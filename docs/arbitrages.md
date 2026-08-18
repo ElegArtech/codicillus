@@ -205,3 +205,98 @@ en **écriture humaine seule** : un agent bloqué sur un rouge en petite largeur
 une vue. C'est le cas d'école du contournement de vérification (`PLAN §12`).
 
 **Ce que ça ferme.** `ECART-010` É-1.
+
+---
+
+## ARB-010 — Le petit écran n'a pas de navigation arborescente, et c'est assumé
+**18 août 2026** — arbitrage délégué à l'orchestrateur par le commanditaire. Répond à `ECART-011` É-6.
+
+**Le conflit.** `BRIEF-VUES.md §V-37` exige, sur petit écran, une navigation *« masquée par défaut,
+ouverte par un bouton, refermée après sélection »*. La maquette gelée ne l'implémente pas :
+`@media (max-width:1240px){ .rail{display:none} }` est **inconditionnel**, sans contre-règle sur
+`[data-rail="ouvert"]`. Vérifié : aucun tiroir, aucune superposition, aucune navigation de
+remplacement ; le bouton `#bascule-rail` bascule bien l'attribut, le CSS l'ignore. Un script
+referme même le rail d'autorité en dessous de 900 px (`V-37:3224`).
+
+**Décision.** La maquette est implémentée **telle quelle**. Sous 1240 px, l'arborescence est
+inatteignable.
+
+**Motif.** L'ordre de préséance ne laisse pas le choix : *Maquettes > Cahier des charges > Brief*.
+Et l'alternative n'est pas ouverte à un agent : dessiner un tiroir serait un comblement, et il
+échouerait de toute façon au banc, qui compare au gel. **Ce que la maquette ne montre pas
+n'existe pas.**
+
+**Ce que ça emporte, et qu'il faut lire sans adoucissement.**
+`RG-M18-12` (« utilisable de 360 px ») et `RG-M18-13` sont **partiellement non tenues** sur l'axe
+navigation. Ce qui reste atteignable sous 1240 px : le fil d'Ariane, le champ de recherche de la
+barre supérieure, les liens du contenu. Ce qui ne l'est pas : l'arbre des univers, domaines et
+dossiers.
+
+**Aucun lot ne déclarera `RG-M18-12` ni `RG-M18-13` tenues.** C'est une interdiction de conclure,
+au même titre que celles de `P-09` et `RG-ACC-04` : la batterie de conformité sera verte — elle
+mesure la fidélité au gel — et la règle restera non satisfaite. Un vert ne vaut jamais
+satisfaction d'une exigence que la référence elle-même n'honore pas.
+
+**La voie de correction, si elle est voulue.** Le régime assisté : produire un V-37 corrigé hors
+dépôt, le geler, mettre `mockups/GEL.md` à jour. Geste du commanditaire, pas session d'exécution.
+Le correctif est mince — une contre-règle sur `[data-rail="ouvert"]` sous 1240 px, plus un voile de
+fermeture — mais il n'appartient pas à un agent de l'écrire.
+
+**Effet de bord à connaître.** Sous 1240 px, `rail-ouvert` et `rail-ferme` rendent le même écran :
+trois des huit états de V-37 deviennent indiscernables deux à deux sur trois des quatre fenêtres.
+« 32 couples conformes » ne signifie donc pas « 32 rendus distincts prouvés ».
+
+---
+
+## ARB-011 — L'état « chargement » rend la notification, pas la minuterie
+**18 août 2026** — arbitrage délégué. Répond à `ECART-011` É-7.
+
+**Le conflit.** L'état `chargement` de V-37 fait apparaître un rouet sur une branche **et** une
+notification qui vit 2 600 ms. Le banc n'avançant l'horloge que de 1 000 ms, la notification est
+dans la capture. La reproduire semblait exiger une minuterie, donc de la logique — que le temps 3
+du protocole UI interdit en phase 1.
+
+**Décision.** Le squelette rend **l'état**, jamais la transition. En mode démo, l'état `chargement`
+affiche la notification et le rouet **statiquement** : c'est ce que la référence montre à l'instant
+capturé. Aucune minuterie n'est écrite.
+
+**Motif.** Une capture est un instant, pas un film. Ce que la maquette montre à cet instant est un
+DOM, et un DOM se rend sans horloge. La confusion venait de lire « notification qui s'efface après
+2 600 ms » comme un comportement à implémenter, alors que le seul fait opposable est : *à cet état,
+cette notification est visible.*
+
+**Ce que ça emporte.** L'effacement automatique — 3 200 ms pour un succès, 6 000 ms pour une
+information, persistance jusqu'à action pour une erreur (`RG-M18-02`) — est du **comportement**, et
+relève de T-102 puis de T-017. Aucun lot de phase 1 ne le déclare tenu.
+
+---
+
+## ARB-012 — L'état « vide » de V-37 est un défaut de maquette, neutralisé par la conformité par zone
+**18 août 2026** — arbitrage délégué. Répond à `ECART-011` É-8.
+
+**Le conflit.** À l'état `vide`, le rail annonce « aucun domaine ne vous est accessible » pendant
+que le tableau de bord affiche 18 notes, 2 révisions, 1 jamais vérifiée, 299 consultations et une
+répartition sur 18 — `rendreBord()` n'étant pas rejoué après le vidage du corpus. Le reproduire,
+c'est afficher des indicateurs sans données, **contre P-02**, l'un des dix principes non
+négociables, et faire rougir la batterie 8. Ne pas le reproduire, c'est diverger du gel.
+
+**Décision.** Le conflit ne se tranche pas : il **disparaît**. La conformité de V-37 est déclarée
+par zone — `aside.rail` et `header.barre`, la coquille proprement dite. Le tableau de bord n'est
+pas dans les zones comparées.
+
+**Motif.** V-37 **n'est pas une route** : `docs/routes.md` la classe parmi les six vues sans adresse
+propre. C'est un catalogue de la coquille, comme V-41 l'est des composants. Le tableau de bord
+qu'elle embarque est le contenu de V-07, la note de démonstration celui de V-14 — chacun couvert
+par son propre lot, sur sa propre maquette, où il est cohérent. Comparer page entière une vue qui
+n'existe à aucune adresse était l'erreur de départ.
+
+**Ce que ça emporte.** L'incohérence reste **dans la maquette** : ni corrigée, ni propagée,
+consignée ici. La question de fond — que montre le tableau de bord sur un corpus vide — est
+tranchée par la maquette de V-07, qui porte son propre état « aucune note », et par la batterie 8
+au lot correspondant.
+
+**Garde-fou, sans lequel la conformité par zone est une échappatoire.** La liste des zones est en
+**écriture humaine seule**, comme les tolérances et les masques ; le rapport nomme les zones
+comparées à chaque exécution ; une vue sans déclaration de zones est comparée **page entière**, par
+défaut. Un agent bloqué sur un rouge ne restreint jamais une zone — c'est le contournement de
+vérification que `PLAN §12` nomme.
