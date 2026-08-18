@@ -22,6 +22,10 @@
  * application — par le même code, jamais par deux réglages jumeaux.
  */
 
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 /* ── Horloge ───────────────────────────────────────────────────────────────
    La date est `DATE_REFERENCE` de `seeds/corpus.ts` : 2026-08-13, dérivée de
    43 marqueurs concordants du corpus, et gelée.
@@ -295,13 +299,85 @@ async function chargerPolices(page) {
 	}
 }
 
-/* ── Planche de revue ──────────────────────────────────────────────────────
-   PLAN §4.2 : « Retirée du DOM avant capture. » Retirée, pas masquée : une
-   planche en `display: none` continue de participer au calcul de mise en page
-   de ses ancêtres dans certains contextes, et surtout elle resterait dans
-   l'arbre d'accessibilité que compare le niveau 1. */
-export async function retirerPlanche(page) {
-	await page.evaluate(() => {
-		document.querySelectorAll('.planche').forEach((n) => n.remove());
-	});
+/* ── Les blocs que la maquette déclare hors produit ────────────────────────
+   PLAN §4.2 : « Retirée du DOM avant capture. » Retirée, pas masquée : un bloc
+   en `display: none` continue de participer au calcul de mise en page de ses
+   ancêtres dans certains contextes, et surtout il resterait dans l'arbre
+   d'accessibilité que compare le niveau 1.
+
+   LE CRITÈRE N'EST PAS « CE QUI GÊNE », C'EST « CE QUE LA MAQUETTE DIT ». Un
+   bloc n'entre dans cette liste que si la maquette gelée déclare elle-même
+   qu'il n'appartient pas au produit. Le retirer n'est alors pas dévier de la
+   maquette : c'est obéir à ce qu'elle écrit. Retirer un bloc qu'elle ne
+   déclare pas serait l'inverse — le contournement de vérification de PLAN §12.
+
+   RECENSEMENT SUR LES 41 MAQUETTES GELÉES, à ce lot :
+
+     `.planche`        — la planche de revue. 37 maquettes sur 41 en portent
+                         une ; toutes la marquent « hors produit », dans le
+                         commentaire qui l'ouvre, dans le commentaire de son
+                         style et dans son `aria-label` (« Contrôles de
+                         maquette, hors produit »). Les quatre sans planche :
+                         V-09, V-35, V-40, V-41.
+     `section.regles`  — les notes de conception de V-37, six pavés dont la
+                         maquette dit d'elle-même : « Ce bloc n'appartient pas
+                         au produit. Il récapitule les comportements que ce
+                         fragment garantit aux trente et une vues de l'espace
+                         de travail. » (V-37:1638, commentaire de balisage
+                         V-37:1635 et commentaire de style V-37:1108).
+                         AUCUNE AUTRE MAQUETTE n'en porte : le relevé sur les
+                         41 fichiers ne trouve la mention nulle part ailleurs,
+                         et aucun autre bloc ne se déclare hors produit.
+
+   PIÈGE ÉCARTÉ, ET C'EST POURQUOI LE SÉLECTEUR EST `section.regles` ET NON
+   `.regles` : V-06 et V-25 portent une `ul.regles` — la liste « Ce qui est
+   demandé » des règles de mot de passe (V-06:713, V-25:1159). Celle-là EST du
+   produit. Un sélecteur de classe seule aurait retiré du DOM une exigence
+   fonctionnelle en croyant retirer une note de maquette.
+
+   Cette liste est en ÉCRITURE HUMAINE SEULE, au même titre que les tolérances,
+   les masques et les zones comparées. */
+export const BLOCS_HORS_PRODUIT = ['.planche', 'section.regles'];
+
+export async function retirerBlocsHorsProduit(page) {
+	return page.evaluate((selecteurs) => {
+		let retires = 0;
+		for (const s of selecteurs) {
+			document.querySelectorAll(s).forEach((n) => {
+				n.remove();
+				retires++;
+			});
+		}
+		return retires;
+	}, BLOCS_HORS_PRODUIT);
+}
+
+/* ── Zones comparées ───────────────────────────────────────────────────────
+   ARB-012, ÉCART-011 É-5. Une vue peut déclarer les zones de son rendu qui
+   font l'objet du verdict ; une vue sans déclaration est comparée PAGE
+   ENTIÈRE, par défaut. La liste vit dans `verif/references/zones.json`, en
+   écriture humaine seule, avec l'arbitrage qui l'autorise et le motif qui la
+   justifie — et le rapport la nomme à chaque exécution.
+
+   Le banc restreint les DEUX niveaux aux mêmes zones. Restreindre le niveau 2
+   sans le niveau 1 ferait juger deux objets différents par les deux moitiés du
+   même verdict. */
+export const ZONES = JSON.parse(
+	readFileSync(
+		join(dirname(fileURLToPath(import.meta.url)), '..', 'references', 'zones.json'),
+		'utf8'
+	)
+);
+
+/**
+ * Les zones comparées d'une vue, ou `[]` quand elle est comparée page entière.
+ * @returns {string[]}
+ */
+export function zonesDe(vue) {
+	return ZONES.vues?.[vue]?.zones ?? [];
+}
+
+/** L'arbitrage et le motif qui autorisent la restriction — pour le rapport. */
+export function declarationZones(vue) {
+	return ZONES.vues?.[vue] ?? null;
 }

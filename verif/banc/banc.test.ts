@@ -22,7 +22,11 @@ import { describe, it, expect } from 'vitest';
 // @ts-expect-error — modules d'instrument en JavaScript, hors périmètre de tsc
 import { encoder, decoder, image } from './png.mjs';
 // @ts-expect-error — modules d'instrument en JavaScript, hors périmètre de tsc
-import { comparerPixels, comparerStructure, TOLERANCES } from './comparer.mjs';
+import { comparerPixels, comparerStructure, comparerZone, TOLERANCES } from './comparer.mjs';
+// @ts-expect-error — modules d'instrument en JavaScript, hors périmètre de tsc
+import { BLOCS_HORS_PRODUIT, zonesDe, declarationZones } from './conditions.mjs';
+// @ts-expect-error — modules d'instrument en JavaScript, hors périmètre de tsc
+import { adresseDeLEtat, PREFIXE } from './mode-demo.mjs';
 
 type Image = { largeur: number; hauteur: number; donnees: Buffer };
 
@@ -132,5 +136,65 @@ describe('niveau 1 — structure', () => {
 	it('refuse un repère ARIA manquant', () => {
 		const candidat = { ...reference, aria: reference.aria.replace('- banner:\n', '') };
 		expect(comparerStructure(reference, candidat).conforme).toBe(false);
+	});
+});
+
+describe('zones comparées — ARB-012, ÉCART-011 É-5', () => {
+	it('ne restreint la surface que là où un arbitrage l’autorise', () => {
+		expect(zonesDe('V-37')).toEqual(['aside.rail', 'header.barre']);
+		expect((declarationZones('V-37') as { arbitrage: string }).arbitrage).toMatch(/ARB-012/);
+	});
+
+	it('compare page entière toute vue qui n’en déclare pas — le défaut est le plus strict', () => {
+		for (const vue of ['V-01', 'V-07', 'V-14', 'V-41']) expect(zonesDe(vue)).toEqual([]);
+		expect(declarationZones('V-14')).toBeNull();
+	});
+
+	it('retire les blocs que la maquette DÉCLARE hors produit, et eux seuls', () => {
+		expect(BLOCS_HORS_PRODUIT).toEqual(['.planche', 'section.regles']);
+		// `ul.regles` de V-06 et V-25 est la liste « Ce qui est demandé » des
+		// règles de mot de passe : elle EST du produit. Un sélecteur de classe
+		// seule l'aurait retirée du DOM en croyant retirer une note de maquette.
+		expect(BLOCS_HORS_PRODUIT).not.toContain('.regles');
+	});
+});
+
+describe('zone non rendue — une restitution est un fait comparable', () => {
+	const rendue = { png: Buffer.from([1]) };
+	const absente = { png: null };
+
+	it('accepte une zone absente des DEUX côtés, sans prétendre l’avoir comparée', () => {
+		const r = comparerZone(absente, absente);
+		expect(r.verdict).toBe('conforme');
+		expect(r.nonRendue).toBe(true);
+		expect(r.pixelsTotal).toBe(0);
+		expect(r.dimensions.reference).toBe('non rendue');
+	});
+
+	it('refuse sans seuil une zone rendue d’un seul côté', () => {
+		// C'est le cas qu'aucun pixel ne peut signaler : une application qui
+		// afficherait le rail sous 1240 px là où la maquette l'escamote.
+		expect(comparerZone(rendue, absente).verdict).toBe('echec');
+		expect(comparerZone(absente, rendue).verdict).toBe('echec');
+		expect(comparerZone(absente, rendue).motif).toMatch(/rendue par le candidat/);
+	});
+});
+
+describe('protocole d’état côté application — annexe F, ÉCART-011 É-1 et É-9', () => {
+	it('construit l’adresse du mode démo, paramètre en français', () => {
+		expect(PREFIXE).toBe('/__design');
+		expect(adresseDeLEtat('V-37', 'cont-bord')).toBe('/__design/V-37?etat=cont-bord');
+	});
+
+	it('n’ajoute la source que lorsqu’elle n’est pas l’application', () => {
+		expect(adresseDeLEtat('V-37', 'vide', 'app')).not.toContain('source=');
+		expect(adresseDeLEtat('V-37', 'vide', 'etalon')).toContain('&source=etalon');
+	});
+
+	it('porte le budget d’horloge du banc, jamais sa propre copie', () => {
+		expect(adresseDeLEtat('V-37', 'vide', 'etalon', 1000)).toBe(
+			'/__design/V-37?etat=vide&source=etalon&differe=1000'
+		);
+		expect(adresseDeLEtat('V-37', 'vide', 'etalon', 0)).not.toContain('differe');
 	});
 });

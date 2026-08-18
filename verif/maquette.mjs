@@ -26,19 +26,50 @@
  *       capture tiennent. Tout écart non nul en à blanc est un DÉFAUT DE BANC,
  *       jamais un défaut de maquette.
  *
- *   --contre=app --base=http://…  — CONFORMITÉ D'UNE VUE.
- *       Le côté candidat devient l'application. Il exige que le volet `app` du
- *       scénario soit renseigné. Aucune vue n'existe au lot T-007 : ce régime
- *       échoue bruyamment plutôt que de sortir en 0 sans rien prouver — c'est
- *       le mode de défaillance RA-01 du plan (§12).
+ *   --contre=app [--base=http://…] [--source=app|etalon] — CONFORMITÉ D'UNE VUE.
+ *       Le côté candidat devient l'APPLICATION, servie à sa propre adresse, et
+ *       son état est atteint par le mode démo de l'annexe F —
+ *       `/__design/V-xx?etat=…`, `verif/banc/mode-demo.mjs`. La référence
+ *       reste la maquette gelée, pilotée par sa planche de revue. Deux
+ *       serveurs, deux adresses, deux protocoles d'état ; les CONDITIONS de
+ *       capture, elles, restent rigoureusement identiques des deux côtés,
+ *       parce qu'elles sont appliquées par le même code
+ *       (`verif/banc/conditions.mjs`, `verif/banc/capture.mjs`).
+ *
+ *       Sans `--base`, le banc démarre lui-même le serveur de développement de
+ *       l'application, par l'API Node de Vite : c'est le seul contexte où le
+ *       mode démo existe.
+ *
+ *       `--source=etalon` — ÉTALONNAGE DU RÉGIME `app`. Le mode démo sert la
+ *       maquette gelée elle-même. Le candidat est alors CONNU IDENTIQUE à la
+ *       référence, et l'exigence est zéro pixel divergent, sans seuil. Ce
+ *       n'est pas une conformité : c'est la preuve que la plomberie du régime
+ *       ne fabrique pas d'écart à elle seule. Sans elle, le premier rouge
+ *       d'une vraie vue serait indiscernable d'un défaut de harnais — le banc
+ *       mesurerait le harnais et non l'implémentation.
  *
  * Usage :
  *   pnpm verif:maquette [V-xx …] [--etats=cle,cle] [--fenetres=1440x900,…]
- *                       [--contre=maquette|app] [--base=URL]
+ *                       [--contre=maquette|app] [--base=URL] [--source=app|etalon]
+ *                       [--zones=declarees|page]
  *                       [--archiver=ecarts|complet] [--silencieux]
  *
  * Sans argument de vue : les 41 vues.
  * Code retour : 0 conforme, 1 non conforme ou recours au niveau 3 en attente.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * ZONES COMPARÉES — ARB-012
+ *
+ * Une vue peut déclarer, dans `verif/references/zones.json` et en écriture
+ * humaine seule, les zones de son rendu qui font l'objet du verdict. Les DEUX
+ * niveaux s'y restreignent — structure comme pixels —, sans quoi ils ne
+ * jugeraient pas le même objet. Une vue sans déclaration est comparée PAGE
+ * ENTIÈRE, par défaut : ne rien déclarer est la position la plus stricte.
+ *
+ * `--zones=page` force la page entière malgré une déclaration. L'option
+ * n'existe que vers le PLUS strict : il n'y a aucun moyen, en ligne de
+ * commande, de restreindre une zone. Un agent bloqué sur un rouge ne
+ * restreint jamais une zone (PLAN §12).
  */
 import { chromium } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
@@ -46,10 +77,20 @@ import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { servir } from './banc/serveur.mjs';
 import { racine, RACINE_MAQUETTES, vues } from './banc/inventaire.mjs';
-import { fenetresDe, FENETRES, avancer, AVANCE_ETAT_MS } from './banc/conditions.mjs';
+import {
+	fenetresDe,
+	FENETRES,
+	avancer,
+	AVANCE_CHARGEMENT_MS,
+	AVANCE_ETAT_MS,
+	zonesDe,
+	declarationZones,
+	BLOCS_HORS_PRODUIT
+} from './banc/conditions.mjs';
 import { ouvrirPage, reglerPlanche, mesurer } from './banc/capture.mjs';
-import { comparerStructure, comparerPixels, coteACote, TOLERANCES } from './banc/comparer.mjs';
+import { comparerStructure, comparerZone, coteACote, TOLERANCES } from './banc/comparer.mjs';
 import { decoder } from './banc/png.mjs';
+import { adresseDeLEtat, PREFIXE as PREFIXE_DEMO } from './banc/mode-demo.mjs';
 
 const DOSSIER_SCENARIOS = join(racine, 'verif', 'scenarios');
 const DOSSIER_CAPTURES = join(racine, 'verif', 'captures');
@@ -67,6 +108,8 @@ const filtreEtats = option('etats') ? option('etats').split(',') : null;
 const filtreFenetres = option('fenetres') ? option('fenetres').split(',') : null;
 const contre = option('contre', 'maquette');
 const base = option('base');
+const source = option('source', 'app');
+const filtreZones = option('zones', 'declarees');
 const archiver = option('archiver', 'ecarts');
 const silencieux = args.includes('--silencieux');
 const sonde = option('sonde');
@@ -81,21 +124,24 @@ if (!['maquette', 'app'].includes(contre)) {
 	console.error(`verif:maquette — --contre=${contre} inconnu (maquette | app).`);
 	process.exit(2);
 }
-if (contre === 'app') {
+if (!['app', 'etalon'].includes(source)) {
+	console.error(`verif:maquette — --source=${source} inconnue (app | etalon).`);
+	process.exit(2);
+}
+if (source !== 'app' && contre !== 'app') {
+	console.error('verif:maquette — --source ne vaut qu’en régime « app ».');
+	process.exit(2);
+}
+if (!['declarees', 'page'].includes(filtreZones)) {
+	// Il n'existe volontairement AUCUNE valeur qui restreindrait une zone : la
+	// ligne de commande ne sait aller que vers le plus strict.
 	console.error(
-		`
-verif:maquette --contre=app — non outillé au lot T-007, et c'est délibéré.
-
-Le côté candidat serait l'application ; aucune vue applicative n'existe, et le
-volet « app » des scénarios de verif/scenarios/ est vide par règle de
-non-comblement. Un banc qui sortirait en 0 dans cet état déclarerait conforme
-une vue inexistante : c'est le mode de défaillance RA-01 du plan (§12).
-
-Le lot qui portera une vue renseigne d'abord le volet « app » de son scénario,
-puis lève ce garde-fou. Base demandée : ${base ?? '(aucune)'}
-`
+		`verif:maquette — --zones=${filtreZones} inconnu (declarees | page).\n` +
+			'  Les zones comparées se déclarent dans verif/references/zones.json, en\n' +
+			'  écriture humaine seule et sous arbitrage (ARB-012). La ligne de commande\n' +
+			'  ne peut qu’élargir la surface jugée, jamais la restreindre.'
 	);
-	process.exit(1);
+	process.exit(2);
 }
 if (filtreFenetres?.some((f) => !FENETRES[f])) {
 	console.error(`verif:maquette — fenêtre inconnue. Connues : ${Object.keys(FENETRES).join(', ')}`);
@@ -126,14 +172,27 @@ if (demandees.length && cibles.length !== demandees.length) {
 
    Il est en ÉCRITURE HUMAINE SEULE, comme le reste de `verif/references/`. Un
    agent bloqué sur une dérive ne le régénère pas : il la déclare. */
-function signature(mesure, png) {
+function signature(mesure) {
 	const somme = (v) => createHash('sha256').update(v).digest('hex').slice(0, 16);
-	const image = png ? decoder(png) : null;
+	const releves = mesure.releves;
 	return {
-		aria: somme(mesure.aria),
-		tabulation: somme(mesure.tabulation.join('\n')),
-		focalisables: mesure.tabulation.length,
-		dimensions: image ? `${image.largeur}×${image.hauteur}` : null
+		aria: somme(releves.map((r) => `${r.nom}\n${r.aria}`).join('\n═══\n')),
+		tabulation: somme(releves.map((r) => `${r.nom}\n${r.tabulation.join('\n')}`).join('\n═══\n')),
+		focalisables: releves.reduce((total, r) => total + r.tabulation.length, 0),
+		dimensions: releves
+			.map((r) => {
+				// Une zone non rendue n'a pas de capture — et c'est en soi une
+				// propriété de la signature : le jour où la maquette se mettrait
+				// à rendre le rail sous 1240 px, la dérive serait vue.
+				const taille = r.png
+					? (() => {
+							const image = decoder(r.png);
+							return `${image.largeur}×${image.hauteur}`;
+						})()
+					: 'non rendue';
+				return releves.length > 1 ? `${r.nom} ${taille}` : taille;
+			})
+			.join(' · ')
 	};
 }
 
@@ -166,14 +225,123 @@ mkdirSync(DOSSIER_RAPPORTS, { recursive: true });
 if (existsSync(DOSSIER_CAPTURES)) rmSync(DOSSIER_CAPTURES, { recursive: true, force: true });
 mkdirSync(DOSSIER_CAPTURES, { recursive: true });
 
+/* ── Les deux côtés, et leurs deux serveurs ───────────────────────────────
+   LA RÉFÉRENCE EST TOUJOURS LA MAQUETTE GELÉE, servie en lecture seule depuis
+   `mockups/` par le serveur du banc, et pilotée par sa planche de revue. Elle
+   ne change pas de régime en régime : c'est ce qui rend les deux régimes
+   comparables entre eux.
+
+   LE CANDIDAT CHANGE. En à blanc, c'est la même adresse — la maquette contre
+   elle-même. En régime `app`, c'est l'application, à sa propre adresse, dont
+   l'état est atteint par le mode démo. Faute de `--base`, le banc démarre
+   lui-même le serveur de développement par l'API Node de Vite : le mode démo
+   est un greffon `apply: 'serve'`, il n'existe que là. Démarrer un build de
+   production n'aurait aucun sens — l'adresse y répond 404, et c'est la
+   propriété qu'on veut.
+
+   Deux serveurs, donc, et deux origines distinctes. Ce qui reste rigoureusement
+   identique des deux côtés est ce qui décide du verdict : les conditions de
+   capture, appliquées par le même code. */
 const serveur = await servir(RACINE_MAQUETTES);
+
+/** @type {{ origine: string, fermer: () => Promise<void> } | null} */
+let serveurApp = null;
+if (contre === 'app') {
+	if (base) {
+		serveurApp = { origine: base.replace(/\/$/, ''), fermer: async () => {} };
+		console.log(`  candidat : ${serveurApp.origine} (base fournie)`);
+	} else {
+		const { createServer } = await import('vite');
+		const vite = await createServer({
+			configFile: join(racine, 'vite.config.ts'),
+			root: racine,
+			server: { port: 0, strictPort: false },
+			logLevel: 'warn'
+		});
+		await vite.listen();
+		const origine = vite.resolvedUrls?.local?.[0]?.replace(/\/$/, '');
+		if (!origine) {
+			console.error('verif:maquette — le serveur de développement n’a pas rendu d’adresse.');
+			process.exit(2);
+		}
+		serveurApp = { origine, fermer: () => vite.close() };
+		console.log(`  candidat : ${origine} (serveur de développement démarré par le banc)`);
+	}
+	// Un mode démo absent ferait comparer la maquette à une page d'erreur, et
+	// le banc rougirait pour la mauvaise raison. On le constate ici, une fois.
+	const sonder = await fetch(`${serveurApp.origine}${PREFIXE_DEMO}/`).catch(() => null);
+	if (!sonder || !sonder.ok) {
+		console.error(
+			`\nverif:maquette — le mode démo ne répond pas sur ${serveurApp.origine}${PREFIXE_DEMO}/.\n` +
+				'  Le régime « app » n’a alors aucun moyen d’atteindre un état côté application\n' +
+				'  (ÉCART-011 É-1). Sans --base, le banc démarre lui-même le serveur de\n' +
+				'  développement ; avec --base, l’adresse doit être celle d’un `vite dev`.\n'
+		);
+		await serveur.fermer();
+		await serveurApp.fermer();
+		process.exit(2);
+	}
+}
+
 const navigateur = await chromium.launch();
 const resultats = [];
 const defauts = [];
 const derives = [];
 const signatures = {};
+/** Les zones effectivement comparées, vue par vue — le rapport les nomme. */
+const zonesParVue = new Map();
 const empreintesConnues =
 	existsSync(EMPREINTES) && !etalonner ? JSON.parse(readFileSync(EMPREINTES, 'utf8')) : null;
+/** La baseline porte la surface déclarée : l'élargir la rend incomparable. */
+const signatureComparable = filtreZones === 'declarees';
+
+/* ── L'agrégation d'un verdict sur plusieurs zones ─────────────────────────
+   Quand une vue déclare des zones comparées, le protocole s'applique zone par
+   zone, et le verdict de l'état est LE PIRE des verdicts de zone — jamais une
+   moyenne. Une moyenne diluerait une petite zone entièrement fausse dans une
+   grande zone juste : c'est exactement l'inverse de ce qu'on veut savoir. Les
+   comptes de pixels, eux, sont cumulés, pour que le rapport reste lisible. */
+const RANG = { conforme: 0, niveau3: 1, echec: 2 };
+
+function agregerNiveau2(parZone) {
+	if (parZone.some((z) => z.niveau2 === null)) return null;
+	let pixelsDifferents = 0;
+	let pixelsTotal = 0;
+	let ecartCanalMax = 0;
+	let motif = null;
+	let verdict = 'conforme';
+	const nonRendues = [];
+	const dimensionsRef = [];
+	const dimensionsCand = [];
+	for (const z of parZone) {
+		const n = z.niveau2;
+		pixelsDifferents += n.pixelsDifferents ?? 0;
+		pixelsTotal += n.pixelsTotal ?? 0;
+		ecartCanalMax = Math.max(ecartCanalMax, n.ecartCanalMax ?? 0);
+		if (n.motif && motif === null) motif = `${z.zone} — ${n.motif}`;
+		if (n.nonRendue) nonRendues.push(z.zone);
+		if (RANG[n.verdict] > RANG[verdict]) verdict = n.verdict;
+		dimensionsRef.push(
+			parZone.length > 1 ? `${z.zone} ${n.dimensions.reference}` : n.dimensions.reference
+		);
+		dimensionsCand.push(
+			parZone.length > 1 ? `${z.zone} ${n.dimensions.candidat}` : n.dimensions.candidat
+		);
+	}
+	return {
+		verdict,
+		motif,
+		nonRendues,
+		pixelsDifferents,
+		pixelsTotal,
+		proportion: pixelsTotal === 0 ? 0 : pixelsDifferents / pixelsTotal,
+		ecartCanalMax,
+		dimensions: { reference: dimensionsRef.join(' · '), candidat: dimensionsCand.join(' · ') }
+	};
+}
+
+/** Un nom de zone rendu sûr pour un nom de fichier de capture. */
+const nomDeFichier = (zone) => zone.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
 
 for (const { vue, fichier } of cibles) {
 	const scenario = JSON.parse(readFileSync(join(DOSSIER_SCENARIOS, `${vue}.json`), 'utf8'));
@@ -196,46 +364,135 @@ for (const { vue, fichier } of cibles) {
 		if (etats.length === 0) continue;
 	}
 
+	// ARB-012 — les zones comparées. Une vue qui n'en déclare pas est comparée
+	// page entière ; `--zones=page` force la page entière malgré la déclaration.
+	const zonesVue = filtreZones === 'page' ? [] : zonesDe(vue);
+	zonesParVue.set(vue, {
+		vue,
+		zones: zonesVue,
+		surface: zonesVue.length ? zonesVue.join(' + ') : 'page entière',
+		declaration: declarationZones(vue),
+		forcePageEntiere: filtreZones === 'page' && zonesDe(vue).length > 0
+	});
+
 	for (const fenetre of fenetres) {
-		const adresse = `${serveur.origine}/${fichier}`;
+		const adresseMaquette = `${serveur.origine}/${fichier}`;
 
 		for (const etat of etats) {
+			if (contre === 'app' && etat.zone) {
+				console.error(
+					`\nverif:maquette — ${vue} · ${etat.cle} est un état de ZONE côte à côte : il est\n` +
+						'  atteint dans la maquette en capturant un fragment de page, pas en réglant un\n' +
+						'  contrôle. Le mode démo n’a aucun moyen d’en déduire une adresse. Le protocole\n' +
+						'  d’état de cette vue se déclare dans verif/references/protocole-app.json, en\n' +
+						'  écriture humaine seule (ÉCART-011 É-9).\n'
+				);
+				process.exit(2);
+			}
+
 			const mesures = {};
 			// Deux chargements indépendants, dans deux contextes distincts :
 			// c'est ce qui rend l'à-blanc probant. Deux captures prises sur la
 			// même page seraient identiques par construction et ne
 			// prouveraient rien du déterminisme du harnais.
 			for (const nom of ['reference', 'candidat']) {
-				const { page, contexte } = await ouvrirPage(navigateur, adresse, fenetre);
-				if (sonde && nom === 'candidat') await perturber(page, sonde);
-				if (etat.vecteur) await reglerPlanche(page, etat.vecteur);
-				else if (scenario.defaut) await reglerPlanche(page, scenario.defaut);
-				if (etat.zone?.declencheur) {
-					const d = etat.zone.declencheur;
-					const cible =
-						typeof d === 'string'
-							? page.locator(d).first()
-							: page.locator(d.selecteur).nth(d.index);
-					await cible.click();
-					await avancer(page, AVANCE_ETAT_MS);
+				const coteApplication = contre === 'app' && nom === 'candidat';
+				const adresse = coteApplication
+					? `${serveurApp.origine}${adresseDeLEtat(vue, etat.cle, source, AVANCE_CHARGEMENT_MS)}`
+					: adresseMaquette;
+				const { page, contexte, statut } = await ouvrirPage(navigateur, adresse, fenetre);
+				if (coteApplication && statut !== null && statut >= 400) {
+					// Une page d'erreur se compare aussi bien qu'une vue, et le
+					// banc rougirait alors pour une raison qui n'a rien à voir
+					// avec le rendu. On cite ce que le mode démo a répondu.
+					const titre = await page
+						.locator('h1')
+						.first()
+						.textContent()
+						.catch(() => null);
+					const explication = await page
+						.locator('p')
+						.allTextContents()
+						.catch(() => []);
+					console.error(
+						`\nverif:maquette — le candidat a répondu ${statut} sur\n  ${adresse}\n\n` +
+							`  ${titre ?? '(sans titre)'}\n` +
+							explication.map((l) => `  ${l}`).join('\n') +
+							'\n'
+					);
+					await page.close();
+					await contexte.close();
+					await navigateur.close();
+					await serveur.fermer();
+					if (serveurApp) await serveurApp.fermer();
+					process.exit(1);
 				}
-				mesures[nom] = await mesurer(page, { zone: etat.zone ?? null, masques: masquesVue });
+				if (sonde && nom === 'candidat') await perturber(page, sonde);
+				if (coteApplication) {
+					// L'ÉTAT EST DÉJÀ ATTEINT : il est porté par l'adresse, c'est
+					// tout le propos du mode démo. On avance néanmoins l'horloge
+					// virtuelle du MÊME temps que le côté référence, où le
+					// réglage de la planche est suivi d'une avance : le budget
+					// d'horloge doit être identique des deux côtés, sinon c'est
+					// lui qu'on mesurerait et non la vue.
+					await avancer(page, AVANCE_ETAT_MS);
+				} else {
+					if (etat.vecteur) await reglerPlanche(page, etat.vecteur);
+					else if (scenario.defaut) await reglerPlanche(page, scenario.defaut);
+					if (etat.zone?.declencheur) {
+						const d = etat.zone.declencheur;
+						const cible =
+							typeof d === 'string'
+								? page.locator(d).first()
+								: page.locator(d.selecteur).nth(d.index);
+						await cible.click();
+						await avancer(page, AVANCE_ETAT_MS);
+					}
+				}
+				mesures[nom] = await mesurer(page, {
+					zone: etat.zone ?? null,
+					zones: zonesVue,
+					masques: masquesVue
+				});
 				await page.close();
 				await contexte.close();
 			}
 
 			const cle = `${vue}/${etat.cle}@${fenetre}`;
-			const empreinte = signature(mesures.reference, mesures.reference.png);
+			const empreinte = signature(mesures.reference);
 			signatures[cle] = empreinte;
-			const attendue = empreintesConnues?.signatures?.[cle];
+			// La signature de référence est relevée sur la SURFACE JUGÉE. Élargir
+			// cette surface par `--zones=page` la rend, à bon droit, incomparable
+			// à la baseline : on ne compare pas deux mesures de deux objets. Le
+			// contrôle de dérive est alors suspendu, et le rapport le dit — il
+			// n'est jamais suspendu en silence.
+			const attendue = signatureComparable ? empreintesConnues?.signatures?.[cle] : null;
 			if (attendue && JSON.stringify(attendue) !== JSON.stringify(empreinte)) {
 				derives.push({ cle, attendue, obtenue: empreinte });
 			}
 
-			const niveau1 = comparerStructure(mesures.reference, mesures.candidat);
-			const niveau2 = niveau1.conforme
-				? comparerPixels(mesures.reference.png, mesures.candidat.png)
-				: null;
+			// Le protocole en trois niveaux, appliqué zone par zone. Les DEUX
+			// niveaux lisent la même liste de zones : ils jugent donc le même
+			// objet (ARB-012).
+			const parZone = mesures.reference.releves.map((r, i) => {
+				const c = mesures.candidat.releves[i];
+				const n1 = comparerStructure(r, c);
+				return {
+					zone: r.nom,
+					niveau1: n1,
+					niveau2: n1.conforme ? comparerZone(r, c) : null,
+					pngReference: r.png,
+					pngCandidat: c.png
+				};
+			});
+
+			const niveau1 = {
+				conforme: parZone.every((z) => z.niveau1.conforme),
+				ecarts: parZone.flatMap((z) =>
+					z.niveau1.ecarts.map((e) => (parZone.length > 1 ? { ...e, zone: z.zone } : e))
+				)
+			};
+			const niveau2 = agregerNiveau2(parZone);
 
 			// EN À BLANC, LES TOLÉRANCES NE S'APPLIQUENT PAS. La maquette est
 			// comparée à elle-même : l'exigence est zéro pixel différent, sans
@@ -243,10 +500,16 @@ for (const { vue, fichier } of cibles) {
 			// l'instrument avec l'instrument, et à masquer précisément le genre
 			// de dérive — sous-pixel, fonderie, minuterie — que l'à-blanc
 			// existe pour débusquer (verif/references/tolerances.json, « a_blanc »).
-			const aBlanc = contre === 'maquette';
+			//
+			// LE RÉGIME `app` EN SOURCE `etalon` OBÉIT À LA MÊME RÈGLE, et pour
+			// la même raison : le candidat y est CONNU IDENTIQUE à la référence.
+			// Une tolérance y absorberait précisément l'écart que l'étalonnage
+			// existe pour débusquer — celui que la plomberie du régime
+			// fabriquerait à elle seule.
+			const sansTolerance = contre === 'maquette' || source === 'etalon';
 			const verdict = !niveau1.conforme
 				? 'echec-structure'
-				: aBlanc
+				: sansTolerance
 					? niveau2.pixelsDifferents === 0 && niveau2.motif === null
 						? 'conforme'
 						: 'echec-a-blanc'
@@ -261,6 +524,7 @@ for (const { vue, fichier } of cibles) {
 				etat: etat.cle,
 				libelle: etat.libelle,
 				fenetre,
+				surface: zonesVue.length ? zonesVue.join(' + ') : 'page entière',
 				verdict,
 				niveau1: { conforme: niveau1.conforme, ecarts: niveau1.ecarts },
 				niveau2: niveau2
@@ -271,7 +535,17 @@ for (const { vue, fichier } of cibles) {
 							pixelsTotal: niveau2.pixelsTotal,
 							proportion: niveau2.proportion,
 							ecartCanalMax: niveau2.ecartCanalMax,
-							dimensions: niveau2.dimensions
+							nonRendues: niveau2.nonRendues,
+							dimensions: niveau2.dimensions,
+							parZone:
+								parZone.length > 1
+									? parZone.map((z) => ({
+											zone: z.zone,
+											pixelsDifferents: z.niveau2?.pixelsDifferents ?? null,
+											pixelsTotal: z.niveau2?.pixelsTotal ?? null,
+											verdict: z.niveau2?.verdict ?? null
+										}))
+									: null
 						}
 					: null,
 				captures: null
@@ -281,20 +555,29 @@ for (const { vue, fichier } of cibles) {
 			if (aArchiver) {
 				const dossier = join(DOSSIER_CAPTURES, vue);
 				mkdirSync(dossier, { recursive: true });
-				const prefixe = join(dossier, `${etat.cle}@${fenetre}`);
-				writeFileSync(`${prefixe}-reference.png`, mesures.reference.png);
-				writeFileSync(`${prefixe}-candidat.png`, mesures.candidat.png);
-				if (niveau2?.ecart) writeFileSync(`${prefixe}-ecart.png`, niveau2.ecart);
-				writeFileSync(
-					`${prefixe}-cote-a-cote.png`,
-					coteACote(mesures.reference.png, mesures.candidat.png)
-				);
-				resultat.captures = {
-					reference: `verif/captures/${vue}/${etat.cle}@${fenetre}-reference.png`,
-					candidat: `verif/captures/${vue}/${etat.cle}@${fenetre}-candidat.png`,
-					ecart: niveau2?.ecart ? `verif/captures/${vue}/${etat.cle}@${fenetre}-ecart.png` : null,
-					coteACote: `verif/captures/${vue}/${etat.cle}@${fenetre}-cote-a-cote.png`
-				};
+				resultat.captures = [];
+				for (const z of parZone) {
+					if (!z.pngReference && !z.pngCandidat) continue; // zone non rendue des deux côtés
+					const suffixe = parZone.length > 1 ? `~${nomDeFichier(z.zone)}` : '';
+					const base = `${etat.cle}@${fenetre}${suffixe}`;
+					const prefixe = join(dossier, base);
+					if (z.pngReference) writeFileSync(`${prefixe}-reference.png`, z.pngReference);
+					if (z.pngCandidat) writeFileSync(`${prefixe}-candidat.png`, z.pngCandidat);
+					if (z.niveau2?.ecart) writeFileSync(`${prefixe}-ecart.png`, z.niveau2.ecart);
+					if (z.pngReference && z.pngCandidat) {
+						writeFileSync(`${prefixe}-cote-a-cote.png`, coteACote(z.pngReference, z.pngCandidat));
+					}
+					resultat.captures.push({
+						zone: z.zone,
+						reference: z.pngReference ? `verif/captures/${vue}/${base}-reference.png` : null,
+						candidat: z.pngCandidat ? `verif/captures/${vue}/${base}-candidat.png` : null,
+						ecart: z.niveau2?.ecart ? `verif/captures/${vue}/${base}-ecart.png` : null,
+						coteACote:
+							z.pngReference && z.pngCandidat
+								? `verif/captures/${vue}/${base}-cote-a-cote.png`
+								: null
+					});
+				}
 			}
 
 			resultats.push(resultat);
@@ -315,13 +598,22 @@ for (const { vue, fichier } of cibles) {
 
 await navigateur.close();
 await serveur.fermer();
+if (serveurApp) await serveurApp.fermer();
 
 /* ── Étalonnage de la signature, ou contrôle de non-dérive ─────────────── */
 if (etalonner) {
-	if (contre !== 'maquette' || demandees.length || filtreEtats || filtreFenetres || sonde) {
+	if (
+		contre !== 'maquette' ||
+		demandees.length ||
+		filtreEtats ||
+		filtreFenetres ||
+		sonde ||
+		filtreZones !== 'declarees'
+	) {
 		console.error(
 			'verif:maquette --etalonner — la signature de référence se produit sur la\n' +
-				'  totalité des vues, en régime « maquette », sans filtre ni sonde.'
+				'  totalité des vues, en régime « maquette », sans filtre ni sonde, et sur la\n' +
+				'  surface réellement jugée (--zones=declarees).'
 		);
 		process.exit(2);
 	}
@@ -333,8 +625,18 @@ if (etalonner) {
 					'BASELINE DU BANC — ÉCRITURE HUMAINE SEULE.',
 					'Signature que le banc relève du côté maquette gelée : empreinte de',
 					"l'instantané ARIA, empreinte de l'ordre de tabulation, nombre",
-					"d'éléments focalisables, dimensions de la capture. Produite par",
-					'`pnpm verif:maquette --etalonner`, à la production initiale.',
+					"d'éléments focalisables, dimensions de la capture — sur la SURFACE",
+					'RÉELLEMENT JUGÉE : page entière, ou zones comparées quand la vue en',
+					'déclare (ARB-012). Produite par `pnpm verif:maquette --etalonner`.',
+					'',
+					'RÉ-ÉTALONNÉE le 18 août 2026, lot T-007b. Motif : ce que le banc LIT a',
+					"changé, sur décision d'instrument, et non ce que la maquette montre.",
+					'Trois changements, tous déclarés — `section.regles` de V-37 retiré',
+					"avant capture parce que la maquette dit elle-même qu'il n'appartient",
+					'pas au produit ; les zones comparées de V-37 (ARB-012) ; la signature',
+					'qui porte désormais le nom de chaque zone et sa restitution. Un',
+					"ré-étalonnage est un geste d'orchestrateur, tracé ici et au rapport de",
+					"lot — jamais la sortie silencieuse d'un contrôle de dérive.",
 					'',
 					"Elle répond à une question que rien d'autre ne pose : le banc lit-il",
 					'encore la maquette gelée comme il la lisait ? `pnpm verif:gel` garde',
@@ -372,8 +674,24 @@ for (const r of resultats) {
 
 const rapport = {
 	batterie: '11 « conformité de maquette »',
-	lot: 'T-007',
-	regime: contre === 'maquette' ? 'étalonnage à blanc — maquette contre elle-même' : contre,
+	lot: 'T-007 (étalonnage à blanc) puis T-007b (régime « app »)',
+	regime:
+		contre === 'maquette'
+			? 'étalonnage à blanc — maquette contre elle-même'
+			: source === 'etalon'
+				? 'étalonnage du régime « app » — candidat CONNU IDENTIQUE (maquette gelée servie par le mode démo)'
+				: 'conformité — maquette gelée contre application',
+	candidat:
+		contre === 'maquette'
+			? 'la maquette gelée elle-même'
+			: `${serveurApp?.origine ?? '(inconnu)'}${PREFIXE_DEMO}/V-xx?etat=… (source « ${source} »)`,
+	blocs_hors_produit: BLOCS_HORS_PRODUIT,
+	zones_comparees: [...zonesParVue.values()].map((z) => ({
+		vue: z.vue,
+		surface: z.surface,
+		arbitrage: z.declaration?.arbitrage ?? null,
+		forcee_page_entiere: z.forcePageEntiere
+	})),
 	le: new Date().toISOString(),
 	duree_s: Number(duree),
 	tolerances: TOLERANCES,
@@ -399,6 +717,42 @@ console.log(
 		`  ·  écarts : ${defauts.length}` +
 		`  ·  recours au niveau 3 : ${recours.length} (${(rapport.comptes.taux_recours * 100).toFixed(2)} %)`
 );
+console.log(`  candidat : ${rapport.candidat}`);
+console.log(
+	`  blocs retirés avant capture (déclarés hors produit par la maquette) : ${BLOCS_HORS_PRODUIT.join(', ')}`
+);
+
+/* ARB-012 — LE RAPPORT NOMME LES ZONES COMPARÉES À CHAQUE EXÉCUTION. C'est
+   l'un des trois garde-fous sans lesquels la conformité par zone serait une
+   échappatoire : une restriction silencieuse est impossible, elle se lit dans
+   la sortie de chaque exécution, avec l'arbitrage qui l'autorise. */
+const restreintes = [...zonesParVue.values()].filter((z) => z.zones.length);
+if (restreintes.length) {
+	console.log(`  zones comparées — ${restreintes.length} vue(s) à surface déclarée :`);
+	for (const z of restreintes) {
+		console.log(
+			`    ${z.vue} : ${z.surface}   (${z.declaration?.arbitrage ?? 'sans arbitrage cité'})`
+		);
+	}
+	console.log(
+		`  les ${zonesParVue.size - restreintes.length} autre(s) vue(s) sont comparées PAGE ENTIÈRE, par défaut.`
+	);
+} else {
+	const forcees = [...zonesParVue.values()].filter((z) => z.forcePageEntiere);
+	console.log(
+		`  zones comparées : page entière pour les ${zonesParVue.size} vue(s)` +
+			(forcees.length
+				? ` — dont ${forcees.length} à surface déclarée, élargie par --zones=page`
+				: '')
+	);
+}
+if (!signatureComparable) {
+	console.log(
+		'  contrôle de dérive du banc : SUSPENDU — --zones=page mesure une autre surface\n' +
+			'    que celle qu’étalonne verif/references/empreintes.json. Le contrôle reprend\n' +
+			'    dès que la surface jugée redevient la surface déclarée.'
+	);
+}
 console.log(`  rapport machine : verif/rapports/maquette.json`);
 
 if (derives.length) {
@@ -438,7 +792,7 @@ if (defauts.length) {
 		if (!d.niveau1.conforme) {
 			for (const e of d.niveau1.ecarts) {
 				console.error(
-					`        niveau 1 · ${e.quoi} · ligne ${e.detail?.ligne}\n` +
+					`        niveau 1 · ${e.zone ? `${e.zone} · ` : ''}${e.quoi} · ligne ${e.detail?.ligne}\n` +
 						`          référence : ${e.detail?.reference}\n` +
 						`          candidat  : ${e.detail?.candidat}`
 				);
@@ -453,10 +807,27 @@ if (defauts.length) {
 				}` + `  ${d.niveau2.dimensions.reference} / ${d.niveau2.dimensions.candidat}`
 			);
 		}
-		if (d.captures) console.error(`        captures : ${d.captures.coteACote}`);
+		for (const c of d.captures ?? []) {
+			console.error(`        captures ${c.zone} : ${c.coteACote}`);
+		}
 	}
 	if (defauts.length > 40)
 		console.error(`    … et ${defauts.length - 40} autre(s), voir le rapport.`);
+
+	if (contre === 'app' && source === 'etalon') {
+		console.error(`
+En étalonnage du régime « app », le candidat est la MAQUETTE GELÉE elle-même,
+servie par le mode démo. Un écart n'est donc JAMAIS un défaut d'implémentation
+— il n'y a pas d'implémentation — mais un DÉFAUT DE PLOMBERIE du régime :
+adresse mal construite, état atteint autrement des deux côtés, budget d'horloge
+virtuelle différent, police servie par un autre chemin, document altéré à la
+volée. Tant qu'il n'est pas à zéro, le régime « app » mesurerait le harnais et
+non la vue.
+
+Il ne s'absorbe pas en élargissant une tolérance : c'est le contournement de
+vérification nommé par PLAN §12.
+`);
+	}
 
 	if (contre === 'maquette') {
 		console.error(`
