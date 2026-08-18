@@ -26,7 +26,7 @@ import { comparerPixels, comparerStructure, comparerZone, TOLERANCES } from './c
 // @ts-expect-error — modules d'instrument en JavaScript, hors périmètre de tsc
 import { BLOCS_HORS_PRODUIT, zonesDe, declarationZones } from './conditions.mjs';
 // @ts-expect-error — modules d'instrument en JavaScript, hors périmètre de tsc
-import { adresseDeLEtat, PREFIXE } from './mode-demo.mjs';
+import { adresseDeLEtat, declarationEtatDeZone, SOURCES, PREFIXE } from './mode-demo.mjs';
 
 type Image = { largeur: number; hauteur: number; donnees: Buffer };
 
@@ -196,5 +196,47 @@ describe('protocole d’état côté application — annexe F, ÉCART-011 É-1 e
 			'/__design/V-37?etat=vide&source=etalon&differe=1000'
 		);
 		expect(adresseDeLEtat('V-37', 'vide', 'etalon', 0)).not.toContain('differe');
+	});
+
+	it('connaît trois sources, dont deux d’étalonnage', () => {
+		// `composant` est la réponse à ÉCART-013 É-1 : `etalon` sert le gel sans
+		// jamais passer par `render()`, donc sans éprouver le chemin d'une vue.
+		expect(SOURCES).toEqual(['app', 'etalon', 'composant']);
+	});
+});
+
+describe('protocole d’état de zone — ÉCART-012 point 6', () => {
+	it('déclare les six vues qui présentent leurs états côte à côte', () => {
+		for (const vue of ['V-09', 'V-35', 'V-38', 'V-39', 'V-40', 'V-41']) {
+			const declaration = declarationEtatDeZone(vue) as { protocole: string; etats: number };
+			expect(declaration, vue).not.toBeNull();
+			expect(declaration.protocole, vue).toBe('page-entiere-zone-isolee');
+		}
+	});
+
+	it('déclare les cinquante-cinq états de zone, et pas un de plus', () => {
+		const total = ['V-09', 'V-35', 'V-38', 'V-39', 'V-40', 'V-41'].reduce(
+			(n, vue) => n + ((declarationEtatDeZone(vue) as { etats: number } | null)?.etats ?? 0),
+			0
+		);
+		expect(total).toBe(55);
+	});
+
+	it('ne déclare rien pour une vue à planche — le refus reste le défaut', () => {
+		// Ne rien écrire n'ouvre rien : une vue non déclarée reste refusée en code
+		// 2 pour ses états de zone. C'est la position la plus stricte (PLAN §12).
+		for (const vue of ['V-01', 'V-07', 'V-14', 'V-37']) {
+			expect(declarationEtatDeZone(vue), vue).toBeNull();
+		}
+	});
+
+	it('n’ajoute rien à l’adresse : un état de zone se demande comme un autre', () => {
+		// La voie retenue est la ZONE COMME SÉLECTEUR : l'application sert la page
+		// entière, le banc y isole la zone. Il n'y a donc rien de particulier à
+		// mettre dans l'adresse — ce qui change est ce que le banc DÉCOUPE.
+		expect(adresseDeLEtat('V-40', 'd-deplacer')).toBe('/__design/V-40?etat=d-deplacer');
+		expect(adresseDeLEtat('V-39', 'vide-dossier-vide')).toBe(
+			'/__design/V-39?etat=vide-dossier-vide'
+		);
 	});
 });

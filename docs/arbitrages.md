@@ -331,3 +331,45 @@ persona par persona. Le banc vérifie le rendu ; il n'a jamais eu à vérifier l
 **Portée strictement bornée.** Seules les lignes `/url:` sont retirées. Toute autre réduction du
 niveau 1 est un contournement de vérification (`PLAN §12`), et `verif/banc/capture.mjs` reste en
 écriture humaine seule.
+
+---
+
+## ARB-014 — Les états de zone : la page entière servie, la même zone isolée des deux côtés
+**19 août 2026** — arbitrage délégué à l'orchestrateur. Régularise `ECART-012` point 6 et
+`ECART-014` É-1.
+
+**Le manque.** Six vues — V-09, V-35, V-38, V-39, V-40, V-41 — présentent leurs états **côte à
+côte** dans la page : 55 états qui ne sont pas des variantes d'un même écran, mais des zones
+distinctes. Le régime `app` n'avait aucun protocole pour les atteindre, et refusait en code 2.
+
+**Décision. La zone comme sélecteur.** L'application sert la **page entière** à
+`/__design/V-xx?etat=cle`, dans la condition où la zone est montrable, et le banc y isole **la même
+zone** que du côté maquette : même sélecteur, même rang, **même code**.
+
+**Motif — trois propriétés, dont deux rendent l'autre voie fausse et non seulement moins
+commode.**
+
+1. **Le rang n'a de sens que dans la page.** Un état de zone est un couple sélecteur + rang
+   (`dialog.dlg` n° 9, `#vides .vignette` n° 7). Hors de l'ordre du document complet, un rang ne
+   désigne rien.
+2. **Le contexte de mise en page fait la géométrie.** Les vingt vignettes de V-39 tirent leur
+   largeur de `grid-template-columns`, donc du nombre de leurs voisines. Rendue seule, une vignette
+   n'a pas les mêmes dimensions : on comparerait deux objets différents en croyant mesurer un
+   écart.
+3. **Rien n'est rédigé à la main.** Sélecteur et rang viennent de `verif/extraire-scenarios.mjs`,
+   et `pnpm scenarios:verifier` le prouve en régénérant.
+
+**La voie écartée — le rendu isolé.** Le mode démo ne rendrait que la zone demandée. Elle rompt la
+symétrie du protocole : référence découpée dans sa page, candidat servi comme fragment sans page.
+Elle rend le rang indéfinissable, donc exige une table clé → fragment **rédigée à la main de 55
+lignes**, qui dériverait au premier regel. Elle ferait juger au niveau 1 un arbre ARIA amputé quand
+le niveau 2 mesurerait un fragment sans contexte. Et surtout elle mettrait **l'implémenteur en
+charge du découpage par lequel il est mesuré** — la faute nommée en `ECART-011` É-1.
+
+**Ce que ça emporte.** Déclaration dans `verif/references/protocole-app.json`, bloc
+`etats_de_zone`, **écriture humaine seule**, six vues nommées, chacune avec son obligation et son
+motif. Le rapport nomme les zones à chaque exécution. **Une vue non déclarée reste refusée en code
+2** — vérifié sur une copie du dépôt privée de la déclaration de V-40.
+
+**Étalonnage : 76 couples, 55 états de zone isolés, 0 écart.** Vérifié indépendamment par
+l'orchestrateur.
