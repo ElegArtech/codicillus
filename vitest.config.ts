@@ -7,7 +7,8 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
 	test: {
 		environment: 'node',
-		include: ['src/**/*.test.ts'],
+		// `seeds/` porte la preuve d'emboîtement du jeu de semence (T-005, §3.6).
+		include: ['src/**/*.test.ts', 'seeds/**/*.test.ts'],
 		reporters: ['default']
 	}
 });
