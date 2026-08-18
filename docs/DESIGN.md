@@ -68,11 +68,21 @@ Conséquences, énoncées ici pour qu'elles soient lisibles plus tard :
    pas** à rendre les vues : il manquerait 23 classes, une règle de rôle et un jeton.
 3. Le présent document documente **les deux**, et signale systématiquement ce
    qui n'existe que dans le socle en ligne. La référence de vérité retenue pour
-   l'implémentation est le socle en ligne le plus complet, celui de **V-41**
-   (lignes 8 à 472 du fichier), par application de l'ordre de préséance.
+   l'implémentation est le socle en ligne le plus complet, celui de
+   **`mockups/V-07-accueil-contributeur.html`** (lignes 8 à 472), par
+   application de l'ordre de préséance.
 
-Aucune correction n'est apportée ici : `mockups/` est gelé. L'arbitrage
-appartient au commanditaire.
+> **Précision du 18 août 2026** — une première rédaction désignait ici **V-41**.
+> Les deux blocs sont identiques au saut de ligne final près : 19 622 octets pour
+> V-41, non terminé par un saut de ligne, contre 19 623 pour V-07. L'enjeu est nul
+> au rendu, mais réel pour un contrôle à l'octet — et la batterie P-6.1 compare
+> précisément à l'octet. La source citée est donc **V-07** partout :
+> `docs/ecarts/ECART-007.md`, `docs/errata-cadrage.md` E-01, `verif/extraire-socle.mjs`
+> et le présent paragraphe. V-07 est retenu parce qu'il est le gel le plus récent
+> et le sur-ensemble strict.
+
+Aucune correction n'est apportée à `mockups/` : il est gelé, et il le reste. Les
+corrections au cadrage vivent dans `docs/errata-cadrage.md` (ARB-006).
 
 ---
 
@@ -1011,9 +1021,21 @@ contrôlée du socle, qui est le seul endroit où une valeur littérale est admi
 | Les valeurs littérales **du fichier socle lui-même** | Le socle est la frontière : voir P-1.8 |
 
 **P-1.8 — Les valeurs littérales résiduelles du socle sont closes.**
-`mockups/socle.css` contient huit valeurs de couleur en dur hors `:root`. Elles
-sont recensées ici pour qu'un contrôle les reconnaisse comme attendues **et
-qu'aucune neuvième n'apparaisse** :
+
+> **Réénumération du 18 août 2026.** Le recensement ci-dessous portait sur
+> `mockups/socle.css`, qui n'est plus la source (E-01). Sur le socle retenu —
+> celui de V-07, installé en `src/socle.css` — il y a **27 occurrences pour 20
+> valeurs distinctes**, et non huit. Une liste close qui ne l'est que pour un
+> fichier abandonné n'est pas close. La liste faisant foi est celle du second
+> tableau ; le premier est conservé pour la traçabilité.
+>
+> **Ce recensement n'est pas ce qui contraint.** La contrainte réelle est P-6.1 :
+> `src/socle.css` est identique **à l'octet** au bloc extrait de la maquette
+> gelée. Aucune vingt-et-unième valeur ne peut donc apparaître sans faire rougir
+> la batterie, indépendamment de toute énumération. L'énumération sert à la
+> lecture humaine et à la reconnaissance des faux positifs, pas au verrou.
+
+**Recensement d'origine — `mockups/socle.css` (source abandonnée, E-01), huit valeurs :**
 
 | Valeur | Ligne | Emploi |
 |---|---|---|
@@ -1026,11 +1048,32 @@ qu'aucune neuvième n'apparaisse** :
 | `#e6eae7` | 296 | Crête de l'animation d'esquisse |
 | `#4fbf8b` | 323 | Filet de la notification de succès |
 
-Le socle en ligne en ajoute pour les quatre types de notification
-(`#e8776a`, `#7fb3d0`, `#9d94e8`) et les voiles sur fond sombre
-(`rgba(252,251,248, …)`). **Aucune valeur littérale ne s'ajoute au socle sans
-arbitrage** : la voie normale est un nouveau jeton, et un nouveau jeton est une
-modification d'une source gelée.
+**Recensement faisant foi — `src/socle.css` (socle retenu), 27 occurrences pour
+20 valeurs distinctes :**
+
+| Valeur | Occ. | Emploi |
+|---|---|---|
+| `#f0d5cf` | 1 | Trame de hachures du témoin obsolète |
+| `#e0b6ad` | 1 | Liseré interne du témoin obsolète |
+| `#fff` | 1 | Texte du bouton principal |
+| `rgba(22,34,43,.06)` | 2 | Survol des boutons discret et de menu |
+| `#e2b8b0` | 1 | Bordure de survol du bouton destructif |
+| `#dcc59a` | 1 | Bordure de la pastille brouillon |
+| `#e6eae7` | 1 | Crête de l'animation d'esquisse |
+| `#4fbf8b` | 2 | Filet de la notification de succès |
+| `#e8776a` | 2 | Filet de la notification d'erreur |
+| `#7fb3d0` | 2 | Filet de la notification d'information |
+| `#9d94e8` | 4 | Filet de la notification en cours, et bord du rouet |
+| `rgba(252,251,248,.1)` · `.16` · `.18` · `.22` · `.25` · `.3` · `.5` · `.6` · `.72` | 9 | Voiles sur fond sombre — texte secondaire, bordures, survols, jauge et rouet de la notification |
+
+Les douze valeurs qui s'ajoutent au recensement d'origine appartiennent toutes au
+**composant de notification**, absent du socle abandonné. C'est la même refonte
+que celle décrite en `ECART-007` : elle explique à la fois les 23 classes
+manquantes et ces douze littéraux.
+
+**Aucune valeur littérale ne s'ajoute au socle sans arbitrage** : la voie normale
+est un nouveau jeton, et un nouveau jeton est une modification d'une source
+gelée — donc un geste humain, tracé, suivi d'un regel.
 
 ### P-2 · Aucun jeton employé hors de son rôle
 
