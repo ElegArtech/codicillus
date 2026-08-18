@@ -38,6 +38,7 @@
 		"verif:maquette:app:zones": "node verif/maquette.mjs V-09 V-35 V-38 V-39 V-40 V-41 --contre=app --source=composant",
 		"verif:demo:hors-production": "node verif/mode-demo-hors-production.mjs",
 		"vues:feuille": "node verif/feuilles-de-vue.mjs",
+		"vues:styles": "node verif/styles-en-ligne.mjs",
 		"scenarios:extraire": "node verif/extraire-scenarios.mjs",
 		"scenarios:verifier": "node verif/extraire-scenarios.mjs --verifier",
 		"mesure:budgets": "node verif/jalon.mjs \"batterie 13 « budgets de performance »\" \"T-028\"",

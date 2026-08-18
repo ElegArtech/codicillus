@@ -31,7 +31,7 @@
 		noteParIdentifiant,
 		type Note
 	} from '../../seeds/corpus';
-	import Coquille from '$lib/coquille/Coquille.svelte';
+	import Coquille, { type Notification } from '$lib/coquille/Coquille.svelte';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
@@ -51,8 +51,23 @@
 	 * chargement de la branche qu'il charge.
 	 */
 	const BRANCHE_EN_CHARGEMENT = 'd:Applications';
-	const NOTIFICATION_CHARGEMENT =
-		"Chargement de l'arborescence d'Applications — signalé sur la branche seule";
+	/**
+	 * La notification que la maquette montre à cet instant, émise par le rail
+	 * via `railNaviguer()` → `window.notifier(texte)` (`V-37:3124`).
+	 *
+	 * DIVERGENCE DÉCLARÉE, hors des zones comparées (ARB-012). V-37 embarque un
+	 * notificateur RÉDUIT — `<div class="notif">texte</div>`, sans marque, sans
+	 * fermeture (`V-37:3080`) —, sous un commentaire qui renvoie lui-même à
+	 * V-38 : « Notifications (V-38) ». Le composant de référence est celui de
+	 * V-38 (`V-38:2263`), où la forme courte `notifier(texte)` vaut le type
+	 * « info ». C'est cette forme que la coquille amendée rend (ARB-015), donc
+	 * celle que V-37 lui passe. Le type n'est pas une décision de ce lot : il
+	 * est celui que la référence attribue à la forme courte.
+	 */
+	const NOTIFICATION_CHARGEMENT: Notification = {
+		type: 'info',
+		titre: "Chargement de l'arborescence d'Applications — signalé sur la branche seule"
+	};
 
 	const reglage = $derived(vecteur ?? {});
 	const contenu = $derived(reglage['cont'] === 'lecture' ? 'lecture' : 'bord');

@@ -1005,6 +1005,11 @@ plus fort que P-1 :
 Une feuille portée qui **diverge** de son gel n'est plus dans cette exclusion :
 P-1 lui est dû en entier, en plus du constat P-6.3.
 
+**Et une exclusion de même nature au niveau du balisage** : un attribut
+`style="…"` d'un composant `src/**/V-xx.svelte` dont la valeur figure dans la
+maquette gelée de la vue, par **P-6.4** — voir la sous-section correspondante.
+Hors de cet ensemble clos, P-1.7 s'applique intégralement.
+
 `mockups/**` n'est jamais analysé : il est gelé et sert de référence.
 
 ### P-1 · Aucune valeur en dur hors du socle
@@ -1017,7 +1022,7 @@ P-1 lui est dû en entier, en plus du constat P-6.3.
 | P-1.4 | `font-family`, `font-size`, `font-weight`, `line-height` littéraux | idem | `--f-*`, `--t-*`, `--g-*`, `--i-*` |
 | P-1.5 | `box-shadow` littéral | idem | `--o-pose` ou `--o-flotte` |
 | P-1.6 | Durée de `transition` ou d'`animation` littérale | idem | `--m-vif`, `--m-doux`, `--m-ample` |
-| P-1.7 | Style en ligne (`style="…"`) portant l'une des propriétés ci-dessus | Analyse des attributs de gabarit | Une classe de l'inventaire |
+| P-1.7 | Style en ligne (`style="…"`) portant l'une des propriétés ci-dessus, **et dont la valeur ne figure pas dans la maquette gelée de la vue** (P-6.4) | Analyse des attributs de gabarit, développés | Une classe de l'inventaire |
 
 **Exceptions admises, énumérées et closes.** Toute autre exception est un écart.
 
@@ -1136,6 +1141,7 @@ couverture). Les deux se remontent dans `docs/ecarts/`.
 | P-6.1 | La copie applicative du socle diffère de sa référence | Comparaison d'empreinte avec la référence du `GEL.md` |
 | P-6.2 | Une règle du socle est redéclarée ou surchargée dans une feuille de vue | Croisement des sélecteurs |
 | P-6.3 | Une **feuille de vue portée** diffère, ne serait-ce que d'un octet, du second bloc `<style>` de sa maquette gelée | Comparaison octet pour octet, ancrée sur le `GEL.md` |
+| P-6.4 | Un **style en ligne** d'un composant `V-xx.svelte` porte une valeur qui ne figure pas parmi les valeurs de `style` de sa maquette gelée | Appartenance à l'ensemble clos extrait du gel, ancrée sur le `GEL.md` |
 
 **Réserve à lever avant d'activer P-6.1** : la référence à retenir est le socle
 en ligne des maquettes, pas `mockups/socle.css`, qui est en retard (§0.2 et
@@ -1208,6 +1214,95 @@ d'une maquette qui a bougé sans arbitrage.
 au même titre que `src/socle.css` : reformater une feuille portée la ferait
 diverger du gel, donc rougir P-6.3. Le formatage porte sur ce que le dépôt
 écrit, jamais sur ce qu'il recopie.
+
+#### P-6.4 — le style en ligne porté, et le prolongement de P-6.3
+
+*Amendement du 19 août 2026, lot T-007d. Résout `docs/ecarts/ECART-015.md` É-3,
+tranché par **ARB-016**. Outillé par `verif/styles-en-ligne.mjs`, joué par
+`pnpm verif:jetons`. Portée : les 41 vues.*
+
+**Le constat, mesuré.** L'implémentation de V-38, V-39 et V-40 produit
+**62 constats** — 49 P-1.7, 5 P-1.3, 3 P-1.4, 3 P-1.2, 2 P-1.1 — portant **tous**
+sur des attributs `style="…"` que **la maquette gelée porte elle-même** : les
+sceaux colorés des quatre types de notification, la géométrie des esquisses de
+chargement, les boutons destructifs des dialogues. Aucun n'est décoratif : les
+retirer déplace le rendu, les garder rend la batterie rouge. C'est **la même
+contradiction que P-6.3**, au même endroit et pour la même raison — P-6.3 avait
+renversé la contrainte pour le bloc `<style>` porté, il ne couvrait pas les
+styles en ligne du **balisage** porté.
+
+**La règle, et elle est plus stricte que P-1, pas plus lâche.**
+
+> Un attribut `style="…"` d'un composant `src/**/V-xx.svelte` est admis **si et
+> seulement si la même valeur figure dans `mockups/V-xx-*.html`**.
+
+Les valeurs de `style` du fichier gelé forment un **ensemble clos**. On ne peut
+pas inventer un style : il faut qu'il soit déjà dans le gel. « Présent dans la
+référence » **implique et dépasse** « n'emploie que des jetons » — un style
+absent du gel reste un écart, quelle qu'en soit la justification, y compris
+lorsqu'il n'emploie que des jetons du socle.
+
+**L'ensemble est par vue.** Le gel de V-39 ne prouve rien de V-40 :
+`border-radius:3px` appartient au premier, pas au second, et l'écrire dans V-40
+est un constat.
+
+**Ce que l'ensemble contient — et il ne peut pas contenir moins.** Sur les vues
+mesurées, la quasi-totalité des styles en ligne du rendu final sont posés par le
+**script** de la maquette, jamais écrits dans son balisage (`ECART-013` É-3, le
+`line-height:0` des icônes de menu). Quatre formes sont donc lues :
+
+| Forme lue dans le gel | Exemple |
+|---|---|
+| `style="…"` du balisage | `V-40:1190`, `flex:1;min-width:0` |
+| `x.style.cssText = <expr>` | `V-39:2960`, `"width:" + w + ";height:15px;border-radius:3px"` |
+| `x.style.propriété = <expr>` | `V-39:3041`, `b.style.paddingLeft = (p[0] * 18) + "px"` |
+| `x.setAttribute("style", …)`, `x.style.setProperty(…)` | — |
+
+**Ce que l'ensemble ne contient pas** : les règles du bloc `<style>` de la
+maquette. L'ensemble clos est celui des **valeurs de `style`**, pas celui des
+déclarations CSS de la vue — celles-là relèvent de P-6.3, et les verser au
+balisage ouvrirait le gel entier.
+
+**La comparaison porte sur la déclaration, pas sur l'attribut entier**, et ce
+n'est pas un choix de commodité : le gel écrit la même mise en forme tantôt en
+un attribut, tantôt en un `cssText`, tantôt en quatre affectations séparées,
+là où un squelette sans hydratation n'a qu'un attribut. Un attribut du composant
+n'a donc en général aucun homologue textuel dans le gel, alors que chacune de
+ses déclarations en a un, exactement. **L'ordre des déclarations en devient sans
+effet** — un ensemble n'a pas d'ordre.
+
+**Normalisation, liste close.** Espaces, ordre des déclarations, point-virgule
+final, casse des unités et des couleurs hexadécimales. Rien d'autre : chaque
+normalisation supplémentaire élargit l'ensemble des styles admis. `0px` n'est
+pas `0`, `12.0px` n'est pas `12px`.
+
+**Les valeurs calculées : un marqueur, qui n'est pas un joker.**
+`l.style.left = s[0] + "%"` ne dit pas *quelle* valeur, il dit sa **forme**.
+Le composant qui écrit `style="left:{a.gauche}%"` dit la même forme. Chaque
+portion non littérale est donc réduite au même marqueur des deux côtés, et la
+comparaison reste une **égalité de chaînes**, marqueur compris : un gel qui pose
+`width:‹calculé›` **n'admet pas** un composant qui écrit `width:64%`.
+
+**Le nom de fichier est le verrou, et il ne s'évade pas dans les deux sens.**
+Est un composant de vue **tout fichier de `src/**` nommé `V-xx.svelte`**, et
+rien d'autre — la même famille de noms que la feuille portée de P-6.3.
+
+| Tentative | Ce qui se passe |
+|---|---|
+| Écrire ses propres styles en ligne dans `src/lib/…/Machin.svelte` | Aucun gel ne lui répond : P-1.7 s'y applique en entier |
+| Renommer un fichier en `V-38.svelte` pour hériter du gel de V-38 | Le mode démo sert alors *ce* fichier pour V-38, et le banc le compare à la maquette de V-38, pixel pour pixel. Hériter du gel, c'est se soumettre à lui |
+| Déplacer les littéraux dans un `.ts` importé | **Fonctionnerait**, et c'est le contournement de vérification de `PLAN §12`. Il est nommé ici plutôt qu'emprunté (`ECART-015` É-3) |
+
+**Le rapport nomme ce qui prouve quoi, à chaque exécution** — même garde-fou
+qu'ARB-012 impose aux zones comparées : `pnpm verif:jetons` imprime, composant
+par composant, la maquette qui répond de ses styles, la taille de son ensemble
+clos et le nombre de déclarations admises. Une dispense silencieuse est
+impossible.
+
+**Ce que P-6.4 n'éprouve pas.** Il ne prouve pas que le style est posé sur le
+**même élément** que dans le gel — cette preuve-là est celle du banc, au pixel
+près (`pnpm verif:maquette V-xx --contre=app`). Les deux contrôles sont
+complémentaires, aucun ne remplace l'autre.
 
 ### P-7 · Aucune information portée par la couleur seule (RG-M18-09)
 

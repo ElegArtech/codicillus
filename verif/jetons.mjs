@@ -31,6 +31,15 @@
  *       dépasse « n'emploie que des jetons ». Hors de ce bloc, P-1 s'applique
  *       intégralement. Détail : `verif/feuilles-de-vue.mjs`.
  *
+ *   (d) LE STYLE EN LIGNE PROUVÉ PAR LE GEL — P-6.4.
+ *       Un attribut `style="…"` d'un composant `src/**\/V-xx.svelte` est admis
+ *       si et seulement si la même valeur figure dans `mockups/V-xx-*.html`,
+ *       balisage ET styles posés par ses scripts. C'est la résolution
+ *       d'`ECART-015` É-3, tranchée par ARB-016 : la même logique que P-6.3,
+ *       bornée de la même façon, étendue du bloc `<style>` porté au balisage
+ *       porté. Hors de cet ensemble clos, P-1.7 et les autres contrôles P-1
+ *       s'appliquent intégralement. Détail : `verif/styles-en-ligne.mjs`.
+ *
  * Ce script est un INSTRUMENT DE MESURE. Le contournement le plus économique
  * d'une vérification est de modifier la vérification
  * (règles/workflow_agentic.md §4.10).
@@ -40,6 +49,14 @@ import { join, relative, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { racine, CIBLE_SOCLE, CIBLE_POLICES, installer } from './extraire-socle.mjs';
 import { DOSSIER_VUES, verifier as verifierFeuillesDeVue } from './feuilles-de-vue.mjs';
+import {
+	declarationsDe,
+	developper,
+	ensembleDuGel,
+	liaisonsDuComposant,
+	lisible,
+	vueDe
+} from './styles-en-ligne.mjs';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Le vocabulaire des interdits — docs/DESIGN.md §5, P-1
@@ -252,8 +269,14 @@ const FONDERIES_DISTANTES = [
 
 const constats = [];
 
-/** @param {{controle: string, fichier: string, ligne: number, message: string}} c */
-const releve = (c) => constats.push(c);
+/**
+ * @param {{controle: string, fichier: string, ligne: number, message: string}} c
+ *
+ * Le marqueur des portions calculées (`verif/styles-en-ligne.mjs`) est rendu
+ * lisible ici, et nulle part ailleurs : il doit rester un caractère impossible
+ * à écrire dans une source pendant toute l'analyse.
+ */
+const releve = (c) => constats.push({ ...c, message: lisible(c.message) });
 
 const ligneDe = (texte, index) => texte.slice(0, index).split('\n').length;
 
@@ -396,49 +419,95 @@ function analyserCss(fragment, fichier, decalageLigne, controlePrefixe = '') {
 	}
 }
 
-/** P-1.7 — style en ligne portant l'une des propriétés contraintes. */
-function analyserStylesEnLigne(source, fichier) {
-	const contraintes = new Set([
-		...PROPS_ESPACEMENT,
-		...PROPS_RAYON,
-		...PROPS_TYPO,
-		...PROPS_OMBRE,
-		...PROPS_DUREE,
-		...PROPS_TRAIT,
-		'color',
-		'background',
-		'background-color',
-		'border',
-		'border-color',
-		'outline',
-		'outline-color',
-		'fill',
-		'stroke'
-	]);
+/**
+ * Les propriétés que P-1.7 refuse de voir dans un attribut `style`. Exportée :
+ * `verif/styles-en-ligne.mjs` s'en sert pour dire, en diagnostic, laquelle de
+ * ses déclarations hors du gel emporterait un constat.
+ */
+export const PROPRIETES_CONTRAINTES = new Set([
+	...PROPS_ESPACEMENT,
+	...PROPS_RAYON,
+	...PROPS_TYPO,
+	...PROPS_OMBRE,
+	...PROPS_DUREE,
+	...PROPS_TRAIT,
+	'color',
+	'background',
+	'background-color',
+	'border',
+	'border-color',
+	'outline',
+	'outline-color',
+	'fill',
+	'stroke'
+]);
+
+/**
+ * P-1.7 — style en ligne portant l'une des propriétés contraintes, ET P-6.4 —
+ * sauf si la maquette gelée de la vue porte elle-même cette valeur (ARB-016).
+ *
+ * L'ATTRIBUT EST DÉVELOPPÉ AVANT D'ÊTRE ANALYSÉ. Un attribut de composant
+ * Svelte n'est pas un texte CSS : `style="width:{l};height:15px{pause}"` porte
+ * des interpolations, dont l'une peut ELLE-MÊME ajouter une déclaration.
+ * `verif/styles-en-ligne.mjs` en rend les formes possibles, en réduisant au
+ * marqueur ce qui n'est pas littéral. Le développement est strictement PLUS
+ * SÉVÈRE que la lecture naïve précédente : un `style="color:{c}"` dont `c` est
+ * lié à `'red'` relève désormais P-1.1, là où le découpage par `;` ne voyait
+ * qu'un accolade opaque.
+ *
+ * @param {string} source
+ * @param {string} fichier
+ * @param {{ maquette: string, declarations: Set<string> } | null} preuve
+ *   l'ensemble clos de la maquette gelée de la vue, ou `null` quand le fichier
+ *   n'est pas un composant de vue — il n'a alors rien qui le prouve, et P-1.7
+ *   s'y applique en entier.
+ * @returns {number} le nombre de déclarations admises par le gel
+ */
+function analyserStylesEnLigne(source, fichier, preuve = null) {
+	const liaisons = preuve ? liaisonsDuComposant(source) : new Map();
+	let admises = 0;
 
 	// style="…" et la directive Svelte style:propriete="…"
 	const re = /\bstyle(?::([a-z-]+))?\s*=\s*("([^"]*)"|'([^']*)'|\{([^}]*)\})/gi;
 	for (const m of source.matchAll(re)) {
 		const ligne = ligneDe(source, m.index);
 		const brut = m[3] ?? m[4] ?? m[5] ?? '';
-		const declarations = m[1] ? [[m[1], brut]] : brut.split(';').map((d) => d.split(/:(.*)/s));
-		for (const [prop, valeur] of declarations) {
-			if (!prop || valeur === undefined) continue;
-			const nom = prop.trim().toLowerCase();
-			if (!contraintes.has(nom)) continue;
-			releve({
-				controle: 'P-1.7',
-				fichier,
-				ligne,
-				message:
-					`style en ligne portant « ${nom} » — une mise en forme contrainte passe ` +
-					"par une classe de l'inventaire, jamais par un attribut style"
-			});
-			analyserDeclaration(nom, valeur, (controle, message) =>
-				releve({ controle: `${controle} (en ligne)`, fichier, ligne, message })
-			);
+		const texte = m[1] ? `${m[1]}:${brut}` : brut;
+		const dejaVues = new Set();
+		for (const forme of developper(texte, liaisons)) {
+			for (const decl of declarationsDe(forme)) {
+				if (dejaVues.has(decl)) continue;
+				dejaVues.add(decl);
+				const coupe = decl.indexOf(':');
+				const nom = decl.slice(0, coupe);
+				const valeur = decl.slice(coupe + 1);
+				if (!PROPRIETES_CONTRAINTES.has(nom)) continue;
+				// P-6.4 — « présent dans la référence » implique et dépasse
+				// « n'emploie que des jetons ». Le contrôle est plus strict que
+				// P-1, pas plus lâche : on ne peut pas inventer un style.
+				if (preuve?.declarations.has(decl)) {
+					admises++;
+					continue;
+				}
+				releve({
+					controle: 'P-1.7',
+					fichier,
+					ligne,
+					message:
+						`style en ligne « ${decl} » — une mise en forme contrainte passe ` +
+						"par une classe de l'inventaire, jamais par un attribut style" +
+						(preuve
+							? `,\n      et cette valeur ne figure pas parmi les ${preuve.declarations.size} ` +
+								`valeurs de style de ${preuve.maquette} (P-6.4, ARB-016)`
+							: '')
+				});
+				analyserDeclaration(nom, valeur, (controle, message) =>
+					releve({ controle: `${controle} (en ligne)`, fichier, ligne, message })
+				);
+			}
 		}
 	}
+	return admises;
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -612,9 +681,28 @@ function executer() {
 		(f) => !exclues.has(f)
 	);
 
+	/* ── (d) P-6.4 — l'ensemble clos des styles en ligne du gel ──────────────
+	   ARB-016, `ECART-015` É-3. Un composant `V-xx.svelte` a une maquette qui
+	   répond de ses styles en ligne ; tout autre fichier n'en a aucune, et P-1.7
+	   s'y applique en entier. Une maquette illisible ou divergente du GEL.md ne
+	   prouve RIEN : le constat est relevé, et le composant reste analysé comme
+	   s'il n'avait pas de preuve. */
+	/** @type {{fichier: string, vue: string, maquette: string, au_gel: number, admises: number}[]} */
+	const composantsDeVueVus = [];
+
 	for (const chemin of aAnalyser) {
 		const source = readFileSync(chemin, 'utf8');
 		const nom = rel(chemin);
+		const vue = vueDe(chemin);
+		/** @type {{maquette: string, declarations: Set<string>} | null} */
+		let preuve = null;
+		if (vue) {
+			try {
+				preuve = ensembleDuGel(vue);
+			} catch (erreur) {
+				releve({ controle: 'P-6.4', fichier: nom, ligne: 0, message: erreur.message });
+			}
+		}
 
 		/** @type {{css: string, ligne: number}[]} */
 		const fragments = [];
@@ -645,7 +733,18 @@ function executer() {
 			}
 		}
 
-		if (extname(chemin) !== '.css') analyserStylesEnLigne(source, nom);
+		if (extname(chemin) !== '.css') {
+			const admises = analyserStylesEnLigne(source, nom, preuve);
+			if (vue && preuve) {
+				composantsDeVueVus.push({
+					fichier: nom,
+					vue,
+					maquette: preuve.maquette,
+					au_gel: preuve.declarations.size,
+					admises
+				});
+			}
+		}
 
 		// RG-NF-08 — aucune fonderie distante dans les gabarits de l'application.
 		for (const motif of FONDERIES_DISTANTES) {
@@ -764,6 +863,23 @@ function executer() {
 				? feuilles.map((f) => `${f.fichier} ${f.identique ? '= gel' : 'DIVERGENTE'}`).join(', ')
 				: `aucune (convention : ${DOSSIER_VUES}/V-xx.css, P-6.3)`)
 	);
+	/* P-6.4 — LE RAPPORT NOMME CE QUI PROUVE QUOI, à chaque exécution. C'est le
+	   même garde-fou que celui d'ARB-012 pour les zones : un style admis par le
+	   gel ne peut pas l'être en silence, ni sans que la maquette qui le prouve
+	   soit citée. */
+	console.log(
+		`  composants de vue, styles en ligne prouvés par le gel (P-6.4) : ` +
+			(composantsDeVueVus.length
+				? '\n' +
+					composantsDeVueVus
+						.map(
+							(c) =>
+								`      ${c.fichier} ← ${c.maquette} : ${c.au_gel} valeur(s) de style au gel, ` +
+								`${c.admises} déclaration(s) admise(s)`
+						)
+						.join('\n')
+				: `aucun (convention : src/**/V-xx.svelte, ARB-016)`)
+	);
 	console.log(`  polices servies localement : ${CIBLE_POLICES}/`);
 	console.log(`  fichiers analysés : ${aAnalyser.length}`);
 
@@ -798,6 +914,13 @@ function executer() {
 			(feuilles.length
 				? `${feuilles.length} feuille(s), toutes identiques au gel`
 				: 'aucune feuille portée à ce jour')
+	);
+	console.log(
+		`  (d) P-6.4 styles en ligne prouvés par le gel : ` +
+			(composantsDeVueVus.length
+				? `${composantsDeVueVus.reduce((n, c) => n + c.admises, 0)} déclaration(s) admise(s) sur ` +
+					`${composantsDeVueVus.length} composant(s) de vue, aucune hors du gel`
+				: 'aucun composant de vue à ce jour')
 	);
 	console.log('\n  Non outillé à ce lot, et déclaré comme tel :');
 	for (const [controle, motif] of NON_OUTILLES) console.log(`    ${controle} — ${motif}`);

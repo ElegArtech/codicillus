@@ -52,7 +52,34 @@
  *                                               → 404
  *
  * ═════════════════════════════════════════════════════════════════════════
- * DEUX SOURCES, ET UNE SEULE PROUVE UNE CONFORMITÉ
+ * LA RÈGLE D'ÉTALONNAGE, EN TÊTE DES SOURCES — `ECART-015` É-5
+ *
+ *   UN ÉTALON NE VAUT QUE POUR LES PORTIONS DE CHEMIN QU'IL EMPRUNTE
+ *   RÉELLEMENT, ET POUR LES PROPRIÉTÉS QUE LE CANDIDAT NE POSSÈDE PAS DÉJÀ.
+ *
+ * Trois occurrences du même mécanisme, dans l'ordre :
+ *
+ *   1. `ECART-013` É-1 — l'étalon n'empruntait pas `render()` : tout composant
+ *      rendait 500 sans que l'étalonnage ne le voie. Révélé par T-101, au
+ *      premier composant réel.
+ *   2. `ECART-014` — l'exécutant a ÉNUMÉRÉ les chemins non empruntés par
+ *      `composant`. L'énumération elle-même a servi de révélateur : la seule
+ *      fois où le trou a été vu AVANT de mordre.
+ *   3. `ECART-015` É-5 — l'étalon POSSÈDE ce dont l'implémentation est démunie :
+ *      du JavaScript. `V-40 --source=composant` rejoue le corps du gel avec ses
+ *      scripts, entre donc en modalité tout seul, et sort conforme là où
+ *      l'implémentation échouait sur les dix états. Révélé par T-102, au
+ *      premier dialogue modal.
+ *
+ * La seconde moitié de la règle est la plus contre-intuitive : UN ÉTALON TROP
+ * CAPABLE EST AVEUGLE EXACTEMENT LÀ OÙ LE CANDIDAT EST DÉMUNI. Tout contrat
+ * d'instrument doit donc exiger l'énumération explicite de ce que l'étalon
+ * n'emprunte pas ET de ce qu'il possède en trop. Elle est tenue dans
+ * `verif/references/protocole-app.json`, bloc `sources`, champ
+ * `n_eprouve_pas`, et le banc la réimprime à chaque exécution.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * TROIS SOURCES, ET UNE SEULE PROUVE UNE CONFORMITÉ
  *
  *   source=app     — l'implémentation de la vue par l'application, nourrie de
  *                    `seeds/corpus.ts`. C'est le régime de conformité. Aucune
@@ -79,7 +106,9 @@
  *                    fonctions qu'un lot de vue : `ssrLoadModule` du graphe SSR
  *                    de Vite, `render()` de `svelte/server`, le contrat de
  *                    propriétés, `corpusPourVue()`, la mise en réponse. Ce
- *                    qu'elle N'emprunte PAS est écrit à `servirEtalon()`.
+ *                    qu'elle N'emprunte PAS est écrit à `servirEtalon()` — et
+ *                    ce qu'elle POSSÈDE EN TROP, les scripts du gel, est le
+ *                    trou d'`ECART-015` É-5 ci-dessus.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * CE QUE LA ROUTE NE FAIT PAS
@@ -175,6 +204,49 @@ export function adresseDeLEtat(vue, etat, source = 'app', differeMs = 0) {
  */
 export function declarationEtatDeZone(vue) {
 	return PROTOCOLE.etats_de_zone?.vues?.[vue] ?? null;
+}
+
+/* ── La révélation d'un état ────────────────────────────────────────────────
+   ARB-017, `ECART-015` É-4. Certaines propriétés du document mesuré ne
+   s'atteignent pas déclarativement : la COUCHE SUPÉRIEURE d'un `dialog` en est
+   une. `open` n'est pas `showModal()` — sans elle, la zone `dialog.dlg` de V-40
+   fait 1440×901 au lieu de 1440×900 et le voile n'existe pas.
+
+   Le banc les établit lui-même, DES DEUX CÔTÉS, par un code unique
+   (`verif/banc/revelation.mjs`), exactement comme il actionne déjà le clic des
+   déclencheurs (`ECART-014` É-3) : le geste appartient au banc, pas au
+   candidat. Exiger de l'application qu'elle entre en modalité, ce serait exiger
+   du JavaScript d'un squelette statique — donc contredire ARB-011 pour
+   satisfaire une mesure.
+
+   UNE VUE SANS DÉCLARATION N'EST JAMAIS RÉVÉLÉE. Ne rien écrire n'ouvre rien,
+   et un agent d'exécution n'ajoute jamais une vue ici pour faire taire un
+   rouge (PLAN §12). */
+
+/**
+ * La déclaration de révélation d'une vue, ou `null` si elle n'en a pas.
+ * @param {string} vue
+ * @returns {{ revelation: string, propriete: string, obligation: string,
+ *             motif: string, arbitrage: string } | null}
+ */
+export function declarationRevelation(vue) {
+	return PROTOCOLE.revelations?.vues?.[vue] ?? null;
+}
+
+/**
+ * Ce qu'une source d'étalonnage N'ÉPROUVE PAS — la règle d'`ECART-015` É-5,
+ * inscrite en tête des sources et rendue lisible par le banc à chaque
+ * exécution. Voir `protocole-app.json`, bloc `sources`.
+ * @param {string} source
+ * @returns {{ prouve: string, n_eprouve_pas: string[] } | null}
+ */
+export function limitesDeLaSource(source) {
+	const declaration = PROTOCOLE.sources?.[source];
+	if (!declaration || typeof declaration === 'string') return null;
+	return {
+		prouve: declaration.prouve ?? '',
+		n_eprouve_pas: declaration.n_eprouve_pas ?? []
+	};
 }
 
 /* ── Lecture des scénarios ──────────────────────────────────────────────────
@@ -307,7 +379,17 @@ function refuser(reponse, code, titre, lignes) {
    par l'adresse — celle qu'une vue implémentée, qui rend l'état et jamais la
    transition (ARB-011), devra honorer. Il n'y a rien à éprouver tant qu'il n'y a
    pas de vue : c'est une portion de chemin non empruntée, et elle est nommée
-   plutôt que passée sous silence (ÉCART-013 É-1). */
+   plutôt que passée sous silence (ÉCART-013 É-1).
+
+   CE QUI A MORDU DEPUIS, ET QUI EST DE NATURE DIFFÉRENTE. Le clic rejoué ici
+   appelle `showModal()`, parce que le gel a ses scripts : l'étalon entre donc en
+   modalité TOUT SEUL, et il ne peut pas éprouver une contrainte qui ne mord que
+   sur un candidat sans JavaScript. `V-40 --source=composant` sortait conforme là
+   où l'implémentation échouait sur ses dix états, faute de couche supérieure.
+   C'est `ECART-015` É-5, la troisième occurrence de la règle d'étalonnage écrite
+   en tête de ce fichier, et la première où le trou n'était pas un chemin non
+   emprunté mais une PROPRIÉTÉ POSSÉDÉE EN TROP. Résolu, non par l'étalon, mais
+   par la révélation du banc (ARB-017, `verif/banc/revelation.mjs`). */
 /**
  * @param {{ cle: string }} etat
  * @param {Record<string, unknown>} vecteur
