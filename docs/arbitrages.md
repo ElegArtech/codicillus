@@ -300,3 +300,34 @@ au lot correspondant.
 comparées à chaque exécution ; une vue sans déclaration de zones est comparée **page entière**, par
 défaut. Un agent bloqué sur un rouge ne restreint jamais une zone — c'est le contournement de
 vérification que `PLAN §12` nomme.
+
+---
+
+## ARB-013 — Les adresses sont retirées de la comparaison de structure
+**18 août 2026** — arbitrage délégué à l'orchestrateur. Répond à `ECART-013` É-5.
+
+**Le conflit.** Le niveau 1 du banc compare l'instantané ARIA, qui imprime `/url: "#"` pour chaque
+lien. Les liens de l'implémentation doivent porter les adresses de `docs/routes.md`. Toute adresse
+réelle fait donc **échouer la structure**, en échec sec et sans tolérance.
+
+Conséquence si rien n'est décidé : **le produit devrait porter des liens morts pour rester
+conforme.**
+
+**Décision.** Les lignes `/url:` sont retirées de l'instantané avant comparaison. Le reste du
+niveau 1 — rôles, repères, noms accessibles, hiérarchie des titres, ordre des blocs nommés — est
+comparé sans aucune tolérance, comme avant.
+
+**Motif, et il est de fait, pas de confort.** Les 41 maquettes gelées ne portent **aucune
+liaison** : sur 681 attributs `href` des fichiers de vue, **681 valent `#`**. Zéro lien inter-vue.
+C'est un artefact du régime assisté — chaque vue a été produite isolément, la liaison n'était pas
+dans son périmètre (`ECART-003`) — et non une décision de conception. La référence imposerait au
+produit un défaut qu'elle ne tient elle-même que par accident de fabrication.
+
+**Ce n'est pas un trou de vérification.** L'autorité sur les adresses est `docs/routes.md` :
+dérivation tracée, chaque route justifiée par une source citée, arbitrée par ARB-001, ARB-002,
+ARB-003 et ARB-007. C'est elle qui les vérifie, et la batterie 6 (étanchéité) les éprouve
+persona par persona. Le banc vérifie le rendu ; il n'a jamais eu à vérifier le routage.
+
+**Portée strictement bornée.** Seules les lignes `/url:` sont retirées. Toute autre réduction du
+niveau 1 est un contournement de vérification (`PLAN §12`), et `verif/banc/capture.mjs` reste en
+écriture humaine seule.

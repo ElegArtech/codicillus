@@ -343,7 +343,14 @@ async function servirApp(serveur, reponse, vue, cleEtat) {
 		return;
 	}
 
-	const { render } = await import('svelte/server');
+	/* ÉCART-013 É-1 — `render` DOIT venir du graphe de modules de Vite, jamais de
+	   l'exemplaire ESM de Node. Le composant est chargé par ssrLoadModule() ; deux
+	   exemplaires de `svelte/internal/server` coexisteraient, `ssr_context` serait nul
+	   dans push_element, et TOUT composant rendrait 500 — y compris `<p>essai</p>`.
+	   L'étalonnage `--source=etalon` ne l'a jamais rencontré : il sert la maquette
+	   gelée sans passer par render(). C'est le trou de cet étalonnage, et il est
+	   comblé par le contrôle `--source=composant` (verif/mode-demo-rend.mjs). */
+	const { render } = await serveur.ssrLoadModule('svelte/server');
 	const module = await serveur.ssrLoadModule(`/${composant}`);
 	const semence = await serveur.ssrLoadModule('/seeds/corpus.ts');
 	const rendu = render(module.default, {
@@ -351,7 +358,7 @@ async function servirApp(serveur, reponse, vue, cleEtat) {
 	});
 
 	const feuilleDeVue = existsSync(join(racine, DOSSIER_VUES, `${vue}.css`))
-		? `<link rel="stylesheet" href="/${DOSSIER_VUES}/${vue}.css">`
+		? `<link rel="stylesheet" href="/${DOSSIER_VUES}/${vue}.css?direct">`
 		: '';
 	repondre(
 		reponse,
@@ -360,7 +367,7 @@ async function servirApp(serveur, reponse, vue, cleEtat) {
 			`<meta name="viewport" content="width=device-width, initial-scale=1">` +
 			`<title>${echapper(scenario.titre ?? vue)} — mode démo</title>` +
 			`<link rel="stylesheet" href="/polices/polices.css">` +
-			`<link rel="stylesheet" href="/src/socle.css">` +
+			`<link rel="stylesheet" href="/src/socle.css?direct">` +
 			feuilleDeVue +
 			rendu.head +
 			`</head><body>${rendu.body}</body></html>`
