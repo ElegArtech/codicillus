@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Réinitialiser son mot de passe — Codicillus</title>
+<link rel="stylesheet" href="polices/polices.css">
+<style>/* ==========================================================================
+   CODICILLUS — SOCLE
+   Jetons et composants communs. Source unique de vérité pour les 41 vues.
+   Aucune valeur arbitraire dans les écrans : tout passe par un jeton nommé.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. JETONS
+   -------------------------------------------------------------------------- */
+:root {
+  /* --- Couleur : encres ------------------------------------------------- */
+  --c-encre:        #16222b;   /* texte principal */
+  --c-encre-2:      #46585f;   /* texte secondaire */
+  --c-encre-3:      #536066;   /* texte tertiaire, métadonnées — assombri le
+                                  16/08/2026 : #71838a ne donnait que 2,75:1
+                                  sur le fond creux, là où RG-M18-07 exige
+                                  4,5:1 pour un texte de 11 px. Teinte
+                                  conservée, contraste porté à 4,54:1 au pire
+                                  des quatre surfaces. */
+  --c-encre-4:      #93a2a6;   /* désactivé, placeholder */
+
+  /* --- Couleur : surfaces ----------------------------------------------- */
+  --c-fond:         #e2e7e4;   /* fond d'application */
+  --c-fond-creux:   #d3d9d6;   /* zones en retrait, rail */
+  --c-papier:       #fcfbf8;   /* surface de lecture et cartes */
+  --c-papier-2:     #f5f4ef;   /* surface secondaire, en-têtes de tableau */
+
+  /* --- Couleur : traits -------------------------------------------------- */
+  --c-trait:        #cbd3d0;   /* bordure standard */
+  --c-trait-fin:    #e0e5e2;   /* séparateur discret */
+  --c-trait-fort:   #9aa7a3;   /* bordure appuyée */
+
+  /* --- Couleur : accent (violet d'encre) --------------------------------- */
+  --c-accent:       #453ba0;
+  --c-accent-fonce: #322b78;
+  --c-accent-voile: #edecf8;
+  --c-accent-trait: #c9c5e8;
+
+  /* --- Couleur : fraîcheur ----------------------------------------------- */
+  --c-frais:        #1d6b4a;
+  --c-frais-voile:  #e4efe8;
+  --c-vieil:        #8f5c00;
+  --c-vieil-voile:  #f6eedd;
+  --c-obsolete:     #a52c1b;
+  --c-obsolete-voile:#f7e7e3;
+
+  /* --- Couleur : sémantique ---------------------------------------------- */
+  --c-info:         #1b5c86;
+  --c-info-voile:   #e4eef4;
+  --c-alerte:       #8f5c00;
+  --c-alerte-voile: #f6eedd;
+  --c-danger:       #a52c1b;
+  --c-danger-voile: #f7e7e3;
+
+  /* --- Typographie : familles -------------------------------------------- */
+  --f-ui:      "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-lecture: "Literata", Georgia, "Times New Roman", serif;
+  --f-donnee:  "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* --- Typographie : échelle --------------------------------------------- */
+  --t-micro:  0.6875rem;  /* 11px — étiquettes mono capitales */
+  --t-mini:   0.75rem;    /* 12px — métadonnées */
+  --t-petit:  0.8125rem;  /* 13px — interface secondaire */
+  --t-base:   0.9375rem;  /* 15px — interface */
+  --t-lect:   1.0625rem;  /* 17px — corps rédigé */
+  --t-t3:     1.125rem;
+  --t-t2:     1.375rem;
+  --t-t1:     1.75rem;
+  --t-titre:  2.125rem;   /* titre de note */
+
+  /* --- Typographie : interlignes et graisses ------------------------------ */
+  --i-serre:  1.2;
+  --i-ui:     1.45;
+  --i-lect:   1.72;
+  --g-normal: 400;
+  --g-moyen:  500;
+  --g-fort:   600;
+  --g-lourd:  700;
+
+  /* --- Espacement --------------------------------------------------------- */
+  --e-0: 2px;  --e-1: 4px;  --e-2: 8px;  --e-3: 12px;
+  --e-4: 16px; --e-5: 24px; --e-6: 32px; --e-7: 48px; --e-8: 64px;
+
+  /* --- Rayons ------------------------------------------------------------- */
+  --r-0: 0;    --r-1: 2px;  --r-2: 4px;  --r-3: 8px;
+
+  /* --- Élévations ---------------------------------------------------------- */
+  --o-pose:   0 1px 2px rgba(22, 34, 43, .07);
+  --o-flotte: 0 6px 20px -4px rgba(22, 34, 43, .18), 0 2px 6px rgba(22, 34, 43, .08);
+
+  /* --- Dimensions de structure --------------------------------------------- */
+  --l-rail:     248px;
+  --l-sommaire: 204px;
+  --l-lecture:  680px;   /* mesure du texte : confort de lecture, non maximisé */
+  --l-large:    900px;   /* débord des objets denses : code, tableaux, schémas */
+  --l-panneaux: 292px;
+  --l-barre:    52px;
+
+  /* --- Mouvement ------------------------------------------------------------ */
+  --m-vif:   120ms cubic-bezier(.2,.7,.4,1);
+  --m-doux:  240ms cubic-bezier(.2,.7,.4,1);
+  --m-ample: 520ms cubic-bezier(.16,.85,.3,1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --m-vif: 1ms; --m-doux: 1ms; --m-ample: 1ms; }
+  * { animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* --------------------------------------------------------------------------
+   2. BASE
+   -------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* L'attribut hidden doit primer sur toute mise en page en flex ou grid. */
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--c-fond);
+  color: var(--c-encre);
+  font-family: var(--f-ui);
+  font-size: var(--t-base);
+  line-height: var(--i-ui);
+  font-weight: var(--g-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+  border-radius: var(--r-1);
+}
+
+::selection { background: var(--c-accent-voile); }
+
+.saut-contenu {
+  position: absolute; left: var(--e-2); top: -60px; z-index: 200;
+  background: var(--c-encre); color: var(--c-papier);
+  padding: var(--e-2) var(--e-4); border-radius: var(--r-2);
+  text-decoration: none; transition: top var(--m-vif);
+}
+.saut-contenu:focus { top: var(--e-2); }
+
+.hors-ecran {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   3. ÉTIQUETTE MONO — le label d'instrument, utilisé partout
+   -------------------------------------------------------------------------- */
+.etiq {
+  font-family: var(--f-donnee);
+  font-size: var(--t-micro);
+  font-weight: var(--g-moyen);
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--c-encre-3);
+}
+
+/* --------------------------------------------------------------------------
+   4. TÉMOIN DE FRAÎCHEUR — la signature du produit
+   Jauge à trois barres : 3 pleines = frais, 2 = vieillissant, 1 + hachures =
+   obsolète. La forme porte l'information ; la couleur ne fait que la répéter.
+   -------------------------------------------------------------------------- */
+.temoin {
+  display: inline-flex; align-items: center; gap: var(--e-2);
+  font-family: var(--f-donnee);
+  font-size: var(--t-mini);
+  font-weight: var(--g-moyen);
+  line-height: 1;
+  white-space: nowrap;
+}
+.temoin__jauge {
+  display: inline-flex; align-items: flex-end; gap: 2px; height: 13px;
+  flex: none;
+}
+.temoin__jauge i {
+  display: block; width: 4px; border-radius: 1px;
+  border: 1px solid currentColor; background: transparent;
+}
+.temoin__jauge i:nth-child(1) { height: 6px; }
+.temoin__jauge i:nth-child(2) { height: 10px; }
+.temoin__jauge i:nth-child(3) { height: 13px; }
+.temoin__jauge i.plein { background: currentColor; }
+
+.temoin--frais  { color: var(--c-frais); }
+.temoin--vieil  { color: var(--c-vieil); }
+.temoin--obs    { color: var(--c-obsolete); }
+
+/* Le niveau obsolète porte en plus un hachurage : reconnaissable de loin,
+   et lisible en niveaux de gris comme en vision périphérique. */
+.temoin--obs .temoin__txt {
+  padding: 2px var(--e-2);
+  border-radius: var(--r-1);
+  background:
+    repeating-linear-gradient(135deg,
+      var(--c-obsolete-voile) 0 5px,
+      #f0d5cf 5px 10px);
+  box-shadow: inset 0 0 0 1px #e0b6ad;
+}
+
+/* --------------------------------------------------------------------------
+   5. BOUTONS
+   -------------------------------------------------------------------------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--e-2);
+  font-family: var(--f-ui); font-size: var(--t-petit); font-weight: var(--g-fort);
+  line-height: 1; letter-spacing: .005em;
+  padding: 9px var(--e-3);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-2);
+  background: var(--c-papier);
+  color: var(--c-encre);
+  cursor: pointer;
+  transition: background var(--m-vif), border-color var(--m-vif), color var(--m-vif), transform var(--m-vif);
+}
+.btn:hover { background: var(--c-papier-2); border-color: var(--c-trait-fort); }
+.btn:active { transform: translateY(1px); }
+
+.btn--principal {
+  background: var(--c-accent); border-color: var(--c-accent); color: #fff;
+}
+.btn--principal:hover { background: var(--c-accent-fonce); border-color: var(--c-accent-fonce); }
+
+.btn--discret {
+  background: transparent; border-color: transparent; color: var(--c-encre-2);
+  font-weight: var(--g-moyen);
+}
+.btn--discret:hover { background: rgba(22,34,43,.06); color: var(--c-encre); }
+
+.btn--destructif { color: var(--c-danger); }
+.btn--destructif:hover { background: var(--c-danger-voile); border-color: #e2b8b0; }
+
+.btn--plein { width: 100%; justify-content: flex-start; }
+.btn--menu  { width: 100%; justify-content: flex-start; background: transparent; border-color: transparent; }
+.btn--menu:hover { background: rgba(22,34,43,.06); }
+
+.btn svg { flex: none; }
+
+/* --------------------------------------------------------------------------
+   6. PASTILLES ET MARQUEURS
+   -------------------------------------------------------------------------- */
+.past {
+  display: inline-flex; align-items: center; gap: var(--e-1);
+  font-size: var(--t-mini); font-weight: var(--g-moyen); line-height: 1;
+  padding: 4px var(--e-2);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-1);
+  background: var(--c-papier-2);
+  color: var(--c-encre-2);
+  white-space: nowrap;
+}
+.past--type {
+  border-color: var(--c-accent-trait); background: var(--c-accent-voile);
+  color: var(--c-accent-fonce); font-weight: var(--g-fort);
+}
+.past--brouillon {
+  border-color: #dcc59a; background: var(--c-alerte-voile); color: var(--c-alerte);
+  font-weight: var(--g-fort);
+}
+.past--etiquette {
+  font-family: var(--f-donnee); font-size: var(--t-mini); text-decoration: none;
+  background: var(--c-papier); color: var(--c-encre-2);
+}
+.past--etiquette::before { content: "#"; color: var(--c-encre-4); }
+.past--etiquette:hover { border-color: var(--c-accent); color: var(--c-accent); }
+
+/* --------------------------------------------------------------------------
+   7. PANNEAU — conteneur de la colonne droite et des blocs de tableau de bord
+   -------------------------------------------------------------------------- */
+.panneau {
+  background: var(--c-papier);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-3);
+  box-shadow: var(--o-pose);
+}
+.panneau__tete {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--e-2);
+  padding: var(--e-3) var(--e-4);
+  border-bottom: 1px solid var(--c-trait-fin);
+}
+.panneau__corps { padding: var(--e-3) var(--e-4) var(--e-4); }
+.panneau__corps--serre { padding: var(--e-2); }
+
+/* --------------------------------------------------------------------------
+   8. ÉTATS DE ZONE — chargement, vide, erreur, sans droit
+   -------------------------------------------------------------------------- */
+.esquisse {
+  background: linear-gradient(90deg, var(--c-fond-creux) 25%, #e6eae7 50%, var(--c-fond-creux) 75%);
+  background-size: 240% 100%;
+  animation: glisse 1.4s ease-in-out infinite;
+  border-radius: var(--r-1);
+}
+@keyframes glisse { from { background-position: 130% 0; } to { background-position: -30% 0; } }
+
+.zone-etat { padding: var(--e-5) var(--e-4); text-align: center; }
+.zone-etat__titre { font-weight: var(--g-fort); font-size: var(--t-petit); margin: 0 0 var(--e-1); }
+.zone-etat__txt   { font-size: var(--t-petit); color: var(--c-encre-3); margin: 0 0 var(--e-3); line-height: 1.5; }
+
+/* --------------------------------------------------------------------------
+   9. NOTIFICATION
+   -------------------------------------------------------------------------- */
+.notifs {
+  position: fixed; z-index: 90; right: var(--e-5); bottom: var(--e-5);
+  display: flex; flex-direction: column; gap: var(--e-2); align-items: flex-end;
+}
+.notif {
+  display: flex; align-items: center; gap: var(--e-3);
+  background: var(--c-encre); color: var(--c-papier);
+  padding: var(--e-3) var(--e-4);
+  border-radius: var(--r-3);
+  box-shadow: var(--o-flotte);
+  font-size: var(--t-petit); font-weight: var(--g-moyen);
+  animation: monte var(--m-doux) both;
+}
+.notif--succes { box-shadow: var(--o-flotte), inset 3px 0 0 #4fbf8b; }
+@keyframes monte { from { opacity: 0; transform: translateY(10px); } }
+
+/* --------------------------------------------------------------------------
+   10. DROITS
+   Une action qu'un utilisateur n'a pas le droit d'exécuter n'est pas affichée :
+   ni grisée, ni refusée après le clic (RG, §3.5).
+   -------------------------------------------------------------------------- */
+.app[data-droits="lecture"] .si-ecriture { display: none !important; }
+.app:not([data-role="admin"]) .si-admin { display: none !important; }
+
+/* --------------------------------------------------------------------------
+   11. CHAMPS DE SAISIE
+   Composants de formulaire communs à l'authentification, à l'éditeur, aux
+   formulaires de la console et à la bibliothèque de composants (V-41).
+   -------------------------------------------------------------------------- */
+.champ { display: flex; flex-direction: column; gap: var(--e-1); }
+.champ__label {
+  font-size: var(--t-petit); font-weight: var(--g-fort); color: var(--c-encre);
+}
+.champ__label .oblig { color: var(--c-danger); margin-left: 2px; }
+.champ__aide { font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.45; }
+
+.saisie {
+  width: 100%;
+  padding: 9px var(--e-3);
+  border: 1px solid var(--c-trait-fort);
+  border-radius: var(--r-2);
+  background: var(--c-papier);
+  font-family: var(--f-ui); font-size: var(--t-base);
+  transition: border-color var(--m-vif), box-shadow var(--m-vif);
+}
+.saisie::placeholder { color: var(--c-encre-4); }
+.saisie:hover { border-color: var(--c-encre-3); }
+.saisie:focus { outline: none; border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-voile); }
+.saisie:disabled { background: var(--c-fond-creux); color: var(--c-encre-4); cursor: not-allowed; }
+textarea.saisie { resize: vertical; min-height: 84px; line-height: 1.5; }
+
+.champ[data-etat="erreur"] .saisie { border-color: var(--c-danger); }
+.champ[data-etat="erreur"] .saisie:focus { box-shadow: 0 0 0 3px var(--c-danger-voile); }
+.champ__erreur {
+  display: flex; align-items: flex-start; gap: var(--e-1);
+  font-size: var(--t-mini); font-weight: var(--g-moyen); color: var(--c-danger);
+}
+
+/* Champ avec action attenante — révéler un mot de passe, vider une saisie. */
+.champ__boite { position: relative; display: flex; align-items: center; }
+.champ__boite .saisie { padding-right: 44px; }
+.champ__action {
+  position: absolute; right: 5px;
+  border: 0; background: none; cursor: pointer; padding: 6px;
+  color: var(--c-encre-3); border-radius: var(--r-1); line-height: 0;
+}
+.champ__action:hover { background: var(--c-fond-creux); color: var(--c-encre); }
+
+/* Case à cocher et interrupteur */
+.case {
+  display: flex; align-items: flex-start; gap: var(--e-2);
+  font-size: var(--t-petit); cursor: pointer;
+}
+.case input { accent-color: var(--c-accent); margin: 2px 0 0; flex: none; width: 15px; height: 15px; }
+.case__txt { line-height: 1.4; }
+.case__aide { display: block; font-size: var(--t-mini); color: var(--c-encre-3); margin-top: 2px; }
+
+/* Message d'avertissement lié à la saisie, non bloquant. */
+.avis-saisie {
+  display: flex; align-items: center; gap: var(--e-2);
+  font-size: var(--t-mini); font-weight: var(--g-moyen); color: var(--c-alerte);
+}
+
+/* Bouton en attente : le libellé reste lisible, l'action est verrouillée. */
+.btn[data-attente="oui"] { pointer-events: none; opacity: .82; }
+.rouet {
+  width: 13px; height: 13px; flex: none;
+  border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; animation: tourne .62s linear infinite;
+}
+@keyframes tourne { to { transform: rotate(360deg); } }</style>
+<style>
+body { background: var(--c-fond); }
+
+/* ==========================================================================
+   AUTHENTIFICATION — ossature commune à V-05 et V-06
+   Hors coquille applicative et hors espace public. Une seule chose à faire
+   par écran, rien qui puisse en distraire.
+   ========================================================================== */
+.auth {
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: var(--e-5) var(--e-4) var(--e-6);
+  gap: var(--e-4);
+}
+.auth__colonne { width: 100%; max-width: 396px; }
+
+/* Identité du produit : le nom, et rien de plus. */
+.auth__marque {
+  display: flex; align-items: center; gap: var(--e-2); justify-content: center;
+  margin-bottom: var(--e-5);
+}
+.auth__sceau {
+  width: 30px; height: 30px; flex: none; border-radius: var(--r-2);
+  background: var(--c-accent); color: #fff;
+  display: grid; place-items: center;
+  font-family: var(--f-donnee); font-size: var(--t-petit); font-weight: var(--g-lourd);
+}
+.auth__nom {
+  font-family: var(--f-ui); font-weight: var(--g-lourd); font-size: var(--t-t2);
+  letter-spacing: -.026em;
+}
+
+.auth__boite {
+  background: var(--c-papier);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-3);
+  box-shadow: var(--o-pose);
+  padding: var(--e-5);
+}
+.auth__titre {
+  font-family: var(--f-ui); font-size: var(--t-t2); font-weight: var(--g-lourd);
+  letter-spacing: -.018em; margin: 0 0 var(--e-1);
+}
+.auth__sous {
+  font-size: var(--t-petit); color: var(--c-encre-2); margin: 0 0 var(--e-5); line-height: 1.5;
+}
+.auth__form { display: flex; flex-direction: column; gap: var(--e-4); }
+.auth__form fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e-4); }
+.auth__form fieldset:disabled { opacity: .58; }
+
+.auth__ligne {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e-3);
+  flex-wrap: wrap;
+}
+.auth__lien {
+  font-size: var(--t-petit); font-weight: var(--g-moyen); color: var(--c-accent);
+  text-decoration: none; border-bottom: 1px solid transparent;
+}
+.auth__lien:hover { border-bottom-color: currentColor; }
+
+.auth__pied {
+  text-align: center; margin-top: var(--e-4);
+  padding-top: var(--e-4); border-top: 1px solid var(--c-trait);
+}
+.auth__pied p { font-size: var(--t-petit); color: var(--c-encre-3); margin: 0 0 var(--e-2); }
+
+/* --- Message contextuel ----------------------------------------------------
+   Session expirée, accès refusé, échec d'identification. Il précède le
+   formulaire : l'utilisateur doit savoir pourquoi il est là avant de saisir. */
+.contexte {
+  display: flex; gap: var(--e-3); align-items: flex-start;
+  padding: var(--e-3) var(--e-4); margin-bottom: var(--e-4);
+  border: 1px solid var(--c-trait); border-left-width: 4px;
+  border-radius: var(--r-3);
+  font-size: var(--t-petit); line-height: 1.5;
+}
+.contexte__marque {
+  flex: none; width: 20px; height: 20px; border-radius: var(--r-1);
+  display: grid; place-items: center; color: #fff;
+  font-family: var(--f-donnee); font-size: var(--t-micro); font-weight: var(--g-lourd);
+}
+.contexte__titre { font-weight: var(--g-fort); margin-bottom: 2px; }
+.contexte--info { background: var(--c-info-voile); border-color: #b6cfdd; border-left-color: var(--c-info); }
+.contexte--info .contexte__marque { background: var(--c-info); }
+.contexte--erreur { background: var(--c-danger-voile); border-color: #e2b8b0; border-left-color: var(--c-danger); }
+.contexte--erreur .contexte__marque { background: var(--c-danger); }
+.contexte--attente { background: var(--c-alerte-voile); border-color: #dcc59a; border-left-color: var(--c-alerte); }
+.contexte--attente .contexte__marque { background: var(--c-alerte); }
+.contexte--succes { background: var(--c-frais-voile); border-color: #b3d3c1; border-left-color: var(--c-frais); }
+.contexte--succes .contexte__marque { background: var(--c-frais); }
+.contexte__compte { font-family: var(--f-donnee); font-weight: var(--g-lourd); }
+
+@media (max-width: 480px) {
+  .auth { justify-content: flex-start; padding-top: var(--e-6); }
+  .auth__colonne { max-width: none; }
+  .auth__boite { padding: var(--e-4); }
+}
+
+/* ==========================================================================
+   V-06 — RÉINITIALISATION DE MOT DE PASSE
+   Parcours guidé en étapes visibles. L'utilisateur sait en permanence où il
+   en est et combien il lui reste à faire.
+   ========================================================================== */
+
+/* --- Jalons ---------------------------------------------------------------- */
+.jalons {
+  display: flex; align-items: flex-start; gap: var(--e-1);
+  margin-bottom: var(--e-5);
+  counter-reset: jalon;
+}
+.jalon {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: var(--e-2);
+  counter-increment: jalon;
+}
+.jalon__barre {
+  height: 4px; border-radius: 2px; background: var(--c-fond-creux);
+  transition: background var(--m-doux);
+}
+.jalon__nom {
+  display: flex; align-items: center; gap: var(--e-1);
+  font-size: var(--t-micro); font-family: var(--f-donnee);
+  letter-spacing: .04em; text-transform: uppercase;
+  color: var(--c-encre-4);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.jalon__nom::before {
+  content: counter(jalon); flex: none;
+  width: 15px; height: 15px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c-fond-creux); color: var(--c-encre-3);
+  font-size: 9px; font-weight: var(--g-lourd);
+}
+.jalon[data-etat="faite"] .jalon__barre { background: var(--c-frais); }
+.jalon[data-etat="faite"] .jalon__nom { color: var(--c-encre-3); }
+.jalon[data-etat="faite"] .jalon__nom::before { content: "✓"; background: var(--c-frais); color: #fff; }
+.jalon[data-etat="courante"] .jalon__barre { background: var(--c-accent); }
+.jalon[data-etat="courante"] .jalon__nom { color: var(--c-accent-fonce); font-weight: var(--g-lourd); }
+.jalon[data-etat="courante"] .jalon__nom::before { background: var(--c-accent); color: #fff; }
+
+/* --- Étapes ----------------------------------------------------------------- */
+.etape { display: none; }
+.etape[data-active="oui"] { display: block; animation: entre var(--m-doux) both; }
+@keyframes entre { from { opacity: 0; transform: translateY(6px); } }
+
+/* ==========================================================================
+   ROBUSTESSE D'UN MOT DE PASSE
+   Composant commun à la réinitialisation (V-06) et à l'onglet Sécurité du
+   profil (V-25). Les règles sont annoncées avant la saisie et se cochent au
+   fil de la frappe : personne ne doit découvrir une contrainte après coup.
+   ========================================================================== */
+
+.robustesse { display: flex; flex-direction: column; gap: var(--e-1); }
+.robustesse__segments { display: flex; gap: 3px; }
+.robustesse__segments i {
+  flex: 1; height: 5px; border-radius: 2px;
+  background: var(--c-fond-creux);
+  transition: background var(--m-vif);
+}
+.robustesse__txt {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e-2);
+  font-size: var(--t-mini);
+}
+.robustesse__note { font-weight: var(--g-fort); }
+.robustesse__reste { font-family: var(--f-donnee); color: var(--c-encre-3); }
+
+.robustesse[data-niveau="court"] i.on   { background: var(--c-encre-4); }
+.robustesse[data-niveau="court"] .robustesse__note { color: var(--c-encre-3); }
+.robustesse[data-niveau="faible"] i.on  { background: var(--c-obsolete); }
+.robustesse[data-niveau="faible"] .robustesse__note { color: var(--c-obsolete); }
+.robustesse[data-niveau="correct"] i.on { background: var(--c-vieil); }
+.robustesse[data-niveau="correct"] .robustesse__note { color: var(--c-vieil); }
+.robustesse[data-niveau="solide"] i.on  { background: var(--c-frais); }
+.robustesse[data-niveau="solide"] .robustesse__note { color: var(--c-frais); }
+
+/* --- Règles annoncées avant la saisie ------------------------------------------ */
+.regles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e-1); }
+.regles li {
+  display: flex; align-items: center; gap: var(--e-2);
+  font-size: var(--t-mini); color: var(--c-encre-3);
+}
+.regles li::before {
+  content: ""; flex: none; width: 13px; height: 13px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--c-trait-fort);
+}
+.regles li[data-ok="oui"] { color: var(--c-frais); }
+.regles li[data-ok="oui"]::before {
+  content: "✓"; font-size: 9px; font-weight: var(--g-lourd);
+  display: grid; place-items: center;
+  background: var(--c-frais); color: #fff; box-shadow: none;
+}
+
+/* --- Confirmation finale --------------------------------------------------------- */
+.fanion {
+  width: 46px; height: 46px; border-radius: 50%; margin: 0 auto var(--e-3);
+  display: grid; place-items: center;
+  background: var(--c-frais); color: #fff;
+}
+.etape--fin { text-align: center; }
+.etape--fin .auth__titre { margin-bottom: var(--e-2); }
+.etape--fin .auth__sous { margin-bottom: var(--e-5); }
+
+.rappel-id {
+  display: inline-flex; align-items: center; gap: var(--e-2);
+  padding: var(--e-1) var(--e-3); border-radius: var(--r-2);
+  background: var(--c-papier-2); border: 1px solid var(--c-trait);
+  font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-2);
+}
+
+/* --- Planche de revue (hors produit) ----------------------------------------------- */
+.planche {
+  position: fixed; z-index: 120; left: 50%; bottom: var(--e-4); transform: translateX(-50%);
+  display: flex; align-items: center; gap: var(--e-4); flex-wrap: wrap;
+  background: var(--c-encre); color: #cfd8db;
+  padding: var(--e-2) var(--e-4); border-radius: 999px;
+  box-shadow: var(--o-flotte); font-size: var(--t-mini); max-width: calc(100vw - var(--e-6));
+}
+.planche fieldset { border: 0; margin: 0; padding: 0; display: flex; align-items: center; gap: var(--e-2); }
+.planche legend { float: left; margin-right: var(--e-2); font-family: var(--f-donnee); font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase; color: #7d8f95; }
+.planche label { cursor: pointer; }
+.planche input { position: absolute; opacity: 0; pointer-events: none; }
+.planche label span { display: inline-block; padding: 4px var(--e-2); border-radius: 999px; border: 1px solid #33454f; color: #cfd8db; }
+.planche input:checked + span { background: #cfd8db; color: var(--c-encre); border-color: #cfd8db; font-weight: var(--g-fort); }
+.planche input:focus-visible + span { outline: 2px solid #8f86e0; outline-offset: 2px; }
+.planche__sep { width: 1px; height: 22px; background: #33454f; }
+</style>
+</head>
+<body>
+
+<main class="auth" id="app" data-etape="1">
+  <div class="auth__colonne">
+
+    <div class="auth__marque">
+      <span class="auth__sceau" aria-hidden="true">C</span>
+      <span class="auth__nom">Codicillus</span>
+    </div>
+
+    <!-- Étapes visibles en permanence -->
+    <ol class="jalons" id="jalons" aria-label="Étapes de la réinitialisation">
+      <li class="jalon" data-jalon="1"><span class="jalon__barre"></span><span class="jalon__nom">Identifiant</span></li>
+      <li class="jalon" data-jalon="2"><span class="jalon__barre"></span><span class="jalon__nom">Envoi</span></li>
+      <li class="jalon" data-jalon="3"><span class="jalon__barre"></span><span class="jalon__nom">Nouveau</span></li>
+      <li class="jalon" data-jalon="4"><span class="jalon__barre"></span><span class="jalon__nom">Terminé</span></li>
+    </ol>
+
+    <div class="auth__boite">
+
+      <!-- ============ ÉTAPE 1 — Identifiant ============ -->
+      <section class="etape" data-etape="1" data-active="oui">
+        <h1 class="auth__titre">Mot de passe oublié</h1>
+        <p class="auth__sous">Indiquez votre identifiant. Si un compte y correspond, vous recevrez un lien de réinitialisation sur votre adresse professionnelle.</p>
+
+        <form class="auth__form" id="form-1" novalidate>
+          <fieldset id="champs-1">
+            <div class="champ" id="champ-id">
+              <label class="champ__label" for="identifiant">Identifiant</label>
+              <input class="saisie" type="text" id="identifiant" autocomplete="username"
+                     autocapitalize="none" spellcheck="false" autofocus placeholder="prenom.nom">
+              <span class="champ__aide">Le même que pour vous connecter, sans le domaine.</span>
+            </div>
+            <button class="btn btn--principal" type="submit" id="valider-1" style="width:100%;padding:11px">
+              <span id="txt-1">Envoyer le lien</span>
+            </button>
+          </fieldset>
+        </form>
+
+        <div class="auth__ligne" style="margin-top:var(--e-4);justify-content:center">
+          <a class="auth__lien" href="#" data-vers="connexion">Revenir à la connexion</a>
+        </div>
+      </section>
+
+      <!-- ============ ÉTAPE 2 — Confirmation d'envoi ============
+           Message rigoureusement identique que l'identifiant existe ou non :
+           rien ne doit permettre de déduire qu'un compte porte ce nom. -->
+      <section class="etape" data-etape="2">
+        <h1 class="auth__titre">Vérifiez votre messagerie</h1>
+        <p class="auth__sous">Si un compte correspond à cet identifiant, un lien de réinitialisation vient d'être envoyé à l'adresse professionnelle associée. Le lien est valable <strong>une heure</strong> et ne peut servir qu'une fois.</p>
+
+        <div class="contexte contexte--info" style="margin-bottom:var(--e-4)">
+          <span class="contexte__marque" aria-hidden="true">i</span>
+          <div>
+            <div class="contexte__titre">Rien reçu au bout de quelques minutes&nbsp;?</div>
+            <div>Vérifiez les courriers indésirables. Si vous n'avez toujours rien, l'identifiant saisi n'est peut-être pas le bon.</div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:center;margin-bottom:var(--e-4)">
+          <span class="rappel-id">Demande envoyée pour <b id="rappel-identifiant">—</b></span>
+        </div>
+
+        <button class="btn" style="width:100%" id="renvoyer">Recommencer avec un autre identifiant</button>
+
+        <div class="auth__ligne" style="margin-top:var(--e-4);justify-content:center">
+          <a class="auth__lien" href="#" data-vers="connexion">Revenir à la connexion</a>
+        </div>
+      </section>
+
+      <!-- ============ ÉTAPE 3 — Nouveau mot de passe ============ -->
+      <section class="etape" data-etape="3">
+        <h1 class="auth__titre">Choisir un nouveau mot de passe</h1>
+        <p class="auth__sous">Il remplacera immédiatement l'ancien sur l'ensemble de vos accès.</p>
+
+        <!-- Les règles sont annoncées avant la saisie, pas après l'échec. -->
+        <div style="margin-bottom:var(--e-4)">
+          <span class="etiq" style="display:block;margin-bottom:var(--e-2)">Ce qui est demandé</span>
+          <ul class="regles" id="regles">
+            <li data-regle="longueur">12 caractères au minimum</li>
+            <li data-regle="varie">Au moins deux natures de caractères différentes</li>
+            <li data-regle="different">Différent de votre identifiant</li>
+          </ul>
+        </div>
+
+        <form class="auth__form" id="form-3" novalidate>
+          <fieldset id="champs-3">
+
+            <div class="champ" id="champ-nouveau">
+              <label class="champ__label" for="nouveau">Nouveau mot de passe</label>
+              <div class="champ__boite">
+                <input class="saisie" type="password" id="nouveau" autocomplete="new-password" spellcheck="false">
+                <button class="champ__action" type="button" id="voir" aria-label="Afficher le mot de passe" aria-pressed="false">
+                  <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <path d="M1.5 8s2.4-4 6.5-4 6.5 4 6.5 4-2.4 4-6.5 4S1.5 8 1.5 8z"/><circle cx="8" cy="8" r="1.8"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="avis-saisie" id="majuscules" hidden>
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2.5L3 8h10L8 2.5zM4.5 11.5h7v2h-7z"/></svg>
+                Le verrouillage des majuscules est activé
+              </div>
+              <div class="robustesse" id="robustesse" data-niveau="court">
+                <div class="robustesse__segments" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                <div class="robustesse__txt">
+                  <span class="robustesse__note" id="robustesse-note">Trop court</span>
+                  <span class="robustesse__reste" id="robustesse-reste">0 / 12</span>
+                </div>
+              </div>
+              <span class="champ__aide">Quatre mots sans rapport entre eux valent mieux qu'un mot compliqué.</span>
+            </div>
+
+            <div class="champ" id="champ-confirm">
+              <label class="champ__label" for="confirmation">Confirmer le mot de passe</label>
+              <input class="saisie" type="password" id="confirmation" autocomplete="new-password" spellcheck="false">
+              <div class="champ__erreur" id="erreur-confirm" hidden>
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" style="flex:none;margin-top:1px"><path d="M8 4.5v4M8 11.2v.3"/><circle cx="8" cy="8" r="6.2"/></svg>
+                Les deux saisies ne correspondent pas.
+              </div>
+            </div>
+
+            <button class="btn btn--principal" type="submit" id="valider-3" style="width:100%;padding:11px">
+              <span id="txt-3">Enregistrer le nouveau mot de passe</span>
+            </button>
+
+          </fieldset>
+        </form>
+      </section>
+
+      <!-- ============ ÉTAPE 3 bis — Lien expiré ============ -->
+      <section class="etape" data-etape="expire">
+        <div class="contexte contexte--attente" style="margin-bottom:var(--e-4)">
+          <span class="contexte__marque" aria-hidden="true">⏱</span>
+          <div>
+            <div class="contexte__titre">Ce lien n'est plus valable</div>
+            <div>Un lien de réinitialisation expire au bout d'une heure et ne sert qu'une fois. Celui-ci a dépassé ce délai, ou a déjà été utilisé.</div>
+          </div>
+        </div>
+        <p class="auth__sous">Rien n'est perdu : demandez-en un nouveau, la démarche prend quelques secondes.</p>
+        <button class="btn btn--principal" style="width:100%;padding:11px" id="relancer">Demander un nouveau lien</button>
+        <div class="auth__ligne" style="margin-top:var(--e-4);justify-content:center">
+          <a class="auth__lien" href="#" data-vers="connexion">Revenir à la connexion</a>
+        </div>
+      </section>
+
+      <!-- ============ ÉTAPE 4 — Confirmation ============ -->
+      <section class="etape etape--fin" data-etape="4">
+        <div class="fanion" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg>
+        </div>
+        <h1 class="auth__titre">Mot de passe enregistré</h1>
+        <p class="auth__sous">Il est actif dès maintenant sur l'ensemble de vos accès. Vos autres sessions ouvertes ont été fermées.</p>
+        <a class="btn btn--principal" href="#" style="width:100%;padding:11px;justify-content:center" data-vers="connexion">Se connecter</a>
+      </section>
+
+    </div>
+
+    <div class="auth__pied">
+      <p>Besoin d'aide pour retrouver votre accès&nbsp;?</p>
+      <a class="btn" href="#" id="assistance">Ouvrir un ticket d'assistance</a>
+    </div>
+
+  </div>
+</main>
+
+<div class="notifs" id="notifs" role="status" aria-live="polite"></div>
+
+<!-- ====================== PLANCHE DE REVUE — hors produit ====================== -->
+<div class="planche" role="group" aria-label="Contrôles de maquette, hors produit">
+  <fieldset>
+    <legend>Étape</legend>
+    <label><input type="radio" name="et" value="1" checked><span>1 · Identifiant</span></label>
+    <label><input type="radio" name="et" value="2"><span>2 · Envoi</span></label>
+    <label><input type="radio" name="et" value="3"><span>3 · Nouveau</span></label>
+    <label><input type="radio" name="et" value="4"><span>4 · Terminé</span></label>
+  </fieldset>
+  <div class="planche__sep"></div>
+  <fieldset>
+    <legend>Compte</legend>
+    <label><input type="radio" name="cpt" value="connu" checked><span>Identifiant connu</span></label>
+    <label><input type="radio" name="cpt" value="inconnu"><span>Identifiant inconnu</span></label>
+  </fieldset>
+  <div class="planche__sep"></div>
+  <fieldset>
+    <legend>Lien</legend>
+    <label><input type="checkbox" id="c-expire"><span>Expiré</span></label>
+  </fieldset>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+    /* ---------- Notifications (V-38) ---------- */
+  window.notifier = function (txt, variante) {
+    var zone = document.getElementById("notifs");
+    if (!zone) {
+      zone = document.createElement("div");
+      zone.id = "notifs"; zone.className = "notifs";
+      zone.setAttribute("role", "status");
+      zone.setAttribute("aria-live", "polite");
+      document.body.appendChild(zone);
+    }
+    var n = document.createElement("div");
+    n.className = "notif" + (variante ? " notif--" + variante : "");
+    n.textContent = txt;
+    zone.appendChild(n);
+    setTimeout(function () {
+      n.style.transition = "opacity .3s"; n.style.opacity = "0";
+      setTimeout(function () { n.remove(); }, 320);
+    }, 2600);
+  };
+
+  var app = document.getElementById("app");
+
+  /* ---------------------------------------------------------------------
+     Navigation entre étapes
+     --------------------------------------------------------------------- */
+  var ORDRE = { "1": 1, "2": 2, "3": 3, "expire": 3, "4": 4 };
+
+  function aller(etape) {
+    app.setAttribute("data-etape", etape);
+    document.querySelectorAll(".etape").forEach(function (s) {
+      s.setAttribute("data-active", s.getAttribute("data-etape") === etape ? "oui" : "non");
+    });
+    var rang = ORDRE[etape];
+    document.querySelectorAll(".jalon").forEach(function (j) {
+      var n = Number(j.getAttribute("data-jalon"));
+      j.setAttribute("data-etat", n < rang ? "faite" : n === rang ? "courante" : "avenir");
+    });
+    var premier = document.querySelector('.etape[data-active="oui"] .saisie, .etape[data-active="oui"] .btn--principal');
+    if (premier) premier.focus();
+    var radio = document.querySelector('input[name="et"][value="' + (etape === "expire" ? "3" : etape) + '"]');
+    if (radio) radio.checked = true;
+  }
+
+  function attendre(bouton, libelle, libelleFinal, suite) {
+    var champs = bouton.closest("fieldset");
+    if (champs) champs.disabled = true;
+    bouton.setAttribute("data-attente", "oui");
+    var txt = bouton.querySelector("span");
+    txt.textContent = libelle;
+    var rouet = document.createElement("span");
+    rouet.className = "rouet";
+    bouton.insertBefore(rouet, txt);
+    setTimeout(function () {
+      rouet.remove();
+      bouton.removeAttribute("data-attente");
+      txt.textContent = libelleFinal;
+      if (champs) champs.disabled = false;
+      suite();
+    }, 800);
+  }
+
+  /* ---------------------------------------------------------------------
+     Étape 1 — demande
+     Aucune vérification d'existence n'est faite avant l'affichage : l'écran
+     suivant est le même dans les deux cas, et il est atteint par le même
+     chemin, au même rythme.
+     --------------------------------------------------------------------- */
+  var identifiant = document.getElementById("identifiant");
+  document.getElementById("form-1").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var val = identifiant.value.trim();
+    var champ = document.getElementById("champ-id");
+    if (!val) {
+      champ.setAttribute("data-etat", "erreur");
+      identifiant.focus();
+      return;
+    }
+    champ.removeAttribute("data-etat");
+    attendre(document.getElementById("valider-1"), "Envoi…", "Envoyer le lien", function () {
+      document.getElementById("rappel-identifiant").textContent = val;
+      aller("2");
+    });
+  });
+
+  document.getElementById("renvoyer").addEventListener("click", function () {
+    aller("1");
+    identifiant.select();
+  });
+  document.getElementById("relancer").addEventListener("click", function () {
+    document.getElementById("c-expire").checked = false;
+    aller("1");
+  });
+
+  /* ---------------------------------------------------------------------
+     Étape 3 — nouveau mot de passe
+     --------------------------------------------------------------------- */
+    /* ====================== ROBUSTESSE D'UN MOT DE PASSE ======================
+     L'échelle récompense la longueur plutôt que la variété de symboles :
+     « cheval agrafe batterie » sort solide, « Motdepasse12 » sort correct.
+     C'est l'état de l'art, et surtout c'est cohérent avec le conseil affiché
+     sous le champ — un indicateur qui contredirait son propre conseil serait
+     pire qu'aucun indicateur.
+
+     creerRobustesse({ champ, confirmation, erreurConfirmation,
+                       champConfirmation, regles, indicateur, note, reste,
+                       interdit }) */
+  function creerRobustesse(o) {
+    var MINI = 12;
+
+    function natures(v) {
+      var n = 0;
+      if (/[a-zà-ÿ]/.test(v)) n++;
+      if (/[A-ZÀ-Ý]/.test(v)) n++;
+      if (/[0-9]/.test(v)) n++;
+      if (/[^a-zà-ÿA-ZÀ-Ý0-9]/.test(v)) n++;
+      return n;
+    }
+
+    function evaluer() {
+      var v = o.champ.value;
+      var mot = o.interdit ? String(o.interdit() || "").toLowerCase() : "";
+      var ok = {
+        longueur: v.length >= MINI,
+        varie: natures(v) >= 2,
+        different: v.length > 0 && (!mot || v.toLowerCase().indexOf(mot) === -1)
+      };
+      if (o.regles) {
+        o.regles.querySelectorAll("li").forEach(function (li) {
+          li.setAttribute("data-ok", ok[li.getAttribute("data-regle")] ? "oui" : "non");
+        });
+      }
+      if (o.reste) o.reste.textContent = Math.min(v.length, 99) + " / " + MINI;
+
+      var niveau, segments, libelle;
+      if (!ok.longueur) {
+        niveau = "court"; segments = v.length ? 1 : 0; libelle = "Trop court";
+      } else {
+        var points = 0;
+        if (v.length >= 12) points++;
+        if (v.length >= 16) points++;
+        if (natures(v) >= 2) points++;
+        if (natures(v) >= 3 || v.length >= 20) points++;
+        segments = Math.max(2, Math.min(4, points));
+        niveau = segments <= 2 ? "faible" : segments === 3 ? "correct" : "solide";
+        libelle = segments <= 2 ? "Faible" : segments === 3 ? "Correct" : "Solide";
+      }
+      if (o.indicateur) {
+        o.indicateur.setAttribute("data-niveau", niveau);
+        o.indicateur.querySelectorAll("i").forEach(function (i, k) { i.classList.toggle("on", k < segments); });
+      }
+      if (o.note) o.note.textContent = libelle;
+
+      if (o.confirmation && o.confirmation.value) verifierConfirmation();
+      return ok.longueur && ok.varie && ok.different;
+    }
+
+    function verifierConfirmation() {
+      if (!o.confirmation) return true;
+      var pareil = o.confirmation.value === o.champ.value;
+      if (o.champConfirmation) o.champConfirmation.setAttribute("data-etat", pareil ? "" : "erreur");
+      if (o.erreurConfirmation) o.erreurConfirmation.hidden = pareil;
+      return pareil;
+    }
+
+    o.champ.addEventListener("input", evaluer);
+    if (o.confirmation) o.confirmation.addEventListener("input", verifierConfirmation);
+
+    return { evaluer: evaluer, verifierConfirmation: verifierConfirmation, minimum: MINI };
+  }
+
+  var jauge = creerRobustesse({
+    champ: document.getElementById("nouveau"),
+    confirmation: document.getElementById("confirmation"),
+    erreurConfirmation: document.getElementById("erreur-confirm"),
+    champConfirmation: document.getElementById("champ-confirm"),
+    regles: document.getElementById("regles"),
+    indicateur: document.getElementById("robustesse"),
+    note: document.getElementById("robustesse-note"),
+    reste: document.getElementById("robustesse-reste"),
+    interdit: function () { return document.getElementById("identifiant").value.trim(); }
+  });
+  var evaluer = jauge.evaluer;
+  var verifierConfirmation = jauge.verifierConfirmation;
+
+  document.getElementById("form-3").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var valide = evaluer();
+    var pareil = verifierConfirmation();
+    if (!valide) {
+      document.getElementById("champ-nouveau").setAttribute("data-etat", "erreur");
+      document.getElementById("nouveau").focus();
+      return;
+    }
+    document.getElementById("champ-nouveau").removeAttribute("data-etat");
+    if (!pareil) { document.getElementById("confirmation").focus(); return; }
+    attendre(document.getElementById("valider-3"), "Enregistrement…", "Enregistrer le nouveau mot de passe", function () {
+      aller("4");
+    });
+  });
+
+  /* Révéler le mot de passe */
+  var voir = document.getElementById("voir");
+  voir.addEventListener("click", function () {
+    var affiche = document.getElementById("nouveau").type === "text";
+    document.getElementById("nouveau").type = affiche ? "password" : "text";
+    voir.setAttribute("aria-pressed", String(!affiche));
+    voir.setAttribute("aria-label", affiche ? "Afficher le mot de passe" : "Masquer le mot de passe");
+    document.getElementById("nouveau").focus();
+  });
+
+  /* Verrouillage des majuscules */
+  var majuscules = document.getElementById("majuscules");
+  function surveiller(e) {
+    if (typeof e.getModifierState !== "function") return;
+    majuscules.hidden = !e.getModifierState("CapsLock");
+  }
+  document.getElementById("nouveau").addEventListener("keydown", surveiller);
+  document.getElementById("nouveau").addEventListener("keyup", surveiller);
+  document.getElementById("nouveau").addEventListener("blur", function () { majuscules.hidden = true; });
+
+  /* ---------------------------------------------------------------------
+     Sorties
+     --------------------------------------------------------------------- */
+  document.querySelectorAll('[data-vers="connexion"]').forEach(function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      window.notifier("Retour à la connexion — vue V-05");
+    });
+  });
+  document.getElementById("assistance").addEventListener("click", function (e) {
+    e.preventDefault();
+    window.notifier("Ouverture du portail d'assistance — adresse externe configurée en console");
+  });
+
+  /* ---------------------------------------------------------------------
+     Planche de revue
+     La bascule « identifiant connu / inconnu » ne change rien à l'écran
+     d'envoi : c'est précisément ce qu'il faut vérifier.
+     --------------------------------------------------------------------- */
+  document.querySelectorAll('input[name="et"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      var cible = r.value;
+      if (cible === "3" && document.getElementById("c-expire").checked) cible = "expire";
+      if (cible === "2" && !document.getElementById("rappel-identifiant").textContent.trim().replace("—", "")) {
+        document.getElementById("rappel-identifiant").textContent = "sophie.nguyen";
+      }
+      aller(cible);
+    });
+  });
+  document.getElementById("c-expire").addEventListener("change", function () {
+    if (app.getAttribute("data-etape") === "3" || app.getAttribute("data-etape") === "expire") {
+      aller(this.checked ? "expire" : "3");
+    }
+  });
+  document.querySelectorAll('input[name="cpt"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      window.notifier(r.value === "inconnu"
+        ? "Identifiant inconnu — l'écran d'envoi reste rigoureusement identique"
+        : "Identifiant connu — même écran, même délai");
+    });
+  });
+
+  aller("1");
+})();
+</script>
+</body>
+</html>

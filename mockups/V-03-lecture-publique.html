@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Réinitialiser son mot de passe — Codicillus</title>
+<link rel="stylesheet" href="polices/polices.css">
+<style>/* ==========================================================================
+   CODICILLUS — SOCLE
+   Jetons et composants communs. Source unique de vérité pour les 41 vues.
+   Aucune valeur arbitraire dans les écrans : tout passe par un jeton nommé.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. JETONS
+   -------------------------------------------------------------------------- */
+:root {
+  /* --- Couleur : encres ------------------------------------------------- */
+  --c-encre:        #16222b;   /* texte principal */
+  --c-encre-2:      #46585f;   /* texte secondaire */
+  --c-encre-3:      #536066;   /* texte tertiaire, métadonnées — assombri le
+                                  16/08/2026 : #71838a ne donnait que 2,75:1
+                                  sur le fond creux, là où RG-M18-07 exige
+                                  4,5:1 pour un texte de 11 px. Teinte
+                                  conservée, contraste porté à 4,54:1 au pire
+                                  des quatre surfaces. */
+  --c-encre-4:      #93a2a6;   /* désactivé, placeholder */
+
+  /* --- Couleur : surfaces ----------------------------------------------- */
+  --c-fond:         #e2e7e4;   /* fond d'application */
+  --c-fond-creux:   #d3d9d6;   /* zones en retrait, rail */
+  --c-papier:       #fcfbf8;   /* surface de lecture et cartes */
+  --c-papier-2:     #f5f4ef;   /* surface secondaire, en-têtes de tableau */
+
+  /* --- Couleur : traits -------------------------------------------------- */
+  --c-trait:        #cbd3d0;   /* bordure standard */
+  --c-trait-fin:    #e0e5e2;   /* séparateur discret */
+  --c-trait-fort:   #9aa7a3;   /* bordure appuyée */
+
+  /* --- Couleur : accent (violet d'encre) --------------------------------- */
+  --c-accent:       #453ba0;
+  --c-accent-fonce: #322b78;
+  --c-accent-voile: #edecf8;
+  --c-accent-trait: #c9c5e8;
+
+  /* --- Couleur : fraîcheur ----------------------------------------------- */
+  --c-frais:        #1d6b4a;
+  --c-frais-voile:  #e4efe8;
+  --c-vieil:        #8f5c00;
+  --c-vieil-voile:  #f6eedd;
+  --c-obsolete:     #a52c1b;
+  --c-obsolete-voile:#f7e7e3;
+
+  /* --- Couleur : sémantique ---------------------------------------------- */
+  --c-info:         #1b5c86;
+  --c-info-voile:   #e4eef4;
+  --c-alerte:       #8f5c00;
+  --c-alerte-voile: #f6eedd;
+  --c-danger:       #a52c1b;
+  --c-danger-voile: #f7e7e3;
+
+  /* --- Typographie : familles -------------------------------------------- */
+  --f-ui:      "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-lecture: "Literata", Georgia, "Times New Roman", serif;
+  --f-donnee:  "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* --- Typographie : échelle --------------------------------------------- */
+  --t-micro:  0.6875rem;  /* 11px — étiquettes mono capitales */
+  --t-mini:   0.75rem;    /* 12px — métadonnées */
+  --t-petit:  0.8125rem;  /* 13px — interface secondaire */
+  --t-base:   0.9375rem;  /* 15px — interface */
+  --t-lect:   1.0625rem;  /* 17px — corps rédigé */
+  --t-t3:     1.125rem;
+  --t-t2:     1.375rem;
+  --t-t1:     1.75rem;
+  --t-titre:  2.125rem;   /* titre de note */
+
+  /* --- Typographie : interlignes et graisses ------------------------------ */
+  --i-serre:  1.2;
+  --i-ui:     1.45;
+  --i-lect:   1.72;
+  --g-normal: 400;
+  --g-moyen:  500;
+  --g-fort:   600;
+  --g-lourd:  700;
+
+  /* --- Espacement --------------------------------------------------------- */
+  --e-0: 2px;  --e-1: 4px;  --e-2: 8px;  --e-3: 12px;
+  --e-4: 16px; --e-5: 24px; --e-6: 32px; --e-7: 48px; --e-8: 64px;
+
+  /* --- Rayons ------------------------------------------------------------- */
+  --r-0: 0;    --r-1: 2px;  --r-2: 4px;  --r-3: 8px;
+
+  /* --- Élévations ---------------------------------------------------------- */
+  --o-pose:   0 1px 2px rgba(22, 34, 43, .07);
+  --o-flotte: 0 6px 20px -4px rgba(22, 34, 43, .18), 0 2px 6px rgba(22, 34, 43, .08);
+
+  /* --- Dimensions de structure --------------------------------------------- */
+  --l-rail:     248px;
+  --l-sommaire: 204px;
+  --l-lecture:  680px;   /* confort de lecture, non maximisé */
+  --l-panneaux: 292px;
+  --l-barre:    52px;
+
+  /* --- Mouvement ------------------------------------------------------------ */
+  --m-vif:   120ms cubic-bezier(.2,.7,.4,1);
+  --m-doux:  240ms cubic-bezier(.2,.7,.4,1);
+  --m-ample: 520ms cubic-bezier(.16,.85,.3,1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --m-vif: 1ms; --m-doux: 1ms; --m-ample: 1ms; }
+  * { animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* --------------------------------------------------------------------------
+   2. BASE
+   -------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* L'attribut hidden doit primer sur toute mise en page en flex ou grid. */
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--c-fond);
+  color: var(--c-encre);
+  font-family: var(--f-ui);
+  font-size: var(--t-base);
+  line-height: var(--i-ui);
+  font-weight: var(--g-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+  border-radius: var(--r-1);
+}
+
+::selection { background: var(--c-accent-voile); }
+
+.saut-contenu {
+  position: absolute; left: var(--e-2); top: -60px; z-index: 200;
+  background: var(--c-encre); color: var(--c-papier);
+  padding: var(--e-2) var(--e-4); border-radius: var(--r-2);
+  text-decoration: none; transition: top var(--m-vif);
+}
+.saut-contenu:focus { top: var(--e-2); }
+
+.hors-ecran {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   3. ÉTIQUETTE MONO — le label d'instrument, utilisé partout
+   -------------------------------------------------------------------------- */
+.etiq {
+  font-family: var(--f-donnee);
+  font-size: var(--t-micro);
+  font-weight: var(--g-moyen);
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--c-encre-3);
+}
+
+/* --------------------------------------------------------------------------
+   4. TÉMOIN DE FRAÎCHEUR — la signature du produit
+   Jauge à trois barres : 3 pleines = frais, 2 = vieillissant, 1 + hachures =
+   obsolète. La forme porte l'information ; la couleur ne fait que la répéter.
+   -------------------------------------------------------------------------- */
+.temoin {
+  display: inline-flex; align-items: center; gap: var(--e-2);
+  font-family: var(--f-donnee);
+  font-size: var(--t-mini);
+  font-weight: var(--g-moyen);
+  line-height: 1;
+  white-space: nowrap;
+}
+.temoin__jauge {
+  display: inline-flex; align-items: flex-end; gap: 2px; height: 13px;
+  flex: none;
+}
+.temoin__jauge i {
+  display: block; width: 4px; border-radius: 1px;
+  border: 1px solid currentColor; background: transparent;
+}
+.temoin__jauge i:nth-child(1) { height: 6px; }
+.temoin__jauge i:nth-child(2) { height: 10px; }
+.temoin__jauge i:nth-child(3) { height: 13px; }
+.temoin__jauge i.plein { background: currentColor; }
+
+.temoin--frais  { color: var(--c-frais); }
+.temoin--vieil  { color: var(--c-vieil); }
+.temoin--obs    { color: var(--c-obsolete); }
+
+/* Le niveau obsolète porte en plus un hachurage : reconnaissable de loin,
+   et lisible en niveaux de gris comme en vision périphérique. */
+.temoin--obs .temoin__txt {
+  padding: 2px var(--e-2);
+  border-radius: var(--r-1);
+  background:
+    repeating-linear-gradient(135deg,
+      var(--c-obsolete-voile) 0 5px,
+      #f0d5cf 5px 10px);
+  box-shadow: inset 0 0 0 1px #e0b6ad;
+}
+
+/* --------------------------------------------------------------------------
+   5. BOUTONS
+   -------------------------------------------------------------------------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--e-2);
+  font-family: var(--f-ui); font-size: var(--t-petit); font-weight: var(--g-fort);
+  line-height: 1; letter-spacing: .005em;
+  padding: 9px var(--e-3);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-2);
+  background: var(--c-papier);
+  color: var(--c-encre);
+  cursor: pointer;
+  transition: background var(--m-vif), border-color var(--m-vif), color var(--m-vif), transform var(--m-vif);
+}
+.btn:hover { background: var(--c-papier-2); border-color: var(--c-trait-fort); }
+.btn:active { transform: translateY(1px); }
+
+.btn--principal {
+  background: var(--c-accent); border-color: var(--c-accent); color: #fff;
+}
+.btn--principal:hover { background: var(--c-accent-fonce); border-color: var(--c-accent-fonce); }
+
+.btn--discret {
+  background: transparent; border-color: transparent; color: var(--c-encre-2);
+  font-weight: var(--g-moyen);
+}
+.btn--discret:hover { background: rgba(22,34,43,.06); color: var(--c-encre); }
+
+.btn--destructif { color: var(--c-danger); }
+.btn--destructif:hover { background: var(--c-danger-voile); border-color: #e2b8b0; }
+
+.btn--plein { width: 100%; justify-content: flex-start; }
+.btn--menu  { width: 100%; justify-content: flex-start; background: transparent; border-color: transparent; }
+.btn--menu:hover { background: rgba(22,34,43,.06); }
+
+.btn svg { flex: none; }
+
+/* --------------------------------------------------------------------------
+   6. PASTILLES ET MARQUEURS
+   -------------------------------------------------------------------------- */
+.past {
+  display: inline-flex; align-items: center; gap: var(--e-1);
+  font-size: var(--t-mini); font-weight: var(--g-moyen); line-height: 1;
+  padding: 4px var(--e-2);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-1);
+  background: var(--c-papier-2);
+  color: var(--c-encre-2);
+  white-space: nowrap;
+}
+.past--type {
+  border-color: var(--c-accent-trait); background: var(--c-accent-voile);
+  color: var(--c-accent-fonce); font-weight: var(--g-fort);
+}
+.past--brouillon {
+  border-color: #dcc59a; background: var(--c-alerte-voile); color: var(--c-alerte);
+  font-weight: var(--g-fort);
+}
+.past--etiquette {
+  font-family: var(--f-donnee); font-size: var(--t-mini); text-decoration: none;
+  background: var(--c-papier); color: var(--c-encre-2);
+}
+.past--etiquette::before { content: "#"; color: var(--c-encre-4); }
+.past--etiquette:hover { border-color: var(--c-accent); color: var(--c-accent); }
+
+/* --------------------------------------------------------------------------
+   7. PANNEAU — conteneur de la colonne droite et des blocs de tableau de bord
+   -------------------------------------------------------------------------- */
+.panneau {
+  background: var(--c-papier);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-3);
+  box-shadow: var(--o-pose);
+}
+.panneau__tete {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--e-2);
+  padding: var(--e-3) var(--e-4);
+  border-bottom: 1px solid var(--c-trait-fin);
+}
+.panneau__corps { padding: var(--e-3) var(--e-4) var(--e-4); }
+.panneau__corps--serre { padding: var(--e-2); }
+
+/* --------------------------------------------------------------------------
+   8. ÉTATS DE ZONE — chargement, vide, erreur, sans droit
+   -------------------------------------------------------------------------- */
+.esquisse {
+  background: linear-gradient(90deg, var(--c-fond-creux) 25%, #e6eae7 50%, var(--c-fond-creux) 75%);
+  background-size: 240% 100%;
+  animation: glisse 1.4s ease-in-out infinite;
+  border-radius: var(--r-1);
+}
+@keyframes glisse { from { background-position: 130% 0; } to { background-position: -30% 0; } }
+
+.zone-etat { padding: var(--e-5) var(--e-4); text-align: center; }
+.zone-etat__titre { font-weight: var(--g-fort); font-size: var(--t-petit); margin: 0 0 var(--e-1); }
+.zone-etat__txt   { font-size: var(--t-petit); color: var(--c-encre-3); margin: 0 0 var(--e-3); line-height: 1.5; }
+
+/* --------------------------------------------------------------------------
+   9. NOTIFICATION
+   -------------------------------------------------------------------------- */
+.notifs {
+  position: fixed; z-index: 90; right: var(--e-5); bottom: var(--e-5);
+  display: flex; flex-direction: column; gap: var(--e-2); align-items: flex-end;
+}
+.notif {
+  display: flex; align-items: center; gap: var(--e-3);
+  background: var(--c-encre); color: var(--c-papier);
+  padding: var(--e-3) var(--e-4);
+  border-radius: var(--r-3);
+  box-shadow: var(--o-flotte);
+  font-size: var(--t-petit); font-weight: var(--g-moyen);
+  animation: monte var(--m-doux) both;
+}
+.notif--succes { box-shadow: var(--o-flotte), inset 3px 0 0 #4fbf8b; }
+@keyframes monte { from { opacity: 0; transform: translateY(10px); } }
+
+/* --------------------------------------------------------------------------
+   10. DROITS
+   Une action qu'un utilisateur n'a pas le droit d'exécuter n'est pas affichée :
+   ni grisée, ni refusée après le clic (RG, §3.5).
+   -------------------------------------------------------------------------- */
+.app[data-droits="lecture"] .si-ecriture { display: none !important; }</style>
+<style>
+body { background: var(--c-fond); }
+
+/* ==========================================================================
+   ESPACE PUBLIC — ossature commune à V-01, V-02, V-03 et V-04
+   Hors coquille applicative : ni navigation latérale, ni palette, ni menu de
+   création. Le visiteur n'a pas de compte et n'en aura pas.
+   ========================================================================== */
+.public { min-height: 100vh; display: flex; flex-direction: column; }
+
+/* --- Bandeau minimal ------------------------------------------------------- */
+.chapeau {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e-4);
+  padding: var(--e-4) var(--e-5);
+  max-width: 1080px; width: 100%; margin: 0 auto;
+}
+.marque { display: flex; align-items: center; gap: var(--e-2); text-decoration: none; color: inherit; }
+.marque__sceau {
+  width: 26px; height: 26px; flex: none; border-radius: var(--r-1);
+  background: var(--c-accent); color: #fff;
+  display: grid; place-items: center;
+  font-family: var(--f-donnee); font-size: var(--t-mini); font-weight: var(--g-lourd);
+}
+.marque__nom {
+  font-family: var(--f-ui); font-weight: var(--g-lourd); font-size: var(--t-t3);
+  letter-spacing: -.02em;
+}
+.chapeau .btn { font-weight: var(--g-moyen); }
+
+/* --- Champ de recherche public ---------------------------------------------- */
+.champ-public {
+  display: flex; align-items: center; gap: var(--e-3);
+  background: var(--c-papier);
+  border: 1.5px solid var(--c-trait-fort); border-radius: var(--r-3);
+  padding: var(--e-4);
+  box-shadow: var(--o-pose);
+  max-width: 720px;
+  transition: border-color var(--m-vif), box-shadow var(--m-vif);
+}
+.champ-public:focus-within { border-color: var(--c-accent); box-shadow: 0 0 0 4px var(--c-accent-voile); }
+.champ-public > svg { flex: none; color: var(--c-encre-3); }
+.champ-public input {
+  flex: 1; min-width: 0; border: 0; outline: none; background: none;
+  font-family: var(--f-ui); font-size: clamp(1.0625rem, 2.4vw, 1.375rem);
+  font-weight: var(--g-moyen); letter-spacing: -.014em;
+}
+.champ-public input::placeholder { color: var(--c-encre-4); font-weight: var(--g-normal); }
+.champ-public input::-webkit-search-cancel-button { display: none; }
+.champ-public__effacer {
+  flex: none; border: 0; background: none; cursor: pointer; padding: 5px; line-height: 0;
+  color: var(--c-encre-3); border-radius: var(--r-1);
+}
+.champ-public__effacer:hover { background: var(--c-fond-creux); color: var(--c-encre); }
+
+/* Variante compacte : une fois la question posée, le champ cesse d'être le
+   sujet de la page et laisse la place aux résultats. */
+.champ-public--compact { padding: var(--e-2) var(--e-3); max-width: none; box-shadow: none; }
+.champ-public--compact input { font-size: var(--t-t3); }
+
+/* --- Titre de section --------------------------------------------------------- */
+.section__tete {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--e-4);
+  padding-bottom: var(--e-3); margin-bottom: var(--e-4);
+  border-bottom: 1px solid var(--c-trait);
+}
+.section__nom {
+  font-family: var(--f-ui); font-size: var(--t-t2); font-weight: var(--g-lourd);
+  letter-spacing: -.016em; margin: 0;
+}
+
+/* --- Repli vers l'assistance ---------------------------------------------------
+   Présent sur toutes les vues publiques : le visiteur ne doit jamais rester
+   dans une impasse. */
+.repli {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--e-4); flex-wrap: wrap;
+  margin-top: var(--e-6); padding: var(--e-5);
+  background: var(--c-papier); border: 1px solid var(--c-trait);
+  border-left: 4px solid var(--c-accent);
+  border-radius: var(--r-3);
+}
+.repli__titre {
+  font-family: var(--f-ui); font-size: var(--t-t3); font-weight: var(--g-lourd);
+  margin: 0 0 var(--e-1); letter-spacing: -.012em;
+}
+.repli__txt { font-size: var(--t-petit); color: var(--c-encre-2); margin: 0; max-width: 52ch; line-height: 1.55; }
+
+/* --- Zones vides et en erreur ----------------------------------------------------- */
+.zone-vide, .zone-erreur {
+  background: var(--c-papier); border: 1px solid var(--c-trait); border-radius: var(--r-3);
+  padding: var(--e-6) var(--e-5); text-align: center;
+}
+.zone-erreur { border-color: #e2b8b0; }
+.zone-vide__titre, .zone-erreur__titre {
+  font-family: var(--f-ui); font-size: var(--t-t3); font-weight: var(--g-lourd);
+  margin: 0 0 var(--e-2); letter-spacing: -.012em;
+}
+.zone-vide p, .zone-erreur p {
+  font-size: var(--t-petit); color: var(--c-encre-2); margin: 0 auto var(--e-4);
+  max-width: 48ch; line-height: 1.6;
+}
+.zone-vide em { font-family: var(--f-lecture); color: var(--c-encre); }
+.reformuler { display: flex; gap: var(--e-2); justify-content: center; flex-wrap: wrap; margin-bottom: var(--e-4); }
+.piste {
+  border: 1px solid var(--c-trait); background: var(--c-papier-2); border-radius: var(--r-2);
+  padding: 5px var(--e-3); font-size: var(--t-petit); cursor: pointer; color: var(--c-encre-2);
+}
+.piste:hover { border-color: var(--c-accent); color: var(--c-accent); background: var(--c-accent-voile); }
+
+/* --- Pied de page ------------------------------------------------------------------- */
+.pied-public { border-top: 1px solid var(--c-trait); padding: var(--e-4) var(--e-5); }
+.pied-public__int {
+  max-width: 1080px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e-4); flex-wrap: wrap;
+}
+.pied-public a {
+  color: var(--c-encre-2); font-size: var(--t-petit); text-decoration: none;
+  border-bottom: 1px solid var(--c-trait-fort);
+}
+.pied-public a:hover { color: var(--c-accent); border-color: var(--c-accent); }
+
+@media (max-width: 700px) {
+  .chapeau { padding: var(--e-3) var(--e-4); }
+  .champ-public { padding: var(--e-3); }
+  .repli { padding: var(--e-4); }
+}
+
+/* ==========================================================================
+   SYSTÈME DE LECTURE
+   Sommaire, en-tête de note, cartouche de fraîcheur, métadonnées, sélecteur
+   de registre et rendu du corps rédigé. Commun à la lecture interne (V-14) et
+   à la lecture publique (V-03) : la seconde est une amputation de la première,
+   jamais une réécriture.
+   ========================================================================== */
+
+.article { min-width: 0; max-width: var(--l-lecture); }
+
+/* --- Sommaire ------------------------------------------------------------ */
+.sommaire { position: sticky; top: calc(var(--l-barre) + var(--e-5)); }
+.sommaire__liste { list-style: none; margin: var(--e-2) 0 0; padding: 0; border-left: 2px solid var(--c-trait); }
+.sommaire__liste ul { list-style: none; margin: 0; padding: 0; }
+.sommaire a {
+  display: flex; gap: var(--e-2);
+  padding: 5px var(--e-3); margin-left: -2px;
+  border-left: 2px solid transparent;
+  font-size: var(--t-petit); line-height: 1.35; color: var(--c-encre-3); text-decoration: none;
+}
+.sommaire a:hover { color: var(--c-encre); }
+.sommaire a[aria-current="true"] {
+  color: var(--c-accent); font-weight: var(--g-fort); border-left-color: var(--c-accent);
+}
+.sommaire .n2 a { padding-left: var(--e-6); font-size: var(--t-mini); }
+.sommaire__num { font-family: var(--f-donnee); font-size: var(--t-micro); color: var(--c-encre-4); padding-top: 1px; }
+.sommaire a[aria-current="true"] .sommaire__num { color: var(--c-accent); }
+
+/* --- En-tête de la note --------------------------------------------------- */
+.entete { margin-bottom: var(--e-5); }
+.entete__sur { display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; margin-bottom: var(--e-3); }
+.titre-note {
+  font-family: var(--f-ui); font-size: var(--t-titre); font-weight: var(--g-lourd);
+  line-height: var(--i-serre); letter-spacing: -.022em;
+  margin: 0 0 var(--e-4);
+  text-wrap: balance;
+}
+
+/* --- CARTOUCHE DE CONTRÔLE : la signature ---------------------------------- */
+.cartouche {
+  position: relative; overflow: hidden;
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--e-4);
+  border: 1.5px solid currentColor; border-radius: var(--r-3);
+  padding: var(--e-3) var(--e-4);
+  margin-bottom: var(--e-4);
+}
+.cartouche__bloc { display: flex; align-items: center; gap: var(--e-3); min-width: 0; }
+.cartouche .temoin__jauge { height: 26px; gap: 3px; }
+.cartouche .temoin__jauge i { width: 7px; border-width: 1.5px; border-radius: var(--r-1); }
+.cartouche .temoin__jauge i:nth-child(1) { height: 12px; }
+.cartouche .temoin__jauge i:nth-child(2) { height: 19px; }
+.cartouche .temoin__jauge i:nth-child(3) { height: 26px; }
+.cartouche__valeur {
+  font-family: var(--f-donnee); font-size: var(--t-t3); font-weight: var(--g-lourd);
+  line-height: 1.1; letter-spacing: -.01em;
+}
+.cartouche__detail { font-size: var(--t-mini); color: var(--c-encre-2); margin-top: 3px; }
+.cartouche__detail time { border-bottom: 1px dotted var(--c-encre-4); cursor: help; }
+.cartouche__actions { display: flex; gap: var(--e-2); flex: none; }
+
+.cartouche[data-niveau="frais"] { color: var(--c-frais); background: var(--c-frais-voile); }
+.cartouche[data-niveau="vieil"] { color: var(--c-vieil); background: var(--c-vieil-voile); }
+.cartouche[data-niveau="obs"]   {
+  color: var(--c-obsolete);
+  background:
+    repeating-linear-gradient(135deg,
+      var(--c-obsolete-voile) 0 9px, #f2ddd8 9px 18px);
+}
+.cartouche__valeur, .cartouche__detail strong { color: inherit; }
+.cartouche__detail { color: color-mix(in srgb, currentColor 62%, var(--c-encre)); }
+
+.cartouche .btn--verifier {
+  border-color: currentColor; color: inherit; background: var(--c-papier);
+  font-weight: var(--g-lourd);
+}
+.cartouche .btn--verifier:hover { background: currentColor; color: var(--c-papier); }
+
+/* Le tampon : retour visuel de la vérification en un clic */
+.tampon {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  pointer-events: none; opacity: 0;
+}
+.tampon span {
+  font-family: var(--f-donnee); font-weight: var(--g-lourd); font-size: 1.5rem;
+  letter-spacing: .18em; color: var(--c-frais);
+  border: 3px solid var(--c-frais); border-radius: var(--r-2);
+  padding: var(--e-2) var(--e-4);
+  transform: rotate(-7deg);
+  background: rgba(252,251,248,.82);
+}
+.cartouche.tamponne .tampon { animation: tamponner var(--m-ample) both; }
+@keyframes tamponner {
+  0%   { opacity: 0; transform: scale(1.9); }
+  35%  { opacity: 1; transform: scale(1); }
+  75%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+.cartouche.tamponne .temoin__jauge i { animation: remplir var(--m-doux) both; }
+.cartouche.tamponne .temoin__jauge i:nth-child(2) { animation-delay: 90ms; }
+.cartouche.tamponne .temoin__jauge i:nth-child(3) { animation-delay: 180ms; }
+@keyframes remplir { from { transform: scaleY(.2); opacity: .3; } }
+
+/* --- Métadonnées ---------------------------------------------------------- */
+.meta {
+  display: grid; grid-template-columns: auto 1fr; gap: var(--e-2) var(--e-4);
+  font-size: var(--t-petit);
+  padding: var(--e-3) 0; border-top: 1px solid var(--c-trait-fin); border-bottom: 1px solid var(--c-trait-fin);
+}
+.meta dt { color: var(--c-encre-3); font-size: var(--t-mini); padding-top: 2px; }
+.meta dd { margin: 0; display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; }
+.meta a { color: var(--c-encre); text-decoration: none; border-bottom: 1px solid var(--c-trait-fort); }
+.meta a:hover { color: var(--c-accent); border-color: var(--c-accent); }
+.chiffre { font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-2); }
+
+/* --- Sélecteur de registre ------------------------------------------------- */
+.registre {
+  display: flex; align-items: center; gap: var(--e-2);
+  margin: var(--e-5) 0 var(--e-6);
+  padding: var(--e-1);
+  background: var(--c-fond-creux); border: 1px solid var(--c-trait);
+  border-radius: var(--r-3); width: fit-content;
+}
+.registre button {
+  border: 0; background: transparent; cursor: pointer;
+  padding: 7px var(--e-4); border-radius: var(--r-2);
+  font-size: var(--t-petit); font-weight: var(--g-fort); color: var(--c-encre-2);
+  display: flex; align-items: center; gap: var(--e-2);
+}
+.registre button[aria-selected="true"] {
+  background: var(--c-papier); color: var(--c-encre); box-shadow: var(--o-pose);
+}
+.registre__pt { width: 6px; height: 6px; border-radius: 50%; background: var(--c-encre-4); }
+.registre button[aria-selected="true"] .registre__pt { background: var(--c-accent); }
+.invite-op {
+  display: inline-flex; align-items: center; gap: var(--e-2);
+  margin: var(--e-5) 0 var(--e-6);
+  font-size: var(--t-petit); color: var(--c-encre-3);
+  border: 1px dashed var(--c-trait-fort); border-radius: var(--r-2);
+  padding: var(--e-2) var(--e-3); background: none; cursor: pointer;
+}
+.invite-op:hover { color: var(--c-accent); border-color: var(--c-accent); }
+
+/* --- Corps rédigé --------------------------------------------------------- */
+.prose {
+  font-family: var(--f-lecture); font-size: var(--t-lect);
+  line-height: var(--i-lect); color: var(--c-encre);
+  counter-reset: sec;
+}
+.prose > * + * { margin-top: var(--e-4); }
+.prose p { margin: 0; }
+
+.prose h2 {
+  counter-increment: sec;
+  font-family: var(--f-ui); font-size: var(--t-t1); font-weight: var(--g-lourd);
+  line-height: 1.25; letter-spacing: -.018em;
+  margin: var(--e-7) 0 var(--e-4);
+  padding-top: var(--e-3); border-top: 1px solid var(--c-trait);
+  display: flex; gap: var(--e-3); align-items: baseline;
+  scroll-margin-top: calc(var(--l-barre) + var(--e-4));
+}
+/* La numérotation n'est pas décorative : le type de note est « Procédure »,
+   l'ordre des sections porte l'ordre des opérations. */
+.prose h2::before {
+  content: counter(sec, decimal-leading-zero);
+  font-family: var(--f-donnee); font-size: var(--t-base); font-weight: var(--g-moyen);
+  color: var(--c-accent); flex: none;
+}
+.prose h3 {
+  font-family: var(--f-ui); font-size: var(--t-t2); font-weight: var(--g-fort);
+  line-height: 1.3; letter-spacing: -.012em; margin: var(--e-6) 0 var(--e-3);
+  scroll-margin-top: calc(var(--l-barre) + var(--e-4));
+}
+.prose h4 { font-family: var(--f-ui); font-size: var(--t-t3); font-weight: var(--g-fort); margin: var(--e-5) 0 var(--e-2); }
+.prose h5 { font-family: var(--f-ui); font-size: var(--t-base); font-weight: var(--g-fort); margin: var(--e-4) 0 var(--e-2); }
+.prose h6 {
+  font-family: var(--f-donnee); font-size: var(--t-mini); font-weight: var(--g-fort);
+  text-transform: uppercase; letter-spacing: .09em; color: var(--c-encre-2);
+  margin: var(--e-4) 0 var(--e-2);
+}
+.prose strong { font-weight: var(--g-fort); }
+.prose em { font-style: italic; }
+.prose u { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.prose s { color: var(--c-encre-3); }
+.prose mark { background: #f6e9a8; color: var(--c-encre); padding: 0 3px; border-radius: var(--r-1); }
+
+.prose ul, .prose ol { margin: 0; padding-left: var(--e-5); }
+.prose li + li { margin-top: var(--e-2); }
+.prose li > ul, .prose li > ol { margin-top: var(--e-2); }
+.prose ul { list-style: none; padding-left: var(--e-5); }
+.prose ul > li { position: relative; }
+.prose ul > li::before {
+  content: ""; position: absolute; left: calc(var(--e-5) * -1 + 6px); top: .62em;
+  width: 5px; height: 5px; background: var(--c-encre-4); border-radius: var(--r-1);
+}
+.prose ul ul > li::before { background: none; box-shadow: inset 0 0 0 1px var(--c-encre-4); }
+.prose ol { list-style: none; counter-reset: pas; padding-left: var(--e-6); }
+.prose ol > li { position: relative; counter-increment: pas; }
+.prose ol > li::before {
+  content: counter(pas) "."; position: absolute; left: calc(var(--e-6) * -1); top: .1em;
+  font-family: var(--f-donnee); font-size: var(--t-petit); color: var(--c-accent); font-weight: var(--g-moyen);
+}
+
+.prose .taches { list-style: none; padding-left: 0; }
+.taches li { display: flex; gap: var(--e-3); align-items: flex-start; }
+.taches li::before { display: none; }
+.taches input { margin: .38em 0 0; accent-color: var(--c-accent); flex: none; }
+.taches input:disabled { opacity: 1; }
+.taches li:has(input:checked) { color: var(--c-encre-3); }
+
+.prose code {
+  font-family: var(--f-donnee); font-size: .84em;
+  background: var(--c-papier-2); border: 1px solid var(--c-trait-fin);
+  border-radius: var(--r-1); padding: 1px 5px; white-space: nowrap;
+}
+.bloc-code {
+  border: 1px solid var(--c-trait); border-radius: var(--r-3); overflow: hidden;
+  background: var(--c-papier-2);
+}
+.bloc-code__tete {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--e-2) var(--e-2) var(--e-2) var(--e-4);
+  border-bottom: 1px solid var(--c-trait-fin); background: var(--c-papier);
+}
+.bloc-code pre {
+  margin: 0; padding: var(--e-4); overflow-x: auto;
+  font-family: var(--f-donnee); font-size: var(--t-petit); line-height: 1.7;
+}
+.bloc-code code { background: none; border: 0; padding: 0; font-size: inherit; white-space: pre; }
+.j-cmd { color: var(--c-accent-fonce); font-weight: var(--g-moyen); }
+.j-arg { color: var(--c-info); }
+.j-str { color: var(--c-frais); }
+.j-com { color: var(--c-encre-4); font-style: italic; }
+.j-mot { color: #7a2f8f; font-weight: var(--g-moyen); }
+
+blockquote.prose-cit {
+  margin: 0; padding: var(--e-1) 0 var(--e-1) var(--e-4);
+  border-left: 3px solid var(--c-accent-trait);
+  color: var(--c-encre-2); font-style: italic;
+}
+blockquote.prose-cit footer { font-style: normal; font-size: var(--t-petit); color: var(--c-encre-3); margin-top: var(--e-2); }
+
+.alerte {
+  display: flex; gap: var(--e-3);
+  border: 1px solid var(--c-trait); border-left-width: 4px;
+  border-radius: var(--r-3); padding: var(--e-3) var(--e-4);
+  font-size: var(--t-petit); font-family: var(--f-ui); line-height: 1.55;
+}
+.alerte__tete { display: flex; align-items: center; gap: var(--e-2); font-weight: var(--g-lourd); margin-bottom: var(--e-1); }
+.alerte__glyphe {
+  font-family: var(--f-donnee); font-size: var(--t-micro); font-weight: var(--g-lourd);
+  letter-spacing: .08em; padding: 2px 6px; border-radius: var(--r-1); color: #fff;
+}
+.alerte--astuce  { background: var(--c-accent-voile); border-color: var(--c-accent-trait); border-left-color: var(--c-accent); }
+.alerte--astuce .alerte__glyphe { background: var(--c-accent); }
+.alerte--attention { background: var(--c-alerte-voile); border-color: #dcc59a; border-left-color: var(--c-alerte); }
+.alerte--attention .alerte__glyphe { background: var(--c-alerte); }
+.alerte--danger { background: var(--c-danger-voile); border-color: #e2b8b0; border-left-color: var(--c-danger); }
+.alerte--danger .alerte__glyphe { background: var(--c-danger); }
+.alerte--danger .alerte__tete { text-transform: uppercase; letter-spacing: .04em; }
+
+.tableau-boite { overflow-x: auto; border: 1px solid var(--c-trait); border-radius: var(--r-3); }
+.prose table { border-collapse: collapse; width: 100%; font-family: var(--f-ui); font-size: var(--t-petit); }
+.prose th, .prose td { text-align: left; padding: var(--e-2) var(--e-3); border-bottom: 1px solid var(--c-trait-fin); white-space: nowrap; }
+.prose thead th { background: var(--c-papier-2); font-weight: var(--g-fort); font-size: var(--t-mini); color: var(--c-encre-2); }
+.prose tbody tr:last-child td { border-bottom: 0; }
+.prose td.num { font-family: var(--f-donnee); }
+
+.figure { margin: 0; }
+.figure__cadre {
+  border: 1px solid var(--c-trait); border-radius: var(--r-3); background: var(--c-papier-2);
+  padding: var(--e-4); cursor: zoom-in; display: block; width: 100%; text-align: left;
+}
+.figure__cadre:hover { border-color: var(--c-trait-fort); }
+.figure figcaption {
+  font-family: var(--f-ui); font-size: var(--t-mini); color: var(--c-encre-3);
+  margin-top: var(--e-2); display: flex; gap: var(--e-2);
+}
+.figure figcaption b { color: var(--c-encre-2); font-weight: var(--g-fort); }
+
+.prose hr { border: 0; border-top: 1px solid var(--c-trait); margin: var(--e-6) 0; }
+
+.lien-int {
+  color: var(--c-accent-fonce); text-decoration: none;
+  border-bottom: 1px solid var(--c-accent-trait);
+  padding-bottom: 1px;
+}
+.lien-int:hover { border-bottom-color: var(--c-accent); background: var(--c-accent-voile); }
+.lien-casse {
+  color: var(--c-obsolete); text-decoration: none;
+  border-bottom: 1px dashed var(--c-obsolete);
+  background: var(--c-obsolete-voile); padding: 0 3px; cursor: pointer;
+}
+.lien-casse::after { content: " ⊘"; font-size: .8em; }
+.lien-ext { color: var(--c-encre); text-decoration: underline; text-decoration-color: var(--c-trait-fort); text-underline-offset: 3px; }
+.lien-ext::after { content: " ↗"; font-size: .8em; color: var(--c-encre-3); }
+
+/* --- Agrandissement d'image -------------------------------------------------- */
+.loupe {
+  position: fixed; inset: 0; z-index: 100; border: 0; padding: var(--e-6);
+  background: rgba(22,34,43,.72); display: none; place-items: center;
+}
+.loupe[open] { display: grid; }
+.loupe__boite { background: var(--c-papier); border-radius: var(--r-3); padding: var(--e-5); max-width: min(1000px, 92vw); box-shadow: var(--o-flotte); }
+.loupe__boite svg { width: 100%; height: auto; }
+.loupe__pied { display: flex; justify-content: space-between; align-items: center; gap: var(--e-4); margin-top: var(--e-3); font-size: var(--t-mini); color: var(--c-encre-3); }
+
+/* --- Numérotation des sections -------------------------------------------
+   Elle n'est pas décorative : elle n'a de sens que si l'ordre des sections
+   porte l'ordre des opérations. Une note de type Procédure la porte, un Guide
+   ou une Note ne la portent pas. */
+body[data-numerote="non"] .prose h2::before { content: none; }
+body[data-numerote="non"] .prose h2 { gap: 0; }
+
+/* ==========================================================================
+   V-03 — LECTURE PUBLIQUE D'UNE NOTE
+   Reprend V-14 sans les actions d'écriture, sans les panneaux Historique,
+   Relations et Notes connexes, sans les métadonnées internes. Conserve le
+   signal de fraîcheur : la transparence sur la fiabilité vaut aussi pour les
+   lecteurs externes.
+   ========================================================================== */
+
+.lecture-pub {
+  display: grid; align-items: start;
+  grid-template-columns: var(--l-sommaire) minmax(0, 1fr) 262px;
+  gap: var(--e-6);
+  max-width: 1240px; width: 100%; margin: 0 auto;
+  padding: var(--e-5) var(--e-5) var(--e-8);
+  flex: 1;
+}
+
+/* Fil d'Ariane public : réduit au domaine, le rangement interne n'est pas
+   exposé. */
+.fil-pub {
+  display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap;
+  max-width: 1240px; width: 100%; margin: 0 auto;
+  padding: 0 var(--e-5); font-size: var(--t-petit);
+}
+.fil-pub a { color: var(--c-encre-3); text-decoration: none; }
+.fil-pub a:hover { color: var(--c-accent); text-decoration: underline; }
+.fil-pub span { color: var(--c-encre-4); }
+
+/* Le sommaire se replie en tête sur petit écran. */
+.sommaire__bascule { display: none; }
+
+/* Colonne droite : à propos, pièces jointes, repli. */
+.aparte { display: flex; flex-direction: column; gap: var(--e-3); position: sticky; top: var(--e-5); }
+.aparte .repli {
+  margin-top: 0; padding: var(--e-4); display: block;
+  border-left-width: 4px;
+}
+.aparte .repli .btn { margin-top: var(--e-3); width: 100%; justify-content: center; }
+.aparte .repli__txt { font-size: var(--t-mini); }
+
+.pj { display: flex; align-items: center; gap: var(--e-3); padding: var(--e-2); border-radius: var(--r-2); text-decoration: none; color: inherit; }
+.pj:hover { background: var(--c-papier-2); }
+.pj__ext {
+  flex: none; width: 34px; height: 34px; border-radius: var(--r-2);
+  display: grid; place-items: center; background: var(--c-fond-creux);
+  font-family: var(--f-donnee); font-size: var(--t-micro); font-weight: var(--g-lourd);
+  color: var(--c-encre-2);
+}
+.pj__nom { font-size: var(--t-petit); font-weight: var(--g-moyen); line-height: 1.3; }
+.pj__sous { font-size: var(--t-mini); color: var(--c-encre-3); margin-top: 2px; }
+
+/* Le cartouche public n'a pas d'actions : il informe, il ne propose rien. */
+.cartouche--lecture { grid-template-columns: 1fr; }
+
+/* Lien interne vers une note non publique : ni cliquable, ni révélateur du
+   titre de sa cible. */
+.lien-prive {
+  color: var(--c-encre-3);
+  border-bottom: 1px dotted var(--c-encre-4);
+  cursor: help;
+}
+.lien-prive::after {
+  content: " ⌁"; font-size: .8em; color: var(--c-encre-4);
+}
+
+/* --- Planche de revue (hors produit) ----------------------------------------------- */
+.planche {
+  position: fixed; z-index: 120; left: 50%; bottom: var(--e-4); transform: translateX(-50%);
+  display: flex; align-items: center; gap: var(--e-4); flex-wrap: wrap;
+  background: var(--c-encre); color: #cfd8db;
+  padding: var(--e-2) var(--e-4); border-radius: 999px;
+  box-shadow: var(--o-flotte); font-size: var(--t-mini); max-width: calc(100vw - var(--e-6));
+}
+.planche fieldset { border: 0; margin: 0; padding: 0; display: flex; align-items: center; gap: var(--e-2); }
+.planche legend { float: left; margin-right: var(--e-2); font-family: var(--f-donnee); font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase; color: #7d8f95; }
+.planche label { cursor: pointer; }
+.planche input { position: absolute; opacity: 0; pointer-events: none; }
+.planche label span { display: inline-block; padding: 4px var(--e-2); border-radius: 999px; border: 1px solid #33454f; color: #cfd8db; }
+.planche input:checked + span { background: #cfd8db; color: var(--c-encre); border-color: #cfd8db; font-weight: var(--g-fort); }
+.planche input:focus-visible + span { outline: 2px solid #8f86e0; outline-offset: 2px; }
+.planche__sep { width: 1px; height: 22px; background: #33454f; }
+
+/* --- Petit écran : cas prioritaire ---------------------------------------- */
+@media (max-width: 1080px) {
+  .lecture-pub { grid-template-columns: var(--l-sommaire) minmax(0, 1fr); }
+  .aparte { grid-column: 1 / -1; position: static; }
+  .aparte > * { flex: 1; }
+}
+@media (max-width: 820px) {
+  .fil-pub { padding: 0 var(--e-4); }
+  .lecture-pub { grid-template-columns: minmax(0, 1fr); padding: var(--e-4) var(--e-4) var(--e-7); gap: var(--e-4); }
+  .article { max-width: none; }
+
+  /* Sommaire replié en tête, dépliable. */
+  .sommaire {
+    position: static; order: -1;
+    background: var(--c-papier); border: 1px solid var(--c-trait);
+    border-radius: var(--r-3); padding: var(--e-2);
+  }
+  .sommaire > .etiq { display: none; }
+  .sommaire__bascule {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--e-2);
+    width: 100%; padding: var(--e-2); background: none; border: 0; cursor: pointer;
+    font-family: var(--f-ui); font-size: var(--t-petit); font-weight: var(--g-fort); color: inherit;
+  }
+  .sommaire__bascule svg { transition: transform var(--m-vif); color: var(--c-encre-3); }
+  .sommaire[data-ouvert="oui"] .sommaire__bascule svg { transform: rotate(90deg); }
+  .sommaire__liste { display: none; margin-top: var(--e-2); }
+  .sommaire[data-ouvert="oui"] .sommaire__liste { display: block; }
+  .titre-note { font-size: var(--t-t1); }
+  .prose { font-size: 1rem; }
+  .meta { grid-template-columns: 1fr; gap: var(--e-1); }
+  .meta dt { margin-top: var(--e-2); }
+  .planche { display: none; }
+}
+
+/* --- Impression ------------------------------------------------------------- */
+@media print {
+  .chapeau, .pied-public, .sommaire, .aparte, .planche, .notifs, .registre, .fil-pub { display: none !important; }
+  .lecture-pub { grid-template-columns: 1fr; padding: 0; }
+  .article { max-width: none; }
+  body { background: #fff; }
+  .lien-ext::after { content: " (" attr(href) ")"; font-size: .75em; }
+}
+
+/* --- Contenus larges : le débordement reste dans son bloc ------------------
+   Un tableau ou un bloc de code trop large défile dans son propre cadre ; il
+   ne fait jamais défiler la page entière (RG-M18-12). */
+.bloc-code pre { overflow-x: auto; }
+.tableau-boite { overflow-x: auto; }
+.ligne-note__titre { display: block; }
+</style>
+</head>
+<body data-numerote="non">
+<a class="saut-contenu" href="#article">Aller au contenu</a>
+
+<div class="public app" id="app" data-registre="reference">
+
+    <header class="chapeau">
+    <a class="marque" href="#" aria-label="Codicillus — accueil public">
+      <span class="marque__sceau" aria-hidden="true">C</span>
+      <span class="marque__nom">Codicillus</span>
+    </a>
+    <!-- Accès connexion : discret, pour les personnes qui ont déjà un compte. -->
+    <a class="btn btn--discret" href="#">Se connecter</a>
+  </header>
+
+  <nav class="fil-pub" aria-label="Fil d'Ariane">
+    <a href="#">Accueil</a><span>›</span>
+    <a href="#">Poste de travail</a><span>›</span>
+    <a href="#">Guides</a>
+  </nav>
+
+  <main class="lecture-pub">
+
+    <!-- ---------- Sommaire ---------- -->
+    <nav class="sommaire" aria-label="Sommaire du guide" data-ouvert="non">
+      <div class="etiq">Sommaire</div>
+      <button class="sommaire__bascule" id="bascule-sommaire" aria-expanded="false">
+        Sommaire
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l4 4-4 4z"/></svg>
+      </button>
+      <ul class="sommaire__liste" id="sommaire"></ul>
+    </nav>
+
+    <!-- ---------- Article ---------- -->
+    <article class="article" id="article">
+
+      <header class="entete">
+        <div class="entete__sur">
+          <span class="past past--type">Guide</span>
+          <span class="past">Poste de travail</span>
+        </div>
+
+        <h1 class="titre-note">Réinitialiser son mot de passe</h1>
+
+        <!-- Cartouche de contrôle : le signal de fraîcheur est conservé en
+             lecture publique, sans aucune action attachée. -->
+        <div class="cartouche cartouche--lecture" data-niveau="frais">
+          <div class="cartouche__bloc">
+            <span class="temoin__jauge" aria-hidden="true"><i class="plein"></i><i class="plein"></i><i class="plein"></i></span>
+            <div>
+              <div class="cartouche__valeur">Vérifié il y a 11 jours</div>
+              <div class="cartouche__detail">
+                Ce guide a été contrôlé le <time datetime="2026-08-02" title="2 août 2026 à 14:05">2 août 2026</time> par l'équipe qui l'a écrit.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <dl class="meta">
+          <dt>Rédaction</dt>
+          <dd>Sophie Nguyen · modifié <time datetime="2026-07-29" title="29 juillet 2026 à 10:12">il y a 2 semaines</time></dd>
+          <dt>Domaine</dt>
+          <dd><a href="#">Poste de travail</a></dd>
+        </dl>
+      </header>
+
+      <!-- Sélecteur de registre : présent, un corps Opérationnel existe. -->
+      <div class="registre" id="registre" role="tablist" aria-label="Registre de lecture">
+        <button role="tab" aria-selected="true" data-reg="reference"><span class="registre__pt"></span>Guide complet</button>
+        <button role="tab" aria-selected="false" data-reg="operationnel"><span class="registre__pt"></span>En bref</button>
+      </div>
+
+      <!-- ================= REGISTRE RÉFÉRENCE ================= -->
+      <div class="prose" id="corps-reference">
+
+        <p>Votre mot de passe expire tous les six mois, et il peut être réinitialisé à tout moment. Trois chemins existent selon l'endroit où vous êtes et l'état de votre poste. <strong>Aucun d'eux ne nécessite d'appeler le support</strong>, sauf le dernier cas décrit plus bas.</p>
+
+        <div class="alerte alerte--attention">
+          <div>
+            <div class="alerte__tete"><span class="alerte__glyphe">ATTENTION</span> Personne ne vous demandera jamais votre mot de passe</div>
+            <div>Ni par téléphone, ni par courriel, ni par message. Aucun agent du support, aucun responsable. Un message qui vous le demande est une tentative d'hameçonnage : signalez-le sans y répondre.</div>
+          </div>
+        </div>
+
+        <h2 id="s-portail">Depuis le portail, sur votre poste</h2>
+        <p>C'est le cas courant : vous êtes connecté et vous voulez changer votre mot de passe avant qu'il n'expire.</p>
+        <ol>
+          <li>Ouvrez le portail interne et allez dans <strong>Mon compte</strong>.</li>
+          <li>Choisissez <strong>Changer mon mot de passe</strong>.</li>
+          <li>Saisissez l'ancien, puis le nouveau deux fois.</li>
+          <li>Verrouillez puis déverrouillez votre session pour vérifier que le nouveau est bien pris en compte.</li>
+        </ol>
+
+        <figure class="figure">
+          <button class="figure__cadre" aria-label="Agrandir le schéma des trois chemins">
+            <svg viewBox="0 0 640 148" width="100%" height="auto" role="img" aria-labelledby="d-titre d-desc">
+              <title id="d-titre">Trois chemins de réinitialisation</title>
+              <desc id="d-desc">Selon la situation : session ouverte sur le poste, chemin par le portail interne. Poste verrouillé, chemin par le lien « Mot de passe oublié » de l'écran de connexion. En déplacement sans accès au réseau, chemin par appel au support avec vérification d'identité.</desc>
+              <g font-family="Archivo, sans-serif" font-size="11">
+                <rect x="2" y="8" width="176" height="40" rx="6" fill="#fcfbf8" stroke="#9aa7a3"/>
+                <text x="16" y="26" fill="#46585f">Votre session est ouverte</text>
+                <text x="16" y="40" font-weight="700" fill="#16222b">→ Portail interne</text>
+
+                <rect x="2" y="56" width="176" height="40" rx="6" fill="#fcfbf8" stroke="#9aa7a3"/>
+                <text x="16" y="74" fill="#46585f">Votre poste est verrouillé</text>
+                <text x="16" y="88" font-weight="700" fill="#16222b">→ Écran de connexion</text>
+
+                <rect x="2" y="104" width="176" height="40" rx="6" fill="#fcfbf8" stroke="#9aa7a3"/>
+                <text x="16" y="122" fill="#46585f">Vous êtes en déplacement</text>
+                <text x="16" y="136" font-weight="700" fill="#16222b">→ Appel au support</text>
+
+                <path d="M178 28h44v48h30" stroke="#9aa7a3" stroke-width="1.4" fill="none"/>
+                <path d="M178 76h74" stroke="#9aa7a3" stroke-width="1.4" fill="none"/>
+                <path d="M178 124h44V76h30" stroke="#9aa7a3" stroke-width="1.4" fill="none"/>
+                <path d="M252 71l9 5-9 5z" fill="#9aa7a3"/>
+
+                <rect x="266" y="56" width="164" height="40" rx="6" fill="#edecf8" stroke="#453ba0"/>
+                <text x="280" y="74" font-weight="700" fill="#322b78">Nouveau mot de passe</text>
+                <text x="280" y="88" fill="#453ba0">12 caractères minimum</text>
+
+                <path d="M430 76h30" stroke="#9aa7a3" stroke-width="1.4"/><path d="M460 71l9 5-9 5z" fill="#9aa7a3"/>
+
+                <rect x="474" y="56" width="164" height="40" rx="6" fill="#e4efe8" stroke="#1d6b4a"/>
+                <text x="488" y="74" font-weight="700" fill="#1d6b4a">Actif sous 5 minutes</text>
+                <text x="488" y="88" fill="#1d6b4a">sur tous vos services</text>
+              </g>
+            </svg>
+          </button>
+          <figcaption><b>Schéma</b><span>Les trois chemins mènent au même résultat. Cliquez pour agrandir.</span></figcaption>
+        </figure>
+
+        <h2 id="s-verrouille">Depuis l'écran de connexion, poste verrouillé</h2>
+        <p>Si vous avez oublié votre mot de passe et que vous ne pouvez plus ouvrir votre session, utilisez le lien <em>Mot de passe oublié</em> sous les champs de connexion. Un code vous est envoyé sur votre téléphone professionnel.</p>
+
+        <div class="alerte alerte--astuce">
+          <div>
+            <div class="alerte__tete"><span class="alerte__glyphe">ASTUCE</span> Le code arrive rarement en moins de dix secondes</div>
+            <div>Attendez une minute avant de le redemander : chaque nouvelle demande annule la précédente, et beaucoup de blocages viennent de là.</div>
+          </div>
+        </div>
+
+        <h2 id="s-deplacement">En déplacement, sans accès au réseau interne</h2>
+        <p>Appelez le support. Votre identité sera vérifiée par une question convenue à votre arrivée dans l'entreprise. Si vous ne vous en souvenez pas, le support passera par votre responsable hiérarchique — comptez alors une demi-journée.</p>
+
+        <h2 id="s-regles">Ce que doit contenir le nouveau mot de passe</h2>
+        <div class="tableau-boite">
+          <table>
+            <thead><tr><th>Règle</th><th>Détail</th></tr></thead>
+            <tbody>
+              <tr><td>Longueur</td><td>12 caractères au minimum</td></tr>
+              <tr><td>Composition</td><td>Aucune contrainte de caractères spéciaux</td></tr>
+              <tr><td>Réutilisation</td><td>Différent des 5 derniers</td></tr>
+              <tr><td>Validité</td><td>6 mois</td></tr>
+              <tr><td>Prise en compte</td><td>5 minutes sur l'ensemble des services</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Une phrase de passe est plus sûre et plus facile à retenir qu'une suite de symboles. <mark>Quatre mots sans rapport entre eux</mark> valent mieux qu'un mot compliqué.</p>
+
+        <h2 id="s-particuliers">Cas particuliers</h2>
+        <ul>
+          <li><strong>Compte partagé d'équipe</strong> — la procédure est différente et suivie par l'équipe technique. Elle est décrite dans <span class="lien-prive" title="Cette ressource n'est pas publique">une ressource réservée aux équipes techniques</span>.</li>
+          <li><strong>Vous n'arrivez plus à accéder à une application précise</strong> — ce n'est peut-être pas votre mot de passe. Voyez <a class="lien-int" href="#">Demander un accès à une application</a>.</li>
+          <li><strong>Téléphone professionnel perdu</strong> — signalez-le d'abord, la réinitialisation viendra ensuite. Voyez <a class="lien-int" href="#">Signaler un incident au support</a>.</li>
+        </ul>
+
+        <p>La politique de mots de passe suit les recommandations publiques de l'<a class="lien-ext" href="https://cyber.gouv.fr" target="_blank" rel="noopener">ANSSI</a>.</p>
+      </div>
+
+      <!-- ================= REGISTRE OPÉRATIONNEL ================= -->
+      <div class="prose" id="corps-operationnel" hidden>
+        <div class="alerte alerte--astuce">
+          <div>
+            <div class="alerte__tete"><span class="alerte__glyphe">EN BREF</span> Version courte</div>
+            <div>Pour le détail, les cas particuliers et les règles, revenez au <strong>guide complet</strong>.</div>
+          </div>
+        </div>
+
+        <h2 id="o-faire">Ce qu'il faut faire</h2>
+        <ol>
+          <li>Session ouverte&nbsp;? Portail interne → <strong>Mon compte</strong> → <strong>Changer mon mot de passe</strong>.</li>
+          <li>Poste verrouillé&nbsp;? <strong>Mot de passe oublié</strong> sur l'écran de connexion, puis le code reçu par téléphone.</li>
+          <li>En déplacement sans réseau&nbsp;? Appelez le support.</li>
+        </ol>
+
+        <h2 id="o-retenir">À retenir</h2>
+        <ul class="taches">
+          <li><input type="checkbox" disabled><span>12 caractères minimum, différent des 5 derniers.</span></li>
+          <li><input type="checkbox" disabled><span>Actif sous 5 minutes sur tous les services.</span></li>
+          <li><input type="checkbox" disabled><span>Personne ne vous demandera jamais votre mot de passe.</span></li>
+        </ul>
+      </div>
+
+    </article>
+
+    <!-- ---------- Colonne droite, réduite ---------- -->
+    <aside class="aparte">
+
+      <section class="panneau">
+        <div class="panneau__tete"><span class="etiq">Pièces jointes</span></div>
+        <div class="panneau__corps panneau__corps--serre">
+          <a class="pj" href="#">
+            <span class="pj__ext">PDF</span>
+            <span>
+              <span class="pj__nom">Aide-mémoire — écran de connexion</span>
+              <span class="pj__sous">320 Ko</span>
+            </span>
+          </a>
+        </div>
+      </section>
+
+      <section class="panneau">
+        <div class="panneau__tete"><span class="etiq">Ce guide</span></div>
+        <div class="panneau__corps">
+          <div style="font-size:var(--t-petit);color:var(--c-encre-2);line-height:1.6">
+            Écrit et maintenu par l'équipe Poste de travail. Le signal en tête indique la dernière date à laquelle son contenu a été contrôlé.
+          </div>
+          <button class="btn btn--plein" style="margin-top:var(--e-3)" onclick="window.print()">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4.5 6V2.5h7V6M4.5 12H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-1.5M4.5 10h7v3.5h-7z"/></svg>
+            Imprimer ce guide
+          </button>
+        </div>
+      </section>
+
+      <aside class="repli">
+        <h2 class="repli__titre">Toujours bloqué ?</h2>
+        <p class="repli__txt">L'assistance prend le relais et vous rappelle.</p>
+        <a class="btn btn--principal" href="#" id="ticket">
+          Ouvrir un ticket
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h7v7M13 3L4 12"/></svg>
+        </a>
+      </aside>
+
+    </aside>
+
+  </main>
+
+    <footer class="pied-public">
+    <div class="pied-public__int">
+      <span class="etiq">Codicillus · Direction technique</span>
+      <a href="#">Se connecter</a>
+    </div>
+  </footer>
+
+</div>
+
+<dialog class="loupe" id="loupe">
+  <div class="loupe__boite">
+    <div id="loupe-contenu"></div>
+    <div class="loupe__pied">
+      <span id="loupe-legende"></span>
+      <button class="btn" id="loupe-fermer">Fermer <kbd class="touche">Échap</kbd></button>
+    </div>
+  </div>
+</dialog>
+
+<div class="notifs" id="notifs" role="status" aria-live="polite"></div>
+
+<!-- ====================== PLANCHE DE REVUE — hors produit ====================== -->
+<div class="planche" role="group" aria-label="Contrôles de maquette, hors produit">
+  <fieldset>
+    <legend>Fraîcheur</legend>
+    <label><input type="radio" name="fr" value="frais" checked><span>Frais</span></label>
+    <label><input type="radio" name="fr" value="vieil"><span>Vieillissant</span></label>
+    <label><input type="radio" name="fr" value="obs"><span>Obsolète</span></label>
+  </fieldset>
+  <div class="planche__sep"></div>
+  <fieldset>
+    <legend>Registres</legend>
+    <label><input type="checkbox" id="c-op" checked><span>Version « En bref » existante</span></label>
+  </fieldset>
+</div>
+
+<script>/* ==========================================================================
+   CORPUS DE DÉMONSTRATION
+   Jeu de notes commun à toutes les maquettes. Les valeurs sont plausibles et
+   cohérentes entre elles : les compteurs affichés dans les vues sont calculés
+   à partir de ce tableau, jamais saisis à la main.
+   ========================================================================== */
+window.CORPUS = [
+  {
+    id: "n-restaurer-pg",
+    titre: "Restaurer une sauvegarde PostgreSQL depuis Barman",
+    extrait: "Cette procédure décrit la restauration d'une base PostgreSQL 16 à partir des sauvegardes gérées par Barman. Elle couvre la restauration complète et la restauration à un instant donné.",
+    type: "Procédure", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Sauvegardes",
+    auteur: "Sophie Nguyen", fraicheur: "frais", jours: 12,
+    revise: "01/08/2026", vues: 412, pj: 2, brouillon: false,
+    visibilite: "Interne", operationnel: true,
+    etiquettes: ["postgresql", "sauvegarde", "barman", "astreinte"]
+  },
+  {
+    id: "n-restaurer-maria",
+    titre: "Restaurer une sauvegarde MariaDB",
+    extrait: "Restauration d'une base de données MariaDB 11 depuis un export logique ou une copie physique. La bascule du réplica est traitée séparément.",
+    type: "Procédure", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Sauvegardes",
+    auteur: "Marc Ferreira", fraicheur: "vieil", jours: 118,
+    revise: "17/04/2026", vues: 156, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["mariadb", "sauvegarde", "restauration"]
+  },
+  {
+    id: "n-pra-bases",
+    titre: "Plan de reprise d'activité — volet bases de données",
+    extrait: "Engagements de reprise, ordre de restauration des bases de données et responsabilités par application. Document de référence, revu annuellement avec la direction.",
+    type: "Note", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation",
+    auteur: "Sophie Nguyen", fraicheur: "obs", jours: 248,
+    revise: "08/12/2025", vues: 289, pj: 3, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["pra", "sauvegarde", "continuité"]
+  },
+  {
+    id: "n-diag-barman",
+    titre: "Diagnostiquer un échec de restauration Barman",
+    extrait: "Arbre de décision face à un échec de restauration de base : clés SSH, espace disque, journaux de transaction manquants, incohérence de version.",
+    type: "Procédure", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Sauvegardes",
+    auteur: "Karim Belhadj", fraicheur: "frais", jours: 5,
+    revise: "08/08/2026", vues: 74, pj: 0, brouillon: true,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["barman", "diagnostic", "astreinte"]
+  },
+  {
+    id: "n-pg-prod-01",
+    titre: "pg-prod-01",
+    extrait: "Serveur de bases de données principal. Héberge les bases de facturation et de référentiel. Sauvegardé chaque nuit par Barman ; restauration couverte par la procédure dédiée.",
+    type: "Fiche", typeFiche: "Serveur", univers: "Production", domaine: "Infrastructure",
+    dossier: "Applications › Serveurs",
+    auteur: "Karim Belhadj", fraicheur: "frais", jours: 20,
+    revise: "24/07/2026", vues: 531, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["postgresql", "serveur", "production"]
+  },
+  {
+    id: "n-tester-pra",
+    titre: "Tester le plan de reprise — mode opératoire",
+    extrait: "Répétition trimestrielle de la reprise sur l'environnement de bascule. Comprend la restauration blanche des bases et le relevé des temps constatés.",
+    type: "Guide", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation",
+    auteur: "Marc Ferreira", fraicheur: "vieil", jours: 141,
+    revise: null, vues: 98, pj: 1, brouillon: false,
+    visibilite: "Interne", operationnel: true,
+    etiquettes: ["pra", "test", "continuité"]
+  },
+  {
+    id: "n-astreinte",
+    titre: "Consignes d'astreinte — nuit et week-end",
+    extrait: "Qui appeler, dans quel ordre, avec quels seuils de déclenchement. Renvoie vers les procédures de restauration des bases et de bascule.",
+    type: "Procédure", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Astreinte",
+    auteur: "Sophie Nguyen", fraicheur: "frais", jours: 9,
+    revise: "04/08/2026", vues: 623, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: true,
+    etiquettes: ["astreinte", "consignes"]
+  },
+  {
+    id: "n-doc-barman",
+    titre: "Documentation officielle Barman",
+    extrait: "Référence de l'éditeur : options de recover, gestion de la rétention, restauration d'une base à un instant donné.",
+    type: "Signet", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Sauvegardes",
+    url: "docs.pgbarman.org",
+    auteur: "Karim Belhadj", fraicheur: "frais", jours: 26,
+    revise: "18/07/2026", vues: 61, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["barman", "documentation"]
+  },
+  {
+    id: "n-purge-sauv",
+    titre: "Purger les sauvegardes hors rétention",
+    extrait: "Libération d'espace sur le serveur de sauvegarde. À ne jamais lancer pendant une restauration en cours.",
+    type: "Procédure", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Sauvegardes",
+    auteur: "Marc Ferreira", fraicheur: "vieil", jours: 126,
+    revise: "09/04/2026", vues: 87, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["sauvegarde", "barman", "rétention"]
+  },
+  {
+    id: "n-planifier-sauv",
+    titre: "Planifier une sauvegarde Barman",
+    extrait: "Déclaration d'un nouveau serveur dans Barman, fenêtre de sauvegarde et vérification du premier passage.",
+    type: "Procédure", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Sauvegardes",
+    auteur: "Karim Belhadj", fraicheur: "frais", jours: 6,
+    revise: "07/08/2026", vues: 143, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["sauvegarde", "barman", "postgresql"]
+  },
+  {
+    id: "n-facturation",
+    titre: "Facturation",
+    extrait: "Application de facturation clients. Base de données hébergée sur pg-prod-01, restauration couverte par la procédure Barman.",
+    type: "Fiche", typeFiche: "Application", univers: "Production", domaine: "Applications",
+    dossier: "Fiches applicatives",
+    auteur: "Sophie Nguyen", fraicheur: "vieil", jours: 133,
+    revise: "02/04/2026", vues: 374, pj: 1, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["application", "facturation", "postgresql"]
+  },
+  {
+    id: "n-sondes",
+    titre: "Sondes de supervision des bases de données",
+    extrait: "Seuils, fréquences et destinataires des alertes. La sonde de réplication doit repasser au vert après toute restauration.",
+    type: "Note", univers: "Production", domaine: "Infrastructure",
+    dossier: "Supervision › Sondes",
+    auteur: "Marc Ferreira", fraicheur: "obs", jours: 274,
+    revise: "12/11/2025", vues: 112, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["supervision", "postgresql", "alertes"]
+  },
+  {
+    id: "n-migration-bases",
+    titre: "Migration 2026 — lot 3, bases de données",
+    extrait: "Périmètre, jalons et stratégie de reprise des bases lors de la bascule vers le nouveau socle. Restauration de contrôle prévue à chaque jalon.",
+    type: "Note", univers: "Projets", domaine: "Migration 2026",
+    dossier: "Lots",
+    auteur: "Sophie Nguyen", fraicheur: "frais", jours: 3,
+    revise: "10/08/2026", vues: 208, pj: 4, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["migration", "postgresql", "planification"]
+  },
+  {
+    id: "n-poste-sauv",
+    titre: "Sauvegarde des postes de travail",
+    extrait: "Périmètre couvert, fréquence et procédure de restauration d'un profil utilisateur. Sans rapport avec les sauvegardes de bases.",
+    type: "Guide", univers: "Production", domaine: "Poste de travail",
+    dossier: "Déploiement",
+    auteur: "Karim Belhadj", fraicheur: "vieil", jours: 152,
+    revise: "14/03/2026", vues: 245, pj: 0, brouillon: false,
+    visibilite: "Publique", operationnel: false,
+    etiquettes: ["poste", "sauvegarde", "restauration"]
+  }  ,
+  /* ---- Corpus public : guides destinés aux collaborateurs hors direction
+     technique. Ce sont les seules notes atteignables depuis V-01 à V-03. ---- */
+  {
+    id: "n-mot-de-passe",
+    titre: "Réinitialiser son mot de passe",
+    extrait: "Réinitialisation depuis le portail, depuis un poste verrouillé, ou par appel au support. Délai de prise en compte et cas des comptes de service.",
+    type: "Guide", univers: "Production", domaine: "Poste de travail",
+    dossier: "Déploiement › Comptes",
+    auteur: "Sophie Nguyen", fraicheur: "frais", jours: 11,
+    revise: "02/08/2026", vues: 3210, pj: 0, brouillon: false,
+    visibilite: "Publique", operationnel: true,
+    etiquettes: ["compte", "mot de passe", "support"]
+  },
+  {
+    id: "n-demander-acces",
+    titre: "Demander un accès à une application",
+    extrait: "Formulaire à remplir, validation par le responsable hiérarchique, délais constatés par application. Liste des applications concernées et de leurs référents.",
+    type: "Guide", univers: "Production", domaine: "Applications",
+    dossier: "Fiches applicatives › Accès",
+    auteur: "Karim Belhadj", fraicheur: "frais", jours: 18,
+    revise: "26/07/2026", vues: 1842, pj: 1, brouillon: false,
+    visibilite: "Publique", operationnel: false,
+    etiquettes: ["accès", "habilitation", "support"]
+  },
+  {
+    id: "n-visio",
+    titre: "Utiliser la visioconférence en salle de réunion",
+    extrait: "Démarrer une réunion, partager un écran, connecter un portable personnel. Que faire quand l'écran reste noir ou que le micro n'est pas détecté.",
+    type: "Guide", univers: "Production", domaine: "Poste de travail",
+    dossier: "Déploiement › Salles",
+    auteur: "Marc Ferreira", fraicheur: "vieil", jours: 124,
+    revise: "11/04/2026", vues: 1431, pj: 0, brouillon: false,
+    visibilite: "Publique", operationnel: true,
+    etiquettes: ["visioconférence", "salle", "support"]
+  },
+  {
+    id: "n-reseau-invite",
+    titre: "Connecter un poste au réseau invité",
+    extrait: "Procédure pour un intervenant extérieur ou un appareil personnel. Durée de validité de l'accès et limites du réseau invité.",
+    type: "Guide", univers: "Production", domaine: "Poste de travail",
+    dossier: "Déploiement › Réseau",
+    auteur: "Marc Ferreira", fraicheur: "vieil", jours: 149,
+    revise: "17/03/2026", vues: 1156, pj: 0, brouillon: false,
+    visibilite: "Publique", operationnel: false,
+    etiquettes: ["réseau", "invité", "support"]
+  },
+  {
+    id: "n-signaler-incident",
+    titre: "Signaler un incident au support",
+    extrait: "Ce qu'il faut indiquer pour être dépanné vite : capture d'écran, heure exacte, message d'erreur complet. Niveaux d'urgence et délais associés.",
+    type: "Guide", univers: "Production", domaine: "Applications",
+    dossier: "Fiches applicatives › Support",
+    auteur: "Sophie Nguyen", fraicheur: "frais", jours: 7,
+    revise: "06/08/2026", vues: 967, pj: 0, brouillon: false,
+    visibilite: "Publique", operationnel: false,
+    etiquettes: ["support", "incident", "assistance"]
+  }
+];
+
+/* Libellé du signal de fraîcheur, toujours accompagné de sa valeur en clair. */
+window.libelleFraicheur = function (n) {
+  if (n.fraicheur === "frais") {
+    return n.jours < 31 ? "Vérifié il y a " + n.jours + " jours" : "Vérifié il y a 1 mois";
+  }
+  var mois = Math.round(n.jours / 30);
+  if (n.fraicheur === "vieil") return "Vérifié il y a " + mois + " mois";
+  return "Pas revu depuis " + mois + " mois";
+};
+
+window.barresFraicheur = function (niv) {
+  return niv === "frais" ? 3 : niv === "vieil" ? 2 : 1;
+};
+
+/* Le témoin de fraîcheur est la signature du produit : il n'existe qu'une
+   seule fabrique, pour qu'il ne puisse pas diverger d'un écran à l'autre. */
+window.temoinFraicheur = function (n) {
+  var s = document.createElement("span");
+  s.className = "temoin " + window.classeTemoin(n.fraicheur);
+  var j = document.createElement("span");
+  j.className = "temoin__jauge";
+  j.setAttribute("aria-hidden", "true");
+  var plein = window.barresFraicheur(n.fraicheur);
+  for (var k = 0; k < 3; k++) {
+    var i = document.createElement("i");
+    if (k < plein) i.className = "plein";
+    j.appendChild(i);
+  }
+  var t = document.createElement("span");
+  t.className = "temoin__txt";
+  t.textContent = window.libelleFraicheur(n);
+  s.appendChild(j);
+  s.appendChild(t);
+  return s;
+};
+
+window.classeTemoin = function (niv) {
+  return niv === "frais" ? "temoin--frais" : niv === "vieil" ? "temoin--vieil" : "temoin--obs";
+};
+
+/* Marque les termes de la requête dans un texte, sans jamais injecter de HTML
+   issu de la saisie. */
+window.surligner = function (texte, requete) {
+  var frag = document.createDocumentFragment();
+  var termes = (requete || "").toLowerCase().split(/\s+/).filter(function (t) { return t.length > 2; });
+  if (!termes.length) { frag.appendChild(document.createTextNode(texte)); return frag; }
+  var motif = new RegExp("(" + termes.map(function (t) {
+    return t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }).join("|") + ")", "ig");
+  var reste = texte, m;
+  motif.lastIndex = 0;
+  var dernier = 0;
+  while ((m = motif.exec(texte)) !== null) {
+    if (m.index > dernier) frag.appendChild(document.createTextNode(texte.slice(dernier, m.index)));
+    var mk = document.createElement("mark");
+    mk.textContent = m[0];
+    frag.appendChild(mk);
+    dernier = m.index + m[0].length;
+    if (m.index === motif.lastIndex) motif.lastIndex++;
+  }
+  if (dernier < texte.length) frag.appendChild(document.createTextNode(texte.slice(dernier)));
+  return frag;
+};
+
+/* Correspondance tolérante : la requête est découpée en termes, un résultat
+   sort s'il porte tous les termes dans son titre, son extrait ou ses étiquettes. */
+window.chercher = function (requete) {
+  var termes = (requete || "").toLowerCase().split(/\s+/).filter(Boolean);
+  if (!termes.length) return [];
+  return window.CORPUS.filter(function (n) {
+    var champ = (n.titre + " " + n.extrait + " " + n.etiquettes.join(" ") + " " + n.domaine + " " + (n.typeFiche || "")).toLowerCase();
+    return termes.every(function (t) {
+      if (champ.indexOf(t) !== -1) return true;
+      /* tolérance simple : racine de 4 caractères, suffisante pour la maquette */
+      return t.length > 4 && champ.indexOf(t.slice(0, Math.max(4, t.length - 2))) !== -1;
+    });
+  });
+};
+
+/* Recherche restreinte au corpus public. L'espace public ne peut atteindre
+   aucune note interne, par aucun chemin : le filtre est appliqué ici, en amont,
+   et non au moment de l'affichage. */
+window.chercherPublic = function (requete) {
+  return window.chercher(requete).filter(function (n) { return n.visibilite === "Publique"; });
+};
+
+window.corpusPublic = function () {
+  return window.CORPUS.filter(function (n) { return n.visibilite === "Publique"; });
+};</script>
+<script>
+(function () {
+  "use strict";
+  var app = document.getElementById("app");
+
+    /* ---------- Notifications (V-38) ---------- */
+  window.notifier = function (txt, variante) {
+    var zone = document.getElementById("notifs");
+    if (!zone) {
+      zone = document.createElement("div");
+      zone.id = "notifs"; zone.className = "notifs";
+      zone.setAttribute("role", "status");
+      zone.setAttribute("aria-live", "polite");
+      document.body.appendChild(zone);
+    }
+    var n = document.createElement("div");
+    n.className = "notif" + (variante ? " notif--" + variante : "");
+    n.textContent = txt;
+    zone.appendChild(n);
+    setTimeout(function () {
+      n.style.transition = "opacity .3s"; n.style.opacity = "0";
+      setTimeout(function () { n.remove(); }, 320);
+    }, 2600);
+  };
+
+  /* Contrainte absolue — périmètre public, comme en V-01 et V-02. */
+  window.CORPUS = window.corpusPublic();
+
+  function majAdresse(frag) {
+    try { history.replaceState(null, "", frag); } catch (e) { /* origine opaque */ }
+  }
+
+    /* ====================== SYSTÈME DE LECTURE ======================
+     Sommaire auto-généré et suivi de lecture, bascule de registre, copie d'un
+     bloc de code, agrandissement d'image. Communs à la lecture interne (V-14)
+     et publique (V-03).
+
+     Conventions attendues dans le markup :
+       #sommaire            liste du sommaire
+       #corps-reference     corps du registre Référence
+       #corps-operationnel  corps du registre Opérationnel (facultatif)
+       #registre            groupe d'onglets, boutons porteurs de data-reg
+       .btn-copier          bouton de copie dans un .bloc-code
+       .figure__cadre       déclencheur d'agrandissement, #loupe la boîte
+     Seuls les niveaux 2 et 3 alimentent le sommaire. */
+
+  /* ---------- Sommaire : construction et suivi de lecture ---------- */
+  var somm = document.getElementById("sommaire");
+  var observateur = null;
+
+  function corpsCourant() {
+    var op = document.getElementById("corps-operationnel");
+    return (app.getAttribute("data-registre") === "operationnel" && op)
+      ? op : document.getElementById("corps-reference");
+  }
+
+  function construireSommaire() {
+    if (!somm) return;
+    var corps = corpsCourant();
+    var titres = corps ? corps.querySelectorAll("h2[id], h3[id]") : [];
+    somm.innerHTML = "";
+    if (observateur) { observateur.disconnect(); observateur = null; }
+
+    /* Absent si le contenu ne comporte aucun titre. */
+    var cadre = somm.closest(".sommaire");
+    if (!titres.length) { if (cadre) cadre.hidden = true; return; }
+    if (cadre) cadre.hidden = false;
+
+    var numerote = document.body.getAttribute("data-numerote") !== "non";
+    var n = 0;
+    titres.forEach(function (t) {
+      var li = document.createElement("li");
+      li.className = t.tagName === "H3" ? "n2" : "n1";
+      var a = document.createElement("a");
+      a.href = "#" + t.id;
+      if (t.tagName === "H2" && numerote) {
+        n++;
+        var num = document.createElement("span");
+        num.className = "sommaire__num";
+        num.textContent = String(n).padStart(2, "0");
+        a.appendChild(num);
+      }
+      var lib = document.createElement("span");
+      lib.textContent = t.textContent.trim();
+      a.appendChild(lib);
+      a.addEventListener("click", function (e) {
+        e.preventDefault();
+        t.scrollIntoView({ behavior: "smooth", block: "start" });
+        majAdresse("#" + t.id);
+      });
+      li.appendChild(a);
+      somm.appendChild(li);
+    });
+
+    var liens = {};
+    somm.querySelectorAll("a").forEach(function (a) { liens[a.getAttribute("href").slice(1)] = a; });
+    observateur = new IntersectionObserver(function (entrees) {
+      entrees.forEach(function (e) {
+        if (e.isIntersecting) {
+          somm.querySelectorAll("a").forEach(function (a) { a.removeAttribute("aria-current"); });
+          if (liens[e.target.id]) liens[e.target.id].setAttribute("aria-current", "true");
+        }
+      });
+    }, { rootMargin: "-70px 0px -72% 0px", threshold: 0 });
+    titres.forEach(function (t) { observateur.observe(t); });
+  }
+  construireSommaire();
+
+  /* ---------- Bascule de registre ----------
+     Sans rechargement, avec recalcul du sommaire. Le registre affiché est
+     reflété dans l'adresse : le lien est partageable tel quel. */
+  document.querySelectorAll("#registre button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var reg = b.getAttribute("data-reg");
+      app.setAttribute("data-registre", reg);
+      document.querySelectorAll("#registre button").forEach(function (x) {
+        x.setAttribute("aria-selected", String(x === b));
+      });
+      var ref = document.getElementById("corps-reference");
+      var op = document.getElementById("corps-operationnel");
+      if (ref) ref.hidden = reg !== "reference";
+      if (op) op.hidden = reg !== "operationnel";
+      majAdresse("?registre=" + reg);
+      construireSommaire();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
+
+  /* ---------- Copie d'un bloc de code ----------
+     La copie produit un texte brut, sans numéro de ligne ni caractère parasite. */
+  document.querySelectorAll(".btn-copier").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var brut = b.closest(".bloc-code").querySelector("code").innerText;
+      var fini = function () {
+        var av = b.innerHTML;
+        b.innerHTML = "Copié";
+        setTimeout(function () { b.innerHTML = av; }, 1400);
+      };
+      if (navigator.clipboard) { navigator.clipboard.writeText(brut).then(fini, fini); } else { fini(); }
+    });
+  });
+
+  /* ---------- Agrandissement d'image ---------- */
+  (function () {
+    var loupe = document.getElementById("loupe");
+    if (!loupe) return;
+    var contenu = document.getElementById("loupe-contenu");
+    document.querySelectorAll(".figure__cadre").forEach(function (f) {
+      f.addEventListener("click", function () {
+        var svg = f.querySelector("svg");
+        var img = f.querySelector("img");
+        contenu.innerHTML = "";
+        if (svg) contenu.innerHTML = svg.outerHTML;
+        else if (img) contenu.appendChild(img.cloneNode(true));
+        var leg = document.getElementById("loupe-legende");
+        var cap = f.closest("figure") && f.closest("figure").querySelector("figcaption");
+        if (leg && cap) leg.textContent = cap.textContent.replace(/\s*Cliquez pour agrandir\.?\s*$/, "").trim();
+        loupe.showModal();
+      });
+    });
+    var fermer = document.getElementById("loupe-fermer");
+    if (fermer) fermer.addEventListener("click", function () { loupe.close(); });
+    loupe.addEventListener("click", function (e) { if (e.target === loupe) loupe.close(); });
+  })();
+
+  /* ---------- Signal de fraîcheur : affichage seul, aucune action ---------- */
+  var cartouche = document.querySelector(".cartouche");
+  var jauge = cartouche.querySelector(".temoin__jauge");
+  var valeur = cartouche.querySelector(".cartouche__valeur");
+  var detail = cartouche.querySelector(".cartouche__detail");
+
+  var niveaux = {
+    frais: {
+      barres: 3,
+      txt: "Vérifié il y a 11 jours",
+      det: 'Ce guide a été contrôlé le <time datetime="2026-08-02" title="2 août 2026 à 14:05">2 août 2026</time> par l&rsquo;équipe qui l&rsquo;a écrit.'
+    },
+    vieil: {
+      barres: 2,
+      txt: "Vérifié il y a 5 mois",
+      det: 'Ce guide a été contrôlé le <time datetime="2026-03-11" title="11 mars 2026">11 mars 2026</time>. Son contenu peut avoir changé depuis.'
+    },
+    obs: {
+      barres: 1,
+      txt: "Pas revu depuis 9 mois",
+      det: 'Dernier contrôle le <time datetime="2025-11-06" title="6 novembre 2025">6 novembre 2025</time>. <strong>Vérifiez auprès de l&rsquo;assistance avant de vous y fier.</strong>'
+    }
+  };
+
+
+  function appliquerFraicheur(niv) {
+    var d = niveaux[niv];
+    cartouche.setAttribute("data-niveau", niv);
+    valeur.textContent = d.txt;
+    detail.innerHTML = d.det;
+    jauge.querySelectorAll("i").forEach(function (i, k) { i.classList.toggle("plein", k < d.barres); });
+  }
+
+  /* ---------- Sommaire replié sur petit écran ---------- */
+  var bascule = document.getElementById("bascule-sommaire");
+  bascule.addEventListener("click", function () {
+    var nav = bascule.closest(".sommaire");
+    var ouvert = nav.getAttribute("data-ouvert") === "oui";
+    nav.setAttribute("data-ouvert", ouvert ? "non" : "oui");
+    bascule.setAttribute("aria-expanded", String(!ouvert));
+  });
+
+  /* ---------- Liens ---------- */
+  document.querySelectorAll(".lien-int").forEach(function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      window.notifier("Ouverture d'un autre guide public — la navigation reste dans le périmètre public");
+    });
+  });
+  /* Un lien vers une note non publique n'est pas cliquable et ne révèle pas
+     le titre de sa cible : il n'y a donc rien à brancher ici. */
+
+  document.getElementById("ticket").addEventListener("click", function (e) {
+    e.preventDefault();
+    window.notifier("Ouverture du portail d'assistance — adresse externe configurée en console");
+  });
+
+  /* ---------- Planche de revue ---------- */
+  document.querySelectorAll('input[name="fr"]').forEach(function (r) {
+    r.addEventListener("change", function () { appliquerFraicheur(r.value); });
+  });
+  document.getElementById("c-op").addEventListener("change", function () {
+    var existe = this.checked;
+    document.getElementById("registre").hidden = !existe;
+    if (!existe) {
+      document.querySelector('#registre button[data-reg="reference"]').click();
+    }
+  });
+})();
+</script>
+</body>
+</html>
