@@ -17,12 +17,26 @@ Le projet est en **vague 0** : harnais, gel, semence, inventaire des routes. Auc
 | `docs/` | ADR, routes, contrats de tâche, journal de vague, `DESIGN.md` | Écriture agentique |
 | `verif/`, `seeds/`, `src/` | Banc de comparaison, jeu de semence, application | Écriture agentique — sauf `verif/references/` |
 
-**Le refus d'écriture est mécanique, pas déclaratif.** `.claude/settings.json` refuse `Edit` et `Write` sur `cadrage/**`, `règles/**`, `mockups/**` et `verif/references/**` (plan §3.5). Un agent qui a besoin de modifier une source de vérité reçoit un refus d'outil : c'est le comportement recherché. La modification passe par un arbitrage humain tracé, jamais par une session d'exécution.
+**Le refus d'écriture est bloquant, pas déclaratif — et il ne l'était pas au départ.** Les règles de `.claude/settings.json` refusent `Edit` et `Write` sur `cadrage/**`, `règles/**`, `mockups/**` et `verif/references/**`. Elles ne suffisent pas : **elles filtrent par outil, et Bash passe à travers** — prouvé par sonde le 18/08/2026 (`docs/ecarts/ECART-004.md`, gravité haute). La protection réelle est portée par le système de fichiers : le bit d'écriture est retiré des trois dossiers. Toute écriture y échoue, y compris par `sed`, `tee` ou redirection. C'est le comportement recherché, jamais un obstacle à contourner. `pnpm verif:gel` recalcule par ailleurs les 43 empreintes du gel et sort en 1 à la première divergence : le verrou empêche, le contrôle détecte.
 
-**Deux rectifications aux documents de cadrage**, constatées le 18 août 2026 :
+### Deux documents font autorité au-dessus du cadrage
 
-- Le plan et le guide nomment le dossier de méthode `guide/` : il s'appelle **`règles/`**. Toute mention de `guide/` dans le cadrage se lit `règles/`.
-- Le plan annonce « 36 corpus de maquette à réconcilier » (§3.6). Il n'en existe en réalité que **cinq variantes strictement emboîtées** — 32, 27, 19, 14 notes, et un corpus vide — le jeu de 32 notes de `V-14` étant le sur-ensemble. **Aucun identifiant n'existe hors de ce jeu.** La réconciliation annoncée est donc une vérification d'inclusion, pas un arbitrage de conflits.
+Ils sont à lire **avant** toute tâche, et ils priment sur `cadrage/` pour les seuls points qu'ils énumèrent :
+
+| Document | Ce qu'il porte |
+|---|---|
+| `docs/arbitrages.md` | Les décisions du commanditaire, numérotées `ARB-xxx`. Seule autorité au-dessus de l'ordre de préséance quand les sources se contredisent ou se taisent. Ce qu'un arbitrage ferme n'a plus à être demandé. |
+| `docs/errata-cadrage.md` | Les affirmations du cadrage révélées fausses, numérotées `E-xx`, chacune rattachée à l'arbitrage qui la valide. |
+
+**Pourquoi un errata plutôt qu'une correction des sources.** Éditer `cadrage/` pour y corriger un fait détruirait la propriété qui rend le dispositif opposable : l'immutabilité et la diffabilité du gel. Les sources restent ce qu'elles étaient ; l'errata dit ce qui, depuis, s'est révélé inexact. Aucun agent d'exécution n'y écrit.
+
+Onze entrées à ce jour. Les trois qui changent le plus de choses :
+
+- **E-01 — `mockups/socle.css` n'est pas la source du système visuel.** C'est le plus ancien de six états du socle en ligne, employé par 4 vues sur 41 ; il lui manque les champs de saisie, que 21 vues emploient. La source est le socle de `mockups/V-07-accueil-contributeur.html` (466 lignes), extrait mécaniquement.
+- **E-04 — cinq variantes de corpus strictement emboîtées**, non 36 corpus à réconcilier (32, 27, 19, 14 notes, et vide). Aucun identifiant n'existe hors du jeu de 32 de `V-14`.
+- **E-05 — `RG-M02-05` à `RG-M02-08` n'existaient pas** : les exigences étaient réelles mais restées des puces non numérotées de M02.6. La numérotation est créée à l'errata.
+
+Également : `guide/` s'appelle `règles/` (E-07), le socle compte 69 jetons et non 61 (E-02), et il y a 37 planches de revue sur 41 vues et non 36 sur 40 (E-03).
 
 ---
 
