@@ -17,25 +17,47 @@
 		"En à blanc — maquette comparée à elle-même — ces tolérances ne servent à",
 		"rien : l'exigence y est zéro écart, sans seuil. Tout écart non nul en à",
 		"blanc est un DÉFAUT DE BANC, jamais un défaut de maquette, et jamais une",
-		"raison d'élargir un seuil."
+		"raison d'élargir un seuil.",
+		"",
+		"RESSERREMENT DU 19 AOÛT 2026 — ARB-018.",
+		"",
+		"Le seuil de 0,5 % du PLAN §4.2 supposait un harnais bruité : antialiasing,",
+		"sous-pixel, variance de fonderie. Le nôtre n'en a pas. L'étalonnage à blanc",
+		"rend 409 couples à EXACTEMENT zéro pixel divergent, et les trois premières",
+		"vues implémentées — V-37, V-38, V-39, soit 59 couples de comparaison réelle",
+		"entre application et maquette — sortent elles aussi à exactement zéro.",
+		"",
+		"Conséquence : en régime « app », un pixel divergent n'est JAMAIS du bruit.",
+		"C'est toujours une différence réelle. Le seuil de 0,5 % n'absorbait donc pas",
+		"de la variance de rendu : il absorbait des défauts. Démonstration sur V-40 —",
+		"quatre états déclarés conformes à 4 380, 4 746, 2 884 et 18 pixels, dont la",
+		"cause est un JETON FAUX : un bloc .contexte posé sur --c-papier là où la",
+		"référence le pose sur --c-accent-voile.",
+		"",
+		"Le seuil de conformité du régime « app » passe donc à ZÉRO, comme celui de",
+		"l'à-blanc. Le niveau 3 demeure — un écart irréductible reste arbitrable —",
+		"mais il est désormais VISIBLE et COMPTÉ, au lieu d'être silencieusement",
+		"absorbé. C'est la propriété qui manquait : un défaut ne doit jamais pouvoir",
+		"traverser le dispositif sans que personne ne le voie.",
+		"",
+		"Le seuil d'échec sec reste à 3 % : au-delà, aucun arbitrage n'est recevable."
 	],
-
 	"niveau1": {
 		"intitule": "Structure",
 		"compare": "instantané ARIA du corps de page (repères, rôles, noms accessibles, hiérarchie des titres, ordre des blocs nommés) et ordre de tabulation",
 		"tolerance": 0,
 		"verdict": "toute divergence est un échec sec — c'est de la sémantique, pas du rendu"
 	},
-
 	"niveau2": {
 		"intitule": "Pixels",
 		"seuil_canal": 0.03,
-		"conforme_au_plus": 0.005,
+		"conforme_au_plus": 0,
 		"echec_au_dela": 0.03,
-		"verdict": "≤ 0,5 % de pixels différents : conforme · > 3 % : échec sec · entre les deux : recours au niveau 3",
-		"dimensions_divergentes": "échec sec — deux captures de tailles différentes ne se comparent pas pixel à pixel"
+		"verdict": "0 pixel différent : conforme · > 3 % : échec sec · entre les deux : recours au niveau 3, arbitré et compté. Le seuil de 0,5 % du PLAN §4.2 est abandonné par ARB-018 : il absorbait des défauts, pas du bruit.",
+		"dimensions_divergentes": "échec sec — deux captures de tailles différentes ne se comparent pas pixel à pixel",
+		"conforme_au_plus_a_blanc": 0,
+		"arbitrage": "ARB-018 — le seuil de conformité du régime « app » est zéro."
 	},
-
 	"niveau3": {
 		"intitule": "Jugement",
 		"arbitre": "un agent dédié, jamais ce script",
@@ -44,7 +66,6 @@
 		"comptabilise": true,
 		"pourquoi_compter": "un taux de recours qui augmente d'une vague à l'autre signale que le protocole de capture dérive, pas que les implémentations s'améliorent (PLAN §14, point 5)"
 	},
-
 	"a_blanc": {
 		"intitule": "Étalonnage à blanc",
 		"compare": "la maquette gelée à elle-même, capturée deux fois dans deux contextes indépendants",

@@ -468,3 +468,48 @@ la phase, il ne le dicte pas.**
 dix états**, et le DOM des dix boîtes est **identique caractère pour caractère** à la référence —
 vérifié par diff, aux seules différences de sérialisation près. Le contenu est juste ; seule la
 surface capturée diffère. On ne masque pas un écart de fond : on corrige un artefact de mesure.
+
+---
+
+## ARB-018 — Le seuil de conformité du régime « app » est zéro
+**19 août 2026** — arbitrage délégué à l'orchestrateur. Répond à `ECART-017` É-2.
+**Portée : les 41 vues, et tout le reste du projet.**
+
+**Le fait.** Quatre états de V-40 étaient déclarés **conformes** à 4 380, 4 746, 2 884 et 18 pixels
+divergents — sous le seuil de 0,5 % du `PLAN §4.2`. Leur cause n'est pas du bruit de rendu : c'est
+un **jeton faux**, un bloc `.contexte` posé sur `--c-papier` là où la référence le pose sur
+`--c-accent-voile`.
+
+**Le dispositif certifiait un défaut.** C'est l'état que `PLAN §12` désigne comme strictement pire
+que l'absence de dispositif : une batterie verte qui ne prouve rien désarme la vigilance.
+
+**La décision. Le seuil de conformité passe à zéro, comme en à-blanc.**
+
+**Le motif est empirique, pas doctrinal.** Le seuil de 0,5 % supposait un harnais bruité —
+antialiasing, sous-pixel, variance de fonderie. **Le nôtre n'en a pas**, et c'est démontré :
+
+| Mesure | Couples | Pixels divergents |
+|---|---|---|
+| Étalonnage à blanc, 41 vues | 409 | **exactement 0** |
+| V-37 contre son implémentation | 32 | **exactement 0** |
+| V-38 | 6 | **exactement 0** |
+| V-39 | 21 | **exactement 0** |
+
+Cinquante-neuf couples de comparaison **réelle** entre une application et sa maquette, à zéro
+pixel. Le zéro n'est donc pas un idéal, c'est le comportement observé du dispositif.
+
+**Il s'ensuit qu'en régime « app », un pixel divergent n'est jamais du bruit.** C'est toujours une
+différence réelle. Le seuil n'absorbait pas de la variance : il absorbait des défauts.
+
+**Ce qui est conservé.** Le niveau 3 demeure : un écart irréductible reste arbitrable par un agent
+dédié, sur pièces. Mais il est désormais **visible et compté** au lieu d'être silencieusement
+absorbé — c'est précisément la propriété qui manquait. Le taux de recours reste l'indicateur de
+dérive du protocole (`PLAN §14`, point 5). L'échec sec au-delà de 3 % est inchangé : passé ce
+seuil, aucun arbitrage n'est recevable.
+
+**Effet immédiat, vérifié** : les quatre états de V-40 remontent en recours au niveau 3, la
+commande sort en 1, et **V-37, V-38, V-39 tiennent le seuil zéro sans une retouche**.
+
+**Sens du geste.** `verif/references/tolerances.json` est en écriture humaine seule, et un agent
+bloqué sur un rouge n'y touche jamais. Ce resserrement va dans la seule direction jamais suspecte :
+il **durcit** le critère. Élargir eût demandé un arbitrage bien plus lourd que celui-ci.
