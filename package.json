@@ -1,0 +1,61 @@
+{
+  "name": "codicillus",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Codicillus — base de connaissances documentaire. Squelette applicatif (lot T-002).",
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
+  "scripts": {
+    "prepare": "svelte-kit sync",
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "sync": "svelte-kit sync",
+    "format": "prettier --write .",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc --noEmit && eslint . && prettier --check .",
+    "test:unit": "vitest run",
+    "test:aller-retour": "node verif/jalon.mjs \"batterie 4 « aller-retour Markdown »\" \"T-015\"",
+    "test:etancheite": "node verif/jalon.mjs \"batterie 6 « étanchéité du périmètre »\" \"T-011\"",
+    "test:droits": "node verif/jalon.mjs \"batterie 7 « actions interdites »\" \"non assigné par le §6.3 du plan de réalisation\"",
+    "test:vide": "node verif/jalon.mjs \"batterie 8 « corpus vide »\" \"T-032\"",
+    "test:etats": "node verif/jalon.mjs \"batterie 9 « quatre états »\" \"T-017\"",
+    "test:a11y": "node verif/jalon.mjs \"batterie 10 « accessibilité »\" \"T-023\"",
+    "test:parcours": "node verif/jalon.mjs \"batterie 12 « parcours de référence »\" \"T-059\"",
+    "test:degradation": "node verif/jalon.mjs \"batterie 14 « dégradation »\" \"T-042\"",
+    "test:impression": "node verif/jalon.mjs \"batterie 15 « impression »\" \"T-023\"",
+    "verif:jetons": "node verif/jalon.mjs \"batterie 2 « jetons et non-divergence du socle »\" \"T-004\"",
+    "verif:fraicheur": "node verif/jalon.mjs \"batterie 5 « unicité de la fraîcheur »\" \"T-013\"",
+    "verif:menus": "node verif/jalon.mjs \"batterie 16 « menu vivant »\" \"T-032\"",
+    "verif:vocabulaire": "node verif/jalon.mjs \"batterie 17 « vocabulaire »\" \"non assigné par le §6.3 du plan de réalisation\"",
+    "verif:maquette": "node verif/jalon.mjs \"batterie 11 « conformité de maquette »\" \"T-007\"",
+    "mesure:budgets": "node verif/jalon.mjs \"batterie 13 « budgets de performance »\" \"T-028\"",
+    "exploitation:restauration": "node verif/jalon.mjs \"batterie 18 « sauvegarde et restauration »\" \"T-058\"",
+    "verify:lot": "node verif/jalon.mjs \"la sélection des batteries citées par un contrat de tâche\" \"non assigné par le §6.3 du plan de réalisation\"",
+    "verify": "pnpm run check && pnpm run verif:jetons && pnpm run test:unit && pnpm run test:aller-retour && pnpm run verif:fraicheur && pnpm run test:etancheite && pnpm run test:droits && pnpm run test:vide && pnpm run test:etats && pnpm run test:a11y && pnpm run verif:maquette && pnpm run test:parcours && pnpm run mesure:budgets && pnpm run test:degradation && pnpm run test:impression && pnpm run verif:menus && pnpm run verif:vocabulaire && pnpm run exploitation:restauration",
+    "verif:gel": "node verif/gel.mjs"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.62.1",
+    "@sveltejs/adapter-node": "5.5.7",
+    "@sveltejs/kit": "2.70.2",
+    "@sveltejs/vite-plugin-svelte": "7.3.0",
+    "eslint": "10.8.1",
+    "eslint-plugin-svelte": "3.23.0",
+    "globals": "17.11.0",
+    "prettier": "3.9.6",
+    "prettier-plugin-svelte": "4.1.1",
+    "svelte": "5.56.9",
+    "svelte-check": "4.7.6",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.67.0",
+    "vite": "8.2.1",
+    "vitest": "4.1.10"
+  }
+}
