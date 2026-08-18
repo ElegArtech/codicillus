@@ -1,0 +1,135 @@
+{
+	"vue": "V-11",
+	"titre": "Infrastructure — Codicillus",
+	"maquette": "mockups/V-11-page-domaine.html",
+	"empreinte": "fd9edfac2335ab35cd57d6bd687c51b6221264fadbe54de01846b00acdd65bcb",
+	"planche": true,
+	"zones": null,
+	"routes": ["/univers/{univers}/{domaine}"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Domaine",
+			"groupes": [
+				{
+					"nom": "dom",
+					"options": [
+						{ "valeur": "Infrastructure", "libelle": "Infrastructure · 6 modules", "defaut": true },
+						{ "valeur": "Migration 2026", "libelle": "Migration 2026 · 1 module", "defaut": false },
+						{ "valeur": "Poste de travail", "libelle": "Poste de travail", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Profil",
+			"groupes": [
+				{
+					"nom": "role",
+					"options": [
+						{ "valeur": "referent", "libelle": "Référent", "defaut": true },
+						{ "valeur": "admin", "libelle": "Administrateur", "defaut": false },
+						{ "valeur": "lecteur", "libelle": "Lecteur", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "État",
+			"groupes": [
+				{
+					"nom": "etat",
+					"options": [
+						{ "valeur": "peuple", "libelle": "Nominal", "defaut": true },
+						{ "valeur": "vide", "libelle": "Sans note", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		}
+	],
+	"defaut": { "dom": "Infrastructure", "role": "referent", "etat": "peuple" },
+	"etats": [
+		{
+			"cle": "dom-infrastructure",
+			"libelle": "Domaine — Infrastructure · 6 modules",
+			"controle": { "fieldset": "Domaine", "nom": "dom", "position": "Infrastructure" },
+			"planche": { "dom": "Infrastructure" },
+			"vecteur": { "dom": "Infrastructure", "role": "referent", "etat": "peuple" },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "dom-migration-2026",
+			"libelle": "Domaine — Migration 2026 · 1 module",
+			"controle": { "fieldset": "Domaine", "nom": "dom", "position": "Migration 2026" },
+			"planche": { "dom": "Migration 2026" },
+			"vecteur": { "dom": "Migration 2026", "role": "referent", "etat": "peuple" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "dom-poste-de-travail",
+			"libelle": "Domaine — Poste de travail",
+			"controle": { "fieldset": "Domaine", "nom": "dom", "position": "Poste de travail" },
+			"planche": { "dom": "Poste de travail" },
+			"vecteur": { "dom": "Poste de travail", "role": "referent", "etat": "peuple" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "role-referent",
+			"libelle": "Profil — Référent",
+			"controle": { "fieldset": "Profil", "nom": "role", "position": "referent" },
+			"planche": { "role": "referent" },
+			"vecteur": { "dom": "Infrastructure", "role": "referent", "etat": "peuple" },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "dom-infrastructure"
+		},
+		{
+			"cle": "role-admin",
+			"libelle": "Profil — Administrateur",
+			"controle": { "fieldset": "Profil", "nom": "role", "position": "admin" },
+			"planche": { "role": "admin" },
+			"vecteur": { "dom": "Infrastructure", "role": "admin", "etat": "peuple" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "role-lecteur",
+			"libelle": "Profil — Lecteur",
+			"controle": { "fieldset": "Profil", "nom": "role", "position": "lecteur" },
+			"planche": { "role": "lecteur" },
+			"vecteur": { "dom": "Infrastructure", "role": "lecteur", "etat": "peuple" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "etat-peuple",
+			"libelle": "État — Nominal",
+			"controle": { "fieldset": "État", "nom": "etat", "position": "peuple" },
+			"planche": { "etat": "peuple" },
+			"vecteur": { "dom": "Infrastructure", "role": "referent", "etat": "peuple" },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "dom-infrastructure"
+		},
+		{
+			"cle": "etat-vide",
+			"libelle": "État — Sans note",
+			"controle": { "fieldset": "État", "nom": "etat", "position": "vide" },
+			"planche": { "etat": "vide" },
+			"vecteur": { "dom": "Infrastructure", "role": "referent", "etat": "vide" },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

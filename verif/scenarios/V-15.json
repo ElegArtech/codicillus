@@ -1,0 +1,125 @@
+{
+	"vue": "V-15",
+	"titre": "Historique — Restaurer une sauvegarde PostgreSQL — Codicillus",
+	"maquette": "mockups/V-15-historique.html",
+	"empreinte": "2c874fc2c022daa5c2313d6a6c1e8f53e8a57e4a907468c5362b3bac1631a0bd",
+	"planche": true,
+	"zones": null,
+	"routes": ["/notes/{identifiant}"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Panneau",
+			"groupes": [
+				{
+					"nom": "pan",
+					"options": [
+						{ "valeur": "ouvert", "libelle": "Ouvert", "defaut": true },
+						{ "valeur": "ferme", "libelle": "Fermé", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Historique",
+			"groupes": [
+				{
+					"nom": "hist",
+					"options": [
+						{ "valeur": "riche", "libelle": "10 versions", "defaut": true },
+						{ "valeur": "une", "libelle": "Une seule version", "defaut": false },
+						{ "valeur": "aucune", "libelle": "Aucune version antérieure", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Droits",
+			"groupes": [
+				{
+					"nom": "droits",
+					"options": [
+						{ "valeur": "ecriture", "libelle": "Écriture", "defaut": true },
+						{ "valeur": "lecture", "libelle": "Lecture seule", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		}
+	],
+	"defaut": { "pan": "ouvert", "hist": "riche", "droits": "ecriture" },
+	"etats": [
+		{
+			"cle": "pan-ouvert",
+			"libelle": "Panneau — Ouvert",
+			"controle": { "fieldset": "Panneau", "nom": "pan", "position": "ouvert" },
+			"planche": { "pan": "ouvert" },
+			"vecteur": { "pan": "ouvert", "hist": "riche", "droits": "ecriture" },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "pan-ferme",
+			"libelle": "Panneau — Fermé",
+			"controle": { "fieldset": "Panneau", "nom": "pan", "position": "ferme" },
+			"planche": { "pan": "ferme" },
+			"vecteur": { "pan": "ferme", "hist": "riche", "droits": "ecriture" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "hist-riche",
+			"libelle": "Historique — 10 versions",
+			"controle": { "fieldset": "Historique", "nom": "hist", "position": "riche" },
+			"planche": { "hist": "riche" },
+			"vecteur": { "pan": "ouvert", "hist": "riche", "droits": "ecriture" },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "pan-ouvert"
+		},
+		{
+			"cle": "hist-une",
+			"libelle": "Historique — Une seule version",
+			"controle": { "fieldset": "Historique", "nom": "hist", "position": "une" },
+			"planche": { "hist": "une" },
+			"vecteur": { "pan": "ouvert", "hist": "une", "droits": "ecriture" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "hist-aucune",
+			"libelle": "Historique — Aucune version antérieure",
+			"controle": { "fieldset": "Historique", "nom": "hist", "position": "aucune" },
+			"planche": { "hist": "aucune" },
+			"vecteur": { "pan": "ouvert", "hist": "aucune", "droits": "ecriture" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "droits-ecriture",
+			"libelle": "Droits — Écriture",
+			"controle": { "fieldset": "Droits", "nom": "droits", "position": "ecriture" },
+			"planche": { "droits": "ecriture" },
+			"vecteur": { "pan": "ouvert", "hist": "riche", "droits": "ecriture" },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "pan-ouvert"
+		},
+		{
+			"cle": "droits-lecture",
+			"libelle": "Droits — Lecture seule",
+			"controle": { "fieldset": "Droits", "nom": "droits", "position": "lecture" },
+			"planche": { "droits": "lecture" },
+			"vecteur": { "pan": "ouvert", "hist": "riche", "droits": "lecture" },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

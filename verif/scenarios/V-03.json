@@ -1,0 +1,75 @@
+{
+	"vue": "V-03",
+	"titre": "Réinitialiser son mot de passe — Codicillus",
+	"maquette": "mockups/V-03-lecture-publique.html",
+	"empreinte": "ed2971199ae3b319771c9bffad76c1309a5e53b1925efc21f65475de843c12fb",
+	"planche": true,
+	"zones": null,
+	"routes": ["/guides/{identifiant}"],
+	"fenetres": ["1440x900", "1024x768", "768x1024", "360x780"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Fraîcheur",
+			"groupes": [
+				{
+					"nom": "fr",
+					"options": [
+						{ "valeur": "frais", "libelle": "Frais", "defaut": true },
+						{ "valeur": "vieil", "libelle": "Vieillissant", "defaut": false },
+						{ "valeur": "obs", "libelle": "Obsolète", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Registres",
+			"groupes": [],
+			"cases": [{ "id": "c-op", "libelle": "Version « En bref » existante", "defaut": true }]
+		}
+	],
+	"defaut": { "fr": "frais", "c-op": true },
+	"etats": [
+		{
+			"cle": "fr-frais",
+			"libelle": "Fraîcheur — Frais",
+			"controle": { "fieldset": "Fraîcheur", "nom": "fr", "position": "frais" },
+			"planche": { "fr": "frais" },
+			"vecteur": { "fr": "frais", "c-op": true },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "fr-vieil",
+			"libelle": "Fraîcheur — Vieillissant",
+			"controle": { "fieldset": "Fraîcheur", "nom": "fr", "position": "vieil" },
+			"planche": { "fr": "vieil" },
+			"vecteur": { "fr": "vieil", "c-op": true },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "fr-obs",
+			"libelle": "Fraîcheur — Obsolète",
+			"controle": { "fieldset": "Fraîcheur", "nom": "fr", "position": "obs" },
+			"planche": { "fr": "obs" },
+			"vecteur": { "fr": "obs", "c-op": true },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "op",
+			"libelle": "Registres — Version « En bref » existante",
+			"controle": { "fieldset": "Registres", "nom": "c-op", "position": false },
+			"planche": { "c-op": false },
+			"vecteur": { "fr": "frais", "c-op": false },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

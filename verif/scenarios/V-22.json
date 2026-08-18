@@ -1,0 +1,107 @@
+{
+	"vue": "V-22",
+	"titre": "Signets d'Infrastructure — Codicillus",
+	"maquette": "mockups/V-22-signets.html",
+	"empreinte": "6e2acda1e36a62de0df4861c64c832a324a6d017f4e8a7e023f83f68a58ca312",
+	"planche": true,
+	"zones": null,
+	"routes": ["/univers/{univers}/{domaine}/signets"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Domaine",
+			"groupes": [
+				{
+					"nom": "dom",
+					"options": [
+						{ "valeur": "Infrastructure", "libelle": "Infrastructure", "defaut": true },
+						{ "valeur": "Applications", "libelle": "Applications", "defaut": false },
+						{ "valeur": "Poste de travail", "libelle": "Sans signet", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Droits",
+			"groupes": [
+				{
+					"nom": "droits",
+					"options": [
+						{ "valeur": "ecriture", "libelle": "Écriture", "defaut": true },
+						{ "valeur": "lecture", "libelle": "Lecture seule", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Rappel de sortie",
+			"groupes": [],
+			"cases": [{ "id": "c-rappel", "libelle": "Affiché", "defaut": true }]
+		}
+	],
+	"defaut": { "dom": "Infrastructure", "droits": "ecriture", "c-rappel": true },
+	"etats": [
+		{
+			"cle": "dom-infrastructure",
+			"libelle": "Domaine — Infrastructure",
+			"controle": { "fieldset": "Domaine", "nom": "dom", "position": "Infrastructure" },
+			"planche": { "dom": "Infrastructure" },
+			"vecteur": { "dom": "Infrastructure", "droits": "ecriture", "c-rappel": true },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "dom-applications",
+			"libelle": "Domaine — Applications",
+			"controle": { "fieldset": "Domaine", "nom": "dom", "position": "Applications" },
+			"planche": { "dom": "Applications" },
+			"vecteur": { "dom": "Applications", "droits": "ecriture", "c-rappel": true },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "dom-poste-de-travail",
+			"libelle": "Domaine — Sans signet",
+			"controle": { "fieldset": "Domaine", "nom": "dom", "position": "Poste de travail" },
+			"planche": { "dom": "Poste de travail" },
+			"vecteur": { "dom": "Poste de travail", "droits": "ecriture", "c-rappel": true },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "droits-ecriture",
+			"libelle": "Droits — Écriture",
+			"controle": { "fieldset": "Droits", "nom": "droits", "position": "ecriture" },
+			"planche": { "droits": "ecriture" },
+			"vecteur": { "dom": "Infrastructure", "droits": "ecriture", "c-rappel": true },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "dom-infrastructure"
+		},
+		{
+			"cle": "droits-lecture",
+			"libelle": "Droits — Lecture seule",
+			"controle": { "fieldset": "Droits", "nom": "droits", "position": "lecture" },
+			"planche": { "droits": "lecture" },
+			"vecteur": { "dom": "Infrastructure", "droits": "lecture", "c-rappel": true },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "rappel",
+			"libelle": "Rappel de sortie — Affiché",
+			"controle": { "fieldset": "Rappel de sortie", "nom": "c-rappel", "position": false },
+			"planche": { "c-rappel": false },
+			"vecteur": { "dom": "Infrastructure", "droits": "ecriture", "c-rappel": false },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

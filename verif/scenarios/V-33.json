@@ -1,0 +1,71 @@
+{
+	"vue": "V-33",
+	"titre": "Console · Configuration — Codicillus",
+	"maquette": "mockups/V-33-console-configuration.html",
+	"empreinte": "4e950a464d8a89065ec4bb4c02339acc4cbf58f124b65f75f97c8ea6ce282364",
+	"planche": true,
+	"zones": null,
+	"routes": ["/console/configuration"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Seuils",
+			"groupes": [
+				{
+					"nom": "seuils",
+					"options": [
+						{ "valeur": "actuel", "libelle": "90 / 180 · en vigueur", "defaut": true },
+						{ "valeur": "severe", "libelle": "30 / 60 · resserrés", "defaut": false },
+						{ "valeur": "large", "libelle": "120 / 240 · élargis", "defaut": false },
+						{ "valeur": "invalide", "libelle": "Valeurs refusées", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		}
+	],
+	"defaut": { "seuils": "actuel" },
+	"etats": [
+		{
+			"cle": "seuils-actuel",
+			"libelle": "Seuils — 90 / 180 · en vigueur",
+			"controle": { "fieldset": "Seuils", "nom": "seuils", "position": "actuel" },
+			"planche": { "seuils": "actuel" },
+			"vecteur": { "seuils": "actuel" },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "seuils-severe",
+			"libelle": "Seuils — 30 / 60 · resserrés",
+			"controle": { "fieldset": "Seuils", "nom": "seuils", "position": "severe" },
+			"planche": { "seuils": "severe" },
+			"vecteur": { "seuils": "severe" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "seuils-large",
+			"libelle": "Seuils — 120 / 240 · élargis",
+			"controle": { "fieldset": "Seuils", "nom": "seuils", "position": "large" },
+			"planche": { "seuils": "large" },
+			"vecteur": { "seuils": "large" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "seuils-invalide",
+			"libelle": "Seuils — Valeurs refusées",
+			"controle": { "fieldset": "Seuils", "nom": "seuils", "position": "invalide" },
+			"planche": { "seuils": "invalide" },
+			"vecteur": { "seuils": "invalide" },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

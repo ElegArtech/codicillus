@@ -1,0 +1,50 @@
+{
+	"_": [
+		"ZONES MASQUÉES À LA CAPTURE — PLAN-DE-REALISATION.md §4.2.",
+		"",
+		"Une zone masquée est une zone dont le contenu ne PEUT PAS coïncider entre",
+		"la maquette gelée et l'application, sans que cela dise quoi que ce soit de",
+		"la conformité : un identifiant tiré au sort, un mot de passe temporaire,",
+		"un horodatage à la minute. Elle est recouverte d'un aplat, du même côté et",
+		"de la même façon, avant comparaison.",
+		"",
+		"CE FICHIER N'EST PAS UNE SOUPAPE. Masquer une zone parce qu'elle rougit",
+		"est le contournement de vérification nommé par PLAN §12 : le banc",
+		"certifierait alors la partie de l'écran qu'il ne regarde plus. Une entrée",
+		"n'est légitime que si l'impossibilité de coïncider est DÉMONTRÉE par la",
+		"maquette elle-même, et la démonstration est écrite dans `motif` avec sa",
+		"référence de ligne. Un agent d'exécution n'ajoute pas d'entrée ici : il",
+		"remonte un écart.",
+		"",
+		"ÉTAT AU LOT T-007 — RÈGLE DE NON-COMBLEMENT.",
+		"PLAN §4.2 nomme trois familles de zones à masquer. Le relevé sur les 41",
+		"maquettes gelées n'en atteste qu'une :",
+		"",
+		"  • identifiants générés — ATTESTÉ. `Math.random()` en V-32, seul tirage",
+		"    au sort de tout le dépôt dont le produit soit affiché.",
+		"  • temps de réponse de recherche — NON ATTESTÉ. Aucune maquette n'affiche",
+		"    de durée de recherche : ni « en NN ms », ni équivalent. Rien à masquer",
+		"    tant qu'aucune maquette n'en porte ; inventer un sélecteur ici serait",
+		"    masquer une zone qui n'existe pas.",
+		"  • horodatages relatifs à la minute — NON ATTESTÉ EN ÉTAT DÉCLARÉ. Deux",
+		"    maquettes calculent une heure à la minute (V-17:2666, V-18:2950,",
+		"    « enregistré à HH:MM »), mais seulement APRÈS une action",
+		"    d'enregistrement, qu'aucune position de planche ne déclenche. Elles",
+		"    sont d'ailleurs neutralisées à la source : l'horloge du banc est gelée",
+		"    des deux côtés (verif/banc/conditions.mjs).",
+		"",
+		"Les deux familles non attestées sont remontées comme écart : c'est le",
+		"cadrage qui anticipe des zones que les maquettes ne portent pas, non le",
+		"banc qui les oublie."
+	],
+
+	"vues": {
+		"V-32": [
+			{
+				"selecteur": "#mdp-valeur",
+				"motif": "Mot de passe temporaire tiré au sort — `motDePasse()` compose trois mots et un nombre par `Math.random()` (mockups/V-32-console-comptes.html:2975-2981) et l'affiche dans le dialogue de réinitialisation (:3236). Aucune implémentation ne peut reproduire la valeur de la maquette : la comparer mesurerait le générateur, pas la vue.",
+				"etats": ["mdp"]
+			}
+		]
+	}
+}
