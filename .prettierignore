@@ -11,6 +11,12 @@ verif/references/
 src/socle.css
 static/polices/
 
+# Feuilles de vue portées — même règle, même motif (P-6.3, ÉCART-011 É-2).
+# Une feuille `V-xx.css` est identique octet pour octet au second bloc <style>
+# de sa maquette gelée ; la reformater ferait rougir `pnpm verif:jetons`.
+# Installées par `node verif/feuilles-de-vue.mjs V-xx --installer`.
+src/**/V-[0-9][0-9].css
+
 # Produits
 .svelte-kit/
 build/
