@@ -1,0 +1,22 @@
+# Sources de vérité gelées — jamais reformatées
+cadrage/
+mockups/
+règles/
+guide/
+verif/references/
+
+# Produits
+.svelte-kit/
+build/
+dist/
+node_modules/
+pnpm-lock.yaml
+test-results/
+playwright-report/
+
+# Documentation et harnais agentique — le formatage porte sur le code, pas sur
+# la prose : reflouer du texte français rédigé à la main n'apporte rien et rend
+# les diffs illisibles.
+*.md
+.claude/
+docs/
