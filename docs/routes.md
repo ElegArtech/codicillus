@@ -2,9 +2,11 @@
 
 > **Lot T-006** — livrable de vague 0. Table `route → vue → états → exigences couvertes`, exhaustive sur les 41 vues.
 >
-> **Statut des sources.** Les 41 maquettes ne portent **aucun lien inter-vue**. Recensement exact de leurs 766 attributs `href` : **681** valent `"#"`, 41 pointent la feuille de polices, 34 sont des liens d'évitement intra-page (`#contenu`, `#travail`…), 5 sont des adresses externes de démonstration. La liaison n'est donc pas *lue* dans les maquettes, elle en est **dérivée**. Chaque route ci-dessous porte sa source. Ce qui n'est pas déductible figure au § « À arbitrer », et nulle part ailleurs.
+> **Statut des sources.** Les 41 maquettes ne portent **aucun lien inter-vue**. Recensement exact de leurs 766 attributs `href` : **681** valent `"#"`, 41 pointent la feuille de polices, 34 sont des liens d'évitement intra-page (`#contenu`, `#travail`…), 5 sont des adresses externes de démonstration. La liaison n'est donc pas *lue* dans les maquettes, elle en est **dérivée**. Chaque route ci-dessous porte sa source. Ce qui n'était pas déductible a été porté à l'arbitrage : les six points sont clos, et le § « Arbitrages appliqués » dit par quel arbitrage. Ce document ne pose plus aucune question ouverte.
 >
 > **Ordre de préséance appliqué** (PLAN §15.1, D-08) : la maquette gelée l'emporte sur le cahier des charges. Les divergences relevées sont consignées au § « Contradictions relevées ».
+>
+> **Révision T-006b — 18 août 2026.** Les huit arbitrages de `docs/arbitrages.md` et les onze entrées de `docs/errata-cadrage.md` sont appliqués. Ces deux documents font autorité **au-dessus** de l'ordre de préséance ci-dessus, pour les seuls points qu'ils énumèrent (`CLAUDE.md`). Cinq arbitrages mordent sur cet inventaire : **ARB-001** (la forme raccourcie `/domaines/{domaine}` n'est pas implémentée ; l'unicité est portée par l'univers seul), **ARB-002** (la bibliothèque de composants est sous rôle administrateur, atteignable depuis la console qui y renvoie sans la contenir ; V-38, V-39 et V-40 cessent d'être des routes), **ARB-003** (le journal des imports ne sort pas de la console), **ARB-005** (articulation des deux régimes de refus), **ARB-007** (les trois routes mineures : pas de cartographie publique, `/guides/{identifiant}` servi tel quel, `?noeud=` ajouté). Le décompte du §9 est refait en conséquence.
 
 ---
 
@@ -16,14 +18,15 @@
 | S2 | **Paramètres d'état écrits par les maquettes** | `majAdresse()` : `?registre=` (V-03:1616, V-14:3959, V-37:3726, V-41:4766), `?version=` (V-15:2921), `#{ancre}` (V-03:1582, V-14:3925, V-15:2671). |
 | S3 | **Fils d'Ariane rendus** | Appels `coquille({ fil: [...] })` dans 28 maquettes. Ils donnent la hiérarchie d'adressage segment par segment. |
 | S4 | **Libellés de navigation de la coquille** | `mockups/V-37-coquille.html` — rail (`Accueil`, `Outils` : Cartographie / Carte mentale / Signets / Import, `Gestion` : Console), menu « Créer », menu utilisateur (`Mon profil`, `Console d'administration`, `Se déconnecter`), et les attributs `data-vers` qui nomment la vue cible. |
-| S5 | **Cahier des charges** | RG-M03-02, RG-M03-03, RG-ACC-01…04, RG-M17-01, RG-M09-05, M02.6, §2.2, §4. |
+| S5 | **Cahier des charges** | RG-M03-02, RG-M03-03, RG-ACC-01…04, RG-M17-01, RG-M09-05, RG-M02-05…08 *(numérotation créée par E-05 sur les puces de §M02.6)*, §2.2, §4. |
 
 ### 1.1 La règle de dérivation appliquée
 
 Trois règles, appliquées uniformément partout où S1 et S2 sont muettes.
 
 **R1 — Le préfixe de ressource est le nom français pluriel de l'objet.**
-Établi par S1 : `/notes/…` et `/guides/…`. Étendu par uniformité à `/univers/…`, `/domaines/…`, `/dossiers/…`, `/signets/…`, `/console/…`, `/bibliotheque/…`. C'est l'application d'une convention posée par la maquette, pas un choix.
+Établi par S1 : `/notes/…` et `/guides/…`. Étendu par uniformité à `/univers/…`, `/dossiers/…`, `/signets/…`, `/console/…`. C'est l'application d'une convention posée par la maquette, pas un choix.
+*Un préfixe que la première rédaction dérivait ainsi n'a plus d'emploi* : `/domaines/…`, supprimé par **ARB-001** (§2.2). `/bibliotheque` subsiste, mais comme **segment terminal** et non comme famille : ARB-002 en fait une adresse unique, sans sous-routes (§3.7).
 *Conséquence directe* : l'exemple `/u/production/infrastructure/n/restaurer-…` de `PLAN-DE-REALISATION.md §4.2` **n'est pas retenu** — voir §7.
 
 **R2 — Un segment ajouté au fil d'Ariane est un segment ajouté au chemin ; un fil qui n'ajoute rien n'ajoute pas de segment.**
@@ -54,10 +57,20 @@ L'identifiant est celui décrit au CDC §3.2 : « Identifiant lisible — dériv
 | Forme | Adresse | Comportement |
 |---|---|---|
 | **Canonique** | `/univers/{univers}/{domaine}` | Sert la page (V-11). |
-| **Raccourcie** | `/domaines/{domaine}` | Un seul domaine porte cet identifiant → **redirection 308** vers la forme canonique. Plusieurs domaines le portent (autorisé par RG-STR-02) → **écran de choix** (§8, A-01). |
+| **Raccourcie** | `/domaines/{quoi-que-ce-soit}` | **Non implémentée** (ARB-001). Rend la page non trouvée — **404 V-26** en connecté, **404 V-04** en anonyme — par le chemin de code unique d'ADR-007 : refus et inexistence y sont indiscernables, comme partout ailleurs. |
 | **Ancienne** | `/univers/{ancien-univers}/{domaine}` | Le domaine a été rattaché à un autre univers (UC-M14-02) → **redirection 308** vers l'univers courant. |
 
-Justification de la forme canonique : le fil d'Ariane de V-11 est `["Accueil", courant.univers, courant.nom]` (`V-11:1944`) — trois segments, univers puis domaine. R1 donne le préfixe `/univers/`. RG-STR-02 (« l'identifiant lisible d'un domaine est unique **au sein de son univers**, pas globalement ») est exactement ce qui rend l'univers obligatoire dans l'adresse et l'adresse raccourcie potentiellement ambiguë.
+Justification de la forme canonique : le fil d'Ariane de V-11 est `["Accueil", courant.univers, courant.nom]` (`V-11:1944`) — trois segments, univers puis domaine. R1 donne le préfixe `/univers/`. RG-STR-02 (« l'identifiant lisible d'un domaine est unique **au sein de son univers**, pas globalement ») est exactement ce qui rend l'univers obligatoire dans l'adresse — et ce qui rendrait une forme raccourcie ambiguë, si le produit en émettait une.
+
+**Ce qu'ARB-001 arrête.** L'unicité est portée par l'**univers seul** : deux univers ne peuvent pas porter le même nom — contrainte bloquante appliquée à l'écriture, au schéma —, tandis que le domaine n'en porte aucune au-delà de son univers. Deux univers différents peuvent parfaitement contenir un domaine homonyme : « Infrastructure » dans *Production* et dans *Support* sont deux domaines distincts et légitimes.
+
+Il en découle, pour RG-M03-02 :
+
+- **clause 1** — l'adresse canonique inclut l'univers : **tenue**, par `/univers/{univers}/{domaine}` ;
+- **clause « adresse ancienne redirigée »** — **tenue**, et pleinement applicable : elle vise le rattachement d'un domaine à un autre univers (UC-M14-02) et les renommages, cas où l'adresse d'origine est sans ambiguïté (§5.1) ;
+- **clause « raccourcie redirigée »** et **clause de désambiguïsation** — **sans objet**, faute de forme raccourcie à rediriger. Le produit n'émet jamais `/domaines/{domaine}` ; la clause n'a donc aucun déclencheur. Elle est **consignée comme sans objet et ne sera jamais implémentée** (E-09, §5.3).
+
+`RG-M03-02` n'est pas fautive pour autant : elle est cohérente, et c'est l'absence de forme raccourcie qui prive sa seconde moitié d'emploi.
 
 ### 2.3 Ce que devient l'exemple de `PLAN-DE-REALISATION.md §4.2`
 
@@ -76,6 +89,8 @@ Ce qui est conservé de l'exemple : l'idée que l'univers précède le domaine �
 
 **Comportement en cas de refus.** Sauf mention contraire, tout refus produit la réponse d'inexistence : **HTTP 404 + V-04** en anonyme, **HTTP 404 + V-26** en connecté, par le même chemin de code que l'inexistence (RG-ACC-04, RG-NF-04, ADR-007). Aucune route ne rend de page « accès refusé ». Session expirée : redirection vers `/connexion?motif=session-expiree&suite={chemin}` (RG-ACC-03).
 
+**Deux régimes de refus, et ils ne portent pas sur le même objet (ARB-005).** Le régime **indiscernable** de `RG-ACC-04` porte sur la résolution d'une **ressource entière** — une adresse : corps, en-têtes, code **et temps de réponse** identiques, un seul chemin de code. L'**état « sans droit »** porte sur une **zone** d'une page que l'utilisateur a le droit d'ouvrir, où l'existence de la ressource porteuse lui est déjà connue : la signaler ne révèle rien. Toute la colonne « Niveau d'accès » ci-dessous relève du premier régime ; la colonne « États » du second. **En cas de doute, l'indiscernable l'emporte** — le doute ne se résout jamais en faveur de l'information révélée. Détail au §6.
+
 ### 3.1 Espace public et racine
 
 | Route | Vue | Niveau d'accès | États | Exigences | Source de l'adresse |
@@ -83,9 +98,11 @@ Ce qui est conservé de l'exemple : l'idée que l'univers précède le domaine �
 | `/` | **V-01** Accueil public *(sans session)* | anonyme | 7 — État : nominal · chargement · aucun contenu public · guides en erreur ; Frappe : champ vide · « mot de passe » · sans résultat | UC-M17-01, RG-M17-01…04, RG-M18-03 | BRIEF V-01 « Points d'entrée : **adresse racine du produit sans session active**. Également après une déconnexion » ; RG-ACC-02 |
 | `/` | **V-07** Accueil contributeur *(avec session)* | connecté | 10 — Profil : référent · administrateur · lecture seule ; État : nominal · chargement · rien en attente · activité en erreur · aucune note ; Aide : première visite | UC-M01-01, RG-M01-01…03, RG-M18-03, RG-M18-04 | S3 `coquille({ fil: ["Accueil"] })` (`V-07:4231`) ; S4 rail `Accueil` → `data-vers="Accueil contributeur — vue V-07"` ; BRIEF V-07 « Après connexion · clic sur le logo ou Accueil » ; tous les fils d'Ariane du produit commencent par le segment cliquable **Accueil** |
 | `/recherche` | **V-02** Recherche publique *(sans session)* | anonyme | 5 — État : nominal · chargement ; Requête : « mot de passe » · « support » · sans résultat | UC-M02-02, UC-M02-05, RG-M02-04, RG-M17-01 | S3 `fil: ["Accueil","Recherche"]` (`V-08:2370`) ; BRIEF V-02 « Points d'entrée : … ou **adresse partagée contenant une requête** » ; V-02 est V-08 « amputée de ce qui n'a pas de sens sans compte » — même fonction, périmètre restreint par RG-M02-04, donc même adresse |
-| `/recherche` | **V-08** Recherche *(avec session)* | connecté | 8 — Droits : écriture · lecture seule ; État : nominal · chargement · sans résultat · trop de résultats ; Sens : indisponible | UC-M02-02…07, RG-M02-01…03, M02.6 | S3 `fil: ["Accueil","Recherche"]` (`V-08:2370`) ; S4 champ de recherche de la barre supérieure |
-| `/guides/{identifiant}` | **V-03** Lecture publique | anonyme | 5 — Fraîcheur : frais · vieillissant · obsolète ; Registres : « En bref » existante · absente | RG-M17-01…03, UC-M04-02, UC-M04-03, RG-M04-05, RG-M18-17 | **S1** — `V-04:2226-2227` affiche `/guides/{identifiant}` comme adresse demandée |
+| `/recherche` | **V-08** Recherche *(avec session)* | connecté | 8 — Droits : écriture · lecture seule ; État : nominal · chargement · sans résultat · trop de résultats ; Sens : indisponible | UC-M02-02…07, RG-M02-01…03, **RG-M02-05…08** *(E-05)* | S3 `fil: ["Accueil","Recherche"]` (`V-08:2370`) ; S4 champ de recherche de la barre supérieure |
+| `/guides/{identifiant}` | **V-03** Lecture publique | anonyme **et connecté** — servi **tel quel** dans les deux cas (ARB-007, A-05) | 5 — Fraîcheur : frais · vieillissant · obsolète ; Registres : « En bref » existante · absente | RG-M17-01…03, UC-M04-02, UC-M04-03, RG-M04-05, RG-M18-17 | **S1** — `V-04:2226-2227` affiche `/guides/{identifiant}` comme adresse demandée |
 | *(toute adresse non résolue)* | **V-04** Page non trouvée (public) | anonyme | 3 — Cas d'arrivée : adresse inexistante · note existante non publique · adresse racine erronée | RG-ACC-04, RG-NF-04, RG-M17-01, RG-M18-14 | Pas de route propre : réponse **404** rendue **à l'adresse demandée**, qui reste affichée (`V-04:715` « Adresse demandée »). `/guides/` nu en fait partie (`V-04:2228`, « adresse racine erronée ») : il n'existe pas d'index public des guides |
+
+> **`/guides/{identifiant}` en session — ARB-007, A-05.** Une seule adresse, un seul rendu : la session ne change ni la route, ni la vue, ni les états. Pas de redirection vers `/notes/{identifiant}`, pas de bandeau « vue publique ». Le motif est double : la vérification « voir ce que voit le public » avant publication est un usage réel, et toute autre option créerait soit une seconde adresse sans canonique désignée, soit un état de V-03 qu'aucune planche ne déclare — donc hors du protocole de comparaison visuelle.
 
 > **Point dur de cette famille.** Les deux premiers cas de la planche de V-04 — *adresse inexistante* et *note existante non publique* — doivent produire un rendu **strictement identique** ; le commentaire de la maquette (`V-04:2219`) le désigne comme « la vérification la plus importante de cette vue ». C'est RG-ACC-04 rendue mesurable.
 
@@ -105,13 +122,14 @@ Ce qui est conservé de l'exemple : l'idée que l'univers précède le domaine �
 | Route | Vue | Niveau d'accès | États | Exigences | Source de l'adresse |
 |---|---|---|---|---|---|
 | `/univers/{univers}` | **V-10** Page d'un univers | connecté (au moins un domaine lisible) | 7 — Droits : écriture · lecture seule ; Univers : Production · Projets ; État : nominal · sans domaine · chargement | UC-M01-02, RG-M01-04, RG-STR-01, UC-M03-02 | S3 `fil: ["Accueil", courant.nom]` (`V-10:1826`) + R1 |
-| `/univers/{univers}/{domaine}` | **V-11** Page d'un domaine | connecté + lecteur | 8 — Domaine : 6 modules · 1 module · Poste de travail ; Profil : référent · administrateur · lecteur ; État : nominal · sans note | UC-M01-03, RG-M01-04, RG-STR-06, **RG-M03-02** | S3 `fil: ["Accueil", courant.univers, courant.nom]` (`V-11:1944`) + R1. **Forme canonique** au sens de RG-M03-02 |
-| `/domaines/{domaine}` | *(redirection ou choix)* | idem cible | — | **RG-M03-02** | Forme raccourcie exigée par RG-M03-02 (« une adresse … raccourcie est redirigée »). 308 si un seul domaine porte l'identifiant ; écran de choix sinon (§8, A-01) |
+| `/univers/{univers}/{domaine}` | **V-11** Page d'un domaine | connecté + lecteur | 8 — Domaine : 6 modules · 1 module · Poste de travail ; Profil : référent · administrateur · lecteur ; État : nominal · sans note | UC-M01-03, RG-M01-04, RG-STR-06, **RG-M03-02** | S3 `fil: ["Accueil", courant.univers, courant.nom]` (`V-11:1944`) + R1. **Forme canonique** au sens de RG-M03-02, et **seule forme** publiée depuis ARB-001 |
 | `/univers/{univers}/{domaine}/notes` | **V-12** Liste des notes | connecté + lecteur | 7 — Domaine : Infrastructure · Poste de travail ; Arrivée : sans filtre · depuis la barre (obsolètes) · depuis l'accueil (brouillons) ; État : nominal · domaine sans note | UC-M03-03, RG-M18-03 | S3 `fil: [..., courant.nom, "Notes"]` (`V-12:2292`) → R2 |
 | `/univers/{univers}/{domaine}/dossiers/{chemin…}` | **V-13** Page d'un dossier | connecté + lecteur (écriture selon droit effectif) | 6 — Dossier : Exploitation · Sauvegardes · dossier vide ; Droit effectif : gestionnaire · rédacteur · lecteur | UC-M03-04…06, RG-M03-04, RG-DRO-01…05, RG-STR-04, RG-STR-05 | S3 `fil: ["Accueil","Production", DOMAINE].concat(chemin)` (`V-13:2033`) ; le segment `dossiers` vient de R1 et lève la collision avec les mots réservés `notes` et `signets`. Le `{chemin…}` est la suite des identifiants de dossiers, jusqu'à 10 niveaux (RG-STR-04), conforme à la représentation `["infra","infra/exploitation","infra/exploitation/sauvegardes"]` de `STACK-TECHNIQUE.md §4.2` |
 | `/univers/{univers}/{domaine}/signets` | **V-22** Signets | connecté + lecteur | 6 — Domaine : Infrastructure · Applications · sans signet ; Droits : écriture · lecture seule ; Rappel de sortie : affiché | UC-M11-01, RG-M11-01, RG-M11-02, RG-STR-06 | S3 `fil: [..., courant.nom, "Signets"]` (`V-22:2948`) → R2 ; S4 rail `Signets` |
 | `/univers/{univers}/{domaine}/signets/nouveau` | **V-23** Formulaire de signet, création | connecté + rédacteur | 5 des 7 — Enveloppe : page dédiée · boîte de dialogue ; Récupération du titre : aboutit · lente · échoue | UC-M11-01 | S3 `fil: ["Accueil","Production","Infrastructure","Signets","Nouveau"]` (`V-23:3273`) → R2 |
 | `/univers/{univers}/{domaine}/signets/{identifiant}/modifier` | **V-23** Formulaire de signet, édition | connecté + rédacteur | 2 des 7 — Mode : édition (champs pré-remplis + suppression) | UC-M11-01, RG-M18-05 | Même fil, mode *Édition* de la planche ; suffixe `/modifier` par uniformité avec `/notes/{identifiant}/modifier` |
+
+> **`/domaines/…` n'est pas une route — ARB-001.** La forme raccourcie n'est pas implémentée : seule l'adresse canonique `/univers/{univers}/{domaine}` existe, et le produit n'émet jamais l'autre. `/domaines/{quoi-que-ce-soit}` tombe donc dans le cas commun de l'adresse non résolue et rend **404 V-26** en connecté, **404 V-04** en anonyme, par le chemin de code unique d'ADR-007. Il n'y a **ni redirection à écrire, ni écran de choix à maquetter** — donc aucune maquette manquante, et le régime assisté n'a pas à être rouvert.
 
 > **Modules désactivés.** RG-STR-06 : « un module non activé n'apparaît ni dans la navigation du domaine, ni dans ses tableaux de bord ». Une route de module désactivé (`…/signets` sur un domaine sans module Signets) rend donc **404 V-26**, pas une page vide — cohérent avec RG-ACC-04 et avec le point dur n° 7 (« une action interdite n'est pas affichée »).
 
@@ -140,11 +158,15 @@ Ce qui est conservé de l'exemple : l'idée que l'univers précède le domaine �
 | `/mon-profil` | **V-25** Profil | connecté | 7 — Onglet : identité · sécurité · distinctions · activité ; Compte : contributeur · nouvel arrivant ; Cas : mot de passe verrouillé | UC-M16-03…05, RG-M16-02, RG-M16-03, RG-CPT-01 | S3 `fil: ["Accueil","Mon profil"]` (`V-25:3259`) → R2 ; S4 menu utilisateur `Mon profil` → `data-vers="Profil — vue V-25"` |
 | *(toute adresse non résolue)* | **V-26** Page non trouvée (connecté) | connecté | 5 — Cas d'arrivée : note supprimée · adresse inexistante · hors de vos droits ; Droits : écriture · lecture seule | **RG-ACC-04**, RG-NF-04, RG-NF-06, RG-M18-14 | Pas de route propre : réponse **404** à l'adresse demandée, qui reste affichée (`V-26:1067`). Le fil rendu est `["Accueil","Page introuvable"]` (`V-26:3045`) — c'est un libellé de repérage, pas un chemin |
 
+> **Le rapport d'import ne quitte pas `/importer` — ARB-003.** Le contributeur reçoit son rapport **à l'étape 4 de V-24**, dans son propre parcours d'import, qui le porte déjà : progression puis rapport. Il n'a jamais besoin de la console. V-35 est et reste le journal **transverse** des imports de l'instance, de périmètre administrateur (§3.6). **Aucune route de rapport d'import n'est exposée hors console** — ni `/importer/{lot}`, ni variante, ni ouverture de `/console/imports` à l'auteur d'un lot. Le renvoi du brief V-24 vers V-35 est l'erreur, et il n'est pas implémenté (E-10).
+
 > **La seule dérogation admise à RG-ACC-04.** Le cas *note supprimée* de V-26 en dit davantage que les deux autres (qui l'a supprimée, quand, pourquoi). Le commentaire de la maquette (`V-26:2604`) en donne la condition : « il n'est possible **que parce que l'utilisateur a des droits sur le domaine concerné** ». Ce n'est donc pas une fuite : l'information n'est révélée qu'à qui pouvait déjà la voir. Les cas *inexistante* et *hors de vos droits* sont rigoureusement identiques, à la chaîne demandée près (`V-26:2628`).
 
 ### 3.6 Console d'administration
 
-Toutes ces routes exigent le rôle **administrateur**. Un utilisateur non administrateur reçoit **404 V-26**, pas un refus : le motif commun du brief impose que la console « n'apparaisse pas dans la navigation des autres profils », et RG-ACC-04 impose que l'accès direct ne l'apprenne pas davantage.
+Toutes ces routes exigent le rôle **administrateur**. Un utilisateur non administrateur reçoit **404 V-26**, pas un refus : le motif commun du brief impose que la console « n'apparaisse pas dans la navigation des autres profils », et RG-ACC-04 impose que l'accès direct ne l'apprenne pas davantage. Ce sont les deux faces d'un même principe : l'entrée n'est pas rendue (P-09, ADR-011) **et** l'adresse construite ne l'apprend pas (ARB-005, régime indiscernable).
+
+**La bibliothèque de composants (V-41) n'appartient pas à cette famille**, bien qu'elle partage son rôle. ARB-002 : la console **y renvoie**, elle ne la **contient** pas — son adresse est `/bibliotheque`, au premier niveau (§3.7).
 
 | Route | Vue | États | Exigences | Source de l'adresse |
 |---|---|---|---|---|
@@ -164,22 +186,29 @@ Toutes ces routes exigent le rôle **administrateur**. Un utilisateur non admini
 
 ### 3.7 Bibliothèque vivante — V-38 à V-41
 
-`STACK-TECHNIQUE.md §4.1` tranche le statut de V-41 : « V-41 (bibliothèque de composants) devient une **page réelle de l'application**, pas une maquette morte — conformément à son rôle de page de démonstration vivante ». V-38, V-39 et V-40 ne sont pas des pages indépendantes : leur contenu est **déjà déclaré dans le périmètre de V-41** par le brief (famille *Retours* = « notifications, états vides, états de chargement, états d'erreur » ; famille *Superpositions* = « boîte de dialogue, panneau latéral, palette de recherche, menu contextuel, infobulle »). Elles en sont donc les sections.
+**ARB-002 ferme A-02.** « Concepteur et développeurs », au brief V-41, est un vestige de rédaction : la population visée est celle des **administrateurs** (E-11). Quatre conséquences, toutes arrêtées :
+
+1. **Le rôle est administrateur.** L'entrée correspondante apparaît **dans la navigation de la console** — et **n'apparaît pour aucun autre rôle** : une action interdite n'est pas rendue (P-09, ADR-011). L'accès direct par adresse construite ne l'apprend pas davantage : **404 V-26** pour tout non-administrateur (RG-ACC-04, ADR-007).
+2. **L'adresse reste `/bibliotheque`, au premier niveau.** *La console y renvoie ; elle ne la contient pas.* C'est le constat de maquette qui tranche, et il est net : les **six vues de console** rendent `["Accueil", "Console", "<section>"]`, tandis que les **quatre vues de bibliothèque** rendent `["Accueil", "<nom>"]` — premier niveau, sans segment « Console » (`V-41:5069`, `V-38:2898`, `V-39:3166`, `V-40:3636`). R2 s'applique donc sans exception : un fil qui n'ajoute pas de segment n'en ajoute pas au chemin. Les deux contraintes — « atteignable depuis la console » et « sous rôle administrateur » — tiennent ensemble sans contredire une source gelée (ARB-002, précision du 18 août ; `ECART-009 b)`).
+3. **V-41 reste une page réelle de l'application**, jamais une maquette morte (`STACK-TECHNIQUE.md §4.1`) : c'est là que la divergence du système visuel devient visible immédiatement (risque R-06).
+4. **V-38, V-39 et V-40 ne sont pas des routes.** ARB-002 les tient pour des **catalogues transverses** : ils documentent des composants employés partout, et leur contenu est déjà déclaré dans le périmètre de V-41 par le brief lui-même (famille *Retours* = « notifications, états vides, états de chargement, états d'erreur » ; famille *Superpositions* = « boîte de dialogue, panneau latéral, palette de recherche, menu contextuel, infobulle »). Ce sont les **sections** de V-41, sans adresse propre — voir §3.8. Leur régime d'accès est celui de V-41.
 
 | Route | Vue | Niveau d'accès | États | Exigences | Source de l'adresse |
 |---|---|---|---|---|---|
-| `/bibliotheque` | **V-41** Bibliothèque de composants | administrateur | 11 familles — signal de fraîcheur · boutons · champs de saisie · pastilles et marqueurs · conteneurs · navigation · restitution de données · superpositions · contenu rédigé · retours · identité *(aucune planche ; chaque famille présente ses variantes côte à côte)* | RG-DA-01, RG-DA-03, RG-M18-07…09 | S3 `fil: ["Accueil","Bibliothèque de composants"]` (`V-41:5069`) ; `STACK-TECHNIQUE.md §4.1` |
-| `/bibliotheque/notifications` | **V-38** Système de notification | administrateur | 6 — types : succès · erreur · information · en cours ; planche : empiler les quatre types · tout refermer | RG-M18-01, RG-M18-02 | S3 `fil: ["Accueil","Système de notification"]` (`V-38:2898`) ; famille *Retours* de V-41 |
-| `/bibliotheque/etats` | **V-39** États vides, de chargement et d'erreur | administrateur | 20 — 10 états vides (corpus vide · domaine sans note · dossier vide · aucune révision · aucun rétrolien · aucune relation · graphe sans relation · aucun signet · aucune distinction · liste filtrée vide) + 6 esquisses de chargement (carte de résultat · ligne de liste · panneau latéral · tableau de bord · graphe · arborescence) + 4 portées d'erreur (un panneau · une vue entière · perte de connexion · fonctionnalité dégradée) | **RG-M18-03**, RG-M18-04, RG-M18-14, RG-NF-01, RG-NF-06 | S3 `fil: ["Accueil","États vides, de chargement et d'erreur"]` (`V-39:3166`) ; famille *Retours* de V-41 |
-| `/bibliotheque/dialogues` | **V-40** Boîtes de dialogue | administrateur | 10 — quitter la comparaison · supprimer cette note · supprimer le dossier · restaurer la version 11 · signaler à réviser · droits du dossier · ajouter une relation · sélecteur de template · avertissement de doublon · déplacer une note | RG-M18-05, RG-M18-10, RG-M03-04, RG-M04-10, UC-M03-06 | S3 `fil: ["Accueil","Boîtes de dialogue"]` (`V-40:3636`) ; famille *Superpositions* de V-41 |
+| `/bibliotheque` | **V-41** Bibliothèque de composants | administrateur | 11 familles — signal de fraîcheur · boutons · champs de saisie · pastilles et marqueurs · conteneurs · navigation · restitution de données · superpositions · contenu rédigé · retours · identité *(aucune planche ; chaque famille présente ses variantes côte à côte)*, **plus les 36 états des trois sections** V-38, V-39 et V-40 | RG-DA-01, RG-DA-03, RG-M18-01…05, RG-M18-07…09, RG-M18-14 | S3 `fil: ["Accueil","Bibliothèque de composants"]` (`V-41:5069`) → R2 + R1 ; **ARB-002** pour le rôle et pour le point d'entrée dans la navigation de la console ; `STACK-TECHNIQUE.md §4.1` pour son statut de page réelle |
 
-### 3.8 Les trois vues qui ne sont pas des routes
+> **Une adresse de premier niveau n'est pas un défaut de rangement.** Le niveau d'accès et le niveau d'adressage sont deux choses distinctes, et rien n'oblige à les faire coïncider : `/mon-profil` est au premier niveau sans être ouvert à tous, `/importer` exige un droit de rédaction. Ce qui protège `/bibliotheque`, c'est la matrice du §5.5 et le chemin de code unique d'ADR-007 — pas la longueur de son chemin. Y ajouter un segment `console` n'aurait rien protégé de plus et aurait contredit quatre maquettes gelées.
+
+### 3.8 Les six vues qui ne sont pas des routes
 
 | Vue | Nature | Où elle vit | États | Source |
 |---|---|---|---|---|
 | **V-09** Palette de recherche rapide | **Superposition**, invoquée au clavier depuis n'importe quelle route de l'espace de travail. **Aucune adresse.** | Toutes les routes portant la coquille. Sortie « voir tous les résultats » → `/recherche?q={requête}` | 6 *(aucune planche ; six états côte à côte dans la maquette)* — au repos · un seul caractère · résultats · aucun résultat · recherche par sens indisponible · petit écran 360 px | Annexe Récapitulatif du brief : « superposée » ; `V-37:3714` monte la palette sur le champ de la barre supérieure ; les six états sont titrés « ÉTAT 01 » à « ÉTAT 06 » dans `V-09` |
 | **V-15** Historique des versions | **Superposition** sur la lecture. Pas de chemin propre ; état adressable par `?version={n}` | `/notes/{identifiant}` | *(voir §3.4)* | R2 : fil identique à V-14. Annexe Récapitulatif : « superposée » |
-| **V-37** Coquille applicative | **Gabarit**, pas une page. Enveloppe toutes les routes sauf `/` anonyme, `/recherche` anonyme, `/guides/…`, `/connexion`, `/mot-de-passe-oublie…`, et V-04 | Partout ailleurs | 8 — Contenu : tableau de bord · lecture d'une note ; Navigation : ouverte · escamotée ; Profil : référent · administrateur ; Cas : branche en chargement · aucun domaine accessible | BRIEF §3.3 : « toutes les vues de l'espace de travail et de la console s'inscrivent dans une coquille permanente décrite en V-37. Les vues de l'espace public (V-01 à V-04) et d'authentification (V-05, V-06) n'en font pas partie » |
+| **V-37** Coquille applicative | **Gabarit**, pas une page. Enveloppe toutes les routes sauf `/` anonyme, `/recherche` anonyme, `/guides/…`, `/connexion`, `/mot-de-passe-oublie…`, et V-04 | Partout ailleurs — **35 vues sur 41** la portent | 8 — Contenu : tableau de bord · lecture d'une note ; Navigation : ouverte · escamotée ; Profil : référent · administrateur ; Cas : branche en chargement · aucun domaine accessible | BRIEF §3.3 : « toutes les vues de l'espace de travail et de la console s'inscrivent dans une coquille permanente décrite en V-37. Les vues de l'espace public (V-01 à V-04) et d'authentification (V-05, V-06) n'en font pas partie » |
+| **V-38** Système de notification | **Section** de V-41, catalogue transverse. **Aucune adresse propre** depuis ARB-002 | `/bibliotheque`, famille *Retours* | 6 — types : succès · erreur · information · en cours ; planche : empiler les quatre types · tout refermer | **ARB-002** : « V-38, V-39 et V-40 restent des catalogues transverses, **non des routes** » ; famille *Retours* du brief V-41 |
+| **V-39** États vides, de chargement et d'erreur | **Section** de V-41, catalogue transverse. **Aucune adresse propre** depuis ARB-002 | `/bibliotheque`, famille *Retours* | 20 — 10 états vides (corpus vide · domaine sans note · dossier vide · aucune révision · aucun rétrolien · aucune relation · graphe sans relation · aucun signet · aucune distinction · liste filtrée vide) + 6 esquisses de chargement (carte de résultat · ligne de liste · panneau latéral · tableau de bord · graphe · arborescence) + 4 portées d'erreur (un panneau · une vue entière · perte de connexion · fonctionnalité dégradée) | **ARB-002** ; famille *Retours* du brief V-41. Ses états sont la **référence** des quatre états de zone employés par toutes les vues (§6) |
+| **V-40** Boîtes de dialogue | **Section** de V-41, catalogue transverse. **Aucune adresse propre** depuis ARB-002 | `/bibliotheque`, famille *Superpositions* ; chaque dialogue s'exécute dans la vue qui le déclenche (C-06) | 10 — quitter la comparaison · supprimer cette note · supprimer le dossier · restaurer la version 11 · signaler à réviser · droits du dossier · ajouter une relation · sélecteur de template · avertissement de doublon · déplacer une note | **ARB-002** ; famille *Superpositions* du brief V-41 |
 
 > **V-23** est un cas intermédiaire, et son ambivalence est **déclarée par sa planche** (contrôle *Enveloppe* : « Boîte de dialogue » / « Page dédiée »). Elle a donc bien une adresse (§3.3) **et** un mode superposé, selon le contexte d'appel — ce que le brief formule ainsi : « formulaire court, en boîte de dialogue ou page dédiée **selon le contexte d'appel** ».
 
@@ -197,9 +226,11 @@ Toutes ces routes exigent le rôle **administrateur**. Un utilisateur non admini
 
 **RG-M02-02** en découle : un résultat de recherche dont la correspondance a été trouvée dans le corps Opérationnel ouvre `/notes/{identifiant}?registre=operationnel`.
 
-### 4.2 État de recherche partageable — M02.6 (cité `RG-M02-06` par le PLAN)
+### 4.2 État de recherche partageable — `RG-M02-06`
 
-> « L'état de la recherche (requête + filtres + mode) est **partageable par l'adresse** de la page. »
+> `RG-M02-06` — « L'état de la recherche — requête, filtres, mode — est partageable par l'adresse de la page. »
+
+**Numérotation.** `RG-M02-05` et `RG-M02-06` étaient cités par le PLAN sans exister au cahier des charges, qui les laissait en puces non numérotées de §M02.6 et s'arrêtait à `RG-M02-04`. **E-05** (validé par ARB-006) leur attribue une numérotation, dans l'ordre des puces : `RG-M02-05` **compteur par facette**, `RG-M02-06` **état de recherche partageable par l'adresse**, `RG-M02-07` **pastilles de filtres supprimables et lien « tout effacer »**, `RG-M02-08` **compteur global reflétant le filtrage** (« 4 résultats sur 37 »). Ce document emploie désormais ces références partout où il écrivait « M02.6 » faute de mieux. Les quatre exigences sont réelles et couvertes : `RG-M02-06` par le présent §4.2, `RG-M02-05`, `RG-M02-07` et `RG-M02-08` par les contrôles de la planche de V-08 (facettes, pastilles, compteur).
 
 Les noms de paramètres ne sont pas inventés : ce sont les identifiants de facettes et les valeurs de contrôles de la maquette V-08.
 
@@ -212,7 +243,7 @@ Les noms de paramètres ne sont pas inventés : ce sont les identifiants de face
 | `tri` | `pertinence` *(défaut)* · `modification` · `verification` · `consultations` · `alpha` | `V-08:1191-1195` — `<option value="…">` |
 | `univers` `domaine` `type` `statut` `fraicheur` `etiquette` `visibilite` | libellé de la valeur de facette ; **répétable** | `V-08:1938-1946` — `definitions: [{ id: "univers" }, { id: "domaine" }, { id: "type" }, { id: "statut" }, { id: "fraicheur" }, { id: "etiquette" }, { id: "visibilite" }]` |
 
-**Sémantique de combinaison**, lue dans `creerFacettes.passe()` (`V-08:1813-1821`) : à l'intérieur d'une facette les valeurs sont en **ou** (paramètre répété), entre facettes en **et**. `/recherche` sans paramètre autre que `q` réinitialise tout (« tout effacer »).
+**Sémantique de combinaison**, lue dans `creerFacettes.passe()` (`V-08:1813-1821`) : à l'intérieur d'une facette les valeurs sont en **ou** (paramètre répété), entre facettes en **et**. `/recherche` sans paramètre autre que `q` réinitialise tout — c'est le lien « tout effacer » de `RG-M02-07`, et chaque pastille supprimable retire un couple `{facette}={valeur}` de l'adresse. Les compteurs de `RG-M02-05` (par facette) et de `RG-M02-08` (global) se calculent sur l'état ainsi porté par l'adresse : une adresse partagée rend exactement les mêmes compteurs.
 
 **En anonyme** (V-02), seuls `q`, `domaine` et `type` sont honorés : le brief V-02 réduit les facettes à « domaine, type de note. **Pas de statut, pas de visibilité, pas d'étiquette interne** » et supprime la bascule de mode. Un paramètre `statut=` ou `visibilite=` présenté par un anonyme est **ignoré**, jamais refusé — un refus révélerait l'existence du filtre (RG-ACC-04, RG-M02-04).
 
@@ -238,6 +269,8 @@ Les trois éléments nommés par la règle, et rien de plus :
 | **type maître** | `?type=` | identifiant du type de fiche | `V-20:1118` — `id="types-maitres"`, sélecteur des types présents dans le périmètre |
 
 `?criticite=oui|non` complète l'ensemble pour la vue complète (`V-19:1128`, `id="c-criticite"`, coché par défaut) : c'est une bascule d'affichage, non nommée par RG-M09-05, portée dans l'adresse par cohérence avec les trois autres — elle change ce que montre la capture partagée.
+
+**`?noeud={identifiant}` est ajouté — ARB-007, A-06.** Il porte le nœud sélectionné, sur `/cartographie` comme sur `/cartographie/par-type`. `RG-M09-05` ne le nomme pas : elle énumère trois éléments et s'arrête. Le **point dur n° 5** du brief fait pourtant de la sélection un **état durable** — « focus persistant au clic, jamais éphémère au survol » —, et **un état durable qui ne survit pas au partage de l'adresse n'en est pas un**. Sans ce paramètre, l'adresse partagée d'une analyse d'impact — l'usage central de la vue selon le brief, « référent en analyse d'impact, souvent pendant ou après un incident » — arriverait amputée de ce qui faisait l'objet de l'analyse. Une valeur qui ne désigne aucun nœud du périmètre est **ignorée**, comme tout paramètre d'affichage non résolu, jamais refusée.
 
 Le **périmètre** de `/carte-mentale` suit la même forme (`?perimetre=`), le brief V-21 déclarant un « sélecteur de périmètre : tout · un univers · un domaine » de même nature.
 
@@ -265,7 +298,8 @@ Le **périmètre** de `/carte-mentale` suit la même forme (`?perimetre=`), le b
 | Panneaux de formulaire de la console (`création` / `édition`) | R2 : **aucun** des dix fils d'Ariane de console ne porte de segment de formulaire — la source répond par son silence, là où le fil de V-23 porte explicitement « Nouveau » | Superposition |
 | Boîtes de dialogue (V-40) | Superpositions ; elles piègent le focus et le rendent à leur déclencheur (RG-M18-10) — un état qui appartient au déclencheur, pas à l'adresse | Superposition |
 | Palette V-09 | Idem ; « rend le focus à l'élément déclencheur » | Superposition |
-| Sélection d'un nœud de cartographie | Non nommée par RG-M09-05, qui énumère trois éléments et s'arrête | Voir §8, A-06 |
+
+*La sélection d'un nœud de cartographie figurait ici. **ARB-007 la fait passer dans l'adresse** : voir §4.3.*
 
 ---
 
@@ -275,10 +309,11 @@ Le **périmètre** de `/carte-mentale` suit la même forme (`?perimetre=`), le b
 
 | Depuis | Vers | Motif |
 |---|---|---|
-| `/domaines/{domaine}` *(un seul porteur)* | `/univers/{univers}/{domaine}` | **RG-M03-02** — adresse raccourcie |
 | `/univers/{ancien-univers}/{domaine}` | `/univers/{univers-courant}/{domaine}` | **RG-M03-02** — adresse ancienne, après rattachement (UC-M14-02) |
 | `/console` | `/console/univers` | S4 : l'entrée `Console` du rail désigne V-27 |
 | `/univers/{u}/{d}` sur un identifiant d'univers ou de domaine renommé | forme courante | **RG-M03-02** — adresse ancienne |
+
+**Ce qui a disparu de ce tableau, et ce qui y reste.** La ligne `/domaines/{domaine}` → forme canonique est **supprimée** : ARB-001 n'implémente pas la forme raccourcie, il n'y a donc rien à rediriger. La ligne des **adresses anciennes** reste, et elle n'est nullement ambiguë : elle vise le rattachement d'un domaine à un autre univers (UC-M14-02) et les renommages d'identifiant. L'adresse de départ y désigne un domaine et un seul — c'est un ancien état de la même ressource, pas une forme abrégée à résoudre. Les deux clauses de RG-M03-02 n'avaient pas le même objet ; seule la première perd le sien.
 
 Aucune redirection n'est nécessaire pour les notes : leur adresse ne change pas (§2.1).
 
@@ -293,11 +328,15 @@ Aucune redirection n'est nécessaire pour les notes : leur adresse ne change pas
 
 `?suite=` n'accepte qu'un chemin absolu interne : une valeur externe est ignorée et remplacée par `/`.
 
-### 5.3 Désambiguïsation
+### 5.3 Désambiguïsation — clause sans objet, à ne jamais implémenter
 
-RG-M03-02 : « en cas d'ambiguïté (même identifiant de domaine dans deux univers), le produit **demande à l'utilisateur de choisir** plutôt que de deviner ». La situation est rendue possible par RG-STR-02 et illustrée par elle : « deux univers peuvent avoir chacun un domaine *support* ».
+RG-M03-02 : « en cas d'ambiguïté (même identifiant de domaine dans deux univers), le produit **demande à l'utilisateur de choisir** plutôt que de deviner ». La situation qu'elle décrit est réelle et légitime : RG-STR-02 l'autorise et l'illustre — « deux univers peuvent avoir chacun un domaine *support* » —, et ARB-001 la confirme sans réserve, l'unicité n'étant portée que par l'univers.
 
-Elle survient sur `/domaines/{domaine}` uniquement — la forme canonique, elle, n'est jamais ambiguë. Le produit doit alors présenter la liste des domaines candidats avec leur univers, et laisser choisir. **Aucune des 41 vues ne porte cet écran** : voir §8, A-01.
+**Mais la clause n'a aucun déclencheur.** Elle ne pouvait survenir que sur `/domaines/{domaine}` — la forme canonique, elle, n'est jamais ambiguë. Cette forme n'étant pas implémentée (ARB-001), rien ne peut plus la déclencher.
+
+**Consigné, et sans suite.** Cette clause est **sans objet** et **ne sera jamais implémentée** (E-09). Aucun écran de choix n'est à maquetter, aucune vue ne manque, et le compte des vues reste à 41. L'inscrire ici est le seul traitement qu'elle reçoit : une clause sans objet qu'on laisse sans trace revient tôt ou tard, sous forme de question déjà tranchée.
+
+`RG-M03-02` n'est pas fautive. C'est l'absence de forme raccourcie qui prive sa seconde moitié d'emploi — non un défaut de rédaction du cahier des charges.
 
 ### 5.4 Identifiants réservés
 
@@ -305,7 +344,7 @@ L'identifiant lisible d'une note est généré et rendu unique automatiquement (
 
 | Espace de noms | Réservés |
 |---|---|
-| Racine | `guides` · `notes` · `univers` · `domaines` · `recherche` · `connexion` · `deconnexion` · `mot-de-passe-oublie` · `cartographie` · `carte-mentale` · `importer` · `mon-profil` · `console` · `bibliotheque` |
+| Racine | `guides` · `notes` · `univers` · `recherche` · `connexion` · `deconnexion` · `mot-de-passe-oublie` · `cartographie` · `carte-mentale` · `importer` · `mon-profil` · `console` · `bibliotheque` |
 | `/notes/…` | `nouvelle` |
 | `/notes/{identifiant}/…` | `modifier` · `operationnel` · `comparaison` · `pieces-jointes` |
 | `/univers/{u}/{d}/…` | `notes` · `dossiers` · `signets` |
@@ -313,26 +352,32 @@ L'identifiant lisible d'une note est généré et rendu unique automatiquement (
 
 Sans cette réservation, une note intitulée « Nouvelle » produirait `/notes/nouvelle` et masquerait l'éditeur de création.
 
+**Un seul segment sort de la liste racine : `domaines`.** ARB-001 supprime la route qui le justifiait, et plus aucune adresse n'y répond. La règle est inchangée : on réserve les segments qui **occuperaient une place de route**, et celui-là n'en occupe plus (`ECART-009 f)`).
+
+`bibliotheque` **y figure toujours** : ARB-002 en fait une adresse de premier niveau (§3.7), donc un segment racine à protéger comme les autres. En revanche il ne se décline plus en sous-routes — `/bibliotheque/notifications`, `/bibliotheque/etats` et `/bibliotheque/dialogues` n'existent pas.
+
 ### 5.5 Matrice d'accès et comportement en cas de refus
 
 | Famille | Anonyme | Connecté sans droit | Connecté avec droit | Administrateur |
 |---|---|---|---|---|
 | `/`, `/recherche` | V-01 / V-02 *(périmètre public)* | V-07 / V-08 *(périmètre autorisé)* | idem | idem |
-| `/guides/{id}` — note publique et publiée | V-03 | V-03 | V-03 | V-03 |
+| `/guides/{id}` — note publique et publiée *(une seule adresse, un seul rendu — ARB-007, A-05)* | V-03 | V-03 | V-03 | V-03 |
 | `/guides/{id}` — note interne ou brouillon | **404 V-04** | **404 V-04** | **404 V-04** | **404 V-04** |
 | `/notes/{id}` et sous-routes | **404 V-04** | **404 V-26** | V-14… | V-14… |
-| `/univers/…`, `/domaines/…` | **404 V-04** | **404 V-26** | V-10… | V-10… |
-| `/cartographie`, `/carte-mentale` | **404 V-04** *(voir §8, A-04)* | périmètre rabattu (RG-M09-02) | V-19… | V-19… |
+| `/univers/…` | **404 V-04** | **404 V-26** | V-10… | V-10… |
+| `/domaines/…` | **404 V-04** | **404 V-26** | **404 V-26** | **404 V-26** *(ARB-001 : forme raccourcie non implémentée — la réponse ne dépend d'aucun droit)* |
+| `/cartographie`, `/carte-mentale` | **404 V-04** *(ARB-007 : pas de cartographie publique)* | périmètre rabattu (RG-M09-02) | V-19… | V-19… |
 | `/importer` | **404 V-04** | **404 V-26** *(sans droit de rédaction)* | V-24 | V-24 |
 | `/mon-profil` | **404 V-04** | V-25 | V-25 | V-25 |
 | `/console/…` | **404 V-04** | **404 V-26** | **404 V-26** | V-27… |
-| `/bibliotheque/…` | **404 V-04** | **404 V-26** | **404 V-26** | V-41… *(voir §8, A-02)* |
+| `/bibliotheque` | **404 V-04** | **404 V-26** | **404 V-26** | V-41 *(ARB-002 ; V-38, V-39 et V-40 en sont les sections, sans adresse propre)* |
 
-Trois principes sont appliqués sans exception :
+Quatre principes sont appliqués sans exception :
 
 1. **RG-ACC-04 / ADR-007** — refus et inexistence passent par le **même chemin de code**. Il n'existe pas de branche « interdit ».
 2. **RG-ACC-01 / ADR-006** — le filtrage est calculé côté serveur et projeté dans l'index (`STACK-TECHNIQUE.md §4.2`). Une adresse construite à la main ne rapporte jamais un contenu interdit.
-3. **Point dur n° 7** — une action interdite n'est pas affichée. Une route interdite n'est pas plus signalée : elle n'existe pas, du point de vue de l'utilisateur.
+3. **Point dur n° 7 / P-09 / ADR-011** — une action interdite n'est pas affichée, et une entrée de navigation interdite n'est pas rendue. Une route interdite n'est pas plus signalée : elle n'existe pas, du point de vue de l'utilisateur.
+4. **ARB-005** — cette matrice relève **entièrement** du régime indiscernable : elle porte sur la résolution de **ressources entières**. L'indiscernabilité y est **aussi temporelle** : un écart de latence entre un refus et une inexistence est une fuite, au même titre qu'un code de statut distinct. L'état « sans droit » de `RG-M18-03` n'a aucune place ici — il vit dans les **zones**, au §6. En cas de doute sur la frontière, **l'indiscernable l'emporte**.
 
 ---
 
@@ -347,10 +392,17 @@ Les planches énumèrent les **variantes propres** de chaque vue. Elles ne dispe
 | **Erreur** | V-01 *(guides en erreur)*, V-07 *(activité en erreur)*, V-08 *(sens indisponible)*, V-17 *(enregistrement en échec)*, V-23 *(récupération échoue)*, V-24 *(échec global)*, V-33 *(valeurs refusées)*, V-36 *(avertissements)* | Toutes les autres. Quatre portées de référence : V-39 |
 | **Sans droit** | V-07, V-08, V-10, V-13 *(droit effectif)*, V-14, V-15, V-19, V-21, V-22, V-26, V-27…V-32 *(suppressions refusées)*, V-37 | — |
 
-**Deux lectures du « sans droit » cohabitent et ne doivent pas être confondues :**
+**Les deux régimes de refus ne portent pas sur le même objet — ARB-005.** C'est la lecture posée par ADR-007, validée par le commanditaire. Confondre les deux est la faute qui coûte le plus cher : elle produit soit une fuite, soit une page muette là où l'utilisateur avait le droit de comprendre.
 
-- *sans droit **d'écriture*** — la zone s'affiche, les actions d'écriture disparaissent. C'est ce que pilotent les contrôles `Droits : écriture / lecture seule` de sept planches. Conforme à RG-M05-08 et au point dur n° 7.
-- *sans droit **de lecture*** — il n'y a pas d'état « sans droit » affiché : la route rend **404** (RG-ACC-04). L'état « sans droit » de RG-M18-03 ne s'applique donc qu'aux **zones** d'une page par ailleurs accessible, jamais à une page entière.
+| Régime | Portée | Comportement |
+|---|---|---|
+| **Indiscernable** — `RG-ACC-04` | la résolution d'une **ressource entière**, c'est-à-dire d'une adresse | Refus et inexistence produisent une réponse identique : **corps, en-têtes, code, et temps de réponse**. Un seul chemin de code (ADR-007). Aucun état « sans droit » n'est affiché : la route rend **404** — V-04 en anonyme, V-26 en connecté |
+| **État « sans droit »** — quatrième état de zone de `RG-M18-03` | une **zone** d'une page que l'utilisateur a le droit d'ouvrir | L'existence de la ressource porteuse lui est **déjà connue** : la signaler ne révèle rien. La zone s'affiche avec son explication et, si pertinent, à qui s'adresser ; les actions d'écriture disparaissent (RG-M05-08, P-09, point dur n° 7) |
+
+**Règle de tranchage.** Le contrat de tâche décide ; à défaut, **le régime indiscernable l'emporte**. Le doute ne se résout jamais en faveur de l'information révélée.
+
+C'est de ce second régime que relèvent les contrôles `Droits : écriture / lecture seule` des sept planches, et la ligne « Sans droit » du tableau ci-dessus. Le premier régime, lui, est tout entier au §5.5 — et c'est `verificateur-acces`, adversarial par construction, qui éprouve nommément la frontière : c'est là qu'une erreur d'implémentation se logera.
+
 
 `RG-M18-04` complète : « une erreur dans un panneau secondaire ne fait jamais tomber la page entière ». Trois planches l'attestent explicitement — V-01 (« la recherche reste utilisable même si les guides populaires échouent »), V-07 (« activité en erreur » pendant que les indicateurs s'affichent), V-14 (« chaque panneau latéral gère ses états indépendamment »).
 
@@ -360,114 +412,84 @@ Les planches énumèrent les **variantes propres** de chaque vue. Elles ne dispe
 
 L'ordre de préséance (PLAN §15.1, D-08) donne raison à la maquette. Elles sont consignées ici pour le diff retour (T-008).
 
+**Statut après arbitrage.** Neuf contradictions, aucune ouverte. **Cinq** étaient tranchées par la seule préséance et le restent, inchangées : C-01, C-04, C-05, C-06, C-07. **Quatre** sont closes par un arbitrage ou un errata, et la colonne *Tranché* porte le renvoi : C-02 (E-05), C-03 (E-03), C-08 (ARB-002), C-09 (ARB-007). Aucune résolution n'est inventée ici : ce qui n'a pas été arbitré reste écrit tel qu'il l'était.
+
 | # | Contradiction | Ce que dit le cadrage | Ce que dit la maquette | Tranché |
 |---|---|---|---|---|
 | C-01 | **Forme de l'adresse d'une note** | `PLAN-DE-REALISATION.md §4.2` : `/u/production/infrastructure/n/restaurer-une-sauvegarde-postgresql-depuis-barman` | `V-26:2612` : `/notes/restaurer-une-sauvegarde-mariadb` — plate, sans univers ni domaine | **Maquette.** Elle est en outre la seule des deux formes à satisfaire RG-M03-03 sans redirection permanente (§2.3) |
-| C-02 | **`RG-M02-05` et `RG-M02-06` n'existent pas** | `PLAN-DE-REALISATION.md:87` et `:107` citent `RG-M02-06` (état de recherche partageable) et `RG-M02-05` (compteur de facettes) comme des règles du cahier des charges | Le CDC M02 s'arrête à `RG-M02-04`. Les deux exigences existent bien, mais sous forme de **puces non numérotées** en M02.6 | Les exigences sont réelles et couvertes (§4.2). **La numérotation du PLAN est fautive** : `RG-M02-05` et `RG-M02-06` sont à créer au CDC, ou les citations à corriger |
-| C-03 | **Nombre de planches de revue** | `PLAN-DE-REALISATION.md §4.1` : « une planche de revue dans **36 des 40** vues » ; le contrat T-006 annonce « 38 des 41 » et nomme V-35, V-40, V-41 comme les vues sans planche | Comptage sur le dépôt : **37 planches sur 41**. Les quatre vues sans planche sont **V-09, V-35, V-40, V-41** — ce que `PLAN §4.1` énonce d'ailleurs correctement deux phrases plus loin, en se contredisant lui-même | **Maquette.** 37 planches ; V-09 est bien sans planche et présente six états côte à côte |
+| C-02 | **`RG-M02-05` et `RG-M02-06` n'existent pas** | `PLAN-DE-REALISATION.md:87` et `:107` citent `RG-M02-06` (état de recherche partageable) et `RG-M02-05` (compteur de facettes) comme des règles du cahier des charges | Le CDC M02 s'arrête à `RG-M02-04`. Les deux exigences existent bien, mais sous forme de **puces non numérotées** en M02.6 | **Résolu — E-05** (validé par ARB-006). Les exigences étaient réelles et couvertes (§4.2) ; la numérotation leur est attribuée à l'errata, dans l'ordre des puces de §M02.6 : `RG-M02-05` compteur par facette, `RG-M02-06` état de recherche partageable, `RG-M02-07` pastilles et « tout effacer », `RG-M02-08` compteur global. `cadrage/` n'est pas modifié — l'errata fait autorité |
+| C-03 | **Nombre de planches de revue** | `PLAN-DE-REALISATION.md §4.1` : « une planche de revue dans **36 des 40** vues » ; le contrat T-006 annonce « 38 des 41 » et nomme V-35, V-40, V-41 comme les vues sans planche | Comptage sur le dépôt : **37 planches sur 41**. Les quatre vues sans planche sont **V-09, V-35, V-40, V-41** — ce que `PLAN §4.1` énonce d'ailleurs correctement deux phrases plus loin, en se contredisant lui-même | **Résolu — E-03** (validé par ARB-006), au même compte que la maquette : **37 planches sur 41 vues**, les quatre sans planche étant V-09, V-35, V-40 et V-41. Le §4.1 du PLAN se contredisait lui-même |
 | C-04 | **Adresse de l'espace public** | Le CDC ne distingue pas l'espace d'adressage public de l'espace interne | `V-04` : `/guides/…` ; `V-26` : `/notes/…`. Deux espaces de noms distincts pour le même objet | **Maquette.** C'est une garantie de plus pour RG-M17-01 : aucune adresse `/guides/` ne peut rendre du contenu interne |
 | C-05 | **`/guides/` n'a pas d'index** | Rien ne l'interdit | `V-04:2228` classe `/guides/` nu parmi les **adresses erronées** | **Maquette.** L'entrée du public est `/` et `/recherche`, jamais une liste de guides |
 | C-06 | **Boîte de dialogue « suppression d'un domaine »** | `BRIEF V-40` la liste parmi les onze dialogues à maquetter | `V-40` n'en contient que dix ; le dialogue de suppression de domaine vit dans `V-28:1391` | **Maquette.** Chaque dialogue destructif vit dans la vue qui le déclenche ; V-40 est un catalogue de motifs, pas leur lieu d'exécution |
 | C-07 | **Fil d'Ariane de l'éditeur** | `UC-M03-02` : « le fil d'Ariane reflète le **chemin complet** : Accueil › Univers › Domaine › Dossier › … › Note » | `V-17:3559` : `["Accueil","Production", domaine, "Modifier"]` — la note éditée est absente, les dossiers aussi | **Maquette** pour le rendu ; **l'adresse conserve l'identifiant de la note**, sans quoi `/modifier` ne désignerait rien |
-| C-08 | **Fils d'Ariane de V-38, V-39, V-40, V-41** | Le brief classe V-38/39/40 « transverses » et V-41 hors coquille | Les quatre rendent un fil de **premier niveau** (`Accueil › …`), donc quatre pages de racine | **Ni l'un ni l'autre au sens strict.** Retenu : une famille `/bibliotheque` et trois sections (§3.7), parce que le contenu de V-38/39/40 est déjà déclaré dans le périmètre de V-41 par le brief lui-même |
-| C-09 | **Cartographie en anonyme** | `RG-M09-02` : « un anonyme ne peut cartographier qu'un **périmètre public** » — donc une cartographie anonyme existe | `BRIEF §4` ne donne que quatre vues publiques, dont aucune n'est un graphe ; la planche de V-19 n'offre que les profils *administrateur* et *référent* | **Non tranchable par préséance** : la maquette ne contredit pas, elle est muette. Voir §8, A-04 |
+| C-08 | **Fils d'Ariane de V-38, V-39, V-40, V-41** | Le brief classe V-38/39/40 « transverses » et V-41 hors coquille | Les quatre rendent un fil de **premier niveau** (`Accueil › …`), donc quatre pages de racine | **Résolu — ARB-002** *(précision du 18 août, `ECART-009 b)`)*. **La maquette l'emporte, et l'arbitrage ne la contredit pas.** Une seule route, **`/bibliotheque`**, au premier niveau que le fil rend, sous rôle administrateur, avec son point d'entrée dans la navigation de la console : *la console y renvoie, elle ne la contient pas*. V-38, V-39 et V-40 sont des catalogues transverses, **non des routes**, et deviennent les sections de V-41 (§3.7, §3.8) — c'est en cela que ces quatre fils de premier niveau ne font pas quatre pages de racine, mais une seule. Le fil rendu est **celui de la maquette**, sans segment ajouté |
+| C-09 | **Cartographie en anonyme** | `RG-M09-02` : « un anonyme ne peut cartographier qu'un **périmètre public** » — donc une cartographie anonyme existe | `BRIEF §4` ne donne que quatre vues publiques, dont aucune n'est un graphe ; la planche de V-19 n'offre que les profils *administrateur* et *référent* | **Résolu — ARB-007 (A-04).** Pas de cartographie publique. L'espace public compte quatre vues, et la planche de V-19 n'offre aucun profil anonyme ; `RG-M09-02` ne l'impose pas explicitement, et l'implémenter serait un comblement. La règle est lue comme une **précaution de filtrage**, non comme l'annonce d'une route |
 
 ---
 
-## 8. À arbitrer
+## 8. Arbitrages appliqués
 
-Six points. Chacun a été cherché dans les cinq sources ; ce qui suit est ce qu'elles **ne disent pas**.
+Six points avaient été portés à l'arbitrage. **Les six sont clos.** Ce document ne pose plus aucune
+question ouverte : ce qu'un arbitrage ferme n'a plus à être demandé.
 
-### A-01 — Écran de désambiguïsation d'un domaine · **gravité haute**
+| Point | Question posée | Arbitrage | Décision, et ce qu'elle emporte ici |
+|---|---|---|---|
+| **A-01** *(gravité haute)* | Quel écran demande de choisir entre deux domaines homonymes ? | **ARB-001** | **Aucun.** La forme raccourcie `/domaines/{domaine}` n'est pas implémentée ; seule l'adresse canonique existe. La clause de désambiguïsation de `RG-M03-02` est **sans objet** (E-09), à ne jamais implémenter. L'unicité est portée par l'**univers seul** : deux univers ne peuvent porter le même nom, deux univers différents peuvent contenir un domaine homonyme. **Aucune maquette ne manque**, le compte reste à 41 vues. → §2.2, §3.3, §5.1, §5.3, §5.4 |
+| **A-02** *(moyenne)* | Qui voit V-38 à V-41 dans le produit livré ? | **ARB-002** | **Les administrateurs.** « Concepteur et développeurs » du brief désigne les administrateurs (E-11). L'adresse reste **`/bibliotheque`**, au premier niveau que rendent les quatre fils d'Ariane : *la console y renvoie, elle ne la contient pas*. Son entrée apparaît dans la navigation de la console et **pour aucun autre rôle** (P-09, ADR-011). Elle reste une **page réelle** (risque R-06). V-38, V-39, V-40 sont des catalogues transverses, **non des routes** : sections de V-41. → §3.6, §3.7, §3.8, §5.4, §5.5 |
+| **A-03** *(moyenne)* | Où un contributeur retrouve-t-il son rapport d'import ? | **ARB-003** | **À l'étape 4 de son propre parcours (V-24)**, qui le porte déjà. V-35 est et reste le journal transverse de l'instance, en console administrateur. **Aucune route de rapport d'import n'est exposée hors console.** Le renvoi du brief V-24 vers V-35 est l'erreur et n'est pas implémenté (E-10). → §3.5, §3.6 |
+| **A-04** *(moyenne)* | Existe-t-il une cartographie publique ? | **ARB-007** | **Non.** L'espace public compte quatre vues, la planche de V-19 n'offre aucun profil anonyme, et `RG-M09-02` ne l'impose pas explicitement : l'implémenter serait un comblement. → §5.5, C-09 |
+| **A-05** *(faible)* | Que rend `/guides/{identifiant}` en session ? | **ARB-007** | **V-03, tel quel.** Une seule adresse, un seul rendu. Cela conserve la vérification « voir ce que voit le public », qui est un usage réel, et évite une seconde adresse sans canonique ou un état hors planche — donc hors protocole de comparaison. → §3.1, §5.5 |
+| **A-06** *(faible)* | Le nœud sélectionné va-t-il dans l'adresse ? | **ARB-007** | **Oui — `?noeud=` est ajouté** à l'état de cartographie porté par l'adresse. Le point dur n° 5 fait de la sélection un **état durable** ; un état durable qui ne survit pas au partage de l'adresse n'en est pas un. → §4.3, §4.5 |
 
-**La question.** RG-M03-02 exige que le produit « demande à l'utilisateur de choisir » quand un identifiant de domaine existe dans deux univers. Quel écran le fait ?
+### 8.1 Les trois autres arbitrages, et ce qu'ils changent ici
 
-**Sources consultées, et ce qu'elles ne disent pas.** CDC §4 (inventaire des 41 vues) : aucune vue de choix. BRIEF, Annexe Récapitulatif : idem. BRIEF V-40, catalogue des onze dialogues : aucun dialogue de désambiguïsation. `grep` sur les 41 maquettes : aucun bloc de ce genre. Aucune planche ne porte cet état. RG-M03-02 prescrit un comportement sans nommer son écran — c'est le seul cas du cahier des charges dans ce cas.
+| Arbitrage | Objet | Effet sur ce document |
+|---|---|---|
+| **ARB-004** | `n-doc-barman` est une note **interne**, non publique | Aucun changement de route. Effet sur la matrice d'étanchéité : cette note est traitée comme interne **sur toutes les routes et pour tous les personas**, `/guides/…` compris — un corpus qui l'exposerait ferait certifier la fuite par la comparaison visuelle |
+| **ARB-005** | Articulation du refus indiscernable et de l'état « sans droit » | Appliqué partout où ce document décrit un refus : §3 (préambule), §5.5 (quatre principes), §6 (les deux régimes). L'indiscernabilité inclut le **temps de réponse**. Manque de couverture nommé par l'arbitrage et **non résolu** : aucune batterie ne mesure aujourd'hui l'indiscernabilité temporelle — à outiller au lot T-011 |
+| **ARB-006** | Les corrections du cadrage vivent à l'errata, `cadrage/` n'est pas modifié | Ce document cite `E-xx` là où il citait un défaut du cadrage. Il ne propose plus de « corriger le CDC » : la correction existe déjà, datée et opposable |
 
-**Options et conséquences.**
-1. **Variante de V-26** portant la liste des candidats. Coût nul en maquettage, mais V-26 est une page d'échec : présenter un choix légitime dans un écran d'erreur est un contresens fonctionnel.
-2. **Onzième dialogue de V-40**, ouvert par-dessus l'espace de travail. Cohérent avec le motif « choisir entre des objets » (le sélecteur de dossier arborescent lui ressemble), mais suppose une page hôte — or l'utilisateur arrive par une adresse, sans contexte.
-3. **Douzième vue**, page de choix dédiée. Honnête, mais ouvre le compte des vues à 42 et sort du gel.
-4. **Renoncer à la forme raccourcie.** Aucune adresse `/domaines/{domaine}` n'est alors publiée ; RG-M03-02 perd son objet sur les clauses *redirection* et *désambiguïsation*, qui deviennent sans emploi. C'est un retrait d'exigence, pas une décision d'implémentation.
+*(ARB-008 — ligne pnpm 11 — est sans effet sur l'adressage.)*
 
-**Recommandation.** Option 3 si l'exigence est maintenue ; option 4 si l'on accepte de ne jamais publier d'adresse raccourcie. Ne pas choisir revient à laisser RG-M03-02 partiellement inapplicable.
+### 8.2 Ce que ce document continue de ne pas trancher
 
-### A-02 — Niveau d'accès de `/bibliotheque` et de ses trois sections · **gravité moyenne**
+La règle de non-comblement reste en vigueur. Un point reste **signalé, non résolu**, et ce n'est
+pas un vide d'adressage :
 
-**La question.** Qui voit V-38, V-39, V-40, V-41 dans le produit livré ?
+- **La mesure de l'indiscernabilité temporelle** (ARB-005), sans batterie à ce jour — assignée à T-011 (`ECART-009 e)`). Tant qu'elle n'existe pas, **aucun lot ne déclare `RG-ACC-04` tenue** : la matrice du §5.5 décrit ce qui doit être rendu, elle ne prouve pas ce qui ne doit pas fuiter.
 
-**Sources consultées, et ce qu'elles ne disent pas.** BRIEF V-41, *Qui et quand* : « **Concepteur et développeurs** » — une population qui n'est aucun des trois niveaux d'accès du CDC §2.2, et qui n'existe pas dans le modèle de droits. `STACK-TECHNIQUE.md §4.1` affirme que V-41 est « une page réelle de l'application » sans dire pour qui. Le rail de V-37 ne porte aucune entrée « Bibliothèque ». Le motif commun de la console énumère ses trois groupes (Contenus, Utilisateurs, Système) : aucun n'accueille la bibliothèque. Les quatre maquettes rendent pourtant la coquille complète, donc un contexte authentifié.
-
-**Options et conséquences.**
-1. **Administrateur, atteignable par adresse seule** *(retenu par défaut dans la table)*. Cohérent avec « aucune entrée inerte » du motif de console et avec le point dur n° 7. Mais l'audience déclarée — les développeurs — n'est pas nécessairement administratrice de l'instance de production.
-2. **Tout utilisateur connecté.** Rend la bibliothèque vraiment « vivante », au prix de quatre pages sans valeur métier dans la navigation d'un intervenant.
-3. **Exclue du produit livré**, servie seulement en développement. Contredit frontalement `STACK-TECHNIQUE.md §4.1` : la page redevient une maquette morte, et la garantie de non-divergence visuelle qu'elle apporte disparaît de la production.
-
-**Ce qui dépend de la réponse.** Le nombre de routes livrées (44 ou 40) et la portée de la batterie d'étanchéité du PLAN §5-6, qui croise « toutes routes × tous personas ».
-
-### A-03 — Rapport d'import d'un contributeur · **gravité moyenne**
-
-**La question.** Un contributeur importe depuis `/importer` (BRIEF V-24 : « administrateur **ou contributeur** »). Où retrouve-t-il son rapport une heure plus tard ?
-
-**Sources consultées, et ce qu'elles ne disent pas.** BRIEF V-24, *Sorties* : « V-11 · V-14 · **V-35** ». Or V-35 est une section de console, et le motif commun de la console pose que « la console est réservée aux administrateurs ». Le brief envoie donc explicitement un contributeur vers une page qu'il ne peut pas atteindre. `RG-M12-09` exige qu'un journal soit produit pour chaque lot, sans dire qui le consulte. Aucune vue ne porte un « mes imports » non administratif. Les deux sources se contredisent sans qu'une préséance puisse départager : la maquette de V-35 est bien une page de console, et le brief de V-24 la désigne bien comme sortie.
-
-**Options et conséquences.**
-1. **Ouvrir `/console/imports` à l'auteur du lot**, restreint à ses propres lots. Rompt la règle « la console est réservée aux administrateurs » — règle qui structure la matrice d'accès entière.
-2. **Adresse de rapport hors console** : `/importer/{lot}`, accessible à l'auteur. Deux adresses pour le même objet, à réconcilier canoniquement.
-3. **Le rapport d'un contributeur n'est pas persistant** : il vit le temps de l'étape 4 de V-24. Contredit `RG-M12-09` en pratique, puisque le journal existe mais reste hors de portée de celui qui l'a produit.
-4. **Réserver l'import aux administrateurs.** Contredit BRIEF V-24 et retire une route à l'espace de travail.
-
-### A-04 — Existence d'une cartographie publique · **gravité moyenne**
-
-**La question.** `RG-M09-02` dit qu'« un anonyme ne peut cartographier qu'un périmètre public ». Existe-t-il une route de cartographie anonyme, et laquelle ?
-
-**Sources consultées, et ce qu'elles ne disent pas.** CDC §4, *Espace public* : quatre vues, V-01 à V-04 — aucun graphe. BRIEF V-19, *Points d'entrée* : « menu de navigation · page de domaine · page d'univers · panneau Relations d'une note » — quatre points d'entrée, tous internes à la coquille, qui n'existe pas en anonyme (BRIEF §3.3). Planche de V-19 : deux profils, *administrateur* et *référent* ; aucune modalité anonyme. La maquette n'infirme pas la règle, elle l'ignore. Contradiction C-09 ci-dessus.
-
-**Options et conséquences.**
-1. **RG-M09-02 est une précaution de filtrage, pas l'annonce d'une route.** Elle signifie : si jamais une cartographie était atteinte en anonyme, elle serait réduite au public. Aucune route publique n'est créée. C'est la lecture retenue par défaut dans la table (`/cartographie` → 404 en anonyme). Coût : la règle devient inobservable, donc invérifiable par la batterie d'étanchéité.
-2. **Une cartographie publique existe** et demande une cinquième vue publique. Sort du gel des 41 vues.
-
-### A-05 — Rendu de `/guides/{identifiant}` pour un utilisateur connecté · **gravité faible**
-
-**La question.** Un contributeur reçoit un lien public par courriel. Que rend `/guides/{id}` quand la session existe ?
-
-**Sources consultées, et ce qu'elles ne disent pas.** BRIEF V-03, *Qui et quand* : « le lecteur externe » — décrit l'usage attendu, pas le comportement du cas non prévu. `RG-M17-01` définit ce que l'espace public **expose**, jamais **à qui** il répond. `RG-M17-02` interdit les actions d'écriture en anonyme, sans dire ce qu'il advient d'un lecteur authentifié sur une page publique. Aucune planche de V-03 ne porte de modalité « avec session ». Aucune maquette ne traite le cas.
-
-**Options et conséquences.**
-1. **Redirection 302 vers `/notes/{id}`.** L'utilisateur obtient la vue riche à laquelle il a droit. Coût : il devient impossible de vérifier ce que voit le public — or c'est une vérification éditoriale réelle avant de publier une note.
-2. **Servir V-03 tel quel.** Le même contenu vit à deux adresses sans canonique désignée, ce qui affaiblit la cohérence posée par RG-M03-02.
-3. **Servir V-03 avec un bandeau « vue publique — voir la note complète ».** Résout l'usage, mais crée un état de V-03 qu'aucune planche ne déclare, donc hors du protocole de comparaison visuelle du PLAN §4.2.
-
-### A-06 — Le nœud sélectionné de la cartographie dans l'adresse · **gravité faible**
-
-**La question.** Faut-il ajouter `?noeud={identifiant}` aux adresses de `/cartographie` ?
-
-**Sources consultées, et ce qu'elles ne disent pas.** `RG-M09-05` énumère **trois** éléments — mode, type maître, périmètre — et s'arrête. Le point dur n° 5 exige un « focus **persistant** au clic », ce qui rend la sélection un état durable et non éphémère. `V-19` n'écrit rien dans l'adresse. La règle est donc soit exhaustive, soit incomplète, et rien ne permet de le dire.
-
-**Options et conséquences.** Ajouter le paramètre rend partageable une analyse d'impact — l'usage central de la vue selon le brief (« référent en analyse d'impact, souvent pendant ou après un incident ») — mais étend une règle close. Ne pas l'ajouter respecte la lettre de RG-M09-05 et laisse le partage de la vue amputé de ce qui faisait l'objet de l'analyse.
+**Deux points l'ont quitté depuis la première rédaction de cette section**, et par des voies opposées. Le fil d'Ariane de la bibliothèque : refuser de le combler était juste, et la réconciliation a montré qu'il n'y avait rien à combler — la maquette avait déjà répondu (`ECART-009 b)`). La référence de l'état « sans droit » : corrigée à la source dans ADR-007 et ARB-005, elle n'a plus à être signalée ici (`ECART-009 a)`).
 
 ---
 
 ## 9. Récapitulatif chiffré
 
-| Grandeur | Nombre |
-|---|---|
-| Routes servant une vue | **38** |
-| Routes de redirection ou de service (sans vue) | **6** — `/console`, `/domaines/{d}`, `/deconnexion`, pièces jointes, archive d'export, capture 404 |
-| **Total des routes** | **44** |
-| Vues couvertes | **41 / 41** |
-| dont vues sans route propre | **3** — V-09 et V-15 (superpositions), V-37 (gabarit) |
-| dont vues rendues à toute adresse non résolue | **2** — V-04, V-26 |
-| Vues servies par deux routes ou plus | **4** — V-06, V-17, V-23, V-35 |
-| Routes servant deux vues selon la session | **2** — `/` et `/recherche` |
-| **États déclarés, tous traçables** | **268** |
-| dont issus d'un contrôle de planche | **221** (37 planches) |
-| dont issus d'une présentation côte à côte | **47** (V-09 : 6 · V-35 : 4 · V-39 : 20 · V-40 : 10 · V-41 : 11 familles) |
-| Paramètres d'état attestés par une maquette | **3** — `?registre=`, `?version=`, `#{ancre}` |
-| Paramètres d'état dérivés d'un contrôle de maquette | **20** |
-| Points portés à l'arbitrage | **6** |
-| Contradictions cadrage ↔ maquettes | **9** |
+| Grandeur | Nombre | Écart à la première rédaction |
+|---|---|---|
+| Routes servant une vue | **35** | −3 : V-38, V-39 et V-40 cessent d'être des routes (ARB-002) |
+| Routes de redirection ou de service (sans vue) | **5** — `/console`, `/deconnexion`, pièces jointes, archive d'export, capture 404 | −1 : `/domaines/{d}` supprimée (ARB-001) |
+| **Total des routes** | **40** | −4. C'est le décompte arrêté par ARB-002 |
+| Vues couvertes | **41 / 41** | — |
+| dont vues sans route propre | **6** — V-09 et V-15 (superpositions), V-37 (gabarit), V-38, V-39 et V-40 (sections de V-41) | +3 |
+| dont vues rendues à toute adresse non résolue | **2** — V-04, V-26 | — |
+| Vues servies par deux routes ou plus | **4** — V-06, V-17, V-23, V-35 | — |
+| Routes servant deux vues selon la session | **2** — `/` et `/recherche` | — |
+| **États déclarés, tous traçables** | **268** *(voir l'avertissement ci-dessous)* | inchangé : une vue qui perd son adresse ne perd pas ses états |
+| dont issus d'un contrôle de planche | **221** (37 planches, E-03) | — |
+| dont issus d'une présentation côte à côte | **47** (V-09 : 6 · V-35 : 4 · V-39 : 20 · V-40 : 10 · V-41 : 11 familles) | — |
+| Paramètres d'état attestés par une maquette | **3** — `?registre=`, `?version=`, `#{ancre}` | — |
+| Paramètres d'état dérivés d'un contrôle de maquette ou d'un arbitrage | **21** | +1 : `?noeud=` (ARB-007) |
+| Points portés à l'arbitrage | **6**, dont **6 clos** — A-01…A-06 | tous fermés |
+| Contradictions cadrage ↔ maquettes | **9**, dont **5** tranchées par préséance et **4** closes par arbitrage ou errata | aucune ouverte |
+
+> **Avertissement sur les décomptes d'états — `ECART-009 c)`.** Trois vues divergent entre ce document et `verif/scenarios/` : **V-03** (5 ici, 4 là), **V-08** (8 ici, 7 là), **V-39** (20 ici, 21 là). Deux dérivations de la même source n'aboutissent pas au même ensemble.
+>
+> **`verif/scenarios/` fait foi** : il est extrait mécaniquement des planches, et c'est lui que la commande exécute. Le critère de sortie de tout lot de vue s'énonce « conforme sur **tous** les états déclarés dans `verif/scenarios/V-xx.json` » — il désigne cet ensemble-là, jamais le décompte de ce tableau.
+>
+> **L'alignement n'est pas fait ici, et c'est délibéré.** Le lot qui écrit les scénarios est en cours ; s'aligner sur un fichier non figé produirait un alignement faux, à refaire. La réconciliation se fera à la clôture de T-007. Le total de 268 est donc à lire comme le décompte de la première dérivation, conservé pour la traçabilité, non comme l'ensemble opposable.
 
 ---
 
-*Fin de `docs/routes.md` — lot T-006, vague 0.*
+*Fin de `docs/routes.md` — lot T-006 (vague 0), révisé au lot T-006b après les arbitrages ARB-001
+à ARB-008 et l'errata du cadrage.*
