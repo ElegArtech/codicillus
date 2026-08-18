@@ -8,32 +8,39 @@ d'exécution n'a plus à demander.
 
 ---
 
-## ARB-001 — Désambiguïsation de domaine : supprimée par contrainte d'unicité
-**18 août 2026** — répond à A-01 (`docs/routes.md`), gravité haute.
+## ARB-001 — Unicité de l'univers, et suppression de la forme raccourcie
+**18 août 2026, révisé le même jour** — répond à A-01 (`docs/routes.md`), gravité haute.
 
-**Décision.** Il n'y a pas d'écran de désambiguïsation, parce qu'il n'y a pas d'ambiguïté
-possible : l'unicité est une **règle métier bloquante**, garantie à l'écriture. La clause de
-`RG-M03-02` prescrivant de « demander à l'utilisateur de choisir » est une **erreur du cahier des
-charges** — elle traite un cas que le modèle de données doit rendre inatteignable.
+> **Révision.** Une première rédaction étendait l'unicité à l'identifiant de domaine et qualifiait
+> `RG-M03-02` d'erreur du cahier des charges. Le commanditaire a corrigé : l'amalgame venait de la
+> rédaction de la question, pas de la règle. `RG-M03-02` est cohérente et n'est pas fautive.
+
+**Décision, en deux volets.**
+
+1. **L'univers porte une contrainte d'unicité bloquante.** Deux univers ne peuvent pas porter le
+   même nom ; le refus est une règle métier appliquée à l'écriture, pas un contrôle d'affichage.
+2. **Le domaine n'en porte aucune au-delà de son univers.** Deux univers différents peuvent
+   parfaitement contenir un domaine homonyme — « Infrastructure » dans *Production* et dans
+   *Support* sont deux domaines distincts et légitimes.
+3. **La forme raccourcie `/domaines/{domaine}` n'est pas implémentée.** Seule l'adresse canonique
+   `/univers/{univers}/{domaine}` existe. Le produit n'émet jamais de forme raccourcie : la clause
+   d'ambiguïté de `RG-M03-02` n'a donc aucun déclencheur.
 
 **Ce que ça emporte.**
-- Contrainte d'unicité sur le nom d'univers (énoncé du commanditaire).
-- Contrainte d'unicité **globale** sur l'identifiant de domaine — *extension nécessaire, voir
-  ci-dessous*.
-- La forme raccourcie `/domaines/{domaine}` résout toujours vers un domaine et un seul : elle
-  redirige en 308 vers `/univers/{univers}/{domaine}`. Aucun troisième comportement.
-- Aucune maquette manquante à produire. Le manque relevé en A-01 se dissout.
-- La console des domaines (V-28) et celle des univers (V-27) refusent la création d'un doublon
-  avec un message explicite, jamais un renommage silencieux.
+- Contrainte d'unicité sur le nom d'univers, au schéma — criticité haute.
+- **Aucune** contrainte d'unicité globale sur l'identifiant de domaine. L'unicité y est *par
+  univers*.
+- `/domaines/{quoi-que-ce-soit}` rend la page non trouvée (V-26), déjà maquettée, par le chemin
+  de code unique d'ADR-007 — refus et inexistence indiscernables.
+- **Aucune maquette manquante.** Le régime assisté n'a pas à être rouvert.
+- `RG-M03-02` clause 1 (adresse canonique incluant l'univers) : tenue. Clause 2 (redirection et
+  désambiguïsation) : **sans objet**, faute de forme raccourcie à rediriger. À consigner comme
+  telle, jamais à implémenter.
+- La console des univers (V-27) refuse la création d'un doublon avec un message explicite.
+- Sans effet sur la recherche : les résultats affichent l'arborescence, qui distingue déjà deux
+  domaines homonymes sans mécanisme supplémentaire.
 
-**Extension appliquée, à confirmer.** L'énoncé porte sur le nom d'**univers**. Or le cas
-d'ambiguïté visé par `RG-M03-02` est « même identifiant de **domaine** dans deux univers » :
-l'unicité des noms d'univers seule ne le ferme pas. L'unicité globale de l'identifiant de domaine
-a donc été retenue en plus — c'est elle qui rend la désambiguïsation structurellement impossible
-et qui valide la forme raccourcie. Contrainte de schéma, criticité haute : signalée pour
-confirmation explicite.
-
-**Ce que ça ferme.** A-01. Plus aucun agent n'a à traiter le cas ambigu ni à inventer l'écran.
+**Ce que ça ferme.** A-01, et la question de la vue manquante avec elle.
 
 ---
 
