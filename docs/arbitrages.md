@@ -373,3 +373,98 @@ motif. Le rapport nomme les zones à chaque exécution. **Une vue non déclarée
 
 **Étalonnage : 76 couples, 55 états de zone isolés, 0 écart.** Vérifié indépendamment par
 l'orchestrateur.
+
+---
+
+## ARB-015 — Le gabarit de coquille est rouvert, pour un amendement borné
+**19 août 2026** — arbitrage délégué. Répond à `ECART-015` É-1 et É-2.
+
+**Le problème.** Le gabarit livré par T-101 est gelé depuis sa clôture (DAG K-10). Deux manques
+apparus au lot suivant :
+
+- `Coquille.svelte` rend `<main id="contenu">` **sans classe et sans moyen d'en passer une**. Or
+  **33 maquettes sur 35** à coquille portent `<main class="…">` — `doc`, `travail`, `lecture`,
+  `editeur`, `carto`, `tdb`. Chaque lot devrait redéclarer le cadre pour poser une classe.
+- La coquille n'expose que des notifications **texte** (`readonly string[]`). V-38 exige les quatre
+  types avec marque, corps, titre, détail, fermeture, progression, actions, et `role="alert"` pour
+  l'erreur. **Le catalogue qui définit le composant de notification ne peut pas alimenter la zone
+  que la coquille pose.**
+
+**Décision. Le gel est levé pour un amendement borné, puis reposé.**
+
+Périmètre exact, et rien d'autre : une propriété de classe sur `<main>`, et un jeu de notifications
+typé conforme au catalogue de V-38. Aucune autre modification de `src/lib/coquille/`.
+
+**Motif.** Le gel de K-10 existe pour **empêcher la dérive**, pas pour sanctuariser une interface
+incomplète découverte au deuxième lot. La lettre du gel conduisait ici à l'inverse de son
+intention : 33 vues auraient dupliqué le cadre pour contourner un manque de trois lignes, et la
+duplication est exactement la dérive que le gel visait.
+
+T-102 a eu raison de **ne pas y toucher et de déclarer** — c'est ce qui rend cet arbitrage
+possible au bon niveau.
+
+**Ce que ça emporte.** Un lot dédié, **T-101b**, criticité moyenne. Il ne fait que l'amendement, ne
+touche aucune vue, et **regèle** à sa clôture. V-38, V-39 et V-40 sont ensuite ramenées sur le
+gabarit amendé, leur cadre local retiré. Le regel vaut pour la suite : aucune autre ouverture sans
+arbitrage numéroté.
+
+---
+
+## ARB-016 — Un style en ligne identique au gel est prouvé par le gel
+**19 août 2026** — arbitrage délégué. Répond à `ECART-015` É-3. **Portée : les 41 vues.**
+
+**Le problème.** 62 constats `verif:jetons`, dont 49 P-1.7, tous sur des **styles en ligne que la
+maquette gelée porte elle-même** : les sceaux colorés des quatre types de V-38, la géométrie des
+esquisses de chargement de V-39, les boutons destructifs de V-40. Aucun n'est décoratif — les
+retirer déplace le rendu.
+
+C'est `ECART-011` É-2 d'un cran plus loin : **P-6.3 a renversé la contrainte pour le bloc
+`<style>` porté, il ne couvre pas les styles en ligne du balisage porté.** La même contradiction,
+au même endroit, pour la même raison.
+
+**Décision. La même résolution, étendue au balisage — et bornée de la même façon.**
+
+Un attribut `style="…"` d'un composant de vue est admis **si et seulement si la même valeur figure
+dans la maquette gelée de cette vue**. Le contrôle est mécanique : les valeurs de `style` du fichier
+gelé forment un ensemble clos, et tout `style` de `src/vues/V-xx.svelte` doit y appartenir. Hors de
+cet ensemble, P-1.7 s'applique intégralement.
+
+**Ce qui rend la règle sûre.** On ne peut pas inventer un style : il faut qu'il soit déjà dans le
+gel. La contrainte est donc, comme P-6.3, **plus stricte que P-1** — « présent dans la référence »
+implique et dépasse « n'emploie que des jetons ». Et elle n'ouvre aucune fenêtre : un style absent
+du gel reste un écart, quelle qu'en soit la justification.
+
+**Ce que l'exécutant n'a pas fait, et qu'il faut saluer.** Il n'a pas déplacé ces littéraux dans un
+fichier `.ts` pour les soustraire à l'analyseur — et il écrit que **ça aurait marché**. C'est
+exactement le contournement de vérification de `PLAN §12`. Il l'a nommé au lieu de l'emprunter.
+
+---
+
+## ARB-017 — Le dialogue modal est révélé par le banc, des deux côtés
+**19 août 2026** — arbitrage délégué. Répond à `ECART-015` É-4. **Bloquait V-40, dix états sur dix.**
+
+**Le problème.** Côté maquette, le banc clique l'entrée du catalogue et `showModal()` place le
+`dialog` dans la couche supérieure : `position: fixed; inset: 0`, zone **1440×900**, avec son
+`::backdrop`. Côté application, la vue rend le dialogue avec l'attribut `open` — qui **n'est pas**
+`showModal()` : le dialogue reste `position: absolute` à sa position statique, la zone fait
+**1440×901**, et le voile n'existe pas. Verdict sur les dix : dimensions divergentes.
+
+La couche supérieure **ne s'atteint pas déclarativement**. Et l'hydratation est du temps 3, interdit
+en phase 1 (ARB-011).
+
+**Décision. Le banc révèle le dialogue, des deux côtés, par un code unique** — déclaré dans
+`verif/references/protocole-app.json`, en écriture humaine seule.
+
+**Motif.** Le principe est déjà posé et éprouvé : `ECART-014` É-3 a établi que **le geste appartient
+au banc, pas au candidat** — c'est ainsi que le clic des déclencheurs a été traité, après que
+`element.click()` eut produit 33 % de pixels divergents. La modalité est le même cas : une
+condition de capture, pas un comportement à implémenter.
+
+Exiger de l'application qu'elle entre en modalité, ce serait exiger du JavaScript d'un squelette
+statique — donc contredire ARB-011 pour satisfaire une mesure. **L'instrument s'adapte au régime de
+la phase, il ne le dicte pas.**
+
+**Ce qui est déjà acquis sur V-40, et qui rend la décision sûre** : le niveau 1 est **vert sur les
+dix états**, et le DOM des dix boîtes est **identique caractère pour caractère** à la référence —
+vérifié par diff, aux seules différences de sérialisation près. Le contenu est juste ; seule la
+surface capturée diffère. On ne masque pas un écart de fond : on corrige un artefact de mesure.
