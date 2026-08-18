@@ -45,9 +45,84 @@
 	"route": "/__design/{vue}?etat={etat}",
 
 	"sources": {
-		"app": "L'implémentation de la vue par l'application. C'est le régime de conformité proprement dit.",
-		"etalon": "La maquette gelée elle-même, servie par le mode démo et pilotée par le même paramètre `etat`. Aucune conformité n'y est prouvée : c'est l'ÉTALONNAGE DU RÉGIME `app` — un candidat connu identique, dont on exige zéro pixel divergent, pour prouver la plomberie de bout en bout (deux serveurs, deux chemins, deux protocoles d'état, un seul verdict). Un rapport produit avec cette source le dit en toutes lettres.",
-		"composant": "La maquette gelée elle aussi — mais SON CORPS TRAVERSE `render()`, par le graphe de modules SSR de Vite, exactement comme le corps d'une vue implémentée. Même candidat connu identique, même exigence de zéro pixel divergent, et une portion de chemin de plus : celle qu'`ECART-013` É-1 a trouvée non étalonnée. `--source=etalon` sert le gel sans jamais passer par `render()`, si bien que le chemin étalonné n'était pas le chemin exercé et que tout composant rendait 500 sans que l'étalonnage ne le voie. Cette source ferme ce trou : elle emprunte `ssrLoadModule('svelte/server')`, `ssrLoadModule` du composant, `render()`, `corpusPourVue()` et la mise en réponse — les fonctions mêmes qu'un lot de vue empruntera."
+		"_": [
+			"LA RÈGLE D'ÉTALONNAGE — À LIRE AVANT TOUTE SOURCE CI-DESSOUS.",
+			"Inscrite par le lot T-007d, sur `docs/ecarts/ECART-015.md` É-5, qui est la",
+			"TROISIÈME occurrence du même mécanisme.",
+			"",
+			"  UN ÉTALON NE VAUT QUE POUR LES PORTIONS DE CHEMIN QU'IL EMPRUNTE",
+			"  RÉELLEMENT, ET POUR LES PROPRIÉTÉS QUE LE CANDIDAT NE POSSÈDE PAS",
+			"  DÉJÀ.",
+			"",
+			"Un étalonnage sur candidat connu identique prouve que la plomberie ne",
+			"fabrique pas d'écart à elle seule. Il ne prouve RIEN de ce qu'il ne",
+			"traverse pas — et rien non plus des contraintes qui ne mordent que sur un",
+			"candidat DÉMUNI de quelque chose que l'étalon, lui, possède. La seconde",
+			"moitié de la règle est la plus récente et la plus contre-intuitive : un",
+			"étalon TROP CAPABLE est aveugle exactement là où le candidat est démuni.",
+			"",
+			"LES TROIS OCCURRENCES, DANS L'ORDRE.",
+			"",
+			"  1. `ECART-013` É-1 — ce que l'étalon n'empruntait pas : `render()`.",
+			"     `--source=etalon` sert le gel sans jamais passer par le rendu Svelte,",
+			"     si bien que TOUT composant rendait 500 sans que l'étalonnage ne le",
+			"     voie. Révélé par T-101, au premier composant réel. Comblé par",
+			"     `--source=composant`.",
+			"  2. `ECART-014` — rien de nouveau : l'exécutant a ÉNUMÉRÉ les chemins non",
+			"     empruntés par `--source=composant`. C'est l'énumération elle-même qui",
+			"     a servi de révélateur, et la seule fois où le trou a été vu AVANT de",
+			"     mordre.",
+			"  3. `ECART-015` É-5 — ce que le candidat possède déjà : DU JAVASCRIPT.",
+			"     `V-40 --contre=app --source=composant` sort conforme là où",
+			"     l'implémentation réelle échoue, parce que cette source rejoue le corps",
+			"     du gel AVEC SES SCRIPTS : elle entre donc en modalité toute seule. Un",
+			"     candidat qui a du JavaScript ne peut pas éprouver une contrainte qui",
+			"     ne mord que sur un candidat qui n'en a pas. Révélé par T-102, au",
+			"     premier dialogue modal.",
+			"",
+			"CE QUE LA RÈGLE EXIGE DÉSORMAIS DE TOUT CONTRAT D'INSTRUMENT.",
+			"",
+			"L'ÉNUMÉRATION EXPLICITE de ce que l'étalon n'emprunte pas et de ce qu'il",
+			"possède en trop. C'est pourquoi chaque source ci-dessous porte un champ",
+			"`n_eprouve_pas`, et pourquoi le banc l'imprime à chaque exécution en",
+			"régime d'étalonnage : un vert d'étalon qu'on lirait sans cette liste ferait",
+			"croire à une couverture qu'il n'a pas (RA-01).",
+			"",
+			"UN ÉTALON N'EST JAMAIS UNE CONFORMITÉ. Seule `app` en est une."
+		],
+
+		"app": {
+			"prouve": "L'implémentation de la vue par l'application. C'est le régime de conformité proprement dit, et le seul.",
+			"n_eprouve_pas": [
+				"Rien n'est mis de côté : c'est le régime complet. Ce qu'il ne couvre pas relève des autres batteries — le routage (docs/routes.md, batterie 6), le comportement (batterie 9), l'accessibilité (batterie 10).",
+				"Il ne dit rien tant qu'aucune vue n'est implémentée : le mode démo refuse alors en 501, plutôt que de sortir en vert sans rien prouver."
+			]
+		},
+
+		"etalon": {
+			"prouve": "La maquette gelée elle-même, servie par le mode démo et pilotée par le même paramètre `etat`. Aucune conformité n'y est prouvée : c'est l'ÉTALONNAGE DU RÉGIME `app` — un candidat connu identique, dont on exige zéro pixel divergent, pour prouver la plomberie de bout en bout (deux serveurs, deux chemins, deux protocoles d'état, un seul verdict). Un rapport produit avec cette source le dit en toutes lettres.",
+			"n_eprouve_pas": [
+				"`render()` NI AUCUN CHEMIN DE RENDU SVELTE — le document servi est le gel, tel quel. C'est le trou d'`ECART-013` É-1 : tout composant rendait 500 sans que cet étalonnage ne le voie. Comblé par `composant`, jamais par celle-ci.",
+				"`src/vues/V-xx.svelte`, `src/vues/V-xx.css`, `src/socle.css` : rien de l'application n'est servi, hors les polices.",
+				"Le gabarit de document de `servirApp()` — tête, `<title>`, `<meta viewport>`, liens de feuilles.",
+				"La traduction du corpus en balisage : `corpusPourVue()` n'est même pas appelée.",
+				"TOUTE CONTRAINTE QUI NE MORD QUE SUR UN CANDIDAT SANS JAVASCRIPT — ce candidat-ci a les scripts du gel. Il atteint donc de lui-même des états que le squelette ne peut pas atteindre : la modalité d'un `dialog` (ARB-017), la préparation d'un contenu au clic, tout rendu différé. `ECART-015` É-5.",
+				"La révélation d'un état par l'ADRESSE seule : pour les onze états à déclencheur, cette source rejoue le geste."
+			]
+		},
+
+		"composant": {
+			"prouve": "La maquette gelée elle aussi — mais SON CORPS TRAVERSE `render()`, par le graphe de modules SSR de Vite, exactement comme le corps d'une vue implémentée. Même candidat connu identique, même exigence de zéro pixel divergent, et une portion de chemin de plus : celle qu'`ECART-013` É-1 a trouvée non étalonnée. Elle emprunte `ssrLoadModule('svelte/server')`, `ssrLoadModule` du composant, `render()`, le contrat de propriétés, `corpusPourVue()` et la mise en réponse — les fonctions mêmes qu'un lot de vue empruntera.",
+			"n_eprouve_pas": [
+				"`src/vues/V-xx.svelte` — il n'y a pas de vue, c'est le propos.",
+				"`src/vues/V-xx.css`, la feuille portée de P-6.3, ni `src/socle.css` : le document servi est celui du gel, avec ses styles en ligne.",
+				"Le gabarit de document de `servirApp()` : ici c'est la tête du gel qui est servie, à `<base href=\"/\">` près.",
+				"La traduction du corpus en balisage : `corpusPourVue()` est appelée et passée en propriété, mais le corps rendu est celui de la maquette.",
+				"TOUTE CONTRAINTE QUI NE MORD QUE SUR UN CANDIDAT SANS JAVASCRIPT — c'est le trou d'`ECART-015` É-5, et il est de nature différente des précédents : ce n'est pas un chemin non emprunté, c'est une PROPRIÉTÉ QUE LE CANDIDAT POSSÈDE DÉJÀ. Le corps du gel est injecté AVEC ses scripts, qui entrent en modalité, préparent les contenus et posent les styles calculés. `V-40 --source=composant` sort donc conforme là où l'implémentation réelle échouait sur les dix états.",
+				"La révélation d'un état par l'ADRESSE seule : pour les onze états à déclencheur, cette source rejoue le geste.",
+				"P-6.4 et P-1.7 : aucun style en ligne du candidat n'est écrit par un lot, ils sont ceux du gel. C'est `pnpm verif:jetons` qui les éprouve, pas le banc."
+			]
+		}
 	},
 
 	"etats_de_zone": {
@@ -194,6 +269,102 @@
 				"obligation": "À `/__design/V-41?etat=cle`, l'application rend la bibliothèque entière, ses onze familles dans l'ordre de la maquette. La clé nomme la famille que le banc découpera.",
 				"motif": "V-41 est un catalogue de composants, comme V-37 est un catalogue de coquille : ses onze familles sont onze sections d'une même page, et non onze écrans. Les séparer inventerait onze pages que la maquette ne montre pas.",
 				"arbitrage": "à régulariser — voir V-09."
+			}
+		}
+	},
+
+	"revelations": {
+		"_": [
+			"RÉVÉLATIONS D'ÉTAT, APPLIQUÉES AUX DEUX CÔTÉS — ÉCRITURE HUMAINE SEULE.",
+			"Répond à `docs/ecarts/ECART-015.md` É-4. Arbitrage : ARB-017. Lot T-007d.",
+			"",
+			"CE QU'EST UNE RÉVÉLATION.",
+			"",
+			"Une CONDITION DE CAPTURE, au même titre que l'horloge gelée, les",
+			"animations coupées ou la remise à zéro du défilement : une propriété que",
+			"le document doit vérifier au moment de la mesure, et que le banc établit",
+			"lui-même, DES DEUX CÔTÉS, PAR UN CODE UNIQUE",
+			"(`verif/banc/revelation.mjs`).",
+			"",
+			"LE MANQUE QUE CE BLOC COMBLE.",
+			"",
+			"Côté maquette, le banc clique l'entrée du catalogue de V-40 et",
+			"`showModal()` place le `dialog` dans la COUCHE SUPÉRIEURE :",
+			"`position: fixed; inset: 0`, zone 1440×900, avec son `::backdrop`.",
+			"Côté application, la vue rend le dialogue avec l'attribut `open` — qui",
+			"n'est PAS `showModal()`. Le dialogue reste `position: absolute` à sa",
+			"position statique, la zone fait 1440×901, et le voile n'existe pas.",
+			"Verdict sur les dix états : dimensions divergentes.",
+			"",
+			"La couche supérieure NE S'ATTEINT PAS DÉCLARATIVEMENT, et l'hydratation",
+			"est du temps 3, interdit en phase 1 (ARB-011). Exiger de l'application",
+			"qu'elle entre en modalité, ce serait exiger du JavaScript d'un squelette",
+			"statique pour satisfaire une mesure. L'instrument s'adapte au régime de",
+			"la phase, il ne le dicte pas.",
+			"",
+			"LE PRINCIPE EST DÉJÀ POSÉ ET ÉPROUVÉ.",
+			"",
+			"`ECART-014` É-3 a établi que LE GESTE APPARTIENT AU BANC, PAS AU",
+			"CANDIDAT : le clic qui ouvre la boîte est actionné par le banc, des deux",
+			"côtés, par un code unique, après que `element.click()` eut produit 33 %",
+			"de pixels divergents et un anneau de focalisation parasite. La modalité",
+			"est le même cas — une condition de capture, pas un comportement à",
+			"implémenter.",
+			"",
+			"COMMENT LA SYMÉTRIE EST TENUE, ET C'EST TOUT L'ENJEU.",
+			"",
+			"Une révélation s'écrit comme une PROPRIÉTÉ À RENDRE VRAIE, jamais comme",
+			"un geste à jouer d'un seul côté. Le même code s'exécute des deux côtés",
+			"et y établit la même postcondition. Du côté maquette, le clic du banc l'a",
+			"déjà rendue vraie : le code n'a rien à faire et NE FAIT RIEN — la",
+			"référence n'est pas touchée, sa signature à",
+			"`verif/references/empreintes.json` ne bouge pas. Du côté application, il",
+			"l'établit. La postcondition est ensuite VÉRIFIÉE des deux côtés : une",
+			"révélation qui n'aurait pas pris échoue bruyamment.",
+			"",
+			"LA MODALITÉ DE SAISIE EST REPRODUITE, PAS MASQUÉE.",
+			"",
+			"`ECART-014` É-4 l'a relevé : la référence n'affiche AUCUN anneau de",
+			"focalisation, le document étant en modalité « pointeur » — la boîte a été",
+			"ouverte par un vrai clic. Le côté application n'a pas de modalité",
+			"pointeur à faire valoir : rien n'y a été cliqué. La révélation retire",
+			"donc le focus qu'elle vient elle-même de poser, et seulement celui-là —",
+			"le geste que `stabiliser()` applique déjà au chargement, pour la raison",
+			"écrite au même endroit. Un dialogue déjà modal n'est pas touché. Aucun",
+			"anneau n'est masqué : il n'y en a d'aucun côté.",
+			"",
+			"CE QUE LA DÉCLARATION N'EST PAS.",
+			"",
+			"Elle ne restreint AUCUNE surface, n'élargit AUCUNE tolérance et ne pose",
+			"AUCUN masque. Elle ne dispense l'application de rien : le contenu du",
+			"dialogue, son arbre d'accessibilité et ses pixels restent comparés sans",
+			"tolérance. Ce qui est acquis et rend la décision sûre : sur V-40, le",
+			"niveau 1 est vert sur les dix états et le DOM des dix boîtes est",
+			"identique caractère pour caractère à la référence. Le contenu est juste ;",
+			"seule la surface capturée divergeait.",
+			"",
+			"UNE VUE SANS DÉCLARATION N'EST JAMAIS RÉVÉLÉE. C'est le défaut, et c'est",
+			"la position la plus stricte : ne rien écrire n'ouvre rien. Le catalogue",
+			"des révélations est CLOS dans `verif/banc/revelation.mjs` : une",
+			"déclaration qui nommerait une révélation inexistante est REFUSÉE, jamais",
+			"ignorée en silence (RA-01).",
+			"",
+			"LE RAPPORT NOMME LA RÉVÉLATION APPLIQUÉE à chaque exécution, comme il",
+			"nomme déjà les zones comparées et les états de zone. Une révélation",
+			"silencieuse est impossible.",
+			"",
+			"UN AGENT D'EXÉCUTION N'ÉCRIT JAMAIS ICI, et n'y ajoute jamais une vue",
+			"pour faire taire un rouge. C'est le contournement de vérification nommé",
+			"par PLAN §12."
+		],
+
+		"vues": {
+			"V-40": {
+				"revelation": "modalite-dialogue",
+				"propriete": "tout `dialog[open]` du document est `:modal` — couche supérieure, `position: fixed; inset: 0`, `::backdrop`.",
+				"obligation": "Aucune pour l'application : elle rend le dialogue ouvert par l'attribut `open`, et rien d'autre. C'est le BANC qui établit la modalité, des deux côtés, avant de mesurer. Côté maquette, la propriété est déjà vraie — le clic du déclencheur a appelé `showModal()` — et le code ne touche donc à rien.",
+				"motif": "`open` n'est pas `showModal()` : sans couche supérieure, la zone `dialog.dlg` fait 1440×901 au lieu de 1440×900 et le voile n'existe pas. La couche supérieure ne s'atteint pas déclarativement, et l'hydratation est interdite en phase 1 (ARB-011). Le geste appartient au banc, pas au candidat — `ECART-014` É-3, déjà éprouvé sur le clic des déclencheurs.",
+				"arbitrage": "ARB-017 — le dialogue modal est révélé par le banc, des deux côtés."
 			}
 		}
 	},

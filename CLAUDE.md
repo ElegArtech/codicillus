@@ -143,10 +143,15 @@ laquelle prouve quoi : elles ne prouvent **pas** la même chose.
 | `pnpm verif:demo:hors-production` | Que le mode démo `/__design/…` n'existe pas dans le produit construit |
 | `pnpm scenarios:verifier` | Que les scénarios du dépôt sont bien ceux que l'extraction des planches régénère |
 | `pnpm vues:feuille V-xx --installer` | Pose `src/vues/V-xx.css`, **identique à l'octet** au second bloc `<style>` de la maquette (P-6.3) |
+| `pnpm vues:styles [V-xx]` | L'ensemble clos des valeurs de `style` du gel d'une vue, et ce qui en sort côté composant (P-6.4, ARB-016). Diagnostic : le verdict reste celui de `pnpm verif:jetons` |
 
-**Un vert ne vaut que ce que la commande a réellement emprunté.** Deux fois déjà, un étalonnage a
-été déclaré vert sur un chemin que les vues n'empruntent pas — et le défaut est apparu au premier
-lot réel. Avant de conclure d'un vert, demande-toi *ce qu'il n'a pas traversé*.
+**Un vert ne vaut que ce que la commande a réellement emprunté — ni plus, ni pour des propriétés
+que le candidat possède déjà.** Trois fois déjà, un étalonnage a été déclaré vert sur un chemin que
+les vues n'empruntent pas, ou sur un candidat qui possédait ce dont l'implémentation est démunie —
+et le défaut est apparu au premier lot réel (`ECART-013` É-1, `ECART-014`, `ECART-015` É-5). Avant
+de conclure d'un vert, demande-toi *ce qu'il n'a pas traversé* **et** *ce qu'il avait en trop*. Le
+banc réimprime la liste à chaque exécution en régime d'étalonnage ; elle est tenue à
+`verif/references/protocole-app.json`, bloc `sources`.
 
 ### Ce qu'un vert ne dit jamais
 
