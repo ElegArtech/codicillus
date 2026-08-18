@@ -6,7 +6,7 @@
  * ADR-002, RG-DA-01, risque RA-02 (« la dérive du système visuel est une
  * perte silencieuse »).
  *
- * La batterie prouve deux propriétés.
+ * La batterie prouve trois propriétés.
  *
  *   (a) NON-DIVERGENCE DU SOCLE — P-6.1.
  *       La feuille applicative `src/socle.css` est identique, octet pour
@@ -17,9 +17,19 @@
  *
  *   (b) AUCUNE VALEUR EN DUR HORS DU SOCLE — P-1, et les contrôles
  *       mécanisables de P-3, P-4 et P-6.2.
- *       Sur `src/**` moins la feuille de socle : aucune couleur, aucun
- *       espacement, aucun rayon, aucune ombre, aucune police, aucune durée
- *       qui ne passe par un jeton `var(--…)`.
+ *       Sur `src/**` moins les feuilles dont l'identité à une source gelée
+ *       est prouvée : aucune couleur, aucun espacement, aucun rayon, aucune
+ *       ombre, aucune police, aucune durée qui ne passe par un jeton
+ *       `var(--…)`.
+ *
+ *   (c) IDENTITÉ À L'OCTET DES FEUILLES DE VUE PORTÉES — P-6.3.
+ *       Toute feuille nommée `V-xx.css` sous `src/` est identique, octet pour
+ *       octet, au second bloc `<style>` de `mockups/V-xx-*.html`. C'est la
+ *       résolution d'`ECART-011` É-2 : la contrainte n'est pas assouplie,
+ *       elle est renversée et resserrée. Dans ce bloc vérifié, les contrôles
+ *       de contenu ne s'appliquent pas — « identique au gel » implique et
+ *       dépasse « n'emploie que des jetons ». Hors de ce bloc, P-1 s'applique
+ *       intégralement. Détail : `verif/feuilles-de-vue.mjs`.
  *
  * Ce script est un INSTRUMENT DE MESURE. Le contournement le plus économique
  * d'une vérification est de modifier la vérification
@@ -27,7 +37,9 @@
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { racine, CIBLE_SOCLE, CIBLE_POLICES, installer } from './extraire-socle.mjs';
+import { DOSSIER_VUES, verifier as verifierFeuillesDeVue } from './feuilles-de-vue.mjs';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Le vocabulaire des interdits — docs/DESIGN.md §5, P-1
@@ -464,17 +476,54 @@ function analyserUtilitaires(fragment, fichier, decalageLigne) {
 // P-6.2 — une règle du socle redéclarée dans une feuille de vue
 // ───────────────────────────────────────────────────────────────────────────
 
-function selecteursDe(fragment) {
+/**
+ * Relève les sélecteurs d'un fragment CSS.
+ *
+ * LES ÉTAPES D'UN `@keyframes` NE SONT PAS DES SÉLECTEURS — ÉCART-011 É-3.
+ * `@keyframes tourne { to { transform: rotate(360deg); } }` fait apparaître
+ * `to` là où l'analyse naïve attend un sélecteur. Le socle en déclare cinq
+ * (`glisse`, `monte`, `descend`, `tourne-notif`, `tourne`, src/socle.css:302 à
+ * 465), dont les étapes `from` et `to` entraient donc dans l'ensemble des
+ * sélecteurs du socle : TOUTE feuille de vue portant une animation nommée
+ * était rouge d'avance en P-6.2, quelle qu'elle soit. C'était un défaut
+ * d'instrument, pas du code mesuré.
+ *
+ * La profondeur d'accolades est donc suivie, et le corps d'un `@keyframes` est
+ * traversé sans en tirer de sélecteur. Les autres at-règles à bloc — `@media`,
+ * `@supports`, `@layer`, `@container` — en portent de vrais : elles sont
+ * traversées normalement.
+ */
+export function selecteursDe(fragment) {
 	const net = neutraliser(fragment);
 	const trouves = new Map();
-	const re = /([^{}]+)\{/g;
-	for (const m of net.matchAll(re)) {
-		const prelude = (m[1].split(';').pop() ?? '').trim();
-		if (prelude.startsWith('@')) continue; // prélude d'at-règle, pas un sélecteur
-		for (const sel of prelude.split(',')) {
-			const normalise = sel.trim().replace(/\s+/g, ' ');
-			if (normalise === '' || normalise.startsWith('/')) continue;
-			if (!trouves.has(normalise)) trouves.set(normalise, ligneDe(fragment, m.index));
+	// Un prélude est tout ce qui précède `{` depuis la dernière accolade ou le
+	// dernier `;`. On avance accolade par accolade en tenant la profondeur, et
+	// la profondeur à laquelle un `@keyframes` a été ouvert.
+	let profondeur = 0;
+	let profondeurKeyframes = -1;
+	let debutPrelude = 0;
+	for (let i = 0; i < net.length; i++) {
+		const c = net[i];
+		if (c === '{') {
+			const prelude = (net.slice(debutPrelude, i).split(';').pop() ?? '').trim();
+			const dansKeyframes = profondeurKeyframes !== -1;
+			if (/^@(-[a-z]+-)?keyframes\b/i.test(prelude)) {
+				profondeurKeyframes = profondeur;
+			} else if (!dansKeyframes && !prelude.startsWith('@')) {
+				for (const sel of prelude.split(',')) {
+					const normalise = sel.trim().replace(/\s+/g, ' ');
+					if (normalise === '' || normalise.startsWith('/')) continue;
+					if (!trouves.has(normalise)) trouves.set(normalise, ligneDe(fragment, debutPrelude));
+				}
+			}
+			profondeur++;
+			debutPrelude = i + 1;
+		} else if (c === '}') {
+			profondeur = Math.max(0, profondeur - 1);
+			if (profondeurKeyframes !== -1 && profondeur <= profondeurKeyframes) {
+				profondeurKeyframes = -1;
+			}
+			debutPrelude = i + 1;
 		}
 	}
 	return trouves;
@@ -482,217 +531,281 @@ function selecteursDe(fragment) {
 
 // ───────────────────────────────────────────────────────────────────────────
 // Exécution
+//
+// Le corps de la batterie est enfermé dans `executer()`, comme
+// `verif/extraire-socle.mjs` le fait déjà pour le sien. Motif : les
+// analyseurs ci-dessus doivent rester importables par les unitaires de
+// `verif/jetons.test.ts` sans qu'un simple import ne déclenche l'analyse ni un
+// `process.exit`. Un instrument dont les règles ne sont pas elles-mêmes
+// testables ne prouve pas qu'il sait dire non (PLAN §12, RA-01).
 // ───────────────────────────────────────────────────────────────────────────
 
-const rel = (chemin) => relative(racine, chemin).split('\\').join('/');
+function executer() {
+	const rel = (chemin) => relative(racine, chemin).split('\\').join('/');
 
-// ── (a) P-6.1 — non-divergence du socle ────────────────────────────────────
-let socleConforme = true;
-try {
-	const { ecarts } = installer({ verifier: true });
-	for (const e of ecarts) {
-		socleConforme = false;
-		releve({
-			controle: 'P-6.1',
-			fichier: e.fichier.split('\\').join('/'),
-			ligne: 0,
-			message:
-				`${e.motif}` +
-				(e.attendue ? `\n      attendue : ${e.attendue}\n      obtenue  : ${e.obtenue}` : '') +
-				(e.diff ? `\n${e.diff}` : '')
-		});
-	}
-} catch (erreur) {
-	socleConforme = false;
-	releve({ controle: 'P-6.1', fichier: CIBLE_SOCLE, ligne: 0, message: erreur.message });
-}
-
-// ── (b) P-1, P-4.2, P-6.2 sur src/ moins la feuille de socle ───────────────
-const cheminSocle = join(racine, CIBLE_SOCLE);
-const selecteursSocle = existsSync(cheminSocle)
-	? new Set(selecteursDe(readFileSync(cheminSocle, 'utf8')).keys())
-	: new Set();
-
-const aAnalyser = fichiers(join(racine, 'src'), ['.css', '.svelte', '.html']).filter(
-	(f) => f !== cheminSocle
-);
-
-for (const chemin of aAnalyser) {
-	const source = readFileSync(chemin, 'utf8');
-	const nom = rel(chemin);
-
-	/** @type {{css: string, ligne: number}[]} */
-	const fragments = [];
-	if (extname(chemin) === '.css') {
-		fragments.push({ css: source, ligne: 1 });
-	} else {
-		for (const m of source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
-			fragments.push({
-				css: m[1],
-				ligne: ligneDe(source, m.index + m[0].indexOf('>') + 1)
+	// ── (a) P-6.1 — non-divergence du socle ────────────────────────────────────
+	let socleConforme = true;
+	try {
+		const { ecarts } = installer({ verifier: true });
+		for (const e of ecarts) {
+			socleConforme = false;
+			releve({
+				controle: 'P-6.1',
+				fichier: e.fichier.split('\\').join('/'),
+				ligne: 0,
+				message:
+					`${e.motif}` +
+					(e.attendue ? `\n      attendue : ${e.attendue}\n      obtenue  : ${e.obtenue}` : '') +
+					(e.diff ? `\n${e.diff}` : '')
 			});
 		}
+	} catch (erreur) {
+		socleConforme = false;
+		releve({ controle: 'P-6.1', fichier: CIBLE_SOCLE, ligne: 0, message: erreur.message });
 	}
 
-	for (const { css, ligne } of fragments) {
-		analyserCss(css, nom, ligne);
-		analyserUtilitaires(css, nom, ligne);
-		// P-6.2 — redéclaration d'une règle du socle.
-		for (const [sel, lg] of selecteursDe(css)) {
-			if (selecteursSocle.has(sel)) {
+	// ── (c) P-6.3 — identité à l'octet des feuilles de vue portées ─────────────
+	//    ECART-011 É-2. Une feuille de vue portée d'une maquette gelée est
+	//    identique À L'OCTET au second bloc <style> de sa maquette. Le contrôle
+	//    est plus strict que P-1, pas plus lâche : « identique au gel » implique
+	//    et dépasse « n'emploie que des jetons ». Détail et motifs :
+	//    verif/feuilles-de-vue.mjs, docs/DESIGN.md §5 P-6.3.
+	let feuilles = [];
+	try {
+		const resultat = verifierFeuillesDeVue();
+		feuilles = resultat.feuilles;
+		for (const e of resultat.ecarts) {
+			releve({
+				controle: 'P-6.3',
+				fichier: e.fichier,
+				ligne: e.ligne,
+				message:
+					e.motif +
+					(e.detail
+						? `\n      attendue (ligne ${e.detail.ligne}) : ${e.detail.attendue}` +
+							`\n      obtenue  (ligne ${e.detail.ligne}) : ${e.detail.obtenue}` +
+							`\n      ${e.detail.lignes[0]} ligne(s) au gel, ${e.detail.lignes[1]} dans la feuille portée` +
+							`\n      Réinstaller : node verif/feuilles-de-vue.mjs ${e.vue} --installer`
+						: '')
+			});
+		}
+	} catch (erreur) {
+		releve({ controle: 'P-6.3', fichier: DOSSIER_VUES, ligne: 0, message: erreur.message });
+	}
+
+	// ── (b) P-1, P-4.2, P-6.2 sur src/ moins les feuilles vérifiées ────────────
+	//    Deux feuilles seulement échappent à l'analyse de contenu, et pour la
+	//    même raison : leur identité à une source gelée est prouvée par ailleurs,
+	//    ce qui est strictement plus fort. `src/socle.css` par P-6.1, une
+	//    `V-xx.css` conforme par P-6.3. Une feuille portée qui DIVERGE reste
+	//    analysée : elle n'est plus le gel, donc P-1 lui est dû en entier.
+	const cheminSocle = join(racine, CIBLE_SOCLE);
+	const selecteursSocle = existsSync(cheminSocle)
+		? new Set(selecteursDe(readFileSync(cheminSocle, 'utf8')).keys())
+		: new Set();
+
+	const exclues = new Set([
+		cheminSocle,
+		...feuilles.filter((f) => f.identique).map((f) => f.chemin)
+	]);
+	const aAnalyser = fichiers(join(racine, 'src'), ['.css', '.svelte', '.html']).filter(
+		(f) => !exclues.has(f)
+	);
+
+	for (const chemin of aAnalyser) {
+		const source = readFileSync(chemin, 'utf8');
+		const nom = rel(chemin);
+
+		/** @type {{css: string, ligne: number}[]} */
+		const fragments = [];
+		if (extname(chemin) === '.css') {
+			fragments.push({ css: source, ligne: 1 });
+		} else {
+			for (const m of source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
+				fragments.push({
+					css: m[1],
+					ligne: ligneDe(source, m.index + m[0].indexOf('>') + 1)
+				});
+			}
+		}
+
+		for (const { css, ligne } of fragments) {
+			analyserCss(css, nom, ligne);
+			analyserUtilitaires(css, nom, ligne);
+			// P-6.2 — redéclaration d'une règle du socle.
+			for (const [sel, lg] of selecteursDe(css)) {
+				if (selecteursSocle.has(sel)) {
+					releve({
+						controle: 'P-6.2',
+						fichier: nom,
+						ligne: ligne + lg - 1,
+						message: `le sélecteur « ${sel} » est déjà déclaré par le socle — surcharge interdite`
+					});
+				}
+			}
+		}
+
+		if (extname(chemin) !== '.css') analyserStylesEnLigne(source, nom);
+
+		// RG-NF-08 — aucune fonderie distante dans les gabarits de l'application.
+		for (const motif of FONDERIES_DISTANTES) {
+			const m = source.match(motif);
+			if (m) {
 				releve({
-					controle: 'P-6.2',
+					controle: 'RG-NF-08',
 					fichier: nom,
-					ligne: ligne + lg - 1,
-					message: `le sélecteur « ${sel} » est déjà déclaré par le socle — surcharge interdite`
+					ligne: ligneDe(source, source.indexOf(m[0])),
+					message: `référence à une fonderie distante « ${m[0]} » — le produit est auto-hébergeable`
 				});
 			}
 		}
 	}
 
-	if (extname(chemin) !== '.css') analyserStylesEnLigne(source, nom);
-
-	// RG-NF-08 — aucune fonderie distante dans les gabarits de l'application.
-	for (const motif of FONDERIES_DISTANTES) {
-		const m = source.match(motif);
-		if (m) {
-			releve({
-				controle: 'RG-NF-08',
-				fichier: nom,
-				ligne: ligneDe(source, source.indexOf(m[0])),
-				message: `référence à une fonderie distante « ${m[0]} » — le produit est auto-hébergeable`
-			});
+	// ── RG-NF-08 sur les actifs statiques servis ───────────────────────────────
+	for (const chemin of fichiers(join(racine, 'static'), ['.css', '.html'])) {
+		const source = readFileSync(chemin, 'utf8');
+		for (const motif of [
+			...FONDERIES_DISTANTES,
+			/url\(\s*['"]?https?:/i,
+			/@import\s+url\(\s*['"]?https?:/i
+		]) {
+			const m = source.match(motif);
+			if (m) {
+				releve({
+					controle: 'RG-NF-08',
+					fichier: rel(chemin),
+					ligne: ligneDe(source, source.indexOf(m[0])),
+					message: `référence distante « ${m[0]} » dans un actif servi — RG-NF-08`
+				});
+			}
 		}
 	}
-}
 
-// ── RG-NF-08 sur les actifs statiques servis ───────────────────────────────
-for (const chemin of fichiers(join(racine, 'static'), ['.css', '.html'])) {
-	const source = readFileSync(chemin, 'utf8');
-	for (const motif of [
-		...FONDERIES_DISTANTES,
-		/url\(\s*['"]?https?:/i,
-		/@import\s+url\(\s*['"]?https?:/i
+	// ── P-3.1 / P-4.1 — dépendances et configurations proscrites ───────────────
+	const paquet = JSON.parse(readFileSync(join(racine, 'package.json'), 'utf8'));
+	for (const champ of [
+		'dependencies',
+		'devDependencies',
+		'peerDependencies',
+		'optionalDependencies'
 	]) {
-		const m = source.match(motif);
-		if (m) {
-			releve({
-				controle: 'RG-NF-08',
-				fichier: rel(chemin),
-				ligne: ligneDe(source, source.indexOf(m[0])),
-				message: `référence distante « ${m[0]} » dans un actif servi — RG-NF-08`
-			});
+		for (const nom of Object.keys(paquet[champ] ?? {})) {
+			const motif = DEPENDANCES_PROSCRITES.find((m) => m.test(nom));
+			if (motif) {
+				releve({
+					controle: 'P-3.1/P-4.1',
+					fichier: 'package.json',
+					ligne: 0,
+					message: `dépendance proscrite « ${nom} » (${champ}) — ADR-002`
+				});
+			}
 		}
 	}
-}
-
-// ── P-3.1 / P-4.1 — dépendances et configurations proscrites ───────────────
-const paquet = JSON.parse(readFileSync(join(racine, 'package.json'), 'utf8'));
-for (const champ of [
-	'dependencies',
-	'devDependencies',
-	'peerDependencies',
-	'optionalDependencies'
-]) {
-	for (const nom of Object.keys(paquet[champ] ?? {})) {
-		const motif = DEPENDANCES_PROSCRITES.find((m) => m.test(nom));
-		if (motif) {
+	for (const entree of readdirSync(racine)) {
+		if (CONFIGS_PROSCRITES.some((m) => m.test(entree))) {
 			releve({
-				controle: 'P-3.1/P-4.1',
-				fichier: 'package.json',
+				controle: 'P-4.1',
+				fichier: entree,
 				ligne: 0,
-				message: `dépendance proscrite « ${nom} » (${champ}) — ADR-002`
+				message: `configuration de générateur de classes utilitaires — ADR-002`
 			});
 		}
 	}
-}
-for (const entree of readdirSync(racine)) {
-	if (CONFIGS_PROSCRITES.some((m) => m.test(entree))) {
-		releve({
-			controle: 'P-4.1',
-			fichier: entree,
-			ligne: 0,
-			message: `configuration de générateur de classes utilitaires — ADR-002`
-		});
-	}
-}
 
-// ── P-3.2 — import de feuille de style tierce ──────────────────────────────
-for (const chemin of fichiers(join(racine, 'src'), ['.css', '.svelte', '.ts', '.js', '.html'])) {
-	const source = readFileSync(chemin, 'utf8');
-	for (const m of source.matchAll(/import\s+['"]([^'"]+\.css)['"]/g)) {
-		const cible = m[1];
-		if (!/^[./]|^\$lib\//.test(cible)) {
-			releve({
-				controle: 'P-3.2',
-				fichier: rel(chemin),
-				ligne: ligneDe(source, m.index),
-				message: `import d'une feuille de style tierce « ${cible} » — ADR-002`
-			});
+	// ── P-3.2 — import de feuille de style tierce ──────────────────────────────
+	for (const chemin of fichiers(join(racine, 'src'), ['.css', '.svelte', '.ts', '.js', '.html'])) {
+		const source = readFileSync(chemin, 'utf8');
+		for (const m of source.matchAll(/import\s+['"]([^'"]+\.css)['"]/g)) {
+			const cible = m[1];
+			if (!/^[./]|^\$lib\//.test(cible)) {
+				releve({
+					controle: 'P-3.2',
+					fichier: rel(chemin),
+					ligne: ligneDe(source, m.index),
+					message: `import d'une feuille de style tierce « ${cible} » — ADR-002`
+				});
+			}
+		}
+		for (const m of source.matchAll(/@import\s+(?:url\()?\s*['"]?([^'")\s;]+)/g)) {
+			if (!/^[./]|^\$lib\//.test(m[1])) {
+				releve({
+					controle: 'P-3.2',
+					fichier: rel(chemin),
+					ligne: ligneDe(source, m.index),
+					message: `@import d'une feuille de style tierce « ${m[1]} » — ADR-002`
+				});
+			}
 		}
 	}
-	for (const m of source.matchAll(/@import\s+(?:url\()?\s*['"]?([^'")\s;]+)/g)) {
-		if (!/^[./]|^\$lib\//.test(m[1])) {
-			releve({
-				controle: 'P-3.2',
-				fichier: rel(chemin),
-				ligne: ligneDe(source, m.index),
-				message: `@import d'une feuille de style tierce « ${m[1]} » — ADR-002`
-			});
-		}
-	}
-}
 
-// ───────────────────────────────────────────────────────────────────────────
-// Rapport
-// ───────────────────────────────────────────────────────────────────────────
+	// ───────────────────────────────────────────────────────────────────────────
+	// Rapport
+	// ───────────────────────────────────────────────────────────────────────────
 
-/**
- * Contrôles de la §5 non outillés à ce lot, avec leur motif. Ils sont
- * énoncés à chaque exécution : une batterie qui tait ce qu'elle ne couvre
- * pas fait croire à une couverture qu'elle n'a pas (RA-01).
- */
-const NON_OUTILLES = [
-	['P-2', "croisement sélecteur ↔ jeton : demande l'inventaire fermé du §2 — lot T-009"],
-	['P-4.3', "analyse des gabarits : demande l'inventaire fermé du §2 — lot T-009"],
-	['P-5', "fermeture de l'inventaire : lint d'import restreint — lot T-009 (ADR-002)"],
-	['P-7', 'balisage des composants : aucune vue implémentée — phase 1, batteries 5 et 10'],
-	['P-8', 'balisage des actions : aucune vue implémentée — phase 1, batterie 7']
-];
+	/**
+	 * Contrôles de la §5 non outillés à ce lot, avec leur motif. Ils sont
+	 * énoncés à chaque exécution : une batterie qui tait ce qu'elle ne couvre
+	 * pas fait croire à une couverture qu'elle n'a pas (RA-01).
+	 */
+	const NON_OUTILLES = [
+		['P-2', "croisement sélecteur ↔ jeton : demande l'inventaire fermé du §2 — lot T-009"],
+		['P-4.3', "analyse des gabarits : demande l'inventaire fermé du §2 — lot T-009"],
+		['P-5', "fermeture de l'inventaire : lint d'import restreint — lot T-009 (ADR-002)"],
+		['P-7', 'balisage des composants : aucune vue implémentée — phase 1, batteries 5 et 10'],
+		['P-8', 'balisage des actions : aucune vue implémentée — phase 1, batterie 7']
+	];
 
-console.log('verif:jetons — batterie 2 « jetons et non-divergence du socle »');
-console.log(`  source du socle : mockups/V-07-accueil-contributeur.html, premier bloc <style>`);
-console.log(`  feuille contrôlée : ${CIBLE_SOCLE} (exclue de l'analyse P-1, c'est la frontière)`);
-console.log(`  polices servies localement : ${CIBLE_POLICES}/`);
-console.log(`  fichiers analysés : ${aAnalyser.length}`);
-
-if (constats.length > 0) {
-	console.error(`\nverif:jetons — ÉCHEC : ${constats.length} constat(s).\n`);
-	const parControle = new Map();
-	for (const c of constats) {
-		if (!parControle.has(c.controle)) parControle.set(c.controle, []);
-		parControle.get(c.controle).push(c);
-	}
-	for (const [controle, liste] of [...parControle].sort()) {
-		console.error(`  ${controle} — ${liste.length} constat(s)`);
-		for (const c of liste) {
-			console.error(`    ${c.fichier}${c.ligne ? `:${c.ligne}` : ''} — ${c.message}`);
-		}
-		console.error('');
-	}
-	console.error(
-		'Le système visuel est une contrainte, pas une préférence : toute valeur qui\n' +
-			"n'est pas un jeton du socle est un écart, y compris si elle est numériquement\n" +
-			'identique au jeton (ADR-002). La voie normale est un jeton existant ; un jeton\n' +
-			"nouveau est une modification d'une source gelée, donc un arbitrage.\n" +
-			'Spécification : docs/DESIGN.md §5. Réinstaller le socle : pnpm socle:extraire.\n'
+	console.log('verif:jetons — batterie 2 « jetons et non-divergence du socle »');
+	console.log(`  source du socle : mockups/V-07-accueil-contributeur.html, premier bloc <style>`);
+	console.log(`  feuille contrôlée : ${CIBLE_SOCLE} (exclue de l'analyse P-1, c'est la frontière)`);
+	console.log(
+		`  feuilles de vue portées : ` +
+			(feuilles.length
+				? feuilles.map((f) => `${f.fichier} ${f.identique ? '= gel' : 'DIVERGENTE'}`).join(', ')
+				: `aucune (convention : ${DOSSIER_VUES}/V-xx.css, P-6.3)`)
 	);
-	process.exit(1);
+	console.log(`  polices servies localement : ${CIBLE_POLICES}/`);
+	console.log(`  fichiers analysés : ${aAnalyser.length}`);
+
+	if (constats.length > 0) {
+		console.error(`\nverif:jetons — ÉCHEC : ${constats.length} constat(s).\n`);
+		const parControle = new Map();
+		for (const c of constats) {
+			if (!parControle.has(c.controle)) parControle.set(c.controle, []);
+			parControle.get(c.controle).push(c);
+		}
+		for (const [controle, liste] of [...parControle].sort()) {
+			console.error(`  ${controle} — ${liste.length} constat(s)`);
+			for (const c of liste) {
+				console.error(`    ${c.fichier}${c.ligne ? `:${c.ligne}` : ''} — ${c.message}`);
+			}
+			console.error('');
+		}
+		console.error(
+			'Le système visuel est une contrainte, pas une préférence : toute valeur qui\n' +
+				"n'est pas un jeton du socle est un écart, y compris si elle est numériquement\n" +
+				'identique au jeton (ADR-002). La voie normale est un jeton existant ; un jeton\n' +
+				"nouveau est une modification d'une source gelée, donc un arbitrage.\n" +
+				'Spécification : docs/DESIGN.md §5. Réinstaller le socle : pnpm socle:extraire.\n'
+		);
+		process.exit(1);
+	}
+
+	console.log(`\n  (a) P-6.1 non-divergence du socle : ${socleConforme ? 'conforme' : 'ÉCHEC'}`);
+	console.log('  (b) P-1.1 à P-1.7, P-3.1, P-3.2, P-4.1, P-4.2, P-6.2, RG-NF-08 : aucun constat');
+	console.log(
+		`  (c) P-6.3 identité à l'octet des feuilles de vue portées : ` +
+			(feuilles.length
+				? `${feuilles.length} feuille(s), toutes identiques au gel`
+				: 'aucune feuille portée à ce jour')
+	);
+	console.log('\n  Non outillé à ce lot, et déclaré comme tel :');
+	for (const [controle, motif] of NON_OUTILLES) console.log(`    ${controle} — ${motif}`);
+	console.log('\nverif:jetons — conforme.');
+	process.exit(0);
 }
 
-console.log(`\n  (a) P-6.1 non-divergence du socle : ${socleConforme ? 'conforme' : 'ÉCHEC'}`);
-console.log('  (b) P-1.1 à P-1.7, P-3.1, P-3.2, P-4.1, P-4.2, P-6.2, RG-NF-08 : aucun constat');
-console.log('\n  Non outillé à ce lot, et déclaré comme tel :');
-for (const [controle, motif] of NON_OUTILLES) console.log(`    ${controle} — ${motif}`);
-console.log('\nverif:jetons — conforme.');
-process.exit(0);
+// ── Exécution directe ──────────────────────────────────────────────────────
+if (process.argv[1] && relative(process.argv[1], fileURLToPath(import.meta.url)) === '') {
+	executer();
+}

@@ -139,6 +139,57 @@ export function comparerPixels(pngReference, pngCandidat) {
 	};
 }
 
+/**
+ * Niveau 2 sur une ZONE, dont la restitution elle-même peut différer.
+ *
+ * Une zone déclarée peut n'être rendue à aucune surface — `aside.rail` de V-37
+ * sous 1240 px, que la maquette escamote inconditionnellement (ARB-010). Le
+ * fait est alors : « cette zone n'est pas rendue ». C'est une propriété
+ * comparable, et elle doit l'être : une application qui afficherait le rail là
+ * où la maquette ne l'affiche pas divergerait, sans qu'aucun pixel ne puisse
+ * en témoigner.
+ *
+ *   • rendue des deux côtés   — comparaison de pixels ordinaire ;
+ *   • non rendue des deux côtés — conforme, sans pixel comparé, et le rapport
+ *     le dit plutôt que de laisser croire à une comparaison ;
+ *   • rendue d'un seul côté    — échec sec. Aucun seuil ne s'applique à une
+ *     divergence de cette nature.
+ */
+export function comparerZone(reference, candidat) {
+	if (!reference.png && !candidat.png) {
+		return {
+			verdict: 'conforme',
+			motif: null,
+			nonRendue: true,
+			pixelsDifferents: 0,
+			pixelsTotal: 0,
+			proportion: 0,
+			ecartCanalMax: 0,
+			dimensions: { reference: 'non rendue', candidat: 'non rendue' },
+			ecart: null
+		};
+	}
+	if (!reference.png || !candidat.png) {
+		return {
+			verdict: 'echec',
+			motif: reference.png
+				? 'zone rendue par la maquette, absente du candidat'
+				: 'zone absente de la maquette, rendue par le candidat',
+			nonRendue: false,
+			pixelsDifferents: null,
+			pixelsTotal: null,
+			proportion: null,
+			ecartCanalMax: null,
+			dimensions: {
+				reference: reference.png ? 'rendue' : 'non rendue',
+				candidat: candidat.png ? 'rendue' : 'non rendue'
+			},
+			ecart: null
+		};
+	}
+	return { ...comparerPixels(reference.png, candidat.png), nonRendue: false };
+}
+
 /** Assemble les deux captures côte à côte, séparées par un filet. */
 export function coteACote(pngReference, pngCandidat) {
 	const r = decoder(pngReference);

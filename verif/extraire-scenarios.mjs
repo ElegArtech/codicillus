@@ -37,11 +37,22 @@
  * regarde. Les combinaisons multiples ne sont pas interdites, elles ne sont
  * simplement pas déclarées ; les ajouter relèverait de l'arbitrage.
  *
- * LE VOLET `app` EST VIDE, ET C'EST VOULU. Aucune vue applicative n'existe au
- * lot T-007. Le fichier porte l'emplacement du volet, sa forme et son mode
- * d'emploi ; le remplir maintenant — persona, adresse, données — serait
- * inventer le scénario applicatif d'une vue que personne n'a écrite. Le lot
- * qui portera la vue le remplira, avec sa route à l'appui.
+ * LE VOLET `app` RESTE `null`, ET CE N'EST PLUS UN MANQUE — lot T-007b,
+ * réponse à `ECART-011` É-9.
+ *
+ * Ces fichiers ne contiennent RIEN que la maquette ne dise, et c'est
+ * exactement ce que `--verifier` prouve en les régénérant. Un volet rédigé à
+ * la main y serait donc soit écrasé à la première extraction, soit un obstacle
+ * permanent au contrôle de non-dérive : l'instruction « renseigne le volet
+ * app » n'avait, littéralement, aucun destinataire dans le code.
+ *
+ * Le protocole d'état côté application vit désormais dans
+ * `verif/references/protocole-app.json`, en écriture humaine seule, aux côtés
+ * des tolérances, des masques et des zones comparées — c'est-à-dire au même
+ * endroit et sous le même régime que tout ce qui décide d'un verdict sans être
+ * dérivé du gel. Le champ `app` de ces scénarios garde sa valeur `null`, qui
+ * dit une chose vraie et utile : LA MAQUETTE, ELLE, NE DÉCLARE RIEN DE
+ * L'APPLICATION.
  *
  * Usage : node verif/extraire-scenarios.mjs [--verifier]
  *   --verifier  ne réécrit rien ; échoue si les fichiers produits diffèrent
@@ -362,7 +373,7 @@ async function produire() {
 				regle:
 					'un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page',
 				volet_app:
-					'non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2).'
+					'`app` reste null, et par construction : ce fichier est dérivé mécaniquement de la maquette gelée, et `pnpm scenarios:verifier` le prouve en le régénérant — la maquette ne déclare rien de l’application. Le protocole d’état côté application vit dans `verif/references/protocole-app.json`, en écriture humaine seule : route `/__design/{vue}?etat={cle}` du mode démo (règles/workflow_agentic.md annexe F, verif/banc/mode-demo.mjs). Voir ECART-011 É-1 et É-9.'
 			},
 			controles: fieldsets ?? null,
 			defaut: fieldsets ? vecteurParDefaut(fieldsets) : null,

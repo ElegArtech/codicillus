@@ -1,0 +1,67 @@
+{
+	"_": [
+		"PROTOCOLE D'ÉTAT CÔTÉ APPLICATION — ÉCRITURE HUMAINE SEULE.",
+		"Répond à `docs/ecarts/ECART-011.md` É-9, avec É-1.",
+		"",
+		"OÙ VIT LE VOLET « app », ET POURQUOI ICI.",
+		"",
+		"`verif/scenarios/V-xx.json` est produit MÉCANIQUEMENT par",
+		"`verif/extraire-scenarios.mjs` à partir de la maquette gelée, et",
+		"`pnpm scenarios:verifier` échoue sur toute divergence entre le dépôt et",
+		"cette extraction. Un volet rédigé à la main dans ces fichiers serait donc",
+		"soit écrasé à la première extraction, soit un obstacle permanent au",
+		"contrôle de non-dérive — c'est exactement le défaut relevé par É-9 :",
+		"l'instruction « renseigne le volet app » n'avait aucun destinataire.",
+		"Faire apprendre à l'extracteur à préserver un volet fourni aurait cassé",
+		"la propriété qui fait la valeur de ces fichiers : ils ne contiennent RIEN",
+		"que la maquette ne dise, et cela se vérifie en les régénérant.",
+		"",
+		"Le protocole d'état côté application vit donc ICI, dans",
+		"`verif/references/`, aux côtés des tolérances, des masques et des zones —",
+		"c'est-à-dire au même endroit et sous le même régime que tout ce qui",
+		"décide d'un verdict sans être dérivé du gel. Les scénarios gardent leur",
+		"champ `app`, qui reste `null` : il dit que la maquette, elle, ne déclare",
+		"rien de l'application. C'est vrai, et c'est ce qu'il doit dire.",
+		"",
+		"CE QUE LE PROTOCOLE EST, EN UNE PHRASE.",
+		"",
+		"`règles/workflow_agentic.md` annexe F le spécifie depuis le début : un",
+		"« mode démo de l'implémentation rendant chaque état avec les fixtures —",
+		"route /__design/V-xx?state=…, builds de développement uniquement ». Le",
+		"paramètre est nommé `etat` et non `state`, par cohérence avec le reste du",
+		"dépôt, qui est en français jusque dans ses clés de scénario.",
+		"",
+		"C'est le SEUL moyen pour le banc d'atteindre un état côté application :",
+		"la maquette a une planche de revue, l'application n'en a pas et n'en aura",
+		"pas. Le mode démo est un INSTRUMENT — il est écrit par l'orchestrateur,",
+		"jamais par un lot de vue : un implémenteur qui écrit le chemin par lequel",
+		"il sera mesuré écrit sa propre note (ÉCART-011 É-1).",
+		"",
+		"UN AGENT D'EXÉCUTION N'ÉCRIT JAMAIS ICI. Détourner l'adresse d'un état",
+		"vers un écran qui passe est le contournement de vérification nommé par",
+		"PLAN §12. La sortie légitime d'un rouge est le protocole d'écart."
+	],
+
+	"route": "/__design/{vue}?etat={etat}",
+
+	"sources": {
+		"app": "L'implémentation de la vue par l'application. C'est le régime de conformité proprement dit.",
+		"etalon": "La maquette gelée elle-même, servie par le mode démo et pilotée par le même paramètre `etat`. Aucune conformité n'y est prouvée : c'est l'ÉTALONNAGE DU RÉGIME `app` — un candidat connu identique, dont on exige zéro pixel divergent, pour prouver la plomberie de bout en bout (deux serveurs, deux chemins, deux protocoles d'état, un seul verdict). Un rapport produit avec cette source le dit en toutes lettres."
+	},
+
+	"vues": {},
+
+	"vues_": [
+		"AUCUNE VUE N'EST IMPLÉMENTÉE. La table est vide, et le rester est la",
+		"seule chose honnête : le mode démo refuse bruyamment une vue qu'il ne",
+		"sait pas rendre, plutôt que de sortir en 0 sans rien prouver (RA-01).",
+		"",
+		"Une entrée n'est nécessaire que si une vue s'écarte de la route",
+		"uniforme ci-dessus. Sa forme :",
+		"",
+		"  \"V-xx\": {",
+		"    \"route\": \"/autre/chemin?etat={etat}\",   (facultatif)",
+		"    \"etats\": { \"cle-d-etat\": \"/chemin/particulier\" }  (facultatif)",
+		"  }"
+	]
+}

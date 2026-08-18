@@ -993,8 +993,18 @@ s'en déduise. Elle est la spécification de `pnpm verif:jetons` (batterie 2,
 lot T-004) et du hook de contrôle des jetons à l'écriture (plan §3.7, RA-02).
 
 **Périmètre de tous les contrôles** : les fichiers de style et de gabarit de
-l'application — `src/**/*.{css,svelte,html}` — **à l'exclusion** de la copie
-contrôlée du socle, qui est le seul endroit où une valeur littérale est admise.
+l'application — `src/**/*.{css,svelte,html}` — **à l'exclusion des feuilles dont
+l'identité à une source gelée est prouvée par ailleurs**, ce qui est strictement
+plus fort que P-1 :
+
+- la copie contrôlée du socle, `src/socle.css`, par **P-6.1** ;
+- toute **feuille de vue portée** `src/**/V-xx.css`, par **P-6.3** — voir la
+  sous-section correspondante, qui explique pourquoi la contrainte y est
+  renversée plutôt qu'assouplie.
+
+Une feuille portée qui **diverge** de son gel n'est plus dans cette exclusion :
+P-1 lui est dû en entier, en plus du constat P-6.3.
+
 `mockups/**` n'est jamais analysé : il est gelé et sert de référence.
 
 ### P-1 · Aucune valeur en dur hors du socle
@@ -1125,11 +1135,79 @@ couverture). Les deux se remontent dans `docs/ecarts/`.
 |---|---|---|
 | P-6.1 | La copie applicative du socle diffère de sa référence | Comparaison d'empreinte avec la référence du `GEL.md` |
 | P-6.2 | Une règle du socle est redéclarée ou surchargée dans une feuille de vue | Croisement des sélecteurs |
+| P-6.3 | Une **feuille de vue portée** diffère, ne serait-ce que d'un octet, du second bloc `<style>` de sa maquette gelée | Comparaison octet pour octet, ancrée sur le `GEL.md` |
 
 **Réserve à lever avant d'activer P-6.1** : la référence à retenir est le socle
 en ligne des maquettes, pas `mockups/socle.css`, qui est en retard (§0.2 et
 `docs/ecarts/ECART-006.md`). Un contrôle qui compare à `mockups/socle.css`
 échouerait à juste titre sur les champs de saisie et les notifications.
+
+#### P-6.3 — la feuille de vue portée, et le renversement de P-1
+
+*Amendement du 18 août 2026, lot T-007b. Résout `docs/ecarts/ECART-011.md` É-2.
+Outillé par `verif/feuilles-de-vue.mjs`, joué par `pnpm verif:jetons`.*
+
+**Le constat, mesuré.** Le second bloc `<style>` de `V-37-coquille.html` —
+782 lignes de style propre à la vue, que la conformité pixel oblige à porter
+**tel quel** — produit **92 constats P-1** : 30 P-1.1, 35 P-1.2, 1 P-1.3,
+20 P-1.4, 2 P-1.5, 4 P-1.6. Aucun de ces littéraux n'a d'équivalent parmi les
+70 jetons : `13px` n'est pas un pas de `--e-*`, `#f6e9a8` et `#7a2f8f`
+n'existent nulle part, `90ms` n'est pas un `--m-*`, `line-height: 1.12` n'est
+pas un `--i-*`. **Les remplacer déplace le rendu ; les garder rend la batterie
+rouge.** Les deux contraintes sont vraies et incompatibles.
+
+> Le relevé d'origine d'`ECART-011` comptait 94 constats, dont 2 P-6.2. Ces
+> deux-là étaient un **faux positif d'instrument** : `selecteursDe()` lisait
+> les étapes `to` et `from` d'un `@keyframes` comme des sélecteurs CSS, et le
+> socle en déclare cinq — toute feuille portant une animation nommée était
+> rouge d'avance (É-3). Corrigé au même lot, unitaire à l'appui.
+
+**La contrainte n'est pas assouplie : elle est renversée, et resserrée.**
+
+Une feuille de vue portée d'une maquette gelée est soumise à un contrôle **plus
+strict** que P-1 : elle doit être **identique à l'octet** au second bloc
+`<style>` de sa maquette, vérifié mécaniquement, exactement comme P-6.1 le fait
+pour le socle. À l'intérieur de ce bloc vérifié, les contrôles de contenu —
+P-1, P-4.2, P-6.2 — ne s'appliquent pas : **non par tolérance, mais parce
+qu'« identique au gel » implique et dépasse « n'emploie que des jetons »**. Le
+socle bénéficie de la même exemption, et pour la même raison exactement (P-1.8,
+dernier alinéa : « ce recensement n'est pas ce qui contraint »).
+
+**Hors de ce bloc, P-1 s'applique intégralement.** Toute ligne de CSS qu'un
+agent écrit lui-même reste soumise à la règle entière. C'est cette seconde
+moitié qui maintient RA-02 couvert — et mieux qu'avant : une feuille identique
+au gel **ne peut pas dériver du tout**, tandis qu'une feuille jetonnée pouvait
+dériver en restant jetonnée.
+
+**Le nom de fichier est le verrou, et il ne s'évade pas dans les deux sens.**
+Est une feuille de vue portée **tout fichier de `src/**` nommé `V-xx.css`**, et
+rien d'autre.
+
+| Tentative | Ce qui se passe |
+|---|---|
+| Rédiger sa propre feuille et la nommer `V-37.css` | P-6.3 la nomme, ligne par ligne — **et** P-1 continue de s'y appliquer |
+| Porter le bloc de la maquette sous un autre nom (`coquille.css`) | Le fichier n'est pas reconnu comme porté : P-1 y relève ses 92 constats |
+| Retoucher une valeur « juste un peu » | Un octet suffit : le contrôle nomme la ligne et donne la commande de réinstallation |
+
+La seule façon d'être vert est donc de porter le bloc **tel quel, sous son nom
+de vue** — c'est-à-dire exactement ce que la conformité pixel exige déjà.
+
+**Une feuille portée ne se recopie pas à la main**, pas plus que le socle. Elle
+s'extrait mécaniquement de la maquette gelée, à la demande :
+
+```
+node verif/feuilles-de-vue.mjs V-37 --installer   → src/vues/V-37.css
+pnpm vues:feuille                                  → état des feuilles portées
+```
+
+L'extraction est **ancrée sur le gel** : elle refuse de s'exécuter si la
+maquette source diverge de son empreinte au `mockups/GEL.md`. On n'extrait pas
+d'une maquette qui a bougé sans arbitrage.
+
+**Conséquence sur le formatage.** `.prettierignore` exclut `src/**/V-xx.css`,
+au même titre que `src/socle.css` : reformater une feuille portée la ferait
+diverger du gel, donc rougir P-6.3. Le formatage porte sur ce que le dépôt
+écrit, jamais sur ce qu'il recopie.
 
 ### P-7 · Aucune information portée par la couleur seule (RG-M18-09)
 

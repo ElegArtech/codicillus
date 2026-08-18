@@ -6,11 +6,11 @@
 	"planche": true,
 	"zones": null,
 	"routes": ["/"],
-	"fenetres": ["1440x900"],
+	"fenetres": ["1440x900", "1024x768", "768x1024", "360x780"],
 	"extraction": {
 		"produit_par": "verif/extraire-scenarios.mjs",
 		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
-		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+		"volet_app": "`app` reste null, et par construction : ce fichier est dérivé mécaniquement de la maquette gelée, et `pnpm scenarios:verifier` le prouve en le régénérant — la maquette ne déclare rien de l’application. Le protocole d’état côté application vit dans `verif/references/protocole-app.json`, en écriture humaine seule : route `/__design/{vue}?etat={cle}` du mode démo (règles/workflow_agentic.md annexe F, verif/banc/mode-demo.mjs). Voir ECART-011 É-1 et É-9."
 	},
 	"controles": [
 		{

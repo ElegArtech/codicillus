@@ -33,7 +33,8 @@ import {
 	stabiliser,
 	avancer,
 	AVANCE_ETAT_MS,
-	optionsContexte
+	optionsContexte,
+	BLOCS_HORS_PRODUIT
 } from './conditions.mjs';
 
 /**
@@ -52,9 +53,13 @@ export async function ouvrirPage(navigateur, adresse, fenetre) {
 	const contexte = await navigateur.newContext(optionsContexte(fenetre));
 	const page = await contexte.newPage();
 	await preparerAvantNavigation(page);
-	await page.goto(adresse, { waitUntil: 'load' });
+	// Le code de réponse est rendu à l'appelant : côté application, une page
+	// d'erreur se compare aussi bien qu'une vue, et le banc rougirait alors
+	// pour une raison qui n'a rien à voir avec le rendu. C'est au banc de
+	// refuser, en citant ce que le serveur a répondu.
+	const reponse = await page.goto(adresse, { waitUntil: 'load' });
 	await stabiliser(page);
-	return { page, contexte };
+	return { page, contexte, statut: reponse?.status() ?? null };
 }
 
 /**
@@ -98,25 +103,49 @@ export async function refermerSuperpositions(page) {
  * Mesure un état : le relevé de structure du niveau 1 et la capture du
  * niveau 2, pris sur le MÊME état du DOM, en une seule fois.
  *
- * La planche est retirée du DOM le temps de la mesure, puis remise en place :
- * retirée comme l'exige PLAN §4.2 — et pas seulement masquée, car une planche
- * masquée resterait dans l'arbre d'accessibilité que compare le niveau 1 —
- * sans interdire au passage de capturer l'état suivant sur la même page.
+ * Les blocs que la maquette DÉCLARE hors produit sont retirés du DOM le temps
+ * de la mesure, puis remis en place : retirés comme l'exige PLAN §4.2 — et pas
+ * seulement masqués, car un bloc masqué resterait dans l'arbre
+ * d'accessibilité que compare le niveau 1 — sans interdire au passage de
+ * capturer l'état suivant sur la même page. La liste et son recensement sur
+ * les 41 maquettes sont dans `conditions.mjs`, `BLOCS_HORS_PRODUIT`.
+ *
+ * TROIS SURFACES POSSIBLES, ET UNE SEULE PAR ÉTAT.
+ *
+ *   • `zones` non vide — les ZONES COMPARÉES déclarées par la vue (ARB-012).
+ *     Un relevé par zone, tous rendus. Les deux niveaux jugent alors le même
+ *     objet, parce qu'ils lisent la même liste.
+ *   • `zone` — la zone d'un état présenté CÔTE À CÔTE dans la page (V-09,
+ *     V-35, V-38…). C'est un état, pas une restriction de verdict.
+ *   • ni l'un ni l'autre — la page entière. C'est le défaut, et c'est le plus
+ *     strict.
+ *
+ * @returns {{ releves: {nom: string, aria: string, tabulation: string[], png: Buffer}[],
+ *             blocsRetires: number }}
  */
-export async function mesurer(page, { zone, masques }) {
-	const planchesRetirees = await page.evaluate(() => {
-		const gardees = [];
-		document.querySelectorAll('.planche').forEach((n) => {
-			gardees.push({ n, parent: n.parentNode, suivant: n.nextSibling });
-			n.remove();
-		});
-		window.__planchesRetirees = gardees;
-		return gardees.length;
-	});
+export async function mesurer(page, { zone = null, zones = [], masques = [] }) {
+	if (zone && zones.length) {
+		throw new Error(
+			'banc : un état ne peut pas être à la fois une zone côte à côte et une vue à ' +
+				'zones comparées — la surface jugée serait ambiguë.'
+		);
+	}
 
-	const racine = zone ? page.locator(zone.selecteur).nth(zone.index) : page.locator('body');
-	const aria = await racine.ariaSnapshot();
-	const tabulation = await ordreDeTabulation(page, zone);
+	const blocsRetires = await page.evaluate((selecteurs) => {
+		const gardes = [];
+		for (const s of selecteurs) {
+			document.querySelectorAll(s).forEach((n) => {
+				gardes.push({ n, parent: n.parentNode, suivant: n.nextSibling });
+				n.remove();
+			});
+		}
+		window.__blocsHorsProduit = gardes;
+		return gardes.length;
+	}, BLOCS_HORS_PRODUIT);
+
+	const cibles = zones.length
+		? zones.map((selecteur) => ({ nom: selecteur, selecteur, index: 0 }))
+		: [zone ? { nom: `${zone.selecteur}#${zone.index}`, ...zone } : { nom: 'page' }];
 
 	const options = {
 		animations: 'disabled',
@@ -125,18 +154,55 @@ export async function mesurer(page, { zone, masques }) {
 		mask: (masques ?? []).map((s) => page.locator(s)),
 		maskColor: '#ff00ff'
 	};
-	const png = zone
-		? await racine.screenshot(options)
-		: await page.screenshot({ ...options, fullPage: true });
+
+	const releves = [];
+	for (const cible of cibles) {
+		if (cible.selecteur) {
+			// Une zone déclarée qui n'existe pas dans le DOM ferait comparer du
+			// vide à du vide, et le banc sortirait en vert sans avoir rien
+			// regardé. On refuse bruyamment (PLAN §12, RA-01).
+			const combien = await page.locator(cible.selecteur).count();
+			if (combien <= cible.index) {
+				throw new Error(
+					`banc : la zone « ${cible.selecteur} » (rang ${cible.index}) est absente du DOM — ` +
+						`${combien} élément(s) trouvé(s). Comparer une zone inexistante sortirait en vert ` +
+						'sans rien mesurer.'
+				);
+			}
+		}
+		const racine = cible.selecteur
+			? page.locator(cible.selecteur).nth(cible.index)
+			: page.locator('body');
+
+		// UNE ZONE PEUT NE PAS ÊTRE RENDUE, ET C'EST UN FAIT À COMPARER.
+		// `aside.rail` de V-37 est en `display: none` sous 1240 px, sans
+		// contre-règle (ARB-010) : la zone existe dans le document et n'occupe
+		// aucune surface. La capturer échouerait ; l'ignorer serait pire — le
+		// banc laisserait passer une application qui, elle, l'afficherait. On
+		// relève donc la NON-RESTITUTION comme une propriété du côté mesuré, et
+		// c'est la comparaison qui exige que les deux côtés soient d'accord.
+		const rendu = cible.selecteur ? await racine.isVisible() : true;
+		releves.push({
+			nom: cible.nom,
+			rendu,
+			aria: await racine.ariaSnapshot(),
+			tabulation: await ordreDeTabulation(page, cible.selecteur ? cible : null),
+			png: !rendu
+				? null
+				: cible.selecteur
+					? await racine.screenshot(options)
+					: await page.screenshot({ ...options, fullPage: true })
+		});
+	}
 
 	await page.evaluate(() => {
-		for (const { n, parent, suivant } of window.__planchesRetirees ?? []) {
+		for (const { n, parent, suivant } of window.__blocsHorsProduit ?? []) {
 			parent.insertBefore(n, suivant);
 		}
-		window.__planchesRetirees = [];
+		window.__blocsHorsProduit = [];
 	});
 
-	return { aria, tabulation, png, planchesRetirees };
+	return { releves, blocsRetires };
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

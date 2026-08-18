@@ -32,12 +32,16 @@
 		"verif:vocabulaire": "node verif/jalon.mjs \"batterie 17 « vocabulaire »\" \"non assigné par le §6.3 du plan de réalisation\"",
 		"verif:maquette": "node verif/maquette.mjs",
 		"verif:maquette:sonde": "node verif/maquette.mjs V-04 --sonde=structure && node verif/maquette.mjs V-04 --sonde=pixels",
+		"verif:maquette:app": "node verif/maquette.mjs --contre=app",
+		"verif:maquette:app:etalon": "node verif/maquette.mjs V-37 --contre=app --source=etalon",
+		"verif:demo:hors-production": "node verif/mode-demo-hors-production.mjs",
+		"vues:feuille": "node verif/feuilles-de-vue.mjs",
 		"scenarios:extraire": "node verif/extraire-scenarios.mjs",
 		"scenarios:verifier": "node verif/extraire-scenarios.mjs --verifier",
 		"mesure:budgets": "node verif/jalon.mjs \"batterie 13 « budgets de performance »\" \"T-028\"",
 		"exploitation:restauration": "node verif/jalon.mjs \"batterie 18 « sauvegarde et restauration »\" \"T-058\"",
 		"verify:lot": "node verif/jalon.mjs \"la sélection des batteries citées par un contrat de tâche\" \"non assigné par le §6.3 du plan de réalisation\"",
-		"verify": "pnpm run check && pnpm run verif:jetons && pnpm run test:unit && pnpm run test:aller-retour && pnpm run verif:fraicheur && pnpm run test:etancheite && pnpm run test:droits && pnpm run test:vide && pnpm run test:etats && pnpm run test:a11y && pnpm run verif:maquette && pnpm run test:parcours && pnpm run mesure:budgets && pnpm run test:degradation && pnpm run test:impression && pnpm run verif:menus && pnpm run verif:vocabulaire && pnpm run exploitation:restauration",
+		"verify": "pnpm run check && pnpm run verif:jetons && pnpm run verif:demo:hors-production && pnpm run test:unit && pnpm run test:aller-retour && pnpm run verif:fraicheur && pnpm run test:etancheite && pnpm run test:droits && pnpm run test:vide && pnpm run test:etats && pnpm run test:a11y && pnpm run verif:maquette && pnpm run test:parcours && pnpm run mesure:budgets && pnpm run test:degradation && pnpm run test:impression && pnpm run verif:menus && pnpm run verif:vocabulaire && pnpm run exploitation:restauration",
 		"verif:gel": "node verif/gel.mjs"
 	},
 	"dependencies": {
