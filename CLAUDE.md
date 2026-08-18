@@ -127,6 +127,35 @@ Maquettes  >  Cahier des charges  >  Brief des vues  >  Pile technique  >  Plan 
 | `pnpm verify:lot T-xxx` | Le sous-ensemble de batteries cité par le contrat de tâche — budget < 3 min |
 | `pnpm verify` | Les dix-huit batteries enchaînées — budget < 20 min |
 
+### Le banc de comparaison — les commandes qui l'entourent
+
+`verif:maquette` est la commande de conformité. Six autres l'accompagnent, et il faut savoir
+laquelle prouve quoi : elles ne prouvent **pas** la même chose.
+
+| Commande | Ce qu'elle prouve |
+|---|---|
+| `pnpm verif:maquette` | **Étalonnage à blanc** — la maquette contre elle-même, 41 vues, 409 couples, tolérance zéro. Prouve que le banc est déterministe, **rien sur l'application** |
+| `pnpm verif:maquette V-xx --contre=app` | **La conformité réelle** d'une vue implémentée à sa maquette gelée. C'est le critère de sortie de tout lot de vue |
+| `pnpm verif:maquette:app:etalon` | Le chemin `app` sur un candidat connu identique — serveurs, protocoles d'état, conditions de capture. **Ne passe pas par `render()`** |
+| `pnpm verif:maquette:app:composant` | Le même chemin **en traversant `render()`**, `ssrLoadModule` et le compilateur Svelte. C'est celui qui manquait quand tout composant rendait 500 sans que rien ne le voie (`ECART-013` É-1) |
+| `pnpm verif:maquette:app:zones` | Le protocole des 55 états de zone des six vues qui présentent leurs états côte à côte (ARB-014) |
+| `pnpm verif:maquette:sonde` | **Que le banc sait dire non** : perturbe le seul côté candidat et exige qu'il rougisse, code retour inversé. Un banc toujours vert ne prouve rien (RA-01) |
+| `pnpm verif:demo:hors-production` | Que le mode démo `/__design/…` n'existe pas dans le produit construit |
+| `pnpm scenarios:verifier` | Que les scénarios du dépôt sont bien ceux que l'extraction des planches régénère |
+| `pnpm vues:feuille V-xx --installer` | Pose `src/vues/V-xx.css`, **identique à l'octet** au second bloc `<style>` de la maquette (P-6.3) |
+
+**Un vert ne vaut que ce que la commande a réellement emprunté.** Deux fois déjà, un étalonnage a
+été déclaré vert sur un chemin que les vues n'empruntent pas — et le défaut est apparu au premier
+lot réel. Avant de conclure d'un vert, demande-toi *ce qu'il n'a pas traversé*.
+
+### Ce qu'un vert ne dit jamais
+
+`verif:maquette` mesure la **fidélité au gel**, jamais la satisfaction d'une exigence. Quand la
+référence elle-même n'honore pas une règle, la batterie est verte et la règle reste non tenue.
+Les interdictions de conclure en vigueur sont listées à `docs/dag-phase-1.md` §8 et rappelées au
+contrat de chaque lot. À ce jour : `P-09`, `RG-ACC-04`, `RG-M18-12`, `RG-M18-13`, et tout
+comportement temporisé.
+
 Un niveau de boucle qui dépasse son budget est un **défaut de harnais** : au-delà, l'agent cesse de l'exécuter spontanément et la délégation se dégrade (plan §3.7).
 
 ---

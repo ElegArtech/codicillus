@@ -37,5 +37,22 @@ export default ts.config(
 				svelteConfig
 			}
 		}
+	},
+	// Les composants d'INSTRUMENT — `verif/banc/CorpsEtalon.svelte`, qui fait
+	// traverser `render()` au corps de la maquette gelée pour étalonner le régime
+	// `app` par son chemin réel (ÉCART-013 É-1). Ils vivent dans `verif/`, donc
+	// hors du graphe applicatif et hors de l'`include` que SvelteKit produit :
+	// le service de projet n'a pas de programme TypeScript où les ranger. Ils
+	// restent lintés, sans les règles typées — dont aucune n'est active ici.
+	{
+		files: ['verif/**/*.svelte'],
+		languageOptions: {
+			parserOptions: {
+				projectService: false,
+				extraFileExtensions: ['.svelte'],
+				parser: ts.parser,
+				svelteConfig
+			}
+		}
 	}
 );

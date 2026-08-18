@@ -34,6 +34,8 @@
 		"verif:maquette:sonde": "node verif/maquette.mjs V-04 --sonde=structure && node verif/maquette.mjs V-04 --sonde=pixels",
 		"verif:maquette:app": "node verif/maquette.mjs --contre=app",
 		"verif:maquette:app:etalon": "node verif/maquette.mjs V-37 --contre=app --source=etalon",
+		"verif:maquette:app:composant": "node verif/maquette.mjs V-37 --contre=app --source=composant",
+		"verif:maquette:app:zones": "node verif/maquette.mjs V-09 V-35 V-38 V-39 V-40 V-41 --contre=app --source=composant",
 		"verif:demo:hors-production": "node verif/mode-demo-hors-production.mjs",
 		"vues:feuille": "node verif/feuilles-de-vue.mjs",
 		"scenarios:extraire": "node verif/extraire-scenarios.mjs",

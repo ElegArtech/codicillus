@@ -26,7 +26,7 @@
  *       capture tiennent. Tout écart non nul en à blanc est un DÉFAUT DE BANC,
  *       jamais un défaut de maquette.
  *
- *   --contre=app [--base=http://…] [--source=app|etalon] — CONFORMITÉ D'UNE VUE.
+ *   --contre=app [--base=http://…] [--source=app|etalon|composant] — CONFORMITÉ.
  *       Le côté candidat devient l'APPLICATION, servie à sa propre adresse, et
  *       son état est atteint par le mode démo de l'annexe F —
  *       `/__design/V-xx?etat=…`, `verif/banc/mode-demo.mjs`. La référence
@@ -48,9 +48,20 @@
  *       d'une vraie vue serait indiscernable d'un défaut de harnais — le banc
  *       mesurerait le harnais et non l'implémentation.
  *
+ *       `--source=composant` — LE MÊME ÉTALONNAGE, MAIS PAR `render()`.
+ *       `ECART-013` É-1 a montré la limite de `etalon` : il sert le gel sans
+ *       jamais passer par `render()`, si bien que le chemin étalonné n'était
+ *       pas le chemin exercé et que tout composant rendait 500 sans que
+ *       l'étalonnage ne le voie. Un étalonnage sur candidat connu identique ne
+ *       vaut QUE POUR LES PORTIONS DE CHEMIN QU'IL EMPRUNTE. Cette source fait
+ *       traverser au corps du gel les fonctions mêmes qu'un lot de vue
+ *       empruntera — `ssrLoadModule`, `render()`, le contrat de propriétés,
+ *       `corpusPourVue()` — sans cesser d'être connue identique.
+ *
  * Usage :
  *   pnpm verif:maquette [V-xx …] [--etats=cle,cle] [--fenetres=1440x900,…]
- *                       [--contre=maquette|app] [--base=URL] [--source=app|etalon]
+ *                       [--contre=maquette|app] [--base=URL]
+ *                       [--source=app|etalon|composant]
  *                       [--zones=declarees|page]
  *                       [--archiver=ecarts|complet] [--silencieux]
  *
@@ -70,6 +81,28 @@
  * n'existe que vers le PLUS strict : il n'y a aucun moyen, en ligne de
  * commande, de restreindre une zone. Un agent bloqué sur un rouge ne
  * restreint jamais une zone (PLAN §12).
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * ÉTATS DE ZONE — ECART-012 point 6
+ *
+ * Six vues — V-09, V-35, V-38, V-39, V-40, V-41 — ne présentent pas leurs
+ * états comme des variantes d'un même écran pilotées par un contrôle, mais
+ * comme des ZONES DISTINCTES DE LA PAGE, montrées simultanément : 55 états.
+ * Ce ne sont pas des zones comparées au sens d'ARB-012 — elles ne restreignent
+ * aucun verdict —, ce SONT des états.
+ *
+ * Côté maquette, un tel état est atteint en isolant la zone dans la page
+ * rendue. Côté application, il l'est PAR LE MÊME MOYEN : l'application sert la
+ * page entière à `/__design/V-xx?etat=cle`, dans la condition où la zone est
+ * montrable, et le banc y isole la même zone, par le même sélecteur, au même
+ * rang, avec le même code. Les deux côtés montrent la même chose, obtenue par
+ * des chemins symétriques ; le niveau 1 et le niveau 2 jugent la même zone,
+ * parce qu'ils lisent le même descripteur.
+ *
+ * La vue doit le DÉCLARER dans `verif/references/protocole-app.json`, bloc
+ * `etats_de_zone`, en écriture humaine seule — le motif de la voie retenue et
+ * de la voie écartée y est écrit au long. Une vue non déclarée reste REFUSÉE en
+ * code 2 pour ses états de zone : ne rien écrire n'ouvre rien.
  */
 import { chromium } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
@@ -90,7 +123,12 @@ import {
 import { ouvrirPage, reglerPlanche, mesurer } from './banc/capture.mjs';
 import { comparerStructure, comparerZone, coteACote, TOLERANCES } from './banc/comparer.mjs';
 import { decoder } from './banc/png.mjs';
-import { adresseDeLEtat, PREFIXE as PREFIXE_DEMO } from './banc/mode-demo.mjs';
+import {
+	adresseDeLEtat,
+	declarationEtatDeZone,
+	SOURCES,
+	PREFIXE as PREFIXE_DEMO
+} from './banc/mode-demo.mjs';
 
 const DOSSIER_SCENARIOS = join(racine, 'verif', 'scenarios');
 const DOSSIER_CAPTURES = join(racine, 'verif', 'captures');
@@ -124,8 +162,8 @@ if (!['maquette', 'app'].includes(contre)) {
 	console.error(`verif:maquette — --contre=${contre} inconnu (maquette | app).`);
 	process.exit(2);
 }
-if (!['app', 'etalon'].includes(source)) {
-	console.error(`verif:maquette — --source=${source} inconnue (app | etalon).`);
+if (!SOURCES.includes(source)) {
+	console.error(`verif:maquette — --source=${source} inconnue (${SOURCES.join(' | ')}).`);
 	process.exit(2);
 }
 if (source !== 'app' && contre !== 'app') {
@@ -217,6 +255,37 @@ async function perturber(page, genre) {
 			if (titre) titre.textContent = `${titre.textContent} ⟂`;
 		});
 	}
+}
+
+/* ── Le geste qui révèle une zone ──────────────────────────────────────────
+   Onze des cinquante-cinq états de zone ne sont pas simplement présents dans la
+   page : ils y sont RÉVÉLÉS par un geste, que `verif/scenarios/V-xx.json` porte
+   sous `zone.declencheur` — les dix boîtes de V-40, ouvertes par leur entrée de
+   catalogue, et le rapport de lot de V-35.
+
+   LE DÉFILEMENT EST REMIS À ZÉRO APRÈS LE GESTE, et c'est une condition de
+   capture, pas une commodité. Playwright fait défiler jusqu'à l'élément avant de
+   le cliquer : la neuvième entrée du catalogue de V-40 est sous la ligne de
+   flottaison, si bien que la capture de référence porte un arrière-plan défilé
+   de plusieurs centaines de pixels — 33 % de la surface comparée sur
+   `d-doublon`. Or ce défilement n'appartient pas à l'état : il appartient au
+   MOYEN par lequel le banc a livré le clic. Le laisser exigerait d'une
+   implémentation qu'elle reproduise l'offset de défilement d'un geste qu'elle ne
+   fait pas — c'est-à-dire un rouge impossible à corriger autrement qu'en
+   trichant.
+
+   `stabiliser()` remet déjà le défilement à zéro au chargement, des deux côtés :
+   cette remise-ci est la même condition, appliquée après le seul autre moment où
+   le banc peut le déplacer. Elle est appliquée AUX DEUX CÔTÉS, par ce code
+   unique, et ne change donc jamais un verdict en faveur d'un côté. */
+async function actionnerDeclencheur(page, declencheur) {
+	const cible =
+		typeof declencheur === 'string'
+			? page.locator(declencheur).first()
+			: page.locator(declencheur.selecteur).nth(declencheur.index);
+	await cible.click();
+	await page.evaluate(() => window.scrollTo(0, 0));
+	await avancer(page, AVANCE_ETAT_MS);
 }
 
 /* ── Exécution ─────────────────────────────────────────────────────────── */
@@ -372,23 +441,52 @@ for (const { vue, fichier } of cibles) {
 		zones: zonesVue,
 		surface: zonesVue.length ? zonesVue.join(' + ') : 'page entière',
 		declaration: declarationZones(vue),
-		forcePageEntiere: filtreZones === 'page' && zonesDe(vue).length > 0
+		forcePageEntiere: filtreZones === 'page' && zonesDe(vue).length > 0,
+		// ECART-012 point 6 — les états de zone, comptés et déclarés à part : ils ne
+		// restreignent aucun verdict, ils SONT des états. Le rapport les nomme pour
+		// que leur isolement ne puisse pas être silencieux.
+		etatsDeZone: etats.filter((e) => e.zone).length,
+		protocoleZone: declarationEtatDeZone(vue)
 	});
 
 	for (const fenetre of fenetres) {
 		const adresseMaquette = `${serveur.origine}/${fichier}`;
 
 		for (const etat of etats) {
-			if (contre === 'app' && etat.zone) {
+			if (contre === 'app' && etat.zone && !declarationEtatDeZone(vue)) {
+				// Le refus reste le défaut, et il reste explicite : un état de zone
+				// est atteint dans la maquette en isolant un fragment de la page, pas
+				// en réglant un contrôle. Tant que `protocole-app.json` ne déclare pas
+				// que la vue est atteignable par sa page, le banc n'a aucun chemin —
+				// et un refus vaut mieux qu'un vert muet (RA-01).
 				console.error(
-					`\nverif:maquette — ${vue} · ${etat.cle} est un état de ZONE côte à côte : il est\n` +
-						'  atteint dans la maquette en capturant un fragment de page, pas en réglant un\n' +
-						'  contrôle. Le mode démo n’a aucun moyen d’en déduire une adresse. Le protocole\n' +
-						'  d’état de cette vue se déclare dans verif/references/protocole-app.json, en\n' +
-						'  écriture humaine seule (ÉCART-011 É-9).\n'
+					`\nverif:maquette — ${vue} · ${etat.cle} est un état de ZONE côte à côte, et ${vue}\n` +
+						'  n’a pas de protocole d’état de zone déclaré. Il est atteint dans la maquette\n' +
+						'  en isolant un fragment de la page, pas en réglant un contrôle : le banc n’a\n' +
+						'  aucun moyen d’en déduire ce que l’application doit servir. La déclaration se\n' +
+						'  fait dans verif/references/protocole-app.json, bloc « etats_de_zone », en\n' +
+						'  écriture humaine seule (ÉCART-011 É-9, ÉCART-012 point 6).\n'
 				);
 				process.exit(2);
 			}
+
+			/* ── LE MÊME BUDGET D'HORLOGE DES DEUX CÔTÉS ────────────────────────
+			   PLAN §4.2 exige des conditions identiques des deux côtés, et
+			   l'horloge en fait partie : `ECART-012` a montré que douze états sur
+			   333 divergeaient pour un vecteur appliqué à t = 0 au lieu de
+			   t = AVANCE_CHARGEMENT_MS.
+
+			   Le côté référence dépense, après le chargement, exactement ce que
+			   son état exige : une avance s'il y a une planche à régler, une autre
+			   s'il y a un déclencheur de zone à actionner. Le candidat dépense les
+			   MÊMES avances, dans le même ordre, et les sources qui rejouent la
+			   maquette reçoivent en plus l'INSTANT du vecteur — `&differe=` — pour
+			   l'appliquer au même moment virtuel. Sans ce calcul, un état de zone
+			   sans planche ni déclencheur (V-09, V-41) verrait le candidat avancer
+			   de 1 000 ms que la référence n'a pas dépensés : c'est l'horloge
+			   qu'on mesurerait, et non la vue. */
+			const regleLaPlanche = Boolean(etat.vecteur ?? scenario.defaut);
+			const instantVecteur = AVANCE_CHARGEMENT_MS;
 
 			const mesures = {};
 			// Deux chargements indépendants, dans deux contextes distincts :
@@ -398,7 +496,7 @@ for (const { vue, fichier } of cibles) {
 			for (const nom of ['reference', 'candidat']) {
 				const coteApplication = contre === 'app' && nom === 'candidat';
 				const adresse = coteApplication
-					? `${serveurApp.origine}${adresseDeLEtat(vue, etat.cle, source, AVANCE_CHARGEMENT_MS)}`
+					? `${serveurApp.origine}${adresseDeLEtat(vue, etat.cle, source, instantVecteur)}`
 					: adresseMaquette;
 				const { page, contexte, statut } = await ouvrirPage(navigateur, adresse, fenetre);
 				if (coteApplication && statut !== null && statut >= 400) {
@@ -430,24 +528,29 @@ for (const { vue, fichier } of cibles) {
 				if (sonde && nom === 'candidat') await perturber(page, sonde);
 				if (coteApplication) {
 					// L'ÉTAT EST DÉJÀ ATTEINT : il est porté par l'adresse, c'est
-					// tout le propos du mode démo. On avance néanmoins l'horloge
-					// virtuelle du MÊME temps que le côté référence, où le
-					// réglage de la planche est suivi d'une avance : le budget
-					// d'horloge doit être identique des deux côtés, sinon c'est
-					// lui qu'on mesurerait et non la vue.
-					await avancer(page, AVANCE_ETAT_MS);
+					// tout le propos du mode démo. On dépense néanmoins, dans le
+					// même ordre, les avances que la référence a dépensées : le
+					// budget d'horloge doit être identique des deux côtés, sinon
+					// c'est lui qu'on mesurerait et non la vue.
+					if (regleLaPlanche) await avancer(page, AVANCE_ETAT_MS);
+					if (etat.zone?.declencheur) {
+						// LES SOURCES QUI REJOUENT LA MAQUETTE REJOUENT AUSSI LE
+						// GESTE, par ce même code. Elles n'ont pas d'implémentation à
+						// qui demander l'état ; et un clic livré autrement — depuis
+						// un script de la page — n'est pas le même geste : il ne fait
+						// pas défiler jusqu'à l'élément et ne met pas le document en
+						// modalité « pointeur ». Mesuré : 33 % des pixels d'écart sur
+						// `d-doublon`, un anneau de focalisation de trop sur
+						// `d-simple`. La source `app`, elle, reçoit l'état par
+						// l'adresse : elle rend l'état et jamais la transition
+						// (ARB-011), il n'y a rien à cliquer.
+						if (source !== 'app') await actionnerDeclencheur(page, etat.zone.declencheur);
+						else await avancer(page, AVANCE_ETAT_MS);
+					}
 				} else {
 					if (etat.vecteur) await reglerPlanche(page, etat.vecteur);
 					else if (scenario.defaut) await reglerPlanche(page, scenario.defaut);
-					if (etat.zone?.declencheur) {
-						const d = etat.zone.declencheur;
-						const cible =
-							typeof d === 'string'
-								? page.locator(d).first()
-								: page.locator(d.selecteur).nth(d.index);
-						await cible.click();
-						await avancer(page, AVANCE_ETAT_MS);
-					}
+					if (etat.zone?.declencheur) await actionnerDeclencheur(page, etat.zone.declencheur);
 				}
 				mesures[nom] = await mesurer(page, {
 					zone: etat.zone ?? null,
@@ -506,7 +609,7 @@ for (const { vue, fichier } of cibles) {
 			// Une tolérance y absorberait précisément l'écart que l'étalonnage
 			// existe pour débusquer — celui que la plomberie du régime
 			// fabriquerait à elle seule.
-			const sansTolerance = contre === 'maquette' || source === 'etalon';
+			const sansTolerance = contre === 'maquette' || source !== 'app';
 			const verdict = !niveau1.conforme
 				? 'echec-structure'
 				: sansTolerance
@@ -519,12 +622,23 @@ for (const { vue, fichier } of cibles) {
 							? 'recours-niveau3'
 							: 'echec-pixels';
 
+			/* LE RAPPORT NOMME CE QUI A ÉTÉ COMPARÉ, état par état. Un état de
+			   zone n'est pas comparé page entière : il est comparé SUR SA ZONE, et
+			   le dire est le garde-fou qui rend l'isolement non silencieux — le
+			   même qu'ARB-012 impose aux zones comparées. */
+			const surfaceEtat = etat.zone
+				? `zone ${etat.zone.selecteur}#${etat.zone.index}`
+				: zonesVue.length
+					? zonesVue.join(' + ')
+					: 'page entière';
+
 			const resultat = {
 				vue,
 				etat: etat.cle,
 				libelle: etat.libelle,
 				fenetre,
-				surface: zonesVue.length ? zonesVue.join(' + ') : 'page entière',
+				surface: surfaceEtat,
+				etat_de_zone: Boolean(etat.zone),
 				verdict,
 				niveau1: { conforme: niveau1.conforme, ecarts: niveau1.ecarts },
 				niveau2: niveau2
@@ -680,7 +794,9 @@ const rapport = {
 			? 'étalonnage à blanc — maquette contre elle-même'
 			: source === 'etalon'
 				? 'étalonnage du régime « app » — candidat CONNU IDENTIQUE (maquette gelée servie par le mode démo)'
-				: 'conformité — maquette gelée contre application',
+				: source === 'composant'
+					? 'étalonnage du régime « app » PAR LE CHEMIN RÉEL — candidat CONNU IDENTIQUE, corps du gel rendu par render() (ÉCART-013 É-1)'
+					: 'conformité — maquette gelée contre application',
 	candidat:
 		contre === 'maquette'
 			? 'la maquette gelée elle-même'
@@ -692,6 +808,16 @@ const rapport = {
 		arbitrage: z.declaration?.arbitrage ?? null,
 		forcee_page_entiere: z.forcePageEntiere
 	})),
+	etats_de_zone: [...zonesParVue.values()]
+		.filter((z) => z.etatsDeZone > 0)
+		.map((z) => ({
+			vue: z.vue,
+			etats: z.etatsDeZone,
+			protocole: z.protocoleZone?.protocole ?? null,
+			zone: z.protocoleZone?.zone ?? null,
+			obligation: z.protocoleZone?.obligation ?? null,
+			arbitrage: z.protocoleZone?.arbitrage ?? null
+		})),
 	le: new Date().toISOString(),
 	duree_s: Number(duree),
 	tolerances: TOLERANCES,
@@ -746,6 +872,33 @@ if (restreintes.length) {
 				: '')
 	);
 }
+/* ECART-012 point 6 — LE RAPPORT NOMME AUSSI LES ÉTATS DE ZONE. Un état de zone
+   n'est pas comparé page entière : il est comparé SUR SA ZONE, isolée dans la
+   page rendue des DEUX côtés. Le dire à chaque exécution est le garde-fou qui
+   rend l'isolement non silencieux, exactement comme ARB-012 l'impose aux zones
+   comparées. */
+const parEtatDeZone = [...zonesParVue.values()].filter((z) => z.etatsDeZone > 0);
+if (parEtatDeZone.length) {
+	const total = parEtatDeZone.reduce((n, z) => n + z.etatsDeZone, 0);
+	console.log(
+		`  états de zone — ${total} état(s) isolé(s) dans la page, sur ${parEtatDeZone.length} vue(s) :`
+	);
+	for (const z of parEtatDeZone) {
+		console.log(
+			`    ${z.vue} : ${z.etatsDeZone} état(s) de zone` +
+				(contre === 'app'
+					? `   (${z.protocoleZone?.protocole ?? 'sans protocole déclaré'} — ${
+							z.protocoleZone?.arbitrage ?? 'sans arbitrage cité'
+						})`
+					: '')
+		);
+	}
+	console.log(
+		'    la zone de chaque état est celle de verif/scenarios/V-xx.json, dérivée de la\n' +
+			'    maquette gelée ; elle est isolée par le même code des deux côtés.'
+	);
+}
+
 if (!signatureComparable) {
 	console.log(
 		'  contrôle de dérive du banc : SUSPENDU — --zones=page mesure une autre surface\n' +
@@ -814,7 +967,7 @@ if (defauts.length) {
 	if (defauts.length > 40)
 		console.error(`    … et ${defauts.length - 40} autre(s), voir le rapport.`);
 
-	if (contre === 'app' && source === 'etalon') {
+	if (contre === 'app' && source !== 'app') {
 		console.error(`
 En étalonnage du régime « app », le candidat est la MAQUETTE GELÉE elle-même,
 servie par le mode démo. Un écart n'est donc JAMAIS un défaut d'implémentation
