@@ -3,6 +3,16 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!--
+			Les trois familles typographiques du socle, servies par l'application
+			elle-même depuis `static/polices/` — jamais par une fonderie distante
+			(RG-NF-08, ADR-002 « conséquences », risque RA-12). Les `url()` de
+			`polices.css` sont relatifs et les woff2 sont dans le même répertoire :
+			servis sous `/polices/`, ils résolvent en `/polices/<fichier>.woff2`.
+			Le répertoire est installé par `pnpm socle:extraire` depuis
+			`mockups/polices/` ; `pnpm verif:jetons` en prouve l'identité au gel.
+		-->
+		<link rel="stylesheet" href="%sveltekit.assets%/polices/polices.css" />
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
