@@ -185,7 +185,7 @@ export async function mesurer(page, { zone = null, zones = [], masques = [] }) {
 		releves.push({
 			nom: cible.nom,
 			rendu,
-			aria: await racine.ariaSnapshot(),
+			aria: sansAdresses(await racine.ariaSnapshot()),
 			tabulation: await ordreDeTabulation(page, cible.selecteur ? cible : null),
 			png: !rendu
 				? null
@@ -261,4 +261,31 @@ async function ordreDeTabulation(page, zone) {
 			(e) => `${e.tagName.toLowerCase()}${e.type ? `[${e.type}]` : ''} « ${nom(e)} »`
 		);
 	}, zone ?? null);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ARB-013 — les adresses sont retirées de l'instantané ARIA avant comparaison.
+
+   Motif, et il est de fait, pas de confort : les 41 maquettes gelées ne portent
+   AUCUNE liaison. Sur 681 attributs href des fichiers de vue, 681 valent « # » —
+   zéro lien inter-vue. C'est un artefact du régime assisté, où chaque vue a été
+   produite isolément, jamais une décision de conception (ECART-003).
+
+   Comparer /url reviendrait donc à exiger de l'application qu'elle porte des
+   liens morts pour rester conforme : la référence imposerait au produit un
+   défaut qu'elle ne tient elle-même que par accident de fabrication.
+
+   L'autorité sur les adresses est `docs/routes.md`, dérivation tracée et
+   arbitrée (ARB-001, ARB-002, ARB-003, ARB-007). C'est elle qui les vérifie,
+   pas le banc.
+
+   Portée strictement bornée : SEULES les lignes « /url: … » sont retirées. Rôles,
+   repères, noms accessibles, hiérarchie des titres et ordre des blocs restent
+   comparés sans tolérance — le niveau 1 demeure un échec sec.
+   ───────────────────────────────────────────────────────────────────────────── */
+function sansAdresses(instantane) {
+	return instantane
+		.split('\n')
+		.filter((ligne) => !/^\s*\/url:/.test(ligne))
+		.join('\n');
 }
