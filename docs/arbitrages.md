@@ -51,8 +51,20 @@ d'exécution n'a plus à demander.
 visée est celle des **administrateurs**. V-41 est une vue de console, atteignable depuis la
 console, sous rôle administrateur.
 
+> **Précision du 18 août 2026, sur constat de maquette.** Une première application de cet
+> arbitrage plaçait V-41 à `/console/bibliotheque`. C'était une sur-lecture, et elle contredisait
+> une maquette gelée : les six vues de console rendent toutes un fil
+> `["Accueil", "Console", "<section>"]`, tandis que **les quatre vues de bibliothèque rendent
+> `["Accueil", "<nom>"]`** — premier niveau, sans segment « Console » (`V-41:5069`, `V-38:2898`,
+> `V-39:3166`, `V-40:3636`). Les maquettes disent donc que ces vues ne sont pas *dans* la console.
+>
+> L'énoncé du commanditaire — « ça doit renvoyer vers la console et ça doit être un rôle des
+> admins » — se satisfait intégralement sans les contredire : la console **y renvoie**, elle ne
+> les **contient** pas. Les deux contraintes tiennent ensemble, il n'y avait rien à arbitrer.
+
 **Ce que ça emporte.**
-- L'adresse de V-41 passe sous l'espace de noms de la console.
+- L'adresse de V-41 est **`/bibliotheque`**, au premier niveau — conforme au fil d'Ariane que la
+  maquette rend. Le point d'entrée est dans la navigation de la console, qui porte le lien.
 - L'entrée correspondante apparaît dans la navigation de la console — et **n'apparaît pas** pour
   les autres rôles : une action interdite n'est pas rendue (P-09, ADR-011).
 - V-41 reste une **page réelle** de l'application, jamais une maquette morte : c'est là que la
@@ -97,7 +109,13 @@ les routes et pour tous les personas.
 ---
 
 ## ARB-005 — Articulation du refus indiscernable et de l'état « sans droit »
-**18 août 2026** — répond à la contradiction relevée entre `RG-ACC-04` et `RG-M18-02`.
+**18 août 2026** — répond à la contradiction relevée entre `RG-ACC-04` et `RG-M18-03`.
+
+> **Correction de référence, 18 août 2026.** La première rédaction citait `RG-M18-02`. C'est
+> faux : `RG-M18-02` porte sur les notifications — non bloquantes, empilables, auto-effacées.
+> L'état « sans droit » est le **quatrième état de zone de `RG-M18-03`**. La substance de
+> l'arbitrage est inchangée ; seule la référence était erronée. Erreur héritée de la rédaction
+> d'ADR-007, qui la porte aussi.
 
 **Décision.** La lecture posée par `ADR-007` est validée. Les deux règles ne s'appliquent pas au
 même objet :
@@ -105,7 +123,7 @@ même objet :
 | Régime | Portée | Comportement |
 |---|---|---|
 | **Indiscernable** (`RG-ACC-04`) | résolution d'une **ressource entière** — une adresse | Refus et inexistence produisent une réponse identique : corps, en-têtes, code, **et temps de réponse**. Un seul chemin de code. |
-| **État « sans droit »** (`RG-M18-02`) | une **zone** dans une page que l'utilisateur a le droit d'ouvrir | L'existence de la ressource porteuse lui est déjà connue : la signaler ne révèle rien. |
+| **État « sans droit »** (`RG-M18-03`, quatrième état de zone) | une **zone** dans une page que l'utilisateur a le droit d'ouvrir | L'existence de la ressource porteuse lui est déjà connue : la signaler ne révèle rien. |
 
 **Règle de tranchage.** Le contrat de tâche décide ; à défaut, **le régime indiscernable
 l'emporte**. Le doute ne se résout jamais en faveur de l'information révélée.
