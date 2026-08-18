@@ -82,9 +82,22 @@ export const FENETRE_PRINCIPALE = '1440x900';
    « Petit écran — 360 px » (`mockups/V-09-palette.html:740`) : c'est
    l'attestation la plus directe de la règle.
 
-   Cette dérivation est remontée comme écart à arbitrer : elle est raisonnée,
-   pas lue. Élargir ou restreindre la liste relève de l'arbitrage. */
-export const VUES_RG_M18_13 = ['V-02', 'V-03', 'V-08', 'V-09', 'V-14'];
+   Cette dérivation a été remontée comme écart (ECART-010 É-1) et ARBITRÉE
+   le 18 août 2026 (ARB-009) : deux vues sont AJOUTÉES aux cinq dérivées.
+
+     V-37 « Coquille applicative » — portée par 35 vues sur 41, elle porte le
+           rail escamotable, mécanisme central de RG-M18-12, et elle est le
+           siège des deux défauts E-01/E-02 relevés au PLAN §11, qui portaient
+           précisément sur le comportement en petite largeur. Ne pas la
+           contrôler aux quatre fenêtres laisserait sans preuve la seule règle
+           dont le cadrage documente qu'elle avait été enfreinte.
+     V-01 « Accueil public » — porte un champ de recherche, donc le cas d'usage
+           « chercher » au sens de la règle.
+
+   Toute modification de cette liste relève de l'arbitrage humain : elle décide
+   quelles vues sont vérifiées sur quatre fenêtres au lieu d'une. Un agent
+   bloqué sur un rouge en petite largeur ne retire jamais une vue d'ici. */
+export const VUES_RG_M18_13 = ['V-01', 'V-02', 'V-03', 'V-08', 'V-09', 'V-14', 'V-37'];
 
 export function fenetresDe(vue) {
 	return VUES_RG_M18_13.includes(vue) ? Object.keys(FENETRES) : [FENETRE_PRINCIPALE];
