@@ -1,0 +1,3264 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mon profil — Codicillus</title>
+<link rel="stylesheet" href="polices/polices.css">
+<style>/* ==========================================================================
+   CODICILLUS — SOCLE
+   Jetons et composants communs. Source unique de vérité pour les 41 vues.
+   Aucune valeur arbitraire dans les écrans : tout passe par un jeton nommé.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. JETONS
+   -------------------------------------------------------------------------- */
+:root {
+  /* --- Couleur : encres ------------------------------------------------- */
+  --c-encre:        #16222b;   /* texte principal */
+  --c-encre-2:      #46585f;   /* texte secondaire */
+  --c-encre-3:      #536066;   /* texte tertiaire, métadonnées — assombri le
+                                  16/08/2026 : #71838a ne donnait que 2,75:1
+                                  sur le fond creux, là où RG-M18-07 exige
+                                  4,5:1 pour un texte de 11 px. Teinte
+                                  conservée, contraste porté à 4,54:1 au pire
+                                  des quatre surfaces. */
+  --c-encre-4:      #93a2a6;   /* désactivé, placeholder */
+
+  /* --- Couleur : surfaces ----------------------------------------------- */
+  --c-fond:         #e2e7e4;   /* fond d'application */
+  --c-fond-creux:   #d3d9d6;   /* zones en retrait, rail */
+  --c-papier:       #fcfbf8;   /* surface de lecture et cartes */
+  --c-papier-2:     #f5f4ef;   /* surface secondaire, en-têtes de tableau */
+
+  /* --- Couleur : traits -------------------------------------------------- */
+  --c-trait:        #cbd3d0;   /* bordure standard */
+  --c-trait-fin:    #e0e5e2;   /* séparateur discret */
+  --c-trait-fort:   #9aa7a3;   /* bordure appuyée */
+
+  /* --- Couleur : accent (violet d'encre) --------------------------------- */
+  --c-accent:       #453ba0;
+  --c-accent-fonce: #322b78;
+  --c-accent-voile: #edecf8;
+  --c-accent-trait: #c9c5e8;
+
+  /* --- Couleur : fraîcheur ----------------------------------------------- */
+  --c-frais:        #1d6b4a;
+  --c-frais-voile:  #e4efe8;
+  --c-vieil:        #8f5c00;
+  --c-vieil-voile:  #f6eedd;
+  --c-obsolete:     #a52c1b;
+  --c-obsolete-voile:#f7e7e3;
+
+  /* --- Couleur : sémantique ---------------------------------------------- */
+  --c-info:         #1b5c86;
+  --c-info-voile:   #e4eef4;
+  --c-alerte:       #8f5c00;
+  --c-alerte-voile: #f6eedd;
+  --c-danger:       #a52c1b;
+  --c-danger-voile: #f7e7e3;
+
+  /* --- Typographie : familles -------------------------------------------- */
+  --f-ui:      "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-lecture: "Literata", Georgia, "Times New Roman", serif;
+  --f-donnee:  "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* --- Typographie : échelle --------------------------------------------- */
+  --t-micro:  0.6875rem;  /* 11px — étiquettes mono capitales */
+  --t-mini:   0.75rem;    /* 12px — métadonnées */
+  --t-petit:  0.8125rem;  /* 13px — interface secondaire */
+  --t-base:   0.9375rem;  /* 15px — interface */
+  --t-lect:   1.0625rem;  /* 17px — corps rédigé */
+  --t-t3:     1.125rem;
+  --t-t2:     1.375rem;
+  --t-t1:     1.75rem;
+  --t-titre:  2.125rem;   /* titre de note */
+
+  /* --- Typographie : interlignes et graisses ------------------------------ */
+  --i-serre:  1.2;
+  --i-ui:     1.45;
+  --i-lect:   1.72;
+  --g-normal: 400;
+  --g-moyen:  500;
+  --g-fort:   600;
+  --g-lourd:  700;
+
+  /* --- Espacement --------------------------------------------------------- */
+  --e-0: 2px;  --e-1: 4px;  --e-2: 8px;  --e-3: 12px;
+  --e-4: 16px; --e-5: 24px; --e-6: 32px; --e-7: 48px; --e-8: 64px;
+
+  /* --- Rayons ------------------------------------------------------------- */
+  --r-0: 0;    --r-1: 2px;  --r-2: 4px;  --r-3: 8px;
+
+  /* --- Élévations ---------------------------------------------------------- */
+  --o-pose:   0 1px 2px rgba(22, 34, 43, .07);
+  --o-flotte: 0 6px 20px -4px rgba(22, 34, 43, .18), 0 2px 6px rgba(22, 34, 43, .08);
+
+  /* --- Dimensions de structure --------------------------------------------- */
+  --l-rail:     248px;
+  --l-sommaire: 204px;
+  --l-lecture:  680px;   /* mesure du texte : confort de lecture, non maximisé */
+  --l-large:    900px;   /* débord des objets denses : code, tableaux, schémas */
+  --l-panneaux: 292px;
+  --l-barre:    52px;
+
+  /* --- Mouvement ------------------------------------------------------------ */
+  --m-vif:   120ms cubic-bezier(.2,.7,.4,1);
+  --m-doux:  240ms cubic-bezier(.2,.7,.4,1);
+  --m-ample: 520ms cubic-bezier(.16,.85,.3,1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --m-vif: 1ms; --m-doux: 1ms; --m-ample: 1ms; }
+  * { animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* --------------------------------------------------------------------------
+   2. BASE
+   -------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* L'attribut hidden doit primer sur toute mise en page en flex ou grid. */
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--c-fond);
+  color: var(--c-encre);
+  font-family: var(--f-ui);
+  font-size: var(--t-base);
+  line-height: var(--i-ui);
+  font-weight: var(--g-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+  border-radius: var(--r-1);
+}
+
+::selection { background: var(--c-accent-voile); }
+
+.saut-contenu {
+  position: absolute; left: var(--e-2); top: -60px; z-index: 200;
+  background: var(--c-encre); color: var(--c-papier);
+  padding: var(--e-2) var(--e-4); border-radius: var(--r-2);
+  text-decoration: none; transition: top var(--m-vif);
+}
+.saut-contenu:focus { top: var(--e-2); }
+
+.hors-ecran {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   3. ÉTIQUETTE MONO — le label d'instrument, utilisé partout
+   -------------------------------------------------------------------------- */
+.etiq {
+  font-family: var(--f-donnee);
+  font-size: var(--t-micro);
+  font-weight: var(--g-moyen);
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--c-encre-3);
+}
+
+/* --------------------------------------------------------------------------
+   4. TÉMOIN DE FRAÎCHEUR — la signature du produit
+   Jauge à trois barres : 3 pleines = frais, 2 = vieillissant, 1 + hachures =
+   obsolète. La forme porte l'information ; la couleur ne fait que la répéter.
+   -------------------------------------------------------------------------- */
+.temoin {
+  display: inline-flex; align-items: center; gap: var(--e-2);
+  font-family: var(--f-donnee);
+  font-size: var(--t-mini);
+  font-weight: var(--g-moyen);
+  line-height: 1;
+  white-space: nowrap;
+}
+.temoin__jauge {
+  display: inline-flex; align-items: flex-end; gap: 2px; height: 13px;
+  flex: none;
+}
+.temoin__jauge i {
+  display: block; width: 4px; border-radius: 1px;
+  border: 1px solid currentColor; background: transparent;
+}
+.temoin__jauge i:nth-child(1) { height: 6px; }
+.temoin__jauge i:nth-child(2) { height: 10px; }
+.temoin__jauge i:nth-child(3) { height: 13px; }
+.temoin__jauge i.plein { background: currentColor; }
+
+.temoin--frais  { color: var(--c-frais); }
+.temoin--vieil  { color: var(--c-vieil); }
+.temoin--obs    { color: var(--c-obsolete); }
+
+/* Le niveau obsolète porte en plus un hachurage : reconnaissable de loin,
+   et lisible en niveaux de gris comme en vision périphérique. */
+.temoin--obs .temoin__txt {
+  padding: 2px var(--e-2);
+  border-radius: var(--r-1);
+  background:
+    repeating-linear-gradient(135deg,
+      var(--c-obsolete-voile) 0 5px,
+      #f0d5cf 5px 10px);
+  box-shadow: inset 0 0 0 1px #e0b6ad;
+}
+
+/* --------------------------------------------------------------------------
+   5. BOUTONS
+   -------------------------------------------------------------------------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--e-2);
+  font-family: var(--f-ui); font-size: var(--t-petit); font-weight: var(--g-fort);
+  line-height: 1; letter-spacing: .005em;
+  padding: 9px var(--e-3);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-2);
+  background: var(--c-papier);
+  color: var(--c-encre);
+  cursor: pointer;
+  transition: background var(--m-vif), border-color var(--m-vif), color var(--m-vif), transform var(--m-vif);
+}
+.btn:hover { background: var(--c-papier-2); border-color: var(--c-trait-fort); }
+.btn:active { transform: translateY(1px); }
+
+.btn--principal {
+  background: var(--c-accent); border-color: var(--c-accent); color: #fff;
+}
+.btn--principal:hover { background: var(--c-accent-fonce); border-color: var(--c-accent-fonce); }
+
+.btn--discret {
+  background: transparent; border-color: transparent; color: var(--c-encre-2);
+  font-weight: var(--g-moyen);
+}
+.btn--discret:hover { background: rgba(22,34,43,.06); color: var(--c-encre); }
+
+.btn--destructif { color: var(--c-danger); }
+.btn--destructif:hover { background: var(--c-danger-voile); border-color: #e2b8b0; }
+
+.btn--plein { width: 100%; justify-content: flex-start; }
+.btn--menu  { width: 100%; justify-content: flex-start; background: transparent; border-color: transparent; }
+.btn--menu:hover { background: rgba(22,34,43,.06); }
+
+.btn svg { flex: none; }
+
+/* --------------------------------------------------------------------------
+   6. PASTILLES ET MARQUEURS
+   -------------------------------------------------------------------------- */
+.past {
+  display: inline-flex; align-items: center; gap: var(--e-1);
+  font-size: var(--t-mini); font-weight: var(--g-moyen); line-height: 1;
+  padding: 4px var(--e-2);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-1);
+  background: var(--c-papier-2);
+  color: var(--c-encre-2);
+  white-space: nowrap;
+}
+.past--type {
+  border-color: var(--c-accent-trait); background: var(--c-accent-voile);
+  color: var(--c-accent-fonce); font-weight: var(--g-fort);
+}
+.past--brouillon {
+  border-color: #dcc59a; background: var(--c-alerte-voile); color: var(--c-alerte);
+  font-weight: var(--g-fort);
+}
+.past--etiquette {
+  font-family: var(--f-donnee); font-size: var(--t-mini); text-decoration: none;
+  background: var(--c-papier); color: var(--c-encre-2);
+}
+.past--etiquette::before { content: "#"; color: var(--c-encre-4); }
+.past--etiquette:hover { border-color: var(--c-accent); color: var(--c-accent); }
+
+/* --------------------------------------------------------------------------
+   7. PANNEAU — conteneur de la colonne droite et des blocs de tableau de bord
+   -------------------------------------------------------------------------- */
+.panneau {
+  background: var(--c-papier);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-3);
+  box-shadow: var(--o-pose);
+}
+.panneau__tete {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--e-2);
+  padding: var(--e-3) var(--e-4);
+  border-bottom: 1px solid var(--c-trait-fin);
+}
+.panneau__corps { padding: var(--e-3) var(--e-4) var(--e-4); }
+.panneau__corps--serre { padding: var(--e-2); }
+
+/* --------------------------------------------------------------------------
+   8. ÉTATS DE ZONE — chargement, vide, erreur, sans droit
+   -------------------------------------------------------------------------- */
+.esquisse {
+  background: linear-gradient(90deg, var(--c-fond-creux) 25%, #e6eae7 50%, var(--c-fond-creux) 75%);
+  background-size: 240% 100%;
+  animation: glisse 1.4s ease-in-out infinite;
+  border-radius: var(--r-1);
+}
+@keyframes glisse { from { background-position: 130% 0; } to { background-position: -30% 0; } }
+
+.zone-etat { padding: var(--e-5) var(--e-4); text-align: center; }
+.zone-etat__titre { font-weight: var(--g-fort); font-size: var(--t-petit); margin: 0 0 var(--e-1); }
+.zone-etat__txt   { font-size: var(--t-petit); color: var(--c-encre-3); margin: 0 0 var(--e-3); line-height: 1.5; }
+
+/* --------------------------------------------------------------------------
+   9. NOTIFICATION
+   -------------------------------------------------------------------------- */
+.notifs {
+  position: fixed; z-index: 90; right: var(--e-5); bottom: var(--e-5);
+  display: flex; flex-direction: column; gap: var(--e-2); align-items: flex-end;
+}
+.notif {
+  display: flex; align-items: center; gap: var(--e-3);
+  background: var(--c-encre); color: var(--c-papier);
+  padding: var(--e-3) var(--e-4);
+  border-radius: var(--r-3);
+  box-shadow: var(--o-flotte);
+  font-size: var(--t-petit); font-weight: var(--g-moyen);
+  animation: monte var(--m-doux) both;
+}
+.notif--succes { box-shadow: var(--o-flotte), inset 3px 0 0 #4fbf8b; }
+@keyframes monte { from { opacity: 0; transform: translateY(10px); } }
+
+/* --------------------------------------------------------------------------
+   10. DROITS
+   Une action qu'un utilisateur n'a pas le droit d'exécuter n'est pas affichée :
+   ni grisée, ni refusée après le clic (RG, §3.5).
+   -------------------------------------------------------------------------- */
+.app[data-droits="lecture"] .si-ecriture { display: none !important; }
+.app:not([data-role="admin"]) .si-admin { display: none !important; }
+
+/* --------------------------------------------------------------------------
+   11. CHAMPS DE SAISIE
+   Composants de formulaire communs à l'authentification, à l'éditeur, aux
+   formulaires de la console et à la bibliothèque de composants (V-41).
+   -------------------------------------------------------------------------- */
+.champ { display: flex; flex-direction: column; gap: var(--e-1); }
+.champ__label {
+  font-size: var(--t-petit); font-weight: var(--g-fort); color: var(--c-encre);
+}
+.champ__label .oblig { color: var(--c-danger); margin-left: 2px; }
+.champ__aide { font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.45; }
+
+.saisie {
+  width: 100%;
+  padding: 9px var(--e-3);
+  border: 1px solid var(--c-trait-fort);
+  border-radius: var(--r-2);
+  background: var(--c-papier);
+  font-family: var(--f-ui); font-size: var(--t-base);
+  transition: border-color var(--m-vif), box-shadow var(--m-vif);
+}
+.saisie::placeholder { color: var(--c-encre-4); }
+.saisie:hover { border-color: var(--c-encre-3); }
+.saisie:focus { outline: none; border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-voile); }
+.saisie:disabled { background: var(--c-fond-creux); color: var(--c-encre-4); cursor: not-allowed; }
+textarea.saisie { resize: vertical; min-height: 84px; line-height: 1.5; }
+
+.champ[data-etat="erreur"] .saisie { border-color: var(--c-danger); }
+.champ[data-etat="erreur"] .saisie:focus { box-shadow: 0 0 0 3px var(--c-danger-voile); }
+.champ__erreur {
+  display: flex; align-items: flex-start; gap: var(--e-1);
+  font-size: var(--t-mini); font-weight: var(--g-moyen); color: var(--c-danger);
+}
+
+/* Champ avec action attenante — révéler un mot de passe, vider une saisie. */
+.champ__boite { position: relative; display: flex; align-items: center; }
+.champ__boite .saisie { padding-right: 44px; }
+.champ__action {
+  position: absolute; right: 5px;
+  border: 0; background: none; cursor: pointer; padding: 6px;
+  color: var(--c-encre-3); border-radius: var(--r-1); line-height: 0;
+}
+.champ__action:hover { background: var(--c-fond-creux); color: var(--c-encre); }
+
+/* Case à cocher et interrupteur */
+.case {
+  display: flex; align-items: flex-start; gap: var(--e-2);
+  font-size: var(--t-petit); cursor: pointer;
+}
+.case input { accent-color: var(--c-accent); margin: 2px 0 0; flex: none; width: 15px; height: 15px; }
+.case__txt { line-height: 1.4; }
+.case__aide { display: block; font-size: var(--t-mini); color: var(--c-encre-3); margin-top: 2px; }
+
+/* Message d'avertissement lié à la saisie, non bloquant. */
+.avis-saisie {
+  display: flex; align-items: center; gap: var(--e-2);
+  font-size: var(--t-mini); font-weight: var(--g-moyen); color: var(--c-alerte);
+}
+
+/* Bouton en attente : le libellé reste lisible, l'action est verrouillée. */
+.btn[data-attente="oui"] { pointer-events: none; opacity: .82; }
+.rouet {
+  width: 13px; height: 13px; flex: none;
+  border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; animation: tourne .62s linear infinite;
+}
+@keyframes tourne { to { transform: rotate(360deg); } }</style>
+<style>
+/* --- Coquille applicative (V-37) ---------------------------------------- */
+.app { display: grid; grid-template-columns: var(--l-rail) minmax(0,1fr); min-height: 100vh; }
+/* Le rail escamoté sort de la grille : la colonne de contenu devient la
+   seule piste. Déclarer « 0 1fr » laisserait le contenu se placer dans la
+   piste de largeur nulle, puisqu'un élément en display:none n'occupe plus
+   sa piste. */
+.app[data-rail="ferme"] { grid-template-columns: minmax(0,1fr); }
+.app[data-rail="ferme"] .rail { display: none; }
+
+.rail {
+  background: var(--c-fond-creux);
+  border-right: 1px solid var(--c-trait);
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.rail__marque {
+  display: flex; align-items: center; gap: var(--e-2);
+  padding: var(--e-4) var(--e-4) var(--e-3);
+}
+.rail__nom {
+  font-family: var(--f-ui); font-weight: var(--g-lourd); font-size: var(--t-t3);
+  letter-spacing: -.02em;
+}
+.rail__sceau {
+  width: 26px; height: 26px; flex: none; border-radius: var(--r-1);
+  background: var(--c-accent); color: #fff;
+  display: grid; place-items: center;
+  font-family: var(--f-donnee); font-size: var(--t-mini); font-weight: var(--g-lourd);
+}
+.rail__section { padding: var(--e-3) var(--e-2) 0; }
+.rail__titre { padding: 0 var(--e-2) var(--e-2); }
+.rail__lien {
+  display: flex; align-items: center; gap: var(--e-2);
+  padding: 6px var(--e-2); border-radius: var(--r-2);
+  font-size: var(--t-petit); color: var(--c-encre-2); text-decoration: none;
+}
+.rail__lien:hover { background: rgba(22,34,43,.06); color: var(--c-encre); }
+.rail__lien[aria-current="page"] { background: var(--c-papier); color: var(--c-encre); font-weight: var(--g-fort); box-shadow: var(--o-pose); }
+
+.arbre { list-style: none; margin: 0; padding: 0; }
+.arbre ul { list-style: none; margin: 0; padding-left: var(--e-4); border-left: 1px solid var(--c-trait); margin-left: 13px; }
+.arbre li { margin: 1px 0; }
+.noeud {
+  display: flex; align-items: center; gap: 2px;
+  border-radius: var(--r-2); padding-right: var(--e-1);
+}
+.noeud:hover { background: rgba(22,34,43,.06); }
+.noeud--courant { background: var(--c-papier); box-shadow: var(--o-pose); }
+.noeud__chevron {
+  flex: none; width: 20px; height: 24px; padding: 0; border: 0; background: none;
+  cursor: pointer; color: var(--c-encre-3); display: grid; place-items: center;
+}
+.noeud__chevron svg { transition: transform var(--m-vif); }
+.noeud[data-ouvert="oui"] > .noeud__chevron svg { transform: rotate(90deg); }
+.noeud__nom {
+  flex: 1; min-width: 0; padding: 5px 0; font-size: var(--t-petit);
+  color: var(--c-encre-2); text-decoration: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.noeud--courant .noeud__nom { color: var(--c-encre); font-weight: var(--g-fort); }
+.noeud > ul, .arbre li > ul { display: none; }
+.arbre li[data-ouvert="oui"] > ul { display: block; }
+.rail__pied {
+  margin-top: auto; padding: var(--e-3) var(--e-4);
+  border-top: 1px solid var(--c-trait);
+}
+
+/* --- Barre supérieure ---------------------------------------------------- */
+.cadre { display: flex; flex-direction: column; min-width: 0; }
+.barre {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: var(--e-3);
+  height: var(--l-barre); padding: 0 var(--e-4);
+  background: rgba(226,231,228,.9);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--c-trait);
+}
+.fil { display: flex; align-items: center; gap: var(--e-1); min-width: 0; flex: 1; font-size: var(--t-petit); }
+.fil a { color: var(--c-encre-3); text-decoration: none; white-space: nowrap; }
+.fil a:hover { color: var(--c-accent); text-decoration: underline; }
+.fil span { color: var(--c-encre-4); }
+.fil .fil__courant {
+  color: var(--c-encre); font-weight: var(--g-fort);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.recherche {
+  display: flex; align-items: center; gap: var(--e-2);
+  width: 260px; padding: 6px var(--e-2) 6px var(--e-3);
+  background: var(--c-papier); border: 1px solid var(--c-trait); border-radius: var(--r-2);
+  color: var(--c-encre-3); font-size: var(--t-petit); cursor: text;
+}
+.recherche:hover { border-color: var(--c-trait-fort); }
+.touche {
+  font-family: var(--f-donnee); font-size: var(--t-micro); font-weight: var(--g-moyen);
+  padding: 2px 5px; border: 1px solid var(--c-trait); border-bottom-width: 2px;
+  border-radius: var(--r-1); background: var(--c-papier-2); color: var(--c-encre-3);
+}
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex: none;
+  background: var(--c-accent); color: #fff;
+  display: grid; place-items: center;
+  font-size: var(--t-mini); font-weight: var(--g-fort);
+}
+
+/* ==========================================================================
+   V-09 — PALETTE DE RECHERCHE RAPIDE
+   Superposition invoquée au clavier depuis n'importe quelle vue.
+   Piège le focus, se ferme à l'échappement, rend le focus à son déclencheur.
+
+   La boîte est instanciable hors superposition — c'est ce qui permet d'en
+   présenter tous les états côte à côte sans dupliquer le composant.
+   ========================================================================== */
+
+/* --- Superposition ------------------------------------------------------- */
+.palette {
+  border: 0; padding: 0; margin: 0; max-width: none; max-height: none;
+  width: 100%; height: 100%; background: transparent; display: none;
+}
+.palette[open] { display: block; }
+.palette::backdrop { background: rgba(22, 34, 43, .46); backdrop-filter: blur(2px); }
+
+.palette[open] .palette__boite {
+  position: fixed; top: 11vh; left: 50%; transform: translateX(-50%);
+  width: min(660px, calc(100vw - 32px));
+  max-height: 74vh;
+  animation: palette-entre var(--m-doux) both;
+}
+@keyframes palette-entre { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } }
+
+/* --- La boîte ------------------------------------------------------------- */
+.palette__boite {
+  background: var(--c-papier);
+  border: 1px solid var(--c-trait-fort);
+  border-radius: var(--r-3);
+  box-shadow: var(--o-flotte);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+
+/* Hôte d'un aperçu statique : sert de conteneur de requête, pour que les
+   règles de petit écran s'appliquent à la largeur de l'aperçu et non à celle
+   de la fenêtre. */
+.palette-hote { container-type: inline-size; }
+.palette-hote .palette__boite { box-shadow: var(--o-pose); }
+
+/* --- Champ --------------------------------------------------------------- */
+.palette__champ {
+  display: flex; align-items: center; gap: var(--e-3);
+  padding: var(--e-3) var(--e-4);
+  border-bottom: 1px solid var(--c-trait);
+  flex: none;
+}
+.palette__champ > svg { flex: none; color: var(--c-encre-3); }
+.palette__saisie {
+  flex: 1; min-width: 0; border: 0; outline: none; background: none;
+  font-family: var(--f-ui); font-size: var(--t-t3); font-weight: var(--g-moyen);
+  letter-spacing: -.008em;
+}
+.palette__saisie::placeholder { color: var(--c-encre-4); font-weight: var(--g-normal); }
+.palette__saisie::-webkit-search-cancel-button { display: none; }
+.palette__effacer {
+  flex: none; border: 0; background: none; cursor: pointer; padding: 4px;
+  color: var(--c-encre-3); border-radius: var(--r-1); line-height: 0;
+}
+.palette__effacer:hover { background: var(--c-fond-creux); color: var(--c-encre); }
+
+/* Curseur simulé : un aperçu statique n'a pas le focus, et sans repère il ne
+   dit pas où en est la frappe. */
+.palette__curseur {
+  display: none; width: 1.5px; height: 22px; background: var(--c-accent); flex: none;
+  animation: clignote 1.06s steps(2, start) infinite;
+}
+.palette__boite[data-curseur="oui"] .palette__curseur { display: block; }
+@keyframes clignote { 50% { opacity: 0; } }
+
+/* --- Bandeau de mode dégradé ---------------------------------------------- */
+.palette__degrade {
+  display: none; align-items: center; gap: var(--e-2);
+  padding: var(--e-2) var(--e-4);
+  background: var(--c-alerte-voile); border-bottom: 1px solid #dcc59a;
+  font-size: var(--t-mini); color: var(--c-alerte); flex: none;
+}
+.palette__boite[data-degrade="oui"] .palette__degrade { display: flex; }
+
+/* --- Liste ----------------------------------------------------------------- */
+.palette__liste { overflow-y: auto; padding: var(--e-2); flex: 1; min-height: 0; }
+.palette__groupe { padding: var(--e-2) var(--e-2) var(--e-1); }
+
+.pres {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center;
+  gap: var(--e-3);
+  width: 100%; text-align: left;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid transparent; border-radius: var(--r-2);
+  background: none; cursor: pointer; color: inherit; font-family: inherit;
+  text-decoration: none;
+}
+.pres:hover { background: var(--c-papier-2); }
+/* Le résultat sélectionné au clavier est distinct du survol souris : fond
+   accentué et repère de bord, là où le survol ne pose qu'un fond neutre. */
+.pres[data-sel="oui"] {
+  background: var(--c-accent-voile);
+  border-color: var(--c-accent-trait);
+  box-shadow: inset 3px 0 0 var(--c-accent);
+}
+.pres__glyphe {
+  width: 28px; height: 28px; flex: none; border-radius: var(--r-2);
+  display: grid; place-items: center;
+  background: var(--c-fond-creux); color: var(--c-encre-2);
+  font-family: var(--f-donnee); font-size: var(--t-micro); font-weight: var(--g-lourd);
+}
+.pres[data-sel="oui"] .pres__glyphe { background: var(--c-accent); color: #fff; }
+.pres__corps { min-width: 0; }
+.pres__titre {
+  font-size: var(--t-base); font-weight: var(--g-moyen); line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pres__titre mark { background: #f6e9a8; color: inherit; border-radius: var(--r-1); padding: 0 2px; }
+.pres__sous {
+  display: flex; align-items: center; gap: var(--e-2);
+  font-size: var(--t-mini); color: var(--c-encre-3); margin-top: 2px;
+  overflow: hidden; white-space: nowrap;
+}
+.pres__sous .temoin { flex: none; }
+.pres__entree {
+  font-family: var(--f-donnee); font-size: var(--t-micro); color: var(--c-encre-3);
+  opacity: 0; flex: none;
+}
+.pres[data-sel="oui"] .pres__entree { opacity: 1; color: var(--c-accent); }
+
+/* --- États ------------------------------------------------------------------ */
+.palette__etat { padding: var(--e-6) var(--e-5); text-align: center; }
+.palette__etat p { margin: 0 0 var(--e-3); font-size: var(--t-petit); color: var(--c-encre-3); line-height: 1.55; }
+.palette__etat strong { color: var(--c-encre); }
+.palette__requete { font-family: var(--f-lecture); font-style: italic; color: var(--c-encre); }
+
+/* --- Pied --------------------------------------------------------------------- */
+.palette__pied {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e-3);
+  padding: var(--e-2) var(--e-4);
+  border-top: 1px solid var(--c-trait);
+  background: var(--c-papier-2);
+  flex: none;
+}
+.palette__aides { display: flex; align-items: center; gap: var(--e-4); flex-wrap: wrap; }
+.palette__aide { display: inline-flex; align-items: center; gap: var(--e-1); font-size: var(--t-micro); color: var(--c-encre-3); }
+.palette__droite { display: flex; align-items: center; gap: var(--e-3); flex: none; }
+.palette__compteur { font-family: var(--f-donnee); font-size: var(--t-micro); color: var(--c-encre-3); }
+.palette__tous {
+  font-size: var(--t-mini); font-weight: var(--g-fort); color: var(--c-accent);
+  background: none; border: 0; cursor: pointer; padding: 4px var(--e-2); border-radius: var(--r-2);
+  white-space: nowrap;
+}
+.palette__tous:hover { background: var(--c-accent-voile); }
+.palette__fermer { display: none; }
+
+/* --- Petit écran : la palette occupe la quasi-totalité de l'écran ------------- */
+@media (max-width: 700px) {
+  .palette[open] .palette__boite {
+    top: 0; left: 0; transform: none;
+    width: 100vw; height: 100dvh; max-height: none; border-radius: 0; border: 0;
+  }
+  .palette__fermer { display: inline-flex; }
+  .palette__aides { display: none; }
+}
+@container (max-width: 430px) {
+  .palette__fermer { display: inline-flex; }
+  .palette__aides { display: none; }
+  .palette__saisie { font-size: var(--t-base); }
+  .pres__sous .temoin__txt { display: none; }
+}
+
+/* ==========================================================================
+   ROBUSTESSE D'UN MOT DE PASSE
+   Composant commun à la réinitialisation (V-06) et à l'onglet Sécurité du
+   profil (V-25). Les règles sont annoncées avant la saisie et se cochent au
+   fil de la frappe : personne ne doit découvrir une contrainte après coup.
+   ========================================================================== */
+
+.robustesse { display: flex; flex-direction: column; gap: var(--e-1); }
+.robustesse__segments { display: flex; gap: 3px; }
+.robustesse__segments i {
+  flex: 1; height: 5px; border-radius: 2px;
+  background: var(--c-fond-creux);
+  transition: background var(--m-vif);
+}
+.robustesse__txt {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e-2);
+  font-size: var(--t-mini);
+}
+.robustesse__note { font-weight: var(--g-fort); }
+.robustesse__reste { font-family: var(--f-donnee); color: var(--c-encre-3); }
+
+.robustesse[data-niveau="court"] i.on   { background: var(--c-encre-4); }
+.robustesse[data-niveau="court"] .robustesse__note { color: var(--c-encre-3); }
+.robustesse[data-niveau="faible"] i.on  { background: var(--c-obsolete); }
+.robustesse[data-niveau="faible"] .robustesse__note { color: var(--c-obsolete); }
+.robustesse[data-niveau="correct"] i.on { background: var(--c-vieil); }
+.robustesse[data-niveau="correct"] .robustesse__note { color: var(--c-vieil); }
+.robustesse[data-niveau="solide"] i.on  { background: var(--c-frais); }
+.robustesse[data-niveau="solide"] .robustesse__note { color: var(--c-frais); }
+
+/* --- Règles annoncées avant la saisie ------------------------------------------ */
+.regles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e-1); }
+.regles li {
+  display: flex; align-items: center; gap: var(--e-2);
+  font-size: var(--t-mini); color: var(--c-encre-3);
+}
+.regles li::before {
+  content: ""; flex: none; width: 13px; height: 13px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--c-trait-fort);
+}
+.regles li[data-ok="oui"] { color: var(--c-frais); }
+.regles li[data-ok="oui"]::before {
+  content: "✓"; font-size: 9px; font-weight: var(--g-lourd);
+  display: grid; place-items: center;
+  background: var(--c-frais); color: #fff; box-shadow: none;
+}
+
+/* ==========================================================================
+   V-25 — PROFIL
+   Consulter son compte et voir la reconnaissance de sa contribution.
+   Les distinctions sont individuelles et privées : aucun classement entre
+   utilisateurs n'est affiché nulle part.
+   ========================================================================== */
+.profil {
+  max-width: 940px; width: 100%; margin: 0 auto;
+  padding: var(--e-5) var(--e-5) var(--e-8);
+}
+
+/* --- Identité en tête --------------------------------------------------------- */
+.entete-profil {
+  display: flex; align-items: center; gap: var(--e-4); flex-wrap: wrap;
+  padding-bottom: var(--e-4); margin-bottom: var(--e-1);
+}
+.avatar-profil {
+  width: 66px; height: 66px; flex: none; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c-accent); color: #fff;
+  font-family: var(--f-ui); font-size: 1.5rem; font-weight: var(--g-lourd);
+  letter-spacing: -.02em;
+}
+.entete-profil__corps { flex: 1; min-width: 220px; }
+.entete-profil h1 {
+  font-family: var(--f-ui); font-size: var(--t-t1); font-weight: var(--g-lourd);
+  letter-spacing: -.022em; line-height: 1.15; margin: 0 0 var(--e-1);
+}
+.entete-profil__sous { display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; font-size: var(--t-petit); color: var(--c-encre-2); }
+
+/* --- Onglets ------------------------------------------------------------------- */
+.onglets {
+  display: flex; gap: var(--e-1); overflow-x: auto;
+  border-bottom: 1px solid var(--c-trait);
+  margin-bottom: var(--e-5);
+}
+.onglets button {
+  border: 0; background: none; cursor: pointer; white-space: nowrap;
+  padding: var(--e-3) var(--e-4);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  font-family: var(--f-ui); font-size: var(--t-base); font-weight: var(--g-moyen);
+  color: var(--c-encre-2);
+}
+.onglets button:hover { color: var(--c-encre); }
+.onglets button[aria-selected="true"] {
+  color: var(--c-accent-fonce); font-weight: var(--g-lourd);
+  border-bottom-color: var(--c-accent);
+}
+
+.volet { display: none; }
+.volet[data-actif="oui"] { display: block; animation: entre var(--m-doux) both; }
+@keyframes entre { from { opacity: 0; transform: translateY(5px); } }
+
+.bloc + .bloc { margin-top: var(--e-4); }
+.bloc__corps { display: flex; flex-direction: column; gap: var(--e-4); }
+
+/* --- Champs modifiables et champs attribués -----------------------------------
+   La distinction est portée par le fond et par une mention, jamais par le seul
+   grisé : un champ verrouillé sans explication passe pour une panne. */
+.attribue {
+  display: flex; align-items: baseline; gap: var(--e-3);
+  padding: var(--e-2) var(--e-3);
+  background: var(--c-papier-2); border: 1px solid var(--c-trait-fin);
+  border-radius: var(--r-2);
+}
+.attribue__cle { flex: none; width: 132px; font-size: var(--t-mini); color: var(--c-encre-3); }
+.attribue__val { flex: 1; min-width: 0; font-size: var(--t-petit); font-weight: var(--g-moyen); }
+.attribue__cadenas {
+  flex: none; display: inline-flex; align-items: center; gap: var(--e-1);
+  font-size: var(--t-micro); color: var(--c-encre-3);
+}
+.mention-attribution {
+  font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.5;
+  padding-top: var(--e-2); border-top: 1px solid var(--c-trait-fin);
+}
+
+/* --- Compte verrouillé ----------------------------------------------------------- */
+.verrou {
+  display: flex; align-items: flex-start; gap: var(--e-3);
+  padding: var(--e-4);
+  background: var(--c-info-voile); border: 1px solid #b6cfdd;
+  border-left: 4px solid var(--c-info); border-radius: var(--r-3);
+}
+.verrou h3 { font-family: var(--f-ui); font-size: var(--t-base); font-weight: var(--g-lourd); margin: 0 0 var(--e-1); }
+.verrou p { font-size: var(--t-petit); color: var(--c-encre-2); line-height: 1.55; margin: 0; max-width: 60ch; }
+
+/* --- Distinctions ------------------------------------------------------------------
+   Six pastilles, toujours les six. Une distinction non obtenue montre le
+   chemin qu'il reste — c'est de la reconnaissance, pas une évaluation. */
+.distinctions { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: var(--e-3); }
+.dist {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--e-1) var(--e-3);
+  background: var(--c-papier); border: 1px solid var(--c-trait); border-radius: var(--r-3);
+  padding: var(--e-4); box-shadow: var(--o-pose);
+}
+.dist[data-obtenue="oui"] { border-color: #b3d3c1; background: var(--c-frais-voile); }
+.dist__sceau {
+  grid-row: 1 / span 3;
+  width: 42px; height: 42px; flex: none; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c-fond-creux); color: var(--c-encre-4);
+  font-family: var(--f-donnee); font-size: var(--t-mini); font-weight: var(--g-lourd);
+}
+.dist[data-obtenue="oui"] .dist__sceau { background: var(--c-frais); color: #fff; }
+.dist__nom { font-family: var(--f-ui); font-size: var(--t-base); font-weight: var(--g-lourd); letter-spacing: -.01em; }
+.dist[data-obtenue="oui"] .dist__nom { color: var(--c-frais); }
+.dist__critere { font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.4; }
+.dist__jauge { grid-column: 2; margin-top: var(--e-2); }
+.dist__piste { height: 6px; border-radius: 3px; background: var(--c-fond-creux); overflow: hidden; }
+.dist__piste i { display: block; height: 100%; background: var(--c-accent); border-radius: 3px; transition: width var(--m-ample); }
+.dist[data-obtenue="oui"] .dist__piste i { background: var(--c-frais); }
+.dist__chiffre {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--e-2);
+  margin-top: 5px; font-family: var(--f-donnee); font-size: var(--t-micro); color: var(--c-encre-3);
+}
+.dist__chiffre b { color: var(--c-encre); font-weight: var(--g-lourd); }
+.dist__reste { color: var(--c-encre-2); }
+
+/* --- Statistiques de contribution -------------------------------------------------- */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: var(--e-3); }
+.stat {
+  border: 1px solid var(--c-trait); border-radius: var(--r-3); background: var(--c-papier);
+  padding: var(--e-4); box-shadow: var(--o-pose);
+}
+.stat__val { font-family: var(--f-donnee); font-size: 1.625rem; font-weight: var(--g-lourd); line-height: 1; letter-spacing: -.03em; }
+.stat__nom { display: block; font-size: var(--t-mini); color: var(--c-encre-3); margin-top: var(--e-2); line-height: 1.4; }
+.stat__sous { display: block; font-size: var(--t-micro); color: var(--c-encre-4); margin-top: 3px; }
+
+/* --- Activité ------------------------------------------------------------------------ */
+.flux { list-style: none; margin: 0; padding: 0 0 0 var(--e-5); border-left: 1px solid var(--c-trait); }
+.flux li { position: relative; padding-bottom: var(--e-4); }
+.flux li:last-child { padding-bottom: 0; }
+.flux li::before {
+  content: ""; position: absolute; left: calc(var(--e-5) * -1 - 4px); top: 4px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--c-papier); box-shadow: 0 0 0 1.5px var(--c-trait-fort);
+}
+.flux li[data-type="verification"]::before { background: var(--c-frais); box-shadow: 0 0 0 1.5px var(--c-frais); }
+.flux li[data-type="revision"]::before { background: var(--c-vieil); box-shadow: 0 0 0 1.5px var(--c-vieil); }
+.flux li[data-type="import"]::before { background: var(--c-accent); box-shadow: 0 0 0 1.5px var(--c-accent); }
+.flux__txt { font-size: var(--t-petit); line-height: 1.5; }
+.flux__txt a { color: var(--c-encre); font-weight: var(--g-fort); text-decoration: none; border-bottom: 1px solid var(--c-trait-fort); }
+.flux__txt a:hover { color: var(--c-accent); border-color: var(--c-accent); }
+.flux__quand { font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-3); display: block; margin-top: 2px; }
+
+.encouragement {
+  background: var(--c-papier); border: 1px dashed var(--c-trait-fort); border-radius: var(--r-3);
+  padding: var(--e-6) var(--e-5); text-align: center;
+}
+.encouragement h3 { font-family: var(--f-ui); font-size: var(--t-t3); font-weight: var(--g-lourd); margin: 0 0 var(--e-2); }
+.encouragement p {
+  font-family: var(--f-lecture); font-size: var(--t-petit); line-height: 1.6;
+  color: var(--c-encre-2); margin: 0 auto var(--e-4); max-width: 46ch;
+}
+
+.preferences { display: flex; flex-direction: column; gap: var(--e-3); }
+.pref { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--e-4); }
+.pref__txt { flex: 1; min-width: 0; }
+.pref__nom { font-size: var(--t-petit); font-weight: var(--g-fort); }
+.pref__aide { font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.45; margin-top: 2px; }
+.interrupteur { display: flex; align-items: center; gap: var(--e-2); cursor: pointer; flex: none; }
+.interrupteur input { position: absolute; opacity: 0; pointer-events: none; }
+.interrupteur__piste {
+  width: 34px; height: 19px; border-radius: 10px; background: var(--c-trait-fort);
+  position: relative; flex: none; transition: background var(--m-vif);
+}
+.interrupteur__piste::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 15px; height: 15px; border-radius: 50%; background: #fff;
+  transition: transform var(--m-vif);
+}
+.interrupteur input:checked + .interrupteur__piste { background: var(--c-accent); }
+.interrupteur input:checked + .interrupteur__piste::after { transform: translateX(15px); }
+.interrupteur input:focus-visible + .interrupteur__piste { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+
+/* --- Planche de revue (hors produit) ----------------------------------------------- */
+.planche {
+  position: fixed; z-index: 120; left: 50%; bottom: var(--e-4); transform: translateX(-50%);
+  display: flex; align-items: center; gap: var(--e-4); flex-wrap: wrap;
+  background: var(--c-encre); color: #cfd8db;
+  padding: var(--e-2) var(--e-4); border-radius: 999px;
+  box-shadow: var(--o-flotte); font-size: var(--t-mini); max-width: calc(100vw - var(--e-6));
+}
+.planche fieldset { border: 0; margin: 0; padding: 0; display: flex; align-items: center; gap: var(--e-2); }
+.planche legend { float: left; margin-right: var(--e-2); font-family: var(--f-donnee); font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase; color: #7d8f95; }
+.planche label { cursor: pointer; }
+.planche input { position: absolute; opacity: 0; pointer-events: none; }
+.planche label span { display: inline-block; padding: 4px var(--e-2); border-radius: 999px; border: 1px solid #33454f; color: #cfd8db; }
+.planche input:checked + span { background: #cfd8db; color: var(--c-encre); border-color: #cfd8db; font-weight: var(--g-fort); }
+.planche input:focus-visible + span { outline: 2px solid #8f86e0; outline-offset: 2px; }
+.planche__sep { width: 1px; height: 22px; background: #33454f; }
+
+@media (max-width: 1240px) {
+  .app { grid-template-columns: minmax(0,1fr); }
+  .rail { display: none; }
+}
+@media (max-width: 640px) {
+  .profil { padding: var(--e-4) var(--e-4) var(--e-7); }
+  .onglets button { padding: var(--e-3); font-size: var(--t-petit); }
+  .attribue { flex-direction: column; gap: var(--e-1); }
+  .attribue__cle { width: auto; }
+  .planche { display: none; }
+}
+
+/* --- Barre supérieure sur petit écran --------------------------------------
+   La barre doit tenir à 360 px sans provoquer de défilement horizontal de la
+   page (RG-M18-12) : le champ de recherche devient élastique et lâche ses
+   rappels clavier, qui n'ont pas de sens sans clavier physique. */
+@media (max-width: 640px) {
+  .barre { padding: 0 var(--e-3); gap: var(--e-2); }
+  .recherche { width: auto; flex: 1 1 90px; min-width: 0; }
+  .recherche .touche { display: none; }
+  .recherche__txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fil { flex: 0 1 auto; }
+  /* Le fil d'Ariane ne tient pas sur 360 px : seul le segment courant reste,
+     les ancêtres restent atteignables par le rail. */
+  .fil > *:not(.fil__courant) { display: none; }
+  .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+/* --- Fil d'Ariane : ne pousse jamais la page ------------------------------
+   Le titre d'une note peut être long, et les segments ne se coupent pas tout
+   seuls : sans troncature, le fil élargit la barre, qui élargit la grille, qui
+   fait défiler la page. Le défaut ne se voyait qu'à 768 px — entre les deux
+   largeurs qu'on regarde d'ordinaire. */
+.fil { overflow: hidden; }
+.fil > * { min-width: 0; flex: 0 1 auto; }
+.fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+<a class="saut-contenu" href="#contenu">Aller au contenu</a>
+
+<div class="app" id="app" data-rail="ouvert" data-onglet="identite" data-verrou="non" data-activite="pleine">
+
+    <!-- =========================== RAIL (V-37) =========================== -->
+  <aside class="rail" aria-label="Navigation principale">
+    <div class="rail__marque">
+      <div class="rail__sceau" aria-hidden="true">C</div>
+      <div class="rail__nom">Codicillus</div>
+    </div>
+
+    <div class="rail__section">
+      <a class="rail__lien" href="#">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 7l6-4.5L14 7v6.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7z"/></svg>
+        Accueil
+      </a>
+    </div>
+
+    <div class="rail__section">
+      <div class="rail__titre etiq">Production</div>
+      <ul class="arbre">
+        <li data-ouvert="oui">
+          <div class="noeud">
+            <button class="noeud__chevron" aria-expanded="true" aria-label="Replier Infrastructure">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l4 4-4 4z"/></svg>
+            </button>
+            <a class="noeud__nom" href="#">Infrastructure</a>
+          </div>
+          <ul>
+            <li data-ouvert="oui">
+              <div class="noeud">
+                <button class="noeud__chevron" aria-expanded="true" aria-label="Replier Exploitation">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l4 4-4 4z"/></svg>
+                </button>
+                <a class="noeud__nom" href="#">Exploitation</a>
+              </div>
+              <ul>
+                <li><div class="noeud"><span style="width:20px"></span><a class="noeud__nom" href="#">Sauvegardes</a></div></li>
+                <li><div class="noeud"><span style="width:20px"></span><a class="noeud__nom" href="#">Ordonnancement</a></div></li>
+                <li><div class="noeud"><span style="width:20px"></span><a class="noeud__nom" href="#">Astreinte</a></div></li>
+              </ul>
+            </li>
+            <li>
+              <div class="noeud">
+                <button class="noeud__chevron" aria-expanded="false" aria-label="Déplier Supervision">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l4 4-4 4z"/></svg>
+                </button>
+                <a class="noeud__nom" href="#">Supervision</a>
+              </div>
+              <ul><li><div class="noeud"><span style="width:20px"></span><a class="noeud__nom" href="#">Sondes</a></div></li></ul>
+            </li>
+            <li>
+              <div class="noeud">
+                <button class="noeud__chevron" aria-expanded="false" aria-label="Déplier Réseau">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l4 4-4 4z"/></svg>
+                </button>
+                <a class="noeud__nom" href="#">Réseau</a>
+              </div>
+              <ul><li><div class="noeud"><span style="width:20px"></span><a class="noeud__nom" href="#">Adressage</a></div></li></ul>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <div class="noeud">
+            <button class="noeud__chevron" aria-expanded="false" aria-label="Déplier Applications">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l4 4-4 4z"/></svg>
+            </button>
+            <a class="noeud__nom" href="#">Applications</a>
+          </div>
+          <ul><li><div class="noeud"><span style="width:20px"></span><a class="noeud__nom" href="#">Fiches applicatives</a></div></li></ul>
+        </li>
+        <li>
+          <div class="noeud">
+            <button class="noeud__chevron" aria-expanded="false" aria-label="Déplier Poste de travail">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l4 4-4 4z"/></svg>
+            </button>
+            <a class="noeud__nom" href="#">Poste de travail</a>
+          </div>
+          <ul><li><div class="noeud"><span style="width:20px"></span><a class="noeud__nom" href="#">Déploiement</a></div></li></ul>
+        </li>
+      </ul>
+    </div>
+
+    <div class="rail__section">
+      <div class="rail__titre etiq">Projets</div>
+      <ul class="arbre">
+        <li>
+          <div class="noeud">
+            <button class="noeud__chevron" aria-expanded="false" aria-label="Déplier Migration 2026">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l4 4-4 4z"/></svg>
+            </button>
+            <a class="noeud__nom" href="#">Migration 2026</a>
+          </div>
+          <ul><li><div class="noeud"><span style="width:20px"></span><a class="noeud__nom" href="#">Lots</a></div></li></ul>
+        </li>
+      </ul>
+    </div>
+
+    <div class="rail__section">
+      <div class="rail__titre etiq">Outils</div>
+      <a class="rail__lien" href="#">Cartographie</a>
+      <a class="rail__lien" href="#">Carte mentale</a>
+      <a class="rail__lien" href="#">Signets</a>
+      <a class="rail__lien si-ecriture" href="#">Import</a>
+    </div>
+
+    <div class="rail__section si-ecriture">
+      <div class="rail__titre etiq">Gestion</div>
+      <a class="rail__lien" href="#">Console</a>
+    </div>
+
+    <div class="rail__pied">
+      <span class="etiq">Codicillus 1.0.0</span>
+    </div>
+  </aside>
+
+  <div class="cadre">
+
+    <!-- ========================= BARRE SUPÉRIEURE ========================= -->
+    <header class="barre">
+      <button class="btn btn--discret" id="bascule-rail" aria-label="Replier la navigation" title="Mode concentration">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M6 2.5v11"/></svg>
+      </button>
+      <nav class="fil" id="fil" aria-label="Fil d'Ariane"></nav>
+      <div class="recherche" role="button" tabindex="0">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+        <span class="recherche__txt" style="flex:1">Rechercher…</span>
+        <kbd class="touche">Ctrl</kbd><kbd class="touche">K</kbd>
+      </div>
+      <button class="btn si-ecriture" title="Créer">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v10M3 8h10"/></svg>
+        Créer
+      </button>
+      <button class="avatar" title="Karim Belhadj — menu utilisateur">KB</button>
+    </header>
+
+    <main class="profil" id="contenu">
+
+      <header class="entete-profil">
+        <div class="avatar-profil" id="avatar" aria-hidden="true">KB</div>
+        <div class="entete-profil__corps">
+          <h1 id="nom">—</h1>
+          <div class="entete-profil__sous" id="sous-nom"></div>
+        </div>
+        <button class="btn" id="deconnexion">Se déconnecter</button>
+      </header>
+
+      <div class="onglets" role="tablist" aria-label="Sections du profil">
+        <button role="tab" aria-selected="true" data-onglet="identite">Identité</button>
+        <button role="tab" aria-selected="false" data-onglet="securite">Sécurité</button>
+        <button role="tab" aria-selected="false" data-onglet="distinctions">Distinctions</button>
+        <button role="tab" aria-selected="false" data-onglet="activite">Activité</button>
+      </div>
+
+      <!-- ============ IDENTITÉ ============ -->
+      <section class="volet" data-volet="identite" data-actif="oui" role="tabpanel">
+        <div class="panneau bloc">
+          <div class="panneau__tete"><span class="etiq">Ce que vous pouvez modifier</span></div>
+          <div class="panneau__corps bloc__corps">
+            <div class="champ">
+              <label class="champ__label" for="p-affiche">Nom affiché</label>
+              <input class="saisie" type="text" id="p-affiche" style="max-width:380px">
+              <span class="champ__aide">C'est ce nom qui apparaît sur vos notes et dans l'activité.</span>
+            </div>
+            <div class="champ">
+              <label class="champ__label" for="p-courriel">Adresse électronique</label>
+              <input class="saisie" type="email" id="p-courriel" style="max-width:380px">
+              <span class="champ__aide">Sert aux notifications et à la réinitialisation du mot de passe.</span>
+            </div>
+            <div>
+              <button class="btn btn--principal" id="enregistrer-identite">Enregistrer</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panneau bloc">
+          <div class="panneau__tete"><span class="etiq">Attribué par l'administration</span></div>
+          <div class="panneau__corps bloc__corps" id="attribues"></div>
+        </div>
+      </section>
+
+      <!-- ============ SÉCURITÉ ============ -->
+      <section class="volet" data-volet="securite" role="tabpanel">
+        <div class="panneau bloc">
+          <div class="panneau__tete"><span class="etiq">Mot de passe</span></div>
+          <div class="panneau__corps bloc__corps">
+
+            <div class="verrou" id="verrou" hidden>
+              <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="var(--c-info)" stroke-width="1.5" style="flex:none;margin-top:1px"><rect x="3" y="7" width="10" height="7" rx="1.4"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>
+              <div>
+                <h3>Compte de démonstration</h3>
+                <p>Le mot de passe de ce compte est géré par l'administrateur : il ne peut pas être changé depuis ici. Adressez-vous à l'administration technique si vous devez le faire modifier.</p>
+              </div>
+            </div>
+
+            <div id="form-mdp">
+              <!-- Les règles sont annoncées avant la saisie, comme en V-06. -->
+              <div style="margin-bottom:var(--e-4)">
+                <span class="etiq" style="display:block;margin-bottom:var(--e-2)">Ce qui est demandé</span>
+                <ul class="regles" id="regles">
+                  <li data-regle="longueur">12 caractères au minimum</li>
+                  <li data-regle="varie">Au moins deux natures de caractères différentes</li>
+                  <li data-regle="different">Différent de votre identifiant</li>
+                </ul>
+              </div>
+
+              <form class="bloc__corps" id="form-securite" novalidate>
+                <div class="champ" id="champ-actuel" style="max-width:380px">
+                  <label class="champ__label" for="actuel">Mot de passe actuel</label>
+                  <input class="saisie" type="password" id="actuel" autocomplete="current-password">
+                  <div class="champ__erreur" id="erreur-actuel" hidden>
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" style="flex:none;margin-top:1px"><path d="M8 4.5v4M8 11.2v.3"/><circle cx="8" cy="8" r="6.2"/></svg>
+                    Saisissez votre mot de passe actuel.
+                  </div>
+                </div>
+
+                <div class="champ" id="champ-nouveau" style="max-width:380px">
+                  <label class="champ__label" for="nouveau">Nouveau mot de passe</label>
+                  <div class="champ__boite">
+                    <input class="saisie" type="password" id="nouveau" autocomplete="new-password">
+                    <button class="champ__action" type="button" id="voir" aria-label="Afficher le mot de passe" aria-pressed="false">
+                      <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 8s2.4-4 6.5-4 6.5 4 6.5 4-2.4 4-6.5 4S1.5 8 1.5 8z"/><circle cx="8" cy="8" r="1.8"/></svg>
+                    </button>
+                  </div>
+                  <div class="robustesse" id="robustesse" data-niveau="court">
+                    <div class="robustesse__segments" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                    <div class="robustesse__txt">
+                      <span class="robustesse__note" id="robustesse-note">Trop court</span>
+                      <span class="robustesse__reste" id="robustesse-reste">0 / 12</span>
+                    </div>
+                  </div>
+                  <span class="champ__aide">Quatre mots sans rapport entre eux valent mieux qu'un mot compliqué.</span>
+                </div>
+
+                <div class="champ" id="champ-confirm" style="max-width:380px">
+                  <label class="champ__label" for="confirmation">Confirmer le nouveau mot de passe</label>
+                  <input class="saisie" type="password" id="confirmation" autocomplete="new-password">
+                  <div class="champ__erreur" id="erreur-confirm" hidden>
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" style="flex:none;margin-top:1px"><path d="M8 4.5v4M8 11.2v.3"/><circle cx="8" cy="8" r="6.2"/></svg>
+                    Les deux saisies ne correspondent pas.
+                  </div>
+                </div>
+
+                <div>
+                  <button class="btn btn--principal" type="submit">Changer le mot de passe</button>
+                </div>
+              </form>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="panneau bloc">
+          <div class="panneau__tete"><span class="etiq">Session</span></div>
+          <div class="panneau__corps bloc__corps">
+            <div class="attribue">
+              <span class="attribue__cle">Dernière connexion</span>
+              <span class="attribue__val" id="derniere-connexion">—</span>
+            </div>
+            <div class="preferences">
+              <label class="pref">
+                <span class="pref__txt">
+                  <span class="pref__nom">Rester connecté sur cet appareil</span>
+                  <span class="pref__aide">À éviter sur un poste partagé. Sans cette option, la session se ferme après deux heures d'inactivité.</span>
+                </span>
+                <span class="interrupteur"><input type="checkbox" id="p-session"><span class="interrupteur__piste"></span></span>
+              </label>
+              <label class="pref">
+                <span class="pref__txt">
+                  <span class="pref__nom">Recevoir les demandes de révision par courriel</span>
+                  <span class="pref__aide">Un message quand un collègue signale une de vos notes à revoir.</span>
+                </span>
+                <span class="interrupteur"><input type="checkbox" id="p-courriels" checked><span class="interrupteur__piste"></span></span>
+              </label>
+            </div>
+            <div>
+              <button class="btn btn--destructif" id="fermer-sessions">Fermer toutes les autres sessions</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ DISTINCTIONS ============ -->
+      <section class="volet" data-volet="distinctions" role="tabpanel">
+        <p class="etape__sous" style="font-family:var(--f-lecture);font-size:var(--t-base);color:var(--c-encre-2);line-height:1.6;margin:0 0 var(--e-5);max-width:64ch">
+          Ces distinctions sont les vôtres et ne sont visibles que de vous. Elles ne donnent lieu à aucun classement : documenter n'est pas une compétition.
+        </p>
+
+        <span class="etiq" style="display:block;margin-bottom:var(--e-3)">Vos contributions</span>
+        <div class="stats" id="stats"></div>
+
+        <span class="etiq" style="display:block;margin:var(--e-6) 0 var(--e-3)">Distinctions</span>
+        <div class="distinctions" id="distinctions"></div>
+      </section>
+
+      <!-- ============ ACTIVITÉ ============ -->
+      <section class="volet" data-volet="activite" role="tabpanel">
+        <div class="panneau">
+          <div class="panneau__tete">
+            <span class="etiq">Vos contributions récentes</span>
+            <span class="chiffre" id="n-activite"></span>
+          </div>
+          <div class="panneau__corps" id="activite"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div class="notifs" id="notifs" role="status" aria-live="polite"></div>
+
+<!-- ===================== V-09 · PALETTE DE RECHERCHE RAPIDE =====================
+     Le gabarit est cloné à chaque instanciation : une fois pour la
+     superposition, autant de fois que nécessaire pour les aperçus d'états.
+     Aucun identifiant à l'intérieur, uniquement des classes. -->
+<template id="tpl-palette">
+  <div class="palette__boite">
+
+    <div class="palette__champ">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+      <input class="palette__saisie" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Chercher une note, une fiche, un signet…"
+             role="combobox" aria-expanded="true" aria-label="Recherche rapide">
+      <span class="palette__curseur" aria-hidden="true"></span>
+      <button class="palette__effacer" aria-label="Effacer la recherche" hidden>
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+      <button class="btn btn--discret palette__fermer">Fermer</button>
+    </div>
+
+    <div class="palette__degrade">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 5.5v3.5M8 11.2v.3"/><circle cx="8" cy="8" r="6"/></svg>
+      Recherche par sens indisponible — résultats en mots-clés
+    </div>
+
+    <div class="palette__liste" role="listbox" aria-label="Résultats"></div>
+
+    <div class="palette__pied">
+      <div class="palette__aides">
+        <span class="palette__aide"><kbd class="touche">↑</kbd><kbd class="touche">↓</kbd> Parcourir</span>
+        <span class="palette__aide"><kbd class="touche">Entrée</kbd> Ouvrir</span>
+        <span class="palette__aide"><kbd class="touche">Échap</kbd> Effacer puis fermer</span>
+      </div>
+      <div class="palette__droite">
+        <span class="palette__compteur"></span>
+        <button class="palette__tous">Voir tous les résultats</button>
+      </div>
+    </div>
+
+  </div>
+</template>
+
+<dialog class="palette" id="palette" aria-label="Recherche rapide"></dialog>
+
+<!-- ====================== PLANCHE DE REVUE — hors produit ====================== -->
+<div class="planche" role="group" aria-label="Contrôles de maquette, hors produit">
+  <fieldset>
+    <legend>Onglet</legend>
+    <label><input type="radio" name="ong" value="identite" checked><span>Identité</span></label>
+    <label><input type="radio" name="ong" value="securite"><span>Sécurité</span></label>
+    <label><input type="radio" name="ong" value="distinctions"><span>Distinctions</span></label>
+    <label><input type="radio" name="ong" value="activite"><span>Activité</span></label>
+  </fieldset>
+  <div class="planche__sep"></div>
+  <fieldset>
+    <legend>Compte</legend>
+    <label><input type="radio" name="cpt" value="karim" checked><span>Karim · contributeur</span></label>
+    <label><input type="radio" name="cpt" value="neuf"><span>Nouvel arrivant</span></label>
+  </fieldset>
+  <div class="planche__sep"></div>
+  <fieldset>
+    <legend>Cas</legend>
+    <label><input type="checkbox" id="c-verrou"><span>Mot de passe verrouillé</span></label>
+  </fieldset>
+</div>
+
+<script>/* ==========================================================================
+   CORPUS DE DÉMONSTRATION
+   Jeu de notes commun à toutes les maquettes. Les valeurs sont plausibles et
+   cohérentes entre elles : les compteurs affichés dans les vues sont calculés
+   à partir de ce tableau, jamais saisis à la main.
+   ========================================================================== */
+window.CORPUS = [
+  {
+    id: "n-restaurer-pg",
+    titre: "Restaurer une sauvegarde PostgreSQL depuis Barman",
+    extrait: "Cette procédure décrit la restauration d'une base PostgreSQL 16 à partir des sauvegardes gérées par Barman. Elle couvre la restauration complète et la restauration à un instant donné.",
+    type: "Procédure", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Sauvegardes",
+    auteur: "Sophie Nguyen", fraicheur: "frais", jours: 12,
+    revise: "01/08/2026", vues: 412, pj: 2, brouillon: false,
+    visibilite: "Interne", operationnel: true,
+    etiquettes: ["postgresql", "sauvegarde", "barman", "astreinte"]
+  },
+  {
+    id: "n-restaurer-maria",
+    titre: "Restaurer une sauvegarde MariaDB",
+    extrait: "Restauration d'une base de données MariaDB 11 depuis un export logique ou une copie physique. La bascule du réplica est traitée séparément.",
+    type: "Procédure", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Sauvegardes",
+    auteur: "Marc Ferreira", fraicheur: "vieil", jours: 118,
+    revise: "17/04/2026", vues: 156, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["mariadb", "sauvegarde", "restauration"]
+  },
+  {
+    id: "n-pra-bases",
+    titre: "Plan de reprise d'activité — volet bases de données",
+    extrait: "Engagements de reprise, ordre de restauration des bases de données et responsabilités par application. Document de référence, revu annuellement avec la direction.",
+    type: "Note", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation",
+    auteur: "Sophie Nguyen", fraicheur: "obs", jours: 248,
+    revise: "08/12/2025", vues: 289, pj: 3, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["pra", "sauvegarde", "continuité"]
+  },
+  {
+    id: "n-diag-barman",
+    titre: "Diagnostiquer un échec de restauration Barman",
+    extrait: "Arbre de décision face à un échec de restauration de base : clés SSH, espace disque, journaux de transaction manquants, incohérence de version.",
+    type: "Procédure", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Sauvegardes",
+    auteur: "Karim Belhadj", fraicheur: "frais", jours: 5,
+    revise: "08/08/2026", vues: 74, pj: 0, brouillon: true,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["barman", "diagnostic", "astreinte"]
+  },
+  {
+    id: "n-pg-prod-01",
+    titre: "pg-prod-01",
+    extrait: "Serveur de bases de données principal. Héberge les bases de facturation et de référentiel. Sauvegardé chaque nuit par Barman ; restauration couverte par la procédure dédiée.",
+    type: "Fiche", typeFiche: "Serveur", univers: "Production", domaine: "Infrastructure",
+    dossier: "Applications › Serveurs",
+    auteur: "Karim Belhadj", fraicheur: "frais", jours: 20,
+    revise: "24/07/2026", vues: 531, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["postgresql", "serveur", "production"]
+  },
+  {
+    id: "n-tester-pra",
+    titre: "Tester le plan de reprise — mode opératoire",
+    extrait: "Répétition trimestrielle de la reprise sur l'environnement de bascule. Comprend la restauration blanche des bases et le relevé des temps constatés.",
+    type: "Guide", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation",
+    auteur: "Marc Ferreira", fraicheur: "vieil", jours: 141,
+    revise: null, vues: 98, pj: 1, brouillon: false,
+    visibilite: "Interne", operationnel: true,
+    etiquettes: ["pra", "test", "continuité"]
+  },
+  {
+    id: "n-astreinte",
+    titre: "Consignes d'astreinte — nuit et week-end",
+    extrait: "Qui appeler, dans quel ordre, avec quels seuils de déclenchement. Renvoie vers les procédures de restauration des bases et de bascule.",
+    type: "Procédure", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Astreinte",
+    auteur: "Sophie Nguyen", fraicheur: "frais", jours: 9,
+    revise: "04/08/2026", vues: 623, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: true,
+    etiquettes: ["astreinte", "consignes"]
+  },
+  {
+    id: "n-doc-barman",
+    titre: "Documentation officielle Barman",
+    extrait: "Référence de l'éditeur : options de recover, gestion de la rétention, restauration d'une base à un instant donné.",
+    type: "Signet", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Sauvegardes",
+    url: "https://docs.pgbarman.org/release/3.11/", ajoute: "18/07/2026",
+    auteur: "Karim Belhadj", fraicheur: "frais", jours: 26,
+    revise: "18/07/2026", vues: 61, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["barman", "documentation"]
+  },
+  {
+    id: "n-purge-sauv",
+    titre: "Purger les sauvegardes hors rétention",
+    extrait: "Libération d'espace sur le serveur de sauvegarde. À ne jamais lancer pendant une restauration en cours.",
+    type: "Procédure", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Sauvegardes",
+    auteur: "Marc Ferreira", fraicheur: "vieil", jours: 126,
+    revise: "09/04/2026", vues: 87, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["sauvegarde", "barman", "rétention"]
+  },
+  {
+    id: "n-planifier-sauv",
+    titre: "Planifier une sauvegarde Barman",
+    extrait: "Déclaration d'un nouveau serveur dans Barman, fenêtre de sauvegarde et vérification du premier passage.",
+    type: "Procédure", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation › Sauvegardes",
+    auteur: "Karim Belhadj", fraicheur: "frais", jours: 6,
+    revise: "07/08/2026", vues: 143, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["sauvegarde", "barman", "postgresql"]
+  },
+  {
+    id: "n-facturation",
+    titre: "Facturation",
+    extrait: "Application de facturation clients. Base de données hébergée sur pg-prod-01, restauration couverte par la procédure Barman.",
+    type: "Fiche", typeFiche: "Application", univers: "Production", domaine: "Applications",
+    dossier: "Fiches applicatives",
+    auteur: "Sophie Nguyen", fraicheur: "vieil", jours: 133,
+    revise: "02/04/2026", vues: 374, pj: 1, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["application", "facturation", "postgresql"]
+  },
+  {
+    id: "n-sondes",
+    titre: "Sondes de supervision des bases de données",
+    extrait: "Seuils, fréquences et destinataires des alertes. La sonde de réplication doit repasser au vert après toute restauration.",
+    type: "Note", univers: "Production", domaine: "Infrastructure",
+    dossier: "Supervision › Sondes",
+    auteur: "Marc Ferreira", fraicheur: "obs", jours: 274,
+    revise: "12/11/2025", vues: 112, pj: 0, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["supervision", "postgresql", "alertes"]
+  },
+  {
+    id: "n-migration-bases",
+    titre: "Migration 2026 — lot 3, bases de données",
+    extrait: "Périmètre, jalons et stratégie de reprise des bases lors de la bascule vers le nouveau socle. Restauration de contrôle prévue à chaque jalon.",
+    type: "Note", univers: "Projets", domaine: "Migration 2026",
+    dossier: "Lots",
+    auteur: "Sophie Nguyen", fraicheur: "frais", jours: 3,
+    revise: "10/08/2026", vues: 208, pj: 4, brouillon: false,
+    visibilite: "Interne", operationnel: false,
+    etiquettes: ["migration", "postgresql", "planification"]
+  },
+  {
+    id: "n-poste-sauv",
+    titre: "Sauvegarde des postes de travail",
+    extrait: "Périmètre couvert, fréquence et procédure de restauration d'un profil utilisateur. Sans rapport avec les sauvegardes de bases.",
+    type: "Guide", univers: "Production", domaine: "Poste de travail",
+    dossier: "Déploiement",
+    auteur: "Karim Belhadj", fraicheur: "vieil", jours: 152,
+    revise: "14/03/2026", vues: 245, pj: 0, brouillon: false,
+    visibilite: "Publique", operationnel: false,
+    etiquettes: ["poste", "sauvegarde", "restauration"]
+  }  ,
+  /* ---- Corpus public : guides destinés aux collaborateurs hors direction
+     technique. Ce sont les seules notes atteignables depuis V-01 à V-03. ---- */
+  {
+    id: "n-mot-de-passe",
+    titre: "Réinitialiser son mot de passe",
+    extrait: "Réinitialisation depuis le portail, depuis un poste verrouillé, ou par appel au support. Délai de prise en compte et cas des comptes de service.",
+    type: "Guide", univers: "Production", domaine: "Poste de travail",
+    dossier: "Déploiement › Comptes",
+    auteur: "Sophie Nguyen", fraicheur: "frais", jours: 11,
+    revise: "02/08/2026", vues: 3210, pj: 0, brouillon: false,
+    visibilite: "Publique", operationnel: true,
+    etiquettes: ["compte", "mot de passe", "support"]
+  },
+  {
+    id: "n-demander-acces",
+    titre: "Demander un accès à une application",
+    extrait: "Formulaire à remplir, validation par le responsable hiérarchique, délais constatés par application. Liste des applications concernées et de leurs référents.",
+    type: "Guide", univers: "Production", domaine: "Applications",
+    dossier: "Fiches applicatives › Accès",
+    auteur: "Karim Belhadj", fraicheur: "frais", jours: 18,
+    revise: "26/07/2026", vues: 1842, pj: 1, brouillon: false,
+    visibilite: "Publique", operationnel: false,
+    etiquettes: ["accès", "habilitation", "support"]
+  },
+  {
+    id: "n-visio",
+    titre: "Utiliser la visioconférence en salle de réunion",
+    extrait: "Démarrer une réunion, partager un écran, connecter un portable personnel. Que faire quand l'écran reste noir ou que le micro n'est pas détecté.",
+    type: "Guide", univers: "Production", domaine: "Poste de travail",
+    dossier: "Déploiement › Salles",
+    auteur: "Marc Ferreira", fraicheur: "vieil", jours: 124,
+    revise: "11/04/2026", vues: 1431, pj: 0, brouillon: false,
+    visibilite: "Publique", operationnel: true,
+    etiquettes: ["visioconférence", "salle", "support"]
+  },
+  {
+    id: "n-reseau-invite",
+    titre: "Connecter un poste au réseau invité",
+    extrait: "Procédure pour un intervenant extérieur ou un appareil personnel. Durée de validité de l'accès et limites du réseau invité.",
+    type: "Guide", univers: "Production", domaine: "Poste de travail",
+    dossier: "Déploiement › Réseau",
+    auteur: "Marc Ferreira", fraicheur: "vieil", jours: 149,
+    revise: "17/03/2026", vues: 1156, pj: 0, brouillon: false,
+    visibilite: "Publique", operationnel: false,
+    etiquettes: ["réseau", "invité", "support"]
+  },
+  {
+    id: "n-signaler-incident",
+    titre: "Signaler un incident au support",
+    extrait: "Ce qu'il faut indiquer pour être dépanné vite : capture d'écran, heure exacte, message d'erreur complet. Niveaux d'urgence et délais associés.",
+    type: "Guide", univers: "Production", domaine: "Applications",
+    dossier: "Fiches applicatives › Support",
+    auteur: "Sophie Nguyen", fraicheur: "frais", jours: 7,
+    revise: "06/08/2026", vues: 967, pj: 0, brouillon: false,
+    visibilite: "Publique", operationnel: false,
+    etiquettes: ["support", "incident", "assistance"]
+  }  ,
+  /* ---- Fiches et relations : la matière de la cartographie ---- */
+  {
+    id: "n-pg-prod-02", titre: "pg-prod-02",
+    extrait: "Réplica synchrone de pg-prod-01. Bascule manuelle, jamais automatique. Sert aussi de source aux extractions de nuit.",
+    type: "Fiche", typeFiche: "Serveur", univers: "Production", domaine: "Infrastructure",
+    dossier: "Applications › Serveurs", auteur: "Karim Belhadj", fraicheur: "frais", jours: 20,
+    revise: "24/07/2026", vues: 287, pj: 0, brouillon: false, visibilite: "Interne", operationnel: false,
+    etiquettes: ["postgresql", "serveur", "réplication"]
+  },
+  {
+    id: "n-bkp-01", titre: "bkp-01.prod",
+    extrait: "Serveur de sauvegarde. Barman pour les bases, dépôt de fichiers pour le reste. Point unique : aucune redondance à ce jour.",
+    type: "Fiche", typeFiche: "Serveur", univers: "Production", domaine: "Infrastructure",
+    dossier: "Applications › Serveurs", auteur: "Marc Ferreira", fraicheur: "vieil", jours: 139,
+    revise: "27/03/2026", vues: 194, pj: 0, brouillon: false, visibilite: "Interne", operationnel: false,
+    etiquettes: ["sauvegarde", "barman", "serveur"]
+  },
+  {
+    id: "n-srv-app-01", titre: "srv-app-01",
+    extrait: "Serveur applicatif mutualisé. Héberge les trois applications métier en service.",
+    type: "Fiche", typeFiche: "Serveur", univers: "Production", domaine: "Infrastructure",
+    dossier: "Applications › Serveurs", auteur: "Karim Belhadj", fraicheur: "obs", jours: 231,
+    revise: "26/12/2025", vues: 163, pj: 0, brouillon: false, visibilite: "Interne", operationnel: false,
+    etiquettes: ["serveur", "applicatif", "production"]
+  },
+  {
+    id: "n-referentiel", titre: "Référentiel",
+    extrait: "Référentiel des tiers, partagé par la facturation et le portail. Toute indisponibilité se propage aux deux.",
+    type: "Fiche", typeFiche: "Application", univers: "Production", domaine: "Applications",
+    dossier: "Fiches applicatives", auteur: "Sophie Nguyen", fraicheur: "frais", jours: 16,
+    revise: "28/07/2026", vues: 241, pj: 0, brouillon: false, visibilite: "Interne", operationnel: false,
+    etiquettes: ["application", "référentiel", "postgresql"]
+  },
+  {
+    id: "n-portail-rh", titre: "Portail RH",
+    extrait: "Portail des demandes de congés et de notes de frais. Pic d'usage en fin de mois.",
+    type: "Fiche", typeFiche: "Application", univers: "Production", domaine: "Applications",
+    dossier: "Fiches applicatives", auteur: "Marc Ferreira", fraicheur: "vieil", jours: 117,
+    revise: "18/04/2026", vues: 198, pj: 0, brouillon: false, visibilite: "Interne", operationnel: false,
+    etiquettes: ["application", "rh"]
+  },
+  {
+    id: "n-presta-reseau", titre: "Prestataire réseau — Neltis",
+    extrait: "Opérateur du lien principal et de la ligne de secours. Astreinte 24/7, engagement de rétablissement en 4 heures.",
+    type: "Fiche", typeFiche: "Contact", univers: "Production", domaine: "Applications",
+    dossier: "Fiches applicatives", auteur: "Sophie Nguyen", fraicheur: "frais", jours: 24,
+    revise: "20/07/2026", vues: 88, pj: 1, brouillon: false, visibilite: "Interne", operationnel: false,
+    etiquettes: ["contact", "réseau", "prestataire"]
+  }  ,
+  {
+    id: "n-coffre-hors-site", titre: "Coffre hors site",
+    extrait: "Dépôt distant des sauvegardes longue durée. Atteignable uniquement depuis bkp-01.prod : aucun autre chemin n'existe.",
+    type: "Fiche", typeFiche: "Serveur", univers: "Production", domaine: "Infrastructure",
+    dossier: "Applications › Serveurs", auteur: "Marc Ferreira", fraicheur: "obs", jours: 268,
+    revise: "18/11/2025", vues: 71, pj: 0, brouillon: false, visibilite: "Interne", operationnel: false,
+    etiquettes: ["sauvegarde", "rétention", "serveur"]
+  },
+  {
+    id: "n-passerelle-edi", titre: "Passerelle EDI",
+    extrait: "Échanges de factures avec les partenaires. Hébergée sur srv-app-01, sans instance de secours.",
+    type: "Fiche", typeFiche: "Application", univers: "Production", domaine: "Applications",
+    dossier: "Fiches applicatives", auteur: "Sophie Nguyen", fraicheur: "vieil", jours: 108,
+    revise: "27/04/2026", vues: 132, pj: 0, brouillon: false, visibilite: "Interne", operationnel: false,
+    etiquettes: ["application", "edi", "facturation"]
+  }  ,
+  /* ---- Signets : liens web rattachés à un domaine ---- */
+  {
+    id: "n-sig-postgres", titre: "PostgreSQL — notes de version 16",
+    extrait: "Journal officiel des versions 16.x. À consulter avant toute montée de version mineure : les changements de comportement y sont listés en tête.",
+    type: "Signet", univers: "Production", domaine: "Infrastructure",
+    dossier: "Exploitation", url: "https://www.postgresql.org/docs/16/release.html", ajoute: "03/06/2026",
+    auteur: "Karim Belhadj", fraicheur: "frais", jours: 14, revise: "30/07/2026",
+    vues: 143, pj: 0, brouillon: false, visibilite: "Interne", operationnel: false,
+    etiquettes: ["postgresql", "documentation", "versions"]
+  },
+  {
+    id: "n-sig-anssi", titre: "ANSSI — guide d'hygiène informatique",
+    extrait: "Les 42 mesures de référence. Sert de base à nos consignes internes de durcissement et aux revues de configuration.",
+    type: "Signet", univers: "Production", domaine: "Infrastructure",
+    dossier: "Supervision", url: "https://cyber.gouv.fr/publications/guide-hygiene-informatique", ajoute: "12/02/2026",
+    auteur: "Sophie Nguyen", fraicheur: "vieil", jours: 121, revise: "14/04/2026",
+    vues: 96, pj: 0, brouillon: false, visibilite: "Interne", operationnel: false,
+    etiquettes: ["sécurité", "référentiel", "documentation"]
+  },
+  {
+    id: "n-sig-statut", titre: "Page d'état de l'hébergeur",
+    extrait: "Incidents et maintenances programmées du fournisseur. Premier réflexe avant d'ouvrir une investigation interne.",
+    type: "Signet", univers: "Production", domaine: "Infrastructure",
+    dossier: "Supervision", url: "https://status.exemple-hebergeur.net", ajoute: "21/07/2026",
+    auteur: "Marc Ferreira", fraicheur: "frais", jours: 23, revise: "21/07/2026",
+    vues: 312, pj: 0, brouillon: false, visibilite: "Interne", operationnel: false,
+    etiquettes: ["supervision", "incident", "prestataire"]
+  },
+  {
+    id: "n-sig-neltis", titre: "Neltis — portail client et déclaration d'incident",
+    extrait: "Ouverture de ticket auprès du prestataire réseau. Identifiants partagés dans le coffre de l'équipe.",
+    type: "Signet", univers: "Production", domaine: "Applications",
+    dossier: "Fiches applicatives", url: "https://client.neltis.fr/incidents", ajoute: "20/07/2026",
+    auteur: "Sophie Nguyen", fraicheur: "frais", jours: 24, revise: "20/07/2026",
+    vues: 74, pj: 0, brouillon: false, visibilite: "Interne", operationnel: false,
+    etiquettes: ["prestataire", "réseau", "incident"]
+  },
+  {
+    id: "n-sig-facturation", titre: "Éditeur Facturation — base de connaissance",
+    extrait: "Articles de l'éditeur sur les erreurs de traitement de lots. Recherche par code d'erreur.",
+    type: "Signet", univers: "Production", domaine: "Applications",
+    dossier: "Fiches applicatives", url: "https://support.editeur-facturation.com/kb", ajoute: "09/01/2026",
+    auteur: "Marc Ferreira", fraicheur: "obs", jours: 216, revise: "10/01/2026",
+    vues: 58, pj: 0, brouillon: false, visibilite: "Interne", operationnel: false,
+    etiquettes: ["facturation", "éditeur", "documentation"]
+  }
+];
+
+/* Libellé du signal de fraîcheur, toujours accompagné de sa valeur en clair. */
+window.libelleFraicheur = function (n) {
+  if (n.fraicheur === "frais") {
+    return n.jours < 31 ? "Vérifié il y a " + n.jours + " jours" : "Vérifié il y a 1 mois";
+  }
+  var mois = Math.round(n.jours / 30);
+  if (n.fraicheur === "vieil") return "Vérifié il y a " + mois + " mois";
+  return "Pas revu depuis " + mois + " mois";
+};
+
+window.barresFraicheur = function (niv) {
+  return niv === "frais" ? 3 : niv === "vieil" ? 2 : 1;
+};
+
+/* Le témoin de fraîcheur est la signature du produit : il n'existe qu'une
+   seule fabrique, pour qu'il ne puisse pas diverger d'un écran à l'autre. */
+window.temoinFraicheur = function (n) {
+  var s = document.createElement("span");
+  s.className = "temoin " + window.classeTemoin(n.fraicheur);
+  var j = document.createElement("span");
+  j.className = "temoin__jauge";
+  j.setAttribute("aria-hidden", "true");
+  var plein = window.barresFraicheur(n.fraicheur);
+  for (var k = 0; k < 3; k++) {
+    var i = document.createElement("i");
+    if (k < plein) i.className = "plein";
+    j.appendChild(i);
+  }
+  var t = document.createElement("span");
+  t.className = "temoin__txt";
+  t.textContent = window.libelleFraicheur(n);
+  s.appendChild(j);
+  s.appendChild(t);
+  return s;
+};
+
+window.classeTemoin = function (niv) {
+  return niv === "frais" ? "temoin--frais" : niv === "vieil" ? "temoin--vieil" : "temoin--obs";
+};
+
+/* Marque les termes de la requête dans un texte, sans jamais injecter de HTML
+   issu de la saisie. */
+window.surligner = function (texte, requete) {
+  var frag = document.createDocumentFragment();
+  var termes = (requete || "").toLowerCase().split(/\s+/).filter(function (t) { return t.length > 2; });
+  if (!termes.length) { frag.appendChild(document.createTextNode(texte)); return frag; }
+  var motif = new RegExp("(" + termes.map(function (t) {
+    return t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }).join("|") + ")", "ig");
+  var reste = texte, m;
+  motif.lastIndex = 0;
+  var dernier = 0;
+  while ((m = motif.exec(texte)) !== null) {
+    if (m.index > dernier) frag.appendChild(document.createTextNode(texte.slice(dernier, m.index)));
+    var mk = document.createElement("mark");
+    mk.textContent = m[0];
+    frag.appendChild(mk);
+    dernier = m.index + m[0].length;
+    if (m.index === motif.lastIndex) motif.lastIndex++;
+  }
+  if (dernier < texte.length) frag.appendChild(document.createTextNode(texte.slice(dernier)));
+  return frag;
+};
+
+/* Correspondance tolérante : la requête est découpée en termes, un résultat
+   sort s'il porte tous les termes dans son titre, son extrait ou ses étiquettes. */
+window.chercher = function (requete) {
+  var termes = (requete || "").toLowerCase().split(/\s+/).filter(Boolean);
+  if (!termes.length) return [];
+  return window.CORPUS.filter(function (n) {
+    var champ = (n.titre + " " + n.extrait + " " + n.etiquettes.join(" ") + " " + n.domaine + " " + (n.typeFiche || "")).toLowerCase();
+    return termes.every(function (t) {
+      if (champ.indexOf(t) !== -1) return true;
+      /* tolérance simple : racine de 4 caractères, suffisante pour la maquette */
+      return t.length > 4 && champ.indexOf(t.slice(0, Math.max(4, t.length - 2))) !== -1;
+    });
+  });
+};
+
+/* Recherche restreinte au corpus public. L'espace public ne peut atteindre
+   aucune note interne, par aucun chemin : le filtre est appliqué ici, en amont,
+   et non au moment de l'affichage. */
+window.chercherPublic = function (requete) {
+  return window.chercher(requete).filter(function (n) { return n.visibilite === "Publique"; });
+};
+
+window.corpusPublic = function () {
+  return window.CORPUS.filter(function (n) { return n.visibilite === "Publique"; });
+};
+
+/* ==========================================================================
+   MESURES ET ÉVÉNEMENTS
+   Tout chiffre affiché par le tableau de bord (V-07) est calculé à partir de
+   ces tables. Aucune valeur n'est saisie dans la vue, aucune tendance n'est
+   simulée : si une donnée manque ici, l'indicateur affiche un état neutre.
+   ========================================================================== */
+
+/* Consultations des sept derniers jours, puis des sept précédents. */
+window.MESURES_7J = {
+  "n-restaurer-pg": 37, "n-restaurer-maria": 9, "n-pra-bases": 14, "n-diag-barman": 11,
+  "n-pg-prod-01": 41, "n-tester-pra": 6, "n-astreinte": 52, "n-doc-barman": 4,
+  "n-purge-sauv": 5, "n-planifier-sauv": 12, "n-facturation": 23, "n-sondes": 7,
+  "n-migration-bases": 31, "n-poste-sauv": 8, "n-mot-de-passe": 214,
+  "n-demander-acces": 96, "n-visio": 63, "n-reseau-invite": 44, "n-signaler-incident": 58,
+  "n-pg-prod-02": 19, "n-bkp-01": 12, "n-srv-app-01": 16, "n-referentiel": 27,
+  "n-portail-rh": 21, "n-presta-reseau": 6,
+  "n-coffre-hors-site": 4, "n-passerelle-edi": 14,
+  "n-sig-postgres": 11, "n-sig-anssi": 5, "n-sig-statut": 34, "n-sig-neltis": 7, "n-sig-facturation": 3
+};
+window.MESURES_7J_PREC = {
+  "n-restaurer-pg": 22, "n-restaurer-maria": 11, "n-pra-bases": 19, "n-diag-barman": 3,
+  "n-pg-prod-01": 38, "n-tester-pra": 9, "n-astreinte": 47, "n-doc-barman": 6,
+  "n-purge-sauv": 8, "n-planifier-sauv": 10, "n-facturation": 26, "n-sondes": 12,
+  "n-migration-bases": 17, "n-poste-sauv": 11, "n-mot-de-passe": 198,
+  "n-demander-acces": 88, "n-visio": 71, "n-reseau-invite": 39, "n-signaler-incident": 51,
+  "n-pg-prod-02": 24, "n-bkp-01": 9, "n-srv-app-01": 13, "n-referentiel": 22,
+  "n-portail-rh": 30, "n-presta-reseau": 8,
+  "n-coffre-hors-site": 3, "n-passerelle-edi": 11,
+  "n-sig-postgres": 9, "n-sig-anssi": 7, "n-sig-statut": 21, "n-sig-neltis": 5, "n-sig-facturation": 6
+};
+
+/* Demandes de révision ouvertes. Le commentaire du demandeur est repris tel
+   quel dans la corbeille de révisions et dans le bandeau de la note (V-14). */
+window.REVISIONS = [
+  {
+    id: "n-restaurer-pg", par: "Sophie Nguyen", le: "28/07/2026", jours: 16,
+    commentaire: "La commande de restauration partielle a changé avec Barman 3.11. Le paragraphe 3.2 renvoie encore à l'ancienne syntaxe."
+  },
+  {
+    id: "n-sondes", par: "Karim Belhadj", le: "11/08/2026", jours: 2,
+    commentaire: "Les seuils ont été relevés en juin après les faux positifs de l'astreinte. Le tableau n'a pas suivi."
+  },
+  {
+    id: "n-visio", par: "Marc Ferreira", le: "05/08/2026", jours: 8,
+    commentaire: "Les salles du deuxième étage ont changé de matériel. Le guide décrit l'ancien boîtier."
+  }
+];
+
+/* Domaines et univers. La couleur sert au repérage d'un domaine ; elle est
+   choisie hors des trois teintes de la fraîcheur, pour qu'aucune confusion
+   ne soit possible entre appartenance et fiabilité. */
+window.DOMAINES = [
+  { nom: "Infrastructure",   univers: "Production", couleur: "#453ba0" },
+  { nom: "Applications",     univers: "Production", couleur: "#1b6b7a" },
+  { nom: "Poste de travail", univers: "Production", couleur: "#7a2f8f" },
+  { nom: "Migration 2026",   univers: "Projets",    couleur: "#3e5266" }
+];
+
+/* Activité récente. « jours » compte à rebours depuis aujourd'hui. */
+window.ACTIVITE = [
+  { type: "verification", qui: "Karim Belhadj",  cible: "n-migration-bases", heures: 3 },
+  { type: "edition",      qui: "Sophie Nguyen",  cible: "n-signaler-incident", heures: 7 },
+  { type: "revision",     qui: "Karim Belhadj",  cible: "n-sondes", heures: 29 },
+  { type: "verification", qui: "Sophie Nguyen",  cible: "n-astreinte", heures: 52 },
+  { type: "publication",  qui: "Karim Belhadj",  cible: "n-planifier-sauv", heures: 78 },
+  { type: "import",       qui: "Marc Ferreira",  cible: null, heures: 104, detail: "12 procédures reprises depuis le partage réseau" },
+  { type: "edition",      qui: "Marc Ferreira",  cible: "n-visio", heures: 126 },
+  { type: "verification", qui: "Karim Belhadj",  cible: "n-planifier-sauv", heures: 151 }
+];
+
+/* Utilisateur de la maquette et état de l'instance. */
+window.MOI = { prenom: "Karim", nom: "Karim Belhadj", initiales: "KB", domaine: "Infrastructure", role: "Référent" };
+window.INSTANCE = { version: "1.0.0", synchro: "il y a 6 minutes" };
+
+/* Somme d'une table de mesures, restreinte aux notes réellement présentes. */
+window.sommeMesures = function (table) {
+  return window.CORPUS.reduce(function (s, n) { return s + (table[n.id] || 0); }, 0);
+};
+
+window.repartitionFraicheur = function (notes) {
+  return {
+    frais: notes.filter(function (n) { return n.fraicheur === "frais"; }).length,
+    vieil: notes.filter(function (n) { return n.fraicheur === "vieil"; }).length,
+    obs:   notes.filter(function (n) { return n.fraicheur === "obs"; }).length,
+    total: notes.length
+  };
+};
+
+/* ==========================================================================
+   UNIVERS, DOMAINES ET MODULES
+   ========================================================================== */
+window.UNIVERS = [
+  {
+    nom: "Production", couleur: "#24485c", glyphe: "pile",
+    description: "Ce qui tourne aujourd'hui. Toute interruption ici se voit depuis le métier, et toute documentation périmée se paie une nuit d'astreinte."
+  },
+  {
+    nom: "Projets", couleur: "#4a3d6b", glyphe: "jalon",
+    description: "Ce qui n'est pas encore en service. Contenu temporaire par nature : à la clôture du projet, ce qui doit survivre est reversé dans Production."
+  }
+];
+
+/* Les modules activés varient d'un domaine à l'autre. Un module non activé
+   n'apparaît nulle part — jamais d'onglet grisé. */
+window.MODULES = {
+  notes:       { nom: "Notes",        sous: "Toutes les notes du domaine" },
+  dossiers:    { nom: "Dossiers",     sous: "Rangement arborescent" },
+  fiches:      { nom: "Fiches",       sous: "Objets typés et leurs relations" },
+  cartographie:{ nom: "Cartographie", sous: "Graphe des dépendances" },
+  signets:     { nom: "Signets",      sous: "Liens web curatés" },
+  carteMentale:{ nom: "Carte mentale", sous: "Arbre dépliable du domaine" }
+};
+
+window.DETAIL_DOMAINES = {
+  "Infrastructure": {
+    description: "Serveurs, réseau, sauvegardes, supervision. Le socle sur lequel tout le reste s'appuie.",
+    modules: ["notes", "dossiers", "fiches", "cartographie", "signets", "carteMentale"]
+  },
+  "Applications": {
+    description: "Fiches applicatives, accès, contacts métier. Qui fait quoi, et sur quoi.",
+    modules: ["notes", "fiches", "cartographie"]
+  },
+  "Poste de travail": {
+    description: "Postes, périphériques, salles de réunion, comptes. Ce que voient les utilisateurs.",
+    modules: ["notes", "dossiers"]
+  },
+  "Migration 2026": {
+    description: "Lots, jalons et décisions de la migration vers le nouveau socle.",
+    modules: ["notes"]
+  }
+};
+
+window.notesDeLUnivers = function (univers) {
+  return window.CORPUS.filter(function (n) { return n.univers === univers; });
+};
+
+window.domainesDeLUnivers = function (univers) {
+  return window.DOMAINES.filter(function (d) { return d.univers === univers; });
+};
+
+/* Contributeurs d'un ensemble de notes, classés par volume. */
+window.contributeurs = function (notes) {
+  var par = {};
+  notes.forEach(function (n) { par[n.auteur] = (par[n.auteur] || 0) + 1; });
+  return Object.keys(par)
+    .map(function (nom) {
+      return {
+        nom: nom,
+        initiales: nom.split(" ").map(function (m) { return m[0]; }).join("").slice(0, 2).toUpperCase(),
+        notes: par[nom]
+      };
+    })
+    .sort(function (a, b) { return b.notes - a.notes || a.nom.localeCompare(b.nom, "fr"); });
+};
+
+/* Ancienneté de la dernière modification, en jours. Distincte de la dernière
+   vérification : une note peut avoir été relue sans être retouchée, et
+   retouchée sans être revérifiée. */
+window.MODIFICATIONS = {
+  "n-restaurer-pg": 22, "n-restaurer-maria": 96, "n-pra-bases": 61, "n-diag-barman": 5,
+  "n-pg-prod-01": 14, "n-tester-pra": 130, "n-astreinte": 9, "n-doc-barman": 26,
+  "n-purge-sauv": 118, "n-planifier-sauv": 3, "n-facturation": 47, "n-sondes": 205,
+  "n-migration-bases": 1, "n-poste-sauv": 142, "n-mot-de-passe": 15,
+  "n-demander-acces": 33, "n-visio": 118, "n-reseau-invite": 149, "n-signaler-incident": 7,
+  "n-pg-prod-02": 18, "n-bkp-01": 74, "n-srv-app-01": 196, "n-referentiel": 12,
+  "n-portail-rh": 88, "n-presta-reseau": 29,
+  "n-coffre-hors-site": 241, "n-passerelle-edi": 63,
+  "n-sig-postgres": 14, "n-sig-anssi": 121, "n-sig-statut": 23, "n-sig-neltis": 24, "n-sig-facturation": 216
+};
+
+window.modifJours = function (id) {
+  var v = window.MODIFICATIONS[id];
+  return typeof v === "number" ? v : null;
+};
+
+/* Arborescence des dossiers d'un domaine, déduite du rangement des notes.
+   Aucune structure séparée : le rangement affiché est celui qui existe. */
+window.dossiersDuDomaine = function (domaine) {
+  var racines = {};
+  window.CORPUS.forEach(function (n) {
+    if (n.domaine !== domaine || !n.dossier) return;
+    var segments = n.dossier.split("›").map(function (s) { return s.trim(); }).filter(Boolean);
+    var niveau = racines;
+    segments.forEach(function (s) {
+      niveau[s] = niveau[s] || { enfants: {}, notes: 0 };
+      niveau = niveau[s].enfants;
+    });
+    /* La note compte pour le dossier terminal de son chemin. */
+    var courant = racines;
+    segments.forEach(function (s, k) {
+      if (k === segments.length - 1) courant[s].notes++;
+      courant = courant[s].enfants;
+    });
+  });
+  return racines;
+};
+
+window.compterDossiers = function (arbre) {
+  return Object.keys(arbre).reduce(function (s, k) {
+    return s + 1 + window.compterDossiers(arbre[k].enfants);
+  }, 0);
+};
+
+window.jamaisVerifiees = function (notes) {
+  return notes.filter(function (n) { return !n.revise; });
+};
+
+window.revisionsDe = function (notes) {
+  var ids = notes.map(function (n) { return n.id; });
+  return window.REVISIONS.filter(function (r) { return ids.indexOf(r.id) !== -1; });
+};
+
+/* ==========================================================================
+   VERSIONS
+   Historique de la note de démonstration. « ajout » et « retrait » comptent
+   les lignes touchées : c'est l'indication d'ampleur affichée en V-15, et la
+   matière du journal de modifications de V-16.
+   ========================================================================== */
+window.RETENTION_VERSIONS = 50;
+
+window.VERSIONS = {
+  "n-restaurer-pg": [
+    { n: 14, jours: 22,  date: "22/07/2026", heure: "16:47", auteur: "Sophie Nguyen", ajout: 6,  retrait: 2,
+      resume: "Précision sur la fenêtre d'intervention et le délai constaté" },
+    { n: 13, jours: 41,  date: "03/07/2026", heure: "09:12", auteur: "Karim Belhadj", ajout: 18, retrait: 11,
+      resume: "Réécriture de la section « Restauration à un instant donné »" },
+    { n: 12, jours: 68,  date: "06/06/2026", heure: "14:30", auteur: "Marc Ferreira", ajout: 2,  retrait: 2,
+      resume: "Correction du nom du serveur de sauvegarde" },
+    { n: 11, jours: 95,  date: "10/05/2026", heure: "11:05", auteur: "Karim Belhadj", ajout: 24, retrait: 0,
+      resume: "Ajout du schéma d'enchaînement et du point de non-retour" },
+    { n: 10, jours: 128, date: "07/04/2026", heure: "17:22", auteur: "Sophie Nguyen", ajout: 4,  retrait: 9,
+      resume: "Suppression du contrôle par comptage complet, abandonné" },
+    { n: 9,  jours: 161, date: "05/03/2026", heure: "08:44", auteur: "Karim Belhadj", ajout: 12, retrait: 3,
+      resume: "Ajout de la liste de contrôle après restauration" },
+    { n: 8,  jours: 204, date: "21/01/2026", heure: "15:58", auteur: "Marc Ferreira", ajout: 1,  retrait: 1,
+      resume: "Coquille dans la commande de listage" },
+    { n: 7,  jours: 246, date: "10/12/2025", heure: "10:17", auteur: "Sophie Nguyen", ajout: 31, retrait: 7,
+      resume: "Passage à Barman 3.10 : options de recover mises à jour" },
+    { n: 6,  jours: 289, date: "28/10/2025", heure: "13:03", auteur: "Karim Belhadj", ajout: 9,  retrait: 4,
+      resume: "Prérequis d'espace disque chiffrés" },
+    { n: 5,  jours: 337, date: "10/09/2025", heure: "09:50", auteur: "Karim Belhadj", ajout: 47, retrait: 0,
+      resume: "Première rédaction complète de la procédure" }
+  ],
+  /* Une note créée et jamais retouchée : l'historique doit le dire clairement. */
+  "n-migration-bases": [
+    { n: 1, jours: 1, date: "12/08/2026", heure: "09:30", auteur: "Sophie Nguyen", ajout: 22, retrait: 0,
+      resume: "Création de la note" }
+  ]
+};
+
+window.versionsDe = function (id) { return window.VERSIONS[id] || []; };
+
+/* ==========================================================================
+   CONTENU DES VERSIONS
+   Trois états de la note de démonstration, décrits en blocs. La « clé » d'un
+   bloc l'identifie d'une version à l'autre : c'est elle qui permet d'aligner
+   les blocs communs en comparaison visuelle (V-16), et de distinguer un bloc
+   déplacé d'un bloc réécrit.
+   ========================================================================== */
+window.CONTENU_VERSIONS = {
+  "n-restaurer-pg": {
+    11: [
+      { cle: "intro", type: "p", texte: "Cette procédure décrit la restauration d'une base PostgreSQL 16 à partir des sauvegardes gérées par Barman sur bkp-01.prod." },
+      { cle: "h-avant", type: "h2", texte: "Avant de commencer" },
+      { cle: "prerequis", type: "liste", items: [
+        "Un accès sudo sur le serveur de sauvegarde bkp-01.prod et sur le serveur cible.",
+        "La clé SSH du compte barman déployée vers le serveur cible."
+      ] },
+      { cle: "h-choisir", type: "h2", texte: "Choisir la sauvegarde" },
+      { cle: "code-liste", type: "code", langage: "bash", lignes: [
+        "barman list-backup pg-prod-01"
+      ] },
+      { cle: "h-restaurer", type: "h2", texte: "Restaurer" },
+      { cle: "code-recover", type: "code", langage: "bash", lignes: [
+        "barman recover --remote-ssh-command \"ssh postgres@pg-prod-01\" \\",
+        "        pg-prod-01 20260810T020112 /var/lib/postgresql/16/main"
+      ] },
+      { cle: "h-verifier", type: "h2", texte: "Vérifier le résultat" },
+      { cle: "controles", type: "taches", items: [
+        "Le service démarre sans erreur.",
+        "Le comptage complet des lignes correspond à l'attendu."
+      ] }
+    ],
+    13: [
+      { cle: "intro", type: "p", texte: "Cette procédure décrit la restauration d'une base PostgreSQL 16 à partir des sauvegardes gérées par Barman sur bkp-01.prod." },
+      { cle: "h-avant", type: "h2", texte: "Avant de commencer" },
+      { cle: "prerequis", type: "liste", items: [
+        "Un accès sudo sur le serveur de sauvegarde bkp-01.prod et sur le serveur cible.",
+        "La clé SSH du compte barman déployée vers le serveur cible.",
+        "L'espace disque disponible sur la cible : au moins 1,4 fois la taille de la sauvegarde."
+      ] },
+      { cle: "h-choisir", type: "h2", texte: "Choisir la sauvegarde" },
+      { cle: "code-liste", type: "code", langage: "bash", lignes: [
+        "barman list-backup pg-prod-01",
+        "barman show-backup pg-prod-01 20260810T020112"
+      ] },
+      { cle: "h-restaurer", type: "h2", texte: "Restaurer" },
+      { cle: "schema", type: "figure", legende: "Enchaînement de la restauration et point de non-retour." },
+      { cle: "code-recover", type: "code", langage: "bash", lignes: [
+        "barman recover --remote-ssh-command \"ssh postgres@pg-prod-01\" \\",
+        "        pg-prod-01 20260810T020112 /var/lib/postgresql/16/main"
+      ] },
+      { cle: "h-instant", type: "h3", texte: "Restauration à un instant donné" },
+      { cle: "code-sql", type: "code", langage: "sql", lignes: [
+        "SELECT max(commit_ts) FROM audit.journal",
+        "WHERE table_cible = 'facturation.lignes';"
+      ] },
+      { cle: "danger", type: "alerte", niveau: "danger", titre: "Opération destructive et irréversible",
+        texte: "barman recover écrase intégralement le répertoire de données de la cible." },
+      { cle: "h-verifier", type: "h2", texte: "Vérifier le résultat" },
+      { cle: "controles", type: "taches", items: [
+        "Le service démarre sans erreur dans le journal système.",
+        "La requête témoin renvoie le nombre de lignes attendu.",
+        "La réplication vers pg-prod-02 est repartie."
+      ] }
+    ],
+    14: [
+      { cle: "intro", type: "p", texte: "Cette procédure décrit la restauration d'une base PostgreSQL 16 à partir des sauvegardes gérées par Barman sur bkp-01.prod. Elle couvre la restauration complète et la restauration à un instant donné." },
+      { cle: "h-avant", type: "h2", texte: "Avant de commencer" },
+      { cle: "prerequis", type: "liste", items: [
+        "Un accès sudo sur le serveur de sauvegarde bkp-01.prod et sur le serveur cible.",
+        "La clé SSH du compte barman déployée vers le serveur cible.",
+        "L'espace disque disponible sur la cible : au moins 1,4 fois la taille de la sauvegarde."
+      ] },
+      { cle: "fenetre", type: "alerte", niveau: "attention", titre: "La base cible est arrêtée pendant toute la restauration",
+        texte: "Comptez 40 minutes pour une base de 120 Go sur disque local. Prévenez l'astreinte applicative avant de démarrer." },
+      { cle: "h-choisir", type: "h2", texte: "Choisir la sauvegarde" },
+      { cle: "code-liste", type: "code", langage: "bash", lignes: [
+        "barman list-backup pg-prod-01",
+        "barman show-backup pg-prod-01 20260810T020112"
+      ] },
+      { cle: "tableau", type: "tableau", entetes: ["Identifiant", "Date", "Taille"], lignes: [
+        ["20260810T020112", "10 août 2026", "118 Go"],
+        ["20260803T020108", "3 août 2026", "117 Go"]
+      ] },
+      { cle: "h-restaurer", type: "h2", texte: "Restaurer" },
+      { cle: "schema", type: "figure", legende: "Enchaînement de la restauration et point de non-retour." },
+      { cle: "code-recover", type: "code", langage: "bash", lignes: [
+        "barman recover --remote-ssh-command \"ssh postgres@pg-prod-01\" \\",
+        "        pg-prod-01 20260810T020112 /var/lib/postgresql/16/main"
+      ] },
+      { cle: "h-instant", type: "h3", texte: "Restauration à un instant donné" },
+      { cle: "code-sql", type: "code", langage: "sql", lignes: [
+        "SELECT max(commit_ts) FROM audit.journal",
+        "WHERE table_cible = 'facturation.lignes'",
+        "  AND commit_ts < '2026-08-11 14:20:00';"
+      ] },
+      { cle: "danger", type: "alerte", niveau: "danger", titre: "Opération destructive et irréversible",
+        texte: "barman recover écrase intégralement le répertoire de données de la cible. Vérifiez trois fois le nom du serveur avant de valider." },
+      { cle: "h-verifier", type: "h2", texte: "Vérifier le résultat" },
+      { cle: "controles", type: "taches", items: [
+        "Le service démarre sans erreur dans le journal système.",
+        "La requête témoin renvoie le nombre de lignes attendu.",
+        "La réplication vers pg-prod-02 est repartie.",
+        "La sonde de supervision est repassée au vert."
+      ] }
+    ]
+  }
+};
+
+/* Représentation linéaire d'un bloc, façon texte source. C'est elle qui est
+   comparée ligne à ligne en mode Texte. */
+window.blocEnLignes = function (b) {
+  switch (b.type) {
+    case "h2": return ["## " + b.texte];
+    case "h3": return ["### " + b.texte];
+    case "p": return [b.texte];
+    case "liste": return b.items.map(function (i) { return "- " + i; });
+    case "taches": return b.items.map(function (i) { return "- [ ] " + i; });
+    case "code": return ["```" + b.langage].concat(b.lignes).concat(["```"]);
+    case "alerte": return [":::" + b.niveau + " " + b.titre, b.texte, ":::"];
+    case "figure": return ["![schéma] " + b.legende];
+    case "tableau": return ["| " + b.entetes.join(" | ") + " |"]
+      .concat(b.lignes.map(function (l) { return "| " + l.join(" | ") + " |"; }));
+    default: return [""];
+  }
+};
+
+/* Plus longue sous-séquence commune : sert à aligner les lignes en mode Texte
+   et les blocs en mode Visuel. Même algorithme, deux granularités. */
+window.alignement = function (a, b, cle) {
+  cle = cle || function (x) { return x; };
+  var n = a.length, m = b.length;
+  var t = [];
+  for (var i = 0; i <= n; i++) { t.push(new Array(m + 1).fill(0)); }
+  for (i = n - 1; i >= 0; i--) {
+    for (var j = m - 1; j >= 0; j--) {
+      t[i][j] = cle(a[i]) === cle(b[j]) ? t[i + 1][j + 1] + 1 : Math.max(t[i + 1][j], t[i][j + 1]);
+    }
+  }
+  var res = [];
+  i = 0; j = 0;
+  while (i < n && j < m) {
+    if (cle(a[i]) === cle(b[j])) { res.push({ etat: "commun", a: a[i], b: b[j] }); i++; j++; }
+    else if (t[i + 1][j] >= t[i][j + 1]) { res.push({ etat: "retire", a: a[i] }); i++; }
+    else { res.push({ etat: "ajoute", b: b[j] }); j++; }
+  }
+  while (i < n) { res.push({ etat: "retire", a: a[i] }); i++; }
+  while (j < m) { res.push({ etat: "ajoute", b: b[j] }); j++; }
+  return res;
+};
+
+/* ==========================================================================
+   TEMPLATES, TYPES DE FICHE, ÉTIQUETTES
+   ========================================================================== */
+window.TEMPLATES = [
+  {
+    id: "procedure", nom: "Procédure d'intervention", type: "Procédure",
+    description: "Prérequis, étapes numérotées, contrôles de sortie. Le format le plus utilisé.",
+    structure: ["Avant de commencer", "Étapes", "Vérifier le résultat", "En cas d'échec"],
+    contenu: "<h2>Avant de commencer</h2><ul><li>Prérequis…</li></ul><h2>Étapes</h2><ol><li>Première étape…</li></ol><h2>Vérifier le résultat</h2><ul class=\"taches\"><li><input type=\"checkbox\"><span>Contrôle…</span></li></ul><h2>En cas d'échec</h2><p>Qui appeler, quoi regarder.</p>"
+  },
+  {
+    id: "fiche-appli", nom: "Fiche applicative", type: "Fiche",
+    description: "Identité de l'application, contacts, dépendances, exploitation courante.",
+    structure: ["Rôle", "Contacts", "Dépendances", "Exploitation"],
+    contenu: "<h2>Rôle</h2><p>À quoi sert cette application, pour qui.</p><h2>Contacts</h2><ul><li>Référent métier…</li></ul><h2>Dépendances</h2><ul><li>Serveur…</li></ul><h2>Exploitation</h2><p>Sauvegarde, supervision, redémarrage.</p>"
+  },
+  {
+    id: "retour", nom: "Retour d'incident", type: "Note",
+    description: "Chronologie, cause, correctif, ce qu'on change pour que ça ne recommence pas.",
+    structure: ["Ce qui s'est passé", "Chronologie", "Cause", "Ce qu'on change"],
+    contenu: "<h2>Ce qui s'est passé</h2><p>En trois lignes.</p><h2>Chronologie</h2><ul><li>hh:mm — …</li></ul><h2>Cause</h2><p>…</p><h2>Ce qu'on change</h2><ul class=\"taches\"><li><input type=\"checkbox\"><span>Action…</span></li></ul>"
+  },
+  {
+    id: "guide", nom: "Guide utilisateur", type: "Guide",
+    description: "Destiné aux collaborateurs hors direction technique. Vocabulaire courant, pas de jargon.",
+    structure: ["Ce que ça permet", "Comment faire", "Si ça ne marche pas"],
+    contenu: "<h2>Ce que ça permet</h2><p>…</p><h2>Comment faire</h2><ol><li>…</li></ol><h2>Si ça ne marche pas</h2><p>Vers qui se tourner.</p>"
+  }
+];
+
+/* Schémas des types de fiche. Choisir un type fait apparaître ces champs. */
+window.TYPES_FICHE = {
+  "Serveur": [
+    { cle: "hote", nom: "Nom d'hôte", type: "texte", exemple: "pg-prod-01" },
+    { cle: "adresse", nom: "Adresse IP", type: "texte", exemple: "10.20.4.11" },
+    { cle: "environnement", nom: "Environnement", type: "liste", valeurs: ["Production", "Recette", "Bascule"] },
+    { cle: "criticite", nom: "Criticité", type: "liste", valeurs: ["Vitale", "Importante", "Secondaire"] },
+    { cle: "sauvegarde", nom: "Sauvegardé", type: "interrupteur" }
+  ],
+  "Application": [
+    { cle: "editeur", nom: "Éditeur", type: "texte", exemple: "Interne" },
+    { cle: "referent", nom: "Référent métier", type: "texte", exemple: "Direction financière" },
+    { cle: "utilisateurs", nom: "Utilisateurs", type: "nombre", exemple: "120" },
+    { cle: "criticite", nom: "Criticité", type: "liste", valeurs: ["Vitale", "Importante", "Secondaire"] }
+  ],
+  "Contact": [
+    { cle: "organisme", nom: "Organisme", type: "texte", exemple: "Prestataire réseau" },
+    { cle: "telephone", nom: "Téléphone", type: "texte", exemple: "01 23 45 67 89" },
+    { cle: "astreinte", nom: "Joignable en astreinte", type: "interrupteur" }
+  ]
+};
+
+window.TYPES_NOTE = ["Procédure", "Guide", "Note", "Fiche", "Signet"];
+
+/* Étiquettes existantes, pour l'auto-complétion. */
+window.etiquettesExistantes = function () {
+  var t = {};
+  window.CORPUS.forEach(function (n) { n.etiquettes.forEach(function (e) { t[e] = (t[e] || 0) + 1; }); });
+  return Object.keys(t).sort(function (a, b) { return t[b] - t[a] || a.localeCompare(b, "fr"); })
+    .map(function (e) { return { nom: e, n: t[e] }; });
+};
+
+/* Notes proches d'un titre saisi — sert à l'avertissement de doublon. */
+window.notesProches = function (titre) {
+  var mots = titre.toLowerCase().split(/\s+/).filter(function (m) { return m.length > 3; });
+  if (mots.length < 2) return [];
+  return window.CORPUS.map(function (n) {
+    var champ = n.titre.toLowerCase();
+    var communs = mots.filter(function (m) { return champ.indexOf(m) !== -1; }).length;
+    return { note: n, score: communs / mots.length };
+  }).filter(function (x) { return x.score >= 0.6; })
+    .sort(function (a, b) { return b.score - a.score; })
+    .map(function (x) { return x.note; });
+};
+
+/* ==========================================================================
+   RELATIONS
+   Liens qualifiés et dirigés entre notes. La cartographie (V-19, V-20) n'a
+   aucune donnée propre : elle est intégralement dérivée de ce tableau et du
+   corpus. Chaque type porte deux libellés, un par sens de lecture — « héberge »
+   d'un côté, « est hébergé par » de l'autre.
+   ========================================================================== */
+window.TYPES_RELATION = {
+  heberge:    { sortant: "héberge",            entrant: "est hébergé par" },
+  depend:     { sortant: "dépend de",          entrant: "dont dépendent" },
+  replique:   { sortant: "réplique",           entrant: "est répliqué par" },
+  sauvegarde: { sortant: "sauvegarde",         entrant: "est sauvegardé par" },
+  documente:  { sortant: "documente",          entrant: "est documenté par" },
+  contact:    { sortant: "a pour contact",     entrant: "est contact de" }
+};
+
+window.RELATIONS = [
+  { de: "n-srv-app-01", vers: "n-facturation", type: "heberge" },
+  { de: "n-srv-app-01", vers: "n-referentiel", type: "heberge" },
+  { de: "n-srv-app-01", vers: "n-portail-rh", type: "heberge" },
+  { de: "n-facturation", vers: "n-pg-prod-01", type: "depend" },
+  { de: "n-referentiel", vers: "n-pg-prod-01", type: "depend" },
+  { de: "n-portail-rh", vers: "n-pg-prod-02", type: "depend" },
+  { de: "n-facturation", vers: "n-referentiel", type: "depend" },
+  { de: "n-pg-prod-01", vers: "n-pg-prod-02", type: "replique" },
+  { de: "n-bkp-01", vers: "n-pg-prod-01", type: "sauvegarde" },
+  { de: "n-bkp-01", vers: "n-pg-prod-02", type: "sauvegarde" },
+  { de: "n-bkp-01", vers: "n-srv-app-01", type: "sauvegarde" },
+  { de: "n-restaurer-pg", vers: "n-pg-prod-01", type: "documente" },
+  { de: "n-restaurer-pg", vers: "n-pg-prod-02", type: "documente" },
+  { de: "n-planifier-sauv", vers: "n-bkp-01", type: "documente" },
+  { de: "n-diag-barman", vers: "n-bkp-01", type: "documente" },
+  { de: "n-pra-bases", vers: "n-pg-prod-01", type: "documente" },
+  { de: "n-sondes", vers: "n-pg-prod-02", type: "documente" },
+  { de: "n-srv-app-01", vers: "n-presta-reseau", type: "contact" },
+  { de: "n-astreinte", vers: "n-presta-reseau", type: "documente" },
+  { de: "n-bkp-01", vers: "n-coffre-hors-site", type: "sauvegarde" },
+  { de: "n-srv-app-01", vers: "n-passerelle-edi", type: "heberge" },
+  { de: "n-passerelle-edi", vers: "n-facturation", type: "depend" }
+];
+
+/* Sous-graphe d'un périmètre. Les notes hors périmètre mais reliées à lui sont
+   conservées et marquées « fantôme » : les masquer donnerait une fausse image
+   des dépendances. */
+window.sousGraphe = function (perimetre) {
+  var dedans = function (n) {
+    if (!perimetre || perimetre.type === "global") return true;
+    if (perimetre.type === "univers") return n.univers === perimetre.nom;
+    return n.domaine === perimetre.nom;
+  };
+  var noeuds = {};
+  window.CORPUS.forEach(function (n) { if (dedans(n)) noeuds[n.id] = { note: n, fantome: false }; });
+
+  var aretes = window.RELATIONS.filter(function (r) {
+    return noeuds[r.de] || noeuds[r.vers];
+  });
+  aretes.forEach(function (r) {
+    [r.de, r.vers].forEach(function (id) {
+      if (noeuds[id]) return;
+      var n = window.CORPUS.filter(function (x) { return x.id === id; })[0];
+      if (n) noeuds[id] = { note: n, fantome: true };
+    });
+  });
+
+  /* Seules les notes effectivement reliées composent le graphe. */
+  var relies = {};
+  aretes.forEach(function (r) { relies[r.de] = true; relies[r.vers] = true; });
+  Object.keys(noeuds).forEach(function (id) { if (!relies[id]) delete noeuds[id]; });
+
+  return { noeuds: noeuds, aretes: aretes };
+};
+
+/* Relations qui portent une dépendance technique. Une note qui en documente
+   une autre n'en dépend pas : inclure « documente » dans le calcul ferait
+   passer pour points de rupture toutes les fiches simplement documentées. */
+window.RELATIONS_TECHNIQUES = ["heberge", "depend", "replique", "sauvegarde"];
+
+/* Points d'articulation : un nœud dont le retrait couperait le graphe des
+   dépendances techniques en morceaux. Ce sont les points de défaillance unique
+   du périmètre. Parcours en profondeur, algorithme de Hopcroft et Tarjan. */
+window.pointsArticulation = function (graphe) {
+  var voisins = {};
+  Object.keys(graphe.noeuds).forEach(function (id) { voisins[id] = []; });
+  graphe.aretes.forEach(function (r) {
+    if (!voisins[r.de] || !voisins[r.vers]) return;
+    if (window.RELATIONS_TECHNIQUES.indexOf(r.type) === -1) return;
+    voisins[r.de].push(r.vers);
+    voisins[r.vers].push(r.de);
+  });
+
+  var visite = {}, decouverte = {}, bas = {}, parent = {}, articulation = {}, temps = 0;
+
+  function parcourir(u) {
+    var enfants = 0;
+    visite[u] = true;
+    decouverte[u] = bas[u] = ++temps;
+    voisins[u].forEach(function (v) {
+      if (!visite[v]) {
+        enfants++;
+        parent[v] = u;
+        parcourir(v);
+        bas[u] = Math.min(bas[u], bas[v]);
+        if (parent[u] === undefined && enfants > 1) articulation[u] = true;
+        if (parent[u] !== undefined && bas[v] >= decouverte[u]) articulation[u] = true;
+      } else if (v !== parent[u]) {
+        bas[u] = Math.min(bas[u], decouverte[v]);
+      }
+    });
+  }
+
+  Object.keys(voisins).forEach(function (id) { if (!visite[id]) parcourir(id); });
+  return articulation;
+};
+
+window.degres = function (graphe) {
+  var d = {};
+  Object.keys(graphe.noeuds).forEach(function (id) { d[id] = 0; });
+  graphe.aretes.forEach(function (r) {
+    if (d[r.de] !== undefined) d[r.de]++;
+    if (d[r.vers] !== undefined) d[r.vers]++;
+  });
+  return d;
+};
+
+/* Type cartographique d'une note : le type de fiche s'il existe, sinon le type
+   de note. C'est lui qui décide de la forme du nœud. */
+window.typeCarto = function (n) { return n.typeFiche || n.type; };
+
+/* Signets d'un domaine, du plus récemment ajouté au plus ancien. */
+window.signetsDe = function (domaine) {
+  return window.CORPUS
+    .filter(function (n) { return n.type === "Signet" && (!domaine || n.domaine === domaine); })
+    .sort(function (a, b) { return (a.jours || 0) - (b.jours || 0); });
+};
+
+/* Nom d'hôte lisible d'une adresse : c'est lui qu'on montre, pas l'adresse
+   complète. Un lecteur reconnaît un site à son nom de domaine. */
+window.hoteDe = function (url) {
+  return String(url || "").replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
+};
+window.cheminDe = function (url) {
+  var reste = String(url || "").replace(/^https?:\/\//, "").replace(/^www\./, "");
+  var i = reste.indexOf("/");
+  return i === -1 ? "" : reste.slice(i);
+};
+
+/* ==========================================================================
+   LOT D'IMPORT DE DÉMONSTRATION
+   Reprise d'un partage réseau. Le sort de chaque fichier est décidé ici :
+   l'aperçu (V-24, étape 3) et le rapport (étape 4) en sont dérivés, de sorte
+   que les décomptes annoncés avant l'import correspondent exactement à ceux
+   annoncés après.
+   ========================================================================== */
+window.LOT_IMPORT = {
+  source: "Partage réseau — \\\\srv-fic-01\\Technique\\Exploitation",
+  fichiers: [
+    { c: "Exploitation/Sauvegardes/Restauration PostgreSQL.docx", f: "docx", o: 184, s: "note" },
+    { c: "Exploitation/Sauvegardes/Restauration MariaDB.docx", f: "docx", o: 96, s: "note" },
+    { c: "Exploitation/Sauvegardes/Purge des sauvegardes.docx", f: "docx", o: 61, s: "note" },
+    { c: "Exploitation/Sauvegardes/Matrice serveurs.xlsx", f: "xlsx", o: 42, s: "ignore",
+      m: "Les tableurs ne sont pas convertis en notes. Déposez-le en pièce jointe d'une note existante." },
+    { c: "Exploitation/Sauvegardes/ancien/Restauration PostgreSQL.docx", f: "docx", o: 152, s: "ignore",
+      m: "Fichier identique à un autre du lot, conservé une seule fois." },
+    { c: "Exploitation/Astreinte/Consignes de nuit.docx", f: "docx", o: 128, s: "note" },
+    { c: "Exploitation/Astreinte/Numéros utiles.txt", f: "txt", o: 3, s: "note" },
+    { c: "Exploitation/Astreinte/Rotation 2025.pdf", f: "pdf", o: 512, s: "note" },
+    { c: "Exploitation/Ordonnancement/Chaînes de nuit.docx", f: "docx", o: 231, s: "note" },
+    { c: "Exploitation/Ordonnancement/Calendrier.pdf", f: "pdf", o: 88, s: "note" },
+    { c: "Exploitation/Ordonnancement/schema-chaines.png", f: "png", o: 640, s: "ignore",
+      m: "Image isolée, sans document qui la référence. Elle sera à joindre manuellement." },
+    { c: "Supervision/Sondes et seuils.docx", f: "docx", o: 174, s: "note" },
+    { c: "Supervision/Alertes/Politique d'escalade.md", f: "md", o: 12, s: "note" },
+    { c: "Supervision/Alertes/Modèles de message.md", f: "md", o: 7, s: "note" },
+    { c: "Supervision/Tableau de bord.pptx", f: "pptx", o: 2048, s: "note" },
+    { c: "Réseau/Plan d'adressage.docx", f: "docx", o: 143, s: "note" },
+    { c: "Réseau/Configuration coeur.txt", f: "txt", o: 28, s: "note" },
+    { c: "Réseau/VPN/Accès prestataires.docx", f: "docx", o: 92, s: "note" },
+    { c: "Réseau/VPN/Certificats.pdf", f: "pdf", o: 310, s: "echec",
+      m: "Le fichier est protégé par un mot de passe : son contenu n'a pas pu être lu." },
+    { c: "Réseau/VPN/~$cès prestataires.docx", f: "docx", o: 1, s: "ignore",
+      m: "Fichier temporaire laissé par le traitement de texte." },
+    { c: "Serveurs/Inventaire.docx", f: "docx", o: 205, s: "note" },
+    { c: "Serveurs/pg-prod-01.docx", f: "docx", o: 74, s: "note" },
+    { c: "Serveurs/pg-prod-02.docx", f: "docx", o: 71, s: "note" },
+    { c: "Serveurs/srv-app-01.docx", f: "docx", o: 68, s: "note" },
+    { c: "Serveurs/Anciens/srv-legacy.doc", f: "doc", o: 55, s: "echec",
+      m: "Format Word antérieur à 2007, non convertible. Réenregistrez-le en .docx." },
+    { c: "Serveurs/Anciens/notes.txt", f: "txt", o: 0, s: "ignore",
+      m: "Fichier vide." },
+    { c: "Procédures/Bascule PRA.docx", f: "docx", o: 388, s: "note" },
+    { c: "Procédures/Bascule PRA — annexes.pdf", f: "pdf", o: 1740, s: "note" },
+    { c: "Procédures/Archive 2019.zip", f: "zip", o: 8600, s: "ignore",
+      m: "Archive imbriquée : décompressez-la et déposez son contenu séparément." },
+    { c: "Procédures/Tests trimestriels.docx", f: "docx", o: 119, s: "echec",
+      m: "Le fichier semble endommagé : sa structure interne n'a pas pu être ouverte." }
+  ]
+};
+
+window.FORMATS_IMPORT = {
+  docx: "Traitement de texte", doc: "Traitement de texte (ancien)",
+  pptx: "Présentation", pdf: "PDF", md: "Markdown", txt: "Texte brut",
+  xlsx: "Tableur", png: "Image", zip: "Archive"
+};
+
+/* Arborescence détectée dans le lot, telle qu'elle deviendra celle des
+   dossiers. Seuls les fichiers retenus comptent. */
+window.arborescenceLot = function (lot) {
+  var racine = {};
+  lot.fichiers.forEach(function (f) {
+    if (f.s === "ignore") return;
+    var segments = f.c.split("/");
+    var nom = segments.pop();
+    var niveau = racine;
+    segments.forEach(function (s) {
+      niveau[s] = niveau[s] || { enfants: {}, fichiers: [] };
+      niveau = niveau[s].enfants;
+    });
+    var courant = racine;
+    segments.forEach(function (s, k) {
+      if (k === segments.length - 1) courant[s].fichiers.push({ nom: nom, format: f.f, sort: f.s });
+      courant = courant[s].enfants;
+    });
+  });
+  return racine;
+};
+
+window.resumeLot = function (lot) {
+  var r = { total: lot.fichiers.length, notes: 0, ignores: 0, echecs: 0, formats: {}, octets: 0 };
+  lot.fichiers.forEach(function (f) {
+    r.octets += f.o;
+    if (f.s === "ignore") r.ignores++;
+    else if (f.s === "echec") r.echecs++;
+    else r.notes++;
+    if (f.s !== "ignore") r.formats[f.f] = (r.formats[f.f] || 0) + 1;
+  });
+  return r;
+};
+
+/* ==========================================================================
+   CONTRIBUTION D'UN UTILISATEUR
+   Ce qui est calculable l'est ; le reste — vérifications et liens, dont
+   l'historique complet n'est pas dans ce corpus de démonstration — est déclaré
+   ici plutôt que deviné dans la vue.
+   ========================================================================== */
+window.CONTRIBUTIONS = {
+  "Karim Belhadj": { verifiees: 14, liens: 63, arrivee: "12/09/2023", derniereConnexion: "aujourd'hui à 08:41" },
+  "Sophie Nguyen": { verifiees: 22, liens: 91, arrivee: "04/03/2021", derniereConnexion: "hier à 17:58" },
+  "Marc Ferreira": { verifiees: 6, liens: 28, arrivee: "18/01/2024", derniereConnexion: "il y a 3 jours" }
+};
+
+window.statsDe = function (nom) {
+  var c = window.CONTRIBUTIONS[nom] || { verifiees: 0, liens: 0 };
+  var siennes = window.CORPUS.filter(function (n) { return n.auteur === nom && !n.brouillon; });
+  var brouillons = window.CORPUS.filter(function (n) { return n.auteur === nom && n.brouillon; });
+  /* Citations : le nombre de notes qui pointent vers la plus citée des siennes. */
+  var citations = 0, notePhare = null;
+  siennes.forEach(function (n) {
+    var v = window.RELATIONS.filter(function (r) { return r.vers === n.id; }).length;
+    if (v > citations) { citations = v; notePhare = n; }
+  });
+  return {
+    publiees: siennes.length, brouillons: brouillons.length,
+    verifiees: c.verifiees, liens: c.liens,
+    citations: citations, notePhare: notePhare,
+    arrivee: c.arrivee, derniereConnexion: c.derniereConnexion
+  };
+};
+
+/* Les six distinctions. Individuelles et privées : aucun classement entre
+   utilisateurs n'existe, ni ici ni ailleurs dans le produit. */
+window.DISTINCTIONS = [
+  { id: "premier", nom: "Premier pas", critere: "Première note publiée", seuil: 1, mesure: "publiees",
+    quoi: "note publiée" },
+  { id: "veilleur", nom: "Veilleur", critere: "10 notes vérifiées", seuil: 10, mesure: "verifiees",
+    quoi: "notes vérifiées" },
+  { id: "redacteur", nom: "Rédacteur", critere: "25 notes publiées", seuil: 25, mesure: "publiees",
+    quoi: "notes publiées" },
+  { id: "biblio", nom: "Bibliothécaire", critere: "50 notes publiées", seuil: 50, mesure: "publiees",
+    quoi: "notes publiées" },
+  { id: "tisseur", nom: "Tisseur", critere: "100 liens internes créés", seuil: 100, mesure: "liens",
+    quoi: "liens créés" },
+  { id: "referent", nom: "Référent", critere: "Une note citée par 20 autres", seuil: 20, mesure: "citations",
+    quoi: "citations sur une même note" }
+];</script>
+<script>
+(function () {
+  "use strict";
+  var app = document.getElementById("app");
+
+    /* ---------- Notifications (V-38) ---------- */
+  window.notifier = function (txt, variante) {
+    var zone = document.getElementById("notifs");
+    if (!zone) {
+      zone = document.createElement("div");
+      zone.id = "notifs"; zone.className = "notifs";
+      zone.setAttribute("role", "status");
+      zone.setAttribute("aria-live", "polite");
+      document.body.appendChild(zone);
+    }
+    var n = document.createElement("div");
+    n.className = "notif" + (variante ? " notif--" + variante : "");
+    n.textContent = txt;
+    zone.appendChild(n);
+    setTimeout(function () {
+      n.style.transition = "opacity .3s"; n.style.opacity = "0";
+      setTimeout(function () { n.remove(); }, 320);
+    }, 2600);
+  };
+
+    /* ---------- Rail : dépliage de l'arborescence ---------- */
+  document.querySelectorAll(".noeud__chevron").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var li = b.closest("li");
+      var ouvert = li.getAttribute("data-ouvert") === "oui";
+      li.setAttribute("data-ouvert", ouvert ? "non" : "oui");
+      b.setAttribute("aria-expanded", String(!ouvert));
+      b.closest(".noeud").setAttribute("data-ouvert", ouvert ? "non" : "oui");
+    });
+  });
+  document.querySelectorAll('.arbre li[data-ouvert="oui"] > .noeud').forEach(function (n) {
+    n.setAttribute("data-ouvert", "oui");
+  });
+
+  /* ---------- Mode concentration ---------- */
+  document.getElementById("bascule-rail").addEventListener("click", function () {
+    var ferme = app.getAttribute("data-rail") === "ferme";
+    app.setAttribute("data-rail", ferme ? "ouvert" : "ferme");
+    this.setAttribute("aria-label", ferme ? "Replier la navigation" : "Déplier la navigation");
+  });
+
+  /* ---------- Fil d'Ariane et page courante ----------
+     Chaque vue déclare son chemin : coquille({ fil: [...], courant: [...] }).
+     Le dernier segment du fil n'est pas cliquable, les ancêtres le sont.
+     Les nœuds de l'arborescence nommés dans « courant » sont mis en évidence
+     et dépliés, conformément à V-37. */
+  window.coquille = function (opts) {
+    opts = opts || {};
+    var fil = document.getElementById("fil");
+    if (fil && opts.fil) {
+      fil.innerHTML = "";
+      opts.fil.forEach(function (seg, k) {
+        if (k) {
+          var sep = document.createElement("span");
+          sep.textContent = "\u203A";
+          fil.appendChild(sep);
+        }
+        var dernier = k === opts.fil.length - 1;
+        var el = document.createElement(dernier ? "span" : "a");
+        if (dernier) { el.className = "fil__courant"; }
+        else { el.href = "#"; }
+        el.textContent = seg;
+        fil.appendChild(el);
+      });
+    }
+    (opts.courant || []).forEach(function (nom, k, tab) {
+      document.querySelectorAll(".noeud__nom").forEach(function (a) {
+        if (a.textContent.trim() !== nom) return;
+        a.closest(".noeud").classList.add("noeud--courant");
+        if (k === tab.length - 1) a.setAttribute("aria-current", "page");
+        var li = a.closest("li");
+        while (li) {
+          li.setAttribute("data-ouvert", "oui");
+          var chev = li.querySelector(":scope > .noeud > .noeud__chevron");
+          if (chev) chev.setAttribute("aria-expanded", "true");
+          var n = li.querySelector(":scope > .noeud");
+          if (n) n.setAttribute("data-ouvert", "oui");
+          li = li.parentElement.closest("li");
+        }
+      });
+    });
+  };
+
+    /* ====================== ROBUSTESSE D'UN MOT DE PASSE ======================
+     L'échelle récompense la longueur plutôt que la variété de symboles :
+     « cheval agrafe batterie » sort solide, « Motdepasse12 » sort correct.
+     C'est l'état de l'art, et surtout c'est cohérent avec le conseil affiché
+     sous le champ — un indicateur qui contredirait son propre conseil serait
+     pire qu'aucun indicateur.
+
+     creerRobustesse({ champ, confirmation, erreurConfirmation,
+                       champConfirmation, regles, indicateur, note, reste,
+                       interdit }) */
+  function creerRobustesse(o) {
+    var MINI = 12;
+
+    function natures(v) {
+      var n = 0;
+      if (/[a-zà-ÿ]/.test(v)) n++;
+      if (/[A-ZÀ-Ý]/.test(v)) n++;
+      if (/[0-9]/.test(v)) n++;
+      if (/[^a-zà-ÿA-ZÀ-Ý0-9]/.test(v)) n++;
+      return n;
+    }
+
+    function evaluer() {
+      var v = o.champ.value;
+      var mot = o.interdit ? String(o.interdit() || "").toLowerCase() : "";
+      var ok = {
+        longueur: v.length >= MINI,
+        varie: natures(v) >= 2,
+        different: v.length > 0 && (!mot || v.toLowerCase().indexOf(mot) === -1)
+      };
+      if (o.regles) {
+        o.regles.querySelectorAll("li").forEach(function (li) {
+          li.setAttribute("data-ok", ok[li.getAttribute("data-regle")] ? "oui" : "non");
+        });
+      }
+      if (o.reste) o.reste.textContent = Math.min(v.length, 99) + " / " + MINI;
+
+      var niveau, segments, libelle;
+      if (!ok.longueur) {
+        niveau = "court"; segments = v.length ? 1 : 0; libelle = "Trop court";
+      } else {
+        var points = 0;
+        if (v.length >= 12) points++;
+        if (v.length >= 16) points++;
+        if (natures(v) >= 2) points++;
+        if (natures(v) >= 3 || v.length >= 20) points++;
+        segments = Math.max(2, Math.min(4, points));
+        niveau = segments <= 2 ? "faible" : segments === 3 ? "correct" : "solide";
+        libelle = segments <= 2 ? "Faible" : segments === 3 ? "Correct" : "Solide";
+      }
+      if (o.indicateur) {
+        o.indicateur.setAttribute("data-niveau", niveau);
+        o.indicateur.querySelectorAll("i").forEach(function (i, k) { i.classList.toggle("on", k < segments); });
+      }
+      if (o.note) o.note.textContent = libelle;
+
+      if (o.confirmation && o.confirmation.value) verifierConfirmation();
+      return ok.longueur && ok.varie && ok.different;
+    }
+
+    function verifierConfirmation() {
+      if (!o.confirmation) return true;
+      var pareil = o.confirmation.value === o.champ.value;
+      if (o.champConfirmation) o.champConfirmation.setAttribute("data-etat", pareil ? "" : "erreur");
+      if (o.erreurConfirmation) o.erreurConfirmation.hidden = pareil;
+      return pareil;
+    }
+
+    o.champ.addEventListener("input", evaluer);
+    if (o.confirmation) o.confirmation.addEventListener("input", verifierConfirmation);
+
+    return { evaluer: evaluer, verifierConfirmation: verifierConfirmation, minimum: MINI };
+  }
+
+  var COMPTE_NEUF = {
+    nom: "Léa Marchand", initiales: "LM", identifiant: "lea.marchand",
+    courriel: "lea.marchand@exemple.fr", role: "Contributeur", domaine: "Poste de travail",
+    arrivee: "02/08/2026", derniereConnexion: "aujourd'hui à 09:12"
+  };
+  var profil = null, stats = null;
+
+  function nb(x) { return x.toLocaleString("fr-FR"); }
+
+  /* =====================================================================
+     Identité
+     ===================================================================== */
+  function rendreIdentite() {
+    document.getElementById("avatar").textContent = profil.initiales;
+    document.getElementById("nom").textContent = profil.nom;
+
+    var sous = document.getElementById("sous-nom");
+    sous.innerHTML = "";
+    var r = document.createElement("span");
+    r.className = "past past--type"; r.textContent = profil.role;
+    sous.appendChild(r);
+    var d = document.createElement("span");
+    d.className = "past"; d.textContent = profil.domaine;
+    sous.appendChild(d);
+    var a = document.createElement("span");
+    a.textContent = "dans l'équipe depuis le " + profil.arrivee;
+    sous.appendChild(a);
+
+    document.getElementById("p-affiche").value = profil.nom;
+    document.getElementById("p-courriel").value = profil.courriel;
+    document.getElementById("derniere-connexion").textContent = profil.derniereConnexion;
+
+    /* Champs attribués : lisibles, expliqués, jamais de simple grisé. */
+    var zone = document.getElementById("attribues");
+    zone.innerHTML = "";
+    [["Identifiant", profil.identifiant],
+     ["Rôle", profil.role],
+     ["Domaine principal", profil.domaine],
+     ["Date d'arrivée", profil.arrivee]].forEach(function (p) {
+      var l = document.createElement("div");
+      l.className = "attribue";
+      var c = document.createElement("span");
+      c.className = "attribue__cle"; c.textContent = p[0];
+      var v = document.createElement("span");
+      v.className = "attribue__val"; v.textContent = p[1];
+      var k = document.createElement("span");
+      k.className = "attribue__cadenas";
+      k.innerHTML = '<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="7" width="9" height="6.5" rx="1.3"/><path d="M5.8 7V5.2a2.2 2.2 0 0 1 4.4 0V7"/></svg>';
+      k.appendChild(document.createTextNode("attribué"));
+      l.appendChild(c); l.appendChild(v); l.appendChild(k);
+      zone.appendChild(l);
+    });
+    var m = document.createElement("div");
+    m.className = "mention-attribution";
+    m.textContent = "Le rôle et le domaine principal sont fixés par un administrateur, depuis la console. Si l'un des deux ne correspond plus à votre situation, demandez-lui de le corriger — vous ne pouvez pas le faire vous-même, et c'est voulu.";
+    zone.appendChild(m);
+  }
+
+  /* =====================================================================
+     Distinctions
+     ===================================================================== */
+  function rendreDistinctions() {
+    var zs = document.getElementById("stats");
+    zs.innerHTML = "";
+    [[stats.publiees, "notes publiées", stats.brouillons ? stats.brouillons + " brouillon en cours" : "aucun brouillon"],
+     [stats.verifiees, "notes vérifiées", "depuis votre arrivée"],
+     [stats.liens, "liens internes créés", "vers d'autres notes"],
+     [stats.citations, "citations maximales", stats.notePhare ? "sur « " + stats.notePhare.titre + " »" : "sur une même note"]
+    ].forEach(function (p) {
+      var d = document.createElement("div");
+      d.className = "stat";
+      var v = document.createElement("div");
+      v.className = "stat__val"; v.textContent = nb(p[0]);
+      var n = document.createElement("span");
+      n.className = "stat__nom"; n.textContent = p[1];
+      var s = document.createElement("span");
+      s.className = "stat__sous"; s.textContent = p[2];
+      d.appendChild(v); d.appendChild(n); d.appendChild(s);
+      zs.appendChild(d);
+    });
+
+    /* Les six sont toujours affichées, obtenues ou non : une zone vide serait
+       décourageante là où une progression est une invitation. */
+    var zd = document.getElementById("distinctions");
+    zd.innerHTML = "";
+    window.DISTINCTIONS.forEach(function (di) {
+      var valeur = stats[di.mesure] || 0;
+      var obtenue = valeur >= di.seuil;
+      var part = Math.min(100, Math.round(valeur / di.seuil * 100));
+
+      var c = document.createElement("article");
+      c.className = "dist";
+      c.setAttribute("data-obtenue", obtenue ? "oui" : "non");
+
+      var s = document.createElement("span");
+      s.className = "dist__sceau";
+      s.setAttribute("aria-hidden", "true");
+      s.innerHTML = obtenue
+        ? '<svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg>'
+        : String(Math.min(99, part)) + "%";
+      c.appendChild(s);
+
+      var n = document.createElement("div");
+      n.className = "dist__nom"; n.textContent = di.nom;
+      c.appendChild(n);
+
+      var cr = document.createElement("div");
+      cr.className = "dist__critere"; cr.textContent = di.critere;
+      c.appendChild(cr);
+
+      var j = document.createElement("div");
+      j.className = "dist__jauge";
+      var p = document.createElement("div");
+      p.className = "dist__piste";
+      var i = document.createElement("i");
+      i.style.width = part + "%";
+      p.appendChild(i);
+      j.appendChild(p);
+      var ch = document.createElement("div");
+      ch.className = "dist__chiffre";
+      var b = document.createElement("b");
+      b.textContent = nb(Math.min(valeur, di.seuil)) + " / " + nb(di.seuil);
+      ch.appendChild(b);
+      var reste = document.createElement("span");
+      reste.className = "dist__reste";
+      reste.textContent = obtenue ? "obtenue" : "encore " + nb(di.seuil - valeur) + " " + di.quoi;
+      ch.appendChild(reste);
+      j.appendChild(ch);
+      c.appendChild(j);
+
+      c.setAttribute("aria-label", di.nom + ", " + di.critere + ", " +
+        (obtenue ? "obtenue" : "progression " + part + " pour cent"));
+      zd.appendChild(c);
+    });
+  }
+
+  /* =====================================================================
+     Activité
+     ===================================================================== */
+  var GESTES = {
+    verification: "Vous avez vérifié", edition: "Vous avez modifié",
+    publication: "Vous avez publié", revision: "Vous avez signalé à réviser",
+    import: "Vous avez terminé un import"
+  };
+  function relatif(h) {
+    if (h < 1) return "à l'instant";
+    if (h < 24) return "il y a " + h + " h";
+    var j = Math.round(h / 24);
+    return j === 1 ? "hier" : "il y a " + j + " jours";
+  }
+
+  function rendreActivite() {
+    var zone = document.getElementById("activite");
+    zone.innerHTML = "";
+    var evenements = app.getAttribute("data-activite") === "vide" ? []
+      : window.ACTIVITE.filter(function (e) { return e.qui === profil.nom; });
+    document.getElementById("n-activite").textContent = evenements.length || "";
+
+    if (!evenements.length) {
+      /* Encouragement plutôt qu'un vide : c'est le premier écran que voit un
+         nouvel arrivant, et il décide s'il contribuera. */
+      var e = document.createElement("div");
+      e.className = "encouragement";
+      var h = document.createElement("h3");
+      h.textContent = "Rien à afficher pour l'instant";
+      var p = document.createElement("p");
+      p.textContent = "Vos contributions apparaîtront ici dès la première. Le plus simple pour commencer : vérifier une note de votre domaine que vous connaissez déjà — cela prend une minute et rend service à tout le monde.";
+      e.appendChild(h); e.appendChild(p);
+      var b = document.createElement("button");
+      b.className = "btn btn--principal";
+      b.textContent = "Voir les notes de " + profil.domaine;
+      b.addEventListener("click", function () {
+        window.notifier("Notes du domaine " + profil.domaine + " — vue V-12");
+      });
+      e.appendChild(b);
+      zone.appendChild(e);
+      return;
+    }
+
+    var ul = document.createElement("ul");
+    ul.className = "flux";
+    evenements.forEach(function (ev) {
+      var li = document.createElement("li");
+      li.setAttribute("data-type", ev.type);
+      var t = document.createElement("div");
+      t.className = "flux__txt";
+      t.appendChild(document.createTextNode(GESTES[ev.type] + " "));
+      if (ev.cible) {
+        var n = window.CORPUS.filter(function (x) { return x.id === ev.cible; })[0];
+        var a = document.createElement("a");
+        a.href = "#"; a.textContent = n ? n.titre : ev.cible;
+        a.addEventListener("click", function (e) {
+          e.preventDefault();
+          window.notifier("Ouverture de « " + (n ? n.titre : ev.cible) + " » — vue V-14");
+        });
+        t.appendChild(a);
+      } else if (ev.detail) {
+        t.appendChild(document.createTextNode("— " + ev.detail));
+      }
+      var q = document.createElement("span");
+      q.className = "flux__quand"; q.textContent = relatif(ev.heures);
+      t.appendChild(q);
+      li.appendChild(t);
+      ul.appendChild(li);
+    });
+    zone.appendChild(ul);
+  }
+
+  /* =====================================================================
+     Sécurité
+     ===================================================================== */
+  var jauge = creerRobustesse({
+    champ: document.getElementById("nouveau"),
+    confirmation: document.getElementById("confirmation"),
+    erreurConfirmation: document.getElementById("erreur-confirm"),
+    champConfirmation: document.getElementById("champ-confirm"),
+    regles: document.getElementById("regles"),
+    indicateur: document.getElementById("robustesse"),
+    note: document.getElementById("robustesse-note"),
+    reste: document.getElementById("robustesse-reste"),
+    interdit: function () { return profil.identifiant; }
+  });
+
+  document.getElementById("form-securite").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var actuel = document.getElementById("actuel");
+    document.getElementById("erreur-actuel").hidden = !!actuel.value;
+    document.getElementById("champ-actuel").setAttribute("data-etat", actuel.value ? "" : "erreur");
+    if (!actuel.value) { actuel.focus(); return; }
+
+    var valide = jauge.evaluer();
+    document.getElementById("champ-nouveau").setAttribute("data-etat", valide ? "" : "erreur");
+    if (!valide) { document.getElementById("nouveau").focus(); return; }
+    if (!jauge.verifierConfirmation()) { document.getElementById("confirmation").focus(); return; }
+
+    window.notifier("Mot de passe changé — vos autres sessions ont été fermées", "succes");
+    document.getElementById("form-securite").reset();
+    jauge.evaluer();
+  });
+
+  document.getElementById("voir").addEventListener("click", function () {
+    var n = document.getElementById("nouveau");
+    var affiche = n.type === "text";
+    n.type = affiche ? "password" : "text";
+    this.setAttribute("aria-pressed", String(!affiche));
+    this.setAttribute("aria-label", affiche ? "Afficher le mot de passe" : "Masquer le mot de passe");
+    n.focus();
+  });
+
+  document.getElementById("fermer-sessions").addEventListener("click", function () {
+    window.notifier("Toutes les autres sessions ont été fermées");
+  });
+  document.getElementById("enregistrer-identite").addEventListener("click", function () {
+    window.notifier("Profil enregistré", "succes");
+  });
+  document.getElementById("deconnexion").addEventListener("click", function () {
+    window.notifier("Déconnexion — retour à l'écran de connexion, vue V-05");
+  });
+
+  /* =====================================================================
+     Onglets
+     ===================================================================== */
+  function allerOnglet(cle) {
+    app.setAttribute("data-onglet", cle);
+    document.querySelectorAll(".onglets button").forEach(function (b) {
+      b.setAttribute("aria-selected", String(b.getAttribute("data-onglet") === cle));
+    });
+    document.querySelectorAll(".volet").forEach(function (v) {
+      v.setAttribute("data-actif", v.getAttribute("data-volet") === cle ? "oui" : "non");
+    });
+    var r = document.querySelector('input[name="ong"][value="' + cle + '"]');
+    if (r) r.checked = true;
+  }
+  document.querySelectorAll(".onglets button").forEach(function (b) {
+    b.addEventListener("click", function () { allerOnglet(b.getAttribute("data-onglet")); });
+  });
+
+  /* =====================================================================
+     Comptes et cas
+     ===================================================================== */
+  function charger(cle) {
+    if (cle === "neuf") {
+      profil = COMPTE_NEUF;
+      stats = { publiees: 0, brouillons: 0, verifiees: 0, liens: 0, citations: 0, notePhare: null };
+      app.setAttribute("data-activite", "vide");
+    } else {
+      var s = window.statsDe(window.MOI.nom);
+      profil = {
+        nom: window.MOI.nom, initiales: window.MOI.initiales,
+        identifiant: "karim.belhadj", courriel: "karim.belhadj@exemple.fr",
+        role: window.MOI.role, domaine: window.MOI.domaine,
+        arrivee: s.arrivee, derniereConnexion: s.derniereConnexion
+      };
+      stats = s;
+      app.setAttribute("data-activite", "pleine");
+    }
+    rendreIdentite();
+    rendreDistinctions();
+    rendreActivite();
+    appliquerVerrou();
+  }
+
+  function appliquerVerrou() {
+    var v = document.getElementById("c-verrou").checked;
+    app.setAttribute("data-verrou", v ? "oui" : "non");
+    document.getElementById("verrou").hidden = !v;
+    document.getElementById("form-mdp").hidden = v;
+  }
+
+  document.querySelectorAll('input[name="ong"]').forEach(function (r) {
+    r.addEventListener("change", function () { allerOnglet(r.value); });
+  });
+  document.querySelectorAll('input[name="cpt"]').forEach(function (r) {
+    r.addEventListener("change", function () { charger(r.value); });
+  });
+  document.getElementById("c-verrou").addEventListener("change", appliquerVerrou);
+
+    /* ====================== V-09 · PALETTE DE RECHERCHE RAPIDE ====================
+     Une fabrique, deux usages : la superposition invoquée au clavier, et des
+     aperçus statiques pour la revue des états. Les règles clavier sont celles
+     de V-08 — flèches pour parcourir, Entrée pour ouvrir, Échappement pour
+     effacer puis quitter, flèche haut depuis le premier résultat pour revenir
+     au champ, bouclage après le dernier. */
+  (function () {
+    var tpl = document.getElementById("tpl-palette");
+    if (!tpl) return;
+
+    /* L'état au repos n'est jamais une zone vide : notes récemment consultées. */
+    var RECENTES = ["n-restaurer-pg", "n-astreinte", "n-pg-prod-01", "n-diag-barman"];
+    var GLYPHES = { "Procédure": "PRO", "Guide": "GUI", "Fiche": "FIC", "Note": "NOT", "Signet": "LIE" };
+
+
+    /* ---------------------------------------------------------------------
+       Fabrique. `hote` reçoit le clone du gabarit.
+       Options : statique, requete, degrade, selection, curseur.
+       --------------------------------------------------------------------- */
+    function creer(hote, opts) {
+      opts = opts || {};
+      var boite = tpl.content.firstElementChild.cloneNode(true);
+      hote.appendChild(boite);
+
+      var saisie = boite.querySelector(".palette__saisie");
+      var liste = boite.querySelector(".palette__liste");
+      var compteur = boite.querySelector(".palette__compteur");
+      var effacer = boite.querySelector(".palette__effacer");
+      var btnFermer = boite.querySelector(".palette__fermer");
+      var btnTous = boite.querySelector(".palette__tous");
+
+      var sel = -1;
+      var resultats = [];
+      var declencheur = null;
+
+      if (opts.degrade) boite.setAttribute("data-degrade", "oui");
+      if (opts.curseur) boite.setAttribute("data-curseur", "oui");
+      if (opts.requete) saisie.value = opts.requete;
+      if (opts.statique) {
+        /* Un aperçu ne capte ni le focus ni le clavier : il illustre. */
+        saisie.setAttribute("tabindex", "-1");
+        saisie.setAttribute("readonly", "readonly");
+        liste.style.maxHeight = opts.hauteur || "268px";
+      }
+
+      function ligne(n, requete, index) {
+        var b = document.createElement("a");
+        b.className = "pres";
+        b.href = "#";
+        b.setAttribute("role", "option");
+        b.setAttribute("data-index", index);
+        b.setAttribute("aria-selected", "false");
+
+        var g = document.createElement("span");
+        g.className = "pres__glyphe";
+        g.textContent = GLYPHES[n.type] || "NOT";
+        b.appendChild(g);
+
+        var corps = document.createElement("span");
+        corps.className = "pres__corps";
+        var titre = document.createElement("span");
+        titre.className = "pres__titre";
+        titre.appendChild(window.surligner(n.titre, requete));
+        corps.appendChild(titre);
+
+        var sous = document.createElement("span");
+        sous.className = "pres__sous";
+        sous.appendChild(window.temoinFraicheur(n));
+        var meta = document.createElement("span");
+        meta.textContent = "· " + n.domaine + " · " + (n.typeFiche ? n.type + " " + n.typeFiche : n.type);
+        sous.appendChild(meta);
+        if (n.operationnel) {
+          var op = document.createElement("span");
+          op.className = "past";
+          op.style.padding = "1px 5px";
+          op.textContent = "Opérationnel";
+          sous.appendChild(op);
+        }
+        corps.appendChild(sous);
+        b.appendChild(corps);
+
+        var e = document.createElement("span");
+        e.className = "pres__entree";
+        e.textContent = "↵";
+        b.appendChild(e);
+
+        b.addEventListener("click", function (ev) { ev.preventDefault(); ouvrir(n); });
+        if (!opts.statique) {
+          b.addEventListener("mousemove", function () { if (sel !== index) marquer(index, false); });
+        }
+        return b;
+      }
+
+      function bloc(texte, requete, actionLabel, action) {
+        var d = document.createElement("div");
+        d.className = "palette__etat";
+        var p = document.createElement("p");
+        p.appendChild(document.createTextNode(texte));
+        if (requete) {
+          var r = document.createElement("span");
+          r.className = "palette__requete";
+          r.textContent = " « " + requete + " »";
+          p.appendChild(r);
+        }
+        d.appendChild(p);
+        if (actionLabel) {
+          var b = document.createElement("button");
+          b.className = "btn btn--principal";
+          b.textContent = actionLabel;
+          b.addEventListener("click", action);
+          d.appendChild(b);
+        }
+        return d;
+      }
+
+      function rendre() {
+        var q = saisie.value.trim();
+        liste.innerHTML = "";
+        sel = -1;
+        effacer.hidden = !q;
+
+        /* Au repos : notes récemment consultées. */
+        if (!q) {
+          resultats = RECENTES.map(function (id) {
+            return window.CORPUS.filter(function (n) { return n.id === id; })[0];
+          }).filter(Boolean);
+          var t = document.createElement("div");
+          t.className = "palette__groupe etiq";
+          t.textContent = "Consultées récemment";
+          liste.appendChild(t);
+          resultats.forEach(function (n, k) { liste.appendChild(ligne(n, "", k)); });
+          compteur.textContent = "";
+          marquer(opts.selection != null ? opts.selection : 0, false);
+          return;
+        }
+
+        /* Un seul caractère : invitation à continuer, résultats au deuxième. */
+        if (q.length < 2) {
+          resultats = [];
+          liste.appendChild(bloc("Continuez à taper — les résultats apparaissent dès le deuxième caractère."));
+          compteur.textContent = "";
+          return;
+        }
+
+        var t0 = performance.now();
+        resultats = window.chercher(q);
+        var duree = Math.max(0.04, (performance.now() - t0) / 1000 + 0.06);
+
+        if (!resultats.length) {
+          var d = bloc("Aucun résultat pour", q, "Créer cette note", function () {
+            window.notifier && window.notifier("Éditeur ouvert, titre pré-rempli avec « " + q + " » — vue V-17");
+          });
+          if (window.DROITS_LECTURE) d.querySelector(".btn").remove();
+          liste.appendChild(d);
+          compteur.textContent = "0 résultat en " + duree.toFixed(2).replace(".", ",") + " s";
+          return;
+        }
+
+        resultats = resultats.slice(0, 7);
+        resultats.forEach(function (n, k) { liste.appendChild(ligne(n, q, k)); });
+        compteur.textContent = resultats.length + " résultat" + (resultats.length > 1 ? "s" : "") +
+          " en " + duree.toFixed(2).replace(".", ",") + " s";
+        marquer(opts.selection != null ? opts.selection : 0, false);
+      }
+
+      function marquer(i, defiler) {
+        var lignes = liste.querySelectorAll(".pres");
+        if (!lignes.length) return;
+        if (i < 0) i = lignes.length - 1;
+        if (i >= lignes.length) i = 0;
+        lignes.forEach(function (l) { l.setAttribute("data-sel", "non"); l.setAttribute("aria-selected", "false"); });
+        lignes[i].setAttribute("data-sel", "oui");
+        lignes[i].setAttribute("aria-selected", "true");
+        if (defiler !== false) lignes[i].scrollIntoView({ block: "nearest" });
+        sel = i;
+      }
+
+      function ouvrir(n) {
+        if (opts.statique) return;
+        fermer();
+        window.notifier && window.notifier("Ouverture de « " + n.titre + " »" +
+          (n.operationnel ? " — directement sur le registre Opérationnel" : ""));
+      }
+
+      function ouvrirPalette(dec) {
+        var dlg = hote;
+        if (dlg.open) { saisie.focus(); saisie.select(); return; }
+        declencheur = dec || document.activeElement;
+        dlg.showModal();
+        rendre();
+        saisie.focus();
+      }
+      function fermer() {
+        if (!hote.close || !hote.open) return;
+        hote.close();
+        if (declencheur && declencheur.focus) declencheur.focus();
+      }
+
+      if (!opts.statique) {
+        saisie.addEventListener("input", rendre);
+        effacer.addEventListener("click", function () { saisie.value = ""; rendre(); saisie.focus(); });
+        btnFermer.addEventListener("click", fermer);
+        btnTous.addEventListener("click", function () {
+          fermer();
+          window.notifier && window.notifier("Recherche complète — vue V-08");
+        });
+        saisie.addEventListener("keydown", function (e) {
+          if (e.key === "ArrowDown") { e.preventDefault(); marquer(sel + 1); }
+          else if (e.key === "ArrowUp") { e.preventDefault(); marquer(sel - 1); }
+          else if (e.key === "Enter") { e.preventDefault(); if (resultats[sel]) ouvrir(resultats[sel]); }
+        });
+      } else {
+        btnTous.setAttribute("tabindex", "-1");
+        btnFermer.setAttribute("tabindex", "-1");
+      }
+
+      rendre();
+      return { boite: boite, rendre: rendre, ouvrir: ouvrirPalette, fermer: fermer, saisie: saisie };
+    }
+    window.creerPalette = creer;
+
+    /* ---------------------------------------------------------------------
+       Instance en superposition
+       --------------------------------------------------------------------- */
+    var dlg = document.getElementById("palette");
+    if (!dlg) return;
+    var api = creer(dlg, {});
+
+    window.ouvrirPalette = api.ouvrir;
+
+    /* Échappement : efface d'abord la requête, ne ferme qu'ensuite. */
+    dlg.addEventListener("cancel", function (e) {
+      e.preventDefault();
+      if (api.saisie.value) { api.saisie.value = ""; api.rendre(); api.saisie.focus(); }
+      else api.fermer();
+    });
+
+    /* Clic hors de la boîte : fermeture. */
+    dlg.addEventListener("mousedown", function (e) {
+      if (!e.target.closest(".palette__boite")) api.fermer();
+    });
+
+    /* Raccourci universel. Un second appui alors que la palette est ouverte
+       replace le focus dans le champ sans refermer. */
+    document.addEventListener("keydown", function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        api.ouvrir();
+      }
+    });
+
+    var champBarre = document.querySelector(".recherche");
+    if (champBarre) {
+      champBarre.addEventListener("click", function () { api.ouvrir(champBarre); });
+      champBarre.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); api.ouvrir(champBarre); }
+      });
+    }
+  })();
+
+  coquille({ fil: ["Accueil", "Mon profil"], courant: [] });
+  charger("karim");
+})();
+</script>
+</body>
+</html>

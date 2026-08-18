@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connexion — Codicillus</title>
+<link rel="stylesheet" href="polices/polices.css">
+<style>/* ==========================================================================
+   CODICILLUS — SOCLE
+   Jetons et composants communs. Source unique de vérité pour les 41 vues.
+   Aucune valeur arbitraire dans les écrans : tout passe par un jeton nommé.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. JETONS
+   -------------------------------------------------------------------------- */
+:root {
+  /* --- Couleur : encres ------------------------------------------------- */
+  --c-encre:        #16222b;   /* texte principal */
+  --c-encre-2:      #46585f;   /* texte secondaire */
+  --c-encre-3:      #536066;   /* texte tertiaire, métadonnées — assombri le
+                                  16/08/2026 : #71838a ne donnait que 2,75:1
+                                  sur le fond creux, là où RG-M18-07 exige
+                                  4,5:1 pour un texte de 11 px. Teinte
+                                  conservée, contraste porté à 4,54:1 au pire
+                                  des quatre surfaces. */
+  --c-encre-4:      #93a2a6;   /* désactivé, placeholder */
+
+  /* --- Couleur : surfaces ----------------------------------------------- */
+  --c-fond:         #e2e7e4;   /* fond d'application */
+  --c-fond-creux:   #d3d9d6;   /* zones en retrait, rail */
+  --c-papier:       #fcfbf8;   /* surface de lecture et cartes */
+  --c-papier-2:     #f5f4ef;   /* surface secondaire, en-têtes de tableau */
+
+  /* --- Couleur : traits -------------------------------------------------- */
+  --c-trait:        #cbd3d0;   /* bordure standard */
+  --c-trait-fin:    #e0e5e2;   /* séparateur discret */
+  --c-trait-fort:   #9aa7a3;   /* bordure appuyée */
+
+  /* --- Couleur : accent (violet d'encre) --------------------------------- */
+  --c-accent:       #453ba0;
+  --c-accent-fonce: #322b78;
+  --c-accent-voile: #edecf8;
+  --c-accent-trait: #c9c5e8;
+
+  /* --- Couleur : fraîcheur ----------------------------------------------- */
+  --c-frais:        #1d6b4a;
+  --c-frais-voile:  #e4efe8;
+  --c-vieil:        #8f5c00;
+  --c-vieil-voile:  #f6eedd;
+  --c-obsolete:     #a52c1b;
+  --c-obsolete-voile:#f7e7e3;
+
+  /* --- Couleur : sémantique ---------------------------------------------- */
+  --c-info:         #1b5c86;
+  --c-info-voile:   #e4eef4;
+  --c-alerte:       #8f5c00;
+  --c-alerte-voile: #f6eedd;
+  --c-danger:       #a52c1b;
+  --c-danger-voile: #f7e7e3;
+
+  /* --- Typographie : familles -------------------------------------------- */
+  --f-ui:      "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-lecture: "Literata", Georgia, "Times New Roman", serif;
+  --f-donnee:  "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* --- Typographie : échelle --------------------------------------------- */
+  --t-micro:  0.6875rem;  /* 11px — étiquettes mono capitales */
+  --t-mini:   0.75rem;    /* 12px — métadonnées */
+  --t-petit:  0.8125rem;  /* 13px — interface secondaire */
+  --t-base:   0.9375rem;  /* 15px — interface */
+  --t-lect:   1.0625rem;  /* 17px — corps rédigé */
+  --t-t3:     1.125rem;
+  --t-t2:     1.375rem;
+  --t-t1:     1.75rem;
+  --t-titre:  2.125rem;   /* titre de note */
+
+  /* --- Typographie : interlignes et graisses ------------------------------ */
+  --i-serre:  1.2;
+  --i-ui:     1.45;
+  --i-lect:   1.72;
+  --g-normal: 400;
+  --g-moyen:  500;
+  --g-fort:   600;
+  --g-lourd:  700;
+
+  /* --- Espacement --------------------------------------------------------- */
+  --e-0: 2px;  --e-1: 4px;  --e-2: 8px;  --e-3: 12px;
+  --e-4: 16px; --e-5: 24px; --e-6: 32px; --e-7: 48px; --e-8: 64px;
+
+  /* --- Rayons ------------------------------------------------------------- */
+  --r-0: 0;    --r-1: 2px;  --r-2: 4px;  --r-3: 8px;
+
+  /* --- Élévations ---------------------------------------------------------- */
+  --o-pose:   0 1px 2px rgba(22, 34, 43, .07);
+  --o-flotte: 0 6px 20px -4px rgba(22, 34, 43, .18), 0 2px 6px rgba(22, 34, 43, .08);
+
+  /* --- Dimensions de structure --------------------------------------------- */
+  --l-rail:     248px;
+  --l-sommaire: 204px;
+  --l-lecture:  680px;   /* confort de lecture, non maximisé */
+  --l-panneaux: 292px;
+  --l-barre:    52px;
+
+  /* --- Mouvement ------------------------------------------------------------ */
+  --m-vif:   120ms cubic-bezier(.2,.7,.4,1);
+  --m-doux:  240ms cubic-bezier(.2,.7,.4,1);
+  --m-ample: 520ms cubic-bezier(.16,.85,.3,1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --m-vif: 1ms; --m-doux: 1ms; --m-ample: 1ms; }
+  * { animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* --------------------------------------------------------------------------
+   2. BASE
+   -------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* L'attribut hidden doit primer sur toute mise en page en flex ou grid. */
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--c-fond);
+  color: var(--c-encre);
+  font-family: var(--f-ui);
+  font-size: var(--t-base);
+  line-height: var(--i-ui);
+  font-weight: var(--g-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+  border-radius: var(--r-1);
+}
+
+::selection { background: var(--c-accent-voile); }
+
+.saut-contenu {
+  position: absolute; left: var(--e-2); top: -60px; z-index: 200;
+  background: var(--c-encre); color: var(--c-papier);
+  padding: var(--e-2) var(--e-4); border-radius: var(--r-2);
+  text-decoration: none; transition: top var(--m-vif);
+}
+.saut-contenu:focus { top: var(--e-2); }
+
+.hors-ecran {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   3. ÉTIQUETTE MONO — le label d'instrument, utilisé partout
+   -------------------------------------------------------------------------- */
+.etiq {
+  font-family: var(--f-donnee);
+  font-size: var(--t-micro);
+  font-weight: var(--g-moyen);
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--c-encre-3);
+}
+
+/* --------------------------------------------------------------------------
+   4. TÉMOIN DE FRAÎCHEUR — la signature du produit
+   Jauge à trois barres : 3 pleines = frais, 2 = vieillissant, 1 + hachures =
+   obsolète. La forme porte l'information ; la couleur ne fait que la répéter.
+   -------------------------------------------------------------------------- */
+.temoin {
+  display: inline-flex; align-items: center; gap: var(--e-2);
+  font-family: var(--f-donnee);
+  font-size: var(--t-mini);
+  font-weight: var(--g-moyen);
+  line-height: 1;
+  white-space: nowrap;
+}
+.temoin__jauge {
+  display: inline-flex; align-items: flex-end; gap: 2px; height: 13px;
+  flex: none;
+}
+.temoin__jauge i {
+  display: block; width: 4px; border-radius: 1px;
+  border: 1px solid currentColor; background: transparent;
+}
+.temoin__jauge i:nth-child(1) { height: 6px; }
+.temoin__jauge i:nth-child(2) { height: 10px; }
+.temoin__jauge i:nth-child(3) { height: 13px; }
+.temoin__jauge i.plein { background: currentColor; }
+
+.temoin--frais  { color: var(--c-frais); }
+.temoin--vieil  { color: var(--c-vieil); }
+.temoin--obs    { color: var(--c-obsolete); }
+
+/* Le niveau obsolète porte en plus un hachurage : reconnaissable de loin,
+   et lisible en niveaux de gris comme en vision périphérique. */
+.temoin--obs .temoin__txt {
+  padding: 2px var(--e-2);
+  border-radius: var(--r-1);
+  background:
+    repeating-linear-gradient(135deg,
+      var(--c-obsolete-voile) 0 5px,
+      #f0d5cf 5px 10px);
+  box-shadow: inset 0 0 0 1px #e0b6ad;
+}
+
+/* --------------------------------------------------------------------------
+   5. BOUTONS
+   -------------------------------------------------------------------------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--e-2);
+  font-family: var(--f-ui); font-size: var(--t-petit); font-weight: var(--g-fort);
+  line-height: 1; letter-spacing: .005em;
+  padding: 9px var(--e-3);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-2);
+  background: var(--c-papier);
+  color: var(--c-encre);
+  cursor: pointer;
+  transition: background var(--m-vif), border-color var(--m-vif), color var(--m-vif), transform var(--m-vif);
+}
+.btn:hover { background: var(--c-papier-2); border-color: var(--c-trait-fort); }
+.btn:active { transform: translateY(1px); }
+
+.btn--principal {
+  background: var(--c-accent); border-color: var(--c-accent); color: #fff;
+}
+.btn--principal:hover { background: var(--c-accent-fonce); border-color: var(--c-accent-fonce); }
+
+.btn--discret {
+  background: transparent; border-color: transparent; color: var(--c-encre-2);
+  font-weight: var(--g-moyen);
+}
+.btn--discret:hover { background: rgba(22,34,43,.06); color: var(--c-encre); }
+
+.btn--destructif { color: var(--c-danger); }
+.btn--destructif:hover { background: var(--c-danger-voile); border-color: #e2b8b0; }
+
+.btn--plein { width: 100%; justify-content: flex-start; }
+.btn--menu  { width: 100%; justify-content: flex-start; background: transparent; border-color: transparent; }
+.btn--menu:hover { background: rgba(22,34,43,.06); }
+
+.btn svg { flex: none; }
+
+/* --------------------------------------------------------------------------
+   6. PASTILLES ET MARQUEURS
+   -------------------------------------------------------------------------- */
+.past {
+  display: inline-flex; align-items: center; gap: var(--e-1);
+  font-size: var(--t-mini); font-weight: var(--g-moyen); line-height: 1;
+  padding: 4px var(--e-2);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-1);
+  background: var(--c-papier-2);
+  color: var(--c-encre-2);
+  white-space: nowrap;
+}
+.past--type {
+  border-color: var(--c-accent-trait); background: var(--c-accent-voile);
+  color: var(--c-accent-fonce); font-weight: var(--g-fort);
+}
+.past--brouillon {
+  border-color: #dcc59a; background: var(--c-alerte-voile); color: var(--c-alerte);
+  font-weight: var(--g-fort);
+}
+.past--etiquette {
+  font-family: var(--f-donnee); font-size: var(--t-mini); text-decoration: none;
+  background: var(--c-papier); color: var(--c-encre-2);
+}
+.past--etiquette::before { content: "#"; color: var(--c-encre-4); }
+.past--etiquette:hover { border-color: var(--c-accent); color: var(--c-accent); }
+
+/* --------------------------------------------------------------------------
+   7. PANNEAU — conteneur de la colonne droite et des blocs de tableau de bord
+   -------------------------------------------------------------------------- */
+.panneau {
+  background: var(--c-papier);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-3);
+  box-shadow: var(--o-pose);
+}
+.panneau__tete {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--e-2);
+  padding: var(--e-3) var(--e-4);
+  border-bottom: 1px solid var(--c-trait-fin);
+}
+.panneau__corps { padding: var(--e-3) var(--e-4) var(--e-4); }
+.panneau__corps--serre { padding: var(--e-2); }
+
+/* --------------------------------------------------------------------------
+   8. ÉTATS DE ZONE — chargement, vide, erreur, sans droit
+   -------------------------------------------------------------------------- */
+.esquisse {
+  background: linear-gradient(90deg, var(--c-fond-creux) 25%, #e6eae7 50%, var(--c-fond-creux) 75%);
+  background-size: 240% 100%;
+  animation: glisse 1.4s ease-in-out infinite;
+  border-radius: var(--r-1);
+}
+@keyframes glisse { from { background-position: 130% 0; } to { background-position: -30% 0; } }
+
+.zone-etat { padding: var(--e-5) var(--e-4); text-align: center; }
+.zone-etat__titre { font-weight: var(--g-fort); font-size: var(--t-petit); margin: 0 0 var(--e-1); }
+.zone-etat__txt   { font-size: var(--t-petit); color: var(--c-encre-3); margin: 0 0 var(--e-3); line-height: 1.5; }
+
+/* --------------------------------------------------------------------------
+   9. NOTIFICATION
+   -------------------------------------------------------------------------- */
+.notifs {
+  position: fixed; z-index: 90; right: var(--e-5); bottom: var(--e-5);
+  display: flex; flex-direction: column; gap: var(--e-2); align-items: flex-end;
+}
+.notif {
+  display: flex; align-items: center; gap: var(--e-3);
+  background: var(--c-encre); color: var(--c-papier);
+  padding: var(--e-3) var(--e-4);
+  border-radius: var(--r-3);
+  box-shadow: var(--o-flotte);
+  font-size: var(--t-petit); font-weight: var(--g-moyen);
+  animation: monte var(--m-doux) both;
+}
+.notif--succes { box-shadow: var(--o-flotte), inset 3px 0 0 #4fbf8b; }
+@keyframes monte { from { opacity: 0; transform: translateY(10px); } }
+
+/* --------------------------------------------------------------------------
+   10. DROITS
+   Une action qu'un utilisateur n'a pas le droit d'exécuter n'est pas affichée :
+   ni grisée, ni refusée après le clic (RG, §3.5).
+   -------------------------------------------------------------------------- */
+.app[data-droits="lecture"] .si-ecriture { display: none !important; }
+
+/* --------------------------------------------------------------------------
+   11. CHAMPS DE SAISIE
+   Composants de formulaire communs à l'authentification, à l'éditeur, aux
+   formulaires de la console et à la bibliothèque de composants (V-41).
+   -------------------------------------------------------------------------- */
+.champ { display: flex; flex-direction: column; gap: var(--e-1); }
+.champ__label {
+  font-size: var(--t-petit); font-weight: var(--g-fort); color: var(--c-encre);
+}
+.champ__label .oblig { color: var(--c-danger); margin-left: 2px; }
+.champ__aide { font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.45; }
+
+.saisie {
+  width: 100%;
+  padding: 9px var(--e-3);
+  border: 1px solid var(--c-trait-fort);
+  border-radius: var(--r-2);
+  background: var(--c-papier);
+  font-family: var(--f-ui); font-size: var(--t-base);
+  transition: border-color var(--m-vif), box-shadow var(--m-vif);
+}
+.saisie::placeholder { color: var(--c-encre-4); }
+.saisie:hover { border-color: var(--c-encre-3); }
+.saisie:focus { outline: none; border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-voile); }
+.saisie:disabled { background: var(--c-fond-creux); color: var(--c-encre-4); cursor: not-allowed; }
+textarea.saisie { resize: vertical; min-height: 84px; line-height: 1.5; }
+
+.champ[data-etat="erreur"] .saisie { border-color: var(--c-danger); }
+.champ[data-etat="erreur"] .saisie:focus { box-shadow: 0 0 0 3px var(--c-danger-voile); }
+.champ__erreur {
+  display: flex; align-items: flex-start; gap: var(--e-1);
+  font-size: var(--t-mini); font-weight: var(--g-moyen); color: var(--c-danger);
+}
+
+/* Champ avec action attenante — révéler un mot de passe, vider une saisie. */
+.champ__boite { position: relative; display: flex; align-items: center; }
+.champ__boite .saisie { padding-right: 44px; }
+.champ__action {
+  position: absolute; right: 5px;
+  border: 0; background: none; cursor: pointer; padding: 6px;
+  color: var(--c-encre-3); border-radius: var(--r-1); line-height: 0;
+}
+.champ__action:hover { background: var(--c-fond-creux); color: var(--c-encre); }
+
+/* Case à cocher et interrupteur */
+.case {
+  display: flex; align-items: flex-start; gap: var(--e-2);
+  font-size: var(--t-petit); cursor: pointer;
+}
+.case input { accent-color: var(--c-accent); margin: 2px 0 0; flex: none; width: 15px; height: 15px; }
+.case__txt { line-height: 1.4; }
+.case__aide { display: block; font-size: var(--t-mini); color: var(--c-encre-3); margin-top: 2px; }
+
+/* Message d'avertissement lié à la saisie, non bloquant. */
+.avis-saisie {
+  display: flex; align-items: center; gap: var(--e-2);
+  font-size: var(--t-mini); font-weight: var(--g-moyen); color: var(--c-alerte);
+}
+
+/* Bouton en attente : le libellé reste lisible, l'action est verrouillée. */
+.btn[data-attente="oui"] { pointer-events: none; opacity: .82; }
+.rouet {
+  width: 13px; height: 13px; flex: none;
+  border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; animation: tourne .62s linear infinite;
+}
+@keyframes tourne { to { transform: rotate(360deg); } }</style>
+<style>
+body { background: var(--c-fond); }
+
+/* ==========================================================================
+   AUTHENTIFICATION — ossature commune à V-05 et V-06
+   Hors coquille applicative et hors espace public. Une seule chose à faire
+   par écran, rien qui puisse en distraire.
+   ========================================================================== */
+.auth {
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: var(--e-5) var(--e-4) var(--e-6);
+  gap: var(--e-4);
+}
+.auth__colonne { width: 100%; max-width: 396px; }
+
+/* Identité du produit : le nom, et rien de plus. */
+.auth__marque {
+  display: flex; align-items: center; gap: var(--e-2); justify-content: center;
+  margin-bottom: var(--e-5);
+}
+.auth__sceau {
+  width: 30px; height: 30px; flex: none; border-radius: var(--r-2);
+  background: var(--c-accent); color: #fff;
+  display: grid; place-items: center;
+  font-family: var(--f-donnee); font-size: var(--t-petit); font-weight: var(--g-lourd);
+}
+.auth__nom {
+  font-family: var(--f-ui); font-weight: var(--g-lourd); font-size: var(--t-t2);
+  letter-spacing: -.026em;
+}
+
+.auth__boite {
+  background: var(--c-papier);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-3);
+  box-shadow: var(--o-pose);
+  padding: var(--e-5);
+}
+.auth__titre {
+  font-family: var(--f-ui); font-size: var(--t-t2); font-weight: var(--g-lourd);
+  letter-spacing: -.018em; margin: 0 0 var(--e-1);
+}
+.auth__sous {
+  font-size: var(--t-petit); color: var(--c-encre-2); margin: 0 0 var(--e-5); line-height: 1.5;
+}
+.auth__form { display: flex; flex-direction: column; gap: var(--e-4); }
+.auth__form fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e-4); }
+.auth__form fieldset:disabled { opacity: .58; }
+
+.auth__ligne {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e-3);
+  flex-wrap: wrap;
+}
+.auth__lien {
+  font-size: var(--t-petit); font-weight: var(--g-moyen); color: var(--c-accent);
+  text-decoration: none; border-bottom: 1px solid transparent;
+}
+.auth__lien:hover { border-bottom-color: currentColor; }
+
+.auth__pied {
+  text-align: center; margin-top: var(--e-4);
+  padding-top: var(--e-4); border-top: 1px solid var(--c-trait);
+}
+.auth__pied p { font-size: var(--t-petit); color: var(--c-encre-3); margin: 0 0 var(--e-2); }
+
+/* --- Message contextuel ----------------------------------------------------
+   Session expirée, accès refusé, échec d'identification. Il précède le
+   formulaire : l'utilisateur doit savoir pourquoi il est là avant de saisir. */
+.contexte {
+  display: flex; gap: var(--e-3); align-items: flex-start;
+  padding: var(--e-3) var(--e-4); margin-bottom: var(--e-4);
+  border: 1px solid var(--c-trait); border-left-width: 4px;
+  border-radius: var(--r-3);
+  font-size: var(--t-petit); line-height: 1.5;
+}
+.contexte__marque {
+  flex: none; width: 20px; height: 20px; border-radius: var(--r-1);
+  display: grid; place-items: center; color: #fff;
+  font-family: var(--f-donnee); font-size: var(--t-micro); font-weight: var(--g-lourd);
+}
+.contexte__titre { font-weight: var(--g-fort); margin-bottom: 2px; }
+.contexte--info { background: var(--c-info-voile); border-color: #b6cfdd; border-left-color: var(--c-info); }
+.contexte--info .contexte__marque { background: var(--c-info); }
+.contexte--erreur { background: var(--c-danger-voile); border-color: #e2b8b0; border-left-color: var(--c-danger); }
+.contexte--erreur .contexte__marque { background: var(--c-danger); }
+.contexte--attente { background: var(--c-alerte-voile); border-color: #dcc59a; border-left-color: var(--c-alerte); }
+.contexte--attente .contexte__marque { background: var(--c-alerte); }
+.contexte--succes { background: var(--c-frais-voile); border-color: #b3d3c1; border-left-color: var(--c-frais); }
+.contexte--succes .contexte__marque { background: var(--c-frais); }
+.contexte__compte { font-family: var(--f-donnee); font-weight: var(--g-lourd); }
+
+@media (max-width: 480px) {
+  .auth { justify-content: flex-start; padding-top: var(--e-6); }
+  .auth__colonne { max-width: none; }
+  .auth__boite { padding: var(--e-4); }
+}
+
+/* ==========================================================================
+   V-05 — CONNEXION
+   Authentifier en trois secondes. Une seule action possible sur cet écran.
+   ========================================================================== */
+
+/* --- Planche de revue (hors produit) ----------------------------------------------- */
+.planche {
+  position: fixed; z-index: 120; left: 50%; bottom: var(--e-4); transform: translateX(-50%);
+  display: flex; align-items: center; gap: var(--e-4); flex-wrap: wrap;
+  background: var(--c-encre); color: #cfd8db;
+  padding: var(--e-2) var(--e-4); border-radius: 999px;
+  box-shadow: var(--o-flotte); font-size: var(--t-mini); max-width: calc(100vw - var(--e-6));
+}
+.planche fieldset { border: 0; margin: 0; padding: 0; display: flex; align-items: center; gap: var(--e-2); }
+.planche legend { float: left; margin-right: var(--e-2); font-family: var(--f-donnee); font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase; color: #7d8f95; }
+.planche label { cursor: pointer; }
+.planche input { position: absolute; opacity: 0; pointer-events: none; }
+.planche label span { display: inline-block; padding: 4px var(--e-2); border-radius: 999px; border: 1px solid #33454f; color: #cfd8db; }
+.planche input:checked + span { background: #cfd8db; color: var(--c-encre); border-color: #cfd8db; font-weight: var(--g-fort); }
+.planche input:focus-visible + span { outline: 2px solid #8f86e0; outline-offset: 2px; }
+.planche__sep { width: 1px; height: 22px; background: #33454f; }
+</style>
+</head>
+<body>
+
+<main class="auth" id="app" data-etat="repos">
+  <div class="auth__colonne">
+
+    <div class="auth__marque">
+      <span class="auth__sceau" aria-hidden="true">C</span>
+      <span class="auth__nom">Codicillus</span>
+    </div>
+
+    <!-- Message contextuel : pourquoi l'utilisateur se trouve ici. -->
+    <div class="contexte contexte--info" id="contexte">
+      <span class="contexte__marque" aria-hidden="true">i</span>
+      <div>
+        <div class="contexte__titre" id="contexte-titre">Vous devez être connecté pour accéder à cette page</div>
+        <div id="contexte-txt">Après connexion, vous serez ramené là où vous alliez.</div>
+      </div>
+    </div>
+
+    <div class="auth__boite">
+      <h1 class="auth__titre">Connexion</h1>
+      <p class="auth__sous">Utilisez les identifiants de votre compte de la direction technique.</p>
+
+      <form class="auth__form" id="form" novalidate>
+        <fieldset id="champs">
+
+          <div class="champ" id="champ-id">
+            <label class="champ__label" for="identifiant">Identifiant</label>
+            <input class="saisie" type="text" id="identifiant" name="identifiant"
+                   autocomplete="username" autocapitalize="none" spellcheck="false" autofocus
+                   placeholder="prenom.nom">
+          </div>
+
+          <div class="champ" id="champ-mdp">
+            <label class="champ__label" for="motdepasse">Mot de passe</label>
+            <div class="champ__boite">
+              <input class="saisie" type="password" id="motdepasse" name="motdepasse"
+                     autocomplete="current-password" spellcheck="false">
+              <button class="champ__action" type="button" id="voir" aria-label="Afficher le mot de passe" aria-pressed="false">
+                <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" id="icone-voir">
+                  <path d="M1.5 8s2.4-4 6.5-4 6.5 4 6.5 4-2.4 4-6.5 4S1.5 8 1.5 8z"/><circle cx="8" cy="8" r="1.8"/>
+                </svg>
+              </button>
+            </div>
+            <!-- Avertissement de verrouillage majuscules : la première cause
+                 d'échec de saisie sur un poste tiers. -->
+            <div class="avis-saisie" id="majuscules" hidden>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2.5L3 8h10L8 2.5zM4.5 11.5h7v2h-7z"/></svg>
+              Le verrouillage des majuscules est activé
+            </div>
+          </div>
+
+          <div class="auth__ligne">
+            <label class="case">
+              <input type="checkbox" id="souvenir">
+              <span class="case__txt">Se souvenir de moi
+                <span class="case__aide">À éviter sur un poste partagé</span>
+              </span>
+            </label>
+          </div>
+
+          <button class="btn btn--principal" type="submit" id="valider" style="width:100%;padding:11px">
+            <span id="valider-txt">Se connecter</span>
+          </button>
+
+        </fieldset>
+      </form>
+
+      <div class="auth__ligne" style="margin-top:var(--e-4);justify-content:center">
+        <a class="auth__lien" href="#" id="oublie">Mot de passe oublié&nbsp;?</a>
+      </div>
+    </div>
+
+    <div class="auth__pied">
+      <p>Pas de compte&nbsp;? Les guides ouverts à tous restent consultables.</p>
+      <a class="btn" href="#" id="public">Consulter la documentation publique sans compte</a>
+    </div>
+
+  </div>
+</main>
+
+<div class="notifs" id="notifs" role="status" aria-live="polite"></div>
+
+<!-- ====================== PLANCHE DE REVUE — hors produit ====================== -->
+<div class="planche" role="group" aria-label="Contrôles de maquette, hors produit">
+  <fieldset>
+    <legend>Arrivée</legend>
+    <label><input type="radio" name="arrivee" value="protegee" checked><span>Page protégée</span></label>
+    <label><input type="radio" name="arrivee" value="expiree"><span>Session expirée</span></label>
+    <label><input type="radio" name="arrivee" value="directe"><span>Accès direct</span></label>
+  </fieldset>
+  <div class="planche__sep"></div>
+  <fieldset>
+    <legend>Issue de la tentative</legend>
+    <label><input type="radio" name="issue" value="succes" checked><span>Réussite</span></label>
+    <label><input type="radio" name="issue" value="echec"><span>Identifiants refusés</span></label>
+    <label><input type="radio" name="issue" value="trop"><span>Trop de tentatives</span></label>
+  </fieldset>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+    /* ---------- Notifications (V-38) ---------- */
+  window.notifier = function (txt, variante) {
+    var zone = document.getElementById("notifs");
+    if (!zone) {
+      zone = document.createElement("div");
+      zone.id = "notifs"; zone.className = "notifs";
+      zone.setAttribute("role", "status");
+      zone.setAttribute("aria-live", "polite");
+      document.body.appendChild(zone);
+    }
+    var n = document.createElement("div");
+    n.className = "notif" + (variante ? " notif--" + variante : "");
+    n.textContent = txt;
+    zone.appendChild(n);
+    setTimeout(function () {
+      n.style.transition = "opacity .3s"; n.style.opacity = "0";
+      setTimeout(function () { n.remove(); }, 320);
+    }, 2600);
+  };
+
+  var app = document.getElementById("app");
+  var form = document.getElementById("form");
+  var champs = document.getElementById("champs");
+  var valider = document.getElementById("valider");
+  var validerTxt = document.getElementById("valider-txt");
+  var identifiant = document.getElementById("identifiant");
+  var motdepasse = document.getElementById("motdepasse");
+  var contexte = document.getElementById("contexte");
+  var ctxTitre = document.getElementById("contexte-titre");
+  var ctxTxt = document.getElementById("contexte-txt");
+  var compteARebours = null;
+
+  /* ---------------------------------------------------------------------
+     Messages contextuels
+     --------------------------------------------------------------------- */
+  var ARRIVEES = {
+    protegee: {
+      variante: "info", marque: "i",
+      titre: "Vous devez être connecté pour accéder à cette page",
+      txt: "Après connexion, vous serez ramené là où vous alliez."
+    },
+    expiree: {
+      variante: "info", marque: "i",
+      titre: "Session expirée",
+      txt: "Votre session a été fermée après une période d'inactivité. Reconnectez-vous pour reprendre."
+    },
+    directe: null
+  };
+
+  function afficherContexte(cle) {
+    var c = ARRIVEES[cle];
+    if (!c) { contexte.hidden = true; return; }
+    contexte.hidden = false;
+    contexte.className = "contexte contexte--" + c.variante;
+    contexte.querySelector(".contexte__marque").textContent = c.marque;
+    ctxTitre.textContent = c.titre;
+    ctxTxt.textContent = c.txt;
+  }
+
+  /* ---------------------------------------------------------------------
+     Erreur d'identification — message strictement générique
+     Ni l'existence de l'identifiant, ni la validité du mot de passe ne sont
+     révélées. Un seul et même message quel que soit ce qui a échoué, et
+     aucun marquage sur l'un des deux champs plutôt que sur l'autre.
+     --------------------------------------------------------------------- */
+  function echec() {
+    contexte.hidden = false;
+    contexte.className = "contexte contexte--erreur";
+    contexte.querySelector(".contexte__marque").textContent = "!";
+    ctxTitre.textContent = "Identifiant ou mot de passe incorrect";
+    ctxTxt.textContent = "Vérifiez votre saisie, puis réessayez.";
+    document.getElementById("champ-id").setAttribute("data-etat", "erreur");
+    document.getElementById("champ-mdp").setAttribute("data-etat", "erreur");
+    motdepasse.value = "";
+    identifiant.focus();
+    identifiant.select();
+  }
+
+  /* ---------------------------------------------------------------------
+     Trop de tentatives — la durée d'attente est annoncée et décomptée
+     --------------------------------------------------------------------- */
+  function verrouiller(secondes) {
+    champs.disabled = true;
+    contexte.hidden = false;
+    contexte.className = "contexte contexte--attente";
+    contexte.querySelector(".contexte__marque").textContent = "⏱";
+    ctxTitre.textContent = "Trop de tentatives";
+
+    function tic() {
+      ctxTxt.innerHTML = "";
+      ctxTxt.appendChild(document.createTextNode("Nouvelle tentative possible dans "));
+      var s = document.createElement("span");
+      s.className = "contexte__compte";
+      var m = Math.floor(secondes / 60), r = secondes % 60;
+      s.textContent = m ? m + " min " + String(r).padStart(2, "0") + " s" : r + " s";
+      ctxTxt.appendChild(s);
+      ctxTxt.appendChild(document.createTextNode("."));
+      if (secondes <= 0) {
+        clearInterval(compteARebours);
+        champs.disabled = false;
+        afficherContexte(document.querySelector('input[name="arrivee"]:checked').value);
+        identifiant.focus();
+        return;
+      }
+      secondes--;
+    }
+    tic();
+    clearInterval(compteARebours);
+    compteARebours = setInterval(tic, 1000);
+  }
+
+  /* ---------------------------------------------------------------------
+     Soumission
+     --------------------------------------------------------------------- */
+  function reinitialiserErreurs() {
+    document.getElementById("champ-id").removeAttribute("data-etat");
+    document.getElementById("champ-mdp").removeAttribute("data-etat");
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (champs.disabled) return;
+    reinitialiserErreurs();
+
+    /* En cours : bouton en attente, formulaire verrouillé. */
+    champs.disabled = true;
+    valider.setAttribute("data-attente", "oui");
+    validerTxt.textContent = "Connexion…";
+    var rouet = document.createElement("span");
+    rouet.className = "rouet";
+    valider.insertBefore(rouet, validerTxt);
+
+    setTimeout(function () {
+      rouet.remove();
+      valider.removeAttribute("data-attente");
+      validerTxt.textContent = "Se connecter";
+      champs.disabled = false;
+
+      var issue = document.querySelector('input[name="issue"]:checked').value;
+      if (issue === "succes") {
+        var arrivee = document.querySelector('input[name="arrivee"]:checked').value;
+        window.notifier(arrivee === "directe"
+          ? "Connexion réussie — accueil contributeur, vue V-07"
+          : "Connexion réussie — retour à la page initialement demandée");
+      } else if (issue === "trop") {
+        verrouiller(90);
+      } else {
+        echec();
+      }
+    }, 850);
+  });
+
+  /* Validation à la touche Entrée depuis n'importe quel champ. */
+  champs.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); form.requestSubmit(); }
+  });
+
+  /* ---------------------------------------------------------------------
+     Révéler le mot de passe
+     --------------------------------------------------------------------- */
+  var voir = document.getElementById("voir");
+  voir.addEventListener("click", function () {
+    var affiche = motdepasse.type === "text";
+    motdepasse.type = affiche ? "password" : "text";
+    voir.setAttribute("aria-pressed", String(!affiche));
+    voir.setAttribute("aria-label", affiche ? "Afficher le mot de passe" : "Masquer le mot de passe");
+    document.getElementById("icone-voir").innerHTML = affiche
+      ? '<path d="M1.5 8s2.4-4 6.5-4 6.5 4 6.5 4-2.4 4-6.5 4S1.5 8 1.5 8z"/><circle cx="8" cy="8" r="1.8"/>'
+      : '<path d="M1.5 8s2.4-4 6.5-4 6.5 4 6.5 4-2.4 4-6.5 4S1.5 8 1.5 8z"/><circle cx="8" cy="8" r="1.8"/><path d="M2.5 13.5l11-11"/>';
+    motdepasse.focus();
+  });
+
+  /* ---------------------------------------------------------------------
+     Verrouillage des majuscules
+     --------------------------------------------------------------------- */
+  var majuscules = document.getElementById("majuscules");
+  function surveillerMajuscules(e) {
+    if (typeof e.getModifierState !== "function") return;
+    majuscules.hidden = !e.getModifierState("CapsLock");
+  }
+  motdepasse.addEventListener("keydown", surveillerMajuscules);
+  motdepasse.addEventListener("keyup", surveillerMajuscules);
+  motdepasse.addEventListener("blur", function () { majuscules.hidden = true; });
+
+  /* ---------------------------------------------------------------------
+     Sorties
+     --------------------------------------------------------------------- */
+  document.getElementById("oublie").addEventListener("click", function (e) {
+    e.preventDefault();
+    window.notifier("Réinitialisation du mot de passe — vue V-06");
+  });
+  document.getElementById("public").addEventListener("click", function (e) {
+    e.preventDefault();
+    window.notifier("Espace public — vue V-01, consultation sans compte");
+  });
+
+  /* ---------------------------------------------------------------------
+     Planche de revue
+     --------------------------------------------------------------------- */
+  document.querySelectorAll('input[name="arrivee"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      clearInterval(compteARebours);
+      champs.disabled = false;
+      reinitialiserErreurs();
+      afficherContexte(r.value);
+    });
+  });
+  document.querySelectorAll('input[name="issue"]').forEach(function (r) {
+    r.addEventListener("change", function () {
+      clearInterval(compteARebours);
+      champs.disabled = false;
+      reinitialiserErreurs();
+      afficherContexte(document.querySelector('input[name="arrivee"]:checked').value);
+    });
+  });
+
+  afficherContexte("protegee");
+})();
+</script>
+</body>
+</html>
