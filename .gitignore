@@ -1,0 +1,30 @@
+# Dépendances
+node_modules/
+.pnpm-store/
+
+# Constructions
+build/
+.svelte-kit/
+dist/
+services/conversion/__pycache__/
+services/conversion/.venv/
+
+# Environnement
+.env
+.env.local
+.env.*.local
+
+# Outillage agentique
+.claude/settings.local.json
+.claude/worktrees/
+
+# Vérification — sorties volatiles (les références sont versionnées)
+verif/captures/
+verif/rapports/
+test-results/
+playwright-report/
+blob-report/
+
+# Système
+.DS_Store
+*.log
