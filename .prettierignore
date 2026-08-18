@@ -5,6 +5,12 @@ règles/
 guide/
 verif/references/
 
+# Copies contrôlées, extraites mécaniquement d'une source gelée par
+# `pnpm socle:extraire` (lot T-004). Elles doivent rester identiques octet pour
+# octet à leur source : les reformater ferait rougir `pnpm verif:jetons` (P-6.1).
+src/socle.css
+static/polices/
+
 # Produits
 .svelte-kit/
 build/
