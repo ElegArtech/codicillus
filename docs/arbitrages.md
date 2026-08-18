@@ -181,3 +181,27 @@ qu'il énumère, et sur rien d'autre. Toute nouvelle correction y entre par un a
 10 ; c'est le document qui est mis à jour, pas l'environnement rétrogradé. Aucune incidence : les
 propriétés recherchées — gestion stricte des dépendances, auditabilité de la chaîne (C-11) — sont
 celles de la ligne 10 comme de la 11. Consigné à l'errata.
+
+---
+
+## ARB-009 — Les vues contrôlées sur quatre fenêtres
+**18 août 2026** — répond à `ECART-010` É-1.
+
+**Décision.** Sept vues, et non cinq. Aux cinq dérivées par le banc — V-02, V-03, V-08, V-09,
+V-14 — s'ajoutent **V-37** et **V-01**.
+
+**Motif.** `RG-M18-13` nomme deux cas d'usage, « chercher » et « lire », et aucune source du dépôt
+n'en donne la liste de vues : la dérivation initiale était raisonnée, pas lue.
+
+- **V-37, la coquille** : portée par 35 vues sur 41, elle porte le rail escamotable — mécanisme
+  central de `RG-M18-12` — et elle est le siège des défauts E-01 et E-02 relevés au `PLAN §11`,
+  qui portaient précisément sur le comportement en petite largeur. L'omettre laisserait sans
+  preuve **la seule règle dont le cadrage documente qu'elle avait été enfreinte**.
+- **V-01, l'accueil public** : porte un champ de recherche, donc le cas d'usage « chercher ».
+
+**Ce que ça emporte.** Le contrôle aux quatre fenêtres — 1440×900, 1024×768, 768×1024, 360×780 —
+passe de 5 à 7 vues. `verif/banc/conditions.mjs` porte la liste et sa justification. La liste est
+en **écriture humaine seule** : un agent bloqué sur un rouge en petite largeur n'en retire jamais
+une vue. C'est le cas d'école du contournement de vérification (`PLAN §12`).
+
+**Ce que ça ferme.** `ECART-010` É-1.
