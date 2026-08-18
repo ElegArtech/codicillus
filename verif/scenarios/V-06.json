@@ -1,0 +1,117 @@
+{
+	"vue": "V-06",
+	"titre": "Réinitialiser son mot de passe — Codicillus",
+	"maquette": "mockups/V-06-reinitialisation.html",
+	"empreinte": "edbbd06fd7c3aafb4d29bb0b7b25964eb971b0e2a509361c2f6c15ad028ef020",
+	"planche": true,
+	"zones": null,
+	"routes": ["/mot-de-passe-oublie", "/mot-de-passe-oublie/{jeton}"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Étape",
+			"groupes": [
+				{
+					"nom": "et",
+					"options": [
+						{ "valeur": "1", "libelle": "1 · Identifiant", "defaut": true },
+						{ "valeur": "2", "libelle": "2 · Envoi", "defaut": false },
+						{ "valeur": "3", "libelle": "3 · Nouveau", "defaut": false },
+						{ "valeur": "4", "libelle": "4 · Terminé", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Compte",
+			"groupes": [
+				{
+					"nom": "cpt",
+					"options": [
+						{ "valeur": "connu", "libelle": "Identifiant connu", "defaut": true },
+						{ "valeur": "inconnu", "libelle": "Identifiant inconnu", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Lien",
+			"groupes": [],
+			"cases": [{ "id": "c-expire", "libelle": "Expiré", "defaut": false }]
+		}
+	],
+	"defaut": { "et": "1", "cpt": "connu", "c-expire": false },
+	"etats": [
+		{
+			"cle": "et-1",
+			"libelle": "Étape — 1 · Identifiant",
+			"controle": { "fieldset": "Étape", "nom": "et", "position": "1" },
+			"planche": { "et": "1" },
+			"vecteur": { "et": "1", "cpt": "connu", "c-expire": false },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "et-2",
+			"libelle": "Étape — 2 · Envoi",
+			"controle": { "fieldset": "Étape", "nom": "et", "position": "2" },
+			"planche": { "et": "2" },
+			"vecteur": { "et": "2", "cpt": "connu", "c-expire": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "et-3",
+			"libelle": "Étape — 3 · Nouveau",
+			"controle": { "fieldset": "Étape", "nom": "et", "position": "3" },
+			"planche": { "et": "3" },
+			"vecteur": { "et": "3", "cpt": "connu", "c-expire": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "et-4",
+			"libelle": "Étape — 4 · Terminé",
+			"controle": { "fieldset": "Étape", "nom": "et", "position": "4" },
+			"planche": { "et": "4" },
+			"vecteur": { "et": "4", "cpt": "connu", "c-expire": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "cpt-connu",
+			"libelle": "Compte — Identifiant connu",
+			"controle": { "fieldset": "Compte", "nom": "cpt", "position": "connu" },
+			"planche": { "cpt": "connu" },
+			"vecteur": { "et": "1", "cpt": "connu", "c-expire": false },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "et-1"
+		},
+		{
+			"cle": "cpt-inconnu",
+			"libelle": "Compte — Identifiant inconnu",
+			"controle": { "fieldset": "Compte", "nom": "cpt", "position": "inconnu" },
+			"planche": { "cpt": "inconnu" },
+			"vecteur": { "et": "1", "cpt": "inconnu", "c-expire": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "expire",
+			"libelle": "Lien — Expiré",
+			"controle": { "fieldset": "Lien", "nom": "c-expire", "position": true },
+			"planche": { "c-expire": true },
+			"vecteur": { "et": "1", "cpt": "connu", "c-expire": true },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

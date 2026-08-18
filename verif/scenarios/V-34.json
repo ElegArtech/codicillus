@@ -1,0 +1,51 @@
+{
+	"vue": "V-34",
+	"titre": "Console · Analytique — Codicillus",
+	"maquette": "mockups/V-34-console-analytique.html",
+	"empreinte": "42e06c77b460a77074bfc030e35dcfdbb4212c31989c44f3b8312ecac92f4373",
+	"planche": true,
+	"zones": null,
+	"routes": ["/console/analytique"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Données",
+			"groupes": [
+				{
+					"nom": "don",
+					"options": [
+						{ "valeur": "completes", "libelle": "Suffisantes", "defaut": true },
+						{ "valeur": "insuffisantes", "libelle": "Insuffisantes", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		}
+	],
+	"defaut": { "don": "completes" },
+	"etats": [
+		{
+			"cle": "don-completes",
+			"libelle": "Données — Suffisantes",
+			"controle": { "fieldset": "Données", "nom": "don", "position": "completes" },
+			"planche": { "don": "completes" },
+			"vecteur": { "don": "completes" },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "don-insuffisantes",
+			"libelle": "Données — Insuffisantes",
+			"controle": { "fieldset": "Données", "nom": "don", "position": "insuffisantes" },
+			"planche": { "don": "insuffisantes" },
+			"vecteur": { "don": "insuffisantes" },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

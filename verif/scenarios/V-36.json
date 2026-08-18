@@ -1,0 +1,83 @@
+{
+	"vue": "V-36",
+	"titre": "Console · Exports — Codicillus",
+	"maquette": "mockups/V-36-console-exports.html",
+	"empreinte": "768c5fc304435ca2088bc937f2b7ddb8bb618a1572580bb9bf2973b86e081928",
+	"planche": true,
+	"zones": null,
+	"routes": ["/console/exports"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Issue",
+			"groupes": [
+				{
+					"nom": "issue",
+					"options": [
+						{ "valeur": "propre", "libelle": "Sans avertissement", "defaut": true },
+						{ "valeur": "avert", "libelle": "Avec avertissements", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Volume",
+			"groupes": [
+				{
+					"nom": "vol",
+					"options": [
+						{ "valeur": "normal", "libelle": "Ordinaire", "defaut": true },
+						{ "valeur": "lent", "libelle": "Domaine volumineux", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		}
+	],
+	"defaut": { "issue": "propre", "vol": "normal" },
+	"etats": [
+		{
+			"cle": "issue-propre",
+			"libelle": "Issue — Sans avertissement",
+			"controle": { "fieldset": "Issue", "nom": "issue", "position": "propre" },
+			"planche": { "issue": "propre" },
+			"vecteur": { "issue": "propre", "vol": "normal" },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "issue-avert",
+			"libelle": "Issue — Avec avertissements",
+			"controle": { "fieldset": "Issue", "nom": "issue", "position": "avert" },
+			"planche": { "issue": "avert" },
+			"vecteur": { "issue": "avert", "vol": "normal" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "vol-normal",
+			"libelle": "Volume — Ordinaire",
+			"controle": { "fieldset": "Volume", "nom": "vol", "position": "normal" },
+			"planche": { "vol": "normal" },
+			"vecteur": { "issue": "propre", "vol": "normal" },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "issue-propre"
+		},
+		{
+			"cle": "vol-lent",
+			"libelle": "Volume — Domaine volumineux",
+			"controle": { "fieldset": "Volume", "nom": "vol", "position": "lent" },
+			"planche": { "vol": "lent" },
+			"vecteur": { "issue": "propre", "vol": "lent" },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

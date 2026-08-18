@@ -1,0 +1,117 @@
+{
+	"vue": "V-25",
+	"titre": "Mon profil — Codicillus",
+	"maquette": "mockups/V-25-profil.html",
+	"empreinte": "14164a1e5e5140357fb65696aa4bc7e9528d81cd7a7f3cc58abf2c5f9d378dc8",
+	"planche": true,
+	"zones": null,
+	"routes": ["/mon-profil"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Onglet",
+			"groupes": [
+				{
+					"nom": "ong",
+					"options": [
+						{ "valeur": "identite", "libelle": "Identité", "defaut": true },
+						{ "valeur": "securite", "libelle": "Sécurité", "defaut": false },
+						{ "valeur": "distinctions", "libelle": "Distinctions", "defaut": false },
+						{ "valeur": "activite", "libelle": "Activité", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Compte",
+			"groupes": [
+				{
+					"nom": "cpt",
+					"options": [
+						{ "valeur": "karim", "libelle": "Karim · contributeur", "defaut": true },
+						{ "valeur": "neuf", "libelle": "Nouvel arrivant", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Cas",
+			"groupes": [],
+			"cases": [{ "id": "c-verrou", "libelle": "Mot de passe verrouillé", "defaut": false }]
+		}
+	],
+	"defaut": { "ong": "identite", "cpt": "karim", "c-verrou": false },
+	"etats": [
+		{
+			"cle": "ong-identite",
+			"libelle": "Onglet — Identité",
+			"controle": { "fieldset": "Onglet", "nom": "ong", "position": "identite" },
+			"planche": { "ong": "identite" },
+			"vecteur": { "ong": "identite", "cpt": "karim", "c-verrou": false },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "ong-securite",
+			"libelle": "Onglet — Sécurité",
+			"controle": { "fieldset": "Onglet", "nom": "ong", "position": "securite" },
+			"planche": { "ong": "securite" },
+			"vecteur": { "ong": "securite", "cpt": "karim", "c-verrou": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "ong-distinctions",
+			"libelle": "Onglet — Distinctions",
+			"controle": { "fieldset": "Onglet", "nom": "ong", "position": "distinctions" },
+			"planche": { "ong": "distinctions" },
+			"vecteur": { "ong": "distinctions", "cpt": "karim", "c-verrou": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "ong-activite",
+			"libelle": "Onglet — Activité",
+			"controle": { "fieldset": "Onglet", "nom": "ong", "position": "activite" },
+			"planche": { "ong": "activite" },
+			"vecteur": { "ong": "activite", "cpt": "karim", "c-verrou": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "cpt-karim",
+			"libelle": "Compte — Karim · contributeur",
+			"controle": { "fieldset": "Compte", "nom": "cpt", "position": "karim" },
+			"planche": { "cpt": "karim" },
+			"vecteur": { "ong": "identite", "cpt": "karim", "c-verrou": false },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "ong-identite"
+		},
+		{
+			"cle": "cpt-neuf",
+			"libelle": "Compte — Nouvel arrivant",
+			"controle": { "fieldset": "Compte", "nom": "cpt", "position": "neuf" },
+			"planche": { "cpt": "neuf" },
+			"vecteur": { "ong": "identite", "cpt": "neuf", "c-verrou": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "verrou",
+			"libelle": "Cas — Mot de passe verrouillé",
+			"controle": { "fieldset": "Cas", "nom": "c-verrou", "position": true },
+			"planche": { "c-verrou": true },
+			"vecteur": { "ong": "identite", "cpt": "karim", "c-verrou": true },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

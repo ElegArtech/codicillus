@@ -1,0 +1,117 @@
+{
+	"vue": "V-08",
+	"titre": "V-08 · Recherche — Codicillus",
+	"maquette": "mockups/V-08-recherche.html",
+	"empreinte": "02c455a44274b304725a9a0bd011632d28cedaa27af80cdc23c3ffac1f8ede7e",
+	"planche": true,
+	"zones": null,
+	"routes": ["/recherche"],
+	"fenetres": ["1440x900", "1024x768", "768x1024", "360x780"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Droits",
+			"groupes": [
+				{
+					"nom": "droits",
+					"options": [
+						{ "valeur": "ecriture", "libelle": "Écriture", "defaut": true },
+						{ "valeur": "lecture", "libelle": "Lecture seule", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "État",
+			"groupes": [
+				{
+					"nom": "etat",
+					"options": [
+						{ "valeur": "nominal", "libelle": "Nominal", "defaut": true },
+						{ "valeur": "chargement", "libelle": "Chargement", "defaut": false },
+						{ "valeur": "vide", "libelle": "Sans résultat", "defaut": false },
+						{ "valeur": "trop", "libelle": "Trop de résultats", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Sens",
+			"groupes": [],
+			"cases": [{ "id": "c-degrade", "libelle": "Indisponible", "defaut": false }]
+		}
+	],
+	"defaut": { "droits": "ecriture", "etat": "nominal", "c-degrade": false },
+	"etats": [
+		{
+			"cle": "droits-ecriture",
+			"libelle": "Droits — Écriture",
+			"controle": { "fieldset": "Droits", "nom": "droits", "position": "ecriture" },
+			"planche": { "droits": "ecriture" },
+			"vecteur": { "droits": "ecriture", "etat": "nominal", "c-degrade": false },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "droits-lecture",
+			"libelle": "Droits — Lecture seule",
+			"controle": { "fieldset": "Droits", "nom": "droits", "position": "lecture" },
+			"planche": { "droits": "lecture" },
+			"vecteur": { "droits": "lecture", "etat": "nominal", "c-degrade": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "etat-nominal",
+			"libelle": "État — Nominal",
+			"controle": { "fieldset": "État", "nom": "etat", "position": "nominal" },
+			"planche": { "etat": "nominal" },
+			"vecteur": { "droits": "ecriture", "etat": "nominal", "c-degrade": false },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "droits-ecriture"
+		},
+		{
+			"cle": "etat-chargement",
+			"libelle": "État — Chargement",
+			"controle": { "fieldset": "État", "nom": "etat", "position": "chargement" },
+			"planche": { "etat": "chargement" },
+			"vecteur": { "droits": "ecriture", "etat": "chargement", "c-degrade": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "etat-vide",
+			"libelle": "État — Sans résultat",
+			"controle": { "fieldset": "État", "nom": "etat", "position": "vide" },
+			"planche": { "etat": "vide" },
+			"vecteur": { "droits": "ecriture", "etat": "vide", "c-degrade": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "etat-trop",
+			"libelle": "État — Trop de résultats",
+			"controle": { "fieldset": "État", "nom": "etat", "position": "trop" },
+			"planche": { "etat": "trop" },
+			"vecteur": { "droits": "ecriture", "etat": "trop", "c-degrade": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "degrade",
+			"libelle": "Sens — Indisponible",
+			"controle": { "fieldset": "Sens", "nom": "c-degrade", "position": true },
+			"planche": { "c-degrade": true },
+			"vecteur": { "droits": "ecriture", "etat": "nominal", "c-degrade": true },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

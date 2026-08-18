@@ -1,0 +1,55 @@
+{
+	"vue": "V-09",
+	"titre": "V-09 · Palette de recherche rapide — Codicillus",
+	"maquette": "mockups/V-09-palette.html",
+	"empreinte": "337c9bff280f9b65f924b8cae209fadc0229e29e8adfd65717dd1ad96ee2bdb0",
+	"planche": false,
+	"zones": "les six sections « ÉTAT 01 » à « ÉTAT 06 » de la grille #etats",
+	"routes": [],
+	"fenetres": ["1440x900", "1024x768", "768x1024", "360x780"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": null,
+	"defaut": null,
+	"etats": [
+		{
+			"cle": "repos",
+			"libelle": "Au repos",
+			"zone": { "selecteur": "#etats section.cas", "index": 0, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "unecar",
+			"libelle": "Un seul caractère",
+			"zone": { "selecteur": "#etats section.cas", "index": 1, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "resultats",
+			"libelle": "Résultats",
+			"zone": { "selecteur": "#etats section.cas", "index": 2, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "vide",
+			"libelle": "Aucun résultat",
+			"zone": { "selecteur": "#etats section.cas", "index": 3, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "degrade",
+			"libelle": "Recherche par sens indisponible",
+			"zone": { "selecteur": "#etats section.cas", "index": 4, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "etroit",
+			"libelle": "Petit écran — 360 px",
+			"zone": { "selecteur": "#etats section.cas", "index": 5, "declencheur": null },
+			"app": null
+		}
+	]
+}

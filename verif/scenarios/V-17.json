@@ -1,0 +1,107 @@
+{
+	"vue": "V-17",
+	"titre": "Nouvelle note — Codicillus",
+	"maquette": "mockups/V-17-editeur.html",
+	"empreinte": "3527a627001b5e0159b95dfbac0f98290d7b725dbb969d456f63008b50c532f0",
+	"planche": true,
+	"zones": null,
+	"routes": ["/notes/nouvelle", "/notes/{identifiant}/modifier"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Entrée",
+			"groupes": [
+				{
+					"nom": "cas",
+					"options": [
+						{ "valeur": "vierge", "libelle": "Création vierge", "defaut": true },
+						{ "valeur": "template", "libelle": "Depuis un template", "defaut": false },
+						{ "valeur": "modif", "libelle": "Modification", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Enregistrement",
+			"groupes": [
+				{
+					"nom": "sv",
+					"options": [
+						{ "valeur": "normal", "libelle": "Réussi", "defaut": true },
+						{ "valeur": "erreur", "libelle": "En échec", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Aides",
+			"groupes": [],
+			"cases": [{ "id": "c-doublon", "libelle": "Doublon détecté", "defaut": false }]
+		}
+	],
+	"defaut": { "cas": "vierge", "sv": "normal", "c-doublon": false },
+	"etats": [
+		{
+			"cle": "cas-vierge",
+			"libelle": "Entrée — Création vierge",
+			"controle": { "fieldset": "Entrée", "nom": "cas", "position": "vierge" },
+			"planche": { "cas": "vierge" },
+			"vecteur": { "cas": "vierge", "sv": "normal", "c-doublon": false },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "cas-template",
+			"libelle": "Entrée — Depuis un template",
+			"controle": { "fieldset": "Entrée", "nom": "cas", "position": "template" },
+			"planche": { "cas": "template" },
+			"vecteur": { "cas": "template", "sv": "normal", "c-doublon": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "cas-modif",
+			"libelle": "Entrée — Modification",
+			"controle": { "fieldset": "Entrée", "nom": "cas", "position": "modif" },
+			"planche": { "cas": "modif" },
+			"vecteur": { "cas": "modif", "sv": "normal", "c-doublon": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "sv-normal",
+			"libelle": "Enregistrement — Réussi",
+			"controle": { "fieldset": "Enregistrement", "nom": "sv", "position": "normal" },
+			"planche": { "sv": "normal" },
+			"vecteur": { "cas": "vierge", "sv": "normal", "c-doublon": false },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "cas-vierge"
+		},
+		{
+			"cle": "sv-erreur",
+			"libelle": "Enregistrement — En échec",
+			"controle": { "fieldset": "Enregistrement", "nom": "sv", "position": "erreur" },
+			"planche": { "sv": "erreur" },
+			"vecteur": { "cas": "vierge", "sv": "erreur", "c-doublon": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "doublon",
+			"libelle": "Aides — Doublon détecté",
+			"controle": { "fieldset": "Aides", "nom": "c-doublon", "position": true },
+			"planche": { "c-doublon": true },
+			"vecteur": { "cas": "vierge", "sv": "normal", "c-doublon": true },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

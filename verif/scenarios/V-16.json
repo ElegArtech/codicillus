@@ -1,0 +1,85 @@
+{
+	"vue": "V-16",
+	"titre": "Comparaison de versions — Codicillus",
+	"maquette": "mockups/V-16-comparaison.html",
+	"empreinte": "f41c89d825e7375068fc90230b6a26242162fc79a0cd3ca743404591dd9ececc",
+	"planche": true,
+	"zones": null,
+	"routes": ["/notes/{identifiant}/comparaison"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Comparaison",
+			"groupes": [
+				{
+					"nom": "cmp",
+					"options": [
+						{ "valeur": "13-14", "libelle": "13 → 14", "defaut": true },
+						{ "valeur": "11-14", "libelle": "11 → 14 · écart large", "defaut": false },
+						{ "valeur": "14-14", "libelle": "Même version", "defaut": false },
+						{ "valeur": "13-13", "libelle": "Sans différence", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Journal",
+			"groupes": [],
+			"cases": [{ "id": "c-tout", "libelle": "Tout afficher", "defaut": false }]
+		}
+	],
+	"defaut": { "cmp": "13-14", "c-tout": false },
+	"etats": [
+		{
+			"cle": "cmp-13-14",
+			"libelle": "Comparaison — 13 → 14",
+			"controle": { "fieldset": "Comparaison", "nom": "cmp", "position": "13-14" },
+			"planche": { "cmp": "13-14" },
+			"vecteur": { "cmp": "13-14", "c-tout": false },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "cmp-11-14",
+			"libelle": "Comparaison — 11 → 14 · écart large",
+			"controle": { "fieldset": "Comparaison", "nom": "cmp", "position": "11-14" },
+			"planche": { "cmp": "11-14" },
+			"vecteur": { "cmp": "11-14", "c-tout": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "cmp-14-14",
+			"libelle": "Comparaison — Même version",
+			"controle": { "fieldset": "Comparaison", "nom": "cmp", "position": "14-14" },
+			"planche": { "cmp": "14-14" },
+			"vecteur": { "cmp": "14-14", "c-tout": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "cmp-13-13",
+			"libelle": "Comparaison — Sans différence",
+			"controle": { "fieldset": "Comparaison", "nom": "cmp", "position": "13-13" },
+			"planche": { "cmp": "13-13" },
+			"vecteur": { "cmp": "13-13", "c-tout": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "tout",
+			"libelle": "Journal — Tout afficher",
+			"controle": { "fieldset": "Journal", "nom": "c-tout", "position": true },
+			"planche": { "c-tout": true },
+			"vecteur": { "cmp": "13-14", "c-tout": true },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

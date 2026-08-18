@@ -1,0 +1,93 @@
+{
+	"vue": "V-29",
+	"titre": "Console · Types de fiches — Codicillus",
+	"maquette": "mockups/V-29-console-types-fiches.html",
+	"empreinte": "f1503bf578b4194979573d6812eedf17596ccfcc231a62144177a97e53cea45f",
+	"planche": true,
+	"zones": null,
+	"routes": ["/console/types-de-fiches"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Formulaire",
+			"groupes": [
+				{
+					"nom": "form",
+					"options": [
+						{ "valeur": "ferme", "libelle": "Fermé", "defaut": true },
+						{ "valeur": "creation", "libelle": "Création", "defaut": false },
+						{ "valeur": "edition", "libelle": "Édition · Serveur", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Suppression",
+			"groupes": [
+				{
+					"nom": "sup",
+					"options": [
+						{ "valeur": "refus", "libelle": "Refusée · type utilisé", "defaut": true },
+						{ "valeur": "ok", "libelle": "Possible · type inutilisé", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		}
+	],
+	"defaut": { "form": "ferme", "sup": "refus" },
+	"etats": [
+		{
+			"cle": "form-ferme",
+			"libelle": "Formulaire — Fermé",
+			"controle": { "fieldset": "Formulaire", "nom": "form", "position": "ferme" },
+			"planche": { "form": "ferme" },
+			"vecteur": { "form": "ferme", "sup": "refus" },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "form-creation",
+			"libelle": "Formulaire — Création",
+			"controle": { "fieldset": "Formulaire", "nom": "form", "position": "creation" },
+			"planche": { "form": "creation" },
+			"vecteur": { "form": "creation", "sup": "refus" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "form-edition",
+			"libelle": "Formulaire — Édition · Serveur",
+			"controle": { "fieldset": "Formulaire", "nom": "form", "position": "edition" },
+			"planche": { "form": "edition" },
+			"vecteur": { "form": "edition", "sup": "refus" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "sup-refus",
+			"libelle": "Suppression — Refusée · type utilisé",
+			"controle": { "fieldset": "Suppression", "nom": "sup", "position": "refus" },
+			"planche": { "sup": "refus" },
+			"vecteur": { "form": "ferme", "sup": "refus" },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "form-ferme"
+		},
+		{
+			"cle": "sup-ok",
+			"libelle": "Suppression — Possible · type inutilisé",
+			"controle": { "fieldset": "Suppression", "nom": "sup", "position": "ok" },
+			"planche": { "sup": "ok" },
+			"vecteur": { "form": "ferme", "sup": "ok" },
+			"defaut": false,
+			"app": null
+		}
+	]
+}
