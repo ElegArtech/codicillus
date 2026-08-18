@@ -25,8 +25,17 @@ import { encoder, decoder, image } from './png.mjs';
 import { comparerPixels, comparerStructure, comparerZone, TOLERANCES } from './comparer.mjs';
 // @ts-expect-error — modules d'instrument en JavaScript, hors périmètre de tsc
 import { BLOCS_HORS_PRODUIT, zonesDe, declarationZones } from './conditions.mjs';
+import {
+	adresseDeLEtat,
+	declarationEtatDeZone,
+	declarationRevelation,
+	limitesDeLaSource,
+	SOURCES,
+	PREFIXE
+	// @ts-expect-error — modules d'instrument en JavaScript, hors périmètre de tsc
+} from './mode-demo.mjs';
 // @ts-expect-error — modules d'instrument en JavaScript, hors périmètre de tsc
-import { adresseDeLEtat, declarationEtatDeZone, SOURCES, PREFIXE } from './mode-demo.mjs';
+import { REVELATIONS, reveler } from './revelation.mjs';
 
 type Image = { largeur: number; hauteur: number; donnees: Buffer };
 
@@ -238,5 +247,99 @@ describe('protocole d’état de zone — ÉCART-012 point 6', () => {
 		expect(adresseDeLEtat('V-39', 'vide-dossier-vide')).toBe(
 			'/__design/V-39?etat=vide-dossier-vide'
 		);
+	});
+});
+
+/* ═════════════════════════════════════════════════════════════════════════
+   RÉVÉLATIONS — ARB-017, `ECART-015` É-4
+
+   Une révélation change ce que le banc mesure. Elle doit donc prouver quatre
+   choses, et ces unitaires les figent :
+
+     1. le catalogue est CLOS — une déclaration qui nomme une révélation
+        inexistante est REFUSÉE, jamais ignorée ;
+     2. une vue sans déclaration n'est JAMAIS révélée — et la page n'est même
+        pas touchée ;
+     3. la déclaration cite son arbitrage, pour que le rapport puisse le nommer ;
+     4. la règle d'étalonnage d'`ECART-015` É-5 est LISIBLE PAR LE CODE, donc
+        réimprimable à chaque exécution.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/** Une page qui hurle si on la touche — pour prouver le « ne touche à rien ». */
+const pageIntouchable = new Proxy(
+	{},
+	{
+		get(_, propriete) {
+			throw new Error(`la page a été touchée : ${String(propriete)}`);
+		}
+	}
+);
+
+describe('révélations — le catalogue est clos et la déclaration est humaine', () => {
+	it('connaît « modalite-dialogue », et énonce la propriété qu’elle établit', () => {
+		const catalogue = REVELATIONS as Record<string, { propriete: string }>;
+		expect(Object.keys(catalogue)).toContain('modalite-dialogue');
+		expect(catalogue['modalite-dialogue'].propriete).toMatch(/dialog\[open\].*:modal/);
+	});
+
+	it('V-40 déclare la révélation, et cite l’arbitrage qui l’autorise', () => {
+		const d = (declarationRevelation as (v: string) => Record<string, string> | null)('V-40');
+		expect(d).not.toBeNull();
+		expect(d?.revelation).toBe('modalite-dialogue');
+		expect(d?.arbitrage).toMatch(/ARB-017/);
+		expect(d?.motif).toBeTruthy();
+	});
+
+	it('UNE VUE SANS DÉCLARATION N’EST JAMAIS RÉVÉLÉE — ni même touchée', async () => {
+		const de = declarationRevelation as (v: string) => unknown;
+		for (const vue of ['V-37', 'V-38', 'V-39', 'V-41', 'V-01']) expect(de(vue)).toBeNull();
+		// `reveler` rend null sans rien demander à la page : ne rien déclarer
+		// n'ouvre rien, et n'exécute rien non plus.
+		await expect(
+			(reveler as (p: unknown, d: unknown, c: string) => Promise<unknown>)(
+				pageIntouchable,
+				null,
+				'candidat'
+			)
+		).resolves.toBeNull();
+	});
+
+	it('REFUSE une déclaration qui nomme une révélation inexistante', async () => {
+		await expect(
+			(reveler as (p: unknown, d: unknown, c: string) => Promise<unknown>)(
+				pageIntouchable,
+				{ revelation: 'faire-passer-le-rouge' },
+				'candidat'
+			)
+		).rejects.toThrow(/inconnue du catalogue/i);
+	});
+});
+
+describe('la règle d’étalonnage — `ECART-015` É-5, lisible par le code', () => {
+	it('chaque source d’étalon énumère ce qu’elle n’éprouve pas', () => {
+		const limites = limitesDeLaSource as (
+			s: string
+		) => { prouve: string; n_eprouve_pas: string[] } | null;
+		for (const source of SOURCES as string[]) {
+			expect(limites(source)?.n_eprouve_pas.length).toBeGreaterThan(0);
+		}
+	});
+
+	it('les deux étalons nomment la propriété que le candidat possède DÉJÀ', () => {
+		const limites = limitesDeLaSource as (s: string) => { n_eprouve_pas: string[] } | null;
+		for (const source of ['etalon', 'composant']) {
+			const dit = (limites(source)?.n_eprouve_pas ?? []).join(' ');
+			// C'est la seconde moitié de la règle, et la plus contre-intuitive :
+			// un étalon trop capable est aveugle là où le candidat est démuni.
+			expect(dit).toMatch(/JAVASCRIPT/);
+		}
+	});
+
+	it('`composant` nomme encore ce qu’il n’EMPRUNTE pas — la première moitié', () => {
+		const dit = (limitesDeLaSource as (s: string) => { n_eprouve_pas: string[] } | null)(
+			'composant'
+		)?.n_eprouve_pas.join(' ');
+		expect(dit).toMatch(/V-xx\.svelte/);
+		expect(dit).toMatch(/socle\.css/);
 	});
 });

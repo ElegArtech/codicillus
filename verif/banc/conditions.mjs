@@ -132,6 +132,23 @@ export const AVANCE_CHARGEMENT_MS = 1000;
 export const AVANCE_ETAT_MS = 1000;
 export const PEINTURE_MS = 80;
 
+/* ── Le pointeur au repos ──────────────────────────────────────────────────
+   Playwright ouvre chaque page avec son curseur en (0, 0), et l'y laisse tant
+   qu'aucun geste ne le déplace : c'est donc la position du pointeur dans la
+   quasi-totalité des captures du banc, et le survol qu'elles portent.
+
+   Les seules captures où il en va autrement sont celles des onze états à
+   déclencheur : le clic laisse le curseur sur la cible, et la boîte s'ouvre
+   ensuite au centre de la fenêtre, si bien que le curseur s'y retrouve — par
+   accident de géométrie — sur son bouton principal. Le banc mesure alors un
+   `:hover` qui n'appartient pas à l'état mais au moyen de livraison du clic
+   (`ECART-014` É-3, même famille que le défilement).
+
+   Le pointeur est donc REMIS AU REPOS après un geste, des deux côtés, par le
+   même code. Cette constante est en écriture humaine seule, comme le reste de
+   ce fichier : la déplacer changerait le survol de toutes les captures. */
+export const POINTEUR_AU_REPOS = [0, 0];
+
 /* ── Inhibition du mouvement, des barres et du curseur ─────────────────────
    Chaque règle neutralise une source de faux positif identifiée à
    l'étalonnage à blanc. Aucune ne touche la mise en page ni les couleurs :

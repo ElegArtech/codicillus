@@ -100,16 +100,18 @@ export function maquetteDe(vue) {
 }
 
 /**
- * Rend le SECOND bloc `<style>` d'une maquette gelée — le style propre à la
- * vue, par opposition au premier bloc, qui est le socle (ÉCART-007).
+ * Rend le texte d'une maquette gelée, APRÈS contrôle de son empreinte.
  *
- * Aucune transformation : ni reformatage, ni normalisation de fin de ligne.
- * Le contrôle porte sur les octets ; les produire autrement qu'à l'identique
- * le rendrait invérifiable.
+ * C'est le point d'ancrage commun de tout ce qui se prouve « par le gel » :
+ * P-6.3 (le second bloc `<style>`, ci-dessous) comme P-6.4 (les valeurs de
+ * `style` du balisage et des scripts, `verif/styles-en-ligne.mjs`). Aucune de
+ * ces preuves ne s'exécute sur une maquette qui a bougé sans arbitrage : la
+ * lecture échoue avant d'avoir servi.
  *
- * @returns {{ contenu: string, lignes: number, maquette: string }}
+ * @param {string} vue
+ * @returns {{ html: string, fichier: string, chemin: string }}
  */
-export function blocDeVue(vue) {
+export function htmlGele(vue) {
 	const fichier = maquetteDe(vue);
 	const chemin = join(RACINE_MAQUETTES, fichier);
 	const gel = lireGel().get(fichier);
@@ -122,8 +124,21 @@ export function blocDeVue(vue) {
 				`  L'extraction est refusée : voir pnpm verif:gel.`
 		);
 	}
+	return { html: octets.toString('utf8'), fichier, chemin };
+}
 
-	const html = octets.toString('utf8');
+/**
+ * Rend le SECOND bloc `<style>` d'une maquette gelée — le style propre à la
+ * vue, par opposition au premier bloc, qui est le socle (ÉCART-007).
+ *
+ * Aucune transformation : ni reformatage, ni normalisation de fin de ligne.
+ * Le contrôle porte sur les octets ; les produire autrement qu'à l'identique
+ * le rendrait invérifiable.
+ *
+ * @returns {{ contenu: string, lignes: number, maquette: string }}
+ */
+export function blocDeVue(vue) {
+	const { html, fichier } = htmlGele(vue);
 	const premier = html.indexOf('<style');
 	if (premier === -1) throw new Error(`aucun bloc <style> dans mockups/${fichier}`);
 	const finPremier = html.indexOf('</style>', premier);

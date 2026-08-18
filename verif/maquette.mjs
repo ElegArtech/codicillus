@@ -103,6 +103,38 @@
  * `etats_de_zone`, en écriture humaine seule — le motif de la voie retenue et
  * de la voie écartée y est écrit au long. Une vue non déclarée reste REFUSÉE en
  * code 2 pour ses états de zone : ne rien écrire n'ouvre rien.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * RÉVÉLATIONS — ARB-017
+ *
+ * Certaines propriétés du document mesuré ne s'atteignent pas déclarativement.
+ * La COUCHE SUPÉRIEURE d'un `dialog` en est une : `open` n'est pas
+ * `showModal()`, et sans elle la zone `dialog.dlg` de V-40 fait 1440×901 au
+ * lieu de 1440×900, sans voile. L'exiger de l'application, ce serait exiger du
+ * JavaScript d'un squelette statique — donc contredire ARB-011 pour satisfaire
+ * une mesure.
+ *
+ * Le banc établit donc la propriété lui-même, DES DEUX CÔTÉS, par un code
+ * unique (`verif/banc/revelation.mjs`), comme il actionne déjà le clic des
+ * déclencheurs (`ECART-014` É-3). La déclaration vit dans
+ * `verif/references/protocole-app.json`, bloc `revelations`, en écriture
+ * humaine seule ; UNE VUE SANS DÉCLARATION N'EST JAMAIS RÉVÉLÉE ; et le
+ * rapport nomme la révélation appliquée à chaque exécution.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * LA RÈGLE D'ÉTALONNAGE — `ECART-015` É-5, troisième occurrence
+ *
+ * UN ÉTALON NE VAUT QUE POUR LES PORTIONS DE CHEMIN QU'IL EMPRUNTE RÉELLEMENT,
+ * ET POUR LES PROPRIÉTÉS QUE LE CANDIDAT NE POSSÈDE PAS DÉJÀ.
+ *
+ * La seconde moitié est la plus récente et la plus contre-intuitive : un étalon
+ * TROP CAPABLE est aveugle exactement là où le candidat est démuni. `--source=
+ * composant` rejoue le corps du gel AVEC SES SCRIPTS, entre donc en modalité
+ * tout seul, et sort conforme sur V-40 là où l'implémentation échouait sur les
+ * dix états. Ce que chaque source n'éprouve pas est ÉNUMÉRÉ dans
+ * `protocole-app.json`, bloc `sources`, et RÉIMPRIMÉ ici à chaque exécution en
+ * régime d'étalonnage : un vert d'étalon qu'on lirait sans cette liste ferait
+ * croire à une couverture qu'il n'a pas (RA-01).
  */
 import { chromium } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
@@ -118,7 +150,8 @@ import {
 	AVANCE_ETAT_MS,
 	zonesDe,
 	declarationZones,
-	BLOCS_HORS_PRODUIT
+	BLOCS_HORS_PRODUIT,
+	POINTEUR_AU_REPOS
 } from './banc/conditions.mjs';
 import { ouvrirPage, reglerPlanche, mesurer } from './banc/capture.mjs';
 import { comparerStructure, comparerZone, coteACote, TOLERANCES } from './banc/comparer.mjs';
@@ -126,9 +159,12 @@ import { decoder } from './banc/png.mjs';
 import {
 	adresseDeLEtat,
 	declarationEtatDeZone,
+	declarationRevelation,
+	limitesDeLaSource,
 	SOURCES,
 	PREFIXE as PREFIXE_DEMO
 } from './banc/mode-demo.mjs';
+import { reveler } from './banc/revelation.mjs';
 
 const DOSSIER_SCENARIOS = join(racine, 'verif', 'scenarios');
 const DOSSIER_CAPTURES = join(racine, 'verif', 'captures');
@@ -277,7 +313,23 @@ async function perturber(page, genre) {
    `stabiliser()` remet déjà le défilement à zéro au chargement, des deux côtés :
    cette remise-ci est la même condition, appliquée après le seul autre moment où
    le banc peut le déplacer. Elle est appliquée AUX DEUX CÔTÉS, par ce code
-   unique, et ne change donc jamais un verdict en faveur d'un côté. */
+   unique, et ne change donc jamais un verdict en faveur d'un côté.
+
+   LE POINTEUR EST REMIS AU REPOS POUR LA MÊME RAISON, ET C'EST LE MÊME DÉFAUT
+   D'UN CRAN PLUS LOIN. Playwright laisse son curseur là où il a cliqué. La
+   boîte s'ouvre ensuite au centre de la fenêtre — et le curseur s'y retrouve,
+   par accident de géométrie, sur le bouton principal : la référence capture
+   alors un `.btn--principal:hover`, `--c-accent-fonce` au lieu de
+   `--c-accent`. Mesuré sur cinq des dix boîtes de V-40, de 2 884 à 5 169 pixels
+   divergents, tous sur le seul bouton.
+
+   Ce survol n'appartient pas plus à l'état que le défilement : il appartient au
+   MOYEN par lequel le banc a livré le clic. Le laisser exigerait d'une
+   implémentation qu'elle devine la position du curseur d'un geste qu'elle ne
+   fait pas. Le repos est (0, 0) — la position qu'a le pointeur dans TOUTES les
+   autres captures du banc, celles qui ne cliquent rien : la remise au repos
+   rend donc les états à déclencheur semblables aux autres, elle ne leur invente
+   pas une condition à part. */
 async function actionnerDeclencheur(page, declencheur) {
 	const cible =
 		typeof declencheur === 'string'
@@ -285,6 +337,7 @@ async function actionnerDeclencheur(page, declencheur) {
 			: page.locator(declencheur.selecteur).nth(declencheur.index);
 	await cible.click();
 	await page.evaluate(() => window.scrollTo(0, 0));
+	await page.mouse.move(...POINTEUR_AU_REPOS);
 	await avancer(page, AVANCE_ETAT_MS);
 }
 
@@ -359,6 +412,8 @@ const derives = [];
 const signatures = {};
 /** Les zones effectivement comparées, vue par vue — le rapport les nomme. */
 const zonesParVue = new Map();
+/** Les révélations effectivement appliquées, vue par vue — ARB-017, même règle. */
+const revelationsParVue = new Map();
 const empreintesConnues =
 	existsSync(EMPREINTES) && !etalonner ? JSON.parse(readFileSync(EMPREINTES, 'utf8')) : null;
 /** La baseline porte la surface déclarée : l'élargir la rend incomparable. */
@@ -552,6 +607,36 @@ for (const { vue, fichier } of cibles) {
 					else if (scenario.defaut) await reglerPlanche(page, scenario.defaut);
 					if (etat.zone?.declencheur) await actionnerDeclencheur(page, etat.zone.declencheur);
 				}
+
+				/* ── LA RÉVÉLATION — ARB-017, appliquée ICI et donc AUX DEUX CÔTÉS.
+				   Elle est écrite comme une PROPRIÉTÉ À RENDRE VRAIE, jamais comme
+				   un geste à jouer d'un seul côté : « tout dialog[open] est :modal ».
+				   Du côté maquette le clic du banc l'a déjà rendue vraie, et le code
+				   ne touche à rien — la référence n'est pas modifiée, sa signature
+				   au verif/references/empreintes.json ne bouge pas. Du côté
+				   application il l'établit. La postcondition est VÉRIFIÉE des deux
+				   côtés : une révélation qui n'aurait pas pris échoue bruyamment.
+
+				   Une vue sans déclaration n'est jamais révélée : `reveler()` rend
+				   `null` sans toucher à la page. */
+				const revele = await reveler(page, declarationRevelation(vue), nom);
+				if (revele) {
+					const cumul = revelationsParVue.get(vue) ?? {
+						vue,
+						revelation: revele.revelation,
+						mesures: 0,
+						deja_vraie: 0,
+						etablie: 0,
+						elements: 0
+					};
+					cumul.mesures++;
+					if (revele.revelees.length) {
+						cumul.etablie++;
+						cumul.elements += revele.revelees.length;
+					} else cumul.deja_vraie++;
+					revelationsParVue.set(vue, cumul);
+				}
+
 				mesures[nom] = await mesurer(page, {
 					zone: etat.zone ?? null,
 					zones: zonesVue,
@@ -808,6 +893,23 @@ const rapport = {
 		arbitrage: z.declaration?.arbitrage ?? null,
 		forcee_page_entiere: z.forcePageEntiere
 	})),
+	/* ARB-017 — LE RAPPORT NOMME LA RÉVÉLATION APPLIQUÉE, comme il nomme déjà
+	   les zones. Une vue déclarée mais jamais atteinte n'apparaît pas : ce qui
+	   est écrit ici est ce que le banc a RÉELLEMENT établi. */
+	revelations: [...revelationsParVue.values()].map((r) => {
+		const declaration = declarationRevelation(r.vue);
+		return {
+			vue: r.vue,
+			revelation: r.revelation,
+			propriete: declaration?.propriete ?? null,
+			mesures: r.mesures,
+			deja_vraie: r.deja_vraie,
+			etablie: r.etablie,
+			elements_reveles: r.elements,
+			arbitrage: declaration?.arbitrage ?? null
+		};
+	}),
+	source_limites: contre === 'app' ? (limitesDeLaSource(source) ?? null) : null,
 	etats_de_zone: [...zonesParVue.values()]
 		.filter((z) => z.etatsDeZone > 0)
 		.map((z) => ({
@@ -897,6 +999,43 @@ if (parEtatDeZone.length) {
 		'    la zone de chaque état est celle de verif/scenarios/V-xx.json, dérivée de la\n' +
 			'    maquette gelée ; elle est isolée par le même code des deux côtés.'
 	);
+}
+
+/* ARB-017 — LE RAPPORT NOMME LA RÉVÉLATION APPLIQUÉE, à chaque exécution, et
+   au même titre que les zones comparées et les états de zone. Une révélation
+   silencieuse serait un changement de surface mesurée qu'on ne verrait pas. */
+if (revelationsParVue.size) {
+	console.log(`  révélations — ${revelationsParVue.size} vue(s) à propriété établie par le banc :`);
+	for (const r of revelationsParVue.values()) {
+		const declaration = declarationRevelation(r.vue);
+		console.log(
+			`    ${r.vue} : « ${r.revelation} » — ${declaration?.propriete ?? 'sans propriété citée'}`
+		);
+		console.log(
+			`      ${r.mesures} mesure(s) : déjà vraie sur ${r.deja_vraie}, établie sur ${r.etablie} ` +
+				`(${r.elements} élément(s))   (${declaration?.arbitrage ?? 'sans arbitrage cité'})`
+		);
+	}
+	console.log(
+		'    exigée par le même code des DEUX côtés, avant la mesure, et VÉRIFIÉE des deux côtés :\n' +
+			'    là où la propriété est déjà vraie, rien n’est touché. Une vue non déclarée à\n' +
+			'    verif/references/protocole-app.json n’est jamais révélée.'
+	);
+} else {
+	console.log('  révélations : aucune — aucune vue mesurée n’en déclare (ARB-017).');
+}
+
+/* `ECART-015` É-5 — CE QUE L'ÉTALON N'ÉPROUVE PAS, RÉIMPRIMÉ À CHAQUE
+   EXÉCUTION. Un étalon ne vaut que pour les portions de chemin qu'il emprunte
+   réellement, ET pour les propriétés que le candidat ne possède pas déjà. Un
+   vert d'étalon lu sans cette liste ferait croire à une couverture qu'il n'a
+   pas (RA-01). */
+if (contre === 'app') {
+	const limites = limitesDeLaSource(source);
+	if (limites?.n_eprouve_pas?.length) {
+		console.log(`  ce que la source « ${source} » N’ÉPROUVE PAS :`);
+		for (const ligne of limites.n_eprouve_pas) console.log(`    · ${ligne}`);
+	}
 }
 
 if (!signatureComparable) {
