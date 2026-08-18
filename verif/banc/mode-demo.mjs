@@ -70,6 +70,17 @@
  *                    le premier rouge d'une vraie vue serait indiscernable
  *                    d'un défaut de harnais.
  *
+ *   source=composant — le même candidat connu identique, MAIS DONT LE CORPS
+ *                    TRAVERSE `render()`. C'est la réponse à `ECART-013` É-1 :
+ *                    `source=etalon` sert le gel sans jamais passer par
+ *                    `render()`, si bien que le chemin étalonné n'était pas le
+ *                    chemin exercé — tout composant rendait 500 sans que
+ *                    l'étalonnage ne le voie. Cette source emprunte les mêmes
+ *                    fonctions qu'un lot de vue : `ssrLoadModule` du graphe SSR
+ *                    de Vite, `render()` de `svelte/server`, le contrat de
+ *                    propriétés, `corpusPourVue()`, la mise en réponse. Ce
+ *                    qu'elle N'emprunte PAS est écrit à `servirEtalon()`.
+ *
  * ═════════════════════════════════════════════════════════════════════════
  * CE QUE LA ROUTE NE FAIT PAS
  *
@@ -99,10 +110,21 @@ const PROTOCOLE = JSON.parse(
 	readFileSync(join(racine, 'verif', 'references', 'protocole-app.json'), 'utf8')
 );
 
+/** Les trois sources reconnues. Voir le bandeau, « deux sources ». */
+export const SOURCES = ['app', 'etalon', 'composant'];
+
 /**
  * L'adresse du mode démo pour un état, telle que le banc doit la construire.
  * Elle est lue du protocole en écriture humaine seule, jamais recomposée à la
  * main dans deux endroits.
+ *
+ * ELLE EST LA MÊME POUR UN ÉTAT DE ZONE. C'est tout le propos de la voie
+ * retenue par `protocole-app.json`, bloc `etats_de_zone` : l'application sert
+ * LA PAGE ENTIÈRE dans la condition où la zone est montrable, et c'est le banc
+ * qui isole la zone — la même, par le même sélecteur et le même rang, des deux
+ * côtés. Il n'y a donc rien de particulier à mettre dans l'adresse : ce qui
+ * change entre un état de variante et un état de zone est ce que le banc
+ * DÉCOUPE, jamais ce qu'il DEMANDE.
  *
  * @param {string} vue
  * @param {string} etat
@@ -125,6 +147,34 @@ export function adresseDeLEtat(vue, etat, source = 'app', differeMs = 0) {
 	if (source !== 'app') ajouter(`source=${encodeURIComponent(source)}`);
 	if (differeMs > 0) ajouter(`differe=${differeMs}`);
 	return chemin;
+}
+
+/* ── Le protocole d'état de zone ────────────────────────────────────────────
+   ECART-012 point 6. Six vues présentent leurs états CÔTE À CÔTE dans la page
+   — 55 états — et le régime `app` n'avait aucun chemin pour les atteindre : il
+   refusait en code 2 en citant `protocole-app.json`. Le refus était le bon
+   comportement ; il lui manquait une suite.
+
+   La suite est déclarée là, dans `protocole-app.json`, en écriture humaine
+   seule, vue par vue : l'application sert la page entière, le banc y isole la
+   même zone que du côté maquette. Le sélecteur et le rang ne sont PAS déclarés
+   ici — ils sont dérivés mécaniquement de la maquette gelée par
+   `verif/extraire-scenarios.mjs`, et `pnpm scenarios:verifier` le prouve en les
+   régénérant. Ce qui se déclare est ce que la maquette ne peut pas dire : que
+   la vue est atteignable par sa page, et ce que l'application doit y servir.
+
+   UNE VUE NON DÉCLARÉE RESTE REFUSÉE. Ne rien écrire n'ouvre rien : c'est la
+   position la plus stricte, et un agent d'exécution n'ajoute jamais une vue ici
+   pour faire taire un refus (PLAN §12). */
+
+/**
+ * La déclaration d'état de zone d'une vue, ou `null` si elle n'en a pas.
+ * @param {string} vue
+ * @returns {{ protocole: string, etats: number, zone: string, obligation: string,
+ *             motif: string, arbitrage: string } | null}
+ */
+export function declarationEtatDeZone(vue) {
+	return PROTOCOLE.etats_de_zone?.vues?.[vue] ?? null;
 }
 
 /* ── Lecture des scénarios ──────────────────────────────────────────────────
@@ -236,13 +286,97 @@ function refuser(reponse, code, titre, lignes) {
    Ce que cette source prouve, et ce qu'elle ne prouve pas, est écrit en tête
    de fichier. Le banc le réimprime à chaque exécution : personne ne doit
    pouvoir lire « conforme » sans lire « candidat = maquette gelée ». */
+/* ── LE DÉCLENCHEUR D'UN ÉTAT DE ZONE N'EST PAS REJOUÉ ICI ───────────────────
+   Onze des cinquante-cinq états de zone ne sont pas simplement présents dans la
+   page : ils sont RÉVÉLÉS par un geste — les dix boîtes de V-40, ouvertes par
+   leur entrée de catalogue, et le rapport de lot de V-35.
+   `verif/scenarios/V-xx.json` porte ce geste, lu sur la maquette gelée, sous
+   `zone.declencheur`.
+
+   Ce geste est actionné PAR LE BANC, des deux côtés, par le même code
+   (`verif/maquette.mjs`), et non par un script injecté ici. Le motif est mesuré,
+   pas supposé : un clic synthétique — `element.click()`, même précédé d'une
+   séquence de `PointerEvent` — ne fait ni défiler jusqu'à l'élément, ni passer
+   le document en modalité « pointeur ». Le premier écart déplace tout l'arrière-
+   plan de la boîte (33 % des pixels sur `d-doublon`), le second allume un anneau
+   de focalisation que la référence n'a pas (584 px sur `d-simple`). Les deux
+   sont des artefacts du MOYEN DE LIVRAISON du clic, pas du rendu de la vue.
+
+   Ce que cela laisse hors d'atteinte de l'étalonnage est dit franchement : pour
+   ces onze états, l'étalon rejoue le geste et n'éprouve donc PAS la révélation
+   par l'adresse — celle qu'une vue implémentée, qui rend l'état et jamais la
+   transition (ARB-011), devra honorer. Il n'y a rien à éprouver tant qu'il n'y a
+   pas de vue : c'est une portion de chemin non empruntée, et elle est nommée
+   plutôt que passée sous silence (ÉCART-013 É-1). */
 /**
+ * @param {{ cle: string }} etat
+ * @param {Record<string, unknown>} vecteur
+ * @param {number} differeMs
+ */
+function scriptDEtat(etat, vecteur, differeMs) {
+	return (
+		`<script>/* mode démo — application de l'état « ${etat.cle} », vecteur complet */\n` +
+		`(function () {\n` +
+		`  var v = ${JSON.stringify(vecteur)};\n` +
+		`  if (${differeMs} > 0) setTimeout(appliquer, ${differeMs}); else appliquer();\n` +
+		`  function appliquer() {\n` +
+		`  for (var nom in v) {\n` +
+		`    var valeur = v[nom];\n` +
+		`    if (typeof valeur === 'boolean') {\n` +
+		`      var c = document.getElementById(nom);\n` +
+		`      if (!c) throw new Error('mode démo : case « ' + nom + ' » introuvable');\n` +
+		`      if (c.checked !== valeur) { c.checked = valeur; c.dispatchEvent(new Event('change', { bubbles: true })); }\n` +
+		`    } else {\n` +
+		`      var r = document.querySelector('.planche input[name="' + nom + '"][value="' + valeur + '"]');\n` +
+		`      if (!r) throw new Error('mode démo : position « ' + nom + '=' + valeur + ' » introuvable');\n` +
+		`      if (!r.checked) { r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); }\n` +
+		`    }\n` +
+		`  }\n` +
+		`  }\n` +
+		`})();</script>\n`
+	);
+}
+
+/* ── `source=composant` — LE CORPS DU GEL, MAIS PAR `render()` ───────────────
+   Ce que cette source emprunte, et c'est la liste qui compte :
+
+     • `adresseDeLEtat()` et le routage du greffon — la construction d'adresse ;
+     • `scenarioDe()` et la recherche d'état, avec leurs refus 404 / 400 ;
+     • `serveur.ssrLoadModule('svelte/server')` — l'exemplaire de `render` DU
+       GRAPHE SSR DE VITE, jamais celui de Node (ÉCART-013 É-1) ;
+     • `serveur.ssrLoadModule()` d'un fichier `.svelte`, donc le compilateur
+       Svelte tel que la chaîne de construction le configure ;
+     • `render(module.default, { props })`, avec le MÊME contrat de propriétés
+       qu'une vue — `etat`, `vecteur`, `notes` ;
+     • `serveur.ssrLoadModule('/seeds/corpus.ts')` et `corpusPourVue(vue)`,
+       donc le chargement du jeu de semence par le même chemin ;
+     • `repondre()`, ses en-têtes et son absence de cache ;
+     • du côté banc : `ouvrirPage`, `stabiliser`, `avancer`, `mesurer` et
+       l'isolement de zone, à l'identique de la référence.
+
+   Ce qu'elle N'EMPRUNTE PAS, et qu'aucun vert ne doit laisser croire prouvé :
+
+     • `src/vues/V-xx.svelte` — il n'y a pas de vue, c'est le propos ;
+     • `src/vues/V-xx.css`, la feuille portée de P-6.3, ni `/src/socle.css` :
+       le document servi est celui du gel, avec ses styles en ligne, parce
+       qu'un candidat connu identique doit l'être aussi par ses styles ;
+     • le gabarit de document de `servirApp()` — `<title>`, `<meta viewport>`,
+       liens de feuilles : ici c'est la tête du gel qui est servie, à
+       `<base href="/">` près ;
+     • la traduction du corpus en balisage : `corpusPourVue()` est appelée et
+       passée en propriété, mais le corps rendu est celui de la maquette.
+
+   Autrement dit : la PLOMBERIE DE RENDU est étalonnée de bout en bout, le
+   CONTENU d'une vue ne l'est pas — et ne peut pas l'être sans vue. */
+/**
+ * @param {{ ssrLoadModule: (id: string) => Promise<any> }} serveur
  * @param {import('node:http').ServerResponse} reponse
  * @param {string} vue
  * @param {string} cleEtat
  * @param {number} differeMs
+ * @param {boolean} [parComposant]
  */
-function servirEtalon(reponse, vue, cleEtat, differeMs) {
+async function servirEtalon(serveur, reponse, vue, cleEtat, differeMs, parComposant = false) {
 	const fichier = maquetteDe(vue);
 	const scenario = scenarioDe(vue);
 	if (!fichier || !scenario) {
@@ -267,30 +401,52 @@ function servirEtalon(reponse, vue, cleEtat, differeMs) {
 
 	const html = readFileSync(join(racine, 'mockups', fichier), 'utf8');
 	const vecteur = etat.vecteur ?? scenario.defaut ?? {};
-	const script =
-		`<script>/* mode démo — application de l'état « ${etat.cle} », vecteur complet */\n` +
-		`(function () {\n` +
-		`  var v = ${JSON.stringify(vecteur)};\n` +
-		`  if (${differeMs} > 0) setTimeout(appliquer, ${differeMs}); else appliquer();\n` +
-		`  function appliquer() {\n` +
-		`  for (var nom in v) {\n` +
-		`    var valeur = v[nom];\n` +
-		`    if (typeof valeur === 'boolean') {\n` +
-		`      var c = document.getElementById(nom);\n` +
-		`      if (!c) throw new Error('mode démo : case « ' + nom + ' » introuvable');\n` +
-		`      if (c.checked !== valeur) { c.checked = valeur; c.dispatchEvent(new Event('change', { bubbles: true })); }\n` +
-		`    } else {\n` +
-		`      var r = document.querySelector('.planche input[name="' + nom + '"][value="' + valeur + '"]');\n` +
-		`      if (!r) throw new Error('mode démo : position « ' + nom + '=' + valeur + ' » introuvable');\n` +
-		`      if (!r.checked) { r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); }\n` +
-		`    }\n` +
-		`  }\n` +
-		`  }\n` +
-		`})();</script>\n`;
+	const script = scriptDEtat(etat, vecteur, differeMs);
 
 	const avecBase = html.replace(/<head>/i, '<head>\n<base href="/">');
-	const servi = avecBase.replace(/<\/body>/i, `${script}</body>`);
-	repondre(reponse, 200, servi);
+	if (!parComposant) {
+		repondre(reponse, 200, avecBase.replace(/<\/body>/i, `${script}</body>`));
+		return;
+	}
+
+	// Le document reste CELUI DU GEL : on n'en remplace que le contenu du corps,
+	// par ce que `render()` a produit. Tout le reste — tête, styles en ligne,
+	// attributs de `<body>` — est servi tel quel, sans quoi le candidat cesserait
+	// d'être connu identique et l'écart mesuré ne dirait plus rien du rendu.
+	const ouvrante = avecBase.match(/<body[^>]*>/i);
+	const finCorps = avecBase.lastIndexOf('</body>');
+	if (!ouvrante || finCorps < 0) {
+		refuser(reponse, 500, `Maquette ${echapper(vue)} sans corps délimitable`, [
+			'Le gel de cette vue ne porte pas de couple <code>&lt;body&gt;</code> / ' +
+				'<code>&lt;/body&gt;</code> repérable. La source <code>composant</code> ne peut pas ' +
+				'en isoler le corps sans deviner, et deviner ferait mesurer autre chose.'
+		]);
+		return;
+	}
+	const debutCorps = (ouvrante.index ?? 0) + ouvrante[0].length;
+	const tete = avecBase.slice(0, debutCorps);
+	const pied = avecBase.slice(finCorps);
+	const corps = avecBase.slice(debutCorps, finCorps);
+
+	/* ÉCART-013 É-1 — `render` vient du graphe SSR de Vite, jamais de
+	   l'exemplaire ESM de Node : c'est la ligne exacte dont l'absence faisait
+	   rendre 500 à tout composant. Elle est ici la même qu'à `servirApp()`. */
+	const { render } = await serveur.ssrLoadModule('svelte/server');
+	const module = await serveur.ssrLoadModule('/verif/banc/CorpsEtalon.svelte');
+	const semence = await serveur.ssrLoadModule('/seeds/corpus.ts');
+	const rendu = render(module.default, {
+		props: {
+			etat: etat.cle,
+			vecteur: etat.vecteur ?? null,
+			notes: semence.corpusPourVue(vue),
+			corps
+		}
+	});
+	repondre(
+		reponse,
+		200,
+		tete.replace(/<\/head>/i, `${rendu.head}</head>`) + rendu.body + script + pied
+	);
 }
 
 /* ── source=app — l'implémentation de la vue ─────────────────────────────────
@@ -338,7 +494,9 @@ async function servirApp(serveur, reponse, vue, cleEtat) {
 				`n’est pas à écrire : il est déjà là.`,
 			`Pour étalonner la plomberie sans implémentation, ajouter ` +
 				`<code>&amp;source=etalon</code> — la maquette gelée devient le candidat, et ` +
-				`l’exigence est zéro pixel divergent.`
+				`l’exigence est zéro pixel divergent —, ou <code>&amp;source=composant</code>, ` +
+				`qui fait en plus traverser <code>render()</code> au corps du gel : le chemin ` +
+				`réel d’une vue (ÉCART-013 É-1).`
 		]);
 		return;
 	}
@@ -349,7 +507,8 @@ async function servirApp(serveur, reponse, vue, cleEtat) {
 	   dans push_element, et TOUT composant rendrait 500 — y compris `<p>essai</p>`.
 	   L'étalonnage `--source=etalon` ne l'a jamais rencontré : il sert la maquette
 	   gelée sans passer par render(). C'est le trou de cet étalonnage, et il est
-	   comblé par le contrôle `--source=composant` (verif/mode-demo-rend.mjs). */
+	   comblé par `--source=composant`, qui fait passer le corps du gel par CES
+	   TROIS LIGNES-CI (lot T-007c). */
 	const { render } = await serveur.ssrLoadModule('svelte/server');
 	const module = await serveur.ssrLoadModule(`/${composant}`);
 	const semence = await serveur.ssrLoadModule('/seeds/corpus.ts');
@@ -387,7 +546,8 @@ function servirIndex(reponse) {
 			(/** @type {{cle: string, libelle: string}} */ e) =>
 				`<li><a href="${PREFIXE}/${vue}?${PARAMETRE_ETAT}=${encodeURIComponent(e.cle)}">${echapper(e.cle)}</a> ` +
 				`— ${echapper(e.libelle ?? '')} ` +
-				`(<a href="${PREFIXE}/${vue}?${PARAMETRE_ETAT}=${encodeURIComponent(e.cle)}&source=etalon">étalon</a>)</li>`
+				`(<a href="${PREFIXE}/${vue}?${PARAMETRE_ETAT}=${encodeURIComponent(e.cle)}&source=etalon">étalon</a>` +
+				` · <a href="${PREFIXE}/${vue}?${PARAMETRE_ETAT}=${encodeURIComponent(e.cle)}&source=composant">composant</a>)</li>`
 		);
 		return `<h2>${echapper(vue)} — ${echapper(s?.titre ?? '')}</h2><ul>${etats.join('')}</ul>`;
 	});
@@ -450,12 +610,15 @@ export function modeDemo() {
 						const cleEtat = adresse.searchParams.get(PARAMETRE_ETAT) ?? parDefaut;
 						const source = adresse.searchParams.get('source') ?? 'app';
 						const differe = Number(adresse.searchParams.get('differe') ?? '0');
-						if (source === 'etalon') servirEtalon(reponse, vue, cleEtat, differe);
-						else if (source === 'app') await servirApp(serveur, reponse, vue, cleEtat);
+						if (source === 'etalon' || source === 'composant') {
+							await servirEtalon(serveur, reponse, vue, cleEtat, differe, source === 'composant');
+						} else if (source === 'app') await servirApp(serveur, reponse, vue, cleEtat);
 						else {
 							refuser(reponse, 400, `Source « ${echapper(source)} » inconnue`, [
-								'Sources : <code>app</code> (l’implémentation) ou <code>etalon</code> ' +
-									'(la maquette gelée, pour étalonner le régime <code>app</code> du banc).'
+								'Sources : <code>app</code> (l’implémentation), <code>etalon</code> ' +
+									'(la maquette gelée, pour étalonner le régime <code>app</code> du banc) ou ' +
+									'<code>composant</code> (la même maquette, mais dont le corps traverse ' +
+									'<code>render()</code> — le chemin réel d’une vue, ÉCART-013 É-1).'
 							]);
 						}
 					} catch (erreur) {
