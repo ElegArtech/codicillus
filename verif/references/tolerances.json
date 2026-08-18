@@ -1,0 +1,55 @@
+{
+	"_": [
+		"BASELINE DU BANC DE COMPARAISON VISUELLE — ÉCRITURE HUMAINE SEULE.",
+		"",
+		"Ce fichier porte les tolérances du protocole en trois niveaux de",
+		"PLAN-DE-REALISATION.md §4.2. Il est la référence contre laquelle les",
+		"verdicts sont rendus : le modifier ne corrige pas un rendu, il déplace la",
+		"frontière entre conforme et non conforme.",
+		"",
+		"UN AGENT D'EXÉCUTION N'ÉCRIT JAMAIS ICI. Un agent bloqué sur un rouge ne",
+		"touche ni ce fichier, ni verif/banc/conditions.mjs. Élargir une tolérance",
+		"pour obtenir du vert est le contournement de vérification nommé par PLAN",
+		"§12 : le dispositif certifierait alors le défaut, ce qui est strictement",
+		"pire que l'absence de dispositif. La sortie légitime d'un rouge est le",
+		"protocole d'écart (règles/workflow_agentic.md §4.15).",
+		"",
+		"En à blanc — maquette comparée à elle-même — ces tolérances ne servent à",
+		"rien : l'exigence y est zéro écart, sans seuil. Tout écart non nul en à",
+		"blanc est un DÉFAUT DE BANC, jamais un défaut de maquette, et jamais une",
+		"raison d'élargir un seuil."
+	],
+
+	"niveau1": {
+		"intitule": "Structure",
+		"compare": "instantané ARIA du corps de page (repères, rôles, noms accessibles, hiérarchie des titres, ordre des blocs nommés) et ordre de tabulation",
+		"tolerance": 0,
+		"verdict": "toute divergence est un échec sec — c'est de la sémantique, pas du rendu"
+	},
+
+	"niveau2": {
+		"intitule": "Pixels",
+		"seuil_canal": 0.03,
+		"conforme_au_plus": 0.005,
+		"echec_au_dela": 0.03,
+		"verdict": "≤ 0,5 % de pixels différents : conforme · > 3 % : échec sec · entre les deux : recours au niveau 3",
+		"dimensions_divergentes": "échec sec — deux captures de tailles différentes ne se comparent pas pixel à pixel"
+	},
+
+	"niveau3": {
+		"intitule": "Jugement",
+		"arbitre": "un agent dédié, jamais ce script",
+		"produit": "les deux captures, leur image d'écart, la vue côte à côte et le libellé de l'état",
+		"verdict": "écart de fond : échec · écart de rendu acceptable : conforme, et consigné au journal de vague",
+		"comptabilise": true,
+		"pourquoi_compter": "un taux de recours qui augmente d'une vague à l'autre signale que le protocole de capture dérive, pas que les implémentations s'améliorent (PLAN §14, point 5)"
+	},
+
+	"a_blanc": {
+		"intitule": "Étalonnage à blanc",
+		"compare": "la maquette gelée à elle-même, capturée deux fois dans deux contextes indépendants",
+		"tolerance_pixels": 0,
+		"tolerance_structure": 0,
+		"verdict": "tout écart non nul est un défaut de banc à corriger ou à déclarer, jamais une tolérance à élargir"
+	}
+}

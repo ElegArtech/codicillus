@@ -1,0 +1,128 @@
+{
+	"vue": "V-23",
+	"titre": "Nouveau signet — Codicillus",
+	"maquette": "mockups/V-23-signet-formulaire.html",
+	"empreinte": "358ec85ce74a7299303bdc8be6417e72ca32c9906ae668d492052ce19fbe525c",
+	"planche": true,
+	"zones": null,
+	"routes": [
+		"/univers/{univers}/{domaine}/signets/nouveau",
+		"/univers/{univers}/{domaine}/signets/{identifiant}/modifier"
+	],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Enveloppe",
+			"groupes": [
+				{
+					"nom": "env",
+					"options": [
+						{ "valeur": "dialogue", "libelle": "Boîte de dialogue", "defaut": true },
+						{ "valeur": "page", "libelle": "Page dédiée", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Mode",
+			"groupes": [
+				{
+					"nom": "mode",
+					"options": [
+						{ "valeur": "creation", "libelle": "Création", "defaut": true },
+						{ "valeur": "edition", "libelle": "Édition", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Récupération du titre",
+			"groupes": [
+				{
+					"nom": "recup",
+					"options": [
+						{ "valeur": "ok", "libelle": "Aboutit", "defaut": true },
+						{ "valeur": "lente", "libelle": "Lente", "defaut": false },
+						{ "valeur": "echec", "libelle": "Échoue", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		}
+	],
+	"defaut": { "env": "dialogue", "mode": "creation", "recup": "ok" },
+	"etats": [
+		{
+			"cle": "env-dialogue",
+			"libelle": "Enveloppe — Boîte de dialogue",
+			"controle": { "fieldset": "Enveloppe", "nom": "env", "position": "dialogue" },
+			"planche": { "env": "dialogue" },
+			"vecteur": { "env": "dialogue", "mode": "creation", "recup": "ok" },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "env-page",
+			"libelle": "Enveloppe — Page dédiée",
+			"controle": { "fieldset": "Enveloppe", "nom": "env", "position": "page" },
+			"planche": { "env": "page" },
+			"vecteur": { "env": "page", "mode": "creation", "recup": "ok" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "mode-creation",
+			"libelle": "Mode — Création",
+			"controle": { "fieldset": "Mode", "nom": "mode", "position": "creation" },
+			"planche": { "mode": "creation" },
+			"vecteur": { "env": "dialogue", "mode": "creation", "recup": "ok" },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "env-dialogue"
+		},
+		{
+			"cle": "mode-edition",
+			"libelle": "Mode — Édition",
+			"controle": { "fieldset": "Mode", "nom": "mode", "position": "edition" },
+			"planche": { "mode": "edition" },
+			"vecteur": { "env": "dialogue", "mode": "edition", "recup": "ok" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "recup-ok",
+			"libelle": "Récupération du titre — Aboutit",
+			"controle": { "fieldset": "Récupération du titre", "nom": "recup", "position": "ok" },
+			"planche": { "recup": "ok" },
+			"vecteur": { "env": "dialogue", "mode": "creation", "recup": "ok" },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "env-dialogue"
+		},
+		{
+			"cle": "recup-lente",
+			"libelle": "Récupération du titre — Lente",
+			"controle": { "fieldset": "Récupération du titre", "nom": "recup", "position": "lente" },
+			"planche": { "recup": "lente" },
+			"vecteur": { "env": "dialogue", "mode": "creation", "recup": "lente" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "recup-echec",
+			"libelle": "Récupération du titre — Échoue",
+			"controle": { "fieldset": "Récupération du titre", "nom": "recup", "position": "echec" },
+			"planche": { "recup": "echec" },
+			"vecteur": { "env": "dialogue", "mode": "creation", "recup": "echec" },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

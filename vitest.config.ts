@@ -8,7 +8,9 @@ export default defineConfig({
 	test: {
 		environment: 'node',
 		// `seeds/` porte la preuve d'emboîtement du jeu de semence (T-005, §3.6).
-		include: ['src/**/*.test.ts', 'seeds/**/*.test.ts'],
+		// `verif/` porte les unitaires des instruments de mesure eux-mêmes : le
+		// banc de comparaison visuelle doit prouver qu'il sait dire non (T-007).
+		include: ['src/**/*.test.ts', 'seeds/**/*.test.ts', 'verif/**/*.test.ts'],
 		reporters: ['default']
 	}
 });

@@ -1,0 +1,87 @@
+{
+	"vue": "V-20",
+	"titre": "Cartographie par type — Codicillus",
+	"maquette": "mockups/V-20-carto-type-maitre.html",
+	"empreinte": "3d1a5eb8b89c21967b761b1af53e057e32934c8463127d79cee93e4e4d3f7295",
+	"planche": true,
+	"zones": null,
+	"routes": ["/cartographie/par-type"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Moment",
+			"groupes": [
+				{
+					"nom": "moment",
+					"options": [
+						{ "valeur": "aucun", "libelle": "Aucun type choisi", "defaut": true },
+						{ "valeur": "anneau", "libelle": "Anneau seul", "defaut": false },
+						{ "valeur": "deplie", "libelle": "Voisinage déplié", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Cas limites",
+			"groupes": [],
+			"cases": [
+				{ "id": "c-isole", "libelle": "Maître sans relation", "defaut": false },
+				{ "id": "c-disparu", "libelle": "Nœud disparu", "defaut": false }
+			]
+		}
+	],
+	"defaut": { "moment": "aucun", "c-isole": false, "c-disparu": false },
+	"etats": [
+		{
+			"cle": "moment-aucun",
+			"libelle": "Moment — Aucun type choisi",
+			"controle": { "fieldset": "Moment", "nom": "moment", "position": "aucun" },
+			"planche": { "moment": "aucun" },
+			"vecteur": { "moment": "aucun", "c-isole": false, "c-disparu": false },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "moment-anneau",
+			"libelle": "Moment — Anneau seul",
+			"controle": { "fieldset": "Moment", "nom": "moment", "position": "anneau" },
+			"planche": { "moment": "anneau" },
+			"vecteur": { "moment": "anneau", "c-isole": false, "c-disparu": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "moment-deplie",
+			"libelle": "Moment — Voisinage déplié",
+			"controle": { "fieldset": "Moment", "nom": "moment", "position": "deplie" },
+			"planche": { "moment": "deplie" },
+			"vecteur": { "moment": "deplie", "c-isole": false, "c-disparu": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "isole",
+			"libelle": "Cas limites — Maître sans relation",
+			"controle": { "fieldset": "Cas limites", "nom": "c-isole", "position": true },
+			"planche": { "c-isole": true },
+			"vecteur": { "moment": "aucun", "c-isole": true, "c-disparu": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "disparu",
+			"libelle": "Cas limites — Nœud disparu",
+			"controle": { "fieldset": "Cas limites", "nom": "c-disparu", "position": true },
+			"planche": { "c-disparu": true },
+			"vecteur": { "moment": "aucun", "c-isole": false, "c-disparu": true },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

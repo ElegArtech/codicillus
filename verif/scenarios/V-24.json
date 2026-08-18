@@ -1,0 +1,113 @@
+{
+	"vue": "V-24",
+	"titre": "Importer — Codicillus",
+	"maquette": "mockups/V-24-import.html",
+	"empreinte": "4a9aeff0d051977d1280fe02af445d861cd93e3b2b3f7b859fa0f834f2b99694",
+	"planche": true,
+	"zones": null,
+	"routes": ["/importer"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Étape",
+			"groupes": [
+				{
+					"nom": "et",
+					"options": [
+						{ "valeur": "1", "libelle": "1 · Scénario", "defaut": true },
+						{ "valeur": "2", "libelle": "2 · Dépôt", "defaut": false },
+						{ "valeur": "3", "libelle": "3 · Aperçu", "defaut": false },
+						{ "valeur": "4", "libelle": "4 · Import", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Issue",
+			"groupes": [
+				{
+					"nom": "issue",
+					"options": [
+						{ "valeur": "erreurs", "libelle": "Terminé avec erreurs", "defaut": true },
+						{ "valeur": "propre", "libelle": "Terminé sans erreur", "defaut": false },
+						{ "valeur": "global", "libelle": "Échec global", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		}
+	],
+	"defaut": { "et": "1", "issue": "erreurs" },
+	"etats": [
+		{
+			"cle": "et-1",
+			"libelle": "Étape — 1 · Scénario",
+			"controle": { "fieldset": "Étape", "nom": "et", "position": "1" },
+			"planche": { "et": "1" },
+			"vecteur": { "et": "1", "issue": "erreurs" },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "et-2",
+			"libelle": "Étape — 2 · Dépôt",
+			"controle": { "fieldset": "Étape", "nom": "et", "position": "2" },
+			"planche": { "et": "2" },
+			"vecteur": { "et": "2", "issue": "erreurs" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "et-3",
+			"libelle": "Étape — 3 · Aperçu",
+			"controle": { "fieldset": "Étape", "nom": "et", "position": "3" },
+			"planche": { "et": "3" },
+			"vecteur": { "et": "3", "issue": "erreurs" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "et-4",
+			"libelle": "Étape — 4 · Import",
+			"controle": { "fieldset": "Étape", "nom": "et", "position": "4" },
+			"planche": { "et": "4" },
+			"vecteur": { "et": "4", "issue": "erreurs" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "issue-erreurs",
+			"libelle": "Issue — Terminé avec erreurs",
+			"controle": { "fieldset": "Issue", "nom": "issue", "position": "erreurs" },
+			"planche": { "issue": "erreurs" },
+			"vecteur": { "et": "1", "issue": "erreurs" },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "et-1"
+		},
+		{
+			"cle": "issue-propre",
+			"libelle": "Issue — Terminé sans erreur",
+			"controle": { "fieldset": "Issue", "nom": "issue", "position": "propre" },
+			"planche": { "issue": "propre" },
+			"vecteur": { "et": "1", "issue": "propre" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "issue-global",
+			"libelle": "Issue — Échec global",
+			"controle": { "fieldset": "Issue", "nom": "issue", "position": "global" },
+			"planche": { "issue": "global" },
+			"vecteur": { "et": "1", "issue": "global" },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

@@ -1,0 +1,154 @@
+{
+	"vue": "V-39",
+	"titre": "États vides, de chargement et d'erreur — Codicillus",
+	"maquette": "mockups/V-39-etats.html",
+	"empreinte": "e41c89d545f30d828ce9bd1b4a36ffffd1dce6903b6bb70a6f7c273a32b8f979",
+	"planche": true,
+	"zones": "les trois grilles de vignettes — vides, esquisses de chargement, erreurs",
+	"routes": [],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Chargement",
+			"groupes": [],
+			"cases": [{ "id": "c-anim", "libelle": "Battement actif", "defaut": true }]
+		}
+	],
+	"defaut": { "c-anim": true },
+	"etats": [
+		{
+			"cle": "anim",
+			"libelle": "Chargement — Battement actif",
+			"controle": { "fieldset": "Chargement", "nom": "c-anim", "position": false },
+			"planche": { "c-anim": false },
+			"vecteur": { "c-anim": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "vide-corpus-entierement-vide",
+			"libelle": "Corpus entièrement vide",
+			"zone": { "selecteur": "#vides .vignette", "index": 0, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "vide-domaine-sans-note",
+			"libelle": "Domaine sans note",
+			"zone": { "selecteur": "#vides .vignette", "index": 1, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "vide-dossier-vide",
+			"libelle": "Dossier vide",
+			"zone": { "selecteur": "#vides .vignette", "index": 2, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "vide-aucune-revision-en-attente",
+			"libelle": "Aucune révision en attente",
+			"zone": { "selecteur": "#vides .vignette", "index": 3, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "vide-aucun-retrolien",
+			"libelle": "Aucun rétrolien",
+			"zone": { "selecteur": "#vides .vignette", "index": 4, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "vide-aucune-relation",
+			"libelle": "Aucune relation",
+			"zone": { "selecteur": "#vides .vignette", "index": 5, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "vide-graphe-sans-relation",
+			"libelle": "Graphe sans relation",
+			"zone": { "selecteur": "#vides .vignette", "index": 6, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "vide-aucun-signet",
+			"libelle": "Aucun signet",
+			"zone": { "selecteur": "#vides .vignette", "index": 7, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "vide-aucune-distinction-obtenue",
+			"libelle": "Aucune distinction obtenue",
+			"zone": { "selecteur": "#vides .vignette", "index": 8, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "vide-liste-filtree-vide",
+			"libelle": "Liste filtrée vide",
+			"zone": { "selecteur": "#vides .vignette", "index": 9, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "chargement-carte-de-resultat",
+			"libelle": "Carte de résultat",
+			"zone": { "selecteur": "#squelettes .vignette", "index": 0, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "chargement-ligne-de-liste",
+			"libelle": "Ligne de liste",
+			"zone": { "selecteur": "#squelettes .vignette", "index": 1, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "chargement-panneau-lateral",
+			"libelle": "Panneau latéral",
+			"zone": { "selecteur": "#squelettes .vignette", "index": 2, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "chargement-tableau-de-bord",
+			"libelle": "Tableau de bord",
+			"zone": { "selecteur": "#squelettes .vignette", "index": 3, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "chargement-graphe",
+			"libelle": "Graphe",
+			"zone": { "selecteur": "#squelettes .vignette", "index": 4, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "chargement-arborescence",
+			"libelle": "Arborescence",
+			"zone": { "selecteur": "#squelettes .vignette", "index": 5, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "erreur-un-panneau",
+			"libelle": "Un panneau",
+			"zone": { "selecteur": "#erreurs .vignette", "index": 0, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "erreur-une-vue-entiere",
+			"libelle": "Une vue entière",
+			"zone": { "selecteur": "#erreurs .vignette", "index": 1, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "erreur-perte-de-connexion",
+			"libelle": "Perte de connexion",
+			"zone": { "selecteur": "#erreurs .vignette", "index": 2, "declencheur": null },
+			"app": null
+		},
+		{
+			"cle": "erreur-fonctionnalite-degradee",
+			"libelle": "Fonctionnalité dégradée",
+			"zone": { "selecteur": "#erreurs .vignette", "index": 3, "declencheur": null },
+			"app": null
+		}
+	]
+}

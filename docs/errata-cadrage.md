@@ -44,7 +44,13 @@ Décompte par famille dans `docs/DESIGN.md`.
 
 Le dépôt contient **41** fichiers de vue, non 40. **37** portent une planche de revue ; les quatre
 qui n'en portent pas sont **V-09, V-35, V-40 et V-41**, et présentent leurs états côte à côte dans
-la page. Le §4.1 se contredit d'ailleurs lui-même : il annonce « 36 des 40 » puis donne deux
+la page.
+
+> **Complément du 18 août 2026** (`ECART-010`) — porter une planche et porter des états côte à côte
+> ne s'excluent pas. **Six** vues présentent des états côte à côte, pas quatre : les quatre
+> ci-dessus, plus **V-38** (quatre types de notification) et **V-39** (vingt vignettes d'états
+> vides, de chargement et d'erreur), qui portent en outre une planche. Le banc les traite en régime
+> mixte. Décompte final : **265 états** sur 41 vues, dont 210 de planche et 55 de zone. Le §4.1 se contredit d'ailleurs lui-même : il annonce « 36 des 40 » puis donne deux
 phrases plus loin la liste correcte des vues sans planche.
 
 ## E-04 — Cinq variantes de corpus emboîtées, non 36 corpus à réconcilier

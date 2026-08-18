@@ -1,0 +1,113 @@
+{
+	"vue": "V-01",
+	"titre": "Codicillus — la documentation de la direction technique",
+	"maquette": "mockups/V-01-accueil-public.html",
+	"empreinte": "2d850e4f7775a80978cf12d2baf0e95bdc69c32e6e6f89ebb0d859565d5a40f2",
+	"planche": true,
+	"zones": null,
+	"routes": ["/"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "État",
+			"groupes": [
+				{
+					"nom": "etat",
+					"options": [
+						{ "valeur": "nominal", "libelle": "Nominal", "defaut": true },
+						{ "valeur": "chargement", "libelle": "Chargement", "defaut": false },
+						{ "valeur": "vide", "libelle": "Aucun contenu public", "defaut": false },
+						{ "valeur": "erreur", "libelle": "Guides en erreur", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Frappe",
+			"groupes": [
+				{
+					"nom": "frappe",
+					"options": [
+						{ "valeur": "rien", "libelle": "Champ vide", "defaut": true },
+						{ "valeur": "trouve", "libelle": "« mot de passe »", "defaut": false },
+						{ "valeur": "rien-trouve", "libelle": "Sans résultat", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		}
+	],
+	"defaut": { "etat": "nominal", "frappe": "rien" },
+	"etats": [
+		{
+			"cle": "etat-nominal",
+			"libelle": "État — Nominal",
+			"controle": { "fieldset": "État", "nom": "etat", "position": "nominal" },
+			"planche": { "etat": "nominal" },
+			"vecteur": { "etat": "nominal", "frappe": "rien" },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "etat-chargement",
+			"libelle": "État — Chargement",
+			"controle": { "fieldset": "État", "nom": "etat", "position": "chargement" },
+			"planche": { "etat": "chargement" },
+			"vecteur": { "etat": "chargement", "frappe": "rien" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "etat-vide",
+			"libelle": "État — Aucun contenu public",
+			"controle": { "fieldset": "État", "nom": "etat", "position": "vide" },
+			"planche": { "etat": "vide" },
+			"vecteur": { "etat": "vide", "frappe": "rien" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "etat-erreur",
+			"libelle": "État — Guides en erreur",
+			"controle": { "fieldset": "État", "nom": "etat", "position": "erreur" },
+			"planche": { "etat": "erreur" },
+			"vecteur": { "etat": "erreur", "frappe": "rien" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "frappe-rien",
+			"libelle": "Frappe — Champ vide",
+			"controle": { "fieldset": "Frappe", "nom": "frappe", "position": "rien" },
+			"planche": { "frappe": "rien" },
+			"vecteur": { "etat": "nominal", "frappe": "rien" },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "etat-nominal"
+		},
+		{
+			"cle": "frappe-trouve",
+			"libelle": "Frappe — « mot de passe »",
+			"controle": { "fieldset": "Frappe", "nom": "frappe", "position": "trouve" },
+			"planche": { "frappe": "trouve" },
+			"vecteur": { "etat": "nominal", "frappe": "trouve" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "frappe-rien-trouve",
+			"libelle": "Frappe — Sans résultat",
+			"controle": { "fieldset": "Frappe", "nom": "frappe", "position": "rien-trouve" },
+			"planche": { "frappe": "rien-trouve" },
+			"vecteur": { "etat": "nominal", "frappe": "rien-trouve" },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

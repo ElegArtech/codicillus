@@ -1,0 +1,119 @@
+{
+	"vue": "V-40",
+	"titre": "Boîtes de dialogue — Codicillus",
+	"maquette": "mockups/V-40-dialogues.html",
+	"empreinte": "4e962440444b2e7f2841509b8d4f1c353ddefc4cd048bb6cde65eb8dddf1e51a",
+	"planche": false,
+	"zones": "les dix boîtes de dialogue, ouvertes par leur entrée de catalogue",
+	"routes": [],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": null,
+	"defaut": null,
+	"etats": [
+		{
+			"cle": "d-simple",
+			"libelle": "Quitter la comparaison ?",
+			"zone": {
+				"selecteur": "dialog.dlg",
+				"index": 0,
+				"declencheur": { "selecteur": ".catalogue article button", "index": 0 }
+			},
+			"app": null
+		},
+		{
+			"cle": "d-note",
+			"libelle": "Supprimer cette note",
+			"zone": {
+				"selecteur": "dialog.dlg",
+				"index": 1,
+				"declencheur": { "selecteur": ".catalogue article button", "index": 1 }
+			},
+			"app": null
+		},
+		{
+			"cle": "d-dossier",
+			"libelle": "Supprimer le dossier",
+			"zone": {
+				"selecteur": "dialog.dlg",
+				"index": 2,
+				"declencheur": { "selecteur": ".catalogue article button", "index": 2 }
+			},
+			"app": null
+		},
+		{
+			"cle": "d-restaurer",
+			"libelle": "Restaurer la version 11",
+			"zone": {
+				"selecteur": "dialog.dlg",
+				"index": 3,
+				"declencheur": { "selecteur": ".catalogue article button", "index": 3 }
+			},
+			"app": null
+		},
+		{
+			"cle": "d-reviser",
+			"libelle": "Signaler cette note à réviser",
+			"zone": {
+				"selecteur": "dialog.dlg",
+				"index": 4,
+				"declencheur": { "selecteur": ".catalogue article button", "index": 4 }
+			},
+			"app": null
+		},
+		{
+			"cle": "d-droits",
+			"libelle": "Droits du dossier Sauvegardes",
+			"zone": {
+				"selecteur": "dialog.dlg",
+				"index": 5,
+				"declencheur": { "selecteur": ".catalogue article button", "index": 5 }
+			},
+			"app": null
+		},
+		{
+			"cle": "d-relation",
+			"libelle": "Ajouter une relation",
+			"zone": {
+				"selecteur": "dialog.dlg",
+				"index": 6,
+				"declencheur": { "selecteur": ".catalogue article button", "index": 6 }
+			},
+			"app": null
+		},
+		{
+			"cle": "d-template",
+			"libelle": "Par quoi commencer ?",
+			"zone": {
+				"selecteur": "dialog.dlg",
+				"index": 7,
+				"declencheur": { "selecteur": ".catalogue article button", "index": 7 }
+			},
+			"app": null
+		},
+		{
+			"cle": "d-doublon",
+			"libelle": "Une note très proche existe déjà",
+			"zone": {
+				"selecteur": "dialog.dlg",
+				"index": 8,
+				"declencheur": { "selecteur": ".catalogue article button", "index": 8 }
+			},
+			"app": null
+		},
+		{
+			"cle": "d-deplacer",
+			"libelle": "Déplacer « Restaurer une sauvegarde PostgreSQL depuis Barman »",
+			"zone": {
+				"selecteur": "dialog.dlg",
+				"index": 9,
+				"declencheur": { "selecteur": ".catalogue article button", "index": 9 }
+			},
+			"app": null
+		}
+	]
+}

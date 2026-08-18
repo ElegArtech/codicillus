@@ -1,0 +1,93 @@
+{
+	"vue": "V-02",
+	"titre": "Recherche — Codicillus",
+	"maquette": "mockups/V-02-recherche-publique.html",
+	"empreinte": "1e4f6361209c7fc8ee3999d610d6ba0514f3cdea68cf5d3b7b819ede8f396675",
+	"planche": true,
+	"zones": null,
+	"routes": ["/recherche"],
+	"fenetres": ["1440x900", "1024x768", "768x1024", "360x780"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "État",
+			"groupes": [
+				{
+					"nom": "etat",
+					"options": [
+						{ "valeur": "nominal", "libelle": "Nominal", "defaut": true },
+						{ "valeur": "chargement", "libelle": "Chargement", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Requête",
+			"groupes": [
+				{
+					"nom": "req",
+					"options": [
+						{ "valeur": "mot de passe", "libelle": "« mot de passe »", "defaut": true },
+						{ "valeur": "support", "libelle": "« support »", "defaut": false },
+						{ "valeur": "note de frais", "libelle": "Sans résultat", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		}
+	],
+	"defaut": { "etat": "nominal", "req": "mot de passe" },
+	"etats": [
+		{
+			"cle": "etat-nominal",
+			"libelle": "État — Nominal",
+			"controle": { "fieldset": "État", "nom": "etat", "position": "nominal" },
+			"planche": { "etat": "nominal" },
+			"vecteur": { "etat": "nominal", "req": "mot de passe" },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "etat-chargement",
+			"libelle": "État — Chargement",
+			"controle": { "fieldset": "État", "nom": "etat", "position": "chargement" },
+			"planche": { "etat": "chargement" },
+			"vecteur": { "etat": "chargement", "req": "mot de passe" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "req-mot-de-passe",
+			"libelle": "Requête — « mot de passe »",
+			"controle": { "fieldset": "Requête", "nom": "req", "position": "mot de passe" },
+			"planche": { "req": "mot de passe" },
+			"vecteur": { "etat": "nominal", "req": "mot de passe" },
+			"defaut": true,
+			"app": null,
+			"identiqueA": "etat-nominal"
+		},
+		{
+			"cle": "req-support",
+			"libelle": "Requête — « support »",
+			"controle": { "fieldset": "Requête", "nom": "req", "position": "support" },
+			"planche": { "req": "support" },
+			"vecteur": { "etat": "nominal", "req": "support" },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "req-note-de-frais",
+			"libelle": "Requête — Sans résultat",
+			"controle": { "fieldset": "Requête", "nom": "req", "position": "note de frais" },
+			"planche": { "req": "note de frais" },
+			"vecteur": { "etat": "nominal", "req": "note de frais" },
+			"defaut": false,
+			"app": null
+		}
+	]
+}

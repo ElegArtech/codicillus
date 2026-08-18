@@ -1,0 +1,2205 @@
+{
+	"_": [
+		"BASELINE DU BANC — ÉCRITURE HUMAINE SEULE.",
+		"Signature que le banc relève du côté maquette gelée : empreinte de",
+		"l'instantané ARIA, empreinte de l'ordre de tabulation, nombre",
+		"d'éléments focalisables, dimensions de la capture. Produite par",
+		"`pnpm verif:maquette --etalonner`, à la production initiale.",
+		"",
+		"Elle répond à une question que rien d'autre ne pose : le banc lit-il",
+		"encore la maquette gelée comme il la lisait ? `pnpm verif:gel` garde",
+		"la maquette ; ce fichier garde l'instrument qui la lit.",
+		"",
+		"Un agent d'exécution ne le régénère JAMAIS pour faire passer un",
+		"contrôle de dérive : il déclare la dérive (PLAN §12)."
+	],
+	"navigateur": "chromium 151.0.7922.34",
+	"le": "2026-08-18T13:35:19.085Z",
+	"etats": 364,
+	"signatures": {
+		"V-01/etat-nominal@1440x900": {
+			"aria": "8189cf2a3e23cf45",
+			"tabulation": "3a743cd41e8f5bb4",
+			"focalisables": 11,
+			"dimensions": "1440×1396"
+		},
+		"V-01/etat-chargement@1440x900": {
+			"aria": "c909b503c07b3e57",
+			"tabulation": "0e7c7973453d50ad",
+			"focalisables": 5,
+			"dimensions": "1440×1091"
+		},
+		"V-01/etat-vide@1440x900": {
+			"aria": "8f438a6437395f99",
+			"tabulation": "7c464fe5998a059c",
+			"focalisables": 6,
+			"dimensions": "1440×1134"
+		},
+		"V-01/etat-erreur@1440x900": {
+			"aria": "4a01e3a2f33b0f8a",
+			"tabulation": "49d49d5f14916eb2",
+			"focalisables": 6,
+			"dimensions": "1440×1134"
+		},
+		"V-01/frappe-rien@1440x900": {
+			"aria": "8189cf2a3e23cf45",
+			"tabulation": "3a743cd41e8f5bb4",
+			"focalisables": 11,
+			"dimensions": "1440×1396"
+		},
+		"V-01/frappe-trouve@1440x900": {
+			"aria": "a44c1ffd08046900",
+			"tabulation": "d0ded962ed26cc4c",
+			"focalisables": 8,
+			"dimensions": "1440×1089"
+		},
+		"V-01/frappe-rien-trouve@1440x900": {
+			"aria": "a743884eedd1fdb7",
+			"tabulation": "a7e31f1cb368189b",
+			"focalisables": 7,
+			"dimensions": "1440×1134"
+		},
+		"V-02/etat-nominal@1440x900": {
+			"aria": "3853d542d90b7a13",
+			"tabulation": "d7c843eff3a0d3df",
+			"focalisables": 12,
+			"dimensions": "1440×900"
+		},
+		"V-02/etat-chargement@1440x900": {
+			"aria": "eb8e4ee6125483e0",
+			"tabulation": "133950903b12ab0a",
+			"focalisables": 11,
+			"dimensions": "1440×937"
+		},
+		"V-02/req-mot-de-passe@1440x900": {
+			"aria": "3853d542d90b7a13",
+			"tabulation": "d7c843eff3a0d3df",
+			"focalisables": 12,
+			"dimensions": "1440×900"
+		},
+		"V-02/req-support@1440x900": {
+			"aria": "620e4a597e8a4e63",
+			"tabulation": "53c394f579511dd2",
+			"focalisables": 17,
+			"dimensions": "1440×1408"
+		},
+		"V-02/req-note-de-frais@1440x900": {
+			"aria": "1520d208df24792d",
+			"tabulation": "5e39d066bae9ba66",
+			"focalisables": 13,
+			"dimensions": "1440×900"
+		},
+		"V-02/etat-nominal@1024x768": {
+			"aria": "3853d542d90b7a13",
+			"tabulation": "d7c843eff3a0d3df",
+			"focalisables": 12,
+			"dimensions": "1024×768"
+		},
+		"V-02/etat-chargement@1024x768": {
+			"aria": "eb8e4ee6125483e0",
+			"tabulation": "133950903b12ab0a",
+			"focalisables": 11,
+			"dimensions": "1024×937"
+		},
+		"V-02/req-mot-de-passe@1024x768": {
+			"aria": "3853d542d90b7a13",
+			"tabulation": "d7c843eff3a0d3df",
+			"focalisables": 12,
+			"dimensions": "1024×768"
+		},
+		"V-02/req-support@1024x768": {
+			"aria": "620e4a597e8a4e63",
+			"tabulation": "53c394f579511dd2",
+			"focalisables": 17,
+			"dimensions": "1024×1408"
+		},
+		"V-02/req-note-de-frais@1024x768": {
+			"aria": "1520d208df24792d",
+			"tabulation": "5e39d066bae9ba66",
+			"focalisables": 13,
+			"dimensions": "1024×768"
+		},
+		"V-02/etat-nominal@768x1024": {
+			"aria": "a5f4c2b68f1768cc",
+			"tabulation": "6f58b9fc230d0973",
+			"focalisables": 9,
+			"dimensions": "768×1024"
+		},
+		"V-02/etat-chargement@768x1024": {
+			"aria": "3b5a49fd8e521b50",
+			"tabulation": "48bccce898632bbd",
+			"focalisables": 8,
+			"dimensions": "768×1024"
+		},
+		"V-02/req-mot-de-passe@768x1024": {
+			"aria": "a5f4c2b68f1768cc",
+			"tabulation": "6f58b9fc230d0973",
+			"focalisables": 9,
+			"dimensions": "768×1024"
+		},
+		"V-02/req-support@768x1024": {
+			"aria": "29e0166078043c37",
+			"tabulation": "865bd99a4cbbf7b3",
+			"focalisables": 13,
+			"dimensions": "768×1350"
+		},
+		"V-02/req-note-de-frais@768x1024": {
+			"aria": "9fe09db075225835",
+			"tabulation": "adcdd625d70a180b",
+			"focalisables": 14,
+			"dimensions": "768×1024"
+		},
+		"V-02/etat-nominal@360x780": {
+			"aria": "a5f4c2b68f1768cc",
+			"tabulation": "6f58b9fc230d0973",
+			"focalisables": 9,
+			"dimensions": "360×817"
+		},
+		"V-02/etat-chargement@360x780": {
+			"aria": "3b5a49fd8e521b50",
+			"tabulation": "48bccce898632bbd",
+			"focalisables": 8,
+			"dimensions": "360×1010"
+		},
+		"V-02/req-mot-de-passe@360x780": {
+			"aria": "a5f4c2b68f1768cc",
+			"tabulation": "6f58b9fc230d0973",
+			"focalisables": 9,
+			"dimensions": "360×817"
+		},
+		"V-02/req-support@360x780": {
+			"aria": "29e0166078043c37",
+			"tabulation": "865bd99a4cbbf7b3",
+			"focalisables": 13,
+			"dimensions": "360×1914"
+		},
+		"V-02/req-note-de-frais@360x780": {
+			"aria": "9fe09db075225835",
+			"tabulation": "adcdd625d70a180b",
+			"focalisables": 14,
+			"dimensions": "360×897"
+		},
+		"V-03/fr-frais@1440x900": {
+			"aria": "0b2acc69bfb7874f",
+			"tabulation": "fd5337507469f012",
+			"focalisables": 22,
+			"dimensions": "1440×2624"
+		},
+		"V-03/fr-vieil@1440x900": {
+			"aria": "4e90ee2f4d66da32",
+			"tabulation": "fd5337507469f012",
+			"focalisables": 22,
+			"dimensions": "1440×2624"
+		},
+		"V-03/fr-obs@1440x900": {
+			"aria": "ece7c693363a0e88",
+			"tabulation": "fd5337507469f012",
+			"focalisables": 22,
+			"dimensions": "1440×2624"
+		},
+		"V-03/op@1440x900": {
+			"aria": "2219c88024834748",
+			"tabulation": "925bdede0fbfcfe8",
+			"focalisables": 20,
+			"dimensions": "1440×2549"
+		},
+		"V-03/fr-frais@1024x768": {
+			"aria": "0b2acc69bfb7874f",
+			"tabulation": "fd5337507469f012",
+			"focalisables": 22,
+			"dimensions": "1024×3001"
+		},
+		"V-03/fr-vieil@1024x768": {
+			"aria": "4e90ee2f4d66da32",
+			"tabulation": "fd5337507469f012",
+			"focalisables": 22,
+			"dimensions": "1024×3001"
+		},
+		"V-03/fr-obs@1024x768": {
+			"aria": "ece7c693363a0e88",
+			"tabulation": "fd5337507469f012",
+			"focalisables": 22,
+			"dimensions": "1024×3001"
+		},
+		"V-03/op@1024x768": {
+			"aria": "2219c88024834748",
+			"tabulation": "925bdede0fbfcfe8",
+			"focalisables": 20,
+			"dimensions": "1024×2926"
+		},
+		"V-03/fr-frais@768x1024": {
+			"aria": "52b16293627c6628",
+			"tabulation": "c114fbdc95f5a99e",
+			"focalisables": 18,
+			"dimensions": "768×3072"
+		},
+		"V-03/fr-vieil@768x1024": {
+			"aria": "36c4a33913998342",
+			"tabulation": "c114fbdc95f5a99e",
+			"focalisables": 18,
+			"dimensions": "768×3072"
+		},
+		"V-03/fr-obs@768x1024": {
+			"aria": "8a0e0ad3a5d3c05b",
+			"tabulation": "c114fbdc95f5a99e",
+			"focalisables": 18,
+			"dimensions": "768×3072"
+		},
+		"V-03/op@768x1024": {
+			"aria": "81a36f65689609f0",
+			"tabulation": "b4eeccde4d5a7037",
+			"focalisables": 16,
+			"dimensions": "768×2997"
+		},
+		"V-03/fr-frais@360x780": {
+			"aria": "52b16293627c6628",
+			"tabulation": "c114fbdc95f5a99e",
+			"focalisables": 18,
+			"dimensions": "360×4010"
+		},
+		"V-03/fr-vieil@360x780": {
+			"aria": "36c4a33913998342",
+			"tabulation": "c114fbdc95f5a99e",
+			"focalisables": 18,
+			"dimensions": "360×4010"
+		},
+		"V-03/fr-obs@360x780": {
+			"aria": "8a0e0ad3a5d3c05b",
+			"tabulation": "c114fbdc95f5a99e",
+			"focalisables": 18,
+			"dimensions": "360×4010"
+		},
+		"V-03/op@360x780": {
+			"aria": "81a36f65689609f0",
+			"tabulation": "b4eeccde4d5a7037",
+			"focalisables": 16,
+			"dimensions": "360×3936"
+		},
+		"V-04/cas-inexistant@1440x900": {
+			"aria": "c37ba1533802f587",
+			"tabulation": "2bc6a42ae59da070",
+			"focalisables": 17,
+			"dimensions": "1440×1188"
+		},
+		"V-04/cas-prive@1440x900": {
+			"aria": "c37ba1533802f587",
+			"tabulation": "2bc6a42ae59da070",
+			"focalisables": 17,
+			"dimensions": "1440×1188"
+		},
+		"V-04/cas-nu@1440x900": {
+			"aria": "a140816776554eb1",
+			"tabulation": "2bc6a42ae59da070",
+			"focalisables": 17,
+			"dimensions": "1440×1188"
+		},
+		"V-05/arrivee-protegee@1440x900": {
+			"aria": "a18ea89db5647068",
+			"tabulation": "85b71b2f8261b2fc",
+			"focalisables": 7,
+			"dimensions": "1440×900"
+		},
+		"V-05/arrivee-expiree@1440x900": {
+			"aria": "de1fc4b794a99506",
+			"tabulation": "85b71b2f8261b2fc",
+			"focalisables": 7,
+			"dimensions": "1440×900"
+		},
+		"V-05/arrivee-directe@1440x900": {
+			"aria": "83616e9e33d1a1be",
+			"tabulation": "85b71b2f8261b2fc",
+			"focalisables": 7,
+			"dimensions": "1440×900"
+		},
+		"V-05/issue-succes@1440x900": {
+			"aria": "a18ea89db5647068",
+			"tabulation": "85b71b2f8261b2fc",
+			"focalisables": 7,
+			"dimensions": "1440×900"
+		},
+		"V-05/issue-echec@1440x900": {
+			"aria": "a18ea89db5647068",
+			"tabulation": "85b71b2f8261b2fc",
+			"focalisables": 7,
+			"dimensions": "1440×900"
+		},
+		"V-05/issue-trop@1440x900": {
+			"aria": "a18ea89db5647068",
+			"tabulation": "85b71b2f8261b2fc",
+			"focalisables": 7,
+			"dimensions": "1440×900"
+		},
+		"V-06/et-1@1440x900": {
+			"aria": "123c2a9bc5143ecc",
+			"tabulation": "0140782a26eedbbd",
+			"focalisables": 4,
+			"dimensions": "1440×900"
+		},
+		"V-06/et-2@1440x900": {
+			"aria": "6df0664b81980ab8",
+			"tabulation": "80d6ad654ac45d74",
+			"focalisables": 3,
+			"dimensions": "1440×900"
+		},
+		"V-06/et-3@1440x900": {
+			"aria": "4f6167bf917e2c50",
+			"tabulation": "cbeb2289a8a4f43d",
+			"focalisables": 5,
+			"dimensions": "1440×900"
+		},
+		"V-06/et-4@1440x900": {
+			"aria": "bc8e26c910b282c0",
+			"tabulation": "987aa206f01608a3",
+			"focalisables": 2,
+			"dimensions": "1440×900"
+		},
+		"V-06/cpt-connu@1440x900": {
+			"aria": "123c2a9bc5143ecc",
+			"tabulation": "0140782a26eedbbd",
+			"focalisables": 4,
+			"dimensions": "1440×900"
+		},
+		"V-06/cpt-inconnu@1440x900": {
+			"aria": "095c679438f2b09d",
+			"tabulation": "0140782a26eedbbd",
+			"focalisables": 4,
+			"dimensions": "1440×900"
+		},
+		"V-06/expire@1440x900": {
+			"aria": "123c2a9bc5143ecc",
+			"tabulation": "0140782a26eedbbd",
+			"focalisables": 4,
+			"dimensions": "1440×900"
+		},
+		"V-07/role-referent@1440x900": {
+			"aria": "996f6c56fb2897ce",
+			"tabulation": "801b87734c93e78c",
+			"focalisables": 50,
+			"dimensions": "1440×1417"
+		},
+		"V-07/role-admin@1440x900": {
+			"aria": "74441585df218e9b",
+			"tabulation": "2c7f0109ba2918cd",
+			"focalisables": 51,
+			"dimensions": "1440×1417"
+		},
+		"V-07/role-lecteur@1440x900": {
+			"aria": "7640bc094d87abab",
+			"tabulation": "e3e36dfb2bff2719",
+			"focalisables": 45,
+			"dimensions": "1440×1417"
+		},
+		"V-07/etat-nominal@1440x900": {
+			"aria": "996f6c56fb2897ce",
+			"tabulation": "801b87734c93e78c",
+			"focalisables": 50,
+			"dimensions": "1440×1417"
+		},
+		"V-07/etat-chargement@1440x900": {
+			"aria": "be2427bb4d7fa9e3",
+			"tabulation": "564c703d8479f9b1",
+			"focalisables": 23,
+			"dimensions": "1440×1105"
+		},
+		"V-07/etat-partiel@1440x900": {
+			"aria": "4b882950607bbbf4",
+			"tabulation": "f319bf5589b1ce6d",
+			"focalisables": 39,
+			"dimensions": "1440×1142"
+		},
+		"V-07/etat-erreur@1440x900": {
+			"aria": "47eef61e50cc0322",
+			"tabulation": "504f8805e139e389",
+			"focalisables": 43,
+			"dimensions": "1440×1208"
+		},
+		"V-07/etat-vide@1440x900": {
+			"aria": "496703cc2edce471",
+			"tabulation": "2f181c08ab5aaa02",
+			"focalisables": 22,
+			"dimensions": "1440×900"
+		},
+		"V-07/aide@1440x900": {
+			"aria": "8e5ce6522a85b942",
+			"tabulation": "5c54707f2f4b7b21",
+			"focalisables": 49,
+			"dimensions": "1440×1336"
+		},
+		"V-08/droits-ecriture@1440x900": {
+			"aria": "89d2c55ddb12ddad",
+			"tabulation": "b9bb322357183099",
+			"focalisables": 56,
+			"dimensions": "1440×940"
+		},
+		"V-08/droits-lecture@1440x900": {
+			"aria": "213ca63c46b41586",
+			"tabulation": "5a8772d4fd1ee780",
+			"focalisables": 53,
+			"dimensions": "1440×940"
+		},
+		"V-08/etat-nominal@1440x900": {
+			"aria": "89d2c55ddb12ddad",
+			"tabulation": "b9bb322357183099",
+			"focalisables": 56,
+			"dimensions": "1440×940"
+		},
+		"V-08/etat-chargement@1440x900": {
+			"aria": "89d2c55ddb12ddad",
+			"tabulation": "b9bb322357183099",
+			"focalisables": 56,
+			"dimensions": "1440×958"
+		},
+		"V-08/etat-vide@1440x900": {
+			"aria": "89d2c55ddb12ddad",
+			"tabulation": "b9bb322357183099",
+			"focalisables": 56,
+			"dimensions": "1440×940"
+		},
+		"V-08/etat-trop@1440x900": {
+			"aria": "89d2c55ddb12ddad",
+			"tabulation": "b9bb322357183099",
+			"focalisables": 56,
+			"dimensions": "1440×940"
+		},
+		"V-08/degrade@1440x900": {
+			"aria": "95f51569f7a1bf29",
+			"tabulation": "bd051a57c5eaf272",
+			"focalisables": 55,
+			"dimensions": "1440×940"
+		},
+		"V-08/droits-ecriture@1024x768": {
+			"aria": "560f99c3fb607a20",
+			"tabulation": "060d1051492b3522",
+			"focalisables": 33,
+			"dimensions": "1024×808"
+		},
+		"V-08/droits-lecture@1024x768": {
+			"aria": "01d3785b7417dcd5",
+			"tabulation": "701487349ce6b078",
+			"focalisables": 32,
+			"dimensions": "1024×808"
+		},
+		"V-08/etat-nominal@1024x768": {
+			"aria": "560f99c3fb607a20",
+			"tabulation": "060d1051492b3522",
+			"focalisables": 33,
+			"dimensions": "1024×808"
+		},
+		"V-08/etat-chargement@1024x768": {
+			"aria": "560f99c3fb607a20",
+			"tabulation": "060d1051492b3522",
+			"focalisables": 33,
+			"dimensions": "1024×958"
+		},
+		"V-08/etat-vide@1024x768": {
+			"aria": "560f99c3fb607a20",
+			"tabulation": "060d1051492b3522",
+			"focalisables": 33,
+			"dimensions": "1024×808"
+		},
+		"V-08/etat-trop@1024x768": {
+			"aria": "560f99c3fb607a20",
+			"tabulation": "060d1051492b3522",
+			"focalisables": 33,
+			"dimensions": "1024×808"
+		},
+		"V-08/degrade@1024x768": {
+			"aria": "e28aa257cf428e13",
+			"tabulation": "ee9f7f0cbead0afd",
+			"focalisables": 32,
+			"dimensions": "1024×808"
+		},
+		"V-08/droits-ecriture@768x1024": {
+			"aria": "2e95fec17e3433fb",
+			"tabulation": "5f65fd6c7da4f707",
+			"focalisables": 13,
+			"dimensions": "768×1024"
+		},
+		"V-08/droits-lecture@768x1024": {
+			"aria": "8b1e734748bed690",
+			"tabulation": "48da0bb7b0bc11bd",
+			"focalisables": 12,
+			"dimensions": "768×1024"
+		},
+		"V-08/etat-nominal@768x1024": {
+			"aria": "2e95fec17e3433fb",
+			"tabulation": "5f65fd6c7da4f707",
+			"focalisables": 13,
+			"dimensions": "768×1024"
+		},
+		"V-08/etat-chargement@768x1024": {
+			"aria": "2e95fec17e3433fb",
+			"tabulation": "5f65fd6c7da4f707",
+			"focalisables": 13,
+			"dimensions": "768×1024"
+		},
+		"V-08/etat-vide@768x1024": {
+			"aria": "2e95fec17e3433fb",
+			"tabulation": "5f65fd6c7da4f707",
+			"focalisables": 13,
+			"dimensions": "768×1024"
+		},
+		"V-08/etat-trop@768x1024": {
+			"aria": "2e95fec17e3433fb",
+			"tabulation": "5f65fd6c7da4f707",
+			"focalisables": 13,
+			"dimensions": "768×1024"
+		},
+		"V-08/degrade@768x1024": {
+			"aria": "c78b48b17c2e4acd",
+			"tabulation": "662b6f18f00aba2f",
+			"focalisables": 12,
+			"dimensions": "768×1024"
+		},
+		"V-08/droits-ecriture@360x780": {
+			"aria": "3eeb43379c13ad7f",
+			"tabulation": "6aa1189e0eb183c2",
+			"focalisables": 12,
+			"dimensions": "360×780"
+		},
+		"V-08/droits-lecture@360x780": {
+			"aria": "76bf16a24ab3e2f7",
+			"tabulation": "0732dfc0c50cda54",
+			"focalisables": 11,
+			"dimensions": "360×780"
+		},
+		"V-08/etat-nominal@360x780": {
+			"aria": "3eeb43379c13ad7f",
+			"tabulation": "6aa1189e0eb183c2",
+			"focalisables": 12,
+			"dimensions": "360×780"
+		},
+		"V-08/etat-chargement@360x780": {
+			"aria": "3eeb43379c13ad7f",
+			"tabulation": "6aa1189e0eb183c2",
+			"focalisables": 12,
+			"dimensions": "360×965"
+		},
+		"V-08/etat-vide@360x780": {
+			"aria": "3eeb43379c13ad7f",
+			"tabulation": "6aa1189e0eb183c2",
+			"focalisables": 12,
+			"dimensions": "360×780"
+		},
+		"V-08/etat-trop@360x780": {
+			"aria": "3eeb43379c13ad7f",
+			"tabulation": "6aa1189e0eb183c2",
+			"focalisables": 12,
+			"dimensions": "360×780"
+		},
+		"V-08/degrade@360x780": {
+			"aria": "5f8af099256b88f2",
+			"tabulation": "f9af2ab9512e07b5",
+			"focalisables": 11,
+			"dimensions": "360×780"
+		},
+		"V-09/repos@1440x900": {
+			"aria": "33047c3a9d1ec37f",
+			"tabulation": "edd5cc054e0bb96c",
+			"focalisables": 4,
+			"dimensions": "408×521"
+		},
+		"V-09/unecar@1440x900": {
+			"aria": "a638cc51124b655a",
+			"tabulation": "c1767cd47b20e6c6",
+			"focalisables": 1,
+			"dimensions": "408×521"
+		},
+		"V-09/resultats@1440x900": {
+			"aria": "acb97e4529a80ccb",
+			"tabulation": "52b569baa1342332",
+			"focalisables": 8,
+			"dimensions": "408×521"
+		},
+		"V-09/vide@1440x900": {
+			"aria": "0ccec4cf82fce933",
+			"tabulation": "3fd8b3077e3589b4",
+			"focalisables": 2,
+			"dimensions": "408×576"
+		},
+		"V-09/degrade@1440x900": {
+			"aria": "13a7812cede569f9",
+			"tabulation": "3893a4491b7ae9d4",
+			"focalisables": 8,
+			"dimensions": "408×576"
+		},
+		"V-09/etroit@1440x900": {
+			"aria": "aba76b9316ad59f8",
+			"tabulation": "52b569baa1342332",
+			"focalisables": 8,
+			"dimensions": "408×576"
+		},
+		"V-09/repos@1024x768": {
+			"aria": "1367c503988a1147",
+			"tabulation": "edd5cc054e0bb96c",
+			"focalisables": 4,
+			"dimensions": "476×553"
+		},
+		"V-09/unecar@1024x768": {
+			"aria": "1b89b1b49b351821",
+			"tabulation": "c1767cd47b20e6c6",
+			"focalisables": 1,
+			"dimensions": "476×553"
+		},
+		"V-09/resultats@1024x768": {
+			"aria": "ed567107f3251029",
+			"tabulation": "52b569baa1342332",
+			"focalisables": 8,
+			"dimensions": "476×601"
+		},
+		"V-09/vide@1024x768": {
+			"aria": "eece25e1f4c0986b",
+			"tabulation": "3fd8b3077e3589b4",
+			"focalisables": 2,
+			"dimensions": "476×601"
+		},
+		"V-09/degrade@1024x768": {
+			"aria": "99dc780d2bb3b160",
+			"tabulation": "3893a4491b7ae9d4",
+			"focalisables": 8,
+			"dimensions": "476×616"
+		},
+		"V-09/etroit@1024x768": {
+			"aria": "aba76b9316ad59f8",
+			"tabulation": "52b569baa1342332",
+			"focalisables": 8,
+			"dimensions": "476×616"
+		},
+		"V-09/repos@768x1024": {
+			"aria": "1367c503988a1147",
+			"tabulation": "edd5cc054e0bb96c",
+			"focalisables": 4,
+			"dimensions": "720×516"
+		},
+		"V-09/unecar@768x1024": {
+			"aria": "1b89b1b49b351821",
+			"tabulation": "c1767cd47b20e6c6",
+			"focalisables": 1,
+			"dimensions": "720×342"
+		},
+		"V-09/resultats@768x1024": {
+			"aria": "ed567107f3251029",
+			"tabulation": "52b569baa1342332",
+			"focalisables": 8,
+			"dimensions": "720×516"
+		},
+		"V-09/vide@768x1024": {
+			"aria": "eece25e1f4c0986b",
+			"tabulation": "3fd8b3077e3589b4",
+			"focalisables": 2,
+			"dimensions": "720×395"
+		},
+		"V-09/degrade@768x1024": {
+			"aria": "99dc780d2bb3b160",
+			"tabulation": "3893a4491b7ae9d4",
+			"focalisables": 8,
+			"dimensions": "720×531"
+		},
+		"V-09/etroit@768x1024": {
+			"aria": "aba76b9316ad59f8",
+			"tabulation": "52b569baa1342332",
+			"focalisables": 8,
+			"dimensions": "720×576"
+		},
+		"V-09/repos@360x780": {
+			"aria": "33047c3a9d1ec37f",
+			"tabulation": "edd5cc054e0bb96c",
+			"focalisables": 4,
+			"dimensions": "328×541"
+		},
+		"V-09/unecar@360x780": {
+			"aria": "a638cc51124b655a",
+			"tabulation": "c1767cd47b20e6c6",
+			"focalisables": 1,
+			"dimensions": "328×386"
+		},
+		"V-09/resultats@360x780": {
+			"aria": "acb97e4529a80ccb",
+			"tabulation": "52b569baa1342332",
+			"focalisables": 8,
+			"dimensions": "328×541"
+		},
+		"V-09/vide@360x780": {
+			"aria": "0ccec4cf82fce933",
+			"tabulation": "3fd8b3077e3589b4",
+			"focalisables": 2,
+			"dimensions": "328×399"
+		},
+		"V-09/degrade@360x780": {
+			"aria": "13a7812cede569f9",
+			"tabulation": "3893a4491b7ae9d4",
+			"focalisables": 8,
+			"dimensions": "328×554"
+		},
+		"V-09/etroit@360x780": {
+			"aria": "aba76b9316ad59f8",
+			"tabulation": "52b569baa1342332",
+			"focalisables": 8,
+			"dimensions": "328×595"
+		},
+		"V-10/droits-ecriture@1440x900": {
+			"aria": "523287ced9b55608",
+			"tabulation": "5d05c1f778cd7ed3",
+			"focalisables": 49,
+			"dimensions": "1440×1267"
+		},
+		"V-10/droits-lecture@1440x900": {
+			"aria": "5e44486323c6f6ba",
+			"tabulation": "8d6c87be9faaafdc",
+			"focalisables": 46,
+			"dimensions": "1440×1267"
+		},
+		"V-10/uni-production@1440x900": {
+			"aria": "523287ced9b55608",
+			"tabulation": "5d05c1f778cd7ed3",
+			"focalisables": 49,
+			"dimensions": "1440×1267"
+		},
+		"V-10/uni-projets@1440x900": {
+			"aria": "480df87ec76b2a5a",
+			"tabulation": "752da6150dad257a",
+			"focalisables": 34,
+			"dimensions": "1440×900"
+		},
+		"V-10/etat-peuple@1440x900": {
+			"aria": "523287ced9b55608",
+			"tabulation": "5d05c1f778cd7ed3",
+			"focalisables": 49,
+			"dimensions": "1440×1267"
+		},
+		"V-10/etat-vide@1440x900": {
+			"aria": "90765dbe92cd8267",
+			"tabulation": "e1d7b0f69540baee",
+			"focalisables": 37,
+			"dimensions": "1440×1269"
+		},
+		"V-10/etat-chargement@1440x900": {
+			"aria": "7d23c438601e249b",
+			"tabulation": "cc37deff0ad1a189",
+			"focalisables": 30,
+			"dimensions": "1440×959"
+		},
+		"V-11/dom-infrastructure@1440x900": {
+			"aria": "fec0af891e34c47e",
+			"tabulation": "528c4dfc732a3c9d",
+			"focalisables": 59,
+			"dimensions": "1440×1390"
+		},
+		"V-11/dom-migration-2026@1440x900": {
+			"aria": "aceb99df744dcb29",
+			"tabulation": "ebfcde99b78e6a0a",
+			"focalisables": 41,
+			"dimensions": "1440×900"
+		},
+		"V-11/dom-poste-de-travail@1440x900": {
+			"aria": "f75470332b496c5a",
+			"tabulation": "6224eb00f1f3713c",
+			"focalisables": 49,
+			"dimensions": "1440×1188"
+		},
+		"V-11/role-referent@1440x900": {
+			"aria": "fec0af891e34c47e",
+			"tabulation": "528c4dfc732a3c9d",
+			"focalisables": 59,
+			"dimensions": "1440×1390"
+		},
+		"V-11/role-admin@1440x900": {
+			"aria": "66380ac759d3dd50",
+			"tabulation": "12b11b4b2e48bbba",
+			"focalisables": 60,
+			"dimensions": "1440×1390"
+		},
+		"V-11/role-lecteur@1440x900": {
+			"aria": "090e86e8774d28b7",
+			"tabulation": "da879c0439017483",
+			"focalisables": 54,
+			"dimensions": "1440×1390"
+		},
+		"V-11/etat-peuple@1440x900": {
+			"aria": "fec0af891e34c47e",
+			"tabulation": "528c4dfc732a3c9d",
+			"focalisables": 59,
+			"dimensions": "1440×1390"
+		},
+		"V-11/etat-vide@1440x900": {
+			"aria": "2d13615a8ac9db94",
+			"tabulation": "d34ffd2b5ba062d5",
+			"focalisables": 37,
+			"dimensions": "1440×900"
+		},
+		"V-12/dom-infrastructure@1440x900": {
+			"aria": "eccb912472975f54",
+			"tabulation": "9bd46bc899f232fd",
+			"focalisables": 52,
+			"dimensions": "1440×1900"
+		},
+		"V-12/dom-poste-de-travail@1440x900": {
+			"aria": "140caa29a7a6235b",
+			"tabulation": "9f1d508eeb4016dc",
+			"focalisables": 46,
+			"dimensions": "1440×900"
+		},
+		"V-12/arr-tout@1440x900": {
+			"aria": "eccb912472975f54",
+			"tabulation": "9bd46bc899f232fd",
+			"focalisables": 52,
+			"dimensions": "1440×1900"
+		},
+		"V-12/arr-obsolete@1440x900": {
+			"aria": "9d86c033099a5447",
+			"tabulation": "4be4283af694b176",
+			"focalisables": 45,
+			"dimensions": "1440×900"
+		},
+		"V-12/arr-brouillon@1440x900": {
+			"aria": "dbdb7c2c3c28a19e",
+			"tabulation": "b09e49c415f8eff0",
+			"focalisables": 44,
+			"dimensions": "1440×900"
+		},
+		"V-12/etat-nominal@1440x900": {
+			"aria": "eccb912472975f54",
+			"tabulation": "9bd46bc899f232fd",
+			"focalisables": 52,
+			"dimensions": "1440×1900"
+		},
+		"V-12/etat-vide@1440x900": {
+			"aria": "31e1533cb9bec3c8",
+			"tabulation": "c0622b44489ea56f",
+			"focalisables": 37,
+			"dimensions": "1440×900"
+		},
+		"V-13/dos-exploitation@1440x900": {
+			"aria": "09a702b514a37c89",
+			"tabulation": "dcd4cc68efd00bde",
+			"focalisables": 40,
+			"dimensions": "1440×900"
+		},
+		"V-13/dos-exploitation-sauvegardes@1440x900": {
+			"aria": "602e6a5c805fd353",
+			"tabulation": "04b6f822e36f5570",
+			"focalisables": 43,
+			"dimensions": "1440×900"
+		},
+		"V-13/dos-exploitation-ordonnancement@1440x900": {
+			"aria": "bc789e29238f52ab",
+			"tabulation": "821cc876ee15e3f9",
+			"focalisables": 39,
+			"dimensions": "1440×900"
+		},
+		"V-13/dr-gestionnaire@1440x900": {
+			"aria": "09a702b514a37c89",
+			"tabulation": "dcd4cc68efd00bde",
+			"focalisables": 40,
+			"dimensions": "1440×900"
+		},
+		"V-13/dr-redacteur@1440x900": {
+			"aria": "1f92ff85cf5219b8",
+			"tabulation": "9c2dff8681966cd6",
+			"focalisables": 36,
+			"dimensions": "1440×900"
+		},
+		"V-13/dr-lecteur@1440x900": {
+			"aria": "ed53980709ae1413",
+			"tabulation": "dadcae0b58bc5853",
+			"focalisables": 32,
+			"dimensions": "1440×900"
+		},
+		"V-14/droits-ecriture@1440x900": {
+			"aria": "a28623ba86108a5e",
+			"tabulation": "e5c7164f558c0586",
+			"focalisables": 86,
+			"dimensions": "1440×4422"
+		},
+		"V-14/droits-lecture@1440x900": {
+			"aria": "5a3a6e85de3f55d5",
+			"tabulation": "4bfdcc3158504be7",
+			"focalisables": 78,
+			"dimensions": "1440×4402"
+		},
+		"V-14/fr-frais@1440x900": {
+			"aria": "a28623ba86108a5e",
+			"tabulation": "e5c7164f558c0586",
+			"focalisables": 86,
+			"dimensions": "1440×4422"
+		},
+		"V-14/fr-vieil@1440x900": {
+			"aria": "29ed2777fdebaef6",
+			"tabulation": "e5c7164f558c0586",
+			"focalisables": 86,
+			"dimensions": "1440×4440"
+		},
+		"V-14/fr-obs@1440x900": {
+			"aria": "5b72d71d7a49c380",
+			"tabulation": "e5c7164f558c0586",
+			"focalisables": 86,
+			"dimensions": "1440×4440"
+		},
+		"V-14/revision@1440x900": {
+			"aria": "60c410f1367b5c0b",
+			"tabulation": "a551a105b7871054",
+			"focalisables": 87,
+			"dimensions": "1440×4539"
+		},
+		"V-14/brouillon@1440x900": {
+			"aria": "3b645964f853c479",
+			"tabulation": "024086f5cc8d184a",
+			"focalisables": 87,
+			"dimensions": "1440×4533"
+		},
+		"V-14/resync@1440x900": {
+			"aria": "179579252913c82d",
+			"tabulation": "bd80f99018a56400",
+			"focalisables": 87,
+			"dimensions": "1440×4533"
+		},
+		"V-14/op@1440x900": {
+			"aria": "134af8f22ec32e9b",
+			"tabulation": "f18625a15a373aae",
+			"focalisables": 85,
+			"dimensions": "1440×4440"
+		},
+		"V-14/etat-nominal@1440x900": {
+			"aria": "a28623ba86108a5e",
+			"tabulation": "e5c7164f558c0586",
+			"focalisables": 86,
+			"dimensions": "1440×4422"
+		},
+		"V-14/etat-chargement@1440x900": {
+			"aria": "f81dd35d49ddc2ee",
+			"tabulation": "9cdaba0cb986ece0",
+			"focalisables": 31,
+			"dimensions": "1440×900"
+		},
+		"V-14/droits-ecriture@1024x768": {
+			"aria": "cbfac4935f3b69b0",
+			"tabulation": "d371a37ee207031a",
+			"focalisables": 60,
+			"dimensions": "1024×4405"
+		},
+		"V-14/droits-lecture@1024x768": {
+			"aria": "4baa697ddd9a0c18",
+			"tabulation": "9f56de2a6d1a6e8d",
+			"focalisables": 53,
+			"dimensions": "1024×4405"
+		},
+		"V-14/fr-frais@1024x768": {
+			"aria": "cbfac4935f3b69b0",
+			"tabulation": "d371a37ee207031a",
+			"focalisables": 60,
+			"dimensions": "1024×4405"
+		},
+		"V-14/fr-vieil@1024x768": {
+			"aria": "55487626b243067c",
+			"tabulation": "d371a37ee207031a",
+			"focalisables": 60,
+			"dimensions": "1024×4422"
+		},
+		"V-14/fr-obs@1024x768": {
+			"aria": "358b46c6cdd66655",
+			"tabulation": "d371a37ee207031a",
+			"focalisables": 60,
+			"dimensions": "1024×4422"
+		},
+		"V-14/revision@1024x768": {
+			"aria": "68e94208c405eda5",
+			"tabulation": "a6f3e820e2b0af8f",
+			"focalisables": 61,
+			"dimensions": "1024×4521"
+		},
+		"V-14/brouillon@1024x768": {
+			"aria": "c2442a72bf2e68b1",
+			"tabulation": "1124787db22abfbb",
+			"focalisables": 61,
+			"dimensions": "1024×4515"
+		},
+		"V-14/resync@1024x768": {
+			"aria": "cbe52e72b20f4aee",
+			"tabulation": "4ef468748ffb050b",
+			"focalisables": 61,
+			"dimensions": "1024×4515"
+		},
+		"V-14/op@1024x768": {
+			"aria": "f41236160238f669",
+			"tabulation": "291c75302c82743a",
+			"focalisables": 59,
+			"dimensions": "1024×4423"
+		},
+		"V-14/etat-nominal@1024x768": {
+			"aria": "cbfac4935f3b69b0",
+			"tabulation": "d371a37ee207031a",
+			"focalisables": 60,
+			"dimensions": "1024×4405"
+		},
+		"V-14/etat-chargement@1024x768": {
+			"aria": "2eb601d62e20caeb",
+			"tabulation": "f52b65d1559a5e5c",
+			"focalisables": 10,
+			"dimensions": "1024×768"
+		},
+		"V-14/droits-ecriture@768x1024": {
+			"aria": "1343d85d665e8b77",
+			"tabulation": "d371a37ee207031a",
+			"focalisables": 60,
+			"dimensions": "768×6551"
+		},
+		"V-14/droits-lecture@768x1024": {
+			"aria": "aa1392a0769fad6f",
+			"tabulation": "9f56de2a6d1a6e8d",
+			"focalisables": 53,
+			"dimensions": "768×6377"
+		},
+		"V-14/fr-frais@768x1024": {
+			"aria": "1343d85d665e8b77",
+			"tabulation": "d371a37ee207031a",
+			"focalisables": 60,
+			"dimensions": "768×6551"
+		},
+		"V-14/fr-vieil@768x1024": {
+			"aria": "5bc2735b7f9d9e6b",
+			"tabulation": "d371a37ee207031a",
+			"focalisables": 60,
+			"dimensions": "768×6551"
+		},
+		"V-14/fr-obs@768x1024": {
+			"aria": "2148667770278c43",
+			"tabulation": "d371a37ee207031a",
+			"focalisables": 60,
+			"dimensions": "768×6551"
+		},
+		"V-14/revision@768x1024": {
+			"aria": "88ce8c910612c64e",
+			"tabulation": "a6f3e820e2b0af8f",
+			"focalisables": 61,
+			"dimensions": "768×6667"
+		},
+		"V-14/brouillon@768x1024": {
+			"aria": "9981e2887f225669",
+			"tabulation": "1124787db22abfbb",
+			"focalisables": 61,
+			"dimensions": "768×6661"
+		},
+		"V-14/resync@768x1024": {
+			"aria": "f124e00d58d21d52",
+			"tabulation": "4ef468748ffb050b",
+			"focalisables": 61,
+			"dimensions": "768×6661"
+		},
+		"V-14/op@768x1024": {
+			"aria": "240acc3a1d2a8750",
+			"tabulation": "291c75302c82743a",
+			"focalisables": 59,
+			"dimensions": "768×6569"
+		},
+		"V-14/etat-nominal@768x1024": {
+			"aria": "1343d85d665e8b77",
+			"tabulation": "d371a37ee207031a",
+			"focalisables": 60,
+			"dimensions": "768×6551"
+		},
+		"V-14/etat-chargement@768x1024": {
+			"aria": "2b5a3c2b9db5afb7",
+			"tabulation": "f52b65d1559a5e5c",
+			"focalisables": 10,
+			"dimensions": "768×1233"
+		},
+		"V-14/droits-ecriture@360x780": {
+			"aria": "e59915263602b8b7",
+			"tabulation": "137f6a707b643825",
+			"focalisables": 55,
+			"dimensions": "360×8048"
+		},
+		"V-14/droits-lecture@360x780": {
+			"aria": "2301ed169b77d638",
+			"tabulation": "92bc8f2339a4e8d7",
+			"focalisables": 48,
+			"dimensions": "360×7862"
+		},
+		"V-14/fr-frais@360x780": {
+			"aria": "e59915263602b8b7",
+			"tabulation": "137f6a707b643825",
+			"focalisables": 55,
+			"dimensions": "360×8048"
+		},
+		"V-14/fr-vieil@360x780": {
+			"aria": "c6711f8141425c95",
+			"tabulation": "137f6a707b643825",
+			"focalisables": 55,
+			"dimensions": "360×8065"
+		},
+		"V-14/fr-obs@360x780": {
+			"aria": "c4ca6fea3f539729",
+			"tabulation": "137f6a707b643825",
+			"focalisables": 55,
+			"dimensions": "360×8065"
+		},
+		"V-14/revision@360x780": {
+			"aria": "c9de0b52622545dd",
+			"tabulation": "b2d60a68bedb8321",
+			"focalisables": 56,
+			"dimensions": "360×8360"
+		},
+		"V-14/brouillon@360x780": {
+			"aria": "10922258dfdf3287",
+			"tabulation": "157a90304b25c4bc",
+			"focalisables": 56,
+			"dimensions": "360×8237"
+		},
+		"V-14/resync@360x780": {
+			"aria": "2bde4bdeb885f6d2",
+			"tabulation": "535cfdc26fe34379",
+			"focalisables": 56,
+			"dimensions": "360×8412"
+		},
+		"V-14/op@360x780": {
+			"aria": "0771d625702490ae",
+			"tabulation": "3b363f416f6d03d4",
+			"focalisables": 54,
+			"dimensions": "360×8066"
+		},
+		"V-14/etat-nominal@360x780": {
+			"aria": "e59915263602b8b7",
+			"tabulation": "137f6a707b643825",
+			"focalisables": 55,
+			"dimensions": "360×8048"
+		},
+		"V-14/etat-chargement@360x780": {
+			"aria": "5942ca054cd36817",
+			"tabulation": "3994baf31458e7b2",
+			"focalisables": 5,
+			"dimensions": "360×1233"
+		},
+		"V-15/pan-ouvert@1440x900": {
+			"aria": "410694e2e09d6f9b",
+			"tabulation": "08b9904ef019773f",
+			"focalisables": 88,
+			"dimensions": "1440×4714"
+		},
+		"V-15/pan-ferme@1440x900": {
+			"aria": "410694e2e09d6f9b",
+			"tabulation": "08b9904ef019773f",
+			"focalisables": 88,
+			"dimensions": "1440×4427"
+		},
+		"V-15/hist-riche@1440x900": {
+			"aria": "410694e2e09d6f9b",
+			"tabulation": "08b9904ef019773f",
+			"focalisables": 88,
+			"dimensions": "1440×4714"
+		},
+		"V-15/hist-une@1440x900": {
+			"aria": "791192b709161763",
+			"tabulation": "a849913806098b58",
+			"focalisables": 69,
+			"dimensions": "1440×4714"
+		},
+		"V-15/hist-aucune@1440x900": {
+			"aria": "94010a397d151f2d",
+			"tabulation": "7d722c814e4f1b17",
+			"focalisables": 68,
+			"dimensions": "1440×4714"
+		},
+		"V-15/droits-ecriture@1440x900": {
+			"aria": "410694e2e09d6f9b",
+			"tabulation": "08b9904ef019773f",
+			"focalisables": 88,
+			"dimensions": "1440×4714"
+		},
+		"V-15/droits-lecture@1440x900": {
+			"aria": "1b9f7207c719a47f",
+			"tabulation": "0e0b2b3da9d09b68",
+			"focalisables": 80,
+			"dimensions": "1440×4575"
+		},
+		"V-16/cmp-13-14@1440x900": {
+			"aria": "5c27cd9d0b3ec266",
+			"tabulation": "7ca67cc10cae8367",
+			"focalisables": 41,
+			"dimensions": "1440×1319"
+		},
+		"V-16/cmp-11-14@1440x900": {
+			"aria": "922824da988b0baa",
+			"tabulation": "a399f44aa79b17ba",
+			"focalisables": 38,
+			"dimensions": "1440×1405"
+		},
+		"V-16/cmp-14-14@1440x900": {
+			"aria": "09701e8a6ddbaefe",
+			"tabulation": "6e6bfe949672ba16",
+			"focalisables": 39,
+			"dimensions": "1440×900"
+		},
+		"V-16/cmp-13-13@1440x900": {
+			"aria": "759e99c2e1db172b",
+			"tabulation": "6e6bfe949672ba16",
+			"focalisables": 39,
+			"dimensions": "1440×900"
+		},
+		"V-16/tout@1440x900": {
+			"aria": "aca8a0a9f398f45e",
+			"tabulation": "a399f44aa79b17ba",
+			"focalisables": 38,
+			"dimensions": "1440×1405"
+		},
+		"V-17/cas-vierge@1440x900": {
+			"aria": "98ba6b27d2a08b46",
+			"tabulation": "dd66449e8a52a850",
+			"focalisables": 72,
+			"dimensions": "1440×1003"
+		},
+		"V-17/cas-template@1440x900": {
+			"aria": "11b4a2887decaa88",
+			"tabulation": "c7090a9a6304d536",
+			"focalisables": 5,
+			"dimensions": "1440×1003"
+		},
+		"V-17/cas-modif@1440x900": {
+			"aria": "688c55ee8815001d",
+			"tabulation": "99c1afadf9d6af7a",
+			"focalisables": 77,
+			"dimensions": "1440×1003"
+		},
+		"V-17/sv-normal@1440x900": {
+			"aria": "98ba6b27d2a08b46",
+			"tabulation": "dd66449e8a52a850",
+			"focalisables": 72,
+			"dimensions": "1440×1003"
+		},
+		"V-17/sv-erreur@1440x900": {
+			"aria": "98ba6b27d2a08b46",
+			"tabulation": "dd66449e8a52a850",
+			"focalisables": 72,
+			"dimensions": "1440×1003"
+		},
+		"V-17/doublon@1440x900": {
+			"aria": "98ba6b27d2a08b46",
+			"tabulation": "dd66449e8a52a850",
+			"focalisables": 72,
+			"dimensions": "1440×1003"
+		},
+		"V-18/cas-existant@1440x900": {
+			"aria": "a0cbed048f97d733",
+			"tabulation": "957b4417fac48d8a",
+			"focalisables": 60,
+			"dimensions": "1440×1475"
+		},
+		"V-18/cas-vierge@1440x900": {
+			"aria": "1e026d1603f2284d",
+			"tabulation": "a83daf79bdc2f27e",
+			"focalisables": 58,
+			"dimensions": "1440×1003"
+		},
+		"V-18/cas-desync@1440x900": {
+			"aria": "c3d56b90bb99dbc9",
+			"tabulation": "12b8b1b847e74231",
+			"focalisables": 63,
+			"dimensions": "1440×1615"
+		},
+		"V-18/ref-ouvert@1440x900": {
+			"aria": "a0cbed048f97d733",
+			"tabulation": "957b4417fac48d8a",
+			"focalisables": 60,
+			"dimensions": "1440×1475"
+		},
+		"V-18/ref-cote@1440x900": {
+			"aria": "8486821d0f380410",
+			"tabulation": "e9c823528e7b78c7",
+			"focalisables": 54,
+			"dimensions": "1440×1496"
+		},
+		"V-18/ref-ferme@1440x900": {
+			"aria": "440404a5d7c7f8c2",
+			"tabulation": "2cf0d5d467b0b752",
+			"focalisables": 57,
+			"dimensions": "1440×1475"
+		},
+		"V-19/role-admin@1440x900": {
+			"aria": "a783bc46327f61cf",
+			"tabulation": "74146e3b6e1ab44d",
+			"focalisables": 60,
+			"dimensions": "1440×900"
+		},
+		"V-19/role-referent@1440x900": {
+			"aria": "a783bc46327f61cf",
+			"tabulation": "74146e3b6e1ab44d",
+			"focalisables": 60,
+			"dimensions": "1440×900"
+		},
+		"V-19/etat-nominal@1440x900": {
+			"aria": "a783bc46327f61cf",
+			"tabulation": "74146e3b6e1ab44d",
+			"focalisables": 60,
+			"dimensions": "1440×900"
+		},
+		"V-19/etat-chargement@1440x900": {
+			"aria": "4f43dac3223f919b",
+			"tabulation": "74146e3b6e1ab44d",
+			"focalisables": 60,
+			"dimensions": "1440×900"
+		},
+		"V-19/etat-vide@1440x900": {
+			"aria": "38e620d15e45a9a8",
+			"tabulation": "f491ad7ca6be2a28",
+			"focalisables": 61,
+			"dimensions": "1440×900"
+		},
+		"V-19/etat-dense@1440x900": {
+			"aria": "85c501091fa57f5d",
+			"tabulation": "fd0a9d9a81ff2298",
+			"focalisables": 62,
+			"dimensions": "1440×900"
+		},
+		"V-20/moment-aucun@1440x900": {
+			"aria": "4c3713db487ee55b",
+			"tabulation": "c8c81f153476c434",
+			"focalisables": 39,
+			"dimensions": "1440×900"
+		},
+		"V-20/moment-anneau@1440x900": {
+			"aria": "e2a86a731cd43a48",
+			"tabulation": "4405a3c73dfb36a9",
+			"focalisables": 44,
+			"dimensions": "1440×900"
+		},
+		"V-20/moment-deplie@1440x900": {
+			"aria": "b0a6d1be76433175",
+			"tabulation": "73c331525b4948db",
+			"focalisables": 57,
+			"dimensions": "1440×900"
+		},
+		"V-20/isole@1440x900": {
+			"aria": "20ec5b58346f51b5",
+			"tabulation": "d04832e0dd413df9",
+			"focalisables": 48,
+			"dimensions": "1440×900"
+		},
+		"V-20/disparu@1440x900": {
+			"aria": "4c3713db487ee55b",
+			"tabulation": "c8c81f153476c434",
+			"focalisables": 39,
+			"dimensions": "1440×900"
+		},
+		"V-21/dv-complets@1440x900": {
+			"aria": "9e8237f87a747325",
+			"tabulation": "ba62f9abc347c389",
+			"focalisables": 49,
+			"dimensions": "1440×900"
+		},
+		"V-21/dv-restreints@1440x900": {
+			"aria": "f5faeb1e38c8902d",
+			"tabulation": "888b77bede95cb26",
+			"focalisables": 42,
+			"dimensions": "1440×900"
+		},
+		"V-21/lent@1440x900": {
+			"aria": "9e8237f87a747325",
+			"tabulation": "ba62f9abc347c389",
+			"focalisables": 49,
+			"dimensions": "1440×900"
+		},
+		"V-22/dom-infrastructure@1440x900": {
+			"aria": "5a4d7579f1fb98de",
+			"tabulation": "91898d754a624582",
+			"focalisables": 47,
+			"dimensions": "1440×1104"
+		},
+		"V-22/dom-applications@1440x900": {
+			"aria": "6a3778bf1a71cd73",
+			"tabulation": "6c8dc86533602e1f",
+			"focalisables": 42,
+			"dimensions": "1440×900"
+		},
+		"V-22/dom-poste-de-travail@1440x900": {
+			"aria": "2a8b4bb0d3692739",
+			"tabulation": "3596cab1eb39ea05",
+			"focalisables": 34,
+			"dimensions": "1440×900"
+		},
+		"V-22/droits-ecriture@1440x900": {
+			"aria": "5a4d7579f1fb98de",
+			"tabulation": "91898d754a624582",
+			"focalisables": 47,
+			"dimensions": "1440×1104"
+		},
+		"V-22/droits-lecture@1440x900": {
+			"aria": "dd516f9ebe291a0d",
+			"tabulation": "68e0b5266f3257e4",
+			"focalisables": 35,
+			"dimensions": "1440×970"
+		},
+		"V-22/rappel@1440x900": {
+			"aria": "fbc857d4f459492c",
+			"tabulation": "afa27ae04d7216c7",
+			"focalisables": 46,
+			"dimensions": "1440×1027"
+		},
+		"V-23/env-dialogue@1440x900": {
+			"aria": "dd5390ed303ded38",
+			"tabulation": "9e65d50e4900cba9",
+			"focalisables": 11,
+			"dimensions": "1440×900"
+		},
+		"V-23/env-page@1440x900": {
+			"aria": "fd71367dffe9eb67",
+			"tabulation": "da43311fc09e9477",
+			"focalisables": 40,
+			"dimensions": "1440×900"
+		},
+		"V-23/mode-creation@1440x900": {
+			"aria": "dd5390ed303ded38",
+			"tabulation": "9e65d50e4900cba9",
+			"focalisables": 11,
+			"dimensions": "1440×900"
+		},
+		"V-23/mode-edition@1440x900": {
+			"aria": "40bb982f7f66bb62",
+			"tabulation": "3993f4439ee5cf59",
+			"focalisables": 16,
+			"dimensions": "1440×900"
+		},
+		"V-23/recup-ok@1440x900": {
+			"aria": "dd5390ed303ded38",
+			"tabulation": "9e65d50e4900cba9",
+			"focalisables": 11,
+			"dimensions": "1440×900"
+		},
+		"V-23/recup-lente@1440x900": {
+			"aria": "dd5390ed303ded38",
+			"tabulation": "9e65d50e4900cba9",
+			"focalisables": 11,
+			"dimensions": "1440×900"
+		},
+		"V-23/recup-echec@1440x900": {
+			"aria": "dd5390ed303ded38",
+			"tabulation": "9e65d50e4900cba9",
+			"focalisables": 11,
+			"dimensions": "1440×900"
+		},
+		"V-24/et-1@1440x900": {
+			"aria": "51af849068525ec4",
+			"tabulation": "a9ace7f524c21aa7",
+			"focalisables": 32,
+			"dimensions": "1440×1009"
+		},
+		"V-24/et-2@1440x900": {
+			"aria": "b92911e3c0df629c",
+			"tabulation": "b77acddd939436fd",
+			"focalisables": 32,
+			"dimensions": "1440×900"
+		},
+		"V-24/et-3@1440x900": {
+			"aria": "872d893409c8ea6f",
+			"tabulation": "097c4cb5d6bbfa1d",
+			"focalisables": 32,
+			"dimensions": "1440×1288"
+		},
+		"V-24/et-4@1440x900": {
+			"aria": "bf5d9a2370df7b3c",
+			"tabulation": "bd99564579770b94",
+			"focalisables": 30,
+			"dimensions": "1440×900"
+		},
+		"V-24/issue-erreurs@1440x900": {
+			"aria": "51af849068525ec4",
+			"tabulation": "a9ace7f524c21aa7",
+			"focalisables": 32,
+			"dimensions": "1440×1009"
+		},
+		"V-24/issue-propre@1440x900": {
+			"aria": "51af849068525ec4",
+			"tabulation": "a9ace7f524c21aa7",
+			"focalisables": 32,
+			"dimensions": "1440×1009"
+		},
+		"V-24/issue-global@1440x900": {
+			"aria": "51af849068525ec4",
+			"tabulation": "a9ace7f524c21aa7",
+			"focalisables": 32,
+			"dimensions": "1440×1009"
+		},
+		"V-25/ong-identite@1440x900": {
+			"aria": "60ad676264775e3a",
+			"tabulation": "d0545afa274ae561",
+			"focalisables": 37,
+			"dimensions": "1440×951"
+		},
+		"V-25/ong-securite@1440x900": {
+			"aria": "56fb8495b35692e4",
+			"tabulation": "d4636f1d7da3f8b1",
+			"focalisables": 42,
+			"dimensions": "1440×1057"
+		},
+		"V-25/ong-distinctions@1440x900": {
+			"aria": "bf8bdfb7ae59b2c8",
+			"tabulation": "467ad99ae7f9d910",
+			"focalisables": 34,
+			"dimensions": "1440×900"
+		},
+		"V-25/ong-activite@1440x900": {
+			"aria": "ce6d036802afda40",
+			"tabulation": "c922ad1e983602ed",
+			"focalisables": 38,
+			"dimensions": "1440×900"
+		},
+		"V-25/cpt-karim@1440x900": {
+			"aria": "60ad676264775e3a",
+			"tabulation": "d0545afa274ae561",
+			"focalisables": 37,
+			"dimensions": "1440×951"
+		},
+		"V-25/cpt-neuf@1440x900": {
+			"aria": "c2cb629ea4656d66",
+			"tabulation": "d0545afa274ae561",
+			"focalisables": 37,
+			"dimensions": "1440×951"
+		},
+		"V-25/verrou@1440x900": {
+			"aria": "60ad676264775e3a",
+			"tabulation": "d0545afa274ae561",
+			"focalisables": 37,
+			"dimensions": "1440×951"
+		},
+		"V-26/cas-supprimee@1440x900": {
+			"aria": "cc761f0017983848",
+			"tabulation": "2a031364e6184c12",
+			"focalisables": 37,
+			"dimensions": "1440×1141"
+		},
+		"V-26/cas-inexistante@1440x900": {
+			"aria": "6b2dd7acc13ec477",
+			"tabulation": "0e540a87b12fb3ff",
+			"focalisables": 39,
+			"dimensions": "1440×942"
+		},
+		"V-26/cas-interdite@1440x900": {
+			"aria": "bb83b02253509839",
+			"tabulation": "db964dc35214e8d4",
+			"focalisables": 39,
+			"dimensions": "1440×942"
+		},
+		"V-26/droits-ecriture@1440x900": {
+			"aria": "cc761f0017983848",
+			"tabulation": "2a031364e6184c12",
+			"focalisables": 37,
+			"dimensions": "1440×1141"
+		},
+		"V-26/droits-lecture@1440x900": {
+			"aria": "8ed17ac6400454ea",
+			"tabulation": "4e416d1d14157a6a",
+			"focalisables": 33,
+			"dimensions": "1440×1141"
+		},
+		"V-27/form-ferme@1440x900": {
+			"aria": "21bf35ab13ffaf4f",
+			"tabulation": "c9b33a74776ed05b",
+			"focalisables": 48,
+			"dimensions": "1440×900"
+		},
+		"V-27/form-creation@1440x900": {
+			"aria": "3390bb6cd63b4d4d",
+			"tabulation": "4528783f9308cdb0",
+			"focalisables": 62,
+			"dimensions": "1440×900"
+		},
+		"V-27/form-edition@1440x900": {
+			"aria": "12588528a0730284",
+			"tabulation": "f00253a1811164ac",
+			"focalisables": 63,
+			"dimensions": "1440×900"
+		},
+		"V-27/sup-refus@1440x900": {
+			"aria": "21bf35ab13ffaf4f",
+			"tabulation": "c9b33a74776ed05b",
+			"focalisables": 48,
+			"dimensions": "1440×900"
+		},
+		"V-27/sup-systeme@1440x900": {
+			"aria": "21360461435ecf65",
+			"tabulation": "05a3fd5343174753",
+			"focalisables": 2,
+			"dimensions": "1440×900"
+		},
+		"V-27/sup-ok@1440x900": {
+			"aria": "fc95043b59ab2b83",
+			"tabulation": "b17f0156bce09dde",
+			"focalisables": 3,
+			"dimensions": "1440×900"
+		},
+		"V-28/form-ferme@1440x900": {
+			"aria": "bb9bdd9ff30eed4f",
+			"tabulation": "5c7164b00db83cf7",
+			"focalisables": 57,
+			"dimensions": "1440×900"
+		},
+		"V-28/form-creation@1440x900": {
+			"aria": "7d3bc5ec67b6b9b1",
+			"tabulation": "20bc58572ede08e1",
+			"focalisables": 70,
+			"dimensions": "1440×900"
+		},
+		"V-28/form-edition@1440x900": {
+			"aria": "60d947fb05da849d",
+			"tabulation": "297beea31ff96b3f",
+			"focalisables": 71,
+			"dimensions": "1440×900"
+		},
+		"V-28/sup-plein@1440x900": {
+			"aria": "bb9bdd9ff30eed4f",
+			"tabulation": "5c7164b00db83cf7",
+			"focalisables": 57,
+			"dimensions": "1440×900"
+		},
+		"V-28/sup-vide@1440x900": {
+			"aria": "80913ea70238265a",
+			"tabulation": "6dd3b2afb71da1f2",
+			"focalisables": 3,
+			"dimensions": "1440×900"
+		},
+		"V-29/form-ferme@1440x900": {
+			"aria": "36d7ea74d66ea8e5",
+			"tabulation": "5b55894e221d17f2",
+			"focalisables": 53,
+			"dimensions": "1440×900"
+		},
+		"V-29/form-creation@1440x900": {
+			"aria": "4c8b860df8cea6d2",
+			"tabulation": "a834ff36541f6775",
+			"focalisables": 59,
+			"dimensions": "1440×900"
+		},
+		"V-29/form-edition@1440x900": {
+			"aria": "e452610660c4460a",
+			"tabulation": "601becda52bf9782",
+			"focalisables": 78,
+			"dimensions": "1440×900"
+		},
+		"V-29/sup-refus@1440x900": {
+			"aria": "36d7ea74d66ea8e5",
+			"tabulation": "5b55894e221d17f2",
+			"focalisables": 53,
+			"dimensions": "1440×900"
+		},
+		"V-29/sup-ok@1440x900": {
+			"aria": "42c18b451f76f26c",
+			"tabulation": "d43d5d1a6cfbae44",
+			"focalisables": 3,
+			"dimensions": "1440×900"
+		},
+		"V-30/form-ferme@1440x900": {
+			"aria": "a8b0e37bef7e8a8e",
+			"tabulation": "085e6f45e5cca967",
+			"focalisables": 62,
+			"dimensions": "1440×900"
+		},
+		"V-30/form-creation@1440x900": {
+			"aria": "6f6118b0450fbea0",
+			"tabulation": "14c4401639bbe3f8",
+			"focalisables": 65,
+			"dimensions": "1440×900"
+		},
+		"V-30/form-edition@1440x900": {
+			"aria": "a1ab8edac3b5b27b",
+			"tabulation": "8cffc75d6f88143a",
+			"focalisables": 66,
+			"dimensions": "1440×900"
+		},
+		"V-30/sup-utilise@1440x900": {
+			"aria": "a8b0e37bef7e8a8e",
+			"tabulation": "085e6f45e5cca967",
+			"focalisables": 62,
+			"dimensions": "1440×900"
+		},
+		"V-30/sup-libre@1440x900": {
+			"aria": "8c6983227b34c035",
+			"tabulation": "b17f0156bce09dde",
+			"focalisables": 3,
+			"dimensions": "1440×900"
+		},
+		"V-31/form-ferme@1440x900": {
+			"aria": "6f254bc6c3e519a5",
+			"tabulation": "09d84db27e782d16",
+			"focalisables": 73,
+			"dimensions": "1440×900"
+		},
+		"V-31/form-creation@1440x900": {
+			"aria": "0da951fd84fc37aa",
+			"tabulation": "e43a2ca226671bf4",
+			"focalisables": 73,
+			"dimensions": "1440×900"
+		},
+		"V-31/form-edition@1440x900": {
+			"aria": "a9e300da72c30948",
+			"tabulation": "cd36e0c1e562876b",
+			"focalisables": 76,
+			"dimensions": "1440×900"
+		},
+		"V-31/sup-defaut@1440x900": {
+			"aria": "6f254bc6c3e519a5",
+			"tabulation": "09d84db27e782d16",
+			"focalisables": 73,
+			"dimensions": "1440×900"
+		},
+		"V-31/sup-autre@1440x900": {
+			"aria": "e6a9822659c96ae9",
+			"tabulation": "b17f0156bce09dde",
+			"focalisables": 3,
+			"dimensions": "1440×900"
+		},
+		"V-32/form-ferme@1440x900": {
+			"aria": "f71d1bff0494871b",
+			"tabulation": "19e245bd1d6814f9",
+			"focalisables": 66,
+			"dimensions": "1440×900"
+		},
+		"V-32/form-creation@1440x900": {
+			"aria": "6ec6167a62b1be23",
+			"tabulation": "b334eaf551bdca6f",
+			"focalisables": 66,
+			"dimensions": "1440×900"
+		},
+		"V-32/form-edition@1440x900": {
+			"aria": "91ef3510e4284dc4",
+			"tabulation": "7a8745b09387e652",
+			"focalisables": 64,
+			"dimensions": "1440×900"
+		},
+		"V-32/form-admin@1440x900": {
+			"aria": "daa9c3f5893da68c",
+			"tabulation": "87356d58b833e023",
+			"focalisables": 63,
+			"dimensions": "1440×900"
+		},
+		"V-32/mdp@1440x900": {
+			"aria": "43d3f231b58fb3e2",
+			"tabulation": "69ab2e3025292a9c",
+			"focalisables": 2,
+			"dimensions": "1440×900"
+		},
+		"V-32/des@1440x900": {
+			"aria": "216fcd35ffb70c3e",
+			"tabulation": "0b241fd174ffd69c",
+			"focalisables": 3,
+			"dimensions": "1440×900"
+		},
+		"V-33/seuils-actuel@1440x900": {
+			"aria": "6e428ec292dcbe9c",
+			"tabulation": "6f74792087212b2d",
+			"focalisables": 53,
+			"dimensions": "1440×1785"
+		},
+		"V-33/seuils-severe@1440x900": {
+			"aria": "510676f69a9f355f",
+			"tabulation": "75645bcbea934ad7",
+			"focalisables": 54,
+			"dimensions": "1440×1844"
+		},
+		"V-33/seuils-large@1440x900": {
+			"aria": "91aa1f9cb1f090ba",
+			"tabulation": "22ad1b5038ddd67e",
+			"focalisables": 55,
+			"dimensions": "1440×1892"
+		},
+		"V-33/seuils-invalide@1440x900": {
+			"aria": "c71cea7e637b4538",
+			"tabulation": "89df18d80702a466",
+			"focalisables": 49,
+			"dimensions": "1440×1714"
+		},
+		"V-34/don-completes@1440x900": {
+			"aria": "2a57d0de9e1acdfd",
+			"tabulation": "e8a1201ba1768a1b",
+			"focalisables": 65,
+			"dimensions": "1440×2611"
+		},
+		"V-34/don-insuffisantes@1440x900": {
+			"aria": "2e63b2c386251f49",
+			"tabulation": "19de4719ead9c317",
+			"focalisables": 40,
+			"dimensions": "1440×900"
+		},
+		"V-35/depot-au-repos@1440x900": {
+			"aria": "31e1645fe8e25239",
+			"tabulation": "0fb672c783f9143c",
+			"focalisables": 1,
+			"dimensions": "850×229"
+		},
+		"V-35/scenarios-directs@1440x900": {
+			"aria": "1925e0d41a0abf88",
+			"tabulation": "faaf282e69432fb6",
+			"focalisables": 3,
+			"dimensions": "850×82"
+		},
+		"V-35/journal-peuple@1440x900": {
+			"aria": "70bccbad9701cea5",
+			"tabulation": "4550a863f24e6067",
+			"focalisables": 4,
+			"dimensions": "900×322"
+		},
+		"V-35/rapport-de-lot@1440x900": {
+			"aria": "e24c95c1bf2c41cb",
+			"tabulation": "c278c60a2a83b9f0",
+			"focalisables": 3,
+			"dimensions": "1440×900"
+		},
+		"V-36/issue-propre@1440x900": {
+			"aria": "8c94e21c1aecfee9",
+			"tabulation": "89030eae4deb1214",
+			"focalisables": 42,
+			"dimensions": "1440×1145"
+		},
+		"V-36/issue-avert@1440x900": {
+			"aria": "8c94e21c1aecfee9",
+			"tabulation": "89030eae4deb1214",
+			"focalisables": 42,
+			"dimensions": "1440×1145"
+		},
+		"V-36/vol-normal@1440x900": {
+			"aria": "8c94e21c1aecfee9",
+			"tabulation": "89030eae4deb1214",
+			"focalisables": 42,
+			"dimensions": "1440×1145"
+		},
+		"V-36/vol-lent@1440x900": {
+			"aria": "8c94e21c1aecfee9",
+			"tabulation": "89030eae4deb1214",
+			"focalisables": 42,
+			"dimensions": "1440×1145"
+		},
+		"V-37/cont-bord@1440x900": {
+			"aria": "7ac2e1c572902fc9",
+			"tabulation": "86b2918697f596a8",
+			"focalisables": 21,
+			"dimensions": "1440×900"
+		},
+		"V-37/cont-lecture@1440x900": {
+			"aria": "a023225240d0c2c2",
+			"tabulation": "273308fcb5229ad9",
+			"focalisables": 54,
+			"dimensions": "1440×4750"
+		},
+		"V-37/rail-ouvert@1440x900": {
+			"aria": "7ac2e1c572902fc9",
+			"tabulation": "86b2918697f596a8",
+			"focalisables": 21,
+			"dimensions": "1440×900"
+		},
+		"V-37/rail-ferme@1440x900": {
+			"aria": "9c14676dcf373dc7",
+			"tabulation": "b0495a2444fa2e40",
+			"focalisables": 8,
+			"dimensions": "1440×900"
+		},
+		"V-37/role-referent@1440x900": {
+			"aria": "7ac2e1c572902fc9",
+			"tabulation": "86b2918697f596a8",
+			"focalisables": 21,
+			"dimensions": "1440×900"
+		},
+		"V-37/role-admin@1440x900": {
+			"aria": "63309747eb4db8fc",
+			"tabulation": "fdd12134cd36c38f",
+			"focalisables": 22,
+			"dimensions": "1440×900"
+		},
+		"V-37/chargement@1440x900": {
+			"aria": "344abd71fdf9b3c7",
+			"tabulation": "86b2918697f596a8",
+			"focalisables": 21,
+			"dimensions": "1440×900"
+		},
+		"V-37/vide@1440x900": {
+			"aria": "be41a4b004254f08",
+			"tabulation": "1da31d849655e943",
+			"focalisables": 13,
+			"dimensions": "1440×900"
+		},
+		"V-38/empilement@1440x900": {
+			"aria": "980e22764f035869",
+			"tabulation": "5dde31adb973f48b",
+			"focalisables": 40,
+			"dimensions": "1440×1613"
+		},
+		"V-38/vider@1440x900": {
+			"aria": "110f088bff7a7f9a",
+			"tabulation": "c6647dc075f14013",
+			"focalisables": 32,
+			"dimensions": "1440×1613"
+		},
+		"V-38/type-succesconfirmation-breve-disparait-seule-au-bout@1440x900": {
+			"aria": "e8bc60965909cfae",
+			"tabulation": "f0d3bc91e905c883",
+			"focalisables": 3,
+			"dimensions": "852×157"
+		},
+		"V-38/type-erreurpersiste-jusqu-a-une-action-dit-la-cause-p@1440x900": {
+			"aria": "0c375b9b0b21002f",
+			"tabulation": "16bc23ff5222f721",
+			"focalisables": 3,
+			"dimensions": "852×157"
+		},
+		"V-38/type-informationevenement-neutre-dont-il-faut-etre-av@1440x900": {
+			"aria": "29ee5375aef3725f",
+			"tabulation": "8ce34e6716408e15",
+			"focalisables": 3,
+			"dimensions": "852×139"
+		},
+		"V-38/type-en-coursoperation-longue-poursuivie-en-arriere-p@1440x900": {
+			"aria": "f445612787cfc176",
+			"tabulation": "8a2e86f9137d1416",
+			"focalisables": 2,
+			"dimensions": "852×157"
+		},
+		"V-39/anim@1440x900": {
+			"aria": "ac9b9e51caa89998",
+			"tabulation": "328fe123d185075e",
+			"focalisables": 34,
+			"dimensions": "1440×4141"
+		},
+		"V-39/vide-corpus-entierement-vide@1440x900": {
+			"aria": "5afdec74b4ecd115",
+			"tabulation": "807f85bb917c0258",
+			"focalisables": 2,
+			"dimensions": "310×351"
+		},
+		"V-39/vide-domaine-sans-note@1440x900": {
+			"aria": "12eca9bb78e4d15d",
+			"tabulation": "9263cd40fd3d6397",
+			"focalisables": 2,
+			"dimensions": "310×351"
+		},
+		"V-39/vide-dossier-vide@1440x900": {
+			"aria": "267518ab035266d0",
+			"tabulation": "a61ddf4698a4ff11",
+			"focalisables": 2,
+			"dimensions": "310×351"
+		},
+		"V-39/vide-aucune-revision-en-attente@1440x900": {
+			"aria": "991d77f73d9c85da",
+			"tabulation": "e3b0c44298fc1c14",
+			"focalisables": 0,
+			"dimensions": "310×263"
+		},
+		"V-39/vide-aucun-retrolien@1440x900": {
+			"aria": "f4ee7d9643f3a422",
+			"tabulation": "e3b0c44298fc1c14",
+			"focalisables": 0,
+			"dimensions": "310×263"
+		},
+		"V-39/vide-aucune-relation@1440x900": {
+			"aria": "f88a5c94d7377bb6",
+			"tabulation": "0cb8452b7758e2b9",
+			"focalisables": 1,
+			"dimensions": "310×263"
+		},
+		"V-39/vide-graphe-sans-relation@1440x900": {
+			"aria": "e09ff7de3e5d2e29",
+			"tabulation": "2d10f592f613ee5c",
+			"focalisables": 1,
+			"dimensions": "310×290"
+		},
+		"V-39/vide-aucun-signet@1440x900": {
+			"aria": "3e1c396c1928705f",
+			"tabulation": "3a04cf31ada3645b",
+			"focalisables": 1,
+			"dimensions": "310×290"
+		},
+		"V-39/vide-aucune-distinction-obtenue@1440x900": {
+			"aria": "8deb4045b8c7d7e1",
+			"tabulation": "e3b0c44298fc1c14",
+			"focalisables": 0,
+			"dimensions": "310×290"
+		},
+		"V-39/vide-liste-filtree-vide@1440x900": {
+			"aria": "374ec94341c51113",
+			"tabulation": "f5dcfd59b2c62bb1",
+			"focalisables": 1,
+			"dimensions": "310×289"
+		},
+		"V-39/chargement-carte-de-resultat@1440x900": {
+			"aria": "a79af7397cde6daf",
+			"tabulation": "e3b0c44298fc1c14",
+			"focalisables": 0,
+			"dimensions": "310×249"
+		},
+		"V-39/chargement-ligne-de-liste@1440x900": {
+			"aria": "399dc5f30893a24f",
+			"tabulation": "e3b0c44298fc1c14",
+			"focalisables": 0,
+			"dimensions": "310×249"
+		},
+		"V-39/chargement-panneau-lateral@1440x900": {
+			"aria": "85af24385de89bdc",
+			"tabulation": "e3b0c44298fc1c14",
+			"focalisables": 0,
+			"dimensions": "310×249"
+		},
+		"V-39/chargement-tableau-de-bord@1440x900": {
+			"aria": "8438d588f05bab80",
+			"tabulation": "e3b0c44298fc1c14",
+			"focalisables": 0,
+			"dimensions": "310×428"
+		},
+		"V-39/chargement-graphe@1440x900": {
+			"aria": "c43807a2d4889ceb",
+			"tabulation": "e3b0c44298fc1c14",
+			"focalisables": 0,
+			"dimensions": "310×428"
+		},
+		"V-39/chargement-arborescence@1440x900": {
+			"aria": "77368e249f3930f8",
+			"tabulation": "e3b0c44298fc1c14",
+			"focalisables": 0,
+			"dimensions": "310×428"
+		},
+		"V-39/erreur-un-panneau@1440x900": {
+			"aria": "e295d2c770cea2c6",
+			"tabulation": "780c13869e72c02a",
+			"focalisables": 1,
+			"dimensions": "310×323"
+		},
+		"V-39/erreur-une-vue-entiere@1440x900": {
+			"aria": "389e856c8c740924",
+			"tabulation": "6bab91a58a994323",
+			"focalisables": 2,
+			"dimensions": "310×323"
+		},
+		"V-39/erreur-perte-de-connexion@1440x900": {
+			"aria": "973df47f092d7474",
+			"tabulation": "e3b0c44298fc1c14",
+			"focalisables": 0,
+			"dimensions": "310×323"
+		},
+		"V-39/erreur-fonctionnalite-degradee@1440x900": {
+			"aria": "81634962fc1b3510",
+			"tabulation": "e3b0c44298fc1c14",
+			"focalisables": 0,
+			"dimensions": "310×249"
+		},
+		"V-40/d-simple@1440x900": {
+			"aria": "b952c8ec1f096f4c",
+			"tabulation": "5836fabdc989b736",
+			"focalisables": 3,
+			"dimensions": "1440×900"
+		},
+		"V-40/d-note@1440x900": {
+			"aria": "9d84848212bba543",
+			"tabulation": "7bde42dfaec6759b",
+			"focalisables": 3,
+			"dimensions": "1440×900"
+		},
+		"V-40/d-dossier@1440x900": {
+			"aria": "b6662d523a530b2f",
+			"tabulation": "6dd3b2afb71da1f2",
+			"focalisables": 3,
+			"dimensions": "1440×900"
+		},
+		"V-40/d-restaurer@1440x900": {
+			"aria": "7fa3fd15c349b39f",
+			"tabulation": "d7938292f7b52625",
+			"focalisables": 3,
+			"dimensions": "1440×900"
+		},
+		"V-40/d-reviser@1440x900": {
+			"aria": "85b19782685d5b6f",
+			"tabulation": "c6bd57589be9b414",
+			"focalisables": 4,
+			"dimensions": "1440×900"
+		},
+		"V-40/d-droits@1440x900": {
+			"aria": "bff9816376d52f44",
+			"tabulation": "51fcea492f15d125",
+			"focalisables": 7,
+			"dimensions": "1440×900"
+		},
+		"V-40/d-relation@1440x900": {
+			"aria": "e16e1f8cda9342ed",
+			"tabulation": "e07b8ed0b09682ce",
+			"focalisables": 4,
+			"dimensions": "1440×900"
+		},
+		"V-40/d-template@1440x900": {
+			"aria": "94a601a587fd5b97",
+			"tabulation": "8b64d25fc6b3c46c",
+			"focalisables": 6,
+			"dimensions": "1440×900"
+		},
+		"V-40/d-doublon@1440x900": {
+			"aria": "a5df72c404e0aa4f",
+			"tabulation": "87ebe4a287101076",
+			"focalisables": 3,
+			"dimensions": "1440×900"
+		},
+		"V-40/d-deplacer@1440x900": {
+			"aria": "0a7e73ef4761ef82",
+			"tabulation": "4c06ab94550b9954",
+			"focalisables": 16,
+			"dimensions": "1440×900"
+		},
+		"V-41/fraicheur@1440x900": {
+			"aria": "4f1d457c8c6bd2cb",
+			"tabulation": "d79490153acfb2d1",
+			"focalisables": 3,
+			"dimensions": "936×778"
+		},
+		"V-41/boutons@1440x900": {
+			"aria": "abace7d3a84f298d",
+			"tabulation": "9ed9994f3cbf1398",
+			"focalisables": 8,
+			"dimensions": "936×690"
+		},
+		"V-41/champs@1440x900": {
+			"aria": "cfd624f251517b34",
+			"tabulation": "d1aafb912eb7a19a",
+			"focalisables": 17,
+			"dimensions": "936×1187"
+		},
+		"V-41/pastilles@1440x900": {
+			"aria": "c71e4eaff36ff488",
+			"tabulation": "3917a39b5b430a19",
+			"focalisables": 1,
+			"dimensions": "936×283"
+		},
+		"V-41/conteneurs@1440x900": {
+			"aria": "7190c9f7860ee440",
+			"tabulation": "2084a75c4bf3c687",
+			"focalisables": 2,
+			"dimensions": "936×985"
+		},
+		"V-41/navigation@1440x900": {
+			"aria": "99a421b6e25973d6",
+			"tabulation": "a848c14c32bbaf0e",
+			"focalisables": 14,
+			"dimensions": "936×749"
+		},
+		"V-41/donnees@1440x900": {
+			"aria": "64e777b48149f5e9",
+			"tabulation": "a92f330d4b222c7f",
+			"focalisables": 3,
+			"dimensions": "936×999"
+		},
+		"V-41/superpositions@1440x900": {
+			"aria": "65df43aeef67205d",
+			"tabulation": "aef6452b2ceb1390",
+			"focalisables": 7,
+			"dimensions": "936×910"
+		},
+		"V-41/prose@1440x900": {
+			"aria": "bd803ab74758fa48",
+			"tabulation": "ad3fb780ea4fe85d",
+			"focalisables": 3,
+			"dimensions": "936×1364"
+		},
+		"V-41/retours@1440x900": {
+			"aria": "b89b8352304aada1",
+			"tabulation": "de3d454efdfa659e",
+			"focalisables": 7,
+			"dimensions": "936×1061"
+		},
+		"V-41/identite@1440x900": {
+			"aria": "4abccab654b07831",
+			"tabulation": "e3b0c44298fc1c14",
+			"focalisables": 0,
+			"dimensions": "936×450"
+		}
+	}
+}

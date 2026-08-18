@@ -1,0 +1,195 @@
+{
+	"vue": "V-37",
+	"titre": "Coquille applicative — Codicillus",
+	"maquette": "mockups/V-37-coquille.html",
+	"empreinte": "19b418a609a391db84b082e69c5fe68e29400237ba9ee529dcbe96bef3751da5",
+	"planche": true,
+	"zones": null,
+	"routes": [],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Contenu",
+			"groupes": [
+				{
+					"nom": "cont",
+					"options": [
+						{ "valeur": "bord", "libelle": "Tableau de bord", "defaut": true },
+						{ "valeur": "lecture", "libelle": "Lecture d'une note", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Navigation",
+			"groupes": [
+				{
+					"nom": "rail",
+					"options": [
+						{ "valeur": "ouvert", "libelle": "Ouverte", "defaut": true },
+						{ "valeur": "ferme", "libelle": "Escamotée", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Profil",
+			"groupes": [
+				{
+					"nom": "role",
+					"options": [
+						{ "valeur": "referent", "libelle": "Référent", "defaut": true },
+						{ "valeur": "admin", "libelle": "Administrateur", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Cas",
+			"groupes": [],
+			"cases": [
+				{ "id": "c-chargement", "libelle": "Branche en chargement", "defaut": false },
+				{ "id": "c-vide", "libelle": "Aucun domaine accessible", "defaut": false }
+			]
+		}
+	],
+	"defaut": {
+		"cont": "bord",
+		"rail": "ouvert",
+		"role": "referent",
+		"c-chargement": false,
+		"c-vide": false
+	},
+	"etats": [
+		{
+			"cle": "cont-bord",
+			"libelle": "Contenu — Tableau de bord",
+			"controle": { "fieldset": "Contenu", "nom": "cont", "position": "bord" },
+			"planche": { "cont": "bord" },
+			"vecteur": {
+				"cont": "bord",
+				"rail": "ouvert",
+				"role": "referent",
+				"c-chargement": false,
+				"c-vide": false
+			},
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "cont-lecture",
+			"libelle": "Contenu — Lecture d'une note",
+			"controle": { "fieldset": "Contenu", "nom": "cont", "position": "lecture" },
+			"planche": { "cont": "lecture" },
+			"vecteur": {
+				"cont": "lecture",
+				"rail": "ouvert",
+				"role": "referent",
+				"c-chargement": false,
+				"c-vide": false
+			},
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "rail-ouvert",
+			"libelle": "Navigation — Ouverte",
+			"controle": { "fieldset": "Navigation", "nom": "rail", "position": "ouvert" },
+			"planche": { "rail": "ouvert" },
+			"vecteur": {
+				"cont": "bord",
+				"rail": "ouvert",
+				"role": "referent",
+				"c-chargement": false,
+				"c-vide": false
+			},
+			"defaut": true,
+			"app": null,
+			"identiqueA": "cont-bord"
+		},
+		{
+			"cle": "rail-ferme",
+			"libelle": "Navigation — Escamotée",
+			"controle": { "fieldset": "Navigation", "nom": "rail", "position": "ferme" },
+			"planche": { "rail": "ferme" },
+			"vecteur": {
+				"cont": "bord",
+				"rail": "ferme",
+				"role": "referent",
+				"c-chargement": false,
+				"c-vide": false
+			},
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "role-referent",
+			"libelle": "Profil — Référent",
+			"controle": { "fieldset": "Profil", "nom": "role", "position": "referent" },
+			"planche": { "role": "referent" },
+			"vecteur": {
+				"cont": "bord",
+				"rail": "ouvert",
+				"role": "referent",
+				"c-chargement": false,
+				"c-vide": false
+			},
+			"defaut": true,
+			"app": null,
+			"identiqueA": "cont-bord"
+		},
+		{
+			"cle": "role-admin",
+			"libelle": "Profil — Administrateur",
+			"controle": { "fieldset": "Profil", "nom": "role", "position": "admin" },
+			"planche": { "role": "admin" },
+			"vecteur": {
+				"cont": "bord",
+				"rail": "ouvert",
+				"role": "admin",
+				"c-chargement": false,
+				"c-vide": false
+			},
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "chargement",
+			"libelle": "Cas — Branche en chargement",
+			"controle": { "fieldset": "Cas", "nom": "c-chargement", "position": true },
+			"planche": { "c-chargement": true },
+			"vecteur": {
+				"cont": "bord",
+				"rail": "ouvert",
+				"role": "referent",
+				"c-chargement": true,
+				"c-vide": false
+			},
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "vide",
+			"libelle": "Cas — Aucun domaine accessible",
+			"controle": { "fieldset": "Cas", "nom": "c-vide", "position": true },
+			"planche": { "c-vide": true },
+			"vecteur": {
+				"cont": "bord",
+				"rail": "ouvert",
+				"role": "referent",
+				"c-chargement": false,
+				"c-vide": true
+			},
+			"defaut": false,
+			"app": null
+		}
+	]
+}

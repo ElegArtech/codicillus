@@ -1,0 +1,65 @@
+{
+	"vue": "V-21",
+	"titre": "Carte mentale — Codicillus",
+	"maquette": "mockups/V-21-carte-mentale.html",
+	"empreinte": "7db54fe019022d985ed3aa43fc76fb0af32de611ba705fa09e67f414ed43f8c1",
+	"planche": true,
+	"zones": null,
+	"routes": ["/carte-mentale"],
+	"fenetres": ["1440x900"],
+	"extraction": {
+		"produit_par": "verif/extraire-scenarios.mjs",
+		"regle": "un état par position de contrôle de la planche (réglage par défaut dévié d’un seul contrôle), plus une entrée par zone présentée côte à côte dans la page",
+		"volet_app": "non renseigné — aucune vue applicative n’existe au lot T-007. Le lot qui portera la vue remplit `app` (persona, adresse, données) avec sa route à l’appui ; le renseigner ici serait un comblement (CLAUDE.md §2)."
+	},
+	"controles": [
+		{
+			"legende": "Droits",
+			"groupes": [
+				{
+					"nom": "dv",
+					"options": [
+						{ "valeur": "complets", "libelle": "Accès complet", "defaut": true },
+						{ "valeur": "restreints", "libelle": "Sans Applications", "defaut": false }
+					]
+				}
+			],
+			"cases": []
+		},
+		{
+			"legende": "Chargement",
+			"groupes": [],
+			"cases": [{ "id": "c-lent", "libelle": "Branches lentes", "defaut": false }]
+		}
+	],
+	"defaut": { "dv": "complets", "c-lent": false },
+	"etats": [
+		{
+			"cle": "dv-complets",
+			"libelle": "Droits — Accès complet",
+			"controle": { "fieldset": "Droits", "nom": "dv", "position": "complets" },
+			"planche": { "dv": "complets" },
+			"vecteur": { "dv": "complets", "c-lent": false },
+			"defaut": true,
+			"app": null
+		},
+		{
+			"cle": "dv-restreints",
+			"libelle": "Droits — Sans Applications",
+			"controle": { "fieldset": "Droits", "nom": "dv", "position": "restreints" },
+			"planche": { "dv": "restreints" },
+			"vecteur": { "dv": "restreints", "c-lent": false },
+			"defaut": false,
+			"app": null
+		},
+		{
+			"cle": "lent",
+			"libelle": "Chargement — Branches lentes",
+			"controle": { "fieldset": "Chargement", "nom": "c-lent", "position": true },
+			"planche": { "c-lent": true },
+			"vecteur": { "dv": "complets", "c-lent": true },
+			"defaut": false,
+			"app": null
+		}
+	]
+}
