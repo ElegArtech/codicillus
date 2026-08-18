@@ -119,7 +119,7 @@ export function extraireSocle() {
 	if (!contenu.includes(BANNIERE)) {
 		throw new Error(
 			`le premier bloc <style> ne porte pas la bannière « ${BANNIERE} » : ` +
-				'la maquette a été restructurée, l\'extraction est refusée.'
+				"la maquette a été restructurée, l'extraction est refusée."
 		);
 	}
 
@@ -225,7 +225,8 @@ export function diffTextuel(attendu, obtenu, maximum = 20) {
 			if (b[i] !== undefined) lignes.push(`    +${i + 1} obtenu  : ${b[i]}`);
 		}
 	}
-	const reste = a.length !== b.length ? ` (${a.length} lignes attendues, ${b.length} obtenues)` : '';
+	const reste =
+		a.length !== b.length ? ` (${a.length} lignes attendues, ${b.length} obtenues)` : '';
 	return lignes.join('\n') + (lignes.length >= maximum ? '\n    … diff tronqué' : '') + reste;
 }
 

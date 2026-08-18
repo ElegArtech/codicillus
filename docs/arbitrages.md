@@ -78,3 +78,88 @@ contributeur vers V-35, écrit au brief de V-24, est l'erreur.
 
 **Ce que ça ferme.** A-03. Le brief V-24 est corrigé de fait par cet arbitrage ; le lien qu'il
 décrit ne sera pas implémenté.
+## ARB-004 — `n-doc-barman` est une note interne
+**18 août 2026** — répond à ÉCART-005.
+
+**Décision.** `Interne`. Le corpus de V-09 (palette), qui la déclare `Publique`, est un état
+antérieur et fautif.
+
+**Motif.** Une note interne rendue publique contredit le périmètre que V-01 à V-04 posent à leur
+point d'entrée, et `RG-M17-01`. Surtout : le corpus de la palette exposerait la note à un compte
+sans droit interne, et **la comparaison visuelle validerait la fuite** — un état où le dispositif
+de vérification certifie le défaut est pire que l'absence de vérification.
+
+**Ce que ça emporte.** `seeds/corpus.ts` retient `Interne` ; l'écart est déclaré dans
+`ECARTS_CONNUS` et vérifié à l'identique — le test échoue si l'écart disparaît, change de valeur,
+ou si un nouveau apparaît. La batterie 6 (étanchéité) traite cette note comme interne, sur toutes
+les routes et pour tous les personas.
+
+---
+
+## ARB-005 — Articulation du refus indiscernable et de l'état « sans droit »
+**18 août 2026** — répond à la contradiction relevée entre `RG-ACC-04` et `RG-M18-02`.
+
+**Décision.** La lecture posée par `ADR-007` est validée. Les deux règles ne s'appliquent pas au
+même objet :
+
+| Régime | Portée | Comportement |
+|---|---|---|
+| **Indiscernable** (`RG-ACC-04`) | résolution d'une **ressource entière** — une adresse | Refus et inexistence produisent une réponse identique : corps, en-têtes, code, **et temps de réponse**. Un seul chemin de code. |
+| **État « sans droit »** (`RG-M18-02`) | une **zone** dans une page que l'utilisateur a le droit d'ouvrir | L'existence de la ressource porteuse lui est déjà connue : la signaler ne révèle rien. |
+
+**Règle de tranchage.** Le contrat de tâche décide ; à défaut, **le régime indiscernable
+l'emporte**. Le doute ne se résout jamais en faveur de l'information révélée.
+
+**Ce que ça emporte.** La batterie 6 vérifie l'indiscernabilité sur la résolution d'adresse, y
+compris **temporelle** — un écart de latence est une fuite. Le rôle `verificateur-acces`, qui est
+adversarial par construction, éprouve nommément la frontière entre les deux régimes : c'est là
+qu'une erreur d'implémentation se logera.
+
+**Manque de couverture nommé, non résolu.** Aucune batterie ne mesure aujourd'hui
+l'indiscernabilité temporelle. À outiller au lot T-011.
+
+---
+
+## ARB-006 — Errata du cadrage, sans modification des sources
+**18 août 2026** — répond aux affirmations fausses relevées dans `cadrage/`.
+
+**Décision.** Les corrections sont validées, et elles vivent dans `docs/errata-cadrage.md`.
+`cadrage/` **n'est pas modifié**.
+
+**Motif.** Éditer les sources gelées pour y corriger des faits détruirait la propriété qui rend
+tout le dispositif opposable : leur immutabilité et leur diffabilité. Un errata daté, tracé à
+l'arbitrage qui le valide et lu par tout agent depuis `CLAUDE.md`, produit le même effet
+contraignant sans coûter le verrou. Les sources restent ce qu'elles étaient au gel ; l'errata dit
+ce qui, depuis, s'est révélé faux.
+
+**Ce que ça emporte.** `docs/errata-cadrage.md` fait autorité sur `cadrage/` pour les seuls points
+qu'il énumère, et sur rien d'autre. Toute nouvelle correction y entre par un arbitrage numéroté.
+
+---
+
+## ARB-007 — Trois routes mineures
+**18 août 2026** — répond à A-04, A-05, A-06 (`docs/routes.md`).
+
+- **A-04 — pas de cartographie publique.** L'espace public compte quatre vues, et la planche de
+  V-19 n'offre aucun profil anonyme. `RG-M09-02` ne l'impose pas explicitement ; l'implémenter
+  serait un comblement.
+- **A-05 — `/guides/{identifiant}` est servi tel quel à un utilisateur connecté.** Une seule
+  adresse, un seul rendu. Conserve la vérification « voir ce que voit le public », qui est un
+  usage réel, et évite une seconde adresse sans canonique ou un état hors planche — donc hors
+  protocole de comparaison.
+- **A-06 — le paramètre `?noeud=` est ajouté** à l'état de cartographie porté par l'adresse. Le
+  point dur n° 5 du brief fait de la sélection un **état durable** (« focus persistant au clic,
+  jamais éphémère au survol ») : un état durable qui ne survit pas au partage de l'adresse n'est
+  pas durable.
+
+**Ce que ça ferme.** A-04, A-05, A-06. `docs/routes.md` n'a plus de section « à arbitrer ».
+
+---
+
+## ARB-008 — pnpm 11
+**18 août 2026.**
+
+**Décision.** La ligne 11 est actée (11.22.0 en place). `STACK-TECHNIQUE.md §3` retient la ligne
+10 ; c'est le document qui est mis à jour, pas l'environnement rétrogradé. Aucune incidence : les
+propriétés recherchées — gestion stricte des dépendances, auditabilité de la chaîne (C-11) — sont
+celles de la ligne 10 comme de la 11. Consigné à l'errata.
