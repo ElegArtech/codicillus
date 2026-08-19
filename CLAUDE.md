@@ -277,6 +277,30 @@ comparée était identique des deux côtés, et le filtre inerte rendait le mêm
 qui marche. **Toute règle nouvelle doit être éprouvée sur un cas qui la sollicite**, sinon elle
 n'est pas posée, elle est espérée. *(P-9, 19/08/2026)*
 
+### P-14 · L'horloge virtuelle du banc ne survit pas au parallélisme
+
+`verif/banc/conditions.mjs` fait `clock.install({time: T})` puis `clock.pauseAt(T)`. **Entre les deux
+appels, le temps virtuel court.** En séquentiel l'écart est nul et rien ne se voit ; dès que
+plusieurs pages s'ouvrent de front, `T` est déjà passé quand `pauseAt` s'exécute et Playwright rejette
+avec `Cannot fast-forward to the past`. Mesuré : **2 couples sur 409 à six pages parallèles, 0 en
+séquentiel**.
+
+Le banc étant séquentiel, il ne l'a jamais rencontré — c'est la batterie 10 qui l'a levé, et elle
+rejoue trois fois plutôt que de toucher au fichier. **À réparer avant toute parallélisation du
+banc** : `pauseAt` doit viser un instant postérieur à l'installation, ou l'installation poser
+l'horloge déjà arrêtée. *(ECART-039 É-1, 19/08/2026)*
+
+**Corollaire, et il vaut au-delà de l'horloge.** Un instrument séquentiel peut porter un défaut que
+seule la concurrence révèle : *l'absence de panne n'est pas une preuve de correction, c'est une
+preuve que le cas n'a pas été joué.* C'est P-5 sous un autre angle.
+
+### P-15 · axe-core est incompatible avec une horloge arrêtée
+
+axe enchaîne ses tranches d'analyse par `setTimeout` : **horloge arrêtée, il ne rend jamais la
+main** — mesuré à plus de deux minutes sur V-21 avant abandon. L'état doit être établi horloge
+arrêtée, puis `clock.resume()` appelé juste avant `analyze()`, sous une garde qui déclare le DOM
+possiblement instable (3 couples sur 409 l'ont déclenchée). *(ECART-039 É-2, 19/08/2026)*
+
 ---
 
 ## 7. Protocole de fin de tâche

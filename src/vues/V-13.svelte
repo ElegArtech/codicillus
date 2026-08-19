@@ -55,7 +55,7 @@
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
 	import { DOMAINES, INSTANCE, MODIFICATIONS, MOI, UNIVERS, type Note } from '../../seeds/corpus';
-	import { classeTemoin, libelleFraicheur } from '$lib/fraicheur';
+	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { segmentsDeDossier } from '$lib/rangement/adresses';
 
@@ -197,10 +197,11 @@
 		);
 	});
 
-	/* ── Témoin de fraîcheur — une seule fabrique ────────────────────────────── */
-	function barres(f: Note['fraicheur']): number {
-		return f === 'frais' ? 3 : f === 'vieil' ? 2 : 1;
-	}
+	/* ── Témoin de fraîcheur — une seule fabrique ──────────────────────────────
+	   Elle est dans `$lib/fraicheur`, et nulle part ailleurs (P-01, ADR-005) :
+	   la classe, le nombre de barres et le libellé en sortent tous les trois.
+	   Une fonction locale rendant 3, 2 ou 1 selon le niveau serait
+	   `barresFraicheur` réécrite sans son nom. */
 
 	/** L'ancienneté de la dernière modification — distincte de la vérification. */
 	function modification(n: Note): string {
@@ -218,7 +219,8 @@
 {#snippet temoin(n: Note)}
 	<span class="temoin {classeTemoin(n.fraicheur)}"
 		><span class="temoin__jauge" aria-hidden="true"
-			>{#each [0, 1, 2] as rang (rang)}<i class={rang < barres(n.fraicheur) ? 'plein' : undefined}
+			>{#each [0, 1, 2] as rang (rang)}<i
+					class={rang < barresFraicheur(n.fraicheur) ? 'plein' : undefined}
 				></i>{/each}</span
 		><span class="temoin__txt">{libelleFraicheur(n)}</span></span
 	>

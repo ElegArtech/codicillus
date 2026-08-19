@@ -78,6 +78,9 @@
 	 * `node verif/feuilles-de-vue.mjs V-03 --installer`. Les `style=` reproduits
 	 * figurent tous à l'ensemble clos du gel (ARB-016).
 	 */
+	import { DATE_REFERENCE, type NiveauFraicheur } from '../../seeds/corpus';
+	import { temoinFraicheur } from '$lib/fraicheur';
+
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
@@ -86,25 +89,59 @@
 	const { vecteur }: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
-	/** Fraîcheur affichée par le cartouche de contrôle. */
-	const niveau = $derived(typeof reglage['fr'] === 'string' ? reglage['fr'] : 'frais');
 	/** Un corps « En bref » existe-t-il ? Sinon le sélecteur de registre disparaît. */
 	const registreExiste = $derived(reglage['c-op'] !== false);
 
 	/**
-	 * Les trois niveaux du cartouche, valeurs du gel (`V-03:1655-1672`). Le
-	 * niveau « frais » est celui du balisage statique — la planche ne le
-	 * reconstruit pas, il porte donc ses apostrophes droites ; les deux autres
-	 * viennent du script, qui écrit `&rsquo;`.
+	 * LES TROIS ÉTATS DU CARTOUCHE — leur DATE DE CONTRÔLE, et elle seule.
+	 *
+	 * Le gel commute le cartouche sur une table de trois entrées portant chacune
+	 * un nombre de barres et un texte (`V-03:1665-1681`). Ces deux valeurs sont
+	 * la SORTIE du calcul de fraîcheur : les transcrire ici est une seconde
+	 * définition — ADR-005 interdit nommément « tout libellé de fraîcheur
+	 * construit localement », et c'est ce que cette vue faisait avant T-013c.
+	 *
+	 * Ce qui est DONNÉE, et que rien ne calcule, c'est la date de contrôle. Le
+	 * gel l'écrit trois fois, dans le `<time>` du détail ci-dessous, et c'est
+	 * elle — elle seule — qui est portée ici. L'ancienneté s'en déduit contre
+	 * `DATE_REFERENCE`, l'horloge gelée du jeu de semence, sans quoi le libellé
+	 * relatif ne serait pas reproductible des deux côtés de la comparaison
+	 * (ADR-005, conséquences).
+	 *
+	 * Les trois libellés que la fabrique en tire sont, à la lettre, les trois du
+	 * gel — c'est ce qui rend cette réparation possible à pixel constant :
+	 *   11 j  → « Vérifié il y a 11 jours »  (frais, moins de 31 jours)
+	 *   155 j → « Vérifié il y a 5 mois »    (arrondi au mois)
+	 *   280 j → « Pas revu depuis 9 mois »   (l'obsolète change de verbe)
+	 *
+	 * Le DÉTAIL du cartouche, lui, reste écrit : c'est de la prose datée, pas un
+	 * libellé de fraîcheur. Le niveau « frais » est celui du balisage statique —
+	 * la planche ne le reconstruit pas, il porte donc ses apostrophes droites ;
+	 * les deux autres viennent du script du gel, qui écrit `&rsquo;`.
 	 */
-	const barres = $derived(niveau === 'frais' ? 3 : niveau === 'vieil' ? 2 : 1);
-	const valeur = $derived(
-		niveau === 'frais'
-			? 'Vérifié il y a 11 jours'
-			: niveau === 'vieil'
-				? 'Vérifié il y a 5 mois'
-				: 'Pas revu depuis 9 mois'
+	const CONTROLE: Record<NiveauFraicheur, string> = {
+		frais: '2026-08-02',
+		vieil: '2026-03-11',
+		obs: '2025-11-06'
+	};
+
+	/** Jours écoulés entre une date de contrôle et l'horloge gelée du corpus. */
+	function depuis(date: string): number {
+		return Math.round((Date.parse(DATE_REFERENCE) - Date.parse(date)) / 86_400_000);
+	}
+
+	/** Fraîcheur affichée par le cartouche de contrôle. */
+	const niveau = $derived<NiveauFraicheur>(
+		typeof reglage['fr'] === 'string' && reglage['fr'] in CONTROLE
+			? (reglage['fr'] as NiveauFraicheur)
+			: 'frais'
 	);
+
+	/**
+	 * LE TÉMOIN DU CARTOUCHE, de la fabrique unique : la jauge et la valeur en
+	 * clair sortent ensemble du même calcul (P-01, ADR-005).
+	 */
+	const temoin = $derived(temoinFraicheur({ fraicheur: niveau, jours: depuis(CONTROLE[niveau]) }));
 
 	/**
 	 * Le sommaire, construit sur les titres de niveau 2 du corps Référence —
@@ -173,11 +210,11 @@
 				<div class="cartouche cartouche--lecture" data-niveau={niveau}>
 					<div class="cartouche__bloc">
 						<span class="temoin__jauge" aria-hidden="true"
-							>{#each [0, 1, 2] as rang (rang)}<i class={rang < barres ? 'plein' : ''}
+							>{#each [0, 1, 2] as rang (rang)}<i class={rang < temoin.barres ? 'plein' : ''}
 								></i>{/each}</span
 						>
 						<div>
-							<div class="cartouche__valeur">{valeur}</div>
+							<div class="cartouche__valeur">{temoin.libelle}</div>
 							<div class="cartouche__detail">
 								{#if niveau === 'frais'}Ce guide a été contrôlé le <time
 										datetime="2026-08-02"
