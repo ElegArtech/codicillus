@@ -80,3 +80,73 @@ descendre, et **non** à effacer en écrivant quatre dossiers devinés.
 
 Confié à un lot d'instrument, avec les six règles de méthode de `docs/orchestration.md` §1.2 — dont la
 quatrième : *prouver que la batterie sait dire non*, et *que la mutation n'est pas inerte*.
+
+---
+
+## Complément du même jour — deux arbitrages manquent aussi, et l'un est cité par un instrument
+
+Le même audit, appliqué au registre des arbitrages :
+
+```
+$ grep -oP "^## ARB-\d+" docs/arbitrages.md | grep -oP "\d+" | sort -n
+001 … 044  047 048 049 050 051          ← 045 et 046 absents
+
+$ for n in $(grep -rhoP "ARB-0\d\d" verif/ src/ base/ seeds/ docs/ CLAUDE.md | sort -u); do
+    grep -q "^## $n " docs/arbitrages.md || echo "MANQUANT: $n"; done
+MANQUANT: ARB-045
+MANQUANT: ARB-046
+```
+
+### `ARB-045` — huit citations, dont six dans un instrument et ses unitaires
+
+| Où | Ce qui y est écrit |
+|---|---|
+| `verif/etats.mjs:64` | « **ARB-045** — L'OBSERVABLE DE « SANS DROIT » ÉTAIT FAUTIF CÔTÉ PORTAGE » |
+| `verif/etats.mjs:67` | « une CORRECTION D'INSTRUMENT, autorisée nommément et bornée à ce seul point (contrat **T-072**, `ARB-045`) » |
+| `verif/etats.mjs:740`, `:814`, `:1300`, `:1647` | quatre autres renvois, dont un dans le **texte imprimé par la batterie** |
+| `verif/etats.test.ts:173`, `:228` | « LA RÈGLE QUI A CHANGÉ, ET SES DEUX BORNES » ; « **PREMIÈRE EXIGENCE D'ARB-045** — le crible ne doit PAS devenir aveugle » |
+
+**C'est plus grave que les quatre écarts** : une batterie **imprime à l'exécution** le numéro de
+l'arbitrage qui autorise sa correction, et ce numéro ne mène à rien. La correction d'un instrument est
+le geste que ce dépôt surveille le plus — `docs/orchestration.md` §4 : *« ne te donne pas ton seuil »*.
+Son autorisation doit être lisible.
+
+**Hypothèse, avec ses pièces — à vérifier, non à croire.** `ARB-045` et **`ARB-048`** paraissent être
+le même arbitrage sous deux numéros :
+
+| | `ARB-048`, tel qu'écrit au registre | ce que le code attribue à `ARB-045` |
+|---|---|---|
+| titre | « L'observable « sans droit » de la batterie 9, corrigé » | « l'observable de « sans droit » était fautif côté portage » |
+| lot | « correction livrée par **T-072** » | « contrat **T-072** » |
+| première exigence | « **1. Le crible n'est pas devenu aveugle.** » | « **PREMIÈRE EXIGENCE** […] le crible ne doit **PAS** devenir aveugle » |
+
+Si l'hypothèse tient, la réparation est **mécanique** — renuméroter les huit citations vers `ARB-048`
+—, et elle n'invente rien. **Elle reste à prouver par le lot**, pas par ce dossier.
+
+### `ARB-046` — révoqué, puis retiré du registre, alors qu'`ARB-047` s'y adosse
+
+`ARB-047` est titré *« `ARB-046` est révoqué : Signets ne peut pas être une route globale »*. Et
+`src/lib/coquille/Rail.svelte:90-95` **cite le texte propre d'ARB-046**, sa borne comprise :
+
+> « `ARB-046` proposait une route GLOBALE `/signets` rendant V-22, au motif que « le gel ne montre
+> qu'une vue de signets et rien n'y distingue les deux portées ». L'arbitrage posait lui-même sa
+> borne : *« si un état déclaré de V-22 montrait un contexte de domaine qui contredit une portée
+> globale, arrête-toi »*. LA BORNE EST FRANCHIE, ET C'EST MESURÉ. »
+
+**Un arbitrage révoqué se marque révoqué, il ne s'efface pas.** C'est le motif même pour lequel
+`cadrage/` n'est jamais corrigé et l'errata existe : *« l'immutabilité et la diffabilité »*
+(`docs/errata-cadrage.md`). Effacer `ARB-046` prive `ARB-047` de la décision qu'il renverse, et prive
+le lecteur du raisonnement qui a été jugé faux — le plus instructif des deux.
+
+Et le cas est **vivant** : la révocation d'`ARB-046` est ce qui laisse les **81 entrées « Signets »
+mortes**, seule chose que `docs/dossier-regel.md` attende encore du commanditaire.
+
+### Ce que le complément change à la réparation
+
+Le contrôle proposé plus haut couvre déjà `ARB-xxx sans entrée`. Deux précisions :
+
+1. **Il doit lire le code et les instruments**, pas seulement `docs/` : six des huit citations
+   d'`ARB-045` sont dans `verif/`, et l'une est dans une chaîne **imprimée à l'exécution**.
+2. **La dette de départ est de six lignes, non quatre** : `ECART-029`, `030`, `034`, `042`, `ARB-045`,
+   `ARB-046`. Et deux d'entre elles ont une réparation connue — renuméroter, et réinscrire en
+   « révoqué ». Le seuil ne peut que descendre.
