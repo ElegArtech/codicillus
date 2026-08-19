@@ -834,3 +834,176 @@ cause qui se répète n'est plus une exception.
 maquette morte. Il n'empêche pas la conformité, puisque les deux côtés le portent, mais il signifie
 que **le fil déroulé par type maître n'est visible dans aucun état**. À verser au dossier des regels,
 avec V-06 et V-08.
+
+---
+
+## ARB-026 — Les deux seuils sont posés, et ils ne peuvent que descendre
+**19 août 2026** — arbitrage délégué. Répond à `ECART-039` et `ECART-040`.
+
+**Décision.** `verif/references/a11y-seuil.json` est posé, et `pnpm test:etats` porte
+`--seuil-gel=173`.
+
+**Ce que le seuil admet, et ce qu'il refuse.** Les **3 439** lignes `gel/…` sont admises. Les **31**
+lignes `portage/…` de la proposition ont été **retirées à la pose** : elles sont corrigeables par un
+lot, et le lot T-060 les traite. La batterie 10 échoue donc aujourd'hui sur ces 31 exactement — c'est
+le comportement recherché, pas un défaut de seuil.
+
+**Ce que cela ferme.** Plus personne n'a à demander si une batterie rouge peut être intégrée. La
+batterie 9 est verte, la 10 le sera quand T-060 rendra, et `pnpm verify` s'enchaîne.
+
+**La borne, et elle est la seule chose qui empêche un seuil de devenir une amnistie.** Ce fichier
+**descend, il ne monte pas.** Toute hausse est un défaut de lot, pas une mise à jour. Chaque ligne
+`gel/…` est une **dette nommée** : elle tombe quand `ARB-027` est appliqué à la vue, ou quand la
+maquette est regelée. Un seuil global aurait absorbé les dettes nouvelles en silence ; celui-ci
+compte par règle **et** par nature.
+
+---
+
+## ARB-027 — L'application peut dépasser le gel sur ce qui ne peint aucun pixel
+**19 août 2026** — arbitrage délégué. Répond à `ECART-039`, et lève 3 439 constats.
+
+**Le fait.** La batterie 10 impute **3 439 violations d'accessibilité aux maquettes elles-mêmes** :
+894 cibles de lien d'évitement non focalisables sur 34 vues, 629 graphiques sans alternative,
+129 `treeitem` sans `role="tree"`, 80 jauges de témoin annoncées alors que `DESIGN.md` §3.7
+l'interdit. Elles étaient réputées irréparables sans regel.
+
+**Elles ne le sont pas, et le raisonnement tenait dans une confusion.** Les maquettes sont la loi
+**de ce qu'elles montrent** — pixels, polices, icônes, disposition, libellés. Elles ne sont pas une
+loi *interdisant* ce qu'elles ne montrent pas. Un `tabindex="-1"`, un `role`, un `aria-hidden`, un
+`aria-controls`, une alternative textuelle hors flux **ne peignent aucun pixel** : les ajouter ne
+fait diverger aucune vue de sa maquette au sens de la règle ultime.
+
+**Décision. L'application PEUT porter un attribut d'accessibilité absent du gel, à trois
+conditions cumulatives :**
+
+1. **Il ne déplace aucun pixel.** Le niveau 2 du banc reste à zéro, sans exception ni tolérance.
+   C'est vérifié à chaque lot, pas déclaré.
+2. **Une règle du projet l'exige nommément** — `RG-M18-07` à `RG-M18-11`, `P-06`, ou une
+   interdiction explicite de `docs/DESIGN.md`. Pas « ce serait mieux » : une règle citée.
+3. **Il est énuméré**, vue par vue et attribut par attribut, dans un fichier de référence en
+   écriture humaine seule. Le banc le lit pour tolérer l'asymétrie **exactement là où elle est
+   déclarée**.
+
+**L'asymétrie n'est autorisée que dans un sens : ajouter.** Retirer un attribut que le gel porte,
+ou en changer la valeur, reste rouge — sans quoi la déclaration deviendrait une porte ouverte.
+
+**Ce que cela ne ferme pas, et qui reste au commanditaire.** Les **707** violations de contraste
+changent des couleurs : elles peignent des pixels, elles sont hors de cette décision. Elles restent
+au dossier des regels, seules.
+
+---
+
+## ARB-028 — V-06 rend la notification que V-06 montre — révision d'ARB-024
+**19 août 2026** — arbitrage délégué.
+
+**Ce qu'ARB-024 avait décidé.** La famille des notifications suit V-38, et V-06 « demande un
+regel ». Conséquence : **13 276 pixels d'écart**, le seul des 409 couples, et V-06 non livrée.
+
+**Pourquoi c'était le mauvais sens.** ARB-024 a fait primer une doctrine de réalisation — *une seule
+définition de composant* — sur une maquette gelée. L'ordre de préséance dit exactement l'inverse :
+
+```
+Maquettes  >  Cahier des charges  >  Brief des vues  >  Pile technique  >  Plan de réalisation
+```
+
+Et la règle ultime porte sur **chaque vue, dans chacun de ses aspects**. V-06 montre une bulle non
+bornée qui tient sur une ligne : **c'est la loi de V-06.**
+
+**Décision. V-06 rend sa propre notification**, telle que sa maquette l'écrit. `docs/DESIGN.md` est
+amendé en conséquence : la famille des notifications a **deux états gelés**, celui de V-38 et celui
+de V-06, et le composant porte une variante déclarée — il n'est pas recopié.
+
+**Ce que cela ferme.** Le dernier écart visuel du projet. **409 couples sur 409**, aucun recours au
+niveau 3.
+
+**Ce qui reste vrai d'ARB-024.** Le constat était juste et la mesure exacte : les deux maquettes
+divergent, et la refonte `flex` → `grid` a bien eu lieu entre deux états du socle. Seule la
+résolution est renversée.
+
+---
+
+## ARB-029 — La forme compacte du libellé entre dans la fabrique unique
+**19 août 2026** — arbitrage délégué. Répond à `ECART-038` É-1.
+
+**Le fait.** V-14 écrit « il y a 6 j » là où `libelleFraicheur` produit « Vérifié il y a 6 jours ».
+Deux lectures s'affrontaient : tenir `P-01` coûte 44 couples, tenir le gel laisse un libellé
+construit localement.
+
+**Les deux perdent, parce que la question était mal posée.** `P-01` exige **une seule
+implémentation**, pas **un seul libellé**. Le gel porte manifestement deux formes — la longue, que
+sa fabrique produit ; la compacte, qu'il écrit dans le panneau « Position ». Transcrire les deux
+dans l'implémentation unique **tient les deux règles à la fois**.
+
+**Décision.** `libelleFraicheur(note, forme)` admet `'longue'` (défaut, inchangée) et `'compacte'`.
+La forme compacte sort **du même niveau et de la même ancienneté** que la longue : ce n'est pas un
+second calcul, c'est un second rendu du même calcul. Aucune vue n'écrit de libellé de fraîcheur en
+dur, et `pnpm verif:fraicheur` retrouve **zéro constat**.
+
+**La borne.** La forme compacte s'emploie **là où le gel l'emploie**, et nulle part ailleurs :
+aujourd'hui les deux voisines du panneau « Position » de V-14. Un troisième site l'emploierait sans
+qu'aucune maquette ne le montre : ce serait un comblement.
+
+---
+
+## ARB-030 — V-08 dérive sa carte de résultat de V-02
+**19 août 2026** — arbitrage délégué. Répond à `ECART-033`.
+
+**Le fait.** `mockups/V-08-recherche.html` appelle `trier()` et `carte()`, qui n'existent pas ;
+`rendre()` lève sur les sept états. La recherche connectée n'a donc **aucune maquette de résultat**.
+
+**Elle en a une, et elle est gelée.** `V-02-recherche-publique.html` est la recherche **publique**,
+sa maquette fonctionne, et elle rend ses résultats. C'est la même fonction, pour un autre public.
+
+**Décision. La carte de résultat de V-08 est celle de V-02**, augmentée des seuls éléments que V-08
+montre par ailleurs dans son balisage statique et que le public n'a pas — les facettes, le compteur,
+le sélecteur de tri. Le reste de V-08 — enveloppe, filtres, barre — est déjà porté et conforme :
+**seule la zone de résultats était vide.**
+
+**Pourquoi ce n'est pas un comblement.** Le comblement, c'est inventer ce qu'aucune source ne
+montre. Ici deux maquettes gelées montrent la même liste de résultats pour deux publics ; en déduire
+la seconde depuis la première est le *travail de cohérence* que le commanditaire a demandé dès le
+départ, et il est vérifiable : la carte de V-08 doit être identique à celle de V-02 au jeton près.
+
+**Ce qui reste au dossier.** La maquette de V-08 reste cassée dans le dépôt, et `verif:maquette`
+restera vert sur sa zone de résultats vide **des deux côtés**. C'est le cas d'école de « ce qu'un
+vert ne dit jamais » : la conformité de V-08 ne prouve rien sur ses résultats, et le contrat de tout
+lot touchant V-08 doit le rappeler.
+
+---
+
+## ARB-031 — La page d'indisponibilité dérive de V-04
+**19 août 2026** — arbitrage délégué. Répond à `RG-NF-10`, sans maquette.
+
+**Décision.** L'écran d'indisponibilité reprend la composition de `V-04-non-trouvee-public.html` —
+même enveloppe, même bloc centré, même hiérarchie typographique —, avec le message et l'action que
+`RG-NF-10` prescrit. Aucune forme nouvelle n'est inventée : une page d'erreur pleine page existe et
+est gelée.
+
+**La borne.** Cet écran n'entre pas au banc : il n'a pas de maquette de référence, donc rien à
+comparer. Il est couvert par la batterie 14 (dégradation), et sa conformité au socle par
+`pnpm verif:jetons`. **Ne pas le déclarer « conforme au gel » : il ne l'est pas, il en dérive.**
+
+---
+
+## ARB-032 — Les états de zone non maquettés dérivent de ceux qui le sont
+**19 août 2026** — arbitrage délégué. Répond à `ECART-040`, et lève 173 couples.
+
+**Le fait.** Le point dur n° 9 — « chaque zone est maquettée dans ses quatre états » — n'est pas
+tenu par le gel : **173 couples zone × état sur 252** manquent, dont 112 sur la seule coquille.
+L'erreur est la grande absente.
+
+**Décision. Une zone dont le gel ne montre pas un état le rend quand même**, en reprenant le
+composant que le gel emploie **ailleurs** pour ce même état : `.panneau--erreur` pour l'erreur,
+`.vide` et `.palette__etat` pour le vide, `.rouet` pour le chargement. Le vocabulaire est celui de
+l'inventaire fermé de `docs/DESIGN.md` ; **aucune classe nouvelle n'est créée**.
+
+**Pourquoi cela ne casse rien.** Le banc ne compare que les états **déclarés** dans
+`verif/scenarios/V-xx.json`, extraits mécaniquement des planches. Un état que le gel ne montre pas
+n'a pas de couple : le rendre n'expose aucune surface à la comparaison. La conformité des 409
+couples est intacte.
+
+**La borne, et elle est stricte.** L'état dérivé emploie **le composant du gel, sans le modifier** —
+même balisage, mêmes classes, mêmes jetons. Inventer une forme d'erreur propre à une zone serait le
+comblement que le contrat interdit. Et `V-39` ne démontrant **aucun** état « sans droit », celui-ci
+reste hors de cette décision : il relève de `P-09`, donc de l'**absence** du nœud, donc de la
+batterie 7 — il n'y a rien à rendre.

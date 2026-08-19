@@ -1,0 +1,43 @@
+{
+	"_": [
+		"SEUIL DE DÉPART — ARBITRÉ le 19 août 2026 (ARB-026).",
+		"",
+		"Il porte un compte PAR RÈGLE ET PAR NATURE, jamais un compte global : un seuil",
+		"global se remplirait de dettes nouvelles sans que rien ne le dise.",
+		"",
+		"AUCUNE LIGNE « portage/… » N'EST ADMISE, et il ne doit jamais en entrer :",
+		"elles sont corrigeables par le lot de la vue. Les 31 unités mesurées au",
+		"moment de la pose sont traitées par le lot T-060, pas absoutes ici.",
+		"",
+		"Les lignes « gel/… » sont admises PROVISOIREMENT, et chacune est une dette",
+		"nommée : elle tombe quand ARB-027 (les attributs qui ne peignent aucun pixel)",
+		"est appliqué à la vue concernée, ou quand la maquette est regelée. Ce fichier",
+		"descend, il ne monte pas. Toute hausse est un défaut de lot.",
+		"",
+		"Retirées de la proposition à la pose : portage/axe:aria-required-children (3), portage/axe:aria-required-parent (3), portage/axe:scrollable-region-focusable (24), portage/superposition:sans-piege (1)"
+	],
+	"arbitre_le": "2026-08-19",
+	"arbitrage": "ARB-026",
+	"couples": 409,
+	"admis": {
+		"gel/arbre:treeitem-sans-aria-selected": 58,
+		"gel/axe:aria-command-name": 22,
+		"gel/axe:aria-prohibited-attr": 57,
+		"gel/axe:aria-required-attr": 144,
+		"gel/axe:aria-required-children": 104,
+		"gel/axe:aria-required-parent": 129,
+		"gel/axe:color-contrast": 707,
+		"gel/axe:label": 249,
+		"gel/axe:nested-interactive": 86,
+		"gel/axe:scrollable-region-focusable": 43,
+		"gel/axe:select-name": 11,
+		"gel/axe:target-size": 9,
+		"gel/clavier:action-non-atteignable": 114,
+		"gel/couleur:notif-sans-marque": 1,
+		"gel/couleur:temoin-jauge-annoncee": 80,
+		"gel/etiquette:orpheline": 91,
+		"gel/focus:invisible": 11,
+		"gel/graphique:sans-alternative": 629,
+		"gel/saut:cible-non-focalisable": 894
+	}
+}
