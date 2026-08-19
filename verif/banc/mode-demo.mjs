@@ -611,7 +611,7 @@ async function servirApp(serveur, reponse, vue, cleEtat) {
 			`<link rel="stylesheet" href="/src/socle.css?direct">` +
 			feuilleDeVue +
 			rendu.head +
-			`</head><body>${rendu.body}</body></html>`
+			`</head><body${attributsDeCorps(vue)}>${rendu.body}</body></html>`
 	);
 }
 
@@ -710,4 +710,30 @@ export function modeDemo() {
 			);
 		}
 	};
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ÉCART-026 É-1 — les attributs de `<body>` déclarés par la maquette.
+
+   V-03 est la seule maquette du dépôt à poser un attribut sur `<body>` :
+   `<body data-numerote="non">` (V-03:912), lu par la règle
+   `body[data-numerote="non"] .prose h2::before { content: none }`.
+
+   Aucun chemin ne permettait à une vue de l'atteindre : ce gabarit compose le
+   document lui-même, et Svelte REFUSE tout attribut sur `<svelte:body>`
+   (`svelte_body_illegal_attribute`). Le poser sur `div.app` ne servirait à rien,
+   la règle visant `body`. Coût mesuré : 34 870 pixels sur 12 couples de V-03, et
+   des dimensions divergentes sur les 4 autres — la numérotation de section et son
+   `gap` étant l'unique cause.
+
+   La déclaration vit dans `verif/references/protocole-app.json`, en ÉCRITURE
+   HUMAINE SEULE : une vue ne choisit pas les attributs du document qui la porte,
+   sans quoi elle pourrait s'accorder une règle que le gel ne lui donne pas.
+   ───────────────────────────────────────────────────────────────────────────── */
+function attributsDeCorps(vue) {
+	const declares = PROTOCOLE?.attributs_de_corps?.vues?.[vue];
+	if (!declares) return '';
+	return Object.entries(declares)
+		.map(([nom, valeur]) => ` ${nom}="${echapper(String(valeur))}"`)
+		.join('');
 }

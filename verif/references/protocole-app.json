@@ -41,9 +41,7 @@
 		"vers un écran qui passe est le contournement de vérification nommé par",
 		"PLAN §12. La sortie légitime d'un rouge est le protocole d'écart."
 	],
-
 	"route": "/__design/{vue}?etat={etat}",
-
 	"sources": {
 		"_": [
 			"LA RÈGLE D'ÉTALONNAGE — À LIRE AVANT TOUTE SOURCE CI-DESSOUS.",
@@ -90,7 +88,6 @@
 			"",
 			"UN ÉTALON N'EST JAMAIS UNE CONFORMITÉ. Seule `app` en est une."
 		],
-
 		"app": {
 			"prouve": "L'implémentation de la vue par l'application. C'est le régime de conformité proprement dit, et le seul.",
 			"n_eprouve_pas": [
@@ -98,7 +95,6 @@
 				"Il ne dit rien tant qu'aucune vue n'est implémentée : le mode démo refuse alors en 501, plutôt que de sortir en vert sans rien prouver."
 			]
 		},
-
 		"etalon": {
 			"prouve": "La maquette gelée elle-même, servie par le mode démo et pilotée par le même paramètre `etat`. Aucune conformité n'y est prouvée : c'est l'ÉTALONNAGE DU RÉGIME `app` — un candidat connu identique, dont on exige zéro pixel divergent, pour prouver la plomberie de bout en bout (deux serveurs, deux chemins, deux protocoles d'état, un seul verdict). Un rapport produit avec cette source le dit en toutes lettres.",
 			"n_eprouve_pas": [
@@ -110,7 +106,6 @@
 				"La révélation d'un état par l'ADRESSE seule : pour les onze états à déclencheur, cette source rejoue le geste."
 			]
 		},
-
 		"composant": {
 			"prouve": "La maquette gelée elle aussi — mais SON CORPS TRAVERSE `render()`, par le graphe de modules SSR de Vite, exactement comme le corps d'une vue implémentée. Même candidat connu identique, même exigence de zéro pixel divergent, et une portion de chemin de plus : celle qu'`ECART-013` É-1 a trouvée non étalonnée. Elle emprunte `ssrLoadModule('svelte/server')`, `ssrLoadModule` du composant, `render()`, le contrat de propriétés, `corpusPourVue()` et la mise en réponse — les fonctions mêmes qu'un lot de vue empruntera.",
 			"n_eprouve_pas": [
@@ -124,7 +119,6 @@
 			]
 		}
 	},
-
 	"etats_de_zone": {
 		"_": [
 			"ÉTATS DE ZONE, CÔTÉ APPLICATION — ÉCRITURE HUMAINE SEULE.",
@@ -218,9 +212,7 @@
 			"la surface réellement comparée état par état : une isolation silencieuse",
 			"est impossible."
 		],
-
 		"protocole": "page-entiere-zone-isolee",
-
 		"vues": {
 			"V-09": {
 				"protocole": "page-entiere-zone-isolee",
@@ -272,7 +264,6 @@
 			}
 		}
 	},
-
 	"revelations": {
 		"_": [
 			"RÉVÉLATIONS D'ÉTAT, APPLIQUÉES AUX DEUX CÔTÉS — ÉCRITURE HUMAINE SEULE.",
@@ -433,7 +424,6 @@
 			"se verra que sur un candidat DÉMUNI de JavaScript, c'est-à-dire au",
 			"premier lot qui implémentera l'une de ces neuf vues."
 		],
-
 		"vues": {
 			"V-17": {
 				"revelation": "modalite-dialogue",
@@ -507,9 +497,7 @@
 			}
 		}
 	},
-
 	"vues": {},
-
 	"vues_": [
 		"AUCUNE VUE N'EST IMPLÉMENTÉE. La table est vide, et le rester est la",
 		"seule chose honnête : le mode démo refuse bruyamment une vue qu'il ne",
@@ -522,5 +510,29 @@
 		"    \"route\": \"/autre/chemin?etat={etat}\",   (facultatif)",
 		"    \"etats\": { \"cle-d-etat\": \"/chemin/particulier\" }  (facultatif)",
 		"  }"
-	]
+	],
+	"attributs_de_corps": {
+		"_": [
+			"ATTRIBUTS DE `<body>` DÉCLARÉS PAR LA MAQUETTE — ÉCRITURE HUMAINE SEULE.",
+			"Répond à docs/ecarts/ECART-026.md É-1.",
+			"",
+			"Une maquette peut poser un attribut sur `<body>` et une règle de sa feuille",
+			"peut le lire. Le mode démo compose le document lui-même ; sans déclaration,",
+			"la vue n'a AUCUN moyen de l'atteindre — Svelte refuse tout attribut sur",
+			"`<svelte:body>`, et le poser sur `div.app` ne sert à rien si la règle vise",
+			"`body`.",
+			"",
+			"POURQUOI EN ÉCRITURE HUMAINE SEULE : une vue ne choisit pas les attributs du",
+			"document qui la porte. Sinon elle pourrait s'accorder une règle que le gel ne",
+			"lui donne pas — et le banc certifierait un rendu que la maquette n'a jamais",
+			"montré.",
+			"",
+			"Régénérable : grep -l '<body [^>]' mockups/V-*.html"
+		],
+		"vues": {
+			"V-03": {
+				"data-numerote": "non"
+			}
+		}
+	}
 }
