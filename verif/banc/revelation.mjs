@@ -100,6 +100,45 @@
  *
  * AUCUN ANNEAU N'EST MASQUÉ : il n'y en a d'aucun côté, et pour la même raison
  * des deux côtés.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LA MODALITÉ DE SAISIE DE LA RÉFÉRENCE — ET ELLE N'EST PAS TOUJOURS LA MÊME
+ *
+ * Ajouté par le lot T-007e, en même temps que les neuf vues que la déclaration
+ * ne nommait pas. Le raisonnement ci-dessus est juste, et il était INCOMPLET :
+ * il a été écrit sur V-40, où la référence tient sa modalité « pointeur » d'un
+ * VRAI CLIC — celui que le banc livre sur l'entrée du catalogue. Il vaut donc
+ * pour les onze états à déclencheur, et pour eux seuls.
+ *
+ * LES QUINZE AUTRES ÉTATS MODAUX N'ONT PAS DE DÉCLENCHEUR. Leur boîte s'ouvre
+ * parce que `reglerPlanche()` a coché une position et RÉPARTI UN ÉVÉNEMENT
+ * `change` SYNTHÉTIQUE, auquel le script de la maquette répond par
+ * `showModal()`. Aucun pointeur n'a touché la référence : elle est donc dans la
+ * modalité par défaut, et elle AFFICHE l'anneau de focalisation que
+ * `showModal()` pose sur le premier élément focalisable.
+ *
+ * MESURÉ (T-007e, candidat privé de couche supérieure, `--source=composant`) :
+ * en livrant l'appui de pointeur à ce candidat-là, on lui retire l'anneau que
+ * la référence, elle, affiche — 308 px divergents sur `V-27 sup-systeme` et
+ * `V-27 sup-ok`, sur le bouton de fermeture de la boîte. Sans l'appui, les six
+ * états de V-27 sortent conformes. C'est le MÊME chiffre que celui relevé plus
+ * haut sur V-40, dans l'autre sens : la même cause, la modalité de saisie, et
+ * le remède opposé.
+ *
+ * LA RÈGLE, DONC, EST CELLE QUI ÉTAIT DÉJÀ ÉCRITE — « reproduire la modalité au
+ * lieu de la masquer » — mais appliquée jusqu'au bout : ON REPRODUIT CELLE DE
+ * LA RÉFÉRENCE, on n'en impose pas une. Le banc sait laquelle c'est, et il le
+ * sait mécaniquement : la référence a reçu un vrai geste de pointeur si et
+ * seulement si l'état porte un `zone.declencheur` dans
+ * `verif/scenarios/V-xx.json`, dérivé de la maquette gelée. C'est le paramètre
+ * `modaliteReference` de `reveler()`.
+ *
+ * CE QUE CE CORRECTIF NE PROUVE PAS. Aucune des dix vues n'est implémentée : la
+ * mesure a été prise sur un candidat FABRIQUÉ pour être démuni — le corps du
+ * gel, dont le premier `showModal()` de chaque boîte ne pose que l'attribut
+ * `open`. C'est la seule façon d'éprouver aujourd'hui une contrainte qui ne
+ * mord que sur un candidat sans JavaScript (`ECART-015` É-5) ; ce n'est pas une
+ * implémentation, et le jour où il y en aura une, c'est elle qui fera foi.
  */
 import { PEINTURE_MS, POINTEUR_AU_REPOS } from './conditions.mjs';
 
@@ -182,7 +221,7 @@ export const REVELATIONS = {
  * @param {string} cote 'reference' ou 'candidat', pour le message d'échec.
  * @returns {Promise<{ revelation: string, trouves: number, revelees: string[] } | null>}
  */
-export async function reveler(page, declaration, cote) {
+export async function reveler(page, declaration, cote, { modaliteReference = 'pointeur' } = {}) {
 	if (!declaration) return null;
 	const nom = declaration.revelation;
 	const connue = REVELATIONS[nom];
@@ -197,10 +236,14 @@ export async function reveler(page, declaration, cote) {
 
 	const compte = await page.evaluate(connue.etablir);
 
-	// La modalité de saisie n'est rétablie que si la révélation a effectivement
-	// ouvert quelque chose — c'est-à-dire jamais du côté référence, qui tient
-	// déjà la sienne du clic de son déclencheur.
-	if (compte.revelees.length && connue.modalitePointeur) {
+	/* LA MODALITÉ N'EST PAS IMPOSÉE : ELLE EST REPRODUITE. Voir le bandeau,
+	   section « la modalité de saisie de la référence ». Le rétablissement au
+	   pointeur n'a lieu que si la révélation a ouvert quelque chose — donc
+	   jamais du côté référence — ET si la référence, elle, tient sa modalité
+	   d'un vrai geste de pointeur. Pour les quinze états à planche, elle n'en
+	   tient aucun : l'imposer au seul candidat lui retirerait un anneau que la
+	   référence affiche. Mesuré : 308 px sur `V-27 sup-systeme` et `sup-ok`. */
+	if (compte.revelees.length && connue.modalitePointeur && modaliteReference === 'pointeur') {
 		await connue.modalitePointeur(page);
 	}
 
@@ -212,6 +255,37 @@ export async function reveler(page, declaration, cote) {
 				`${compte.recalcitrants.join(', ')}.\n` +
 				`  Propriété exigée : ${connue.propriete}.\n` +
 				'  Comparer sans elle mesurerait deux surfaces différentes.'
+		);
+	}
+
+	/* LA SECONDE MOITIÉ DE LA POSTCONDITION — « et ils sont TOUJOURS OUVERTS ».
+	   Le contrôle ci-dessus est VACUEMENT VRAI si la révélation a fait
+	   disparaître ce qu'elle devait promouvoir : `dialog[open]` ne trouve alors
+	   plus rien, donc aucun récalcitrant, donc aucun cri. C'est le mode de
+	   défaillance RA-01 dans sa forme la plus pure — un contrôle qui se tait
+	   parce qu'il n'a plus rien à contrôler.
+
+	   IL A ÉTÉ RENCONTRÉ, PAS SUPPOSÉ (T-007e). Sur un candidat où la couche
+	   supérieure manquait mais où les scripts de la maquette étaient présents,
+	   l'appui de pointeur au repos (0, 0) est tombé sur le `dialog` lui-même —
+	   qui est `inset: 0`, donc couvre la fenêtre — et y a déclenché le renvoi au
+	   clic du voile : la boîte s'est refermée juste après avoir été révélée. Le
+	   banc a comparé une zone vide à une zone pleine et rendu « échec de
+	   structure », c'est-à-dire le bon verdict pour la mauvaise raison, sans
+	   jamais nommer la cause.
+
+	   Le compte est donc relevé APRÈS, et comparé. Un candidat de phase 1 n'a
+	   pas de script à déclencher (ARB-011) et ne peut pas rencontrer ce cas ;
+	   c'est précisément pourquoi le contrôle doit exister — le jour où il se
+	   produira, personne ne le cherchera là. */
+	const ouvertsApres = await page.evaluate(() => document.querySelectorAll('dialog[open]').length);
+	if (ouvertsApres < compte.trouves) {
+		throw new Error(
+			`banc : la révélation « ${nom} » a REFERMÉ ce qu'elle devait révéler, du côté ` +
+				`${cote} — ${compte.trouves} dialogue(s) ouvert(s) avant, ${ouvertsApres} après.\n` +
+				`  Propriété exigée : ${connue.propriete}.\n` +
+				'  Le contrôle des récalcitrants ne le voit pas : sans dialogue ouvert, il\n' +
+				"  n'a plus rien à trouver et se tait (RA-01). Celui-ci parle."
 		);
 	}
 
