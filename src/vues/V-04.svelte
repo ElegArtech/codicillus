@@ -74,6 +74,7 @@
 	import { adresseNonResolue } from '$lib/public/adresse-non-resolue';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
+	import { motFiche } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
@@ -186,7 +187,7 @@
 	<!-- prettier-ignore -->
 	<a class="carte carte--publique" href="#" data-index={index}
 		><div class="carte__haut"
-			><h2 class="carte__titre">{@render marque(n.titre, q)}</h2><span class="past past--type">{n.type === 'Fiche' ? `Fiche ${n.typeFiche}` : n.type}</span
+			><h2 class="carte__titre">{@render marque(n.titre, q)}</h2><span class="past past--type">{n.type === 'Fiche' ? `${motFiche} ${n.typeFiche}` : n.type}</span
 		></div
 		>{#if n.type === 'Signet'}<div class="marque-signet" style="margin-bottom:var(--e-2)">↗ {n.url}</div>{/if}<p class="carte__extrait">{@render marque(n.extrait, q)}</p
 		><div class="carte__signal"

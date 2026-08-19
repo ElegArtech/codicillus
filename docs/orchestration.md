@@ -165,6 +165,12 @@ chmod -R u+w /tmp/wt-<nom> && git worktree remove /tmp/wt-<nom> --force
 - **`P-22` — retirer la copie n'est pas du ménage, c'est de la correction.** Huit serveurs orphelins
   ont été trouvés le 19 août, le plus vieux de vingt et une heures, occupant **7,3 Go**. Le banc
   passe de 363 s à 563 s selon la charge, et un port pris fait **mesurer le mauvais serveur**.
+- **Deux lots qui jouent le banc en même temps se paient très cher.** Mesuré le 19 août : le même
+  `verif:maquette:app` annonce **368 s de temps instrument** et a demandé **plus de deux heures
+  d'horloge**, charge machine à **12**. *Le verdict n'est pas faussé — les chiffres d'instrument
+  restent stables — mais le budget de boucle du plan §3.7 ne tient pas en régime concurrent.*
+  **Ne lance pas deux lots gourmands en banc côte à côte** : un lot de vue et un lot de back se
+  supportent, deux lots de vue non.
 
 ---
 

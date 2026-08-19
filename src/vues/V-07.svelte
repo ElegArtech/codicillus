@@ -116,6 +116,7 @@
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { BARRES_DE_JAUGE, temoinFraicheur } from '$lib/fraicheur';
+	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — profil × état × aide. */
@@ -461,7 +462,7 @@
 				autocomplete="off"
 				spellcheck="false"
 				autofocus
-				placeholder="Chercher une note, une fiche, un signet…"
+				placeholder="Chercher une note, une {motFicheMinuscule}, un signet…"
 				aria-label="Rechercher dans le corpus"
 			/>
 			<span class="quete__rappel"
@@ -529,7 +530,7 @@
 				<h2>Votre base est vide</h2>
 				<p>
 					Rien n'a encore été écrit ni repris. Le plus rapide reste de rapatrier ce qui existe déjà
-					— procédures, guides, fiches — plutôt que de repartir d'une page blanche.
+					— procédures, guides, {motFichePlurielMinuscule} — plutôt que de repartir d'une page blanche.
 				</p>
 				<div class="amorce__actions">
 					<!-- P-09 · ARB-040 — omises, jamais masquées. `V-07:1265`, `:1266` -->

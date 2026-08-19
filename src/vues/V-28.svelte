@@ -73,6 +73,7 @@
 	import NavigationConsole from '$lib/console/NavigationConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { filDeConsole } from '$lib/console/sections';
+	import { motFicheMinuscule, motFichePluriel, motFichePlurielMinuscule } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
@@ -169,8 +170,7 @@
 			"Rangement arborescent des notes. À désactiver pour un domaine plat de quelques dizaines de notes, où l'arborescence coûte plus qu'elle ne rapporte.",
 		fiches:
 			'Objets typés — serveurs, applications, contacts — avec leurs propriétés structurées et leurs relations.',
-		cartographie:
-			"Graphe des dépendances entre fiches. N'a d'intérêt que si le domaine déclare des relations.",
+		cartographie: `Graphe des dépendances entre ${motFichePlurielMinuscule}. N'a d'intérêt que si le domaine déclare des relations.`,
 		signets:
 			"Liens web curatés rattachés au domaine : documentation d'éditeur, portails de prestataires.",
 		carteMentale:
@@ -248,7 +248,7 @@
 		mesuresSup
 			? ([
 					[mesuresSup.notes, mesuresSup.notes > 1 ? 'notes' : 'note'],
-					[mesuresSup.fiches, mesuresSup.fiches > 1 ? 'fiches' : 'fiche'],
+					[mesuresSup.fiches, mesuresSup.fiches > 1 ? motFichePlurielMinuscule : motFicheMinuscule],
 					[mesuresSup.signets, mesuresSup.signets > 1 ? 'signets' : 'signet'],
 					[mesuresSup.dossiers, mesuresSup.dossiers > 1 ? 'dossiers' : 'dossier']
 				] as [number, string][])
@@ -345,7 +345,7 @@
 				<span>Nom</span>
 				<span>Univers</span>
 				<span class="tg__n tg--reduit">Notes</span>
-				<span class="tg__n tg--reduit">Fiches</span>
+				<span class="tg__n tg--reduit">{motFichePluriel}</span>
 				<span class="tg__n tg--masquable tg--reduit">Signets</span>
 				<span class="tg__n tg--masquable tg--reduit">Dossiers</span>
 				<span class="tg__n tg--masquable tg--reduit">Contrib.</span>

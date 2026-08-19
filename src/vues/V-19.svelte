@@ -81,6 +81,7 @@
 		type Contour,
 		type EncodageDeType
 	} from '$lib/graphe/cartographie';
+	import { motFicheMinuscule } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — profil × état. */
@@ -470,8 +471,8 @@
 								<h2>Aucune relation dans ce périmètre</h2>
 								<p>
 									La cartographie n'a pas de données propres : elle se nourrit des relations
-									déclarées sur les notes. Ouvrez une fiche et ajoutez-y une relation — « héberge »,
-									« dépend de », « sauvegarde » — pour voir le graphe apparaître.
+									déclarées sur les notes. Ouvrez une {motFicheMinuscule} et ajoutez-y une relation —
+									« héberge », « dépend de », « sauvegarde » — pour voir le graphe apparaître.
 								</p>
 								<div class="voile__actions">
 									<button class="btn btn--principal">Comment déclarer une relation</button>

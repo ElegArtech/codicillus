@@ -159,6 +159,7 @@
 	import type { Note } from '../../seeds/corpus';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { chercher, segmenter } from '$lib/public/recherche';
+	import { motFicheMinuscule } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le jeu de semence de la vue — `corpusPourVue('V-09')`, variante « palette ». */
@@ -466,7 +467,7 @@
 								autocomplete="off"
 								spellcheck="false"
 								value={cas.requete}
-								placeholder="Chercher une note, une fiche, un signet…"
+								placeholder="Chercher une note, une {motFicheMinuscule}, un signet…"
 								role="combobox"
 								aria-expanded="true"
 								aria-label="Recherche rapide"
