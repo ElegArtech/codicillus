@@ -1,6 +1,7 @@
 # DESIGN.md — le système visuel comme contrainte
 
-**Lot** : T-009 · **Date** : 18 août 2026 · **Régime** : extraction, pas conception.
+**Lot** : T-009, complété par **T-009b** · **Date** : 18 août 2026, complètement de
+l'inventaire le 19 août 2026 · **Régime** : extraction, pas conception.
 
 Ce document ne dessine rien. Il **documente et contraint**. La source unique du
 système visuel reste `mockups/socle.css`, lu et jamais édité (plan §3.5,
@@ -18,7 +19,7 @@ et c'est un écart à remonter, jamais une décision d'exécution.
 |---|---|---|
 | **0** | Sources, préséance, et **l'avertissement sur les deux socles** | Avant toute reprise du socle dans l'application |
 | **1** | Les jetons nommés — décompte réel, rôle, emploi, décisions tracées | Avant d'écrire une déclaration de style |
-| **2** | **L'inventaire fermé des composants** — socle et planche V-41 | Avant d'implémenter une vue |
+| **2** | **L'inventaire fermé des composants** — les 41 maquettes, par nature, et le contrôle P-5 | Avant d'implémenter une vue |
 | **3** | **Le témoin de fraîcheur** — balisage exact, géométrie, interdits | Dès qu'une note est représentée |
 | **4** | Les règles de layout — grille, densité, ruptures, 360 px | Avant de poser une structure |
 | **5** | **Ce qui est proscrit** — huit familles de contrôles mécanisables | Spécification de `pnpm verif:jetons` |
@@ -36,6 +37,7 @@ et c'est un écart à remonter, jamais une décision d'exécution.
 | `mockups/socle.css` (331 lignes) | Les jetons, dix familles de composants | Gelé, lecture seule, empreinte au `GEL.md` |
 | `mockups/V-41-bibliotheque.html` | Onze familles de composants en situation, avec leur règle d'emploi | Gelé, lecture seule |
 | `mockups/V-37-coquille.html`, `V-14`, `V-12` | Grille, densité, points de rupture | Gelés |
+| **Les 41 `mockups/V-xx-*.html`** | Le relevé complet des classes employées, par nature — §2.0, §2.D à §2.I | Gelés, relevés mécaniquement (`verif/inventaire-composants.mjs`) |
 | `cadrage/BRIEF-VUES.md` §3, §V-41 | Les conventions communes que le socle sert | Gelé |
 | `cadrage/CAHIER-DES-CHARGES-FONCTIONNEL.md` | RG-DA-01, RG-DA-03, RG-M18-07, RG-M18-09, RG-M18-12, RG-M18-13 | Gelé |
 
@@ -66,6 +68,10 @@ Conséquences, énoncées ici pour qu'elles soient lisibles plus tard :
    tous employés par les vues gelées.
 2. Une copie conforme de `mockups/socle.css` dans l'application **ne suffirait
    pas** à rendre les vues : il manquerait 23 classes, une règle de rôle et un jeton.
+   *Relevé de T-009b, pour mémoire* : le socle en ligne déclare **58** noms de
+   classe, dont **25** que `mockups/socle.css` ne porte pas — `.si-admin`
+   comprise. L'écart de comptage avec « 23 » n'a pas d'effet : la contrainte
+   réelle est P-6.1, qui compare le fichier au bloc gelé, à l'octet.
 3. Le présent document documente **les deux**, et signale systématiquement ce
    qui n'existe que dans le socle en ligne. La référence de vérité retenue pour
    l'implémentation est le socle en ligne le plus complet, celui de
@@ -352,10 +358,142 @@ n'est pas ci-dessous, l'agent **arrête** et ouvre une fiche dans `docs/ecarts/`
 Il n'invente ni classe, ni variante, ni état. Il ne « compose vite fait » pas
 davantage : une classe locale nouvelle est un composant nouveau.
 
-**Colonne « Règle »** : `socle.css:NNN` désigne la ligne de la déclaration dans
-`mockups/socle.css`. `V-41:NNN` désigne la ligne dans
+**Colonne « Règle » ou « Trace »** : `socle.css:NNN` désigne la ligne de la
+déclaration dans `mockups/socle.css`. `V-41:NNN` désigne la ligne dans
 `mockups/V-41-bibliotheque.html` — soit parce que le composant n'existe que dans
-le socle en ligne (§0.2), soit parce qu'il est propre à la planche.
+le socle en ligne (§0.2), soit parce qu'il est propre à la planche. Les entrées
+du complément (§2.E) tracent au fichier qui **déclare** la classe : `socle.css`
+d'abord, puis `V-07` pour ce que seul le socle en ligne porte — c'est le socle
+retenu par `ECART-008 a)`, identique à celui de V-41 au saut de ligne final près
+—, puis la feuille de vue qui la définit, la première dans l'ordre des numéros.
+
+**Lire d'abord le §2.0.** Il énonce les trois natures de classe, ce que « fermé »
+veut dire pour chacune, et ce que le contrôle P-5 refuse. Sans lui, le mot
+« fermé » induit en erreur : les 41 maquettes connaissent 1 254 classes, et cet
+inventaire n'a pas vocation à les porter toutes au même rang.
+
+### 2.0 Les trois natures, et ce que « fermé » veut dire pour chacune
+
+**Cette section est la clé de lecture de tout le §2, et elle est née d'une
+dette.** L'inventaire ci-dessous avait été extrait de `mockups/socle.css` et de
+la planche V-41, et de rien d'autre. Quatre lots ont relevé ce qu'il ne portait
+pas, sans pouvoir le compléter : 36 classes de V-37 (`ECART-011` É-4), quatre
+classes des zones comparées (`ECART-013` É-4), 86 classes sur V-38, V-39 et V-40
+(`ECART-015`), la famille `.notif__*` désormais portée par le gabarit
+(`ECART-016` É-5). **Le complément est fait, par relevé mécanique des 41
+maquettes gelées.** Il ne se relit pas à la main : l'instrument est
+`verif/inventaire-composants.mjs`, il rejoue le relevé à chaque exécution, et
+`--verifier` confronte ce document au gel.
+
+#### Ce que « employée » veut dire, mécaniquement
+
+Une classe est **employée** par une vue quand la maquette la pose sur un nœud.
+Quatre chemins, tous relevés — les maquettes construisent l'essentiel de leur
+DOM en script, et un relevé qui ne lirait que le balisage serait faux de moitié :
+
+| # | Chemin | Exemple |
+|---|---|---|
+| 1 | l'attribut `class` du balisage | `<div class="panneau">` |
+| 2 | `className`, `classList`, `setAttribute("class", …)`, le balisage porté par une chaîne | `className = "notif"` |
+| 3 | une **fabrique** — toute fonction qui affecte un de ses paramètres à `className`, propagation jusqu'à point fixe comprise | `el("div", "encart-b", …)` |
+| 4 | une table de données ou une fonction de choix, **bornée aux classes que le fichier déclare lui-même** | `{ classe: "p-frais" }`, `return "temoin--obs"` |
+
+Les 41 maquettes portent **1 679 affectations de `className`**, et davantage
+encore d'appels de fabrique. Sans les chemins 2 et 3, `.avatar-p`, `.encart-b`,
+`.chrono__txt` passaient pour mortes alors que V-41 les rend. Les jetons des chemins 2 à 4 qu'aucune maquette ne déclare ni ne pose sont
+**rejetés** : « Gagner du temps » est une phrase d'alerte, pas un composant, et
+`pg-prod-01` est le titre d'une note de démonstration
+(`node verif/inventaire-composants.mjs --rejets`). Le chemin 2 échappe à ce
+crible — ce que reçoit `className` est une classe par construction, même si
+aucune règle ne la style, et `.n1` du sommaire de note est exactement dans ce
+cas. Un littéral qui touche un opérateur de comparaison, lui, n'est jamais
+retenu : dans `tagName === "H3" ? "n2" : "n1"`, « H3 » est comparé, pas posé.
+
+#### Le décompte
+
+Les 41 maquettes connaissent **1 254 classes** — déclarées par une feuille,
+posées par un balisage, ou les deux :
+
+| Nature | Classes | Familles | Son autorité | Ce qui la contrôle |
+|---|---|---|---|---|
+| **Transverse** | **449**, dont 58 au socle en ligne | 202 | **le §2** | **P-5**, nommément |
+| **Propre à une vue** | **790** | 361 | **sa maquette gelée** | P-6.3, P-6.4, batterie 11 |
+| **Hors produit** | **5** | 2 | la maquette, qui les déclare hors produit | le banc, qui les retire (§2.G) |
+| Déclarée sans emploi | 10 | — | aucune — elles ne rendent rien | — (`--residu`) |
+
+Le §6.4 annonçait « 1 202 classes » sans citer sa méthode ; le décompte ci-dessus
+est celui de l'instrument, et il se reproduit par `node
+verif/inventaire-composants.mjs`. Sur les 449 transverses, **210 étaient déjà
+inventoriées** aux §2.A à §2.C ; les **239** autres sont au §2.E.
+
+#### La règle, et elle est opposable
+
+**1 · Transverse — c'est un composant, et l'inventaire le nomme.** Une classe est
+transverse quand **le socle en ligne la déclare** — elle est alors opposable aux
+41 vues quel que soit son nombre d'emplois — **ou** quand **deux vues au moins
+l'emploient**. *Fermé* y a son sens plein, dans les deux directions : une classe
+transverse absente de ce document est un **trou d'inventaire** ; une classe
+employée par l'application et absente des 41 maquettes est une **invention**.
+P-5 dit l'un et l'autre.
+
+**2 · Propre à une vue — la maquette gelée est l'inventaire.** Une classe
+employée par **une seule** vue et non déclarée par le socle n'est pas nommée ici,
+et son absence de ce document **n'autorise rien**. *Fermé* y signifie **relevée
+de la maquette à porter, et de rien d'autre** : l'agent qui implémente V-24 tire
+ses 49 classes propres de `mockups/V-24-import.html`, dont sa feuille est une
+copie à l'octet (P-6.3). La liste d'une vue s'obtient par
+`node verif/inventaire-composants.mjs --liste=V-24`. **Ce document ne la duplique
+pas** : 790 lignes recopiées à la main d'une source gelée seraient une seconde
+source de vérité, donc une occasion de divergence — et le §7 interdit déjà de
+compléter cet inventaire autrement que depuis une source.
+
+**3 · Hors produit — cela ne se porte jamais.** Cinq classes ne vivent qu'à
+l'intérieur d'un bloc que la maquette déclare elle-même hors produit, et que le
+banc retire du DOM avant toute mesure (`verif/banc/conditions.mjs`,
+`BLOCS_HORS_PRODUIT`). Les porter, ce serait porter le contrôle de maquette dans
+le produit. §2.G.
+
+#### Ce que cette règle n'autorise pas
+
+- Elle **n'ouvre pas** la porte à une classe « propre à une vue » inventée en
+  session. Propre à une vue veut dire **présente dans sa maquette gelée**, à sa
+  ligne. Une classe qui n'existe dans **aucune** des 41 maquettes est une
+  invention pure, et un écart au sens plein.
+- Elle ne fait pas de la fréquence un argument de conception. Deux vues suffisent
+  à rendre une classe transverse : **c'est un constat de partage, pas un brevet
+  de qualité.** Le §2.H recense 66 noms partagés dont les vues ne partagent pas
+  la définition — `.vide` et `.noeud` en tête.
+- Elle ne renomme rien et ne factorise rien. Le §2.D tranche quatre
+  contradictions par le décompte ; **aucune ne se solde par un renommage**, parce
+  que la vue à porter garde sa classe (préséance des maquettes, plan §11 D-08).
+
+#### L'instrument, et ce que P-5 contrôle désormais
+
+| Commande | Ce qu'elle donne |
+|---|---|
+| `node verif/inventaire-composants.mjs` | le décompte par nature |
+| `… --verifier` | **P-5** — sort en 1 dès un constat |
+| `… --liste` | les transverses, tracées, par famille |
+| `… --liste=V-xx` | les classes propres d'une vue, tracées |
+| `… --classe=vide` | la fiche d'une classe : nature, trace, emplois, vue par vue |
+| `… --regles=vide` | ses déclarations CSS, vue par vue — pour départager deux homonymes |
+| `… --homonymes` `--orphelines` `--residu` `--rejets` | les quatre signaux du §2.I |
+| `… --json` `--markdown` | le relevé exploitable, et les tables §2.E à §2.H |
+
+`--verifier` porte quatre sous-contrôles, et il **énonce ce qu'il ne couvre pas**
+à chaque exécution (RA-01) :
+
+| # | Ce qu'il refuse | Ce qu'il lit |
+|---|---|---|
+| P-5.1 | une classe employée par `src/**` et absente des 41 maquettes | les `class` des composants, littéraux d'expression compris |
+| P-5.2 | une classe propre à une vue employée par une **autre** vue, ou en dur dans un fichier partagé | idem, croisé au relevé |
+| P-5.3 | un transverse absent du §2 · une entrée du §2 absente du gel ou sans emploi | le §2 de ce fichier, `code spans` compris, une famille notée `.prefixe*` valant pour ses membres |
+| P-5.4 | une colonne « En situation » que le relevé dément | la dernière cellule de chaque ligne de tableau du §2 |
+
+**Ce qu'il ne couvre pas** : le sens inverse de P-5.2 — une variante documentée
+et non implémentée — suppose une vue achevée, et 36 vues restent à écrire ; et
+une classe posée par une expression Svelte non littérale échapperait au relevé de
+`src/**` (aucune n'existe aujourd'hui).
 
 ### 2.A Les familles du socle
 
@@ -416,9 +554,9 @@ Règles : `socle.css:170` à `:205`.
 | Classe | Variantes | États | Règle | En situation |
 |---|---|---|---|---|
 | `.past` | base | — | `socle.css:249` | V-03, V-14, V-15, V-37 et les listes |
-| `.past--type` | type de note / de fiche | — | `socle.css:259` | V-08, V-12, V-14 |
-| `.past--brouillon` | statut brouillon | — | `socle.css:263` | V-12, V-17 |
-| `.past--etiquette` | étiquette | `:hover` | `socle.css:267`, `:271`, `:272` | V-14, V-08 — croisillon en `::before` |
+| `.past--type` | type de note / de fiche | — | `socle.css:259` | V-02, V-03, V-04, V-12, V-14, V-15, V-18, V-19, V-20, V-25, V-26, V-31, V-37, V-41 |
+| `.past--brouillon` | statut brouillon | — | `socle.css:263` | V-02, V-04, V-12, V-13, V-26, V-41 |
+| `.past--etiquette` | étiquette | `:hover` | `socle.css:267`, `:271`, `:272` | V-12, V-14, V-15, V-18, V-22, V-37, V-41 — croisillon en `::before` |
 | pastille de domaine | puce colorée + nom | — | V-41 famille « Pastilles » | Teinte d'identification du domaine |
 | pastille de filtre actif | + bouton de retrait | — | V-41 famille « Pastilles » | V-08, V-12 |
 
@@ -455,9 +593,16 @@ deux conteneurs du même type** : deux cadres emboîtés ne hiérarchisent rien
 | État | Composant | Règle d'emploi |
 |---|---|---|
 | **Chargement** | esquisse typée (`.sq-*`) | Une esquisse **de la structure qui arrive**, jamais un rouet universel |
-| **Vide** | `.zone-etat` | Titre qui nomme la situation, phrase qui explique, action qui en sort. « Il n'y a rien » et « vos filtres ne renvoient rien » **ne se confondent jamais** |
+| **Vide** | `.zone-etat` — **c'est elle qui fait loi**, §2.D-1 | Titre qui nomme la situation, phrase qui explique, action qui en sort. « Il n'y a rien » et « vos filtres ne renvoient rien » **ne se confondent jamais** |
 | **Erreur** | bloc d'erreur local (V-41, famille « Retours ») | La panne d'un panneau ne condamne pas l'écran. Dire ce qui continue de fonctionner, proposer de réessayer |
 | **Sans droit** | l'action n'est pas rendue (`.si-ecriture`, `.si-admin`) | Pas de composant : l'élément est absent du DOM |
+
+**Une seconde famille existe dans le corpus, et elle n'est pas celle-ci.** V-08
+et V-39 emploient `.vide`, `.vide__titre`, `.vide__txt` — et V-39, la planche des
+états, **n'emploie pas `.zone-etat`**. Les deux vues n'en donnent pas la même
+définition, ce qui interdit d'y voir un composant commun. La contradiction est
+tranchée au **§2.D-1** : `.zone-etat` fait loi, `.vide` reste au gel de ses deux
+vues et ne se factorise pas.
 
 #### A-8 · Notifications
 
@@ -493,13 +638,14 @@ la pile occupe toute la largeur.
 | `.champ__label` | + `.oblig` | — | `V-41:412`, `:415` | Toujours **au-dessus** du champ |
 | `.champ__aide` | — | — | `V-41:416` | Sous le champ |
 | `.champ__erreur` | — | — | `V-41:435` | **Remplace** l'aide |
-| `.saisie` | `input`, `textarea`, `select` | `:hover`, `:focus`, `:disabled`, `::placeholder` | `V-41:418`–`430` | — |
+| `.saisie` | `input`, `textarea` — **pas `select`**, §2.D-3 | `:hover`, `:focus`, `:disabled`, `::placeholder` | `V-41:418`–`430` | 17 vues |
+| `.selecteur` | `select` | `:hover`, `:focus`, `:disabled` | `V-17:1009` | V-17, V-23, V-24, V-27, V-28, V-29, V-30, V-31, V-32, V-33, V-36, V-40 — définitions divergentes, §2.H |
 | `.champ__boite`, `.champ__action` | champ à action attenante | `:hover` | `V-41:441`, `:443` | Révéler un mot de passe (V-05), vider une saisie |
 | `.case`, `.case__txt`, `.case__aide` | case à cocher | — | `V-41:451`–`457` | V-05, V-24, V-30, V-31, V-32 |
-| `.avis-saisie` | avertissement non bloquant | — | `V-41:460` | V-34 |
+| `.avis-saisie` | avertissement non bloquant | — | `V-41:460` | V-05, V-06 (§2.D-4) |
 | `.interrupteur`, `.interrupteur__piste` | interrupteur | `:checked`, `:focus` | `V-41:1627`–`1633` | V-17, V-25 |
-| `.etq-boite`, `.etq`, `.etq-suggestions`, `.etq-sug`, `.etq-sug__n`, `.etq-sug__neuf` | saisie d'étiquettes | `[data-ouvert="oui"]` | `V-41:1250`–`1284` | V-17, V-18, V-23 |
-| `.dossier-choix-b`, `.dc-b` | sélecteur arborescent | — | `V-41:1635`–`1643` | V-13, V-40 (variante `.arbre-choix`) |
+| `.etq-boite`, `.etq`, `.etq-suggestions`, `.etq-sug`, `.etq-sug__n`, `.etq-sug__neuf` | saisie d'étiquettes | `[data-ouvert="oui"]` | `V-41:1250`–`1284` | V-17, V-23, V-41 |
+| `.dossier-choix-b`, `.dc-b` | sélecteur arborescent | — | `V-41:1635`–`1643` | **V-41 seulement** — la variante `.arbre-choix` ailleurs (§2.E) |
 
 **Règles d'emploi** (V-41, famille « Champs de saisie ») :
 
@@ -550,11 +696,11 @@ V-33, V-34).
 
 | Composant | Classes | Règle | En situation |
 |---|---|---|---|
-| Carte de résultat | `.carte`, `.carte__haut`, `.carte__titre`, `.carte__extrait`, `.carte__signal`, `.carte__revision`, `.carte__pied`, `.carte__chemin`, `.carte--publique`, `[data-sel="oui"]` | `V-41:954`–`1019` | V-02, V-04, V-08, V-26 |
-| Marqueurs de carte | `.marque-op`, `.marque-signet` | `V-41:1004`, `:1011` | V-02, V-04, V-08, V-26 |
+| Carte de résultat | `.carte`, `.carte__haut`, `.carte__titre`, `.carte__extrait`, `.carte__signal`, `.carte__revision`, `.carte__pied`, `.carte__chemin`, `.carte--publique`, `[data-sel="oui"]` | `V-41:954`–`1019` | V-02, V-04, V-26, V-41 — la recherche connectée rend ses résultats en `.pres` |
+| Marqueurs de carte | `.marque-op`, `.marque-signet` | `V-41:1004`, `:1011` | V-02, V-04, V-26, V-41 |
 | Panneau | `.panneau*` | `socle.css:277` | → A-6 |
-| Encart | `.encart-b` | `V-41:1613` | Dans un corps de texte |
-| Panneau latéral | `.tiroir-form*` | Style local des vues console | V-15, V-27 à V-32 |
+| Encart | `.encart-b` | `V-41:1613` | **V-41 seulement** — le produit a quatre familles de bandeau, §2.D-4 |
+| Panneau latéral | `.tiroir-form*` | Style local des vues console | V-27, V-28, V-29, V-30, V-31, V-32 |
 
 *« Quatre niveaux de mise en boîte, du plus au moins engageant. Ne jamais en
 imbriquer deux du même type. »* — La carte porte **toujours** le témoin de
@@ -567,7 +713,7 @@ préféré à la boîte de dialogue quand la saisie est longue.
 | Composant | Classes | États | Règle | En situation |
 |---|---|---|---|---|
 | Fil d'Ariane | `.fil`, `.fil a`, `.fil span`, `.fil__courant` | — | `V-41:551`–`555`, `:1687`–`1689` | 34 vues |
-| Onglets | `.onglets-d` | `[aria-selected]` | `V-41:1512` | V-25, V-34 (variante `.onglets-o`) |
+| Onglets | `.onglets-d` | `[aria-selected]` | `V-41:1512` | **V-41 seulement** — deux autres vues ont chacune la leur (§2.D-2) |
 | Arborescence | `.arbre`, `.noeud`, `.noeud__chevron`, `.noeud__nom`, `.noeud--courant`, `.noeud__rouet`, `[data-ouvert]` | ouvert / fermé / courant / en chargement | `V-41:513`–`535`, `:606` | 27 vues, rail compris |
 | Pagination | `.pagination`, `.pagination__saut` | `[aria-current="page"]` | `V-41:1521`–`1531` | **V-41 seulement** — voir §6.3 |
 
@@ -587,8 +733,8 @@ courante et le total**.
 |---|---|---|---|---|
 | Tableau triable | `.tableau-tri`, `.tableau-tri th button`, `td.n` | `[aria-sort]` | `V-41:1533`–`1548` | **V-41 seulement** (V-34 emploie `.tg`, voir §6.3) |
 | Boîte de tableau | `.tableau-boite` | défilement horizontal contenu | `V-41:892`, `:1679` | V-03, V-14, V-15, V-17, V-18, V-37 |
-| Indicateur chiffré | `.indicateur`, `.indicateur__val`, `.indicateur__nom` | — | `V-41:1562`–`1564` | **V-41 seulement** (V-34 emploie `.mesure-a`, `.nord`) |
-| Tendance | `.tendance-c` | `[data-sens="hausse"|"baisse"|"stable"]` | `V-41:1565`–`1568` | V-07, V-34 (`.tendance`) |
+| Indicateur chiffré | `.indicateur`, `.indicateur__val`, `.indicateur__nom` | — | `V-41:1562`–`1564` | **V-41 seulement** — trois formes concurrentes, tranchées au §2.D-2 |
+| Tendance | `.tendance-c` | `[data-sens="hausse"|"baisse"|"stable"]` | `V-41:1565`–`1568` | **V-41 seulement** — `.tendance` ailleurs (§2.E) |
 | Chronologie | `.chrono`, `.chrono__txt`, `.chrono__quand` | `[data-marque="fait"]` | `V-41:1550`–`1560` | V-14 |
 | Barre de répartition | `.repart`, `.p-frais`, `.p-vieil`, `.p-obs`, `.legende` | parts cliquables | `V-41:1032`–`1049` | V-07, V-10, V-11, V-33, V-34 |
 
@@ -607,10 +753,10 @@ quelque chose. Une tendance stable se dit aussi. »* L'en-tête trié porte
 | Sélecteur arborescent de destination | `.arbre-choix`, `.choix`, `.choix__nom`, `.choix__motif`, `[data-refuse="oui"]` | refusé | `V-41:1212`–`1232` | V-13, V-40 |
 | Palette de recherche rapide | `.palette`, `.palette__boite`, `.palette__champ`, `.palette__saisie`, `.palette__effacer`, `.palette__curseur`, `.palette__degrade`, `.palette__liste`, `.palette__groupe`, `.palette__etat`, `.palette__requete`, `.palette__pied`, `.palette__aides`, `.palette__compteur`, `.palette__tous`, `.palette__fermer`, `.palette-hote` | `[open]`, `[data-curseur]`, `[data-degrade]` | `V-41:1296`–`1436` | V-09 et 29 vues |
 | Ligne de présentation | `.pres`, `.pres__glyphe`, `.pres__corps`, `.pres__titre`, `.pres__sous`, `.pres__entree` | `[data-sel="oui"]` | `V-41:1370`–`1410` | Résultats de palette, 31 vues |
-| Menu contextuel | `.menu-ctx`, `.menu-ctx__sep`, `.menu-ctx__raccourci`, `button.destructif` | — | `V-41:1596`–`1611` | V-12, V-22 |
+| Menu contextuel | `.menu-ctx`, `.menu-ctx__sep`, `.menu-ctx__raccourci`, `button.destructif` | — | `V-41:1596`–`1611` | **V-41 seulement** — les listes emploient `.fac-menu*` (§2.E) |
 | Menu de barre | `.menu-barre`, `.menu-barre__liste`, `.menu-barre__entete`, `.menu-barre__sep` | `[data-ouvert="oui"]` | `V-41:579`–`603` | V-37 et les vues à coquille |
-| Infobulle | `.infobulle`, `.infobulle-h` | `:hover`, `:focus` | `V-41:1581`–`1594` | V-08 |
-| Agrandissement d'image | `.loupe`, `.loupe__boite`, `.loupe__pied` | `[open]` | `V-41:929`–`936` | V-03, V-14, V-15, V-17, V-18, V-31, V-37 |
+| Infobulle | `.infobulle`, `.infobulle-h` | `:hover`, `:focus` | `V-41:1581`–`1594` | **V-41 seulement** — aucune autre vue n'en porte |
+| Agrandissement d'image | `.loupe`, `.loupe__boite`, `.loupe__pied` | `[open]` | `V-41:929`–`936` | V-03, V-14 — cinq autres vues la déclarent sans l'employer |
 
 *« Ce qui exige une décision avant de continuer est une boîte de dialogue ; tout
 le reste doit pouvoir être ignoré. »*
@@ -654,7 +800,7 @@ Notifications → A-8. État vide, état de chargement, état d'erreur local →
 | Composant | Classes | Règle | En situation |
 |---|---|---|---|
 | Avatar | `.avatar` (barre), `.avatar-p` (contenu) | `V-41:571`, `:1571` | V-10, V-25, V-37 |
-| Pile d'avatars | `.piles`, `.avatar-p--reste` | `V-41:1570`, `:1579` | V-10 |
+| Pile d'avatars | `.piles`, `.avatar-p--reste` | `V-41:1570`, `:1579` | **V-41 seulement** — la page d'univers empile par `.avatars` (§2.F) |
 | Touche clavier | `.touche` (`<kbd>`) | `V-41:566` | 35 vues |
 
 *« Un avatar n'est jamais seul quand le nom peut tenir à côté : deux initiales
@@ -677,8 +823,570 @@ Non listés par V-41 comme une famille, mais posés par V-37 et employés par le
 | Sommaire de note | `.sommaire`, `.sommaire__liste`, `.sommaire__num` | `[aria-current="true"]` | `V-41:635`–`650` | V-03, V-14, V-15 |
 | En-tête de note | `.entete`, `.entete__sur`, `.titre-note` | — | `V-41:653`–`655` | V-03, V-14, V-15 |
 | Cartouche de contrôle | `.cartouche*`, `.tampon` | `[data-niveau]`, `.tamponne` | `V-41:663`–`723` | V-03, V-14, V-15, V-37 → §3 |
-| Métadonnées | `.meta`, `.chiffre` | — | `V-41:727`–`736` | V-03, V-14, V-15, V-17, V-18, V-37 |
-| Sélecteur de registre | `.registre`, `.registre__pt`, `.invite-op` | `[aria-selected]` | `V-41:739`–`764` | V-03, V-14, V-15, V-18, V-37 |
+| Métadonnées | `.meta`, `.chiffre` | — | `V-41:727`–`736` | V-03, V-14, V-15, V-17, V-37 — `.chiffre` aussi en V-11, V-25, V-34, V-41 |
+| Sélecteur de registre | `.registre`, `.registre__pt`, `.invite-op` | `[aria-selected]` | `V-41:739`–`764` | V-03, V-14, V-15, V-37 |
+
+### 2.D Les quatre contradictions, tranchées par le décompte
+
+Quatre contradictions traînaient dans ce document, relevées par les lots et
+jamais tranchées faute de relevé. Elles le sont ici, **par la préséance des
+maquettes et par le nombre d'emplois réels**, jamais par goût. Chaque décompte
+se reproduit : `node verif/inventaire-composants.mjs --classe=NOM`.
+
+#### D-1 · `.zone-etat` contre `.vide` — l'état vide
+
+C'est la contradiction que `ECART-015` désignait comme *« la première à
+trancher »* : le §2 donne `.zone-etat` comme composant d'état vide, mais V-39 —
+la vue qui définit les états vides — ne l'emploie pas.
+
+| | `.zone-etat`, `.zone-etat__titre`, `.zone-etat__txt` | `.vide`, `.vide__titre`, `.vide__txt`, `.vide--sobre`, `.vide__actions` |
+|---|---|---|
+| Déclarée par | `mockups/socle.css:303`–`305`, **et le socle en ligne des 41 maquettes** | la feuille de **V-08** (`V-08:909`) et celle de **V-39** (`V-39:727`), et rien d'autre |
+| Employée par | **5 vues** — V-07, V-10, V-14, V-29, V-34 ; la variante `__txt` seule : 10 vues | **2 vues** — V-08, V-39 |
+| Définitions | **une seule**, identique dans les 41 fichiers | **deux, qui divergent** : bord `1px solid --c-trait` contre `1px dashed --c-trait-fort`, `--e-7 --e-5` contre `--e-5 --e-4`, titre `--t-t2` contre `--t-t3` |
+
+**`.zone-etat` fait loi.** Elle est au socle — donc opposable aux 41 vues —, elle
+est employée par cinq vues, et elle n'a **qu'une définition**. `.vide` en a deux,
+qui ne décrivent pas le même objet : ce n'est pas un composant transverse, c'est
+**un nom que deux vues emploient chacune pour le sien**.
+
+**Ce que devient `.vide`.** Elle ne disparaît pas et ne se renomme pas : elle est
+dans deux maquettes gelées. V-08 et V-39 se portent avec elle, chacune avec **sa**
+définition, par P-6.3 — leur feuille est une copie à l'octet. Elle est
+inventoriée au §2.E, marquée divergente au §2.H, et cela veut dire une chose
+précise : **ne jamais la factoriser**, ni la promouvoir au socle, ni la donner en
+exemple à une vue nouvelle. Une zone vide à écrire emploie `.zone-etat`.
+
+**Le constat d'`ECART-015` reste vrai, et il est mesuré** : les trois occurrences
+de `zone-etat` dans `mockups/V-39-etats.html` sont les trois déclarations du
+socle ; **aucune n'est un emploi**. La planche des états ne démontre pas le
+composant d'état vide du socle. Ce n'est pas un défaut à corriger — `mockups/`
+est en lecture seule — mais un fait à connaître avant de porter V-39.
+
+#### D-2 · Trois formes d'indicateur chiffré
+
+| Forme | Trace | Ce qu'elle porte | Employée par |
+|---|---|---|---|
+| `.indicateur`, `.indicateur__val`, `.indicateur__nom` | `V-41:1562`–`1564` | la démonstration de la planche | **1 vue** — V-41 |
+| `.mesure`, `.mesure__val`, `.mesure__nom`, `.mesure__sous` | `V-10:764`–`769` | le chiffre d'un panneau d'univers ou de domaine | **3 vues** — V-10, V-11, V-37 |
+| `.mesure-a`, `.mesure-a__val`, `.nord` | `V-34:1062`–`1063`, `:960` | l'indicateur d'analytique et sa mesure phare | **1 vue** — V-34 |
+
+**Aucune n'est canonique, et le décompte le dit sans ambiguïté.** La plus
+employée est `.mesure`, à trois vues — mais ses trois vues **n'en donnent pas la
+même définition** (§2.H), ce qui lui interdit précisément le rang de forme
+commune. `.indicateur` est démontrée par la planche et employée par **aucune**
+des quarante autres vues.
+
+**Décision — elle confirme le §6.3, désormais chiffré : l'implémentation reprend
+la classe de la vue à porter.** Aucune promotion, aucun renommage, aucune
+factorisation. `.indicateur` reste au §2.B, marquée « V-41 seulement ».
+
+**Le même motif se répète ailleurs, et il faut le lire comme un motif, pas comme
+trois accidents** : les onglets sont `.onglets-d` en V-41, `.onglets` en V-25,
+`.onglets-o` en V-34 — trois vues, trois noms, aucun partagé ; le tableau est
+`.tableau-tri` en V-41 et `.tableau-gestion` / `.tg` dans sept vues de console ;
+la pagination n'existe qu'en V-41. **La planche V-41 démontre 37
+classes qu'aucune autre vue n'emploie** (`--liste=V-41`), et non quatre comme le
+§6.3 le supposait.
+
+#### D-3 · `.selecteur` contre `.saisie`
+
+Le §2 A-9 range `select` sous `.saisie`. **Le relevé le dément.**
+
+| | `.saisie` | `.selecteur` |
+|---|---|---|
+| Déclarée | socle en ligne, `V-07:418`–`430` — absente de `mockups/socle.css` (§0.2) | la feuille de 10 vues, à partir de `V-17:1009` |
+| Employée | **17 vues** | **12 vues** — V-17, V-23, V-24, V-27, V-28, V-29, V-30, V-31, V-32, V-33, V-36, V-40 |
+| Portée | `input`, `textarea` | `select` |
+| Définitions | une | **cinq corps distincts** sur dix déclarations — `padding` de 7, 8 ou 9 px, taille `--t-base` ou `--t-petit` |
+
+**Le fait qui tranche** : sur les 25 `<select>` que les 41 maquettes portent avec
+une classe, **quinze portent `.selecteur`, dix portent `.nav2__selecteur`, et
+aucun ne porte `.saisie`**. Réciproquement, aucun `input` ni `textarea` ne porte
+`.selecteur`.
+
+**`.selecteur` entre à l'inventaire comme composant transverse à part entière**
+(§2.E), et la ligne `.saisie` du §2 A-9 est corrigée : elle couvre `input` et
+`textarea`, pas `select`. La règle d'emploi de la planche — *« le sélecteur quand
+les valeurs possibles sont connues, fermées et peu nombreuses »* — vaut toujours ;
+c'est la classe qui était fausse, pas la règle. Ses définitions divergentes
+(§2.H) interdisent ici encore de la factoriser : chaque vue porte la sienne.
+
+#### D-4 · `.contexte*`, quatrième famille d'encart
+
+Le §2 B-5 donne quatre niveaux de mise en boîte et cite `.encart-b` comme
+l'encart. Le relevé donne cinq familles de bandeau ou d'encart, et `.encart-b`
+n'est pas la plus employée — c'est la moins employée de toutes.
+
+| Famille | Trace | Ce qu'elle dit | Employée par |
+|---|---|---|---|
+| `.alerte`, `.alerte__tete`, `.alerte__glyphe`, `.alerte--astuce`, `.alerte--attention`, `.alerte--danger` | `V-03:707`–`722` | un avertissement **dans un corps rédigé** | **8 vues** — V-03, V-14, V-15, V-17, V-18, V-31, V-37, V-41 |
+| `.contexte`, `.contexte__marque`, `.contexte__titre`, `.contexte--succes`, `.contexte--info`, `.contexte--attente`, `.contexte--erreur`, `.contexte__compte` | `V-05:476`–`497` | l'**état de la situation** en tête d'écran ou de dialogue | **6 vues** — V-05, V-06, V-15, V-31, V-32, V-40 |
+| `.avis`, `.avis__titre`, `.avis__corps`, `.avis__actions`, `.avis__fermer`, `.avis--doublon`, `.avis--erreur`, `.avis--info`, `.avis--resync` | `V-17:982`–`994` | un avis **d'éditeur**, refermable | **2 vues** — V-17, V-18 |
+| `.avis-saisie` | `V-07:460` (socle en ligne) | un avertissement **non bloquant sous un champ** | **2 vues** — V-05, V-06 |
+| `.encart-b` | `V-41:1613` | la démonstration de l'encart | **1 vue** — V-41 |
+
+**`.contexte*` entre à l'inventaire comme quatrième famille**, et elle y entre
+par son décompte : six vues, une seule définition, aucune divergence. `.encart-b`
+reste ce qu'elle est — une démonstration de planche — et le §2 B-5 ne peut pas la
+présenter comme l'encart du produit.
+
+**Un piège mesuré, à connaître avant de porter** : `.contexte` est **employée par
+six vues et déclarée par deux** (V-05 et V-06). V-15, V-31, V-32 et V-40 la
+posent sans qu'aucune de leurs feuilles ne la définisse : dans ces quatre vues,
+le nœud **rend sans style**, et c'est le gel qui le veut. Le porter fidèlement,
+c'est porter la classe sans chercher la règle manquante. Il y a **92 emplois
+orphelins** de cette sorte dans le corpus (§2.I).
+
+### 2.E Le complément — les composants transverses relevés des 41 maquettes
+
+**239 classes, 124 familles.** Ce sont les composants transverses que les §2.A à
+§2.C ne portaient pas : ils viennent des 39 maquettes qui n'avaient jamais été
+dépouillées. Chacune est tracée à la ligne du fichier qui la **déclare** —
+`socle.css:NNN` quand le fichier gelé la porte, `V-07:NNN` quand elle n'existe
+que dans le socle en ligne (§0.2), `V-xx:NNN` quand c'est la feuille d'une vue
+qui la définit, la première dans l'ordre des numéros.
+
+La colonne « Employée par » donne le décompte réel, tous chemins confondus
+(§2.0). La mention **divergente** renvoie au §2.H : le nom est partagé, la
+définition ne l'est pas — **une telle classe ne se factorise jamais**, elle se
+porte vue par vue depuis le gel.
+
+Cette table est **dérivée**, pas rédigée : `node
+verif/inventaire-composants.mjs --markdown` la réémet, et `--verifier` refuse
+qu'elle et le gel divergent.
+
+| Classe | Trace | Employée par |
+|---|---|---|
+| `.ac__n` | `V-40:868` | 2 — V-40, V-41 |
+| `.actifs` | `V-02:609` | 4 — V-02, V-08, V-12, V-22 |
+| `.actifs__vider` | `V-02:624` | 4 — V-02, V-08, V-12, V-22 |
+| `.adresse-demandee` | `V-04:638` | 2 — V-04, V-26 |
+| `.aide` | `V-07:689` | 2 — V-07, V-30 |
+| `.amorce` | `V-07:859` | 2 — V-07, V-11 · **divergente** |
+| `.amorce__actions` | `V-07:871` | 2 — V-07, V-11 |
+| `.apercu-bandeau` | `V-17:1121` | 2 — V-17, V-18 |
+| `.arete` | `V-19:829` | 2 — V-19, V-20 · **divergente** |
+| `.auth` | `V-05:415` | 2 — V-05, V-06 |
+| `.auth__boite` | `V-05:439` | 2 — V-05, V-06 |
+| `.auth__colonne` | `V-05:421` | 2 — V-05, V-06 |
+| `.auth__form` | `V-05:453` | 2 — V-05, V-06 |
+| `.auth__lien` | `V-05:461` | 2 — V-05, V-06 |
+| `.auth__ligne` | `V-05:457` | 2 — V-05, V-06 |
+| `.auth__marque` | `V-05:424` | 2 — V-05, V-06 |
+| `.auth__nom` | `V-05:434` | 2 — V-05, V-06 |
+| `.auth__pied` | `V-05:467` | 2 — V-05, V-06 |
+| `.auth__sceau` | `V-05:428` | 2 — V-05, V-06 |
+| `.auth__sous` | `V-05:450` | 2 — V-05, V-06 |
+| `.auth__titre` | `V-05:446` | 2 — V-05, V-06 |
+| `.avis` | `V-17:982` | 2 — V-17, V-18 |
+| `.avis__actions` | `V-17:990` | 2 — V-17, V-18 |
+| `.avis__corps` | `V-17:988` | 2 — V-17, V-18 |
+| `.avis__titre` | `V-17:989` | 2 — V-17, V-18 |
+| `.avis--doublon` | `V-17:991` | 2 — V-17, V-18 |
+| `.avis--erreur` | `V-17:992` | 2 — V-17, V-18 |
+| `.avis--info` | `V-17:993` | 2 — V-17, V-18 |
+| `.bandeau` | `V-14:961` | 3 — V-14, V-15, V-37 |
+| `.bandeau__corps` | `V-14:973` | 3 — V-14, V-15, V-37 |
+| `.bandeau__marque` | `V-14:968` | 3 — V-14, V-15, V-37 |
+| `.bandeau__note` | `V-14:975` | 3 — V-14, V-15, V-37 |
+| `.bandeau__titre` | `V-14:974` | 3 — V-14, V-15, V-37 |
+| `.bandeau--brouillon` | `V-14:982` | 3 — V-14, V-15, V-37 |
+| `.bandeau--resync` | `V-14:984` | 3 — V-14, V-15, V-37 |
+| `.bandeau--revision` | `V-14:980` | 3 — V-14, V-15, V-37 |
+| `.bandeaux` | `V-14:959` | 3 — V-14, V-15, V-37 |
+| `.barre-etat` | `V-17:1098` | 2 — V-17, V-18 |
+| `.barre-etat__actions` | `V-17:1116` | 2 — V-17, V-18 |
+| `.barre-outils` | `V-12:824` | 2 — V-12, V-22 |
+| `.barre-progres` | `V-24:995` | 2 — V-24, V-36 · **divergente** |
+| `.bascule-vue` | `V-19:706` | 2 — V-19, V-20 |
+| `.bilan` | `V-16:736` | 2 — V-16, V-24 · **divergente** |
+| `.bloc` | `V-13:923` | 2 — V-13, V-25 · **divergente** |
+| `.bouton-facettes` | `V-02:631` | 2 — V-02, V-08 |
+| `.bouton-meta` | `V-17:1154` | 2 — V-17, V-18 |
+| `.btn--verifier` | `V-03:537` | 3 — V-14, V-15, V-37 |
+| `.btn-copier` | — *crochet de script, aucune règle* | 5 — V-14, V-15, V-17, V-18, V-37 |
+| `.carte__visibilite` | `V-02:540` | 4 — V-02, V-04, V-26, V-41 |
+| `.carto` | `V-19:687` | 2 — V-19, V-20 |
+| `.champ-public` | `V-01:388` | 3 — V-01, V-02, V-04 · **divergente** |
+| `.champ-public__effacer` | `V-01:406` | 3 — V-01, V-02, V-04 |
+| `.chapeau` | `V-01:353` | 4 — V-01, V-02, V-03, V-04 |
+| `.colonne` | `V-07:774` | 2 — V-07, V-11 |
+| `.colonne-redaction` | `V-17:852` | 2 — V-17, V-18 · **divergente** |
+| `.commandes` | `V-17:937` | 2 — V-17, V-18 |
+| `.compte-filtres` | `V-02:632` | 3 — V-02, V-08, V-12 |
+| `.compteur` | `V-02:606` | 2 — V-02, V-08 |
+| `.console` | `V-27:733` | 11 — 11 vues |
+| `.contexte` | `V-05:476` | 6 — 6 vues |
+| `.contexte__marque` | `V-05:483` | 6 — 6 vues |
+| `.contexte__titre` | `V-05:488` | 6 — 6 vues |
+| `.contexte--attente` | `V-05:493` | 2 — V-05, V-06 |
+| `.contexte--info` | `V-05:489` | 2 — V-05, V-06 |
+| `.contexte--succes` | `V-05:495` | 5 — V-05, V-15, V-31, V-32, V-40 |
+| `.controles` | `V-19:694` | 3 — V-19, V-20, V-21 |
+| `.controles__groupe` | `V-19:700` | 2 — V-19, V-20 |
+| `.corps-public` | `V-01:432` | 2 — V-01, V-02 · **divergente** |
+| `.couleurs` | `V-27:880` | 2 — V-27, V-28 |
+| `.crit` | `V-19:788` | 2 — V-19, V-20 |
+| `.crit__boite` | `V-19:789` | 2 — V-19, V-20 |
+| `.crit__boite--rupture` | `V-19:796` | 2 — V-19, V-20 |
+| `.crit__nom` | `V-19:795` | 2 — V-19, V-20 |
+| `.crit__val` | `V-19:794` | 2 — V-19, V-20 |
+| `.degrade` | `V-08:820` | 2 — V-08, V-39 · **divergente** |
+| `.depot` | `V-24:894` | 2 — V-24, V-35 · **divergente** |
+| `.depot__ic` | `V-24:900` | 2 — V-24, V-35 · **divergente** |
+| `.detail__section` | `V-19:785` | 2 — V-19, V-20 |
+| `.detail__sous` | `V-19:784` | 2 — V-19, V-20 |
+| `.detail__tete` | `V-19:779` | 2 — V-19, V-20 |
+| `.detail__titre` | `V-19:780` | 2 — V-19, V-20 |
+| `.detail__vide` | `V-19:777` | 2 — V-19, V-20 |
+| `.detail-col` | `V-19:743` | 2 — V-19, V-20 · **divergente** |
+| `.doc` | `V-38:625` | 3 — V-38, V-39, V-40 · **divergente** |
+| `.doc__tete` | `V-38:627` | 3 — V-38, V-39, V-40 · **divergente** |
+| `.domaine` | `V-11:716` | 2 — V-07, V-11 |
+| `.editeur` | `V-17:845` | 2 — V-17, V-18 |
+| `.esq-carte` | `V-02:641` | 2 — V-02, V-08 |
+| `.esq-l` | `V-07:886` | 2 — V-07, V-14 · **divergente** |
+| `.etape` | `V-06:550` | 2 — V-06, V-24 |
+| `.etape__sous` | `V-24:853` | 2 — V-24, V-25 |
+| `.fac-menu` | `V-12:766` | 2 — V-12, V-22 |
+| `.fac-menu__bouton` | `V-12:767` | 2 — V-12, V-22 |
+| `.fac-menu__n` | `V-12:780` | 2 — V-12, V-22 |
+| `.fac-menu__panneau` | `V-12:785` | 2 — V-12, V-22 |
+| `.facette` | `V-02:575` | 4 — V-02, V-08, V-12, V-22 |
+| `.facette__corps` | `V-02:585` | 4 — V-02, V-08, V-12, V-22 |
+| `.facette__tete` | `V-02:577` | 4 — V-02, V-08, V-12, V-22 |
+| `.facettes` | `V-02:574` | 2 — V-02, V-08 · **divergente** |
+| `.filtre` | `V-02:611` | 4 — V-02, V-08, V-12, V-22 |
+| `.filtres-barre` | `V-12:765` | 2 — V-12, V-22 |
+| `.flux` | `V-10:820` | 2 — V-10, V-25 |
+| `.flux__quand` | `V-10:834` | 2 — V-10, V-25 |
+| `.flux__txt` | `V-10:831` | 2 — V-10, V-25 |
+| `.graphe` | `V-19:833` | 2 — V-19, V-20 |
+| `.groupe` | `V-13:882` | 2 — V-13, V-33 |
+| `.groupe__nom` | `V-13:888` | 2 — V-13, V-33 · **divergente** |
+| `.groupe__tete` | `V-13:883` | 2 — V-13, V-33 · **divergente** |
+| `.icones` | `V-27:890` | 2 — V-27, V-29 |
+| `.introuvable` | `V-04:619` | 2 — V-04, V-26 · **divergente** |
+| `.introuvable__txt` | `V-04:631` | 2 — V-04, V-26 · **divergente** |
+| `.jalon` | `V-06:519` | 2 — V-06, V-24 |
+| `.jalon__barre` | `V-06:524` | 2 — V-06, V-24 |
+| `.jalon__nom` | `V-06:528` | 2 — V-06, V-24 · **divergente** |
+| `.jalons` | `V-06:514` | 2 — V-06, V-24 · **divergente** |
+| `.lecture` | `V-14:950` | 3 — V-14, V-15, V-37 · **divergente** |
+| `.lg__forme` | `V-19:763` | 2 — V-19, V-20 |
+| `.liste` | `V-12:853` | 2 — V-07, V-12 |
+| `.marque` | `V-01:358` | 4 — V-01, V-02, V-03, V-04 · **divergente** |
+| `.marque__nom` | `V-01:365` | 4 — V-01, V-02, V-03, V-04 |
+| `.marque__sceau` | `V-01:359` | 4 — V-01, V-02, V-03, V-04 |
+| `.menu-barre__liste--droite` | `V-07:587` | 8 — 8 vues |
+| `.menu-barre__nom` | `V-07:602` | 8 — 8 vues |
+| `.menu-barre__role` | `V-07:603` | 8 — 8 vues |
+| `.menu-etendu` | `V-17:899` | 2 — V-17, V-18 |
+| `.menu-etendu__liste` | `V-17:900` | 2 — V-17, V-18 |
+| `.mesure` | `V-10:764` | 3 — V-10, V-11, V-37 · **divergente** |
+| `.mesure__nom` | `V-10:768` | 3 — V-10, V-11, V-37 · **divergente** |
+| `.mesure__sous` | `V-10:773` | 2 — V-10, V-11 · **divergente** |
+| `.mesure__val` | `V-10:769` | 3 — V-10, V-11, V-37 · **divergente** |
+| `.meta-panneau` | `V-17:1001` | 2 — V-17, V-18 |
+| `.modes` | `V-08:715` | 2 — V-08, V-16 · **divergente** |
+| `.module` | `V-11:783` | 2 — V-11, V-17 |
+| `.module__corps` | `V-11:798` | 2 — V-11, V-17 |
+| `.module__ic` | `V-11:792` | 2 — V-11, V-17 |
+| `.module__nom` | `V-11:799` | 2 — V-11, V-17 |
+| `.module__sous` | `V-11:804` | 2 — V-11, V-17 |
+| `.n1` | — *crochet de script, aucune règle* | 5 — V-03, V-14, V-15, V-37, V-41 |
+| `.n2` | `V-03:490` | 5 — V-03, V-14, V-15, V-37, V-41 |
+| `.nav2` | `V-27:736` | 10 — 10 vues |
+| `.nav2__groupe` | `V-27:748` | 10 — 10 vues |
+| `.nav2__lien` | `V-27:750` | 10 — 10 vues |
+| `.nav2__n` | `V-27:764` | 10 — 10 vues |
+| `.nav2__nom` | `V-27:743` | 10 — 10 vues |
+| `.nav2__nomlien` | `V-27:763` | 10 — 10 vues |
+| `.nav2__selecteur` | `V-27:771` | 10 — 10 vues |
+| `.nav2__sous` | `V-27:747` | 10 — 10 vues |
+| `.nav2__tete` | `V-27:742` | 10 — 10 vues |
+| `.nav2__titre` | `V-27:749` | 10 — 10 vues |
+| `.noeud__code` | `V-19:818` | 2 — V-19, V-20 |
+| `.noeud__forme` | `V-19:817` | 2 — V-19, V-20 |
+| `.ob` | `V-17:883` | 3 — V-17, V-18, V-31 · **divergente** |
+| `.ob--txt` | `V-17:892` | 3 — V-17, V-18, V-31 |
+| `.on` | `V-06:575` | 3 — V-06, V-14, V-25 |
+| `.outils-graphe` | `V-19:883` | 3 — V-19, V-20, V-21 |
+| `.outils-red` | `V-17:869` | 3 — V-17, V-18, V-31 · **divergente** |
+| `.oz` | `V-17:878` | 3 — V-17, V-18, V-31 · **divergente** |
+| `.palette__aide` | `V-07:1082` | 30 — 30 vues |
+| `.palette__droite` | `V-07:1083` | 30 — 30 vues |
+| `.past--systeme` | `V-27:820` | 2 — V-27, V-32 |
+| `.pied-public` | `V-01:525` | 4 — V-01, V-02, V-03, V-04 |
+| `.pied-public__int` | `V-01:529` | 4 — V-01, V-02, V-03, V-04 |
+| `.piste` | `V-02:442` | 4 — V-02, V-04, V-08, V-26 |
+| `.pj` | `V-03:819` | 2 — V-03, V-14 · **divergente** |
+| `.pj__ext` | `V-03:821` | 2 — V-03, V-14 |
+| `.prop` | `V-19:811` | 2 — V-19, V-20 |
+| `.prop__cle` | `V-19:813` | 2 — V-19, V-20 |
+| `.public` | `V-01:347` | 6 — 6 vues |
+| `.rang` | `V-27:828` | 2 — V-27, V-29 |
+| `.rassurance` | `V-01:416` | 2 — V-01, V-31 · **divergente** |
+| `.recherche__txt` | `V-07:926` | 34 — 34 vues |
+| `.redaction` | `V-17:919` | 2 — V-17, V-18 |
+| `.reformuler` | `V-02:441` | 3 — V-02, V-04, V-26 · **divergente** |
+| `.refus` | `V-27:922` | 5 — V-27, V-29, V-30, V-31, V-32 |
+| `.refus__sortie` | `V-27:931` | 5 — V-27, V-29, V-30, V-31, V-32 |
+| `.refus__titre` | `V-27:927` | 5 — V-27, V-29, V-30, V-31, V-32 |
+| `.reglages` | `V-02:600` | 2 — V-02, V-08 · **divergente** |
+| `.regles` | `V-06:585` | 2 — V-06, V-25 · **divergente** |
+| `.rel-groupe` | `V-14:1002` | 3 — V-14, V-19, V-20 |
+| `.rel-groupe__titre` | `V-14:1003` | 3 — V-14, V-19, V-20 · **divergente** |
+| `.rel-item` | `V-19:802` | 3 — V-19, V-20, V-40 · **divergente** |
+| `.rel-item__nom` | `V-19:808` | 2 — V-19, V-20 |
+| `.rel-item__type` | `V-19:809` | 2 — V-19, V-20 |
+| `.repli` | `V-01:510` | 3 — V-01, V-02, V-03 |
+| `.repli__titre` | `V-01:518` | 3 — V-01, V-02, V-03 |
+| `.repli__txt` | `V-01:522` | 3 — V-01, V-02, V-03 |
+| `.resultats` | `V-02:473` | 4 — V-02, V-04, V-08, V-26 · **divergente** |
+| `.reviser` | `V-14:1031` | 3 — V-14, V-15, V-37 |
+| `.reviser__pied` | `V-14:1040` | 3 — V-14, V-15, V-37 |
+| `.robustesse` | `V-06:561` | 2 — V-06, V-25 |
+| `.robustesse__note` | `V-06:572` | 2 — V-06, V-25 |
+| `.robustesse__reste` | `V-06:573` | 2 — V-06, V-25 |
+| `.robustesse__segments` | `V-06:562` | 2 — V-06, V-25 |
+| `.robustesse__txt` | `V-06:568` | 2 — V-06, V-25 |
+| `.rupture-anneau` | `V-19:842` | 2 — V-19, V-20 |
+| `.rupture-fanion` | `V-19:843` | 2 — V-19, V-20 |
+| `.rupture-glyphe` | `V-19:844` | 2 — V-19, V-20 |
+| `.sauvegarde` | `V-17:1107` | 2 — V-17, V-18 |
+| `.sauvegarde__pastille` | `V-17:1108` | 2 — V-17, V-18 |
+| `.scene` | `V-19:741` | 3 — V-19, V-20, V-21 · **divergente** |
+| `.section-titre` | `V-10:837` | 3 — V-10, V-11, V-13 · **divergente** |
+| `.selecteur` | `V-17:1009` | 12 — 12 vues · **divergente** |
+| `.sep` | `V-02:522` | 7 — 7 vues |
+| `.si-apercu` | `V-17:1120` | 2 — V-17, V-18 |
+| `.si-chargement` | `V-01:538` | 3 — V-01, V-02, V-08 |
+| `.si-nominal` | `V-01:537` | 3 — V-01, V-02, V-08 |
+| `.si-peuple` | `V-07:874` | 2 — V-07, V-11 |
+| `.si-redaction` | `V-17:1119` | 2 — V-17, V-18 |
+| `.si-vide` | `V-07:875` | 3 — V-07, V-11, V-34 |
+| `.tableau-gestion` | `V-27:793` | 7 — 7 vues |
+| `.tete` | `V-12:808` | 2 — V-12, V-22 |
+| `.tete__compteur` | `V-12:820` | 2 — V-12, V-22 |
+| `.tete__puce` | `V-12:815` | 2 — V-12, V-22 |
+| `.tete__sur` | `V-12:814` | 2 — V-12, V-22 |
+| `.tete-section` | `V-27:776` | 10 — 10 vues |
+| `.tete-section__corps` | `V-27:782` | 10 — 10 vues |
+| `.tg__actions` | `V-27:815` | 7 — 7 vues |
+| `.tg__desc` | `V-27:810` | 6 — 6 vues |
+| `.tg__n` | `V-27:814` | 7 — 7 vues |
+| `.tg__nom` | `V-27:809` | 6 — 6 vues |
+| `.tg__puce` | `V-27:817` | 2 — V-27, V-28 |
+| `.tg--entetes` | `V-27:802` | 7 — 7 vues |
+| `.tg--ligne` | `V-27:808` | 7 — 7 vues |
+| `.tg--masquable` | `V-27:1098` | 7 — 7 vues |
+| `.tg--reduit` | `V-28:1116` | 2 — V-28, V-32 |
+| `.tire` | `V-19:752` | 2 — V-19, V-21 |
+| `.travail` | `V-27:774` | 10 — 10 vues · **divergente** |
+| `.tri` | `V-08:755` | 2 — V-08, V-12 · **divergente** |
+| `.val` | `V-02:588` | 4 — V-02, V-08, V-12, V-22 · **divergente** |
+| `.val__n` | `V-02:596` | 4 — V-02, V-08, V-12, V-22 |
+| `.val__nom` | `V-02:595` | 4 — V-02, V-08, V-12, V-22 |
+| `.vide` | `V-08:909` | 2 — V-08, V-39 · **divergente** |
+| `.vide__titre` | `V-08:913` | 2 — V-08, V-39 · **divergente** |
+| `.vide__txt` | `V-08:918` | 2 — V-08, V-39 · **divergente** |
+| `.voile` | `V-19:848` | 3 — V-19, V-20, V-21 |
+| `.voile__boite` | `V-19:854` | 3 — V-19, V-20, V-21 · **divergente** |
+| `.zone-graphe` | `V-19:750` | 2 — V-19, V-20 · **divergente** |
+| `.zone-vide` | `V-01:541` | 4 — V-01, V-02, V-04, V-26 |
+| `.zone-vide__titre` | `V-01:546` | 4 — V-01, V-02, V-04, V-26 · **divergente** |
+
+### 2.F Les classes propres à une vue
+
+**790 classes, 361 familles, réparties sur les 41 vues.** Elles ne sont pas
+nommées ici, et c'est une décision, pas un oubli : leur autorité est la maquette
+gelée de leur vue, dont la feuille portée est une copie à l'octet (P-6.3).
+Les recopier ici créerait une seconde source de vérité pour une source déjà
+gelée — donc une occasion de divergence, et rien d'autre.
+
+**Ce que « fermé » veut dire ici, et c'est opposable** : l'agent qui implémente
+V-xx relève ses classes propres de `mockups/V-xx-*.html`, à la ligne, et
+**n'en emploie aucune autre**. Une classe absente de sa maquette est une
+invention, qu'elle ressemble ou non à ce que fait une autre vue. La liste
+tracée d'une vue s'obtient par `node verif/inventaire-composants.mjs
+--liste=V-xx` ; P-5.2 refuse qu'une vue emploie la classe propre d'une autre.
+
+| Vue | Classes propres | Premières |
+|---|---|---|
+| V-01 | 23 | `.esq-guide` `.guide` `.guide__extrait` `.guide__pied` … |
+| V-02 | 4 | `.barre-requete` `.barre-requete__int` `.champ-public--compact` `.grille-rech` |
+| V-03 | 8 | `.aparte` `.cartouche--lecture` `.fil-pub` `.lecture-pub` … |
+| V-04 | 6 | `.introuvable__aide` `.introuvable__champ` `.issues` `.rattrapage` … |
+| V-05 | 2 | `.contexte__compte` `.contexte--erreur` |
+| V-06 | 3 | `.etape--fin` `.fanion` `.rappel-id` |
+| V-07 | 48 | `.aide__corps` `.aide__fermer` `.aide__marque` `.dom` … |
+| V-08 | 9 | `.aide-mode` `.facettes__cadre` `.rech` `.requete` … |
+| V-09 | 12 | `.cas` `.cas__hote` `.cas__nom` `.cas__num` … |
+| V-10 | 19 | `.avatar-pile` `.avatars` `.carte-dom` `.carte-dom__desc` … |
+| V-11 | 31 | `.contrib` `.contrib__av` `.contrib__barre` `.contrib__n` … |
+| V-12 | 15 | `.bouton-filtres` `.densite` `.lc` `.lc__dossier` … |
+| V-13 | 27 | `.actions-dossier` `.choix` `.choix__corps` `.choix__motif` … |
+| V-14 | 10 | `.actions-liste` `.item` `.item__nom` `.item__sous` … |
+| V-15 | 31 | `.a` `.ampleur` `.ampleur__barre` `.ampleur__moins` … |
+| V-16 | 39 | `.alternative` `.alternative__corps` `.bilan__egal` `.bilan__moins` … |
+| V-17 | 23 | `.avis__fermer` `.champ-titre` `.cmd` `.cmd__ic` … |
+| V-18 | 17 | `.avis--resync` `.meta-figee` `.meta-figee__note` `.mf` … |
+| V-19 | 15 | `.alt-texte` `.dense-bandeau` `.legende__bloc` `.legende__note` … |
+| V-20 | 8 | `.fil-deroule` `.fil-deroule__courant` `.fil-deroule__sep` `.halo-centre` … |
+| V-21 | 19 | `.bascule-affichage` `.branche` `.chevron` `.chevron__fond` … |
+| V-22 | 16 | `.liste-signets` `.sig` `.sig__actions` `.sig__adresse` … |
+| V-23 | 16 | `.apercu-adresse` `.apercu-adresse__chemin` `.apercu-adresse__hote` `.apercu-adresse__sceau` … |
+| V-24 | 49 | `.al` `.al__fmt` `.al__ic` `.al__neuf` … |
+| V-25 | 34 | `.attribue` `.attribue__cadenas` `.attribue__cle` `.attribue__val` … |
+| V-26 | 11 | `.aide-rech` `.champ-rech` `.champ-rech__effacer` `.reprise` … |
+| V-27 | 4 | `.apercu-nav` `.apercu-nav__ligne` `.apercu-nav__sceau` `.tg--univers` |
+| V-28 | 13 | `.conserve` `.definitif` `.mod` `.mod__aide` … |
+| V-29 | 20 | `.apercu-schema` `.as-aide` `.as-champ` `.as-faux` … |
+| V-30 | 11 | `.apercu-phrases` `.choix-reaffectation` `.exemples` `.phrase` … |
+| V-31 | 4 | `.past--defaut` `.redaction-tpl` `.structure-apercu` `.tg--templates` |
+| V-32 | 10 | `.avatar-c` `.avert-unique` `.mdp-unique` `.mdp-unique__valeur` … |
+| V-33 | 21 | `.apercu-vocabulaire` `.champ-nombre` `.champ-nombre__unite` `.comparaison` … |
+| V-34 | 43 | `.adoption` `.alerte-dom` `.alertes-dom` `.bloc-a` … |
+| V-35 | 17 | `.lancement` `.n-echec` `.n-nul` `.rapport-lot` … |
+| V-36 | 21 | `.arbo-archive` `.ca` `.ca__ic` `.ca__nom` … |
+| V-37 | 9 | `.bord` `.bord__grille` `.bord__salut` `.bord__sous` … |
+| V-38 | 13 | `.epreuve` `.epreuve__barre` `.epreuve__corps` `.regle-c` … |
+| V-39 | 40 | `.bandeau-reseau` `.bandeau-reseau__detail` `.bandeau-reseau__pastille` `.chapitre` … |
+| V-40 | 32 | `.ac` `.ac--interdit` `.catalogue` `.dr` … |
+| V-41 | 37 | `.avatar-p` `.avatar-p--reste` `.biblio` `.chrono__quand` … |
+
+### 2.G Les blocs hors produit
+
+Cinq classes, deux blocs. Les maquettes les déclarent elles-mêmes hors produit —
+V-37 écrit de sa section de règles : *« Ce bloc n'appartient pas au produit »* —
+et le banc les retire du DOM avant toute mesure, sur les deux niveaux
+(`verif/banc/conditions.mjs`, `BLOCS_HORS_PRODUIT` ; `ECART-011` É-5).
+
+**Elles ne se portent jamais.** Les porter serait porter le contrôle de maquette
+dans le produit, et P-5.1 le refuse nommément.
+
+| Classe | Trace | Bloc | Vues |
+|---|---|---|---|
+| `.planche` | `V-01:556` | `.planche` | 37 |
+| `.planche__sep` | `V-01:570` | `.planche` | 33 |
+| `.regles__liste` | `V-37:1122` | `section.regles` | 1 |
+| `.regles__sous` | `V-37:1121` | `section.regles` | 1 |
+| `.regles__titre` | `V-37:1117` | `section.regles` | 1 |
+
+La classe `regles` **ne figure pas** dans cette table, et c'est volontaire : le
+`ul.regles` de V-06 et V-25 — la liste des exigences d'un mot de passe — est du
+produit. Seule la `section.regles` de V-37 est hors produit. Le relevé distingue
+les deux par leur balise et leur sous-arbre, pas par leur nom.
+
+### 2.H Les définitions divergentes — 66 noms partagés qui ne partagent pas leur objet
+
+Deux vues ou plus déclarent le même nom de classe et donnent **au même sélecteur
+des corps différents**. Une redéclaration à l'identique ne compte pas, une règle
+qu'une vue ajoute et que l'autre n'a pas non plus : seul un **conflit sur le même
+sélecteur** est retenu.
+
+**Ce que ces 66 lignes interdisent** : les factoriser dans une feuille commune,
+les promouvoir au socle, ou porter la définition de l'une dans l'autre. Chaque
+vue garde la sienne, par P-6.3. Ce que la table donne à voir, ce sont les
+endroits où un agent pressé casserait deux vues en croyant en simplifier une.
+
+Trois exemples qui valent avertissement. `.vide`, au §2.D-1. `.noeud`, que
+34 vues emploient : le nœud d'arborescence du rail pour presque toutes, **et** le
+nœud de graphe pour V-19 et V-20, avec des règles inconciliables. `.fil`, enfin : déclarée par
+35 vues et identique dans 34 ; seule V-09 n'a pas le `overflow: hidden` de la
+correction de troncature du fil d'Ariane (§6.1), et elle est aussi la seule à ne
+pas employer le fil.
+
+| Classe | Vues qui la déclarent | Sélecteur en collision |
+|---|---|---|
+| `.amorce` | 2 — V-07, V-11 | `.amorce p` |
+| `.arbre-choix` | 16 — V-13, V-15, V-17, V-18, V-22, V-23, V-24, V-27, V-28, V-29, V-30, V-31, V-32, V-35, V-40, V-41 | `.arbre-choix` |
+| `.arete` | 2 — V-19, V-20 | `.arete` |
+| `.article` | 8 — V-03, V-14, V-15, V-17, V-18, V-31, V-37, V-41 | `.article` |
+| `.barre-progres` | 2 — V-24, V-36 | `.barre-progres` (+1) |
+| `.bilan` | 2 — V-16, V-24 | `.bilan` |
+| `.bloc` | 2 — V-13, V-25 | `.bloc + .bloc` |
+| `.bloc-code` | 9 — V-03, V-11, V-14, V-15, V-17, V-18, V-31, V-37, V-41 | `.bloc-code pre` |
+| `.champ-public` | 4 — V-01, V-02, V-03, V-04 | `.champ-public` |
+| `.chrono` | 2 — V-14, V-41 | `.chrono` (+2) |
+| `.colonne-redaction` | 2 — V-17, V-18 | `.colonne-redaction` |
+| `.corps-public` | 2 — V-01, V-02 | `.corps-public` |
+| `.degrade` | 2 — V-08, V-39 | `.degrade` |
+| `.depot` | 2 — V-24, V-35 | `.depot` (+1) |
+| `.depot__ic` | 2 — V-24, V-35 | `.depot__ic` |
+| `.detail-col` | 2 — V-19, V-20 | `.detail-col` |
+| `.doc` | 3 — V-38, V-39, V-40 | `.doc` |
+| `.doc__tete` | 3 — V-38, V-39, V-40 | `.doc__tete p` |
+| `.esq-l` | 2 — V-07, V-14 | `.esq-l` |
+| `.facettes` | 4 — V-02, V-08, V-12, V-22 | `.facettes` |
+| `.fil` | 35 — V-07, V-08, V-09, V-10, V-11, V-12, V-13, V-14, V-15, V-16, V-17, V-18, V-19, V-20, V-21, V-22, V-23, V-24, V-25, V-26, V-27, V-28, V-29, V-30, V-31, V-32, V-33, V-34, V-35, V-36, V-37, V-38, V-39, V-40, V-41 | `.fil` |
+| `.groupe__nom` | 2 — V-13, V-33 | `.groupe__nom` |
+| `.groupe__tete` | 2 — V-13, V-33 | `.groupe__tete` |
+| `.interrupteur` | 4 — V-17, V-18, V-25, V-41 | `.interrupteur` |
+| `.introuvable` | 2 — V-04, V-26 | `.introuvable` (+1) |
+| `.introuvable__txt` | 2 — V-04, V-26 | `.introuvable__txt` |
+| `.jalon__nom` | 2 — V-06, V-24 | `.jalon__nom` |
+| `.jalons` | 2 — V-06, V-24 | `.jalons` |
+| `.lecture` | 2 — V-14, V-15 | `.lecture` (+1) |
+| `.ligne-note__titre` | 9 — V-03, V-11, V-14, V-15, V-17, V-18, V-31, V-37, V-41 | `.ligne-note__titre` |
+| `.marque` | 4 — V-01, V-02, V-03, V-04 | `.marque` |
+| `.mesure` | 3 — V-10, V-11, V-37 | `.mesure` |
+| `.mesure__nom` | 3 — V-10, V-11, V-37 | `.mesure__nom` |
+| `.mesure__sous` | 2 — V-10, V-11 | `.mesure__sous` |
+| `.mesure__val` | 3 — V-10, V-11, V-37 | `.mesure__val` |
+| `.modes` | 2 — V-08, V-16 | `.modes` (+1) |
+| `.noeud` | 35 — V-07, V-08, V-09, V-10, V-11, V-12, V-13, V-14, V-15, V-16, V-17, V-18, V-19, V-20, V-21, V-22, V-23, V-24, V-25, V-26, V-27, V-28, V-29, V-30, V-31, V-32, V-33, V-34, V-35, V-36, V-37, V-38, V-39, V-40, V-41 | `.noeud` |
+| `.noeud__nom` | 35 — V-07, V-08, V-09, V-10, V-11, V-12, V-13, V-14, V-15, V-16, V-17, V-18, V-19, V-20, V-21, V-22, V-23, V-24, V-25, V-26, V-27, V-28, V-29, V-30, V-31, V-32, V-33, V-34, V-35, V-36, V-37, V-38, V-39, V-40, V-41 | `.noeud__nom` |
+| `.ob` | 3 — V-17, V-18, V-31 | `.ob` |
+| `.outils-red` | 3 — V-17, V-18, V-31 | `.outils-red` |
+| `.oz` | 3 — V-17, V-18, V-31 | `.oz + .oz::before` |
+| `.pj` | 2 — V-03, V-14 | `.pj` |
+| `.rassurance` | 2 — V-01, V-31 | `.rassurance` |
+| `.reformuler` | 4 — V-02, V-03, V-04, V-26 | `.reformuler` |
+| `.reglages` | 4 — V-02, V-08, V-12, V-22 | `.reglages` |
+| `.regles` | 3 — V-06, V-25, V-37 | `.regles` |
+| `.rel-groupe__titre` | 3 — V-14, V-19, V-20 | `.rel-groupe__titre` |
+| `.rel-item` | 3 — V-19, V-20, V-40 | `.rel-item` |
+| `.resultats` | 5 — V-02, V-04, V-08, V-26, V-41 | `.resultats` |
+| `.scene` | 3 — V-19, V-20, V-21 | `.scene` (+1) |
+| `.section-titre` | 3 — V-10, V-11, V-13 | `.section-titre` |
+| `.selecteur` | 10 — V-17, V-18, V-23, V-24, V-29, V-31, V-32, V-33, V-36, V-40 | `.selecteur` |
+| `.sommaire` | 8 — V-03, V-14, V-15, V-17, V-18, V-31, V-37, V-41 | `@media (max-width: 1240px) » .sommaire` |
+| `.tableau-boite` | 9 — V-03, V-11, V-14, V-15, V-17, V-18, V-31, V-37, V-41 | `.tableau-boite` |
+| `.tendance` | 2 — V-07, V-34 | `.tendance` |
+| `.tiroir-form` | 10 — V-27, V-28, V-29, V-30, V-31, V-32, V-33, V-34, V-35, V-36 | `.tiroir-form` |
+| `.travail` | 10 — V-27, V-28, V-29, V-30, V-31, V-32, V-33, V-34, V-35, V-36 | `.travail` |
+| `.tri` | 3 — V-08, V-12, V-22 | `.tri select` |
+| `.val` | 4 — V-02, V-08, V-12, V-22 | `.val:hover` |
+| `.vide` | 2 — V-08, V-39 | `.vide` |
+| `.vide__titre` | 2 — V-08, V-39 | `.vide__titre` |
+| `.vide__txt` | 2 — V-08, V-39 | `.vide__txt` |
+| `.voile__boite` | 3 — V-19, V-20, V-21 | `.voile__boite` |
+| `.zone-erreur__titre` | 4 — V-01, V-02, V-03, V-04 | `.zone-vide__titre, .zone-erreur__titre` |
+| `.zone-graphe` | 2 — V-19, V-20 | `.zone-graphe svg` (+1) |
+| `.zone-vide__titre` | 5 — V-01, V-02, V-03, V-04, V-26 | `.zone-vide__titre, .zone-erreur__titre` |
+
+### 2.I Les quatre signaux que le relevé produit, et que rien ne corrige
+
+Ces quatre listes ne sont pas des composants. Ce sont des faits du gel, qu'un
+lot doit connaître avant de porter une vue, et qu'**aucun lot n'a le droit de
+corriger** : `mockups/` est en lecture seule.
+
+| Signal | Volume | Ce que c'est | Commande |
+|---|---|---|---|
+| **Emplois orphelins** | 92 | la vue pose la classe, aucune de ses deux feuilles ne la déclare : le nœud rend sans style | `--orphelines` |
+| **Déclarées sans emploi** | 10 | la feuille porte la règle, aucun balisage ne la pose : elle ne rend rien, donc elle ne se porte pas | `--residu` |
+| **Homonymes divergents** | 66 | §2.H | `--homonymes` |
+| **Jetons rejetés** | 53 | ce que le relevé a lu dans un script et écarté, faute d'être déclaré ou posé nulle part | `--rejets` |
+
+Le plus instructif est le premier. `.btn-copier`, employée par cinq vues, n'est
+**déclarée nulle part** : c'est un crochet de script, et son apparence vient de
+`.btn`. `.contexte` est employée par six vues et déclarée par deux (§2.D-4).
+Porter fidèlement, c'est porter la classe **telle que le gel la pose**, sans
+inventer la règle qui manque — et sans la retirer parce qu'elle « ne sert à
+rien ».
 
 ---
 
@@ -1122,17 +1830,31 @@ La nomenclature du produit est **BEM** : `bloc`, `bloc__element`,
 `[data-densite]`, `[data-rail]`, `[data-droits]`, `[data-role]`) ou par attribut
 ARIA (`[aria-current]`, `[aria-selected]`, `[aria-sort]`, `[aria-pressed]`).
 
-### P-5 · Aucun composant hors inventaire
+### P-5 · Aucun composant hors inventaire — **outillé**
+
+`node verif/inventaire-composants.mjs --verifier`. Le contrôle était assigné à
+T-009 par `ADR-002` et resté non outillé (`ECART-008 c`) faute d'inventaire
+complet ; l'inventaire l'étant (§2.0), il l'est aussi. Il **ne consulte aucune
+liste rédigée à la main** : il relève les 41 maquettes gelées à chaque exécution
+et confronte le relevé au §2 de ce document.
 
 | # | Interdit | Détection |
 |---|---|---|
-| P-5.1 | Toute classe de la feuille applicative absente de l'inventaire du §2 | Différence entre les classes déclarées et la liste close du §2 |
-| P-5.2 | Toute variante `--*` absente de la colonne « Variantes » de son composant | idem |
-| P-5.3 | Tout composant de l'inventaire dont une variante documentée n'est pas implémentée | Différence en sens inverse |
+| P-5.1 | Toute classe employée par `src/**` et absente des 41 maquettes | Différence entre les classes des composants et le relevé du gel |
+| P-5.2 | Toute classe **propre à une vue** employée par une autre vue, ou en dur dans un fichier partagé | Le relevé donne la vue propriétaire ; le nom de fichier donne la vue employeuse |
+| P-5.3 | Tout composant **transverse** absent du §2 · toute entrée du §2 absente du gel ou sans emploi | Différence dans les deux sens entre le §2 et le relevé |
+| P-5.4 | Toute colonne « En situation » que le relevé dément | La dernière cellule de chaque ligne de tableau du §2 |
 
 **C'est le contrôle qui donne sa force au mot « fermé ».** Il produit deux
 listes : *ce qui existe en trop* (écart de dérive) et *ce qui manque* (écart de
 couverture). Les deux se remontent dans `docs/ecarts/`.
+
+**Ce qu'il ne couvre pas, et il le dit à chaque exécution** (RA-01) : le sens
+inverse de P-5.2 — une variante documentée et non implémentée — suppose une vue
+achevée, et 36 vues restent à écrire ; une classe posée par une expression Svelte
+non littérale échapperait au relevé de `src/**`, et aucune n'existe aujourd'hui.
+La conformité de rendu des classes **propres à une vue** relève de P-6.3 et de la
+batterie 11, pas d'ici : leur autorité est la maquette, non ce document.
 
 ### P-6 · Aucune divergence du socle
 
@@ -1394,16 +2116,32 @@ la vue à porter**, puisque c'est elle qui fait foi pour le rendu (préséance
 maquettes), et l'écart est signalé au §6.5. Aucun renommage n'est entrepris dans
 une session d'exécution.
 
+> **Constat corrigé par le relevé (T-009b).** Ce ne sont pas quatre composants,
+> **c'est 37** : la planche déclare 37 classes qu'aucune des quarante autres
+> maquettes n'emploie (`--liste=V-41`). Et le tableau ci-dessus se trompait deux
+> fois : `.infobulle` n'apparaît **pas** dans V-08, `.menu-ctx` **pas** dans V-12
+> ni V-22. La décision, elle, tient — elle est confirmée par le décompte au
+> **§2.D-2**, qui la chiffre : `.indicateur` 1 vue, `.mesure` 3 vues à trois
+> définitions divergentes, `.mesure-a` 1 vue. Aucune n'est canonique, donc aucune
+> ne se promeut.
+
 ### 6.4 Constat de volumétrie : l'inventaire fermé ne couvre pas tout le corpus
 
-Les 41 maquettes déclarent **1 202 classes distinctes**. Le socle en ligne en
-déclare **53** ; l'inventaire du §2, socle et planche V-41 réunis, en nomme
-**255**. Le reste — de l'ordre de mille classes — est **propre à une
-vue** : `.nord`, `.tg`, `.cl`, `.orph`, `.trou`, `.bloc-a`, `.mesure-a` pour la
-seule V-34, par exemple.
+**Ce constat a été fait sur un décompte approximatif, et il est refait ici sur un
+relevé mécanique** (T-009b, §2.0). Les chiffres qui suivent remplacent ceux de la
+rédaction d'origine — « 1 202 classes », « 53 » au socle en ligne, « 255 »
+inventoriées — dont la méthode n'était pas citée.
+
+Les 41 maquettes connaissent **1 254 classes**, déclarées ou posées. Le socle en
+ligne en déclare **58** ; **449** sont transverses, **790** propres à une vue,
+**5** hors produit, **10** déclarées sans aucun emploi. L'inventaire du §2 les
+porte toutes selon leur nature : nommément pour les 449 transverses (§2.A à
+§2.E), par renvoi à leur maquette pour les 790 autres (§2.F).
+
+Le reste du raisonnement d'origine reste exact, et le voici :
 
 Ce n'est pas une contradiction : le plan §3.4 définit l'inventaire fermé comme
-l'extraction de `socle.css` **et** de V-41, ce qui est fait. Mais il faut
+l'extraction de `socle.css` **et** de V-41, ce qui était fait. Mais il faut
 l'énoncer clairement, sinon le mot « fermé » induit en erreur :
 
 > **L'inventaire du §2 est fermé pour les composants transverses.** Les
@@ -1413,7 +2151,9 @@ l'énoncer clairement, sinon le mot « fermé » induit en erreur :
 > classes de vue sont contrôlées par la conformité de rendu (batterie 11).
 
 Une classe de vue qui n'existe dans **aucune** maquette est, elle, une invention
-pure et un écart au sens plein.
+pure et un écart au sens plein. **Ces deux phrases sont désormais mécaniques** :
+P-5.3 refuse un transverse absent du §2, P-5.1 refuse une classe que le gel ne
+porte pas, et P-5.2 refuse qu'une vue emploie la classe propre d'une autre.
 
 ### 6.5 Écarts et décisions prises pendant ce lot
 
@@ -1428,6 +2168,25 @@ pure et un écart au sens plein.
 | 7 | Huit valeurs de couleur en dur subsistent dans `socle.css` hors `:root` | Recensées et closes (P-1.8). Aucune promotion en jeton — ce serait éditer une source gelée |
 | 8 | Le contrôle de non-divergence P-6.1 ne peut pas viser `mockups/socle.css` en l'état | Réserve écrite dans la section, à lever avec l'arbitrage de l'écart 2 |
 
+### 6.6 Le complètement de l'inventaire — écarts et décisions de T-009b
+
+Le §2 a été complété par relevé mécanique des 41 maquettes gelées, et P-5
+outillé. Rien n'a été écrit hors de ce fichier et de
+`verif/inventaire-composants.mjs`. Aucune vue n'a été implémentée.
+
+| # | Nature | Décision |
+|---|---|---|
+| 9 | Le §2 ne portait que le socle et V-41 — dette d'`ECART-011` É-4, `ECART-013` É-4, `ECART-015`, `ECART-016` É-5 | 239 composants transverses ajoutés au §2.E, tracés. La règle des trois natures est écrite au §2.0 |
+| 10 | `.zone-etat` contre `.vide` — « le constat le plus lourd » | Tranché au §2.D-1 : `.zone-etat` fait loi (socle, 5 vues, une définition) ; `.vide` reste au gel de V-08 et V-39 (2 vues, deux définitions divergentes) |
+| 11 | Trois formes d'indicateur chiffré | Tranché au §2.D-2 : aucune n'est canonique. La vue à porter garde la sienne. Le motif se répète sur les onglets, les tableaux et la pagination |
+| 12 | `.selecteur` absent de A-9, qui rangeait `select` sous `.saisie` | Tranché au §2.D-3 : sur 25 `select` classés, 15 portent `.selecteur`, 10 `.nav2__selecteur`, **aucun** `.saisie`. A-9 est corrigée, `.selecteur` entre à l'inventaire |
+| 13 | `.contexte*`, quatrième famille d'encart | Tranché au §2.D-4 : elle entre à l'inventaire (6 vues, une définition) ; `.encart-b` reste une démonstration de planche (1 vue) |
+| 14 | La colonne « En situation » des §2.A à §2.C portait 18 lignes que le relevé dément | Les 18 corrigées ; le contrôle P-5.4 les tient désormais. `.infobulle` n'est pas en V-08, `.menu-ctx` pas en V-12 ni V-22 |
+| 15 | 66 noms de classe reçoivent deux définitions ou plus selon la vue | Recensés au §2.H. Interdiction de les factoriser ; chaque vue porte la sienne (P-6.3) |
+| 16 | 92 emplois orphelins — la vue pose une classe qu'aucune de ses feuilles ne déclare | Recensés au §2.I. Ce sont des faits du gel : ni corrigés, ni retirés au portage |
+| 17 | V-09 ne porte pas la correction de troncature du fil d'Ariane (E-03) | Constaté au §2.H. `mockups/` étant en lecture seule, rien n'est corrigé : c'est un écart de gel à arbitrer |
+| 18 | P-5 était assigné à T-009 par `ADR-002` et non outillé (`ECART-008 c`) | Outillé : `node verif/inventaire-composants.mjs --verifier`, quatre sous-contrôles, 0 constat. **Non câblé à `package.json`**, hors périmètre d'écriture de ce lot |
+
 ---
 
 ## 7. Ce que ce document n'autorise pas
@@ -1436,14 +2195,18 @@ pure et un écart au sens plein.
   gelée, **la vue gagne**, et le désaccord se fiche dans `docs/ecarts/`.
 - Il ne se complète pas en session d'exécution. Ajouter une ligne à l'inventaire
   suppose qu'un composant a été ajouté au socle ou à une maquette — donc un
-  arbitrage.
+  arbitrage. Le complètement du §2.E n'y déroge pas : **aucun composant n'y a été
+  ajouté**, ils ont tous été **relevés** de maquettes déjà gelées, et le relevé
+  se rejoue (§2.0).
+- Il ne décide pas à la place d'une maquette. Les quatre contradictions du §2.D
+  sont tranchées **par le décompte des emplois réels**, jamais par préférence ; et
+  aucune ne conclut à un renommage.
 - Il ne dispense d'aucune batterie. Il **spécifie** la batterie 2 ; il ne la
   remplace pas.
 
-**Sources gelées consultées** : `mockups/socle.css`,
-`mockups/V-41-bibliotheque.html`, `mockups/V-37-coquille.html`,
-`mockups/V-14-lecture-note.html`, `mockups/V-12-liste-notes.html`,
-`mockups/GEL.md`, `cadrage/PLAN-DE-REALISATION.md` §3.3, §3.4, §3.5, §11, §15.1,
+**Sources gelées consultées** : `mockups/socle.css`, **les 41 fichiers
+`mockups/V-xx-*.html`** — relevés en entier par `verif/inventaire-composants.mjs`
+pour le §2.0 et les §2.D à §2.I —, `mockups/GEL.md`, `cadrage/PLAN-DE-REALISATION.md` §3.3, §3.4, §3.5, §11, §15.1,
 `cadrage/BRIEF-VUES.md` §3 et §V-41,
 `cadrage/CAHIER-DES-CHARGES-FONCTIONNEL.md` RG-DA-01, RG-DA-03, RG-M18-07,
 RG-M18-09, RG-M18-12, RG-M18-13. Aucune n'a été modifiée.

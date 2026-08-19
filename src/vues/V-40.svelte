@@ -330,6 +330,30 @@
 	};
 </script>
 
+<!--
+	L'ÉLÉMENT FOCAL DE CHAQUE BOÎTE, DÉCLARÉ — et non piloté.
+
+	La maquette gelée le pose en script, à l'ouverture :
+	`d.querySelector(".saisie, .selecteur, .btn--principal").focus()`
+	(`mockups/V-40-dialogues.html:3189`). Le squelette n'a pas de script
+	(ADR-001, ARB-011) ; il pose donc la même propriété en DÉCLARATION, par
+	`autofocus`, que l'algorithme du délégué de focalisation de `showModal()`
+	honore. Résultat identique des deux côtés, y compris pour `d-droits` et
+	`d-deplacer` où la cible est désactivée : elle n'est pas une aire
+	focalisable, la focalisation retombe donc sur le bouton de fermeture — ce
+	que la maquette obtient parce que `focus()` y est sans effet.
+
+	Sans cette déclaration, la référence portait l'anneau de `.saisie:focus`
+	(`box-shadow: 0 0 0 3px var(--c-accent-voile)`) et le candidat non :
+	4 380 px sur `d-dossier`, 4 746 sur `d-reviser`, 2 884 sur `d-relation`.
+	C'est la cause réelle du jeton faux relevé par `ECART-017` É-2 — le voile
+	n'est pas posé sur un bloc `.contexte`, il est celui de la focalisation.
+
+	`a11y_autofocus` met en garde contre la focalisation automatique AU
+	CHARGEMENT D'UNE PAGE. Ici la focalisation est celle d'un dialogue modal,
+	que `RG-M18-08` et P-06 exigent : ne pas la poser serait la régression.
+-->
+
 {#snippet croix()}
 	<svg
 		width="16"
@@ -418,7 +442,8 @@
 		</div>
 		<div class="dlg__pied">
 			<button class="btn" data-fermer="">Rester ici</button>
-			<button class="btn btn--principal" data-fermer="">Quitter</button>
+			<!-- svelte-ignore a11y_autofocus -->
+			<button class="btn btn--principal" data-fermer="" autofocus>Quitter</button>
 		</div>
 	</div>
 </dialog>
@@ -473,8 +498,10 @@
 		</div>
 		<div class="dlg__pied">
 			<button class="btn" data-fermer="">Annuler</button>
+			<!-- svelte-ignore a11y_autofocus -->
 			<button
 				class="btn btn--principal btn--destructif"
+				autofocus
 				data-fermer=""
 				style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
 				>Supprimer la note</button
@@ -526,8 +553,10 @@
 					Pour confirmer, retapez le nom du dossier :
 					<span class="confirmation__cible" id="dossier-cible">Sauvegardes</span>
 				</label>
+				<!-- svelte-ignore a11y_autofocus -->
 				<input
 					class="saisie"
+					autofocus
 					type="text"
 					id="dossier-saisie"
 					autocomplete="off"
@@ -588,7 +617,8 @@
 		</div>
 		<div class="dlg__pied">
 			<button class="btn" data-fermer="">Annuler</button>
-			<button class="btn btn--principal" data-fermer="">Restaurer cette version</button>
+			<!-- svelte-ignore a11y_autofocus -->
+			<button class="btn btn--principal" data-fermer="" autofocus>Restaurer cette version</button>
 		</div>
 	</div>
 </dialog>
@@ -622,8 +652,10 @@
 			</p>
 			<div class="champ">
 				<label class="champ__label" for="reviser-txt">Qu'est-ce qui doit être revu ?</label>
+				<!-- svelte-ignore a11y_autofocus -->
 				<textarea
 					class="saisie"
+					autofocus
 					id="reviser-txt"
 					rows="3"
 					placeholder="La commande de l'étape 4 a changé depuis la version 3.11 de Barman."
@@ -714,8 +746,10 @@
 			<div class="champ">
 				<span class="champ__label">Ajouter un accès</span>
 				<div class="dr-ajout">
+					<!-- svelte-ignore a11y_autofocus -->
 					<select
 						class="selecteur"
+						autofocus
 						id="droit-qui"
 						aria-label="Personne"
 						disabled={ouvert === 'd-droits' && comptesSansAcces.length === 0}
@@ -776,7 +810,8 @@
 		<div class="dlg__corps">
 			<div class="champ">
 				<label class="champ__label" for="rel-type">Type de relation</label>
-				<select class="selecteur" id="rel-type"
+				<!-- svelte-ignore a11y_autofocus -->
+				<select class="selecteur" id="rel-type" autofocus
 					>{#if ouvert === 'd-relation'}{#each Object.entries(TYPES_RELATION) as [cle, libelles] (cle)}<option
 								value={cle}>{libelles.sortant}</option
 							>{/each}{/if}</select
@@ -848,8 +883,10 @@
 			</button>
 		</div>
 		<div class="dlg__corps">
+			<!-- svelte-ignore a11y_autofocus -->
 			<button
 				class="btn btn--principal"
+				autofocus
 				data-fermer=""
 				style="width:100%;padding:12px;justify-content:flex-start;gap:var(--e-3)"
 			>
@@ -911,7 +948,8 @@
 		</div>
 		<div class="dlg__pied dlg__pied--reparti">
 			<button class="btn" data-fermer="">Continuer quand même</button>
-			<button class="btn btn--principal" data-fermer="">Ouvrir la note existante</button>
+			<!-- svelte-ignore a11y_autofocus -->
+			<button class="btn btn--principal" data-fermer="" autofocus>Ouvrir la note existante</button>
 		</div>
 	</div>
 </dialog>
@@ -960,7 +998,8 @@
 		</div>
 		<div class="dlg__pied">
 			<button class="btn" data-fermer="">Annuler</button>
-			<button class="btn btn--principal" id="deplacer-valider" disabled>Déplacer</button>
+			<!-- svelte-ignore a11y_autofocus -->
+			<button class="btn btn--principal" id="deplacer-valider" disabled autofocus>Déplacer</button>
 		</div>
 	</div>
 </dialog>

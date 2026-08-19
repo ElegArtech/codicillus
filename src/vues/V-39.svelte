@@ -265,6 +265,17 @@
 	>
 {/snippet}
 
+<!--
+	`ligne(largeur, classe)` — le calque exact de la fabrique du gel
+	(`mockups/V-39-etats.html:2939`), qui pose la largeur d'une ligne d'esquisse
+	en ARGUMENT et jamais en littéral de style : `l.style.width = largeur`. Les
+	largeurs vivent donc au point d'appel, comme dans la maquette, et la
+	déclaration produite est la même des deux côtés (P-6.4, `ECART-017` É-7).
+-->
+{#snippet ligne(largeur: string, classe: string)}
+	<div class={classe ? `sq sq-l ${classe}` : 'sq sq-l'} style="width:{largeur}{pause}"></div>
+{/snippet}
+
 {#snippet esquisse(genre: string)}
 	{#if genre === 'carte'}<div class="sq-carte">
 			<div class="sq-carte__tete">
@@ -272,11 +283,11 @@
 					class="sq sq--fort"
 					style="width:26px;height:26px;border-radius:4px;flex:none{pause}"
 				></div>
-				<div class="sq sq-l sq-l--titre sq--fort" style="width:64%{pause}"></div>
+				{@render ligne('64%', 'sq-l--titre sq--fort')}
 			</div>
 			<div class="sq-pile">
-				<div class="sq sq-l" style="width:100%{pause}"></div>
-				<div class="sq sq-l" style="width:88%{pause}"></div>
+				{@render ligne('100%', '')}
+				{@render ligne('88%', '')}
 			</div>
 			<div class="sq-carte__pieds">
 				{#each ['58px', '44px', '72px'] as largeur (largeur)}<div
@@ -295,7 +306,7 @@
 				</div>{/each}
 		</div>{:else if genre === 'panneau'}<div class="sq-panneau">
 			<div class="sq-panneau__tete">
-				<div class="sq sq-l sq--fort" style="width:46%{pause}"></div>
+				{@render ligne('46%', 'sq--fort')}
 			</div>
 			<div class="sq-panneau__corps">
 				{#each PILES_PANNEAU as [haut, bas] (haut)}<div class="sq-pile">
@@ -309,7 +320,7 @@
 						class="sq sq--fort"
 						style="width:52px;height:26px;border-radius:3px;margin-bottom:10px{pause}"
 					></div>
-					<div class="sq sq-l" style="width:78%{pause}"></div>
+					{@render ligne('78%', '')}
 				</div>{/each}
 		</div>{:else if genre === 'graphe'}<div class="sq-graphe">
 			{#each ARETES_RENDUES as a (a.cle)}<div
