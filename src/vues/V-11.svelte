@@ -69,6 +69,7 @@
 		type Note
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import { classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { segmentsDeDossier } from '$lib/rangement/adresses';
 
 	interface Proprietes {
@@ -171,22 +172,7 @@
 		return niveau === 'frais' ? 3 : niveau === 'vieil' ? 2 : 1;
 	}
 
-	function classeTemoin(niveau: Note['fraicheur']): string {
-		return niveau === 'frais'
-			? 'temoin--frais'
-			: niveau === 'vieil'
-				? 'temoin--vieil'
-				: 'temoin--obs';
-	}
-
 	/** Le libellé du témoin : toujours la valeur en clair à côté du signal. */
-	function libelleFraicheur(n: Note): string {
-		if (n.fraicheur === 'frais') {
-			return n.jours < 31 ? `Vérifié il y a ${n.jours} jours` : 'Vérifié il y a 1 mois';
-		}
-		const mois = Math.round(n.jours / 30);
-		return n.fraicheur === 'vieil' ? `Vérifié il y a ${mois} mois` : `Pas revu depuis ${mois} mois`;
-	}
 
 	/* ── Santé du domaine ───────────────────────────────────────────────────── */
 	const jamais = $derived(notesDuDomaine.filter((n) => n.revise === null).length);
