@@ -61,6 +61,45 @@
  * afficherait « quatre états partout » là où la maquette n'en montre qu'un.
  *
  * ═════════════════════════════════════════════════════════════════════════
+ * ARB-045 — L'OBSERVABLE DE « SANS DROIT » ÉTAIT FAUTIF CÔTÉ PORTAGE
+ *
+ * Une CORRECTION D'INSTRUMENT, autorisée nommément et bornée à ce seul point
+ * (contrat T-072, `ARB-045`). Ce n'est pas un ajustement pour obtenir du vert.
+ *
+ * CE QUI ÉTAIT ÉCRIT ICI. `sansDroitParZone` attestait l'état des DEUX CÔTÉS
+ * en comparant les états où une classe `si-*` est PRÉSENTE à ceux où elle est
+ * VISIBLE — « le nœud conditionné doit exister pour qu'on puisse constater son
+ * retrait ». Appliqué au portage, cet observable exige que l'action interdite
+ * SOIT DANS LE DOM.
+ *
+ * OR P-09 EXIGE QU'ELLE N'Y SOIT PAS : « une action interdite n'est pas
+ * affichée, ni grisée, NI MASQUÉE » — et `ARB-040` autorise nommément le
+ * produit à OMETTRE ce que le gel masque, la maquette n'ayant pas de serveur.
+ * AUCUNE APPLICATION CONFORME À P-09 NE POUVAIT SATISFAIRE CET OBSERVABLE. Le
+ * seul « remède » eût été de poser un nœud masqué pour la seule satisfaction
+ * de l'instrument : RA-01, le contournement que le plan nomme et interdit. Le
+ * lot T-071 a livré le rouge plutôt que de le faire ; il a eu raison, et c'est
+ * l'instrument qui avait tort.
+ *
+ * CE QUI EST ÉCRIT MAINTENANT. Côté GEL, rien ne change — la lecture par la
+ * présence est exacte d'une maquette statique, et les 173 couples de manque de
+ * gel sont intacts. Côté PORTAGE, l'observable est la VISIBILITÉ, état par
+ * état : `ecransConditionnesParZone` relève les écrans qui OFFRENT l'action,
+ * et `verdictDeZone` exige que les deux ensembles COÏNCIDENT. Masqué et absent
+ * sont indiscernables à l'écran — c'est le fait qu'`ARB-040` établit —, si
+ * bien que L'ABSENCE EST LA FORME LA PLUS FORTE DE « SANS DROIT », PAS SON
+ * MANQUE. Une zone dont le portage n'émet pas le nœud là où le gel le masque
+ * TIENT `RG-M18-03`, et mieux que le gel : elle est comptée `omis (P-09)`.
+ *
+ * LE CRIBLE N'EST PAS DEVENU AVEUGLE, ET CE POINT EST LE PLUS IMPORTANT. Le
+ * GEL décide seul de l'APPLICABILITÉ. Une zone où personne n'a jamais posé de
+ * nœud conditionné reste « sans objet » ; une zone qui le déclare sans jamais
+ * l'atteindre reste « gel : déclaré ». Aucune omission du portage ne convertit
+ * l'un ou l'autre en état tenu. Et le rouge subsiste, avec DEUX formes
+ * mesurées : l'action OFFERTE là où le gel la retire — la porte ouverte de
+ * RG-M05-08 —, et l'action PERDUE là où le gel l'offre.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
  * ARB-005 — ET CE QUE CETTE BATTERIE NE CONFOND PAS
  *
  * L'état « sans droit » vaut quand l'existence de la ressource porteuse est
@@ -655,6 +694,11 @@ export function agregerCote(releves) {
 	return zones;
 }
 
+/** Cet ensemble de classes porte-t-il un nœud conditionné par un DROIT ? */
+function porteUnConditionnement(classes) {
+	return classes.some((c) => MARQUEURS.some((m) => m.etat === 'sans-droit' && m.re.test(c)));
+}
+
 /**
  * « Sans droit » n'est ATTEIGNABLE que si l'écran change : le nœud conditionné
  * est présent dans les états déclarés, et VISIBLE dans certains seulement.
@@ -663,19 +707,22 @@ export function agregerCote(releves) {
  * déclaré ne la retire : l'état n'est pas atteignable, il est seulement
  * DÉCLARÉ. Présent nulle part = non applicable.
  *
+ * CE VERDICT DÉCRIT LE GEL, ET C'EST TOUT CE QU'IL PEUT DÉCRIRE. Il est bâti
+ * sur l'écart entre PRÉSENCE et VISIBILITÉ, parce qu'une maquette statique n'a
+ * pas de serveur : elle ne sait exprimer « cette action n'existe pas pour ce
+ * rôle » qu'en la posant puis en la masquant. Côté PORTAGE, la même lecture
+ * serait fautive — voir `ecransConditionnesParZone` et `verdictDeZone`.
+ *
  * @param {{etat: string, zones: {cle: string, visibles: string[], presentes: string[]}[]}[]} releves
  */
 export function sansDroitParZone(releves) {
 	/** @type {Map<string, {present: string[], visible: string[]}>} */
 	const par = new Map();
-	const conditionnements = MARQUEURS.filter((m) => m.etat === 'sans-droit');
 	for (const r of releves) {
 		for (const z of r.zones) {
 			const p = par.get(z.cle) ?? par.set(z.cle, { present: [], visible: [] }).get(z.cle);
-			const aPresent = z.presentes.some((c) => conditionnements.some((m) => m.re.test(c)));
-			const aVisible = z.visibles.some((c) => conditionnements.some((m) => m.re.test(c)));
-			if (aPresent) p.present.push(r.etat);
-			if (aVisible) p.visible.push(r.etat);
+			if (porteUnConditionnement(z.presentes)) p.present.push(r.etat);
+			if (porteUnConditionnement(z.visibles)) p.visible.push(r.etat);
 		}
 	}
 	/** @type {Map<string, 'atteignable'|'declare-non-atteignable'|'non-applicable'>} */
@@ -689,11 +736,72 @@ export function sansDroitParZone(releves) {
 }
 
 /**
- * Le verdict d'une zone, les deux côtés confrontés. CINQ valeurs, parce que
- * « déclaré » et « atteignable » ne sont pas la même chose, et que la mission
- * porte sur les DEUX.
+ * LES ÉTATS DÉCLARÉS OÙ LA ZONE MONTRE À L'ÉCRAN UN NŒUD CONDITIONNÉ PAR UN
+ * DROIT — l'observable de « sans droit » côté PORTAGE (ARB-045, lot T-072).
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * POURQUOI CELUI-CI, ET PAS CELUI DE `sansDroitParZone`
+ *
+ * `sansDroitParZone` atteste l'état par la PRÉSENCE : « le nœud conditionné
+ * doit exister pour qu'on puisse constater son retrait ». C'est vrai d'une
+ * MAQUETTE, et faux d'un PRODUIT. `P-09` exige que l'action interdite ne soit
+ * pas affichée — « ni grisée, NI MASQUÉE » —, et `ARB-040` autorise
+ * nommément le produit à OMETTRE ce que le gel masque. Une application
+ * conforme à P-09 n'a donc PAS le nœud à présenter : appliquée au portage, la
+ * lecture par la présence exigeait le contraire d'un principe non négociable,
+ * et le seul moyen de la satisfaire eût été de poser un nœud masqué pour la
+ * seule satisfaction de l'instrument — RA-01, le contournement que le plan
+ * nomme et interdit.
+ *
+ * L'OBSERVABLE JUSTE EST LA VISIBILITÉ, ÉTAT PAR ÉTAT. Masqué et absent sont
+ * indiscernables à l'écran, et c'est précisément ce qu'`ARB-040` établit :
+ * un nœud en `display: none` ne pèse ni dans l'instantané ARIA, ni dans
+ * l'ordre de tabulation, ni dans un pixel. Ce que l'on compare est donc
+ * l'ENSEMBLE DES ÉCRANS qui offrent l'action, des deux côtés :
+ *
+ *   · le portage MONTRE l'action là où le gel la retire  → P-09 violé, ROUGE ;
+ *   · le portage RETIRE l'action là où le gel l'offre    → l'action a disparu
+ *     pour qui y a droit, ROUGE aussi ;
+ *   · les deux ensembles coïncident                      → l'état est TENU,
+ *     que le portage masque comme le gel ou qu'il omette. L'ABSENCE EST LA
+ *     FORME LA PLUS FORTE DE « SANS DROIT », PAS SON MANQUE.
+ *
+ * CE QUE CE CRIBLE NE FAIT PAS, ET C'EST VOULU : il ne rend PAS l'état
+ * applicable. C'est le GEL, par `sansDroitParZone`, qui décide s'il y a
+ * quelque chose à tenir. Une zone où personne n'a jamais posé de nœud
+ * conditionné — ni au gel, ni au portage — reste « non applicable » : elle ne
+ * tient pas l'état, elle n'a pas d'état à tenir. Distinguer « le portage omet
+ * ce que le gel masque » de « personne n'a jamais rien posé » est la première
+ * exigence de la correction, et elle est portée par `verdictDeZone`.
+ *
+ * @param {{etat: string, zones: {cle: string, visibles: string[]}[]}[]} releves
+ * @returns {Map<string, string[]>} zone → les états où l'action est À L'ÉCRAN
+ */
+export function ecransConditionnesParZone(releves) {
+	/** @type {Map<string, string[]>} */
+	const par = new Map();
+	for (const r of releves) {
+		for (const z of r.zones) {
+			const l = par.get(z.cle) ?? par.set(z.cle, []).get(z.cle);
+			if (porteUnConditionnement(z.visibles)) l.push(r.etat);
+		}
+	}
+	for (const [cle, l] of par) par.set(cle, [...new Set(l)].sort());
+	return par;
+}
+
+/**
+ * Le verdict d'une zone, les deux côtés confrontés. SIX valeurs, parce que
+ * « déclaré » et « atteignable » ne sont pas la même chose, que la mission
+ * porte sur les DEUX, et qu'un portage peut tenir « sans droit » par
+ * l'ABSENCE là où le gel ne sait le tenir que par le masquage.
  *
  *   porte                 le gel rend l'état, le portage aussi ;
+ *   porte-par-omission    « sans droit » SEUL — le gel MASQUE le nœud
+ *                         conditionné, le portage ne l'ÉMET PAS. Même écran,
+ *                         état par état ; forme la PLUS FORTE de l'état, celle
+ *                         que P-09 exige et qu'ARB-040 autorise. Ni rouge, ni
+ *                         manque de gel ;
  *   manque-portage        le gel le rend, le portage non — LE SEUL ROUGE ;
  *   gel-non-atteignable   la maquette DÉCLARE le composant — la classe est
  *                         dans le DOM — mais aucun état déclaré ne le rend.
@@ -702,18 +810,59 @@ export function sansDroitParZone(releves) {
  *   gel-absent            la maquette ne porte rien du tout pour cet état ;
  *   non-applicable        aucun observable — le cas nommé de « sans droit ».
  *
- * @returns {Record<string, 'porte'|'manque-portage'|'gel-non-atteignable'|'gel-absent'|'non-applicable'>}
+ * ═════════════════════════════════════════════════════════════════════════
+ * « SANS DROIT » — L'OBSERVABLE CORRIGÉ (ARB-045, lot T-072)
+ *
+ * L'APPLICABILITÉ EST DÉCIDÉE PAR LE GEL, ET PAR LUI SEUL. Rien au gel — le
+ * cas « personne n'a jamais rien posé » — reste « non applicable » : la zone
+ * ne tient pas l'état, elle n'a pas d'état à tenir, et aucune omission du
+ * portage ne peut le lui donner. Déclaré mais jamais atteint reste
+ * « gel : déclaré ». Ces deux lignes-là sont intactes : le compte de gel ne
+ * bouge pas d'un couple.
+ *
+ * LA CONFRONTATION NE PORTE QUE SUR LE TROISIÈME CAS — le gel RETIRE
+ * effectivement l'action de l'écran dans au moins un état déclaré. On y
+ * compare alors les ENSEMBLES D'ÉCRANS qui offrent l'action, jamais les
+ * présences au DOM : masqué et absent sont indiscernables à l'écran (ARB-040),
+ * et P-09 interdit au produit d'être présent-mais-masqué. Le rouge subsiste,
+ * et il a désormais deux formes MESURÉES au lieu d'une forme structurelle :
+ * l'action OFFERTE là où le gel la retire, l'action PERDUE là où le gel
+ * l'offre.
+ *
+ * @param {string[]} ecransGel     états déclarés où le GEL montre l'action
+ * @param {string[]} ecransPortage états déclarés où le PORTAGE la montre
+ * @returns {Record<string, 'porte'|'porte-par-omission'|'manque-portage'|'gel-non-atteignable'|'gel-absent'|'non-applicable'>}
  */
-export function verdictDeZone(gel, portage, sansDroitGel, sansDroitPortage) {
+export function verdictDeZone(
+	gel,
+	portage,
+	sansDroitGel,
+	sansDroitPortage,
+	ecransGel = [],
+	ecransPortage = []
+) {
 	const out = {};
 	for (const e of QUATRE_ETATS) {
 		if (e === 'sans-droit') {
 			const g = sansDroitGel ?? 'non-applicable';
-			const p = sansDroitPortage ?? 'non-applicable';
-			if (g === 'non-applicable') out[e] = 'non-applicable';
-			else if (g === 'declare-non-atteignable') out[e] = 'gel-non-atteignable';
-			else if (p === 'atteignable') out[e] = 'porte';
-			else out[e] = 'manque-portage';
+			if (g === 'non-applicable') {
+				out[e] = 'non-applicable';
+				continue;
+			}
+			if (g === 'declare-non-atteignable') {
+				out[e] = 'gel-non-atteignable';
+				continue;
+			}
+			const auGelVu = new Set(ecransGel);
+			const auPortageVu = new Set(ecransPortage);
+			/* OFFERTE : le portage MONTRE l'action dans un état où le gel la
+			   retire. C'est la porte ouverte que RG-M05-08 interdit nommément.
+			   PERDUE : le portage la retire là où le gel l'offre — l'action a
+			   disparu pour qui y a droit. Les deux rougissent. */
+			const offerte = ecransPortage.some((x) => !auGelVu.has(x));
+			const perdue = ecransGel.some((x) => !auPortageVu.has(x));
+			if (offerte || perdue) out[e] = 'manque-portage';
+			else out[e] = sansDroitPortage === 'atteignable' ? 'porte' : 'porte-par-omission';
 			continue;
 		}
 		const auGel = (gel?.etats?.[e] ?? []).length > 0;
@@ -1148,13 +1297,25 @@ async function executer(args) {
 		const aPort = agregerCote(portA);
 		const sdGel = sansDroitParZone(gelA);
 		const sdPort = sansDroitParZone(portA);
+		/* ARB-045 — les ÉCRANS qui offrent une action gouvernée, des deux côtés.
+		   C'est l'observable de « sans droit » côté portage : la présence au DOM
+		   ne peut pas l'être, P-09 exigeant l'absence. */
+		const ecrGel = ecransConditionnesParZone(gelA);
+		const ecrPort = ecransConditionnesParZone(portA);
 
 		const chutesPortage = gelSeul ? [] : chutesDePage(gelA, portA);
 
 		const zones = [];
 		for (const [cle, fg] of aGel) {
 			const fp = aPort.get(cle) ?? null;
-			const v = verdictDeZone(fg, fp, sdGel.get(cle), sdPort.get(cle));
+			const v = verdictDeZone(
+				fg,
+				fp,
+				sdGel.get(cle),
+				sdPort.get(cle),
+				ecrGel.get(cle) ?? [],
+				ecrPort.get(cle) ?? []
+			);
 			/* ARB-012 — UNE ZONE HORS DU VERDICT DE SA VUE N'EN REÇOIT PAS UN.
 			   V-37 déclare `aside.rail` et `header.barre` : son `<main>` est
 			   « le contenu de V-07, la note de démonstration celle de V-14,
@@ -1167,7 +1328,12 @@ async function executer(args) {
 			/* `--gel` ne mesure pas l'application : lui imputer un manque serait
 			   lui reprocher de n'avoir pas été regardée. */
 			if (gelSeul) {
-				for (const e of QUATRE_ETATS) if (v[e] === 'manque-portage') v[e] = 'portage-non-mesure';
+				/* `porte-par-omission` en fait partie : sans mesure du portage, deux
+				   ensembles d'écrans vides coïncident TRIVIALEMENT, et un vert tiré
+				   d'une absence de mesure ne vaut rien (RA-01). */
+				for (const e of QUATRE_ETATS)
+					if (v[e] === 'manque-portage' || v[e] === 'porte-par-omission')
+						v[e] = 'portage-non-mesure';
 			}
 			const atteste =
 				QUATRE_ETATS.some((e) => (fg.etats?.[e] ?? []).length) ||
@@ -1185,6 +1351,7 @@ async function executer(args) {
 				sortes: fg.sortes,
 				portage: fp?.etats ?? {},
 				sansDroit: { gel: sdGel.get(cle) ?? null, portage: sdPort.get(cle) ?? null },
+				ecrans: { gel: ecrGel.get(cle) ?? [], portage: ecrPort.get(cle) ?? [] },
 				ecartees: [...fg.ecartees],
 				suspectes: [...fg.suspectes]
 			});
@@ -1228,6 +1395,7 @@ async function executer(args) {
 	/* ── Rapport ───────────────────────────────────────────────────────────── */
 	const compte = {
 		porte: 0,
+		'porte-par-omission': 0,
 		'manque-portage': 0,
 		'gel-non-atteignable': 0,
 		'gel-absent': 0,
@@ -1263,6 +1431,7 @@ async function executer(args) {
 			const cell = (e) =>
 				({
 					porte: 'porté',
+					'porte-par-omission': 'omis',
 					'manque-portage': 'PORTAGE',
 					'gel-non-atteignable': 'gel:décl',
 					'gel-absent': 'gel:rien',
@@ -1344,6 +1513,7 @@ async function executer(args) {
 		`\n  VERDICT — ${zonesAttestees} zone(s) de contenu attestée(s) sur ${vues.length} vue(s), ` +
 			`${total} couples zone × état\n` +
 			`    porté             ${String(compte.porte).padStart(5)}   le gel rend l’état, le portage aussi\n` +
+			`    omis (P-09)       ${String(compte['porte-par-omission']).padStart(5)}   « sans droit » TENU PAR L’ABSENCE : le gel masque, le portage n’émet pas\n` +
 			`    MANQUE PORTAGE    ${String(compte['manque-portage']).padStart(5)}   le gel rend l’état, le portage ne le rend pas\n` +
 			`    gel : déclaré     ${String(compte['gel-non-atteignable']).padStart(5)}   la maquette porte le composant, aucun état ne l’ATTEINT\n` +
 			`    gel : rien        ${String(compte['gel-absent']).padStart(5)}   la maquette ne montre pas cet état du tout\n` +
@@ -1473,7 +1643,9 @@ async function executer(args) {
 			`    · l’absence au DOM d’une action interdite : ${conditionnementsRestants} zone(s) du portage portent\n` +
 			'      encore un nœud conditionné par un droit. Le gel le MASQUE par une règle CSS\n' +
 			'      (socle.css:396–397) ; P-09 exige qu’il soit ABSENT. Ce verdict-là appartient\n' +
-			'      à la batterie 7 (`pnpm test:droits`), qui lit le DOM et non l’écran.\n' +
+			'      à la batterie 7 (`pnpm test:droits`), qui lit le DOM et non l’écran. CELLE-CI\n' +
+			'      ne lit que l’ÉCRAN, et depuis ARB-045 elle l’assume : masqué et absent lui\n' +
+			'      sont indiscernables, et c’est pourquoi elle ne peut pas trancher ce point.\n' +
 			`    · ${indiscernables.length} groupe(s) d’états que cette batterie NE SAIT PAS DISTINGUER —\n` +
 			'      vecteurs de planche différents, même instantané ARIA et mêmes classes rendues :\n' +
 			`      ${indiscernables.join(' · ') || 'aucun'}\n` +

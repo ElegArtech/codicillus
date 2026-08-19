@@ -16,10 +16,27 @@
 	 * temps 3 : aucun des huit états de `verif/scenarios/V-37.json` ne les montre
 	 * ouverts, et le squelette ne rend que l'état.
 	 *
-	 * `si-admin` sur l'entrée « Console d'administration » reproduit la maquette,
-	 * qui la retire en CSS. Ce n'est PAS P-09 : une action interdite doit être
-	 * absente du DOM (ADR-011), ce que ce squelette ne prétend pas tenir — la
-	 * frontière de droits relève de T-011 et T-016, en lentille adversariale.
+	 * ─────────────────────────────────────────────────────────────────────────
+	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040) — lot T-072
+	 *
+	 * Le gel POSE les actions d'écriture puis les cache par
+	 * `.app[data-droits="lecture"] .si-ecriture { display: none }` (socle.css:396).
+	 * Une maquette statique n'a pas de serveur ; le produit, lui, peut ne pas les
+	 * ÉMETTRE — et P-09 l'exige, « ni grisée, NI MASQUÉE ». DEUX NŒUDS sont
+	 * conditionnés ici, et seul leur RENDU l'est ; la classe `si-ecriture` reste
+	 * intacte sur le nœud émis, parce qu'elle porte aussi la mise en forme :
+	 *
+	 *   forme ABRÉGÉE   `button.btn.si-ecriture` « Créer »          (7 vues)
+	 *   forme COMPLÈTE  `div.menu-barre.si-ecriture#menu-creer`     (V-07, V-14)
+	 *
+	 * `si-admin` SUR L'ENTRÉE « Console d'administration » N'EST PAS CONDITIONNÉE,
+	 * et il faut dire pourquoi plutôt que de le taire. Elle vit dans
+	 * `.menu-barre__liste`, que le gel rend `display: none` tant que le menu est
+	 * fermé — et aucun des huit états déclarés ne l'ouvre. `pnpm test:droits` la
+	 * classe donc « hors état » DES DEUX CÔTÉS et ne la compte nulle part : elle
+	 * ne fait pas partie des 26 actions que le lot T-072 avait à fermer. La
+	 * fermer quand même serait une décision fonctionnelle prise en exécution ;
+	 * elle est REMONTÉE, pas prise. Voir T-072 É-4.
 	 *
 	 * ─────────────────────────────────────────────────────────────────────────
 	 * DEUX FORMES — ARB-021, A-1a et A-1g
@@ -74,9 +91,19 @@
 		compte: Compte;
 		/** La forme portée par la vue (ARB-021, A-1). */
 		forme?: 'complete' | 'abregee';
+		/**
+		 * DROITS EFFECTIFS — P-09. En lecture seule, le menu de création n'est pas
+		 * ÉMIS. Absente, la propriété vaut « aucune restriction » : c'est ce que
+		 * fait le socle, dont la règle ne se déclenche que sur
+		 * `data-droits="lecture"`.
+		 */
+		droits?: 'ecriture' | 'lecture' | undefined;
 	}
 
-	const { fil, rail, compte, forme = 'complete' }: Proprietes = $props();
+	const { fil, rail, compte, forme = 'complete', droits }: Proprietes = $props();
+
+	/* La TRANSCRIPTION de la règle du socle, pas une interprétation. */
+	const ecriture = $derived(droits !== 'lecture');
 
 	const designation = $derived(`${compte.nom} — menu utilisateur`);
 	const sousTitre = $derived(compte.domaine ? `${compte.role} · ${compte.domaine}` : compte.role);
@@ -123,27 +150,7 @@
 		<kbd class="touche">Ctrl</kbd><kbd class="touche">K</kbd>
 	</div>
 	{#if forme === 'abregee'}
-		<button class="btn si-ecriture" title="Créer">
-			<svg
-				width="14"
-				height="14"
-				viewBox="0 0 16 16"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.8"><path d="M8 3v10M3 8h10" /></svg
-			>
-			Créer
-		</button>
-		<button class="avatar" title={designation}>{compte.initiales}</button>
-	{:else}
-		<div class="menu-barre si-ecriture" id="menu-creer">
-			<button
-				class="btn"
-				id="ouvrir-creer"
-				aria-haspopup="true"
-				aria-expanded="false"
-				title="Créer"
-			>
+		{#if ecriture}<button class="btn si-ecriture" title="Créer">
 				<svg
 					width="14"
 					height="14"
@@ -153,55 +160,75 @@
 					stroke-width="1.8"><path d="M8 3v10M3 8h10" /></svg
 				>
 				Créer
-			</button>
-			<div class="menu-barre__liste" role="menu" aria-label="Créer">
-				<button type="button" role="menuitem"
-					><svg
-						width="15"
-						height="15"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.4"
-						><path
-							d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5L9 1.5zM9 1.5v4h4"
-						/></svg
-					>Nouvelle note</button
-				><button type="button" role="menuitem"
-					><svg
-						width="15"
-						height="15"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.4"
-						><path
-							d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"
-						/><path d="M8 7.5v4M6 9.5h4" /></svg
-					>Nouveau dossier</button
-				><button type="button" role="menuitem"
-					><svg
-						width="15"
-						height="15"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.4"><path d="M4 2.5h8v11l-4-3-4 3v-11z" /></svg
-					>Nouveau signet</button
+			</button>{/if}
+		<button class="avatar" title={designation}>{compte.initiales}</button>
+	{:else}
+		{#if ecriture}<div class="menu-barre si-ecriture" id="menu-creer">
+				<button
+					class="btn"
+					id="ouvrir-creer"
+					aria-haspopup="true"
+					aria-expanded="false"
+					title="Créer"
 				>
-				<div class="menu-barre__sep"></div>
-				<button type="button" role="menuitem"
-					><svg
-						width="15"
-						height="15"
+					<svg
+						width="14"
+						height="14"
 						viewBox="0 0 16 16"
 						fill="none"
 						stroke="currentColor"
-						stroke-width="1.4"><path d="M8 10.5V2M4.8 6.2L8 2.8l3.2 3.4M2.5 13.5h11" /></svg
-					>Importer des fichiers</button
-				>
-			</div>
-		</div>
+						stroke-width="1.8"><path d="M8 3v10M3 8h10" /></svg
+					>
+					Créer
+				</button>
+				<div class="menu-barre__liste" role="menu" aria-label="Créer">
+					<button type="button" role="menuitem"
+						><svg
+							width="15"
+							height="15"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.4"
+							><path
+								d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5L9 1.5zM9 1.5v4h4"
+							/></svg
+						>Nouvelle note</button
+					><button type="button" role="menuitem"
+						><svg
+							width="15"
+							height="15"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.4"
+							><path
+								d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"
+							/><path d="M8 7.5v4M6 9.5h4" /></svg
+						>Nouveau dossier</button
+					><button type="button" role="menuitem"
+						><svg
+							width="15"
+							height="15"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.4"><path d="M4 2.5h8v11l-4-3-4 3v-11z" /></svg
+						>Nouveau signet</button
+					>
+					<div class="menu-barre__sep"></div>
+					<button type="button" role="menuitem"
+						><svg
+							width="15"
+							height="15"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.4"><path d="M8 10.5V2M4.8 6.2L8 2.8l3.2 3.4M2.5 13.5h11" /></svg
+						>Importer des fichiers</button
+					>
+				</div>
+			</div>{/if}
 
 		<div class="menu-barre" id="menu-compte">
 			<button

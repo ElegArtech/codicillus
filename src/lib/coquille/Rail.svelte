@@ -86,6 +86,48 @@
 	 *     fonctionnelle prise en exécution, donc un défaut de contrat de tâche
 	 *     (`CLAUDE.md` §2, règle de non-comblement). L'entrée reste inerte et
 	 *     l'écart est remonté.
+	 *
+	 * SIGNETS A ÉTÉ ROUVERT AU LOT T-072, ET L'ENTRÉE RESTE INERTE. `ARB-046`
+	 * proposait une route GLOBALE `/signets` rendant V-22, au motif que « le gel
+	 * ne montre qu'une vue de signets et rien n'y distingue les deux portées ».
+	 * L'arbitrage posait lui-même sa borne : *« si un état déclaré de V-22
+	 * montrait un contexte de domaine qui contredit une portée globale,
+	 * arrête-toi »*. LA BORNE EST FRANCHIE, ET C'EST MESURÉ :
+	 *
+	 *   `V-22:3232`  `changerDomaine("Infrastructure")` — l'initialisation, donc
+	 *                les SIX états déclarés y passent ;
+	 *   `V-22:2946`  `#sur-titre` ← `courant.univers + " · " + courant.nom` ;
+	 *   `V-22:2947`  `#titre`     ← `"Signets de " + courant.nom` ;
+	 *   `V-22:2948`  `fil: ["Accueil", courant.univers, courant.nom, "Signets"]`.
+	 *
+	 * Aucun état de V-22 n'existe sans domaine : son titre, son sur-titre et son
+	 * fil en nomment un, et trois de ses six états sont un CHOIX de domaine. Une
+	 * adresse globale rendrait donc « Signets de Infrastructure ». La décision
+	 * est remontée pour reprise (T-072 É-3) ; l'entrée n'est pas câblée.
+	 *
+	 * ───────────────────────────────────────────────────────────────────────────
+	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040) — lot T-072
+	 *
+	 * Le gel POSE les entrées gouvernées par un droit, puis les cache en CSS :
+	 *   `.app[data-droits="lecture"] .si-ecriture { display: none }` (socle.css:396)
+	 *   `.app:not([data-role="admin"]) .si-admin  { display: none }` (socle.css:397)
+	 * Une maquette statique n'a pas de serveur : le masquage y est sa SEULE
+	 * possibilité. Le produit, lui, peut ne pas les émettre — et P-09 l'exige,
+	 * « ni grisée, NI MASQUÉE ».
+	 *
+	 * QUATRE NŒUDS SONT CONDITIONNÉS ICI, ET SEUL LEUR RENDU L'EST. La classe
+	 * `si-*` reste intacte sur le nœud émis : elle porte AUSSI la mise en forme —
+	 * en V-13 c'est elle qui donne son `display: inline-flex` au bouton. On
+	 * conditionne le rendu du nœud, jamais ses classes.
+	 *
+	 *   forme ABRÉGÉE   `a.rail__lien.si-ecriture` « Import »
+	 *                   `div.rail__section.si-ecriture` « Gestion › Console »
+	 *   forme COMPLÈTE  `a.rail__lien.si-ecriture` « Import »
+	 *                   `div.rail__section.si-admin` « Gestion › Console »
+	 *
+	 * Mesuré par `pnpm test:droits` : 23 des 27 actions de gel de la batterie 7
+	 * étaient portées par ces quatre nœuds. Énumération des omissions :
+	 * `docs/omissions-p09.md` — et son entête dit pourquoi cette adresse-là.
 	 */
 	import { resolve } from '$app/paths';
 	import type { NoeudRendu, SectionRendue } from './arborescence';
@@ -105,6 +147,20 @@
 		 * `aria-current="page"` et son `data-vers` propre (`V-07:1150`).
 		 */
 		accueilCourant?: boolean;
+		/**
+		 * DROITS EFFECTIFS — P-09. En lecture seule, les entrées `si-ecriture` ne
+		 * sont pas ÉMISES. Absente, la propriété vaut « aucune restriction » :
+		 * c'est exactement ce que fait le socle, dont la règle ne se déclenche que
+		 * sur `data-droits="lecture"`.
+		 */
+		droits?: 'ecriture' | 'lecture' | undefined;
+		/**
+		 * PROFIL — P-09. La section `si-admin` n'est ÉMISE que pour
+		 * l'administrateur. Le socle masque `.si-admin` dès que `data-role` vaut
+		 * autre chose qu'`admin` ; le défaut `referent` du gabarit est donc
+		 * restrictif, et la condition ci-dessous le reproduit à l'identique.
+		 */
+		role?: 'referent' | 'admin';
 	}
 
 	const {
@@ -112,8 +168,16 @@
 		sections = [],
 		sectionsAbregees = [],
 		version,
-		accueilCourant = false
+		accueilCourant = false,
+		droits,
+		role = 'referent'
 	}: Proprietes = $props();
+
+	/* Les deux conditions sont la TRANSCRIPTION des deux règles du socle, pas
+	   une interprétation : `.si-ecriture` disparaît quand `data-droits` vaut
+	   « lecture », `.si-admin` quand `data-role` ne vaut pas « admin ». */
+	const ecriture = $derived(droits !== 'lecture');
+	const admin = $derived(role === 'admin');
 </script>
 
 {#snippet branche(n: NoeudRendu)}
@@ -228,13 +292,15 @@
 			<a class="rail__lien" href="#">Cartographie</a>
 			<a class="rail__lien" href="#">Carte mentale</a>
 			<a class="rail__lien" href="#">Signets</a>
-			<a class="rail__lien si-ecriture" href="#">Import</a>
+			{#if ecriture}<a class="rail__lien si-ecriture" href="#">Import</a>{/if}
 		</div>
 
-		<div class="rail__section si-ecriture">
-			<div class="rail__titre etiq">Gestion</div>
-			<a class="rail__lien" href="#">Console</a>
-		</div>
+		{#if ecriture}
+			<div class="rail__section si-ecriture">
+				<div class="rail__titre etiq">Gestion</div>
+				<a class="rail__lien" href="#">Console</a>
+			</div>
+		{/if}
 	{:else}
 		<div class="rail__section">
 			<div class="rail__titre etiq">Outils</div>
@@ -283,36 +349,42 @@
 				>
 				Signets
 			</a>
-			<a class="rail__lien si-ecriture" href={resolve('/importer')} data-vers="Import — vue V-24">
-				<svg
-					width="15"
-					height="15"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.4"><path d="M8 10.5V2M4.8 6.2L8 2.8l3.2 3.4M2.5 13.5h11" /></svg
+			{#if ecriture}<a
+					class="rail__lien si-ecriture"
+					href={resolve('/importer')}
+					data-vers="Import — vue V-24"
 				>
-				Import
-			</a>
+					<svg
+						width="15"
+						height="15"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.4"><path d="M8 10.5V2M4.8 6.2L8 2.8l3.2 3.4M2.5 13.5h11" /></svg
+					>
+					Import
+				</a>{/if}
 		</div>
 
-		<div class="rail__section si-admin">
-			<div class="rail__titre etiq">Gestion</div>
-			<a class="rail__lien" href={resolve('/console/univers')} data-vers="Console — vue V-27">
-				<svg
-					width="15"
-					height="15"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.4"
-					><path
-						d="M6.5 1.8h3l.3 1.7 1.5.9 1.6-.7 1.5 2.6-1.2 1.2v1.7l1.2 1.2-1.5 2.6-1.6-.7-1.5.9-.3 1.7h-3l-.3-1.7-1.5-.9-1.6.7L.6 12.4l1.2-1.2V9.5L.6 8.3l1.5-2.6 1.6.7 1.5-.9z"
-					/><circle cx="8" cy="8" r="2" /></svg
-				>
-				Console
-			</a>
-		</div>
+		{#if admin}
+			<div class="rail__section si-admin">
+				<div class="rail__titre etiq">Gestion</div>
+				<a class="rail__lien" href={resolve('/console/univers')} data-vers="Console — vue V-27">
+					<svg
+						width="15"
+						height="15"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.4"
+						><path
+							d="M6.5 1.8h3l.3 1.7 1.5.9 1.6-.7 1.5 2.6-1.2 1.2v1.7l1.2 1.2-1.5 2.6-1.6-.7-1.5.9-.3 1.7h-3l-.3-1.7-1.5-.9-1.6.7L.6 12.4l1.2-1.2V9.5L.6 8.3l1.5-2.6 1.6.7 1.5-.9z"
+						/><circle cx="8" cy="8" r="2" /></svg
+					>
+					Console
+				</a>
+			</div>
+		{/if}
 	{/if}
 
 	<div class="rail__pied">

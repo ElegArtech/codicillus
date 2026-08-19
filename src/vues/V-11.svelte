@@ -93,7 +93,7 @@
 	 * Une maquette statique n'a pas de serveur : le masquage y est sa SEULE
 	 * possibilité. Le produit peut ne pas émettre le nœud, et P-09 l'exige —
 	 * « ni grisée, NI MASQUÉE ». La classe reste posée quand le nœud est rendu :
-	 * elle porte aussi le rendu. Énumération : `verif/rapports/omissions-p09.md`.
+	 * elle porte aussi le rendu. Énumération : `docs/omissions-p09.md`.
 	 */
 	const ecriture = $derived(profil !== 'lecteur');
 	const admin = $derived(profil === 'admin');
