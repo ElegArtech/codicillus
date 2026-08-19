@@ -20,6 +20,10 @@
  *     données (`src/lib/lecture/note-de-demonstration.ts` le constate). Le seul
  *     texte que le corpus porte par note est son `extrait`. Il devient le corps
  *     Référence — la SEULE dérivation possible qui n'invente pas de prose.
+ *     T-014 nuance ce constat sans le renverser : le corpus porte bien du corps
+ *     rédigé, mais celui de TROIS VERSIONS ANCIENNES de la seule note de
+ *     démonstration (`CONTENU_VERSIONS`, extrait de V-16), jamais le corps
+ *     courant d'une note. Voir `src/lib/contenu/documents-du-gel.ts`.
  *  2. LE CORPS OPÉRATIONNEL des cinq notes qui le déclarent : aucun texte.
  *     Un document vide est écrit — le registre existe, son contenu n'est nulle
  *     part —, jamais une prose fabriquée.
@@ -36,6 +40,7 @@
  *     fichier. Aucune ligne n'est écrite — un nom de fichier inventé serait une
  *     valeur illustrative, ce que P-02 proscrit.
  */
+import { analyserDocument, type Document } from '../contenu/document';
 import { SEUILS_PAR_DEFAUT, niveauFraicheur } from '../fraicheur';
 import { identifiantLisible, segmentsDeDossier } from '../rangement/adresses';
 import {
@@ -101,23 +106,33 @@ export function anciennete(instant: Date): number {
 
 /* ═══════════════════════════════════════════ Le corps des notes ═════════ */
 
-/** Un document ProseMirror sérialisé, tel qu'ADR-003 le décrit. */
-export interface DocumentDeNote {
-	readonly type: 'doc';
-	readonly content: readonly unknown[];
-}
+/**
+ * Un document ProseMirror sérialisé, tel qu'ADR-003 le décrit.
+ *
+ * LE FORMAT N'EST PLUS DÉCRIT ICI. T-010 en portait une esquisse — `content`
+ * en `unknown[]`, faute de schéma — ; T-014 a posé le format canonique, son
+ * schéma et son rendu dans `src/lib/contenu/document.ts`. Ce module s'y
+ * rattache plutôt que d'en tenir une seconde définition, qui divergerait.
+ */
+export type DocumentDeNote = Document;
 
-/** Le corps Référence dérivé du seul texte que le corpus porte : l'extrait. */
+/**
+ * Le corps Référence dérivé du seul texte que le corpus porte : l'extrait.
+ *
+ * Le document est VALIDÉ avant d'être rendu : ADR-003 interdit « toute écriture
+ * directe en base d'un document non validé par le schéma ProseMirror », et la
+ * semence est une écriture en base comme une autre.
+ */
 export function corpsDepuisTexte(texte: string): DocumentDeNote {
-	return {
+	return analyserDocument({
 		type: 'doc',
 		content: [{ type: 'paragraph', content: [{ type: 'text', text: texte }] }]
-	};
+	});
 }
 
 /** Le corps Opérationnel des notes qui le déclarent sans le porter : vide. */
 export function corpsVide(): DocumentDeNote {
-	return { type: 'doc', content: [{ type: 'paragraph' }] };
+	return analyserDocument({ type: 'doc', content: [{ type: 'paragraph' }] });
 }
 
 /* ═══════════════════════════════════════════════ Les traductions ════════ */
