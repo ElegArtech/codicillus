@@ -464,6 +464,19 @@ Exiger de l'application qu'elle entre en modalité, ce serait exiger du JavaScri
 statique — donc contredire ARB-011 pour satisfaire une mesure. **L'instrument s'adapte au régime de
 la phase, il ne le dicte pas.**
 
+> **Rectification, 19 août 2026 — `ECART-023` É-2. Cet arbitrage était écrit sur un seul cas.**
+>
+> La reproduction de la modalité « pointeur » valait pour V-40, dont la référence tient sa modalité
+> d'un **vrai clic du banc**. Mais **quinze des seize autres états modaux s'ouvrent sur un `change`
+> synthétique** : aucun pointeur ne touche leur référence, qui **affiche donc l'anneau de
+> focalisation**. Livrer l'appui au seul candidat le lui retirait — **308 pixels** sur `V-27`
+> `sup-systeme` et `sup-ok`, exactement le chiffre relevé sur V-40, **dans l'autre sens**.
+>
+> Corrigé : la modalité de la référence est **déduite mécaniquement** de la présence d'un
+> déclencheur. La formulation juste du principe est **« on reproduit la modalité de la référence,
+> on n'en impose pas une »** — et elle n'était pas la mienne : j'avais généralisé un cas
+> particulier en règle. Neuf vues portent des états modaux, non une.
+
 **Ce qui est déjà acquis sur V-40, et qui rend la décision sûre** : le niveau 1 est **vert sur les
 dix états**, et le DOM des dix boîtes est **identique caractère pour caractère** à la référence —
 vérifié par diff, aux seules différences de sérialisation près. Le contenu est juste ; seule la
