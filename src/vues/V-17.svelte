@@ -111,6 +111,7 @@
 		noteParIdentifiant,
 		type Note
 	} from '../../seeds/corpus';
+	import { motFiche, motFicheMinuscule } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — trois contrôles de planche. */
@@ -812,10 +813,10 @@
 			</section>
 
 			<section class="panneau">
-				<div class="panneau__tete"><span class="etiq">Fiche structurée</span></div>
+				<div class="panneau__tete"><span class="etiq">{motFiche} structurée</span></div>
 				<div class="panneau__corps meta-bloc">
 					<div class="champ">
-						<label class="champ__label" for="m-fiche">Type de fiche</label>
+						<label class="champ__label" for="m-fiche">Type de {motFicheMinuscule}</label>
 						<select class="selecteur" id="m-fiche">
 							<option value="" selected>Aucun — note simple</option>
 							{#each Object.keys(TYPES_FICHE) as type (type)}<option value={type}>{type}</option

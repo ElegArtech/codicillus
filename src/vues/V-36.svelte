@@ -82,6 +82,7 @@
 	import { CORPUS, DATE_REFERENCE, DOMAINES, type Note } from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
+	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/**
@@ -178,7 +179,7 @@
 	/** Les cinq lignes du récapitulatif, dans l'ordre du gel (`V-36:2894`). */
 	const recapitulatif = $derived([
 		['Notes', apercu.notes],
-		['dont fiches', apercu.fiches],
+		[`dont ${motFichePlurielMinuscule}`, apercu.fiches],
 		['dont signets', apercu.signets],
 		['Dossiers', apercu.dossiers],
 		['Pièces jointes', apercu.pieces]
@@ -263,7 +264,7 @@
 						><span class="ca__ic"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3" width="12" height="10" rx="1.4"/><path d="M2 6h12M5.5 9h5"/></svg></span
 						><div
 							><div class="ca__nom">Les métadonnées, en en-tête de chaque fichier</div
-							><div class="ca__txt">Type, étiquettes, auteur, date de dernière vérification, visibilité et propriétés de fiche, dans un bloc <code>---</code> en tête de fichier. C'est ce bloc qui rend l'archive réimportable.</div
+							><div class="ca__txt">Type, étiquettes, auteur, date de dernière vérification, visibilité et propriétés de {motFicheMinuscule}, dans un bloc <code>---</code> en tête de fichier. C'est ce bloc qui rend l'archive réimportable.</div
 						></div
 					></div
 					><div class="ca"

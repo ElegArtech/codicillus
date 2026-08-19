@@ -81,6 +81,7 @@ import {
 	TYPES_RELATION,
 	UNIVERS
 } from '../../../seeds/corpus';
+import { motFichePlurielMinuscule } from '../vocabulaire';
 
 /**
  * Les dix sections, dans l'ordre du gel. La clé est celle que la maquette
@@ -179,7 +180,7 @@ export const GROUPES_DE_CONSOLE: readonly GroupeDeSections[] = [
 			},
 			{
 				cle: 'fiches',
-				nom: 'Types de fiches',
+				nom: `Types de ${motFichePlurielMinuscule}`,
 				compte: Object.keys(TYPES_FICHE).length,
 				pictogramme: [
 					{ forme: 'rect', x: '2', y: '3', largeur: '12', hauteur: '10', rx: '1.4' },

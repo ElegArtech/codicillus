@@ -94,6 +94,12 @@
 	import { niveauFraicheur } from '$lib/fraicheur';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
+	import {
+		motFiche,
+		motFicheMinuscule,
+		motFichePluriel,
+		motFichePlurielMinuscule
+	} from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
@@ -253,21 +259,15 @@
 			.filter((b) => b.m.length)
 	);
 
-	/** `pluriel()` (`V-33:3136`) et `rendreVocabulaire()` (`V-33:3143`). */
-	function pluriel(mot: string): string {
-		if (/[sxz]$/i.test(mot)) return mot;
-		if (/(au|eu)$/i.test(mot)) return `${mot}x`;
-		if (/al$/i.test(mot)) return `${mot.slice(0, -2)}aux`;
-		return `${mot}s`;
-	}
-
-	const mot = $derived(CONFIG.motFiche.trim() || 'Fiche');
-	const motMinuscule = $derived(mot.charAt(0).toLowerCase() + mot.slice(1));
+	/* `pluriel()` (`V-33:3136`) et `rendreVocabulaire()` (`V-33:3143`) ne sont
+	   plus portés ici : ils sont dans `$lib/vocabulaire`, avec les quatre formes
+	   du mot, parce que TOUT le produit en dépend et non cette seule vue
+	   (`ARB-043` §4). Le calque du gel est inchangé, il a seulement déménagé. */
 	const vocabulaire = $derived([
-		['Console', `Types de ${pluriel(motMinuscule)}`],
-		['Éditeur', `Type de ${motMinuscule} — ajoute des propriétés structurées`],
-		['Page de domaine', `${pluriel(mot)} · module activé`],
-		['Recherche', `Filtrer par type · ${mot}`]
+		['Console', `Types de ${motFichePlurielMinuscule}`],
+		['Éditeur', `Type de ${motFicheMinuscule} — ajoute des propriétés structurées`],
+		['Page de domaine', `${motFichePluriel} · module activé`],
+		['Recherche', `Filtrer par type · ${motFiche}`]
 	]);
 
 	/** `majEtat()` (`V-33:3171`) — l'aide du champ « versions conservées ». */
@@ -294,13 +294,21 @@
 <!--
 	La barre de répartition du produit, et sa légende chiffrée. Les gardes de
 	formatage encadrent tout ce dont le texte porte un nom accessible.
+
+	LA BRANCHE VIDE EST CELLE DU GEL, ET ELLE EST LA PREMIÈRE CHOSE RENDUE.
+	`mockups/V-33-console-configuration.html:2902-2908` : quand l'ensemble
+	mesuré est vide — `!r.total` —, la fabrique du gel ne rend NI barre NI
+	légende, mais un seul nœud, `div.zone-etat__txt` de marge nulle, portant
+	« Aucune note à mesurer. ». Le corpus natif de V-33 ne l'exerce jamais :
+	`verif:maquette` était vert sans que ce chemin soit parcouru une seule fois
+	(CLAUDE.md §6, P-5). C'est `pnpm test:vide` — corpus vierge — qui l'a levé.
 -->
 <!-- prettier-ignore -->
-{#snippet barreRepartition(r: Repartition, sansLegende: boolean)}<div class="repart" role="img" aria-label={libelleDeBarre(r)}
+{#snippet barreRepartition(r: Repartition, sansLegende: boolean)}{#if !r.total}<div class="zone-etat__txt" style="margin:0">Aucune note à mesurer.</div>{:else}<div class="repart" role="img" aria-label={libelleDeBarre(r)}
 		>{#each partsDe(r) as p (p.cle)}<button type="button" class={p.classe} style="flex:{p.n}" title={p.libelle} aria-label={p.libelle}></button>{/each}</div
 	>{#if !sansLegende}<div class="legende"
 		>{#each partsDe(r) as p (p.cle)}<span><i class={p.classe}></i><b>{p.n}</b>{` ${p.n > 1 ? p.pluriel : p.singulier}`}</span>{/each}</div
-	>{/if}{/snippet}
+	>{/if}{/if}{/snippet}
 
 <CoquilleDeConsole section="configuration" {notes}>
 	{#snippet enfants()}

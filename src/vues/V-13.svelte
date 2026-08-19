@@ -58,6 +58,7 @@
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { segmentsDeDossier } from '$lib/rangement/adresses';
+	import { motFiche, motFichePluriel } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — dossier × droit effectif. */
@@ -194,7 +195,7 @@
 	/* ── Notes groupées par type ─────────────────────────────────────────────
 	   Une fiche est groupée sous son type structuré : « Fiche Serveur ». */
 	function cleDeType(n: Note): string {
-		return n.type === 'Fiche' ? `Fiche ${n.typeFiche}` : n.type;
+		return n.type === 'Fiche' ? `${motFiche} ${n.typeFiche}` : n.type;
 	}
 
 	function pluriel(t: string): string {
@@ -202,7 +203,7 @@
 		if (t === 'Guide') return 'Guides';
 		if (t === 'Note') return 'Notes';
 		if (t === 'Signet') return 'Signets';
-		if (t.startsWith('Fiche ')) return `Fiches ${t.slice(6)}`;
+		if (t.startsWith(`${motFiche} `)) return `${motFichePluriel} ${t.slice(motFiche.length + 1)}`;
 		return t;
 	}
 

@@ -73,6 +73,7 @@
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
+	import { motFiche } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — domaine × arrivée × état. */
@@ -278,7 +279,7 @@
 
 	/** Le libellé de pastille de type : une fiche annonce son type de fiche. */
 	function libelleDeType(n: Note): string {
-		return n.type === 'Fiche' ? `Fiche ${n.typeFiche}` : n.type;
+		return n.type === 'Fiche' ? `${motFiche} ${n.typeFiche}` : n.type;
 	}
 </script>
 

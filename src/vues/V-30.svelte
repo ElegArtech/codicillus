@@ -52,6 +52,7 @@
 		type CleDeTypeDeRelation,
 		type Note
 	} from '../../seeds/corpus';
+	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — formulaire × suppression. */
@@ -197,7 +198,7 @@
 	{#snippet enfants()}
 		<TeteDeSection
 			titre="Types de relations"
-			description="Le vocabulaire qui relie les fiches entre elles. Chaque type se lit dans les deux sens : « héberge » d'un côté, « est hébergé par » de l'autre. C'est ce couple qui rend le graphe compréhensible sans légende."
+			description={`Le vocabulaire qui relie les ${motFichePlurielMinuscule} entre elles. Chaque type se lit dans les deux sens : « héberge » d'un côté, « est hébergé par » de l'autre. C'est ce couple qui rend le graphe compréhensible sans légende.`}
 		>
 			{#snippet action()}
 				<BoutonDeCreation libelle="Nouveau type" />
@@ -313,8 +314,8 @@
 						value={edite ? edite.direct : ''}
 					/>
 					<span class="champ__aide"
-						>Se lit de la fiche d'origine vers la fiche cible. En minuscules, à la troisième
-						personne.</span
+						>Se lit de la {motFicheMinuscule} d'origine vers la {motFicheMinuscule} cible. En minuscules,
+						à la troisième personne.</span
 					>
 					<div class="champ__erreur" id="erreur-direct" hidden>
 						<svg
@@ -345,7 +346,7 @@
 					/>
 					<span class="champ__aide"
 						>Se lit de la cible vers l'origine. C'est lui qui apparaît dans le panneau Relations de
-						la fiche visée.</span
+						la {motFicheMinuscule} visée.</span
 					>
 					<div class="champ__erreur" id="erreur-inverse" hidden>
 						<svg
@@ -468,8 +469,8 @@
 								<ul>
 									<li>
 										<b>{relationsASupprimer}</b>{relationsASupprimer > 1
-											? 'relations déclarées entre des fiches'
-											: 'relation déclarée entre des fiches'}
+											? `relations déclarées entre des ${motFichePlurielMinuscule}`
+											: `relation déclarée entre des ${motFichePlurielMinuscule}`}
 									</li>
 									{#if aSupprimer.technique}<li>
 											Type technique : sa disparition modifiera le calcul des points de rupture de
@@ -477,8 +478,8 @@
 										</li>{/if}
 								</ul>
 								<div class="refus__sortie">
-									Choisissez ce qu'il advient de ces relations. Aucune fiche n'est supprimée dans
-									les deux cas : seul le lien entre elles est concerné.
+									Choisissez ce qu'il advient de ces relations. Aucune {motFicheMinuscule} n'est supprimée
+									dans les deux cas : seul le lien entre elles est concerné.
 								</div>
 							</div>
 							<div class="choix-reaffectation">
@@ -499,7 +500,7 @@
 								><label
 									><input type="radio" name="sortie" value="supprimer" /><span style="flex:1"
 										>Supprimer aussi ces {relationsASupprimer} relations<span class="aide"
-											>Les liens disparaissent du graphe et des panneaux Relations. Les fiches
+											>Les liens disparaissent du graphe et des panneaux Relations. Les {motFichePlurielMinuscule}
 											restent intactes. Cette perte est définitive.</span
 										></span
 									></label
