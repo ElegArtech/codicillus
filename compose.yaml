@@ -1,0 +1,244 @@
+# Composition d'exploitation de Codicillus — lot T-003.
+#
+# Cinq services applicatifs (STACK-TECHNIQUE.md §8), plus le serveur frontal
+# qui termine les connexions et sert la page d'indisponibilité programmée
+# (RG-NF-10). Une machine, aucun orchestrateur, aucun cache distribué, aucune
+# file de messages tierce : la file de tâches vit dans PostgreSQL (C-13,
+# ADR-009).
+#
+# ┌── frontal (Caddy) ── termine TLS, sert l'indisponibilité programmée
+# │
+# ├── app ────────────── SvelteKit + tâches de fond            CRITIQUE
+# ├── db ─────────────── PostgreSQL 18.6 + pgvector 0.8.6      CRITIQUE
+# ├── recherche ──────── Meilisearch 1.53.1                    CRITIQUE
+# ├── conversion ─────── Pandoc, python-pptx, pdfplumber       OPTIONNEL
+# └── embeddings ─────── Ollama                                OPTIONNEL
+#
+# LES DEUX OPTIONNELS NE SONT JAMAIS DANS LE CHEMIN CRITIQUE (P-10, RG-NF-01,
+# ADR-009). C'est une propriété de cette composition, pas une intention :
+# `app` ne les déclare pas en `depends_on`, ne les attend pas au démarrage, et
+# aucun de ses contrôles de santé ne les traverse. Les arrêter laisse le
+# produit pleinement utilisable — seuls le mode « Sens » et l'import
+# bureautique se signalent indisponibles.
+#
+# Aucun mot de passe par défaut : les variables de secret sont déclarées avec
+# `:?`, la composition refuse de démarrer si elles manquent. Voir `.env.example`.
+
+name: ${NOM_PROJET:-codicillus}
+
+services:
+  # ───────────────────────────────────────────────────────────── frontal ────
+  # Caddy 2.11.4. TLS automatique : une adresse de site en `https://` ou un
+  # nom de domaine nu suffit — certificat public par ACME, certificat de
+  # l'autorité interne pour `localhost` et `.localhost`. Aucune clé n'est
+  # écrite dans le dépôt.
+  frontal:
+    image: caddy:2.11.4-alpine
+    restart: unless-stopped
+    environment:
+      ADRESSE_SITE: ${ADRESSE_SITE:?adresse publique du site — voir .env.example}
+      DIRECTIVE_COURRIEL_ACME: ${COURRIEL_ACME:+email ${COURRIEL_ACME}}
+    ports:
+      - '${PORT_HTTP:-19080}:80'
+      - '${PORT_HTTPS:-19443}:443'
+    volumes:
+      - ./frontal/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontal/indisponibilite:/srv/indisponibilite:ro
+      - caddy_donnees:/data
+      - caddy_config:/config
+    healthcheck:
+      # `/_sante` est servi par le frontal lui-même : il prouve que le frontal
+      # répond, y compris quand `app` est arrêté ou en indisponibilité.
+      test: ['CMD', 'wget', '--quiet', '--spider', 'http://127.0.0.1/_sante']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      app:
+        condition: service_started
+    networks: [codicillus]
+
+  # ───────────────────────────────────────────────────────────────── app ────
+  # Image construite : SvelteKit rendu par `@sveltejs/adapter-node` sur
+  # Node 24.19.0, et les tâches de fond `pg-boss` dans le même processus
+  # (C-13 : rien de plus à exploiter).
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # N'ATTEND QUE LES DEUX BRIQUES CRITIQUES. Ajouter `conversion` ou
+    # `embeddings` ici mettrait une brique optionnelle dans le chemin de
+    # démarrage : ADR-009 l'interdit.
+    depends_on:
+      db:
+        condition: service_healthy
+      recherche:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '3000'
+      ORIGIN: ${ADRESSE_SITE}
+      # Briques critiques.
+      URL_BASE: postgres://${UTILISATEUR_POSTGRES:-codicillus}:${MDP_POSTGRES:?mot de passe PostgreSQL — voir .env.example}@db:5432/${BASE_POSTGRES:-codicillus}
+      URL_RECHERCHE: http://recherche:7700
+      CLE_RECHERCHE: ${CLE_MAITRE_RECHERCHE:?clé maître Meilisearch — voir .env.example}
+      # Briques optionnelles : une adresse, jamais une dépendance. Leur
+      # indisponibilité est un état dégradé, pas une erreur (RG-NF-01).
+      URL_CONVERSION: http://conversion:8000
+      URL_EMBEDDINGS: http://embeddings:11434
+      MODELE_EMBEDDINGS: ${MODELE_EMBEDDINGS:-}
+      # Racine des pièces jointes et des images — deuxième et dernier élément
+      # de la sauvegarde (RG-NF-09).
+      RACINE_FICHIERS: /var/lib/codicillus/fichiers
+    volumes:
+      - fichiers:/var/lib/codicillus/fichiers
+    ports:
+      # Diagnostic d'exploitation seulement : la boucle locale, jamais
+      # l'extérieur. Le public passe par le frontal.
+      - '127.0.0.1:${PORT_APP:-19300}:3000'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [codicillus]
+
+  # ────────────────────────────────────────────────────────────────── db ────
+  # PostgreSQL 18.6 + pgvector 0.8.6 : la vérité métier, les vecteurs de sens,
+  # et la file de tâches `pg-boss`. `pg_dump` de cette base est le premier des
+  # deux seuls éléments de sauvegarde (RG-NF-09).
+  db:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${UTILISATEUR_POSTGRES:-codicillus}
+      POSTGRES_PASSWORD: ${MDP_POSTGRES:?mot de passe PostgreSQL — voir .env.example}
+      POSTGRES_DB: ${BASE_POSTGRES:-codicillus}
+      # Les accents du corpus documentaire ne sont pas négociables.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C.UTF-8'
+    volumes:
+      # POINT DE MONTAGE : `/var/lib/postgresql`, PAS `/var/lib/postgresql/data`.
+      # Depuis la 18, l'image officielle range les données dans un
+      # sous-dossier par version majeure (`18/docker`) et REFUSE DE DÉMARRER
+      # si elle trouve un volume monté sur l'ancien chemin — mesuré au lot
+      # T-003. C'est ce rangement qui rend `pg_upgrade --link` possible sans
+      # franchir une frontière de montage.
+      - db_donnees:/var/lib/postgresql
+    ports:
+      - '127.0.0.1:${PORT_DB:-19432}:5432'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U "${UTILISATEUR_POSTGRES:-codicillus}" -d "${BASE_POSTGRES:-codicillus}"'
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks: [codicillus]
+
+  # ─────────────────────────────────────────────────────────── recherche ────
+  # Meilisearch 1.53.1 : l'index des trois modes de M02.4. Reconstructible
+  # depuis la base — il n'entre donc PAS dans la sauvegarde (RG-NF-09), et sa
+  # réindexation est un test de cohérence.
+  recherche:
+    image: getmeili/meilisearch:v1.53.1
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${CLE_MAITRE_RECHERCHE:?clé maître Meilisearch — voir .env.example}
+      MEILI_ENV: production
+      # C-11 : aucune donnée ne sort vers un tiers.
+      MEILI_NO_ANALYTICS: 'true'
+    volumes:
+      - recherche_donnees:/meili_data
+    ports:
+      - '127.0.0.1:${PORT_RECHERCHE:-19700}:7700'
+    healthcheck:
+      test: ['CMD', 'curl', '--fail', '--silent', 'http://127.0.0.1:7700/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks: [codicillus]
+
+  # ────────────────────────────────────────────────────────── conversion ────
+  # OPTIONNEL. Pandoc 3.10.2, python-pptx 1.0.2, pdfplumber 0.11.10 sur
+  # Python 3.14.7. Arrêté, l'import bureautique se signale indisponible et
+  # l'import Markdown — qui ne sort jamais de l'application (ADR-004) —
+  # continue. Le service de conversion lui-même est le lot T-042 ; T-003 pose
+  # le conteneur et son contrôle de santé, rien d'autre.
+  conversion:
+    build:
+      context: ./services/conversion
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # Un fichier malformé ne doit ni durer, ni emporter le lot (RG-M12-04).
+      DELAI_MAX_CONVERSION: ${DELAI_MAX_CONVERSION:-120}
+    ports:
+      - '127.0.0.1:${PORT_CONVERSION:-19800}:8000'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/sante', timeout=5).status == 200 else 1)"
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    networks: [codicillus]
+
+  # ────────────────────────────────────────────────────────── embeddings ────
+  # OPTIONNEL. Ollama : le calcul des vecteurs de sens. Les vecteurs eux-mêmes
+  # sont conservés dans PostgreSQL avec pgvector (ADR-009) : service arrêté,
+  # l'index reste complet en mots-clés et le mode « Sens » se signale
+  # indisponible. Le modèle est un paramètre, pas une décision de structure
+  # (STACK §11 point 4) : il n'est pas fixé ici.
+  embeddings:
+    image: ollama/ollama:0.32.13
+    restart: unless-stopped
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_MODELS: /root/.ollama/models
+    volumes:
+      - embeddings_modeles:/root/.ollama
+    ports:
+      - '127.0.0.1:${PORT_EMBEDDINGS:-19114}:11434'
+    healthcheck:
+      # `ollama list` interroge l'API du service : il prouve qu'il répond, et
+      # pas seulement que le binaire existe.
+      test: ['CMD-SHELL', 'ollama list >/dev/null 2>&1']
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks: [codicillus]
+
+networks:
+  codicillus:
+    driver: bridge
+
+volumes:
+  # SAUVEGARDÉS (RG-NF-09) : la base, et les fichiers joints. Rien d'autre.
+  db_donnees:
+  fichiers:
+  # RECONSTRUCTIBLES : l'index se réindexe depuis la base, les modèles se
+  # retirent du registre, Caddy réémet ses certificats.
+  recherche_donnees:
+  embeddings_modeles:
+  caddy_donnees:
+  caddy_config:

@@ -1,0 +1,22 @@
+# Ce qui n'a rien à faire dans un contexte de construction d'image.
+# `verif/` est exclu en bloc : seul `verif/banc/mode-demo.mjs`, exigé par
+# `vite.config.ts`, est copié explicitement par le Dockerfile.
+node_modules
+.svelte-kit
+build
+.git
+.claude
+.env
+.env.*
+verif
+!verif/banc/mode-demo.mjs
+!verif/references/protocole-app.json
+mockups
+cadrage
+règles
+docs
+seeds
+test-results
+playwright-report
+blob-report
+*.log

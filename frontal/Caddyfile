@@ -1,0 +1,88 @@
+# Serveur frontal — Caddy 2.11.4 (STACK-TECHNIQUE.md §8).
+#
+# Trois rôles, et rien d'autre :
+#   1. terminer les connexions, TLS automatique ;
+#   2. servir la page d'indisponibilité programmée (RG-NF-10) ;
+#   3. relayer tout le reste vers `app`.
+#
+# TLS AUTOMATIQUE, SANS CLÉ DANS LE DÉPÔT. `ADRESSE_SITE` porte à elle seule
+# la décision : un nom de domaine public déclenche l'émission ACME ; un nom en
+# `.localhost` ou une adresse IP déclenche l'autorité interne de Caddy. Aucun
+# certificat, aucune clé privée n'est écrite ici — ils vivent dans le volume
+# `caddy_donnees`, qui se reconstruit (RG-NF-09 : il n'est pas sauvegardé).
+
+{
+	# Adresse de notification de l'autorité de certification. La DIRECTIVE
+	# ENTIÈRE est posée par la composition : `COURRIEL_ACME` vide n'y laisse
+	# rien du tout, là où un `email` sans argument serait une erreur de
+	# syntaxe. L'autorité interne, elle, n'en demande aucune.
+	{$DIRECTIVE_COURRIEL_ACME}
+	# Aucune interface d'administration : rien à exploiter de plus (C-13).
+	admin off
+}
+
+# ── Sonde d'exploitation, boucle locale ────────────────────────────────────
+# Ce bloc existe pour que le contrôle de santé du conteneur ait une réponse
+# indépendante du nom de domaine ET du certificat. Il répond sur la boucle
+# locale du conteneur, jamais depuis l'extérieur : le port 80 publié n'est
+# atteignable qu'avec l'en-tête `Host` du site public.
+http://127.0.0.1 {
+	respond /_sante 204
+	respond 404
+}
+
+# ── Le site ────────────────────────────────────────────────────────────────
+{$ADRESSE_SITE} {
+	encode zstd gzip
+
+	# Journal en JSON sur la sortie standard : `docker compose logs frontal`
+	# suffit, aucun fichier à faire tourner (C-13).
+	log {
+		output stdout
+		format json
+	}
+
+	handle /_sante {
+		respond 204
+	}
+
+	# INDISPONIBILITÉ PROGRAMMÉE (RG-NF-10). Elle s'active par la seule
+	# présence du fichier témoin `frontal/indisponibilite/ACTIF` — création,
+	# suppression, rien à redémarrer, et l'application peut être arrêtée
+	# pendant ce temps :
+	#
+	#     touch frontal/indisponibilite/ACTIF     → activée
+	#     rm    frontal/indisponibilite/ACTIF     → levée
+	#
+	# Le code 503 et l'en-tête `Retry-After` sont ce qui distingue une
+	# maintenance d'une panne pour les moteurs et les clients automatiques.
+	@indisponible file {
+		root /srv/indisponibilite
+		try_files ACTIF
+	}
+	handle @indisponible {
+		root * /srv/indisponibilite
+		rewrite * /indisponibilite.html
+		header Cache-Control "no-store"
+		header Retry-After "600"
+		file_server {
+			status 503
+		}
+	}
+
+	handle {
+		reverse_proxy app:3000
+	}
+
+	# Une brique en défaut ne produit jamais d'erreur brute (RG-NF-10) : la
+	# même page est servie, en conservant le code réel — 502 reste 502, il ne
+	# se déguise pas en maintenance.
+	handle_errors {
+		root * /srv/indisponibilite
+		rewrite * /indisponibilite.html
+		header Cache-Control "no-store"
+		file_server {
+			status {err.status_code}
+		}
+	}
+}
