@@ -42,16 +42,12 @@
 			{
 				"selecteur": "#mdp-valeur",
 				"motif": "Mot de passe temporaire tiré au sort — `motDePasse()` compose trois mots et un nombre par `Math.random()` (mockups/V-32-console-comptes.html:2975-2981) et l'affiche dans le dialogue de réinitialisation (:3236). Aucune implémentation ne peut reproduire la valeur de la maquette : la comparer mesurerait le générateur, pas la vue.",
-				"etats": [
-					"mdp"
-				]
+				"etats": ["mdp"]
 			},
 			{
 				"selecteur": "#f-mdp",
 				"motif": "Mot de passe initial du formulaire de création — même tirage par Math.random() que #mdp-valeur (mockups/V-32-console-comptes.html:2975). Relevé manquant, ajouté sur constat de P-3 : l'état form-creation portait la même valeur non reproductible.",
-				"etats": [
-					"form-creation"
-				]
+				"etats": ["form-creation"]
 			}
 		]
 	}
