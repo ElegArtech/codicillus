@@ -129,6 +129,21 @@ export const DENSITE = 1;
    Chromium, lui, n'est pas virtualisable : il faut lui laisser peindre ce que
    le temps virtuel vient de produire. */
 export const AVANCE_CHARGEMENT_MS = 1000;
+/* ÉCART-032 — CETTE VALEUR EST DANS LE RENDU DE CERTAINES VUES, pas seulement
+   dans le harnais. Le lot de l'import l'a mesuré : V-24 `et-4` avance de 130 ms
+   par fichier, donc sept tics sont dus à 1 000 ms — d'où barre à 23 %, septième
+   fichier, compteurs 5/2/0. La même mesure vaut pour tout état dont le gel
+   anime la progression.
+
+   La constante est donc un COUPLAGE VUE ↔ INSTRUMENT, symétrique — les deux
+   côtés reçoivent la même avance — mais réel : la changer ferait diverger ces
+   états sans qu'aucune vue n'ait bougé, et l'implémenteur chercherait la cause
+   dans son code.
+
+   Elle est en ÉCRITURE HUMAINE SEULE au même titre que les tolérances, et pour
+   la même raison. La modifier exige de rejouer le régime `app` sur toutes les
+   vues, pas seulement l'à-blanc : l'à-blanc compare la maquette à elle-même et
+   ne verrait rien. */
 export const AVANCE_ETAT_MS = 1000;
 export const PEINTURE_MS = 80;
 
