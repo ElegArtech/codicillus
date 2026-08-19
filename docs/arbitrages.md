@@ -1659,3 +1659,226 @@ implémentations, et vérifier que tous les appelants passent par la même.
 **Ce que cet arbitrage ne fait pas.** Il n'anticipe ni `T-021`, ni `T-043`, ni `T-045` : il pose le
 garde-fou, pas leur code. Et il ne dit pas *où* le contrôle vit — batterie propre ou extension de la
 5 : l'exécutant tranche, et le justifie.
+
+---
+
+## ARB-052 — Les deux régimes de refus se partagent par la nature de l'adresse, non par la famille
+**20 août 2026** — arbitrage délégué. Répond à `T-012` É-2, et **corrige `docs/routes.md` §5.5**.
+
+### La contradiction, et elle est réelle
+
+`docs/routes.md` dit deux choses incompatibles de la **même** requête — un anonyme demandant
+`/importer` :
+
+| Où | Ce qui y est écrit |
+|---|---|
+| `:324`, §5.2 | « Route protégée sans session → `302 → /connexion?motif=page-protegee&suite={chemin}` » |
+| `:370`, §5.5 | `/importer` · Anonyme → **404 V-04** — et le principe 4 ajoute que la matrice « relève **entièrement** du régime indiscernable » |
+
+Une redirection et un 404 ne se cumulent pas. L'exécutant a tranché pour la redirection sur trois
+familles, a **déclaré** le choix et demandé l'arbitrage. C'était le bon geste ; le motif qu'il donnait
+n'était pas le bon, et la décision tient tout de même — ci-dessous.
+
+### Ce que la préséance dit, et qu'il faut dire d'abord
+
+**`docs/routes.md` n'est pas une source de vérité.** L'ordre est *Maquettes > Cahier des charges >
+Brief des vues > Pile technique > Plan de réalisation*. `routes.md` est un livrable de vague 0
+(`T-006`), écrit par un agent : c'est un **inventaire**, opposable comme relevé, jamais comme
+décision. Sa contradiction interne ne se tranche donc pas « par le §5.5 parce qu'il est plus
+détaillé », mais en remontant aux sources.
+
+### Ce que les sources donnent
+
+1. **La maquette V-05 fait de `page-protegee` la position COCHÉE PAR DÉFAUT de sa planche** —
+   `mockups/V-05-connexion.html:615` : `<input type="radio" name="arrivee" value="protegee" checked>`.
+   Son bandeau dit « Vous devez être connecté pour accéder à cette page · Après connexion, vous serez
+   ramené là où vous alliez » (`:671-672`). Et `verif/scenarios/V-05.json` déclare
+   `arrivee-protegee` **état par défaut**, mesuré par le banc.
+   **Si aucune route ne produit jamais ce motif, l'état par défaut du gel n'a aucun déclencheur.**
+   C'est `P-5` appliqué au gel lui-même : une règle qu'aucun cas n'exerce.
+2. **`UC-M16-01`** (`CDC:1277`) : « après connexion, l'utilisateur retourne à la page qu'il tentait
+   d'atteindre ». Une page qu'on ne peut pas *tenter* d'atteindre — parce qu'elle rend 404 — ne peut
+   pas être restaurée. La règle exige donc un chemin qui mémorise la cible.
+3. **`RG-ACC-04`** (`CDC:113`) : « un accès refusé sur un **contenu** existant et un accès sur un
+   **contenu** inexistant produisent la même réponse visible, **pour ne pas révéler l'existence d'un
+   contenu confidentiel** ». Le motif de la règle est nommé, et il porte sur du **contenu**.
+4. **`ARB-005`**, repris à `routes.md:399` : le régime indiscernable porte sur « la résolution d'une
+   **ressource entière**, c'est-à-dire d'une adresse ».
+
+### La décision
+
+**Le partage se fait par la nature de l'adresse, et le §5.5 sur-généralise.**
+
+| Nature de l'adresse | Régime | Pourquoi |
+|---|---|---|
+| **Adresse de ressource** — `/notes/{id}`, `/univers/…`, `/guides/{id}`, `/domaines/…`, et toute adresse portant un identifiant de corpus | **indiscernable** : 404, V-04 en anonyme, V-26 en connecté, par le chemin unique d'`ADR-007` | son existence **est** l'information confidentielle. C'est exactement le motif que `RG-ACC-04` énonce |
+| **Chemin fixe de fonction** — `/importer`, `/mon-profil`, `/console/…`, `/bibliotheque`, `/cartographie`, `/carte-mentale` — pour un **anonyme** | **redirection** `302 → /connexion?motif=page-protegee&suite={chemin}` | il ne révèle **aucun contenu**. Que le produit ait un import, un profil et une console est vrai de tout produit de cette nature, et `P-09` le dit déjà autrement : l'entrée n'est pas *rendue* dans la navigation — ce qui ne rend pas le chemin secret |
+| **Chemin fixe de fonction** — pour un **connecté sans le droit** | **indiscernable** : 404 V-26 | là, l'information n'est plus « il faut un compte » mais « ce compte n'y a pas droit », et `routes.md:167` en donne le motif : la console « n'apparaît pas dans la navigation des autres profils » |
+
+**Le critère opérationnel, en une phrase :** *une adresse dont la réponse dépend du corpus est
+indiscernable ; une adresse dont la réponse ne dépend que de la présence d'une session redirige.*
+
+### Ce que cela emporte
+
+- **`docs/routes.md` §5.5 est corrigé** sur la seule colonne « Anonyme » des six chemins fixes, et le
+  principe 4 est amendé : la matrice relève du régime indiscernable **pour les adresses de
+  ressource**, non « entièrement ». La contradiction avec §5.2 disparaît.
+- **La décision d'exécution de `T-012` est ratifiée** pour `/importer`, `/mon-profil`, `/console/…`.
+  Elle est **étendue** à `/bibliotheque`, `/cartographie` et `/carte-mentale`, que le lot avait
+  laissées en régime `resolution` faute d'arbitrage — le même raisonnement les couvre, et `ARB-002`
+  comme `ARB-007` ne parlent que du **connecté**.
+- **La borne, et elle est stricte.** Aucune adresse portant un identifiant de corpus ne redirige,
+  jamais, sous aucun prétexte de commodité. En cas de doute sur la nature d'une adresse,
+  **l'indiscernable l'emporte** — `ARB-005` est inchangé sur ce point.
+
+---
+
+## ARB-053 — L'origine de `RG-M16-01` derrière le frontal, et pourquoi on peut faire confiance à l'en-tête
+**20 août 2026** — arbitrage délégué. Répond à `T-012` É-3, qui est un défaut réel et bien relevé.
+
+### Le fait, mesuré et non supposé
+
+`RG-M16-01` (`CDC:1279`) ralentit puis bloque « les tentatives depuis une **même origine** ». `T-012`
+l'implémente à la lettre, sur `getClientAddress()`. Et il a relevé la conséquence :
+
+```
+$ grep -rn "ADDRESS_HEADER\|XFF\|X-Forwarded\|trusted_proxies" compose.yaml Dockerfile frontal/Caddyfile .env.example
+(aucune occurrence)
+$ grep -n -A1 reverse_proxy frontal/Caddyfile
+74:		reverse_proxy app:3000
+```
+
+Le frontal proxifie sans transmettre d'origine exploitable, et `@sveltejs/adapter-node` ne lit
+`X-Forwarded-For` que si `ADDRESS_HEADER` le lui dit. **En exploitation, toutes les requêtes partagent
+donc une seule origine : le frontal.** Un attaquant bloque l'instance entière pendant 90 secondes.
+
+**C'est une exigence tenue à la lettre dont l'effet est l'inverse de son intention**, et l'exécutant a
+eu raison de la livrer ainsi en le déclarant plutôt que de « l'adapter » en silence.
+
+### La question qui bloquait, et sa réponse est dans `compose.yaml`
+
+Faire confiance à `X-Forwarded-For` est ordinairement imprudent : un client qui atteint l'application
+directement peut le forger. **Ici, il ne peut pas**, et c'est vérifiable :
+
+`compose.yaml`, service `app` — la publication de port est
+`'127.0.0.1:${PORT_APP:-19300}:3000'`, avec le commentaire *« diagnostic d'exploitation seulement : la
+boucle locale, jamais l'extérieur. Le public passe par le frontal. »* Le service `db` et
+`recherche` font de même. **Le seul chemin d'entrée depuis l'extérieur est le frontal**, qui réécrit
+l'en-tête.
+
+La confiance n'est donc pas un pari : elle est une **propriété de la composition**, au même titre que
+« les deux optionnels ne sont jamais dans le chemin critique ».
+
+### Décision
+
+**L'origine est l'adresse du client telle que le frontal la voit**, transmise par
+`X-Forwarded-For` et lue avec **exactement un saut de confiance** :
+
+```
+ADDRESS_HEADER=X-Forwarded-For
+XFF_DEPTH=1
+```
+
+Un seul saut, parce qu'il n'y a qu'un seul intermédiaire. `XFF_DEPTH` plus grand ferait confiance à
+une valeur que le client contrôle.
+
+**La clé reste l'origine seule, et non `(origine, identifiant)`.** La seconde forme s'écarte de la
+lettre de `RG-M16-01` et ouvre un blocage **ciblé** : qui connaît un identifiant peut en verrouiller
+le compte. La règle protège contre le balayage, pas contre le déni de service nominatif.
+
+### Et la parade est dans la forme, pas dans la consigne
+
+`P-13` a appris à ce dépôt qu'une parade qui repose sur la discipline de l'exploitant est du régime le
+plus faible. Deux variables d'environnement posées dans `compose.yaml` sont **de la forme** : elles
+voyagent avec la composition.
+
+**Mais elles ne suffisent pas, et voici la borne.** Deux cas doivent être éprouvés, sans quoi la
+correction est espérée (`P-5`) :
+
+1. **Deux origines distinctes ne se bloquent pas l'une l'autre** — le cas que le défaut rend faux
+   aujourd'hui, et qui doit donc rougir avant la correction.
+2. **Une origine forgée par le client ne passe pas** au-delà du saut autorisé.
+
+Le premier est celui qui compte : c'est lui qui distingue une correction d'une déclaration.
+
+---
+
+## ARB-054 — Les quatre décisions de forme de `T-012`, ratifiées
+**20 août 2026** — arbitrage délégué. Répond à `T-012` É-4, É-5, É-6 et É-9. **Aucune ne va au dossier
+de regel** : les quatre se déduisent, et deux se déduisent d'une ligne du gel que le lot n'avait pas
+citée.
+
+### 1 · Le barème de ralentissement — `É-4`, ratifié
+
+`BAREME = { attentesEnSecondes: [0, 0, 1, 2, 4, 8], blocageEnSecondes: 90 }`.
+
+Recherche exhaustive confirmée : le gel ne porte **qu'un** nombre, `verrouiller(90)`
+(`mockups/V-05-connexion.html:777`), et `RG-M16-01` n'exige que la **forme** (« ralenti **puis**
+bloqué ») et la **transmission** de la durée. Le reste est un espace libre, et le lot l'a rempli en le
+déclarant.
+
+**Et il a raison de ne pas le rendre configurable.** `M14.7` énumère sept paramètres ;
+`mockups/V-33-console-configuration.html` en rend sept ; aucun n'est un barème de connexion. En
+ajouter un huitième serait un comblement.
+
+**La borne** : le blocage vaut **90 secondes**, parce que le gel l'écrit. Ce nombre-là n'est pas
+libre, et il ne bouge pas sans regel.
+
+### 2 · « Se souvenir de moi » n'expire pas — `É-5`, et le lot avait tort de le croire indécidable
+
+Le lot a refusé d'inventer une durée de cookie. Le refus est sain ; la conclusion « rien ne le
+spécifie » ne tient pas, parce que **le gel spécifie l'inverse d'une durée** :
+
+- `mockups/V-25-profil.html:1222` — « **Rester connecté sur cet appareil** » ;
+- `:1223` — « À éviter sur un poste partagé. **Sans cette option, la session se ferme après deux heures
+  d'inactivité.** » ;
+- `:1236` — un bouton **« Fermer toutes les autres sessions »** ;
+- `mockups/V-25-profil.html:2917` — « Mot de passe changé — **vos autres sessions ont été fermées** ».
+
+**Le gel promet une persistance sans terme, et il fournit lui-même les affordances de révocation.**
+Un produit qui déconnecterait au bout de trente jours romprait « rester connecté » sans qu'aucune
+maquette n'annonce d'échéance ; les maquettes sont la loi **de ce qu'elles montrent**, et ce qu'elles
+montrent ici est un interrupteur, un bouton de fermeture et un changement de mot de passe — pas une
+minuterie.
+
+**Décision.** Une session `souvenir` n'expire **ni** par inactivité, **ni** par échéance. Son cookie
+est persistant. Elle se termine par : la déconnexion, le retrait de l'option, « Fermer toutes les
+autres sessions », le changement de mot de passe, ou la désactivation du compte (`RG-M14-08`, déjà
+tenue par `T-012`).
+
+**Et `:1223` corrobore un chiffre que le lot avait lu ailleurs** : « deux heures d'inactivité » =
+**120 minutes** = le défaut de `duree_session` (`V-33:2663`). Deux maquettes indépendantes donnent la
+même valeur : elle n'est pas un choix de lot.
+
+**Une remarque pour `T-049`, qui portera V-25 :** « Rester connecté sur cet appareil » y est une
+**préférence persistée** (`input#p-session`), là où V-05 en fait une **case de connexion**
+(`input#souvenir`). Deux surfaces, un seul concept. `T-012` a posé `souvenir` sur la **session**, ce
+qui est juste pour V-05. `T-049` ne crée pas un second mécanisme : il lit et écrit le même.
+
+### 3 · Les attributs de formulaire ne sont pas un regel — `É-6`, ratifié
+
+Les **cinq** formulaires du gel — vérifié, `grep -n "<form" mockups/*.html` en rend exactement cinq :
+`V-05:551`, `V-06:661`, `V-06:721`, `V-23:1181`, `V-25:1166` — portent tous `novalidate` et **ni
+`method` ni `action`**.
+
+Le raisonnement du lot est le bon, et c'est le raisonnement 1 de `docs/dossier-regel.md` : **ces
+attributs ne peignent aucun pixel.** `ARB-027` et `ARB-040` l'ont déjà établi pour `role`,
+`tabindex` et `aria-*`. Le lot de comportement les pose, ou soumet par `fetch`.
+
+**La borne, et elle est absolue :** sans `method`, une soumission native part en **GET, avec le mot de
+passe dans l'adresse**. Le lot qui reliera le formulaire pose `method="post"` ou n'utilise pas de
+soumission native. Il n'y a pas de troisième voie.
+
+### 4 · `/deconnexion` répond en GET — `É-9`, ratifié avec une réserve
+
+Le gel en fait un lien : `mockups/V-37-coquille.html:3370` —
+`{ nom: "Se déconnecter", vers: "Déconnexion — vue V-05" }`, une entrée de menu, donc un GET.
+`docs/routes.md:116` l'inventorie comme « route d'action, sans vue ».
+
+**Décision.** GET est accepté, parce que le gel le demande. POST l'est aussi, et `T-016` l'emploie s'il
+peut. Le risque est borné : `SameSite=Lax` laisse passer un GET intersite, mais fermer une session
+n'expose ni ne détruit rien — au pire un utilisateur se retrouve déconnecté, sur l'espace public, ce
+que `RG-ACC-02` rend inoffensif par construction.
+
+**Ce que cela n'autorise pas :** aucune autre action d'écriture ne passe en GET. Celle-ci est la seule,
+et elle l'est parce que sa pire conséquence est l'état de départ du produit.
