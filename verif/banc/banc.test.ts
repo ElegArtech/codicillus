@@ -97,8 +97,12 @@ describe('niveau 2 — pixels', () => {
 		const verdictPour = (combien: number) =>
 			comparerPixels(encoder(unie(100, 100)), encoder(altererPixels(unie(100, 100), combien, 40)))
 				.verdict;
-		// ≤ 0,5 % : conforme · > 3 % : échec sec · entre les deux : niveau 3.
-		expect(verdictPour(Math.floor(total * 0.004))).toBe('conforme');
+		// ARB-018 — le seuil de conformité est ZÉRO, non plus 0,5 %.
+		// Zéro pixel : conforme · au-delà et jusqu'à 3 % : recours au niveau 3,
+		// arbitré et compté · > 3 % : échec sec.
+		expect(verdictPour(0)).toBe('conforme');
+		expect(verdictPour(1)).toBe('niveau3'); // un seul pixel ne passe plus
+		expect(verdictPour(Math.floor(total * 0.004))).toBe('niveau3');
 		expect(verdictPour(Math.floor(total * 0.02))).toBe('niveau3');
 		expect(verdictPour(Math.floor(total * 0.05))).toBe('echec');
 	});
@@ -111,7 +115,7 @@ describe('niveau 2 — pixels', () => {
 
 	it('lit ses seuils dans la baseline, jamais en dur', () => {
 		expect(TOLERANCES.niveau2.seuil_canal).toBe(0.03);
-		expect(TOLERANCES.niveau2.conforme_au_plus).toBe(0.005);
+		expect(TOLERANCES.niveau2.conforme_au_plus).toBe(0); // ARB-018
 		expect(TOLERANCES.niveau2.echec_au_dela).toBe(0.03);
 		expect(TOLERANCES.a_blanc.tolerance_pixels).toBe(0);
 	});
