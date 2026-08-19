@@ -83,13 +83,16 @@
 		"ressource pour faire taire un rouge. C'est le contournement de",
 		"vérification nommé par PLAN §12."
 	],
-
 	"ressources": {
 		"src/lib/coquille": {
 			"maquette": "V-37",
 			"obligation": "Les styles en ligne de `src/lib/coquille/**` sont prouvés par `mockups/V-37-coquille.html`. Chaque déclaration `propriété: valeur` d'un attribut `style` doit figurer dans l'ensemble clos de cette maquette ; hors de cet ensemble, P-1 s'applique en entier.",
 			"motif": "V-37 EST la maquette de la coquille : elle en est le catalogue, et c'est d'elle que le gabarit a été porté. Le rattachement n'est donc pas un choix parmi plusieurs, c'est un constat — et l'instrument le sait déjà, puisque `ensembleDuGel('V-37')` contient `line-height:0`, la valeur même dont la convergence avait été refusée faute de portée. Aucune autre maquette ne répond de ce dossier : les 40 autres reçoivent la coquille, elles ne la définissent pas.",
 			"arbitrage": "ARB-022 — la preuve par le gel s'étend aux ressources partagées dont la maquette de référence est identifiable et déclarée."
+		},
+		"src/lib/lecture": {
+			"maquette": "V-14",
+			"motif": "Le bloc d'en-tête de note est identique à l'octet entre V-14 et V-15 — 341 lignes, vérifié par diff, et la maquette l'annonce elle-même. La référence est V-14, la plus riche des deux. ÉCART-031 É-2."
 		}
 	}
 }

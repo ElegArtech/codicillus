@@ -1,0 +1,519 @@
+<script lang="ts">
+	/**
+	 * V-14 — Lecture d'une note.
+	 * Route `/notes/{identifiant}` (`docs/routes.md`, `verif/scenarios/V-14.json`).
+	 *
+	 * LA VUE CENTRALE DU PRODUIT. Elle porte le corpus de référence — la note de
+	 * démonstration `n-restaurer-pg` — et c'est d'elle que les autres vues
+	 * empruntent leur idée du témoin, du cartouche et des deux registres.
+	 *
+	 * ONZE ÉTATS SUR QUATRE FENÊTRES — 44 couples. V-14 est l'une des six vues
+	 * contrôlées sur les quatre fenêtres au titre de RG-M18-13 (ARB-009,
+	 * `verif/banc/conditions.mjs`). Les onze clés sont celles de
+	 * `verif/scenarios/V-14.json`, réextraites de la planche gelée ; deux d'entre
+	 * elles — `fr-frais` et `etat-nominal` — sont marquées `identiqueA`
+	 * `droits-ecriture`, parce qu'elles ne dévient d'aucun contrôle.
+	 *
+	 * COQUILLE DE FORME COMPLÈTE — ARB-021, A-1 : le rail se dérive du corpus,
+	 * la barre porte ses deux menus déroulants. V-14 est l'une des huit vues
+	 * dans ce cas. `<main class="lecture" id="contenu">` (ARB-015), et le lien
+	 * d'évitement vise `#article`, pas `<main>` (ARB-019) : c'est une ancre
+	 * INTÉRIEURE au contenu, avec le libellé par défaut « Aller au contenu ».
+	 *
+	 * DEUX ATTRIBUTS DE DONNÉES HORS GABARIT — `data-etat` et `data-registre`,
+	 * portés par `donnees` (ARB-021, A-2). Le premier commande l'état de
+	 * chargement : `.app[data-etat="chargement"] .vue-reelle { display: none }`
+	 * et sa réciproque sur `.vue-esquisse` (`V-14.css:571-572`). LES DEUX
+	 * ARBRES SONT DONC RENDUS EN PERMANENCE, réel et esquisse, et c'est la
+	 * feuille qui choisit — exactement comme le gel. Le second nomme le
+	 * registre affiché ; aucun état de la planche ne le fait varier, la bascule
+	 * étant un comportement (ARB-011).
+	 *
+	 * LE CARTOUCHE NE PASSE PAS PAR `appliquerFraicheur` AU NIVEAU FRAIS, ET
+	 * C'EST MESURABLE. Le mode démo n'émet un `change` que sur les contrôles
+	 * qu'il DÉPLACE (`verif/banc/mode-demo.mjs`, `if (!r.checked)`). `fr=frais`
+	 * étant la position par défaut de la planche, `appliquerFraicheur("frais")`
+	 * n'est appelée dans AUCUN des onze états : le cartouche frais reste celui
+	 * du BALISAGE, qui écrit « 1er août 2026 » là où la fonction écrirait
+	 * « 1<sup>er</sup> août 2026 ». Huit états sur onze en dépendent.
+	 *
+	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011). Ni le tampon de
+	 * vérification, ni la bascule de registre, ni le repliage des panneaux sur
+	 * petit écran, ni l'agrandissement du schéma, ni la copie d'un bloc de code.
+	 * L'attribut `onclick="window.print()"` du bouton « Imprimer » n'est pas
+	 * porté : c'est un comportement, et **ce lot ne déclare pas `RG-M18-17`
+	 * tenue**. Le bouton est rendu, son effet appartient au lot d'impression.
+	 *
+	 * **CE LOT NE DÉCLARE PAS `P-09` TENUE.** Les actions d'écriture disparaissent
+	 * en lecture seule par `si-ecriture` et `.app[data-droits="lecture"]`
+	 * (`socle.css:396`) — c'est le rendu de deux états, pas une preuve
+	 * d'étanchéité : celle-ci relève de `pnpm test:droits`.
+	 *
+	 * NON RENDUS, ET DÉCLARÉS : `dialog.loupe#loupe` et `dialog.palette#palette`,
+	 * tous deux FERMÉS, et `template#tpl-palette`. `docs/releve-vues.md` §4.1 les
+	 * mesure : un `<dialog>` fermé et un `<template>` ne portent aucune boîte de
+	 * rendu, ne déplacent aucun pixel et n'entrent pas dans l'instantané ARIA. Le
+	 * gabarit n'ouvre sa `superposition` qu'aux neuf nœuds hors `div.app` qui
+	 * rendent, et aucun n'est de V-14. Et `div.planche`, bloc hors produit
+	 * (`docs/DESIGN.md` §2.G), qui ne se porte jamais.
+	 *
+	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
+	 * `src/vues/V-14.css`, posé par `node verif/feuilles-de-vue.mjs V-14
+	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 */
+	import {
+		DOMAINES,
+		INSTANCE,
+		MOI,
+		UNIVERS,
+		noteParIdentifiant,
+		type IdentifiantNote,
+		type Note
+	} from '../../seeds/corpus';
+	import Coquille from '$lib/coquille/Coquille.svelte';
+	import NoteDeDemonstration from '$lib/lecture/NoteDeDemonstration.svelte';
+	import SommaireDeLaNote from '$lib/lecture/SommaireDeLaNote.svelte';
+	import {
+		BARRES_DE_JAUGE,
+		barresFraicheur,
+		classeTemoin,
+		type NiveauFraicheur
+	} from '$lib/fraicheur';
+	import { NOTE } from '$lib/lecture/note-de-demonstration';
+
+	interface Proprietes {
+		/** Le vecteur complet de l'état — cinq contrôles de planche. */
+		vecteur: Record<string, string | boolean> | null;
+		/** Le jeu de semence de la vue — `corpusPourVue('V-14')`, variante « complète ». */
+		notes: readonly Note[];
+	}
+
+	const { vecteur, notes: corpus }: Proprietes = $props();
+
+	const reglage = $derived(vecteur ?? {});
+
+	/** Les cinq leviers de la planche, lus au vecteur et jamais ailleurs. */
+	const droits = $derived<'ecriture' | 'lecture'>(
+		reglage['droits'] === 'lecture' ? 'lecture' : 'ecriture'
+	);
+	const niveau = $derived<NiveauFraicheur>(
+		reglage['fr'] === 'vieil' ? 'vieil' : reglage['fr'] === 'obs' ? 'obs' : 'frais'
+	);
+	const revision = $derived(reglage['c-revision'] === true);
+	const brouillon = $derived(reglage['c-brouillon'] === true);
+	const resync = $derived(reglage['c-resync'] === true);
+	const operationnel = $derived(reglage['c-op'] !== false);
+	const etat = $derived<'nominal' | 'chargement'>(
+		reglage['etat'] === 'chargement' ? 'chargement' : 'nominal'
+	);
+
+	/**
+	 * LE TITRE DE LA NOTE ferme le fil d'Ariane (`V-14:4365`), et le nombre de
+	 * pièces jointes coiffe son panneau. Les deux viennent du corpus, par le
+	 * module partagé — la même note que celle que rend `NoteDeDemonstration`,
+	 * jamais une seconde lecture.
+	 */
+	const titre = NOTE.titre;
+
+	/**
+	 * LES DEUX NOTES VOISINES du panneau « Position », dans l'ordre du gel :
+	 * la précédente, puis la suivante. Leur niveau de fraîcheur vient du corpus
+	 * et passe par la fabrique unique pour la classe et le nombre de barres.
+	 *
+	 * LEUR LIBELLÉ, LUI, EST TRANSCRIT — et c'est un écart du GEL, pas de ce
+	 * lot. Le balisage écrit « il y a 6 j » et « il y a 4 mois », une forme
+	 * COMPACTE que `libelleFraicheur` ne produit pas : la fabrique donnerait
+	 * « Vérifié il y a 6 jours ». L'appeler ici ferait rougir les 44 couples.
+	 * Constat remonté, non comblé (ARB-018 : un pixel divergent est un défaut).
+	 */
+	const VOISINES: readonly {
+		readonly id: IdentifiantNote;
+		readonly sens: string;
+		readonly libelle: string;
+	}[] = [
+		{ id: 'n-planifier-sauv', sens: '←', libelle: 'il y a 6 j' },
+		{ id: 'n-purge-sauv', sens: '→', libelle: 'il y a 4 mois' }
+	];
+
+	/** Le niveau porté par une note voisine — lu au corpus, jamais supposé. */
+	function niveauDe(id: IdentifiantNote): NiveauFraicheur {
+		return noteParIdentifiant(id)?.fraicheur ?? 'frais';
+	}
+
+	/** Le titre d'une note voisine — lu au corpus. */
+	function titreDe(id: IdentifiantNote): string {
+		return noteParIdentifiant(id)?.titre ?? '';
+	}
+
+	/** Les rangs de la jauge — trois, toujours (`docs/DESIGN.md` §3.7, 2). */
+	const RANGS = Array.from({ length: BARRES_DE_JAUGE }, (_, rang) => rang);
+</script>
+
+<!--
+	LE SÉPARATEUR `›` DE LA LIGNE « RANGEMENT ».
+
+	Il vit ici, et non dans `$lib/lecture/`, parce qu'il porte un style en ligne
+	du gel — `color:var(--c-encre-4)` — et qu'un style en ligne n'est prouvé que
+	par la maquette RATTACHÉE au fichier : par le nommage pour
+	`src/vues/V-xx.svelte` (ARB-016, P-6.4), par déclaration humaine dans
+	`verif/references/preuve-par-le-gel.json` pour une ressource partagée
+	(ARB-022). `src/lib/lecture/` n'a aucune des deux, et un agent d'exécution
+	n'écrit jamais dans ce fichier de rattachement (PLAN §12). Écart remonté.
+-->
+{#snippet separateur()}<span style="color:var(--c-encre-4)">›</span>{/snippet}
+
+<Coquille
+	classeContenu="lecture"
+	cibleEvitement="article"
+	fil={['Accueil', 'Production', 'Infrastructure', 'Exploitation', 'Sauvegardes', titre]}
+	courant={['Infrastructure', 'Exploitation', 'Sauvegardes']}
+	{droits}
+	donnees={{ 'data-etat': etat, 'data-registre': 'reference' }}
+	univers={UNIVERS}
+	domaines={DOMAINES}
+	notes={corpus}
+	compte={{
+		nom: MOI.nom,
+		initiales: MOI.initiales,
+		role: MOI.role,
+		domaine: MOI.domaine
+	}}
+	version={INSTANCE.version}
+>
+	{#snippet enfants()}
+		<!-- ---------- Sommaire ---------- -->
+		<SommaireDeLaNote classe="sommaire vue-reelle" />
+		<div class="sommaire vue-esquisse" aria-hidden="true">
+			<div class="esquisse esq-l" style="width:60%"></div>
+			<div class="esquisse esq-l" style="width:90%"></div>
+			<div class="esquisse esq-l" style="width:75%"></div>
+			<div class="esquisse esq-l" style="width:85%"></div>
+		</div>
+
+		<!-- ---------- Article ---------- -->
+
+		<!-- ---------- Article ---------- -->
+		<article class="article vue-reelle" id="article">
+			<NoteDeDemonstration {niveau} {revision} {brouillon} {resync} {operationnel} {separateur} />
+		</article>
+
+		<!-- Esquisse de chargement de l'article -->
+		<div class="article vue-esquisse" aria-hidden="true">
+			<div class="esquisse" style="height:46px;width:70%;margin-bottom:20px"></div>
+			<div class="esquisse" style="height:72px;margin-bottom:20px;border-radius:8px"></div>
+			<div class="esquisse esq-l" style="width:100%"></div>
+			<div class="esquisse esq-l" style="width:96%"></div>
+			<div class="esquisse esq-l" style="width:88%"></div>
+			<div class="esquisse" style="height:26px;width:44%;margin:28px 0 14px"></div>
+			<div class="esquisse esq-l" style="width:100%"></div>
+			<div class="esquisse esq-l" style="width:92%"></div>
+			<div class="esquisse" style="height:120px;border-radius:8px;margin-top:20px"></div>
+		</div>
+
+		<aside class="panneaux vue-reelle" aria-label="Actions et relations">
+			<!-- Actions -->
+			<section class="panneau">
+				<div class="panneau__tete"><span class="etiq">Actions</span></div>
+				<div class="panneau__corps panneau__corps--serre">
+					<div class="actions-liste">
+						<button class="btn btn--menu si-ecriture">
+							<svg
+								width="15"
+								height="15"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11z" /></svg
+							>
+							Modifier la référence
+						</button>
+						<button class="btn btn--menu si-ecriture">
+							<svg
+								width="15"
+								height="15"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11z" /></svg
+							>
+							Modifier l'opérationnel
+						</button>
+						<button class="btn btn--menu">
+							<svg
+								width="15"
+								height="15"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"><circle cx="8" cy="8" r="6" /><path d="M8 4.5V8l2.5 1.5" /></svg
+							>
+							Historique des versions
+						</button>
+						<button class="btn btn--menu">
+							<svg
+								width="15"
+								height="15"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"><path d="M8 2v8M5 7l3 3 3-3M2.5 12.5h11" /></svg
+							>
+							Exporter
+						</button>
+						<button class="btn btn--menu">
+							<svg
+								width="15"
+								height="15"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"
+								><path
+									d="M4.5 6V2.5h7V6M4.5 12H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-1.5M4.5 10h7v3.5h-7z"
+								/></svg
+							>
+							Imprimer
+						</button>
+						<button class="btn btn--menu btn--destructif si-ecriture">
+							<svg
+								width="15"
+								height="15"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"
+								><path
+									d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"
+								/></svg
+							>
+							Supprimer
+						</button>
+					</div>
+				</div>
+			</section>
+
+			<!-- Position -->
+			<section class="panneau repliable" data-ouvert="oui">
+				<div class="panneau__tete"><span class="etiq">Position</span></div>
+				<div class="panneau__corps">
+					<div class="item__sous" style="margin-bottom:var(--e-3)">
+						<a
+							href="#"
+							style="color:var(--c-encre);text-decoration:none;border-bottom:1px solid var(--c-trait-fort)"
+							>Infrastructure</a
+						>
+						›
+						<a
+							href="#"
+							style="color:var(--c-encre);text-decoration:none;border-bottom:1px solid var(--c-trait-fort)"
+							>Sauvegardes</a
+						>
+					</div>
+					{#each VOISINES as voisine (voisine.id)}
+						<a class="item" href="#">
+							<span style="color:var(--c-encre-4)">{voisine.sens}</span>
+							<span
+								><span class="item__nom">{titreDe(voisine.id)}</span>
+								<span class="item__sous"
+									><span class="temoin {classeTemoin(niveauDe(voisine.id))}"
+										><span class="temoin__jauge"
+											>{#each RANGS as rang (rang)}<i
+													class={rang < barresFraicheur(niveauDe(voisine.id)) ? 'plein' : undefined}
+												></i>{/each}</span
+										><span class="temoin__txt">{voisine.libelle}</span></span
+									></span
+								></span
+							>
+						</a>
+					{/each}
+				</div>
+			</section>
+
+			<!-- Pièces jointes -->
+			<section class="panneau repliable" data-ouvert="oui">
+				<div class="panneau__tete">
+					<span class="etiq">Pièces jointes</span><span class="chiffre">{NOTE.pj}</span>
+				</div>
+				<div class="panneau__corps panneau__corps--serre">
+					<a class="pj" href="#">
+						<span class="pj__ext">PDF</span>
+						<span
+							><span class="item__nom">Plan de reprise — volet bases</span>
+							<span class="item__sous">1,2 Mo · déposé le 22 juillet 2026</span></span
+						>
+					</a>
+					<a class="pj" href="#">
+						<span class="pj__ext">CSV</span>
+						<span
+							><span class="item__nom">Matrice des serveurs sauvegardés</span>
+							<span class="item__sous">18 Ko · déposé le 4 juin 2026</span></span
+						>
+					</a>
+				</div>
+			</section>
+
+			<!-- Relations typées -->
+			<section class="panneau repliable" data-ouvert="oui">
+				<div class="panneau__tete">
+					<span class="etiq">Relations</span>
+					<button class="btn btn--discret si-ecriture" style="padding:4px 8px">+ Ajouter</button>
+				</div>
+				<div class="panneau__corps panneau__corps--serre">
+					<div class="rel-groupe">
+						<div class="rel-groupe__titre etiq">S'applique à</div>
+						<a class="item" href="#"
+							><span
+								><span class="item__nom">pg-prod-01</span>
+								<span class="item__sous"><span class="past">Serveur</span> Infrastructure</span
+								></span
+							></a
+						>
+						<a class="item" href="#"
+							><span
+								><span class="item__nom">pg-prod-02</span>
+								<span class="item__sous"><span class="past">Serveur</span> Infrastructure</span
+								></span
+							></a
+						>
+					</div>
+					<div class="rel-groupe">
+						<div class="rel-groupe__titre etiq">Dépend de</div>
+						<a class="item" href="#"
+							><span
+								><span class="item__nom">bkp-01.prod</span>
+								<span class="item__sous"><span class="past">Serveur</span> Infrastructure</span
+								></span
+							></a
+						>
+					</div>
+					<div class="rel-groupe">
+						<div class="rel-groupe__titre etiq">Est référencée par</div>
+						<a class="item" href="#"
+							><span
+								><span class="item__nom">Facturation</span>
+								<span class="item__sous"><span class="past">Application</span> Applications</span
+								></span
+							></a
+						>
+					</div>
+				</div>
+			</section>
+
+			<!-- Rétroliens -->
+			<section class="panneau repliable" data-ouvert="oui">
+				<div class="panneau__tete">
+					<span class="etiq">Rétroliens</span><span class="chiffre">3</span>
+				</div>
+				<div class="panneau__corps panneau__corps--serre">
+					<a class="item" href="#"
+						><span
+							><span class="item__nom">Consignes d'astreinte — nuit et week-end</span><span
+								class="item__sous">Infrastructure</span
+							></span
+						></a
+					>
+					<a class="item" href="#"
+						><span
+							><span class="item__nom">Plan de reprise d'activité — volet bases de données</span
+							><span class="item__sous">Infrastructure</span></span
+						></a
+					>
+					<a class="item" href="#"
+						><span
+							><span class="item__nom">Fiche applicative — Facturation</span><span
+								class="item__sous">Applications</span
+							></span
+						></a
+					>
+				</div>
+			</section>
+
+			<!-- Historique de vérification -->
+			<section class="panneau repliable" data-ouvert="oui">
+				<div class="panneau__tete"><span class="etiq">Historique de vérification</span></div>
+				<div class="panneau__corps">
+					<ul class="chrono" id="chrono">
+						<li>
+							<span class="item__nom">Karim Belhadj</span><time datetime="2026-08-01"
+								>1<sup>er</sup> août 2026</time
+							>
+						</li>
+						<li>
+							<span class="item__nom">Sophie Nguyen</span><time datetime="2026-04-14"
+								>14 avril 2026</time
+							>
+						</li>
+						<li>
+							<span class="item__nom">Karim Belhadj</span><time datetime="2026-01-09"
+								>9 janvier 2026</time
+							>
+						</li>
+						<li>
+							<span class="item__nom">Marc Ferreira</span><time datetime="2025-09-30"
+								>30 septembre 2025</time
+							>
+						</li>
+					</ul>
+				</div>
+			</section>
+
+			<!-- Notes connexes -->
+			<section class="panneau repliable" data-ouvert="oui">
+				<div class="panneau__tete"><span class="etiq">Notes connexes</span></div>
+				<div class="panneau__corps panneau__corps--serre">
+					<a class="item" href="#"
+						><span
+							><span class="item__nom">Restaurer une sauvegarde MariaDB</span>
+							<span class="item__sous"
+								><span class="jauge-prox" title="Proximité forte"
+									><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span
+								> Infrastructure</span
+							></span
+						></a
+					>
+					<a class="item" href="#"
+						><span
+							><span class="item__nom">Diagnostiquer un échec de restauration Barman</span>
+							<span class="item__sous"
+								><span class="jauge-prox" title="Proximité forte"
+									><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span
+								> Infrastructure</span
+							></span
+						></a
+					>
+					<a class="item" href="#"
+						><span
+							><span class="item__nom">Tester le plan de reprise — mode opératoire</span>
+							<span class="item__sous"
+								><span class="jauge-prox" title="Proximité moyenne"
+									><i class="on"></i><i class="on"></i><i></i><i></i></span
+								> Infrastructure</span
+							></span
+						></a
+					>
+				</div>
+			</section>
+
+			<!-- Exemple d'un panneau en erreur : il ne casse pas la lecture -->
+			<section class="panneau panneau--erreur">
+				<div class="panneau__tete"><span class="etiq">Consultations détaillées</span></div>
+				<div class="panneau__corps">
+					<div class="zone-etat">
+						<div class="zone-etat__titre">Statistiques indisponibles</div>
+						<div class="zone-etat__txt">
+							Le service de mesure ne répond pas. Le reste de la note reste consultable.
+						</div>
+						<button class="btn">Réessayer</button>
+					</div>
+				</div>
+			</section>
+		</aside>
+
+		<!-- Esquisse de chargement des panneaux -->
+		<div class="panneaux vue-esquisse" aria-hidden="true">
+			<div class="esquisse" style="height:196px;border-radius:8px"></div>
+			<div class="esquisse" style="height:120px;border-radius:8px"></div>
+			<div class="esquisse" style="height:150px;border-radius:8px"></div>
+		</div>
+	{/snippet}
+</Coquille>
