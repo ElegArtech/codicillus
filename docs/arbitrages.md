@@ -608,3 +608,73 @@ référence, l'autre **ajoute** ce que la référence ne dit pas.
 confort. La parade est le point 1 : la ligne du gel est citée, ou il n'y a pas de convergence.
 Un agent bloqué sur un rouge ne « converge » jamais vers quelque chose que la maquette ne montre
 pas.
+
+---
+
+## ARB-021 — Les deux formes de coquille, et l'amendement unique du gabarit
+**19 août 2026** — arbitrage délégué. Répond à `ECART-022` É-1 à É-5. **Portée : 27 vues.**
+
+**Le fait, et personne ne l'avait vu.** Les 34 maquettes à coquille portent **deux formes** :
+
+- la forme **complète** — 8 vues, dont **les 4 déjà livrées** : menus déroulants, pictogrammes de
+  rail, `#rail-univers`, `Gestion` conditionné au rôle ;
+- la forme **abrégée** — **26 vues** : barre sans menus, rail sans pictogrammes ni `data-vers`,
+  `Gestion` en `si-ecriture`, **arborescence de 15 nœuds écrite au balisage** — que
+  `sectionsDuRail(corpusPourVue(v))` ne peut pas produire, puisqu'il en rend 19 et que **les deux
+  arbres ne sont pas emboîtés**.
+
+Et les six classes `.menu-barre*` que le gabarit pose ne sont **déclarées par aucune des deux
+feuilles** de ces 26 vues : la liste s'y afficherait dépliée.
+
+**Décision. Un amendement unique, couvrant les cinq besoins d'un coup, puis regel.**
+
+| | Amendement | Vues |
+|---|---|---|
+| A-1 | la coquille rend la forme **abrégée** ou complète | 26 |
+| A-2 | les attributs de données de la vue sont transmis à `div.app` — 47 attributs, 26 noms | 27 |
+| A-3 | libellé du chevron : « Replier » quand le nœud est ouvert — **convergence**, ARB-020 | 27 |
+| A-4 | loger une superposition rendue hors de `div.app` | 8 |
+| A-5 | marquer l'entrée de rail courante | 1 |
+
+**Motif du regroupement.** Trois amendements en trois lots ont déjà coûté trois arbitrages, trois
+preuves de non-régression et trois regels — pour des besoins qu'un seul relevé aurait donnés
+ensemble. C'est le défaut d'orchestration que ce lot corrige ; le répéter cinq fois de plus serait
+l'aggraver en connaissance de cause.
+
+**L'arborescence de la forme abrégée n'est pas dérivable du corpus** (É-2). Elle est **écrite au
+balisage du gel**, et les deux arbres divergent. Elle se porte donc comme une donnée de vue, non
+comme un calcul — et surtout **pas** en « corrigeant » `seeds/corpus.ts`, qui rend fidèlement ce que
+les 41 maquettes portent.
+
+**Critère, et il ne souffre aucune marge** : les 4 vues livrées restent à **zéro pixel**. Le seuil
+est zéro (ARB-018).
+
+---
+
+## ARB-022 — La preuve par le gel s'étend aux ressources partagées
+**19 août 2026** — arbitrage délégué. Répond à `ECART-021` (convergence bloquée) et `ECART-022` É-5.
+
+**Le problème, rencontré deux fois.** `ARB-016` (P-6.4) n'accorde la preuve par le gel qu'aux
+composants `src/vues/V-xx.svelte`. Conséquences mesurées :
+
+- la convergence de `<span style="line-height: 0">` vers le gel a été **refusée** par son exécutant,
+  bien que **mesurée gratuite** — l'enveloppe ne déplace rien —, faute de portée ;
+- le gabarit écrit `flex: 0 0 auto` là où le gel écrit `flex: none`, et **rien ne l'a détecté**,
+  P-6.4 ne couvrant pas `src/lib/`.
+
+Le second cas est le plus parlant : la portée trop étroite ne protège pas, elle **aveugle**.
+
+**Décision. La preuve par le gel s'étend aux ressources partagées dont la maquette de référence est
+identifiable et déclarée.**
+
+Pour le gabarit de coquille, la référence est **V-37** — l'instrument le sait déjà :
+`ensembleDuGel('V-37')` contient `line-height:0`, précisément parce que `styles-en-ligne.mjs` lit
+les styles posés par script.
+
+**Ce qui ne change pas** : la valeur doit **figurer au gel** de la maquette de référence, sans quoi
+P-1 s'applique en entier. On n'invente pas un style, on le prouve. Et le rattachement
+ressource → maquette est déclaré dans un fichier en **écriture humaine seule** — un agent ne
+choisit pas la référence contre laquelle il sera prouvé.
+
+**Effet attendu** : la convergence refusée devient possible, et `flex: 0 0 auto` devient visible.
+Une règle qui rend un défaut détectable vaut mieux qu'une règle qui l'ignore par prudence.
