@@ -619,7 +619,18 @@ for (const { vue, fichier } of cibles) {
 
 				   Une vue sans déclaration n'est jamais révélée : `reveler()` rend
 				   `null` sans toucher à la page. */
-				const revele = await reveler(page, declarationRevelation(vue), nom);
+				const revele = await reveler(page, declarationRevelation(vue), nom, {
+					/* La modalité de saisie de la RÉFÉRENCE, que la révélation
+					   reproduira du côté candidat au lieu d'en imposer une. Le banc
+					   la connaît mécaniquement : il a livré un vrai geste de pointeur
+					   à la référence si et seulement si l'état porte un déclencheur —
+					   onze états sur les vingt-six qui ouvrent un dialogue. Les quinze
+					   autres s'ouvrent sur un `change` synthétique de `reglerPlanche()`,
+					   sans qu'aucun pointeur ne touche la page : leur référence affiche
+					   donc l'anneau de focalisation, et l'appui retiré au candidat en
+					   ferait 308 px d'écart. Voir verif/banc/revelation.mjs. */
+					modaliteReference: etat.zone?.declencheur ? 'pointeur' : 'script'
+				});
 				if (revele) {
 					const cumul = revelationsParVue.get(vue) ?? {
 						vue,
