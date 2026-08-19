@@ -87,6 +87,19 @@ Conséquences, énoncées ici pour qu'elles soient lisibles plus tard :
 > et le présent paragraphe. V-07 est retenu parce qu'il est le gel le plus récent
 > et le sur-ensemble strict.
 
+> **Réserve du 19 août 2026 — « emboîtés » est faux pour une famille, et une
+> seule.** Le constat d'ARB-024, confirmé par diff intégral : entre le socle de
+> V-06 (401 lignes) et celui de V-07 (466), la **section 9 « Notifications »**
+> n'est pas étendue, elle est **remplacée** — `.notif` passe de `flex` à `grid`,
+> `.notifs` gagne un `max-width` qu'elle n'avait pas, et le rembourrage change.
+> Partout ailleurs, les 400 lignes restantes sont identiques à l'octet, et
+> l'emboîtement tient. La conséquence est traitée au **§2.A · A-8** : la famille
+> porte **deux états gelés**, et le composant unique expose une variante
+> déclarée (ARB-028). Un seul des 409 couples du banc l'exerce — `V-06 ·
+> cpt-inconnu` —, ce qui est exactement pourquoi la divergence est restée
+> invisible sept lots durant : **une divergence qu'aucun état n'exerce est une
+> divergence dont on ignore si elle est inerte.**
+
 Aucune correction n'est apportée à `mockups/` : il est gelé, et il le reste. Les
 corrections au cadrage vivent dans `docs/errata-cadrage.md` (ARB-006).
 
@@ -629,6 +642,72 @@ s'empilent, se referment individuellement, et n'occultent ni l'action en cours
 ni un champ de saisie — d'où l'ancrage en bas à droite. Le type se lit par le
 glyphe et le filet, **jamais par la couleur seule** (RG-M18-09). Sur ≤ 640 px,
 la pile occupe toute la largeur.
+
+##### La famille a **deux états gelés**, et une variante déclarée — ARB-028
+
+Le tableau ci-dessus décrit **un** de ces deux états. C'est celui de V-38, celui
+que le socle en ligne retenu porte (`src/socle.css`, extrait de V-07), et celui
+que rendent les 40 vues à coquille.
+
+**`mockups/V-06-reinitialisation.html` en gèle un autre**, et il a été gelé
+*avant* la refonte de la section 9. Sur les 409 couples du banc, un seul état
+rend une bulle hors de V-38 — `V-06 · cpt-inconnu` — et c'est celui-là. Diff
+intégral des deux socles en ligne : ils ne diffèrent **que** par la section 9 et
+par le commentaire qui la titre ; les 400 autres lignes sont identiques à
+l'octet.
+
+| Déclaration | État gelé **V-06** | État gelé **V-38** (socle applicatif) |
+|---|---|---|
+| `.notifs` `max-width` | — (non bornée) | `min(400px, 100vw − 2 × --e-5)` |
+| `.notifs` `pointer-events` | — (`auto`) | `none`, plus `.notifs > * { auto }` |
+| `.notif` `display` | `flex` | `grid` |
+| `.notif` `grid-template-columns` | — | `auto minmax(0, 1fr) auto` |
+| `.notif` `align-items` | `center` | `start` |
+| `.notif` `gap` | `var(--e-3)` | `var(--e-1) var(--e-3)` |
+| `.notif` `width` | — (`auto`) | `100%` |
+| `.notif` `padding` | `var(--e-3) var(--e-4)` | `var(--e-3) var(--e-3) var(--e-3) var(--e-4)` |
+| `.notif` `line-height` | — (hérité, `--i-ui`) | `1.45` |
+| enfants du balisage | **aucun** — `textContent` seul (`V-06:830`) | `.notif__marque`, `__corps`, `__titre`, `__detail`, `__fermer`, `__progres`, `__actions` |
+| `@media (max-width: 640px)` | — | la pile occupe toute la largeur |
+
+**Les règles sont remplacées, pas étendues.** Pour cette seule famille, le §0.2
+de ce document a tort quand il écrit que le socle retenu est « strictement plus
+riche » et que les cinq états sont « emboîtés » — voir la réserve ajoutée là-bas.
+
+**Ce que la décision impose, et ce qu'elle interdit.** ARB-028 tranche que *V-06
+rend la notification que V-06 montre* : l'ordre de préséance met la maquette
+au-dessus de toute doctrine de réalisation, et il porte sur **chaque vue dans
+chacun de ses aspects**. Mais il n'ouvre **pas** un second composant : l'interdit
+n° 7 du §3.7 — *« recopier le balisage au lieu d'appeler le composant unique »* —
+reste entier.
+
+D'où la forme retenue, et elle est opposable :
+
+1. **Un seul composant** rend la famille — `src/lib/coquille/PileDeNotifications.svelte`.
+   Il est appelé par la coquille (35 vues) comme par V-06, qui n'en a pas.
+2. **La variante est déclarée**, pas devinée : `variante` vaut `catalogue`
+   (défaut, V-38) ou `texte` (V-06), et le conteneur la porte en clair dans le
+   document, sur `div.notifs`. Chaque variante ne lit que sa propre source de
+   données ; les deux sont mutuellement exclusives par construction.
+3. **Aucune troisième valeur** ne s'ajoute sans une maquette gelée qui la montre.
+   Une variante est un gel, pas un goût.
+4. **Le socle n'est pas surchargé.** `.notifs` et `.notif` ne sont jamais
+   redéclarés — P-6.2 l'interdit. La feuille de la variante `texte` porte le
+   sélecteur de la variante, n'emploie que des jetons, et se borne à rendre les
+   déclarations que le socle de V-07 a remplacées.
+
+**Où vit cette feuille, et pourquoi pas ailleurs.** Dans `<svelte:head>`, au
+composant. Les trois autres canaux sont fermés, chacun pour une bonne raison :
+`src/socle.css` et `src/vues/V-06.css` sont gelés à l'octet (P-6.1, P-6.3) ;
+l'ensemble clos des styles en ligne de V-06 (P-6.4, ARB-016) ne contient aucune
+des déclarations nécessaires ; et **un bloc `<style>` de composant n'est jamais
+servi au banc** — le mode démo compose le document et n'y lie que les polices,
+le socle et la feuille de vue. La classe de portée est bien posée sur les nœuds,
+mais la feuille qui la définit n'est liée nulle part : elle ne peint rien. Aucun
+composant de `src/` n'en portait avant ce lot, la propriété n'avait donc jamais
+été exercée — **P-5 une fois de plus**. `<svelte:head>` atteint le document et ne
+se soustrait à aucun contrôle : `verif:jetons` relève tout bloc `<style>` d'un
+fichier `.svelte`, où qu'il soit.
 
 #### A-9 · Champs de saisie — **absents de `mockups/socle.css`**
 
