@@ -154,6 +154,23 @@
 
 	/** Droits effectifs : `si-ecriture` disparaît en lecture seule. */
 	const droits = $derived(reglage['droits'] === 'lecture' ? 'lecture' : 'ecriture');
+	/**
+	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
+	 *
+	 * Le gel POSE l'action d'écriture puis la cache par
+	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
+	 * (`mockups/V-08-recherche.html:338`) : faute de serveur, une maquette statique n'a
+	 * pas d'autre moyen de dire « cette action n'existe pas pour ce rôle ». Le
+	 * produit peut ne pas l'émettre, et P-09 l'exige — « ni grisée, NI MASQUÉE ».
+	 * La classe reste posée sur le nœud rendu.
+	 *
+	 * AUCUN ÉTAT DÉCLARÉ N'EXERCE CETTE OMISSION, et c'est dit : le nœud vit dans
+	 * l'état vide, qu'aucun vecteur du scénario ne croise avec `droits=lecture`.
+	 * Le différentiel de la batterie 7 ne le voit donc pas (P-5). Il est traité
+	 * comme les autres pour que la vue n'ait qu'une seule règle.
+	 * Énumération : `verif/rapports/omissions-p09.md`.
+	 */
+	const ecriture = $derived(droits !== 'lecture');
 
 	/**
 	 * `data-etat` — la valeur que le gestionnaire de planche pose AVANT de
@@ -674,8 +691,8 @@
 					><h2 class="vide__titre">Aucun résultat pour <span class="vide__requete">{`« ${REQUETE || 'procédure de bascule VoIP'} »`}</span></h2
 					><p class="vide__txt">Cette connaissance n'est pas encore écrite. Si vous la détenez, c'est le bon moment : une note d'une dizaine de lignes vaut mieux que rien.</p
 					><div class="vide__pistes">{#each PISTES as piste (piste)}<button class="piste">{`Essayer « ${piste} »`}</button>{/each}</div
-					><button class="btn btn--principal si-ecriture">{`Créer la note « ${REQUETE || 'procédure de bascule VoIP'} »`}</button
-				></div>{:else}{#each affiches as n, index (n.id)}{@render carte(n, REQUETE, index)}{/each}{/if}</div>
+					>{#if ecriture}<button class="btn btn--principal si-ecriture">{`Créer la note « ${REQUETE || 'procédure de bascule VoIP'} »`}</button
+				>{/if}</div>{:else}{#each affiches as n, index (n.id)}{@render carte(n, REQUETE, index)}{/each}{/if}</div>
 
 			<div class="si-chargement" aria-hidden="true">
 				<div class="esquisse esq-carte"></div>

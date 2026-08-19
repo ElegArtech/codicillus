@@ -128,6 +128,19 @@
 
 	const reglage = $derived(vecteur ?? {});
 	const profil = $derived(String(reglage['role'] ?? 'referent'));
+	/**
+	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
+	 *
+	 * Le gel POSE les actions d'écriture puis les cache par
+	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
+	 * (`mockups/V-07-accueil-contributeur.html:403`) : une maquette statique n'a
+	 * pas de serveur, le masquage y est sa SEULE possibilité. Le produit, lui,
+	 * peut ne pas les émettre — et P-09 l'exige, « ni grisée, NI MASQUÉE ».
+	 * Les nœuds concernés gardent leur classe `si-ecriture` intacte quand ils
+	 * sont rendus : la classe porte aussi le rendu, elle ne se retire pas.
+	 * Énumération : `verif/rapports/omissions-p09.md`.
+	 */
+	const ecriture = $derived(profil !== 'lecteur');
 	const etatPage = $derived(String(reglage['etat'] ?? 'nominal'));
 	/**
 	 * L'aide de première visite. La case de planche est cochée par défaut et
@@ -519,10 +532,11 @@
 					— procédures, guides, fiches — plutôt que de repartir d'une page blanche.
 				</p>
 				<div class="amorce__actions">
-					<button class="btn btn--principal si-ecriture" id="v-importer"
-						>Importer votre patrimoine existant</button
-					>
-					<button class="btn si-ecriture" id="v-creer">Créer votre première note</button>
+					<!-- P-09 · ARB-040 — omises, jamais masquées. `V-07:1265`, `:1266` -->
+					{#if ecriture}<button class="btn btn--principal si-ecriture" id="v-importer"
+							>Importer votre patrimoine existant</button
+						>
+						<button class="btn si-ecriture" id="v-creer">Créer votre première note</button>{/if}
 				</div>
 			</div>
 		</div>
@@ -632,51 +646,53 @@
 					</section>
 
 					<!-- ---------- Raccourcis (priorité 6) ---------- -->
-					<section class="panneau si-ecriture" aria-labelledby="t-raccourcis">
-						<div class="panneau__tete">
-							<span class="etiq" id="t-raccourcis">Créer</span>
-						</div>
-						<div class="panneau__corps">
-							<div class="raccourcis">
-								<button class="btn btn--plein btn--principal" id="r-note">
-									<svg
-										width="15"
-										height="15"
-										viewBox="0 0 16 16"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="1.4"
-										><path
-											d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5L9 1.5zM9 1.5v4h4"
-										/></svg
-									>
-									Nouvelle note
-								</button>
-								<button class="btn btn--plein" id="r-import">
-									<svg
-										width="15"
-										height="15"
-										viewBox="0 0 16 16"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="1.4"><path d="M8 10.5V2M4.8 6.2L8 2.8l3.2 3.4M2.5 13.5h11" /></svg
-									>
-									Importer des fichiers
-								</button>
-								<button class="btn btn--plein" id="r-signet">
-									<svg
-										width="15"
-										height="15"
-										viewBox="0 0 16 16"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="1.4"><path d="M4 2.5h8v11l-4-3-4 3v-11z" /></svg
-									>
-									Nouveau signet
-								</button>
+					<!-- P-09 · ARB-040 — omis, jamais masqué. `V-07:1305` -->
+					{#if ecriture}<section class="panneau si-ecriture" aria-labelledby="t-raccourcis">
+							<div class="panneau__tete">
+								<span class="etiq" id="t-raccourcis">Créer</span>
 							</div>
-						</div>
-					</section>
+							<div class="panneau__corps">
+								<div class="raccourcis">
+									<button class="btn btn--plein btn--principal" id="r-note">
+										<svg
+											width="15"
+											height="15"
+											viewBox="0 0 16 16"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="1.4"
+											><path
+												d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5L9 1.5zM9 1.5v4h4"
+											/></svg
+										>
+										Nouvelle note
+									</button>
+									<button class="btn btn--plein" id="r-import">
+										<svg
+											width="15"
+											height="15"
+											viewBox="0 0 16 16"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="1.4"
+											><path d="M8 10.5V2M4.8 6.2L8 2.8l3.2 3.4M2.5 13.5h11" /></svg
+										>
+										Importer des fichiers
+									</button>
+									<button class="btn btn--plein" id="r-signet">
+										<svg
+											width="15"
+											height="15"
+											viewBox="0 0 16 16"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="1.4"><path d="M4 2.5h8v11l-4-3-4 3v-11z" /></svg
+										>
+										Nouveau signet
+									</button>
+								</div>
+							</div>
+						</section>{/if}
 				</div>
 			</div>
 

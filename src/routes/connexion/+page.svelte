@@ -1,11 +1,11 @@
 <script lang="ts">
 	/**
-	 * `/` — V-07 Accueil contributeur.
+	 * `/connexion` — V-05 Connexion.
 	 *
 	 * LOT T-070, « la liaison ». Cette route existe parce qu'une entrée de
 	 * navigation la nomme : le gel déclare sa destination en `data-vers`
-	 * (« Accueil contributeur — vue V-07 », rail de la coquille), et `docs/routes.md` §3 — qui fait foi sur les chemins — la
-	 * résout en `/` → V-07.
+	 * (« connexion », les quatre liens de retour de V-06), et `docs/routes.md` §3 — qui fait foi sur les chemins — la
+	 * résout en `/connexion` → V-05.
 	 *
 	 * ELLE NE FAIT QUE RENDRE LA VUE, et c'est le périmètre exact du lot : pas
 	 * de chargeur, pas de garde de droit, pas d'authentification, aucune lecture
@@ -15,7 +15,7 @@
 	 *
 	 * `vecteur={null}` demande l'état par défaut de la vue. LE BANC NE PASSE
 	 * JAMAIS PAR ICI : il atteint la vue par le mode démo
-	 * (`/__design/V-07?etat=…`), qui rend le composant directement. Rien de ce
+	 * (`/__design/V-05?etat=…`), qui rend le composant directement. Rien de ce
 	 * fichier n'entre dans son verdict.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
@@ -28,9 +28,8 @@
 	 * V-07 porte même son numéro de vue —, et en inventer un serait un
 	 * comblement.
 	 */
-	import Vue from '../vues/V-07.svelte';
-	import '../vues/V-07.css';
-	import { corpusPourVue } from '../../seeds/corpus';
+	import Vue from '../../vues/V-05.svelte';
+	import '../../vues/V-05.css';
 </script>
 
-<Vue vecteur={null} notes={corpusPourVue('V-07')} />
+<Vue vecteur={null} />

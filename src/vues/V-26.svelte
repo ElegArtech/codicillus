@@ -97,6 +97,18 @@
 	const droits = $derived(
 		reglage['droits'] === 'lecture' ? ('lecture' as const) : ('ecriture' as const)
 	);
+	/**
+	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
+	 *
+	 * Le gel POSE les actions d'écriture puis les cache par
+	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
+	 * (`mockups/V-26-non-trouvee-connecte.html:339`) : faute de serveur, une
+	 * maquette statique n'a pas d'autre moyen de dire « cette action n'existe pas
+	 * pour ce rôle ». Le produit peut ne pas l'émettre, et P-09 l'exige — « ni
+	 * grisée, NI MASQUÉE ». La classe reste posée sur les nœuds rendus.
+	 * Énumération : `verif/rapports/omissions-p09.md`.
+	 */
+	const ecriture = $derived(droits !== 'lecture');
 
 	/**
 	 * LES TROIS ADRESSES DE LA PLANCHE DE REVUE. Données de MAQUETTE
@@ -281,7 +293,10 @@
 					><span>Motif indiqué : {SUPPRIMEE.motif}</span>
 				</div>
 				<div class="suppression__actions">
-					<button class="btn si-ecriture" id="sup-restaurer">Demander sa restauration</button>
+					<!-- P-09 · ARB-040 — omise, jamais masquée. `V-26:1078` -->
+					{#if ecriture}<button class="btn si-ecriture" id="sup-restaurer"
+							>Demander sa restauration</button
+						>{/if}
 					<button class="btn" id="sup-domaine">Voir le dossier qui la contenait</button>
 				</div>
 			</div>
@@ -340,9 +355,11 @@
 						<div class="reformuler">
 							{#each PISTES as piste (piste)}<button class="piste">{piste}</button>{/each}
 						</div>
-						<button class="btn btn--principal si-ecriture" style="margin-top:var(--e-3)"
-							>Créer la note « {requete} »</button
-						>
+						<!-- P-09 · ARB-040 — omise, jamais masquée. `V-26:2709` -->
+						{#if ecriture}<button
+								class="btn btn--principal si-ecriture"
+								style="margin-top:var(--e-3)">Créer la note « {requete} »</button
+							>{/if}
 					</div>{:else}<div class="etiq">
 						{resultats.length}{resultats.length > 1 ? ' notes correspondent' : ' note correspond'}
 					</div>

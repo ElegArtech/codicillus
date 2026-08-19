@@ -7,6 +7,17 @@
 	 * — un lien expirable est un lien porteur d'un jeton —, elle n'est pas lue
 	 * dans la maquette, qui ne porte aucun lien inter-vue.
 	 *
+	 * LES QUATRE LIENS DE RETOUR SONT CÂBLÉS — lot T-070. Trois « Revenir à la
+	 * connexion » (`V-06:676`, `:702`, `:777`) et le « Se connecter » de l'étape
+	 * 4 (`V-06:788`) portent `data-vers="connexion"` : c'est la SEULE des deux
+	 * formes de destination déclarée du corpus qui ne nomme pas une vue par son
+	 * numéro (`verif/menus.mjs`, `REGLES_DE_DESTINATION`). `docs/routes.md` §3.2
+	 * la résout en `/connexion` → V-05. `ARB-013` retire la ligne `/url:` de
+	 * l'instantané de structure : l'adresse ne déplace rien au banc.
+	 *
+	 * « Ouvrir un ticket d'assistance » (`V-06:795`) reste à `href="#"` : aucune
+	 * source ne déclare sa destination, et aucune route du dépôt ne la sert.
+	 *
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * CE QUE CE COMPOSANT NE PROUVE PAS, ET IL FAUT LE DIRE EN PREMIER
 	 *
@@ -179,6 +190,7 @@
 	 * VOCABULAIRE : aucun des douze termes contractuels n'apparaît dans cette
 	 * vue ; rien à y contrôler (P-07).
 	 */
+	import { resolve } from '$app/paths';
 	import Marque from '$lib/auth/Marque.svelte';
 	import PileDeNotifications from '$lib/coquille/PileDeNotifications.svelte';
 	import { COMPTES } from '../../seeds/corpus';
@@ -311,7 +323,9 @@
 				</form>
 
 				<div class="auth__ligne" style="margin-top:var(--e-4);justify-content:center">
-					<a class="auth__lien" href="#" data-vers="connexion">Revenir à la connexion</a>
+					<a class="auth__lien" href={resolve('/connexion')} data-vers="connexion"
+						>Revenir à la connexion</a
+					>
 				</div>
 			</section>
 
@@ -351,7 +365,9 @@
 				</button>
 
 				<div class="auth__ligne" style="margin-top:var(--e-4);justify-content:center">
-					<a class="auth__lien" href="#" data-vers="connexion">Revenir à la connexion</a>
+					<a class="auth__lien" href={resolve('/connexion')} data-vers="connexion"
+						>Revenir à la connexion</a
+					>
 				</div>
 			</section>
 
@@ -493,7 +509,9 @@
 					>Demander un nouveau lien</button
 				>
 				<div class="auth__ligne" style="margin-top:var(--e-4);justify-content:center">
-					<a class="auth__lien" href="#" data-vers="connexion">Revenir à la connexion</a>
+					<a class="auth__lien" href={resolve('/connexion')} data-vers="connexion"
+						>Revenir à la connexion</a
+					>
 				</div>
 			</section>
 
@@ -516,7 +534,7 @@
 				</p>
 				<a
 					class="btn btn--principal"
-					href="#"
+					href={resolve('/connexion')}
 					style="width:100%;padding:11px;justify-content:center"
 					data-vers="connexion">Se connecter</a
 				>

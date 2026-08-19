@@ -39,10 +39,15 @@
 	 *
 	 * Le gel avance par `setInterval(…, 130)` (`V-24:3122`) : un fichier tous
 	 * les 130 ms. Le banc, lui, ne patiente pas, il AVANCE une horloge virtuelle
-	 * de 1 000 ms après avoir réglé la planche (`verif/banc/conditions.mjs`,
+	 * de 1 000 ms après avoir réglé la planche (`conditions.mjs` du banc,
 	 * `AVANCE_ETAT_MS`), puis capture. Sept tics sont donc dus — 130, 260, …,
 	 * 910 ms —, et l'écran mesuré est celui du septième : barre à 23 %, septième
 	 * fichier du lot en cours, compteurs à 5 / 2 / 0.
+	 *
+	 * (Le chemin complet du module du banc n'est volontairement PAS cité :
+	 * depuis T-070 cette vue est servie par une route réelle, donc BÂTIE, et
+	 * `verif:demo:hors-production` cherche cette chaîne en texte brut dans le
+	 * produit construit — commentaires compris. Écart É-2 du lot T-070.)
 	 *
 	 * AUCUNE MINUTERIE N'EST ÉCRITE ICI, et aucun de ces chiffres n'est saisi
 	 * (P-02) : `TRAITES` est le seul nombre déclaré — le rang de l'instant

@@ -49,10 +49,45 @@
 	 * décide, et ARB-010 qui l'assume — RG-M18-12 et RG-M18-13 restent, sur cet
 	 * axe, NON TENUES. Aucun tiroir n'est ajouté ici : ce serait un comblement.
 	 *
-	 * Le chevron déplie, le nom navigue : deux cibles distinctes. Les adresses
-	 * sont celles de la maquette gelée — `href="#"` — ; leur câblage relève des
-	 * lots de routage, pas de la coquille.
+	 * Le chevron déplie, le nom navigue : deux cibles distinctes.
+	 *
+	 * ─────────────────────────────────────────────────────────────────────────
+	 * LES ADRESSES — lot T-070, ET SEULEMENT CELLES QUE LE GEL DÉCLARE
+	 *
+	 * `ARB-013` retire les lignes `/url:` de l'instantané de structure : le
+	 * produit peut donc porter ses adresses sans échouer au banc. Ce qu'il porte
+	 * n'est pas déduit d'un libellé — c'est la destination que la MAQUETTE
+	 * déclare elle-même en `data-vers`, résolue par `docs/routes.md`, qui fait
+	 * foi sur les chemins :
+	 *
+	 *   Accueil        « Accueil contributeur — vue V-07 »  →  `/`
+	 *   Cartographie   « Cartographie — vue V-19 »          →  `/cartographie`
+	 *   Carte mentale  « Carte mentale — vue V-21 »         →  `/carte-mentale`
+	 *   Import         « Import — vue V-24 »                →  `/importer`
+	 *   Console        « Console — vue V-27 »               →  `/console/univers`
+	 *
+	 * TROIS ENTRÉES RESTENT À `href="#"`, ET C'EST LE BON CLASSEMENT :
+	 *
+	 *   · la FORME ABRÉGÉE tout entière — son gel ne porte AUCUN `data-vers`
+	 *     (vérifié sur V-11:1056-1064 et V-22:1209-1217). Deviner sa destination
+	 *     serait un comblement ; `verif:menus` la compte en `inerte-au-gel`, qui
+	 *     est un CONSTAT et non un rouge ;
+	 *   · l'Accueil de V-07, dont le gel déclare « Vous êtes déjà sur l'accueil »
+	 *     (`V-07:1150`) — une non-destination, qu'aucune règle de
+	 *     `REGLES_DE_DESTINATION` ne résout, et qui ne doit pas l'être ;
+	 *   · SIGNETS, et celle-là est un ÉCART, pas un choix. Son `data-vers`
+	 *     désigne V-22, dont `docs/routes.md` §3.3 donne la route
+	 *     `/univers/{univers}/{domaine}/signets` : PARAMÉTRÉE. Or le rail est
+	 *     GLOBAL — `verif/menus.mjs` le constate lui-même : « le rail de V-37
+	 *     offre Cartographie, Carte mentale et Signets quel que soit le domaine
+	 *     courant » — et aucune source du dépôt ne dit quel univers ni quel
+	 *     domaine cette entrée vise. Le brief de V-37 ne cite même pas Signets
+	 *     parmi les outils du rail. Choisir un domaine serait une décision
+	 *     fonctionnelle prise en exécution, donc un défaut de contrat de tâche
+	 *     (`CLAUDE.md` §2, règle de non-comblement). L'entrée reste inerte et
+	 *     l'écart est remonté.
 	 */
+	import { resolve } from '$app/paths';
 	import type { NoeudRendu, SectionRendue } from './arborescence';
 	import type { NoeudAbregeRendu, SectionAbregeeRendue } from './arborescence-abregee';
 
@@ -146,7 +181,7 @@
 	<div class="rail__section">
 		<a
 			class="rail__lien"
-			href="#"
+			href={forme === 'abregee' || accueilCourant ? '#' : resolve('/')}
 			aria-current={accueilCourant ? 'page' : undefined}
 			data-vers={forme === 'abregee'
 				? undefined
@@ -203,7 +238,7 @@
 	{:else}
 		<div class="rail__section">
 			<div class="rail__titre etiq">Outils</div>
-			<a class="rail__lien" href="#" data-vers="Cartographie — vue V-19">
+			<a class="rail__lien" href={resolve('/cartographie')} data-vers="Cartographie — vue V-19">
 				<svg
 					width="15"
 					height="15"
@@ -217,7 +252,7 @@
 				>
 				Cartographie
 			</a>
-			<a class="rail__lien" href="#" data-vers="Carte mentale — vue V-21">
+			<a class="rail__lien" href={resolve('/carte-mentale')} data-vers="Carte mentale — vue V-21">
 				<svg
 					width="15"
 					height="15"
@@ -248,7 +283,7 @@
 				>
 				Signets
 			</a>
-			<a class="rail__lien si-ecriture" href="#" data-vers="Import — vue V-24">
+			<a class="rail__lien si-ecriture" href={resolve('/importer')} data-vers="Import — vue V-24">
 				<svg
 					width="15"
 					height="15"
@@ -263,7 +298,7 @@
 
 		<div class="rail__section si-admin">
 			<div class="rail__titre etiq">Gestion</div>
-			<a class="rail__lien" href="#" data-vers="Console — vue V-27">
+			<a class="rail__lien" href={resolve('/console/univers')} data-vers="Console — vue V-27">
 				<svg
 					width="15"
 					height="15"

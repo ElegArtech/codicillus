@@ -117,11 +117,16 @@
 	 * LES POSITIONS DU GEL, RENDUES TELLES QUELLES.
 	 *
 	 * Relevées sur `mockups/V-19-cartographie.html` servie par le banc, fenêtre
-	 * 1440 × 900, horloge et animations dans les conditions de
-	 * `verif/banc/conditions.mjs`. Identiques aux six états : le périmètre ne
+	 * 1440 × 900, horloge et animations dans les conditions de capture du banc
+	 * (`conditions.mjs`). Identiques aux six états : le périmètre ne
 	 * change pas, et `disposer()` est déterministe — « deux chargements du même
 	 * périmètre donnent exactement la même carte, ce qui est indispensable pour
 	 * s'y repérer d'une session à l'autre » (`V-19:2561`).
+	 *
+	 * (Le chemin complet du module du banc n'est volontairement PAS cité :
+	 * depuis T-070 cette vue est servie par une route réelle, donc BÂTIE, et
+	 * `verif:demo:hors-production` cherche cette chaîne en texte brut dans le
+	 * produit construit — commentaires compris. Écart É-2 du lot T-070.)
 	 *
 	 * Ce ne sont PAS des données du produit : c'est le calque d'une fabrique du
 	 * gel, au sens d'`ECART-020` É-3, pour une fabrique dont le recalcul serait
