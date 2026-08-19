@@ -847,12 +847,20 @@ function executer() {
 	 * pas fait croire à une couverture qu'elle n'a pas (RA-01).
 	 */
 	const NON_OUTILLES = [
-		['P-2', "croisement sélecteur ↔ jeton : demande l'inventaire fermé du §2 — lot T-009"],
-		['P-4.3', "analyse des gabarits : demande l'inventaire fermé du §2 — lot T-009"],
-		['P-5', "fermeture de l'inventaire : lint d'import restreint — lot T-009 (ADR-002)"],
-		['P-7', 'balisage des composants : aucune vue implémentée — phase 1, batteries 5 et 10'],
-		['P-8', 'balisage des actions : aucune vue implémentée — phase 1, batterie 7']
+		[
+			'P-2',
+			"croisement sélecteur ↔ jeton : l'inventaire fermé du §2 est désormais complet " +
+				'(T-009b) et `node verif/inventaire-composants.mjs --json` en donne la liste ' +
+				'exploitable. Reste à écrire, la prémisse est levée.'
+		],
+		['P-4.3', 'analyse des gabarits : même prémisse levée par T-009b. Reste à écrire.'],
+		['P-7', 'balisage des composants : 4 vues sur 41 implémentées — phase 1, batteries 5 et 10'],
+		['P-8', 'balisage des actions : 4 vues sur 41 implémentées — phase 1, batterie 7']
 	];
+
+	/* P-5 est OUTILLÉ depuis T-009b — `pnpm verif:inventaire`, chaîné dans `pnpm verify`.
+	   Il ne figure donc plus ici : une batterie qui se déclarerait non outillée alors
+	   qu'elle l'est ferait douter des quatre autres lignes de cette liste. */
 
 	console.log('verif:jetons — batterie 2 « jetons et non-divergence du socle »');
 	console.log(`  source du socle : mockups/V-07-accueil-contributeur.html, premier bloc <style>`);
