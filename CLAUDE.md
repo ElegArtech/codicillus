@@ -308,6 +308,45 @@ accents graves coupe la chaîne : l'erreur remonte en `[PARSE_ERROR] Expected a 
 lignes de la cause**. Même famille que **P-9**, où citer la forme exacte de `prettier-ignore` dans un
 commentaire de balisage faisait fuir la suite dans le DOM. *(T-010, 19/08/2026)*
 
+### P-19 · Un bloc `<style>` de composant n'est **jamais** servi au banc
+
+`verif/banc/mode-demo.mjs` **compose le document lui-même** et n'y lie que trois feuilles : les
+polices, `src/socle.css`, `src/vues/V-xx.css`. Or Svelte en rendu serveur **ne met pas la CSS d'un
+composant dans `rendu.head`**.
+
+Conséquence, et elle est traître : `pnpm check`, `verif:jetons` et `svelte-check` sont **verts**, la
+classe de portée est bien posée sur les nœuds du document servi — et le banc reste **au pixel près
+identique à l'écart d'avant**. Mesuré : 13 276 px inchangés, sur une correction pourtant juste.
+
+**Aucun composant de `src/` ne portait de bloc `<style>` avant le 19/08/2026** : la propriété n'avait
+jamais été exercée — **P-5** mot pour mot. Le canal qui atteint le document est `<svelte:head>`, et
+il ne se soustrait à aucun contrôle : `verif:jetons` relève tout bloc `<style>` d'un `.svelte`, où
+qu'il soit. *(T-063, 19/08/2026)*
+
+### P-20 · Une forme de balisage citée dans un commentaire est lue comme du balisage
+
+Écrire `class="notifs …"` **dans un commentaire** fait rougir le relevé de composants :
+`inventaire-composants.mjs` relève les `class="…"` sans distinguer prose et balisage. C'est le cousin
+exact de **P-9**, où citer la forme de `prettier-ignore` dans un commentaire de balisage faisait fuir
+la suite dans le DOM. **Décrire une forme, ne jamais la citer.** *(T-063, 19/08/2026)*
+
+### P-21 · N'énonce jamais un fait sur le gel sans citer la ligne que tu as lue
+
+**Sept chiffres ou affirmations transmis par l'orchestrateur se sont révélés faux**, et la cause est
+toujours la même : une propriété du gel affirmée sans ouvrir le fichier. Trois exemples du seul
+19 août :
+
+- *« aucune maquette ne montre un module de domaine désactivé »* — **V-11 et V-28 en montrent 39
+  instances, 7 ensembles distincts** ; `P-04` était éprouvé depuis le début ;
+- *« V-18 est la lecture du registre Opérationnel »* — c'est l'**éditeur** ; son gel ne porte aucun
+  `<article>` ni aucune règle d'impression ;
+- une plage de lignes de constructeur **amputée du quatrième nœud** : qui l'aurait crue aurait porté
+  trois nœuds sur quatre.
+
+`verif/contrat.mjs` protège contre les chiffres tapés à la main. **Il ne protège pas contre une
+lecture de travers, ni contre une affirmation qu'on n'a pas vérifiée.** La parade est une discipline
+d'écriture : *fichier, ligne, et ce qu'on y lit* — ou rien. *(19/08/2026)*
+
 ### P-18 · Depuis l'imbrication CSS, `CSSStyleRule` porte un `cssRules` vide mais vrai
 
 `CSSStyleRule` hérite désormais de `CSSGroupingRule` : **toute** règle expose un `cssRules`, vide la
