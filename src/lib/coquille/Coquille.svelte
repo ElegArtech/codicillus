@@ -81,6 +81,45 @@
 	 *     humaine seule, qui n'existe pas encore. `BarreSuperieure.svelte` le
 	 *     détaille, avec la mesure.
 	 *
+	 * QUATRIÈME AMENDEMENT — ARB-023, lot P-0b. L'arbitrage se nomme lui-même
+	 * « troisième amendement BORNÉ » : c'est le troisième à ne porter que deux
+	 * propriétés, après ARB-015 et ARB-019 ; celui d'ARB-021 en couvrait cinq
+	 * d'un coup et n'était pas borné. Les deux décomptes sont justes et ne
+	 * comptent pas la même chose — ici, c'est le quatrième passage.
+	 *
+	 * Deux propriétés, et rien d'autre : `classeEnveloppe` et `avantContenu`.
+	 * Onze maquettes intercalent un conteneur entre `div.cadre` et `<main>`,
+	 * là où le gabarit rendait
+	 * `<main>` en enfant direct du cadre, sans autre frère que la barre :
+	 *
+	 *   V-27 à V-36  `div.console > (aside.nav2, main.travail#travail)`
+	 *   V-41         `div.biblio  > (nav.sommaire-b#sommaire, main.corps-b#corps)`
+	 *
+	 * Ce sont des GRILLES — `.console` fait `244px minmax(0,1fr)` (`V-27:733`),
+	 * `.biblio` fait `208px minmax(0,1fr)` (`V-41:1460`). Sans l'enveloppe, la
+	 * découpe du contenu n'a pas les mêmes dimensions et les états divergent
+	 * avant même la comparaison de pixels : mesuré au navigateur, `main.travail`
+	 * de V-27 passe de 492 / 948 à 248 / 1180, et `main.corps-b` de V-41 de
+	 * 456 / 984 à 248 / 1060 (boîtes de bordure, fenêtre 1440 × 900).
+	 *
+	 * Les DIX vues de console partagent EXACTEMENT la même enveloppe — vérifié
+	 * attribut par attribut au navigateur : `div.console` sans autre attribut
+	 * que sa classe, `aside.nav2[aria-label="Sections de la console"]`,
+	 * `main.travail#travail`, deux enfants, et rien après `<main>`. Un
+	 * amendement unique suffit donc, et c'était la question à trancher avant de
+	 * l'écrire.
+	 *
+	 * POURQUOI UNE CLASSE ET UN SNIPPET, ET PAS DEUX SNIPPETS. La classe seule
+	 * décide de la grille ; le nœud qui précède `<main>` change de balise d'une
+	 * forme à l'autre (`aside` ici, `nav` là), porte son propre `aria-label`,
+	 * son propre identifiant et son propre contenu. La première est une donnée,
+	 * le second est du balisage de vue : les confondre obligerait le gabarit à
+	 * connaître la navigation de la console.
+	 *
+	 * SANS `classeEnveloppe`, AUCUN CONTENEUR N'EST RENDU — pas un `div` sans
+	 * classe. C'est ce qui laisse les vingt-trois autres vues à coquille, dont
+	 * les quatre livrées, à zéro pixel d'écart.
+	 *
 	 * LE GABARIT EST REGELÉ. Un seul lot est encore autorisé à y revenir :
 	 * T-106 / P-8, pour monter la palette V-09 sur le champ de recherche de la
 	 * barre. Tout autre lot qui croit devoir y écrire déclare un écart.
@@ -241,6 +280,31 @@
 		 * visible est `V-07:512`, `.rail__lien[aria-current="page"]`.
 		 */
 		accueilCourant?: boolean;
+		/**
+		 * LA CLASSE DE L'ENVELOPPE intercalée entre `div.cadre` et `<main>`
+		 * (ARB-023). Absente — les vingt-trois autres vues à coquille, dont les
+		 * quatre livrées —, AUCUN conteneur n'est rendu et `<main>` reste enfant
+		 * direct du cadre : c'est le rendu de T-101, préservé à l'octet.
+		 *
+		 * `console` pour V-27 à V-36, `biblio` pour V-41. Ce sont des grilles
+		 * déclarées par la feuille de chaque vue (`V-27:733`, `V-41:1460`) ; le
+		 * gabarit n'écrit aucune règle de style, il pose la classe qui les active.
+		 */
+		classeEnveloppe?: string;
+		/**
+		 * LE NŒUD RENDU DANS L'ENVELOPPE, AVANT `<main>` (ARB-023) — la première
+		 * cellule de la grille.
+		 *
+		 * `aside.nav2[aria-label="Sections de la console"]` pour les dix vues de
+		 * console, `nav.sommaire-b#sommaire[aria-label="Familles de composants"]`
+		 * pour V-41. Balise, identifiant, libellé et contenu appartiennent à la
+		 * vue : le gabarit ne connaît ni la navigation de la console ni le
+		 * sommaire de la bibliothèque.
+		 *
+		 * N'a de sens qu'avec `classeEnveloppe` — sans enveloppe, il n'y a pas de
+		 * place où le rendre, et il n'est pas rendu.
+		 */
+		avantContenu?: Snippet;
 	}
 
 	const {
@@ -265,7 +329,9 @@
 		forme = 'complete',
 		donnees,
 		superposition,
-		accueilCourant = false
+		accueilCourant = false,
+		classeEnveloppe,
+		avantContenu
 	}: Proprietes = $props();
 
 	/**
@@ -313,6 +379,16 @@
 	>
 {/snippet}
 
+<!--
+	`<main>`, rendu une seule fois et posé à deux endroits : dans l'enveloppe
+	quand la vue en déclare une, en enfant direct du cadre sinon (ARB-023). Un
+	snippet plutôt que deux écritures — deux `<main>` recopiés divergeraient au
+	premier amendement suivant.
+-->
+{#snippet zoneDeContenu()}<main class={classeContenu} id={idContenu}>
+		{#if enfants}{@render enfants()}{/if}
+	</main>{/snippet}
+
 <a class="saut-contenu" href="#{cible}">{libelleEvitement}</a>
 
 <div
@@ -329,9 +405,10 @@
 	<div class="cadre">
 		<BarreSuperieure {fil} {rail} {compte} {forme} />
 
-		<main class={classeContenu} id={idContenu}>
-			{#if enfants}{@render enfants()}{/if}
-		</main>
+		{#if classeEnveloppe}<div class={classeEnveloppe}>
+				{#if avantContenu}{@render avantContenu()}{/if}
+				{@render zoneDeContenu()}
+			</div>{:else}{@render zoneDeContenu()}{/if}
 	</div>
 </div>
 
