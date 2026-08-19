@@ -138,7 +138,7 @@
 	 * peut ne pas les émettre — et P-09 l'exige, « ni grisée, NI MASQUÉE ».
 	 * Les nœuds concernés gardent leur classe `si-ecriture` intacte quand ils
 	 * sont rendus : la classe porte aussi le rendu, elle ne se retire pas.
-	 * Énumération : `verif/rapports/omissions-p09.md`.
+	 * Énumération : `docs/omissions-p09.md`.
 	 */
 	const ecriture = $derived(profil !== 'lecteur');
 	const etatPage = $derived(String(reglage['etat'] ?? 'nominal'));

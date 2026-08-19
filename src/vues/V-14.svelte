@@ -115,7 +115,7 @@
 	 * statique n'a pas d'autre moyen de dire « cette action n'existe pas pour ce
 	 * rôle ». Le produit peut ne pas l'émettre, et P-09 l'exige — « ni grisée,
 	 * NI MASQUÉE ». La classe reste posée sur les nœuds rendus.
-	 * Énumération : `verif/rapports/omissions-p09.md`.
+	 * Énumération : `docs/omissions-p09.md`.
 	 */
 	const ecriture = $derived(droits !== 'lecture');
 

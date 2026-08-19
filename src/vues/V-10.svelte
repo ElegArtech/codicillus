@@ -100,7 +100,7 @@
 	 * l'état vide, qu'aucun vecteur du scénario ne croise avec `droits=lecture`.
 	 * Le différentiel de la batterie 7 ne le voit donc pas (P-5). Il est traité
 	 * comme les autres pour que la vue n'ait qu'une seule règle.
-	 * Énumération : `verif/rapports/omissions-p09.md`.
+	 * Énumération : `docs/omissions-p09.md`.
 	 */
 	const ecriture = $derived(droits !== 'lecture');
 	const etatDeLaPage = $derived(

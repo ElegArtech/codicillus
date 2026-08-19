@@ -113,7 +113,7 @@
 	 * c'est elle qui porte le `display: inline-flex`. La retirer changerait le
 	 * rendu ; seul le nœud s'omet, jamais sa classe.
 	 *
-	 * Énumération : `verif/rapports/omissions-p09.md`.
+	 * Énumération : `docs/omissions-p09.md`.
 	 */
 	const gestionnaire = $derived(niveau === 'gestionnaire');
 	const redacteur = $derived(niveau === 'gestionnaire' || niveau === 'redacteur');
