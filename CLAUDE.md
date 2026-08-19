@@ -347,6 +347,25 @@ toujours la même : une propriété du gel affirmée sans ouvrir le fichier. Tro
 lecture de travers, ni contre une affirmation qu'on n'a pas vérifiée.** La parade est une discipline
 d'écriture : *fichier, ligne, et ce qu'on y lit* — ou rien. *(19/08/2026)*
 
+### P-22 · Les serveurs de développement orphelins s'accumulent, et personne ne les compte
+
+Mesuré le 19/08/2026 : **huit serveurs Vite orphelins**, le plus ancien démarré **vingt et une heures
+plus tôt**, tous survivants de lots depuis longtemps clos. Ils occupaient **7,3 Go** — un tiers de la
+mémoire utilisée de la machine.
+
+Ce n'est pas neuf : `ECART-014` É-2 relevait déjà « six serveurs de développement orphelins », et le
+passage aux copies de travail devait le refermer. **Il l'a aggravé** : chaque copie lance le sien, et
+rien ne les arrête quand le lot rend.
+
+**Deux conséquences, et la seconde est la plus grave.** Le banc ralentit — les mêmes 409 couples
+passent de 363 s à 563 s selon la charge. Et surtout, **un port pris par un orphelin fait mesurer le
+mauvais serveur** : c'est exactement le symptôme qu'`ECART-017` É-8 avait nommé, et `--strictPort`
+n'y protège que si le lot le passe.
+
+Parade : compter les serveurs avant et après chaque vague — `ps -eo pid,lstart,args | grep 'vite.js
+dev'` —, et ne jamais chercher à les repérer par `pgrep` sur un motif (**P-1**). Un lot qui rend doit
+être suivi du retrait de sa copie, qui emporte son serveur. *(19/08/2026)*
+
 ### P-18 · Depuis l'imbrication CSS, `CSSStyleRule` porte un `cssRules` vide mais vrai
 
 `CSSStyleRule` hérite désormais de `CSSGroupingRule` : **toute** règle expose un `cssRules`, vide la
