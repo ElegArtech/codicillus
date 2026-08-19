@@ -730,6 +730,7 @@ export function modeDemo() {
    HUMAINE SEULE : une vue ne choisit pas les attributs du document qui la porte,
    sans quoi elle pourrait s'accorder une règle que le gel ne lui donne pas.
    ───────────────────────────────────────────────────────────────────────────── */
+/** @param {string} vue */
 function attributsDeCorps(vue) {
 	const declares = PROTOCOLE?.attributs_de_corps?.vues?.[vue];
 	if (!declares) return '';
