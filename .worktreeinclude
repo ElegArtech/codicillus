@@ -1,0 +1,4 @@
+# Fichiers non suivis à recopier dans chaque copie de travail (PLAN §7.4).
+# node_modules n'y figure pas : il est lié, pas copié — voir verif/preparer-copie.sh
+.env
+.env.local
