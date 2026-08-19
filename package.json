@@ -64,7 +64,9 @@
 		"base:semer": "node base/base.mjs semer",
 		"base:unicite": "node base/base.mjs unicite",
 		"base:coherence": "node base/base.mjs coherence",
-		"verif:base": "node base/base.mjs reversibilite && node base/base.mjs semer && node base/base.mjs coherence && node base/base.mjs unicite"
+		"verif:base": "node base/base.mjs reversibilite && node base/base.mjs semer && node base/base.mjs coherence && node base/base.mjs unicite",
+		"contenu:constructions": "node verif/contenu.mjs constructions",
+		"contenu:invalide": "node verif/contenu.mjs invalide"
 	},
 	"dependencies": {
 		"zod": "4.4.3",
