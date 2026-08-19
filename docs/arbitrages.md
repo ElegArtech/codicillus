@@ -838,6 +838,13 @@ avec V-06 et V-08.
 ---
 
 ## ARB-026 — Les deux seuils sont posés, et ils ne peuvent que descendre
+
+> **SUSPENDU sur son volet accessibilité, le 19 août 2026 — `ECART-041`.** Le seuil a été posé en
+> retirant 31 lignes `portage/…` dont T-060 a établi ensuite qu'elles sont du **gel** : la batterie
+> 10 sur-discrimine sur une clé de rapprochement sensible aux blancs, que le compilateur Svelte
+> élague d'un côté et pas de l'autre (P-8). Le fichier fige donc 31 fausses lignes. La batterie s'est
+> par ailleurs révélée **non déterministe** (92 puis 95 sur un arbre identique). Le volet batterie 9
+> — `--seuil-gel=173` — n'est **pas** concerné et reste en vigueur.
 **19 août 2026** — arbitrage délégué. Répond à `ECART-039` et `ECART-040`.
 
 **Décision.** `verif/references/a11y-seuil.json` est posé, et `pnpm test:etats` porte
