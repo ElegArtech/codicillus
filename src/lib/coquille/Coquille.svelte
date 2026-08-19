@@ -137,6 +137,15 @@
 	 * T-106 / P-8, pour monter la palette V-09 sur le champ de recherche de la
 	 * barre. Tout autre lot qui croit devoir y écrire déclare un écart.
 	 *
+	 * SIXIÈME PASSAGE — lot T-072, ET IL EST DÉCLARÉ COMME ÉCART (T-072 É-1).
+	 * DEUX LIGNES, ET RIEN D'AUTRE : `droits` et `role`, déjà propriétés de ce
+	 * gabarit et déjà posées en attributs de données sur `div.app`, sont PASSÉES
+	 * à `<Rail>` et `<BarreSuperieure>`. Aucune propriété n'est créée, aucun nœud
+	 * n'est ajouté, aucun rendu ne change tant que le droit est accordé. Le
+	 * passage était inévitable : P-09 demande aux deux composants de ne pas
+	 * ÉMETTRE les actions gouvernées, et un composant ne peut pas conditionner
+	 * sur une donnée qu'il ne reçoit pas.
+	 *
 	 * Rendu SERVEUR, sans hydratation (ADR-001) : la navigation, le fil d'Ariane
 	 * et les droits sont résolus avant production du HTML. Aucune minuterie n'est
 	 * écrite : le squelette rend l'ÉTAT, jamais la transition (ARB-011).
@@ -409,10 +418,17 @@
 	data-droits={droits}
 	data-contenu={contenu}
 >
-	<Rail {forme} {sections} {sectionsAbregees} {version} {accueilCourant} />
+	<!--
+		`droits` et `role` DESCENDENT jusqu'aux deux composants de coquille — lot
+		T-072, P-09 / ARB-040. `div.app` les portait déjà en attributs de données,
+		pour le socle ; le rail et la barre en ont besoin comme DONNÉES, parce que
+		P-09 leur demande de ne pas ÉMETTRE ce que le socle se contentait de
+		cacher. Aucun rendu ne change tant que le droit est là.
+	-->
+	<Rail {forme} {sections} {sectionsAbregees} {version} {accueilCourant} {droits} {role} />
 
 	<div class="cadre">
-		<BarreSuperieure {fil} {rail} {compte} {forme} />
+		<BarreSuperieure {fil} {rail} {compte} {forme} {droits} />
 
 		{#if classeEnveloppe}<div class={classeEnveloppe}>
 				{#if avantContenu}{@render avantContenu()}{/if}

@@ -89,7 +89,7 @@
 		 * `si-ecriture` reste posée sur les nœuds rendus — elle porte aussi le
 		 * rendu, elle ne se retire pas.
 		 *
-		 * Énumération : `verif/rapports/omissions-p09.md`.
+		 * Énumération : `docs/omissions-p09.md`.
 		 */
 		droits?: 'ecriture' | 'lecture';
 		/**

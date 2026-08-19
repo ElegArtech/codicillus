@@ -46,6 +46,7 @@ import {
 	racine,
 	RE_SUSPECT,
 	sansDroitParZone,
+	ecransConditionnesParZone,
 	verdictDeZone,
 	vuesDuDepot
 	// @ts-expect-error — modules d'instrument en JavaScript, hors périmètre de tsc
@@ -169,9 +170,104 @@ describe('verdictDeZone — les trois natures de manque ne se confondent pas', (
 		expect(v['sans-droit']).toBe('non-applicable');
 	});
 
-	it('« sans droit » atteignable au gel et absent du portage est un manque de PORTAGE', () => {
-		const v = verdictDeZone({ etats: {}, declares: {} }, null, 'atteignable', 'non-applicable');
+	/* ARB-045, lot T-072 — LA RÈGLE QUI A CHANGÉ, ET SES DEUX BORNES.
+	   L'assertion qui vivait ici exigeait « manque-portage » d'un portage qui
+	   n'émet pas le nœud conditionné. C'était exiger le contraire de P-09 :
+	   aucune application conforme ne pouvait la satisfaire. Elle est remplacée
+	   par les quatre cas ci-dessous, qui éprouvent la règle DANS LES DEUX SENS —
+	   « une règle qu'aucun cas n'exerce est une règle dont on ignore si elle
+	   marche » (CLAUDE.md §6 P-5). */
+	it('« sans droit » OMIS par le portage là où le gel masque est TENU, pas manqué', () => {
+		const v = verdictDeZone(
+			{ etats: {}, declares: {} },
+			null,
+			'atteignable',
+			'non-applicable',
+			[],
+			[]
+		);
+		expect(v['sans-droit']).toBe('porte-par-omission');
+	});
+
+	it('« sans droit » masqué comme au gel reste « porté »', () => {
+		const v = verdictDeZone(
+			{ etats: {}, declares: {} },
+			null,
+			'atteignable',
+			'atteignable',
+			['ecriture'],
+			['ecriture']
+		);
+		expect(v['sans-droit']).toBe('porte');
+	});
+
+	it('ROUGE quand le portage OFFRE l’action dans un état où le gel la retire', () => {
+		const v = verdictDeZone(
+			{ etats: {}, declares: {} },
+			null,
+			'atteignable',
+			'declare-non-atteignable',
+			['ecriture'],
+			['ecriture', 'lecture']
+		);
 		expect(v['sans-droit']).toBe('manque-portage');
+	});
+
+	it('ROUGE quand le portage PERD l’action dans un état où le gel l’offre', () => {
+		const v = verdictDeZone(
+			{ etats: {}, declares: {} },
+			null,
+			'atteignable',
+			'non-applicable',
+			['ecriture'],
+			[]
+		);
+		expect(v['sans-droit']).toBe('manque-portage');
+	});
+
+	/* PREMIÈRE EXIGENCE D'ARB-045 — le crible ne doit PAS devenir aveugle.
+	   « Le portage omet ce que le gel masque » est conforme ; « personne n'a
+	   jamais rien posé » ne l'est pas, et une omission ne le rend pas conforme
+	   rétroactivement. Un cas de chaque, côte à côte. */
+	it('une zone où le GEL n’a jamais rien posé reste SANS OBJET, omission ou pas', () => {
+		const v = verdictDeZone({ etats: {}, declares: {} }, null, 'non-applicable', 'non-applicable');
+		expect(v['sans-droit']).toBe('non-applicable');
+	});
+
+	it('une zone que le GEL déclare sans jamais l’atteindre reste un manque de GEL', () => {
+		const v = verdictDeZone(
+			{ etats: {}, declares: {} },
+			null,
+			'declare-non-atteignable',
+			'non-applicable'
+		);
+		expect(v['sans-droit']).toBe('gel-non-atteignable');
+	});
+});
+
+describe('ecransConditionnesParZone — l’observable de « sans droit » côté portage', () => {
+	it('relève les états où l’action gouvernée est À L’ÉCRAN, pas ceux où elle est au DOM', () => {
+		const releves: Releve[] = [
+			{ etat: 'ecriture', zones: [z('#a', ['si-ecriture'])] },
+			{
+				etat: 'lecture',
+				zones: [{ cle: '#a', rend: true, visibles: [], presentes: ['si-ecriture'] }]
+			}
+		];
+		expect(ecransConditionnesParZone(releves).get('#a')).toEqual(['ecriture']);
+	});
+
+	it('un portage qui n’ÉMET rien rend le même ensemble qu’un gel qui masque partout', () => {
+		const masqueDesDeuxCotes: Releve[] = [
+			{
+				etat: 'lecture',
+				zones: [{ cle: '#a', rend: true, visibles: [], presentes: ['si-ecriture'] }]
+			}
+		];
+		const omisPartout: Releve[] = [{ etat: 'lecture', zones: [z('#a', [])] }];
+		expect(ecransConditionnesParZone(masqueDesDeuxCotes).get('#a')).toEqual(
+			ecransConditionnesParZone(omisPartout).get('#a')
+		);
 	});
 });
 

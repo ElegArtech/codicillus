@@ -1413,3 +1413,76 @@ la référence elle-même.
 
 **Les deux batteries restent rouges, et c'est le but** : elles pointent chacune un défaut réel et
 fermable, pas une dette de gel.
+
+---
+
+## ARB-047 — `ARB-046` est révoqué : Signets ne peut pas être une route globale
+**19 août 2026** — arbitrage délégué. Révoque `ARB-046`, sur la borne que j'y avais posée moi-même.
+
+**J'avais écrit** : *« le gel ne montre qu'une vue de signets — V-22 — et rien n'y distingue les deux
+portées : la vue est la même, le chemin diffère. »* Et j'avais posé la borne : *« si un état déclaré
+de V-22 montrait un contexte de domaine qui contredit une portée globale, arrête-toi et déclare-le. »*
+
+**L'exécutant a vérifié avant d'écrire, et la borne est franchie.** Lu dans le gel :
+
+| Ligne | Ce qu'elle porte |
+|---|---|
+| `mockups/V-22-signets.html:3232` | `changerDomaine("Infrastructure")` — **l'initialisation** ; les six états déclarés y passent |
+| `:2946` | `#sur-titre` ← `courant.univers + " · " + courant.nom` |
+| `:2947` | `#titre` ← `"Signets de " + courant.nom` |
+| `:2948` | `fil: ["Accueil", courant.univers, courant.nom, "Signets"]` |
+
+Et **trois des six états déclarés sont un choix de domaine**. **Aucun état de V-22 n'existe sans
+domaine.** Une route `/signets` globale rendrait « Signets de Infrastructure » et le fil « Accueil ›
+Production › Infrastructure › Signets » : une portée globale affichant un domaine arbitraire.
+**Mon affirmation était fausse, et c'est la neuvième.**
+
+**Décision. L'entrée Signets du rail reste inerte, et `P-03` n'est pas tenue sur elle.**
+
+Le raisonnement est celui de la précédence, et il a déjà servi deux fois aujourd'hui (`ARB-033` pour
+le contraste, `ARB-043` pour « document ») : **le rail est global, V-22 est portée par un domaine, et
+les deux sont dans le gel.** Aucun chemin ne satisfait les deux sans inventer — ni un domaine par
+défaut, que rien ne désigne, ni une entrée qui disparaît selon la page, qui ferait rougir ~70 des 81
+couples où le gel la montre.
+
+`P-03` dit qu'une entrée visible est une entrée qui fonctionne ; le gel en montre une qui ne le peut
+pas. **Les maquettes l'emportent.** Les 81 occurrences sont une **dette nommée**, et non une question
+ouverte. Elles se ferment par un regel — soit du rail, soit de V-22 — jamais par un lot.
+
+**Ce que cela clôt.** `verif:menus` reste à 81 entrées mortes, et c'est le bon verdict. Un seuil de
+gel est à poser pour cette batterie ; il ne peut l'être qu'après le regel ou avec lui.
+
+**Un blocage indépendant, à connaître avant toute reprise.** `verif/menus.mjs:923` porte
+`const ATTENDU_ROUTES = 39` **en dur**, et refuse de mesurer — code 2 — si l'extraction de
+`docs/routes.md` §3 n'en rend pas exactement 39. Son commentaire annonce vérifier le décompte contre
+le §9 du même document ; **il ne le lit pas, il l'a recopié.** Toute route ajoutée à `docs/routes.md`,
+même arbitrée, fait donc refuser l'instrument. C'est un garde-fou juste dans son intention — il
+préfère refuser à dériver en silence — et faux dans sa réalisation.
+
+---
+
+## ARB-048 — L'observable « sans droit » de la batterie 9, corrigé
+**19 août 2026** — arbitrage délégué. Répond à `T-071` É-1 ; correction livrée par `T-072`.
+
+`verdictDeZone` lisait la branche « sans droit » sur la **présence au DOM des deux côtés**. Côté
+portage, cela **exigeait que l'action interdite soit dans le DOM** — l'exact contraire de `P-09`, et
+de ce qu'`ARB-040` autorise à omettre. Aucune application conforme ne pouvait le satisfaire.
+
+**Décision. Côté portage seul, l'observable de présence est remplacé par un observable de
+visibilité, état par état.** Masqué et absent sont indiscernables à l'écran : **l'absence tient
+l'état, et mieux que le gel.** Nouveau verdict `porte-par-omission`.
+
+**Les trois exigences posées au contrat sont tenues, et mesurées :**
+
+1. **Le crible n'est pas devenu aveugle.** L'applicabilité reste décidée par le **gel seul** : une
+   zone que personne n'a jamais équipée reste `non-applicable`, une zone que seul le gel déclare
+   reste un manque de gel. Deux unitaires verrouillent le point.
+2. **Contrôle positif, dans les deux polarités.** Une mutation faisant *montrer* au portage ce que le
+   gel masque rougit en portage ; la polarité inverse rougit aussi. Et la mutation est prouvée non
+   inerte — le banc passe à 5 conformes / 1 écart pendant qu'elle est posée.
+3. **Le compte de gel n'a pas bougé** : **173**, à l'identique, et la conservation est vérifiable —
+   `porté 55 + manque 5 = 60` devient `porté 46 + omis 14 = 60`.
+
+**Un test unitaire a été supprimé, et c'est le bon geste** : *« sans droit atteignable au gel et
+absent du portage est un manque de PORTAGE »* exigeait littéralement le contraire de `P-09`. Six cas
+le remplacent.
