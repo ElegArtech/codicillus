@@ -215,6 +215,26 @@ Le banc floute l'élément actif au chargement. `autofocus` ne prend que dans un
 `showModal()` est appelé **après** la stabilisation. Inutile de le poser sur un nœud de page : il
 sera perdu, et la cause cherchée ailleurs. *(P-2, 19/08/2026)*
 
+### P-6 · **Le formateur peut casser la conformité, et rien ne le signale**
+
+`prettier --write` réintroduit des **blancs entre nœuds** à l'intérieur des cartes et des listes.
+Le relevé d'ordre de tabulation du niveau 1 construit le nom accessible sur `textContent` : **un
+blanc inséré s'y voit**. Mesuré : **27 couples en échec de structure** sur V-01, V-02 et V-26, pour
+cette seule cause.
+
+Le formatage fait partie de `pnpm check`, donc du critère de sortie de tout lot : **un lot peut
+donc échouer parce qu'il a obéi à une autre de ses obligations.** Parade : `<!-- prettier-ignore -->`
+au-dessus de la région concernée — **forme exacte obligatoire**, un commentaire
+`prettier-ignore — …` n'est pas reconnu. Documenter le motif à côté. *(P-13, 19/08/2026)*
+
+### P-7 · Un attribut de `<body>` n'est pas atteignable depuis une vue
+
+Svelte **refuse** tout attribut sur `<svelte:body>`, et le mode démo compose le document lui-même.
+Une maquette qui pose `<body data-x="…">` et dont la feuille lit `body[data-x]` a besoin d'une
+déclaration dans `verif/references/protocole-app.json` → `attributs_de_corps`, en écriture humaine
+seule. Une seule maquette est dans ce cas — V-03 —, et l'oublier coûtait 34 870 pixels.
+*(P-13, 19/08/2026)*
+
 ### P-5 · Une règle qu'aucun cas n'exerce est une règle dont on ignore si elle marche
 
 Le filtre d'adresses d'ARB-013 fut inerte pendant huit lots : il visait `/url:` quand Playwright
