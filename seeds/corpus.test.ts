@@ -60,6 +60,7 @@ import {
 	type IdentifiantDeVue,
 	type Variante
 } from './corpus.js';
+import { niveauFraicheur } from '../src/lib/fraicheur.js';
 
 /* ── Lecture des maquettes ────────────────────────────────────────────────── */
 
@@ -483,15 +484,15 @@ describe('la date de référence est déduite des maquettes', () => {
 		}
 	});
 
+	/* Le niveau attendu est CALCULÉ PAR L'IMPLÉMENTATION UNIQUE, jamais rejoué
+	   ici. ADR-005 interdit « tout recalcul local de la fraîcheur : dans un
+	   composant de vue, dans une requête SQL, […] ou DANS UN TEST ». Un test qui
+	   réécrit le calcul ne prouve plus que le corpus est cohérent avec le
+	   produit : il prouve qu'il est cohérent avec lui-même. */
 	it('est cohérente avec les seuils de fraîcheur déclarés', () => {
+		const seuils = { frais: CONFIG.seuilFrais, vieillissant: CONFIG.seuilVieillissant };
 		for (const note of CORPUS) {
-			const attendu =
-				note.jours < CONFIG.seuilFrais
-					? 'frais'
-					: note.jours < CONFIG.seuilVieillissant
-						? 'vieil'
-						: 'obs';
-			expect(note.fraicheur, note.id).toBe(attendu);
+			expect(note.fraicheur, note.id).toBe(niveauFraicheur(note.jours, seuils));
 		}
 	});
 });

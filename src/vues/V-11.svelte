@@ -69,7 +69,7 @@
 		type Note
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
-	import { classeTemoin, libelleFraicheur } from '$lib/fraicheur';
+	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { segmentsDeDossier } from '$lib/rangement/adresses';
 
 	interface Proprietes {
@@ -167,12 +167,12 @@
 		return `${n} ${accord(p, n)}${contexte ? ` · ${contexte}` : ''}`;
 	}
 
-	/** Le témoin de fraîcheur : trois graduations, dont `barres` pleines. */
-	function barres(niveau: Note['fraicheur']): number {
-		return niveau === 'frais' ? 3 : niveau === 'vieil' ? 2 : 1;
-	}
-
-	/** Le libellé du témoin : toujours la valeur en clair à côté du signal. */
+	/* ── Témoin de fraîcheur ─────────────────────────────────────────────────
+	   Rien n'est écrit ici : la classe, le nombre de barres et le libellé
+	   sortent tous les trois de `$lib/fraicheur`, l'implémentation unique de
+	   P-01 (ADR-005). Une fonction locale qui rendrait le nombre de barres
+	   serait `barresFraicheur` réécrite sans son nom — c'est exactement ce
+	   qu'elle était avant T-013c. */
 
 	/* ── Santé du domaine ───────────────────────────────────────────────────── */
 	const jamais = $derived(notesDuDomaine.filter((n) => n.revise === null).length);
@@ -280,7 +280,8 @@
 {#snippet temoin(n: Note)}
 	<span class="temoin {classeTemoin(n.fraicheur)}"
 		><span class="temoin__jauge" aria-hidden="true"
-			>{#each [0, 1, 2] as rang (rang)}<i class={rang < barres(n.fraicheur) ? 'plein' : undefined}
+			>{#each [0, 1, 2] as rang (rang)}<i
+					class={rang < barresFraicheur(n.fraicheur) ? 'plein' : undefined}
 				></i>{/each}</span
 		><span class="temoin__txt">{libelleFraicheur(n)}</span></span
 	>
