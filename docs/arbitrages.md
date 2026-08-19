@@ -476,9 +476,25 @@ surface capturée diffère. On ne masque pas un écart de fond : on corrige un a
 **Portée : les 41 vues, et tout le reste du projet.**
 
 **Le fait.** Quatre états de V-40 étaient déclarés **conformes** à 4 380, 4 746, 2 884 et 18 pixels
-divergents — sous le seuil de 0,5 % du `PLAN §4.2`. Leur cause n'est pas du bruit de rendu : c'est
-un **jeton faux**, un bloc `.contexte` posé sur `--c-papier` là où la référence le pose sur
-`--c-accent-voile`.
+divergents — sous le seuil de 0,5 % du `PLAN §4.2`. Leur cause n'était pas du bruit de rendu.
+
+> **Correction d'attribution, 19 août 2026 — `ECART-020` É-2.** La première rédaction nommait
+> « un bloc `.contexte` posé sur `--c-papier` là où la référence le pose sur `--c-accent-voile` ».
+> **Le couple de jetons était juste, l'élément était faux**, et T-102b l'a établi en décodant les
+> captures : `.contexte` n'apparaît que dans `d-restaurer`, **qui était déjà conforme**, et aucune
+> règle `.contexte` ne pose de fond nulle part.
+>
+> La cause réelle est l'**anneau de focalisation** —
+> `.saisie:focus { box-shadow: 0 0 0 3px var(--c-accent-voile) }` (`src/socle.css:422`). La maquette
+> focalise le premier contrôle à l'ouverture (`showModal()` puis `focus()` sur
+> `.saisie, .selecteur, .btn--principal`) ; le squelette n'ayant pas de script, la focalisation
+> retombait sur le bouton de fermeture. **Exactement les trois boîtes dont la cible est une
+> `.saisie` ou un `.selecteur` produisaient des pixels** — `d-dossier`, `d-reviser`, `d-relation`.
+>
+> **La décision d'ARB-018 n'est pas affectée** : un défaut réel passait bien sous la tolérance, et
+> le resserrement est ce qui l'a fait remonter. Seule l'attribution était fausse. Elle est corrigée
+> ici parce qu'une leçon attachée à un diagnostic invérifiable ne vaut rien — et parce que c'est le
+> deuxième diagnostic de ma main que le recomptage d'un exécutant corrige.
 
 **Le dispositif certifiait un défaut.** C'est l'état que `PLAN §12` désigne comme strictement pire
 que l'absence de dispositif : une batterie verte qui ne prouve rien désarme la vigilance.
@@ -554,3 +570,41 @@ pas le gel qui est mal posé : c'est l'interface du gabarit qui se découvre au 
 elle continuera. La discipline qui tient est celle-ci — **jamais d'écriture opportuniste dans la
 ressource gelée, toujours un arbitrage numéroté, un périmètre écrit, une preuve de non-régression,
 un regel.** Trois lots successifs s'y sont tenus.
+
+
+---
+
+## ARB-020 — Converger vers le gel n'est jamais une dérive
+**19 août 2026** — arbitrage délégué. Répond à `ECART-020` É-4.
+
+**Le problème.** Le gabarit de coquille est gelé, et deux divergences avec la maquette y ont été
+relevées en passant par un lot qui n'avait pas le droit d'y écrire : les `.menu-barre` ne portent
+pas `data-ouvert="non"` que le gel pose, et les SVG des menus ne sont pas enveloppés du
+`<span style="line-height: 0">` dont le gel les entoure. Aucun effet de rendu mesuré, aucune
+batterie ne les nomme.
+
+Faut-il un arbitrage numéroté pour chaque correction de ce genre ? Trois amendements en trois lots
+donnaient la réponse par l'absurde : le gel deviendrait un frein administratif là où il doit être
+un garde-fou.
+
+**Décision. Le gel interdit de *diverger* du gel ; il ne peut pas interdire d'y *converger*.**
+
+Une correction qui rapproche une ressource gelée de sa maquette — attribut manquant, enveloppe
+absente, ordre de nœuds — **ne demande pas d'arbitrage numéroté**. Elle demande trois choses, toutes
+vérifiables :
+
+1. La divergence est **constatée contre le gel**, pas contre un jugement — le fichier de maquette
+   et la ligne sont cités.
+2. La correction est **prouvée sans effet de rendu**, ou avec l'effet attendu : comparaison de DOM
+   avant/après, état par état, et les batteries de toutes les vues portant la ressource.
+3. Elle est **déclarée** au rapport de lot, comme n'importe quelle écriture en ressource gelée.
+
+**Ce qui reste soumis à arbitrage numéroté**, sans exception : tout ajout d'**interface** — une
+propriété, un contrat, un comportement — c'est-à-dire tout ce qui ne se lit pas dans le gel. C'est
+ce qu'ARB-015 et ARB-019 ont couvert, et la distinction est nette : l'un **corrige** vers la
+référence, l'autre **ajoute** ce que la référence ne dit pas.
+
+**Le risque, et sa parade.** Un agent pourrait qualifier de « convergence » une modification de
+confort. La parade est le point 1 : la ligne du gel est citée, ou il n'y a pas de convergence.
+Un agent bloqué sur un rouge ne « converge » jamais vers quelque chose que la maquette ne montre
+pas.
