@@ -163,6 +163,22 @@ export const CSS_INHIBITION = `
   transition-delay: 0s !important;
   scroll-behavior: auto !important;
 }
+/* ÉCART-028 — l'animation d'une boîte de dialogue est neutralisée, pas seulement
+   sa durée. Mettre animation-duration à zéro ne suffit pas : la révélation
+   (ARB-017) ouvre le dialogue par close() puis showModal(), ce qui REDÉMARRE
+   l'animation nommée. Même à durée nulle, ce redémarrage change la rastérisation
+   des coins arrondis d'une boîte translatée de -50%,-50% — offset fractionnaire —
+   et l'écart transparaît à travers le backdrop-filter du voile.
+
+   Mesuré par P-4 sur la MAQUETTE GELÉE SEULE, sans aucune implémentation : le
+   même document, ouvert par les deux chemins, diverge de 77 pixels dont 2 au-delà
+   du seuil de canal. Neutraliser l'animation de la boîte ramène l'écart à ZÉRO —
+   c'est le discriminant isolé par neutralisation successive.
+
+   Condition de capture, appliquée des deux côtés : elle rend les deux chemins
+   comparables, elle n'excuse aucun écart de rendu. */
+dialog > * { animation-name: none !important; }
+
 /* Curseur de saisie — il clignote, donc il diverge d'une capture à l'autre. */
 * { caret-color: transparent !important; }
 /* Barres de défilement — masquées, largeur neutralisée. */

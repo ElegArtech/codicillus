@@ -58,7 +58,7 @@
 	 */
 	import { notesPubliques, type Note } from '../../seeds/corpus';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
-	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/public/fraicheur';
+	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
