@@ -189,12 +189,19 @@ Un niveau de boucle qui dépasse son budget est un **défaut de harnais** : au-d
 
 *Vide au départ. Cette section est alimentée par la capitalisation (`cadrage/PLAN-DE-REALISATION.md` §10) : à la clôture de chaque lot, tout piège d'environnement ou convention non évidente rencontré par un agent y est inscrit — l'agent rédige, l'humain arbitre. Une décision d'architecture ou une interdiction va dans `docs/adr/` ; un motif d'interface va dans `docs/DESIGN.md` ; un écart de spec va en `cadrage/`, par arbitrage humain uniquement.*
 
-### P-1 · Un guetteur `pgrep -f` se trouve lui-même et n'aboutit jamais
+### P-1 · Un guetteur `pgrep` ne convient pas — attends un marqueur écrit
 
 `until ! pgrep -f "verif/maquette.mjs"; do sleep 10; done` **ne se termine pas** : la ligne de
-commande du shell guetteur contient elle-même le motif, `pgrep` la trouve, et l'attente expire.
-Employer `pgrep -f "node verif/maquette.mjs"`, ou `pgrep -x node` filtré sur le répertoire de
-travail. *(P-9, 19/08/2026)*
+commande du shell guetteur contient le motif, `pgrep` la trouve, et l'attente expire.
+
+**Et la parade recommandée ici ne suffit pas.** Un guetteur `pgrep -f "node verif/a11y.mjs"` s'est
+trouvé lui-même à son tour (T-065). Pire : **le motif attrape aussi les processus des autres copies
+de travail** — jusqu'à dix tournent en parallèle, et le guetteur attend alors la fin d'un lot
+étranger.
+
+**La seule parade sûre est d'attendre un marqueur écrit** — une ligne de journal, un fichier de
+rapport, un code de sortie —, jamais la disparition d'un processus.
+*(P-9, 19/08/2026 ; élargi par T-065)*
 
 ### P-2 · Une copie de travail fraîche déclare « no tests » au lieu d'échouer
 

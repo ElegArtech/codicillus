@@ -1296,3 +1296,67 @@ deux : *le gel masque, faute de serveur ; le produit omet, parce que `P-09` l'ex
 **Et le motif d'exclusion de `.ac--interdit` dans `verif/etats.mjs` est corrigé** : la classe n'est
 pas un droit hérité grisé, c'est l'emplacement courant du dialogue de déplacement. L'exclusion tient ;
 sa justification était fausse et se serait propagée.
+
+---
+
+## ARB-042 — Révision d'ARB-033 : le motif d'exemption tombe, la conclusion tient
+**19 août 2026** — arbitrage délégué. Répond à `T-065` É-3, É-5, É-6.
+
+### Ce que j'avais écrit, et qui est faux
+
+`ARB-033` §3 : *« Là où ce jeton habille un élément réellement inactif, il n'y a pas de violation —
+**axe ne peut pas savoir que l'élément l'est**. »*
+
+**Si, il le sait.** `color-contrast-matches` d'axe-core 4.13 écarte lui-même tout nœud pour lequel
+`isDisabled()` ou `isInert()` rend vrai, et **`isDisabled()` remonte la chaîne des ascendants**.
+Aucune occurrence des 707 ne *peut* donc porter une inactivité déclarée : **le seau « exempt » est
+vide par construction**, et le partage que j'avais demandé n'avait mécaniquement qu'une issue.
+
+Éprouvé sur cas réel plutôt que déduit : poser `aria-disabled="true"` sur les ascendants d'un site de
+V-41 fait passer axe de 2 violations à 0. Et contre-relevé : les 4 sites en `--c-encre-4` réellement
+portés par un composant inactif — les `<option disabled>` de V-32 — **existent dans le gel et ne sont
+dans aucun des 707**.
+
+**La conclusion d'`ARB-033` tient sur son autre jambe**, et c'était la bonne : `#526064` est à un
+point de `--c-encre-3`, donc `--c-encre-4` assombri cesse d'être une quatrième encre. **Elle n'est
+pas assombrie.** Mais son motif d'exemption est retiré.
+
+### Ce que la mesure a établi, et qui vaut mieux qu'un chiffre
+
+| | |
+|---|---|
+| Contrôle de la méthode du socle | `#71838a` → **2,7590** (annoncé 2,75) · `#536066` → **4,5366** (annoncé 4,54). Elle se reproduit |
+| Avant-plan en cause | **`--c-encre-4` dans 715 cas sur 715.** Aucune autre encre |
+| Fonds en cause | **six**, non quatre — `--c-frais-voile` et `--c-danger-voile` s'ajoutent aux quatre surfaces de la méthode |
+| Partage | **exempt 0 · réel 675 · indécidable 32** — borne `675 ≤ réel ≤ 707` |
+| Le dossier | **133 sites nommés · 22 groupes · 18 classes · 16 vues** |
+| La réparation | **`--c-encre-3` partout**, vérifié contre le fond **composé** de chaque site, pas contre une moyenne. Il tient AA sur les **neuf** surfaces du socle, voiles compris |
+
+**C'est cela qui remplace « 707 ».** Un chiffre d'occurrences d'axe est devenu un dossier borné, où
+chaque ligne porte son sélecteur, son texte, son état, sa fenêtre et sa réparation — **aucune teinte
+inventée**.
+
+### Et le chiffre de 707 sous-compte
+
+`axe` n'évalue pas les pseudo-éléments. Or **71 champs portent un `placeholder`, et les 41 vues sur
+41 colorent `::placeholder` en `--c-encre-4`** (2,10 à 2,55:1) ; 64 règles font de même sur
+`::before`/`::after`. **Aucun de ces sites n'est dans les 707** — et le placeholder d'un champ
+**actif** n'est pas exempté par 1.4.3.
+
+S'y ajoutent **2 299 nœuds** qu'axe classe `incomplete` et refuse de trancher — plus de trois fois
+les 707 — et le **contraste non textuel** (WCAG 1.4.11), que rien ne mesure : la seconde moitié de
+`RG-M18-07`.
+
+### Décision
+
+1. **`--c-encre-4` n'est pas assombri.** Inchangé.
+2. **La ligne `gel/axe:color-contrast: 707` du seuil est une dette *sous-évaluée*, et doit le dire.**
+   Elle ne borne que ce qu'axe voit.
+3. **Le dossier de regel des 16 vues est prêt et chiffré** — `verif/rapports/contraste.json`,
+   `pnpm verif:contraste`. Il ne s'exécute pas de lui-même : remplacer `--c-encre-4` par
+   `--c-encre-3` déplace des pixels, donc c'est un regel, donc **l'ordre de préséance le refuse tant
+   qu'il n'est pas arbitré**. `RG-M18-07` reste non tenue sur ces sites, et c'est une conséquence de
+   la loi du projet — pas une question ouverte.
+4. **Aucun site n'est classé « décoration ».** Le gel plaide lui-même contre : V-32 garde le **nom**
+   d'un compte inactif en `--c-encre-3` et ne laisse tomber que sa date ; et `.alerte-dom[data-nul]`
+   grise une **valeur zéro**, c'est-à-dire une donnée que `P-02` et `P-05` imposent de lire.
