@@ -27,7 +27,7 @@
 		"test:impression": "node verif/jalon.mjs \"batterie 15 « impression »\" \"T-023\"",
 		"socle:extraire": "node verif/extraire-socle.mjs",
 		"verif:jetons": "node verif/jetons.mjs",
-		"verif:fraicheur": "node verif/jalon.mjs \"batterie 5 « unicité de la fraîcheur »\" \"T-013\"",
+		"verif:fraicheur": "node verif/fraicheur.mjs",
 		"verif:menus": "node verif/jalon.mjs \"batterie 16 « menu vivant »\" \"T-032\"",
 		"verif:vocabulaire": "node verif/jalon.mjs \"batterie 17 « vocabulaire »\" \"non assigné par le §6.3 du plan de réalisation\"",
 		"verif:maquette": "node verif/maquette.mjs",

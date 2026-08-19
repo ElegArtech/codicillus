@@ -41,4 +41,21 @@ fi
 #    sort en échec, mais un lecteur pressé lit « no tests » comme « rien à faire ».
 (cd "$copie" && pnpm exec svelte-kit sync >/dev/null)
 
+# 5. LE VERROU DES SOURCES DE VÉRITÉ.
+#
+#    ÉCART-037 — il manquait, et il a manqué à TOUTES les copies depuis la
+#    création de ce script. `git worktree add` recrée les fichiers avec les
+#    permissions normales : le `chmod a-w` posé sur l'arbre principal (ECART-004)
+#    NE SE PROPAGE PAS. Une vingtaine de lots ont donc travaillé avec cadrage/,
+#    mockups/ et règles/ en écriture, alors que CLAUDE.md affirme le contraire.
+#
+#    Aucun n'a écrit — `verif:gel` est resté vert, 43 empreintes intactes à
+#    chaque clôture — mais la protection était redevenue DÉCLARATIVE, ce qui est
+#    précisément la faute qu'ECART-004 avait relevée et que je croyais close.
+#
+#    C'est un exécutant qui l'a trouvé, en sondant l'écriture au lieu de croire
+#    le document.
+chmod -R a-w "$copie/cadrage" "$copie/mockups" "$copie/règles" 2>/dev/null || true
+[ -d "$copie/verif/references" ] && chmod -R a-w "$copie/verif/references" 2>/dev/null || true
+
 echo "preparer-copie — $copie prête (dépendances liées, $(basename "$racine") comme source)."
