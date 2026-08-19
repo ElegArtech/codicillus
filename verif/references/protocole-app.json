@@ -534,5 +534,37 @@
 				"data-numerote": "non"
 			}
 		}
+	},
+	"focalisations": {
+		"_": [
+			"FOCALISATIONS DÉCLARÉES PAR LA MAQUETTE — ÉCRITURE HUMAINE SEULE.",
+			"Répond à docs/ecarts/ECART-029.md. Même famille qu'ARB-017 (révélations).",
+			"",
+			"LE PROBLÈME. `stabiliser()` relâche le focus au chargement, des deux côtés.",
+			"Côté RÉFÉRENCE, le script du gel refocalise ensuite — le focus survit. Côté",
+			"CANDIDAT, l'état arrive par l'adresse et `autofocus` a déjà été effacé.",
+			"Aucune forme déclarative n'y survit hors dialogue, et écrire un script pour",
+			"focaliser après coup violerait ARB-011 (le squelette rend l'état, jamais la",
+			"transition). Coût mesuré : 5 148 px sur V-23 `env-page`.",
+			"",
+			"LE GESTE APPARTIENT AU BANC, pas au candidat — c'est le principe posé par",
+			"ARB-017 et éprouvé depuis. La propriété est idempotente : là où elle est",
+			"déjà vraie, rien n'est touché.",
+			"",
+			"POURQUOI EN ÉCRITURE HUMAINE SEULE : une vue ne choisit pas ce qui est",
+			"focalisé chez elle, sans quoi elle pourrait s'accorder un anneau de",
+			"focalisation que le gel ne lui donne pas.",
+			"",
+			"La clé `*` vaut pour tous les états de la vue."
+		],
+		"vues": {
+			"V-23": {
+				"env-page": "input#adresse"
+			},
+			"V-06": {
+				"et-3": "input#nouveau",
+				"et-4": "a.btn--principal"
+			}
+		}
 	}
 }

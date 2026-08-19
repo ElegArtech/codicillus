@@ -160,6 +160,7 @@ import {
 	adresseDeLEtat,
 	declarationEtatDeZone,
 	declarationRevelation,
+	focalisationDeclaree,
 	limitesDeLaSource,
 	SOURCES,
 	PREFIXE as PREFIXE_DEMO
@@ -414,6 +415,7 @@ const signatures = {};
 const zonesParVue = new Map();
 /** Les révélations effectivement appliquées, vue par vue — ARB-017, même règle. */
 const revelationsParVue = new Map();
+
 const empreintesConnues =
 	existsSync(EMPREINTES) && !etalonner ? JSON.parse(readFileSync(EMPREINTES, 'utf8')) : null;
 /** La baseline porte la surface déclarée : l'élargir la rend incomparable. */
@@ -631,6 +633,30 @@ for (const { vue, fichier } of cibles) {
 					   ferait 308 px d'écart. Voir verif/banc/revelation.mjs. */
 					modaliteReference: etat.zone?.declencheur ? 'pointeur' : 'script'
 				});
+
+				/* ÉCART-029 — LA FOCALISATION DÉCLARÉE PAR LA MAQUETTE.
+				   Même famille qu'ARB-017 : une propriété du document que le banc
+				   rend vraie DES DEUX CÔTÉS, jamais un comportement à implémenter.
+
+				   L'asymétrie était de mon fait. Côté référence, `stabiliser()`
+				   relâche le focus, puis le script du gel focalise 40 ms plus tard —
+				   le focus SURVIT. Côté candidat, l'état arrive par l'adresse,
+				   `autofocus` prend au chargement, et `stabiliser()` l'efface. Aucune
+				   forme déclarative n'y survit hors dialogue, et écrire un script
+				   pour focaliser après coup violerait ARB-011.
+
+				   Coût mesuré : 5 148 px sur V-23 `env-page`, entièrement l'anneau de
+				   `.saisie:focus`. Seize états du projet sont dans ce cas.
+
+				   Comme pour la révélation, la propriété est idempotente : là où elle
+				   est déjà vraie — la référence — rien n'est touché. */
+				const focal = focalisationDeclaree(vue, etat.cle);
+				if (focal) {
+					await page.evaluate((sel) => {
+						const e = document.querySelector(sel);
+						if (e && document.activeElement !== e) e.focus();
+					}, focal);
+				}
 				if (revele) {
 					const cumul = revelationsParVue.get(vue) ?? {
 						vue,

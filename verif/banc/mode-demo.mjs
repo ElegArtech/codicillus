@@ -234,6 +234,19 @@ export function declarationRevelation(vue) {
 }
 
 /**
+ * La focalisation que la maquette pose et que le banc rend vraie des deux côtés
+ * — `protocole-app.json`, bloc `focalisations`, ÉCRITURE HUMAINE SEULE. Voir
+ * `docs/ecarts/ECART-029.md`. La clé `*` vaut pour tous les états de la vue.
+ * @param {string} vue @param {string} cleEtat
+ * @returns {string | null} le sélecteur à focaliser, ou `null`
+ */
+export function focalisationDeclaree(vue, cleEtat) {
+	const bloc = PROTOCOLE.focalisations?.vues?.[vue];
+	if (!bloc) return null;
+	return bloc[cleEtat] ?? bloc['*'] ?? null;
+}
+
+/**
  * Ce qu'une source d'étalonnage N'ÉPROUVE PAS — la règle d'`ECART-015` É-5,
  * inscrite en tête des sources et rendue lisible par le banc à chaque
  * exécution. Voir `protocole-app.json`, bloc `sources`.
