@@ -235,6 +235,24 @@ déclaration dans `verif/references/protocole-app.json` → `attributs_de_corps`
 seule. Une seule maquette est dans ce cas — V-03 —, et l'oublier coûtait 34 870 pixels.
 *(P-13, 19/08/2026)*
 
+### P-8 · Svelte élague les blancs en bord d'élément
+
+`<span>{n.univers} › </span>` perd son espace final : le rendu donne « Production ›Infrastructure› »
+et le niveau 1 échoue sur le nom accessible. **Porter l'espace dans l'expression** :
+`{n.univers + ' › '}`. Mesuré sur deux lots. *(P-1 et P-4, 19/08/2026)*
+
+### P-9 · Un commentaire de balisage ne peut pas citer `<!-- prettier-ignore -->`
+
+Le `-->` intérieur ferme le commentaire, et la suite fuit dans le DOM en nœud de texte — quatre
+couples en échec de structure. Ne jamais citer la forme exacte à l'intérieur d'un commentaire.
+*(P-4, 19/08/2026)*
+
+### P-10 · Dans une région serrée, une ligne qui ne finit pas par un tag ouvert crée un nœud de texte
+
+Dans un bloc `<!-- prettier-ignore -->` écrit en `></tag\n\t><tag`, remplacer une ligne par un
+`{@render}` qui ne finit **pas** par un tag ouvert transforme le `\n\t>` suivant en texte. Se relit
+dans le nom accessible du `row`. *(P-2, 19/08/2026)*
+
 ### P-5 · Une règle qu'aucun cas n'exerce est une règle dont on ignore si elle marche
 
 Le filtre d'adresses d'ARB-013 fut inerte pendant huit lots : il visait `/url:` quand Playwright
