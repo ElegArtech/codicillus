@@ -301,6 +301,17 @@ accents graves coupe la chaîne : l'erreur remonte en `[PARSE_ERROR] Expected a 
 lignes de la cause**. Même famille que **P-9**, où citer la forme exacte de `prettier-ignore` dans un
 commentaire de balisage faisait fuir la suite dans le DOM. *(T-010, 19/08/2026)*
 
+### P-18 · Depuis l'imbrication CSS, `CSSStyleRule` porte un `cssRules` vide mais vrai
+
+`CSSStyleRule` hérite désormais de `CSSGroupingRule` : **toute** règle expose un `cssRules`, vide la
+plupart du temps, **donc présent, donc vrai**. Un parcours écrit
+`if (r.cssRules) { descendre ; continue }` saute **toutes** les règles du document et rend `0` sans
+se plaindre — mesuré : **0 règle masquante sur V-08, qui en porte 30**.
+
+Faux vert silencieux, et de la pire espèce : il ne ressemble pas à une panne, il ressemble à un
+résultat. Tester `r.cssRules && r.cssRules.length`, ou le type de la règle.
+*(T-061, 19/08/2026)*
+
 ### P-5 · Une règle qu'aucun cas n'exerce est une règle dont on ignore si elle marche
 
 Le filtre d'adresses d'ARB-013 fut inerte pendant huit lots : il visait `/url:` quand Playwright
@@ -308,6 +319,11 @@ imprime `- /url:`. Personne ne l'a vu parce que toutes les vues portaient `href=
 comparée était identique des deux côtés, et le filtre inerte rendait le même verdict qu'un filtre
 qui marche. **Toute règle nouvelle doit être éprouvée sur un cas qui la sollicite**, sinon elle
 n'est pas posée, elle est espérée. *(P-9, 19/08/2026)*
+
+**Et une règle éprouvée sur un seul mécanisme n'est éprouvée qu'à moitié.** Le socle **masque** quand
+le droit tombe ; **V-13 masque par défaut et révèle quand le droit est là**. Un crible limité aux
+règles masquantes ne voit **rien** de V-13 — dix actions gouvernées, invisibles. Chercher la
+**polarité inverse** de ce qu'on mesure fait partie de l'épreuve. *(T-061, 19/08/2026)*
 
 ### P-14 · L'horloge virtuelle du banc ne survit pas au parallélisme
 

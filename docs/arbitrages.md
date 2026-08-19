@@ -1197,3 +1197,102 @@ hexadécimal, il interdit la composition d'URI.
 noms `*_POSTGRES` — ils nomment la configuration du **conteneur PostgreSQL**, qui les attend sous
 cette forme ; les `*_BASE` nomment la configuration du **client**. Les deux jeux ne se confondent
 pas, et c'est voulu.
+
+---
+
+## ARB-039 — `P-09` gouverne les droits, pas l'état d'un formulaire
+**19 août 2026** — arbitrage délégué. Répond à `T-061` É-1 et É-2, et corrige une prémisse à moi.
+
+**La tension que j'avais transmise n'existe pas.** J'ai écrit — et la batterie 9 l'avait écrit avant
+moi — que `.ac--interdit` était *« un droit hérité affiché en grisé, que le brief V-40 exige
+explicitement »*. **C'est faux, et il suffisait de lire `V-40:3579`** : `.ac--interdit` est
+l'**emplacement courant**, rendu non sélectionnable dans l'arborescence de destination du dialogue de
+déplacement — `label.ac.ac--interdit` avec un `input[type=radio][disabled]` et le libellé
+« emplacement actuel ».
+
+Le droit hérité, lui, est `.dr[data-herite="oui"]`, et **le gel y tient `P-09` exactement là où on le
+croyait en défaut** : mesuré, une rangée héritée porte **0 action**, une rangée explicite en porte
+**1**. Le gel pose un `<span>` de 27 px là où serait le bouton « Retirer l'accès ». **Il ne grise pas
+un bouton : il n'en met pas.**
+
+*L'exclusion de `.ac--interdit` par la batterie 9 reste juste ; son motif est faux et corrigé.*
+
+**La vraie question est ailleurs, et elle se déduit.** Le brief V-40 exige, pour les suppressions à
+confirmation : *« saisie du nom exact exigée · bouton inactif tant que la saisie ne correspond
+pas »*. Cinq actions sont dans ce cas, et à la lettre de `P-09` un bouton inactif est « une action
+interdite affichée, grisée ».
+
+**Décision. Ce n'est pas une action interdite, et `P-09` ne le vise pas.** Le principe se lit en
+entier : *« Une action interdite n'est pas affichée. Ni grisée, ni refusée après le clic.
+**L'utilisateur ne rencontre pas de porte fermée.** »* — et il renvoie à `RG-M05-08`, une règle de
+**droits**.
+
+Un bouton de confirmation inactif tant que le nom n'est pas saisi **n'est pas une porte fermée** :
+l'utilisateur *a* le droit de supprimer, et la clé est dans sa main. Ce n'est pas un refus, c'est un
+**état de formulaire incomplet** — la même famille qu'un « Enregistrer » inactif tant qu'aucun champ
+n'a changé.
+
+**La frontière, et elle est nette.** `P-09` interdit d'afficher une action que l'utilisateur **ne
+peut pas** accomplir. Il ne dit rien d'une action qu'il **peut** accomplir mais **n'a pas encore
+préparée**. Le critère est : *l'inertie dépend-elle d'un droit, ou d'un état que l'utilisateur peut
+changer lui-même ?* Si l'utilisateur peut la lever, ce n'est pas `P-09`.
+
+**Portée.** Les **51 actions inertes qu'aucun droit ne gouverne** relevées par la batterie —
+`disabled ×28`, `pointer-events:none ×23`, sur 16 vues — sortent de `P-09` par ce critère. Elles
+restent **comptées et imprimées** en constat : le jour où l'une d'elles serait inerte par droit, elle
+change de nature, et la batterie le verra.
+
+---
+
+## ARB-040 — Le produit peut omettre ce que le gel rend masqué — extension d'ARB-027
+**19 août 2026** — arbitrage délégué. Répond à `T-061` É-5, et lève 59 actions.
+
+`ARB-027` autorisait l'application à **ajouter** ce qui ne peint aucun pixel, et fermait
+explicitement l'autre sens : *« retirer un attribut que le gel porte, ou en changer la valeur, reste
+rouge »*. **La mesure de T-061 montre que la borne était trop large d'un cas.**
+
+**Le fait, prouvé et non argumenté.** Un nœud en `display:none` ne pèse **ni dans l'instantané ARIA,
+ni dans l'ordre de tabulation, ni dans un pixel** — donc dans aucune des trois surfaces que le banc
+compare. Vérifié par mutation : les trois actions propres de V-11, rendues **conditionnellement** au
+lieu d'être masquées, laissent `pnpm verif:maquette V-11 --contre=app` à **8/8 conformes, 0 écart**.
+
+**Et le masquage n'est pas un choix de la maquette : c'est sa seule possibilité.** Une maquette
+statique n'a pas de serveur. Elle ne peut exprimer « cette action n'existe pas pour ce rôle »
+qu'en la posant puis en la cachant. **L'application, elle, peut ne pas l'émettre** — et `P-09` exige
+précisément cela : *« ni grisée, ni masquée »*.
+
+**Décision. L'application peut OMETTRE un nœud que le gel rend masqué, à trois conditions
+cumulatives** — les mêmes qu'`ARB-027`, dans l'autre sens :
+
+1. **le nœud est effectivement masqué dans le gel** pour cet état — jamais visible ;
+2. **une règle du projet exige l'absence**, nommément : `P-09` / `RG-M05-08`, ou `P-04` /
+   `RG-STR-06` pour un module désactivé ;
+3. **l'omission est énumérée**, vue par vue, dans un fichier de référence en écriture humaine seule.
+
+**Le banc reste juge, sans exception** : `verif:maquette` doit rester à zéro pixel et zéro écart de
+structure sur la vue touchée. Si l'omission déplace quoi que ce soit, elle est refusée — c'est le
+contrôle qui décide, pas le raisonnement ci-dessus.
+
+**Ce que cela emporte.** Les **59 actions de gel** de la batterie 7 ne sont **pas** une impasse,
+contrairement aux 173 de la batterie 9 et aux 3 439 de la batterie 10. **Elles se referment par une
+campagne de portage, sans aucun regel.** C'est la différence que T-061 a établie et qu'il faut
+garder : *un « gel » qui vient d'une limite du support n'est pas un « gel » qui vient de la loi.*
+
+**Le seuil de 59 n'est donc PAS installé.** Il figerait comme dette permanente ce qu'un lot referme.
+
+---
+
+## ARB-041 — Deux motifs faux dans la documentation, corrigés
+**19 août 2026** — arbitrage délégué. Répond à `T-061` É-1 et É-6.
+
+**`docs/DESIGN.md` §2.A A-7 décrit une propriété que sa source n'a pas.** Il écrit *« Sans droit …
+Pas de composant : l'élément est **absent du DOM** »* en citant `.si-ecriture` et `.si-admin` — or
+`socle.css:396-397` **masque**. C'était faux du gel, et cela le reste.
+
+**Mais avec `ARB-040`, la phrase devient vraie du produit.** `DESIGN.md` est amendé pour dire les
+deux : *le gel masque, faute de serveur ; le produit omet, parce que `P-09` l'exige* — et la batterie
+7 l'oppose.
+
+**Et le motif d'exclusion de `.ac--interdit` dans `verif/etats.mjs` est corrigé** : la classe n'est
+pas un droit hérité grisé, c'est l'emplacement courant du dialogue de déplacement. L'exclusion tient ;
+sa justification était fausse et se serait propagée.
