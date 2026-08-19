@@ -11,7 +11,10 @@ export default defineConfig({
 	retries: 0,
 	reporter: process.env.CI ? 'list' : 'html',
 	use: {
-		baseURL: process.env.URL_BASE ?? 'http://localhost:4173',
+		// `URL_BASE` a été retiré de la configuration de base par ARB-050 : le nom est
+		// libre, mais le réemployer ici pour une base HTTP recréerait l'homonymie
+		// que T-012 É-13 signalait — deux sens pour un nom, dont l'un vient d'être aboli.
+		baseURL: process.env.URL_BANC ?? 'http://localhost:4173',
 		trace: 'on-first-retry',
 		locale: 'fr-FR',
 		timezoneId: 'Europe/Paris'

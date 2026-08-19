@@ -35,9 +35,10 @@ ici pendant une journée (`ECART-044` É-1, relevé par le lot `T-012` sur sa li
   `libelleFraicheur()`. **Ce n'est pas une dette de gel : c'est un défaut de portage, et `ARB-029` en
   porte déjà la solution complète** — rendu le 19 août, jamais appliqué. Il touche `P-01`, le premier
   des dix principes non négociables. Aucune ligne de portage n'est jamais admise
-  (`docs/orchestration.md` §4). Les six jalons restants attendent tous réellement le
-back : `test:aller-retour`, `test:etancheite`, `test:parcours`, `mesure:budgets`,
-`test:degradation`, `exploitation:restauration`.
+  (`docs/orchestration.md` §4).
+
+Les six jalons restants attendent tous réellement le back : `test:aller-retour`, `test:etancheite`,
+`test:parcours`, `mesure:budgets`, `test:degradation`, `exploitation:restauration`.
 
 **Ce qui est posé côté produit** : les 41 vues conformes au pixel ; 7 routes ; le schéma de données
 (18 tables, migrations réversibles prouvées) ; la résolution des droits ; le format canonique du

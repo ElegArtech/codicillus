@@ -2,21 +2,33 @@
 	/**
 	 * `/connexion` — V-05 Connexion.
 	 *
-	 * LOT T-070, « la liaison ». Cette route existe parce qu'une entrée de
+	 * LOT T-070, « la liaison », a posé cette route parce qu'une entrée de
 	 * navigation la nomme : le gel déclare sa destination en `data-vers`
 	 * (« connexion », les quatre liens de retour de V-06), et `docs/routes.md` §3 — qui fait foi sur les chemins — la
 	 * résout en `/connexion` → V-05.
 	 *
-	 * ELLE NE FAIT QUE RENDRE LA VUE, et c'est le périmètre exact du lot : pas
-	 * de chargeur, pas de garde de droit, pas d'authentification, aucune lecture
-	 * des paramètres d'adresse. L'étanchéité (batterie 6) et la résolution des
-	 * droits appartiennent à T-011 et T-012 ; les anticiper ici serait un
-	 * débordement (`docs/dag-phase-1.md` §6).
+	 * LOT T-012 y a ajouté le CHARGEUR ET L'ACTION — `+page.server.ts`, qui porte
+	 * l'authentification, le barème de ralentissement et l'ouverture de session.
+	 * Ce fichier, lui, ne fait toujours que rendre la vue : la seule chose qu'il
+	 * ait gagnée est de LIRE `?motif=` par son chargeur, comme
+	 * `docs/routes.md:286` le prescrit — `page-protegee` / `session-expiree` /
+	 * (absent) → `protegee` / `expiree` / `directe`, les trois positions de l'axe
+	 * « Arrivée » de la planche V-05. La correspondance vient de la source ; elle
+	 * n'est pas inventée ici.
 	 *
-	 * `vecteur={null}` demande l'état par défaut de la vue. LE BANC NE PASSE
-	 * JAMAIS PAR ICI : il atteint la vue par le mode démo
-	 * (`/__design/V-05?etat=…`), qui rend le composant directement. Rien de ce
-	 * fichier n'entre dans son verdict.
+	 * LE BANC NE PASSE JAMAIS PAR ICI : il atteint la vue par la route de
+	 * conception du mode démo, qui rend le composant directement. Rien de ce
+	 * fichier n'entre dans son verdict, et le vecteur qu'il passe n'est pas
+	 * celui-ci.
+	 *
+	 * SON ADRESSE N'EST PAS CITÉE ICI, ET C'EST UN PIÈGE MESURÉ. Depuis T-070,
+	 * cette route est BÂTIE, et `verif:demo:hors-production` cherche la chaîne du
+	 * mode démo en texte brut dans le produit construit — COMMENTAIRES COMPRIS.
+	 * Écrire l'adresse dans ce fichier a fait rougir la batterie sur trois
+	 * fichiers produits (T-012). Le fait n'était pas hypothétique : l'en-tête de
+	 * `src/vues/V-05.svelte` le déclarait déjà (écart É-2 de T-070), et les autres
+	 * routes bâties y échappent seulement parce que leur commentaire ne précède
+	 * aucune instruction conservée — un `$props()` de plus, et la trace revient.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
 	 * sert : le mode démo pose lui-même son `<link>`, `+layout.svelte` ne porte
@@ -30,6 +42,9 @@
 	 */
 	import Vue from '../../vues/V-05.svelte';
 	import '../../vues/V-05.css';
+	import type { PageData } from './$types';
+
+	const { data }: { data: PageData } = $props();
 </script>
 
-<Vue vecteur={null} />
+<Vue vecteur={{ arrivee: data.arrivee }} />
