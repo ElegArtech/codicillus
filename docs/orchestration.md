@@ -165,6 +165,14 @@ chmod -R u+w /tmp/wt-<nom> && git worktree remove /tmp/wt-<nom> --force
 - **`P-22` — retirer la copie n'est pas du ménage, c'est de la correction.** Huit serveurs orphelins
   ont été trouvés le 19 août, le plus vieux de vingt et une heures, occupant **7,3 Go**. Le banc
   passe de 363 s à 563 s selon la charge, et un port pris fait **mesurer le mauvais serveur**.
+- **Une commande DESTRUCTRICE sur une ressource PARTAGÉE ne peut pas figurer aux critères de sortie de
+  deux lots parallèles.** J'ai inscrit `pnpm verif:base` au §8 de `T-015` **et** de `T-012` le 20 août.
+  Or la commande enchaîne `reversibilite` — qui descend puis remonte toutes les migrations — et `semer`,
+  sur une base **unique**. `T-015` a **refusé de l'exécuter** en expliquant qu'il aurait pu casser le lot
+  du voisin, et il avait raison : il ne touchait aucun fichier de `base/**`, donc la commande ne pouvait
+  rien prouver de lui, et pouvait tout casser de l'autre. *Le remède : soit une base par copie, soit la
+  commande n'est au critère que du lot qui touche son domaine.* Elle a été rejouée au rapatriement —
+  `18/18 sondes conformes` (`ECART-045` É-3).
 - **Deux lots qui jouent le banc en même temps se paient très cher.** Mesuré le 19 août : le même
   `verif:maquette:app` annonce **368 s de temps instrument** et a demandé **plus de deux heures
   d'horloge**, charge machine à **12**. *Le verdict n'est pas faussé — les chiffres d'instrument

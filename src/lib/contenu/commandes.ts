@@ -31,7 +31,7 @@ import {
 	type Manquement
 } from './document';
 import { DOCUMENTS_DU_GEL, resoudreDansLeCorpus } from './documents-du-gel';
-import { rendreDocument } from './rendu';
+import { rendreDocument, type ResolveurDeNote } from './rendu';
 
 /* ══════════════════════════════ Les constructions et leur exercice ══════ */
 
@@ -80,20 +80,30 @@ const MARQUES = new Set([
 	'lienInterne'
 ]);
 
+/**
+ * Les occurrences d'un porteur DANS UN DOCUMENT. Extrait de
+ * `compterDansLesDocuments` pour que la batterie 4 (`aller-retour.ts`) relève
+ * l'exercice des constructions DOCUMENT PAR DOCUMENT sans écrire une seconde
+ * règle de comptage : deux comptages divergeraient au premier cas limite.
+ */
+export function compterPorteur(document: Document, porteur: string): number {
+	let n = 0;
+	if (MARQUES.has(porteur)) {
+		for (const t of textes(document)) {
+			n += (t.marks ?? []).filter((m) => m.type === porteur).length;
+		}
+	} else {
+		for (const bloc of parcourir(document)) if (bloc.type === porteur) n += 1;
+		/* Les conteneurs ne sont pas rendus par `parcourir` : ils se comptent
+		   sur leurs parents, dont ils sont le contenu direct. */
+		n += compterLesConteneurs(document, porteur);
+	}
+	return n;
+}
+
 function compterDansLesDocuments(porteur: string): number {
 	let n = 0;
-	for (const { document } of DOCUMENTS_DU_GEL) {
-		if (MARQUES.has(porteur)) {
-			for (const t of textes(document)) {
-				n += (t.marks ?? []).filter((m) => m.type === porteur).length;
-			}
-		} else {
-			for (const bloc of parcourir(document)) if (bloc.type === porteur) n += 1;
-			/* Les conteneurs ne sont pas rendus par `parcourir` : ils se comptent
-			   sur leurs parents, dont ils sont le contenu direct. */
-			n += compterLesConteneurs(document, porteur);
-		}
-	}
+	for (const { document } of DOCUMENTS_DU_GEL) n += compterPorteur(document, porteur);
 	return n;
 }
 
@@ -116,18 +126,35 @@ function conteneursDe(bloc: Bloc, porteur: string): number {
 	return 0;
 }
 
+/**
+ * Les liens internes D'UN DOCUMENT, séparés par le sort que la résolution leur
+ * fait. Extrait pour la même raison que `compterPorteur` : les constructions
+ * 13 et 14 partagent un porteur, et seule la résolution les distingue.
+ */
+export function compterLesLiensDUnDocument(
+	document: Document,
+	resoudre: ResolveurDeNote
+): { readonly resolus: number; readonly casses: number } {
+	let resolus = 0;
+	let casses = 0;
+	for (const t of textes(document)) {
+		for (const m of t.marks ?? []) {
+			if (m.type !== 'lienInterne') continue;
+			if (resoudre(m.attrs.cible) === null) casses += 1;
+			else resolus += 1;
+		}
+	}
+	return { resolus, casses };
+}
+
 /** Les liens internes du gel, séparés par le sort que la résolution leur fait. */
 function compterLesLiens(): { readonly resolus: number; readonly casses: number } {
 	let resolus = 0;
 	let casses = 0;
 	for (const { document } of DOCUMENTS_DU_GEL) {
-		for (const t of textes(document)) {
-			for (const m of t.marks ?? []) {
-				if (m.type !== 'lienInterne') continue;
-				if (resoudreDansLeCorpus(m.attrs.cible) === null) casses += 1;
-				else resolus += 1;
-			}
-		}
+		const compte = compterLesLiensDUnDocument(document, resoudreDansLeCorpus);
+		resolus += compte.resolus;
+		casses += compte.casses;
 	}
 	return { resolus, casses };
 }
