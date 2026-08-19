@@ -631,8 +631,8 @@ feuilles** de ces 26 vues : la liste s'y afficherait dépliée.
 | | Amendement | Vues |
 |---|---|---|
 | A-1 | la coquille rend la forme **abrégée** ou complète | 26 |
-| A-2 | les attributs de données de la vue sont transmis à `div.app` — 47 attributs, 26 noms | 27 |
-| A-3 | libellé du chevron : « Replier » quand le nœud est ouvert — **convergence**, ARB-020 | 27 |
+| A-2 | les attributs de données de la vue sont transmis à `div.app` — ~~47~~ **46** attributs, 26 noms | 27 |
+| ~~A-3~~ | ~~libellé du chevron~~ — **retiré : le constat était faux** (voir ci-dessous) | — |
 | A-4 | loger une superposition rendue hors de `div.app` | 8 |
 | A-5 | marquer l'entrée de rail courante | 1 |
 
@@ -645,6 +645,24 @@ l'aggraver en connaissance de cause.
 balisage du gel**, et les deux arbres divergent. Elle se porte donc comme une donnée de vue, non
 comme un calcul — et surtout **pas** en « corrigeant » `seeds/corpus.ts`, qui rend fidèlement ce que
 les 41 maquettes portent.
+
+> **Deux rectifications, 19 août 2026 — `ECART-022` É-1 et É-2.**
+>
+> **A-3 était faux, et l'appliquer aurait été une régression.** Mesuré au navigateur dans les
+> conditions du banc : **V-14 rend trois nœuds ouverts et trois libellés « Déplier »**. La cause
+> est que `element()` construit l'`aria-label` sur le dépliage mémorisé — **vide à tout chargement
+> propre** —, puis la coquille déplie les ancêtres du nœud courant **sans toucher au libellé**. Le
+> relevé avait déduit « Replier » d'un indicateur qui mesure l'*ouverture*, pas le *libellé*. Le
+> gabarit écrivait déjà « Déplier » sans condition : **c'était juste**. En forme abrégée, le
+> libellé vient du balisage. A-3 est entièrement absorbé par A-1.
+>
+> **A-2 porte 46 attributs, non 47** — le quarante-septième est celui de V-37, que le périmètre du
+> relevé exclut. Les 26 noms sont exacts.
+>
+> **Cinquième et sixième constats transmis corrigés au recomptage.** Ils viennent cette fois d'un
+> relevé *mécanique*, ce qui déplace la leçon : un chiffre produit par un instrument n'est pas
+> davantage une source qu'un chiffre écrit à la main — **c'est son interprétation qui doit être
+> vérifiée**. Ici, l'instrument mesurait juste ; la colonne qu'on lui a fait dire était la mauvaise.
 
 **Critère, et il ne souffre aucune marge** : les 4 vues livrées restent à **zéro pixel**. Le seuil
 est zéro (ARB-018).
@@ -676,5 +694,17 @@ P-1 s'applique en entier. On n'invente pas un style, on le prouve. Et le rattach
 ressource → maquette est déclaré dans un fichier en **écriture humaine seule** — un agent ne
 choisit pas la référence contre laquelle il sera prouvé.
 
-**Effet attendu** : la convergence refusée devient possible, et `flex: 0 0 auto` devient visible.
-Une règle qui rend un défaut détectable vaut mieux qu'une règle qui l'ignore par prudence.
+**Effet attendu** : la convergence refusée devient possible.
+
+> **Rectification, 19 août 2026 — `ECART-022` É-4.** J'annonçais aussi que `flex: 0 0 auto`
+> deviendrait visible. **C'est faux** : `flex` n'appartient pas aux propriétés contraintes de
+> P-1.7. Étendre la portée ne le révèle pas ; il y faudrait une **seconde** modification
+> d'instrument, à décider séparément.
+>
+> Et la prémisse elle-même était plus subtile que je ne l'avais écrite (`ECART-022` É-3) : le gel
+> écrit bien `flex: none` **dans son littéral source**, mais le navigateur le sérialise en
+> `flex: 0 0 auto` — ce que le gabarit écrivait déjà. La divergence était donc **de littéral, pas
+> de rendu**. La convergence a été portée quand même, P-6.4 gouvernant les littéraux.
+>
+> Une règle qui rend un défaut détectable vaut toujours mieux qu'une règle qui l'ignore par
+> prudence — mais encore faut-il ne pas se tromper sur le défaut qu'elle rend détectable.

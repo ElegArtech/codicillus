@@ -51,9 +51,39 @@
 	 * focalisable de la page et une exigence d'accessibilité réelle
 	 * (RG-M18-08, P-06), pas une décoration.
 	 *
+	 * TROISIÈME AMENDEMENT — ARB-021 et ARB-022, lot P-0. Il est UNIQUE et
+	 * couvre d'un coup les cinq besoins que le relevé des 37 vues restantes
+	 * (`docs/releve-vues.md`) a mis au jour ensemble, plutôt qu'un lot par
+	 * besoin comme les trois amendements précédents l'ont fait :
+	 *
+	 *   A-1  `forme` — la coquille rend la forme ABRÉGÉE ou complète. 26 vues.
+	 *   A-2  `donnees` — les attributs de données de la vue sur `div.app`.
+	 *        46 attributs — recomptés —, 26 noms distincts, 27 vues.
+	 *   A-3  le libellé du chevron. MESURÉ, et le relevé se corrige : la forme
+	 *        complète dit « Déplier » MÊME OUVERTE, parce que le gel construit
+	 *        le libellé sur l'état persisté du rail — vide à tout chargement du
+	 *        banc — et que `coquille({ courant })` déplie sans relibeller. Le
+	 *        gabarit était donc DÉJÀ juste pour les 8 vues complètes, V-14
+	 *        comprise ; la seule chose à faire était de porter, en forme
+	 *        abrégée, le libellé écrit AU BALISAGE. Voir `Rail.svelte`.
+	 *   A-4  `superposition` — un nœud rendu HORS de `div.app`. 8 vues.
+	 *   A-5  `accueilCourant` — l'entrée de rail courante. 1 vue (V-07).
+	 *
+	 * Et les deux convergences d'ARB-022, qui étend la preuve par le gel aux
+	 * ressources partagées dont la maquette de référence est déclarée — pour le
+	 * gabarit, V-37. UNE SEULE EST PORTÉE :
+	 *
+	 *   • `flex: none` là où le gabarit écrivait `flex: 0 0 auto` — PORTÉE.
+	 *     `flex:none` figure à `ensembleDuGel('V-37')`, et les 45 états des
+	 *     quatre vues livrées restent à zéro pixel.
+	 *   • l'enveloppe de pictogramme de menu — NON PORTÉE. ARB-022 conditionne
+	 *     l'extension de portée à un fichier de rattachement en écriture
+	 *     humaine seule, qui n'existe pas encore. `BarreSuperieure.svelte` le
+	 *     détaille, avec la mesure.
+	 *
 	 * LE GABARIT EST REGELÉ. Un seul lot est encore autorisé à y revenir :
-	 * T-106, pour monter la palette V-09 sur le champ de recherche de la barre.
-	 * Tout autre lot qui croit devoir y écrire déclare un écart.
+	 * T-106 / P-8, pour monter la palette V-09 sur le champ de recherche de la
+	 * barre. Tout autre lot qui croit devoir y écrire déclare un écart.
 	 *
 	 * Rendu SERVEUR, sans hydratation (ADR-001) : la navigation, le fil d'Ariane
 	 * et les droits sont résolus avant production du HTML. Aucune minuterie n'est
@@ -67,6 +97,7 @@
 	import type { Snippet } from 'svelte';
 	import type { Domaine, Note, Univers } from '../../../seeds/corpus';
 	import { railRendu, sectionsDuRail } from './arborescence';
+	import { railAbregeRendu } from './arborescence-abregee';
 	import BarreSuperieure from './BarreSuperieure.svelte';
 	import Rail from './Rail.svelte';
 
@@ -144,6 +175,72 @@
 		 * tout en visant `article` : cible et libellé sont indépendants.
 		 */
 		libelleEvitement?: string;
+		/**
+		 * LA FORME DE COQUILLE que la vue porte (ARB-021, A-1). Les 34 maquettes
+		 * à coquille en portent DEUX, et le gabarit n'en savait rendre qu'une.
+		 *
+		 * `complete` — 8 vues : V-07, V-14, V-27, V-37 à V-41. C'est le défaut,
+		 * donc les quatre vues livrées ne changent pas d'un octet.
+		 *
+		 * `abregee` — 26 vues : V-08, V-10 à V-13, V-15 à V-26, V-28 à V-36.
+		 * Barre sans les deux menus déroulants, rail sans pictogrammes ni
+		 * `data-vers`, `Gestion` en `si-ecriture`, pas de `#rail-univers`, et une
+		 * arborescence de quinze nœuds ÉCRITE AU BALISAGE que le corpus ne peut
+		 * pas produire — `arborescence-abregee.ts` le démontre.
+		 *
+		 * En forme abrégée, `univers`, `domaines`, `notes` et
+		 * `brancheEnChargement` ne servent PAS au rail : il ne se dérive pas du
+		 * corpus. Ils restent exigés parce que la coquille est une seule
+		 * interface, et parce que les vues abrégées les portent déjà.
+		 */
+		forme?: 'complete' | 'abregee';
+		/**
+		 * LES ATTRIBUTS DE DONNÉES que la vue pose sur `div.app` (ARB-021, A-2).
+		 *
+		 * 46 attributs sur les 27 vues du relevé, 26 noms distincts — 47 en
+		 * comptant celui de V-37 elle-même, que ce lot pose aussi. RECOMPTÉ par
+		 * l'instrument du relevé, qui donne 46 là où ARB-021 et
+		 * `docs/releve-vues.md` §4 écrivent 47. Les noms — `data-activite`,
+		 * `data-affichage`, `data-cas`, `data-degrade`, `data-dense`,
+		 * `data-detail`, `data-donnees`, `data-droit`, `data-droits-vue`,
+		 * `data-enveloppe`, `data-etape`, `data-etat`, `data-facettes`,
+		 * `data-filtres`, `data-form`, `data-historique`, `data-meta`,
+		 * `data-mode`, `data-numerote`, `data-onglet`, `data-reference`,
+		 * `data-registre`, `data-trop`, `data-verrou`, `data-version`,
+		 * `data-vue`.
+		 *
+		 * AUCUN N'EST DÉCORATIF : le relevé les répartit entre ceux qu'un
+		 * sélecteur d'attribut de la feuille de la vue lit et ceux que lit son
+		 * script de planche. Ils sont posés TELS QUELS, avec leur nom complet —
+		 * le gabarit ne préfixe rien, pour qu'une vue ne puisse jamais poser un
+		 * attribut que la maquette n'écrit pas.
+		 *
+		 * Ils ne peuvent pas écraser `data-rail`, `data-role`, `data-droits` ni
+		 * `data-contenu`, qui sont des propriétés à part entière et sont écrits
+		 * APRÈS l'étalement.
+		 */
+		donnees?: Record<string, string | undefined>;
+		/**
+		 * UNE SUPERPOSITION RENDUE HORS DE `div.app` (ARB-021, A-4), entre
+		 * `div.app` et `div.notifs` — l'emplacement exact du gel.
+		 *
+		 * 8 vues sur les 103 nœuds que les 41 maquettes placent hors de
+		 * `div.app` : ce sont les NEUF SEULS qui portent une boîte de rendu
+		 * (`releve-etats.mjs --incidence`). `aside.tiroir-form#tiroir` de la
+		 * console (V-27 à V-32), `aside.tiroir#tiroir` de V-15, et
+		 * `dialog#dlg-signet` de V-23, ouvert à l'état par défaut. Les 94 autres
+		 * — `<template>`, `<dialog>` fermé, bloc masqué — ne déplacent aucun
+		 * pixel et n'entrent pas dans l'instantané ARIA : le gabarit ne leur
+		 * ouvre rien, et ce n'est pas un oubli.
+		 */
+		superposition?: Snippet;
+		/**
+		 * L'entrée « Accueil » du rail EST la page courante (ARB-021, A-5).
+		 * V-07 seule : `aria-current="page"`, et le `data-vers` propre du gel —
+		 * « Vous êtes déjà sur l'accueil » (`V-07:1150`). La règle qui le rend
+		 * visible est `V-07:512`, `.rail__lien[aria-current="page"]`.
+		 */
+		accueilCourant?: boolean;
 	}
 
 	const {
@@ -164,12 +261,27 @@
 		classeContenu,
 		idContenu = 'contenu',
 		cibleEvitement,
-		libelleEvitement = 'Aller au contenu'
+		libelleEvitement = 'Aller au contenu',
+		forme = 'complete',
+		donnees,
+		superposition,
+		accueilCourant = false
 	}: Proprietes = $props();
 
+	/**
+	 * L'arborescence du rail — DEUX DÉRIVATIONS, et une seule sert.
+	 *
+	 * La forme complète dérive du corpus, la forme abrégée le contredit : elle
+	 * est écrite au balisage du gel, et les deux arbres ne sont pas emboîtés
+	 * (ARB-021, `arborescence-abregee.ts`). Chacune n'est calculée que pour la
+	 * forme qui la porte.
+	 */
 	const sections = $derived(
-		railRendu(sectionsDuRail(univers, domaines, notes), courant, brancheEnChargement)
+		forme === 'abregee'
+			? []
+			: railRendu(sectionsDuRail(univers, domaines, notes), courant, brancheEnChargement)
 	);
+	const sectionsAbregees = $derived(forme === 'abregee' ? railAbregeRendu(courant) : []);
 
 	/**
 	 * La cible effective du lien d'évitement : l'ancre déclarée par la vue, à
@@ -206,21 +318,28 @@
 <div
 	class="app"
 	id="app"
+	{...donnees}
 	data-rail={rail}
 	data-role={role}
 	data-droits={droits}
 	data-contenu={contenu}
 >
-	<Rail {sections} {version} />
+	<Rail {forme} {sections} {sectionsAbregees} {version} {accueilCourant} />
 
 	<div class="cadre">
-		<BarreSuperieure {fil} {rail} {compte} />
+		<BarreSuperieure {fil} {rail} {compte} {forme} />
 
 		<main class={classeContenu} id={idContenu}>
 			{#if enfants}{@render enfants()}{/if}
 		</main>
 	</div>
 </div>
+
+<!--
+	La superposition rendue HORS de `div.app` (ARB-021, A-4). Sa place est celle
+	du gel : après `div.app`, avant `div.notifs`.
+-->
+{#if superposition}{@render superposition()}{/if}
 
 <div class="notifs" id="notifs" role="status" aria-live="polite">
 	{#each notifications as n, rang (rang)}<div

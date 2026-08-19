@@ -20,6 +20,42 @@
 	 * qui la retire en CSS. Ce n'est PAS P-09 : une action interdite doit être
 	 * absente du DOM (ADR-011), ce que ce squelette ne prétend pas tenir — la
 	 * frontière de droits relève de T-011 et T-016, en lentille adversariale.
+	 *
+	 * ─────────────────────────────────────────────────────────────────────────
+	 * DEUX FORMES — ARB-021, A-1a et A-1g
+	 *
+	 * Forme COMPLÈTE — 8 vues : les deux menus déroulants, et `id` sur le champ
+	 * de recherche. Forme ABRÉGÉE — 26 vues : `button.btn.si-ecriture` NU et
+	 * `button.avatar` NU, et `.recherche` SANS `id` (`V-25:1084-1094`).
+	 *
+	 * La différence n'est pas décorative, et le CSS le prouve : les six classes
+	 * `.menu-barre*` ne sont déclarées par AUCUNE des deux feuilles des 26 vues
+	 * abrégées. `.menu-barre__liste { display: none }` n'y existant pas, la liste
+	 * de menu s'y afficherait DÉPLIÉE dans la barre supérieure.
+	 *
+	 * ─────────────────────────────────────────────────────────────────────────
+	 * L'ENVELOPPE DE PICTOGRAMME DE MENU — CONVERGENCE ARB-022, TOUJOURS NON
+	 * PORTÉE, ET POUR UNE RAISON DE DISPOSITIF
+	 *
+	 * Le gel enveloppe chaque pictogramme d'entrée de menu d'un `<span>` porteur
+	 * d'une hauteur de ligne nulle (`V-37:3308`, `i.style.lineHeight = "0"`).
+	 * Mesurée gratuite par le lot précédent — géométries identiques au centième
+	 * de pixel, 45 états identiques à l'octet —, la convergence a été REFUSÉE
+	 * faute de portée (`ECART-021`) : P-6.4 / ARB-016 n'accorde la preuve par le
+	 * gel qu'aux composants `src/vues/V-xx.svelte`.
+	 *
+	 * ARB-022 étend cette preuve aux ressources partagées — MAIS À UNE CONDITION
+	 * QU'IL POSE LUI-MÊME : « le rattachement ressource → maquette est déclaré
+	 * dans un fichier en écriture humaine seule ». Ce fichier N'EXISTE PAS
+	 * ENCORE, et `verif/styles-en-ligne.mjs` ne connaît toujours que
+	 * `RE_COMPOSANT = /^(V-\d\d)\.svelte$/`. Mesuré : porter les sept
+	 * enveloppes fait sortir `pnpm verif:jetons` avec SEPT constats P-1.7, tous
+	 * de cette seule cause.
+	 *
+	 * L'exécutant de P-0 a donc fait le même geste que celui d'`ECART-021`, et
+	 * pour la même raison : il n'étend pas l'instrument pour verdir sa propre
+	 * tâche. La convergence attend le fichier de rattachement, pas un arbitrage
+	 * de plus.
 	 */
 	interface Compte {
 		/** Nom complet, affiché en tête du menu utilisateur. */
@@ -36,9 +72,11 @@
 		/** L'état du rail : le bouton de bascule annonce l'action opposée. */
 		rail: 'ouvert' | 'ferme';
 		compte: Compte;
+		/** La forme portée par la vue (ARB-021, A-1). */
+		forme?: 'complete' | 'abregee';
 	}
 
-	const { fil, rail, compte }: Proprietes = $props();
+	const { fil, rail, compte, forme = 'complete' }: Proprietes = $props();
 
 	const designation = $derived(`${compte.nom} — menu utilisateur`);
 	const sousTitre = $derived(compte.domaine ? `${compte.role} · ${compte.domaine}` : compte.role);
@@ -67,7 +105,12 @@
 					href="#">{segment}</a
 				>{/if}{/each}
 	</nav>
-	<div class="recherche" id="ouvrir-recherche" role="button" tabindex="0">
+	<div
+		class="recherche"
+		id={forme === 'abregee' ? undefined : 'ouvrir-recherche'}
+		role="button"
+		tabindex="0"
+	>
 		<svg
 			width="14"
 			height="14"
@@ -79,9 +122,8 @@
 		<span class="recherche__txt" style="flex:1">Rechercher…</span>
 		<kbd class="touche">Ctrl</kbd><kbd class="touche">K</kbd>
 	</div>
-
-	<div class="menu-barre si-ecriture" id="menu-creer">
-		<button class="btn" id="ouvrir-creer" aria-haspopup="true" aria-expanded="false" title="Créer">
+	{#if forme === 'abregee'}
+		<button class="btn si-ecriture" title="Créer">
 			<svg
 				width="14"
 				height="14"
@@ -92,108 +134,131 @@
 			>
 			Créer
 		</button>
-		<div class="menu-barre__liste" role="menu" aria-label="Créer">
-			<button type="button" role="menuitem"
-				><svg
-					width="15"
-					height="15"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.4"
-					><path
-						d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5L9 1.5zM9 1.5v4h4"
-					/></svg
-				>Nouvelle note</button
-			><button type="button" role="menuitem"
-				><svg
-					width="15"
-					height="15"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.4"
-					><path
-						d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"
-					/><path d="M8 7.5v4M6 9.5h4" /></svg
-				>Nouveau dossier</button
-			><button type="button" role="menuitem"
-				><svg
-					width="15"
-					height="15"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.4"><path d="M4 2.5h8v11l-4-3-4 3v-11z" /></svg
-				>Nouveau signet</button
+		<button class="avatar" title={designation}>{compte.initiales}</button>
+	{:else}
+		<div class="menu-barre si-ecriture" id="menu-creer">
+			<button
+				class="btn"
+				id="ouvrir-creer"
+				aria-haspopup="true"
+				aria-expanded="false"
+				title="Créer"
 			>
-			<div class="menu-barre__sep"></div>
-			<button type="button" role="menuitem"
-				><svg
-					width="15"
-					height="15"
+				<svg
+					width="14"
+					height="14"
 					viewBox="0 0 16 16"
 					fill="none"
 					stroke="currentColor"
-					stroke-width="1.4"><path d="M8 10.5V2M4.8 6.2L8 2.8l3.2 3.4M2.5 13.5h11" /></svg
-				>Importer des fichiers</button
-			>
-		</div>
-	</div>
-
-	<div class="menu-barre" id="menu-compte">
-		<button
-			class="avatar"
-			id="ouvrir-compte"
-			aria-haspopup="true"
-			aria-expanded="false"
-			title={designation}
-			aria-label={designation}>{compte.initiales}</button
-		>
-		<div
-			class="menu-barre__liste menu-barre__liste--droite"
-			role="menu"
-			aria-label="Menu utilisateur"
-		>
-			<div class="menu-barre__entete">
-				<div class="menu-barre__nom">{compte.nom}</div>
-				<div class="menu-barre__role">{sousTitre}</div>
+					stroke-width="1.8"><path d="M8 3v10M3 8h10" /></svg
+				>
+				Créer
+			</button>
+			<div class="menu-barre__liste" role="menu" aria-label="Créer">
+				<button type="button" role="menuitem"
+					><svg
+						width="15"
+						height="15"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.4"
+						><path
+							d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5L9 1.5zM9 1.5v4h4"
+						/></svg
+					>Nouvelle note</button
+				><button type="button" role="menuitem"
+					><svg
+						width="15"
+						height="15"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.4"
+						><path
+							d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"
+						/><path d="M8 7.5v4M6 9.5h4" /></svg
+					>Nouveau dossier</button
+				><button type="button" role="menuitem"
+					><svg
+						width="15"
+						height="15"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.4"><path d="M4 2.5h8v11l-4-3-4 3v-11z" /></svg
+					>Nouveau signet</button
+				>
+				<div class="menu-barre__sep"></div>
+				<button type="button" role="menuitem"
+					><svg
+						width="15"
+						height="15"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.4"><path d="M8 10.5V2M4.8 6.2L8 2.8l3.2 3.4M2.5 13.5h11" /></svg
+					>Importer des fichiers</button
+				>
 			</div>
-			<button type="button" role="menuitem"
-				><svg
-					width="15"
-					height="15"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.4"
-					><circle cx="8" cy="5.5" r="2.6" /><path d="M2.8 13.5a5.2 5.2 0 0 1 10.4 0" /></svg
-				>Mon profil</button
-			><button type="button" role="menuitem" class="si-admin"
-				><svg
-					width="15"
-					height="15"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.4"
-					><circle cx="8" cy="8" r="2" /><path
-						d="M6.5 1.8h3l.3 1.7 1.5.9 1.6-.7 1.5 2.6-1.2 1.2v1.7l1.2 1.2-1.5 2.6-1.6-.7-1.5.9-.3 1.7h-3l-.3-1.7-1.5-.9-1.6.7L.6 12.4l1.2-1.2V9.5L.6 8.3l1.5-2.6 1.6.7 1.5-.9z"
-					/></svg
-				>Console d'administration</button
-			>
-			<div class="menu-barre__sep"></div>
-			<button type="button" role="menuitem"
-				><svg
-					width="15"
-					height="15"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.4"
-					><path d="M6 14H3.5a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1H6M10.5 11L14 8l-3.5-3M14 8H6" /></svg
-				>Se déconnecter</button
-			>
 		</div>
-	</div>
+
+		<div class="menu-barre" id="menu-compte">
+			<button
+				class="avatar"
+				id="ouvrir-compte"
+				aria-haspopup="true"
+				aria-expanded="false"
+				title={designation}
+				aria-label={designation}>{compte.initiales}</button
+			>
+			<div
+				class="menu-barre__liste menu-barre__liste--droite"
+				role="menu"
+				aria-label="Menu utilisateur"
+			>
+				<div class="menu-barre__entete">
+					<div class="menu-barre__nom">{compte.nom}</div>
+					<div class="menu-barre__role">{sousTitre}</div>
+				</div>
+				<button type="button" role="menuitem"
+					><svg
+						width="15"
+						height="15"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.4"
+						><circle cx="8" cy="5.5" r="2.6" /><path d="M2.8 13.5a5.2 5.2 0 0 1 10.4 0" /></svg
+					>Mon profil</button
+				><button type="button" role="menuitem" class="si-admin"
+					><svg
+						width="15"
+						height="15"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.4"
+						><circle cx="8" cy="8" r="2" /><path
+							d="M6.5 1.8h3l.3 1.7 1.5.9 1.6-.7 1.5 2.6-1.2 1.2v1.7l1.2 1.2-1.5 2.6-1.6-.7-1.5.9-.3 1.7h-3l-.3-1.7-1.5-.9-1.6.7L.6 12.4l1.2-1.2V9.5L.6 8.3l1.5-2.6 1.6.7 1.5-.9z"
+						/></svg
+					>Console d'administration</button
+				>
+				<div class="menu-barre__sep"></div>
+				<button type="button" role="menuitem"
+					><svg
+						width="15"
+						height="15"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.4"
+						><path
+							d="M6 14H3.5a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1H6M10.5 11L14 8l-3.5-3M14 8H6"
+						/></svg
+					>Se déconnecter</button
+				>
+			</div>
+		</div>
+	{/if}
 </header>
