@@ -402,6 +402,44 @@
 		><span class="temoin__txt">{libelleFraicheur(n)}</span></span
 	>{/snippet}
 
+<!--
+	LE FIL DÉROULÉ — UNE SEULE SOURCE POUR LES DEUX NŒUDS QUI PORTENT `id="fil"`.
+
+	Le gel n'a qu'UN constructeur, `rendreFil()` (`V-20:2924`), et il produit ces
+	nœuds-là :
+
+	  • sans centre   — un `span.fil-deroule__courant` (`V-20:2933-2937`) ;
+	  • avec centre   — `button` « Tous les … », `span.fil-deroule__sep` de
+	    `textContent "›"` (`V-20:2945`), `span.fil-deroule__courant` du titre
+	    (`V-20:2948`), puis un `span` de style en ligne portant le nombre de
+	    connexions (`V-20:2951-2953`).
+
+	La feuille du gel les habille : `.fil-deroule` (`V-20:869-876`),
+	`.fil-deroule button` (`:877-880`), son survol (`:881`), `__sep` (`:882`) et
+	`__courant` (`:883`) — cinq règles, portées à l'identique par
+	`src/vues/V-20.css:461-475`.
+
+	CE SNIPPET EST CE CONSTRUCTEUR, ET IL EST RENDU AUX DEUX ENDROITS que le gel
+	désigne : le `nav.fil` de la barre (`V-20:1090`), que `getElementById("fil")`
+	atteint réellement, et le `div.fil-deroule` de la zone de graphe
+	(`V-20:1129`), que le double identifiant d'ARB-025 rend inatteignable. La
+	zone cesse d'être du balisage mort sans qu'un pixel bouge : le second nœud
+	reste `hidden` là où le gel le laisse `hidden`, et `[hidden] { display: none
+	!important }` (`src/socle.css:116`) le tient hors de toute boîte de rendu
+	comme hors de l'arbre d'accessibilité.
+-->
+<!-- prettier-ignore -->
+{#snippet filDeroule()}{#if centre === null}<span
+			class="fil-deroule__courant"
+			>{`${maitres.length} ${(typeMaitreEncode?.nom ?? '').toLowerCase()}${maitres.length > 1 ? 's' : ''} — choisissez-en un pour déplier ses connexions`}</span
+		>{:else}<button type="button"
+			>{`Tous les ${(typeMaitreEncode?.nom ?? '').toLowerCase()}s`}</button
+		><span class="fil-deroule__sep">›</span><span class="fil-deroule__courant"
+			>{titreDe(graphe, corpus, centre)}</span
+		><span style="font-family:var(--f-donnee);font-size:var(--t-micro);color:var(--c-encre-3)"
+			>{`${voisins.length}${voisins.length > 1 ? ' connexions' : ' connexion'}`}</span
+		>{/if}{/snippet}
+
 <a class="saut-contenu" href="#contenu">Aller au contenu</a>
 
 <div class="app" id="app" data-rail="ouvert" data-detail={detailOuvert ? 'ouvert' : 'ferme'}>
@@ -429,18 +467,10 @@
 				LE FIL DÉROULÉ EST ÉCRIT DANS LE FIL D'ARIANE — voir l'en-tête. Deux
 				éléments du gel portent `id="fil"` ; `rendreFil()` atteint le premier.
 			-->
+			<!-- prettier-ignore -->
 			<nav class="fil" id="fil" aria-label="Fil d'Ariane" hidden={typeMaitre === null}>
 				{#if typeMaitre === null}<a href="#">Accueil</a><span>›</span><a href="#">Cartographie</a
-					><span>›</span><span class="fil__courant">Par type</span>{:else if centre === null}<span
-						class="fil-deroule__courant"
-						>{`${maitres.length} ${(typeMaitreEncode?.nom ?? '').toLowerCase()}${maitres.length > 1 ? 's' : ''} — choisissez-en un pour déplier ses connexions`}</span
-					>{:else}<button type="button"
-						>{`Tous les ${(typeMaitreEncode?.nom ?? '').toLowerCase()}s`}</button
-					><span class="fil-deroule__sep">›</span><span class="fil-deroule__courant"
-						>{titreDe(graphe, corpus, centre)}</span
-					><span style="font-family:var(--f-donnee);font-size:var(--t-micro);color:var(--c-encre-3)"
-						>{`${voisins.length}${voisins.length > 1 ? ' connexions' : ' connexion'}`}</span
-					>{/if}
+					><span>›</span><span class="fil__courant">Par type</span>{:else}{@render filDeroule()}{/if}
 			</nav>
 			<div class="recherche" role="button" tabindex="0">
 				<svg
@@ -560,7 +590,18 @@
 						></svg
 					>
 
-					<div class="fil-deroule" id="fil" hidden></div>
+					<!--
+						LE NŒUD QUE LE DOUBLE IDENTIFIANT REND INATTEIGNABLE — ARB-025.
+						`hidden` est celui du gel (`V-20:1129`) et il ne bouge pas : dans le
+						gel, `rendreFil()` n'atteint jamais ce nœud, donc rien ne lui retire
+						l'attribut, et il n'est visible dans AUCUN des cinq états déclarés de
+						`verif/scenarios/V-20.json`. Le contenu, lui, est désormais celui que
+						le constructeur produirait — même snippet que la barre, donc même
+						balisage, mêmes classes, mêmes jetons, par construction et non par
+						recopie. La zone est vivante ; elle n'est pas visible.
+					-->
+					<!-- prettier-ignore -->
+					<div class="fil-deroule" id="fil" hidden>{#if typeMaitre !== null}{@render filDeroule()}{/if}</div>
 
 					<div class="outils-graphe">
 						<button type="button" id="zoom-plus" aria-label="Agrandir" title="Agrandir">

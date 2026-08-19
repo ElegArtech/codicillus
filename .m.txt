@@ -1,0 +1,457 @@
+$ node verif/maquette.mjs
+  V-01 etat-nominal                       1440x900  conforme
+  V-01 etat-chargement                    1440x900  conforme
+  V-01 etat-vide                          1440x900  conforme
+  V-01 etat-erreur                        1440x900  conforme
+  V-01 frappe-rien                        1440x900  conforme
+  V-01 frappe-trouve                      1440x900  conforme
+  V-01 frappe-rien-trouve                 1440x900  conforme
+  V-01 etat-nominal                       1024x768  conforme
+  V-01 etat-chargement                    1024x768  conforme
+  V-01 etat-vide                          1024x768  conforme
+  V-01 etat-erreur                        1024x768  conforme
+  V-01 frappe-rien                        1024x768  conforme
+  V-01 frappe-trouve                      1024x768  conforme
+  V-01 frappe-rien-trouve                 1024x768  conforme
+  V-01 etat-nominal                       768x1024  conforme
+  V-01 etat-chargement                    768x1024  conforme
+  V-01 etat-vide                          768x1024  conforme
+  V-01 etat-erreur                        768x1024  conforme
+  V-01 frappe-rien                        768x1024  conforme
+  V-01 frappe-trouve                      768x1024  conforme
+  V-01 frappe-rien-trouve                 768x1024  conforme
+  V-01 etat-nominal                       360x780   conforme
+  V-01 etat-chargement                    360x780   conforme
+  V-01 etat-vide                          360x780   conforme
+  V-01 etat-erreur                        360x780   conforme
+  V-01 frappe-rien                        360x780   conforme
+  V-01 frappe-trouve                      360x780   conforme
+  V-01 frappe-rien-trouve                 360x780   conforme
+  V-02 etat-nominal                       1440x900  conforme
+  V-02 etat-chargement                    1440x900  conforme
+  V-02 req-mot-de-passe                   1440x900  conforme
+  V-02 req-support                        1440x900  conforme
+  V-02 req-note-de-frais                  1440x900  conforme
+  V-02 etat-nominal                       1024x768  conforme
+  V-02 etat-chargement                    1024x768  conforme
+  V-02 req-mot-de-passe                   1024x768  conforme
+  V-02 req-support                        1024x768  conforme
+  V-02 req-note-de-frais                  1024x768  conforme
+  V-02 etat-nominal                       768x1024  conforme
+  V-02 etat-chargement                    768x1024  conforme
+  V-02 req-mot-de-passe                   768x1024  conforme
+  V-02 req-support                        768x1024  conforme
+  V-02 req-note-de-frais                  768x1024  conforme
+  V-02 etat-nominal                       360x780   conforme
+  V-02 etat-chargement                    360x780   conforme
+  V-02 req-mot-de-passe                   360x780   conforme
+  V-02 req-support                        360x780   conforme
+  V-02 req-note-de-frais                  360x780   conforme
+  V-03 fr-frais                           1440x900  conforme
+  V-03 fr-vieil                           1440x900  conforme
+  V-03 fr-obs                             1440x900  conforme
+  V-03 op                                 1440x900  conforme
+  V-03 fr-frais                           1024x768  conforme
+  V-03 fr-vieil                           1024x768  conforme
+  V-03 fr-obs                             1024x768  conforme
+  V-03 op                                 1024x768  conforme
+  V-03 fr-frais                           768x1024  conforme
+  V-03 fr-vieil                           768x1024  conforme
+  V-03 fr-obs                             768x1024  conforme
+  V-03 op                                 768x1024  conforme
+  V-03 fr-frais                           360x780   conforme
+  V-03 fr-vieil                           360x780   conforme
+  V-03 fr-obs                             360x780   conforme
+  V-03 op                                 360x780   conforme
+  V-04 cas-inexistant                     1440x900  conforme
+  V-04 cas-prive                          1440x900  conforme
+  V-04 cas-nu                             1440x900  conforme
+  V-05 arrivee-protegee                   1440x900  conforme
+  V-05 arrivee-expiree                    1440x900  conforme
+  V-05 arrivee-directe                    1440x900  conforme
+  V-05 issue-succes                       1440x900  conforme
+  V-05 issue-echec                        1440x900  conforme
+  V-05 issue-trop                         1440x900  conforme
+  V-06 et-1                               1440x900  conforme
+  V-06 et-2                               1440x900  conforme
+  V-06 et-3                               1440x900  conforme
+  V-06 et-4                               1440x900  conforme
+  V-06 cpt-connu                          1440x900  conforme
+  V-06 cpt-inconnu                        1440x900  conforme
+  V-06 expire                             1440x900  conforme
+  V-07 role-referent                      1440x900  conforme
+  V-07 role-admin                         1440x900  conforme
+  V-07 role-lecteur                       1440x900  conforme
+  V-07 etat-nominal                       1440x900  conforme
+  V-07 etat-chargement                    1440x900  conforme
+  V-07 etat-partiel                       1440x900  conforme
+  V-07 etat-erreur                        1440x900  conforme
+  V-07 etat-vide                          1440x900  conforme
+  V-07 aide                               1440x900  conforme
+  V-08 droits-ecriture                    1440x900  conforme
+  V-08 droits-lecture                     1440x900  conforme
+  V-08 etat-nominal                       1440x900  conforme
+  V-08 etat-chargement                    1440x900  conforme
+  V-08 etat-vide                          1440x900  conforme
+  V-08 etat-trop                          1440x900  conforme
+  V-08 degrade                            1440x900  conforme
+  V-08 droits-ecriture                    1024x768  conforme
+  V-08 droits-lecture                     1024x768  conforme
+  V-08 etat-nominal                       1024x768  conforme
+  V-08 etat-chargement                    1024x768  conforme
+  V-08 etat-vide                          1024x768  conforme
+  V-08 etat-trop                          1024x768  conforme
+  V-08 degrade                            1024x768  conforme
+  V-08 droits-ecriture                    768x1024  conforme
+  V-08 droits-lecture                     768x1024  conforme
+  V-08 etat-nominal                       768x1024  conforme
+  V-08 etat-chargement                    768x1024  conforme
+  V-08 etat-vide                          768x1024  conforme
+  V-08 etat-trop                          768x1024  conforme
+  V-08 degrade                            768x1024  conforme
+  V-08 droits-ecriture                    360x780   conforme
+  V-08 droits-lecture                     360x780   conforme
+  V-08 etat-nominal                       360x780   conforme
+  V-08 etat-chargement                    360x780   conforme
+  V-08 etat-vide                          360x780   conforme
+  V-08 etat-trop                          360x780   conforme
+  V-08 degrade                            360x780   conforme
+  V-09 repos                              1440x900  conforme
+  V-09 unecar                             1440x900  conforme
+  V-09 resultats                          1440x900  conforme
+  V-09 vide                               1440x900  conforme
+  V-09 degrade                            1440x900  conforme
+  V-09 etroit                             1440x900  conforme
+  V-09 repos                              1024x768  conforme
+  V-09 unecar                             1024x768  conforme
+  V-09 resultats                          1024x768  conforme
+  V-09 vide                               1024x768  conforme
+  V-09 degrade                            1024x768  conforme
+  V-09 etroit                             1024x768  conforme
+  V-09 repos                              768x1024  conforme
+  V-09 unecar                             768x1024  conforme
+  V-09 resultats                          768x1024  conforme
+  V-09 vide                               768x1024  conforme
+  V-09 degrade                            768x1024  conforme
+  V-09 etroit                             768x1024  conforme
+  V-09 repos                              360x780   conforme
+  V-09 unecar                             360x780   conforme
+  V-09 resultats                          360x780   conforme
+  V-09 vide                               360x780   conforme
+  V-09 degrade                            360x780   conforme
+  V-09 etroit                             360x780   conforme
+  V-10 droits-ecriture                    1440x900  conforme
+  V-10 droits-lecture                     1440x900  conforme
+  V-10 uni-production                     1440x900  conforme
+  V-10 uni-projets                        1440x900  conforme
+  V-10 etat-peuple                        1440x900  conforme
+  V-10 etat-vide                          1440x900  conforme
+  V-10 etat-chargement                    1440x900  conforme
+  V-11 dom-infrastructure                 1440x900  conforme
+  V-11 dom-migration-2026                 1440x900  conforme
+  V-11 dom-poste-de-travail               1440x900  conforme
+  V-11 role-referent                      1440x900  conforme
+  V-11 role-admin                         1440x900  conforme
+  V-11 role-lecteur                       1440x900  conforme
+  V-11 etat-peuple                        1440x900  conforme
+  V-11 etat-vide                          1440x900  conforme
+  V-12 dom-infrastructure                 1440x900  conforme
+  V-12 dom-poste-de-travail               1440x900  conforme
+  V-12 arr-tout                           1440x900  conforme
+  V-12 arr-obsolete                       1440x900  conforme
+  V-12 arr-brouillon                      1440x900  conforme
+  V-12 etat-nominal                       1440x900  conforme
+  V-12 etat-vide                          1440x900  conforme
+  V-13 dos-exploitation                   1440x900  conforme
+  V-13 dos-exploitation-sauvegardes       1440x900  conforme
+  V-13 dos-exploitation-ordonnancement    1440x900  conforme
+  V-13 dr-gestionnaire                    1440x900  conforme
+  V-13 dr-redacteur                       1440x900  conforme
+  V-13 dr-lecteur                         1440x900  conforme
+  V-14 droits-ecriture                    1440x900  conforme
+  V-14 droits-lecture                     1440x900  conforme
+  V-14 fr-frais                           1440x900  conforme
+  V-14 fr-vieil                           1440x900  conforme
+  V-14 fr-obs                             1440x900  conforme
+  V-14 revision                           1440x900  conforme
+  V-14 brouillon                          1440x900  conforme
+  V-14 resync                             1440x900  conforme
+  V-14 op                                 1440x900  conforme
+  V-14 etat-nominal                       1440x900  conforme
+  V-14 etat-chargement                    1440x900  conforme
+  V-14 droits-ecriture                    1024x768  conforme
+  V-14 droits-lecture                     1024x768  conforme
+  V-14 fr-frais                           1024x768  conforme
+  V-14 fr-vieil                           1024x768  conforme
+  V-14 fr-obs                             1024x768  conforme
+  V-14 revision                           1024x768  conforme
+  V-14 brouillon                          1024x768  conforme
+  V-14 resync                             1024x768  conforme
+  V-14 op                                 1024x768  conforme
+  V-14 etat-nominal                       1024x768  conforme
+  V-14 etat-chargement                    1024x768  conforme
+  V-14 droits-ecriture                    768x1024  conforme
+  V-14 droits-lecture                     768x1024  conforme
+  V-14 fr-frais                           768x1024  conforme
+  V-14 fr-vieil                           768x1024  conforme
+  V-14 fr-obs                             768x1024  conforme
+  V-14 revision                           768x1024  conforme
+  V-14 brouillon                          768x1024  conforme
+  V-14 resync                             768x1024  conforme
+  V-14 op                                 768x1024  conforme
+  V-14 etat-nominal                       768x1024  conforme
+  V-14 etat-chargement                    768x1024  conforme
+  V-14 droits-ecriture                    360x780   conforme
+  V-14 droits-lecture                     360x780   conforme
+  V-14 fr-frais                           360x780   conforme
+  V-14 fr-vieil                           360x780   conforme
+  V-14 fr-obs                             360x780   conforme
+  V-14 revision                           360x780   conforme
+  V-14 brouillon                          360x780   conforme
+  V-14 resync                             360x780   conforme
+  V-14 op                                 360x780   conforme
+  V-14 etat-nominal                       360x780   conforme
+  V-14 etat-chargement                    360x780   conforme
+  V-15 pan-ouvert                         1440x900  conforme
+  V-15 pan-ferme                          1440x900  conforme
+  V-15 hist-riche                         1440x900  conforme
+  V-15 hist-une                           1440x900  conforme
+  V-15 hist-aucune                        1440x900  conforme
+  V-15 droits-ecriture                    1440x900  conforme
+  V-15 droits-lecture                     1440x900  conforme
+  V-16 cmp-13-14                          1440x900  conforme
+  V-16 cmp-11-14                          1440x900  conforme
+  V-16 cmp-14-14                          1440x900  conforme
+  V-16 cmp-13-13                          1440x900  conforme
+  V-16 tout                               1440x900  conforme
+  V-17 cas-vierge                         1440x900  conforme
+  V-17 cas-template                       1440x900  conforme
+  V-17 cas-modif                          1440x900  conforme
+  V-17 sv-normal                          1440x900  conforme
+  V-17 sv-erreur                          1440x900  conforme
+  V-17 doublon                            1440x900  conforme
+  V-18 cas-existant                       1440x900  conforme
+  V-18 cas-vierge                         1440x900  conforme
+  V-18 cas-desync                         1440x900  conforme
+  V-18 ref-ouvert                         1440x900  conforme
+  V-18 ref-cote                           1440x900  conforme
+  V-18 ref-ferme                          1440x900  conforme
+  V-19 role-admin                         1440x900  conforme
+  V-19 role-referent                      1440x900  conforme
+  V-19 etat-nominal                       1440x900  conforme
+  V-19 etat-chargement                    1440x900  conforme
+  V-19 etat-vide                          1440x900  conforme
+  V-19 etat-dense                         1440x900  conforme
+  V-20 moment-aucun                       1440x900  conforme
+  V-20 moment-anneau                      1440x900  conforme
+  V-20 moment-deplie                      1440x900  conforme
+  V-20 isole                              1440x900  conforme
+  V-20 disparu                            1440x900  conforme
+  V-21 dv-complets                        1440x900  conforme
+  V-21 dv-restreints                      1440x900  conforme
+  V-21 lent                               1440x900  conforme
+  V-22 dom-infrastructure                 1440x900  conforme
+  V-22 dom-applications                   1440x900  conforme
+  V-22 dom-poste-de-travail               1440x900  conforme
+  V-22 droits-ecriture                    1440x900  conforme
+  V-22 droits-lecture                     1440x900  conforme
+  V-22 rappel                             1440x900  conforme
+  V-23 env-dialogue                       1440x900  conforme
+  V-23 env-page                           1440x900  conforme
+  V-23 mode-creation                      1440x900  conforme
+  V-23 mode-edition                       1440x900  conforme
+  V-23 recup-ok                           1440x900  conforme
+  V-23 recup-lente                        1440x900  conforme
+  V-23 recup-echec                        1440x900  conforme
+  V-24 et-1                               1440x900  conforme
+  V-24 et-2                               1440x900  conforme
+  V-24 et-3                               1440x900  conforme
+  V-24 et-4                               1440x900  conforme
+  V-24 issue-erreurs                      1440x900  conforme
+  V-24 issue-propre                       1440x900  conforme
+  V-24 issue-global                       1440x900  conforme
+  V-25 ong-identite                       1440x900  conforme
+  V-25 ong-securite                       1440x900  conforme
+  V-25 ong-distinctions                   1440x900  conforme
+  V-25 ong-activite                       1440x900  conforme
+  V-25 cpt-karim                          1440x900  conforme
+  V-25 cpt-neuf                           1440x900  conforme
+  V-25 verrou                             1440x900  conforme
+  V-26 cas-supprimee                      1440x900  conforme
+  V-26 cas-inexistante                    1440x900  conforme
+  V-26 cas-interdite                      1440x900  conforme
+  V-26 droits-ecriture                    1440x900  conforme
+  V-26 droits-lecture                     1440x900  conforme
+  V-27 form-ferme                         1440x900  conforme
+  V-27 form-creation                      1440x900  conforme
+  V-27 form-edition                       1440x900  conforme
+  V-27 sup-refus                          1440x900  conforme
+  V-27 sup-systeme                        1440x900  conforme
+  V-27 sup-ok                             1440x900  conforme
+  V-28 form-ferme                         1440x900  conforme
+  V-28 form-creation                      1440x900  conforme
+  V-28 form-edition                       1440x900  conforme
+  V-28 sup-plein                          1440x900  conforme
+  V-28 sup-vide                           1440x900  conforme
+  V-29 form-ferme                         1440x900  conforme
+  V-29 form-creation                      1440x900  conforme
+  V-29 form-edition                       1440x900  conforme
+  V-29 sup-refus                          1440x900  conforme
+  V-29 sup-ok                             1440x900  conforme
+  V-30 form-ferme                         1440x900  conforme
+  V-30 form-creation                      1440x900  conforme
+  V-30 form-edition                       1440x900  conforme
+  V-30 sup-utilise                        1440x900  conforme
+  V-30 sup-libre                          1440x900  conforme
+  V-31 form-ferme                         1440x900  conforme
+  V-31 form-creation                      1440x900  conforme
+  V-31 form-edition                       1440x900  conforme
+  V-31 sup-defaut                         1440x900  conforme
+  V-31 sup-autre                          1440x900  conforme
+  V-32 form-ferme                         1440x900  conforme
+  V-32 form-creation                      1440x900  conforme
+  V-32 form-edition                       1440x900  conforme
+  V-32 form-admin                         1440x900  conforme
+  V-32 mdp                                1440x900  conforme
+  V-32 des                                1440x900  conforme
+  V-33 seuils-actuel                      1440x900  conforme
+  V-33 seuils-severe                      1440x900  conforme
+  V-33 seuils-large                       1440x900  conforme
+  V-33 seuils-invalide                    1440x900  conforme
+  V-34 don-completes                      1440x900  conforme
+  V-34 don-insuffisantes                  1440x900  conforme
+  V-35 depot-au-repos                     1440x900  conforme
+  V-35 scenarios-directs                  1440x900  conforme
+  V-35 journal-peuple                     1440x900  conforme
+  V-35 rapport-de-lot                     1440x900  conforme
+  V-36 issue-propre                       1440x900  conforme
+  V-36 issue-avert                        1440x900  conforme
+  V-36 vol-normal                         1440x900  conforme
+  V-36 vol-lent                           1440x900  conforme
+  V-37 cont-bord                          1440x900  conforme
+  V-37 cont-lecture                       1440x900  conforme
+  V-37 rail-ouvert                        1440x900  conforme
+  V-37 rail-ferme                         1440x900  conforme
+  V-37 role-referent                      1440x900  conforme
+  V-37 role-admin                         1440x900  conforme
+  V-37 chargement                         1440x900  conforme
+  V-37 vide                               1440x900  conforme
+  V-37 cont-bord                          1024x768  conforme
+  V-37 cont-lecture                       1024x768  conforme
+  V-37 rail-ouvert                        1024x768  conforme
+  V-37 rail-ferme                         1024x768  conforme
+  V-37 role-referent                      1024x768  conforme
+  V-37 role-admin                         1024x768  conforme
+  V-37 chargement                         1024x768  conforme
+  V-37 vide                               1024x768  conforme
+  V-37 cont-bord                          768x1024  conforme
+  V-37 cont-lecture                       768x1024  conforme
+  V-37 rail-ouvert                        768x1024  conforme
+  V-37 rail-ferme                         768x1024  conforme
+  V-37 role-referent                      768x1024  conforme
+  V-37 role-admin                         768x1024  conforme
+  V-37 chargement                         768x1024  conforme
+  V-37 vide                               768x1024  conforme
+  V-37 cont-bord                          360x780   conforme
+  V-37 cont-lecture                       360x780   conforme
+  V-37 rail-ouvert                        360x780   conforme
+  V-37 rail-ferme                         360x780   conforme
+  V-37 role-referent                      360x780   conforme
+  V-37 role-admin                         360x780   conforme
+  V-37 chargement                         360x780   conforme
+  V-37 vide                               360x780   conforme
+  V-38 empilement                         1440x900  conforme
+  V-38 vider                              1440x900  conforme
+  V-38 type-succesconfirmation-breve-disparait-seule-au-bout 1440x900  conforme
+  V-38 type-erreurpersiste-jusqu-a-une-action-dit-la-cause-p 1440x900  conforme
+  V-38 type-informationevenement-neutre-dont-il-faut-etre-av 1440x900  conforme
+  V-38 type-en-coursoperation-longue-poursuivie-en-arriere-p 1440x900  conforme
+  V-39 anim                               1440x900  conforme
+  V-39 vide-corpus-entierement-vide       1440x900  conforme
+  V-39 vide-domaine-sans-note             1440x900  conforme
+  V-39 vide-dossier-vide                  1440x900  conforme
+  V-39 vide-aucune-revision-en-attente    1440x900  conforme
+  V-39 vide-aucun-retrolien               1440x900  conforme
+  V-39 vide-aucune-relation               1440x900  conforme
+  V-39 vide-graphe-sans-relation          1440x900  conforme
+  V-39 vide-aucun-signet                  1440x900  conforme
+  V-39 vide-aucune-distinction-obtenue    1440x900  conforme
+  V-39 vide-liste-filtree-vide            1440x900  conforme
+  V-39 chargement-carte-de-resultat       1440x900  conforme
+  V-39 chargement-ligne-de-liste          1440x900  conforme
+  V-39 chargement-panneau-lateral         1440x900  conforme
+  V-39 chargement-tableau-de-bord         1440x900  conforme
+  V-39 chargement-graphe                  1440x900  conforme
+  V-39 chargement-arborescence            1440x900  conforme
+  V-39 erreur-un-panneau                  1440x900  conforme
+  V-39 erreur-une-vue-entiere             1440x900  conforme
+  V-39 erreur-perte-de-connexion          1440x900  conforme
+  V-39 erreur-fonctionnalite-degradee     1440x900  conforme
+  V-40 d-simple                           1440x900  conforme
+  V-40 d-note                             1440x900  conforme
+  V-40 d-dossier                          1440x900  conforme
+  V-40 d-restaurer                        1440x900  conforme
+  V-40 d-reviser                          1440x900  conforme
+  V-40 d-droits                           1440x900  conforme
+  V-40 d-relation                         1440x900  conforme
+  V-40 d-template                         1440x900  conforme
+  V-40 d-doublon                          1440x900  conforme
+  V-40 d-deplacer                         1440x900  conforme
+  V-41 fraicheur                          1440x900  conforme
+  V-41 boutons                            1440x900  conforme
+  V-41 champs                             1440x900  conforme
+  V-41 pastilles                          1440x900  conforme
+  V-41 conteneurs                         1440x900  conforme
+  V-41 navigation                         1440x900  conforme
+  V-41 donnees                            1440x900  conforme
+  V-41 superpositions                     1440x900  conforme
+  V-41 prose                              1440x900  conforme
+  V-41 retours                            1440x900  conforme
+  V-41 identite                           1440x900  conforme
+
+─────────────────────────────────────────────────────────────────────
+verif:maquette — étalonnage à blanc — maquette contre elle-même
+  41 vue(s) · 409 couple(s) de captures · 524.2 s
+  conformes : 409  ·  écarts : 0  ·  recours au niveau 3 : 0 (0.00 %)
+  candidat : la maquette gelée elle-même
+  blocs retirés avant capture (déclarés hors produit par la maquette) : .planche, section.regles
+  zones comparées — 1 vue(s) à surface déclarée :
+    V-37 : aside.rail + header.barre   (ARB-012 du 18 août 2026, docs/arbitrages.md)
+  les 40 autre(s) vue(s) sont comparées PAGE ENTIÈRE, par défaut.
+  états de zone — 55 état(s) isolé(s) dans la page, sur 6 vue(s) :
+    V-09 : 6 état(s) de zone
+    V-35 : 4 état(s) de zone
+    V-38 : 4 état(s) de zone
+    V-39 : 20 état(s) de zone
+    V-40 : 10 état(s) de zone
+    V-41 : 11 état(s) de zone
+    la zone de chaque état est celle de verif/scenarios/V-xx.json, dérivée de la
+    maquette gelée ; elle est isolée par le même code des deux côtés.
+  révélations — 10 vue(s) à propriété établie par le banc :
+    V-17 : « modalite-dialogue » — tout `dialog[open]` du document est `:modal` — couche supérieure, `position: fixed; inset: 0`, `::backdrop`.
+      12 mesure(s) : déjà vraie sur 12, établie sur 0 (0 élément(s))   (ARB-017 — le dialogue modal est révélé par le banc, des deux côtés.)
+    V-23 : « modalite-dialogue » — tout `dialog[open]` du document est `:modal` — couche supérieure, `position: fixed; inset: 0`, `::backdrop`.
+      14 mesure(s) : déjà vraie sur 14, établie sur 0 (0 élément(s))   (ARB-017 — le dialogue modal est révélé par le banc, des deux côtés.)
+    V-27 : « modalite-dialogue » — tout `dialog[open]` du document est `:modal` — couche supérieure, `position: fixed; inset: 0`, `::backdrop`.
+      12 mesure(s) : déjà vraie sur 12, établie sur 0 (0 élément(s))   (ARB-017 — le dialogue modal est révélé par le banc, des deux côtés.)
+    V-28 : « modalite-dialogue » — tout `dialog[open]` du document est `:modal` — couche supérieure, `position: fixed; inset: 0`, `::backdrop`.
+      10 mesure(s) : déjà vraie sur 10, établie sur 0 (0 élément(s))   (ARB-017 — le dialogue modal est révélé par le banc, des deux côtés.)
+    V-29 : « modalite-dialogue » — tout `dialog[open]` du document est `:modal` — couche supérieure, `position: fixed; inset: 0`, `::backdrop`.
+      10 mesure(s) : déjà vraie sur 10, établie sur 0 (0 élément(s))   (ARB-017 — le dialogue modal est révélé par le banc, des deux côtés.)
+    V-30 : « modalite-dialogue » — tout `dialog[open]` du document est `:modal` — couche supérieure, `position: fixed; inset: 0`, `::backdrop`.
+      10 mesure(s) : déjà vraie sur 10, établie sur 0 (0 élément(s))   (ARB-017 — le dialogue modal est révélé par le banc, des deux côtés.)
+    V-31 : « modalite-dialogue » — tout `dialog[open]` du document est `:modal` — couche supérieure, `position: fixed; inset: 0`, `::backdrop`.
+      10 mesure(s) : déjà vraie sur 10, établie sur 0 (0 élément(s))   (ARB-017 — le dialogue modal est révélé par le banc, des deux côtés.)
+    V-32 : « modalite-dialogue » — tout `dialog[open]` du document est `:modal` — couche supérieure, `position: fixed; inset: 0`, `::backdrop`.
+      12 mesure(s) : déjà vraie sur 12, établie sur 0 (0 élément(s))   (ARB-017 — le dialogue modal est révélé par le banc, des deux côtés.)
+    V-35 : « modalite-dialogue » — tout `dialog[open]` du document est `:modal` — couche supérieure, `position: fixed; inset: 0`, `::backdrop`.
+      8 mesure(s) : déjà vraie sur 8, établie sur 0 (0 élément(s))   (ARB-017 — le dialogue modal est révélé par le banc, des deux côtés.)
+    V-40 : « modalite-dialogue » — tout `dialog[open]` du document est `:modal` — couche supérieure, `position: fixed; inset: 0`, `::backdrop`.
+      20 mesure(s) : déjà vraie sur 20, établie sur 0 (0 élément(s))   (ARB-017 — le dialogue modal est révélé par le banc, des deux côtés.)
+    exigée par le même code des DEUX côtés, avant la mesure, et VÉRIFIÉE des deux côtés :
+    là où la propriété est déjà vraie, rien n’est touché. Une vue non déclarée à
+    verif/references/protocole-app.json n’est jamais révélée.
+  rapport machine : verif/rapports/maquette.json
+  Aucun écart.
+
+maquette rc=0

@@ -97,13 +97,14 @@
 	 * lien coûte 1 596 px.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * `cpt-inconnu` — LE SOCLE RETENU N'EST PAS UN SUR-ENSEMBLE DU SIEN
+	 * `cpt-inconnu` — LE SOCLE RETENU N'EST PAS UN SUR-ENSEMBLE DU SIEN,
+	 * ET V-06 REND DÉSORMAIS LA NOTIFICATION QUE V-06 MONTRE (ARB-028)
 	 *
-	 * Troisième écart, et il ne vient ni de cette vue ni de ce lot. E-01 et
-	 * ADR-002 retiennent comme socle applicatif celui de V-07, le plus complet
-	 * des états en ligne ; `docs/DESIGN.md` §0.2 les décrit « strictement plus
-	 * riche » et « emboîtés ». POUR LA FAMILLE DES NOTIFICATIONS, C'EST FAUX :
-	 * les règles ne sont pas étendues, elles sont REMPLACÉES.
+	 * Le constat ne vient ni de cette vue ni de son premier lot. E-01 et ADR-002
+	 * retiennent comme socle applicatif celui de V-07, le plus complet des états
+	 * en ligne ; `docs/DESIGN.md` §0.2 les décrit « strictement plus riche » et
+	 * « emboîtés ». POUR LA FAMILLE DES NOTIFICATIONS, C'EST FAUX : les règles ne
+	 * sont pas étendues, elles sont REMPLACÉES.
 	 *
 	 *   socle gelé de V-06        →  `.notifs` sans `max-width`
 	 *                                `.notif { display: flex; align-items: center;
@@ -112,25 +113,31 @@
 	 *                                `.notif { display: grid; …; width: 100%;
 	 *                                 padding: e-3 e-3 e-3 e-4; line-height: 1.45 }`
 	 *
-	 * La bulle de la référence n'est pas bornée et tient sur UNE ligne ; celle
-	 * de l'application est plafonnée à 400 px et REPASSE À LA LIGNE. Coût :
-	 * 13 276 px, canal max 230. Rendre au candidat les seules déclarations que
-	 * V-07 a remplacées ramène l'écart à ZÉRO — cause isolée, elle aussi, par
-	 * neutralisation.
+	 * La bulle de la référence n'est pas bornée et tient sur UNE ligne ; celle du
+	 * socle applicatif est plafonnée à 400 px et repasse à la ligne. Coût mesuré
+	 * au premier lot : 13 276 px, canal max 230 — le DERNIER écart visuel des
+	 * 409 couples.
 	 *
-	 * Hors de cette famille, le socle gelé de V-06 et `src/socle.css` ne
-	 * diffèrent que par un COMMENTAIRE : deux blocs de différence en tout, et le
-	 * second est le titre de la section 9. Aucun autre état des deux vues n'est
-	 * touché, et pour une raison mesurée : `cpt-inconnu` est le SEUL état des
-	 * 37 vues restantes qui rende une notification visible
-	 * (`docs/releve-vues.md` §6.4). La règle divergente n'avait jamais été
-	 * exercée — c'est exactement P-5 (`CLAUDE.md` §6).
+	 * ARB-024 en avait conclu « la famille suit V-38, et V-06 demande un regel ».
+	 * ARB-028 RENVERSE LA RÉSOLUTION, et le constat reste : l'ordre de préséance
+	 * met la maquette au-dessus de toute doctrine de réalisation, et il porte sur
+	 * CHAQUE VUE dans CHACUN de ses aspects. V-06 régit V-06.
 	 *
-	 * RIEN N'EST COMBLÉ ICI. `src/socle.css` et `src/vues/V-06.css` sont de
-	 * l'instrument, et une règle de style écrite dans ce composant serait un
-	 * contournement. Les trois écarts sont chiffrés et remontés ; aucune
-	 * tolérance n'est demandée, aucun recours au niveau 3 n'est accordé par
-	 * soi-même (ARB-018).
+	 * CE QUE CETTE VUE FAIT DONC, ET CE QU'ELLE NE FAIT PAS. Elle appelle le
+	 * composant UNIQUE de la famille — `$lib/coquille/PileDeNotifications.svelte`
+	 * — avec la variante `texte`, celle que SA maquette gèle. Elle ne recopie
+	 * aucun balisage (`docs/DESIGN.md` §3.7, interdit n° 7), n'écrit aucune règle
+	 * de style, et ne touche ni à `src/socle.css` (P-6.1) ni à `src/vues/V-06.css`
+	 * (P-6.3), qui restent gelés à l'octet. La variante et sa feuille vivent dans
+	 * le composant, où la divergence est documentée en entier.
+	 *
+	 * Hors de cette famille, le socle gelé de V-06 et `src/socle.css` ne diffèrent
+	 * que par un COMMENTAIRE : deux blocs de différence en tout — vérifié par diff
+	 * intégral des 400 lignes —, et le second est le titre de la section 9. Aucun
+	 * autre état des deux vues n'est touché, et pour une raison mesurée :
+	 * `cpt-inconnu` est le SEUL état des 37 vues restantes qui rende une
+	 * notification visible (`docs/releve-vues.md` §6.4). La règle divergente
+	 * n'avait jamais été exercée — c'est exactement P-5 (`CLAUDE.md` §6).
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT — ARB-011
@@ -158,7 +165,9 @@
 	 * (P-6.1) et de `src/vues/V-06.css` (P-6.3), posé par
 	 * `node verif/feuilles-de-vue.mjs V-06 --installer`, identique à l'octet au
 	 * second bloc `<style>` de la maquette. Tous les `style=` du fichier
-	 * figurent à l'ensemble clos du gel (ARB-016, P-6.4).
+	 * figurent à l'ensemble clos du gel (ARB-016, P-6.4). La seule règle de style
+	 * que cette vue fasse poser est celle de la variante `texte` de la famille des
+	 * notifications, et elle vit dans le composant qui la rend, pas ici (ARB-028).
 	 *
 	 * LE JEU DE SEMENCE EST VIDE, ET C'EST DÉCLARÉ. `VARIANTE_PAR_VUE` range
 	 * V-06 dans la variante « vide » (`seeds/corpus.ts`) : le mode démo passe
@@ -171,6 +180,7 @@
 	 * vue ; rien à y contrôler (P-07).
 	 */
 	import Marque from '$lib/auth/Marque.svelte';
+	import PileDeNotifications from '$lib/coquille/PileDeNotifications.svelte';
 	import { COMPTES } from '../../seeds/corpus';
 
 	interface Proprietes {
@@ -226,10 +236,10 @@
 	 */
 	const CPT_COCHE_AU_BALISAGE = 'connu';
 	const cpt = $derived(typeof vecteur?.cpt === 'string' ? vecteur.cpt : CPT_COCHE_AU_BALISAGE);
-	const notification = $derived(
+	const notifications = $derived<readonly string[]>(
 		cpt === CPT_COCHE_AU_BALISAGE
-			? null
-			: "Identifiant inconnu — l'écran d'envoi reste rigoureusement identique"
+			? []
+			: ["Identifiant inconnu — l'écran d'envoi reste rigoureusement identique"]
 	);
 
 	/** `aller()` marque chaque section active ou non — jamais retirée du DOM. */
@@ -520,6 +530,17 @@
 	</div>
 </main>
 
-<div class="notifs" id="notifs" role="status" aria-live="polite">
-	{#if notification}<div class="notif">{notification}</div>{/if}
-</div>
+<!--
+	LA PILE DE NOTIFICATIONS, VARIANTE `texte` — ARB-028.
+
+	V-06 rend la notification que V-06 montre : une bulle de texte nu, non
+	bornée, tenue sur une ligne, telle que le `notifier()` du gel la pose
+	(`V-06:830`, `n.textContent = txt`). Ce n'est PAS le catalogue de V-38, et
+	les deux socles en ligne divergent réellement sur cette seule famille — le
+	constat d'ARB-024, dont ARB-028 renverse la seule résolution.
+
+	LE BALISAGE N'EST PAS RECOPIÉ (`docs/DESIGN.md` §3.7, interdit n° 7) : c'est
+	le composant unique de la famille, appelé avec la variante que SA maquette
+	gèle. Le détail de la divergence est en tête de `PileDeNotifications.svelte`.
+-->
+<PileDeNotifications variante="texte" textes={notifications} />

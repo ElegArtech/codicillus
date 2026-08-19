@@ -6,50 +6,362 @@
 		<meta name="robots" content="noindex" />
 		<title>Codicillus — maintenance en cours</title>
 		<!--
-			Page d'indisponibilité programmée (RG-NF-10). Servie par le frontal, donc
-			disponible même application arrêtée : elle ne dépend d'aucun service, ne
-			charge aucune ressource distante (RG-NF-08) et tient dans un seul fichier.
+			PAGE D'INDISPONIBILITÉ PROGRAMMÉE — RG-NF-10, DÉRIVÉE DE V-04 PAR ARB-031.
 
-			ÉTAT DE CETTE PAGE. Aucune des 41 maquettes gelées ne décrit cet écran :
-			ni sa mise en forme, ni son texte, ni le canal d'information à donner.
-			Elle est donc posée ici dans sa forme la plus sobre possible, sans
-			emprunter au système visuel — le socle est une ressource applicative, et
-			cette page vit hors de l'application. Sa forme définitive et son texte
-			relèvent du lot T-058 (« Exploitation : sauvegarde, restauration,
-			indisponibilité », vague 11) et d'un arbitrage. Déclaré au rapport de
-			T-003, écart É-2 : c'est un vide de spécification signalé, pas comblé.
+			Servie par le frontal (`frontal/Caddyfile`, bloc `@indisponible`), donc
+			disponible APPLICATION ARRÊTÉE : elle ne dépend d'aucun service et ne
+			charge aucune ressource distante (RG-NF-08).
+
+			═══════════════════════════════════════════════════════════════════════
+			CE QU'ELLE N'EST PAS, ET IL FAUT LE LIRE EN PREMIER
+
+			ELLE N'EST PAS « CONFORME AU GEL », ELLE EN DÉRIVE. ARB-031 le dit mot
+			pour mot : « Cet écran n'entre pas au banc : il n'a pas de maquette de
+			référence, donc rien à comparer. Ne pas le déclarer conforme au gel : il
+			ne l'est pas, il en dérive. » Aucune des 41 maquettes ne montre cet
+			écran ; `pnpm verif:maquette` ne le mesure pas et ne le mesurera pas.
+
+			Sa couverture est ailleurs : la batterie 14 (dégradation) pour son
+			activation, et le contrôle du système visuel pour ses valeurs.
+
+			═══════════════════════════════════════════════════════════════════════
+			CE QUI EST DÉRIVÉ, ET D'OÙ — `mockups/V-04-non-trouvee-public.html`
+
+			ARB-031 nomme la source : « même enveloppe, même bloc centré, même
+			hiérarchie typographique ». Le balisage ci-dessous est celui de
+			`V-04:691-753`, réduit à ce qu'une page servie sans application peut
+			porter :
+
+			  div.public.app          V-04:694    enveloppe pleine hauteur
+			  header.chapeau          V-04:696    bandeau minimal
+			    .marque               V-04:697
+			      .marque__sceau      V-04:698
+			      .marque__nom        V-04:699
+			  main.introuvable        V-04:705    le bloc centré
+			    h1                    V-04:710    la hiérarchie typographique
+			    p.introuvable__txt    V-04:711
+			    div.issues            V-04:730    les issues, jamais moins d'une
+			  footer.pied-public      V-04:746
+			    .pied-public__int     V-04:747
+			      span.etiq           V-04:748
+
+			LES RÈGLES DE STYLE SONT RECOPIÉES, JAMAIS RÉÉCRITES. Chaque bloc porte
+			l'adresse d'où il vient : `src/socle.css` — dont `pnpm verif:jetons`
+			contrôle (a) l'identité à l'octet à la source du socle (P-6.1, E-01) —
+			et `mockups/V-04-non-trouvee-public.html`, gelé. Aucune valeur n'est
+			écrite en dur : tout passe par un jeton du socle (RG-DA-01).
+
+			POURQUOI TOUT EST EN LIGNE, ET NON LIÉ. Le frontal réécrit TOUTE requête
+			vers ce fichier (`rewrite * /indisponibilite.html`) : un
+			`<link rel="stylesheet" href="/socle.css">` recevrait cette même page en
+			guise de feuille. Un seul fichier est donc la seule forme qui fonctionne,
+			et la duplication des règles est le prix de l'indépendance exigée par
+			RG-NF-10 — « sans que les utilisateurs rencontrent des erreurs brutes »,
+			y compris application arrêtée.
+
+			LES POLICES NE SONT PAS SERVIES ICI. `--f-ui`, `--f-lecture` et
+			`--f-donnee` sont copiés tels quels du socle ; leurs fichiers vivent dans
+			l'application, indisponible par construction. Les piles de repli du socle
+			— Helvetica Neue / Arial, Georgia, ui-monospace — prennent alors le
+			relais, et c'est exactement ce à quoi elles servent.
+
+			═══════════════════════════════════════════════════════════════════════
+			CE QUI N'EST PAS DÉRIVÉ, ET POURQUOI — À REMONTER, NON À COMBLER
+
+			  • LE TEXTE. `RG-NF-10` exige la page, sans en prescrire ni le message
+			    ni le canal d'information. Le texte est celui posé par T-003
+			    (écart É-2), inchangé : ce lot en dérive la FORME, pas les mots.
+			  • LES DEUX LIENS « SE CONNECTER » de V-04 (`:702` et `:749`) sont
+			    RETIRÉS. L'authentification est dans l'application, arrêtée : les
+			    afficher serait une entrée inerte, que P-03 interdit.
+			  • LE CHAMP DE RECHERCHE, l'adresse demandée, le rattrapage et le ticket
+			    d'assistance de V-04 (`:713-744`) sont RETIRÉS pour la même raison —
+			    ils interrogent tous le corpus.
+			  • L'ACTION est le « Revenir à l'accueil » de V-04 (`:731`), son libellé
+			    et ses classes inchangés, mais visant `/` et non `#` : ici elle
+			    RÉINTERROGE le site, donc elle fonctionne — c'est une issue, pas un
+			    ancrage de maquette.
 		-->
 		<style>
-			html {
-				color-scheme: light dark;
+			/* ═══════════════════════════════════════════════════════════════════
+			   1 · JETONS — recopiés de `src/socle.css:10-104`, sans modification.
+			   Seuls les jetons employés par cette page sont repris.
+			   ═══════════════════════════════════════════════════════════════════ */
+			:root {
+				--c-encre: #16222b;
+				--c-encre-2: #46585f;
+				--c-encre-3: #536066;
+
+				--c-fond: #e2e7e4;
+				--c-papier: #fcfbf8;
+				--c-papier-2: #f5f4ef;
+
+				--c-trait: #cbd3d0;
+				--c-trait-fort: #9aa7a3;
+
+				--c-accent: #453ba0;
+				--c-accent-fonce: #322b78;
+				--c-accent-voile: #edecf8;
+
+				--f-ui: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+				--f-lecture: 'Literata', Georgia, 'Times New Roman', serif;
+				--f-donnee: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+				--t-micro: 0.6875rem;
+				--t-mini: 0.75rem;
+				--t-petit: 0.8125rem;
+				--t-base: 0.9375rem;
+				--t-lect: 1.0625rem;
+				--t-t3: 1.125rem;
+
+				--i-ui: 1.45;
+				--i-lect: 1.72;
+				--g-normal: 400;
+				--g-moyen: 500;
+				--g-fort: 600;
+				--g-lourd: 700;
+
+				--e-1: 4px;
+				--e-2: 8px;
+				--e-3: 12px;
+				--e-4: 16px;
+				--e-5: 24px;
+				--e-7: 48px;
+				--e-8: 64px;
+
+				--r-1: 2px;
+				--r-2: 4px;
+
+				--m-vif: 120ms cubic-bezier(0.2, 0.7, 0.4, 1);
 			}
+
+			@media (prefers-reduced-motion: reduce) {
+				:root {
+					--m-vif: 1ms;
+				}
+			}
+
+			/* ═══════════════════════════════════════════════════════════════════
+			   2 · BASE ET COMPOSANTS DU SOCLE — `src/socle.css:113-137`, `:157-165`,
+			   `:211-231`. Recopiés, jamais réécrits.
+			   ═══════════════════════════════════════════════════════════════════ */
+			*,
+			*::before,
+			*::after {
+				box-sizing: border-box;
+			}
+
+			html {
+				-webkit-text-size-adjust: 100%;
+			}
+
 			body {
 				margin: 0;
+				background: var(--c-fond);
+				color: var(--c-encre);
+				font-family: var(--f-ui);
+				font-size: var(--t-base);
+				line-height: var(--i-ui);
+				font-weight: var(--g-normal);
+				-webkit-font-smoothing: antialiased;
+			}
+
+			:focus-visible {
+				outline: 2px solid var(--c-accent);
+				outline-offset: 2px;
+				border-radius: var(--r-1);
+			}
+
+			::selection {
+				background: var(--c-accent-voile);
+			}
+
+			/* L'étiquette mono — le label d'instrument (`src/socle.css:157`). */
+			.etiq {
+				font-family: var(--f-donnee);
+				font-size: var(--t-micro);
+				font-weight: var(--g-moyen);
+				letter-spacing: 0.09em;
+				text-transform: uppercase;
+				color: var(--c-encre-3);
+			}
+
+			/* Boutons (`src/socle.css:211-231`). */
+			.btn {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				gap: var(--e-2);
+				font-family: var(--f-ui);
+				font-size: var(--t-petit);
+				font-weight: var(--g-fort);
+				line-height: 1;
+				letter-spacing: 0.005em;
+				padding: 9px var(--e-3);
+				border: 1px solid var(--c-trait);
+				border-radius: var(--r-2);
+				background: var(--c-papier);
+				color: var(--c-encre);
+				cursor: pointer;
+				transition:
+					background var(--m-vif),
+					border-color var(--m-vif),
+					color var(--m-vif),
+					transform var(--m-vif);
+			}
+			.btn:hover {
+				background: var(--c-papier-2);
+				border-color: var(--c-trait-fort);
+			}
+			.btn:active {
+				transform: translateY(1px);
+			}
+			.btn--principal {
+				background: var(--c-accent);
+				border-color: var(--c-accent);
+				color: #fff;
+			}
+			.btn--principal:hover {
+				background: var(--c-accent-fonce);
+				border-color: var(--c-accent-fonce);
+			}
+
+			/* ═══════════════════════════════════════════════════════════════════
+			   3 · L'ENVELOPPE DE V-04 — `mockups/V-04-non-trouvee-public.html:417`,
+			   `:420-436`, `:519-527`, `:530-533`, `:619-637`, `:652`. Recopiées.
+			   ═══════════════════════════════════════════════════════════════════ */
+			.public {
 				min-height: 100vh;
+				display: flex;
+				flex-direction: column;
+			}
+
+			.chapeau {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: var(--e-4);
+				padding: var(--e-4) var(--e-5);
+				max-width: 1080px;
+				width: 100%;
+				margin: 0 auto;
+			}
+			.marque {
+				display: flex;
+				align-items: center;
+				gap: var(--e-2);
+				text-decoration: none;
+				color: inherit;
+			}
+			.marque__sceau {
+				width: 26px;
+				height: 26px;
+				flex: none;
+				border-radius: var(--r-1);
+				background: var(--c-accent);
+				color: #fff;
 				display: grid;
 				place-items: center;
-				padding: 2rem;
-				box-sizing: border-box;
-				font-family: system-ui, sans-serif;
-				line-height: 1.6;
+				font-family: var(--f-donnee);
+				font-size: var(--t-mini);
+				font-weight: var(--g-lourd);
 			}
-			main {
-				max-width: 34rem;
+			.marque__nom {
+				font-family: var(--f-ui);
+				font-weight: var(--g-lourd);
+				font-size: var(--t-t3);
+				letter-spacing: -0.02em;
 			}
-			h1 {
-				font-size: 1.5rem;
-				margin: 0 0 1rem;
+
+			/* Le bloc centré (`V-04:619-637`). */
+			.introuvable {
+				flex: 1;
+				max-width: 760px;
+				width: 100%;
+				margin: 0 auto;
+				padding: var(--e-8) var(--e-5) var(--e-7);
 			}
-			p {
-				margin: 0 0 0.75rem;
+			.introuvable h1 {
+				font-family: var(--f-ui);
+				font-size: clamp(1.75rem, 4.6vw, 2.5rem);
+				font-weight: var(--g-lourd);
+				line-height: 1.12;
+				letter-spacing: -0.028em;
+				margin: 0 0 var(--e-3);
+				max-width: 20ch;
+				text-wrap: balance;
+			}
+			.introuvable__txt {
+				font-family: var(--f-lecture);
+				font-size: var(--t-lect);
+				line-height: var(--i-lect);
+				color: var(--c-encre-2);
+				margin: 0 0 var(--e-5);
+				max-width: 56ch;
+			}
+
+			/* Les issues : jamais moins d'une, toujours visible sans défilement
+			   (`V-04:652`, dont la marge basse est retirée avec le rattrapage
+			   qu'elle séparait). */
+			.issues {
+				display: flex;
+				gap: var(--e-2);
+				flex-wrap: wrap;
+			}
+
+			.pied-public {
+				border-top: 1px solid var(--c-trait);
+				padding: var(--e-4) var(--e-5);
+			}
+			.pied-public__int {
+				max-width: 1080px;
+				margin: 0 auto;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: var(--e-4);
+				flex-wrap: wrap;
+			}
+
+			/* `V-04:530-533`, réduit aux sélecteurs que cette page porte. */
+			@media (max-width: 700px) {
+				.chapeau {
+					padding: var(--e-3) var(--e-4);
+				}
 			}
 		</style>
 	</head>
 	<body>
-		<main>
-			<h1>Maintenance en cours</h1>
-			<p>Codicillus est momentanément indisponible, le temps d'une opération programmée.</p>
-			<p>Le service reprend sans action de votre part. Aucune donnée n'est perdue.</p>
-		</main>
+		<div class="public app">
+			<header class="chapeau">
+				<!-- `.marque` est un lien en V-04 (`:697`) ; ici il vise `/`, qui
+				     réinterroge le site — jamais l'ancre `#` d'une maquette. -->
+				<a class="marque" href="/" aria-label="Codicillus — accueil">
+					<span class="marque__sceau" aria-hidden="true">C</span>
+					<span class="marque__nom">Codicillus</span>
+				</a>
+			</header>
+
+			<main class="introuvable">
+				<!-- Message : pas de code d'erreur brut, pas de jargon — la règle de
+				     composition de V-04 (`:707-709`). Le texte est celui de T-003, ce
+				     lot n'en dérive que la forme. -->
+				<h1>Maintenance en cours</h1>
+				<p class="introuvable__txt">
+					Codicillus est momentanément indisponible, le temps d'une opération programmée. Le service
+					reprend sans action de votre part, et aucune donnée n'est perdue.
+				</p>
+
+				<div class="issues">
+					<a class="btn btn--principal" href="/">Revenir à l'accueil</a>
+				</div>
+			</main>
+
+			<footer class="pied-public">
+				<div class="pied-public__int">
+					<span class="etiq">Codicillus · Direction technique</span>
+				</div>
+			</footer>
+		</div>
 	</body>
 </html>

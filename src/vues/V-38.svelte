@@ -36,7 +36,8 @@
 	 * P-1.7 les refuse, la conformité pixel les impose.
 	 */
 	import { DOMAINES, INSTANCE, MOI, UNIVERS, type Note } from '../../seeds/corpus';
-	import Coquille, { type Notification } from '$lib/coquille/Coquille.svelte';
+	import Coquille from '$lib/coquille/Coquille.svelte';
+	import type { Notification } from '$lib/coquille/notifications';
 
 	interface Proprietes {
 		/** La clé de l'état demandé, telle que le scénario la déclare. */
