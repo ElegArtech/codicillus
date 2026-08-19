@@ -1,0 +1,334 @@
+<script lang="ts">
+	/**
+	 * V-04 — Page non trouvée, espace public. Servie à TOUTE adresse non résolue.
+	 *
+	 * PAS DE ROUTE PROPRE (`docs/routes.md` §3.1) : la réponse est un 404 rendu
+	 * À L'ADRESSE DEMANDÉE, qui reste affichée. `/guides/` nu en fait partie —
+	 * il n'existe pas d'index public des guides.
+	 *
+	 * ═══════════════════════════════════════════════════════════════════════
+	 * LE CHEMIN DE CODE UNIQUE — ADR-007, ET C'EST LA RAISON D'ÊTRE DE CE LOT
+	 *
+	 * V-04 et V-26 sont dans le même lot par OBLIGATION (`docs/releve-vues.md`
+	 * §9, R-7) : « Deux lots parallèles y écrivant chacun leur branche est la
+	 * manière la plus sûre de faire apparaître la branche “interdit” que l'ADR
+	 * interdit. » Les deux vues appellent `adresseNonResolue()` de
+	 * `$lib/public/adresse-non-resolue`, dont la SEULE entrée est le chemin
+	 * demandé : il n'existe ni paramètre de cas, ni drapeau d'interdiction, ni
+	 * exception typée qui remonterait jusqu'ici. Rien, dans ce composant, ne
+	 * peut savoir POURQUOI l'adresse n'a rien rapporté.
+	 *
+	 * Le commentaire du gel le dit dans les mêmes termes (`V-04:2219`) : « Les
+	 * deux premiers cas doivent produire un rendu strictement identique : c'est
+	 * la vérification la plus importante de cette vue. »
+	 *
+	 * CE QUE CE COMPOSANT NE PROUVE PAS, ET IL FAUT LE DIRE. Il rend un ÉTAT DE
+	 * MAQUETTE. Il ne résout aucun droit, n'interroge aucune base et ne mesure
+	 * aucun temps de réponse. `RG-ACC-04` — indiscernabilité de corps, d'en-têtes,
+	 * de code ET DE TEMPS — relève de la batterie 6 (`pnpm test:etancheite`) et
+	 * du lot T-011, en criticité haute. L'indiscernabilité TEMPORELLE n'est
+	 * mesurée par aucun instrument à ce jour (`docs/releve-vues.md` §10, M-5).
+	 * Ce lot ne la déclare pas tenue. `P-09` ne l'est pas davantage.
+	 *
+	 * ═══════════════════════════════════════════════════════════════════════
+	 * PÉRIMÈTRE PUBLIC — RG-M17-01
+	 *
+	 * Le corpus est réduit aux notes publiques ICI, au point d'entrée unique de
+	 * la vue, et non au moment de l'affichage : `notesPubliques(notes)`, à
+	 * l'endroit exact où la maquette écrit `window.CORPUS = window.corpusPublic()`
+	 * (`V-04:1975`). Aucune expression de ce fichier n'atteint une note interne,
+	 * pas même par erreur de branchement — elles n'existent plus pour lui.
+	 * `seeds/corpus.ts` porte la même déclaration au même endroit :
+	 * `VUES_A_PERIMETRE_PUBLIC` contient V-01 à V-04.
+	 *
+	 * PAS DE COQUILLE. `docs/releve-vues.md` §5.1 : V-01 à V-06 et V-09 n'en
+	 * portent pas — sept vues sur trente-sept. Le gabarit de `$lib/coquille`
+	 * n'est donc pas employé, et la page est autonome.
+	 *
+	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT — ARB-011. Le squelette rend l'ÉTAT,
+	 * jamais la transition. Les notifications de la maquette — ouverture du
+	 * portail d'assistance, retour à l'accueil, ouverture d'un guide — sont du
+	 * comportement et relèvent de T-017 : `div.notifs` est rendu vide, comme la
+	 * référence le montre à l'instant capturé.
+	 *
+	 * LES ADRESSES RESTENT CELLES DU GEL — ET C'EST UN CONSTAT, PAS UN CHOIX.
+	 * ARB-013 retire les lignes `/url:` de l'instantané ARIA précisément pour que
+	 * le produit puisse porter les adresses de `docs/routes.md` sans rougir. Le
+	 * filtre est `verif/banc/capture.mjs`, `sansAdresses()` : il retire les
+	 * lignes qui répondent à `/^\s*\/url:/`. Or l'instantané que Playwright
+	 * produit écrit `  - /url: "#"`, avec le tiret de liste : le filtre ne
+	 * reconnaît donc aucune ligne, et toute adresse réelle fait échouer le
+	 * niveau 1 — MESURÉ sur cette vue, trois états sur trois, avant correction.
+	 * `src/lib/coquille/Rail.svelte` porte quatorze `href="#"` pour la même
+	 * raison, sans que rien ne l'ait relevé. Les liens de ce fichier restent donc
+	 * ceux du gel ; le fait est remonté au rapport du lot, et l'instrument ne se
+	 * modifie pas depuis un lot de vue.
+	 *
+	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
+	 * (P-6.1) et de `src/vues/V-04.css` (P-6.3), posé par
+	 * `node verif/feuilles-de-vue.mjs V-04 --installer` et identique à l'octet au
+	 * second bloc `<style>` de la maquette gelée. Le seul `style=` du fichier —
+	 * `margin-bottom:var(--e-2)` — figure à l'ensemble clos du gel (ARB-016).
+	 */
+	import { notesPubliques, type Note } from '../../seeds/corpus';
+	import { adresseNonResolue } from '$lib/public/adresse-non-resolue';
+	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
+	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/public/fraicheur';
+
+	interface Proprietes {
+		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
+		vecteur: Record<string, string | boolean> | null;
+		/** Le jeu de semence de la vue — `corpusPourVue('V-04')`, variante complète. */
+		notes: readonly Note[];
+	}
+
+	const { vecteur, notes }: Proprietes = $props();
+
+	/**
+	 * LES TROIS ADRESSES DE LA PLANCHE DE REVUE, ET RIEN D'AUTRE.
+	 *
+	 * Ce sont des données de MAQUETTE (`V-04:2223-2227`) : la planche ne choisit
+	 * pas un comportement, elle choisit QUELLE ADRESSE a été demandée. Le rendu,
+	 * lui, ne dépend que de cette chaîne — c'est tout le propos d'ADR-007.
+	 */
+	const ADRESSES_PAR_DEFAUT = '/guides/plan-de-reprise-volet-bases';
+	const ADRESSES: Record<string, string> = {
+		inexistant: '/guides/reinitialiser-le-badge-daccess',
+		prive: ADRESSES_PAR_DEFAUT,
+		nu: '/guides/'
+	};
+
+	/**
+	 * LA POSITION QUE LA PLANCHE ATTEINT RÉELLEMENT, ET ELLE N'EST PAS CELLE
+	 * QU'ON CROIT — relevé au navigateur, dans les conditions du banc.
+	 *
+	 * La maquette s'initialise sur `appliquerCas("prive")` (`V-04:2242`) alors
+	 * que le bouton coché au balisage est `inexistant` (`V-04:762`). Le banc
+	 * applique le vecteur complet mais ne déclenche `change` que sur un bouton
+	 * QUI N'EST PAS DÉJÀ COCHÉ (`verif/banc/capture.mjs`, `reglerPlanche`) :
+	 * l'état `cas-inexistant` laisse donc la page sur le réglage initial, et la
+	 * référence y affiche l'adresse du cas `prive`.
+	 *
+	 * Ce n'est pas un défaut : les deux cas DOIVENT rendre le même écran, et le
+	 * gel le vérifie ainsi. Mais le rendu de `cas-inexistant` est bien celui de
+	 * `prive`, et le porter autrement ferait diverger l'unique ligne d'adresse.
+	 * Le fait est remonté au rapport du lot.
+	 */
+	const CAS_INITIAL = 'prive';
+	const CAS_COCHE_AU_BALISAGE = 'inexistant';
+
+	const cas = $derived(
+		typeof vecteur?.cas === 'string' && vecteur.cas !== CAS_COCHE_AU_BALISAGE
+			? vecteur.cas
+			: CAS_INITIAL
+	);
+
+	/** L'UNIQUE point d'entrée. Une adresse entre, un état sort — ADR-007. */
+	const resolution = $derived(adresseNonResolue(ADRESSES[cas] ?? ADRESSES_PAR_DEFAUT));
+
+	/** RG-M17-01 — la restriction au périmètre public, au point d'entrée. */
+	const publiques = $derived(notesPubliques(notes));
+
+	const requete = $derived(resolution.requete.trim());
+	const resultats = $derived(requete.length < 2 ? [] : chercher(publiques, requete));
+
+	/**
+	 * Le port fidèle de `rendre()` (`V-04:2130`) : sous deux caractères, l'aide
+	 * reste visible et rien n'est cherché ; au-delà, elle s'efface dans les deux
+	 * branches — résultats comme absence de résultat.
+	 */
+	const aideVisible = $derived(requete.length < 2);
+
+	/** Les quatre guides les plus consultés — la sortie de secours (`V-04:2172`). */
+	const populaires = $derived(
+		publiques
+			.slice()
+			.sort((a, b) => b.vues - a.vues)
+			.slice(0, 4)
+	);
+
+	/** Les cinq pistes de reformulation, telles que le gel les énumère. */
+	const PISTES = ['mot de passe', 'accès', 'salle de réunion', 'réseau', 'support'];
+</script>
+
+<!--
+	Le témoin de fraîcheur, fabrique unique de la vue — `temoinFraicheur()` du
+	gel. Le libellé accompagne TOUJOURS la jauge : l'information ne passe jamais
+	par la couleur seule (RG-M18-09).
+-->
+{#snippet temoin(n: Note)}<span class="temoin {classeTemoin(n.fraicheur)}"
+		><span class="temoin__jauge" aria-hidden="true"
+			>{#each [0, 1, 2] as rang (rang)}<i
+					class={rang < barresFraicheur(n.fraicheur) ? 'plein' : undefined}
+				></i>{/each}</span
+		><span class="temoin__txt">{libelleFraicheur(n)}</span></span
+	>{/snippet}
+
+<!-- Un texte, avec les termes de la requête marqués — `surligner()` du gel. -->
+{#snippet marque(
+	texte: string,
+	q: string
+)}{#each segmenter(texte, q) as s, rang (rang)}{#if s.marque}<mark>{s.texte}</mark
+			>{:else}{s.texte}{/if}{/each}{/snippet}
+
+<!--
+	La carte de résultat, variante PUBLIQUE : une amputation, jamais une
+	réécriture. Ni brouillon, ni visibilité, ni marquage de registre, ni
+	rangement interne — seul le domaine est exposé.
+-->
+{#snippet carte(n: Note, q: string, index: number)}
+	<!--
+		AUCUN BLANC ENTRE LES NŒUDS DE LA CARTE, et il doit le rester : le relevé
+		d'ordre de tabulation du niveau 1 construit le nom accessible sur
+		`textContent`, où un blanc inséré par le formateur se voit. Mesuré : trois
+		états en échec de structure pour cette seule cause.
+	-->
+	<!-- prettier-ignore -->
+	<a class="carte carte--publique" href="#" data-index={index}
+		><div class="carte__haut"
+			><h2 class="carte__titre">{@render marque(n.titre, q)}</h2><span class="past past--type">{n.type === 'Fiche' ? `Fiche ${n.typeFiche}` : n.type}</span
+		></div
+		>{#if n.type === 'Signet'}<div class="marque-signet" style="margin-bottom:var(--e-2)">↗ {n.url}</div>{/if}<p class="carte__extrait">{@render marque(n.extrait, q)}</p
+		><div class="carte__signal"
+			>{@render temoin(n)}<span class="carte__revision" data-jamais={n.revise ? undefined : 'oui'}>{n.revise ? `Révisé le ${n.revise}` : 'Jamais révisé'}</span
+		></div
+		><div class="carte__pied"
+			><span class="carte__chemin"><b>{n.domaine}</b></span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{nombreFr(n.vues)} consultations</span
+			>{#if n.pj}<span class="sep">·</span><span>{n.pj} {n.pj > 1 ? 'pièces jointes' : 'pièce jointe'}</span>{/if}</div
+		></a
+	>
+{/snippet}
+
+<a class="saut-contenu" href="#recherche">Aller à la recherche</a>
+
+<div class="public app" id="app">
+	<header class="chapeau">
+		<a class="marque" href="#" aria-label="Codicillus — accueil public">
+			<span class="marque__sceau" aria-hidden="true">C</span>
+			<span class="marque__nom">Codicillus</span>
+		</a>
+		<!-- Accès connexion : discret, pour les personnes qui ont déjà un compte. -->
+		<a class="btn btn--discret" href="#">Se connecter</a>
+	</header>
+
+	<main class="introuvable">
+		<!--
+			Message : pas de code d'erreur brut, pas de jargon. La formulation couvre
+			indistinctement les deux cas — inexistant et non public — de sorte
+			qu'aucune déduction n'est possible (ADR-007, RG-M18-14).
+		-->
+		<h1>Cette page n'est pas accessible.</h1>
+		<p class="introuvable__txt">
+			L'adresse demandée ne correspond à aucun guide public. Soit elle n'existe pas, soit elle a été
+			déplacée, soit son contenu est réservé aux équipes techniques. Dans tous les cas, la recherche
+			ci-dessous couvre l'ensemble de ce qui est ouvert à tous.
+		</p>
+
+		<div class="adresse-demandee">
+			<span class="etiq">Adresse demandée</span>
+			<span id="adresse">{resolution.adresse}</span>
+		</div>
+
+		<div class="champ-public introuvable__champ" id="recherche">
+			<svg
+				width="22"
+				height="22"
+				viewBox="0 0 16 16"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.6"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5L14 14" /></svg
+			>
+			<!-- svelte-ignore a11y_autofocus -->
+			<input
+				type="search"
+				id="saisie"
+				autocomplete="off"
+				spellcheck="false"
+				autofocus
+				value={resolution.requete}
+				placeholder="Que cherchiez-vous ?"
+				aria-label="Rechercher dans les guides publics"
+			/>
+			<button
+				class="champ-public__effacer"
+				id="effacer"
+				aria-label="Effacer la recherche"
+				hidden={!resolution.requete}
+			>
+				<svg
+					width="18"
+					height="18"
+					viewBox="0 0 16 16"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8" /></svg
+				>
+			</button>
+		</div>
+		<p class="introuvable__aide" id="aide" hidden={!aideVisible}>
+			Les termes de l'adresse ont été repris dans le champ. Modifiez-les si besoin.
+		</p>
+
+		<div class="resultats" id="resultats">
+			{#if requete.length >= 2}{#if resultats.length === 0}<div class="zone-vide">
+						<div class="zone-vide__titre">Rien de public pour <em>« {requete} »</em></div>
+						<p>
+							Essayez d'autres mots, ou décrivez votre besoin à l'assistance — votre demande
+							signalera le guide manquant.
+						</p>
+						<div class="reformuler">
+							{#each PISTES as piste (piste)}<button class="piste">{piste}</button>{/each}
+						</div>
+					</div>{:else}<div class="etiq" style="margin-bottom:var(--e-2)">
+						{resultats.length}{resultats.length > 1
+							? ' guides publics correspondent'
+							: ' guide public correspond'}
+					</div>
+					{#each resultats.slice(0, 4) as n, index (n.id)}{@render carte(
+							n,
+							requete,
+							index
+						)}{/each}{/if}{/if}
+		</div>
+
+		<div class="issues">
+			<a class="btn btn--principal" href="#" id="accueil">Revenir à l'accueil</a>
+			<!--
+				L'adresse du portail d'assistance est une donnée de configuration
+				(« adresse externe configurée en console », `V-04:2205`) : aucune source
+				du dépôt ne la porte, et `docs/routes.md` n'en connaît pas. La fabriquer
+				serait un comblement.
+			-->
+			<a class="btn" href="#" id="ticket">
+				Ouvrir un ticket d'assistance
+				<svg
+					width="13"
+					height="13"
+					viewBox="0 0 16 16"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.6"><path d="M6 3h7v7M13 3L4 12" /></svg
+				>
+			</a>
+		</div>
+
+		<!-- Rattrapage : une sortie concrète plutôt qu'une impasse. -->
+		<section class="rattrapage">
+			<span class="etiq">Les guides les plus consultés</span>
+			<ul class="rattrapage__liste" id="populaires">
+				{#each populaires as n (n.id)}<li>
+						<a href="#"><span class="rattrapage__nom">{n.titre}</span>{@render temoin(n)}</a>
+					</li>{/each}
+			</ul>
+		</section>
+	</main>
+
+	<footer class="pied-public">
+		<div class="pied-public__int">
+			<span class="etiq">Codicillus · Direction technique</span>
+			<a href="#">Se connecter</a>
+		</div>
+	</footer>
+</div>
+
+<div class="notifs" id="notifs" role="status" aria-live="polite"></div>
