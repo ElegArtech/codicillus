@@ -366,18 +366,18 @@ Sans cette réservation, une note intitulée « Nouvelle » produirait `/notes/n
 | `/notes/{id}` et sous-routes | **404 V-04** | **404 V-26** | V-14… | V-14… |
 | `/univers/…` | **404 V-04** | **404 V-26** | V-10… | V-10… |
 | `/domaines/…` | **404 V-04** | **404 V-26** | **404 V-26** | **404 V-26** *(ARB-001 : forme raccourcie non implémentée — la réponse ne dépend d'aucun droit)* |
-| `/cartographie`, `/carte-mentale` | **404 V-04** *(ARB-007 : pas de cartographie publique)* | périmètre rabattu (RG-M09-02) | V-19… | V-19… |
-| `/importer` | **404 V-04** | **404 V-26** *(sans droit de rédaction)* | V-24 | V-24 |
-| `/mon-profil` | **404 V-04** | V-25 | V-25 | V-25 |
-| `/console/…` | **404 V-04** | **404 V-26** | **404 V-26** | V-27… |
-| `/bibliotheque` | **404 V-04** | **404 V-26** | **404 V-26** | V-41 *(ARB-002 ; V-38, V-39 et V-40 en sont les sections, sans adresse propre)* |
+| `/cartographie`, `/carte-mentale` | **302 → `/connexion?motif=page-protegee`** *(ARB-052 ; ARB-007 ne parle que du connecté)* | périmètre rabattu (RG-M09-02) | V-19… | V-19… |
+| `/importer` | **302 → `/connexion?motif=page-protegee`** *(ARB-052)* | **404 V-26** *(sans droit de rédaction)* | V-24 | V-24 |
+| `/mon-profil` | **302 → `/connexion?motif=page-protegee`** *(ARB-052)* | V-25 | V-25 | V-25 |
+| `/console/…` | **302 → `/connexion?motif=page-protegee`** *(ARB-052)* | **404 V-26** | **404 V-26** | V-27… |
+| `/bibliotheque` | **302 → `/connexion?motif=page-protegee`** *(ARB-052 ; ARB-002 ne parle que du connecté)* | **404 V-26** | **404 V-26** | V-41 *(ARB-002 ; V-38, V-39 et V-40 en sont les sections, sans adresse propre)* |
 
 Quatre principes sont appliqués sans exception :
 
 1. **RG-ACC-04 / ADR-007** — refus et inexistence passent par le **même chemin de code**. Il n'existe pas de branche « interdit ».
 2. **RG-ACC-01 / ADR-006** — le filtrage est calculé côté serveur et projeté dans l'index (`STACK-TECHNIQUE.md §4.2`). Une adresse construite à la main ne rapporte jamais un contenu interdit.
 3. **Point dur n° 7 / P-09 / ADR-011** — une action interdite n'est pas affichée, et une entrée de navigation interdite n'est pas rendue. Une route interdite n'est pas plus signalée : elle n'existe pas, du point de vue de l'utilisateur.
-4. **ARB-005** — cette matrice relève **entièrement** du régime indiscernable : elle porte sur la résolution de **ressources entières**. L'indiscernabilité y est **aussi temporelle** : un écart de latence entre un refus et une inexistence est une fuite, au même titre qu'un code de statut distinct. L'état « sans droit » de `RG-M18-03` n'a aucune place ici — il vit dans les **zones**, au §6. En cas de doute sur la frontière, **l'indiscernable l'emporte**.
+4. **ARB-005, amendé par ARB-052** — cette matrice relève du régime indiscernable **pour les adresses de ressource** : celles qui portent un identifiant de corpus, et dont l'existence est elle-même l'information confidentielle. Les **chemins fixes de fonction** — `/importer`, `/mon-profil`, `/console/…`, `/bibliotheque`, `/cartographie`, `/carte-mentale` — ne révèlent aucun contenu : pour un **anonyme** ils redirigent vers `/connexion` en mémorisant la cible (§5.2, `UC-M16-01`), et c'est ce qui donne son déclencheur à l'état **par défaut** de la planche de V-05 (`V-05:615`). Pour un **connecté sans le droit**, ils restent indiscernables : l'information n'est plus « il faut un compte » mais « ce compte n'y a pas droit ». L'indiscernabilité y est **aussi temporelle** : un écart de latence entre un refus et une inexistence est une fuite, au même titre qu'un code de statut distinct. L'état « sans droit » de `RG-M18-03` n'a aucune place ici — il vit dans les **zones**, au §6. En cas de doute sur la frontière, **l'indiscernable l'emporte**.
 
 ---
 

@@ -27,8 +27,15 @@ pnpm test:unit            → 681 tests
 pnpm verif:gel            → 43 empreintes intactes
 ```
 
-**13 batteries réelles sur 19.** Onze vertes. `verif:menus` rouge à 81 — dette de gel arbitrée
-(`ARB-047`), qui ne se ferme que par un regel. Les six jalons restants attendent tous réellement le
+**13 batteries réelles sur 19.** **Dix vertes, DEUX ROUGES** — et la seconde a été affirmée verte
+ici pendant une journée (`ECART-044` É-1, relevé par le lot `T-012` sur sa ligne de base) :
+
+- `verif:menus` **rouge à 81** — dette de gel arbitrée (`ARB-047`), qui ne se ferme que par un regel ;
+- `verif:fraicheur` **rouge à 1** — `src/vues/V-14.svelte:345`, le libellé ne vient pas de
+  `libelleFraicheur()`. **Ce n'est pas une dette de gel : c'est un défaut de portage, et `ARB-029` en
+  porte déjà la solution complète** — rendu le 19 août, jamais appliqué. Il touche `P-01`, le premier
+  des dix principes non négociables. Aucune ligne de portage n'est jamais admise
+  (`docs/orchestration.md` §4). Les six jalons restants attendent tous réellement le
 back : `test:aller-retour`, `test:etancheite`, `test:parcours`, `mesure:budgets`,
 `test:degradation`, `exploitation:restauration`.
 

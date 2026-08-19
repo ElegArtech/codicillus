@@ -428,6 +428,41 @@ possiblement instable (3 couples sur 409 l'ont déclenchée). *(ECART-039 É-2, 
 
 ---
 
+### P-23 · Un commentaire n'est retiré du produit construit que s'il ne précède rien de retenu
+
+Citer l'adresse du mode démo **dans un commentaire** d'une route bâtie fait rougir
+`verif:demo:hors-production` sur **trois fichiers produits** — la batterie cherche la chaîne en texte
+brut, commentaires compris.
+
+**Et la raison pour laquelle les autres routes y échappent est un accident, pas une propriété.** Le
+regroupeur conserve un commentaire qui précède une instruction **retenue** ; les routes bâties
+existantes s'en tirent seulement parce que leur commentaire ne précède que des imports. **Un `$props()`
+de plus, et la trace revient.** C'est l'écart É-2 de `T-070` qui se rejoue au lot suivant.
+
+La parade est celle de **P-20**, et elle vaut mot pour mot ici : **décrire une forme, ne jamais la
+citer.** *(T-012, 20/08/2026)*
+
+---
+
+### P-24 · `verif/preparer-copie.sh` lie `node_modules`, et l'hypothèse qui le justifiait est tombée
+
+Le script se justifie en propres termes : *« le lien est sûr ici parce qu'aucun lot n'installe de
+dépendance »*. **`T-012` en a installé une** — `@node-rs/argon2`, que `STACK-TECHNIQUE.md:321`
+impose —, et l'hypothèse a cessé d'être vraie le 20 août 2026.
+
+Le geste est celui de **P-16**, et il coûte 1,1 s :
+
+```bash
+rm node_modules && pnpm install --frozen-lockfile     # AVANT tout pnpm add, dans la copie
+```
+
+**Ce que P-16 ne disait pas, et qui décide du rapatriement :** un lot qui ajoute une dépendance
+modifie aussi `package.json` **et** `pnpm-lock.yaml`. Or `pnpm add` **réordonne** les dépendances
+existantes. Deux lots parallèles qui touchent `package.json` ne se rapatrient donc **jamais par `cp`** :
+la fusion est à la main, ligne par ligne. *(T-012, 20/08/2026)*
+
+---
+
 ## 7. Protocole de fin de tâche
 
 ### Le protocole UI en quatre temps
