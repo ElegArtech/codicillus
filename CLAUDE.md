@@ -27,6 +27,7 @@ Ils sont à lire **avant** toute tâche, et ils priment sur `cadrage/` pour les 
 |---|---|
 | `docs/arbitrages.md` | Les décisions du commanditaire, numérotées `ARB-xxx`. Seule autorité au-dessus de l'ordre de préséance quand les sources se contredisent ou se taisent. Ce qu'un arbitrage ferme n'a plus à être demandé. |
 | `docs/errata-cadrage.md` | Les affirmations du cadrage révélées fausses, numérotées `E-xx`, chacune rattachée à l'arbitrage qui la valide. |
+| `docs/dossier-regel.md` | **Ce qui attend le geste du commanditaire** : les défauts que les maquettes portent elles-mêmes, consolidés et chiffrés. Aucun lot ne peut les fermer — combler est interdit, diverger est rouge. Tenu à jour à chaque lot. |
 
 **Pourquoi un errata plutôt qu'une correction des sources.** Éditer `cadrage/` pour y corriger un fait détruirait la propriété qui rend le dispositif opposable : l'immutabilité et la diffabilité du gel. Les sources restent ce qu'elles étaient ; l'errata dit ce qui, depuis, s'est révélé inexact. Aucun agent d'exécution n'y écrit.
 
