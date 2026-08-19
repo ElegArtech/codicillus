@@ -21,7 +21,17 @@
    Ce fichier ne contient que des données et des sélecteurs sans effet de bord.
    Les fonctions de calcul des maquettes (fraîcheur, recherche, sous-graphe,
    arborescences…) relèvent du code applicatif, pas du jeu de semence.
+
+   UNE SEULE DÉPENDANCE SORT DE CE FICHIER, et elle est là pour P-01. `CONFIG`
+   porte les deux seuils de fraîcheur ; les écrire en littéral en faisait un
+   second jeu de seuils que rien ne liait à celui de l'implémentation unique —
+   ce qu'ADR-005 interdit nommément. `SEUILS_PAR_DEFAUT` de
+   `src/lib/fraicheur.ts` est la définition ; `CONFIG` en dérive (voir plus
+   bas). C'est l'import d'une CONSTANTE, pas d'un calcul : la règle ci-dessus
+   tient toujours. Aucun cycle n'en naît — `fraicheur.ts` ne prend d'ici qu'un
+   `import type`, effacé à la compilation.
    ========================================================================== */
+import { SEUILS_PAR_DEFAUT } from '../src/lib/fraicheur.js';
 
 /* ── Date de référence ─────────────────────────────────────────────────────
    Les maquettes affichent « Vérifié il y a 12 jours » à partir d'un couple
@@ -2124,10 +2134,24 @@ export const DISTINCTIONS: readonly Distinction[] = [
 ];
 
 /** Les seuils de fraîcheur ne sont pas décoratifs : c'est d'eux que dépend le
- *  niveau affiché par le témoin sur chaque note. Le corpus leur est cohérent. */
+ *  niveau affiché par le témoin sur chaque note. Le corpus leur est cohérent.
+ *
+ *  ILS NE SONT PAS ÉCRITS ICI, ET LE SENS DE LA DÉRIVATION EST DÉLIBÉRÉ. Le gel
+ *  porte `window.CONFIG.seuilFrais = 90` et `seuilVieillissant = 180` sur ses
+ *  treize maquettes ; `src/lib/fraicheur.ts` en fait `SEUILS_PAR_DEFAUT`, et
+ *  c'est LUI la définition — ADR-005 : « les seuils sont des paramètres de
+ *  cette implémentation, jamais des constantes locales », et toute duplication
+ *  littérale est interdite « ailleurs que dans la configuration lue par
+ *  l'implémentation unique ». `CONFIG` est la configuration de l'INSTANCE de
+ *  démonstration : à seuils non touchés, elle vaut les valeurs par défaut du
+ *  produit. Elle les LIT, elle ne les redit pas.
+ *
+ *  Les valeurs rendues sont inchangées : 90 et 180, comme aux treize maquettes.
+ *  Les cinq autres réglages restent des données de gel, sans équivalent
+ *  applicatif à quoi les rattacher. */
 export const CONFIG: Configuration = {
-	seuilFrais: 90,
-	seuilVieillissant: 180,
+	seuilFrais: SEUILS_PAR_DEFAUT.frais,
+	seuilVieillissant: SEUILS_PAR_DEFAUT.vieillissant,
 	versionsMax: 50,
 	portailAssistance: 'https://assistance.exemple.fr/nouveau-ticket',
 	motFiche: 'Fiche',

@@ -14,11 +14,25 @@
 	 *
 	 * LES QUATRE COUPLES DE SEUILS SONT DES DONNÉES DE MAQUETTE, pas de
 	 * corpus : `{ actuel: [90, 180], severe: [30, 60], large: [120, 240],
-	 * invalide: [120, 90] }` (`V-33:3228`). Elles sont recopiées telles quelles
-	 * et déclarées comme littéraux du gel — la même situation que les trois
-	 * adresses de planche de V-26. Le couple `actuel` REDIT `CONFIG.seuilFrais`
-	 * et `CONFIG.seuilVieillissant` du corpus, et c'est cohérent : c'est la
-	 * position « en vigueur ».
+	 * invalide: [120, 90] }` (`V-33:3228`) — trois d'entre eux, du moins. Les
+	 * couples `severe`, `large` et `invalide` sont des réglages HYPOTHÉTIQUES,
+	 * choisis pour la revue : littéraux du gel, recopiés tels quels, la même
+	 * situation que les trois adresses de planche de V-26.
+	 *
+	 * `actuel` N'EN EST PAS UN. Le gel l'étiquette « 90 / 180 · en vigueur »
+	 * (`V-33:1427`) : ce n'est pas un quatrième réglage d'essai qui vaudrait
+	 * 90 / 180 par coïncidence, c'est LA CONFIGURATION DE L'INSTANCE, celle que
+	 * `CONFIG` porte. L'écrire en littéral en faisait un second jeu de seuils
+	 * que rien ne liait au premier — ADR-005 interdit « toute duplication des
+	 * seuils sous forme de constante littérale ailleurs que dans la
+	 * configuration lue par l'implémentation unique ». Il en DÉRIVE désormais,
+	 * et la chaîne de dérivation est écrite en un seul sens :
+	 *
+	 *   `SEUILS_PAR_DEFAUT` (`src/lib/fraicheur.ts`, l'implémentation unique)
+	 *      → `CONFIG.seuil*` (`seeds/corpus.ts`, la configuration de l'instance)
+	 *         → `SEUILS_DE_PLANCHE.actuel` (ici, la position « en vigueur »)
+	 *
+	 * Les valeurs rendues sont inchangées : 90 et 180 des deux côtés.
 	 *
 	 * LE FORMULAIRE EST NOURRI PAR `CONFIG` DE `seeds/corpus.ts` — les sept
 	 * réglages, aucun en dur : seuils, versions conservées, portail
@@ -91,12 +105,14 @@
 	const { vecteur, notes }: Proprietes = $props();
 
 	/**
-	 * LES QUATRE POSITIONS DE LA PLANCHE — littéral du gel (`V-33:3228`),
-	 * recopié et non fabriqué. Aucune table du corpus ne les porte : ce sont
-	 * des réglages hypothétiques, choisis pour la revue.
+	 * LES QUATRE POSITIONS DE LA PLANCHE. Les trois dernières sont des réglages
+	 * hypothétiques, littéral du gel (`V-33:3228`), recopié et non fabriqué :
+	 * aucune table du corpus ne les porte. La première, `actuel`, est au
+	 * contraire la position « en vigueur » — elle DÉRIVE de `CONFIG`, et n'est
+	 * pas un second jeu de seuils (P-01, ADR-005 ; voir l'en-tête).
 	 */
 	const SEUILS_DE_PLANCHE: Record<string, readonly [number, number]> = {
-		actuel: [90, 180],
+		actuel: [CONFIG.seuilFrais, CONFIG.seuilVieillissant],
 		severe: [30, 60],
 		large: [120, 240],
 		invalide: [120, 90]
