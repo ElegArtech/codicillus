@@ -587,6 +587,27 @@ function lireScript(source, declarations, comptes) {
 			for (const d of declarationsDe(forme)) ajouter(d, 'attribut');
 		}
 	}
+
+	/* CINQUIÈME FORME — ÉCART-028.
+	   Les quatre formes ci-dessus supposent que le nom de l'attribut est LITTÉRAL.
+	   Le gel de V-41 pose ses styles par `b.setAttribute(k, attrs[k])` — nom
+	   VARIABLE, dans une boucle sur un objet d'attributs. La valeur
+	   `outline:2px solid var(--c-accent);outline-offset:2px` est donc bien au gel,
+	   mot pour mot, et échappait pourtant à l'ensemble clos.
+
+	   ARB-016 dit : « la valeur doit figurer dans la maquette gelée ». Les formes
+	   ne sont que la MANIÈRE de l'y trouver — et une manière incomplète refusait
+	   une valeur que l'arbitrage admet.
+
+	   Ce balayage récolte donc toute chaîne littérale de la maquette qui se lit
+	   comme une liste de déclarations CSS. La borne reste la même et elle est
+	   entière : la chaîne doit EXISTER dans le gel. On ne peut pas inventer un
+	   style, on peut seulement en trouver un que les quatre formes manquaient. */
+	for (const m of source.matchAll(/(['"])((?:[-a-zA-Z]+\s*:\s*[^'";{}]+;?\s*){1,8})\1/g)) {
+		const brut = m[2].trim();
+		if (!/^[-a-zA-Z]+\s*:/.test(brut)) continue;
+		for (const d of declarationsDe(brut)) ajouter(d, 'litteral');
+	}
 }
 
 /**

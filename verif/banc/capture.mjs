@@ -185,7 +185,7 @@ export async function mesurer(page, { zone = null, zones = [], masques = [] }) {
 		releves.push({
 			nom: cible.nom,
 			rendu,
-			aria: sansAdresses(await racine.ariaSnapshot()),
+			aria: await sansZonesMasquees(page, sansAdresses(await racine.ariaSnapshot()), masques),
 			tabulation: await ordreDeTabulation(page, cible.selecteur ? cible : null),
 			png: !rendu
 				? null
@@ -243,13 +243,30 @@ async function ordreDeTabulation(page, zone) {
 			.filter((e) => Number(e.getAttribute('tabindex')) > 0)
 			.sort((a, b) => Number(a.getAttribute('tabindex')) - Number(b.getAttribute('tabindex')));
 		const naturel = candidats.filter((e) => !(Number(e.getAttribute('tabindex')) > 0));
+		/* ÉCART-028 — un CONTRÔLE DE FORMULAIRE ne se nomme jamais par son
+		   `textContent`. C'était un défaut de l'instrument, et il rendait le
+		   niveau 1 INSATISFIABLE par un squelette sans script :
+
+		   la maquette pose la valeur d'un `<textarea>` par propriété
+		   (`f-desc.value = …`), donc son `textContent` reste VIDE ; une
+		   application statique n'a que le contenu du nœud pour porter cette
+		   valeur — et l'instantané ARIA du niveau 1 l'EXIGE. Les deux relevés
+		   du même niveau se contredisaient : valeur ⇒ `textContent` non vide.
+
+		   L'asymétrie était dans l'instrument, pas dans les vues : un
+		   `<input value="…">` ne posait pas la question, son contenu étant vide.
+		   Cinq vues sont concernées — V-27 à V-31, état `form-edition` —, et
+		   TROIS LOTS INDÉPENDANTS l'ont diagnostiqué sans emprunter le
+		   contournement qu'ils avaient pourtant identifié (poser `aria-label=""`,
+		   qui aurait fait taire le relevé sans rien changer au rendu). */
+		const CONTROLES = ['input', 'textarea', 'select'];
 		const nom = (e) =>
 			(
 				e.getAttribute('aria-label') ??
 				(e.getAttribute('aria-labelledby')
 					? (document.getElementById(e.getAttribute('aria-labelledby'))?.textContent ?? '')
 					: null) ??
-				e.textContent ??
+				(CONTROLES.includes(e.tagName.toLowerCase()) ? null : e.textContent) ??
 				e.getAttribute('placeholder') ??
 				e.getAttribute('title') ??
 				''
@@ -298,4 +315,48 @@ function sansAdresses(instantane) {
 			.filter((ligne) => !/^\s*-?\s*\/url:/.test(ligne))
 			.join('\n')
 	);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ÉCART-028 — un masque doit valoir pour les DEUX niveaux.
+
+   `verif/masques.json` déclare les zones qu'aucune implémentation ne peut
+   reproduire — le mot de passe temporaire de V-32, tiré par `Math.random()`.
+   Le masque était passé à `page.screenshot({ mask })` : il ne couvrait donc
+   QUE le niveau 2. Le niveau 1 compare les instantanés ARIA caractère par
+   caractère, et la valeur y figurait — deux états de V-32 échouaient sur elle.
+
+   Un masque qui ne vaut qu'à moitié est pire qu'un masque absent : il donne
+   l'illusion que la zone est neutralisée, et le lot cherche la cause ailleurs.
+
+   Le texte des zones masquées est remplacé par un jeton constant, IDENTIQUE
+   des deux côtés — jamais retiré, sans quoi la présence du nœud cesserait
+   d'être comparée.
+   ───────────────────────────────────────────────────────────────────────────── */
+async function sansZonesMasquees(page, instantane, masques) {
+	if (!masques?.length) return instantane;
+	const textes = await page.evaluate(
+		(sels) =>
+			sels
+				.flatMap((s) => [...document.querySelectorAll(s)])
+				/* Un contrôle de formulaire porte sa valeur dans `value`, jamais dans
+				   son contenu — c'est la même asymétrie que celle qui rendait le
+				   niveau 1 insatisfiable (voir `nom()` ci-dessus). */
+				.map((e) =>
+					(
+						(e instanceof HTMLInputElement || e instanceof HTMLTextAreaElement
+							? e.value
+							: e.textContent) ?? ''
+					)
+						.replace(/\s+/g, ' ')
+						.trim()
+				)
+				.filter((x) => x.length > 2),
+		masques
+	);
+	let sortie = instantane;
+	for (const texte of textes) {
+		sortie = sortie.split(texte).join('‹masqué›');
+	}
+	return sortie;
 }
