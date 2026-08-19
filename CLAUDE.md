@@ -188,7 +188,40 @@ Un niveau de boucle qui dépasse son budget est un **défaut de harnais** : au-d
 
 *Vide au départ. Cette section est alimentée par la capitalisation (`cadrage/PLAN-DE-REALISATION.md` §10) : à la clôture de chaque lot, tout piège d'environnement ou convention non évidente rencontré par un agent y est inscrit — l'agent rédige, l'humain arbitre. Une décision d'architecture ou une interdiction va dans `docs/adr/` ; un motif d'interface va dans `docs/DESIGN.md` ; un écart de spec va en `cadrage/`, par arbitrage humain uniquement.*
 
-*(aucune entrée à ce jour)*
+### P-1 · Un guetteur `pgrep -f` se trouve lui-même et n'aboutit jamais
+
+`until ! pgrep -f "verif/maquette.mjs"; do sleep 10; done` **ne se termine pas** : la ligne de
+commande du shell guetteur contient elle-même le motif, `pgrep` la trouve, et l'attente expire.
+Employer `pgrep -f "node verif/maquette.mjs"`, ou `pgrep -x node` filtré sur le répertoire de
+travail. *(P-9, 19/08/2026)*
+
+### P-2 · Une copie de travail fraîche déclare « no tests » au lieu d'échouer
+
+`.svelte-kit/tsconfig.json` est **généré** et ignoré par git. Sans `svelte-kit sync`, vitest rend
+`Tsconfig not found` puis **« no tests »** — un faux vert traître, qu'un lecteur pressé lit
+« rien à faire » là où la commande a échoué. `verif/preparer-copie.sh` lance la synchronisation ;
+ne pas créer de copie à la main. *(T-101d, 19/08/2026)*
+
+### P-3 · Le panneau `tiroir-form` des consoles ne glisse jamais, et c'est le gel
+
+La seule règle qui l'ouvre est `.app[data-form="ouvert"] .tiroir-form`, or le panneau vit **hors de
+`div.app`** : le sélecteur ne peut pas s'appliquer. Le panneau reste hors fenêtre et **ne pèse aucun
+pixel** — le niveau 1 en est le seul juge. **Un implémenteur qui « réparerait » cela rendrait six
+vues rouges.** *(P-2, 19/08/2026)*
+
+### P-4 · `autofocus` ne survit pas à `stabiliser()` hors dialogue
+
+Le banc floute l'élément actif au chargement. `autofocus` ne prend que dans un dialogue révélé, où
+`showModal()` est appelé **après** la stabilisation. Inutile de le poser sur un nœud de page : il
+sera perdu, et la cause cherchée ailleurs. *(P-2, 19/08/2026)*
+
+### P-5 · Une règle qu'aucun cas n'exerce est une règle dont on ignore si elle marche
+
+Le filtre d'adresses d'ARB-013 fut inerte pendant huit lots : il visait `/url:` quand Playwright
+imprime `- /url:`. Personne ne l'a vu parce que toutes les vues portaient `href="#"` — la ligne
+comparée était identique des deux côtés, et le filtre inerte rendait le même verdict qu'un filtre
+qui marche. **Toute règle nouvelle doit être éprouvée sur un cas qui la sollicite**, sinon elle
+n'est pas posée, elle est espérée. *(P-9, 19/08/2026)*
 
 ---
 
