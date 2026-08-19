@@ -721,3 +721,38 @@ choisit pas la référence contre laquelle il sera prouvé.
 >
 > Une règle qui rend un défaut détectable vaut toujours mieux qu'une règle qui l'ignore par
 > prudence — mais encore faut-il ne pas se tromper sur le défaut qu'elle rend détectable.
+
+---
+
+## ARB-023 — Troisième amendement borné : l'enveloppe de contenu
+**19 août 2026** — arbitrage délégué. Répond à `ECART-024` É-1. **Portée : 11 vues.**
+
+**Le fait.** Le gabarit rend `<main>` en **enfant direct de `div.cadre`, sans frère**. **Onze
+maquettes** intercalent un conteneur :
+
+- **V-27 à V-36** — `div.cadre > div.console > (aside.nav2, main.travail#travail)` ;
+- **V-41** — `div.cadre > div.biblio > (nav.sommaire-b#sommaire, main.corps-b#corps)`.
+
+Ce sont des **grilles** : `.biblio` fait `208px minmax(0,1fr)`. Mesuré : le contenu de V-41 passe de
+`480 / 936` à `272 / 1012` sans l'enveloppe, celui de V-27 de `492 / 948` à `248 / 1180`. À seuil
+zéro, **les états divergent avant même la comparaison de pixels** — les découpes n'ont pas les mêmes
+dimensions.
+
+**Décision. Un amendement unique couvrant les onze vues, puis regel.** Deux propriétés : la classe
+de l'enveloppe autour de `<main>`, et le nœud rendu dans l'enveloppe avant `<main>`.
+
+**Pourquoi ni le relevé ni P-0 ne l'ont vu, et c'est la leçon.** Le contrôle d'amendements du relevé
+fait six vérifications — forme, attributs de `div.app`, rail courant, superposition, chevron,
+attributs de `<main>`. **Aucune ne regarde le parent ni les frères de `<main>`.**
+
+C'est la **troisième occurrence** du même motif : `ECART-022` É-1 (le libellé du chevron déduit d'un
+indicateur d'ouverture), `ECART-023` É-1 (l'état modal à déclencheur, que le relevé ne joue pas),
+et celle-ci. À chaque fois **l'instrument mesure juste, et la colonne lue n'est pas la bonne**.
+
+**La règle qui en découle, et qui vaut pour tous les relevés à venir** : un relevé ne prouve que ce
+qu'il regarde. Sa valeur ne tient pas à sa mécanicité mais à **l'exhaustivité de ce qu'il
+interroge** — et cette exhaustivité, elle, n'est pas mécanisable. Tout relevé doit donc énoncer ce
+qu'il **ne** regarde pas, comme les sources d'étalonnage le font depuis `ECART-015`.
+
+**Effet immédiat** : P-1 est arrêté au temps 1, P-2 est prévenu avant d'y buter. Les deux reprennent
+au temps 2 sans rien réextraire.
