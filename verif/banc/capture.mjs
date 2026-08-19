@@ -284,8 +284,18 @@ async function ordreDeTabulation(page, zone) {
    comparés sans tolérance — le niveau 1 demeure un échec sec.
    ───────────────────────────────────────────────────────────────────────────── */
 function sansAdresses(instantane) {
-	return instantane
-		.split('\n')
-		.filter((ligne) => !/^\s*\/url:/.test(ligne))
-		.join('\n');
+	return (
+		instantane
+			.split('\n')
+			/* ÉCART-025 É-1 — le motif d'origine, /^\s*\/url:/, N'A JAMAIS RETIRÉ UNE LIGNE.
+		   Playwright imprime l'instantané en liste : « - /url: /reel », avec un tiret
+		   que le motif ne prévoyait pas. ARB-013 était donc INERTE depuis sa pose, et
+		   personne ne l'a vu parce que les quatre vues livrées portent toutes des
+		   href="#", comme le gel : la ligne comparée était identique des deux côtés.
+		   Le premier lot à câbler une adresse réelle l'a découvert — 6 des 7 états de
+		   V-10 échouaient au niveau 1 sur cette seule ligne.
+		   Une règle qu'aucun cas n'exerce est une règle dont on ignore si elle marche. */
+			.filter((ligne) => !/^\s*-?\s*\/url:/.test(ligne))
+			.join('\n')
+	);
 }
