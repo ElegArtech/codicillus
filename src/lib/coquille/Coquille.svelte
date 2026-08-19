@@ -120,6 +120,36 @@
 	 * classe. C'est ce qui laisse les vingt-trois autres vues à coquille, dont
 	 * les quatre livrées, à zéro pixel d'écart.
 	 *
+	 * CINQUIÈME PASSAGE — `ECART-027` É-2, lot P-0c. UNE SEULE PROPRIÉTÉ :
+	 * `apresContenu`, le nœud rendu APRÈS `<main>`.
+	 *
+	 * Le quatrième passage n'ouvrait qu'un nœud AVANT `<main>`, et seulement DANS
+	 * l'enveloppe. Relevé géométrique des 41 maquettes, 265 états, conditions du
+	 * banc, blocs hors produit retirés : sur les 34 vues à coquille, `div.cadre`
+	 * a DEUX enfants partout — `header.barre`, puis `<main>` ou l'enveloppe —
+	 * SAUF V-17 et V-18, qui en ont TROIS. Le troisième est `div.barre-etat`,
+	 * classe seule, sans autre attribut, deux enfants, boîte `248, 837, 1192, 63`
+	 * IDENTIQUE aux douze états des deux vues et aux quatre fenêtres du banc.
+	 * C'est une barre COLLANTE — `position: sticky; bottom: 0` (`V-17:1099`) —
+	 * qui occupe une place réelle : son absence n'est pas sans incidence.
+	 *
+	 * Un `div` nu ne porte NI RÔLE NI NOM ACCESSIBLE : il est invisible au
+	 * niveau 1 et fatal au niveau 2, où la comparaison échoue avant de compter un
+	 * pixel. Seule la géométrie le révèle — c'est pourquoi le relevé ci-dessus
+	 * est géométrique, et pourquoi il fallait le refaire plutôt que le déduire.
+	 *
+	 * POURQUOI UN SNIPPET, ET UN SEUL. Balise, classe et contenu appartiennent à
+	 * la vue : les deux barres d'état diffèrent au libellé près (`Métadonnées` /
+	 * `Référence`, `Enregistrer` / `Enregistrer l'Opérationnel` — `V-17:1685`,
+	 * `V-18:1976`). Le gabarit n'a donc rien à en connaître, pas même la classe —
+	 * à la différence de `classeEnveloppe`, qui décide d'une grille.
+	 *
+	 * OÙ IL EST RENDU : après `<main>`, dans le parent immédiat de `<main>` —
+	 * l'enveloppe quand la vue en déclare une, `div.cadre` sinon. AUCUNE des 41
+	 * maquettes ne cumule enveloppe et nœud après `<main>` ; la règle est unique
+	 * parce qu'un contrat à deux régimes serait un piège pour le lot suivant, non
+	 * parce qu'un besoin l'exige.
+	 *
 	 * LE GABARIT EST REGELÉ. Un seul lot est encore autorisé à y revenir :
 	 * T-106 / P-8, pour monter la palette V-09 sur le champ de recherche de la
 	 * barre. Tout autre lot qui croit devoir y écrire déclare un écart.
@@ -305,6 +335,21 @@
 		 * place où le rendre, et il n'est pas rendu.
 		 */
 		avantContenu?: Snippet;
+		/**
+		 * LE NŒUD RENDU APRÈS `<main>` (`ECART-027` É-2), dans le parent immédiat
+		 * de `<main>` : l'enveloppe si la vue en déclare une, `div.cadre` sinon.
+		 *
+		 * DEUX MAQUETTES sur 41 en portent un, et c'est le même : `div.barre-etat`
+		 * de V-17 et V-18 — classe seule, deux enfants, `position: sticky; bottom: 0`
+		 * (`V-17:1099`, `V-18:1099`), boîte `248, 837, 1192, 63` aux douze états des
+		 * deux vues et aux quatre fenêtres. Leur contenu diffère : il appartient à la
+		 * vue, et le gabarit ne pose ni balise ni classe.
+		 *
+		 * Absent — les 32 autres vues à coquille, dont les 19 vues à coquille déjà
+		 * livrées —, RIEN n'est rendu après `<main>` : le rendu des quatre passages
+		 * précédents, préservé à l'octet du DOM significatif.
+		 */
+		apresContenu?: Snippet;
 	}
 
 	const {
@@ -331,7 +376,8 @@
 		superposition,
 		accueilCourant = false,
 		classeEnveloppe,
-		avantContenu
+		avantContenu,
+		apresContenu
 	}: Proprietes = $props();
 
 	/**
@@ -407,8 +453,8 @@
 
 		{#if classeEnveloppe}<div class={classeEnveloppe}>
 				{#if avantContenu}{@render avantContenu()}{/if}
-				{@render zoneDeContenu()}
-			</div>{:else}{@render zoneDeContenu()}{/if}
+				{@render zoneDeContenu()}{#if apresContenu}{@render apresContenu()}{/if}
+			</div>{:else}{@render zoneDeContenu()}{#if apresContenu}{@render apresContenu()}{/if}{/if}
 	</div>
 </div>
 
