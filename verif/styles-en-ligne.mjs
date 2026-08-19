@@ -54,6 +54,36 @@
  *     temps se soumettre à lui.
  *
  * ═════════════════════════════════════════════════════════════════════════
+ * LES RESSOURCES PARTAGÉES — ARB-022, ET UN SECOND VERROU
+ *
+ * La première évasion ci-dessus se lisait aussi comme une LIMITE, et elle a
+ * coûté deux fois (`ECART-021`, `ECART-022` É-5) :
+ *
+ *   • la convergence de `<span style="line-height: 0">` vers le gel a été
+ *     REFUSÉE par son exécutant, bien que MESURÉE GRATUITE, faute de portée —
+ *     un lot a renoncé à ressembler à la maquette parce que la règle ne savait
+ *     pas le lui reconnaître ;
+ *   • le gabarit de coquille écrivait `flex: 0 0 auto` là où le gel de V-37
+ *     écrit `flex: none`, et RIEN NE L'A DÉTECTÉ.
+ *
+ * LA PORTÉE TROP ÉTROITE NE PROTÈGE PAS, ELLE AVEUGLE. ARB-022 l'étend donc
+ * aux ressources partagées dont la maquette de référence est IDENTIFIABLE ET
+ * DÉCLARÉE — pour `src/lib/coquille/`, c'est V-37, et l'instrument le savait
+ * déjà : `ensembleDuGel('V-37')` contient `line-height:0`.
+ *
+ * LE VERROU CHANGE DE NATURE, IL NE DISPARAÎT PAS. Une ressource partagée n'a
+ * pas de nom qui la désigne, donc le nommage ne peut plus servir de verrou. Le
+ * rattachement ressource → maquette vit dans
+ * `verif/references/preuve-par-le-gel.json`, en ÉCRITURE HUMAINE SEULE : un
+ * agent ne choisit pas la référence contre laquelle il sera prouvé, sans quoi
+ * il rattacherait son fichier à la maquette la plus permissive du dépôt.
+ *
+ * CE QUI NE CHANGE PAS : la valeur doit FIGURER AU GEL de la maquette de
+ * référence, sans quoi P-1 s'applique en entier. On n'invente pas un style, on
+ * le prouve. Une ressource non déclarée n'a aucune maquette qui réponde d'elle
+ * — ne rien écrire n'ouvre rien.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
  * LA GRANULARITÉ EST LA DÉCLARATION, ET ELLE NE PEUT PAS ÊTRE AUTRE CHOSE
  *
  * ARB-016 parle des « valeurs de `style` ». Comparer des ATTRIBUTS ENTIERS est
@@ -133,7 +163,7 @@
  *   node verif/styles-en-ligne.mjs V-39       le détail d'une vue
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
-import { join, relative, basename } from 'node:path';
+import { join, relative, basename, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { racine, htmlGele } from './feuilles-de-vue.mjs';
 
@@ -652,7 +682,77 @@ export function vueDe(chemin) {
 	return m ? m[1] : null;
 }
 
-/** Parcourt `src/` et rend les composants de vue présents, triés. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   LES RESSOURCES PARTAGÉES, RATTACHÉES À LEUR MAQUETTE — ARB-022
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Le rattachement ressource → maquette de référence, en ÉCRITURE HUMAINE
+ * SEULE. Un agent ne choisit pas la référence contre laquelle il sera prouvé :
+ * il pourrait sinon rattacher son fichier à la maquette la plus permissive du
+ * dépôt. Le fichier porte son propre bandeau, et le motif au long.
+ */
+export const RESSOURCES_PROUVEES = JSON.parse(
+	readFileSync(join(racine, 'verif', 'references', 'preuve-par-le-gel.json'), 'utf8')
+);
+
+/**
+ * Les entrées de rattachement, triées de la plus longue à la plus courte : le
+ * cas particulier prime le général, jamais l'inverse.
+ * @type {{ prefixe: string, maquette: string, declaration: Record<string, string> }[]}
+ */
+const RATTACHEMENTS = Object.entries(RESSOURCES_PROUVEES.ressources ?? {})
+	.map(([prefixe, declaration]) => {
+		if (!/^V-\d\d$/.test(declaration?.maquette ?? '')) {
+			throw new Error(
+				`preuve-par-le-gel : la ressource « ${prefixe} » nomme une maquette ` +
+					`« ${declaration?.maquette} » qui n'est pas au format V-xx.\n` +
+					'  Une déclaration illisible est REFUSÉE, jamais ignorée en silence (RA-01).'
+			);
+		}
+		return { prefixe: prefixe.replace(/\/+$/, ''), maquette: declaration.maquette, declaration };
+	})
+	.sort((a, b) => b.prefixe.length - a.prefixe.length);
+
+/**
+ * LA MAQUETTE QUI RÉPOND DES STYLES EN LIGNE D'UN FICHIER, ou `null`.
+ *
+ * Deux voies, et la première l'emporte :
+ *
+ *   1. LA CONVENTION DE NOMMAGE (ARB-016, P-6.4). Un fichier `V-xx.svelte` est
+ *      prouvé par `mockups/V-xx-*.html`, et le nommage est le verrou : hériter
+ *      du gel, c'est en même temps s'y soumettre au banc, pixel pour pixel.
+ *      Elle garde la priorité, y compris sous une ressource déclarée — sans
+ *      quoi il suffirait de déplacer une vue sous un dossier rattaché pour lui
+ *      changer de référence.
+ *   2. LE RATTACHEMENT DÉCLARÉ (ARB-022). Une ressource partagée n'a pas de nom
+ *      qui la désigne : `Rail.svelte` n'est la vue d'aucune maquette, il est le
+ *      portage d'une PORTION de maquette réutilisée par les 41. Le verrou n'est
+ *      donc plus le nommage mais l'ÉCRITURE HUMAINE SEULE du rattachement.
+ *
+ * @param {string} chemin chemin absolu du fichier
+ * @returns {{ vue: string, origine: 'nommage' | 'ressource',
+ *             declaration: Record<string, string> | null } | null}
+ */
+export function referenceDe(chemin) {
+	const parNom = vueDe(chemin);
+	if (parNom) return { vue: parNom, origine: 'nommage', declaration: null };
+	const relatif = relative(racine, chemin).split(sep).join('/');
+	for (const r of RATTACHEMENTS) {
+		if (relatif === r.prefixe || relatif.startsWith(r.prefixe + '/')) {
+			return { vue: r.maquette, origine: 'ressource', declaration: r.declaration };
+		}
+	}
+	return null;
+}
+
+/**
+ * Parcourt `src/` et rend tout fichier dont une maquette gelée répond des
+ * styles en ligne — composants de vue par le NOMMAGE (ARB-016) et fichiers de
+ * ressource partagée par le RATTACHEMENT DÉCLARÉ (ARB-022), dans le même
+ * relevé. Le diagnostic doit montrer ce que la batterie contrôle, sans quoi il
+ * dirait moins qu'elle.
+ */
 export function composantsDeVue() {
 	const trouves = [];
 	const base = join(racine, 'src');
@@ -661,9 +761,9 @@ export function composantsDeVue() {
 			if (entree === 'node_modules' || entree.startsWith('.')) continue;
 			const chemin = join(dossier, entree);
 			if (statSync(chemin).isDirectory()) descendre(chemin);
-			else {
-				const vue = vueDe(entree);
-				if (vue) trouves.push({ vue, chemin });
+			else if (chemin.endsWith('.svelte') || chemin.endsWith('.html')) {
+				const reference = referenceDe(chemin);
+				if (reference) trouves.push({ vue: reference.vue, origine: reference.origine, chemin });
 			}
 		}
 	};
@@ -683,9 +783,10 @@ async function diagnostiquer() {
 	);
 	if (composants.length === 0) {
 		console.log(
-			'styles-en-ligne — aucun composant de vue dans src/.\n' +
-				'  Convention : src/vues/V-xx.svelte, dont chaque attribut style="…" doit\n' +
-				'  figurer dans mockups/V-xx-*.html (P-6.4, ARB-016).'
+			'styles-en-ligne — aucun fichier rattaché à une maquette dans src/.\n' +
+				'  Deux voies : src/vues/V-xx.svelte par le nommage (P-6.4, ARB-016), et les\n' +
+				'  ressources partagées déclarées à verif/references/preuve-par-le-gel.json\n' +
+				'  (ARB-022). Chaque attribut style="…" doit figurer au gel de sa maquette.'
 		);
 		process.exit(0);
 	}
@@ -694,7 +795,7 @@ async function diagnostiquer() {
 	// aucune analyse.
 	const { PROPRIETES_CONTRAINTES } = await import('./jetons.mjs');
 	let hors = 0;
-	for (const { vue, chemin } of composants) {
+	for (const { vue, origine, chemin } of composants) {
 		const { maquette, declarations, comptes } = ensembleDuGel(vue);
 		const source = readFileSync(chemin, 'utf8');
 		const liaisons = liaisonsDuComposant(source);
@@ -716,7 +817,9 @@ async function diagnostiquer() {
 		);
 		hors += contraintes.length;
 		console.log(
-			`  ${relative(racine, chemin)} — ${maquette} : ${declarations.size} déclaration(s) ` +
+			`  ${relative(racine, chemin)} — ${maquette} ` +
+				`[${origine === 'nommage' ? 'nommage, ARB-016' : 'ressource déclarée, ARB-022'}] : ` +
+				`${declarations.size} déclaration(s) ` +
 				`au gel (${comptes.balisage} de balisage, ${comptes.cssText} de cssText, ` +
 				`${comptes.propriete} de propriété, ${comptes.attribut} d'attribut)\n` +
 				`      ${admises} déclaration(s) admise(s), ${absentes.size} hors du gel ` +

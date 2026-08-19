@@ -40,6 +40,18 @@
  *       porté. Hors de cet ensemble clos, P-1.7 et les autres contrôles P-1
  *       s'appliquent intégralement. Détail : `verif/styles-en-ligne.mjs`.
  *
+ *       ÉTENDU AUX RESSOURCES PARTAGÉES PAR ARB-022 (lot T-007e). La portée
+ *       d'ARB-016 était les 41 vues, et elle a coûté deux fois : une
+ *       convergence vers le gel REFUSÉE faute de portée (`ECART-021`), et un
+ *       `flex: 0 0 auto` là où le gel écrit `flex: none`, que RIEN N'A DÉTECTÉ
+ *       (`ECART-022` É-5). La portée trop étroite ne protège pas, elle aveugle.
+ *       Une ressource partagée n'ayant pas de nom qui la désigne, le verrou
+ *       n'est plus le nommage mais le RATTACHEMENT DÉCLARÉ, dans
+ *       `verif/references/preuve-par-le-gel.json`, en écriture humaine seule :
+ *       un agent ne choisit pas la référence contre laquelle il sera prouvé.
+ *       Ce qui ne change pas : la valeur doit figurer au gel, sans quoi P-1
+ *       s'applique en entier.
+ *
  * Ce script est un INSTRUMENT DE MESURE. Le contournement le plus économique
  * d'une vérification est de modifier la vérification
  * (règles/workflow_agentic.md §4.10).
@@ -55,7 +67,9 @@ import {
 	ensembleDuGel,
 	liaisonsDuComposant,
 	lisible,
-	vueDe
+	MARQUEUR,
+	referenceDe,
+	RESSOURCES_PROUVEES
 } from './styles-en-ligne.mjs';
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -457,10 +471,11 @@ export const PROPRIETES_CONTRAINTES = new Set([
  *
  * @param {string} source
  * @param {string} fichier
- * @param {{ maquette: string, declarations: Set<string> } | null} preuve
- *   l'ensemble clos de la maquette gelée de la vue, ou `null` quand le fichier
- *   n'est pas un composant de vue — il n'a alors rien qui le prouve, et P-1.7
- *   s'y applique en entier.
+ * @param {{ maquette: string, declarations: Set<string>, origine?: string } | null} preuve
+ *   l'ensemble clos de la maquette gelée qui répond du fichier, ou `null` quand
+ *   aucune maquette n'en répond — il n'a alors rien qui le prouve, et P-1.7 s'y
+ *   applique en entier. `origine` dit par quelle voie le rattachement est fait :
+ *   `nommage` (ARB-016) ou `ressource` (ARB-022, déclaration humaine).
  * @returns {number} le nombre de déclarations admises par le gel
  */
 function analyserStylesEnLigne(source, fichier, preuve = null) {
@@ -498,7 +513,11 @@ function analyserStylesEnLigne(source, fichier, preuve = null) {
 						"par une classe de l'inventaire, jamais par un attribut style" +
 						(preuve
 							? `,\n      et cette valeur ne figure pas parmi les ${preuve.declarations.size} ` +
-								`valeurs de style de ${preuve.maquette} (P-6.4, ARB-016)`
+								`valeurs de style de ${preuve.maquette} ` +
+								(preuve.origine === 'ressource'
+									? '(P-6.4, ARB-022 — ressource partagée rattachée par\n' +
+										'      verif/references/preuve-par-le-gel.json, en écriture humaine seule)'
+									: '(P-6.4, ARB-016)')
 							: '')
 				});
 				analyserDeclaration(nom, valeur, (controle, message) =>
@@ -508,6 +527,94 @@ function analyserStylesEnLigne(source, fichier, preuve = null) {
 		}
 	}
 	return admises;
+}
+
+/**
+ * ARB-022, LA PART QUI N'EST PAS ENCORE UN CONSTAT — ET POURQUOI ELLE EST
+ * IMPRIMÉE QUAND MÊME.
+ *
+ * `flex: 0 0 auto` là où le gel écrit `flex: none` : c'est le second cas
+ * mesuré par ARB-022, celui dont l'arbitrage dit qu'il « dit l'essentiel — la
+ * portée trop étroite ne protège pas, elle aveugle ». Or l'étendre à
+ * `src/lib/coquille/` NE SUFFIT PAS À LE FAIRE VOIR, et il faut le dire :
+ * `analyserStylesEnLigne()` ne regarde que les PROPRIÉTÉS CONTRAINTES par P-1
+ * — espacements, rayons, typographie, ombres, durées, traits, couleurs.
+ * `flex` et `width` n'en sont pas. Le rattachement déclaré ouvre donc la
+ * preuve à ces fichiers ; il n'ouvre pas le vocabulaire du contrôle.
+ *
+ * CE QUE CETTE FONCTION FAIT : elle relève, pour un fichier RATTACHÉ, les
+ * déclarations LITTÉRALES dont la propriété figure au gel SOUS UNE AUTRE
+ * VALEUR. Ce n'est pas une invention (la propriété est bien du vocabulaire de
+ * la maquette), c'est une DIVERGENCE — et c'est exactement la forme du défaut
+ * qu'ARB-022 veut rendre visible.
+ *
+ * CE QU'ELLE NE FAIT PAS, ET C'EST DÉLIBÉRÉ : elle ne relève pas de constat.
+ * Elle IMPRIME. Deux raisons, et la seconde est la vraie :
+ *
+ *   • P-1 ne contraint pas ces propriétés, et un constat P-1.7 sur `flex`
+ *     serait un contrôle qui n'existe pas ;
+ *   • un lot parallèle porte la coquille au moment où ceci est écrit. Rendre
+ *     la divergence bloquante ici la rendrait rouge chez un exécutant qui n'a
+ *     pas le droit d'y toucher — et un rouge qu'on ne peut pas corriger est
+ *     le meilleur moyen de faire désactiver un contrôle.
+ *
+ * La passer en constat une fois la convergence acquise est un geste d'une
+ * ligne, et il est nommé dans le rapport du lot T-007e sous « écarts à
+ * numéroter ». Rendre un défaut DÉTECTABLE vaut mieux que l'ignorer par
+ * prudence ; le rendre BLOQUANT est la marche d'après, et elle se décide.
+ *
+ * LES VALEURS NON LITTÉRALES SONT ÉCARTÉES : `style="width:{n.progres}%"` ne
+ * dit pas une valeur, il dit une forme. On ne compare que du comparable —
+ * sinon on relèverait comme divergence tout ce qui est calculé, c'est-à-dire
+ * ce dont on ne sait rien.
+ *
+ * @param {string} source
+ * @param {string} fichier
+ * @param {string} vue
+ * @param {{ maquette: string, declarations: Set<string> }} preuve
+ * @returns {{fichier: string, ligne: number, vue: string, declaration: string}[]}
+ */
+function divergerDuGel(source, fichier, vue, preuve) {
+	/** Les valeurs que le gel donne à chaque propriété. */
+	const auGel = new Map();
+	for (const decl of preuve.declarations) {
+		const coupe = decl.indexOf(':');
+		const nom = decl.slice(0, coupe);
+		if (!auGel.has(nom)) auGel.set(nom, new Set());
+		auGel.get(nom).add(decl.slice(coupe + 1));
+	}
+
+	const trouvees = [];
+	const liaisons = liaisonsDuComposant(source);
+	const re = /\bstyle(?::([a-z-]+))?\s*=\s*("([^"]*)"|'([^']*)'|\{([^}]*)\})/gi;
+	const dejaVues = new Set();
+	for (const m of source.matchAll(re)) {
+		const ligne = ligneDe(source, m.index);
+		const brut = m[3] ?? m[4] ?? m[5] ?? '';
+		const texte = m[1] ? `${m[1]}:${brut}` : brut;
+		for (const forme of developper(texte, liaisons)) {
+			for (const decl of declarationsDe(forme)) {
+				if (decl.includes(MARQUEUR)) continue; // rien de comparable
+				if (preuve.declarations.has(decl)) continue; // prouvé
+				const coupe = decl.indexOf(':');
+				const nom = decl.slice(0, coupe);
+				if (PROPRIETES_CONTRAINTES.has(nom)) continue; // déjà P-1.7
+				if (!auGel.has(nom)) continue; // propriété absente du gel : muet
+				const cle = `${fichier}:${ligne}:${decl}`;
+				if (dejaVues.has(cle)) continue;
+				dejaVues.add(cle);
+				trouvees.push({
+					fichier,
+					ligne,
+					vue,
+					declaration:
+						`${lisible(decl)} — le gel écrit ` +
+						[...auGel.get(nom)].map((v) => `${nom}:${lisible(v)}`).join(' ou ')
+				});
+			}
+		}
+	}
+	return trouvees;
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -682,23 +789,40 @@ function executer() {
 	);
 
 	/* ── (d) P-6.4 — l'ensemble clos des styles en ligne du gel ──────────────
-	   ARB-016, `ECART-015` É-3. Un composant `V-xx.svelte` a une maquette qui
-	   répond de ses styles en ligne ; tout autre fichier n'en a aucune, et P-1.7
-	   s'y applique en entier. Une maquette illisible ou divergente du GEL.md ne
-	   prouve RIEN : le constat est relevé, et le composant reste analysé comme
-	   s'il n'avait pas de preuve. */
-	/** @type {{fichier: string, vue: string, maquette: string, au_gel: number, admises: number}[]} */
+	   ARB-016, `ECART-015` É-3, ÉTENDU PAR ARB-022.
+
+	   DEUX VOIES DE RATTACHEMENT, ET UNE SEULE PORTE :
+
+	     • LE NOMMAGE — un composant `V-xx.svelte` a la maquette de son nom. Le
+	       verrou est le nom lui-même : hériter du gel de V-38, c'est du même
+	       coup se faire comparer à `mockups/V-38-*.html` au pixel près.
+	     • LE RATTACHEMENT DÉCLARÉ (ARB-022) — une ressource partagée n'a pas de
+	       nom qui la désigne. `verif/references/preuve-par-le-gel.json`, en
+	       ÉCRITURE HUMAINE SEULE, dit quelle maquette répond d'elle : pour
+	       `src/lib/coquille/`, c'est V-37. Un agent ne choisit pas la référence
+	       contre laquelle il sera prouvé.
+
+	   Tout fichier hors de ces deux voies n'a aucune maquette qui réponde de
+	   lui, et P-1.7 s'y applique en entier. Une maquette illisible ou divergente
+	   du GEL.md ne prouve RIEN : le constat est relevé, et le fichier reste
+	   analysé comme s'il n'avait pas de preuve. */
+	/** @type {{fichier: string, vue: string, origine: string, maquette: string,
+	            au_gel: number, admises: number}[]} */
 	const composantsDeVueVus = [];
+	/** ARB-022, la part encore invisible — voir le rapport, plus bas. */
+	/** @type {{fichier: string, ligne: number, vue: string, declaration: string}[]} */
+	const divergencesHorsP17 = [];
 
 	for (const chemin of aAnalyser) {
 		const source = readFileSync(chemin, 'utf8');
 		const nom = rel(chemin);
-		const vue = vueDe(chemin);
+		const reference = referenceDe(chemin);
+		const vue = reference?.vue ?? null;
 		/** @type {{maquette: string, declarations: Set<string>} | null} */
 		let preuve = null;
 		if (vue) {
 			try {
-				preuve = ensembleDuGel(vue);
+				preuve = { ...ensembleDuGel(vue), origine: reference?.origine ?? 'nommage' };
 			} catch (erreur) {
 				releve({ controle: 'P-6.4', fichier: nom, ligne: 0, message: erreur.message });
 			}
@@ -739,10 +863,12 @@ function executer() {
 				composantsDeVueVus.push({
 					fichier: nom,
 					vue,
+					origine: reference?.origine ?? 'nommage',
 					maquette: preuve.maquette,
 					au_gel: preuve.declarations.size,
 					admises
 				});
+				divergencesHorsP17.push(...divergerDuGel(source, nom, vue, preuve));
 			}
 		}
 
@@ -876,18 +1002,47 @@ function executer() {
 	   gel ne peut pas l'être en silence, ni sans que la maquette qui le prouve
 	   soit citée. */
 	console.log(
-		`  composants de vue, styles en ligne prouvés par le gel (P-6.4) : ` +
+		`  styles en ligne prouvés par le gel (P-6.4) : ` +
 			(composantsDeVueVus.length
 				? '\n' +
 					composantsDeVueVus
 						.map(
 							(c) =>
-								`      ${c.fichier} ← ${c.maquette} : ${c.au_gel} valeur(s) de style au gel, ` +
-								`${c.admises} déclaration(s) admise(s)`
+								`      ${c.fichier} ← ${c.maquette} ` +
+								`[${c.origine === 'nommage' ? 'nommage, ARB-016' : 'ressource déclarée, ARB-022'}] : ` +
+								`${c.au_gel} valeur(s) de style au gel, ${c.admises} déclaration(s) admise(s)`
 						)
 						.join('\n')
 				: `aucun (convention : src/**/V-xx.svelte, ARB-016)`)
 	);
+	/* ARB-022 — LE RATTACHEMENT EST NOMMÉ À CHAQUE EXÉCUTION, comme le banc
+	   nomme ses zones, ses états de zone et ses révélations. Une preuve par le
+	   gel qui s'appliquerait en silence à un dossier serait indiscernable d'une
+	   tolérance. */
+	const ressources = Object.entries(RESSOURCES_PROUVEES.ressources ?? {});
+	console.log(
+		`  ressources partagées rattachées à une maquette (ARB-022, écriture humaine seule) : ` +
+			(ressources.length
+				? '\n' + ressources.map(([p, d]) => `      ${p}/** ← ${d.maquette}`).join('\n')
+				: 'aucune — ne rien écrire n’ouvre rien')
+	);
+	/* LA PART ENCORE INVISIBLE, DITE PLUTÔT QUE TUE (RA-01). Voir
+	   `divergerDuGel()` pour le motif : P-1 ne contraint pas ces propriétés,
+	   donc aucun constat ne leur correspond aujourd'hui. Les taire ferait
+	   croire que la portée étendue les couvre. */
+	if (divergencesHorsP17.length) {
+		console.log(
+			`  divergences avec le gel HORS du vocabulaire de P-1 — signalées, NON bloquantes :`
+		);
+		for (const d of divergencesHorsP17) {
+			console.log(`      ${d.fichier}:${d.ligne}  ${d.declaration}  (gel de ${d.vue})`);
+		}
+		console.log(
+			`      ARB-022 les veut visibles ; P-1 ne contraint pas ces propriétés, donc\n` +
+				`      aucun constat ne leur répond encore. Les passer en constat est la marche\n` +
+				`      d'après, et elle se décide — elle ne se prend pas par surprise.`
+		);
+	}
 	console.log(`  polices servies localement : ${CIBLE_POLICES}/`);
 	console.log(`  fichiers analysés : ${aAnalyser.length}`);
 
@@ -927,7 +1082,12 @@ function executer() {
 		`  (d) P-6.4 styles en ligne prouvés par le gel : ` +
 			(composantsDeVueVus.length
 				? `${composantsDeVueVus.reduce((n, c) => n + c.admises, 0)} déclaration(s) admise(s) sur ` +
-					`${composantsDeVueVus.length} composant(s) de vue, aucune hors du gel`
+					`${composantsDeVueVus.filter((c) => c.origine === 'nommage').length} composant(s) de vue ` +
+					`et ${composantsDeVueVus.filter((c) => c.origine === 'ressource').length} fichier(s) de ` +
+					`ressource partagée rattachée, aucune hors du gel` +
+					(divergencesHorsP17.length
+						? ` — ${divergencesHorsP17.length} divergence(s) hors du vocabulaire de P-1, signalée(s) plus haut`
+						: '')
 				: 'aucun composant de vue à ce jour')
 	);
 	console.log('\n  Non outillé à ce lot, et déclaré comme tel :');
