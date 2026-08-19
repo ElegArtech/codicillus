@@ -500,7 +500,7 @@ export function classer({ visibles = [], presentes = [] } = {}) {
    `main` qui le contient.
    ═════════════════════════════════════════════════════════════════════════ */
 
-const SELECTEUR_REGION = 'main, header, section, aside, nav, form, article, [role="region"]';
+export const SELECTEUR_REGION = 'main, header, section, aside, nav, form, article, [role="region"]';
 
 /** Exécutée DANS la page. Ne dépend d'aucun module — Playwright la sérialise. */
 const SONDE = ({ selecteurRegion, zonesComparees, zonesDeCoquille }) => {

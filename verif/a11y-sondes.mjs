@@ -556,6 +556,42 @@ export function installerSondes() {
 
 	const masque = (e) => e.closest('[aria-hidden="true"],[inert],[hidden]') !== null;
 
+	/* LE TEXTE DE LA SIGNATURE — sans AUCUN blanc, et c'est le correctif.
+
+	   `texte()` réduit les suites de blancs à un espace : cela neutralise les
+	   différences D'INDENTATION, mais pas la PRÉSENCE OU L'ABSENCE d'un nœud de
+	   texte blanc entre deux éléments. Or les deux côtés n'en ont pas le même
+	   nombre : le compilateur Svelte élague les blancs en bord d'élément
+	   (`CLAUDE.md` §6, P-8) là où le HTML indenté de la maquette les conserve.
+	   Le même nœud, portant le même défaut, recevait donc deux signatures —
+	   « …RétentionÉtat 20260810T » au gel, « …RétentionÉtat20260810T0 » à
+	   l'application — et le classement en tirait UN PORTAGE ET UN GEL NON
+	   REPORTÉ là où il n'y a qu'un seul défaut, commun aux deux côtés.
+
+	   Mesuré à la découverte : 31 lignes de portage sur 31 étaient dans ce cas,
+	   chacune jumelée à une ligne « gel non reporté » de même règle, même
+	   compte, même signature aux blancs près. C'est exactement le « faux
+	   portage » que l'en-tête de ce fichier dit que la méthode ne doit pas
+	   fabriquer.
+
+	   POURQUOI RETIRER LES BLANCS PLUTÔT QUE PRENDRE LE NOM ACCESSIBLE. Le nom
+	   accessible est l'invariant que le niveau 1 du banc compare, et il est
+	   identique des deux côtés — mais il n'existe QUE pour les éléments dont le
+	   rôle en prend un. Les nœuds que cette batterie doit distinguer sont pour
+	   l'essentiel des `div` sans rôle — `div.tableau-boite`, `div.voile` —, qui
+	   n'ont aucun nom accessible et ne figurent même pas à l'instantané ARIA.
+	   Mesure du pouvoir discriminant sur cinq maquettes, 2 244 nœuds visibles :
+
+	     clé actuelle            14,8 % de collisions
+	     texte sans blancs       14,8 %  — aucune perte
+	     nom accessible          59,0 %  — quatre fois plus de nœuds confondus
+
+	   Prendre le nom accessible confondrait donc trois nœuds sur cinq, et
+	   rendrait « 0 portage » par sur-rapprochement — le même contournement sous
+	   un autre nom. Le retrait des blancs ne perd rien : il gagne même un peu,
+	   les 48 caractères retenus portant alors du texte et non des espaces. */
+	const texteDeSignature = (n) => texte(n).replace(/\s+/g, '');
+
 	/* LA SIGNATURE D'UN NŒUD — la clé du classement en trois natures.
 	   Elle doit être identique pour le même nœud de la maquette et de
 	   l'application. Elle ne retient donc QUE ce que le niveau 1 du banc rend
@@ -576,8 +612,8 @@ export function installerSondes() {
 			e.getAttribute('role') || '',
 			e.getAttribute('href') || '',
 			e.getAttribute('type') || '',
-			(e.getAttribute('aria-label') || '').slice(0, 48),
-			texte(e).slice(0, 48),
+			(e.getAttribute('aria-label') || '').replace(/\s+/g, '').slice(0, 48),
+			texteDeSignature(e).slice(0, 48),
 			parents.join('>')
 		].join('|');
 	};
@@ -821,32 +857,131 @@ export function installerSondes() {
 			return releve;
 		},
 
+		/* LA RESTITUTION DU FOCUS NE S'OBSERVE NI À UN INSTANT, NI AU PREMIER
+		   REPOS VENU — mais après l'événement, ET une fois le focus arrêté.
+
+		   Cette sonde était non déterministe : de 0 à 5 occurrences de
+		   `superposition:sans-restitution` sur les mêmes 10 couples de V-40,
+		   sans qu'aucune source n'ait bougé (ÉCART T-060 É-4). La cause tient en
+		   deux faits emboîtés, l'un et l'autre MESURÉS :
+
+		   1. `dialog.close()` ne délivre pas `close` synchronement : il MET EN
+		      FILE une tâche. Le gestionnaire de la maquette s'exécute donc après
+		      le retour de `armerRestitution()`. V-40 en porte un qui rend le
+		      focus à son déclencheur et le décroche ensuite
+		      (`mockups/V-40-…:3194`) : livré avant Échappement il est neutre,
+		      livré après il écrase la mesure. Huit pages en parallèle décidaient
+		      lequel, au hasard de la charge.
+		   2. La restitution NATIVE du focus, elle, suit encore la distribution
+		      de `close`.
+
+		   ET LE MÊME DÉFAUT PORTAIT UN FAUX NÉGATIF, plus grave que l'instabilité.
+		   Contrôle construit (trois cas, cinq exécutions chacun) : sur une page où
+		   un gestionnaire de `close` détourne le focus IMMÉDIATEMENT, la sonde
+		   d'origine répondait « focus rendu » cinq fois sur cinq. Elle ne mesurait
+		   pas trop tard par malchance : elle mesurait avant que quiconque ait pu
+		   bouger. Un vol différé, lui, sortait tantôt vu tantôt non — deux
+		   résultats distincts sur cinq. La correction rend les trois cas
+		   déterministes ET justes.
+
+		   TROIS PARADES ESSAYÉES, DEUX REJETÉES SUR MESURE — elles sont la
+		   preuve que la troisième n'est pas un pari :
+		     · purger la file par un `setTimeout(0)` : encore 0 à 7 occurrences
+		       sur six exécutions. Minuterie et événement `close` relèvent de deux
+		       SOURCES DE TÂCHES distinctes, que la spécification n'ordonne pas
+		       entre elles — attendre « un tour » n'attend pas le bon.
+		     · s'ancrer sur la fin de la distribution de `close` : pire, 9 ou 10
+		       couples rouges des deux côtés, l'instant choisi précédant la
+		       restitution qu'il prétend mesurer.
+		     · attendre le seul arrêt du focus : 2 ou 3 occurrences, toujours
+		       instable — l'arrêt est atteint TROP TÔT, avant même que la tâche
+		       de `close` ne soit livrée, puisque rien n'a encore bougé.
+
+		   PARADE RETENUE : attendre L'ÉVÉNEMENT PUIS L'ARRÊT. L'écouteur est posé
+		   AVANT le geste qui ferme, jamais après — sans quoi la sonde attendrait
+		   un événement déjà passé. Une machine chargée allonge l'attente sans
+		   changer la valeur d'arrivée : c'est ce qui rend la mesure indépendante
+		   de la charge, là où tout échantillonnage à offset fixe en dépend. C'est
+		   P-14 pris à l'endroit — on ne mesure pas quand la file se vide, on
+		   mesure ce vers quoi elle converge.
+
+		   BORNE DÉCLARÉE : au-delà de `tours` relances, la sonde ne conclut pas —
+		   elle rend `stabilise: false`, et l'appelant le porte en `instrument`,
+		   jamais en verdict. `setTimeout` suppose l'horloge REPRISE : elle l'est
+		   depuis `analyze()` (voir le bandeau de `verif/a11y.mjs`), et cette
+		   sonde ne doit jamais remonter avant cette reprise. */
+		async attendreQue(predicat, tours = 200) {
+			for (let i = 0; i < tours; i++) {
+				if (predicat()) return true;
+				await new Promise((r) => setTimeout(r, 0));
+			}
+			return predicat();
+		},
+
+		async attendreFocusStable(tours = 200, requis = 3) {
+			let precedent = document.activeElement;
+			let stable = 0;
+			for (let i = 0; i < tours && stable < requis; i++) {
+				await new Promise((r) => setTimeout(r, 0));
+				const actif = document.activeElement;
+				if (actif === precedent) stable++;
+				else {
+					precedent = actif;
+					stable = 0;
+				}
+			}
+			return stable >= requis;
+		},
+
 		/** Prépare la mesure de la restitution du focus : ferme, focalise un
 		 *  témoin, rouvre. Le témoin est le premier interactif du document hors
 		 *  de la superposition — s'il n'y en a pas, la propriété n'est pas
 		 *  mesurable et la sonde le dit. */
-		armerRestitution() {
+		async armerRestitution() {
 			const d = [...document.querySelectorAll('dialog[open]')].find((x) => x.matches(':modal'));
 			if (!d) return { arme: false, motif: 'aucun dialogue modal ouvert' };
 			const temoin = [...document.querySelectorAll(NATIFS)].find(
 				(e) => !d.contains(e) && visible(e) && !masque(e) && e.tabIndex >= 0
 			);
 			if (!temoin) return { arme: false, motif: 'aucun élément témoin hors de la superposition' };
+
+			/* La fermeture d'ARMEMENT déclenche elle aussi les gestionnaires de la
+			   page et la restitution native. Les laisser aboutir avant de poser le
+			   témoin, sinon c'est leur retard qui décidera du verdict. */
+			window.__a11yFermetureArmement = false;
+			d.addEventListener('close', () => (window.__a11yFermetureArmement = true), { once: true });
 			d.close();
+			const livre = await window.__a11y.attendreQue(() => window.__a11yFermetureArmement);
+			const arrete = await window.__a11y.attendreFocusStable();
+			if (!livre || !arrete) {
+				d.showModal();
+				return { arme: false, motif: 'la fermeture d’armement ne s’est pas stabilisée' };
+			}
+
 			temoin.focus();
 			const pris = document.activeElement === temoin;
-			d.showModal();
 			window.__a11yTemoin = temoin;
+			/* L'écouteur de la fermeture MESURÉE est posé MAINTENANT : après
+			   Échappement il serait trop tard, l'événement serait déjà passé. */
+			window.__a11yFermetureMesuree = false;
+			d.addEventListener('close', () => (window.__a11yFermetureMesuree = true), { once: true });
+			d.showModal();
 			return { arme: pris, motif: pris ? '' : 'le témoin n’a pas pris le focus' };
 		},
 
 		/** Après Échappement : la superposition est-elle fermée, le focus rendu ? */
-		constaterRestitution() {
+		async constaterRestitution() {
+			const livre = await window.__a11y.attendreQue(() => window.__a11yFermetureMesuree);
+			const arrete = await window.__a11y.attendreFocusStable();
 			const encoreOuverts = [...document.querySelectorAll('dialog[open]')].filter((d) =>
 				d.matches(':modal')
 			);
 			const temoin = window.__a11yTemoin;
 			return {
+				/* Une fermeture non livrée n'est PAS une instabilité : c'est
+				   `sans-echappement`, et `ferme` le dit déjà. Seul l'arrêt du focus
+				   conditionne la mesurabilité. */
+				stabilise: arrete || !livre,
 				ferme: encoreOuverts.length === 0,
 				rendu: Boolean(temoin) && document.activeElement === temoin,
 				actif: document.activeElement ? signature(document.activeElement) : '(body)'

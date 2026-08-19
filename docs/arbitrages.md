@@ -839,6 +839,10 @@ avec V-06 et V-08.
 
 ## ARB-026 — Les deux seuils sont posés, et ils ne peuvent que descendre
 
+> **RÉTABLI le 19 août 2026, après réparation de l'instrument.** Le seuil est reposé sur le partage
+> corrigé : **0 portage, 3 470 gel**, 20 lignes toutes `gel/…`. `pnpm test:a11y` est **vert**.
+> La suspension qui suit est conservée pour mémoire.
+>
 > **SUSPENDU sur son volet accessibilité, le 19 août 2026 — `ECART-041`.** Le seuil a été posé en
 > retirant 31 lignes `portage/…` dont T-060 a établi ensuite qu'elles sont du **gel** : la batterie
 > 10 sur-discrimine sur une clé de rapprochement sensible aux blancs, que le compilateur Svelte
@@ -1360,3 +1364,52 @@ les 707 — et le **contraste non textuel** (WCAG 1.4.11), que rien ne mesure : 
 4. **Aucun site n'est classé « décoration ».** Le gel plaide lui-même contre : V-32 garde le **nom**
    d'un compte inactif en `--c-encre-3` et ne laisse tomber que sa date ; et `.alerte-dom[data-nul]`
    grise une **valeur zéro**, c'est-à-dire une donnée que `P-02` et `P-05` imposent de lire.
+
+---
+
+## ARB-043 — Quatre lectures du vocabulaire, tranchées
+**19 août 2026** — arbitrage délégué. Répond à `T-066` É-2, É-3, É-5, É-6.
+
+**1. « Guide » n'est pas un synonyme de « note ».** Le gel emploie le mot 227 fois pour la note
+publique. **`CDC` §3.4 en fait un type de note fourni** : une note publiée de ce type *est* un guide,
+et la nommer ainsi emploie le **nom du type**, pas un synonyme du concept. C'est exactement le
+raisonnement d'`ARB-036` — le cahier décrit un référentiel, la vue montre une instance. La batterie
+le compte en constat et ne l'oppose jamais : c'est le bon classement, et il est confirmé.
+
+**2. Les trois « document » du gel sont des violations réelles, et le gel les emporte.** `V-24` écrit
+« Les liens entre **documents** sont résolus automatiquement » et « sans **document** qui la
+référence » — du chrome, donc `P-07` à la lettre. Mais **maquettes > brief** : `P-07` n'est pas tenue
+sur ces 9 occurrences, et c'est une conséquence de la loi, pas une question. Dette nommée, ligne
+`gel` du seuil. *(Le cas de `V-12` est l'extrait d'une note, pas du chrome — `É-4` du lot signale à
+juste titre qu'aucune source ne dit si `P-07` vise le contenu. Non tranché, non compté.)*
+
+**3. L'extension de `P-07` aux identifiants ne peut pas s'opposer au gel.** `CLAUDE.md` §3 l'étend
+aux noms de classes ; `P-6.3` exige que la feuille d'une vue soit **identique à l'octet** au gel. Le
+portage **ne peut pas** renommer `.article` ou `.page-signet` sans casser `pnpm vues:feuille` et le
+banc. **L'extension vaut pour le code neuf, jamais contre un identifiant gelé.** `CLAUDE.md` §3 est
+amendé en ce sens.
+
+**4. « Fiche » en dur est une dette de portage, et elle se ferme par un lot.** 69 emplois en dur pour
+**une seule** lecture de `CONFIG.motFiche`, alors que `M14.7` rend le concept renommable globalement.
+**Une maquette statique ne lit aucune configuration : qu'elle écrive « Fiche » en dur n'autorise
+rien.** Le seuil est posé à **67**, la valeur mesurée à l'arbitrage — il descend, il ne monte pas, et
+les 2 unités au-dessus sont un défaut à fermer, pas un seuil à relever.
+
+---
+
+## ARB-044 — Les seuils des batteries 8 et 17
+**19 août 2026** — arbitrage délégué.
+
+| Batterie | Seuil posé | Ce qui reste rouge, et c'est voulu |
+|---|---|---|
+| 8 — corpus vide | `--seuil-gel=210` | **1 défaut de portage** : `V-33` n'a pas la branche vide que son gel porte (`V-33:2897-2907`, `zone-etat__txt` « Aucune note à mesurer »). `verif:maquette` est vert dessus parce que le corpus natif ne l'exerce jamais — cas d'école de « ce qu'un vert ne dit jamais » |
+| 17 — vocabulaire | `--seuil-gel=138 --seuil-fiche=67` | **2 emplois de « fiche »** au-dessus du seuil |
+
+Les 210 du gel sont établis par un fait que la batterie 8 a mesuré et qu'il faut retenir : **aucune
+des 41 maquettes ne modélise une vue sous corpus vide.** Elles modélisent la base vierge comme un
+**état de planche**, jamais comme un corpus. Sous corpus vide et état nominal, **14 zones du gel
+rendent « 0 » sans état neutre** — `V-28 #travail` en rend 25. `RG-M01-01` n'est donc pas tenue par
+la référence elle-même.
+
+**Les deux batteries restent rouges, et c'est le but** : elles pointent chacune un défaut réel et
+fermable, pas une dette de gel.
