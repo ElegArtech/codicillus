@@ -265,10 +265,41 @@ démarrage raté. *(T-003, 19/08/2026)*
 du module**. Sans ces deux fichiers dans le contexte, `vite build` s'arrête sur `ENOENT`. Une image
 qui n'embarquerait que `src/` ne se construit pas. *(T-003, 19/08/2026)*
 
-### P-13 · Le mot de passe PostgreSQL entre dans une URI
+### P-13 · **Ne compose jamais une URI de connexion — la base se configure par variables séparées**
 
-Un `/` ou un `+` issu d'un tirage base64 ne se voit **qu'à la première connexion**, et le message
-n'aide pas. Employer `openssl rand -hex 32`. *(T-003, 19/08/2026)*
+Un `/`, un `#` ou un `?` dans un mot de passe fait sortir l'application en `ERR_INVALID_URL`
+**au démarrage**, et le message ne nomme pas la cause. Mesuré sur six mots de passe : `mot/de+passe`,
+`mot#passe` et `mot?passe` tuent le service ; `mot@passe`, `mot:passe` et un tirage hexadécimal
+passent.
+
+**La première rédaction de ce piège recommandait `openssl rand -hex 32`. C'était une parade
+déclarative**, qui repose sur la discipline de l'exploitant — le plus mauvais des trois régimes de ce
+dépôt (*bloquant > vérifiable > déclaratif*) pour un défaut qui refuse le démarrage.
+
+**La parade est désormais dans la forme** (ARB-038) : `HOTE_BASE`, `PORT_BASE`, `UTILISATEUR_BASE`,
+`MDP_BASE`, `NOM_BASE`, et un **objet** passé au connecteur. Rien n'est concaténé, donc rien n'est à
+échapper. *(T-003 puis T-010, 19/08/2026)*
+
+### P-16 · Un lot qui installe une dépendance casse l'hypothèse des copies de travail
+
+`node_modules` est un **lien** vers l'arbre principal (`verif/preparer-copie.sh`), et le script le
+justifie : *« le lien est sûr ici parce qu'aucun lot n'installe de dépendance »*. **Un `pnpm add` dans
+une copie écrit donc dans l'arbre du voisin.** Remplacer le lien par une installation locale coûte
+10 s, le magasin pnpm étant sur le même tmpfs.
+
+Et **retirer une dépendance ne suffit pas à revenir en arrière** : pnpm laisse un
+`pnpm-workspace.yaml` et des pairs optionnels résolus dans le lockfile, qui font sortir
+`pnpm install --frozen-lockfile` en 1. Réinitialiser le lockfile depuis `HEAD`, puis réinstaller.
+
+**Corollaire pour l'orchestrateur** : ne jamais rapatrier un lot qui ajoute une dépendance tant que
+d'autres copies tournent — l'installation change `node_modules` **sous** elles. *(T-010, 19/08/2026)*
+
+### P-17 · Un accent grave dans un modèle littéral JavaScript ferme le modèle
+
+Un commentaire SQL rédigé à l'intérieur d'un *template literal* et citant un identifiant entre
+accents graves coupe la chaîne : l'erreur remonte en `[PARSE_ERROR] Expected a semicolon`, **à cent
+lignes de la cause**. Même famille que **P-9**, où citer la forme exacte de `prettier-ignore` dans un
+commentaire de balisage faisait fuir la suite dans le DOM. *(T-010, 19/08/2026)*
 
 ### P-5 · Une règle qu'aucun cas n'exerce est une règle dont on ignore si elle marche
 
