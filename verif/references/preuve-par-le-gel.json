@@ -93,6 +93,10 @@
 		"src/lib/lecture": {
 			"maquette": "V-14",
 			"motif": "Le bloc d'en-tête de note est identique à l'octet entre V-14 et V-15 — 341 lignes, vérifié par diff, et la maquette l'annonce elle-même. La référence est V-14, la plus riche des deux. ÉCART-031 É-2."
+		},
+		"src/lib/edition": {
+			"maquette": "V-17",
+			"motif": "Les deux éditeurs partagent la barre d'état, la zone de rédaction et le bandeau d'aperçu. V-17 est la référence — V-18 en est l'éditeur du second registre. Sans ce rattachement, le fragment du bouton principal, qui porte un margin-left en ligne au gel, reste dupliqué dans les deux vues. ÉCART-035 É-5."
 		}
 	}
 }
