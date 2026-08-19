@@ -69,6 +69,18 @@
 		titre: "Chargement de l'arborescence d'Applications — signalé sur la branche seule"
 	};
 
+	/**
+	 * L'attribut de données que la maquette pose sur `div.app` (`V-37:1195`), et
+	 * que le gabarit n'émettait pas — la conformité par zone d'ARB-012 le
+	 * masquait. Il est INERTE ici, et le gel le veut ainsi : la règle qui
+	 * l'exploite vise `body` (`V-37.css:638`), et seule V-03 le pose au bon
+	 * endroit. Le porter sur `<body>` « corrigerait » le gel et changerait le
+	 * rendu : c'est un comblement, et il serait rouge au banc
+	 * (`docs/releve-vues.md` §7.7). On le pose là où le gel le pose, et nulle
+	 * part ailleurs — ARB-021, A-2.
+	 */
+	const ATTRIBUTS_DE_VUE = { 'data-numerote': 'non' };
+
 	const reglage = $derived(vecteur ?? {});
 	const contenu = $derived(reglage['cont'] === 'lecture' ? 'lecture' : 'bord');
 	const rail = $derived(reglage['rail'] === 'ferme' ? 'ferme' : 'ouvert');
@@ -110,6 +122,7 @@
 		domaine: MOI.domaine
 	}}
 	version={INSTANCE.version}
+	donnees={ATTRIBUTS_DE_VUE}
 	brancheEnChargement={enChargement ? BRANCHE_EN_CHARGEMENT : null}
 	notifications={enChargement ? [NOTIFICATION_CHARGEMENT] : []}
 />
