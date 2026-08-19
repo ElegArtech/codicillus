@@ -1,30 +1,13 @@
-<script module lang="ts">
-	/** Les quatre types de notification du catalogue V-38, et rien d'autre. */
-	export type TypeNotification = 'succes' | 'erreur' | 'info' | 'encours';
-
-	/**
-	 * Une notification visible à l'instant rendu.
-	 *
-	 * La forme est celle de `window.notifier()` de la maquette gelée
-	 * (`V-38-notifications.html:2263`) : titre, détail facultatif, actions
-	 * facultatives, avancement facultatif pour le seul type « en cours ».
-	 * `duree` n'y figure PAS : l'effacement automatique est du comportement,
-	 * pas un état (ARB-011, RG-M18-02, à reprendre par T-017).
-	 */
-	export interface Notification {
-		readonly type: TypeNotification;
-		readonly titre: string;
-		readonly detail?: string;
-		/** Les libellés des boutons d'action. Leur effet relève de T-017. */
-		readonly actions?: readonly string[];
-		/** Avancement figé, en pourcentage — un instant, jamais un film (ARB-011). */
-		readonly progres?: number;
-	}
-</script>
-
 <script lang="ts">
 	/**
 	 * Coquille applicative — le gabarit permanent de l'espace de travail (V-37).
+	 *
+	 * LE VOCABULAIRE DE LA FAMILLE A-8 A DÉMÉNAGÉ — ARB-028. `TypeNotification`
+	 * et `Notification` étaient déclarés ici, parce que la coquille était le seul
+	 * lieu qui rendît la pile. Elle ne l'est plus : V-06 la rend SANS coquille,
+	 * avec la variante gelée de sa propre maquette. Le vocabulaire est passé à
+	 * `./notifications`, le balisage à `./PileDeNotifications.svelte` — un seul
+	 * composant, deux états gelés, aucune recopie (`docs/DESIGN.md` §3.7, n° 7).
 	 *
 	 * Trente-cinq vues sur quarante et une l'enveloppent : toutes celles de
 	 * l'espace de travail et de la console. En sont exclues les quatre vues de
@@ -169,6 +152,8 @@
 	import { railAbregeRendu } from './arborescence-abregee';
 	import BarreSuperieure from './BarreSuperieure.svelte';
 	import Rail from './Rail.svelte';
+	import PileDeNotifications from './PileDeNotifications.svelte';
+	import type { Notification } from './notifications';
 
 	interface Compte {
 		readonly nom: string;
@@ -404,28 +389,6 @@
 </script>
 
 <!--
-	La marque d'une notification. Les trois glyphes sont ceux de `GLYPHES_NOTIF`
-	de la maquette gelée ; « en cours » n'en a pas et porte le rouet.
--->
-{#snippet marque(type: TypeNotification)}
-	<span class="notif__marque" aria-hidden="true"
-		>{#if type === 'encours'}<span class="notif__rouet"></span>{:else}<svg
-				width="16"
-				height="16"
-				viewBox="0 0 16 16"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.9"
-				>{#if type === 'succes'}<path
-						d="M3 8.5l3.5 3.5L13 4.5"
-					/>{:else if type === 'erreur'}<circle cx="8" cy="8" r="6.2" /><path
-						d="M8 4.5v4M8 11.2v.3"
-					/>{:else}<circle cx="8" cy="8" r="6.2" /><path d="M8 7.2v4M8 4.7v.3" />{/if}</svg
-			>{/if}</span
-	>
-{/snippet}
-
-<!--
 	`<main>`, rendu une seule fois et posé à deux endroits : dans l'enveloppe
 	quand la vue en déclare une, en enfant direct du cadre sinon (ARB-023). Un
 	snippet plutôt que deux écritures — deux `<main>` recopiés divergeraient au
@@ -464,30 +427,4 @@
 -->
 {#if superposition}{@render superposition()}{/if}
 
-<div class="notifs" id="notifs" role="status" aria-live="polite">
-	{#each notifications as n, rang (rang)}<div
-			class="notif notif--{n.type}"
-			role={n.type === 'erreur' ? 'alert' : 'status'}
-			aria-live={n.type === 'erreur' ? 'assertive' : 'polite'}
-		>
-			{@render marque(n.type)}
-			<div class="notif__corps">
-				<div class="notif__titre">{n.titre}</div>
-				{#if n.detail}<div class="notif__detail">{n.detail}</div>{/if}
-			</div>
-			<button class="notif__fermer" type="button" aria-label="Fermer cette notification"
-				><svg
-					width="14"
-					height="14"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8" /></svg
-				></button
-			>{#if n.progres !== undefined}<div class="notif__progres">
-					<i style="width:{n.progres}%"></i>
-				</div>{/if}{#if n.actions}<div class="notif__actions">
-					{#each n.actions as action (action)}<button type="button">{action}</button>{/each}
-				</div>{/if}
-		</div>{/each}
-</div>
+<PileDeNotifications {notifications} />

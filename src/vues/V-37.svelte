@@ -31,7 +31,8 @@
 		noteParIdentifiant,
 		type Note
 	} from '../../seeds/corpus';
-	import Coquille, { type Notification } from '$lib/coquille/Coquille.svelte';
+	import Coquille from '$lib/coquille/Coquille.svelte';
+	import type { Notification } from '$lib/coquille/notifications';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
