@@ -55,6 +55,7 @@
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
 	import { DOMAINES, INSTANCE, MODIFICATIONS, MOI, UNIVERS, type Note } from '../../seeds/corpus';
+	import { classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { segmentsDeDossier } from '$lib/rangement/adresses';
 
@@ -199,18 +200,6 @@
 	/* ── Témoin de fraîcheur — une seule fabrique ────────────────────────────── */
 	function barres(f: Note['fraicheur']): number {
 		return f === 'frais' ? 3 : f === 'vieil' ? 2 : 1;
-	}
-
-	function classeTemoin(f: Note['fraicheur']): string {
-		return f === 'frais' ? 'temoin--frais' : f === 'vieil' ? 'temoin--vieil' : 'temoin--obs';
-	}
-
-	function libelleFraicheur(n: Note): string {
-		if (n.fraicheur === 'frais') {
-			return n.jours < 31 ? `Vérifié il y a ${n.jours} jours` : 'Vérifié il y a 1 mois';
-		}
-		const mois = Math.round(n.jours / 30);
-		return n.fraicheur === 'vieil' ? `Vérifié il y a ${mois} mois` : `Pas revu depuis ${mois} mois`;
 	}
 
 	/** L'ancienneté de la dernière modification — distincte de la vérification. */
