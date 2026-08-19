@@ -1007,3 +1007,93 @@ même balisage, mêmes classes, mêmes jetons. Inventer une forme d'erreur propr
 comblement que le contrat interdit. Et `V-39` ne démontrant **aucun** état « sans droit », celui-ci
 reste hors de cette décision : il relève de `P-09`, donc de l'**absence** du nœud, donc de la
 batterie 7 — il n'y a rien à rendre.
+
+---
+
+## ARB-033 — Le contraste : la précédence tranche, et ce qui reste se mesure
+**19 août 2026** — arbitrage délégué. Répond au dernier point du dossier des regels.
+
+**J'avais posé une question là où l'ordre de préséance avait déjà répondu.** Les maquettes priment
+sur le cahier des charges. Là où le gel porte un contraste sous 4,5:1, `RG-M18-07` **n'est pas
+tenue**, et ce n'est pas une décision en attente : c'est une conséquence de la loi du projet. Les
+707 occurrences sont une **dette nommée**, pas une question ouverte.
+
+**Ce que la mesure a établi ensuite, et qui change la nature du problème.** L'exemple type de la
+batterie est `#93a2a6` sur `#fcfbf8` — soit **`--c-encre-4` sur `--c-papier`**, à 2,55:1.
+
+Le socle documente lui-même la méthode, dans un commentaire daté du 16/08/2026, **avant le gel** :
+
+> `--c-encre-3` — *« assombri le 16/08/2026 : #71838a ne donnait que 2,75:1 sur le fond creux, là où
+> RG-M18-07 exige 4,5:1 pour un texte de 11 px. Teinte conservée, contraste porté à 4,54:1 au pire
+> des quatre surfaces. »*
+
+**La méthode est reproductible, et je l'ai reproduite** : mes calculs rendent 2,76:1 et 4,54:1, aux
+mêmes bornes. Appliquée à `--c-encre-4` à teinte constante, elle donne **`#526064`**, 4,56:1 au pire
+des quatre surfaces.
+
+**Et c'est précisément ce qui prouve qu'il ne faut pas l'appliquer.** `#526064` est à un point de
+`--c-encre-3` (`#536066`) : les deux encres deviendraient indistinguables. **Une quatrième encre qui
+ne se distingue pas de la troisième n'est plus une encre, c'est un doublon.**
+
+**Décision, en deux volets.**
+
+1. **`--c-encre-4` n'est pas assombri.** Son rôle est écrit au socle : *« désactivé, placeholder »*.
+   **WCAG 1.4.3 exempte nommément les composants d'interface inactifs** de toute exigence de
+   contraste. Là où ce jeton habille un élément réellement inactif, **il n'y a pas de violation** —
+   axe ne peut pas savoir que l'élément l'est.
+2. **Ce qui n'est pas exempt est un défaut réel, et il se mesure — il ne se demande pas.** Là où
+   `--c-encre-4` habille du texte **actif**, la règle est violée, et la réparation est connue sans
+   qu'aucune teinte ne soit inventée : employer `--c-encre-3`, qui est conforme sur les quatre
+   surfaces. Cela déplace des pixels, donc cela demande un regel — mais **de quelques sites nommés,
+   pas de seize vues**.
+
+**Ce que cela ferme.** Plus personne ne demande « que faire des 707 ». La suite est un lot de
+mesure : partager les 707 entre *exempt par 1.4.3* et *défaut réel*, site par site. Tant que ce
+partage n'est pas fait, **le chiffre de 707 ne veut rien dire** — c'est un compte d'occurrences
+d'axe, pas un compte de défauts.
+
+---
+
+## ARB-034 — Le fil déroulé de V-20 est entièrement spécifié par sa propre maquette
+**19 août 2026** — arbitrage délégué. Ferme le point 2 du dossier des regels.
+
+**J'avais écrit : *« aucune maquette ne montre à quoi il ressemble rempli »*. C'est faux, et il
+suffisait de lire le fichier.**
+
+`mockups/V-20-carto-type-maitre.html` **construit le fil déroulé lui-même**, et le décrit
+complètement :
+
+| Où | Quoi |
+|---|---|
+| l. 869–883 | la feuille — `.fil-deroule`, `.fil-deroule button`, son survol, `__sep`, `__courant` |
+| l. 2934–2948 | le constructeur — `fil-deroule__courant`, `fil-deroule__sep` de `textContent "›"` |
+| l. 1129 | le conteneur, `id="fil"`, `hidden` |
+
+Rien ne manque : les classes, le séparateur, la graisse du courant, le fond du survol. **Le fil n'est
+pas non spécifié, il est spécifié et inatteignable** — le double `id="fil"` d'ARB-025 fait rendre
+l'autre nœud à `getElementById`.
+
+**Décision.** V-20 rend le fil déroulé **tel que son propre constructeur le produirait**, lu au
+balisage et à la feuille du gel. Aucune forme n'est inventée, aucune source n'est empruntée à une
+autre vue.
+
+**La borne.** Le nœud reste `hidden` dans les états où le gel le laisse `hidden` — le banc compare
+les états déclarés, et le fil n'y est visible dans aucun. Ce lot rend la zone **vivante**, il ne la
+rend pas **visible** là où le gel la masque.
+
+---
+
+## ARB-035 — Les trois entrées attendues ne bloquent rien, et n'ont jamais rien bloqué
+**19 août 2026** — arbitrage délégué. Ferme le point 4 du dossier des regels.
+
+Le plan §15.2 attend trois choses du commanditaire. **Je les avais présentées comme des attentes ;
+elles sont des précisions, et chacune a un comportement par défaut déductible.**
+
+| Attendu | Ce qui se déduit, et se construit sans l'attendre |
+|---|---|
+| **Le périmètre de la v1** | Le cahier des charges **est** le périmètre. En l'absence de retrait explicite, v1 = le cahier intégral. Un retrait ultérieur soustrait ; il ne se devine pas à l'avance |
+| **Un échantillon du patrimoine** | Les formats sont nommés au cahier (traitement de texte, tableur, PDF, texte, liens web). Le convertisseur se construit contre les **formats**, pas contre un échantillon, et se valide sur des pièces synthétiques jusqu'à ce qu'un échantillon réel arrive. Il n'en sera que mieux éprouvé |
+| **Un relais SMTP** | `P-10` l'impose déjà : *dégradation, jamais panne*. Le produit doit fonctionner **sans** relais — donc le comportement sans relais est le cas nominal à construire, et le relais est une configuration, jamais une dépendance |
+
+**Décision.** Aucun lot n'attend ces trois entrées. Elles sont des paramètres, pas des préalables.
+Le dossier des regels ne les porte plus.
