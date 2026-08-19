@@ -117,3 +117,93 @@ export function segmentsDeDossier(chemin: string): readonly string[] {
 		.map((s) => s.trim())
 		.filter(Boolean);
 }
+
+/* ═════════════════════════════════════════════════════════════════════════
+   LE PROLONGEMENT DU LOT P-10 — `/notes`, `/signets`, ET LES DEUX FORMES DU
+   FORMULAIRE DE SIGNET
+
+   Trois vues de plus émettent des adresses de rangement — V-12 la liste des
+   notes d'un domaine, V-22 ses signets, V-23 le formulaire de signet — et
+   toutes les trois PROLONGENT l'adresse canonique de domaine ci-dessus. Elles
+   ne créent aucune forme nouvelle : `adresseDeDomaine()` reste le seul point
+   où l'univers et le domaine sont composés, et il le reste pour la raison qui
+   a fait ce fichier — une forme d'adresse recopiée dans trois vues est trois
+   sources de vérité.
+
+   L'AUTORITÉ RESTE `docs/routes.md` §3.3 :
+
+     /univers/{univers}/{domaine}/notes                       V-12
+     /univers/{univers}/{domaine}/signets                     V-22
+     /univers/{univers}/{domaine}/signets/nouveau             V-23 création
+     /univers/{univers}/{domaine}/signets/{id}/modifier       V-23 édition
+
+   `notes`, `dossiers` et `signets` sont des IDENTIFIANTS RÉSERVÉS sous
+   `/univers/{u}/{d}/`, et `nouveau` sous `.../signets/` (`docs/routes.md`
+   §5.4). C'est cette réservation qui rend les quatre formes non ambiguës : un
+   domaine nommé « Notes » ne peut pas produire un segment qui masquerait la
+   liste. Le préfixe pluriel français vient de la convention R1, la même qui a
+   donné `dossiers` à V-13.
+
+   CE QUI N'EST TOUJOURS PAS ÉMIS, ET NE DOIT PAS L'ÊTRE : `/domaines/…`
+   (ARB-001). Aucune des fonctions ci-dessous ne peut en produire, puisqu'elles
+   passent toutes par `adresseDeDomaine()`. La clause de désambiguïsation de
+   `RG-M03-02` reste **sans objet** (E-09) : rien n'est à y ajouter, et surtout
+   pas un écran de choix.
+
+   L'IDENTIFIANT D'UN SIGNET EST CELUI D'UNE NOTE. Un signet est une note de
+   type `Signet` (`seeds/corpus.ts`, `TypeDeNote`), pas un objet séparé — le
+   vocabulaire contractuel du §2.3 ne connaît pas de « lien ». Son identifiant
+   est donc pris tel quel, comme `adresseDeNote()` prend le sien, et n'est pas
+   redérivé d'un titre.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `/univers/{univers}/{domaine}/notes` — la liste des notes d'un domaine
+ * (V-12).
+ *
+ * C'est la cible des accès qui ouvrent la liste déjà filtrée : un segment de
+ * la barre de fraîcheur, un indicateur d'accueil. Les filtres eux-mêmes
+ * voyagent en paramètres de requête (`docs/routes.md` §4.2), jamais en
+ * segments de chemin — un filtre n'est pas un niveau de rangement.
+ */
+export function adresseDesNotesDuDomaine(univers: string, domaine: string): string {
+	return `${adresseDeDomaine(univers, domaine)}/notes`;
+}
+
+/** `/univers/{univers}/{domaine}/signets` — les signets d'un domaine (V-22). */
+export function adresseDesSignetsDuDomaine(univers: string, domaine: string): string {
+	return `${adresseDeDomaine(univers, domaine)}/signets`;
+}
+
+/**
+ * `/univers/{univers}/{domaine}/signets/nouveau` — la création d'un signet
+ * (V-23, mode « création »).
+ *
+ * `nouveau` est réservé sous `.../signets/` (`docs/routes.md` §5.4) : sans
+ * cette réservation, un signet dont l'identifiant serait `nouveau` masquerait
+ * le formulaire de création, exactement comme `nouvelle` sous `/notes/`.
+ */
+export function adresseDeCreationDeSignet(univers: string, domaine: string): string {
+	return `${adresseDesSignetsDuDomaine(univers, domaine)}/nouveau`;
+}
+
+/**
+ * `/univers/{univers}/{domaine}/signets/{identifiant}/modifier` — l'édition
+ * d'un signet (V-23, mode « édition »).
+ *
+ * Le suffixe `/modifier` est celui de `/notes/{identifiant}/modifier`, par
+ * uniformité déclarée (`docs/routes.md` §3.3).
+ *
+ * L'ENVELOPPE N'EST PAS DANS L'ADRESSE. V-23 a deux enveloppes — page dédiée
+ * et boîte de dialogue — et une seule paire d'adresses : le formulaire est le
+ * même, seul son entourage change selon l'endroit d'où on l'ouvre. En faire
+ * deux adresses créerait deux routes pour un même écran, sans canonique
+ * désignée.
+ */
+export function adresseDeModificationDeSignet(
+	univers: string,
+	domaine: string,
+	identifiant: string
+): string {
+	return `${adresseDesSignetsDuDomaine(univers, domaine)}/${identifiant}/modifier`;
+}

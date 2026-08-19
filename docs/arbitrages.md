@@ -756,3 +756,46 @@ qu'il **ne** regarde pas, comme les sources d'étalonnage le font depuis `ECART-
 
 **Effet immédiat** : P-1 est arrêté au temps 1, P-2 est prévenu avant d'y buter. Les deux reprennent
 au temps 2 sans rien réextraire.
+
+---
+
+## ARB-024 — La famille des notifications suit V-38, et V-06 demande un regel
+**19 août 2026** — arbitrage délégué. Répond à `ECART-030` É-3.
+
+**Le fait, et il contredit une de mes résolutions.** `ECART-007` a retenu le socle de V-07 comme
+source unique, en écartant la seule divergence réelle — le composant de notification, refondu de
+`flex` en `grid` entre l'état 401 et l'état 465 — au motif qu'elle était **inerte** : le conteneur
+`.notifs` est vide dans les 41 vues, les notifications étant injectées au déclenchement.
+
+**Elle ne l'est plus.** `V-06 cpt-inconnu` est **le seul état de tout le projet** qui rende une
+notification hors de V-38 — et il a été gelé **avant** la refonte. Mesuré : **13 276 pixels**, soit
+1,02 %. La bulle de la référence n'est pas bornée et tient sur une ligne ; celle de l'application est
+plafonnée à 400 px et repasse à la ligne.
+
+**Ce n'est pas un emboîtement partiel : les règles sont remplacées, pas étendues.** `.notif` passe
+de `flex / gap:--e-3 / padding:--e-3 --e-4` à `grid / width:100% / padding:--e-3 --e-3 --e-3 --e-4`,
+et `.notifs` gagne un `max-width` qu'elle n'avait pas. `docs/DESIGN.md` §0.2 écrit que le socle
+retenu est « strictement plus riche » et « emboîté » : **pour cette famille, c'est faux**.
+
+**Décision. La famille des notifications suit V-38**, et le raisonnement est celui d'`ECART-007`
+lui-même : *une vue dont la notification n'est qu'un accessoire ne peut pas trancher contre la vue
+qui la spécifie*. V-38 est la vue dont c'est le sujet.
+
+**Conséquence, énoncée sans l'adoucir.** `V-06 cpt-inconnu` **ne peut pas être conforme**. Ce n'est
+pas un défaut d'implémentation — l'exécutant a mesuré que rendre au candidat *les seules
+déclarations que V-07 remplace* ramène l'écart à **zéro**. C'est une **divergence du gel avec
+lui-même** : deux maquettes gelées à des dates différentes montrent le même composant autrement.
+
+**La seule résolution propre est un regel de V-06** — régime assisté, hors dépôt, geste du
+commanditaire. Aucun agent ne peut le faire, et aucun ne doit contourner.
+
+**En attendant : V-06 n'est pas déclarée livrée.** Six de ses sept états sont conformes à zéro
+pixel ; le septième est consigné au journal comme **recours au niveau 3 en attente d'arbitrage**,
+non accordé. Une vue partiellement conforme n'est pas une vue livrée (`PLAN §4.3`), et je ne vais
+pas faire une exception pour tenir un décompte.
+
+**Ce que cet écart apprend, et qui vaut mieux que le cas.** `ECART-007` avait raison sur les faits
+et tort sur la conclusion : « inerte » n'était vrai que **des états alors connus**. C'est
+exactement la règle du piège **P-5** — *une règle qu'aucun cas n'exerce est une règle dont on ignore
+si elle marche* — appliquée à une **divergence** plutôt qu'à un contrôle. Une divergence
+qu'aucun état n'exerce est une divergence dont on ignore si elle est inerte.
