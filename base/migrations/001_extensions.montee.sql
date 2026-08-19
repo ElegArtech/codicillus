@@ -1,0 +1,16 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 001 — LES EXTENSIONS
+--
+-- pgvector 0.8.6 (`cadrage/STACK-TECHNIQUE.md` §3) : « les vecteurs de sens
+-- sont conservés dans la base de vérité ». L'extension est posée ICI, à part du
+-- socle, pour une raison de fait : elle est la seule chose de ce lot qui puisse
+-- échouer sur une image PostgreSQL nue. La séparer rend l'échec lisible.
+--
+-- AUCUNE COLONNE `vector` N'EST CRÉÉE, ET C'EST DÉLIBÉRÉ. Un vecteur pgvector
+-- porte sa dimension dans son type (`vector(n)`), et `n` est celle du modèle
+-- d'embeddings. `.env.example` livre `MODELE_EMBEDDINGS=` — vide, sans valeur
+-- par défaut —, aucun document du cadrage ne nomme de modèle, et le service
+-- d'embeddings est optionnel (P-10). Choisir 384, 768 ou 1536 ici serait un
+-- comblement : la dimension viendra du lot qui installera le modèle.
+-- ═══════════════════════════════════════════════════════════════════════════
+CREATE EXTENSION IF NOT EXISTS vector;
