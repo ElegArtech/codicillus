@@ -1882,3 +1882,136 @@ que `RG-ACC-02` rend inoffensif par construction.
 
 **Ce que cela n'autorise pas :** aucune autre action d'écriture ne passe en GET. Celle-ci est la seule,
 et elle l'est parce que sa pire conséquence est l'état de départ du produit.
+
+---
+
+## ARB-055 — `blocEnLignes` du gel est un quatrième RENDU, pas un second convertisseur
+**20 août 2026** — arbitrage délégué. Répond à `T-015` É-1, **borne 1 de son contrat atteinte**.
+
+### Ce que le lot a trouvé, et il l'a trouvé parce que la borne le lui demandait
+
+Le contrat de `T-015` posait : *« si une maquette gelée montre un Markdown sérialisé, ligne ouverte et
+citée, alors elle est la loi et `ARB-049` doit céder devant elle. J'ai cherché `markdown` dans les 41
+maquettes […] mais je n'ai pas cherché toutes les orthographes. »*
+
+**Il a cherché, et il a trouvé.** `mockups/V-16-comparaison.html:1862-1878` :
+
+```js
+/* Représentation linéaire d'un bloc, façon texte source. C'est elle qui est
+   comparée ligne à ligne en mode Texte. */
+window.blocEnLignes = function (b) {
+  switch (b.type) {
+    case "h2": return ["## " + b.texte];
+    …
+    case "alerte": return [":::" + b.niveau + " " + b.titre, b.texte, ":::"];
+    case "figure": return ["![schéma] " + b.legende];
+    case "tableau": return ["| " + b.entetes.join(" | ") + " |"]…
+    default: return [""];
+  }
+};
+```
+
+Six des sept familles coïncident avec les formes qu'`ARB-049` a laissées libres et que le lot a
+choisies — et il les avait choisies **avant** de trouver ceci. C'est une convergence, non une copie.
+
+### Pourquoi ce n'est pas la loi du convertisseur — trois faits, tous vérifiés
+
+1. **Son entrée n'est pas le document canonique.** Elle est le `BlocDeContenu` de
+   `seeds/corpus.ts:309-331` — la forme simplifiée des maquettes. Le convertisseur, lui, part du
+   `Document` d'`ADR-003`.
+2. **Elle est irréversible par construction, et pas par négligence.** Elle ne porte ni le glyphe
+   d'alerte, ni la source ou l'alternative d'une image, ni l'ancre d'un titre, ni l'état coché
+   (`"- [ ] "` est écrit en dur, jamais `[x]`), ni le caractère numérique d'une cellule. Et son
+   `default: return [""]` **efface silencieusement** tout bloc qu'elle ne connaît pas. Un aller-retour
+   par cette fonction perd ce que `RG-M13-01` — « critère de réussite principal » — exige de conserver.
+3. **Elle est définie dans 29 maquettes et appelée par une seule** — vérifié :
+   `grep -n "blocEnLignes(" mockups/*.html | grep -v "= function"` ne rend que
+   `V-16-comparaison.html:2019`. C'est un utilitaire du bloc de script partagé des maquettes, au même
+   titre que `window.notifier` ou `window.alignement`, et non une spécification de format.
+
+Et **la pile dit ce que le mode Texte doit employer** : `STACK-TECHNIQUE.md` §4.5 — *« Mode Texte
+(V-16). Différences ligne à ligne sur le **rendu Markdown** des deux versions, avec le paquet
+`diff` »*. La pile désigne un rendu, pas un second convertisseur.
+
+### Décision
+
+**`blocEnLignes` est un quatrième rendu dérivé du document canonique, de la même nature que les trois
+qu'`ADR-003` énumère** — HTML, texte brut, Markdown. `ADR-004` interdit un second **convertisseur**,
+c'est-à-dire un second chemin `document ⇄ Markdown` : une linéarisation qui n'est **jamais relue**
+n'en est pas un, exactement comme `src/lib/contenu/rendu.ts` (HTML) n'en est pas un.
+
+| Fonction | Régime | Forme qui fait loi |
+|---|---|---|
+| **Export / import** — `serialiserEnMarkdown` / `analyserMarkdown` | conversion, aller-retour **identité** | `ARB-049`, et la fidélité prime : les formes de `T-015` |
+| **Mode Texte de V-16** — lignes de comparaison | **rendu**, jamais relu | le gel, `V-16:1864-1878`, au caractère près |
+
+**Les deux divergences relevées par le lot sont donc les bonnes, et elles ne sont pas des divergences :
+ce sont deux fonctions.** Le conteneur d'alerte nommé d'après le nœud avec ses attributs
+(`:::alerte{niveau= glyphe= titre=}`) est la forme d'**export**, parce que le glyphe doit survivre
+(`P-7.2`, `RG-M18-09`) ; `:::danger Titre` est la forme d'**affichage** de V-16. Le filet de tableau
+est requis à l'export (sans lui, ni la ligne de tête ni le caractère numérique ne se relisent) et
+absent de l'affichage.
+
+**Et le port du gel existe déjà, conforme** : `src/vues/V-16.svelte:149-173` transcrit `blocEnLignes`
+à la lettre, et le banc est vert dessus. **Rien n'est à changer.**
+
+### La borne, et elle vise le lot de V-16
+
+Quand `T-036` fera comparer de **vraies** versions à V-16, ses lignes de comparaison se dérivent du
+document canonique — comme le HTML se dérive — et **jamais** en appelant `analyserMarkdown` sur la
+sortie de `serialiserEnMarkdown`. Le jour où une seule de ces lignes serait **relue** pour reconstruire
+un document, ce serait un second convertisseur, et `ADR-004` s'appliquerait plein.
+
+`T-015` a d'ailleurs déjà posé le garde-fou : son contrôle d'unicité imprime la liste des
+**frontaliers**, et `src/vues/V-16.svelte` y figure, avec la mention qu'il *« basculera en constat le
+jour où V-16 comparera de vrais documents »*.
+
+---
+
+## ARB-056 — Deux trous du format canonique, relevés par `T-015` sur le livrable de `T-014`
+**20 août 2026** — arbitrage délégué. Répond à `T-015` É-6 et É-7.
+
+`T-014` a écrit six règles de forme canonique (`src/lib/contenu/document.ts:57-81`) dont la première
+énonce le motif de toutes : *« deux écritures pour le même document ruineraient l'identité de
+l'aller-retour de C-04 — la batterie 4 serait verte sans rien prouver »*. `T-015`, qui est le lot que
+cette phrase visait, en a trouvé deux qui manquent.
+
+### 1 · L'ordre des marques n'est pas contraint — `É-6`
+
+`marks: [bold, italic]` et `marks: [italic, bold]` sont deux JSON différents, donc **deux documents
+différents** au sens de l'identité mesurée par la batterie 4. Or ProseMirror trie les marques par rang
+de schéma et n'en produirait jamais qu'une des deux. `document.ts` ne l'impose pas.
+
+**C'est exactement ce que la règle 1 existe pour interdire, et elle l'a manqué.** Le convertisseur de
+`T-015` **préserve** l'ordre — c'est pourquoi son italique s'écrit avec un tiret bas plutôt qu'un
+astérisque —, donc rien n'est perdu aujourd'hui ; mais le format admet toujours deux écritures pour ce
+que le produit tient pour un seul document.
+
+**Décision. Une septième règle est ajoutée : les marques d'un texte sont dans l'ordre de leur
+déclaration au type `Marque`** (`document.ts:91-105`), et `analyserDocument` **refuse** tout autre
+ordre — il ne réordonne pas. Le refus, jamais la réparation : c'est le régime des six autres règles, et
+réordonner en silence ferait de la validation une normalisation, ce qui rendrait la batterie 4 verte
+par construction sur ce point.
+
+### 2 · Le retour chariot n'est refusé que dans un bloc de code — `É-7`
+
+`RG-M04-05` est tenue par refus à l'entrée : un `\r` dans un bloc de code est rejeté, et c'est juste.
+Mais `texteEnLigne` (`document.ts:300`) n'interdit que `\n` : **un fichier en CRLF donnerait des
+paragraphes à `\r` final, que le schéma accepte.**
+
+**Décision. Aucun `\r` n'entre dans un document canonique, où que ce soit.** Le motif de `RG-M04-05` —
+*« exactement ce que l'utilisateur collera dans son terminal »* — n'a aucune raison de s'arrêter aux
+blocs de code : un titre ou un paragraphe porteur d'un `\r` invisible est une différence qui se propage
+au texte brut, à l'index, à la détection de doublon et au diff.
+
+**Et le refus reste un refus.** L'hygiène de fin de ligne appartient à la **frontière du fichier**, donc
+à `T-043` (import) : c'est lui qui normalise avant de valider, et `T-015` a eu raison de remonter le
+point plutôt que de le combler dans le convertisseur — normaliser à la désérialisation serait
+« la correction appliquée d'un seul côté » qu'`ADR-004` interdit nommément.
+
+### Portée
+
+Ces deux règles touchent `src/lib/contenu/document.ts`, livré par `T-014`. Elles sont **des
+resserrements**, jamais des assouplissements : aucun document du corpus ne les enfreint — à vérifier
+par le lot, sur les quatre documents du gel et les dix cas nommés de la batterie 4. Si l'un les
+enfreint, **c'est le document qui est faux**, et il se corrige.

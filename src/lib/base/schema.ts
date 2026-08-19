@@ -110,6 +110,13 @@ export const comptes = pgTable(
 		actif: boolean('actif').notNull().default(true),
 		/** RG-CPT-01 — compte de démonstration partagé : droits intacts, mot de passe figé. */
 		motDePasseVerrouille: boolean('mot_de_passe_verrouille').notNull().default(false),
+		/**
+		 * UC-M16-01, STACK §4.7 — le condensat Argon2id du mot de passe, et jamais
+		 * le mot de passe (`003_authentification.montee.sql`). NULLABLE : un compte
+		 * sans condensat ne peut pas s'authentifier, ce qui est la fermeture par
+		 * défaut. Le jeu de semence n'en pose aucun.
+		 */
+		condensatMotDePasse: text('condensat_mot_de_passe'),
 		arriveLe: date('arrive_le').notNull(),
 		creeLe: timestamp('cree_le', { withTimezone: true }).notNull().defaultNow(),
 		modifieLe: timestamp('modifie_le', { withTimezone: true }).notNull().defaultNow()
@@ -510,6 +517,66 @@ export const verifications = pgTable(
 	(t) => [index('verifications_note_idx').on(t.noteId, t.le.desc())]
 );
 
+/* ══════════════════════════════════════ L'authentification (003) ════════ */
+
+/**
+ * STACK §4.7 — « sessions : jetons opaques en base ». Le jeton vit dans le
+ * cookie de l'appelant ; la base n'en garde que le condensat
+ * (`003_authentification.montee.sql`, qui porte le raisonnement).
+ *
+ * `souvenir` EXEMPTE du délai d'inactivité, il ne prolonge aucune durée
+ * (V-05:582, V-25:1222-1223). Le délai, lui, est lu dans `parametres`
+ * (`duree_session`, M14.7) : aucune durée n'est codée en dur.
+ */
+export const sessions = pgTable(
+	'sessions',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		condensatJeton: text('condensat_jeton').notNull(),
+		compteId: uuid('compte_id')
+			.notNull()
+			.references(() => comptes.id, { onDelete: 'cascade' }),
+		souvenir: boolean('souvenir').notNull().default(false),
+		creeeLe: timestamp('creee_le', { withTimezone: true }).notNull().defaultNow(),
+		derniereActiviteLe: timestamp('derniere_activite_le', { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+		fermeeLe: timestamp('fermee_le', { withTimezone: true })
+	},
+	(t) => [
+		unique('sessions_condensat_unique').on(t.condensatJeton),
+		check('sessions_activite_apres_ouverture', sql`${t.derniereActiviteLe} >= ${t.creeeLe}`),
+		index('sessions_compte_idx').on(t.compteId, t.creeeLe.desc())
+	]
+);
+
+/**
+ * RG-M16-01 — « un nombre excessif de tentatives DEPUIS UNE MÊME ORIGINE est
+ * ralenti puis bloqué temporairement ». STACK §4.7 : « compteur en base ».
+ *
+ * L'identifiant saisi n'est pas stocké : la règle ne le demande pas, et une
+ * saisie décalée d'un champ écrirait un mot de passe dans cette table.
+ */
+export const tentativesDeConnexion = pgTable(
+	'tentatives_de_connexion',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		origine: text('origine').notNull(),
+		reussie: boolean('reussie').notNull(),
+		attenteSecondes: integer('attente_secondes').notNull().default(0),
+		blocageJusquA: timestamp('blocage_jusqu_a', { withTimezone: true }),
+		le: timestamp('le', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [
+		check('tentatives_attente_positive', sql`${t.attenteSecondes} >= 0`),
+		check(
+			'tentatives_blocage_posterieur',
+			sql`${t.blocageJusquA} IS NULL OR ${t.blocageJusquA} > ${t.le}`
+		),
+		index('tentatives_de_connexion_origine_idx').on(t.origine, t.le.desc())
+	]
+);
+
 /** Le schéma complet, tel que l'ORM et le contrôle de cohérence le lisent. */
 export const schema = {
 	comptes,
@@ -529,5 +596,7 @@ export const schema = {
 	etiquettesDeNote,
 	relations,
 	piecesJointes,
-	verifications
+	verifications,
+	sessions,
+	tentativesDeConnexion
 };

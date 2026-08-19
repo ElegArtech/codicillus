@@ -16,8 +16,10 @@
 		"format": "prettier --write .",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc --noEmit && eslint . && prettier --check .",
 		"test:unit": "vitest run",
-		"test:aller-retour": "node verif/jalon.mjs \"batterie 4 « aller-retour Markdown »\" \"T-015\"",
-		"test:etancheite": "node verif/jalon.mjs \"batterie 6 « étanchéité du périmètre »\" \"T-011\"",
+		"test:aller-retour": "node verif/aller-retour.mjs",
+		"test:aller-retour:sonde": "node verif/aller-retour.mjs --sonde=marque-perdue && node verif/aller-retour.mjs --sonde=attribut-perdu",
+		"test:aller-retour:markdown": "node verif/aller-retour.mjs --markdown",
+		"test:etancheite": "node verif/jalon.mjs \"batterie 6 « étanchéité du périmètre »\" \"T-012b\"",
 		"test:droits": "node verif/droits.mjs",
 		"test:droits:sonde": "node verif/droits.mjs --sonde=masque && node verif/droits.mjs --sonde=grise && node verif/droits.mjs --sonde=offerte",
 		"test:vide": "node verif/vide.mjs --seuil-gel=210",
@@ -33,6 +35,9 @@
 		"verif:jetons": "node verif/jetons.mjs",
 		"verif:contraste": "node verif/contraste.mjs",
 		"verif:fraicheur": "node verif/fraicheur.mjs",
+		"verif:convertisseur": "node verif/convertisseur.mjs",
+		"verif:convertisseur:sonde": "node verif/convertisseur.mjs --sonde=second-convertisseur && node verif/convertisseur.mjs --sonde=nom-redeclare && node verif/convertisseur.mjs --sonde=chemin-detourne",
+		"verif:convertisseur:marqueurs": "node verif/convertisseur.mjs --marqueurs",
 		"verif:menus": "node verif/menus.mjs",
 		"verif:menus:sonde": "node verif/menus.mjs V-07 --sonde=lien-mort --etats=role-referent && node verif/menus.mjs V-07 --sonde=ancre-morte --etats=role-referent && node verif/menus.mjs V-37 --sonde=promesse --etats=cont-bord && node verif/menus.mjs V-37 --sonde=hors-routes --etats=cont-bord && node verif/menus.mjs V-37 --sonde=inactivee --etats=cont-bord && node verif/menus.mjs V-37 --sonde=sans-nom --etats=cont-bord && node verif/menus.mjs V-11 --sonde=module-fantome --etats=dom-migration-2026",
 		"verif:vocabulaire": "node verif/vocabulaire.mjs --seuil-gel=138 --seuil-fiche=67",
@@ -52,7 +57,7 @@
 		"mesure:budgets": "node verif/jalon.mjs \"batterie 13 « budgets de performance »\" \"T-028\"",
 		"exploitation:restauration": "node verif/jalon.mjs \"batterie 18 « sauvegarde et restauration »\" \"T-058\"",
 		"verify:lot": "node verif/jalon.mjs \"la sélection des batteries citées par un contrat de tâche\" \"non assigné par le §6.3 du plan de réalisation\"",
-		"verify": "pnpm run check && pnpm run verif:jetons && pnpm verif:inventaire && pnpm run verif:demo:hors-production && pnpm run test:unit && pnpm run test:aller-retour && pnpm run verif:fraicheur && pnpm run test:etancheite && pnpm run test:droits && pnpm run test:vide && pnpm run test:etats && pnpm run test:a11y && pnpm run verif:maquette && pnpm run test:parcours && pnpm run mesure:budgets && pnpm run test:degradation && pnpm run test:impression && pnpm run verif:menus && pnpm run verif:vocabulaire && pnpm run exploitation:restauration",
+		"verify": "pnpm run check && pnpm run verif:jetons && pnpm verif:inventaire && pnpm run verif:demo:hors-production && pnpm run test:unit && pnpm run test:aller-retour && pnpm run verif:convertisseur && pnpm run verif:fraicheur && pnpm run test:etancheite && pnpm run test:droits && pnpm run test:vide && pnpm run test:etats && pnpm run test:a11y && pnpm run verif:maquette && pnpm run test:parcours && pnpm run mesure:budgets && pnpm run test:degradation && pnpm run test:impression && pnpm run verif:menus && pnpm run verif:vocabulaire && pnpm run exploitation:restauration",
 		"verif:gel": "node verif/gel.mjs",
 		"verif:inventaire": "node verif/inventaire-composants.mjs --verifier",
 		"contrat": "node verif/contrat.mjs",
@@ -69,9 +74,10 @@
 		"contenu:invalide": "node verif/contenu.mjs invalide"
 	},
 	"dependencies": {
-		"zod": "4.4.3",
+		"@node-rs/argon2": "2.1.0",
 		"drizzle-orm": "0.45.2",
-		"pg": "8.23.0"
+		"pg": "8.23.0",
+		"zod": "4.4.3"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "4.13.0",
@@ -81,6 +87,7 @@
 		"@sveltejs/kit": "2.70.2",
 		"@sveltejs/vite-plugin-svelte": "7.3.0",
 		"@types/node": "^24.13.3",
+		"@types/pg": "8.23.1",
 		"eslint": "10.8.1",
 		"eslint-plugin-svelte": "3.23.0",
 		"globals": "17.11.0",
@@ -91,7 +98,6 @@
 		"typescript": "6.0.3",
 		"typescript-eslint": "8.67.0",
 		"vite": "8.2.1",
-		"vitest": "4.1.10",
-		"@types/pg": "8.23.1"
+		"vitest": "4.1.10"
 	}
 }
