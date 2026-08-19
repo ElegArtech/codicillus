@@ -253,6 +253,22 @@ Dans un bloc `<!-- prettier-ignore -->` écrit en `></tag\n\t><tag`, remplacer u
 `{@render}` qui ne finit **pas** par un tag ouvert transforme le `\n\t>` suivant en texte. Se relit
 dans le nom accessible du `row`. *(P-2, 19/08/2026)*
 
+### P-11 · PostgreSQL 18 se monte sur `/var/lib/postgresql`, pas `…/data`
+
+Le point de montage a changé avec la 18 : monter `…/data` fait **refuser le démarrage**. Coûté un
+démarrage raté. *(T-003, 19/08/2026)*
+
+### P-12 · L'instrument est dans le chemin de construction de l'image
+
+`vite.config.ts` importe le mode démo, qui lit `verif/references/protocole-app.json` **au chargement
+du module**. Sans ces deux fichiers dans le contexte, `vite build` s'arrête sur `ENOENT`. Une image
+qui n'embarquerait que `src/` ne se construit pas. *(T-003, 19/08/2026)*
+
+### P-13 · Le mot de passe PostgreSQL entre dans une URI
+
+Un `/` ou un `+` issu d'un tirage base64 ne se voit **qu'à la première connexion**, et le message
+n'aide pas. Employer `openssl rand -hex 32`. *(T-003, 19/08/2026)*
+
 ### P-5 · Une règle qu'aucun cas n'exerce est une règle dont on ignore si elle marche
 
 Le filtre d'adresses d'ARB-013 fut inerte pendant huit lots : il visait `/url:` quand Playwright

@@ -1,0 +1,8 @@
+# Dépendances du service de conversion — versions de STACK-TECHNIQUE.md §3.
+fastapi==0.141.1
+python-pptx==1.0.2
+pdfplumber==0.11.10
+# Serveur d'exécution de l'interface FastAPI. STACK §3 nomme FastAPI sans
+# nommer le serveur qui la sert : choix d'exploitation, déclaré au rapport du
+# lot T-003 (écart É-3). Version relevée à PyPI le 19/08/2026. Licence BSD-3, compatible C-11.
+uvicorn==0.52.4

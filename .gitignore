@@ -14,6 +14,10 @@ services/conversion/.venv/
 .env.local
 .env.*.local
 
+# Témoin d'indisponibilité programmée (RG-NF-10) : un état d'exploitation,
+# jamais un état du dépôt.
+frontal/indisponibilite/ACTIF
+
 # Outillage agentique
 .claude/settings.local.json
 .claude/worktrees/
