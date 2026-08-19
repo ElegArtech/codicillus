@@ -70,6 +70,7 @@
 		type Note,
 		type TypeDeFiche
 	} from '../../seeds/corpus';
+	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — formulaire × suppression. */
@@ -285,7 +286,7 @@
 	classeEnveloppe="console"
 	classeContenu="travail"
 	idContenu="travail"
-	fil={filDeConsole('Types de fiches')}
+	fil={filDeConsole(`Types de ${motFichePlurielMinuscule}`)}
 	donnees={{ 'data-form': panneauOuvert ? 'ouvert' : 'ferme' }}
 	univers={UNIVERS}
 	domaines={DOMAINES}
@@ -299,8 +300,8 @@
 
 	{#snippet enfants()}
 		<TeteDeSection
-			titre="Types de fiches"
-			description="Les schémas de propriétés structurées. Un type de fiche transforme une note en objet exploitable : un serveur porte une adresse et une criticité, et devient un nœud de la cartographie."
+			titre={`Types de ${motFichePlurielMinuscule}`}
+			description={`Les schémas de propriétés structurées. Un type de ${motFicheMinuscule} transforme une note en objet exploitable : un serveur porte une adresse et une criticité, et devient un nœud de la cartographie.`}
 		>
 			{#snippet action()}
 				<BoutonDeCreation libelle="Nouveau type" />
@@ -367,11 +368,11 @@
 	{/snippet}
 
 	{#snippet superposition()}
-		<aside class="tiroir-form" id="tiroir" aria-label="Formulaire de type de fiche">
+		<aside class="tiroir-form" id="tiroir" aria-label="Formulaire de type de {motFicheMinuscule}">
 			<div class="tiroir-form__tete">
 				<div style="min-width:0">
 					<h2 class="tiroir-form__titre" id="form-titre">
-						{edite ? edite.nom : 'Nouveau type de fiche'}
+						{edite ? edite.nom : `Nouveau type de ${motFicheMinuscule}`}
 					</h2>
 					<div class="tiroir-form__sous" id="form-sous">
 						{#if edite}{notesEditees.length} notes utilisent déjà ce schéma.{:else}Définissez les
@@ -705,7 +706,7 @@
 							/></svg
 						>
 					</span>
-					<h2 class="dlg__titre" id="dlg-sup-titre">Supprimer le type de fiche</h2>
+					<h2 class="dlg__titre" id="dlg-sup-titre">Supprimer le type de {motFicheMinuscule}</h2>
 					<button class="dlg__fermer" data-fermer aria-label="Fermer">
 						<svg
 							width="16"
@@ -723,8 +724,8 @@
 								<ul>
 									<li>
 										<b>{notesASupprimer.length}</b>{notesASupprimer.length > 1
-											? 'notes portent ce type de fiche'
-											: 'note porte ce type de fiche'}
+											? `notes portent ce type de ${motFicheMinuscule}`
+											: `note porte ce type de ${motFicheMinuscule}`}
 									</li>
 									<li>
 										<b>{aSupprimer.props.length}</b>propriétés dont les valeurs seraient perdues

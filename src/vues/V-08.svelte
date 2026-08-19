@@ -140,6 +140,7 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
+	import { motFiche } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — droits × état × sens. */
@@ -489,7 +490,7 @@
 <!-- prettier-ignore -->
 {#snippet carte(n: Note, q: string, index: number)}<a class="carte" href="#" data-index={index}
 		><div class="carte__haut"
-			><h2 class="carte__titre">{@render marque(n.titre, q)}</h2>{#if n.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}<span class="past past--type">{n.type === 'Fiche' ? `Fiche ${n.typeFiche}` : n.type}</span
+			><h2 class="carte__titre">{@render marque(n.titre, q)}</h2>{#if n.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}<span class="past past--type">{n.type === 'Fiche' ? `${motFiche} ${n.typeFiche}` : n.type}</span
 		></div
 		>{#if n.type === 'Signet'}<div class="marque-signet">↗ {n.url}</div>{/if}<p class="carte__extrait">{@render marque(n.extrait, q)}</p
 		><div class="carte__signal"
