@@ -27,12 +27,17 @@
 	 * LES SIX ÉTATS, ET CE QUE LA PLANCHE ATTEINT RÉELLEMENT — MESURÉ
 	 *
 	 * `reglerPlanche()` applique le vecteur complet mais n'émet `change` que sur
-	 * un bouton QUI N'EST PAS DÉJÀ COCHÉ (`verif/banc/capture.mjs`). Or les deux
+	 * un bouton QUI N'EST PAS DÉJÀ COCHÉ (`capture.mjs` du banc). Or les deux
 	 * gestionnaires de la planche du gel (`V-05:831` et `V-05:839`) rappellent
 	 * l'UN ET L'AUTRE `afficherContexte(arrivee)` : le contrôle « Issue de la
 	 * tentative » ne peint donc rien. Il déclenche une soumission différée de
 	 * 850 ms que seul un clic sur « Se connecter » emprunte, et le banc ne clique
 	 * pas.
+	 *
+	 * (Le chemin complet du module du banc n'est volontairement PAS cité :
+	 * depuis T-070 cette vue est servie par une route réelle, donc BÂTIE, et
+	 * `verif:demo:hors-production` cherche cette chaîne en texte brut dans le
+	 * produit construit — commentaires compris. Écart É-2 du lot T-070.)
 	 *
 	 * RELEVÉ AU NAVIGATEUR, dans les conditions du banc — six états, TROIS
 	 * écrans distincts :
