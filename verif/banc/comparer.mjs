@@ -113,9 +113,19 @@ export function comparerPixels(pngReference, pngCandidat) {
 		} else {
 			// Le fond de l'image d'écart est la référence, éclaircie : elle situe
 			// les taches roses sans jamais se confondre avec elles.
-			ecart.donnees[p] = 200 + (r.donnees[p] >> 2);
-			ecart.donnees[p + 1] = 200 + (r.donnees[p + 1] >> 2);
-			ecart.donnees[p + 2] = 200 + (r.donnees[p + 2] >> 2);
+			/* ÉCART-021 É-1 — le voile doit rester dans [0, 255].
+			   La formule d'origine, `200 + (v >> 2)`, atteint 263 pour v = 255 et
+			   DÉBORDE dans un Buffer, qui tronque au modulo : le fond clair repartait
+			   de zéro et virait au noir, et 2 355 pixels prenaient exactement
+			   (255, 0, 255) — la couleur réservée aux divergences. Sur d-droits,
+			   l'image portait 2 373 pixels magenta pour 18 vraies divergences.
+			   Aucun verdict n'en dépendait — les comptes se font sur les tampons
+			   bruts — mais le NIVEAU 3 JUGE SUR PIÈCES, et cette pièce mentait.
+			   Voile éclaircissant borné : v + (255 - v) * 0,78, monotone et sans
+			   débordement possible. */
+			ecart.donnees[p] = voile(r.donnees[p]);
+			ecart.donnees[p + 1] = voile(r.donnees[p + 1]);
+			ecart.donnees[p + 2] = voile(r.donnees[p + 2]);
 		}
 	}
 
@@ -203,4 +213,13 @@ export function coteACote(pngReference, pngCandidat) {
 	coller(planche, r, 0, 0);
 	coller(planche, c, r.largeur + filet, 0);
 	return encoder(planche);
+}
+
+/**
+ * Voile éclaircissant du fond de l'image d'écart, borné à [0, 255] par
+ * construction : les zones identiques sont estompées, les divergences seules
+ * restent en magenta plein. Voir ÉCART-021 É-1.
+ */
+function voile(v) {
+	return Math.min(255, Math.round(v + (255 - v) * 0.78));
 }
