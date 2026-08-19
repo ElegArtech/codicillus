@@ -1486,3 +1486,176 @@ l'état, et mieux que le gel.** Nouveau verdict `porte-par-omission`.
 **Un test unitaire a été supprimé, et c'est le bon geste** : *« sans droit atteignable au gel et
 absent du portage est un manque de PORTAGE »* exigeait littéralement le contraire de `P-09`. Six cas
 le remplacent.
+
+---
+
+## ARB-049 — Le Markdown de l'export porte des conventions maison, et le gel en fixe déjà deux
+**19 août 2026** — arbitrage délégué, rendu pour `T-015`. Aucun point ne remonte au commanditaire :
+tout se déduit, et deux formes sont **écrites dans le gel**.
+
+### Le vide apparent, et pourquoi il n'en est pas un
+
+`ADR-003` et `STACK-TECHNIQUE.md` §4.3 (l. 264) écrivent que « le Markdown ne sait pas représenter
+proprement les blocs d'alerte à trois niveaux, les liens internes stables au renommage, les cases de
+tâches imbriquées ni les blocs de diagramme **sans conventions maison** ». Lu de travers, cela
+interdirait de convertir. Lu à la lettre, c'est un motif pour **ne pas stocker** le Markdown, et non
+une interdiction d'en produire : la phrase énumère précisément ce qu'une convention doit couvrir.
+
+Et le cahier des charges autorise la convention, en propres termes :
+`CAHIER-DES-CHARGES-FONCTIONNEL.md` l. 1110 — « Les liens internes sont exprimés dans une **syntaxe
+réimportable**. »
+
+### Ce que le gel fixe, et qui n'est donc pas à décider
+
+| Construction | Ce que le gel écrit | Où, ligne ouverte et lue |
+|---|---|---|
+| **Diagramme** | « 1 diagramme — converti en **bloc de code**, sans rendu graphique » | `mockups/V-36-console-exports.html:3044` |
+| **Lien interne** | le déclencheur est `[[` — bouton « Lien interne » portant `<span class="raccourci">[[</span>`, invite du champ « … « [[ » pour lier une autre note », entrée de menu d'icône `[[ ]` | `mockups/V-17-editeur.html:1576`, `:1585`, `:3191` |
+
+**Décision 1 — un diagramme se sérialise en bloc de code clôturé.** C'est le gel, et le gel ne se
+discute pas. « Sans rendu graphique » qualifie ce que voit un lecteur **hors du produit** : l'archive,
+elle, reste « complète et réimportable » (`V-36:3035`). La forme est donc un bloc clôturé dont la
+chaîne d'information nomme le langage.
+
+**Décision 2 — le lien interne emploie la famille `[[ … ]]`, et porte l'identifiant de la cible.**
+`ADR-003` interdit tout lien portant le titre. La forme exacte à l'intérieur des crochets — position
+du libellé, séparateur — est laissée à l'exécutant, sous la contrainte de la décision 4.
+
+**Décision 3 — pour toute autre construction que le Markdown de référence ne sait pas porter, la
+convention maison est autorisée**, à trois conditions : elle est **documentée à l'implémentation
+unique**, elle est **lisible par un humain** (le gel promet « lisible dans n'importe quel éditeur de
+texte », `V-36:2923`), et elle satisfait la décision 4.
+
+### Décision 4 — la fidélité prime sur l'apparence, et c'est RG-M13-01 qui l'impose
+
+`RG-M13-01` est désigné par le cahier comme le **« critère de réussite principal »** ; l'ordre de
+préséance le place au-dessus de la pile. **L'aller-retour est l'identité, pour tout document du
+corpus** : un attribut que le format canonique porte et que le Markdown ne rend pas est un **défaut
+de convention**, jamais une perte admise.
+
+En particulier, l'alternative textuelle d'un diagramme et d'une image (`P-06`, `RG-M18-11`), le
+glyphe et le titre d'une alerte, l'ancre d'un titre, l'attribution d'une citation, l'étiquette et la
+légende d'une figure, et le caractère numérique d'une cellule **survivent à l'aller-retour**. Une
+convention qui les perdrait est refusée, quelle que soit son élégance.
+
+**Et une construction qui ne saurait pas revenir à l'identique se déclare et se compte** — elle ne se
+dégrade pas en silence. C'est `R-05` de `STACK-TECHNIQUE.md` l. 461 : « un aller-retour non idempotent
+fait échouer la construction ».
+
+### Décision 5 — l'en-tête de métadonnées n'appartient pas à ce lot, et le dire est obligatoire
+
+`V-36:2929` décrit « Type, étiquettes, auteur, date de dernière vérification, visibilité et propriétés
+de fiche, dans un bloc `---` en tête de fichier. C'est ce bloc qui rend l'archive réimportable. »
+
+Ce bloc porte les métadonnées de la **note**, non le corps du document. Il appartient à `T-045`
+(export) et `T-043` (import). **`T-015` convertit le corps, et rien d'autre** — mais il **déclare la
+couture** à l'implémentation unique, de sorte qu'aucun lot ultérieur n'écrive un second analyseur
+(`ADR-004` l'interdit nommément).
+
+**Corollaire à traiter, et il est réel** : un document dont le premier bloc est un `horizontalRule`
+sérialise un fichier commençant par `---`, que l'analyseur d'en-tête de `T-043` lirait comme une
+ouverture de métadonnées. Le convertisseur choisit une forme de séparateur qui ne collisionne pas, ou
+démontre que la collision est impossible. Le choix est à l'exécutant ; le silence ne l'est pas.
+
+### Ce que cet arbitrage ne tranche pas, et qui reste ouvert de `T-014`
+
+La **coloration syntaxique** d'un bloc de code reste hors format : le gel porte ses jetons au
+balisage, les stocker casserait l'aller-retour, les recalculer demanderait un lexer hors pile. Le
+Markdown d'un bloc de code porte donc le **texte brut** et la chaîne d'information du langage, jamais
+des jetons. Cela ne perd rien, puisque le format canonique ne les porte pas non plus.
+
+---
+
+## ARB-050 — `src/lib/base/connexion.ts` n'applique pas ARB-038, et honore encore une URI
+**19 août 2026** — arbitrage délégué, rendu pour `T-012`. Défaut **vérifié fichier ouvert**, non
+supposé.
+
+### Le fait, et les deux lignes qui l'établissent
+
+`ARB-038` a décidé le 19 août : « **La base se configure par variables séparées, jamais par une
+URI.** `compose.yaml` est corrigé : `HOTE_BASE`, `PORT_BASE`, `UTILISATEUR_BASE`, `MDP_BASE`,
+`NOM_BASE`. Le connecteur reçoit un **objet**, jamais une chaîne. […] `URL_BASE` disparaît du contrat
+de déploiement. »
+
+`compose.yaml` l'applique : le service `app` passe bien les cinq `*_BASE`.
+
+**`src/lib/base/connexion.ts` ne l'applique pas.**
+
+- `:60-67` — l’interface `EnvironnementDeConnexion` déclare `URL_BASE`, `UTILISATEUR_POSTGRES`,
+  `MDP_POSTGRES`, `BASE_POSTGRES`, `HOTE_POSTGRES`, `PORT_DB`. **Aucun des cinq `*_BASE` n'y figure.**
+- `:80-83` — `if (url) { return { connectionString: url }; }` : le chemin `URL_BASE` est vivant, et il
+  rend **une chaîne**, ce qu'ARB-038 interdit en propres termes.
+
+### Les deux conséquences, et la seconde est la plus grave
+
+1. **L'application en conteneur ne peut pas se connecter.** Elle reçoit cinq variables qu'elle ne lit
+   pas, et aucune de celles qu'elle lit — donc `ConnexionNonConfigureeErreur` au démarrage.
+2. **`P-13` est réouvert par la porte de derrière.** Le chemin `URL_BASE` accepte encore une URI
+   composée ; un `/`, un `#` ou un `?` dans le mot de passe y refait exactement le défaut que T-010 a
+   mesuré sur six mots de passe. La parade était « dans la forme » ; la forme a deux entrées, et l'une
+   des deux est celle d'avant.
+
+**Aucune batterie ne l'a vu, et la raison est nommée au dépôt** : c'est `P-5`. Rien n'exerce le chemin
+de l'application conteneurisée — les commandes de base passent par `.env` et les `*_POSTGRES`, qui
+sont, eux, la configuration du **serveur** PostgreSQL et fonctionnent.
+
+### Décision
+
+**`connexion.ts` lit les cinq `*_BASE` et le chemin `URL_BASE` est retiré**, sans période de
+tolérance : ARB-038 l'a fait disparaître du contrat de déploiement, le code ne peut pas le garder
+« au cas où ».
+
+Les `*_POSTGRES` **restent** : ARB-038 les conserve explicitement pour nommer la configuration du
+conteneur PostgreSQL, et les commandes de base hors conteneur les emploient. Les deux jeux ne se
+confondent pas — c'est déjà écrit, et c'est le seul point qu'il ne faut pas « simplifier ».
+
+**Et le défaut ne se referme pas par une correction seule : il se referme par un cas qui l'exerce.**
+Un unitaire doit échouer si `URL_BASE` redevient un chemin accepté, et un autre doit prouver que les
+cinq `*_BASE` produisent bien un **objet** — `connectionString` absent du résultat. Sans quoi la
+correction est espérée, non posée.
+
+### Portée exacte
+
+Cet arbitrage ne rouvre ni `compose.yaml`, ni `.env.example`, ni les noms de variables : il aligne le
+client sur une décision déjà rendue. Il ne dit rien de la configuration des sessions, que `T-012`
+traite par ailleurs.
+
+---
+
+## ARB-051 — Le contrôle d'unicité du convertisseur est livré par `T-015`, non différé à la vague 7
+**19 août 2026** — arbitrage délégué, rendu pour `T-015`.
+
+**Ce qu'`ADR-004` laisse ouvert.** Sa section « Comment le vérifier » dit : la batterie 4 « prouve la
+propriété, pas l'unicité », et l'unicité « n'a pas encore de batterie dédiée […] à ouvrir comme
+extension de la batterie 5 ou comme batterie propre au lot d'export (M13) ».
+
+Le lot d'export est `T-045`, **vague 7**.
+
+**Pourquoi ce délai n'est pas tenable.** Entre `T-015` et `T-045` s'exécutent, entre autres :
+
+- **`T-021` — « Markdown à la frappe »**, vague 2, `UC-M05-04`, critère « les neuf conversions
+  attendues ». C'est **littéralement** un lot de conversion Markdown, et son point d'appui au gel est
+  la table `RACCOURCIS` de `mockups/V-17-editeur.html:3145-3149`. Aucune tentation ne ressemble
+  davantage à un second convertisseur.
+- **`T-043` — import**, vague 7, qui `ADR-004` désigne comme le chemin où « il paraît toujours plus
+  simple d'écrire un petit convertisseur pour l'import ».
+
+`ADR-004` interdit nommément « les convertisseurs qualifiés de *temporaires*, *provisoires* ou *pour
+l'import seulement* ». Une interdiction dont le contrôle arrive cinq vagues après la première
+occasion de la violer est **déclarative** — et ce dépôt tient *bloquant > vérifiable > déclaratif*.
+
+**Décision. `T-015` livre le contrôle d'unicité, sur le modèle de la batterie 5.** `verif/fraicheur.mjs`
+existe, il fait exactement ce travail pour `P-01`, et il est le modèle à décliner : compter les
+implémentations, et vérifier que tous les appelants passent par la même.
+
+**Deux exigences, et la seconde est celle qui décide de tout** (`P-5`) :
+
+1. Le contrôle **compte** les implémentations et **rougit à deux**.
+2. Le contrôle est **éprouvé sur un cas qui le sollicite** — une seconde implémentation posée pour la
+   durée de la sonde, et retirée. Un contrôle d'unicité sur un dépôt qui n'en porte qu'une seule est
+   vert par vacuité : il ne prouve rien, et il ressemble à un résultat. C'est le mode de défaillance
+   `RA-01`, et c'est le motif pour lequel le filtre d'ARB-013 est resté inerte huit lots.
+
+**Ce que cet arbitrage ne fait pas.** Il n'anticipe ni `T-021`, ni `T-043`, ni `T-045` : il pose le
+garde-fou, pas leur code. Et il ne dit pas *où* le contrôle vit — batterie propre ou extension de la
+5 : l'exécutant tranche, et le justifie.
