@@ -513,3 +513,44 @@ commande sort en 1, et **V-37, V-38, V-39 tiennent le seuil zéro sans une retou
 **Sens du geste.** `verif/references/tolerances.json` est en écriture humaine seule, et un agent
 bloqué sur un rouge n'y touche jamais. Ce resserrement va dans la seule direction jamais suspecte :
 il **durcit** le critère. Élargir eût demandé un arbitrage bien plus lourd que celui-ci.
+
+---
+
+## ARB-019 — Second amendement borné du gabarit : le lien d'évitement
+**19 août 2026** — arbitrage délégué. Répond à `ECART-016` É-3.
+
+**Le problème, relevé mécaniquement par T-101b.** La cible du lien d'évitement **n'est `<main>` que
+dans 22 des 34 maquettes à coquille**. Douze visent une ancre *intérieure* au contenu —
+`#resultats` (V-08), `#liste` (V-12, V-21, V-22), `#article` (V-14, V-15), `#zone` (V-16),
+`#redaction` (V-17, V-18), `#liste-noeuds` (V-19), `#adresse` (V-23), `#rech` (V-26) — et **onze
+vues portent un libellé autre** que « Aller au contenu » : « Aller à la bibliothèque » (V-41),
+« Aller à la rédaction », « Aller aux résultats », « Aller à la comparaison », « Aller à la liste
+des nœuds »…
+
+Le gabarit lie aujourd'hui `href` à `idContenu`, ce qui est exact pour les 22 concordantes et faux
+pour les douze autres.
+
+**Décision. Le gel est levé une seconde fois, pour un périmètre aussi étroit que la première.**
+
+Deux propriétés, et rien d'autre : la **cible** du lien d'évitement, et son **libellé**. Défauts
+inchangés — `#{idContenu}` et « Aller au contenu » — pour ne rien casser des quatre vues livrées.
+Puis regel.
+
+**Motif.** Le lien d'évitement est le **premier nœud focalisable de chaque page** : il est dans
+l'instantané ARIA que le niveau 1 compare en échec sec, et il porte une exigence d'accessibilité
+réelle (`RG-M18-08`, P-06), pas une décoration. Un libellé faux n'est pas un écart de rendu, c'est
+une régression d'accessibilité que le banc signalerait à juste titre.
+
+**Pourquoi maintenant.** V-41 est le prochain lot (T-103) et fait partie des douze : son lien dit
+« Aller à la bibliothèque » et vise `#corps`. Attendre, c'est faire buter le lot ou le laisser
+dupliquer le gabarit — ce que le premier amendement visait précisément à empêcher.
+
+**Ce que ça emporte.** Un lot dédié **T-101c**, criticité basse, qui n'amende que ces deux
+propriétés, ne touche aucune vue au-delà de la preuve de non-régression, et **regèle** à sa
+clôture. Les quatre vues livrées doivent rester à zéro pixel : c'est le critère.
+
+**Sur la répétition.** C'est le deuxième amendement d'une ressource gelée en deux lots. Ce n'est
+pas le gel qui est mal posé : c'est l'interface du gabarit qui se découvre au contact des vues, et
+elle continuera. La discipline qui tient est celle-ci — **jamais d'écriture opportuniste dans la
+ressource gelée, toujours un arbitrage numéroté, un périmètre écrit, une preuve de non-régression,
+un regel.** Trois lots successifs s'y sont tenus.
