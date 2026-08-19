@@ -532,7 +532,17 @@ async function auditerLaPage(page, { vue, etat }) {
 		} else {
 			await page.keyboard.press('Escape');
 			const c = await page.evaluate(() => window.__a11y.constaterRestitution());
-			if (!c.ferme) {
+			if (c.stabilise === false) {
+				/* Le focus n'a pas cessé de bouger dans la borne de la sonde : la
+				   propriété n'est pas MESURÉE, elle est indécise. La porter au
+				   verdict rendrait un chiffre qui varie sans qu'aucune source
+				   n'ait bougé — le défaut même que cette sonde vient de fermer. */
+				constats.push({
+					regle: 'instrument:restitution-non-mesurable',
+					signature: '(superposition)',
+					detail: 'le focus ne s’est pas stabilisé après Échappement'
+				});
+			} else if (!c.ferme) {
 				constats.push({
 					regle: 'superposition:sans-echappement',
 					signature: '(superposition)',
