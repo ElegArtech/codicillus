@@ -40,6 +40,14 @@
 	 * `position: fixed` et donc hors du flux : écart d'ORDRE de document déclaré
 	 * au rapport, sans effet de mise en page.
 	 *
+	 * LA FRAÎCHEUR VIENT DE L'IMPLÉMENTATION UNIQUE — `$lib/fraicheur.ts`,
+	 * extraite du gel par le lot P-0b. La restitution locale de `libelleFraicheur`
+	 * que ce fichier portait, déclarée à `ECART-015` É-6, est RETIRÉE : elle était
+	 * le second calcul dérivé de la fraîcheur du dépôt, et P-01 n'en admet qu'un.
+	 * Le texte rendu est identique — la fabrique unique est la transcription
+	 * littérale de `window.libelleFraicheur` du gel, dont la restitution locale
+	 * était déjà la copie.
+	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
 	 * (P-6.1) et de `src/vues/V-40.css` (P-6.3). Les styles en ligne reproduits
 	 * ci-dessous sont ceux de la maquette gelée — voir l'écart déclaré au rapport
@@ -58,6 +66,7 @@
 		type Note
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import { libelleFraicheur } from '$lib/fraicheur';
 
 	interface Proprietes {
 		/** La clé de l'état demandé : le dialogue rendu ouvert. */
@@ -96,19 +105,6 @@
 	const notesDuDossier = $derived(
 		notes.filter((n) => n.domaine === DOMAINE_DOSSIER && n.dossier.startsWith(DOSSIER)).length
 	);
-
-	/**
-	 * Le libellé de fraîcheur, dans la forme que la maquette emploie. Restitution
-	 * locale : l'implémentation unique du calcul de fraîcheur (P-01) relève de
-	 * T-013, et cette vue devra la reprendre le jour où elle existera.
-	 */
-	function libelleFraicheur(n: Note): string {
-		if (n.fraicheur === 'frais') {
-			return n.jours < 31 ? `Vérifié il y a ${n.jours} jours` : 'Vérifié il y a 1 mois';
-		}
-		const mois = Math.round(n.jours / 30);
-		return n.fraicheur === 'vieil' ? `Vérifié il y a ${mois} mois` : `Pas revu depuis ${mois} mois`;
-	}
 
 	/** Les notes dont le titre recouvre au moins 60 % des mots significatifs. */
 	function notesProches(titre: string): readonly Note[] {
