@@ -348,24 +348,34 @@ toujours la même : une propriété du gel affirmée sans ouvrir le fichier. Tro
 lecture de travers, ni contre une affirmation qu'on n'a pas vérifiée.** La parade est une discipline
 d'écriture : *fichier, ligne, et ce qu'on y lit* — ou rien. *(19/08/2026)*
 
-### P-22 · Les serveurs de développement orphelins s'accumulent, et personne ne les compte
+### P-22 · Ce qu'un lot laisse derrière lui — serveurs, conteneurs, volumes
 
-Mesuré le 19/08/2026 : **huit serveurs Vite orphelins**, le plus ancien démarré **vingt et une heures
-plus tôt**, tous survivants de lots depuis longtemps clos. Ils occupaient **7,3 Go** — un tiers de la
-mémoire utilisée de la machine.
+**Mesuré deux fois le 19 août, et la seconde était pire.**
 
-Ce n'est pas neuf : `ECART-014` É-2 relevait déjà « six serveurs de développement orphelins », et le
-passage aux copies de travail devait le refermer. **Il l'a aggravé** : chaque copie lance le sien, et
-rien ne les arrête quand le lot rend.
+| Ce qui restait | Combien | Depuis | Coût |
+|---|---|---|---|
+| Serveurs Vite | **8** | jusqu'à **21 h** | **7,3 Go** de mémoire |
+| Conteneurs d'agents | **14** | **2 jours** | 0,7 Go, et 49 volumes |
+
+`ECART-014` É-2 relevait déjà « six serveurs de développement orphelins », et le passage aux copies
+de travail devait refermer le cas. **Il l'a aggravé** : chaque copie lance les siens, et rien ne les
+arrête quand le lot rend. Un lot qui appelle `pnpm verif:base` crée en outre un **conteneur
+PostgreSQL et ses volumes**, que le retrait de la copie n'emporte pas.
 
 **Deux conséquences, et la seconde est la plus grave.** Le banc ralentit — les mêmes 409 couples
 passent de 363 s à 563 s selon la charge. Et surtout, **un port pris par un orphelin fait mesurer le
-mauvais serveur** : c'est exactement le symptôme qu'`ECART-017` É-8 avait nommé, et `--strictPort`
-n'y protège que si le lot le passe.
+mauvais serveur** : c'est le symptôme qu'`ECART-017` É-8 avait nommé, et `--strictPort` n'y protège
+que si le lot le passe.
 
-Parade : compter les serveurs avant et après chaque vague — `ps -eo pid,lstart,args | grep 'vite.js
-dev'` —, et ne jamais chercher à les repérer par `pgrep` sur un motif (**P-1**). Un lot qui rend doit
-être suivi du retrait de sa copie, qui emporte son serveur. *(19/08/2026)*
+**Deux gestes à la clôture d'un lot, jamais un seul :**
+
+```bash
+chmod -R u+w /tmp/wt-<nom> && git worktree remove /tmp/wt-<nom> --force   # emporte son serveur
+docker rm -f -v <les conteneurs que le lot a créés>                       # jamais un prune aveugle
+```
+
+**Ne jamais repérer un processus par `pgrep` sur un motif** (`P-1`) : il se trouve lui-même, et il
+attrape les processus des autres copies. *(19/08/2026)*
 
 ### P-18 · Depuis l'imbrication CSS, `CSSStyleRule` porte un `cssRules` vide mais vrai
 
