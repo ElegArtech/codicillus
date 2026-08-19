@@ -1104,3 +1104,96 @@ elles sont des précisions, et chacune a un comportement par défaut déductible
 
 **Décision.** Aucun lot n'attend ces trois entrées. Elles sont des paramètres, pas des préalables.
 Le dossier des regels ne les porte plus.
+
+---
+
+## ARB-036 — Les quatre divergences relevées par T-010, et une lecture qui n'était pas la bonne
+**19 août 2026** — arbitrage délégué. Répond à `T-010` É-7.
+
+T-010 a relevé quatre divergences entre le cahier des charges et les maquettes, et les a toutes
+tranchées par l'ordre de préséance. **Trois sont justes ; la quatrième repose sur une contradiction
+qui n'existe pas.**
+
+| Point | Cahier | Maquettes | Retenu |
+|---|---|---|---|
+| Rôles de compte | §2.2 : 3 niveaux d'accès | 4 rôles (V-28) | **4 rôles** — la maquette prime |
+| Modules de domaine | RG-STR-06 : 5 modules | 6, « Dossiers » en plus | **6** — la maquette prime |
+| Signet | §3.3 : objet de référentiel | type de note portant `url` et `ajoute` | **type de note** — la maquette prime |
+| Types de note | §3.4 : **11 fournis** | **5 employés** | **11 au référentiel, 5 au corpus** |
+
+**La quatrième n'est pas un conflit.** T-010 a retenu « les 5 des maquettes », en concluant qu'elles
+priment. Mais *fournir* onze types et *en employer* cinq dans un corpus de démonstration ne se
+contredisent pas : **le cahier décrit un référentiel, les maquettes montrent un jeu de données.** Une
+maquette qui emploie cinq types ne prouve pas que les six autres n'existent pas — elle prouve que le
+corpus de démonstration n'en emploie que cinq.
+
+**L'ordre de préséance tranche les conflits ; il ne s'invoque pas quand il n'y en a pas.** Retenir 5
+aurait fait perdre six types fournis que rien ne contredit.
+
+**Décision.** Le référentiel livré porte **les onze types de CDC §3.4**, avec les libellés du cahier.
+Les **cinq des maquettes** sont ceux que la semence emploie, avec **les libellés des maquettes** —
+là, elles priment, puisque ces libellés sont rendus à l'écran. Si un des cinq porte un libellé
+différent du type de cahier correspondant, c'est le libellé de la maquette qui est stocké.
+
+**Ce que cela coûte :** une migration de plus, comme T-010 l'avait prévu. Rien à défaire.
+
+---
+
+## ARB-037 — Les trois décisions de T-010 prises faute de source
+**19 août 2026** — arbitrage délégué. Répond à `T-010` É-8.
+
+**1. Le nom du dossier racine.** `RG-STR-03` donne à chaque domaine un dossier racine par défaut,
+sans le nommer, et aucune maquette ne l'affiche — l'adresse `/…/dossiers/{chemin…}` ne le porte pas.
+T-010 lui donne **le nom de son domaine**. **Retenu.** C'est la seule valeur qui ne soit pas
+inventée : elle est déjà connue, elle est unique dans son univers, et un dossier racine ne s'affiche
+nulle part, donc aucune vue ne dépend de ce choix.
+
+**2. La profondeur se compte racine comprise** — `BETWEEN 1 AND 10`. `RG-STR-04` plafonne à dix
+niveaux sans dire si la racine en est un. **Retenu**, et c'est le sens strict : le plafond protège
+d'une arborescence ingérable, et la racine est un niveau de rangement comme un autre. La lecture
+inverse offrirait onze niveaux là où la règle en écrit dix.
+
+**3. L'origine des relations.** `P-08` exige que l'utilisateur sache toujours si une relation est
+*déclarée*, *déduite* ou *ambiguë*. Aucune maquette ne porte l'origine des 22 relations du corpus.
+T-010 les entre toutes en `declaree`. **Retenu, et c'est la seule valeur défendable** : une relation
+du jeu de semence a été écrite à la main, donc elle est déclarée. **Mais la colonne n'a pas de
+défaut** — `declaree` doit être posé explicitement à chaque écriture, jamais hérité d'un `DEFAULT`.
+Une origine par défaut ferait entrer des relations déduites en « déclarées » le jour où l'inférence
+existera, et `P-08` tomberait sans que rien ne le signale.
+
+**Et la traduction déclarée est retenue** : le type de champ `interrupteur` du corpus devient
+`booleen`, terme de CDC §3.5. Le vocabulaire contractuel de `CLAUDE.md` §3 ne couvre pas les types de
+champ ; à défaut, le cahier fait foi.
+
+---
+
+## ARB-038 — La base ne se configure pas par une URI
+**19 août 2026** — arbitrage délégué. Répond à `T-010` É-5, et referme `P-13`.
+
+**Le fait, mesuré et non supposé.** `compose.yaml` composait
+`postgres://${UTILISATEUR}:${MDP}@db:5432/${BASE}` **par interpolation brute**. T-010 l'a éprouvé sur
+six mots de passe :
+
+```
+mot/de+passe  → ERR_INVALID_URL au démarrage      mot@passe  → intact
+mot#passe     → ERR_INVALID_URL au démarrage      mot:passe  → intact
+mot?passe     → ERR_INVALID_URL au démarrage      hexadécimal → intact
+```
+
+**`P-13` n'était pas refermé, il était évité.** Le piège recommandait `openssl rand -hex 32` — une
+parade **déclarative**, qui repose sur la discipline de l'exploitant. Or ce dépôt tient une hiérarchie
+explicite : *bloquant > vérifiable > déclaratif*. Une parade déclarative sur un défaut qui refuse le
+démarrage et dont le message ne nomme pas la cause est le plus mauvais des trois régimes.
+
+**Décision. La base se configure par variables séparées, jamais par une URI.** `compose.yaml` est
+corrigé : `HOTE_BASE`, `PORT_BASE`, `UTILISATEUR_BASE`, `MDP_BASE`, `NOM_BASE`. Le connecteur reçoit
+un **objet**, jamais une chaîne — **rien n'est concaténé, donc rien n'est à échapper**. Le piège
+devient inaccessible par la forme, pas évité par la consigne.
+
+**`P-13` est réécrit en conséquence** dans `CLAUDE.md` §6 : il ne recommande plus un tirage
+hexadécimal, il interdit la composition d'URI.
+
+**Ce que cela emporte.** `URL_BASE` disparaît du contrat de déploiement. `.env.example` garde ses
+noms `*_POSTGRES` — ils nomment la configuration du **conteneur PostgreSQL**, qui les attend sous
+cette forme ; les `*_BASE` nomment la configuration du **client**. Les deux jeux ne se confondent
+pas, et c'est voulu.
