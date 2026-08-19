@@ -96,6 +96,18 @@
 	const droits = $derived<'ecriture' | 'lecture'>(
 		reglage['droits'] === 'lecture' ? 'lecture' : 'ecriture'
 	);
+	/**
+	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
+	 *
+	 * Le gel POSE les actions d'écriture puis les cache par
+	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
+	 * (`mockups/V-15-historique.html:339`) : faute de serveur, une maquette
+	 * statique n'a pas d'autre moyen de dire « cette action n'existe pas pour ce
+	 * rôle ». Le produit peut ne pas l'émettre, et P-09 l'exige — « ni grisée,
+	 * NI MASQUÉE ». La classe reste posée sur les nœuds rendus.
+	 * Énumération : `verif/rapports/omissions-p09.md`.
+	 */
+	const ecriture = $derived(droits !== 'lecture');
 
 	/**
 	 * LES TROIS CAS D'HISTORIQUE DE LA PLANCHE — `charger()`, `V-15:2990-2994`.
@@ -273,12 +285,16 @@
 					<div id="bv-sous"></div>
 				</div>
 				<div class="bandeau-version__actions">
-					<button class="btn si-ecriture" id="bv-restaurer">Restaurer cette version</button>
+					<!-- P-09 · ARB-040 — omise, jamais masquée. `V-15:1502` -->
+					{#if ecriture}<button class="btn si-ecriture" id="bv-restaurer"
+							>Restaurer cette version</button
+						>{/if}
 					<button class="btn btn--discret" id="bv-retour">Revenir à la version courante</button>
 				</div>
 			</div>
 
-			<NoteDeDemonstration {separateur} />
+			<!-- P-09 · ARB-040 — le bloc partagé OMET ses actions d'écriture en lecture seule. -->
+			<NoteDeDemonstration {droits} {separateur} />
 		</article>
 	{/snippet}
 

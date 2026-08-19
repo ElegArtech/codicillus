@@ -106,6 +106,18 @@
 	const etat = $derived<'nominal' | 'chargement'>(
 		reglage['etat'] === 'chargement' ? 'chargement' : 'nominal'
 	);
+	/**
+	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
+	 *
+	 * Le gel POSE les actions d'écriture puis les cache par
+	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
+	 * (`mockups/V-14-lecture-note.html:403`) : faute de serveur, une maquette
+	 * statique n'a pas d'autre moyen de dire « cette action n'existe pas pour ce
+	 * rôle ». Le produit peut ne pas l'émettre, et P-09 l'exige — « ni grisée,
+	 * NI MASQUÉE ». La classe reste posée sur les nœuds rendus.
+	 * Énumération : `verif/rapports/omissions-p09.md`.
+	 */
+	const ecriture = $derived(droits !== 'lecture');
 
 	/**
 	 * LE TITRE DE LA NOTE ferme le fil d'Ariane (`V-14:4365`), et le nombre de
@@ -194,7 +206,16 @@
 
 		<!-- ---------- Article ---------- -->
 		<article class="article vue-reelle" id="article">
-			<NoteDeDemonstration {niveau} {revision} {brouillon} {resync} {operationnel} {separateur} />
+			<!-- P-09 · ARB-040 — le bloc partagé OMET ses actions d'écriture en lecture seule. -->
+			<NoteDeDemonstration
+				{niveau}
+				{revision}
+				{brouillon}
+				{resync}
+				{operationnel}
+				{droits}
+				{separateur}
+			/>
 		</article>
 
 		<!-- Esquisse de chargement de l'article -->
@@ -216,28 +237,29 @@
 				<div class="panneau__tete"><span class="etiq">Actions</span></div>
 				<div class="panneau__corps panneau__corps--serre">
 					<div class="actions-liste">
-						<button class="btn btn--menu si-ecriture">
-							<svg
-								width="15"
-								height="15"
-								viewBox="0 0 16 16"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.4"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11z" /></svg
-							>
-							Modifier la référence
-						</button>
-						<button class="btn btn--menu si-ecriture">
-							<svg
-								width="15"
-								height="15"
-								viewBox="0 0 16 16"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.4"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11z" /></svg
-							>
-							Modifier l'opérationnel
-						</button>
+						<!-- P-09 · ARB-040 — omises, jamais masquées. `V-14:1778`, `:1782`, `:1798` -->
+						{#if ecriture}<button class="btn btn--menu si-ecriture">
+								<svg
+									width="15"
+									height="15"
+									viewBox="0 0 16 16"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.4"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11z" /></svg
+								>
+								Modifier la référence
+							</button>
+							<button class="btn btn--menu si-ecriture">
+								<svg
+									width="15"
+									height="15"
+									viewBox="0 0 16 16"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.4"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11z" /></svg
+								>
+								Modifier l'opérationnel
+							</button>{/if}
 						<button class="btn btn--menu">
 							<svg
 								width="15"
@@ -274,20 +296,20 @@
 							>
 							Imprimer
 						</button>
-						<button class="btn btn--menu btn--destructif si-ecriture">
-							<svg
-								width="15"
-								height="15"
-								viewBox="0 0 16 16"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.4"
-								><path
-									d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"
-								/></svg
-							>
-							Supprimer
-						</button>
+						{#if ecriture}<button class="btn btn--menu btn--destructif si-ecriture">
+								<svg
+									width="15"
+									height="15"
+									viewBox="0 0 16 16"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.4"
+									><path
+										d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"
+									/></svg
+								>
+								Supprimer
+							</button>{/if}
 					</div>
 				</div>
 			</section>
@@ -356,7 +378,10 @@
 			<section class="panneau repliable" data-ouvert="oui">
 				<div class="panneau__tete">
 					<span class="etiq">Relations</span>
-					<button class="btn btn--discret si-ecriture" style="padding:4px 8px">+ Ajouter</button>
+					<!-- P-09 · ARB-040 — omise, jamais masquée. `V-14:1848` -->
+					{#if ecriture}<button class="btn btn--discret si-ecriture" style="padding:4px 8px"
+							>+ Ajouter</button
+						>{/if}
 				</div>
 				<div class="panneau__corps panneau__corps--serre">
 					<div class="rel-groupe">

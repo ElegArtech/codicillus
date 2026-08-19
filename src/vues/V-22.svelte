@@ -68,6 +68,18 @@
 
 	const reglage = $derived(vecteur ?? {});
 	const droits = $derived(reglage['droits'] === 'lecture' ? 'lecture' : 'ecriture');
+	/**
+	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
+	 *
+	 * Le gel POSE les actions d'écriture puis les cache par
+	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
+	 * (`mockups/V-22-signets.html:339`) : faute de serveur, une maquette statique
+	 * n'a pas d'autre moyen de dire « cette action n'existe pas pour ce rôle ».
+	 * Le produit peut ne pas l'émettre, et P-09 l'exige — « ni grisée, NI
+	 * MASQUÉE ». La classe reste posée sur les nœuds rendus.
+	 * Énumération : `verif/rapports/omissions-p09.md`.
+	 */
+	const ecriture = $derived(droits !== 'lecture');
 	/** Le rappel de sortie est une case de planche : cochée par défaut. */
 	const rappelDemande = $derived(reglage['c-rappel'] !== false);
 
@@ -235,7 +247,7 @@
 -->
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
 <!-- prettier-ignore -->
-{#snippet carteSignet(n: Note)}<article class="sig"><span class="sig__sceau" aria-hidden="true">{monogramme(n.url ?? '')}</span><div style="min-width:0"><a class="sig__titre" href={n.url} target="_blank" rel="noopener noreferrer" aria-label={n.titre + " — site externe, s'ouvre dans un nouvel onglet"}>{n.titre}</a><div class="sig__adresse"><span class="sig__hote">{hoteDe(n.url ?? '')}</span>{#if cheminAffiche(n.url ?? '')}<span class="sig__chemin">{cheminAffiche(n.url ?? '')}</span>{/if}<span class="sig__sortie"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg>site externe</span></div></div><div class="sig__actions si-ecriture"><button class="btn" type="button">Modifier</button><button class="btn btn--destructif" type="button" aria-label={'Supprimer le signet ' + n.titre}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"/></svg></button></div><p class="sig__desc">{n.extrait}</p><div class="sig__pied"><span class="sig__etq">{#each n.etiquettes as e (e)}<span class="past past--etiquette">{e}</span>{/each}</span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{'ajouté le ' + (n.ajoute ?? n.revise)}</span></div></article>{/snippet}
+{#snippet carteSignet(n: Note)}<article class="sig"><span class="sig__sceau" aria-hidden="true">{monogramme(n.url ?? '')}</span><div style="min-width:0"><a class="sig__titre" href={n.url} target="_blank" rel="noopener noreferrer" aria-label={n.titre + " — site externe, s'ouvre dans un nouvel onglet"}>{n.titre}</a><div class="sig__adresse"><span class="sig__hote">{hoteDe(n.url ?? '')}</span>{#if cheminAffiche(n.url ?? '')}<span class="sig__chemin">{cheminAffiche(n.url ?? '')}</span>{/if}<span class="sig__sortie"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg>site externe</span></div></div>{#if ecriture}<div class="sig__actions si-ecriture"><button class="btn" type="button">Modifier</button><button class="btn btn--destructif" type="button" aria-label={'Supprimer le signet ' + n.titre}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"/></svg></button></div>{/if}<p class="sig__desc">{n.extrait}</p><div class="sig__pied"><span class="sig__etq">{#each n.etiquettes as e (e)}<span class="past past--etiquette">{e}</span>{/each}</span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{'ajouté le ' + (n.ajoute ?? n.revise)}</span></div></article>{/snippet}
 <!-- eslint-enable svelte/no-navigation-without-resolve -->
 
 <Coquille
@@ -269,17 +281,18 @@
 			<div style="display:flex;align-items:center;gap:var(--e-3);flex-wrap:wrap">
 				<!-- prettier-ignore -->
 				<span class="tete__compteur" id="compteur">{#if base.length}<b>{base.length}</b>{compteur}{/if}</span>
-				<button class="btn btn--principal si-ecriture" id="nouveau">
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.8"><path d="M8 3v10M3 8h10" /></svg
-					>
-					Nouveau signet
-				</button>
+				<!-- P-09 · ARB-040 — omise, jamais masquée. `V-22:1257` -->
+				{#if ecriture}<button class="btn btn--principal si-ecriture" id="nouveau">
+						<svg
+							width="14"
+							height="14"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.8"><path d="M8 3v10M3 8h10" /></svg
+						>
+						Nouveau signet
+					</button>{/if}
 			</div>
 		</header>
 
@@ -342,7 +355,10 @@
 						d'état d'un fournisseur, portail de prestataire. Le premier prend quinze secondes à
 						enregistrer.
 					</p>
-					<button class="btn btn--principal si-ecriture">Ajouter le premier signet</button>
+					<!-- P-09 · ARB-040 — omise, jamais masquée. `V-22:2915` -->
+					{#if ecriture}<button class="btn btn--principal si-ecriture"
+							>Ajouter le premier signet</button
+						>{/if}
 				</div>
 			{:else}
 				{#each base as n (n.id)}{@render carteSignet(n)}{/each}

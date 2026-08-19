@@ -76,6 +76,23 @@
 		 */
 		operationnel?: boolean;
 		/**
+		 * LES DROITS EFFECTIFS, ET CE QU'ILS COMMANDENT — P-09 / RG-M05-08.
+		 *
+		 * Le gel POSE les actions d'écriture de ce bloc puis les cache par
+		 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
+		 * (`V-14:403`, `V-15:339`). Une maquette statique n'a pas de serveur :
+		 * le masquage y est sa SEULE possibilité. Le produit peut ne pas les
+		 * émettre, et P-09 l'exige — « ni grisée, NI MASQUÉE » (ARB-040).
+		 *
+		 * La valeur par défaut est `ecriture`, celle du gel : une vue qui ne
+		 * passe rien rend exactement ce que la maquette rend. La classe
+		 * `si-ecriture` reste posée sur les nœuds rendus — elle porte aussi le
+		 * rendu, elle ne se retire pas.
+		 *
+		 * Énumération : `verif/rapports/omissions-p09.md`.
+		 */
+		droits?: 'ecriture' | 'lecture';
+		/**
 		 * LE SÉPARATEUR `›` DE LA LIGNE « RANGEMENT », fourni par la vue.
 		 *
 		 * Le gel le pose dans un `span` porteur d'un style en ligne — la teinte
@@ -101,8 +118,12 @@
 		brouillon = false,
 		resync = false,
 		operationnel = true,
+		droits = 'ecriture',
 		separateur
 	}: Proprietes = $props();
+
+	/** P-09 · ARB-040 — ce qui n'est pas émis n'est pas une porte fermée. */
+	const ecriture = $derived(droits !== 'lecture');
 
 	/** Les trois rangs de la jauge — jamais un de plus, jamais un de moins. */
 	const RANGS = Array.from({ length: BARRES_DE_JAUGE }, (_, rang) => rang);
@@ -125,7 +146,8 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 				encore à l'ancienne syntaxe. »
 			</div>
 		</div>
-		<button class="btn si-ecriture" style="flex:none">Lever la demande</button>
+		<!-- P-09 · ARB-040 — omise, jamais masquée. `V-14:1427` / `V-15:1519` -->
+		{#if ecriture}<button class="btn si-ecriture" style="flex:none">Lever la demande</button>{/if}
 	</div>
 
 	<div class="bandeau bandeau--brouillon" id="bandeau-brouillon" hidden={!brouillon}>
@@ -137,7 +159,9 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 				consultable depuis l'espace public.
 			</div>
 		</div>
-		<button class="btn btn--principal si-ecriture" style="flex:none">Publier</button>
+		<!-- P-09 · ARB-040 — omise, jamais masquée. `V-14:1436` / `V-15:1528` -->
+		{#if ecriture}<button class="btn btn--principal si-ecriture" style="flex:none">Publier</button
+			>{/if}
 	</div>
 
 	<div class="bandeau bandeau--resync" id="bandeau-resync" hidden={!resync}>
@@ -149,7 +173,10 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 				l'opérationnel.
 			</div>
 		</div>
-		<button class="btn si-ecriture" style="flex:none">Comparer les deux registres</button>
+		<!-- P-09 · ARB-040 — omise, jamais masquée. `V-14:1445` / `V-15:1537` -->
+		{#if ecriture}<button class="btn si-ecriture" style="flex:none"
+				>Comparer les deux registres</button
+			>{/if}
 	</div>
 </div>
 
@@ -180,35 +207,37 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 				</div>
 			</div>
 		</div>
-		<div class="cartouche__actions si-ecriture">
-			<button class="btn btn--verifier" id="btn-verifier">
-				<svg
-					width="14"
-					height="14"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"><path d="M3 8.5l3.5 3.5L13 4.5" /></svg
-				>
-				Marquer comme vérifié
-			</button>
-			<button class="btn" id="btn-reviser" aria-expanded="false">Signaler à réviser</button>
-		</div>
+		<!-- P-09 · ARB-040 — omises, jamais masquées. `V-14:1471` / `V-15:1563` -->
+		{#if ecriture}<div class="cartouche__actions si-ecriture">
+				<button class="btn btn--verifier" id="btn-verifier">
+					<svg
+						width="14"
+						height="14"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"><path d="M3 8.5l3.5 3.5L13 4.5" /></svg
+					>
+					Marquer comme vérifié
+				</button>
+				<button class="btn" id="btn-reviser" aria-expanded="false">Signaler à réviser</button>
+			</div>{/if}
 		<div class="tampon" aria-hidden="true"><span>VÉRIFIÉ</span></div>
 	</div>
 
 	<!-- Signalement à réviser -->
-	<div class="reviser si-ecriture" id="panneau-reviser" data-ouvert="non">
-		<label class="etiq" for="txt-reviser">Qu'attendez-vous de cette révision&nbsp;?</label>
-		<textarea
-			id="txt-reviser"
-			placeholder="Décrivez ce qui doit être vérifié ou corrigé. Le message sera affiché en tête de la note."
-		></textarea>
-		<div class="reviser__pied">
-			<button class="btn btn--principal" id="btn-reviser-envoi">Signaler à réviser</button>
-			<button class="btn btn--discret" id="btn-reviser-annul">Annuler</button>
-		</div>
-	</div>
+	<!-- P-09 · ARB-040 — omis, jamais masqué. `V-14:1482` / `V-15:1574` -->
+	{#if ecriture}<div class="reviser si-ecriture" id="panneau-reviser" data-ouvert="non">
+			<label class="etiq" for="txt-reviser">Qu'attendez-vous de cette révision&nbsp;?</label>
+			<textarea
+				id="txt-reviser"
+				placeholder="Décrivez ce qui doit être vérifié ou corrigé. Le message sera affiché en tête de la note."
+			></textarea>
+			<div class="reviser__pied">
+				<button class="btn btn--principal" id="btn-reviser-envoi">Signaler à réviser</button>
+				<button class="btn btn--discret" id="btn-reviser-annul">Annuler</button>
+			</div>
+		</div>{/if}
 
 	<!-- Métadonnées -->
 	<dl class="meta">
@@ -256,17 +285,18 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 		><span class="registre__pt"></span>Opérationnel</button
 	>
 </div>
-<button class="invite-op si-ecriture" id="invite-op" hidden={operationnel}>
-	<svg
-		width="13"
-		height="13"
-		viewBox="0 0 16 16"
-		fill="none"
-		stroke="currentColor"
-		stroke-width="1.8"><path d="M8 3v10M3 8h10" /></svg
-	>
-	Ajouter une version opérationnelle
-</button>
+<!-- P-09 · ARB-040 — omise, jamais masquée. `V-14:1517` / `V-15:1609` -->
+{#if ecriture}<button class="invite-op si-ecriture" id="invite-op" hidden={operationnel}>
+		<svg
+			width="13"
+			height="13"
+			viewBox="0 0 16 16"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="1.8"><path d="M8 3v10M3 8h10" /></svg
+		>
+		Ajouter une version opérationnelle
+	</button>{/if}
 
 <!-- ============ NOTE DE DÉMONSTRATION — corps rédigé, deux registres ============ -->
 <!-- ================= CORPS — REGISTRE RÉFÉRENCE ================= -->

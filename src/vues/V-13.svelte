@@ -96,6 +96,28 @@
 	};
 	const droitEffectif = $derived(DROITS[niveau]);
 
+	/**
+	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
+	 *
+	 * Le gel POSE les actions puis les cache, et ici avec la POLARITÉ INVERSE du
+	 * socle : `.si-gestionnaire, .si-redacteur { display: none }`
+	 * (`mockups/V-13-page-dossier.html:941`), puis
+	 * `.app[data-droit="gestionnaire"] .si-gestionnaire`,
+	 * `.app[data-droit="gestionnaire"] .si-redacteur`,
+	 * `.app[data-droit="redacteur"] .si-redacteur { display: inline-flex }`
+	 * (`:942`–`:944`). Une maquette statique n'a pas de serveur : le masquage y
+	 * est sa SEULE possibilité. Le produit peut ne pas émettre le nœud, et P-09
+	 * l'exige — « ni grisée, NI MASQUÉE ».
+	 *
+	 * LA CLASSE RESTE POSÉE quand le nœud est rendu, et c'est indispensable ici :
+	 * c'est elle qui porte le `display: inline-flex`. La retirer changerait le
+	 * rendu ; seul le nœud s'omet, jamais sa classe.
+	 *
+	 * Énumération : `verif/rapports/omissions-p09.md`.
+	 */
+	const gestionnaire = $derived(niveau === 'gestionnaire');
+	const redacteur = $derived(niveau === 'gestionnaire' || niveau === 'redacteur');
+
 	/* ── Arborescence — déduite du rangement réel des notes ──────────────────
 	   Aucune structure séparée : le rangement affiché est celui qui existe. Un
 	   chemin que le corpus ne porte pas ne rend donc aucun nœud, et c'est ainsi
@@ -280,21 +302,25 @@
 			</div>
 
 			<div class="actions-dossier">
-				<button class="btn btn--principal si-redacteur" id="a-note">
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.8"><path d="M8 3v10M3 8h10" /></svg
+				<!-- P-09 · ARB-040 — omises, jamais masquées. `V-13:1157`, `:1161`–`:1164` -->
+				{#if redacteur}<button class="btn btn--principal si-redacteur" id="a-note">
+						<svg
+							width="14"
+							height="14"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.8"><path d="M8 3v10M3 8h10" /></svg
+						>
+						Nouvelle note
+					</button>{/if}
+				{#if gestionnaire}<button class="btn si-gestionnaire" id="a-sousdossier"
+						>Nouveau sous-dossier</button
 					>
-					Nouvelle note
-				</button>
-				<button class="btn si-gestionnaire" id="a-sousdossier">Nouveau sous-dossier</button>
-				<button class="btn si-gestionnaire" id="a-renommer">Renommer ou déplacer</button>
-				<button class="btn si-gestionnaire" id="a-droits">Gérer les droits</button>
-				<button class="btn btn--destructif si-gestionnaire" id="a-supprimer">Supprimer</button>
+					<button class="btn si-gestionnaire" id="a-renommer">Renommer ou déplacer</button>
+					<button class="btn si-gestionnaire" id="a-droits">Gérer les droits</button>
+					<button class="btn btn--destructif si-gestionnaire" id="a-supprimer">Supprimer</button
+					>{/if}
 			</div>
 		</header>
 
@@ -376,8 +402,13 @@
 					préparée pour ce qui va venir.
 				</p>
 				<div class="vide-dossier__actions">
-					<button class="btn btn--principal si-redacteur" id="v-note">Créer une note ici</button>
-					<button class="btn si-gestionnaire" id="v-sousdossier">Créer un sous-dossier</button>
+					<!-- P-09 · ARB-040 — omises, jamais masquées. `V-13:1192`, `:1193` -->
+					{#if redacteur}<button class="btn btn--principal si-redacteur" id="v-note"
+							>Créer une note ici</button
+						>{/if}
+					{#if gestionnaire}<button class="btn si-gestionnaire" id="v-sousdossier"
+							>Créer un sous-dossier</button
+						>{/if}
 				</div>
 			</div>
 		</section>

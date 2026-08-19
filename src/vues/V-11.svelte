@@ -83,6 +83,20 @@
 
 	const reglage = $derived(vecteur ?? {});
 	const profil = $derived(String(reglage['role'] ?? 'referent'));
+	/**
+	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
+	 *
+	 * Le gel POSE les actions puis les cache —
+	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
+	 * (`mockups/V-11-page-domaine.html:338`) et
+	 * `.app:not([data-role="admin"]) .si-admin { display: none }` (`:339`).
+	 * Une maquette statique n'a pas de serveur : le masquage y est sa SEULE
+	 * possibilité. Le produit peut ne pas émettre le nœud, et P-09 l'exige —
+	 * « ni grisée, NI MASQUÉE ». La classe reste posée quand le nœud est rendu :
+	 * elle porte aussi le rendu. Énumération : `verif/rapports/omissions-p09.md`.
+	 */
+	const ecriture = $derived(profil !== 'lecteur');
+	const admin = $derived(profil === 'admin');
 	const vide = $derived(reglage['etat'] === 'vide');
 
 	const courant = $derived(
@@ -329,19 +343,20 @@
 				<p id="description">{detail.description}</p>
 			</div>
 			<div class="couv__actions">
-				<button class="btn btn--principal si-ecriture" id="a-creer">
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.8"><path d="M8 3v10M3 8h10" /></svg
-					>
-					Nouvelle note
-				</button>
-				<button class="btn si-ecriture" id="a-importer">Importer ici</button>
-				<button class="btn si-admin" id="a-exporter">Exporter</button>
+				<!-- P-09 · ARB-040 — omises, jamais masquées. `V-11:1105`, `:1109`, `:1110` -->
+				{#if ecriture}<button class="btn btn--principal si-ecriture" id="a-creer">
+						<svg
+							width="14"
+							height="14"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.8"><path d="M8 3v10M3 8h10" /></svg
+						>
+						Nouvelle note
+					</button>
+					<button class="btn si-ecriture" id="a-importer">Importer ici</button>{/if}
+				{#if admin}<button class="btn si-admin" id="a-exporter">Exporter</button>{/if}
 			</div>
 		</header>
 
@@ -396,10 +411,11 @@
 					écrit ailleurs plutôt que de repartir d'une page blanche.
 				</p>
 				<div class="amorce__actions">
-					<button class="btn btn--principal si-ecriture" id="v-importer"
-						>Importer dans ce domaine</button
-					>
-					<button class="btn si-ecriture" id="v-creer">Créer la première note</button>
+					<!-- P-09 · ARB-040 — omises, jamais masquées. `V-11:1123`, `:1124` -->
+					{#if ecriture}<button class="btn btn--principal si-ecriture" id="v-importer"
+							>Importer dans ce domaine</button
+						>
+						<button class="btn si-ecriture" id="v-creer">Créer la première note</button>{/if}
 				</div>
 			</div>
 		</div>
