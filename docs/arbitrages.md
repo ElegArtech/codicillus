@@ -799,3 +799,38 @@ et tort sur la conclusion : « inerte » n'était vrai que **des états alors co
 exactement la règle du piège **P-5** — *une règle qu'aucun cas n'exerce est une règle dont on ignore
 si elle marche* — appliquée à une **divergence** plutôt qu'à un contrôle. Une divergence
 qu'aucun état n'exerce est une divergence dont on ignore si elle est inerte.
+
+---
+
+## ARB-025 — V-20 recompose son enveloppe, et le gabarit n'est pas rouvert
+**19 août 2026** — arbitrage délégué. Répond à `ECART-034` É-1.
+
+**Le fait, vérifié.** `mockups/V-20-carto-type-maitre.html` pose **deux fois** l'identifiant `fil` :
+sur `nav.fil` de la barre supérieure (`:1090`) et sur `div.fil-deroule` de la zone de graphe
+(`:1129`). `getElementById` rendant le premier, **le fil déroulé par type maître écrase le fil
+d'Ariane**, et `.fil-deroule` reste vide et masqué aux cinq états.
+
+Balayage des 41 maquettes : **V-20 est la seule dans ce cas.**
+
+**Décision. Le gabarit n'est pas rouvert ; V-20 recompose son enveloppe, bornée et déclarée.**
+
+**Motif.** Trois issues existaient, et l'exécutant les a toutes nommées : écrire dans le gabarit —
+interdit, il est regelé après cinq passages ; rendre un fil d'Ariane que la maquette ne montre pas —
+comblement, et rouge au banc ; recomposer l'enveloppe dans la vue. Il a pris la troisième, en la
+bornant : **`Rail.svelte` est emprunté tel quel** — le rail de V-20 est identique à l'octet à ceux
+de V-19, V-21 et V-22 —, seules la barre supérieure et les trois nœuds d'enveloppe sont réécrits, et
+**aucune règle de style n'est dupliquée**.
+
+**Un sixième passage du gabarit pour une seule vue coûterait plus qu'il ne rapporte** : un arbitrage,
+une preuve de non-régression sur 34 vues, un regel — pour un défaut qui n'existe qu'ici, et qui est
+un **défaut de la maquette**, pas un manque d'interface.
+
+**La borne, et elle reprend celle du recours au niveau 3.** Si une **seconde** vue exige cette
+recomposition, elle cesse d'être un cas particulier et devient une propriété de l'interface :
+l'amendement du gabarit devient alors obligatoire, et cette recomposition est reprise avec lui. Une
+cause qui se répète n'est plus une exception.
+
+**Ce qui reste ouvert.** Le double identifiant est un **défaut du gel** — il rend une zone de la
+maquette morte. Il n'empêche pas la conformité, puisque les deux côtés le portent, mais il signifie
+que **le fil déroulé par type maître n'est visible dans aucun état**. À verser au dossier des regels,
+avec V-06 et V-08.
