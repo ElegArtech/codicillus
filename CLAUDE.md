@@ -643,3 +643,29 @@ Tout vide de spécification rencontré, tout état non maquetté, toute incohér
 ### La question de clôture
 
 **Le dépôt suffirait-il à réexpliquer ce lot sans le rouvrir ?** (plan §9.) Contrat, journal de vague, ADR et commentaires du code sont la mémoire externalisée ; si l'un manque, la dette de compréhension s'installe sans témoin. Une réponse négative refuse la clôture.
+
+---
+
+### P-31 · Un pilote détaché survit à l'arrêt de ce qui l'a lancé, et le second pilote mesure à côté du premier
+
+Lancer un enchaînement de batteries **détaché** — redirection, arrière-plan, immunité au raccrochage —
+puis constater que l'appel qui l'a lancé a rendu la main, puis **le relancer** : les deux tournent, et
+ils écrivent dans le même relevé.
+
+**Ce qui rend le défaut invisible, c'est que le relevé reste plausible.** Vingt-quatre lignes pour
+douze batteries, chacune en double, avec des durées voisines : cela ressemble à un instrument
+bavard, pas à une double exécution. La ligne `test:etancheite 1` apparaissait deux fois avec le même
+code — un lecteur pressé y lit une confirmation, alors que c'est **la même mesure comptée deux fois**.
+
+Et le coût réel n'est pas le doublon : les deux pilotes frappaient **la même base partagée**, ce qui
+est `P-30` mot pour mot, et se disputaient les ports, ce qui est `P-22`.
+
+**Le repérage par motif de ligne de commande ne rattrape rien** — `P-1` : le guetteur se trouve
+lui-même, et l'inspection des processus par nom de programme (`bash`) ne voit pas un script exécuté
+par un interpréteur qui n'apparaît pas sous ce nom. La constatation « le pilote est absent » était
+fausse, et c'est elle qui a autorisé le second lancement.
+
+**La règle : un enchaînement de mesure se lance sous le harnais qui le suit, jamais détaché.** Et
+avant tout relancement, la preuve de mort est un **marqueur écrit** — un relevé qui porte sa ligne
+de fin —, jamais l'absence d'un processus. C'est `P-1` appliqué à soi-même.
+*(orchestration, 20/08/2026)*
