@@ -98,7 +98,7 @@ import {
 	type PanneauxDeLaNote,
 	type VoisineAffichee
 } from '$lib/lecture/panneaux';
-import { enregistrerLaNote } from '$lib/donnees/edition';
+import { enregistrerLaNote, operationnelDesynchronise } from '$lib/donnees/edition';
 import {
 	deposerUnePieceJointe,
 	NomDePieceDejaPris,
@@ -412,9 +412,15 @@ async function complementsDeLecture(
 			/* `RG-NOT-02` — il n'y a rien à resynchroniser sans version
 			   opérationnelle. La comparaison porte sur les deux dates de CORPS, et
 			   non sur `modifieLe`, qu'un simple renommage fait bouger. */
-			resync:
-				ligne.corpsOperationnelModifieLe !== null &&
-				ligne.corpsReferenceModifieLe.getTime() > ligne.corpsOperationnelModifieLe.getTime(),
+			/* `RG-M06-08` A UNE SEULE DÉFINITION, et ce n'est pas ici. Le prédicat
+			   était recopié en ligne, et le même signal se calculait à deux endroits
+			   — c'est `P-01` en petit : deux définitions concurrentes d'un même
+			   signal finissent par diverger, et celle qui diverge n'est jamais celle
+			   qu'on relit. `operationnelDesynchronise()` est l'unique. */
+			resync: operationnelDesynchronise({
+				referenceModifieLe: ligne.corpsReferenceModifieLe,
+				operationnelModifieLe: ligne.corpsOperationnelModifieLe
+			}),
 			revision:
 				ligne.revisionDemandee && ligne.revisionLe !== null
 					? {
