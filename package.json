@@ -64,7 +64,8 @@
 		"vues:styles": "node verif/styles-en-ligne.mjs",
 		"scenarios:extraire": "node verif/extraire-scenarios.mjs",
 		"scenarios:verifier": "node verif/extraire-scenarios.mjs --verifier",
-		"mesure:budgets": "node verif/jalon.mjs \"batterie 13 « budgets de performance »\" \"T-028\"",
+		"mesure:budgets": "node verif/budgets.mjs",
+		"mesure:budgets:sonde": "node verif/budgets.mjs --sonde=latence && ! node verif/budgets.mjs --sonde=temoin-inerte",
 		"exploitation:restauration": "node verif/restauration.mjs",
 		"exploitation:restauration:sonde": "node verif/restauration.mjs --sonde=ligne-perdue && node verif/restauration.mjs --sonde=champ-modifie && node verif/restauration.mjs --sonde=schema-ampute && node verif/restauration.mjs --sonde=octets-perdus && node verif/restauration.mjs --sonde=index-non-reconstruit && ! node verif/restauration.mjs --sonde=temoin-inerte",
 		"verify:lot": "node verif/jalon.mjs \"la sélection des batteries citées par un contrat de tâche\" \"non assigné par le §6.3 du plan de réalisation\"",
@@ -82,7 +83,10 @@
 		"base:coherence": "node base/base.mjs coherence",
 		"verif:base": "node base/base.mjs reversibilite && node base/base.mjs semer && node base/base.mjs coherence && node base/base.mjs unicite",
 		"contenu:constructions": "node verif/contenu.mjs constructions",
-		"contenu:invalide": "node verif/contenu.mjs invalide"
+		"contenu:invalide": "node verif/contenu.mjs invalide",
+		"volumetrie:charger": "node verif/volumetrie.mjs charger",
+		"volumetrie:retirer": "node verif/volumetrie.mjs retirer",
+		"volumetrie:etat": "node verif/volumetrie.mjs etat"
 	},
 	"dependencies": {
 		"@node-rs/argon2": "2.1.0",
