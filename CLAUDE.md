@@ -541,6 +541,21 @@ n'a pas été joué.* *(T-012b, 20/08/2026)*
 
 ---
 
+### P-29 · Le cache de pré-groupage de Vite est PARTAGÉ par toutes les copies de travail
+
+`verif/preparer-copie.sh` **lie** `node_modules` à l'arbre principal. `P-16` et `P-24` n'en retenaient
+que l'installation de dépendances — mais `node_modules/.vite/deps_ssr` est **écrit à l'exécution**, et
+dix copies l'écrivent donc en même temps.
+
+Symptôme : `There is a new version of the pre-bundle`, sur une commande qui n'a rien à voir. Mesuré
+trois fois sur un seul lot, en concurrence avec neuf autres. Cousin de **P-14** — un défaut que seule la
+concurrence révèle.
+
+**Parade** : sérialiser les batteries d'un même lot, et rejouer. Une copie qui échoue là-dessus n'a rien
+à corriger. *(T-037, 20/08/2026)*
+
+---
+
 ## 7. Protocole de fin de tâche
 
 ### Le protocole UI en quatre temps
