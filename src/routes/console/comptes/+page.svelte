@@ -17,12 +17,24 @@
 	 *
 	 * AUCUN `<svelte:head>` : rien ne déclare de titre de page pour le PRODUIT.
 	 */
+	import { onMount } from 'svelte';
 	import Vue from '../../../vues/V-32.svelte';
 	import '../../../vues/V-32.css';
-	import { envoyerAUneAction } from '../cablage';
+	import { cablerLeTiroirDeFormulaire, envoyerAUneAction } from '../cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	/**
+	 * LE PANNEAU DE FORMULAIRE EST RENDU ATTEIGNABLE AU MONTAGE — voir
+	 * `cablerLeTiroirDeFormulaire()`, qui dit pourquoi et ce qu'il ne fait pas.
+	 *
+	 * Ce n'est pas un ornement : `#f-role`, le déclencheur de `RG-M14-07`, vit
+	 * dans ce panneau. Sans ce geste, l'action `changerLeRole` d'à côté est juste,
+	 * éprouvée, et inatteignable — six lots ont écrit des actions que rien ne
+	 * pouvait atteindre (`ARB-063`).
+	 */
+	onMount(() => cablerLeTiroirDeFormulaire(document));
 </script>
 
 <!--
@@ -51,6 +63,17 @@
 		void envoyerAUneAction(document, '?/changerLActivation', {
 			'f-ident': demande.identifiant,
 			actif: demande.actif ? 'oui' : 'non'
+		});
+	}}
+	onEnregistrerLeRole={(demande) => {
+		/* LES DEUX NOMS SONT CEUX DU GEL, ET L'ACTION LES ATTEND TELS QUELS :
+		   `f-ident` désigne le compte — identifiant de connexion, définitif après
+		   création (`V-32:3109`) —, `f-role` porte le LIBELLÉ du sélecteur, que
+		   `roleDepuisLeLibelle()` convertit côté serveur. Rien n'est traduit ici :
+		   une seconde table de conversion finirait par diverger de la première. */
+		void envoyerAUneAction(document, '?/changerLeRole', {
+			'f-ident': demande.identifiant,
+			'f-role': demande.role
 		});
 	}}
 />

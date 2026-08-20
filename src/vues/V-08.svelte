@@ -134,6 +134,21 @@
 	import { motFiche } from '$lib/vocabulaire';
 
 	/**
+	 * LES DEUX DÉFAUTS DE L'ADRESSE, RECOPIÉS ICI PLUTÔT QU'IMPORTÉS.
+	 *
+	 * `$lib/recherche/moteur` les porte aussi — `ORDRE_PAR_DEFAUT` — mais ce
+	 * module ouvre la base et le client du moteur : l'importer depuis une vue
+	 * ferait entrer du code serveur dans le paquet du navigateur. Les deux
+	 * valeurs viennent du gel, chacune deux fois plutôt qu'une : « pertinence »
+	 * est le premier `<option>` d'un sélecteur sans `selected` (`V-08:1191`), et
+	 * « hybride » est à la fois le `data-mode` de `div.app` (`V-08:1004`) et le
+	 * seul bouton `aria-pressed="true"` du gel, dont l'infobulle écrit « Mode par
+	 * défaut ».
+	 */
+	const ORDRE_PAR_DEFAUT = 'pertinence';
+	const MODE_PAR_DEFAUT = 'hybride';
+
+	/**
 	 * LES QUATRE SOURCES QUI NE VENAIENT DE NULLE PART — T-041.
 	 *
 	 * `UNIVERS`, `DOMAINES`, `MOI` et `INSTANCE` sont des PROPRIÉTÉS
@@ -173,6 +188,26 @@
 		compte?: UtilisateurCourant;
 		/** L'état de l'instance — version, synchronisation. Absent, celui du jeu. */
 		instance?: EtatDInstance;
+		/**
+		 * L'ORDRE DEMANDÉ PAR L'ADRESSE — `?tri=`, `docs/routes.md:243`.
+		 *
+		 * Absent : « pertinence », qui est ce que le sélecteur du gel retient faute
+		 * de `selected` — donc l'état des sept positions de planche.
+		 *
+		 * LA VUE NE TRIE PAS, ET C'EST VOULU : les notes arrivent déjà dans l'ordre
+		 * demandé, parce que c'est le MOTEUR qui l'applique (voir `trier()` plus
+		 * bas). Cette propriété ne sert qu'à dire au sélecteur ce qu'il montre et à
+		 * composer les adresses.
+		 */
+		tri?: string;
+		/**
+		 * LE MODE DEMANDÉ PAR L'ADRESSE — `?mode=`, `docs/routes.md:242`.
+		 *
+		 * Absent : « hybride », le défaut du gel (`V-08:1004`, `data-mode`). Le mode
+		 * EFFECTIF n'est pas celui-ci : quand le sens est indisponible, l'écran
+		 * bascule en mots-clés et le dit. Voir `mode` dans le corps du script.
+		 */
+		modeDemande?: string;
 	}
 
 	const {
@@ -185,7 +220,9 @@
 		univers = UNIVERS,
 		domaines = DOMAINES,
 		compte: moi = MOI,
-		instance = INSTANCE
+		instance = INSTANCE,
+		tri = ORDRE_PAR_DEFAUT,
+		modeDemande = MODE_PAR_DEFAUT
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -225,7 +262,30 @@
 	 * ET `disabled` sont bien posés (`V-08:2102-2103`).
 	 */
 	const degrade = $derived(reglage['c-degrade'] === true);
-	const mode = $derived(degrade ? 'motscles' : 'hybride');
+	/**
+	 * LE MODE EFFECTIF — celui que l'écran SERT, jamais seulement celui qu'on a
+	 * demandé.
+	 *
+	 * Dégradé, il vaut « mots-clés » quoi qu'on demande, et le bandeau du gel
+	 * l'écrit juste au-dessous : « Recherche par sens momentanément indisponible
+	 * — les résultats sont établis en mots-clés ». C'est la règle du gel, pas une
+	 * invention : son gestionnaire clique « Mots-clés » et désactive « Sens » dès
+	 * que la brique tombe (`V-08:2098-2106`). `RG-M02-01` veut la bascule
+	 * ANNONCÉE ; `P-10` veut la dégradation sans panne ; `P-02` interdit qu'un
+	 * mode « Sens » rende en réalité des mots-clés sans le dire.
+	 *
+	 * NON DÉGRADÉ, C'EST LE MODE DEMANDÉ, et « hybride » à défaut. Aucun lot n'a
+	 * encore de vecteurs : `SENS_DISPONIBLE` est faux, `c-degrade` est donc vrai
+	 * sur toute page servie, et CETTE BRANCHE N'EST EXERCÉE PAR AUCUN CAS
+	 * aujourd'hui (`P-5` : elle n'est pas éprouvée, elle est espérée).
+	 *
+	 * CE QUI EST PORTÉ DE BOUT EN BOUT, ET CE QUI NE L'EST PAS : la DEMANDE va de
+	 * l'adresse au chargeur, du chargeur à cette vue, et de cette vue aux adresses
+	 * qu'elle compose. Elle ne va PAS jusqu'au moteur : `chercherLesNotes()` n'a
+	 * pas de paramètre de mode, parce qu'il n'y a rien à lui demander tant qu'il
+	 * n'a pas d'embedder. C'est le lot qui déclarera cet embedder qui l'y mènera.
+	 */
+	const mode = $derived(degrade ? 'motscles' : modeDemande);
 
 	/* ═════════════════════════════════════════════════════════════════════
 	   LA REQUÊTE — UNE SEULE VALEUR SUR LES SEPT ÉTATS DE PLANCHE.
@@ -380,36 +440,35 @@
 	   ═════════════════════════════════════════════════════════════════════ */
 
 	/**
-	 * `trier()` — SEUL L'ORDRE PAR DÉFAUT EST DÉRIVABLE, et c'est tout ce qui est
-	 * porté.
+	 * `trier()` — L'ORDRE EST CELUI DU MOTEUR, ET C'EST POURQUOI CETTE FONCTION
+	 * EST L'IDENTITÉ.
 	 *
 	 * Le sélecteur du gel (`V-08:1190-1196`) offre cinq ordres — pertinence,
 	 * modification, vérification, consultations, alphabétique — et n'en marque
 	 * aucun `selected` : le navigateur retient donc le premier, « pertinence ».
-	 * Le moteur rend ses résultats dans cet ordre-là, et le chargeur le
-	 * restitue : `trier()` y est l'identité, et c'est la seule branche qu'une
-	 * source montre.
 	 *
-	 * LES QUATRE AUTRES ORDRES NE SONT ÉCRITS NULLE PART — ni en V-08, ni en
-	 * V-02, qui n'a pas de sélecteur de tri. Les inventer serait le comblement
-	 * que `CLAUDE.md` §2 interdit : ils sont REMONTÉS, pas comblés. `?tri=`
-	 * n'est donc pas dans la liste close des paramètres honorés.
+	 * CE QUE LA RÉDACTION PRÉCÉDENTE DISAIT, ET CE QU'ELLE AVAIT DE FAUX. Elle
+	 * levait sur les quatre autres ordres, au motif qu'ils « ne sont écrits nulle
+	 * part ». C'était exact de V-08, dont `trier()` n'existe pas — et inexact du
+	 * gel pris dans son ensemble : `mockups/V-12-liste-notes.html:2117-2124`
+	 * définit ces quatre ordres, avec les MÊMES valeurs d'option et les mêmes
+	 * libellés (`V-12:1151-1156`). La sémantique était gelée, dans une autre
+	 * planche. Elle est citée et portée par `ORDRES_DE_TRI` de
+	 * `$lib/recherche/moteur`, qui la traduit en clauses de tri du moteur.
+	 *
+	 * LE TRI A DONC LIEU AVANT CETTE VUE, et il doit y avoir lieu : trier ici ne
+	 * classerait que ce que le plafond de résultats a déjà retenu. Les notes
+	 * arrivent dans l'ordre demandé ; le filtrage par facettes qui suit préserve
+	 * cet ordre, un filtre étant stable. `trier()` reste écrite pour dire d'où
+	 * vient l'ordre — la supprimer effacerait la seule trace, dans la vue, du fait
+	 * que `V-08:1966` appelle bien une fonction à cet endroit.
 	 */
-	const ORDRE_PAR_DEFAUT = 'pertinence';
-	function trier(notes: readonly Note[], ordre: string): readonly Note[] {
-		if (ordre === ORDRE_PAR_DEFAUT) return notes;
-		throw new Error(
-			`ordre de tri « ${ordre} » — aucune source ne le définit (ARB-030, écart remonté)`
-		);
+	function trier(notes: readonly Note[]): readonly Note[] {
+		return notes;
 	}
 
 	/** Les résultats après facettes puis tri (`V-08:1959-1966`). */
-	const affiches = $derived(
-		trier(
-			base.filter((n) => passe(n)),
-			ORDRE_PAR_DEFAUT
-		)
-	);
+	const affiches = $derived(trier(base.filter((n) => passe(n))));
 
 	/**
 	 * La durée affichée par le compteur. Formule du gel (`V-08:1961`) à durée
@@ -489,9 +548,21 @@
 	 * l'ordre de lecture : deux états identiques rendent la même adresse, donc
 	 * comparable.
 	 */
-	function adresse(prochaines: Record<string, readonly string[]>, requeteVoulue: string): string {
+	function adresse(
+		prochaines: Record<string, readonly string[]>,
+		requeteVoulue: string,
+		ordre: string = tri,
+		modeVoulu: string = modeDemande
+	): string {
 		const couples: string[] = [];
 		if (requeteVoulue) couples.push(`q=${encodeURIComponent(requeteVoulue)}`);
+		/* LES DEUX RÉGLAGES SUIVENT LA REQUÊTE, ET ILS NE S'ÉCRIVENT QUE S'ILS
+		   DÉVIENT DU DÉFAUT : une adresse qui porterait `tri=pertinence&mode=hybride`
+		   partout dirait la même chose que `/recherche` en trois fois plus long, et
+		   deux écrans identiques rendraient deux adresses différentes — ce que la
+		   fabrique unique est justement là pour empêcher. */
+		if (ordre !== ORDRE_PAR_DEFAUT) couples.push(`tri=${encodeURIComponent(ordre)}`);
+		if (modeVoulu !== MODE_PAR_DEFAUT) couples.push(`mode=${encodeURIComponent(modeVoulu)}`);
 		for (const f of FACETTES) {
 			for (const v of prochaines[f.id] ?? []) couples.push(`${f.id}=${encodeURIComponent(v)}`);
 		}
@@ -531,6 +602,30 @@
 	 *  « nominal » et repose la saisie (`V-08:1990-1994`). */
 	function essayer(piste: string): void {
 		aller(adresse({}, piste));
+	}
+
+	/**
+	 * CHANGER L'ORDRE — `triSel.addEventListener("change", rendre)` du gel
+	 * (`V-08:2069`), à ceci près que l'état vit dans l'adresse et non dans une
+	 * clôture : `RG-M02-06` veut l'état de la recherche partageable, et un tri
+	 * gardé en mémoire ne se partage pas. LES FILTRES SONT CONSERVÉS, comme chez
+	 * le gel, où changer l'ordre ne touche pas aux facettes.
+	 */
+	function changerLOrdre(ordre: string): void {
+		aller(adresse(choisis, q, ordre));
+	}
+
+	/**
+	 * CHANGER LE MODE — `V-08:2077-2083`, où le clic pose `data-mode` et rejoue le
+	 * rendu. Ici encore, l'adresse porte l'état.
+	 *
+	 * LE BOUTON DU MODE COURANT NE NAVIGUE PAS : le gel repose `aria-pressed` et
+	 * refait le même rendu, ce qui ne change rien ; recharger la page pour rien
+	 * serait la seule différence, et ce serait une régression.
+	 */
+	function changerLeMode(voulu: string): void {
+		if (voulu === modeDemande) return;
+		aller(adresse(choisis, q, tri, voulu));
 	}
 </script>
 
@@ -705,21 +800,34 @@
 					est absorbée par la répartition d'événement du `.click()` qu'il émet.
 				-->
 				<div class="modes" role="group" aria-label="Mode de recherche">
-					<button data-mode="motscles" aria-pressed={mode === 'motscles'}>
+					<button
+						data-mode="motscles"
+						aria-pressed={mode === 'motscles'}
+						onclick={() => changerLeMode('motscles')}
+					>
 						Mots-clés
 						<span class="aide-mode" role="tooltip"
 							>Correspondance textuelle, tolérante aux fautes de frappe. Cherche les mots tels
 							qu'ils sont écrits.</span
 						>
 					</button>
-					<button data-mode="sens" aria-pressed="false" disabled={degrade}>
+					<button
+						data-mode="sens"
+						aria-pressed="false"
+						disabled={degrade}
+						onclick={() => changerLeMode('sens')}
+					>
 						Sens
 						<span class="aide-mode" role="tooltip"
 							>Trouve les notes qui parlent du même sujet, même lorsqu'elles n'emploient aucun mot
 							de la requête.</span
 						>
 					</button>
-					<button data-mode="hybride" aria-pressed={mode === 'hybride'}>
+					<button
+						data-mode="hybride"
+						aria-pressed={mode === 'hybride'}
+						onclick={() => changerLeMode('hybride')}
+					>
 						Hybride
 						<span class="aide-mode" role="tooltip"
 							>Fusionne les deux approches et classe les résultats sur les deux critères. Mode par
@@ -762,14 +870,29 @@
 							>{nbFiltres}</span
 						>
 					</button>
+					<!--
+						LE SÉLECTEUR DE TRI — les cinq `<option>` du gel, dans son ordre, avec
+						ses valeurs et ses libellés.
+
+						`selected` N'EST POSÉ QUE HORS DÉFAUT, et ce n'est pas un détail de
+						style : le gel n'écrit AUCUN `selected` (`V-08:1191-1195`), et le
+						navigateur retient donc le premier. Poser l'attribut sur « Pertinence »
+						ne changerait rien au rendu mais ferait diverger le balisage servi de
+						celui de la référence sur les sept états de planche, pour rien.
+					-->
 					<div class="tri">
 						<label class="etiq" for="tri">Trier par</label>
-						<select id="tri">
+						<select id="tri" onchange={(e) => changerLOrdre(e.currentTarget.value)}>
 							<option value="pertinence">Pertinence</option>
-							<option value="modification">Date de modification</option>
-							<option value="verification">Date de vérification</option>
-							<option value="consultations">Consultations</option>
-							<option value="alpha">Alphabétique</option>
+							<option value="modification" selected={tri === 'modification'}
+								>Date de modification</option
+							>
+							<option value="verification" selected={tri === 'verification'}
+								>Date de vérification</option
+							>
+							<option value="consultations" selected={tri === 'consultations'}>Consultations</option
+							>
+							<option value="alpha" selected={tri === 'alpha'}>Alphabétique</option>
 						</select>
 					</div>
 				</div>
