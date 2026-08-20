@@ -118,6 +118,14 @@
 		 * constantes du jeu de semence s'appliquent — c'est ce que le mode démo
 		 * passe, et c'est ce qui garantit que le banc ne bouge pas d'un pixel.
 		 */
+		/**
+		 * CE QUE LA VUE FAIT QUAND UN SCÉNARIO EST CHOISI.
+		 *
+		 * Le gel l'annonce lui-même : le clic mène au « Parcours d'import, scénario
+		 * "X" — vue V-24 » (`mockups/V-35-console-imports.html:2984`). La vue ne
+		 * décide pas où cela mène ; la page le sait.
+		 */
+		onScenario?: (scenario: string) => void;
 		/** Le dernier lot déposé. Absente, `LOT_IMPORT` du jeu de semence. */
 		lotImport?: LotDImport;
 		/** Le journal des imports. Absente, `JOURNAL_IMPORTS` du jeu de semence. */
@@ -132,7 +140,8 @@
 		compte = MOI,
 		instance = INSTANCE,
 		lotImport = LOT_IMPORT,
-		journalImports = JOURNAL_IMPORTS
+		journalImports = JOURNAL_IMPORTS,
+		onScenario
 	}: Proprietes = $props();
 
 	/**
@@ -259,7 +268,7 @@
 			></div
 			><span class="etiq" style="display:block;margin-bottom:var(--e-2)">Ou choisissez directement votre scénario</span
 			><div class="scenarios-court" id="scenarios"
-				>{#each SCENARIOS as s (s.nom)}<button class="sc" type="button"><span class="sc__nom">{s.nom}</span><span class="sc__sous">{s.sous}</span></button>{/each}</div
+				>{#each SCENARIOS as s (s.nom)}<button class="sc" type="button" onclick={() => onScenario?.(s.nom)}><span class="sc__nom">{s.nom}</span><span class="sc__sous">{s.sous}</span></button>{/each}</div
 		></section>
 
 		<!-- ---------- Journal ---------- -->
