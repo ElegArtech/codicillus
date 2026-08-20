@@ -2248,3 +2248,87 @@ Il a coûté quatre lectures de code et trois hypothèses fausses avant qu'une s
 `P-21` le dit depuis le 19 août — *n'énonce jamais un fait sans citer la ligne que tu as lue* — et il
 vaut aussi pour un instrument : **raisonner sur ce qu'un masque devrait faire est plus lent, et moins
 sûr, que de lui demander ce qu'il a fait.**
+
+---
+
+## ARB-060 — La requête d'enregistrement soumet à l'index, elle n'attend pas la tâche
+
+*Arbitrage délégué, 21 août 2026. Demandé par `T-075` É-1.*
+
+### Le conflit, et il est réel
+
+`T-075` a rendu `RG-M05-06` tenue : une note enregistrée est retrouvable, poste 5 de la batterie 13
+passant de **jamais** (au-delà de 30,1 s) à **1 151 ms**. Il a du même coup fait franchir un autre
+budget, et il l'a déclaré plutôt que de le taire :
+
+| | médiane | p95 | verdict |
+|---|---|---|---|
+| enregistrement, sans l'entretien | **205 ms** | 237 ms | vert |
+| enregistrement, avec l'entretien | **1 049 ms** | 1 181 ms | **rouge** — le budget est d'1 s |
+
+### Ce qui tranche : le cahier porte DEUX budgets, sur deux lignes
+
+```
+CDC:1534   | Indexation après enregistrement | < 10 s | > 30 s |
+CDC:1537   | Enregistrement d'une note       | < 1 s  | > 3 s  |
+```
+
+**Lues ensemble, ces deux lignes ne peuvent désigner qu'un seul instant chacune.** Si l'indexation
+était comprise dans la requête d'enregistrement, la ligne 1534 serait sans objet : son budget de 10 s
+ne pourrait jamais dépasser celui d'1 s de la ligne 1537, et un seuil d'échec de 30 s en serait
+absurde. **Deux budgets distincts décrivent deux instants distincts.**
+
+`ADR-009` dit *« l'écriture dans l'index est synchrone à l'enregistrement »*. Une lecture qui en fait
+« la requête bloque jusqu'à la fin de la tâche du moteur » rend le budget d'1 s du cahier
+**inatteignable par une constante de l'outil**, et le cahier prime sur un ADR : l'ordre de préséance
+de `CLAUDE.md` §2 ne range pas les ADR au-dessus des sources.
+
+### La mesure qui rend la décision exécutable
+
+Sept tirages sur le moteur, index de 32 documents :
+
+```
+soumission seule (addDocuments)  médiane    4 ms     5 4 4 4 4 4 4
+attente de la tâche (waitTask)   médiane  804 ms   817 804 805 806 804 802 800
+```
+
+**Les 800 ms sont l'intervalle de regroupement des tâches du moteur, pas du travail.** `T-075`
+l'avait déjà établi autrement : 793 ms sur 32 notes, 789 ms sur 5 000 — la latence ne dépend pas de
+la volumétrie. Aucune optimisation du produit ne la réduira.
+
+### Ce qui est décidé
+
+**La requête d'enregistrement soumet le document à l'index et ne l'attend pas.**
+
+- La **soumission reste synchrone et dans la requête**. Le moteur arrêté, injoignable ou refusant fait
+  toujours échouer l'appel, au même endroit qu'aujourd'hui. L'intention d'`ADR-009` — *« une note est
+  trouvable en mots-clés immédiatement »* — est tenue : 804 ms est immédiat, et le budget de la
+  ligne 1534 est tenu avec un facteur 12.
+- **Seule l'attente disparaît**, et avec elle la seule chose qu'elle garantissait.
+
+### Ce que cette décision retire, et où cette garantie est REPLACÉE
+
+`attendre()` existe pour une raison que son en-tête énonce et qui reste juste :
+
+> *« Un échec d'indexation silencieux est le pire des états : l'index paraît alimenté et ne l'est pas,
+> et la recherche rend moins que le corpus sans que rien ne le dise. »*
+
+**Cette garantie ne doit pas s'évaporer — elle doit changer de place, sinon cet arbitrage n'est qu'un
+desserrage.** Trois obligations, portées par le lot `T-076` :
+
+1. **L'attente est conservée partout où la latence ne coûte rien** — réindexation complète, commandes
+   de console, épreuves de périmètre. Elle ne disparaît que du chemin de requête.
+2. **Une tâche du moteur en échec devient un rouge**, relevé par un contrôle et non par la chance.
+   Le moteur conserve ses tâches : l'échec est lisible après coup, ce qui suffit à le rendre
+   opposable.
+3. **La reprise durable** est le mécanisme qu'`ADR-009` a déjà désigné — *« les travaux coûteux sont
+   des tâches de fond adossées à PostgreSQL »*, et le même ADR interdit d'introduire un service de
+   plus dans le chemin critique. Elle n'est pas exigée par cet arbitrage ; elle est le chemin quand
+   le point 2 rougira pour de bon.
+
+### Ce que cet arbitrage ne fait PAS
+
+Il ne desserre aucun budget, n'écrit aucun seuil, et ne touche pas `verif/references/`. Il ne
+autorise pas à taire un échec de soumission. Et il ne dit rien de ce qui doit s'afficher quand
+l'index refuse : `T-075` É-2 relève qu'**aucune maquette ne porte cet état** et qu'aucune source ne le
+décrit. C'est un vide de spécification, il reste ouvert, et il n'est pas comblé ici.

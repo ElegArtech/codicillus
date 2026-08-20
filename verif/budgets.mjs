@@ -939,8 +939,20 @@ async function principale() {
 
 	/* ═════════════════════════════════════════════ Les utilitaires ════ */
 
+	/* `T-075` É-3 : le port du moteur était ÉCRIT EN DUR, et `PORT_RECHERCHE`
+	   ignoré. Sous copies parallèles, la batterie mesurait donc le moteur du
+	   VOISIN — mesuré : « l'index porte 32 entrées pour 5000 notes », refus de
+	   mesurer, sur une copie dont le moteur était ailleurs. C'est `P-30` dans
+	   l'instrument lui-même, et un instrument qui mesure le voisin est pire
+	   qu'un instrument absent : il rend un chiffre. */
+	function adresseDuMoteur() {
+		if (process.env.URL_RECHERCHE !== undefined) return process.env.URL_RECHERCHE;
+		const port = process.env.PORT_RECHERCHE ?? '19700';
+		return `http://127.0.0.1:${port}`;
+	}
+
 	async function entreesDeLIndex() {
-		const adresse = process.env.URL_RECHERCHE ?? 'http://127.0.0.1:19700';
+		const adresse = adresseDuMoteur();
 		const cle = process.env.CLE_RECHERCHE ?? process.env.CLE_MAITRE_RECHERCHE;
 		const r = await fetch(`${adresse}/indexes/notes/stats`, {
 			headers: { authorization: `Bearer ${cle}` }
@@ -951,7 +963,7 @@ async function principale() {
 	}
 
 	async function entreesTrouvees(requete) {
-		const adresse = process.env.URL_RECHERCHE ?? 'http://127.0.0.1:19700';
+		const adresse = adresseDuMoteur();
 		const cle = process.env.CLE_RECHERCHE ?? process.env.CLE_MAITRE_RECHERCHE;
 		const r = await fetch(`${adresse}/indexes/notes/search`, {
 			method: 'POST',
