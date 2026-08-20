@@ -35,11 +35,14 @@
  * qui n'existe pas au gel, ne crée aucun nœud, ne retire aucun nœud et ne change
  * aucun ordre.
  *
- * IL NE « RÉPARE » PAS LE TIROIR. Le panneau `.tiroir-form` des consoles ne
- * glisse jamais : la seule règle qui l'ouvre vise `.app[data-form="ouvert"]
- * .tiroir-form`, or le panneau vit hors de `div.app` (`CLAUDE.md` §6, `P-3`).
- * C'est le gel, et le corriger rendrait six vues fausses. Aucune ligne d'ici ne
- * touche à `data-form` ni à une transformation.
+ * IL N'ÉCRIT AUCUN STYLE POUR LE TIROIR, ET IL LE REND POURTANT ATTEIGNABLE.
+ * Le panneau `.tiroir-form` des consoles ne glissait jamais : la seule règle qui
+ * l'ouvre vise `.app[data-form="ouvert"] .tiroir-form`, or le panneau vit hors
+ * de `div.app` (`CLAUDE.md` §6, `P-3`). `cablerLeTiroirDeFormulaire()`, en bas
+ * de ce fichier, le rend DESCENDANT de `.app` pour que la règle GELÉE puisse
+ * enfin s'appliquer — le geste de `cablerLHistorique()` pour V-15, et rien de
+ * plus : aucune transformation n'est écrite ici, et `data-form` reste posé par
+ * la vue.
  *
  * Sans JavaScript, ces écrans ne soumettent pas — même régime que `ARB-063` §4.
  */
@@ -208,3 +211,132 @@ export function cablerLaConfiguration(racine: ParentNode): Debranchement {
  * Laisser ici un câblage qu'aucune page n'appelle aurait fait une règle que rien
  * n'exerce, et dont personne ne saurait si elle marche (`P-5`).
  */
+
+/* ═══════════════════════════════ Le tiroir de formulaire ════════════════ */
+
+/**
+ * LE PANNEAU `tiroir-form` DES CONSOLES — LE MÊME GESTE QU'EN V-15.
+ *
+ * L'EN-TÊTE DE CE FICHIER DISAIT « IL NE RÉPARE PAS LE TIROIR », ET IL LE DIT
+ * ENCORE POUR LE STYLE : aucune ligne d'ici n'écrit de règle. Le constat qu'il
+ * portait reste exact au mot près — `V-32.css:401` ouvre le panneau par
+ * `.app[data-form="ouvert"] .tiroir-form { transform: none; }`, et
+ * `Coquille.svelte:444` rend la superposition HORS de `div.app` (ARB-021, A-4) :
+ * le sélecteur ne peut pas s'appliquer, le panneau reste à `translateX(100%)` et
+ * ne pèse aucun pixel (`CLAUDE.md` §6, P-3).
+ *
+ * CE QUI CHANGE N'EST PAS LE CONSTAT, C'EST CE QU'IL COÛTE. Tant qu'aucun écran
+ * ne demandait à ouvrir ce panneau, le laisser hors fenêtre ne coûtait rien.
+ * `RG-M14-07` — changer le rôle d'un compte — a son déclencheur DEDANS, et son
+ * action de route est écrite et juste : le panneau inatteignable était la seule
+ * chose qui séparait l'administrateur du geste.
+ *
+ * `cablerLHistorique()` de `$lib/cablage/formulaires.ts` a tranché le cas
+ * identique de V-15, et sa rédaction vaut ici mot pour mot :
+ *
+ *     « DEUX GESTES, ET AUCUN N'INVENTE UN STYLE. On pose l'attribut que la
+ *       règle attend, et on rend le panneau DESCENDANT de `.app` pour que la
+ *       règle du gel puisse enfin le trouver. Aucune déclaration n'est écrite,
+ *       aucune feuille n'est touchée : c'est la règle GELÉE qui ouvre le
+ *       panneau, elle en devient seulement applicable. »
+ *
+ * ICI, UN SEUL DES DEUX GESTES EST NÉCESSAIRE, et c'est la différence avec
+ * V-15. L'attribut `data-form` est déjà posé par la vue, qui le tient de son
+ * état (`V-32:301`) : rendre le panneau DESCENDANT de `.app` suffit, et
+ * l'ouverture reste commandée par la vue. Rien ici ne décide qu'un panneau
+ * s'ouvre ; ce module rend seulement possible que la règle gelée le voie.
+ *
+ * C'EST UNE DIVERGENCE DE STRUCTURE AVEC LA MAQUETTE, ET ELLE EST ASSUMÉE — la
+ * même qu'en V-15, avec la même justification : un panneau que l'utilisateur ne
+ * peut pas atteindre n'est pas un panneau. Elle appelle un regel des vues de
+ * console concernées, pas une seconde rustine.
+ *
+ * LE DÉPLACEMENT EST IDEMPOTENT et n'a lieu qu'une fois par montage : Svelte
+ * garde des RÉFÉRENCES aux nœuds qu'il met à jour, jamais leur chemin dans
+ * l'arbre, et le contenu du panneau reste donc réactif après le déplacement.
+ */
+export function cablerLeTiroirDeFormulaire(racine: ParentNode): Debranchement {
+	const app = noeud<HTMLElement>(racine, '.app');
+	const tiroir = noeud<HTMLElement>(racine, '.tiroir-form');
+	if (app !== null && tiroir !== null && !app.contains(tiroir)) app.appendChild(tiroir);
+	return () => {
+		/* Rien à défaire : aucun écouteur n'est posé, et remettre le panneau à sa
+		   place d'origine au démontage n'aurait aucun observateur — la page entière
+		   disparaît avec lui. */
+	};
+}
+
+/* ═══════════════════════════════ La zone de dépôt — V-35 ════════════════ */
+
+/** Ce que le câblage du dépôt fait d'un lot reçu. */
+export interface OptionsDuDepot {
+	/** Appelé dès qu'au moins un fichier est reçu, par dépôt ou par sélection. */
+	readonly surLot: (fichiers: readonly File[]) => void;
+}
+
+/**
+ * LA ZONE DE DÉPÔT ET « PARCOURIR » DE V-35 — les quatre écouteurs du gel, et
+ * le champ de fichiers que le gel n'a pas.
+ *
+ * CE QUE LE GEL ÉCRIT, RECOPIÉ SANS RIEN Y AJOUTER
+ * (`mockups/V-35-console-imports.html:2990-3001`) :
+ *
+ *     dragenter, dragover → `data-survol="oui"` ; dragleave, drop → `"non"`,
+ *     et `drop` comme `#parcourir` appellent `lancer()`, qui notifie
+ *     « Lot reçu — parcours d'import à l'étape du choix de scénario, vue V-24 ».
+ *
+ * `data-survol` EST L'ATTRIBUT DU GEL, et la feuille le lit déjà
+ * (`V-35.css` : `.depot[data-survol="oui"]`). Aucune règle n'est écrite ici,
+ * aucun nœud du gel n'est créé ni retiré.
+ *
+ * LE CHAMP DE FICHIERS N'EXISTE PAS AU GEL — `#parcourir` y est un bouton nu.
+ * Il est donc créé ici, DÉTACHÉ DU DOCUMENT : un `<input type="file">` qui n'a
+ * jamais été inséré ouvre le sélecteur du navigateur exactement de la même
+ * façon, et le document servi reste au nœud près celui de la maquette. C'est le
+ * même constat qu'en `V-24`, qui pose le sien caché faute de pouvoir faire
+ * autrement dans un balisage de vue.
+ *
+ * LES FICHIERS SONT PRIS PLATS, ET C'EST DÉLIBÉRÉ. `V-24` descend
+ * l'arborescence des entrées du transfert parce qu'elle en a besoin : c'est
+ * elle qui l'envoie au serveur, et le scénario promet une arborescence
+ * conservée « à l'identique ». Ici, rien n'est envoyé (voir la route) : refaire
+ * cette descente ferait une SECONDE implémentation du même parcours, qui
+ * finirait par diverger de celle qui compte.
+ */
+export function cablerLeDepot(racine: ParentNode, options: OptionsDuDepot): Debranchement {
+	const attaches = new Attaches();
+	const zone = noeud<HTMLElement>(racine, '#depot');
+	if (zone === null) return attaches.debranchement();
+
+	const marquer =
+		(etat: string) =>
+		(evenement: Event): void => {
+			evenement.preventDefault();
+			zone.setAttribute('data-survol', etat);
+		};
+	const entree = marquer('oui');
+	const sortie = marquer('non');
+	attaches.ecouter(zone, 'dragenter', entree);
+	attaches.ecouter(zone, 'dragover', entree);
+	attaches.ecouter(zone, 'dragleave', sortie);
+	attaches.ecouter(zone, 'drop', (evenement) => {
+		sortie(evenement);
+		const transfert = (evenement as DragEvent).dataTransfer;
+		const recus = transfert === null ? [] : Array.from(transfert.files);
+		if (recus.length > 0) options.surLot(recus);
+	});
+
+	const parcourir = noeud<HTMLButtonElement>(racine, '#parcourir');
+	if (parcourir !== null) {
+		const champ = zone.ownerDocument.createElement('input');
+		champ.type = 'file';
+		champ.multiple = true;
+		attaches.ecouter(champ, 'change', () => {
+			const recus = Array.from(champ.files ?? []);
+			if (recus.length > 0) options.surLot(recus);
+		});
+		attaches.ecouter(parcourir, 'click', () => champ.click());
+	}
+
+	return attaches.debranchement();
+}

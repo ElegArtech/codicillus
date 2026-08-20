@@ -22,7 +22,11 @@
 	 *
 	 * LE PANNEAU `tiroir-form` NE PÈSE AUCUN PIXEL, ET C'EST LE GEL. Hors de
 	 * `div.app`, `.app[data-form="ouvert"] .tiroir-form` ne l'atteint pas ; le
-	 * NIVEAU 1 en est le seul juge (`CLAUDE.md` §6, P-3).
+	 * NIVEAU 1 en est le seul juge (`CLAUDE.md` §6, P-3). RIEN DE CE FICHIER NE
+	 * CHANGE CELA : le déplacement qui rend la règle gelée applicable est fait par
+	 * la ROUTE, au montage (`cablerLeTiroirDeFormulaire()` de
+	 * `src/routes/console/cablage.ts`), sur le document vivant que le banc
+	 * n'atteint jamais. La vue, elle, se borne à dire `data-form="ouvert"`.
 	 *
 	 * AUCUN `autofocus` : hors dialogue, le focus ne survit pas à `stabiliser()`
 	 * (`CLAUDE.md` §6, P-4). Dans `#dlg-desactiver`, `showModal()` focalise
@@ -40,7 +44,13 @@
 	 * dernières connexions viennent de `COMPTES` ; le nombre de contributions
 	 * est compté sur le corpus de la vue.
 	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011).
+	 * AUCUNE MINUTERIE (ARB-011). LE COMPORTEMENT, LUI, EXISTE DÉSORMAIS, et il
+	 * est celui du script du gel : « Modifier » ouvre le panneau sur un compte
+	 * (`V-32:3107`), le sélecteur de rôle met son aide à jour (`V-32:3136`),
+	 * « Annuler » et la croix le referment (`V-32:3225`), « Enregistrer » rend le
+	 * rôle choisi à la page. Aucun de ces gestes n'a lieu au rendu serveur : les
+	 * deux états qui les portent partent de `null`, et les sept positions de
+	 * planche rendent exactement ce qu'elles rendaient.
 	 *
 	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette`, `dialog#palette` fermé,
 	 * et `div.planche`, bloc hors produit (§2.G).
@@ -100,6 +110,28 @@
 			readonly identifiant: string;
 			readonly actif: boolean;
 		}) => void;
+		/**
+		 * CE QUE LA VUE FAIT QUAND « ENREGISTRER » EST CLIQUÉ — `RG-M14-07`.
+		 *
+		 * MÊME PARTAGE QUE CI-DESSUS : la vue tient l'état de son panneau — quel
+		 * compte est édité, quel rôle est choisi dans le sélecteur —, la page tient
+		 * le réseau et l'action. Le gel fait exactement ce partage-là : `V-32:3199`
+		 * relit `document.getElementById("f-role").value` au clic, puis écrit.
+		 *
+		 * ABSENTE, LE PANNEAU S'OUVRE ET SE FERME SANS RIEN ENVOYER : c'est l'état
+		 * d'une planche, qui n'a ni route ni action derrière elle.
+		 *
+		 * SEUL LE RÔLE VOYAGE. Le gel enregistre aussi le nom affiché, le courriel,
+		 * le domaine principal et le verrouillage du mot de passe (`V-32:3214-3218`)
+		 * ; côté produit, `RG-M14-07` est la seule de ces écritures dont l'action de
+		 * route existe (`changerLeRole`). Les quatre autres sont REMONTÉES, pas
+		 * comblées : leur envoyer un champ qu'aucune action ne lit ferait croire à
+		 * un enregistrement qui n'a pas lieu.
+		 */
+		onEnregistrerLeRole?: (demande: {
+			readonly identifiant: string;
+			readonly role: RoleDeCompte;
+		}) => void;
 	}
 
 	const {
@@ -110,7 +142,8 @@
 		compte = MOI,
 		instance = INSTANCE,
 		comptes: registreDeComptes = COMPTES,
-		onChangerLActivation
+		onChangerLActivation,
+		onEnregistrerLeRole
 	}: Proprietes = $props();
 
 	/**
@@ -225,26 +258,61 @@
 	   réglage par défaut (`V-32:3337`). */
 	const reglage = $derived(vecteur ?? {});
 	const form = $derived(String(reglage['form'] ?? 'ferme'));
-	const panneauOuvert = $derived(form !== 'ferme');
 	const casMdp = $derived(reglage['c-mdp'] === true);
 	const casDes = $derived(reglage['c-des'] === true);
 
 	/**
-	 * Le compte édité : « Karim Belhadj » pour la position `edition`, le premier
-	 * administrateur actif pour `admin` (`V-32:3342`).
+	 * LE COMPTE DONT « MODIFIER » A OUVERT LE PANNEAU — `ouvrirForm(c)` du gel
+	 * (`V-32:3107`).
+	 *
+	 * `null` AU RENDU SERVEUR, exactement comme `demandeDeDesactivation` plus
+	 * bas : l'écran reste celui que le vecteur décrit tant que personne n'a
+	 * cliqué, et les sept positions de planche ne bougent pas d'un pixel.
+	 *
+	 * La vue tient cet état parce que le gel le tenait — `edite` est une variable
+	 * de son script, pas un paramètre d'adresse : `docs/routes.md` §3.6 ne déclare
+	 * aucun état adressable pour le panneau de formulaire, et lui en inventer un
+	 * serait combler.
+	 */
+	let demandeDEdition = $state<string | null>(null);
+
+	/** Le rôle retenu dans le sélecteur, tant que le panneau est ouvert. */
+	let roleChoisi = $state<RoleDeCompte | null>(null);
+
+	function ouvrirLeFormulaire(identifiant: string): void {
+		demandeDEdition = identifiant;
+		roleChoisi = null;
+	}
+
+	/** `fermerForm()` du gel (`V-32:3225`) — l'écran revient à sa liste. */
+	function fermerLeFormulaire(): void {
+		demandeDEdition = null;
+		roleChoisi = null;
+	}
+
+	const panneauOuvert = $derived(form !== 'ferme' || demandeDEdition !== null);
+
+	/**
+	 * Le compte édité : celui que « Modifier » désigne, sinon « Karim Belhadj »
+	 * pour la position `edition` et le premier administrateur actif pour `admin`
+	 * (`V-32:3342`).
 	 */
 	const edite = $derived<CompteRendu | null>(
-		form === 'edition'
-			? (comptes.find((c) => c.compte.identifiant === 'karim.belhadj') ?? null)
-			: form === 'admin'
-				? (administrateurs[0] ?? null)
-				: null
+		demandeDEdition !== null
+			? (comptes.find((c) => c.compte.identifiant === demandeDEdition) ?? null)
+			: form === 'edition'
+				? (comptes.find((c) => c.compte.identifiant === 'karim.belhadj') ?? null)
+				: form === 'admin'
+					? (administrateurs[0] ?? null)
+					: null
 	);
 	const nouveau = $derived(form === 'creation');
 	const dernierAdminEdite = $derived(edite !== null && estDernierAdmin(edite));
 
 	/** Le rôle porté par le sélecteur, et l'aide qui va avec (`V-32:3136`). */
-	const roleCourant = $derived<RoleDeCompte>(edite ? edite.compte.role : 'Contributeur');
+	const roleCourant = $derived<RoleDeCompte>(
+		roleChoisi ?? (edite ? edite.compte.role : 'Contributeur')
+	);
 	const aideDuRole = $derived(ROLES.find((r) => r.cle === roleCourant)?.aide ?? '');
 
 	/** Le mot de passe initial, généré à l'ouverture d'un formulaire de création. */
@@ -379,7 +447,11 @@
 							>{c.compte.derniere}</span
 						>
 						<div class="tg__actions">
-							<button class="btn" type="button">Modifier</button>
+							<button
+								class="btn"
+								type="button"
+								onclick={() => ouvrirLeFormulaire(c.compte.identifiant)}>Modifier</button
+							>
 							{#if c.compte.actif}<button
 									class="btn"
 									type="button"
@@ -430,7 +502,12 @@
 							devra changer son mot de passe à la première connexion.{/if}
 					</div>
 				</div>
-				<button class="tiroir-form__fermer" id="form-fermer" aria-label="Fermer le formulaire">
+				<button
+					class="tiroir-form__fermer"
+					id="form-fermer"
+					aria-label="Fermer le formulaire"
+					onclick={fermerLeFormulaire}
+				>
 					<svg
 						width="17"
 						height="17"
@@ -567,7 +644,13 @@
 
 				<div class="champ">
 					<label class="champ__label" for="f-role">Rôle <span class="oblig">*</span></label>
-					<select class="selecteur" id="f-role" disabled={dernierAdminEdite}
+					<select
+						class="selecteur"
+						id="f-role"
+						disabled={dernierAdminEdite}
+						onchange={(evenement) => {
+							roleChoisi = evenement.currentTarget.value as RoleDeCompte;
+						}}
 						>{#if panneauOuvert}{#each ROLES as r (r.cle)}<option
 									value={r.cle}
 									selected={r.cle === roleCourant}>{r.cle}</option
@@ -607,15 +690,40 @@
 				</div>
 			</div>
 
+			<!--
+				LE PIED DU PANNEAU — les trois boutons du gel, câblés comme
+				`V-32:3232-3235` et `V-32:3238` les câblent.
+
+				AUCUN N'EST DANS UN FORMULAIRE, et aucun ne porte donc `type` : le gel
+				n'en pose pas, et le danger d'un bouton sans type — soumettre — n'existe
+				qu'à l'intérieur d'un `<form>`, qui n'existe pas ici.
+
+				« CRÉER LE COMPTE » N'EST PAS CÂBLÉ, ET C'EST DÉCLARÉ. La création d'un
+				compte (`RG-M14-06`) n'a pas d'action de route : la câbler à
+				`changerLeRole` enverrait un rôle pour un identifiant qui n'existe pas,
+				et l'écran mentirait sur une création qui n'a pas eu lieu. Le bouton
+				ferme donc le panneau sans rien envoyer quand il crée — l'état de la
+				planche —, et n'appelle l'action que sur un compte EXISTANT.
+			-->
 			<div class="tiroir-form__pied">
 				<button
 					class="btn btn--destructif"
 					id="form-desactiver"
-					hidden={edite === null || !edite.compte.actif}>Désactiver</button
+					hidden={edite === null || !edite.compte.actif}
+					onclick={() => {
+						if (edite !== null) demandeDeDesactivation = edite.compte.identifiant;
+					}}>Désactiver</button
 				>
-				<button class="btn" id="form-annuler">Annuler</button>
-				<button class="btn btn--principal" id="form-valider"
-					><span id="form-valider-txt">{edite ? 'Enregistrer' : 'Créer le compte'}</span></button
+				<button class="btn" id="form-annuler" onclick={fermerLeFormulaire}>Annuler</button>
+				<button
+					class="btn btn--principal"
+					id="form-valider"
+					onclick={() => {
+						if (edite !== null) {
+							onEnregistrerLeRole?.({ identifiant: edite.compte.identifiant, role: roleCourant });
+						}
+						fermerLeFormulaire();
+					}}><span id="form-valider-txt">{edite ? 'Enregistrer' : 'Créer le compte'}</span></button
 				>
 			</div>
 		</aside>
