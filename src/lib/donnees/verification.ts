@@ -109,9 +109,11 @@
  * client compose la requête qu'il veut.
  */
 import { eq } from 'drizzle-orm';
+import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import { notes, verifications } from '../base/schema';
 import { INTROUVABLE, type Identite, type Resolution } from '../droits/resolution';
+import { entretenirLIndex } from '../recherche/entretien';
 import { lireLaNote } from './note';
 import type { ContexteDeLecture } from './lecture';
 
@@ -341,9 +343,24 @@ export interface VerificationFaite {
  * que `RG-M06-01` se lise sans jointure » (`002_socle.montee.sql:449-451`). Les
  * deux écritures portent donc LE MÊME INSTANT, celui du plan, et non deux appels
  * d'horloge qui pourraient différer d'une milliseconde.
+ *
+ * PUIS L'INDEX — ET C'EST LE SEUL DES TROIS GESTES QUI LE TOUCHE. `verifieLe` est
+ * un champ de `NoteIndexee` (`../recherche/notes-indexees.ts`), et l'un des
+ * quatre champs TRIABLES de `CHAMPS_TRIABLES`. Les deux autres gestes — signaler,
+ * lever — n'écrivent que les quatre colonnes de révision, dont AUCUNE n'est
+ * projetée : `ColonnesDUneDemandeDeRevision` et `LEVEE_DE_LA_DEMANDE` ne portent
+ * ni titre, ni corps, ni périmètre, ni date de vérification. Ils n'ont donc rien
+ * à entretenir, et cela se lit sur leur type plutôt que sur une intention.
+ *
+ * L'index n'apprend pas la FRAÎCHEUR pour autant : `notes-indexees.ts` le refuse
+ * explicitement (`P-01`, refus n° 1), et ce sont les INSTANTS qui y entrent.
+ *
+ * @throws l'erreur de la tâche du moteur si l'index n'a pas pu être entretenu —
+ *   voir `enregistrerLeCorps()` pour la portée de ce refus.
  */
 export async function verifierLaNote(
 	base: Base,
+	client: Meilisearch,
 	demande: DemandeDeGeste
 ): Promise<Resolution<VerificationFaite>> {
 	const acces = await resoudreLeGeste(base, demande);
@@ -364,6 +381,9 @@ export async function verifierLaNote(
 			le: plan.journal.le
 		});
 	});
+
+	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre, jamais avant. */
+	await entretenirLIndex(base, client, [demande.identifiant]);
 
 	return {
 		trouve: true,

@@ -74,6 +74,7 @@ import {
 	leverLaDemandeDeRevision,
 	verifierLaNote
 } from '$lib/donnees/verification';
+import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
@@ -186,7 +187,11 @@ export const actions: Actions = {
 	 */
 	verifier: async ({ params, locals }) => {
 		const { base, maintenant, contexte } = await contexteDUnGeste();
-		const fait = await verifierLaNote(base, {
+		/* SEUL CE GESTE ENTRETIENT L'INDEX DES TROIS — il écrit `verifieLe`, qui
+		   est un champ projeté et l'un des quatre champs triables. Signaler et
+		   lever n'écrivent que les colonnes de révision, qu'aucune entrée d'index
+		   ne porte. */
+		const fait = await verifierLaNote(base, moteurPartage(), {
 			identifiant: params.identifiant,
 			identite: locals.identite,
 			contexte,

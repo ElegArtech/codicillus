@@ -76,10 +76,12 @@
  * simulé, rien n'est comblé, tout est compté.
  */
 import { and, eq } from 'drizzle-orm';
+import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import { dossiers, etiquettes, etiquettesDeNote, notes, typesDeNote } from '../base/schema';
 import type { Document } from '../contenu/document';
 import { analyserMarkdown } from '../contenu/markdown';
+import { entretenirLIndex } from '../recherche/entretien';
 import { identifiantLisible } from '../rangement/adresses';
 import { PROFONDEUR_MAX } from './rangement';
 import { FORMATS_IMPORT, type FormatDImport, type SortDeFichier } from '../../../seeds/corpus';
@@ -903,7 +905,10 @@ export interface RapportDImport {
 	 * Aucune table ne la porte : le rapport le DIT, il ne le tait pas.
 	 */
 	readonly journalEnregistre: boolean;
-	/** `RG-M12-08` — indexation à la recherche. Aucun index n'est alimenté. */
+	/**
+	 * `RG-M12-08` — chaque note écrite par le lot a traversé l'entretien de
+	 * l'index (`../recherche/entretien.ts`), qu'elle y ait été écrite ou retirée.
+	 */
 	readonly indexeALaRecherche: boolean;
 }
 
@@ -1001,6 +1006,7 @@ export async function identifiantsPris(base: Base): Promise<ReadonlySet<string>>
  */
 export async function executerLImport(
 	base: Base,
+	client: Meilisearch,
 	cible: CibleDImport,
 	plan: PlanDImport,
 	options: { readonly simulation: boolean; readonly profondeurDeDepart: number }
@@ -1149,6 +1155,26 @@ export async function executerLImport(
 		if (!(erreur instanceof AnnulationDeSimulation)) throw erreur;
 	}
 
+	/* ── L'INDEX, APRÈS LA TRANSACTION — `RG-M12-08` ───────────────────────
+	   ET IL N'Y A TOUJOURS QU'UN SEUL CHEMIN DE CODE. `simulation` n'est pas
+	   relue ici : `entretenirLIndex()` RELIT LA BASE pour les identifiants qu'on
+	   lui nomme. En réel, les notes y sont et sont réécrites dans l'index avec
+	   leur périmètre du moment ; en simulation la transaction a été annulée,
+	   elles n'y sont pas, et rien n'est écrit. Une branche « si simulation » ne
+	   changerait donc rien à l'effet et rendrait faux le seul contrôle qui vaille
+	   (`RG-M12-02`, `ADR-004`) : les deux exécutions font le même travail.
+
+	   LES NOTES MISES À JOUR SONT DANS LA LISTE AU MÊME TITRE QUE LES CRÉÉES.
+	   La branche de mise à jour réécrit le titre, le corps, le dossier et les
+	   étiquettes — quatre champs projetés, dont le DOSSIER, qui porte le
+	   périmètre. Une note déplacée dont l'index garderait l'ancienne chaîne
+	   d'ancêtres serait lisible sous son ancien périmètre : c'est la fuite que
+	   `ADR-006` nomme, et c'est pourquoi la liste ne se limite pas aux créations. */
+	const ecrites = lignes
+		.filter((l) => l.sort === 'note' && l.identifiant !== null)
+		.map((l) => l.identifiant as string);
+	const entretien = await entretenirLIndex(base, client, ecrites);
+
 	return {
 		source: plan.source,
 		simulation: options.simulation,
@@ -1163,8 +1189,14 @@ export async function executerLImport(
 		   tables, aucune ne les porte). Le rapport le déclare plutôt que de le
 		   taire — et `base/` n'est pas le territoire de ce lot. */
 		journalEnregistre: false,
-		/* Aucun index de recherche n'est alimenté par le produit à ce jour. */
-		indexeALaRecherche: false
+		/* `RG-M12-08` — ET C'EST UNE MESURE, PAS UNE DÉCLARATION (`P-02`).
+		   Chaque note écrite a-t-elle traversé l'entretien de l'index ? Une note
+		   qui existe en base y est INDEXÉE, une note qui n'y est pas (simulation
+		   annulée) en est RETIRÉE : la somme des deux vaut le nombre de notes
+		   écrites, et un identifiant qui aurait échappé au geste ferait tomber
+		   l'égalité. La valeur est donc la même en simulation et en réel — ce que
+		   `RG-M12-02` exige du rapport — sans être pour autant une constante. */
+		indexeALaRecherche: entretien.indexees + entretien.retirees === ecrites.length
 	};
 }
 
@@ -1204,11 +1236,6 @@ export const MANQUES_DE_L_IMPORT: readonly ManqueDeLImport[] = [
 			'porte des métadonnées, et rien n’écrit ni ne sert le fichier lui-même. Les images ' +
 			'arrivent donc jusqu’à l’application et s’arrêtent là, ce que `imagesNonReprises` dit ' +
 			'plutôt que de le taire.'
-	},
-	{
-		exigence: 'RG-M12-08',
-		ceQuiManque: 'l’indexation à la recherche dans les 10 secondes',
-		motif: 'aucun index de recherche n’est alimenté par le produit à ce jour.'
 	},
 	{
 		exigence: 'RG-M12-09',

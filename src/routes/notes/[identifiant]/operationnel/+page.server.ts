@@ -43,6 +43,7 @@ import { lireSeuils } from '$lib/donnees/lecture';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import { DocumentInvalide } from '$lib/contenu/document';
 import { EditeurIncapable } from '$lib/edition/document';
+import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
 
 async function contexteDe() {
@@ -95,7 +96,10 @@ export const actions: Actions = {
 		}
 
 		try {
-			const fait = await enregistrerLeCorps(base, {
+			/* L'INDEX EST ENTRETENU PAR L'ENREGISTREMENT — `RG-M05-06`, et le
+			   registre Opérationnel n'y fait pas exception : les deux registres
+			   passent par le même `enregistrerLeCorps()`. */
+			const fait = await enregistrerLeCorps(base, moteurPartage(), {
 				identifiant: params.identifiant,
 				registre: 'operationnel',
 				identite: locals.identite,

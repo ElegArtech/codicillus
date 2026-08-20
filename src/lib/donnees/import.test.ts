@@ -32,8 +32,10 @@
  *      l'erreur sont traités — pas seulement sur le compte final.
  */
 import { describe, expect, it } from 'vitest';
+import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import { dossiers, etiquettes, etiquettesDeNote, notes, typesDeNote } from '../base/schema';
+import type { NoteIndexee } from '../recherche/notes-indexees';
 import {
 	MANQUES_DE_L_IMPORT,
 	SERVICE_INJOIGNABLE,
@@ -761,6 +763,20 @@ describe('la voie bureautique, service disponible — M12.1, ADR-004', () => {
  * Elle existe pour une seule question, et c'est celle que rien d'autre ne peut
  * poser : la simulation fait-elle EXACTEMENT le même travail que le réel ? La
  * réponse se lit dans le journal, pas dans un compteur.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * ELLE PORTE DÉSORMAIS UN ÉTAT, ET C'EST `RG-M12-08` QUI L'EXIGE — `T-075`
+ *
+ * `executerLImport()` entretient l'index APRÈS sa transaction, et le geste RELIT
+ * LA BASE plutôt que de croire le plan (`../recherche/entretien.ts`). Une base
+ * d'épreuve sans mémoire rendrait donc le même résultat en simulation et en
+ * réel pour la mauvaise raison — elle ne porterait jamais rien —, et le contrôle
+ * serait inerte au sens de `P-26`.
+ *
+ * Elle tient donc les dossiers et les notes que l'import écrit, et elle les REND
+ * quand la transaction est validée, jamais quand elle est annulée. C'est le
+ * minimum sans lequel la question « la note créée entre-t-elle dans l'index ? »
+ * n'a pas de réponse mesurable ici.
  */
 function baseDEpreuve(): {
 	readonly base: Base;
@@ -773,9 +789,25 @@ function baseDEpreuve(): {
 	let annulations = 0;
 	let rang = 0;
 
+	/* L'ÉTAT — ce que la transaction a écrit, et qu'elle rend si elle est
+	   validée. `racine-1` est le dossier de la cible, seule racine de l'arbre. */
+	let arbre: { id: string; parentId: string | null }[] = [{ id: 'racine-1', parentId: null }];
+	let notesEnBase: Record<string, unknown>[] = [];
+
 	const lire = (table: unknown, colonnes: Record<string, unknown>): unknown[] => {
 		if (table === typesDeNote) return [{ id: 'type-note' }];
-		if (table === notes) return 'identifiant' in colonnes ? [{ identifiant: 'deja-pris' }] : [];
+		if (table === dossiers) {
+			/* La PROJECTION lit l'arbre — `{ id, parentId }` ; `dossierDuSegment()`
+			   lit un dossier précis et ne demande que `id`. Les deux requêtes se
+			   distinguent par leurs colonnes, non par un ordre d'appel. */
+			return 'parentId' in colonnes ? arbre : [];
+		}
+		if (table === notes) {
+			/* Le socle de `projeterLeCorpus()` demande le corps ; `identifiantsPris()`
+			   ne demande que l'identifiant. */
+			if ('corpsReference' in colonnes) return notesEnBase;
+			return 'identifiant' in colonnes ? [{ identifiant: 'deja-pris' }] : [];
+		}
 		return [];
 	};
 
@@ -787,6 +819,8 @@ function baseDEpreuve(): {
 				return chaine;
 			},
 			innerJoin: () => chaine,
+			leftJoin: () => chaine,
+			orderBy: () => chaine,
 			where: () => chaine,
 			limit: () => chaine,
 			then: (suite: (v: unknown) => unknown, echec?: (e: unknown) => unknown) =>
@@ -811,7 +845,34 @@ function baseDEpreuve(): {
 			rang += 1;
 			const identite = String(v['identifiant'] ?? v['libelle'] ?? v['nom'] ?? v['ordre'] ?? '');
 			journal.push(`insert ${nomDe(table)} ${identite}`);
-			const rendu = [{ id: `${nomDe(table)}-${rang}` }];
+			const id = `${nomDe(table)}-${rang}`;
+			const rendu = [{ id }];
+			/* L'ÉTAT SUIT L'ÉCRITURE — sans quoi la projection d'après transaction
+			   ne verrait jamais ce que l'import vient d'écrire. */
+			if (table === dossiers) {
+				arbre = [...arbre, { id, parentId: String(v['parentId']) }];
+			}
+			if (table === notes) {
+				notesEnBase = [
+					...notesEnBase,
+					{
+						identifiant: v['identifiant'],
+						titre: v['titre'],
+						corpsReference: v['corpsReference'],
+						typeNom: 'Procédure',
+						typeFicheNom: null,
+						universNom: 'Production',
+						domaineNom: 'Exploitation',
+						dossierId: v['dossierId'],
+						auteurNom: 'Compte d’épreuve',
+						visibilite: 'interne',
+						statut: 'publiee',
+						modifieLe: new Date('2026-08-20T00:00:00Z'),
+						verifieLe: null,
+						consultations: 0
+					}
+				];
+			}
 			return {
 				returning: () => Promise.resolve(rendu),
 				then: (suite: (v: unknown) => unknown) => Promise.resolve(rendu).then(suite)
@@ -834,10 +895,18 @@ function baseDEpreuve(): {
 		},
 		async transaction(corps: (tx: unknown) => Promise<void>) {
 			transactions += 1;
+			/* L'ANNULATION REND L'ÉTAT — c'est ce qui fait qu'une simulation ne
+			   laisse rien derrière elle, et donc que l'entretien de l'index ne
+			   trouve rien à écrire. Le journal, lui, n'est PAS rendu : il porte
+			   ce qui a été tenté, et c'est sa raison d'être. */
+			const arbreAvant = arbre;
+			const notesAvant = notesEnBase;
 			try {
 				await corps(base);
 			} catch (erreur) {
 				annulations += 1;
+				arbre = arbreAvant;
+				notesEnBase = notesAvant;
 				throw erreur;
 			}
 		}
@@ -849,6 +918,48 @@ function baseDEpreuve(): {
 		transactions: () => transactions,
 		annulations: () => annulations
 	};
+}
+
+/**
+ * UN MOTEUR D'ÉPREUVE — il retient ce qu'on lui écrit, et rien de plus.
+ *
+ * `RG-M12-08` se mesure sur ce qui ENTRE dans l'index, pas sur un booléen du
+ * rapport. Ce faux moteur porte donc les deux gestes que `entretenirLIndex()`
+ * emploie, et il rend une tâche RÉUSSIE : `attendre()` (`../recherche/moteur.ts`)
+ * lève sur tout autre état terminal, et un moteur d'épreuve qui rendrait un état
+ * quelconque ferait échouer l'import pour une raison étrangère au contrôle.
+ */
+function moteurDEpreuve(): {
+	readonly client: Meilisearch;
+	/** Les identifiants écrits dans l'index, dans l'ordre des appels. */
+	readonly ecrites: string[];
+	/** Les identifiants retirés de l'index. */
+	readonly retirees: string[];
+	/** Ce que la dernière écriture a porté comme périmètre, par identifiant. */
+	readonly perimetres: Map<string, { dossier: string; ancetres: readonly string[] }>;
+} {
+	const ecrites: string[] = [];
+	const retirees: string[] = [];
+	const perimetres = new Map<string, { dossier: string; ancetres: readonly string[] }>();
+	const tache = (type: string) => ({
+		waitTask: async () => ({ status: 'succeeded', type })
+	});
+	const client = {
+		index: () => ({
+			addDocuments(entrees: NoteIndexee[]) {
+				for (const e of entrees) {
+					ecrites.push(e.id);
+					perimetres.set(e.id, { dossier: e.dossier, ancetres: e.ancetres });
+				}
+				return tache('documentAdditionOrUpdate');
+			},
+			deleteDocuments(ids: string[]) {
+				retirees.push(...ids);
+				return tache('documentDeletion');
+			}
+		})
+	};
+	return { client: client as unknown as Meilisearch, ecrites, retirees, perimetres };
 }
 
 const CIBLE = { domaineId: 'dom-1', dossierId: 'racine-1', auteurId: 'compte-1' };
@@ -872,13 +983,13 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 
 	it('écrit, compte, puis annule — et le rapport est le même des deux côtés', async () => {
 		const reel = baseDEpreuve();
-		const rapportReel = await executerLImport(reel.base, CIBLE, plan, {
+		const rapportReel = await executerLImport(reel.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: false,
 			profondeurDeDepart: 1
 		});
 
 		const simule = baseDEpreuve();
-		const rapportSimule = await executerLImport(simule.base, CIBLE, plan, {
+		const rapportSimule = await executerLImport(simule.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: true,
 			profondeurDeDepart: 1
 		});
@@ -892,12 +1003,18 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 
 	it('n’annule la transaction QUE en simulation', async () => {
 		const reel = baseDEpreuve();
-		await executerLImport(reel.base, CIBLE, plan, { simulation: false, profondeurDeDepart: 1 });
+		await executerLImport(reel.base, moteurDEpreuve().client, CIBLE, plan, {
+			simulation: false,
+			profondeurDeDepart: 1
+		});
 		expect(reel.transactions()).toBe(1);
 		expect(reel.annulations()).toBe(0);
 
 		const simule = baseDEpreuve();
-		await executerLImport(simule.base, CIBLE, plan, { simulation: true, profondeurDeDepart: 1 });
+		await executerLImport(simule.base, moteurDEpreuve().client, CIBLE, plan, {
+			simulation: true,
+			profondeurDeDepart: 1
+		});
 		expect(simule.transactions()).toBe(1);
 		expect(simule.annulations()).toBe(1);
 	});
@@ -909,13 +1026,16 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 			}
 		} as unknown as Base;
 		await expect(
-			executerLImport(cassee, CIBLE, plan, { simulation: true, profondeurDeDepart: 1 })
+			executerLImport(cassee, moteurDEpreuve().client, CIBLE, plan, {
+				simulation: true,
+				profondeurDeDepart: 1
+			})
 		).rejects.toThrow('la base a rompu');
 	});
 
 	it('crée les dossiers de l’arborescence, du plus haut au plus bas', async () => {
 		const essai = baseDEpreuve();
-		const rapport = await executerLImport(essai.base, CIBLE, plan, {
+		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: false,
 			profondeurDeDepart: 1
 		});
@@ -925,14 +1045,17 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 
 	it('rattache les étiquettes déclarées — RG-M12-06', async () => {
 		const essai = baseDEpreuve();
-		await executerLImport(essai.base, CIBLE, plan, { simulation: false, profondeurDeDepart: 1 });
+		await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
+			simulation: false,
+			profondeurDeDepart: 1
+		});
 		expect(essai.journal).toContain('insert etiquette barman');
 		expect(essai.journal.filter((l) => l.startsWith('insert liaison'))).toHaveLength(1);
 	});
 
 	it('consigne les renvois qu’aucune note ne résout, et seulement ceux-là', async () => {
 		const essai = baseDEpreuve();
-		const rapport = await executerLImport(essai.base, CIBLE, plan, {
+		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: false,
 			profondeurDeDepart: 1
 		});
@@ -943,7 +1066,7 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 
 	it('reporte au rapport les fichiers écartés, avec leur motif', async () => {
 		const essai = baseDEpreuve();
-		const rapport = await executerLImport(essai.base, CIBLE, plan, {
+		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: false,
 			profondeurDeDepart: 1
 		});
@@ -957,13 +1080,66 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 
 	it('déclare ce qu’il n’a pas fait plutôt que de le taire', async () => {
 		const essai = baseDEpreuve();
-		const rapport = await executerLImport(essai.base, CIBLE, plan, {
+		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: false,
 			profondeurDeDepart: 1
 		});
-		/* RG-M12-09 et RG-M12-08 : aucune table d’imports, aucun index alimenté. */
+		/* `RG-M12-09` — aucune table d’imports n’existe, et le rapport le dit. */
 		expect(rapport.journalEnregistre).toBe(false);
-		expect(rapport.indexeALaRecherche).toBe(false);
+	});
+
+	/* ── `RG-M12-08` — l’index suit le lot, et il le suit VRAIMENT (`T-075`) ── */
+
+	it('écrit dans l’index les notes qu’il a créées, avec leur périmètre', async () => {
+		const essai = baseDEpreuve();
+		const moteur = moteurDEpreuve();
+		const rapport = await executerLImport(essai.base, moteur.client, CIBLE, plan, {
+			simulation: false,
+			profondeurDeDepart: 1
+		});
+
+		const attendues = rapport.lignes
+			.filter((l) => l.sort === 'note')
+			.map((l) => l.identifiant)
+			.sort();
+		expect(attendues).toHaveLength(2);
+		expect([...moteur.ecrites].sort()).toEqual(attendues);
+		expect(moteur.retirees).toEqual([]);
+		expect(rapport.indexeALaRecherche).toBe(true);
+
+		/* LE PÉRIMÈTRE EST CELUI DU DOSSIER OÙ LA NOTE A ATTERRI, et la chaîne
+		   d’ancêtres remonte jusqu’à la racine de la cible. Une entrée sans
+		   périmètre est un document public (`ADR-006`) : le contrôle porte donc
+		   sur la chaîne, pas sur la seule présence de l’identifiant. */
+		for (const identifiant of attendues) {
+			const perimetre = moteur.perimetres.get(identifiant as string);
+			expect(perimetre).toBeDefined();
+			expect(perimetre?.ancetres.length).toBeGreaterThan(0);
+			expect(perimetre?.ancetres[0]).toBe(perimetre?.dossier);
+			expect(perimetre?.ancetres).toContain(CIBLE.dossierId);
+		}
+	});
+
+	it('n’écrit RIEN dans l’index quand la transaction a été annulée — la simulation', async () => {
+		const essai = baseDEpreuve();
+		const moteur = moteurDEpreuve();
+		const rapport = await executerLImport(essai.base, moteur.client, CIBLE, plan, {
+			simulation: true,
+			profondeurDeDepart: 1
+		});
+
+		/* La polarité inverse de l’essai précédent, et c’est elle qui prouve que
+		   l’entretien LIT LA BASE au lieu de croire le plan : les mêmes lignes de
+		   rapport, le même nombre de notes, et pourtant aucune entrée écrite. */
+		expect(moteur.ecrites).toEqual([]);
+		expect([...moteur.retirees].sort()).toEqual(
+			rapport.lignes
+				.filter((l) => l.sort === 'note')
+				.map((l) => l.identifiant)
+				.sort()
+		);
+		/* Le geste a bien été tenté pour chacune — c’est ce que le champ mesure. */
+		expect(rapport.indexeALaRecherche).toBe(true);
 	});
 });
 
