@@ -495,6 +495,24 @@ export async function lireLesDesignationsDeDomaine(
 	return rendu;
 }
 
+/**
+ * L'IDENTIFIANT LISIBLE D'UN UNIVERS, par son NOM D'AFFICHAGE.
+ *
+ * Même besoin que pour les domaines, et même cause : `supprimerUnUnivers()`
+ * désigne par `univers.identifiant` — c'est la clé du segment d'adresse
+ * `/univers/{univers}` (`docs/routes.md` §2.2) —, tandis que `interface Univers`
+ * du jeu de semence ne porte que le nom. La correspondance est LUE, jamais
+ * dérivée du nom.
+ */
+export async function lireLesDesignationsDUnivers(base: Base): Promise<Record<string, string>> {
+	const lignes = await base
+		.select({ nom: univers.nom, identifiant: univers.identifiant })
+		.from(univers);
+	const rendu: Record<string, string> = {};
+	for (const l of lignes) rendu[l.nom] = l.identifiant;
+	return rendu;
+}
+
 /** Les univers et les domaines, dans la forme que la coquille attend. */
 export interface RangementDeConsole {
 	readonly univers: readonly Univers[];
