@@ -10,12 +10,20 @@
  * n'est écrite ici, et le seul `error(404, MESSAGE_INTROUVABLE)` du fichier est SANS MESSAGE — un
  * message entrerait dans le corps et rendrait le refus discernable (`ADR-007`).
  *
- * CE QUE CE CHARGEUR NE FAIT PAS. Il ne touche pas `src/vues/V-28.svelte`, et
- * ne peut donc pas corriger ce que la vue lit du jeu de semence : les univers,
- * les domaines et leur détail y sont importés au niveau du module (`V-28:68`).
- * Seules les NOTES entrent par propriété, et c'est par là que la base entre —
- * ce sont elles que V-28 compte pour la colonne « notes » de chaque domaine.
- * Écart déclaré au rapport du lot.
+ * CE QUE CE CHARGEUR NE FAISAIT PAS. La rédaction précédente affirmait qu'il ne
+ * pouvait « pas corriger ce que la vue lit du jeu de semence : les univers, les
+ * domaines et leur détail y sont importés au niveau du module (`V-28:68`) ».
+ * `V-28:98` et `:107-110` déclarent `univers?`, `domaines?`, `detailDomaines?`,
+ * `compte?` en propriétés facultatives dont l'import n'est que le DÉFAUT :
+ * l'affirmation était fausse, et elle coûtait un écran entier de données
+ * illustratives. Les quatre sont passées.
+ *
+ * `modules` RESTE AU DÉFAUT, ET CE N'EST PAS LA MÊME CHOSE. `MODULES` est le
+ * catalogue des LIBELLÉS des six modules — « Notes », « Arborescence de
+ * dossiers »… —, pas la liste des modules d'un domaine. Aucune table ne le
+ * porte, et il n'en existe qu'un : c'est un référentiel d'interface, pas une
+ * donnée. Ce qui varie par domaine — quels modules sont ACTIVÉS — entre par
+ * `detailDomaines`, lu dans `modules_de_domaine` (`P-04`).
  *
  * `vecteur: null` demande l'état au repos : les trois positions de l'axe
  * « Formulaire » et les deux de l'axe « Suppression » sont des états
@@ -24,7 +32,13 @@
 import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { supprimerUnDomaine } from '$lib/donnees/administration';
-import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import {
+	accesALaConsole,
+	contexteDeRequete,
+	lireLeDetailDesDomaines,
+	lireLesDesignationsDeDomaine,
+	resoudreLaConsole
+} from '$lib/donnees/consoles';
 import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
@@ -34,7 +48,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
-	return { vecteur: null, notes: acces.ressource.notes };
+	return {
+		vecteur: null,
+		notes: acces.ressource.notes,
+		univers: acces.ressource.univers,
+		domaines: acces.ressource.domaines,
+		compte: acces.ressource.compte,
+		detailDomaines: await lireLeDetailDesDomaines(base),
+		designations: await lireLesDesignationsDeDomaine(base)
+	};
 };
 
 /** La garde des onze adresses, appliquée à l'action — voir `/console/univers`. */

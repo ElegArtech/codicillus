@@ -18,9 +18,32 @@
 	 */
 	import Vue from '../../../vues/V-31.svelte';
 	import '../../../vues/V-31.css';
+	import { envoyerAUneAction } from '../cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
 </script>
 
-<Vue vecteur={data.vecteur} notes={data.notes} />
+<!--
+	LA VUE TIENT L'ÉTAT DU DIALOGUE, CETTE PAGE TIENT LE RÉSEAU — voir
+	`/console/domaines` pour le motif.
+
+	AUCUNE TABLE DE TRADUCTION : `lireTemplates()` rend `templates.identifiant`
+	sous le nom `id`, et la vue le porte. C'est le second écran dans ce cas, avec
+	les types de relation.
+-->
+<Vue
+	vecteur={data.vecteur}
+	notes={data.notes}
+	univers={data.univers}
+	domaines={data.domaines}
+	compte={data.compte}
+	templates={data.templates}
+	typesNote={data.typesNote}
+	onSupprimer={(template) => {
+		void envoyerAUneAction(document, '?/supprimer', { template });
+	}}
+	onMarquerParDefaut={(template) => {
+		void envoyerAUneAction(document, '?/marquerParDefaut', { template });
+	}}
+/>

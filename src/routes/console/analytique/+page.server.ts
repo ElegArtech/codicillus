@@ -49,6 +49,7 @@
 import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { contexteDeRequete, resoudreLaConsole, vecteurDeV34 } from '$lib/donnees/consoles';
+import { lireRelations } from '$lib/donnees/lecture';
 import type { PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
@@ -57,5 +58,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
-	return { vecteur: vecteurDeV34(), notes: acces.ressource.notes };
+	return {
+		vecteur: vecteurDeV34(),
+		notes: acces.ressource.notes,
+		univers: acces.ressource.univers,
+		domaines: acces.ressource.domaines,
+		compte: acces.ressource.compte,
+		relations: await lireRelations(base)
+	};
 };

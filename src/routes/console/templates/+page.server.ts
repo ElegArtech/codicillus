@@ -21,8 +21,10 @@
  */
 import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
-import type { PageServerLoad } from './$types';
+import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import { marquerLeTemplateParDefaut, supprimerUnTemplate } from '$lib/donnees/administration';
+import { lireTemplates, lireTypesDeNote } from '$lib/donnees/lecture';
+import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -30,5 +32,64 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
-	return { vecteur: null, notes: acces.ressource.notes };
+	const [templates, typesNote] = await Promise.all([lireTemplates(base), lireTypesDeNote(base)]);
+
+	return {
+		vecteur: null,
+		notes: acces.ressource.notes,
+		univers: acces.ressource.univers,
+		domaines: acces.ressource.domaines,
+		compte: acces.ressource.compte,
+		templates,
+		typesNote
+	};
+};
+
+/** La garde des onze adresses, appliquée aux actions — voir `/console/univers`. */
+function consoleOuverte(locals: App.Locals): void {
+	if (!accesALaConsole(locals.identite)) error(404, MESSAGE_INTROUVABLE);
+}
+
+export const actions: Actions = {
+	/**
+	 * SUPPRIMER UN TEMPLATE — `RG-REF-01`.
+	 *
+	 * `template` porte l'IDENTIFIANT LISIBLE, celui de `templates.identifiant` que
+	 * `lireTemplates()` rend en `id` : la vue le porte déjà, aucune table de
+	 * traduction n'est nécessaire.
+	 *
+	 * AUCUNE ISSUE DE REFUS : la suppression d'un template n'affecte aucune note,
+	 * et le dialogue du gel n'avertit que d'une chose — la création s'ouvrira sur
+	 * la page vierge si c'était le template par défaut.
+	 */
+	supprimer: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const resultat = await supprimerUnTemplate(
+			basePartagee(),
+			String(champs.get('template') ?? '')
+		);
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		return resultat;
+	},
+
+	/**
+	 * MARQUER UN TEMPLATE PAR DÉFAUT — `RG-REF-02`.
+	 *
+	 * Le geste est UNIQUE et laisse exactement un template par défaut : c'est ce
+	 * que le gel écrit depuis l'écran — « Cocher décochera "X", qui l'est
+	 * actuellement » (`V-31:380`). Voir `marquerLeTemplateParDefaut()` pour le
+	 * motif de la transaction.
+	 */
+	marquerParDefaut: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const resultat = await marquerLeTemplateParDefaut(
+			basePartagee(),
+			String(champs.get('template') ?? ''),
+			new Date()
+		);
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		return resultat;
+	}
 };

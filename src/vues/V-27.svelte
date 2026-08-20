@@ -100,6 +100,23 @@
 		compte?: UtilisateurCourant;
 		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
 		instance?: EtatDInstance;
+		/**
+		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE — et rien d'autre.
+		 *
+		 * Même partage qu'en `V-28` : la vue tient l'état de son dialogue — quel
+		 * univers est visé, laquelle des trois branches s'applique — parce que
+		 * c'est ce que `demanderSuppression(u)` tenait au gel (`V-27:3524`) et
+		 * parce que le décompte des domaines et des notes se fait sur ce qu'elle a
+		 * reçu. Elle ne connaît ni route, ni action, ni réseau : `+page.svelte`
+		 * passe le rappel.
+		 */
+		onSupprimer?: (univers: string) => void;
+		/**
+		 * LA SORTIE PROPOSÉE PAR LE REFUS — « Rattacher ces domaines à un autre
+		 * univers ». Le gel y attache un geste (`V-27:3591`) ; la vue ne décide pas
+		 * où il mène, la page le sait.
+		 */
+		onRattacher?: (univers: string) => void;
 	}
 
 	const {
@@ -108,7 +125,9 @@
 		univers = UNIVERS,
 		domaines: tousLesDomaines = DOMAINES,
 		compte = MOI,
-		instance = INSTANCE
+		instance = INSTANCE,
+		onSupprimer,
+		onRattacher
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -297,10 +316,81 @@
 		systeme: false
 	};
 
+	/**
+	 * L'UNIVERS DONT LA SUPPRESSION EST EXAMINÉE.
+	 *
+	 * `null` au rendu serveur : l'écran reste exactement celui que le vecteur
+	 * décrit tant que personne n'a cliqué. C'est le comportement que le script du
+	 * gel portait, rendu à la vue qui le transcrit.
+	 */
+	let demande = $state<string | null>(null);
+
 	const aSupprimer = $derived(
-		sup === 'systeme' ? (liste.find((u) => u.systeme) ?? null) : sup === 'ok' ? ARCHIVES : null
+		demande !== null
+			? (liste.find((u) => u.nom === demande) ?? null)
+			: sup === 'systeme'
+				? (liste.find((u) => u.systeme) ?? null)
+				: sup === 'ok'
+					? ARCHIVES
+					: null
 	);
 	const dialogueOuvert = $derived(aSupprimer !== null);
+
+	/**
+	 * LES TROIS BRANCHES DE `demanderSuppression(u)` — `V-27:3524-3606`, LUES.
+	 *
+	 * La transcription précédente n'en portait que DEUX : « univers système » et
+	 * « univers vide ». La troisième — l'univers qui porte des domaines — existe
+	 * au gel avec son titre, son décompte, la liste de ses domaines et sa sortie ;
+	 * elle n'était pas atteignable par la planche, aucun état ne la montrait, et
+	 * elle avait été laissée de côté. Servi sur des données réelles, l'écran
+	 * disait donc « Production ne contient aucun domaine » à un univers qui en
+	 * porte trois. La branche est ici transcrite, texte pour texte.
+	 */
+	const domainesDeLUnivers = $derived(aSupprimer === null ? [] : domaines(aSupprimer.nom));
+	const notesDeLUnivers = $derived(aSupprimer === null ? 0 : compteDeNotes(aSupprimer.nom));
+	/** `u.systeme` d'abord, `doms.length` ensuite, le reste sinon — l'ordre du gel. */
+	const branche = $derived(
+		aSupprimer === null
+			? 'aucune'
+			: aSupprimer.systeme
+				? 'systeme'
+				: domainesDeLUnivers.length
+					? 'peuple'
+					: 'possible'
+	);
+
+	/** `valider.hidden` et `annuler.textContent`, tels que le gel les pose. */
+	const suppressionOfferte = $derived(branche === 'possible');
+
+	/**
+	 * LES DEUX LIGNES DU REFUS, accordées comme le gel les accorde
+	 * (`V-27:3552-3554`) : « domaines rattachés » / « domaine rattaché »,
+	 * « notes qu'ils contiennent » / « note qu'ils contiennent ».
+	 */
+	const refusPeuple = $derived([
+		[
+			domainesDeLUnivers.length,
+			domainesDeLUnivers.length > 1 ? 'domaines rattachés' : 'domaine rattaché'
+		],
+		[notesDeLUnivers, notesDeLUnivers > 1 ? "notes qu'ils contiennent" : "note qu'ils contiennent"]
+	] as [number, string][]);
+
+	/** Le nombre de notes d'un domaine — `window.notesDuDomaine(d.nom).length`. */
+	function notesDuDomaine(nom: string): number {
+		return notes.filter((n) => n.domaine === nom).length;
+	}
+
+	/** `showModal()` — voir `V-28.svelte` : l'attribut `open` n'obtient pas la modalité. */
+	$effect(() => {
+		const boite = document.getElementById('dlg-supprimer');
+		if (!(boite instanceof HTMLDialogElement)) return;
+		if (!dialogueOuvert) {
+			if (boite.open) boite.close();
+			return;
+		}
+		if (!boite.open) boite.showModal();
+	});
 </script>
 
 <!-- Un glyphe d'univers, à la taille et à l'épaisseur que le gel lui donne. -->
@@ -336,7 +426,7 @@
 	><span class="tg__n tg--masquable">{compteDeNotes(u.nom)}</span
 	><div class="tg__actions"
 		><button class="btn" type="button">{u.systeme ? 'Voir' : 'Modifier'}</button
-		><button class="btn btn--destructif" type="button" aria-label="Supprimer l'univers {u.nom}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"/></svg></button
+		><button class="btn btn--destructif" type="button" aria-label="Supprimer l'univers {u.nom}" onclick={() => (demande = u.nom)}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"/></svg></button
 	></div
 ></div>{/snippet}
 
@@ -557,7 +647,12 @@
 						>
 					</span>
 					<h2 class="dlg__titre" id="dlg-sup-titre">Supprimer l'univers</h2>
-					<button class="dlg__fermer" data-fermer aria-label="Fermer">
+					<button
+						class="dlg__fermer"
+						data-fermer
+						aria-label="Fermer"
+						onclick={() => (demande = null)}
+					>
 						<svg
 							width="16"
 							height="16"
@@ -570,22 +665,34 @@
 				</div>
 				<!-- prettier-ignore -->
 				<div class="dlg__corps" id="sup-corps"
-					>{#if aSupprimer && aSupprimer.systeme}<div class="refus"
+					>{#if aSupprimer && branche === 'systeme'}<div class="refus"
 						><div class="refus__titre">« {aSupprimer.nom} » ne peut pas être supprimé</div
 						><div class="refus__sortie">C'est l'univers de repli du produit : quand un domaine perd son rattachement, il atterrit ici plutôt que de disparaître de la navigation. Sans lui, un domaine orphelin deviendrait invisible sans être supprimé. Vous pouvez en revanche changer sa couleur et son rang.</div
 					></div
+					>{:else if aSupprimer && branche === 'peuple'}<div class="refus"
+						><div class="refus__titre">Suppression refusée : cet univers n'est pas vide</div
+						><ul
+							>{#each refusPeuple as [combien, mot] (mot)}<li><b>{combien}</b>{mot}</li>{/each}</ul
+						><div class="refus__sortie">Un univers ne se supprime que vide, pour qu'aucun contenu ne disparaisse par ricochet. Rattachez d'abord ses domaines ailleurs — « Non classé » convient si aucune destination ne s'impose.</div
+					></div
+					><div style="display:flex;flex-direction:column;gap:var(--e-1)"
+						>{#each domainesDeLUnivers as d (d.nom)}<div style="display:flex;align-items:center;gap:var(--e-2);padding:var(--e-2);border:1px solid var(--c-trait);border-radius:var(--r-2);font-size:var(--t-petit)"><span class="tg__puce" style="background:{d.couleur}"></span><span style="flex:1">{d.nom}</span><span class="tg__n">{notesDuDomaine(d.nom)} notes</span></div>{/each}</div
+					><button class="btn btn--principal" style="width:100%" type="button" onclick={() => aSupprimer && onRattacher?.(aSupprimer.nom)}>Rattacher ces domaines à un autre univers</button
 					>{:else if aSupprimer}<p class="dlg__texte">« {aSupprimer.nom} » ne contient aucun domaine : sa suppression ne détruit aucun contenu. Il disparaîtra de la navigation latérale de tous les utilisateurs.</p>{/if}</div
 				>
 				<div class="dlg__pied">
-					<button class="btn" data-fermer id="sup-annuler"
-						>{aSupprimer && aSupprimer.systeme ? 'Fermer' : 'Annuler'}</button
+					<button class="btn" data-fermer id="sup-annuler" onclick={() => (demande = null)}
+						>{aSupprimer && !suppressionOfferte ? 'Fermer' : 'Annuler'}</button
 					>
 					<button
 						class="btn btn--principal btn--destructif"
 						id="sup-valider"
-						hidden={aSupprimer !== null && aSupprimer.systeme}
+						hidden={aSupprimer !== null && !suppressionOfferte}
 						style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
-						>Supprimer</button
+						onclick={() => {
+							if (aSupprimer === null || !suppressionOfferte) return;
+							onSupprimer?.(aSupprimer.nom);
+						}}>Supprimer</button
 					>
 				</div>
 			</div>
