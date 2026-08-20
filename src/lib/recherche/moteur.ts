@@ -550,12 +550,109 @@ export async function perimetreDeLIdentite(base: Base, identite: Identite): Prom
  */
 export const PLAFOND_DE_RESULTATS = 1000;
 
+/* ═══════════════════════════════════ L'ordre de tri ════════════════════ */
+
+/**
+ * LES CINQ ORDRES DE `docs/routes.md` §4.2, ET CE QUI LES DÉFINIT.
+ *
+ * LES NOMS NE SONT PAS INVENTÉS : ce sont les valeurs des `<option>` du gel de
+ * V-08 (`mockups/V-08-recherche.html:1191-1195`), reprises telles quelles par
+ * `docs/routes.md:243`.
+ *
+ * LEUR SÉMANTIQUE NON PLUS, ET C'EST LE POINT QUI A LONGTEMPS MANQUÉ. V-08
+ * appelle `trier(filtres)` (`V-08:1966`) sans définir `trier` : la fonction
+ * n'existe nulle part dans ses 2 377 lignes, `rendre()` lève une
+ * `ReferenceError` à chaque appel, et c'est pourquoi la zone de résultats de la
+ * référence reste vide sur les sept états (voir l'en-tête de `V-08.svelte`).
+ *
+ * MAIS UNE AUTRE MAQUETTE GELÉE LA DÉFINIT, avec les MÊMES quatre valeurs et
+ * les mêmes libellés : `mockups/V-12-liste-notes.html:2117-2124`, dont le
+ * sélecteur (`V-12:1151-1156`) porte `modification`, `verification`,
+ * `consultations` et `alpha`. Recopiée :
+ *
+ *     if (t === "alpha")             a.titre.localeCompare(b.titre, "fr")
+ *     else if (t === "consultations") b.vues - a.vues
+ *     else if (t === "verification")  a.jours - b.jours
+ *     else                            modifJours(a) - modifJours(b)
+ *
+ * `jours` est l'ancienneté de la dernière vérification et `modifJours` celle de
+ * la dernière modification (`V-12:1702-1716`) : trier par ancienneté CROISSANTE,
+ * c'est trier par date DÉCROISSANTE. D'où les quatre clauses ci-dessous. Rien
+ * n'est inventé — les maquettes priment, et l'une d'elles écrit la règle.
+ *
+ * LA PERTINENCE N'EST PAS UNE CLAUSE, c'est l'absence de clause : le classement
+ * par défaut du moteur. `CHAMPS_TRIABLES` de `notes-indexees.ts` le disait déjà
+ * avant ce lot, et déclarait les quatre champs qui suivent.
+ *
+ * DEUX DIVERGENCES CONNUES AVEC LES COMPARATEURS DE V-12, et elles tiennent au
+ * fait que le tri est fait par le MOTEUR et non sur une liste déjà en mémoire :
+ *
+ *   · `alpha` suit l'ordre du moteur, non `localeCompare(…, 'fr')` ; deux
+ *     titres qui ne diffèrent que par une diacritique peuvent donc se ranger
+ *     autrement ;
+ *   · `verification` place EN DERNIER les notes jamais vérifiées, dont
+ *     `verifieLe` est nul, là où `jours` de V-12 retombe sur la modification.
+ *     C'est ce que l'écran dit d'elles par ailleurs — « Jamais révisé ».
+ *
+ * ET UNE TROISIÈME, MESURÉE, QUI N'EST PAS DE MÊME NATURE : `consultations`
+ * classe sur la valeur INDEXÉE, que l'écran n'affiche pas — il affiche celle de
+ * la base, seule vérité (`lireNotes()`). Une ouverture de note incrémente le
+ * compteur en base (`T-078`) sans réindexer la note : les deux valeurs dérivent
+ * donc entre deux indexations. Mesuré le 21/08/2026 sur la base partagée :
+ * index 1 856 · 1 434 · 631 contre base 1 842 · 1 431 · 623 pour trois notes,
+ * l'ORDRE restant le même. Le jour où l'écart de deux notes voisines dépassera
+ * leur intervalle, l'ordre affiché paraîtra faux à qui lit les chiffres.
+ * Refermer cela est une décision d'indexation — réindexer à chaque
+ * consultation, ou trier hors du moteur —, pas un réglage de ce tri : c'est
+ * REMONTÉ, pas comblé.
+ *
+ * Le tri est fait par le moteur PARCE QUE l'ordre doit décider AVANT le plafond
+ * de résultats : trier après coup ne classerait que ce que le plafond a déjà
+ * retenu, et le premier corpus dépassant `PLAFOND_DE_RESULTATS` rendrait un
+ * classement faux sans que rien ne le dise.
+ */
+export const ORDRES_DE_TRI = [
+	'pertinence',
+	'modification',
+	'verification',
+	'consultations',
+	'alpha'
+] as const;
+
+export type OrdreDeTri = (typeof ORDRES_DE_TRI)[number];
+
+/** L'ordre par défaut : celui que le navigateur retient, faute de `selected`. */
+export const ORDRE_PAR_DEFAUT: OrdreDeTri = 'pertinence';
+
+/** L'ordre demandé, ou `null` si ce n'en est pas un — jamais un défaut deviné. */
+export function ordreDeTriDemande(valeur: string | null): OrdreDeTri | null {
+	return ORDRES_DE_TRI.find((o) => o === valeur) ?? null;
+}
+
+/** La clause de tri du moteur, vide pour la pertinence. */
+function clauseDeTri(tri: OrdreDeTri): readonly string[] {
+	switch (tri) {
+		case 'modification':
+			return ['modifieLe:desc'];
+		case 'verification':
+			return ['verifieLe:desc'];
+		case 'consultations':
+			return ['consultations:desc'];
+		case 'alpha':
+			return ['titre:asc'];
+		default:
+			return [];
+	}
+}
+
 /** Ce qu'une requête demande. Le filtre n'en fait PAS partie : il se calcule. */
 export interface DemandeDeRecherche {
 	/** La requête de mots-clés. Vide : tout le périmètre. */
 	readonly requete: string;
 	/** Les paramètres de facette DÉJÀ CRIBLÉS par la couche de route. */
 	readonly facettes?: URLSearchParams;
+	/** L'ordre demandé. Absent : la pertinence, classement par défaut du moteur. */
+	readonly tri?: OrdreDeTri;
 }
 
 /**
@@ -609,11 +706,16 @@ export async function chercherLesNotes(
 		return { identifiants: [], total: 0, tronque: false, filtre: null };
 	}
 
+	/* L'ORDRE EST DEMANDÉ AU MOTEUR, JAMAIS RÉTABLI APRÈS COUP — voir
+	   `ORDRES_DE_TRI`. Une clause vide n'est pas envoyée : `sort: []` demanderait
+	   au moteur un classement sur rien, là où la pertinence EST son classement. */
+	const sort = clauseDeTri(demande.tri ?? ORDRE_PAR_DEFAUT);
 	const reponse = await client.index<EntreeRapportee>(NOM_DE_L_INDEX).search(demande.requete, {
 		filter: filtre.filtre,
 		attributesToRetrieve: [CLE_PRIMAIRE],
 		page: 1,
-		hitsPerPage: PLAFOND_DE_RESULTATS
+		hitsPerPage: PLAFOND_DE_RESULTATS,
+		...(sort.length === 0 ? {} : { sort: [...sort] })
 	});
 
 	return {
