@@ -45,57 +45,65 @@ et l'écran montre bien la donnée réelle :
 | profil, import, guides | préférences enregistrées, import idempotent, simulation qui n'écrit rien |
 | **console** (12 écrans) | 200 en administratrice, **404 en rédacteur**, onze actions qui écrivent |
 
+## Le parcours complet, joué dans un navigateur
+
+Base fraîchement semée, session réelle, une seule exécution :
+
+```
+POST /connexion                                303 → /
+POST /notes/nouvelle                           303 → /notes/n-bascule-du-reseau-de-secours
+POST /notes/{id}/operationnel?/enregistrer     200      le second registre
+POST /notes/{id}/modifier                      303      version capturée
+GET  /notes/{id}?version                       200      Version 2 | Version 1
+POST /notes/{id}?/deposerPiece                 200      TXT · plan-bascule · 21 o
+POST /notes/{id}/relations?/ajouter            200      origine visible
+GET  /recherche?q=bascule                      200      la note y est
+GET  /recherche?q=sauvegarde&tri=alpha         200      tri appliqué
+POST /notes/{id}?/supprimer                    303 → /univers/production/infrastructure
+GET  /notes/{id}                               404
+```
+
+Le titre affiché est celui qui a été saisi, le corps est celui qui a été frappé à la barre d'outils
+— titre de niveau 2 et liste à puces —, et la note disparaît vraiment.
+
 ## Ce qui ne marche pas encore
 
-### 1. Ce qu'aucun écran n'atteint
+### 1. Trois gestes que le gel dessine et que rien n'atteint
 
-- **Changer le rôle d'un compte** (`RG-M14-07`) vit dans le `.tiroir-form` des consoles, qui ne
-  glisse jamais — c'est le gel, cousin de la réparation faite sur V-15.
-- **La zone de dépôt et « Parcourir » de V-35** sont inertes : elles transportent des fichiers vers
-  un autre écran.
-- **`?tri=` et `?mode=` de la recherche** : les quatre ordres autres que « pertinence » ne sont
-  écrits dans aucune source gelée.
+- **Créer un compte** (`RG-M14-06`) : aucune action de route. Le bouton ferme le panneau sans rien
+  envoyer plutôt que de mentir sur une création.
+- **Les octets d'un lot déposé sur l'écran d'import de la console** ne traversent pas : V-35 fait
+  atterrir le lot à l'étape du *choix de scénario*, où le parcours d'import n'a aucun état pour les
+  tenir. Le dépôt et « Parcourir » répondent, la navigation se fait, les fichiers restent en route.
+- **Ajouter une relation depuis la note** : le gel dessine le bouton dans V-14 et le dialogue dans
+  V-40, mais V-40 fixe sa note de démonstration en dur — le monter ferait parler l'écran d'une autre
+  note que celle regardée. Le geste vit sur `/notes/{id}/relations`.
 
 ### 2. Ce que le gel dit et que la base ne porte pas
 
 `instance` (version, dernière synchronisation), le résumé d'une version, les utilisations d'un
-gabarit, la dernière connexion en relatif, et la prose de V-34 qui affirme des chiffres. Tout cela
-s'affiche en état neutre explicite plutôt qu'en valeur illustrative.
+gabarit, la dernière connexion en relatif, la prose chiffrée de V-34, et « dernière version il y a
+3 semaines » dans la barre d'état des deux éditeurs. Tout cela s'affiche en état neutre explicite —
+sauf la dernière, qui reste la chaîne du gel et **est** une valeur illustrative sur une note réelle.
 
-### 3. ~~Le produit livré ne laisse écrire personne~~ — fermé
+### 3. Cinq divergences avec le gel, assumées et à regeler
 
-**Le diagnostic était faux, et la mesure l'a montré.** `RG-DRO-03` — « l'administrateur contourne
-tous les droits de dossier » — est implémentée : une administratrice crée une note sur une base sans
-une seule ligne dans `droits_de_dossier`. Le produit n'a jamais été bloqué ; c'est elle qui
-distribue les droits par la console.
+- **Le panneau d'historique** (V-15) et **le tiroir de formulaire des comptes** (V-32) sont rendus
+  descendants de `.app` pour que la règle GELÉE qui les ouvre puisse s'appliquer — elle vise
+  `.app[data-…="ouvert"] …` et les panneaux vivent hors de `.app`. Aucune déclaration inventée.
+- **Le dépôt et le retrait d'une pièce jointe** : le gel ne les dessine pas. Les deux nœuds posés
+  empruntent leurs formes au gel voisin, depuis la route.
+- **La confirmation de suppression** est celle du navigateur, pas le dialogue de V-40.
+- **`RG-M04-10` contre `V-40:3295`** : le cahier nomme trois quantités à rappeler, la maquette en
+  construit quatre. Les maquettes priment, le produit porte les quatre.
+- **`P-08`, l'origine d'une relation**, n'a de place dans aucun gel : elle est rendue sur la route
+  dédiée. Le principe est tenu sur le fond, pas à l'endroit que la maquette aurait choisi.
 
-Restait le **jeu de démonstration**, qui n'en posait aucun : les quatre comptes non administrateurs
-ne pouvaient rien écrire, alors que la planche de V-14 rend « Droits : écriture » par défaut pour un
-référent. Le corpus impliquait donc des droits. `lignesDeDroitDeDossier()` les dérive de `CDC` §2.3
-et du rôle, sur la **racine** du domaine de rattachement — le droit descend seul (`RG-DRO-01`) :
+### 4. Trois divergences de tri, mesurées
 
-```
-karim.belhadj   referent      gestionnaire  Infrastructure
-marc.ferreira   contributeur  redacteur     Poste de travail
-lea.marchand    contributeur  redacteur     Poste de travail
-pierre.dubois   lecteur       lecteur       Applications
-sophie.nguyen   administrateur   AUCUNE LIGNE — RG-DRO-03
-```
-
-Mesuré au navigateur : référent et contributeur → `/notes/nouvelle` **200**, `/console/comptes`
-**404** · administratrice → **200** et **200** · anonyme → **404** sur les notes, redirigé vers
-`/connexion?motif=page-protegee` sur la console. `pierre.dubois` est le compte **désactivé** du jeu :
-sa connexion est refusée en **401**, et c'est le cas de démonstration voulu.
-
-### 4. Trois divergences avec le gel, assumées et à regeler
-
-- **Le panneau d'historique** est rendu descendant de `.app` pour que la règle GELÉE qui l'ouvre
-  puisse s'appliquer — elle vise `.app[data-historique="ouvert"] .tiroir` et le panneau vit hors de
-  `.app`. Aucune déclaration inventée ; la structure diverge.
-- **`RG-M04-10` contre `V-40:3295`** : le cahier nomme trois quantités à rappeler avant de supprimer
-  une note, la maquette en construit quatre. Les maquettes priment, le produit porte les quatre.
-- **La confirmation de suppression** est celle du navigateur, pas le dialogue de V-40 : V-40 est un
-  catalogue transverse qu'aucune vue ne transcrit.
+`alpha` suit l'ordre du moteur et non `localeCompare('fr')` · `verification` range en dernier les
+notes jamais vérifiées · `consultations` classe sur la valeur **indexée**, qui dérive de celle de la
+base entre deux indexations.
 
 ## Comment on travaille maintenant
 
