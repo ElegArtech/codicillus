@@ -60,6 +60,7 @@
  * les rouvre (`docs/omissions-p09.md`).
  */
 import { eq } from 'drizzle-orm';
+import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import { notes } from '../base/schema';
 import {
@@ -73,8 +74,9 @@ import {
 	resoudreDroitDeDossier
 } from '../droits/resolution';
 import { lireIndexDesDroits } from './note';
-import { identifiantsLisibles } from './accueil';
 import { type ContexteDeLecture, lireNotes } from './lecture';
+import { chercherLesNotes } from '../recherche/moteur';
+import { SENS_DISPONIBLE } from '../recherche/notes-indexees';
 import type { Note } from '../../../seeds/corpus';
 
 /* ═══════════════════════════════════ Les lacunes déclarées ═════════════ */
@@ -179,9 +181,11 @@ export const LACUNES_DU_CHEMIN_PUBLIC: readonly LacuneDuCheminPublic[] = [
 /**
  * LES TROIS MODES DE `RG-M02-01`, ET CELUI QUI EXISTE.
  *
- * `STACK-TECHNIQUE.md` §4.2 veut Meilisearch pour les trois. **L'index n'est
- * pas alimenté** — c'est le lot `T-027` —, et le mode « Sens » a besoin de
- * vecteurs qui n'existent pas. Deux principes se rejoignent ici :
+ * `STACK-TECHNIQUE.md` §4.2 veut Meilisearch pour les trois, et **l'index est
+ * désormais alimenté** (`T-051`) : les mots-clés viennent du moteur. Le mode
+ * « Sens », lui, a besoin de VECTEURS, et il n'en existe aucun — le service
+ * d'embeddings est optionnel, le modèle n'est pas fixé par `compose.yaml`, et
+ * aucun lot ne les calcule. Deux principes se rejoignent ici :
  *
  *   · `P-02` — aucune valeur illustrative. Un mode « Sens » qui rendrait en
  *     réalité des résultats de mots-clés serait une simulation, et la pire :
@@ -190,22 +194,23 @@ export const LACUNES_DU_CHEMIN_PUBLIC: readonly LacuneDuCheminPublic[] = [
  *     fonctionnalité concernée « avec un message clair, sans jamais empêcher
  *     l'usage du reste ».
  *
- * Le gel porte déjà cet état, et il porte sa phrase : V-08 pose
- * `data-mode="motscles"`, `data-degrade="oui"`, désactive le bouton « Sens » et
- * affiche « Recherche par sens momentanément indisponible — les résultats sont
- * établis en mots-clés » (`V-08.svelte`, position de planche `c-degrade`).
+ * Le gel porte déjà cet état, et il porte sa phrase : V-08 pose son mode en
+ * mots-clés, se déclare dégradée, désactive le bouton « Sens » et affiche
+ * « Recherche par sens momentanément indisponible — les résultats sont établis
+ * en mots-clés » (`V-08.svelte`, position de planche `c-degrade`).
  * `RG-M02-01` exige que la bascule soit ANNONCÉE, pas silencieuse : c'est
  * exactement ce que cette position rend.
  *
- * Ce drapeau n'est donc pas un réglage : c'est un CONSTAT sur le produit, écrit
- * au seul endroit qui en décide. Le jour où `T-027` alimentera l'index, il
- * passera à `true` et la déclaration disparaîtra de l'écran.
+ * LE CONSTAT N'EST PLUS ÉCRIT ICI, IL EST DÉRIVÉ. `SENS_DISPONIBLE` vient
+ * désormais des RÉGLAGES DE L'INDEX, où l'absence d'embedder est la condition
+ * mécanique de l'indisponibilité du mode. Un booléen écrit à la main aurait
+ * demandé qu'on se souvienne de le changer ; celui-ci suit le réglage.
  *
  * `docs/routes.md:242` admet `?mode=motscles`, `sens` et `hybride`. Les deux
  * derniers ont besoin de vecteurs : le paramètre n'est pas dans la liste close
  * des honorés, donc il n'est pas lu — ni pour être servi, ni pour être refusé.
  */
-export const SENS_DISPONIBLE = false;
+export { SENS_DISPONIBLE };
 
 /* ═══════════════════════════════════ Les paramètres d'adresse ══════════ */
 
@@ -307,10 +312,21 @@ export interface DonneesDeRecherche {
  *
  * `docs/routes.md` §5.5, ligne « `/`, `/recherche` » : **V-02 en anonyme,
  * périmètre public ; V-08 en session, périmètre autorisé**, et la même colonne
- * pour tous les rôles connectés. Le périmètre est celui d'`identifiantsLisibles()`
- * — le même que `/`, à dessein : deux calculs concurrents de « ce que cette
- * identité peut lire » finiraient par diverger, et c'est `P-01` appliqué au
- * périmètre comme il l'est à la fraîcheur.
+ * pour tous les rôles connectés.
+ *
+ * LE PÉRIMÈTRE EST DANS LA REQUÊTE AU MOTEUR, ET C'EST LA MÊME DÉFINITION QUE
+ * CELLE DE `/`. Le chargeur de `/` appelle `identifiantsLisibles()`, qui compose
+ * `perimetreDeLecture()` et `noteLisible()` ; celui-ci passe par
+ * `chercherLesNotes()`, qui appelle `perimetreDeLecture()` et TRADUIT ce qu'elle
+ * rend en filtre d'index. Une seule résolution, deux expressions — et la seconde
+ * n'est pas une réécriture : elle transporte le résultat de la première.
+ *
+ * Une seule différence de forme subsiste, celle qu'`ADR-006` prescrit : en
+ * anonyme, le filtre est réduit à `visibilite = publique AND statut = publiee`.
+ * Cette réduction est EXACTE et non approchée, et elle est éprouvée sur des
+ * corpus synthétiques par `src/lib/recherche/perimetre.test.ts` — le dossier
+ * porteur d'une note publique et publiée est toujours dans le périmètre anonyme,
+ * par construction de `perimetreAnonyme()`.
  *
  * LES QUATRE ÉTATS DE `RG-M18-03`. L'état VIDE de V-08 est décidé sur ce que
  * l'identité peut RÉELLEMENT lire : un périmètre vide n'affiche pas « 0
@@ -327,6 +343,7 @@ export interface DonneesDeRecherche {
  */
 export async function lireLaRecherche(
 	base: Base,
+	client: Meilisearch,
 	identite: Identite,
 	url: URL,
 	contexte: ContexteDeLecture
@@ -336,9 +353,16 @@ export async function lireLaRecherche(
 	   ce qui n'est pas honoré n'a aucun chemin jusqu'à la réponse. */
 	const demande = parametresHonores(url.searchParams, session);
 
-	const retenus = await identifiantsLisibles(base, identite);
-	const corpus = retenus.size === 0 ? [] : await lireNotes(base, contexte);
-	const lisibles = corpus.filter((n) => retenus.has(n.id));
+	/* LE PÉRIMÈTRE EST DANS LA REQUÊTE — `ADR-006`. Ce chargeur ne reçoit pas une
+	   liste qu'il filtrerait ensuite : il reçoit ce que le moteur a consenti à
+	   rendre sous le filtre que `chercherLesNotes()` a calculé de l'identité.
+	   Les identifiants gouvernent ensuite la LECTURE en base, qui ne remonte donc
+	   que les notes retenues — `RG-ACC-01`, « au plus près de la donnée ». */
+	const trouvees = await chercherLesNotes(base, client, identite, {
+		requete: requeteDemandee(demande),
+		facettes: demande
+	});
+	const lisibles = await lireNotes(base, contexte, trouvees.identifiants);
 
 	if (!session) {
 		return {
