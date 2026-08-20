@@ -370,8 +370,7 @@ export type MotifDeRefus = 'doublon' | 'reflexive';
 const FORME_DE_CLE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type EcritureDeRelation =
-	| { readonly ok: true; readonly id: string }
-	| { readonly ok: false; readonly motif: MotifDeRefus };
+	{ readonly ok: true; readonly id: string } | { readonly ok: false; readonly motif: MotifDeRefus };
 
 /** Ce qu'une relation écrite rend à l'appelant. */
 export type ResultatDAjout = Resolution<EcritureDeRelation>;
@@ -417,7 +416,8 @@ export async function ajouterUneRelation(
 	/* Une note ne se relie pas à elle-même : `relations_pas_reflexives` le
 	   refuse au schéma, et le refuser ici rend un message plutôt qu'une
 	   violation de contrainte. */
-	if (source.cle === cible.cle) return { trouve: true, ressource: { ok: false, motif: 'reflexive' } };
+	if (source.cle === cible.cle)
+		return { trouve: true, ressource: { ok: false, motif: 'reflexive' } };
 
 	const [type] = await base
 		.select({ cle: typesDeRelation.id })
