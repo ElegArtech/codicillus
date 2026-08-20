@@ -53,7 +53,7 @@
 	 * six états portant chacun `zone: { selecteur: "#etats section.cas",
 	 * index: 0…5 }`. `verif/references/protocole-app.json` → `etats_de_zone` →
 	 * `V-09` déclare le protocole `page-entiere-zone-isolee` et l'obligation :
-	 * « À /__design/V-09?etat=cle, l'application rend la planche des six cas de
+	 * « À la route de conception du banc, l'application rend la planche des six cas de
 	 * la palette, comme la maquette les montre côte à côte. La clé d'état ne
 	 * change pas la page : elle nomme le cas que le banc découpera. »
 	 *
