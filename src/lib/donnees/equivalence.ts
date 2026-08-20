@@ -642,13 +642,18 @@ function estOuverte(lesLacunes: readonly Lacune[], forme: string, prefixeDeChamp
  */
 export function normalisationDesNotes(
 	lesLacunes: readonly Lacune[],
-	piecesReelles: ReadonlyMap<string, number>
+	piecesReelles: ReadonlyMap<string, number>,
+	consultationsReelles: ReadonlyMap<string, number> = new Map()
 ): readonly Note[] {
 	const ordreEnLacune = estOuverte(lesLacunes, 'Note', 'etiquettes');
 	const pjEnLacune = estOuverte(lesLacunes, 'Note', 'pj');
 	return CORPUS.map((n) => ({
 		...n,
 		pj: pjEnLacune ? (piecesReelles.get(n.id) ?? 0) : n.pj,
+		/* `ARB-061` : la valeur du jeu PLUS les entrées du journal. Le compteur et
+		   le journal sont deux écritures distinctes ; les croiser est plus fort
+		   que comparer le compteur à une constante que la première lecture périme. */
+		vues: n.vues + (consultationsReelles.get(n.id) ?? 0),
 		etiquettes: ordreEnLacune
 			? [...n.etiquettes].sort((a, b) => a.localeCompare(b, 'fr'))
 			: n.etiquettes
@@ -844,6 +849,34 @@ export async function rapportDEquivalence(
 			)
 		).map((l) => [l.identifiant, l.n])
 	);
+
+	/* LE JOURNAL DES CONSULTATIONS, PAR UNE REQUÊTE À NOUS AUSSI — `ARB-061`.
+	   `Note.vues` est le PREMIER champ du corpus que le produit mute
+	   légitimement : depuis `T-078`, toute ouverture d'une note incrémente son
+	   compteur et écrit une entrée. Comparer ce compteur à la valeur figée du jeu
+	   rendait donc la batterie rouge dès la première lecture — mesuré, 2
+	   divergences après une seule exécution de la batterie 6 — et sous un libellé
+	   FAUX : « la base porte la donnée, la couche la rend mal », alors que la base
+	   est juste et que c'est la référence qui a vieilli.
+
+	   La référence devient « la valeur du jeu PLUS les entrées du journal ». Ce
+	   n'est pas un desserrage, c'est un contrôle PLUS FORT que l'égalité qu'il
+	   remplace : il croise deux écritures que rien n'obligeait à s'accorder.
+	   Incrémenter sans journaliser diverge ; journaliser sans incrémenter diverge.
+	   L'égalité d'avant ne tenait, elle, que sur une base jamais lue.
+
+	   La requête est SÉPARÉE de la couche, pour la même raison que celle des
+	   pièces jointes : prendre la valeur du candidat pour référence rendrait la
+	   comparaison tautologique. */
+	const consultationsParNote = new Map(
+		rangs<{ identifiant: string; n: number }>(
+			await base.execute(
+				`select n.identifiant, count(c.note_id)::int as n
+				   from notes n left join consultations c on c.note_id = n.id
+				  group by n.identifiant`
+			)
+		).map((l) => [l.identifiant, l.n])
+	);
 	const comptesAttendus = COMPTES.map((c) => {
 		const reduit: Record<string, unknown> = {};
 		for (const [cle, valeur] of Object.entries(c)) {
@@ -917,7 +950,11 @@ export async function rapportDEquivalence(
 	   son champ à la mesure PLEINE — c'est la promesse que l'ancien entête
 	   faisait sans l'écrire. Le détail du « au mieux » de chaque champ est à
 	   `normalisationDesNotes()`. */
-	const referenceDesNotes = normalisationDesNotes(lesLacunes, piecesReellesParNote);
+	const referenceDesNotes = normalisationDesNotes(
+		lesLacunes,
+		piecesReellesParNote,
+		consultationsParNote
+	);
 
 	const verdictDesNotes = (notesCandidates: readonly Note[]): Verdict =>
 		comparerParCle(
