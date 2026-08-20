@@ -42,7 +42,7 @@
 	 * `div.app#app`, où aucune règle ne le lit (`docs/releve-vues.md` §7.7).
 	 *
 	 * AUCUN CHEMIN N'EXISTE POUR LE POSER. Le mode démo compose le document
-	 * lui-même — `<body>${rendu.body}</body>` (`verif/banc/mode-demo.mjs`) — et
+	 * lui-même — `<body>${rendu.body}</body>` (le module de service du banc) — et
 	 * ne transmet aucun attribut de corps ; Svelte refuse tout attribut sur
 	 * `<svelte:body>` (`svelte_body_illegal_attribute`, vérifié dans le
 	 * compilateur embarqué) ; `<svelte:head>` ne touche pas au corps. Le poser

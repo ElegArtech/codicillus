@@ -119,11 +119,46 @@ export const comptes = pgTable(
 		condensatMotDePasse: text('condensat_mot_de_passe'),
 		arriveLe: date('arrive_le').notNull(),
 		creeLe: timestamp('cree_le', { withTimezone: true }).notNull().defaultNow(),
-		modifieLe: timestamp('modifie_le', { withTimezone: true }).notNull().defaultNow()
+		modifieLe: timestamp('modifie_le', { withTimezone: true }).notNull().defaultNow(),
+		/**
+		 * Le domaine principal du compte (`005`) — BRIEF-VUES.md:1487 pour le
+		 * formulaire de V-32, :1322 pour l'identité de V-25 ; CDC:1177 et :1179
+		 * pour le « rattachement ».
+		 *
+		 * NULLABLE PAR EXIGENCE, et non faute de mieux : RG-M14-04 (CDC:1149) dit
+		 * « les comptes rattachés au domaine supprimé sont conservés ; leur
+		 * rattachement devient vide ». `ON DELETE SET NULL` est la transcription
+		 * littérale de cette phrase — `RESTRICT` interdirait la suppression que la
+		 * règle autorise, `CASCADE` emporterait le compte qu'elle veut conserver.
+		 *
+		 * L'ACTION RÉFÉRENTIELLE N'EST ÉPROUVÉE PAR AUCUNE BATTERIE, et il faut le
+		 * savoir : `base:coherence` déclare ne regarder « ni les valeurs par
+		 * défaut, ni le corps des CHECK, ni les actions référentielles », et les
+		 * sondes de `base:unicite` n'attendent qu'un refus ou une acceptation, pas
+		 * un effet de bord. `SET NULL` est donc, à ce jour, une règle qu'aucun cas
+		 * n'exerce — `P-5`. C'est une dette nommée, pas un oubli.
+		 */
+		domaineId: uuid('domaine_id').references(() => domaines.id, { onDelete: 'set null' }),
+		/**
+		 * L'instant de la dernière connexion (`005`) — CDC:1177, « date de dernière
+		 * connexion », colonne de la liste des comptes.
+		 *
+		 * C'EST UN INSTANT, ET LE JEU N'EN PORTE QUE LE LIBELLÉ. « aujourd'hui à
+		 * 08:41 » est un RENDU relatif ; les deux vues qui l'affichent l'écrivent
+		 * tel quel sans le calculer (V-32:3043, V-25:2712), et le gel ne donne donc
+		 * aucune règle de passage de l'instant vers le libellé. La colonne porte la
+		 * donnée ; la fabrique du libellé n'est écrite nulle part, et l'inventer
+		 * serait un comblement.
+		 *
+		 * Nullable : un compte qui ne s'est jamais connecté n'a pas de dernière
+		 * connexion. Même choix que `condensatMotDePasse`.
+		 */
+		derniereConnexionLe: timestamp('derniere_connexion_le', { withTimezone: true })
 	},
 	(t) => [
 		unique('comptes_identifiant_unique').on(t.identifiant),
-		unique('comptes_courriel_unique').on(t.courriel)
+		unique('comptes_courriel_unique').on(t.courriel),
+		index('comptes_domaine_idx').on(t.domaineId)
 	]
 );
 
@@ -451,11 +486,27 @@ export const etiquettesDeNote = pgTable(
 			.references(() => notes.id, { onDelete: 'cascade' }),
 		etiquetteId: uuid('etiquette_id')
 			.notNull()
-			.references(() => etiquettes.id, { onDelete: 'cascade' })
+			.references(() => etiquettes.id, { onDelete: 'cascade' }),
+		/**
+		 * LE RANG DE L'ÉTIQUETTE SUR SA NOTE (`005`).
+		 *
+		 * Sans elle, cette table était une pure liaison, et l'ordre que le jeu
+		 * porte — qui n'est pas l'ordre alphabétique sur 25 notes de 32 — n'y était
+		 * pas représentable. Le seul ordre qu'une liaison sans rang puisse rendre
+		 * est l'ordre PHYSIQUE des lignes, que PostgreSQL ne garantit pas.
+		 *
+		 * L'unicité du couple `(note_id, ordre)` avec un défaut à `0` fait de
+		 * l'omission une ERREUR de la base : deux étiquettes sur une même note sans
+		 * rang explicite se heurtent au même `0`. Le silence est refusé par le
+		 * schéma, pas par une convention d'appelant.
+		 */
+		ordre: integer('ordre').notNull().default(0)
 	},
 	(t) => [
 		primaryKey({ name: 'etiquettes_de_note_pk', columns: [t.noteId, t.etiquetteId] }),
-		index('etiquettes_de_note_etiquette_idx').on(t.etiquetteId)
+		index('etiquettes_de_note_etiquette_idx').on(t.etiquetteId),
+		unique('etiquettes_de_note_ordre_unique').on(t.noteId, t.ordre),
+		check('etiquettes_de_note_ordre_positif', sql`${t.ordre} >= 0`)
 	]
 );
 

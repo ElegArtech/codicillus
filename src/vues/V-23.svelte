@@ -407,7 +407,7 @@
 
 	L'attribut `open` est TOUT ce que la vue pose. La modalité — couche
 	supérieure, `position: fixed`, voile — est établie par le banc, des deux
-	côtés, par un code unique (ARB-017, `verif/banc/revelation.mjs`).
+	côtés, par un code unique (ARB-017, le module de révélation du banc).
 -->
 {#snippet boiteDeDialogue()}
 	<dialog

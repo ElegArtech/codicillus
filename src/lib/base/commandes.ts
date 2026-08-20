@@ -333,22 +333,6 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 	}
 
 	return session.db.transaction(async (tx) => {
-		/* Les comptes — la note a besoin de son auteur. */
-		const comptesPoses = await tx
-			.insert(comptes)
-			.values(
-				lignesDeCompte().map((c) => ({
-					identifiant: c.identifiant,
-					nom: c.nom,
-					courriel: c.courriel,
-					role: c.role as 'administrateur' | 'referent' | 'contributeur' | 'lecteur',
-					actif: c.actif,
-					arriveLe: c.arriveLe
-				}))
-			)
-			.returning({ id: comptes.id, nom: comptes.nom });
-		const compteParNom = new Map(comptesPoses.map((c) => [c.nom, c.id]));
-
 		/* Les univers. */
 		const universPoses = await tx
 			.insert(univers)
@@ -380,6 +364,33 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 			}))
 		);
 		await tx.insert(modulesDeDomaine).values(lignesModule);
+
+		/* ── Les comptes, APRÈS les domaines depuis `005` ──────────────────────
+		   Ils étaient posés en premier, « la note a besoin de son auteur ». Depuis
+		   `005` ils ont besoin de leur DOMAINE PRINCIPAL, et l'ordre s'inverse :
+		   univers → domaines → comptes → dossiers → notes. Le rattachement est
+		   écrit À L'INSERTION plutôt que par un UPDATE d'après-coup — un UPDATE
+		   laisserait, l'espace d'une instruction, cinq comptes sans périmètre, un
+		   état qu'aucune règle ne décrit. */
+		const comptesPoses = await tx
+			.insert(comptes)
+			.values(
+				lignesDeCompte().map((c) => ({
+					identifiant: c.identifiant,
+					nom: c.nom,
+					courriel: c.courriel,
+					role: c.role as 'administrateur' | 'referent' | 'contributeur' | 'lecteur',
+					actif: c.actif,
+					arriveLe: c.arriveLe,
+					domaineId:
+						c.domaineNom === null
+							? null
+							: exigerDefini(domaineParNom.get(c.domaineNom), `domaine ${c.domaineNom}`),
+					derniereConnexionLe: c.derniereConnexionLe
+				}))
+			)
+			.returning({ id: comptes.id, nom: comptes.nom });
+		const compteParNom = new Map(comptesPoses.map((c) => [c.nom, c.id]));
 
 		/* Les dossiers, de la racine vers les feuilles : le parent doit exister. */
 		const dossierParChemin = new Map<string, string>();
@@ -528,10 +539,15 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 			.returning({ id: notes.id, identifiant: notes.identifiant });
 		const noteParIdentifiant = new Map(notesPosees.map((n) => [n.identifiant, n.id]));
 
+		/* L'ORDRE DU JEU EST ÉCRIT, depuis `005`. `n.etiquettes` est le tableau du
+		   jeu, sans retri : son rang EST le rang. Sans cette colonne, la seule
+		   restitution possible était un tri alphabétique — déterministe, mais faux
+		   sur 25 notes de 32. */
 		const lignesEtiquetteDeNote = lignesNote.flatMap((n) =>
-			n.etiquettes.map((libelle) => ({
+			n.etiquettes.map((libelle, rang) => ({
 				noteId: exigerDefini(noteParIdentifiant.get(n.identifiant), `note ${n.identifiant}`),
-				etiquetteId: exigerDefini(etiquetteParLibelle.get(libelle), `étiquette ${libelle}`)
+				etiquetteId: exigerDefini(etiquetteParLibelle.get(libelle), `étiquette ${libelle}`),
+				ordre: rang
 			}))
 		);
 		await tx.insert(etiquettesDeNote).values(lignesEtiquetteDeNote);
