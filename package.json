@@ -69,7 +69,7 @@
 		"exploitation:restauration": "node verif/restauration.mjs",
 		"exploitation:restauration:sonde": "node verif/restauration.mjs --sonde=ligne-perdue && node verif/restauration.mjs --sonde=champ-modifie && node verif/restauration.mjs --sonde=schema-ampute && node verif/restauration.mjs --sonde=octets-perdus && node verif/restauration.mjs --sonde=index-non-reconstruit && ! node verif/restauration.mjs --sonde=temoin-inerte",
 		"verify:lot": "node verif/jalon.mjs \"la sélection des batteries citées par un contrat de tâche\" \"non assigné par le §6.3 du plan de réalisation\"",
-		"verify": "pnpm run check && pnpm run verif:jetons && pnpm verif:inventaire && pnpm run verif:demo:hors-production && pnpm run test:unit && pnpm run test:aller-retour && pnpm run verif:convertisseur && pnpm run verif:fraicheur && pnpm run test:etancheite && pnpm run test:droits && pnpm run test:vide && pnpm run test:etats && pnpm run test:a11y && pnpm run verif:maquette && pnpm run test:parcours && pnpm run mesure:budgets && pnpm run test:degradation && pnpm run test:impression && pnpm run verif:menus && pnpm run verif:vocabulaire && pnpm run exploitation:restauration",
+		"verify": "node verif/verify.mjs",
 		"verif:gel": "node verif/gel.mjs",
 		"verif:inventaire": "node verif/inventaire-composants.mjs --verifier",
 		"contrat": "node verif/contrat.mjs",
