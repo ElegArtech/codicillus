@@ -77,6 +77,7 @@
 		BARRES_DE_JAUGE,
 		barresFraicheur,
 		classeTemoin,
+		libelleFraicheur,
 		type NiveauFraicheur
 	} from '$lib/fraicheur';
 	import { NOTE } from '$lib/lecture/note-de-demonstration';
@@ -129,27 +130,41 @@
 
 	/**
 	 * LES DEUX NOTES VOISINES du panneau « Position », dans l'ordre du gel :
-	 * la précédente, puis la suivante. Leur niveau de fraîcheur vient du corpus
-	 * et passe par la fabrique unique pour la classe et le nombre de barres.
-	 *
-	 * LEUR LIBELLÉ, LUI, EST TRANSCRIT — et c'est un écart du GEL, pas de ce
-	 * lot. Le balisage écrit « il y a 6 j » et « il y a 4 mois », une forme
-	 * COMPACTE que `libelleFraicheur` ne produit pas : la fabrique donnerait
-	 * « Vérifié il y a 6 jours ». L'appeler ici ferait rougir les 44 couples.
-	 * Constat remonté, non comblé (ARB-018 : un pixel divergent est un défaut).
+	 * la précédente, puis la suivante. Tout ce qu'elles affichent vient du
+	 * corpus et passe par la fabrique unique — la classe, le nombre de barres,
+	 * ET LE LIBELLÉ. La table ne porte que ce que le gel décide sans données :
+	 * quelle note, et de quel côté.
 	 */
 	const VOISINES: readonly {
 		readonly id: IdentifiantNote;
 		readonly sens: string;
-		readonly libelle: string;
 	}[] = [
-		{ id: 'n-planifier-sauv', sens: '←', libelle: 'il y a 6 j' },
-		{ id: 'n-purge-sauv', sens: '→', libelle: 'il y a 4 mois' }
+		{ id: 'n-planifier-sauv', sens: '←' },
+		{ id: 'n-purge-sauv', sens: '→' }
 	];
 
 	/** Le niveau porté par une note voisine — lu au corpus, jamais supposé. */
 	function niveauDe(id: IdentifiantNote): NiveauFraicheur {
 		return noteParIdentifiant(id)?.fraicheur ?? 'frais';
+	}
+
+	/**
+	 * LE LIBELLÉ D'UNE NOTE VOISINE, dans la forme COMPACTE du gel — « il y a
+	 * 6 j » (V-14:1817), « il y a 4 mois » (V-14:1822).
+	 *
+	 * Ce n'est pas un second libellé : c'est la seconde FORME du libellé unique,
+	 * entrée dans la fabrique par ARB-029 — « ce n'est pas un second calcul,
+	 * c'est un second rendu du même calcul ». Le niveau et l'ancienneté sont
+	 * ceux du corpus, comme pour la classe et les barres juste au-dessus.
+	 *
+	 * C'est ici, et NULLE PART AILLEURS, que la forme compacte s'emploie : la
+	 * borne d'ARB-029 est explicite, un troisième site serait un comblement.
+	 */
+	function libelleCompactDe(id: IdentifiantNote): string {
+		return libelleFraicheur(
+			{ fraicheur: niveauDe(id), jours: noteParIdentifiant(id)?.jours ?? 0 },
+			'compacte'
+		);
 	}
 
 	/** Le titre d'une note voisine — lu au corpus. */
@@ -342,7 +357,7 @@
 											>{#each RANGS as rang (rang)}<i
 													class={rang < barresFraicheur(niveauDe(voisine.id)) ? 'plein' : undefined}
 												></i>{/each}</span
-										><span class="temoin__txt">{voisine.libelle}</span></span
+										><span class="temoin__txt">{libelleCompactDe(voisine.id)}</span></span
 									></span
 								></span
 							>
