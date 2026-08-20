@@ -164,6 +164,19 @@ export const SORTIE_DELESTER_LES_NOTES =
 export const MOTIF_DERNIER_ADMINISTRATEUR =
 	'est le seul administrateur actif de l’instance. Le retirer fermerait définitivement l’accès à la console — plus personne ne pourrait créer de domaine, gérer les comptes, ni rendre ce rôle à quiconque. Nommez d’abord un second administrateur : le sélecteur se déverrouillera aussitôt.';
 
+/**
+ * `mockups/V-32-console-comptes.html:3278` — LE MOTIF DE LA DÉSACTIVATION, ET
+ * IL N'EST PAS CELUI DU CHANGEMENT DE RÔLE.
+ *
+ * Les deux gestes retirent le dernier administrateur et se jugent par le MÊME
+ * prédicat, mais le gel leur écrit deux phrases DIFFÉRENTES : celle du rôle
+ * parle du sélecteur qui se déverrouillera, celle-ci d'un retour à cet écran.
+ * Réutiliser l'une pour l'autre aurait donné un texte qui ne décrit pas le geste
+ * qu'on refuse.
+ */
+export const MOTIF_DERNIER_ADMINISTRATEUR_DESACTIVATION =
+	'est le seul administrateur actif. Désactiver ce compte rendrait la console inaccessible et sans recours. Nommez un second administrateur avant de revenir ici.';
+
 /* ═══════════════════════════════════════════════════════════════════════════
    3. `RG-M14-01` — UN UNIVERS QUI CONTIENT DES DOMAINES NE SE SUPPRIME PAS
    ═════════════════════════════════════════════════════════════════════════ */
@@ -934,6 +947,68 @@ export async function changerLeRoleDUnCompte(
 		.set({ role: verdict.role, modifieLe: maintenant })
 		.where(eq(comptes.id, etat.id));
 	return verdict;
+}
+
+/** Le verdict d'une désactivation — deux issues, celles du dialogue de `V-32`. */
+export type VerdictDeDesactivation =
+	| { readonly issue: 'refus-dernier-administrateur'; readonly motif: string }
+	| { readonly issue: 'possible'; readonly actif: boolean };
+
+/**
+ * ACTIVER OU DÉSACTIVER UN COMPTE — `RG-M14-08`.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE QUE LA RÈGLE DIT, ET QUI LA TIENT DÉJÀ
+ *
+ * `CAHIER-DES-CHARGES-FONCTIONNEL.md:1186` : « un compte désactivé perd
+ * IMMÉDIATEMENT l'accès mais reste attaché à ses contributions passées. »
+ *
+ * LA MOITIÉ « IMMÉDIATEMENT » EST DÉJÀ ÉCRITE, ET AILLEURS : `src/hooks.server.ts`
+ * ferme la session au premier accès d'un compte devenu inactif — « la session est
+ * fermée au premier accès, sans purge à faire courir ». Rien n'est donc à purger
+ * ici, et surtout rien n'est à réécrire : une seconde application de la règle
+ * serait une définition concurrente.
+ *
+ * LA MOITIÉ « RESTE ATTACHÉ » EST TENUE PAR L'ABSENCE : aucune ligne ci-dessous
+ * ne touche `notes.auteur_id`, ni `verifications`, ni `versions`. C'est ce que
+ * le dialogue promet — « les notes écrites par X restent à son nom, et
+ * l'historique des vérifications n'est pas réécrit » (`V-32:3306`).
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LE REFUS DU DERNIER ADMINISTRATEUR EST LU AU GEL, PAS DÉDUIT
+ *
+ * `mockups/V-32-console-comptes.html:3270-3284` : si le compte visé est le seul
+ * administrateur actif, la désactivation est REFUSÉE, avec son motif —
+ * « désactiver ce compte rendrait la console inaccessible et sans recours ».
+ *
+ * Le prédicat est `estLeDernierAdministrateur()`, celui-là même que
+ * `RG-M14-07` emploie pour le changement de rôle : ce sont deux façons de
+ * retirer le dernier administrateur, et il n'y a aucune raison qu'elles se
+ * jugent différemment. Une seconde définition aurait divergé.
+ *
+ * LE MOTIF, LUI, EST PROPRE AU GESTE : le gel écrit deux phrases distinctes —
+ * voir `MOTIF_DERNIER_ADMINISTRATEUR_DESACTIVATION`.
+ *
+ * LA RÉACTIVATION N'EST JAMAIS REFUSÉE : elle ne peut pas retirer d'accès.
+ */
+export async function changerLActivationDUnCompte(
+	base: Base,
+	identifiant: string,
+	actif: boolean,
+	maintenant: Date
+): Promise<IssueDUnGeste<VerdictDeDesactivation>> {
+	const etat = await mesurerUnCompte(base, identifiant);
+	if (etat === null) return { issue: 'introuvable' };
+
+	if (!actif && estLeDernierAdministrateur(etat)) {
+		return {
+			issue: 'refus-dernier-administrateur',
+			motif: `« ${etat.nom} » ${MOTIF_DERNIER_ADMINISTRATEUR_DESACTIVATION}`
+		};
+	}
+
+	await base.update(comptes).set({ actif, modifieLe: maintenant }).where(eq(comptes.id, etat.id));
+	return { issue: 'possible', actif };
 }
 
 /**
