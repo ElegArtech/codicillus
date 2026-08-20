@@ -62,6 +62,7 @@ import {
 	notes,
 	parametres,
 	relations,
+	templates,
 	typesDeFiche,
 	typesDeNote,
 	typesDeRelation,
@@ -949,6 +950,83 @@ export async function changerLeRoleDUnCompte(
 		.set({ role: verdict.role, modifieLe: maintenant })
 		.where(eq(comptes.id, etat.id));
 	return verdict;
+}
+
+/** Le verdict d'un geste sur un template — une seule issue possible. */
+export type VerdictDUnTemplate = { readonly issue: 'possible'; readonly template: string };
+
+/**
+ * SUPPRIMER UN TEMPLATE — `RG-REF-01`, et une suppression qui ne se refuse pas.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * AUCUN REFUS, ET C'EST LE GEL QUI LE DIT
+ *
+ * `V-31:202` : « Modifier ou supprimer un template n'affecte AUCUNE note
+ * existante. Un squelette est copié au moment de la création : la note devient
+ * aussitôt indépendante. » Aucune colonne ne rattache une note à son template —
+ * le lien est rompu dès la création —, et il n'y a donc rien à décompter, rien à
+ * délester, rien à confirmer par un nom retapé.
+ *
+ * Le dialogue porte un AVERTISSEMENT, non un refus, quand le template visé est
+ * celui par défaut : « la création de note s'ouvrira sur la page vierge tant
+ * qu'un autre n'aura pas été marqué par défaut. Ce n'est pas bloquant, mais
+ * autant le savoir » (`V-31:615-622`). Le geste ne le contredit pas : il ne
+ * promeut aucun remplaçant, parce que la maquette n'en désigne aucun, et en
+ * choisir un serait décider à la place de l'administrateur.
+ */
+export async function supprimerUnTemplate(
+	base: Base,
+	identifiant: string
+): Promise<IssueDUnGeste<VerdictDUnTemplate>> {
+	const [ligne] = await base
+		.select({ id: templates.id, nom: templates.nom })
+		.from(templates)
+		.where(eq(templates.identifiant, identifiant))
+		.limit(1);
+	if (ligne === undefined) return { issue: 'introuvable' };
+
+	await base.delete(templates).where(eq(templates.id, ligne.id));
+	return { issue: 'possible', template: ligne.nom };
+}
+
+/**
+ * MARQUER UN TEMPLATE PAR DÉFAUT — `RG-REF-02`, et l'unicité est le geste.
+ *
+ * `V-31:380-381` écrit la règle depuis l'écran : « Proposé en premier dans le
+ * sélecteur. Cocher décochera "X", qui l'est actuellement. » Il n'y a donc pas
+ * un marquage suivi d'un démarquage à ne pas oublier : il y a UN geste, qui
+ * laisse exactement un template par défaut.
+ *
+ * LES DEUX ÉCRITURES SONT DANS UNE TRANSACTION, et ce n'est pas une précaution
+ * de style : entre les deux, la base porterait DEUX templates par défaut, ou
+ * ZÉRO selon l'ordre. Aucune contrainte ne l'interdit — `templates.defaut` est
+ * un booléen ordinaire —, donc la règle n'existe que si elle est écrite, et elle
+ * ne tient que si les deux écritures tiennent ensemble.
+ *
+ * L'ORDRE EST : démarquer tout, puis marquer celui-ci. L'inverse démarquerait ce
+ * qu'on vient de marquer.
+ */
+export async function marquerLeTemplateParDefaut(
+	base: Base,
+	identifiant: string,
+	maintenant: Date
+): Promise<IssueDUnGeste<VerdictDUnTemplate>> {
+	const [ligne] = await base
+		.select({ id: templates.id, nom: templates.nom })
+		.from(templates)
+		.where(eq(templates.identifiant, identifiant))
+		.limit(1);
+	if (ligne === undefined) return { issue: 'introuvable' };
+
+	await base.transaction(async (tx) => {
+		await tx.update(templates).set({ defaut: false, modifieLe: maintenant });
+		await tx
+			.update(templates)
+			.set({ defaut: true, modifieLe: maintenant })
+			.where(eq(templates.id, ligne.id));
+	});
+
+	return { issue: 'possible', template: ligne.nom };
 }
 
 /**
