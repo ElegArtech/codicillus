@@ -375,8 +375,17 @@ const schemaMarque = z.discriminatedUnion(
  * compile pas tant qu'elle n'a pas son rang, et un rang donné à une marque qui
  * n'existe pas ne compile pas non plus. La table ne peut donc pas dériver du
  * type en silence — c'est le seul point que `pnpm check` tient à ma place.
+ *
+ * EXPORTÉE PAR `T-050`, ET POUR UNE SEULE RAISON. Le schéma ProseMirror de
+ * l'éditeur (`src/lib/edition/schema.ts`) doit déclarer ses marques DANS CET
+ * ORDRE : ProseMirror trie les marques d'un texte par leur rang de schéma, et
+ * un schéma d'éditeur ordonné autrement émettrait des documents que la règle 7
+ * refuse — refus juste, cause introuvable. La table est donc LUE, jamais
+ * recopiée : deux écritures de l'ordre seraient deux ordres au premier
+ * changement, ce que la règle 1 existe pour interdire aux documents et qui ne
+ * vaut pas mieux pour le schéma.
  */
-const RANG_DE_MARQUE: Readonly<Record<Marque['type'], number>> = {
+export const RANG_DE_MARQUE: Readonly<Record<Marque['type'], number>> = {
 	bold: 1,
 	italic: 2,
 	underline: 3,

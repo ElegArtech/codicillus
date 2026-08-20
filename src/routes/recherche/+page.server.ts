@@ -28,21 +28,33 @@
  * n'ouvre aucune branche : la réponse est la même avec ou sans eux.
  *
  * ═════════════════════════════════════════════════════════════════════════
+ * LE PÉRIMÈTRE EST DANS LA REQUÊTE AU MOTEUR — `ADR-006`
+ *
+ * Ce chargeur ne filtre rien et ne reçoit aucune liste à filtrer. Il passe le
+ * moteur et l'identité à `lireLaRecherche()`, qui appelle l'unique chemin de
+ * recherche du dépôt ; celui-ci CALCULE le filtre depuis `resolution.ts` et
+ * l'injecte dans la requête. « La requête envoyée au moteur NE PEUT PAS
+ * rapporter un document interdit » (`STACK` §4.2).
+ *
+ * ═════════════════════════════════════════════════════════════════════════
  * LE MODE « SENS » SE DÉCLARE INDISPONIBLE
  *
- * L'index de recherche n'est pas alimenté (`T-027`) : le produit interroge
- * PostgreSQL et ne sert que les mots-clés. `SENS_DISPONIBLE` porte le constat,
- * et V-08 porte la phrase du gel — « Recherche par sens momentanément
+ * L'index sert les mots-clés. Le mode « Sens » a besoin de VECTEURS, et aucun
+ * n'existe : le service d'embeddings est optionnel et le modèle n'est pas fixé.
+ * `SENS_DISPONIBLE` porte le constat — dérivé des réglages de l'index, où
+ * l'absence d'embedder est la condition mécanique de l'indisponibilité —, et
+ * V-08 porte la phrase du gel : « Recherche par sens momentanément
  * indisponible ». `P-10` — dégradation, jamais panne ; `P-02` — jamais de
  * simulation.
  */
 import { basePartagee } from '$lib/base/acces';
 import { lireSeuils } from '$lib/donnees/lecture';
 import { lireLaRecherche } from '$lib/donnees/public';
+import { moteurPartage } from '$lib/recherche/acces';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const base = basePartagee();
 	const contexte = { maintenant: new Date(), seuils: await lireSeuils(base) };
-	return await lireLaRecherche(base, locals.identite, url, contexte);
+	return await lireLaRecherche(base, moteurPartage(), locals.identite, url, contexte);
 };

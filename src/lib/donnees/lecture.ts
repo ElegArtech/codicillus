@@ -43,7 +43,7 @@
  * elle-même rendrait ses résultats non reproductibles, donc non mesurables —
  * et la batterie d'équivalence ne pourrait rien prouver.
  */
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Base } from '../base/acces';
 import {
@@ -79,6 +79,7 @@ import type {
 	TypeDeNote,
 	Univers
 } from '../../../seeds/corpus';
+import { analyserDocument, texteBrut } from '../contenu/document';
 
 /* ═══════════════════════════════════════════════════ Les instants ═══════ */
 
@@ -129,35 +130,46 @@ export interface ContexteDeLecture {
 /* ═══════════════════════════════════════════════════ Le contenu ═════════ */
 
 /**
- * Le texte du corps Référence, quand ce corps est celui que la semence produit
- * — un document à un seul paragraphe, à un seul nœud de texte
- * (`corpsDepuisTexte()`).
+ * L'EXTRAIT D'UNE NOTE — dérivé du TEXTE BRUT de son corps.
  *
- * LE PARCOURS EST STRUCTUREL, JAMAIS TEXTUEL : ADR-003 interdit « toute
- * manipulation du corps par expression régulière ou par transformation de
- * chaîne ». Un document d'une autre forme fait LEVER plutôt que rendre une
- * approximation : `Note.extrait` est un champ de la vue, et un extrait faux se
- * verrait à l'écran sans que rien ne l'ait signalé.
+ * `cadrage/STACK-TECHNIQUE.md:261` tranche la question, et il faut le lire avant
+ * de toucher à cette fonction : des trois formes que le format canonique dérive,
+ * le **texte brut** est produit « à l'enregistrement » et sert à
+ * « l'indexation, les EXTRAITS, la détection de doublon ». L'extrait n'est donc
+ * pas une donnée stockée — la table `notes` n'en porte aucune colonne — c'est
+ * une dérivation, et sa source est nommée.
+ *
+ * LE PARCOURS RESTE STRUCTUREL, JAMAIS TEXTUEL : `texteBrut()` de
+ * `src/lib/contenu/document.ts` parcourt l'arbre de nœuds, et `ADR-003` interdit
+ * « toute manipulation du corps par expression régulière ou par transformation
+ * de chaîne ».
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * POURQUOI CETTE FONCTION NE LÈVE PLUS, ET CE QUE ÇA A COÛTÉ DE LE DÉCOUVRIR
+ *
+ * Sa première écriture n'admettait qu'un document d'UN SEUL paragraphe à UN SEUL
+ * nœud de texte — la forme exacte que la semence écrit — et LEVAIT sur tout le
+ * reste. L'intention était juste : un extrait faux se verrait à l'écran sans que
+ * rien ne l'ait signalé.
+ *
+ * Mais l'effet ne l'était pas. `T-050` l'a mesuré en enregistrant une vraie note
+ * par l'éditeur : dès le premier corps à deux blocs, `lireNotes()` levait, donc
+ * **toute route qui lit le corpus tombait**. Et aucune batterie ne l'aurait vu —
+ * aucune n'enregistre. C'est une sonde d'exécutant qui l'a trouvé.
+ *
+ * Le remède n'est pas d'élargir la tolérance : c'est d'employer la source que la
+ * pile désigne. Vérifié sur les 32 notes du corpus : la semence bâtissant le
+ * corps DEPUIS l'extrait (`corpsDepuisTexte`), `texteBrut()` rend exactement la
+ * même chaîne — l'unitaire qui l'exige est conservé, et il passe à l'octet.
+ *
+ * CE QU'AUCUNE SOURCE NE DIT, et qui n'est donc pas décidé ici : la LONGUEUR
+ * d'un extrait. Les 32 du corpus sont rédigés à la main, d'une à deux phrases ;
+ * rien ne fixe où couper, ni comment traiter un titre, une alerte ou un tableau.
+ * Cette fonction ne tronque donc pas. Le jour où une source le dira, la coupe se
+ * pose ICI, et nulle part ailleurs.
  */
 export function extraitDuCorps(corps: unknown): string {
-	const doc = corps as { type?: string; content?: readonly unknown[] };
-	const blocs = doc.content ?? [];
-	if (doc.type !== 'doc' || blocs.length !== 1) {
-		throw new Error(
-			`corps hors de la forme que la semence écrit : ${String(doc.type)}, ` +
-				`${String(blocs.length)} bloc(s)`
-		);
-	}
-	const bloc = blocs[0] as { type?: string; content?: readonly unknown[] };
-	const enfants = bloc.content ?? [];
-	if (bloc.type !== 'paragraph' || enfants.length !== 1) {
-		throw new Error(`bloc unique attendu paragraphe à un nœud, obtenu ${String(bloc.type)}`);
-	}
-	const noeud = enfants[0] as { type?: string; text?: string };
-	if (noeud.type !== 'text' || typeof noeud.text !== 'string') {
-		throw new Error(`nœud de texte attendu, obtenu ${String(noeud.type)}`);
-	}
-	return noeud.text;
+	return texteBrut(analyserDocument(corps));
 }
 
 /* ═══════════════════════════════════════════════════ Le rangement ══════ */
@@ -330,11 +342,25 @@ export async function lireDomainesParDossier(base: Base): Promise<ReadonlyMap<st
  * défaire. `chiffrerLesLacunes()` MESURE désormais chaque lacune contre la base ;
  * la normalisation se déduit de ce qu'elle rend. Les deux éditions ne pouvaient
  * pas être séparées — d'où un lot, un geste.
+ *
+ * @param identifiants restreint la lecture à ces notes, DANS la requête. Absent :
+ *   tout le corpus, comme les huit appelants qui ne le passent pas. Présent, il
+ *   vient d'une décision d'accès déjà prise — le périmètre de `/recherche`, que
+ *   le moteur a filtré (`ADR-006`) — et il ne DÉCIDE de rien : il transporte.
  */
-export async function lireNotes(base: Base, contexte: ContexteDeLecture): Promise<readonly Note[]> {
+export async function lireNotes(
+	base: Base,
+	contexte: ContexteDeLecture,
+	identifiants?: readonly string[]
+): Promise<readonly Note[]> {
+	/* AUCUN IDENTIFIANT RETENU, AUCUNE REQUÊTE. Le tableau vide n'est pas un cas
+	   limite à écarter : c'est le périmètre fermé de `RG-DRO-02`, et la bonne
+	   réponse est de ne rien demander à la base. */
+	if (identifiants !== undefined && identifiants.length === 0) return [];
+
 	const chemins = await lireCheminsDeDossier(base);
 
-	const lignes = await base
+	const socle = base
 		.select({
 			identifiant: notes.identifiant,
 			titre: notes.titre,
@@ -359,8 +385,15 @@ export async function lireNotes(base: Base, contexte: ContexteDeLecture): Promis
 		.innerJoin(domaines, eq(notes.domaineId, domaines.id))
 		.innerJoin(univers, eq(domaines.universId, univers.id))
 		.innerJoin(comptes, eq(notes.auteurId, comptes.id))
-		.leftJoin(typesDeFiche, eq(notes.typeDeFicheId, typesDeFiche.id))
-		.orderBy(notes.identifiant);
+		.leftJoin(typesDeFiche, eq(notes.typeDeFicheId, typesDeFiche.id));
+
+	/* LA RESTRICTION EST DANS LA REQUÊTE, JAMAIS APRÈS ELLE. `ADR-006` interdit
+	   « toute route qui reçoit une liste puis la filtre » : quand l'appelant sait
+	   déjà quelles notes il a le droit de lire, c'est la clause SQL qui le dit,
+	   et la base ne remonte pas une ligne de plus. */
+	const lignes = await (identifiants === undefined
+		? socle.orderBy(notes.identifiant)
+		: socle.where(inArray(notes.identifiant, [...identifiants])).orderBy(notes.identifiant));
 
 	const etiquettesParNote = await lireEtiquettesParNote(base);
 	const piecesParNote = await lirePiecesJointesParNote(base);

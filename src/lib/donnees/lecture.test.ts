@@ -63,12 +63,14 @@ describe('l’extrait — l’inverse de `corpsDepuisTexte`', () => {
 		}
 	});
 
-	it('lève sur un document d’une autre forme, plutôt que d’approximer', () => {
-		/* ADR-003 interdit de manipuler un corps par transformation de chaîne. Un
-		   document à deux blocs n'est pas celui que la semence écrit : rendre son
-		   premier paragraphe serait un extrait faux, visible à l'écran sans que
-		   rien ne l'ait signalé. */
-		expect(() =>
+	it('rend le texte brut d’un corps à plusieurs blocs, sans lever', () => {
+		/* T-050 a mesuré ce que la levée coûtait : dès le premier corps enregistré
+		   par l'éditeur, `lireNotes()` levait, donc TOUTE route qui lit le corpus
+		   tombait — et aucune batterie ne l'aurait vu, aucune n'enregistre.
+		   `STACK-TECHNIQUE.md:261` nomme la source : le texte brut sert « aux
+		   extraits ». Le parcours reste structurel (`texteBrut()` de document.ts),
+		   jamais textuel : ADR-003 est tenu. */
+		expect(
 			extraitDuCorps({
 				type: 'doc',
 				content: [
@@ -76,9 +78,15 @@ describe('l’extrait — l’inverse de `corpsDepuisTexte`', () => {
 					{ type: 'paragraph', content: [{ type: 'text', text: 'deux' }] }
 				]
 			})
-		).toThrow(/forme/);
-		expect(() => extraitDuCorps({ type: 'doc', content: [{ type: 'horizontal_rule' }] })).toThrow(
-			/paragraphe/
-		);
+		).toContain('un');
+	});
+
+	it('refuse un document INVALIDE — la porte unique n’a pas de mode indulgent', () => {
+		/* Ce qui reste refusé, et c'est le contrôle qui compte : la validation n'a
+		   pas été desserrée, elle a été DÉPLACÉE sur `analyserDocument`, la porte
+		   unique d'ADR-003. Un nœud que le format ne connaît pas est rejeté. */
+		expect(() => extraitDuCorps({ type: 'doc', content: [{ type: 'horizontal_rule' }] })).toThrow();
+		expect(() => extraitDuCorps({ type: 'paragraphe' })).toThrow();
+		expect(() => extraitDuCorps({ type: 'doc', content: [] })).toThrow();
 	});
 });
