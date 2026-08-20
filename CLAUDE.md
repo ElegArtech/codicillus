@@ -403,18 +403,51 @@ le droit tombe ; **V-13 masque par défaut et révèle quand le droit est là**.
 règles masquantes ne voit **rien** de V-13 — dix actions gouvernées, invisibles. Chercher la
 **polarité inverse** de ce qu'on mesure fait partie de l'épreuve. *(T-061, 19/08/2026)*
 
-### P-14 · L'horloge virtuelle du banc ne survit pas au parallélisme
+### P-14 · L'horloge virtuelle du banc ne survivait pas au parallélisme — RÉPARÉ
 
-`verif/banc/conditions.mjs` fait `clock.install({time: T})` puis `clock.pauseAt(T)`. **Entre les deux
-appels, le temps virtuel court.** En séquentiel l'écart est nul et rien ne se voit ; dès que
-plusieurs pages s'ouvrent de front, `T` est déjà passé quand `pauseAt` s'exécute et Playwright rejette
-avec `Cannot fast-forward to the past`. Mesuré : **2 couples sur 409 à six pages parallèles, 0 en
-séquentiel**.
+**Le défaut.** `verif/banc/conditions.mjs` posait l'horloge en **deux ordres** au navigateur —
+installer à `T`, puis mettre en pause à `T` — et le temps réel court entre les deux : ce sont deux
+allers-retours distincts. Tant qu'elle n'est pas arrêtée, l'horloge virtuelle se resynchronise sur le
+temps réel **au plus tard toutes les 100 ms** ; la mise en pause consomme l'écart entre la cible et
+l'instant courant, et **refuse un écart négatif** — le rejet `Cannot fast-forward to the past`.
+*(playwright-core 1.62.1, module injecté `clock.ts` : `_updateRealTimeTimer`, `_syncRealTime`,
+`pauseAt`, `_innerFastForwardTo`.)*
 
-Le banc étant séquentiel, il ne l'a jamais rencontré — c'est la batterie 10 qui l'a levé, et elle
-rejoue trois fois plutôt que de toucher au fichier. **À réparer avant toute parallélisation du
-banc** : `pauseAt` doit viser un instant postérieur à l'installation, ou l'installation poser
-l'horloge déjà arrêtée. *(ECART-039 É-1, 19/08/2026)*
+**Le seuil n'est donc pas la charge, c'est cette période de 100 ms** — et T-047 l'a mesuré en imposant
+le délai entre les deux ordres plutôt qu'en l'espérant de la charge : **0 et 50 ms passent ; 100, 150,
+300 et 1 000 ms rejettent, quatre fois sur quatre**. Sous 96 pages de front et charge machine à 10,
+l'ancienne écriture rejetait **171 pages sur 192**.
+
+**La parade, depuis T-047 :** l'installation vise `T` **reculé d'une marge d'une minute**
+(`MARGE_INSTALLATION_MS`), la mise en pause vise `T`. L'écart consommé vaut « marge moins temps
+réellement écoulé », donc positif, et la pause atterrit **exactement** sur `T` — par construction :
+l'horloge avance de ce qu'on lui demande, pas de ce que la machine a mis à le demander. La marge est
+du temps **virtuel**, dépensé sur une page encore vierge, qui ne porte aucune minuterie : elle ne coûte
+rien. **Et la page mesurée ne la voit jamais** — le navigateur rejoue le journal des ordres au
+chargement, où la mise en pause écrit `T` sans rattrapage. C'est ce qui rend la réparation sans
+effet sur le gel : **409 couples conformes, 0 écart, sur trois exécutions**.
+
+**Deux gardes encadrent l'appel**, parce qu'une marge se vérifie et ne se déclare pas : un
+diagnostic **préemptif** qui nomme P-14 et donne l'écoulement mesuré si la marge était dépassée, et
+une **relecture de l'instant posé** dans la page, qui refuse tout écart à `T`. Le cas d'épreuve de la
+marge est **synthétique** (`verif/banc/conditions.test.ts`, 8 cas, les deux polarités) : sans lui, le
+seul cas de la parade serait le défaut qu'elle vient de fermer, et elle deviendrait inerte en
+réussissant (P-26).
+
+**Éprouvé sous concurrence, jamais en séquentiel seul** — c'est ce que le défaut lui-même exigeait :
+**96 pages de front, navigation et stabilisation comprises, charge machine à 39, trois tours : 0 rejet
+et 0 instant hors cible sur 288 pages**. La polarité inverse est éprouvée aussi : marge ramenée à
+200 ms, le rejet revient à 300 ms. *Ce qui protège est la marge, pas la chance.*
+
+**Ce qui reste.** Six modules rejouent trois fois pour absorber ce défaut — `verif/a11y.mjs`,
+`verif/contraste.mjs`, `verif/droits.mjs`, `verif/impression.mjs`, `verif/menus.mjs`,
+`verif/vide.mjs`. Cinq filtrent sur le message de rejet et redeviennent donc inertes ; **`verif/vide.mjs`
+rejoue sur n'importe quelle erreur** et gardera son effet, pour d'autres causes. Ces reprises sont
+désormais sans objet pour celle-ci ; T-047 les a laissées telles quelles — les retirer relève des lots
+qui possèdent ces fichiers. Les deux **autres** défauts d'instrument sont **intacts** : la minuterie
+de 2 600 ms de `V-37 chargement` (`ECART-042` É-6 — elle tient à `clock.resume()` avant axe, non à la
+pose de l'horloge) et la sonde de restitution de focus. *(ECART-039 É-1, ouvert le 19/08/2026, fermé
+par T-047 le 20/08/2026)*
 
 **Corollaire, et il vaut au-delà de l'horloge.** Un instrument séquentiel peut porter un défaut que
 seule la concurrence révèle : *l'absence de panne n'est pas une preuve de correction, c'est une
