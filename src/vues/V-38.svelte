@@ -4,7 +4,7 @@
 	 *
 	 * `docs/routes.md` §3.7 et §3.8 : V-38 est une SECTION de V-41, sans adresse
 	 * propre (ARB-002). Ce fichier n'existe donc que pour le mode démo —
-	 * `/__design/V-38?etat=…` —, seul chemin par lequel le banc atteint un état
+	 * la route de conception du banc —, seul chemin par lequel le banc atteint un état
 	 * côté application (le module de service du banc, ÉCART-011 É-1).
 	 *
 	 * SIX ÉTATS, DE DEUX NATURES — `verif/scenarios/V-38.json` :

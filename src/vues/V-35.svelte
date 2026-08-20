@@ -10,7 +10,7 @@
 	 * ZONE : `#depot`, `#scenarios`, `.tableau-gestion`, `#dlg-rapport`. Le
 	 * protocole est `page-entiere-zone-isolee` (ARB-014,
 	 * `verif/references/protocole-app.json` → `etats_de_zone`) : l'application
-	 * rend LA PAGE ENTIÈRE à `/__design/V-35?etat=cle`, et le banc y découpe la
+	 * rend LA PAGE ENTIÈRE à la route de conception du banc, et le banc y découpe la
 	 * même zone que du côté maquette, par le même sélecteur et le même rang.
 	 * La clé d'état ne change donc rien à trois des quatre écrans — elle nomme
 	 * ce qui sera mesuré.

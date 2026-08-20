@@ -4,7 +4,7 @@
 	 *
 	 * `docs/routes.md` §3.7 et §3.8 : V-39 est une SECTION de V-41, sans adresse
 	 * propre (ARB-002). Ce fichier n'existe que pour le mode démo —
-	 * `/__design/V-39?etat=…` (le module de service du banc, ÉCART-011 É-1).
+	 * la route de conception du banc (le module de service du banc, ÉCART-011 É-1).
 	 *
 	 * CETTE VUE EST LA RÉFÉRENCE DES QUATRE ÉTATS DE ZONE DE `RG-M18-03`, que
 	 * toutes les vues suivantes reprendront : dix états vides, six esquisses de
