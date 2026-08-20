@@ -761,6 +761,25 @@ export function masquerLAdresse(texte, chemin) {
 }
 
 /**
+ * La réponse SANS AUCUN MASQUE — statut, en-têtes non volatils, corps.
+ *
+ * `ARB-059`. Deux réponses identiques ici ne peuvent RIEN révéler du corpus, et
+ * cette propriété ne dépend d'aucune convention de masquage : elle est vraie de
+ * l'octet. C'est ce qui en fait le premier juge du rapprochement, le masque ne
+ * servant qu'aux couples dont le brut diffère.
+ *
+ * @param {{status: number, entetes: Record<string,string>, corps: string}} reponse
+ */
+export function cleSansMasque(reponse) {
+	const entetes = Object.entries(reponse.entetes)
+		.filter(([n]) => !ENTETES_VOLATILES.includes(n.toLowerCase()))
+		.map(([n, v]) => `${n.toLowerCase()}: ${v}`)
+		.sort()
+		.join('\n');
+	return `${reponse.status}\n${entetes}\n${reponse.corps}`;
+}
+
+/**
  * La clé de rapprochement d'une réponse : ce qui doit être identique entre un
  * refus et une inexistence.
  *

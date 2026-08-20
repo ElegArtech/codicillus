@@ -117,6 +117,7 @@ import {
 	PERSONAS,
 	attenduDe,
 	cleDeRapprochement,
+	cleSansMasque,
 	famillesDuRefus,
 	formeSelonLaVariante,
 	issueDuCouple,
@@ -1017,7 +1018,12 @@ async function mesurerLaMatrice() {
 				verdict,
 				motif,
 				perturbee: o.perturbee === true,
-				cle: cleDeRapprochement(o, instance.chemin)
+				cle: cleDeRapprochement(o, instance.chemin),
+				/* `ARB-059` : la réponse TELLE QU'ELLE EST SERVIE, sans masque. Deux
+				   réponses identiques à l'octet ne peuvent RIEN révéler du corpus —
+				   c'est vrai sans qu'aucune convention de masquage n'ait à être juste.
+				   Voir `cleSansMasque()` et le court-circuit d'`issueDuCouple`. */
+				cleBrute: cleSansMasque(o)
 			});
 			if (verdict === 'defaut') {
 				defauts.push({
@@ -1067,7 +1073,34 @@ function mesurerLesCouples() {
 					c.instance.variante === 'inexistante'
 			);
 			if (existante === undefined || inexistante === undefined) continue;
-			const memeCle = existante.cle === inexistante.cle;
+			/* ══ `ARB-059` — LE BRUT D'ABORD, LE MASQUE ENSUITE ══════════════════
+			   Le masque existe parce que V-04 et V-26 AFFICHENT l'adresse demandée
+			   (`V-04:715`, `V-26:1067`) : deux adresses différentes rendent deux
+			   corps différents sans qu'aucune information de corpus ne fuie.
+
+			   Mais il masque PAR SEGMENT, et un segment d'adresse peut être un mot
+			   du contenu FIXE de la vue. Mesuré le 21/08/2026 : le panneau de
+			   reformulation de V-26 porte quatre pistes gelées, dont l'une porte le
+			   nom du dernier segment d'un dossier réel du corpus. Le masque du côté
+			   « existante » l'a donc effacée d'UN SEUL côté, et la batterie a
+			   rapporté un couple discernable — sur deux réponses IDENTIQUES À
+			   L'OCTET. Un faux rouge, et de la pire espèce : il désigne un défaut
+			   d'étanchéité là où le produit est correct.
+
+			   La parade ne DESSERRE rien, parce qu'elle ne s'appuie sur aucune
+			   convention : deux réponses identiques à l'octet ne peuvent rien
+			   révéler du corpus, quel que soit le masque qu'on leur applique. Le
+			   masque ne sert donc qu'aux couples dont le brut DIFFÈRE — ceux où il
+			   faut décider si l'écart est l'écho légitime de l'adresse.
+
+			   CE QUE CE COURT-CIRCUIT NE RÉPARE PAS, et il faut le lire : quand les
+			   bruts diffèrent, le masque garde son défaut SYMÉTRIQUE — il peut
+			   effacer une fuite dont le mot est aussi un segment de l'adresse
+			   demandée, et rendre indiscernable un couple qui ne l'est pas. Le
+			   rapport compte donc à part les couples décidés PAR LE MASQUE, et
+			   nomme ce que le masque y a absorbé. */
+			const memeBrut = existante.cleBrute === inexistante.cleBrute;
+			const memeCle = memeBrut || existante.cle === inexistante.cle;
 			/* Une REDIRECTION est décidée par le point d'entrée, sur le préfixe,
 			   avant toute résolution : le couple est donc mesurable même si la route
 			   n'existe pas. C'est ce qui rend opposable la borne d'`ARB-052` sur
@@ -1094,6 +1127,7 @@ function mesurerLesCouples() {
 				route,
 				persona: persona.nom,
 				issue,
+				decidePar: memeBrut ? 'brut' : 'masque',
 				detail: `${existante.instance.chemin} (${String(existante.status)}) contre ${inexistante.instance.chemin} (${String(inexistante.status)})`
 			});
 			if (issue === 'discernable' || issue === 'fuyant' || issue === 'asymetrique') {
@@ -1524,6 +1558,22 @@ console.log(
 	`    ${String(comptesCouples.sansObjet).padStart(3)} SANS OBJET — le côté existant est légitimement servi : RG-ACC-04 (CDC:113)\n` +
 		'        parle d’« un accès REFUSÉ sur un contenu existant », et il n’y en a pas ici'
 );
+
+/* `ARB-059` — CE QUE LE MASQUE A DÛ TRANCHER, ET QU'IL FAUT LIRE.
+   Un couple décidé sur le BRUT est prouvé : deux réponses identiques à l'octet
+   ne révèlent rien, quelle que soit la convention de masquage. Un couple décidé
+   PAR LE MASQUE ne l'est qu'autant que le masque est juste — et le masque efface
+   tout segment de l'adresse demandée, y compris là où ce mot appartient au
+   contenu FIXE de la vue. Le chiffre ci-dessous est donc la part du verdict qui
+   repose sur une convention plutôt que sur une mesure. */
+const parLeMasque = couples.filter(
+	(c) => c.decidePar === 'masque' && (c.issue === 'indiscernable' || c.issue === 'vacueux')
+);
+console.log(
+	`    dont ${String(parLeMasque.length).padStart(3)} rapproché(s) PAR LE MASQUE et non sur le brut — la part du verdict qui\n` +
+		'        tient à une convention. Les autres sont identiques À L’OCTET, donc prouvés'
+);
+for (const c of parLeMasque) console.log(`          ${c.route} · ${c.persona}`);
 
 if (temporel !== null) {
 	console.log('\n  LE TEMPS — POST /connexion, identifiant existant contre inconnu');
