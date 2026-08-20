@@ -4,27 +4,77 @@
 
 ---
 
-## ⛔ AVANT TOUT LE RESTE — ON NE PEUT PAS CRÉER UNE NOTE
+## ✅ LE BLOCAGE DE TÊTE EST LEVÉ — ON CRÉE, ON MODIFIE, ON SUPPRIME UNE NOTE
 
-`src/routes/notes/nouvelle/+page.server.ts:100` rend **501**. Lu, pas déduit :
+*Levé le 21 août 2026, seconde session. Ce bloc disait : « `src/routes/notes/nouvelle/+page.server.ts:100`
+rend 501 ». Il ne le rend plus.*
 
-> *« la création d'une note n'est pas implémentée : `RG-M12-11` impose un identifiant lisible rendu
-> unique automatiquement et n'en donne aucune forme, et cet identifiant est dans l'adresse
-> (`RG-M03-03`) »*
+**La preuve n'est pas une batterie verte, c'est une trace** — session réelle, navigateur piloté,
+compte `karim.belhadj`, base de développement :
 
-**C'est la finalité de l'outil, et elle est bloquée par un vide de spécification que personne n'a
-arbitré.** Le blocage est réel — `RG-M12-11` (`CDC:1097`) exige l'unicité automatique sans donner de
-forme, et `RG-M03-03` (`CDC:484`) exige que l'adresse reste stable, donc que l'identifiant ne se
-recalcule jamais après coup. Mais il est **arbitrable** : `seeds/corpus.ts` porte 35 identifiants de
-la forme `n-<mot-court>`, et le gel les affiche dans les adresses de onze maquettes.
+```
+POST /connexion                                     303 → /
+GET  /notes/nouvelle                                200
+POST /notes/nouvelle                                303 → /notes/n-rotation-des-cles-ssh-des-passerelles
+GET  /notes/n-rotation-des-cles-ssh-des-passerelles 200
+GET  /notes/n-rotation-.../modifier                 200
+POST /notes/n-rotation-.../modifier                 303 → /notes/n-rotation-...
+POST /notes/n-rotation-...?/supprimer               303 → /univers/production/infrastructure
+GET  /notes/n-rotation-...                          404
+```
 
-**Ce que ça vaut comme leçon d'orchestration, et elle est chère.** Vingt batteries mesuraient le
-produit, dont une — `verif:couverture` — écrite pour compter ce qui manque. **Aucune ne demandait :
-peut-on créer une note ?** Le 501 est déclaré depuis des jours dans le fichier qui le porte, et il a
-fallu que le commanditaire pose la question pour qu'il remonte.
+En base : la note écrite, l'identifiant dérivé du titre, une version capturée à la modification,
+**zéro ligne** après la suppression. L'aller-retour du corps est **idempotent** — deux
+réenregistrements sans frappe rendent un document identique, et aucune version n'est écrite
+(`RG-M07-01`).
 
-*Une batterie mesure ce qu'on lui a demandé de mesurer. Le produit, lui, se juge à ce qu'un
-utilisateur peut en faire.*
+**Ce qui l'a levé** : `ARB-062` (la forme de l'identifiant — `n-<slug>`, collision par suffixe,
+unicité arbitrée par la contrainte de base, jamais recalculé) et `ARB-063` (le câblage des
+formulaires vit dans `src/routes/**/+page.svelte`, que le banc ne traverse pas). Puis trois lots en
+parallèle : `T-079` création, `T-080` suppression, `T-081` modification.
+
+**Le garde-fou n'a pas bougé** : `pnpm verif:maquette:app` — 41 vues, **409 conformes sur 409, 0
+défaut, 0 recours**, mesuré avec le câblage en place. Par construction, pas par relecture :
+`ARB-063` §2.
+
+---
+
+## ⚠ CE QUI RESTE OUVERT SUR CE CHEMIN, ET QUI COMPTE
+
+### 1. Le câblage n'est couvert par aucune batterie
+
+Ce qui prouve la création aujourd'hui est **une trace**, c'est-à-dire un récit reproductible — pas un
+verdict opposable. `verif:couverture` ne le compte pas, `test:parcours` ne joue pas de formulaire,
+et le banc ne traverse pas les routes **par conception**. Une régression du câblage passerait toutes
+les batteries. *C'est la dette la plus chère de cette session, et elle est nommée.*
+
+### 2. Le produit livré ne laisse écrire personne
+
+**`droits_de_dossier` porte ZÉRO ligne** pour les cinq comptes du jeu de semence, et `RG-DRO-02` est
+sans appel : « aucun droit explicite, aucune capacité ». Une instance semée puis démarrée est donc
+**en lecture seule pour tout le monde** — `/notes/nouvelle` y rend 404. La batterie 6 pose ces droits
+elle-même avant de mesurer ; la trace a dû faire de même. Il faut soit que la semence en pose, soit
+que la console M14.6 soit le chemin déclaré, et **aucune source ne tranche**.
+
+### 3. Trois écrans montrent encore le gel plutôt que la note
+
+`V-14` rend l'article gelé de `n-restaurer-pg` quelle que soit l'adresse ; `V-17` en modification ne
+reçoit le corps que par le câblage, après montage ; la confirmation de suppression est celle du
+navigateur, non le dialogue de `V-40`. Les trois demandent de toucher `src/vues/`, que `ARB-063` §5
+ferme. **Écarts déclarés, entiers.**
+
+### 4. Ce que les trois lots ont remonté
+
+`ECART-048` (T-079, 6), `ECART-049` (T-080, 6), et les 10 écarts de T-081 au journal. Trois méritent
+un arbitrage :
+
+- **`RG-M04-10` contre le gel** : le cahier nomme trois quantités à rappeler avant une suppression,
+  **`V-40:3295-3297` en construit quatre** — les pièces jointes s'y ajoutent. *Maquettes > cahier* :
+  le produit porte les quatre. Errata ou regel.
+- **le statut par défaut d'une note neuve** : le contrat `T-079` disait `brouillon`, `CDC:187` dit
+  « défaut : publiée ». Le lot a suivi le cahier et l'a déclaré.
+- **la forme des valeurs de rangement soumises** : nom affiché du domaine, chemin affiché du
+  dossier. Déduite du gel, pas arbitrée.
 
 ---
 
