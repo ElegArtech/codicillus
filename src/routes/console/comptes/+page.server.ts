@@ -22,7 +22,11 @@
  */
 import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { changerLeRoleDUnCompte, roleDepuisLeLibelle } from '$lib/donnees/administration';
+import {
+	changerLActivationDUnCompte,
+	changerLeRoleDUnCompte,
+	roleDepuisLeLibelle
+} from '$lib/donnees/administration';
 import {
 	accesALaConsole,
 	contexteDeRequete,
@@ -82,6 +86,36 @@ export const actions: Actions = {
 			basePartagee(),
 			String(champs.get('f-ident') ?? ''),
 			role,
+			new Date()
+		);
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	},
+	/**
+	 * ACTIVER OU DÉSACTIVER UN COMPTE — `RG-M14-08`.
+	 *
+	 * `f-ident` DÉSIGNE LE COMPTE, comme pour le changement de rôle : c'est
+	 * l'identifiant de connexion, « définitif après création » (`V-32:3109`), et
+	 * deux noms de champ pour une même clé finiraient par diverger.
+	 *
+	 * `actif` PORTE LA CIBLE, PAS LA BASCULE. Un booléen « inverser » se
+	 * tromperait de sens si deux administrateurs cliquaient en même temps, et le
+	 * second annulerait le premier sans le savoir. La requête dit l'état voulu ;
+	 * la base l'écrit.
+	 *
+	 * LE REFUS DU DERNIER ADMINISTRATEUR SORT EN `fail` AVEC SON MOTIF. Le gel le
+	 * rend dans le dialogue (`V-32:3270-3284`), bouton de validation caché ;
+	 * `P-09` veut que le geste ne soit pas offert, ce qui ne dispense jamais de le
+	 * refuser ici — un client compose la requête qu'il veut.
+	 */
+	changerLActivation: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const resultat = await changerLActivationDUnCompte(
+			basePartagee(),
+			String(champs.get('f-ident') ?? ''),
+			champs.get('actif') === 'oui',
 			new Date()
 		);
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
