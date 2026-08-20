@@ -109,7 +109,16 @@
 		UNIVERS,
 		modificationsPourVue,
 		noteParIdentifiant,
-		type Note
+		type ChampDeFiche,
+		type Domaine,
+		type EtatDInstance,
+		type IdentifiantNote,
+		type Note,
+		type Template,
+		type TypeDeFiche,
+		type TypeDeNote,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import { motFiche, motFicheMinuscule } from '$lib/vocabulaire';
 
@@ -118,9 +127,72 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-17')`, variante « lecture ». */
 		notes: readonly Note[];
+		/**
+		 * LES QUATRE PROPRIÉTÉS DE CONTEXTE — T-042, et elles sont OPTIONNELLES.
+		 *
+		 * Avant ce lot, cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et
+		 * `INSTANCE` au niveau du module : un chargeur de route ne pouvait rien
+		 * y substituer, et l'éditeur ouvrait une note vierge dans le domaine de
+		 * `MOI` — « Bonjour Karim » servi à Sophie Nguyen.
+		 *
+		 * `compte` COMMANDE ICI DAVANTAGE QUE LA PASTILLE : le domaine
+		 * pré-choisi d'une note vierge est celui de l'utilisateur courant
+		 * (`V-17:3537`), et l'arborescence du choix de dossier s'en déduit.
+		 *
+		 * LE DÉFAUT EST LA CONSTANTE DU JEU, et c'est ce qui garantit que le banc
+		 * ne bouge pas : le mode de conception ne passe que `vecteur` et `notes`,
+		 * la vue reçoit donc exactement ce qu'elle avait.
+		 */
+		univers?: readonly Univers[];
+		domaines?: readonly Domaine[];
+		compte?: UtilisateurCourant;
+		instance?: EtatDInstance;
+		/**
+		 * LES TROIS RÉFÉRENTIELS DE SAISIE — les types de note, les types de
+		 * fiche et les gabarits que l'éditeur propose. Ils sont administrables
+		 * (M14), donc propres à l'instance : un chargeur les lira en base.
+		 *
+		 * Le défaut est celui du jeu de semence, et le banc ne bouge pas.
+		 */
+		typesNote?: readonly TypeDeNote[];
+		typesFiche?: Record<TypeDeFiche, readonly ChampDeFiche[]>;
+		templates?: readonly Template[];
+		/**
+		 * L'ANCIENNETÉ DE MODIFICATION DE CHAQUE NOTE — `window.modifJours` du
+		 * gel, table `V-17:2235`. `Partial` et non `Record` total : un type
+		 * total réclamerait les trente-deux clés et interdirait mécaniquement
+		 * un état partiel ou neutre (P-02).
+		 */
+		modifications?: Partial<Record<IdentifiantNote, number>>;
+		/**
+		 * LA NOTE REPRISE EN MODIFICATION — `n-planifier-sauv`, que le gel nomme
+		 * lui-même (`V-17:3549`) et que la vue lisait au corpus AU NIVEAU DU
+		 * MODULE : `/notes/{identifiant}/modifier` rouvrait donc toujours la
+		 * même note, quelle que fût l'adresse.
+		 *
+		 * Tout ce que l'écran en montre — titre, type, domaine, dossier,
+		 * étiquettes, extrait — sort du type `Note` : aucun corps rendu n'est
+		 * nécessaire ici, à la différence de V-14 et de V-18.
+		 *
+		 * Absente, la note du gel : le cas `modif` de la planche rend à
+		 * l'identique.
+		 */
+		noteModifiee?: Note | undefined;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		typesNote = TYPES_NOTE,
+		typesFiche = TYPES_FICHE,
+		templates = TEMPLATES,
+		modifications = modificationsPourVue('V-17'),
+		noteModifiee = noteParIdentifiant('n-planifier-sauv')
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 
@@ -130,19 +202,17 @@
 	);
 
 	/**
-	 * LA NOTE REPRISE EN MODIFICATION — `n-planifier-sauv`, nommée par le gel
-	 * (`V-17:3549`). Elle vient du corpus, jamais d'une transcription.
+	 * L'ancienneté de la dernière version, en jours — `window.modifJours`,
+	 * `V-17:2240`, table `MODIFICATIONS` `V-17:2235`. Elle est lue à la table
+	 * REÇUE, pour la note reçue : rien n'est écrit ici.
 	 */
-	const NOTE_MODIFIEE = noteParIdentifiant('n-planifier-sauv');
+	const JOURS_DEPUIS_MODIF = $derived(noteModifiee ? modifications[noteModifiee.id] : undefined);
 
-	/** L'ancienneté de la dernière version, en jours — `window.modifJours`, `V-17:2240`, table `MODIFICATIONS` `V-17:2235`. */
-	const JOURS_DEPUIS_MODIF = modificationsPourVue('V-17')['n-planifier-sauv'];
-
-	const titre = $derived(cas === 'modif' ? (NOTE_MODIFIEE?.titre ?? '') : '');
-	const typeChoisi = $derived(cas === 'modif' ? (NOTE_MODIFIEE?.type ?? 'Procédure') : 'Procédure');
-	const domaineChoisi = $derived(cas === 'modif' ? (NOTE_MODIFIEE?.domaine ?? '') : MOI.domaine);
-	const dossierChoisi = $derived(cas === 'modif' ? (NOTE_MODIFIEE?.dossier ?? null) : null);
-	const etiquettes = $derived(cas === 'modif' ? (NOTE_MODIFIEE?.etiquettes ?? []) : []);
+	const titre = $derived(cas === 'modif' ? (noteModifiee?.titre ?? '') : '');
+	const typeChoisi = $derived(cas === 'modif' ? (noteModifiee?.type ?? 'Procédure') : 'Procédure');
+	const domaineChoisi = $derived(cas === 'modif' ? (noteModifiee?.domaine ?? '') : compte.domaine);
+	const dossierChoisi = $derived(cas === 'modif' ? (noteModifiee?.dossier ?? null) : null);
+	const etiquettes = $derived(cas === 'modif' ? (noteModifiee?.etiquettes ?? []) : []);
 
 	/**
 	 * L'ARBORESCENCE DU CHOIX DE DOSSIER — `window.dossiersDuDomaine`,
@@ -203,7 +273,7 @@
 	const fil = $derived(
 		cas === 'modif'
 			? ['Accueil', 'Production', domaineChoisi, 'Modifier']
-			: ['Accueil', 'Production', MOI.domaine, 'Nouvelle note']
+			: ['Accueil', 'Production', compte.domaine, 'Nouvelle note']
 	);
 </script>
 
@@ -250,7 +320,7 @@
 	que le gel écrit.
 -->
 {#snippet corpsRepris()}
-	<p>{NOTE_MODIFIEE?.extrait ?? ''}</p>
+	<p>{noteModifiee?.extrait ?? ''}</p>
 	<h2 id="s-decl">Déclarer le serveur</h2>
 	<ol>
 		<li>Ajouter la section dans la configuration de Barman.</li>
@@ -306,7 +376,7 @@
 				</button>
 				<div class="etiq">Ou reprendre une structure éprouvée</div>
 				<div id="templates" style="display:flex;flex-direction:column;gap:var(--e-2)">
-					{#each TEMPLATES as gabarit (gabarit.id)}<button
+					{#each templates as gabarit (gabarit.id)}<button
 							class="module"
 							type="button"
 							style="width:100%"
@@ -335,17 +405,17 @@
 	libelleEvitement="Aller à la rédaction"
 	donnees={{ 'data-vue': 'redaction', 'data-meta': 'ferme', 'data-numerote': 'non' }}
 	{fil}
-	courant={[cas === 'modif' ? domaineChoisi : MOI.domaine]}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	courant={[cas === 'modif' ? domaineChoisi : compte.domaine]}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 	{...cas === 'template' ? { superposition: dialogueTemplate } : {}}
 >
 	{#snippet enfants()}
@@ -721,7 +791,7 @@
 							>Type de note <span class="oblig">*</span></label
 						>
 						<select class="selecteur" id="m-type">
-							{#each TYPES_NOTE as type (type)}<option value={type} selected={type === typeChoisi}
+							{#each typesNote as type (type)}<option value={type} selected={type === typeChoisi}
 									>{type}</option
 								>{/each}
 						</select>
@@ -730,7 +800,7 @@
 					<div class="champ">
 						<label class="champ__label" for="m-domaine">Domaine <span class="oblig">*</span></label>
 						<select class="selecteur" id="m-domaine">
-							{#each DOMAINES as domaine (domaine.nom)}<option
+							{#each domaines as domaine (domaine.nom)}<option
 									value={domaine.nom}
 									selected={domaine.nom === domaineChoisi}
 									>{domaine.univers + ' › ' + domaine.nom}</option
@@ -819,7 +889,7 @@
 						<label class="champ__label" for="m-fiche">Type de {motFicheMinuscule}</label>
 						<select class="selecteur" id="m-fiche">
 							<option value="" selected>Aucun — note simple</option>
-							{#each Object.keys(TYPES_FICHE) as type (type)}<option value={type}>{type}</option
+							{#each Object.keys(typesFiche) as type (type)}<option value={type}>{type}</option
 								>{/each}
 						</select>
 						<span class="champ__aide"

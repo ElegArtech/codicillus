@@ -8,7 +8,9 @@
 	 * `TYPES_RELATION`, `TYPES_FICHE` de `seeds/corpus.ts`, et le jeu de semence
 	 * que le mode démo passe en propriété (`corpusPourVue('V-20')`, variante
 	 * « complete », 32 notes dont cinq signets sans relation, donc absents du
-	 * graphe). Ce lot NE DÉCLARE PAS `RG-M09-01` tenue.
+	 * graphe). Les trois tableaux de relations sont désormais REÇUS EN PROPRIÉTÉ,
+	 * de défaut la constante du jeu (T-043) ; `TYPES_FICHE` reste une constante,
+	 * hors de l'énumération du contrat. Ce lot NE DÉCLARE PAS `RG-M09-01` tenue.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * CETTE VUE N'EMPRUNTE PAS `$lib/coquille/Coquille.svelte`, ET C'EST UN
@@ -90,9 +92,17 @@
 		DOMAINES,
 		INSTANCE,
 		MOI,
+		RELATIONS,
+		RELATIONS_TECHNIQUES,
 		TYPES_FICHE,
 		TYPES_RELATION,
-		type Note
+		type CleDeTypeDeRelation,
+		type Domaine,
+		type EtatDInstance,
+		type LibellesDeRelation,
+		type Note,
+		type Relation,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import Rail from '$lib/coquille/Rail.svelte';
@@ -112,14 +122,51 @@
 		type EncodageDeType
 	} from '$lib/graphe/cartographie';
 
+	/**
+	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
+	 * DÉFAUT EST LA CONSTANTE DU JEU DE SEMENCE.
+	 *
+	 * V-20 ne compose pas la coquille : elle monte le rail elle-même, et n'a donc
+	 * pas d'univers à recevoir — la propriété n'est pas déclarée parce qu'aucun
+	 * nœud de cette vue n'en dépendrait, et une propriété inerte est une promesse
+	 * sans effet. Pour le reste, le défaut est la constante du jeu : le mode de
+	 * conception ne passe que `vecteur` et `notes`, la vue reçoit donc exactement
+	 * ce qu'elle recevait, et le banc de comparaison ne bouge pas d'un pixel.
+	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — moment × cas limites. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-20')`. */
 		notes: readonly Note[];
+		/** Les domaines du produit. Défaut : ceux du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Défaut : celui du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
+		instance?: EtatDInstance;
+		/**
+		 * Les relations du corpus. Défaut : celles du jeu de semence.
+		 *
+		 * La base les porte réellement. La vue n'en fabrique aucune : elle les
+		 * descend au socle commun des cartographies, qui en dérive le sous-graphe.
+		 */
+		relations?: readonly Relation[];
+		/** Les types de relation et leurs deux libellés. Défaut : ceux du jeu de semence. */
+		typesRelation?: Record<CleDeTypeDeRelation, LibellesDeRelation>;
+		/** Les types de relation qui portent une dépendance technique. Défaut : ceux du jeu de semence. */
+		relationsTechniques?: readonly CleDeTypeDeRelation[];
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		relations = RELATIONS,
+		typesRelation = TYPES_RELATION,
+		relationsTechniques = RELATIONS_TECHNIQUES
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const moment = $derived(String(reglage['moment'] ?? 'aucun'));
@@ -127,9 +174,9 @@
 
 	/* ── Le graphe ──────────────────────────────────────────────────────────
 	   Le périmètre est la première option du sélecteur, « Tous les domaines ». */
-	const graphe = $derived(sousGraphe(corpus, { type: 'global' }));
+	const graphe = $derived(sousGraphe(corpus, { type: 'global' }, relations));
 	const deg = $derived(degres(graphe));
-	const ruptures = $derived(pointsArticulation(graphe));
+	const ruptures = $derived(pointsArticulation(graphe, relationsTechniques));
 	const types = $derived(typesPresents(graphe));
 
 	/**
@@ -286,8 +333,8 @@
 			aretes.push({
 				a: centrePoint,
 				b,
-				technique: estTechnique(r.type),
-				titre: `${titreDe(graphe, corpus, r.de)} ${TYPES_RELATION[r.type].sortant} ${titreDe(graphe, corpus, r.vers)}`
+				technique: estTechnique(r.type, relationsTechniques),
+				titre: `${titreDe(graphe, corpus, r.de)} ${typesRelation[r.type].sortant} ${titreDe(graphe, corpus, r.vers)}`
 			});
 		}
 
@@ -325,7 +372,7 @@
 	);
 
 	/* ── Le panneau de détail ───────────────────────────────────────────────
-	   Les relations groupées par libellé, dans l'ordre de `RELATIONS` — le
+	   Les relations groupées par libellé, dans l'ordre où elles sont reçues — le
 	   libellé dépend du sens de lecture, « héberge » ou « est hébergé par ». */
 	interface GroupeDeRelations {
 		readonly libelle: string;
@@ -335,8 +382,8 @@
 	const groupesDuDetail = $derived.by<GroupeDeRelations[]>(() => {
 		if (choisi === null) return [];
 		const groupes: GroupeDeRelations[] = [];
-		for (const r of relationsDe(choisi)) {
-			const libelle = TYPES_RELATION[r.type][r.sortant ? 'sortant' : 'entrant'];
+		for (const r of relationsDe(choisi, relations)) {
+			const libelle = typesRelation[r.type][r.sortant ? 'sortant' : 'entrant'];
 			const note = noteDe(r.autre);
 			const existant = groupes.find((g) => g.libelle === libelle);
 			const groupe = existant ?? { libelle, items: [] };
@@ -443,7 +490,7 @@
 <a class="saut-contenu" href="#contenu">Aller au contenu</a>
 
 <div class="app" id="app" data-rail="ouvert" data-detail={detailOuvert ? 'ouvert' : 'ferme'}>
-	<Rail forme="abregee" sectionsAbregees={railAbregeRendu([])} version={INSTANCE.version} />
+	<Rail forme="abregee" sectionsAbregees={railAbregeRendu([])} version={instance.version} />
 
 	<div class="cadre">
 		<header class="barre">
@@ -495,7 +542,7 @@
 				>
 				Créer
 			</button>
-			<button class="avatar" title="{MOI.nom} — menu utilisateur">{MOI.initiales}</button>
+			<button class="avatar" title="{compte.nom} — menu utilisateur">{compte.initiales}</button>
 		</header>
 
 		<main class="carto" id="contenu">
@@ -508,7 +555,7 @@
 				<div class="controles__groupe" style="display:flex;align-items:center;gap:var(--e-2)">
 					<label class="etiq" for="perimetre">Périmètre</label>
 					<select id="perimetre"
-						><option value="global|">Tous les domaines</option>{#each DOMAINES as d (d.nom)}<option
+						><option value="global|">Tous les domaines</option>{#each domaines as d (d.nom)}<option
 								value="domaine|{d.nom}">Domaine {d.nom}</option
 							>{/each}</select
 					>

@@ -60,8 +60,12 @@
 		MOI,
 		UNIVERS,
 		type Compte,
+		type Domaine,
+		type EtatDInstance,
 		type Note,
-		type RoleDeCompte
+		type RoleDeCompte,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 
 	interface Proprietes {
@@ -69,9 +73,27 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-32')`. */
 		notes: readonly Note[];
+		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
+		univers?: readonly Univers[];
+		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
+		instance?: EtatDInstance;
+		/** Le registre des comptes. Absente, la constante du jeu de semence. */
+		comptes?: readonly Compte[];
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		comptes: registreDeComptes = COMPTES
+	}: Proprietes = $props();
 
 	/**
 	 * LES QUATRE RÔLES ET LEUR AIDE sont ceux du gel (`V-32:2947`).
@@ -96,23 +118,27 @@
 	const IDENTIFIANT_VERROUILLE = 'lea.marchand';
 
 	/** Le domaine proposé à la création : le premier de la liste (`V-32:3149`). */
-	const PREMIER_DOMAINE = DOMAINES[0]?.nom ?? '';
+	const PREMIER_DOMAINE = $derived(domaines[0]?.nom ?? '');
 
 	interface CompteRendu {
 		readonly compte: Compte;
 		readonly verrouille: boolean;
 	}
 
-	const comptes: readonly CompteRendu[] = COMPTES.map((c) => ({
-		compte: c,
-		verrouille: c.identifiant === IDENTIFIANT_VERROUILLE
-	}));
+	const comptes: readonly CompteRendu[] = $derived(
+		registreDeComptes.map((c) => ({
+			compte: c,
+			verrouille: c.identifiant === IDENTIFIANT_VERROUILLE
+		}))
+	);
 
 	/** L'ordre du gel : les actifs d'abord, puis par nom (`V-32:2989`). */
-	const listeTriee: readonly CompteRendu[] = [...comptes].sort(
-		(a, b) =>
-			Number(b.compte.actif) - Number(a.compte.actif) ||
-			a.compte.nom.localeCompare(b.compte.nom, 'fr')
+	const listeTriee: readonly CompteRendu[] = $derived(
+		[...comptes].sort(
+			(a, b) =>
+				Number(b.compte.actif) - Number(a.compte.actif) ||
+				a.compte.nom.localeCompare(b.compte.nom, 'fr')
+		)
 	);
 
 	function initiales(nom: string): string {
@@ -124,8 +150,8 @@
 			.toUpperCase();
 	}
 
-	const administrateurs: readonly CompteRendu[] = comptes.filter(
-		(c) => c.compte.role === 'Administrateur' && c.compte.actif
+	const administrateurs: readonly CompteRendu[] = $derived(
+		comptes.filter((c) => c.compte.role === 'Administrateur' && c.compte.actif)
 	);
 
 	function estDernierAdmin(c: CompteRendu): boolean {
@@ -229,11 +255,16 @@
 	idContenu="travail"
 	fil={filDeConsole('Comptes')}
 	donnees={{ 'data-form': panneauOuvert ? 'ouvert' : 'ferme' }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
-	compte={{ nom: MOI.nom, initiales: MOI.initiales, role: MOI.role, domaine: MOI.domaine }}
-	version={INSTANCE.version}
+	compte={{
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
+	}}
+	version={instance.version}
 >
 	{#snippet avantContenu()}
 		<NavigationConsole courante="comptes" />
@@ -480,7 +511,7 @@
 				<div class="champ">
 					<label class="champ__label" for="f-domaine">Domaine principal</label>
 					<select class="selecteur" id="f-domaine"
-						>{#if panneauOuvert}{#each DOMAINES as d (d.nom)}<option
+						>{#if panneauOuvert}{#each domaines as d (d.nom)}<option
 									value={d.nom}
 									selected={d.nom === (edite ? edite.compte.domaine : PREMIER_DOMAINE)}
 									>{d.univers} › {d.nom}</option

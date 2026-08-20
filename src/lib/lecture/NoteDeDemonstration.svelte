@@ -50,10 +50,11 @@
 	import CorpsReference from './CorpsReference.svelte';
 	import {
 		anciennete,
-		CONSULTATIONS_RECENTES,
+		consultationsRecentes,
 		CONTROLE_PAR_NIVEAU,
 		NOTE,
-		RANGEMENT
+		rangementDe,
+		type NoteAffichee
 	} from './note-de-demonstration';
 	import type { Snippet } from 'svelte';
 
@@ -110,6 +111,35 @@
 		 * le ramènerait ici en une ligne.
 		 */
 		separateur: Snippet;
+		/**
+		 * LA NOTE RÉELLEMENT LUE, ET SES DEUX CORPS RENDUS — T-042.
+		 *
+		 * ABSENTE, LE BLOC REND LA TRANSCRIPTION FIGÉE DU GEL, à l'identique :
+		 * c'est le défaut, et c'est ce qui garantit que le banc ne bouge pas.
+		 * V-15 ne la passe pas et ne change donc en rien.
+		 *
+		 * FOURNIE, L'IDENTITÉ DE LA NOTE VIENT D'ELLE — pastille de type,
+		 * visibilité, titre, rangement, auteur, étiquettes, consultations — et
+		 * les deux corps sont le HTML que l'appelant a rendu par
+		 * `rendreDocument` (ADR-004 : une seule implémentation, et aucune vue
+		 * n'en est un second chemin).
+		 *
+		 * CE QU'ELLE N'ALIMENTE PAS, ET POURQUOI — écart déclaré, non comblé :
+		 *
+		 *   · LE CARTOUCHE DE CONTRÔLE. Il affiche « par <qui> · <date> », et
+		 *     `Note` de `seeds/corpus.ts` ne porte NI le vérificateur, NI
+		 *     l'heure, NI la date en toutes lettres. Trois des sept champs
+		 *     seulement sont dérivables ; en alimenter trois et laisser quatre
+		 *     valeurs de planche produirait un cartouche MIXTE, c'est-à-dire une
+		 *     valeur illustrative au sens de P-02. Il reste donc entièrement sur
+		 *     le levier `niveau`.
+		 *   · LA DATE DE MODIFICATION de la ligne « Rédaction ». Même cause :
+		 *     `Note` ne la porte pas.
+		 *   · LES TROIS BANDEAUX. Leur prose est écrite au gel (auteur et date
+		 *     de la demande de révision, nom du domaine) ; ils restent des
+		 *     leviers, comme `operationnel`.
+		 */
+		affichee?: NoteAffichee | undefined;
 	}
 
 	const {
@@ -119,11 +149,17 @@
 		resync = false,
 		operationnel = true,
 		droits = 'ecriture',
-		separateur
+		separateur,
+		affichee
 	}: Proprietes = $props();
 
 	/** P-09 · ARB-040 — ce qui n'est pas émis n'est pas une porte fermée. */
 	const ecriture = $derived(droits !== 'lecture');
+
+	/** La note affichée — celle qu'on lit, ou celle du gel à défaut. */
+	const note = $derived(affichee?.note ?? NOTE);
+	const rangement = $derived(rangementDe(note));
+	const consultations = $derived(consultationsRecentes(note));
 
 	/** Les trois rangs de la jauge — jamais un de plus, jamais un de moins. */
 	const RANGS = Array.from({ length: BARRES_DE_JAUGE }, (_, rang) => rang);
@@ -183,12 +219,12 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 <!-- En-tête -->
 <header class="entete">
 	<div class="entete__sur">
-		<span class="past past--type">{NOTE.type}</span>
+		<span class="past past--type">{note.type}</span>
 		<span class="past" id="past-brouillon" hidden={!brouillon}>Brouillon</span>
-		<span class="past">{NOTE.visibilite}</span>
+		<span class="past">{note.visibilite}</span>
 	</div>
 
-	<h1 class="titre-note" id="h-titre">{NOTE.titre}</h1>
+	<h1 class="titre-note" id="h-titre">{note.titre}</h1>
 
 	<!-- CARTOUCHE DE CONTRÔLE — signal de fraîcheur -->
 	<div class="cartouche" id="cartouche" data-niveau={niveau}>
@@ -243,20 +279,20 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 	<dl class="meta">
 		<dt>Rangement</dt>
 		<dd>
-			{#each RANGEMENT as segment, rang (segment)}{#if rang}{@render separateur()}{/if}
+			{#each rangement as segment, rang (segment)}{#if rang}{@render separateur()}{/if}
 				<a href="#">{segment}</a>
 			{/each}
 		</dd>
 
 		<dt>Rédaction</dt>
 		<dd>
-			Créée par <a href="#">{NOTE.auteur}</a> · modifiée
+			Créée par <a href="#">{note.auteur}</a> · modifiée
 			<time datetime="2026-07-22" title="22 juillet 2026 à 16:47">il y a 3 semaines</time>
 		</dd>
 
 		<dt>Étiquettes</dt>
 		<dd>
-			{#each NOTE.etiquettes as etiquette (etiquette)}
+			{#each note.etiquettes as etiquette (etiquette)}
 				<a class="past past--etiquette" href="#">{etiquette}</a>
 			{/each}
 		</dd>
@@ -264,7 +300,7 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 		<dt>Consultations</dt>
 		<dd>
 			<span class="chiffre"
-				>{NOTE.vues} consultations · {CONSULTATIONS_RECENTES} sur les 30 derniers jours</span
+				>{note.vues} consultations · {consultations} sur les 30 derniers jours</span
 			>
 		</dd>
 	</dl>
@@ -298,9 +334,34 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 		Ajouter une version opérationnelle
 	</button>{/if}
 
-<!-- ============ NOTE DE DÉMONSTRATION — corps rédigé, deux registres ============ -->
-<!-- ================= CORPS — REGISTRE RÉFÉRENCE ================= -->
-<div class="prose" id="corps-reference"><CorpsReference /></div>
+<!-- ============ NOTE DE DÉMONSTRATION — corps rédigé, deux registres ============
+	LES DEUX ENVELOPPES SONT CELLES DU GEL, ET ELLES NE BOUGENT PAS. Ce qu'elles
+	contiennent change de SOURCE, jamais de forme : sans note affichée, la
+	transcription figée des deux corps ; avec, le HTML que l'appelant a rendu par
+	l'implémentation unique de `rendreDocument` (ADR-004).
 
-<!-- ================ CORPS — REGISTRE OPÉRATIONNEL ================ -->
-<div class="prose" id="corps-operationnel" hidden><CorpsOperationnel /></div>
+	AUCUN BLANC ENTRE L'ENVELOPPE ET SON CONTENU, et le bloc est protégé du
+	formateur : un blanc inséré se relit dans le nom accessible du niveau 1
+	(CLAUDE.md §6, P-6). Ne jamais citer la forme exacte de la directive à
+	l'intérieur d'un commentaire (P-9).
+
+	POURQUOI L'INSERTION DE BALISAGE EST ADMISE ICI, ET SEULEMENT ICI. La règle
+	qui l'interdit vise l'insertion de contenu NON MAÎTRISÉ ; ce contenu est la
+	sortie de `rendreDocument`, dont l'en-tête énonce la contrepartie exacte du
+	refus d'ADR-003 de stocker du HTML libre : « le texte d'un document est du
+	TEXTE : il ne devient jamais du balisage » — `echapper()` s'applique à
+	chaque nœud de texte, et le schéma ProseMirror refuse tout document
+	structurellement invalide avant même le rendu. Même jurisprudence que
+	`src/vues/V-31.svelte` et que le composant d'étalon du banc.
+
+	La directive est portée en BLOC plutôt qu'en ligne : la ligne précédant
+	chaque enveloppe est déjà celle du formateur, et deux directives ne peuvent
+	pas viser la même ligne.
+-->
+<!-- eslint-disable svelte/no-at-html-tags -- sortie de `rendreDocument`, texte échappé par `echapper()` (ADR-003) -->
+<!-- prettier-ignore -->
+<div class="prose" id="corps-reference">{#if affichee}{@html affichee.reference ?? ''}{:else}<CorpsReference />{/if}</div>
+
+<!-- prettier-ignore -->
+<div class="prose" id="corps-operationnel" hidden>{#if affichee}{@html affichee.operationnel ?? ''}{:else}<CorpsOperationnel />{/if}</div>
+<!-- eslint-enable svelte/no-at-html-tags -->

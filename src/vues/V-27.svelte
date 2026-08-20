@@ -68,7 +68,17 @@
 	 * compris ceux que le script de la maquette pose par `.style.propriété`,
 	 * que l'instrument lit aussi (`verif/styles-en-ligne.mjs`).
 	 */
-	import { DOMAINES, INSTANCE, MOI, UNIVERS, type Note } from '../../seeds/corpus';
+	import {
+		DOMAINES,
+		INSTANCE,
+		MOI,
+		UNIVERS,
+		type Domaine,
+		type EtatDInstance,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
+	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { domainesDe, universOrdonnes } from '$lib/coquille/arborescence';
 	import BoutonDeCreation from '$lib/console/BoutonDeCreation.svelte';
@@ -82,9 +92,24 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-27')`, variante complète. */
 		notes: readonly Note[];
+		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
+		univers?: readonly Univers[];
+		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
+		instance?: EtatDInstance;
 	}
 
-	const { vecteur, notes }: Proprietes = $props();
+	const {
+		vecteur,
+		notes,
+		univers = UNIVERS,
+		domaines: tousLesDomaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	/** Panneau de formulaire : fermé, création, édition (`V-27:1388`). */
@@ -165,18 +190,20 @@
 	}
 
 	/** La liste, dans l'ordre défini par l'administrateur (`rendreListe()`). */
-	const liste: readonly UniversDeTravail[] = universOrdonnes(UNIVERS).map((u) => ({
-		nom: u.nom,
-		description: u.description,
-		couleur: u.couleur,
-		glyphe: u.glyphe,
-		ordre: u.ordre ?? 0,
-		systeme: !!u.systeme
-	}));
+	const liste: readonly UniversDeTravail[] = $derived(
+		universOrdonnes(univers).map((u) => ({
+			nom: u.nom,
+			description: u.description,
+			couleur: u.couleur,
+			glyphe: u.glyphe,
+			ordre: u.ordre ?? 0,
+			systeme: !!u.systeme
+		}))
+	);
 
 	/** Les domaines rattachés — jamais un chiffre saisi (P-02). */
-	function domaines(univers: string) {
-		return domainesDe(DOMAINES, univers);
+	function domaines(nomDUnivers: string) {
+		return domainesDe(tousLesDomaines, nomDUnivers);
 	}
 	/** Les notes que ces domaines contiennent (`notesDe()`, `V-27:3256`). */
 	function compteDeNotes(univers: string): number {
@@ -315,16 +342,16 @@
 
 <Coquille
 	fil={filDeConsole('Univers')}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	domaines={tousLesDomaines}
 	{notes}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 	rail="ouvert"
 	role="admin"
 	forme="complete"

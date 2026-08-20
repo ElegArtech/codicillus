@@ -140,10 +140,15 @@
 		type Compte,
 		type Contribution,
 		type Distinction,
+		type Domaine,
+		type EtatDInstance,
 		type EvenementDActivite,
 		type NomDAuteur,
 		type Note,
-		type TypeDEvenement
+		type Relation,
+		type TypeDEvenement,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 
@@ -152,9 +157,51 @@
 		vecteur?: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-25')`, variante complète. */
 		notes: readonly Note[];
+		/**
+		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
+		 *
+		 * Absentes, les constantes du jeu de semence s'appliquent : c'est ce que le
+		 * mode démo passe, et c'est ce qui garantit que le banc ne bouge pas d'un
+		 * pixel. Fournies — par un chargeur de route —, elles l'emportent, et la vue
+		 * cesse de servir une valeur figée, indépendante de la base et de l'identité.
+		 */
+		/** Les univers déclarés. Absente, `UNIVERS` du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines du périmètre du compte. Absente, `DOMAINES` du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** Le compte connecté. Absente, `MOI` du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, `INSTANCE` du jeu de semence. */
+		instance?: EtatDInstance;
+		/** Les comptes de l'instance. Absente, `COMPTES` du jeu de semence. */
+		comptes?: readonly Compte[];
+		/**
+		 * Les contributions déclarées, par auteur. Absente, `CONTRIBUTIONS` du jeu
+		 * de semence. La table est PARTIELLE : un compte sans contribution
+		 * déclarée existe — le gel en montre un —, et le rendu le traite déjà.
+		 */
+		contributions?: Partial<Record<NomDAuteur, Contribution>>;
+		/** Les distinctions du barème. Absente, `DISTINCTIONS` du jeu de semence. */
+		distinctions?: readonly Distinction[];
+		/** Le flux d'activité. Absente, `ACTIVITE` du jeu de semence. */
+		activite?: readonly EvenementDActivite[];
+		/** Les relations du corpus. Absente, `RELATIONS` du jeu de semence. */
+		relations?: readonly Relation[];
 	}
 
-	const { vecteur, notes }: Proprietes = $props();
+	const {
+		vecteur,
+		notes,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		comptes = COMPTES,
+		contributions = CONTRIBUTIONS,
+		distinctions = DISTINCTIONS,
+		activite = ACTIVITE,
+		relations = RELATIONS
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 
@@ -223,7 +270,9 @@
 	}
 
 	const compteCourant = $derived(
-		COMPTES.find((c) => (cas === 'neuf' ? c.id === IDENTIFIANT_DU_COMPTE_NEUF : c.nom === MOI.nom))
+		comptes.find((c) =>
+			cas === 'neuf' ? c.id === IDENTIFIANT_DU_COMPTE_NEUF : c.nom === compte.nom
+		)
 	);
 	const profil = $derived(compteCourant ? profilDe(compteCourant) : null);
 
@@ -262,13 +311,13 @@
 	 * vaut zéro. C'est la lettre du gel.
 	 */
 	function statistiquesDe(nom: string): Statistiques {
-		const declaree: Contribution | undefined = CONTRIBUTIONS[nom as NomDAuteur];
+		const declaree: Contribution | undefined = contributions[nom as NomDAuteur];
 		const siennes = notes.filter((n) => n.auteur === nom && !n.brouillon);
 		const brouillons = notes.filter((n) => n.auteur === nom && n.brouillon);
 		let citations = 0;
 		let notePhare: Note | null = null;
 		for (const n of siennes) {
-			const vers = RELATIONS.filter((r) => r.vers === n.id).length;
+			const vers = relations.filter((r) => r.vers === n.id).length;
 			if (vers > citations) {
 				citations = vers;
 				notePhare = n;
@@ -328,7 +377,7 @@
 		};
 	}
 
-	const jauges = $derived(stats ? DISTINCTIONS.map((d) => progression(d, stats)) : []);
+	const jauges = $derived(stats ? distinctions.map((d) => progression(d, stats)) : []);
 
 	/* ═══════════════════════════════════════════════════════════════════════
 	   L'ACTIVITÉ — `rendreActivite` (`V-25:2830`)
@@ -352,7 +401,7 @@
 	}
 
 	const evenements = $derived(
-		profil ? ACTIVITE.filter((e: EvenementDActivite) => e.qui === profil.nom) : []
+		profil ? activite.filter((e: EvenementDActivite) => e.qui === profil.nom) : []
 	);
 
 	/** Le titre de la note visée, cherché au corpus — `V-25:2861`. */
@@ -366,28 +415,28 @@
 	 * puis le relit pour décider s'il rend un flux ou un encouragement. Les
 	 * deux voies aboutissent au même ensemble d'événements : celui du filtre.
 	 */
-	const activite = $derived(evenements.length ? 'pleine' : 'vide');
+	const etatDActivite = $derived(evenements.length ? 'pleine' : 'vide');
 </script>
 
 <Coquille
 	fil={['Accueil', 'Mon profil']}
 	courant={[]}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	{notes}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 	rail="ouvert"
 	forme="abregee"
 	donnees={{
 		'data-onglet': onglet,
 		'data-verrou': verrouille ? 'oui' : 'non',
-		'data-activite': activite
+		'data-activite': etatDActivite
 	}}
 	classeContenu="profil"
 	idContenu="contenu"

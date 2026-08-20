@@ -69,7 +69,11 @@
 		MOI,
 		UNIVERS,
 		type Domaine,
-		type Note
+		type EtatDInstance,
+		type IdentifiantNote,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
@@ -80,16 +84,50 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-12')`, variante « lecture ». */
 		notes: readonly Note[];
+		/**
+		 * LES QUATRE PROPRIÉTÉS DE CONTEXTE — T-042, et elles sont OPTIONNELLES.
+		 *
+		 * Avant ce lot, cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et
+		 * `INSTANCE` au niveau du module : un chargeur de route ne pouvait rien
+		 * y substituer, et l'écran servait le contexte du jeu de semence quelle
+		 * que fût l'identité de l'appelant.
+		 *
+		 * LE DÉFAUT EST LA CONSTANTE DU JEU, et c'est ce qui garantit que le banc
+		 * ne bouge pas : le mode de conception ne passe que `vecteur` et `notes`,
+		 * la vue reçoit donc exactement ce qu'elle avait.
+		 */
+		univers?: readonly Univers[];
+		domaines?: readonly Domaine[];
+		compte?: UtilisateurCourant;
+		instance?: EtatDInstance;
+		/**
+		 * L'ANCIENNETÉ DE MODIFICATION DE CHAQUE NOTE — `window.modifJours` du gel.
+		 *
+		 * `Partial` ET NON `Record` TOTAL, et c'est une exigence de P-02 : un
+		 * type total réclamerait les trente-deux clés, ce qui interdirait
+		 * mécaniquement à un chargeur de passer un état PARTIEL ou NEUTRE. Une
+		 * note absente de la table s'affiche « date de modification inconnue »,
+		 * jamais une ancienneté inventée.
+		 */
+		modifications?: Partial<Record<IdentifiantNote, number>>;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		modifications = MODIFICATIONS
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const vide = $derived(reglage['etat'] === 'vide');
 	const arrivee = $derived(String(reglage['arr'] ?? 'tout'));
 
 	const courant = $derived(
-		(DOMAINES.find((d) => d.nom === reglage['dom']) ?? DOMAINES[0]) as Domaine
+		(domaines.find((d) => d.nom === reglage['dom']) ?? domaines[0]) as Domaine
 	);
 
 	/**
@@ -246,7 +284,7 @@
 	   comportement, donc du temps 3.
 	   ═════════════════════════════════════════════════════════════════════ */
 	function ancienneteDeModification(n: Note): number {
-		return MODIFICATIONS[n.id] ?? 999;
+		return modifications[n.id] ?? 999;
 	}
 
 	const filtrees = $derived(
@@ -272,7 +310,7 @@
 
 	/** L'ancienneté de modification en clair — `window.modifJours` du gel. */
 	function modifiee(n: Note): string {
-		const j = MODIFICATIONS[n.id];
+		const j = modifications[n.id];
 		if (typeof j !== 'number') return 'date de modification inconnue';
 		return j <= 1 ? 'modifiée hier' : `modifiée il y a ${j} jours`;
 	}
@@ -315,16 +353,16 @@
 	courant={railCourant}
 	droits="ecriture"
 	donnees={{ 'data-filtres': 'ferme', 'data-etat': vide ? 'vide' : undefined }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<header class="tete" style="--teinte:{courant.couleur}">

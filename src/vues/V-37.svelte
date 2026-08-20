@@ -29,7 +29,11 @@
 		UNIVERS,
 		corpusDeVariante,
 		noteParIdentifiant,
-		type Note
+		type Domaine,
+		type EtatDInstance,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import type { Notification } from '$lib/coquille/notifications';
@@ -39,9 +43,32 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-37')`, la variante complète. */
 		notes: readonly Note[];
+		/**
+		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
+		 *
+		 * Absentes, les constantes du jeu de semence s'appliquent : c'est ce que le
+		 * mode démo passe, et c'est ce qui garantit que le banc ne bouge pas d'un
+		 * pixel. Fournies — par un chargeur de route —, elles l'emportent, et la vue
+		 * cesse de servir une valeur figée, indépendante de la base et de l'identité.
+		 */
+		/** Les univers déclarés. Absente, `UNIVERS` du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines du périmètre du compte. Absente, `DOMAINES` du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** Le compte connecté. Absente, `MOI` du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, `INSTANCE` du jeu de semence. */
+		instance?: EtatDInstance;
 	}
 
-	const { vecteur, notes }: Proprietes = $props();
+	const {
+		vecteur,
+		notes,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE
+	}: Proprietes = $props();
 
 	/** La note de démonstration du contenu « lecture » — celle de V-14 et V-15. */
 	const NOTE_DEMONSTRATION = 'n-restaurer-pg';
@@ -113,16 +140,16 @@
 	{rail}
 	{role}
 	{contenu}
-	univers={UNIVERS}
-	domaines={sansPerimetre ? [] : DOMAINES}
+	{univers}
+	domaines={sansPerimetre ? [] : domaines}
 	notes={sansPerimetre ? corpusDeVariante('vide') : notes}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 	donnees={ATTRIBUTS_DE_VUE}
 	brancheEnChargement={enChargement ? BRANCHE_EN_CHARGEMENT : null}
 	notifications={enChargement ? [NOTIFICATION_CHARGEMENT] : []}

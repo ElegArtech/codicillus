@@ -77,15 +77,25 @@
 	 * l'ensemble clos du gel de V-34 (ARB-016).
 	 */
 	import {
-		CORPUS,
 		DOMAINES,
+		INSTANCE,
 		MESURES_7J,
 		MESURES_7J_PREC,
+		MOI,
 		MODIFICATIONS,
 		RECHERCHES,
 		RELATIONS,
 		REVISIONS,
-		type Note
+		UNIVERS,
+		type DemandeDeRevision,
+		type Domaine,
+		type EtatDInstance,
+		type IdentifiantNote,
+		type Note,
+		type Relation,
+		type RequeteDeRecherche,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
@@ -96,9 +106,47 @@
 		vecteur?: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-34')`. */
 		notes: readonly Note[];
+		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
+		univers?: readonly Univers[];
+		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
+		instance?: EtatDInstance;
+		/** Les relations déclarées. Absente, la constante du jeu de semence. */
+		relations?: readonly Relation[];
+		/**
+		 * LES CINQ TABLES DE MESURE, TOUTES FACULTATIVES ET TOUTES PARTIELLES.
+		 *
+		 * `Partial<Record<…>>` et non `Record<…>` : le type total exigerait les
+		 * trente-deux identifiants du corpus, ce qui empêcherait mécaniquement un
+		 * chargeur de passer un état partiel — ou vide. Or c'est exactement ce que
+		 * `P-02` demande de rendre possible : une donnée indisponible s'affiche
+		 * comme telle, elle ne se fabrique pas. Le défaut reste la table entière du
+		 * jeu de semence, donc le rendu ne bouge pas.
+		 */
+		mesures7j?: Partial<Record<IdentifiantNote, number>>;
+		mesures7jPrec?: Partial<Record<IdentifiantNote, number>>;
+		modifications?: Partial<Record<IdentifiantNote, number>>;
+		revisions?: readonly DemandeDeRevision[];
+		recherches?: readonly RequeteDeRecherche[];
 	}
 
-	const { vecteur, notes }: Proprietes = $props();
+	const {
+		vecteur,
+		notes,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		relations = RELATIONS,
+		mesures7j = MESURES_7J,
+		mesures7jPrec = MESURES_7J_PREC,
+		modifications = MODIFICATIONS,
+		revisions = REVISIONS,
+		recherches = RECHERCHES
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const donnees = $derived(
@@ -114,7 +162,7 @@
 	const taux = $derived.by(() => {
 		let total = 0;
 		let abouties = 0;
-		for (const r of RECHERCHES) {
+		for (const r of recherches) {
 			total += r.n;
 			abouties += r.ouvertures;
 		}
@@ -124,13 +172,14 @@
 	/** `window.trousDocumentaires` (`V-34:2730`) — « l'échec silencieux compte
 	 *  autant que l'absence de résultat ». */
 	const trous = $derived(
-		RECHERCHES.filter((r) => r.resultats === 0 || r.ouvertures === 0)
+		recherches
+			.filter((r) => r.resultats === 0 || r.ouvertures === 0)
 			.slice()
 			.sort((a, b) => b.n - a.n)
 	);
 
 	/** `window.notesDuDomaine` (`V-34:2645`). */
-	const notesDuDomaine = (nom: string): readonly Note[] => CORPUS.filter((n) => n.domaine === nom);
+	const notesDuDomaine = (nom: string): readonly Note[] => notes.filter((n) => n.domaine === nom);
 
 	/** `window.contributeurs` (`V-34:2005`) — un volume, jamais une performance. */
 	function contributeurs(liste: readonly Note[]): { nom: string; notes: number }[] {
@@ -143,22 +192,22 @@
 
 	/** `window.sommeMesures` (`V-34:1933`) — restreinte aux notes présentes. */
 	const sommeMesures = (table: Partial<Record<string, number>>): number =>
-		CORPUS.reduce((s, n) => s + (table[n.id] ?? 0), 0);
+		notes.reduce((s, n) => s + (table[n.id] ?? 0), 0);
 
 	/** `window.desynchronises` (`V-34:2749`) — registres opérationnels dont la
 	 *  référence a bougé depuis. */
 	const desynchronises = $derived(
-		CORPUS.filter((n) => n.operationnel && (MODIFICATIONS[n.id] ?? 999) < 30)
+		notes.filter((n) => n.operationnel && (modifications[n.id] ?? 999) < 30)
 	);
 
 	/** `window.orphelines` (`V-34:2737`) — trois critères distincts, qui
 	 *  n'appellent pas la même décision. */
 	const orphelines = $derived.by(() => {
-		const cibles = new Set(RELATIONS.map((r) => r.vers));
+		const cibles = new Set(relations.map((r) => r.vers));
 		return {
-			jamaisVerifiees: CORPUS.filter((n) => !n.revise),
-			peuConsultees: CORPUS.filter((n) => (MESURES_7J[n.id] ?? 0) < 8),
-			sansLienEntrant: CORPUS.filter(
+			jamaisVerifiees: notes.filter((n) => !n.revise),
+			peuConsultees: notes.filter((n) => (mesures7j[n.id] ?? 0) < 8),
+			sansLienEntrant: notes.filter(
 				(n) => !cibles.has(n.id) && (n.type === 'Fiche' || n.type === 'Procédure')
 			)
 		};
@@ -233,33 +282,35 @@
 
 	/* ── La santé documentaire, domaine par domaine (`V-34:3114`) ──────────── */
 	const sante = $derived(
-		DOMAINES.map((dom) => {
-			const liste = notesDuDomaine(dom.nom);
-			return {
-				dom,
-				liste,
-				repartition: repartition(liste),
-				contributeurs: contributeurs(liste).length,
-				alertes: [
-					[liste.filter((n) => !n.revise).length, 'jamais vérifiées'],
-					[
-						REVISIONS.filter((r) => liste.some((n) => n.id === r.id)).length,
-						'en attente de révision'
-					],
-					[liste.filter((n) => n.brouillon).length, 'brouillons'],
-					[
-						desynchronises.filter((x) => x.domaine === dom.nom).length,
-						'opérationnels désynchronisés'
-					]
-				] as const
-			};
-		}).filter((s) => s.liste.length)
+		domaines
+			.map((dom) => {
+				const liste = notesDuDomaine(dom.nom);
+				return {
+					dom,
+					liste,
+					repartition: repartition(liste),
+					contributeurs: contributeurs(liste).length,
+					alertes: [
+						[liste.filter((n) => !n.revise).length, 'jamais vérifiées'],
+						[
+							revisions.filter((r) => liste.some((n) => n.id === r.id)).length,
+							'en attente de révision'
+						],
+						[liste.filter((n) => n.brouillon).length, 'brouillons'],
+						[
+							desynchronises.filter((x) => x.domaine === dom.nom).length,
+							'opérationnels désynchronisés'
+						]
+					] as const
+				};
+			})
+			.filter((s) => s.liste.length)
 	);
 
 	/* ── L'adoption (`V-34:3268`) ──────────────────────────────────────────── */
 	const adoption = $derived.by(() => {
-		const a = sommeMesures(MESURES_7J);
-		const p = sommeMesures(MESURES_7J_PREC);
+		const a = sommeMesures(mesures7j);
+		const p = sommeMesures(mesures7jPrec);
 		const ecart = p ? Math.round(((a - p) / p) * 100) : 0;
 		return [
 			[
@@ -273,24 +324,25 @@
 				`${nb(Math.round(taux.total / 30))} par jour en moyenne`
 			],
 			[
-				nb(CORPUS.length),
+				nb(notes.length),
 				'notes au total',
-				`${CORPUS.filter((n) => n.visibilite === 'Publique').length} ouvertes au public`
+				`${notes.filter((n) => n.visibilite === 'Publique').length} ouvertes au public`
 			],
-			[nb(contributeurs(CORPUS).length), 'contributeurs actifs', 'au moins une note à leur nom']
+			[nb(contributeurs(notes).length), 'contributeurs actifs', 'au moins une note à leur nom']
 		] as const;
 	});
 
 	/** Les cinq notes les plus consultées, et l'échelle de leurs barres. */
 	const plusConsultees = $derived(
-		CORPUS.slice()
-			.sort((x, y) => (MESURES_7J[y.id] ?? 0) - (MESURES_7J[x.id] ?? 0))
+		notes
+			.slice()
+			.sort((x, y) => (mesures7j[y.id] ?? 0) - (mesures7j[x.id] ?? 0))
 			.slice(0, 5)
 	);
 	const maxiConsultations = $derived(
-		plusConsultees[0] ? (MESURES_7J[plusConsultees[0].id] ?? 1) : 1
+		plusConsultees[0] ? (mesures7j[plusConsultees[0].id] ?? 1) : 1
 	);
-	const volumesDeContribution = $derived(contributeurs(CORPUS));
+	const volumesDeContribution = $derived(contributeurs(notes));
 	const maxiContributions = $derived(volumesDeContribution[0]?.notes ?? 1);
 </script>
 
@@ -323,7 +375,15 @@
 		><span class="cl__n">{valeur}{unite}</span
 	></div>{/if}{/snippet}
 
-<CoquilleDeConsole section="analytique" {notes} donnees={{ 'data-donnees': donnees }}>
+<CoquilleDeConsole
+	section="analytique"
+	{notes}
+	{univers}
+	{domaines}
+	{compte}
+	{instance}
+	donnees={{ 'data-donnees': donnees }}
+>
 	{#snippet enfants()}
 		<TeteDeSection
 			titre="Analytique"
@@ -423,7 +483,7 @@
 							><div class="orph__corps"
 								><div class="orph__titre">{n.titre}</div
 								><div class="orph__meta"
-									>{@render temoin(n)}<span>{n.domaine}</span><span>{n.auteur}</span><span style="font-family:var(--f-donnee)">{`${MESURES_7J[n.id] ?? 0} vues / 7 j`}</span
+									>{@render temoin(n)}<span>{n.domaine}</span><span>{n.auteur}</span><span style="font-family:var(--f-donnee)">{`${mesures7j[n.id] ?? 0} vues / 7 j`}</span
 								></div
 							></div
 							><div class="orph__actions"
@@ -448,7 +508,7 @@
 						>{#each adoption as [valeur, nom, sous] (nom)}<div class="mesure-a"><div class="mesure-a__val">{valeur}</div><span class="mesure-a__nom">{nom}</span><span class="mesure-a__nom" style="color:var(--c-encre-4)">{sous}</span></div>{/each}</div
 					><span class="etiq" style="display:block;margin-bottom:var(--e-2)">Notes les plus consultées</span
 					><div class="classement" id="top-notes"
-						>{#each plusConsultees as n, rang (n.id)}{@render ligneDeClassement(rang + 1, n.titre, MESURES_7J[n.id] ?? 0, maxiConsultations, ' vues')}{/each}</div
+						>{#each plusConsultees as n, rang (n.id)}{@render ligneDeClassement(rang + 1, n.titre, mesures7j[n.id] ?? 0, maxiConsultations, ' vues')}{/each}</div
 					><span class="etiq" style="display:block;margin:var(--e-5) 0 var(--e-2)">Volumes de contribution</span
 					><div class="classement" id="top-contrib"
 						>{#each volumesDeContribution as c (c.nom)}{@render ligneDeClassement(null, c.nom, c.notes, maxiContributions, c.notes > 1 ? ' notes' : ' note')}{/each}</div

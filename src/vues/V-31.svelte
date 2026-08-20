@@ -54,8 +54,13 @@
 		TEMPLATES,
 		TYPES_NOTE,
 		UNIVERS,
+		type Domaine,
+		type EtatDInstance,
 		type Note,
-		type Template
+		type Template,
+		type TypeDeNote,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 
 	interface Proprietes {
@@ -63,9 +68,30 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-31')`. */
 		notes: readonly Note[];
+		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
+		univers?: readonly Univers[];
+		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
+		instance?: EtatDInstance;
+		/** Les squelettes déclarés. Absente, la constante du jeu de semence. */
+		templates?: readonly Template[];
+		/** Les types de note proposés. Absente, la constante du jeu de semence. */
+		typesNote?: readonly TypeDeNote[];
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		templates = TEMPLATES,
+		typesNote = TYPES_NOTE
+	}: Proprietes = $props();
 
 	/**
 	 * LA STRUCTURE ANNONCÉE EST EXTRAITE DU CONTENU, jamais lue ailleurs.
@@ -93,7 +119,7 @@
 	}
 
 	/** Le total affiché par le bandeau de rassurance — calculé, jamais écrit. */
-	const totalUtilisations = TEMPLATES.reduce((s, t) => s + utilisations(t), 0);
+	const totalUtilisations = $derived(templates.reduce((s, t) => s + utilisations(t), 0));
 
 	/**
 	 * LE SQUELETTE D'UN TEMPLATE NEUF est celui du gel (`V-31:3468`) : une
@@ -111,12 +137,12 @@
 	const panneauOuvert = $derived(form !== 'ferme');
 
 	/** Le template édité par la position « Édition · Procédure » (`V-31:3571`). */
-	const edite = $derived<Template | null>(form === 'edition' ? (TEMPLATES[0] ?? null) : null);
+	const edite = $derived<Template | null>(form === 'edition' ? (templates[0] ?? null) : null);
 	const contenuEdite = $derived(panneauOuvert ? (edite ? edite.contenu : SQUELETTE_NEUF) : '');
 	const titresEdites = $derived(panneauOuvert ? structure(contenuEdite) : []);
 
 	/** Le template par défaut, hors celui qu'on édite — l'aide du gel s'y règle. */
-	const defautActuel = $derived(TEMPLATES.find((t) => t.defaut && t !== edite) ?? null);
+	const defautActuel = $derived(templates.find((t) => t.defaut && t !== edite) ?? null);
 
 	/**
 	 * LE TEMPLATE PROPOSÉ À LA SUPPRESSION (`V-31:3574`) : celui par défaut pour
@@ -124,7 +150,7 @@
 	 * « Template ordinaire ». La position par défaut n'ouvre rien.
 	 */
 	const aSupprimer = $derived<Template | null>(
-		sup === 'defaut' ? null : (TEMPLATES.find((t) => !t.defaut) ?? null)
+		sup === 'defaut' ? null : (templates.find((t) => !t.defaut) ?? null)
 	);
 </script>
 
@@ -136,11 +162,16 @@
 	idContenu="travail"
 	fil={filDeConsole('Templates')}
 	donnees={{ 'data-form': panneauOuvert ? 'ouvert' : 'ferme', 'data-numerote': 'non' }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
-	compte={{ nom: MOI.nom, initiales: MOI.initiales, role: MOI.role, domaine: MOI.domaine }}
-	version={INSTANCE.version}
+	compte={{
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
+	}}
+	version={instance.version}
 >
 	{#snippet avantContenu()}
 		<NavigationConsole courante="templates" />
@@ -184,7 +215,7 @@
 				<span></span>
 			</div>
 			<div id="liste">
-				{#each TEMPLATES as t (t.id)}
+				{#each templates as t (t.id)}
 					{@const titres = structure(t.contenu)}
 					<div class="tg tg--templates tg--ligne">
 						<div style="min-width:0">
@@ -307,7 +338,7 @@
 				<div class="champ">
 					<label class="champ__label" for="f-type">Type de note associé</label>
 					<select class="selecteur" id="f-type"
-						>{#if panneauOuvert}{#each TYPES_NOTE as type (type)}<option
+						>{#if panneauOuvert}{#each typesNote as type (type)}<option
 									value={type}
 									selected={type === (edite ? edite.type : 'Procédure')}>{type}</option
 								>{/each}{/if}</select

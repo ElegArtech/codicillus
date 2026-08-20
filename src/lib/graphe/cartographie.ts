@@ -33,6 +33,11 @@
  * AUCUNE DONNÉE PROPRE (RG-M09-01) : tout vient de `seeds/corpus.ts` —
  * `RELATIONS`, `RELATIONS_TECHNIQUES`, `TYPES_RELATION` et le jeu de notes que
  * le mode démo passe en propriété.
+ *
+ * LES DEUX TABLEAUX SONT DES PARAMÈTRES, DE DÉFAUT LA CONSTANTE (T-043). La
+ * base porte les relations réellement ; une vue qui les reçoit d'un chargeur
+ * de route les fait descendre ici. Le défaut garde le comportement d'avant à
+ * l'octet : aucun appel existant ne change, et le banc ne bouge pas d'un pixel.
  */
 import { RELATIONS, RELATIONS_TECHNIQUES, type Note, type Relation } from '../../../seeds/corpus';
 
@@ -179,8 +184,13 @@ export interface Graphe {
  *
  * @param notes le jeu de semence de la vue, `corpusPourVue()`
  * @param perimetre `global`, `univers` ou `domaine`
+ * @param relations les relations du corpus. Défaut : celles du jeu de semence.
  */
-export function sousGraphe(notes: readonly Note[], perimetre: Perimetre): Graphe {
+export function sousGraphe(
+	notes: readonly Note[],
+	perimetre: Perimetre,
+	relations: readonly Relation[] = RELATIONS
+): Graphe {
 	const dedans = (n: Note): boolean => {
 		if (perimetre.type === 'global') return true;
 		if (perimetre.type === 'univers') return n.univers === perimetre.nom;
@@ -190,7 +200,7 @@ export function sousGraphe(notes: readonly Note[], perimetre: Perimetre): Graphe
 	const noeuds = new Map<string, NoeudDeGraphe>();
 	for (const n of notes) if (dedans(n)) noeuds.set(n.id, { id: n.id, note: n, fantome: false });
 
-	const aretes = RELATIONS.filter((r) => noeuds.has(r.de) || noeuds.has(r.vers));
+	const aretes = relations.filter((r) => noeuds.has(r.de) || noeuds.has(r.vers));
 	for (const r of aretes) {
 		for (const id of [r.de, r.vers]) {
 			if (noeuds.has(id)) continue;
@@ -233,14 +243,17 @@ export function degres(g: Graphe): ReadonlyMap<string, number> {
  * documentaires sont écartées, sans quoi toute fiche simplement documentée
  * passerait pour un point de rupture.
  */
-export function pointsArticulation(g: Graphe): ReadonlySet<string> {
+export function pointsArticulation(
+	g: Graphe,
+	techniques: readonly Relation['type'][] = RELATIONS_TECHNIQUES
+): ReadonlySet<string> {
 	const voisins = new Map<string, string[]>();
 	for (const n of g.noeuds) voisins.set(n.id, []);
 	for (const r of g.aretes) {
 		const de = voisins.get(r.de);
 		const vers = voisins.get(r.vers);
 		if (!de || !vers) continue;
-		if (!estTechnique(r.type)) continue;
+		if (!estTechnique(r.type, techniques)) continue;
 		de.push(r.vers);
 		vers.push(r.de);
 	}
@@ -283,18 +296,26 @@ export interface RelationOrientee {
 	readonly type: Relation['type'];
 }
 
-/** Les relations touchant un nœud, dans l'ordre de `RELATIONS`. */
-export function relationsDe(id: string): RelationOrientee[] {
-	return RELATIONS.filter((r) => r.de === id || r.vers === id).map((r) => ({
-		autre: r.de === id ? r.vers : r.de,
-		sortant: r.de === id,
-		type: r.type
-	}));
+/** Les relations touchant un nœud, dans l'ordre où elles sont données. */
+export function relationsDe(
+	id: string,
+	relations: readonly Relation[] = RELATIONS
+): RelationOrientee[] {
+	return relations
+		.filter((r) => r.de === id || r.vers === id)
+		.map((r) => ({
+			autre: r.de === id ? r.vers : r.de,
+			sortant: r.de === id,
+			type: r.type
+		}));
 }
 
 /** Une relation porte-t-elle une dépendance technique ? */
-export function estTechnique(type: Relation['type']): boolean {
-	return (RELATIONS_TECHNIQUES as readonly string[]).includes(type);
+export function estTechnique(
+	type: Relation['type'],
+	techniques: readonly Relation['type'][] = RELATIONS_TECHNIQUES
+): boolean {
+	return (techniques as readonly string[]).includes(type);
 }
 
 /** Le titre d'un nœud, le graphe d'abord, le corpus ensuite — comme au gel. */

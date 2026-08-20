@@ -65,21 +65,82 @@
 		REVISIONS,
 		UNIVERS,
 		type CleDeModule,
+		type DemandeDeRevision,
+		type DetailDeDomaine,
 		type Domaine,
-		type Note
+		type EtatDInstance,
+		type IdentifiantNote,
+		type Module,
+		type NomDeDomaine,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { segmentsDeDossier } from '$lib/rangement/adresses';
 
+	/**
+	 * LES NEUF SOURCES QUI NE VENAIENT DE NULLE PART — T-041.
+	 *
+	 * Jusqu'ici les constantes du jeu de semence étaient lues AU NIVEAU DU
+	 * MODULE : un chargeur de route pouvait passer `notes`, et rien d'autre
+	 * n'atteignait l'écran — « En attente de révision » servait le même chiffre à
+	 * qui que ce soit. Elles sont désormais des PROPRIÉTÉS OPTIONNELLES.
+	 *
+	 * LE DÉFAUT EST LA CONSTANTE, ET C'EST CE QUI TIENT LE GEL. Le mode démo ne
+	 * passe que `etat`, `vecteur` et `notes` : la vue reçoit exactement ce qu'elle
+	 * recevait, et les 32 couples du banc ne bougent pas. Ce lot rend le passage
+	 * POSSIBLE ; il ne décide pas de ce qui sera passé.
+	 *
+	 * `detailDomaines` ET `modules` SONT CEUX QUI RENDENT `P-04` EFFECTIVE. La
+	 * section « Accès » sortait de la constante et COÏNCIDAIT avec la table
+	 * `modules_de_domaine` sans en être PILOTÉE (mesuré par T-032).
+	 *
+	 * LES DEUX TABLES DE MESURE SONT PARTIELLES, ET C'EST DÉLIBÉRÉ. Aucune table
+	 * ne porte `MESURES_7J` ni `MODIFICATIONS`. Exiger la forme complète
+	 * interdirait au chargeur de passer un ensemble vide — c'est-à-dire l'état
+	 * neutre explicite que P-02 réclame quand la mesure est indisponible. Le
+	 * défaut, lui, reste la constante entière.
+	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — domaine × profil × état. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-11')`, variante « lecture ». */
 		notes: readonly Note[];
+		/** Les univers déclarés. Absents, ceux du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines accessibles. Absents, ceux du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur connecté. Absent, celui du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance — version, synchronisation. Absent, celui du jeu. */
+		instance?: EtatDInstance;
+		/** Consultations des sept derniers jours, par note. */
+		mesures7j?: Partial<Record<IdentifiantNote, number>>;
+		/** Ancienneté de modification, en jours, par note. */
+		modifications?: Partial<Record<IdentifiantNote, number>>;
+		/** Les demandes de révision. Absentes, celles du jeu de semence. */
+		revisions?: readonly DemandeDeRevision[];
+		/** Description et modules activés, par domaine — porté par la base. */
+		detailDomaines?: Record<NomDeDomaine, DetailDeDomaine>;
+		/** Le catalogue des modules — nom et sous-titre de chaque clé. */
+		modules?: Record<CleDeModule, Module>;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte: moi = MOI,
+		instance = INSTANCE,
+		mesures7j = MESURES_7J,
+		modifications = MODIFICATIONS,
+		revisions: demandesDeRevision = REVISIONS,
+		detailDomaines = DETAIL_DOMAINES,
+		modules = MODULES
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const profil = $derived(String(reglage['role'] ?? 'referent'));
@@ -100,7 +161,7 @@
 	const vide = $derived(reglage['etat'] === 'vide');
 
 	const courant = $derived(
-		(DOMAINES.find((d) => d.nom === reglage['dom']) ?? DOMAINES[0]) as Domaine
+		(domaines.find((d) => d.nom === reglage['dom']) ?? domaines[0]) as Domaine
 	);
 
 	/**
@@ -137,7 +198,7 @@
 	const railCourant = $derived(
 		courant.nom === DOMAINE_INITIAL ? [courant.nom] : [DOMAINE_INITIAL, courant.nom]
 	);
-	const detail = $derived(DETAIL_DOMAINES[courant.nom]);
+	const detail = $derived(detailDomaines[courant.nom]);
 	const notesDuDomaine = $derived(vide ? [] : corpus.filter((n) => n.domaine === courant.nom));
 
 	/* ── Fraîcheur ──────────────────────────────────────────────────────────
@@ -191,7 +252,7 @@
 	/* ── Santé du domaine ───────────────────────────────────────────────────── */
 	const jamais = $derived(notesDuDomaine.filter((n) => n.revise === null).length);
 	const revisions = $derived(
-		REVISIONS.filter((r) => notesDuDomaine.some((n) => n.id === r.id)).length
+		demandesDeRevision.filter((r) => notesDuDomaine.some((n) => n.id === r.id)).length
 	);
 	const brouillons = $derived(notesDuDomaine.filter((n) => n.brouillon).length);
 
@@ -233,18 +294,16 @@
 
 	/* ── Palmarès ───────────────────────────────────────────────────────────── */
 	const populaires = $derived(
-		[...notesDuDomaine]
-			.sort((a, b) => (MESURES_7J[b.id] ?? 0) - (MESURES_7J[a.id] ?? 0))
-			.slice(0, 5)
+		[...notesDuDomaine].sort((a, b) => (mesures7j[b.id] ?? 0) - (mesures7j[a.id] ?? 0)).slice(0, 5)
 	);
 	const recentes = $derived(
 		[...notesDuDomaine]
-			.sort((a, b) => (MODIFICATIONS[a.id] ?? 999) - (MODIFICATIONS[b.id] ?? 999))
+			.sort((a, b) => (modifications[a.id] ?? 999) - (modifications[b.id] ?? 999))
 			.slice(0, 5)
 	);
 
 	function ancienneteDeModification(n: Note): string {
-		const j = MODIFICATIONS[n.id];
+		const j = modifications[n.id];
 		if (typeof j !== 'number') return '—';
 		return j <= 1 ? 'hier' : `il y a ${j} j`;
 	}
@@ -321,16 +380,16 @@
 	role={profil === 'admin' ? 'admin' : 'referent'}
 	droits={profil === 'lecteur' ? 'lecture' : 'ecriture'}
 	donnees={{ 'data-etat': vide ? 'vide' : 'peuple' }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: moi.nom,
+		initiales: moi.initiales,
+		role: moi.role,
+		domaine: moi.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<header class="couv" id="couv" style="--teinte:{courant.couleur}">
@@ -501,10 +560,10 @@
 									>{/if}</span
 							><span class="module__corps"
 								><span class="module__nom"
-									>{MODULES[m].nom}{#if typeof comptes[m] === 'number'}<span class="module__n"
+									>{modules[m].nom}{#if typeof comptes[m] === 'number'}<span class="module__n"
 											>{comptes[m]}</span
 										>{/if}</span
-								><span class="module__sous">{MODULES[m].sous}</span></span
+								><span class="module__sous">{modules[m].sous}</span></span
 							></button
 						>
 					{/each}
@@ -521,7 +580,7 @@
 							{#if !vide}{#each populaires as n, rang (n.id)}{@render ligneNote(
 										n,
 										rang + 1,
-										`${MESURES_7J[n.id] ?? 0} vues`
+										`${mesures7j[n.id] ?? 0} vues`
 									)}{/each}{/if}
 						</div>
 					</section>

@@ -34,7 +34,11 @@
 	 * `seeds/corpus.ts`, exactement ce que le gel lit dans
 	 * `window.CONTENU_VERSIONS` et `window.versionsDe()`. Aucun compte n'est
 	 * écrit : « +11 lignes », « −3 lignes » et « 6 blocs touchés sur 15 » sont
-	 * comptés sur l'alignement.
+	 * comptés sur l'alignement. Les deux tableaux sont désormais REÇUS EN
+	 * PROPRIÉTÉ, de défaut la constante du jeu (T-043) : `T-030` a posé la table
+	 * des versions, la semence la laisse vide, et la forme de `CONTENU_VERSIONS`
+	 * n'est transposée par aucun lot à ce jour — ce lot rend la vue CAPABLE sans
+	 * rien transposer.
 	 *
 	 * LES BLOCS COMMUNS SONT ALIGNÉS HORIZONTALEMENT — c'est la rangée à deux
 	 * cellules de `.visuel`, et c'est ce que `C-05` et `M07.3` demandent. LE
@@ -92,19 +96,64 @@
 		VERSIONS,
 		noteParIdentifiant,
 		type BlocDeContenu,
+		type Domaine,
+		type EtatDInstance,
+		type IdentifiantNote,
 		type Note,
+		type Univers,
+		type UtilisateurCourant,
 		type Version
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 
+	/**
+	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
+	 * DÉFAUT EST LA CONSTANTE DU JEU DE SEMENCE.
+	 *
+	 * La vue devient capable de recevoir ce qu'un chargeur de route lit en base
+	 * — univers, domaines, compte courant, état de l'instance — sans qu'aucun
+	 * rendu ne change tant que rien ne lui est passé : le mode de conception ne
+	 * passe que `vecteur` et `notes`, la vue reçoit donc exactement ce qu'elle
+	 * recevait, et le banc de comparaison ne bouge pas d'un pixel.
+	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — deux contrôles de planche. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-16')`, variante « lecture ». */
 		notes: readonly Note[];
+		/** Les univers du produit. Défaut : ceux du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines du produit. Défaut : ceux du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Défaut : celui du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
+		instance?: EtatDInstance;
+		/**
+		 * L'historique, par note. Défaut : celui du jeu de semence.
+		 *
+		 * `T-030` a posé la table des versions ; la semence la laisse VIDE. La vue
+		 * est rendue capable de recevoir un historique réel, elle n'en transpose
+		 * aucun : tant que rien ne lui est passé, elle lit le jeu de semence.
+		 */
+		versions?: Partial<Record<IdentifiantNote, readonly Version[]>>;
+		/**
+		 * Le contenu de chaque version, par note puis par numéro. Défaut : celui du
+		 * jeu de semence, dont la forme n'est transposée par aucun lot à ce jour.
+		 */
+		contenuVersions?: Partial<Record<IdentifiantNote, Record<string, readonly BlocDeContenu[]>>>;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		versions: historique = VERSIONS,
+		contenuVersions = CONTENU_VERSIONS
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 
@@ -124,7 +173,7 @@
 	const tout = $derived(reglage['c-tout'] === true);
 
 	/** Les métadonnées d'une version — `META`, `V-16:1994`. */
-	const versions = $derived<readonly Version[]>(VERSIONS[ID] ?? []);
+	const versions = $derived<readonly Version[]>(historique[ID] ?? []);
 	function meta(n: number): Version | undefined {
 		return versions.find((v) => v.n === n);
 	}
@@ -135,7 +184,7 @@
 	}
 
 	/** Les trois états de contenu de la note — `CONTENUS`, `V-16:1993`. */
-	const CONTENUS = CONTENU_VERSIONS[ID] ?? {};
+	const CONTENUS = $derived(contenuVersions[ID] ?? {});
 	function contenu(n: number): readonly BlocDeContenu[] {
 		return CONTENUS[String(n)] ?? [];
 	}
@@ -433,16 +482,16 @@
 	]}
 	courant={['Infrastructure', 'Exploitation', 'Sauvegardes']}
 	donnees={{ 'data-mode': 'texte' }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<header class="tete-compare">

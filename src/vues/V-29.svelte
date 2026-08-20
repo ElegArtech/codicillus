@@ -67,8 +67,12 @@
 		TYPES_FICHE,
 		UNIVERS,
 		type ChampDeFiche,
+		type Domaine,
+		type EtatDInstance,
 		type Note,
-		type TypeDeFiche
+		type TypeDeFiche,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
 
@@ -77,9 +81,27 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-29')`. */
 		notes: readonly Note[];
+		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
+		univers?: readonly Univers[];
+		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
+		instance?: EtatDInstance;
+		/** Les types de fiche et leurs champs. Absente, la constante du jeu. */
+		typesFiche?: Record<TypeDeFiche, readonly ChampDeFiche[]>;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		typesFiche = TYPES_FICHE
+	}: Proprietes = $props();
 
 	/* ── Les huit types de valeur du gel (`V-29:2909`) ─────────────────────
 	   `faux` est le texte du faux champ de l'aperçu ; « Oui ou non » n'en a
@@ -206,22 +228,22 @@
 		return 'texte';
 	}
 
-	const types: readonly TypeDeFicheRendu[] = (
-		Object.keys(TYPES_FICHE) as readonly TypeDeFiche[]
-	).map((nom) => ({
-		nom,
-		description: DESCRIPTIONS[nom] ?? '',
-		icone: ICONE_PAR_TYPE[nom] ?? 'serveur',
-		props: TYPES_FICHE[nom].map((p) => ({
-			cle: p.cle,
-			libelle: p.nom,
-			type: typeDeValeur(p),
-			obligatoire: PROPRIETES_OBLIGATOIRES.includes(p.cle),
-			defaut: '',
-			aide: '',
-			valeurs: [...(p.valeurs ?? [])]
+	const types: readonly TypeDeFicheRendu[] = $derived(
+		(Object.keys(typesFiche) as readonly TypeDeFiche[]).map((nom) => ({
+			nom,
+			description: DESCRIPTIONS[nom] ?? '',
+			icone: ICONE_PAR_TYPE[nom] ?? 'serveur',
+			props: typesFiche[nom].map((p) => ({
+				cle: p.cle,
+				libelle: p.nom,
+				type: typeDeValeur(p),
+				obligatoire: PROPRIETES_OBLIGATOIRES.includes(p.cle),
+				defaut: '',
+				aide: '',
+				valeurs: [...(p.valeurs ?? [])]
+			}))
 		}))
-	}));
+	);
 
 	/** Les notes qui portent ce type de fiche — calculé, jamais écrit. */
 	function utilisation(nom: string): readonly Note[] {
@@ -288,11 +310,16 @@
 	idContenu="travail"
 	fil={filDeConsole(`Types de ${motFichePlurielMinuscule}`)}
 	donnees={{ 'data-form': panneauOuvert ? 'ouvert' : 'ferme' }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
-	compte={{ nom: MOI.nom, initiales: MOI.initiales, role: MOI.role, domaine: MOI.domaine }}
-	version={INSTANCE.version}
+	compte={{
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
+	}}
+	version={instance.version}
 >
 	{#snippet avantContenu()}
 		<NavigationConsole courante="fiches" />

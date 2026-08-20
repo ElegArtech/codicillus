@@ -79,7 +79,7 @@
 	 * reproduits figurent tous à l'ensemble clos du gel de V-36 (ARB-016,
 	 * `node verif/styles-en-ligne.mjs V-36`).
 	 */
-	import { CORPUS, DATE_REFERENCE, DOMAINES, type Note } from '../../seeds/corpus';
+	import { CORPUS, DATE_REFERENCE, DOMAINES, type Domaine, type Note } from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
@@ -91,9 +91,15 @@
 		 * et `etat` comme `vecteur` ne lui apprendraient rien.
 		 */
 		notes: readonly Note[];
+		/**
+		 * LES DOMAINES DE L'INSTANCE, EN PROPRIÉTÉ OPTIONNELLE (T-045). Absente,
+		 * `DOMAINES` du jeu de semence s'applique — c'est ce que le mode démo
+		 * passe, et c'est ce qui garantit que le banc ne bouge pas d'un pixel.
+		 */
+		domaines?: readonly Domaine[];
 	}
 
-	const { notes }: Proprietes = $props();
+	const { notes, domaines = DOMAINES }: Proprietes = $props();
 
 	/* ── Le calque des fabriques du gel ──────────────────────────────────────
 	   `ECART-020` É-3 : un gel qui produit une valeur par une fabrique n'admet
@@ -173,7 +179,7 @@
 	   au gel. `notes` reste la propriété du contrat de rendu ; les agrégats
 	   d'export portent, eux, sur le corpus entier, comme au gel — la vue de
 	   console administre l'instance, pas une variante. */
-	const domaineCourant = DOMAINES[0]!.nom;
+	const domaineCourant = $derived(domaines[0]!.nom);
 	const apercu = $derived(apercuExport(domaineCourant));
 
 	/** Les cinq lignes du récapitulatif, dans l'ordre du gel (`V-36:2894`). */
@@ -236,7 +242,7 @@
 					<label class="champ__label" for="domaine">Domaine à exporter</label>
 					<!-- prettier-ignore -->
 					<select class="selecteur" id="domaine"
-						>{#each DOMAINES as d (d.nom)}<option value={d.nom}>{d.univers} › {d.nom} — {notesDuDomaine(d.nom).length} notes</option>{/each}</select
+						>{#each domaines as d (d.nom)}<option value={d.nom}>{d.univers} › {d.nom} — {notesDuDomaine(d.nom).length} notes</option>{/each}</select
 					>
 				</div>
 

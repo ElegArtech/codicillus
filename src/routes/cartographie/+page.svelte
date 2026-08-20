@@ -2,35 +2,30 @@
 	/**
 	 * `/cartographie` — V-19 Cartographie.
 	 *
-	 * LOT T-070, « la liaison ». Cette route existe parce qu'une entrée de
-	 * navigation la nomme : le gel déclare sa destination en `data-vers`
-	 * (« Cartographie — vue V-19 », rail de la coquille), et `docs/routes.md` §3 — qui fait foi sur les chemins — la
-	 * résout en `/cartographie` → V-19.
+	 * Ce fichier ne fait que rendre la vue avec ce que son chargeur a lu en base.
+	 * Le vecteur, les notes et les relations viennent de `+page.server.ts`, qui
+	 * porte le périmètre de droits et l'état de zone. `T-070` l'avait posé sans
+	 * chargeur — « pas de garde de droit, pas de chargeur » —, et il servait le
+	 * jeu de semence à tout connecté ; `T-037` le branche sur la base.
 	 *
-	 * ELLE NE FAIT QUE RENDRE LA VUE, et c'est le périmètre exact du lot : pas
-	 * de chargeur, pas de garde de droit, pas d'authentification, aucune lecture
-	 * des paramètres d'adresse. L'étanchéité (batterie 6) et la résolution des
-	 * droits appartiennent à T-011 et T-012 ; les anticiper ici serait un
-	 * débordement (`docs/dag-phase-1.md` §6).
+	 * `data.relations` N'EST PAS PASSÉE À LA VUE, ET C'EST UN ÉCART DÉCLARÉ.
+	 * `src/vues/V-19.svelte` n'expose que `vecteur` et `notes` ; ses arêtes
+	 * viennent encore de la constante du jeu de semence, par
+	 * `$lib/graphe/cartographie`. Ce lot n'écrit dans aucun fichier de
+	 * `src/vues/` — cinq lots y travaillent en parallèle —, et la propriété
+	 * manquante est remontée plutôt qu'ajoutée.
 	 *
-	 * `vecteur={null}` demande l'état par défaut de la vue. LE BANC NE PASSE
-	 * JAMAIS PAR ICI : il atteint la vue par le mode démo
-	 * (la route de conception du banc), qui rend le composant directement. Rien de ce
-	 * fichier n'entre dans son verdict.
+	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert.
+	 * Elle est identique à l'octet à sa source gelée (P-6.3).
 	 *
-	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
-	 * sert : le mode démo pose lui-même son `<link>`, `+layout.svelte` ne porte
-	 * que le socle. Elle est identique à l'octet à sa source gelée (P-6.3) et
-	 * n'est pas modifiée par cet import.
-	 *
-	 * AUCUN `<svelte:head>` : rien ne déclare de titre de page pour le PRODUIT.
-	 * Les `<title>` des maquettes sont ceux des planches de revue — celui de
-	 * V-07 porte même son numéro de vue —, et en inventer un serait un
-	 * comblement.
+	 * AUCUN titre de page n'est déclaré : les titres des maquettes sont ceux des
+	 * planches de revue, et en inventer un serait un comblement.
 	 */
 	import Vue from '../../vues/V-19.svelte';
 	import '../../vues/V-19.css';
-	import { corpusPourVue } from '../../../seeds/corpus';
+	import type { PageData } from './$types';
+
+	const { data }: { data: PageData } = $props();
 </script>
 
-<Vue vecteur={null} notes={corpusPourVue('V-19')} />
+<Vue vecteur={data.vecteur} notes={data.notes} />

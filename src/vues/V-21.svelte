@@ -60,18 +60,53 @@
 	 * `src/vues/V-21.css`, posé par `node verif/feuilles-de-vue.mjs V-21
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import { DOMAINES, INSTANCE, MOI, UNIVERS, type Note } from '../../seeds/corpus';
+	import {
+		DOMAINES,
+		INSTANCE,
+		MOI,
+		UNIVERS,
+		type Domaine,
+		type EtatDInstance,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
+	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { segmentsDeDossier } from '$lib/rangement/adresses';
 
+	/**
+	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
+	 * DÉFAUT EST LA CONSTANTE DU JEU DE SEMENCE.
+	 *
+	 * La vue devient capable de recevoir ce qu'un chargeur de route lit en base
+	 * — univers, domaines, compte courant, état de l'instance — sans qu'aucun
+	 * rendu ne change tant que rien ne lui est passé : le mode de conception ne
+	 * passe que `vecteur` et `notes`, la vue reçoit donc exactement ce qu'elle
+	 * recevait, et le banc de comparaison ne bouge pas d'un pixel.
+	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — droits de vue × chargement. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-21')`. */
 		notes: readonly Note[];
+		/** Les univers du produit. Défaut : ceux du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines du produit. Défaut : ceux du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Défaut : celui du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
+		instance?: EtatDInstance;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const restreint = $derived(reglage['dv'] === 'restreints');
@@ -82,14 +117,14 @@
 	 * est la destination de repli d'un domaine qui perd son rattachement, et
 	 * aucun domaine ne s'y trouve. Le gel n'en connaît que deux (`V-21:1712`).
 	 */
-	const UNIVERS_PROPOSES = UNIVERS.filter((u) => !u.systeme);
+	const UNIVERS_PROPOSES = $derived(univers.filter((u) => !u.systeme));
 
 	/**
 	 * Les domaines que l'utilisateur a le droit de voir. « Un domaine interdit
 	 * n'apparaît pas — il n'est pas grisé, il n'existe pas pour cette vue. »
 	 */
 	const domainesVisibles = $derived(
-		restreint ? DOMAINES.filter((d) => d.nom !== 'Applications') : DOMAINES
+		restreint ? domaines.filter((d) => d.nom !== 'Applications') : domaines
 	);
 
 	/* ── L'arbre ────────────────────────────────────────────────────────────
@@ -335,16 +370,16 @@
 	libelleEvitement="Aller à l'arborescence"
 	fil={['Accueil', 'Carte mentale']}
 	donnees={{ 'data-affichage': 'arbre', 'data-droits-vue': restreint ? 'restreints' : 'complets' }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<div class="controles">

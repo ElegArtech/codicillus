@@ -89,17 +89,73 @@
 	import ZoneDeRedaction from '$lib/edition/ZoneDeRedaction.svelte';
 	import CorpsOperationnel from '$lib/lecture/CorpsOperationnel.svelte';
 	import CorpsReference from '$lib/lecture/CorpsReference.svelte';
-	import { NOTE, RANGEMENT } from '$lib/lecture/note-de-demonstration';
-	import { DOMAINES, INSTANCE, MOI, UNIVERS, type Note } from '../../seeds/corpus';
+	import { NOTE, rangementDe, type NoteAffichee } from '$lib/lecture/note-de-demonstration';
+	import {
+		DOMAINES,
+		INSTANCE,
+		MOI,
+		UNIVERS,
+		type Domaine,
+		type EtatDInstance,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
+	} from '../../seeds/corpus';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — deux contrôles de planche. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-18')`, variante « lecture ». */
 		notes: readonly Note[];
+		/**
+		 * LES QUATRE PROPRIÉTÉS DE CONTEXTE — T-042, et elles sont OPTIONNELLES.
+		 *
+		 * Avant ce lot, cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et
+		 * `INSTANCE` au niveau du module : un chargeur de route ne pouvait rien
+		 * y substituer, et l'écran servait le contexte du jeu de semence quelle
+		 * que fût l'identité de l'appelant.
+		 *
+		 * LE DÉFAUT EST LA CONSTANTE DU JEU, et c'est ce qui garantit que le banc
+		 * ne bouge pas : le mode de conception ne passe que `vecteur` et `notes`,
+		 * la vue reçoit donc exactement ce qu'elle avait.
+		 */
+		univers?: readonly Univers[];
+		domaines?: readonly Domaine[];
+		compte?: UtilisateurCourant;
+		instance?: EtatDInstance;
+		/**
+		 * LA NOTE ÉDITÉE ET SES DEUX CORPS RENDUS — T-042.
+		 *
+		 * L'éditeur de l'Opérationnel montre TROIS choses de la note : son
+		 * identité (fil d'Ariane, nom du registre édité, métadonnées figées), le
+		 * registre Référence en panneau de rappel, et le registre Opérationnel
+		 * dans la zone de rédaction. Les trois venaient de la transcription
+		 * gelée de `n-restaurer-pg` ; elles viennent d'elle quand elle est
+		 * fournie.
+		 *
+		 * **CE LOT N'ÉCRIT AUCUNE SAISIE.** La zone de rédaction reçoit le corps
+		 * rendu, elle ne le modifie pas : l'édition est un comportement
+		 * (ARB-011) et appartient au lot d'édition.
+		 *
+		 * ABSENTE, LA TRANSCRIPTION FIGÉE, à l'identique — les couples de la vue
+		 * ne bougent pas.
+		 */
+		affichee?: NoteAffichee;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		affichee
+	}: Proprietes = $props();
+
+	/** La note éditée — celle qu'on modifie, ou celle du gel à défaut. */
+	const note = $derived(affichee?.note ?? NOTE);
+	const rangement = $derived(rangementDe(note));
 
 	const reglage = $derived(vecteur ?? {});
 
@@ -123,8 +179,23 @@
 	LE CORPS OPÉRATIONNEL DANS LA ZONE DE RÉDACTION — la seconde des deux copies
 	que le gel rend (`redaction.innerHTML = OPERATIONNEL`, `V-18:3281`). Le même
 	composant que la source masquée du panneau : un seul markup, deux places.
+
+	T-042 — SANS NOTE ÉDITÉE, LA TRANSCRIPTION FIGÉE ; avec, le corps
+	Opérationnel rendu par l'implémentation unique de `rendreDocument`
+	(ADR-004). Le bloc est protégé du formateur : un blanc inséré entre
+	l'enveloppe et son contenu se relit dans le nom accessible du niveau 1
+	(CLAUDE.md §6, P-6), et la forme exacte de la directive ne se cite jamais
+	dans un commentaire (P-9).
+
+	L'INSERTION DE BALISAGE EST ADMISE PARCE QUE LE CONTENU EST MAÎTRISÉ : c'est
+	la sortie de `rendreDocument`, dont l'en-tête énonce la contrepartie du refus
+	d'ADR-003 de stocker du HTML libre — « le texte d'un document est du TEXTE :
+	il ne devient jamais du balisage ». Même jurisprudence que `V-31.svelte`.
 -->
-{#snippet corpsOperationnelRedige()}<CorpsOperationnel />{/snippet}
+<!-- eslint-disable svelte/no-at-html-tags -- sortie de `rendreDocument`, texte échappé par `echapper()` (ADR-003) -->
+<!-- prettier-ignore -->
+{#snippet corpsOperationnelRedige()}{#if affichee}{@html affichee.operationnel ?? ''}{:else}<CorpsOperationnel />{/if}{/snippet}
+<!-- eslint-enable svelte/no-at-html-tags -->
 
 <!--
 	Le contenu du bouton principal de la barre d'état. Il vit ICI parce qu'il
@@ -150,26 +221,18 @@
 		'data-reference': reference,
 		'data-cas': cas
 	}}
-	fil={[
-		'Accueil',
-		'Production',
-		'Infrastructure',
-		'Exploitation',
-		'Sauvegardes',
-		NOTE.titre,
-		'Opérationnel'
-	]}
-	courant={['Infrastructure', 'Exploitation', 'Sauvegardes']}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	fil={['Accueil', ...rangement, note.titre, 'Opérationnel']}
+	courant={rangement.slice(1)}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<div class="colonne-redaction">
@@ -180,7 +243,7 @@
 					<div class="registre-actif__txt">
 						<div class="registre-actif__label">Vous modifiez le registre</div>
 						<div class="registre-actif__nom">Opérationnel</div>
-						<div class="registre-actif__note" id="nom-note">{NOTE.titre}</div>
+						<div class="registre-actif__note" id="nom-note">{note.titre}</div>
 					</div>
 				</div>
 				<button class="btn" id="vers-reference">
@@ -476,10 +539,14 @@
 				<div class="ref-panneau__corps" id="ref-corps">
 					<!-- ============ NOTE DE DÉMONSTRATION — corps rédigé, deux registres ============ -->
 					<!-- ================= CORPS — REGISTRE RÉFÉRENCE ================= -->
-					<div class="prose" id="corps-reference"><CorpsReference /></div>
+					<!-- eslint-disable svelte/no-at-html-tags -- sortie de `rendreDocument`, texte échappé (ADR-003) -->
+					<!-- prettier-ignore -->
+					<div class="prose" id="corps-reference">{#if affichee}{@html affichee.reference ?? ''}{:else}<CorpsReference />{/if}</div>
 
 					<!-- ================ CORPS — REGISTRE OPÉRATIONNEL ================ -->
-					<div class="prose" id="corps-operationnel" hidden><CorpsOperationnel /></div>
+					<!-- prettier-ignore -->
+					<div class="prose" id="corps-operationnel" hidden>{#if affichee}{@html affichee.operationnel ?? ''}{:else}<CorpsOperationnel />{/if}</div>
+					<!-- eslint-enable svelte/no-at-html-tags -->
 				</div>
 			</section>
 
@@ -488,33 +555,33 @@
 				<div class="panneau__tete"><span class="etiq">Métadonnées de la note</span></div>
 				<div class="panneau__corps meta-figee" id="meta-figee">
 					<div class="mf">
-						<span class="mf__cle">Titre</span><span class="mf__val">{NOTE.titre}</span>
+						<span class="mf__cle">Titre</span><span class="mf__val">{note.titre}</span>
 					</div>
 					<div class="mf">
 						<span class="mf__cle">Type</span><span class="mf__val"
-							><span class="past past--type">{NOTE.type}</span></span
+							><span class="past past--type">{note.type}</span></span
 						>
 					</div>
 					<div class="mf">
 						<span class="mf__cle">Rangement</span><span class="mf__val"
-							>{RANGEMENT.join(' › ')}</span
+							>{rangement.join(' › ')}</span
 						>
 					</div>
 					<div class="mf">
 						<span class="mf__cle">Étiquettes</span><span class="mf__val"
 							><span
-								>{#each NOTE.etiquettes as etiquette (etiquette)}<span class="past past--etiquette"
+								>{#each note.etiquettes as etiquette (etiquette)}<span class="past past--etiquette"
 										>{etiquette}</span
 									>{/each}</span
 							></span
 						>
 					</div>
 					<div class="mf">
-						<span class="mf__cle">Visibilité</span><span class="mf__val">{NOTE.visibilite}</span>
+						<span class="mf__cle">Visibilité</span><span class="mf__val">{note.visibilite}</span>
 					</div>
 					<div class="mf">
 						<span class="mf__cle">Statut</span><span class="mf__val"
-							>{NOTE.brouillon ? 'Brouillon' : 'Publiée'}</span
+							>{note.brouillon ? 'Brouillon' : 'Publiée'}</span
 						>
 					</div>
 					<div class="meta-figee__note">
