@@ -103,6 +103,12 @@ const BATTERIES = [
 		pourquoi_ici: 'statique, et elle surveille la mémoire du dépôt'
 	},
 	{
+		nom: 'verif:couverture',
+		prouve:
+			'quelle règle du cahier n\u2019est portée par aucun code, et laquelle par aucun contrôle',
+		pourquoi_ici: 'statique — et elle est la seule à mesurer une ABSENCE'
+	},
+	{
 		nom: 'test:unit',
 		prouve: 'les comportements locaux, droits et fraîcheur compris',
 		pourquoi_ici: 'sans base'
