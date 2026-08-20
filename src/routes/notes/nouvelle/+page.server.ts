@@ -25,36 +25,56 @@
  * Écart déclaré, chiffré au rapport.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * L'ACTION EXISTE, ELLE REFUSE AVANT D'ÉCRIRE, ET ELLE N'ÉCRIT PAS
+ * L'ACTION ÉCRIT — LE 501 EST LEVÉ, ET C'EST `ARB-062` QUI L'A LEVÉ
  *
- * La création d'une note bute sur la même valeur manquante que la création d'un
- * signet, et le lot qui l'a rencontrée l'a déjà déclarée
- * (`…/signets/nouveau/+page.server.ts`) : L'IDENTIFIANT LISIBLE.
- * `RG-M12-11` — « les identifiants lisibles sont rendus uniques automatiquement
- * en cas de collision, sans écraser de note existante » — impose le RÉSULTAT et
- * ne donne AUCUNE forme : ni suffixe, ni compteur, ni séparateur. Or
- * l'identifiant est dans l'ADRESSE (`RG-M03-03`, stable dans le temps) : en
- * choisir la forme ici serait décider à la place du commanditaire d'une chaîne
- * que l'utilisateur verra, qu'il partagera, et qu'on ne pourra plus changer.
- * `src/lib/rangement/adresses.ts` le dit de lui-même : sa dérivation « n'est
- * pas la génération d'identifiant du produit ».
+ * Cette section a longtemps dit pourquoi l'action ne pouvait PAS écrire : la
+ * création d'une note butait sur `RG-M12-11`, qui impose des identifiants
+ * lisibles « rendus uniques automatiquement en cas de collision » et n'en donne
+ * AUCUNE forme — ni suffixe, ni compteur, ni séparateur. L'identifiant étant
+ * dans l'ADRESSE (`RG-M03-03`, stable dans le temps), en choisir la forme en
+ * cours d'exécution aurait été décider à la place du commanditaire d'une chaîne
+ * que l'utilisateur voit, partage, et qu'on ne peut plus changer.
  *
- * S'y ajoute que le formulaire gelé ne porte NI `method`, NI `action`, NI le
- * moindre attribut de nom sur ses sept champs (V-17:1596-1665, relevé champ par
- * champ) : aucune soumission ne peut l'atteindre. C'est la situation qu'ont
- * connue `POST /connexion` en `T-012` et la création de signet — l'action
- * existe, son refus est juste, et elle attend le lot qui reliera le formulaire.
+ * `ARB-062` a tranché la forme — `n-` + le slug du titre tronqué à 48, `-2`,
+ * `-3` en cas de collision, unicité arbitrée par la contrainte de base — et le
+ * vide n'existe plus. C'est le guichet du protocole d'écart qui a fonctionné,
+ * pas un implémenteur qui a comblé.
  *
- * L'appelant qui a le droit reçoit donc **501**, qui dit « pas implémenté » sans
- * rien inventer ; celui qui ne l'a pas reçoit **404**, comme une adresse qui
- * n'existe pas. La différence est légitime : à qui a le droit, la ressource
- * n'est pas cachée.
+ * L'ORDRE DES PORTES EST CELUI DE `T-079` §5, ET IL N'EST PAS NÉGOCIABLE :
+ *
+ *   1. le DROIT d'écrire quelque part — `resoudreLaCreationDeNote()`, la même
+ *      résolution que le chargeur, AVANT toute lecture du corps soumis ;
+ *   2. la CIBLE, puis le DROIT SUR CE DOSSIER — `peutEcrireSurLeDossier()`. Un
+ *      rédacteur d'un domaine ne crée pas dans un autre, et le refus est le
+ *      MÊME OCTET que celui de la porte 1 : `404 MESSAGE_INTROUVABLE` ;
+ *   3. la FORME — champs manquants en `400`, Markdown illisible en `422`
+ *      portant ses manquements, comme le fait déjà `/notes/{id}/modifier` ;
+ *   4. l'ÉCRITURE, une transaction par essai d'identifiant ;
+ *   5. l'INDEX après la transaction, jamais dedans (`ARB-060`) ;
+ *   6. `303` vers `/notes/{identifiant}` — un POST ne rend pas une page.
+ *
+ * POURQUOI LA CIBLE SE RÉSOUT AVANT QUE LA FORME SOIT JUGÉE. Il faut connaître
+ * le dossier pour savoir si l'appelant a le droit d'y écrire, donc le lire du
+ * formulaire — mais rien de plus n'est lu : le CORPS n'est ni analysé ni même
+ * regardé tant que les deux portes de droit ne sont pas franchies. Un appelant
+ * sans droit ne fait donc rien travailler d'autre qu'une résolution de nom.
+ *
+ * CE QUE LE FORMULAIRE GELÉ N'ATTEINT TOUJOURS PAS. V-17 ne porte ni `method`,
+ * ni `action`, ni attribut de nom sur ses champs (V-17:1596-1665) : la
+ * soumission est composée par la ROUTE, jamais par la vue — `ARB-063`, et c'est
+ * un autre lot qui l'écrit dans `+page.svelte`. L'action, elle, est atteignable
+ * par un `POST` en `application/x-www-form-urlencoded` dès aujourd'hui.
  */
-import { error } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { resoudreLaCreationDeNote } from '$lib/donnees/edition';
+import { DocumentInvalide } from '$lib/contenu/document';
+import { MarkdownInvalide } from '$lib/contenu/markdown';
+import { creerUneNote, lireLaSaisie, resoudreLaCible } from '$lib/donnees/creation';
+import { peutEcrireSurLeDossier, resoudreLaCreationDeNote } from '$lib/donnees/edition';
 import { lireSeuils } from '$lib/donnees/lecture';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
+import { adresseDeNote } from '$lib/rangement/adresses';
+import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
 
 /** L'instant de référence est pris ICI, une fois : voir `/notes/{identifiant}`. */
@@ -90,18 +110,56 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ locals }) => {
+	default: async ({ locals, request }) => {
 		const { base, contexte: lecture } = await contexte();
-		/* Le refus est le MÊME que celui du chargeur, et il vient du même appel :
-		   il n'existe pas une règle de droit pour lire et une autre pour écrire. */
+		/* PORTE 1 — le refus est le MÊME que celui du chargeur, et il vient du même
+		   appel : il n'existe pas une règle de droit pour lire et une autre pour
+		   écrire. Rien du corps soumis n'a encore été lu. */
 		const acces = await resoudreLaCreationDeNote(base, locals.identite, lecture);
 		if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
-		error(
-			501,
-			"la création d'une note n'est pas implémentée : RG-M12-11 impose un identifiant " +
-				'lisible rendu unique automatiquement et n’en donne aucune forme, et cet identifiant ' +
-				'est dans l’adresse (RG-M03-03)'
-		);
+		const lue = lireLaSaisie(await request.formData());
+		if (!lue.ok) return fail(400, { motif: lue.motif });
+
+		/* PORTE 2 — la cible, puis le droit SUR ELLE. Les deux refus sont un seul
+		   octet : une cible qui n'existe pas et une cible interdite ne se
+		   distinguent pas (`RG-ACC-04`, `ADR-007`). */
+		const cible = await resoudreLaCible(base, lue.saisie);
+		if (cible === null) error(404, MESSAGE_INTROUVABLE);
+		if (!(await peutEcrireSurLeDossier(base, locals.identite, cible.dossierId))) {
+			error(404, MESSAGE_INTROUVABLE);
+		}
+
+		let identifiant: string;
+		try {
+			const fait = await creerUneNote(base, moteurPartage(), {
+				saisie: lue.saisie,
+				cible,
+				identite: locals.identite,
+				maintenant: lecture.maintenant
+			});
+			if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
+			identifiant = fait.ressource.identifiant;
+		} catch (cause) {
+			/* PORTE 3 — un corps mal formé est REFUSÉ, jamais réparé (`ADR-003`), et
+			   le refus porte ses manquements : c'est ce que l'écran d'erreur de V-17
+			   a vocation à montrer, et c'est la forme que `/notes/{id}/modifier`
+			   emploie déjà. */
+			if (cause instanceof DocumentInvalide) {
+				return fail(422, {
+					motif: 'document refusé',
+					manquements: cause.manquements.map((m) => `${m.chemin} : ${m.message}`)
+				});
+			}
+			if (cause instanceof MarkdownInvalide) {
+				return fail(422, { motif: 'markdown refusé', manquements: [cause.message] });
+			}
+			throw cause;
+		}
+
+		/* La redirection est HORS du `try` : `redirect()` lève, et une redirection
+		   avalée par le filet à erreurs ci-dessus rendrait un 422 sur une note
+		   pourtant écrite. */
+		redirect(303, adresseDeNote(identifiant));
 	}
 };
