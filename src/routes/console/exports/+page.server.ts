@@ -36,7 +36,11 @@
  */
 import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import {
+	contexteDeRequete,
+	lireLesDesignationsDeDomaine,
+	resoudreLaConsole
+} from '$lib/donnees/consoles';
 import type { PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
@@ -49,6 +53,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		notes: acces.ressource.notes,
 		univers: acces.ressource.univers,
 		domaines: acces.ressource.domaines,
-		compte: acces.ressource.compte
+		compte: acces.ressource.compte,
+		designations: await lireLesDesignationsDeDomaine(base)
 	};
 };
