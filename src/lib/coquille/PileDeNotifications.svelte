@@ -131,7 +131,7 @@
 	POURQUOI DANS `<svelte:head>` ET NON DANS LE BLOC `<style>` DU COMPOSANT.
 	Parce qu'un bloc `<style>` de composant N'EST JAMAIS SERVI AU BANC. Le mode
 	démo compose le document lui-même et n'y met que trois feuilles : les polices,
-	`src/socle.css` et `src/vues/V-xx.css` (`verif/banc/mode-demo.mjs`, et
+	`src/socle.css` et `src/vues/V-xx.css` (le module de service du banc, et
 	`verif/references/protocole-app.json` le dit noir sur blanc). Svelte pose bien
 	la classe de portée sur les nœuds — relevé au document servi : le conteneur
 	sort avec sa classe `notifs` suivie de la classe de portée `svelte-xxxxxxx` —

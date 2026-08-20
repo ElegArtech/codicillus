@@ -9,7 +9,7 @@
 	 *
 	 * ONZE ÉTATS SUR QUATRE FENÊTRES — 44 couples. V-14 est l'une des six vues
 	 * contrôlées sur les quatre fenêtres au titre de RG-M18-13 (ARB-009,
-	 * `verif/banc/conditions.mjs`). Les onze clés sont celles de
+	 * le module de conditions du banc). Les onze clés sont celles de
 	 * `verif/scenarios/V-14.json`, réextraites de la planche gelée ; deux d'entre
 	 * elles — `fr-frais` et `etat-nominal` — sont marquées `identiqueA`
 	 * `droits-ecriture`, parce qu'elles ne dévient d'aucun contrôle.
@@ -31,7 +31,7 @@
 	 *
 	 * LE CARTOUCHE NE PASSE PAS PAR `appliquerFraicheur` AU NIVEAU FRAIS, ET
 	 * C'EST MESURABLE. Le mode démo n'émet un `change` que sur les contrôles
-	 * qu'il DÉPLACE (`verif/banc/mode-demo.mjs`, `if (!r.checked)`). `fr=frais`
+	 * qu'il DÉPLACE (le module de service du banc, `if (!r.checked)`). `fr=frais`
 	 * étant la position par défaut de la planche, `appliquerFraicheur("frais")`
 	 * n'est appelée dans AUCUN des onze états : le cartouche frais reste celui
 	 * du BALISAGE, qui écrit « 1er août 2026 » là où la fonction écrirait

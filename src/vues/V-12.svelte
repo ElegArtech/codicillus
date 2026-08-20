@@ -11,7 +11,7 @@
 	 * objet** (E-09) : elle ne doit jamais être implémentée.
 	 *
 	 * LES LIENS RESTENT CEUX DU GEL — `href="#"`. ARB-013 devait permettre
-	 * l'adresse réelle ; mesuré par P-9, le filtre de `verif/banc/capture.mjs`
+	 * l'adresse réelle ; mesuré par P-9, le filtre de le module de capture du banc
 	 * ne retire pas les lignes `/url:` de l'instantané ARIA, et l'instrument est
 	 * en écriture humaine seule. Le constat est reconduit ici, pas rouvert.
 	 *
@@ -27,7 +27,7 @@
 	 * `data-etat` N'EST POSÉ QUE PAR L'ÉTAT « DOMAINE SANS NOTE », et c'est le
 	 * gel : la planche n'écrit l'attribut que lorsqu'un `change` est émis, et le
 	 * mode démo n'en émet aucun sur une position déjà cochée
-	 * (`verif/banc/mode-demo.mjs`, `scriptDEtat`). Aucune règle de la feuille ne
+	 * (le module de service du banc, `scriptDEtat`). Aucune règle de la feuille ne
 	 * le lit — seul le script de planche l'interroge. Poser l'attribut sur les
 	 * six autres états serait rendre ce que la maquette ne rend pas.
 	 *

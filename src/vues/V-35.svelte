@@ -25,7 +25,7 @@
 	 * `open` N'EST PAS `showModal()`, ET CE N'EST PAS À LA VUE DE LE COMBLER.
 	 * V-35 est déclarée révélable — `modalite-dialogue`, ARB-017 — et le banc
 	 * établit la modalité DES DEUX CÔTÉS, par un code unique
-	 * (`verif/banc/revelation.mjs`). Écrire un script qui appellerait
+	 * (le module de révélation du banc). Écrire un script qui appellerait
 	 * `showModal()` contredirait ARB-011 et serait un comblement : la couche
 	 * supérieure ne s'atteint pas déclarativement, et l'instrument s'adapte au
 	 * régime de la phase. La vue rend l'attribut, rien de plus.
