@@ -122,6 +122,16 @@
 		univers?: readonly Univers[];
 		compte?: UtilisateurCourant;
 		instance?: EtatDInstance;
+		/**
+		 * CE QUE LA VUE FAIT QUAND L'ARCHIVE EST DEMANDÉE.
+		 *
+		 * `P-03` — « une entrée visible est une entrée qui fonctionne » : le bouton
+		 * « Préparer l'archive » est au gel, et la route qui produit l'archive
+		 * existe (`/console/exports/{univers}/{domaine}`). Il ne manquait que le
+		 * fil entre les deux. La vue rend le NOM du domaine choisi ; la page sait à
+		 * quelle adresse il correspond.
+		 */
+		onExporter?: (domaine: string) => void;
 	}
 
 	const {
@@ -129,7 +139,8 @@
 		domaines = DOMAINES,
 		univers = UNIVERS,
 		compte = MOI,
-		instance = INSTANCE
+		instance = INSTANCE,
+		onExporter
 	}: Proprietes = $props();
 
 	/* ── Le calque des fabriques du gel ──────────────────────────────────────
@@ -219,7 +230,15 @@
 	   au gel. `notes` reste la propriété du contrat de rendu ; les agrégats
 	   d'export portent, eux, sur le corpus entier, comme au gel — la vue de
 	   console administre l'instance, pas une variante. */
-	const domaineCourant = $derived(domaines[0]!.nom);
+	/**
+	 * LE DOMAINE CHOISI — `select#domaine` du gel, dont la valeur initiale est le
+	 * premier de la liste. Au rendu serveur, `choisi` est vide et le premier
+	 * s'applique : l'écran reste celui que la maquette montre.
+	 */
+	let choisi = $state('');
+	const domaineCourant = $derived(
+		choisi !== '' && domaines.some((d) => d.nom === choisi) ? choisi : domaines[0]!.nom
+	);
 	const apercu = $derived(apercuExport(domaineCourant));
 
 	/** Les cinq lignes du récapitulatif, dans l'ordre du gel (`V-36:2894`). */
@@ -289,7 +308,11 @@
 				<div class="champ" style="margin-bottom:var(--e-4)">
 					<label class="champ__label" for="domaine">Domaine à exporter</label>
 					<!-- prettier-ignore -->
-					<select class="selecteur" id="domaine"
+					<select
+						class="selecteur"
+						id="domaine"
+						value={domaineCourant}
+						onchange={(e) => (choisi = e.currentTarget.value)}
 						>{#each domaines as d (d.nom)}<option value={d.nom}>{d.univers} › {d.nom} — {notesDuDomaine(d.nom).length} notes</option>{/each}</select
 					>
 				</div>
@@ -350,7 +373,11 @@
 				><div class="recap-export__corps"
 					><div id="recap"
 						>{#each recapitulatif as [nom, valeur] (nom)}<div class="re" data-nul={valeur ? 'non' : 'oui'}><span>{nom}</span><span class="re__n">{valeur}</span></div>{/each}</div
-					><button class="btn btn--principal" id="exporter"
+					><button
+						class="btn btn--principal"
+						id="exporter"
+						type="button"
+						onclick={() => onExporter?.(domaineCourant)}
 						><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8.5M4.8 7.3L8 10.7l3.2-3.4M2.5 13.5h11"/></svg>
 						Préparer l'archive</button
 					><div class="etat-export" id="etat" hidden
