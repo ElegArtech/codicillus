@@ -80,6 +80,15 @@
 		templates?: readonly Template[];
 		/** Les types de note proposés. Absente, la constante du jeu de semence. */
 		typesNote?: readonly TypeDeNote[];
+		/**
+		 * CE QUE LA VUE FAIT QUAND UN GESTE EST CONFIRMÉ — deux rappels, deux
+		 * gestes. Même partage qu'en `V-27`, `V-28`, `V-29`, `V-30` et `V-32` : la
+		 * vue tient l'état de son dialogue, la page tient le réseau. Le template est
+		 * désigné par son identifiant lisible, que `Template.id` porte déjà.
+		 */
+		onSupprimer?: (template: string) => void;
+		/** `RG-REF-02` — « Cocher décochera "X", qui l'est actuellement » (`V-31:380`). */
+		onMarquerParDefaut?: (template: string) => void;
 	}
 
 	const {
@@ -90,7 +99,9 @@
 		compte = MOI,
 		instance = INSTANCE,
 		templates = TEMPLATES,
-		typesNote = TYPES_NOTE
+		typesNote = TYPES_NOTE,
+		onSupprimer,
+		onMarquerParDefaut
 	}: Proprietes = $props();
 
 	/**
@@ -171,9 +182,30 @@
 	 * la position « Template par défaut », le premier qui ne l'est pas pour
 	 * « Template ordinaire ». La position par défaut n'ouvre rien.
 	 */
+	/**
+	 * LE TEMPLATE DONT LA SUPPRESSION EST EXAMINÉE. `null` au rendu serveur :
+	 * l'écran reste celui que le vecteur décrit tant que personne n'a cliqué.
+	 */
+	let demande = $state<string | null>(null);
+
 	const aSupprimer = $derived<Template | null>(
-		sup === 'defaut' ? null : (templates.find((t) => !t.defaut) ?? null)
+		demande !== null
+			? (templates.find((t) => t.id === demande) ?? null)
+			: sup === 'defaut'
+				? null
+				: (templates.find((t) => !t.defaut) ?? null)
 	);
+
+	/** `showModal()` — voir `V-28.svelte` : l'attribut `open` n'obtient pas la modalité. */
+	$effect(() => {
+		const boite = document.getElementById('dlg-supprimer');
+		if (!(boite instanceof HTMLDialogElement)) return;
+		if (aSupprimer === null) {
+			if (boite.open) boite.close();
+			return;
+		}
+		if (!boite.open) boite.showModal();
+	});
 </script>
 
 <Coquille
@@ -250,7 +282,9 @@
 						<span class="tg--masquable"
 							>{#if t.defaut}<span class="past past--defaut">par défaut</span>{:else}<button
 									class="btn btn--discret"
-									style="padding:3px var(--e-2);font-size:var(--t-mini)">Marquer</button
+									type="button"
+									style="padding:3px var(--e-2);font-size:var(--t-mini)"
+									onclick={() => onMarquerParDefaut?.(t.id)}>Marquer</button
 								>{/if}</span
 						>
 						<span
@@ -274,7 +308,11 @@
 									/></svg
 								></button
 							>
-							<button class="btn btn--destructif" type="button" aria-label="Supprimer {t.nom}"
+							<button
+								class="btn btn--destructif"
+								type="button"
+								aria-label="Supprimer {t.nom}"
+								onclick={() => (demande = t.id)}
 								><svg
 									width="14"
 									height="14"
@@ -584,7 +622,12 @@
 						>
 					</span>
 					<h2 class="dlg__titre" id="dlg-sup-titre">Supprimer le template</h2>
-					<button class="dlg__fermer" data-fermer aria-label="Fermer">
+					<button
+						class="dlg__fermer"
+						data-fermer
+						aria-label="Fermer"
+						onclick={() => (demande = null)}
+					>
 						<svg
 							width="16"
 							height="16"
@@ -623,12 +666,15 @@
 					</div>
 				</div>
 				<div class="dlg__pied">
-					<button class="btn" data-fermer>Annuler</button>
+					<button class="btn" data-fermer onclick={() => (demande = null)}>Annuler</button>
 					<button
 						class="btn btn--principal btn--destructif"
 						id="sup-valider"
 						style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
-						>Supprimer</button
+						onclick={() => {
+							if (aSupprimer === null) return;
+							onSupprimer?.(aSupprimer.id);
+						}}>Supprimer</button
 					>
 				</div>
 			</div>
