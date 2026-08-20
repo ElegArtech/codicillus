@@ -404,3 +404,102 @@ export function cablerLaConnexion(racine: ParentNode): Debranchement {
 	}
 	return () => {};
 }
+
+/* ═══════════════════════════════════ Le signet — V-23 ═══════════════════ */
+
+/**
+ * LE CÂBLAGE DU FORMULAIRE DE SIGNET.
+ *
+ * Comme V-05, et à la différence de V-17, le gel écrit ici un vrai
+ * `form.formulaire` avec un `button[type=submit]#valider-page`. Il ne lui
+ * manque que la méthode et les noms. Aucune enveloppe n'est posée.
+ *
+ * Trois champs portent déjà le nom attendu dans leur identifiant — `adresse`,
+ * `description`, `domaine` — et deux ne le portent pas : le titre s'appelle
+ * `titre-signet` au gel, et les étiquettes sont des pastilles, pas un champ. Le
+ * relevé des pastilles et la touche Entrée sont les mêmes gestes que ceux de
+ * l'éditeur, et ils sont écrits une seule fois.
+ *
+ * `#supprimer-page` soumet vers une action nommée, sur confirmation chiffrée.
+ */
+export interface OptionsDuSignet {
+	/** Ce que la confirmation de suppression rappelle. Absent : pas de suppression. */
+	rappelDeSuppression?: string;
+}
+
+export function cablerLeSignet(racine: ParentNode, options: OptionsDuSignet = {}): Debranchement {
+	const formulaire = noeud<HTMLFormElement>(racine, 'form.formulaire');
+	if (formulaire === null) return () => {};
+	const document = formulaire.ownerDocument;
+	const jetables: Debranchement[] = [];
+
+	formulaire.method = 'post';
+	/* EN MODIFICATION, LES DEUX ACTIONS SONT NOMMÉES. SvelteKit refuse qu'une
+	   action par défaut cohabite avec une action nommée sur la même page — il
+	   rend 500 —, et l'écran d'édition en porte deux : enregistrer et supprimer.
+	   La création, elle, n'en a qu'une, et garde donc l'action par défaut. */
+	if (options.rappelDeSuppression !== undefined) formulaire.action = '?/enregistrer';
+	for (const id of ['adresse', 'description', 'domaine']) {
+		const champ = noeud<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+			formulaire,
+			`#${id}`
+		);
+		if (champ !== null) champ.name = id;
+	}
+	const champTitre = noeud<HTMLInputElement>(formulaire, '#titre-signet');
+	if (champTitre !== null) champTitre.name = 'titre';
+
+	/* Les pastilles d'étiquette — même geste que l'éditeur, même forme gelée. */
+	const saisie = noeud<HTMLInputElement>(formulaire, '#etiquette');
+	const boite = noeud<HTMLElement>(formulaire, '#etq-boite');
+	const nomsPoses = (): string[] =>
+		Array.from(formulaire.querySelectorAll('#etq-boite > span')).map((p) => {
+			const copie = p.cloneNode(true) as Element;
+			copie.querySelector('button')?.remove();
+			return (copie.textContent ?? '').trim();
+		});
+	if (saisie !== null && boite !== null) {
+		const aLaFrappe = (evenement: KeyboardEvent): void => {
+			if (evenement.key !== 'Enter') return;
+			evenement.preventDefault();
+			const nom = saisie.value.trim();
+			saisie.value = '';
+			if (nom === '' || nomsPoses().includes(nom)) return;
+			boite.insertBefore(pastille(document, nom), saisie);
+		};
+		saisie.addEventListener('keydown', aLaFrappe);
+		jetables.push(() => saisie.removeEventListener('keydown', aLaFrappe));
+		for (const retrait of Array.from(boite.querySelectorAll<HTMLButtonElement>('span > button'))) {
+			const oter = (): void => retrait.closest('span')?.remove();
+			retrait.addEventListener('click', oter);
+			jetables.push(() => retrait.removeEventListener('click', oter));
+		}
+	}
+
+	/* Les étiquettes voyagent dans un champ caché, posé à la soumission. */
+	const avantEnvoi = (): void => poserChamp(formulaire, 'etiquettes', nomsPoses().join(','));
+	formulaire.addEventListener('submit', avantEnvoi);
+	jetables.push(() => formulaire.removeEventListener('submit', avantEnvoi));
+
+	/* La suppression — action nommée, confirmation chiffrée. `RG-M18-05` :
+	   toute action irréversible rappelle précisément ce qui sera détruit. */
+	const bouton = noeud<HTMLButtonElement>(formulaire, '#supprimer-page');
+	const rappel = options.rappelDeSuppression;
+	if (bouton !== null && rappel !== undefined) {
+		bouton.type = 'button';
+		const oter = (): void => {
+			if (!document.defaultView?.confirm(rappel)) return;
+			formulaire.action = '?/supprimer';
+			formulaire.requestSubmit();
+			formulaire.action = '?/enregistrer';
+		};
+		bouton.addEventListener('click', oter);
+		jetables.push(() => bouton.removeEventListener('click', oter));
+	} else if (bouton !== null) {
+		bouton.type = 'button';
+	}
+
+	return () => {
+		for (const defaire of jetables) defaire();
+	};
+}

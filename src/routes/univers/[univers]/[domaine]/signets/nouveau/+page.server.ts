@@ -13,44 +13,40 @@
  * adresse ne peut pas entrer en collision avec `…/signets/{identifiant}/…`.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * L'ACTION EXISTE, ET ELLE REFUSE AVANT D'ÉCRIRE
+ * L'ACTION ÉCRIT — LE 501 EST LEVÉ PAR `ARB-064`
  *
- * `P-09` dit que l'action interdite n'est pas RENDUE. Cela ne dispense pas de
- * la REFUSER : un client peut composer la requête lui-même, et l'absence de
- * bouton n'est pas un contrôle d'accès. Le droit de rédaction est donc vérifié
- * ici, côté serveur, par `resolution.ts`, avant toute écriture.
+ * Cette section disait pourquoi l'écriture était impossible : trois valeurs
+ * qu'aucune source ne donnait — le dossier d'accueil, le corps, l'identifiant
+ * lisible — et les inventer aurait été le défaut de contrat que la règle de
+ * non-comblement nomme. Le refus était juste ; il attendait un arbitrage.
  *
- * ET L'ÉCRITURE ELLE-MÊME N'EST PAS DE CE LOT — elle est DÉCLARÉE, non comblée.
- * Trois valeurs qu'aucune source ne donne l'en empêchent, et les inventer
- * serait le défaut de contrat que `CLAUDE.md` §2 nomme :
+ * `ARB-062` a tranché l'identifiant, `ARB-064` les deux autres : le signet est
+ * rangé à la RACINE de son domaine, et la description saisie devient le corps
+ * Référence. `ARB-063` a placé le câblage du formulaire dans la route.
  *
- *   1. LE DOSSIER D'ACCUEIL. `RG-STR-03` — « toute note appartient à un
- *      dossier » — et le schéma l'impose (`notes.dossier_id`, non nul). Le
- *      formulaire gelé n'a PAS de champ dossier : il n'offre qu'un choix de
- *      domaine (`mockups/V-23-signet-formulaire.html`, formulaire unique).
- *   2. LE CORPS. `notes.corps_reference` est non nul et canonique (`ADR-003`).
- *      Le formulaire porte une description de 240 caractères ; qu'elle DEVIENNE
- *      le corps Référence est une hypothèse, pas une lecture.
- *   3. L'IDENTIFIANT LISIBLE. `RG-M12-11` le veut dérivé du titre, unique et
- *      STABLE ; la règle de désambiguïsation d'un doublon n'est écrite nulle
- *      part, et `src/lib/rangement/adresses.ts` le dit de lui-même : il n'est
- *      pas la génération d'identifiant du produit.
+ * L'ORDRE DES PORTES : le droit d'abord, par le MÊME appel que le chargeur —
+ * rien du corps soumis n'est lu avant ; puis la forme ; puis l'écriture ; puis
+ * l'index, après la transaction ; puis `303` vers la note créée. Un signet EST
+ * une note : son adresse de lecture est celle d'une note.
  *
- * S'y ajoute que le formulaire gelé ne porte NI `method` NI `action`
- * (`ARB-057` §3, cinq formulaires vérifiés) : aucune soumission ne l'atteint
- * aujourd'hui. Le poser demanderait de toucher `src/vues/V-23.svelte`, que le
- * contrat de ce lot interdit. C'est exactement la situation de `POST /connexion`
- * en `T-012` : l'action existe, elle est juste, et elle attend le lot qui
- * reliera le formulaire.
- *
- * L'appelant qui a le droit reçoit donc **501** — la réponse qui dit « pas
- * implémenté » sans rien inventer. Celui qui ne l'a pas reçoit **404**, comme
- * une adresse qui n'existe pas. La différence entre les deux est légitime : à
- * qui a le droit, la ressource n'est pas cachée.
+ * LE DOMAINE SOUMIS N'EST PAS CRU SUR PAROLE. Le formulaire gelé porte un
+ * sélecteur de domaine, mais le droit résolu est celui du domaine de
+ * L'ADRESSE : écrire dans le domaine soumis reviendrait à écrire là où le droit
+ * n'a pas été vérifié. Une divergence est refusée.
  */
-import { error } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { contexteDeRequete, resoudreLAccesAuxSignets, vecteurDeV23 } from '$lib/donnees/signets';
+import { DocumentInvalide } from '$lib/contenu/document';
+import { MarkdownInvalide } from '$lib/contenu/markdown';
+import {
+	contexteDeRequete,
+	lireLeRangement,
+	resoudreLAccesAuxSignets,
+	vecteurDeV23
+} from '$lib/donnees/signets';
+import { creerUnSignet, lireLaSaisieDeSignet } from '$lib/donnees/signets-ecriture';
+import { adresseDeNote } from '$lib/rangement/adresses';
+import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
@@ -69,19 +65,58 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ params, locals }) => {
+	default: async ({ params, locals, request }) => {
 		const base = basePartagee();
+		const segments = { univers: params.univers, domaine: params.domaine };
+		/* Le refus est le MÊME que celui du chargeur, et il vient du même appel :
+		   il n'existe pas une règle de droit pour lire et une autre pour écrire. */
 		const acces = await resoudreLAccesAuxSignets(
 			base,
 			await contexteDeRequete(base),
 			locals.identite,
-			{ univers: params.univers, domaine: params.domaine },
+			segments,
 			true
 		);
-		/* Le refus est le MÊME que celui du chargeur, et il vient du même appel :
-		   il n'existe pas une règle de droit pour lire et une autre pour écrire. */
 		if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
-		error(501, "la création d'un signet n'est pas implémentée");
+		const lue = lireLaSaisieDeSignet(await request.formData());
+		if (!lue.ok) return fail(400, { motif: lue.motif });
+
+		/* Le domaine du formulaire n'est pas cru sur parole : le signet est créé
+		   dans le domaine de l'ADRESSE, celui dont le droit vient d'être résolu.
+		   Un domaine soumis différent est refusé, jamais suivi. */
+		const rangement = await lireLeRangement(base, segments);
+		if (rangement === null) error(404, MESSAGE_INTROUVABLE);
+		if (lue.saisie.domaine !== rangement.domaine.nom) {
+			return fail(400, { motif: 'domaine hors de l’adresse' });
+		}
+
+		let identifiant: string;
+		try {
+			const fait = await creerUnSignet(base, moteurPartage(), {
+				saisie: lue.saisie,
+				domaineId: rangement.domaineId,
+				identite: locals.identite,
+				maintenant: new Date()
+			});
+			if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
+			identifiant = fait.ressource.identifiant;
+		} catch (cause) {
+			/* Une description mal formée est REFUSÉE, jamais réparée (`ADR-003`). */
+			if (cause instanceof DocumentInvalide) {
+				return fail(422, {
+					motif: 'description refusée',
+					manquements: cause.manquements.map((m) => `${m.chemin} : ${m.message}`)
+				});
+			}
+			if (cause instanceof MarkdownInvalide) {
+				return fail(422, { motif: 'description refusée', manquements: [cause.message] });
+			}
+			throw cause;
+		}
+
+		/* Hors du `try` : `redirect()` lève, et une redirection avalée par le filet
+		   ci-dessus rendrait un 422 sur un signet pourtant écrit. */
+		redirect(303, adresseDeNote(identifiant));
 	}
 };

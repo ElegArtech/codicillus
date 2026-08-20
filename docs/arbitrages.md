@@ -2523,3 +2523,37 @@ source exigera la soumission sans script, elle exigera aussi un regel des sept f
 
 `src/vues/` reste en écriture agentique **fermée pour cette campagne**. Un lot qui croit devoir y
 toucher s'arrête et remonte — c'est le protocole d'écart, inchangé.
+
+---
+
+## ARB-064 — Les trois valeurs qui manquaient à la création d'un signet
+
+*Rendu le 21 août 2026. Lève le second `501` du produit.*
+
+Le lot P-10 avait **refusé d'écrire**, et il avait raison : trois valeurs manquaient, et les
+inventer en cours d'exécution aurait été un défaut de contrat. Elles sont tranchées ici.
+
+1. **Le dossier d'accueil.** `RG-STR-03` veut que toute note appartienne à un dossier ; le
+   formulaire gelé de V-23 n'offre qu'un choix de **domaine**. Le signet est rangé à la **racine de
+   son domaine**. C'est le seul point de rattachement qu'un écran sans arborescence puisse désigner
+   sans mentir, et il existe toujours : tout domaine porte un dossier racine.
+2. **Le corps.** `notes.corps_reference` est non nul et canonique (`ADR-003`). **La description
+   saisie devient le corps Référence** — elle est le seul texte que l'écran collecte, et le champ
+   compte ses caractères, ce qui en fait un contenu et non une étiquette. Description vide ⇒ corps
+   vide au sens de `corpsVide()`.
+3. **L'identifiant lisible.** `ARB-062`, sans exception. **Un signet est une note** — le schéma le
+   dit, `signet_adresse` et `signet_ajoute_le` sont deux colonnes de `notes` —, et son identifiant
+   se dérive de son titre comme celui de n'importe quelle note.
+
+**Deux points que l'implémentation a dû trancher en plus, et qui sont ici plutôt que dans le code :**
+
+- **Le domaine soumis n'est pas cru sur parole.** Le formulaire porte un sélecteur de domaine, mais
+  le droit résolu est celui du domaine de **l'adresse**. Écrire dans le domaine soumis reviendrait à
+  écrire là où le droit n'a pas été vérifié. Une divergence est refusée, jamais suivie.
+- **Seuls `http` et `https` sont admis** comme adresse curatée, et le contrôle passe par l'analyseur
+  d'adresses de la plateforme, jamais par une expression régulière. Un signet est un « lien web
+  curaté » ; un `javascript:` collé dans ce champ serait ensuite servi à tous les lecteurs du
+  domaine.
+
+**Ce que cet arbitrage ne fait pas** : il ne déplace pas un signet d'un domaine à un autre — cela
+demanderait le droit de rédaction sur les deux (`RG-M05-09`) et l'écran ne l'offre pas.
