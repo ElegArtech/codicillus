@@ -62,12 +62,30 @@ et l'écran montre bien la donnée réelle :
 gabarit, la dernière connexion en relatif, et la prose de V-34 qui affirme des chiffres. Tout cela
 s'affiche en état neutre explicite plutôt qu'en valeur illustrative.
 
-### 3. Le produit livré ne laisse écrire personne
+### 3. ~~Le produit livré ne laisse écrire personne~~ — fermé
 
-**`droits_de_dossier` porte zéro ligne** dans le jeu de semence. Sans droit explicite, aucune
-capacité : une instance semée puis démarrée est en lecture seule pour tout le monde. Il faut soit
-que la semence pose des droits, soit que la console soit le chemin déclaré. Aucune source ne
-tranche.
+**Le diagnostic était faux, et la mesure l'a montré.** `RG-DRO-03` — « l'administrateur contourne
+tous les droits de dossier » — est implémentée : une administratrice crée une note sur une base sans
+une seule ligne dans `droits_de_dossier`. Le produit n'a jamais été bloqué ; c'est elle qui
+distribue les droits par la console.
+
+Restait le **jeu de démonstration**, qui n'en posait aucun : les quatre comptes non administrateurs
+ne pouvaient rien écrire, alors que la planche de V-14 rend « Droits : écriture » par défaut pour un
+référent. Le corpus impliquait donc des droits. `lignesDeDroitDeDossier()` les dérive de `CDC` §2.3
+et du rôle, sur la **racine** du domaine de rattachement — le droit descend seul (`RG-DRO-01`) :
+
+```
+karim.belhadj   referent      gestionnaire  Infrastructure
+marc.ferreira   contributeur  redacteur     Poste de travail
+lea.marchand    contributeur  redacteur     Poste de travail
+pierre.dubois   lecteur       lecteur       Applications
+sophie.nguyen   administrateur   AUCUNE LIGNE — RG-DRO-03
+```
+
+Mesuré au navigateur : référent et contributeur → `/notes/nouvelle` **200**, `/console/comptes`
+**404** · administratrice → **200** et **200** · anonyme → **404** sur les notes, redirigé vers
+`/connexion?motif=page-protegee` sur la console. `pierre.dubois` est le compte **désactivé** du jeu :
+sa connexion est refusée en **401**, et c'est le cas de démonstration voulu.
 
 ### 4. Trois divergences avec le gel, assumées et à regeler
 

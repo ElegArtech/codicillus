@@ -37,6 +37,7 @@ import { configurationDeConnexion, connexionLisible } from './connexion';
 import {
 	champsDeTypeDeFiche,
 	comptes,
+	droitsDeDossier,
 	domaines,
 	dossiers,
 	etiquettes,
@@ -59,6 +60,7 @@ import {
 	lignesDUnivers,
 	lignesDeChamp,
 	lignesDeCompte,
+	lignesDeDroitDeDossier,
 	lignesDeDomaine,
 	lignesDeDossier,
 	lignesDeNote,
@@ -293,6 +295,7 @@ export async function empreinte(pool: pg.Pool): Promise<Empreinte> {
 
 export interface RapportDeSemence {
 	readonly comptes: number;
+	readonly droitsDeDossier: number;
 	readonly univers: number;
 	readonly domaines: number;
 	readonly modulesDeDomaine: number;
@@ -422,6 +425,28 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 			dossierParChemin.set(
 				cleDeChemin(ligne.domaineNom, ligne.chemin),
 				exigerDefini(pose, `dossier ${ligne.nom}`).id
+			);
+		}
+
+		/* ── LES DROITS DE DOSSIER, APRÈS LES DOSSIERS ────────────────────────
+		   `RG-DRO-02` : sans droit explicite, aucune capacité. Sans ces lignes,
+		   les quatre comptes non administrateurs du jeu ne peuvent RIEN écrire, et
+		   le corpus de démonstration cesse d'être fidèle aux maquettes qu'il sert
+		   — la planche de V-14 rend « Droits : écriture » par défaut, pour un
+		   compte référent. La dérivation est celle de `CDC` §2.3 et vit dans
+		   `lignesDeDroitDeDossier()` ; l'administrateur n'en reçoit AUCUNE
+		   (`RG-DRO-03`). */
+		const lignesDroit = lignesDeDroitDeDossier();
+		if (lignesDroit.length > 0) {
+			await tx.insert(droitsDeDossier).values(
+				lignesDroit.map((d) => ({
+					dossierId: exigerDefini(
+						dossierParChemin.get(cleDeChemin(d.domaineNom, [d.domaineNom])),
+						`racine du domaine ${d.domaineNom}`
+					),
+					compteId: exigerDefini(compteParNom.get(d.compteNom), `compte ${d.compteNom}`),
+					droit: d.droit
+				}))
 			);
 		}
 
@@ -622,6 +647,7 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 
 		return {
 			comptes: comptesPoses.length,
+			droitsDeDossier: lignesDroit.length,
 			univers: universPoses.length,
 			domaines: domainesPoses.length,
 			modulesDeDomaine: lignesModule.length,
