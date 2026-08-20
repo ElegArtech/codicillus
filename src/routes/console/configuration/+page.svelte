@@ -7,21 +7,31 @@
 	 * `T-036` la monte avec sa garde : le rôle administrateur est éprouvé côté
 	 * serveur par `+page.server.ts`, à côté de ce fichier.
 	 *
-	 * CE FICHIER NE FAIT QUE RENDRE CE QUE LE CHARGEUR A RÉSOLU. Les notes
-	 * viennent de la base ; les seuils affichés, non — voir le chargeur. LE
-	 * BANC NE PASSE JAMAIS PAR ICI : il atteint la vue par le mode de
-	 * conception, qui rend le composant directement.
+	 * CE FICHIER REND CE QUE LE CHARGEUR A RÉSOLU, ET CÂBLE CE QUE LE GEL LAISSE
+	 * INERTE. Les notes, le rangement, l'utilisateur ET LES SEPT RÉGLAGES viennent
+	 * de la base — la rédaction précédente disait « les seuils affichés, non »,
+	 * ce qui n'est plus vrai : `config` est passé, lu par `lireConfiguration()`.
+	 *
+	 * LE CÂBLAGE EST APPELÉ DEPUIS `onMount`, jamais ailleurs — c'est le motif
+	 * de `$lib/cablage/formulaires.ts`, et son en-tête en donne la raison : le
+	 * chemin mesuré ne traverse pas ce code, si bien que la conformité au gel n'a
+	 * pas à être défendue par une relecture. Le module appelé vit à côté, sous
+	 * `src/routes/console/cablage.ts`.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
 	 * sert ; elle est identique à l'octet à sa source gelée (P-6.3).
 	 *
 	 * AUCUN `<svelte:head>` : rien ne déclare de titre de page pour le PRODUIT.
 	 */
+	import { onMount } from 'svelte';
 	import Vue from '../../../vues/V-33.svelte';
 	import '../../../vues/V-33.css';
+	import { cablerLaConfiguration } from '../cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	onMount(() => cablerLaConfiguration(document));
 </script>
 
 <Vue
