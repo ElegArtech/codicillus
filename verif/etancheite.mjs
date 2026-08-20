@@ -65,6 +65,15 @@
  * et prouve que la mutation n'est pas inerte ». Deux genres sont ici :
  *
  *   --sonde=fuite-de-regime          l'OBSERVATION : un refus devient un 200
+ *   --sonde=inexistante-servie       l'OBSERVATION : une adresse dont aucun
+ *                                    segment n'est dans le corpus est SERVIE à
+ *                                    un persona habilité — la mutation que la
+ *                                    batterie ne pouvait PAS voir tant qu'elle
+ *                                    lisait §5.5 sans la variante d'adresse
+ *   --sonde=couple-servi-sans-droit  l'OBSERVATION : le côté EXISTANT d'un
+ *                                    couple est servi à un persona à qui §5.5
+ *                                    le refuse — la clause « sans objet » doit
+ *                                    rougir plutôt que d'absorber la fuite
  *   --sonde=refus-discernable        l'OBSERVATION : un côté du couple bouge
  *   --sonde=latence-discernable      l'OBSERVATION : le couple temporel change
  *                                    de côté — 401 (Argon2id) contre 429 (sans),
@@ -76,10 +85,17 @@
  *   --sonde=temoin-inerte            LA SONDE QUI NE TOUCHE RIEN, et elle est là
  *                                    pour être jouée. La batterie doit REFUSER
  *                                    DE CONCLURE — code 1, jamais inversé.
+ *   --sonde=temoin-inimputable       LE SECOND TÉMOIN : elle touche BEAUCOUP et
+ *                                    ne peut produire aucun défaut. La batterie
+ *                                    doit refuser de conclure elle aussi —
+ *                                    sinon l'exigence d'imputabilité serait une
+ *                                    règle qu'aucun cas n'exerce (`P-5`).
  *
  * Le code de retour est inversé sous sonde : une sonde qui ne fait pas rougir
- * est un échec. L'inversion s'arrête au refus de conclure — inverser une
- * mutation inerte fabriquerait un vert à partir de rien.
+ * est un échec. L'inversion s'arrête aux DEUX refus de conclure — inverser une
+ * mutation inerte fabriquerait un vert à partir de rien, et une sonde
+ * d'observation dont aucun défaut n'est IMPUTABLE serait verte par les défauts
+ * des autres. Voir `GENRES_DE_SONDE`.
  *
  * Usage :
  *   node verif/etancheite.mjs                    la batterie
@@ -102,6 +118,8 @@ import {
 	attenduDe,
 	cleDeRapprochement,
 	famillesDuRefus,
+	formeSelonLaVariante,
+	issueDuCouple,
 	niveauxParRoute,
 	rapprocher,
 	recouper,
@@ -129,6 +147,51 @@ const ORIGINE_FORGEE = '9.9.9.9';
 
 /** Les valeurs que le corpus ne porte pas, et dont l'absence est vérifiée. */
 const ABSENT = 'ceci-n-existe-pas-dans-le-corpus';
+
+/**
+ * LES GENRES DE SONDE, ET POURQUOI LE GENRE DÉCIDE DE CE QU'ON EXIGE D'ELLE.
+ *
+ * `docs/orchestration.md` §1.2 règle 4 : « prouve que la mutation n'est pas
+ * inerte — une perturbation qui ne change rien ne teste rien ». Le compte de
+ * touches y répond, mais IL N'Y RÉPOND QU'À MOITIÉ, et le dépôt du 20 août
+ * 2026 en donne la démonstration : la batterie porte 69 défauts de fond, donc
+ * `rougit` est vrai QUOI QU'UNE SONDE FASSE. Une sonde d'observation qui
+ * toucherait 72 réponses sans qu'aucun défaut n'en découle serait déclarée
+ * mordante par les défauts d'autrui — `P-26` sous un autre angle.
+ *
+ * D'où l'IMPUTABILITÉ, exigée des seules sondes qui perturbent une réponse
+ * observable : au moins un défaut doit porter sur une case ou un couple que la
+ * sonde a effectivement touché. Les deux autres genres ne peuvent pas être
+ * imputés case par case, et c'est une propriété de leur nature, non une
+ * indulgence :
+ *
+ *   `observation`   la réponse d'une case est altérée — imputabilité EXIGÉE
+ *   `etat`          l'état du candidat en base change (le barème de
+ *                   `RG-M16-01`) ; le défaut est temporel, hors matrice
+ *   `configuration` l'environnement du produit change (`XFF_DEPTH`) ; il
+ *                   affecte toutes les réponses, donc n'impute aucune
+ *   `inerte`        la sonde ne touche RIEN, et c'est ce qu'elle prouve
+ */
+const GENRES_DE_SONDE = {
+	'fuite-de-regime': 'observation',
+	'inexistante-servie': 'observation',
+	'couple-servi-sans-droit': 'observation',
+	'refus-discernable': 'observation',
+	'latence-discernable': 'etat',
+	'confiance-trop-profonde': 'configuration',
+	'temoin-inerte': 'inerte',
+	'temoin-inimputable': 'observation'
+};
+
+if (sonde !== undefined && !Object.hasOwn(GENRES_DE_SONDE, sonde)) {
+	console.error(
+		`sonde « ${sonde} » inconnue — les genres sont : ${Object.keys(GENRES_DE_SONDE).join(', ')}`
+	);
+	exit(2);
+}
+
+/** Les personas dont le droit satisfait la lecture du corpus (§5.5 colonnes 3 et 4). */
+const HABILITES = ['lecteur', 'redacteur', 'gestionnaire', 'administrateur'];
 
 /** @type {{genre: string, quoi: string, detail: string}[]} */
 const defauts = [];
@@ -715,7 +778,9 @@ async function servirLeProduit() {
 /**
  * Une requête, et l'observation qu'on en tire.
  * @param {string} chemin
- * @param {{cookie?: string|null, origine?: string, methode?: string, corps?: string}} [options]
+ * @param {{cookie?: string|null, origine?: string, methode?: string, corps?: string,
+ *   persona?: string}} [options] `persona` ne voyage PAS dans la requête : il
+ *   sert à l'imputabilité des sondes d'observation, et à rien d'autre.
  */
 async function observer(chemin, options = {}) {
 	/** @type {Record<string,string>} */
@@ -750,29 +815,94 @@ async function observer(chemin, options = {}) {
 	/** @type {Record<string,string>} */
 	const recus = {};
 	for (const [n, v] of reponse.headers.entries()) recus[n] = v;
-	return perturber({ status: reponse.status, entetes: recus, corps, duree, chemin });
+	return perturber({
+		status: reponse.status,
+		entetes: recus,
+		corps,
+		duree,
+		chemin,
+		persona: options.persona ?? null,
+		perturbee: false
+	});
 }
 
 /**
  * LES SONDES D'OBSERVATION. Elles perturbent le CANDIDAT tel qu'il est observé,
  * jamais la règle qui juge — et chacune COMPTE ce qu'elle touche, faute de quoi
  * une sonde inerte rendrait le vert d'une mutation qui ne teste rien.
- * @param {{status: number, entetes: Record<string,string>, corps: string, duree: number, chemin: string}} o
+ * @param {{status: number, entetes: Record<string,string>, corps: string, duree: number,
+ *   chemin: string, persona: string|null, perturbee: boolean}} o
  */
 function perturber(o) {
 	if (sonde === 'fuite-de-regime' && o.status === 404 && o.chemin.startsWith('/univers/')) {
 		touchesDeLaSonde += 1;
-		return { ...o, status: 200, corps: `${o.corps}<article>contenu interne</article>` };
+		return {
+			...o,
+			status: 200,
+			perturbee: true,
+			corps: `${o.corps}<article>contenu interne</article>`
+		};
+	}
+	/* LA SONDE DE LA RÈGLE DE VARIANTE, et elle est étroite exprès : elle ne
+	   touche QUE les adresses inexistantes demandées par un persona HABILITÉ —
+	   les 34 cases exactes que `formeSelonLaVariante` vient de faire passer de
+	   « servi » à « refus-404 ». Tant que la batterie lisait §5.5 sans la
+	   variante, cette mutation rendait ces cases CONFORMES au lieu de fautives :
+	   elle est donc la seule qui distingue la batterie réparée de l'ancienne, et
+	   son imputabilité l'atteste case par case (`P-5`, `P-26`). */
+	if (
+		sonde === 'inexistante-servie' &&
+		o.chemin.includes(ABSENT) &&
+		HABILITES.includes(o.persona ?? '')
+	) {
+		touchesDeLaSonde += 1;
+		return {
+			...o,
+			status: 200,
+			perturbee: true,
+			corps: `${o.corps}<article>contenu interne</article>`
+		};
+	}
+	/* LA SONDE DE LA CLAUSE « SANS OBJET », et elle éprouve l'inversion qui la
+	   rendrait complice : le côté EXISTANT d'un couple est servi à un persona à
+	   qui §5.5 le REFUSE. La clause étant décidée sur l'attendu, le couple doit
+	   rester un défaut ; décidée sur l'observé, elle l'aurait absorbé. */
+	if (
+		sonde === 'couple-servi-sans-droit' &&
+		o.persona === 'contributeur-sans-droit' &&
+		o.status === 404 &&
+		!o.chemin.includes(ABSENT) &&
+		(o.chemin.startsWith('/univers/') || o.chemin.startsWith('/notes/'))
+	) {
+		touchesDeLaSonde += 1;
+		return {
+			...o,
+			status: 200,
+			perturbee: true,
+			corps: `${o.corps}<article>contenu interne</article>`
+		};
 	}
 	if (sonde === 'refus-discernable' && o.chemin.includes(ABSENT)) {
 		touchesDeLaSonde += 1;
-		return { ...o, corps: `${o.corps} ` };
+		return { ...o, perturbee: true, corps: `${o.corps} ` };
+	}
+	/* LE TÉMOIN DU SECOND REFUS DE CONCLURE. Une règle qu'aucun cas n'exerce est
+	   une règle qu'on espère (`P-5`), et l'exigence d'imputabilité n'était
+	   exercée par AUCUNE des six autres sondes : elles la satisfont toutes. Ce
+	   témoin-ci touche beaucoup — chaque réponse servie sur une adresse du
+	   corpus — et ne peut produire aucun défaut : la forme observée reste
+	   « servi », et la clé de rapprochement d'un côté légitimement servi n'est
+	   comparée à rien, son couple étant sans objet. La batterie doit donc
+	   REFUSER DE CONCLURE, code 1, jamais inversé. */
+	if (sonde === 'temoin-inimputable' && o.status === 200 && !o.chemin.includes(ABSENT)) {
+		touchesDeLaSonde += 1;
+		return { ...o, perturbee: true, corps: `${o.corps} ` };
 	}
 	if (sonde === 'temoin-inerte' && o.status === 418) {
 		/* 418 : aucun chemin du produit ne le rend. La sonde ne touche donc RIEN,
 		   et c'est exactement ce qu'elle est là pour prouver. */
 		touchesDeLaSonde += 1;
-		return { ...o, status: 200 };
+		return { ...o, status: 200, perturbee: true };
 	}
 	return o;
 }
@@ -807,12 +937,21 @@ async function mesurerLaMatrice() {
 					: attenduDe(instance.route, persona, rapprochement, familles, niveaux);
 			/* `/guides/{identifiant}` : la ligne de §5.5 dépend de la note, non du
 			   persona. La variante porte donc sa propre famille. */
-			const forme =
+			const formeLue =
 				instance.route === '/guides/{identifiant}'
 					? (familles[instance.famille]?.formes[
 							persona.colonne === 'avecDroit' ? 'avecDroit' : persona.colonne
 						] ?? attendu.forme)
 					: attendu.forme;
+			/* LA VARIANTE D'ADRESSE, ET C'EST ELLE QUI MANQUAIT. §5.5 dit ce qu'une
+			   adresse QUI RÉSOUT rend à ce persona ; elle ne dit rien d'une adresse
+			   dont aucun segment n'est dans le corpus. Voir `formeSelonLaVariante`,
+			   §6 bis du module d'attendu, pour la source et les trois exclusions. */
+			const { forme, motif: motifDeVariante } = formeSelonLaVariante(
+				formeLue,
+				instance.variante,
+				attendu.niveau === 'hors-matrice'
+			);
 
 			/* UNE MATRICE DONT LES CASES SE CONTAMINENT MESURE L'ORDRE, PAS LES
 			   DROITS. `/deconnexion` est la seule action d'écriture en GET du
@@ -824,7 +963,8 @@ async function mesurerLaMatrice() {
 			await reouvrirLaSession(incarnation.condensat);
 			const o = await observer(instance.chemin, {
 				cookie: incarnation.cookie,
-				origine: ORIGINE_A
+				origine: ORIGINE_A,
+				persona: persona.nom
 			});
 			const observe = formeObservee(o);
 			const montee = estImplementee(instance.route) || instance.variante === 'construite';
@@ -840,11 +980,22 @@ async function mesurerLaMatrice() {
 			   3. Un SERVI sur une route qui n'existe pas n'est pas un défaut de ce
 			      lot-ci : c'est le lot de la route qui le doit. NON COUVERTE. */
 			let verdict;
-			let motif = attendu.source;
-			if (!montee && forme === 'servi') {
+			let motif =
+				motifDeVariante === null ? attendu.source : `${attendu.source} — ${motifDeVariante}`;
+			/* LES DEUX NON-COUVERTURES SE LISENT SUR LA FORME LUE, NON SUR LA FORME
+			   CORRIGÉE, et ce n'est pas un détail. Elles disent toutes deux la même
+			   chose : « la source dit que cette adresse devrait être servie à ce
+			   persona, et RIEN ICI NE PERMET DE LE MESURER » — parce que la route
+			   n'est pas montée, ou parce que le corpus ne porte pas la valeur. Ce
+			   constat est indépendant de la variante. Les lire sur la forme corrigée
+			   déplacerait ces cases vers `vacuite` ou `conforme` : le compte de
+			   vacuités MONTERAIT sans qu'aucune route nouvelle n'ait été mesurée, et
+			   `docs/orchestration.md` §4 tient les vacuités pour une dette qu'un lot
+			   referme, jamais un chiffre qu'on déplace. */
+			if (!montee && formeLue === 'servi') {
 				verdict = 'non-couverte';
 				motif = `attendu servi ; la route n'est pas montée par src/routes — au lot de la route`;
-			} else if (instance.raisonSansValeur !== null && forme === 'servi') {
+			} else if (instance.raisonSansValeur !== null && formeLue === 'servi') {
 				verdict = 'non-couverte';
 				motif = `le corpus ne porte aucune valeur : ${instance.raisonSansValeur}`;
 			} else if (observe !== forme) {
@@ -860,17 +1011,20 @@ async function mesurerLaMatrice() {
 				instance,
 				persona: persona.nom,
 				attendu: forme,
+				formeLue,
 				observe,
 				status: o.status,
 				verdict,
 				motif,
+				perturbee: o.perturbee === true,
 				cle: cleDeRapprochement(o, instance.chemin)
 			});
 			if (verdict === 'defaut') {
 				defauts.push({
 					genre: 'matrice',
 					quoi: `${instance.chemin} · ${persona.nom}`,
-					detail: motif
+					detail: motif,
+					imputable: o.perturbee === true
 				});
 			}
 		}
@@ -913,7 +1067,6 @@ function mesurerLesCouples() {
 					c.instance.variante === 'inexistante'
 			);
 			if (existante === undefined || inexistante === undefined) continue;
-			const refusDesDeux = existante.observe !== 'servi' && inexistante.observe !== 'servi';
 			const memeCle = existante.cle === inexistante.cle;
 			/* Une REDIRECTION est décidée par le point d'entrée, sur le préfixe,
 			   avant toute résolution : le couple est donc mesurable même si la route
@@ -924,19 +1077,19 @@ function mesurerLesCouples() {
 			const decideAvantResolution =
 				existante.observe === 'redirection' && inexistante.observe === 'redirection';
 			const portee = estImplementee(route) || decideAvantResolution;
-			let issue;
-			if (!refusDesDeux) {
-				issue =
-					existante.observe === 'servi' && inexistante.observe === 'servi'
-						? 'fuyant'
-						: 'asymetrique';
-			} else if (!memeCle) {
-				issue = 'discernable';
-			} else if (!portee) {
-				issue = 'vacueux';
-			} else {
-				issue = 'indiscernable';
-			}
+			/* `RG-ACC-04` (`CDC:113`) nomme son côté gauche : « un accès REFUSÉ sur
+			   un contenu existant ». Un côté existant que la source SERT et que le
+			   produit sert est hors de la règle — il n'y a aucune existence à
+			   dissimuler. Voir `issueDuCouple`, §6 ter du module d'attendu, et les
+			   deux gardes qui empêchent la clause d'absorber une fuite ou une
+			   vacuité. */
+			const issue = issueDuCouple({
+				attenduExistante: existante.attendu,
+				observeExistante: existante.observe,
+				observeInexistante: inexistante.observe,
+				memeCle,
+				portee
+			});
 			couples.push({
 				route,
 				persona: persona.nom,
@@ -947,7 +1100,8 @@ function mesurerLesCouples() {
 				defauts.push({
 					genre: 'couple',
 					quoi: `${route} · ${persona.nom}`,
-					detail: `couple ${issue} — ${existante.instance.chemin} rend ${String(existante.status)} et ${inexistante.instance.chemin} rend ${String(inexistante.status)}`
+					detail: `couple ${issue} — ${existante.instance.chemin} rend ${String(existante.status)} et ${inexistante.instance.chemin} rend ${String(inexistante.status)}`,
+					imputable: existante.perturbee === true || inexistante.perturbee === true
 				});
 			}
 		}
@@ -1292,7 +1446,8 @@ const comptesCouples = {
 	vacueux: couples.filter((c) => c.issue === 'vacueux').length,
 	fuyants: couples.filter((c) => c.issue === 'fuyant').length,
 	discernables: couples.filter((c) => c.issue === 'discernable').length,
-	asymetriques: couples.filter((c) => c.issue === 'asymetrique').length
+	asymetriques: couples.filter((c) => c.issue === 'asymetrique').length,
+	sansObjet: couples.filter((c) => c.issue === 'sans-objet').length
 };
 
 console.log('\ntest:etancheite — batterie 6, étanchéité du périmètre');
@@ -1365,6 +1520,10 @@ console.log(
 console.log(
 	`    ${String(comptesCouples.asymetriques).padStart(3)} ASYMÉTRIQUES — un côté sert, l’autre refuse`
 );
+console.log(
+	`    ${String(comptesCouples.sansObjet).padStart(3)} SANS OBJET — le côté existant est légitimement servi : RG-ACC-04 (CDC:113)\n` +
+		'        parle d’« un accès REFUSÉ sur un contenu existant », et il n’y en a pas ici'
+);
 
 if (temporel !== null) {
 	console.log('\n  LE TEMPS — POST /connexion, identifiant existant contre inconnu');
@@ -1416,7 +1575,7 @@ if (etatFinal !== null && etatFinal !== undefined) {
 
 console.log(
 	`\n  EMPREINTE ${comptes.conformes}/${comptes.vacuites}/${comptes.nonCouvertes}/${comptes.defauts} · ` +
-		`couples ${comptesCouples.indiscernables}/${comptesCouples.vacueux}/${comptesCouples.fuyants}/${comptesCouples.discernables}/${comptesCouples.asymetriques} · ` +
+		`couples ${comptesCouples.indiscernables}/${comptesCouples.vacueux}/${comptesCouples.fuyants}/${comptesCouples.discernables}/${comptesCouples.asymetriques}/${comptesCouples.sansObjet} · ` +
 		`temps ${temporel?.issue ?? 'non mesuré'}`
 );
 
@@ -1446,11 +1605,31 @@ if (sonde === undefined) {
 	exit(refusDeMesurer.length > 0 ? 2 : rougit ? 1 : 0);
 }
 
-console.log(`\n  sonde ${sonde} : ${String(touchesDeLaSonde)} touche(s).`);
+const genreDeLaSonde = GENRES_DE_SONDE[sonde] ?? 'inconnu';
+const imputables = defauts.filter((d) => d.imputable === true).length;
+console.log(
+	`\n  sonde ${sonde} (${genreDeLaSonde}) : ${String(touchesDeLaSonde)} touche(s), ` +
+		`${String(imputables)} défaut(s) imputable(s) sur ${String(defauts.length)}.`
+);
 if (touchesDeLaSonde === 0) {
 	console.error(
 		'  REFUS DE CONCLURE : la mutation est INERTE — elle n’a rien touché, donc elle ne\n' +
 			'  teste rien. C’est le mode de défaillance RA-01, et il ne se lit pas comme une panne.\n'
+	);
+	exit(1);
+}
+/* LE SECOND REFUS DE CONCLURE, ET IL EST NÉ D'UN CONSTAT CHIFFRÉ. La batterie
+   porte des défauts de fond — 69 le 20 août 2026 — donc `rougit` est vrai quoi
+   qu'une sonde fasse : une sonde d'observation pourrait toucher 72 réponses
+   sans qu'aucun défaut n'en découle, et se déclarer mordante grâce aux défauts
+   d'autrui. On exige donc d'elle un défaut QUI LUI SOIT IMPUTABLE, c'est-à-dire
+   porté par une case ou un couple qu'elle a elle-même touché. Les trois autres
+   genres ne peuvent pas être imputés case par case : voir `GENRES_DE_SONDE`. */
+if (genreDeLaSonde === 'observation' && imputables === 0) {
+	console.error(
+		`  REFUS DE CONCLURE : la mutation a touché ${String(touchesDeLaSonde)} réponse(s), et AUCUN\n` +
+			'  des défauts mesurés ne lui est imputable. Elle est donc verte par les défauts des\n' +
+			'  autres, pas par ce qu’elle éprouve — RA-01, sous la forme la moins visible.\n'
 	);
 	exit(1);
 }
