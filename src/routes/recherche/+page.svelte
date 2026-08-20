@@ -8,6 +8,19 @@
 	 * Le vecteur et les notes viennent de `+page.server.ts`, qui porte le
 	 * périmètre, les droits et la déclaration d'indisponibilité du mode « Sens ».
 	 *
+	 * `recherchees` EST CE QUI DISTINGUE LE PRODUIT DE LA PLANCHE, et c'est ici
+	 * qu'il se pose. Les deux vues savent rendre un état de maquette — elles
+	 * cherchent alors elles-mêmes dans le jeu de semence, comme le gel — et le
+	 * PRODUIT — le jeu reçu est le résultat de l'index, dans l'ordre du moteur,
+	 * et la vue ne fait plus que le rendre. Aucune autre source ne pose cette
+	 * propriété : le rendu direct d'un composant, lui, ne la passe pas.
+	 *
+	 * `requete`, `retenues` et `perimetre` complètent le branchement :
+	 * `RG-M02-06` veut l'état de la recherche porté par l'adresse, et c'est le
+	 * chargeur — seul lecteur de `url` — qui l'en extrait. V-02 n'en reçoit que
+	 * `retenues` : sa requête lui vient de l'axe `req` de son vecteur, comme sa
+	 * planche le déclare, et son affluence n'est pas une notion de sa maquette.
+	 *
 	 * `data.session` vient du chargeur, jamais du navigateur : `ADR-006` interdit
 	 * « toute exposition des droits au navigateur pour qu'il compose
 	 * l'interface ». Le client reçoit un booléen d'écran, pas un rôle.
@@ -55,7 +68,19 @@
 </svelte:head>
 
 {#if data.session}
-	<VueConnectee vecteur={data.vecteur} notes={data.notes} />
+	<VueConnectee
+		vecteur={data.vecteur}
+		notes={data.notes}
+		recherchees={data.recherchees}
+		requete={data.requete}
+		retenues={data.retenues}
+		perimetre={data.perimetre}
+	/>
 {:else}
-	<VuePublique vecteur={data.vecteur} notes={data.notes} />
+	<VuePublique
+		vecteur={data.vecteur}
+		notes={data.notes}
+		recherchees={data.recherchees}
+		retenues={data.retenues}
+	/>
 {/if}
