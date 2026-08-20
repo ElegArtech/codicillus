@@ -89,7 +89,7 @@ import {
 } from './lecture';
 import { contexteDeRequete } from './signets';
 import { eq } from 'drizzle-orm';
-import { comptes, domaines, univers } from '../base/schema';
+import { comptes, domaines, typesDeFiche, univers } from '../base/schema';
 import type {
 	Compte,
 	DetailDeDomaine,
@@ -508,6 +508,25 @@ export async function lireLesDesignationsDUnivers(base: Base): Promise<Record<st
 	const lignes = await base
 		.select({ nom: univers.nom, identifiant: univers.identifiant })
 		.from(univers);
+	const rendu: Record<string, string> = {};
+	for (const l of lignes) rendu[l.nom] = l.identifiant;
+	return rendu;
+}
+
+/**
+ * L'IDENTIFIANT LISIBLE D'UN TYPE DE FICHE, par son NOM D'AFFICHAGE.
+ *
+ * `supprimerUnTypeDeFiche()` et `delesterUnTypeDeFiche()` désignent par
+ * `types_de_fiche.identifiant` — « un libellé se renomme, un identifiant lisible
+ * est stable », dit le chargeur de la route —, tandis que `V-29` ne connaît que
+ * les clés de `TYPES_FICHE`, c'est-à-dire des noms. La correspondance est lue.
+ */
+export async function lireLesDesignationsDeTypeDeFiche(
+	base: Base
+): Promise<Record<string, string>> {
+	const lignes = await base
+		.select({ nom: typesDeFiche.nom, identifiant: typesDeFiche.identifiant })
+		.from(typesDeFiche);
 	const rendu: Record<string, string> = {};
 	for (const l of lignes) rendu[l.nom] = l.identifiant;
 	return rendu;

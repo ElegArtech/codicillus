@@ -857,6 +857,59 @@ export async function supprimerUnTypeDeFiche(
 }
 
 /**
+ * DÉLESTER LES NOTES D'UN TYPE DE FICHE — la sortie que `RG-M14-06` propose.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE GESTE N'EST PAS INVENTÉ : IL EST LU AU GEL
+ *
+ * `mockups/V-29-console-types-fiches.html:3464-3468` : le refus de suppression
+ * offre un bouton « Délester ces N notes du type "X" », et la notification qui
+ * suit dit exactement ce qu'il fait — « les notes conservent leur contenu, sans
+ * propriétés structurées ». `RG-M14-06` exige que le refus porte une sortie ;
+ * c'est celle-là, et la maquette fait loi.
+ *
+ * `P-03` LE REND OBLIGATOIRE, pas facultatif : « une entrée visible est une
+ * entrée qui fonctionne. Pas de "bientôt disponible", pas de lien mort. » Le
+ * bouton est au gel ; le laisser inerte serait le défaut que ce principe nomme.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * DEUX COLONNES, ET LES DEUX ENSEMBLE
+ *
+ * `notes.type_de_fiche_id` porte le type, `notes.proprietes_typees` porte les
+ * valeurs de son schéma. Retirer l'un sans l'autre laisserait des propriétés
+ * orphelines, dont plus aucun schéma ne dirait le sens — « sans propriétés
+ * structurées » se lit sur les deux. Une seule instruction, donc atomique par
+ * nature : aucune transaction n'est nécessaire là où il n'y a qu'une écriture.
+ *
+ * LE CORPS DES NOTES N'EST PAS TOUCHÉ, et c'est tout ce que la notification
+ * promet : « les notes conservent leur contenu ». Rien ici ne lit ni n'écrit
+ * `corps_reference` ou `corps_operationnel`.
+ *
+ * L'INDEX N'EST PAS ENTRETENU, et il faut le dire. Aucune note ne disparaît —
+ * `RG-M14-05` vise la disparition —, mais leur type de fiche change. Si la
+ * projection de recherche portait ce type, elle serait périmée jusqu'à la
+ * prochaine écriture de la note. Lacune déclarée plutôt que geste ajouté sans
+ * l'avoir mesuré.
+ *
+ * @returns le nombre de notes délestées, ou `introuvable` si le type n'existe pas.
+ */
+export async function delesterUnTypeDeFiche(
+	base: Base,
+	identifiant: string
+): Promise<IssueDUnGeste<{ readonly issue: 'possible'; readonly notes: number }>> {
+	const etat = await mesurerUnTypeDeFiche(base, identifiant);
+	if (etat === null) return { issue: 'introuvable' };
+
+	const delestees = await base
+		.update(notes)
+		.set({ typeDeFicheId: null, proprietesTypees: null })
+		.where(eq(notes.typeDeFicheId, etat.id))
+		.returning({ identifiant: notes.identifiant });
+
+	return { issue: 'possible', notes: delestees.length };
+}
+
+/**
  * CHANGER LE RÔLE D'UN COMPTE — `RG-M14-07`.
  *
  * Le refus est prononcé AVANT l'écriture, sur une mesure prise dans la même
