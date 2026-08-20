@@ -192,17 +192,47 @@ function baseDEpreuve(lignes: LigneDeNote[]) {
 	return { base: { select: selection } as unknown as Base, etat };
 }
 
-/** Le moteur d'épreuve — il retient ce qu'on lui écrit, et ce qu'on lui retire. */
-function moteurDEpreuve(echec: string | null = null) {
+/**
+ * Le moteur d'épreuve — il retient ce qu'on lui écrit, et ce qu'on lui retire.
+ *
+ * IL DISTINGUE LES DEUX ÉCHECS, PARCE QU'`ARB-060` LES SÉPARE. La SOUMISSION
+ * — l'enfilement, c'est-à-dire la requête HTTP au moteur — reste dans la requête
+ * et doit lever. La TÂCHE, elle, n'est plus suivie : son état terminal ne peut
+ * plus faire échouer un enregistrement, et le faux moteur doit pouvoir prouver
+ * les deux polarités séparément.
+ *
+ * `waitTask` reste posé sur la tâche, et il est COMPTÉ : un cas nommé plus bas
+ * exige qu'`entretenirLIndex()` ne l'appelle jamais. Sans ce compte, le retrait
+ * de l'attente serait espéré et non posé — `P-5`.
+ *
+ * @param echecDeSoumission le moteur refuse l'enfilement (arrêté, injoignable)
+ * @param echecDeTache la tâche est enfilée puis échoue — ce que le chemin de
+ *   requête ne voit plus, et que le contrôle de `verif/budgets.mjs` relève
+ */
+function moteurDEpreuve(
+	echecDeSoumission: string | null = null,
+	echecDeTache: string | null = null
+) {
 	const ecrites: NoteIndexee[] = [];
 	const retirees: string[] = [];
 	let appels = 0;
-	const tache = (type: string) => ({
-		waitTask: async () =>
-			echec === null
-				? { status: 'succeeded', type }
-				: { status: 'failed', type, error: { message: echec } }
-	});
+	let attentes = 0;
+	let dernierUid = 0;
+	const tache = (type: string) => {
+		dernierUid += 1;
+		const enfilement =
+			echecDeSoumission === null
+				? Promise.resolve({ taskUid: dernierUid })
+				: Promise.reject(new Error(echecDeSoumission));
+		return Object.assign(enfilement, {
+			waitTask: async () => {
+				attentes += 1;
+				return echecDeTache === null
+					? { status: 'succeeded', type }
+					: { status: 'failed', type, error: { message: echecDeTache } };
+			}
+		});
+	};
 	const client = {
 		index: () => ({
 			addDocuments(entrees: NoteIndexee[]) {
@@ -221,7 +251,8 @@ function moteurDEpreuve(echec: string | null = null) {
 		client: client as unknown as Meilisearch,
 		ecrites,
 		retirees,
-		appels: () => appels
+		appels: () => appels,
+		attentes: () => attentes
 	};
 }
 
@@ -405,12 +436,64 @@ describe('ce que l’entretien refuse, et ce qu’il ne fait pas', () => {
 		expect(moteur.appels()).toBe(0);
 	});
 
-	it('ne TAIT pas un échec du moteur — un index muet est le pire des états', async () => {
+	it('ne TAIT pas un échec de SOUMISSION — moteur arrêté, injoignable ou refusant', async () => {
+		/* `ARB-060` : « il n'autorise pas à taire un échec de soumission ». C'est
+		   la moitié de la décision qui ne bouge pas, et c'est celle qu'un lot
+		   pressé aurait avalée avec l'autre. */
 		const { base } = baseDEpreuve([uneNote('n-1', 'd-atelier')]);
 		const moteur = moteurDEpreuve('le moteur a refusé');
 
 		await expect(entretenirLIndex(base, moteur.client, ['n-1'])).rejects.toThrow(
 			'le moteur a refusé'
 		);
+	});
+});
+
+/* ═══════════════════════════════════ ARB-060 — la soumission ════════════ */
+
+/**
+ * CE QUE CE GROUPE MESURE, ET POURQUOI IL EST ICI PLUTÔT QU'AILLEURS.
+ *
+ * `ARB-060` retire l'attente du CHEMIN DE REQUÊTE, et de lui seul. Ce module est
+ * ce chemin — ses trois appelants sont les trois écritures que fait un
+ * utilisateur. Le régime se lit donc ici, à deux lignes de code, et nulle part
+ * ailleurs : `RegimeDeTache` n'a pas de valeur par défaut, si bien qu'aucun
+ * appelant ne peut hériter d'un régime sans l'écrire.
+ *
+ * LA POLARITÉ INVERSE — l'attente CONSERVÉE dans `reindexer()`, les commandes de
+ * console et `eprouverLesSondes()` — n'est pas mesurable ici : ces chemins ne
+ * passent pas par ce module. Elle l'est par la lecture du régime au point
+ * d'appel, et par le fait qu'`indexerDesNotes()` exige ce paramètre.
+ */
+describe('ARB-060 — l’entretien SOUMET la tâche et ne l’attend pas', () => {
+	it('n’appelle jamais waitTask, ni pour l’écriture ni pour le retrait', async () => {
+		const { base } = baseDEpreuve([uneNote('n-1', 'd-atelier')]);
+		const moteur = moteurDEpreuve();
+
+		/* Deux gestes en un : `n-1` est réécrite, `n-partie` n'est pas en base et
+		   doit être retirée. Les DEUX tâches sont donc sollicitées, et aucune
+		   attendue — un cas qui ne solliciterait que l'écriture laisserait le
+		   retrait sans épreuve. */
+		const rapport = await entretenirLIndex(base, moteur.client, ['n-1', 'n-partie']);
+
+		expect(rapport).toEqual({ indexees: 1, retirees: 1 });
+		expect(moteur.appels()).toBe(2);
+		/* LE CŒUR DU LOT, EN UNE LIGNE : deux tâches posées, zéro attendue. */
+		expect(moteur.attentes()).toBe(0);
+	});
+
+	it('NE LÈVE PLUS quand la tâche du moteur échoue après la soumission', async () => {
+		/* Ce cas mesure exactement la garantie qui a CHANGÉ DE PLACE. Elle n'est
+		   pas perdue : le moteur conserve ses tâches, et le contrôle « aucune
+		   tâche en échec dans le moteur » de `verif/budgets.mjs` la relève après
+		   coup. Un jour où ce contrôle disparaîtrait, ce cas resterait vert — c'est
+		   pourquoi il NOMME le contrôle qui le complète. */
+		const { base } = baseDEpreuve([uneNote('n-1', 'd-atelier')]);
+		const moteur = moteurDEpreuve(null, 'la tâche a échoué');
+
+		const rapport = await entretenirLIndex(base, moteur.client, ['n-1']);
+
+		expect(rapport.indexees).toBe(1);
+		expect(moteur.attentes()).toBe(0);
 	});
 });

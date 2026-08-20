@@ -68,7 +68,7 @@
 		"scenarios:extraire": "node verif/extraire-scenarios.mjs",
 		"scenarios:verifier": "node verif/extraire-scenarios.mjs --verifier",
 		"mesure:budgets": "node verif/budgets.mjs",
-		"mesure:budgets:sonde": "node verif/budgets.mjs --sonde=latence && ! node verif/budgets.mjs --sonde=temoin-inerte",
+		"mesure:budgets:sonde": "node verif/budgets.mjs --sonde=latence && node verif/budgets.mjs --sonde=tache-en-echec && ! node verif/budgets.mjs --sonde=temoin-inerte",
 		"exploitation:restauration": "node verif/restauration.mjs",
 		"exploitation:restauration:sonde": "node verif/restauration.mjs --sonde=ligne-perdue && node verif/restauration.mjs --sonde=champ-modifie && node verif/restauration.mjs --sonde=schema-ampute && node verif/restauration.mjs --sonde=octets-perdus && node verif/restauration.mjs --sonde=index-non-reconstruit && ! node verif/restauration.mjs --sonde=temoin-inerte",
 		"verify:lot": "node verif/jalon.mjs \"la sélection des batteries citées par un contrat de tâche\" \"non assigné par le §6.3 du plan de réalisation\"",

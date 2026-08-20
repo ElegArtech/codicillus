@@ -1173,6 +1173,11 @@ export async function executerLImport(
 	const ecrites = lignes
 		.filter((l) => l.sort === 'note' && l.identifiant !== null)
 		.map((l) => l.identifiant as string);
+	/* `ARB-060` : les documents sont SOUMIS au moteur, la tâche n'est pas
+	   attendue. Un lot d'import est aussi un chemin de requête — c'est la route
+	   d'import qui l'appelle —, et l'attente y aurait coûté un regroupement du
+	   moteur de plus. Le rapport compte ce qui a été SOUMIS, ce qu'il a toujours
+	   fait : `RG-M12-08` porte sur la trouvabilité, pas sur un instant. */
 	const entretien = await entretenirLIndex(base, client, ecrites);
 
 	return {
