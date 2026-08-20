@@ -30,7 +30,7 @@ import {
 } from '../../seeds/corpus';
 import { documentDuGel, resoudreDansLeCorpus } from '../lib/contenu/documents-du-gel';
 import { rendreDocument } from '../lib/contenu/rendu';
-import { NOTE } from '../lib/lecture/note-de-demonstration';
+import { NOTE, type LectureAffichee } from '../lib/lecture/note-de-demonstration';
 
 const NOTES = corpusPourVue('V-14');
 
@@ -59,10 +59,41 @@ function corpsRenduDuGel(note: Note, registre: 'reference' | 'operationnel'): st
 	});
 }
 
-const AFFICHEE = {
+/**
+ * LA NOTE AFFICHÉE, COMPLÈTE — et « complète » a changé de sens.
+ *
+ * Elle ne portait que l'identité et les deux corps ; le reste de l'écran —
+ * cartouche de contrôle, dates, bandeaux, mesure de consultation, sommaire —
+ * restait la transcription du gel, quelle que fût la note ouverte. Ces champs
+ * sont ceux que le chargeur lit désormais en base.
+ *
+ * LES VALEURS SONT CELLES D'UN CAS, PAS CELLES DU GEL : elles ne coïncident
+ * avec aucune date de la planche, et c'est ce qui rend les contrôles
+ * ci-dessous capables de dire non (P-5).
+ */
+/** Les deux corps rendus, nommés : `LectureAffichee` les admet nuls, pas eux. */
+const REFERENCE_RENDUE = corpsRenduDuGel(AUTRE_NOTE, 'reference');
+const OPERATIONNEL_RENDU = corpsRenduDuGel(AUTRE_NOTE, 'operationnel');
+
+const AFFICHEE: LectureAffichee = {
 	note: AUTRE_NOTE,
-	reference: corpsRenduDuGel(AUTRE_NOTE, 'reference'),
-	operationnel: corpsRenduDuGel(AUTRE_NOTE, 'operationnel')
+	reference: REFERENCE_RENDUE,
+	operationnel: OPERATIONNEL_RENDU,
+	sommaire: [{ niveau: 2, ancre: 's-epreuve', libelle: "Un titre d'épreuve" }],
+	controle: {
+		par: 'Marc Ferreira',
+		quand: { iso: '2026-03-05', jour: '5 mars 2026', heureDite: '5 mars 2026 à 08:12' }
+	},
+	joursDepuisControle: 4,
+	modifiee: { iso: '2026-03-02', jour: '2 mars 2026', heureDite: '2 mars 2026 à 17:40' },
+	referenceModifiee: {
+		iso: '2026-03-02',
+		jour: '2 mars 2026',
+		heureDite: '2 mars 2026 à 17:40'
+	},
+	resync: false,
+	revision: null,
+	consultations30j: 7
 };
 
 function rendu(proprietes: Record<string, unknown>): Promise<string> {
@@ -106,15 +137,87 @@ describe('V-14 — la propriété fournie l’emporte', () => {
 
 	it('rend le corps de la note reçue, rendu par l’implémentation unique', async () => {
 		const html = await rendu({ affichee: AFFICHEE });
-		expect(AFFICHEE.reference.length).toBeGreaterThan(200);
-		expect(html).toContain(AFFICHEE.reference);
-		expect(html).toContain(AFFICHEE.operationnel);
+		expect(REFERENCE_RENDUE.length).toBeGreaterThan(200);
+		expect(html).toContain(REFERENCE_RENDUE);
+		expect(html).toContain(OPERATIONNEL_RENDU);
+	});
+
+	it('rend le contrôle, les dates et la mesure de la note reçue', async () => {
+		const html = await rendu({ affichee: AFFICHEE });
+		/* Le cartouche : le vérificateur et la date du journal, jamais ceux de la
+		   planche — « Karim Belhadj » et « 1er août 2026 » n'apparaissent plus. */
+		expect(html).toContain('<strong>Marc Ferreira</strong>');
+		expect(html).toContain('5 mars 2026');
+		expect(html).not.toContain('1<sup>er</sup> août 2026');
+		/* La ligne « Rédaction » et la mesure de consultation. */
+		expect(html).toContain('2 mars 2026 à 17:40');
+		expect(html).not.toContain('il y a 3 semaines');
+		expect(html).toContain('7 sur les 30 derniers jours');
+		/* Le sommaire suit le corps affiché, et non les onze titres du gel. */
+		expect(html).toContain("Un titre d'épreuve");
+		expect(html).not.toContain('s-prerequis');
+	});
+
+	it('dit qu’une note n’a jamais été vérifiée plutôt que d’inventer un contrôle', async () => {
+		const html = await rendu({ affichee: { ...AFFICHEE, controle: null } });
+		expect(html).toContain('Jamais vérifiée');
+		expect(html).not.toContain('<strong>Marc Ferreira</strong>');
+	});
+
+	/**
+	 * P-02 — les sept panneaux latéraux étaient transcrits du gel : deux pièces
+	 * jointes, quatre relations, trois rétroliens et quatre vérifications, les
+	 * mêmes pour toutes les notes. Sans données, ils DISENT le vide.
+	 */
+	it('rend les panneaux vides en état neutre, jamais en exemple', async () => {
+		const html = await rendu({ affichee: AFFICHEE });
+		expect(html).toContain('Aucune pièce jointe');
+		expect(html).toContain('Aucune relation');
+		expect(html).toContain('Aucun rétrolien');
+		expect(html).not.toContain('Plan de reprise — volet bases');
+		expect(html).not.toContain('pg-prod-01');
+		expect(html).not.toContain("Consignes d'astreinte — nuit et week-end");
+		expect(html).not.toContain('Restaurer une sauvegarde MariaDB');
+	});
+
+	it('rend les panneaux servis, et rien qu’eux', async () => {
+		const html = await rendu({
+			affichee: AFFICHEE,
+			panneaux: {
+				voisines: [],
+				pieces: [
+					{ nom: 'Journal', extension: 'CSV', taille: '18 Ko', depose: 'déposé le 4 juin 2026' }
+				],
+				relations: [
+					{
+						libelle: 'Dépend de',
+						notes: [
+							{
+								identifiant: 'n-pg-prod-02',
+								titre: 'pg-prod-02',
+								type: 'Fiche',
+								domaine: 'Infrastructure'
+							}
+						]
+					}
+				],
+				retroliens: [
+					{ identifiant: 'n-astreinte', titre: 'Consignes d’astreinte', domaine: 'Infrastructure' }
+				],
+				verifications: [{ par: null, iso: '2026-03-05', jour: '5 mars 2026' }]
+			}
+		});
+		expect(html).toContain('Journal');
+		expect(html).toContain('pg-prod-02');
+		expect(html).toContain('Consignes d’astreinte');
+		/* Une attestation que le journal ne rattache à aucun compte est DITE,
+		   jamais attribuée (`RG-M15-02`). */
+		expect(html).toContain('auteur non journalisé');
+		expect(html).not.toContain('Aucune relation');
 	});
 
 	it('n’invente aucun corps quand le registre n’existe pas', async () => {
-		const html = await rendu({
-			affichee: { note: AUTRE_NOTE, reference: AFFICHEE.reference, operationnel: null }
-		});
+		const html = await rendu({ affichee: { ...AFFICHEE, operationnel: null } });
 		/* L'enveloppe du gel reste — le nœud ne disparaît pas —, et elle ne
 		   porte AUCUN contenu : ni la transcription du gel, ni un corps inventé.
 		   Les marques de rendu de Svelte sont retirées avant de mesurer, elles
@@ -145,6 +248,6 @@ describe('V-14 — la propriété absente rend la transcription figée du gel', 
 		const html = await rendu({});
 		expect(html).toContain('id="s-restaurer"');
 		expect(html).toContain('id="o-preparer"');
-		expect(html).not.toContain(AFFICHEE.reference);
+		expect(html).not.toContain(REFERENCE_RENDUE);
 	});
 });

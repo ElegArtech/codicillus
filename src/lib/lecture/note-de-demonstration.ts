@@ -254,6 +254,49 @@ export const CONSULTATIONS_RECENTES: number = consultationsRecentes(NOTE);
    `pnpm verif:convertisseur` compte les appelants). Une vue qui rendrait
    elle-même serait le second chemin que l'ADR interdit. */
 
+/* ── Ce que la base porte, et que le gel écrivait à la main ─────────────────
+   Les quatre descriptions ci-dessous sont les seules choses que le bloc
+   partagé affichait SANS pouvoir les recevoir : le dernier contrôle, la
+   dernière modification, la demande de révision courante et la mesure de
+   consultation. Chacune existe en base — `verifications`, `notes.modifie_le`,
+   les quatre colonnes `revision_*`, `consultations` —, aucune n'était lue.
+
+   ELLES SONT TOUTES FAILLIBLES, ET C'EST LE POINT. Une note jamais vérifiée
+   n'a pas de contrôle ; un journal de vérification peut porter une entrée
+   anonymisée, donc sans nom (`RG-M15-02`) ; une note sans demande courante n'a
+   pas de révision. `null` DIT CES ABSENCES et le bloc les rend en état neutre
+   explicite (`RG-M18-03`) — jamais une valeur d'exemple (P-02). */
+
+/** Un instant, dans les trois formes que le gel emploie côte à côte. */
+export interface InstantAffiche {
+	/** Forme machine — l'attribut `datetime` d'un `<time>`. */
+	readonly iso: string;
+	/** Date en toutes lettres — le texte du `<time>`. */
+	readonly jour: string;
+	/** Date et heure — l'infobulle du `<time>`. */
+	readonly heureDite: string;
+}
+
+/**
+ * LE DERNIER CONTRÔLE RÉELLEMENT PORTÉ PAR LA NOTE — `M06.2`.
+ *
+ * `par` vaut `null` quand le journal ne rattache l'entrée à aucun compte :
+ * `verifications.compte_id` est effaçable (`on delete set null`) et l'entrée
+ * survit à son auteur. Une entrée sans nom reste une vérification ; c'est
+ * l'AUTEUR qui manque, pas l'attestation.
+ */
+export interface ControleReel {
+	readonly par: string | null;
+	readonly quand: InstantAffiche;
+}
+
+/** La demande de révision courante — `RG-M06-05`, `RG-M06-06`. */
+export interface RevisionCourante {
+	readonly par: string | null;
+	readonly le: string;
+	readonly commentaire: string | null;
+}
+
 /** La note affichée par le bloc partagé, et ses deux corps déjà rendus. */
 export interface NoteAffichee {
 	/** La note lue — celle que l'adresse désigne, jamais celle du gel. */
@@ -265,4 +308,59 @@ export interface NoteAffichee {
 	readonly reference: string | null;
 	/** Le corps du registre Opérationnel, rendu par `rendreDocument`, ou `null`. */
 	readonly operationnel: string | null;
+}
+
+/**
+ * LA NOTE TELLE QUE V-14 L'AFFICHE — l'identité et les corps, PLUS tout ce que
+ * le bloc partagé écrivait à la main faute de le recevoir.
+ *
+ * ELLE ÉTEND `NoteAffichee` AU LIEU DE LA REMPLACER, et ce n'est pas un détail
+ * de forme : `$lib/donnees/edition.ts` construit une `NoteAffichee` pour V-18,
+ * l'éditeur de l'Opérationnel, qui n'a ni cartouche de contrôle, ni bandeaux,
+ * ni métadonnées — lui imposer ces champs le ferait mentir sur ce qu'il rend.
+ * V-15, de son côté, ne passe rien du tout et garde la transcription du gel.
+ */
+export interface LectureAffichee extends NoteAffichee {
+	/**
+	 * LE SOMMAIRE DU CORPS AFFICHÉ, relevé sur le DOCUMENT et non sur le rendu.
+	 *
+	 * Le gel le construit en relisant son propre DOM (`construireSommaire()`,
+	 * `V-14:3901`) ; un composant Svelte ne peut pas se relire. La liste vient
+	 * donc de `titres()` appliqué au document canonique, ce qui donne
+	 * exactement la même matière : les `h2[id]` et `h3[id]`, dans l'ordre.
+	 */
+	readonly sommaire: readonly EntreeDeSommaire[];
+	/** Le dernier contrôle. `null` : la note n'a jamais été vérifiée. */
+	readonly controle: ControleReel | null;
+	/**
+	 * L'ANCIENNETÉ QUI A SERVI À RÉSOUDRE LE NIVEAU — jours écoulés depuis la
+	 * dernière vérification, et à défaut depuis la dernière modification
+	 * (`RG-M06-01`).
+	 *
+	 * C'est l'entrée de `libelleFraicheur()`, et c'est LA MÊME que celle du
+	 * calcul du niveau : deux anciennetés distinctes feraient dire au libellé
+	 * autre chose que ce que la jauge montre — l'écart exact que P-01 ferme.
+	 */
+	readonly joursDepuisControle: number;
+	/** La dernière modification de la note — ligne « Rédaction ». */
+	readonly modifiee: InstantAffiche;
+	/** La dernière modification du corps Référence — bandeau de resynchronisation. */
+	readonly referenceModifiee: InstantAffiche;
+	/**
+	 * Le corps Référence a été modifié APRÈS le corps Opérationnel : c'est
+	 * l'état que le bandeau `bandeau--resync` signale. Faux quand la note ne
+	 * porte pas d'Opérationnel — il n'y a alors rien à resynchroniser.
+	 */
+	readonly resync: boolean;
+	/** La demande de révision courante. `null` : aucune n'est ouverte. */
+	readonly revision: RevisionCourante | null;
+	/**
+	 * Les consultations des trente derniers jours, comptées au journal.
+	 *
+	 * `MESURES_7J` de la semence nomme « 7 j » ce que le gel écrit « 30
+	 * derniers jours » (voir `consultationsRecentes` ci-dessus) : cette valeur
+	 * ne vient pas de la table de semence, elle vient du JOURNAL, sur la
+	 * fenêtre que le gel annonce.
+	 */
+	readonly consultations30j: number;
 }

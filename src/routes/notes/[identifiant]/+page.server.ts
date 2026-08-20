@@ -64,11 +64,39 @@
  * pas » de « vous n'y avez pas droit ».
  */
 import { error, fail, redirect } from '@sveltejs/kit';
-import { basePartagee } from '$lib/base/acces';
+import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { basePartagee, type Base } from '$lib/base/acces';
+import {
+	comptes,
+	consultations,
+	domaines,
+	notes,
+	piecesJointes,
+	relations,
+	typesDeNote,
+	typesDeRelation,
+	verifications
+} from '$lib/base/schema';
+import { analyserDocument, titres } from '$lib/contenu/document';
+import { formaterDateFr, formaterDateHeureFr, formaterDateIso } from '$lib/dates';
 import { compteDe, journaliserUneConsultation } from '$lib/donnees/consultation';
 import { lireLHistoire, versionDemandee } from '$lib/donnees/histoire';
-import { lireSeuils } from '$lib/donnees/lecture';
-import { lireLaNote, registreDemande } from '$lib/donnees/note';
+import { joursEcoules, lireSeuils, type ContexteDeLecture } from '$lib/donnees/lecture';
+import type { Identite } from '$lib/droits/resolution';
+import { lireLaNote, registreDemande, type LectureDeNote, type Registre } from '$lib/donnees/note';
+import type {
+	EntreeDeSommaire,
+	InstantAffiche,
+	LectureAffichee
+} from '$lib/lecture/note-de-demonstration';
+import {
+	extensionEtNom,
+	tailleEnClair,
+	type GroupeDeRelations,
+	type NoteLiee,
+	type PanneauxDeLaNote,
+	type VoisineAffichee
+} from '$lib/lecture/panneaux';
 import { supprimerUneNote } from '$lib/donnees/suppression';
 import {
 	commentaireDeRevision,
@@ -79,6 +107,308 @@ import {
 import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
+import type { Note } from '../../../../seeds/corpus';
+
+/* ════════════════════════════════════════════════════════════════════════════
+   CE QUE L'ÉCRAN MONTRE, ET QUE PERSONNE NE LISAIT
+
+   `lireLaNote()` rendait déjà la note réelle, son corps rendu et ses
+   rétroliens ; `V-14` n'avait aucune propriété pour les recevoir et affichait
+   la transcription du gel — le titre de `n-restaurer-pg` POUR LES 32 NOTES, et
+   pour toute note créée depuis. L'écart était déclaré au rapport de `T-033`.
+
+   CE BLOC EST LA MOITIÉ MANQUANTE. Il complète la lecture par ce que le gel
+   écrivait à la main et que la base porte pourtant : le journal des
+   vérifications, la demande de révision courante, les dates de modification,
+   les pièces jointes, les relations dans les deux sens et la mesure de
+   consultation.
+
+   POURQUOI LES REQUÊTES SONT ICI, ET NON DANS `$lib/donnees/`. Le contrat de
+   ce lot ouvre le chargeur de la route, pas les modules partagés de la couche
+   de données — d'autres lots y travaillent en parallèle. Le regroupement dans
+   un module de lecture reste à faire, et c'est une dette dite, pas un choix
+   d'architecture.
+
+   AUCUNE DÉCISION D'ACCÈS N'EST PRISE ICI, et c'est la propriété qui compte
+   (ADR-006). Toutes les requêtes ci-dessous s'exécutent APRÈS la résolution :
+   la note a déjà été jugée lisible. Les seules qui traversent le corpus —
+   celles des relations — sont bornées aux identifiants que `lireLaNote()` a
+   retenus, c'est-à-dire au périmètre qu'elle a calculé. Aucun second filtre,
+   aucune seconde règle. */
+
+/** La fenêtre de mesure que le gel annonce : « sur les 30 derniers jours ». */
+const JOURS_DE_MESURE = 30;
+const MILLISECONDES_PAR_JOUR = 86_400_000;
+
+/** Un instant, dans les trois formes que le gel emploie côte à côte. */
+function instantAffiche(valeur: Date): InstantAffiche {
+	return {
+		iso: formaterDateIso(valeur),
+		jour: formaterDateFr(valeur),
+		heureDite: formaterDateHeureFr(valeur)
+	};
+}
+
+/**
+ * LE SOMMAIRE, RELEVÉ SUR LE DOCUMENT CANONIQUE.
+ *
+ * `construireSommaire()` du gel (`V-14:3901`) relit le DOM rendu ; un composant
+ * Svelte ne peut pas se relire. `titres()` donne la même matière depuis
+ * l'arbre : « seuls les niveaux 2 et 3 alimentent le sommaire »
+ * (`V-14:1704`), et un titre sans ancre n'est la cible d'aucun lien.
+ */
+function sommaireDuDocument(valeur: unknown): readonly EntreeDeSommaire[] {
+	const retenus: EntreeDeSommaire[] = [];
+	for (const titre of titres(analyserDocument(valeur))) {
+		const { level, ancre } = titre.attrs;
+		if ((level !== 2 && level !== 3) || ancre === null) continue;
+		retenus.push({
+			niveau: level,
+			ancre,
+			libelle: (titre.content ?? []).map((t) => t.text).join('')
+		});
+	}
+	return retenus;
+}
+
+/**
+ * LES DEUX NOTES VOISINES DU PANNEAU « POSITION » — celle qui précède et celle
+ * qui suit, DANS LE CORPUS QUE L'APPELANT A LE DROIT DE LIRE.
+ *
+ * La fratrie est lue sur `lecture.notes`, déjà filtré par le périmètre : une
+ * note voisine qu'on n'a pas le droit de lire n'est pas une voisine, et son
+ * titre ne s'affiche pas (`RG-ACC-01`).
+ *
+ * L'ORDRE EST CELUI DU CORPUS SERVI — voir `$lib/lecture/panneaux.ts`.
+ */
+function voisinesDe(lecture: LectureDeNote): readonly VoisineAffichee[] {
+	const note = lecture.note;
+	const fratrie = lecture.notes.filter(
+		(n) => n.univers === note.univers && n.domaine === note.domaine && n.dossier === note.dossier
+	);
+	const rang = fratrie.findIndex((n) => n.id === note.id);
+	if (rang < 0) return [];
+	const decrire = (n: Note, sens: '←' | '→'): VoisineAffichee => ({
+		identifiant: n.id,
+		sens,
+		titre: n.titre,
+		fraicheur: n.fraicheur,
+		jours: n.jours
+	});
+	const retenues: VoisineAffichee[] = [];
+	const avant = fratrie[rang - 1];
+	const apres = fratrie[rang + 1];
+	if (avant !== undefined) retenues.push(decrire(avant, '←'));
+	if (apres !== undefined) retenues.push(decrire(apres, '→'));
+	return retenues;
+}
+
+/** Une relation lue, dans le sens où elle se lit depuis la note ouverte. */
+interface RelationLue extends NoteLiee {
+	readonly libelle: string;
+}
+
+/**
+ * LES RELATIONS, GROUPÉES PAR LIBELLÉ — le gel les rend ainsi, sortantes
+ * d'abord, entrantes ensuite (« S'applique à », « Dépend de », puis « Est
+ * référencée par »).
+ *
+ * L'ORDRE DES GROUPES EST CELUI DU RÉFÉRENTIEL (`types_de_relation.ordre`),
+ * puis celui du sens : ce sont les deux seuls ordres que la base porte, et
+ * aucun classement n'est inventé.
+ */
+function grouperLesRelations(lues: readonly RelationLue[]): readonly GroupeDeRelations[] {
+	const groupes = new Map<string, NoteLiee[]>();
+	for (const r of lues) {
+		const liee: NoteLiee = {
+			identifiant: r.identifiant,
+			titre: r.titre,
+			type: r.type,
+			domaine: r.domaine
+		};
+		const deja = groupes.get(r.libelle);
+		if (deja === undefined) groupes.set(r.libelle, [liee]);
+		else deja.push(liee);
+	}
+	return [...groupes].map(([libelle, notesDuGroupe]) => ({ libelle, notes: notesDuGroupe }));
+}
+
+/** Ce que le chargeur ajoute à la lecture : la note telle qu'elle s'affiche. */
+interface ComplementsDeLecture {
+	readonly affichee: LectureAffichee;
+	readonly panneaux: PanneauxDeLaNote;
+}
+
+async function complementsDeLecture(
+	base: Base,
+	lecture: LectureDeNote,
+	registre: Registre,
+	corpsDuRegistreReference: string | null,
+	maintenant: Date
+): Promise<ComplementsDeLecture> {
+	const identifiant = lecture.note.id;
+
+	/* La ligne brute de la note : les colonnes que la couche de lecture ne
+	   projette pas, et le compte qui a demandé la révision. */
+	const [ligne] = await base
+		.select({
+			cle: notes.id,
+			modifieLe: notes.modifieLe,
+			verifieLe: notes.verifieLe,
+			corpsReference: notes.corpsReference,
+			corpsReferenceModifieLe: notes.corpsReferenceModifieLe,
+			corpsOperationnelModifieLe: notes.corpsOperationnelModifieLe,
+			revisionDemandee: notes.revisionDemandee,
+			revisionCommentaire: notes.revisionCommentaire,
+			revisionLe: notes.revisionLe,
+			revisionPar: comptes.nom
+		})
+		.from(notes)
+		.leftJoin(comptes, eq(notes.revisionParId, comptes.id))
+		.where(eq(notes.identifiant, identifiant))
+		.limit(1);
+
+	/* La note a disparu entre sa résolution et cette lecture. Le refus est le
+	   MÊME que partout dans cette famille — rien ne distingue deux causes
+	   (`RG-ACC-04`). */
+	if (ligne === undefined) error(404, MESSAGE_INTROUVABLE);
+
+	/* Le journal des vérifications — `M06.2`, « l'historique complet est
+	   conservé ». Une entrée sans compte reste une attestation : la colonne est
+	   effaçable, et `RG-M15-02` fait de l'anonymat un état normal du journal. */
+	const attestations = await base
+		.select({ par: comptes.nom, le: verifications.le })
+		.from(verifications)
+		.leftJoin(comptes, eq(verifications.compteId, comptes.id))
+		.where(eq(verifications.noteId, ligne.cle))
+		.orderBy(desc(verifications.le));
+
+	const lignesDePiece = await base
+		.select({
+			nom: piecesJointes.nom,
+			tailleOctets: piecesJointes.tailleOctets,
+			typeMedia: piecesJointes.typeMedia,
+			deposeeLe: piecesJointes.deposeeLe
+		})
+		.from(piecesJointes)
+		.where(eq(piecesJointes.noteId, ligne.cle))
+		.orderBy(desc(piecesJointes.deposeeLe));
+
+	/* LE PÉRIMÈTRE EST CELUI QUE `lireLaNote()` A CALCULÉ, et il entre dans la
+	   requête (ADR-006) : une relation vers une note qu'on n'a pas le droit de
+	   lire n'affiche pas son titre. */
+	const lisibles = lecture.notes.map((n) => n.id);
+	const sansRelation = lisibles.length === 0;
+
+	const sortantes = sansRelation
+		? []
+		: await base
+				.select({
+					libelle: typesDeRelation.libelleSortant,
+					identifiant: notes.identifiant,
+					titre: notes.titre,
+					type: typesDeNote.nom,
+					domaine: domaines.nom
+				})
+				.from(relations)
+				.innerJoin(typesDeRelation, eq(relations.typeDeRelationId, typesDeRelation.id))
+				.innerJoin(notes, eq(relations.cibleId, notes.id))
+				.innerJoin(typesDeNote, eq(notes.typeDeNoteId, typesDeNote.id))
+				.innerJoin(domaines, eq(notes.domaineId, domaines.id))
+				.where(and(eq(relations.sourceId, ligne.cle), inArray(notes.identifiant, lisibles)))
+				.orderBy(typesDeRelation.ordre, notes.titre);
+
+	const entrantes = sansRelation
+		? []
+		: await base
+				.select({
+					libelle: typesDeRelation.libelleEntrant,
+					identifiant: notes.identifiant,
+					titre: notes.titre,
+					type: typesDeNote.nom,
+					domaine: domaines.nom
+				})
+				.from(relations)
+				.innerJoin(typesDeRelation, eq(relations.typeDeRelationId, typesDeRelation.id))
+				.innerJoin(notes, eq(relations.sourceId, notes.id))
+				.innerJoin(typesDeNote, eq(notes.typeDeNoteId, typesDeNote.id))
+				.innerJoin(domaines, eq(notes.domaineId, domaines.id))
+				.where(and(eq(relations.cibleId, ligne.cle), inArray(notes.identifiant, lisibles)))
+				.orderBy(typesDeRelation.ordre, notes.titre);
+
+	/* LA MESURE DE CONSULTATION VIENT DU JOURNAL, sur la fenêtre que le gel
+	   annonce — « 37 sur les 30 derniers jours ». `MESURES_7J` de la semence
+	   nomme « 7 j » la même donnée : la contradiction est ancienne et déclarée
+	   (`$lib/lecture/note-de-demonstration.ts`), et elle se tranche ici en
+	   lisant la table plutôt qu'une constante. */
+	const depuis = new Date(maintenant.getTime() - JOURS_DE_MESURE * MILLISECONDES_PAR_JOUR);
+	const [mesure] = await base
+		.select({ nombre: sql<number>`count(*)::int` })
+		.from(consultations)
+		.where(and(eq(consultations.noteId, ligne.cle), gte(consultations.le, depuis)));
+
+	const domaineParNote = new Map<string, string>(lecture.notes.map((n) => [n.id, n.domaine]));
+
+	/* `RG-M06-01` — la fraîcheur se lit sur la dernière vérification, et à
+	   défaut sur la dernière modification. L'ANCIENNETÉ SERVIE AU LIBELLÉ EST
+	   CELLE-LÀ, la même que celle sur laquelle le niveau a été résolu : deux
+	   sources donneraient deux âges pour un seul signal (P-01). */
+	const referenceDeFraicheur = ligne.verifieLe ?? ligne.modifieLe;
+
+	return {
+		affichee: {
+			note: lecture.note,
+			reference: corpsDuRegistreReference,
+			operationnel: registre === 'operationnel' && lecture.corps.redige ? lecture.corps.html : null,
+			sommaire: sommaireDuDocument(ligne.corpsReference),
+			controle:
+				ligne.verifieLe === null
+					? null
+					: { par: attestations[0]?.par ?? null, quand: instantAffiche(ligne.verifieLe) },
+			joursDepuisControle: joursEcoules(referenceDeFraicheur, maintenant),
+			modifiee: instantAffiche(ligne.modifieLe),
+			referenceModifiee: instantAffiche(ligne.corpsReferenceModifieLe),
+			/* `RG-NOT-02` — il n'y a rien à resynchroniser sans version
+			   opérationnelle. La comparaison porte sur les deux dates de CORPS, et
+			   non sur `modifieLe`, qu'un simple renommage fait bouger. */
+			resync:
+				ligne.corpsOperationnelModifieLe !== null &&
+				ligne.corpsReferenceModifieLe.getTime() > ligne.corpsOperationnelModifieLe.getTime(),
+			revision:
+				ligne.revisionDemandee && ligne.revisionLe !== null
+					? {
+							par: ligne.revisionPar,
+							le: formaterDateFr(ligne.revisionLe),
+							commentaire: ligne.revisionCommentaire
+						}
+					: null,
+			consultations30j: mesure?.nombre ?? 0
+		},
+		panneaux: {
+			voisines: voisinesDe(lecture),
+			pieces: lignesDePiece.map((pj) => {
+				const { extension, nom } = extensionEtNom(pj.nom, pj.typeMedia);
+				return {
+					nom,
+					extension,
+					taille: tailleEnClair(pj.tailleOctets),
+					depose: `déposé le ${formaterDateFr(pj.deposeeLe)}`
+				};
+			}),
+			relations: grouperLesRelations([...sortantes, ...entrantes]),
+			retroliens: lecture.retroliens.map((r) => ({
+				identifiant: r.identifiant,
+				titre: r.titre,
+				domaine: domaineParNote.get(r.identifiant) ?? ''
+			})),
+			verifications: attestations.map((a) => ({
+				par: a.par,
+				iso: formaterDateIso(a.le),
+				jour: formaterDateFr(a.le)
+			}))
+		}
+	};
+}
 
 export const load: PageServerLoad = async ({ params, url, locals }) => {
 	const base = basePartagee();
@@ -144,6 +474,38 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		versionDemandee(url.searchParams.get('version'))
 	);
 
+	/* ═══════════════════════════════════════════════════════════════════════
+	   LE CORPS QUE L'ÉCRAN AFFICHE EST CELUI DU REGISTRE RÉFÉRENCE.
+
+	   Le gel rend les DEUX enveloppes en permanence et cache la seconde
+	   (`div#corps-operationnel[hidden]`) ; la bascule qui les échange est un
+	   COMPORTEMENT, absent du gel par `ARB-011` et non livré à ce jour. Le volet
+	   visible est donc toujours `corps-reference`, quel que soit `?registre=`.
+
+	   D'OÙ CETTE SECONDE RÉSOLUTION, ET SEULEMENT DANS CE SENS-LÀ : quand
+	   l'adresse demande l'Opérationnel, la Référence est chargée en plus, pour
+	   que le volet visible ne soit pas vide. Elle passe par `lireLaNote()`, donc
+	   par la MÊME décision d'accès — jamais par une requête écrite ici. Le
+	   chemin ordinaire (`?registre=reference`, le défaut) n'en paie pas le coût.
+
+	   UN CORPS EXISTANT MAIS VIDE REND `null`, et la vue le DIT : `corpsRendu()`
+	   sépare `existe` de `redige`, et « la note n'a pas encore de texte » n'est
+	   pas la même chose que « le texte n'a pas été chargé » (`RG-M18-03`). */
+	const corpsDeReference =
+		registre === 'reference'
+			? lecture.corps.redige
+				? lecture.corps.html
+				: null
+			: await corpsDeReferenceCharge(base, params.identifiant, locals.identite, contexte);
+
+	const complements = await complementsDeLecture(
+		base,
+		lecture,
+		registre,
+		corpsDeReference,
+		maintenant
+	);
+
 	return {
 		/**
 		 * LE VECTEUR D'ÉTAT DE V-14, et il ne porte que ce qui est VRAI de cet
@@ -194,9 +556,44 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		 * 32 notes —, et non parce qu'une transposition manquerait.
 		 * `retention` est `versions_max` de `parametres`, lu et jamais redéclaré.
 		 */
-		histoire
+		histoire,
+		/**
+		 * LA NOTE TELLE QU'ELLE S'AFFICHE — l'identité, le corps rendu, le
+		 * sommaire, le dernier contrôle, les dates, la révision courante et la
+		 * mesure de consultation.
+		 *
+		 * C'est la propriété qui manquait à `src/vues/V-14.svelte` et dont
+		 * l'absence faisait afficher la note du gel pour toutes les autres.
+		 */
+		affichee: complements.affichee,
+		/** Les sept panneaux latéraux, tous lus en base, aucun transcrit. */
+		panneaux: complements.panneaux
 	};
 };
+
+/**
+ * LE CORPS DE RÉFÉRENCE, RÉSOLU UNE SECONDE FOIS — et par le même chemin.
+ *
+ * Elle n'est appelée que lorsque l'adresse demande l'Opérationnel. Passer par
+ * `lireLaNote()` plutôt que par une requête écrite ici garantit qu'il n'existe
+ * pas deux décisions d'accès à cette adresse : un refus rend `INTROUVABLE`, et
+ * le volet visible reste vide plutôt que de trahir quoi que ce soit.
+ */
+async function corpsDeReferenceCharge(
+	base: Base,
+	identifiant: string,
+	identite: Identite,
+	contexte: ContexteDeLecture
+): Promise<string | null> {
+	const autre = await lireLaNote(base, {
+		identifiant,
+		registre: 'reference',
+		identite,
+		contexte
+	});
+	if (!autre.trouve || !autre.ressource.corps.redige) return null;
+	return autre.ressource.corps.html;
+}
 
 /**
  * LE CONTEXTE D'UN GESTE — l'instant est pris UNE FOIS par requête, et il sert

@@ -31,7 +31,7 @@
 		 */
 		classe?: string;
 		/** Les titres du corps affiché. Par défaut, ceux du registre Référence. */
-		entrees?: readonly EntreeDeSommaire[];
+		entrees?: readonly EntreeDeSommaire[] | undefined;
 	}
 
 	const { classe = 'sommaire', entrees }: Proprietes = $props();
@@ -48,5 +48,5 @@
 			>{#if ligne.numero}<span class="sommaire__num">{ligne.numero}</span>{/if}<span
 				>{ligne.libelle}</span
 			></a
-		></li>{/each}</ul>
+		></li>{:else}<li class="n1"><span>Aucun titre dans cette note</span></li>{/each}</ul>
 </nav>

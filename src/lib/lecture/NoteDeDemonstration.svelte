@@ -54,7 +54,9 @@
 		CONTROLE_PAR_NIVEAU,
 		NOTE,
 		rangementDe,
-		type NoteAffichee
+		type LectureAffichee,
+		type InstantAffiche,
+		type RevisionCourante
 	} from './note-de-demonstration';
 	import type { Snippet } from 'svelte';
 
@@ -124,22 +126,29 @@
 		 * `rendreDocument` (ADR-004 : une seule implémentation, et aucune vue
 		 * n'en est un second chemin).
 		 *
-		 * CE QU'ELLE N'ALIMENTE PAS, ET POURQUOI — écart déclaré, non comblé :
+		 * CE QU'ELLE ALIMENTE DÉSORMAIS, ET QUI RESTAIT DU GEL. Les trois
+		 * exclusions déclarées à `T-042` sont levées, parce que leur cause a
+		 * disparu : elles tenaient à ce que `Note` de `seeds/corpus.ts` ne porte
+		 * ni le vérificateur, ni l'heure, ni la date de modification. Le
+		 * chargeur les lit maintenant à la SOURCE — `verifications`,
+		 * `notes.modifie_le`, les quatre colonnes `revision_*` — et les passe
+		 * ici tout rendus.
 		 *
-		 *   · LE CARTOUCHE DE CONTRÔLE. Il affiche « par <qui> · <date> », et
-		 *     `Note` de `seeds/corpus.ts` ne porte NI le vérificateur, NI
-		 *     l'heure, NI la date en toutes lettres. Trois des sept champs
-		 *     seulement sont dérivables ; en alimenter trois et laisser quatre
-		 *     valeurs de planche produirait un cartouche MIXTE, c'est-à-dire une
-		 *     valeur illustrative au sens de P-02. Il reste donc entièrement sur
-		 *     le levier `niveau`.
-		 *   · LA DATE DE MODIFICATION de la ligne « Rédaction ». Même cause :
-		 *     `Note` ne la porte pas.
-		 *   · LES TROIS BANDEAUX. Leur prose est écrite au gel (auteur et date
-		 *     de la demande de révision, nom du domaine) ; ils restent des
-		 *     leviers, comme `operationnel`.
+		 *   · LE CARTOUCHE DE CONTRÔLE. « par <qui> · <date> » vient du journal.
+		 *     Ce qui dépend du NIVEAU et non de la note — le suffixe « une revue
+		 *     serait bienvenue », l'appui « revue nécessaire » — continue de se
+		 *     lire dans `CONTROLE_PAR_NIVEAU` : ce n'est pas une donnée de note,
+		 *     c'est la mise en garde que le gel attache à chaque niveau. Le
+		 *     cartouche n'est donc pas MIXTE : ses deux moitiés sont vraies.
+		 *   · LA DATE DE MODIFICATION de la ligne « Rédaction ».
+		 *   · LES TROIS BANDEAUX, qui décrivent l'état de la note et non un
+		 *     réglage de planche.
+		 *
+		 * ET CE QU'ELLE N'ALIMENTE TOUJOURS PAS : rien du libellé de fraîcheur.
+		 * Il sort de la fabrique unique, à qui l'on ne donne que le niveau et
+		 * l'ancienneté (P-01, ADR-005).
 		 */
-		affichee?: NoteAffichee | undefined;
+		affichee?: LectureAffichee | undefined;
 	}
 
 	const {
@@ -159,13 +168,98 @@
 	/** La note affichée — celle qu'on lit, ou celle du gel à défaut. */
 	const note = $derived(affichee?.note ?? NOTE);
 	const rangement = $derived(rangementDe(note));
-	const consultations = $derived(consultationsRecentes(note));
+	const consultations = $derived(
+		affichee ? affichee.consultations30j : consultationsRecentes(note)
+	);
 
 	/** Les trois rangs de la jauge — jamais un de plus, jamais un de moins. */
 	const RANGS = Array.from({ length: BARRES_DE_JAUGE }, (_, rang) => rang);
 
-	const controle = $derived(CONTROLE_PAR_NIVEAU[niveau]);
-	const temoin = $derived(temoinFraicheur({ fraicheur: niveau, jours: anciennete(controle.iso) }));
+	/**
+	 * LES QUATRE LEVIERS DE PLANCHE DEVIENNENT DES FAITS DE LA NOTE — T-042b.
+	 *
+	 * Sans note affichée, ils restent ce qu'ils étaient : cinq contrôles que la
+	 * planche de V-14 actionne, et que V-15 laisse à leur défaut. Avec une note
+	 * affichée, ils décrivent CETTE note-ci, et rien n'est plus piloté de
+	 * l'extérieur : un bandeau de révision déployé sur une note sans demande
+	 * courante serait exactement la valeur illustrative que P-02 proscrit.
+	 */
+	const niveauAffiche = $derived(affichee ? affichee.note.fraicheur : niveau);
+	const revisionAffichee = $derived(affichee ? affichee.revision !== null : revision);
+	const brouillonAffiche = $derived(affichee ? affichee.note.brouillon : brouillon);
+	const resyncAffiche = $derived(affichee ? affichee.resync : resync);
+	const operationnelAffiche = $derived(affichee ? affichee.note.operationnel : operationnel);
+
+	/**
+	 * LE TÉMOIN PASSE PAR LA FABRIQUE UNIQUE, ET SON ANCIENNETÉ VIENT DE LA MÊME
+	 * SOURCE QUE SON NIVEAU (P-01, ADR-005).
+	 *
+	 * `joursDepuisControle` est l'ancienneté sur laquelle le niveau a été
+	 * résolu — dernière vérification, à défaut dernière modification
+	 * (`RG-M06-01`). La lire ailleurs ferait dire au libellé autre chose que ce
+	 * que la jauge montre. Sans note affichée, l'ancienneté reste celle de la
+	 * date de planche, comptée depuis `DATE_REFERENCE`.
+	 */
+	const temoin = $derived(
+		temoinFraicheur(
+			affichee
+				? { fraicheur: niveauAffiche, jours: affichee.joursDepuisControle }
+				: { fraicheur: niveau, jours: anciennete(CONTROLE_PAR_NIVEAU[niveau].iso) }
+		)
+	);
+
+	/**
+	 * LA PROSE DU CARTOUCHE QUI DÉPEND DU NIVEAU, ET D'ELLE SEULE — le suffixe
+	 * « une revue serait bienvenue » et l'appui « revue nécessaire ».
+	 *
+	 * Ce ne sont pas des données de note : ce sont les deux mises en garde que
+	 * le gel attache aux niveaux `vieil` et `obs` (`V-14:4008-4012`). Elles se
+	 * lisent donc sur le niveau AFFICHÉ, qui est celui de la note quand une note
+	 * est affichée. Le couple « qui · quand », lui, ne se déduit d'aucun niveau
+	 * et vient du journal des vérifications.
+	 */
+	const prose = $derived(CONTROLE_PAR_NIVEAU[niveauAffiche]);
+
+	/**
+	 * LES TROIS PROSES DATÉES DU GEL — la demande de révision, la modification
+	 * de la note, celle du corps Référence.
+	 *
+	 * Elles sont ici pour la même raison que `CONTROLE_PAR_NIVEAU` : sans note
+	 * affichée, le bloc rend la transcription de la planche, et cette
+	 * transcription porte des dates. Avec une note affichée, AUCUNE n'est lue —
+	 * les trois viennent de `notes.revision_le`, `notes.modifie_le` et
+	 * `notes.corps_reference_modifie_le`.
+	 */
+	const REVISION_DU_GEL: RevisionCourante = {
+		par: 'Sophie Nguyen',
+		le: '28 juillet 2026',
+		commentaire:
+			"La commande de restauration partielle a changé avec Barman 3.11. Le paragraphe 3.2 renvoie encore à l'ancienne syntaxe."
+	};
+	const MODIFICATION_DU_GEL: InstantAffiche = {
+		iso: '2026-07-22',
+		jour: 'il y a 3 semaines',
+		heureDite: '22 juillet 2026 à 16:47'
+	};
+
+	const revisionDite = $derived(affichee ? affichee.revision : REVISION_DU_GEL);
+	const modifiee = $derived(affichee ? affichee.modifiee : MODIFICATION_DU_GEL);
+	const referenceModifieeLe = $derived(
+		affichee ? affichee.referenceModifiee.jour : '22 juillet 2026'
+	);
+	/** Le dernier contrôle : celui du journal, ou celui de la planche à défaut. */
+	const controle = $derived(
+		affichee
+			? affichee.controle
+			: {
+					par: CONTROLE_PAR_NIVEAU[niveau].par as string | null,
+					quand: {
+						iso: CONTROLE_PAR_NIVEAU[niveau].iso,
+						jour: CONTROLE_PAR_NIVEAU[niveau].jour,
+						heureDite: `${CONTROLE_PAR_NIVEAU[niveau].jour} à ${CONTROLE_PAR_NIVEAU[niveau].heure}`
+					}
+				}
+	);
 </script>
 
 <!-- ============ NOTE DE DÉMONSTRATION — bandeaux, en-tête, cartouche ============
@@ -173,26 +267,34 @@ Partagé par la lecture interne (V-14) et l'historique (V-15) : les deux
 vues montrent la même note, jamais deux versions divergentes du markup. -->
 <!-- Bandeaux d'alerte, empilables, au-dessus de tout -->
 <div class="bandeaux" id="bandeaux">
-	<div class="bandeau bandeau--revision" id="bandeau-revision" hidden={!revision}>
+	<div class="bandeau bandeau--revision" id="bandeau-revision" hidden={!revisionAffichee}>
 		<div class="bandeau__marque" aria-hidden="true">!</div>
 		<div class="bandeau__corps">
-			<div class="bandeau__titre">Révision demandée par Sophie Nguyen le 28 juillet 2026</div>
+			<!-- `RG-M06-05` — qui a demandé, quand, et pourquoi. Un demandeur que le
+			     journal ne nomme plus (compte effacé) est DIT, jamais remplacé. -->
+			<div class="bandeau__titre">
+				{revisionDite === null
+					? 'Révision demandée'
+					: revisionDite.par === null
+						? `Révision demandée le ${revisionDite.le}`
+						: `Révision demandée par ${revisionDite.par} le ${revisionDite.le}`}
+			</div>
 			<div class="bandeau__note">
-				« La commande de restauration partielle a changé avec Barman 3.11. Le paragraphe 3.2 renvoie
-				encore à l'ancienne syntaxe. »
+				{revisionDite === null || revisionDite.commentaire === null
+					? 'Aucune explication n’a été jointe à la demande.'
+					: `« ${revisionDite.commentaire} »`}
 			</div>
 		</div>
 		<!-- P-09 · ARB-040 — omise, jamais masquée. `V-14:1427` / `V-15:1519` -->
 		{#if ecriture}<button class="btn si-ecriture" style="flex:none">Lever la demande</button>{/if}
 	</div>
 
-	<div class="bandeau bandeau--brouillon" id="bandeau-brouillon" hidden={!brouillon}>
+	<div class="bandeau bandeau--brouillon" id="bandeau-brouillon" hidden={!brouillonAffiche}>
 		<div class="bandeau__marque" aria-hidden="true">B</div>
 		<div class="bandeau__corps">
 			<div class="bandeau__titre">Brouillon — cette note n'est pas visible du public</div>
 			<div>
-				Elle reste accessible aux contributeurs du domaine Infrastructure. Publiez-la pour la rendre
-				consultable depuis l'espace public.
+				{`Elle reste accessible aux contributeurs du domaine ${note.domaine}. Publiez-la pour la rendre consultable depuis l'espace public.`}
 			</div>
 		</div>
 		<!-- P-09 · ARB-040 — omise, jamais masquée. `V-14:1436` / `V-15:1528` -->
@@ -200,13 +302,12 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 			>{/if}
 	</div>
 
-	<div class="bandeau bandeau--resync" id="bandeau-resync" hidden={!resync}>
+	<div class="bandeau bandeau--resync" id="bandeau-resync" hidden={!resyncAffiche}>
 		<div class="bandeau__marque" aria-hidden="true">↺</div>
 		<div class="bandeau__corps">
 			<div class="bandeau__titre">Version opérationnelle à resynchroniser</div>
 			<div>
-				La référence a été modifiée le 22 juillet 2026, après la dernière mise à jour de
-				l'opérationnel.
+				{`La référence a été modifiée le ${referenceModifieeLe}, après la dernière mise à jour de l'opérationnel.`}
 			</div>
 		</div>
 		<!-- P-09 · ARB-040 — omise, jamais masquée. `V-14:1445` / `V-15:1537` -->
@@ -220,14 +321,14 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 <header class="entete">
 	<div class="entete__sur">
 		<span class="past past--type">{note.type}</span>
-		<span class="past" id="past-brouillon" hidden={!brouillon}>Brouillon</span>
+		<span class="past" id="past-brouillon" hidden={!brouillonAffiche}>Brouillon</span>
 		<span class="past">{note.visibilite}</span>
 	</div>
 
 	<h1 class="titre-note" id="h-titre">{note.titre}</h1>
 
 	<!-- CARTOUCHE DE CONTRÔLE — signal de fraîcheur -->
-	<div class="cartouche" id="cartouche" data-niveau={niveau}>
+	<div class="cartouche" id="cartouche" data-niveau={niveauAffiche}>
 		<div class="cartouche__bloc">
 			<span class="temoin__jauge" id="jauge" aria-hidden="true"
 				>{#each RANGS as rang (rang)}<i class={rang < temoin.barres ? 'plein' : undefined}
@@ -235,11 +336,18 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 			>
 			<div>
 				<div class="cartouche__valeur" id="cart-valeur">{temoin.libelle}</div>
+				<!-- LE COUPLE « QUI · QUAND » VIENT DU JOURNAL DES VÉRIFICATIONS.
+				     Trois états, et aucun n'invente : le contrôle nommé, le contrôle
+				     dont le journal ne porte pas le compte (`RG-M15-02` : anonymiser
+				     n'est pas omettre), et la note jamais vérifiée — dont le niveau
+				     se lit alors sur la modification (`RG-M06-01`). -->
 				<div class="cartouche__detail" id="cart-detail">
-					par <strong>{controle.par}</strong> ·
-					<time datetime={controle.iso} title="{controle.jour} à {controle.heure}"
-						>{controle.jour}</time
-					>{controle.suffixe}{#if controle.appui}<strong>{controle.appui}</strong>{/if}
+					{#if controle === null}Jamais vérifiée{:else}{#if controle.par === null}par <strong
+								>auteur non journalisé</strong
+							>{:else}par <strong>{controle.par}</strong>{/if} ·
+						<time datetime={controle.quand.iso} title={controle.quand.heureDite}
+							>{controle.quand.jour}</time
+						>{prose.suffixe}{#if prose.appui}<strong>{prose.appui}</strong>{/if}{/if}
 				</div>
 			</div>
 		</div>
@@ -287,13 +395,15 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 		<dt>Rédaction</dt>
 		<dd>
 			Créée par <a href="#">{note.auteur}</a> · modifiée
-			<time datetime="2026-07-22" title="22 juillet 2026 à 16:47">il y a 3 semaines</time>
+			<time datetime={modifiee.iso} title={modifiee.heureDite}>{modifiee.jour}</time>
 		</dd>
 
 		<dt>Étiquettes</dt>
 		<dd>
 			{#each note.etiquettes as etiquette (etiquette)}
 				<a class="past past--etiquette" href="#">{etiquette}</a>
+			{:else}
+				Aucune étiquette
 			{/each}
 		</dd>
 
@@ -312,7 +422,7 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 	id="registre"
 	role="tablist"
 	aria-label="Registre de lecture"
-	hidden={!operationnel}
+	hidden={!operationnelAffiche}
 >
 	<button role="tab" aria-selected="true" data-reg="reference"
 		><span class="registre__pt"></span>Référence</button
@@ -322,7 +432,7 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 	>
 </div>
 <!-- P-09 · ARB-040 — omise, jamais masquée. `V-14:1517` / `V-15:1609` -->
-{#if ecriture}<button class="invite-op si-ecriture" id="invite-op" hidden={operationnel}>
+{#if ecriture}<button class="invite-op si-ecriture" id="invite-op" hidden={operationnelAffiche}>
 		<svg
 			width="13"
 			height="13"
@@ -360,7 +470,7 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 -->
 <!-- eslint-disable svelte/no-at-html-tags -- sortie de `rendreDocument`, texte échappé par `echapper()` (ADR-003) -->
 <!-- prettier-ignore -->
-<div class="prose" id="corps-reference">{#if affichee}{@html affichee.reference ?? ''}{:else}<CorpsReference />{/if}</div>
+<div class="prose" id="corps-reference">{#if affichee}{#if affichee.reference === null}<div class="zone-etat"><div class="zone-etat__titre">Registre Référence vide</div><div class="zone-etat__txt">Cette note ne porte encore aucun texte de référence.</div></div>{:else}{@html affichee.reference}{/if}{:else}<CorpsReference />{/if}</div>
 
 <!-- prettier-ignore -->
 <div class="prose" id="corps-operationnel" hidden>{#if affichee}{@html affichee.operationnel ?? ''}{:else}<CorpsOperationnel />{/if}</div>
