@@ -27,6 +27,14 @@
  * AUCUN `<svelte:head>`, aucun titre, aucune redirection : `/` est une adresse
  * publique au sens de `src/lib/auth/garde.ts` ; sans session elle sert l'espace
  * public, ce qui est exactement `RG-ACC-02`.
+ *
+ * CE QUE CE CHARGEUR REND A CHANGÉ DE VOLUME, PAS DE NATURE. Il rendait
+ * `session` et `notes` ; il rend en outre, pour la branche connectée, le compte,
+ * les univers, les domaines, les consultations des sept derniers jours et de la
+ * semaine précédente, les anciennetés de modification, l'activité et les
+ * demandes de révision — tout ce que V-07 attendait en propriété depuis `T-041`
+ * sans que rien ne le lui passe. Ce fichier n'en calcule aucune : `lireAccueil`
+ * les lit, bornées au périmètre autorisé, et ce chargeur les transmet.
  */
 import { basePartagee } from '$lib/base/acces';
 import { lireAccueil } from '$lib/donnees/accueil';

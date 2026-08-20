@@ -25,13 +25,27 @@
 	 * pas un oubli : « aucune note » est un état de vecteur de V-07, dont la
 	 * phrase gelée affirme « Votre base ne contient encore aucune note »
 	 * (`mockups/V-07-accueil-contributeur.html:3381`). Or un périmètre vide n'est
-	 * pas une base vide — le corpus ne porte aucune ligne de
-	 * `droits_de_dossier`, donc trois des quatre comptes semés qui peuvent
-	 * ouvrir une session lisent zéro note sur une base qui en porte
-	 * trente-deux. Choisir cet
-	 * état afficherait une affirmation fausse ; choisir l'état nominal affiche
-	 * des comptes justes. Aucune planche ne montre « votre périmètre est vide » :
-	 * le vide est remonté au rapport, pas comblé ici.
+	 * pas une base vide — un compte sans droit explicite et sans rôle
+	 * d'administrateur lit zéro note sur une base qui en porte trente-deux.
+	 * Choisir cet état afficherait une affirmation fausse ; choisir l'état
+	 * nominal affiche des comptes justes. Aucune planche ne montre « votre
+	 * périmètre est vide » : le vide est remonté au rapport, pas comblé ici.
+	 *
+	 * ═══════════════════════════════════════════════════════════════════════
+	 * LES NEUF SOURCES DE V-07, PASSÉES — et la dixième qui ne l'est pas
+	 *
+	 * `T-041` avait rendu les sources de V-07 OPTIONNELLES sans que rien ne les
+	 * passe : l'écran affichait donc le jeu de semence. Elles arrivent
+	 * désormais du chargeur, toutes bornées au périmètre autorisé. `instance` —
+	 * la version et la dernière synchronisation du pied — reste la constante du
+	 * jeu : la base n'en porte AUCUNE des deux, et
+	 * `SANS_CONTREPARTIE_EN_BASE` le dit plutôt que ce fichier ne le taise.
+	 *
+	 * `ecriture` VIENT DU GABARIT, PAS DE LA VUE. `+layout.server.ts` calcule la
+	 * capacité d'écriture EN BASE (`capaciteDEcriture`, deux projections sur les
+	 * droits) ; V-07 la recevait jusqu'ici de son seul vecteur de planche, donc
+	 * toujours vraie. `P-09` veut qu'une action interdite ne soit pas affichée
+	 * — « ni grisée, ni masquée » —, et c'est ce booléen qui la retire.
 	 *
 	 * LE BANC NE PASSE JAMAIS PAR CE FICHIER : il atteint les vues par le mode de
 	 * conception, qui rend le composant directement et compose lui-même son
@@ -83,7 +97,19 @@
 </script>
 
 {#if data.session}
-	<VueContributeur vecteur={null} notes={data.notes} />
+	<VueContributeur
+		vecteur={null}
+		notes={data.notes}
+		compte={data.compte}
+		univers={data.univers}
+		domaines={data.domaines}
+		mesures7j={data.mesures7j}
+		mesures7jPrec={data.mesures7jPrec}
+		modifications={data.modifications}
+		activite={data.activite}
+		revisions={data.revisions}
+		ecriture={data.ecriture}
+	/>
 {:else}
 	<VuePublique vecteur={null} notes={data.notes} />
 {/if}
