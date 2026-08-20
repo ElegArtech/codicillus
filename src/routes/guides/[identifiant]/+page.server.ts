@@ -48,12 +48,51 @@
  * portent sur le corpus réel, et c'est ce que la batterie 6 mesure.
  */
 import { basePartagee } from '$lib/base/acces';
+import { compteDeLEspacePublic, journaliserUneConsultation } from '$lib/donnees/consultation';
 import { refuserLAdresse } from '$lib/donnees/rangement';
 import { resoudreLeGuide } from '$lib/donnees/public';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, url }) => {
-	const resolution = await resoudreLeGuide(basePartagee(), params.identifiant);
+	const base = basePartagee();
+	const resolution = await resoudreLeGuide(base, params.identifiant);
 	if (!resolution.trouve) refuserLAdresse(url.pathname);
+
+	/* ═══════════════════════════════════════════════════════════════════════
+	   LA CONSULTATION SE COMPTE ET SE JOURNALISE — `RG-M04-09`, T-078.
+
+	   « TOUTE ouverture d'une note » : la lecture publique en est une. Le
+	   compteur monte donc ici aussi, et non sur la seule lecture interne — un
+	   compteur qui ignorerait l'espace public sous-compterait les notes
+	   publiques, qui sont précisément celles que le public lit.
+
+	   CE CHARGEUR N'AFFICHE PAS CE COMPTEUR, et il ne prétend donc rien de la
+	   règle de M15.1 qui veut le nombre de consultations visible partout où une
+	   note apparaît : elle reste sans porteur, et son numéro n'est pas cité ici
+	   — le nommer ferait descendre le compte de `pnpm verif:couverture` sans que
+	   le produit ait changé.
+
+	   L'ENTRÉE EST ANONYMISÉE, ET SANS LIRE LA SESSION. `RG-M15-02` (CDC:1227)
+	   ne parle pas du lecteur mais du JOURNAL : « les journaux de l'espace
+	   public sont anonymisés : aucun identifiant d'utilisateur n'y est
+	   associé ». C'est aussi la seule forme compatible avec `ARB-007` A-05, que
+	   l'en-tête de ce fichier cite — « la session ne change ni la route, ni la
+	   vue, ni les états » : un journal qui distinguerait le connecté de
+	   l'anonyme rétablirait ici la dépendance au cookie que l'arbitrage a
+	   fermée. La fonction appelée ne prend aucune identité ; la garantie est
+	   portée par la signature, pas par la discipline.
+
+	   APRÈS LA RÉSOLUTION, ET JAMAIS AVANT — même raison qu'à
+	   `/notes/{identifiant}` : une note interne et une adresse absente sortent
+	   toutes deux par le refus ci-dessus, sans atteindre cette écriture. Le
+	   point dur de `V-04:2219` reste tenu, coût compris.
+
+	   L'INSTANT EST PRIS ICI, une fois : ce chargeur n'en avait aucun. */
+	await journaliserUneConsultation(base, {
+		identifiant: params.identifiant,
+		compte: compteDeLEspacePublic(),
+		maintenant: new Date()
+	});
+
 	return {};
 };

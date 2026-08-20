@@ -65,6 +65,7 @@
  */
 import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
+import { compteDe, journaliserUneConsultation } from '$lib/donnees/consultation';
 import { lireLHistoire, versionDemandee } from '$lib/donnees/histoire';
 import { lireSeuils } from '$lib/donnees/lecture';
 import { lireLaNote, registreDemande } from '$lib/donnees/note';
@@ -93,6 +94,37 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 
 	if (!resolution.trouve) error(404, MESSAGE_INTROUVABLE);
 	const lecture = resolution.ressource;
+
+	/* ═══════════════════════════════════════════════════════════════════════
+	   LA CONSULTATION SE COMPTE ET SE JOURNALISE — `RG-M04-09`, T-078.
+
+	   APRÈS LA RÉSOLUTION, ET JAMAIS AVANT. Deux propriétés en dépendent, et
+	   aucune des deux n'est une précaution :
+
+	     · `RG-ACC-04` — le refus et l'inexistence doivent rendre la même
+	       réponse. Les deux passent par le `error()` ci-dessus et n'atteignent
+	       donc jamais cette écriture : une note interdite coûte exactement ce
+	       que coûte une note absente, y compris en temps. Écrire avant la
+	       résolution ferait payer au refus un aller-retour que l'inexistence ne
+	       paie pas — la fuite de latence qu'`ARB-005` nomme et que la batterie 6
+	       mesure ;
+	     · une lecture REFUSÉE n'est pas une ouverture, et RG-M04-09 compte les
+	       ouvertures.
+
+	   L'INSTANT EST CELUI DE LA REQUÊTE, pris plus haut et pris une fois : la
+	   fraîcheur a été résolue dessus, et une seconde lecture d'horloge donnerait
+	   à l'entrée un horodatage postérieur d'une milliseconde à l'état qu'elle
+	   date.
+
+	   ET C'EST UNE ÉCRITURE SUR UNE REQUÊTE DE LECTURE — écart déclaré au
+	   rapport de `T-078` au regard d'`ARB-054` §4, qui réserve l'écriture en GET
+	   à `/deconnexion`. Elle n'est pas contournable : « toute OUVERTURE d'une
+	   note » désigne cette requête-ci, et le cahier prime sur la commodité. */
+	await journaliserUneConsultation(base, {
+		identifiant: params.identifiant,
+		compte: compteDe(locals.identite),
+		maintenant
+	});
 
 	/* ═══════════════════════════════════════════════════════════════════════
 	   L'HISTORIQUE — T-039, ajouté à ce chargeur et non à un autre.
