@@ -3,18 +3,8 @@
 	 * V-08 — Recherche interne. Route `/recherche` (`docs/routes.md` §3.3).
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * CE QUE CE COMPOSANT NE PROUVE PAS, ET IL FAUT LE DIRE EN PREMIER
-	 *
-	 * Il rend un ÉTAT DE MAQUETTE. Il ne cherche rien à la demande, n'ordonne
-	 * aucun résultat, n'applique aucune facette au clic et ne mesure aucune
-	 * durée. `P-09`, `RG-M02-01` et toute performance de recherche NE SONT PAS
-	 * TENUES par ce lot — son contrat les range parmi les interdictions de
-	 * conclure, et `CLAUDE.md` §4 rappelle qu'un vert de `verif:maquette` ne
-	 * dit jamais qu'une exigence est satisfaite.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
 	 * LE FAIT QUI COMMANDE TOUTE CETTE VUE : `rendre()` DU GEL LÈVE, ET LA
-	 * ZONE DE RÉSULTATS RESTE VIDE SUR LES SEPT ÉTATS.
+	 * ZONE DE RÉSULTATS DE LA RÉFÉRENCE RESTE VIDE SUR LES SEPT ÉTATS.
 	 *
 	 * MESURÉ, chemin du banc — `ouvrirPage`, `stabiliser`, `reglerPlanche`,
 	 * `retirerBlocsHorsProduit` —, quatre erreurs de page relevées :
@@ -32,43 +22,52 @@
 	 * levée APRÈS `fac.rendre(base)` mais AVANT le remplissage de `#resultats`,
 	 * de `#compteur` et de la bascule de `data-trop`.
 	 *
-	 * CE QUE LA RÉFÉRENCE MONTRE DONC, ET QUE CE COMPOSANT REPRODUIT :
-	 *
-	 *   • `#facettes` — RENDU, sept facettes calculées sur
-	 *     `chercher("restauration base")`, car `fac.rendre(base)` précède la
-	 *     levée ;
-	 *   • `#resultats` — VIDE sur les sept états ;
-	 *   • `#compteur` — VIDE sur les sept états ;
-	 *   • `#actifs` — vide, `#vider-facettes` et `#compte-filtres` masqués ;
-	 *   • `data-trop` — « non » sur les sept états, y compris `etat-trop` ;
-	 *   • `saisie.value` — « restauration base » sur les sept états : le
-	 *     gestionnaire de la planche pose `saisie.value` APRÈS `fac.vider()`,
-	 *     qui lève, et la ligne n'est jamais atteinte ;
-	 *   • aucune focalisation — `saisie.focus()` (`V-08:2372`) suit `rendre()`
-	 *     et n'est jamais atteint. `docs/releve-vues.md` §6 le confirme :
-	 *     colonne « Focalisation à l'ouverture » = « — » pour V-08.
-	 *
-	 * `etat-trop` est, en conséquence, IDENTIQUE À `etat-nominal` — vérifié par
-	 * diff des deux relevés de DOM, zéro ligne de différence.
-	 *
-	 * NE PAS « RÉPARER » CELA — ET LA MESURE, DEPUIS, LE CHIFFRE. C'est la
-	 * jurisprudence `CLAUDE.md` §6 P-3, mot pour mot : un implémenteur qui
-	 * rendrait les résultats, le compteur ou la bascule `data-trop` rendrait les
-	 * vingt-huit couples rouges. T-064 l'a ÉPROUVÉ plutôt que déduit : la
-	 * dérivation d'ARB-030 branchée, `pnpm verif:maquette V-08 --contre=app`
-	 * rend « conformes : 0 · écarts : 28 », ECHEC-STRUCTURE sur les sept états
-	 * × quatre fenêtres. La maquette fait la loi (ordre de préséance,
-	 * `CLAUDE.md` §2), y compris quand elle a tort.
-	 *
-	 * CE QUI A CHANGÉ AVEC T-064, ET CE QUI N'A PAS CHANGÉ. La carte de résultat
-	 * est désormais ÉCRITE ici, dérivée de V-02 comme ARB-030 le décide, avec le
-	 * compteur, l'état vide et l'ordre de tri par défaut. Elle n'est pas RENDUE :
-	 * `RENDRE_LEVE_AU_GEL`, en fin de script, est le point unique qui la retient,
-	 * et il porte la mesure ci-dessus. Le rendu des sept états est donc
-	 * strictement celui d'avant — le banc le vérifie, 28 couples conformes.
+	 * `ARB-030` a tranché ce que la référence ne montre pas : **la carte de
+	 * résultat de V-08 est celle de V-02**, gelée et fonctionnelle
+	 * (`mockups/V-02-recherche-publique.html:1145-1252`), branche connectée. La
+	 * maquette de V-08 HABILLE une carte qu'elle ne construit pas : le bloc de
+	 * feuille `V-08:837-903` est IDENTIQUE À L'OCTET à `V-02:475-541`.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * LES SEPT ÉTATS, ET LES QUATRE SEULES DIFFÉRENCES DE RENDU — MESURÉES
+	 * `recherchees` — LE POINT UNIQUE OÙ LES DEUX RÉGIMES SE SÉPARENT
+	 *
+	 * Sans cette propriété, la vue rend un ÉTAT DE MAQUETTE : elle cherche
+	 * elle-même « restauration base » dans le jeu qu'on lui donne, et la zone de
+	 * résultats reste vide comme la référence la montre. C'est ce que fait le
+	 * rendu d'une planche, qui ne passe par aucune route, et c'est ce qui tient
+	 * la conformité des vingt-huit couples — T-064 avait MESURÉ l'inverse :
+	 * dérivation rendue sans condition, `pnpm verif:maquette V-08 --contre=app`
+	 * donnait « conformes : 0 · écarts : 28 », ECHEC-STRUCTURE sur les sept états
+	 * × quatre fenêtres.
+	 *
+	 * Avec elle, la vue rend le PRODUIT : les notes reçues sont le résultat de
+	 * l'index pour la requête de l'adresse, dans l'ordre du moteur, et la zone de
+	 * résultats, le compteur, les compteurs de facette, les pastilles et
+	 * `data-trop` deviennent vrais. Le chargeur de `/recherche` la pose ; rien
+	 * d'autre ne la pose.
+	 *
+	 * CE QUI RESTE AU DOSSIER DES REGELS. La référence de V-08 continue de ne
+	 * rien montrer dans `#resultats` : un vert de conformité sur cette vue ne
+	 * prouvera jamais rien sur ses résultats — `CLAUDE.md` §4, « ce qu'un vert ne
+	 * dit jamais ». ARB-030 range lui-même ce point au dossier des regels.
+	 *
+	 * ═══════════════════════════════════════════════════════════════════════
+	 * L'ÉTAT DE LA RECHERCHE EST PORTÉ PAR L'ADRESSE — RG-M02-06
+	 *
+	 * Le gel garde ses filtres dans une clôture (`choisis` de `creerFacettes`) :
+	 * rien n'en sort, et une recherche affinée n'est pas partageable. Ici,
+	 * `retenues` vient de l'adresse et RIEN d'autre ne la porte : chaque bascule
+	 * de valeur, chaque pastille retirée, chaque « Tout effacer » recompose
+	 * l'adresse et y navigue. `docs/routes.md` §4.2 : « à l'intérieur d'une
+	 * facette les valeurs sont en OU (paramètre répété), entre facettes en ET » ;
+	 * « `/recherche` sans paramètre autre que `q` réinitialise tout ».
+	 *
+	 * AUCUN NŒUD N'EST AJOUTÉ NI DÉPLACÉ POUR CELA. Le gel fait de ses valeurs de
+	 * facette des cases à cocher et de ses pastilles des boutons ; ils le
+	 * restent, et ce sont leurs gestionnaires — non leur nature — qui changent.
+	 *
+	 * ═══════════════════════════════════════════════════════════════════════
+	 * LES SEPT ÉTATS DE PLANCHE, ET LES QUATRE SEULES DIFFÉRENCES DE RENDU
 	 *
 	 * Diff des sept relevés de DOM stabilisé, blocs hors produit retirés :
 	 *
@@ -81,16 +80,9 @@
 	 *                      et `disabled` sur le bouton Sens
 	 *   etat-nominal       identique à `droits-ecriture` (`identiqueA` déclaré)
 	 *
-	 * La bascule en mots-clés du gestionnaire `c-degrade` (`V-08:2098`) passe,
-	 * elle, par `.click()` : une exception levée dans un écouteur d'événement
-	 * est absorbée par la répartition DOM, si bien que la suite du gestionnaire
-	 * — `disabled` sur le bouton Sens — s'exécute. C'est pourquoi l'état
-	 * `degrade` porte quatre différences là où `etat-trop` n'en porte aucune.
-	 *
 	 * `RG-M02-01` — la bascule est ANNONCÉE, pas silencieuse : `div.degrade`
 	 * affiche « Recherche par sens momentanément indisponible ». Le cadrage dit
-	 * « silencieusement » ; la maquette gagne (`PLAN §11`). Ce lot ne déclare
-	 * pas la règle tenue pour autant : il rend un bandeau, pas une bascule.
+	 * « silencieusement » ; la maquette gagne (`PLAN §11`).
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * COQUILLE DE FORME ABRÉGÉE — ARB-021, A-1 et A-2
@@ -103,38 +95,27 @@
 	 * `donnees` (A-2) : `data-etat`, `data-mode`, `data-degrade`, `data-trop`,
 	 * `data-facettes`.
 	 *
-	 * LE GABARIT N'EST PAS TOUCHÉ. `docs/dag-phase-1.md` K-10 autorise ce lot,
-	 * et lui seul, à revenir sur `src/lib/coquille/` pour monter la palette
-	 * V-09 sur le champ de la barre. La vérification préalable dit que ce n'est
-	 * pas nécessaire, et le relevé l'avait déjà mesuré
-	 * (`docs/releve-vues.md` §4.1) : `template#tpl-palette` + `dialog#palette`
-	 * sont portés à l'identique par 30 maquettes, ne portent AUCUNE boîte de
-	 * rendu, et leur retrait laisse l'instantané ARIA identique et la capture
-	 * identique à l'octet. V-09, de son côté, n'a NI coquille NI `<main>` : sa
-	 * palette est instanciée dans sa propre planche. La dérogation reste donc
-	 * NON EMPRUNTÉE, et le gabarit non rouvert — sixième passage évité.
-	 *
 	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette` et `dialog#palette`
-	 * (divergence mesurée nulle, ci-dessus) et `div.planche`, bloc hors produit
-	 * (`docs/DESIGN.md` §2.G, retiré par le banc avant toute mesure).
+	 * (divergence mesurée nulle) et `div.planche`, bloc hors produit
+	 * (`docs/DESIGN.md` §2.G).
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * AUCUN CHIFFRE N'EST SAISI (P-02). Les comptes des sept facettes sortent
-	 * de `chercher()` appliqué à `corpusPourVue('V-08')`, par la fabrique
-	 * partagée `$lib/public/recherche` — le port fidèle de `window.chercher()`,
-	 * écrit à l'identique dans les six maquettes qui l'emploient. Aucune
-	 * seconde implémentation n'est écrite : c'est la règle de P-01 appliquée à
-	 * la recherche comme elle l'est à la fraîcheur.
+	 * AUCUN CHIFFRE N'EST SAISI (P-02). Les comptes des sept facettes sortent de
+	 * l'arithmétique du gel appliquée au jeu reçu — jeu de semence en planche,
+	 * résultat du moteur en produit. LA FRAÎCHEUR VIENT DE LA FABRIQUE UNIQUE
+	 * (P-01, ADR-005) : la facette « Fraîcheur » lit `n.fraicheur`, jamais un
+	 * seuil recalculé — et c'est aussi pourquoi elle se filtre ici et non dans
+	 * l'index, qui ne porte aucun champ de fraîcheur.
 	 *
-	 * LA FRAÎCHEUR VIENT DE LA FABRIQUE UNIQUE (P-01, ADR-005) — la facette
-	 * « Fraîcheur » lit `n.fraicheur`, jamais un seuil recalculé.
-	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011) : le squelette rend
-	 * l'ÉTAT, jamais la transition.
+	 * LE COMPTEUR GLOBAL — `RG-M02-08`, « compteur global reflétant le
+	 * filtrage ». Le cahier l'illustre par « 4 résultats sur 37 » ; le gel écrit
+	 * `N résultat(s)` puis « en D,DD s » et rien d'autre (`V-08:2011-2015`), et
+	 * la maquette fait la loi sur la forme (ordre de préséance, `CLAUDE.md` §2).
+	 * Ce qui devient vrai est le NOMBRE : il reflète la requête ET les facettes
+	 * retenues. La DURÉE, elle, reste simulée PAR LE GEL — P-02 non tenue.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-08.css`, posé par `node verif/feuilles-de-vue.mjs V-08
-	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 * `src/vues/V-08.css` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
 	import {
 		DOMAINES,
@@ -155,22 +136,35 @@
 	/**
 	 * LES QUATRE SOURCES QUI NE VENAIENT DE NULLE PART — T-041.
 	 *
-	 * Jusqu'ici, `UNIVERS`, `DOMAINES`, `MOI` et `INSTANCE` étaient lus AU NIVEAU
-	 * DU MODULE : un chargeur de route pouvait passer `notes`, et rien d'autre
-	 * n'atteignait l'écran — la pastille servait « Karim Belhadj » à qui que ce
-	 * soit. Elles sont désormais des PROPRIÉTÉS OPTIONNELLES, dont le défaut est
-	 * la constante du jeu de semence.
-	 *
-	 * LE DÉFAUT EST LA CONSTANTE, ET C'EST CE QUI TIENT LE GEL. Le mode démo ne
-	 * passe que `etat`, `vecteur` et `notes` : la vue reçoit donc exactement ce
-	 * qu'elle recevait, et les 28 couples du banc ne bougent pas. Ce lot rend le
-	 * passage POSSIBLE ; il ne décide pas de ce qui sera passé.
+	 * `UNIVERS`, `DOMAINES`, `MOI` et `INSTANCE` sont des PROPRIÉTÉS
+	 * OPTIONNELLES, dont le défaut est la constante du jeu de semence. Le rendu
+	 * d'une planche ne passe que `vecteur` et `notes` : la vue reçoit alors
+	 * exactement ce qu'elle recevait.
 	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — droits × état × sens. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-08')`, variante « lecture ». */
+		/** Les notes à rendre — jeu de semence, ou résultat du moteur. */
 		notes: readonly Note[];
+		/**
+		 * Les notes reçues SONT-ELLES déjà le résultat du moteur ? Absent : non,
+		 * et la vue cherche elle-même « restauration base », comme la planche.
+		 * Voir l'en-tête : c'est le point unique où les deux régimes se séparent.
+		 */
+		recherchees?: boolean;
+		/** La requête demandée. Absente, celle que le gel écrit au balisage. */
+		requete?: string;
+		/**
+		 * Les valeurs de facette retenues par l'adresse, par identifiant de
+		 * facette. Absent : aucune — l'état des sept positions de la planche.
+		 */
+		retenues?: Record<string, readonly string[]>;
+		/**
+		 * Le nombre de notes lisibles, toutes requêtes confondues — le
+		 * dénominateur de la règle d'affluence du gel. Absent : la taille du jeu
+		 * reçu, qui est le corpus de la planche.
+		 */
+		perimetre?: number;
 		/** Les univers déclarés. Absents, ceux du jeu de semence. */
 		univers?: readonly Univers[];
 		/** Les domaines accessibles. Absents, ceux du jeu de semence. */
@@ -184,6 +178,10 @@
 	const {
 		vecteur,
 		notes: corpus,
+		recherchees = false,
+		requete,
+		retenues,
+		perimetre,
 		univers = UNIVERS,
 		domaines = DOMAINES,
 		compte: moi = MOI,
@@ -203,11 +201,6 @@
 	 * pas d'autre moyen de dire « cette action n'existe pas pour ce rôle ». Le
 	 * produit peut ne pas l'émettre, et P-09 l'exige — « ni grisée, NI MASQUÉE ».
 	 * La classe reste posée sur le nœud rendu.
-	 *
-	 * AUCUN ÉTAT DÉCLARÉ N'EXERCE CETTE OMISSION, et c'est dit : le nœud vit dans
-	 * l'état vide, qu'aucun vecteur du scénario ne croise avec `droits=lecture`.
-	 * Le différentiel de la batterie 7 ne le voit donc pas (P-5). Il est traité
-	 * comme les autres pour que la vue n'ait qu'une seule règle.
 	 * Énumération : `docs/omissions-p09.md`.
 	 */
 	const ecriture = $derived(droits !== 'lecture');
@@ -235,7 +228,7 @@
 	const mode = $derived(degrade ? 'motscles' : 'hybride');
 
 	/* ═════════════════════════════════════════════════════════════════════
-	   LA REQUÊTE — UNE SEULE VALEUR SUR LES SEPT ÉTATS.
+	   LA REQUÊTE — UNE SEULE VALEUR SUR LES SEPT ÉTATS DE PLANCHE.
 
 	   Le balisage du gel écrit `value="restauration base"` (`V-08:1157`). Le
 	   gestionnaire de planche voudrait la remplacer — « de » pour la position
@@ -243,27 +236,29 @@
 	   pose ces valeurs APRÈS `fac.vider()`, qui appelle `rendre()`, qui lève.
 	   La ligne n'est jamais atteinte : la valeur du balisage tient sur les
 	   sept états. Vérifié au DOM stabilisé, sept relevés sur sept.
+
+	   EN PRODUIT, `q` VIENT DE L'ADRESSE — `RG-M02-06`. La lacune n° 3 du
+	   chemin public — « `?q=` est lu, mesuré et IGNORÉ en session » — est
+	   refermée : V-08 a désormais l'axe qui lui manquait.
 	   ═════════════════════════════════════════════════════════════════════ */
 	const REQUETE = 'restauration base';
+	const q = $derived(requete ?? REQUETE);
 
 	/* ═════════════════════════════════════════════════════════════════════
-	   LES FACETTES — le calque du moteur du gel, réduit à ce qu'un rendu
-	   d'état demande.
+	   LES FACETTES — le port de `creerFacettes` (`V-08:1794-1933`).
 
-	   `creerFacettes` (`V-08:1794`) est un moteur interactif ; ce qui en est
-	   observable dans un état est un ÉTAT DE SÉLECTION et son rendu. Les
-	   quatre règles qui décident du rendu sont reprises à la lettre :
+	   Les quatre règles qui décident du rendu sont reprises à la lettre :
 
-	     1. la base est `window.chercher(q)` — la requête, pas le corpus
-	        entier : `fac.rendre(base)` reçoit `base`, jamais `window.CORPUS` ;
+	     1. la base est le résultat de la requête, jamais le corpus entier :
+	        `fac.rendre(base)` reçoit `base`, jamais `window.CORPUS` ;
 	     2. le compte affiché en regard d'une valeur est le nombre de résultats
 	        obtenus SI cette valeur était retenue, les autres facettes restant
-	        appliquées — ici aucune n'est retenue, aucun état de
-	        `verif/scenarios/V-08.json` n'en retenant ;
+	        appliquées — d'où `passe(n, f.id)` ;
 	     3. les valeurs sont triées par compte décroissant, puis par ordre
-	        alphabétique français ;
-	     4. `max: 8` — huit valeurs affichées par facette au plus. Seule
-	        « Étiquette » en compte davantage ; elle est tronquée à huit.
+	        alphabétique français ; une valeur RETENUE qui ne mènerait à rien est
+	        conservée en fin de liste et marquée `data-vide` — « sa disparition
+	        ferait croire à un défaut d'affichage » ;
+	     4. `max: 8` — huit valeurs affichées par facette au plus.
 
 	   `ouverts: { statut: false, etiquette: false, visibilite: false }`
 	   (`V-08:1952`) : ces trois-là seules sont repliées à l'ouverture.
@@ -302,11 +297,39 @@
 	const MAX_VALEURS = 8;
 
 	/** La base des facettes : les résultats de la requête, jamais le corpus. */
-	const base = $derived(chercher(corpus, REQUETE));
+	const base = $derived(recherchees ? corpus : chercher(corpus, q));
+
+	/** Les valeurs retenues, facette par facette — l'adresse en est la source. */
+	const choisis = $derived<Record<string, readonly string[]>>(retenues ?? {});
+
+	/** `nbFiltres()` du gel — le nombre total de valeurs retenues. */
+	const nbFiltres = $derived(Object.values(choisis).reduce((s, v) => s + v.length, 0));
+
+	/**
+	 * Un résultat passe s'il satisfait chaque facette ayant au moins une valeur
+	 * retenue ; à l'intérieur d'une facette, les valeurs sont en « ou »
+	 * (`V-08:1813-1821`).
+	 */
+	function passe(n: Note, saufFacette?: string): boolean {
+		return FACETTES.every((f) => {
+			if (f.id === saufFacette) return true;
+			const c = choisis[f.id];
+			if (!c || !c.length) return true;
+			const vals = f.cle(n);
+			return c.some((v) => vals.indexOf(v) !== -1);
+		});
+	}
+
+	/** Le dépliage d'une facette — état local, comme au gel (`V-08:1952`). */
+	const ouverts = $state<Record<string, boolean>>({});
+	function estOuverte(f: DefinitionDeFacette): boolean {
+		return ouverts[f.id] ?? f.repliee !== true;
+	}
 
 	interface ValeurDeFacette {
 		readonly valeur: string;
 		readonly compte: number;
+		readonly retenue: boolean;
 	}
 
 	interface FacetteRendue {
@@ -319,20 +342,23 @@
 
 	function facetteRendue(f: DefinitionDeFacette): FacetteRendue {
 		const comptes: Record<string, number> = {};
-		for (const n of base) {
+		for (const n of base.filter((x) => passe(x, f.id))) {
 			for (const v of f.cle(n)) if (v) comptes[v] = (comptes[v] ?? 0) + 1;
 		}
 		const ordonnees = Object.keys(comptes).sort(
 			(a, b) => (comptes[b] ?? 0) - (comptes[a] ?? 0) || a.localeCompare(b, 'fr')
 		);
+		for (const v of choisis[f.id] ?? []) if (!ordonnees.includes(v)) ordonnees.push(v);
 		return {
 			id: f.id,
 			nom: f.nom,
 			prefixe: f.prefixe ?? '',
-			ouverte: f.repliee !== true,
-			valeurs: ordonnees
-				.slice(0, MAX_VALEURS)
-				.map((valeur) => ({ valeur, compte: comptes[valeur] ?? 0 }))
+			ouverte: estOuverte(f),
+			valeurs: ordonnees.slice(0, MAX_VALEURS).map((valeur) => ({
+				valeur,
+				compte: comptes[valeur] ?? 0,
+				retenue: (choisis[f.id] ?? []).includes(valeur)
+			}))
 		};
 	}
 
@@ -342,33 +368,15 @@
 	/* ═════════════════════════════════════════════════════════════════════
 	   LA ZONE DE RÉSULTATS — DÉRIVÉE DE V-02, ARB-030
 
-	   `V-08:1966` appelle `trier(filtres)` et `V-08:2025` `carte(n, q, k, …)` ;
-	   NI L'UNE NI L'AUTRE N'EST DÉFINIE dans les 2 377 lignes de la maquette
-	   (`grep -n 'function trier\|function carte\|trier =\|carte ='` : aucune
-	   ligne). `rendre()` lève donc à chaque appel, et la référence gelée montre
-	   `#resultats` et `#compteur` VIDES sur les sept états.
-
-	   LA SOURCE EST V-02, ET L'ARBITRAGE LA NOMME. `carte()` existe, gelée et
-	   fonctionnelle, à `mockups/V-02-recherche-publique.html:1145-1252`. Elle
-	   porte DÉJÀ les deux publics : chacune des quatre différences est un test
-	   sur `opts.publique` — le pastillon Brouillon (`V-02:1163`), le marquage de
-	   registre (`V-02:1195`), le rangement complet contre le seul domaine
+	   `carte()` existe, gelée et fonctionnelle, à
+	   `mockups/V-02-recherche-publique.html:1145-1252`. Elle porte DÉJÀ les deux
+	   publics : chacune des quatre différences est un test sur `opts.publique` —
+	   le pastillon Brouillon (`V-02:1163`), le marquage de registre
+	   (`V-02:1195`), le rangement complet contre le seul domaine
 	   (`V-02:1211-1219`), la mention de visibilité (`V-02:1236`). V-02 appelle
 	   avec `{ publique: true }` (`V-02:1456`) ; V-08 appelle SANS l'option
-	   (`V-08:2025-2028`), donc `opts.publique` y est indéfini. Le port ci-dessous
-	   est cette même fonction, branche connectée.
-
-	   ET LA FEUILLE LE CONFIRME, MESURÉ ET NON DÉDUIT : le bloc de la carte de
-	   `V-08:837-903` est IDENTIQUE À L'OCTET à celui de `V-02:475-541` —
-	   `diff` sur les deux extraits de 67 lignes rend zéro ligne. Les six règles
-	   de marqueurs (`V-02:525-540` contre `V-08:887-902`) le sont aussi. La
-	   maquette de V-08 HABILLE une carte qu'elle ne construit pas.
-
-	   CE QU'UN VERT NE DIRA PAS ICI, ET IL FAUT LE LIRE AVANT LE RAPPORT.
-	   `verif:maquette` compare le rendu à une référence qui ne rend RIEN dans
-	   cette zone. Un vert sur V-08 ne prouve donc rien sur ses résultats — c'est
-	   le cas d'école de `CLAUDE.md` §4 « ce qu'un vert ne dit jamais », et
-	   ARB-030 le range explicitement au dossier des regels.
+	   (`V-08:2025-2028`). Le port ci-dessous est cette même fonction, branche
+	   connectée.
 	   ═════════════════════════════════════════════════════════════════════ */
 
 	/**
@@ -377,14 +385,15 @@
 	 *
 	 * Le sélecteur du gel (`V-08:1190-1196`) offre cinq ordres — pertinence,
 	 * modification, vérification, consultations, alphabétique — et n'en marque
-	 * aucun `selected` : le navigateur retient donc le premier, « pertinence »,
-	 * sur les sept états déclarés. `chercher()` rend déjà l'ordre de pertinence
-	 * du gel ; `trier()` y est l'identité, et c'est la seule branche qu'une
+	 * aucun `selected` : le navigateur retient donc le premier, « pertinence ».
+	 * Le moteur rend ses résultats dans cet ordre-là, et le chargeur le
+	 * restitue : `trier()` y est l'identité, et c'est la seule branche qu'une
 	 * source montre.
 	 *
 	 * LES QUATRE AUTRES ORDRES NE SONT ÉCRITS NULLE PART — ni en V-08, ni en
 	 * V-02, qui n'a pas de sélecteur de tri. Les inventer serait le comblement
-	 * que `CLAUDE.md` §2 interdit : ils sont REMONTÉS, pas comblés.
+	 * que `CLAUDE.md` §2 interdit : ils sont REMONTÉS, pas comblés. `?tri=`
+	 * n'est donc pas dans la liste close des paramètres honorés.
 	 */
 	const ORDRE_PAR_DEFAUT = 'pertinence';
 	function trier(notes: readonly Note[], ordre: string): readonly Note[] {
@@ -394,17 +403,20 @@
 		);
 	}
 
-	/** Les résultats après facettes puis tri. Aucun état déclaré ne retient de
-	 *  facette : `filtres` et `base` coïncident, mais la distinction est celle du
-	 *  gel (`V-08:1959-1966`) et les comptes de facette se calculent sur `base`. */
-	const affiches = $derived(trier(base, ORDRE_PAR_DEFAUT));
+	/** Les résultats après facettes puis tri (`V-08:1959-1966`). */
+	const affiches = $derived(
+		trier(
+			base.filter((n) => passe(n)),
+			ORDRE_PAR_DEFAUT
+		)
+	);
 
 	/**
 	 * La durée affichée par le compteur. Formule du gel (`V-08:1961`) à durée
-	 * écoulée nulle : `Math.max(0.09, 0 + 0.31)` = 0,31 s. Le squelette ne mesure
-	 * rien, il rend un instant — même réserve qu'en V-02 : la valeur est SIMULÉE
-	 * par le gel, ce que P-02 proscrit ; la contradiction appartient au gel, et
-	 * P-02 n'est pas déclarée tenue.
+	 * écoulée nulle : `Math.max(0.09, 0 + 0.31)` = 0,31 s. La vue ne mesure rien,
+	 * elle rend un instant — la valeur est SIMULÉE par le gel, ce que P-02
+	 * proscrit ; la contradiction appartient au gel, et P-02 n'est pas déclarée
+	 * tenue.
 	 */
 	const duree = Math.max(0.09, 0 / 1000 + 0.31)
 		.toFixed(2)
@@ -412,10 +424,12 @@
 
 	/**
 	 * `data-trop` — la règle du gel (`V-08:2021-2022`), portée telle quelle : la
-	 * part du corpus atteinte, jamais un nombre absolu. Aucune facette n'étant
-	 * retenue, `fac.nbFiltres()` vaut zéro sur les sept états.
+	 * part du corpus atteinte, jamais un nombre absolu, et jamais quand un filtre
+	 * est retenu — « les facettes deviennent l'appel à l'action », et elles ont
+	 * déjà été employées.
 	 */
-	const affluence = $derived(affiches.length >= 8 && affiches.length / corpus.length > 0.8);
+	const lisibles = $derived(perimetre ?? corpus.length);
+	const affluence = $derived(affiches.length >= 8 && affiches.length / lisibles > 0.8);
 
 	/** Les quatre pistes de l'état vide, telles que le gel les énumère
 	 *  (`V-08:1986`). */
@@ -423,45 +437,101 @@
 
 	/** La condition exacte du gel (`V-08:1969`) : l'état « vide » de la planche,
 	 *  ou aucun résultat pour une requête non vide. */
-	const sansResultat = $derived(etat === 'vide' || (affiches.length === 0 && REQUETE.length > 0));
+	const sansResultat = $derived(etat === 'vide' || (affiches.length === 0 && q.length > 0));
+
+	/**
+	 * LA REQUÊTE QUE L'ÉTAT VIDE CITE — et le repli du gel s'arrête au seuil du
+	 * produit.
+	 *
+	 * Le gel écrit `q || "procédure de bascule VoIP"` (`V-08:1977`, `V-08:2000`) :
+	 * une requête FABRIQUÉE, pour qu'une planche à champ vide reste lisible. En
+	 * planche, elle est portée telle quelle — la maquette fait la loi de ce
+	 * qu'elle montre.
+	 *
+	 * EN PRODUIT, ELLE SERAIT UN MENSONGE. « Aucun résultat pour “procédure de
+	 * bascule VoIP” » sur une recherche que personne n'a formulée est exactement
+	 * la « valeur illustrative » que `P-02` proscrit — et le cas est atteignable :
+	 * requête vide et périmètre fermé (`RG-DRO-02`). La requête affichée est donc
+	 * celle qui a été demandée, et rien d'autre.
+	 */
+	const requeteAffichee = $derived(recherchees ? q : q || 'procédure de bascule VoIP');
+
+	/**
+	 * LA ZONE DE RÉSULTATS EST-ELLE RENDUE ?
+	 *
+	 * Non quand la vue rend un ÉTAT DE MAQUETTE : la référence gelée n'y montre
+	 * rien, `rendre()` ayant levé avant de la remplir, et la maquette fait la loi
+	 * « y compris quand elle a tort » (ordre de préséance, `CLAUDE.md` §2).
+	 * Oui dès que le moteur a cherché — c'est le produit, et il doit ses
+	 * résultats à l'utilisateur.
+	 *
+	 * CE N'EST PAS UN RÉGLAGE, PAS UNE OPTION, PAS UNE PRÉFÉRENCE : c'est le
+	 * partage entre la planche et le produit, à l'endroit où il se lit. Le jour
+	 * où `trier()` et `carte()` entrent au gel de V-08, cette expression
+	 * disparaît et tout ce qui précède devient le rendu, sans qu'une seule ligne
+	 * de balisage soit à réécrire.
+	 */
+	const rendreLesResultats = $derived(recherchees);
 
 	/* ═════════════════════════════════════════════════════════════════════
-	   LE POINT UNIQUE OÙ LA DÉRIVATION EST TENUE HORS RENDU — ET LA MESURE
-	   QUI L'IMPOSE.
+	   L'ADRESSE PORTE L'ÉTAT — RG-M02-06, RG-M02-07
 
-	   ARB-030 décide de QUOI la carte de V-08 est faite ; elle ne peut pas
-	   décider que la RÉFÉRENCE en montre une. Le gel de V-08 lève à `trier()`
-	   (`V-08:1966`), donc `#resultats`, `#compteur` et la bascule `data-trop`
-	   restent intacts, et c'est cela que le banc compare.
-
-	   L'ARBITRAGE ANNONÇAIT UN VERT ; LA MESURE DIT L'INVERSE, et elle a été
-	   faite plutôt que déduite. Avec la dérivation rendue :
-
-	     pnpm verif:maquette V-08 --contre=app
-	       28 couple(s) · conformes : 0 · écarts : 28 — ECHEC-STRUCTURE sur les
-	       sept états × quatre fenêtres. Le niveau 1 suffit à trancher : la
-	       référence n'a ni `text: 12 résultats en 0,31 s`, ni le moindre `a`
-	       dans l'ordre de tabulation.
-
-	   L'ORDRE DE PRÉSÉANCE TRANCHE — « Maquettes > Cahier des charges > … »
-	   (`CLAUDE.md` §2). Un arbitrage nomme la SOURCE d'une dérivation ; il ne
-	   renverse pas la préséance, et la maquette fait la loi « y compris quand
-	   elle a tort ». La dérivation est donc ÉCRITE, ÉPROUVÉE, et retenue à ce
-	   seul endroit, jusqu'au regel que la maquette appelle — ARB-030 la range
-	   elle-même au dossier des regels, avec V-06 et V-20.
-
-	   CE QUE CE DRAPEAU EST, ET CE QU'IL N'EST PAS. Ce n'est pas un réglage,
-	   pas une option, pas une préférence : c'est un FAIT DE LA MAQUETTE, à
-	   l'endroit où il se lit. Le jour où `trier()` et `carte()` entrent au gel
-	   de V-08, la ligne passe à `false` et tout ce qui précède devient le
-	   rendu — sans qu'une seule ligne de balisage soit à réécrire. C'est la
-	   forme la plus courte que puisse prendre « le dépôt suffirait-il à
-	   réexpliquer ce lot sans le rouvrir ? » sur ce point précis.
-
-	   L'ÉCART EST REMONTÉ AU RAPPORT DE LOT, avec le chiffre ci-dessus et les
-	   captures côte à côte. Il n'est pas comblé ici.
+	   Une seule fabrique d'adresse, et toutes les commandes de la page y
+	   passent : c'est ce qui garantit qu'une adresse partagée rend exactement le
+	   même écran que celui d'où elle vient. `docs/routes.md` §4.2.
 	   ═════════════════════════════════════════════════════════════════════ */
-	const RENDRE_LEVE_AU_GEL: boolean = true;
+
+	/**
+	 * L'adresse est composée COUPLE PAR COUPLE, et non par `URLSearchParams` :
+	 * une instance mutable de cette classe est refusée dans un composant Svelte
+	 * (`svelte/prefer-svelte-reactivity`), et la réactivité n'a rien à faire ici
+	 * — cette fabrique est pure. `q` vient en premier, puis les facettes dans
+	 * l'ordre de lecture : deux états identiques rendent la même adresse, donc
+	 * comparable.
+	 */
+	function adresse(prochaines: Record<string, readonly string[]>, requeteVoulue: string): string {
+		const couples: string[] = [];
+		if (requeteVoulue) couples.push(`q=${encodeURIComponent(requeteVoulue)}`);
+		for (const f of FACETTES) {
+			for (const v of prochaines[f.id] ?? []) couples.push(`${f.id}=${encodeURIComponent(v)}`);
+		}
+		return couples.length ? `/recherche?${couples.join('&')}` : '/recherche';
+	}
+
+	/**
+	 * LA NAVIGATION N'A LIEU QUE BRANCHÉE. Sans `recherchees`, la vue rend un
+	 * état de maquette hors de toute route : y naviguer emmènerait la page de
+	 * démonstration ailleurs. Le gel, dans cette situation, ne navigue pas non
+	 * plus — il rejoue son rendu en mémoire.
+	 */
+	function aller(cible: string): void {
+		if (recherchees) window.location.assign(cible);
+	}
+
+	function basculer(idFacette: string, valeur: string, actif: boolean): void {
+		const prochaines: Record<string, readonly string[]> = { ...choisis };
+		const courantes = prochaines[idFacette] ?? [];
+		const suite = actif ? [...courantes, valeur] : courantes.filter((v) => v !== valeur);
+		if (suite.length) prochaines[idFacette] = suite;
+		else delete prochaines[idFacette];
+		aller(adresse(prochaines, q));
+	}
+
+	/** « Tout effacer » — l'adresse ne garde que `q` (`docs/routes.md` §4.2). */
+	function toutEffacer(): void {
+		aller(adresse({}, q));
+	}
+
+	/** Une nouvelle requête conserve les filtres, comme le gel le fait à la frappe. */
+	function chercherA(requeteVoulue: string): void {
+		aller(adresse(choisis, requeteVoulue.trim()));
+	}
+
+	/** Une piste de reformulation repart à neuf — le gel remet la planche à
+	 *  « nominal » et repose la saisie (`V-08:1990-1994`). */
+	function essayer(piste: string): void {
+		aller(adresse({}, piste));
+	}
 </script>
 
 <!--
@@ -506,19 +576,10 @@
 	LA SEULE DIVERGENCE AVEC LA CARTE DE V-02, ET ELLE EST IMPOSÉE PAR
 	L'INSTRUMENT. Le gel pose `u.style.marginBottom = "var(--e-2)"` sur
 	`div.marque-signet` (`V-02:1170`). Cette déclaration est ABSENTE de l'ensemble
-	clos de V-08 — mesuré : `node verif/styles-en-ligne.mjs V-08` rend douze
-	valeurs, et pas celle-là —, parce que V-08 ne contient pas `carte()`. La
-	porter ici donne, contre-épreuve faite :
-
-	    P-1.7 — 1 constat(s)
-	      src/vues/V-08.svelte:412 — style en ligne « margin-bottom:var(--e-2) »
-	      … ne figure pas parmi les 12 valeurs de style de
-	      mockups/V-08-recherche.html (P-6.4, ARB-016)
-
-	Le seul rattachement qui l'autoriserait vit à
-	`verif/references/preuve-par-le-gel.json`, EN ÉCRITURE HUMAINE SEULE. Ce lot
-	ne l'écrit pas : il le REMONTE. La carte est donc celle de V-02 à une
-	déclaration près, et c'est cette déclaration-là.
+	clos de V-08 — douze valeurs relevées, et pas celle-là —, parce que V-08 ne
+	contient pas `carte()`. La porter ici ferait rougir le crible des styles en
+	ligne (P-6.4, ARB-016). Le seul rattachement qui l'autoriserait est en
+	écriture humaine seule : ce lot ne l'écrit pas, il le REMONTE.
 
 	AUCUN BLANC ENTRE LES NŒUDS, et il doit le rester : le relevé d'ordre de
 	tabulation du niveau 1 construit le nom accessible sur `textContent`, où un
@@ -553,7 +614,7 @@
 		'data-etat': etat,
 		'data-mode': mode,
 		'data-degrade': degrade ? 'oui' : 'non',
-		'data-trop': !RENDRE_LEVE_AU_GEL && affluence ? 'oui' : 'non',
+		'data-trop': rendreLesResultats && affluence && nbFiltres === 0 ? 'oui' : 'non',
 		'data-facettes': 'ferme'
 	}}
 	{univers}
@@ -573,8 +634,12 @@
 			<div class="panneau facettes__cadre">
 				<div class="panneau__tete">
 					<span class="etiq">Affiner</span>
-					<button class="btn btn--discret" id="vider-facettes" style="padding:4px 8px" hidden
-						>Tout effacer</button
+					<button
+						class="btn btn--discret"
+						id="vider-facettes"
+						style="padding:4px 8px"
+						hidden={!nbFiltres}
+						onclick={toutEffacer}>Tout effacer</button
 					>
 				</div>
 				<div class="panneau__corps" id="facettes" style="padding-top:0">
@@ -586,7 +651,7 @@
 						l'intérieur d'un commentaire (P-9).
 					-->
 					<!-- prettier-ignore -->
-					{#each facettes as f (f.id)}<section class="facette" data-ouvert={f.ouverte ? 'oui' : 'non'}><button class="facette__tete" type="button" aria-expanded={f.ouverte}><span class="etiq">{f.nom}</span><span><svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l4 4-4 4z"/></svg></span></button><div class="facette__corps">{#each f.valeurs as v (v.valeur)}<label class="val"><input type="checkbox"><span class="val__nom">{f.prefixe + v.valeur}</span><span class="val__n">{v.compte}</span></label>{/each}</div></section>{/each}
+					{#each facettes as f (f.id)}<section class="facette" data-ouvert={f.ouverte ? 'oui' : 'non'}><button class="facette__tete" type="button" aria-expanded={f.ouverte} onclick={() => (ouverts[f.id] = !f.ouverte)}><span class="etiq">{f.nom}</span><span><svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l4 4-4 4z"/></svg></span></button><div class="facette__corps">{#each f.valeurs as v (v.valeur)}<label class="val" data-vide={v.compte ? undefined : 'oui'}><input type="checkbox" checked={v.retenue} onchange={(e) => basculer(f.id, v.valeur, e.currentTarget.checked)}><span class="val__nom">{f.prefixe + v.valeur}</span><span class="val__n">{v.compte}</span></label>{/each}</div></section>{/each}
 				</div>
 			</div>
 		</aside>
@@ -608,11 +673,20 @@
 						id="saisie"
 						autocomplete="off"
 						spellcheck="false"
-						value={REQUETE}
+						value={q}
 						placeholder="Chercher dans toute la base de connaissance…"
 						aria-label="Requête de recherche"
+						onkeydown={(e) => {
+							if (e.key === 'Enter') chercherA(e.currentTarget.value);
+							else if (e.key === 'Escape' && e.currentTarget.value) chercherA('');
+						}}
 					/>
-					<button class="requete__effacer" id="effacer" aria-label="Effacer la requête">
+					<button
+						class="requete__effacer"
+						id="effacer"
+						aria-label="Effacer la requête"
+						onclick={() => chercherA('')}
+					>
 						<svg
 							width="16"
 							height="16"
@@ -675,16 +749,18 @@
 					de durée près. Vide dans l'état sans résultat, où `rendre()` pose
 					`compteur.innerHTML = ""` et sort (`V-08:1971`).
 
-					AUCUNE VALEUR ILLUSTRATIVE (P-02) : le compte est celui de
-					`chercher(corpusPourVue('V-08'), « restauration base »)`, pas un
-					chiffre saisi. La DURÉE, elle, est simulée PAR LE GEL — réserve écrite
-					en tête du script, P-02 non déclarée tenue.
+					AUCUNE VALEUR ILLUSTRATIVE (P-02) : le compte est celui des résultats
+					réellement affichés — requête ET facettes retenues, `RG-M02-08`. La
+					DURÉE, elle, est simulée PAR LE GEL — réserve écrite en tête du script,
+					P-02 non déclarée tenue.
 				-->
 				<!-- prettier-ignore -->
-				<span class="compteur" id="compteur">{#if !RENDRE_LEVE_AU_GEL && !sansResultat}<b>{`${affiches.length} résultat${affiches.length > 1 ? 's' : ''}`}</b>{` en ${duree} s`}{/if}</span>
+				<span class="compteur" id="compteur">{#if rendreLesResultats && !sansResultat}<b>{`${affiches.length} résultat${affiches.length > 1 ? 's' : ''}`}</b>{` en ${duree} s`}{/if}</span>
 				<div style="display:flex;align-items:center;gap:var(--e-3)">
 					<button class="btn bouton-facettes" id="ouvrir-facettes">
-						Affiner <span class="compte-filtres" id="compte-filtres" hidden>0</span>
+						Affiner <span class="compte-filtres" id="compte-filtres" hidden={!nbFiltres}
+							>{nbFiltres}</span
+						>
 					</button>
 					<div class="tri">
 						<label class="etiq" for="tri">Trier par</label>
@@ -699,8 +775,31 @@
 				</div>
 			</div>
 
-			<!-- Aucun filtre retenu sur aucun des sept états : la zone reste vide. -->
-			<div class="actifs" id="actifs"></div>
+			<!--
+				LES PASTILLES DE FILTRE — RG-M02-07, port de `rendreActifs()`
+				(`V-08:1892-1922`). Chaque pastille retire son couple
+				`{facette}={valeur}` de l'adresse ; « Tout effacer » ne garde que `q`.
+			-->
+			<div class="actifs" id="actifs">
+				{#if nbFiltres}{#each FACETTES as f (f.id)}{#each choisis[f.id] ?? [] as valeur (valeur)}<span
+								class="filtre"
+								><span><b>{f.nom + ' : '}</b>{(f.prefixe ?? '') + valeur}</span><button
+									type="button"
+									aria-label={`Retirer le filtre ${f.nom} ${valeur}`}
+									onclick={() => basculer(f.id, valeur, false)}
+									><svg
+										width="12"
+										height="12"
+										viewBox="0 0 16 16"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"><path d="M4 4l8 8M12 4l-8 8" /></svg
+									></button
+								></span
+							>{/each}{/each}<button class="actifs__vider" type="button" onclick={toutEffacer}
+						>Tout effacer</button
+					>{/if}
+			</div>
 
 			<div class="trop">
 				<svg
@@ -727,12 +826,12 @@
 				  • avec résultats — une carte par note, `V-08:2024-2030`.
 			-->
 			<!-- prettier-ignore -->
-			<div class="resultats si-nominal" id="resultats">{#if RENDRE_LEVE_AU_GEL}{:else if sansResultat}<div class="vide"
-					><h2 class="vide__titre">Aucun résultat pour <span class="vide__requete">{`« ${REQUETE || 'procédure de bascule VoIP'} »`}</span></h2
+			<div class="resultats si-nominal" id="resultats">{#if !rendreLesResultats}{:else if sansResultat}<div class="vide"
+					><h2 class="vide__titre">Aucun résultat pour <span class="vide__requete">{`« ${requeteAffichee} »`}</span></h2
 					><p class="vide__txt">Cette connaissance n'est pas encore écrite. Si vous la détenez, c'est le bon moment : une note d'une dizaine de lignes vaut mieux que rien.</p
-					><div class="vide__pistes">{#each PISTES as piste (piste)}<button class="piste">{`Essayer « ${piste} »`}</button>{/each}</div
-					>{#if ecriture}<button class="btn btn--principal si-ecriture">{`Créer la note « ${REQUETE || 'procédure de bascule VoIP'} »`}</button
-				>{/if}</div>{:else}{#each affiches as n, index (n.id)}{@render carte(n, REQUETE, index)}{/each}{/if}</div>
+					><div class="vide__pistes">{#each PISTES as piste (piste)}<button class="piste" onclick={() => essayer(piste)}>{`Essayer « ${piste} »`}</button>{/each}</div
+					>{#if ecriture}<button class="btn btn--principal si-ecriture">{`Créer la note « ${requeteAffichee} »`}</button
+				>{/if}</div>{:else}{#each affiches as n, index (n.id)}{@render carte(n, q, index)}{/each}{/if}</div>
 
 			<div class="si-chargement" aria-hidden="true">
 				<div class="esquisse esq-carte"></div>

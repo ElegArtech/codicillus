@@ -3,7 +3,7 @@
 	 * V-02 — Recherche publique, sans session. Route `/recherche` en anonyme
 	 * (`docs/routes.md` §3.1). La même adresse sert V-08 en session : les deux
 	 * branches sont SÉQUENCÉES, jamais parallèles (DAG K-2, `docs/releve-vues.md`
-	 * §9 R-6). P-8 écrit la branche connectée, ce lot l'anonyme.
+	 * §9 R-6).
 	 *
 	 * V-02 EST V-08 AMPUTÉE, JAMAIS RÉÉCRITE — c'est le commentaire du gel
 	 * (`V-02:1125`) : la carte de résultat publique retire le brouillon, la
@@ -13,48 +13,75 @@
 	 * de guide. Ni statut, ni visibilité, ni étiquette interne.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
+	 * CE QUI CHERCHE, ET CE QUI REND — `recherchees`
+	 *
+	 * Cette vue portait sa propre correspondance : `chercher()`, le port fidèle
+	 * de la fabrique de maquette, rejoué sur les notes reçues. C'était une
+	 * SECONDE implémentation de la recherche à côté du moteur — elle n'inspecte
+	 * ni le corps, ni le rangement, ni l'auteur —, et une note trouvée par
+	 * l'index pouvait disparaître à l'affichage sans que rien ne le dise.
+	 *
+	 * `recherchees` tranche l'ambiguïté au point d'entrée, et son défaut est
+	 * `false` : sans elle, la vue cherche elle-même dans le jeu qu'on lui donne,
+	 * exactement comme le gel — c'est ce que fait le rendu d'un état de maquette,
+	 * qui ne passe par aucune route. Le chargeur de `/recherche`, lui, la pose :
+	 * les notes qu'il transmet SONT le résultat de l'index, dans l'ordre du
+	 * moteur, et la vue n'a plus qu'à les rendre.
+	 *
+	 * ═══════════════════════════════════════════════════════════════════════
 	 * PÉRIMÈTRE PUBLIC — RG-M17-01, AU POINT D'ENTRÉE
 	 *
 	 * « Réduction du corpus au point d'entrée de la vue, comme en V-01. Aucune
 	 * fonction de cette page ne peut atteindre une note interne, même par erreur
 	 * de branchement : elles n'existent plus pour elle » (`V-02:1120`).
 	 * `notesPubliques(notes)` est calculé une fois, en tête ; toutes les
-	 * expressions du fichier en descendent. `seeds/corpus.ts` porte la même
-	 * déclaration au même endroit.
+	 * expressions du fichier en descendent. IL EST CONSERVÉ MÊME QUAND LE MOTEUR
+	 * A DÉJÀ CHERCHÉ : le filtre du régime anonyme est porté par
+	 * `resolution.ts` et injecté dans la requête à l'index (`ADR-006`), et cette
+	 * réduction-ci ne le remplace pas — elle le double, au point exact où le gel
+	 * la met.
 	 *
-	 * CE QUE CE COMPOSANT NE PROUVE PAS. Il rend un ÉTAT DE MAQUETTE. L'étanchéité
-	 * réelle est la batterie 6 (`pnpm test:etancheite`, livrée par T-012b). Ni
-	 * `RG-ACC-01`, ni `RG-ACC-04`, ni `P-09` ne sont déclarées tenues.
+	 * CE QUE CE COMPOSANT NE PROUVE PAS. L'étanchéité réelle est la batterie 6
+	 * (`pnpm test:etancheite`), matrice routes × personas. Ni `RG-ACC-01`, ni
+	 * `RG-ACC-04`, ni `P-09` ne sont déclarées tenues.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * PAS DE COQUILLE, ET QUATRE FENÊTRES
+	 * L'ÉTAT DE LA RECHERCHE EST PORTÉ PAR L'ADRESSE — RG-M02-06
 	 *
-	 * `docs/releve-vues.md` §5.1 : V-01 à V-06 et V-09 n'en portent pas.
-	 * V-02 est contrôlée sur quatre fenêtres (ARB-009, RG-M18-13, cas d'usage
-	 * « chercher ») : cinq états × quatre fenêtres = 20 couples.
+	 * Le gel garde ses filtres dans une variable de page (`choisis`) : rien n'en
+	 * sort, et une recherche affinée n'est pas partageable. Ici, `retenues` vient
+	 * de l'adresse et RIEN d'autre ne la porte : chaque bascule de valeur, chaque
+	 * pastille retirée, chaque « Tout effacer » recompose l'adresse et y navigue.
+	 * `docs/routes.md` §4.2 : « à l'intérieur d'une facette les valeurs sont en
+	 * OU (paramètre répété), entre facettes en ET » ; « `/recherche` sans
+	 * paramètre autre que `q` réinitialise tout ».
 	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT — ARB-011. Le dépliage des facettes,
-	 * le choix d'une valeur, le retrait d'un filtre, la frappe et l'ouverture
-	 * d'un guide relèvent de T-017. Aucun filtre n'est choisi dans les cinq états
-	 * déclarés : `#actifs` est vide, `#vider-facettes` et `#compte-filtres` sont
-	 * masqués, comme la référence les montre.
+	 * AUCUN NŒUD N'EST AJOUTÉ NI DÉPLACÉ POUR CELA. Le gel fait de ses valeurs
+	 * de facette des cases à cocher et de ses pastilles des boutons ; ils le
+	 * restent, et ce sont leurs gestionnaires — non leur nature — qui changent.
 	 *
+	 * ═══════════════════════════════════════════════════════════════════════
 	 * LE COMPTEUR DE DURÉE EST UNE VALEUR DU GEL, ET IL CONTREDIT P-02. La
 	 * maquette écrit `Math.max(0.06, (performance.now() - t0) / 1000 + 0.18)` :
 	 * une durée SIMULÉE, que P-02 proscrit — « aucun compteur ne peut être figé
-	 * ou simulé ». Le squelette ne mesure rien, il rend un instant : la valeur
-	 * portée est celle de la formule à durée écoulée nulle, soit 0,18 s, et c'est
+	 * ou simulé ». La vue ne mesure rien, elle rend un instant : la valeur portée
+	 * est celle de la formule à durée écoulée nulle, soit 0,18 s, et c'est
 	 * exactement ce que la référence affiche. La contradiction appartient au gel,
-	 * pas au port ; elle est remontée au rapport du lot, et P-02 n'est pas
-	 * déclarée tenue.
+	 * pas au port ; P-02 n'est pas déclarée tenue.
 	 *
-	 * LES ADRESSES RESTENT CELLES DU GEL — voir l'en-tête de `V-04.svelte`.
+	 * LE COMPTE, LUI, EST RÉEL — `RG-M02-08`, « compteur global reflétant le
+	 * filtrage ». Le cahier l'illustre par « 4 résultats sur 37 » ; le gel écrit
+	 * `N résultat(s)` et rien d'autre (`V-02:1447-1452`), et la maquette fait la
+	 * loi sur la forme (ordre de préséance, `CLAUDE.md` §2). Ce qui devient vrai
+	 * ici est le nombre : il reflète la requête ET les facettes retenues.
+	 *
+	 * LES ADRESSES DE RÉSULTAT RESTENT CELLES DU GEL — `href="#"`. Ouvrir un
+	 * guide depuis un résultat n'appartient pas à ce lot.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
-	 * (P-6.1) et de `src/vues/V-02.css` (P-6.3), posé par
-	 * `node verif/feuilles-de-vue.mjs V-02 --installer`. Les deux `style=` du
-	 * fichier — `padding:4px 8px` et `padding-top:0` — figurent à l'ensemble clos
-	 * du gel (ARB-016).
+	 * (P-6.1) et de `src/vues/V-02.css` (P-6.3). Les deux `style=` du fichier —
+	 * `padding:4px 8px` et `padding-top:0` — figurent à l'ensemble clos du gel
+	 * (ARB-016).
 	 */
 	import { notesPubliques, type Note } from '../../seeds/corpus';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
@@ -64,11 +91,21 @@
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-02')`, variante « lecture ». */
+		/** Les notes à rendre — jeu de semence, ou résultat du moteur. */
 		notes: readonly Note[];
+		/**
+		 * Les notes reçues SONT-ELLES déjà le résultat du moteur ? Absent : non,
+		 * et la vue cherche elle-même, comme le gel. Voir l'en-tête.
+		 */
+		recherchees?: boolean;
+		/**
+		 * Les valeurs de facette retenues par l'adresse, par identifiant de
+		 * facette. Absent : aucune — l'état des cinq positions de la planche.
+		 */
+		retenues?: Record<string, readonly string[]>;
 	}
 
-	const { vecteur, notes }: Proprietes = $props();
+	const { vecteur, notes, recherchees = false, retenues }: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const etat = $derived(typeof reglage['etat'] === 'string' ? reglage['etat'] : 'nominal');
@@ -80,16 +117,14 @@
 	const requete = $derived(saisie.trim());
 	/**
 	 * `base` est le résultat AVANT filtrage par facettes ; `resultats` l'ensemble
-	 * après. Aucun filtre n'est choisi dans les états déclarés, les deux
-	 * coïncident donc — mais la distinction est celle du gel, et les comptes de
-	 * facette se calculent sur `base`, jamais sur `resultats`.
+	 * après. La distinction est celle du gel (`V-02:1394-1395`), et les comptes
+	 * de facette se calculent sur `base`, jamais sur `resultats`.
 	 */
-	const base = $derived(chercher(publiques, requete));
-	const resultats = $derived(base);
+	const base = $derived(recherchees ? publiques : chercher(publiques, requete));
 
 	/**
 	 * La durée affichée. Formule du gel à durée écoulée nulle — voir l'en-tête :
-	 * le squelette ne mesure pas, il rend l'instant que la référence montre.
+	 * la vue ne mesure pas, elle rend l'instant que la référence montre.
 	 */
 	const duree = Math.max(0.06, 0 / 1000 + 0.18)
 		.toFixed(2)
@@ -101,16 +136,113 @@
 		{ id: 'type', nom: 'Type de guide', cle: (n: Note) => [n.type as string] }
 	];
 
+	/** Les valeurs retenues, facette par facette — l'adresse en est la source. */
+	const choisis = $derived<Record<string, readonly string[]>>(retenues ?? {});
+
+	/** Le nombre total de valeurs retenues — `nbFiltres()` du gel. */
+	const nbFiltres = $derived(Object.values(choisis).reduce((s, v) => s + v.length, 0));
+
+	/**
+	 * Un résultat passe s'il satisfait chaque facette ayant au moins une valeur
+	 * retenue ; à l'intérieur d'une facette, les valeurs sont en « ou »
+	 * (`V-02:1272-1280`). `saufFacette` sert au comptage : la facette qu'on
+	 * compte est écartée, les autres restent appliquées.
+	 */
+	function passe(n: Note, saufFacette?: string): boolean {
+		return FACETTES.every((f) => {
+			if (f.id === saufFacette) return true;
+			const c = choisis[f.id];
+			if (!c || !c.length) return true;
+			const vals = f.cle(n);
+			return c.some((v) => vals.indexOf(v) !== -1);
+		});
+	}
+
+	const resultats = $derived(base.filter((n) => passe(n)));
+
 	/**
 	 * Les valeurs d'une facette et leur compte, dans l'ordre du gel : compte
-	 * décroissant, puis ordre alphabétique français à égalité.
+	 * décroissant, puis ordre alphabétique français à égalité. Une valeur retenue
+	 * qui ne mènerait à rien est CONSERVÉE en fin de liste et marquée
+	 * `data-vide` — « sa disparition ferait croire à un défaut d'affichage ».
 	 */
 	function valeursDe(facette: (typeof FACETTES)[number]): readonly (readonly [string, number])[] {
 		const comptes: Record<string, number> = {};
-		for (const n of base) {
+		for (const n of base.filter((x) => passe(x, facette.id))) {
 			for (const v of facette.cle(n)) comptes[v] = (comptes[v] ?? 0) + 1;
 		}
-		return Object.entries(comptes).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr'));
+		const valeurs = Object.entries(comptes).sort(
+			(a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr')
+		);
+		for (const v of choisis[facette.id] ?? []) {
+			if (!valeurs.some(([nom]) => nom === v)) valeurs.push([v, 0]);
+		}
+		return valeurs;
+	}
+
+	/** Le dépliage d'une facette — état local, comme au gel (`V-02:1267`). */
+	const ouverts = $state<Record<string, boolean>>({ domaine: true, type: true });
+	function estOuverte(id: string): boolean {
+		return ouverts[id] !== false;
+	}
+
+	/* ═════════════════════════════════════════════════════════════════════
+	   L'ADRESSE PORTE L'ÉTAT — RG-M02-06, RG-M02-07
+
+	   Une seule fabrique d'adresse, et toutes les commandes de la page y
+	   passent : c'est ce qui garantit qu'une adresse partagée rend exactement le
+	   même écran que celui d'où elle vient. `docs/routes.md` §4.2.
+	   ═════════════════════════════════════════════════════════════════════ */
+
+	/**
+	 * L'adresse est composée COUPLE PAR COUPLE, et non par `URLSearchParams` :
+	 * une instance mutable de cette classe est refusée dans un composant Svelte
+	 * (`svelte/prefer-svelte-reactivity`), et la réactivité n'a rien à faire ici
+	 * — cette fabrique est pure. `q` vient en premier, puis les facettes dans
+	 * l'ordre de lecture : deux états identiques rendent la même adresse, donc
+	 * comparable.
+	 */
+	function adresse(prochaines: Record<string, readonly string[]>, q: string): string {
+		const couples: string[] = [];
+		if (q) couples.push(`q=${encodeURIComponent(q)}`);
+		for (const f of FACETTES) {
+			for (const v of prochaines[f.id] ?? []) couples.push(`${f.id}=${encodeURIComponent(v)}`);
+		}
+		return couples.length ? `/recherche?${couples.join('&')}` : '/recherche';
+	}
+
+	/**
+	 * LA NAVIGATION N'A LIEU QUE BRANCHÉE. Sans `recherchees`, la vue rend un
+	 * état de maquette hors de toute route : y naviguer emmènerait la page de
+	 * démonstration ailleurs. Le gel, dans cette situation, ne navigue pas non
+	 * plus — il rejoue son rendu en mémoire.
+	 */
+	function aller(cible: string): void {
+		if (recherchees) window.location.assign(cible);
+	}
+
+	function basculer(idFacette: string, valeur: string, actif: boolean): void {
+		const prochaines: Record<string, readonly string[]> = { ...choisis };
+		const courantes = prochaines[idFacette] ?? [];
+		const suite = actif ? [...courantes, valeur] : courantes.filter((v) => v !== valeur);
+		if (suite.length) prochaines[idFacette] = suite;
+		else delete prochaines[idFacette];
+		aller(adresse(prochaines, requete));
+	}
+
+	/** « Tout effacer » — l'adresse ne garde que `q` (`docs/routes.md` §4.2). */
+	function toutEffacer(): void {
+		aller(adresse({}, requete));
+	}
+
+	/** Une nouvelle requête conserve les filtres, comme le gel le fait à la frappe. */
+	function chercherA(q: string): void {
+		aller(adresse(choisis, q.trim()));
+	}
+
+	/** Une piste de reformulation repart à neuf — `choisis = {}` (`V-02:1430`). */
+	function essayer(piste: string): void {
+		aller(adresse({}, piste));
 	}
 
 	/** Les cinq pistes de reformulation, telles que le gel les énumère. */
@@ -195,8 +327,17 @@
 					value={saisie}
 					placeholder="Que cherchez-vous ?"
 					aria-label="Rechercher dans les guides publics"
+					onkeydown={(e) => {
+						if (e.key === 'Enter') chercherA(e.currentTarget.value);
+						else if (e.key === 'Escape' && e.currentTarget.value) chercherA('');
+					}}
 				/>
-				<button class="champ-public__effacer" id="effacer" aria-label="Effacer la recherche">
+				<button
+					class="champ-public__effacer"
+					id="effacer"
+					aria-label="Effacer la recherche"
+					onclick={() => chercherA('')}
+				>
 					<svg
 						width="18"
 						height="18"
@@ -217,16 +358,23 @@
 				<div class="panneau">
 					<div class="panneau__tete">
 						<span class="etiq">Affiner</span>
-						<button class="btn btn--discret" id="vider-facettes" style="padding:4px 8px" hidden
-							>Tout effacer</button
+						<button
+							class="btn btn--discret"
+							id="vider-facettes"
+							style="padding:4px 8px"
+							hidden={!nbFiltres}
+							onclick={toutEffacer}>Tout effacer</button
 						>
 					</div>
 					<div class="panneau__corps" id="facettes" style="padding-top:0">
 						{#each FACETTES as f (f.id)}{@const valeurs = valeursDe(f)}{#if valeurs.length}<section
 									class="facette"
-									data-ouvert="oui"
+									data-ouvert={estOuverte(f.id) ? 'oui' : 'non'}
 								>
-									<button class="facette__tete" aria-expanded="true"
+									<button
+										class="facette__tete"
+										aria-expanded={estOuverte(f.id)}
+										onclick={() => (ouverts[f.id] = !estOuverte(f.id))}
 										><span class="etiq">{f.nom}</span><span
 											><svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"
 												><path d="M3 1l4 4-4 4z" /></svg
@@ -237,8 +385,11 @@
 										{#each valeurs as [valeur, compte] (valeur)}<label
 												class="val"
 												data-vide={compte ? undefined : 'oui'}
-												><input type="checkbox" /><span class="val__nom">{valeur}</span><span
-													class="val__n">{compte}</span
+												><input
+													type="checkbox"
+													checked={(choisis[f.id] ?? []).indexOf(valeur) !== -1}
+													onchange={(e) => basculer(f.id, valeur, e.currentTarget.checked)}
+												/><span class="val__nom">{valeur}</span><span class="val__n">{compte}</span
 												></label
 											>{/each}
 									</div>
@@ -256,11 +407,36 @@
 							>{` en ${duree} s`}{/if}</span
 					>
 					<button class="btn bouton-facettes" id="ouvrir-facettes">
-						Affiner <span class="compte-filtres" id="compte-filtres" hidden>0</span>
+						Affiner <span class="compte-filtres" id="compte-filtres" hidden={!nbFiltres}
+							>{nbFiltres}</span
+						>
 					</button>
 				</div>
 
-				<div class="actifs" id="actifs"></div>
+				<!--
+					LES PASTILLES DE FILTRE — RG-M02-07, port de `rendreActifs()`
+					(`V-02:1351-1385`). Chaque pastille retire son couple
+					`{facette}={valeur}` de l'adresse ; « Tout effacer » ne garde que `q`.
+				-->
+				<div class="actifs" id="actifs">
+					{#if nbFiltres}{#each FACETTES as f (f.id)}{#each choisis[f.id] ?? [] as valeur (valeur)}<span
+									class="filtre"
+									><span><b>{f.nom + ' : '}</b>{valeur}</span><button
+										aria-label={`Retirer le filtre ${f.nom} ${valeur}`}
+										onclick={() => basculer(f.id, valeur, false)}
+										><svg
+											width="12"
+											height="12"
+											viewBox="0 0 16 16"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"><path d="M4 4l8 8M12 4l-8 8" /></svg
+										></button
+									></span
+								>{/each}{/each}<button class="actifs__vider" onclick={toutEffacer}
+							>Tout effacer</button
+						>{/if}
+				</div>
 
 				<div class="resultats si-nominal" id="resultats">
 					{#if resultats.length === 0}<!--
@@ -271,11 +447,14 @@
 						<div class="zone-vide">
 							<div class="zone-vide__titre">Aucun guide ne répond à <em>« {requete} »</em></div>
 							<p>
-								Aucun guide public ne correspond. Essayez d'autres mots, ou demandez directement à
-								l'assistance — votre question signalera le guide manquant.
+								{nbFiltres
+									? 'Aucun guide public ne correspond avec les filtres appliqués. Retirez-en un, ou reformulez votre question.'
+									: "Aucun guide public ne correspond. Essayez d'autres mots, ou demandez directement à l'assistance — votre question signalera le guide manquant."}
 							</p>
 							<div class="reformuler">
-								{#each PISTES as piste (piste)}<button class="piste">{piste}</button>{/each}
+								{#each PISTES as piste (piste)}<button class="piste" onclick={() => essayer(piste)}
+										>{piste}</button
+									>{/each}
 							</div>
 							<a class="btn btn--principal" href="#">Ouvrir un ticket d'assistance</a>
 						</div>{:else}{#each resultats as n, index (n.id)}{@render carte(
