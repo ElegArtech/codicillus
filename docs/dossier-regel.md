@@ -55,4 +55,54 @@ Un point n'entre ici que s'il satisfait les trois conditions **à la fois** :
 2. aucune autre vue ne montre la même chose pour un autre public ou dans un autre état ;
 3. l'ordre de préséance ne le tranche pas, et aucune règle déjà écrite n'en fixe la valeur.
 
-**À ce jour, aucun point ne les satisfait.**
+**Un point les satisfait, depuis le 20 août 2026. Il est ci-dessous.**
+
+---
+
+## R-01 · `Template.utilisations` — 72 annoncées, 32 possibles
+
+*Ouvert le 20/08/2026 par `T-049`. Vue concernée : **V-31**. Batterie qui le tient : `pnpm verif:donnees`, lacune `Template.utilisations`.*
+
+### Le fait, mesuré fichier ouvert
+
+`mockups/V-31-console-templates.html` déclare quatre templates et leur compteur d'emploi :
+
+| Ligne | Template | `utilisations` |
+|---|---|---|
+| `:2705` | Procédure d'intervention | 34 |
+| `:2711` | Fiche applicative | 12 |
+| `:2717` | Retour d'incident | 7 |
+| `:2723` | Guide utilisateur | 19 |
+
+`total()` (`:3289-3291`) en fait la somme — **72** — et `rendreListe()` (`:3305`) l'écrit dans le `span#total-utilisations` du `:1655`, qui se lit alors :
+
+> « Les **72** notes déjà créées à partir de ces templates ne bougeront pas. »
+
+Le `:3348` rend en outre chaque compteur note par note, dans la colonne de la liste.
+
+**Le corpus embarqué par cette même maquette compte 32 notes** (`:1876-2200`). Une note ne peut être créée qu'à partir d'un seul template : 72 provenances ne se répartissent pas sur 32 lignes. **Le chiffre affiché est arithmétiquement impossible dans le monde que la maquette décrit elle-même.**
+
+### Les trois conditions
+
+Ce point n'est pas de la famille des vingt précédents — ceux-là étaient des **silences** du gel, celui-ci est une **contradiction interne**. Les trois conditions se lisent donc en conséquence, et elles sont satisfaites :
+
+1. **Aucune maquette ne montre la provenance d'une note.** Vérifié sur les 41 fichiers : la seule prose sur le sujet est celle de V-31 (`:3464`, `:3548`), qui parle des notes issues d'un squelette **sans jamais en désigner une**. Aucune vue de lecture, d'édition ou de console n'affiche « créée depuis le template X ». La donnée qui rendrait 72 vérifiable n'est montrée nulle part.
+2. **Aucune autre vue ne montre la même chose autrement.** Quinze maquettes embarquent le même tableau `TEMPLATES` avec les mêmes quatre valeurs ; **une seule les rend** — V-31 est le seul fichier où `t.utilisations` est lu. Il n'existe donc ni second chiffre, ni autre public, ni autre état qui trancherait.
+3. **L'ordre de préséance ne tranche pas.** Il classe *Maquettes > Cahier des charges > …* et règle les conflits **entre** documents. Ici le conflit est **entre une maquette et elle-même** : V-31 contre V-31. Aucun classement ne départage un document d'avec lui-même. Et aucune règle écrite ne fixe `utilisations` : le CDC ne le mentionne pas, et `docs/arbitrages.md` ne l'a jamais abordé.
+
+### Pourquoi aucun lot ne peut le fermer
+
+Les deux issues qu'un agent d'exécution pourrait prendre sont fermées, chacune par une règle :
+
+- **Poser la colonne de provenance et compter** rendrait au mieux un total ≤ 32, donc **pas 72** : l'écran resterait faux, et la colonne serait écrite par personne et lue par personne — la règle qu'aucun cas n'exerce de `P-5`.
+- **Rendre 72 depuis le jeu** serait la valeur illustrative que **`P-02`** proscrit en propres termes : « aucun indicateur, aucun compteur ne peut être figé ou simulé ».
+
+`T-030b` avait refusé de poser la colonne ; `T-049` ne la pose pas davantage. **Le produit ne rend donc pas `utilisations`** : `lireTemplates()` l'omet, et `pnpm verif:donnees` porte la lacune, chiffrée à chaque exécution — *« les 4 templates — 72 utilisations annoncées pour 32 notes au corpus, 0 provenance en base »*. Le manque est **compté en rouge**, jamais comblé.
+
+### Ce que le commanditaire a à trancher
+
+Une seule question, et elle appelle un chiffre ou une suppression :
+
+> **Les compteurs d'emploi de V-31 doivent-ils être ramenés à des valeurs compatibles avec les 32 notes du corpus — et lesquelles —, ou l'indicateur doit-il disparaître de la vue ?**
+
+Toute réponse est un **regel de V-31** : la valeur vit dans le corpus embarqué de la maquette, et le gel de `mockups/GEL.md` couvre le fichier entier. Tant qu'elle n'est pas donnée, la lacune reste ouverte et la batterie reste rouge d'un point — **c'est le comportement voulu**, pas un défaut à corriger.
