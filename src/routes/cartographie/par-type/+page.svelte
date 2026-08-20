@@ -7,8 +7,11 @@
 	 * bascule « Par type maître » de V-19, et le segment porte le mode
 	 * d'affichage exigé par `RG-M09-05` (`docs/routes.md:267`).
 	 *
-	 * `data.relations` n'est pas passée à la vue : `src/vues/V-20.svelte` n'expose
-	 * que `vecteur` et `notes`. Écart déclaré au rapport du lot.
+	 * LES ARÊTES VIENNENT DE LA TABLE `relations`, comme à `/cartographie` et par
+	 * le même chemin de lecture : la bascule change le mode d'affichage, jamais
+	 * le corpus. Les trois propriétés de relation de `src/vues/V-20.svelte` sont
+	 * optionnelles et retombent sur les constantes du jeu de semence quand rien
+	 * ne leur est passé — le rendu du banc de comparaison est donc inchangé.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert.
 	 * Elle est identique à l'octet à sa source gelée (P-6.3).
@@ -23,4 +26,10 @@
 	const { data }: { data: PageData } = $props();
 </script>
 
-<Vue vecteur={data.vecteur} notes={data.notes} />
+<Vue
+	vecteur={data.vecteur}
+	notes={data.notes}
+	relations={data.relations}
+	typesRelation={data.typesRelation}
+	relationsTechniques={data.relationsTechniques}
+/>

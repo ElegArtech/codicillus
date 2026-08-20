@@ -8,12 +8,12 @@
 	 * chargeur — « pas de garde de droit, pas de chargeur » —, et il servait le
 	 * jeu de semence à tout connecté ; `T-037` le branche sur la base.
 	 *
-	 * `data.relations` N'EST PAS PASSÉE À LA VUE, ET C'EST UN ÉCART DÉCLARÉ.
-	 * `src/vues/V-19.svelte` n'expose que `vecteur` et `notes` ; ses arêtes
-	 * viennent encore de la constante du jeu de semence, par
-	 * `$lib/graphe/cartographie`. Ce lot n'écrit dans aucun fichier de
-	 * `src/vues/` — cinq lots y travaillent en parallèle —, et la propriété
-	 * manquante est remontée plutôt qu'ajoutée.
+	 * LES ARÊTES VIENNENT DE LA TABLE `relations`, PLUS DU JEU DE SEMENCE. Les
+	 * trois propriétés de relation de `src/vues/V-19.svelte` sont optionnelles
+	 * et retombent, si rien ne leur est passé, sur les constantes du jeu ; les
+	 * nourrir ici est ce qui fait de cette page la cartographie du corpus réel.
+	 * Le mode de conception, lui, ne passe que `vecteur` et `notes` : le rendu
+	 * du banc de comparaison est inchangé, à l'octet.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert.
 	 * Elle est identique à l'octet à sa source gelée (P-6.3).
@@ -28,4 +28,10 @@
 	const { data }: { data: PageData } = $props();
 </script>
 
-<Vue vecteur={data.vecteur} notes={data.notes} />
+<Vue
+	vecteur={data.vecteur}
+	notes={data.notes}
+	relations={data.relations}
+	typesRelation={data.typesRelation}
+	relationsTechniques={data.relationsTechniques}
+/>
