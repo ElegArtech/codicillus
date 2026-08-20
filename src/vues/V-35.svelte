@@ -78,11 +78,19 @@
 	 * l'ensemble clos du gel de V-35 (ARB-016).
 	 */
 	import {
+		DOMAINES,
+		INSTANCE,
 		JOURNAL_IMPORTS,
 		LOT_IMPORT,
+		MOI,
+		UNIVERS,
+		type Domaine,
 		type EntreeDeJournalDImport,
+		type EtatDInstance,
 		type LotDImport,
-		type Note
+		type Note,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
@@ -93,10 +101,31 @@
 		/** Le jeu de semence de la vue — `corpusPourVue('V-35')`. */
 		notes: readonly Note[];
 		/**
+		 * LES QUATRE SOURCES DE LA COQUILLE, TOUTES FACULTATIVES — le rail de
+		 * gauche, le fil et l'identité de la barre. Absentes, les constantes du jeu
+		 * de semence s'appliquent, et cette vue rend exactement ce qu'elle rendait.
+		 * `CoquilleDeConsole.svelte:70-75` les déclare dans les mêmes termes ; elles
+		 * ne faisaient que manquer ICI, si bien que cet écran affichait le rail et
+		 * l'utilisateur du jeu de semence même servi depuis la base.
+		 */
+		univers?: readonly Univers[];
+		domaines?: readonly Domaine[];
+		compte?: UtilisateurCourant;
+		instance?: EtatDInstance;
+
+		/**
 		 * LE LOT ET LE JOURNAL, EN PROPRIÉTÉS OPTIONNELLES (T-045). Absentes, les
 		 * constantes du jeu de semence s'appliquent — c'est ce que le mode démo
 		 * passe, et c'est ce qui garantit que le banc ne bouge pas d'un pixel.
 		 */
+		/**
+		 * CE QUE LA VUE FAIT QUAND UN SCÉNARIO EST CHOISI.
+		 *
+		 * Le gel l'annonce lui-même : le clic mène au « Parcours d'import, scénario
+		 * "X" — vue V-24 » (`mockups/V-35-console-imports.html:2984`). La vue ne
+		 * décide pas où cela mène ; la page le sait.
+		 */
+		onScenario?: (scenario: string) => void;
 		/** Le dernier lot déposé. Absente, `LOT_IMPORT` du jeu de semence. */
 		lotImport?: LotDImport;
 		/** Le journal des imports. Absente, `JOURNAL_IMPORTS` du jeu de semence. */
@@ -106,8 +135,13 @@
 	const {
 		etat,
 		notes,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
 		lotImport = LOT_IMPORT,
-		journalImports = JOURNAL_IMPORTS
+		journalImports = JOURNAL_IMPORTS,
+		onScenario
 	}: Proprietes = $props();
 
 	/**
@@ -206,7 +240,15 @@
 		></div
 	></dialog>{/snippet}
 
-<CoquilleDeConsole section="imports" {notes} superposition={rapportDeLot}>
+<CoquilleDeConsole
+	section="imports"
+	{notes}
+	{univers}
+	{domaines}
+	{compte}
+	{instance}
+	superposition={rapportDeLot}
+>
 	{#snippet enfants()}
 		<TeteDeSection
 			titre="Imports"
@@ -226,7 +268,7 @@
 			></div
 			><span class="etiq" style="display:block;margin-bottom:var(--e-2)">Ou choisissez directement votre scénario</span
 			><div class="scenarios-court" id="scenarios"
-				>{#each SCENARIOS as s (s.nom)}<button class="sc" type="button"><span class="sc__nom">{s.nom}</span><span class="sc__sous">{s.sous}</span></button>{/each}</div
+				>{#each SCENARIOS as s (s.nom)}<button class="sc" type="button" onclick={() => onScenario?.(s.nom)}><span class="sc__nom">{s.nom}</span><span class="sc__sous">{s.sous}</span></button>{/each}</div
 		></section>
 
 		<!-- ---------- Journal ---------- -->

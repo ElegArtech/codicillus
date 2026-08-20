@@ -80,6 +80,15 @@
 		templates?: readonly Template[];
 		/** Les types de note proposés. Absente, la constante du jeu de semence. */
 		typesNote?: readonly TypeDeNote[];
+		/**
+		 * CE QUE LA VUE FAIT QUAND UN GESTE EST CONFIRMÉ — deux rappels, deux
+		 * gestes. Même partage qu'en `V-27`, `V-28`, `V-29`, `V-30` et `V-32` : la
+		 * vue tient l'état de son dialogue, la page tient le réseau. Le template est
+		 * désigné par son identifiant lisible, que `Template.id` porte déjà.
+		 */
+		onSupprimer?: (template: string) => void;
+		/** `RG-REF-02` — « Cocher décochera "X", qui l'est actuellement » (`V-31:380`). */
+		onMarquerParDefaut?: (template: string) => void;
 	}
 
 	const {
@@ -90,7 +99,9 @@
 		compte = MOI,
 		instance = INSTANCE,
 		templates = TEMPLATES,
-		typesNote = TYPES_NOTE
+		typesNote = TYPES_NOTE,
+		onSupprimer,
+		onMarquerParDefaut
 	}: Proprietes = $props();
 
 	/**
@@ -107,19 +118,41 @@
 	}
 
 	/**
-	 * Le nombre de notes créées à partir d'un squelette.
+	 * Le nombre de notes créées à partir d'un squelette — OU SON ABSENCE.
 	 *
-	 * `Template.utilisations` est FACULTATIF dans `seeds/corpus.ts` — les
-	 * variantes réduites du corpus (V-17, V-18, V-19…) ne le portent pas. V-31
-	 * est nourrie du jeu complet, qui le porte pour les quatre templates : le
-	 * repli à zéro n'est jamais emprunté ici, il satisfait le typage.
+	 * `Template.utilisations` est FACULTATIF dans `seeds/corpus.ts`, et la base
+	 * NE LE PORTE PAS : `src/lib/donnees/lecture.ts` le dit en propres termes —
+	 * « `utilisations` n'a AUCUNE colonne : c'est un compteur d'emploi » —, et
+	 * aucune colonne de `notes` ne rattache une note au template qui l'a amorcée.
+	 *
+	 * LE REPLI À ZÉRO ÉTAIT SANS CONSÉQUENCE TANT QUE LA VUE LISAIT LE JEU DE
+	 * SEMENCE, qui porte la clé pour ses quatre templates. Servi depuis la base,
+	 * il afficherait « 0 note » partout — et « 0 » n'est pas « indisponible » :
+	 * c'est exactement le zéro muet que `RG-M01-01` vise et que `P-02` proscrit.
+	 *
+	 * `null` DIT L'ABSENCE, ET LE RENDU LA MONTRE PAR « — » — la marque que le
+	 * gel emploie déjà pour un vide (`V-28:614`, `aSupprimer?.nom ?? '—'`). La
+	 * lacune est par ailleurs recensée dans `MESURES_DE_CONSOLE_SANS_CONTREPARTIE`
+	 * (`src/lib/donnees/consoles.ts`), de sorte qu'elle soit comptée et non
+	 * seulement racontée.
 	 */
-	function utilisations(t: Template): number {
-		return t.utilisations ?? 0;
+	function utilisations(t: Template): number | null {
+		return t.utilisations ?? null;
 	}
 
-	/** Le total affiché par le bandeau de rassurance — calculé, jamais écrit. */
-	const totalUtilisations = $derived(templates.reduce((s, t) => s + utilisations(t), 0));
+	/** L'absence de compteur, telle qu'elle s'écrit à l'écran. */
+	const INDISPONIBLE = '—';
+
+	/**
+	 * Le total du bandeau — ou `null` si AUCUN template ne porte le compteur.
+	 * Sommer en traitant l'absence comme un zéro rendrait un total faux ; le
+	 * total n'existe que si la donnée existe.
+	 */
+	const totalUtilisations = $derived(
+		templates.every((t) => utilisations(t) === null)
+			? null
+			: templates.reduce((s, t) => s + (utilisations(t) ?? 0), 0)
+	);
 
 	/**
 	 * LE SQUELETTE D'UN TEMPLATE NEUF est celui du gel (`V-31:3468`) : une
@@ -149,9 +182,30 @@
 	 * la position « Template par défaut », le premier qui ne l'est pas pour
 	 * « Template ordinaire ». La position par défaut n'ouvre rien.
 	 */
+	/**
+	 * LE TEMPLATE DONT LA SUPPRESSION EST EXAMINÉE. `null` au rendu serveur :
+	 * l'écran reste celui que le vecteur décrit tant que personne n'a cliqué.
+	 */
+	let demande = $state<string | null>(null);
+
 	const aSupprimer = $derived<Template | null>(
-		sup === 'defaut' ? null : (templates.find((t) => !t.defaut) ?? null)
+		demande !== null
+			? (templates.find((t) => t.id === demande) ?? null)
+			: sup === 'defaut'
+				? null
+				: (templates.find((t) => !t.defaut) ?? null)
 	);
+
+	/** `showModal()` — voir `V-28.svelte` : l'attribut `open` n'obtient pas la modalité. */
+	$effect(() => {
+		const boite = document.getElementById('dlg-supprimer');
+		if (!(boite instanceof HTMLDialogElement)) return;
+		if (aSupprimer === null) {
+			if (boite.open) boite.close();
+			return;
+		}
+		if (!boite.open) boite.showModal();
+	});
 </script>
 
 <Coquille
@@ -201,8 +255,8 @@
 			<div>
 				<b>Modifier ou supprimer un template n'affecte aucune note existante.</b>
 				Un squelette est copié au moment de la création : la note devient aussitôt indépendante. Les
-				<span id="total-utilisations">{totalUtilisations}</span> notes déjà créées à partir de ces templates
-				ne bougeront pas.
+				<span id="total-utilisations">{totalUtilisations ?? INDISPONIBLE}</span> notes déjà créées à partir
+				de ces templates ne bougeront pas.
 			</div>
 		</div>
 
@@ -228,13 +282,16 @@
 						<span class="tg--masquable"
 							>{#if t.defaut}<span class="past past--defaut">par défaut</span>{:else}<button
 									class="btn btn--discret"
-									style="padding:3px var(--e-2);font-size:var(--t-mini)">Marquer</button
+									type="button"
+									style="padding:3px var(--e-2);font-size:var(--t-mini)"
+									onclick={() => onMarquerParDefaut?.(t.id)}>Marquer</button
 								>{/if}</span
 						>
 						<span
 							class="tg__n tg--masquable"
 							style={utilisations(t) ? undefined : 'color:var(--c-encre-4)'}
-							>{utilisations(t)} {utilisations(t) > 1 ? 'notes' : 'note'}</span
+							>{#if utilisations(t) === null}{INDISPONIBLE}{:else}{utilisations(t)}
+								{(utilisations(t) ?? 0) > 1 ? 'notes' : 'note'}{/if}</span
 						>
 						<div class="tg__actions">
 							<button class="btn" type="button">Modifier</button>
@@ -251,7 +308,11 @@
 									/></svg
 								></button
 							>
-							<button class="btn btn--destructif" type="button" aria-label="Supprimer {t.nom}"
+							<button
+								class="btn btn--destructif"
+								type="button"
+								aria-label="Supprimer {t.nom}"
+								onclick={() => (demande = t.id)}
 								><svg
 									width="14"
 									height="14"
@@ -279,8 +340,8 @@
 						{edite ? edite.nom : 'Nouveau template'}
 					</h2>
 					<div class="tiroir-form__sous" id="form-sous">
-						{#if edite}{utilisations(edite)}
-							{utilisations(edite) > 1
+						{#if edite}{utilisations(edite) ?? INDISPONIBLE}
+							{(utilisations(edite) ?? 0) > 1
 								? 'notes ont été créées à partir de ce squelette — elles ne bougeront pas.'
 								: 'note a été créée à partir de ce squelette — elle ne bougera pas.'}{:else}Ce que
 							vous écrivez ici est exactement ce que trouvera le rédacteur.{/if}
@@ -561,7 +622,12 @@
 						>
 					</span>
 					<h2 class="dlg__titre" id="dlg-sup-titre">Supprimer le template</h2>
-					<button class="dlg__fermer" data-fermer aria-label="Fermer">
+					<button
+						class="dlg__fermer"
+						data-fermer
+						aria-label="Fermer"
+						onclick={() => (demande = null)}
+					>
 						<svg
 							width="16"
 							height="16"
@@ -600,12 +666,15 @@
 					</div>
 				</div>
 				<div class="dlg__pied">
-					<button class="btn" data-fermer>Annuler</button>
+					<button class="btn" data-fermer onclick={() => (demande = null)}>Annuler</button>
 					<button
 						class="btn btn--principal btn--destructif"
 						id="sup-valider"
 						style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
-						>Supprimer</button
+						onclick={() => {
+							if (aSupprimer === null) return;
+							onSupprimer?.(aSupprimer.id);
+						}}>Supprimer</button
 					>
 				</div>
 			</div>

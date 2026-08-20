@@ -34,13 +34,23 @@
  * `perimetreDeLecture()` plutôt qu'une comparaison de rôle recopiée ici.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CE CHARGEUR NE FAIT PAS
+ * CE QUE CE CHARGEUR NE FAISAIT PAS, ET POURQUOI IL LE FAIT DÉSORMAIS
  *
- * Il ne touche pas `src/vues/V-27.svelte`, et il ne peut donc pas corriger ce
- * que la vue lit du jeu de semence : les univers, les domaines, le compte de
- * l'utilisateur et la version de l'instance y sont importés au niveau du module
- * (`V-27:71`). Seules les NOTES entrent par propriété, et c'est par là que la
- * base entre. Écart déclaré au rapport du lot.
+ * La rédaction précédente affirmait : « il ne peut pas corriger ce que la vue
+ * lit du jeu de semence : les univers, les domaines, le compte de l'utilisateur
+ * et la version de l'instance y sont importés au niveau du module (`V-27:71`).
+ * Seules les NOTES entrent par propriété. »
+ *
+ * C'ÉTAIT FAUX, et la ligne citée le dit elle-même : `V-27:71` est un `import`
+ * qui sert de VALEUR PAR DÉFAUT, et `V-27:96-101` déclare `univers?`,
+ * `domaines?`, `compte?`, `instance?` en propriétés facultatives. Il n'y avait
+ * rien à corriger dans la vue : il fallait passer les propriétés. La liste des
+ * univers affichée par cet écran vient donc de `univers`, celle des domaines de
+ * `domaines`, et l'utilisateur de la coquille du compte connecté.
+ *
+ * `instance` RESTE AU DÉFAUT, et c'est la seule des quatre : la version du
+ * produit n'est portée par aucune des vingt et une tables du schéma. La lacune
+ * est déclarée au rapport, pas comblée.
  *
  * `vecteur: null` demande l'état au repos : panneau de formulaire fermé, aucun
  * dialogue de suppression ouvert. Les trois positions de l'axe « Formulaire » et
@@ -50,7 +60,12 @@
 import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { supprimerUnUnivers } from '$lib/donnees/administration';
-import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import {
+	accesALaConsole,
+	contexteDeRequete,
+	lireLesDesignationsDUnivers,
+	resoudreLaConsole
+} from '$lib/donnees/consoles';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
@@ -59,7 +74,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
-	return { vecteur: null, notes: acces.ressource.notes };
+	return {
+		vecteur: null,
+		notes: acces.ressource.notes,
+		univers: acces.ressource.univers,
+		domaines: acces.ressource.domaines,
+		compte: acces.ressource.compte,
+		designations: await lireLesDesignationsDUnivers(base)
+	};
 };
 
 /**

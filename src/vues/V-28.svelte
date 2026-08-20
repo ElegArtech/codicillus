@@ -96,6 +96,28 @@
 		instance?: EtatDInstance;
 		/** Description et modules de chaque domaine. Absente, la constante du jeu. */
 		detailDomaines?: Record<NomDeDomaine, DetailDeDomaine>;
+		/**
+		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE — et rien d'autre.
+		 *
+		 * La vue tient l'ÉTAT de son dialogue — quel domaine est visé, ce qui a été
+		 * retapé — parce que c'est ce que le script du gel tenait lui-même
+		 * (`demanderSuppression(d)`, `V-28:3201`), et parce que le décompte exact de
+		 * `RG-M14-02` se calcule sur les notes qu'elle a reçues : personne d'autre
+		 * ne peut le composer.
+		 *
+		 * ELLE NE CONNAÎT NI ROUTE, NI ACTION, NI RÉSEAU. Le rappel est passé par
+		 * `+page.svelte`, qui seul sait à quelle action s'adresser — la frontière est
+		 * celle de `$lib/cablage/formulaires.ts` : le gel n'écrit aucun `method` ni
+		 * aucun `action`, et rien ici n'en invente.
+		 *
+		 * Absent, le dialogue s'ouvre, se ferme et se confirme sans rien envoyer :
+		 * c'est ce que le mode de conception et les tests de propriétés obtiennent.
+		 */
+		onSupprimer?: (demande: {
+			readonly univers: string;
+			readonly domaine: string;
+			readonly saisie: string;
+		}) => void;
 		/** Le registre des modules de domaine. Absente, la constante du jeu. */
 		modules?: Record<CleDeModule, Module>;
 	}
@@ -108,6 +130,7 @@
 		compte = MOI,
 		instance = INSTANCE,
 		detailDomaines = DETAIL_DOMAINES,
+		onSupprimer,
 		modules = MODULES
 	}: Proprietes = $props();
 
@@ -146,16 +169,34 @@
 		modules: ['notes', 'dossiers']
 	};
 
-	/** La copie de travail : le registre des domaines, plus le domaine vide. */
+	/**
+	 * La copie de travail : le registre des domaines — plus le domaine vide,
+	 * MAIS SEULEMENT QUAND LE REGISTRE EST CELUI DU JEU DE SEMENCE.
+	 *
+	 * `TELEPHONIE` est un littéral de démonstration (voir juste au-dessus) : il
+	 * donne à la maquette le cas « domaine vide » que le brief demande de
+	 * montrer, et il n'existe dans aucune table. Servi À CÔTÉ des domaines réels
+	 * d'une instance, c'est une ligne que l'administrateur voit, ne peut ni
+	 * éditer ni supprimer, et qui ne correspond à rien — la valeur illustrative
+	 * que `P-02` proscrit, sur l'écran qui gouverne le rangement.
+	 *
+	 * LA CONDITION EST UNE COMPARAISON D'IDENTITÉ, ET C'EST LE PLUS PETIT GESTE
+	 * POSSIBLE. `registreDeDomaines === DOMAINES` n'est vrai que lorsque la
+	 * propriété n'a pas été passée, c'est-à-dire quand la vue tourne sur le jeu
+	 * de semence : la maquette garde alors exactement ce qu'elle montrait, au
+	 * nœud près. Dès qu'un chargeur passe les domaines de la base, la ligne
+	 * disparaît. Rien de la structure, des classes, des styles ni de l'ordre
+	 * n'est touché — seul le CONTENU l'est, et c'est ce que ce lot a à faire.
+	 */
 	const domaines: readonly DomaineDeTravail[] = $derived([
 		...registreDeDomaines.map((d) => ({
 			nom: d.nom,
 			univers: d.univers,
 			couleur: d.couleur,
-			description: detailDomaines[d.nom].description,
-			modules: detailDomaines[d.nom].modules
+			description: detailDomaines[d.nom]?.description ?? '',
+			modules: detailDomaines[d.nom]?.modules ?? []
 		})),
-		TELEPHONIE
+		...(registreDeDomaines === DOMAINES ? [TELEPHONIE] : [])
 	]);
 
 	/** Le tableau : par univers, puis par nom, en français (`rendreListe()`). */
@@ -265,7 +306,72 @@
 
 	/* ── La suppression ─────────────────────────────────────────────────── */
 
-	const aSupprimer = $derived(sup === 'vide' ? TELEPHONIE : null);
+	/**
+	 * LE DOMAINE DONT LA SUPPRESSION EST EXAMINÉE, et ce qui a été retapé.
+	 *
+	 * Deux états, et ils ne servent qu'au document vivant : au rendu serveur ils
+	 * valent `null` et `''`, si bien que l'écran rendu est exactement celui que le
+	 * vecteur décrit. C'est le comportement que le script du gel portait, rendu à
+	 * la vue qui le transcrit.
+	 */
+	let demande = $state<string | null>(null);
+	let saisie = $state('');
+
+	/**
+	 * L'OUVERTURE PAR UN CLIC L'EMPORTE SUR LE VECTEUR DE PLANCHE, et ne le
+	 * contredit pas : tant que personne n'a cliqué, `demande` est `null` et l'état
+	 * reste celui que le scénario demande.
+	 */
+	const aSupprimer = $derived(
+		demande !== null
+			? (domaines.find((d) => d.nom === demande) ?? null)
+			: sup === 'vide'
+				? TELEPHONIE
+				: null
+	);
+
+	/**
+	 * `RG-M14-02`, SECONDE MOITIÉ — « exige la saisie du nom exact du domaine. Le
+	 * bouton reste inactif tant que la saisie ne correspond pas. »
+	 *
+	 * EXACT VEUT DIRE EXACT : le gel le commente en propres termes —
+	 * « Correspondance exacte, SANS TOLÉRANCE DE CASSE : le geste doit être
+	 * délibéré » (`V-28:3239-3240`). Aucun `trim()`, aucune normalisation.
+	 *
+	 * CE N'EST PAS LA RÈGLE, C'EST SON REFLET À L'ÉCRAN. La règle est écrite une
+	 * fois, dans `nomConfirme()` de `src/lib/donnees/administration.ts`, et c'est
+	 * ELLE qui décide : l'action refuse une saisie non conforme quoi qu'il arrive.
+	 * Ce module-là ne peut pas être importé ici — il tire le schéma, le connecteur
+	 * et le moteur de recherche —, et c'est pourquoi la comparaison est réécrite.
+	 * Le serveur reste seul juge ; l'écran ne fait qu'éviter de proposer un geste
+	 * qui serait refusé.
+	 */
+	const confirme = $derived(aSupprimer !== null && saisie === aSupprimer.nom);
+
+	/**
+	 * LA MODALITÉ EST ÉTABLIE SUR LE DOCUMENT VIVANT, jamais au rendu serveur.
+	 *
+	 * La vue rend `<dialog open={…}>` parce qu'un rendu serveur ne peut pas
+	 * appeler `showModal()`. Or l'attribut seul n'obtient NI le fond assombri —
+	 * `.dlg::backdrop` ne s'applique qu'à un dialogue modal (`V-28.css:525`) — NI
+	 * l'inertie du reste de la page, NI la fermeture par `Échap`. `$effect` ne
+	 * tourne qu'au client : le rendu serveur est inchangé.
+	 */
+	$effect(() => {
+		const boite = document.getElementById('dlg-supprimer');
+		if (!(boite instanceof HTMLDialogElement)) return;
+		if (aSupprimer === null) {
+			if (boite.open) boite.close();
+			return;
+		}
+		if (!boite.open) boite.showModal();
+	});
+
+	/** Refermer : le dialogue disparaît, et la saisie ne survit pas au geste. */
+	function refermer(): void {
+		demande = null;
+		saisie = '';
+	}
 	const mesuresSup = $derived(aSupprimer ? mesures(aSupprimer.nom) : null);
 	/** Un domaine est vide quand il ne porte ni note ni dossier (`V-28:3201`). */
 	const videSup = $derived(mesuresSup !== null && !mesuresSup.notes && !mesuresSup.dossiers);
@@ -312,7 +418,7 @@
 		>{#each d.modules as cle (cle)}<span class="mod-pastille" title={modules[cle].nom}>{CODES_MODULES[cle]}</span>{/each}</div
 	><div class="tg__actions"
 		><button class="btn" type="button">Modifier</button
-		><button class="btn btn--destructif" type="button" aria-label="Supprimer le domaine {d.nom}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"/></svg></button
+		><button class="btn btn--destructif" type="button" aria-label="Supprimer le domaine {d.nom}" onclick={() => { demande = d.nom; saisie = ''; }}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"/></svg></button
 	></div
 ></div>{/snippet}
 
@@ -516,7 +622,7 @@
 						>
 					</span>
 					<h2 class="dlg__titre" id="dlg-sup-titre">Supprimer le domaine</h2>
-					<button class="dlg__fermer" data-fermer aria-label="Fermer">
+					<button class="dlg__fermer" data-fermer aria-label="Fermer" onclick={refermer}>
 						<svg
 							width="16"
 							height="16"
@@ -610,17 +716,23 @@
 							spellcheck="false"
 							autofocus
 							placeholder="Nom du domaine"
+							value={saisie}
+							oninput={(e) => (saisie = e.currentTarget.value)}
 						/>
 					</div>
 				</div>
 
 				<div class="dlg__pied">
-					<button class="btn" data-fermer>Annuler</button>
+					<button class="btn" data-fermer onclick={refermer}>Annuler</button>
 					<button
 						class="btn btn--principal btn--destructif"
 						id="sup-valider"
-						disabled
+						disabled={!confirme}
 						style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
+						onclick={() => {
+							if (aSupprimer === null || !confirme) return;
+							onSupprimer?.({ univers: aSupprimer.univers, domaine: aSupprimer.nom, saisie });
+						}}
 					>
 						Supprimer définitivement
 					</button>

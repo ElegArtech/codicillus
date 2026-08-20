@@ -21,10 +21,12 @@
  *
  * `vecteur: null` demande l'état au repos.
  */
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
-import type { PageServerLoad } from './$types';
+import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import { supprimerUnTypeDeRelation } from '$lib/donnees/administration';
+import { lireRelations, lireRelationsTechniques, lireTypesDeRelation } from '$lib/donnees/lecture';
+import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -32,5 +34,55 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
-	return { vecteur: null, notes: acces.ressource.notes };
+	const [typesRelation, relations, relationsTechniques] = await Promise.all([
+		lireTypesDeRelation(base),
+		lireRelations(base),
+		lireRelationsTechniques(base)
+	]);
+
+	return {
+		vecteur: null,
+		notes: acces.ressource.notes,
+		univers: acces.ressource.univers,
+		domaines: acces.ressource.domaines,
+		compte: acces.ressource.compte,
+		typesRelation,
+		relations,
+		relationsTechniques
+	};
+};
+
+/** La garde des onze adresses, appliquée à l'action — voir `/console/univers`. */
+function consoleOuverte(locals: App.Locals): void {
+	if (!accesALaConsole(locals.identite)) error(404, MESSAGE_INTROUVABLE);
+}
+
+export const actions: Actions = {
+	/**
+	 * SUPPRIMER UN TYPE DE RELATION — `RG-M08-06`, `RG-M08-07`.
+	 *
+	 * `sortie` PORTE LE NOM DU GROUPE DE BOUTONS RADIO DU GEL, et ses deux valeurs
+	 * sont celles qu'il écrit : `reaffecter` et `supprimer` (`V-30:536`, `:549`).
+	 * Rien n'est traduit — le jour où le dialogue soumettrait nativement, aucun
+	 * nom ne serait à changer.
+	 *
+	 * `vers` N'A DE SENS QUE POUR LA RÉAFFECTATION, et son absence n'est pas un
+	 * défaut : le geste ne le lit que dans cette branche, et refuse une cible
+	 * inconnue plutôt que de se rabattre sur un type quelconque — se tromper de
+	 * type d'accueil réécrirait tout un pan du graphe.
+	 */
+	supprimer: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const sortie = champs.get('sortie') === 'supprimer' ? 'supprimer' : 'reaffecter';
+		const vers = champs.get('vers');
+		const resultat = await supprimerUnTypeDeRelation(basePartagee(), {
+			type: String(champs.get('type-de-relation') ?? ''),
+			sortie,
+			...(typeof vers === 'string' ? { vers } : {})
+		});
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	}
 };

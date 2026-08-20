@@ -91,6 +91,17 @@
 		instance?: EtatDInstance;
 		/** Les types de fiche et leurs champs. Absente, la constante du jeu. */
 		typesFiche?: Record<TypeDeFiche, readonly ChampDeFiche[]>;
+		/**
+		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE. Même partage qu'en
+		 * `V-27` et `V-28` : la vue tient l'état de son dialogue, la page tient le
+		 * réseau. Le décompte des notes concernées se calcule sur ce qu'elle a reçu.
+		 */
+		onSupprimer?: (type: string) => void;
+		/**
+		 * LA SORTIE PROPOSÉE PAR LE REFUS — « Délester ces N notes ». Le gel y
+		 * attache un geste (`V-29:3465`) et `P-03` interdit qu'il soit inerte.
+		 */
+		onDelester?: (type: string) => void;
 	}
 
 	const {
@@ -100,7 +111,9 @@
 		domaines = DOMAINES,
 		compte = MOI,
 		instance = INSTANCE,
-		typesFiche = TYPES_FICHE
+		typesFiche = TYPES_FICHE,
+		onSupprimer,
+		onDelester
 	}: Proprietes = $props();
 
 	/* ── Les huit types de valeur du gel (`V-29:2909`) ─────────────────────
@@ -293,13 +306,32 @@
 	 * montre le REFUS sur « Contact ». C'est le gel ; le corriger serait
 	 * inventer un état que la maquette ne montre pas.
 	 */
+	/**
+	 * LE TYPE DONT LA SUPPRESSION EST EXAMINÉE. `null` au rendu serveur : l'écran
+	 * reste celui que le vecteur décrit tant que personne n'a cliqué.
+	 */
+	let demande = $state<string | null>(null);
+
 	const aSupprimer = $derived(
-		sup === 'refus'
-			? null
-			: (types.find((t) => utilisation(t.nom).length === 0) ?? types[types.length - 1])
+		demande !== null
+			? (types.find((t) => t.nom === demande) ?? null)
+			: sup === 'refus'
+				? null
+				: (types.find((t) => utilisation(t.nom).length === 0) ?? types[types.length - 1] ?? null)
 	);
 	const notesASupprimer = $derived(aSupprimer ? utilisation(aSupprimer.nom) : []);
 	const dialogueOuvert = $derived(aSupprimer !== null);
+
+	/** `showModal()` — voir `V-28.svelte` : l'attribut `open` n'obtient pas la modalité. */
+	$effect(() => {
+		const boite = document.getElementById('dlg-supprimer');
+		if (!(boite instanceof HTMLDialogElement)) return;
+		if (!dialogueOuvert) {
+			if (boite.open) boite.close();
+			return;
+		}
+		if (!boite.open) boite.showModal();
+	});
 </script>
 
 <Coquille
@@ -375,6 +407,7 @@
 								class="btn btn--destructif"
 								type="button"
 								aria-label="Supprimer le type {t.nom}"
+								onclick={() => (demande = t.nom)}
 								><svg
 									width="14"
 									height="14"
@@ -734,7 +767,12 @@
 						>
 					</span>
 					<h2 class="dlg__titre" id="dlg-sup-titre">Supprimer le type de {motFicheMinuscule}</h2>
-					<button class="dlg__fermer" data-fermer aria-label="Fermer">
+					<button
+						class="dlg__fermer"
+						data-fermer
+						aria-label="Fermer"
+						onclick={() => (demande = null)}
+					>
 						<svg
 							width="16"
 							height="16"
@@ -773,7 +811,11 @@
 										<span style="flex:1">{n.titre}</span><span class="tg__n">{n.domaine}</span>
 									</div>{/each}
 							</div>
-							<button class="btn btn--principal" style="width:100%"
+							<button
+								class="btn btn--principal"
+								style="width:100%"
+								type="button"
+								onclick={() => aSupprimer && onDelester?.(aSupprimer.nom)}
 								>Délester ces {notesASupprimer.length} notes du type « {aSupprimer.nom} »</button
 							>{:else}<p class="dlg__texte">
 								« {aSupprimer.nom} » n'est utilisé par aucune note. Sa suppression retire le schéma et
@@ -781,14 +823,18 @@
 							</p>{/if}{/if}
 				</div>
 				<div class="dlg__pied">
-					<button class="btn" data-fermer id="sup-annuler"
+					<button class="btn" data-fermer id="sup-annuler" onclick={() => (demande = null)}
 						>{notesASupprimer.length ? 'Fermer' : 'Annuler'}</button
 					>
 					<button
 						class="btn btn--principal btn--destructif"
 						id="sup-valider"
 						style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
-						hidden={notesASupprimer.length > 0}>Supprimer</button
+						hidden={notesASupprimer.length > 0}
+						onclick={() => {
+							if (aSupprimer === null || notesASupprimer.length) return;
+							onSupprimer?.(aSupprimer.nom);
+						}}>Supprimer</button
 					>
 				</div>
 			</div>
