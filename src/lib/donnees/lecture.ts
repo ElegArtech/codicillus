@@ -295,62 +295,41 @@ export async function lireDomainesParDossier(base: Base): Promise<ReadonlyMap<st
 /**
  * Les notes, dans la forme exacte de `interface Note`.
  *
- * DEUX CHAMPS NE SONT PAS RENDUS TELS QUE LE JEU LES PORTE, et les deux motifs
- * ont changé de nature avec la migration `005` :
+ * UN SEUL CHAMP N'EST PLUS RENDU TEL QUE LE JEU LE PORTE, et c'est `pj`.
  *
- *   `pj`          le nombre de pièces jointes. La table `pieces_jointes` existe
- *                 depuis 002 et la semence n'y écrit toujours RIEN, alors que le
- *                 jeu en déclare 13 sur 7 notes. Le compte rendu est donc le
- *                 compte RÉEL de la table — 0 —, jamais le chiffre du jeu : P-02
- *                 interdit la valeur illustrative, et rendre 2 pièces jointes
- *                 qu'aucune ligne ne porte en serait une. `005` ne les sème pas,
- *                 et son entête dit pourquoi : deux pièces sur treize existent,
- *                 au balisage de V-14 (:1831-1841) ; les onze autres nulle part,
- *                 et `nom`, `taille_octets` et `type_media` sont NOT NULL.
+ *   `pj`          le nombre de pièces jointes. Le compte rendu est le compte
+ *                 RÉEL de la table — 0 —, jamais le chiffre du jeu : P-02
+ *                 interdit la valeur illustrative, et rendre des pièces
+ *                 qu'aucune ligne ne porte en serait une. `T-049` a rouvert la
+ *                 question et conclu comme `T-030b`, pour un motif plus étroit :
+ *                 le gel nomme DEUX des treize pièces (V-14:1831-1840), mais
+ *                 leurs tailles y sont RENDUES — « 1,2 Mo », « 18 Ko » — et
+ *                 `taille_octets` veut un nombre. « 1,2 Mo » ne désigne pas un
+ *                 nombre d'octets, il en désigne un intervalle. Ce ne sont donc
+ *                 pas onze pièces qui manquent, ce sont treize TAILLES : même
+ *                 les deux nommées ne se sèment pas sans fabriquer un chiffre.
+ *                 Le manque est porté par la lacune `Note.pj`, chiffrée à chaque
+ *                 exécution, et c'est un défaut du GEL, pas du schéma.
  *
- *   `etiquettes`  leur ORDRE. `005` A REFERMÉ LE MANQUE DE SCHÉMA :
- *                 `etiquettes_de_note.ordre` porte désormais le rang du jeu, et
- *                 `semer()` l'écrit. L'ordre du jeu est donc EN BASE, et
- *                 restituable sans détour. Ce module continue pourtant de rendre
- *                 les étiquettes triées par libellé, et la raison n'est plus la
- *                 même — voir ci-dessous.
+ *   `etiquettes`  leur ORDRE EST RENDU, depuis `T-049`. `005` avait posé
+ *                 `etiquettes_de_note.ordre` et `semer()` l'écrivait déjà ;
+ *                 seule la référence de l'instrument triait encore.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI LE TRI PAR LIBELLÉ SURVIT À LA COLONNE QUI LE RENDRAIT INUTILE
+ * CE QUE `T-049` A DÛ DÉFAIRE, ET POURQUOI C'ÉTAIT UN SEUL GESTE
  *
- * Le motif d'origine est périmé. Il disait : « rendre l'ordre PHYSIQUE des
- * lignes redonnerait par accident l'ordre du jeu, et la batterie serait verte
- * sur une propriété que PostgreSQL ne garantit pas ». Avec une colonne de rang,
- * il n'y a plus d'accident : `ORDER BY ordre` est une garantie.
+ * Ce module a rendu, huit lots durant, des étiquettes triées par libellé et des
+ * comptes amputés de leur rattachement — alors que la base portait les deux. La
+ * cause n'était pas ici : `equivalence.ts` écrivait ses lacunes en LITTÉRAUX et
+ * normalisait sa référence en conséquence, si bien que rendre la donnée juste
+ * aurait fait DIVERGER 25 notes sur 32 et 5 comptes sur 5. Or « divergence » y
+ * signifie « la couche rend MAL » : la couche aurait rougi POUR AVOIR EU RAISON,
+ * dans la seule prémisse dont dépendent les lots de câblage.
  *
- * CE QUI RETIENT LE CHANGEMENT EST AILLEURS, ET C'EST L'INSTRUMENT. La référence
- * de `pnpm verif:donnees` est écrite en littéral : `equivalence.ts` construit
- * `referenceDesNotes` en TRIANT les étiquettes du jeu et en forçant `pj: 0`, et
- * écarte trois champs de compte par un ensemble en dur
- * (`champsDeCompteSansContrepartie`). Son propre commentaire promet que « le jour
- * où une migration referme une lacune, son entrée disparaît et la normalisation
- * qu'elle justifiait disparaît avec elle » — mais RIEN dans le code ne le fait :
- * la fonction `chiffrerLesLacunes()` que ce commentaire nomme n'existe pas dans
- * le dépôt, et les six lacunes sont un tableau de littéraux compté tel quel.
- *
- * Conséquence, et elle est contre-intuitive : rendre ici l'ordre du jeu ferait
- * DIVERGER 25 notes sur 32 d'une référence triée, c'est-à-dire ferait rougir la
- * batterie pour avoir eu raison. Or « divergence » y signifie « la base porte la
- * donnée, la couche la rend MAL ». Écrire 25 divergences fausses dans la seule
- * prémisse dont dépendent les lots de câblage serait leur mentir.
- *
- * LES DEUX ÉDITIONS SONT DONC COUPLÉES, et elles ne sont pas du même ressort :
- * l'instrument appartient à l'orchestrateur (`verif/donnees.mjs` le dit en
- * entête), la couche à ce fichier. Le geste atomique à faire, en une fois :
- *
- *   1. `equivalence.ts` — retirer l'entrée « Note.etiquettes (leur ORDRE) » de
- *      `lacunes()`, et le tri de `referenceDesNotes` ;
- *   2. ici — remplacer le tri de `lireEtiquettesParNote()` par la lecture de
- *      `etiquettes_de_note.ordre` ;
- *   3. les trois champs de compte : même mouvement, `champsDeCompteSansContrepartie`
- *      d'un côté, `lireComptes()` de l'autre (voir son propre entête).
- *
- * Tant que 1 n'est pas fait, 2 ne peut pas l'être sans fabriquer du rouge faux.
+ * L'instrument gouvernait donc la couche, et c'est l'inversion qu'il fallait
+ * défaire. `chiffrerLesLacunes()` MESURE désormais chaque lacune contre la base ;
+ * la normalisation se déduit de ce qu'elle rend. Les deux éditions ne pouvaient
+ * pas être séparées — d'où un lot, un geste.
  */
 export async function lireNotes(base: Base, contexte: ContexteDeLecture): Promise<readonly Note[]> {
 	const chemins = await lireCheminsDeDossier(base);
@@ -437,11 +416,19 @@ export async function lireNotes(base: Base, contexte: ContexteDeLecture): Promis
  * l'ordre affiché de la collation de l'instance, c'est-à-dire d'un réglage
  * d'exploitation. Un seul comparateur, dans le code, comme pour la fraîcheur.
  *
- * CE PARAGRAPHE RESTE VRAI ET CESSE D'ÊTRE LE MOTIF. Depuis `005`,
- * `etiquettes_de_note.ordre` porte le rang du jeu : `ORDER BY ordre` ne dépend
- * d'aucune collation et rendrait l'ordre exact des maquettes, sans comparateur.
- * Ce qui retient le changement est l'instrument, non la base — l'entête de
- * `lireNotes()` le détaille, et la bascule est un geste couplé.
+ * CE PARAGRAPHE RESTE VRAI ET CESSE D'ÊTRE LE MOTIF, ET LE TRI EST TOMBÉ.
+ * Depuis `005`, `etiquettes_de_note.ordre` porte le rang du jeu, `semer()`
+ * l'écrit, et `ORDER BY ordre` ne dépend d'aucune collation : c'est l'ordre
+ * exact des maquettes, rendu sans comparateur et sans accident. Ce qui retenait
+ * la bascule était l'instrument — sa référence triait les étiquettes du jeu par
+ * un littéral, si bien que rendre l'ordre juste aurait fait DIVERGER 25 notes
+ * sur 32. `T-049` a réparé les deux en un seul geste : `chiffrerLesLacunes()`
+ * MESURE désormais l'ordre porté par la base, la lacune se referme d'elle-même,
+ * et la normalisation qui triait la référence disparaît avec elle.
+ *
+ * `localeCompare(…, 'fr')` reste employé par `lignesDEtiquette()` de la semence,
+ * qui range le RÉFÉRENTIEL des étiquettes ; ce module n'en a plus besoin, parce
+ * qu'il ne classe plus rien — il restitue.
  */
 export async function lireEtiquettesParNote(
 	base: Base
@@ -450,7 +437,8 @@ export async function lireEtiquettesParNote(
 		.select({ noteIdentifiant: notes.identifiant, libelle: etiquettes.libelle })
 		.from(etiquettesDeNote)
 		.innerJoin(notes, eq(etiquettesDeNote.noteId, notes.id))
-		.innerJoin(etiquettes, eq(etiquettesDeNote.etiquetteId, etiquettes.id));
+		.innerJoin(etiquettes, eq(etiquettesDeNote.etiquetteId, etiquettes.id))
+		.orderBy(etiquettesDeNote.ordre);
 
 	const par = new Map<string, string[]>();
 	for (const ligne of lignes) {
@@ -458,7 +446,6 @@ export async function lireEtiquettesParNote(
 		if (deja === undefined) par.set(ligne.noteIdentifiant, [ligne.libelle]);
 		else deja.push(ligne.libelle);
 	}
-	for (const libelles of par.values()) libelles.sort((a, b) => a.localeCompare(b, 'fr'));
 	return par;
 }
 
@@ -651,26 +638,32 @@ const ROLE_DEPUIS_ENUM: Record<string, string> = {
  *               colonne de commodité de semence. La table a bien un `id`, mais
  *               c'est un UUID tiré au hasard — rendre l'un pour l'autre serait
  *               rendre une valeur qui change à chaque semence.
- *   `domaine`   le domaine principal. `comptes.domaine_id` EXISTE depuis `005`,
- *               nullable comme RG-M14-04 (CDC:1149) l'exige, et `semer()` l'écrit
- *               pour les cinq comptes. La donnée est en base ; ce module ne la
- *               rend pas encore, et le paragraphe suivant dit pourquoi.
  *   `derniere`  « aujourd'hui à 08:41 » — un libellé RELATIF, donc un rendu et
  *               non une donnée. `comptes.derniere_connexion_le` porte l'INSTANT
  *               depuis `005`. Le LIBELLÉ, lui, n'est calculable par aucune règle
  *               du gel : V-32:3043 et V-25:2712 l'écrivent tel quel, et rien ne
  *               dit où « N jours » devient « N mois ». Le rendre demanderait
  *               d'inventer ce seuil, donc un arbitrage — pas une ligne de code.
+ *               `chiffrerLesLacunes()` mesure sa restitution ICI, sur ce que ce
+ *               module rend : le jour où l'arbitrage tombe et où la fabrique
+ *               s'écrit, la lacune se referme sans qu'on touche à l'instrument.
  *
- * POURQUOI `domaine` N'EST PAS RENDU ALORS QUE LA BASE LE PORTE. Parce que la
- * référence de `pnpm verif:donnees` l'écarte par un ensemble EN DUR — le
- * `champsDeCompteSansContrepartie` d'`equivalence.ts` —, qui ne se retire pas
- * tout seul : la fonction `chiffrerLesLacunes()` que le commentaire de cet
- * instrument annonce n'existe pas dans le dépôt. Rendre `domaine` ici ferait
- * donc DIVERGER les cinq comptes d'une référence à six champs, et « divergence »
- * y signifie « la couche rend MAL ». L'édition est couplée à celle de
- * l'instrument, qui appartient à l'orchestrateur ; l'entête de `lireNotes()`
- * détaille le geste atomique à faire en une fois.
+ * `domaine` EST RENDU DEPUIS `T-049`, et son motif d'omission est tombé avec
+ * l'instrument qui le portait. `comptes.domaine_id` existe depuis `005`, nullable
+ * comme RG-M14-04 (CDC:1149) l'exige, et `semer()` l'écrit pour les cinq comptes.
+ * Ce qui retenait le rendu n'était pas la base : c'était le
+ * `champsDeCompteSansContrepartie` EN DUR d'`equivalence.ts`, qui écartait le
+ * champ de la référence — rendre la donnée juste y aurait produit cinq
+ * « divergences », mot qui signifie « la couche rend MAL ». Les deux éditions
+ * étaient couplées ; `T-049` les a faites en une fois.
+ *
+ * LE RATTACHEMENT VIDE SE DIT PAR L'ABSENCE DE LA CLÉ, jamais par une chaîne
+ * vide ni par `null` posé. `interface Compte` déclare `domaine` requis, et le
+ * jeu en donne un aux cinq comptes ; mais la colonne est nullable PAR EXIGENCE,
+ * et un compte dont le domaine a été supprimé n'en a plus. Poser la clé à `null`
+ * fabriquerait un nom de domaine qui n'existe pas — l'omettre dit exactement ce
+ * que la base dit. C'est la règle que `premiereDifference()` sait voir, et que
+ * la sonde `optionnel-pose` éprouve sur les notes.
  */
 export async function lireComptes(base: Base): Promise<readonly Partial<Compte>[]> {
 	const lignes = await base
@@ -680,22 +673,26 @@ export async function lireComptes(base: Base): Promise<readonly Partial<Compte>[
 			courriel: comptes.courriel,
 			role: comptes.role,
 			actif: comptes.actif,
-			arriveLe: comptes.arriveLe
+			arriveLe: comptes.arriveLe,
+			domaineNom: domaines.nom
 		})
 		.from(comptes)
+		.leftJoin(domaines, eq(comptes.domaineId, domaines.id))
 		.orderBy(comptes.identifiant);
 
 	return lignes.map((c) => {
 		const role = ROLE_DEPUIS_ENUM[c.role];
 		if (role === undefined) throw new Error(`rôle inconnu en base : ${c.role}`);
-		return {
+		const rendu: Record<string, unknown> = {
 			nom: c.nom,
 			identifiant: c.identifiant,
 			courriel: c.courriel,
 			role,
 			actif: c.actif,
 			arrivee: dateCourteDIso(c.arriveLe)
-		} as unknown as Partial<Compte>;
+		};
+		if (c.domaineNom !== null) rendu['domaine'] = c.domaineNom;
+		return rendu as unknown as Partial<Compte>;
 	});
 }
 
