@@ -328,6 +328,41 @@ export interface DemandeDeLecture {
 }
 
 /**
+ * LE CORPUS LISIBLE PAR L'APPELANT, SANS NOTE DÉSIGNÉE — ajouté par `T-050`.
+ *
+ * `/notes/nouvelle` n'a aucune note à résoudre et a pourtant besoin du corpus :
+ * `src/lib/coquille/arborescence.ts` en dérive le rail, et la vue le déclare en
+ * propriété. Sans cette fonction, la route aurait dû reconstruire un périmètre —
+ * c'est-à-dire écrire une SECONDE règle d'accès, ce qu'`ADR-006` interdit
+ * nommément (« toute route qui reçoit une liste puis la filtre »).
+ *
+ * LE FILTRE EST LE MÊME, ET C'EST LE POINT : `conditionDePerimetre()` est
+ * l'unique traduction d'un périmètre en `where`, et `lireLaNote()` l'emploie
+ * pour la même chose quelques lignes plus bas. Un périmètre vide devient
+ * `false` — la requête ne rapporte rien, par le même chemin qu'une base sans
+ * note (`RG-ACC-04`), et l'appelant reçoit l'ensemble VIDE, qui est l'état
+ * vide de `RG-M18-03` et non un corpus commode.
+ */
+export async function lireLeCorpusLisible(
+	base: Base,
+	identite: Identite,
+	contexte: ContexteDeLecture
+): Promise<readonly Note[]> {
+	const index = await lireIndexDesDroits(base, identite);
+	const perimetre = perimetreDeLaLectureDUneNote(identite, index);
+	const lisibles = new Set(
+		(
+			await base
+				.select({ identifiant: notes.identifiant })
+				.from(notes)
+				.where(conditionDePerimetre(perimetre))
+		).map((n) => n.identifiant)
+	);
+	if (lisibles.size === 0) return [];
+	return (await lireNotes(base, contexte)).filter((n) => lisibles.has(n.id));
+}
+
+/**
  * LA LECTURE D'UNE NOTE — une ressource, ou rien.
  *
  * Le type de retour est celui de `RG-ACC-04` : `Resolution<T>` n'a pas de
