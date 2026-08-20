@@ -22,6 +22,8 @@
 	 */
 	import Vue from '../../../vues/V-35.svelte';
 	import '../../../vues/V-35.css';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -33,6 +35,15 @@
 	domaines={data.domaines}
 	compte={data.compte}
 	journalImports={[]}
+	onScenario={() => {
+		/* LE GEL ANNONCE LA DESTINATION, PAS LE FILTRE. Il notifie « Parcours
+		   d'import, scénario "X" — vue V-24 » : la vue cible est nommée, donc
+		   l'adresse l'est aussi — `/importer`. Le SCÉNARIO, lui, n'a aucun
+		   paramètre d'adresse déclaré (`docs/routes.md`), et en inventer un serait
+		   combler. La navigation va donc à l'écran annoncé, sans son scénario.
+		   Même arbitrage qu'en `/console/univers` pour le filtre par univers. */
+		void goto(resolve('/importer'));
+	}}
 />
 
 <!--
