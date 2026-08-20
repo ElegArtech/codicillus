@@ -99,8 +99,9 @@ CREATE INDEX versions_note_idx ON versions (note_id, numero DESC);
    IL NE PORTE QUE L'UPDATE, ET C'EST UN CHOIX RAISONNÉ. « Immuable » qualifie
    le CONTENU d'une version : ce qui a été capturé ne se réécrit pas. Étendre
    le refus au DELETE aurait deux conséquences fausses. La première est
-   mécanique : `note_id` est en ON DELETE CASCADE — RG-NOT-06 autorise la
-   suppression d'une note —, et un déclencheur qui refuse le DELETE rendrait
+   mécanique : `note_id` est en ON DELETE CASCADE — RG-M04-10 régit la
+   suppression d'une note et compte d'ailleurs « les versions perdues » —, et
+   un déclencheur qui refuse le DELETE rendrait
    toute note historisée INDESTRUCTIBLE, ce qu'aucune règle ne demande. La
    seconde est fonctionnelle : la purge au-delà du plafond (T-019, `versions_max`)
    est un DELETE légitime, et la seule façon de la laisser passer serait de
