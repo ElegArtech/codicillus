@@ -257,7 +257,25 @@ describe('la projection d’une ligne vers une `Note` — les 32 notes du corpus
 				   l'écart est mesuré à part juste en dessous. */
 				piecesJointes: new Map([[attendue.id, attendue.pj]])
 			};
-			expect(noteDepuisLigne(ligneDepuisNote(attendue), voisines, contexte)).toEqual(attendue);
+			/* LES DEUX NOTES QUE LE GEL LUI-MÊME PORTE DISCORDANTES.
+			   `seeds/corpus.test.ts` les nomme et les explique : sur `n-srv-app-01`
+			   et `n-sig-facturation`, la date de révision et le nombre de jours du
+			   corpus divergent d'UN jour — c'est la maquette de référence qui les
+			   écrit ainsi, et les maquettes font la loi.
+
+			   La projection dérive désormais `jours` de la date de VÉRIFICATION, la
+			   même que celle dont elle dérive la fraîcheur : sans quoi le cartouche
+			   d'une note pouvait écrire « Vérifié il y a 3 jours » sur une note
+			   vérifiée il y a neuf mois. L'écart du gel devient donc visible ici, à
+			   un jour près, sur ces deux notes et sur aucune autre. Les deux sont
+			   obsolètes depuis plus de sept mois, leur libellé est arrondi au mois,
+			   et l'écart y reste invisible à l'écran. */
+			const rendue = noteDepuisLigne(ligneDepuisNote(attendue), voisines, contexte);
+			const discordante = attendue.id === 'n-srv-app-01' || attendue.id === 'n-sig-facturation';
+			expect(rendue, attendue.id).toEqual(
+				discordante ? { ...attendue, jours: attendue.jours - 1 } : attendue
+			);
+			if (discordante) expect(rendue.fraicheur).toBe(attendue.fraicheur);
 		}
 	});
 
