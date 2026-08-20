@@ -21,14 +21,33 @@
  * interdiction nomme.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * L'ATTENTE EST EXPLICITE, JAMAIS UNE TEMPORISATION
+ * DEUX RÉGIMES DE TÂCHE, ET AUCUN N'EST UNE TEMPORISATION — ARB-060
  *
  * `ADR-006`, dernière conséquence : « le non-déterminisme de l'indexation en
  * test impose d'attendre l'indexation EXPLICITEMENT, jamais par temporisation ».
- * Toute écriture passe donc par `attendre()`, qui suit la tâche du moteur
- * jusqu'à son état terminal et LÈVE si cet état n'est pas la réussite. C'est
- * `P-1` sous un autre habit : on attend un marqueur écrit, pas l'écoulement d'un
- * délai.
+ * Cette interdiction tient dans les deux régimes, et c'est ce qui les rend
+ * comparables : ni l'un ni l'autre ne dort.
+ *
+ *   `attendre()`   suit la tâche jusqu'à son état terminal et LÈVE si cet état
+ *                  n'est pas la réussite. C'est `P-1` sous un autre habit : on
+ *                  attend un marqueur écrit, pas l'écoulement d'un délai.
+ *   `soumettre()`  POSE la tâche et rend son numéro. La soumission reste
+ *                  synchrone — moteur arrêté, injoignable ou refusant, l'appel
+ *                  échoue au même endroit qu'avant — mais la tâche n'est pas
+ *                  suivie.
+ *
+ * `ARB-060` : « la requête d'enregistrement soumet le document à l'index et ne
+ * l'attend pas ». Le régime n'a pas de valeur par défaut, et c'est la forme qui
+ * tient la propriété : tout appelant DÉCLARE le sien, personne ne l'hérite. Le
+ * cahier porte deux budgets sur deux lignes — indexation < 10 s (`CDC:1534`),
+ * enregistrement < 1 s (`CDC:1537`) —, et l'attente coûte 804 ms d'intervalle de
+ * regroupement du moteur, mesurés, indépendants de la volumétrie.
+ *
+ * CE QUE LA SOUMISSION PERD, ET OÙ CETTE GARANTIE EST REPLACÉE. `attendre()`
+ * était le seul juge d'une tâche en échec ; sans elle, un échec survenu après la
+ * soumission ne lèverait nulle part. Le moteur CONSERVE ses tâches : le contrôle
+ * de `verif/budgets.mjs` — « aucune tâche en échec dans le moteur » — le relève
+ * après coup, et rougit. Sans ce contrôle, `ARB-060` ne serait qu'un desserrage.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * CE QUE CE MODULE NE FAIT PAS
@@ -46,7 +65,7 @@
  */
 import { eq, inArray } from 'drizzle-orm';
 import { Meilisearch } from 'meilisearch';
-import type { Task } from 'meilisearch';
+import type { EnqueuedTask, Task } from 'meilisearch';
 import type { Base } from '../base/acces';
 import {
 	comptes,
@@ -94,7 +113,23 @@ export function clientDe(config: ConfigurationDeRecherche): Meilisearch {
 	return new Meilisearch({ host: config.host, apiKey: config.apiKey });
 }
 
-/* ═══════════════════════════════════ L'attente explicite ══════════════ */
+/* ═══════════════════════════════════ Les deux régimes de tâche ════════ */
+
+/**
+ * LE RÉGIME D'UNE TÂCHE DU MOTEUR — déclaré par l'appelant, jamais hérité.
+ *
+ * Il n'a délibérément PAS de valeur par défaut. Un défaut aurait fait de
+ * l'attente un choix silencieux : le prochain appelant l'aurait obtenue — ou
+ * perdue — sans l'écrire, et c'est exactement ce qu'`ARB-060` demande de rendre
+ * lisible au point d'appel.
+ */
+export type RegimeDeTache =
+	/** Suivre la tâche jusqu'à son état terminal et lever si ce n'est pas la
+	 *  réussite. Partout où la latence ne coûte rien : réindexation, commandes
+	 *  de console, épreuves de périmètre. */
+	| 'attendre'
+	/** Poser la tâche et rendre. Le CHEMIN DE REQUÊTE, et lui seul (`ARB-060`). */
+	| 'soumettre';
 
 /**
  * Attend la fin d'une tâche du moteur et LÈVE si elle n'a pas réussi.
@@ -112,6 +147,37 @@ export async function attendre(tache: Promise<unknown> & { waitTask: () => Promi
 		);
 	}
 	return finie;
+}
+
+/**
+ * SOUMET une tâche au moteur et rend son numéro, SANS la suivre — `ARB-060`.
+ *
+ * CE QUI RESTE SYNCHRONE, ET C'EST L'ESSENTIEL. La promesse rendue par le client
+ * est celle de l'ENFILEMENT : l'attendre, c'est faire la requête HTTP au moteur
+ * et lire son accusé. Un moteur arrêté, injoignable, saturé ou qui refuse la
+ * requête fait donc échouer cet appel — au même endroit et de la même façon
+ * qu'avant `ARB-060`, qui « n'autorise pas à taire un échec de soumission ».
+ *
+ * CE QUI CESSE D'ÊTRE SUIVI : l'état terminal de la tâche. Mesuré sur cette
+ * copie, sept tirages, index de 32 documents — soumission 6 ms de médiane,
+ * attente 804 ms, dont l'intervalle de regroupement du moteur fait la quasi
+ * totalité. C'est cette part-là qui disparaît, et elle seule.
+ *
+ * @returns le numéro de la tâche enfilée — ce par quoi le moteur la nomme, et
+ *   par quoi un contrôle la retrouve après coup
+ */
+export async function soumettre(tache: Promise<EnqueuedTask>): Promise<number> {
+	const enfilee = await tache;
+	return enfilee.taskUid;
+}
+
+/** Joue une tâche du moteur sous le régime que l'appelant a déclaré. */
+async function selonLeRegime(
+	tache: Promise<EnqueuedTask> & { waitTask: () => Promise<Task> },
+	regime: RegimeDeTache
+): Promise<void> {
+	if (regime === 'attendre') await attendre(tache);
+	else await soumettre(tache);
 }
 
 /* ═══════════════════════════════════ La projection du corpus ══════════ */
@@ -217,31 +283,72 @@ export async function projeterLeCorpus(
 
 /* ═══════════════════════════════════ L'alimentation ═══════════════════ */
 
-/** Pose l'index s'il n'existe pas, et ses réglages dans tous les cas. */
-export async function assurerLIndex(client: Meilisearch, uid: string): Promise<void> {
-	const existe = await client
+/** L'index existe-t-il ? Lu sur le moteur, jamais supposé. */
+async function lIndexExiste(client: Meilisearch, uid: string): Promise<boolean> {
+	return await client
 		.getRawIndex(uid)
 		.then(() => true)
 		.catch(() => false);
-	if (!existe) await attendre(client.createIndex(uid, { primaryKey: CLE_PRIMAIRE }));
+}
+
+/** Pose l'index s'il n'existe pas, et ses réglages dans tous les cas. */
+export async function assurerLIndex(client: Meilisearch, uid: string): Promise<void> {
+	if (!(await lIndexExiste(client, uid))) {
+		await attendre(client.createIndex(uid, { primaryKey: CLE_PRIMAIRE }));
+	}
 	await attendre(client.index(uid).updateSettings(REGLAGES_DE_L_INDEX));
 }
 
 /**
- * L'ÉCRITURE SYNCHRONE D'UNE ÉCRITURE DE NOTE — `STACK` §4.2 : « l'écriture est
- * synchrone à l'enregistrement, le calcul du vecteur est différé. Une note est
- * donc trouvable en mots-clés immédiatement ».
+ * RETIRE UN INDEX S'IL EXISTE — et n'enfile RIEN quand il n'existe pas.
  *
- * L'appelant est la couche qui vient d'écrire en base. L'attente est explicite :
- * quand cette promesse rend, la note est trouvable — `RG-M05-06` et `RG-M12-08`
- * portent sur la trouvabilité, pas sur un délai.
+ * `deleteIndexIfExists()` du client ne tient pas son nom sous cette version
+ * (`meilisearch` 0.60.0, `dist/index.js:1030`) : il n'attend que l'ENFILEMENT de
+ * la suppression, et rattrape un refus SYNCHRONE que le moteur n'émet pas. Le
+ * moteur, lui, accepte la demande puis fait ÉCHOUER la tâche en
+ * `index_not_found`. Mesuré sur un moteur neuf : la première réindexation
+ * laissait une tâche `indexDeletion` en état « failed », pour une opération
+ * pourtant nominale et volontairement tolérée.
+ *
+ * DEUX RAISONS DE LE CORRIGER ICI, ET LA SECONDE DÉCIDE. La première est qu'un
+ * échec toléré reste un échec inscrit dans le moteur. La seconde est que le
+ * contrôle qui remplace l'attente du chemin de requête (`ARB-060`, point 2) pose
+ * une question sans nuance — « existe-t-il, dans le moteur, une tâche en
+ * échec ? ». Laisser subsister un producteur légitime de tâches en échec aurait
+ * obligé ce contrôle à porter une liste d'exceptions, c'est-à-dire un trou
+ * nommé, qui s'élargit à chaque cas suivant. On retire la cause, pas le
+ * contrôle.
+ *
+ * L'ATTENTE EST ICI CONSERVÉE, et même AJOUTÉE : la réindexation est le lieu où
+ * la latence ne coûte rien (`ARB-060`, point 1). Un retrait d'index non suivi
+ * laisserait l'index de reconstruction en place sans que rien ne le dise.
+ */
+async function retirerLIndexSIlExiste(client: Meilisearch, uid: string): Promise<boolean> {
+	if (!(await lIndexExiste(client, uid))) return false;
+	await attendre(client.deleteIndex(uid));
+	return true;
+}
+
+/**
+ * L'ÉCRITURE D'UNE ÉCRITURE DE NOTE — `STACK` §4.2 : « l'écriture est synchrone
+ * à l'enregistrement, le calcul du vecteur est différé. Une note est donc
+ * trouvable en mots-clés immédiatement ».
+ *
+ * L'appelant est la couche qui vient d'écrire en base, et c'est LUI qui déclare
+ * son régime. Sous `attendre`, la note est trouvable quand cette promesse rend.
+ * Sous `soumettre` (`ARB-060`), elle l'est 804 ms plus tard : `RG-M05-06` et
+ * `RG-M12-08` portent sur la trouvabilité « dans un délai maximal de 10
+ * secondes », que ce régime tient avec un facteur douze.
+ *
+ * @param regime `attendre` ou `soumettre` — voir `RegimeDeTache`
  */
 export async function indexerDesNotes(
 	client: Meilisearch,
-	notesAIndexer: readonly NoteIndexee[]
+	notesAIndexer: readonly NoteIndexee[],
+	regime: RegimeDeTache
 ): Promise<number> {
 	if (notesAIndexer.length === 0) return 0;
-	await attendre(client.index(NOM_DE_L_INDEX).addDocuments([...notesAIndexer]));
+	await selonLeRegime(client.index(NOM_DE_L_INDEX).addDocuments([...notesAIndexer]), regime);
 	return notesAIndexer.length;
 }
 
@@ -266,13 +373,21 @@ export async function indexerDesNotes(
  * le droit et rend introuvable. Un retrait TROP TÔT, suivi d'une annulation,
  * laisse une note bien vivante et INTROUVABLE. C'est la seconde faute qui coûte,
  * et c'est celle que l'ordre prescrit évite.
+ *
+ * LE RÉGIME NE DÉPLACE PAS CET ORDRE, il ne déplace que l'instant où le retrait
+ * est ACQUIS. Sous `soumettre`, l'entrée survit encore quelques centaines de
+ * millisecondes après le retour — sans effet sur la fuite que ce module évite :
+ * la route de lecture revérifie le droit et rend l'entrée périmée introuvable.
+ *
+ * @param regime `attendre` ou `soumettre` — voir `RegimeDeTache`
  */
 export async function retirerDesNotes(
 	client: Meilisearch,
-	identifiants: readonly string[]
+	identifiants: readonly string[],
+	regime: RegimeDeTache
 ): Promise<number> {
 	if (identifiants.length === 0) return 0;
-	await attendre(client.index(NOM_DE_L_INDEX).deleteDocuments([...identifiants]));
+	await selonLeRegime(client.index(NOM_DE_L_INDEX).deleteDocuments([...identifiants]), regime);
 	return identifiants.length;
 }
 
@@ -315,7 +430,7 @@ export async function reindexer(base: Base, client: Meilisearch): Promise<Rappor
 		.then((s) => s.numberOfDocuments)
 		.catch(() => 0);
 
-	await client.deleteIndexIfExists(NOM_DE_L_INDEX_EN_RECONSTRUCTION);
+	await retirerLIndexSIlExiste(client, NOM_DE_L_INDEX_EN_RECONSTRUCTION);
 	await assurerLIndex(client, NOM_DE_L_INDEX_EN_RECONSTRUCTION);
 	if (corpus.length > 0) {
 		await attendre(client.index(NOM_DE_L_INDEX_EN_RECONSTRUCTION).addDocuments([...corpus]));
@@ -334,7 +449,7 @@ export async function reindexer(base: Base, client: Meilisearch): Promise<Rappor
 			{ indexes: [NOM_DE_L_INDEX, NOM_DE_L_INDEX_EN_RECONSTRUCTION], rename: false }
 		])
 	);
-	await client.deleteIndexIfExists(NOM_DE_L_INDEX_EN_RECONSTRUCTION);
+	await retirerLIndexSIlExiste(client, NOM_DE_L_INDEX_EN_RECONSTRUCTION);
 
 	const indexees = await client
 		.index(NOM_DE_L_INDEX)

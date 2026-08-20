@@ -3,12 +3,43 @@
  * écriture de note appelle APRÈS avoir validé sa transaction.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI IL EST SYNCHRONE, ET CE QUI RESTE DIFFÉRÉ
+ * IL SOUMET À L'INDEX ET NE L'ATTEND PAS — ARB-060
+ *
+ * C'EST LE SEUL ENDROIT DU DÉPÔT OÙ L'ATTENTE TOMBE, et c'est parce que ce
+ * module est le seul à se tenir dans le CHEMIN D'UNE REQUÊTE : ses trois
+ * appelants — `enregistrerLeCorps()`, `verifierLaNote()`, `executerLImport()` —
+ * font attendre un utilisateur. La réindexation, les commandes de console et
+ * l'épreuve de périmètre gardent l'attente : la latence n'y coûte rien, et « une
+ * réindexation qui ne saurait pas si elle a réussi serait pire que l'inverse ».
+ *
+ * LE CAHIER PORTE DEUX BUDGETS, SUR DEUX LIGNES, ET ILS DÉCRIVENT DEUX INSTANTS.
+ * « Indexation après enregistrement < 10 s » (`CDC:1534`) et « enregistrement
+ * d'une note < 1 s » (`CDC:1537`). Si l'indexation était comprise dans la
+ * requête, la première ligne serait sans objet. Or l'attente coûte 804 ms de
+ * médiane — l'intervalle de regroupement des tâches du moteur, mesuré à 793 ms
+ * sur 32 notes et 789 ms sur 5 000 : aucune optimisation du produit ne la
+ * réduira. La soumission, elle, coûte 6 ms.
+ *
+ * CE QUI RESTE SYNCHRONE, ET IL NE FAUT PAS LE PERDRE DE VUE. La SOUMISSION est
+ * dans la requête et elle lève : moteur arrêté, injoignable ou refusant,
+ * l'enregistrement échoue au même endroit qu'avant. `ARB-060` « n'autorise pas à
+ * taire un échec de soumission ». Seul le suivi de la tâche disparaît.
+ *
+ * OÙ LA GARANTIE PERDUE EST REPLACÉE. `attendre()` était le seul juge d'une
+ * tâche en échec. Le moteur CONSERVE ses tâches : le contrôle « aucune tâche en
+ * échec dans le moteur » de `verif/budgets.mjs` les relève après coup et rougit.
+ * Sans lui, `ARB-060` ne serait qu'un desserrage.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE QUI RESTE DIFFÉRÉ, ET CE QUI NE L'EST PAS
  *
  * `docs/adr/ADR-009.md`, section « Décision », deuxième puce, mot pour mot :
  * « Le calcul du vecteur est DIFFÉRÉ ; l'écriture dans l'index est SYNCHRONE à
  * l'enregistrement. Une note est trouvable en mots-clés immédiatement, et par le
- * sens quelques secondes plus tard. »
+ * sens quelques secondes plus tard. » L'écriture reste bien commandée dans la
+ * requête ; `ARB-060` a tranché que « synchrone » ne pouvait pas vouloir dire
+ * « la requête bloque jusqu'à la fin de la tâche du moteur », sous peine de
+ * rendre le budget d'1 s du cahier inatteignable par une constante de l'outil.
  *
  * Le même ADR nomme les DEUX briques optionnelles, et le moteur de recherche
  * n'en fait pas partie : ce sont le service d'embeddings (Ollama) et le service
@@ -23,9 +54,9 @@
  *
  * `RG-M05-06` (`cadrage/CAHIER-DES-CHARGES-FONCTIONNEL.md:731`) : « une note
  * enregistrée est trouvable en recherche dans un délai maximal de 10 secondes ».
- * L'attente est EXPLICITE — `attendre()` de `moteur.ts` suit la tâche du moteur
- * jusqu'à son état terminal —, jamais une temporisation (`ADR-006`, dernière
- * conséquence). Quand cette promesse rend, la note est trouvable.
+ * Le délai n'est jamais attendu par une temporisation (`ADR-006`, dernière
+ * conséquence) : il est celui du moteur, mesuré, et il tient avec un facteur
+ * douze.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * LA DISPARITION EST DÉDUITE DE LA BASE, JAMAIS DU PLAN DE L'APPELANT
@@ -100,8 +131,10 @@ export interface RapportDEntretien {
  * @param client le client du moteur
  * @param identifiants les notes touchées par l'écriture — celles qui existent
  *   encore sont réécrites, celles qui n'existent plus sont retirées
- * @throws l'erreur de la tâche du moteur — `attendre()` ne tait aucun échec :
- *   « un échec d'indexation silencieux est le pire des états » (`moteur.ts`)
+ * @throws l'erreur de SOUMISSION au moteur — arrêté, injoignable ou refusant.
+ *   `ARB-060` retire l'attente de la tâche, jamais la remontée de cet échec-là.
+ *   L'échec de la TÂCHE, lui, n'est plus levé ici : il est relevé après coup par
+ *   le contrôle « aucune tâche en échec dans le moteur » de `verif/budgets.mjs`
  */
 export async function entretenirLIndex(
 	base: Base,
@@ -120,9 +153,15 @@ export async function entretenirLIndex(
 	/* Les deux ensembles sont DISJOINTS par construction — une note est en base
 	   ou elle n'y est pas —, l'ordre des deux appels est donc sans effet sur
 	   l'état final. Il n'y a pas de fenêtre où une entrée serait écrite puis
-	   retirée, ni l'inverse. */
-	const indexees = await indexerDesNotes(client, projetees);
-	const retirees = await retirerDesNotes(client, disparues);
+	   retirée, ni l'inverse.
+
+	   LE RÉGIME EST ÉCRIT ICI, DEUX FOIS, ET C'EST LE LOT `T-076` TOUT ENTIER.
+	   `soumettre` : la tâche est posée, pas suivie (`ARB-060`). Les deux seules
+	   occurrences du dépôt sont ces deux lignes — partout ailleurs le régime est
+	   `attendre`, et `RegimeDeTache` n'a pas de valeur par défaut pour que
+	   personne ne puisse en hériter sans l'écrire. */
+	const indexees = await indexerDesNotes(client, projetees, 'soumettre');
+	const retirees = await retirerDesNotes(client, disparues, 'soumettre');
 
 	return { indexees, retirees };
 }

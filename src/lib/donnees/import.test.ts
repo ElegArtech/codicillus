@@ -925,9 +925,11 @@ function baseDEpreuve(): {
  *
  * `RG-M12-08` se mesure sur ce qui ENTRE dans l'index, pas sur un booléen du
  * rapport. Ce faux moteur porte donc les deux gestes que `entretenirLIndex()`
- * emploie, et il rend une tâche RÉUSSIE : `attendre()` (`../recherche/moteur.ts`)
- * lève sur tout autre état terminal, et un moteur d'épreuve qui rendrait un état
- * quelconque ferait échouer l'import pour une raison étrangère au contrôle.
+ * emploie, et chacun rend une tâche ENFILÉE : depuis `ARB-060`, l'entretien
+ * SOUMET et n'attend pas — c'est l'enfilement qu'il attend, donc c'est lui que
+ * le faux moteur doit rendre. `waitTask` reste posé, et reste sans appelant sur
+ * ce chemin : il est conservé pour que la forme du faux moteur reste celle du
+ * client réel, jamais parce que l'import s'en sert.
  */
 function moteurDEpreuve(): {
 	readonly client: Meilisearch;
@@ -941,9 +943,13 @@ function moteurDEpreuve(): {
 	const ecrites: string[] = [];
 	const retirees: string[] = [];
 	const perimetres = new Map<string, { dossier: string; ancetres: readonly string[] }>();
-	const tache = (type: string) => ({
-		waitTask: async () => ({ status: 'succeeded', type })
-	});
+	let dernierUid = 0;
+	const tache = (type: string) => {
+		dernierUid += 1;
+		return Object.assign(Promise.resolve({ taskUid: dernierUid }), {
+			waitTask: async () => ({ status: 'succeeded', type })
+		});
+	};
 	const client = {
 		index: () => ({
 			addDocuments(entrees: NoteIndexee[]) {
