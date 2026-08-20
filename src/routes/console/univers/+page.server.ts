@@ -47,10 +47,11 @@
  * les trois de l'axe « Suppression » sont des états d'INTERACTION, qu'aucune
  * donnée ne détermine ; les faire dépendre de la base serait un comblement.
  */
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
-import type { PageServerLoad } from './$types';
+import { supprimerUnUnivers } from '$lib/donnees/administration';
+import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -59,4 +60,43 @@ export const load: PageServerLoad = async ({ locals }) => {
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
 	return { vecteur: null, notes: acces.ressource.notes };
+};
+
+/**
+ * LA GARDE DES ACTIONS, ET ELLE N'EST PAS CELLE DU CHARGEUR PAR HASARD.
+ *
+ * `accesALaConsole()` est le prédicat unique des onze adresses — celui que
+ * `resoudreLaConsole()` interroge lui-même. L'action ne passe pas par la
+ * résolution complète parce qu'elle n'a pas besoin des notes ; elle passe par le
+ * MÊME prédicat, et rend le MÊME `error(404, MESSAGE_INTROUVABLE)` sans message
+ * (`ADR-007`, `RG-ACC-04`). `P-09` demande que l'action interdite ne soit pas
+ * rendue ; cela ne dispense jamais de la refuser ici.
+ */
+function consoleOuverte(locals: App.Locals): void {
+	if (!accesALaConsole(locals.identite)) error(404, MESSAGE_INTROUVABLE);
+}
+
+export const actions: Actions = {
+	/**
+	 * SUPPRIMER UN UNIVERS — `RG-M14-01`.
+	 *
+	 * Le champ `univers` porte l'IDENTIFIANT LISIBLE, celui du segment d'adresse
+	 * `/univers/{univers}` (`docs/routes.md` §2.2). Le gel désigne l'univers par
+	 * son nom dans une fermeture, et n'expose donc aucun nom de champ : celui-ci
+	 * est DÉRIVÉ de l'adressage du produit, pas inventé — c'est la clé par
+	 * laquelle toutes les autres routes désignent un univers.
+	 *
+	 * LES DEUX REFUS NE SONT PAS DES ERREURS DE CLIENT, ce sont les états que le
+	 * dialogue de `V-27` rend. Ils sortent en `fail`, donc avec leur décompte et
+	 * leur sortie proposée, jamais en exception : c'est ce contenu-là que la
+	 * règle exige d'afficher.
+	 */
+	supprimer: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const resultat = await supprimerUnUnivers(basePartagee(), String(champs.get('univers') ?? ''));
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	}
 };
