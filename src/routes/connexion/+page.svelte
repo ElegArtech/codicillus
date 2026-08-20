@@ -9,8 +9,10 @@
 	 *
 	 * LOT T-012 y a ajouté le CHARGEUR ET L'ACTION — `+page.server.ts`, qui porte
 	 * l'authentification, le barème de ralentissement et l'ouverture de session.
-	 * Ce fichier, lui, ne fait toujours que rendre la vue : la seule chose qu'il
-	 * ait gagnée est de LIRE `?motif=` par son chargeur, comme
+	 * Ce fichier POSE EN OUTRE, depuis `ARB-063`, la méthode et les trois noms de
+	 * champ que le gel n'écrit pas — `$lib/cablage/formulaires.ts`, qui dit
+	 * pourquoi ce geste vit dans une route et nulle part ailleurs. Il LIT aussi
+	 * `?motif=` par son chargeur, comme
 	 * `docs/routes.md:286` le prescrit — `page-protegee` / `session-expiree` /
 	 * (absent) → `protegee` / `expiree` / `directe`, les trois positions de l'axe
 	 * « Arrivée » de la planche V-05. La correspondance vient de la source ; elle
@@ -40,11 +42,19 @@
 	 * V-07 porte même son numéro de vue —, et en inventer un serait un
 	 * comblement.
 	 */
+	import { onMount } from 'svelte';
 	import Vue from '../../vues/V-05.svelte';
 	import '../../vues/V-05.css';
+	import { cablerLaConnexion } from '$lib/cablage/formulaires';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	let enveloppe: HTMLDivElement;
+
+	onMount(() => cablerLaConnexion(enveloppe));
 </script>
 
-<Vue vecteur={{ arrivee: data.arrivee }} />
+<div bind:this={enveloppe} style="display:contents">
+	<Vue vecteur={{ arrivee: data.arrivee }} />
+</div>

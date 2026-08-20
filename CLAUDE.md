@@ -722,3 +722,57 @@ exception.**
 **La règle** : quand tu poses une parade dans un fichier, **compte ses lecteurs**. Une parade
 déclarative — celle qui repose sur la discipline de qui l'emploie — est le plus faible des trois
 régimes de ce dépôt (*bloquant > vérifiable > déclaratif*). *(T-076, 21/08/2026)*
+
+---
+
+### P-34 · Le sérialiseur de formulaire d'un navigateur normalise les fins de ligne, et le format les refuse
+
+Un `<form>` en `application/x-www-form-urlencoded` **réécrit toute fin de ligne en couple retour
+chariot + saut** avant d'encoder. Relevé sur la soumission réelle de `/notes/nouvelle` :
+
+```
+corps-markdown=%23%23+Pourquoi%0D%0A%0D%0AUn+texte+simple.
+```
+
+`analyserMarkdown()` ne découpe que sur le saut : chaque ligne garde donc un retour chariot collé,
+et un texte parfaitement valide devient illisible — un titre suivi d'un retour chariot n'est plus un
+titre. **Le même texte, passé par appel direct, s'analysait sans un mot ; passé par l'écran, il
+rendait 422.** Deux heures pour un `%0D`.
+
+**Et la parade évidente était la mauvaise.** Normaliser dans l'analyseur paraissait juste —
+CommonMark §2.1 traite les trois fins de ligne à l'identique — mais **le format REFUSE un retour
+chariot dans un bloc de code** (`RG-M04-05`, `CDC:602`), et il le refuse **à l'entrée**, par un cas
+d'épreuve nommé. La normalisation aurait rendu ce refus **inerte en réussissant** : `P-26` mot pour
+mot. C'est l'unitaire qui l'a dit, pas la relecture.
+
+La parade vit donc à la **frontière de transport** — `markdownDeFormulaire()`, qui défait le couple
+et **ne touche pas** un retour chariot seul —, et elle a **deux lecteurs comptés** (`P-33`) : les
+seuls deux chemins par lesquels un formulaire atteint le format. Son cas d'épreuve est synthétique,
+les deux polarités jouées.
+
+**La leçon de méthode est celle de `P-32`** : *demander à l'instrument ce qu'il a fait est plus
+rapide, et plus sûr, que raisonner sur ce qu'il devrait faire.* Quatre hypothèses fausses avant
+qu'un relevé du corps de requête ne tranche en une exécution. *(T-079 / T-081, 21/08/2026)*
+
+---
+
+### P-35 · Deux contrats du même orchestrateur, deux noms pour un champ — et le silence est total
+
+`T-079` nommait `corps` le Markdown soumis ; `T-081`, écrit **le même jour, par la même main, pour
+le même écran**, nommait `corps-markdown` le Markdown et réservait `corps` au document sérialisé.
+Les deux lots étaient justes contre leur contrat. Le câblage, lui, est **unique** — c'est
+`ARB-063` — et il ne peut envoyer qu'un nom.
+
+**Ce que ça fabrique n'est pas une panne, c'est une note vide.** `FormData.get('corps')` rend `null`,
+la lecture tombe sur sa valeur par défaut, `corpsVide()` s'écrit, et la création répond **303**. Le
+produit se déclare en réussite ; le corps est perdu. Aucune batterie ne l'aurait vu : elles ne
+soumettent pas de formulaire.
+
+**Le motif dépasse les noms de champ** : dès que deux lots parallèles se parlent par un CONTRAT DE
+DONNÉES — noms de champs, codes de retour, forme d'une valeur —, ce contrat doit être écrit **une
+fois, dans l'arbitrage**, jamais recopié dans deux contrats de tâche. Recopier, c'est créer deux
+sources de vérité pour la même interface, et la divergence est silencieuse par construction.
+
+Corollaire : la lecture accepte désormais **les deux noms**, `corps-markdown` faisant foi — corriger
+l'un des deux lots après coup aurait laissé l'autre nom en circulation sans témoin.
+*(T-079 / T-081, 21/08/2026)*

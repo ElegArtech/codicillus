@@ -73,7 +73,7 @@ import {
 	notes,
 	typesDeNote
 } from '../base/schema';
-import { analyserMarkdown } from '../contenu/markdown';
+import { analyserMarkdown, markdownDeFormulaire } from '../contenu/markdown';
 import type { Document } from '../contenu/document';
 import { INTROUVABLE, type Identite, type Resolution } from '../droits/resolution';
 import { identifiantDeNote, identifiantSuivant } from '../rangement/identifiants';
@@ -146,6 +146,21 @@ export function etiquettesDeSaisie(brut: string): readonly string[] {
 }
 
 /**
+ * LE MARKDOWN SOUMIS, sous l'un ou l'autre de ses deux noms. Voir la note de
+ * `lireLaSaisie()` : `corps-markdown` fait foi, `corps` reste admis.
+ */
+function texteDuCorps(formulaire: FormData): string {
+	for (const nom of ['corps-markdown', 'corps']) {
+		const valeur = formulaire.get(nom);
+		/* `markdownDeFormulaire()` défait la normalisation du sérialiseur du
+		   navigateur, et rien d'autre : voir son en-tête, et `P-26` pour la
+		   raison qu'elle ne vit pas dans l'analyseur. */
+		if (typeof valeur === 'string' && valeur.length > 0) return markdownDeFormulaire(valeur);
+	}
+	return '';
+}
+
+/**
  * LA LECTURE D'UN FORMULAIRE DE CRÉATION — `T-079` §3, le contrat de
  * soumission, à la lettre et sans un champ de plus.
  *
@@ -192,8 +207,19 @@ export function lireLaSaisie(formulaire: FormData): LectureDeSaisie {
 			statut: statutBrut.length > 0 ? (statutBrut as Statut) : null,
 			etiquettes: etiquettesDeSaisie(texte(formulaire, 'etiquettes')),
 			/* Le corps n'est PAS rogné : un Markdown commence parfois par une ligne
-			   blanche, et `analyserMarkdown()` est seul juge de ce qu'il lit. */
-			corps: typeof formulaire.get('corps') === 'string' ? String(formulaire.get('corps')) : ''
+			   blanche, et `analyserMarkdown()` est seul juge de ce qu'il lit.
+
+			   DEUX NOMS POUR UN SEUL CHAMP, et ce n'est pas une hésitation. Le
+			   contrat de `T-079` nommait ce champ `corps` ; celui de `T-081` —
+			   l'ÉCRAN JUMEAU, la même vue V-17 — nomme `corps-markdown` le
+			   Markdown et réserve `corps` au document sérialisé de l'éditeur. Un
+			   câblage unique sert les deux adresses (`ARB-063`), et il ne peut
+			   pas envoyer un nom ici et un autre là. `corps-markdown` fait donc
+			   foi, `corps` reste admis pour ce qu'écrivait le contrat de ce lot.
+			   Mesuré : sans cette ligne, une création par le navigateur écrit un
+			   corps VIDE sans que rien ne s'en plaigne — le champ était envoyé,
+			   il n'était simplement pas lu. */
+			corps: texteDuCorps(formulaire)
 		}
 	};
 }

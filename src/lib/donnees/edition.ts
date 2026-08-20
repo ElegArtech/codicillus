@@ -78,7 +78,7 @@ import {
 	visibilite as enumDeVisibilite
 } from '../base/schema';
 import { analyserDocument, type Document } from '../contenu/document';
-import { analyserMarkdown } from '../contenu/markdown';
+import { analyserMarkdown, markdownDeFormulaire } from '../contenu/markdown';
 import { identifiantLisible } from '../rangement/adresses';
 import {
 	cequeLEditeurNeSaitPasPorter,
@@ -513,7 +513,14 @@ export function lireLaModification(champs: ChampsSoumis): LectureDuFormulaire {
 	   (`ADR-003`). Un champ resté vide lève donc, et n'efface rien. */
 	let corps: { readonly saisi: unknown } | undefined;
 	if (lus.corps.etat === 'texte') corps = { saisi: JSON.parse(lus.corps.valeur) };
-	else if (lus.markdown.etat === 'texte') corps = { saisi: analyserMarkdown(lus.markdown.valeur) };
+	else if (lus.markdown.etat === 'texte') {
+		/* LA FRONTIÈRE DE TRANSPORT — `markdownDeFormulaire()` défait la
+		   normalisation des fins de ligne du sérialiseur de formulaire, et rien
+		   d'autre. Son en-tête dit pourquoi elle n'est pas dans l'analyseur :
+		   elle y rendrait inerte le refus de `RG-M04-05` (`P-26`). Second des
+		   deux lecteurs de cette parade, `P-33`. */
+		corps = { saisi: analyserMarkdown(markdownDeFormulaire(lus.markdown.valeur)) };
+	}
 
 	/* L'ABSENCE EST UNE CLÉ ABSENTE, PAS UNE CLÉ À `undefined` : le dépôt tient
 	   `exactOptionalPropertyTypes`, et la distinction cesse alors d'être une

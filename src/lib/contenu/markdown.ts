@@ -1326,3 +1326,48 @@ function lireBlocs(lignes: readonly string[], decalage: number): unknown[] {
 export function analyserMarkdown(texte: string): Document {
 	return analyserDocument({ type: 'doc', content: lireBlocs(texte.split('\n'), 0) });
 }
+
+/**
+ * LE MARKDOWN TEL QU'UN FORMULAIRE DE NAVIGATEUR L'ENVOIE — et la seule chose
+ * que cette fonction défait.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE QUE LE NAVIGATEUR FAIT, MESURÉ PLUTÔT QUE SUPPOSÉ — 21/08/2026
+ *
+ * Le sérialiseur de formulaire normalise TOUTE fin de ligne en couple retour
+ * chariot + saut avant d'encoder le corps de la requête. Relevé sur la
+ * soumission réelle de `/notes/nouvelle` :
+ *
+ *   corps-markdown=%23%23+Pourquoi%0D%0A%0D%0AUn+texte+simple.
+ *
+ * Le même texte, envoyé par appel direct, s'analysait sans un mot ; envoyé par
+ * l'écran, il rendait `422`. Deux heures pour un `%0D` — et la leçon est celle
+ * de `P-32` : *demander à l'instrument ce qu'il a fait est plus rapide, et plus
+ * sûr, que raisonner sur ce qu'il devrait faire.*
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * POURQUOI PAS DANS `analyserMarkdown()`, QUI SEMBLAIT L'ENDROIT ÉVIDENT
+ *
+ * Parce que le format REFUSE un retour chariot dans un bloc de code —
+ * `RG-M04-05` (`CDC:602`), « pas de retour chariot Windows, exactement ce que
+ * l'utilisateur collera dans son terminal » —, et que ce refus est tenu À
+ * L'ENTRÉE, par un cas d'épreuve nommé (`markdown.test.ts:289`). Normaliser
+ * dans l'analyseur aurait rendu ce refus INERTE en réussissant : c'est `P-26`
+ * mot pour mot, et l'unitaire l'a dit avant que je ne le voie.
+ *
+ * La normalisation est donc posée à la FRONTIÈRE DE TRANSPORT, où elle défait
+ * un artefact d'encodage et rien d'autre. Ce qui traverse le format garde ses
+ * refus entiers ; un retour chariot écrit à la main dans un bloc de code arrive
+ * par un autre chemin — l'import, l'API — et y reste refusé.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * ET ELLE A DEUX LECTEURS, PAS UN — `P-33`
+ *
+ * `src/lib/donnees/creation.ts` et `src/lib/donnees/edition.ts` l'emploient
+ * tous les deux, et ce sont les deux seuls chemins par lesquels un formulaire
+ * atteint le format. Une parade tenue par un seul de ses appelants n'est pas
+ * une parade, c'est une exception.
+ */
+export function markdownDeFormulaire(texte: string): string {
+	return texte.replace(/\r\n/g, '\n');
+}
