@@ -65,6 +65,7 @@ import { eq } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import { corpsVide } from '../base/semence';
+import { documentDepuisNoeud, noeudDepuisDocument } from '../edition/document';
 import {
 	domaines,
 	dossiers,
@@ -111,6 +112,12 @@ export interface SaisieDeNote {
 	readonly etiquettes: readonly string[];
 	/** Le Markdown reçu, tel quel. Vide : la note naît sans corps rédigé. */
 	readonly corps: string;
+	/**
+	 * Le document canonique reçu de l'ÉDITEUR, ou `null`. Exclusif du précédent :
+	 * `corpsSoumis()` le garantit, et `P-35` dit pourquoi les deux ne portent pas
+	 * le même nom.
+	 */
+	readonly corpsDocument: unknown;
 }
 
 /** Ce que la lecture d'un formulaire rend : une saisie, ou le motif du refus. */
@@ -150,14 +157,33 @@ export function etiquettesDeSaisie(brut: string): readonly string[] {
  * `lireLaSaisie()` : `corps-markdown` fait foi, `corps` reste admis.
  */
 function texteDuCorps(formulaire: FormData): string {
-	for (const nom of ['corps-markdown', 'corps']) {
-		const valeur = formulaire.get(nom);
-		/* `markdownDeFormulaire()` défait la normalisation du sérialiseur du
-		   navigateur, et rien d'autre : voir son en-tête, et `P-26` pour la
-		   raison qu'elle ne vit pas dans l'analyseur. */
-		if (typeof valeur === 'string' && valeur.length > 0) return markdownDeFormulaire(valeur);
+	const valeur = formulaire.get('corps-markdown');
+	/* `markdownDeFormulaire()` défait la normalisation du sérialiseur du
+	   navigateur, et rien d'autre : voir son en-tête, et `P-26` pour la raison
+	   qu'elle ne vit pas dans l'analyseur. */
+	return typeof valeur === 'string' ? markdownDeFormulaire(valeur) : '';
+}
+
+/**
+ * LE DOCUMENT SÉRIALISÉ, quand c'est l'ÉDITEUR qui a écrit le corps.
+ *
+ * Deux noms, deux formats, et jamais l'inverse — `P-35` a coûté une note créée
+ * vide, en 303, parce que deux contrats du même jour appelaient `corps` deux
+ * choses différentes :
+ *
+ *   `corps`           le document canonique sérialisé — ce que l'éditeur produit
+ *   `corps-markdown`  du Markdown — ce qu'une zone de saisie nue produit
+ *
+ * Les deux ensemble sont refusés : personne ne peut avoir écrit deux corps.
+ */
+export function corpsSoumis(formulaire: FormData): { markdown: string; document: unknown } {
+	const brut = formulaire.get('corps');
+	if (typeof brut !== 'string' || brut === '')
+		return { markdown: texteDuCorps(formulaire), document: null };
+	if (typeof formulaire.get('corps-markdown') === 'string' && texteDuCorps(formulaire) !== '') {
+		throw new SyntaxError('deux corps soumis');
 	}
-	return '';
+	return { markdown: '', document: JSON.parse(brut) };
 }
 
 /**
@@ -196,6 +222,14 @@ export function lireLaSaisie(formulaire: FormData): LectureDeSaisie {
 		return { ok: false, motif: 'statut inconnu' };
 	}
 
+	let soumis: { markdown: string; document: unknown };
+	try {
+		soumis = corpsSoumis(formulaire);
+	} catch {
+		/* Deux corps soumis, ou un document illisible : refus de forme, pas de
+		   refus de format — rien n'a encore atteint la porte du document. */
+		return { ok: false, motif: 'corps illisible' };
+	}
 	return {
 		ok: true,
 		saisie: {
@@ -219,7 +253,8 @@ export function lireLaSaisie(formulaire: FormData): LectureDeSaisie {
 			   Mesuré : sans cette ligne, une création par le navigateur écrit un
 			   corps VIDE sans que rien ne s'en plaigne — le champ était envoyé,
 			   il n'était simplement pas lu. */
-			corps: texteDuCorps(formulaire)
+			corps: soumis.markdown,
+			corpsDocument: soumis.document
 		}
 	};
 }
@@ -365,7 +400,15 @@ export interface CreationFaite {
  * @throws MarkdownInvalide, DocumentInvalide — le corps soumis est refusé,
  *   jamais réparé (`ADR-003`).
  */
-export function corpsDeLaSaisie(corps: string): Document {
+export function corpsDeLaSaisie(corps: string, document: unknown = null): Document {
+	/* LE DOCUMENT DE L'ÉDITEUR PASSE PAR LES DEUX PORTES, comme à
+	   l'enregistrement : `noeudDepuisDocument()` contrôle que le schéma de
+	   l'éditeur sait le porter, `documentDepuisNoeud()` rend ce que ProseMirror
+	   RÉÉCRIT — jamais ce qu'on a reçu. C'est ce qui garantit que deux écritures
+	   d'un même document ne peuvent pas cohabiter (règle 1 du format). */
+	if (document !== null && document !== undefined) {
+		return documentDepuisNoeud(noeudDepuisDocument(document));
+	}
 	return corps.trim().length === 0 ? corpsVide() : analyserMarkdown(corps);
 }
 
@@ -422,7 +465,7 @@ export async function creerUneNote(
 	/* LE CORPS EST VALIDÉ AVANT LA PREMIÈRE TRANSACTION : un Markdown illisible
 	   ne doit pas coûter un aller-retour en base, et surtout pas un identifiant
 	   consommé. `ADR-003` — rien d'invalide n'entre en base. */
-	const corps = corpsDeLaSaisie(demande.saisie.corps);
+	const corps = corpsDeLaSaisie(demande.saisie.corps, demande.saisie.corpsDocument);
 	const candidat = identifiantDeNote(demande.saisie.titre);
 
 	for (let essai = 1; ; essai += 1) {

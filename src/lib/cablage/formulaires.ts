@@ -208,6 +208,16 @@ function pastille(document: Document, nom: string): HTMLElement {
 
 export interface OptionsDeLEditeur {
 	/**
+	 * L'ÉDITEUR RÉEL, quand la route en a monté un.
+	 *
+	 * Présent, c'est LUI qui donne le corps, et le champ soumis est `corps` — le
+	 * document canonique sérialisé, celui que la base porte. Absent, la zone de
+	 * rédaction est un `contenteditable` nu et le champ soumis est
+	 * `corps-markdown`. Les deux chemins existent, ils ne se mélangent jamais, et
+	 * `P-35` est la raison pour laquelle ils ne portent pas le même nom.
+	 */
+	editeur?: () => unknown;
+	/**
 	 * Le corps repris, en Markdown. Absent en création. Présent en
 	 * modification : c'est le document que la base porte, sérialisé par le
 	 * convertisseur unique, côté serveur.
@@ -293,9 +303,12 @@ export function cablerLEditeur(
 		}
 	}
 
-	/* 5. Le corps repris. */
+	/* 5. Le corps repris — seulement quand aucun éditeur n'est monté : l'éditeur
+	      pose le document lui-même, et écraser sa zone la viderait. */
 	const zone = noeud<HTMLElement>(formulaire, '#redaction');
-	if (zone !== null && typeof options.corps === 'string') poserLeTexte(zone, options.corps);
+	if (zone !== null && options.editeur === undefined && typeof options.corps === 'string') {
+		poserLeTexte(zone, options.corps);
+	}
 
 	/* 6. Le changement de domaine recharge — voir `rechargerSurDomaine`. */
 	const selecteurDeDomaine = noeud<HTMLSelectElement>(formulaire, '#m-domaine');
@@ -316,7 +329,11 @@ export function cablerLEditeur(
 		poserChamp(formulaire, 'visibilite', bascule(formulaire, 'm-visibilite', 'interne'));
 		poserChamp(formulaire, 'statut', bascule(formulaire, 'm-statut', 'publiee'));
 		poserChamp(formulaire, 'etiquettes', etiquettes(formulaire).join(','));
-		poserChamp(formulaire, 'corps-markdown', zone === null ? '' : texteDeLaZone(zone));
+		if (options.editeur === undefined) {
+			poserChamp(formulaire, 'corps-markdown', zone === null ? '' : texteDeLaZone(zone));
+		} else {
+			poserChamp(formulaire, 'corps', JSON.stringify(options.editeur()));
+		}
 		formulaire.requestSubmit();
 	};
 
@@ -363,11 +380,22 @@ export function cablerLaSuppression(
 	formulaire: HTMLFormElement,
 	options: OptionsDeSuppression
 ): Debranchement {
+	/* AUCUN BOUTON DU GEL NE SOUMET — geste 1 de `cablerLEditeur`, et il manquait
+	   ICI. Le défaut a été mesuré, pas imaginé : un `button` sans attribut de
+	   type est un bouton de SOUMISSION dès qu'il entre dans un formulaire, et ce
+	   formulaire-ci vise `?/supprimer`. Cliquer « Imprimer », « Modifier la
+	   référence », « Historique des versions » ou « Exporter » DÉTRUISAIT donc la
+	   note — 303 vers le domaine, puis 404 sur la note. Une action irréversible
+	   déclenchée par un bouton d'impression : c'est le pire défaut de cette
+	   campagne, et il tenait à une ligne absente. */
+	for (const b of Array.from(formulaire.querySelectorAll('button'))) {
+		if (!b.hasAttribute('type')) b.type = 'button';
+	}
+
 	const bouton = Array.from(formulaire.querySelectorAll('button')).find(
 		(b) => (b.textContent ?? '').trim() === 'Supprimer'
 	);
 	if (bouton === undefined) return () => {};
-	bouton.type = 'button';
 	const reaction = (): void => {
 		if (!formulaire.ownerDocument.defaultView?.confirm(options.rappel)) return;
 		formulaire.requestSubmit();

@@ -42,17 +42,32 @@
 	import Vue from '../../../../vues/V-17.svelte';
 	import '../../../../vues/V-17.css';
 	import { cablerLEditeur } from '$lib/cablage/formulaires';
-	import { serialiserEnMarkdown } from '$lib/contenu/markdown';
+	import { monterLEditeur } from '$lib/edition/editeur-client';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
 
-	/** Le corps repris, en Markdown. `null` : la note n'a pas de corps Référence. */
-	const corps = $derived(data.corps === null ? null : serialiserEnMarkdown(data.corps));
-
 	let formulaire: HTMLFormElement;
 
-	onMount(() => cablerLEditeur(formulaire, { corps }));
+	/**
+	 * L'ÉDITEUR REÇOIT LE DOCUMENT CANONIQUE, pas une transposition.
+	 *
+	 * `data.corps` est ce que la base porte, validé par la porte unique du
+	 * format. Il entre dans l'éditeur par `noeudDepuisDocument()` et en ressort
+	 * par `documentDepuisNoeud()` : ce qui est réenregistré sans une frappe est
+	 * identique à ce qui a été ouvert.
+	 */
+	onMount(() => {
+		const zone = formulaire.querySelector<HTMLElement>('#redaction');
+		const editeur = zone === null ? null : monterLEditeur(zone, data.corps, formulaire);
+		const defaire = cablerLEditeur(formulaire, {
+			...(editeur === null ? {} : { editeur: () => editeur.document() })
+		});
+		return () => {
+			defaire();
+			editeur?.detruire();
+		};
+	});
 </script>
 
 <form method="POST" bind:this={formulaire} style="display:contents">
