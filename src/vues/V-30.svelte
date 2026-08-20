@@ -75,6 +75,11 @@
 		instance?: EtatDInstance;
 		/** Le catalogue des types de relation. Absente, la constante du jeu. */
 		typesRelation?: Record<CleDeTypeDeRelation, LibellesDeRelation>;
+		/**
+		 * Les types qui portent une dépendance technique — `types_de_relation.technique`.
+		 * Absente, la constante du jeu de semence s'applique.
+		 */
+		relationsTechniques?: readonly CleDeTypeDeRelation[];
 		/** Les relations déclarées, dont se compte l'usage. Absente, la constante du jeu. */
 		relations?: readonly Relation[];
 	}
@@ -87,6 +92,7 @@
 		compte = MOI,
 		instance = INSTANCE,
 		typesRelation = TYPES_RELATION,
+		relationsTechniques = RELATIONS_TECHNIQUES,
 		relations = RELATIONS
 	}: Proprietes = $props();
 
@@ -131,15 +137,26 @@
 		technique: false
 	};
 
+	/**
+	 * La liste — plus le type inutilisé, MAIS SEULEMENT SUR LE JEU DE SEMENCE.
+	 *
+	 * `TYPE_INUTILISE` est un littéral de démonstration : il donne à la planche
+	 * son état « type inutilisé », et aucune table ne le porte. Servi à côté des
+	 * types réels d'une instance, c'est une ligne que l'administrateur voit et
+	 * qui ne correspond à rien — la valeur illustrative que `P-02` proscrit.
+	 * La condition est une comparaison d'identité avec le défaut : la maquette
+	 * garde exactement ce qu'elle montrait, et la base ne montre qu'elle-même.
+	 * Même geste, même motif, que `TELEPHONIE` de `V-28`.
+	 */
 	const types: readonly TypeDeRelationRendu[] = $derived([
 		...(Object.keys(typesRelation) as readonly CleDeTypeDeRelation[]).map((cle) => ({
 			cle,
 			direct: typesRelation[cle].sortant,
 			inverse: typesRelation[cle].entrant,
 			usage: USAGES[cle] ?? '',
-			technique: RELATIONS_TECHNIQUES.includes(cle)
+			technique: relationsTechniques.includes(cle)
 		})),
-		TYPE_INUTILISE
+		...(typesRelation === TYPES_RELATION ? [TYPE_INUTILISE] : [])
 	]);
 
 	/** Les relations déclarées qui portent ce type — calculé, jamais écrit. */

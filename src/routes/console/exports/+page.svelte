@@ -23,4 +23,4 @@
 	const { data }: { data: PageData } = $props();
 </script>
 
-<Vue notes={data.notes} />
+<Vue notes={data.notes} univers={data.univers} domaines={data.domaines} compte={data.compte} />

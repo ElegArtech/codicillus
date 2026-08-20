@@ -27,4 +27,26 @@
 	const { data }: { data: PageData } = $props();
 </script>
 
-<Vue notes={data.notes} />
+<Vue
+	notes={data.notes}
+	univers={data.univers}
+	domaines={data.domaines}
+	compte={data.compte}
+	journalImports={[]}
+/>
+
+<!--
+	`journalImports={[]}` — ET C'EST UNE DÉCISION, PAS UN OUBLI.
+
+	Aucune des vingt et une tables du schéma n'enregistre d'import : le service de
+	conversion n'existe pas et rien n'écrit de lot (`MESURES_DE_CONSOLE_SANS_CONTREPARTIE`,
+	entrée `JOURNAL_IMPORTS`). Le défaut de la vue est `JOURNAL_IMPORTS` du jeu de
+	semence — quatre lots datés, avec leurs auteurs et leurs décomptes. Servi ici,
+	c'est un journal d'imports qui n'ont jamais eu lieu : la valeur illustrative
+	que `P-02` proscrit, sur un écran de traçabilité.
+
+	LE TABLEAU RESTE DONC VIDE, ET IL N'ANNONCE PAS SON VIDE : le gel de V-35 ne
+	porte aucun état vide pour ce tableau — aucune planche n'en montre —, et en
+	écrire un serait combler. Une table vide n'affirme rien de faux ; un journal
+	fictif, si. Le vide de maquette est remonté au rapport du lot.
+-->
