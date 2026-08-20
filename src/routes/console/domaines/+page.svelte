@@ -8,9 +8,11 @@
 	 * avec sa garde : le rôle administrateur est éprouvé côté serveur par
 	 * `+page.server.ts`, à côté de ce fichier.
 	 *
-	 * CE FICHIER NE FAIT QUE RENDRE CE QUE LE CHARGEUR A RÉSOLU. Les notes
-	 * viennent de la base. LE BANC NE PASSE JAMAIS PAR ICI : il atteint la vue
-	 * par le mode de conception, qui rend le composant directement.
+	 * CE FICHIER NE FAIT QUE RENDRE CE QUE LE CHARGEUR A RÉSOLU. Les notes, les
+	 * univers, les domaines, leur détail — description et modules activés — et
+	 * l'utilisateur courant viennent tous de la base. LE BANC NE PASSE JAMAIS PAR
+	 * ICI : il atteint la vue par le mode de conception, qui rend le composant
+	 * directement.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
 	 * sert : `+layout.svelte` ne porte que le socle. Elle est identique à
@@ -25,4 +27,11 @@
 	const { data }: { data: PageData } = $props();
 </script>
 
-<Vue vecteur={data.vecteur} notes={data.notes} />
+<Vue
+	vecteur={data.vecteur}
+	notes={data.notes}
+	univers={data.univers}
+	domaines={data.domaines}
+	compte={data.compte}
+	detailDomaines={data.detailDomaines}
+/>

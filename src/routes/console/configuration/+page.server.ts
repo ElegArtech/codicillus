@@ -29,6 +29,7 @@ import {
 	valeursDeConfigurationSaisies
 } from '$lib/donnees/administration';
 import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import { lireConfiguration } from '$lib/donnees/lecture';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
@@ -37,7 +38,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
-	return { vecteur: null, notes: acces.ressource.notes };
+	return {
+		vecteur: null,
+		notes: acces.ressource.notes,
+		univers: acces.ressource.univers,
+		domaines: acces.ressource.domaines,
+		compte: acces.ressource.compte,
+		config: await lireConfiguration(base)
+	};
 };
 
 /** La garde des onze adresses, appliquée à l'action — voir `/console/univers`. */

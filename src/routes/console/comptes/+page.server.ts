@@ -23,7 +23,12 @@
 import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { changerLeRoleDUnCompte, roleDepuisLeLibelle } from '$lib/donnees/administration';
-import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import {
+	accesALaConsole,
+	contexteDeRequete,
+	lireLesComptesDeConsole,
+	resoudreLaConsole
+} from '$lib/donnees/consoles';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
@@ -32,7 +37,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
-	return { vecteur: null, notes: acces.ressource.notes };
+	return {
+		vecteur: null,
+		notes: acces.ressource.notes,
+		univers: acces.ressource.univers,
+		domaines: acces.ressource.domaines,
+		compte: acces.ressource.compte,
+		comptes: await lireLesComptesDeConsole(base)
+	};
 };
 
 /** La garde des onze adresses, appliquée à l'action — voir `/console/univers`. */
