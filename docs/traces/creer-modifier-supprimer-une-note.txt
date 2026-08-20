@@ -1,0 +1,48 @@
+  compte    karim.belhadj — Karim Belhadj, mot de passe posé
+  droits    gestionnaire sur 4 dossier(s) racine — RG-DRO-02
+
+── 1. CONNEXION ──────────────────────────────────────────────────────
+     GET  /connexion                                     200
+     GET  /connexion                                     200
+     POST /connexion                                     303 → /
+     GET  /                                              200
+     session ouverte — adresse : http://127.0.0.1:5199/
+
+── 2. CRÉATION D’UNE NOTE ────────────────────────────────────────────
+     GET  /notes/nouvelle                                200
+     POST /notes/nouvelle                                303 → /notes/n-rotation-des-cles-ssh-des-passerelles
+     GET  /notes/n-rotation-des-cles-ssh-des-passerelles 200
+     titre    « Rotation des clés SSH des passerelles »
+     dossier  Exploitation
+     adresse  http://127.0.0.1:5199/notes/n-rotation-des-cles-ssh-des-passerelles
+     en base  {"identifiant":"n-rotation-des-cles-ssh-des-passerelles","titre":"Rotation des clés SSH des passerelles","statut":"publiee","visibilite":"interne"}
+
+── 3. MODIFICATION ───────────────────────────────────────────────────
+     corps repris à l’écran :
+       │ ## Pourquoi
+       │ 
+       │ 
+       │ 
+       │ 
+       │ Les clés des passerelles tournent tous les 180 jours.
+       │ 
+       │ 
+       │ 
+     GET  /notes/n-rotation-des-cles-ssh-des-passerelles/modifier 200
+     POST /notes/n-rotation-des-cles-ssh-des-passerelles/modifier 303 → /notes/n-rotation-des-cles-ssh-des-passerelles
+     GET  /notes/n-rotation-des-cles-ssh-des-passerelles 200
+     en base  {"titre":"Rotation des clés SSH des passerelles — révision annuelle","versions":"1"}
+
+── 4. SUPPRESSION ────────────────────────────────────────────────────
+     GET  /notes/n-rotation-des-cles-ssh-des-passerelles 200
+     POST /notes/n-rotation-des-cles-ssh-des-passerelles?/supprimer 303 → /univers/production/infrastructure
+     GET  /univers/production/infrastructure             200
+     retour   http://127.0.0.1:5199/univers/production/infrastructure
+
+── 5. LA NOTE N’EXISTE PLUS ──────────────────────────────────────────
+     GET  /notes/n-rotation-des-cles-ssh-des-passerelles 404
+     GET /notes/n-rotation-des-cles-ssh-des-passerelles → 404
+     en base  0 ligne(s)
+
+══ TRACE COMPLÈTE — créée, modifiée, supprimée ══
+
