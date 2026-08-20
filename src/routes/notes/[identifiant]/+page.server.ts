@@ -11,7 +11,7 @@
  * UN SEUL POINT DE SORTIE POUR LE REFUS — ADR-007, RG-ACC-04
  *
  * `lireLaNote()` rend une ressource ou `INTROUVABLE`, sans troisième forme, et
- * ce fichier n'a donc qu'UN `error(404)` : « une note inexistante » et « une
+ * ce fichier n'a donc qu'UN `error(404, MESSAGE_INTROUVABLE)` : « une note inexistante » et « une
  * note interdite » ne sont pas deux branches qui se ressemblent, c'est le même
  * appel, à la même ligne. Rien ici ne sait laquelle des deux causes s'est
  * réalisée — la garantie est portée par le type, pas par la discipline.
@@ -40,13 +40,16 @@
  */
 import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
+import { lireLHistoire, versionDemandee } from '$lib/donnees/histoire';
 import { lireSeuils } from '$lib/donnees/lecture';
 import { lireLaNote, registreDemande } from '$lib/donnees/note';
 import type { PageServerLoad } from './$types';
+import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ params, url, locals }) => {
 	const base = basePartagee();
-	const contexte = { maintenant: new Date(), seuils: await lireSeuils(base) };
+	const maintenant = new Date();
+	const contexte = { maintenant, seuils: await lireSeuils(base) };
 	const registre = registreDemande(url.searchParams.get('registre'));
 
 	const resolution = await lireLaNote(base, {
@@ -56,8 +59,25 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		contexte
 	});
 
-	if (!resolution.trouve) error(404);
+	if (!resolution.trouve) error(404, MESSAGE_INTROUVABLE);
 	const lecture = resolution.ressource;
+
+	/* ═══════════════════════════════════════════════════════════════════════
+	   L'HISTORIQUE — T-039, ajouté à ce chargeur et non à un autre.
+
+	   V-15 N'A PAS DE CHEMIN PROPRE : `docs/routes.md:141` et `:207` la classent
+	   « superposée » à cette adresse, et son fil est celui de V-14. Son état
+	   adressable est `?version={n}` (`docs/routes.md:224`), lu ici.
+
+	   L'ACCÈS EST DÉJÀ DÉCIDÉ : `lireLHistoire()` prend la lecture RÉSOLUE
+	   ci-dessus, jamais un identifiant nu — il n'existe donc pas deux décisions
+	   d'accès à cette adresse. */
+	const histoire = await lireLHistoire(
+		base,
+		lecture,
+		maintenant,
+		versionDemandee(url.searchParams.get('version'))
+	);
 
 	return {
 		/**
@@ -94,6 +114,21 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 			registre,
 			corps: lecture.corps,
 			retroliens: lecture.retroliens
-		}
+		},
+		/**
+		 * L'HISTORIQUE RÉEL DE LA NOTE — T-039 —, ET QU'AUCUN NŒUD DE CETTE PAGE
+		 * NE PEUT RECEVOIR À CE JOUR. `src/vues/V-15.svelte` déclare bien
+		 * `versions` et `retentionVersions` depuis `T-043`, mais c'est `V-14` que
+		 * cette adresse monte : V-15 est une SUPERPOSITION, et rien n'adresse
+		 * l'ouverture de son panneau — `docs/routes.md` §S2 ne connaît de V-15
+		 * que `?version=` et l'ancre. Monter V-15 demanderait de décider quand le
+		 * panneau est ouvert, ce qu'aucune source ne dit : ce serait combler.
+		 * Écart déclaré, chiffré au rapport de lot.
+		 *
+		 * `versions` est VIDE parce que la table l'est — zéro ligne pour
+		 * 32 notes —, et non parce qu'une transposition manquerait.
+		 * `retention` est `versions_max` de `parametres`, lu et jamais redéclaré.
+		 */
+		histoire
 	};
 };

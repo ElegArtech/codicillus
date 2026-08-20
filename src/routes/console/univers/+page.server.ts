@@ -19,7 +19,7 @@
  * ═════════════════════════════════════════════════════════════════════════
  * UN SEUL CHEMIN DE SORTIE — ADR-007, RG-ACC-04
  *
- * Il n'y a qu'un `error(404)` dans ce fichier, SANS MESSAGE, et c'est délibéré :
+ * Il n'y a qu'un `error(404, MESSAGE_INTROUVABLE)` dans ce fichier, SANS MESSAGE, et c'est délibéré :
  * un message entrerait dans le corps rendu et suffirait à rendre le refus
  * discernable de l'inexistence. La décision, elle, est prise une seule fois pour
  * les onze adresses, dans `src/lib/donnees/consoles.ts`, qui rend `INTROUVABLE`
@@ -51,11 +51,12 @@ import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
 import type { PageServerLoad } from './$types';
+import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
-	if (!acces.trouve) error(404);
+	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
 	return { vecteur: null, notes: acces.ressource.notes };
 };

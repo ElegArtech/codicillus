@@ -53,6 +53,7 @@ import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { contexteDeRequete, resoudreUnSignet, vecteurDeV23 } from '$lib/donnees/signets';
 import type { Actions, PageServerLoad } from './$types';
+import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const base = basePartagee();
@@ -63,7 +64,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		{ univers: params.univers, domaine: params.domaine },
 		params.identifiant
 	);
-	if (!acces.trouve) error(404);
+	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
 	return {
 		vecteur: vecteurDeV23('edition'),
@@ -85,7 +86,7 @@ export const actions: Actions = {
 			{ univers: params.univers, domaine: params.domaine },
 			params.identifiant
 		);
-		if (!acces.trouve) error(404);
+		if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
 		error(501, "la modification d'un signet n'est pas implémentée");
 	}

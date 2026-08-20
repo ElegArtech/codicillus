@@ -6,7 +6,7 @@
  * utilisateur non administrateur reçoit 404 V-26, pas un refus » — `P-09` pour
  * l'entrée non rendue, `RG-ACC-04` pour l'adresse construite. La décision est
  * prise par `resoudreLaConsole()` de `src/lib/donnees/consoles.ts`, qui appelle
- * `src/lib/droits/resolution.ts` et rend `INTROUVABLE` ; le seul `error(404)`
+ * `src/lib/droits/resolution.ts` et rend `INTROUVABLE` ; le seul `error(404, MESSAGE_INTROUVABLE)`
  * du fichier est SANS MESSAGE (`ADR-007`).
  *
  * CE QUE CE CHARGEUR NE FAIT PAS, ET C'EST L'ÉCRAN OÙ CELA PÈSE LE PLUS. Il ne
@@ -24,11 +24,12 @@ import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
 import type { PageServerLoad } from './$types';
+import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
-	if (!acces.trouve) error(404);
+	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
 	return { vecteur: null, notes: acces.ressource.notes };
 };
