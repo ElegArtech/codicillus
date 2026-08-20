@@ -107,19 +107,41 @@
 	}
 
 	/**
-	 * Le nombre de notes créées à partir d'un squelette.
+	 * Le nombre de notes créées à partir d'un squelette — OU SON ABSENCE.
 	 *
-	 * `Template.utilisations` est FACULTATIF dans `seeds/corpus.ts` — les
-	 * variantes réduites du corpus (V-17, V-18, V-19…) ne le portent pas. V-31
-	 * est nourrie du jeu complet, qui le porte pour les quatre templates : le
-	 * repli à zéro n'est jamais emprunté ici, il satisfait le typage.
+	 * `Template.utilisations` est FACULTATIF dans `seeds/corpus.ts`, et la base
+	 * NE LE PORTE PAS : `src/lib/donnees/lecture.ts` le dit en propres termes —
+	 * « `utilisations` n'a AUCUNE colonne : c'est un compteur d'emploi » —, et
+	 * aucune colonne de `notes` ne rattache une note au template qui l'a amorcée.
+	 *
+	 * LE REPLI À ZÉRO ÉTAIT SANS CONSÉQUENCE TANT QUE LA VUE LISAIT LE JEU DE
+	 * SEMENCE, qui porte la clé pour ses quatre templates. Servi depuis la base,
+	 * il afficherait « 0 note » partout — et « 0 » n'est pas « indisponible » :
+	 * c'est exactement le zéro muet que `RG-M01-01` vise et que `P-02` proscrit.
+	 *
+	 * `null` DIT L'ABSENCE, ET LE RENDU LA MONTRE PAR « — » — la marque que le
+	 * gel emploie déjà pour un vide (`V-28:614`, `aSupprimer?.nom ?? '—'`). La
+	 * lacune est par ailleurs recensée dans `MESURES_DE_CONSOLE_SANS_CONTREPARTIE`
+	 * (`src/lib/donnees/consoles.ts`), de sorte qu'elle soit comptée et non
+	 * seulement racontée.
 	 */
-	function utilisations(t: Template): number {
-		return t.utilisations ?? 0;
+	function utilisations(t: Template): number | null {
+		return t.utilisations ?? null;
 	}
 
-	/** Le total affiché par le bandeau de rassurance — calculé, jamais écrit. */
-	const totalUtilisations = $derived(templates.reduce((s, t) => s + utilisations(t), 0));
+	/** L'absence de compteur, telle qu'elle s'écrit à l'écran. */
+	const INDISPONIBLE = '—';
+
+	/**
+	 * Le total du bandeau — ou `null` si AUCUN template ne porte le compteur.
+	 * Sommer en traitant l'absence comme un zéro rendrait un total faux ; le
+	 * total n'existe que si la donnée existe.
+	 */
+	const totalUtilisations = $derived(
+		templates.every((t) => utilisations(t) === null)
+			? null
+			: templates.reduce((s, t) => s + (utilisations(t) ?? 0), 0)
+	);
 
 	/**
 	 * LE SQUELETTE D'UN TEMPLATE NEUF est celui du gel (`V-31:3468`) : une
@@ -201,8 +223,8 @@
 			<div>
 				<b>Modifier ou supprimer un template n'affecte aucune note existante.</b>
 				Un squelette est copié au moment de la création : la note devient aussitôt indépendante. Les
-				<span id="total-utilisations">{totalUtilisations}</span> notes déjà créées à partir de ces templates
-				ne bougeront pas.
+				<span id="total-utilisations">{totalUtilisations ?? INDISPONIBLE}</span> notes déjà créées à partir
+				de ces templates ne bougeront pas.
 			</div>
 		</div>
 
@@ -234,7 +256,8 @@
 						<span
 							class="tg__n tg--masquable"
 							style={utilisations(t) ? undefined : 'color:var(--c-encre-4)'}
-							>{utilisations(t)} {utilisations(t) > 1 ? 'notes' : 'note'}</span
+							>{#if utilisations(t) === null}{INDISPONIBLE}{:else}{utilisations(t)}
+								{(utilisations(t) ?? 0) > 1 ? 'notes' : 'note'}{/if}</span
 						>
 						<div class="tg__actions">
 							<button class="btn" type="button">Modifier</button>
@@ -279,8 +302,8 @@
 						{edite ? edite.nom : 'Nouveau template'}
 					</h2>
 					<div class="tiroir-form__sous" id="form-sous">
-						{#if edite}{utilisations(edite)}
-							{utilisations(edite) > 1
+						{#if edite}{utilisations(edite) ?? INDISPONIBLE}
+							{(utilisations(edite) ?? 0) > 1
 								? 'notes ont été créées à partir de ce squelette — elles ne bougeront pas.'
 								: 'note a été créée à partir de ce squelette — elle ne bougera pas.'}{:else}Ce que
 							vous écrivez ici est exactement ce que trouvera le rédacteur.{/if}

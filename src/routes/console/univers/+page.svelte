@@ -8,11 +8,16 @@
 	 * octets à n'importe quel connecté. `T-036` pose la garde et le chargeur :
 	 * `+page.server.ts`, à côté de ce fichier.
 	 *
-	 * CE FICHIER NE FAIT PLUS QUE RENDRE CE QUE LE CHARGEUR A RÉSOLU. Les notes
-	 * viennent de la base ; `seeds/corpus.ts` n'est plus lu ici. Il reste la
-	 * référence du mode de conception, qui atteint la vue par son propre chemin
-	 * et ne passe pas par cette route : rien de ce fichier n'entre dans le
-	 * verdict du banc.
+	 * CE FICHIER NE FAIT PLUS QUE RENDRE CE QUE LE CHARGEUR A RÉSOLU. Les notes,
+	 * les univers, les domaines et l'utilisateur courant viennent de la base ;
+	 * `seeds/corpus.ts` n'est plus lu ici. Il reste la référence du mode de
+	 * conception, qui atteint la vue par son propre chemin et ne passe pas par
+	 * cette route : rien de ce fichier n'entre dans le verdict du banc.
+	 *
+	 * `compte` EST TOUJOURS PRÉSENT : `resoudreLaConsole()` refuse une session
+	 * dont la ligne de compte a disparu, plutôt que de rendre un administrateur
+	 * sans nom (voir `AccesALaConsole.compte`). Aucune branche de repli ici : une
+	 * branche que rien n'exerce est une branche dont on ignore si elle marche.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
 	 * sert : `+layout.svelte` ne porte que le socle. Elle est identique à
@@ -29,4 +34,10 @@
 	const { data }: { data: PageData } = $props();
 </script>
 
-<Vue vecteur={data.vecteur} notes={data.notes} />
+<Vue
+	vecteur={data.vecteur}
+	notes={data.notes}
+	univers={data.univers}
+	domaines={data.domaines}
+	compte={data.compte}
+/>

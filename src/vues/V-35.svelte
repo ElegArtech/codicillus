@@ -78,11 +78,19 @@
 	 * l'ensemble clos du gel de V-35 (ARB-016).
 	 */
 	import {
+		DOMAINES,
+		INSTANCE,
 		JOURNAL_IMPORTS,
 		LOT_IMPORT,
+		MOI,
+		UNIVERS,
+		type Domaine,
 		type EntreeDeJournalDImport,
+		type EtatDInstance,
 		type LotDImport,
-		type Note
+		type Note,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
@@ -92,6 +100,19 @@
 		etat?: string;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-35')`. */
 		notes: readonly Note[];
+		/**
+		 * LES QUATRE SOURCES DE LA COQUILLE, TOUTES FACULTATIVES — le rail de
+		 * gauche, le fil et l'identité de la barre. Absentes, les constantes du jeu
+		 * de semence s'appliquent, et cette vue rend exactement ce qu'elle rendait.
+		 * `CoquilleDeConsole.svelte:70-75` les déclare dans les mêmes termes ; elles
+		 * ne faisaient que manquer ICI, si bien que cet écran affichait le rail et
+		 * l'utilisateur du jeu de semence même servi depuis la base.
+		 */
+		univers?: readonly Univers[];
+		domaines?: readonly Domaine[];
+		compte?: UtilisateurCourant;
+		instance?: EtatDInstance;
+
 		/**
 		 * LE LOT ET LE JOURNAL, EN PROPRIÉTÉS OPTIONNELLES (T-045). Absentes, les
 		 * constantes du jeu de semence s'appliquent — c'est ce que le mode démo
@@ -106,6 +127,10 @@
 	const {
 		etat,
 		notes,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
 		lotImport = LOT_IMPORT,
 		journalImports = JOURNAL_IMPORTS
 	}: Proprietes = $props();
@@ -206,7 +231,15 @@
 		></div
 	></dialog>{/snippet}
 
-<CoquilleDeConsole section="imports" {notes} superposition={rapportDeLot}>
+<CoquilleDeConsole
+	section="imports"
+	{notes}
+	{univers}
+	{domaines}
+	{compte}
+	{instance}
+	superposition={rapportDeLot}
+>
 	{#snippet enfants()}
 		<TeteDeSection
 			titre="Imports"

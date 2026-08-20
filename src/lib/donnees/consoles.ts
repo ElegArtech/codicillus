@@ -76,9 +76,28 @@ import {
 	type IndexDesDroits,
 	type Resolution
 } from '../droits/resolution';
-import { lireNotes, type ContexteDeLecture } from './lecture';
+import {
+	dateCourteDInstant,
+	lireComptes,
+	lireDescriptionsDeDomaine,
+	lireDomaines,
+	lireModulesParDomaine,
+	lireNotes,
+	lireUnivers,
+	ROLE_DEPUIS_ENUM,
+	type ContexteDeLecture
+} from './lecture';
 import { contexteDeRequete } from './signets';
-import type { Note } from '../../../seeds/corpus';
+import { eq } from 'drizzle-orm';
+import { comptes, domaines } from '../base/schema';
+import type {
+	Compte,
+	DetailDeDomaine,
+	Domaine,
+	Note,
+	Univers,
+	UtilisateurCourant
+} from '../../../seeds/corpus';
 
 /**
  * L'INSTANT ET LES SEUILS D'UNE REQUÊTE, réémis tels quels.
@@ -212,6 +231,20 @@ export const MESURES_DE_CONSOLE_SANS_CONTREPARTIE: readonly MesureSansContrepart
 			'même absence : sans table de lot, il n’y a ni lot à ouvrir ni fichier à lister. C’est ce qui laisse `/console/imports/{lot}` non montée — voir le rapport du lot.'
 	},
 	{
+		donnee: 'Template.utilisations',
+		vue: 'V-31',
+		affichage: 'le nombre de notes créées à partir de chaque template, et leur total',
+		motif:
+			'aucune colonne. `templates` n’en porte pas, et `notes` ne rattache aucune note au template qui l’a amorcée : le lien est rompu dès la création — « un squelette est copié au moment de la création », dit l’écran lui-même. Le compteur est donc rendu « — » plutôt que zéro (`P-02`).'
+	},
+	{
+		donnee: 'Compte.derniere',
+		vue: 'V-32',
+		affichage: 'la dernière connexion, sous la forme relative du gel',
+		motif:
+			'`comptes.derniere_connexion_le` porte l’INSTANT, et `src/lib/base/schema.ts` dit que « le gel ne donne aucune règle de passage de l’instant vers le libellé ». La date est rendue au format court du dépôt ; le libellé relatif attend un arbitrage.'
+	},
+	{
 		donnee: '(l’archive d’export)',
 		vue: 'V-36',
 		affichage: 'l’issue d’un export — avertissements, volume de l’archive',
@@ -274,6 +307,167 @@ export function vecteurDeV34(
 	return { don: etatDesDonnees(manquantes) };
 }
 
+/* ══════════════════════════════════════ Le catalogue de la console ═════ */
+
+/**
+ * L'UTILISATEUR COURANT, LU EN BASE — et ce qu'il remplace.
+ *
+ * Les onze vues passaient `MOI` du jeu de semence à leur coquille : Karim
+ * Belhadj, Référent, Infrastructure, quel que soit le compte connecté. Une
+ * console d'administration qui affiche le nom de quelqu'un d'autre est une
+ * valeur illustrative au sens de `P-02`, et sur la donnée la plus visible de la
+ * page.
+ *
+ * TROIS CHAMPS SONT LUS, DEUX SONT DÉRIVÉS, ET LA DISTINCTION IMPORTE :
+ *
+ *   `nom` `role` `domaine`  LUS. `comptes.nom`, `comptes.role` traduit par
+ *                           `ROLE_DEPUIS_ENUM` — la table de `lecture.ts`,
+ *                           empruntée et jamais redite —, et le nom du domaine
+ *                           joint par `comptes.domaine_id`.
+ *   `prenom` `initiales`    DÉRIVÉS du nom, et il n'y a pas de colonne pour eux.
+ *                           La dérivation est MÉCANIQUE — premier mot, puis
+ *                           première lettre de chaque mot — et c'est exactement
+ *                           ce que le jeu de semence porte pour Karim Belhadj :
+ *                           `prenom: 'Karim'`, `initiales: 'KB'`. On retrouve la
+ *                           valeur du gel en l'appliquant à sa donnée ; ce n'est
+ *                           donc pas une règle inventée, c'est la règle que la
+ *                           semence applique déjà, écrite là où elle manquait.
+ *
+ * LE RATTACHEMENT VIDE — `RG-M14-04`, `ON DELETE SET NULL` : un compte dont le
+ * domaine a été supprimé n'en a plus. `UtilisateurCourant.domaine` est déclaré
+ * requis par `seeds/corpus.ts` ; la chaîne vide est ici le seul rendu possible,
+ * et la coquille n'affiche alors aucun rattachement. Fabriquer un nom de
+ * domaine serait pire.
+ *
+ * `null` QUAND L'IDENTITÉ EST ANONYME OU QUE LE COMPTE A DISPARU. L'appelant
+ * retombe alors sur le défaut de la vue ; mais aucun appelant de ce module n'est
+ * dans ce cas — `resoudreLaConsole()` a déjà refusé l'anonyme.
+ */
+export async function lireLUtilisateurCourant(
+	base: Base,
+	identite: Identite
+): Promise<UtilisateurCourant | null> {
+	if (identite.type !== 'authentifie') return null;
+
+	const lignes = await base
+		.select({ nom: comptes.nom, role: comptes.role, domaineNom: domaines.nom })
+		.from(comptes)
+		.leftJoin(domaines, eq(comptes.domaineId, domaines.id))
+		.where(eq(comptes.id, identite.compteId));
+
+	const ligne = lignes[0];
+	if (ligne === undefined) return null;
+
+	const role = ROLE_DEPUIS_ENUM[ligne.role];
+	if (role === undefined) throw new Error(`rôle inconnu en base : ${ligne.role}`);
+
+	const mots = ligne.nom.split(/\s+/).filter((m) => m !== '');
+	/* Les quatre types du jeu — `NomDAuteur`, `NomDeDomaine`, `RoleDeCompte` —
+	   sont des unions de littéraux tirées des maquettes. Une valeur venue de la
+	   base ne s'y range pas par inférence : c'est la même conversion que
+	   `lireDomaines()` et `lireComptes()` pratiquent, pour la même raison. */
+	return {
+		prenom: mots[0] ?? ligne.nom,
+		nom: ligne.nom,
+		initiales: mots.map((m) => m.charAt(0).toLocaleUpperCase('fr-FR')).join(''),
+		domaine: ligne.domaineNom ?? '',
+		role
+	} as unknown as UtilisateurCourant;
+}
+
+/**
+ * LE DÉTAIL DE CHAQUE DOMAINE — description et modules activés, par nom.
+ *
+ * C'est la forme que `V-28` attend (`DETAIL_DOMAINES` du jeu), et elle est
+ * COMPOSÉE de deux lectures que `lecture.ts` porte déjà, jamais réécrite :
+ * `lireDescriptionsDeDomaine()` et `lireModulesParDomaine()`.
+ *
+ * `P-04` SE JOUE ICI, ET IL EST DÉJÀ ÉPROUVÉ PAR LA DONNÉE. « Un module
+ * désactivé disparaît de la navigation et des tableaux de bord du domaine » :
+ * la liste rendue est celle des lignes de `modules_de_domaine`, donc des modules
+ * RÉELLEMENT activés. Un domaine sans aucune ligne rend une liste vide, ce que
+ * la vue sait montrer — c'est la polarité que `V-28` et `V-11` portent au gel
+ * sur sept ensembles distincts.
+ */
+export async function lireLeDetailDesDomaines(
+	base: Base
+): Promise<Record<string, DetailDeDomaine>> {
+	const [descriptions, modules] = await Promise.all([
+		lireDescriptionsDeDomaine(base),
+		lireModulesParDomaine(base)
+	]);
+
+	const rendu: Record<string, DetailDeDomaine> = {};
+	for (const [nom, description] of descriptions) {
+		rendu[nom] = { description, modules: modules.get(nom) ?? [] };
+	}
+	return rendu;
+}
+
+/**
+ * LES COMPTES DE `V-32`, complétés de leur dernière connexion.
+ *
+ * `lireComptes()` de `lecture.ts` rend huit champs sur dix et dit pourquoi il
+ * en omet deux. `id` reste omis — la vue ne s'en sert pas, et `identifiant` est
+ * la clé par laquelle les actions désignent un compte.
+ *
+ * `derniere` EST COMPLÉTÉ ICI, ET SOUS UNE FORME QUI N'INVENTE AUCUN SEUIL.
+ * `src/lib/base/schema.ts` est explicite : la colonne porte l'INSTANT, « le gel
+ * ne donne donc aucune règle de passage de l'instant vers le libellé », et
+ * « l'inventer serait un comblement ». Le libellé relatif du gel — « aujourd'hui
+ * à 08:41 » — n'est donc PAS reproduit.
+ *
+ * Restaient deux issues, et la case vide n'en est pas une : `P-02` exige qu'une
+ * donnée indisponible s'affiche « comme telle », pas qu'elle s'efface. La date
+ * est donc rendue au format court du dépôt — `dateCourteDInstant()`, celui-là
+ * même qui rend `arrivee` —, et l'absence de connexion se dit par un mot.
+ * Écart de FORME au gel, déclaré au rapport du lot : le fond est exact, la
+ * forme relative attend l'arbitrage que le schéma appelle.
+ */
+export const JAMAIS_CONNECTE = 'Jamais';
+
+export async function lireLesComptesDeConsole(base: Base): Promise<readonly Compte[]> {
+	const [rendus, instants] = await Promise.all([
+		lireComptes(base),
+		base
+			.select({ identifiant: comptes.identifiant, derniere: comptes.derniereConnexionLe })
+			.from(comptes)
+	]);
+
+	const par = new Map(instants.map((i) => [i.identifiant, i.derniere]));
+	return rendus.map((c) => {
+		const instant = par.get(String(c.identifiant));
+		return {
+			...c,
+			derniere:
+				instant === null || instant === undefined ? JAMAIS_CONNECTE : dateCourteDInstant(instant)
+		} as unknown as Compte;
+	});
+}
+
+/** Les univers et les domaines, dans la forme que la coquille attend. */
+export interface RangementDeConsole {
+	readonly univers: readonly Univers[];
+	readonly domaines: readonly Domaine[];
+}
+
+/**
+ * LE RANGEMENT, lu une fois par requête.
+ *
+ * Les onze écrans le passent à leur coquille — c'est le rail de gauche —, et
+ * trois d'entre eux s'en servent aussi pour leur contenu : `V-27` liste les
+ * univers, `V-28` les domaines, `V-36` les domaines exportables. Une seule
+ * lecture les sert tous, et les deux fonctions appelées sont celles de
+ * `lecture.ts`.
+ */
+export async function lireLeRangement(base: Base): Promise<RangementDeConsole> {
+	const [tousLesUnivers, tousLesDomaines] = await Promise.all([
+		lireUnivers(base),
+		lireDomaines(base)
+	]);
+	return { univers: tousLesUnivers, domaines: tousLesDomaines };
+}
+
 /* ═══════════════════════════════════════════════════ La résolution ═════ */
 
 /** Ce qu'une adresse de console rapporte quand elle rapporte quelque chose. */
@@ -281,21 +475,43 @@ export interface AccesALaConsole {
 	/**
 	 * LES NOTES, dans la forme que les onze vues déclarent en propriété.
 	 *
-	 * C'est la SEULE donnée qui entre par propriété dans ces écrans, et il faut
-	 * le dire nettement : les onze vues lisent leur catalogue — univers,
-	 * domaines, types, templates, comptes, configuration — au niveau du MODULE
-	 * `seeds/corpus.ts` (`V-27:71`, `V-28:68`, `V-29:72`, `V-30:54`, `V-31:59`,
-	 * `V-32:65`, `V-33:93`, `V-34:89`, `V-35:80`, `V-36:82`, `V-41:93`), et
-	 * `CoquilleDeConsole.svelte:44` fait de même pour la coquille. Aucun
-	 * chargeur ne peut donc y substituer la base sans toucher `src/vues/`, ce
-	 * que ce lot s'interdit. Écart déclaré au rapport.
-	 *
 	 * Le périmètre est TOTAL : l'appelant est administrateur, sans quoi il n'y a
 	 * pas de ressource. `lireNotes()` de `T-030` lit donc la table entière, et
 	 * c'est le seul cas du dépôt où cela n'entre pas en conflit avec `ADR-006` —
 	 * le filtre de périmètre d'un administrateur ne retire rien.
 	 */
 	readonly notes: readonly Note[];
+	/**
+	 * LE RANGEMENT ET L'UTILISATEUR — ce que les onze écrans passent tous à leur
+	 * coquille, et que trois d'entre eux affichent aussi dans leur contenu.
+	 *
+	 * LA RÉDACTION PRÉCÉDENTE DE CE COMMENTAIRE DISAIT L'INVERSE, ET ELLE ÉTAIT
+	 * FAUSSE. Elle affirmait que « les onze vues lisent leur catalogue au niveau
+	 * du MODULE `seeds/corpus.ts` » et qu'« aucun chargeur ne peut donc y
+	 * substituer la base sans toucher `src/vues/` ». Vérifié ligne à ligne :
+	 * `V-27:96-101`, `V-28`, `V-29`, `V-30`, `V-31`, `V-32`, `V-33`, `V-34` et
+	 * `CoquilleDeConsole.svelte:70-75` déclarent TOUS `univers?`, `domaines?`,
+	 * `compte?` et `instance?` en propriétés FACULTATIVES, dont le défaut — et le
+	 * défaut seulement — est la constante du jeu. L'import de module sert de
+	 * valeur par défaut, pas de source. Il n'y avait donc rien à toucher dans les
+	 * vues pour que la base entre : il fallait passer les propriétés.
+	 *
+	 * C'est `P-21` : la propriété du gel était affirmée, pas lue.
+	 */
+	readonly univers: readonly Univers[];
+	readonly domaines: readonly Domaine[];
+	/**
+	 * L'utilisateur connecté. JAMAIS `null` ici, et c'est la résolution qui
+	 * l'établit : une identité authentifiée dont la ligne de compte a disparu
+	 * n'est pas un administrateur sans nom, c'est une session caduque — elle
+	 * ressort par le même `INTROUVABLE` que le refus de droit, sans que rien ne
+	 * distingue les deux (`ADR-007`).
+	 *
+	 * Le type non nul n'est pas une commodité : il évite aux onze pages une
+	 * branche de rendu que rien n'exercerait, donc onze branches dont personne ne
+	 * saurait si elles marchent (`P-5`).
+	 */
+	readonly compte: UtilisateurCourant;
 }
 
 /**
@@ -315,5 +531,22 @@ export async function resoudreLaConsole(
 	identite: Identite
 ): Promise<Resolution<AccesALaConsole>> {
 	if (!accesALaConsole(identite)) return INTROUVABLE;
-	return { trouve: true, ressource: { notes: await lireNotes(base, contexte) } };
+
+	/* Les quatre lectures sont indépendantes : elles partent ensemble plutôt
+	   qu'en file, et l'instant de `contexte` est commun aux quatre — c'est ce
+	   que `contexteDeRequete()` garantit, une horloge lue une seule fois. */
+	const [notes, rangement, compte] = await Promise.all([
+		lireNotes(base, contexte),
+		lireLeRangement(base),
+		lireLUtilisateurCourant(base, identite)
+	]);
+
+	/* La session porte un identifiant de compte que la base ne connaît plus :
+	   même issue que le refus de droit, et pour la même raison. */
+	if (compte === null) return INTROUVABLE;
+
+	return {
+		trouve: true,
+		ressource: { notes, univers: rangement.univers, domaines: rangement.domaines, compte }
+	};
 }

@@ -146,16 +146,34 @@
 		modules: ['notes', 'dossiers']
 	};
 
-	/** La copie de travail : le registre des domaines, plus le domaine vide. */
+	/**
+	 * La copie de travail : le registre des domaines — plus le domaine vide,
+	 * MAIS SEULEMENT QUAND LE REGISTRE EST CELUI DU JEU DE SEMENCE.
+	 *
+	 * `TELEPHONIE` est un littéral de démonstration (voir juste au-dessus) : il
+	 * donne à la maquette le cas « domaine vide » que le brief demande de
+	 * montrer, et il n'existe dans aucune table. Servi À CÔTÉ des domaines réels
+	 * d'une instance, c'est une ligne que l'administrateur voit, ne peut ni
+	 * éditer ni supprimer, et qui ne correspond à rien — la valeur illustrative
+	 * que `P-02` proscrit, sur l'écran qui gouverne le rangement.
+	 *
+	 * LA CONDITION EST UNE COMPARAISON D'IDENTITÉ, ET C'EST LE PLUS PETIT GESTE
+	 * POSSIBLE. `registreDeDomaines === DOMAINES` n'est vrai que lorsque la
+	 * propriété n'a pas été passée, c'est-à-dire quand la vue tourne sur le jeu
+	 * de semence : la maquette garde alors exactement ce qu'elle montrait, au
+	 * nœud près. Dès qu'un chargeur passe les domaines de la base, la ligne
+	 * disparaît. Rien de la structure, des classes, des styles ni de l'ordre
+	 * n'est touché — seul le CONTENU l'est, et c'est ce que ce lot a à faire.
+	 */
 	const domaines: readonly DomaineDeTravail[] = $derived([
 		...registreDeDomaines.map((d) => ({
 			nom: d.nom,
 			univers: d.univers,
 			couleur: d.couleur,
-			description: detailDomaines[d.nom].description,
-			modules: detailDomaines[d.nom].modules
+			description: detailDomaines[d.nom]?.description ?? '',
+			modules: detailDomaines[d.nom]?.modules ?? []
 		})),
-		TELEPHONIE
+		...(registreDeDomaines === DOMAINES ? [TELEPHONIE] : [])
 	]);
 
 	/** Le tableau : par univers, puis par nom, en français (`rendreListe()`). */

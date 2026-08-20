@@ -79,7 +79,18 @@
 	 * reproduits figurent tous à l'ensemble clos du gel de V-36 (ARB-016,
 	 * `node verif/styles-en-ligne.mjs V-36`).
 	 */
-	import { CORPUS, DATE_REFERENCE, DOMAINES, type Domaine, type Note } from '../../seeds/corpus';
+	import {
+		DATE_REFERENCE,
+		DOMAINES,
+		INSTANCE,
+		MOI,
+		UNIVERS,
+		type Domaine,
+		type EtatDInstance,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
+	} from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
@@ -97,17 +108,46 @@
 		 * passe, et c'est ce qui garantit que le banc ne bouge pas d'un pixel.
 		 */
 		domaines?: readonly Domaine[];
+		/**
+		 * LES QUATRE SOURCES DE LA COQUILLE, TOUTES FACULTATIVES — le rail de
+		 * gauche, le fil et l'identité de la barre. Absentes, les constantes du jeu
+		 * de semence s'appliquent, et cette vue rend exactement ce qu'elle rendait.
+		 * `CoquilleDeConsole.svelte:70-75` les déclare dans les mêmes termes ; elles
+		 * ne faisaient que manquer ICI, si bien que cet écran affichait le rail et
+		 * l'utilisateur du jeu de semence même servi depuis la base.
+		 *
+		 * `domaines` est déclarée plus haut : elle servait déjà au CONTENU de cet
+		 * écran — le périmètre exportable — avant de servir au rail.
+		 */
+		univers?: readonly Univers[];
+		compte?: UtilisateurCourant;
+		instance?: EtatDInstance;
 	}
 
-	const { notes, domaines = DOMAINES }: Proprietes = $props();
+	const {
+		notes,
+		domaines = DOMAINES,
+		univers = UNIVERS,
+		compte = MOI,
+		instance = INSTANCE
+	}: Proprietes = $props();
 
 	/* ── Le calque des fabriques du gel ──────────────────────────────────────
 	   `ECART-020` É-3 : un gel qui produit une valeur par une fabrique n'admet
 	   pas qu'on la réécrive autrement. Ces quatre fonctions sont recopiées de
 	   la maquette, ligne à ligne, et appelées avec les mêmes arguments. */
 
-	/** `window.notesDuDomaine` (`V-36:2530`). */
-	const notesDuDomaine = (nom: string): readonly Note[] => CORPUS.filter((n) => n.domaine === nom);
+	/**
+	 * `window.notesDuDomaine` (`V-36:2530`).
+	 *
+	 * LE CORPUS LU EST CELUI DE LA PROPRIÉTÉ, PLUS CELUI DU MODULE. La fabrique
+	 * du gel ferme sur `CORPUS`, parce qu'une maquette n'a qu'une source ; ici la
+	 * vue reçoit ses notes en propriété — `notes` —, et lire `CORPUS` revenait à
+	 * décompter le jeu de semence quelle que soit la base servie. Tout ce que cet
+	 * écran chiffre en découle : notes, fiches, signets, dossiers, pièces jointes,
+	 * et jusqu'au nom de l'archive. L'argument change, la fabrique non.
+	 */
+	const notesDuDomaine = (nom: string): readonly Note[] => notes.filter((n) => n.domaine === nom);
 
 	interface NoeudDeDossier {
 		enfants: Record<string, NoeudDeDossier>;
@@ -118,7 +158,7 @@
 	 *  qui existe : il se déduit du chemin des notes, jamais d'une table à part. */
 	function dossiersDuDomaine(domaine: string): Record<string, NoeudDeDossier> {
 		const racines: Record<string, NoeudDeDossier> = {};
-		for (const n of CORPUS) {
+		for (const n of notes) {
 			if (n.domaine !== domaine || !n.dossier) continue;
 			const segments = n.dossier
 				.split('›')
@@ -210,7 +250,15 @@
 	});
 </script>
 
-<CoquilleDeConsole section="exports" {notes} donnees={{ 'data-etat': 'repos' }}>
+<CoquilleDeConsole
+	section="exports"
+	{notes}
+	{univers}
+	{domaines}
+	{compte}
+	{instance}
+	donnees={{ 'data-etat': 'repos' }}
+>
 	{#snippet enfants()}
 		<TeteDeSection
 			titre="Exports"
