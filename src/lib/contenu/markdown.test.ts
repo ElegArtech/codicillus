@@ -16,6 +16,7 @@ import {
 	MarkdownInvalide,
 	MarkdownNonRepresentable,
 	analyserMarkdown,
+	markdownDeFormulaire,
 	serialiserEnMarkdown
 } from './markdown';
 
@@ -328,5 +329,47 @@ describe('ce qui est REFUSÉ, et jamais réparé', () => {
 		expect(() => serialiserEnMarkdown(doc(p(t('  ', { type: 'code' }))))).toThrow(
 			MarkdownNonRepresentable
 		);
+	});
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LA FRONTIÈRE DE TRANSPORT — `P-26`, ET LE CAS EST SYNTHÉTIQUE
+
+   Cette parade est née d'un défaut mesuré : le sérialiseur de formulaire d'un
+   navigateur normalise les fins de ligne en couple, et la création d'une note
+   par l'écran rendait 422 là où le même texte passait par appel direct. Le seul
+   cas qui l'exerçait était donc ce défaut-là — et une parade dont l'unique cas
+   d'épreuve est le défaut qu'elle ferme devient inerte en réussissant.
+
+   Les cas ci-dessous ne dépendent d'aucun état du dépôt, d'aucun navigateur, et
+   d'aucune route. Ils jouent les DEUX polarités (`P-5`) : ce que la parade doit
+   défaire, et ce qu'elle ne doit PAS toucher — sans quoi elle desserrerait le
+   refus de `RG-M04-05`, qui est justement la raison pour laquelle elle ne vit
+   pas dans l'analyseur.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+describe('markdownDeFormulaire — la frontière de transport', () => {
+	it('défait le couple que le sérialiseur de formulaire a posé', () => {
+		expect(markdownDeFormulaire('## Pourquoi\r\n\r\nUn texte.')).toBe('## Pourquoi\n\nUn texte.');
+	});
+
+	it('rend un texte déjà propre inchangé — la parade est idempotente', () => {
+		const propre = '## Pourquoi\n\nUn texte.';
+		expect(markdownDeFormulaire(propre)).toBe(propre);
+		expect(markdownDeFormulaire(markdownDeFormulaire('a\r\nb'))).toBe('a\nb');
+	});
+
+	it('ne touche PAS un retour chariot SEUL : lui n’est pas une fin de ligne de transport', () => {
+		expect(markdownDeFormulaire('ls\r-l')).toBe('ls\r-l');
+	});
+
+	it('laisse donc intact le refus de RG-M04-05 sur un retour chariot seul', () => {
+		const markdown = CLOTURE + 'bash\nls\r-l\n' + CLOTURE;
+		expect(() => analyserMarkdown(markdownDeFormulaire(markdown))).toThrow(DocumentInvalide);
+	});
+
+	it('un texte sans aucune fin de ligne traverse sans changer', () => {
+		expect(markdownDeFormulaire('')).toBe('');
+		expect(markdownDeFormulaire('une ligne')).toBe('une ligne');
 	});
 });
