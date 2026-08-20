@@ -141,6 +141,23 @@
 		 * ne bougent pas.
 		 */
 		affichee?: NoteAffichee;
+		/**
+		 * CE QUE LE BANDEAU DE DÉSYNCHRONISATION NOMME — `RG-M06-08`.
+		 *
+		 * Le gel écrit la date et l'auteur en dur dans son script de planche
+		 * (`V-18:3287`). Le produit les LIT : la date est celle de
+		 * `corps_reference_modifie_le`, l'auteur celui de la version que cet
+		 * enregistrement a écrite.
+		 *
+		 * L'AUTEUR PEUT MANQUER, et son absence retire la mention plutôt que
+		 * d'inventer un nom (`P-02`). C'est la jurisprudence du bandeau de V-14,
+		 * qui n'interpole que la date qu'il a (`NoteDeDemonstration.svelte:322`).
+		 *
+		 * ABSENTE, LA TRANSCRIPTION FIGÉE : le mode de conception ne passe rien,
+		 * la vue rend exactement la phrase du gel, et les six couples ne bougent
+		 * pas.
+		 */
+		desynchronisation?: { quand: string; par: string | null };
 	}
 
 	const {
@@ -150,7 +167,8 @@
 		domaines = DOMAINES,
 		compte = MOI,
 		instance = INSTANCE,
-		affichee
+		affichee,
+		desynchronisation
 	}: Proprietes = $props();
 
 	/** La note éditée — celle qu'on modifie, ou celle du gel à défaut. */
@@ -167,6 +185,24 @@
 	/** La place du panneau de Référence — `reglerReference()`, `V-18:3160`. */
 	const reference = $derived<'ouvert' | 'cote' | 'ferme'>(
 		reglage['ref'] === 'cote' ? 'cote' : reglage['ref'] === 'ferme' ? 'ferme' : 'ouvert'
+	);
+
+	/**
+	 * LA PHRASE DU BANDEAU DE DÉSYNCHRONISATION — celle du gel, mot pour mot,
+	 * quand rien n'est passé ; la même, nourrie, quand la note est réelle.
+	 *
+	 * La mention de l'auteur tombe avec l'auteur. Elle ne se remplace pas : une
+	 * phrase qui nommerait « un contributeur » là où la base ne sait pas qui a
+	 * écrit serait une valeur illustrative, ce que `P-02` refuse.
+	 */
+	const SUITE_DESYNC =
+		", après votre dernière rédaction. Vérifiez que le pas-à-pas tient toujours — ou attestez qu'il tient, sans le rééditer.";
+	const phraseDesync = $derived(
+		desynchronisation === undefined
+			? `Modifiée le 22 juillet 2026 par Sophie Nguyen${SUITE_DESYNC}`
+			: `Modifiée le ${desynchronisation.quand}${
+					desynchronisation.par === null ? '' : ` par ${desynchronisation.par}`
+				}${SUITE_DESYNC}`
 	);
 
 	const etatSauvegarde = $derived(cas === 'vierge' ? 'vierge' : 'enregistre');
@@ -283,11 +319,7 @@
 							<div class="avis__titre">
 								La Référence a changé depuis la dernière mise à jour de l'Opérationnel
 							</div>
-							<div>
-								Modifiée le 22 juillet 2026 par Sophie Nguyen, après votre dernière rédaction.
-								Vérifiez que le pas-à-pas tient toujours — ou attestez qu'il tient, sans le
-								rééditer.
-							</div>
+							<div>{phraseDesync}</div>
 							<div class="avis__actions">
 								<button class="btn">Comparer les deux registres</button>
 								<button class="btn">Marquer comme resynchronisé</button>
