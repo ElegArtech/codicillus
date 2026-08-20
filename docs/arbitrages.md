@@ -2115,3 +2115,57 @@ sauts : il tue l'action.** Mesuré sous sonde : `XFF_DEPTH=2` avec un seul en-t�
 **La valeur suit le nombre d'intermédiaires, dans les deux sens.** À écrire à côté de la variable — c'est
 fait, `compose.yaml` porte le raisonnement en commentaire — et la sonde
 `--sonde=confiance-trop-profonde` l'éprouve à chaque exécution de la chaîne.
+
+---
+
+## ARB-058 — Le périmètre de portage de `verif:couverture` est le produit entier, pas les trois dossiers de son contrat
+
+*Arbitrage délégué, 21 août 2026. Demandé par `T-074` É-1.*
+
+### Ce qui a été mesuré
+
+Mon contrat `T-074` §2 fixait le périmètre de la question A — *« la règle est-elle portée ? »* — à
+`src/`, `base/` et `seeds/`. L'exécutant a relevé que **six pièces réelles du produit en sont
+absentes** : `frontal/`, `services/`, `recherche/`, `static/`, `Dockerfile` et `compose.yaml`.
+
+Trois règles déclarées orphelines y sont **portées**, et il les a nommées avec leur ligne :
+
+| Règle | Où elle est portée |
+|---|---|
+| `RG-DA-01` | `frontal/indisponibilite/indisponibilite.html:52` |
+| `RG-M18-16` | `static/polices/polices.css:8` |
+| `RG-NF-10` | `compose.yaml:5`, `frontal/Caddyfile:5,:49,:77`, `frontal/indisponibilite/indisponibilite.html:9,:59,:71` |
+
+**`RG-NF-10` — l'indisponibilité programmée — est portée SEPT fois et était comptée orpheline.**
+`docs/reprise.md` la donnait par ailleurs comme « portée par aucun contrat ». Les deux étaient faux.
+
+### Ce qui est décidé
+
+**Le périmètre de portage devient le produit entier.** `PORTAGE` reçoit les six pièces relevées.
+Un fichier n'est hors du périmètre que s'il n'est pas livré : la documentation, les copies de
+travail, les sorties volatiles et les dépendances.
+
+**Trois raisons, et la troisième est la seule qui compte vraiment :**
+
+1. Une règle tenue par la composition d'exploitation ou par le frontal est **tenue**. Le produit
+   n'est pas `src/` ; il est ce que l'image embarque et ce que la composition monte.
+2. Un périmètre plus étroit que le produit fabrique des orphelines qui n'en sont pas — et une
+   orpheline fausse coûte un lot inutile, ou pire, discrédite le chiffre entier.
+3. **Le partage par RÔLE reste, et il ne se négocie pas.** Un fichier de test est un contrôle où
+   qu'il vive, y compris sous `src/`. L'exécutant l'a mesuré : les confondre faisait passer A de 93 à
+   94, et `DA` de 0 à 1 règle portée *sur la seule foi d'un unitaire* — exactement la confusion que la
+   batterie existe pour empêcher. Élargir le périmètre de PORTAGE n'autorise pas à y verser les
+   contrôles.
+
+### Ce que cet arbitrage ne fait PAS
+
+Il ne descend aucun seuil et n'en pose aucun. Il ne referme aucune dette : les règles qui cessent
+d'être orphelines ne le cessent que parce qu'elles l'étaient **à tort**. Le chiffre baisse de trois
+parce que la mesure était fausse de trois, et c'est tout ce qu'il faut en lire.
+
+### Ce que l'exécutant a bien fait, et qu'il faut redire
+
+**Il n'a pas élargi le périmètre de son propre chef.** Il a appliqué le mien, mesuré ce qu'il
+écartait, nommé les trois règles avec leurs lignes, et remonté la décision. C'est le protocole
+d'écart tenu exactement — et c'est ce qui rend cet arbitrage possible en trois minutes plutôt qu'en
+un lot rouvert.

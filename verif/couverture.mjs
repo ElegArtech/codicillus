@@ -190,10 +190,18 @@ export const familleDe = (numero) => numero.slice(PREFIXE.length).replace(/-\d+$
    unitaires nomment — mesuré : 94 numéros contre 93, et `DA` passait de 0 à 1
    règle portée sur la seule foi d'un unitaire. */
 
-export const PORTAGE = ['src', 'base', 'seeds'];
-export const CONTROLE = ['verif'];
-/** Pièces réelles du produit, hors du périmètre que le contrat juge. */
-export const HORS_PERIMETRE = [
+/* `ARB-058` : le portage est le PRODUIT ENTIER, non les trois dossiers du
+   contrat d'origine. Trois règles étaient déclarées orphelines alors qu'elles
+   sont portées hors de `src` — dont celle de l'indisponibilité programmée,
+   portée SEPT fois par le frontal et la composition, et que ce commentaire ne
+   NOMME pas : citer un numéro ici ferait rougir l'auto-mesure de cet
+   instrument, ce qu'elle a fait à la première rédaction. C'est `P-20`, et il
+   vaut aussi pour qui répare. Un produit n'est pas `src/` : il est ce que
+   l'image embarque et ce que la composition monte. */
+export const PORTAGE = [
+	'src',
+	'base',
+	'seeds',
 	'recherche',
 	'frontal',
 	'services',
@@ -201,6 +209,9 @@ export const HORS_PERIMETRE = [
 	'Dockerfile',
 	'compose.yaml'
 ];
+export const CONTROLE = ['verif'];
+/** Plus aucune pièce du produit n'est hors du périmètre jugé (`ARB-058`). */
+export const HORS_PERIMETRE = [];
 export const DOCUMENTAIRE = ['docs', 'CLAUDE.md', 'README.md'];
 
 /* Sorties volatiles et dépendances : elles ne sont pas le dépôt.
