@@ -126,6 +126,18 @@
 		detailDomaines?: Record<NomDeDomaine, DetailDeDomaine>;
 		/** Le catalogue des modules — nom et sous-titre de chaque clé. */
 		modules?: Record<CleDeModule, Module>;
+		/**
+		 * Le nombre de dossiers du domaine, racine exclue — le compteur porté par
+		 * l'entrée « Dossiers » de la section « Accès ».
+		 *
+		 * ABSENT, IL EST DÉDUIT DU RANGEMENT DES NOTES, comme la maquette le
+		 * déduit : elle n'a que `window.CORPUS` pour le calculer. Cette déduction
+		 * ne voit PAS un dossier vide — mesuré sur le corpus, `Infrastructure`
+		 * porte sept dossiers sous sa racine et la déduction en rend six. Le
+		 * défaut reste la déduction pour que le gel ne bouge pas ; un chargeur qui
+		 * lit la table `dossiers` passe le compte réel.
+		 */
+		nombreDeDossiers?: number;
 	}
 
 	const {
@@ -139,7 +151,8 @@
 		modifications = MODIFICATIONS,
 		revisions: demandesDeRevision = REVISIONS,
 		detailDomaines = DETAIL_DOMAINES,
-		modules = MODULES
+		modules = MODULES,
+		nombreDeDossiers = undefined
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -287,7 +300,7 @@
 	 *  ont un ; cartographie et carte mentale n'en portent pas. */
 	const comptes = $derived<Partial<Record<CleDeModule, number>>>({
 		notes: notesDuDomaine.length,
-		dossiers: compterDossiers(arbreDuDomaine(courant.nom)),
+		dossiers: nombreDeDossiers ?? compterDossiers(arbreDuDomaine(courant.nom)),
 		fiches: notesDuDomaine.filter((n) => n.type === 'Fiche').length,
 		signets: notesDuDomaine.filter((n) => n.type === 'Signet').length
 	});

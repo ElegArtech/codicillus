@@ -25,10 +25,9 @@
  * La planche a trois positions — `referent`, `admin`, `lecteur`
  * (`verif/scenarios/V-11.json`) — là où le produit a quatre rôles (`ARB-036`) et
  * trois droits de dossier. La correspondance n'est pas devinée : elle est lue
- * dans ce que la VUE fait de cette valeur (`src/vues/V-11.svelte:98-99`), et
- * elle ne fait que deux choses — `ecriture = profil !== 'lecteur'` et
- * `admin = profil === 'admin'`. Les deux questions ont déjà une réponse
- * autorisée dans le dépôt :
+ * dans ce que la VUE fait de cette valeur, et elle ne fait que deux choses —
+ * `ecriture = profil !== 'lecteur'` et `admin = profil === 'admin'`. Les deux
+ * questions ont déjà une réponse autorisée dans le dépôt :
  *
  *   `admin`    — `perimetreDeLecture()` rend le périmètre TOTAL au seul
  *                administrateur (`RG-DRO-03`, et `resolution.ts` l'écrit :
@@ -40,29 +39,274 @@
  * C'est une DÉDUCTION à partir de deux sources citées, non une décision
  * fonctionnelle : la planche n'invente pas un quatrième rôle, elle présente
  * trois combinaisons de ces deux réponses.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE QUE LA VUE REÇOIT DÉSORMAIS — SIX TABLEAUX DE BORD BRANCHÉS
+ *
+ * `T-041` avait rendu les neuf sources de V-11 PASSABLES sans rien passer. La
+ * page rendait donc la santé et les compteurs sur les notes RÉELLES, mais la
+ * description du domaine, ses modules, son palmarès et sa corbeille de révisions
+ * sortaient encore de `seeds/corpus.ts` : une note créée à l'instant ne pouvait
+ * PAS apparaître dans « Notes récemment modifiées », puisque son identifiant
+ * n'était dans aucune des deux tables de mesure du jeu de semence.
+ *
+ *   `univers`, `domaines`   le rangement lisible, comme sur V-10 ;
+ *   `detailDomaines`        description de `domaines` + `modules_de_domaine`.
+ *                           C'est ce qui rend `P-04` EFFECTIVE sur la section
+ *                           « Accès » : elle coïncidait avec la table sans en
+ *                           être pilotée (mesuré par `T-032`) ;
+ *   `nombreDeDossiers`      la table `dossiers`, racine exclue — voir plus bas ;
+ *   `mesures7j`             le journal `consultations` (migration 006), fenêtre
+ *                           de sept jours, exactement l'unité que le panneau
+ *                           annonce ;
+ *   `modifications`         `Note.jours`, DÉJÀ porté par les notes reçues :
+ *                           `noteDepuisLigne()` l'écrit comme le nombre de jours
+ *                           écoulés depuis `modifie_le`. Aucune seconde lecture,
+ *                           donc aucune seconde définition — la table du jeu de
+ *                           semence porte les mêmes valeurs, ce qui se vérifie
+ *                           note à note ;
+ *   `revisions`             `notes.revision_*` — le signalement de RG-M06-05 est
+ *                           porté par la note, comme CDC §3.2 l'écrit.
+ *
+ * NE SONT TOUJOURS PAS PASSÉS, déclarés plutôt que comblés : `modules` — le
+ * catalogue des six libellés, une nomenclature qu'aucune table ne porte —,
+ * `compte` et `instance`, qui appartiennent à la COQUILLE et sont servis de la
+ * même façon aux 41 vues.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LE COMPTEUR DE DOSSIERS NE SE DÉDUIT PAS DU RANGEMENT DES NOTES
+ *
+ * La vue déduisait son arborescence des chemins portés par les notes : un
+ * dossier VIDE n'y comptait pas. Mesuré sur le corpus — `Infrastructure` porte
+ * sept dossiers sous sa racine et la page en affichait six. L'entrée « Dossiers »
+ * de la section « Accès » annonce ce que le module contient ; elle est donc lue
+ * dans la table `dossiers`, racine exclue, et réduite aux dossiers que
+ * l'appelant peut lire — un compteur qui inclurait l'inatteignable serait la
+ * porte fermée de `P-09` sous forme de chiffre.
  */
 import { basePartagee } from '$lib/base/acces';
-import { resoudre } from '$lib/droits/resolution';
+import type { Base } from '$lib/base/acces';
+import {
+	comptes,
+	consultations,
+	domaines as tableDesDomaines,
+	notes as tableDesNotes,
+	univers as tableDesUnivers
+} from '$lib/base/schema';
+import { capacites, resoudre } from '$lib/droits/resolution';
 import {
 	domaineLisible,
 	dossiersDuDomaine,
+	droitEffectif,
 	lireDomaineParIdentifiants,
 	lireNotesLisibles,
 	ouvrirLAcces,
 	peutEcrireDansLUn,
-	refuserLAdresse
+	refuserLAdresse,
+	type AccesAuRangement
 } from '$lib/donnees/rangement';
+import {
+	dateCourteDInstant,
+	joursEcoules,
+	lireModulesParDomaine,
+	lireUnivers
+} from '$lib/donnees/lecture';
+import { and, eq, gte, inArray, sql } from 'drizzle-orm';
+import type {
+	DemandeDeRevision,
+	DetailDeDomaine,
+	Domaine,
+	IdentifiantNote,
+	NomDeDomaine,
+	Note,
+	Univers
+} from '../../../../../seeds/corpus';
 import type { PageServerLoad } from './$types';
+
+/** Le rangement que l'appelant peut atteindre — univers, domaines, détail. */
+interface RangementLisible {
+	readonly univers: readonly Univers[];
+	readonly domaines: readonly Domaine[];
+	readonly detailDomaines: Record<NomDeDomaine, DetailDeDomaine>;
+}
+
+/**
+ * LE RANGEMENT RÉDUIT À CE QUI EST LISIBLE.
+ *
+ * `P-03` : « une entrée visible est une entrée qui fonctionne ». Un domaine sur
+ * lequel l'appelant n'a aucun droit mène à une adresse que cette même route
+ * refuse.
+ *
+ * AUCUNE RÈGLE DE DROIT N'EST ÉCRITE ICI : `domaineLisible()` interroge
+ * `capacites()`, l'implémentation unique.
+ *
+ * CE CODE EST LE MÊME DANS LE CHARGEUR PARENT, `../+page.server.ts`, et la
+ * duplication est SUBIE : `+page.server.ts` n'admet que les exports que
+ * SvelteKit valide, et un module partagé demanderait un fichier hors du
+ * périmètre de ce lot. Les deux copies appellent les mêmes fonctions de lecture.
+ */
+async function lireLeRangementLisible(
+	base: Base,
+	acces: AccesAuRangement
+): Promise<RangementLisible> {
+	const lignes = await base
+		.select({
+			id: tableDesDomaines.id,
+			nom: tableDesDomaines.nom,
+			couleur: tableDesDomaines.couleur,
+			description: tableDesDomaines.description,
+			universNom: tableDesUnivers.nom
+		})
+		.from(tableDesDomaines)
+		.innerJoin(tableDesUnivers, eq(tableDesDomaines.universId, tableDesUnivers.id))
+		.orderBy(tableDesUnivers.ordre, tableDesDomaines.nom);
+
+	const lisibles = lignes.filter((ligne) => domaineLisible(acces, ligne.id));
+	const modulesParDomaine = await lireModulesParDomaine(base);
+
+	/* `DetailDeDomaine.modules` est la liste RÉELLE de `modules_de_domaine`. Un
+	   domaine sans aucune ligne fille rend une liste vide : la base ne porte pas
+	   le plancher « 1 à N » de RG-STR-06 (déclaré par `002_socle.montee.sql`), et
+	   supposer un module par défaut serait le combler ici, au mauvais endroit. */
+	const detail: Record<string, DetailDeDomaine> = {};
+	for (const ligne of lisibles) {
+		detail[ligne.nom] = {
+			description: ligne.description,
+			modules: modulesParDomaine.get(ligne.nom) ?? []
+		};
+	}
+
+	const tousLesUnivers = await lireUnivers(base);
+	return {
+		univers: tousLesUnivers.filter((u) => lisibles.some((l) => l.universNom === u.nom)),
+		domaines: lisibles.map(
+			(l) => ({ nom: l.nom, univers: l.universNom, couleur: l.couleur }) as Domaine
+		),
+		detailDomaines: detail as Record<NomDeDomaine, DetailDeDomaine>
+	};
+}
+
+const MILLISECONDES_PAR_JOUR = 86_400_000;
+/** L'unité que le panneau « Notes les plus consultées » annonce lui-même. */
+const FENETRE_DE_CONSULTATION_JOURS = 7;
+
+/**
+ * LES CONSULTATIONS DES SEPT DERNIERS JOURS, PAR NOTE.
+ *
+ * `notes.compteur_de_consultations` est un CUMUL de toute la vie de la note —
+ * c'est `Note.vues`, et ce n'est pas ce que ce panneau demande. La série datée
+ * est le journal `consultations` de la migration 006, et le compte est fait par
+ * le serveur : ramener les lignes pour les compter ici serait le motif
+ * qu'`ADR-006` interdit.
+ *
+ * Le filtre de périmètre est DANS la requête. Un périmètre vide n'interroge pas
+ * la base — même raison que `lireNotesLisibles()`, un ensemble vide passé à une
+ * clause d'appartenance ne se rend pas de la même façon selon le dialecte.
+ *
+ * UNE NOTE SANS AUCUNE CONSULTATION N'A PAS DE CLÉ, et c'est voulu : la vue lit
+ * une table PARTIELLE et rend zéro pour ce qu'elle n'y trouve pas. Poser zéro
+ * ici ne changerait rien à l'écran et ferait porter à la table une exhaustivité
+ * qu'elle n'a pas.
+ */
+async function lireLesConsultations7j(
+	base: Base,
+	acces: AccesAuRangement,
+	maintenant: Date
+): Promise<Partial<Record<IdentifiantNote, number>>> {
+	const autorises = acces.perimetre.tout ? null : [...acces.perimetre.dossiers];
+	if (autorises !== null && autorises.length === 0) return {};
+	const filtre = autorises === null ? undefined : inArray(tableDesNotes.dossierId, autorises);
+	const depuis = new Date(
+		maintenant.getTime() - FENETRE_DE_CONSULTATION_JOURS * MILLISECONDES_PAR_JOUR
+	);
+
+	const lignes = await base
+		.select({
+			identifiant: tableDesNotes.identifiant,
+			nombre: sql<number>`count(${consultations.id})::int`
+		})
+		.from(consultations)
+		.innerJoin(tableDesNotes, eq(consultations.noteId, tableDesNotes.id))
+		.where(and(gte(consultations.le, depuis), filtre))
+		.groupBy(tableDesNotes.identifiant);
+
+	const table: Record<string, number> = {};
+	for (const ligne of lignes) table[ligne.identifiant] = ligne.nombre;
+	return table as Partial<Record<IdentifiantNote, number>>;
+}
+
+/**
+ * LES DEMANDES DE RÉVISION OUVERTES — `notes.revision_*`.
+ *
+ * `RG-M06-05` : le signalement « à réviser » est porté par la NOTE, drapeau +
+ * commentaire + demandeur + date, et `002_socle.montee.sql` le transcrit tel
+ * quel. Il n'y a donc aucune table à chercher, et la contrainte
+ * `notes_revision_coherente` garantit que le demandeur et la date sont présents
+ * dès que le drapeau l'est : la jointure interne sur `comptes` ne peut retirer
+ * qu'une demande dont le compte a été supprimé, cas où le « par » n'existe plus.
+ */
+async function lireLesRevisions(
+	base: Base,
+	acces: AccesAuRangement,
+	maintenant: Date
+): Promise<readonly DemandeDeRevision[]> {
+	const autorises = acces.perimetre.tout ? null : [...acces.perimetre.dossiers];
+	if (autorises !== null && autorises.length === 0) return [];
+	const filtre = autorises === null ? undefined : inArray(tableDesNotes.dossierId, autorises);
+
+	const lignes = await base
+		.select({
+			identifiant: tableDesNotes.identifiant,
+			par: comptes.nom,
+			le: tableDesNotes.revisionLe,
+			commentaire: tableDesNotes.revisionCommentaire
+		})
+		.from(tableDesNotes)
+		.innerJoin(comptes, eq(tableDesNotes.revisionParId, comptes.id))
+		.where(and(eq(tableDesNotes.revisionDemandee, true), filtre))
+		.orderBy(tableDesNotes.identifiant);
+
+	const demandes: DemandeDeRevision[] = [];
+	for (const ligne of lignes) {
+		if (ligne.le === null) continue;
+		demandes.push({
+			id: ligne.identifiant,
+			par: ligne.par,
+			le: dateCourteDInstant(ligne.le),
+			jours: joursEcoules(ligne.le, maintenant),
+			commentaire: ligne.commentaire ?? ''
+		} as DemandeDeRevision);
+	}
+	return demandes;
+}
+
+/**
+ * L'ANCIENNETÉ DE MODIFICATION, PAR NOTE — et elle ne se relit pas en base.
+ *
+ * `Note.jours` EST cette valeur : `noteDepuisLigne()` l'écrit comme le nombre de
+ * jours entiers écoulés depuis `modifie_le`, par `joursEcoules()`. Rouvrir la
+ * table pour la recalculer créerait une seconde définition d'une même grandeur,
+ * et la faute est de la même famille que celle que `P-01` interdit sur la
+ * fraîcheur. La projection est donc faite sur les notes DÉJÀ reçues.
+ */
+function ancienneteDeModification(
+	notes: readonly Note[]
+): Partial<Record<IdentifiantNote, number>> {
+	const table: Record<string, number> = {};
+	for (const note of notes) table[note.id] = note.jours;
+	return table as Partial<Record<IdentifiantNote, number>>;
+}
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const base = basePartagee();
-	const acces = await ouvrirLAcces(base, locals.identite, new Date());
+	const maintenant = new Date();
+	const acces = await ouvrirLAcces(base, locals.identite, maintenant);
 
 	const domaine = await lireDomaineParIdentifiants(base, params.univers, params.domaine);
 	const resolution = resoudre(domaine, (trouve) => domaineLisible(acces, trouve.id));
 	if (!resolution.trouve) refuserLAdresse(url.pathname);
 
-	const siens = dossiersDuDomaine(acces, resolution.ressource.id).map((ligne) => ligne.id);
+	const siens = dossiersDuDomaine(acces, resolution.ressource.id);
 	const notes = await lireNotesLisibles(base, acces.perimetre, acces.contexte);
 
 	/* L'état « sans note » de la planche, décidé sur les notes RÉELLEMENT
@@ -72,18 +316,36 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	   contredire : elles lisent la même liste. */
 	const aDesNotes = notes.some((n) => n.domaine === resolution.ressource.nom);
 
+	/* La racine est exclue : elle porte le nom du domaine et n'apparaît dans
+	   aucun chemin affiché (`lireCheminsDeDossier()`, `profondeur === 1`). */
+	const nombreDeDossiers = siens.filter(
+		(d) => d.profondeur > 1 && capacites(droitEffectif(acces, d.id)).lire
+	).length;
+
+	const rangement = await lireLeRangementLisible(base, acces);
+
 	return {
 		vecteur: {
 			/* `dom` porte le NOM : c'est ce que l'axe « Domaine » de la planche
-			   emploie, et ce que la vue cherche dans `DOMAINES`. */
+			   emploie, et ce que la vue cherche dans les domaines qu'elle reçoit. */
 			dom: resolution.ressource.nom,
 			role: acces.perimetre.tout
 				? 'admin'
-				: peutEcrireDansLUn(acces, siens)
+				: peutEcrireDansLUn(
+							acces,
+							siens.map((d) => d.id)
+					  )
 					? 'referent'
 					: 'lecteur',
 			etat: aDesNotes ? 'peuple' : 'vide'
 		},
-		notes
+		notes,
+		univers: rangement.univers,
+		domaines: rangement.domaines,
+		detailDomaines: rangement.detailDomaines,
+		nombreDeDossiers,
+		mesures7j: await lireLesConsultations7j(base, acces, maintenant),
+		modifications: ancienneteDeModification(notes),
+		revisions: await lireLesRevisions(base, acces, maintenant)
 	};
 };
