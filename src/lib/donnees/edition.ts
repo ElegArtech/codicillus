@@ -326,33 +326,32 @@ export interface EnregistrementFait {
  * une capture « à chaque enregistrement qui modifie le corps ».
  *
  * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CETTE FONCTION CASSE EN AVAL, ET QU'AUCUNE BATTERIE NE RELÈVE
+ * CE QUE CETTE FONCTION CASSAIT EN AVAL — RÉPARÉ, ET CE QUI RESTE
  *
- * MESURÉ, dans une transaction annulée, sur `n-astreinte` le 20 août 2026 :
- * l'enregistrement réussit, la version n° 1 est écrite avec le titre et LES
- * DEUX corps, `+3/−1` lignes touchées, l'`UPDATE` sur `versions` est refusé par
- * le déclencheur — et **la lecture suivante du corpus LÈVE** :
+ * Cette section décrivait, mesure à l'appui, un défaut RÉEL et fermé depuis :
+ * `extraitDuCorps()` n'admettait qu'un document d'un seul paragraphe — la forme
+ * que `corpsDepuisTexte()` produit — et LEVAIT sur tout corps rédigé, rendant
+ * `lireNotes()` inutilisable, donc toute route qui lit le corpus. Un corps
+ * rédigé étant précisément le premier que cet éditeur produit, la fonction
+ * ci-dessous cassait la lecture du corpus à son premier usage.
  *
- *     corps hors de la forme que la semence écrit : doc, 2 bloc(s)
+ * Il est fermé : `extraitDuCorps()` est aujourd'hui `texteBrut(analyserDocument(
+ * corps))` (`./lecture.ts`), et traite tous les types de bloc. `ADR-003` le
+ * fonde — le texte brut est produit « à l'enregistrement » et « sert aux
+ * extraits ». La validation n'a pas été desserrée, elle a été DÉPLACÉE sur
+ * `analyserDocument`, qui refuse toujours un document mal formé. Le poste 4 de
+ * la batterie 13 écrit 45 corps réels et les projette sans lever.
  *
- * `extraitDuCorps()` (`./lecture.ts`) n'admet qu'un document d'UN SEUL
- * paragraphe — la forme que `corpsDepuisTexte()` produit — et son en-tête dit
- * pourquoi il LÈVE au lieu d'approcher : « `Note.extrait` est un champ de la
- * vue, et un extrait faux se verrait à l'écran sans que rien ne l'ait signalé ».
- * Le choix de `T-030` est juste ; sa conséquence est qu'un corps RÉDIGÉ, c'est-à-
- * dire le premier que cet éditeur produira, rend `lireNotes()` inutilisable, donc
- * toute route qui lit le corpus.
+ * CE QUI RESTE, ET QUI N'EST PAS RÉPARABLE ICI SANS COMBLER. La dérivation d'un
+ * extrait est spécifiée à moitié : aucune source ne dit la LONGUEUR d'un
+ * extrait, ni s'il commence au premier paragraphe ou au premier texte, ni ce
+ * qu'il fait des titres, des alertes et des tableaux. Le corpus, lui, porte
+ * trente-deux extraits RÉDIGÉS À LA MAIN (`seeds/corpus.ts`), qui ne sont la
+ * troncature d'aucun corps. C'est un vide de spécification, déclaré et non
+ * comblé.
  *
- * CE N'EST PAS RÉPARABLE ICI SANS COMBLER. La dérivation d'un extrait est
- * spécifiée à moitié : `ADR-003` dit que le texte brut est produit « à
- * l'enregistrement » et « sert aux extraits », et `texteBrut()` existe — mais
- * aucune source ne dit la LONGUEUR d'un extrait, ni s'il commence au premier
- * paragraphe ou au premier texte, ni ce qu'il fait des titres, des alertes et
- * des tableaux. Le corpus, lui, porte trente-deux extraits RÉDIGÉS À LA MAIN
- * (`seeds/corpus.ts`), qui ne sont la troncature d'aucun corps.
- *
- * Aucune batterie ne l'aurait vu : aucune n'enregistre. La sonde, si. L'écart
- * est déclaré au rapport du lot, chiffré, et non contourné.
+ * ET LA LEÇON DE MÉTHODE TIENT, ELLE : aucune batterie ne l'avait vu, parce
+ * qu'aucune n'enregistrait. La sonde, si.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * PUIS L'INDEX, ET DANS CET ORDRE
