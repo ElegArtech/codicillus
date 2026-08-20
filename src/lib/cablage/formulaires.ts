@@ -205,7 +205,7 @@ function poserChamp(formulaire: HTMLFormElement, nom: string, valeur: string): v
  * n'est à remettre, il n'y a plus de fenêtre pendant laquelle le formulaire vise
  * autre chose que ce qu'il vise d'ordinaire.
  */
-function soumettreVers(formulaire: HTMLFormElement, action: string): void {
+export function soumettreVers(formulaire: HTMLFormElement, action: string): void {
 	const document = formulaire.ownerDocument;
 	const existant = formulaire.querySelector<HTMLButtonElement>('button[data-cable-action]');
 	const soumetteur = existant ?? document.createElement('button');

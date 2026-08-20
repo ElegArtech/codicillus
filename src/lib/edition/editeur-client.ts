@@ -276,7 +276,6 @@ export function monterLEditeur(
 		evenement.preventDefault();
 		if (commande === undefined) {
 			/* Un bouton auquel rien ne répond est un lien mort. On le DIT. */
-			// eslint-disable-next-line no-console
 			console.warn(`éditeur : aucune commande pour « ${nom} »`);
 			return;
 		}

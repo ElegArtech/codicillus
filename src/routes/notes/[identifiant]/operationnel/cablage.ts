@@ -14,7 +14,12 @@
  * Il n'est pas ÉCRIT dans `$lib/cablage/formulaires.ts` parce que ce fichier
  * appartient à un lot concurrent de cette campagne, et qu'un même fichier
  * touché par deux copies de travail ne se rapatrie pas (`P-24`, corollaire).
- * La conséquence est nommée plus bas : `soumettreVers()` y est privé, et il est
+ * `soumettreVers()` est désormais EXPORTÉ par `$lib/cablage/formulaires.ts` et
+ * importé ici : la recopie que ce lot avait dû faire — le module partagé lui
+ * étant fermé en écriture — est supprimée. Une parade recopiée est une parade
+ * qui divergera.
+ *
+ * Ce qui suit décrivait la conséquence de cette fermeture : `soumettreVers()` y était privé, et il est
  * donc RECOPIÉ ici. C'est une duplication, elle est déclarée, et elle appelle sa
  * réunion — l'export de la fonction d'origine — au premier lot qui possède ce
  * fichier.
@@ -54,37 +59,10 @@
  * relevé sur le DOM vivant, donc sur ce que l'éditeur montre à l'instant du
  * clic — jamais sur un état serveur qui pourrait avoir vieilli.
  */
+import { soumettreVers } from '$lib/cablage/formulaires';
 
 /** Ce qu'un câblage rend : de quoi le défaire. Même contrat que le voisin. */
 export type Debranchement = () => void;
-
-/**
- * SOUMETTRE VERS UNE ACTION NOMMÉE — par le SOUMETTEUR, jamais en réécrivant
- * l'attribut du formulaire.
- *
- * RECOPIE de `soumettreVers()` (`$lib/cablage/formulaires.ts`), qui est privé.
- * Le corps est identique, et la raison d'être l'est aussi : poser
- * `formulaire.action`, soumettre, puis remettre l'ancienne valeur est une
- * COURSE, et elle a mordu — le panneau d'historique a fait partir une
- * restauration vers l'action de SUPPRESSION, parce que le navigateur lit
- * l'attribut après le retour de `requestSubmit()`.
- *
- * `formaction` sur le bouton soumetteur l'emporte sur l'action du formulaire, et
- * `requestSubmit(soumetteur)` le désigne explicitement. Rien n'est réécrit, rien
- * n'est à remettre, il n'y a plus de fenêtre pendant laquelle le formulaire vise
- * autre chose que ce qu'il vise d'ordinaire.
- */
-function soumettreVers(formulaire: HTMLFormElement, action: string): void {
-	const document = formulaire.ownerDocument;
-	const existant = formulaire.querySelector<HTMLButtonElement>('button[data-cable-action]');
-	const soumetteur = existant ?? document.createElement('button');
-	soumetteur.type = 'submit';
-	soumetteur.hidden = true;
-	soumetteur.dataset['cableAction'] = action;
-	soumetteur.formAction = action;
-	if (existant === null) formulaire.appendChild(soumetteur);
-	formulaire.requestSubmit(soumetteur);
-}
 
 /** Le bouton du bandeau qui redouble `#a-resync`, repéré par son libellé. */
 function boutonDuBandeau(formulaire: ParentNode, libelle: string): HTMLButtonElement | null {
