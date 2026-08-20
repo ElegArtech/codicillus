@@ -34,7 +34,9 @@
  *     l'ancienneté observable, et `verifierFraicheur()` la contrôle.
  *  4. L'HEURE. Le corpus la déclare indéterminable et refuse de la fabriquer.
  *     Convention explicite de ce module : minuit UTC. Elle est choisie ici, pas
- *     déduite.
+ *     déduite. Elle s'applique aussi aux libellés de dernière connexion qui ne
+ *     portent pas d'heure — « il y a 3 jours », « il y a 8 mois » : voir
+ *     `instantDeDerniereConnexion()`.
  *  5. L'IDENTITÉ DU VÉRIFICATEUR (M06.2). Absente : la colonne reste nulle.
  *  6. LES PIÈCES JOINTES. Le corpus n'en porte que le NOMBRE (`pj`), jamais un
  *     fichier. Aucune ligne n'est écrite — un nom de fichier inventé serait une
@@ -102,6 +104,109 @@ export function instantAvantReference(jours: number): Date {
 /** Le nombre de jours entiers écoulés entre un instant et la date de référence. */
 export function anciennete(instant: Date): number {
 	return Math.floor((instantDeReference().getTime() - instant.getTime()) / MILLISECONDES_PAR_JOUR);
+}
+
+/**
+ * L'instant situé `mois` mois de calendrier avant la date de référence.
+ *
+ * Le jour du mois est CONSERVÉ, et ramené au dernier jour du mois d'arrivée
+ * quand celui-ci est plus court — « il y a 1 mois » depuis un 31 mars désigne le
+ * 28 ou le 29 février, jamais le 3 mars. Aucun cas du jeu ne l'exerce (les cinq
+ * comptes sont datés du 13), et c'est précisément pourquoi la règle est écrite
+ * ici plutôt que laissée au débordement silencieux de `Date` : un unitaire
+ * l'éprouve (`P-5`).
+ *
+ * L'INSTANT DE RÉFÉRENCE EST UN PARAMÈTRE, ET C'EST POUR ÇA. `DATE_REFERENCE`
+ * tombe un 13 : aucune valeur du jeu ne peut faire jouer le ramenage, et une
+ * branche qu'aucun cas ne peut atteindre n'est pas une règle, c'est un espoir
+ * (`P-5`). Le paramètre existe donc pour que l'unitaire puisse poser un 31.
+ * Aucun appelant du produit ne le passe.
+ */
+export function instantMoisAvantReference(mois: number, depuis?: Date): Date {
+	const reference = depuis ?? instantDeReference();
+	const annee = reference.getUTCFullYear();
+	const moisDeReference = reference.getUTCMonth();
+	const jour = reference.getUTCDate();
+	/* Le jour 0 du mois suivant est le dernier jour du mois visé. */
+	const dernierJour = new Date(Date.UTC(annee, moisDeReference - mois + 1, 0)).getUTCDate();
+	return new Date(
+		Date.UTC(
+			annee,
+			moisDeReference - mois,
+			Math.min(jour, dernierJour),
+			reference.getUTCHours(),
+			reference.getUTCMinutes()
+		)
+	);
+}
+
+/* ═════════════════════════════════ La dernière connexion ════════════════ */
+
+/**
+ * LE LIBELLÉ DE DERNIÈRE CONNEXION DU JEU, RENDU À L'INSTANT QU'IL DÉSIGNE.
+ *
+ * `interface Compte` porte `derniere` en toutes lettres : « aujourd'hui à
+ * 08:41 », « hier à 17:58 », « il y a 3 jours », « il y a 8 mois ». C'est un
+ * RENDU relatif, et son commentaire au jeu le dit — « libellé relatif, tel
+ * qu'affiché par la console ». La DONNÉE est l'instant, et c'est elle que `005`
+ * met en base.
+ *
+ * CE SENS-LÀ EST DÉDUCTIBLE, L'AUTRE NE L'EST PAS. Passer du libellé à l'instant
+ * ne demande que la date de référence du jeu ; passer de l'instant au libellé
+ * demanderait le seuil où « N jours » devient « N mois » et l'heure d'un « il y
+ * a 3 jours » — deux règles qu'AUCUNE source ne porte. Les deux vues qui
+ * affichent ce champ écrivent la chaîne telle quelle, sans la calculer :
+ * `V-32:3043` (`dc.textContent = c.derniere`) et `V-25:2712`. La fabrique du
+ * libellé n'est donc pas écrite ici : ce serait un comblement (CLAUDE.md §2),
+ * et elle appartient au lot qui câblera V-25 et V-32.
+ *
+ * DEUX CONVENTIONS SONT CHOISIES ICI, PAS DÉDUITES, et ce sont celles que ce
+ * module emploie déjà pour les notes :
+ *
+ *   · « il y a N jours » et « il y a N mois » ne portent pas d'heure : l'instant
+ *     reçoit `HEURE_DE_REFERENCE`, minuit UTC — la convention déclarée en tête
+ *     de ce fichier pour toute date du jeu privée d'heure ;
+ *   · « aujourd'hui » et « hier » portent une heure, et elle est lue en UTC.
+ *     Les maquettes n'ont pas de fuseau ; en supposer un serait pire.
+ *
+ * L'apostrophe est acceptée sous ses deux formes, droite et typographique : le
+ * jeu emploie la droite, la prose du dépôt emploie l'autre, et faire dépendre
+ * une lecture de données d'un choix de typographie serait un piège de plus.
+ *
+ * Tout libellé d'une autre forme fait LEVER une erreur. Rendre `null` sur
+ * l'inconnu perdrait silencieusement une donnée que le jeu porte.
+ */
+export function instantDeDerniereConnexion(libelle: string): Date {
+	const normalise = libelle.replace(/’/g, "'").trim();
+
+	const aujourdhui = /^aujourd'hui à (\d{1,2}):(\d{2})$/.exec(normalise);
+	const hier = /^hier à (\d{1,2}):(\d{2})$/.exec(normalise);
+	const jours = /^il y a (\d+) jours?$/.exec(normalise);
+	const mois = /^il y a (\d+) mois$/.exec(normalise);
+
+	const aLHeure = (joursAvant: number, heures: string, minutes: string): Date => {
+		const jour = new Date(instantDeReference().getTime() - joursAvant * MILLISECONDES_PAR_JOUR);
+		return new Date(
+			Date.UTC(
+				jour.getUTCFullYear(),
+				jour.getUTCMonth(),
+				jour.getUTCDate(),
+				Number(heures),
+				Number(minutes)
+			)
+		);
+	};
+
+	if (aujourdhui?.[1] !== undefined && aujourdhui[2] !== undefined) {
+		return aLHeure(0, aujourdhui[1], aujourdhui[2]);
+	}
+	if (hier?.[1] !== undefined && hier[2] !== undefined) {
+		return aLHeure(1, hier[1], hier[2]);
+	}
+	if (jours?.[1] !== undefined) return instantAvantReference(Number(jours[1]));
+	if (mois?.[1] !== undefined) return instantMoisAvantReference(Number(mois[1]));
+
+	throw new Error(`libellé de dernière connexion illisible : ${libelle}`);
 }
 
 /* ═══════════════════════════════════════════ Le corps des notes ═════════ */
@@ -208,6 +313,10 @@ export interface LigneDeCompte {
 	readonly role: string;
 	readonly actif: boolean;
 	readonly arriveLe: string;
+	/** Le domaine principal, par son nom. Nullable au schéma (RG-M14-04). */
+	readonly domaineNom: string | null;
+	/** L'instant de la dernière connexion, déduit du libellé du jeu. */
+	readonly derniereConnexionLe: Date | null;
 }
 
 export interface LigneDeNote {
@@ -227,6 +336,12 @@ export interface LigneDeNote {
 	readonly corpsOperationnelModifieLe: Date | null;
 	readonly verifieLe: Date | null;
 	readonly compteurDeConsultations: number;
+	/**
+	 * Les étiquettes DANS L'ORDRE DU JEU. Cet ordre n'est pas l'ordre
+	 * alphabétique sur 25 notes de 32, et depuis `005` il est représentable :
+	 * `etiquettes_de_note.ordre` en porte le rang. Le rang est le rang de ce
+	 * tableau, sans retri.
+	 */
 	readonly etiquettes: readonly string[];
 	readonly signetAdresse: string | null;
 	readonly signetAjouteLe: string | null;
@@ -302,7 +417,18 @@ export function lignesDeDossier(notes: readonly Note[] = CORPUS): readonly Ligne
 	return lignes;
 }
 
-/** Les comptes de la console (V-28). */
+/**
+ * Les comptes de la console (V-32).
+ *
+ * `Compte.id` — `c-karim` et ses quatre voisins — N'EST TOUJOURS PAS ÉCRIT, et
+ * `005` n'y change rien : `comptes.identifiant` porte déjà l'identifiant de
+ * connexion que CDC:1178 énumère (`karim.belhadj`), et un second identifiant
+ * qu'aucune règle du produit ne demande serait une colonne de commodité de
+ * semence. Le rapport d'équivalence l'écarte de sa référence, ce qui dit la même
+ * chose autrement : ce champ appartient au jeu, pas au produit.
+ *
+ * Le rattachement et la dernière connexion, eux, sont désormais portés.
+ */
 export function lignesDeCompte(): readonly LigneDeCompte[] {
 	return COMPTES.map((c) => ({
 		identifiant: c.identifiant,
@@ -310,7 +436,12 @@ export function lignesDeCompte(): readonly LigneDeCompte[] {
 		courriel: c.courriel,
 		role: ROLE_EN_ENUM[c.role],
 		actif: c.actif,
-		arriveLe: dateCourteEnIso(c.arrivee)
+		arriveLe: dateCourteEnIso(c.arrivee),
+		/* Les cinq comptes du jeu en portent un. La colonne est malgré tout
+		   nullable — RG-M14-04 l'exige —, et c'est la semence qui n'exerce pas
+		   ce cas, non le schéma qui l'interdit. */
+		domaineNom: c.domaine,
+		derniereConnexionLe: instantDeDerniereConnexion(c.derniere)
 	}));
 }
 

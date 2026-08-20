@@ -62,7 +62,7 @@
 	 * la même empreinte MD5, au bit près.
 	 *
 	 * V-09 est aussi la SEULE maquette du dépôt à porter un état « Petit écran
-	 * — 360 px » (`V-09:740`, `verif/banc/conditions.mjs:85`). Il n'est pas
+	 * — 360 px » (`V-09:740`, `le module de conditions du banc, sa borne de temporisation`). Il n'est pas
 	 * obtenu en rétrécissant la fenêtre : la sixième section porte
 	 * `class="cas cas--etroit"`, sa feuille contraint `.palette-hote` à 360 px,
 	 * et `.palette-hote { container-type: inline-size }` fait réagir la palette

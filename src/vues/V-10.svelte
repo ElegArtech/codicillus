@@ -11,7 +11,7 @@
 	 * LES LIENS RESTENT CEUX DU GEL — `href="#"`, comme `src/lib/coquille/*` les
 	 * porte depuis T-101. ARB-013 devait permettre l'adresse réelle en retirant
 	 * les lignes `/url:` de l'instantané ARIA ; MESURÉ ici, le filtre de
-	 * `verif/banc/capture.mjs` ne retire rien — son motif `/^\s*\/url:/` ne
+	 * le module de capture du banc ne retire rien — son motif `/^\s*\/url:/` ne
 	 * reconnaît pas la forme `- /url: …` que Playwright imprime —, et six des
 	 * sept états sortaient en échec de structure sur cette seule ligne.
 	 * `ECART-013` É-5 annonçait que l'écart mordrait « au premier lot câblant une

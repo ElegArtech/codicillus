@@ -49,7 +49,7 @@
 	 * LES SEPT ÉTATS, ET CE QUE LA PLANCHE ATTEINT RÉELLEMENT — MESURÉ
 	 *
 	 * `reglerPlanche()` applique le vecteur complet mais n'émet `change` que sur
-	 * un contrôle dont la position CHANGE (`verif/banc/capture.mjs`). Deux
+	 * un contrôle dont la position CHANGE (le module de capture du banc). Deux
 	 * conséquences, toutes deux relevées au navigateur dans les conditions du
 	 * banc, et aucune n'était écrite ailleurs :
 	 *
@@ -166,7 +166,7 @@
 	 *
 	 * Seule `div.planche` est hors produit ici, et elle n'est pas rendue. La
 	 * `ul.regles` de l'étape 3 EST DU PRODUIT : le sélecteur du banc est
-	 * `section.regles`, pas `.regles` (`verif/banc/conditions.mjs`,
+	 * `section.regles`, pas `.regles` (le module de conditions du banc,
 	 * `BLOCS_HORS_PRODUIT` ; `docs/DESIGN.md` §2.G). Un lot qui « nettoierait »
 	 * par nom de classe retirerait une exigence fonctionnelle.
 	 *

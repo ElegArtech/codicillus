@@ -54,7 +54,7 @@
 	 * LES ADRESSES RESTENT CELLES DU GEL — ET C'EST UN CONSTAT, PAS UN CHOIX.
 	 * ARB-013 retire les lignes `/url:` de l'instantané ARIA précisément pour que
 	 * le produit puisse porter les adresses de `docs/routes.md` sans rougir. Le
-	 * filtre est `verif/banc/capture.mjs`, `sansAdresses()` : il retire les
+	 * filtre est le module de capture du banc, `sansAdresses()` : il retire les
 	 * lignes qui répondent à `/^\s*\/url:/`. Or l'instantané que Playwright
 	 * produit écrit `  - /url: "#"`, avec le tiret de liste : le filtre ne
 	 * reconnaît donc aucune ligne, et toute adresse réelle fait échouer le
@@ -106,7 +106,7 @@
 	 * La maquette s'initialise sur `appliquerCas("prive")` (`V-04:2242`) alors
 	 * que le bouton coché au balisage est `inexistant` (`V-04:762`). Le banc
 	 * applique le vecteur complet mais ne déclenche `change` que sur un bouton
-	 * QUI N'EST PAS DÉJÀ COCHÉ (`verif/banc/capture.mjs`, `reglerPlanche`) :
+	 * QUI N'EST PAS DÉJÀ COCHÉ (le module de capture du banc, `reglerPlanche`) :
 	 * l'état `cas-inexistant` laisse donc la page sur le réglage initial, et la
 	 * référence y affiche l'adresse du cas `prive`.
 	 *

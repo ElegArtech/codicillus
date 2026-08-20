@@ -15,7 +15,7 @@
 	 *
 	 * LES LIENS RESTENT CEUX DU GEL — `href="#"`, comme `src/lib/coquille/*`.
 	 * ARB-013 devait permettre l'adresse réelle ; mesuré sur ce lot, le filtre de
-	 * `verif/banc/capture.mjs` ne retire pas les lignes `/url:` de l'instantané
+	 * le module de capture du banc ne retire pas les lignes `/url:` de l'instantané
 	 * ARIA. Le constat est déclaré au rapport ; l'instrument est en écriture
 	 * humaine seule. Voir l'en-tête de `V-10.svelte`.
 	 *
