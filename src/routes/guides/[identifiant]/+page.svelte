@@ -6,9 +6,9 @@
 	 * note réellement demandée — est dans `+page.server.ts`, qui porte le
 	 * périmètre public et le point de sortie unique du refus.
 	 *
-	 * `vecteur={null}` demande à la vue son état par défaut : ses deux axes
-	 * décrivent la note affichée, et l'article de V-03 est celui du gel. Voir
-	 * l'en-tête du chargeur, et `LACUNES_DU_CHEMIN_PUBLIC`.
+	 * `vecteur={null}` : les deux axes de la planche décrivent LA NOTE AFFICHÉE
+	 * — fraîcheur du cartouche, présence du registre « En bref » —, et la note
+	 * les porte désormais elle-même. Il ne reste rien à piloter par vecteur.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert.
 	 * Elle est identique à l'octet à sa source gelée (P-6.3). Cette route ne rend
@@ -17,8 +17,9 @@
 	 */
 	import Vue from '../../../vues/V-03.svelte';
 	import '../../../vues/V-03.css';
+	import type { PageData } from './$types';
 
-	/* `data` n'est pas lue : la vue n'a pas d'axe qui reçoive la note résolue. */
+	const { data }: { data: PageData } = $props();
 </script>
 
-<Vue vecteur={null} />
+<Vue vecteur={data.vecteur} guide={data.guide} />

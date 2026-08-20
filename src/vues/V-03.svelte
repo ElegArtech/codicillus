@@ -81,16 +81,82 @@
 	import { DATE_REFERENCE, type NiveauFraicheur } from '../../seeds/corpus';
 	import { temoinFraicheur } from '$lib/fraicheur';
 
+	/**
+	 * UNE ENTRÉE DE SOMMAIRE — les titres de niveau 2 du corps affiché.
+	 * `body[data-numerote="non"]` retire la numérotation : aucun numéro n'est
+	 * porté, ici comme au gel.
+	 */
+	interface EntreeDeSommaire {
+		readonly ancre: string;
+		readonly titre: string;
+	}
+
+	/** Une pièce jointe telle que le panneau la rend — trois champs, pas un de plus. */
+	interface PieceAffichee {
+		readonly nom: string;
+		/** La marque du format, en capitales : « PDF », « DOCX ». */
+		readonly marque: string;
+		/** La taille en toutes lettres, telle que le gel l'écrit : « 320 Ko ». */
+		readonly taille: string;
+		readonly adresse: string;
+	}
+
+	/**
+	 * LE GUIDE DEMANDÉ — la note que l'adresse désigne, et ses deux corps DÉJÀ
+	 * RENDUS par `rendreDocument`, l'implémentation unique (`ADR-004`).
+	 *
+	 * La vue ne convertit rien : elle reçoit du HTML et le pose, exactement comme
+	 * `NoteDeDemonstration.svelte` le fait pour V-14 depuis `T-042`. Un document
+	 * canonique rendu ici serait le second chemin que l'ADR interdit.
+	 */
+	interface GuideAffiche {
+		readonly titre: string;
+		/** Le type de la note — la pastille de type du sur-titre. */
+		readonly type: string;
+		readonly domaine: string;
+		readonly adresseDuDomaine: string;
+		readonly auteur: string;
+		/** La modification, en toutes lettres et en forme machine. */
+		readonly modifieLe: string;
+		readonly modifieIso: string;
+		readonly fraicheur: NiveauFraicheur;
+		readonly jours: number;
+		/** La date du dernier contrôle. `null` : la note n'a jamais été vérifiée. */
+		readonly controleLe: string | null;
+		readonly controleIso: string | null;
+		readonly reference: string;
+		readonly operationnel: string | null;
+		readonly sommaire: readonly EntreeDeSommaire[];
+		readonly piecesJointes: readonly PieceAffichee[];
+	}
+
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
+		/**
+		 * LE GUIDE RÉELLEMENT DEMANDÉ. Absente, la vue rend le guide écrit dans la
+		 * maquette gelée — son texte, son schéma et son tableau sont dans le gel et
+		 * nulle part ailleurs, et c'est ce que les quatre états de la planche
+		 * montrent. Fournie par le chargeur de `/guides/{identifiant}`, elle
+		 * l'emporte : l'écran cesse alors d'afficher une page écrite et affiche la
+		 * note que l'adresse désigne.
+		 *
+		 * LES DEUX AXES DE LA PLANCHE DÉCRIVENT LA NOTE AFFICHÉE — fraîcheur du
+		 * cartouche, présence du registre « En bref ». Quand un guide est fourni,
+		 * ils viennent donc de LUI et non du vecteur : peindre les attributs d'une
+		 * note sur le corps d'une autre est la valeur illustrative que `P-02`
+		 * proscrit.
+		 */
+		guide?: GuideAffiche | null;
 	}
 
-	const { vecteur }: Proprietes = $props();
+	const { vecteur, guide = null }: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	/** Un corps « En bref » existe-t-il ? Sinon le sélecteur de registre disparaît. */
-	const registreExiste = $derived(reglage['c-op'] !== false);
+	const registreExiste = $derived(
+		guide === null ? reglage['c-op'] !== false : guide.operationnel !== null
+	);
 
 	/**
 	 * LES TROIS ÉTATS DU CARTOUCHE — leur DATE DE CONTRÔLE, et elle seule.
@@ -125,6 +191,24 @@
 		obs: '2025-11-06'
 	};
 
+	/**
+	 * LE MARQUEUR D'UNE DONNÉE QUI N'EXISTE PAS — `P-02`. Le gel l'emploie
+	 * lui-même pour une valeur qu'il n'a pas encore (`V-24:1287`).
+	 */
+	const RIEN = '—';
+
+	/**
+	 * LES TROIS DATES DE CONTRÔLE EN TOUTES LETTRES, telles que le gel les écrit
+	 * dans le `<time>` de son détail. Elles vont par paire avec `CONTROLE` : la
+	 * forme machine y est, la forme humaine ici, et aucune n'est dérivée de
+	 * l'autre — le gel les écrit toutes les deux.
+	 */
+	const DATES_DE_CONTROLE: Record<NiveauFraicheur, string> = {
+		frais: '2 août 2026',
+		vieil: '11 mars 2026',
+		obs: '6 novembre 2025'
+	};
+
 	/** Jours écoulés entre une date de contrôle et l'horloge gelée du corpus. */
 	function depuis(date: string): number {
 		return Math.round((Date.parse(DATE_REFERENCE) - Date.parse(date)) / 86_400_000);
@@ -132,16 +216,33 @@
 
 	/** Fraîcheur affichée par le cartouche de contrôle. */
 	const niveau = $derived<NiveauFraicheur>(
-		typeof reglage['fr'] === 'string' && reglage['fr'] in CONTROLE
-			? (reglage['fr'] as NiveauFraicheur)
-			: 'frais'
+		guide !== null
+			? guide.fraicheur
+			: typeof reglage['fr'] === 'string' && reglage['fr'] in CONTROLE
+				? (reglage['fr'] as NiveauFraicheur)
+				: 'frais'
 	);
 
 	/**
 	 * LE TÉMOIN DU CARTOUCHE, de la fabrique unique : la jauge et la valeur en
 	 * clair sortent ensemble du même calcul (P-01, ADR-005).
+	 *
+	 * L'ANCIENNETÉ VIENT DE LA NOTE quand une note est affichée, et de l'horloge
+	 * gelée du corpus sinon — sans quoi le libellé relatif ne serait pas
+	 * reproductible des deux côtés de la comparaison.
 	 */
-	const temoin = $derived(temoinFraicheur({ fraicheur: niveau, jours: depuis(CONTROLE[niveau]) }));
+	const temoin = $derived(
+		temoinFraicheur({
+			fraicheur: niveau,
+			jours: guide !== null ? guide.jours : depuis(CONTROLE[niveau])
+		})
+	);
+
+	/** La date de contrôle affichée par le détail du cartouche. */
+	const controle = $derived(guide === null ? CONTROLE[niveau] : guide.controleIso);
+	const controleEnClair = $derived(
+		guide === null ? DATES_DE_CONTROLE[niveau] : (guide.controleLe ?? RIEN)
+	);
 
 	/**
 	 * Le sommaire, construit sur les titres de niveau 2 du corps Référence —
@@ -149,15 +250,33 @@
 	 * numérotation : aucun `span.sommaire__num` n'est rendu, ce que la référence
 	 * confirme état par état.
 	 */
-	const SOMMAIRE = [
-		{ id: 's-portail', titre: 'Depuis le portail, sur votre poste' },
-		{ id: 's-verrouille', titre: "Depuis l'écran de connexion, poste verrouillé" },
-		{ id: 's-deplacement', titre: 'En déplacement, sans accès au réseau interne' },
-		{ id: 's-regles', titre: 'Ce que doit contenir le nouveau mot de passe' },
-		{ id: 's-particuliers', titre: 'Cas particuliers' }
+	const SOMMAIRE_DU_GEL: readonly EntreeDeSommaire[] = [
+		{ ancre: 's-portail', titre: 'Depuis le portail, sur votre poste' },
+		{ ancre: 's-verrouille', titre: "Depuis l'écran de connexion, poste verrouillé" },
+		{ ancre: 's-deplacement', titre: 'En déplacement, sans accès au réseau interne' },
+		{ ancre: 's-regles', titre: 'Ce que doit contenir le nouveau mot de passe' },
+		{ ancre: 's-particuliers', titre: 'Cas particuliers' }
 	];
+
+	const SOMMAIRE = $derived(guide === null ? SOMMAIRE_DU_GEL : guide.sommaire);
 </script>
 
+<!--
+	DEUX RÈGLES D'ESLINT SONT LEVÉES POUR CETTE VUE, ET CHACUNE A SON MOTIF.
+
+	`svelte/no-navigation-without-resolve` — les trois adresses calculées de cet
+	écran sont celle du domaine et celles des pièces jointes, bâties par
+	`$lib/rangement/adresses`, le constructeur unique (`ARB-001`, « seule forme
+	publiée »). `resolve()` n'accepte qu'un chemin connu à la compilation : il ne
+	peut pas les prendre. Les adresses littérales du gel, elles, restent `#`.
+
+	`svelte/no-at-html-tags` — les deux corps rendus viennent de
+	`rendreDocument`, l'implémentation unique, dont le texte est échappé par
+	`echapper()` (`ADR-003` : « le texte d'un document est du TEXTE ; il ne
+	devient jamais du balisage »). C'est le motif exact de `V-18` et de
+	`NoteDeDemonstration.svelte`, qui posent la même levée.
+-->
+<!-- eslint-disable svelte/no-navigation-without-resolve, svelte/no-at-html-tags -->
 <a class="saut-contenu" href="#article">Aller au contenu</a>
 
 <div class="public app" id="app" data-registre="reference">
@@ -171,9 +290,9 @@
 	</header>
 
 	<nav class="fil-pub" aria-label="Fil d'Ariane">
-		<a href="#">Accueil</a><span>›</span><a href="#">Poste de travail</a><span>›</span><a href="#"
-			>Guides</a
-		>
+		<a href="#">Accueil</a><span>›</span><a href={guide?.adresseDuDomaine ?? '#'}
+			>{guide?.domaine ?? 'Poste de travail'}</a
+		><span>›</span><a href="#">Guides</a>
 	</nav>
 
 	<main class="lecture-pub">
@@ -187,8 +306,8 @@
 				>
 			</button>
 			<ul class="sommaire__liste" id="sommaire">
-				{#each SOMMAIRE as s (s.id)}<li class="n1">
-						<a href="#{s.id}"><span>{s.titre}</span></a>
+				{#each SOMMAIRE as s (s.ancre)}<li class="n1">
+						<a href="#{s.ancre}"><span>{s.titre}</span></a>
 					</li>{/each}
 			</ul>
 		</nav>
@@ -197,11 +316,11 @@
 		<article class="article" id="article">
 			<header class="entete">
 				<div class="entete__sur">
-					<span class="past past--type">Guide</span>
-					<span class="past">Poste de travail</span>
+					<span class="past past--type">{guide?.type ?? 'Guide'}</span>
+					<span class="past">{guide?.domaine ?? 'Poste de travail'}</span>
 				</div>
 
-				<h1 class="titre-note">Réinitialiser son mot de passe</h1>
+				<h1 class="titre-note">{guide?.titre ?? 'Réinitialiser son mot de passe'}</h1>
 
 				<!--
 					Cartouche de contrôle : le signal de fraîcheur est conservé en lecture
@@ -217,14 +336,15 @@
 							<div class="cartouche__valeur">{temoin.libelle}</div>
 							<div class="cartouche__detail">
 								{#if niveau === 'frais'}Ce guide a été contrôlé le <time
-										datetime="2026-08-02"
-										title="2 août 2026 à 14:05">2 août 2026</time
+										datetime={controle ?? undefined}
+										title={controleEnClair}>{controleEnClair}</time
 									> par l'équipe qui l'a écrit.{:else if niveau === 'vieil'}Ce guide a été contrôlé
 									le
-									<time datetime="2026-03-11" title="11 mars 2026">11 mars 2026</time>. Son contenu
-									peut avoir changé depuis.{:else}Dernier contrôle le <time
-										datetime="2025-11-06"
-										title="6 novembre 2025">6 novembre 2025</time
+									<time datetime={controle ?? undefined} title={controleEnClair}
+										>{controleEnClair}</time
+									>. Son contenu peut avoir changé depuis.{:else}Dernier contrôle le <time
+										datetime={controle ?? undefined}
+										title={controleEnClair}>{controleEnClair}</time
 									>. <strong>Vérifiez auprès de l’assistance avant de vous y fier.</strong>{/if}
 							</div>
 						</div>
@@ -234,12 +354,16 @@
 				<dl class="meta">
 					<dt>Rédaction</dt>
 					<dd>
-						Sophie Nguyen · modifié <time datetime="2026-07-29" title="29 juillet 2026 à 10:12"
-							>il y a 2 semaines</time
+						{(guide?.auteur ?? 'Sophie Nguyen') + ' · modifié '}<time
+							datetime={guide?.modifieIso ?? '2026-07-29'}
+							title={guide?.modifieLe ?? '29 juillet 2026 à 10:12'}
+							>{guide?.modifieLe ?? 'il y a 2 semaines'}</time
 						>
 					</dd>
 					<dt>Domaine</dt>
-					<dd><a href="#">Poste de travail</a></dd>
+					<dd>
+						<a href={guide?.adresseDuDomaine ?? '#'}>{guide?.domaine ?? 'Poste de travail'}</a>
+					</dd>
 				</dl>
 			</header>
 
@@ -261,259 +385,293 @@
 
 			<!-- ================= REGISTRE RÉFÉRENCE ================= -->
 			<div class="prose" id="corps-reference">
-				<p>
-					Votre mot de passe expire tous les six mois, et il peut être réinitialisé à tout moment.
-					Trois chemins existent selon l'endroit où vous êtes et l'état de votre poste. <strong
-						>Aucun d'eux ne nécessite d'appeler le support</strong
-					>, sauf le dernier cas décrit plus bas.
-				</p>
+				{#if guide !== null}{@html guide.reference}{:else}
+					<p>
+						Votre mot de passe expire tous les six mois, et il peut être réinitialisé à tout moment.
+						Trois chemins existent selon l'endroit où vous êtes et l'état de votre poste. <strong
+							>Aucun d'eux ne nécessite d'appeler le support</strong
+						>, sauf le dernier cas décrit plus bas.
+					</p>
 
-				<div class="alerte alerte--attention">
-					<div>
-						<div class="alerte__tete">
-							<span class="alerte__glyphe">ATTENTION</span> Personne ne vous demandera jamais votre mot
-							de passe
-						</div>
+					<div class="alerte alerte--attention">
 						<div>
-							Ni par téléphone, ni par courriel, ni par message. Aucun agent du support, aucun
-							responsable. Un message qui vous le demande est une tentative d'hameçonnage :
-							signalez-le sans y répondre.
+							<div class="alerte__tete">
+								<span class="alerte__glyphe">ATTENTION</span> Personne ne vous demandera jamais votre
+								mot de passe
+							</div>
+							<div>
+								Ni par téléphone, ni par courriel, ni par message. Aucun agent du support, aucun
+								responsable. Un message qui vous le demande est une tentative d'hameçonnage :
+								signalez-le sans y répondre.
+							</div>
 						</div>
 					</div>
-				</div>
 
-				<h2 id="s-portail">Depuis le portail, sur votre poste</h2>
-				<p>
-					C'est le cas courant : vous êtes connecté et vous voulez changer votre mot de passe avant
-					qu'il n'expire.
-				</p>
-				<ol>
-					<li>Ouvrez le portail interne et allez dans <strong>Mon compte</strong>.</li>
-					<li>Choisissez <strong>Changer mon mot de passe</strong>.</li>
-					<li>Saisissez l'ancien, puis le nouveau deux fois.</li>
-					<li>
-						Verrouillez puis déverrouillez votre session pour vérifier que le nouveau est bien pris
-						en compte.
-					</li>
-				</ol>
+					<h2 id="s-portail">Depuis le portail, sur votre poste</h2>
+					<p>
+						C'est le cas courant : vous êtes connecté et vous voulez changer votre mot de passe
+						avant qu'il n'expire.
+					</p>
+					<ol>
+						<li>Ouvrez le portail interne et allez dans <strong>Mon compte</strong>.</li>
+						<li>Choisissez <strong>Changer mon mot de passe</strong>.</li>
+						<li>Saisissez l'ancien, puis le nouveau deux fois.</li>
+						<li>
+							Verrouillez puis déverrouillez votre session pour vérifier que le nouveau est bien
+							pris en compte.
+						</li>
+					</ol>
 
-				<figure class="figure">
-					<button class="figure__cadre" aria-label="Agrandir le schéma des trois chemins">
-						<svg
-							viewBox="0 0 640 148"
-							width="100%"
-							height="auto"
-							role="img"
-							aria-labelledby="d-titre d-desc"
-						>
-							<title id="d-titre">Trois chemins de réinitialisation</title>
-							<desc id="d-desc"
-								>Selon la situation : session ouverte sur le poste, chemin par le portail interne.
-								Poste verrouillé, chemin par le lien « Mot de passe oublié » de l'écran de
-								connexion. En déplacement sans accès au réseau, chemin par appel au support avec
-								vérification d'identité.</desc
+					<figure class="figure">
+						<button class="figure__cadre" aria-label="Agrandir le schéma des trois chemins">
+							<svg
+								viewBox="0 0 640 148"
+								width="100%"
+								height="auto"
+								role="img"
+								aria-labelledby="d-titre d-desc"
 							>
-							<g font-family="Archivo, sans-serif" font-size="11">
-								<rect x="2" y="8" width="176" height="40" rx="6" fill="#fcfbf8" stroke="#9aa7a3" />
-								<text x="16" y="26" fill="#46585f">Votre session est ouverte</text>
-								<text x="16" y="40" font-weight="700" fill="#16222b">→ Portail interne</text>
+								<title id="d-titre">Trois chemins de réinitialisation</title>
+								<desc id="d-desc"
+									>Selon la situation : session ouverte sur le poste, chemin par le portail interne.
+									Poste verrouillé, chemin par le lien « Mot de passe oublié » de l'écran de
+									connexion. En déplacement sans accès au réseau, chemin par appel au support avec
+									vérification d'identité.</desc
+								>
+								<g font-family="Archivo, sans-serif" font-size="11">
+									<rect
+										x="2"
+										y="8"
+										width="176"
+										height="40"
+										rx="6"
+										fill="#fcfbf8"
+										stroke="#9aa7a3"
+									/>
+									<text x="16" y="26" fill="#46585f">Votre session est ouverte</text>
+									<text x="16" y="40" font-weight="700" fill="#16222b">→ Portail interne</text>
 
-								<rect x="2" y="56" width="176" height="40" rx="6" fill="#fcfbf8" stroke="#9aa7a3" />
-								<text x="16" y="74" fill="#46585f">Votre poste est verrouillé</text>
-								<text x="16" y="88" font-weight="700" fill="#16222b">→ Écran de connexion</text>
+									<rect
+										x="2"
+										y="56"
+										width="176"
+										height="40"
+										rx="6"
+										fill="#fcfbf8"
+										stroke="#9aa7a3"
+									/>
+									<text x="16" y="74" fill="#46585f">Votre poste est verrouillé</text>
+									<text x="16" y="88" font-weight="700" fill="#16222b">→ Écran de connexion</text>
 
-								<rect
-									x="2"
-									y="104"
-									width="176"
-									height="40"
-									rx="6"
-									fill="#fcfbf8"
-									stroke="#9aa7a3"
-								/>
-								<text x="16" y="122" fill="#46585f">Vous êtes en déplacement</text>
-								<text x="16" y="136" font-weight="700" fill="#16222b">→ Appel au support</text>
+									<rect
+										x="2"
+										y="104"
+										width="176"
+										height="40"
+										rx="6"
+										fill="#fcfbf8"
+										stroke="#9aa7a3"
+									/>
+									<text x="16" y="122" fill="#46585f">Vous êtes en déplacement</text>
+									<text x="16" y="136" font-weight="700" fill="#16222b">→ Appel au support</text>
 
-								<path d="M178 28h44v48h30" stroke="#9aa7a3" stroke-width="1.4" fill="none" />
-								<path d="M178 76h74" stroke="#9aa7a3" stroke-width="1.4" fill="none" />
-								<path d="M178 124h44V76h30" stroke="#9aa7a3" stroke-width="1.4" fill="none" />
-								<path d="M252 71l9 5-9 5z" fill="#9aa7a3" />
+									<path d="M178 28h44v48h30" stroke="#9aa7a3" stroke-width="1.4" fill="none" />
+									<path d="M178 76h74" stroke="#9aa7a3" stroke-width="1.4" fill="none" />
+									<path d="M178 124h44V76h30" stroke="#9aa7a3" stroke-width="1.4" fill="none" />
+									<path d="M252 71l9 5-9 5z" fill="#9aa7a3" />
 
-								<rect
-									x="266"
-									y="56"
-									width="164"
-									height="40"
-									rx="6"
-									fill="#edecf8"
-									stroke="#453ba0"
-								/>
-								<text x="280" y="74" font-weight="700" fill="#322b78">Nouveau mot de passe</text>
-								<text x="280" y="88" fill="#453ba0">12 caractères minimum</text>
+									<rect
+										x="266"
+										y="56"
+										width="164"
+										height="40"
+										rx="6"
+										fill="#edecf8"
+										stroke="#453ba0"
+									/>
+									<text x="280" y="74" font-weight="700" fill="#322b78">Nouveau mot de passe</text>
+									<text x="280" y="88" fill="#453ba0">12 caractères minimum</text>
 
-								<path d="M430 76h30" stroke="#9aa7a3" stroke-width="1.4" /><path
-									d="M460 71l9 5-9 5z"
-									fill="#9aa7a3"
-								/>
+									<path d="M430 76h30" stroke="#9aa7a3" stroke-width="1.4" /><path
+										d="M460 71l9 5-9 5z"
+										fill="#9aa7a3"
+									/>
 
-								<rect
-									x="474"
-									y="56"
-									width="164"
-									height="40"
-									rx="6"
-									fill="#e4efe8"
-									stroke="#1d6b4a"
-								/>
-								<text x="488" y="74" font-weight="700" fill="#1d6b4a">Actif sous 5 minutes</text>
-								<text x="488" y="88" fill="#1d6b4a">sur tous vos services</text>
-							</g>
-						</svg>
-					</button>
-					<figcaption>
-						<b>Schéma</b><span
-							>Les trois chemins mènent au même résultat. Cliquez pour agrandir.</span
-						>
-					</figcaption>
-				</figure>
+									<rect
+										x="474"
+										y="56"
+										width="164"
+										height="40"
+										rx="6"
+										fill="#e4efe8"
+										stroke="#1d6b4a"
+									/>
+									<text x="488" y="74" font-weight="700" fill="#1d6b4a">Actif sous 5 minutes</text>
+									<text x="488" y="88" fill="#1d6b4a">sur tous vos services</text>
+								</g>
+							</svg>
+						</button>
+						<figcaption>
+							<b>Schéma</b><span
+								>Les trois chemins mènent au même résultat. Cliquez pour agrandir.</span
+							>
+						</figcaption>
+					</figure>
 
-				<h2 id="s-verrouille">Depuis l'écran de connexion, poste verrouillé</h2>
-				<p>
-					Si vous avez oublié votre mot de passe et que vous ne pouvez plus ouvrir votre session,
-					utilisez le lien <em>Mot de passe oublié</em> sous les champs de connexion. Un code vous est
-					envoyé sur votre téléphone professionnel.
-				</p>
+					<h2 id="s-verrouille">Depuis l'écran de connexion, poste verrouillé</h2>
+					<p>
+						Si vous avez oublié votre mot de passe et que vous ne pouvez plus ouvrir votre session,
+						utilisez le lien <em>Mot de passe oublié</em> sous les champs de connexion. Un code vous est
+						envoyé sur votre téléphone professionnel.
+					</p>
 
-				<div class="alerte alerte--astuce">
-					<div>
-						<div class="alerte__tete">
-							<span class="alerte__glyphe">ASTUCE</span> Le code arrive rarement en moins de dix secondes
-						</div>
+					<div class="alerte alerte--astuce">
 						<div>
-							Attendez une minute avant de le redemander : chaque nouvelle demande annule la
-							précédente, et beaucoup de blocages viennent de là.
+							<div class="alerte__tete">
+								<span class="alerte__glyphe">ASTUCE</span> Le code arrive rarement en moins de dix secondes
+							</div>
+							<div>
+								Attendez une minute avant de le redemander : chaque nouvelle demande annule la
+								précédente, et beaucoup de blocages viennent de là.
+							</div>
 						</div>
 					</div>
-				</div>
 
-				<h2 id="s-deplacement">En déplacement, sans accès au réseau interne</h2>
-				<p>
-					Appelez le support. Votre identité sera vérifiée par une question convenue à votre arrivée
-					dans l'entreprise. Si vous ne vous en souvenez pas, le support passera par votre
-					responsable hiérarchique — comptez alors une demi-journée.
-				</p>
+					<h2 id="s-deplacement">En déplacement, sans accès au réseau interne</h2>
+					<p>
+						Appelez le support. Votre identité sera vérifiée par une question convenue à votre
+						arrivée dans l'entreprise. Si vous ne vous en souvenez pas, le support passera par votre
+						responsable hiérarchique — comptez alors une demi-journée.
+					</p>
 
-				<h2 id="s-regles">Ce que doit contenir le nouveau mot de passe</h2>
-				<div class="tableau-boite">
-					<table>
-						<thead><tr><th>Règle</th><th>Détail</th></tr></thead>
-						<tbody>
-							<tr><td>Longueur</td><td>12 caractères au minimum</td></tr>
-							<tr><td>Composition</td><td>Aucune contrainte de caractères spéciaux</td></tr>
-							<tr><td>Réutilisation</td><td>Différent des 5 derniers</td></tr>
-							<tr><td>Validité</td><td>6 mois</td></tr>
-							<tr><td>Prise en compte</td><td>5 minutes sur l'ensemble des services</td></tr>
-						</tbody>
-					</table>
-				</div>
-				<p>
-					Une phrase de passe est plus sûre et plus facile à retenir qu'une suite de symboles. <mark
-						>Quatre mots sans rapport entre eux</mark
-					> valent mieux qu'un mot compliqué.
-				</p>
+					<h2 id="s-regles">Ce que doit contenir le nouveau mot de passe</h2>
+					<div class="tableau-boite">
+						<table>
+							<thead><tr><th>Règle</th><th>Détail</th></tr></thead>
+							<tbody>
+								<tr><td>Longueur</td><td>12 caractères au minimum</td></tr>
+								<tr><td>Composition</td><td>Aucune contrainte de caractères spéciaux</td></tr>
+								<tr><td>Réutilisation</td><td>Différent des 5 derniers</td></tr>
+								<tr><td>Validité</td><td>6 mois</td></tr>
+								<tr><td>Prise en compte</td><td>5 minutes sur l'ensemble des services</td></tr>
+							</tbody>
+						</table>
+					</div>
+					<p>
+						Une phrase de passe est plus sûre et plus facile à retenir qu'une suite de symboles. <mark
+							>Quatre mots sans rapport entre eux</mark
+						> valent mieux qu'un mot compliqué.
+					</p>
 
-				<h2 id="s-particuliers">Cas particuliers</h2>
-				<ul>
-					<li>
-						<strong>Compte partagé d'équipe</strong> — la procédure est différente et suivie par
-						l'équipe technique. Elle est décrite dans
-						<span class="lien-prive" title="Cette ressource n'est pas publique"
-							>une ressource réservée aux équipes techniques</span
+					<h2 id="s-particuliers">Cas particuliers</h2>
+					<ul>
+						<li>
+							<strong>Compte partagé d'équipe</strong> — la procédure est différente et suivie par
+							l'équipe technique. Elle est décrite dans
+							<span class="lien-prive" title="Cette ressource n'est pas publique"
+								>une ressource réservée aux équipes techniques</span
+							>.
+						</li>
+						<li>
+							<strong>Vous n'arrivez plus à accéder à une application précise</strong> — ce n'est
+							peut-être pas votre mot de passe. Voyez
+							<a class="lien-int" href="#">Demander un accès à une application</a>.
+						</li>
+						<li>
+							<strong>Téléphone professionnel perdu</strong> — signalez-le d'abord, la
+							réinitialisation viendra ensuite. Voyez
+							<a class="lien-int" href="#">Signaler un incident au support</a>.
+						</li>
+					</ul>
+
+					<p>
+						La politique de mots de passe suit les recommandations publiques de l'<a
+							class="lien-ext"
+							href="https://cyber.gouv.fr"
+							target="_blank"
+							rel="noopener">ANSSI</a
 						>.
-					</li>
-					<li>
-						<strong>Vous n'arrivez plus à accéder à une application précise</strong> — ce n'est
-						peut-être pas votre mot de passe. Voyez
-						<a class="lien-int" href="#">Demander un accès à une application</a>.
-					</li>
-					<li>
-						<strong>Téléphone professionnel perdu</strong> — signalez-le d'abord, la
-						réinitialisation viendra ensuite. Voyez
-						<a class="lien-int" href="#">Signaler un incident au support</a>.
-					</li>
-				</ul>
-
-				<p>
-					La politique de mots de passe suit les recommandations publiques de l'<a
-						class="lien-ext"
-						href="https://cyber.gouv.fr"
-						target="_blank"
-						rel="noopener">ANSSI</a
-					>.
-				</p>
+					</p>
+				{/if}
 			</div>
 
 			<!-- ================= REGISTRE OPÉRATIONNEL ================= -->
 			<div class="prose" id="corps-operationnel" hidden>
-				<div class="alerte alerte--astuce">
-					<div>
-						<div class="alerte__tete">
-							<span class="alerte__glyphe">EN BREF</span> Version courte
-						</div>
+				{#if guide !== null}{@html guide.operationnel ?? ''}{:else}
+					<div class="alerte alerte--astuce">
 						<div>
-							Pour le détail, les cas particuliers et les règles, revenez au <strong
-								>guide complet</strong
-							>.
+							<div class="alerte__tete">
+								<span class="alerte__glyphe">EN BREF</span> Version courte
+							</div>
+							<div>
+								Pour le détail, les cas particuliers et les règles, revenez au <strong
+									>guide complet</strong
+								>.
+							</div>
 						</div>
 					</div>
-				</div>
 
-				<h2 id="o-faire">Ce qu'il faut faire</h2>
-				<ol>
-					<li>
-						Session ouverte&nbsp;? Portail interne → <strong>Mon compte</strong> →
-						<strong>Changer mon mot de passe</strong>.
-					</li>
-					<li>
-						Poste verrouillé&nbsp;? <strong>Mot de passe oublié</strong> sur l'écran de connexion, puis
-						le code reçu par téléphone.
-					</li>
-					<li>En déplacement sans réseau&nbsp;? Appelez le support.</li>
-				</ol>
+					<h2 id="o-faire">Ce qu'il faut faire</h2>
+					<ol>
+						<li>
+							Session ouverte&nbsp;? Portail interne → <strong>Mon compte</strong> →
+							<strong>Changer mon mot de passe</strong>.
+						</li>
+						<li>
+							Poste verrouillé&nbsp;? <strong>Mot de passe oublié</strong> sur l'écran de connexion, puis
+							le code reçu par téléphone.
+						</li>
+						<li>En déplacement sans réseau&nbsp;? Appelez le support.</li>
+					</ol>
 
-				<h2 id="o-retenir">À retenir</h2>
-				<ul class="taches">
-					<li>
-						<input type="checkbox" disabled /><span
-							>12 caractères minimum, différent des 5 derniers.</span
-						>
-					</li>
-					<li>
-						<input type="checkbox" disabled /><span
-							>Actif sous 5 minutes sur tous les services.</span
-						>
-					</li>
-					<li>
-						<input type="checkbox" disabled /><span
-							>Personne ne vous demandera jamais votre mot de passe.</span
-						>
-					</li>
-				</ul>
+					<h2 id="o-retenir">À retenir</h2>
+					<ul class="taches">
+						<li>
+							<input type="checkbox" disabled /><span
+								>12 caractères minimum, différent des 5 derniers.</span
+							>
+						</li>
+						<li>
+							<input type="checkbox" disabled /><span
+								>Actif sous 5 minutes sur tous les services.</span
+							>
+						</li>
+						<li>
+							<input type="checkbox" disabled /><span
+								>Personne ne vous demandera jamais votre mot de passe.</span
+							>
+						</li>
+					</ul>
+				{/if}
 			</div>
 		</article>
 
 		<!-- ---------- Colonne droite, réduite ---------- -->
 		<aside class="aparte">
+			<!--
+				Les pièces jointes de la note demandée. Le panneau reste, la liste
+				suit : une note sans pièce jointe rend un corps vide, ce qui est
+				l'état vide de la zone, jamais un exemple laissé là.
+			-->
 			<section class="panneau">
 				<div class="panneau__tete"><span class="etiq">Pièces jointes</span></div>
 				<div class="panneau__corps panneau__corps--serre">
-					<a class="pj" href="#">
-						<span class="pj__ext">PDF</span>
-						<span>
-							<span class="pj__nom">Aide-mémoire — écran de connexion</span>
-							<span class="pj__sous">320 Ko</span>
-						</span>
-					</a>
+					{#if guide !== null}{#each guide.piecesJointes as pj (pj.nom)}<a
+								class="pj"
+								href={pj.adresse}
+							>
+								<span class="pj__ext">{pj.marque}</span>
+								<span>
+									<span class="pj__nom">{pj.nom}</span>
+									<span class="pj__sous">{pj.taille}</span>
+								</span>
+							</a>{/each}{:else}<a class="pj" href="#">
+							<span class="pj__ext">PDF</span>
+							<span>
+								<span class="pj__nom">Aide-mémoire — écran de connexion</span>
+								<span class="pj__sous">320 Ko</span>
+							</span>
+						</a>{/if}
 				</div>
 			</section>
 
@@ -521,8 +679,7 @@
 				<div class="panneau__tete"><span class="etiq">Ce guide</span></div>
 				<div class="panneau__corps">
 					<div style="font-size:var(--t-petit);color:var(--c-encre-2);line-height:1.6">
-						Écrit et maintenu par l'équipe Poste de travail. Le signal en tête indique la dernière
-						date à laquelle son contenu a été contrôlé.
+						{`Écrit et maintenu par l'équipe ${guide?.domaine ?? 'Poste de travail'}. Le signal en tête indique la dernière date à laquelle son contenu a été contrôlé.`}
 					</div>
 					<button class="btn btn--plein" style="margin-top:var(--e-3)">
 						<svg
@@ -568,3 +725,4 @@
 </div>
 
 <div class="notifs" id="notifs" role="status" aria-live="polite"></div>
+<!-- eslint-enable svelte/no-navigation-without-resolve, svelte/no-at-html-tags -->

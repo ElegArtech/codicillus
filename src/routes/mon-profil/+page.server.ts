@@ -14,52 +14,70 @@
  * INATTEIGNABLE, et le ferme par défaut plutôt que de le supposer impossible.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LE CHARGEUR PASSE, ET CE QU'IL NE PEUT PAS PASSER
+ * CE QUE LE CHARGEUR PASSE — L'ÉCRAN EST BRANCHÉ SUR LA BASE
  *
- * `src/vues/V-25.svelte` déclare DEUX propriétés — `vecteur` et `notes` — et
- * lit l'identité qu'il affiche dans `seeds/corpus.ts`. Le chargeur passe donc
- * les deux, et rien d'autre :
+ *   `notes`             — le périmètre de lecture de l'appelant, jamais le
+ *                         corpus. La coquille en déduit l'arborescence du rail :
+ *                         le corpus entier publierait la structure interne à qui
+ *                         n'y a aucun droit (`RG-ACC-01`).
+ *   `vecteur`           — l'onglet, de l'adresse ; le verrou, de la base.
+ *   `profilDuCompte`    — le titulaire de la session, `profilAffiche()`. C'est
+ *                         lui que l'entête, l'onglet Identité et le panneau
+ *                         Session rendent désormais, et non plus `MOI`.
+ *   `preferenceDeSession` — `sessions.souvenir` de la session COURANTE.
+ *   `contributions`     — CE QUI SE COMPTE EST COMPTÉ, LE RESTE EST DÉCLARÉ
+ *                         INDISPONIBLE. `verifications.compte_id` existe : les
+ *                         vérifications sont comptées en base. `relations` ne
+ *                         porte pas l'auteur du lien : « liens internes créés »
+ *                         vaut `null`, et l'écran affiche un état neutre plutôt
+ *                         qu'un zéro qui mentirait (`P-02`).
+ *   `relations`         — celles du PÉRIMÈTRE, d'où sortent les citations et la
+ *                         note phare. Sans elles, l'écran comptait sur le jeu de
+ *                         semence.
+ *   `activite`          — VIDE. Aucune table d'événements n'existe (§1 de
+ *                         `profil.ts`) ; l'onglet rend alors l'encouragement,
+ *                         qui est une position du gel et non un écran inventé.
+ *   `compte`            — le titulaire, pour la coquille. Les trois champs sont
+ *                         des unions du jeu de semence : la conversion est faite
+ *                         au bord, comme `src/lib/auth/depot.ts` la fait déjà.
  *
- *   `notes`   — le périmètre de lecture de l'appelant, jamais le corpus. La
- *               coquille en déduit l'arborescence du rail : le corpus entier
- *               publierait la structure interne à qui n'y a aucun droit
- *               (`RG-ACC-01`).
- *   `vecteur` — l'onglet, de l'adresse ; le verrou, de la base.
- *
- * L'IDENTITÉ AFFICHÉE RESTE CELLE DU JEU DE SEMENCE. C'est l'écart principal
- * de ce lot, déclaré et non comblé : aucune propriété de V-25 ne reçoit un
- * profil, et `src/vues/` est hors du périmètre de ce lot — cinq lots y
- * travaillent en parallèle. Le profil RÉEL est lu ici (`lireLeProfil`), il
- * gouverne le verrou et le changement de mot de passe, et il n'est PAS renvoyé
- * à la page : une donnée qu'aucun nœud ne rend n'a rien à faire dans la charge
- * sérialisée du document (`ADR-006`, esprit).
+ * `distinctions` N'EST PAS PASSÉE : le barème est un CATALOGUE de critères, pas
+ * une mesure. Ses six seuils sont ceux du jeu de semence, la MESURE vient des
+ * statistiques ci-dessus, et aucune table ne porte de barème. Le passer vide
+ * effacerait l'écran ; le passer tel quel n'affirme rien de faux.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * LES TROIS ACTIONS EXISTENT, ET AUCUNE SOUMISSION NE LES ATTEINT ENCORE
+ * LES QUATRE ACTIONS SONT TOUTES NOMMÉES, ET C'EST OBLIGATOIRE
  *
- * Les cinq formulaires du gel ne portent NI `method` NI `action` (`ARB-054`
- * §3), et les champs de V-25 n'ont que des `id`. C'est exactement la situation
- * de `POST /connexion` en `T-012` : les actions sont écrites, elles portent les
- * noms de champ du gel — `actuel`, `nouveau`, `confirmation`, `p-session` —, et
- * elles attendent le lot qui reliera le formulaire. Rien ne sera à renommer.
+ * SvelteKit rend **500** si une action par défaut cohabite avec une action
+ * nommée sur la même page. Cette page en porte quatre : aucune ne peut donc
+ * être l'action par défaut. `+page.svelte` les vise par `?/nom`.
  *
  * `ARB-054` §4 borne le reste : `/deconnexion` est la SEULE action d'écriture
- * en GET du produit. Les trois d'ici sont des POST.
+ * en GET du produit. Les quatre d'ici sont des POST.
  */
 import { fail, error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { lireSeuils } from '$lib/donnees/lecture';
 import {
 	changerLeMotDePasse,
+	compterLesVerifications,
 	ecrirePreferenceDeSession,
+	initialesDuNom,
+	enregistrerLIdentite,
 	fermerLesAutresSessions,
 	lireLeProfil,
 	lireLesNotesDuPerimetre,
+	lirePreferenceDeSession,
 	ongletDemande,
+	profilAffiche,
 	vecteurDeV25
 } from '$lib/donnees/profil';
+import { lireRelationsLisibles } from '$lib/donnees/outils';
+import { ouvrirLAcces } from '$lib/donnees/rangement';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
+import type { NomDAuteur, NomDeDomaine, RoleDeCompte } from '../../../seeds/corpus';
 
 /**
  * Le titulaire de la requête — son compte, sa session, son profil en base.
@@ -83,24 +101,77 @@ async function titulaire(locals: App.Locals) {
 }
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	const { base, identite, profil } = await titulaire(locals);
+	const { base, identite, sessionId, profil } = await titulaire(locals);
 
 	/* L'instant est pris ici, une fois par requête, et les seuils viennent de la
 	   base : `P-01` veut une seule définition de la fraîcheur, seuils compris.
 	   V-25 n'affiche aucun signal de fraîcheur, mais `lireNotes()` en calcule un
 	   pour toute note qu'il rend, et il n'existe pas deux façons de l'appeler. */
 	const contexte = { maintenant: new Date(), seuils: await lireSeuils(base) };
+	const affiche = profilAffiche(profil);
+
+	/* Le périmètre sert DEUX fois — les relations lisibles et rien d'autre. Il
+	   est ouvert une seule fois : `ouvrirLAcces()` est l'unique porte du dépôt
+	   vers les droits résolus, et le rouvrir en dupliquerait la décision. */
+	const acces = await ouvrirLAcces(base, identite, contexte.maintenant);
 
 	return {
 		vecteur: vecteurDeV25(
 			ongletDemande(url.searchParams.get('onglet')),
 			profil.motDePasseVerrouille
 		),
-		notes: await lireLesNotesDuPerimetre(base, identite, contexte)
+		notes: await lireLesNotesDuPerimetre(base, identite, contexte),
+		profilDuCompte: affiche,
+		preferenceDeSession: await lirePreferenceDeSession(base, sessionId),
+		/* `verifiees` est COMPTÉ ; `liens` est déclaré indisponible, parce que la
+		   table des relations ne porte pas l'auteur du lien. Deux informations
+		   différentes, deux rendus différents (`P-02`). */
+		contributions: {
+			[affiche.nom]: {
+				verifiees: await compterLesVerifications(base, identite.compteId),
+				liens: null
+			}
+		},
+		relations: await lireRelationsLisibles(base, acces.perimetre),
+		/* Aucune table d'événements : le flux est vide, et l'écran le dit. */
+		activite: [],
+		compte: {
+			prenom: affiche.nom.split(' ')[0] ?? affiche.nom,
+			nom: affiche.nom as NomDAuteur,
+			initiales: initialesDuNom(affiche.nom),
+			domaine: affiche.domaine as NomDeDomaine,
+			role: affiche.role as RoleDeCompte
+		}
 	};
 };
 
 export const actions: Actions = {
+	/**
+	 * LE NOM AFFICHÉ ET L'ADRESSE ÉLECTRONIQUE — `#p-affiche`, `#p-courriel`,
+	 * `#enregistrer-identite` (`V-25:1060-1093`).
+	 *
+	 * Le gel intitule le panneau « Ce que vous pouvez modifier » et lui oppose
+	 * « Attribué par l'administration » : la frontière est lue, pas choisie. Le
+	 * refus d'un compte verrouillé est pris dans `enregistrerLIdentite()`, avant
+	 * toute validation de saisie, pour la même raison que le changement de mot de
+	 * passe — `RG-CPT-01`, un compte partagé ne se réattribue pas d'ici.
+	 */
+	enregistrerLIdentite: async ({ locals, request }) => {
+		const { base, profil } = await titulaire(locals);
+		const champs = await request.formData();
+		const issue = await enregistrerLIdentite(base, {
+			profil,
+			saisies: {
+				nom: String(champs.get('p-affiche') ?? ''),
+				courriel: String(champs.get('p-courriel') ?? '')
+			},
+			maintenant: new Date()
+		});
+		if (issue === 'verrouille') return fail(403, { issue });
+		if (issue !== 'enregistre') return fail(400, { issue });
+		return { issue };
+	},
+
 	/**
 	 * « Rester connecté sur cet appareil » — `input#p-session` de `V-25:1225`.
 	 *
