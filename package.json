@@ -41,7 +41,7 @@
 		"verif:convertisseur:sonde": "node verif/convertisseur.mjs --sonde=second-convertisseur && node verif/convertisseur.mjs --sonde=nom-redeclare && node verif/convertisseur.mjs --sonde=chemin-detourne",
 		"verif:convertisseur:marqueurs": "node verif/convertisseur.mjs --marqueurs",
 		"verif:donnees": "node verif/donnees.mjs",
-		"verif:donnees:sonde": "node verif/donnees.mjs --sonde=date-decalee && node verif/donnees.mjs --sonde=optionnel-pose && ! node verif/donnees.mjs --sonde=temoin-inerte",
+		"verif:donnees:sonde": "node verif/donnees.mjs --sonde=date-decalee && node verif/donnees.mjs --sonde=optionnel-pose && node verif/donnees.mjs --sonde=ordre-etiquettes && ! node verif/donnees.mjs --sonde=temoin-inerte",
 		"verif:tracabilite": "node verif/tracabilite.mjs",
 		"verif:tracabilite:sonde": "node verif/tracabilite.mjs --sonde=pointeur-invente && node verif/tracabilite.mjs --sonde=piece-retiree && ! node verif/tracabilite.mjs --sonde=temoin-inerte",
 		"verif:menus": "node verif/menus.mjs --seuil-gel=3589",
