@@ -403,7 +403,7 @@ export function refuserLAdresse(chemin: string): never {
 	   dans la signature parce que `T-116` en aura besoin, et parce qu'une
 	   signature qui ne prend rien ne dit pas qu'elle ne prend QUE cela. */
 	void chemin;
-	error(404);
+	error(404, MESSAGE_INTROUVABLE);
 }
 
 /* ═══════════════════════════════════════════ Univers et domaines ═══════ */
@@ -701,3 +701,24 @@ async function lirePiecesJointesLisibles(
 
 	return new Map(lignes.map((l) => [l.identifiant, l.nombre]));
 }
+
+/**
+ * LE MESSAGE DU REFUS, ET POURQUOI IL EST CELUI DU CADRE.
+ *
+ * `error(404)` sans message fait porter à la charge sérialisée `« Error: 404 »`,
+ * là où une adresse qu'AUCUNE route ne dessert porte `« Not Found »` — le défaut
+ * de SvelteKit (`respond.js:716`). Un octet, et il distingue « cette adresse
+ * existe et t'est refusée » de « cette adresse n'existe pas ». C'est exactement
+ * ce que `RG-ACC-04` interdit, et la batterie 6 ne le voit pas : ses couples ne
+ * portent que sur des adresses de ressource, dont les deux côtés passent par le
+ * MÊME chargeur et rendent donc le même message.
+ *
+ * Mesuré par `T-040` sur deux familles indépendantes — `/importer` contre une
+ * adresse inconnue, `/univers/aaa/bbb/signets` contre `/aaa/bbb/ccc/ddd` — et
+ * porté par les trente routes montées.
+ *
+ * Le produit adopte donc le message du cadre, partout. Aucun refus n'a de texte
+ * propre, et il n'y a rien à tenir à jour : le jour où SvelteKit changerait le
+ * sien, le contrôle qui l'exige rougirait.
+ */
+export const MESSAGE_INTROUVABLE = 'Not Found';

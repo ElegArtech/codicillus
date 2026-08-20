@@ -19,7 +19,7 @@
  * ═════════════════════════════════════════════════════════════════════════
  * UN SEUL CHEMIN DE SORTIE — ADR-007, RG-ACC-04
  *
- * Il n'y a qu'un `error(404)` dans ce fichier, sans message, et c'est délibéré.
+ * Il n'y a qu'un `error(404, MESSAGE_INTROUVABLE)` dans ce fichier, sans message, et c'est délibéré.
  * Quatre raisons de refuser — segments inconnus, module Signets éteint, domaine
  * hors périmètre, et pour les deux autres adresses l'absence de droit de
  * rédaction — passent toutes par `resoudreLAccesAuxSignets()`, qui rend
@@ -51,6 +51,7 @@ import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { contexteDeRequete, resoudreLAccesAuxSignets, vecteurDeV22 } from '$lib/donnees/signets';
 import type { PageServerLoad } from './$types';
+import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const base = basePartagee();
@@ -60,7 +61,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		locals.identite,
 		{ univers: params.univers, domaine: params.domaine }
 	);
-	if (!acces.trouve) error(404);
+	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
 	return {
 		vecteur: vecteurDeV22(acces.ressource.domaine, acces.ressource.ecriture),

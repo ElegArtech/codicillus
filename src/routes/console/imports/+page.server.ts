@@ -9,7 +9,7 @@
  * transverse des imports de l'instance, de périmètre administrateur », et
  * qu'aucune route de rapport d'import n'est exposée hors console. La décision
  * est prise par `resoudreLaConsole()` de `src/lib/donnees/consoles.ts` ; le seul
- * `error(404)` du fichier est SANS MESSAGE (`ADR-007`).
+ * `error(404, MESSAGE_INTROUVABLE)` du fichier est SANS MESSAGE (`ADR-007`).
  *
  * ═════════════════════════════════════════════════════════════════════════
  * L'ÉCRAN, PAS LE TRAITEMENT — ET LE JOURNAL EST STRUCTURELLEMENT VIDE
@@ -37,11 +37,12 @@ import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
 import type { PageServerLoad } from './$types';
+import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
-	if (!acces.trouve) error(404);
+	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
 	return { notes: acces.ressource.notes };
 };
