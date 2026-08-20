@@ -1,0 +1,166 @@
+/**
+ * LES PANNEAUX LATÉRAUX DE LA LECTURE D'UNE NOTE — la matière que V-14 écrivait
+ * au balisage.
+ *
+ * `src/vues/V-14.svelte` transcrivait sept panneaux du gel avec leur contenu
+ * d'exemple : deux notes voisines nommées, deux pièces jointes, quatre
+ * relations, trois rétroliens, quatre vérifications et trois notes connexes.
+ * Aucun ne venait de la base, et tous s'affichaient à l'identique quelle que
+ * fût la note ouverte — la « valeur illustrative » que P-02 proscrit.
+ *
+ * CE FICHIER NE PORTE QUE DES FORMES, JAMAIS DE REQUÊTE. Il est importé par la
+ * vue, donc par le paquet servi au navigateur : y importer le schéma de la base
+ * l'y ferait entrer avec lui. Les requêtes vivent dans le chargeur de la route,
+ * `src/routes/notes/[identifiant]/+page.server.ts`, et lui seul.
+ *
+ * VOCABULAIRE CONTRACTUEL (`CLAUDE.md` §3) : Note, Relation, Étiquette,
+ * Domaine, Dossier, Vérifier. Aucun synonyme n'apparaît dans les noms ci-dessous.
+ */
+import type { NiveauFraicheur } from '../fraicheur';
+
+/* ═══════════════════════════════════════════ Le panneau « Position » ════ */
+
+/**
+ * UNE NOTE VOISINE — celle qui précède, celle qui suit, dans le même dossier.
+ *
+ * L'ORDRE EST CELUI DU CORPUS SERVI, et c'est le seul que le produit possède :
+ * `lireNotes()` classe par identifiant, et toutes les listes du produit en
+ * héritent. Aucune source ne définit un ordre propre au panneau « Position » ;
+ * en inventer un (par titre, par date, par pertinence) serait une décision
+ * fonctionnelle prise en exécution. L'écart au gel — qui montre « Planifier »
+ * avant et « Purger » après, ce qu'aucun ordre dérivable ne redonne — est
+ * signalé au rapport du lot.
+ *
+ * `null` des deux côtés quand la note est seule dans son dossier : le panneau
+ * n'affiche alors que sa ligne de rangement.
+ */
+export interface VoisineAffichee {
+	readonly identifiant: string;
+	/** Le sens du gel : « ← » pour la précédente, « → » pour la suivante. */
+	readonly sens: '←' | '→';
+	readonly titre: string;
+	/** Le niveau porté par la note voisine — jamais recalculé ici (P-01). */
+	readonly fraicheur: NiveauFraicheur;
+	/** Son ancienneté, entrée de la forme compacte du libellé (ARB-029). */
+	readonly jours: number;
+}
+
+/* ═══════════════════════════════════════ Le panneau « Pièces jointes » ══ */
+
+/** Une pièce jointe, dans les quatre formes que le gel rend côte à côte. */
+export interface PieceAffichee {
+	readonly nom: string;
+	/** Le cartouche d'extension — « PDF », « CSV ». */
+	readonly extension: string;
+	/** La taille en clair — « 1,2 Mo », « 18 Ko ». */
+	readonly taille: string;
+	/** La date de dépôt en toutes lettres. */
+	readonly depose: string;
+}
+
+/** Un kibioctet, et son carré. Les deux seules bornes que le gel exerce. */
+const KO = 1024;
+const MO = KO * KO;
+
+/**
+ * LA TAILLE EN CLAIR — « 1,2 Mo », « 18 Ko ».
+ *
+ * Les deux formes viennent du gel (`V-14:1833`, `:1838`) et rien d'autre n'y
+ * est écrit : l'unité change au mébioctet, le mébioctet porte une décimale, le
+ * kibioctet n'en porte aucune, et le séparateur décimal est la virgule
+ * française. Ce sont les deux seuls cas que le gel exerce ; l'octet nu est la
+ * conséquence de la même règle, non un troisième format inventé.
+ *
+ * ELLE N'EST EXERCÉE PAR AUCUNE DONNÉE DU DÉPÔT : `pieces_jointes` est vide,
+ * et `P-5` dit ce que vaut une règle qu'aucun cas ne sollicite. Le fait est
+ * signalé au rapport plutôt que caché.
+ */
+export function tailleEnClair(octets: number): string {
+	if (octets >= MO) {
+		return `${(octets / MO).toFixed(1).replace('.', ',')} Mo`;
+	}
+	if (octets >= KO) return `${Math.round(octets / KO)} Ko`;
+	return `${octets} o`;
+}
+
+/**
+ * LE CARTOUCHE D'EXTENSION — le gel écrit « PDF » et « CSV » à côté d'un nom
+ * qui, lui, ne la porte pas.
+ *
+ * Elle se lit sur le nom du fichier, qui est la seule chose que l'utilisateur a
+ * nommée ; le type de média sert de repli quand le nom n'a pas de suffixe.
+ * Aucune table de correspondance n'est écrite : inventer une traduction de
+ * types de média serait combler.
+ */
+export function extensionEtNom(nom: string, typeMedia: string): { extension: string; nom: string } {
+	const point = nom.lastIndexOf('.');
+	const suffixe = point > 0 ? nom.slice(point + 1) : '';
+	if (suffixe !== '' && suffixe.length <= 4 && /^[a-z0-9]+$/i.test(suffixe)) {
+		return { extension: suffixe.toUpperCase(), nom: nom.slice(0, point) };
+	}
+	const sousType = typeMedia.split('/').at(-1) ?? '';
+	return { extension: (sousType === '' ? 'FIC' : sousType.slice(0, 4)).toUpperCase(), nom };
+}
+
+/* ══════════════════════════════════════════ Le panneau « Relations » ════ */
+
+/**
+ * UNE NOTE AU BOUT D'UNE RELATION — son titre, son type, son domaine, exactement
+ * ce que le gel montre : « pg-prod-01 · [Serveur] Infrastructure ».
+ */
+export interface NoteLiee {
+	readonly identifiant: string;
+	readonly titre: string;
+	/** Le type de la note, rendu en pastille. */
+	readonly type: string;
+	readonly domaine: string;
+}
+
+/**
+ * UN GROUPE DE RELATIONS — un libellé, et les notes qu'il relie.
+ *
+ * Le libellé est celui du TYPE DE RELATION, dans le sens où la relation est
+ * lue : `libelle_sortant` quand la note lue est la source (« S'applique à »),
+ * `libelle_entrant` quand elle est la cible (« Est référencée par »). Le gel
+ * porte les deux sens dans le même panneau, et ce type ne les distingue pas
+ * autrement que par le libellé — c'est déjà ce que le gel fait.
+ */
+export interface GroupeDeRelations {
+	readonly libelle: string;
+	readonly notes: readonly NoteLiee[];
+}
+
+/* ══════════════════════════════════════════ Le panneau « Rétroliens » ═══ */
+
+/** Une note qui cite celle qu'on lit — `RG-M05-02`, déduite, jamais saisie. */
+export interface RetrolienAffiche {
+	readonly identifiant: string;
+	readonly titre: string;
+	readonly domaine: string;
+}
+
+/* ══════════════════════════ Le panneau « Historique de vérification » ═══ */
+
+/**
+ * UNE ATTESTATION DU JOURNAL — `M06.2`, « l'historique complet des
+ * vérifications est conservé ».
+ *
+ * `par` vaut `null` quand l'entrée ne porte aucun compte : la colonne est
+ * effaçable, et `RG-M15-02` fait de l'anonymat un état normal du journal.
+ */
+export interface VerificationAffichee {
+	readonly par: string | null;
+	readonly iso: string;
+	readonly jour: string;
+}
+
+/* ═══════════════════════════════════════════════════ L'ensemble ═════════ */
+
+/** Tout ce que les panneaux latéraux de V-14 lisent, et rien de plus. */
+export interface PanneauxDeLaNote {
+	readonly voisines: readonly VoisineAffichee[];
+	readonly pieces: readonly PieceAffichee[];
+	readonly relations: readonly GroupeDeRelations[];
+	readonly retroliens: readonly RetrolienAffiche[];
+	readonly verifications: readonly VerificationAffichee[];
+}
