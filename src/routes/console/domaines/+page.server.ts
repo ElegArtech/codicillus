@@ -36,6 +36,7 @@ import {
 	accesALaConsole,
 	contexteDeRequete,
 	lireLeDetailDesDomaines,
+	lireLesDesignationsDeDomaine,
 	resoudreLaConsole
 } from '$lib/donnees/consoles';
 import { moteurPartage } from '$lib/recherche/acces';
@@ -53,7 +54,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		univers: acces.ressource.univers,
 		domaines: acces.ressource.domaines,
 		compte: acces.ressource.compte,
-		detailDomaines: await lireLeDetailDesDomaines(base)
+		detailDomaines: await lireLeDetailDesDomaines(base),
+		designations: await lireLesDesignationsDeDomaine(base)
 	};
 };
 

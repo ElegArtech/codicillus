@@ -85,7 +85,7 @@ function noeud<T extends Element>(racine: ParentNode, selecteur: string): T | nu
  * programmée ; sans lui, il répond par une redirection destinée à un formulaire
  * natif, et la réponse n'est pas lisible ici.
  */
-async function envoyer(
+export async function envoyerAUneAction(
 	document: Document,
 	action: string,
 	champs: Record<string, string>
@@ -179,133 +179,32 @@ export function cablerLaConfiguration(racine: ParentNode): Debranchement {
 		attaches.ecouter(enregistrer, 'click', () => {
 			const charge: Record<string, string> = {};
 			for (const champ of champs) charge[champ.id] = champ.value;
-			void envoyer(enregistrer.ownerDocument, '?/enregistrer', charge);
+			void envoyerAUneAction(enregistrer.ownerDocument, '?/enregistrer', charge);
 		});
 	}
 
 	return attaches.debranchement();
 }
 
-/* ═══════════════════════════════ Les suppressions — V-27, V-28, V-29 ════ */
+/* ═══════════════════════════════ Les suppressions ═══════════════════════ */
 
-/** Ce qu'un écran de suppression a besoin de savoir de sa propre page. */
-export interface OptionsDeSuppression {
-	/**
-	 * Comment reconnaître le bouton destructif d'une ligne, et ce qu'il désigne.
-	 *
-	 * Le gel ne pose aucun attribut de donnée sur ces boutons : ils se
-	 * reconnaissent par leur `aria-label`, que la vue compose avec le nom de
-	 * l'objet — « Supprimer l'univers Production », « Supprimer le domaine
-	 * Infrastructure ». La fonction rend le NOM, ou `null` si le bouton n'est pas
-	 * un bouton de suppression.
-	 */
-	readonly designer: (bouton: HTMLElement) => string | null;
-	/**
-	 * Le nom de l'action, et les champs qu'elle attend pour l'objet désigné.
-	 * Rendre `null` refuse l'envoi — c'est ce qui tient la confirmation par le
-	 * nom exact de `RG-M14-02`.
-	 */
-	readonly requete: (nom: string, racine: ParentNode) => Record<string, string> | null;
-	/**
-	 * Le contrôle de saisie, quand l'écran en porte un. Appelé à chaque frappe :
-	 * il rend `true` quand le geste est permis. Absent, le bouton de validation
-	 * est actif dès l'ouverture — c'est le cas de V-27 et V-29, dont les
-	 * dialogues ne demandent aucune saisie.
-	 */
-	readonly saisieConforme?: (nom: string, racine: ParentNode) => boolean;
-}
-
-/**
- * LE CÂBLAGE D'UN DIALOGUE DE SUPPRESSION — le motif commun de V-27, V-28, V-29.
+/*
+ * IL N'Y A PAS DE CÂBLAGE DE SUPPRESSION ICI, ET C'EST UNE DÉCISION MESURÉE.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * `showModal()` PLUTÔT QUE L'ATTRIBUT `open`, ET LE GEL LE DEMANDE
+ * Une première rédaction en portait un : il ouvrait le dialogue depuis le
+ * document, relisait la saisie et envoyait l'action. Il a été retiré, parce que
+ * le DÉCOMPTE de `RG-M14-02` ne se compose pas depuis le DOM — il faut les notes
+ * du domaine, leurs types et leurs dossiers, c'est-à-dire précisément ce que le
+ * chargeur a servi à la VUE et à elle seule.
  *
- * Les trois vues rendent `<dialog open={…}>` parce qu'un squelette sans
- * hydratation ne peut pas appeler `showModal()`. Sur le document VIVANT, c'est
- * `showModal()` qu'il faut : lui seul pose le fond de superposition, prend le
- * focus, rend le reste de la page inerte et ferme sur `Échap`. L'attribut seul
- * afficherait une boîte sans modalité, au milieu d'une page encore cliquable.
+ * Le partage retenu est donc celui-ci, et il vaut pour V-27, V-28 et V-29 :
  *
- * ═════════════════════════════════════════════════════════════════════════
- * LE DIALOGUE EST OUVERT PAR LA PAGE, ET SON CONTENU EST CELUI DE LA VUE
+ *   la VUE   tient l'état de son dialogue — quel objet est visé, ce qui a été
+ *            retapé, le décompte, la modalité —, comme le script du gel le
+ *            tenait ; elle ne connaît ni route, ni action, ni réseau ;
+ *   la PAGE  traduit la désignation et appelle l'action, par `envoyerAUneAction`
+ *            ci-dessus ; elle ne connaît rien du contenu du dialogue.
  *
- * Ce module N'ÉCRIT PAS le décompte : il ne connaît ni les notes, ni les
- * dossiers, ni ce que la suppression détruira. Le décompte est composé par la
- * VUE, à partir des notes que le chargeur lui a servies — c'est ce qui le rend
- * exact au sens de `RG-M14-02`, et c'est pourquoi l'ouverture demande à la page
- * de recharger l'état du dialogue plutôt que d'en fabriquer un ici. Le rappel du
- * geste est donné par `onDemande`.
+ * Laisser ici un câblage qu'aucune page n'appelle aurait fait une règle que rien
+ * n'exerce, et dont personne ne saurait si elle marche (`P-5`).
  */
-export interface OuvertureDeDialogue {
-	/** Ce que la page doit faire quand une ligne demande sa suppression. */
-	readonly onDemande: (nom: string) => void;
-}
-
-export function cablerLaSuppression(
-	racine: ParentNode,
-	options: OptionsDeSuppression & OuvertureDeDialogue
-): Debranchement {
-	const attaches = new Attaches();
-	const dialogue = noeud<HTMLDialogElement>(racine, '#dlg-supprimer');
-	const valider = noeud<HTMLButtonElement>(racine, '#sup-valider');
-	const saisie = noeud<HTMLInputElement>(racine, '#sup-saisie');
-
-	/** Le nom de l'objet dont la suppression est en cours d'examen. */
-	let vise: string | null = null;
-
-	const relireLaSaisie = (): void => {
-		if (valider === null) return;
-		const permis =
-			vise !== null && (options.saisieConforme?.(vise, racine) ?? true) && !valider.hidden;
-		valider.disabled = !permis;
-	};
-
-	/* L'ouverture — un clic sur le bouton destructif d'une ligne. */
-	attaches.ecouter(racine as unknown as EventTarget, 'click', (evenement) => {
-		const cible = (evenement.target as Element | null)?.closest('button');
-		if (cible === null || cible === undefined) return;
-		const nom = options.designer(cible);
-		if (nom === null) return;
-		evenement.preventDefault();
-		vise = nom;
-		options.onDemande(nom);
-	});
-
-	/* La fermeture — les deux nœuds que le gel marque `data-fermer`. */
-	for (const fermer of Array.from(
-		racine.querySelectorAll<HTMLElement>('#dlg-supprimer [data-fermer]')
-	)) {
-		attaches.ecouter(fermer, 'click', () => {
-			vise = null;
-			dialogue?.close();
-		});
-	}
-
-	if (saisie !== null) attaches.ecouter(saisie, 'input', relireLaSaisie);
-
-	if (valider !== null) {
-		attaches.ecouter(valider, 'click', () => {
-			if (vise === null) return;
-			const charge = options.requete(vise, racine);
-			if (charge === null) return;
-			void envoyer(valider.ownerDocument, '?/supprimer', charge);
-		});
-	}
-
-	return attaches.debranchement();
-}
-
-/**
- * LA RÉVÉLATION MODALE D'UN DIALOGUE DÉJÀ RENDU OUVERT PAR LA VUE.
- *
- * Appelée par la page après que la vue a recomposé son dialogue : l'attribut
- * `open` est là, la modalité ne l'est pas. `showModal()` refuse un dialogue déjà
- * ouvert — d'où la fermeture préalable, qui ne se voit pas puisqu'elle précède
- * la révélation dans la même tâche.
- */
-export function revelerLeDialogue(dialogue: HTMLDialogElement | null): void {
-	if (dialogue === null) return;
-	if (dialogue.open) dialogue.close();
-	dialogue.showModal();
-}

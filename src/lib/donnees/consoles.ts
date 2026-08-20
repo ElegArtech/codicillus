@@ -89,7 +89,7 @@ import {
 } from './lecture';
 import { contexteDeRequete } from './signets';
 import { eq } from 'drizzle-orm';
-import { comptes, domaines } from '../base/schema';
+import { comptes, domaines, univers } from '../base/schema';
 import type {
 	Compte,
 	DetailDeDomaine,
@@ -443,6 +443,56 @@ export async function lireLesComptesDeConsole(base: Base): Promise<readonly Comp
 				instant === null || instant === undefined ? JAMAIS_CONNECTE : dateCourteDInstant(instant)
 		} as unknown as Compte;
 	});
+}
+
+/**
+ * LA DÉSIGNATION CANONIQUE D'UN DOMAINE, par son NOM D'AFFICHAGE.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * POURQUOI CETTE TABLE EXISTE, ET CE QU'ELLE A COÛTÉ DE NE PAS EXISTER
+ *
+ * Les gestes d'administration désignent un domaine par sa forme CANONIQUE —
+ * identifiant lisible d'univers, puis identifiant lisible de domaine
+ * (`docs/routes.md` §2.2) — parce que `RG-STR-02` ne rend son identifiant unique
+ * qu'au sein de son univers. `mesurerUnDomaine()` interroge donc
+ * `univers.identifiant` et `domaines.identifiant`.
+ *
+ * Les VUES, elles, ne connaissent que des noms d'affichage : `interface Domaine`
+ * du jeu de semence porte `{ nom, univers, couleur }` et pas un identifiant.
+ * Envoyer « Projets » là où le geste attend « projets » fait rendre `introuvable`
+ * à la mesure, donc `404` à l'action — mesuré sur la première tentative, et le
+ * 404 ne dit rien de sa cause puisqu'il est le refus indiscernable d'`ADR-007`.
+ *
+ * LA TRADUCTION VIT ICI, ET NON DANS LA VUE. Une vue qui porterait les
+ * identifiants de base cesserait d'être la transcription du gel ; une page qui
+ * les devinerait par abaissement de casse inventerait une règle que rien ne
+ * garantit — « Poste de travail » ne donne pas « poste-de-travail » par
+ * mécanique évidente, et c'est la base qui sait.
+ */
+export interface DesignationDeDomaine {
+	/** L'identifiant lisible de l'univers — premier segment de la forme canonique. */
+	readonly univers: string;
+	/** L'identifiant lisible du domaine — second segment. */
+	readonly domaine: string;
+}
+
+export async function lireLesDesignationsDeDomaine(
+	base: Base
+): Promise<Record<string, DesignationDeDomaine>> {
+	const lignes = await base
+		.select({
+			nom: domaines.nom,
+			domaineIdentifiant: domaines.identifiant,
+			universIdentifiant: univers.identifiant
+		})
+		.from(domaines)
+		.innerJoin(univers, eq(domaines.universId, univers.id));
+
+	const rendu: Record<string, DesignationDeDomaine> = {};
+	for (const l of lignes) {
+		rendu[l.nom] = { univers: l.universIdentifiant, domaine: l.domaineIdentifiant };
+	}
+	return rendu;
 }
 
 /** Les univers et les domaines, dans la forme que la coquille attend. */
