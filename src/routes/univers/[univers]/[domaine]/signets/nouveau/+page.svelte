@@ -18,11 +18,19 @@
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
 	 * sert ; elle est identique à l'octet à sa source gelée (P-6.3).
 	 */
+	import { onMount } from 'svelte';
 	import Vue from '../../../../../../vues/V-23.svelte';
 	import '../../../../../../vues/V-23.css';
+	import { cablerLeSignet } from '$lib/cablage/formulaires';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	let enveloppe: HTMLDivElement;
+
+	onMount(() => cablerLeSignet(enveloppe));
 </script>
 
-<Vue vecteur={data.vecteur} notes={data.notes} />
+<div bind:this={enveloppe} style="display:contents">
+	<Vue vecteur={data.vecteur} notes={data.notes} />
+</div>

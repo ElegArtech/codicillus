@@ -330,6 +330,16 @@ export interface DemandeDeCreation {
 	readonly cible: CibleDeCreation;
 	readonly identite: Identite;
 	readonly maintenant: Date;
+	/**
+	 * L'ADRESSE CURATÉE, quand la note créée est un SIGNET.
+	 *
+	 * Un signet n'est pas un objet séparé : c'est une note de type « Signet »
+	 * qui porte une adresse. Le schéma le dit — `notes.signet_adresse` et
+	 * `notes.signet_ajoute_le` sont deux colonnes de `notes`, pas une table —,
+	 * et le vocabulaire du produit ne connaît que la Note. Cette création est
+	 * donc la même, avec deux colonnes de plus.
+	 */
+	readonly signet?: { readonly adresse: string; readonly ajouteLe: Date };
 }
 
 /** Ce qu'une création rend : l'identifiant, qui est désormais une adresse. */
@@ -360,7 +370,7 @@ export function corpsDeLaSaisie(corps: string): Document {
 }
 
 /** L'étiquette d'un libellé, créée si elle n'existe pas — `RG-M12-06`. */
-async function etiquetteDuLibelle(tx: Base, libelle: string): Promise<string> {
+export async function etiquetteDuLibelle(tx: Base, libelle: string): Promise<string> {
 	const [deja] = await tx
 		.select({ id: etiquettes.id })
 		.from(etiquettes)
@@ -393,6 +403,14 @@ async function etiquetteDuLibelle(tx: Base, libelle: string): Promise<string> {
  *   silence — même régime que `enregistrerLeCorps()`, et même écart déclaré :
  *   aucune source ne décrit l'état d'un enregistrement dont l'index a refusé.
  */
+/**
+ * La colonne `signet_ajoute_le` est une DATE, pas un instant : elle porte le
+ * jour où le signet est entré au corpus, et rien de plus fin.
+ */
+function dateSeule(instant: Date): string {
+	return instant.toISOString().slice(0, 10);
+}
+
 export async function creerUneNote(
 	base: Base,
 	client: Meilisearch,
@@ -435,7 +453,13 @@ export async function creerUneNote(
 						   valeurs voisines et différentes, pour un même geste. */
 						creeLe: demande.maintenant,
 						modifieLe: demande.maintenant,
-						corpsReferenceModifieLe: demande.maintenant
+						corpsReferenceModifieLe: demande.maintenant,
+						...(demande.signet === undefined
+							? {}
+							: {
+									signetAdresse: demande.signet.adresse,
+									signetAjouteLe: dateSeule(demande.signet.ajouteLe)
+								})
 					})
 					.returning({ id: notes.id });
 				const noteId = (inseres[0] as { id: string }).id;
