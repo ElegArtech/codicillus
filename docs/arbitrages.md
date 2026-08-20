@@ -2404,3 +2404,122 @@ commanditaire ou un regel. Il ne dit rien de la **durée approximative** de `RG-
 la relève comme un vide — le mot n'apparaît que deux fois au cahier, jamais au brief, et aucune des
 41 maquettes ne montre un mécanisme de fin de visite. **Aucune colonne n'a été créée**, et c'est
 juste : en poser une aurait tranché l'unité et la borne en silence.
+
+---
+
+## ARB-062 — La forme de l'identifiant lisible d'une note, et le seul geste qui la fixe
+
+*Rendu le 21 août 2026. Ferme le blocage de tête de `docs/reprise.md` : `RG-M12-11` impose
+l'unicité automatique sans donner de forme, et `src/routes/notes/nouvelle/+page.server.ts:100`
+en tirait un **501**. Le vide est réel ; il est ici comblé par arbitrage, ce qui est son
+guichet — pas par un implémenteur en cours de route.*
+
+### §1 — Ce que les sources disent, et ce qu'elles ne disent pas
+
+Lu, pas déduit :
+
+- `CDC:1097` (`RG-M12-11`) — *« les identifiants lisibles sont rendus uniques automatiquement en
+  cas de collision, sans écraser de note existante »*. Le **résultat** est imposé, la **forme**
+  n'est nulle part.
+- `CDC:484` (`RG-M03-03`) — l'identifiant est dans l'adresse, et l'adresse est stable dans le
+  temps. Donc : **dérivé à la création, jamais recalculé ensuite.**
+- `CDC` §3.2 — *« Identifiant lisible — dérivé du titre, unique, stable, utilisé dans l'adresse »*.
+- `seeds/corpus.ts` — **32 identifiants de notes**, tous de la forme `n-<mot-court>` :
+  `n-restaurer-pg`, `n-diag-barman`, `n-sig-anssi`, `n-pg-prod-01`… Le gel les affiche dans les
+  adresses de onze maquettes.
+- `src/lib/rangement/adresses.ts` — `identifiantLisible()` existe déjà et fait exactement la
+  dérivation d'un nom : NFD, diacritiques retirés, minuscules, séquences non alphanumériques
+  réduites à un tiret, tirets de bord retirés. Le fichier dit lui-même qu'il **n'est pas** la
+  génération d'identifiant du produit ; il en est désormais la **première moitié**.
+
+### §2 — Ce qui est décidé
+
+**La forme est `n-<slug du titre>`, et la collision se lève par un suffixe numérique.**
+
+1. **Préfixe `n-`.** Il n'est pas décoratif : c'est la forme que porte le corpus entier, donc la
+   forme que le gel montre à l'utilisateur. Il réserve aussi, de fait, l'espace de nommage des
+   notes vis-à-vis des segments réservés de `docs/routes.md` §5.4 — `nouvelle` ne peut pas être
+   produit par cette fonction, puisque tout identifiant produit commence par `n-`.
+2. **Le corps est `identifiantLisible(titre)`**, l'implémentation qui existe, **tronquée à 48
+   caractères** sur une frontière de tiret (jamais au milieu d'un mot), tirets de bord retirés.
+   Quarante-huit : les 32 identifiants du corpus tiennent en 17 caractères au plus ; la borne est
+   là pour qu'une adresse reste lisible, pas pour contraindre le titre.
+3. **Un titre dont le slug est vide** — titre entièrement composé de ponctuation ou d'idéogrammes
+   — donne le corps `note`. Il n'y a pas de note sans identifiant, et il n'y a pas de refus
+   d'enregistrer pour cette cause : `RG-M05-08` ne connaît pas ce refus, et le champ titre de
+   V-17 n'a qu'une seule erreur déclarée, *« une note sans titre est introuvable »*.
+4. **La collision se lève par `-2`, puis `-3`, et ainsi de suite**, sur le candidat entier :
+   `n-astreinte`, puis `n-astreinte-2`, puis `n-astreinte-3`. Jamais `-1` : le premier n'a pas de
+   suffixe, et un `-1` qui n'aurait pas de `-0` serait un compteur qui ment sur son origine.
+5. **L'unicité est arbitrée par la BASE, pas par une lecture préalable.** La contrainte d'unicité
+   de `notes.identifiant` est le juge ; la boucle d'essai réessaie sur violation de contrainte.
+   Une lecture « cet identifiant est-il pris ? » suivie d'une écriture est une course, et deux
+   créations simultanées du même titre l'exhiberaient — c'est `P-28` dans sa forme la plus banale.
+6. **L'identifiant n'est JAMAIS recalculé.** Renommer une note ne change pas son adresse. C'est
+   `RG-M03-03`, et c'est ce qui rend la borne de 48 caractères sans conséquence : elle ne
+   s'applique qu'une fois, à la création.
+
+### §3 — Ce que cet arbitrage NE tranche pas
+
+Il ne dit rien des identifiants de **signets** (`…/signets/nouveau` reste en 501 : il lui manque
+en outre le dossier d'accueil et le corps, `T-P10` les a déclarés), ni du **renommage** d'un
+identifiant existant, ni de la **redirection** d'une adresse ancienne — `docs/routes.md:316` la
+prévoit pour les domaines, et aucune note du corpus n'a jamais changé d'identifiant.
+
+---
+
+## ARB-063 — Le câblage des formulaires vit dans les ROUTES, jamais dans les vues
+
+*Rendu le 21 août 2026, en même temps qu'`ARB-062` et pour la même campagne.*
+
+### §1 — Le constat
+
+`ARB-057` §3 l'a relevé sur cinq formulaires, et il vaut pour les sept : **aucune vue de
+`src/vues/` ne porte `method`, ni `action`, ni le moindre attribut `name` utile.** Ce n'est pas
+un oubli d'implémenteur — c'est le gel : `mockups/V-17-editeur.html` n'en porte pas davantage,
+et les vues sont des transcriptions fidèles. Six lots successifs ont donc écrit des actions
+justes que rien ne peut atteindre.
+
+### §2 — Ce qui est décidé
+
+**Le câblage — l'élément `form`, les champs nommés, la collecte de l'état saisi — est écrit dans
+`src/routes/**/+page.svelte`, et jamais dans `src/vues/`.**
+
+La raison n'est pas la commodité, elle est **mesurable** : `src/routes/notes/nouvelle/+page.svelte`
+le dit déjà de lui-même — *« le banc ne passe jamais par ici : il rend les composants par le mode
+de conception ; rien de ce fichier n'entre dans son verdict, et les 409 couples ne peuvent pas
+bouger de son fait »*. Le corollaire est strict et il est la valeur de cet arbitrage :
+
+> **Un câblage écrit dans une route ne peut pas, par construction, faire bouger
+> `pnpm verif:maquette:app`. Un câblage écrit dans une vue le peut, et il faudrait le prouver
+> à chaque fois.**
+
+C'est le régime *bloquant > vérifiable > déclaratif* appliqué au gel : la conformité n'est pas
+défendue par une relecture, elle l'est par le fait que le chemin mesuré ne traverse pas le code
+écrit.
+
+### §3 — La forme du câblage, et ses deux moitiés
+
+1. **La route enveloppe la vue** dans `<form method="POST" style="display:contents">`. `display:
+   contents` retire l'élément de la génération de boîtes : il ne peut porter ni marge, ni
+   remplissage, ni contexte de formatage. Le rendu est celui d'avant, à l'octet.
+2. **Les champs nommés sont des `input type="hidden"` posés par la route**, remplis à la
+   soumission depuis les nœuds du gel, lus par leur `id` — `#titre`, `#m-type`, `#m-domaine`,
+   `input[name="dossier"]:checked`, `#m-visibilite`, `#m-statut`, `#redaction`. Le gel porte
+   déjà tous ces identifiants ; aucun n'est ajouté.
+3. **Le geste est délégué** : un écouteur sur l'enveloppe, jamais un attribut sur un bouton du
+   gel.
+
+### §4 — Ce que cet arbitrage coûte, et il est déclaré
+
+**Sans JavaScript, ces trois écrans ne soumettent pas.** Aucune source du projet n'exige le
+fonctionnement sans script — le gel de V-17 est un éditeur de texte riche `contenteditable`
+piloté par 1 400 lignes de script, et `P-3`, `P-4` et `ARB-011` établissent que le comportement
+du gel est du script. La dégradation de `P-10` vise les **briques optionnelles** (embeddings,
+convertisseur), pas le navigateur. L'écart est **déclaré ici**, non comblé : le jour où une
+source exigera la soumission sans script, elle exigera aussi un regel des sept formulaires.
+
+### §5 — Ce qui reste interdit
+
+`src/vues/` reste en écriture agentique **fermée pour cette campagne**. Un lot qui croit devoir y
+toucher s'arrête et remonte — c'est le protocole d'écart, inchangé.
