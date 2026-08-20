@@ -40,6 +40,8 @@
 		"verif:convertisseur": "node verif/convertisseur.mjs",
 		"verif:convertisseur:sonde": "node verif/convertisseur.mjs --sonde=second-convertisseur && node verif/convertisseur.mjs --sonde=nom-redeclare && node verif/convertisseur.mjs --sonde=chemin-detourne",
 		"verif:convertisseur:marqueurs": "node verif/convertisseur.mjs --marqueurs",
+		"verif:donnees": "node verif/donnees.mjs",
+		"verif:donnees:sonde": "node verif/donnees.mjs --sonde=date-decalee && node verif/donnees.mjs --sonde=optionnel-pose && ! node verif/donnees.mjs --sonde=temoin-inerte",
 		"verif:menus": "node verif/menus.mjs",
 		"verif:menus:sonde": "node verif/menus.mjs V-07 --sonde=lien-mort --etats=role-referent && node verif/menus.mjs V-07 --sonde=ancre-morte --etats=role-referent && node verif/menus.mjs V-37 --sonde=promesse --etats=cont-bord && node verif/menus.mjs V-37 --sonde=hors-routes --etats=cont-bord && node verif/menus.mjs V-37 --sonde=inactivee --etats=cont-bord && node verif/menus.mjs V-37 --sonde=sans-nom --etats=cont-bord && node verif/menus.mjs V-11 --sonde=module-fantome --etats=dom-migration-2026",
 		"verif:vocabulaire": "node verif/vocabulaire.mjs --seuil-gel=138 --seuil-fiche=67",

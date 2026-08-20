@@ -517,6 +517,53 @@ export const verifications = pgTable(
 	(t) => [index('verifications_note_idx').on(t.noteId, t.le.desc())]
 );
 
+/* ═══════════════════════════════════ L'historique des versions (004) ════ */
+
+/**
+ * RG-M07-02 — « une version capture titre et les deux corps, immuable ».
+ *
+ * IMMUABLE SE LIT DANS L'ABSENCE : il n'y a pas de `modifieLe`, parce qu'une
+ * version ne se modifie pas. Le refus est porté par un déclencheur sur UPDATE
+ * (`004_versions.montee.sql`), non par cette description : Drizzle ne modélise
+ * pas les déclencheurs, et `pnpm base:coherence` ne compare donc que colonnes,
+ * types, nullabilité et contraintes. La protection est en base ; sa preuve est
+ * une épreuve unitaire, pas une ligne de ce fichier.
+ *
+ * `date` et `heure` de `seeds/corpus.ts` (`interface Version`) sont deux champs
+ * d'AFFICHAGE d'un seul instant : la colonne `le` les porte tous deux.
+ */
+export const versions = pgTable(
+	'versions',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		noteId: uuid('note_id')
+			.notNull()
+			.references(() => notes.id, { onDelete: 'cascade' }),
+		numero: integer('numero').notNull(),
+		le: timestamp('le', { withTimezone: true }).notNull(),
+		auteurId: uuid('auteur_id')
+			.notNull()
+			.references(() => comptes.id, { onDelete: 'restrict' }),
+		resume: text('resume').notNull(),
+		/** Lignes ajoutées et retirées : deux quantités, jamais un solde. */
+		ajout: integer('ajout').notNull(),
+		retrait: integer('retrait').notNull(),
+		/** Capturé parce que le titre est renommable, et que V-16 doit le montrer. */
+		titre: text('titre').notNull(),
+		/** ADR-003 — documents ProseMirror sérialisés, comme sur `notes`. */
+		corpsReference: jsonb('corps_reference').notNull(),
+		corpsOperationnel: jsonb('corps_operationnel'),
+		creeLe: timestamp('cree_le', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [
+		unique('versions_numero_par_note_unique').on(t.noteId, t.numero),
+		check('versions_numero_positif', sql`${t.numero} >= 1`),
+		check('versions_ajout_positif', sql`${t.ajout} >= 0`),
+		check('versions_retrait_positif', sql`${t.retrait} >= 0`),
+		index('versions_note_idx').on(t.noteId, t.numero.desc())
+	]
+);
+
 /* ══════════════════════════════════════ L'authentification (003) ════════ */
 
 /**
@@ -597,6 +644,7 @@ export const schema = {
 	relations,
 	piecesJointes,
 	verifications,
+	versions,
 	sessions,
 	tentativesDeConnexion
 };

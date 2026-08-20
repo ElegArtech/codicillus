@@ -1,0 +1,699 @@
+/**
+ * LA COUCHE DE LECTURE — les formes de `seeds/corpus.ts`, rendues depuis la base.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE QU'ELLE EST, ET POURQUOI ELLE REND LES TYPES DU JEU DE SEMENCE
+ *
+ * Les 41 vues gelées attendent leurs données en PROPRIÉTÉ, et elles les
+ * déclarent avec les types de `seeds/corpus.ts` — `V-12.svelte:78-85` déclare
+ * `notes: readonly Note[]`. Ce module ne définit donc AUCUN type nouveau : il
+ * réemploie ceux du jeu de semence. C'est ce qui permet à un chargeur de route
+ * de remplacer `corpusPourVue('V-12')` par `lireNotes(...)` sans toucher la vue.
+ *
+ * La base a été semée DEPUIS `seeds/corpus.ts` (`src/lib/base/semence.ts` et
+ * `commandes.ts:325` `semer()`). Ce module est donc l'INVERSE de la semence, et
+ * `pnpm verif:donnees` mesure que l'aller-retour est fidèle. Là où il ne l'est
+ * pas, la batterie le dit et le compte : ce n'est pas à ce module de combler.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * POURQUOI `base` EST UN PARAMÈTRE, ET NON `basePartagee()` APPELÉ ICI
+ *
+ * Le contrat veut un seul groupe de connexions, celui de
+ * `src/lib/base/acces.ts`. Ce module l'honore en n'en ouvrant AUCUN : il reçoit
+ * la poignée. Deux raisons de ne pas appeler `basePartagee()` ici même :
+ *
+ *   1. `acces.ts` importe `$env/dynamic/private`, qui n'existe que dans le
+ *      graphe de modules de SvelteKit. Un module de lecture qui en dépendrait
+ *      au chargement ne serait plus éprouvable par `vitest`.
+ *   2. Un paramètre explicite rend la transaction possible : un chargeur qui
+ *      veut plusieurs lectures cohérentes passe son `tx` au lieu de la base.
+ *
+ * Le type `Base` est importé en `import type` : la déclaration est effacée à la
+ * compilation, donc `$env/dynamic/private` n'entre jamais dans ce graphe.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LA FRAÎCHEUR N'EST PAS RECALCULÉE ICI (P-01)
+ *
+ * `src/lib/fraicheur.ts` est l'implémentation unique. Ce module lui passe une
+ * ancienneté et des seuils, et n'écrit aucune comparaison de date à un seuil.
+ *
+ * ET L'INSTANT DE RÉFÉRENCE EST UN PARAMÈTRE, jamais `new Date()` pris ici.
+ * `Note.fraicheur` du jeu de semence est vraie À `DATE_REFERENCE` ; en service,
+ * elle est vraie maintenant. Une couche de lecture qui prendrait l'heure
+ * elle-même rendrait ses résultats non reproductibles, donc non mesurables —
+ * et la batterie d'équivalence ne pourrait rien prouver.
+ */
+import { eq } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
+import type { Base } from '../base/acces';
+import {
+	champsDeTypeDeFiche,
+	comptes,
+	domaines,
+	dossiers,
+	etiquettes,
+	etiquettesDeNote,
+	modulesDeDomaine,
+	notes,
+	parametres,
+	relations,
+	templates,
+	typesDeFiche,
+	typesDeNote,
+	typesDeRelation,
+	univers
+} from '../base/schema';
+import { niveauFraicheur, type SeuilsDeFraicheur } from '../fraicheur';
+import type {
+	ChampDeFiche,
+	CleDeModule,
+	CleDeTypeDeRelation,
+	Compte,
+	Configuration,
+	Domaine,
+	LibellesDeRelation,
+	Note,
+	Relation,
+	Template,
+	TypeDeFiche,
+	TypeDeNote,
+	Univers
+} from '../../../seeds/corpus';
+
+/* ═══════════════════════════════════════════════════ Les instants ═══════ */
+
+/**
+ * `2026-07-18T00:00:00.000Z` vers `18/07/2026` — l'inverse exact de
+ * `dateCourteEnIso()` de la semence, qui écrit `HEURE_DE_REFERENCE` en UTC.
+ *
+ * LES COMPOSANTES SONT LUES EN UTC, ET C'EST LA SEULE LECTURE JUSTE. La
+ * semence écrit `new Date('2026-07-18T00:00:00.000Z')` ; relire avec
+ * `getDate()` donnerait le 17 dans tout fuseau à l'ouest de Greenwich. Le
+ * décalage d'un jour déplacerait l'ancienneté, donc le niveau de fraîcheur
+ * d'une note posée sur un seuil — le défaut exact que `semer()` se garde de
+ * commettre (`commandes.ts`, « un `timestamptz` traverse une conversion de
+ * fuseau à l'aller comme au retour »).
+ */
+export function dateCourteDInstant(instant: Date): string {
+	const jour = String(instant.getUTCDate()).padStart(2, '0');
+	const mois = String(instant.getUTCMonth() + 1).padStart(2, '0');
+	return `${jour}/${mois}/${String(instant.getUTCFullYear())}`;
+}
+
+/** `2026-07-18` vers `18/07/2026`. Le type SQL `date` se relit en chaîne. */
+export function dateCourteDIso(iso: string): string {
+	const [annee, mois, jour] = iso.split('-');
+	if (annee === undefined || mois === undefined || jour === undefined) {
+		throw new Error(`date ISO illisible : ${iso}`);
+	}
+	return `${jour}/${mois}/${annee}`;
+}
+
+const MILLISECONDES_PAR_JOUR = 86_400_000;
+
+/** Le nombre de jours entiers écoulés entre un instant et l'instant de lecture. */
+export function joursEcoules(instant: Date, maintenant: Date): number {
+	return Math.floor((maintenant.getTime() - instant.getTime()) / MILLISECONDES_PAR_JOUR);
+}
+
+/**
+ * Le contexte d'une lecture : l'instant qui fait foi, et les seuils en vigueur.
+ * Les deux sont exigés — aucun défaut, pour qu'aucun appelant ne les subisse
+ * sans le savoir.
+ */
+export interface ContexteDeLecture {
+	readonly maintenant: Date;
+	readonly seuils: SeuilsDeFraicheur;
+}
+
+/* ═══════════════════════════════════════════════════ Le contenu ═════════ */
+
+/**
+ * Le texte du corps Référence, quand ce corps est celui que la semence produit
+ * — un document à un seul paragraphe, à un seul nœud de texte
+ * (`corpsDepuisTexte()`).
+ *
+ * LE PARCOURS EST STRUCTUREL, JAMAIS TEXTUEL : ADR-003 interdit « toute
+ * manipulation du corps par expression régulière ou par transformation de
+ * chaîne ». Un document d'une autre forme fait LEVER plutôt que rendre une
+ * approximation : `Note.extrait` est un champ de la vue, et un extrait faux se
+ * verrait à l'écran sans que rien ne l'ait signalé.
+ */
+export function extraitDuCorps(corps: unknown): string {
+	const doc = corps as { type?: string; content?: readonly unknown[] };
+	const blocs = doc.content ?? [];
+	if (doc.type !== 'doc' || blocs.length !== 1) {
+		throw new Error(
+			`corps hors de la forme que la semence écrit : ${String(doc.type)}, ` +
+				`${String(blocs.length)} bloc(s)`
+		);
+	}
+	const bloc = blocs[0] as { type?: string; content?: readonly unknown[] };
+	const enfants = bloc.content ?? [];
+	if (bloc.type !== 'paragraph' || enfants.length !== 1) {
+		throw new Error(`bloc unique attendu paragraphe à un nœud, obtenu ${String(bloc.type)}`);
+	}
+	const noeud = enfants[0] as { type?: string; text?: string };
+	if (noeud.type !== 'text' || typeof noeud.text !== 'string') {
+		throw new Error(`nœud de texte attendu, obtenu ${String(noeud.type)}`);
+	}
+	return noeud.text;
+}
+
+/* ═══════════════════════════════════════════════════ Le rangement ══════ */
+
+/** Les univers, dans l'ordre que l'administrateur leur a donné (RG-STR-01). */
+export async function lireUnivers(base: Base): Promise<readonly Univers[]> {
+	const lignes = await base
+		.select({
+			nom: univers.nom,
+			couleur: univers.couleur,
+			glyphe: univers.glyphe,
+			ordre: univers.ordre,
+			systeme: univers.systeme,
+			description: univers.description
+		})
+		.from(univers)
+		.orderBy(univers.ordre);
+
+	return lignes.map((u) => {
+		const rendu: Record<string, unknown> = {
+			nom: u.nom,
+			couleur: u.couleur,
+			glyphe: u.glyphe,
+			ordre: u.ordre,
+			description: u.description
+		};
+		/* `systeme` est OPTIONNEL dans `interface Univers` : le jeu de semence ne
+		   porte la clé que sur « Non classé ». Elle est donc OMISE quand elle est
+		   fausse, et non posée à `false` — une clé de plus se verrait dans toute
+		   comparaison profonde. */
+		if (u.systeme) rendu['systeme'] = true;
+		return rendu as unknown as Univers;
+	});
+}
+
+/** Les domaines, groupés par univers, dans l'ordre d'affichage du rail. */
+export async function lireDomaines(base: Base): Promise<readonly Domaine[]> {
+	const lignes = await base
+		.select({ nom: domaines.nom, universNom: univers.nom, couleur: domaines.couleur })
+		.from(domaines)
+		.innerJoin(univers, eq(domaines.universId, univers.id))
+		.orderBy(univers.ordre, domaines.nom);
+
+	return lignes.map((d) => ({ nom: d.nom, univers: d.universNom, couleur: d.couleur }) as Domaine);
+}
+
+/**
+ * Les modules activés, par domaine (RG-STR-06, P-04).
+ *
+ * `MODULE_EN_ENUM` de la semence traduit `carteMentale` en `carte_mentale` ;
+ * la table de retour est son inverse, déclarée et non tacite.
+ */
+const MODULE_DEPUIS_ENUM: Record<string, CleDeModule> = {
+	notes: 'notes',
+	dossiers: 'dossiers',
+	fiches: 'fiches',
+	cartographie: 'cartographie',
+	signets: 'signets',
+	carte_mentale: 'carteMentale'
+};
+
+export async function lireModulesParDomaine(
+	base: Base
+): Promise<ReadonlyMap<string, readonly CleDeModule[]>> {
+	const lignes = await base
+		.select({ domaineNom: domaines.nom, module: modulesDeDomaine.module })
+		.from(modulesDeDomaine)
+		.innerJoin(domaines, eq(modulesDeDomaine.domaineId, domaines.id))
+		.orderBy(domaines.nom, modulesDeDomaine.module);
+
+	const par = new Map<string, CleDeModule[]>();
+	for (const ligne of lignes) {
+		const cle = MODULE_DEPUIS_ENUM[ligne.module];
+		if (cle === undefined) throw new Error(`module inconnu en base : ${ligne.module}`);
+		const deja = par.get(ligne.domaineNom);
+		if (deja === undefined) par.set(ligne.domaineNom, [cle]);
+		else deja.push(cle);
+	}
+	return par;
+}
+
+/** La description d'un domaine — `DETAIL_DOMAINES[…].description` du jeu. */
+export async function lireDescriptionsDeDomaine(base: Base): Promise<ReadonlyMap<string, string>> {
+	const lignes = await base
+		.select({ nom: domaines.nom, description: domaines.description })
+		.from(domaines);
+	return new Map(lignes.map((d) => [d.nom, d.description]));
+}
+
+/**
+ * Le chemin de rangement de chaque dossier, tel que `Note.dossier` l'écrit :
+ * les segments SOUS la racine, séparés par « › ».
+ *
+ * La racine porte le nom de son domaine (décision de la semence,
+ * `lignesDeDossier()`) et n'entre pas dans le chemin affiché — c'est ce que
+ * `segmentsDeDossier()` défait, et ce que cette fonction refait.
+ */
+export async function lireCheminsDeDossier(base: Base): Promise<ReadonlyMap<string, string>> {
+	const lignes = await base
+		.select({
+			id: dossiers.id,
+			parentId: dossiers.parentId,
+			nom: dossiers.nom,
+			profondeur: dossiers.profondeur
+		})
+		.from(dossiers);
+
+	const parId = new Map(lignes.map((d) => [d.id, d]));
+	const chemins = new Map<string, string>();
+	for (const dossier of lignes) {
+		const segments: string[] = [];
+		let courant: typeof dossier | undefined = dossier;
+		/* On remonte jusqu'à la racine EXCLUSE : `profondeur === 1` est la racine,
+		   dont le nom est celui du domaine et que `Note.dossier` n'affiche pas. */
+		while (courant !== undefined && courant.profondeur > 1) {
+			segments.unshift(courant.nom);
+			courant = courant.parentId === null ? undefined : parId.get(courant.parentId);
+		}
+		chemins.set(dossier.id, segments.join(' › '));
+	}
+	return chemins;
+}
+
+/** Le domaine de chaque dossier, par identifiant de dossier. */
+export async function lireDomainesParDossier(base: Base): Promise<ReadonlyMap<string, string>> {
+	const lignes = await base
+		.select({ id: dossiers.id, domaineNom: domaines.nom })
+		.from(dossiers)
+		.innerJoin(domaines, eq(dossiers.domaineId, domaines.id));
+	return new Map(lignes.map((d) => [d.id, d.domaineNom]));
+}
+
+/* ═══════════════════════════════════════════════════ Les notes ══════════ */
+
+/**
+ * Les notes, dans la forme exacte de `interface Note`.
+ *
+ * DEUX CHAMPS NE SONT PAS RESTITUABLES, et ce module ne les invente pas :
+ *
+ *   `pj`          le nombre de pièces jointes. La table `pieces_jointes` existe
+ *                 depuis 002 mais la semence n'y écrit RIEN, alors que le jeu
+ *                 en déclare 13 sur 7 notes. Le compte rendu est donc le compte
+ *                 RÉEL de la table — 0 —, jamais le chiffre du jeu : P-02
+ *                 interdit la valeur illustrative, et rendre 2 pièces jointes
+ *                 qu'aucune ligne ne porte en serait une.
+ *
+ *   `etiquettes`  leur ORDRE. `etiquettes_de_note` n'a pas de colonne de rang :
+ *                 l'ordre du jeu — qui n'est pas l'ordre alphabétique sur 25
+ *                 notes de 32 — n'est pas représentable. Elles sont rendues
+ *                 triées par libellé, ce qui est DÉTERMINISTE et déclaré.
+ *
+ * Le tri par libellé est un choix contre un autre, et il faut dire lequel :
+ * rendre l'ordre PHYSIQUE des lignes (`ctid`) redonnerait par accident l'ordre
+ * du jeu, et la batterie d'équivalence serait verte. Elle serait verte sur une
+ * propriété que PostgreSQL ne garantit pas — un faux vert reposant sur un
+ * détail d'implémentation, qu'un VACUUM FULL suffirait à défaire. Mieux vaut un
+ * rouge qui dit la vérité qu'un vert qui repose sur un accident (P-26).
+ *
+ * `pnpm verif:donnees` chiffre les deux écarts. Ils se ferment par une
+ * migration — une colonne de rang, et une semence des pièces jointes —, jamais
+ * par ce module.
+ */
+export async function lireNotes(base: Base, contexte: ContexteDeLecture): Promise<readonly Note[]> {
+	const chemins = await lireCheminsDeDossier(base);
+
+	const lignes = await base
+		.select({
+			identifiant: notes.identifiant,
+			titre: notes.titre,
+			corpsReference: notes.corpsReference,
+			corpsOperationnel: notes.corpsOperationnel,
+			typeNom: typesDeNote.nom,
+			typeFicheNom: typesDeFiche.nom,
+			universNom: univers.nom,
+			domaineNom: domaines.nom,
+			dossierId: notes.dossierId,
+			auteurNom: comptes.nom,
+			visibilite: notes.visibilite,
+			statut: notes.statut,
+			modifieLe: notes.modifieLe,
+			verifieLe: notes.verifieLe,
+			consultations: notes.compteurDeConsultations,
+			signetAdresse: notes.signetAdresse,
+			signetAjouteLe: notes.signetAjouteLe
+		})
+		.from(notes)
+		.innerJoin(typesDeNote, eq(notes.typeDeNoteId, typesDeNote.id))
+		.innerJoin(domaines, eq(notes.domaineId, domaines.id))
+		.innerJoin(univers, eq(domaines.universId, univers.id))
+		.innerJoin(comptes, eq(notes.auteurId, comptes.id))
+		.leftJoin(typesDeFiche, eq(notes.typeDeFicheId, typesDeFiche.id))
+		.orderBy(notes.identifiant);
+
+	const etiquettesParNote = await lireEtiquettesParNote(base);
+	const piecesParNote = await lirePiecesJointesParNote(base);
+
+	return lignes.map((n) => {
+		/* La fraîcheur se lit sur la dernière vérification, et à défaut sur la
+		   dernière modification : c'est la règle de RG-M06-01, et `semer()` la
+		   relit dans les mêmes termes. */
+		const reference = n.verifieLe ?? n.modifieLe;
+		const rendu: Record<string, unknown> = {
+			id: n.identifiant,
+			titre: n.titre,
+			extrait: extraitDuCorps(n.corpsReference),
+			type: n.typeNom as TypeDeNote,
+			univers: n.universNom,
+			domaine: n.domaineNom,
+			dossier: chemins.get(n.dossierId) ?? '',
+			auteur: n.auteurNom,
+			fraicheur: niveauFraicheur(joursEcoules(reference, contexte.maintenant), contexte.seuils),
+			jours: joursEcoules(n.modifieLe, contexte.maintenant),
+			revise: n.verifieLe === null ? null : dateCourteDInstant(n.verifieLe),
+			vues: n.consultations,
+			pj: piecesParNote.get(n.identifiant) ?? 0,
+			brouillon: n.statut === 'brouillon',
+			visibilite: n.visibilite === 'publique' ? 'Publique' : 'Interne',
+			operationnel: n.corpsOperationnel !== null,
+			etiquettes: etiquettesParNote.get(n.identifiant) ?? []
+		};
+		/* `typeFiche`, `url` et `ajoute` sont OPTIONNELS : la clé est OMISE quand
+		   la colonne est nulle, et non posée à `undefined`. Une clé présente et
+		   vide n'est pas la même valeur qu'une clé absente pour une comparaison
+		   profonde, et c'est cette comparaison qui garde les huit lots suivants. */
+		if (n.typeFicheNom !== null) rendu['typeFiche'] = n.typeFicheNom as TypeDeFiche;
+		if (n.signetAdresse !== null) rendu['url'] = n.signetAdresse;
+		if (n.signetAjouteLe !== null) rendu['ajoute'] = dateCourteDIso(n.signetAjouteLe);
+		return rendu as unknown as Note;
+	});
+}
+
+/**
+ * Les étiquettes de chaque note, triées par libellé — voir `lireNotes`.
+ *
+ * LE TRI EST FAIT ICI, EN TYPESCRIPT, ET SURTOUT PAS PAR `ORDER BY`. Les deux
+ * ne donnent pas le même ordre, et l'écart a été mesuré : sur `n-sig-facturation`,
+ * PostgreSQL rend « facturation » avant « éditeur », là où
+ * `localeCompare(…, 'fr')` rend « éditeur » avant « facturation ». La collation
+ * du serveur classe sur les octets de l'encodage, où `é` suit `f` ; la collation
+ * française traite `é` comme un `e` accentué, donc avant `f`.
+ *
+ * Le français est le bon ordre — c'est celui que les maquettes montrent —, et
+ * c'est déjà celui de la semence : `lignesDEtiquette()` emploie exactement
+ * `localeCompare(a, b, 'fr')`. Déléguer le tri au serveur ferait dépendre
+ * l'ordre affiché de la collation de l'instance, c'est-à-dire d'un réglage
+ * d'exploitation. Un seul comparateur, dans le code, comme pour la fraîcheur.
+ */
+export async function lireEtiquettesParNote(
+	base: Base
+): Promise<ReadonlyMap<string, readonly string[]>> {
+	const lignes = await base
+		.select({ noteIdentifiant: notes.identifiant, libelle: etiquettes.libelle })
+		.from(etiquettesDeNote)
+		.innerJoin(notes, eq(etiquettesDeNote.noteId, notes.id))
+		.innerJoin(etiquettes, eq(etiquettesDeNote.etiquetteId, etiquettes.id));
+
+	const par = new Map<string, string[]>();
+	for (const ligne of lignes) {
+		const deja = par.get(ligne.noteIdentifiant);
+		if (deja === undefined) par.set(ligne.noteIdentifiant, [ligne.libelle]);
+		else deja.push(ligne.libelle);
+	}
+	for (const libelles of par.values()) libelles.sort((a, b) => a.localeCompare(b, 'fr'));
+	return par;
+}
+
+/**
+ * Le nombre de pièces jointes par note — le compte RÉEL de la table.
+ *
+ * Il vaut 0 partout tant que la semence n'écrit pas de pièce jointe. C'est un
+ * fait, pas un défaut de ce module : le rendre autrement serait la « valeur
+ * illustrative » que P-02 proscrit.
+ */
+export async function lirePiecesJointesParNote(base: Base): Promise<ReadonlyMap<string, number>> {
+	const lignes = await base.execute<{ identifiant: string; n: number }>(
+		`select n.identifiant, count(p.id)::int as n
+		   from notes n left join pieces_jointes p on p.note_id = n.id
+		  group by n.identifiant`
+	);
+	const rangs = lignes.rows ?? (lignes as unknown as { identifiant: string; n: number }[]);
+	return new Map(rangs.map((l) => [l.identifiant, l.n]));
+}
+
+/* ═══════════════════════════════════════════════════ Les relations ══════ */
+
+/**
+ * Les relations, par les identifiants lisibles de leurs deux extrémités.
+ *
+ * `notes` est jointe DEUX FOIS — la source et la cible —, ce qui exige deux
+ * alias : sans eux, la seconde jointure écraserait la première et les deux
+ * extrémités porteraient le même identifiant.
+ */
+export async function lireRelations(base: Base): Promise<readonly Relation[]> {
+	const source = alias(notes, 'note_source');
+	const cible = alias(notes, 'note_cible');
+	const lignes = await base
+		.select({
+			de: source.identifiant,
+			vers: cible.identifiant,
+			type: typesDeRelation.identifiant
+		})
+		.from(relations)
+		.innerJoin(typesDeRelation, eq(relations.typeDeRelationId, typesDeRelation.id))
+		.innerJoin(source, eq(relations.sourceId, source.id))
+		.innerJoin(cible, eq(relations.cibleId, cible.id))
+		.orderBy(source.identifiant, cible.identifiant, typesDeRelation.ordre);
+
+	return lignes.map(
+		(r) => ({ de: r.de, vers: r.vers, type: r.type as CleDeTypeDeRelation }) as unknown as Relation
+	);
+}
+
+/** Les six types de relation et leurs deux libellés (RG-M08-06). */
+export async function lireTypesDeRelation(base: Base): Promise<Record<string, LibellesDeRelation>> {
+	const lignes = await base
+		.select({
+			identifiant: typesDeRelation.identifiant,
+			sortant: typesDeRelation.libelleSortant,
+			entrant: typesDeRelation.libelleEntrant
+		})
+		.from(typesDeRelation)
+		.orderBy(typesDeRelation.ordre);
+
+	const rendu: Record<string, LibellesDeRelation> = {};
+	for (const t of lignes) rendu[t.identifiant] = { sortant: t.sortant, entrant: t.entrant };
+	return rendu;
+}
+
+/** Les types de relation qui portent une dépendance technique. */
+export async function lireRelationsTechniques(base: Base): Promise<readonly CleDeTypeDeRelation[]> {
+	const lignes = await base
+		.select({ identifiant: typesDeRelation.identifiant })
+		.from(typesDeRelation)
+		.where(eq(typesDeRelation.technique, true))
+		.orderBy(typesDeRelation.ordre);
+	return lignes.map((t) => t.identifiant as CleDeTypeDeRelation);
+}
+
+/* ═══════════════════════════════════════════════════ Le référentiel ════ */
+
+/** Les types de note, dans l'ordre du référentiel. */
+export async function lireTypesDeNote(base: Base): Promise<readonly TypeDeNote[]> {
+	const lignes = await base
+		.select({ nom: typesDeNote.nom })
+		.from(typesDeNote)
+		.orderBy(typesDeNote.ordre);
+	return lignes.map((t) => t.nom as TypeDeNote);
+}
+
+/** Les types de fiche et leur schéma de propriétés (CDC §3.5). */
+export async function lireTypesDeFiche(
+	base: Base
+): Promise<Record<string, readonly ChampDeFiche[]>> {
+	const TYPE_DEPUIS_ENUM: Record<string, string> = {
+		texte: 'texte',
+		nombre: 'nombre',
+		liste: 'liste',
+		booleen: 'interrupteur'
+	};
+	const lignes = await base
+		.select({
+			typeNom: typesDeFiche.nom,
+			typeOrdre: typesDeFiche.ordre,
+			cle: champsDeTypeDeFiche.cle,
+			nom: champsDeTypeDeFiche.nom,
+			type: champsDeTypeDeFiche.type,
+			exemple: champsDeTypeDeFiche.exemple,
+			valeurs: champsDeTypeDeFiche.valeurs
+		})
+		.from(champsDeTypeDeFiche)
+		.innerJoin(typesDeFiche, eq(champsDeTypeDeFiche.typeDeFicheId, typesDeFiche.id))
+		.orderBy(typesDeFiche.ordre, champsDeTypeDeFiche.ordre);
+
+	const rendu: Record<string, ChampDeFiche[]> = {};
+	/* Les types SANS champ existeraient sans cette passe : la jointure ne les
+	   rendrait pas, et le référentiel serait amputé sans que rien ne le dise. */
+	const tous = await base
+		.select({ nom: typesDeFiche.nom })
+		.from(typesDeFiche)
+		.orderBy(typesDeFiche.ordre);
+	for (const t of tous) rendu[t.nom] = [];
+
+	for (const c of lignes) {
+		const type = TYPE_DEPUIS_ENUM[c.type];
+		if (type === undefined) throw new Error(`type de champ inconnu en base : ${c.type}`);
+		const champ: Record<string, unknown> = { cle: c.cle, nom: c.nom, type };
+		if (c.exemple !== null) champ['exemple'] = c.exemple;
+		if (c.valeurs !== null) champ['valeurs'] = c.valeurs;
+		const liste = rendu[c.typeNom];
+		if (liste === undefined) throw new Error(`type de fiche inconnu : ${c.typeNom}`);
+		liste.push(champ as unknown as ChampDeFiche);
+	}
+	return rendu;
+}
+
+/** Les templates fournis (RG-REF-01). */
+export async function lireTemplates(base: Base): Promise<readonly Template[]> {
+	const lignes = await base
+		.select({
+			identifiant: templates.identifiant,
+			nom: templates.nom,
+			description: templates.description,
+			typeNom: typesDeNote.nom,
+			defaut: templates.defaut,
+			structure: templates.structure,
+			contenu: templates.contenu
+		})
+		.from(templates)
+		.innerJoin(typesDeNote, eq(templates.typeDeNoteId, typesDeNote.id))
+		.orderBy(templates.identifiant);
+
+	/* `defaut` est déclaré OPTIONNEL dans `interface Template`, et le commentaire
+	   du jeu dit pourquoi : « porté par le jeu complet seulement », c'est-à-dire
+	   absent des variantes réduites. Dans le jeu complet il est TOUJOURS présent,
+	   `false` compris — il est donc toujours rendu, et jamais omis quand il est
+	   faux. L'optionnel d'un type n'est pas l'optionnel d'un jeu de données.
+
+	   `utilisations` n'a AUCUNE colonne : c'est un compteur d'emploi, et la
+	   batterie d'équivalence le porte en lacune plutôt que ce module en zéro. */
+	return lignes.map(
+		(t) =>
+			({
+				id: t.identifiant,
+				defaut: t.defaut,
+				nom: t.nom,
+				type: t.typeNom,
+				description: t.description,
+				structure: t.structure,
+				contenu: t.contenu
+			}) as unknown as Template
+	);
+}
+
+/* ═══════════════════════════════════════════════════ Les comptes ════════ */
+
+const ROLE_DEPUIS_ENUM: Record<string, string> = {
+	administrateur: 'Administrateur',
+	referent: 'Référent',
+	contributeur: 'Contributeur',
+	lecteur: 'Lecteur'
+};
+
+/**
+ * Les comptes de la console (V-28).
+ *
+ * TROIS CHAMPS D'`interface Compte` N'ONT AUCUNE COLONNE, et ce module ne les
+ * fabrique pas :
+ *
+ *   `id`        `c-karim` et ses quatre voisins. La semence ne les écrit nulle
+ *               part : `lignesDeCompte()` ne retient que `identifiant`. La
+ *               table a bien un `id`, mais c'est un UUID tiré au hasard —
+ *               rendre l'un pour l'autre serait rendre une valeur qui change à
+ *               chaque semence.
+ *   `domaine`   le domaine de rattachement. `comptes` n'a pas la colonne. C'est
+ *               le champ dont l'entrée « Signets » du rail aurait besoin.
+ *   `derniere`  « aujourd'hui à 08:41 » — un libellé RELATIF, donc un rendu et
+ *               non une donnée ; la donnée serait un instant de dernière
+ *               connexion, et `comptes` ne l'a pas non plus.
+ *
+ * Les trois sont OMIS du résultat. `pnpm verif:donnees` les compte et les
+ * nomme : c'est un rouge déclaré, pas un trou silencieux.
+ */
+export async function lireComptes(base: Base): Promise<readonly Partial<Compte>[]> {
+	const lignes = await base
+		.select({
+			identifiant: comptes.identifiant,
+			nom: comptes.nom,
+			courriel: comptes.courriel,
+			role: comptes.role,
+			actif: comptes.actif,
+			arriveLe: comptes.arriveLe
+		})
+		.from(comptes)
+		.orderBy(comptes.identifiant);
+
+	return lignes.map((c) => {
+		const role = ROLE_DEPUIS_ENUM[c.role];
+		if (role === undefined) throw new Error(`rôle inconnu en base : ${c.role}`);
+		return {
+			nom: c.nom,
+			identifiant: c.identifiant,
+			courriel: c.courriel,
+			role,
+			actif: c.actif,
+			arrivee: dateCourteDIso(c.arriveLe)
+		} as unknown as Partial<Compte>;
+	});
+}
+
+/* ═══════════════════════════════════════════════ La configuration ══════ */
+
+/**
+ * La configuration globale (CDC §3.3, M14.7) — la table `parametres`.
+ *
+ * ELLE EST LUE, JAMAIS REDÉCLARÉE. ADR-005 interdit de dupliquer les seuils
+ * ailleurs que dans la configuration que lit l'implémentation unique : cette
+ * fonction est le chemin par lequel `niveauFraicheur()` reçoit ses seuils, et
+ * il n'y en a pas d'autre.
+ */
+export async function lireConfiguration(base: Base): Promise<Configuration> {
+	const lignes = await base
+		.select({ cle: parametres.cle, valeur: parametres.valeur })
+		.from(parametres);
+	const par = new Map(lignes.map((p) => [p.cle, p.valeur]));
+
+	const nombre = (cle: string): number => {
+		const valeur = par.get(cle);
+		if (typeof valeur !== 'number') {
+			throw new Error(`paramètre ${cle} attendu numérique, obtenu ${typeof valeur}`);
+		}
+		return valeur;
+	};
+	const chaine = (cle: string): string => {
+		const valeur = par.get(cle);
+		if (typeof valeur !== 'string') {
+			throw new Error(`paramètre ${cle} attendu textuel, obtenu ${typeof valeur}`);
+		}
+		return valeur;
+	};
+
+	return {
+		seuilFrais: nombre('seuil_frais'),
+		seuilVieillissant: nombre('seuil_vieillissant'),
+		versionsMax: nombre('versions_max'),
+		portailAssistance: chaine('portail_assistance'),
+		motFiche: chaine('mot_fiche'),
+		tailleMaxPieceJointe: nombre('taille_max_piece_jointe'),
+		dureeSession: nombre('duree_session')
+	};
+}
+
+/**
+ * Les seuils de fraîcheur en vigueur, dans la forme que `niveauFraicheur()`
+ * attend. C'est le raccourci qu'un chargeur de route emploie avant `lireNotes`.
+ */
+export async function lireSeuils(base: Base): Promise<SeuilsDeFraicheur> {
+	const config = await lireConfiguration(base);
+	return { frais: config.seuilFrais, vieillissant: config.seuilVieillissant };
+}
