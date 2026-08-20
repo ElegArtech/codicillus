@@ -83,6 +83,23 @@
 		instance?: EtatDInstance;
 		/** Le registre des comptes. Absente, la constante du jeu de semence. */
 		comptes?: readonly Compte[];
+		/**
+		 * CE QUE LA VUE FAIT QUAND LA DÉSACTIVATION EST CONFIRMÉE, ou quand un
+		 * compte est réactivé.
+		 *
+		 * Même partage qu'en `V-27`, `V-28` et `V-29` : la vue tient l'état de son
+		 * dialogue — quel compte est visé, s'il est le dernier administrateur, ce
+		 * que ses contributions comptent — et la page tient le réseau. Le décompte
+		 * des contributions se fait sur les notes qu'elle a reçues ; personne
+		 * d'autre ne peut le composer.
+		 *
+		 * `actif` PORTE L'ÉTAT VOULU, pas une bascule : deux administrateurs qui
+		 * cliquent en même temps ne doivent pas s'annuler l'un l'autre.
+		 */
+		onChangerLActivation?: (compte: {
+			readonly identifiant: string;
+			readonly actif: boolean;
+		}) => void;
 	}
 
 	const {
@@ -92,7 +109,8 @@
 		domaines = DOMAINES,
 		compte = MOI,
 		instance = INSTANCE,
-		comptes: registreDeComptes = COMPTES
+		comptes: registreDeComptes = COMPTES,
+		onChangerLActivation
 	}: Proprietes = $props();
 
 	/**
@@ -236,12 +254,38 @@
 	const compteReinitialise = $derived(casMdp ? comptes[0] : null);
 	const motDePasseAffiche = $derived(casMdp ? motDePasse() : '—');
 
+	/**
+	 * LE COMPTE DONT LA DÉSACTIVATION EST EXAMINÉE.
+	 *
+	 * `null` au rendu serveur : l'écran reste celui que le vecteur décrit tant que
+	 * personne n'a cliqué. C'est `demanderDesactivation(c)` du gel
+	 * (`V-32:3264`), rendu à la vue qui le transcrit.
+	 *
+	 * LA RÉACTIVATION N'OUVRE PAS DE DIALOGUE, et c'est le gel qui en décide :
+	 * `V-32:3067` réactive directement — elle ne retire aucun accès, il n'y a rien
+	 * à confirmer.
+	 */
+	let demandeDeDesactivation = $state<string | null>(null);
+
 	/** `des` désactive le premier compte actif non administrateur (`V-32:3348`). */
 	const compteDesactive = $derived(
-		casDes
-			? (comptes.find((c) => c.compte.actif && c.compte.role !== 'Administrateur') ?? null)
-			: null
+		demandeDeDesactivation !== null
+			? (comptes.find((c) => c.compte.identifiant === demandeDeDesactivation) ?? null)
+			: casDes
+				? (comptes.find((c) => c.compte.actif && c.compte.role !== 'Administrateur') ?? null)
+				: null
 	);
+
+	/** `showModal()` — voir `V-28.svelte` : l'attribut `open` n'obtient pas la modalité. */
+	$effect(() => {
+		const boite = document.getElementById('dlg-desactiver');
+		if (!(boite instanceof HTMLDialogElement)) return;
+		if (compteDesactive === null) {
+			if (boite.open) boite.close();
+			return;
+		}
+		if (!boite.open) boite.showModal();
+	});
 	const refusDeDesactivation = $derived(
 		compteDesactive !== null && estDernierAdmin(compteDesactive)
 	);
@@ -290,7 +334,24 @@
 				<span></span>
 			</div>
 			<div id="liste">
-				{#each listeTriee as c (c.compte.id)}
+				<!--
+					LA CLÉ EST L'IDENTIFIANT DE CONNEXION, ET NON `id` — UN DÉFAUT MESURÉ.
+
+					`c.compte.id` était la clé. Elle vaut `undefined` pour tout compte venu
+					de la base : `lireComptes()` omet `id` PAR DÉCISION, et le dit —
+					« `comptes.identifiant` porte déjà l'identifiant de connexion que
+					CDC:1178 énumère […] la table a bien un `id`, mais c'est un UUID tiré au
+					hasard ».
+
+					Cinq clés `undefined` font `each_key_duplicate`, et Svelte ABANDONNE
+					L'HYDRATATION DE LA PAGE ENTIÈRE : plus un seul écouteur n'était posé,
+					sur aucun écran de cette route. Le rendu serveur restait juste, ce qui
+					rendait le défaut invisible à l'œil — c'est la sonde qui l'a nommé.
+
+					`identifiant` est unique par contrainte (`comptes_identifiant_unique`),
+					présent au jeu de semence comme en base, et stable : c'est la clé.
+				-->
+				{#each listeTriee as c (c.compte.identifiant)}
 					{@const marques = !c.compte.actif || c.verrouille || estDernierAdmin(c)}
 					<div class="tg tg--comptes tg--ligne" data-actif={c.compte.actif ? 'oui' : 'non'}>
 						<span class="avatar-c">{initiales(c.compte.nom)}</span>
@@ -336,8 +397,18 @@
 										/></svg
 									></button
 								>{/if}
-							<button class="btn" class:btn--destructif={c.compte.actif} type="button"
-								>{c.compte.actif ? 'Désactiver' : 'Réactiver'}</button
+							<button
+								class="btn"
+								class:btn--destructif={c.compte.actif}
+								type="button"
+								onclick={() => {
+									if (c.compte.actif) demandeDeDesactivation = c.compte.identifiant;
+									else
+										onChangerLActivation?.({
+											identifiant: c.compte.identifiant,
+											actif: true
+										});
+								}}>{c.compte.actif ? 'Désactiver' : 'Réactiver'}</button
 							>
 						</div>
 					</div>
@@ -639,7 +710,12 @@
 						>
 					</span>
 					<h2 class="dlg__titre" id="dlg-des-titre">Désactiver le compte</h2>
-					<button class="dlg__fermer" data-fermer aria-label="Fermer">
+					<button
+						class="dlg__fermer"
+						data-fermer
+						aria-label="Fermer"
+						onclick={() => (demandeDeDesactivation = null)}
+					>
 						<svg
 							width="16"
 							height="16"
@@ -681,14 +757,25 @@
 							</p>{/if}{/if}
 				</div>
 				<div class="dlg__pied">
-					<button class="btn" data-fermer id="des-annuler"
+					<button
+						class="btn"
+						data-fermer
+						id="des-annuler"
+						onclick={() => (demandeDeDesactivation = null)}
 						>{refusDeDesactivation ? 'Fermer' : 'Annuler'}</button
 					>
 					<button
 						class="btn btn--principal btn--destructif"
 						id="des-valider"
 						style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
-						hidden={refusDeDesactivation}>Désactiver</button
+						hidden={refusDeDesactivation}
+						onclick={() => {
+							if (compteDesactive === null || refusDeDesactivation) return;
+							onChangerLActivation?.({
+								identifiant: compteDesactive.compte.identifiant,
+								actif: false
+							});
+						}}>Désactiver</button
 					>
 				</div>
 			</div>
