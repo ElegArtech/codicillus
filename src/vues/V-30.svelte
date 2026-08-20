@@ -82,6 +82,19 @@
 		relationsTechniques?: readonly CleDeTypeDeRelation[];
 		/** Les relations déclarées, dont se compte l'usage. Absente, la constante du jeu. */
 		relations?: readonly Relation[];
+		/**
+		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE.
+		 *
+		 * Même partage qu'en `V-27`, `V-28`, `V-29` et `V-32` : la vue tient l'état
+		 * de son dialogue — quel type est visé, combien de relations le portent,
+		 * quelle sortie est cochée — et la page tient le réseau. `sortie` et `vers`
+		 * portent les valeurs du gel (`V-30:536`, `:549`), jamais des noms choisis.
+		 */
+		onSupprimer?: (demande: {
+			readonly type: string;
+			readonly sortie: 'reaffecter' | 'supprimer';
+			readonly vers: string;
+		}) => void;
 	}
 
 	const {
@@ -93,6 +106,7 @@
 		instance = INSTANCE,
 		typesRelation = TYPES_RELATION,
 		relationsTechniques = RELATIONS_TECHNIQUES,
+		onSupprimer,
 		relations = RELATIONS
 	}: Proprietes = $props();
 
@@ -214,11 +228,42 @@
 	 * relation pour « Type inutilisé », `heberge` pour « Type utilisé ». La
 	 * position par défaut n'ouvre rien.
 	 */
+	/**
+	 * LE TYPE DONT LA SUPPRESSION EST EXAMINÉE. `null` au rendu serveur : l'écran
+	 * reste celui que le vecteur décrit tant que personne n'a cliqué.
+	 */
+	let demande = $state<string | null>(null);
+	/** La sortie cochée, et le type d'accueil — les deux réglages du gel. */
+	let sortie = $state<'reaffecter' | 'supprimer'>('reaffecter');
+	let versLeType = $state('');
+
 	const aSupprimer = $derived(
-		sup === 'utilise' ? null : (types.find((t) => usage(t.cle) === 0) ?? null)
+		demande !== null
+			? (types.find((t) => t.cle === demande) ?? null)
+			: sup === 'utilise'
+				? null
+				: (types.find((t) => usage(t.cle) === 0) ?? null)
 	);
 	const relationsASupprimer = $derived(aSupprimer ? usage(aSupprimer.cle) : 0);
 	const autresTypes = $derived(aSupprimer ? types.filter((t) => t !== aSupprimer) : []);
+
+	/** `showModal()` — voir `V-28.svelte` : l'attribut `open` n'obtient pas la modalité. */
+	$effect(() => {
+		const boite = document.getElementById('dlg-supprimer');
+		if (!(boite instanceof HTMLDialogElement)) return;
+		if (aSupprimer === null) {
+			if (boite.open) boite.close();
+			return;
+		}
+		if (!boite.open) boite.showModal();
+	});
+
+	/** Refermer : le dialogue disparaît, et les réglages retrouvent leur défaut. */
+	function refermer(): void {
+		demande = null;
+		sortie = 'reaffecter';
+		versLeType = '';
+	}
 </script>
 
 <Coquille
@@ -303,6 +348,11 @@
 								class="btn btn--destructif"
 								type="button"
 								aria-label="Supprimer le type {t.direct}"
+								onclick={() => {
+									demande = t.cle;
+									sortie = 'reaffecter';
+									versLeType = '';
+								}}
 								><svg
 									width="14"
 									height="14"
@@ -498,7 +548,7 @@
 						>
 					</span>
 					<h2 class="dlg__titre" id="dlg-sup-titre">Supprimer le type de relation</h2>
-					<button class="dlg__fermer" data-fermer aria-label="Fermer">
+					<button class="dlg__fermer" data-fermer aria-label="Fermer" onclick={refermer}>
 						<svg
 							width="16"
 							height="16"
@@ -533,11 +583,18 @@
 							</div>
 							<div class="choix-reaffectation">
 								<label
-									><input type="radio" name="sortie" value="reaffecter" checked /><span
-										style="flex:1"
+									><input
+										type="radio"
+										name="sortie"
+										value="reaffecter"
+										checked={sortie === 'reaffecter'}
+										onchange={() => (sortie = 'reaffecter')}
+									/><span style="flex:1"
 										>Réaffecter à un autre type<select
 											class="selecteur"
 											style="margin-top:var(--e-2);width:100%;padding:6px var(--e-2);border:1px solid var(--c-trait-fort);border-radius:var(--r-2);background:var(--c-papier);font-family:var(--f-ui);font-size:var(--t-petit)"
+											value={versLeType || (autresTypes[0]?.cle ?? '')}
+											onchange={(e) => (versLeType = e.currentTarget.value)}
 											>{#each autresTypes as t (t.cle)}<option value={t.cle}
 													>{t.direct} / {t.inverse}</option
 												>{/each}</select
@@ -547,7 +604,13 @@
 										></span
 									></label
 								><label
-									><input type="radio" name="sortie" value="supprimer" /><span style="flex:1"
+									><input
+										type="radio"
+										name="sortie"
+										value="supprimer"
+										checked={sortie === 'supprimer'}
+										onchange={() => (sortie = 'supprimer')}
+									/><span style="flex:1"
 										>Supprimer aussi ces {relationsASupprimer} relations<span class="aide"
 											>Les liens disparaissent du graphe et des panneaux Relations. Les {motFichePlurielMinuscule}
 											restent intactes. Cette perte est définitive.</span
@@ -557,12 +620,19 @@
 							</div>{/if}{/if}
 				</div>
 				<div class="dlg__pied">
-					<button class="btn" data-fermer id="sup-annuler">Annuler</button>
+					<button class="btn" data-fermer id="sup-annuler" onclick={refermer}>Annuler</button>
 					<button
 						class="btn btn--principal btn--destructif"
 						id="sup-valider"
 						style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
-						>{aSupprimer && relationsASupprimer === 0 ? 'Supprimer' : 'Appliquer'}</button
+						onclick={() => {
+							if (aSupprimer === null) return;
+							onSupprimer?.({
+								type: aSupprimer.cle,
+								sortie: relationsASupprimer === 0 ? 'supprimer' : sortie,
+								vers: versLeType || (autresTypes[0]?.cle ?? '')
+							});
+						}}>{aSupprimer && relationsASupprimer === 0 ? 'Supprimer' : 'Appliquer'}</button
 					>
 				</div>
 			</div>

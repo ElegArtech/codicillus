@@ -61,8 +61,10 @@ import {
 	dossiers,
 	notes,
 	parametres,
+	relations,
 	typesDeFiche,
 	typesDeNote,
+	typesDeRelation,
 	univers
 } from '../base/schema';
 import type { RoleDeCompte } from '../droits/resolution';
@@ -947,6 +949,126 @@ export async function changerLeRoleDUnCompte(
 		.set({ role: verdict.role, modifieLe: maintenant })
 		.where(eq(comptes.id, etat.id));
 	return verdict;
+}
+
+/**
+ * CE QU'IL ADVIENT DES RELATIONS D'UN TYPE SUPPRIMÉ — les deux sorties que le
+ * dialogue de `V-30` offre, et il n'y en a pas d'autres.
+ *
+ * `V-30:534-556` : « Choisissez ce qu'il advient de ces relations. Aucune fiche
+ * n'est supprimée dans les deux cas : seul le lien entre elles est concerné. »
+ */
+export type SortieDUnTypeDeRelation = 'reaffecter' | 'supprimer';
+
+/** Le verdict d'une suppression de type de relation. */
+export type VerdictDUnTypeDeRelation =
+	| { readonly issue: 'cible-invalide' }
+	| {
+			readonly issue: 'possible';
+			/** Le nombre de relations réaffectées ou détruites — jamais un chiffre supposé. */
+			readonly relations: number;
+			readonly sortie: SortieDUnTypeDeRelation;
+	  };
+
+/**
+ * SUPPRIMER UN TYPE DE RELATION — `RG-M08-06`, `RG-M08-07`.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * TROIS CAS, ET LES TROIS SONT AU GEL
+ *
+ * `V-30:513-556`, lu :
+ *
+ *   AUCUNE RELATION   « n'est utilisé par aucune relation. Sa suppression retire
+ *                     seulement ce couple de libellés du vocabulaire proposé. »
+ *                     Le type part, rien d'autre n'est touché.
+ *   RÉAFFECTER        « Les N relations sont conservées et changent d'étiquette.
+ *                     Le graphe garde sa structure. »
+ *   SUPPRIMER AUSSI   « Les liens disparaissent du graphe et des panneaux
+ *                     Relations. Les fiches restent intactes. Cette perte est
+ *                     définitive. »
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * POURQUOI UNE TRANSACTION, ALORS QUE `V-28` EN AVAIT UNE POUR LA MÊME RAISON
+ *
+ * `type_de_relation_id` est en `ON DELETE RESTRICT` : le type ne peut pas partir
+ * tant qu'une relation le porte. Les deux écritures sont donc ORDONNÉES et
+ * indissociables — traiter les relations, puis retirer le type. Si la seconde
+ * échoue, la première doit être annulée, sans quoi des relations auraient changé
+ * d'étiquette ou disparu pour un type qui, lui, existe toujours.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LA RÉAFFECTATION PEUT SE HEURTER À L'UNICITÉ, ET CE N'EST PAS UNE ERREUR
+ *
+ * `relations_unicite` porte sur (source, cible, type). Réaffecter vers un type
+ * que le même couple porte DÉJÀ produirait un doublon : ces relations-là sont
+ * retirées plutôt que réécrites — le lien existe déjà sous l'étiquette visée, et
+ * « le graphe garde sa structure » reste vrai. Rien n'est perdu, rien n'est
+ * dupliqué.
+ *
+ * L'INDEX DE RECHERCHE N'EST PAS ENTRETENU : aucune note ne disparaît, et la
+ * projection ne porte pas les relations. Lacune nommée plutôt que geste supposé.
+ */
+export async function supprimerUnTypeDeRelation(
+	base: Base,
+	demande: {
+		readonly type: string;
+		readonly sortie: SortieDUnTypeDeRelation;
+		/** L'identifiant du type d'accueil, quand la sortie est la réaffectation. */
+		readonly vers?: string;
+	}
+): Promise<IssueDUnGeste<VerdictDUnTypeDeRelation>> {
+	const [type] = await base
+		.select({ id: typesDeRelation.id })
+		.from(typesDeRelation)
+		.where(eq(typesDeRelation.identifiant, demande.type))
+		.limit(1);
+	if (type === undefined) return { issue: 'introuvable' };
+
+	const portees = await base
+		.select({ id: relations.id, sourceId: relations.sourceId, cibleId: relations.cibleId })
+		.from(relations)
+		.where(eq(relations.typeDeRelationId, type.id));
+
+	let accueil: { readonly id: string } | undefined;
+	if (portees.length > 0 && demande.sortie === 'reaffecter') {
+		[accueil] = await base
+			.select({ id: typesDeRelation.id })
+			.from(typesDeRelation)
+			.where(eq(typesDeRelation.identifiant, demande.vers ?? ''))
+			.limit(1);
+		/* Un type d'accueil inconnu, ou le type qu'on retire : ni l'un ni l'autre
+		   ne conserve les relations. Refus, jamais un repli silencieux. */
+		if (accueil === undefined || accueil.id === type.id) return { issue: 'cible-invalide' };
+	}
+
+	await base.transaction(async (tx) => {
+		if (portees.length > 0) {
+			if (accueil === undefined) {
+				await tx.delete(relations).where(eq(relations.typeDeRelationId, type.id));
+			} else {
+				/* Les couples que le type d'accueil porte déjà — voir l'en-tête. */
+				const deja = await tx
+					.select({ sourceId: relations.sourceId, cibleId: relations.cibleId })
+					.from(relations)
+					.where(eq(relations.typeDeRelationId, accueil.id));
+				const occupes = new Set(deja.map((r) => `${r.sourceId}→${r.cibleId}`));
+
+				for (const relation of portees) {
+					if (occupes.has(`${relation.sourceId}→${relation.cibleId}`)) {
+						await tx.delete(relations).where(eq(relations.id, relation.id));
+						continue;
+					}
+					await tx
+						.update(relations)
+						.set({ typeDeRelationId: accueil.id })
+						.where(eq(relations.id, relation.id));
+				}
+			}
+		}
+		await tx.delete(typesDeRelation).where(eq(typesDeRelation.id, type.id));
+	});
+
+	return { issue: 'possible', relations: portees.length, sortie: demande.sortie };
 }
 
 /** Le verdict d'une désactivation — deux issues, celles du dialogue de `V-32`. */
