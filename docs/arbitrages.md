@@ -2015,3 +2015,73 @@ Ces deux règles touchent `src/lib/contenu/document.ts`, livré par `T-014`. Ell
 resserrements**, jamais des assouplissements : aucun document du corpus ne les enfreint — à vérifier
 par le lot, sur les quatre documents du gel et les dix cas nommés de la batterie 4. Si l'un les
 enfreint, **c'est le document qui est faux**, et il se corrige.
+
+---
+
+## ARB-057 — Amendements à `ARB-052` et `ARB-053`, sur les deux points où `T-012b` m'a contredit
+**20 août 2026** — arbitrage délégué. Répond à `T-012b` É-2 et É-3. **Les deux décisions tiennent ; leur
+énoncé était faux, et c'est la mesure qui l'a montré.**
+
+### 1 · `ARB-052` — la borne visait le mauvais objet
+
+**Ce que j'avais écrit** : *« aucune adresse portant un identifiant de corpus ne redirige, jamais, sous
+aucun prétexte de commodité »*.
+
+**Ce que `T-012b` a trouvé, et j'ai vérifié.** Deux adresses de `docs/routes.md` §3 portent un
+identifiant de corpus **et** appartiennent aux chemins fixes qui redirigent :
+
+| Adresse | Où |
+|---|---|
+| `/console/imports/{lot}` | `docs/routes.md:183` |
+| `/console/exports/{univers}/{domaine}` | `docs/routes.md:185` |
+
+À la lettre, ma borne les interdit. **Et elle a tort**, pour la raison que le critère opérationnel du
+même arbitrage donnait déjà : *« une adresse dont la réponse dépend du corpus est indiscernable ; une
+adresse dont la réponse ne dépend que de la présence d'une session redirige. »*
+
+Ces deux adresses redirigent sur leur **préfixe**, `/console`, **avant toute résolution**. La réponse
+ne dépend donc pas du corpus, et le paramètre n'est jamais lu. **Et la batterie le mesure au lieu de
+le supposer** : ce sont précisément les **deux seuls couples indiscernables PROUVÉS** du dépôt —
+`/console/exports/{u}/{d}` sur une valeur existante contre une valeur absente, clés identiques.
+
+**Amendement. La borne porte sur la DÉPENDANCE AU CORPUS DE LA RÉPONSE, non sur la présence d'un
+identifiant dans l'adresse.** Formulation qui remplace la précédente :
+
+> **Aucune adresse dont la réponse dépend du corpus ne redirige.** Une adresse qui porte un identifiant
+> mais dont le régime est décidé sur le préfixe, avant toute résolution, redirige — et cela **se
+> mesure** : le couple *valeur existante* / *valeur absente* doit être indiscernable, prouvé, jamais
+> supposé.
+
+Le critère opérationnel était juste ; la borne le trahissait en le durcissant sur une propriété
+syntaxique. **`T-012b` a eu raison de mesurer plutôt que d'obéir.**
+
+### 2 · `ARB-053` — la frontière de confiance n'est pas le frontal, c'est l'hôte et le réseau
+
+**Ce que j'avais écrit** : *« aucun client ne peut forger l'en-tête »*, au motif que `compose.yaml:142`
+publie `app` sur `127.0.0.1` seulement.
+
+**Ce que `T-012b` a établi, et j'ai vérifié.** La prémisse tient — cinq services publiés sur la boucle
+locale, seul le frontal ouvert sur 19080/19443. **Mais elle ne dit pas ce que j'en concluais.**
+`compose.yaml` déclare `networks: [codicillus]` sur **six** services : tout conteneur du réseau
+atteint `app:3000` **directement**, sans passer par le frontal — y compris `conversion` et
+`embeddings`, les deux briques optionnelles. Et tout processus de l'hôte atteint `127.0.0.1:19300`.
+
+**Amendement. La frontière de confiance de `ARB-053` est l'HÔTE ET LE RÉSEAU DE LA COMPOSITION, non le
+frontal.** La décision est inchangée — `ADDRESS_HEADER=X-Forwarded-For`, `XFF_DEPTH=1` — parce que la
+propriété qui la fonde reste vraie : **aucun client DISTANT** ne peut forger l'en-tête. Mais la portée
+doit être écrite, car elle est ce qu'un exploitant doit savoir :
+
+> Un attaquant qui exécute du code sur l'hôte, ou dans un conteneur du réseau `codicillus`, peut forger
+> `X-Forwarded-For` et contourner le comptage de `RG-M16-01`. **Ce n'est pas une régression** : au même
+> niveau d'accès, il atteint déjà la base et l'index. La parade est le cloisonnement de l'hôte, pas la
+> lecture de l'en-tête.
+
+### 3 · Et une contrainte d'exploitation que la sonde a révélée — `T-012b` É-11
+
+`XFF_DEPTH` supérieur au nombre réel d'intermédiaires **ne fait pas que faire confiance à trop de
+sauts : il tue l'action.** Mesuré sous sonde : `XFF_DEPTH=2` avec un seul en-tête,
+`getClientAddress()` ne trouve rien, et `POST /connexion` rend **500** sans rien enregistrer.
+
+**La valeur suit le nombre d'intermédiaires, dans les deux sens.** À écrire à côté de la variable — c'est
+fait, `compose.yaml` porte le raisonnement en commentaire — et la sonde
+`--sonde=confiance-trop-profonde` l'éprouve à chaque exécution de la chaîne.

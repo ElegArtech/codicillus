@@ -508,6 +508,39 @@ cas après ta correction. Si non, **dis-le** — ce n'est pas un rouge, c'est un
 
 ---
 
+### P-27 · Le joker de type MIME ferme un commentaire de bloc JavaScript
+
+Écrit **dans un commentaire de bloc**, il en referme la clôture : la suite du commentaire devient du
+code, et l'erreur remonte en `SyntaxError: Unexpected template string`, **à quarante lignes de la
+cause**. Coûté une exécution.
+
+**Quatrième membre d'une famille que ce dépôt connaît bien** : `P-9` (citer la forme de
+`prettier-ignore` dans un commentaire de balisage), `P-17` (un accent grave dans un modèle littéral),
+`P-20` (citer une forme de balisage dans un commentaire). La règle est la même dans les quatre cas, et
+elle est courte : **décrire une forme, ne jamais la citer.** *(T-012b, 20/08/2026)*
+
+---
+
+### P-28 · Une matrice dont les cases se contaminent mesure l'ordre, pas la propriété
+
+`/deconnexion` est la **seule action d'écriture en GET** du produit (`ARB-054`). Dans une matrice
+adresses × personas, la case qui la demandait **fermait la session**, et toutes les cases suivantes du
+même persona étaient mesurées en anonyme. **Mesuré : 76 défauts, dont 62 étaient cet artefact.**
+
+Deux enseignements, et le second est le moins évident :
+
+1. **Chaque case rétablit son état avant de mesurer.** Une matrice doit être indépendante de l'ordre de
+   parcours, sinon elle mesure son propre parcours.
+2. **Ce qu'on neutralise, on le mesure ailleurs.** Neutraliser l'effet de bord de `/deconnexion` aurait
+   effacé la preuve que `RG-ACC-02` est tenue. Elle est donc mesurée **à part** — sinon la correction
+   du piège aurait créé un trou de couverture invisible.
+
+Même famille que **P-14** (un instrument séquentiel porte des défauts que seule la concurrence révèle)
+et que **P-26** : *l'absence de panne n'est pas une preuve de correction, c'est une preuve que le cas
+n'a pas été joué.* *(T-012b, 20/08/2026)*
+
+---
+
 ## 7. Protocole de fin de tâche
 
 ### Le protocole UI en quatre temps

@@ -457,7 +457,7 @@ question ouverte : ce qu'un arbitrage ferme n'a plus à être demandé.
 La règle de non-comblement reste en vigueur. Un point reste **signalé, non résolu**, et ce n'est
 pas un vide d'adressage :
 
-- **La mesure de l'indiscernabilité temporelle** (ARB-005), sans batterie à ce jour — assignée à T-011 (`ECART-009 e)`). Tant qu'elle n'existe pas, **aucun lot ne déclare `RG-ACC-04` tenue** : la matrice du §5.5 décrit ce qui doit être rendu, elle ne prouve pas ce qui ne doit pas fuiter.
+- **La mesure de l'indiscernabilité temporelle** (ARB-005) — **la batterie existe depuis le 20 août 2026**, livrée par `T-012b` : `pnpm test:etancheite`, matrice 54 adresses × 7 personas, plancher de bruit mesuré sur couple témoin entrelacé. Elle est **rouge**, et `RG-ACC-04` **reste non tenue** — désormais pour une raison mesurée : **145 cases sur 378 sont vacantes** (31 routes sur 39 ne sont pas montées, leur 404 est une *absence*, pas une décision), **0 couple indiscernable n'est prouvé sur une adresse de ressource**, et **12 défauts** subsistent sur les seules routes montées (`ECART-047`). La matrice du §5.5 décrit ce qui doit être rendu ; la batterie 6 dit ce qui, à ce jour, ne fuite pas — et ce n'est pas encore l'essentiel.
 
 **Deux points l'ont quitté depuis la première rédaction de cette section**, et par des voies opposées. Le fil d'Ariane de la bibliothèque : refuser de le combler était juste, et la réconciliation a montré qu'il n'y avait rien à combler — la maquette avait déjà répondu (`ECART-009 b)`). La référence de l'état « sans droit » : corrigée à la source dans ADR-007 et ARB-005, elle n'a plus à être signalée ici (`ECART-009 a)`).
 

@@ -26,7 +26,8 @@
  * chose. C'est précisément ce qui le rend indiscernable, et c'est aussi ce qui
  * borne sa portée — l'indiscernabilité RÉELLE se joue en amont, dans la
  * résolution d'accès (ADR-006, filtre de périmètre injecté dans la requête),
- * et se prouve par la batterie 6 (`pnpm test:etancheite`, lot T-011). Ce
+ * et se prouve par la batterie 6 (`pnpm test:etancheite`, livrée par T-012b le
+ * 20/08/2026, et ROUGE : 145 cases vacantes sur 378, cette famille comprise). Ce
  * module rend un ÉTAT DE MAQUETTE ; il ne résout aucun droit, et il ne peut
  * pas prouver `RG-ACC-04`. L'indiscernabilité TEMPORELLE n'est mesurée par
  * rien à ce jour (`docs/releve-vues.md` §10, M-5).
