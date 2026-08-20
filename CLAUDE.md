@@ -669,3 +669,30 @@ fausse, et c'est elle qui a autorisé le second lancement.
 avant tout relancement, la preuve de mort est un **marqueur écrit** — un relevé qui porte sa ligne
 de fin —, jamais l'absence d'un processus. C'est `P-1` appliqué à soi-même.
 *(orchestration, 20/08/2026)*
+
+---
+
+### P-32 · Un masque par jeton fabrique un faux rouge quand le mot masqué appartient au contenu fixe
+
+La batterie 6 neutralise, dans chaque réponse, toutes les formes de l'adresse demandée — **segment
+par segment**, dès trois caractères. Le motif est juste : `V-04` et `V-26` **affichent** l'adresse,
+et deux adresses différentes rendent donc deux corps différents sans qu'aucune information ne fuie.
+
+**Mais un segment d'adresse peut être un mot du contenu GELÉ de la vue.** V-26 porte quatre pistes de
+reformulation figées au gel, dont l'une porte le nom d'un dossier réel du corpus. Le masque du côté
+« existante » l'a effacée d'**un seul côté**, et la batterie a rapporté un **couple discernable** sur
+deux réponses **identiques à l'octet** — un défaut d'étanchéité désigné là où le produit est correct.
+
+**La parade ne desserre rien, et c'est ce qui la rend recevable** : deux réponses identiques à
+l'octet ne peuvent rien révéler, quel que soit le masque. Le brut juge donc en premier ; le masque ne
+sert qu'aux couples dont le brut diffère. Ce qu'il tranche encore est **compté et nommé au rapport**
+(`ARB-059`).
+
+**Le motif général, et il dépasse cette batterie** : *toute normalisation appliquée à un seul côté
+d'une comparaison peut créer l'écart qu'elle est censée effacer.* Compare d'abord ce que tu as
+mesuré ; ne normalise que ce que tu dois.
+
+**Et le coût de ne pas mesurer** : quatre lectures de code et trois hypothèses fausses avant qu'une
+sonde de dix lignes ne tranche en une exécution. C'est `P-21` appliqué à un instrument — *raisonner
+sur ce qu'un masque devrait faire est plus lent, et moins sûr, que de lui demander ce qu'il a fait.*
+*(21/08/2026)*

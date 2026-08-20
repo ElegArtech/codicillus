@@ -2169,3 +2169,82 @@ parce que la mesure était fausse de trois, et c'est tout ce qu'il faut en lire.
 écartait, nommé les trois règles avec leurs lignes, et remonté la décision. C'est le protocole
 d'écart tenu exactement — et c'est ce qui rend cet arbitrage possible en trois minutes plutôt qu'en
 un lot rouvert.
+
+---
+
+## ARB-059 — Deux réponses identiques à l'octet sont indiscernables, et aucun masque n'a son mot à dire
+
+*Arbitrage délégué, 21 août 2026. Rendu sur mesure, après un faux rouge de la batterie 6.*
+
+### Ce qui a été mesuré
+
+`pnpm test:etancheite` rapportait **un couple discernable** :
+
+```
+/univers/{univers}/{domaine}/dossiers/{chemin…} · contributeur-sans-droit
+  … /exploitation/astreinte rend 404 et …/ceci-n-existe-pas… rend 404
+```
+
+Les deux côtés rendent 404. La sonde de diagnostic a demandé les deux adresses avec la même session,
+et rendu le verdict que la batterie ne rendait pas :
+
+```
+CORPS BRUTS : IDENTIQUES — aucune information de corpus ne fuit
+statuts     : 404 404 IDENTIQUES
+en-têtes    : IDENTIQUES
+corps       : DIFFÉRENTS (12 343 o contre 12 343 o)   ← APRÈS masquage
+```
+
+**Les deux réponses sont identiques à l'octet.** L'écart est fabriqué par le masque.
+
+### La cause, à l'octet 9 833
+
+`masquerLAdresse()` neutralise, dans chaque corps, toutes les formes sous lesquelles l'adresse
+demandée peut y apparaître — **y compris chacun de ses segments de trois caractères ou plus**. Le
+masque existe pour une raison juste : `V-04` et `V-26` **affichent** l'adresse demandée
+(`V-04:715`, `V-26:1067`), et `docs/routes.md:163` le dit de la source — les deux cas sont
+identiques *« à la chaîne demandée près »*.
+
+Mais V-26 porte un panneau de reformulation dont les quatre pistes sont **gelées** :
+
+```
+<button class="piste">sauvegarde</button><button class="piste">restauration</button>
+<button class="piste">astreinte</button><button class="piste">supervision</button>
+```
+
+`astreinte` est **du contenu fixe de la maquette**. C'est aussi le dernier segment d'un dossier réel
+du corpus. Le masque du côté « existante » l'a donc effacé **d'un seul côté**, et deux corps
+identiques sont devenus deux clés différentes.
+
+### Ce qui est décidé
+
+**Le brut juge en premier.** Le rapprochement des deux côtés d'un couple compare d'abord la réponse
+**sans aucun masque** — statut, en-têtes non volatils, corps. Identiques : le couple est
+indiscernable, et le masque n'est pas consulté.
+
+**Cette parade ne desserre rien, et c'est ce qui la rend acceptable.** Elle ne s'appuie sur aucune
+convention : *deux réponses identiques à l'octet ne peuvent rien révéler du corpus*, quel que soit le
+masque qu'on leur applique. Le masque ne sert plus qu'aux couples dont le brut **diffère** — ceux où
+il faut décider si l'écart est l'écho légitime de l'adresse.
+
+**Et ce qui reste est compté à part, jamais tu.** Le masque garde son défaut symétrique : il peut
+effacer une fuite dont le mot est aussi un segment de l'adresse demandée, et rendre indiscernable un
+couple qui ne l'est pas. La batterie imprime donc, à chaque exécution, **combien de couples ont été
+rapprochés par le masque et non sur le brut**, et lesquels — la part du verdict qui tient à une
+convention plutôt qu'à une mesure. Deux aujourd'hui, sur cinquante.
+
+### Ce que cet arbitrage ne fait PAS
+
+Il ne descend aucun seuil. L'empreinte de la matrice est **inchangée** — `357/8/13/0` avant comme
+après : le brut ne touche pas aux cases, seulement au rapprochement des couples. Les couples passent
+de `49/0/0/1/0/41` à `50/0/0/0/0/41` : le discernable devient indiscernable **prouvé**, non toléré.
+
+**Et la batterie sait toujours dire non** : les huit sondes passent, `refus-discernable` mordant sur
+**50 défauts imputables sur 50**. Une parade qui aurait rendu l'instrument aveugle se serait vue là.
+
+### Ce que ce faux rouge enseigne
+
+Il a coûté quatre lectures de code et trois hypothèses fausses avant qu'une seule mesure ne tranche.
+`P-21` le dit depuis le 19 août — *n'énonce jamais un fait sans citer la ligne que tu as lue* — et il
+vaut aussi pour un instrument : **raisonner sur ce qu'un masque devrait faire est plus lent, et moins
+sûr, que de lui demander ce qu'il a fait.**
