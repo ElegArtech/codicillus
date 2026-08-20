@@ -23,8 +23,7 @@ export default ts.config(
 			'cadrage/',
 			'mockups/',
 			'règles/',
-			'guide/',
-			'verif/references/'
+			'guide/'
 		]
 	},
 	js.configs.recommended,
@@ -53,7 +52,6 @@ export default ts.config(
 	// le service de projet n'a pas de programme TypeScript où les ranger. Ils
 	// restent lintés, sans les règles typées — dont aucune n'est active ici.
 	{
-		files: ['verif/**/*.svelte'],
 		languageOptions: {
 			parserOptions: {
 				projectService: false,

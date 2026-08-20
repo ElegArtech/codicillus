@@ -4,11 +4,9 @@
 # actée là où STACK §3 retient la 10).
 #
 # Deux étages. Le premier construit et n'entre jamais en production : il porte
-# les dépendances de construction et le greffon de mesure `verif/banc/`. Le
 # second ne reçoit que la sortie de `vite build` et les dépendances d'exécution.
 # C'EST CE QUI GARANTIT QUE L'INSTRUMENT NE VOYAGE PAS AVEC LE PRODUIT : le mode
 # démo `/__design/…` est monté en `apply: 'serve'`, `vite build` ne le traverse
-# pas, et `verif/` n'est pas copié dans l'étage final.
 
 # ───────────────────────────────────────────────────────────── construction ──
 FROM node:24.19.0-bookworm-slim AS constructeur
@@ -32,10 +30,8 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 # démo : le fichier doit exister pour que la configuration se charge, même s'il
 # n'est monté qu'en développement.
 COPY svelte.config.js vite.config.ts tsconfig.json ./
-COPY verif/banc/mode-demo.mjs ./verif/banc/mode-demo.mjs
 # Le greffon lit ce protocole au chargement du module, donc AVANT tout choix de
 # mode : sans lui, `vite build` échoue. Il ne franchit pas l'étage suivant.
-COPY verif/references/protocole-app.json ./verif/references/protocole-app.json
 
 # Les sources de l'application, et rien de plus.
 COPY src ./src
