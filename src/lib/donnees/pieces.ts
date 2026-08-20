@@ -238,6 +238,67 @@ export async function retirerUnePieceJointe(
 	return true;
 }
 
+/** Ce qu'un retrait désigne : la note, la pièce par son NOM, et par qui. */
+export interface RetraitDePieceJointe {
+	/** L'identifiant LISIBLE de la note porteuse — celui de l'adresse. */
+	readonly note: string;
+	/** Le nom de la pièce, qui EST son adresse (`docs/routes.md:146`). */
+	readonly nom: string;
+	readonly identite: Identite;
+}
+
+/**
+ * RETIRE UNE PIÈCE DÉSIGNÉE PAR SON NOM — le geste tel qu'un écran peut le
+ * former, le nom étant la seule clé qu'une adresse porte.
+ *
+ * ELLE EST LE PENDANT EXACT DE `deposerUnePieceJointe()`, ET DÉLIBÉRÉMENT : même
+ * ordre — le droit d'abord, la ressource ensuite —, même résolution par
+ * `peutEcrireSurLeDossier()`, et même sortie unique `INTROUVABLE` quand la note
+ * n'existe pas, quand l'appelant n'y écrit pas, ou quand aucune pièce ne porte ce
+ * nom. Les trois cas sont indiscernables (`ADR-007`, `RG-ACC-04`) : distinguer
+ * « cette note existe mais vous n'y écrivez pas » de « cette pièce n'existe pas »
+ * énumérerait le corpus par la porte des pièces jointes.
+ *
+ * LE DROIT EXIGÉ EST CELUI D'ÉCRIRE, PAS CELUI DE LIRE, et c'est ce qui interdit
+ * d'emprunter `resoudreUnePieceJointe()` : celle-ci résout la LISIBILITÉ, ce que
+ * la route de téléchargement demande. Un retrait détruit. Aucune règle n'est
+ * recopiée pour autant — la capacité est celle que `peutEcrireSurLeDossier()`
+ * rend, la même que le dépôt interroge deux fonctions plus haut.
+ *
+ * L'ORDRE DES DEUX EFFACEMENTS est celui de `retirerUnePieceJointe()`, qu'elle
+ * appelle sans le redire — la ligne, puis les octets.
+ *
+ * @param base la base
+ * @param racine la racine de l'entrepôt
+ * @param retrait ce qui est retiré, et par qui
+ */
+export async function retirerUnePieceJointeParNom(
+	base: Base,
+	racine: string,
+	retrait: RetraitDePieceJointe
+): Promise<Resolution<{ nom: string }>> {
+	const nom = retrait.nom.trim();
+	if (nom === '') return INTROUVABLE;
+
+	const [note] = await base
+		.select({ id: notes.id, dossierId: notes.dossierId })
+		.from(notes)
+		.where(eq(notes.identifiant, retrait.note))
+		.limit(1);
+	if (note === undefined) return INTROUVABLE;
+	if (!(await peutEcrireSurLeDossier(base, retrait.identite, note.dossierId))) return INTROUVABLE;
+
+	const [piece] = await base
+		.select({ id: piecesJointes.id })
+		.from(piecesJointes)
+		.where(and(eq(piecesJointes.noteId, note.id), eq(piecesJointes.nom, nom)))
+		.limit(1);
+	if (piece === undefined) return INTROUVABLE;
+
+	if (!(await retirerUnePieceJointe(base, racine, note.id, piece.id))) return INTROUVABLE;
+	return { trouve: true, ressource: { nom } };
+}
+
 /* ═══════════════════════════════════ L'export ═══════════════════════════ */
 
 /** Une pièce jointe et ses octets, telle que l'archive d'export les attend. */
