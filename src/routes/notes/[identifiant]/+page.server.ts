@@ -97,6 +97,7 @@ import {
 	type PanneauxDeLaNote,
 	type VoisineAffichee
 } from '$lib/lecture/panneaux';
+import { enregistrerLaNote } from '$lib/donnees/edition';
 import { supprimerUneNote } from '$lib/donnees/suppression';
 import {
 	commentaireDeRevision,
@@ -685,6 +686,46 @@ export const actions: Actions = {
 	 * d'actualité », et le vocabulaire du produit sépare les deux (`CLAUDE.md`
 	 * §3, « Vérifier »).
 	 */
+	/**
+	 * RESTAURER UNE VERSION — `UC-M07-04`. Le geste est dessiné dans
+	 * `mockups/V-40-dialogues.html` (« restaurer la version 11 ») et son
+	 * déclencheur vit dans V-15, le panneau d'historique, qui est une
+	 * SUPERPOSITION de cette adresse (`docs/routes.md` §3.4). L'action est donc
+	 * ici, à côté des trois autres gestes de la lecture, et non sur une route de
+	 * comparaison qu'aucun bouton ne vise depuis le panneau.
+	 *
+	 * Restaurer n'efface rien : c'est un ENREGISTREMENT du corps ancien, qui
+	 * capture donc sa propre version (`RG-M07-02`). L'historique s'allonge, il ne
+	 * recule pas.
+	 */
+	restaurer: async ({ params, locals, request }) => {
+		const { base, maintenant, contexte } = await contexteDUnGeste();
+		const resolution = await lireLaNote(base, {
+			identifiant: params.identifiant,
+			registre: 'reference',
+			identite: locals.identite,
+			contexte
+		});
+		if (!resolution.trouve) error(404, MESSAGE_INTROUVABLE);
+
+		const soumis = (await request.formData()).get('version');
+		const numero = versionDemandee(typeof soumis === 'string' ? soumis : null);
+		const histoire = await lireLHistoire(base, resolution.ressource, maintenant, numero);
+		if (histoire.affichee === null)
+			return fail(400, { motif: 'aucune version ne porte ce numéro' });
+
+		const issue = await enregistrerLaNote(base, moteurPartage(), {
+			identifiant: params.identifiant,
+			registre: 'reference',
+			identite: locals.identite,
+			contexte,
+			maintenant,
+			modification: { corps: { saisi: histoire.affichee.reference } }
+		});
+		if (!issue.trouve) error(404, MESSAGE_INTROUVABLE);
+		redirect(303, `/notes/${params.identifiant}`);
+	},
+
 	lever: async ({ params, locals }) => {
 		const { base, maintenant, contexte } = await contexteDUnGeste();
 		const fait = await leverLaDemandeDeRevision(base, {

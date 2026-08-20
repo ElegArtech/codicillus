@@ -190,6 +190,33 @@ function poserChamp(formulaire: HTMLFormElement, nom: string, valeur: string): v
 	if (existant === null) formulaire.appendChild(champ);
 }
 
+/**
+ * SOUMETTRE VERS UNE ACTION NOMMÉE — par le SUBMITTER, jamais en réécrivant
+ * l'attribut du formulaire.
+ *
+ * Le geste naïf — poser `formulaire.action`, soumettre, puis remettre l'ancienne
+ * valeur — est une COURSE, et elle a mordu : le panneau d'historique a fait
+ * partir une restauration vers l'action de SUPPRESSION, parce que le navigateur
+ * lit l'attribut après le retour de `requestSubmit()`. Une note détruite au lieu
+ * d'être restaurée : la pire issue possible pour cette famille de gestes.
+ *
+ * `formaction` sur le bouton soumetteur l'emporte sur l'action du formulaire, et
+ * `requestSubmit(soumetteur)` le désigne explicitement. Rien n'est réécrit, rien
+ * n'est à remettre, il n'y a plus de fenêtre pendant laquelle le formulaire vise
+ * autre chose que ce qu'il vise d'ordinaire.
+ */
+function soumettreVers(formulaire: HTMLFormElement, action: string): void {
+	const document = formulaire.ownerDocument;
+	const existant = formulaire.querySelector<HTMLButtonElement>('button[data-cable-action]');
+	const soumetteur = existant ?? document.createElement('button');
+	soumetteur.type = 'submit';
+	soumetteur.hidden = true;
+	soumetteur.dataset['cableAction'] = action;
+	soumetteur.formAction = action;
+	if (existant === null) formulaire.appendChild(soumetteur);
+	formulaire.requestSubmit(soumetteur);
+}
+
 /** Une pastille d'étiquette, de la forme exacte du gel (`V-17:833-861`). */
 function pastille(document: Document, nom: string): HTMLElement {
 	const span = document.createElement('span');
@@ -425,12 +452,30 @@ export function cablerLaSuppression(
 export function cablerLaConnexion(racine: ParentNode): Debranchement {
 	const formulaire = noeud<HTMLFormElement>(racine, '#form');
 	if (formulaire === null) return () => {};
+
+	/**
+	 * L'ORDRE COMPTE, ET IL EST UNE QUESTION DE SÛRETÉ.
+	 *
+	 * La méthode est posée AVANT les noms. Dans l'ordre inverse, une soumission
+	 * qui partirait entre les deux serait un `GET` portant des champs nommés :
+	 * le mot de passe irait dans l'adresse, donc dans l'historique du navigateur
+	 * et dans les journaux du frontal. Observé une fois, sur une hydratation
+	 * partielle : `GET /connexion?identifiant=…&motdepasse=…`.
+	 *
+	 * La garde ci-dessous ferme le cas restant — celui où la page est soumise
+	 * avant que ce câblage n'ait tourné. Sans noms, un tel envoi ne transporte
+	 * rien ; la garde s'assure qu'il ne transporte rien EN ADRESSE non plus.
+	 */
 	formulaire.method = 'post';
+	const garde = (evenement: Event): void => {
+		if (formulaire.method.toLowerCase() !== 'post') evenement.preventDefault();
+	};
+	formulaire.addEventListener('submit', garde);
 	for (const id of ['identifiant', 'motdepasse', 'souvenir']) {
 		const champ = noeud<HTMLInputElement>(formulaire, `#${id}`);
 		if (champ !== null) champ.name = id;
 	}
-	return () => {};
+	return () => formulaire.removeEventListener('submit', garde);
 }
 
 /* ═══════════════════════════════════ Le signet — V-23 ═══════════════════ */
@@ -517,14 +562,145 @@ export function cablerLeSignet(racine: ParentNode, options: OptionsDuSignet = {}
 		bouton.type = 'button';
 		const oter = (): void => {
 			if (!document.defaultView?.confirm(rappel)) return;
-			formulaire.action = '?/supprimer';
-			formulaire.requestSubmit();
-			formulaire.action = '?/enregistrer';
+			poserChamp(formulaire, 'etiquettes', nomsPoses().join(','));
+			soumettreVers(formulaire, '?/supprimer');
 		};
 		bouton.addEventListener('click', oter);
 		jetables.push(() => bouton.removeEventListener('click', oter));
 	} else if (bouton !== null) {
 		bouton.type = 'button';
+	}
+
+	return () => {
+		for (const defaire of jetables) defaire();
+	};
+}
+
+/* ═══════════════════════════════════ L'historique — V-15 ════════════════ */
+
+export interface OptionsDeLHistorique {
+	/** L'adresse de la note — celle sur laquelle le panneau est superposé. */
+	adresse: string;
+	/** Ce que la confirmation de restauration rappelle. */
+	rappel: (numero: number) => string;
+}
+
+/** Le numéro qu'une ligne de version porte, lu dans son libellé. */
+function numeroDeLigne(ligne: Element): number | null {
+	const texte = ligne.querySelector('.ver__n')?.textContent ?? '';
+	const trouve = /(\d+)/.exec(texte);
+	return trouve === null ? null : Number(trouve[1]);
+}
+
+/**
+ * LE CÂBLAGE DU PANNEAU D'HISTORIQUE.
+ *
+ * V-15 n'a **pas de chemin propre** : `docs/routes.md` §3.4 la classe
+ * superposition de `/notes/{identifiant}`, et son seul état adressable est
+ * `?version={n}` — `?` nu désignant la version courante. Tout ce que ce câblage
+ * fait est donc de la NAVIGATION vers cet état, plus le geste de restauration.
+ *
+ * Le numéro d'une version se lit dans le libellé de sa ligne, faute d'attribut :
+ * le gel n'en pose aucun, et lui en ajouter un serait toucher `src/vues/`.
+ */
+export function cablerLHistorique(
+	racine: ParentNode,
+	formulaire: HTMLFormElement,
+	options: OptionsDeLHistorique
+): Debranchement {
+	const document = formulaire.ownerDocument;
+	const jetables: Debranchement[] = [];
+	const aller = (cible: string): void => document.location.assign(cible);
+
+	/**
+	 * LE PANNEAU EST HORS FENÊTRE, ET C'EST LE GEL — cousin exact de `P-3`.
+	 *
+	 * `V-15.css:761` ouvre le panneau par `.app[data-historique="ouvert"]
+	 * .tiroir { transform: none; }`, et `mockups/V-15-historique.html:1853` place
+	 * l'`aside.tiroir` **hors** de `div.app` : le sélecteur ne peut pas
+	 * s'appliquer, le panneau reste à `translateX(100%)`, et il est
+	 * inatteignable. Mesuré : Playwright refuse le clic — « element is outside of
+	 * the viewport ».
+	 *
+	 * DEUX GESTES, ET AUCUN N'INVENTE UN STYLE. On pose l'attribut que la règle
+	 * attend, et on rend le panneau DESCENDANT de `.app` pour que la règle du gel
+	 * puisse enfin le trouver. Aucune déclaration n'est écrite, aucune feuille
+	 * n'est touchée : c'est la règle GELÉE qui ouvre le panneau, elle en devient
+	 * seulement applicable.
+	 *
+	 * C'est une divergence de structure avec la maquette, et elle est assumée :
+	 * un panneau que l'utilisateur ne peut pas atteindre n'est pas un panneau.
+	 * Elle appelle un regel de V-15, pas une seconde rustine.
+	 */
+	const app = noeud<HTMLElement>(racine, '.app');
+	const tiroir = noeud<HTMLElement>(racine, '#tiroir');
+	if (app !== null && tiroir !== null) {
+		if (!app.contains(tiroir)) app.appendChild(tiroir);
+		app.setAttribute('data-historique', 'ouvert');
+	}
+
+	const ecouter = (cible: EventTarget, type: string, reaction: (e: Event) => void): void => {
+		cible.addEventListener(type, reaction);
+		jetables.push(() => cible.removeEventListener(type, reaction));
+	};
+
+	/* Une ligne de version ouvre son état adressable. La ligne courante y revient
+	   par l'adresse nue, ce que le gel écrit lui-même. */
+	ecouter(racine as unknown as EventTarget, 'click', (evenement) => {
+		const corps = (evenement.target as Element | null)?.closest('.ver__corps');
+		if (corps === null || corps === undefined) return;
+		const ligne = corps.closest('.ver');
+		if (ligne === null) return;
+		evenement.preventDefault();
+		if (ligne.getAttribute('data-courante') === 'oui') return aller(options.adresse);
+		const numero = numeroDeLigne(ligne);
+		if (numero !== null) aller(`${options.adresse}?version=${String(numero)}`);
+	});
+
+	const retour = noeud<HTMLButtonElement>(racine, '#bv-retour');
+	if (retour !== null) {
+		retour.type = 'button';
+		ecouter(retour, 'click', () => aller(options.adresse));
+	}
+
+	/* COMPARER — deux versions cochées, et l'adresse de la comparaison se compose
+	   de leurs deux numéros. Le bouton du gel naît désactivé ; il le reste tant
+	   que la sélection n'en porte pas exactement deux. */
+	const comparer = noeud<HTMLButtonElement>(racine, '#comparer');
+	const cochees = (): number[] =>
+		Array.from(racine.querySelectorAll('.ver'))
+			.filter((l) => l.querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked === true)
+			.map(numeroDeLigne)
+			.filter((n): n is number => n !== null)
+			.sort((a, b) => a - b);
+	if (comparer !== null) {
+		comparer.type = 'button';
+		ecouter(racine as unknown as EventTarget, 'change', (evenement) => {
+			if ((evenement.target as Element | null)?.matches('.ver input[type="checkbox"]') !== true) {
+				return;
+			}
+			comparer.disabled = cochees().length !== 2;
+		});
+		ecouter(comparer, 'click', () => {
+			const deux = cochees();
+			if (deux.length !== 2) return;
+			aller(`${options.adresse}/comparaison?versions=${String(deux[0])}-${String(deux[1])}`);
+		});
+	}
+
+	/* RESTAURER — action irréversible, donc confirmation qui rappelle ce qui sera
+	   écrasé (`RG-M18-05`). Le numéro voyage en champ caché. */
+	const restaurer = noeud<HTMLButtonElement>(racine, '#bv-restaurer');
+	if (restaurer !== null) {
+		restaurer.type = 'button';
+		ecouter(restaurer, 'click', () => {
+			const affichee = racine.querySelector('.ver[data-affichee="oui"]');
+			const numero = affichee === null ? null : numeroDeLigne(affichee);
+			if (numero === null) return;
+			if (!document.defaultView?.confirm(options.rappel(numero))) return;
+			poserChamp(formulaire, 'version', String(numero));
+			soumettreVers(formulaire, '?/restaurer');
+		});
 	}
 
 	return () => {

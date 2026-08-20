@@ -200,13 +200,6 @@
 	 * que la jauge montre. Sans note affichée, l'ancienneté reste celle de la
 	 * date de planche, comptée depuis `DATE_REFERENCE`.
 	 */
-	const temoin = $derived(
-		temoinFraicheur(
-			affichee
-				? { fraicheur: niveauAffiche, jours: affichee.joursDepuisControle }
-				: { fraicheur: niveau, jours: anciennete(CONTROLE_PAR_NIVEAU[niveau].iso) }
-		)
-	);
 
 	/**
 	 * LA PROSE DU CARTOUCHE QUI DÉPEND DU NIVEAU, ET D'ELLE SEULE — le suffixe
@@ -259,6 +252,26 @@
 						heureDite: `${CONTROLE_PAR_NIVEAU[niveau].jour} à ${CONTROLE_PAR_NIVEAU[niveau].heure}`
 					}
 				}
+	);
+
+	const temoin = $derived(
+		temoinFraicheur(
+			affichee
+				? {
+						fraicheur: niveauAffiche,
+						jours: affichee.joursDepuisControle,
+						/* UNE NOTE JAMAIS VÉRIFIÉE NE PEUT PAS ÊTRE « VÉRIFIÉE IL Y A N
+						   JOURS ». Le cartouche écrivait les deux à la fois : « Vérifié
+						   il y a 0 jours » sur la ligne du haut, « Jamais vérifiée » sur
+						   celle du bas. `controle` est ce que le journal des
+						   vérifications porte — `null` quand il n'en porte rien —, et
+						   c'est la même source que la ligne de détail juste en dessous.
+						   Le NIVEAU ne bouge pas : `RG-M06-01` retombe sur la
+						   modification, et c'est juste. Seul le verbe cesse de mentir. */
+						revise: controle === null ? null : controle.quand.iso
+					}
+				: { fraicheur: niveau, jours: anciennete(CONTROLE_PAR_NIVEAU[niveau].iso) }
+		)
 	);
 </script>
 

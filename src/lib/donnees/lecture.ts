@@ -414,7 +414,14 @@ export async function lireNotes(
 			dossier: chemins.get(n.dossierId) ?? '',
 			auteur: n.auteurNom,
 			fraicheur: niveauFraicheur(joursEcoules(reference, contexte.maintenant), contexte.seuils),
-			jours: joursEcoules(n.modifieLe, contexte.maintenant),
+			/* L'ÂGE DE LA VÉRIFICATION, PAS CELUI DE LA MODIFICATION. `seeds/corpus.ts`
+			   le documente en propres termes — « jours écoulés depuis la dernière
+			   vérification » —, et la ligne du dessus calcule la fraîcheur sur
+			   `verifie_le ?? modifie_le`. Les deux ont longtemps divergé : le
+			   cartouche d'une note pouvait écrire « Vérifié il y a 3 jours » sur une
+			   note vérifiée il y a neuf mois et modifiée avant-hier. Un seul
+			   instant de référence, deux emplois, aucune seconde définition. */
+			jours: joursEcoules(reference, contexte.maintenant),
 			revise: n.verifieLe === null ? null : dateCourteDInstant(n.verifieLe),
 			vues: n.consultations,
 			pj: piecesParNote.get(n.identifiant) ?? 0,

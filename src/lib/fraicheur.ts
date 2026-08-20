@@ -155,6 +155,13 @@ export interface EtatDeFraicheur {
 	readonly fraicheur: NiveauFraicheur;
 	/** Jours écoulés depuis la dernière vérification. */
 	readonly jours: number;
+	/**
+	 * La date de dernière vérification, ou `null` — la note n'a JAMAIS été
+	 * vérifiée. Absente, on ne sait pas, et le libellé garde sa forme d'avant :
+	 * c'est ce qui laisse les appelants qui ne portent pas l'information rendre
+	 * exactement ce qu'ils rendaient.
+	 */
+	readonly revise?: string | null;
 }
 
 /**
@@ -245,6 +252,24 @@ export type FormeDeLibelle = 'longue' | 'compacte';
  * site serait un comblement.
  */
 export function libelleFraicheur(note: EtatDeFraicheur, forme: FormeDeLibelle = 'longue'): string {
+	/**
+	 * UNE NOTE JAMAIS VÉRIFIÉE NE PEUT PAS ÊTRE « VÉRIFIÉE IL Y A N JOURS ».
+	 *
+	 * Le défaut se voyait à l'écran, et il était contradictoire avec lui-même :
+	 * une note créée à l'instant portait « Vérifié il y a 0 jours » à côté de
+	 * « Jamais vérifiée ». La cause est que la fraîcheur retombe sur la date de
+	 * MODIFICATION quand il n'y a pas de vérification (`RG-M06-01`, et c'est
+	 * juste) — mais le VERBE du libellé, lui, n'est plus vrai.
+	 *
+	 * Le mot est celui du gel : `mockups/V-11-page-domaine.html:1995` et
+	 * `V-34-console-analytique.html:3173` comptent les notes « Jamais
+	 * vérifiées ». Le singulier en est la forme, pas une invention.
+	 *
+	 * Le NIVEAU, lui, ne change pas : la jauge continue de dire ce que
+	 * `RG-M06-01` calcule. Seul le libellé cesse d'affirmer un geste qui n'a pas
+	 * eu lieu.
+	 */
+	if (note.revise === null) return forme === 'longue' ? 'Jamais vérifiée' : 'jamais';
 	if (note.fraicheur === 'frais') {
 		if (note.jours < 31) {
 			return forme === 'longue' ? `Vérifié il y a ${note.jours} jours` : `il y a ${note.jours} j`;
