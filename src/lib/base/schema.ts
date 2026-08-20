@@ -568,6 +568,39 @@ export const verifications = pgTable(
 	(t) => [index('verifications_note_idx').on(t.noteId, t.le.desc())]
 );
 
+/* ═══════════════════════════════ Le journal des consultations (006) ═════ */
+
+/**
+ * `RG-M04-09` — le journal que produit toute ouverture d'une note.
+ *
+ * TROIS DES QUATRE MEMBRES QUE CDC:1225 ÉNUMÈRE : la note, l'horodatage,
+ * l'utilisateur. Le quatrième — la durée approximative — N'A PAS DE COLONNE, et
+ * c'est un vide DÉCLARÉ, pas un oubli : aucune source ne dit comment on
+ * l'obtient ni ce qu'« approximative » borne. Le raisonnement complet est en
+ * tête de `base/migrations/006_consultations.montee.sql`.
+ *
+ * `compteId` NULL EST L'ANONYMISATION, et la définition vient de `RG-M15-02`
+ * (CDC:1227) : « aucun identifiant d'utilisateur n'y est associé ». La ligne,
+ * elle, existe toujours — anonymiser n'est pas omettre.
+ *
+ * La forme est celle de `verifications` — la note, le compte, l'instant —
+ * parce que M15.2 range les deux journaux côte à côte et que rien ne justifie
+ * deux manières de dire la même chose.
+ */
+export const consultations = pgTable(
+	'consultations',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		noteId: uuid('note_id')
+			.notNull()
+			.references(() => notes.id, { onDelete: 'cascade' }),
+		/** NULL : entrée anonymisée (RG-M15-02). */
+		compteId: uuid('compte_id').references(() => comptes.id, { onDelete: 'set null' }),
+		le: timestamp('le', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [index('consultations_note_idx').on(t.noteId, t.le.desc())]
+);
+
 /* ═══════════════════════════════════ L'historique des versions (004) ════ */
 
 /**
@@ -695,6 +728,7 @@ export const schema = {
 	relations,
 	piecesJointes,
 	verifications,
+	consultations,
 	versions,
 	sessions,
 	tentativesDeConnexion
