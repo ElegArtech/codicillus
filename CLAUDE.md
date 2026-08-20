@@ -590,6 +590,29 @@ concurrence révèle.
 
 ---
 
+### P-30 · Un instrument qui incarne un persona dans une base PARTAGÉE mesure le voisin
+
+Sept copies lisent la même base. Quand une batterie ouvre une session pour incarner un persona, une
+autre copie peut la **purger sous elle** — `test:etancheite` fait `delete from sessions` à chaque
+exécution, et `T-024` a vu `droits_de_dossier` passer de 0 à 1 entre deux lectures espacées de
+quelques secondes.
+
+**Ce que ça fabrique n'est pas une panne, c'est un verdict faux.** Mesuré par `T-056` : session perdue,
+`/recherche` **ne refuse jamais** (`docs/routes.md:248`) — elle rend 200 en vue anonyme, sans
+signalement, et la batterie relevait « le mode Sens ne se signale pas » sur une page où il n'a rien à
+faire.
+
+**La garde doit interroger la BASE, jamais le code de retour.** Un `302` vers la connexion est un
+symptôme que toutes les routes ne portent pas.
+
+Et la charge aggrave tout : `T-056` a mesuré `test:etancheite` à **141 défauts puis 0** sur trois
+exécutions consécutives, et `test:unit` à **84 échecs** à charge 32, verts à charge 6,5.
+
+**Corollaire pour l'orchestrateur** : au-delà de quatre copies concurrentes, donne une base à chaque
+lot qui écrit. Famille `P-28` et `P-29`. *(T-056, 20/08/2026)*
+
+---
+
 ## 7. Protocole de fin de tâche
 
 ### Le protocole UI en quatre temps
