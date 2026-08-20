@@ -18,11 +18,23 @@
 	 */
 	import Vue from '../../../vues/V-29.svelte';
 	import '../../../vues/V-29.css';
+	import { envoyerAUneAction } from '../cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
 </script>
 
+<!--
+	LA VUE TIENT L'ÉTAT DU DIALOGUE, CETTE PAGE TIENT LE RÉSEAU — voir
+	`/console/domaines` pour le motif.
+
+	DEUX GESTES, ET LE SECOND EST CELUI QUE LE REFUS PROPOSE. `RG-M14-06` refuse
+	la suppression d'un type employé, et exige que le refus porte une sortie : le
+	gel l'offre en « Délester ces N notes »
+	(`mockups/V-29-console-types-fiches.html:3464`), et `P-03` interdit qu'elle
+	soit inerte. Les deux désignent le type par son identifiant lisible, lu en
+	base — un libellé se renomme, un identifiant est stable.
+-->
 <Vue
 	vecteur={data.vecteur}
 	notes={data.notes}
@@ -30,4 +42,14 @@
 	domaines={data.domaines}
 	compte={data.compte}
 	typesFiche={data.typesFiche}
+	onSupprimer={(type) => {
+		const identifiant = data.designations[type];
+		if (identifiant === undefined) return;
+		void envoyerAUneAction(document, '?/supprimer', { 'type-de-fiche': identifiant });
+	}}
+	onDelester={(type) => {
+		const identifiant = data.designations[type];
+		if (identifiant === undefined) return;
+		void envoyerAUneAction(document, '?/delester', { 'type-de-fiche': identifiant });
+	}}
 />
