@@ -452,6 +452,60 @@ export interface LigneDeReferentiel {
 }
 
 /** Les types de note employés par les maquettes — cinq des onze de CDC §3.4. */
+/** Une ligne de `droits_de_dossier`, telle que la semence la pose. */
+export interface LigneDeDroitDeDossier {
+	readonly compteNom: string;
+	/** Le domaine dont la RACINE porte le droit. */
+	readonly domaineNom: string;
+	readonly droit: 'lecteur' | 'redacteur' | 'gestionnaire';
+}
+
+/**
+ * LES DROITS DU CORPUS DE DÉMONSTRATION — et pourquoi il en faut.
+ *
+ * `RG-DRO-02` est sans appel : « aucun droit explicite, aucune capacité ». Sans
+ * une seule ligne dans `droits_de_dossier`, les quatre comptes non
+ * administrateurs du jeu ne peuvent RIEN écrire — et les maquettes, elles,
+ * montrent l'inverse : la position par défaut de la planche de V-14 est
+ * « Droits : écriture », et l'écran gelé rend les actions Modifier, Vérifier,
+ * Signaler et Supprimer pour Karim Belhadj, qui est référent. Le corpus de
+ * démonstration IMPLIQUE donc des droits ; ne pas les poser rendait le jeu
+ * infidèle au gel qu'il sert.
+ *
+ * LA DÉRIVATION EST CELLE DE `CDC` §2.3, ET RIEN DE PLUS. Trois droits y sont
+ * définis — Lecteur, Rédacteur, Gestionnaire — et le rôle du compte les décide :
+ *
+ *   référent      → gestionnaire  il administre son domaine
+ *   contributeur  → rédacteur     il écrit des notes, il ne range pas
+ *   lecteur       → lecteur       il lit
+ *   administrateur → AUCUNE LIGNE
+ *
+ * `RG-DRO-03` — « l'administrateur contourne tous les droits de dossier » : lui
+ * en poser une serait écrire une règle deux fois, et laisser croire que le
+ * contournement en dépend. Mesuré : sans aucune ligne, une administratrice crée
+ * une note.
+ *
+ * LE DROIT PORTE SUR LA RACINE DU DOMAINE, et il descend seul : la résolution
+ * remonte l'arbre des dossiers (`RG-DRO-01`). Poser une ligne par dossier
+ * fabriquerait des droits qu'aucune source ne décrit, et rendrait un déplacement
+ * de dossier capable de changer les droits en silence.
+ */
+export function lignesDeDroitDeDossier(): readonly LigneDeDroitDeDossier[] {
+	const parRole: Record<string, LigneDeDroitDeDossier['droit'] | null> = {
+		administrateur: null,
+		referent: 'gestionnaire',
+		contributeur: 'redacteur',
+		lecteur: 'lecteur'
+	};
+	const lignes: LigneDeDroitDeDossier[] = [];
+	for (const compte of lignesDeCompte()) {
+		const droit = parRole[compte.role];
+		if (droit === null || droit === undefined || compte.domaineNom === null) continue;
+		lignes.push({ compteNom: compte.nom, domaineNom: compte.domaineNom, droit });
+	}
+	return lignes;
+}
+
 export function lignesDeTypeDeNote(): readonly LigneDeReferentiel[] {
 	return TYPES_NOTE.map((nom, rang) => ({
 		identifiant: identifiantLisible(nom),
