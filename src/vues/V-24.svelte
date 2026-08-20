@@ -104,7 +104,9 @@
 		type Univers,
 		type UtilisateurCourant
 	} from '../../seeds/corpus';
+	import { onMount } from 'svelte';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import { adresseDeDomaine } from '$lib/rangement/adresses';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — deux contrôles de planche. */
@@ -136,6 +138,71 @@
 		 * rendu retombe déjà sur l'extension quand le libellé manque.
 		 */
 		formatsImport?: Partial<Record<FormatDImport, string>>;
+		/**
+		 * L'ANALYSE D'UN LOT DÉPOSÉ — ce que la route fait du dépôt.
+		 *
+		 * Absente, le parcours reste celui de la planche : les vignettes se
+		 * choisissent, le pied avance, et rien n'est envoyé nulle part. Fournie,
+		 * l'étape 2 devient un vrai dépôt : les fichiers partent au serveur, qui
+		 * les CLASSE sans rien écrire — c'est l'étape 3 de `UC-M12-04`, « rien
+		 * n'a encore été écrit » — et rend le lot tel qu'il sera traité.
+		 *
+		 * Rend `null` quand l'analyse a échoué : le parcours reste alors où il est,
+		 * et rien n'est inventé.
+		 */
+		analyser?: (fichiers: readonly File[], reglages: ReglagesDuDepot) => Promise<LotDImport | null>;
+		/**
+		 * L'EXÉCUTION DU LOT — réelle ou simulée, c'est le même appel. `RG-M12-02` :
+		 * « un seul chemin de code, donc un rapport de simulation qui dit
+		 * rigoureusement ce que fera l'import réel ». La simulation n'est pas un
+		 * autre geste, c'est un réglage du même.
+		 */
+		importer?: (
+			fichiers: readonly File[],
+			reglages: ReglagesDuDepot
+		) => Promise<RapportAffiche | null>;
+		/** Le domaine de destination proposé. Absente, celui du compte. */
+		domaineParDefaut?: string;
+	}
+
+	/** Ce que le dépôt règle, et que les deux appels transportent. */
+	interface ReglagesDuDepot {
+		readonly domaine: string;
+		readonly simulation: boolean;
+	}
+
+	/**
+	 * LE RAPPORT D'UN LOT, TEL QUE L'ÉCRAN LE REND — `RG-M12-04` et `RG-M12-09`.
+	 *
+	 * Chaque nombre vient du traitement réel : rien n'est déduit ici, et surtout
+	 * rien n'est figé (`P-02`). Les noms sont ceux de `RapportDImport`
+	 * (`$lib/donnees/import.ts`), à la mise en forme près.
+	 */
+	interface RapportAffiche {
+		readonly simulation: boolean;
+		readonly total: number;
+		readonly notesCreees: number;
+		readonly notesMisesAJour: number;
+		readonly ignores: number;
+		readonly echecs: number;
+		readonly dossiersCrees: number;
+		/** Le domaine où le lot a atterri — la section « Structure créée » le nomme. */
+		readonly domaine: string;
+		/** `RG-M12-04` — chaque fichier en échec, avec sa cause en clair. */
+		readonly enEchec: readonly { readonly chemin: string; readonly motif: string }[];
+		/** `RG-M12-03` — les renvois qu'aucune note ne résout. */
+		readonly renvoisNonResolus: readonly {
+			readonly chemin: string;
+			readonly renvois: readonly string[];
+		}[];
+		/** Les notes écrites, créées ou mises à jour, avec leur adresse. */
+		readonly ecrites: readonly {
+			readonly identifiant: string;
+			readonly titre: string;
+			readonly ou: string;
+			readonly adresse: string;
+			readonly miseAJour: boolean;
+		}[];
 	}
 
 	const {
@@ -146,16 +213,44 @@
 		compte = MOI,
 		instance = INSTANCE,
 		lotImport = LOT_IMPORT,
-		formatsImport = FORMATS_IMPORT
+		formatsImport = FORMATS_IMPORT,
+		analyser,
+		importer,
+		domaineParDefaut
 	}: Proprietes = $props();
+
+	/* ═══════════════════════════════════════════════════════════════════════
+	   L'ÉTAT DU PARCOURS — local, et seulement quand il y a un parcours
+
+	   `ARB-011` reste vrai de la PLANCHE : sans les deux rappels ci-dessus,
+	   aucun de ces états ne bouge, et les sept captures sont exactement celles
+	   du vecteur. Ce qui suit ne s'anime que sur une route réelle, où le gel
+	   lui-même s'anime — `aller()`, `deposer()`, `lancerImport()` du script de
+	   la maquette. La transition n'est pas inventée : elle est transcrite.
+	   ═══════════════════════════════════════════════════════════════════════ */
+
+	/** Le parcours est-il vivant ? Il l'est dès qu'une route lui donne prise. */
+	const vivant = $derived(analyser !== undefined && importer !== undefined);
+
+	let etapeLocale = $state(1);
+	let scenarioLocal = $state<string | null>(null);
+	let fichiers = $state<readonly File[]>([]);
+	let sourceDuLot = $state('');
+	let lotAnalyse = $state<LotDImport | null>(null);
+	let rapport = $state<RapportAffiche | null>(null);
+	let enCours = $state(false);
+	let simulationRetenue = $state(false);
+	let domaineRetenu = $state('');
 
 	const reglage = $derived(vecteur ?? {});
 
 	/** L'étape du parcours — `data-etape` de `div.app`, quatre positions. */
 	const etape = $derived(
-		reglage['et'] === '2' || reglage['et'] === '3' || reglage['et'] === '4'
-			? Number(reglage['et'])
-			: 1
+		vivant
+			? etapeLocale
+			: reglage['et'] === '2' || reglage['et'] === '3' || reglage['et'] === '4'
+				? Number(reglage['et'])
+				: 1
 	);
 
 	/**
@@ -164,8 +259,10 @@
 	 * l'étape suivante sans avoir répondu à la précédente — `V-24:3387`. À
 	 * l'étape 1, aucun scénario n'est retenu et aucune vignette n'est enfoncée.
 	 */
-	const scenarioChoisi = $derived<string | null>(etape >= 2 ? 'notes' : null);
-	const depose = $derived(etape >= 3);
+	const scenarioChoisi = $derived<string | null>(
+		vivant ? scenarioLocal : etape >= 2 ? 'notes' : null
+	);
+	const depose = $derived(vivant ? fichiers.length > 0 : etape >= 3);
 
 	/* ── Les trois scénarios ──────────────────────────────────────────────────
 	   `SCENARIOS` (`V-24:2871`). Ils appartiennent à la maquette, pas au corpus,
@@ -245,7 +342,7 @@
 		'Markdown'
 	];
 
-	const depotTraverse = $derived(etape === 2);
+	const depotTraverse = $derived(vivant ? etape >= 2 : etape === 2);
 	const sousTitreDuDepot = $derived(
 		depotTraverse && scenarioCourant
 			? scenarioCourant.nom +
@@ -257,7 +354,90 @@
 	   `resumeLot()` (`V-24:2552`) et `arborescenceLot()` (`V-24:2532`). Aucun
 	   chiffre n'est saisi : tout est compté sur `LOT_IMPORT` (P-02). */
 
-	const LOT = $derived(lotImport);
+	const LOT = $derived(lotAnalyse ?? lotImport);
+
+	/**
+	 * LES MOTIFS EN CLAIR — les codes du classement, mis en français ICI.
+	 *
+	 * `$lib/donnees/import.ts` le dit de lui-même : « les motifs sont donc des
+	 * codes stables, que la vue mettra en français quand elle en aura la prise.
+	 * Le gel de V-24 en porte d'ailleurs les formulations, dans le lot d'exemple
+	 * du jeu de semence : elles seront reprises là-bas. » C'est fait, et les
+	 * quatre phrases que le lot d'exemple écrit sont reprises au caractère près.
+	 *
+	 * UNE VALEUR INCONNUE PASSE TELLE QUELLE, et ce n'est pas une négligence :
+	 * le lot d'exemple du jeu de semence porte déjà des PHRASES dans ce champ, et
+	 * elles doivent traverser sans être traduites deux fois.
+	 */
+	const LIBELLE_DU_MOTIF: Readonly<Record<string, string>> = {
+		'format-non-converti':
+			"Ce format n'est pas converti en note. Déposez-le en pièce jointe d'une note existante.",
+		'format-inconnu': "Le dépôt ne reconnaît pas ce format : le fichier n'a pas été ouvert.",
+		'fichier-vide': 'Fichier vide, sans contenu à reprendre.',
+		'doublon-dans-le-lot': 'Fichier identique à un autre du lot, conservé une seule fois.',
+		'service-de-conversion-injoignable':
+			"Le service de conversion n'a pas répondu. Le reste du lot a été traité ; ce fichier est à reprendre.",
+		'outil-de-conversion-absent':
+			"L'outil qui lit ce format manque au service de conversion. Le reste du lot a été traité.",
+		'fichier-protege':
+			"Le fichier est protégé par un mot de passe : son contenu n'a pas pu être lu.",
+		'fichier-endommage': "La structure interne du fichier ne s'ouvre pas : il est endommagé.",
+		'delai-de-conversion-depasse': 'La conversion a dépassé le délai accordé et a été interrompue.',
+		'conversion-absente': "Ce fichier n'a pas été soumis à la conversion.",
+		'contenu-illisible': "Le contenu n'a pas pu être lu comme un document."
+	};
+
+	/**
+	 * LES FRAGMENTS DE PHRASE DU GEL QUI ENTOURENT UN SEGMENT GRAS.
+	 *
+	 * Ils sont nommés plutôt qu'écrits au balisage pour une raison de rendu, et
+	 * elle est mesurée : Svelte ÉLAGUE les blancs en bord d'élément (`CLAUDE.md`
+	 * §6, P-8), et « reçus depuis » perdrait ses espaces encadrants — le texte
+	 * rendu serait « 30 fichiersreçus depuisExploitation ». Portés dans une
+	 * expression, les blancs survivent. Les phrases sont celles de
+	 * `rendreRapport()` et de `deposer()`, au caractère près.
+	 */
+	const PHRASES = {
+		recusDepuis: ' reçus depuis ',
+		bilanAvecErreurs: "L'import est allé jusqu'au bout : ",
+		bilanSansErreur: 'Tous les fichiers retenus ont été convertis. ',
+		ecartesALApercu: ' avaient été écartés à l\u2019aperçu, comme annoncé.'
+	};
+
+	function motifEnClair(motif: string | undefined): string {
+		if (motif === undefined) return '';
+		return LIBELLE_DU_MOTIF[motif] ?? motif;
+	}
+
+	/**
+	 * LE TITRE DU BILAN — la phrase du gel, et la MISE À JOUR y prend sa place.
+	 *
+	 * Le gel écrit « N notes créées, M fichiers en échec » ou « … aucun échec ».
+	 * `RG-M12-01` fait apparaître un troisième nombre que le gel ne connaissait
+	 * pas — les notes MISES À JOUR par un réimport —, et le taire ferait croire
+	 * qu'un réimport n'a rien fait. Il n'est nommé que lorsqu'il n'est pas nul.
+	 */
+	/**
+	 * L'INTITULÉ DE LA DERNIÈRE SECTION — « Notes créées » du gel, sauf quand ce
+	 * n'est pas vrai.
+	 *
+	 * Le gel ne connaît pas la mise à jour : son lot d'exemple ne crée que des
+	 * notes neuves. Un réimport, lui, n'en crée aucune et en met à jour trois —
+	 * garder « Notes créées — 0 » au-dessus d'une liste de trois notes serait
+	 * faux à l'écran. L'intitulé nomme alors ce que la liste contient.
+	 */
+	function intituleDesNotes(r: RapportAffiche): string {
+		if (r.notesMisesAJour === 0) return `Notes créées — ${r.notesCreees}`;
+		return `Notes écrites — ${r.ecrites.length}`;
+	}
+
+	function titreDuBilan(r: RapportAffiche): string {
+		const debut =
+			r.notesMisesAJour > 0
+				? `${r.notesCreees} notes créées, ${r.notesMisesAJour} mises à jour`
+				: `${r.notesCreees} notes créées`;
+		return r.echecs > 0 ? `${debut}, ${r.echecs} fichiers en échec` : `${debut}, aucun échec`;
+	}
 
 	/** Le sort d'un fichier décide de sa colonne : note, écarté, en échec. */
 	const resume = $derived.by(() => {
@@ -351,6 +531,13 @@
 	const TRAITES = 7;
 
 	const progression = $derived.by(() => {
+		/* SUR UNE ROUTE RÉELLE, LE TRAITEMENT EST AU SERVEUR ET NE SE RACONTE PAS
+		   FICHIER PAR FICHIER. Le gel anime une minuterie locale ; le produit, lui,
+		   attend une réponse. Poser une barre qui progresserait toute seule serait
+		   une valeur illustrative (`P-02`) : la barre reste donc à zéro et les
+		   compteurs à zéro tant que rien n'est connu, puis le rapport les remplace.
+		   L'invite est celle du balisage gelé, « Préparation… ». */
+		if (vivant) return { pourcent: 0, courant: 'Préparation…', notes: 0, ignores: 0, echecs: 0 };
 		if (etape !== 4) {
 			return { pourcent: 0, courant: 'Préparation…', notes: 0, ignores: 0, echecs: 0 };
 		}
@@ -389,20 +576,275 @@
 	/** Le retour en arrière reste possible jusqu'à la validation, pas au-delà. */
 	const precedentMasque = $derived(etape === 1 || etape === 4);
 	const renoncerMasque = $derived(etape !== 3);
+	/** `termine` de `majPied()` — l'étape 4 avec son rapport à l'écran. */
+	const termine = $derived(etape === 4 && rapport !== null);
 	/* L'import lancé, « Continuer » disparaît jusqu'à ce que le rapport soit là ;
-	   aucun état ne l'y voit revenir. */
-	const suivantMasque = $derived(etape === 4);
+	   aucun état de la planche ne l'y voit revenir. */
+	const suivantMasque = $derived(etape === 4 && !termine);
 	/**
 	 * `majPied()` ne retouche l'inhibition qu'aux étapes 1 à 3 : à l'étape 4
 	 * elle reste celle du dernier passage, et le gel arrive toujours à l'étape 4
 	 * par l'étape 1, où aucun scénario n'était encore retenu. Mesuré sur le gel.
 	 */
 	const suivantInhibe = $derived(
-		etape === 1 ? scenarioChoisi === null : etape === 2 ? !depose : etape === 3 ? false : true
+		etape === 1 ? scenarioChoisi === null : etape === 2 ? !depose : etape === 3 ? enCours : !termine
 	);
 	const libelleDuSuivant = $derived(
-		etape === 2 ? 'Analyser le lot' : etape === 3 ? "Lancer l'import" : 'Continuer'
+		etape === 2
+			? 'Analyser le lot'
+			: etape === 3
+				? simulationRetenue
+					? 'Lancer la simulation'
+					: "Lancer l'import"
+				: termine
+					? 'Ouvrir le domaine'
+					: 'Continuer'
 	);
+
+	/* ═══════════════════════════════════════════════════════════════════════
+	   LES GESTES DU PARCOURS — `aller()`, `deposer()`, `lancerImport()` du gel
+
+	   Aucun n'a d'effet quand la vue est rendue sans ses deux rappels : la
+	   planche reste ce qu'elle est, et `vivant` en est le seul juge.
+	   ═══════════════════════════════════════════════════════════════════════ */
+
+	/** Le champ de fichiers, caché — voir le balisage. */
+	let champDeFichiers: HTMLInputElement | undefined = $state();
+	/** La zone de dépôt du gel, qui reçoit le glisser-déposer. */
+	let zoneDeDepot: HTMLElement | undefined = $state();
+
+	/**
+	 * LE GLISSER-DÉPOSER — les quatre écouteurs du gel, posés APRÈS LE MONTAGE.
+	 *
+	 * Ils sont posés en script plutôt qu'en attributs parce que `div.depot` n'est
+	 * pas un élément interactif : lui attacher des gestionnaires au balisage
+	 * ferait rougir le contrôle d'accessibilité pour un nœud que le gel écrit
+	 * ainsi. `data-survol` est l'attribut du gel, et la feuille le lit.
+	 *
+	 * L'ARBORESCENCE D'UN DOSSIER DÉPOSÉ EST CONSERVÉE — c'est la promesse écrite
+	 * du scénario, « à l'identique ». Les entrées du transfert sont parcourues en
+	 * profondeur ; à défaut d'entrées, les fichiers nus sont pris.
+	 */
+	onMount(() => {
+		const zone = zoneDeDepot;
+		if (zone === undefined || !vivant) return;
+		const marquer = (etat: string) => (evenement: Event) => {
+			evenement.preventDefault();
+			zone.setAttribute('data-survol', etat);
+		};
+		const entree = marquer('oui');
+		const sortie = marquer('non');
+		const deposer = (evenement: DragEvent): void => {
+			sortie(evenement);
+			void fichiersDuTransfert(evenement.dataTransfer).then(retenir);
+		};
+		zone.addEventListener('dragenter', entree);
+		zone.addEventListener('dragover', entree);
+		zone.addEventListener('dragleave', sortie);
+		zone.addEventListener('drop', deposer as (e: Event) => void);
+		return () => {
+			zone.removeEventListener('dragenter', entree);
+			zone.removeEventListener('dragover', entree);
+			zone.removeEventListener('dragleave', sortie);
+			zone.removeEventListener('drop', deposer as (e: Event) => void);
+		};
+	});
+
+	/** Une entrée de système de fichiers, telle que le transfert la rend. */
+	interface EntreeDeTransfert {
+		readonly isFile: boolean;
+		readonly isDirectory: boolean;
+		readonly fullPath: string;
+		file?: (retour: (f: File) => void, echec: (e: unknown) => void) => void;
+		createReader?: () => {
+			readEntries: (retour: (e: EntreeDeTransfert[]) => void, echec: (e: unknown) => void) => void;
+		};
+	}
+
+	/** Le fichier d'une entrée, son chemin complet greffé dessus. */
+	function fichierDe(entree: EntreeDeTransfert): Promise<File | null> {
+		return new Promise((rendre) => {
+			if (entree.file === undefined) {
+				rendre(null);
+				return;
+			}
+			entree.file(
+				(f) => {
+					/* Le chemin du transfert commence par une barre oblique ; le lot le
+					   veut relatif, comme `webkitRelativePath` le donne. */
+					Object.defineProperty(f, 'webkitRelativePath', {
+						value: entree.fullPath.replace(/^\//, ''),
+						configurable: true
+					});
+					rendre(f);
+				},
+				() => rendre(null)
+			);
+		});
+	}
+
+	/** Les entrées d'un répertoire, page par page — le lecteur en rend au plus cent. */
+	function entreesDe(entree: EntreeDeTransfert): Promise<EntreeDeTransfert[]> {
+		const lecteur = entree.createReader?.();
+		if (lecteur === undefined) return Promise.resolve([]);
+		const toutes: EntreeDeTransfert[] = [];
+		return new Promise((rendre) => {
+			const lire = (): void => {
+				lecteur.readEntries(
+					(lot) => {
+						if (lot.length === 0) {
+							rendre(toutes);
+							return;
+						}
+						toutes.push(...lot);
+						lire();
+					},
+					() => rendre(toutes)
+				);
+			};
+			lire();
+		});
+	}
+
+	/** Le parcours en profondeur d'une entrée déposée. */
+	async function descendre(entree: EntreeDeTransfert, recueil: File[]): Promise<void> {
+		if (entree.isFile) {
+			const f = await fichierDe(entree);
+			if (f !== null) recueil.push(f);
+			return;
+		}
+		if (!entree.isDirectory) return;
+		for (const enfant of await entreesDe(entree)) await descendre(enfant, recueil);
+	}
+
+	/** Les fichiers d'un transfert, arborescence conservée quand elle est offerte. */
+	async function fichiersDuTransfert(transfert: DataTransfer | null): Promise<readonly File[]> {
+		if (transfert === null) return [];
+		const items = Array.from(transfert.items ?? []);
+		const entrees = items
+			.map((i) => i.webkitGetAsEntry?.() ?? null)
+			.filter((e) => e !== null)
+			.map((e) => e as unknown as EntreeDeTransfert);
+		if (entrees.length === 0) return Array.from(transfert.files);
+		const recueil: File[] = [];
+		for (const e of entrees) await descendre(e, recueil);
+		return recueil;
+	}
+
+	/** Le domaine effectivement visé — celui qu'on a choisi, sinon le proposé. */
+	const domaineCible = $derived(domaineRetenu || (domaineParDefaut ?? compte.domaine));
+
+	const reglages = $derived({ domaine: domaineCible, simulation: simulationRetenue });
+
+	function choisirScenario(id: string): void {
+		if (!vivant) return;
+		scenarioLocal = id;
+	}
+
+	/**
+	 * LES FICHIERS RETENUS — leur chemin est celui du dépôt, jamais leur seul nom.
+	 *
+	 * `webkitRelativePath` porte l'arborescence quand le navigateur la connaît :
+	 * c'est elle qui deviendra l'arborescence des dossiers, « à l'identique »
+	 * comme le scénario le promet. À défaut, le fichier est à la racine du lot.
+	 */
+	function cheminDe(fichier: File): string {
+		const relatif = (fichier as File & { webkitRelativePath?: string }).webkitRelativePath;
+		return relatif !== undefined && relatif !== '' ? relatif : fichier.name;
+	}
+
+	/** La source affichée : le dossier de tête du lot, ou le nombre de fichiers. */
+	function sourceDe(retenus: readonly File[]): string {
+		const premiers = retenus
+			.map((f) => cheminDe(f))
+			.filter((c) => c.includes('/'))
+			.map((c) => c.slice(0, c.indexOf('/')));
+		const tete = premiers[0];
+		if (tete !== undefined && premiers.every((p) => p === tete)) return tete;
+		return 'votre poste';
+	}
+
+	function retenir(retenus: readonly File[]): void {
+		if (retenus.length === 0) return;
+		fichiers = retenus;
+		sourceDuLot = sourceDe(retenus);
+		lotAnalyse = null;
+		rapport = null;
+	}
+
+	/** Le total du lot, en méga-octets à une décimale — la phrase du gel. */
+	const megaOctets = $derived(
+		Math.round((fichiers.reduce((t, f) => t + f.size, 0) / 1024 / 1024) * 10) / 10
+	);
+
+	function parcourir(): void {
+		if (!vivant) return;
+		champDeFichiers?.click();
+	}
+
+	function surChoixDeFichiers(evenement: Event): void {
+		const champ = evenement.currentTarget as HTMLInputElement;
+		retenir(Array.from(champ.files ?? []));
+	}
+
+	async function avancer(): Promise<void> {
+		if (!vivant || enCours) return;
+
+		if (etape === 1) {
+			if (scenarioLocal !== null) etapeLocale = 2;
+			return;
+		}
+		if (etape === 2) {
+			if (fichiers.length === 0 || analyser === undefined) return;
+			enCours = true;
+			try {
+				const lot = await analyser(fichiers, reglages);
+				if (lot === null) return;
+				lotAnalyse = lot;
+				etapeLocale = 3;
+			} finally {
+				enCours = false;
+			}
+			return;
+		}
+		if (etape === 3) {
+			if (importer === undefined) return;
+			enCours = true;
+			etapeLocale = 4;
+			try {
+				rapport = await importer(fichiers, reglages);
+			} finally {
+				enCours = false;
+			}
+			return;
+		}
+		/* Étape 4, rapport à l'écran : « Ouvrir le domaine ». */
+		if (termine) location.assign(adresseDuDomaine);
+	}
+
+	function reculer(): void {
+		if (!vivant || etape === 1) return;
+		etapeLocale = etape - 1;
+	}
+
+	function renoncer(): void {
+		if (!vivant) return;
+		fichiers = [];
+		lotAnalyse = null;
+		rapport = null;
+		sourceDuLot = '';
+		etapeLocale = 1;
+	}
+
+	/**
+	 * L'adresse du domaine visé — pour la sortie de l'étape 4. Elle est BÂTIE par
+	 * le constructeur unique du dépôt, jamais écrite à la main : `ARB-001` en fait
+	 * la seule forme publiée.
+	 */
+	const adresseDuDomaine = $derived.by(() => {
+		const cible = domaines.find((d) => d.nom === domaineCible);
+		return cible === undefined ? '/' : adresseDeDomaine(cible.univers, cible.nom);
+	});
 </script>
 
 <!--
@@ -413,7 +855,7 @@
 -->
 <!-- prettier-ignore -->
 {#snippet vignetteDeScenario(s: Scenario)}<button
-		class="scen" type="button" aria-pressed={scenarioChoisi === s.id}
+		class="scen" type="button" aria-pressed={scenarioChoisi === s.id} onclick={() => choisirScenario(s.id)}
 		><span class="scen__marque" aria-hidden="true"></span
 		><span
 			><h2 class="scen__nom">{s.nom}</h2
@@ -448,7 +890,7 @@
 {#snippet fichierEcarte(f: FichierDuLot)}<div class="ign"
 		><span class="ign__marque">{f.f}</span
 		><span class="ign__nom">{f.c}</span
-		><span class="ign__motif">{f.m}</span></div
+		><span class="ign__motif">{motifEnClair(f.m)}</span></div
 	>{/snippet}
 
 <Coquille
@@ -496,7 +938,7 @@
 			<h1 class="etape__titre">Déposez vos fichiers</h1>
 			<p class="etape__sous" id="depot-sous">{sousTitreDuDepot}</p>
 
-			<div class="depot" id="depot">
+			<div class="depot" id="depot" bind:this={zoneDeDepot}>
 				<div class="depot__ic">
 					<svg
 						width="42"
@@ -514,7 +956,24 @@
 				<p>
 					L'arborescence est conservée. Vous pouvez aussi parcourir vos fichiers si vous préférez.
 				</p>
-				<button class="btn btn--principal" id="parcourir">Parcourir mes fichiers</button>
+				<button class="btn btn--principal" id="parcourir" onclick={parcourir}
+					>Parcourir mes fichiers</button
+				>
+				<!--
+					LE CHAMP DE FICHIERS DU GEL N'EXISTE PAS : `#parcourir` y est un
+					bouton nu, et le dépôt un comportement de navigateur. Le champ est
+					donc posé ici, CACHÉ, et seulement quand le parcours est vivant —
+					la planche ne le porte pas. C'est le geste de
+					`$lib/cablage/formulaires.ts`, qui pose lui aussi des champs cachés
+					sur des formulaires que le gel n'attribue pas.
+				-->
+				{#if vivant}<input
+						type="file"
+						multiple
+						hidden
+						bind:this={champDeFichiers}
+						onchange={surChoixDeFichiers}
+					/>{/if}
 				<!-- prettier-ignore -->
 				<div class="formats-admis" id="formats-admis"
 					>{#if depotTraverse}{#each FORMATS_ADMIS as f (f)}<span>{f}</span>{/each}{/if}</div
@@ -527,9 +986,9 @@
 						>Domaine de destination <span class="oblig">*</span></label
 					>
 					<!-- prettier-ignore -->
-					<select class="selecteur" id="domaine-cible"
+					<select class="selecteur" id="domaine-cible" onchange={(e) => (domaineRetenu = (e.currentTarget as HTMLSelectElement).value)}
 						>{#if depotTraverse}{#each domaines as d (d.nom)}<option
-							value={d.nom} selected={d.nom === compte.domaine}>{d.univers + ' › ' + d.nom}</option
+							value={d.nom} selected={d.nom === domaineCible}>{d.univers + ' › ' + d.nom}</option
 						>{/each}{/if}</select
 					>
 				</div>
@@ -549,7 +1008,12 @@
 					>
 				</div>
 				<label class="case" id="champ-simulation" hidden={scenarioChoisi !== 'prepare'}>
-					<input type="checkbox" id="simulation" />
+					<input
+						type="checkbox"
+						id="simulation"
+						checked={simulationRetenue}
+						onchange={(e) => (simulationRetenue = (e.currentTarget as HTMLInputElement).checked)}
+					/>
 					<span class="case__txt"
 						>Simulation
 						<span class="case__aide"
@@ -558,7 +1022,20 @@
 						>
 					</span>
 				</label>
-				<div class="lot-depose" id="lot-depose" hidden></div>
+				<!--
+					`deposer()` du gel, transcrit : la coche, la phrase chiffrée, et le
+					bouton qui reprend le dépôt. Les deux nombres sont MESURÉS sur les
+					fichiers reçus, jamais annoncés (`P-02`).
+				-->
+				<!-- prettier-ignore -->
+				<div class="lot-depose" id="lot-depose" hidden={!depose}
+					>{#if depose}<span
+						><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--c-frais)"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg
+					></span
+					><span style="flex:1"
+						><b>{`${fichiers.length} fichiers`}</b>{PHRASES.recusDepuis}<b>{sourceDuLot}</b>{` — ${megaOctets} Mo.`}</span
+					><button class="btn" onclick={renoncer}>Remplacer le lot</button>{/if}</div
+				>
 			</div>
 		</section>
 
@@ -621,13 +1098,19 @@
 
 		<!-- ============ ÉTAPE 4 — Import et rapport ============ -->
 		<section class="etape" data-etape="4" data-active={etape === 4 ? 'oui' : 'non'}>
-			<h1 class="etape__titre" id="titre-4">Import en cours</h1>
+			<!--
+				`rendreRapport()` du gel remplace ces deux textes quand le rapport
+				arrive : le titre devient « Import terminé », le sous-titre s'efface.
+			-->
+			<h1 class="etape__titre" id="titre-4">
+				{rapport === null ? 'Import en cours' : 'Import terminé'}
+			</h1>
 			<p class="etape__sous" id="sous-4">
-				Un fichier en erreur n'interrompt pas le lot : le traitement va jusqu'au bout et le rapport
-				détaillera chaque cas.
+				{#if rapport === null}Un fichier en erreur n'interrompt pas le lot : le traitement va
+					jusqu'au bout et le rapport détaillera chaque cas.{/if}
 			</p>
 
-			<div class="progression-bloc" id="bloc-progression">
+			<div class="progression-bloc" id="bloc-progression" hidden={rapport !== null}>
 				<!-- prettier-ignore -->
 				<div class="barre-progres"
 					>{#if etape === 4}<i id="barre" style="width:{progression.pourcent}%"></i
@@ -653,19 +1136,89 @@
 				</div>
 			</div>
 
-			<div id="rapport" hidden></div>
+			<!--
+				LE RAPPORT — `rendreRapport()` du gel, transcrit nœud pour nœud, et
+				nourri du traitement RÉEL. Aucun de ses nombres n'est écrit ici :
+				`RapportAffiche` les porte tous, et ils viennent de la base.
+
+				Les quatre sections sont celles du gel, dans son ordre : le bilan,
+				les fichiers en échec, les références non résolues, la structure
+				créée, les notes écrites. La section « Références non résolues » du
+				gel porte deux exemples ; ici elle porte les renvois que le lot n'a
+				pas résolus, et elle DISPARAÎT quand il n'y en a aucun — une section
+				vide affirmerait qu'il y en a.
+			-->
+			<!--
+				`svelte/no-navigation-without-resolve` est levée pour le seul lien de
+				note ci-dessous. `resolve()` n'accepte qu'un chemin CONNU à la
+				compilation ; l'adresse d'une note importée est bâtie à l'exécution
+				par `adresseDeNote()` — le constructeur unique du dépôt, `ARB-001`,
+				« seule forme publiée ». La résoudre est impossible, la construire à
+				la main serait la faute que la règle vise.
+			-->
+			<!-- eslint-disable svelte/no-navigation-without-resolve -->
+			<!-- prettier-ignore -->
+			<div id="rapport" hidden={rapport === null}
+				>{#if rapport !== null}<div class="bilan" data-avec-erreurs={rapport.echecs ? 'oui' : 'non'}
+					><div class="bilan__ic"
+						>{#if rapport.echecs}<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--c-alerte)" stroke-width="1.6"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v5.5M12 16.3v.3"/></svg>{:else}<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--c-frais)" stroke-width="1.8"><circle cx="12" cy="12" r="9.5"/><path d="M7.8 12.4l3 3 5.4-6"/></svg>{/if}</div
+					><div style="flex:1"
+						><h3>{titreDuBilan(rapport)}</h3
+						><p
+							>{#if rapport.echecs}{PHRASES.bilanAvecErreurs}<b>{`${rapport.notesCreees + rapport.notesMisesAJour} fichiers sur ${rapport.total}`}</b>{` sont devenus des notes. Les ${rapport.echecs} fichiers en échec sont listés plus bas avec leur cause ; ils n'ont bloqué aucun des autres et peuvent être repris séparément.`}{:else}{PHRASES.bilanSansErreur}<b>{`${rapport.ignores} fichiers`}</b>{PHRASES.ecartesALApercu}{/if}</p
+						></div
+					></div
+				>{#if rapport.echecs}<section class="section-rapport section-rapport--erreurs"
+					><span class="etiq">Fichiers en échec — à reprendre</span
+					><div class="section-rapport__cadre"
+						>{#each rapport.enEchec as f (f.chemin)}<div class="ign"
+							><span class="ign__marque" style="background:var(--c-danger-voile);color:var(--c-danger)">échec</span
+							><span class="ign__nom">{f.chemin}</span
+							><span class="ign__motif">{motifEnClair(f.motif)}</span></div
+						>{/each}</div
+					></section
+				>{/if}{#if rapport.renvoisNonResolus.length}<section class="section-rapport"
+					><span class="etiq">Références non résolues</span
+					><div class="section-rapport__cadre"
+						>{#each rapport.renvoisNonResolus as r (r.chemin)}<div class="ign"
+							><span class="ign__marque">lien</span
+							><span class="ign__nom">{r.chemin}</span
+							><span class="ign__motif">{`renvoie à « ${r.renvois.join(' », « ')} », absente du lot. Le lien a été conservé en attente : il se résoudra tout seul si la note est créée plus tard.`}</span></div
+						>{/each}</div
+					></section
+				>{/if}<section class="section-rapport"
+					><span class="etiq">Structure créée</span
+					><div class="section-rapport__cadre" style="padding:var(--e-3) var(--e-4);font-size:var(--t-petit)"
+						>{`${rapport.dossiersCrees} dossiers créés dans le domaine ${rapport.domaine}.`}</div
+					></section
+				><section class="section-rapport"
+					><span class="etiq">{intituleDesNotes(rapport)}</span
+					><div class="section-rapport__cadre"
+						>{#each rapport.ecrites.slice(0, 8) as n (n.identifiant)}<a class="note-creee" href={n.adresse}
+							><span class="note-creee__nom">{n.titre}</span
+							><span class="note-creee__ou">{n.ou}</span></a
+						>{/each}{#if rapport.ecrites.length > 8}<div style="padding:var(--e-2);font-size:var(--t-mini);color:var(--c-encre-3)"
+							>{`et ${rapport.ecrites.length - 8} autres — la liste complète est dans le domaine.`}</div
+						>{/if}</div
+					></section
+				>{/if}</div
+			>
+			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		</section>
 
 		<!-- ---------- Pied de parcours ---------- -->
 		<div class="pied-parcours" id="pied">
-			<button class="btn" id="precedent" hidden={precedentMasque}>Retour</button>
+			<button class="btn" id="precedent" hidden={precedentMasque} onclick={reculer}>Retour</button>
 			<div class="pied-parcours__droite">
-				<button class="btn" id="renoncer" hidden={renoncerMasque}>Renoncer</button>
+				<button class="btn" id="renoncer" hidden={renoncerMasque} onclick={renoncer}
+					>Renoncer</button
+				>
 				<button
 					class="btn btn--principal"
 					id="suivant"
 					disabled={suivantInhibe}
-					hidden={suivantMasque}><span id="suivant-txt">{libelleDuSuivant}</span></button
+					hidden={suivantMasque}
+					onclick={() => void avancer()}><span id="suivant-txt">{libelleDuSuivant}</span></button
 				>
 			</div>
 		</div>

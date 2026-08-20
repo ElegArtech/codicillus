@@ -138,12 +138,10 @@
 		RELATIONS,
 		UNIVERS,
 		type Compte,
-		type Contribution,
 		type Distinction,
 		type Domaine,
 		type EtatDInstance,
 		type EvenementDActivite,
-		type NomDAuteur,
 		type Note,
 		type Relation,
 		type TypeDEvenement,
@@ -179,14 +177,58 @@
 		 * Les contributions déclarées, par auteur. Absente, `CONTRIBUTIONS` du jeu
 		 * de semence. La table est PARTIELLE : un compte sans contribution
 		 * déclarée existe — le gel en montre un —, et le rendu le traite déjà.
+		 *
+		 * `null` N'EST PAS ZÉRO — `P-02`. Un chargeur de route qui compte en base
+		 * ce qui est comptable et ne peut PAS attribuer les liens internes
+		 * (`relations` ne porte pas l'auteur du lien) passe `null` pour celui-là :
+		 * l'indicateur et les distinctions qui le mesurent s'affichent alors en
+		 * état neutre explicite, jamais en zéro muet. Le jeu de semence, lui,
+		 * déclare deux nombres, et rien ne change pour lui.
 		 */
-		contributions?: Partial<Record<NomDAuteur, Contribution>>;
+		contributions?: Partial<Record<string, ContributionAffichee>>;
 		/** Les distinctions du barème. Absente, `DISTINCTIONS` du jeu de semence. */
 		distinctions?: readonly Distinction[];
 		/** Le flux d'activité. Absente, `ACTIVITE` du jeu de semence. */
 		activite?: readonly EvenementDActivite[];
 		/** Les relations du corpus. Absente, `RELATIONS` du jeu de semence. */
 		relations?: readonly Relation[];
+		/**
+		 * LE PROFIL DU COMPTE CONNECTÉ, tel que la base le porte.
+		 *
+		 * Absente, le compte est cherché dans `comptes` par le nom de `compte` —
+		 * c'est le chemin du jeu de semence et des sept états de la planche, et il
+		 * ne bouge pas. Fournie par un chargeur de route, elle l'emporte : l'écran
+		 * cesse alors d'afficher l'identité du corpus et affiche celle du titulaire
+		 * de la session. `src/lib/donnees/profil.ts`, `profilAffiche()`, en est la
+		 * seule fabrique.
+		 */
+		profilDuCompte?: ProfilAffiche | null;
+		/**
+		 * « Rester connecté sur cet appareil » — l'état de `sessions.souvenir` pour
+		 * la session courante. Absente, la case reste dans la position du gel.
+		 */
+		preferenceDeSession?: boolean;
+	}
+
+	/**
+	 * Une contribution telle que l'écran la reçoit — deux nombres, dont chacun
+	 * peut être INDISPONIBLE. `Contribution` du jeu de semence s'y range sans
+	 * conversion : ses deux champs sont des nombres.
+	 */
+	interface ContributionAffichee {
+		readonly verifiees: number | null;
+		readonly liens: number | null;
+	}
+
+	/** Le profil affiché, dans la forme que `profilAffiche()` compose. */
+	interface ProfilAffiche {
+		readonly nom: string;
+		readonly identifiant: string;
+		readonly courriel: string;
+		readonly role: string;
+		readonly domaine: string;
+		readonly arrivee: string;
+		readonly derniereConnexion: string;
 	}
 
 	const {
@@ -200,7 +242,9 @@
 		contributions = CONTRIBUTIONS,
 		distinctions = DISTINCTIONS,
 		activite = ACTIVITE,
-		relations = RELATIONS
+		relations = RELATIONS,
+		profilDuCompte = null,
+		preferenceDeSession = false
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -236,6 +280,20 @@
 	/** Le nombre en français — `nb()` du gel, `toLocaleString("fr-FR")`. */
 	function nb(x: number): string {
 		return x.toLocaleString('fr-FR');
+	}
+
+	/**
+	 * LE MARQUEUR D'UNE DONNÉE QUI N'EXISTE PAS — `P-02`, et c'est la seule
+	 * forme que le gel donne au vide : `V-24:1287` écrit le cadratin au
+	 * sous-titre du dépôt tant qu'aucun scénario n'est retenu. Zéro et
+	 * « indisponible » sont deux informations différentes ; c'est le zéro muet
+	 * que `RG-M01-01` vise.
+	 */
+	const RIEN = '—';
+
+	/** Un nombre à l'écran, ou le marqueur du vide. */
+	function chiffre(x: number | null): string {
+		return x === null ? RIEN : nb(x);
 	}
 
 	/** Le profil affiché : ce que l'entête, l'identité et la session en lisent. */
@@ -274,7 +332,23 @@
 			cas === 'neuf' ? c.id === IDENTIFIANT_DU_COMPTE_NEUF : c.nom === compte.nom
 		)
 	);
-	const profil = $derived(compteCourant ? profilDe(compteCourant) : null);
+
+	/**
+	 * LE PROFIL RENDU — celui de la base quand un chargeur le passe, celui du
+	 * corpus sinon.
+	 *
+	 * Les initiales ne voyagent pas : la règle du gel est ci-dessus, et
+	 * l'appliquer ici plutôt que de la recevoir garantit qu'il n'en existe
+	 * qu'une. Vérifié sur le jeu de semence — « Karim Belhadj » rend « KB »,
+	 * c'est-à-dire `MOI.initiales`.
+	 */
+	const profil = $derived<Profil | null>(
+		profilDuCompte !== null && profilDuCompte !== undefined
+			? { ...profilDuCompte, initiales: initialesDe(profilDuCompte.nom) }
+			: compteCourant
+				? profilDe(compteCourant)
+				: null
+	);
 
 	/** Les quatre lignes du panneau « Attribué par l'administration ». */
 	const attribues = $derived(
@@ -295,8 +369,9 @@
 	interface Statistiques {
 		readonly publiees: number;
 		readonly brouillons: number;
-		readonly verifiees: number;
-		readonly liens: number;
+		/** `null` quand la donnée n'existe pas — jamais un zéro de commodité. */
+		readonly verifiees: number | null;
+		readonly liens: number | null;
 		readonly citations: number;
 		readonly notePhare: Note | null;
 	}
@@ -311,7 +386,7 @@
 	 * vaut zéro. C'est la lettre du gel.
 	 */
 	function statistiquesDe(nom: string): Statistiques {
-		const declaree: Contribution | undefined = contributions[nom as NomDAuteur];
+		const declaree: ContributionAffichee | undefined = contributions[nom];
 		const siennes = notes.filter((n) => n.auteur === nom && !n.brouillon);
 		const brouillons = notes.filter((n) => n.auteur === nom && n.brouillon);
 		let citations = 0;
@@ -326,8 +401,8 @@
 		return {
 			publiees: siennes.length,
 			brouillons: brouillons.length,
-			verifiees: declaree?.verifiees ?? 0,
-			liens: declaree?.liens ?? 0,
+			verifiees: declaree === undefined ? 0 : declaree.verifiees,
+			liens: declaree === undefined ? 0 : declaree.liens,
 			citations,
 			notePhare
 		};
@@ -361,20 +436,34 @@
 
 	interface Jauge {
 		readonly distinction: Distinction;
-		readonly valeur: number;
+		/** `null` : la mesure n'existe pas. Ni obtenue, ni en progression — inconnue. */
+		readonly valeur: number | null;
 		readonly obtenue: boolean;
 		readonly part: number;
 	}
 
-	/** `V-25:2765` — la mesure lue sur les statistiques, jamais une constante. */
+	/**
+	 * `V-25:2765` — la mesure lue sur les statistiques, jamais une constante.
+	 *
+	 * UNE MESURE INDISPONIBLE NE PROGRESSE PAS DE ZÉRO POUR CENT : elle ne
+	 * progresse pas du tout, et la jauge le dit. Poser `0 %` affirmerait que le
+	 * compte n'a rien fait, ce qu'on ignore (`P-02`).
+	 */
 	function progression(d: Distinction, s: Statistiques): Jauge {
 		const valeur = s[d.mesure];
+		if (valeur === null) return { distinction: d, valeur: null, obtenue: false, part: 0 };
 		return {
 			distinction: d,
 			valeur,
 			obtenue: valeur >= d.seuil,
 			part: Math.min(100, Math.round((valeur / d.seuil) * 100))
 		};
+	}
+
+	/** Ce que l'étiquette accessible d'une distinction dit de son état. */
+	function etatDeLaJauge(j: Jauge): string {
+		if (j.valeur === null) return 'mesure indisponible';
+		return j.obtenue ? 'obtenue' : `progression ${j.part} pour cent`;
 	}
 
 	const jauges = $derived(stats ? distinctions.map((d) => progression(d, stats)) : []);
@@ -689,7 +778,7 @@
 								>
 							</span>
 							<!-- prettier-ignore -->
-							<span class="interrupteur"><input type="checkbox" id="p-session"><span class="interrupteur__piste"></span></span>
+							<span class="interrupteur"><input type="checkbox" id="p-session" checked={preferenceDeSession}><span class="interrupteur__piste"></span></span>
 						</label>
 						<label class="pref">
 							<span class="pref__txt">
@@ -730,7 +819,7 @@
 			<!-- prettier-ignore -->
 			<div class="stats" id="stats"
 				>{#each indicateurs as i (i[1])}<div class="stat"
-					><div class="stat__val">{nb(i[0])}</div
+					><div class="stat__val">{chiffre(i[0])}</div
 					><span class="stat__nom">{i[1]}</span
 					><span class="stat__sous">{i[2]}</span
 				></div>{/each}</div>
@@ -742,16 +831,16 @@
 			-->
 			<!-- prettier-ignore -->
 			<div class="distinctions" id="distinctions"
-				>{#each jauges as j (j.distinction.id)}<article class="dist" data-obtenue={j.obtenue ? 'oui' : 'non'} aria-label={`${j.distinction.nom}, ${j.distinction.critere}, ${j.obtenue ? 'obtenue' : `progression ${j.part} pour cent`}`}
+				>{#each jauges as j (j.distinction.id)}<article class="dist" data-obtenue={j.obtenue ? 'oui' : 'non'} aria-label={`${j.distinction.nom}, ${j.distinction.critere}, ${etatDeLaJauge(j)}`}
 					><span class="dist__sceau" aria-hidden="true"
-						>{#if j.obtenue}<svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg>{:else}{`${Math.min(99, j.part)}%`}{/if}</span
+						>{#if j.obtenue}<svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg>{:else if j.valeur === null}{RIEN}{:else}{`${Math.min(99, j.part)}%`}{/if}</span
 					><div class="dist__nom">{j.distinction.nom}</div
 					><div class="dist__critere">{j.distinction.critere}</div
 					><div class="dist__jauge"
 						><div class="dist__piste"><i style="width:{j.part}%"></i></div
 						><div class="dist__chiffre"
-							><b>{`${nb(Math.min(j.valeur, j.distinction.seuil))} / ${nb(j.distinction.seuil)}`}</b
-							><span class="dist__reste">{j.obtenue ? 'obtenue' : `encore ${nb(j.distinction.seuil - j.valeur)} ${j.distinction.quoi}`}</span
+							><b>{`${j.valeur === null ? RIEN : nb(Math.min(j.valeur, j.distinction.seuil))} / ${nb(j.distinction.seuil)}`}</b
+							><span class="dist__reste">{j.valeur === null ? 'mesure indisponible' : j.obtenue ? 'obtenue' : `encore ${nb(j.distinction.seuil - j.valeur)} ${j.distinction.quoi}`}</span
 						></div
 					></div
 				></article>{/each}</div>
