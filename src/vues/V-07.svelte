@@ -44,9 +44,18 @@
 	 * P-02 — AUCUN CHIFFRE N'EST SAISI, ET C'EST ICI QUE ÇA SE JOUE
 	 *
 	 * `RG-M01-01` : aucun indicateur n'affiche de valeur inventée. Les quatre
-	 * indicateurs, la salutation, les quatre domaines et le pied sont CALCULÉS
-	 * depuis `seeds/corpus.ts`, exactement comme la maquette les calcule depuis
-	 * `window.CORPUS` et ses tables de mesures. Rien n'est figé.
+	 * indicateurs, la salutation, les domaines et le pied sont CALCULÉS depuis
+	 * les sources reçues en propriété, exactement comme la maquette les calcule
+	 * depuis `window.CORPUS` et ses tables de mesures. Rien n'est figé.
+	 *
+	 * ET DEPUIS LE LOT DE CÂBLAGE DE `/`, CES SOURCES VIENNENT DE LA BASE. Le
+	 * jeu de semence n'est plus que le DÉFAUT, celui de la revue : `+page.svelte`
+	 * passe le compte connecté, les univers, les domaines, les consultations des
+	 * sept derniers jours et de la semaine précédente, les anciennetés de
+	 * modification, l'activité et les demandes de révision, toutes bornées au
+	 * périmètre autorisé par `$lib/donnees/accueil`. Seul `instance` reste la
+	 * constante du jeu — la base ne porte ni la version du produit, ni l'instant
+	 * de la dernière synchronisation (`SANS_CONTREPARTIE_EN_BASE`).
 	 *
 	 * `RG-M01-02` : l'indicateur « En attente de révision » et la corbeille de
 	 * révisions lisent LA MÊME SOURCE — `revisionsCourantes`, une seule fois.
@@ -72,10 +81,14 @@
 	 * de relais du champ de recherche à la palette V-09 — relèvent des lots de
 	 * logique. L'aide est ici un ÉTAT, piloté par le vecteur.
 	 *
-	 * LES LIENS RESTENT CEUX DU GEL — `href="#"`, comme `src/lib/coquille/*`.
-	 * Voir l'en-tête de `V-10.svelte` : le filtre `/url:` d'ARB-013 ne retire
-	 * rien, l'instrument est en écriture humaine seule, et aucun lien mort n'est
-	 * pour autant inventé.
+	 * LES LIENS QUI MÈNENT QUELQUE PART Y MÈNENT — deux, et deux seulement : la
+	 * cible d'un évènement d'activité et l'ouverture d'une note de la corbeille.
+	 * Le brief les nomme (« cible cliquable », « Accès direct à la note ») et
+	 * `docs/routes.md` en donne l'adresse, plate et stable : `/notes/{id}`.
+	 * Aucun autre nœud n'est touché — les boutons de domaine, les indicateurs
+	 * cliquables et les raccourcis de création gardent le geste du gel, faute
+	 * d'une adresse que ce lot puisse citer sans l'inventer. C'est déclaré au
+	 * rapport, pas comblé.
 	 *
 	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette` et `dialog#palette`
 	 * (divergence mesurée nulle, `docs/releve-vues.md` §4.1) et `div.planche`,
@@ -119,6 +132,8 @@
 		type Univers,
 		type UtilisateurCourant
 	} from '../../seeds/corpus';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { BARRES_DE_JAUGE, temoinFraicheur } from '$lib/fraicheur';
 	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
@@ -149,24 +164,56 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-07')`, variante « complète ». */
 		notes: readonly Note[];
+		/**
+		 * ─────────────────────────────────────────────────────────────────────
+		 * `| undefined` EST EXIGÉ PAR `exactOptionalPropertyTypes`, ET IL DIT
+		 * QUELQUE CHOSE
+		 *
+		 * `tsconfig.json:9` distingue « la clé est absente » de « la clé vaut
+		 * `undefined` ». Sans la seconde forme, un chargeur ne peut PAS écrire
+		 * `compte={data.compte}` quand la donnée peut manquer : il lui faudrait
+		 * composer son objet de propriétés par étalement conditionnel, une ligne
+		 * par source, pour dire ce que `undefined` dit déjà.
+		 *
+		 * Or c'est exactement le cas que `P-02` décrit : une source indisponible
+		 * n'est pas une source à zéro. La laisser passer en `undefined` fait
+		 * répondre le défaut de la vue — le jeu de semence en revue, rien de plus
+		 * en production —, et Svelte applique le défaut sur `undefined` comme sur
+		 * l'absence. Les deux formes sont donc admises, et elles ont le même
+		 * effet.
+		 */
 		/** Les univers déclarés. Absents, ceux du jeu de semence. */
-		univers?: readonly Univers[];
+		univers?: readonly Univers[] | undefined;
 		/** Les domaines accessibles. Absents, ceux du jeu de semence. */
-		domaines?: readonly Domaine[];
+		domaines?: readonly Domaine[] | undefined;
 		/** L'utilisateur connecté. Absent, celui du jeu de semence. */
-		compte?: UtilisateurCourant;
+		compte?: UtilisateurCourant | undefined;
 		/** L'état de l'instance — version, synchronisation. Absent, celui du jeu. */
-		instance?: EtatDInstance;
+		instance?: EtatDInstance | undefined;
 		/** Consultations des sept derniers jours, par note. */
-		mesures7j?: Partial<Record<IdentifiantNote, number>>;
+		mesures7j?: Partial<Record<IdentifiantNote, number>> | undefined;
 		/** Consultations de la semaine précédente, par note. */
-		mesures7jPrec?: Partial<Record<IdentifiantNote, number>>;
+		mesures7jPrec?: Partial<Record<IdentifiantNote, number>> | undefined;
 		/** Ancienneté de modification, en jours, par note. */
-		modifications?: Partial<Record<IdentifiantNote, number>>;
+		modifications?: Partial<Record<IdentifiantNote, number>> | undefined;
 		/** Les évènements du corpus. Absents, ceux du jeu de semence. */
-		activite?: readonly EvenementDActivite[];
+		activite?: readonly EvenementDActivite[] | undefined;
 		/** Les demandes de révision. Absentes, celles du jeu de semence. */
-		revisions?: readonly DemandeDeRevision[];
+		revisions?: readonly DemandeDeRevision[] | undefined;
+		/**
+		 * LA CAPACITÉ D'ÉCRITURE DE L'APPELANT, CALCULÉE EN BASE — P-09.
+		 *
+		 * Le profil du VECTEUR est un état de planche : il fait la revue, pas le
+		 * produit. Un chargeur qui n'a pas de vecteur à passer laisserait donc
+		 * `profil` valoir « referent », et toutes les actions d'écriture seraient
+		 * émises quel que soit le compte. `+layout.server.ts` calcule la capacité
+		 * réelle (`capaciteDEcriture`, deux projections sur les droits) ; cette
+		 * propriété est le chemin par lequel elle atteint la vue.
+		 *
+		 * ABSENTE, LE PROFIL RÉPOND — le vecteur reste seul juge en revue, et les
+		 * neuf états déclarés ne bougent pas d'un pixel.
+		 */
+		ecriture?: boolean | undefined;
 	}
 
 	const {
@@ -180,7 +227,8 @@
 		mesures7jPrec = MESURES_7J_PREC,
 		modifications = MODIFICATIONS,
 		activite = ACTIVITE,
-		revisions = REVISIONS
+		revisions = REVISIONS,
+		ecriture: ecritureAutorisee
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -196,8 +244,22 @@
 	 * Les nœuds concernés gardent leur classe `si-ecriture` intacte quand ils
 	 * sont rendus : la classe porte aussi le rendu, elle ne se retire pas.
 	 * Énumération : `docs/omissions-p09.md`.
+	 *
+	 * LA CAPACITÉ FOURNIE L'EMPORTE SUR LE PROFIL, et c'est l'ordre juste : le
+	 * profil est un état de planche, la capacité est une lecture des droits en
+	 * base. Absente — en revue, où aucun chargeur ne parle —, le profil répond
+	 * seul, et les neuf états déclarés restent ce qu'ils étaient.
+	 *
+	 * ET C'EST CETTE MÊME VALEUR QUI GOUVERNE `droits` DE LA COQUILLE. Le
+	 * `data-droits` de la racine décidait jusqu'ici du seul profil, si bien
+	 * qu'un compte sans capacité d'écriture gardait le menu « Créer » de la
+	 * barre supérieure pendant que les raccourcis de la page disparaissaient —
+	 * deux réponses pour une seule question. Mesuré : sans capacité fournie, la
+	 * valeur est identique à l'octet à ce qu'elle était (`ecriture` vaut alors
+	 * `profil !== 'lecteur'`, mot pour mot l'ancienne expression), donc les neuf
+	 * états de revue ne bougent pas.
 	 */
-	const ecriture = $derived(profil !== 'lecteur');
+	const ecriture = $derived(ecritureAutorisee ?? profil !== 'lecteur');
 	const etatPage = $derived(String(reglage['etat'] ?? 'nominal'));
 	/**
 	 * L'aide de première visite. La case de planche est cochée par défaut et
@@ -370,6 +432,43 @@
 		return id === null ? undefined : corpus.find((n) => n.id === id);
 	}
 
+	/**
+	 * L'ADRESSE D'UNE NOTE EST PLATE — `/notes/{identifiant}`.
+	 *
+	 * `docs/routes.md` §2.1 : « Aucun segment de rangement (univers, domaine,
+	 * dossier) n'y figure. Déplacer la note dans un autre dossier, un autre
+	 * domaine ou un autre univers ne change pas son adresse. » C'est `RG-M03-03`
+	 * satisfaite par construction, et il n'y a rien à composer.
+	 *
+	 * L'ADRESSE EST RÉSOLUE, JAMAIS CONCATÉNÉE. `resolve()` de `$app/paths` prend
+	 * l'IDENTIFIANT DE ROUTE et ses paramètres : le cadre vérifie à la
+	 * compilation que la route existe, encode le segment, et
+	 * `svelte/no-navigation-without-resolve` refuse toute autre forme. Une
+	 * adresse fabriquée à la main est un lien mort en puissance — `P-03`.
+	 *
+	 * L'APPEL EST INLINE AUX DEUX POINTS D'USAGE, ET CE N'EST PAS UNE PRÉFÉRENCE
+	 * DE STYLE : `svelte/no-navigation-without-resolve` inspecte l'EXPRESSION
+	 * passée à `goto()` et celle d'un `href`. Une fabrique d'adresse, si juste
+	 * soit-elle, lui est opaque — la règle rougit, et elle a raison de rougir :
+	 * ce qu'elle sait vérifier, c'est ce qu'elle voit.
+	 */
+	const ROUTE_DE_NOTE = '/notes/[identifiant]' as const;
+
+	/**
+	 * LA CORBEILLE S'OUVRE EN UN CLIC — CDC M07, `BRIEF-VUES.md` §V-07, « Accès
+	 * direct à la note ».
+	 *
+	 * LE GEL NAVIGUE DÉJÀ, ET PAR LE MÊME MOYEN : `V-07:3588-3592` construit un
+	 * `button.revision` et lui pose un écouteur de clic qui annonce « Ouverture
+	 * de "…" — vue V-14 ». Une maquette statique n'a pas de route à atteindre ;
+	 * le produit en a une. Le nœud reste celui du gel — même balise, mêmes
+	 * classes, même ordre —, et `onclick` n'écrit aucun attribut au rendu
+	 * serveur : le document servi est identique à l'octet à ce qu'il était.
+	 */
+	function ouvrirLaNote(n: Note): void {
+		void goto(resolve(ROUTE_DE_NOTE, { identifiant: n.id }));
+	}
+
 	/* ── Pied de page ───────────────────────────────────────────────────────── */
 	const signets = $derived(corpus.length - toutesLesNotes.length);
 </script>
@@ -418,7 +517,7 @@
 	accueilCourant
 	fil={['Accueil']}
 	role={profil === 'admin' ? 'admin' : 'referent'}
-	droits={profil === 'lecteur' ? 'lecture' : 'ecriture'}
+	droits={ecriture ? 'ecriture' : 'lecture'}
 	donnees={{ 'data-etat': etatPage }}
 	{univers}
 	{domaines}
@@ -627,7 +726,7 @@
 										{@const note = noteCible(r.id)}
 										{#if note}
 											<!-- prettier-ignore -->
-											<button class="revision" type="button"><span class="revision__tete"><span class="revision__titre">{note.titre}</span><span class="revision__dom past">{note.domaine}</span></span><span class="revision__com">{r.commentaire}</span><span class="revision__sous">{'Signalée par ' + r.par + ' · ' + (r.jours <= 1 ? 'hier' : 'il y a ' + r.jours + ' jours') + ' · ' + r.le}{@render temoin(note)}</span></button>
+											<button class="revision" type="button" onclick={() => ouvrirLaNote(note)}><span class="revision__tete"><span class="revision__titre">{note.titre}</span><span class="revision__dom past">{note.domaine}</span></span><span class="revision__com">{r.commentaire}</span><span class="revision__sous">{'Signalée par ' + r.par + ' · ' + (r.jours <= 1 ? 'hier' : 'il y a ' + r.jours + ' jours') + ' · ' + r.le}{@render temoin(note)}</span></button>
 										{/if}
 									{/each}
 								{/if}
@@ -668,7 +767,7 @@
 									{#each activiteCourante as e, rang (rang)}
 										{@const cible = noteCible(e.cible)}
 										<!-- prettier-ignore -->
-										<div class="evt evt--{e.type}"><span class="evt__marque" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">{#each GLYPHES[e.type] as trace (trace)}<path d={trace}/>{/each}</svg></span><div class="evt__corps"><span class="evt__qui">{e.qui}</span>{' ' + VERBES[e.type] + ' '}<a class="evt__cible" href="#">{cible ? cible.titre : 'voir le rapport'}</a>{#if e.detail}<span class="evt__detail">{e.detail}</span>{/if}</div><span class="evt__quand">{relatif(e.heures)}</span></div>
+										<div class="evt evt--{e.type}"><span class="evt__marque" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">{#each GLYPHES[e.type] as trace (trace)}<path d={trace}/>{/each}</svg></span><div class="evt__corps"><span class="evt__qui">{e.qui}</span>{' ' + VERBES[e.type] + ' '}<a class="evt__cible" href={cible ? resolve(ROUTE_DE_NOTE, { identifiant: cible.id }) : '#'}>{cible ? cible.titre : 'voir le rapport'}</a>{#if e.detail}<span class="evt__detail">{e.detail}</span>{/if}</div><span class="evt__quand">{relatif(e.heures)}</span></div>
 									{/each}
 								{/if}
 							{/if}
