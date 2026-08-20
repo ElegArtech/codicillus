@@ -86,6 +86,7 @@ import {
 	noeudDepuisDocument
 } from '../edition/document';
 import {
+	empreinteDuCorps,
 	versionDUnEnregistrement,
 	type CorpsDeLaNote,
 	type EtatEnBase,
@@ -265,13 +266,42 @@ export async function resoudreLEditionDUneNote(
 }
 
 /**
+ * L'ÉTAT DE SYNCHRONISATION DES DEUX REGISTRES — ce que `RG-M06-08` fait lire à
+ * V-18, et ce que son bandeau nomme.
+ *
+ * L'AUTEUR EST CELUI DE L'ENREGISTREMENT QUI A CHANGÉ LA RÉFÉRENCE, retrouvé par
+ * la version que cet enregistrement a écrite : les deux portent le même instant,
+ * `demande.maintenant`, posé une seule fois par la route (`enregistrerLaNote()`).
+ * Ce n'est donc pas un rapprochement approximatif, c'est une jointure sur la
+ * valeur que la même transaction a écrite des deux côtés.
+ *
+ * `null` QUAND PERSONNE NE PEUT ÊTRE NOMMÉ, et jamais un nom de remplacement
+ * (`P-02`). Deux cas réels : la Référence vient de la SEMENCE, qui pose les dates
+ * sans écrire de version ; ou l'enregistrement n'a écrit aucune version parce que
+ * le contenu n'avait pas changé — auquel cas la date n'a pas bougé non plus, et
+ * l'attribution porterait sur un geste antérieur.
+ */
+export interface SynchronisationDesRegistres extends DatesDesDeuxRegistres {
+	/** `RG-M06-08`, calculée par `operationnelDesynchronise()` et par elle seule. */
+	readonly desynchronise: boolean;
+	/** Le nom de qui a modifié la Référence en dernier, ou `null`. */
+	readonly referenceModifieePar: string | null;
+}
+
+/**
  * LES DEUX REGISTRES RENDUS — ce que `src/vues/V-18.svelte` reçoit en
  * propriété `affichee`. Voir l'en-tête : deux lectures, une seule décision.
  */
 export async function resoudreLEditionDeLOperationnel(
 	base: Base,
 	demande: Omit<DemandeDEdition, 'registre'>
-): Promise<Resolution<{ edition: EditionDeNote; affichee: NoteAffichee }>> {
+): Promise<
+	Resolution<{
+		edition: EditionDeNote;
+		affichee: NoteAffichee;
+		synchronisation: SynchronisationDesRegistres;
+	}>
+> {
 	const operationnel = await resoudreLEditionDUneNote(base, {
 		...demande,
 		registre: 'operationnel'
@@ -287,6 +317,26 @@ export async function resoudreLEditionDeLOperationnel(
 	if (!reference.trouve) return INTROUVABLE;
 
 	const edition = operationnel.ressource;
+
+	const [dates] = await base
+		.select({
+			id: notes.id,
+			referenceModifieLe: notes.corpsReferenceModifieLe,
+			operationnelModifieLe: notes.corpsOperationnelModifieLe
+		})
+		.from(notes)
+		.where(eq(notes.identifiant, demande.identifiant))
+		.limit(1);
+	if (dates === undefined) return INTROUVABLE;
+
+	const [auteur] = await base
+		.select({ nom: comptes.nom })
+		.from(versions)
+		.innerJoin(comptes, eq(comptes.id, versions.auteurId))
+		.where(and(eq(versions.noteId, dates.id), eq(versions.le, dates.referenceModifieLe)))
+		.orderBy(desc(versions.numero))
+		.limit(1);
+
 	return {
 		trouve: true,
 		ressource: {
@@ -295,6 +345,12 @@ export async function resoudreLEditionDeLOperationnel(
 				note: edition.lecture.note,
 				reference: reference.ressource.corps.existe ? reference.ressource.corps.html : null,
 				operationnel: edition.lecture.corps.existe ? edition.lecture.corps.html : null
+			},
+			synchronisation: {
+				referenceModifieLe: dates.referenceModifieLe,
+				operationnelModifieLe: dates.operationnelModifieLe,
+				desynchronise: operationnelDesynchronise(dates),
+				referenceModifieePar: auteur?.nom ?? null
 			}
 		}
 	};
@@ -346,8 +402,65 @@ export interface ModificationDeNote {
 	readonly statut?: StatutDeNote;
 	/** La liste soumise REMPLACE la liste courante. Vide : plus aucune. */
 	readonly etiquettes?: readonly string[];
-	/** Présent : le corps est réécrit. La valeur n'est pas encore validée. */
-	readonly corps?: { readonly saisi: unknown };
+	/** Présent : le corps est réécrit, ou retiré. Voir `CorpsSoumis`. */
+	readonly corps?: CorpsSoumis;
+}
+
+/** Un corps réécrit — la valeur n'est pas encore validée. */
+export interface CorpsSaisi {
+	readonly saisi: unknown;
+	/** Nie le retrait — voir `CorpsSoumis`, l'exclusion est portée par le type. */
+	readonly supprime?: undefined;
+}
+
+/**
+ * CE QU'UNE MODIFICATION FAIT DU CORPS — deux gestes, et le second n'existe que
+ * pour l'Opérationnel.
+ *
+ * `RG-NOT-02` (`CDC:200`) : « le corps Référence est CANONIQUE. Le corps
+ * Opérationnel est optionnel et ne peut exister sans Référence. » Le retrait est
+ * donc une opération du seul registre Opérationnel, et la règle est tenue à
+ * trois hauteurs plutôt qu'à une :
+ *
+ *   1. le SCHÉMA — `notes.corps_reference` est `NOT NULL` : une Référence
+ *      retirée est inécrivable, quoi que demande un appelant ;
+ *   2. le TYPE — `CorpsDeLaNote.reference` est `Document`, jamais
+ *      `Document | null` : l'état « sans Référence » n'est pas représentable
+ *      dans ce qu'un enregistrement produit ;
+ *   3. la GARDE de `enregistrerLaNote()`, qui refuse un retrait demandé sur le
+ *      registre Référence au lieu de le laisser échouer en base.
+ *
+ * Le régime du dépôt est *bloquant > vérifiable > déclaratif* : les deux
+ * premières hauteurs sont bloquantes, la troisième nomme la cause.
+ *
+ * LES DEUX MEMBRES SE DÉCLARENT L'UN L'AUTRE, et ce n'est pas une coquetterie :
+ * un membre qui tairait le champ de l'autre rendrait `{ saisi, supprime }`
+ * assignable, c'est-à-dire un corps à la fois réécrit et retiré. Chacun nie donc
+ * explicitement le champ de l'autre, et la contradiction devient inécrivable.
+ */
+export type CorpsSoumis =
+	| CorpsSaisi
+	/** Le corps est RETIRÉ — registre Opérationnel seul (`RG-NOT-02`). */
+	| { readonly saisi?: undefined; readonly supprime: true };
+
+/**
+ * CE QU'UN FORMULAIRE PEUT PORTER — et le retrait n'en est pas.
+ *
+ * `lireLaModification()` lit une soumission de l'éditeur : elle rend un corps
+ * SAISI, jamais un retrait. Le retrait est une action nommée à part
+ * (`?/supprimer`), qui ne lit aucun champ — ce qui la rend insensible à ce que
+ * le client compose. Le type dit cette différence plutôt que de la commenter :
+ * une lecture de formulaire ne peut pas fabriquer une suppression.
+ */
+export interface ModificationSoumise extends Omit<ModificationDeNote, 'corps'> {
+	readonly corps?: CorpsSaisi;
+}
+
+/** Un retrait de corps, distingué d'une réécriture sans supposer l'autre. */
+function estUnRetrait(corps: CorpsSoumis | undefined): boolean {
+	/* La VALEUR, jamais la présence de la clé : `{ saisi, supprime: undefined }`
+	   porte la clé sans porter l'intention, et `in` s'y tromperait. */
+	return corps?.supprime === true;
 }
 
 /* ═══════════════════════════════════ La lecture du formulaire ═══════════ */
@@ -419,7 +532,7 @@ export interface RefusDeForme {
 
 /** Ce qu'une lecture de formulaire rend : une modification, ou un refus. */
 export type LectureDuFormulaire =
-	| { readonly recu: true; readonly modification: ModificationDeNote }
+	| { readonly recu: true; readonly modification: ModificationSoumise }
 	| { readonly recu: false; readonly refus: RefusDeForme };
 
 function refuser(motif: string): LectureDuFormulaire {
@@ -690,7 +803,7 @@ async function etiquetteDuLibelle(tx: Transaction, libelle: string): Promise<str
 function corpsApresEnregistrement(
 	ligne: { readonly corpsReference: unknown; readonly corpsOperationnel: unknown },
 	registre: Registre,
-	corps: { readonly saisi: unknown } | undefined
+	corps: CorpsSoumis | undefined
 ): CorpsDeLaNote {
 	const reference = analyserDocument(ligne.corpsReference);
 	const operationnel =
@@ -698,6 +811,13 @@ function corpsApresEnregistrement(
 			? null
 			: analyserDocument(ligne.corpsOperationnel);
 	if (corps === undefined) return { reference, operationnel };
+
+	/* LE RETRAIT DU REGISTRE OPÉRATIONNEL — l'absence est un ÉTAT du corps, et
+	   `empreinteDuCorps()` lui en donne un (« absent ») : la version qui suit
+	   capture donc bien un changement, et l'historique porte le retrait plutôt
+	   que de l'omettre. La Référence n'a pas ce geste (`RG-NOT-02`, ci-dessus),
+	   et le type ne le lui offre pas. */
+	if (estUnRetrait(corps)) return { reference, operationnel: null };
 
 	/* Le document REÉCRIT par ProseMirror, jamais celui reçu — porte 3. */
 	const document = documentDepuisNoeud(noeudDepuisDocument(corps.saisi));
@@ -814,6 +934,15 @@ export async function enregistrerLaNote(
 
 	const modification = demande.modification;
 
+	/* `RG-NOT-02`, troisième hauteur — voir `CorpsSoumis`. Le retrait ne vise que
+	   l'Opérationnel ; demandé sur la Référence, il est refusé ICI plutôt que
+	   laissé buter sur `NOT NULL`, pour que la cause soit nommée et non déduite
+	   d'un message de base. Le refus emprunte la sortie unique de la famille
+	   `/notes/…` (`RG-ACC-04`) : rien n'a été écrit, rien n'est à défaire. */
+	if (estUnRetrait(modification.corps) && demande.registre !== 'operationnel') {
+		return INTROUVABLE;
+	}
+
 	const [ligne] = await base
 		.select({
 			id: notes.id,
@@ -870,13 +999,44 @@ export async function enregistrerLaNote(
 		colonnes.domaineId = destination.domaineId;
 		colonnes.dossierId = destination.dossierId;
 	}
+	/**
+	 * LA DATE DE CORPS NE BOUGE QUE SI LE CORPS A BOUGÉ — `RG-M06-09`.
+	 *
+	 * « Seule une modification EFFECTIVE du corps Référence » déclenche le signal
+	 * de désynchronisation (`CDC:812`), et ce signal se lit sur ces deux dates
+	 * (`RG-M06-08`). Poser la date sur toute soumission ferait donc désynchroniser
+	 * un registre Opérationnel parce que quelqu'un a rouvert la Référence et
+	 * réenregistré sans une frappe — un signal levé par un geste qui n'a rien
+	 * changé.
+	 *
+	 * La comparaison n'est pas écrite ici : c'est `empreinteDuCorps()`
+	 * (`../edition/enregistrement.ts`), la même normalisation que celle dont
+	 * `RG-M07-01` décide s'il faut écrire une version. Un second comparateur
+	 * rendrait possible une note qui porte une version sans en porter la date, ou
+	 * l'inverse. Les deux décisions restent donc alignées PAR CONSTRUCTION, et
+	 * c'est exactement ce que `RG-M06-10` demande : « enregistrer une NOUVELLE
+	 * VERSION du corps Opérationnel » lève le signal — un enregistrement qui n'en
+	 * écrit aucune ne le lève pas, et c'est pour ce cas-là que « Marquer comme
+	 * resynchronisé » existe.
+	 *
+	 * La COLONNE, elle, est écrite dans tous les cas : c'est le document réécrit
+	 * par la porte 3, dont l'aller-retour est idempotent — écrire la même valeur
+	 * n'apprend rien de faux à personne.
+	 */
 	if (modification.corps !== undefined) {
 		if (demande.registre === 'operationnel') {
 			colonnes.corpsOperationnel = apres.operationnel;
-			colonnes.corpsOperationnelModifieLe = demande.maintenant;
+			const change =
+				empreinteDuCorps(ligne.corpsOperationnel) !== empreinteDuCorps(apres.operationnel);
+			/* `notes_operationnel_date_coherente` — les deux colonnes sont nulles
+			   ensemble, ou aucune ne l'est. Le retrait emporte donc la date. */
+			if (apres.operationnel === null) colonnes.corpsOperationnelModifieLe = null;
+			else if (change) colonnes.corpsOperationnelModifieLe = demande.maintenant;
 		} else {
 			colonnes.corpsReference = apres.reference;
-			colonnes.corpsReferenceModifieLe = demande.maintenant;
+			if (empreinteDuCorps(ligne.corpsReference) !== empreinteDuCorps(apres.reference)) {
+				colonnes.corpsReferenceModifieLe = demande.maintenant;
+			}
 		}
 	}
 	const ecrit = Object.keys(colonnes).length > 0 || modification.etiquettes !== undefined;
@@ -955,6 +1115,183 @@ export async function enregistrerLeCorps(
 	/* Cette voie ne soumet AUCUN rangement : l'issue ne peut être qu'« écrit ».
 	   Le cas contraire est néanmoins traité — une issue laissée sans traitement
 	   serait une supposition, et une supposition se périme en silence. */
+	if (issue.ressource.sort !== 'ecrit') return INTROUVABLE;
+	return { trouve: true, ressource: issue.ressource.fait };
+}
+
+/* ═══════════════════════ Les deux registres et leur synchronisation ═════ */
+
+/** Les deux dates de corps d'une note, telles que la requête les rapporte. */
+export interface DatesDesDeuxRegistres {
+	readonly referenceModifieLe: Date;
+	/** `null` : la note n'a pas de registre Opérationnel (`RG-NOT-02`). */
+	readonly operationnelModifieLe: Date | null;
+}
+
+/**
+ * `RG-M06-08` — LE SIGNAL « À RESYNCHRONISER », ET SON UNIQUE DÉFINITION.
+ *
+ * « Le registre Opérationnel est signalé « à resynchroniser » SI ET SEULEMENT SI
+ * le corps Référence a été modifié après la dernière mise à jour du corps
+ * Opérationnel » (`CDC:810`). Trois choses s'y lisent, et aucune n'est une
+ * interprétation :
+ *
+ *  - la comparaison porte sur les DEUX DATES DE CORPS, jamais sur `modifieLe`,
+ *    qu'un simple renommage fait bouger — ce serait `RG-M06-09` violée ;
+ *  - « après » est STRICT : deux dates égales ne désynchronisent pas. C'est le
+ *    cas nominal d'une note dont les deux registres ont été écrits du même
+ *    geste, et celui de la semence — cinq notes sur trente-deux y sont ;
+ *  - sans registre Opérationnel, il n'y a rien à resynchroniser.
+ *
+ * La fonction est PURE, et c'est ce qui la rend éprouvable sans base (`P-26`) :
+ * son cas d'épreuve ne dépend pas de l'état du dépôt.
+ *
+ * DEUX POINTS D'APPEL DEVRAIENT LA CITER, ET UN SEUL LE FAIT AUJOURD'HUI :
+ * `src/routes/notes/[identifiant]/+page.server.ts` porte le même prédicat en
+ * ligne, pour le bandeau de lecture de V-14. Le fichier appartient à un autre
+ * lot et n'est pas touché ici ; la duplication est déclarée au rapport, et elle
+ * est exactement le mode de défaillance que `P-01` nomme pour la fraîcheur —
+ * deux définitions concurrentes d'un même signal.
+ */
+export function operationnelDesynchronise(dates: DatesDesDeuxRegistres): boolean {
+	if (dates.operationnelModifieLe === null) return false;
+	return dates.referenceModifieLe.getTime() > dates.operationnelModifieLe.getTime();
+}
+
+/**
+ * LES COLONNES QU'UNE ATTESTATION DE RESYNCHRONISATION ÉCRIT, ET RIEN D'AUTRE.
+ *
+ * Même forme que `ColonnesDUneVerification` (`./verification.ts`), et pour la
+ * même raison : le type est la garantie. Il ne déclare ni corps, ni titre, ni
+ * `modifieLe`, ni `verifieLe` — un point d'appel qui voudrait en écrire un n'a
+ * pas de champ où le poser.
+ *
+ * `RG-M06-10` — « deux actions lèvent le signal : enregistrer une nouvelle
+ * version du corps Opérationnel, ou « Marquer comme resynchronisé » (pour le cas
+ * « j'ai relu, ça tient toujours ») ». La seconde n'est donc PAS une
+ * modification : elle n'écrit aucun corps, ne crée aucune version (`RG-M07-01`,
+ * qui veut un changement de contenu), et ne touche pas `modifieLe` — une note
+ * dont la date de modification bougerait sans que rien n'ait changé mentirait à
+ * la lecture, et à la fraîcheur qui s'y adosse quand la note n'a jamais été
+ * vérifiée (`RG-M06-01`).
+ *
+ * Elle ne touche pas `verifieLe` non plus, et c'est le point délicat :
+ * « j'ai relu, ça tient » ressemble à une vérification, mais `RG-M06-05` fait de
+ * la vérification une action DISTINCTE, et « attester que le pas-à-pas suit la
+ * Référence » n'est pas « attester que la note est d'actualité ». Confondre les
+ * deux confondrait deux termes du vocabulaire contractuel (`CLAUDE.md` §3).
+ *
+ * Ce qu'elle écrit est donc exactement ce que `RG-M06-08` lit : la date de
+ * dernière mise à jour du corps Opérationnel.
+ */
+export interface ColonnesDUneResynchronisation {
+	readonly corpsOperationnelModifieLe: Date;
+}
+
+/** Ce qu'une attestation de resynchronisation demande. */
+export interface DemandeDeResynchronisation {
+	readonly identifiant: string;
+	readonly identite: Identite;
+	readonly contexte: ContexteDeLecture;
+	readonly maintenant: Date;
+}
+
+/** Ce qu'une attestation rend : le signal est-il levé, et l'était-il déjà. */
+export interface ResynchronisationFaite {
+	readonly identifiant: string;
+	/** Vrai : le signal était levé avant ce geste — l'attestation l'a éteint. */
+	readonly etaitDesynchronise: boolean;
+}
+
+/**
+ * « MARQUER COMME RESYNCHRONISÉ » — l'attestation sans réédition de `M05.9`.
+ *
+ * Le droit est acquis par la MÊME résolution que l'éditeur —
+ * `resoudreLEditionDeLOperationnel()` —, jamais par une seconde table de droits :
+ * qui peut écrire l'Opérationnel peut attester qu'il tient toujours, et qui ne
+ * le peut pas reçoit `INTROUVABLE` (`RG-ACC-04`).
+ *
+ * SANS REGISTRE OPÉRATIONNEL, L'ATTESTATION N'A PAS D'OBJET. La contrainte
+ * `notes_operationnel_date_coherente` l'interdit de toute façon — la date ne peut
+ * exister sans le corps —, et le gel ne montre l'action qu'au cas `desync`
+ * (`V-18:1954`, `hidden`). Le refus est celui de la famille.
+ *
+ * L'INDEX N'EST PAS ENTRETENU : rien de cherchable ne change. `RG-M05-06` porte
+ * sur « une note enregistrée » ; une attestation n'écrit ni titre, ni corps, ni
+ * étiquette, ni domaine, ni date de modification — les cinq champs que
+ * l'entretien projette.
+ */
+export async function attesterLaResynchronisation(
+	base: Base,
+	demande: DemandeDeResynchronisation
+): Promise<Resolution<ResynchronisationFaite>> {
+	const acces = await resoudreLEditionDeLOperationnel(base, {
+		identifiant: demande.identifiant,
+		identite: demande.identite,
+		contexte: demande.contexte
+	});
+	if (!acces.trouve) return INTROUVABLE;
+
+	const [ligne] = await base
+		.select({
+			id: notes.id,
+			referenceModifieLe: notes.corpsReferenceModifieLe,
+			operationnelModifieLe: notes.corpsOperationnelModifieLe
+		})
+		.from(notes)
+		.where(eq(notes.identifiant, demande.identifiant))
+		.limit(1);
+	if (ligne === undefined || ligne.operationnelModifieLe === null) return INTROUVABLE;
+
+	const colonnes: ColonnesDUneResynchronisation = {
+		corpsOperationnelModifieLe: demande.maintenant
+	};
+	await base.update(notes).set(colonnes).where(eq(notes.id, ligne.id));
+
+	return {
+		trouve: true,
+		ressource: {
+			identifiant: demande.identifiant,
+			etaitDesynchronise: operationnelDesynchronise(ligne)
+		}
+	};
+}
+
+/**
+ * « SUPPRIMER LA VERSION OPÉRATIONNELLE » — la troisième action dédiée de
+ * `M05.9`, et elle passe par la voie d'écriture UNIQUE.
+ *
+ * Rien n'est écrit ici : la demande est un retrait de corps, et
+ * `enregistrerLaNote()` en fait ce qu'il fait de toute écriture de corps — la
+ * même résolution de droit, la même transaction, la même capture de version, le
+ * même entretien d'index. Un second chemin d'écriture divergerait, et la
+ * divergence ne se verrait qu'à l'historique (`ADR-004`, mode de défaillance).
+ *
+ * LA NOTE SURVIT, ET C'EST TOUT L'ENJEU. Le gel le dit à l'utilisateur en propres
+ * termes — « seul le registre Opérationnel est supprimé ; la Référence, les
+ * métadonnées, l'historique et les liens de la note sont intacts »
+ * (`mockups/V-18-editeur-operationnel.html:2007-2010`) —, et `RG-NOT-02` en fait
+ * la règle : le corps canonique n'est pas retirable.
+ *
+ * @throws rien de ce que lève l'enregistrement d'un corps saisi : un retrait ne
+ *   passe par aucune porte de format, n'ayant pas de document à valider.
+ */
+export async function supprimerLeRegistreOperationnel(
+	base: Base,
+	client: Meilisearch,
+	demande: Omit<DemandeDEnregistrementDeNote, 'registre' | 'corpsSaisi'>
+): Promise<Resolution<EnregistrementFait>> {
+	const issue = await enregistrerLaNote(base, client, {
+		identifiant: demande.identifiant,
+		registre: 'operationnel',
+		identite: demande.identite,
+		contexte: demande.contexte,
+		maintenant: demande.maintenant,
+		modification: { corps: { supprime: true } }
+	});
+	if (!issue.trouve) return INTROUVABLE;
+	/* Aucun rangement n'est soumis : l'issue ne peut être qu'« écrit ». Traitée
+	   quand même — une supposition non traitée se périme en silence. */
 	if (issue.ressource.sort !== 'ecrit') return INTROUVABLE;
 	return { trouve: true, ressource: issue.ressource.fait };
 }
