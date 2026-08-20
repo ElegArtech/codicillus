@@ -140,14 +140,49 @@ describe('T-079 §3 — les étiquettes, séparées par des virgules', () => {
 });
 
 describe('T-079 §3 — le corps soumis', () => {
+	/* DEUX NOMS, DEUX FORMATS — `P-35`. `corps-markdown` porte du Markdown,
+	   `corps` porte le document sérialisé de l'éditeur, et jamais l'inverse. La
+	   confusion des deux a coûté une note créée VIDE, en 303, sans que rien ne
+	   s'en plaigne : les cas ci-dessous existent pour que cela ne se reproduise
+	   pas en silence. */
 	it('n’est PAS rogné : `analyserMarkdown()` est seul juge de ce qu’il lit', () => {
-		const lue = lireLaSaisie(formulaire({ ...COMPLET, corps: '\nBonjour\n' }));
+		const lue = lireLaSaisie(formulaire({ ...COMPLET, 'corps-markdown': '\nBonjour\n' }));
 		expect(lue.ok && lue.saisie.corps).toBe('\nBonjour\n');
+	});
+
+	it('les fins de ligne du sérialiseur de formulaire sont défaites — P-34', () => {
+		const lue = lireLaSaisie(formulaire({ ...COMPLET, 'corps-markdown': '## A\r\n\r\nB' }));
+		expect(lue.ok && lue.saisie.corps).toBe('## A\n\nB');
+	});
+
+	it('`corps` porte le DOCUMENT de l’éditeur, jamais du Markdown', () => {
+		const document = { type: 'doc', content: [{ type: 'paragraph' }] };
+		const lue = lireLaSaisie(formulaire({ ...COMPLET, corps: JSON.stringify(document) }));
+		expect(lue.ok && lue.saisie.corpsDocument).toEqual(document);
+		expect(lue.ok && lue.saisie.corps).toBe('');
+	});
+
+	it('un `corps` illisible est refusé en forme, pas en format', () => {
+		const lue = lireLaSaisie(formulaire({ ...COMPLET, corps: 'Bonjour' }));
+		expect(lue.ok).toBe(false);
+		expect(!lue.ok && lue.motif).toBe('corps illisible');
+	});
+
+	it('les deux corps ensemble sont refusés : personne n’en a écrit deux', () => {
+		const lue = lireLaSaisie(
+			formulaire({
+				...COMPLET,
+				corps: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph' }] }),
+				'corps-markdown': 'Bonjour'
+			})
+		);
+		expect(lue.ok).toBe(false);
 	});
 
 	it('vaut la chaîne vide quand le champ est absent', () => {
 		const lue = lireLaSaisie(formulaire(COMPLET));
 		expect(lue.ok && lue.saisie.corps).toBe('');
+		expect(lue.ok && lue.saisie.corpsDocument).toBe(null);
 	});
 
 	it('un corps absent ou blanc donne le corps VIDE du produit, non un Markdown', () => {

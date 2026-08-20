@@ -176,7 +176,10 @@ export async function creerUnSignet(
 			visibilite: null,
 			statut: null,
 			etiquettes: demande.saisie.etiquettes,
-			corps: demande.saisie.description
+			corps: demande.saisie.description,
+			/* Le formulaire d'un signet n'a pas d'éditeur : sa description est du
+			   texte, jamais un document. */
+			corpsDocument: null
 		},
 		cible: { typeDeNoteId, domaineId: demande.domaineId, dossierId },
 		identite: demande.identite,
