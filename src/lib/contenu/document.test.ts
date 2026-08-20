@@ -2,10 +2,16 @@
  * LE FORMAT CANONIQUE — ce qu'il accepte, et surtout ce qu'il refuse.
  *
  * « Schéma refusant l'invalide » est un critère de sortie littéral de T-014.
- * Les vingt et un documents mal formés sont ceux de `CAS_INVALIDES` : une seule
+ * Les vingt-quatre documents mal formés sont ceux de `CAS_INVALIDES` : une seule
  * liste, jouée ici et par `pnpm contenu:invalide`. Deux listes auraient
  * divergé — c'est la même raison qui fait vivre le schéma et son rendu au même
  * endroit.
+ *
+ * Les deux règles d'`ARB-056` — l'ordre des marques, et le retour chariot où
+ * que ce soit — sont éprouvées ci-dessous sur des cas qui les SOLLICITENT,
+ * l'ordre sur les vingt couples de marques que la règle 6 n'exclut pas. Une
+ * règle qu'aucun cas n'exerce est une règle dont on ignore si elle marche
+ * (P-5), et deux resserrements posés sans cas seraient espérés, non posés.
  */
 import { describe, expect, it } from 'vitest';
 import { corpsDepuisTexte, corpsVide } from '../base/semence';
@@ -84,7 +90,7 @@ describe('ce que le schéma accepte', () => {
 	});
 });
 
-describe('ce que le schéma refuse — vingt et un documents, sept genres', () => {
+describe('ce que le schéma refuse — vingt-quatre documents, sept genres', () => {
 	for (const cas of CAS_INVALIDES) {
 		it(`refuse (${cas.genre}) ${cas.nom}`, () => {
 			const verdict = verifierDocument(cas.valeur);
@@ -118,6 +124,194 @@ describe('ce que le schéma refuse — vingt et un documents, sept genres', () =
 		expect(leve).toBeInstanceOf(DocumentInvalide);
 		expect((leve as DocumentInvalide).manquements).toHaveLength(3);
 		expect((leve as DocumentInvalide).message).toContain('3 manquement(s)');
+	});
+});
+
+/**
+ * RÈGLE 7 (`ARB-056`) — L'ORDRE DES MARQUES, ÉPROUVÉ SUR TOUS LES COUPLES.
+ *
+ * Le rang est l'ordre de déclaration du type `Marque`, `document.ts` l. 114-128,
+ * relu ligne à ligne : bold, italic, underline, strike, highlight, code, link,
+ * lienInterne. Pour chaque couple, l'ordre du type PASSE et l'ordre inverse est
+ * REFUSÉ — c'est ce qui distingue un refus d'un tri silencieux.
+ */
+describe('règle 7 — l’ordre des marques est celui du type, et l’inverse se refuse', () => {
+	const ORDRE = [
+		'bold',
+		'italic',
+		'underline',
+		'strike',
+		'highlight',
+		'code',
+		'link',
+		'lienInterne'
+	] as const;
+
+	const marque = (type: string) =>
+		type === 'link'
+			? { type, attrs: { href: 'https://exemple.test' } }
+			: type === 'lienInterne'
+				? { type, attrs: { cible: 'n-x' } }
+				: { type };
+
+	const documentAvec = (a: string, b: string) => ({
+		type: 'doc',
+		content: [
+			{
+				type: 'paragraph',
+				content: [{ type: 'text', text: 'x', marks: [marque(a), marque(b)] }]
+			}
+		]
+	});
+
+	/* `code` exclut toute autre marque, et les deux liens s'excluent l'un
+	   l'autre : la règle 6 refuse ces huit couples DANS LES DEUX ORDRES. Ils ne
+	   peuvent donc rien dire de la règle 7, et ils sont écartés — les compter
+	   comme éprouvés serait un vert par construction. */
+	const exclusParLaRegle6 = (a: string, b: string) =>
+		a === 'code' ||
+		b === 'code' ||
+		(a === 'link' && b === 'lienInterne') ||
+		(a === 'lienInterne' && b === 'link');
+
+	const couples: Array<[string, string]> = [];
+	for (let i = 0; i < ORDRE.length; i++) {
+		for (let j = i + 1; j < ORDRE.length; j++) {
+			if (!exclusParLaRegle6(ORDRE[i]!, ORDRE[j]!)) couples.push([ORDRE[i]!, ORDRE[j]!]);
+		}
+	}
+
+	it('éprouve les vingt couples sur vingt-huit que la règle 6 n’exclut pas', () => {
+		expect(couples).toHaveLength(20);
+	});
+
+	for (const [premier, second] of couples) {
+		it(`[${premier}, ${second}] passe · [${second}, ${premier}] est refusé`, () => {
+			expect(verifierDocument(documentAvec(premier, second)).valide).toBe(true);
+			const verdict = verifierDocument(documentAvec(second, premier));
+			expect(verdict.valide, 'l’ordre inverse a été accepté').toBe(false);
+			if (verdict.valide) return;
+			expect(verdict.manquements.map((m) => m.message).join(' ')).toMatch(
+				/ordre de déclaration du type/
+			);
+		});
+	}
+});
+
+/**
+ * RÈGLE 5 ÉLARGIE (`ARB-056`) — AUCUN RETOUR CHARIOT, OÙ QUE CE SOIT.
+ *
+ * Elle ne valait que dans un bloc de code, et `texteEnLigne` n'interdisait que
+ * « \n » : un fichier en CRLF donnait des paragraphes à « \r » final, que le
+ * schéma acceptait. Les sept sites ci-dessous couvrent les trois natures de
+ * chaîne du format : un texte, un texte de bloc de code, et un attribut.
+ */
+describe('règle 5 élargie — aucun retour chariot, où que ce soit', () => {
+	const CR = '\r';
+	const cas: Array<[string, unknown]> = [
+		[
+			'un texte de paragraphe',
+			{
+				type: 'doc',
+				content: [{ type: 'paragraph', content: [{ type: 'text', text: `a${CR}b` }] }]
+			}
+		],
+		[
+			'un texte de titre',
+			{
+				type: 'doc',
+				content: [
+					{
+						type: 'heading',
+						attrs: { level: 2, ancre: null },
+						content: [{ type: 'text', text: `a${CR}b` }]
+					}
+				]
+			}
+		],
+		[
+			'un texte de bloc de code — RG-M04-05, le motif d’origine',
+			{
+				type: 'doc',
+				content: [
+					{
+						type: 'codeBlock',
+						attrs: { language: 'bash' },
+						content: [{ type: 'text', text: `ls${CR}\n-l` }]
+					}
+				]
+			}
+		],
+		[
+			'l’ancre d’un titre',
+			{ type: 'doc', content: [{ type: 'heading', attrs: { level: 2, ancre: `s${CR}a` } }] }
+		],
+		[
+			'le titre d’une alerte',
+			{
+				type: 'doc',
+				content: [
+					{
+						type: 'alerte',
+						attrs: { niveau: 'astuce', glyphe: 'i', titre: `EN${CR}BREF` },
+						content: [{ type: 'paragraph', content: [{ type: 'text', text: 'x' }] }]
+					}
+				]
+			}
+		],
+		[
+			'la source d’un diagramme',
+			{
+				type: 'doc',
+				content: [
+					{
+						type: 'diagramme',
+						attrs: {
+							source: `graph TD${CR}\n  A --> B`,
+							langage: 'mermaid',
+							alternative: 'A mène à B',
+							etiquette: null,
+							legende: null
+						}
+					}
+				]
+			}
+		],
+		[
+			'la destination d’un lien externe',
+			{
+				type: 'doc',
+				content: [
+					{
+						type: 'paragraph',
+						content: [
+							{
+								type: 'text',
+								text: 'x',
+								marks: [{ type: 'link', attrs: { href: `https://x${CR}y` } }]
+							}
+						]
+					}
+				]
+			}
+		]
+	];
+
+	for (const [ou, valeur] of cas) {
+		it(`refuse un retour chariot dans ${ou}`, () => {
+			const verdict = verifierDocument(valeur);
+			expect(verdict.valide, 'le retour chariot est passé').toBe(false);
+			if (verdict.valide) return;
+			expect(verdict.manquements.map((m) => m.message).join(' ')).toMatch(/retour chariot/);
+		});
+	}
+
+	it('les quatre corps transcrits du gel n’en portent aucun — ARB-056 § Portée', () => {
+		for (const id of ['n-restaurer-pg', 'n-mot-de-passe'] as const) {
+			for (const registre of ['reference', 'operationnel'] as const) {
+				expect(JSON.stringify(documentDuGel(id, registre))).not.toContain(CR);
+			}
+		}
 	});
 });
 

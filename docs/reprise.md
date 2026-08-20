@@ -75,6 +75,10 @@ lots gourmands en banc** : mesuré, 368 s de temps instrument pour plus de deux 
    pas. 2 couples sur 409.
 3. **La sonde de restitution de focus**, une fois corrigée, **n'est plus exercée par aucun des 409
    couples**. `P-5` sur la correction elle-même — elle est redevenue une règle qu'on espère.
+   **Le motif a désormais un nom : `P-26`**, et une troisième occurrence — le contrôle `B3` de la
+   batterie 5 a perdu son unique cas réel le jour où `T-013b` a réparé le défaut qu'il détectait
+   (`ECART-046` É-8). Un contrôle doit avoir un cas d'épreuve **synthétique** ; B3 en a un,
+   la sonde de focus non.
 
 ### Un garde-fou qui bloque toute route nouvelle
 

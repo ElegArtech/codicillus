@@ -203,12 +203,21 @@ export interface CasInvalide {
 const p = (texte: string) => ({ type: 'paragraph', content: [{ type: 'text', text: texte }] });
 
 /**
- * LES QUINZE DOCUMENTS MAL FORMÉS, en six genres d'invalidité.
+ * LES VINGT-QUATRE DOCUMENTS MAL FORMÉS, en sept genres d'invalidité.
  *
  * « Schéma refusant l'invalide » est un critère de sortie littéral de T-014 :
  * un document mal formé est REJETÉ, jamais silencieusement réparé. Chaque cas
  * ci-dessous est joué par la commande ET par l'unitaire — même liste, deux
- * lecteurs.
+ * lecteurs. Les comptes sont calculés, jamais recopiés : `rapportDesRefus` les
+ * mesure sur la liste (cet en-tête annonçait « quinze, six genres » quand elle
+ * en portait déjà vingt et un de sept genres — T-013b l'a constaté et corrigé).
+ *
+ * UN CAS, UNE RÈGLE. Un document qui violerait deux règles serait refusé pour
+ * l'une ou pour l'autre selon l'ordre des contrôles, et le cas passerait pour
+ * la mauvaise raison. Deux cas portaient deux fautes depuis que la règle 7
+ * existe — leurs marques étaient bien exclusives, mais aussi mal ordonnées :
+ * T-013b les a remis dans l'ordre du type pour qu'ils n'éprouvent que la
+ * règle 6.
  */
 export const CAS_INVALIDES: readonly CasInvalide[] = [
 	{
@@ -455,7 +464,7 @@ export const CAS_INVALIDES: readonly CasInvalide[] = [
 			content: [
 				{
 					type: 'paragraph',
-					content: [{ type: 'text', text: 'x', marks: [{ type: 'code' }, { type: 'bold' }] }]
+					content: [{ type: 'text', text: 'x', marks: [{ type: 'bold' }, { type: 'code' }] }]
 				}
 			]
 		},
@@ -475,8 +484,8 @@ export const CAS_INVALIDES: readonly CasInvalide[] = [
 							type: 'text',
 							text: 'x',
 							marks: [
-								{ type: 'lienInterne', attrs: { cible: 'n-x' } },
-								{ type: 'link', attrs: { href: 'https://x' } }
+								{ type: 'link', attrs: { href: 'https://x' } },
+								{ type: 'lienInterne', attrs: { cible: 'n-x' } }
 							]
 						}
 					]
@@ -485,6 +494,38 @@ export const CAS_INVALIDES: readonly CasInvalide[] = [
 		},
 		chemin: 'content[0].content[0].marks',
 		message: /lien externe et un lien interne/
+	},
+	{
+		genre: 'forme non canonique',
+		nom: 'des marques dans l’ordre inverse de leur déclaration — règle 7, ARB-056',
+		valeur: {
+			type: 'doc',
+			content: [
+				{
+					type: 'paragraph',
+					content: [{ type: 'text', text: 'x', marks: [{ type: 'italic' }, { type: 'bold' }] }]
+				}
+			]
+		},
+		chemin: 'content[0].content[0].marks',
+		message: /ordre de déclaration du type/
+	},
+	{
+		genre: 'forme non canonique',
+		nom: 'un retour chariot dans un texte de paragraphe — règle 5 élargie, ARB-056',
+		valeur: { type: 'doc', content: [p('deux\rlignes')] },
+		chemin: 'content[0].content[0].text',
+		message: /retour chariot/
+	},
+	{
+		genre: 'forme non canonique',
+		nom: 'un retour chariot dans une valeur d’attribut — « où que ce soit »',
+		valeur: {
+			type: 'doc',
+			content: [{ type: 'heading', attrs: { level: 2, ancre: 's-a\rb' } }]
+		},
+		chemin: 'content[0].attrs.ancre',
+		message: /retour chariot/
 	}
 ];
 

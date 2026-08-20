@@ -342,11 +342,12 @@ const NOMMES: readonly {
 		}
 	},
 	{
-		nom: 'marques empilées, dans les deux ordres',
+		nom: 'marques empilées, dans l’ordre du type',
 		provenance: 'écrit pour ce cas',
 		exerce:
-			'le piège d’identité 1 : aucun texte du gel ne porte plus d’une marque, or l’ordre ' +
-			'du tableau `marks` est de l’information',
+			'le piège d’identité 1 : aucun texte du gel ne porte plus d’une marque, et l’ordre ' +
+			'du tableau `marks` est celui du type depuis ARB-056 — l’ordre inverse n’est plus un ' +
+			'document, il est refusé, et CAS_INVALIDES l’éprouve',
 		valeur: {
 			type: 'doc',
 			content: [
@@ -355,14 +356,14 @@ const NOMMES: readonly {
 					content: [
 						{
 							type: 'text',
-							text: 'gras puis italique',
+							text: 'gras et italique',
 							marks: [{ type: 'bold' }, { type: 'italic' }]
 						},
 						{ type: 'text', text: ' — ' },
 						{
 							type: 'text',
-							text: 'italique puis gras',
-							marks: [{ type: 'italic' }, { type: 'bold' }]
+							text: 'souligné et surligné',
+							marks: [{ type: 'underline' }, { type: 'highlight' }]
 						}
 					]
 				},
@@ -372,22 +373,16 @@ const NOMMES: readonly {
 						{
 							type: 'text',
 							text: 'lien interne en gras',
-							marks: [{ type: 'lienInterne', attrs: { cible: 'n-restaurer-pg' } }, { type: 'bold' }]
+							marks: [{ type: 'bold' }, { type: 'lienInterne', attrs: { cible: 'n-restaurer-pg' } }]
 						},
 						{ type: 'text', text: ' / ' },
 						{
 							type: 'text',
 							text: 'barré dans un lien externe',
 							marks: [
-								{ type: 'link', attrs: { href: 'https://exemple.test/a(b)c' } },
-								{ type: 'strike' }
+								{ type: 'strike' },
+								{ type: 'link', attrs: { href: 'https://exemple.test/a(b)c' } }
 							]
-						},
-						{ type: 'text', text: ' / ' },
-						{
-							type: 'text',
-							text: 'surligné souligné',
-							marks: [{ type: 'highlight' }, { type: 'underline' }]
 						}
 					]
 				}

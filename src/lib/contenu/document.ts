@@ -52,11 +52,16 @@
  * ce choix ne rouvre rien, il constate.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * LES SIX RÈGLES DE FORME CANONIQUE, ET CE QU'ELLES PROTÈGENT
+ * LES SEPT RÈGLES DE FORME CANONIQUE, ET CE QU'ELLES PROTÈGENT
  *
  * « Schéma refusant l'invalide » (critère de sortie de T-014) veut dire qu'un
- * document mal formé est REJETÉ, jamais silencieusement réparé. Six règles
- * s'ajoutent au typage des nœuds, et chacune protège une propriété nommée :
+ * document mal formé est REJETÉ, jamais silencieusement réparé. Sept règles
+ * s'ajoutent au typage des nœuds, et chacune protège une propriété nommée.
+ *
+ * ELLES ÉTAIENT SIX. `ARB-056` en a ajouté une septième et élargi la
+ * cinquième, sur constat de `T-015` — le lot que la règle 1 visait
+ * explicitement, et qui a trouvé deux écritures encore admises pour un même
+ * document. Les deux entrées portent la marque `ARB-056` ci-dessous :
  *
  *  1. AUCUN TABLEAU VIDE. `content: []` et `marks: []` sont refusés :
  *     l'absence s'écrit par l'absence de la clé. Deux écritures pour le même
@@ -71,14 +76,32 @@
  *  4. AUCUN RETOUR À LA LIGNE dans un texte hors bloc de code. Le format ne
  *     porte pas de saut de ligne dur (`hardBreak` n'est pas des quinze
  *     constructions) : un « \n » y serait une construction clandestine.
- *  5. AUCUN RETOUR CHARIOT (« \r ») dans un bloc de code. `RG-M04-05` exige que
- *     la copie donne « exactement ce que l'utilisateur collera dans son
- *     terminal » : la règle est tenue par REFUS À L'ENTRÉE, pas par nettoyage
- *     à la copie — un nettoyage serait une réparation silencieuse, et le
- *     document stocké resterait faux.
+ *  5. AUCUN RETOUR CHARIOT (« \r »), OÙ QUE CE SOIT — élargie par `ARB-056`.
+ *     `RG-M04-05` exige que la copie d'un bloc de code donne « exactement ce
+ *     que l'utilisateur collera dans son terminal » : la règle est tenue par
+ *     REFUS À L'ENTRÉE, pas par nettoyage à la copie — un nettoyage serait une
+ *     réparation silencieuse, et le document stocké resterait faux. Elle ne
+ *     s'arrêtait qu'aux blocs de code, et `texteEnLigne` n'interdisait que
+ *     « \n » : un fichier en CRLF donnait des paragraphes à « \r » final, que
+ *     le schéma acceptait. Le motif de `RG-M04-05` n'a aucune raison de
+ *     s'arrêter au code — un titre ou un paragraphe porteur d'un « \r »
+ *     invisible est une différence qui se propage au texte brut, à l'index, à
+ *     la détection de doublon et au diff. L'hygiène de fin de ligne appartient
+ *     à la FRONTIÈRE DU FICHIER, donc à l'import (`T-043`) : ici, c'est un
+ *     refus, jamais une normalisation — normaliser à la désérialisation serait
+ *     « la correction appliquée d'un seul côté » qu'`ADR-004` interdit.
  *  6. MARQUES EXCLUSIVES. `code` exclut toute autre marque (c'est
  *     `excludes: '_'` de ProseMirror), un texte ne porte pas deux marques de
  *     même type, et jamais un lien interne ET un lien externe.
+ *  7. LES MARQUES SONT DANS L'ORDRE DE DÉCLARATION DU TYPE `Marque` — ajoutée
+ *     par `ARB-056`. `marks: [bold, italic]` et `marks: [italic, bold]` sont
+ *     deux JSON différents, donc DEUX DOCUMENTS au sens de l'identité que
+ *     mesure la batterie 4 ; or ProseMirror trie les marques par rang de
+ *     schéma et n'en produirait jamais qu'une des deux. C'est exactement ce
+ *     que la règle 1 existe pour interdire, et elle l'avait manqué. Le schéma
+ *     REFUSE tout autre ordre — il ne réordonne pas : réordonner en silence
+ *     ferait de la validation une NORMALISATION, ce qui rendrait la batterie 4
+ *     verte par construction sur ce point.
  */
 import { z } from 'zod';
 
@@ -291,7 +314,27 @@ export interface Document {
 
 /* ═══════════════════════════════════════════════ Les schémas ════════════ */
 
-const texteNonVide = z.string().min(1);
+/**
+ * TOUTE CHAÎNE D'UN DOCUMENT CANONIQUE passe par ici : les textes, mais aussi
+ * chaque attribut porteur de caractères — l'ancre d'un titre, la chaîne
+ * d'information d'un bloc de code, l'attribution d'une citation, le glyphe et
+ * le titre d'une alerte, la source et l'alternative d'un diagramme, les
+ * destinations de lien. C'est donc ici, et à un seul endroit, que se tient la
+ * règle 5 élargie par `ARB-056` : aucun retour chariot, OÙ QUE CE SOIT.
+ *
+ * Le refuser deux fois — une pour les blocs de code, une pour le reste —
+ * aurait été deux écritures d'une même règle, ce que la règle 1 réprouve pour
+ * les documents et qui ne vaut pas mieux pour le schéma.
+ */
+const texteNonVide = z
+	.string()
+	.min(1)
+	.refine((t) => !t.includes('\r'), {
+		error:
+			'un retour chariot : aucun « \\r » n’entre dans un document canonique, où que ce soit — ' +
+			'RG-M04-05 veut « exactement ce que l’utilisateur collera dans son terminal », et un ' +
+			'« \\r » invisible se propagerait au texte brut, à l’index et au diff'
+	});
 
 /**
  * Un texte de contenu : ni vide, ni porteur d'un retour à la ligne. Règle 4 —
@@ -322,7 +365,29 @@ const schemaMarque = z.discriminatedUnion(
 	{ error: () => 'marque inconnue' }
 );
 
-/** Règle 6 — les exclusions de marques, chacune avec son propre refus. */
+/**
+ * LE RANG D'UNE MARQUE — règle 7 (`ARB-056`).
+ *
+ * Les rangs sont ceux de la DÉCLARATION DU TYPE `Marque`, l. 114-128 de ce
+ * fichier, dans cet ordre et sans trou — `ARB-056` la cite « l. 91-105 », ce
+ * qu'elle était avant que ce lot n'allonge l'en-tête de vingt-quatre lignes. Le type de cette table est
+ * `Record<Marque['type'], number>` : une neuvième marque ajoutée au type ne
+ * compile pas tant qu'elle n'a pas son rang, et un rang donné à une marque qui
+ * n'existe pas ne compile pas non plus. La table ne peut donc pas dériver du
+ * type en silence — c'est le seul point que `pnpm check` tient à ma place.
+ */
+const RANG_DE_MARQUE: Readonly<Record<Marque['type'], number>> = {
+	bold: 1,
+	italic: 2,
+	underline: 3,
+	strike: 4,
+	highlight: 5,
+	code: 6,
+	link: 7,
+	lienInterne: 8
+};
+
+/** Règles 6 et 7 — les exclusions de marques et leur ordre, chacune avec son propre refus. */
 const schemaMarques = z
 	.array(schemaMarque)
 	.min(1, { error: 'aucune marque vide : l’absence de marque s’écrit par l’absence de la clé' })
@@ -334,7 +399,20 @@ const schemaMarques = z
 	})
 	.refine((m) => !(m.some((x) => x.type === 'link') && m.some((x) => x.type === 'lienInterne')), {
 		error: 'un texte ne porte pas à la fois un lien externe et un lien interne'
-	});
+	})
+	/* Règle 7 — l'ordre, et le REFUS plutôt que le tri. La comparaison est
+	   STRICTE : deux marques de même rang sont deux marques de même type, que la
+	   règle 6 refuse déjà, et une égalité admise ici laisserait passer un ordre
+	   indécidable. */
+	.refine(
+		(m) => m.every((x, i) => i === 0 || RANG_DE_MARQUE[m[i - 1]!.type] < RANG_DE_MARQUE[x.type]),
+		{
+			error:
+				'des marques hors de l’ordre de déclaration du type « Marque » : deux ordres seraient ' +
+				'deux documents pour ce que ProseMirror n’écrit jamais qu’une fois — le schéma refuse, ' +
+				'il ne réordonne pas'
+		}
+	);
 
 const schemaTexte = z.strictObject({
 	type: z.literal('text'),
@@ -343,17 +421,18 @@ const schemaTexte = z.strictObject({
 });
 
 /**
- * Un texte de bloc de code : les retours à la ligne y sont le contenu même, le
- * retour chariot y est refusé (règle 5, RG-M04-05), et aucune marque n'y entre
- * — ProseMirror déclare le contenu d'un bloc de code sans marques.
+ * Un texte de bloc de code : les retours à la ligne y sont le contenu même —
+ * c'est le seul texte du format qui en porte —, et aucune marque n'y entre :
+ * ProseMirror déclare le contenu d'un bloc de code sans marques.
+ *
+ * LE RETOUR CHARIOT Y EST REFUSÉ COMME PARTOUT AILLEURS, par `texteNonVide`
+ * (règle 5, élargie par `ARB-056`). Il l'était ici seul jusqu'au 20 août
+ * 2026 : `RG-M04-05` est bien le motif de la règle, elle n'en est pas la
+ * borne.
  */
 const schemaTexteDeCode = z.strictObject({
 	type: z.literal('text'),
-	text: texteNonVide.refine((t) => !t.includes('\r'), {
-		error:
-			'un retour chariot dans un bloc de code : RG-M04-05 veut « exactement ce que ' +
-			'l’utilisateur collera dans son terminal »'
-	})
+	text: texteNonVide
 });
 
 /** Règle 3 — deux textes consécutifs de mêmes marques sont une seconde écriture. */

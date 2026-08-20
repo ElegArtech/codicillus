@@ -20,6 +20,7 @@ import {
 	SEUILS_PAR_DEFAUT,
 	barresFraicheur,
 	classeTemoin,
+	libelleFraicheur,
 	niveauFraicheur,
 	temoinFraicheur,
 	type NiveauFraicheur
@@ -74,6 +75,116 @@ describe('la jauge — la forme porte l’information, la couleur la répète', 
 	});
 });
 
+/**
+ * LE LIBELLÉ NE S'ÉCRIT PAS EN CLAIR ICI, et ce n'est pas une commodité.
+ *
+ * La batterie 5, contrôle A2.3, refuse « tout libellé de fraîcheur construit
+ * localement » (ADR-005) : elle relève TOUTE chaîne littérale portant l'un des
+ * deux verbes du libellé, hors de l'implémentation — et l'exemption dont ce
+ * fichier bénéficie ne couvre que les seuils (A3), pas les libellés. Écrire la
+ * forme longue attendue ferait rougir la batterie qui tient P-01 : neuf
+ * constats, mesurés.
+ *
+ * Les octets exacts de la forme LONGUE sont donc épinglés ailleurs, et mieux :
+ * par le banc, à chacun des 409 couples — 39 maquettes portent
+ * `window.libelleFraicheur` et le rendent. Ce qui se prouve ici, c'est la
+ * BRANCHE prise, l'unité employée, et la dérivation de la forme compacte.
+ */
+describe('libelleFraicheur — la forme longue, les quatre branches du gel', () => {
+	it('frais sous 31 jours : le compte en JOURS, unité en entier', () => {
+		expect(libelleFraicheur({ fraicheur: 'frais', jours: 6 })).toContain('6 jours');
+		expect(libelleFraicheur({ fraicheur: 'frais', jours: 30 })).toContain('30 jours');
+	});
+
+	it('frais à 31 jours ou plus : « 1 mois », sans arrondi et sans compte de jours', () => {
+		expect(libelleFraicheur({ fraicheur: 'frais', jours: 31 })).toContain('1 mois');
+		expect(libelleFraicheur({ fraicheur: 'frais', jours: 89 })).toContain('1 mois');
+		expect(libelleFraicheur({ fraicheur: 'frais', jours: 89 })).not.toContain('jours');
+	});
+
+	it('vieil : le compte en mois, arrondi — 126 / 30 donne 4', () => {
+		expect(libelleFraicheur({ fraicheur: 'vieil', jours: 126 })).toContain('4 mois');
+	});
+
+	it('obs : le verbe CHANGE, et c’est l’information portée hors couleur', () => {
+		const obs = libelleFraicheur({ fraicheur: 'obs', jours: 240 });
+		expect(obs).toContain('8 mois');
+		/* Même ancienneté, même nombre de mois : SEUL LE VERBE distingue les deux
+		   niveaux. C'est ce que RG-M18-09 (CDC l. 1403) interdit de laisser à la
+		   couleur. */
+		expect(obs).not.toBe(libelleFraicheur({ fraicheur: 'vieil', jours: 240 }));
+		expect(obs).not.toContain('il y a');
+	});
+
+	it('est la forme par DÉFAUT : les appelants d’aujourd’hui ne changent pas', () => {
+		for (const cas of CAS_DES_QUATRE_BRANCHES) {
+			expect(libelleFraicheur(cas)).toBe(libelleFraicheur(cas, 'longue'));
+		}
+	});
+});
+
+/**
+ * LA FORME COMPACTE — ARB-029, et ses quatre branches une par une.
+ *
+ * DEUX SEULEMENT SONT EXERCÉES PAR LE GEL. Mesuré : les deux seuls contenus
+ * littéraux de `.temoin__txt` des 41 maquettes sont « il y a 6 j »
+ * (V-14:1817) et « il y a 4 mois » (V-14:1822) ; partout ailleurs le témoin
+ * est construit par `window.temoinFraicheur`. Les deux autres branches sont
+ * tranchées ICI, et nulle part ailleurs — P-5 : une règle qu'aucun cas
+ * n'exerce est une règle dont on ignore si elle marche.
+ */
+describe('libelleFraicheur — la forme compacte, branche par branche', () => {
+	it('frais, 6 jours → « il y a 6 j » — V-14:1817, et n-planifier-sauv du corpus', () => {
+		expect(libelleFraicheur({ fraicheur: 'frais', jours: 6 }, 'compacte')).toBe('il y a 6 j');
+	});
+
+	it('vieil, 126 jours → « il y a 4 mois » — V-14:1822, et n-purge-sauv du corpus', () => {
+		expect(libelleFraicheur({ fraicheur: 'vieil', jours: 126 }, 'compacte')).toBe('il y a 4 mois');
+	});
+
+	it('BRANCHE NON EXERCÉE PAR LE GEL — frais à 31 jours ou plus → « il y a 1 mois »', () => {
+		expect(libelleFraicheur({ fraicheur: 'frais', jours: 31 }, 'compacte')).toBe('il y a 1 mois');
+		expect(libelleFraicheur({ fraicheur: 'frais', jours: 89 }, 'compacte')).toBe('il y a 1 mois');
+	});
+
+	it('BRANCHE NON EXERCÉE PAR LE GEL — obs : le verbe RESTE, RG-M18-09 l’exige', () => {
+		const etat = { fraicheur: 'obs', jours: 240 } as const;
+		/* La compacte de l'obsolète EST sa longue : rien ne s'y abrège. */
+		expect(libelleFraicheur(etat, 'compacte')).toBe(libelleFraicheur(etat));
+		/* Et surtout, elle n'est PAS le retrait mécanique du verbe : celui-ci est
+		   « une part de l'information portée hors couleur ». */
+		expect(libelleFraicheur(etat, 'compacte')).not.toBe('il y a 8 mois');
+		expect(libelleFraicheur(etat, 'compacte')).toContain('8 mois');
+	});
+
+	it('ne dit jamais « Vérifié » là où le gel ne l’écrit pas', () => {
+		expect(libelleFraicheur({ fraicheur: 'frais', jours: 6 }, 'compacte')).not.toContain('Vérifié');
+		expect(libelleFraicheur({ fraicheur: 'vieil', jours: 126 }, 'compacte')).not.toContain(
+			'Vérifié'
+		);
+	});
+
+	it('la dérivation : le verbe d’attestation tombe, l’unité « jours » s’abrège', () => {
+		/* Écrite sans citer le verbe, pour la raison dite plus haut : la longue
+		   FINIT par la compacte, une fois l'unité rétablie. */
+		for (const cas of CAS_DES_QUATRE_BRANCHES.filter((c) => c.fraicheur !== 'obs')) {
+			const longue = libelleFraicheur(cas);
+			const compacte = libelleFraicheur(cas, 'compacte');
+			expect(longue.endsWith(compacte.replace(/ j$/, ' jours'))).toBe(true);
+			expect(longue.length).toBeGreaterThan(compacte.length);
+		}
+	});
+
+	it('sort du MÊME niveau et de la MÊME ancienneté que la longue (ARB-029)', () => {
+		/* « Ce n'est pas un second calcul, c'est un second rendu du même
+		   calcul » : les nombres affichés sont les mêmes des deux côtés. */
+		const chiffres = (t: string) => t.replace(/\D+/g, ' ').trim();
+		for (const cas of CAS_DES_QUATRE_BRANCHES) {
+			expect(chiffres(libelleFraicheur(cas, 'compacte'))).toBe(chiffres(libelleFraicheur(cas)));
+		}
+	});
+});
+
 describe('temoinFraicheur — la fabrique unique', () => {
 	it('rend une description cohérente avec chacune de ses composantes', () => {
 		for (const [fraicheur, jours] of [
@@ -88,4 +199,27 @@ describe('temoinFraicheur — la fabrique unique', () => {
 			expect(t.libelle.length).toBeGreaterThan(0);
 		}
 	});
+
+	it('rend la forme LONGUE, jamais la compacte — 39 maquettes en dépendent', () => {
+		for (const cas of CAS_DES_QUATRE_BRANCHES) {
+			expect(temoinFraicheur(cas).libelle).toBe(libelleFraicheur(cas, 'longue'));
+		}
+		/* Les trois branches où les deux formes DIFFÈRENT : si la fabrique du
+		   témoin basculait en compacte, ces trois-là rougiraient. */
+		for (const cas of CAS_DES_QUATRE_BRANCHES.filter((c) => c.fraicheur !== 'obs')) {
+			expect(temoinFraicheur(cas).libelle).not.toBe(libelleFraicheur(cas, 'compacte'));
+		}
+	});
 });
+
+/**
+ * LES QUATRE BRANCHES DU LIBELLÉ, une note par branche. Les deux premières
+ * sont celles du gel de V-14 ; les deux autres ne sont exercées que par ce
+ * fichier, et c'est dit à chaque cas qui les emploie.
+ */
+const CAS_DES_QUATRE_BRANCHES = [
+	{ fraicheur: 'frais', jours: 6 },
+	{ fraicheur: 'frais', jours: 31 },
+	{ fraicheur: 'vieil', jours: 126 },
+	{ fraicheur: 'obs', jours: 240 }
+] as const satisfies readonly { fraicheur: NiveauFraicheur; jours: number }[];
