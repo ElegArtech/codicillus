@@ -29,6 +29,11 @@
 	 * lignes. Un autre algorithme, même « meilleur », donnerait un autre écran :
 	 * ce serait dessiner, pas porter.
 	 *
+	 * ET QUAND LA COMPARAISON EST REÇUE, C'EST LE MÊME ALGORITHME QUI L'A FAITE :
+	 * `src/lib/donnees/histoire.ts` porte la même plus longue sous-séquence
+	 * commune et le même départage, appliqués aux documents CANONIQUES des deux
+	 * versions. La vue ne recalcule alors rien — elle compte, replie et peint.
+	 *
 	 * LA MATIÈRE VIENT DU CORPUS, JAMAIS D'UNE SAISIE (P-02) : `CONTENU_VERSIONS`
 	 * — 37 blocs sur trois versions de `n-restaurer-pg` — et `VERSIONS` de
 	 * `seeds/corpus.ts`, exactement ce que le gel lit dans
@@ -142,6 +147,31 @@
 		 * jeu de semence, dont la forme n'est transposée par aucun lot à ce jour.
 		 */
 		contenuVersions?: Partial<Record<IdentifiantNote, Record<string, readonly BlocDeContenu[]>>>;
+		/**
+		 * LA NOTE COMPARÉE. Défaut : celle du gel, `n-restaurer-pg`. Passée, elle
+		 * décide du titre, du fil d'Ariane et de la clé sous laquelle l'historique
+		 * est lu — la vue ne nomme alors plus aucune note d'exemple.
+		 */
+		note?: Note;
+		/**
+		 * LA COMPARAISON DÉJÀ CALCULÉE — `lireLaComparaison()` de
+		 * `$lib/donnees/histoire.ts`, mise en forme d'affichage par
+		 * `rangeesDAffichage()`.
+		 *
+		 * ELLE REMPLACE LE CALCUL LOCAL, elle ne s'y ajoute pas : l'alignement
+		 * d'ADR-003 est fait UNE fois, côté données, sur les documents canoniques
+		 * des deux versions — un second alignement divergerait, et la divergence
+		 * ne se verrait qu'à l'écran. Ce que la vue garde est ce qui lui
+		 * appartient : le repli du journal, les quantités, l'alternative
+		 * textuelle, tous comptés sur ce qu'elle reçoit. Absente, le calcul du gel
+		 * sur le jeu de semence reprend et le rendu par défaut ne bouge pas.
+		 */
+		comparaison?: {
+			/** Le mode Texte : les lignes alignées des deux versions. */
+			readonly lignes: readonly Paire<string>[];
+			/** Le mode Visuel : les rangées de nœuds alignés. */
+			readonly rangees: readonly Paire<BlocDeContenu>[];
+		};
 	}
 
 	const {
@@ -152,14 +182,42 @@
 		compte = MOI,
 		instance = INSTANCE,
 		versions: historique = VERSIONS,
-		contenuVersions = CONTENU_VERSIONS
+		contenuVersions = CONTENU_VERSIONS,
+		note = undefined,
+		comparaison = undefined
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 
-	/** La note comparée — `ID`, `V-16:1991`. */
-	const ID = 'n-restaurer-pg';
-	const NOTE = $derived((corpus.find((n) => n.id === ID) ?? noteParIdentifiant(ID)) as Note);
+	/** La note comparée par le gel — `ID`, `V-16:1991`. */
+	const ID_DU_GEL = 'n-restaurer-pg';
+	const NOTE = $derived(
+		note ?? ((corpus.find((n) => n.id === ID_DU_GEL) ?? noteParIdentifiant(ID_DU_GEL)) as Note)
+	);
+	/** La clé sous laquelle l'historique et les contenus sont lus. */
+	const ID = $derived(NOTE.id);
+
+	/**
+	 * LE RANGEMENT DE LA NOTE, tel que le fil le déroule. Le chemin de dossier est
+	 * découpé comme `src/vues/V-17.svelte:247` le découpe, et non par une seconde
+	 * règle. Une note rangée à la racine d'un domaine n'a aucun segment.
+	 */
+	const segments = $derived(
+		NOTE.dossier
+			.split('›')
+			.map((s) => s.trim())
+			.filter((s) => s !== '')
+	);
+	/** `S3` : le fil de la note, augmenté du segment propre à la comparaison. */
+	const fil = $derived([
+		'Accueil',
+		NOTE.univers,
+		NOTE.domaine,
+		...segments,
+		NOTE.titre,
+		'Comparaison'
+	]);
+	const courant = $derived([NOTE.domaine, ...segments]);
 
 	/**
 	 * LE COUPLE DE BORNES. Le gel part de `na = 13, nbv = 14` (`V-16:1997`) et
@@ -284,12 +342,23 @@
 		return contenu(v).reduce<string[]>((s, b) => s.concat(blocEnLignes(b)), []);
 	}
 
-	const diffLignes = $derived(memeVersion ? [] : alignement(lignesDe(na), lignesDe(nbv)));
+	/**
+	 * LES DEUX ALIGNEMENTS. Reçus quand la route les a calculés sur les documents
+	 * canoniques des deux versions ; calculés sur le jeu de semence sinon, par la
+	 * transcription du gel ci-dessus. Jamais les deux.
+	 */
+	const diffLignes = $derived<readonly Paire<string>[]>(
+		comparaison ? comparaison.lignes : memeVersion ? [] : alignement(lignesDe(na), lignesDe(nbv))
+	);
 	const ajouts = $derived(diffLignes.filter((d) => d.etat === 'ajoute').length);
 	const retraits = $derived(diffLignes.filter((d) => d.etat === 'retire').length);
 
-	const rangees = $derived(
-		memeVersion ? [] : alignement(contenu(na), contenu(nbv), (b: BlocDeContenu) => b.cle)
+	const rangees = $derived<readonly Paire<BlocDeContenu>[]>(
+		comparaison
+			? comparaison.rangees
+			: memeVersion
+				? []
+				: alignement(contenu(na), contenu(nbv), (b: BlocDeContenu) => b.cle)
 	);
 
 	/** Deux blocs de même clé sont-ils le même bloc — `memeBloc()`, `V-16:2094`. */
@@ -471,16 +540,8 @@
 	idContenu="contenu"
 	cibleEvitement="zone"
 	libelleEvitement="Aller à la comparaison"
-	fil={[
-		'Accueil',
-		'Production',
-		'Infrastructure',
-		'Exploitation',
-		'Sauvegardes',
-		NOTE.titre,
-		'Comparaison'
-	]}
-	courant={['Infrastructure', 'Exploitation', 'Sauvegardes']}
+	{fil}
+	{courant}
 	donnees={{ 'data-mode': 'texte' }}
 	{univers}
 	{domaines}
