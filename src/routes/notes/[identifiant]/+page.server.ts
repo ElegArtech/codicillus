@@ -63,12 +63,13 @@
  * que celui du chargeur — `RG-ACC-04`, rien ne distingue « la note n'existe
  * pas » de « vous n'y avez pas droit ».
  */
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { compteDe, journaliserUneConsultation } from '$lib/donnees/consultation';
 import { lireLHistoire, versionDemandee } from '$lib/donnees/histoire';
 import { lireSeuils } from '$lib/donnees/lecture';
 import { lireLaNote, registreDemande } from '$lib/donnees/note';
+import { supprimerUneNote } from '$lib/donnees/suppression';
 import {
 	commentaireDeRevision,
 	demanderUneRevision,
@@ -297,5 +298,52 @@ export const actions: Actions = {
 		});
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
 		return { avaitUneDemande: fait.ressource.avaitUneDemande };
+	},
+
+	/**
+	 * SUPPRIMER — `RG-M04-10`, `RG-M07-04`, `RG-M14-03`, `RG-M14-05`. T-080.
+	 *
+	 * ELLE N'APPARTIENT PAS À M06, et c'est pourquoi elle est nommée à part des
+	 * trois précédentes : celles-ci sont les gestes de la FRAÎCHEUR, celle-ci
+	 * détruit. Elle est ici parce que `docs/routes.md:140` rattache la famille
+	 * `/notes/{identifiant}` à cette adresse, et que la note à détruire est
+	 * précisément celle qu'on lit.
+	 *
+	 * AUCUN CHAMP N'EST LU. `RG-M04-10` demande une CONFIRMATION — un fait
+	 * d'écran, le dialogue « Supprimer cette note » de V-40 —, pas une saisie du
+	 * nom exact : celle-ci est réservée aux dossiers (`RG-M03-04`) et aux
+	 * domaines (`RG-M14-02`). Lire un champ ici serait inventer une porte que le
+	 * cahier ne pose pas.
+	 *
+	 * LE REFUS EST LE MÊME `404` QUE PARTOUT DANS CETTE FAMILLE. Le droit est
+	 * résolu AVANT toute destruction, par `resoudreLEditionDUneNote()` — la même
+	 * décision que l'éditeur, jamais recopiée —, et rien ne distingue « la note
+	 * n'existe pas » de « vous n'y avez pas droit » (`RG-ACC-04`).
+	 *
+	 * ET LA RÉPONSE EST UN `303` VERS LE DOMAINE, jamais vers la note. La note
+	 * n'existe plus : rediriger vers `/notes/{identifiant}` rendrait un 404, ce
+	 * qui serait une confirmation par l'absurde. L'adresse est celle
+	 * qu'`adresseDeDomaine()` compose (`ARB-001`, seule forme publiée) et elle
+	 * remonte du module de suppression, qui l'a calculée AVANT de détruire.
+	 *
+	 * `redirect()` LÈVE, et l'appel est donc la dernière ligne : tout ce qui la
+	 * suivrait serait mort.
+	 *
+	 * CE QUI N'ATTEINT PAS ENCORE CETTE ACTION. Aucun formulaire de l'écran ne
+	 * la vise : V-14 rend le bouton de suppression sous `{#if ecriture}`
+	 * (`src/vues/V-14.svelte`) et le gel ne porte pour cette vue aucun `form`
+	 * (`ARB-054` §3). `ARB-063` place ce câblage dans `+page.svelte`, que le
+	 * contrat de ce lot n'ouvre pas. Écart déclaré — `ECART-048` É-4 —, non
+	 * comblé ici.
+	 */
+	supprimer: async ({ params, locals }) => {
+		const { base, contexte } = await contexteDUnGeste();
+		const fait = await supprimerUneNote(base, moteurPartage(), {
+			identifiant: params.identifiant,
+			identite: locals.identite,
+			contexte
+		});
+		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
+		redirect(303, fait.ressource.adresseDeRetour);
 	}
 };
