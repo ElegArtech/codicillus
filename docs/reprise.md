@@ -4,6 +4,30 @@
 
 ---
 
+## ⛔ AVANT TOUT LE RESTE — ON NE PEUT PAS CRÉER UNE NOTE
+
+`src/routes/notes/nouvelle/+page.server.ts:100` rend **501**. Lu, pas déduit :
+
+> *« la création d'une note n'est pas implémentée : `RG-M12-11` impose un identifiant lisible rendu
+> unique automatiquement et n'en donne aucune forme, et cet identifiant est dans l'adresse
+> (`RG-M03-03`) »*
+
+**C'est la finalité de l'outil, et elle est bloquée par un vide de spécification que personne n'a
+arbitré.** Le blocage est réel — `RG-M12-11` (`CDC:1097`) exige l'unicité automatique sans donner de
+forme, et `RG-M03-03` (`CDC:484`) exige que l'adresse reste stable, donc que l'identifiant ne se
+recalcule jamais après coup. Mais il est **arbitrable** : `seeds/corpus.ts` porte 35 identifiants de
+la forme `n-<mot-court>`, et le gel les affiche dans les adresses de onze maquettes.
+
+**Ce que ça vaut comme leçon d'orchestration, et elle est chère.** Vingt batteries mesuraient le
+produit, dont une — `verif:couverture` — écrite pour compter ce qui manque. **Aucune ne demandait :
+peut-on créer une note ?** Le 501 est déclaré depuis des jours dans le fichier qui le porte, et il a
+fallu que le commanditaire pose la question pour qu'il remonte.
+
+*Une batterie mesure ce qu'on lui a demandé de mesurer. Le produit, lui, se juge à ce qu'un
+utilisateur peut en faire.*
+
+---
+
 ## Lire d'abord, dans cet ordre
 
 | Fichier | Ce qu'il donne |
