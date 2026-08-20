@@ -129,7 +129,7 @@ Maquettes  >  Cahier des charges  >  Brief des vues  >  Pile technique  >  Plan 
 | `pnpm verif:tracabilite` | Aucune référence — dossier d'écart, arbitrage, écart nommé, piège — ne renvoie à une pièce qui n'existe pas, sur `verif/`, `src/`, `base/`, `seeds/`, `docs/` et ce fichier. **Rouge aujourd'hui, et c'est la preuve qu'il mord** (`ECART-043`) |
 | `pnpm verif:gel` | Les empreintes de `mockups/GEL.md` correspondent aux fichiers : aucun regel non arbitré |
 | `pnpm verify:lot T-xxx` | Le sous-ensemble de batteries cité par le contrat de tâche — budget < 3 min |
-| `pnpm verify` | Les dix-huit batteries enchaînées — budget < 20 min |
+| `pnpm verify` | **L'état du dépôt, batterie par batterie** — chacune jouée jusqu'au bout, code de sortie relevé. Elle **ne s'arrête pas** au premier rouge : un dépôt qui porte des rouges assumés rendrait sinon toujours le même chiffre, celui de la première batterie rouge. `--arret` rétablit l'ancien régime |
 
 ### Le banc de comparaison — les commandes qui l'entourent
 
