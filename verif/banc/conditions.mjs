@@ -238,6 +238,69 @@ export function optionsContexte(nomFenetre) {
 	};
 }
 
+/* ── La marge d'installation de l'horloge ─────────────────────────────────
+   P-14, refermé par T-047. La pose de l'horloge demande DEUX ordres au
+   navigateur — installer, puis mettre en pause — et le temps réel court entre
+   les deux : ce sont deux allers-retours distincts sur la connexion.
+
+   CE QUE FAIT LA BIBLIOTHÈQUE, lu dans playwright-core 1.62.1, module
+   `packages/injected/src/clock.ts` embarqué dans `lib/coreBundle.js` :
+     • tant qu'elle n'est pas arrêtée, l'horloge virtuelle se resynchronise sur
+       le temps réel par une minuterie native reprogrammée au plus tard toutes
+       les 100 ms (`_updateRealTimeTimer`, `_syncRealTime`) ;
+     • la mise en pause consomme l'écart entre la cible et l'instant courant,
+       et la méthode interne de rattrapage REFUSE un écart négatif — c'est le
+       rejet « Cannot fast-forward to the past » (`pauseAt`,
+       `_innerFastForwardTo`).
+
+   D'où la mesure du lot, sur six délais imposés entre les deux ordres :
+   0 ms et 50 ms passent, 100 ms, 150 ms, 300 ms et 1 000 ms rejettent. Le
+   seuil n'est pas la charge, c'est la période de resynchronisation.
+
+   LA PARADE. L'installation vise l'instant de référence RECULÉ de cette marge ;
+   la mise en pause vise l'instant de référence. L'écart consommé vaut alors
+   « marge moins temps réellement écoulé », donc positif tant que la seconde
+   reste sous la première — et la pause atterrit exactement sur la cible, par
+   construction : l'horloge avance de ce qu'on lui demande, pas de ce que la
+   machine a mis à le demander.
+
+   POURQUOI CETTE MARGE NE COÛTE RIEN. Elle est du temps VIRTUEL, consommé sur
+   une page encore vierge — la fonction est appelée avant `goto`, et une page
+   vierge ne porte aucune minuterie à déclencher. La page mesurée, elle, ne voit
+   jamais cette valeur : le navigateur rejoue le journal des ordres au
+   chargement et la mise en pause y écrit l'instant de référence sans rattrapage.
+   L'état de la page capturée est donc inchangé, et il a été constaté tel :
+   409 couples conformes, 0 écart, sur trois exécutions du régime candidat.
+
+   POURQUOI UNE MINUTE. La marge doit couvrir UN ALLER-RETOUR, pas une durée de
+   travail : sous 96 pages de front et charge machine à 10, le pire aller-retour
+   mesuré par T-047 est de 643 ms — six fois le seuil qui faisait rejeter,
+   quatre-vingt-treize fois sous la marge. Au-delà d'une minute entre deux ordres,
+   la machine ne mesure plus rien d'utile, et la vérification qui suit le dit en
+   clair plutôt que de laisser la bibliothèque rejeter avec un message qui ne
+   nomme pas la cause. */
+export const MARGE_INSTALLATION_MS = 60_000;
+
+/** L'instant que reçoit l'installation : la cible, reculée de la marge. */
+export function instantDInstallation(marge = MARGE_INSTALLATION_MS) {
+	return new Date(INSTANT_REFERENCE).getTime() - marge;
+}
+
+/**
+ * La règle de refus de la bibliothèque, écrite ici pour être ÉPROUVÉE hors
+ * navigateur — `verif/banc/conditions.test.ts`. Sans ce cas synthétique, le
+ * seul cas d'épreuve de la parade serait le défaut qu'elle vient de fermer,
+ * et elle deviendrait inerte en réussissant (P-26).
+ *
+ * @param instantInstalle instant posé par l'installation, en ms.
+ * @param instantCible instant visé par la mise en pause, en ms.
+ * @param ecoulementReelMs temps réel écoulé entre les deux ordres, en ms.
+ * @returns vrai si la mise en pause viserait le passé, donc serait rejetée.
+ */
+export function pauseRefusee(instantInstalle, instantCible, ecoulementReelMs) {
+	return instantCible - (instantInstalle + ecoulementReelMs) < 0;
+}
+
 /**
  * Applique à une page les conditions qui se règlent avant navigation.
  *
@@ -255,10 +318,42 @@ export function optionsContexte(nomFenetre) {
  * banc décide alors, à la milliseconde près et identiquement des deux côtés,
  * de combien le temps a passé. Aucune des 41 maquettes n'emploie
  * `requestAnimationFrame` : la virtualiser est sans effet de bord.
+ *
+ * LA COURSE ENTRE LES DEUX APPELS — P-14, refermée par T-047. Voir
+ * `MARGE_INSTALLATION_MS` juste au-dessus : l'installation vise la cible
+ * RECULÉE de la marge, la mise en pause vise la cible. Les deux vérifications
+ * qui encadrent l'appel sont là pour que la course, si elle revenait par une
+ * autre porte, se dise en clair au lieu de se lire en pixels.
  */
 export async function preparerAvantNavigation(page) {
-	await page.clock.install({ time: new Date(INSTANT_REFERENCE) });
-	await page.clock.pauseAt(new Date(INSTANT_REFERENCE));
+	const cible = new Date(INSTANT_REFERENCE).getTime();
+	const installe = instantDInstallation();
+	const debut = Date.now();
+	await page.clock.install({ time: new Date(installe) });
+	const ecoulement = Date.now() - debut;
+	/* Le rejet de la bibliothèque ne nomme ni la cause ni la mesure. Celui-ci
+	   les donne, et il tombe AVANT l'appel qui échouerait. */
+	if (pauseRefusee(installe, cible, ecoulement)) {
+		throw new Error(
+			`banc — P-14 : ${ecoulement} ms réelles se sont écoulées entre la pose et ` +
+				`la mise en pause de l'horloge, au-delà de la marge de ` +
+				`${MARGE_INSTALLATION_MS} ms. La machine est saturée, ou la marge est ` +
+				`devenue trop courte : c'est une décision d'instrument, pas un défaut de vue.`
+		);
+	}
+	await page.clock.pauseAt(new Date(cible));
+	/* CE QUI EST POSÉ EST RELU. La marge se calcule ; l'instant, lui, se
+	   constate. Un écart non nul signifierait que la page ne mesure pas
+	   l'instant de référence — donc que tout rendu horo-dépendant, à commencer
+	   par la salutation de la coquille, est pris à une autre heure. */
+	const pose = await page.evaluate(() => Date.now());
+	if (pose !== cible) {
+		throw new Error(
+			`banc — l'horloge de la page lit ${new Date(pose).toISOString()} au lieu de ` +
+				`${INSTANT_REFERENCE} (écart de ${pose - cible} ms). La capture ne serait pas ` +
+				`prise à l'instant de référence.`
+		);
+	}
 	await page.addInitScript(SCRIPT_DETERMINISME);
 }
 
