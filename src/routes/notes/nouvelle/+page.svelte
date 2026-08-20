@@ -42,6 +42,7 @@
 	import Vue from '../../../vues/V-17.svelte';
 	import '../../../vues/V-17.css';
 	import { cablerLEditeur } from '$lib/cablage/formulaires';
+	import { monterLEditeur } from '$lib/edition/editeur-client';
 	import { MOI } from '../../../../seeds/corpus';
 	import type { PageData } from './$types';
 
@@ -55,11 +56,27 @@
 
 	let formulaire: HTMLFormElement;
 
-	onMount(() =>
-		cablerLEditeur(formulaire, {
-			rechargerSurDomaine: (domaine) => `/notes/nouvelle?domaine=${encodeURIComponent(domaine)}`
-		})
-	);
+	/**
+	 * L'ÉDITEUR SE MONTE SUR LA ZONE DU GEL, ET C'EST LUI QUI DONNE LE CORPS.
+	 *
+	 * Il rend la barre d'outils vivante — gras, titres, listes, tableaux,
+	 * alertes, tâches — et la soumission porte alors le document canonique dans
+	 * `corps`, jamais du Markdown. Sans lui, la zone resterait une saisie nue et
+	 * le champ serait `corps-markdown` : les deux chemins existent, ils ne se
+	 * mélangent pas (`P-35`).
+	 */
+	onMount(() => {
+		const zone = formulaire.querySelector<HTMLElement>('#redaction');
+		const editeur = zone === null ? null : monterLEditeur(zone, null, formulaire);
+		const defaire = cablerLEditeur(formulaire, {
+			rechargerSurDomaine: (domaine) => `/notes/nouvelle?domaine=${encodeURIComponent(domaine)}`,
+			...(editeur === null ? {} : { editeur: () => editeur.document() })
+		});
+		return () => {
+			defaire();
+			editeur?.detruire();
+		};
+	});
 </script>
 
 <form method="POST" bind:this={formulaire} style="display:contents">
