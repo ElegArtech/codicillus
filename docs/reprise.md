@@ -26,41 +26,58 @@ URI composée, `P-13`).
 
 ---
 
+## Ce qui marche, écran par écran — mesuré, pas déclaré
+
+Une note créée dans le navigateur, puis chaque adresse interrogée. **Tout est à 200 en rédacteur**,
+et l'écran montre bien la donnée réelle :
+
+| | |
+|---|---|
+| accueil | indicateurs, activité, corbeille de révisions, périmètre du compte |
+| recherche | résultats réels, facettes, compteurs, pastilles, état vide, périmètre anonyme |
+| lecture d'une note | titre, corps rendu, cartouche, sommaire, relations, rétroliens, consultations |
+| **historique** | les vraies versions, ouvert par `?version`, **restaurer marche** et capture sa version |
+| comparaison | modes Texte et Visuel sur les vraies versions, alternative textuelle |
+| **éditeur** | ProseMirror monté sur le nœud du gel — gras, titres, listes, tâches, tableaux, alertes |
+| univers, domaine, notes, dossiers | listes, compteurs, santé, **modules désactivés qui disparaissent** |
+| signets | créer, modifier, supprimer |
+| cartographie, par type, carte mentale | le graphe des vraies relations, alternative textuelle |
+| profil, import, guides | préférences enregistrées, import idempotent, simulation qui n'écrit rien |
+| **console** (12 écrans) | 200 en administratrice, **404 en rédacteur**, onze actions qui écrivent |
+
 ## Ce qui ne marche pas encore
 
-### 1. La plupart des écrans montrent le gel, pas les données
+### 1. Ce qu'aucun écran n'atteint
 
-Les 41 vues sont des transcriptions fidèles des maquettes **avec le contenu d'exemple écrit en dur**.
-Les chargeurs servent déjà les vraies données ; personne ne les lit. C'est ça, le travail — la
-manière de le faire est au §5 de `CLAUDE.md`.
+- **Changer le rôle d'un compte** (`RG-M14-07`) vit dans le `.tiroir-form` des consoles, qui ne
+  glisse jamais — c'est le gel, cousin de la réparation faite sur V-15.
+- **La zone de dépôt et « Parcourir » de V-35** sont inertes : elles transportent des fichiers vers
+  un autre écran.
+- **`?tri=` et `?mode=` de la recherche** : les quatre ordres autres que « pertinence » ne sont
+  écrits dans aucune source gelée.
 
-Mesuré : une note créée à l'instant apparaît sur `/univers/{u}/{d}`, `…/notes` et `…/dossiers/…`,
-et **n'apparaît pas** sur la page de lecture d'une note, la recherche, l'accueil, la cartographie.
+### 2. Ce que le gel dit et que la base ne porte pas
 
-### 2. L'éditeur n'est pas un éditeur
-
-La zone de rédaction est un `contenteditable` nu. **La barre d'outils est inerte** — cliquer sur
-Gras ne fait rien —, et le corps se saisit en Markdown à la main. Monter un vrai éditeur demande
-d'installer les paquets ProseMirror manquants ; `prosemirror-model` seul est présent.
+`instance` (version, dernière synchronisation), le résumé d'une version, les utilisations d'un
+gabarit, la dernière connexion en relatif, et la prose de V-34 qui affirme des chiffres. Tout cela
+s'affiche en état neutre explicite plutôt qu'en valeur illustrative.
 
 ### 3. Le produit livré ne laisse écrire personne
 
-**`droits_de_dossier` porte zéro ligne** dans le jeu de semence, et sans droit explicite il n'y a
-aucune capacité. Une instance semée puis démarrée est en lecture seule pour tout le monde :
-`/notes/nouvelle` y rend 404. Il faut soit que la semence pose des droits, soit que la console soit
-le chemin déclaré. Aucune source ne tranche.
+**`droits_de_dossier` porte zéro ligne** dans le jeu de semence. Sans droit explicite, aucune
+capacité : une instance semée puis démarrée est en lecture seule pour tout le monde. Il faut soit
+que la semence pose des droits, soit que la console soit le chemin déclaré. Aucune source ne
+tranche.
 
-### 4. Trois choses attendent un arbitrage
+### 4. Trois divergences avec le gel, assumées et à regeler
 
-- **`RG-M04-10` contre le gel** : le cahier nomme trois quantités à rappeler avant de supprimer une
-  note, `mockups/V-40-dialogues.html:3295` en construit quatre — les pièces jointes s'y ajoutent.
-  Les maquettes priment, le produit porte les quatre. Errata ou regel.
-- **Le statut par défaut d'une note neuve** : `CDC:187` dit « publiée », et le gel de V-17 presse
-  « Publiée ». C'est ce qui est appliqué.
-- **La forme des valeurs de rangement soumises** : nom affiché du domaine, chemin affiché du dossier,
-  séparateur ` › `. Déduite du gel, pas arbitrée.
-
----
+- **Le panneau d'historique** est rendu descendant de `.app` pour que la règle GELÉE qui l'ouvre
+  puisse s'appliquer — elle vise `.app[data-historique="ouvert"] .tiroir` et le panneau vit hors de
+  `.app`. Aucune déclaration inventée ; la structure diverge.
+- **`RG-M04-10` contre `V-40:3295`** : le cahier nomme trois quantités à rappeler avant de supprimer
+  une note, la maquette en construit quatre. Les maquettes priment, le produit porte les quatre.
+- **La confirmation de suppression** est celle du navigateur, pas le dialogue de V-40 : V-40 est un
+  catalogue transverse qu'aucune vue ne transcrit.
 
 ## Comment on travaille maintenant
 
