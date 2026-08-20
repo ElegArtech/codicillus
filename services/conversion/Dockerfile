@@ -1,7 +1,6 @@
 # Image du service « conversion » — brique OPTIONNELLE (P-10, RG-NF-01,
 # ADR-009). Lot T-003 : le conteneur, ses outils et son contrôle de santé.
-# La conversion elle-même est le lot T-042 (vague 7) ; rien de son
-# comportement n'est décidé ici.
+# Lot T-052 : la conversion elle-même, en deux modules.
 #
 # Versions arrêtées par STACK-TECHNIQUE.md §3 et §4.6 :
 #   Python 3.14.7 · Pandoc 3.10.2 · python-pptx 1.0.2 · pdfplumber 0.11.10
@@ -38,7 +37,11 @@ WORKDIR /service
 COPY dependances.txt ./
 RUN pip install --no-cache-dir --requirement dependances.txt
 
-COPY service.py ./
+# LES DEUX MODULES DU SERVICE, ET IL N'EN FAUT PAS UN DE MOINS. `service.py`
+# porte l'interface HTTP ; `convertisseurs.py` porte l'extraction et il est
+# lancé EN SOUS-PROCESSUS depuis le premier — une image qui n'embarquerait que
+# l'interface répondrait « fichier endommagé » à tout, sans le dire (T-052).
+COPY service.py convertisseurs.py ./
 
 # Le service ne tourne pas en superutilisateur, et n'écrit que dans un espace
 # de travail éphémère : un fichier malformé n'a rien à corrompre (RG-M12-04).

@@ -86,8 +86,11 @@ import { basePartagee, type Base } from '$lib/base/acces';
 import { domaines, dossiers } from '$lib/base/schema';
 import { capacites } from '$lib/droits/resolution';
 import {
+	VOIE_PAR_FORMAT,
 	classerLeLot,
+	convertirLeLot,
 	executerLImport,
+	formatDuChemin,
 	identifiantsPris,
 	libellesDeFormat,
 	sonderLeServiceDeConversion,
@@ -182,8 +185,17 @@ export const actions: Actions = {
 		const fichiers = await deposes(champs);
 		if (fichiers.length === 0) return fail(400, { issue: 'lot-vide' });
 
+		/* L'ÉTAT DU SERVICE EST SONDÉ UNE FOIS PAR LOT, PUIS LE LOT EST CONVERTI
+		   AVANT D'ÊTRE CLASSÉ. L'ordre n'est pas indifférent : le classement est
+		   synchrone et sans réseau, ce qui est la condition pour que l'étape 3 de
+		   `UC-M12-04` soit une décision pure et que la simulation n'ait rien de
+		   plus à faire que l'import réel (`RG-M12-02`). */
+		const service = await sonderLeServiceDeConversion(fetch, env['URL_CONVERSION']);
+		const conversions = await convertirLeLot(fetch, env['URL_CONVERSION'], fichiers, service);
+
 		const plan = classerLeLot(`Dépôt — ${fichiers.length} fichier(s)`, fichiers, {
-			service: await sonderLeServiceDeConversion(fetch, env['URL_CONVERSION']),
+			service,
+			conversions,
 			identifiantsPris: await identifiantsPris(base),
 			profondeurDeDepart: racine.profondeur
 		});
@@ -199,20 +211,26 @@ export const actions: Actions = {
 	}
 };
 
-/** Les parties de la requête qui sont des fichiers, décodées quand on sait. */
+/**
+ * Les parties de la requête qui sont des fichiers, décodées quand on sait.
+ *
+ * DEUX LECTURES, ET JAMAIS LES DEUX POUR LE MÊME FICHIER. Un `.md` est du
+ * texte, et l'application le lit ; un `.docx` ne l'est pas, et l'application ne
+ * l'ouvre à aucun moment — elle en prend les octets et les passe au service,
+ * qui est isolé précisément pour ça (`STACK` §4.6). Un fichier écarté n'est ni
+ * lu ni transporté : le classement le refusera sur sa seule extension.
+ */
 async function deposes(champs: FormData): Promise<readonly FichierDepose[]> {
 	const sortis: FichierDepose[] = [];
 	for (const partie of champs.getAll('fichiers')) {
 		if (typeof partie === 'string') continue;
-		const extension = partie.name.slice(partie.name.lastIndexOf('.') + 1).toLowerCase();
-		/* Seule la voie « application » a besoin du texte, et elle seule sait le
-		   décoder : un document bureautique n'est pas du texte, et le décoder en
-		   produirait un faux. */
-		const lisible = extension === 'md' || extension === 'txt';
+		const format = formatDuChemin(partie.name);
+		const voie = format === null ? 'ecarte' : VOIE_PAR_FORMAT[format];
 		sortis.push({
 			chemin: partie.name,
 			octets: partie.size,
-			texte: lisible ? await partie.text() : null
+			texte: voie === 'application' ? await partie.text() : null,
+			binaire: voie === 'service' ? new Uint8Array(await partie.arrayBuffer()) : null
 		});
 	}
 	return sortis;

@@ -23,11 +23,13 @@
  * (`V-36:82`) : le décompte par domaine affiché reste celui du jeu de semence.
  * Écart déclaré au rapport du lot.
  *
- * `/console/exports/{univers}/{domaine}` N'EST PAS MONTÉE, ET C'EST DÉLIBÉRÉ.
- * `docs/routes.md` §3.6 la déclare comme « aucune vue — téléchargement de
- * l'archive » : la monter sans `T-045` reviendrait à servir une archive qui
- * n'existe pas, ou à inventer un refus que la source ne prévoit pas. Le choix
- * est déclaré au rapport plutôt que tranché ici. La redirection de l'anonyme sur
+ * `/console/exports/{univers}/{domaine}` EST MONTÉE DEPUIS `T-053`, et le motif
+ * qui la retenait est levé : la monter sans l'archive « reviendrait à servir une
+ * archive qui n'existe pas », or l'archive existe — `src/lib/export/archive.ts`,
+ * et son aller-retour est éprouvé sur le domaine entier. `docs/routes.md` §3.6 la
+ * déclare comme « aucune vue — téléchargement de l'archive » : c'est un
+ * `+server.ts`, et cette vue-ci n'y renvoie toujours pas — le bouton du gel est
+ * une minuterie, et `ARB-011` interdit de rendre une transition. La redirection de l'anonyme sur
  * cette adresse est, elle, déjà décidée sur le préfixe par `src/lib/auth/garde.ts`
  * (`ARB-052`, `ARB-057`), et la batterie 6 la mesure comme un couple indiscernable
  * prouvé — l'un des deux seuls du dépôt.

@@ -18,12 +18,13 @@
  *      deux journaux d'écriture sont comparés. Un `if (simulation)` glissé dans
  *      la boucle les ferait diverger.
  *
- *   2. L'INDISPONIBILITÉ DE LA VOIE BUREAUTIQUE A UN CAS D'ÉPREUVE
- *      SYNTHÉTIQUE. `P-26` : « tout contrôle doit avoir un cas d'épreuve
- *      indépendant de l'état du dépôt ». Le service de conversion est absent
- *      aujourd'hui ; le jour où `T-042` le livrera, les trois causes
- *      d'indisponibilité resteront éprouvées, parce que l'état du service est
- *      un PARAMÈTRE ici, jamais une lecture du monde.
+ *   2. L'ÉTAT DE LA VOIE BUREAUTIQUE A UN CAS D'ÉPREUVE SYNTHÉTIQUE, DANS LES
+ *      DEUX SENS. `P-26` : « tout contrôle doit avoir un cas d'épreuve
+ *      indépendant de l'état du dépôt ». L'état du service et le verdict de
+ *      chaque fichier sont des PARAMÈTRES ici, jamais une lecture du monde : ni
+ *      un conteneur arrêté, ni un conteneur qui tourne ne change ce que ces cas
+ *      mesurent. C'est ce qui a permis à `T-052` de RETOURNER les cas de
+ *      l'indisponibilité sans en perdre un seul.
  *
  *   3. LE LOT NE S'ARRÊTE JAMAIS. `RG-M12-04` : « un fichier en erreur
  *      n'interrompt jamais le lot ». Un lot d'épreuve mêle les six sorts
@@ -34,11 +35,12 @@ import { describe, expect, it } from 'vitest';
 import type { Base } from '../base/acces';
 import { dossiers, etiquettes, etiquettesDeNote, notes, typesDeNote } from '../base/schema';
 import {
-	CONVERSION_LIVREE,
 	MANQUES_DE_L_IMPORT,
 	SERVICE_INJOIGNABLE,
 	VOIE_PAR_FORMAT,
 	classerLeLot,
+	convertirLeLot,
+	convertirParLeService,
 	detacherLEnTete,
 	executerLImport,
 	formatDuChemin,
@@ -47,8 +49,10 @@ import {
 	motifDIndisponibilite,
 	segmentsPlafonnes,
 	sonderLeServiceDeConversion,
+	verdictDuCorps,
 	type EtatDuServiceDeConversion,
-	type FichierDepose
+	type FichierDepose,
+	type ResultatDeConversion
 } from './import';
 
 /* ═══════════════════════════════════════════ Le catalogue des formats ══ */
@@ -150,28 +154,201 @@ describe('le service de conversion — P-10, RG-NF-01', () => {
 		);
 	});
 
-	it('nomme l’outil manquant quand le service répond sans lui', () => {
+	it('nomme l’outil manquant quand le service répond sans le lecteur du format', () => {
 		const partiel: EtatDuServiceDeConversion = {
+			joignable: true,
+			outils: { pandoc: '3.10.2', 'python-pptx': null, pdfplumber: '0.11.10' },
+			complet: false
+		};
+		expect(motifDIndisponibilite(partiel, 'pptx')).toBe('outil-de-conversion-absent');
+		/* Et il ne le reproche qu’au format concerné : c’est une dégradation
+		   ciblée, pas une panne d’ensemble. */
+		expect(motifDIndisponibilite(partiel, 'docx')).toBeNull();
+		expect(motifDIndisponibilite(partiel, 'pdf')).toBeNull();
+	});
+
+	it('ferme LES TROIS formats quand l’écrivain manque — T-052', () => {
+		/* Pandoc écrit le Markdown des trois formats, y compris de ceux qu’un
+		   autre outil LIT (`services/conversion/convertisseurs.py`). Sans lui, le
+		   service ne rend rien : le déclarer disponible pour le .pptx serait une
+		   promesse que le fichier suivant démentirait. */
+		const sansEcrivain: EtatDuServiceDeConversion = {
 			joignable: true,
 			outils: { pandoc: null, 'python-pptx': '1.0.2', pdfplumber: '0.11.10' },
 			complet: false
 		};
-		expect(motifDIndisponibilite(partiel, 'docx')).toBe('outil-de-conversion-absent');
-		/* Et il ne le reproche qu’au format concerné : c’est une dégradation
-		   ciblée, pas une panne d’ensemble. */
-		expect(motifDIndisponibilite(partiel, 'pptx')).toBe('conversion-non-livree');
+		expect(motifDIndisponibilite(sansEcrivain, 'docx')).toBe('outil-de-conversion-absent');
+		expect(motifDIndisponibilite(sansEcrivain, 'pptx')).toBe('outil-de-conversion-absent');
+		expect(motifDIndisponibilite(sansEcrivain, 'pdf')).toBe('outil-de-conversion-absent');
 	});
 
-	it('déclare le point d’entrée non livré sur un service pourtant complet', () => {
+	it('déclare la voie ouverte sur un service joignable et complet — T-052', () => {
 		const complet: EtatDuServiceDeConversion = {
 			joignable: true,
 			outils: { pandoc: '3.10.2', 'python-pptx': '1.0.2', pdfplumber: '0.11.10' },
 			complet: true
 		};
-		/* Le jour où T-042 livre, cette attente change AVEC la constante — et
-		   c’est le seul endroit du dépôt où le fait est écrit. */
-		expect(CONVERSION_LIVREE).toBe(false);
-		expect(motifDIndisponibilite(complet, 'pdf')).toBe('conversion-non-livree');
+		/* Avant T-052, cette attente valait `conversion-non-livree` : le point
+		   d’entrée n’existait pas. Il existe, et la constante qui le disait a été
+		   retirée avec la branche qu’elle gouvernait. */
+		for (const format of ['docx', 'pptx', 'pdf'] as const) {
+			expect(motifDIndisponibilite(complet, format)).toBeNull();
+		}
+	});
+});
+
+/* ═════════════════════════════ L'appel de conversion — T-052, ADR-004 ══ */
+
+/** Une réponse du point d’entrée de conversion, telle que le service en rend. */
+function reponseDeConversion(corps: unknown, ok = true): Response {
+	return { ok, json: async () => corps } as unknown as Response;
+}
+
+/** Un fichier bureautique déposé, avec ses octets — jamais son texte. */
+function docxDepose(chemin = 'Exploitation/Restauration.docx'): FichierDepose {
+	return { chemin, octets: 42, texte: null, binaire: new Uint8Array([80, 75, 3, 4]) };
+}
+
+const SERVICE_COMPLET: EtatDuServiceDeConversion = {
+	joignable: true,
+	outils: { pandoc: '3.10.2', 'python-pptx': '1.0.2', pdfplumber: '0.11.10' },
+	complet: true
+};
+
+describe('l’appel de conversion — ADR-004, RG-M12-04', () => {
+	it('rend le Markdown du service, et rien qui ressemble à un document', async () => {
+		let vue = '';
+		const verdict = await convertirParLeService(
+			(async (adresse: string) => {
+				vue = String(adresse);
+				return reponseDeConversion({
+					issue: 'converti',
+					format: 'docx',
+					markdown: 'du texte',
+					images: [],
+					avertissements: []
+				});
+			}) as unknown as typeof fetch,
+			'http://conversion:8000',
+			docxDepose()
+		);
+		expect(verdict).toEqual({
+			issue: 'converti',
+			markdown: 'du texte',
+			images: [],
+			avertissements: []
+		});
+		/* Le NOM est envoyé, pas le chemin de partage réseau. */
+		expect(vue).toContain('Restauration.docx');
+		expect(vue).not.toContain('Exploitation');
+	});
+
+	it('ne lève jamais quand le service ne répond pas — RG-M12-04', async () => {
+		const verdict = await convertirParLeService(
+			(async () => {
+				throw new Error('connexion refusée');
+			}) as unknown as typeof fetch,
+			'http://conversion:8000',
+			docxDepose()
+		);
+		expect(verdict).toEqual({ issue: 'echec', motif: 'service-de-conversion-injoignable' });
+	});
+
+	it('ne lève jamais quand le corps n’est pas du JSON — RG-M12-04', async () => {
+		const verdict = await convertirParLeService(
+			(async () =>
+				({
+					ok: true,
+					json: async () => {
+						throw new Error('corps tronqué');
+					}
+				}) as unknown as Response) as unknown as typeof fetch,
+			'http://conversion:8000',
+			docxDepose()
+		);
+		expect(verdict).toEqual({ issue: 'echec', motif: 'contenu-illisible' });
+	});
+
+	it('traduit les motifs du service, et ferme la table aux inconnus', () => {
+		expect(verdictDuCorps({ issue: 'echec', motif: 'fichier-endommage' })).toEqual({
+			issue: 'echec',
+			motif: 'fichier-endommage'
+		});
+		expect(verdictDuCorps({ issue: 'echec', motif: 'fichier-protege' })).toEqual({
+			issue: 'echec',
+			motif: 'fichier-protege'
+		});
+		expect(verdictDuCorps({ issue: 'echec', motif: 'delai-depasse' })).toEqual({
+			issue: 'echec',
+			motif: 'delai-de-conversion-depasse'
+		});
+		/* Un motif qu’une version ultérieure du service ajouterait ne traverse
+		   pas le rapport jusqu’à l’écran : il devient le motif générique. */
+		expect(verdictDuCorps({ issue: 'echec', motif: 'quelque-chose-de-neuf' })).toEqual({
+			issue: 'echec',
+			motif: 'contenu-illisible'
+		});
+	});
+
+	it('refuse une réponse qui ne porte pas de Markdown — aucune forme supposée', () => {
+		expect(verdictDuCorps({ issue: 'converti' })).toEqual({
+			issue: 'echec',
+			motif: 'contenu-illisible'
+		});
+		expect(verdictDuCorps(null)).toEqual({ issue: 'echec', motif: 'contenu-illisible' });
+		expect(verdictDuCorps('converti')).toEqual({ issue: 'echec', motif: 'contenu-illisible' });
+	});
+
+	it('relève les images extraites, et laisse tomber celles qui sont incomplètes', () => {
+		const verdict = verdictDuCorps({
+			issue: 'converti',
+			markdown: 'x',
+			images: [
+				{ nom: 'media/rId9.png', type_mime: 'image/png', octets: 81, contenu_base64: 'AAAA' },
+				{ type_mime: 'image/png', contenu_base64: 'AAAA' },
+				'pas un objet'
+			],
+			avertissements: ['contenu-scanne', 7]
+		});
+		expect(verdict.issue).toBe('converti');
+		if (verdict.issue !== 'converti') return;
+		expect(verdict.images).toEqual([
+			{ nom: 'media/rId9.png', typeMime: 'image/png', octets: 81, contenuBase64: 'AAAA' }
+		]);
+		expect(verdict.avertissements).toEqual(['contenu-scanne']);
+	});
+
+	it('n’envoie au service QUE les fichiers de la voie « service »', async () => {
+		const envoyes: string[] = [];
+		const conversions = await convertirLeLot(
+			(async (adresse: string) => {
+				envoyes.push(String(adresse));
+				return reponseDeConversion({ issue: 'converti', markdown: 'x' });
+			}) as unknown as typeof fetch,
+			'http://conversion:8000',
+			[
+				{ chemin: 'a/Consignes.md', octets: 42, texte: '# x', binaire: null },
+				{ chemin: 'a/Matrice.xlsx', octets: 42, texte: null, binaire: new Uint8Array([1]) },
+				{ chemin: 'a/vide.docx', octets: 0, texte: null, binaire: new Uint8Array() },
+				docxDepose('a/Restauration.docx')
+			],
+			SERVICE_COMPLET
+		);
+		expect(envoyes).toHaveLength(1);
+		expect(envoyes[0]).toContain('Restauration.docx');
+		expect([...conversions.keys()]).toEqual(['a/Restauration.docx']);
+	});
+
+	it('n’envoie rien du tout quand la brique optionnelle est arrêtée — P-10', async () => {
+		const conversions = await convertirLeLot(
+			(() => {
+				throw new Error('ne doit pas être appelé');
+			}) as unknown as typeof fetch,
+			'http://conversion:8000',
+			[docxDepose()],
+			SERVICE_INJOIGNABLE
+		);
+		expect(conversions.size).toBe(0);
 	});
 });
 
@@ -259,20 +436,26 @@ describe('la profondeur importée — RG-M12-10', () => {
 
 const SANS_SERVICE = {
 	service: SERVICE_INJOIGNABLE,
+	conversions: new Map<string, ResultatDeConversion>(),
 	identifiantsPris: new Set<string>(),
 	profondeurDeDepart: 1
 };
 
 describe('le classement d’un lot — RG-M12-04, et le lot ne s’arrête jamais', () => {
 	const LOT: readonly FichierDepose[] = [
-		{ chemin: 'Exploitation/Consignes.md', octets: 42, texte: '# Consignes\n\nDe nuit.' },
-		{ chemin: 'Exploitation/Matrice.xlsx', octets: 42, texte: null },
-		{ chemin: 'Exploitation/Restauration.docx', octets: 42, texte: null },
-		{ chemin: 'Exploitation/vide.txt', octets: 0, texte: '' },
-		{ chemin: 'Exploitation/archive.rar', octets: 42, texte: null },
-		{ chemin: 'Exploitation/Consignes.md', octets: 42, texte: 'doublon' },
-		{ chemin: 'Exploitation/illisible.md', octets: 42, texte: null },
-		{ chemin: 'Reseau/Adressage.txt', octets: 42, texte: 'Plan.' }
+		{
+			chemin: 'Exploitation/Consignes.md',
+			octets: 42,
+			texte: '# Consignes\n\nDe nuit.',
+			binaire: null
+		},
+		{ chemin: 'Exploitation/Matrice.xlsx', octets: 42, texte: null, binaire: null },
+		{ chemin: 'Exploitation/Restauration.docx', octets: 42, texte: null, binaire: null },
+		{ chemin: 'Exploitation/vide.txt', octets: 0, texte: '', binaire: null },
+		{ chemin: 'Exploitation/archive.rar', octets: 42, texte: null, binaire: null },
+		{ chemin: 'Exploitation/Consignes.md', octets: 42, texte: 'doublon', binaire: null },
+		{ chemin: 'Exploitation/illisible.md', octets: 42, texte: null, binaire: null },
+		{ chemin: 'Reseau/Adressage.txt', octets: 42, texte: 'Plan.', binaire: null }
 	];
 
 	const plan = classerLeLot('épreuve', LOT, SANS_SERVICE);
@@ -311,6 +494,18 @@ describe('le classement d’un lot — RG-M12-04, et le lot ne s’arrête jamai
 		expect(bureautique?.corps).toBeNull();
 	});
 
+	it('consigne un fichier de la voie service qu’aucun verdict n’accompagne', () => {
+		/* Défaut d’enchaînement plutôt que défaut de fichier : le classement le
+		   consigne au lieu de lever, parce que RG-M12-04 gouverne aussi les
+		   erreurs de l’appelant. */
+		const sansVerdict = classerLeLot('épreuve', [docxDepose('a/Restauration.docx')], {
+			...SANS_SERVICE,
+			service: SERVICE_COMPLET
+		});
+		expect(sansVerdict.lignes[0]?.sort).toBe('echec');
+		expect(sansVerdict.lignes[0]?.motif).toBe('conversion-absente');
+	});
+
 	it('n’empêche pas l’import Markdown — RG-NF-01, la dégradation ciblée', () => {
 		expect(plan.notes).toBe(2);
 	});
@@ -334,7 +529,8 @@ describe('le classement d’un lot — RG-M12-04, et le lot ne s’arrête jamai
 				{
 					chemin: 'Reseau/quelconque.md',
 					octets: 42,
-					texte: '---\ntitre: Plan d’adressage\netiquettes: [reseau]\n---\nLe corps.'
+					texte: '---\ntitre: Plan d’adressage\netiquettes: [reseau]\n---\nLe corps.',
+					binaire: null
 				}
 			],
 			SANS_SERVICE
@@ -344,10 +540,14 @@ describe('le classement d’un lot — RG-M12-04, et le lot ne s’arrête jamai
 	});
 
 	it('ne reprend pas un identifiant déjà en base — RG-M12-11', () => {
-		const seul = classerLeLot('épreuve', [{ chemin: 'Adressage.md', octets: 4, texte: 'x' }], {
-			...SANS_SERVICE,
-			identifiantsPris: new Set(['adressage'])
-		});
+		const seul = classerLeLot(
+			'épreuve',
+			[{ chemin: 'Adressage.md', octets: 4, texte: 'x', binaire: null }],
+			{
+				...SANS_SERVICE,
+				identifiantsPris: new Set(['adressage'])
+			}
+		);
 		expect(seul.lignes[0]?.identifiant).toBe('adressage-2');
 	});
 
@@ -355,12 +555,200 @@ describe('le classement d’un lot — RG-M12-04, et le lot ne s’arrête jamai
 		const seul = classerLeLot(
 			'épreuve',
 			[
-				{ chemin: 'a/Adressage.md', octets: 4, texte: 'x' },
-				{ chemin: 'b/Adressage.md', octets: 4, texte: 'y' }
+				{ chemin: 'a/Adressage.md', octets: 4, texte: 'x', binaire: null },
+				{ chemin: 'b/Adressage.md', octets: 4, texte: 'y', binaire: null }
 			],
 			SANS_SERVICE
 		);
 		expect(seul.lignes.map((l) => l.identifiant)).toEqual(['adressage', 'adressage-2']);
+	});
+});
+
+/* ══════════════════════ La voie bureautique disponible — T-052 ═════════ */
+
+/**
+ * LES QUATRE SORTIES DU SERVICE SONT CELLES QU'IL A RÉELLEMENT RENDUES.
+ *
+ * Elles ne sont pas rédigées ici : elles sont recopiées de l'exécution du
+ * service dans son conteneur, sur des fichiers d'épreuve fabriqués par Pandoc
+ * lui-même — un `.docx` et un `.pptx` écrits depuis un même Markdown source, un
+ * PDF de trois lignes, et un PDF sans aucun flux de texte. C'est ce qui distingue
+ * ces cas d'une maquette de réponse : ils cassent si le dialecte de sortie du
+ * service change, et c'est précisément ce qu'on veut d'eux.
+ *
+ * Les formes Markdown sont donc dans des littéraux de ce fichier, et il faut le
+ * dire : ce fichier ne CONVERTIT rien, il vérifie qu'un texte venu du dehors
+ * traverse le convertisseur unique. `ADR-004` n'interdit pas de citer du
+ * Markdown, il interdit d'en écrire à partir d'un document canonique.
+ */
+const SORTIE_DOCX = [
+	'# Restauration PostgreSQL',
+	'',
+	'Procédure de restauration, avec un nom_de_serveur.',
+	'',
+	'## Prérequis',
+	'',
+	'- une sauvegarde',
+	'- un accès au serveur pg-prod-01',
+	''
+].join('\n');
+
+const SORTIE_PPTX = ['## Restauration PostgreSQL', '', '- Prérequis', '- pg-prod-01', ''].join(
+	'\n'
+);
+
+const SORTIE_PDF = [
+	'Rotation d’astreinte 2025',
+	'',
+	'Semaine 1 : pg-prod-01, equipe Exploitation',
+	''
+].join('\n');
+
+const SORTIE_PDF_SCANNE = 'contenu scanné — transcription manuelle recommandée\n';
+
+function converti(markdown: string, avertissements: readonly string[] = []): ResultatDeConversion {
+	return { issue: 'converti', markdown, images: [], avertissements };
+}
+
+describe('la voie bureautique, service disponible — M12.1, ADR-004', () => {
+	const LOT: readonly FichierDepose[] = [
+		docxDepose('Exploitation/Restauration PostgreSQL.docx'),
+		{
+			chemin: 'Supervision/Tableau de bord.pptx',
+			octets: 99,
+			texte: null,
+			binaire: new Uint8Array([1])
+		},
+		{
+			chemin: 'Astreinte/Rotation 2025.pdf',
+			octets: 99,
+			texte: null,
+			binaire: new Uint8Array([1])
+		},
+		{
+			chemin: 'VPN/Certificats scannes.pdf',
+			octets: 99,
+			texte: null,
+			binaire: new Uint8Array([1])
+		},
+		{
+			chemin: 'Procedures/Tests trimestriels.docx',
+			octets: 99,
+			texte: null,
+			binaire: new Uint8Array([1])
+		},
+		{ chemin: 'VPN/Certificats.pdf', octets: 99, texte: null, binaire: new Uint8Array([1]) },
+		{ chemin: 'Procedures/Annexes.pdf', octets: 99, texte: null, binaire: new Uint8Array([1]) },
+		{ chemin: 'Astreinte/Numéros utiles.txt', octets: 12, texte: 'Le standard.', binaire: null }
+	];
+
+	const plan = classerLeLot('épreuve', LOT, {
+		...SANS_SERVICE,
+		service: SERVICE_COMPLET,
+		conversions: new Map<string, ResultatDeConversion>([
+			['Exploitation/Restauration PostgreSQL.docx', converti(SORTIE_DOCX)],
+			['Supervision/Tableau de bord.pptx', converti(SORTIE_PPTX)],
+			['Astreinte/Rotation 2025.pdf', converti(SORTIE_PDF)],
+			['VPN/Certificats scannes.pdf', converti(SORTIE_PDF_SCANNE, ['contenu-scanne'])],
+			['Procedures/Tests trimestriels.docx', { issue: 'echec', motif: 'fichier-endommage' }],
+			['VPN/Certificats.pdf', { issue: 'echec', motif: 'fichier-protege' }],
+			['Procedures/Annexes.pdf', { issue: 'echec', motif: 'delai-de-conversion-depasse' }]
+		])
+	});
+
+	const ligne = (chemin: string) => plan.lignes.find((l) => l.chemin === chemin);
+
+	it('fait des notes des trois formats bureautiques — STACK §4.6', () => {
+		for (const chemin of [
+			'Exploitation/Restauration PostgreSQL.docx',
+			'Supervision/Tableau de bord.pptx',
+			'Astreinte/Rotation 2025.pdf'
+		]) {
+			expect(ligne(chemin)?.sort).toBe('note');
+			expect(ligne(chemin)?.corps).not.toBeNull();
+		}
+	});
+
+	it('fait passer le Markdown du service par le convertisseur UNIQUE — ADR-004', () => {
+		/* Le corps est un document validé par `analyserDocument`, que seul
+		   `analyserMarkdown` produit dans ce dépôt. Le service n’en a jamais
+		   fabriqué : il a rendu du texte. */
+		const note = ligne('Exploitation/Restauration PostgreSQL.docx');
+		expect(note?.corps?.type).toBe('doc');
+		expect(note?.corps?.content?.length).toBeGreaterThan(3);
+	});
+
+	it('prend le titre du nom du fichier bureautique — RG-M12-05', () => {
+		expect(ligne('Exploitation/Restauration PostgreSQL.docx')?.titre).toBe(
+			'Restauration PostgreSQL'
+		);
+		expect(ligne('Exploitation/Restauration PostgreSQL.docx')?.identifiant).toBe(
+			'restauration-postgresql'
+		);
+	});
+
+	it('crée la note d’un PDF sans texte, avec son avertissement — M12.1', () => {
+		const scanne = ligne('VPN/Certificats scannes.pdf');
+		/* LA NOTE EST CRÉÉE : ce n’est pas un échec, et ce n’est pas une
+		   reconnaissance de caractères — « hors périmètre » (STACK §4.6). */
+		expect(scanne?.sort).toBe('note');
+		expect(scanne?.avertissements).toEqual(['contenu-scanne']);
+		/* Et l’avertissement est DANS le corps, en français, pas seulement en
+		   code : c’est ce que M12.1 demande de la note. */
+		expect(JSON.stringify(scanne?.corps)).toContain('contenu scanné');
+	});
+
+	it('consigne chaque fichier en erreur avec SON motif — RG-M12-04', () => {
+		expect(ligne('Procedures/Tests trimestriels.docx')?.motif).toBe('fichier-endommage');
+		expect(ligne('VPN/Certificats.pdf')?.motif).toBe('fichier-protege');
+		expect(ligne('Procedures/Annexes.pdf')?.motif).toBe('delai-de-conversion-depasse');
+		for (const chemin of [
+			'Procedures/Tests trimestriels.docx',
+			'VPN/Certificats.pdf',
+			'Procedures/Annexes.pdf'
+		]) {
+			expect(ligne(chemin)?.sort).toBe('echec');
+			expect(ligne(chemin)?.corps).toBeNull();
+		}
+	});
+
+	it('N’INTERROMPT PAS LE LOT sur trois fichiers en erreur — RG-M12-04', () => {
+		/* Le dernier fichier du lot vient APRÈS les trois erreurs, et il est
+		   traité : c’est la règle même, et le compte final ne suffirait pas à le
+		   prouver. */
+		const dernier = plan.lignes[plan.lignes.length - 1];
+		expect(dernier?.chemin).toBe('Astreinte/Numéros utiles.txt');
+		expect(dernier?.sort).toBe('note');
+		expect(plan.total).toBe(LOT.length);
+		expect(plan.notes).toBe(5);
+		expect(plan.echecs).toBe(3);
+	});
+
+	it('porte les images extraites jusqu’au plan, sans les écrire — RG-M12-07', () => {
+		const avecImage = classerLeLot('épreuve', [docxDepose('a/Avec image.docx')], {
+			...SANS_SERVICE,
+			service: SERVICE_COMPLET,
+			conversions: new Map<string, ResultatDeConversion>([
+				[
+					'a/Avec image.docx',
+					{
+						issue: 'converti',
+						markdown: 'Un texte.\n',
+						images: [
+							{
+								nom: 'media/rId9.png',
+								typeMime: 'image/png',
+								octets: 81,
+								contenuBase64: 'AAAA'
+							}
+						],
+						avertissements: []
+					}
+				]
+			])
+		});
+		expect(avecImage.lignes[0]?.images).toHaveLength(1);
+		expect(avecImage.lignes[0]?.images[0]?.nom).toBe('media/rId9.png');
 	});
 });
 
@@ -473,10 +861,11 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 				chemin: 'Exploitation/Sauvegardes/Restauration.md',
 				octets: 42,
 				texte:
-					'---\ntitre: Restauration\netiquettes: [barman]\nvoir: [deja-pris, inconnue]\n---\nLe corps.'
+					'---\ntitre: Restauration\netiquettes: [barman]\nvoir: [deja-pris, inconnue]\n---\nLe corps.',
+				binaire: null
 			},
-			{ chemin: 'Exploitation/Matrice.xlsx', octets: 42, texte: null },
-			{ chemin: 'Reseau/Adressage.txt', octets: 42, texte: 'Plan.' }
+			{ chemin: 'Exploitation/Matrice.xlsx', octets: 42, texte: null, binaire: null },
+			{ chemin: 'Reseau/Adressage.txt', octets: 42, texte: 'Plan.', binaire: null }
 		],
 		SANS_SERVICE
 	);
