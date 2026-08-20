@@ -28,9 +28,10 @@
  */
 import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { supprimerUnTypeDeFiche } from '$lib/donnees/administration';
+import { delesterUnTypeDeFiche, supprimerUnTypeDeFiche } from '$lib/donnees/administration';
 import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
 import { lireTypesDeFiche } from '$lib/donnees/lecture';
+import { lireLesDesignationsDeTypeDeFiche } from '$lib/donnees/consoles';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
@@ -45,7 +46,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		univers: acces.ressource.univers,
 		domaines: acces.ressource.domaines,
 		compte: acces.ressource.compte,
-		typesFiche: await lireTypesDeFiche(base)
+		typesFiche: await lireTypesDeFiche(base),
+		designations: await lireLesDesignationsDeTypeDeFiche(base)
 	};
 };
 
@@ -77,6 +79,28 @@ export const actions: Actions = {
 		);
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	},
+	/**
+	 * DÉLESTER LES NOTES D'UN TYPE — la sortie que le refus propose.
+	 *
+	 * `mockups/V-29-console-types-fiches.html:3464` porte le bouton, et `P-03`
+	 * interdit qu'il soit inerte : « une entrée visible est une entrée qui
+	 * fonctionne ». Le geste est celui de `delesterUnTypeDeFiche()`, dont l'en-tête
+	 * dit ce qu'il touche et ce qu'il ne touche pas.
+	 *
+	 * Le type est désigné par le MÊME champ que la suppression — `type-de-fiche`,
+	 * l'identifiant lisible — parce que c'est le même objet. Deux noms de champ
+	 * pour une même clé finiraient par diverger.
+	 */
+	delester: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const resultat = await delesterUnTypeDeFiche(
+			basePartagee(),
+			String(champs.get('type-de-fiche') ?? '')
+		);
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		return resultat;
 	}
 };
