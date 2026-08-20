@@ -15,18 +15,80 @@
  * colonnes. Les deux refus passent par le même point de sortie, `ADR-007`.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LA VUE ACCEPTE, ET CE QUI RESTE DONC AU JEU DE SEMENCE
+ * CE QUE LA VUE REÇOIT DÉSORMAIS — LA PAGE EST BRANCHÉE SUR LA BASE
  *
- * `src/vues/V-10.svelte:81-84` ne déclare que deux propriétés — `vecteur` et
- * `notes` —, et le contrat de ce lot interdit de toucher `src/vues/`. Tout ce
- * que la vue lit ailleurs, elle le lit STATIQUEMENT dans `seeds/corpus.ts` :
- * `UNIVERS`, `DOMAINES`, `DETAIL_DOMAINES`, `MODULES`, `ACTIVITE`, `MOI`,
- * `INSTANCE`. Les cartes de domaine et leurs pastilles de module en font
- * partie. Ce chargeur branche donc ce qu'il peut brancher — l'univers demandé,
- * les droits d'écriture, et les notes du périmètre — et l'écart est déclaré au
- * rapport du lot plutôt que comblé par une modification de la vue.
+ * `T-041` avait rendu les sept sources de V-10 PASSABLES sans rien passer : la
+ * vue lisait toujours `UNIVERS`, `DOMAINES`, `DETAIL_DOMAINES` et `ACTIVITE`
+ * dans `seeds/corpus.ts`, et une note créée à l'instant ne changeait donc ni la
+ * description d'un domaine, ni ses pastilles de module, ni le flux d'activité.
+ * Les quatre viennent maintenant de la base :
+ *
+ *   `univers`         `univers`, ordre compris, réduit à ceux qui portent au
+ *                     moins un domaine lisible par l'appelant ;
+ *   `domaines`        `domaines`, réduits de la même façon — une carte de
+ *                     domaine mène à une page, donc à une page atteignable
+ *                     (`P-03`) ;
+ *   `detailDomaines`  la description de `domaines` et les modules de
+ *                     `modules_de_domaine`. C'est ce qui rend `P-04` EFFECTIVE
+ *                     sur les pastilles des cartes : elles coïncidaient avec la
+ *                     table sans en être pilotées (mesuré par `T-032`) ;
+ *   `activite`        les traces que la base porte RÉELLEMENT — voir plus bas.
+ *
+ * NE SONT TOUJOURS PAS PASSÉS, et c'est déclaré plutôt que comblé :
+ * `modules` — le catalogue des six libellés de module, qui n'est pas une donnée
+ * d'instance mais une nomenclature, et qu'aucune table ne porte —, `compte` et
+ * `instance`, qui appartiennent à la COQUILLE et sont servis de la même façon
+ * aux 41 vues : les câbler ici seulement fabriquerait deux régimes.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * L'ACTIVITÉ NE S'INVENTE PAS — CE QUE LA BASE ENREGISTRE, ET RIEN D'AUTRE
+ *
+ * `P-02` : « aucun indicateur, aucune tendance, aucun compteur ne peut être
+ * figé ou simulé ». Le flux d'activité de V-10 servait jusqu'ici les huit
+ * événements de `ACTIVITE`, écrits à la main pour la maquette.
+ *
+ * La base porte trois des cinq types de `TypeDEvenement`, et chacun par une
+ * trace horodatée et signée :
+ *
+ *   `verification` — une ligne de `verifications` (M06.2, écrite par
+ *                    `src/lib/donnees/verification.ts`) ;
+ *   `edition`      — une ligne de `versions` (RG-M07-02, écrite par
+ *                    `src/lib/donnees/edition.ts`) ;
+ *   `revision`     — le signalement porté par la note elle-même
+ *                    (`revision_demandee`, RG-M06-05).
+ *
+ * LES DEUX AUTRES — `publication` et `import` — N'ONT AUCUNE TRACE, et ils ne
+ * sont donc JAMAIS ÉMIS. Ce n'est pas une lacune de ce chargeur : rien en base
+ * ne date une publication ni un import, et en déduire un événement serait
+ * exactement la valeur illustrative que `P-02` proscrit. La lacune est celle
+ * que `SANS_CONTREPARTIE_EN_BASE` de `src/lib/donnees/accueil.ts` décrit pour
+ * V-07 ; ce chargeur en tire la seule conclusion possible — il rend ce qui est
+ * enregistré, jamais ce qui manque.
+ *
+ * LA FENÊTRE EST DE SEPT JOURS, ET ELLE EST LUE DANS LE GEL, non décidée ici :
+ * la zone annonce elle-même son absence par « Rien de neuf CETTE SEMAINE »
+ * (`mockups/V-10-page-univers.html:1983`), et les huit événements de la maquette
+ * s'étalent sur 151 heures au plus — six jours et demi. Les deux se recoupent
+ * sur la semaine.
+ *
+ * UN ÉVÉNEMENT SANS AUTEUR CONNU N'EST PAS RENDU. Les trois jointures sur
+ * `comptes` sont INTERNES : `verifications.compte_id` et `notes.revision_par_id`
+ * s'annulent quand le compte disparaît, et une ligne de flux s'écrit « QUI a
+ * fait QUOI ». Sans le qui, il n'y a pas de ligne à écrire, et lui en inventer
+ * un serait la même faute. Le jeu de semence est dans ce cas — ses trente
+ * vérifications ne portent aucun compte —, ce qui rend le cas réel et non
+ * théorique.
  */
 import { basePartagee } from '$lib/base/acces';
+import type { Base } from '$lib/base/acces';
+import {
+	comptes,
+	domaines as tableDesDomaines,
+	notes as tableDesNotes,
+	univers as tableDesUnivers,
+	verifications,
+	versions
+} from '$lib/base/schema';
 import { resoudre } from '$lib/droits/resolution';
 import {
 	domaineLisible,
@@ -36,13 +98,163 @@ import {
 	lireUniversParIdentifiant,
 	ouvrirLAcces,
 	peutEcrireDansLUn,
-	refuserLAdresse
+	refuserLAdresse,
+	type AccesAuRangement
 } from '$lib/donnees/rangement';
+import { lireModulesParDomaine, lireUnivers } from '$lib/donnees/lecture';
+import { and, eq, gte, inArray } from 'drizzle-orm';
+import type {
+	DetailDeDomaine,
+	Domaine,
+	EvenementDActivite,
+	NomDeDomaine,
+	Univers
+} from '../../../../seeds/corpus';
 import type { PageServerLoad } from './$types';
+
+/** Le rangement que l'appelant peut atteindre — univers, domaines, détail. */
+interface RangementLisible {
+	readonly univers: readonly Univers[];
+	readonly domaines: readonly Domaine[];
+	readonly detailDomaines: Record<NomDeDomaine, DetailDeDomaine>;
+}
+
+/**
+ * LE RANGEMENT RÉDUIT À CE QUI EST LISIBLE — et la réduction est un refus de
+ * porte fermée, pas une précaution.
+ *
+ * `P-03` : « une entrée visible est une entrée qui fonctionne ». La carte d'un
+ * domaine sur lequel l'appelant n'a aucun droit mènerait à une adresse que
+ * cette même route refuse — un lien mort, et un nom de domaine divulgué que
+ * `RG-ACC-01` n'autorise pas davantage.
+ *
+ * AUCUNE RÈGLE DE DROIT N'EST ÉCRITE ICI : `domaineLisible()` interroge
+ * `capacites()`, l'implémentation unique.
+ *
+ * CE CODE EST LE MÊME DANS LE CHARGEUR VOISIN, `[domaine]/+page.server.ts`, et
+ * la duplication est SUBIE : `+page.server.ts` n'admet que les exports que
+ * SvelteKit valide, un module partagé demanderait un fichier hors du périmètre
+ * de ce lot. Les deux copies appellent les mêmes fonctions de lecture — la
+ * divergence possible est dans l'assemblage, pas dans les conversions.
+ */
+async function lireLeRangementLisible(
+	base: Base,
+	acces: AccesAuRangement
+): Promise<RangementLisible> {
+	const lignes = await base
+		.select({
+			id: tableDesDomaines.id,
+			nom: tableDesDomaines.nom,
+			couleur: tableDesDomaines.couleur,
+			description: tableDesDomaines.description,
+			universNom: tableDesUnivers.nom
+		})
+		.from(tableDesDomaines)
+		.innerJoin(tableDesUnivers, eq(tableDesDomaines.universId, tableDesUnivers.id))
+		.orderBy(tableDesUnivers.ordre, tableDesDomaines.nom);
+
+	const lisibles = lignes.filter((ligne) => domaineLisible(acces, ligne.id));
+	const modulesParDomaine = await lireModulesParDomaine(base);
+
+	/* `DetailDeDomaine.modules` est la liste RÉELLE de `modules_de_domaine`. Un
+	   domaine sans aucune ligne fille rend une liste vide : la base ne porte pas
+	   le plancher « 1 à N » de RG-STR-06 (déclaré par `002_socle.montee.sql`), et
+	   supposer un module par défaut serait le combler ici, au mauvais endroit. */
+	const detail: Record<string, DetailDeDomaine> = {};
+	for (const ligne of lisibles) {
+		detail[ligne.nom] = {
+			description: ligne.description,
+			modules: modulesParDomaine.get(ligne.nom) ?? []
+		};
+	}
+
+	const tousLesUnivers = await lireUnivers(base);
+	return {
+		univers: tousLesUnivers.filter((u) => lisibles.some((l) => l.universNom === u.nom)),
+		domaines: lisibles.map(
+			(l) => ({ nom: l.nom, univers: l.universNom, couleur: l.couleur }) as Domaine
+		),
+		detailDomaines: detail as Record<NomDeDomaine, DetailDeDomaine>
+	};
+}
+
+const MILLISECONDES_PAR_JOUR = 86_400_000;
+const MILLISECONDES_PAR_HEURE = 3_600_000;
+/** La semaine que la zone d'activité annonce elle-même quand elle est vide. */
+const FENETRE_DACTIVITE_JOURS = 7;
+
+/**
+ * L'ACTIVITÉ DE LA SEMAINE, LUE DANS LES TROIS TRACES QUI EXISTENT.
+ *
+ * Le filtre de périmètre est DANS la requête, jamais après elle (`ADR-006`) :
+ * les trois lectures portent l'ensemble des dossiers lisibles dans leur
+ * condition, exactement comme `lireNotesLisibles()`. Un périmètre vide
+ * n'interroge pas la base — même raison que là-bas, un ensemble vide passé à une
+ * clause d'appartenance ne se rend pas de la même façon selon le dialecte.
+ */
+async function lireLActiviteRecente(
+	base: Base,
+	acces: AccesAuRangement,
+	maintenant: Date
+): Promise<readonly EvenementDActivite[]> {
+	const autorises = acces.perimetre.tout ? null : [...acces.perimetre.dossiers];
+	if (autorises !== null && autorises.length === 0) return [];
+	const filtre = autorises === null ? undefined : inArray(tableDesNotes.dossierId, autorises);
+	const depuis = new Date(maintenant.getTime() - FENETRE_DACTIVITE_JOURS * MILLISECONDES_PAR_JOUR);
+
+	const verifiees = await base
+		.select({ cible: tableDesNotes.identifiant, qui: comptes.nom, le: verifications.le })
+		.from(verifications)
+		.innerJoin(tableDesNotes, eq(verifications.noteId, tableDesNotes.id))
+		.innerJoin(comptes, eq(verifications.compteId, comptes.id))
+		.where(and(gte(verifications.le, depuis), filtre));
+
+	const modifiees = await base
+		.select({ cible: tableDesNotes.identifiant, qui: comptes.nom, le: versions.le })
+		.from(versions)
+		.innerJoin(tableDesNotes, eq(versions.noteId, tableDesNotes.id))
+		.innerJoin(comptes, eq(versions.auteurId, comptes.id))
+		.where(and(gte(versions.le, depuis), filtre));
+
+	const signalees = await base
+		.select({ cible: tableDesNotes.identifiant, qui: comptes.nom, le: tableDesNotes.revisionLe })
+		.from(tableDesNotes)
+		.innerJoin(comptes, eq(tableDesNotes.revisionParId, comptes.id))
+		.where(
+			and(eq(tableDesNotes.revisionDemandee, true), gte(tableDesNotes.revisionLe, depuis), filtre)
+		);
+
+	function evenement(
+		type: EvenementDActivite['type'],
+		ligne: { cible: string; qui: string; le: Date | null }
+	): EvenementDActivite | null {
+		if (ligne.le === null) return null;
+		return {
+			type,
+			qui: ligne.qui,
+			cible: ligne.cible,
+			heures: Math.floor((maintenant.getTime() - ligne.le.getTime()) / MILLISECONDES_PAR_HEURE)
+		} as EvenementDActivite;
+	}
+
+	const evenements = [
+		...verifiees.map((l) => evenement('verification', l)),
+		...modifiees.map((l) => evenement('edition', l)),
+		...signalees.map((l) => evenement('revision', l))
+	].filter((e): e is EvenementDActivite => e !== null);
+
+	/* Du plus récent au plus ancien — l'ordre du gel, où `heures` croît le long
+	   de la liste. À égalité, l'identifiant de note départage : sans lui, l'ordre
+	   dépendrait de celui que le serveur a rendu, donc du plan de requête. */
+	return evenements.sort(
+		(a, b) => a.heures - b.heures || (a.cible ?? '').localeCompare(b.cible ?? '', 'fr')
+	);
+}
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const base = basePartagee();
-	const acces = await ouvrirLAcces(base, locals.identite, new Date());
+	const maintenant = new Date();
+	const acces = await ouvrirLAcces(base, locals.identite, maintenant);
 
 	const univers = await lireUniversParIdentifiant(base, params.univers);
 	const domainesDeLUnivers = univers === null ? [] : await lireDomainesDeLUnivers(base, univers.id);
@@ -60,21 +272,26 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		dossiersDuDomaine(acces, d.id).map((ligne) => ligne.id)
 	);
 
+	const rangement = await lireLeRangementLisible(base, acces);
+
 	return {
 		/* `uni` porte le NOM, non l'identifiant d'adresse : c'est ce que l'axe
 		   « Univers » de la planche emploie (`verif/scenarios/V-10.json`, valeurs
-		   `Production` et `Projets`), et ce que la vue cherche dans `UNIVERS`.
+		   `Production` et `Projets`), et ce que la vue cherche dans les univers
+		   qu'elle reçoit.
 
 		   `etat` n'est pas posé, et c'est un fait à déclarer plutôt qu'un oubli :
 		   la position « sans domaine » de la planche ne peut pas être atteinte par
 		   cette route, puisque zéro domaine lisible rend 404 par la ligne de §3
-		   ci-dessus. Poser `etat` à `vide` serait affirmer un état que la vue
-		   calculerait ensuite sur `DOMAINES` du jeu de semence, donc un affichage
-		   faux. Absent, il vaut « nominal ». */
+		   ci-dessus. Absent, il vaut « nominal ». */
 		vecteur: {
 			uni: resolution.ressource.nom,
 			droits: peutEcrireDansLUn(acces, dossiersLisibles) ? 'ecriture' : 'lecture'
 		},
-		notes: await lireNotesLisibles(base, acces.perimetre, acces.contexte)
+		notes: await lireNotesLisibles(base, acces.perimetre, acces.contexte),
+		univers: rangement.univers,
+		domaines: rangement.domaines,
+		detailDomaines: rangement.detailDomaines,
+		activite: await lireLActiviteRecente(base, acces, maintenant)
 	};
 };
