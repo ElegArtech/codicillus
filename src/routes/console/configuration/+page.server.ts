@@ -22,10 +22,14 @@
  * `vecteur: null` demande l'état au repos — les quatre positions de l'axe
  * « Seuils » sont des états de SAISIE, que la vue lit de son propre réglage.
  */
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
-import type { PageServerLoad } from './$types';
+import {
+	enregistrerLaConfiguration,
+	valeursDeConfigurationSaisies
+} from '$lib/donnees/administration';
+import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -34,4 +38,36 @@ export const load: PageServerLoad = async ({ locals }) => {
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
 	return { vecteur: null, notes: acces.ressource.notes };
+};
+
+/** La garde des onze adresses, appliquée à l'action — voir `/console/univers`. */
+function consoleOuverte(locals: App.Locals): void {
+	if (!accesALaConsole(locals.identite)) error(404, MESSAGE_INTROUVABLE);
+}
+
+export const actions: Actions = {
+	/**
+	 * ENREGISTRER LA CONFIGURATION GLOBALE — `RG-M14-09` et `RG-M14-10`.
+	 *
+	 * LES SEPT NOMS DE CHAMP SONT CEUX DU GEL, préfixe compris : `V-33:2965`
+	 * lit ses champs par `document.getElementById("c-" + id)`, et les sept
+	 * `input` et `select` portent `c-frais`, `c-vieil`, `c-versions`,
+	 * `c-portail`, `c-mot`, `c-taille`, `c-session` (`V-33:1247-1360`).
+	 *
+	 * LE REFUS EST UN ÉTAT DE L'ÉCRAN, pas une panne : la planche de `V-33`
+	 * l'appelle « Valeurs refusées » et c'est l'une de ses quatre positions
+	 * (`docs/routes.md` §3.6). Il sort donc en `fail` avec SES messages, rattachés
+	 * à leur champ, comme `marquer()` les rattache au bloc du champ concerné.
+	 */
+	enregistrer: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const resultat = await enregistrerLaConfiguration(
+			basePartagee(),
+			valeursDeConfigurationSaisies((nom) => champs.get(nom)),
+			new Date()
+		);
+		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	}
 };

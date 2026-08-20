@@ -26,10 +26,11 @@
  * `vecteur: null` demande l'état au repos — formulaire fermé, aucun refus de
  * suppression ouvert.
  */
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
-import type { PageServerLoad } from './$types';
+import { supprimerUnTypeDeFiche } from '$lib/donnees/administration';
+import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -38,4 +39,36 @@ export const load: PageServerLoad = async ({ locals }) => {
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
 	return { vecteur: null, notes: acces.ressource.notes };
+};
+
+/** La garde des onze adresses, appliquée à l'action — voir `/console/univers`. */
+function consoleOuverte(locals: App.Locals): void {
+	if (!accesALaConsole(locals.identite)) error(404, MESSAGE_INTROUVABLE);
+}
+
+export const actions: Actions = {
+	/**
+	 * SUPPRIMER UN TYPE DE FICHE — `RG-M14-06`.
+	 *
+	 * `type-de-fiche` porte l'IDENTIFIANT LISIBLE du type, celui que
+	 * `identifiantLisible(nom)` pose à la semence (`src/lib/base/semence.ts`) et
+	 * que la colonne `types_de_fiche.identifiant` rend unique. Le gel désigne le
+	 * type par son nom dans une fermeture et n'expose aucun nom de champ ; la clé
+	 * retenue est celle par laquelle le schéma le désigne, jamais son libellé —
+	 * un libellé se renomme, un identifiant lisible est stable.
+	 *
+	 * LE REFUS PORTE LE NOMBRE ET LA SORTIE, les deux que la règle exige en plus
+	 * du refus lui-même.
+	 */
+	supprimer: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const resultat = await supprimerUnTypeDeFiche(
+			basePartagee(),
+			String(champs.get('type-de-fiche') ?? '')
+		);
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	}
 };

@@ -48,6 +48,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import type { Base } from '../base/acces';
 import {
 	champsDeTypeDeFiche,
+	CLES_DE_PARAMETRE,
 	comptes,
 	domaines,
 	dossiers,
@@ -651,7 +652,16 @@ export async function lireTemplates(base: Base): Promise<readonly Template[]> {
 
 /* ═══════════════════════════════════════════════════ Les comptes ════════ */
 
-const ROLE_DEPUIS_ENUM: Record<string, string> = {
+/**
+ * L'ÉNUMÉRÉ DE LA BASE VERS LE LIBELLÉ AFFICHÉ — les quatre rôles de CDC §2.3.
+ *
+ * EXPORTÉE DEPUIS `T-077`, et pour une raison de règle : la console doit lire le
+ * chemin INVERSE — le sélecteur de `V-32` rend un libellé, la colonne attend
+ * l'énuméré — et `RG-M14-07` se joue sur cette correspondance. Deux tables de
+ * libellés auraient fini par diverger ; `roleDepuisLeLibelle()`
+ * (`./administration.ts`) retourne celle-ci plutôt que d'en écrire une seconde.
+ */
+export const ROLE_DEPUIS_ENUM: Record<string, string> = {
 	administrateur: 'Administrateur',
 	referent: 'Référent',
 	contributeur: 'Contributeur',
@@ -760,14 +770,20 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 		return valeur;
 	};
 
+	/* LES SEPT CLÉS VIENNENT DU SCHÉMA, ET DE NULLE PART AILLEURS. Elles étaient
+	   ici en littéraux, ce qui suffisait tant que rien n'écrivait dans
+	   `parametres` ; `T-077` y écrit, et `RG-M14-09` — « toute modification de
+	   seuil provoque un recalcul immédiat » — serait fausse à la lettre si
+	   l'écriture posait une clé que cette lecture n'interroge pas. Une seule
+	   table de clés rend ce cas INÉCRIVABLE. */
 	return {
-		seuilFrais: nombre('seuil_frais'),
-		seuilVieillissant: nombre('seuil_vieillissant'),
-		versionsMax: nombre('versions_max'),
-		portailAssistance: chaine('portail_assistance'),
-		motFiche: chaine('mot_fiche'),
-		tailleMaxPieceJointe: nombre('taille_max_piece_jointe'),
-		dureeSession: nombre('duree_session')
+		seuilFrais: nombre(CLES_DE_PARAMETRE.seuilFrais),
+		seuilVieillissant: nombre(CLES_DE_PARAMETRE.seuilVieillissant),
+		versionsMax: nombre(CLES_DE_PARAMETRE.versionsMax),
+		portailAssistance: chaine(CLES_DE_PARAMETRE.portailAssistance),
+		motFiche: chaine(CLES_DE_PARAMETRE.motFiche),
+		tailleMaxPieceJointe: nombre(CLES_DE_PARAMETRE.tailleMaxPieceJointe),
+		dureeSession: nombre(CLES_DE_PARAMETRE.dureeSession)
 	};
 }
 

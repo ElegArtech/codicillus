@@ -21,10 +21,12 @@
  * « Formulaire » et les deux de l'axe « Suppression » sont des états
  * d'INTERACTION, qu'aucune donnée ne détermine.
  */
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
-import type { PageServerLoad } from './$types';
+import { supprimerUnDomaine } from '$lib/donnees/administration';
+import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import { moteurPartage } from '$lib/recherche/acces';
+import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -33,4 +35,41 @@ export const load: PageServerLoad = async ({ locals }) => {
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
 	return { vecteur: null, notes: acces.ressource.notes };
+};
+
+/** La garde des onze adresses, appliquée à l'action — voir `/console/univers`. */
+function consoleOuverte(locals: App.Locals): void {
+	if (!accesALaConsole(locals.identite)) error(404, MESSAGE_INTROUVABLE);
+}
+
+export const actions: Actions = {
+	/**
+	 * SUPPRIMER UN DOMAINE ET TOUT SON CONTENU — `RG-M14-02`, `03`, `04`, `05`.
+	 *
+	 * `sup-saisie` EST LE NOM DU GEL, pas un nom choisi : `V-28:1421` porte
+	 * `input#sup-saisie`, le champ où le nom du domaine se retape. Rien ne sera à
+	 * renommer le jour où le dialogue soumettra.
+	 *
+	 * Les deux segments désignent le domaine par sa forme CANONIQUE — univers
+	 * puis domaine (`docs/routes.md` §2.2) —, parce que `RG-STR-02` rend son
+	 * identifiant unique au sein de son univers seulement : un domaine ne se
+	 * désigne pas par son seul nom, et deux univers peuvent en porter un
+	 * homonyme.
+	 *
+	 * LE REFUS PORTE LE DÉCOMPTE. C'est ce qui distingue `RG-M14-02` d'une simple
+	 * confirmation : l'écran doit dire ce qui sera détruit AVANT que le nom ne
+	 * soit retapé, et le décompte accompagne donc les deux issues.
+	 */
+	supprimer: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const resultat = await supprimerUnDomaine(basePartagee(), moteurPartage(), {
+			univers: String(champs.get('univers') ?? ''),
+			domaine: String(champs.get('domaine') ?? ''),
+			saisie: champs.get('sup-saisie')
+		});
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	}
 };
