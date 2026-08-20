@@ -103,6 +103,7 @@ import {
 	peutEcrireDansLUn,
 	type AccesAuRangement
 } from '$lib/donnees/rangement';
+import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
@@ -200,8 +201,12 @@ export const actions: Actions = {
 			profondeurDeDepart: racine.profondeur
 		});
 
+		/* L'INDEX EST ENTRETENU PAR LE LOT — `RG-M12-08`. Le client est un
+		   paramètre : un import ne peut pas s'exécuter sans dire par quel moteur
+		   ses notes deviendront trouvables. */
 		const rapport = await executerLImport(
 			base,
+			moteurPartage(),
 			{ domaineId: racine.domaineId, dossierId: racine.id, auteurId: compteId },
 			plan,
 			{ simulation, profondeurDeDepart: racine.profondeur }
