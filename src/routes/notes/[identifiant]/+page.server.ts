@@ -64,6 +64,7 @@
  * pas » de « vous n'y avez pas droit ».
  */
 import { error, fail, redirect } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { basePartagee, type Base } from '$lib/base/acces';
 import {
@@ -98,6 +99,15 @@ import {
 	type VoisineAffichee
 } from '$lib/lecture/panneaux';
 import { enregistrerLaNote } from '$lib/donnees/edition';
+import {
+	deposerUnePieceJointe,
+	NomDePieceDejaPris,
+	NomDePieceVide,
+	PieceTropVolumineuse,
+	retirerUnePieceJointeParNom
+} from '$lib/donnees/pieces';
+import { racineDesFichiers } from '$lib/fichiers/entrepot';
+import { adresseDePieceJointe } from '$lib/rangement/adresses';
 import { supprimerUneNote } from '$lib/donnees/suppression';
 import {
 	commentaireDeRevision,
@@ -109,6 +119,13 @@ import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import type { Note } from '../../../../seeds/corpus';
+
+/**
+ * Le type de média que la norme HTTP donne à des octets sans type déclaré. Il
+ * n'est employé que lorsque le dépôt lui-même n'en annonce aucun — le produit
+ * ne devine JAMAIS un type à partir d'un nom de fichier.
+ */
+const TYPE_DES_OCTETS_NON_TYPES = 'application/octet-stream';
 
 /* ════════════════════════════════════════════════════════════════════════════
    CE QUE L'ÉCRAN MONTRE, ET QUE PERSONNE NE LISAIT
@@ -234,10 +251,33 @@ function grouperLesRelations(lues: readonly RelationLue[]): readonly GroupeDeRel
 	return [...groupes].map(([libelle, notesDuGroupe]) => ({ libelle, notes: notesDuGroupe }));
 }
 
+/**
+ * UNE PIÈCE JOINTE TELLE QUE LE CÂBLAGE EN A BESOIN — et non telle que l'écran
+ * l'affiche.
+ *
+ * `PieceAffichee` porte ce que le GEL rend : un nom AMPUTÉ de son suffixe, une
+ * extension en cartouche, une taille en clair (`$lib/lecture/panneaux.ts`,
+ * `V-14:1830-1834`). Aucun de ces quatre champs ne permet de reformer l'adresse
+ * de la pièce : `adresseDePieceJointe()` prend le nom de FICHIER, celui que
+ * `pieces_jointes.nom` porte, suffixe compris.
+ *
+ * Les deux formes coexistent donc, dans le MÊME ORDRE, et c'est cet ordre qui
+ * les apparie : la vue affiche `panneaux.pieces[i]`, le câblage adresse
+ * `piecesJointes[i]`. Rien n'est recalculé à l'écran — ni le nom, ni l'adresse.
+ */
+export interface PieceJointeCablee {
+	/** Le nom de FICHIER, tel que la base le porte. C'est la clé du retrait. */
+	readonly nom: string;
+	/** L'adresse de téléchargement, composée par `adresseDePieceJointe()`. */
+	readonly adresse: string;
+}
+
 /** Ce que le chargeur ajoute à la lecture : la note telle qu'elle s'affiche. */
 interface ComplementsDeLecture {
 	readonly affichee: LectureAffichee;
 	readonly panneaux: PanneauxDeLaNote;
+	/** Les mêmes pièces que `panneaux.pieces`, dans le même ordre — voir ci-dessus. */
+	readonly piecesJointes: readonly PieceJointeCablee[];
 }
 
 async function complementsDeLecture(
@@ -407,7 +447,14 @@ async function complementsDeLecture(
 				iso: formaterDateIso(a.le),
 				jour: formaterDateFr(a.le)
 			}))
-		}
+		},
+		/* LA MÊME LISTE, DANS LE MÊME ORDRE — `lignesDePiece` est parcourue deux
+		   fois de suite, jamais retriée entre les deux. L'appariement par indice
+		   n'est donc pas une convention d'écran : c'est le même tableau. */
+		piecesJointes: lignesDePiece.map((pj) => ({
+			nom: pj.nom,
+			adresse: adresseDePieceJointe(lecture.note.id, pj.nom)
+		}))
 	};
 }
 
@@ -568,7 +615,14 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		 */
 		affichee: complements.affichee,
 		/** Les sept panneaux latéraux, tous lus en base, aucun transcrit. */
-		panneaux: complements.panneaux
+		panneaux: complements.panneaux,
+		/**
+		 * LES PIÈCES, SOUS LA FORME QUE LE CÂBLAGE ADRESSE — nom de fichier et
+		 * adresse de téléchargement. Le gel de V-14 pose les pièces en `a.pj`
+		 * avec un `href="#"` (`V-14:1830`, `:1835`) : sans cette liste, aucun de
+		 * ces liens ne mène nulle part, et le panneau reste une vitrine.
+		 */
+		piecesJointes: complements.piecesJointes
 	};
 };
 
@@ -783,5 +837,90 @@ export const actions: Actions = {
 		});
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
 		redirect(303, fait.ressource.adresseDeRetour);
+	},
+
+	/**
+	 * DÉPOSER UNE PIÈCE JOINTE — `M04.7` (`CDC:611`), le panneau « liste des
+	 * fichiers, taille, type, téléchargement » de la note qu'on lit.
+	 *
+	 * LE MÉCANISME EXISTAIT DEPUIS `T-026` ET N'AVAIT AUCUNE PORTE.
+	 * `deposerUnePieceJointe()` écrivait les octets puis la ligne, l'entrepôt
+	 * était monté, la route de téléchargement servait — et `pieces_jointes`
+	 * portait ZÉRO ligne, faute d'une seule adresse qui accepte un fichier.
+	 * C'est cette porte, et elle n'est pas une route de plus : `docs/routes.md`
+	 * est un inventaire FERMÉ, et la note qui reçoit la pièce est précisément
+	 * celle qu'on lit. L'action est donc ici, à côté de `supprimer`.
+	 *
+	 * TROIS REFUS SONT RENDUS `400`, ET UN SEUL `404`. Les trois premiers —
+	 * plafond dépassé, homonyme, nom vide — sont ADRESSÉS à quelqu'un dont le
+	 * droit d'écrire a DÉJÀ été résolu : `deposerUnePieceJointe()` tranche le
+	 * droit AVANT de lire le plafond, et ces trois-là ne peuvent donc être
+	 * atteints que par un contributeur habilité. Les nommer ne révèle rien.
+	 * Le `404`, lui, est le refus indiscernable d'`ADR-007` : note inexistante
+	 * et note non accessible en écriture sortent par le même chemin.
+	 *
+	 * AUCUNE TAILLE N'EST CONTRÔLÉE ICI. Le plafond est celui de la console
+	 * (`M14.7`), lu en base à chaque dépôt par le module ; le redire ici en
+	 * ferait une seconde définition, et `P-01` dit ce que valent deux
+	 * définitions concurrentes d'un même seuil.
+	 */
+	deposerPiece: async ({ params, locals, request }) => {
+		const depose = (await request.formData()).get('fichier');
+		if (!(depose instanceof File) || depose.size === 0) {
+			return fail(400, { motif: 'aucun fichier déposé' });
+		}
+		const octets = new Uint8Array(await depose.arrayBuffer());
+		try {
+			const fait = await deposerUnePieceJointe(basePartagee(), racineDesFichiers(env), {
+				note: params.identifiant,
+				nom: depose.name,
+				/* LE TYPE VIENT DU DÉPÔT, ET SON ABSENCE A UNE VALEUR NORMALISÉE. Un
+				   navigateur qui ne reconnaît pas un fichier rend une chaîne vide ;
+				   `application/octet-stream` est le type que la norme HTTP donne à
+				   des octets non typés, pas une devinette de ce module. Rien n'est
+				   inféré du suffixe : `entrepot.ts` refuse par principe qu'une chaîne
+				   d'utilisateur décide de quoi que ce soit. */
+				typeMedia: depose.type === '' ? TYPE_DES_OCTETS_NON_TYPES : depose.type,
+				octets,
+				identite: locals.identite
+			});
+			if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
+			return { pieceDeposee: fait.ressource.nom };
+		} catch (cause) {
+			if (
+				cause instanceof PieceTropVolumineuse ||
+				cause instanceof NomDePieceDejaPris ||
+				cause instanceof NomDePieceVide
+			) {
+				return fail(400, { motif: cause.message });
+			}
+			throw cause;
+		}
+	},
+
+	/**
+	 * RETIRER UNE PIÈCE JOINTE — le pendant du dépôt, désigné par le NOM du
+	 * fichier, qui est la seule clé qu'une adresse porte (`docs/routes.md:146`).
+	 *
+	 * LE REFUS EST UNIQUE ET IL EST `404`, pour les trois causes que
+	 * `retirerUnePieceJointeParNom()` confond : note inexistante, note sur
+	 * laquelle l'appelant n'écrit pas, pièce inexistante. Aucune branche ne les
+	 * distingue ici, et il n'y en a pas ailleurs.
+	 */
+	retirerPiece: async ({ params, locals, request }) => {
+		/* LE CHAMP NE S'APPELLE PAS `fichier` : le champ de DÉPÔT porte déjà ce
+		   nom, dans le même formulaire, et deux champs homonymes rendent le
+		   premier dans l'ordre du document. Voir `+page.svelte`. */
+		const soumis = (await request.formData()).get('piece');
+		if (typeof soumis !== 'string' || soumis.trim() === '') {
+			return fail(400, { motif: 'aucune pièce jointe désignée' });
+		}
+		const fait = await retirerUnePieceJointeParNom(basePartagee(), racineDesFichiers(env), {
+			note: params.identifiant,
+			nom: soumis,
+			identite: locals.identite
+		});
+		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
+		return { pieceRetiree: fait.ressource.nom };
 	}
 };
