@@ -126,6 +126,7 @@ Maquettes  >  Cahier des charges  >  Brief des vues  >  Pile technique  >  Plan 
 | `pnpm verif:menus` | Aucune entrée de navigation inerte ; un module désactivé disparaît de la navigation et des tableaux de bord (P-03, P-04) |
 | `pnpm verif:vocabulaire` | Aucun synonyme des douze termes contractuels dans l'interface (P-07) |
 | `pnpm exploitation:restauration` | Restauration complète depuis une sauvegarde, réindexation incluse, corpus identique après (RG-NF-09) |
+| `pnpm verif:tracabilite` | Aucune référence — dossier d'écart, arbitrage, écart nommé, piège — ne renvoie à une pièce qui n'existe pas, sur `verif/`, `src/`, `base/`, `seeds/`, `docs/` et ce fichier. **Rouge aujourd'hui, et c'est la preuve qu'il mord** (`ECART-043`) |
 | `pnpm verif:gel` | Les empreintes de `mockups/GEL.md` correspondent aux fichiers : aucun regel non arbitré |
 | `pnpm verify:lot T-xxx` | Le sous-ensemble de batteries cité par le contrat de tâche — budget < 3 min |
 | `pnpm verify` | Les dix-huit batteries enchaînées — budget < 20 min |

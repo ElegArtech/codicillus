@@ -31,7 +31,15 @@
  *   4. LA TABLE REFUSE PLUTÔT QUE DE DEVINER. Une cellule qu'aucune règle ne
  *      classe, une famille qu'aucune route ne satisfait, un niveau qu'aucune
  *      route n'exige : `code 2`, jamais vert.
- *   5. LE PLANCHER DE BRUIT SE MESURE SUR LE TÉMOIN. Le prendre sur les séries
+ *   5. LA VARIANTE D'ADRESSE DÉCIDE AVEC §5.5, ET NON APRÈS ELLE. §5.5 est une
+ *      matrice d'ACCÈS : ses colonnes disent ce qu'une adresse QUI RÉSOUT rend
+ *      à un persona. Lue seule, elle faisait attendre « servi » d'une adresse
+ *      dont aucun segment n'est dans le corpus — 34 cases et 34 couples qu'
+ *      AUCUNE implémentation correcte ne pouvait satisfaire, relevés par trois
+ *      lots. Les cas ci-dessous éprouvent la règle DANS LES DEUX SENS, et ils
+ *      sont synthétiques : `P-26`, un contrôle dont le seul cas d'épreuve est
+ *      le défaut qu'il trouve devient inerte en réussissant.
+ *   6. LE PLANCHER DE BRUIT SE MESURE SUR LE TÉMOIN. Le prendre sur les séries
  *      mesurées le fait enfler avec l'effet qu'il devrait détecter : mesuré,
  *      11,125 ms de plancher pour 11,157 ms d'écart, un verdict à 32 µs.
  */
@@ -45,6 +53,8 @@ import {
 	ecartInterquartile,
 	famillesDuRefus,
 	formeDeCellule,
+	formeSelonLaVariante,
+	issueDuCouple,
 	masquerLAdresse,
 	mediane,
 	niveauDeCellule,
@@ -353,5 +363,112 @@ describe('la mesure temporelle, et ses trois issues', () => {
 		const e = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 		expect(quantile(e, 0.5)).toBe(5);
 		expect(ecartInterquartile(e)).toBe(4);
+	});
+});
+
+describe('la variante d’adresse — §5.5 dit l’accès, pas la résolution', () => {
+	/* `P-26` : un contrôle dont le seul cas d'épreuve est le défaut qu'il trouve
+	   devient inerte en réussissant. Ces cas sont donc SYNTHÉTIQUES — ils ne
+	   dépendent ni du corpus, ni des routes montées, ni du verdict du jour. */
+
+	it('CORRIGE — une adresse inexistante n’est pas SERVIE à un persona habilité', () => {
+		const r = formeSelonLaVariante('servi', 'inexistante', false);
+		expect(r.forme).toBe('refus-404');
+		expect(r.motif).not.toBeNull();
+	});
+
+	it('NE CORRIGE PAS — les quatre autres variantes gardent ce que §5.5 leur donne', () => {
+		for (const variante of ['fixe', 'existante', 'interne', 'construite']) {
+			const r = formeSelonLaVariante('servi', variante, false);
+			expect(r.forme, variante).toBe('servi');
+			expect(r.motif, variante).toBeNull();
+		}
+	});
+
+	it('NE CORRIGE PAS une redirection — ARB-057, le régime décidé sur le préfixe', () => {
+		/* `/console/imports/{lot}` et `/console/exports/{u}/{d}` en anonyme : la
+		   réponse ne dépend pas du corpus, le paramètre n'est jamais lu. Les deux
+		   seuls couples indiscernables PROUVÉS du dépôt tiennent à ce cas. */
+		const r = formeSelonLaVariante('redirection', 'inexistante', false);
+		expect(r.forme).toBe('redirection');
+		expect(r.motif).toBeNull();
+	});
+
+	it('NE CORRIGE PAS une forme déjà refusante', () => {
+		expect(formeSelonLaVariante('refus-404', 'inexistante', false).forme).toBe('refus-404');
+	});
+
+	it('NE CORRIGE PAS une route hors matrice — la source ne dit rien de sa variante', () => {
+		/* Mesuré : `/mot-de-passe-oublie/{jeton}` sert 200 sur un jeton inconnu, pour
+		   les sept personas. Corriger fabriquerait sept faux défauts là où il y a un
+		   vide de spécification — à déclarer, jamais à combler. */
+		const r = formeSelonLaVariante('servi', 'inexistante', true);
+		expect(r.forme).toBe('servi');
+		expect(r.motif).toBeNull();
+	});
+
+	it('REFUSE une variante qu’aucune règle ne gouverne — P-5', () => {
+		expect(() => formeSelonLaVariante('servi', 'approximative', false)).toThrow(/inconnue/);
+	});
+
+	it('la source elle-même refuse dans les QUATRE colonnes — docs/routes.md:365', () => {
+		/* « `/guides/{id}` — note interne ou brouillon » rend 404 V-04 dans les
+		   quatre colonnes, celle de l'administrateur comprise. C'est le fondement
+		   textuel de la règle : le régime indiscernable ne connaît pas les personas,
+		   il connaît la résolution. Si cette ligne changeait, la règle perdrait sa
+		   source et ce test le dirait. */
+		const guides = familles.filter((f) => f.prefixes.includes('/guides'));
+		expect(guides).toHaveLength(2);
+		const refusante = guides.find((f) => f.formes['administrateur'] === 'refus-404');
+		expect(refusante, 'routes.md:365 — la ligne « note interne ou brouillon »').toBeDefined();
+		for (const colonne of ['anonyme', 'sansDroit', 'avecDroit', 'administrateur']) {
+			expect(refusante?.formes[colonne], colonne).toBe('refus-404');
+		}
+	});
+});
+
+describe('le couple de RG-ACC-04 exige un refus du côté existant', () => {
+	const couple = (
+		attenduExistante: string,
+		observeExistante: string,
+		observeInexistante: string,
+		memeCle = true,
+		portee = true
+	) => issueDuCouple({ attenduExistante, observeExistante, observeInexistante, memeCle, portee });
+
+	it('SANS OBJET — la source sert le côté existant, et le produit le sert', () => {
+		/* `CDC:113` nomme son côté gauche : « un accès REFUSÉ sur un contenu
+		   existant ». Il n'y en a pas ici : il n'y a rien à dissimuler. */
+		expect(couple('servi', 'servi', 'refus-404')).toBe('sans-objet');
+	});
+
+	it('N’ABSORBE PAS une fuite — la clause se décide sur l’ATTENDU, pas sur l’observé', () => {
+		/* Le côté existant est SERVI là où §5.5 le REFUSE : c'est la fuite même que
+		   `RG-ACC-04` interdit. Décidée sur l'observé, la clause l'aurait effacée.
+		   La sonde `couple-servi-sans-droit` éprouve ce cas sur le produit. */
+		expect(couple('refus-404', 'servi', 'refus-404')).toBe('asymetrique');
+	});
+
+	it('N’ABSORBE PAS une vacuité — un côté existant refusé reste vacueux', () => {
+		/* Attendu servi, mais la route n'est pas montée : le 404 des deux côtés est
+		   une ABSENCE. `docs/orchestration.md` §4 — une vacuité se referme route par
+		   route, elle ne se déplace pas et ne se seuille pas. */
+		expect(couple('servi', 'refus-404', 'refus-404', true, false)).toBe('vacueux');
+	});
+
+	it('FUYANT passe avant SANS OBJET — deux côtés servis restent un défaut', () => {
+		expect(couple('servi', 'servi', 'servi')).toBe('fuyant');
+	});
+
+	it('les issues d’origine sont inchangées, une par une', () => {
+		expect(couple('refus-404', 'refus-404', 'refus-404')).toBe('indiscernable');
+		expect(couple('refus-404', 'refus-404', 'refus-404', false)).toBe('discernable');
+		expect(couple('refus-404', 'refus-404', 'refus-404', true, false)).toBe('vacueux');
+		expect(couple('refus-404', 'refus-404', 'servi')).toBe('asymetrique');
+		expect(couple('refus-404', 'servi', 'servi')).toBe('fuyant');
+	});
+
+	it('une redirection des deux côtés reste indiscernable — ARB-057', () => {
+		expect(couple('redirection', 'redirection', 'redirection')).toBe('indiscernable');
 	});
 });

@@ -61,10 +61,19 @@
  * afficherait « quatre états partout » là où la maquette n'en montre qu'un.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * ARB-045 — L'OBSERVABLE DE « SANS DROIT » ÉTAIT FAUTIF CÔTÉ PORTAGE
+ * ARB-048 — L'OBSERVABLE DE « SANS DROIT » ÉTAIT FAUTIF CÔTÉ PORTAGE
  *
  * Une CORRECTION D'INSTRUMENT, autorisée nommément et bornée à ce seul point
- * (contrat T-072, `ARB-045`). Ce n'est pas un ajustement pour obtenir du vert.
+ * (contrat T-072, `ARB-048`). Ce n'est pas un ajustement pour obtenir du vert.
+ *
+ * CE BLOC A PORTÉ UN NUMÉRO QUI NE MENAIT NULLE PART — ici et dans les
+ * unitaires, huit citations en tout —, et la batterie l'IMPRIMAIT à chaque
+ * exécution comme l'autorisation de sa propre correction. Rectifié au lot
+ * T-048 sur cinq recoupements, non sur une impression : même objet, même lot,
+ * première exigence mot pour mot, ET SURTOUT LE MÊME COMMIT — celui qui a
+ * inscrit l'entrée au registre est celui qui a écrit ces lignes, le 19 août
+ * 2026. Le numéro qu'elles portaient n'a jamais eu d'entrée, à aucun point de
+ * l'historique. Rien de la règle n'a bougé : le compte de gel reste 173.
  *
  * CE QUI ÉTAIT ÉCRIT ICI. `sansDroitParZone` attestait l'état des DEUX CÔTÉS
  * en comparant les états où une classe `si-*` est PRÉSENTE à ceux où elle est
@@ -737,7 +746,7 @@ export function sansDroitParZone(releves) {
 
 /**
  * LES ÉTATS DÉCLARÉS OÙ LA ZONE MONTRE À L'ÉCRAN UN NŒUD CONDITIONNÉ PAR UN
- * DROIT — l'observable de « sans droit » côté PORTAGE (ARB-045, lot T-072).
+ * DROIT — l'observable de « sans droit » côté PORTAGE (ARB-048, lot T-072).
  *
  * ═════════════════════════════════════════════════════════════════════════
  * POURQUOI CELUI-CI, ET PAS CELUI DE `sansDroitParZone`
@@ -811,7 +820,7 @@ export function ecransConditionnesParZone(releves) {
  *   non-applicable        aucun observable — le cas nommé de « sans droit ».
  *
  * ═════════════════════════════════════════════════════════════════════════
- * « SANS DROIT » — L'OBSERVABLE CORRIGÉ (ARB-045, lot T-072)
+ * « SANS DROIT » — L'OBSERVABLE CORRIGÉ (ARB-048, lot T-072)
  *
  * L'APPLICABILITÉ EST DÉCIDÉE PAR LE GEL, ET PAR LUI SEUL. Rien au gel — le
  * cas « personne n'a jamais rien posé » — reste « non applicable » : la zone
@@ -1297,7 +1306,7 @@ async function executer(args) {
 		const aPort = agregerCote(portA);
 		const sdGel = sansDroitParZone(gelA);
 		const sdPort = sansDroitParZone(portA);
-		/* ARB-045 — les ÉCRANS qui offrent une action gouvernée, des deux côtés.
+		/* ARB-048 — les ÉCRANS qui offrent une action gouvernée, des deux côtés.
 		   C'est l'observable de « sans droit » côté portage : la présence au DOM
 		   ne peut pas l'être, P-09 exigeant l'absence. */
 		const ecrGel = ecransConditionnesParZone(gelA);
@@ -1644,7 +1653,7 @@ async function executer(args) {
 			'      encore un nœud conditionné par un droit. Le gel le MASQUE par une règle CSS\n' +
 			'      (socle.css:396–397) ; P-09 exige qu’il soit ABSENT. Ce verdict-là appartient\n' +
 			'      à la batterie 7 (`pnpm test:droits`), qui lit le DOM et non l’écran. CELLE-CI\n' +
-			'      ne lit que l’ÉCRAN, et depuis ARB-045 elle l’assume : masqué et absent lui\n' +
+			'      ne lit que l’ÉCRAN, et depuis ARB-048 elle l’assume : masqué et absent lui\n' +
 			'      sont indiscernables, et c’est pourquoi elle ne peut pas trancher ce point.\n' +
 			`    · ${indiscernables.length} groupe(s) d’états que cette batterie NE SAIT PAS DISTINGUER —\n` +
 			'      vecteurs de planche différents, même instantané ARIA et mêmes classes rendues :\n' +

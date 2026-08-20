@@ -170,7 +170,7 @@ describe('verdictDeZone — les trois natures de manque ne se confondent pas', (
 		expect(v['sans-droit']).toBe('non-applicable');
 	});
 
-	/* ARB-045, lot T-072 — LA RÈGLE QUI A CHANGÉ, ET SES DEUX BORNES.
+	/* ARB-048, lot T-072 — LA RÈGLE QUI A CHANGÉ, ET SES DEUX BORNES.
 	   L'assertion qui vivait ici exigeait « manque-portage » d'un portage qui
 	   n'émet pas le nœud conditionné. C'était exiger le contraire de P-09 :
 	   aucune application conforme ne pouvait la satisfaire. Elle est remplacée
@@ -225,7 +225,7 @@ describe('verdictDeZone — les trois natures de manque ne se confondent pas', (
 		expect(v['sans-droit']).toBe('manque-portage');
 	});
 
-	/* PREMIÈRE EXIGENCE D'ARB-045 — le crible ne doit PAS devenir aveugle.
+	/* PREMIÈRE EXIGENCE D'ARB-048 — le crible ne doit PAS devenir aveugle.
 	   « Le portage omet ce que le gel masque » est conforme ; « personne n'a
 	   jamais rien posé » ne l'est pas, et une omission ne le rend pas conforme
 	   rétroactivement. Un cas de chaque, côte à côte. */

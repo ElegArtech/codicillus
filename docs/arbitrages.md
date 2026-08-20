@@ -1416,6 +1416,36 @@ fermable, pas une dette de gel.
 
 ---
 
+## ARB-046 — **RÉVOQUÉ** — une route globale `/signets` rendant V-22
+**19 août 2026** — arbitrage délégué, **révoqué le jour même par `ARB-047`**.
+
+**Cette entrée est une réinscription, faite au lot `T-048`, et son contenu se limite strictement à
+ce que deux pièces du dépôt en citent.** L'arbitrage avait été révoqué puis **retiré du registre** ;
+`git log -S` établit qu'un titre `## ARB-046` n'y a **jamais** figuré. Or `ARB-047` s'y adosse — son
+titre même le nomme —, et un lecteur ne pouvait plus lire la décision que celui-ci renverse.
+
+**Un arbitrage révoqué se marque révoqué, il ne s'efface pas.** C'est le motif exact pour lequel
+`cadrage/` n'est jamais corrigé et pour lequel l'errata existe : *l'immutabilité et la diffabilité*
+(`docs/errata-cadrage.md`). Effacer prive `ARB-047` de la décision qu'il renverse, et prive le
+lecteur du raisonnement jugé faux — le plus instructif des deux.
+
+### Ce qui survit de la décision, mot pour mot, et rien de plus
+
+| Source lue | Ce qu'on y lit |
+|---|---|
+| `docs/arbitrages.md`, entrée `ARB-047` ci-dessous | *« le gel ne montre qu'une vue de signets — V-22 — et rien n'y distingue les deux portées : la vue est la même, le chemin diffère »* ; et la borne : *« si un état déclaré de V-22 montrait un contexte de domaine qui contredit une portée globale, arrête-toi et déclare-le »* |
+| `src/lib/coquille/Rail.svelte:90-95` au commit `c066557` — texte retiré depuis par `dd75830` | *« `ARB-046` proposait une route GLOBALE `/signets` rendant V-22, au motif que « le gel ne montre qu'une vue de signets et rien n'y distingue les deux portées ». L'arbitrage posait lui-même sa borne : « si un état déclaré de V-22 montrait un contexte de domaine qui contredit une portée globale, arrête-toi ». »* |
+
+**Rien d'autre n'est reconstitué.** Le raisonnement complet de l'arbitrage n'a survécu dans aucune
+pièce : l'écrire depuis un résumé de deuxième main produirait une entrée d'apparence opposable et de
+contenu deviné, et `P-21` vaut aussi pour qui documente.
+
+**Ce qui l'a révoqué.** `ARB-047`, sur la borne posée ici même : quatre lignes du gel de V-22
+montrent que la vue nomme un domaine à chacun de ses six états déclarés. La borne était franchie.
+**Cette entrée n'a donc aucune force ; elle n'existe que pour que `ARB-047` reste lisible.**
+
+---
+
 ## ARB-047 — `ARB-046` est révoqué : Signets ne peut pas être une route globale
 **19 août 2026** — arbitrage délégué. Révoque `ARB-046`, sur la borne que j'y avais posée moi-même.
 

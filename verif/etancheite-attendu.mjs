@@ -581,6 +581,146 @@ export function attenduDe(route, persona, rapprochement, familles, niveaux) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   6 bis. LA VARIANTE D'ADRESSE — CE QUE §5.5 NE DIT PAS DE SES COLONNES
+
+   §5.5 est une matrice d'ACCÈS, non de RÉSOLUTION : ses colonnes disent ce
+   qu'un persona obtient d'une adresse QUI RÉSOUT. Lue sans la variante, la
+   colonne « Connecté avec droit » de `/univers/…` fait attendre « V-10… » —
+   donc SERVI — d'une adresse dont AUCUN segment paramétré n'est dans le
+   corpus. Aucune implémentation correcte ne peut le satisfaire, et trois lots
+   l'ont relevé indépendamment : `T-032` (16 cases + 16 couples), `T-034`
+   (10 + 10), `T-039` (8).
+
+   CE QUE LA SOURCE DIT, ET QUI TRANCHE.
+
+   §5.5 principe 4, `docs/routes.md:399`, amendé par `ARB-052` : « cette
+   matrice relève du régime indiscernable POUR LES ADRESSES DE RESSOURCE :
+   celles qui portent un identifiant de corpus, et dont l'existence est
+   elle-même l'information confidentielle ».
+
+   Et la source le MONTRE déjà sur une de ses lignes, `docs/routes.md:365` :
+   « `/guides/{id}` — note interne ou brouillon » rend **404 V-04 dans les
+   QUATRE colonnes**, celle de l'administrateur comprise. Le régime
+   indiscernable ne connaît pas les personas : il connaît la résolution. C'est
+   d'ailleurs le traitement par variante que `verif/etancheite.mjs` applique
+   déjà à cette seule route, et que cette fonction généralise.
+
+   LA BORNE QUI EMPÊCHE LA RÈGLE DE TROP COUVRIR est `ARB-057` §1 : « une
+   adresse qui porte un identifiant mais dont le régime est décidé sur le
+   préfixe, avant toute résolution, redirige — et cela SE MESURE ». Une forme
+   lue « redirection » n'est donc jamais touchée : c'est ce qui laisse
+   `/console/imports/{lot}` et `/console/exports/{univers}/{domaine}` rediriger
+   sur leurs DEUX variantes en anonyme, les deux seuls couples indiscernables
+   PROUVÉS du dépôt. Le critère opérationnel d'`ARB-052` est respecté à la
+   lettre : « une adresse dont la réponse dépend du corpus est indiscernable ;
+   une adresse dont la réponse ne dépend que de la présence d'une session
+   redirige ».
+
+   TROIS EXCLUSIONS, ET CHACUNE A SA RAISON :
+
+     · LES ROUTES HORS MATRICE. Leur forme vient d'une déclaration citée
+       (`HORS_MATRICE` ci-dessus), et la source ne dit RIEN de leur variante.
+       Mesuré : `/mot-de-passe-oublie/{jeton}` sert 200 sur un jeton inconnu,
+       pour les sept personas. Lui attendre 404 fabriquerait sept faux défauts
+       là où il y a un VIDE DE SPÉCIFICATION — à déclarer, jamais à combler.
+     · LES FORMES DÉJÀ REFUSANTES. La règle n'aurait rien à y changer.
+     · TOUTE VARIANTE AUTRE QU'`inexistante`. `existante` et `interne`
+       résolvent ; `fixe` ne porte aucun paramètre ; `construite` tient son
+       attendu d'`ARB-001`.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Les variantes d'adresse que la batterie construit. Une variante inconnue
+ * fait sortir `formeSelonLaVariante` en erreur : `P-5`, une règle qu'aucun cas
+ * n'exerce est une règle dont on ignore si elle marche, et une variante qu'on
+ * n'a pas prévue est une règle qui ne s'applique pas sans le dire.
+ */
+export const VARIANTES = ['fixe', 'existante', 'inexistante', 'interne', 'construite'];
+
+/**
+ * La forme attendue, une fois la VARIANTE d'adresse prise en compte.
+ *
+ * @param {string} formeLue la forme que §5.5 donne au persona
+ * @param {string} variante l'une de `VARIANTES`
+ * @param {boolean} horsMatrice la route tient sa forme d'une déclaration citée
+ * @returns {{forme: string, motif: string|null}} `motif` non nul si et
+ *   seulement si la variante a décidé — le rapport le cite alors case par case
+ */
+export function formeSelonLaVariante(formeLue, variante, horsMatrice) {
+	if (!VARIANTES.includes(variante)) {
+		throw new Error(`variante « ${variante} » inconnue : aucune règle ne la gouverne`);
+	}
+	if (variante !== 'inexistante' || horsMatrice || formeLue !== 'servi') {
+		return { forme: formeLue, motif: null };
+	}
+	return {
+		forme: 'refus-404',
+		motif:
+			'variante inexistante : §5.5 dit ce qu’une adresse QUI RÉSOUT rend à ce persona, et ' +
+			'aucun segment de celle-ci n’est dans le corpus. Régime indiscernable — §5.5 principe 4 ' +
+			'(docs/routes.md:399, ARB-052), et docs/routes.md:365 où une ressource non résolue rend ' +
+			'404 dans les quatre colonnes, celle de l’administrateur comprise'
+	};
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   6 ter. LE COUPLE DE `RG-ACC-04` EXIGE UN REFUS DU CÔTÉ EXISTANT
+
+   `CDC:113`, recopiée : « Un accès REFUSÉ sur un contenu existant et un accès
+   sur un contenu inexistant produisent la même réponse visible, pour ne pas
+   révéler l'existence d'un contenu confidentiel. »
+
+   La règle NOMME son côté gauche : un accès refusé. Elle ne dit rien — et n'a
+   rien à dire — du cas où le persona a le droit et où le contenu lui est
+   LÉGITIMEMENT SERVI : il n'y a alors aucune existence à dissimuler, puisque
+   celle-ci lui est ouverte. Comparer un service légitime à une absence mesure
+   la résolution, pas l'étanchéité. C'est ce que faisaient les 34 couples
+   `asymetrique` du 20 août 2026.
+
+   DEUX GARDES, ET LE SECOND EST CELUI QUI COMPTE.
+
+     1. La clause est décidée sur l'ATTENDU, jamais sur l'observé. Décidée sur
+        l'observé, elle ABSORBERAIT une fuite : un côté existant servi là où la
+        source le refuse deviendrait « sans objet » au lieu de rougir. La sonde
+        `couple-servi-sans-droit` éprouve exactement cette inversion.
+     2. « Fuyant » passe AVANT « sans objet ». Deux côtés servis restent un
+        défaut quel que soit l'attendu : une adresse dont aucun segment n'est
+        dans le corpus ne peut pas être servie.
+
+   ET CE QUE LA CLAUSE NE CACHE PAS. Un côté existant dont l'attendu est
+   « servi » mais que le produit refuse — parce que la route n'est pas montée —
+   ne devient PAS sans objet : il reste `vacueux`, et sa case reste
+   `non-couverte`. Aucune vacuité ne disparaît par cette règle, ce que
+   `docs/orchestration.md` §4 interdirait.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * L'issue d'un couple « existe mais est refusé » contre « n'existe pas ».
+ *
+ * @param {object} c
+ * @param {string} c.attenduExistante la forme attendue du côté existant
+ * @param {string} c.observeExistante la forme observée du côté existant
+ * @param {string} c.observeInexistante la forme observée du côté inexistant
+ * @param {boolean} c.memeCle les deux clés de rapprochement sont-elles égales ?
+ * @param {boolean} c.portee la route est-elle montée, ou le régime décidé
+ *   avant toute résolution ?
+ * @returns {'fuyant'|'sans-objet'|'asymetrique'|'discernable'|'vacueux'|'indiscernable'}
+ */
+export function issueDuCouple({
+	attenduExistante,
+	observeExistante,
+	observeInexistante,
+	memeCle,
+	portee
+}) {
+	if (observeExistante === 'servi' && observeInexistante === 'servi') return 'fuyant';
+	if (attenduExistante === 'servi' && observeExistante === 'servi') return 'sans-objet';
+	if (observeExistante === 'servi' || observeInexistante === 'servi') return 'asymetrique';
+	if (!memeCle) return 'discernable';
+	if (!portee) return 'vacueux';
+	return 'indiscernable';
+}
+/* ═══════════════════════════════════════════════════════════════════════════
    7. LA CLÉ DE RAPPROCHEMENT DES DEUX CÔTÉS D'UN REFUS
 
    `RG-ACC-04` : refus et inexistence rendent la MÊME chose. La comparaison

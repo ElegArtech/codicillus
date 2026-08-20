@@ -93,7 +93,7 @@ cas (`P-5`). **Elle devient une fuite au premier brouillon public.**
 | Lot | Objet | Dépend de | Pourquoi maintenant |
 |---|---|---|---|
 | **à créer** | **Les gardes des trois routes montées** | T-011 ✅, T-012 ✅ | fait descendre 12 défauts et 7 couples fuyants de la batterie 6, et ferme une fuite réelle |
-| **à créer** | **Contrôle de traçabilité** (`ECART-043`) | — | six numéros cités sans pièce, dont `ARB-045` **imprimé par la batterie 9 à chaque exécution** |
+| **`T-048` ✅** | **Contrôle de traçabilité** (`ECART-043`) | — | livré : `pnpm verif:tracabilite`. Le numéro qu'imprimait la batterie 9 est rectifié ; `ARB-045` reste sans entrée, et n'est plus cité que par les registres qui le déclarent absent |
 | **T-016** | Coquille applicative | T-011 ✅, T-012 ✅ | dépliage mémorisé, dossiers interdits absents. **Premier lecteur de `event.locals.identite`**, qui n'en a aucun |
 | **T-027** | Indexation et projection des droits | T-011 ✅, T-014 ✅ | `ADR-006` — le filtrage au plus près de la donnée |
 | **T-017** | Notifications, états, dialogues, messages | T-016 | porte le décompte de V-05 et le bandeau d'échec, que `T-012` a laissés |
@@ -107,15 +107,36 @@ n'appartient qu'au lot qui touche `base/**` (`ECART-045` É-3).
 
 ## Ce qui reste ouvert, et que personne n'a repris
 
-### Six numéros cités sans pièce — `ECART-043`
+### Les numéros cités sans pièce — `ECART-043`, et depuis `T-048` le contrôle qui les compte
 
-`ECART-029`, `030`, `034`, `042`, `ARB-045`, `ARB-046`, cités depuis **dix** endroits. Deux sont dans
-`verif/references/`, en écriture humaine seule : `a11y-seuil.json:16-21` justifie **deux lignes
-volontairement absentes d'un seuil** en renvoyant à `ECART-042`, qui n'existe pas. Et **`ARB-045` est
-imprimé par la batterie 9 à chaque exécution** comme l'autorisation d'une correction d'instrument.
+**La réparation proposée par `ECART-043` est livrée** : `pnpm verif:tracabilite` refuse toute
+référence sans pièce porteuse, sur `verif/`, `src/`, `base/`, `seeds/`, `docs/` et `CLAUDE.md`. Il
+sort en **1** aujourd'hui, et c'est la preuve qu'il mord.
 
-Réparation proposée en **bloquant** : un contrôle qui refuse toute référence sans pièce porteuse. Dette
-de départ **six lignes**, dont deux à réparation connue.
+**Deux des six sont réparés**, et ils l'ont été sans rien inventer :
+
+- l'arbitrage qu'imprimait la batterie 9 était le même que celui du registre sous un autre rang —
+  **cinq recoupements**, dont le décisif : *le commit qui a inscrit l'entrée au registre est celui
+  qui a écrit les huit citations*, et le rang qu'elles portaient n'a jamais eu d'entrée à aucun point
+  de l'historique. Les huit citations sont renumérotées ;
+- l'arbitrage révoqué puis retiré du registre y est **réinscrit et marqué révoqué**, à partir des
+  deux seules pièces qui en citent le texte — l'entrée qui le révoque, et l'état d'un composant à un
+  commit nommé. Rien d'autre n'est reconstitué : le raisonnement complet n'a survécu nulle part.
+
+**Et le compte réel est plus lourd que l'audit d'origine ne l'annonçait** — il grepait la forme nue
+du préfixe, quand les titres de dossier emploient la forme accentuée, et il ne descendait pas à
+l'intérieur des dossiers présents. **Trois dossiers de plus sont cités sans exister, dont deux depuis
+`verif/references/`**, et plusieurs écarts nommés meurent à l'intérieur d'un dossier qui, lui,
+existe : le dossier ne les numérote pas, ou les numérote autrement.
+
+**Ce document ne les énumère pas, et c'est délibéré** : une liste tenue à la main se périme, et c'est
+précisément la faute que `ECART-043` documente. **La liste est celle que l'instrument imprime**, avec
+son fichier et sa ligne, à chaque exécution et dans `verif/rapports/tracabilite.json`.
+
+**Le seuil n'est pas posé** : l'instrument le PROPOSE par genre, jamais globalement, et refuse de se
+le donner (`docs/orchestration.md` §4). Il attend un arbitrage. Les dossiers manquants, eux, ne se
+reconstituent pas — `git log -S` ne rend que les commits qui les citent, et écrire un dossier depuis
+un résumé de deuxième main produirait une pièce d'apparence opposable et de contenu deviné.
 
 ### Trois défauts d'instrument, déclarés et non réparés
 
