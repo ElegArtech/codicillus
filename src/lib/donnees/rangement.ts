@@ -550,7 +550,10 @@ export function noteDepuisLigne(
 		dossier: voisines.chemins.get(ligne.dossierId) ?? '',
 		auteur: ligne.auteurNom,
 		fraicheur: niveauFraicheur(joursEcoules(reference, contexte.maintenant), contexte.seuils),
-		jours: joursEcoules(ligne.modifieLe, contexte.maintenant),
+		/* L'ÂGE DE LA VÉRIFICATION — même correction, même raison qu'à
+		   `./lecture.ts` : `fraicheur` et `jours` se calculent sur le MÊME
+		   instant de référence, sans quoi le libellé contredit la jauge. */
+		jours: joursEcoules(reference, contexte.maintenant),
 		revise: ligne.verifieLe === null ? null : dateCourteDInstant(ligne.verifieLe),
 		vues: ligne.consultations,
 		pj: voisines.piecesJointes.get(ligne.identifiant) ?? 0,

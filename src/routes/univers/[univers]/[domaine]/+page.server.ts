@@ -283,17 +283,30 @@ async function lireLesRevisions(
 /**
  * L'ANCIENNETÉ DE MODIFICATION, PAR NOTE — et elle ne se relit pas en base.
  *
- * `Note.jours` EST cette valeur : `noteDepuisLigne()` l'écrit comme le nombre de
- * jours entiers écoulés depuis `modifie_le`, par `joursEcoules()`. Rouvrir la
- * table pour la recalculer créerait une seconde définition d'une même grandeur,
- * et la faute est de la même famille que celle que `P-01` interdit sur la
- * fraîcheur. La projection est donc faite sur les notes DÉJÀ reçues.
+ * CE N'EST PAS `Note.jours`, ET C'ÉTAIT L'ERREUR. `Note.jours` porte l'âge de la
+ * VÉRIFICATION — `seeds/corpus.ts` le documente ainsi, et c'est lui qui rend le
+ * libellé de fraîcheur cohérent avec sa jauge. L'écran de domaine, lui, écrit
+ * « dernière modification il y a N jours » : deux grandeurs, deux dates, et les
+ * confondre faisait dire à la page qu'une note vérifiée hier avait été modifiée
+ * hier. Elle se lit donc à la source, sur `modifie_le`.
+ *
+ * Ce n'est pas une seconde définition de la fraîcheur — `P-01` ne s'applique
+ * pas : ce n'est pas de la fraîcheur, c'est une ancienneté de modification, que
+ * rien d'autre ne calcule.
  */
-function ancienneteDeModification(
-	notes: readonly Note[]
-): Partial<Record<IdentifiantNote, number>> {
+async function ancienneteDeModification(
+	base: Base,
+	notes: readonly Note[],
+	maintenant: Date
+): Promise<Partial<Record<IdentifiantNote, number>>> {
+	const identifiants = notes.map((n) => n.id as string);
+	if (identifiants.length === 0) return {};
+	const lignes = await base
+		.select({ identifiant: tableDesNotes.identifiant, modifieLe: tableDesNotes.modifieLe })
+		.from(tableDesNotes)
+		.where(inArray(tableDesNotes.identifiant, identifiants));
 	const table: Record<string, number> = {};
-	for (const note of notes) table[note.id] = note.jours;
+	for (const ligne of lignes) table[ligne.identifiant] = joursEcoules(ligne.modifieLe, maintenant);
 	return table as Partial<Record<IdentifiantNote, number>>;
 }
 
@@ -345,7 +358,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		detailDomaines: rangement.detailDomaines,
 		nombreDeDossiers,
 		mesures7j: await lireLesConsultations7j(base, acces, maintenant),
-		modifications: ancienneteDeModification(notes),
+		modifications: await ancienneteDeModification(base, notes, maintenant),
 		revisions: await lireLesRevisions(base, acces, maintenant)
 	};
 };

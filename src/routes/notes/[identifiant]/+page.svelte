@@ -42,7 +42,10 @@
 	import { onMount } from 'svelte';
 	import Vue from '../../../vues/V-14.svelte';
 	import '../../../vues/V-14.css';
-	import { cablerLaSuppression } from '$lib/cablage/formulaires';
+	import { page } from '$app/state';
+	import { cablerLaSuppression, cablerLHistorique } from '$lib/cablage/formulaires';
+	import Historique from '../../../vues/V-15.svelte';
+	import '../../../vues/V-15.css';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -58,6 +61,28 @@
 			'La suppression est définitive : il n’y a pas de corbeille.'
 		].join('\n')
 	);
+
+	/**
+	 * L'HISTORIQUE EST UN ÉTAT DE CETTE ADRESSE, PAS UNE AUTRE PAGE.
+	 *
+	 * `docs/routes.md` §3.4 : V-15 n'a **pas de chemin propre**, elle est
+	 * superposée à `/notes/{identifiant}`, et son unique état adressable est
+	 * `?version={n}` — `?version` nu désignant la version courante. La présence
+	 * du paramètre décide donc laquelle des deux vues est montée, et rien
+	 * d'autre : ni un état local, ni un booléen inventé.
+	 *
+	 * Sans ce montage, l'historique et la restauration n'étaient atteignables
+	 * par AUCUN écran : le panneau existait, ses données étaient servies, et
+	 * personne ne pouvait les voir.
+	 */
+	const historiqueOuvert = $derived(page.url.searchParams.has('version'));
+	const adresse = $derived(`/notes/${data.lecture.note.id}`);
+
+	/** `RG-M18-05` — l'action irréversible rappelle ce qu'elle va écraser. */
+	const rappelDeRestauration = (numero: number): string =>
+		`Restaurer la version ${String(numero)} de « ${data.lecture.note.titre} » ?\n\n` +
+		'Le corps actuel est remplacé par celui de cette version.\n' +
+		'Rien n’est perdu : la restauration capture sa propre version.';
 
 	let formulaire: HTMLFormElement;
 
@@ -86,15 +111,50 @@
 		for (const bouton of Array.from(formulaire.querySelectorAll('button'))) {
 			if (!bouton.hasAttribute('type')) bouton.type = 'button';
 		}
-		return cablerLaSuppression(formulaire, { rappel });
+		const defaireSuppression = cablerLaSuppression(formulaire, { rappel });
+		const defaireHistorique = historiqueOuvert
+			? cablerLHistorique(formulaire, formulaire, { adresse, rappel: rappelDeRestauration })
+			: ouvrirLHistorique(formulaire, adresse);
+		return () => {
+			defaireSuppression();
+			defaireHistorique();
+		};
 	});
+
+	/**
+	 * LE BOUTON « HISTORIQUE DES VERSIONS » DE V-14 — il ouvre l'état, il ne
+	 * fait rien d'autre. Le gel le pose sans comportement (`ARB-011`) ; la route
+	 * lui en donne un, et c'est le seul endroit où elle peut le faire.
+	 */
+	function ouvrirLHistorique(racine: ParentNode, cible: string): () => void {
+		const bouton = Array.from(racine.querySelectorAll('button')).find(
+			(b) => (b.textContent ?? '').trim() === 'Historique des versions'
+		);
+		if (bouton === undefined) return () => {};
+		const aller = (): void => {
+			racine.ownerDocument?.location.assign(`${cible}?version`);
+		};
+		bouton.addEventListener('click', aller);
+		return () => bouton.removeEventListener('click', aller);
+	}
 </script>
 
 <form method="POST" action="?/supprimer" bind:this={formulaire} style="display:contents">
-	<Vue
-		vecteur={data.vecteur}
-		notes={data.notes}
-		affichee={data.affichee}
-		panneaux={data.panneaux}
-	/>
+	{#if historiqueOuvert}
+		<Historique
+			vecteur={{ panneau: 'ouvert', droits: data.vecteur.droits }}
+			notes={data.notes}
+			note={data.lecture.note}
+			versions={{ [data.lecture.note.id]: data.histoire.versions }}
+			retentionVersions={data.histoire.retention}
+			versionAffichee={data.histoire.affichee?.numero ?? null}
+		/>
+	{:else}
+		<Vue
+			vecteur={data.vecteur}
+			notes={data.notes}
+			affichee={data.affichee}
+			panneaux={data.panneaux}
+		/>
+	{/if}
 </form>
