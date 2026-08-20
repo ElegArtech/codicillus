@@ -45,8 +45,23 @@
  * multiple sur `lireLaNote` la supprimerait ; il n'est pas ajouté ici parce
  * qu'il toucherait la signature d'un module que trois routes emploient déjà.
  * Coût déclaré au rapport de lot.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * L'ENREGISTREMENT ENTRETIENT L'INDEX, ET LE CLIENT DU MOTEUR EST OBLIGATOIRE
+ *
+ * `RG-M05-06` (`CAHIER-DES-CHARGES-FONCTIONNEL.md:731`) : « une note enregistrée
+ * est trouvable en recherche dans un délai maximal de 10 secondes ». Le geste est
+ * `entretenirLIndex()` (`../recherche/entretien.ts`), appelé APRÈS la validation
+ * de la transaction.
+ *
+ * Le client est un PARAMÈTRE, non un champ facultatif de la demande, et la
+ * différence est fonctionnelle : un appelant ne peut pas l'oublier, faute de
+ * pouvoir composer un appel sans lui. C'est la même forme que
+ * `chercherLesNotes()`, dont l'en-tête l'explique — « c'est la forme qui tient la
+ * propriété, pas la relecture ».
  */
 import { and, desc, eq, max } from 'drizzle-orm';
+import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import { comptes, notes, piecesJointes, versions } from '../base/schema';
 import { analyserDocument, type Document } from '../contenu/document';
@@ -71,6 +86,7 @@ import {
 	type Perimetre,
 	type Resolution
 } from '../droits/resolution';
+import { entretenirLIndex } from '../recherche/entretien';
 import { peutEcrireQuelquePart } from './public';
 import {
 	lireIndexDesDroits,
@@ -338,10 +354,25 @@ export interface EnregistrementFait {
  * Aucune batterie ne l'aurait vu : aucune n'enregistre. La sonde, si. L'écart
  * est déclaré au rapport du lot, chiffré, et non contourné.
  *
+ * ═════════════════════════════════════════════════════════════════════════
+ * PUIS L'INDEX, ET DANS CET ORDRE
+ *
+ * L'entretien de l'index vient APRÈS la transaction, jamais dedans :
+ * `retirerDesNotes()` (`../recherche/moteur.ts`) le prescrit en majuscules, et sa
+ * raison vaut aussi pour l'écriture — « une transaction annulée ne peut pas
+ * laisser un index amputé ». Le corps réécrit change l'EXTRAIT projeté, qui est
+ * un champ cherchable, et `modifieLe`, qui est un champ triable.
+ *
  * @throws DocumentInvalide, EditeurIncapable — le corps saisi est refusé
+ * @throws l'erreur de la tâche du moteur si l'index n'a pas pu être entretenu.
+ *   La note est alors ÉCRITE et non indexée, et l'appelant reçoit l'échec plutôt
+ *   qu'un silence. Ce que l'écran en fait n'est spécifié nulle part : aucune
+ *   source ne décrit l'état d'un enregistrement dont l'index a refusé, et aucune
+ *   maquette ne le porte. Écart déclaré au rapport du lot, non comblé ici.
  */
 export async function enregistrerLeCorps(
 	base: Base,
+	client: Meilisearch,
 	demande: DemandeDEnregistrementDeNote
 ): Promise<Resolution<EnregistrementFait>> {
 	const acces = await resoudreLEditionDUneNote(base, {
@@ -436,6 +467,10 @@ export async function enregistrerLeCorps(
 			});
 		}
 	});
+
+	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre. `RG-M05-06` : la note est
+	   trouvable quand cet appel rend, l'attente étant explicite et non temporisée. */
+	await entretenirLIndex(base, client, [demande.identifiant]);
 
 	return { trouve: true, ressource: { identifiant: demande.identifiant, version } };
 }
