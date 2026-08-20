@@ -26,16 +26,45 @@
  * l'obtenait. Le contenu, lui, n'était pas celui de l'appelant.
  *
  * ═════════════════════════════════════════════════════════════════════════
+ * LE GRAPHE SERVI EST CELUI DE LA TABLE `relations`, PLUS AUCUN AUTRE
+ *
+ * Trois listes descendent désormais jusqu'à la vue : les relations lisibles,
+ * les six types de relation avec leurs DEUX libellés, et ceux d'entre eux qui
+ * portent une dépendance technique. Les trois propriétés de V-19 existaient
+ * déjà et retombaient sur les constantes du jeu de semence ; les nourrir est
+ * tout ce qu'il reste à faire, et le rendu par défaut du mode de conception ne
+ * change pas d'un pixel puisque rien ne lui est passé.
+ *
+ * POURQUOI LES TROIS, ET PAS LES SEULES RELATIONS. `RELATIONS_TECHNIQUES`
+ * décide des points de défaillance unique, `TYPES_RELATION` décide du libellé
+ * lu dans le nom accessible d'une arête et dans l'alternative textuelle. Deux
+ * listes lues en base et une troisième restée constante fabriqueraient un
+ * graphe dont les arêtes viennent du corpus réel et le vocabulaire d'un jeu
+ * d'exemple : la première relation d'un type que le référentiel aurait renommé
+ * s'afficherait sous l'ancien mot, sans que rien ne le signale.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
  * LES PARAMÈTRES D'ADRESSE DE §4.3 SONT IGNORÉS, ET DÉCLARÉS
  *
  * `RG-M09-05` fait de l'état de cartographie une adresse partageable :
  * `?perimetre=`, `?noeud=` (ARB-007), le mode d'affichage étant porté par le
- * chemin. Aucun des trois n'a de chemin jusqu'à la vue : `src/vues/V-19.svelte`
- * ne reçoit que `vecteur` et `notes`, et son périmètre d'affichage est une
- * constante du gel. Les honorer exigerait une propriété de plus, ce que le
- * contrat de ce lot interdit — `src/vues/` appartient à cinq lots parallèles.
- * Ils sont donc IGNORÉS, jamais refusés, ce qui est d'ailleurs la règle de §4.2
- * pour tout paramètre non honoré. Écart déclaré au rapport du lot.
+ * chemin. Aucun des deux paramètres n'a de chemin jusqu'à la vue : le périmètre
+ * d'affichage de `src/vues/V-19.svelte` est une constante du gel, et le nœud
+ * centré n'existe pas dans cette vue. Les honorer exigerait une propriété de
+ * plus, dont aucun nœud du gel ne dépendrait tant que la sélection reste un
+ * comportement (ARB-011). Ils sont donc IGNORÉS, jamais refusés, ce qui est la
+ * règle de §4.2 pour tout paramètre non honoré.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * `P-08` — L'ORIGINE VOYAGE, ET AUCUN NŒUD DU GEL NE SAIT L'ÉCRIRE
+ *
+ * `lireRelationsLisibles()` sélectionne la colonne `origine` et la fait
+ * descendre jusqu'à la vue. Aucune des deux maquettes de cartographie ne
+ * l'affiche : le mot n'y figure pas, et le seul « déduite » de leur source est
+ * le commentaire d'une fabrique d'arborescence de dossiers
+ * (`mockups/V-19-cartographie.html:1806`). Rendre l'origine ici exigerait un
+ * nœud d'interface que le gel ne porte pas, donc un comblement. La donnée est
+ * portée, elle n'est pas montrée ; le fait est remonté au rapport du lot.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * `RG-STR-06` N'EST PAS APPLIQUÉE ICI, ET CE N'EST PAS UN OUBLI
@@ -49,24 +78,21 @@
  * n'est pas comblé.
  */
 import { basePartagee } from '$lib/base/acces';
-import {
-	PERIMETRE_DE_V19,
-	etatDeCartographie,
-	grapheReel,
-	lireRelationsLisibles
-} from '$lib/donnees/outils';
-import { lireNotesLisibles, ouvrirLAcces } from '$lib/donnees/rangement';
+import { PERIMETRE_DE_V19, etatDeCartographie, grapheReel } from '$lib/donnees/outils';
+import { ouvrirLAcces } from '$lib/donnees/rangement';
+import { lireLeGraphe } from './lecture-du-graphe';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
 	const acces = await ouvrirLAcces(base, locals.identite, new Date());
 
-	const notes = await lireNotesLisibles(base, acces.perimetre, acces.contexte);
-	const relations = await lireRelationsLisibles(base, acces.perimetre);
+	const { notes, relations, typesRelation, relationsTechniques } = await lireLeGraphe(base, acces);
 
 	/* L'état de zone se décide sur LE graphe que la vue dessinera : même
-	   fabrique, même périmètre d'affichage. Voir `PERIMETRE_DE_V19`. */
+	   fabrique, même périmètre d'affichage, MÊME liste d'arêtes. Voir
+	   `PERIMETRE_DE_V19`. Décider « vide » sur un jeu et dessiner l'autre
+	   afficherait le voile au-dessus d'un graphe peuplé, ou l'inverse. */
 	const graphe = grapheReel(notes, relations, PERIMETRE_DE_V19);
 
 	return {
@@ -75,13 +101,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 		vecteur: { etat: etatDeCartographie(graphe) },
 		notes,
 		/**
-		 * LES RELATIONS, AVEC LEUR ORIGINE (`P-08`). Elles vont jusqu'ici et pas
-		 * plus loin : `src/vues/V-19.svelte` ne porte aucune propriété qui les
-		 * reçoive, et ce lot n'a pas le droit de lui en ajouter une. La vue
-		 * dessine donc encore les arêtes de la constante du jeu de semence.
-		 * L'écart est chiffré et déclaré au rapport du lot — il ne se voit sur
-		 * aucune batterie, ce qui est exactement pourquoi il est écrit.
+		 * LES ARÊTES DU GRAPHE, AVEC LEUR ORIGINE (`P-08`). Elles descendent
+		 * jusqu'à la vue, qui les fait descendre au socle commun : le dessin, les
+		 * degrés, les points de défaillance unique et l'alternative textuelle en
+		 * dérivent tous, sans qu'aucun d'eux ne reçoive une seconde source.
 		 */
-		relations
+		relations,
+		/** Les six types de relation et leurs deux libellés — RG-M08-06. */
+		typesRelation,
+		/** Ceux d'entre eux qui portent une dépendance technique. */
+		relationsTechniques
 	};
 };
