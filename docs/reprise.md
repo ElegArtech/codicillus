@@ -1,6 +1,6 @@
 # Où reprendre
 
-*État arrêté au 20 août 2026, au petit matin. Tout est commité et poussé.*
+*État arrêté au 21 août 2026, mesuré batterie par batterie. Tout est commité et poussé.*
 
 ---
 
@@ -8,176 +8,172 @@
 
 | Fichier | Ce qu'il donne |
 |---|---|
-| `CLAUDE.md` | le contrat permanent — sources, préséance, vocabulaire, batteries, **28 pièges** |
+| `CLAUDE.md` | le contrat permanent — sources, préséance, vocabulaire, batteries, **32 pièges** |
 | `docs/orchestration.md` | **comment on commande un lot** — le gabarit, la procédure d'une vague, les seuils |
-| `docs/arbitrages.md` | les **55 décisions** rendues, dont celles qui priment sur le cadrage |
+| `docs/arbitrages.md` | les **59 décisions** rendues, dont celles qui priment sur le cadrage |
 | `docs/errata-cadrage.md` | ce que le cadrage affirme et qui est faux |
 | `docs/journal/V1.md` | ce qui s'est passé, et ce qu'on en a appris |
 
 **Une session fraîche n'a pas besoin d'autre chose.** Les contrats des lots livrés sont dans
-`docs/taches/contrats/`.
+`docs/taches/contrats/` — quarante à ce jour.
 
 ---
 
-## L'état, vérifiable en quatre commandes
+## L'état, en une commande
 
 ```
-pnpm verif:maquette:app   → 409 couples · 409 conformes · 0 écart · 0 recours   (365,8 s)
-pnpm test:unit            → 943 tests
-pnpm verif:gel            → 43 empreintes intactes
-pnpm verif:base           → 18/18 sondes conformes
+pnpm verify        les 25 batteries, chacune jouée JUSQU'AU BOUT
 ```
 
-**15 batteries réelles sur 19. Treize vertes, DEUX ROUGES**, et les deux rouges ne se ressemblent pas :
+**Elle ne s'arrête plus au premier rouge**, et c'est la réparation qui rend ce document tenable : une
+chaîne conjonctive rendait toujours le même chiffre — celui de la première batterie rouge — et
+n'apprenait rien des seize suivantes. Elle appelait par ailleurs `verif:maquette`, l'étalonnage à
+blanc, et **jamais** `verif:maquette:app` : elle ne confrontait pas le produit à la loi du projet.
 
-| Batterie | État | Nature |
-|---|---|---|
-| `verif:menus` | **rouge à 81** | **dette de gel arbitrée** (`ARB-047`) — ne se ferme que par un regel |
-| `test:etancheite` | **ROUGE** — 145 vacuités, 12 défauts, 7 couples fuyants | **défaut de PRODUIT**, fermable route par route. Aucun seuil posé, et c'est délibéré |
+### Dix-neuf vertes
 
-Les quatre jalons restants attendent réellement le back : `test:parcours`, `mesure:budgets`,
-`test:degradation`, `exploitation:restauration`.
+`verif:gel` (43 empreintes) · `check` · `verif:jetons` · `verif:inventaire` ·
+`verif:demo:hors-production` · `test:unit` (**1 864**) · `test:aller-retour` · `verif:convertisseur` ·
+`verif:fraicheur` · `test:droits` · `test:vide` · `test:etats` · `test:impression` · `verif:menus` ·
+`verif:vocabulaire` · `test:a11y` · `verif:maquette` · **`verif:maquette:app` — 409 couples, 409
+conformes, 0 écart, 0 recours** · `exploitation:restauration`
 
-**Ce qui est posé côté produit** : les 41 vues conformes au pixel ; **8 routes** ; le schéma de données
-(20 tables, migrations réversibles prouvées) ; la résolution des droits ; le format canonique et son
-rendu serveur ; **le convertisseur unique document ⇄ Markdown** ; **l'authentification, les sessions et
-le ralentissement des tentatives** ; la fraîcheur en implémentation unique, **et enfin conforme à
-`P-01`**.
+### Six rouges, et aucun ne ressemble aux autres
 
-**Ce qui n'existe pas encore** : recherche, indexation, versions, relations, cartographie, import,
-export, espace public, consoles, éditeur — **et les gardes de trois routes déjà montées** (voir
-ci-dessous). C'est l'essentiel du produit.
-
----
-
-## ⚠ Ce qui doit être fermé avant tout le reste
-
-### Trois routes servent du contenu interne à qui n'y a pas droit — `ECART-047` É-1
-
-**Mesuré, et reproduit à la main sur le produit construit :**
-
-```
-curl -H 'accept: text/html' .../univers/production/infrastructure/signets   → 200 · 18 629 o
-                                                            (aucun cookie, aucune session)
-```
-
-| Adresse | Servie à | Octets | Attendu (`routes.md` §5.5) |
+| Batterie | Le chiffre | Ce que c'est | Qui la referme |
 |---|---|---|---|
-| `/univers/{u}/{d}/signets` | **anonyme**, contributeur sans droit, compte désactivé | 18 529 | 404 |
-| `/importer` | contributeur sans droit, lecteur | 14 874 | 404 |
-| `/console/univers` | contributeur sans droit, lecteur, rédacteur, gestionnaire | 30 315 | 404 |
+| `verif:couverture` | **60** règles que rien ne porte, **82** que rien ne contrôle | **la dette de fonctionnalité**, énumérée pour la première fois | des lots, un module à la fois |
+| `test:parcours` | 13 étapes franchies, **27 non couvertes** | 11 comportements non câblés, **7 tenues par le gel**, 3 actions absentes, 2 routes absentes | des lots — sauf les 7 du gel |
+| `test:etancheite` | 0 défaut, 0 couple discernable, **8 vacuités** | des cases vertes **par absence de route** : `RA-01`, pas une réussite | chaque lot de route |
+| `test:degradation` | **0 défaut**, 2 non-couvertures | le gel n'a **aucune phrase** pour dire qu'une brique est absente | un regel de V-24 / V-35 |
+| `verif:donnees` | 0 divergence, **4 lacunes** | dont `R-01` — V-31 somme 72 utilisations sur un corpus de 32 notes | le commanditaire |
+| `verif:tracabilite` | **24 citations, 14 numéros** sans pièce | la mémoire du dépôt renvoie à des pièces absentes | un arbitrage, pas un lot |
 
-Le contenu servi n'est pas une coquille : signets curatés, noms d'auteurs, **arborescence complète des
-univers et domaines**, et les actions d'écriture. `RG-ACC-01` en défaut, `P-09` par-dessus. Et la même
-adresse avec un identifiant **inexistant** rend les mêmes octets : la route ne lit pas ses paramètres.
-
-**Ce n'est le défaut d'aucun lot livré** — les lots de vue excluent nommément le chargeur et la garde.
-`T-011` a livré la résolution des droits ; **aucune route de page ne l'appelle.**
-
-> **C'est un trou du DAG : ces trois routes ont été montées par avance par les lots de liaison, et
-> aucun contrat n'hérite de leur garde. À attribuer avant toute autre chose.**
-
-### Une demi-règle sur le chemin public — `ECART-047`
-
-`seeds/corpus.ts:2452-2454` — `notesPubliques` filtre sur `visibilite === 'Publique'` **seulement**.
-`src/lib/droits/resolution.ts:328-330` exige `publique ET publiee`. **Deux définitions de « ce qu'un
-anonyme peut voir », et celle dont `V-01` se sert n'en porte que la moitié.**
-
-Zéro note `publique + brouillon` au corpus aujourd'hui : la moitié manquante n'est exercée par aucun
-cas (`P-5`). **Elle devient une fuite au premier brouillon public.**
+**Et une septième qui n'est pas un rouge** : `mesure:budgets` sort en **2** sur une base non préparée
+— *refus de mesurer*, plutôt qu'un chiffre faux tenu sur 32 notes. La séquence est
+`base:migrer · base:semer · volumetrie:charger · réindexer · mesurer`. Préparée, elle rend **cinq
+budgets verts** (recherche 63–71 ms, note 156–176 ms, enregistrement 237–276 ms, cartographie
+221–232 ms) et **un rouge de produit**, traité ci-dessous.
 
 ---
 
-## Les prochains lots, dans l'ordre des dépendances
+## Ce qui est posé, et ce qui ne l'est pas
 
-| Lot | Objet | Dépend de | Pourquoi maintenant |
-|---|---|---|---|
-| **à créer** | **Les gardes des trois routes montées** | T-011 ✅, T-012 ✅ | fait descendre 12 défauts et 7 couples fuyants de la batterie 6, et ferme une fuite réelle |
-| **`T-048` ✅** | **Contrôle de traçabilité** (`ECART-043`) | — | livré : `pnpm verif:tracabilite`. Le numéro qu'imprimait la batterie 9 est rectifié ; `ARB-045` reste sans entrée, et n'est plus cité que par les registres qui le déclarent absent |
-| **T-016** | Coquille applicative | T-011 ✅, T-012 ✅ | dépliage mémorisé, dossiers interdits absents. **Premier lecteur de `event.locals.identite`**, qui n'en a aucun |
-| **T-027** | Indexation et projection des droits | T-011 ✅, T-014 ✅ | `ADR-006` — le filtrage au plus près de la donnée |
-| **T-017** | Notifications, états, dialogues, messages | T-016 | porte le décompte de V-05 et le bandeau d'échec, que `T-012` a laissés |
+**Posé** : les 41 vues conformes au pixel · **34 routes de page** et leurs chargeurs, 3 points
+d'entrée d'API, 11 actions de formulaire · le schéma (**21 tables**, migrations réversibles
+prouvées) · la résolution des droits · le format canonique et son rendu serveur · le convertisseur
+unique document ⇄ Markdown · l'authentification, les sessions, le ralentissement des tentatives · la
+fraîcheur en implémentation unique · **les pièces jointes** · le geste de vérification.
+
+**Non posé** : ce que `verif:couverture` énumère — **60 règles du cahier que pas une ligne de code ne
+cite**. Ce n'est plus une impression, c'est une liste, par module, que la batterie imprime.
+
+---
+
+## ⚠ Le rouge de produit qui bloque la recherche
+
+### Une note enregistrée n'entre jamais dans l'index — `T-075`, en vol
+
+`mesure:budgets` poste 5 : la note enregistrée n'est pas retrouvable après **30,1 s**, le seuil
+d'échec du cahier. `RG-M05-06` (« trouvable en 10 secondes ») n'est pas tenue.
+
+La cause est lue, pas déduite :
+
+- `indexerDesNotes()` **déclare** porter la règle (`src/lib/recherche/moteur.ts:236`) ;
+- elle n'a que **deux appelants**, tous deux dans la console ;
+- `src/lib/donnees/edition.ts` ne mentionne ni recherche ni index ;
+- et `moteur.ts:144-145` porte un paramètre écrit **pour ce cas** — *« l'indexation synchrone d'une
+  écriture n'a pas à relire le corpus entier »* — qu'**aucun appelant ne passe**.
+
+`ADR-009` tranche le seul point qui aurait pu se discuter : *« l'écriture dans l'index est synchrone
+à l'enregistrement »*. Meilisearch n'est pas une brique optionnelle ; les deux nommées sont les
+embeddings et le convertisseur.
+
+**La partie dangereuse est le périmètre** : `ADR-006` le projette *dans* l'index, et **aucune
+batterie ne lit l'index**. Une note qui *sort* du périmètre d'un compte à l'écriture est une fuite
+que `test:etancheite` ne verrait pas.
+
+---
+
+## Les prochains lots, dans l'ordre
+
+`verif:couverture` **est** le plan. Son tableau par module donne l'ordre, et il n'est pas celui
+qu'on aurait deviné :
+
+| Module | Règles | Portées | Contrôlées | Ce que ça veut dire |
+|---|---|---|---|---|
+| **M04** cycle de vie d'une note | 10 | 2 | 2 | huit règles sur dix ne sont nulle part |
+| **M14** administration | 10 | 2 | 2 | idem |
+| **M08** relations | 7 | 3 | **0** | sept règles, **zéro contrôle** |
+| **M18** interface | 17 | 11 | 11 | six manquent |
+| **NF** non fonctionnel | 10 | 4 | 4 | six manquent |
+| **M05** édition | 9 | 4 | 3 | et le rouge d'indexation est là |
+| **NOT** modèle de note | 4 | **4** | 2 | portée en entier, **à moitié sans contrôle** |
+| **DA** design | 3 | 0 | 2 | **un contrôle qui mesure du vide** |
+| **M12**, **DRO**, **ACC** | — | pleins | pleins | rien à faire |
+
+**Les deux chiffres ne se remplacent pas.** Une règle portée mais non contrôlée est une règle dont
+personne ne saura qu'elle s'est cassée ; une règle contrôlée mais non portée est un contrôle qui
+mesure du vide. `NOT` et `DA` sont les deux cas, et ils demandent des lots opposés.
 
 **Deux lots peuvent partir ensemble** s'ils ne partagent aucun fichier. **Mais pas deux lots gourmands
-en banc** : mesuré, 368 s de temps instrument pour plus de deux heures d'horloge. **Et pas deux lots
-dont les critères de sortie contiennent une commande destructrice sur la base** — `pnpm verif:base`
-n'appartient qu'au lot qui touche `base/**` (`ECART-045` É-3).
+en banc**, et **pas deux lots qui écrivent dans la base partagée** — au-delà de quatre copies
+concurrentes, donne une base à chaque lot qui écrit (`P-30`). Un lot qui touche `package.json` ne se
+rapatrie **jamais** par copie : la fusion est à la main (`P-24`).
 
 ---
 
 ## Ce qui reste ouvert, et que personne n'a repris
 
-### Les numéros cités sans pièce — `ECART-043`, et depuis `T-048` le contrôle qui les compte
+### Les numéros cités sans pièce — `verif:tracabilite`, rouge à 24 citations pour 14 numéros
 
-**La réparation proposée par `ECART-043` est livrée** : `pnpm verif:tracabilite` refuse toute
-référence sans pièce porteuse, sur `verif/`, `src/`, `base/`, `seeds/`, `docs/` et `CLAUDE.md`. Il
-sort en **1** aujourd'hui, et c'est la preuve qu'il mord.
+L'instrument imprime la liste avec fichier et ligne à chaque exécution, et l'écrit dans
+`verif/rapports/tracabilite.json`. **Ce document ne l'énumère pas, et c'est délibéré** : une liste
+tenue à la main se périme, et c'est exactement la faute que `ECART-043` documente.
 
-**Deux des six sont réparés**, et ils l'ont été sans rien inventer :
+**Le seuil n'est pas posé** : l'instrument le propose par genre, jamais globalement, et refuse de se
+le donner. Les dossiers manquants ne se reconstituent pas — `git log -S` ne rend que les commits qui
+les citent, et écrire un dossier depuis un résumé de deuxième main produirait une pièce d'apparence
+opposable et de contenu deviné.
 
-- l'arbitrage qu'imprimait la batterie 9 était le même que celui du registre sous un autre rang —
-  **cinq recoupements**, dont le décisif : *le commit qui a inscrit l'entrée au registre est celui
-  qui a écrit les huit citations*, et le rang qu'elles portaient n'a jamais eu d'entrée à aucun point
-  de l'historique. Les huit citations sont renumérotées ;
-- l'arbitrage révoqué puis retiré du registre y est **réinscrit et marqué révoqué**, à partir des
-  deux seules pièces qui en citent le texte — l'entrée qui le révoque, et l'état d'un composant à un
-  commit nommé. Rien d'autre n'est reconstitué : le raisonnement complet n'a survécu nulle part.
+### Deux défauts d'instrument, déclarés et non réparés
 
-**Et le compte réel est plus lourd que l'audit d'origine ne l'annonçait** — il grepait la forme nue
-du préfixe, quand les titres de dossier emploient la forme accentuée, et il ne descendait pas à
-l'intérieur des dossiers présents. **Trois dossiers de plus sont cités sans exister, dont deux depuis
-`verif/references/`**, et plusieurs écarts nommés meurent à l'intérieur d'un dossier qui, lui,
-existe : le dossier ne les numérote pas, ou les numérote autrement.
-
-**Ce document ne les énumère pas, et c'est délibéré** : une liste tenue à la main se périme, et c'est
-précisément la faute que `ECART-043` documente. **La liste est celle que l'instrument imprime**, avec
-son fichier et sa ligne, à chaque exécution et dans `verif/rapports/tracabilite.json`.
-
-**Le seuil n'est pas posé** : l'instrument le PROPOSE par genre, jamais globalement, et refuse de se
-le donner (`docs/orchestration.md` §4). Il attend un arbitrage. Les dossiers manquants, eux, ne se
-reconstituent pas — `git log -S` ne rend que les commits qui les citent, et écrire un dossier depuis
-un résumé de deuxième main produirait une pièce d'apparence opposable et de contenu deviné.
-
-### Trois défauts d'instrument, déclarés et non réparés
-
-1. **`P-14`** — l'horloge du banc ne survit pas au parallélisme. **À réparer avant toute
-   parallélisation du banc.**
-2. **`ECART-042` É-6** — troisième source de non-déterminisme sur `V-37 chargement` (et le dossier
-   n'existe pas — voir ci-dessus).
-3. **La sonde de restitution de focus** n'est plus exercée par aucun des 409 couples. Le motif a
-   désormais un nom, **`P-26`**, et trois occurrences.
+1. **`ECART-042` É-6** — la minuterie de 2 600 ms de `V-37 chargement`. Elle tient à `clock.resume()`
+   avant axe, non à la pose de l'horloge : `P-14` est réparé, celui-ci ne l'est pas.
+2. **La sonde de restitution de focus** n'est plus exercée par aucun des 409 couples. Le motif a un
+   nom — `P-26` — et trois occurrences.
 
 ### Un garde-fou qui bloque toute route nouvelle
 
-`verif/menus.mjs:923` porte `ATTENDU_ROUTES = 39` en dur et sort en **code 2** si l'extraction diverge.
-Toute route ajoutée au §3 de `docs/routes.md`, même arbitrée, fait refuser l'instrument.
+`verif/menus.mjs` porte un nombre de routes attendu **en dur** et sort en **code 2** si l'extraction
+diverge. Toute route ajoutée au §3 de `docs/routes.md`, même arbitrée, fait refuser l'instrument.
 
 ### Deux contradictions ouvertes du lot de contenu
 
-La **coloration syntaxique** (le gel porte ses jetons au balisage) ; et le **titre de niveau 1** que le
-cahier autorise et que le gel réserve — `V-17:3146` donne `h2` pour `#` **et** `##`. Se refermera à
-`T-021`. *(La troisième — le rendu graphique d'un diagramme — est tranchée : `ARB-049`, bloc de code.)*
+La **coloration syntaxique** (le gel porte ses jetons au balisage) ; et le **titre de niveau 1** que
+le cahier autorise et que le gel réserve — `V-17:3146` donne `h2` pour un dièse **et** pour deux.
 
 ### Aucun mécanisme n'exige la mise à jour du journal
 
-Toujours vrai. Le journal de cette journée a été écrit à la clôture, parce que l'orchestrateur l'a
-fait — pas parce que le dispositif l'a demandé.
+Toujours vrai. Le journal de cette nuit a été écrit parce que l'orchestrateur l'a fait — pas parce
+que le dispositif l'a demandé.
 
 ---
 
 ## Ce qui attend le commanditaire
 
-**Une seule chose bloque, et elle est visuelle** : les **81 entrées « Signets » mortes**. Le rail est
-global, V-22 est portée par un domaine, et les deux sont dans le gel (`ARB-047`). Elles se ferment par
-un regel du rail **ou** de V-22.
+**Quatre choses, et trois sont visuelles.**
 
-Le reste du dossier de regel est **vide** : tout s'est déduit, y compris les quatre décisions de forme
-de `T-012` et les deux branches de libellé de `T-013b` (`docs/dossier-regel.md`).
+| # | Ce qui bloque | Pourquoi aucun lot ne peut le fermer |
+|---|---|---|
+| `R-01` | **V-31 somme 72 utilisations de template** sur un corpus de 32 notes (`:2705`, `:2711`, `:2717`, `:2723`, sommées au `:3289`) | le défaut est **arithmétique et dans le gel**. Aucune colonne de provenance ne peut porter 72 provenances sur 32 lignes |
+| `R-02` | **les treize pièces jointes de V-14** sont nommées deux fois et pesées **zéro octet** | le gel les déclare ainsi ; les inventer serait `P-02` |
+| — | **le gel n'a aucune phrase pour dire qu'une brique est absente** — V-24 n'a pas de prise du tout, V-35 en a une dont les trois phrases nomment le défaut *du fichier* | `ADR-009` le nomme : « l'absence d'un tel état est un vide de spécification à remonter, pas à combler » |
+| — | **le libellé relatif de dernière connexion** — « aujourd'hui à 08:41 » | aucune source ne donne le seuil où « N jours » devient « N mois ». Les deux vues écrivent la chaîne telle quelle |
 
-Les dettes de gel arbitrées — 3 470 violations d'accessibilité, 173 couples zone × état, 210 sous
-corpus vide, 138 emplois de vocabulaire — sont **nommées et bornées**, et leurs seuils ne peuvent que
-descendre.
+Les dettes de gel arbitrées — violations d'accessibilité, couples zone × état, emplois de vocabulaire
+— sont **nommées et bornées**, et leurs seuils ne peuvent que descendre.
 
-**La batterie 6 n'a PAS de seuil, et il ne faut pas lui en donner** : ses 12 défauts sont trois gardes
-de route, et ses 145 vacuités se referment route par route. *Ne pose pas de seuil sur une dette qu'un
-lot referme* (`docs/orchestration.md` §4).
+**`test:etancheite` et `verif:couverture` n'ont PAS de seuil, et il ne faut pas leur en donner** :
+leurs chiffres se referment lot par lot. *Ne pose pas de seuil sur une dette qu'un lot referme*
+(`docs/orchestration.md` §4).
