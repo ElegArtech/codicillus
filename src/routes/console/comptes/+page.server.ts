@@ -20,10 +20,11 @@
  * `vecteur: null` demande l'état au repos : les quatre positions de l'axe
  * « Formulaire » et les deux de l'axe « Cas » sont des états d'INTERACTION.
  */
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
-import type { PageServerLoad } from './$types';
+import { changerLeRoleDUnCompte, roleDepuisLeLibelle } from '$lib/donnees/administration';
+import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -32,4 +33,47 @@ export const load: PageServerLoad = async ({ locals }) => {
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
 	return { vecteur: null, notes: acces.ressource.notes };
+};
+
+/** La garde des onze adresses, appliquée à l'action — voir `/console/univers`. */
+function consoleOuverte(locals: App.Locals): void {
+	if (!accesALaConsole(locals.identite)) error(404, MESSAGE_INTROUVABLE);
+}
+
+export const actions: Actions = {
+	/**
+	 * CHANGER LE RÔLE D'UN COMPTE — `RG-M14-07`.
+	 *
+	 * `f-ident` ET `f-role` SONT LES NOMS DU GEL : `V-32:1384` porte
+	 * `select#f-role`, et le champ d'identifiant de connexion est `f-ident`
+	 * (`V-32:3109`), définitif après création — « le modifier casserait
+	 * l'attribution de ses contributions passées ». Le compte se désigne donc par
+	 * lui.
+	 *
+	 * LE SÉLECTEUR REND UN LIBELLÉ, PAS UN ÉNUMÉRÉ. `roleDepuisLeLibelle()` fait
+	 * la conversion, et rend `null` sur tout le reste : un rôle non reconnu est
+	 * un refus, jamais un rôle par défaut — se tromper de défaut ici, ce serait
+	 * accorder un droit.
+	 *
+	 * LE REFUS DU DERNIER ADMINISTRATEUR SORT EN `fail` AVEC SON MOTIF. `P-09`
+	 * veut que le geste ne soit pas offert — le gel verrouille le sélecteur et
+	 * écrit le motif au-dessus (`V-32:3081-3099`) —, ce qui ne dispense pas de le
+	 * refuser ici : un client compose la requête qu'il veut.
+	 */
+	changerLeRole: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const role = roleDepuisLeLibelle(champs.get('f-role'));
+		if (role === null) return fail(400, { issue: 'role-inconnu' });
+
+		const resultat = await changerLeRoleDUnCompte(
+			basePartagee(),
+			String(champs.get('f-ident') ?? ''),
+			role,
+			new Date()
+		);
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	}
 };

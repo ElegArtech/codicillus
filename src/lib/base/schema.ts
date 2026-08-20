@@ -47,6 +47,7 @@ import {
 	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core';
+import type { Configuration } from '../../../seeds/corpus';
 
 /* ═══════════════════════════════════════════════ Les énumérations ═══════ */
 
@@ -388,6 +389,33 @@ export const parametres = pgTable('parametres', {
 	cle: text('cle').primaryKey(),
 	valeur: jsonb('valeur').notNull(),
 	modifieLe: timestamp('modifie_le', { withTimezone: true }).notNull().defaultNow()
+});
+
+/**
+ * LES SEPT CLÉS DE `parametres`, ÉCRITES UNE FOIS — M14.7 (`CDC:1189-1197`).
+ *
+ * Elles vivaient en littéraux dans `lireConfiguration()` seule, ce qui suffisait
+ * tant que RIEN N'ÉCRIVAIT dans cette table. `T-077` y écrit (`RG-M14-09`), et
+ * deux jeux de littéraux auraient rendu possible ce que la règle interdit
+ * précisément : un seuil enregistré sous un nom que la lecture ignore, donc un
+ * badge qui ne bouge pas.
+ *
+ * LE TYPE EST LA GARANTIE, PAS LA DISCIPLINE. `Record<keyof Configuration,
+ * string>` refuse à la compilation qu'un champ de la configuration n'ait pas sa
+ * clé — un huitième paramètre ajouté à `Configuration` ne se compile plus tant
+ * qu'il n'a pas la sienne.
+ *
+ * L'import du type est ERASÉ à l'exécution : ce module reste sans dépendance,
+ * et le jeu de semence n'entre pas dans le graphe du serveur par cette ligne.
+ */
+export const CLES_DE_PARAMETRE: Readonly<Record<keyof Configuration, string>> = Object.freeze({
+	seuilFrais: 'seuil_frais',
+	seuilVieillissant: 'seuil_vieillissant',
+	versionsMax: 'versions_max',
+	portailAssistance: 'portail_assistance',
+	motFiche: 'mot_fiche',
+	tailleMaxPieceJointe: 'taille_max_piece_jointe',
+	dureeSession: 'duree_session'
 });
 
 /* ══════════════════════════════════════════════════════ La note ═════════ */
