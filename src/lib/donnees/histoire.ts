@@ -29,12 +29,20 @@
  * propres termes — « le lot de V-15 / V-16 la remplira » —, et la semence ne
  * l'écrit pas. Conséquences, et aucune n'est comblée :
  *
- *   · l'historique de toute note est VIDE : c'est le troisième cas de la
+ *   · l'historique d'une note SEMÉE est VIDE : c'est le troisième cas de la
  *     planche de V-15 (« aucune version antérieure »), rendu parce qu'il est
  *     VRAI, et non parce qu'il serait commode ;
- *   · aucune comparaison n'a de matière : les deux bornes d'une adresse
- *     `?versions={a}-{b}` désignent des versions qui n'existent pas, et le
- *     résultat le DIT (`presentes`) au lieu de rendre un écart nul.
+ *   · une comparaison dont les bornes ne désignent aucune version le DIT
+ *     (`presentes`) au lieu de rendre un écart nul.
+ *
+ * CE QUI A CHANGÉ LE 21 AOÛT 2026, et rien d'autre n'a changé : la semence est
+ * toujours muette, mais `enregistrerLaNote()` écrit une version à chaque
+ * enregistrement qui modifie un corps (`RG-M07-01`). Une note CRÉÉE puis
+ * modifiée par le produit a donc un historique réel, et c'est lui que V-15 et
+ * V-16 montrent. Mesuré : trois modifications d'une note neuve rendent trois
+ * versions, et la comparaison de la première à la troisième rend
+ * « +5 lignes −2 lignes · 6 blocs touchés sur 7 » sur un contenu qu'aucune
+ * source n'a soufflé.
  *
  * `seeds/corpus.ts:1503` porte `CONTENU_VERSIONS` — trois états de contenu de
  * `n-restaurer-pg` —, dans la forme `BlocDeContenu` des maquettes
@@ -110,11 +118,17 @@
 import { desc, eq } from 'drizzle-orm';
 import type { Base } from '../base/acces';
 import { comptes, notes, versions } from '../base/schema';
-import { analyserDocument, type Bloc, type Document } from '../contenu/document';
+import {
+	analyserDocument,
+	texteBrut,
+	texteDeCopie,
+	type Bloc,
+	type Document
+} from '../contenu/document';
 import { serialiserEnMarkdown } from '../contenu/markdown';
 import { dateCourteDInstant, joursEcoules, lireConfiguration } from './lecture';
 import type { LectureDeNote } from './note';
-import type { Version } from '../../../seeds/corpus';
+import type { BlocDeContenu, Version } from '../../../seeds/corpus';
 
 /* ═══════════════════════════════════ Les versions, forme du corpus ══════ */
 
@@ -536,4 +550,124 @@ export async function lireLaComparaison(
 		visuel: compare ? comparerEnVisuel(a?.corpsReference, b?.corpsReference) : AUCUNE_RANGEE,
 		versions: lignes.map((l) => versionRendue(l, maintenant))
 	};
+}
+
+/* ═══════════════════════════════════ Les blocs, forme d'affichage ══════ */
+
+/**
+ * LA TRANSPOSITION D'AFFICHAGE — un nœud canonique dans la forme que le mode
+ * Visuel de V-16 sait peindre.
+ *
+ * ELLE NE TOUCHE NI LE STOCKAGE NI LA COMPARAISON. L'alignement d'ADR-003 est
+ * calculé plus haut, sur les nœuds CANONIQUES et sur leur empreinte : cette
+ * fonction n'intervient qu'APRÈS l'appariement, pour donner à chaque cellule de
+ * `src/vues/V-16.svelte` la forme des neuf types que son gel rend
+ * (`seeds/corpus.ts:309-331`). Aucune de ces valeurs n'est RELUE : rien ici ne
+ * reconstruit un document, et la borne d'ARB-055 reste tenue — le seul
+ * convertisseur du dépôt demeure `src/lib/contenu/markdown.ts`.
+ *
+ * CE QU'ELLE PERD EST NOMMÉ, JAMAIS TU. Le gel ne dessine que neuf formes, le
+ * format canonique en porte douze :
+ *
+ *   · une liste NUMÉROTÉE est rendue par la forme de liste à puces — le gel
+ *     n'en dessine aucune autre ;
+ *   · une CITATION est rendue en paragraphe, son attribution à la suite du
+ *     texte : c'est ce que `texteBrut()` en donne, et il est l'unique lecture
+ *     de texte du format ;
+ *   · un SÉPARATEUR est rendu par sa forme Markdown — celle-là même que le mode
+ *     Texte affiche de lui, à la même ligne ;
+ *   · un DIAGRAMME est rendu comme une figure, par sa légende ou, à défaut, par
+ *     l'alternative textuelle que P-06 lui impose ;
+ *   · le LANGAGE d'un bloc de code et le niveau `astuce` d'une alerte sortent de
+ *     l'ensemble clos qu'énumère `BlocDeContenu` — deux langages, deux niveaux.
+ *     La valeur RÉELLE est portée telle quelle : la rabattre sur une valeur du
+ *     gel afficherait un langage que le bloc n'a pas.
+ *
+ * LA CLÉ EST L'EMPREINTE DU CONTENU, et ce n'est pas un détail. Le gel apparie
+ * ses blocs par une identité STABLE d'une version à l'autre, que le format
+ * canonique ne porte pas (voir l'en-tête). Deux blocs de même contenu ont donc
+ * ici la même clé, et deux contenus différents deux clés différentes :
+ * `memeBloc()` de V-16 rend « commun » sur les paires communes, et un bloc
+ * réécrit sort en « retiré » puis « ajouté » — la conséquence d'ADR-003, déjà
+ * déclarée en tête de module.
+ */
+function texteDUnBloc(bloc: Bloc): string {
+	return texteBrut({ type: 'doc', content: [bloc] });
+}
+
+/** Le texte d'une suite de blocs — le contenu d'un élément, d'une cellule. */
+function texteDeBlocs(blocs: readonly Bloc[]): string {
+	return texteBrut({ type: 'doc', content: blocs });
+}
+
+/** La forme Markdown d'un bloc, employée là où le gel n'a aucune forme. */
+function markdownDUnBloc(bloc: Bloc): string {
+	return serialiserEnMarkdown({ type: 'doc', content: [bloc] }).trim();
+}
+
+/** Un tableau canonique, cellule par cellule. */
+function tableauDAffichage(bloc: Extract<Bloc, { type: 'table' }>): {
+	readonly entetes: readonly string[];
+	readonly lignes: readonly (readonly string[])[];
+} {
+	const rangees = bloc.content.map((ligne) => ({
+		enTete: ligne.content.every((c) => c.type === 'tableHeader'),
+		cellules: ligne.content.map((c) => texteDeBlocs(c.content))
+	}));
+	const premiere = rangees[0];
+	/* Les lignes de tête sont celles dont TOUTES les cellules sont des cellules
+	   d'en-tête — la lecture de `rendu.ts`, reprise et non réécrite. */
+	return premiere !== undefined && premiere.enTete
+		? { entetes: premiere.cellules, lignes: rangees.slice(1).map((r) => r.cellules) }
+		: { entetes: [], lignes: rangees.map((r) => r.cellules) };
+}
+
+/** Un nœud canonique dans la forme d'affichage de V-16. Voir l'en-tête. */
+export function blocDAffichage(bloc: Bloc): BlocDeContenu {
+	const cle = empreinteDeNoeud(bloc);
+	switch (bloc.type) {
+		case 'heading':
+			return { cle, type: bloc.attrs.level <= 2 ? 'h2' : 'h3', texte: texteDUnBloc(bloc) };
+		case 'paragraph':
+			return { cle, type: 'p', texte: texteDUnBloc(bloc) };
+		case 'blockquote':
+			return { cle, type: 'p', texte: texteDUnBloc(bloc).split('\n').join(' ') };
+		case 'bulletList':
+		case 'orderedList':
+			return { cle, type: 'liste', items: bloc.content.map((e) => texteDeBlocs(e.content)) };
+		case 'taskList':
+			return { cle, type: 'taches', items: bloc.content.map((t) => texteDeBlocs(t.content)) };
+		case 'codeBlock':
+			return {
+				cle,
+				type: 'code',
+				langage: bloc.attrs.language ?? '',
+				lignes: texteDeCopie(bloc).split('\n')
+			} as BlocDeContenu;
+		case 'alerte':
+			return {
+				cle,
+				type: 'alerte',
+				niveau: bloc.attrs.niveau,
+				titre: bloc.attrs.titre,
+				texte: texteDeBlocs(bloc.content)
+			} as BlocDeContenu;
+		case 'table':
+			return { cle, type: 'tableau', ...tableauDAffichage(bloc) };
+		case 'image':
+			return { cle, type: 'figure', legende: bloc.attrs.legende ?? bloc.attrs.alt };
+		case 'diagramme':
+			return { cle, type: 'figure', legende: bloc.attrs.legende ?? bloc.attrs.alternative };
+		case 'horizontalRule':
+			return { cle, type: 'p', texte: markdownDUnBloc(bloc) };
+	}
+}
+
+/** Les rangées du mode Visuel, chaque nœud mis en forme d'affichage. */
+export function rangeesDAffichage(visuel: ComparaisonEnVisuel): readonly Paire<BlocDeContenu>[] {
+	return visuel.rangees.map((r) => ({
+		etat: r.etat,
+		a: r.a === undefined ? undefined : blocDAffichage(r.a),
+		b: r.b === undefined ? undefined : blocDAffichage(r.b)
+	}));
 }
