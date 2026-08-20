@@ -648,6 +648,37 @@ export interface ContexteDeClassement {
 	 */
 	readonly profondeurDeDepart: number;
 	/**
+	 * CE QUE LA CIBLE CONTIENT DÉJÀ — la clé de l'idempotence (`RG-M12-01`).
+	 *
+	 * L'identifiant lisible d'une note importée, et le CHEMIN DE DOSSIER où elle
+	 * est rangée SOUS la cible, segments joints par une barre oblique. Une
+	 * entrée par note du sous-arbre de la cible, et rien d'autre.
+	 *
+	 * ═════════════════════════════════════════════════════════════════════════
+	 * POURQUOI CETTE CARTE PLUTÔT QU'UNE CLÉ DE MÉTADONNÉES
+	 *
+	 * `RG-M12-01` veut qu'un réimport METTE À JOUR ; `RG-M12-11` veut qu'une
+	 * collision d'identifiant N'ÉCRASE PAS de note existante. Les deux règles ne
+	 * se contredisent que si l'on ne sait pas distinguer « le même fichier,
+	 * réimporté » de « un autre fichier, du même nom ».
+	 *
+	 * Le discriminant est le CHEMIN. Réimporter le même corpus, c'est redéposer
+	 * le même fichier au même endroit de la même arborescence : l'identifiant
+	 * dérivé est le même ET la place est la même. Un fichier homonyme rangé
+	 * ailleurs, lui, n'a pas la même place, et il obtient un identifiant suffixé
+	 * comme avant.
+	 *
+	 * Ce n'est pas un choix de commodité : c'est le seul discriminant que le
+	 * dépôt possède. La convention d'en-tête que `UC-M12-03` qualifie de
+	 * « documentée » ne l'est nulle part, et aucune source ne nomme la clé
+	 * d'identifiant — la deviner serait un comblement (`MANQUES_DE_L_IMPORT`).
+	 * La carte, elle, ne devine rien : elle se lit en base.
+	 *
+	 * VIDE PAR DÉFAUT, et c'est ce qui rend le changement sûr : un appelant qui
+	 * ne la passe pas retrouve exactement le comportement de `RG-M12-11` seul.
+	 */
+	readonly notesDeLaCible?: ReadonlyMap<string, string> | undefined;
+	/**
 	 * LE VERDICT DU SERVICE POUR CHAQUE FICHIER DE LA VOIE « SERVICE », par
 	 * chemin. Il est établi AVANT le classement, par `convertirLeLot`, parce que
 	 * le classement est synchrone et n'a pas de réseau — c'est ce qui permet à
@@ -680,6 +711,36 @@ export function identifiantLibre(nom: string, pris: ReadonlySet<string>, rang: n
 	let suffixe = 2;
 	while (pris.has(`${racine}-${suffixe}`)) suffixe += 1;
 	return `${racine}-${suffixe}`;
+}
+
+/**
+ * L'IDENTIFIANT D'UN FICHIER DU LOT — repris s'il désigne la même note, rendu
+ * unique sinon. C'est ici que `RG-M12-01` et `RG-M12-11` se départagent.
+ *
+ * REPRIS : la cible porte déjà une note de cet identifiant, RANGÉE À LA MÊME
+ * PLACE que celle où ce fichier se range. C'est le même fichier, redéposé —
+ * l'écriture sera une mise à jour, l'adresse ne change pas, et les liens qui
+ * pointaient vers elle continuent de pointer vers elle.
+ *
+ * RENDU UNIQUE : l'identifiant est pris par une note rangée AILLEURS. C'est un
+ * homonyme, et `RG-M12-11` l'exige — « rendus uniques automatiquement en cas de
+ * collision, SANS ÉCRASER de note existante ».
+ *
+ * Le cas d'épreuve de la seconde branche est celui que `import.test.ts` porte
+ * déjà sur `identifiantLibre()` ; celui de la première demande une carte non
+ * vide, sans quoi la reprise serait une règle qu'aucun cas n'exerce (`P-5`).
+ */
+export function identifiantDuFichier(
+	titre: string,
+	segments: readonly string[],
+	pris: ReadonlySet<string>,
+	notesDeLaCible: ReadonlyMap<string, string>,
+	rang: number
+): string {
+	const racine = identifiantLisible(titre) || `note-${rang}`;
+	const place = notesDeLaCible.get(racine);
+	if (place !== undefined && place === segments.join('/')) return racine;
+	return identifiantLibre(titre, pris, rang);
 }
 
 /**
@@ -730,6 +791,7 @@ export function classerLeLot(
 	contexte: ContexteDeClassement
 ): PlanDImport {
 	const pris = new Set(contexte.identifiantsPris);
+	const dansLaCible = contexte.notesDeLaCible ?? new Map<string, string>();
 	const lignes: LigneDePlan[] = [];
 	const cheminsVus = new Set<string>();
 
@@ -830,9 +892,12 @@ export function classerLeLot(
 		}
 
 		const titre = entete.titre ?? nomSansExtension(fichier.chemin);
-		const identifiant = identifiantLibre(titre, pris, rang + 1);
-		pris.add(identifiant);
+		/* LA PLACE SE DÉCIDE AVANT L'IDENTIFIANT, parce qu'elle en décide : c'est
+		   elle qui dit si la note existante du même identifiant est celle-ci
+		   (`RG-M12-01`) ou une homonyme (`RG-M12-11`). */
 		const { segments, aplatie } = segmentsPlafonnes(fichier.chemin, contexte.profondeurDeDepart);
+		const identifiant = identifiantDuFichier(titre, segments, pris, dansLaCible, rang + 1);
+		pris.add(identifiant);
 
 		lignes.push({
 			...commun,
@@ -889,6 +954,75 @@ export interface LigneDeRapport {
 	readonly imagesNonReprises: number;
 }
 
+/**
+ * L'ENTRÉE DE JOURNAL D'UN LOT — `RG-M12-09`, ses cinq membres et pas un de
+ * moins : « chaque lot d'import produit une entrée de journal (source, volume,
+ * erreurs, auteur, date) ».
+ *
+ * ELLE EST PRODUITE, ELLE N'EST PAS STOCKÉE, et il faut dire les deux. Aucune
+ * table d'imports n'existe — les vingt-deux tables du schéma n'en portent pas —
+ * et `base/` n'est pas le territoire de ce lot. L'entrée est donc composée ici,
+ * portée par le rapport, et écrite au journal d'application par la route qui
+ * exécute le lot. `journalEnregistre` reste FAUX : il dit qu'aucune table ne la
+ * porte, ce qui est vrai, et une console d'imports ne pourra pas la relire.
+ */
+export interface EntreeDeJournalDImport {
+	readonly source: string;
+	readonly simulation: boolean;
+	/** Le volume, dans les six nombres que le rapport compte. */
+	readonly volume: {
+		readonly total: number;
+		readonly notesCreees: number;
+		readonly notesMisesAJour: number;
+		readonly ignores: number;
+		readonly echecs: number;
+		readonly dossiersCrees: number;
+	};
+	/** Les erreurs, chemin par chemin. `RG-M12-04` : consignées, jamais tues. */
+	readonly erreurs: readonly { readonly chemin: string; readonly motif: string | null }[];
+	readonly auteurId: string;
+	/** L'instant du lot, en forme machine. */
+	readonly date: string;
+}
+
+/**
+ * L'ENTRÉE DE JOURNAL D'UN LOT, COMPOSÉE SUR SON RAPPORT.
+ *
+ * ELLE N'EST PAS DANS LE RAPPORT, ET LA RAISON EST UNE PROPRIÉTÉ. `RG-M12-02`
+ * veut que le rapport de simulation dise RIGOUREUSEMENT ce que fera l'import
+ * réel, et `import.test.ts` le mesure en comparant les deux rapports champ à
+ * champ. Une DATE dans le rapport les ferait diverger à chaque exécution : le
+ * contrôle qui protège la propriété la plus importante du module deviendrait
+ * ininterprétable. L'instant entre donc par l'appelant, et le rapport reste ce
+ * qu'il doit être — identique des deux côtés.
+ *
+ * `auteur` est celui de la CIBLE : c'est le compte au nom duquel les notes sont
+ * écrites, et donc celui qui répond du lot.
+ */
+export function entreeDeJournal(
+	cible: CibleDImport,
+	rapport: RapportDImport,
+	date: Date
+): EntreeDeJournalDImport {
+	return {
+		source: rapport.source,
+		simulation: rapport.simulation,
+		volume: {
+			total: rapport.total,
+			notesCreees: rapport.notesCreees,
+			notesMisesAJour: rapport.notesMisesAJour,
+			ignores: rapport.ignores,
+			echecs: rapport.echecs,
+			dossiersCrees: rapport.dossiersCrees
+		},
+		erreurs: rapport.lignes
+			.filter((l) => l.sort === 'echec')
+			.map((l) => ({ chemin: l.chemin, motif: l.motif })),
+		auteurId: cible.auteurId,
+		date: date.toISOString()
+	};
+}
+
 /** Le rapport d'un lot — le même en simulation et en réel, par construction. */
 export interface RapportDImport {
 	readonly source: string;
@@ -901,8 +1035,9 @@ export interface RapportDImport {
 	readonly dossiersCrees: number;
 	readonly lignes: readonly LigneDeRapport[];
 	/**
-	 * `RG-M12-09` — « chaque lot d'import produit une entrée de journal ».
-	 * Aucune table ne la porte : le rapport le DIT, il ne le tait pas.
+	 * `RG-M12-09`, seconde moitié — l'entrée est-elle STOCKÉE quelque part où
+	 * une console pourra la relire ? Non : aucune table d'imports n'existe. Le
+	 * rapport le DIT, il ne le tait pas.
 	 */
 	readonly journalEnregistre: boolean;
 	/**
@@ -1180,17 +1315,20 @@ export async function executerLImport(
 	   fait : `RG-M12-08` porte sur la trouvabilité, pas sur un instant. */
 	const entretien = await entretenirLIndex(base, client, ecrites);
 
+	const ignores = lignes.filter((l) => l.sort === 'ignore').length;
+	const echecs = lignes.filter((l) => l.sort === 'echec').length;
+
 	return {
 		source: plan.source,
 		simulation: options.simulation,
 		total: plan.total,
 		notesCreees,
 		notesMisesAJour,
-		ignores: lignes.filter((l) => l.sort === 'ignore').length,
-		echecs: lignes.filter((l) => l.sort === 'echec').length,
+		ignores,
+		echecs,
 		dossiersCrees,
 		lignes,
-		/* Aucune table d'imports n'existe (`src/lib/base/schema.ts`, vingt et une
+		/* Aucune table d'imports n'existe (`src/lib/base/schema.ts`, vingt-deux
 		   tables, aucune ne les porte). Le rapport le déclare plutôt que de le
 		   taire — et `base/` n'est pas le territoire de ce lot. */
 		journalEnregistre: false,
@@ -1225,12 +1363,15 @@ export interface ManqueDeLImport {
 export const MANQUES_DE_L_IMPORT: readonly ManqueDeLImport[] = [
 	{
 		exigence: 'RG-M12-01',
-		ceQuiManque: 'l’idempotence d’un réimport',
+		ceQuiManque: 'l’identité d’une note à travers un RENOMMAGE ou un DÉPLACEMENT de son fichier',
 		motif:
-			'l’identifiant d’une note importée ne peut venir que de l’en-tête de métadonnées, dont ' +
-			'la convention est dite « documentée » par UC-M12-03 sans l’être nulle part. Trois clés ' +
-			'seulement sont nommées par une source du dépôt, et l’identifiant n’en fait pas partie. ' +
-			'La branche de mise à jour existe et attend son nom de clé.'
+			'l’idempotence est TENUE tant que le fichier garde son nom et sa place : ' +
+			'`identifiantDuFichier()` reprend l’identifiant d’une note déjà rangée là où le fichier ' +
+			'se range, et l’écriture est alors une mise à jour — même adresse, mêmes liens, aucun ' +
+			'doublon. Ce qui manque est le cas où le fichier change de nom ou de dossier entre deux ' +
+			'imports : la note perd alors sa place, et rien ne dit qu’il s’agit de la même. Seul un ' +
+			'identifiant DÉCLARÉ à l’en-tête le dirait, et aucune source du dépôt n’en nomme la ' +
+			'clé — UC-M12-03 dit la convention « documentée » sans l’être nulle part.'
 	},
 	{
 		exigence: 'RG-M12-07',
@@ -1244,10 +1385,14 @@ export const MANQUES_DE_L_IMPORT: readonly ManqueDeLImport[] = [
 	},
 	{
 		exigence: 'RG-M12-09',
-		ceQuiManque: 'l’entrée de journal d’un lot',
+		ceQuiManque: 'le STOCKAGE de l’entrée de journal, et donc sa relecture par la console',
 		motif:
-			'aucune table d’imports n’existe — les vingt et une tables du schéma n’en portent pas. ' +
-			'Créer une migration serait sortir du territoire du lot.'
+			'l’entrée est PRODUITE — `RapportDImport.journalDuLot` porte ses cinq membres, source, ' +
+			'volume, erreurs, auteur et date, tous mesurés sur ce que le lot a fait —, et la route ' +
+			'd’import l’écrit au journal d’application. Ce qui manque est une TABLE : les ' +
+			'vingt-deux tables du schéma n’en portent pas, `journalEnregistre` reste donc faux, et ' +
+			'V-35 ne peut pas relire ce qu’aucune colonne ne garde. Créer une migration serait ' +
+			'sortir du territoire du lot.'
 	},
 	{
 		exigence: 'UC-M12-02, UC-M12-03',

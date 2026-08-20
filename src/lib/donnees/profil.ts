@@ -24,13 +24,14 @@
  *  - AUCUNE VALEUR DE POLITIQUE DE MOT DE PASSE choisie ici : elle est
  *    TRANSCRITE du gel (voir §4).
  */
-import { and, eq, isNull, ne } from 'drizzle-orm';
+import { and, count, eq, isNull, ne } from 'drizzle-orm';
 import type { Base } from '../base/acces';
-import { comptes, domaines, sessions } from '../base/schema';
+import { comptes, domaines, sessions, verifications } from '../base/schema';
 import { hacherMotDePasse, motDePasseCorrespond } from '../auth/mots-de-passe';
+import { formaterDateFr, formaterDateHeureFr } from '../dates';
 import type { Identite } from '../droits/resolution';
 import { identifiantsLisibles, type DonneeSansContrepartie } from './accueil';
-import { lireNotes, type ContexteDeLecture } from './lecture';
+import { lireNotes, ROLE_DEPUIS_ENUM, type ContexteDeLecture } from './lecture';
 import type { Note } from '../../../seeds/corpus';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -52,11 +53,11 @@ import type { Note } from '../../../seeds/corpus';
  */
 export const SANS_CONTREPARTIE_EN_BASE: readonly DonneeSansContrepartie[] = [
 	{
-		donnee: 'CONTRIBUTIONS',
+		donnee: 'CONTRIBUTIONS.liens',
 		vue: 'V-25',
-		affichage: 'indicateurs « notes vérifiées » et « liens internes créés »',
+		affichage: 'indicateur « liens internes créés » et les distinctions qui le mesurent',
 		motif:
-			'`verifications` porte une ligne par vérification, mais le jeu de semence n’en écrit aucune ; `relations` ne porte pas l’auteur du lien. Les deux nombres sont DÉCLARÉS par le corpus, qui l’écrit de lui-même : « ce qui est calculable l’est ; le reste est déclaré ici plutôt que deviné dans la vue ».'
+			'`relations` ne porte PAS l’auteur du lien — ni colonne de compte, ni horodatage attribuable (`schema.ts`, table `relations` : `source_id`, `cible_id`, `type_de_relation_id`, `origine`, `cree_le`). Le nombre est donc INDISPONIBLE, et il s’affiche comme tel plutôt qu’en zéro muet (`P-02`). Son voisin « notes vérifiées » n’est plus de cette liste : `verifications.compte_id` existe, et `compterLesVerifications()` le compte pour de bon.'
 	},
 	{
 		donnee: 'DISTINCTIONS',
@@ -73,11 +74,12 @@ export const SANS_CONTREPARTIE_EN_BASE: readonly DonneeSansContrepartie[] = [
 			'aucune table d’événements — même absence que `T-031` a relevée pour V-07. `versions` et `verifications` portent deux des cinq types du jeu ; publication, révision et import n’ont aucune trace.'
 	},
 	{
-		donnee: 'comptes.derniere_connexion_le (le libellé)',
+		donnee: 'comptes.derniere_connexion_le (le LIBELLÉ RELATIF)',
 		vue: 'V-25',
-		affichage: '« Dernière connexion — aujourd’hui à 08:41 »',
+		affichage:
+			'l’instant en toutes lettres — « 20 août 2026 à 08:41 » — et non « aujourd’hui à 08:41 »',
 		motif:
-			'la colonne porte l’INSTANT, et le gel n’écrit que le LIBELLÉ relatif sans donner la règle de passage de l’un à l’autre (`schema.ts`, `comptes.derniereConnexionLe`). Inventer la règle serait un comblement.'
+			'la colonne porte l’INSTANT, et elle est désormais AFFICHÉE : `formaterDateHeureFr()`, l’implémentation unique de `../dates`, la met en français. Ce qui manque est la règle de passage de l’instant au libellé RELATIF que le gel écrit ; aucune source ne la donne, et `dates.ts` n’a pas de formateur relatif. L’inventer serait un comblement ; afficher l’instant ne l’est pas.'
 	},
 	{
 		donnee: 'préférence « Recevoir les demandes de révision par courriel »',
@@ -169,6 +171,178 @@ export async function lireLesNotesDuPerimetre(
 	if (retenus.size === 0) return [];
 	const corpus = await lireNotes(base, contexte);
 	return corpus.filter((n) => retenus.has(n.id));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   2 bis. CE QUE V-25 AFFICHE DU PROFIL, ET COMMENT IL Y ARRIVE
+
+   `T-038` écrivait ici : « le profil RÉEL est lu, et il n'est PAS renvoyé à la
+   page », faute d'une propriété qui le reçoive. La propriété existe désormais —
+   `profilDuCompte` de `src/vues/V-25.svelte` —, et cette section met le profil
+   dans la forme exacte que la vue attend.
+
+   AUCUNE RÈGLE DE DATE N'EST ÉCRITE ICI. `formaterDateFr()` et
+   `formaterDateHeureFr()` de `../dates` sont l'implémentation unique du dépôt ;
+   ce module ne formate rien lui-même. Ce qu'il ne peut pas rendre — le libellé
+   RELATIF que le gel écrit — reste au recensement du §1 : l'instant est vrai,
+   sa mise en mots relative n'a pas de règle écrite.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * LE MARQUEUR D'UNE DONNÉE ABSENTE — `P-02`, « une donnée indisponible
+ * s'affiche comme telle ».
+ *
+ * Le cadratin est le marqueur que le GEL emploie lui-même pour une valeur qu'il
+ * n'a pas encore : `V-24:1287` pose `—` au sous-titre du dépôt tant qu'aucun
+ * scénario n'est retenu. Rien n'est inventé ici, la forme est reprise.
+ */
+export const RIEN_A_AFFICHER = '—';
+
+/**
+ * Le profil dans la forme que V-25 rend — huit champs, tous des chaînes prêtes
+ * à écrire. Les initiales n'y sont PAS : la vue porte déjà la règle du gel
+ * (`initialesDe`), et la dédoubler ici en ferait deux.
+ */
+export interface ProfilAffiche {
+	readonly nom: string;
+	readonly identifiant: string;
+	readonly courriel: string;
+	readonly role: string;
+	readonly domaine: string;
+	readonly arrivee: string;
+	readonly derniereConnexion: string;
+}
+
+/**
+ * Le profil de la base, mis en forme pour l'écran.
+ *
+ * `domaine` à `null` est un état PRÉVU — `RG-M14-04` veut le domaine principal
+ * détachable —, et il s'affiche comme tel plutôt que par une chaîne vide, qui
+ * laisserait croire à un libellé perdu.
+ */
+export function profilAffiche(profil: ProfilDuCompte): ProfilAffiche {
+	return {
+		nom: profil.nom,
+		identifiant: profil.identifiant,
+		courriel: profil.courriel,
+		/* La colonne porte l'ÉNUMÉRÉ ; l'écran porte le libellé français. La
+		   correspondance est celle de `../donnees/lecture.ts`, l'unique table du
+		   dépôt — en écrire une seconde ici, c'est se donner deux vocabulaires de
+		   rôle qui finiront par diverger (`roleDepuisLeLibelle()` le dit déjà). */
+		role: ROLE_DEPUIS_ENUM[profil.role] ?? profil.role,
+		domaine: profil.domaine ?? RIEN_A_AFFICHER,
+		arrivee: formaterDateFr(profil.arriveLe),
+		derniereConnexion:
+			profil.derniereConnexionLe === null
+				? RIEN_A_AFFICHER
+				: formaterDateHeureFr(profil.derniereConnexionLe)
+	};
+}
+
+/**
+ * LES INITIALES D'UN NOM — la règle du gel, pour les appelants SERVEUR.
+ *
+ * `window.contributeurs` de la maquette la pose, et V-10, V-11, V-25 et V-40 la
+ * transcrivent chacune pour leur propre rendu. Elle est ici pour que le CÔTÉ
+ * SERVEUR n'en écrive pas une cinquième : la coquille reçoit un
+ * `UtilisateurCourant`, dont les initiales sont un champ obligatoire, et un
+ * chargeur qui les recalculerait à la main serait la seconde définition.
+ *
+ * Vérifié : « Karim Belhadj » rend « KB », soit exactement `MOI.initiales`.
+ */
+export function initialesDuNom(nom: string): string {
+	return nom
+		.split(' ')
+		.map((m) => m[0] ?? '')
+		.join('')
+		.slice(0, 2)
+		.toUpperCase();
+}
+
+/**
+ * LES VÉRIFICATIONS PORTÉES AU COMPTE — l'indicateur « notes vérifiées ».
+ *
+ * `verifications.compte_id` existe (`schema.ts`), et le nombre est donc COMPTÉ,
+ * jamais déclaré. Zéro est alors un résultat — le compte n'a rien vérifié —, et
+ * non l'aveu d'une donnée absente : c'est ce qui distingue cet indicateur de
+ * son voisin « liens internes créés », que la table des relations ne permet pas
+ * d'attribuer (§1).
+ */
+export async function compterLesVerifications(base: Base, compteId: string): Promise<number> {
+	const lignes = await base
+		.select({ combien: count() })
+		.from(verifications)
+		.where(eq(verifications.compteId, compteId));
+	return lignes[0]?.combien ?? 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   2 ter. CE QUE LE TITULAIRE MODIFIE LUI-MÊME — le panneau « Ce que vous
+   pouvez modifier » de V-25
+
+   DEUX CHAMPS, ET DEUX SEULEMENT. Le gel les nomme et les oppose au panneau
+   voisin, « Attribué par l'administration », dont il écrit en toutes lettres
+   que « le rôle et le domaine principal sont fixés par un administrateur ». La
+   frontière n'est donc pas choisie ici : elle est lue.
+
+   `RG-CPT-01` ET `RG-M16-02` GOUVERNENT AUSSI CE GESTE. Un compte dont le mot
+   de passe est géré par l'administration est un compte de démonstration
+   partagé ; lui laisser changer l'adresse électronique du compte reviendrait à
+   déplacer la réinitialisation de mot de passe vers la boîte du dernier venu.
+   Le refus est le même que celui du changement de mot de passe, et il est pris
+   au même endroit — avant toute validation de saisie.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/** Les issues de l'enregistrement de l'identité. Elles ne se recouvrent pas. */
+export type IssueDeLIdentite = 'verrouille' | 'nom-vide' | 'courriel-invalide' | 'enregistre';
+
+/** Les deux champs que le titulaire modifie — `#p-affiche` et `#p-courriel`. */
+export interface SaisiesDeLIdentite {
+	readonly nom: string;
+	readonly courriel: string;
+}
+
+/**
+ * LA FORME D'UNE ADRESSE ÉLECTRONIQUE — reprise du type du champ gelé.
+ *
+ * `V-25:1080` écrit `type="email"` : le contrôle est celui que le navigateur
+ * applique déjà, et il est refait ici parce qu'un client peut composer la
+ * requête lui-même — le raisonnement de `T-034` sur le droit de rédaction,
+ * « l'absence de bouton n'est pas un contrôle d'accès ».
+ *
+ * Le motif est volontairement celui, minimal, de la plateforme : quelque chose,
+ * une arobase, quelque chose, un point, quelque chose. Un motif plus sévère
+ * refuserait des adresses valides, ce qu'aucune source ne demande.
+ */
+const ADRESSE_ELECTRONIQUE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Le nom affiché et l'adresse électronique du titulaire, enregistrés.
+ *
+ * `modifieLe` est posé au même geste : la colonne existe, et une écriture qui
+ * ne la touche pas rendrait l'instant faux pour toutes les lectures suivantes.
+ */
+export async function enregistrerLIdentite(
+	base: Base,
+	demande: {
+		readonly profil: ProfilDuCompte;
+		readonly saisies: SaisiesDeLIdentite;
+		readonly maintenant: Date;
+	}
+): Promise<IssueDeLIdentite> {
+	const { profil } = demande;
+	if (profil.motDePasseVerrouille) return 'verrouille';
+
+	const nom = demande.saisies.nom.trim();
+	const courriel = demande.saisies.courriel.trim();
+	if (nom === '') return 'nom-vide';
+	if (!ADRESSE_ELECTRONIQUE.test(courriel)) return 'courriel-invalide';
+
+	await base
+		.update(comptes)
+		.set({ nom, courriel, modifieLe: demande.maintenant })
+		.where(eq(comptes.id, profil.compteId));
+	return 'enregistre';
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
