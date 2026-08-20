@@ -41,17 +41,26 @@
 	 * versions conservées, l'ancienneté relative, l'ampleur des modifications et
 	 * la répartition des cinq segments sont tous calculés à partir des données.
 	 * Les trois cas de la planche nomment deux notes et le vide — `charger()`,
-	 * `V-15:2990-2994`. Les deux tableaux sont désormais REÇUS EN PROPRIÉTÉ, de
-	 * défaut la constante du jeu (T-043) : `T-030` a posé la table des versions,
-	 * la semence la laisse vide, et ce lot rend la vue CAPABLE sans rien
-	 * transposer.
+	 * `V-15:2990-2994`. Les deux tableaux sont REÇUS EN PROPRIÉTÉ, de défaut la
+	 * constante du jeu (T-043).
+	 *
+	 * ET LA NOTE AUSSI EST REÇUE. Passée en propriété, elle prend la place du cas
+	 * de planche : la liste rendue est celle des versions que la BASE porte pour
+	 * cette note-là, le titre et le rangement sont les siens, et les trois cas du
+	 * gel — dix versions, une seule, aucune — ne sont plus des positions de
+	 * planche mais ce que l'historique se trouve être. Une note sans version
+	 * antérieure rend l'état vide du gel, jamais une liste d'exemple (P-02).
 	 *
 	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011). La sélection de deux
-	 * versions, l'affichage d'une version antérieure, la restauration et sa
-	 * boîte de confirmation, la fermeture du panneau : tout cela est du
-	 * comportement. Ce qui est rendu est l'ÉTAT DE DÉPART du gel — aucune
-	 * version cochée, `data-version="courante"`, `#bandeau-version` masqué,
-	 * « Comparer » désactivé.
+	 * versions, la restauration et sa boîte de confirmation, la fermeture du
+	 * panneau : tout cela est du comportement. Ce qui est rendu est l'ÉTAT DE
+	 * DÉPART du gel — aucune version cochée, « Comparer » désactivé.
+	 *
+	 * UNE SEULE EXCEPTION, ET ELLE EST ADRESSABLE : la version consultée. Elle
+	 * n'est pas du comportement, elle est l'état que `?version={n}` porte
+	 * (`docs/routes.md:224`) — reçue en propriété, elle déplie le bandeau
+	 * d'identification, marque sa ligne `data-affichee` et pose
+	 * `data-version="antérieure"`, exactement comme `afficher()` du gel.
 	 *
 	 * **CE LOT NE DÉCLARE PAS `P-09` TENUE** : la disparition des actions
 	 * d'écriture en lecture seule est un rendu de deux états — `si-ecriture` et
@@ -124,6 +133,24 @@
 		versions?: Partial<Record<IdentifiantNote, readonly Version[]>>;
 		/** Le nombre de versions conservées par note. Défaut : celui du jeu de semence. */
 		retentionVersions?: number;
+		/**
+		 * LA NOTE DONT L'HISTORIQUE EST MONTRÉ. Défaut : aucune, et les trois cas
+		 * de la planche décident alors — l'état du gel, inchangé.
+		 *
+		 * Passée, elle décide de TOUT ce qui nomme la note : les versions lues
+		 * dans `versions`, le titre du fil et du panneau, le rangement du fil.
+		 * Rien n'est alors saisi (P-02).
+		 */
+		note?: Note;
+		/**
+		 * LE NUMÉRO DE LA VERSION CONSULTÉE — `?version={n}`, `docs/routes.md:224`.
+		 *
+		 * `null`, absent, ou désignant la version courante : le bandeau reste
+		 * replié, `data-version` vaut « courante ». Un numéro qui ne désigne
+		 * aucune version vaut la version courante — une adresse forgée ne
+		 * fabrique pas un troisième état.
+		 */
+		versionAffichee?: number | null;
 	}
 
 	const {
@@ -134,7 +161,9 @@
 		compte: moi = MOI,
 		instance = INSTANCE,
 		versions: historique = VERSIONS,
-		retentionVersions = RETENTION_VERSIONS
+		retentionVersions = RETENTION_VERSIONS,
+		note = undefined,
+		versionAffichee = null
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -172,14 +201,64 @@
 	const cas = $derived(
 		reglage['hist'] === 'une' ? 'une' : reglage['hist'] === 'aucune' ? 'aucune' : 'riche'
 	);
-	const source = $derived(NOTE_PAR_CAS[cas]);
+	const source = $derived(note ? note.id : NOTE_PAR_CAS[cas]);
 	const versions = $derived<readonly Version[]>(source ? (historique[source] ?? []) : []);
 
 	/**
 	 * LE TITRE DE LA NOTE ferme le fil d'Ariane et coiffe le panneau
-	 * (`V-15:3271`, `V-15:2859`). Il vient du corpus, par le module partagé.
+	 * (`V-15:3271`, `V-15:2859`). Il vient de la note reçue, ou du corpus par le
+	 * module partagé quand aucune n'est passée.
 	 */
-	const titre = NOTE.titre;
+	const titre = $derived(note ? note.titre : NOTE.titre);
+
+	/**
+	 * LE RANGEMENT DE LA NOTE, tel que le fil le déroule. Le chemin de dossier
+	 * est une chaîne de segments séparés par le chevron du corpus (`Note.dossier`,
+	 * `seeds/corpus.ts:203`) ; il est découpé comme `src/vues/V-17.svelte:247` le
+	 * découpe, et non par une seconde règle. Une note rangée à la racine d'un
+	 * domaine n'a aucun segment.
+	 */
+	const segments = $derived(
+		note
+			? note.dossier
+					.split('›')
+					.map((s) => s.trim())
+					.filter((s) => s !== '')
+			: []
+	);
+
+	/** Le fil d'Ariane — identique à celui de V-14 : l'historique n'a pas de chemin propre. */
+	const fil = $derived(
+		note
+			? ['Accueil', note.univers, note.domaine, ...segments, note.titre]
+			: ['Accueil', 'Production', 'Infrastructure', 'Exploitation', 'Sauvegardes', titre]
+	);
+	const courant = $derived(
+		note ? [note.domaine, ...segments] : ['Infrastructure', 'Exploitation', 'Sauvegardes']
+	);
+
+	/**
+	 * LA VERSION ANTÉRIEURE CONSULTÉE — `afficher()`, `V-15:2905`.
+	 *
+	 * La plus récente est la version COURANTE : la consulter n'est pas consulter
+	 * un état antérieur, et le gel replie alors le bandeau plutôt que d'annoncer
+	 * un état qui est celui de la note.
+	 */
+	const anterieure = $derived(
+		versionAffichee === null || versionAffichee === undefined || versionAffichee === versions[0]?.n
+			? null
+			: (versions.find((v) => v.n === versionAffichee) ?? null)
+	);
+
+	/** Le bandeau d'identification, quand une version antérieure est consultée. */
+	const bandeau = $derived(
+		anterieure === null
+			? null
+			: {
+					titre: `Version ${anterieure.n} du ${anterieure.date}, par ${anterieure.auteur}`,
+					sous: `${anterieure.resume} · vous consultez un état antérieur, la note courante n'est pas modifiée.`
+				}
+	);
 
 	/* ── Le panneau ───────────────────────────────────────────────────────────
 	   Transcription de `rendreListe()` (`V-15:2857`), `ligneVersion()`
@@ -253,7 +332,7 @@
 
 {#snippet ligneVersion(v: Version, courante: boolean)}
 	<!-- prettier-ignore -->
-	<div class="ver" data-courante={courante ? 'oui' : undefined}
+	<div class="ver" data-courante={courante ? 'oui' : undefined} data-affichee={anterieure !== null && anterieure.n === v.n ? 'oui' : undefined}
 		><label class="ver__case"
 			><input
 				type="checkbox"
@@ -299,13 +378,13 @@
 	forme="abregee"
 	classeContenu="lecture"
 	cibleEvitement="article"
-	fil={['Accueil', 'Production', 'Infrastructure', 'Exploitation', 'Sauvegardes', titre]}
-	courant={['Infrastructure', 'Exploitation', 'Sauvegardes']}
+	{fil}
+	{courant}
 	{droits}
 	donnees={{
 		'data-registre': 'reference',
 		'data-historique': panneau,
-		'data-version': 'courante'
+		'data-version': anterieure === null ? 'courante' : 'antérieure'
 	}}
 	{univers}
 	{domaines}
@@ -324,13 +403,14 @@
 		<article class="article" id="article">
 			<!--
 				Bandeau d'identification, affiché quand une version antérieure est
-				consultée. Il précède tout le reste, y compris l'en-tête. Aucun des
-				sept états ne consulte de version antérieure : il reste masqué.
+				consultée — `?version={n}` désignant autre chose que la plus récente.
+				Il précède tout le reste, y compris l'en-tête. Aucun des sept états de
+				la planche ne consulte de version antérieure : il y reste masqué.
 			-->
-			<div class="bandeau-version" id="bandeau-version" hidden>
+			<div class="bandeau-version" id="bandeau-version" hidden={bandeau === null}>
 				<div class="bandeau-version__corps">
-					<div class="bandeau-version__titre" id="bv-titre">—</div>
-					<div id="bv-sous"></div>
+					<div class="bandeau-version__titre" id="bv-titre">{bandeau ? bandeau.titre : '—'}</div>
+					<div id="bv-sous">{bandeau ? bandeau.sous : ''}</div>
 				</div>
 				<div class="bandeau-version__actions">
 					<!-- P-09 · ARB-040 — omise, jamais masquée. `V-15:1502` -->
