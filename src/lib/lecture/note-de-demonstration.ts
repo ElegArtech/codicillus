@@ -212,12 +212,13 @@ export const NOTE: Note = (() => {
 	return note;
 })();
 
-/** Le chemin de rangement de la note, du plus haut au plus bas. */
-export const RANGEMENT: readonly string[] = [
-	NOTE.univers,
-	NOTE.domaine,
-	...segmentsDeDossier(NOTE.dossier)
-];
+/** Le chemin de rangement d'une note, du plus haut au plus bas. */
+export function rangementDe(note: Note): readonly string[] {
+	return [note.univers, note.domaine, ...segmentsDeDossier(note.dossier)];
+}
+
+/** Le chemin de rangement de la note de démonstration. */
+export const RANGEMENT: readonly string[] = rangementDe(NOTE);
 
 /**
  * LES CONSULTATIONS RÉCENTES, et une contradiction déclarée.
@@ -230,4 +231,38 @@ export const RANGEMENT: readonly string[] = [
  * ni l'un ni l'autre n'est du ressort de ce lot. Le chiffre est lu, la
  * contradiction est remontée.
  */
-export const CONSULTATIONS_RECENTES: number = MESURES_7J[NOTE.id];
+export function consultationsRecentes(note: Note): number {
+	return MESURES_7J[note.id];
+}
+
+export const CONSULTATIONS_RECENTES: number = consultationsRecentes(NOTE);
+
+/* ── La note réellement lue ─────────────────────────────────────────────────
+   T-042. Le bloc partagé était, jusqu'à ce lot, la transcription de
+   `n-restaurer-pg` ET RIEN D'AUTRE : `/notes/{identifiant}` servait donc le
+   même article pour les 32 notes du corpus. Le chargeur, lui, rendait déjà la
+   note réelle et son corps rendu — `src/lib/donnees/note.ts` —, et l'écart
+   était déclaré au rapport de `T-033` faute d'une propriété pour les recevoir.
+
+   C'est cette propriété. Elle est OPTIONNELLE, et son absence rend la
+   transcription figée à l'identique : le banc ne bouge pas.
+
+   LE CORPS EST RENDU PAR L'APPELANT, ET PAR `rendreDocument` SEUL. Cette
+   interface porte du HTML DÉJÀ RENDU, jamais un document canonique : le rendu
+   demande un résolveur de liens internes que seule la couche de données peut
+   construire (ADR-004 — une seule implémentation, et
+   `pnpm verif:convertisseur` compte les appelants). Une vue qui rendrait
+   elle-même serait le second chemin que l'ADR interdit. */
+
+/** La note affichée par le bloc partagé, et ses deux corps déjà rendus. */
+export interface NoteAffichee {
+	/** La note lue — celle que l'adresse désigne, jamais celle du gel. */
+	readonly note: Note;
+	/**
+	 * Le corps du registre Référence, rendu par `rendreDocument`. `null` : la
+	 * note ne porte pas ce registre — l'absence est dite, jamais comblée.
+	 */
+	readonly reference: string | null;
+	/** Le corps du registre Opérationnel, rendu par `rendreDocument`, ou `null`. */
+	readonly operationnel: string | null;
+}

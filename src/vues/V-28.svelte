@@ -63,8 +63,14 @@
 		MOI,
 		UNIVERS,
 		type CleDeModule,
+		type DetailDeDomaine,
+		type Domaine,
+		type EtatDInstance,
+		type Module,
+		type NomDeDomaine,
 		type Note,
-		type Univers
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { dossiersDuDomaine, universOrdonnes } from '$lib/coquille/arborescence';
@@ -80,9 +86,30 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-28')`, variante complète. */
 		notes: readonly Note[];
+		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
+		univers?: readonly Univers[];
+		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
+		instance?: EtatDInstance;
+		/** Description et modules de chaque domaine. Absente, la constante du jeu. */
+		detailDomaines?: Record<NomDeDomaine, DetailDeDomaine>;
+		/** Le registre des modules de domaine. Absente, la constante du jeu. */
+		modules?: Record<CleDeModule, Module>;
 	}
 
-	const { vecteur, notes }: Proprietes = $props();
+	const {
+		vecteur,
+		notes,
+		univers = UNIVERS,
+		domaines: registreDeDomaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		detailDomaines = DETAIL_DOMAINES,
+		modules = MODULES
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const form = $derived(
@@ -120,16 +147,16 @@
 	};
 
 	/** La copie de travail : le registre des domaines, plus le domaine vide. */
-	const domaines: readonly DomaineDeTravail[] = [
-		...DOMAINES.map((d) => ({
+	const domaines: readonly DomaineDeTravail[] = $derived([
+		...registreDeDomaines.map((d) => ({
 			nom: d.nom,
 			univers: d.univers,
 			couleur: d.couleur,
-			description: DETAIL_DOMAINES[d.nom].description,
-			modules: DETAIL_DOMAINES[d.nom].modules
+			description: detailDomaines[d.nom].description,
+			modules: detailDomaines[d.nom].modules
 		})),
 		TELEPHONIE
-	];
+	]);
 
 	/** Le tableau : par univers, puis par nom, en français (`rendreListe()`). */
 	const tableau = $derived(
@@ -178,7 +205,7 @@
 	};
 
 	/** Les six modules, dans l'ordre du registre (`Object.keys(window.MODULES)`). */
-	const CLES_DE_MODULE = Object.keys(MODULES) as CleDeModule[];
+	const CLES_DE_MODULE = $derived(Object.keys(modules) as CleDeModule[]);
 
 	/** Le nombre en français — `nb()` du gel, `toLocaleString("fr-FR")`. */
 	function nb(x: number): string {
@@ -186,7 +213,7 @@
 	}
 
 	function couleurUnivers(nom: string): string {
-		return UNIVERS.find((u) => u.nom === nom)?.couleur ?? '#6b7c87';
+		return univers.find((u) => u.nom === nom)?.couleur ?? '#6b7c87';
 	}
 
 	function compterDossiers(arbre: readonly NoeudDeDossier[]): number {
@@ -232,7 +259,7 @@
 	);
 	const couleurChoisie = $derived(edite ? edite.couleur : COULEURS[0]);
 	/** `su.value` : l'univers du domaine, ou le premier du registre en création. */
-	const universChoisi = $derived(edite ? edite.univers : (UNIVERS[0] as Univers).nom);
+	const universChoisi = $derived(edite ? edite.univers : (univers[0] as Univers).nom);
 	/** `edite.modules` : ceux du domaine, ou le seul module obligatoire. */
 	const modulesActifs: readonly CleDeModule[] = $derived(edite ? edite.modules : ['notes']);
 
@@ -282,7 +309,7 @@
 	></div
 	><span class="tg__univers"><i style="background:{couleurUnivers(d.univers)}"></i>{d.univers}</span
 	>{@render nombre(m.notes, 'tg__n tg--reduit')}{@render nombre(m.fiches, 'tg__n tg--reduit')}{@render nombre(m.signets, 'tg__n tg--masquable tg--reduit')}{@render nombre(m.dossiers, 'tg__n tg--masquable tg--reduit')}{@render nombre(m.contributeurs, 'tg__n tg--masquable tg--reduit')}<div class="tg__modules tg--reduit"
-		>{#each d.modules as cle (cle)}<span class="mod-pastille" title={MODULES[cle].nom}>{CODES_MODULES[cle]}</span>{/each}</div
+		>{#each d.modules as cle (cle)}<span class="mod-pastille" title={modules[cle].nom}>{CODES_MODULES[cle]}</span>{/each}</div
 	><div class="tg__actions"
 		><button class="btn" type="button">Modifier</button
 		><button class="btn btn--destructif" type="button" aria-label="Supprimer le domaine {d.nom}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"/></svg></button
@@ -299,7 +326,7 @@
 {#snippet moduleDuForm(cle: CleDeModule)}{@const verrou = cle === 'notes'}<label class="mod" data-verrou={verrou ? 'oui' : undefined} data-consequence="non"
 	><input type="checkbox" checked={modulesActifs.includes(cle) || verrou} disabled={verrou}
 	/><span class="mod__corps"
-		><span class="mod__nom">{MODULES[cle].nom}{#if verrou}<span class="mod__oblig">toujours actif</span>{/if}</span
+		><span class="mod__nom">{modules[cle].nom}{#if verrou}<span class="mod__oblig">toujours actif</span>{/if}</span
 		><span class="mod__aide">{AIDES_MODULES[cle]}</span
 		><span class="mod__consequence"></span
 	></span
@@ -307,16 +334,16 @@
 
 <Coquille
 	fil={filDeConsole('Domaines')}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	domaines={registreDeDomaines}
 	{notes}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 	rail="ouvert"
 	role="admin"
 	forme="abregee"
@@ -429,7 +456,7 @@
 						class="selecteur"
 						id="f-univers"
 						style="width:100%;padding:8px var(--e-3);border:1px solid var(--c-trait-fort);border-radius:var(--r-2);background:var(--c-papier);font-family:var(--f-ui);font-size:var(--t-base)"
-						>{#if ouvert}{#each universOrdonnes(UNIVERS) as u (u.nom)}<option value={u.nom} selected={u.nom === universChoisi}>{u.nom}</option>{/each}{/if}</select
+						>{#if ouvert}{#each universOrdonnes(univers) as u (u.nom)}<option value={u.nom} selected={u.nom === universChoisi}>{u.nom}</option>{/each}{/if}</select
 					>
 					<span class="champ__aide" id="aide-univers"
 						>Le rattachement change la place du domaine dans la navigation, jamais son contenu.</span

@@ -7,7 +7,10 @@
 	 * intégralement dérivé de `seeds/corpus.ts` — `RELATIONS`,
 	 * `RELATIONS_TECHNIQUES`, `TYPES_RELATION` — et du jeu de semence que le
 	 * mode démo passe en propriété (`corpusPourVue('V-19')`, variante
-	 * « cartographie », 27 notes). Aucun identifiant, aucun libellé, aucun
+	 * « cartographie », 27 notes). Les trois tableaux sont désormais REÇUS EN
+	 * PROPRIÉTÉ, de défaut la constante du jeu (T-043) : la base les porte, un
+	 * chargeur de route peut donc les passer sans que le rendu par défaut change.
+	 * Aucun identifiant, aucun libellé, aucun
 	 * compteur n'est écrit ici. Ce lot NE DÉCLARE PAS `RG-M09-01` tenue : la
 	 * règle porte sur le module entier, pas sur une vue.
 	 *
@@ -66,7 +69,23 @@
 	 * `src/vues/V-19.css`, posé par `node verif/feuilles-de-vue.mjs V-19
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import { DOMAINES, INSTANCE, MOI, TYPES_RELATION, UNIVERS, type Note } from '../../seeds/corpus';
+	import {
+		DOMAINES,
+		INSTANCE,
+		MOI,
+		RELATIONS,
+		RELATIONS_TECHNIQUES,
+		TYPES_RELATION,
+		UNIVERS,
+		type CleDeTypeDeRelation,
+		type Domaine,
+		type EtatDInstance,
+		type LibellesDeRelation,
+		type Note,
+		type Relation,
+		type Univers,
+		type UtilisateurCourant
+	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import {
 		contourDeForme,
@@ -83,14 +102,53 @@
 	} from '$lib/graphe/cartographie';
 	import { motFicheMinuscule } from '$lib/vocabulaire';
 
+	/**
+	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
+	 * DÉFAUT EST LA CONSTANTE DU JEU DE SEMENCE.
+	 *
+	 * La vue devient capable de recevoir ce qu'un chargeur de route lit en base
+	 * — univers, domaines, compte courant, état de l'instance — sans qu'aucun
+	 * rendu ne change tant que rien ne lui est passé : le mode de conception ne
+	 * passe que `vecteur` et `notes`, la vue reçoit donc exactement ce qu'elle
+	 * recevait, et le banc de comparaison ne bouge pas d'un pixel.
+	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — profil × état. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-19')`. */
 		notes: readonly Note[];
+		/** Les univers du produit. Défaut : ceux du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines du produit. Défaut : ceux du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Défaut : celui du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
+		instance?: EtatDInstance;
+		/**
+		 * Les relations du corpus. Défaut : celles du jeu de semence.
+		 *
+		 * La base les porte réellement. La vue n'en fabrique aucune : elle les
+		 * descend au socle commun des cartographies, qui en dérive le sous-graphe.
+		 */
+		relations?: readonly Relation[];
+		/** Les types de relation et leurs deux libellés. Défaut : ceux du jeu de semence. */
+		typesRelation?: Record<CleDeTypeDeRelation, LibellesDeRelation>;
+		/** Les types de relation qui portent une dépendance technique. Défaut : ceux du jeu de semence. */
+		relationsTechniques?: readonly CleDeTypeDeRelation[];
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		relations = RELATIONS,
+		typesRelation = TYPES_RELATION,
+		relationsTechniques = RELATIONS_TECHNIQUES
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const cas = $derived(String(reglage['etat'] ?? 'nominal'));
@@ -99,9 +157,9 @@
 	   Le périmètre est la première option du sélecteur, celle que le gel a
 	   sélectionnée au chargement : « Univers Production », l'option globale
 	   n'étant jamais posée (voir l'en-tête). */
-	const graphe = $derived(sousGraphe(corpus, { type: 'univers', nom: 'Production' }));
+	const graphe = $derived(sousGraphe(corpus, { type: 'univers', nom: 'Production' }, relations));
 	const deg = $derived(degres(graphe));
-	const ruptures = $derived(pointsArticulation(graphe));
+	const ruptures = $derived(pointsArticulation(graphe, relationsTechniques));
 	const types = $derived(typesPresents(graphe));
 
 	/**
@@ -112,7 +170,7 @@
 	 * aucun domaine n'y est rattaché : l'offrir en périmètre proposerait un
 	 * choix qui ne rend rien. Le filtre est celui du gel, pas une décision.
 	 */
-	const UNIVERS_PROPOSES = UNIVERS.filter((u) => !u.systeme);
+	const UNIVERS_PROPOSES = $derived(univers.filter((u) => !u.systeme));
 
 	/**
 	 * LES POSITIONS DU GEL, RENDUES TELLES QUELLES.
@@ -240,16 +298,16 @@
 	libelleEvitement="Aller à la liste des nœuds"
 	fil={['Accueil', 'Cartographie']}
 	donnees={{ 'data-dense': cas === 'dense' ? 'oui' : 'non', 'data-detail': 'ferme' }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<!-- ---------- Barre de contrôle ---------- -->
@@ -259,7 +317,7 @@
 				<select id="perimetre"
 					>{#each UNIVERS_PROPOSES as u (u.nom)}<option value="univers|{u.nom}"
 							>Univers {u.nom}</option
-						>{/each}{#each DOMAINES as d (d.nom)}<option value="domaine|{d.nom}"
+						>{/each}{#each domaines as d (d.nom)}<option value="domaine|{d.nom}"
 							>Domaine {d.nom}</option
 						>{/each}</select
 				>
@@ -337,8 +395,10 @@
 								<b>{n.note.titre}</b>{ligneAlternative(
 									n.id,
 									n.note
-								)}{#each relationsDe(n.id) as r, rang (rang)}<div style="color:var(--c-encre-2)">
-										{`${TYPES_RELATION[r.type][r.sortant ? 'sortant' : 'entrant']} : ${titreDe(graphe, corpus, r.autre)}`}
+								)}{#each relationsDe(n.id, relations) as r, rang (rang)}<div
+										style="color:var(--c-encre-2)"
+									>
+										{`${typesRelation[r.type][r.sortant ? 'sortant' : 'entrant']} : ${titreDe(graphe, corpus, r.autre)}`}
 									</div>{/each}
 							</li>{/each}
 					</ul>
@@ -367,9 +427,9 @@
 									data-de={r.de}
 									data-vers={r.vers}
 									data-actif="non"
-									data-technique={estTechnique(r.type) ? 'oui' : 'non'}
+									data-technique={estTechnique(r.type, relationsTechniques) ? 'oui' : 'non'}
 									><title
-										>{`${titreDe(graphe, corpus, r.de)} ${TYPES_RELATION[r.type].sortant} ${titreDe(graphe, corpus, r.vers)}`}</title
+										>{`${titreDe(graphe, corpus, r.de)} ${typesRelation[r.type].sortant} ${titreDe(graphe, corpus, r.vers)}`}</title
 									></line
 								>{/each}</g
 						><g

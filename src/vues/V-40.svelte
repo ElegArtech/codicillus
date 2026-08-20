@@ -63,7 +63,18 @@
 		TYPES_RELATION,
 		UNIVERS,
 		VERSIONS,
-		type Note
+		type CleDeTypeDeRelation,
+		type Compte,
+		type Domaine,
+		type EtatDInstance,
+		type IdentifiantNote,
+		type LibellesDeRelation,
+		type Note,
+		type Relation,
+		type Template,
+		type Univers,
+		type UtilisateurCourant,
+		type Version
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { libelleFraicheur } from '$lib/fraicheur';
@@ -73,9 +84,51 @@
 		etat: string;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-40')`, variante complète. */
 		notes: readonly Note[];
+		/**
+		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
+		 *
+		 * Absentes, les constantes du jeu de semence s'appliquent : c'est ce que le
+		 * mode démo passe, et c'est ce qui garantit que le banc ne bouge pas d'un
+		 * pixel. Fournies — par un chargeur de route —, elles l'emportent, et la vue
+		 * cesse de servir une valeur figée, indépendante de la base et de l'identité.
+		 */
+		/** Les univers déclarés. Absente, `UNIVERS` du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines du périmètre du compte. Absente, `DOMAINES` du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** Le compte connecté. Absente, `MOI` du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, `INSTANCE` du jeu de semence. */
+		instance?: EtatDInstance;
+		/** Les comptes de l'instance. Absente, `COMPTES` du jeu de semence. */
+		comptes?: readonly Compte[];
+		/** Les relations du corpus. Absente, `RELATIONS` du jeu de semence. */
+		relations?: readonly Relation[];
+		/** Les gabarits de note. Absente, `TEMPLATES` du jeu de semence. */
+		templates?: readonly Template[];
+		/** Les libellés des types de relation. Absente, `TYPES_RELATION` du jeu. */
+		typesRelation?: Record<CleDeTypeDeRelation, LibellesDeRelation>;
+		/**
+		 * L'historique par note. Absente, `VERSIONS` du jeu de semence. La table
+		 * est PARTIELLE : une note sans historique n'a pas d'entrée, et exiger
+		 * les trente-deux clés interdirait à un chargeur l'état neutre (`P-02`).
+		 */
+		versions?: Partial<Record<IdentifiantNote, readonly Version[]>>;
 	}
 
-	const { etat, notes }: Proprietes = $props();
+	const {
+		etat,
+		notes,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		comptes = COMPTES,
+		relations = RELATIONS,
+		templates = TEMPLATES,
+		typesRelation = TYPES_RELATION,
+		versions = VERSIONS
+	}: Proprietes = $props();
 
 	/** Le dialogue ouvert à cet état. Aucun autre ne l'est. */
 	const ouvert = $derived(etat);
@@ -96,10 +149,10 @@
 	const VERSIONS_PAR_DEFAUT = 6;
 
 	const versionsSup = $derived(
-		NOTE_SUP ? (VERSIONS[NOTE_SUP.id]?.length ?? 0) || VERSIONS_PAR_DEFAUT : 0
+		NOTE_SUP ? (versions[NOTE_SUP.id]?.length ?? 0) || VERSIONS_PAR_DEFAUT : 0
 	);
 	const retroliensSup = $derived(
-		NOTE_SUP ? RELATIONS.filter((r) => r.vers === NOTE_SUP.id).length : 0
+		NOTE_SUP ? relations.filter((r) => r.vers === NOTE_SUP.id).length : 0
 	);
 	/** Les notes rangées dans le dossier à supprimer, sous-dossiers compris. */
 	const notesDuDossier = $derived(
@@ -142,7 +195,7 @@
 
 	/** Les comptes actifs à qui aucun accès explicite ni hérité n'est encore posé. */
 	const comptesSansAcces = $derived(
-		COMPTES.filter((c) => c.actif && !DROITS.some((d) => d.qui === c.nom))
+		comptes.filter((c) => c.actif && !DROITS.some((d) => d.qui === c.nom))
 	);
 
 	const initiales = (nom: string) =>
@@ -203,9 +256,9 @@
 	}
 
 	const arbresDeDestination = $derived(
-		DOMAINES.map((d) => ({ nom: d.nom, racines: destinations(d.nom) })).filter(
-			(d) => d.racines.length > 0
-		)
+		domaines
+			.map((d) => ({ nom: d.nom, racines: destinations(d.nom) }))
+			.filter((d) => d.racines.length > 0)
 	);
 
 	interface EntreeDeCatalogue {
@@ -317,13 +370,6 @@
 				"l'accord."
 		]
 	];
-
-	const compte = {
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
-	};
 </script>
 
 <!--
@@ -376,11 +422,11 @@
 
 <Coquille
 	fil={['Accueil', 'Boîtes de dialogue']}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	{notes}
 	{compte}
-	version={INSTANCE.version}
+	version={instance.version}
 	classeContenu="doc"
 >
 	{#snippet enfants()}
@@ -808,13 +854,13 @@
 				<label class="champ__label" for="rel-type">Type de relation</label>
 				<!-- svelte-ignore a11y_autofocus -->
 				<select class="selecteur" id="rel-type" autofocus
-					>{#if ouvert === 'd-relation'}{#each Object.entries(TYPES_RELATION) as [cle, libelles] (cle)}<option
+					>{#if ouvert === 'd-relation'}{#each Object.entries(typesRelation) as [cle, libelles] (cle)}<option
 								value={cle}>{libelles.sortant}</option
 							>{/each}{/if}</select
 				>
 				<span class="champ__aide" id="rel-usage"
-					>{#if ouvert === 'd-relation'}Se lira « {TYPES_RELATION.heberge.sortant} » depuis cette note,
-						et « {TYPES_RELATION.heberge.entrant} » depuis l'autre.{/if}</span
+					>{#if ouvert === 'd-relation'}Se lira « {typesRelation.heberge.sortant} » depuis cette note,
+						et « {typesRelation.heberge.entrant} » depuis l'autre.{/if}</span
 				>
 			</div>
 			<div class="champ rel-cible">
@@ -833,14 +879,14 @@
 				<div id="rel-apercu">
 					{#if ouvert === 'd-relation' && NOTE}<div class="phrase-rel">
 							<span class="phrase-rel__sens">sens direct</span><span
-								><i>{NOTE.titre}</i> <b>{TYPES_RELATION.heberge.sortant}</b>
+								><i>{NOTE.titre}</i> <b>{typesRelation.heberge.sortant}</b>
 								<span class="phrase-rel__vide">…note à choisir…</span>.</span
 							>
 						</div>
 						<div class="phrase-rel">
 							<span class="phrase-rel__sens">sens inverse</span><span
 								><span class="phrase-rel__vide">…note à choisir…</span>
-								<b>{TYPES_RELATION.heberge.entrant}</b> <i>{NOTE.titre}</i>.</span
+								<b>{typesRelation.heberge.entrant}</b> <i>{NOTE.titre}</i>.</span
 							>
 						</div>{/if}
 				</div>
@@ -901,7 +947,7 @@
 			</button>
 			<span class="etiq">Ou reprendre une structure éprouvée</span>
 			<div class="tpl-liste" id="templates">
-				{#if ouvert === 'd-template'}{#each TEMPLATES as t (t.id)}<button class="tpl" type="button"
+				{#if ouvert === 'd-template'}{#each templates as t (t.id)}<button class="tpl" type="button"
 							><span class="tpl__ic">{t.type.slice(0, 3).toUpperCase()}</span><span
 								><span class="tpl__nom">{t.nom}</span><span class="tpl__desc">{t.description}</span
 								><span class="tpl__struct">{t.structure.join(' › ')}</span></span

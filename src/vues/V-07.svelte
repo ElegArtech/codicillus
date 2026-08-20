@@ -110,22 +110,78 @@
 		UNIVERS,
 		type DemandeDeRevision,
 		type Domaine,
+		type EtatDInstance,
+		type EvenementDActivite,
+		type IdentifiantNote,
 		type Note,
 		type NiveauFraicheur,
-		type TypeDEvenement
+		type TypeDEvenement,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { BARRES_DE_JAUGE, temoinFraicheur } from '$lib/fraicheur';
 	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
 
+	/**
+	 * LES NEUF SOURCES QUI NE VENAIENT DE NULLE PART — T-041.
+	 *
+	 * Jusqu'ici les constantes du jeu de semence étaient lues AU NIVEAU DU
+	 * MODULE : un chargeur de route pouvait passer `notes`, et rien d'autre
+	 * n'atteignait l'écran. « En attente de révision = 3 » s'affichait pour un
+	 * compte qui ne lit aucune note, et « Bonjour Karim. » était servi à Sophie
+	 * Nguyen. Elles sont désormais des PROPRIÉTÉS OPTIONNELLES.
+	 *
+	 * LE DÉFAUT EST LA CONSTANTE, ET C'EST CE QUI TIENT LE GEL. Le mode démo ne
+	 * passe que `etat`, `vecteur` et `notes` : la vue reçoit donc exactement ce
+	 * qu'elle recevait, et les 36 couples du banc ne bougent pas. Ce lot rend le
+	 * passage POSSIBLE ; il ne décide pas de ce qui sera passé.
+	 *
+	 * LES TROIS TABLES DE MESURE SONT PARTIELLES, ET C'EST DÉLIBÉRÉ. `MESURES_7J`,
+	 * `MESURES_7J_PREC` et `MODIFICATIONS` sont des `Record` COMPLETS sur les
+	 * identifiants du jeu ; aucune table ne les porte en base. Exiger la forme
+	 * complète interdirait au chargeur de passer un ensemble vide — c'est-à-dire
+	 * précisément l'état neutre explicite que P-02 réclame quand la mesure est
+	 * indisponible. Le défaut, lui, reste la constante entière.
+	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — profil × état × aide. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-07')`, variante « complète ». */
 		notes: readonly Note[];
+		/** Les univers déclarés. Absents, ceux du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines accessibles. Absents, ceux du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur connecté. Absent, celui du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance — version, synchronisation. Absent, celui du jeu. */
+		instance?: EtatDInstance;
+		/** Consultations des sept derniers jours, par note. */
+		mesures7j?: Partial<Record<IdentifiantNote, number>>;
+		/** Consultations de la semaine précédente, par note. */
+		mesures7jPrec?: Partial<Record<IdentifiantNote, number>>;
+		/** Ancienneté de modification, en jours, par note. */
+		modifications?: Partial<Record<IdentifiantNote, number>>;
+		/** Les évènements du corpus. Absents, ceux du jeu de semence. */
+		activite?: readonly EvenementDActivite[];
+		/** Les demandes de révision. Absentes, celles du jeu de semence. */
+		revisions?: readonly DemandeDeRevision[];
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte: moi = MOI,
+		instance = INSTANCE,
+		mesures7j = MESURES_7J,
+		mesures7jPrec = MESURES_7J_PREC,
+		modifications = MODIFICATIONS,
+		activite = ACTIVITE,
+		revisions = REVISIONS
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const profil = $derived(String(reglage['role'] ?? 'referent'));
@@ -175,10 +231,10 @@
 	   Le chiffre marquant porte sur le périmètre de la personne, pas sur le
 	   corpus entier : c'est ce qui fait la différence entre une salutation et
 	   une statistique. */
-	const mien = $derived(corpus.filter((n) => n.domaine === MOI.domaine && estNote(n)));
+	const mien = $derived(corpus.filter((n) => n.domaine === moi.domaine && estNote(n)));
 	const recentes = $derived(
 		mien.filter((n) => {
-			const j = MODIFICATIONS[n.id];
+			const j = modifications[n.id];
 			return typeof j === 'number' && j <= 7;
 		})
 	);
@@ -187,9 +243,9 @@
 	   Même source que la navigation latérale : les deux ne peuvent pas diverger.
 	   L'ordre est celui des univers, `ordre` croissant (`V-07:2619`). */
 	const domainesAccessibles = $derived(
-		[...UNIVERS]
+		[...univers]
 			.sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))
-			.flatMap((u) => DOMAINES.filter((d) => d.univers === u.nom))
+			.flatMap((u) => domaines.filter((d) => d.univers === u.nom))
 	);
 
 	/* ── Consultations ──────────────────────────────────────────────────────
@@ -199,8 +255,8 @@
 		return corpus.reduce((s, n) => s + (table[n.id] ?? 0), 0);
 	}
 
-	const consultations = $derived(sommeMesures(MESURES_7J));
-	const consultationsPrecedentes = $derived(sommeMesures(MESURES_7J_PREC));
+	const consultations = $derived(sommeMesures(mesures7j));
+	const consultationsPrecedentes = $derived(sommeMesures(mesures7jPrec));
 	const ecart = $derived(
 		consultationsPrecedentes
 			? Math.round(((consultations - consultationsPrecedentes) / consultationsPrecedentes) * 100)
@@ -215,7 +271,7 @@
 	/* ── L'unique source des révisions (RG-M01-02) ──────────────────────────
 	   L'indicateur et la corbeille lisent CECI, et rien d'autre. */
 	const revisionsCourantes = $derived<readonly DemandeDeRevision[]>(
-		etatPage === 'partiel' ? [] : REVISIONS
+		etatPage === 'partiel' ? [] : revisions
 	);
 
 	const brouillons = $derived(toutesLesNotes.filter((n) => n.brouillon).length);
@@ -308,7 +364,7 @@
 	const activiteEnErreur = $derived(etatPage === 'erreur');
 
 	/** L'activité rendue. Vide à l'état « rien en attente ». */
-	const activiteCourante = $derived(etatPage === 'partiel' ? [] : ACTIVITE);
+	const activiteCourante = $derived(etatPage === 'partiel' ? [] : activite);
 
 	function noteCible(id: string | null): Note | undefined {
 		return id === null ? undefined : corpus.find((n) => n.id === id);
@@ -364,21 +420,21 @@
 	role={profil === 'admin' ? 'admin' : 'referent'}
 	droits={profil === 'lecteur' ? 'lecture' : 'ecriture'}
 	donnees={{ 'data-etat': etatPage }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: moi.nom,
+		initiales: moi.initiales,
+		role: moi.role,
+		domaine: moi.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<!-- ---------- Salutation ---------- -->
 		<header class="salut">
-			<h1 class="salut__titre" id="salut-titre">{'Bonjour ' + MOI.prenom + '.'}</h1>
+			<h1 class="salut__titre" id="salut-titre">{'Bonjour ' + moi.prenom + '.'}</h1>
 			{#if etatPage === 'vide'}
 				<p class="salut__sous" id="salut-sous">
 					Votre base ne contient encore aucune note. C'est le bon moment pour reprendre l'existant.
@@ -409,7 +465,7 @@
 				</div>
 			{:else}
 				<!-- prettier-ignore -->
-				<p class="salut__sous" id="salut-sous">{'Votre périmètre, ' + MOI.domaine + ', compte '}<b>{nb(mien.length)}</b>{#if recentes.length}{(mien.length > 1 ? ' notes' : ' note') + ', dont '}<b>{nb(recentes.length)}</b>{recentes.length > 1 ? ' mises à jour cette semaine.' : ' mise à jour cette semaine.'}{:else}{(mien.length > 1 ? ' notes' : ' note') + ". Aucune n'a bougé cette semaine."}{/if}</p>
+				<p class="salut__sous" id="salut-sous">{'Votre périmètre, ' + moi.domaine + ', compte '}<b>{nb(mien.length)}</b>{#if recentes.length}{(mien.length > 1 ? ' notes' : ' note') + ', dont '}<b>{nb(recentes.length)}</b>{recentes.length > 1 ? ' mises à jour cette semaine.' : ' mise à jour cette semaine.'}{:else}{(mien.length > 1 ? ' notes' : ' note') + ". Aucune n'a bougé cette semaine."}{/if}</p>
 			{/if}
 		</header>
 
@@ -702,10 +758,10 @@
 				{#if etatPage === 'chargement'}
 					{@render esquisse('esq-l', '38%')}
 				{:else if etatPage !== 'vide'}
-					<span>{'Codicillus ' + INSTANCE.version}</span>
+					<span>{'Codicillus ' + instance.version}</span>
 					<!-- prettier-ignore -->
 					<span><span><b>{nb(toutesLesNotes.length)}</b>{' ' + (toutesLesNotes.length > 1 ? 'notes' : 'note')}</span> · <span><b>{nb(signets)}</b>{' ' + (signets > 1 ? 'signets' : 'signet')}</span></span>
-					<span>{'Dernière synchronisation ' + INSTANCE.synchro}</span>
+					<span>{'Dernière synchronisation ' + instance.synchro}</span>
 				{/if}
 			</footer>
 		</div>

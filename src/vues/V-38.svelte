@@ -35,7 +35,17 @@
 	 * maquette gelée, au caractère près — voir l'écart déclaré au rapport du lot :
 	 * P-1.7 les refuse, la conformité pixel les impose.
 	 */
-	import { DOMAINES, INSTANCE, MOI, UNIVERS, type Note } from '../../seeds/corpus';
+	import {
+		DOMAINES,
+		INSTANCE,
+		MOI,
+		UNIVERS,
+		type Domaine,
+		type EtatDInstance,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
+	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import type { Notification } from '$lib/coquille/notifications';
 
@@ -44,9 +54,32 @@
 		etat: string;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-38')`, variante complète. */
 		notes: readonly Note[];
+		/**
+		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
+		 *
+		 * Absentes, les constantes du jeu de semence s'appliquent : c'est ce que le
+		 * mode démo passe, et c'est ce qui garantit que le banc ne bouge pas d'un
+		 * pixel. Fournies — par un chargeur de route —, elles l'emportent, et la vue
+		 * cesse de servir une valeur figée, indépendante de la base et de l'identité.
+		 */
+		/** Les univers déclarés. Absente, `UNIVERS` du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines du périmètre du compte. Absente, `DOMAINES` du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** Le compte connecté. Absente, `MOI` du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, `INSTANCE` du jeu de semence. */
+		instance?: EtatDInstance;
 	}
 
-	const { etat, notes }: Proprietes = $props();
+	const {
+		etat,
+		notes,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE
+	}: Proprietes = $props();
 
 	/** Les quatre types, avec leur règle d'emploi et leurs exemples réels. */
 	const TYPES = [
@@ -160,13 +193,6 @@
 	];
 
 	const notifications = $derived<readonly Notification[]>(etat === 'empilement' ? EMPILEMENT : []);
-
-	const compte = {
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
-	};
 </script>
 
 {#snippet glyphe(type: string)}
@@ -193,11 +219,11 @@
 
 <Coquille
 	fil={['Accueil', 'Système de notification']}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	{notes}
 	{compte}
-	version={INSTANCE.version}
+	version={instance.version}
 	classeContenu="doc"
 	{notifications}
 >

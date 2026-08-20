@@ -67,8 +67,12 @@
 		MOI,
 		UNIVERS,
 		noteParIdentifiant,
+		type Domaine,
+		type EtatDInstance,
 		type IdentifiantNote,
-		type Note
+		type Note,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import NoteDeDemonstration from '$lib/lecture/NoteDeDemonstration.svelte';
@@ -80,16 +84,57 @@
 		libelleFraicheur,
 		type NiveauFraicheur
 	} from '$lib/fraicheur';
-	import { NOTE } from '$lib/lecture/note-de-demonstration';
+	import { NOTE, rangementDe, type NoteAffichee } from '$lib/lecture/note-de-demonstration';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — cinq contrôles de planche. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-14')`, variante « complète ». */
 		notes: readonly Note[];
+		/**
+		 * LES QUATRE PROPRIÉTÉS DE CONTEXTE — T-042, et elles sont OPTIONNELLES.
+		 *
+		 * Avant ce lot, cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et
+		 * `INSTANCE` au niveau du module : un chargeur de route ne pouvait rien
+		 * y substituer, et l'écran servait le contexte du jeu de semence quelle
+		 * que fût l'identité de l'appelant.
+		 *
+		 * LE DÉFAUT EST LA CONSTANTE DU JEU, et c'est ce qui garantit que le banc
+		 * ne bouge pas : le mode de conception ne passe que `vecteur` et `notes`,
+		 * la vue reçoit donc exactement ce qu'elle avait.
+		 */
+		univers?: readonly Univers[];
+		domaines?: readonly Domaine[];
+		compte?: UtilisateurCourant;
+		instance?: EtatDInstance;
+		/**
+		 * LA NOTE LUE ET SES DEUX CORPS RENDUS — T-042, et c'est le défaut le
+		 * plus visible du produit : `/notes/{identifiant}` servait l'article de
+		 * `n-restaurer-pg` POUR LES 32 NOTES.
+		 *
+		 * La cause n'était pas le chargeur — `src/lib/donnees/note.ts` rend
+		 * depuis le 20 août la note réelle et son corps rendu par
+		 * `rendreDocument` — mais l'absence d'une propriété pour les recevoir,
+		 * écart déclaré au rapport de `T-033`. C'est cette propriété.
+		 *
+		 * ABSENTE, LA TRANSCRIPTION FIGÉE DU GEL, à l'identique — les 44 couples
+		 * de la vue ne bougent pas. FOURNIE, l'identité de la note et ses corps.
+		 * Ce qu'elle n'alimente PAS — le cartouche de contrôle et la date de
+		 * modification — est énuméré, avec sa cause, au bloc partagé
+		 * `$lib/lecture/NoteDeDemonstration.svelte`.
+		 */
+		affichee?: NoteAffichee;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		affichee
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 
@@ -125,8 +170,16 @@
 	 * pièces jointes coiffe son panneau. Les deux viennent du corpus, par le
 	 * module partagé — la même note que celle que rend `NoteDeDemonstration`,
 	 * jamais une seconde lecture.
+	 *
+	 * T-042 — LA NOTE EST CELLE QU'ON LIT, ou celle du gel à défaut. Le fil
+	 * d'Ariane et le chemin courant du rail s'en DÉDUISENT par `rangementDe`,
+	 * là où ils étaient écrits en clair : au défaut, la déduction redonne
+	 * exactement `['Accueil', 'Production', 'Infrastructure', 'Exploitation',
+	 * 'Sauvegardes', titre]`, ce que les 44 couples vérifient.
 	 */
-	const titre = NOTE.titre;
+	const note = $derived(affichee?.note ?? NOTE);
+	const titre = $derived(note.titre);
+	const rangement = $derived(rangementDe(note));
 
 	/**
 	 * LES DEUX NOTES VOISINES du panneau « Position », dans l'ordre du gel :
@@ -192,20 +245,20 @@
 <Coquille
 	classeContenu="lecture"
 	cibleEvitement="article"
-	fil={['Accueil', 'Production', 'Infrastructure', 'Exploitation', 'Sauvegardes', titre]}
-	courant={['Infrastructure', 'Exploitation', 'Sauvegardes']}
+	fil={['Accueil', ...rangement, titre]}
+	courant={rangement.slice(1)}
 	{droits}
 	donnees={{ 'data-etat': etat, 'data-registre': 'reference' }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<!-- ---------- Sommaire ---------- -->
@@ -230,6 +283,7 @@
 				{operationnel}
 				{droits}
 				{separateur}
+				{affichee}
 			/>
 		</article>
 
@@ -369,7 +423,7 @@
 			<!-- Pièces jointes -->
 			<section class="panneau repliable" data-ouvert="oui">
 				<div class="panneau__tete">
-					<span class="etiq">Pièces jointes</span><span class="chiffre">{NOTE.pj}</span>
+					<span class="etiq">Pièces jointes</span><span class="chiffre">{note.pj}</span>
 				</div>
 				<div class="panneau__corps panneau__corps--serre">
 					<a class="pj" href="#">

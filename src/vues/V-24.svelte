@@ -95,9 +95,14 @@
 		LOT_IMPORT,
 		MOI,
 		UNIVERS,
+		type Domaine,
+		type EtatDInstance,
 		type FichierDuLot,
 		type FormatDImport,
-		type Note
+		type LotDImport,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 
@@ -106,9 +111,43 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-24')`, variante complète. */
 		notes: readonly Note[];
+		/**
+		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
+		 *
+		 * Absentes, les constantes du jeu de semence s'appliquent : c'est ce que le
+		 * mode démo passe, et c'est ce qui garantit que le banc ne bouge pas d'un
+		 * pixel. Fournies — par un chargeur de route —, elles l'emportent, et la vue
+		 * cesse de servir une valeur figée, indépendante de la base et de l'identité.
+		 */
+		/** Les univers déclarés. Absente, `UNIVERS` du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines du périmètre du compte. Absente, `DOMAINES` du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** Le compte connecté. Absente, `MOI` du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, `INSTANCE` du jeu de semence. */
+		instance?: EtatDInstance;
+		/** Le lot déposé. Absente, `LOT_IMPORT` du jeu de semence. */
+		lotImport?: LotDImport;
+		/**
+		 * Les libellés des formats admis. Absente, `FORMATS_IMPORT` du jeu de
+		 * semence. La table est PARTIELLE : un service de conversion qui n'en
+		 * reconnaîtrait qu'une partie ne doit pas être empêché de le dire, et le
+		 * rendu retombe déjà sur l'extension quand le libellé manque.
+		 */
+		formatsImport?: Partial<Record<FormatDImport, string>>;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		lotImport = LOT_IMPORT,
+		formatsImport = FORMATS_IMPORT
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 
@@ -218,7 +257,7 @@
 	   `resumeLot()` (`V-24:2552`) et `arborescenceLot()` (`V-24:2532`). Aucun
 	   chiffre n'est saisi : tout est compté sur `LOT_IMPORT` (P-02). */
 
-	const LOT = LOT_IMPORT;
+	const LOT = $derived(lotImport);
 
 	/** Le sort d'un fichier décide de sa colonne : note, écarté, en échec. */
 	const resume = $derived.by(() => {
@@ -295,7 +334,7 @@
 	const parFormat = $derived(
 		[...resume.formats]
 			.sort((a, b) => b[1] - a[1])
-			.map(([f, n]) => [n, FORMATS_IMPORT[f] ?? f] as const)
+			.map(([f, n]) => [n, formatsImport[f] ?? f] as const)
 	);
 
 	/** La structure annoncée. Le scénario « notes » ne crée aucun domaine. */
@@ -418,16 +457,16 @@
 	idContenu="contenu"
 	fil={['Accueil', 'Importer']}
 	donnees={{ 'data-etape': String(etape) }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<!-- prettier-ignore -->
@@ -489,8 +528,8 @@
 					>
 					<!-- prettier-ignore -->
 					<select class="selecteur" id="domaine-cible"
-						>{#if depotTraverse}{#each DOMAINES as d (d.nom)}<option
-							value={d.nom} selected={d.nom === MOI.domaine}>{d.univers + ' › ' + d.nom}</option
+						>{#if depotTraverse}{#each domaines as d (d.nom)}<option
+							value={d.nom} selected={d.nom === compte.domaine}>{d.univers + ' › ' + d.nom}</option
 						>{/each}{/if}</select
 					>
 				</div>

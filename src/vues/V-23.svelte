@@ -117,38 +117,80 @@
 		MOI,
 		UNIVERS,
 		noteParIdentifiant,
-		type Note
+		type Domaine,
+		type EtatDInstance,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 
+	/**
+	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
+	 * DÉFAUT EST LA CONSTANTE DU JEU DE SEMENCE.
+	 *
+	 * La vue devient capable de recevoir ce qu'un chargeur de route lit en base
+	 * — univers, domaines, compte courant, état de l'instance — sans qu'aucun
+	 * rendu ne change tant que rien ne lui est passé : le mode de conception ne
+	 * passe que `vecteur` et `notes`, la vue reçoit donc exactement ce qu'elle
+	 * recevait, et le banc de comparaison ne bouge pas d'un pixel.
+	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — enveloppe × mode × récupération. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-23')`, variante « complète ». */
 		notes: readonly Note[];
+		/** Les univers du produit. Défaut : ceux du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines du produit. Défaut : ceux du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Défaut : celui du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
+		instance?: EtatDInstance;
+		/**
+		 * LE SIGNET ÉDITÉ, quand la route en désigne un.
+		 *
+		 * Le jeu de semence de la vue porte SIX notes de type « Signet » (compté sur
+		 * `corpusPourVue('V-23')`) ; la vue en cherchait UNE, `n-sig-statut`, en
+		 * dur — le chargeur résolvait la bonne note et la vue en affichait une
+		 * autre. La propriété l'emporte désormais ; absente, le repli reste celui
+		 * que le gel désigne nommément, et le banc ne bouge pas.
+		 */
+		signet?: Note;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		signet
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const enveloppe = $derived(reglage['env'] === 'page' ? 'page' : 'dialogue');
 	const edition = $derived(reglage['mode'] === 'edition');
 
 	/**
-	 * LE SIGNET ÉDITÉ — `n-sig-statut`, celui que le gel désigne nommément
-	 * (`V-23:2723`) : `window.CORPUS.filter(n => n.id === "n-sig-statut")[0]`. Il
-	 * n'est pas choisi, il est lu — et il est lu DANS LE JEU DE SEMENCE DE LA
-	 * VUE, comme le gel le lit dans le sien.
+	 * LE SIGNET ÉDITÉ — celui que la route désigne, sinon `n-sig-statut`, celui
+	 * que le gel désigne nommément (`V-23:2723`) :
+	 * `window.CORPUS.filter(n => n.id === "n-sig-statut")[0]`. Le repli est lu
+	 * DANS LE JEU DE SEMENCE DE LA VUE, comme le gel le lit dans le sien.
 	 */
 	const SIGNET = $derived(
-		(corpus.find((n) => n.id === 'n-sig-statut') ?? noteParIdentifiant('n-sig-statut')) as Note
+		(signet ??
+			corpus.find((n) => n.id === 'n-sig-statut') ??
+			noteParIdentifiant('n-sig-statut')) as Note
 	);
 
 	/* ── Les valeurs du formulaire, selon le mode ─────────────────────────── */
 	const adresse = $derived(edition ? (SIGNET.url ?? '') : '');
 	const titre = $derived(edition ? SIGNET.titre : '');
 	const description = $derived(edition ? SIGNET.extrait : '');
-	const domaineChoisi = $derived(edition ? SIGNET.domaine : MOI.domaine);
+	const domaineChoisi = $derived(edition ? SIGNET.domaine : compte.domaine);
 	const etiquettes = $derived<readonly string[]>(edition ? SIGNET.etiquettes : []);
 
 	const libelle = $derived(edition ? 'Modifier le signet' : 'Nouveau signet');
@@ -368,7 +410,7 @@
 			<label class="champ__label" for="domaine">Domaine de rattachement <span class="oblig">*</span></label>
 			<select class="selecteur" id="domaine">
 				<!-- prettier-ignore -->
-				{#each DOMAINES as d (d.nom)}<option value={d.nom} selected={d.nom === domaineChoisi}>{d.univers + ' › ' + d.nom}</option>{/each}
+				{#each domaines as d (d.nom)}<option value={d.nom} selected={d.nom === domaineChoisi}>{d.univers + ' › ' + d.nom}</option>{/each}
 			</select>
 		</div>
 
@@ -463,16 +505,16 @@
 	fil={['Accueil', 'Production', 'Infrastructure', 'Signets', 'Nouveau']}
 	courant={['Infrastructure']}
 	donnees={{ 'data-enveloppe': enveloppe, 'data-mode': edition ? 'edition' : 'creation' }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 	superposition={boiteDeDialogue}
 >
 	{#snippet enfants()}

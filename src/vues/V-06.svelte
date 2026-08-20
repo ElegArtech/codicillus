@@ -193,14 +193,16 @@
 	import { resolve } from '$app/paths';
 	import Marque from '$lib/auth/Marque.svelte';
 	import PileDeNotifications from '$lib/coquille/PileDeNotifications.svelte';
-	import { COMPTES } from '../../seeds/corpus';
+	import { COMPTES, type Compte } from '../../seeds/corpus';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
+		/** Les comptes de l'instance. Absente, `COMPTES` du jeu de semence. */
+		comptes?: readonly Compte[];
 	}
 
-	const { vecteur }: Proprietes = $props();
+	const { vecteur, comptes = COMPTES }: Proprietes = $props();
 
 	/**
 	 * L'étape affichée, portée du gestionnaire de la planche (`V-06:1068`) :
@@ -237,7 +239,7 @@
 	 */
 	const TIRET = '—';
 	const identifiantRappele = $derived(
-		etape === '2' ? (COMPTES.find((c) => c.id === 'c-sophie')?.identifiant ?? TIRET) : TIRET
+		etape === '2' ? (comptes.find((c) => c.id === 'c-sophie')?.identifiant ?? TIRET) : TIRET
 	);
 
 	/**

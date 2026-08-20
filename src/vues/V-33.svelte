@@ -29,15 +29,18 @@
 	 * et la chaîne de dérivation est écrite en un seul sens :
 	 *
 	 *   `SEUILS_PAR_DEFAUT` (`src/lib/fraicheur.ts`, l'implémentation unique)
-	 *      → `CONFIG.seuil*` (`seeds/corpus.ts`, la configuration de l'instance)
+	 *      → la configuration de l'instance, reçue en propriété `config`
+	 *         (défaut : `CONFIG` de `seeds/corpus.ts`)
 	 *         → `SEUILS_DE_PLANCHE.actuel` (ici, la position « en vigueur »)
 	 *
 	 * Les valeurs rendues sont inchangées : 90 et 180 des deux côtés.
 	 *
-	 * LE FORMULAIRE EST NOURRI PAR `CONFIG` DE `seeds/corpus.ts` — les sept
+	 * LE FORMULAIRE EST NOURRI PAR LA PROPRIÉTÉ `config` — les sept
 	 * réglages, aucun en dur : seuils, versions conservées, portail
 	 * d'assistance, libellé du concept, taille de pièce jointe, durée de
 	 * session. `enregistre` du gel est cette même valeur (`V-33:2962`).
+	 * Absente, la constante `CONFIG` du jeu de semence s'applique : la vue rend
+	 * alors exactement ce qu'elle rendait (T-044).
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * L'APERÇU D'IMPACT — UNE SEULE DÉFINITION DE LA FRAÎCHEUR (P-01)
@@ -90,7 +93,20 @@
 	 * `node verif/feuilles-de-vue.mjs V-33 --installer`. Les `style=` reproduits
 	 * figurent tous à l'ensemble clos du gel (ARB-016).
 	 */
-	import { CONFIG, CORPUS, type NiveauFraicheur, type Note } from '../../seeds/corpus';
+	import {
+		CONFIG,
+		DOMAINES,
+		INSTANCE,
+		MOI,
+		UNIVERS,
+		type Configuration,
+		type Domaine,
+		type EtatDInstance,
+		type NiveauFraicheur,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
+	} from '../../seeds/corpus';
 	import { niveauFraicheur } from '$lib/fraicheur';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
@@ -106,27 +122,45 @@
 		vecteur?: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-33')`. */
 		notes: readonly Note[];
+		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
+		univers?: readonly Univers[];
+		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
+		instance?: EtatDInstance;
+		/** Les sept réglages de l'instance. Absente, la constante du jeu de semence. */
+		config?: Configuration;
 	}
 
-	const { vecteur, notes }: Proprietes = $props();
+	const {
+		vecteur,
+		notes,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		config = CONFIG
+	}: Proprietes = $props();
 
 	/**
 	 * LES QUATRE POSITIONS DE LA PLANCHE. Les trois dernières sont des réglages
 	 * hypothétiques, littéral du gel (`V-33:3228`), recopié et non fabriqué :
 	 * aucune table du corpus ne les porte. La première, `actuel`, est au
-	 * contraire la position « en vigueur » — elle DÉRIVE de `CONFIG`, et n'est
-	 * pas un second jeu de seuils (P-01, ADR-005 ; voir l'en-tête).
+	 * contraire la position « en vigueur » — elle DÉRIVE de `config`, et
+	 * n'est pas un second jeu de seuils (P-01, ADR-005 ; voir l'en-tête).
 	 */
-	const SEUILS_DE_PLANCHE: Record<string, readonly [number, number]> = {
-		actuel: [CONFIG.seuilFrais, CONFIG.seuilVieillissant],
+	const SEUILS_DE_PLANCHE: Record<string, readonly [number, number]> = $derived({
+		actuel: [config.seuilFrais, config.seuilVieillissant],
 		severe: [30, 60],
 		large: [120, 240],
 		invalide: [120, 90]
-	};
+	});
 
 	/**
 	 * LES DURÉES DE SESSION PROPOSÉES — littéral du gel (`var DUREES`,
-	 * `V-33:2963`). `CONFIG.dureeSession` donne la valeur retenue, jamais la
+	 * `V-33:2963`). `config.dureeSession` donne la valeur retenue, jamais la
 	 * liste des choix : le corpus ne la porte pas, et la fabriquer serait
 	 * inventer une définition que le gel n'a pas.
 	 */
@@ -151,8 +185,8 @@
 
 	/** `window.repartitionPour` (`V-33:2687`) — le niveau vient de P-01. */
 	function repartitionPour(frais: number, vieillissant: number): Repartition {
-		const r: Repartition = { frais: 0, vieil: 0, obs: 0, total: CORPUS.length };
-		for (const n of CORPUS) r[niveauFraicheur(n.jours, { frais, vieillissant })]++;
+		const r: Repartition = { frais: 0, vieil: 0, obs: 0, total: notes.length };
+		for (const n of notes) r[niveauFraicheur(n.jours, { frais, vieillissant })]++;
 		return r;
 	}
 
@@ -169,10 +203,10 @@
 			versVieil: [],
 			versObs: []
 		};
-		for (const n of CORPUS) {
+		for (const n of notes) {
 			const avant = niveauFraicheur(n.jours, {
-				frais: CONFIG.seuilFrais,
-				vieillissant: CONFIG.seuilVieillissant
+				frais: config.seuilFrais,
+				vieillissant: config.seuilVieillissant
 			});
 			const apres = niveauFraicheur(n.jours, { frais, vieillissant });
 			if (avant === apres) continue;
@@ -219,12 +253,12 @@
 	/** `modifie()` (`V-33:3166`) — la comparaison porte sur les sept réglages ;
 	 *  seuls les deux seuils peuvent différer de l'enregistré. */
 	const modifie = $derived(
-		seuilFrais !== CONFIG.seuilFrais || seuilVieillissant !== CONFIG.seuilVieillissant
+		seuilFrais !== config.seuilFrais || seuilVieillissant !== config.seuilVieillissant
 	);
 
 	/** `rendreImpact()` (`V-33:3032`). L'aperçu ne s'affiche que si les deux
 	 *  seuils forment une progression valable. */
-	const avant = $derived(repartitionPour(CONFIG.seuilFrais, CONFIG.seuilVieillissant));
+	const avant = $derived(repartitionPour(config.seuilFrais, config.seuilVieillissant));
 	const apres = $derived(repartitionPour(seuilFrais, seuilVieillissant));
 	const mouvements = $derived(impactSeuils(seuilFrais, seuilVieillissant));
 	const bascules = $derived(
@@ -272,8 +306,8 @@
 
 	/** `majEtat()` (`V-33:3171`) — l'aide du champ « versions conservées ». */
 	const aideVersions = $derived(
-		CONFIG.versionsMax
-			? `Au-delà de ${CONFIG.versionsMax} versions, la plus ancienne est supprimée à chaque ` +
+		config.versionsMax
+			? `Au-delà de ${config.versionsMax} versions, la plus ancienne est supprimée à chaque ` +
 					'nouvel enregistrement. Réduire cette valeur supprimera les versions excédentaires ' +
 					"dès le prochain enregistrement d'une note."
 			: ''
@@ -310,7 +344,7 @@
 		>{#each partsDe(r) as p (p.cle)}<span><i class={p.classe}></i><b>{p.n}</b>{` ${p.n > 1 ? p.pluriel : p.singulier}`}</span>{/each}</div
 	>{/if}{/if}{/snippet}
 
-<CoquilleDeConsole section="configuration" {notes}>
+<CoquilleDeConsole section="configuration" {notes} {univers} {domaines} {compte} {instance}>
 	{#snippet enfants()}
 		<TeteDeSection
 			titre="Configuration"
@@ -385,7 +419,7 @@
 				><div class="champ"
 					><label class="champ__label" for="c-versions">Versions conservées par note</label
 					><div class="champ-nombre"
-						><input class="saisie" type="number" id="c-versions" min="5" max="500" step="1" value={CONFIG.versionsMax}
+						><input class="saisie" type="number" id="c-versions" min="5" max="500" step="1" value={config.versionsMax}
 						><span class="champ-nombre__unite">versions</span
 					></div
 					><span class="champ__aide" id="aide-versions">{aideVersions}</span
@@ -405,7 +439,7 @@
 			><div class="groupe__corps"
 				><div class="champ" id="champ-portail"
 					><label class="champ__label" for="c-portail">Adresse du portail d'assistance</label
-					><input class="saisie" type="url" id="c-portail" spellcheck="false" placeholder="https://…" value={CONFIG.portailAssistance}
+					><input class="saisie" type="url" id="c-portail" spellcheck="false" placeholder="https://…" value={config.portailAssistance}
 					><span class="champ__aide">Cible du bouton « Ouvrir un ticket d'assistance », présent sur toutes les vues publiques et sur les pages introuvables.</span
 					><div class="champ__erreur" id="erreur-portail" hidden
 						>{@render marqueurDErreur()}<span id="erreur-portail-txt"></span
@@ -426,7 +460,7 @@
 			><div class="groupe__corps"
 				><div class="champ" id="champ-mot"
 					><label class="champ__label" for="c-mot">Libellé du concept</label
-					><input class="saisie" type="text" id="c-mot" style="max-width:280px" autocomplete="off" value={CONFIG.motFiche}
+					><input class="saisie" type="text" id="c-mot" style="max-width:280px" autocomplete="off" value={config.motFiche}
 					><span class="champ__aide">Au singulier, avec sa majuscule. Le pluriel est déduit.</span
 					><div class="champ__erreur" id="erreur-mot" hidden
 						>{@render marqueurDErreur()}<span id="erreur-mot-txt"></span
@@ -454,7 +488,7 @@
 					><div class="champ"
 						><label class="champ__label" for="c-taille">Taille maximale d'une pièce jointe</label
 						><div class="champ-nombre"
-							><input class="saisie" type="number" id="c-taille" min="1" max="500" step="1" value={CONFIG.tailleMaxPieceJointe}
+							><input class="saisie" type="number" id="c-taille" min="1" max="500" step="1" value={config.tailleMaxPieceJointe}
 							><span class="champ-nombre__unite">Mo</span
 						></div
 						><span class="champ__aide">Les fichiers déjà déposés au-delà de cette limite restent accessibles.</span
@@ -462,7 +496,7 @@
 					><div class="champ"
 						><label class="champ__label" for="c-session">Durée de session</label
 						><select class="selecteur" id="c-session"
-							>{#each DUREES as d (d)}<option value={d} selected={d === CONFIG.dureeSession}>{libelleDuree(d)}</option>{/each}</select
+							>{#each DUREES as d (d)}<option value={d} selected={d === config.dureeSession}>{libelleDuree(d)}</option>{/each}</select
 						><span class="champ__aide">Délai d'inactivité au bout duquel la session se ferme, sauf si l'utilisateur a choisi de rester connecté.</span
 					></div
 				></div
