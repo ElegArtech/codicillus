@@ -60,7 +60,12 @@
 import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { supprimerUnUnivers } from '$lib/donnees/administration';
-import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import {
+	accesALaConsole,
+	contexteDeRequete,
+	lireLesDesignationsDUnivers,
+	resoudreLaConsole
+} from '$lib/donnees/consoles';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
@@ -74,7 +79,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		notes: acces.ressource.notes,
 		univers: acces.ressource.univers,
 		domaines: acces.ressource.domaines,
-		compte: acces.ressource.compte
+		compte: acces.ressource.compte,
+		designations: await lireLesDesignationsDUnivers(base)
 	};
 };
 
