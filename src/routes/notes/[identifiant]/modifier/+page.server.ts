@@ -40,23 +40,50 @@
  *
  * `RG-M07-01` et `RG-M07-02` : chaque enregistrement qui modifie un corps
  * capture une version — titre et LES DEUX corps —, et un enregistrement sans
- * changement n'en crée pas. `enregistrerLeCorps()` fait les deux écritures dans
- * une seule transaction.
+ * changement n'en crée pas. `enregistrerLaNote()` fait toutes les écritures dans
+ * une seule transaction : la note, sa version, ses étiquettes.
  *
  * LE FORMULAIRE GELÉ NE PEUT PAS L'ATTEINDRE, et c'est dit plutôt que contourné :
  * V-17 ne porte ni `method` ni `action`, et aucun de ses champs ne porte
- * d'attribut de nom (relevé champ par champ, V-17:1596-1665). Le corps saisi
- * arrive donc d'un champ nommé que seul un client construit — celui que le lot
- * de câblage de l'éditeur posera, en touchant `src/vues/`. L'action est
- * néanmoins REFUSÉE avant d'écrire pour qui n'a pas le droit : l'absence de
- * bouton n'est pas un contrôle d'accès.
+ * d'attribut de nom (relevé champ par champ, V-17:1596-1665). Les champs nommés
+ * que cette action lit sont ceux qu'`ARB-063` §3.2 fait poser PAR LA ROUTE, en
+ * champs cachés remplis depuis les nœuds du gel — jamais par `src/vues/`, que le
+ * §5 du même arbitrage ferme pour cette campagne. L'action est néanmoins REFUSÉE
+ * avant d'écrire pour qui n'a pas le droit : l'absence de bouton n'est pas un
+ * contrôle d'accès.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE QUE LA SOUMISSION PORTE, ET CE QU'ELLE NE PORTE PAS
+ *
+ * Sept champs, tous FACULTATIFS : `corps` (le document sérialisé de l'éditeur),
+ * `corps-markdown` (le Markdown, converti par la porte unique d'`ADR-004`, et
+ * EXCLUSIF du premier), `titre`, `domaine` et `dossier` (ensemble, jamais l'un
+ * sans l'autre), `visibilite`, `statut`, `etiquettes`. Un champ absent n'est pas
+ * modifié — une soumission qui ne porte qu'un titre ne touche pas au corps, et
+ * n'écrit donc aucune version.
+ *
+ * DEUX CHAMPS DE CORPS PLUTÔT QU'UN, et la raison est le navigateur : aucun
+ * client ne compose le document sérialisé de l'éditeur depuis une zone de saisie
+ * riche sans embarquer l'éditeur lui-même. Le champ Markdown est le chemin d'un
+ * client qui ne l'embarque pas ; le premier reste, parce qu'il est celui du
+ * client qui l'embarque. Ils ne peuvent pas arriver ensemble.
+ *
+ * LA RÉPONSE EST UNE REDIRECTION 303 vers la lecture de la note. L'identifiant
+ * de destination est celui de l'adresse demandée, jamais un identifiant
+ * recalculé sur le nouveau titre : `RG-M03-03` (`CDC:484`) et `ARB-062` §2.6.
  */
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { enregistrerLeCorps, resoudreLEditionDUneNote } from '$lib/donnees/edition';
+import {
+	enregistrerLaNote,
+	lireLaModification,
+	resoudreLEditionDUneNote,
+	type LectureDuFormulaire
+} from '$lib/donnees/edition';
 import { lireSeuils } from '$lib/donnees/lecture';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import { DocumentInvalide } from '$lib/contenu/document';
+import { MarkdownInvalide } from '$lib/contenu/markdown';
 import { EditeurIncapable } from '$lib/edition/document';
 import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
@@ -100,12 +127,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 export const actions: Actions = {
 	default: async ({ params, locals, request }) => {
 		const { base, lecture } = await contexteDe();
-		const formulaire = await request.formData();
-		const saisi = formulaire.get('corps');
-		if (typeof saisi !== 'string') {
-			/* Le droit est vérifié AVANT de se plaindre de la forme : une réponse
-			   qui distinguerait « champ manquant » de « adresse inconnue »
-			   révélerait l'existence de la note à qui n'y a pas droit. */
+
+		/**
+		 * LE DROIT AVANT LA FORME. Une réponse qui distinguerait « champ mal
+		 * formé » de « adresse inconnue » révélerait l'existence de la note à qui
+		 * n'y a pas droit — `RG-ACC-04`, régime indiscernable de `docs/routes.md`
+		 * §5.5. Cette garde précède donc TOUTE plainte sur la soumission.
+		 *
+		 * Elle n'est appelée que sur le chemin du refus : le chemin nominal refait
+		 * la même résolution dans `enregistrerLaNote()`, par le même objet et le
+		 * même filtre.
+		 */
+		const garderLeDroit = async (): Promise<void> => {
 			const acces = await resoudreLEditionDUneNote(base, {
 				identifiant: params.identifiant,
 				registre: 'reference',
@@ -113,28 +146,53 @@ export const actions: Actions = {
 				contexte: lecture
 			});
 			if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
-			return fail(400, { motif: 'aucun corps soumis' });
+		};
+
+		const formulaire = await request.formData();
+		let lue: LectureDuFormulaire;
+		try {
+			lue = lireLaModification(formulaire);
+		} catch (cause) {
+			/* UN CORPS MAL FORMÉ EST REFUSÉ, JAMAIS RÉPARÉ (ADR-003) — quelle que
+			   soit la forme par laquelle il est arrivé. Le refus porte ce que la
+			   levée transporte : les manquements chemin par chemin pour un
+			   document, la ligne fautive pour du Markdown. */
+			await garderLeDroit();
+			if (cause instanceof DocumentInvalide) {
+				return fail(422, {
+					motif: 'document refusé',
+					manquements: cause.manquements.map((m) => `${m.chemin} : ${m.message}`)
+				});
+			}
+			if (cause instanceof MarkdownInvalide) {
+				return fail(422, { motif: 'markdown refusé', ligne: cause.ligne });
+			}
+			if (cause instanceof SyntaxError) {
+				return fail(400, { motif: 'corps illisible' });
+			}
+			throw cause;
+		}
+		if (!lue.recu) {
+			await garderLeDroit();
+			return fail(400, { motif: lue.refus.motif });
 		}
 
+		let issue;
 		try {
 			/* L'INDEX EST ENTRETENU PAR L'ENREGISTREMENT — `RG-M05-06`. Le client du
 			   moteur est un paramètre, non une option : cette route ne peut pas
 			   écrire sans le fournir. */
-			const fait = await enregistrerLeCorps(base, moteurPartage(), {
+			issue = await enregistrerLaNote(base, moteurPartage(), {
 				identifiant: params.identifiant,
 				registre: 'reference',
 				identite: locals.identite,
 				contexte: lecture,
-				corpsSaisi: JSON.parse(saisi),
-				maintenant: lecture.maintenant
+				maintenant: lecture.maintenant,
+				modification: lue.modification
 			});
-			if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
-			return { version: fait.ressource.version?.numero ?? null };
 		} catch (cause) {
-			/* UN DOCUMENT MAL FORMÉ EST REFUSÉ, JAMAIS RÉPARÉ (ADR-003). Le refus
-			   porte ses manquements, chemin par chemin : c'est ce que
-			   `DocumentInvalide` transporte, et c'est ce que l'écran d'erreur de
-			   V-17 a vocation à montrer. */
+			/* Ici, le droit est DÉJÀ acquis : ces deux levées viennent d'après la
+			   résolution, à l'intérieur de l'enregistrement. */
 			if (cause instanceof DocumentInvalide) {
 				return fail(422, {
 					motif: 'document refusé',
@@ -144,10 +202,19 @@ export const actions: Actions = {
 			if (cause instanceof EditeurIncapable) {
 				return fail(422, { motif: 'éditeur incapable', manque: cause.manque });
 			}
-			if (cause instanceof SyntaxError) {
-				return fail(400, { motif: 'corps illisible' });
-			}
 			throw cause;
 		}
+		if (!issue.trouve) error(404, MESSAGE_INTROUVABLE);
+		if (issue.ressource.sort === 'rangement-introuvable') {
+			/* Le dossier de destination est inconnu, ambigu, ou interdit — une
+			   seule issue pour les quatre causes, `RG-ACC-04`. La note, elle,
+			   existe : ce n'est donc pas un 404. */
+			return fail(400, { motif: 'rangement introuvable' });
+		}
+
+		/* L'ADRESSE DE DESTINATION EST CELLE DE L'ADRESSE DEMANDÉE. Un identifiant
+		   recalculé sur le nouveau titre romprait `RG-M03-03` — « l'adresse d'une
+		   note reste stable dans le temps » — et `ARB-062` §2.6. */
+		redirect(303, '/notes/' + params.identifiant);
 	}
 };

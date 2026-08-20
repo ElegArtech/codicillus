@@ -2,9 +2,10 @@
  * LES UNITAIRES DE L'ÉDITION — ce qui se contrôle SANS base.
  *
  * Même règle que `note.test.ts` : ce qui exige le conteneur est mesuré par les
- * batteries qui l'ouvrent. Ici, la seule DÉCISION extractible est celle de la
- * pièce jointe, et elle est éprouvée sur une pièce SYNTHÉTIQUE — parce qu'elle
- * ne peut pas l'être autrement.
+ * batteries qui l'ouvrent. Trois décisions sont extractibles, et toutes trois
+ * sont éprouvées sur du SYNTHÉTIQUE : la résolution d'une pièce jointe, la
+ * lecture d'une soumission de modification, et le dossier qu'un chemin affiché
+ * désigne.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * POURQUOI CE CAS DOIT ÊTRE SYNTHÉTIQUE — `P-5` ET `P-26`
@@ -23,7 +24,18 @@
  */
 import { describe, expect, it } from 'vitest';
 import { ANONYME, identiteAuthentifiee, INTROUVABLE } from '../droits/resolution';
-import { pieceJointeResolue, type LigneDePieceJointe } from './edition';
+import { DocumentInvalide, type Document } from '../contenu/document';
+import { analyserMarkdown } from '../contenu/markdown';
+import {
+	dossierDeDestination,
+	etiquettesSoumises,
+	lireLaModification,
+	pieceJointeResolue,
+	type ChampsSoumis,
+	type LigneDePieceJointe,
+	type ModificationDeNote
+} from './edition';
+import type { LigneDeDossier } from './rangement';
 
 /* ═══════════════════════════════════ Le décor synthétique ═══════════════ */
 
@@ -127,5 +139,222 @@ describe('RG-ACC-04 — refus et inexistence rendent le MÊME OBJET, pas deux é
 		expect(pieceJointeResolue(ANONYME, piece(), PERIMETRE_TOTAL)).toBe(
 			pieceJointeResolue(REDACTEUR, piece({ dossierId: DOSSIER_INTERDIT }), PERIMETRE)
 		);
+	});
+});
+
+/* ═══════════════════════════════════ La lecture d'une soumission ════════ */
+
+/**
+ * CE QUE CES CAS ÉPROUVENT, ET POURQUOI ILS SONT SYNTHÉTIQUES.
+ *
+ * `lireLaModification()` est la porte d'entrée de `POST /notes/{id}/modifier` :
+ * c'est elle qui décide ce qui sera écrit et ce qui ne le sera pas. Aucune
+ * batterie du dépôt ne soumet ce formulaire — le gel de V-17 ne porte ni
+ * `method`, ni `action`, ni un seul attribut de nom (`ARB-063` §1) —, de sorte
+ * que sans les cas ci-dessous, la règle « aucun champ absent n'est modifié »
+ * serait une règle qu'on espère (`P-5`, `P-26`).
+ *
+ * Ils sont éprouvés sur une table de correspondance, sans base et sans serveur :
+ * la base est PARTAGÉE par plusieurs copies de travail, et un unitaire qui y
+ * écrirait mesurerait le voisin (`P-30`).
+ */
+function champs(soumis: Record<string, unknown>): ChampsSoumis {
+	return { get: (nom: string) => (nom in soumis ? soumis[nom] : null) };
+}
+
+function modificationDe(soumis: Record<string, unknown>): ModificationDeNote {
+	const lue = lireLaModification(champs(soumis));
+	if (!lue.recu) throw new Error('soumission refusée : ' + lue.refus.motif);
+	return lue.modification;
+}
+
+function motifDuRefus(soumis: Record<string, unknown>): string {
+	const lue = lireLaModification(champs(soumis));
+	if (lue.recu) throw new Error('soumission acceptée, un refus était attendu');
+	return lue.refus.motif;
+}
+
+describe('« aucun champ absent n’est modifié » — l’absence est une clé ABSENTE', () => {
+	it('une soumission vide ne porte AUCUN champ', () => {
+		expect(modificationDe({})).toEqual({});
+	});
+
+	it('une soumission qui ne porte qu’un titre ne porte pas de corps', () => {
+		const modification = modificationDe({ titre: 'Restaurer PostgreSQL' });
+		expect(modification.titre).toBe('Restaurer PostgreSQL');
+		/* La clé est absente, et non présente à `undefined` : c'est ce que
+		   `enregistrerLaNote()` lit pour ne pas toucher au corps, donc pour ne pas
+		   écrire de version (`RG-M07-01`). */
+		expect('corps' in modification).toBe(false);
+		expect('etiquettes' in modification).toBe(false);
+		expect('rangement' in modification).toBe(false);
+	});
+
+	it('un champ vide ne vaut pas un choix — visibilité et statut restent absents', () => {
+		const modification = modificationDe({ visibilite: '', statut: '   ' });
+		expect('visibilite' in modification).toBe(false);
+		expect('statut' in modification).toBe(false);
+	});
+});
+
+describe('les deux corps sont EXCLUSIFS', () => {
+	it('les deux ensemble sont refusés, et le refus est nommé', () => {
+		expect(
+			motifDuRefus({ corps: '{"type":"doc","content":[]}', 'corps-markdown': 'Bonjour' })
+		).toBe('deux corps soumis');
+	});
+
+	it('le document sérialisé seul passe, et arrive tel quel', () => {
+		const modification = modificationDe({ corps: '{"type":"doc","content":[]}' });
+		expect(modification.corps?.saisi).toEqual({ type: 'doc', content: [] });
+	});
+
+	it('le Markdown seul passe, et il est converti par la porte unique d’ADR-004', () => {
+		/* Le corps rendu est un DOCUMENT, pas le texte reçu : c'est
+		   `analyserMarkdown()` qui a travaillé, et aucun second analyseur. */
+		const saisi = modificationDe({ 'corps-markdown': 'Bonjour' }).corps?.saisi as Document;
+		expect(saisi.type).toBe('doc');
+		expect(saisi).toEqual(analyserMarkdown('Bonjour'));
+	});
+
+	it('un document sérialisé illisible LÈVE, il n’est jamais réparé (ADR-003)', () => {
+		expect(() => lireLaModification(champs({ corps: 'ceci n’est pas du JSON' }))).toThrow(
+			SyntaxError
+		);
+	});
+
+	it('un corps VIDE est refusé par le FORMAT, et n’efface donc jamais rien', () => {
+		/* Le corps est le seul champ dont le vide n'est pas arbitré ici : la porte
+		   unique du format le refuse d'elle-même — « aucun contenu vide :
+		   l'absence de contenu s'écrit par l'absence de la clé ». Une note dont le
+		   corps serait effacé par un champ caché resté vide est donc impossible, et
+		   elle l'est par une règle qui existait déjà (`ADR-003`). */
+		expect(() => lireLaModification(champs({ 'corps-markdown': '' }))).toThrow(DocumentInvalide);
+		expect(() => lireLaModification(champs({ corps: '' }))).toThrow(SyntaxError);
+	});
+});
+
+describe('le titre — le seul champ dont le BLANC est une erreur', () => {
+	it('un titre blanc est refusé', () => {
+		expect(motifDuRefus({ titre: '   ' })).toBe('titre manquant');
+	});
+
+	it('un titre est retenu sans ses blancs de bord', () => {
+		expect(modificationDe({ titre: '  Astreinte  ' }).titre).toBe('Astreinte');
+	});
+});
+
+describe('RG-M05-09 — le rangement se soumet ENTIER, ou pas du tout', () => {
+	it('un domaine sans dossier est refusé', () => {
+		expect(motifDuRefus({ domaine: 'Infrastructure' })).toBe('rangement incomplet');
+	});
+
+	it('un dossier sans domaine l’est aussi — la polarité inverse', () => {
+		expect(motifDuRefus({ dossier: 'Bases de données' })).toBe('rangement incomplet');
+	});
+
+	it('les deux ensemble composent le rangement demandé', () => {
+		expect(
+			modificationDe({ domaine: 'Infrastructure', dossier: 'Bases de données' }).rangement
+		).toEqual({ domaine: 'Infrastructure', dossier: 'Bases de données' });
+	});
+});
+
+describe('les deux énumérations viennent du SCHÉMA, et rien n’est coercé', () => {
+	it('les valeurs du schéma passent', () => {
+		expect(modificationDe({ visibilite: 'publique' }).visibilite).toBe('publique');
+		expect(modificationDe({ statut: 'brouillon' }).statut).toBe('brouillon');
+	});
+
+	it('la forme AFFICHÉE du corpus n’est pas la forme de la base', () => {
+		/* `seeds/corpus.ts:77` porte « Interne » et « Publique » — la forme
+		   affichée. Les colonnes portent les minuscules du schéma. Accepter la
+		   première reviendrait à écrire une seconde table de correspondance. */
+		expect(motifDuRefus({ visibilite: 'Publique' })).toBe('visibilite invalide');
+	});
+
+	it('une valeur hors énumération est refusée, jamais rabattue sur un défaut', () => {
+		expect(motifDuRefus({ statut: 'publié' })).toBe('statut invalide');
+	});
+});
+
+describe('les étiquettes — la liste soumise REMPLACE la liste courante', () => {
+	it('les noms sont séparés par des virgules, sans blancs ni doublons', () => {
+		expect(etiquettesSoumises('postgresql,  sauvegarde , ,postgresql')).toEqual([
+			'postgresql',
+			'sauvegarde'
+		]);
+	});
+
+	it('une liste VIDE est une liste, et c’est le seul moyen de tout retirer', () => {
+		const modification = modificationDe({ etiquettes: '' });
+		expect(modification.etiquettes).toEqual([]);
+		expect('etiquettes' in modification).toBe(true);
+	});
+
+	it('l’ordre soumis est l’ordre retenu — c’est lui qui devient le rang', () => {
+		expect(etiquettesSoumises('pra, bases, astreinte')).toEqual(['pra', 'bases', 'astreinte']);
+	});
+});
+
+describe('un champ non textuel est refusé, et le refus le NOMME', () => {
+	it('un fichier déposé dans le champ titre ne devient pas un titre', () => {
+		expect(motifDuRefus({ titre: new Blob(['x']) })).toBe('champ illisible : titre');
+	});
+});
+
+/* ═══════════════════════════════════ Le dossier de destination ══════════ */
+
+/**
+ * L'arborescence synthétique — deux domaines, et le même nom de dossier dans
+ * les deux. C'est la configuration que `resoudreLeChemin()` dit redouter : « deux
+ * domaines portent tous deux un dossier "Applications" […] un appariement par
+ * nom seul rendrait le mauvais ». Elle est reproduite ici pour que la descente
+ * par PARENT soit éprouvée, et non seulement invoquée.
+ */
+const ARBRE: readonly LigneDeDossier[] = [
+	{ id: 'r-infra', parentId: null, domaineId: 'd-infra', nom: 'Infrastructure', profondeur: 1 },
+	{
+		id: 'bases',
+		parentId: 'r-infra',
+		domaineId: 'd-infra',
+		nom: 'Bases de données',
+		profondeur: 2
+	},
+	{ id: 'pg', parentId: 'bases', domaineId: 'd-infra', nom: 'PostgreSQL', profondeur: 3 },
+	{ id: 'r-appli', parentId: null, domaineId: 'd-appli', nom: 'Applications', profondeur: 1 },
+	{
+		id: 'bases-bis',
+		parentId: 'r-appli',
+		domaineId: 'd-appli',
+		nom: 'Bases de données',
+		profondeur: 2
+	}
+];
+
+describe('le dossier qu’un chemin AFFICHÉ désigne', () => {
+	it('le chemin du gel, séparateur compris, désigne le dossier', () => {
+		expect(dossierDeDestination(ARBRE, 'Bases de données › PostgreSQL')?.id).toBe('pg');
+	});
+
+	it('les diacritiques et la casse ne décident de rien — identifiantLisible() normalise', () => {
+		expect(dossierDeDestination(ARBRE, 'BASES DE DONNEES › postgresql')?.id).toBe('pg');
+	});
+
+	it('un chemin VIDE ne désigne rien — la racine n’est pas un choix de rangement', () => {
+		expect(dossierDeDestination(ARBRE, '')).toBe(null);
+		expect(dossierDeDestination(ARBRE, '   ')).toBe(null);
+	});
+
+	it('un segment inconnu ne désigne rien, et rien n’est deviné', () => {
+		expect(dossierDeDestination(ARBRE, 'Bases de données › MariaDB')).toBe(null);
+	});
+
+	it('la descente se fait par PARENT : le dossier homonyme de l’autre domaine reste hors d’atteinte', () => {
+		/* Les lignes d'un seul domaine sont passées, comme le fait
+		   `destinationDuRangement()`. Le même chemin y désigne l'autre dossier —
+		   et jamais les deux. */
+		const dUnSeulDomaine = ARBRE.filter((d) => d.domaineId === 'd-appli');
+		expect(dossierDeDestination(dUnSeulDomaine, 'Bases de données')?.id).toBe('bases-bis');
 	});
 });
