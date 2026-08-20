@@ -81,6 +81,31 @@ services:
       HOST: 0.0.0.0
       PORT: '3000'
       ORIGIN: ${ADRESSE_SITE}
+      # L'ORIGINE DE RG-M16-01, DERRIÈRE LE FRONTAL — ARB-053.
+      #
+      # `RG-M16-01` ralentit puis bloque « les tentatives depuis une MÊME
+      # ORIGINE ». Sans ces deux lignes, `getClientAddress()` rend l'adresse du
+      # FRONTAL pour toutes les requêtes : l'exigence est tenue à la lettre et
+      # son effet est l'inverse de son intention — un attaquant bloque
+      # l'instance entière 90 secondes. Mesuré par T-012 (ECART-044 É-3), et
+      # mesuré à nouveau par `pnpm test:etancheite`, qui rougissait sur « deux
+      # origines distinctes ne se bloquent pas l'une l'autre ».
+      #
+      # FAIRE CONFIANCE À CET EN-TÊTE N'EST PAS UN PARI, C'EST UNE PROPRIÉTÉ DE
+      # LA COMPOSITION : `app` n'est publiée que sur la boucle locale (voir la
+      # section `ports` ci-dessous), et le seul chemin d'entrée depuis
+      # l'extérieur est le frontal, qui réécrit l'en-tête. Aucun client ne peut
+      # donc le forger. La batterie 6 VÉRIFIE cette prémisse à chaque exécution
+      # plutôt que de la croire : si une publication s'ouvrait, elle rougit.
+      #
+      # UN SEUL SAUT DE CONFIANCE, parce qu'il n'y a qu'un seul intermédiaire.
+      # `XFF_DEPTH` plus grand ferait confiance à une valeur que le client
+      # contrôle : le frontal AJOUTE l'adresse réelle à ce que le client a
+      # envoyé, et la profondeur 1 est ce qui retient la sienne et non celle du
+      # client. La sonde `--sonde=confiance-trop-profonde` porte la valeur à 2 et
+      # exige que la batterie rougisse : la garde est éprouvée, pas espérée.
+      ADDRESS_HEADER: X-Forwarded-For
+      XFF_DEPTH: '1'
       # Briques critiques.
       #
       # LA BASE SE CONFIGURE PAR VARIABLES SÉPARÉES, JAMAIS PAR UNE URI.

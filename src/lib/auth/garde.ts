@@ -32,21 +32,36 @@
  * produite par le chemin unique de `src/lib/public/adresse-non-resolue.ts`
  * (ADR-007), au lot qui portera ces routes.
  *
- * `/cartographie`, `/cartographie/par-type`, `/carte-mentale` et
- * `/bibliotheque` sont classées `resolution` elles aussi, et par ARBITRAGE :
- * `ARB-007` (A-04) — « pas de cartographie publique […] l'implémenter serait un
- * comblement » — et `ARB-002` (A-02) — la bibliothèque n'apparaît « pour aucun
- * autre rôle (P-09, ADR-011) ». Un arbitrage prime sur la table de §5.2.
+ * ═════════════════════════════════════════════════════════════════════════
+ * LA TENSION QUE `T-012` AVAIT DÉCLARÉE EST TRANCHÉE — ARB-052
  *
- * LA TENSION QUI RESTE EST DÉCLARÉE, PAS COMBLÉE. Pour `/importer`,
- * `/mon-profil` et `/console/…`, §5.2 impose la redirection et la matrice de
- * §5.5 impose 404 V-04 : les deux sections de `docs/routes.md` se contredisent,
- * et aucun arbitrage ne tranche. `ARB-005` fixe l'ordre — « le contrat de tâche
- * décide ; à défaut, le régime indiscernable l'emporte » —, et le contrat de
- * `T-012` décide : sa table de §3.5 et son critère de sortie exigent la
- * redirection. Elle est donc appliquée à ces trois familles, et à elles seules.
- * L'écart est remonté au rapport du lot ; un arbitrage déplacera une ligne de la
- * table ci-dessous, jamais une ligne de logique.
+ * `T-012` avait relevé que §5.2 (`:324`) impose la redirection là où §5.5
+ * (`:370`) impose 404 V-04, et n'avait appliqué la redirection qu'aux trois
+ * familles que son contrat nommait, en déclarant l'écart. `ARB-052` (20 août)
+ * tranche, et il tranche PAR LA NATURE DE L'ADRESSE, non par la famille :
+ *
+ *   « Une adresse dont la réponse dépend du CORPUS est indiscernable ; une
+ *     adresse dont la réponse ne dépend que de la PRÉSENCE D'UNE SESSION
+ *     redirige. »
+ *
+ * Les six chemins fixes de fonction — `/importer`, `/mon-profil`, `/console/…`,
+ * `/bibliotheque`, `/cartographie`, `/carte-mentale` — redirigent donc pour un
+ * ANONYME. Les trois derniers étaient en `resolution` faute d'arbitrage :
+ * `ARB-052` étend la décision, au motif qu'`ARB-002` et `ARB-007` ne parlent
+ * que du CONNECTÉ. Pour un connecté sans le droit, ils restent indiscernables —
+ * 404 V-26 —, et c'est la résolution de la route qui le rend, pas ce module.
+ *
+ * DEUX ADRESSES SOUS `/console/…` PORTENT UN IDENTIFIANT DE CORPUS, et il faut
+ * le dire : `/console/imports/{lot}` et `/console/exports/{univers}/{domaine}`.
+ * La borne d'`ARB-052` — « aucune adresse portant un identifiant de corpus ne
+ * redirige » — les viserait à la lettre. Ce qui les sauve n'est pas leur nom,
+ * c'est que la redirection est décidée ICI, sur le PRÉFIXE, AVANT toute
+ * résolution : la réponse est rigoureusement la même que le lot existe ou non,
+ * donc elle ne dépend pas du corpus, donc le critère opérationnel d'`ARB-052`
+ * est satisfait là où sa borne littérale ne l'est pas. `pnpm test:etancheite`
+ * le MESURE — couple `existante` contre `inexistante` sur ces deux adresses —
+ * plutôt que de le supposer. Si un jour une redirection consultait la base, le
+ * couple rougirait le lendemain.
  */
 
 /** Les valeurs de `?motif=` (`docs/routes.md:286`, `:324-325`). */
@@ -87,16 +102,23 @@ export const REGIMES: readonly { readonly prefixe: string; readonly regime: Regi
 	/* ARB-007 A-05 — servie telle quelle, anonyme comme connecté. La note non
 	   publique y rend 404 V-04, par la résolution de la route, non par ici. */
 	{ prefixe: '/guides', regime: 'resolution' },
-	/* §5.2, et le contrat de T-012 : les trois familles fixes qui redirigent. */
+	/* LES SIX CHEMINS FIXES DE FONCTION — ARB-052, et ils sont six, non trois.
+	   « Une adresse dont la réponse ne dépend que de la présence d'une session
+	   redirige. » Les trois dernières étaient en `resolution` faute d'arbitrage ;
+	   `ARB-052` ratifie les trois premières et ÉTEND la décision aux trois
+	   autres, au motif qu'`ARB-002` et `ARB-007` ne parlent que du CONNECTÉ. */
 	{ prefixe: '/importer', regime: 'redirection' },
 	{ prefixe: '/mon-profil', regime: 'redirection' },
 	{ prefixe: '/console', regime: 'redirection' },
-	/* Régime indiscernable — §5.5, ADR-007, ARB-007, ARB-002. */
+	{ prefixe: '/cartographie', regime: 'redirection' },
+	{ prefixe: '/carte-mentale', regime: 'redirection' },
+	{ prefixe: '/bibliotheque', regime: 'redirection' },
+	/* Régime indiscernable — §5.5, ADR-007. Ces deux préfixes portent un
+	   IDENTIFIANT DE CORPUS : leur existence est elle-même l'information
+	   confidentielle, et `ARB-052` est formel — « aucune adresse portant un
+	   identifiant de corpus ne redirige, jamais ». */
 	{ prefixe: '/notes', regime: 'resolution' },
 	{ prefixe: '/univers', regime: 'resolution' },
-	{ prefixe: '/cartographie', regime: 'resolution' },
-	{ prefixe: '/carte-mentale', regime: 'resolution' },
-	{ prefixe: '/bibliotheque', regime: 'resolution' },
 	/* La racine — V-01 sans session, V-07 avec (`docs/routes.md:98-99`). */
 	{ prefixe: '/', regime: 'publique' }
 ];
