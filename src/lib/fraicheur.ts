@@ -158,6 +158,13 @@ export interface EtatDeFraicheur {
 }
 
 /**
+ * LES DEUX FORMES DU LIBELLÉ (ARB-029). La longue est celle de la fabrique du
+ * gel, partout ; la compacte est celle que le gel écrit au panneau
+ * « Position » de V-14. Il n'en existe pas de troisième.
+ */
+export type FormeDeLibelle = 'longue' | 'compacte';
+
+/**
  * Le libellé en clair, toujours affiché à côté de la jauge.
  *
  * `window.libelleFraicheur` (`V-41-bibliotheque.html:2183`) :
@@ -183,15 +190,73 @@ export interface EtatDeFraicheur {
  *
  * ADR-005 interdit « tout libellé de fraîcheur construit localement » : c'est
  * cette fonction, et elle seule.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LES DEUX FORMES, ET LE SEUL SITE DE LA COMPACTE — ARB-029
+ *
+ * Le gel porte DEUX mises en mots du même calcul. La longue, que sa fabrique
+ * produit partout. Et une COMPACTE, qu'il écrit au panneau « Position » de
+ * V-14, et nulle part ailleurs :
+ *
+ *     V-14-lecture-note.html:1817   temoin--frais, trois barres pleines
+ *       <span class="temoin__txt">il y a 6 j</span>
+ *     V-14-lecture-note.html:1822   temoin--vieil, deux barres
+ *       <span class="temoin__txt">il y a 4 mois</span>
+ *
+ * Mesuré sur les 41 maquettes : ce sont les DEUX SEULS contenus littéraux de
+ * `.temoin__txt` de tout le gel — partout ailleurs le témoin est construit par
+ * `window.temoinFraicheur`. Les « il y a 3 semaines » de V-03:971, V-14:1497,
+ * V-15:1589 et V-37:1376 sont des dates de MODIFICATION dans un `<time>` :
+ * ni un niveau, ni une ancienneté de vérification.
+ *
+ * ARB-029 : « ce n'est pas un second calcul, c'est un second rendu du même
+ * calcul ». Le niveau et l'ancienneté sont les mêmes des deux côtés ; seule la
+ * mise en mots change. La forme compacte RETIRE LE VERBE D'ATTESTATION
+ * « Vérifié » et ABRÈGE L'UNITÉ « jours » EN « j ». Les deux cas du gel
+ * l'établissent, et se recoupent avec le corpus :
+ *
+ *   n-planifier-sauv   frais, 6 j     « Vérifié il y a 6 jours » → « il y a 6 j »
+ *   n-purge-sauv       vieil, 126 j   « Vérifié il y a 4 mois »  → « il y a 4 mois »
+ *
+ * `Math.round(126 / 30)` vaut 4, et l'unité « mois » n'est PAS abrégée : le gel
+ * l'écrit en entier.
+ *
+ * DEUX BRANCHES SUR QUATRE N'ONT AUCUN CAS AU GEL, et on le dit plutôt que de
+ * le glisser (P-5 : une règle qu'aucun cas n'exerce est une règle dont on
+ * ignore si elle marche) :
+ *
+ *  1. FRAIS À 31 JOURS OU PLUS, dont la forme longue est « Vérifié il y a
+ *     1 mois », littéralement. Le retrait du verbe s'y applique sans rien
+ *     perdre : « il y a 1 mois ».
+ *  2. OBSOLÈTE, et c'est un PIÈGE. Sa forme longue CHANGE DE VERBE — « Pas
+ *     revu depuis » —, et c'est écrit vingt lignes plus haut : ce verbe est
+ *     « une part de l'information portée hors couleur ». RG-M18-09 (CDC
+ *     l. 1403) l'exige : « l'information n'est jamais portée par la couleur
+ *     seule. Le signal de fraîcheur […] porte aussi un libellé ». Retirer le
+ *     verbe donnerait « depuis 8 mois » et effacerait ce que le niveau dit de
+ *     lui-même. LA FORME COMPACTE DE L'OBSOLÈTE EST DONC SA FORME LONGUE :
+ *     rien n'est abrégé, et le gel ne montre nulle part un obsolète abrégé.
+ *     Ce que la forme compacte retire, c'est le verbe REDONDANT avec la jauge
+ *     — pas le verbe qui la contredit.
+ *
+ * Ces deux branches ne sont exercées que par `fraicheur.test.ts`, qui les nomme
+ * comme telles. LA BORNE D'ARB-029 vaut pour les deux : la forme compacte
+ * s'emploie « là où le gel l'emploie, et nulle part ailleurs ». Un troisième
+ * site serait un comblement.
  */
-export function libelleFraicheur(note: EtatDeFraicheur): string {
+export function libelleFraicheur(note: EtatDeFraicheur, forme: FormeDeLibelle = 'longue'): string {
 	if (note.fraicheur === 'frais') {
-		return note.jours < 31 ? `Vérifié il y a ${note.jours} jours` : 'Vérifié il y a 1 mois';
+		if (note.jours < 31) {
+			return forme === 'longue' ? `Vérifié il y a ${note.jours} jours` : `il y a ${note.jours} j`;
+		}
+		return forme === 'longue' ? 'Vérifié il y a 1 mois' : 'il y a 1 mois';
 	}
 	const mois = Math.round(note.jours / 30);
-	return note.fraicheur === 'vieil'
-		? `Vérifié il y a ${mois} mois`
-		: `Pas revu depuis ${mois} mois`;
+	if (note.fraicheur === 'vieil') {
+		return forme === 'longue' ? `Vérifié il y a ${mois} mois` : `il y a ${mois} mois`;
+	}
+	/* Le verbe de l'obsolète EST l'information : les deux formes se confondent. */
+	return `Pas revu depuis ${mois} mois`;
 }
 
 /**
@@ -225,6 +290,15 @@ export interface Temoin {
  * Elle ne recalcule PAS le niveau — pas plus que le gel. Une note dont le
  * niveau doit être rejoué sous d'autres seuils passe d'abord par
  * `niveauFraicheur`.
+ *
+ * ELLE REND LA FORME LONGUE, et cela ne bougera pas : c'est ce que produit
+ * `window.temoinFraicheur`, que 37 maquettes sur 41 portent — compté, et
+ * cohérent avec l'en-tête de ce module : V-01 et V-09 écrivent leur témoin au
+ * balisage, V-05 et V-06 n'en ont pas. Le LIBELLÉ long, lui, est celui des 39
+ * qui portent `window.libelleFraicheur`.
+ *
+ * La forme compacte d'ARB-029 ne passe pas par la fabrique du témoin — le seul
+ * site du gel qui l'écrit compose son témoin nœud à nœud (V-14:1817 et 1822).
  */
 export function temoinFraicheur(note: EtatDeFraicheur): Temoin {
 	return {

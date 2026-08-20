@@ -463,6 +463,51 @@ la fusion est à la main, ligne par ligne. *(T-012, 20/08/2026)*
 
 ---
 
+### P-25 · Une copie de travail d'agent DANS le dépôt fait rendre 340 erreurs à `pnpm check`
+
+L'outillage agentique peut créer une copie de travail **à l'intérieur** du dépôt, sous
+`.claude/worktrees/`. `.gitignore` l'exclut ; **eslint ne lit pas `.gitignore`** — son ignore est la
+liste de `eslint.config.js`. Sans `.claude/` dedans, le dépôt entier est relu une seconde fois sous une
+racine `tsconfig` ambiguë, et la **batterie 1** rend :
+
+```
+0:0  error  Parsing error: No tsconfigRootDir was set, and multiple
+            candidate TSConfigRootDirs are present          … ×340
+```
+
+**Faux rouge, et de la pire espèce pour un diagnostic** : il est **intermittent** — il n'existe que
+pendant qu'un tel agent tourne —, il est **sans rapport avec le moindre livrable**, et il ne s'était
+jamais vu parce que les vagues précédentes n'employaient que des copies sous `/tmp/wt-*`. C'est `P-5`
+retourné : une configuration qu'aucun cas n'exerçait, et qui était fausse.
+
+`.claude/` est désormais dans les ignores. **Et ce n'est pas un assouplissement** : la ligne ne retire
+aucun fichier du **produit** au crible, seulement une copie transitoire que git ignore déjà. La lecture
+inverse — eslint doit contrôler la copie d'un agent — échoue par construction, quel que soit le code.
+*(T-013b, 20/08/2026)*
+
+---
+
+### P-26 · Un contrôle dont le seul cas d'épreuve est le défaut qu'il trouve devient inerte en réussissant
+
+**Trois occurrences, et la troisième a nommé le motif.**
+
+| Le contrôle | Son unique cas | Ce qui l'a effacé |
+|---|---|---|
+| la sonde de restitution de focus | un couple du banc | sa propre correction — plus exercée par aucun des 409 |
+| `B3` de la batterie 5 — « le libellé vient de `libelleFraicheur()` » | `{voisine.libelle}` de V-14, et `verif/fraicheur.mjs` le DIT : *« sans la condition de receveur, ce contrôle serait inerte »* | `T-013b`, en réparant précisément ce défaut |
+| le filtre d'adresses d'`ARB-013` | aucun — inerte huit lots | rien : il n'a jamais marché (`P-5`) |
+
+Ce n'est pas un paradoxe, c'est une **exigence de conception** : tout contrôle doit avoir un cas
+d'épreuve **synthétique**, indépendant de l'état du dépôt. `verif/fraicheur.test.ts:313-380` en porte
+un, et c'est pourquoi B3 reste éprouvé après la correction ; la sonde de focus n'en a pas, et elle est
+redevenue une règle qu'on espère.
+
+**Corollaire pour tout lot qui répare un défaut** : demande-toi si le contrôle qui l'a trouvé garde un
+cas après ta correction. Si non, **dis-le** — ce n'est pas un rouge, c'est une dette à connaître.
+*(T-013b, 20/08/2026 ; motif présent depuis ECART-039)*
+
+---
+
 ## 7. Protocole de fin de tâche
 
 ### Le protocole UI en quatre temps

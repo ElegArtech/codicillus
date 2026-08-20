@@ -99,11 +99,26 @@ describe('les formes écrites — ARB-049, et ce qui est épinglé ne bougera pa
 
 	it('l’ordre des marques est l’ordre d’imbrication, et il se relit', () => {
 		const gras_italique = doc(p(t('x', { type: 'bold' }, { type: 'italic' })));
-		const italique_gras = doc(p(t('x', { type: 'italic' }, { type: 'bold' })));
 		expect(serialiserEnMarkdown(gras_italique)).toBe('**_x_**\n');
-		expect(serialiserEnMarkdown(italique_gras)).toBe('_**x**_\n');
 		expect(analyserMarkdown('**_x_**')).toEqual(gras_italique);
-		expect(analyserMarkdown('_**x**_')).toEqual(italique_gras);
+	});
+
+	it('l’ordre INVERSE n’est plus un document — règle 7, ARB-056', () => {
+		/* Ce cas épinglait les DEUX ordres jusqu'au 20 août 2026, l'un et l'autre
+		   sérialisés puis relus. `ARB-056` a fait de l'ordre une règle de forme
+		   canonique : « le schéma refuse tout autre ordre, il ne réordonne pas ».
+		   Les deux entrées du convertisseur validant, le refus se prononce des
+		   deux côtés.
+		
+		   LE TIRET BAS RESTE NÉCESSAIRE, et c'est ce que ce cas prouve encore : il
+		   rend les deux imbrications DISTINGUABLES, donc le « _**x**_ » d'un
+		   fichier importé relisible — et par là refusable. Avec trois astérisques
+		   des deux côtés, la relecture aurait rendu un ordre ou l'autre sans que
+		   rien ne le dise, et le refus n'aurait jamais eu lieu. */
+		expect(() => analyserMarkdown('_**x**_')).toThrow(DocumentInvalide);
+		expect(() =>
+			serialiserEnMarkdown(doc(p(t('x', { type: 'italic' }, { type: 'bold' }))))
+		).toThrow(DocumentInvalide);
 	});
 
 	it('le bloc de code est clôturé, et sa chaîne d’information nomme le langage', () => {
