@@ -31,7 +31,7 @@
 	 * courriel, ne mesure aucun temps de réponse — et l'indiscernabilité
 	 * TEMPORELLE, qui fait partie de RG-ACC-04, n'est mesurée par aucun
 	 * instrument à ce jour (`docs/releve-vues.md` §10, M-5). La preuve relève de
-	 * la batterie 6 (`pnpm test:etancheite`) et du lot T-011.
+	 * la batterie 6 (`pnpm test:etancheite`), livrée par T-012b le 20/08/2026.
 	 *
 	 * NE SONT PAS TENUES DAVANTAGE : `RG-M16-01` — la robustesse affichée est
 	 * l'état figé du gel, aucune politique n'est appliquée —, `RG-NF-07`, et

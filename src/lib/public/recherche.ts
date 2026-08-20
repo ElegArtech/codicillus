@@ -19,7 +19,8 @@
  * qu'un appel l'oublie.
  *
  * CE QUI N'EST PAS PROUVÉ ICI. L'étanchéité réelle du périmètre public relève
- * de la batterie 6 (`pnpm test:etancheite`, lot T-011), matrice routes ×
+ * de la batterie 6 (`pnpm test:etancheite`, livrée par T-012b le 20/08/2026 —
+ * `/recherche` n'étant pas montée, sa case y est VACANTE), matrice routes ×
  * personas. Ce module rend un état de maquette ; il ne résout aucun droit.
  */
 import type { Note } from '../../../seeds/corpus';

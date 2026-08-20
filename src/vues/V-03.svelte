@@ -29,7 +29,7 @@
 	 * brancher ici ».
 	 *
 	 * CE QUE CE COMPOSANT NE PROUVE PAS. Il rend un ÉTAT DE MAQUETTE.
-	 * L'étanchéité réelle est la batterie 6 (`pnpm test:etancheite`, lot T-011).
+	 * L'étanchéité réelle est la batterie 6 (`pnpm test:etancheite`, livrée par T-012b).
 	 * Ni `RG-ACC-01`, ni `RG-ACC-04`, ni `P-09` ne sont déclarées tenues.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════

@@ -20,7 +20,7 @@
 	 * CE QUE CE COMPOSANT NE PROUVE PAS. Il rend un ÉTAT DE MAQUETTE nourri du
 	 * jeu de semence. L'étanchéité RÉELLE de l'espace public — matrice toutes
 	 * routes × tous personas, y compris par adresse construite — est la
-	 * batterie 6 (`pnpm test:etancheite`), assignée au lot T-011 en criticité
+	 * batterie 6 (`pnpm test:etancheite`), livrée par T-012b le 20/08/2026 en criticité
 	 * haute. Ce lot ne déclare tenues ni `RG-ACC-01`, ni `RG-ACC-04`, ni `P-09`.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
