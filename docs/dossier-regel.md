@@ -55,7 +55,7 @@ Un point n'entre ici que s'il satisfait les trois conditions **à la fois** :
 2. aucune autre vue ne montre la même chose pour un autre public ou dans un autre état ;
 3. l'ordre de préséance ne le tranche pas, et aucune règle déjà écrite n'en fixe la valeur.
 
-**Un point les satisfait, depuis le 20 août 2026. Il est ci-dessous.**
+**Deux points les satisfont, depuis le 20 août 2026. Ils sont ci-dessous.**
 
 ---
 
@@ -106,3 +106,52 @@ Une seule question, et elle appelle un chiffre ou une suppression :
 > **Les compteurs d'emploi de V-31 doivent-ils être ramenés à des valeurs compatibles avec les 32 notes du corpus — et lesquelles —, ou l'indicateur doit-il disparaître de la vue ?**
 
 Toute réponse est un **regel de V-31** : la valeur vit dans le corpus embarqué de la maquette, et le gel de `mockups/GEL.md` couvre le fichier entier. Tant qu'elle n'est pas donnée, la lacune reste ouverte et la batterie reste rouge d'un point — **c'est le comportement voulu**, pas un défaut à corriger.
+
+---
+
+## R-02 · Les treize pièces jointes de V-14 — nommées à deux, chiffrées à zéro
+
+*Ouvert le 20/08/2026 par `T-026`. Vues concernées : **V-14**, et les six autres maquettes qui déclarent un décompte de pièces. Batterie qui le tient : `pnpm verif:donnees`, lacune `Note.pj`.*
+
+### Ce que ce point n'est plus
+
+**Jusqu'au 20 août, il était double, et l'une de ses deux moitiés vient de tomber.** `T-030b` puis `T-049` ont refusé de semer les pièces pour deux raisons cumulées : le gel ne donne pas leurs données, **et** le produit ne savait stocker aucun fichier — `RACINE_FICHIERS` était déclarée à `compose.yaml:136` et lue par zéro ligne.
+
+`T-026` a fermé la seconde. L'entrepôt existe, une pièce déposée porte ses octets sur le disque et sa métadonnée en base, la route de `RG-M04-08` les ressert, et `node base/base.mjs pieces` le mesure en onze pas. **Ce qui reste est donc exclusivement un défaut du gel** : c'est ce qui fait entrer ce point ici plutôt que dans un contrat de lot.
+
+### Le fait, mesuré fichier ouvert
+
+Sept notes sur les 32 du corpus déclarent des pièces jointes, **treize au total**. Le gel n'en **nomme** que deux, au panneau de `mockups/V-14-lecture-note.html` :
+
+| Ligne | Nom | Type affiché | Taille affichée |
+|---|---|---|---|
+| `:1833-1836` | Plan de reprise — volet bases | PDF | « 1,2 Mo » |
+| `:1837-1840` | Matrice des serveurs sauvegardés | CSV | « 18 Ko » |
+
+Les onze autres n'existent nulle part : le corpus n'en porte que le **nombre**.
+
+**Et les deux nommées ne se sèment pas davantage, pour un motif plus étroit que l'absence de nom.** `pieces_jointes.taille_octets` veut un nombre d'octets ; « 1,2 Mo » n'en désigne pas un, il en désigne **un intervalle** — toutes les tailles qui s'arrondissent pareil à deux chiffres significatifs s'y affichent identiques. Le gel montre le **rendu**, la colonne veut la **donnée**, et le passage inverse n'est pas une fonction. C'est le défaut de `Compte.derniere` mot pour mot.
+
+Ce ne sont donc pas onze noms qui manquent : **ce sont treize tailles**, plus onze noms et onze types de média.
+
+### Les trois conditions
+
+1. **Aucune maquette ne donne une pièce jointe en données.** Vérifié sur les 41 fichiers : le seul endroit où une pièce est nommée est le panneau de V-14 ci-dessus. Partout ailleurs, le corpus embarqué ne porte qu'un entier `pj`.
+2. **Aucune autre vue ne montre la même chose autrement.** Les six autres notes déclarantes n'ont pas de panneau rendu ; aucune console, aucun export, aucune vue de recherche n'énumère les pièces d'une note.
+3. **L'ordre de préséance ne tranche pas.** Le CDC décrit le panneau — « liste des fichiers, taille, type, téléchargement » (`M04.7`) — sans donner aucune valeur, et `docs/arbitrages.md` n'a jamais abordé le sujet.
+
+### Pourquoi aucun lot ne peut le fermer
+
+- **Semer un chiffre recopié du libellé** — 1 258 291 octets pour « 1,2 Mo » — est la valeur illustrative que **`P-02`** proscrit, et `T-049` a déjà refusé ce geste.
+- **Semer des octets engendrés** donnerait une taille réelle et mesurée, mais **elle contredirait celle que la maquette affiche à côté** : le corpus cesserait d'être le corpus du gel. C'est pourquoi `src/lib/fichiers/engendrer.ts` sert les épreuves et **jamais la semence**, et le dit dans son en-tête.
+- **Inventer onze noms** est un comblement au sens de `CLAUDE.md` §2.
+
+La table compte donc toujours zéro ligne, `lireNotes()` rend le décompte **réel** et non celui du jeu, et la lacune reste chiffrée à chaque exécution.
+
+### Ce que le commanditaire a à trancher
+
+> **Les treize pièces jointes du corpus doivent-elles être données en DONNÉES — nom, nombre d'octets, type de média pour chacune — ou le corpus doit-il ramener les décomptes `pj` à zéro ?**
+
+Toute réponse est un **regel** : les décomptes vivent dans le corpus embarqué des maquettes, et les deux noms dans le balisage de V-14. Tant qu'elle n'est pas donnée, la lacune reste ouverte et la batterie reste rouge d'un point — **c'est le comportement voulu**.
+
+**Ce que la réponse débloquerait, et qui est prêt :** le panneau de pièces de V-14 rendu depuis la base plutôt que transcrit du gel ; la matrice de `pnpm test:etancheite`, dont le paramètre `{fichier}` est aujourd'hui vacant faute d'une seule pièce en base ; et l'archive d'export, qui emporte désormais les octets qu'on lui donne.

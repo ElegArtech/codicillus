@@ -45,11 +45,13 @@
  * réel de l'export qui vient d'être produit.
  */
 import { error } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import { basePartagee } from '$lib/base/acces';
 import { accesALaConsole } from '$lib/donnees/consoles';
 import { lireLeDomaineAExporter } from '$lib/donnees/export';
 import { MESSAGE_INTROUVABLE, lireDomaineParIdentifiants } from '$lib/donnees/rangement';
 import { exporterLeDomaine, nomDArchive } from '$lib/export/archive';
+import { racineDesFichiers } from '$lib/fichiers/entrepot';
 import { TYPE_MEDIA_DE_ZIP } from '$lib/export/zip';
 import type { RequestHandler } from './$types';
 
@@ -67,7 +69,11 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	const lu = await lireLeDomaineAExporter(
 		base,
 		{ identifiant: params.univers, nom: domaine.universNom },
-		{ id: domaine.id, identifiant: params.domaine, nom: domaine.nom }
+		{ id: domaine.id, identifiant: params.domaine, nom: domaine.nom },
+		/* Les octets des pièces jointes viennent de l'entrepôt (`T-026`) : le gel
+		   promet « les images et pièces jointes inclus dans un dossier voisin »
+		   (`V-36:2932`), et l'archive les y met désormais pour de bon. */
+		() => racineDesFichiers(env)
 	);
 	const produit = exporterLeDomaine(lu.domaine, lu.avertissements);
 	const nom = nomDArchive(params.domaine, new Date().toISOString());

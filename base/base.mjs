@@ -32,6 +32,10 @@ Usage : node base/base.mjs <commande>
   semer             charge seeds/corpus.ts dans la base
   unicite           joue les sondes d'unicité (refus ET acceptations)
   coherence         compare src/lib/base/schema.ts au catalogue de la base
+  pieces [--racine=<chemin>]
+                    dépose une pièce jointe aux octets engendrés, la ressert par
+                    la route de RG-M04-08 dans les deux polarités, éprouve le
+                    plafond et l'intégrité base ↔ entrepôt, puis retire tout
 `;
 
 try {
@@ -193,6 +197,44 @@ try {
 					'CE CONTRÔLE NE REGARDE PAS : valeurs par défaut, corps des CHECK, actions référentielles.'
 				);
 			}
+			break;
+		}
+
+		/**
+		 * L'ESSAI DES PIÈCES JOINTES — `T-026`.
+		 *
+		 * Il DÉPOSE une pièce dont les octets sont engendrés, la ressert par le
+		 * chemin de `RG-M04-08`, joue les deux polarités, éprouve le plafond de la
+		 * console et l'intégrité base ↔ entrepôt, puis RETIRE tout ce qu'il a
+		 * posé — et il vérifie qu'il n'en reste rien plutôt que de le promettre.
+		 *
+		 * Il ne vide pas la base et ne la sème pas : il travaille sur ce qu'elle
+		 * porte, et rend l'état où il l'a trouvée. La racine de l'entrepôt vient de
+		 * l'environnement (`RACINE_FICHIERS`) ou de l'argument, jamais d'un défaut.
+		 */
+		case 'pieces': {
+			const argRacine = arguments_.find((a) => a.startsWith('--racine='));
+			const racine = argRacine === undefined ? process.env.RACINE_FICHIERS : argRacine.slice(9);
+			if (racine === undefined || racine.trim() === '') {
+				console.log(
+					'ÉCHEC — aucune racine d’entrepôt : renseigner RACINE_FICHIERS (voir .env.example)\n' +
+						'        ou passer --racine=<chemin>. Aucun défaut n’est deviné (RG-NF-09).'
+				);
+				code = 1;
+				break;
+			}
+			console.log(`entrepôt : ${racine}`);
+			/** @type {import('../src/lib/fichiers/epreuve.ts')} */
+			const E = await vite.ssrLoadModule('/src/lib/fichiers/epreuve.ts');
+			const pas = await E.eprouverLesPiecesJointes(session.db, racine);
+			for (const p of pas) {
+				console.log(
+					`  ${p.reussi ? 'OK ' : 'ÉCHEC'}  ${p.nom}\n         règle ${p.regle}\n` +
+						`         attendu ${p.attendu}\n         obtenu  ${p.obtenu}`
+				);
+				if (!p.reussi) code = 1;
+			}
+			console.log(`\n${pas.filter((p) => p.reussi).length}/${pas.length} pas conformes.`);
 			break;
 		}
 

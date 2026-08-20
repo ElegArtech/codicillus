@@ -449,6 +449,17 @@ export interface PieceJointeResolue {
 	readonly typeMedia: string;
 	/** L'identifiant de la note porteuse — celle dont la visibilité décide. */
 	readonly note: string;
+	/**
+	 * LES DEUX CLÉS DONT LE CHEMIN DE L'ENTREPÔT EST LA FONCTION — `T-026`.
+	 *
+	 * `src/lib/fichiers/entrepot.ts` ne stocke aucun chemin : il le DÉRIVE de
+	 * `<note_id>/<piece_id>`. Les deux clés sortent donc d'ici, et d'ici
+	 * seulement — c'est-à-dire APRÈS la résolution de visibilité. Le chemin des
+	 * octets n'est pas formable sans avoir traversé `noteLisible()`, ce qui rend
+	 * `RG-M04-08` structurel plutôt que déclaratif.
+	 */
+	readonly id: string;
+	readonly noteId: string;
 }
 
 /** Ce qu'une demande de pièce jointe porte. */
@@ -479,15 +490,19 @@ export interface DemandeDePieceJointe {
  * cette fonction n'est exercée par AUCUN état du dépôt : elle l'est par un cas
  * SYNTHÉTIQUE en unitaire (`P-5`, `P-26`).
  *
- * ET LE CONTENU N'EXISTE NULLE PART. La table porte le nom, la taille et le
- * type de média ; elle ne porte ni octets ni chemin. La variable
- * d'environnement qui nomme la racine des fichiers (compose.yaml:136) n'est lue
- * par aucune ligne du dépôt — relevé mécanique. Une pièce RÉSOLUE ne peut donc
- * pas être servie, et la route le dit sans rien inventer.
+ * ET LE CONTENU EXISTE DÉSORMAIS, HORS DE LA BASE — `T-026`. La table porte
+ * toujours le nom, la taille et le type de média, et toujours ni octets ni
+ * chemin : les octets vivent dans l'entrepôt (`src/lib/fichiers/entrepot.ts`,
+ * `RACINE_FICHIERS`, `compose.yaml:136`), et leur chemin est DÉRIVÉ des deux
+ * clés que cette résolution rapporte. Une pièce résolue est donc servie ; une
+ * pièce non résolue ne l'est pas, et les deux sorties sont indiscernables.
+ * L'ordre reste celui d'`ADR-007` : la visibilité d'abord, l'entrepôt ensuite.
  */
 
 /** La ligne que la requête rapporte : la pièce, jointe à sa note porteuse. */
 export interface LigneDePieceJointe {
+	readonly id: string;
+	readonly noteId: string;
 	readonly nom: string;
 	readonly tailleOctets: number;
 	readonly typeMedia: string;
@@ -530,7 +545,9 @@ export function pieceJointeResolue(
 			nom: trouvee.nom,
 			tailleOctets: trouvee.tailleOctets,
 			typeMedia: trouvee.typeMedia,
-			note: trouvee.identifiant
+			note: trouvee.identifiant,
+			id: trouvee.id,
+			noteId: trouvee.noteId
 		}
 	};
 }
@@ -544,6 +561,8 @@ export async function resoudreUnePieceJointe(
 
 	const [ligne] = await base
 		.select({
+			id: piecesJointes.id,
+			noteId: piecesJointes.noteId,
 			nom: piecesJointes.nom,
 			tailleOctets: piecesJointes.tailleOctets,
 			typeMedia: piecesJointes.typeMedia,

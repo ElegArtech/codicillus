@@ -18,18 +18,20 @@
  * ═════════════════════════════════════════════════════════════════════════
  * CE QUE LA BASE NE PORTE PAS, ET QUI EST CONSIGNÉ PLUTÔT QUE FABRIQUÉ
  *
- * LES OCTETS DES PIÈCES JOINTES N'EXISTENT NULLE PART. La table des pièces
- * jointes porte le nom, la taille et le type de média ; elle ne porte AUCUNE
- * colonne de contenu, et aucun lot n'a livré de stockage de fichier. Le gel
- * promet pourtant « les images et pièces jointes inclus dans un dossier
- * voisin » (`V-36:2932`).
+ * LES OCTETS DES PIÈCES JOINTES EXISTENT DEPUIS `T-026`, ET ILS ENTRENT ICI.
+ * Ce module a longtemps rendu `piecesJointes: []` en consignant chaque pièce au
+ * rapport, faute de stockage : la table portait le nom, la taille et le type de
+ * média, jamais les octets, et `RACINE_FICHIERS` n'était lue par aucune ligne du
+ * dépôt. Le gel promettait pourtant « les images et pièces jointes inclus dans
+ * un dossier voisin » (`V-36:2932`).
  *
- * Trois réponses étaient possibles, deux sont refusées : écrire un fichier vide
- * ferait croire à une pièce de zéro octet (`P-02` — aucune valeur illustrative),
- * et se taire perdrait l'information sans témoin. La troisième est appliquée :
- * la pièce est RECENSÉE dans le rapport de conversion, avec sa taille annoncée
- * et la raison. La mécanique d'inclusion, elle, existe et est éprouvée — sur
- * des octets synthétiques, faute d'octets réels (`P-5`, `P-26`).
+ * L'entrepôt (`src/lib/fichiers/entrepot.ts`) porte désormais les octets, et
+ * l'archive les emporte. LA CONSIGNATION SUBSISTE, mais pour un autre cas, plus
+ * étroit et bien réel : une pièce dont la base porte la ligne et dont l'entrepôt
+ * ne porte pas le fichier. `RG-NF-09` prend la base et le volume SÉPARÉMENT ;
+ * une restauration désaccordée produit exactement cet état, et l'archive le
+ * consigne plutôt que d'écrire un fichier vide — une pièce de zéro octet serait
+ * la valeur illustrative que `P-02` proscrit.
  *
  * L'ORDRE DES DOSSIERS FRÈRES VOYAGE, LA VALEUR DE LEUR POSITION NON. Les
  * dossiers sont lus ordonnés par `position` ; l'archive conserve cet ordre par
@@ -51,7 +53,6 @@ import {
 	etiquettes,
 	etiquettesDeNote,
 	notes,
-	piecesJointes,
 	relations,
 	typesDeFiche,
 	typesDeNote,
@@ -61,8 +62,10 @@ import type {
 	AvertissementDeConversion,
 	DomaineAExporter,
 	NoteAExporter,
+	PieceJointeAExporter,
 	RelationAExporter
 } from '../export/archive';
+import { lireLesPiecesAvecLeursOctets } from './pieces';
 
 /**
  * Le domaine, tel que l'adresse d'export le désigne. `DomaineResolu` de
@@ -96,7 +99,8 @@ export interface UniversDeLExport {
 export async function lireLeDomaineAExporter(
 	base: Base,
 	univers: UniversDeLExport,
-	domaine: DomaineDeLExport
+	domaine: DomaineDeLExport,
+	racineDesFichiers: () => string
 ): Promise<DomaineLu> {
 	const avertissements: AvertissementDeConversion[] = [];
 
@@ -221,19 +225,10 @@ export async function lireLeDomaineAExporter(
 		else deja.push(relation);
 	}
 
-	/* ── Les pièces jointes : recensées, jamais fabriquées ──────────────── */
-	const lignesDePiece = await base
-		.select({
-			noteId: piecesJointes.noteId,
-			nom: piecesJointes.nom,
-			tailleOctets: piecesJointes.tailleOctets,
-			typeMedia: piecesJointes.typeMedia,
-			deposeeLe: piecesJointes.deposeeLe
-		})
-		.from(piecesJointes)
-		.innerJoin(notes, eq(piecesJointes.noteId, notes.id))
-		.where(eq(notes.domaineId, domaine.id))
-		.orderBy(asc(piecesJointes.noteId), asc(piecesJointes.nom));
+	/* ── Les pièces jointes : lues dans l'entrepôt, jamais fabriquées ───── */
+	const lignesDePiece = [
+		...(await lireLesPiecesAvecLeursOctets(base, racineDesFichiers, [...idsDeNote]))
+	].sort((a, b) => a.noteId.localeCompare(b.noteId) || a.nom.localeCompare(b.nom));
 
 	/* ── L'assemblage ───────────────────────────────────────────────────── */
 	const cheminDeNote = (dossierId: string): readonly string[] => {
@@ -245,21 +240,38 @@ export async function lireLeDomaineAExporter(
 	};
 
 	const titreParNote = new Map(lignesDeNote.map((n) => [n.id, n.titre]));
+	/* Les pièces dont l'entrepôt PORTE les octets entrent dans l'archive ; les
+	   autres sont consignées. La seconde famille n'est plus « le produit ne
+	   stocke pas les fichiers » — il les stocke depuis `T-026` — mais le
+	   désaccord entre la base et le volume que `RG-NF-09` prend séparément. */
+	const piecesParNote = new Map<string, PieceJointeAExporter[]>();
 	for (const piece of lignesDePiece) {
 		if (!idsDeNote.has(piece.noteId)) continue;
-		avertissements.push({
-			famille: 'piece-sans-octets',
-			note: identifiantParId.get(piece.noteId) ?? piece.noteId,
-			titre: titreParNote.get(piece.noteId) ?? '',
-			raison:
-				'la pièce jointe « ' +
-				piece.nom +
-				' » (' +
-				String(piece.tailleOctets) +
-				' octets, ' +
-				piece.typeMedia +
-				') est recensée en base sans ses octets : le produit ne stocke pas encore les fichiers, l’archive ne peut donc pas la porter'
-		});
+		if (piece.octets === null) {
+			avertissements.push({
+				famille: 'piece-sans-octets',
+				note: identifiantParId.get(piece.noteId) ?? piece.noteId,
+				titre: titreParNote.get(piece.noteId) ?? '',
+				raison:
+					'la pièce jointe « ' +
+					piece.nom +
+					' » (' +
+					String(piece.tailleOctets) +
+					' octets, ' +
+					piece.typeMedia +
+					') est en base mais ses octets ne sont pas dans l’entrepôt : la base et le volume des fichiers sont les deux éléments de la sauvegarde (RG-NF-09) et ils sont ici désaccordés'
+			});
+			continue;
+		}
+		const deja = piecesParNote.get(piece.noteId);
+		const aExporter: PieceJointeAExporter = {
+			nom: piece.nom,
+			typeMedia: piece.typeMedia,
+			deposeeLe: piece.deposeeLe.toISOString(),
+			octets: piece.octets
+		};
+		if (deja === undefined) piecesParNote.set(piece.noteId, [aExporter]);
+		else deja.push(aExporter);
 	}
 
 	const notesAExporter: NoteAExporter[] = lignesDeNote.map((n) => ({
@@ -288,9 +300,9 @@ export async function lireLeDomaineAExporter(
 		relations: relationsParNote.get(n.id) ?? [],
 		corpsReference: n.corpsReference,
 		corpsOperationnel: n.corpsOperationnel ?? null,
-		/* Aucune pièce : leurs octets n'existent pas, et une pièce sans octets
-		   ferait échouer la relecture de l'archive — à raison. */
-		piecesJointes: []
+		/* Les pièces dont l'entrepôt porte les octets, et elles seules : une pièce
+		   sans octets ferait échouer la relecture de l'archive — à raison. */
+		piecesJointes: piecesParNote.get(n.id) ?? []
 	}));
 
 	return {
@@ -316,6 +328,5 @@ export async function lireLeDomaineAExporter(
 export const CHAMPS_NON_EXPORTES: readonly string[] = [
 	'l’historique des vérifications (M06.2)',
 	'l’historique des versions (RG-M07-01)',
-	'les octets des pièces jointes — aucun stockage de fichier n’est livré',
 	'la valeur de `dossiers.position` — l’ORDRE des frères voyage, la valeur est renormalisée'
 ];

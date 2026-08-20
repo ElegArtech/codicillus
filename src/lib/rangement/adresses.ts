@@ -108,6 +108,25 @@ export function adresseDeNote(identifiant: string): string {
 }
 
 /**
+ * L'adresse d'une pièce jointe — `docs/routes.md:146`, et le SEUL accès à ses
+ * octets (`RG-M04-08` : « jamais en fichier statique »).
+ *
+ * LE NOM EST ENCODÉ, ET C'EST UNE PROPRIÉTÉ, PAS UNE PRÉCAUTION. Le nom d'une
+ * pièce est libre : il peut porter une espace, un accent, une barre oblique.
+ * Encodé, il reste UN segment d'adresse — la route en attend un seul —, et il
+ * revient identique à la lecture du paramètre. C'est ce qui permet au nom d'être
+ * l'adresse sans jamais devenir un chemin : le chemin des octets, lui, est
+ * dérivé d'identifiants en base et ne voit jamais ce nom
+ * (`src/lib/fichiers/entrepot.ts`).
+ *
+ * @param identifiant l'identifiant lisible de la note porteuse
+ * @param nom le nom de la pièce, tel que la base le porte
+ */
+export function adresseDePieceJointe(identifiant: string, nom: string): string {
+	return `${adresseDeNote(identifiant)}/pieces-jointes/${encodeURIComponent(nom)}`;
+}
+
+/**
  * Le chemin de dossier d'une note, tel que le corpus le porte
  * (« Exploitation › Sauvegardes »), découpé en segments.
  */

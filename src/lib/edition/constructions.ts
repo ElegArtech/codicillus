@@ -294,7 +294,9 @@ export function gabaritDeLienInterne(cible: string, titre: string): Document {
 /**
  * L'IMAGE. Le gabarit du gel (V-17:3076) n'est PAS une image : c'est une figure
  * vide portant une zone de dépôt et une légende en deux parties. La source vient
- * du fichier déposé — voir `LACUNES`, n° 10.
+ * du fichier déposé, et depuis `T-026` elle EXISTE : c'est l'adresse que rend
+ * `adresseDePieceJointe()` pour une pièce réellement déposée. Ce qui manque
+ * encore est l'écran qui dépose — voir `LACUNES`, n° 10.
  */
 export function gabaritDImage(
 	src: string,
@@ -359,13 +361,17 @@ export const LACUNES: Readonly<Record<number, string>> = {
 		'jamais amputation silencieuse (voir `EditeurIncapable`). Les cinq autres ' +
 		'porteurs de la construction sont produits.',
 	10:
-		'la SOURCE d’une image. Le nœud est bien au schéma de l’éditeur ' +
-		'(`@tiptap/extension-image`), et son rendu est éprouvé en unitaire ; ce qui ' +
-		'manque est en amont : le gabarit du gel (V-17:3076) est une zone de DÉPÔT, pas ' +
-		'une image, et le produit n’a aucun chemin de dépôt de fichier — la table ' +
-		'`pieces_jointes` ne porte ni contenu ni chemin, et la variable d’environnement ' +
-		'qui nomme la racine des fichiers (compose.yaml:136) n’est lue par aucune ligne ' +
-		'du dépôt. Aucune valeur de source n’est donc inventée ici.',
+		'l’ÉCRAN qui dépose une image. Ce qui manquait au premier relevé, c’était la ' +
+		'SOURCE — « le produit n’a aucun chemin de dépôt de fichier » — et cette moitié ' +
+		'est refermée : `T-026` a posé l’entrepôt, une pièce déposée porte ses octets ' +
+		'sur le disque et son adresse est celle de la route de `RG-M04-08` ; ' +
+		'`node base/base.mjs pieces` produit la construction de bout en bout sur une ' +
+		'image réelle. Ce qui manque désormais est en AVAL du format et en AMONT de ' +
+		'l’entrepôt : aucun écran ne dépose. `M04.8` ne porte qu’un cas d’usage, ' +
+		'`UC-M04-04`, et c’est le TÉLÉCHARGEMENT ; l’inventaire fermé de ' +
+		'`docs/routes.md` ne compte aucune route qui dépose ; le gabarit du gel ' +
+		'(V-17:3076) est une zone de DÉPÔT dont la maquette ne montre ni progression, ' +
+		'ni refus, ni liste. Inventer cette route et cet écran serait un comblement.',
 	12:
 		'l’ALTERNATIVE TEXTUELLE d’un diagramme, que `P-06` et `RG-M18-11` rendent ' +
 		'obligatoire et que le format refuse vide. La SOURCE est du gel (V-17:3078) ; ' +
