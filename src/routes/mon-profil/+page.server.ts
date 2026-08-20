@@ -59,6 +59,7 @@ import {
 	vecteurDeV25
 } from '$lib/donnees/profil';
 import type { Actions, PageServerLoad } from './$types';
+import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 /**
  * Le titulaire de la requête — son compte, sa session, son profil en base.
@@ -74,10 +75,10 @@ async function titulaire(locals: App.Locals) {
 	/* Inatteignable par construction : `regimeDe('/mon-profil')` vaut
 	   `redirection`, et les hooks ont déjà répondu 302. Fermé par défaut tout
 	   de même — le jour où le régime changerait, l'omission serait une fuite. */
-	if (identite.type !== 'authentifie' || sessionId === undefined) error(404);
+	if (identite.type !== 'authentifie' || sessionId === undefined) error(404, MESSAGE_INTROUVABLE);
 	const base = basePartagee();
 	const profil = await lireLeProfil(base, identite.compteId);
-	if (profil === null) error(404);
+	if (profil === null) error(404, MESSAGE_INTROUVABLE);
 	return { base, identite, sessionId, profil };
 }
 

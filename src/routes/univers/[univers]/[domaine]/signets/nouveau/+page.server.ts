@@ -52,6 +52,7 @@ import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { contexteDeRequete, resoudreLAccesAuxSignets, vecteurDeV23 } from '$lib/donnees/signets';
 import type { Actions, PageServerLoad } from './$types';
+import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const base = basePartagee();
@@ -62,7 +63,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		{ univers: params.univers, domaine: params.domaine },
 		true
 	);
-	if (!acces.trouve) error(404);
+	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
 	return { vecteur: vecteurDeV23('creation'), notes: acces.ressource.notes };
 };
@@ -79,7 +80,7 @@ export const actions: Actions = {
 		);
 		/* Le refus est le MÊME que celui du chargeur, et il vient du même appel :
 		   il n'existe pas une règle de droit pour lire et une autre pour écrire. */
-		if (!acces.trouve) error(404);
+		if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
 		error(501, "la création d'un signet n'est pas implémentée");
 	}

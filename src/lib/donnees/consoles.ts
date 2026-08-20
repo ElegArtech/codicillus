@@ -58,7 +58,7 @@
  * `resolution.ts`. Il n'existe ici ni variante « interdit », ni champ
  * « raison », ni code d'erreur : l'appelant n'a RIEN à quoi se raccrocher pour
  * distinguer un refus d'une inexistence, et le chargeur qui l'appelle n'a qu'un
- * `error(404)` sans message.
+ * `error(404, MESSAGE_INTROUVABLE)` sans message.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * ET LA FRAÎCHEUR NON PLUS (P-01)
