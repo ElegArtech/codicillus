@@ -28,6 +28,7 @@ import { DocumentInvalide, type Document } from '../contenu/document';
 import { analyserMarkdown } from '../contenu/markdown';
 import {
 	dossierDeDestination,
+	operationnelDesynchronise,
 	etiquettesSoumises,
 	lireLaModification,
 	pieceJointeResolue,
@@ -356,5 +357,55 @@ describe('le dossier qu’un chemin AFFICHÉ désigne', () => {
 		   et jamais les deux. */
 		const dUnSeulDomaine = ARBRE.filter((d) => d.domaineId === 'd-appli');
 		expect(dossierDeDestination(dUnSeulDomaine, 'Bases de données')?.id).toBe('bases-bis');
+	});
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   `RG-M06-08` — LE SIGNAL DE DÉSYNCHRONISATION, ET SON CAS SYNTHÉTIQUE
+
+   La règle a été écrite avec une sonde de navigateur, et la sonde a été
+   supprimée avec le lot : le prédicat serait redevenu une règle qu'on espère
+   (`P-26`). Les cas ci-dessous ne dépendent d'aucune base, d'aucun navigateur
+   et d'aucun état du dépôt, et ils jouent les DEUX polarités (`P-5`).
+
+   `operationnelDesynchronise()` est aussi la SEULE définition de ce signal : le
+   chargeur de la lecture le recopiait en ligne, et c'était `P-01` en petit.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+describe('la désynchronisation de l’Opérationnel — RG-M06-08', () => {
+	const t = (iso: string): Date => new Date(iso);
+
+	it('une note sans registre Opérationnel n’est jamais désynchronisée', () => {
+		expect(
+			operationnelDesynchronise({
+				referenceModifieLe: t('2026-08-21T10:00:00Z'),
+				operationnelModifieLe: null
+			})
+		).toBe(false);
+	});
+
+	it('la Référence modifiée APRÈS l’Opérationnel désynchronise', () => {
+		expect(
+			operationnelDesynchronise({
+				referenceModifieLe: t('2026-08-21T10:00:01Z'),
+				operationnelModifieLe: t('2026-08-21T10:00:00Z')
+			})
+		).toBe(true);
+	});
+
+	it('l’Opérationnel écrit APRÈS la Référence ne désynchronise pas', () => {
+		expect(
+			operationnelDesynchronise({
+				referenceModifieLe: t('2026-08-21T10:00:00Z'),
+				operationnelModifieLe: t('2026-08-21T10:00:01Z')
+			})
+		).toBe(false);
+	});
+
+	it('l’ÉGALITÉ ne désynchronise pas — le signal veut un « après », pas un « pas avant »', () => {
+		const instant = t('2026-08-21T10:00:00Z');
+		expect(
+			operationnelDesynchronise({ referenceModifieLe: instant, operationnelModifieLe: instant })
+		).toBe(false);
 	});
 });
