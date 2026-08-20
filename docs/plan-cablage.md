@@ -47,28 +47,31 @@ fidélité écran par écran.
 
 ### Vague 1 — quatre lots en parallèle
 
-| Lot | Routes | Vues | Ce qu'il ferme en plus |
+| Lot | Routes | Écrans | Ce qu'il ferme en plus |
 |---|---|---|---|
-| **T-031** Espace public | `/`, `/recherche` anonyme, `/guides/{id}`, adresse non résolue | V-01 à V-04 | la demi-règle de `notesPubliques` (`ECART-047`) ; `RG-M17-01` |
-| **T-032** Rangement | `/univers/{u}`, `/univers/{u}/{d}`, `…/notes`, `…/dossiers/{chemin}` | V-10 à V-13 | `RG-STR-06` — un module désactivé disparaît |
-| **T-033** Lecture d'une note | `/notes/{id}`, `/notes/{id}/operationnel` | V-14, V-18 | le corps canonique lu en base ; les rétroliens |
-| **T-034** Signets | `…/signets`, `…/signets/nouveau`, `…/signets/{id}/modifier` | V-22, V-23 | **la fuite mesurée d'`ECART-047` É-1** |
+| **T-031** Accueil, les deux branches | `/` sans session **et** avec | V-01, V-07 | la demi-règle de `notesPubliques` (`ECART-047`) ; `P-02` sur les indicateurs |
+| **T-032** Rangement | `/univers/{u}`, `…/{d}`, `…/notes`, `…/dossiers/{chemin}` | V-10 à V-13 | `RG-STR-06` — un module désactivé disparaît (`P-04`) |
+| **T-033** Lecture d'une note | `/notes/{id}`, `…/operationnel` | V-14, V-18 | le corps canonique lu en base ; les rétroliens déduits |
+| **T-034** Signets | `…/signets`, `…/nouveau`, `…/{id}/modifier` | V-22, V-23 | **la première fuite d'`ECART-047` É-1 — 18 629 octets en anonyme** |
+
+*`/` porte les deux écrans parce que la route est **un seul fichier** : les séparer créerait une
+collision entre deux lots.*
 
 ### Vague 2 — quatre lots en parallèle
 
-| Lot | Routes | Vues | Ce qu'il ferme en plus |
+| Lot | Routes | Écrans | Ce qu'il ferme en plus |
 |---|---|---|---|
-| **T-035** Accueil connecté | `/` avec session, adresse non résolue connectée | V-07, V-26 | `RG-M01-01` — aucun indicateur figé (`P-02`) |
-| **T-036** Consoles | les dix routes `/console/…` | V-27 à V-36, V-41 | **la fuite de `/console/univers`** ; `P-09` sur le rôle |
-| **T-037** Outils | `/cartographie`, `/cartographie/par-type`, `/carte-mentale` | V-19 à V-21 | le graphe depuis les relations réelles |
-| **T-038** Profil et compte | `/mon-profil`, `/mot-de-passe-oublie` | V-25, V-06 | `RG-M16-02` — mot de passe verrouillé |
+| **T-035** Recherche et espace public | `/recherche`, `/guides/{id}`, adresse non résolue | V-02, V-03, V-04, V-26 | **le point dur de V-04**, que la maquette appelle « la vérification la plus importante de cette vue » |
+| **T-036** Consoles | les dix routes `/console/…`, `/bibliotheque` | V-27 à V-36, V-41 | **la deuxième fuite — 30 315 octets à tout connecté** |
+| **T-037** Outils | `/cartographie`, `…/par-type`, `/carte-mentale` | V-19 à V-21 | `P-08` — l'origine d'une relation est visible ; `P-06` |
+| **T-038** Profil et compte | `/mon-profil`, `/mot-de-passe-oublie{/jeton}` | V-25, V-06 | `RG-M16-02` ; les trois gestes de session d'`ARB-054` |
 
 ### Vague 3 — deux lots
 
-| Lot | Routes | Vues |
-|---|---|---|
-| **T-039** Historique et comparaison | `/notes/{id}/comparaison` | V-15, V-16 |
-| **T-040** Import, écran câblé | `/importer` | V-24 |
+| Lot | Routes | Écrans | Ce qu'il ferme en plus |
+|---|---|---|---|
+| **T-039** Historique et comparaison | `/notes/{id}/comparaison` | V-15, V-16 | `C-05` — les blocs identiques alignés. **Le manque que le commanditaire a relevé** |
+| **T-040** Import | `/importer` | V-24 | **la troisième fuite — 14 874 octets sans droit de rédaction** ; premier cas réel de `P-10` |
 
 ### Clôture — l'orchestrateur seul
 
