@@ -77,7 +77,13 @@
 	 * `src/vues/V-35.css` (P-6.3). Les `style=` reproduits figurent tous à
 	 * l'ensemble clos du gel de V-35 (ARB-016).
 	 */
-	import { JOURNAL_IMPORTS, LOT_IMPORT, type Note } from '../../seeds/corpus';
+	import {
+		JOURNAL_IMPORTS,
+		LOT_IMPORT,
+		type EntreeDeJournalDImport,
+		type LotDImport,
+		type Note
+	} from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 
@@ -86,9 +92,23 @@
 		etat?: string;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-35')`. */
 		notes: readonly Note[];
+		/**
+		 * LE LOT ET LE JOURNAL, EN PROPRIÉTÉS OPTIONNELLES (T-045). Absentes, les
+		 * constantes du jeu de semence s'appliquent — c'est ce que le mode démo
+		 * passe, et c'est ce qui garantit que le banc ne bouge pas d'un pixel.
+		 */
+		/** Le dernier lot déposé. Absente, `LOT_IMPORT` du jeu de semence. */
+		lotImport?: LotDImport;
+		/** Le journal des imports. Absente, `JOURNAL_IMPORTS` du jeu de semence. */
+		journalImports?: readonly EntreeDeJournalDImport[];
 	}
 
-	const { etat, notes }: Proprietes = $props();
+	const {
+		etat,
+		notes,
+		lotImport = LOT_IMPORT,
+		journalImports = JOURNAL_IMPORTS
+	}: Proprietes = $props();
 
 	/**
 	 * LES TROIS SCÉNARIOS D'ACCÈS DIRECT — littéral du gel (`V-35:2966`).
@@ -117,11 +137,11 @@
 	 * n'est pas choisie ici.
 	 */
 	const rapportOuvert = $derived(etat === 'rapport-de-lot');
-	const lot = $derived(rapportOuvert ? JOURNAL_IMPORTS[0] : undefined);
+	const lot = $derived(rapportOuvert ? journalImports[0] : undefined);
 
 	/** `ouvrirRapport()` (`V-35:3067`) — les fichiers nommés au rapport. */
 	const echoues = $derived(
-		lot ? LOT_IMPORT.fichiers.filter((f) => f.s === 'echec').slice(0, lot.echecs) : []
+		lot ? lotImport.fichiers.filter((f) => f.s === 'echec').slice(0, lot.echecs) : []
 	);
 
 	/** Les quatre chiffres du bilan, dans l'ordre du gel (`V-35:3101`). */
@@ -230,7 +250,7 @@
 				><span></span
 			></div
 			><div id="journal"
-				>{#each JOURNAL_IMPORTS as i (i.id)}<div class="tg tg--imports tg--ligne"
+				>{#each journalImports as i (i.id)}<div class="tg tg--imports tg--ligne"
 					><div><div class="tg__date">{i.date}</div><div class="tg__heure">{i.heure}</div></div
 					><div style="min-width:0"><div class="tg__nom" style="font-size:var(--t-petit)">{i.source}</div><div class="tg__desc">{`${i.scenario} · ${i.domaine} · ${i.duree}`}</div></div
 					><span class="tg__n tg--masquable">{i.auteur}</span

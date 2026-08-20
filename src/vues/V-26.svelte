@@ -67,7 +67,17 @@
 	 * `node verif/feuilles-de-vue.mjs V-26 --installer`. Les `style=` reproduits
 	 * figurent tous à l'ensemble clos du gel de V-26 (ARB-016).
 	 */
-	import { DOMAINES, INSTANCE, MOI, UNIVERS, type Note } from '../../seeds/corpus';
+	import {
+		DOMAINES,
+		INSTANCE,
+		MOI,
+		UNIVERS,
+		type Domaine,
+		type EtatDInstance,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
+	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { adresseNonResolue } from '$lib/public/adresse-non-resolue';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
@@ -79,9 +89,32 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-26')`, variante complète. */
 		notes: readonly Note[];
+		/**
+		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
+		 *
+		 * Absentes, les constantes du jeu de semence s'appliquent : c'est ce que le
+		 * mode démo passe, et c'est ce qui garantit que le banc ne bouge pas d'un
+		 * pixel. Fournies — par un chargeur de route —, elles l'emportent, et la vue
+		 * cesse de servir une valeur figée, indépendante de la base et de l'identité.
+		 */
+		/** Les univers déclarés. Absente, `UNIVERS` du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines du périmètre du compte. Absente, `DOMAINES` du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** Le compte connecté. Absente, `MOI` du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, `INSTANCE` du jeu de semence. */
+		instance?: EtatDInstance;
 	}
 
-	const { vecteur, notes }: Proprietes = $props();
+	const {
+		vecteur,
+		notes,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const cas = $derived(typeof reglage['cas'] === 'string' ? reglage['cas'] : 'supprimee');
@@ -239,16 +272,16 @@
 <Coquille
 	fil={['Accueil', 'Page introuvable']}
 	courant={[]}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	{notes}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 	rail="ouvert"
 	{droits}
 	forme="abregee"

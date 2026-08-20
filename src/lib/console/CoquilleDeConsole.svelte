@@ -41,7 +41,17 @@
 	 * donc pas la dérogation P-6.4 d'ARB-016.
 	 */
 	import type { Snippet } from 'svelte';
-	import { DOMAINES, INSTANCE, MOI, UNIVERS, type Note } from '../../../seeds/corpus';
+	import {
+		DOMAINES,
+		INSTANCE,
+		MOI,
+		UNIVERS,
+		type Domaine,
+		type EtatDInstance,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
+	} from '../../../seeds/corpus';
 	import Coquille from '../coquille/Coquille.svelte';
 	import NavigationConsole from './NavigationConsole.svelte';
 	import { GROUPES_DE_CONSOLE, filDeConsole, type CleDeSection } from './sections';
@@ -51,6 +61,17 @@
 		section: CleDeSection;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-xx')`. */
 		notes: readonly Note[];
+		/**
+		 * LES QUATRE SOURCES DE LA COQUILLE, TOUTES FACULTATIVES. Absentes, la
+		 * constante du jeu de semence s'applique — c'est ce défaut qui garantit
+		 * que les vues qui ne les passent pas rendent exactement ce qu'elles
+		 * rendaient. Une vue branchée sur la base les passe, et rien d'autre ne
+		 * change (T-044).
+		 */
+		univers?: readonly Univers[];
+		domaines?: readonly Domaine[];
+		compte?: UtilisateurCourant;
+		instance?: EtatDInstance;
 		/** Les attributs de données que la vue pose sur `div.app` (ARB-021, A-2). */
 		donnees?: Record<string, string | undefined>;
 		/**
@@ -68,6 +89,10 @@
 	const {
 		section,
 		notes,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
 		donnees,
 		superposition: superpositionDeVue,
 		enfants
@@ -82,16 +107,16 @@
 <Coquille
 	fil={filDeConsole(nom)}
 	courant={[]}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	{notes}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 	rail="ouvert"
 	role="admin"
 	forme="abregee"

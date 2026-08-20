@@ -69,20 +69,67 @@
 		MOI,
 		UNIVERS,
 		type CleDeModule,
+		type DetailDeDomaine,
+		type Domaine,
+		type EtatDInstance,
 		type EvenementDActivite,
+		type Module,
+		type NomDeDomaine,
 		type Note,
-		type Univers
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 
+	/**
+	 * LES SEPT SOURCES QUI NE VENAIENT DE NULLE PART — T-041.
+	 *
+	 * Jusqu'ici les constantes du jeu de semence étaient lues AU NIVEAU DU
+	 * MODULE : un chargeur de route pouvait passer `notes`, et rien d'autre
+	 * n'atteignait l'écran. Elles sont désormais des PROPRIÉTÉS OPTIONNELLES.
+	 *
+	 * LE DÉFAUT EST LA CONSTANTE, ET C'EST CE QUI TIENT LE GEL. Le mode démo ne
+	 * passe que `etat`, `vecteur` et `notes` : la vue reçoit exactement ce qu'elle
+	 * recevait, et les 28 couples du banc ne bougent pas. Ce lot rend le passage
+	 * POSSIBLE ; il ne décide pas de ce qui sera passé.
+	 *
+	 * `detailDomaines` ET `modules` SONT CEUX QUI RENDENT `P-04` EFFECTIVE. Les
+	 * pastilles de module des cartes de domaine sortaient de la constante et
+	 * COÏNCIDAIENT avec la table `modules_de_domaine` sans en être PILOTÉES
+	 * (mesuré par T-032). Un chargeur peut désormais les piloter.
+	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — droits × univers × état. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-10')`, variante « lecture ». */
 		notes: readonly Note[];
+		/** Les univers déclarés. Absents, ceux du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines accessibles. Absents, ceux du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur connecté. Absent, celui du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance — version, synchronisation. Absent, celui du jeu. */
+		instance?: EtatDInstance;
+		/** Les évènements du corpus. Absents, ceux du jeu de semence. */
+		activite?: readonly EvenementDActivite[];
+		/** Description et modules activés, par domaine — porté par la base. */
+		detailDomaines?: Record<NomDeDomaine, DetailDeDomaine>;
+		/** Le catalogue des modules — nom et sous-titre de chaque clé. */
+		modules?: Record<CleDeModule, Module>;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines: tousLesDomaines = DOMAINES,
+		compte: moi = MOI,
+		instance = INSTANCE,
+		activite = ACTIVITE,
+		detailDomaines = DETAIL_DOMAINES,
+		modules = MODULES
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const droits = $derived(reglage['droits'] === 'lecture' ? 'lecture' : 'ecriture');
@@ -113,7 +160,7 @@
 	 * système — que la planche ne présente pas et que le gel ignore donc.
 	 */
 	const courant = $derived(
-		(UNIVERS.find((u) => u.nom === reglage['uni']) ?? UNIVERS[0]) as Univers
+		(univers.find((u) => u.nom === reglage['uni']) ?? univers[0]) as Univers
 	);
 
 	/** L'état « sans domaine » vide l'univers de ses deux dérivés à la fois. */
@@ -121,7 +168,7 @@
 		etatDeLaPage === 'vide' ? [] : corpus.filter((n) => n.univers === courant.nom)
 	);
 	const domaines = $derived(
-		etatDeLaPage === 'vide' ? [] : DOMAINES.filter((d) => d.univers === courant.nom)
+		etatDeLaPage === 'vide' ? [] : tousLesDomaines.filter((d) => d.univers === courant.nom)
 	);
 	const brouillons = $derived(notesDeLUnivers.filter((n) => n.brouillon).length);
 
@@ -229,7 +276,7 @@
 	 * rattaché à Production.
 	 */
 	const evenements = $derived(
-		ACTIVITE.filter((e) => {
+		activite.filter((e) => {
 			if (!e.cible) return courant.nom === 'Production';
 			const n = noteParId(e.cible);
 			return n !== undefined && n.univers === courant.nom;
@@ -277,16 +324,16 @@
 	courant={[]}
 	{droits}
 	donnees={{ 'data-etat': etatDeLaPage }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	domaines={tousLesDomaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: moi.nom,
+		initiales: moi.initiales,
+		role: moi.role,
+		domaine: moi.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<header class="couverture" id="couverture" style="--teinte:{courant.couleur}">
@@ -396,7 +443,7 @@
 			{:else}
 				<div class="grille-domaines">
 					{#each domaines as d (d.nom)}
-						{@const detail = DETAIL_DOMAINES[d.nom]}
+						{@const detail = detailDomaines[d.nom]}
 						{@const notesDom = corpus.filter((n) => n.domaine === d.nom)}
 						<article class="carte-dom" style="--teinte:{d.couleur}">
 							<div class="carte-dom__tete">
@@ -410,7 +457,7 @@
 							<div class="carte-dom__modules">
 								{#each detail.modules as m (m)}<span
 										class="past"
-										title={MODULES[m as CleDeModule].sous}>{MODULES[m as CleDeModule].nom}</span
+										title={modules[m as CleDeModule].sous}>{modules[m as CleDeModule].nom}</span
 									>{/each}
 							</div>
 						</article>

@@ -41,7 +41,10 @@
 	 * versions conservées, l'ancienneté relative, l'ampleur des modifications et
 	 * la répartition des cinq segments sont tous calculés à partir des données.
 	 * Les trois cas de la planche nomment deux notes et le vide — `charger()`,
-	 * `V-15:2990-2994`.
+	 * `V-15:2990-2994`. Les deux tableaux sont désormais REÇUS EN PROPRIÉTÉ, de
+	 * défaut la constante du jeu (T-043) : `T-030` a posé la table des versions,
+	 * la semence la laisse vide, et ce lot rend la vue CAPABLE sans rien
+	 * transposer.
 	 *
 	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011). La sélection de deux
 	 * versions, l'affichage d'une version antérieure, la restauration et sa
@@ -71,8 +74,12 @@
 		RETENTION_VERSIONS,
 		UNIVERS,
 		VERSIONS,
+		type Domaine,
+		type EtatDInstance,
 		type IdentifiantNote,
 		type Note,
+		type Univers,
+		type UtilisateurCourant,
 		type Version
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
@@ -80,14 +87,55 @@
 	import SommaireDeLaNote from '$lib/lecture/SommaireDeLaNote.svelte';
 	import { NOTE } from '$lib/lecture/note-de-demonstration';
 
+	/**
+	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
+	 * DÉFAUT EST LA CONSTANTE DU JEU DE SEMENCE.
+	 *
+	 * La vue devient capable de recevoir ce qu'un chargeur de route lit en base
+	 * — univers, domaines, compte courant, état de l'instance — sans qu'aucun
+	 * rendu ne change tant que rien ne lui est passé : le mode de conception ne
+	 * passe que `vecteur` et `notes`, la vue reçoit donc exactement ce qu'elle
+	 * recevait, et le banc de comparaison ne bouge pas d'un pixel.
+	 *
+	 * `compte` est reçu SOUS LE NOM LOCAL `moi` : la vue porte déjà un `compte`,
+	 * qui est le libellé du pied du panneau d'historique. Le nom de la propriété
+	 * reste `compte` — il est contractuel, huit lots l'emploient.
+	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — trois contrôles de planche. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-15')`, variante « lecture ». */
 		notes: readonly Note[];
+		/** Les univers du produit. Défaut : ceux du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines du produit. Défaut : ceux du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Défaut : celui du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
+		instance?: EtatDInstance;
+		/**
+		 * L'historique, par note. Défaut : celui du jeu de semence.
+		 *
+		 * `T-030` a posé la table des versions ; la semence la laisse VIDE. La vue
+		 * est rendue capable de recevoir un historique réel, elle n'en transpose
+		 * aucun : tant que rien ne lui est passé, elle lit le jeu de semence.
+		 */
+		versions?: Partial<Record<IdentifiantNote, readonly Version[]>>;
+		/** Le nombre de versions conservées par note. Défaut : celui du jeu de semence. */
+		retentionVersions?: number;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte: moi = MOI,
+		instance = INSTANCE,
+		versions: historique = VERSIONS,
+		retentionVersions = RETENTION_VERSIONS
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 
@@ -125,7 +173,7 @@
 		reglage['hist'] === 'une' ? 'une' : reglage['hist'] === 'aucune' ? 'aucune' : 'riche'
 	);
 	const source = $derived(NOTE_PAR_CAS[cas]);
-	const versions = $derived<readonly Version[]>(source ? (VERSIONS[source] ?? []) : []);
+	const versions = $derived<readonly Version[]>(source ? (historique[source] ?? []) : []);
 
 	/**
 	 * LE TITRE DE LA NOTE ferme le fil d'Ariane et coiffe le panneau
@@ -147,7 +195,7 @@
 		versions.length === 0
 			? ''
 			: `${versions.length}${versions.length > 1 ? ' versions conservées' : ' version conservée'}` +
-					` · les ${RETENTION_VERSIONS} dernières sont gardées, les plus anciennes sont supprimées automatiquement`
+					` · les ${retentionVersions} dernières sont gardées, les plus anciennes sont supprimées automatiquement`
 	);
 
 	/**
@@ -259,16 +307,16 @@
 		'data-historique': panneau,
 		'data-version': 'courante'
 	}}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: moi.nom,
+		initiales: moi.initiales,
+		role: moi.role,
+		domaine: moi.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<SommaireDeLaNote />

@@ -136,20 +136,59 @@
 	 * `src/vues/V-08.css`, posé par `node verif/feuilles-de-vue.mjs V-08
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import { DOMAINES, INSTANCE, MOI, UNIVERS, type Note } from '../../seeds/corpus';
+	import {
+		DOMAINES,
+		INSTANCE,
+		MOI,
+		UNIVERS,
+		type Domaine,
+		type EtatDInstance,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
+	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { motFiche } from '$lib/vocabulaire';
 
+	/**
+	 * LES QUATRE SOURCES QUI NE VENAIENT DE NULLE PART — T-041.
+	 *
+	 * Jusqu'ici, `UNIVERS`, `DOMAINES`, `MOI` et `INSTANCE` étaient lus AU NIVEAU
+	 * DU MODULE : un chargeur de route pouvait passer `notes`, et rien d'autre
+	 * n'atteignait l'écran — la pastille servait « Karim Belhadj » à qui que ce
+	 * soit. Elles sont désormais des PROPRIÉTÉS OPTIONNELLES, dont le défaut est
+	 * la constante du jeu de semence.
+	 *
+	 * LE DÉFAUT EST LA CONSTANTE, ET C'EST CE QUI TIENT LE GEL. Le mode démo ne
+	 * passe que `etat`, `vecteur` et `notes` : la vue reçoit donc exactement ce
+	 * qu'elle recevait, et les 28 couples du banc ne bougent pas. Ce lot rend le
+	 * passage POSSIBLE ; il ne décide pas de ce qui sera passé.
+	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — droits × état × sens. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-08')`, variante « lecture ». */
 		notes: readonly Note[];
+		/** Les univers déclarés. Absents, ceux du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines accessibles. Absents, ceux du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur connecté. Absent, celui du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance — version, synchronisation. Absent, celui du jeu. */
+		instance?: EtatDInstance;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte: moi = MOI,
+		instance = INSTANCE
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 
@@ -517,16 +556,16 @@
 		'data-trop': !RENDRE_LEVE_AU_GEL && affluence ? 'oui' : 'non',
 		'data-facettes': 'ferme'
 	}}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: moi.nom,
+		initiales: moi.initiales,
+		role: moi.role,
+		domaine: moi.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<!-- ============================ FACETTES ============================ -->

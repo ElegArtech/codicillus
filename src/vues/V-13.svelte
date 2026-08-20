@@ -54,7 +54,20 @@
 	 * `src/vues/V-13.css`, posé par `node verif/feuilles-de-vue.mjs V-13
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import { DOMAINES, INSTANCE, MODIFICATIONS, MOI, UNIVERS, type Note } from '../../seeds/corpus';
+	import {
+		DOMAINES,
+		INSTANCE,
+		MODIFICATIONS,
+		MOI,
+		UNIVERS,
+		type Domaine,
+		type EtatDInstance,
+		type IdentifiantNote,
+		type NomDeDomaine,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
+	} from '../../seeds/corpus';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { segmentsDeDossier } from '$lib/rangement/adresses';
@@ -65,16 +78,60 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-13')`, variante « lecture ». */
 		notes: readonly Note[];
+		/**
+		 * LES QUATRE PROPRIÉTÉS DE CONTEXTE — T-042, et elles sont OPTIONNELLES.
+		 *
+		 * Avant ce lot, cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et
+		 * `INSTANCE` au niveau du module : un chargeur de route ne pouvait rien
+		 * y substituer, et l'écran servait le contexte du jeu de semence quelle
+		 * que fût l'identité de l'appelant.
+		 *
+		 * LE DÉFAUT EST LA CONSTANTE DU JEU, et c'est ce qui garantit que le banc
+		 * ne bouge pas : le mode de conception ne passe que `vecteur` et `notes`,
+		 * la vue reçoit donc exactement ce qu'elle avait.
+		 */
+		univers?: readonly Univers[];
+		domaines?: readonly Domaine[];
+		compte?: UtilisateurCourant;
+		instance?: EtatDInstance;
+		/**
+		 * LE DOMAINE DE LA PAGE DE DOSSIER — T-042, et c'est le défaut mesuré
+		 * par `T-032` : la maquette fixe `Infrastructure` en tête de son script
+		 * (`V-13:1957`), la vue le recopiait en constante, et une adresse d'un
+		 * AUTRE domaine rendait donc l'arborescence d'Infrastructure.
+		 *
+		 * Le défaut de la propriété est `Infrastructure` — la valeur du gel — :
+		 * ni le banc ni les onze états de la planche ne bougent, et un chargeur
+		 * de route peut désormais nommer le domaine que l'adresse porte.
+		 */
+		domaine?: NomDeDomaine;
+		/**
+		 * L'ANCIENNETÉ DE MODIFICATION DE CHAQUE NOTE — `window.modifJours` du gel.
+		 *
+		 * `Partial` ET NON `Record` TOTAL, et c'est une exigence de P-02 : un
+		 * type total réclamerait les trente-deux clés, ce qui interdirait
+		 * mécaniquement à un chargeur de passer un état PARTIEL ou NEUTRE. Une
+		 * note absente de la table s'affiche « modification inconnue », jamais
+		 * une ancienneté inventée.
+		 */
+		modifications?: Partial<Record<IdentifiantNote, number>>;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		domaine: DOMAINE = 'Infrastructure',
+		modifications = MODIFICATIONS
+	}: Proprietes = $props();
 
-	/**
-	 * Le domaine et l'univers que la maquette fixe en tête de son script
-	 * (`V-13:1957`) : la page de dossier est toujours celle d'Infrastructure.
-	 */
-	const DOMAINE = 'Infrastructure';
-	const UNIVERS_DU_DOMAINE = DOMAINES.find((d) => d.nom === DOMAINE)?.univers ?? 'Production';
+	/** L'univers du domaine affiché — lu à la liste des domaines, jamais supposé. */
+	const UNIVERS_DU_DOMAINE = $derived(
+		domaines.find((d) => d.nom === DOMAINE)?.univers ?? 'Production'
+	);
 
 	/** Les trois droits effectifs de la planche, et rien d'autre. */
 	type NiveauDeDroit = 'gestionnaire' | 'redacteur' | 'lecteur';
@@ -228,7 +285,7 @@
 
 	/** L'ancienneté de la dernière modification — distincte de la vérification. */
 	function modification(n: Note): string {
-		const j = MODIFICATIONS[n.id];
+		const j = modifications[n.id];
 		if (typeof j !== 'number') return 'modification inconnue';
 		return j <= 1 ? 'modifiée hier' : `modifiée il y a ${j} jours`;
 	}
@@ -256,16 +313,16 @@
 	courant={[DOMAINE, ...chemin]}
 	droits={niveau === 'lecteur' ? 'lecture' : 'ecriture'}
 	donnees={{ 'data-droit': niveau }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<header class="tete-dossier">

@@ -50,7 +50,13 @@
 		TYPES_RELATION,
 		UNIVERS,
 		type CleDeTypeDeRelation,
-		type Note
+		type Domaine,
+		type EtatDInstance,
+		type LibellesDeRelation,
+		type Note,
+		type Relation,
+		type Univers,
+		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
 
@@ -59,9 +65,30 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-30')`. */
 		notes: readonly Note[];
+		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
+		univers?: readonly Univers[];
+		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
+		instance?: EtatDInstance;
+		/** Le catalogue des types de relation. Absente, la constante du jeu. */
+		typesRelation?: Record<CleDeTypeDeRelation, LibellesDeRelation>;
+		/** Les relations déclarées, dont se compte l'usage. Absente, la constante du jeu. */
+		relations?: readonly Relation[];
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE,
+		typesRelation = TYPES_RELATION,
+		relations = RELATIONS
+	}: Proprietes = $props();
 
 	/**
 	 * L'USAGE ATTENDU EST UN TEXTE DU GEL (`V-30:2875`), recopié depuis lui.
@@ -104,20 +131,20 @@
 		technique: false
 	};
 
-	const types: readonly TypeDeRelationRendu[] = [
-		...(Object.keys(TYPES_RELATION) as readonly CleDeTypeDeRelation[]).map((cle) => ({
+	const types: readonly TypeDeRelationRendu[] = $derived([
+		...(Object.keys(typesRelation) as readonly CleDeTypeDeRelation[]).map((cle) => ({
 			cle,
-			direct: TYPES_RELATION[cle].sortant,
-			inverse: TYPES_RELATION[cle].entrant,
+			direct: typesRelation[cle].sortant,
+			inverse: typesRelation[cle].entrant,
 			usage: USAGES[cle] ?? '',
 			technique: RELATIONS_TECHNIQUES.includes(cle)
 		})),
 		TYPE_INUTILISE
-	];
+	]);
 
 	/** Les relations déclarées qui portent ce type — calculé, jamais écrit. */
 	function usage(cle: string): number {
-		return RELATIONS.filter((r) => r.type === cle).length;
+		return relations.filter((r) => r.type === cle).length;
 	}
 
 	/**
@@ -185,11 +212,16 @@
 	idContenu="travail"
 	fil={filDeConsole('Types de relations')}
 	donnees={{ 'data-form': panneauOuvert ? 'ouvert' : 'ferme' }}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
-	compte={{ nom: MOI.nom, initiales: MOI.initiales, role: MOI.role, domaine: MOI.domaine }}
-	version={INSTANCE.version}
+	compte={{
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
+	}}
+	version={instance.version}
 >
 	{#snippet avantContenu()}
 		<NavigationConsole courante="relations" />

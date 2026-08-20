@@ -54,17 +54,52 @@
 	 * `src/vues/V-22.css`, posé par `node verif/feuilles-de-vue.mjs V-22
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import { DOMAINES, INSTANCE, MOI, UNIVERS, type Domaine, type Note } from '../../seeds/corpus';
+	import {
+		DOMAINES,
+		INSTANCE,
+		MOI,
+		UNIVERS,
+		type Domaine,
+		type EtatDInstance,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
+	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 
+	/**
+	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
+	 * DÉFAUT EST LA CONSTANTE DU JEU DE SEMENCE.
+	 *
+	 * La vue devient capable de recevoir ce qu'un chargeur de route lit en base
+	 * — univers, domaines, compte courant, état de l'instance — sans qu'aucun
+	 * rendu ne change tant que rien ne lui est passé : le mode de conception ne
+	 * passe que `vecteur` et `notes`, la vue reçoit donc exactement ce qu'elle
+	 * recevait, et le banc de comparaison ne bouge pas d'un pixel.
+	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — domaine × droits × rappel. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-22')`, variante « complète ». */
 		notes: readonly Note[];
+		/** Les univers du produit. Défaut : ceux du jeu de semence. */
+		univers?: readonly Univers[];
+		/** Les domaines du produit. Défaut : ceux du jeu de semence. */
+		domaines?: readonly Domaine[];
+		/** L'utilisateur courant. Défaut : celui du jeu de semence. */
+		compte?: UtilisateurCourant;
+		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
+		instance?: EtatDInstance;
 	}
 
-	const { vecteur, notes: corpus }: Proprietes = $props();
+	const {
+		vecteur,
+		notes: corpus,
+		univers = UNIVERS,
+		domaines = DOMAINES,
+		compte = MOI,
+		instance = INSTANCE
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const droits = $derived(reglage['droits'] === 'lecture' ? 'lecture' : 'ecriture');
@@ -84,7 +119,7 @@
 	const rappelDemande = $derived(reglage['c-rappel'] !== false);
 
 	const courant = $derived(
-		(DOMAINES.find((d) => d.nom === reglage['dom']) ?? DOMAINES[0]) as Domaine
+		(domaines.find((d) => d.nom === reglage['dom']) ?? domaines[0]) as Domaine
 	);
 
 	/**
@@ -258,16 +293,16 @@
 	fil={['Accueil', courant.univers, courant.nom, 'Signets']}
 	courant={railCourant}
 	{droits}
-	univers={UNIVERS}
-	domaines={DOMAINES}
+	{univers}
+	{domaines}
 	notes={corpus}
 	compte={{
-		nom: MOI.nom,
-		initiales: MOI.initiales,
-		role: MOI.role,
-		domaine: MOI.domaine
+		nom: compte.nom,
+		initiales: compte.initiales,
+		role: compte.role,
+		domaine: compte.domaine
 	}}
-	version={INSTANCE.version}
+	version={instance.version}
 >
 	{#snippet enfants()}
 		<header class="tete" style="--teinte:{courant.couleur}">
