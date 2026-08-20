@@ -75,35 +75,28 @@
 	 *   · l'Accueil de V-07, dont le gel déclare « Vous êtes déjà sur l'accueil »
 	 *     (`V-07:1150`) — une non-destination, qu'aucune règle de
 	 *     `REGLES_DE_DESTINATION` ne résout, et qui ne doit pas l'être ;
-	 *   · SIGNETS, et celle-là est un ÉCART, pas un choix. Son `data-vers`
-	 *     désigne V-22, dont `docs/routes.md` §3.3 donne la route
-	 *     `/univers/{univers}/{domaine}/signets` : PARAMÉTRÉE. Or le rail est
-	 *     GLOBAL — `verif/menus.mjs` le constate lui-même : « le rail de V-37
-	 *     offre Cartographie, Carte mentale et Signets quel que soit le domaine
-	 *     courant » — et aucune source du dépôt ne dit quel univers ni quel
-	 *     domaine cette entrée vise. Le brief de V-37 ne cite même pas Signets
-	 *     parmi les outils du rail. Choisir un domaine serait une décision
-	 *     fonctionnelle prise en exécution, donc un défaut de contrat de tâche
-	 *     (`CLAUDE.md` §2, règle de non-comblement). L'entrée reste inerte et
-	 *     l'écart est remonté.
+	 *   · SIGNETS — RÉSOLUE LE 20 AOÛT 2026, PAR UNE DÉCISION DE PÉRIMÈTRE DU
+	 *     COMMANDITAIRE, et il faut lire pourquoi avant de toucher à cette ligne.
 	 *
-	 * SIGNETS A ÉTÉ ROUVERT AU LOT T-072, ET L'ENTRÉE RESTE INERTE. `ARB-046`
-	 * proposait une route GLOBALE `/signets` rendant V-22, au motif que « le gel
-	 * ne montre qu'une vue de signets et rien n'y distingue les deux portées ».
-	 * L'arbitrage posait lui-même sa borne : *« si un état déclaré de V-22
-	 * montrait un contexte de domaine qui contredit une portée globale,
-	 * arrête-toi »*. LA BORNE EST FRANCHIE, ET C'EST MESURÉ :
+	 *     Le blocage tenait tout entier à une prémisse : que « Signets » soit une
+	 *     CHOSE À PART, donc une destination qui a besoin d'un domaine. `ARB-047`
+	 *     s'est appuyé dessus pour laisser l'entrée inerte, et trois lectures du
+	 *     gel l'ont confirmé — le titre de V-22 nomme un domaine, son fil aussi,
+	 *     et trois de ses six états sont un choix de domaine.
 	 *
-	 *   `V-22:3232`  `changerDomaine("Infrastructure")` — l'initialisation, donc
-	 *                les SIX états déclarés y passent ;
-	 *   `V-22:2946`  `#sur-titre` ← `courant.univers + " · " + courant.nom` ;
-	 *   `V-22:2947`  `#titre`     ← `"Signets de " + courant.nom` ;
-	 *   `V-22:2948`  `fil: ["Accueil", courant.univers, courant.nom, "Signets"]`.
+	 *     LA PRÉMISSE ÉTAIT FAUSSE. Le commanditaire l'a tranché : « c'est de
+	 *     l'abus sémantique, ce sont des documents. » Et le dépôt le disait déjà
+	 *     sans qu'on l'entende — `RG-NOT-01` : « une note est unique ; la fiche
+	 *     n'est pas un objet séparé, et le signet non plus », et le cahier des
+	 *     charges range « Signet » parmi les CINQ TYPES DE NOTE.
 	 *
-	 * Aucun état de V-22 n'existe sans domaine : son titre, son sur-titre et son
-	 * fil en nomment un, et trois de ses six états sont un CHOIX de domaine. Une
-	 * adresse globale rendrait donc « Signets de Infrastructure ». La décision
-	 * est remontée pour reprise (T-072 É-3) ; l'entrée n'est pas câblée.
+	 *     Un signet étant une note, l'entrée n'a jamais eu besoin d'un domaine :
+	 *     elle vise les notes de ce type, et cette adresse est GLOBALE. Elle
+	 *     existe, elle est montée, et le §4.2 de `docs/routes.md` déclare `type`
+	 *     parmi ses facettes.
+	 *
+	 *     Ce qui a coûté trois jours n'était pas un conflit entre le rail et
+	 *     V-22 : c'était une catégorie de trop.
 	 *
 	 * ───────────────────────────────────────────────────────────────────────────
 	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040) — lot T-072
@@ -178,6 +171,20 @@
 	   « lecture », `.si-admin` quand `data-role` ne vaut pas « admin ». */
 	const ecriture = $derived(droits !== 'lecture');
 	const admin = $derived(role === 'admin');
+
+	/**
+	 * L'ADRESSE DE L'ENTRÉE « SIGNETS » DU RAIL.
+	 *
+	 * Un signet est une NOTE portant une adresse web (`RG-NOT-01`, et « Signet »
+	 * est l'un des cinq types de note du cahier des charges). L'entrée vise donc
+	 * les notes de ce type — une adresse GLOBALE, comme le rail lui-même, et non
+	 * une page de domaine qui aurait demandé de choisir un domaine que rien ne
+	 * désigne.
+	 *
+	 * `resolve()` n'accepte pas de chaîne de requête : elle est concaténée après,
+	 * et le contrôle de navigation d'eslint s'en satisfait parce que le chemin,
+	 * lui, passe bien par la résolution du cadre.
+	 */
 </script>
 
 {#snippet branche(n: NoeudRendu)}
@@ -338,7 +345,11 @@
 				>
 				Carte mentale
 			</a>
-			<a class="rail__lien" href="#" data-vers="Signets — vue V-22">
+			<a
+				class="rail__lien"
+				href="{resolve('/recherche')}?type=Signet"
+				data-vers="Signets — vue V-22"
+			>
 				<svg
 					width="15"
 					height="15"
