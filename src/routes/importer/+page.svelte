@@ -15,7 +15,7 @@
 	 *
 	 * `vecteur={null}` demande l'état par défaut de la vue. LE BANC NE PASSE
 	 * JAMAIS PAR ICI : il atteint la vue par le mode démo
-	 * (`/__design/V-24?etat=…`), qui rend le composant directement. Rien de ce
+	 * (la route de conception du banc), qui rend le composant directement. Rien de ce
 	 * fichier n'entre dans son verdict.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la

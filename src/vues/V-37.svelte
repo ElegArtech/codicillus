@@ -4,7 +4,7 @@
 	 *
 	 * `docs/routes.md` §3.8 classe V-37 parmi les six vues sans adresse propre :
 	 * c'est un catalogue du gabarit, comme V-41 l'est des composants. Ce fichier
-	 * n'existe donc que pour le mode démo — `/__design/V-37?etat=…` — qui est le
+	 * n'existe donc que pour le mode démo — la route de conception du banc — qui est le
 	 * seul chemin par lequel le banc atteint un état côté application
 	 * (le module de service du banc, ÉCART-011 É-1). Le gabarit lui-même vit dans
 	 * `src/lib/coquille/`, où les trente-cinq vues qui le portent le prendront.

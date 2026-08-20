@@ -5,7 +5,7 @@
 	 * `docs/routes.md` §3.7 et §3.8 : V-40 est une SECTION de V-41, sans adresse
 	 * propre (ARB-002) ; chaque dialogue s'exécute dans la vue qui le déclenche
 	 * (C-06). Ce fichier n'existe que pour le mode démo —
-	 * `/__design/V-40?etat=…` (le module de service du banc, ÉCART-011 É-1).
+	 * la route de conception du banc (le module de service du banc, ÉCART-011 É-1).
 	 *
 	 * DIX ÉTATS, TOUS DE ZONE — `verif/scenarios/V-40.json` : `dialog.dlg`, rangs
 	 * 0 à 9. Le protocole est « page-entiere-zone-isolee »
