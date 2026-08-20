@@ -79,7 +79,18 @@
 	 * reproduits figurent tous à l'ensemble clos du gel de V-36 (ARB-016,
 	 * `node verif/styles-en-ligne.mjs V-36`).
 	 */
-	import { CORPUS, DATE_REFERENCE, DOMAINES, type Domaine, type Note } from '../../seeds/corpus';
+	import {
+		DATE_REFERENCE,
+		DOMAINES,
+		INSTANCE,
+		MOI,
+		UNIVERS,
+		type Domaine,
+		type EtatDInstance,
+		type Note,
+		type Univers,
+		type UtilisateurCourant
+	} from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
@@ -97,17 +108,57 @@
 		 * passe, et c'est ce qui garantit que le banc ne bouge pas d'un pixel.
 		 */
 		domaines?: readonly Domaine[];
+		/**
+		 * LES QUATRE SOURCES DE LA COQUILLE, TOUTES FACULTATIVES — le rail de
+		 * gauche, le fil et l'identité de la barre. Absentes, les constantes du jeu
+		 * de semence s'appliquent, et cette vue rend exactement ce qu'elle rendait.
+		 * `CoquilleDeConsole.svelte:70-75` les déclare dans les mêmes termes ; elles
+		 * ne faisaient que manquer ICI, si bien que cet écran affichait le rail et
+		 * l'utilisateur du jeu de semence même servi depuis la base.
+		 *
+		 * `domaines` est déclarée plus haut : elle servait déjà au CONTENU de cet
+		 * écran — le périmètre exportable — avant de servir au rail.
+		 */
+		univers?: readonly Univers[];
+		compte?: UtilisateurCourant;
+		instance?: EtatDInstance;
+		/**
+		 * CE QUE LA VUE FAIT QUAND L'ARCHIVE EST DEMANDÉE.
+		 *
+		 * `P-03` — « une entrée visible est une entrée qui fonctionne » : le bouton
+		 * « Préparer l'archive » est au gel, et la route qui produit l'archive
+		 * existe (`/console/exports/{univers}/{domaine}`). Il ne manquait que le
+		 * fil entre les deux. La vue rend le NOM du domaine choisi ; la page sait à
+		 * quelle adresse il correspond.
+		 */
+		onExporter?: (domaine: string) => void;
 	}
 
-	const { notes, domaines = DOMAINES }: Proprietes = $props();
+	const {
+		notes,
+		domaines = DOMAINES,
+		univers = UNIVERS,
+		compte = MOI,
+		instance = INSTANCE,
+		onExporter
+	}: Proprietes = $props();
 
 	/* ── Le calque des fabriques du gel ──────────────────────────────────────
 	   `ECART-020` É-3 : un gel qui produit une valeur par une fabrique n'admet
 	   pas qu'on la réécrive autrement. Ces quatre fonctions sont recopiées de
 	   la maquette, ligne à ligne, et appelées avec les mêmes arguments. */
 
-	/** `window.notesDuDomaine` (`V-36:2530`). */
-	const notesDuDomaine = (nom: string): readonly Note[] => CORPUS.filter((n) => n.domaine === nom);
+	/**
+	 * `window.notesDuDomaine` (`V-36:2530`).
+	 *
+	 * LE CORPUS LU EST CELUI DE LA PROPRIÉTÉ, PLUS CELUI DU MODULE. La fabrique
+	 * du gel ferme sur `CORPUS`, parce qu'une maquette n'a qu'une source ; ici la
+	 * vue reçoit ses notes en propriété — `notes` —, et lire `CORPUS` revenait à
+	 * décompter le jeu de semence quelle que soit la base servie. Tout ce que cet
+	 * écran chiffre en découle : notes, fiches, signets, dossiers, pièces jointes,
+	 * et jusqu'au nom de l'archive. L'argument change, la fabrique non.
+	 */
+	const notesDuDomaine = (nom: string): readonly Note[] => notes.filter((n) => n.domaine === nom);
 
 	interface NoeudDeDossier {
 		enfants: Record<string, NoeudDeDossier>;
@@ -118,7 +169,7 @@
 	 *  qui existe : il se déduit du chemin des notes, jamais d'une table à part. */
 	function dossiersDuDomaine(domaine: string): Record<string, NoeudDeDossier> {
 		const racines: Record<string, NoeudDeDossier> = {};
-		for (const n of CORPUS) {
+		for (const n of notes) {
 			if (n.domaine !== domaine || !n.dossier) continue;
 			const segments = n.dossier
 				.split('›')
@@ -179,7 +230,15 @@
 	   au gel. `notes` reste la propriété du contrat de rendu ; les agrégats
 	   d'export portent, eux, sur le corpus entier, comme au gel — la vue de
 	   console administre l'instance, pas une variante. */
-	const domaineCourant = $derived(domaines[0]!.nom);
+	/**
+	 * LE DOMAINE CHOISI — `select#domaine` du gel, dont la valeur initiale est le
+	 * premier de la liste. Au rendu serveur, `choisi` est vide et le premier
+	 * s'applique : l'écran reste celui que la maquette montre.
+	 */
+	let choisi = $state('');
+	const domaineCourant = $derived(
+		choisi !== '' && domaines.some((d) => d.nom === choisi) ? choisi : domaines[0]!.nom
+	);
 	const apercu = $derived(apercuExport(domaineCourant));
 
 	/** Les cinq lignes du récapitulatif, dans l'ordre du gel (`V-36:2894`). */
@@ -210,7 +269,15 @@
 	});
 </script>
 
-<CoquilleDeConsole section="exports" {notes} donnees={{ 'data-etat': 'repos' }}>
+<CoquilleDeConsole
+	section="exports"
+	{notes}
+	{univers}
+	{domaines}
+	{compte}
+	{instance}
+	donnees={{ 'data-etat': 'repos' }}
+>
 	{#snippet enfants()}
 		<TeteDeSection
 			titre="Exports"
@@ -241,7 +308,11 @@
 				<div class="champ" style="margin-bottom:var(--e-4)">
 					<label class="champ__label" for="domaine">Domaine à exporter</label>
 					<!-- prettier-ignore -->
-					<select class="selecteur" id="domaine"
+					<select
+						class="selecteur"
+						id="domaine"
+						value={domaineCourant}
+						onchange={(e) => (choisi = e.currentTarget.value)}
 						>{#each domaines as d (d.nom)}<option value={d.nom}>{d.univers} › {d.nom} — {notesDuDomaine(d.nom).length} notes</option>{/each}</select
 					>
 				</div>
@@ -302,7 +373,11 @@
 				><div class="recap-export__corps"
 					><div id="recap"
 						>{#each recapitulatif as [nom, valeur] (nom)}<div class="re" data-nul={valeur ? 'non' : 'oui'}><span>{nom}</span><span class="re__n">{valeur}</span></div>{/each}</div
-					><button class="btn btn--principal" id="exporter"
+					><button
+						class="btn btn--principal"
+						id="exporter"
+						type="button"
+						onclick={() => onExporter?.(domaineCourant)}
 						><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8.5M4.8 7.3L8 10.7l3.2-3.4M2.5 13.5h11"/></svg>
 						Préparer l'archive</button
 					><div class="etat-export" id="etat" hidden

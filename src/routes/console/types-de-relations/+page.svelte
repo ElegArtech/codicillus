@@ -18,9 +18,40 @@
 	 */
 	import Vue from '../../../vues/V-30.svelte';
 	import '../../../vues/V-30.css';
+	import { envoyerAUneAction } from '../cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
 </script>
 
-<Vue vecteur={data.vecteur} notes={data.notes} />
+<!--
+	LA VUE TIENT L'ÉTAT DU DIALOGUE, CETTE PAGE TIENT LE RÉSEAU — voir
+	`/console/domaines` pour le motif.
+
+	AUCUNE TABLE DE TRADUCTION ICI, et c'est une propriété du corpus : les clés
+	de `TYPES_RELATION` SONT les identifiants lisibles de `types_de_relation`
+	(`heberge`, `depend`, `documente`…), et `lireTypesDeRelation()` les rend telles
+	quelles. La vue les porte déjà ; rien n'est à retrouver en base.
+
+	LES DEUX SORTIES SONT CELLES DU GEL — « Réaffecter à un autre type » et
+	« Supprimer aussi ces N relations » (`V-30:536`, `:549`). Ce qu'elles écrivent
+	est dans `supprimerUnTypeDeRelation()`, avec le cas d'unicité qu'une
+	réaffectation peut rencontrer.
+-->
+<Vue
+	vecteur={data.vecteur}
+	notes={data.notes}
+	univers={data.univers}
+	domaines={data.domaines}
+	compte={data.compte}
+	typesRelation={data.typesRelation}
+	relations={data.relations}
+	relationsTechniques={data.relationsTechniques}
+	onSupprimer={(demande) => {
+		void envoyerAUneAction(document, '?/supprimer', {
+			'type-de-relation': demande.type,
+			sortie: demande.sortie,
+			vers: demande.vers
+		});
+	}}
+/>

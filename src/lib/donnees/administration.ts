@@ -61,8 +61,11 @@ import {
 	dossiers,
 	notes,
 	parametres,
+	relations,
+	templates,
 	typesDeFiche,
 	typesDeNote,
+	typesDeRelation,
 	univers
 } from '../base/schema';
 import type { RoleDeCompte } from '../droits/resolution';
@@ -163,6 +166,19 @@ export const SORTIE_DELESTER_LES_NOTES =
 /** `V-32:3096` — `RG-M14-07`, et il explique la sortie autant que le refus. */
 export const MOTIF_DERNIER_ADMINISTRATEUR =
 	'est le seul administrateur actif de l’instance. Le retirer fermerait définitivement l’accès à la console — plus personne ne pourrait créer de domaine, gérer les comptes, ni rendre ce rôle à quiconque. Nommez d’abord un second administrateur : le sélecteur se déverrouillera aussitôt.';
+
+/**
+ * `mockups/V-32-console-comptes.html:3278` — LE MOTIF DE LA DÉSACTIVATION, ET
+ * IL N'EST PAS CELUI DU CHANGEMENT DE RÔLE.
+ *
+ * Les deux gestes retirent le dernier administrateur et se jugent par le MÊME
+ * prédicat, mais le gel leur écrit deux phrases DIFFÉRENTES : celle du rôle
+ * parle du sélecteur qui se déverrouillera, celle-ci d'un retour à cet écran.
+ * Réutiliser l'une pour l'autre aurait donné un texte qui ne décrit pas le geste
+ * qu'on refuse.
+ */
+export const MOTIF_DERNIER_ADMINISTRATEUR_DESACTIVATION =
+	'est le seul administrateur actif. Désactiver ce compte rendrait la console inaccessible et sans recours. Nommez un second administrateur avant de revenir ici.';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    3. `RG-M14-01` — UN UNIVERS QUI CONTIENT DES DOMAINES NE SE SUPPRIME PAS
@@ -857,6 +873,59 @@ export async function supprimerUnTypeDeFiche(
 }
 
 /**
+ * DÉLESTER LES NOTES D'UN TYPE DE FICHE — la sortie que `RG-M14-06` propose.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE GESTE N'EST PAS INVENTÉ : IL EST LU AU GEL
+ *
+ * `mockups/V-29-console-types-fiches.html:3464-3468` : le refus de suppression
+ * offre un bouton « Délester ces N notes du type "X" », et la notification qui
+ * suit dit exactement ce qu'il fait — « les notes conservent leur contenu, sans
+ * propriétés structurées ». `RG-M14-06` exige que le refus porte une sortie ;
+ * c'est celle-là, et la maquette fait loi.
+ *
+ * `P-03` LE REND OBLIGATOIRE, pas facultatif : « une entrée visible est une
+ * entrée qui fonctionne. Pas de "bientôt disponible", pas de lien mort. » Le
+ * bouton est au gel ; le laisser inerte serait le défaut que ce principe nomme.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * DEUX COLONNES, ET LES DEUX ENSEMBLE
+ *
+ * `notes.type_de_fiche_id` porte le type, `notes.proprietes_typees` porte les
+ * valeurs de son schéma. Retirer l'un sans l'autre laisserait des propriétés
+ * orphelines, dont plus aucun schéma ne dirait le sens — « sans propriétés
+ * structurées » se lit sur les deux. Une seule instruction, donc atomique par
+ * nature : aucune transaction n'est nécessaire là où il n'y a qu'une écriture.
+ *
+ * LE CORPS DES NOTES N'EST PAS TOUCHÉ, et c'est tout ce que la notification
+ * promet : « les notes conservent leur contenu ». Rien ici ne lit ni n'écrit
+ * `corps_reference` ou `corps_operationnel`.
+ *
+ * L'INDEX N'EST PAS ENTRETENU, et il faut le dire. Aucune note ne disparaît —
+ * `RG-M14-05` vise la disparition —, mais leur type de fiche change. Si la
+ * projection de recherche portait ce type, elle serait périmée jusqu'à la
+ * prochaine écriture de la note. Lacune déclarée plutôt que geste ajouté sans
+ * l'avoir mesuré.
+ *
+ * @returns le nombre de notes délestées, ou `introuvable` si le type n'existe pas.
+ */
+export async function delesterUnTypeDeFiche(
+	base: Base,
+	identifiant: string
+): Promise<IssueDUnGeste<{ readonly issue: 'possible'; readonly notes: number }>> {
+	const etat = await mesurerUnTypeDeFiche(base, identifiant);
+	if (etat === null) return { issue: 'introuvable' };
+
+	const delestees = await base
+		.update(notes)
+		.set({ typeDeFicheId: null, proprietesTypees: null })
+		.where(eq(notes.typeDeFicheId, etat.id))
+		.returning({ identifiant: notes.identifiant });
+
+	return { issue: 'possible', notes: delestees.length };
+}
+
+/**
  * CHANGER LE RÔLE D'UN COMPTE — `RG-M14-07`.
  *
  * Le refus est prononcé AVANT l'écriture, sur une mesure prise dans la même
@@ -881,6 +950,265 @@ export async function changerLeRoleDUnCompte(
 		.set({ role: verdict.role, modifieLe: maintenant })
 		.where(eq(comptes.id, etat.id));
 	return verdict;
+}
+
+/** Le verdict d'un geste sur un template — une seule issue possible. */
+export type VerdictDUnTemplate = { readonly issue: 'possible'; readonly template: string };
+
+/**
+ * SUPPRIMER UN TEMPLATE — `RG-REF-01`, et une suppression qui ne se refuse pas.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * AUCUN REFUS, ET C'EST LE GEL QUI LE DIT
+ *
+ * `V-31:202` : « Modifier ou supprimer un template n'affecte AUCUNE note
+ * existante. Un squelette est copié au moment de la création : la note devient
+ * aussitôt indépendante. » Aucune colonne ne rattache une note à son template —
+ * le lien est rompu dès la création —, et il n'y a donc rien à décompter, rien à
+ * délester, rien à confirmer par un nom retapé.
+ *
+ * Le dialogue porte un AVERTISSEMENT, non un refus, quand le template visé est
+ * celui par défaut : « la création de note s'ouvrira sur la page vierge tant
+ * qu'un autre n'aura pas été marqué par défaut. Ce n'est pas bloquant, mais
+ * autant le savoir » (`V-31:615-622`). Le geste ne le contredit pas : il ne
+ * promeut aucun remplaçant, parce que la maquette n'en désigne aucun, et en
+ * choisir un serait décider à la place de l'administrateur.
+ */
+export async function supprimerUnTemplate(
+	base: Base,
+	identifiant: string
+): Promise<IssueDUnGeste<VerdictDUnTemplate>> {
+	const [ligne] = await base
+		.select({ id: templates.id, nom: templates.nom })
+		.from(templates)
+		.where(eq(templates.identifiant, identifiant))
+		.limit(1);
+	if (ligne === undefined) return { issue: 'introuvable' };
+
+	await base.delete(templates).where(eq(templates.id, ligne.id));
+	return { issue: 'possible', template: ligne.nom };
+}
+
+/**
+ * MARQUER UN TEMPLATE PAR DÉFAUT — `RG-REF-02`, et l'unicité est le geste.
+ *
+ * `V-31:380-381` écrit la règle depuis l'écran : « Proposé en premier dans le
+ * sélecteur. Cocher décochera "X", qui l'est actuellement. » Il n'y a donc pas
+ * un marquage suivi d'un démarquage à ne pas oublier : il y a UN geste, qui
+ * laisse exactement un template par défaut.
+ *
+ * LES DEUX ÉCRITURES SONT DANS UNE TRANSACTION, et ce n'est pas une précaution
+ * de style : entre les deux, la base porterait DEUX templates par défaut, ou
+ * ZÉRO selon l'ordre. Aucune contrainte ne l'interdit — `templates.defaut` est
+ * un booléen ordinaire —, donc la règle n'existe que si elle est écrite, et elle
+ * ne tient que si les deux écritures tiennent ensemble.
+ *
+ * L'ORDRE EST : démarquer tout, puis marquer celui-ci. L'inverse démarquerait ce
+ * qu'on vient de marquer.
+ */
+export async function marquerLeTemplateParDefaut(
+	base: Base,
+	identifiant: string,
+	maintenant: Date
+): Promise<IssueDUnGeste<VerdictDUnTemplate>> {
+	const [ligne] = await base
+		.select({ id: templates.id, nom: templates.nom })
+		.from(templates)
+		.where(eq(templates.identifiant, identifiant))
+		.limit(1);
+	if (ligne === undefined) return { issue: 'introuvable' };
+
+	await base.transaction(async (tx) => {
+		await tx.update(templates).set({ defaut: false, modifieLe: maintenant });
+		await tx
+			.update(templates)
+			.set({ defaut: true, modifieLe: maintenant })
+			.where(eq(templates.id, ligne.id));
+	});
+
+	return { issue: 'possible', template: ligne.nom };
+}
+
+/**
+ * CE QU'IL ADVIENT DES RELATIONS D'UN TYPE SUPPRIMÉ — les deux sorties que le
+ * dialogue de `V-30` offre, et il n'y en a pas d'autres.
+ *
+ * `V-30:534-556` : « Choisissez ce qu'il advient de ces relations. Aucune fiche
+ * n'est supprimée dans les deux cas : seul le lien entre elles est concerné. »
+ */
+export type SortieDUnTypeDeRelation = 'reaffecter' | 'supprimer';
+
+/** Le verdict d'une suppression de type de relation. */
+export type VerdictDUnTypeDeRelation =
+	| { readonly issue: 'cible-invalide' }
+	| {
+			readonly issue: 'possible';
+			/** Le nombre de relations réaffectées ou détruites — jamais un chiffre supposé. */
+			readonly relations: number;
+			readonly sortie: SortieDUnTypeDeRelation;
+	  };
+
+/**
+ * SUPPRIMER UN TYPE DE RELATION — `RG-M08-06`, `RG-M08-07`.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * TROIS CAS, ET LES TROIS SONT AU GEL
+ *
+ * `V-30:513-556`, lu :
+ *
+ *   AUCUNE RELATION   « n'est utilisé par aucune relation. Sa suppression retire
+ *                     seulement ce couple de libellés du vocabulaire proposé. »
+ *                     Le type part, rien d'autre n'est touché.
+ *   RÉAFFECTER        « Les N relations sont conservées et changent d'étiquette.
+ *                     Le graphe garde sa structure. »
+ *   SUPPRIMER AUSSI   « Les liens disparaissent du graphe et des panneaux
+ *                     Relations. Les fiches restent intactes. Cette perte est
+ *                     définitive. »
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * POURQUOI UNE TRANSACTION, ALORS QUE `V-28` EN AVAIT UNE POUR LA MÊME RAISON
+ *
+ * `type_de_relation_id` est en `ON DELETE RESTRICT` : le type ne peut pas partir
+ * tant qu'une relation le porte. Les deux écritures sont donc ORDONNÉES et
+ * indissociables — traiter les relations, puis retirer le type. Si la seconde
+ * échoue, la première doit être annulée, sans quoi des relations auraient changé
+ * d'étiquette ou disparu pour un type qui, lui, existe toujours.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LA RÉAFFECTATION PEUT SE HEURTER À L'UNICITÉ, ET CE N'EST PAS UNE ERREUR
+ *
+ * `relations_unicite` porte sur (source, cible, type). Réaffecter vers un type
+ * que le même couple porte DÉJÀ produirait un doublon : ces relations-là sont
+ * retirées plutôt que réécrites — le lien existe déjà sous l'étiquette visée, et
+ * « le graphe garde sa structure » reste vrai. Rien n'est perdu, rien n'est
+ * dupliqué.
+ *
+ * L'INDEX DE RECHERCHE N'EST PAS ENTRETENU : aucune note ne disparaît, et la
+ * projection ne porte pas les relations. Lacune nommée plutôt que geste supposé.
+ */
+export async function supprimerUnTypeDeRelation(
+	base: Base,
+	demande: {
+		readonly type: string;
+		readonly sortie: SortieDUnTypeDeRelation;
+		/** L'identifiant du type d'accueil, quand la sortie est la réaffectation. */
+		readonly vers?: string;
+	}
+): Promise<IssueDUnGeste<VerdictDUnTypeDeRelation>> {
+	const [type] = await base
+		.select({ id: typesDeRelation.id })
+		.from(typesDeRelation)
+		.where(eq(typesDeRelation.identifiant, demande.type))
+		.limit(1);
+	if (type === undefined) return { issue: 'introuvable' };
+
+	const portees = await base
+		.select({ id: relations.id, sourceId: relations.sourceId, cibleId: relations.cibleId })
+		.from(relations)
+		.where(eq(relations.typeDeRelationId, type.id));
+
+	let accueil: { readonly id: string } | undefined;
+	if (portees.length > 0 && demande.sortie === 'reaffecter') {
+		[accueil] = await base
+			.select({ id: typesDeRelation.id })
+			.from(typesDeRelation)
+			.where(eq(typesDeRelation.identifiant, demande.vers ?? ''))
+			.limit(1);
+		/* Un type d'accueil inconnu, ou le type qu'on retire : ni l'un ni l'autre
+		   ne conserve les relations. Refus, jamais un repli silencieux. */
+		if (accueil === undefined || accueil.id === type.id) return { issue: 'cible-invalide' };
+	}
+
+	await base.transaction(async (tx) => {
+		if (portees.length > 0) {
+			if (accueil === undefined) {
+				await tx.delete(relations).where(eq(relations.typeDeRelationId, type.id));
+			} else {
+				/* Les couples que le type d'accueil porte déjà — voir l'en-tête. */
+				const deja = await tx
+					.select({ sourceId: relations.sourceId, cibleId: relations.cibleId })
+					.from(relations)
+					.where(eq(relations.typeDeRelationId, accueil.id));
+				const occupes = new Set(deja.map((r) => `${r.sourceId}→${r.cibleId}`));
+
+				for (const relation of portees) {
+					if (occupes.has(`${relation.sourceId}→${relation.cibleId}`)) {
+						await tx.delete(relations).where(eq(relations.id, relation.id));
+						continue;
+					}
+					await tx
+						.update(relations)
+						.set({ typeDeRelationId: accueil.id })
+						.where(eq(relations.id, relation.id));
+				}
+			}
+		}
+		await tx.delete(typesDeRelation).where(eq(typesDeRelation.id, type.id));
+	});
+
+	return { issue: 'possible', relations: portees.length, sortie: demande.sortie };
+}
+
+/** Le verdict d'une désactivation — deux issues, celles du dialogue de `V-32`. */
+export type VerdictDeDesactivation =
+	| { readonly issue: 'refus-dernier-administrateur'; readonly motif: string }
+	| { readonly issue: 'possible'; readonly actif: boolean };
+
+/**
+ * ACTIVER OU DÉSACTIVER UN COMPTE — `RG-M14-08`.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE QUE LA RÈGLE DIT, ET QUI LA TIENT DÉJÀ
+ *
+ * `CAHIER-DES-CHARGES-FONCTIONNEL.md:1186` : « un compte désactivé perd
+ * IMMÉDIATEMENT l'accès mais reste attaché à ses contributions passées. »
+ *
+ * LA MOITIÉ « IMMÉDIATEMENT » EST DÉJÀ ÉCRITE, ET AILLEURS : `src/hooks.server.ts`
+ * ferme la session au premier accès d'un compte devenu inactif — « la session est
+ * fermée au premier accès, sans purge à faire courir ». Rien n'est donc à purger
+ * ici, et surtout rien n'est à réécrire : une seconde application de la règle
+ * serait une définition concurrente.
+ *
+ * LA MOITIÉ « RESTE ATTACHÉ » EST TENUE PAR L'ABSENCE : aucune ligne ci-dessous
+ * ne touche `notes.auteur_id`, ni `verifications`, ni `versions`. C'est ce que
+ * le dialogue promet — « les notes écrites par X restent à son nom, et
+ * l'historique des vérifications n'est pas réécrit » (`V-32:3306`).
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LE REFUS DU DERNIER ADMINISTRATEUR EST LU AU GEL, PAS DÉDUIT
+ *
+ * `mockups/V-32-console-comptes.html:3270-3284` : si le compte visé est le seul
+ * administrateur actif, la désactivation est REFUSÉE, avec son motif —
+ * « désactiver ce compte rendrait la console inaccessible et sans recours ».
+ *
+ * Le prédicat est `estLeDernierAdministrateur()`, celui-là même que
+ * `RG-M14-07` emploie pour le changement de rôle : ce sont deux façons de
+ * retirer le dernier administrateur, et il n'y a aucune raison qu'elles se
+ * jugent différemment. Une seconde définition aurait divergé.
+ *
+ * LE MOTIF, LUI, EST PROPRE AU GESTE : le gel écrit deux phrases distinctes —
+ * voir `MOTIF_DERNIER_ADMINISTRATEUR_DESACTIVATION`.
+ *
+ * LA RÉACTIVATION N'EST JAMAIS REFUSÉE : elle ne peut pas retirer d'accès.
+ */
+export async function changerLActivationDUnCompte(
+	base: Base,
+	identifiant: string,
+	actif: boolean,
+	maintenant: Date
+): Promise<IssueDUnGeste<VerdictDeDesactivation>> {
+	const etat = await mesurerUnCompte(base, identifiant);
+	if (etat === null) return { issue: 'introuvable' };
+
+	if (!actif && estLeDernierAdministrateur(etat)) {
+		return {
+			issue: 'refus-dernier-administrateur',
+			motif: `« ${etat.nom} » ${MOTIF_DERNIER_ADMINISTRATEUR_DESACTIVATION}`
+		};
+	}
+
+	await base.update(comptes).set({ actif, modifieLe: maintenant }).where(eq(comptes.id, etat.id));
+	return { issue: 'possible', actif };
 }
 
 /**
