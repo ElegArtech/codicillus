@@ -21,9 +21,16 @@
  *   4. LE SEUIL DE `RG-M09-04` SE LIT, IL NE SE DÉCIDE PAS. Y compris le cas où
  *      la courbe ne franchit rien : la fonction doit alors DIRE qu'elle ne donne
  *      pas le seuil, jamais rendre le dernier palier comme s'il était la limite.
+ *   5. LE CONTRÔLE DES TÂCHES DU MOTEUR — `ARB-060`, point 2. C'est la
+ *      contrepartie du retrait de l'attente au chemin de requête : sans lui,
+ *      l'arbitrage ne serait qu'un desserrage. Ses cas sont SYNTHÉTIQUES, sur des
+ *      tâches fabriquées et sans moteur — `P-26` : « un contrôle dont le seul cas
+ *      d'épreuve est le défaut qu'il trouve devient inerte en réussissant ». Le
+ *      jour où plus aucune tâche n'échouera, ces cas resteront exercés.
  */
 import { describe, it, expect } from 'vitest';
 import {
+	ETATS_NON_REUSSIS,
 	POSTES,
 	VOLUMES_EXIGES,
 	centile,
@@ -31,6 +38,7 @@ import {
 	manquementsDeVolumetrie,
 	mediane,
 	seuilDeBascule,
+	verdictDesTaches,
 	verdictDuPoste
 	// @ts-expect-error — modules d'instrument en JavaScript, hors périmètre de tsc
 } from './budgets.mjs';
@@ -251,5 +259,82 @@ describe('le seuil de bascule', () => {
 		);
 		expect(seuil.dernierTenu).toBe(500);
 		expect(seuil.premierRompu).toBe(8000);
+	});
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   5. LE CONTRÔLE DES TÂCHES DU MOTEUR — ARB-060, point 2.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+describe('le contrôle des tâches du moteur', () => {
+	const tache = (uid: number, status: string, message: string | null = null) => ({
+		uid,
+		status,
+		type: 'documentAdditionOrUpdate',
+		indexUid: 'notes',
+		error: message === null ? null : { message }
+	});
+
+	it('nomme les deux états terminaux qui ne sont pas la réussite, et eux seuls', () => {
+		expect([...ETATS_NON_REUSSIS].sort()).toEqual(['canceled', 'failed']);
+	});
+
+	it('est VERT quand le moteur ne porte que des tâches réussies', () => {
+		const v = verdictDesTaches([tache(1, 'succeeded'), tache(2, 'succeeded')], 0);
+		expect(v.total).toBe(0);
+		expect(v.lignes).toEqual([]);
+	});
+
+	it('ROUGIT sur une tâche en échec, et rend son message tel que le moteur l’écrit', () => {
+		/* LA POLARITÉ QUI COMPTE — `P-5`. Sans ce cas, le contrôle serait vert
+		   pour la seule raison que rien n’a jamais échoué, ce qui ne prouve rien
+		   de sa capacité à dire non. */
+		const v = verdictDesTaches([tache(4, 'failed', 'Document identifier is invalid.')], 0);
+		expect(v.total).toBe(1);
+		expect(v.lignes[0]).toContain('tâche 4');
+		expect(v.lignes[0]).toContain('Document identifier is invalid.');
+	});
+
+	it('compte une tâche ANNULÉE comme une tâche non réussie', () => {
+		/* Du point de vue du corpus, une tâche annulée dit la même chose qu’une
+		   tâche échouée : l’écriture demandée n’a pas eu lieu. Un contrôle qui ne
+		   regarderait que « failed » laisserait passer la moitié du cas. */
+		expect(verdictDesTaches([tache(9, 'canceled')], 0).total).toBe(1);
+	});
+
+	it('ne compte NI une tâche enfilée, NI une tâche en cours — elles ne sont pas jugées', () => {
+		/* C’est ce qui oblige le contrôle à vider la file avant de lire : une
+		   tâche soumise il y a quatre millisecondes n’est pas un succès, elle
+		   n’est pas encore passée. La compter comme réussie serait conclure sur un
+		   chemin non parcouru. */
+		const v = verdictDesTaches([tache(1, 'enqueued'), tache(2, 'processing')], 0);
+		expect(v.total).toBe(0);
+	});
+
+	it('sépare ce que l’exécution a PRODUIT de ce dont elle a HÉRITÉ — sans absoudre', () => {
+		/* `P-28` : ce qu’on neutralise, on le mesure ailleurs. La distinction dit
+		   l’imputabilité ; elle ne retire rien du compte, et les deux rougissent. */
+		const v = verdictDesTaches([tache(3, 'failed'), tache(12, 'failed')], 7);
+		expect(v.total).toBe(2);
+		expect(v.heritees.map((t: { uid: number }) => t.uid)).toEqual([3]);
+		expect(v.produites.map((t: { uid: number }) => t.uid)).toEqual([12]);
+	});
+
+	it('range TOUT en hérité quand la marque est inconnue — jamais en produit', () => {
+		/* Moteur injoignable au départ : on ne sait pas ce qui préexistait. Le
+		   contrôle rougit quand même, et n’impute rien à cette exécution — une
+		   imputation inventée serait pire qu’une imputation absente. */
+		const v = verdictDesTaches([tache(3, 'failed')], null);
+		expect(v.total).toBe(1);
+		expect(v.produites).toEqual([]);
+		expect(v.heritees).toHaveLength(1);
+	});
+
+	it('trie par numéro de tâche, quel que soit l’ordre où le moteur les rend', () => {
+		/* Le moteur rend les tâches de la plus récente à la plus ancienne. Un
+		   rapport qui reprendrait cet ordre se lirait à l’envers de l’histoire. */
+		const v = verdictDesTaches([tache(12, 'failed'), tache(3, 'failed')], 0);
+		expect(v.lignes[0]).toContain('tâche 3');
+		expect(v.lignes[1]).toContain('tâche 12');
 	});
 });

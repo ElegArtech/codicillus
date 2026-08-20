@@ -47,6 +47,36 @@
  * est inversé. `--sonde=temoin-inerte` ne retarde rien et doit donc RESTER
  * verte : elle s'invoque en la niant, comme celle de la batterie 6.
  *
+ * `--sonde=tache-en-echec` FABRIQUE une tâche que le moteur refuse — un document
+ * dont la clé primaire est invalide — et exige que le CONTRÔLE DES TÂCHES
+ * rougisse. C'est la seconde polarité de `P-5` : « un moteur sans tâche en échec
+ * doit être vert, et un moteur qui en porte une doit rougir ; la seconde ne
+ * s'obtient pas en attendant qu'elle arrive ». La tâche fabriquée est RETIRÉE du
+ * moteur après le verdict, faute de quoi la sonde empoisonnerait toutes les
+ * exécutions suivantes.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LE CONTRÔLE DES TÂCHES DU MOTEUR — CE QU'IL EST, ET CE QU'IL N'EST PAS
+ *
+ * Il n'est PAS un huitième budget : le cahier en porte sept, et sept verdicts
+ * sont rendus. C'est un contrôle, et il tient dans une question — « existe-t-il,
+ * dans le moteur, une tâche en échec ? ». Il est ici parce que cette batterie est
+ * la seule à exercer le chemin d'écriture qui n'attend plus (`ARB-060`), et à
+ * l'exercer en nombre : le poste 4 enregistre réellement une note à chaque
+ * tirage. Le vert du poste 4 est PRODUIT par le retrait de l'attente ; le
+ * contrôle qui le paie est donc dans le même rapport, et l'un ne s'obtient plus
+ * sans l'autre.
+ *
+ * IL INTERROGE LE MOTEUR EN HTTP BRUT, jamais par le client du produit : un
+ * instrument qui auditerait le code d'indexation à travers ce même code serait
+ * aveugle au jour où c'est lui qui casse.
+ *
+ * IL VIDE LA FILE AVANT DE LIRE. Une tâche soumise il y a 4 ms n'est pas encore
+ * en échec — elle n'est pas encore jouée. Lire les échecs sans attendre le
+ * désemplissage serait conclure sur des tâches que le moteur n'a pas traversées,
+ * ce que `CLAUDE.md` §4 interdit. Une file qui ne se vide pas est elle-même un
+ * rouge : le contrôle ne peut pas conclure.
+ *
  * ═════════════════════════════════════════════════════════════════════════
  * LA BASE DE LA MESURE N'EST PAS CELLE DES AUTRES LOTS
  *
@@ -66,11 +96,14 @@
  * Usage :
  *   node verif/budgets.mjs                       la batterie
  *   node verif/budgets.mjs --sonde=latence       la preuve qu'elle sait dire non
+ *   node verif/budgets.mjs --sonde=tache-en-echec  la preuve que le contrôle des
+ *                                                tâches du moteur sait dire non
  *   node verif/budgets.mjs --sans-construire     diagnostic : réemploie build/
  *   node verif/budgets.mjs --detail              chaque tirage, série par série
  *
- * Codes de retour : 0 tous les budgets tenus et prouvés · 1 un budget dépassé
- * ou non mesurable · 2 refus de mesurer (volumétrie absente, produit muet).
+ * Codes de retour : 0 tous les budgets tenus et prouvés, aucune tâche du moteur
+ * en échec · 1 un budget dépassé, non mesurable, ou une tâche du moteur en
+ * échec · 2 refus de mesurer (volumétrie absente, produit muet).
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -89,6 +122,23 @@ import {
 	ouvrirLeBassin,
 	ramenerAuPalier
 } from './volumetrie.mjs';
+
+/* L'ENVIRONNEMENT EST LU AVANT TOUT LE RESTE, ET LES DEUX FICHIERS COMPTENT.
+   Cette batterie ne chargeait AUCUN fichier : son `PORT_DEV` était donc
+   toujours indéfini, et elle repartait sur le port par défaut à chaque
+   exécution — dans une copie de travail comme dans une autre. `.env` porte les
+   secrets de la composition ; `.env.local` porte le PORT de la copie, et c'est
+   `verif/preparer-copie.sh` qui l'y écrit. `T-076` É-2 a payé la version étroite
+   sur la batterie 6 : partie sur le port par défaut, occupé par le serveur du
+   lot voisin et adossé à la base PARTAGÉE, elle a rendu 140 défauts dont AUCUN
+   n'existait. C'est `ECART-017` É-8, que `P-22` remesure à chaque lot. */
+for (const fichier of ['.env', '.env.local']) {
+	try {
+		process.loadEnvFile(join(racine, fichier));
+	} catch {
+		/* Absent : l'environnement du processus fait foi (`base/base.mjs`). */
+	}
+}
 
 /* ═══════════════════════════════════════════════ Les sept postes ═══════ */
 
@@ -200,6 +250,98 @@ export function manquementsDeVolumetrie(mesure, exiges = VOLUMES_EXIGES) {
 		}
 	}
 	return manques;
+}
+
+/* ══════════════════ Le contrôle des tâches du moteur — ARB-060, point 2 ══ */
+
+/**
+ * LES ÉTATS TERMINAUX D'UNE TÂCHE QUI NE SONT PAS LA RÉUSSITE.
+ *
+ * Le moteur en connaît cinq : `enqueued`, `processing`, `succeeded`, `failed`,
+ * `canceled`. Les deux premiers ne sont pas terminaux — une tâche en cours n'est
+ * pas un défaut, c'est une mesure prise trop tôt, et c'est pourquoi la file est
+ * VIDÉE avant d'être lue. Les deux derniers disent la même chose du point de vue
+ * du corpus : l'écriture demandée n'a pas eu lieu.
+ */
+export const ETATS_NON_REUSSIS = ['failed', 'canceled'];
+
+/**
+ * Le nombre de tâches non réussies effectivement LUES. Au-delà, le compte total
+ * reste juste et la liste est déclarée tronquée : un instrument qui tairait la
+ * troncature laisserait croire que le rapport est exhaustif.
+ */
+export const PLAFOND_DE_TACHES_LUES = 200;
+
+/**
+ * Le temps qu'on laisse à la file du moteur pour se vider avant de renoncer.
+ *
+ * Il est large à dessein : la batterie enregistre plusieurs dizaines de notes,
+ * chacune soumise sans attente, et l'intervalle de regroupement du moteur est de
+ * 800 ms. Le dépasser n'est pas un délai d'attente qui expire, c'est un refus de
+ * conclure — donc un rouge.
+ */
+export const DELAI_DE_LA_FILE_MS = 60_000;
+
+/**
+ * LE CONTRÔLE QUI REMPLACE L'ATTENTE RETIRÉE DU CHEMIN DE REQUÊTE — `ARB-060`.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * CE QU'IL EXISTE POUR EMPÊCHER
+ *
+ * Jusqu'à `T-076`, `entretenirLIndex()` attendait la tâche du moteur et levait
+ * si elle n'avait pas réussi. `ARB-060` retire cette attente du chemin de
+ * requête — elle coûtait 804 ms, l'intervalle de regroupement du moteur, contre
+ * un budget d'1 s au cahier — et déclare en toutes lettres que la garantie perdue
+ * doit CHANGER DE PLACE, sans quoi l'arbitrage « n'est qu'un desserrage ».
+ *
+ * L'en-tête d'`attendre()` dit ce qu'on protège, et il reste juste : « un échec
+ * d'indexation silencieux est le pire des états : l'index paraît alimenté et ne
+ * l'est pas, et la recherche rend moins que le corpus sans que rien ne le dise ».
+ * Le moteur CONSERVE ses tâches ; l'échec est donc lisible après coup, et c'est
+ * ce qui le rend opposable.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * POURQUOI IL N'A PAS DE LISTE D'EXCEPTIONS
+ *
+ * La question qu'il pose n'a pas de nuance : « existe-t-il, dans le moteur, une
+ * tâche en échec ? ». Un moteur neuf en portait pourtant une, LÉGITIME et
+ * tolérée — `deleteIndexIfExists()` du client 0.60.0 n'attend que l'enfilement,
+ * et le moteur faisait échouer la suppression en `index_not_found` à chaque
+ * première réindexation. La réponse n'a pas été d'excepter ce cas ici : une liste
+ * d'exceptions est un trou nommé, qui s'élargit au cas suivant. `T-076` a retiré
+ * la CAUSE (`src/lib/recherche/moteur.ts`, `retirerLIndexSIlExiste()`), et le
+ * contrôle est resté sans nuance.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FONCTION PURE, CAS D'ÉPREUVE SYNTHÉTIQUE — `P-26`
+ *
+ * Le jour où plus aucune tâche n'échouera, un contrôle dont le seul cas est le
+ * défaut qu'il trouve deviendrait inerte en réussissant. Celui-ci est éprouvé
+ * dans `verif/budgets.test.ts`, sur des tâches fabriquées, sans moteur.
+ *
+ * @param {{uid: number, status: string, type: string, indexUid?: string|null,
+ *          error?: {message?: string}|null}[]} taches les tâches lues du moteur
+ * @param {number|null} marque le plus grand numéro de tâche relevé AVANT la
+ *   mesure. Au-delà : ce que cette exécution a produit. En deçà : ce dont elle a
+ *   hérité. Les deux rougissent — la distinction dit l'imputabilité, jamais
+ *   l'indulgence (`P-28` : ce qu'on neutralise, on le mesure ailleurs)
+ */
+export function verdictDesTaches(taches, marque = null) {
+	const fautives = taches
+		.filter((t) => ETATS_NON_REUSSIS.includes(t.status))
+		.sort((a, b) => a.uid - b.uid);
+	const produites = marque === null ? [] : fautives.filter((t) => t.uid > marque);
+	const heritees = marque === null ? fautives : fautives.filter((t) => t.uid <= marque);
+	return {
+		total: fautives.length,
+		produites,
+		heritees,
+		lignes: fautives.map(
+			(t) =>
+				`tâche ${t.uid} « ${t.type} » sur « ${t.indexUid ?? '—'} » en état « ${t.status} » : ` +
+				(t.error?.message ?? 'aucun message')
+		)
+	};
 }
 
 /* ═══════════════════════════════════════════════ La statistique ════════ */
@@ -339,8 +481,9 @@ async function principale() {
 	const PORT_RELAIS = PORT + 40;
 	const RETARD_DE_SONDE = 1200;
 
-	if (sonde !== null && sonde !== 'latence' && sonde !== 'temoin-inerte') {
-		console.error(`sonde « ${sonde} » inconnue — les genres sont : latence, temoin-inerte`);
+	const GENRES_DE_SONDE = ['latence', 'temoin-inerte', 'tache-en-echec'];
+	if (sonde !== null && !GENRES_DE_SONDE.includes(sonde)) {
+		console.error(`sonde « ${sonde} » inconnue — les genres sont : ${GENRES_DE_SONDE.join(', ')}`);
 		exit(2);
 	}
 
@@ -367,6 +510,13 @@ async function principale() {
 	 * ajouté peut faire basculer.
 	 */
 	const rougesChronometres = [];
+	/**
+	 * LE VERDICT DU CONTRÔLE DES TÂCHES DU MOTEUR — `null` tant qu'il n'a pas été
+	 * rendu. C'est `conclure()` qui en a besoin, et il peut être appelé bien avant
+	 * (refus de mesurer) : la variable est donc déclarée ici, jamais plus bas.
+	 * C'est la même leçon que les trois états ci-dessus.
+	 */
+	let controleDesTaches = null;
 	/** @type {Record<string, unknown>} */
 	const rapport = {};
 
@@ -381,6 +531,12 @@ async function principale() {
 	const rembobinees = await ramenerAuPalier(bassin, jeu, 0);
 	const volumes = await etat(bassin, UNIVERS_DU_GRAPHE);
 	const entrees = await entreesDeLIndex();
+	/* LA MARQUE DES TÂCHES — relevée AVANT le premier tirage, et c'est tout son
+	   intérêt. Au-delà de ce numéro, une tâche en échec est imputable à CETTE
+	   exécution ; en deçà, elle est héritée. Les deux rougissent. Sans la marque,
+	   le contrôle mesurerait l'histoire du moteur sans savoir qui l'a écrite —
+	   `P-28`, une matrice dont les cases se contaminent mesure l'ordre. */
+	const marqueDesTaches = await dernierNumeroDeTache();
 	const machine = {
 		processeur: cpus()[0]?.model ?? 'inconnu',
 		coeurs: cpus().length,
@@ -407,6 +563,10 @@ async function principale() {
 		`  dont engendrées    ${volumes.notesEngendrees} notes (seeds/volumetrie.ts, graine ${generateur.GRAINE})`
 	);
 	console.log(`  index              ${entrees === null ? 'injoignable' : `${entrees} entrées`}`);
+	console.log(
+		`  moteur             ${adresseDuMoteur()} · marque des tâches ` +
+			`${marqueDesTaches === null ? 'INJOIGNABLE' : marqueDesTaches} (au-delà : ce que cette exécution produit)`
+	);
 	console.log(
 		`  graphe de V-19     ${volumes.noeudsDuGraphe} nœuds dans l’univers « ${UNIVERS_DU_GRAPHE} »` +
 			`${rembobinees > 0 ? ` (${rembobinees} notes d’un palier supérieur retirées avant mesure)` : ''}`
@@ -824,15 +984,24 @@ async function principale() {
 			: { series: [[trouveeEn]], froid: trouveeEn, statuts: new Set([ecrit.statut]), octets: 0 },
 		trouveeEn === null
 			? `la note enregistrée n’est PAS retrouvable après ${Math.round(attendu)} ms d’attente ` +
-					'(seuil d’échec du cahier). Aucun chemin du produit n’indexe à l’enregistrement : ' +
-					'src/lib/donnees/edition.ts n’appelle jamais indexerDesNotes(), et la seule écriture ' +
-					'd’index du dépôt est la commande de réindexation complète.'
+					'(seuil d’échec du cahier). Le chemin d’écriture existe depuis T-075 — ' +
+					'src/lib/donnees/edition.ts appelle entretenirLIndex() —, et depuis ARB-060 il SOUMET ' +
+					'la tâche sans l’attendre : lire le CONTRÔLE DES TÂCHES DU MOTEUR ci-dessous, qui dit ' +
+					'si la tâche a été refusée, avant de chercher la cause ailleurs.'
 			: null,
 		[
 			`marque cherchée    « ${marque} », portée par l’extrait dérivé du corps (moteur.ts:200)`,
-			`réindexation complète du corpus (le seul chemin qui existe) : ${fmt(await mesurerLaReindexation())} ms pour ${volumes.notes} notes`
+			`réindexation complète du corpus (l’autre chemin d’écriture de l’index) : ${fmt(await mesurerLaReindexation())} ms pour ${volumes.notes} notes`
 		]
 	);
+
+	/* ── LE CONTRÔLE DES TÂCHES DU MOTEUR — ARB-060, point 2 ─────────────
+	   Il vient ICI, juste après les deux postes qui écrivent, et pas à la fin :
+	   le poste 4 tire ce qu'il tire d'enregistrements RÉELS, et le poste 5 en
+	   ajoute un. Ce sont ces tâches-là que le retrait de l'attente a rendues
+	   muettes, et c'est immédiatement après elles que la question se pose. */
+	controleDesTaches = await controlerLesTachesDuMoteur();
+	imprimerLeControleDesTaches(controleDesTaches);
 
 	/* ── Poste 6 — palette ─────────────────────────────────────────────── */
 	rendre(
@@ -985,6 +1154,215 @@ async function principale() {
 		return performance.now() - depart;
 	}
 
+	/* ═══════ Le contrôle des tâches du moteur — ARB-060, point 2 ═══════ */
+
+	/** La clé du moteur — celle du client d'abord, celle du serveur à défaut. */
+	function cleDuMoteur() {
+		return process.env.CLE_RECHERCHE ?? process.env.CLE_MAITRE_RECHERCHE;
+	}
+
+	/**
+	 * Une lecture du moteur, en HTTP BRUT — jamais par le client du produit.
+	 * Un instrument qui auditerait l'indexation à travers le code qui indexe
+	 * serait aveugle le jour où c'est ce code qui casse.
+	 *
+	 * @returns le corps JSON, ou `null` si le moteur n'a pas répondu
+	 */
+	async function lireDuMoteur(chemin) {
+		const r = await fetch(`${adresseDuMoteur()}${chemin}`, {
+			headers: { authorization: `Bearer ${cleDuMoteur()}` }
+		}).catch(() => null);
+		if (r === null || !r.ok) return null;
+		return await r.json();
+	}
+
+	/**
+	 * LE PLUS GRAND NUMÉRO DE TÂCHE DU MOTEUR, à l'instant de l'appel.
+	 *
+	 * `-1` quand le moteur n'a aucune tâche : tout numéro futur lui est alors
+	 * supérieur, donc imputable à cette exécution. `null` quand le moteur est
+	 * injoignable — et c'est un état distinct de « aucune tâche », que le rapport
+	 * ne confond pas.
+	 */
+	async function dernierNumeroDeTache() {
+		const corps = await lireDuMoteur('/tasks?limit=1');
+		if (corps === null) return null;
+		const [derniere] = corps.results ?? [];
+		return derniere === undefined ? -1 : derniere.uid;
+	}
+
+	/**
+	 * ATTEND QUE LA FILE DU MOTEUR SE VIDE — et c'est ce qui rend la lecture
+	 * concluante.
+	 *
+	 * `ARB-060` a retiré l'attente du chemin de requête : au moment où ce contrôle
+	 * s'exécute, les dernières tâches soumises ont quelques millisecondes et sont
+	 * encore `enqueued`. Les lire comme « aucun échec » serait conclure sur un
+	 * chemin que le moteur n'a pas parcouru. L'attente est ici GRATUITE — la
+	 * batterie n'est pas dans une requête —, et elle est explicite, jamais une
+	 * temporisation à l'aveugle (`ADR-006`, `P-1`).
+	 *
+	 * Une file qui ne se vide pas est un ROUGE : le contrôle ne peut pas conclure.
+	 */
+	async function attendreLaFileDuMoteur(borneMs) {
+		const depart = performance.now();
+		for (;;) {
+			const corps = await lireDuMoteur('/tasks?statuses=enqueued,processing&limit=1');
+			const ms = performance.now() - depart;
+			if (corps === null) return { videe: false, restantes: null, ms };
+			const restantes = corps.total ?? 0;
+			if (restantes === 0) return { videe: true, restantes: 0, ms };
+			if (ms >= borneMs) return { videe: false, restantes, ms };
+			await pause(200);
+		}
+	}
+
+	/** Les tâches du moteur dont l'état terminal n'est pas la réussite. */
+	async function tachesNonReussies() {
+		const corps = await lireDuMoteur(
+			`/tasks?statuses=${ETATS_NON_REUSSIS.join(',')}&limit=${PLAFOND_DE_TACHES_LUES}`
+		);
+		if (corps === null) return null;
+		return { relevees: corps.results ?? [], total: corps.total ?? 0 };
+	}
+
+	/**
+	 * FABRIQUE UNE TÂCHE QUE LE MOTEUR REFUSERA — la seconde polarité de `P-5`.
+	 *
+	 * « Un moteur qui porte une tâche en échec doit rougir. La seconde polarité ne
+	 * s'obtient pas en attendant qu'elle arrive. » Le refus choisi ne dépend
+	 * d'aucun état du dépôt : une clé primaire contenant des espaces est invalide
+	 * par la règle du moteur lui-même, qui n'accepte que des caractères
+	 * alphanumériques, le tiret et le souligné.
+	 *
+	 * @returns le numéro de la tâche fabriquée, ou `null` si le moteur l'a refusée
+	 *   dès la soumission — auquel cas la sonde n'a rien fabriqué et le dira
+	 */
+	async function fabriquerUneTacheRefusee() {
+		const r = await fetch(`${adresseDuMoteur()}/indexes/notes/documents`, {
+			method: 'POST',
+			headers: { authorization: `Bearer ${cleDuMoteur()}`, 'content-type': 'application/json' },
+			body: JSON.stringify([{ id: 'sonde t076 cle primaire invalide', titre: 'sonde' }])
+		}).catch(() => null);
+		if (r === null || !r.ok) return null;
+		const corps = await r.json();
+		return typeof corps.taskUid === 'number' ? corps.taskUid : null;
+	}
+
+	/**
+	 * RETIRE DU MOTEUR LA TÂCHE QUE LA SONDE A FABRIQUÉE — et elle seule.
+	 *
+	 * Une sonde qui laisserait sa tâche en place empoisonnerait toutes les
+	 * exécutions suivantes de la batterie : le contrôle rougirait pour toujours,
+	 * sur un défaut qu'on a fabriqué soi-même. Le retrait est nominatif — un
+	 * numéro —, jamais un effacement de l'historique : ce qui s'y trouve d'autre
+	 * est la preuve que ce contrôle existe pour relever (`P-22`, transposé).
+	 */
+	async function retirerLaTache(uid) {
+		const r = await fetch(`${adresseDuMoteur()}/tasks?uids=${uid}`, {
+			method: 'DELETE',
+			headers: { authorization: `Bearer ${cleDuMoteur()}` }
+		}).catch(() => null);
+		if (r === null || !r.ok) return false;
+		await attendreLaFileDuMoteur(DELAI_DE_LA_FILE_MS);
+		return true;
+	}
+
+	/**
+	 * LE CONTRÔLE — vide la file, lit les tâches, rend un verdict.
+	 *
+	 * En régime `--sonde=tache-en-echec`, une tâche refusée est fabriquée AVANT la
+	 * lecture, puis retirée APRÈS le verdict. L'ordre importe : la retirer avant
+	 * de conclure effacerait ce qu'on mesure.
+	 */
+	async function controlerLesTachesDuMoteur() {
+		const fabriquee = sonde === 'tache-en-echec' ? await fabriquerUneTacheRefusee() : null;
+		const file = await attendreLaFileDuMoteur(DELAI_DE_LA_FILE_MS);
+		const lues = await tachesNonReussies();
+		if (lues === null) {
+			return { injoignable: true, file, fabriquee, verdict: null, tronque: false, retiree: null };
+		}
+		const verdict = verdictDesTaches(lues.relevees, marqueDesTaches);
+		const retiree = fabriquee === null ? null : await retirerLaTache(fabriquee);
+		return {
+			injoignable: false,
+			file,
+			fabriquee,
+			verdict,
+			tronque: lues.total > lues.relevees.length,
+			retiree
+		};
+	}
+
+	/** Imprime le contrôle, et inscrit son rouge s'il y a lieu. */
+	function imprimerLeControleDesTaches(controle) {
+		console.log(
+			'CONTRÔLE DES TÂCHES DU MOTEUR — la contrepartie d’ARB-060, pas un huitième budget'
+		);
+		console.log(
+			'  ce qu’il prouve    aucune tâche du moteur n’est en échec. Depuis ARB-060, le chemin de'
+		);
+		console.log(
+			'                     requête SOUMET sans attendre : plus rien, dans le produit, ne lève'
+		);
+		console.log('                     sur une tâche refusée. C’est ce contrôle qui le fait.');
+		if (controle.injoignable) {
+			console.log(
+				'  VERDICT            ROUGE — le moteur n’a pas répondu : rien ne peut être conclu.'
+			);
+			console.log('');
+			rouges.push('contrôle des tâches du moteur : le moteur n’a pas répondu');
+			return;
+		}
+		console.log(
+			`  file du moteur     ${controle.file.videe ? 'vidée' : 'NON VIDÉE'} en ${Math.round(controle.file.ms)} ms` +
+				`${controle.file.videe ? '' : ` — ${controle.file.restantes ?? '?'} tâche(s) encore en cours`}`
+		);
+		console.log(
+			`  tâches non réussies ${controle.verdict.total}` +
+				` (dont ${controle.verdict.produites.length} produite(s) par cette exécution,` +
+				` ${controle.verdict.heritees.length} héritée(s) du moteur)`
+		);
+		if (controle.fabriquee !== null) {
+			console.log(
+				`  SONDE              tâche ${controle.fabriquee} fabriquée (clé primaire invalide), ` +
+					`retirée après verdict : ${controle.retiree ? 'oui' : 'NON — le moteur la garde'}`
+			);
+		}
+		for (const ligne of controle.verdict.lignes) console.log(`    ${ligne}`);
+		if (controle.tronque) {
+			console.log(
+				`  RÉSERVE            plus de ${PLAFOND_DE_TACHES_LUES} tâches non réussies : la liste est tronquée.`
+			);
+		}
+		const rouge = !controle.file.videe || controle.verdict.total > 0;
+		console.log(
+			`  VERDICT            ${rouge ? 'ROUGE' : 'VERT'}` +
+				(rouge
+					? controle.file.videe
+						? ` — ${controle.verdict.total} tâche(s) du moteur en échec`
+						: ' — la file ne s’est pas vidée : le contrôle ne peut pas conclure'
+					: '')
+		);
+		console.log(
+			'  CE QU’IL NE DIT PAS  qu’une note est indexée. Une tâche réussie peut avoir écrit le'
+		);
+		console.log(
+			'                     mauvais document ; le contenu de l’index est jugé par « recherche'
+		);
+		console.log('                     epreuve » et par verif:donnees, jamais ici.');
+		console.log('');
+		if (!controle.file.videe) {
+			rouges.push('contrôle des tâches du moteur : la file ne s’est pas vidée, aucune conclusion');
+		}
+		if (controle.verdict.total > 0) {
+			rouges.push(
+				`contrôle des tâches du moteur : ${controle.verdict.total} tâche(s) en échec — ` +
+					controle.verdict.lignes.join(' | ')
+			);
+		}
+	}
+
 	async function conclure() {
 		await fermerVite();
 		await bassin.end();
@@ -995,10 +1373,35 @@ async function principale() {
 		for (const r of refus) console.log(`  REFUS DE MESURER — ${r}`);
 		for (const r of rouges) console.log(`  ROUGE — ${r}`);
 		if (refus.length === 0 && rouges.length === 0) {
-			console.log('  les sept budgets sont tenus, sur les volumes déclarés en tête.');
+			console.log(
+				'  les sept budgets sont tenus, sur les volumes déclarés en tête, et aucune tâche'
+			);
+			console.log('  du moteur n’est en échec.');
+		}
+		if (controleDesTaches === null && refus.length === 0) {
+			/* Le contrôle vient après le poste 5 : un arrêt plus tôt le saute. On le
+			   DIT, plutôt que de laisser un rapport muet passer pour un rapport vert. */
+			console.log('  NON JOUÉ — le contrôle des tâches du moteur n’a pas été atteint.');
 		}
 		console.log('');
 
+		if (sonde === 'tache-en-echec') {
+			/* LA SONDE DU CONTRÔLE NE REGARDE QUE LE CONTRÔLE — même leçon que
+			   `rougesChronometres` : une sonde déclarée mordante par les défauts
+			   d'autrui ne prouve rien. Ce qui est exigé ici, c'est que la tâche
+			   FABRIQUÉE ait été relevée, et par cette exécution. */
+			const fabriquee = controleDesTaches?.fabriquee ?? null;
+			const releve =
+				fabriquee !== null &&
+				(controleDesTaches?.verdict?.produites ?? []).some((t) => t.uid === fabriquee);
+			console.log(
+				`SONDE « ${sonde} » — la tâche fabriquée ` +
+					`${fabriquee === null ? 'N’A PAS PU ÊTRE POSÉE' : `n° ${fabriquee}`} a ` +
+					`${releve ? 'ÉTÉ RELEVÉE par le contrôle : il sait dire non' : 'ÉCHAPPÉ au contrôle'}` +
+					`${controleDesTaches?.retiree === false ? ' — ATTENTION : elle n’a pas été retirée du moteur' : ''}`
+			);
+			exit(releve ? 0 : 1);
+		}
 		if (sonde !== null) {
 			/* LE CODE EST INVERSÉ POUR LA SONDE : elle prouve que la batterie sait
 			   dire non. Une sonde de latence qui laisse tout vert est un instrument

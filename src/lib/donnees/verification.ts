@@ -382,7 +382,9 @@ export async function verifierLaNote(
 		});
 	});
 
-	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre, jamais avant. */
+	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre, jamais avant. Le document
+	   y est SOUMIS sans que la tâche soit attendue (`ARB-060`) : le geste de
+	   vérification est un clic, donc un chemin de requête. */
 	await entretenirLIndex(base, client, [demande.identifiant]);
 
 	return {

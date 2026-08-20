@@ -56,10 +56,19 @@ import { argv, exit } from 'node:process';
 const args = argv.slice(2);
 const sonde = args.find((a) => a.startsWith('--sonde='))?.slice('--sonde='.length);
 
-try {
-	process.loadEnvFile('.env');
-} catch {
-	/* Pas de `.env` : l'environnement du processus fait foi. */
+/* L'ENVIRONNEMENT EST LU AVANT TOUT LE RESTE, ET LES DEUX FICHIERS COMPTENT.
+   `.env` porte les secrets de la composition ; `.env.local` porte le PORT de la
+   copie de travail, et c'est `verif/preparer-copie.sh` qui l'y écrit. Ne lire
+   que le premier fait mesurer le port d'une AUTRE copie — `T-076` É-2 l'a payé :
+   sa batterie 6 est partie sur le port par défaut, occupé par le serveur du lot
+   voisin et adossé à la base PARTAGÉE, et a rendu 140 défauts dont AUCUN
+   n'existait. C'est `ECART-017` É-8, que `P-22` remesure à chaque lot. */
+for (const fichier of ['.env', '.env.local']) {
+	try {
+		process.loadEnvFile(fichier);
+	} catch {
+		/* Absent : l'environnement du processus fait foi (`base/base.mjs`). */
+	}
 }
 
 const { createServer } = await import('vite');

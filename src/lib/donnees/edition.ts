@@ -52,7 +52,9 @@
  * `RG-M05-06` (`CAHIER-DES-CHARGES-FONCTIONNEL.md:731`) : « une note enregistrée
  * est trouvable en recherche dans un délai maximal de 10 secondes ». Le geste est
  * `entretenirLIndex()` (`../recherche/entretien.ts`), appelé APRÈS la validation
- * de la transaction.
+ * de la transaction. Il SOUMET le document au moteur et n'attend pas sa tâche
+ * (`ARB-060`) : cette route est un chemin de requête, et le cahier lui donne un
+ * budget séparé d'1 s (`CDC:1537`).
  *
  * Le client est un PARAMÈTRE, non un champ facultatif de la demande, et la
  * différence est fonctionnelle : un appelant ne peut pas l'oublier, faute de
@@ -467,8 +469,11 @@ export async function enregistrerLeCorps(
 		}
 	});
 
-	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre. `RG-M05-06` : la note est
-	   trouvable quand cet appel rend, l'attente étant explicite et non temporisée. */
+	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre, jamais avant. `ARB-060` :
+	   le document est SOUMIS à l'index, et la tâche n'est pas attendue. Quand cet
+	   appel rend, la soumission est faite — un moteur arrêté ou refusant lève
+	   ici — mais la note n'est pas encore trouvable : elle l'est 804 ms plus tard,
+	   sous les 10 s de `RG-M05-06`. Ne rien conclure d'autre de ce retour. */
 	await entretenirLIndex(base, client, [demande.identifiant]);
 
 	return { trouve: true, ressource: { identifiant: demande.identifiant, version } };

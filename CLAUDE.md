@@ -696,3 +696,29 @@ mesuré ; ne normalise que ce que tu dois.
 sonde de dix lignes ne tranche en une exécution. C'est `P-21` appliqué à un instrument — *raisonner
 sur ce qu'un masque devrait faire est plus lent, et moins sûr, que de lui demander ce qu'il a fait.*
 *(21/08/2026)*
+
+---
+
+### P-33 · Une parade par copie de travail est inerte si l'instrument ne lit pas le fichier qui la porte
+
+`verif/preparer-copie.sh` écrit `PORT_DEV` dans **`.env.local`**, et son commentaire dit exactement
+pourquoi : *« sans quoi le second lot lancé échoue sur un port occupé, ou pire, mesure le serveur du
+premier »*.
+
+**Six instruments sur sept ne lisaient que `.env`.** Un — `verif/budgets.mjs` — n'en lisait **aucun**.
+La parade était donc écrite, documentée, et **inerte** : chaque copie repartait sur le port par
+défaut.
+
+**Ce que ça a coûté, mesuré** : la batterie 6 d'un lot est partie sur le port par défaut, occupé par
+le serveur d'un lot voisin et adossé à la base **partagée**. Verdict rendu : **`225/0/13/140` — 140
+défauts, dont aucun n'existait.** Rejouée sur son propre port : `357/8/13/0`. Un instrument qui
+mesure le voisin est pire qu'un instrument absent — **il rend un chiffre**.
+
+C'est `P-5` dans sa forme la plus coûteuse : une règle qu'aucun cas n'exerçait, et qui était fausse.
+`verif/degradation.mjs` la tenait, seul, depuis toujours — et son commentaire nommait déjà
+`ECART-017` É-8. **Une parade tenue par un seul des sept appelants n'est pas une parade, c'est une
+exception.**
+
+**La règle** : quand tu poses une parade dans un fichier, **compte ses lecteurs**. Une parade
+déclarative — celle qui repose sur la discipline de qui l'emploie — est le plus faible des trois
+régimes de ce dépôt (*bloquant > vérifiable > déclaratif*). *(T-076, 21/08/2026)*

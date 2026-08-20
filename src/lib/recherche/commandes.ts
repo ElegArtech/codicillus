@@ -585,7 +585,11 @@ async function eprouverLesSondes(
 	const forcee = sansPerimetre as unknown as Record<string, unknown>;
 	delete forcee['dossier'];
 	delete forcee['ancetres'];
-	await indexerDesNotes(client, [...entrees, sansPerimetre]);
+	/* `attendre` — `ARB-060` point 1 : l'attente est CONSERVÉE partout où la
+	   latence ne coûte rien, et une épreuve de périmètre qui interrogerait
+	   l'index avant que ses entrées de sonde y soient rendrait « aucune fuite »
+	   sur un index vide. Ce serait un vert sur un chemin non emprunté. */
+	await indexerDesNotes(client, [...entrees, sansPerimetre], 'attendre');
 
 	const cas: CasDeSonde[] = [];
 	try {
@@ -637,7 +641,10 @@ async function eprouverLesSondes(
 			)
 		);
 	} finally {
-		await retirerDesNotes(client, [...entrees.map((e) => e.id), 'epr-sans-perimetre']);
+		/* `attendre` de nouveau : le retrait des sondes doit être ACQUIS quand la
+		   commande rend, sinon six entrées étrangères au corpus survivraient à
+		   l'épreuve dans l'index d'exploitation. */
+		await retirerDesNotes(client, [...entrees.map((e) => e.id), 'epr-sans-perimetre'], 'attendre');
 	}
 	return cas;
 }
