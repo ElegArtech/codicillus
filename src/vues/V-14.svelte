@@ -66,10 +66,8 @@
 		INSTANCE,
 		MOI,
 		UNIVERS,
-		noteParIdentifiant,
 		type Domaine,
 		type EtatDInstance,
-		type IdentifiantNote,
 		type Note,
 		type Univers,
 		type UtilisateurCourant
@@ -84,7 +82,8 @@
 		libelleFraicheur,
 		type NiveauFraicheur
 	} from '$lib/fraicheur';
-	import { NOTE, rangementDe, type NoteAffichee } from '$lib/lecture/note-de-demonstration';
+	import { NOTE, rangementDe, type LectureAffichee } from '$lib/lecture/note-de-demonstration';
+	import type { PanneauxDeLaNote } from '$lib/lecture/panneaux';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — cinq contrôles de planche. */
@@ -117,13 +116,34 @@
 		 * `rendreDocument` — mais l'absence d'une propriété pour les recevoir,
 		 * écart déclaré au rapport de `T-033`. C'est cette propriété.
 		 *
-		 * ABSENTE, LA TRANSCRIPTION FIGÉE DU GEL, à l'identique — les 44 couples
-		 * de la vue ne bougent pas. FOURNIE, l'identité de la note et ses corps.
-		 * Ce qu'elle n'alimente PAS — le cartouche de contrôle et la date de
-		 * modification — est énuméré, avec sa cause, au bloc partagé
-		 * `$lib/lecture/NoteDeDemonstration.svelte`.
+		 * ABSENTE, LA TRANSCRIPTION FIGÉE DU GEL, à l'identique. FOURNIE, TOUT
+		 * ce que l'écran dit de la note : identité, corps rendus, sommaire,
+		 * cartouche de contrôle, dates, bandeaux et mesure de consultation.
+		 *
+		 * LE CARTOUCHE ET LA DATE DE MODIFICATION EN FONT DÉSORMAIS PARTIE. Ils
+		 * en étaient exclus faute de colonnes projetées par la couche de
+		 * lecture ; le chargeur les lit maintenant à la source — `verifications`,
+		 * `notes.modifie_le` —, et un cartouche mixte, moitié note moitié
+		 * planche, n'a plus lieu d'être (P-02).
 		 */
-		affichee?: NoteAffichee;
+		affichee?: LectureAffichee;
+		/**
+		 * LES SEPT PANNEAUX LATÉRAUX — T-042b, et c'est la seconde moitié du
+		 * défaut que `affichee` a ouverte.
+		 *
+		 * Ils étaient TRANSCRITS : deux notes voisines nommées, deux pièces
+		 * jointes, quatre relations, trois rétroliens, quatre vérifications et
+		 * trois notes connexes — le même contenu pour les 32 notes du corpus, et
+		 * pour toute note créée depuis. C'est la « valeur illustrative » que P-02
+		 * proscrit, et le gel ne pouvait pas faire autrement : une maquette
+		 * statique n'a pas de base.
+		 *
+		 * ABSENTS, LES PANNEAUX SONT VIDES, ET ILS LE DISENT. Le défaut n'est pas
+		 * la transcription du gel — ce serait rendre l'exemple opposable une fois
+		 * de plus —, c'est l'ensemble vide, que chaque panneau rend en état neutre
+		 * explicite (`RG-M18-03`).
+		 */
+		panneaux?: PanneauxDeLaNote;
 	}
 
 	const {
@@ -133,8 +153,16 @@
 		domaines = DOMAINES,
 		compte = MOI,
 		instance = INSTANCE,
-		affichee
+		affichee,
+		panneaux
 	}: Proprietes = $props();
+
+	/** Les cinq listes des panneaux — vides tant que rien n'est servi. */
+	const voisines = $derived(panneaux?.voisines ?? []);
+	const pieces = $derived(panneaux?.pieces ?? []);
+	const relations = $derived(panneaux?.relations ?? []);
+	const retroliens = $derived(panneaux?.retroliens ?? []);
+	const verifications = $derived(panneaux?.verifications ?? []);
 
 	const reglage = $derived(vecteur ?? {});
 
@@ -182,24 +210,17 @@
 	const rangement = $derived(rangementDe(note));
 
 	/**
-	 * LES DEUX NOTES VOISINES du panneau « Position », dans l'ordre du gel :
-	 * la précédente, puis la suivante. Tout ce qu'elles affichent vient du
-	 * corpus et passe par la fabrique unique — la classe, le nombre de barres,
-	 * ET LE LIBELLÉ. La table ne porte que ce que le gel décide sans données :
-	 * quelle note, et de quel côté.
+	 * LA LIGNE DE RANGEMENT DU PANNEAU « POSITION » — le domaine, puis le
+	 * dossier qui porte directement la note.
+	 *
+	 * Le gel écrit « Infrastructure › Sauvegardes » : ni l'univers, ni les
+	 * dossiers intermédiaires, que le fil d'Ariane rend déjà au-dessus de
+	 * l'article. `rangementDe` donne le chemin complet ; les deux extrémités
+	 * utiles s'y lisent sans second calcul. Une note posée à la racine de son
+	 * domaine n'a pas de second segment, et la ligne s'arrête au domaine.
 	 */
-	const VOISINES: readonly {
-		readonly id: IdentifiantNote;
-		readonly sens: string;
-	}[] = [
-		{ id: 'n-planifier-sauv', sens: '←' },
-		{ id: 'n-purge-sauv', sens: '→' }
-	];
-
-	/** Le niveau porté par une note voisine — lu au corpus, jamais supposé. */
-	function niveauDe(id: IdentifiantNote): NiveauFraicheur {
-		return noteParIdentifiant(id)?.fraicheur ?? 'frais';
-	}
+	const domaineDeLaNote = $derived(rangement[1] ?? note.domaine);
+	const dossierDeLaNote = $derived(rangement.length > 2 ? (rangement.at(-1) ?? '') : '');
 
 	/**
 	 * LE LIBELLÉ D'UNE NOTE VOISINE, dans la forme COMPACTE du gel — « il y a
@@ -208,21 +229,13 @@
 	 * Ce n'est pas un second libellé : c'est la seconde FORME du libellé unique,
 	 * entrée dans la fabrique par ARB-029 — « ce n'est pas un second calcul,
 	 * c'est un second rendu du même calcul ». Le niveau et l'ancienneté sont
-	 * ceux du corpus, comme pour la classe et les barres juste au-dessus.
+	 * ceux que le chargeur a lus en base, comme la classe et les barres.
 	 *
 	 * C'est ici, et NULLE PART AILLEURS, que la forme compacte s'emploie : la
 	 * borne d'ARB-029 est explicite, un troisième site serait un comblement.
 	 */
-	function libelleCompactDe(id: IdentifiantNote): string {
-		return libelleFraicheur(
-			{ fraicheur: niveauDe(id), jours: noteParIdentifiant(id)?.jours ?? 0 },
-			'compacte'
-		);
-	}
-
-	/** Le titre d'une note voisine — lu au corpus. */
-	function titreDe(id: IdentifiantNote): string {
-		return noteParIdentifiant(id)?.titre ?? '';
+	function libelleCompactDe(voisine: { fraicheur: NiveauFraicheur; jours: number }): string {
+		return libelleFraicheur({ fraicheur: voisine.fraicheur, jours: voisine.jours }, 'compacte');
 	}
 
 	/** Les rangs de la jauge — trois, toujours (`docs/DESIGN.md` §3.7, 2). */
@@ -262,7 +275,7 @@
 >
 	{#snippet enfants()}
 		<!-- ---------- Sommaire ---------- -->
-		<SommaireDeLaNote classe="sommaire vue-reelle" />
+		<SommaireDeLaNote classe="sommaire vue-reelle" entrees={affichee?.sommaire} />
 		<div class="sommaire vue-esquisse" aria-hidden="true">
 			<div class="esquisse esq-l" style="width:60%"></div>
 			<div class="esquisse esq-l" style="width:90%"></div>
@@ -391,31 +404,35 @@
 						<a
 							href="#"
 							style="color:var(--c-encre);text-decoration:none;border-bottom:1px solid var(--c-trait-fort)"
-							>Infrastructure</a
+							>{domaineDeLaNote}</a
 						>
-						›
-						<a
-							href="#"
-							style="color:var(--c-encre);text-decoration:none;border-bottom:1px solid var(--c-trait-fort)"
-							>Sauvegardes</a
-						>
+						{#if dossierDeLaNote}
+							›
+							<a
+								href="#"
+								style="color:var(--c-encre);text-decoration:none;border-bottom:1px solid var(--c-trait-fort)"
+								>{dossierDeLaNote}</a
+							>
+						{/if}
 					</div>
-					{#each VOISINES as voisine (voisine.id)}
+					{#each voisines as voisine (voisine.identifiant)}
 						<a class="item" href="#">
 							<span style="color:var(--c-encre-4)">{voisine.sens}</span>
 							<span
-								><span class="item__nom">{titreDe(voisine.id)}</span>
+								><span class="item__nom">{voisine.titre}</span>
 								<span class="item__sous"
-									><span class="temoin {classeTemoin(niveauDe(voisine.id))}"
+									><span class="temoin {classeTemoin(voisine.fraicheur)}"
 										><span class="temoin__jauge"
 											>{#each RANGS as rang (rang)}<i
-													class={rang < barresFraicheur(niveauDe(voisine.id)) ? 'plein' : undefined}
+													class={rang < barresFraicheur(voisine.fraicheur) ? 'plein' : undefined}
 												></i>{/each}</span
-										><span class="temoin__txt">{libelleCompactDe(voisine.id)}</span></span
+										><span class="temoin__txt">{libelleCompactDe(voisine)}</span></span
 									></span
 								></span
 							>
 						</a>
+					{:else}
+						<div class="item__sous">Aucune autre note dans ce dossier</div>
 					{/each}
 				</div>
 			</section>
@@ -423,23 +440,23 @@
 			<!-- Pièces jointes -->
 			<section class="panneau repliable" data-ouvert="oui">
 				<div class="panneau__tete">
-					<span class="etiq">Pièces jointes</span><span class="chiffre">{note.pj}</span>
+					<span class="etiq">Pièces jointes</span><span class="chiffre">{pieces.length}</span>
 				</div>
 				<div class="panneau__corps panneau__corps--serre">
-					<a class="pj" href="#">
-						<span class="pj__ext">PDF</span>
-						<span
-							><span class="item__nom">Plan de reprise — volet bases</span>
-							<span class="item__sous">1,2 Mo · déposé le 22 juillet 2026</span></span
-						>
-					</a>
-					<a class="pj" href="#">
-						<span class="pj__ext">CSV</span>
-						<span
-							><span class="item__nom">Matrice des serveurs sauvegardés</span>
-							<span class="item__sous">18 Ko · déposé le 4 juin 2026</span></span
-						>
-					</a>
+					{#each pieces as piece (piece.nom)}
+						<a class="pj" href="#">
+							<span class="pj__ext">{piece.extension}</span>
+							<span
+								><span class="item__nom">{piece.nom}</span>
+								<span class="item__sous">{piece.taille} · {piece.depose}</span></span
+							>
+						</a>
+					{:else}
+						<div class="zone-etat">
+							<div class="zone-etat__titre">Aucune pièce jointe</div>
+							<div class="zone-etat__txt">Cette note ne porte aucun fichier joint.</div>
+						</div>
+					{/each}
 				</div>
 			</section>
 
@@ -453,72 +470,52 @@
 						>{/if}
 				</div>
 				<div class="panneau__corps panneau__corps--serre">
-					<div class="rel-groupe">
-						<div class="rel-groupe__titre etiq">S'applique à</div>
-						<a class="item" href="#"
-							><span
-								><span class="item__nom">pg-prod-01</span>
-								<span class="item__sous"><span class="past">Serveur</span> Infrastructure</span
-								></span
-							></a
-						>
-						<a class="item" href="#"
-							><span
-								><span class="item__nom">pg-prod-02</span>
-								<span class="item__sous"><span class="past">Serveur</span> Infrastructure</span
-								></span
-							></a
-						>
-					</div>
-					<div class="rel-groupe">
-						<div class="rel-groupe__titre etiq">Dépend de</div>
-						<a class="item" href="#"
-							><span
-								><span class="item__nom">bkp-01.prod</span>
-								<span class="item__sous"><span class="past">Serveur</span> Infrastructure</span
-								></span
-							></a
-						>
-					</div>
-					<div class="rel-groupe">
-						<div class="rel-groupe__titre etiq">Est référencée par</div>
-						<a class="item" href="#"
-							><span
-								><span class="item__nom">Facturation</span>
-								<span class="item__sous"><span class="past">Application</span> Applications</span
-								></span
-							></a
-						>
-					</div>
+					{#each relations as groupe (groupe.libelle)}
+						<div class="rel-groupe">
+							<div class="rel-groupe__titre etiq">{groupe.libelle}</div>
+							{#each groupe.notes as liee (liee.identifiant)}
+								<a class="item" href="#"
+									><span
+										><span class="item__nom">{liee.titre}</span>
+										<span class="item__sous"
+											><span class="past">{liee.type}</span>
+											{liee.domaine}</span
+										></span
+									></a
+								>
+							{/each}
+						</div>
+					{:else}
+						<div class="zone-etat">
+							<div class="zone-etat__titre">Aucune relation</div>
+							<div class="zone-etat__txt">
+								Cette note n'est reliée à aucune autre par une relation qualifiée.
+							</div>
+						</div>
+					{/each}
 				</div>
 			</section>
 
 			<!-- Rétroliens -->
 			<section class="panneau repliable" data-ouvert="oui">
 				<div class="panneau__tete">
-					<span class="etiq">Rétroliens</span><span class="chiffre">3</span>
+					<span class="etiq">Rétroliens</span><span class="chiffre">{retroliens.length}</span>
 				</div>
 				<div class="panneau__corps panneau__corps--serre">
-					<a class="item" href="#"
-						><span
-							><span class="item__nom">Consignes d'astreinte — nuit et week-end</span><span
-								class="item__sous">Infrastructure</span
-							></span
-						></a
-					>
-					<a class="item" href="#"
-						><span
-							><span class="item__nom">Plan de reprise d'activité — volet bases de données</span
-							><span class="item__sous">Infrastructure</span></span
-						></a
-					>
-					<a class="item" href="#"
-						><span
-							><span class="item__nom">Fiche applicative — Facturation</span><span
-								class="item__sous">Applications</span
-							></span
-						></a
-					>
+					{#each retroliens as retrolien (retrolien.identifiant)}
+						<a class="item" href="#"
+							><span
+								><span class="item__nom">{retrolien.titre}</span><span class="item__sous"
+									>{retrolien.domaine}</span
+								></span
+							></a
+						>
+					{:else}
+						<div class="zone-etat">
+							<div class="zone-etat__titre">Aucun rétrolien</div>
+							<div class="zone-etat__txt">Aucune note du corpus lisible ne cite celle-ci.</div>
+						</div>
+					{/each}
 				</div>
 			</section>
 
@@ -526,28 +523,24 @@
 			<section class="panneau repliable" data-ouvert="oui">
 				<div class="panneau__tete"><span class="etiq">Historique de vérification</span></div>
 				<div class="panneau__corps">
-					<ul class="chrono" id="chrono">
-						<li>
-							<span class="item__nom">Karim Belhadj</span><time datetime="2026-08-01"
-								>1<sup>er</sup> août 2026</time
-							>
-						</li>
-						<li>
-							<span class="item__nom">Sophie Nguyen</span><time datetime="2026-04-14"
-								>14 avril 2026</time
-							>
-						</li>
-						<li>
-							<span class="item__nom">Karim Belhadj</span><time datetime="2026-01-09"
-								>9 janvier 2026</time
-							>
-						</li>
-						<li>
-							<span class="item__nom">Marc Ferreira</span><time datetime="2025-09-30"
-								>30 septembre 2025</time
-							>
-						</li>
-					</ul>
+					{#if verifications.length}
+						<ul class="chrono" id="chrono">
+							{#each verifications as attestation (attestation.iso)}
+								<li>
+									<span class="item__nom">{attestation.par ?? 'auteur non journalisé'}</span><time
+										datetime={attestation.iso}>{attestation.jour}</time
+									>
+								</li>
+							{/each}
+						</ul>
+					{:else}
+						<div class="zone-etat">
+							<div class="zone-etat__titre">Jamais vérifiée</div>
+							<div class="zone-etat__txt">
+								Le journal des vérifications ne porte aucune attestation pour cette note.
+							</div>
+						</div>
+					{/if}
 				</div>
 			</section>
 
@@ -555,36 +548,19 @@
 			<section class="panneau repliable" data-ouvert="oui">
 				<div class="panneau__tete"><span class="etiq">Notes connexes</span></div>
 				<div class="panneau__corps panneau__corps--serre">
-					<a class="item" href="#"
-						><span
-							><span class="item__nom">Restaurer une sauvegarde MariaDB</span>
-							<span class="item__sous"
-								><span class="jauge-prox" title="Proximité forte"
-									><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span
-								> Infrastructure</span
-							></span
-						></a
-					>
-					<a class="item" href="#"
-						><span
-							><span class="item__nom">Diagnostiquer un échec de restauration Barman</span>
-							<span class="item__sous"
-								><span class="jauge-prox" title="Proximité forte"
-									><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span
-								> Infrastructure</span
-							></span
-						></a
-					>
-					<a class="item" href="#"
-						><span
-							><span class="item__nom">Tester le plan de reprise — mode opératoire</span>
-							<span class="item__sous"
-								><span class="jauge-prox" title="Proximité moyenne"
-									><i class="on"></i><i class="on"></i><i></i><i></i></span
-								> Infrastructure</span
-							></span
-						></a
-					>
+					<!-- LE RAPPROCHEMENT PAR PROXIMITÉ N'EXISTE PAS DANS LE PRODUIT.
+					     Le gel montre trois notes et une jauge à quatre rangs ; aucune
+					     source ne dit ce que la proximité mesure ni comment elle se
+					     calcule, et aucun module du dépôt ne la produit. En inventer un
+					     barème serait combler (`CLAUDE.md` §2) ; recopier les trois
+					     notes du gel serait une valeur illustrative (P-02). L'état est
+					     donc DIT, et le vide remonté au rapport du lot. -->
+					<div class="zone-etat">
+						<div class="zone-etat__titre">Rapprochement indisponible</div>
+						<div class="zone-etat__txt">
+							Le calcul de proximité entre notes n'est pas encore fourni par le produit.
+						</div>
+					</div>
 				</div>
 			</section>
 

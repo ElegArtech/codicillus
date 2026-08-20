@@ -10,11 +10,15 @@
 	 * conception. Rien de ce fichier n'entre dans son verdict, et les 409 couples
 	 * ne peuvent pas bouger de son fait. C'est le fondement d'`ARB-063`.
 	 *
-	 * CE QUE `data.lecture` PORTE ET QUE RIEN NE MONTRE. Le chargeur rend la note
-	 * réelle, son corps rendu par `rendreDocument` et ses rétroliens déduits.
-	 * `src/vues/V-14.svelte` ne déclare aucune propriété pour les recevoir : son
-	 * article est la transcription gelée de `n-restaurer-pg`. `ARB-063` §5 ferme
-	 * `src/vues/` pour cette campagne ; l'écart reste déclaré, entier.
+	 * L'ÉCRAN MONTRE LA NOTE QU'ON LIT — et il ne le faisait pas.
+	 *
+	 * Le chargeur rendait déjà la note réelle, son corps rendu par
+	 * `rendreDocument` et ses rétroliens déduits ; cette page ne les passait
+	 * pas, et `src/vues/V-14.svelte` n'avait aucune propriété pour les recevoir.
+	 * Une note créée puis ouverte affichait donc le titre et le texte de
+	 * `n-restaurer-pg`, la note gelée de la maquette. C'est fermé : `affichee`
+	 * porte l'identité, le corps et les dates, `panneaux` porte les sept
+	 * panneaux latéraux, et plus rien de l'écran ne vient du jeu de semence.
 	 *
 	 * ═════════════════════════════════════════════════════════════════════════
 	 * LA SUPPRESSION EST CÂBLÉE, ET SA CONFIRMATION EST CHIFFRÉE
@@ -57,9 +61,40 @@
 
 	let formulaire: HTMLFormElement;
 
-	onMount(() => cablerLaSuppression(formulaire, { rappel }));
+	onMount(() => {
+		/* ═══════════════════════════════════════════════════════════════════
+		   AUCUN BOUTON DU GEL NE SOUMET — et sans cette ligne, ils soumettaient
+		   TOUS, vers `?/supprimer`.
+
+		   MESURÉ : une note créée, puis « Imprimer » cliqué, puis 303 vers
+		   `/univers/production/infrastructure` et 404 sur la note. « Modifier la
+		   référence », « Historique des versions » et « Exporter » avaient le
+		   même effet.
+
+		   LA CAUSE EST UNE RÈGLE DE HTML, pas une faute de la vue : un `button`
+		   sans attribut `type`, dans un formulaire, est un bouton de SOUMISSION.
+		   Le gel n'en pose aucun — ses boutons portent des comportements, absents
+		   par `ARB-011` —, et l'enveloppe `<form action="?/supprimer">` qu'exige
+		   `RG-M04-10` leur en a donné un que personne n'a spécifié.
+
+		   LA PARADE EST CELLE DE `cablerLEditeur`, geste 1, mot pour mot :
+		   « aucun bouton du gel ne soumet ». Elle ne rend rien inerte qui ne le
+		   fût déjà ; elle RÉTABLIT l'état que le gel décrit. La suppression, elle,
+		   ne passe pas par un bouton de soumission : `cablerLaSuppression` appelle
+		   `requestSubmit()` après confirmation, et un formulaire sans bouton de
+		   soumission se soumet très bien ainsi. */
+		for (const bouton of Array.from(formulaire.querySelectorAll('button'))) {
+			if (!bouton.hasAttribute('type')) bouton.type = 'button';
+		}
+		return cablerLaSuppression(formulaire, { rappel });
+	});
 </script>
 
 <form method="POST" action="?/supprimer" bind:this={formulaire} style="display:contents">
-	<Vue vecteur={data.vecteur} notes={data.notes} />
+	<Vue
+		vecteur={data.vecteur}
+		notes={data.notes}
+		affichee={data.affichee}
+		panneaux={data.panneaux}
+	/>
 </form>
