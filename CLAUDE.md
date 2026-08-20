@@ -56,6 +56,15 @@ pnpm base:migrer    monter le schéma
 pnpm base:semer     charger le jeu de semence
 ```
 
+**Lis le CODE DE SORTIE, jamais un filtre sur la sortie.** `pnpm check` enchaîne quatre outils —
+`svelte-check`, `tsc`, `eslint`, `prettier` — et ils ne rapportent pas leurs erreurs de la même
+façon. Compter les lignes `ERROR "` ne voit que le premier : une erreur `eslint` passe alors pour un
+vert. Mesuré — `'ParentNode' is not defined` a traversé trois commits annoncés à zéro.
+
+```
+pnpm check >/dev/null 2>&1; echo $?     # 0, ou rien n'est vert
+```
+
 **Le harnais de vérification a été supprimé le 21/08/2026.** Il pesait 52 000 lignes contre 5 000
 lignes de branchement applicatif. Ne le reconstruis pas. Ne crée aucune batterie, aucun instrument,
 aucun compteur de couverture. La preuve qu'une chose marche est **qu'elle marche dans un navigateur**.
