@@ -23,4 +23,36 @@
 	const { data }: { data: PageData } = $props();
 </script>
 
-<Vue notes={data.notes} univers={data.univers} domaines={data.domaines} compte={data.compte} />
+<!--
+	LE BOUTON « PRÉPARER L'ARCHIVE » MÈNE À LA ROUTE QUI PRODUIT L'ARCHIVE.
+
+	`P-03` — « une entrée visible est une entrée qui fonctionne. Pas de "bientôt
+	disponible", pas de lien mort. » Le bouton était au gel, la route
+	`/console/exports/{univers}/{domaine}` existait et produisait un ZIP : il ne
+	manquait que le fil entre les deux.
+
+	CE QUE CET ÉCRAN NE MONTRE TOUJOURS PAS : l'issue d'un export passé —
+	avertissements, volume réel de l'archive. Aucune table ne l'enregistre
+	(`MESURES_DE_CONSOLE_SANS_CONTREPARTIE`). L'écran présente le PÉRIMÈTRE
+	exportable, jamais un export accompli, et les chiffres qu'il affiche sont
+	comptés sur les notes du domaine.
+-->
+<Vue
+	notes={data.notes}
+	univers={data.univers}
+	domaines={data.domaines}
+	compte={data.compte}
+	onExporter={(domaine) => {
+		/* LA DÉSIGNATION EST CANONIQUE, comme partout ailleurs : le sélecteur rend
+		   un NOM de domaine, l'adresse attend deux identifiants lisibles
+		   (`docs/routes.md` §2.2). La table vient du chargeur, lue en base. */
+		const canonique = data.designations[domaine];
+		if (canonique === undefined) return;
+		/* UNE NAVIGATION DU DOCUMENT, PAS UNE NAVIGATION D'APPLICATION : la réponse
+		   est une archive avec `content-disposition: attachment`, pas une page.
+		   `goto()` de SvelteKit attend une page et ne saurait qu'en faire. */
+		document.location.assign(
+			`/console/exports/${encodeURIComponent(canonique.univers)}/${encodeURIComponent(canonique.domaine)}`
+		);
+	}}
+/>
