@@ -12,6 +12,14 @@ export default ts.config(
 			'build/',
 			'dist/',
 			'node_modules/',
+			/* `.claude/` PORTE LES COPIES DE TRAVAIL DE L'OUTILLAGE AGENTIQUE, et
+			   `.gitignore` les exclut déjà — mais eslint ne lit pas `.gitignore`.
+			   Sans cette ligne, un agent doté d'une copie interne fait rendre à
+			   `pnpm check` des centaines d'erreurs « No tsconfigRootDir was set, and
+			   multiple candidate TSConfigRootDirs are present » : le dépôt entier relu
+			   une seconde fois sous une racine ambiguë. FAUX ROUGE, intermittent, et
+			   sans rapport avec le moindre livrable. Voir P-25. */
+			'.claude/',
 			'cadrage/',
 			'mockups/',
 			'règles/',
