@@ -2332,3 +2332,75 @@ Il ne desserre aucun budget, n'écrit aucun seuil, et ne touche pas `verif/refer
 autorise pas à taire un échec de soumission. Et il ne dit rien de ce qui doit s'afficher quand
 l'index refuse : `T-075` É-2 relève qu'**aucune maquette ne porte cet état** et qu'aucune source ne le
 décrit. C'est un vide de spécification, il reste ouvert, et il n'est pas comblé ici.
+
+---
+
+## ARB-061 — Une écriture en GET qu'une règle du cahier impose, et un compteur qui se croise avec son journal
+
+*Arbitrage délégué, 21 août 2026. Demandé par `T-078` É-1 et É-2.*
+
+### §1 — `RG-M04-09` écrit sur une requête GET, et c'est licite
+
+`ARB-054` §4 énonce, à propos de `/deconnexion` : *« Ce que cela n'autorise pas : aucune autre action
+d'écriture ne passe en GET. Celle-ci est la seule. »* Et `RG-M04-09` (`CDC:629`) énonce : *« Toute
+**ouverture** d'une note incrémente son compteur de consultations et produit une entrée de
+journal. »* Une ouverture **est** une requête GET.
+
+**Les deux tiennent, parce qu'ils ne parlent pas de la même chose.** `ARB-054` §4 gouverne les
+**actions** — les routes d'action du §3 de `docs/routes.md`, celles qu'un utilisateur déclenche et
+dont il attend un effet. `RG-M04-09` décrit l'**effet incident d'une lecture**, que le cahier impose
+et que personne ne déclenche.
+
+La distinction est opérante, pas rhétorique, et elle se vérifie sur ce qui distingue les deux cas :
+
+| | une action en GET | l'effet incident de `RG-M04-09` |
+|---|---|---|
+| déclenchée par | l'utilisateur, qui l'attend | personne — elle suit la lecture |
+| rejouable sans conséquence | non : `/deconnexion` ferme la session | oui : relire compte une lecture de plus, ce qui est **le fait mesuré** |
+| visible dans le rendu | oui, la réponse en dépend | non, la réponse est la même |
+
+**La borne est donc celle-ci, et elle est étroite** : une écriture peut suivre un GET **si et
+seulement si** une règle du cahier la décrit comme l'effet d'une lecture, et si la réponse ne dépend
+pas de son résultat. Tout le reste reste interdit — `ARB-054` §4 est inchangé pour les actions.
+
+**L'exécutant a écrit sa lecture dans le code plutôt que de la taire**, et l'a remontée comme non
+arbitrée. C'est le protocole tenu ; l'arbitrage la ratifie.
+
+### §2 — `Note.vues` est le premier champ du corpus que le produit mute légitimement
+
+**Ce qui a été mesuré**, sur base fraîchement semée puis une seule exécution de la batterie 6 :
+
+```
+n-astreinte      → vues : 623 / 631
+n-demander-acces → vues : 1842 / 1856
+2 divergence(s) — la base porte la donnée, la couche la rend mal
+```
+
+**Et le libellé est faux** : la base est juste, c'est la référence qui a vieilli. `seeds/corpus.ts`
+fige `vues: 623` ; le produit compte désormais les ouvertures. `verif:donnees` serait rouge dès la
+première lecture, à jamais, et son chiffre deviendrait du bruit.
+
+**Ce qui est décidé** : la référence de `Note.vues` n'est plus la valeur du jeu, c'est **la valeur du
+jeu plus les entrées du journal des consultations**.
+
+**Ce n'est pas un desserrage — c'est un contrôle strictement plus fort que celui qu'il remplace.**
+L'égalité d'avant ne tenait que sur une base jamais lue ; elle ne vérifiait rien d'autre que
+l'immobilité. La nouvelle relation **croise deux écritures que rien n'obligeait à s'accorder** :
+
+- incrémenter le compteur sans écrire au journal → **diverge** ;
+- écrire au journal sans incrémenter le compteur → **diverge**.
+
+**Éprouvé dans les deux sens, pas déclaré.** Compteur de `n-astreinte` poussé de 1 en SQL, sans
+entrée de journal : `n-astreinte → vues : 631 / 632`, **1 divergence**. Rétabli : **0**. Et
+`pnpm verif:donnees:sonde` reste à **0** — les sondes d'origine mordent toujours.
+
+La requête du journal est **séparée de la couche**, pour la raison que porte déjà celle des pièces
+jointes : prendre la valeur du candidat pour référence rendrait la comparaison tautologique.
+
+### Ce que cet arbitrage ne fait PAS
+
+Il ne referme aucune des quatre lacunes de `verif:donnees`, qui restent entières et attendent le
+commanditaire ou un regel. Il ne dit rien de la **durée approximative** de `RG-M04-09` : `T-078` É-3
+la relève comme un vide — le mot n'apparaît que deux fois au cahier, jamais au brief, et aucune des
+41 maquettes ne montre un mécanisme de fin de visite. **Aucune colonne n'a été créée**, et c'est
+juste : en poser une aurait tranché l'unité et la borne en silence.
