@@ -19,34 +19,36 @@
  * qu'elle enveloppe part entier vers l'implémentation unique.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * DEUX VOIES, ET UNE SEULE EST PRATICABLE AUJOURD'HUI — STACK §4.6
+ * DEUX VOIES, ET ELLES CONVERGENT — STACK §4.6, ADR-004
  *
  * La pile technique partage les formats en deux, et le partage est formel :
  *
  *   · `.md` et `.txt` — « Ne sort pas de l'application : c'est le chemin qui
  *     garantit l'idempotence et la résolution des références (RG-M12-01) ».
- *     Cette voie est LIVRÉE.
  *   · `.docx`, `.pptx`, `.pdf` — un service Python séparé, qui « retourne du
- *     Markdown et des images extraites ». Ce service EXISTE en tant que
- *     conteneur (`services/conversion/service.py`, lot `T-003`) mais NE
- *     CONVERTIT RIEN : son propre en-tête le dit — « ce module ne convertit
- *     RIEN […] la conversion des trois formats bureautiques est le lot T-042 ».
+ *     Markdown et des images extraites » (`services/conversion/`, lots `T-003`
+ *     puis `T-052`).
  *
- * CETTE VOIE SE SIGNALE DONC INDISPONIBLE, ET ELLE NE SE SIMULE PAS. C'est
- * `P-10` — « une brique optionnelle indisponible dégrade la fonctionnalité
- * concernée avec un message clair, sans jamais empêcher l'usage du reste » — et
- * `RG-NF-01`. Le lot va jusqu'au bout, chaque fichier bureautique est consigné
- * avec le motif de son échec, et l'import Markdown n'en souffre pas.
+ * LE POINT DE CONVERGENCE EST À UNE SEULE LIGNE DE `classerLeLot`, et c'est
+ * l'exigence d'`ADR-004` : « l'import bureautique et l'import Markdown
+ * convergent vers le même code après la sortie du service de conversion ». Un
+ * document bureautique devient un TEXTE MARKDOWN, puis suit exactement le
+ * chemin d'un `.md` — même détachement d'en-tête, même unique appel à
+ * `analyserMarkdown`, même écriture. Il n'existe pas de seconde branche à
+ * maintenir, donc pas de seconde branche pour diverger.
  *
- * TROIS CAUSES D'INDISPONIBILITÉ SONT DISTINGUÉES, et aucune n'est devinée :
- * le service est injoignable, ou il répond en déclarant un outil absent
- * (son contrôle de santé rend ses trois versions d'outils), ou il est joignable
- * et outillé mais son point d'entrée de conversion n'est pas livré. La
- * troisième est celle d'aujourd'hui.
+ * L'INDISPONIBILITÉ RESTE UN ÉTAT, JAMAIS UNE PANNE. C'est `P-10` — « une
+ * brique optionnelle indisponible dégrade la fonctionnalité concernée avec un
+ * message clair, sans jamais empêcher l'usage du reste » — et `RG-NF-01`. Le lot
+ * va jusqu'au bout, chaque fichier bureautique en échec est consigné avec le
+ * motif de son échec, et l'import Markdown du même lot n'en souffre pas.
  *
- * AUCUN APPEL DE CONVERSION N'EST ÉCRIT. Le chemin, la méthode, la forme du
- * corps et celle de la réponse appartiennent à `T-042` ; les inventer serait
- * un comblement, et le premier fichier importé le paierait.
+ * DEUX CAUSES D'INDISPONIBILITÉ SONT DISTINGUÉES, et aucune n'est devinée : le
+ * service est injoignable, ou il répond en déclarant un outil absent — son
+ * contrôle de santé rend les trois versions d'outils, et l'application les lit.
+ * S'y ajoutent les motifs propres à un FICHIER, qui ne sont pas des
+ * indisponibilités : endommagé, protégé par un mot de passe, ou trop long à
+ * convertir.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * LE MODE SIMULATION EST LE MÊME CODE — RG-M12-02, ADR-004
@@ -127,6 +129,14 @@ const OUTIL_PAR_FORMAT: Readonly<Partial<Record<FormatDImport, string>>> = {
 };
 
 /**
+ * L'OUTIL QUI ÉCRIT LE MARKDOWN, POUR LES TROIS FORMATS. Le service confie la
+ * lecture à l'outil de la colonne de STACK §4.6 et l'écriture à Pandoc seul —
+ * son en-tête dit pourquoi, et le lot T-052 le déclare. Un conteneur privé de
+ * Pandoc ne convertit donc rien du tout.
+ */
+const OUTIL_ECRIVAIN = 'pandoc';
+
+/**
  * Le format d'un chemin, d'après son extension, ou `null` si le dépôt n'en
  * connaît aucun de ce nom. La comparaison est faite en minuscules : un fichier
  * nommé en capitales est le même fichier.
@@ -153,19 +163,20 @@ export function libellesDeFormat(): Partial<Record<FormatDImport, string>> {
 /* ═══════════════════════════════════ Le service de conversion — P-10 ═══ */
 
 /**
- * LE POINT D'ENTRÉE DE CONVERSION N'EST PAS LIVRÉ.
+ * LE POINT D'ENTRÉE DE CONVERSION, ET CE QU'IL RAPPORTE.
  *
- * `services/conversion/service.py` porte son contrôle de santé et rien d'autre :
- * son en-tête déclare en propres termes que « la conversion des trois formats
- * bureautiques est le lot T-042 ». Tant que ce lot n'a pas posé le point
- * d'entrée, la voie « service » est indisponible même sur un service joignable
- * et complètement outillé.
+ * `T-052` a livré le service (`services/conversion/`). Le contrat de l'appel
+ * est écrit une seule fois, ici et là-bas : un fichier envoyé en corps brut, son
+ * nom en paramètre, et une réponse qui porte toujours `issue`.
  *
- * Cette constante n'est pas un interrupteur de confort : c'est le fait, écrit
- * une fois, à l'endroit où il décide. Le jour où `T-042` livre le point
- * d'entrée, elle disparaît avec la branche qu'elle gouverne.
+ * `T-040` portait à cet endroit une constante `CONVERSION_LIVREE` valant faux,
+ * dont son commentaire disait : « le jour où le lot livre le point d'entrée,
+ * elle disparaît avec la branche qu'elle gouverne ». C'est ce qui est arrivé —
+ * la constante et le motif `conversion-non-livree` sont retirés, et non
+ * conservés à faux « au cas où » : un interrupteur qui survit à sa cause devient
+ * une branche que rien n'exerce (`P-5`).
  */
-export const CONVERSION_LIVREE = false;
+const CHEMIN_DE_CONVERSION = '/convertir';
 
 /** L'état du service de conversion, tel que son contrôle de santé le rend. */
 export interface EtatDuServiceDeConversion {
@@ -218,20 +229,217 @@ export async function sonderLeServiceDeConversion(
  * Le motif pour lequel la voie « service » ne peut pas traiter ce format, ou
  * `null` quand elle le peut.
  *
- * L'ordre des trois causes est celui de leur proximité : on ne reproche pas à
- * un service arrêté de manquer d'outils.
+ * L'ordre des deux causes est celui de leur proximité : on ne reproche pas à un
+ * service arrêté de manquer d'outils.
+ *
+ * L'OUTIL EXIGÉ N'EST PAS SEULEMENT CELUI DE LA COLONNE DE STACK §4.6. Pandoc
+ * est le seul écrivain de Markdown du service — `services/conversion/convertisseurs.py`
+ * dit pourquoi, et le lot T-052 le déclare —, de sorte qu'un conteneur privé de
+ * Pandoc ne convertit AUCUN des trois formats, pas seulement le `.docx`. Le
+ * réclamer partout est ce qui rend l'indisponibilité vraie au lieu d'optimiste :
+ * la promettre pour l'annoncer au fichier suivant serait pire que de la dire
+ * tout de suite (`P-10` veut un message clair, pas un espoir).
  */
 export function motifDIndisponibilite(
 	etat: EtatDuServiceDeConversion,
 	format: FormatDImport
 ): MotifDEchec | null {
 	if (!etat.joignable) return 'service-de-conversion-injoignable';
-	const outil = OUTIL_PAR_FORMAT[format];
-	if (outil !== undefined && (etat.outils[outil] ?? null) === null) {
-		return 'outil-de-conversion-absent';
+	const outils = [OUTIL_PAR_FORMAT[format], OUTIL_ECRIVAIN];
+	for (const outil of outils) {
+		if (outil !== undefined && (etat.outils[outil] ?? null) === null) {
+			return 'outil-de-conversion-absent';
+		}
 	}
-	if (!CONVERSION_LIVREE) return 'conversion-non-livree';
 	return null;
+}
+
+/* ══════════════════════════════════ L'appel de conversion — ADR-004 ════ */
+
+/** Une image que le service a extraite du fichier, encodée pour le transport. */
+export interface ImageExtraite {
+	/** Le chemin relatif sous lequel le Markdown rendu la référence. */
+	readonly nom: string;
+	readonly typeMime: string;
+	readonly octets: number;
+	readonly contenuBase64: string;
+}
+
+/**
+ * CE QUE LE SERVICE REND D'UN FICHIER — DU MARKDOWN, JAMAIS UN DOCUMENT.
+ *
+ * `ADR-004` : le service « s'arrête à la production de Markdown », et
+ * l'application applique ensuite son convertisseur unique. Le type le dit :
+ * `markdown` est une CHAÎNE, et rien dans ce module ne la transforme autrement
+ * qu'en la passant à `analyserMarkdown`.
+ */
+export type ResultatDeConversion =
+	| {
+			readonly issue: 'converti';
+			readonly markdown: string;
+			readonly images: readonly ImageExtraite[];
+			/** Des codes, dont celui du PDF sans texte extractible (M12.1). */
+			readonly avertissements: readonly string[];
+	  }
+	| { readonly issue: 'echec'; readonly motif: MotifDEchec };
+
+/**
+ * LES MOTIFS QUE LE SERVICE REND, TRADUITS EN MOTIFS DU PRODUIT.
+ *
+ * La table est FERMÉE des deux côtés, et c'est ce qui la rend utile : un motif
+ * que le service inventerait — ou qu'une version ultérieure ajouterait sans que
+ * l'application le sache — ne devient pas un code inconnu qui traverserait le
+ * rapport jusqu'à l'écran. Il devient `contenu-illisible`, le motif générique,
+ * et le fichier est consigné.
+ *
+ * Les deux premiers sont les cas d'échec que le lot d'exemple du gel de V-24
+ * porte (`seeds/corpus.ts`, `LOT_IMPORT`), et ils justifient d'être distingués :
+ * un fichier protégé se rouvre avec son mot de passe, un fichier endommagé ne se
+ * rouvre pas.
+ */
+const MOTIF_DU_SERVICE: Readonly<Record<string, MotifDEchec>> = {
+	'fichier-endommage': 'fichier-endommage',
+	'fichier-protege': 'fichier-protege',
+	'delai-depasse': 'delai-de-conversion-depasse',
+	'fichier-vide': 'contenu-illisible',
+	'format-non-pris-en-charge': 'contenu-illisible',
+	'outil-absent': 'outil-de-conversion-absent'
+};
+
+/** L'adresse du point d'entrée, la barre oblique finale absorbée. */
+function adresseDeConversion(adresse: string, nom: string): string {
+	return `${adresse.replace(/\/+$/, '')}${CHEMIN_DE_CONVERSION}?nom=${encodeURIComponent(nom)}`;
+}
+
+/**
+ * UN FICHIER ENVOYÉ AU SERVICE, ET SON VERDICT — jamais une exception.
+ *
+ * `RG-M12-04` gouverne cette fonction de bout en bout : « un fichier en erreur
+ * n'interrompt jamais le lot ». Elle ne lève donc RIEN. Un service qui ne répond
+ * pas, une réponse tronquée, un corps qui n'est pas du JSON, un JSON qui ne
+ * porte pas ce qu'on attend : chacun est un motif, consigné, et le lot continue.
+ *
+ * LE NOM ENVOYÉ EST LE NOM DU FICHIER, PAS SON CHEMIN. Le service n'a besoin
+ * que de l'extension, et un chemin de partage réseau dans une adresse serait à
+ * la fois inutile et bavard.
+ */
+export async function convertirParLeService(
+	recuperer: typeof fetch,
+	adresse: string | undefined,
+	fichier: FichierDepose
+): Promise<ResultatDeConversion> {
+	if (adresse === undefined || adresse === '') {
+		return { issue: 'echec', motif: 'service-de-conversion-injoignable' };
+	}
+	if (fichier.binaire === null) {
+		/* L'appelant n'a pas lu les octets. Ce n'est pas le service qui manque,
+		   c'est le fichier qui n'est pas là : le dire autrement accuserait à
+		   tort une brique optionnelle. */
+		return { issue: 'echec', motif: 'contenu-illisible' };
+	}
+	const nom = fichier.chemin.slice(fichier.chemin.lastIndexOf('/') + 1);
+	let reponse: Response;
+	try {
+		reponse = await recuperer(adresseDeConversion(adresse, nom), {
+			method: 'POST',
+			headers: { 'content-type': 'application/octet-stream' },
+			/* Le corps EST le fichier, octet pour octet. La conversion de type est
+			   celle du tableau d'octets vers un corps de requête : la plateforme
+			   l'accepte, la déclaration de `fetch` la nomme par une union dont
+			   `Uint8Array` fait partie sous un autre alias de tampon. */
+			body: fichier.binaire as BodyInit
+		});
+	} catch {
+		return { issue: 'echec', motif: 'service-de-conversion-injoignable' };
+	}
+	if (!reponse.ok) return { issue: 'echec', motif: 'service-de-conversion-injoignable' };
+
+	let corps: unknown;
+	try {
+		corps = await reponse.json();
+	} catch {
+		return { issue: 'echec', motif: 'contenu-illisible' };
+	}
+	return verdictDuCorps(corps);
+}
+
+/** Le verdict lu d'un corps de réponse INCONNU — aucune forme n'est supposée. */
+export function verdictDuCorps(corps: unknown): ResultatDeConversion {
+	if (typeof corps !== 'object' || corps === null) {
+		return { issue: 'echec', motif: 'contenu-illisible' };
+	}
+	const lu = corps as {
+		issue?: unknown;
+		markdown?: unknown;
+		motif?: unknown;
+		images?: unknown;
+		avertissements?: unknown;
+	};
+	if (lu.issue === 'echec') {
+		const motif = typeof lu.motif === 'string' ? MOTIF_DU_SERVICE[lu.motif] : undefined;
+		return { issue: 'echec', motif: motif ?? 'contenu-illisible' };
+	}
+	if (lu.issue !== 'converti' || typeof lu.markdown !== 'string') {
+		return { issue: 'echec', motif: 'contenu-illisible' };
+	}
+	return {
+		issue: 'converti',
+		markdown: lu.markdown,
+		images: imagesDu(lu.images),
+		avertissements: Array.isArray(lu.avertissements)
+			? lu.avertissements.filter((a): a is string => typeof a === 'string')
+			: []
+	};
+}
+
+/** Les images d'une réponse, celles qui portent tout ce qu'il faut. */
+function imagesDu(brut: unknown): readonly ImageExtraite[] {
+	if (!Array.isArray(brut)) return [];
+	const sorties: ImageExtraite[] = [];
+	for (const element of brut) {
+		if (typeof element !== 'object' || element === null) continue;
+		const image = element as Record<string, unknown>;
+		if (typeof image['nom'] !== 'string' || typeof image['contenu_base64'] !== 'string') continue;
+		sorties.push({
+			nom: image['nom'],
+			typeMime: typeof image['type_mime'] === 'string' ? image['type_mime'] : '',
+			octets: typeof image['octets'] === 'number' ? image['octets'] : 0,
+			contenuBase64: image['contenu_base64']
+		});
+	}
+	return sorties;
+}
+
+/**
+ * LE LOT ENVOYÉ AU SERVICE, FICHIER PAR FICHIER — `STACK` §4.6.
+ *
+ * L'appel est séquentiel, et c'est la conséquence directe de ce qu'il traverse :
+ * « ces convertisseurs sont lents, consomment de la mémoire de façon
+ * irrégulière ». Un lot de plusieurs centaines de fichiers lancé de front sur un
+ * service qui borne chaque conversion par un sous-processus ferait de la mémoire
+ * du conteneur le facteur limitant, et les délais commenceraient à courir avant
+ * que le premier fichier ne soit lu.
+ *
+ * NE SONT ENVOYÉS QUE LES FICHIERS DE LA VOIE « SERVICE », et seulement quand
+ * elle est disponible : un `.md` ne sort jamais de l'application (`ADR-004`), et
+ * un service arrêté n'a rien à recevoir.
+ */
+export async function convertirLeLot(
+	recuperer: typeof fetch,
+	adresse: string | undefined,
+	fichiers: readonly FichierDepose[],
+	etat: EtatDuServiceDeConversion
+): Promise<ReadonlyMap<string, ResultatDeConversion>> {
+	const verdicts = new Map<string, ResultatDeConversion>();
+	for (const fichier of fichiers) {
+		const format = formatDuChemin(fichier.chemin);
+		if (format === null || VOIE_PAR_FORMAT[format] !== 'service') continue;
+		if (verdicts.has(fichier.chemin)) continue;
+		if (fichier.octets === 0) continue;
+		if (motifDIndisponibilite(etat, format) !== null) continue;
+		verdicts.set(fichier.chemin, await convertirParLeService(recuperer, adresse, fichier));
+	}
+	return verdicts;
 }
 
 /* ═══════════════════════════════════════════════════ Les motifs ════════ */
@@ -254,7 +462,19 @@ export type MotifDEcart =
 export type MotifDEchec =
 	| 'service-de-conversion-injoignable'
 	| 'outil-de-conversion-absent'
-	| 'conversion-non-livree'
+	/** Le service a répondu que le fichier est chiffré — gel de V-24. */
+	| 'fichier-protege'
+	/** Le service a répondu que la structure interne ne s'ouvre pas — gel de V-24. */
+	| 'fichier-endommage'
+	/** La conversion a dépassé `DELAI_MAX_CONVERSION` et a été tuée (RG-M12-04). */
+	| 'delai-de-conversion-depasse'
+	/**
+	 * AUCUN VERDICT POUR CE FICHIER. Le classement a reçu un lot dont un fichier
+	 * de la voie « service » n'a pas été soumis à la conversion. Le motif existe
+	 * parce que `RG-M12-04` interdit de lever : un défaut d'enchaînement devient
+	 * une ligne du rapport, pas un lot perdu.
+	 */
+	| 'conversion-absente'
 	| 'contenu-illisible';
 
 /* ═══════════════════════════════════════════ L'en-tête de métadonnées ══ */
@@ -351,6 +571,16 @@ export interface FichierDepose {
 	 * commodité : elle n'ouvre ni un document bureautique, ni une archive.
 	 */
 	readonly texte: string | null;
+	/**
+	 * LES OCTETS BRUTS, POUR LA SEULE VOIE « SERVICE ». `null` partout ailleurs.
+	 *
+	 * Un document bureautique n'est pas du texte : il part au service tel quel, et
+	 * l'application ne l'ouvre à aucun moment — c'est le sens même de l'isolement
+	 * (`STACK` §4.6). Le champ est distinct de `texte` pour que le type interdise
+	 * de confondre les deux voies : un `.md` n'a pas d'octets à envoyer, un
+	 * `.docx` n'a pas de texte à lire.
+	 */
+	readonly binaire: Uint8Array | null;
 }
 
 /** Ce qu'un fichier du lot deviendra, décidé sans rien écrire. */
@@ -374,6 +604,19 @@ export interface LigneDePlan {
 	readonly aplatie: boolean;
 	/** `RG-M12-03` — les renvois déclarés, dont la résolution reste à faire. */
 	readonly renvois: readonly string[];
+	/**
+	 * `M12.1` — les avertissements que la conversion a levés, en codes. Le seul
+	 * qu'une source du dépôt nomme est celui du PDF sans texte extractible, dont
+	 * la phrase française est déjà DANS le corps : le code permet de le compter
+	 * au rapport sans relire le contenu.
+	 */
+	readonly avertissements: readonly string[];
+	/**
+	 * `RG-M12-07` — les images que le service a extraites. Elles sont portées
+	 * jusqu'ici et PAS ÉCRITES : aucun stockage de pièce jointe n'existe (voir
+	 * `MANQUES_DE_L_IMPORT`). Les taire aurait fait croire qu'il n'y en avait pas.
+	 */
+	readonly images: readonly ImageExtraite[];
 }
 
 /** Ce qu'un lot deviendra, en entier, sans qu'une ligne ait été écrite. */
@@ -402,6 +645,14 @@ export interface ContexteDeClassement {
 	 * contrainte `dossiers_racine_sans_parent`).
 	 */
 	readonly profondeurDeDepart: number;
+	/**
+	 * LE VERDICT DU SERVICE POUR CHAQUE FICHIER DE LA VOIE « SERVICE », par
+	 * chemin. Il est établi AVANT le classement, par `convertirLeLot`, parce que
+	 * le classement est synchrone et n'a pas de réseau — c'est ce qui permet à
+	 * l'étape 3 de `UC-M12-04` d'être une décision pure, et à la simulation de
+	 * n'avoir rigoureusement rien de plus à faire que l'import réel.
+	 */
+	readonly conversions: ReadonlyMap<string, ResultatDeConversion>;
 }
 
 /** Le nom d'un fichier, extension retirée. `RG-M12-05`, seconde branche. */
@@ -493,7 +744,9 @@ export function classerLeLot(
 			etiquettes: [] as readonly string[],
 			segments: [] as readonly string[],
 			aplatie: false,
-			renvois: [] as readonly string[]
+			renvois: [] as readonly string[],
+			avertissements: [] as readonly string[],
+			images: [] as readonly ImageExtraite[]
 		};
 
 		const ecart = (motif: MotifDEcart): void => {
@@ -525,21 +778,45 @@ export function classerLeLot(
 			ecart('format-non-converti');
 			return;
 		}
+		/* LES DEUX VOIES CONVERGENT ICI, ET C'EST L'EXIGENCE D'ADR-004 : « l'import
+		   bureautique et l'import Markdown convergent vers le même code après la
+		   sortie du service de conversion ». Un fichier bureautique devient un
+		   texte Markdown — celui que le service a rendu —, et tout ce qui suit est
+		   rigoureusement le chemin du `.md` : un seul convertisseur, appelé une
+		   seule fois, au même endroit. */
+		let texte = fichier.texte;
+		let avertissements: readonly string[] = [];
+		let images: readonly ImageExtraite[] = [];
+
 		if (voie === 'service') {
-			const motif = motifDIndisponibilite(contexte.service, format);
-			/* La branche « disponible » est fermée par défaut plutôt que supposée
-			   impossible : le jour où T-042 livre le point d'entrée, c'est ici que
-			   son appel se branche, et non dans une autre fonction. */
-			echec(motif ?? 'conversion-non-livree');
-			return;
+			const indisponible = motifDIndisponibilite(contexte.service, format);
+			if (indisponible !== null) {
+				/* `P-10` — la brique optionnelle est absente ou incomplète. Le
+				   fichier est consigné, le lot continue, et l'import Markdown du
+				   même lot n'en souffre pas. */
+				echec(indisponible);
+				return;
+			}
+			const verdict = contexte.conversions.get(fichier.chemin);
+			if (verdict === undefined) {
+				echec('conversion-absente');
+				return;
+			}
+			if (verdict.issue === 'echec') {
+				echec(verdict.motif);
+				return;
+			}
+			texte = verdict.markdown;
+			avertissements = verdict.avertissements;
+			images = verdict.images;
 		}
 
-		if (fichier.texte === null) {
+		if (texte === null) {
 			echec('contenu-illisible');
 			return;
 		}
 
-		const entete = detacherLEnTete(fichier.texte);
+		const entete = detacherLEnTete(texte);
 		let corps: Document;
 		try {
 			corps = analyserMarkdown(entete.texte);
@@ -565,7 +842,9 @@ export function classerLeLot(
 			etiquettes: entete.etiquettes,
 			segments,
 			aplatie,
-			renvois: entete.renvois
+			renvois: entete.renvois,
+			avertissements,
+			images
 		});
 	});
 
@@ -594,6 +873,18 @@ export interface LigneDeRapport {
 	readonly aplatie: boolean;
 	/** Les renvois qu'aucune note ne résout — `RG-M12-03`. */
 	readonly renvoisNonResolus: readonly string[];
+	/** `M12.1` — les avertissements de la conversion, en codes. */
+	readonly avertissements: readonly string[];
+	/**
+	 * `RG-M12-07` — les images que le service a extraites et QUE RIEN N'A ÉCRITES.
+	 *
+	 * Le nombre est au rapport parce qu'il n'est pas nul et qu'il ne doit pas
+	 * l'avoir l'air : aucun stockage de pièce jointe n'existe (voir
+	 * `MANQUES_DE_L_IMPORT`), donc les images d'un document importé sont perdues,
+	 * et le rapport le dit plutôt que de les taire (`P-02`, aucune valeur
+	 * illustrative — et une absence tue en est une).
+	 */
+	readonly imagesNonReprises: number;
 }
 
 /** Le rapport d'un lot — le même en simulation et en réel, par construction. */
@@ -747,7 +1038,9 @@ export async function executerLImport(
 					identifiant: null,
 					miseAJour: false,
 					aplatie: ligne.aplatie,
-					renvoisNonResolus
+					renvoisNonResolus,
+					avertissements: ligne.avertissements,
+					imagesNonReprises: ligne.images.length
 				});
 				continue;
 			}
@@ -762,7 +1055,9 @@ export async function executerLImport(
 					identifiant: null,
 					miseAJour: false,
 					aplatie: ligne.aplatie,
-					renvoisNonResolus
+					renvoisNonResolus,
+					avertissements: ligne.avertissements,
+					imagesNonReprises: ligne.images.length
 				});
 				continue;
 			}
@@ -835,7 +1130,9 @@ export async function executerLImport(
 				identifiant: ligne.identifiant,
 				miseAJour: trouvee !== undefined,
 				aplatie: ligne.aplatie,
-				renvoisNonResolus
+				renvoisNonResolus,
+				avertissements: ligne.avertissements,
+				imagesNonReprises: ligne.images.length
 			});
 		}
 	};
@@ -902,9 +1199,11 @@ export const MANQUES_DE_L_IMPORT: readonly ManqueDeLImport[] = [
 		exigence: 'RG-M12-07',
 		ceQuiManque: 'la reprise des images en chemin relatif',
 		motif:
-			'aucun stockage de pièce jointe n’existe. La table des pièces jointes porte des ' +
-			'métadonnées, rien n’écrit ni ne sert le fichier lui-même, et les images extraites ' +
-			'viennent du service de conversion, qui ne convertit pas.'
+			'le service de conversion les EXTRAIT désormais, et le rapport les compte ligne par ' +
+			'ligne — mais aucun stockage de pièce jointe n’existe : la table des pièces jointes ' +
+			'porte des métadonnées, et rien n’écrit ni ne sert le fichier lui-même. Les images ' +
+			'arrivent donc jusqu’à l’application et s’arrêtent là, ce que `imagesNonReprises` dit ' +
+			'plutôt que de le taire.'
 	},
 	{
 		exigence: 'RG-M12-08',
@@ -939,7 +1238,17 @@ export const MANQUES_DE_L_IMPORT: readonly ManqueDeLImport[] = [
 		ceQuiManque: 'le message clair de dégradation, à l’écran',
 		motif:
 			'l’indisponibilité de la voie bureautique est décidée, motivée et consignée ici, avec ' +
-			'trois causes distinguées. V-24 n’a aucune propriété pour la recevoir : sa liste des ' +
+			'ses causes distinguées. V-24 n’a aucune propriété pour la recevoir : sa liste des ' +
 			'formats admis est transcrite du gel, et son rapport n’est dans aucun de ses sept états.'
+	},
+	{
+		exigence: 'M12.1',
+		ceQuiManque: 'la nature « bloc de code » d’un bloc importé d’un .docx',
+		motif:
+			'Pandoc écrit tout bloc de code sans langage en bloc INDENTÉ, dans tous ses dialectes ' +
+			'Markdown et sans option pour l’en empêcher — mesuré sur `gfm` et sur `commonmark` ; ' +
+			'or l’implémentation unique ne lit comme bloc de code que les blocs clôturés. Le texte ' +
+			'survit en paragraphes, sa nature de bloc non. M12.1 exige du .docx « titres, listes, ' +
+			'tableaux, mise en forme préservés » et ne nomme pas les blocs de code.'
 	}
 ];
