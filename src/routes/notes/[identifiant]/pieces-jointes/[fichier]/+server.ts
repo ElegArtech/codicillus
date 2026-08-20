@@ -10,51 +10,79 @@
  * ═════════════════════════════════════════════════════════════════════════
  * POURQUOI C'EST UNE ROUTE, ET JAMAIS UN FICHIER STATIQUE
  *
- * `STACK-TECHNIQUE.md:103-105` range les pièces jointes dans un volume local,
- * « servies DERRIÈRE UN CONTRÔLE D'ACCÈS ». Un fichier servi par le frontal ne
- * rejouerait aucun droit : une note passée d'interne à publique — ou l'inverse —
- * changerait la visibilité de ses pièces sans que rien ne le sache, et une
- * adresse devinée rapporterait un contenu interdit, ce que `RG-ACC-01` refuse.
+ * `STACK-TECHNIQUE.md` §4.7 range les pièces jointes parmi les ressources
+ * « servies par une route qui revérifie la visibilité de la note porteuse —
+ * jamais en fichier statique ». Un fichier servi par le frontal ne rejouerait
+ * aucun droit : une note passée d'interne à publique — ou l'inverse — changerait
+ * la visibilité de ses pièces sans que rien ne le sache, et une adresse devinée
+ * rapporterait un contenu interdit, ce que `RG-ACC-01` refuse.
  *
  * La visibilité est donc RÉSOLUE À CHAQUE REQUÊTE, par la même composition que
  * la lecture d'une note : périmètre injecté dans le `where` (`ADR-006`), puis
  * `noteLisible()` en garde-fou, puis sortie unique par `INTROUVABLE`
  * (`RG-ACC-04`). Aucune règle de droit n'est écrite ici.
  *
+ * ET LE CHEMIN DES OCTETS N'EST FORMABLE QU'APRÈS. L'entrepôt ne stocke aucun
+ * chemin : il le dérive des deux clés que la résolution rapporte
+ * (`src/lib/fichiers/entrepot.ts`). Un appelant qui n'a pas franchi la
+ * résolution n'a donc pas de chemin — la garantie n'est pas un contrôle de plus,
+ * c'est la forme du code.
+ *
  * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LA BASE PORTE, ET CE QU'ELLE NE PORTE PAS — COMPTÉ, JAMAIS COMBLÉ
+ * LES TROIS SORTIES, ET CE QUE CHACUNE DIT
  *
- * Mesuré le 20 août 2026 sur la base semée : `pieces_jointes` compte **zéro
- * ligne**. `pnpm verif:donnees` le dit sous un autre angle et le chiffre :
- * « `Note.pj` — 7 notes sur 32 en déclarent, **13 pièces déclarées**, 2 nommées
- * au gel dont **0 chiffrables en octets**, **0 portées en base** ». Le corpus ne
- * porte que des COMPTES de pièces.
+ *   404 — la pièce n'existe pas, OU la note porteuse n'est pas lisible par
+ *         l'appelant. Le même octet dans les deux cas, par le même chemin de
+ *         code : c'est `ADR-007`, et c'est ce que la matrice de la batterie 6
+ *         mesure. Aucune branche ne les distingue ici, et il n'y en a pas
+ *         ailleurs — `pieceJointeResolue()` rend `INTROUVABLE` pour les deux.
  *
- * ET LE CONTENU N'EXISTE NULLE PART DANS LE PRODUIT. La table porte le nom, la
- * taille et le type de média ; elle ne porte **ni octets ni chemin**. La
- * variable d'environnement qui nomme la racine des fichiers (compose.yaml:136)
- * n'est lue par **aucune ligne** du dépôt — relevé mécanique sur `src/`,
- * `base/` et `verif/`. Le dépôt de fichier, sa nomenclature sur disque et sa
- * sauvegarde (`RG-NF-09`) sont l'affaire du lot qui les spécifiera.
+ *   200 — les octets, avec leur type de média, leur longueur et leur nom
+ *         d'origine. Cette sortie est celle que `T-050` avait laissée en 501
+ *         « faute d'octets » : le produit ne stockait aucun fichier. `T-026` a
+ *         posé l'entrepôt ; la branche est ici PROLONGÉE, pas réécrite.
  *
- * Conséquence, et elle est honnête plutôt que commode :
+ *   500 — la ligne est en base, l'appelant y a droit, et l'entrepôt ne porte pas
+ *         les octets. CE N'EST PAS UN CAS D'`ADR-007` : l'appelant a déjà
+ *         franchi la résolution, il SAIT que la pièce existe, et lui rendre 404
+ *         cacherait une panne d'exploitation derrière un « rien à voir ». La
+ *         distinction ne fuit rien — elle n'est atteignable que par quelqu'un
+ *         qui a le droit. Elle est le symptôme d'une restauration désaccordée
+ *         (base rendue sans son volume, `RG-NF-09`), et `verifierLesPiecesJointes()`
+ *         la relève en masse.
  *
- *   · une pièce NON RÉSOLUE — inexistante, ou portée par une note que
- *     l'appelant ne peut pas lire — rend **404**, le même octet dans les deux
- *     cas. C'est le seul comportement que ce dépôt peut prouver aujourd'hui, et
- *     c'est celui que la matrice de §5.5 exige ;
- *   · une pièce RÉSOLUE rend **501** en nommant ce qui manque. Cette branche
- *     n'est exercée par AUCUN état du dépôt : elle l'est par un cas SYNTHÉTIQUE
- *     en unitaire (`P-5`, `P-26`), sur `resoudreUnePieceJointe()`.
+ * ═════════════════════════════════════════════════════════════════════════
+ * LES DEUX EN-TÊTES QUI SONT DES DÉCISIONS, ET LEUR SOURCE
  *
- * La différence entre 404 et 501 est légitime, et elle est la même que pour la
- * création : à qui a le droit, la ressource n'est pas cachée.
+ * LA DISPOSITION. `M04.7` (CDC:611) décrit le panneau des pièces d'une note
+ * comme « liste des fichiers, taille, type, TÉLÉCHARGEMENT » : une pièce se
+ * télécharge, donc `attachment`, avec son nom d'origine. Mais `M04.6` compte
+ * l'IMAGE parmi les quinze constructions d'un corps, et une image de corps
+ * s'affiche à sa place — son adresse est cette même route. Les images sont donc
+ * servies `inline`, tout le reste `attachment`. Les deux moitiés de la règle
+ * sortent de la CDC ; aucune n'est un goût d'implémenteur.
+ *
+ * LE TYPE DE MÉDIA N'EST JAMAIS DEVINÉ, et il n'est jamais renégocié : c'est
+ * celui que la base porte. Le refus de reniflement l'accompagne — un fichier
+ * dont le type annoncé serait faux ne doit pas être réinterprété par le
+ * navigateur, sans quoi le type déclaré en base cesserait d'être la vérité.
+ *
+ * PAS DE CACHE PARTAGÉ. Une pièce de note interne est du contenu interne, et sa
+ * visibilité est revérifiée à chaque requête : la mettre en cache partagé
+ * annulerait la revérification pour tous les appelants suivants — c'est-à-dire
+ * rendrait `RG-M04-08` inopérante par un en-tête. Même raison, mot pour mot, que
+ * l'archive d'export (`/console/exports/…`).
  */
 import { error } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import { basePartagee } from '$lib/base/acces';
 import { resoudreUnePieceJointe } from '$lib/donnees/edition';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
+import { lireLesOctets, racineDesFichiers } from '$lib/fichiers/entrepot';
 import type { RequestHandler } from './$types';
+
+/** Le groupe de types de média qui s'affichent à leur place dans un corps. */
+const PREFIXE_DES_IMAGES = 'image/';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const resolue = await resoudreUnePieceJointe(basePartagee(), {
@@ -63,11 +91,31 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		identite: locals.identite
 	});
 	if (!resolue.trouve) error(404, MESSAGE_INTROUVABLE);
+	const piece = resolue.ressource;
 
-	error(
-		501,
-		'le contenu des pièces jointes n’est pas servi : la table porte le nom, la taille et ' +
-			'le type de média, jamais les octets ni un chemin, et la racine des fichiers déclarée ' +
-			'à la composition n’est lue par aucune ligne du dépôt'
-	);
+	const octets = await lireLesOctets(racineDesFichiers(env), piece.noteId, piece.id);
+	if (octets === null) {
+		error(
+			500,
+			'les octets de cette pièce jointe ne sont pas dans l’entrepôt : sa ligne existe ' +
+				'en base, son fichier non. La base et le volume des fichiers sont les deux ' +
+				'éléments de la sauvegarde (RG-NF-09) et ils sont ici désaccordés.'
+		);
+	}
+
+	const enLigne = piece.typeMedia.startsWith(PREFIXE_DES_IMAGES);
+	return new Response(octets, {
+		status: 200,
+		headers: new Headers({
+			'content-type': piece.typeMedia,
+			'content-length': String(octets.length),
+			/* Le nom est porté par la forme étendue de l'en-tête, celle qui déclare
+			   son encodage : un nom accentué ou espacé y voyage sans perte, là où
+			   la forme simple ne porte que de l'ASCII. */
+			'content-disposition':
+				(enLigne ? 'inline' : 'attachment') + "; filename*=UTF-8''" + encodeURIComponent(piece.nom),
+			'x-content-type-options': 'nosniff',
+			'cache-control': 'no-store'
+		})
+	});
 };

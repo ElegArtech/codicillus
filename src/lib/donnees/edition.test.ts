@@ -36,6 +36,12 @@ const PERIMETRE_TOTAL = { tout: true as const };
 /** Une pièce jointe, jointe à sa note porteuse. Rien de tout cela n'est en base. */
 function piece(surcharge: Partial<LigneDePieceJointe> = {}): LigneDePieceJointe {
 	return {
+		/* Les deux clés dont l'entrepôt dérive le chemin des octets (`T-026`).
+		   Elles sont ici synthétiques comme le reste de la pièce : ce qui est
+		   éprouvé est que la résolution les RAPPORTE, donc qu'aucun chemin de
+		   fichier n'est formable avant elle. */
+		id: 'p0000000-0000-4000-8000-000000000001',
+		noteId: 'a0000000-0000-4000-8000-000000000001',
 		nom: 'procedure-de-restauration.pdf',
 		tailleOctets: 184_320,
 		typeMedia: 'application/pdf',
@@ -64,7 +70,9 @@ describe('RG-M04-08 — la visibilité de la NOTE PORTEUSE décide, pas le fichi
 			nom: 'procedure-de-restauration.pdf',
 			tailleOctets: 184_320,
 			typeMedia: 'application/pdf',
-			note: 'n-restaurer-pg'
+			note: 'n-restaurer-pg',
+			id: 'p0000000-0000-4000-8000-000000000001',
+			noteId: 'a0000000-0000-4000-8000-000000000001'
 		});
 	});
 
