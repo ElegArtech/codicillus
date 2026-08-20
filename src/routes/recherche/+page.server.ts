@@ -77,10 +77,30 @@
  * `SENS_DISPONIBLE` porte le constat — dérivé des réglages de l'index —, et
  * V-08 porte la phrase du gel : « Recherche par sens momentanément
  * indisponible ». `P-10` — dégradation, jamais panne ; `P-02` — jamais de
- * simulation. `?mode=` et `?tri=` ne sont donc PAS dans la liste close des
- * paramètres honorés : les quatre ordres de tri autres que « pertinence » ne
- * sont écrits dans AUCUNE source gelée (voir `trier()` en V-08), et les
- * inventer serait le comblement que `CLAUDE.md` §2 interdit.
+ * simulation.
+ *
+ * `?mode=` EST DÉSORMAIS HONORÉ, ET LE DEMEURE MÊME DÉGRADÉ. Il est lu, porté
+ * par l'adresse et rendu par les trois boutons de la bascule ; tant que
+ * `SENS_DISPONIBLE` est faux, le mode EFFECTIF reste « mots-clés », l'écran se
+ * déclare dégradé et affiche la phrase du gel. C'est la règle du gel lui-même,
+ * qui bascule en mots-clés et désactive « Sens » quand la brique tombe
+ * (`V-08:2098-2106`) : la bascule est ANNONCÉE, jamais silencieuse
+ * (`RG-M02-01`).
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * `?tri=` EST HONORÉ, ET LES QUATRE ORDRES NE SONT PAS INVENTÉS
+ *
+ * La rédaction précédente de ce fichier disait : « les quatre ordres de tri
+ * autres que “pertinence” ne sont écrits dans AUCUNE source gelée ». C'était
+ * vrai de V-08, dont `trier()` n'existe pas — et faux du gel pris dans son
+ * ensemble : `mockups/V-12-liste-notes.html:2117-2124` définit ces quatre
+ * ordres, avec les MÊMES valeurs d'option et les mêmes libellés que le
+ * sélecteur de V-08. La sémantique est donc GELÉE, dans une autre planche, et
+ * `ORDRES_DE_TRI` de `$lib/recherche/moteur` la porte avec la citation.
+ *
+ * L'ordre est appliqué PAR LE MOTEUR, sur les champs que `CHAMPS_TRIABLES`
+ * déclarait déjà, et le résultat traverse `dansLOrdreDuMoteur()` comme avant :
+ * la vue continue de rendre l'ordre qu'elle reçoit.
  */
 import { basePartagee } from '$lib/base/acces';
 import { type ContexteDeLecture, lireNotes, lireSeuils } from '$lib/donnees/lecture';
@@ -91,7 +111,12 @@ import {
 	requeteDemandee
 } from '$lib/donnees/public';
 import { moteurPartage } from '$lib/recherche/acces';
-import { chercherLesNotes } from '$lib/recherche/moteur';
+import {
+	ORDRE_PAR_DEFAUT,
+	chercherLesNotes,
+	ordreDeTriDemande,
+	type OrdreDeTri
+} from '$lib/recherche/moteur';
 import type { Base } from '$lib/base/acces';
 import type { Identite } from '$lib/droits/resolution';
 import type { Meilisearch } from 'meilisearch';
@@ -147,10 +172,27 @@ const FACETTES_HONOREES_EN_ANONYME: readonly string[] = FACETTES_DE_LA_RECHERCHE
 function honores(parametres: URLSearchParams, session: boolean): URLSearchParams {
 	if (!session) return parametresHonores(parametres, false);
 	const retenus = new URLSearchParams();
-	for (const cle of ['q', ...FACETTES_DE_LA_RECHERCHE]) {
+	for (const cle of ['q', 'tri', 'mode', ...FACETTES_DE_LA_RECHERCHE]) {
 		for (const valeur of parametres.getAll(cle)) retenus.append(cle, valeur);
 	}
 	return retenus;
+}
+
+/**
+ * LES TROIS MODES DE `docs/routes.md:242` — les valeurs de `data-mode` du gel
+ * (`V-08:1165-1171`), et rien d'autre.
+ *
+ * `hybride` EST LE DÉFAUT, et c'est le gel qui le dit deux fois : `V-08:1004`
+ * pose `data-mode="hybride"` sur `div.app`, et le bouton « Hybride » est le seul
+ * à naître `aria-pressed="true"` — son infobulle écrit « Mode par défaut ».
+ */
+const MODES = ['motscles', 'sens', 'hybride'] as const;
+type ModeDeRecherche = (typeof MODES)[number];
+const MODE_PAR_DEFAUT: ModeDeRecherche = 'hybride';
+
+/** Le mode demandé, ou le défaut. Une valeur hors liste est IGNORÉE, pas refusée. */
+function modeDemande(demande: URLSearchParams): ModeDeRecherche {
+	return MODES.find((m) => m === demande.get('mode')) ?? MODE_PAR_DEFAUT;
 }
 
 /**
@@ -213,6 +255,16 @@ interface DonneesDeRecherche {
 	readonly perimetre: number;
 	/** Les notes reçues SONT le résultat du moteur : la vue ne cherche plus. */
 	readonly recherchees: true;
+	/** L'ordre demandé par l'adresse — celui dans lequel les notes arrivent. */
+	readonly tri: OrdreDeTri;
+	/**
+	 * LE MODE DEMANDÉ, jamais le mode effectif. La bascule en mots-clés quand la
+	 * brique manque est un ÉTAT DE L'ÉCRAN, que la vue dérive de `c-degrade` —
+	 * comme le gel, qui bascule dans l'écouteur et laisse le bouton parler.
+	 * Envoyer ici le mode déjà rabattu ferait perdre ce que l'utilisateur a
+	 * demandé, donc l'aveu que sa demande n'a pas été servie.
+	 */
+	readonly mode: ModeDeRecherche;
 }
 
 /**
@@ -235,9 +287,17 @@ async function lireLaRecherche(
 	const session = identite.type === 'authentifie';
 	const demande = honores(url.searchParams, session);
 	const requete = requeteDemandee(demande);
+	/* Un `tri=` inconnu retombe sur la pertinence : ignoré, jamais refusé —
+	   `docs/routes.md:248`, « un refus révélerait l'existence du filtre ». En
+	   anonyme, le crible a déjà retiré le paramètre : V-02 n'a pas de sélecteur. */
+	const tri = ordreDeTriDemande(demande.get('tri')) ?? ORDRE_PAR_DEFAUT;
+	const mode = modeDemande(demande);
 
 	const [trouvees, toutLeLisible] = await Promise.all([
-		chercherLesNotes(base, client, identite, { requete }),
+		chercherLesNotes(base, client, identite, { requete, tri }),
+		/* AUCUN TRI SUR LA SECONDE : elle ne lit aucune note et seul son TOTAL est
+		   employé — le dénominateur de la règle d'affluence. Trier un compte n'a
+		   pas de sens, et le demander au moteur coûterait sans rien rendre. */
 		chercherLesNotes(base, client, identite, { requete: '' })
 	]);
 	const notes = dansLOrdreDuMoteur(
@@ -252,7 +312,9 @@ async function lireLaRecherche(
 			session ? FACETTES_DE_LA_RECHERCHE : FACETTES_HONOREES_EN_ANONYME
 		),
 		perimetre: toutLeLisible.total,
-		recherchees: true as const
+		recherchees: true as const,
+		tri,
+		mode
 	};
 
 	if (!session) {

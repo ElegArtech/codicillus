@@ -68,6 +68,12 @@
 </svelte:head>
 
 {#if data.session}
+	<!--
+		`tri` et `mode` ne vont QU'À LA VUE CONNECTÉE, et c'est le gel qui le
+		décide : V-02 n'a ni sélecteur de tri, ni bascule de mode — le brief lui
+		« supprime la bascule de mode » (`docs/routes.md:248`). Les lui passer
+		reviendrait à lui donner un état qu'elle n'a aucun moyen de montrer.
+	-->
 	<VueConnectee
 		vecteur={data.vecteur}
 		notes={data.notes}
@@ -75,6 +81,8 @@
 		requete={data.requete}
 		retenues={data.retenues}
 		perimetre={data.perimetre}
+		tri={data.tri}
+		modeDemande={data.mode}
 	/>
 {:else}
 	<VuePublique
