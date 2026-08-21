@@ -104,6 +104,8 @@
 		domaines?: readonly Domaine[];
 		/** Le compte connecté. Absente, `MOI` du jeu de semence. */
 		compte?: UtilisateurCourant;
+		/** Les reprises de contexte. Absente, celles du jeu de semence. */
+		reprises?: readonly { nom: string; sous: string; trace: string | null }[] | null;
 		/** L'état de l'instance. Absente, `INSTANCE` du jeu de semence. */
 		instance?: EtatDInstance;
 	}
@@ -114,6 +116,7 @@
 		univers = UNIVERS,
 		domaines = DOMAINES,
 		compte = MOI,
+		reprises = null,
 		instance = INSTANCE
 	}: Proprietes = $props();
 
@@ -204,8 +207,20 @@
 	/** Les quatre pistes de reformulation, telles que le gel les énumère. */
 	const PISTES = ['sauvegarde', 'restauration', 'astreinte', 'supervision'];
 
-	/** Les trois reprises de contexte, avec leur tracé de pictogramme (`V-26:2731`). */
-	const REPRISES = [
+	/**
+	 * LES TROIS REPRISES DE CONTEXTE — `V-26:2731`.
+	 *
+	 * La DEUXIÈME nomme un dossier réel : « Sauvegardes · Dernier dossier consulté
+	 * · Infrastructure › Exploitation ». C'est le jeu de démonstration, et aucune
+	 * table ne porte d'historique de consultation : sur une instance qui n'a
+	 * jamais eu ces dossiers, la page d'adresse non résolue proposait d'y
+	 * retourner. Mesuré le 21/08/2026.
+	 *
+	 * Elles deviennent donc une propriété, avec le gel pour défaut : la vue rendue
+	 * seule ne bouge pas, et une route qui n'a pas d'historique passe une liste
+	 * vide plutôt qu'un souvenir emprunté.
+	 */
+	const REPRISES_DU_GEL = [
 		{
 			nom: 'Accueil',
 			sous: 'Votre tableau de bord et vos révisions en attente',
@@ -219,6 +234,7 @@
 		},
 		{ nom: 'Recherche complète', sous: 'Facettes, tri et modes de recherche', trace: null }
 	] as const;
+	const REPRISES = $derived(reprises ?? REPRISES_DU_GEL);
 </script>
 
 <!--

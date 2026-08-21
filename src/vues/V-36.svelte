@@ -237,7 +237,10 @@
 	 */
 	let choisi = $state('');
 	const domaineCourant = $derived(
-		choisi !== '' && domaines.some((d) => d.nom === choisi) ? choisi : domaines[0]!.nom
+		/* `domaines[0]!` faisait tomber la page quand la liste est VIDE — une
+		   instance neuve n'a aucun domaine, et l'export sortait en 500. La chaîne
+		   vide traverse le reste sans rien affirmer : l'écran rend son état vide. */
+		choisi !== '' && domaines.some((d) => d.nom === choisi) ? choisi : (domaines[0]?.nom ?? '')
 	);
 	const apercu = $derived(apercuExport(domaineCourant));
 
