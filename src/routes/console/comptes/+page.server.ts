@@ -9,13 +9,11 @@
  * `src/lib/droits/resolution.ts` et rend `INTROUVABLE` ; le seul `error(404, MESSAGE_INTROUVABLE)`
  * du fichier est SANS MESSAGE (`ADR-007`).
  *
- * CE QUE CE CHARGEUR NE FAIT PAS, ET C'EST L'ÉCRAN OÙ CELA PÈSE LE PLUS. Il ne
- * touche pas `src/vues/V-32.svelte`, qui importe `COMPTES` au niveau du module
- * (`V-32:65`) : la liste des comptes affichée est celle du JEU DE SEMENCE, non
- * celle de la table. `lireComptes()` de `T-030` existe et rend les comptes de la
- * base, mais aucune propriété ne les porte jusqu'à l'écran. Un administrateur
- * qui créerait un compte ne le verrait donc pas apparaître — écran de gestion
- * dont la gestion n'est pas branchée. Écart déclaré au rapport du lot.
+ * CE QUE CE CHARGEUR SERT, ET CE QU'IL NE SERT PAS. La liste des comptes vient
+ * de la TABLE — `lireLesComptesDeConsole()` —, et la vue la reçoit en
+ * propriété : un compte créé apparaît donc à la relecture de la page. Le jeu de
+ * semence de `V-32:65` ne sert plus que de valeur par défaut, pour les planches
+ * du banc, qui n'ont pas de chargeur derrière elles.
  *
  * `vecteur: null` demande l'état au repos : les quatre positions de l'axe
  * « Formulaire » et les deux de l'axe « Cas » sont des états d'INTERACTION.
@@ -25,12 +23,15 @@ import { basePartagee } from '$lib/base/acces';
 import {
 	changerLActivationDUnCompte,
 	changerLeRoleDUnCompte,
+	creerUnCompte,
+	identifiantNormalise,
 	roleDepuisLeLibelle
 } from '$lib/donnees/administration';
 import {
 	accesALaConsole,
 	contexteDeRequete,
 	lireLesComptesDeConsole,
+	lireLesDesignationsDeDomaine,
 	resoudreLaConsole
 } from '$lib/donnees/consoles';
 import type { Actions, PageServerLoad } from './$types';
@@ -47,7 +48,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 		univers: acces.ressource.univers,
 		domaines: acces.ressource.domaines,
 		compte: acces.ressource.compte,
-		comptes: await lireLesComptesDeConsole(base)
+		comptes: await lireLesComptesDeConsole(base),
+		/**
+		 * LA TABLE DES DÉSIGNATIONS — le nom d'affichage d'un domaine vers sa forme
+		 * canonique. Même motif qu'à `/console/domaines`, et pour le même motif :
+		 * `#f-domaine` porte le NOM (`V-32:3144`), le geste attend l'identifiant
+		 * lisible d'univers puis celui du domaine, et « Poste de travail » ne donne
+		 * pas son identifiant par abaissement de casse — c'est la base qui sait.
+		 */
+		designations: await lireLesDesignationsDeDomaine(base)
 	};
 };
 
@@ -57,6 +66,75 @@ function consoleOuverte(locals: App.Locals): void {
 }
 
 export const actions: Actions = {
+	/**
+	 * CRÉER UN COMPTE — `UC-M14-07` (`CDC:1178`), `RG-CPT-01`, `RG-CPT-02`.
+	 *
+	 * LES NOMS DE CHAMP SONT CEUX DU GEL, SAUF DEUX, ET LES DEUX EXCEPTIONS SE
+	 * JUSTIFIENT. Les six premiers sont les identifiants du formulaire de
+	 * `V-32:1344-1401` — `f-ident`, `f-nom`, `f-courriel`, `f-mdp`, `f-role`,
+	 * `f-verrou` —, comme `changerLeRole` le fait déjà pour `f-ident` et
+	 * `f-role` : rien n'est traduit, et deux noms pour une même clé finiraient
+	 * par diverger.
+	 *
+	 * Le septième, `#f-domaine`, ne voyage PAS sous son nom, parce qu'il ne
+	 * voyage pas sous sa valeur : le sélecteur porte le NOM d'affichage du
+	 * domaine, le geste attend sa forme CANONIQUE. La page traduit par la table
+	 * que le chargeur lui a servie, et envoie `univers` puis `domaine` — les
+	 * deux noms que `/console/domaines` emploie déjà pour la même désignation.
+	 *
+	 * `P-09` ET `RG-ACC-04` PASSENT PAR `consoleOuverte()`, comme les deux
+	 * autres actions : un compte sans le rôle administrateur reçoit `404` sur
+	 * l'ACTION comme sur l'écran, et ce 404 est celui d'`ADR-007` — sans message,
+	 * indiscernable d'une adresse qui n'existe pas.
+	 *
+	 * `RG-CPT-02` N'EST PAS RÉÉCRITE ICI, et c'est délibéré : elle est portée par
+	 * cette garde — sur une instance sans administrateur, personne n'atteint
+	 * cette action — et par l'impossibilité de se créer soi-même. Le
+	 * raisonnement complet est à l'en-tête de section 11 d'`administration.ts`.
+	 *
+	 * LE MOT DE PASSE EN CLAIR ENTRE ICI ET N'EN RESSORT PAS. `creerUnCompte()`
+	 * le condense ; aucune valeur rendue à l'écran ne le porte. La boîte
+	 * « Compte créé » affiche la valeur que le NAVIGATEUR a engendrée, celle-là
+	 * même qui a été envoyée.
+	 */
+	creer: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+
+		/* LE RÔLE EST CONVERTI PAR LA SEULE TABLE DU DÉPÔT, et un libellé inconnu
+		   est un refus — jamais un rôle par défaut. Se tromper de défaut ici, ce
+		   serait accorder un droit. Même rédaction que `changerLeRole`. */
+		const role = roleDepuisLeLibelle(champs.get('f-role'));
+		if (role === null) return fail(400, { issue: 'role-inconnu' });
+
+		/* LE RATTACHEMENT EST FACULTATIF AU GEL — `#f-domaine` ne porte pas
+		   l'étoile d'obligation (`V-32:1389`) — et la colonne est nullable par
+		   exigence (`RG-M14-04`). Une désignation incomplète vaut donc « aucun
+		   rattachement », pas un refus. */
+		const universDemande = String(champs.get('univers') ?? '');
+		const domaineDemande = String(champs.get('domaine') ?? '');
+		const rattachement =
+			universDemande === '' || domaineDemande === ''
+				? null
+				: { univers: universDemande, domaine: domaineDemande };
+
+		const resultat = await creerUnCompte(
+			basePartagee(),
+			{
+				identifiant: identifiantNormalise(champs.get('f-ident')),
+				nom: String(champs.get('f-nom') ?? ''),
+				courriel: String(champs.get('f-courriel') ?? ''),
+				motDePasse: String(champs.get('f-mdp') ?? ''),
+				role,
+				domaine: rattachement,
+				motDePasseVerrouille: champs.get('f-verrou') === 'oui'
+			},
+			new Date()
+		);
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	},
 	/**
 	 * CHANGER LE RÔLE D'UN COMPTE — `RG-M14-07`.
 	 *
