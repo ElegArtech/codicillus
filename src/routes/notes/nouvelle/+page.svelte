@@ -58,8 +58,23 @@
 
 	/** Le domaine demandé par l'adresse, à défaut celui du compte du jeu. */
 	const domaineDemande = $derived(page.url.searchParams.get('domaine'));
-	const compte = $derived(
-		domaineDemande === null ? MOI : { ...MOI, domaine: domaineDemande as typeof MOI.domaine }
+	/* LE COMPTE RÉEL, ET SON UNIVERS. La route passait `MOI` — la constante du
+	   jeu de semence : l'éditeur affichait « Karim Belhadj » et un fil d'Ariane
+	   « Accueil › Production › Infrastructure » sur une instance qui n'a jamais
+	   porté ces noms. Mesuré le 21/08/2026 sur une base neuve : le fil offrait
+	   `/univers/production/infrastructure`, qui rend 404. */
+	const compteServi = $derived(page.data.compte ?? MOI);
+	const compte = $derived({
+		...MOI,
+		nom: compteServi.nom,
+		initiales: compteServi.initiales,
+		role: compteServi.role,
+		domaine: domaineDemande ?? compteServi.domaine
+	});
+	/* L'univers auquel le domaine du compte appartient, tel que la base le nomme. */
+	const universDuCompte = $derived(
+		page.data.domaines?.find((d: { nom: string }) => d.nom === compte.domaine)?.univers ??
+			'Production'
 	);
 
 	let formulaire: HTMLFormElement;
@@ -144,7 +159,13 @@
 </script>
 
 <form method="POST" bind:this={formulaire} style="display:contents">
+	<!-- `domaines` vient du GABARIT RACINE, qui les lit en base : la propriété de
+	     la vue retombe sinon sur `DOMAINES` du jeu de semence, et le sélecteur
+	     proposait des domaines inexistants — mesuré sur une instance neuve, il
+	     offrait « Production › Infrastructure » à une base qui n'en a jamais eu. -->
 	<Vue
+		domaines={page.data.domaines}
+		{universDuCompte}
 		vecteur={data.vecteur}
 		notes={data.notes}
 		{compte}

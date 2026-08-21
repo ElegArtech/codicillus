@@ -75,6 +75,23 @@ import {
 	verifierFraicheur,
 	verifierUniversDesNotes
 } from './semence';
+/* LA SECONDE COUCHE DU JEU DE SEMENCE — `semence-organisation.ts` porte le
+   motif complet. En deux mots : `seeds/corpus.ts` est la TRANSCRIPTION des
+   maquettes gelées, prouvée telle par `seeds/corpus.test.ts` ; on ne peut donc
+   pas y ajouter une note sans casser le gel. Ce qui s'ajoute ici n'entre que
+   dans la BASE, jamais dans le rendu par défaut d'une vue. */
+import {
+	champsDOrganisation,
+	domainesDOrganisation,
+	dossiersDOrganisation,
+	etiquettesDOrganisation,
+	notesDOrganisation,
+	relationsDOrganisation,
+	typesDeFicheDOrganisation,
+	typesDeRelationDOrganisation,
+	fraicheurAttendueDOrganisation,
+	universDOrganisation
+} from './semence-organisation';
 
 /** Le dossier des migrations, relatif à la racine du dépôt. */
 export const DOSSIER_DES_MIGRATIONS = 'base/migrations';
@@ -342,12 +359,12 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 		/* Les univers. */
 		const universPoses = await tx
 			.insert(univers)
-			.values(lignesDUnivers().map((u) => ({ ...u })))
+			.values([...lignesDUnivers(), ...universDOrganisation()].map((u) => ({ ...u })))
 			.returning({ id: univers.id, nom: univers.nom });
 		const universParNom = new Map(universPoses.map((u) => [u.nom, u.id]));
 
 		/* Les domaines, et leurs modules. */
-		const lignesDomaine = lignesDeDomaine();
+		const lignesDomaine = [...lignesDeDomaine(), ...domainesDOrganisation()];
 		const domainesPoses = await tx
 			.insert(domaines)
 			.values(
@@ -402,7 +419,9 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 		const dossierParChemin = new Map<string, string>();
 		const cleDeChemin = (domaine: string, chemin: readonly string[]): string =>
 			`${domaine}\0${chemin.join('\0')}`;
-		const lignesDossier = [...lignesDeDossier()].sort((a, b) => a.profondeur - b.profondeur);
+		const lignesDossier = [...lignesDeDossier(), ...dossiersDOrganisation()].sort(
+			(a, b) => a.profondeur - b.profondeur
+		);
 		for (const ligne of lignesDossier) {
 			const parentChemin = ligne.chemin.slice(0, -1);
 			const parentId =
@@ -454,19 +473,28 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 		}
 
 		/* Le référentiel. */
-		const typesNotePoses = await tx
+		/* LES TYPES DE NOTE SONT POSÉS PAR LA MIGRATION `007`, pas par la semence :
+		   ce sont des valeurs de schéma, et une installation neuve doit pouvoir
+		   écrire sa première note sans avoir chargé le jeu de démonstration. Le
+		   semis les repose donc SANS ÉCHOUER SI ELLES SONT LÀ — une base montée
+		   avant `007` n'en a pas —, puis relit la table pour bâtir sa table de
+		   correspondance : les lignes ignorées ne reviennent pas d'un `returning`. */
+		await tx
 			.insert(typesDeNote)
 			.values(lignesDeTypeDeNote().map((t) => ({ ...t })))
-			.returning({ id: typesDeNote.id, nom: typesDeNote.nom });
+			.onConflictDoNothing();
+		const typesNotePoses = await tx
+			.select({ id: typesDeNote.id, nom: typesDeNote.nom })
+			.from(typesDeNote);
 		const typeDeNoteParNom = new Map(typesNotePoses.map((t) => [t.nom, t.id]));
 
 		const typesFichePoses = await tx
 			.insert(typesDeFiche)
-			.values(lignesDeTypeDeFiche().map((t) => ({ ...t })))
+			.values([...lignesDeTypeDeFiche(), ...typesDeFicheDOrganisation()].map((t) => ({ ...t })))
 			.returning({ id: typesDeFiche.id, nom: typesDeFiche.nom });
 		const typeDeFicheParNom = new Map(typesFichePoses.map((t) => [t.nom, t.id]));
 
-		const lignesChamp = lignesDeChamp();
+		const lignesChamp = [...lignesDeChamp(), ...champsDOrganisation()];
 		await tx.insert(champsDeTypeDeFiche).values(
 			lignesChamp.map((c) => ({
 				typeDeFicheId: exigerDefini(
@@ -482,7 +510,7 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 			}))
 		);
 
-		const lignesTypeRelation = lignesDeTypeDeRelation();
+		const lignesTypeRelation = [...lignesDeTypeDeRelation(), ...typesDeRelationDOrganisation()];
 		const typesRelationPoses = await tx
 			.insert(typesDeRelation)
 			.values(lignesTypeRelation.map((t) => ({ ...t })))
@@ -507,7 +535,9 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 			}))
 		);
 
-		const libelles = lignesDEtiquette();
+		const libelles = [...new Set([...lignesDEtiquette(), ...etiquettesDOrganisation()])].sort(
+			(a, b) => a.localeCompare(b, 'fr')
+		);
 		const etiquettesPosees = await tx
 			.insert(etiquettes)
 			.values(libelles.map((libelle) => ({ libelle })))
@@ -519,7 +549,7 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 			.values(lignesDeParametre().map((p) => ({ cle: p.cle, valeur: p.valeur })));
 
 		/* Les notes. */
-		const lignesNote = lignesDeNote();
+		const lignesNote = [...lignesDeNote(), ...notesDOrganisation()];
 		const notesPosees = await tx
 			.insert(notes)
 			.values(
@@ -580,7 +610,7 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 		);
 		await tx.insert(etiquettesDeNote).values(lignesEtiquetteDeNote);
 
-		const lignesRelation = lignesDeRelation();
+		const lignesRelation = [...lignesDeRelation(), ...relationsDOrganisation()];
 		await tx.insert(relations).values(
 			lignesRelation.map((r) => ({
 				sourceId: exigerDefini(
@@ -658,7 +688,10 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 				creeLe: notes.creeLe
 			})
 			.from(notes);
-		const niveauAttendu = new Map(CORPUS.map((n) => [n.id as string, n.fraicheur]));
+		const niveauAttendu = new Map<string, string>([
+			...CORPUS.map((n) => [n.id as string, n.fraicheur as string] as const),
+			...fraicheurAttendueDOrganisation()
+		]);
 		const menteuses: string[] = [];
 		for (const ligne of relues) {
 			const reference = ligne.verifieLe ?? ligne.modifieLe ?? ligne.creeLe;

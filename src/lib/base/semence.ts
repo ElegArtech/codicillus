@@ -354,11 +354,30 @@ export interface LigneDeNote {
 
 /* ═══════════════════════════════════════════════ Les dérivations ════════ */
 
+/**
+ * LE RENOMMAGE DE « PRODUCTION » EN « TECHNIQUE », À L'ÉTAGE DU SEMEUR.
+ *
+ * Il ne peut PAS se faire dans `seeds/corpus.ts` : ce fichier est la
+ * transcription des maquettes gelées, et `seeds/corpus.test.ts` le prouve en
+ * relisant `mockups/`. Le gel dit « Production », et il continuera de le dire.
+ *
+ * Mais le PRODUIT sert désormais deux univers de contenu — « Technique » et
+ * « Organisation » —, et « Production » n'était un bon nom que tant que le
+ * corpus était entièrement informatique. Le jeu semé le renomme donc ici, au
+ * seul endroit qui écrit en base. Conséquence assumée : les adresses passent de
+ * `/univers/production/…` à `/univers/technique/…`.
+ */
+const RENOMMAGES_DUNIVERS: Readonly<Record<string, string>> = { Production: 'Technique' };
+
+function nomDUniversSeme(nom: string): string {
+	return RENOMMAGES_DUNIVERS[nom] ?? nom;
+}
+
 /** Les univers, dans l'ordre que le corpus leur donne. */
 export function lignesDUnivers(): readonly LigneDUnivers[] {
 	return UNIVERS.map((u, rang) => ({
-		identifiant: identifiantLisible(u.nom),
-		nom: u.nom,
+		identifiant: identifiantLisible(nomDUniversSeme(u.nom)),
+		nom: nomDUniversSeme(u.nom),
 		description: u.description,
 		couleur: u.couleur,
 		glyphe: u.glyphe,
@@ -370,9 +389,15 @@ export function lignesDUnivers(): readonly LigneDUnivers[] {
 /** Les domaines, avec leur description et leurs modules activés. */
 export function lignesDeDomaine(): readonly LigneDeDomaine[] {
 	return DOMAINES.map((d) => {
+		/* `NomDeDomaine` est une CHAÎNE depuis que le vocabulaire s'ouvre : la
+		   table de détail peut donc ne rien porter pour un nom, et l'accès n'est
+		   plus garanti par le type. Un domaine du corpus en a toujours un — sinon
+		   le jeu est incohérent, et il vaut mieux le dire ici que rendre un
+		   domaine sans description ni module. */
 		const detail = DETAIL_DOMAINES[d.nom];
+		if (detail === undefined) throw new Error(`domaine sans détail : ${d.nom}`);
 		return {
-			universNom: d.univers,
+			universNom: nomDUniversSeme(d.univers),
 			identifiant: identifiantLisible(d.nom),
 			nom: d.nom,
 			description: detail.description,

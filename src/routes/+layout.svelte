@@ -39,6 +39,13 @@
 		},
 		get administrateur() {
 			return data.administrateur;
+		},
+		get univers() {
+			/* La page d'erreur peut être rendue sans données de gabarit. */
+			return data.univers ?? [];
+		},
+		get domaines() {
+			return data.domaines ?? [];
 		}
 	});
 

@@ -460,7 +460,7 @@
 			{:else}
 				<div class="grille-domaines">
 					{#each domaines as d (d.nom)}
-						{@const detail = detailDomaines[d.nom]}
+						{@const detail = detailDomaines[d.nom] ?? { description: '', modules: [] }}
 						{@const notesDom = corpus.filter((n) => n.domaine === d.nom)}
 						<article class="carte-dom" style="--teinte:{d.couleur}">
 							<div class="carte-dom__tete">

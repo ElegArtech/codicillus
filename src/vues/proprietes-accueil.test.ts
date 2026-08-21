@@ -155,7 +155,7 @@ describe('V-10 — page d’un univers', () => {
 		expect(b).toContain('<h1 id="titre">Production</h1>'); // univers
 		expect(b).not.toContain('Cet univers ne contient aucun domaine'); // domaines
 		expect(b).not.toContain('Rien de neuf cette semaine'); // activite
-		expect(b).toContain(DETAIL_DOMAINES['Infrastructure'].description); // detailDomaines
+		expect(b).toContain(DETAIL_DOMAINES['Infrastructure']?.description ?? ''); // detailDomaines
 		expect(b).toContain(MODULES.carteMentale.sous); // modules
 	}, 60_000);
 
@@ -195,7 +195,7 @@ describe('V-11 — page d’un domaine', () => {
 		expect(b).toContain('Karim Belhadj — menu utilisateur');
 		expect(b).toContain('Codicillus 1.0.0');
 		expect(b).toContain('<h1 id="titre">Infrastructure</h1>'); // domaines
-		expect(b).toContain(DETAIL_DOMAINES['Infrastructure'].description); // detailDomaines
+		expect(b).toContain(DETAIL_DOMAINES['Infrastructure']?.description ?? ''); // detailDomaines
 		expect(b).toContain('module__nom">Notes'); // modules
 		expect(b).toContain('Signalées par des collègues'); // revisions
 		expect(b).not.toContain('ligne-note__n">0 vues<'); // mesures7j
