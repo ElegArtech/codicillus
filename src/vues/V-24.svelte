@@ -139,6 +139,24 @@
 		 */
 		formatsImport?: Partial<Record<FormatDImport, string>>;
 		/**
+		 * UN LOT DÉJÀ DÉPOSÉ, REMIS PAR L'ÉCRAN QUI L'A REÇU — le gel de V-35.
+		 *
+		 * `mockups/V-35-console-imports.html:3000` fait atterrir le lot de la
+		 * console « à l'étape du choix de scénario » : les fichiers sont donc
+		 * REÇUS AVANT que le scénario ne soit choisi, et le parcours doit les
+		 * tenir pendant l'étape 1. Cette propriété est ce qui les tient.
+		 *
+		 * VIDE, RIEN NE CHANGE — le parcours s'ouvre sur une étape 1 vierge, et
+		 * le dépôt se fait à l'étape 2 comme le gel de V-24 le dessine. La zone
+		 * de dépôt de l'étape 2 reste vivante dans les deux cas : « Remplacer le
+		 * lot » du bloc `lot-depose` la rouvre.
+		 *
+		 * LE LOT N'EST PAS ANALYSÉ POUR AUTANT. Le classement demande une cible,
+		 * et la cible demande un scénario : le lot attend, exactement là où le
+		 * gel le dit.
+		 */
+		lotRecu?: readonly File[];
+		/**
 		 * L'ANALYSE D'UN LOT DÉPOSÉ — ce que la route fait du dépôt.
 		 *
 		 * Absente, le parcours reste celui de la planche : les vignettes se
@@ -214,6 +232,7 @@
 		instance = INSTANCE,
 		lotImport = LOT_IMPORT,
 		formatsImport = FORMATS_IMPORT,
+		lotRecu = [],
 		analyser,
 		importer,
 		domaineParDefaut
@@ -234,8 +253,23 @@
 
 	let etapeLocale = $state(1);
 	let scenarioLocal = $state<string | null>(null);
-	let fichiers = $state<readonly File[]>([]);
-	let sourceDuLot = $state('');
+	/**
+	 * LE LOT TENU PAR LE PARCOURS — vide au départ, SAUF si un écran l'a déjà
+	 * reçu et nous le remet (`lotRecu`, le dépôt de la console).
+	 *
+	 * L'initialisation est faite ici et pas dans un effet : un lot remis est
+	 * connu au montage, et le repasser par un effet ferait un premier rendu où
+	 * l'étape 2 s'annonce vide avant de se corriger.
+	 *
+	 * LA VALEUR INITIALE DE `lotRecu` EST BIEN CE QU'ON VEUT, et l'avertissement
+	 * `state_referenced_locally` ne s'applique donc pas : un lot est REMIS une
+	 * fois, à l'ouverture du parcours. Le suivre ensuite écraserait le lot que
+	 * l'utilisateur aurait remplacé à l'étape 2 par celui de son arrivée.
+	 */
+	// svelte-ignore state_referenced_locally
+	let fichiers = $state<readonly File[]>(lotRecu);
+	// svelte-ignore state_referenced_locally
+	let sourceDuLot = $state(lotRecu.length > 0 ? sourceDe(lotRecu) : '');
 	let lotAnalyse = $state<LotDImport | null>(null);
 	let rapport = $state<RapportAffiche | null>(null);
 	let enCours = $state(false);

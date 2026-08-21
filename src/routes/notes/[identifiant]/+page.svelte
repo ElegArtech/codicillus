@@ -76,15 +76,37 @@
 	 * partir une restauration vers une suppression.
 	 */
 	import { onMount } from 'svelte';
+	import { deserialize } from '$app/forms';
 	import Vue from '../../../vues/V-14.svelte';
 	import '../../../vues/V-14.css';
 	import { page } from '$app/state';
 	import { cablerLaSuppression, cablerLHistorique } from '$lib/cablage/formulaires';
 	import Historique from '../../../vues/V-15.svelte';
 	import '../../../vues/V-15.css';
+	import Dialogues from '../../../vues/V-40.svelte';
+	import '../../../vues/V-40.css';
+	import type { LibellesDeRelation } from '../../../../seeds/corpus';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	/**
+	 * LES TYPES DE RELATION, DANS LA FORME QUE LE DIALOGUE LIT.
+	 *
+	 * `d-relation` remplit son sélecteur par `Object.entries(typesRelation)` —
+	 * c'est le geste de `prepRelation()` au gel (`V-40:3424`), qui parcourt les
+	 * clés de `window.TYPES_RELATION`. Le chargeur, lui, sert une LISTE ordonnée
+	 * par l'ordre d'administration ; la table est composée dans cet ordre-là, que
+	 * l'insertion préserve, de sorte que le premier type offert reste le premier
+	 * proposé.
+	 */
+	const typesRelation = $derived.by<Readonly<Record<string, LibellesDeRelation>>>(() => {
+		const table: Record<string, LibellesDeRelation> = {};
+		for (const t of data.relation?.types ?? []) {
+			table[t.identifiant] = { sortant: t.sortant, entrant: t.entrant };
+		}
+		return table;
+	});
 
 	/** Les trois quantités de `RG-M04-10`, telles que le chargeur les sert. */
 	const rappel = $derived(
@@ -157,10 +179,29 @@
 					pieces: data.piecesJointes,
 					ecriture: data.vecteur.droits === 'ecriture'
 				});
+		/**
+		 * LE DIALOGUE `d-relation`, ET SON DÉCLENCHEUR.
+		 *
+		 * Il est câblé sur le DOCUMENT, et non sur le formulaire : la boîte vit
+		 * hors de l'enveloppe `<form action="?/supprimer">`, exprès. Ses champs
+		 * seraient sinon des champs de ce formulaire-là, et partiraient avec une
+		 * suppression.
+		 */
+		const relation = data.relation;
+		const defaireRelation =
+			historiqueOuvert || relation === null
+				? () => {}
+				: cablerLeDialogueDeRelation(formulaire.ownerDocument, {
+						cibles: relation.cibles,
+						types: typesRelation,
+						titreDeLaNote: data.lecture.note.titre,
+						action: `${adresse}/relations?/ajouter`
+					});
 		return () => {
 			defaireSuppression();
 			defaireHistorique();
 			defairePieces();
+			defaireRelation();
 		};
 	});
 
@@ -185,14 +226,23 @@
 	 * qu'on lit — la même méthode que `ouvrirLHistorique()`, qui reconnaît son
 	 * bouton au texte faute d'attribut.
 	 */
-	function panneauDesPieces(racine: Element): HTMLElement | null {
+	/**
+	 * `Document | Element`, ET SURTOUT PAS `ParentNode` — la batterie 1 a déjà
+	 * été rouge pour cette seule ligne : `ParentNode` est une interface de
+	 * typage, pas un objet global du navigateur, et `no-undef` la refuse. Les
+	 * deux types employés ici sont l'un et l'autre, et portent
+	 * `querySelectorAll`.
+	 */
+	function panneauNomme(racine: Document | Element, libelle: string): HTMLElement | null {
 		for (const section of Array.from(racine.querySelectorAll('section.panneau'))) {
 			const etiquette = section.querySelector('.panneau__tete .etiq');
-			if ((etiquette?.textContent ?? '').trim() === 'Pièces jointes') {
-				return section as HTMLElement;
-			}
+			if ((etiquette?.textContent ?? '').trim() === libelle) return section as HTMLElement;
 		}
 		return null;
+	}
+
+	function panneauDesPieces(racine: Element): HTMLElement | null {
+		return panneauNomme(racine, 'Pièces jointes');
 	}
 
 	/**
@@ -301,6 +351,277 @@
 		return () => debranchements.forEach((d) => d());
 	}
 
+	/* ═══════════════════════════ Le dialogue « Ajouter une relation » ═══════ */
+
+	/** Une note que l'appelant peut viser — ce que le chargeur en sert. */
+	interface CibleDeRelation {
+		readonly identifiant: string;
+		readonly titre: string;
+		readonly type: string;
+		readonly domaine: string;
+	}
+
+	/** Ce dont le câblage du dialogue a besoin, et rien de plus. */
+	interface CablageDeRelation {
+		readonly cibles: readonly CibleDeRelation[];
+		readonly types: Readonly<Record<string, LibellesDeRelation>>;
+		/** Le titre de la note d'où part la relation — l'aperçu le nomme. */
+		readonly titreDeLaNote: string;
+		/** L'action de route qui déclare la relation. */
+		readonly action: string;
+	}
+
+	/** `V-40:3444` — le lot de résultats que la liste montre au plus. */
+	const RESULTATS_DE_RECHERCHE = 6;
+
+	/**
+	 * LE DIALOGUE `d-relation`, MONTÉ DANS LA VUE QUI LE DÉCLENCHE.
+	 *
+	 * ═════════════════════════════════════════════════════════════════════════
+	 * CE QUE LE GEL DIT, ET QUI N'ÉTAIT PAS TENU
+	 *
+	 * `mockups/V-14-lecture-note.html:1848` : le panneau « Relations » porte un
+	 * bouton « + Ajouter », sous `si-ecriture`. `mockups/V-40-dialogues.html:3252`
+	 * dit de `d-relation` : `ou: "V-14"`. Et `docs/routes.md:211` ferme la
+	 * question — V-40 n'a aucune adresse propre, « chaque dialogue s'exécute dans
+	 * la vue qui le déclenche ».
+	 *
+	 * Le geste existait pourtant : il était sur `/notes/{identifiant}/relations`,
+	 * une adresse qu'aucune source ne prévoit, et le bouton du gel n'y menait
+	 * pas. Il y mène maintenant — et l'ACTION reste celle-là, inchangée : c'est
+	 * elle qui porte `RG-M08-03` (pas de doublon), `RG-M08-04` (le droit sur les
+	 * deux extrémités) et le refus indiscernable d'une inexistence. Rien de ce
+	 * qui décide n'est réécrit ici.
+	 *
+	 * ═════════════════════════════════════════════════════════════════════════
+	 * LES QUATRE GESTES DU SCRIPT GELÉ, TRANSCRITS
+	 *
+	 *   1. `prepRelation()` (`V-40:3423`) — à l'ouverture : aucune cible retenue,
+	 *      champ de recherche vide, bouton inhibé, usage et aperçu recomposés ;
+	 *   2. `majUsage()` (`V-40:3437`) — la phrase du `champ__aide`, au caractère
+	 *      près, dans les libellés du type SÉLECTIONNÉ (`RG-M08-06`) ;
+	 *   3. la recherche (`V-40:3488`) — au plus six résultats, le titre et la
+	 *      ligne « type · domaine », sélection au `mousedown` pour que le champ
+	 *      ne perde pas le focus avant le clic ;
+	 *   4. `majApercuRel()` (`V-40:3446`) — les deux phrases, sens direct et sens
+	 *      inverse, avec leur `phrase-rel__vide` tant qu'aucune note n'est visée.
+	 *
+	 * AUCUN NŒUD DU GEL N'EST CRÉÉ NI RETIRÉ EN DEHORS DE CES DEUX ZONES —
+	 * `#rel-liste` et `#rel-apercu` —, que le script de la maquette peuple lui
+	 * aussi et qui sont VIDES au gel. Aucune classe n'est inventée : `rel-item`,
+	 * `rel-item__t`, `rel-item__s`, `phrase-rel`, `phrase-rel__sens`,
+	 * `phrase-rel__vide` sont toutes du gel. Aucune règle de style n'est écrite.
+	 *
+	 * ═════════════════════════════════════════════════════════════════════════
+	 * LA MODALITÉ EST UN COMPORTEMENT, DONC ELLE EST ICI
+	 *
+	 * `showModal()`, et non l'attribut `open` : lui seul donne le voile
+	 * `::backdrop`, le piège de focus et la fermeture par Échap que `RG-M18-08`
+	 * exige. `src/vues/V-40.svelte` ne pose donc AUCUN `open` hors catalogue.
+	 *
+	 * UN REFUS N'A PAS DE VÊTEMENT AU GEL, ET C'EST DÉCLARÉ. La maquette annonce
+	 * l'issue par `window.notifier` (`V-40:3514`), que le produit n'a pas ; le
+	 * dialogue, lui, ne porte aucun bloc d'erreur. Le motif est donc dit par
+	 * `alert()`, comme la suppression et le retrait d'une pièce disent leur
+	 * rappel par `confirm()` dans ce même fichier. C'est une lacune de gel,
+	 * remontée au rapport, pas une invention d'écran.
+	 */
+	function cablerLeDialogueDeRelation(document: Document, options: CablageDeRelation): () => void {
+		const boite = document.querySelector<HTMLDialogElement>('dialog#d-relation');
+		const panneau = panneauNomme(document, 'Relations');
+		const declencheur = panneau?.querySelector<HTMLButtonElement>('.panneau__tete button') ?? null;
+		if (boite === null || declencheur === null) return () => {};
+
+		const typeChoisi = boite.querySelector<HTMLSelectElement>('#rel-type');
+		const usage = boite.querySelector<HTMLElement>('#rel-usage');
+		const cherche = boite.querySelector<HTMLInputElement>('#rel-cherche');
+		const liste = boite.querySelector<HTMLElement>('#rel-liste');
+		const apercu = boite.querySelector<HTMLElement>('#rel-apercu');
+		const valider = boite.querySelector<HTMLButtonElement>('#rel-valider');
+		if (
+			typeChoisi === null ||
+			usage === null ||
+			cherche === null ||
+			liste === null ||
+			apercu === null ||
+			valider === null
+		) {
+			return () => {};
+		}
+
+		/** La note visée, tant qu'aucune n'est choisie — `cibleRel` du gel. */
+		let visee: CibleDeRelation | null = null;
+
+		const libellesDuType = (): LibellesDeRelation =>
+			options.types[typeChoisi.value] ?? { sortant: '', entrant: '' };
+
+		/** `majUsage()` — la phrase du gel, au caractère près. */
+		const majUsage = (): void => {
+			const t = libellesDuType();
+			usage.textContent = `Se lira « ${t.sortant} » depuis cette note, et « ${t.entrant} » depuis l'autre.`;
+		};
+
+		/** `morceau()` du gel : un titre en italique, un libellé en gras, un vide. */
+		const morceau = (texte: string | null, gras: boolean): HTMLElement => {
+			if (texte === null || texte === '') {
+				const vide = document.createElement('span');
+				vide.className = 'phrase-rel__vide';
+				vide.textContent = '…note à choisir…';
+				return vide;
+			}
+			const noeud = document.createElement(gras ? 'b' : 'i');
+			noeud.textContent = texte;
+			return noeud;
+		};
+
+		/** `majApercuRel()` — les deux phrases, dans l'ordre du gel. */
+		const majApercu = (): void => {
+			apercu.replaceChildren();
+			const t = libellesDuType();
+			const autre = visee === null ? null : visee.titre;
+			const phrases: readonly (readonly [string | null, string, string | null, string])[] = [
+				[options.titreDeLaNote, t.sortant, autre, 'sens direct'],
+				[autre, t.entrant, options.titreDeLaNote, 'sens inverse']
+			];
+			for (const [gauche, milieu, droite, sens] of phrases) {
+				const ligne = document.createElement('div');
+				ligne.className = 'phrase-rel';
+				const marque = document.createElement('span');
+				marque.className = 'phrase-rel__sens';
+				marque.textContent = sens;
+				ligne.appendChild(marque);
+				const corps = document.createElement('span');
+				corps.append(
+					morceau(gauche, false),
+					' ',
+					morceau(milieu, true),
+					' ',
+					morceau(droite, false),
+					'.'
+				);
+				ligne.appendChild(corps);
+				apercu.appendChild(ligne);
+			}
+		};
+
+		/** La liste des résultats — vidée, puis repeuplée, comme le gel la fait. */
+		const chercher = (): void => {
+			const q = cherche.value.trim().toLowerCase();
+			liste.replaceChildren();
+			if (q === '') {
+				liste.setAttribute('data-ouvert', 'non');
+				return;
+			}
+			const trouvees = options.cibles
+				.filter((c) => c.titre.toLowerCase().includes(q))
+				.slice(0, RESULTATS_DE_RECHERCHE);
+			for (const note of trouvees) {
+				const entree = document.createElement('button');
+				entree.className = 'rel-item';
+				entree.type = 'button';
+				const titre = document.createElement('div');
+				titre.className = 'rel-item__t';
+				titre.textContent = note.titre;
+				const sous = document.createElement('div');
+				sous.className = 'rel-item__s';
+				sous.textContent = `${note.type} · ${note.domaine}`;
+				entree.append(titre, sous);
+				/* `mousedown` et non `click` : le gel le fait ainsi, et pour une
+				   raison — le champ de recherche perdrait le focus avant que le clic
+				   n'aboutisse, et la liste se refermerait sous le curseur. */
+				entree.addEventListener('mousedown', (evenement) => {
+					evenement.preventDefault();
+					visee = note;
+					cherche.value = note.titre;
+					liste.setAttribute('data-ouvert', 'non');
+					valider.disabled = false;
+					majApercu();
+				});
+				liste.appendChild(entree);
+			}
+			liste.setAttribute('data-ouvert', liste.children.length > 0 ? 'oui' : 'non');
+		};
+
+		/** `prepRelation()` — l'état d'ouverture, remis à neuf à chaque fois. */
+		const preparer = (): void => {
+			visee = null;
+			cherche.value = '';
+			liste.replaceChildren();
+			liste.setAttribute('data-ouvert', 'non');
+			valider.disabled = true;
+			majUsage();
+			majApercu();
+		};
+
+		const ouvrir = (): void => {
+			preparer();
+			boite.showModal();
+		};
+		const surType = (): void => {
+			majUsage();
+			majApercu();
+		};
+		const declarer = (): void => {
+			if (visee === null) return;
+			void envoyerLaRelation(options.action, typeChoisi.value, visee.identifiant, boite);
+		};
+
+		declencheur.addEventListener('click', ouvrir);
+		typeChoisi.addEventListener('change', surType);
+		cherche.addEventListener('input', chercher);
+		valider.addEventListener('click', declarer);
+
+		/* Les deux boutons `data-fermer` du gel — la croix et « Annuler ». */
+		const fermetures = Array.from(boite.querySelectorAll<HTMLButtonElement>('[data-fermer]'));
+		const fermer = (): void => boite.close();
+		for (const bouton of fermetures) bouton.addEventListener('click', fermer);
+
+		preparer();
+
+		return () => {
+			declencheur.removeEventListener('click', ouvrir);
+			typeChoisi.removeEventListener('change', surType);
+			cherche.removeEventListener('input', chercher);
+			valider.removeEventListener('click', declarer);
+			for (const bouton of fermetures) bouton.removeEventListener('click', fermer);
+		};
+	}
+
+	/**
+	 * L'ENVOI À L'ACTION `ajouter` DE `/notes/{identifiant}/relations`.
+	 *
+	 * `deserialize` DE SVELTEKIT EST EMPLOYÉ, et il n'est pas décoratif : la
+	 * réponse d'une action est sérialisée par `devalue`, qui porte des formes que
+	 * `JSON` perd. C'est le geste de `/importer`, et pour la même raison.
+	 *
+	 * AUCUNE ACTION N'EST CRÉÉE POUR CE GESTE. `ajouter` existe, elle est éprouvée
+	 * et elle porte les deux règles qui comptent ; en écrire une seconde ici
+	 * ferait deux chemins pour un même geste, dont l'un finirait par diverger.
+	 */
+	async function envoyerLaRelation(
+		action: string,
+		type: string,
+		cible: string,
+		boite: HTMLDialogElement
+	): Promise<void> {
+		const corps = new FormData();
+		corps.append('type', type);
+		corps.append('cible', cible);
+		const reponse = await fetch(action, { method: 'POST', body: corps });
+		const resultat = deserialize(await reponse.text());
+		if (resultat.type === 'success') {
+			boite.close();
+			/* La relation apparaît des DEUX côtés, et le panneau de cette note est
+			   servi par le chargeur : c'est lui qu'il faut refaire parler. */
+			boite.ownerDocument.location.reload();
+			return;
+		}
+		const charge = resultat.type === 'failure' ? (resultat.data ?? null) : null;
+		const annonce = charge === null ? undefined : charge['motif'];
+		const motif = typeof annonce === 'string' ? annonce : 'la relation n’a pas pu être déclarée';
+		boite.ownerDocument.defaultView?.alert(`Relation refusée : ${motif}.`);
+	}
+
 	/**
 	 * Le nom de la pièce visée par le retrait, en champ caché du formulaire.
 	 *
@@ -363,3 +684,30 @@
 		/>
 	{/if}
 </form>
+
+<!--
+	LA BOÎTE « AJOUTER UNE RELATION », HORS DU FORMULAIRE — ET C'EST DÉLIBÉRÉ.
+
+	Elle porte un sélecteur et un champ de recherche. À l'intérieur de
+	l'enveloppe `<form action="?/supprimer">`, ils en deviendraient des champs, et
+	partiraient avec une suppression. Elle vit donc en frère du formulaire, où le
+	gel la met : `mockups/V-40-dialogues.html:1228` la pose au premier niveau du
+	document, hors de `div.app`.
+
+	`P-09` — ELLE N'EST MONTÉE QUE SI LE GESTE EST POSSIBLE. `data.relation` vaut
+	`null` sans le droit d'écrire : ni la boîte, ni ses actions n'entrent alors
+	dans le DOM. Et pas davantage quand l'historique est ouvert : c'est V-15 qui
+	est à l'écran, et son panneau « Relations » n'existe pas.
+
+	`catalogue={false}` — le seul dialogue nommé, sans le cadre de la planche et
+	sans attribut `open` : la modalité est posée au clic par `showModal()`.
+-->
+{#if !historiqueOuvert && data.relation !== null}
+	<Dialogues
+		etat="d-relation"
+		catalogue={false}
+		notes={data.notes}
+		note={data.lecture.note}
+		{typesRelation}
+	/>
+{/if}
