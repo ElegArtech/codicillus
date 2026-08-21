@@ -47,10 +47,18 @@
  * importés au niveau du module (`V-22.svelte:57`). Seules les NOTES entrent par
  * propriété, et c'est par là que la base entre. Écart déclaré au rapport du lot.
  */
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { contexteDeRequete, resoudreLAccesAuxSignets, vecteurDeV22 } from '$lib/donnees/signets';
-import type { PageServerLoad } from './$types';
+import {
+	contexteDeRequete,
+	lireLeRangement,
+	resoudreLAccesAuxSignets,
+	resoudreUnSignet,
+	vecteurDeV22
+} from '$lib/donnees/signets';
+import { supprimerUnSignet } from '$lib/donnees/signets-ecriture';
+import { moteurPartage } from '$lib/recherche/acces';
+import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -65,6 +73,46 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	return {
 		vecteur: vecteurDeV22(acces.ressource.domaine, acces.ressource.ecriture),
-		notes: acces.ressource.notes
+		notes: acces.ressource.notes,
+		/**
+		 * DE QUOI RETROUVER UN SIGNET DEPUIS SA CARTE.
+		 *
+		 * Les deux boutons de chaque carte — « Modifier », « Supprimer » — ne
+		 * faisaient rien : le gel ne pose sur la carte ni identifiant ni adresse
+		 * d'action, et lui en ajouter un serait toucher `src/vues/`. La carte
+		 * porte en revanche le TITRE et l'ADRESSE curatée, et le couple des deux
+		 * désigne le signet sans ambiguïté dans un domaine.
+		 */
+		signets: acces.ressource.notes
+			.filter((n) => n.type === 'Signet')
+			.map((n) => ({ identifiant: n.id, titre: n.titre, url: n.url ?? '' }))
 	};
+};
+
+export const actions: Actions = {
+	/**
+	 * SUPPRIMER UN SIGNET depuis sa carte. Le droit est celui de la lecture
+	 * prolongée — `resoudreUnSignet()` exige déjà l'écriture —, et le refus est
+	 * le même `404` que partout dans cette famille.
+	 */
+	supprimer: async ({ params, locals, request }) => {
+		const base = basePartagee();
+		const segments = { univers: params.univers, domaine: params.domaine };
+		const brut = (await request.formData()).get('signet');
+		const identifiant = typeof brut === 'string' ? brut : '';
+		const acces = await resoudreUnSignet(
+			base,
+			await contexteDeRequete(base),
+			locals.identite,
+			segments,
+			identifiant
+		);
+		if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
+
+		const rangement = await lireLeRangement(base, segments);
+		if (rangement === null) error(404, MESSAGE_INTROUVABLE);
+		const fait = await supprimerUnSignet(base, moteurPartage(), identifiant, rangement.domaineId);
+		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
+		redirect(303, `/univers/${params.univers}/${params.domaine}/signets`);
+	}
 };
