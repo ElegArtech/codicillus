@@ -22,9 +22,50 @@
 	 */
 	import Vue from '../../vues/V-21.svelte';
 	import '../../vues/V-21.css';
+	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	let enveloppe: HTMLDivElement;
+
+	/**
+	 * LA BASCULE « ARBRE / LISTE » — et c'est `P-06` qu'elle sert.
+	 *
+	 * « Alternative textuelle sur tout contenu graphique » est un principe non
+	 * négociable : la carte mentale doit disposer d'une restitution exploitable
+	 * SANS le rendu graphique. Le gel la rend en permanence et la révèle par
+	 * cette bascule — `V-21.css:388`, `.app[data-affichage="liste"] .liste-arbre
+	 * { display: block }` — et la bascule ne faisait rien. La restitution
+	 * existait donc, et personne ne pouvait l'atteindre.
+	 *
+	 * On pose l'attribut que la règle GELÉE attend, et rien d'autre. Les deux
+	 * boutons portent déjà `aria-pressed` : l'état est dit aux techniques
+	 * d'assistance par le gel lui-même.
+	 */
+	onMount(() => {
+		const app = enveloppe.querySelector('.app');
+		const boutons = Array.from(
+			enveloppe.querySelectorAll<HTMLButtonElement>('button[data-affichage]')
+		);
+		if (app === null || boutons.length === 0) return;
+		const basculer = (evenement: Event): void => {
+			const bouton = (evenement.target as Element | null)?.closest<HTMLButtonElement>(
+				'button[data-affichage]'
+			);
+			if (bouton === null || bouton === undefined) return;
+			evenement.preventDefault();
+			const choisi = bouton.dataset['affichage'] ?? 'arbre';
+			app.setAttribute('data-affichage', choisi);
+			for (const autre of boutons) {
+				autre.setAttribute('aria-pressed', autre === bouton ? 'true' : 'false');
+			}
+		};
+		enveloppe.addEventListener('click', basculer);
+		return () => enveloppe.removeEventListener('click', basculer);
+	});
 </script>
 
-<Vue vecteur={data.vecteur} notes={data.notes} univers={data.univers} domaines={data.domaines} />
+<div bind:this={enveloppe} style="display:contents">
+	<Vue vecteur={data.vecteur} notes={data.notes} univers={data.univers} domaines={data.domaines} />
+</div>
