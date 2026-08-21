@@ -1,0 +1,282 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600;7..72,700&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; padding: 0; background: #fcfbf8; color: #16222b;
+      font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif; font-size: 16px; line-height: 1.55;
+      -webkit-font-smoothing: antialiased; }
+    html { scroll-behavior: smooth; }
+    a { color: #453ba0; }
+    a:hover { color: #322b78; }
+    ::selection { background: #edecf8; }
+    img { display: block; max-width: 100%; }
+    @keyframes monte { from { opacity: 0; transform: translateY(22px) } to { opacity: 1; transform: none } }
+    @keyframes monteCadre { from { opacity: 0; transform: translateY(48px) } to { opacity: 1; transform: none } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important } }
+
+    /* Les grilles se replient. Les styles en ligne restent la source du rendu
+       de bureau — que le panneau de propriétés sait éditer — et ces règles ne
+       s'appliquent qu'en dessous des seuils, d'où le `!important`. */
+    @media (max-width: 1080px) {
+      .g-cinq { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+      .g-duo, .g-inverse { grid-template-columns: minmax(0, 1fr) !important; gap: 40px !important; }
+      .g-inverse > *:first-child { order: 2; }
+    }
+    @media (max-width: 860px) {
+      .g-trois, .g-deux { grid-template-columns: minmax(0, 1fr) !important; }
+      .nav-liens { display: none !important; }
+    }
+    @media (max-width: 640px) {
+      .g-cinq { grid-template-columns: minmax(0, 1fr) !important; }
+      h1 { font-size: 34px !important; }
+      h2 { font-size: 26px !important; }
+    }
+  </style>
+</helmet>
+
+<div>
+
+<!-- ═══════════════════════════════ En-tête ═══════════════════════════════ -->
+<header style="position: sticky; top: 0; z-index: 50; background: rgba(252,251,248,.94); backdrop-filter: blur(8px); border-bottom: 1px solid #e0e5e2">
+  <div style="max-width: 1160px; margin: 0 auto; display: flex; align-items: center; gap: 32px; padding: 15px 24px">
+    <div style="font-family: 'Literata', Georgia, serif; font-size: 21px; font-weight: 600; letter-spacing: .1px">Codicillus</div>
+    <nav class="nav-liens" style="display: flex; gap: 26px; font-size: 14px; font-weight: 500; margin-left: auto">
+      <a href="#fraicheur" style="color: #46585f; text-decoration: none; transition: color .15s ease" style-hover="color:#16222b">La fraîcheur</a>
+      <a href="#registres" style="color: #46585f; text-decoration: none; transition: color .15s ease" style-hover="color:#16222b">Les deux registres</a>
+      <a href="#graphe" style="color: #46585f; text-decoration: none; transition: color .15s ease" style-hover="color:#16222b">Le graphe</a>
+      <a href="#ecrans" style="color: #46585f; text-decoration: none; transition: color .15s ease" style-hover="color:#16222b">Les écrans</a>
+    </nav>
+    <a href="#essayer" style="background: #453ba0; color: #fcfbf8; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 18px; border-radius: 4px; transition: background .15s ease" style-hover="background:#322b78">Demander une démonstration</a>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════ Héros ═════════════════════════════════ -->
+<section style="background: #16222b; color: #fcfbf8; padding: 92px 24px 0; overflow: hidden">
+  <div style="max-width: 1160px; margin: 0 auto">
+    <div style="max-width: 780px">
+      <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #a9a2e0; margin-bottom: 22px; animation: monte .5s ease both">Base de connaissances documentaire · auto-hébergée</div>
+      <h1 style="font-family: 'Literata', Georgia, serif; font-weight: 600; font-size: 54px; line-height: 1.12; margin: 0 0 24px; max-width: 720px; text-wrap: balance; animation: monte .6s ease .08s both">Une documentation dont on sait si elle est encore vraie.</h1>
+      <p style="font-size: 19px; line-height: 1.62; color: #c2ccce; margin: 0 0 34px; max-width: 660px; text-wrap: pretty; animation: monte .6s ease .16s both">Codicillus réunit les procédures, guides, architectures et fiches techniques d'une direction technique en un seul point d'entrée. Chaque note affiche si elle est encore digne de confiance — et se remet au vert en un clic.</p>
+      <div style="display: flex; gap: 14px; margin-bottom: 60px; animation: monte .6s ease .24s both">
+        <a href="#essayer" style="background: #fcfbf8; color: #16222b; text-decoration: none; font-size: 15px; font-weight: 600; padding: 13px 24px; border-radius: 4px; transition: transform .18s ease, box-shadow .18s ease" style-hover="transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.32)">Demander une démonstration</a>
+        <a href="#ecrans" style="border: 1px solid #4d5f66; color: #fcfbf8; text-decoration: none; font-size: 15px; font-weight: 600; padding: 13px 24px; border-radius: 4px; transition: background .18s ease, border-color .18s ease" style-hover="background:rgba(252,251,248,.08);border-color:#93a2a6">Voir les écrans</a>
+      </div>
+    </div>
+
+    <div style="position: relative; max-width: 1160px; margin: 0 auto; animation: monteCadre .9s cubic-bezier(.22,.61,.36,1) .3s both">
+      <div style="border: 1px solid #2c3b44; border-bottom: none; border-radius: 5px 5px 0 0; overflow: hidden; box-shadow: 0 -10px 44px rgba(0,0,0,.42); background: #e2e7e4">
+        <img src="ecran-note.jpg" alt="Lecture d'une note dans Codicillus, avec son signal de fraîcheur et ses deux registres" style="width: 100%; height: auto">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ Le problème ═══════════════════════════ -->
+<section style="background: #e2e7e4; padding: 76px 24px">
+  <div style="max-width: 1160px; margin: 0 auto">
+    <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #536066; margin-bottom: 18px">Ce qu'on remplace</div>
+    <h2 style="font-family: 'Literata', Georgia, serif; font-weight: 600; font-size: 34px; line-height: 1.22; margin: 0 0 44px; max-width: 700px; text-wrap: pretty">Le partage réseau ne dit jamais si un document est encore bon.</h2>
+    <div class="g-trois" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px">
+      <div style="background: #fcfbf8; border: 1px solid #cbd3d0; border-radius: 5px; padding: 26px 24px 28px">
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #a52c1b; margin-bottom: 12px">01</div>
+        <h3 style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 600; margin: 0 0 10px; line-height: 1.35">On ne trouve rien en transversal</h3>
+        <p style="font-size: 15px; line-height: 1.6; color: #46585f; margin: 0">Les arborescences de fichiers ne se cherchent pas. Une procédure existe, personne ne sait où, et elle est réécrite une troisième fois.</p>
+      </div>
+      <div style="background: #fcfbf8; border: 1px solid #cbd3d0; border-radius: 5px; padding: 26px 24px 28px">
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #a52c1b; margin-bottom: 12px">02</div>
+        <h3 style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 600; margin: 0 0 10px; line-height: 1.35">On ne sait pas si c'est à jour</h3>
+        <p style="font-size: 15px; line-height: 1.6; color: #46585f; margin: 0">Un document sans date de vérification ne se lit pas : dans le doute, on appelle un collègue. La documentation cesse d'exister.</p>
+      </div>
+      <div style="background: #fcfbf8; border: 1px solid #cbd3d0; border-radius: 5px; padding: 26px 24px 28px">
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #a52c1b; margin-bottom: 12px">03</div>
+        <h3 style="font-family: 'Archivo', sans-serif; font-size: 17px; font-weight: 600; margin: 0 0 10px; line-height: 1.35">Contribuer coûte une demi-journée</h3>
+        <p style="font-size: 15px; line-height: 1.6; color: #46585f; margin: 0">Ouvrir un traitement de texte, mettre en page, trouver où déposer. Le coût d'entrée est tel que la connaissance reste dans les têtes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ La fraîcheur ══════════════════════════ -->
+<section id="fraicheur" style="background: #fcfbf8; padding: 88px 24px">
+  <div style="max-width: 1160px; margin: 0 auto">
+    <div class="g-duo" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; align-items: center">
+      <div>
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #453ba0; margin-bottom: 18px">Le différenciateur</div>
+        <h2 style="font-family: 'Literata', Georgia, serif; font-weight: 600; font-size: 34px; line-height: 1.22; margin: 0 0 20px; text-wrap: pretty">Chaque note dit d'elle-même si on peut encore s'y fier.</h2>
+        <p style="font-size: 17px; line-height: 1.65; color: #46585f; margin: 0 0 22px">Un calcul sur la date de dernière vérification, rien de plus. Le signal est visible partout — dans les listes, dans la recherche, sur la note. Il casse le cercle vicieux du « je ne lis pas la doc parce que je ne sais pas si elle est à jour ».</p>
+        <p style="font-size: 17px; line-height: 1.65; color: #46585f; margin: 0 0 28px">Le remettre au vert coûte <strong style="color: #16222b; font-weight: 600">un clic et une seconde</strong> : relire, confirmer que c'est toujours juste. Pas de circuit de validation, pas de réunion.</p>
+        <a href="#ecrans" style="font-size: 15px; font-weight: 600; text-decoration: none; border-bottom: 1px solid #c9c5e8; padding-bottom: 2px">Voir le signal dans le produit →</a>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <div style="background: #e4efe8; border: 1px solid #b9d4c5; border-left: 3px solid #1d6b4a; border-radius: 5px; padding: 18px 20px">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px">
+            <span style="display: inline-flex; gap: 2px" aria-hidden="true"><i style="display: block; width: 4px; height: 13px; background: #1d6b4a; border-radius: 1px"></i><i style="display: block; width: 4px; height: 13px; background: #1d6b4a; border-radius: 1px"></i><i style="display: block; width: 4px; height: 13px; background: #1d6b4a; border-radius: 1px"></i></span>
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #1d6b4a; font-weight: 500">Fraîche</span>
+          </div>
+          <p style="font-size: 15px; line-height: 1.55; color: #46585f; margin: 0">Vérifiée récemment. On l'applique sans se poser de question.</p>
+        </div>
+        <div style="background: #f6eedd; border: 1px solid #e0cfa6; border-left: 3px solid #8f5c00; border-radius: 5px; padding: 18px 20px">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px">
+            <span style="display: inline-flex; gap: 2px" aria-hidden="true"><i style="display: block; width: 4px; height: 13px; background: #8f5c00; border-radius: 1px"></i><i style="display: block; width: 4px; height: 13px; background: #8f5c00; border-radius: 1px"></i><i style="display: block; width: 4px; height: 13px; background: #d6c9a8; border-radius: 1px"></i></span>
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #8f5c00; font-weight: 500">Vieillissante</span>
+          </div>
+          <p style="font-size: 15px; line-height: 1.55; color: #46585f; margin: 0">Le seuil approche. À relire à la prochaine occasion.</p>
+        </div>
+        <div style="background: #f7e7e3; border: 1px solid #e6bfb6; border-left: 3px solid #a52c1b; border-radius: 5px; padding: 18px 20px">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px">
+            <span style="display: inline-flex; gap: 2px" aria-hidden="true"><i style="display: block; width: 4px; height: 13px; background: #a52c1b; border-radius: 1px"></i><i style="display: block; width: 4px; height: 13px; background: #e0b8b0; border-radius: 1px"></i><i style="display: block; width: 4px; height: 13px; background: #e0b8b0; border-radius: 1px"></i></span>
+            <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #a52c1b; font-weight: 500">Obsolète probable</span>
+          </div>
+          <p style="font-size: 15px; line-height: 1.55; color: #46585f; margin: 0">Le seuil est dépassé. On vérifie avant d'appliquer.</p>
+        </div>
+        <p style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; line-height: 1.5; color: #536066; margin: 6px 0 0">Les deux seuils se règlent par instance, dans la console.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ Les deux registres ════════════════════ -->
+<section id="registres" style="background: #e2e7e4; padding: 88px 24px">
+  <div style="max-width: 1160px; margin: 0 auto">
+    <div class="g-duo" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 64px; align-items: center">
+      <div>
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #453ba0; margin-bottom: 18px">Deux lectures, un seul fond</div>
+        <h2 style="font-family: 'Literata', Georgia, serif; font-weight: 600; font-size: 34px; line-height: 1.22; margin: 0 0 20px; text-wrap: pretty">On ne lit pas de la même façon à son bureau et en intervention.</h2>
+        <p style="font-size: 17px; line-height: 1.65; color: #46585f; margin: 0 0 24px">Une même note porte deux registres. <strong style="color: #16222b; font-weight: 600">Référence</strong> : dense, exhaustif, ce qu'on lit pour comprendre. <strong style="color: #16222b; font-weight: 600">Opérationnel</strong> : le pas-à-pas, ce qu'on suit à trois heures du matin devant une baie.</p>
+        <p style="font-size: 17px; line-height: 1.65; color: #46585f; margin: 0">Ce n'est pas un résumé de l'autre : c'est un autre registre du même fond. Quand la Référence change, l'Opérationnel signale qu'il est à resynchroniser.</p>
+      </div>
+      <div style="border: 1px solid #9aa7a3; border-radius: 5px; overflow: hidden; box-shadow: 0 14px 40px rgba(22,34,43,.16)">
+        <img src="ecran-operationnel.jpg" alt="L'éditeur du registre Opérationnel, avec la Référence en regard et l'avis de resynchronisation" style="width: 100%; height: auto">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ Le graphe ═════════════════════════════ -->
+<section id="graphe" style="background: #fcfbf8; padding: 88px 24px">
+  <div style="max-width: 1160px; margin: 0 auto">
+    <div class="g-duo g-inverse" style="display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 64px; align-items: center">
+      <div style="border: 1px solid #cbd3d0; border-radius: 5px; overflow: hidden; box-shadow: 0 14px 40px rgba(22,34,43,.12)">
+        <img src="ecran-cartographie.jpg" alt="La cartographie relationnelle de Codicillus : applications, serveurs et équipements reliés" style="width: 100%; height: auto">
+      </div>
+      <div>
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #453ba0; margin-bottom: 18px">Le corpus est un graphe</div>
+        <h2 style="font-family: 'Literata', Georgia, serif; font-weight: 600; font-size: 34px; line-height: 1.22; margin: 0 0 20px; text-wrap: pretty">Qui héberge quoi, qui dépend de quoi, où sont les points uniques de défaillance.</h2>
+        <p style="font-size: 17px; line-height: 1.65; color: #46585f; margin: 0 0 24px">Les notes typées — Application, Serveur, Équipement réseau, Contact — se relient par des relations qualifiées. La documentation devient un schéma de dépendances qu'on interroge, au lieu d'un dossier qu'on fouille.</p>
+        <p style="font-size: 17px; line-height: 1.65; color: #46585f; margin: 0">Deux vues : la cartographie d'ensemble, et la carte mentale d'une note et de son voisinage.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ Les écrans ════════════════════════════ -->
+<section id="ecrans" style="background: #16222b; color: #fcfbf8; padding: 88px 24px">
+  <div style="max-width: 1160px; margin: 0 auto">
+    <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #a9a2e0; margin-bottom: 18px">Le produit</div>
+    <h2 style="font-family: 'Literata', Georgia, serif; font-weight: 600; font-size: 34px; line-height: 1.22; margin: 0 0 48px; max-width: 640px; text-wrap: pretty">Quatre écrans du quotidien.</h2>
+    <div class="g-deux" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px">
+      <figure style="margin: 0">
+        <div style="border: 1px solid #2c3b44; border-radius: 5px; overflow: hidden; background: #e2e7e4">
+          <img src="ecran-accueil.jpg" alt="L'accueil d'un contributeur : ce qui a bougé, ce qui vieillit, ce qu'on lui demande" style="width: 100%; height: auto">
+        </div>
+        <figcaption style="margin-top: 14px">
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 4px">L'accueil</div>
+          <div style="font-size: 14px; line-height: 1.55; color: #a3b0b3">Ce qui a bougé dans son périmètre, ce qui vieillit, ce qu'on lui demande de relire.</div>
+        </figcaption>
+      </figure>
+      <figure style="margin: 0">
+        <div style="border: 1px solid #2c3b44; border-radius: 5px; overflow: hidden; background: #e2e7e4">
+          <img src="ecran-recherche.jpg" alt="La recherche de Codicillus, avec ses facettes et le signal de fraîcheur sur chaque résultat" style="width: 100%; height: auto">
+        </div>
+        <figcaption style="margin-top: 14px">
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 4px">La recherche</div>
+          <div style="font-size: 14px; line-height: 1.55; color: #a3b0b3">Instantanée, tolérante aux fautes, avec la fraîcheur affichée sur chaque résultat.</div>
+        </figcaption>
+      </figure>
+      <figure style="margin: 0">
+        <div style="border: 1px solid #2c3b44; border-radius: 5px; overflow: hidden; background: #e2e7e4">
+          <img src="ecran-editeur.jpg" alt="L'éditeur de note, en registre Référence" style="width: 100%; height: auto">
+        </div>
+        <figcaption style="margin-top: 14px">
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 4px">La rédaction</div>
+          <div style="font-size: 14px; line-height: 1.55; color: #a3b0b3">Éditeur riche, gabarits de départ, historique de versions. Une procédure simple en quelques minutes.</div>
+        </figcaption>
+      </figure>
+      <figure style="margin: 0">
+        <div style="border: 1px solid #2c3b44; border-radius: 5px; overflow: hidden; background: #e2e7e4">
+          <img src="ecran-analytique.jpg" alt="La console analytique : taux de recherche aboutie, notes orphelines, trous du corpus" style="width: 100%; height: auto">
+        </div>
+        <figcaption style="margin-top: 14px">
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 4px">Le pilotage</div>
+          <div style="font-size: 14px; line-height: 1.55; color: #a3b0b3">Taux de recherche aboutie, notes jamais lues, questions restées sans réponse.</div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ À qui ça sert ═════════════════════════ -->
+<section style="background: #fcfbf8; padding: 88px 24px">
+  <div style="max-width: 1160px; margin: 0 auto">
+    <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #453ba0; margin-bottom: 18px">À qui ça sert</div>
+    <h2 style="font-family: 'Literata', Georgia, serif; font-weight: 600; font-size: 34px; line-height: 1.22; margin: 0 0 44px; max-width: 700px; text-wrap: pretty">Cinq façons de s'en servir, dans une direction technique de 50 à 200 personnes.</h2>
+    <div class="g-cinq" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px">
+      <div style="border-top: 2px solid #453ba0; padding-top: 18px">
+        <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 8px">L'intervenant</h3>
+        <p style="font-size: 14px; line-height: 1.55; color: #46585f; margin: 0">Trouver la bonne procédure en moins de dix secondes, et savoir si elle est fiable.</p>
+      </div>
+      <div style="border-top: 2px solid #453ba0; padding-top: 18px">
+        <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 8px">Le contributeur</h3>
+        <p style="font-size: 14px; line-height: 1.55; color: #46585f; margin: 0">Formaliser ce qu'il sait sans que ça lui coûte une demi-journée.</p>
+      </div>
+      <div style="border-top: 2px solid #453ba0; padding-top: 18px">
+        <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 8px">Le référent</h3>
+        <p style="font-size: 14px; line-height: 1.55; color: #46585f; margin: 0">Voir l'état de santé de son périmètre, savoir ce qui est obsolète, arbitrer.</p>
+      </div>
+      <div style="border-top: 2px solid #453ba0; padding-top: 18px">
+        <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 8px">Le lecteur externe</h3>
+        <p style="font-size: 14px; line-height: 1.55; color: #46585f; margin: 0">Consulter les guides publics sans compte, depuis n'importe quel navigateur.</p>
+      </div>
+      <div style="border-top: 2px solid #453ba0; padding-top: 18px">
+        <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 8px">L'administrateur</h3>
+        <p style="font-size: 14px; line-height: 1.55; color: #46585f; margin: 0">Configurer la structure, les comptes et les référentiels ; mesurer l'adoption.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ Appel à l'action ══════════════════════ -->
+<section id="essayer" style="background: #e2e7e4; padding: 84px 24px; border-top: 1px solid #cbd3d0">
+  <div style="max-width: 760px; margin: 0 auto; text-align: center">
+    <h2 style="font-family: 'Literata', Georgia, serif; font-weight: 600; font-size: 36px; line-height: 1.2; margin: 0 0 18px; text-wrap: pretty">Auto-hébergé, chez vous, sur vos serveurs.</h2>
+    <p style="font-size: 17px; line-height: 1.65; color: #46585f; margin: 0 0 32px">Aucune donnée ne sort de votre infrastructure. L'import reprend l'existant — traitement de texte, présentations, PDF, Markdown — en conservant l'arborescence.</p>
+    <a href="mailto:[VOTRE ADRESSE DE CONTACT]" style="display: inline-block; background: #453ba0; color: #fcfbf8; text-decoration: none; font-size: 16px; font-weight: 600; padding: 15px 30px; border-radius: 4px; transition: background .15s ease, transform .18s ease" style-hover="background:#322b78;transform:translateY(-2px)">Demander une démonstration</a>
+    <p style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; line-height: 1.6; color: #536066; margin: 22px 0 0">[VOTRE ADRESSE DE CONTACT] · [CONDITIONS DE MISE À DISPOSITION]</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ Pied ═════════════════════════════════ -->
+<footer style="background: #16222b; color: #93a2a6; padding: 34px 24px">
+  <div style="max-width: 1160px; margin: 0 auto; display: flex; align-items: center; gap: 24px; font-size: 13px">
+    <div style="font-family: 'Literata', Georgia, serif; font-size: 17px; font-weight: 600; color: #fcfbf8">Codicillus</div>
+    <div style="margin-left: auto">Les captures d'écran sont celles du produit.</div>
+  </div>
+</footer>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1440,"height":5100}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>
