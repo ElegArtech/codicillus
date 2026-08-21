@@ -20,7 +20,8 @@
 		"base:annuler": "node base/base.mjs annuler",
 		"base:etat": "node base/base.mjs etat",
 		"base:semer": "node base/base.mjs semer",
-		"base:reindexer": "node base/base.mjs reindexer"
+		"base:reindexer": "node base/base.mjs reindexer",
+		"base:administrateur": "node base/base.mjs administrateur"
 	},
 	"dependencies": {
 		"@node-rs/argon2": "2.1.0",

@@ -64,12 +64,20 @@
 	   porté ces noms. Mesuré le 21/08/2026 sur une base neuve : le fil offrait
 	   `/univers/production/infrastructure`, qui rend 404. */
 	const compteServi = $derived(page.data.compte ?? MOI);
+	const premierDomaine = $derived(page.data.domaines?.[0]?.nom ?? MOI.domaine);
+
 	const compte = $derived({
 		...MOI,
 		nom: compteServi.nom,
 		initiales: compteServi.initiales,
 		role: compteServi.role,
-		domaine: domaineDemande ?? compteServi.domaine
+		/* UN ADMINISTRATEUR N'A PAS FORCÉMENT DE DOMAINE DE RATTACHEMENT, et sur une
+		   instance neuve il n'en a jamais. Sans repli, `domaineChoisi` reste vide :
+		   le sélecteur de domaine ne présélectionne rien et l'arborescence de
+		   dossiers sort vide — mesuré, la première note était impossible à écrire.
+		   Le premier domaine servi fait un point de départ que l'utilisateur change
+		   d'un clic. */
+		domaine: domaineDemande ?? (compteServi.domaine || premierDomaine)
 	});
 	/* L'univers auquel le domaine du compte appartient, tel que la base le nomme. */
 	const universDuCompte = $derived(
@@ -166,6 +174,7 @@
 	<Vue
 		domaines={page.data.domaines}
 		{universDuCompte}
+		dossiersParDomaine={data.dossiersParDomaine}
 		vecteur={data.vecteur}
 		notes={data.notes}
 		{compte}
