@@ -98,7 +98,14 @@
 	import { onMount } from 'svelte';
 	import { cablerLaPageDErreur } from './cablage-erreur';
 
-	const donnees = $derived(page.data as { session?: boolean; ecriture?: boolean });
+	const donnees = $derived(
+		page.data as {
+			session?: boolean;
+			ecriture?: boolean;
+			compte?: { nom: string; initiales: string; role: string; domaine: string } | null;
+			domaines?: readonly { nom: string; univers: string; couleur: string }[];
+		}
+	);
 	const session = $derived(donnees.session === true);
 	const ecriture = $derived(donnees.ecriture === true);
 
@@ -123,9 +130,18 @@
 
 {#if nonResolue}
 	{#if vue === 'V-26'}
+		<!-- Le compte et les domaines viennent du gabarit racine, qui les lit en
+		     base : sans eux, la page d'adresse non résolue affichait l'identité et
+		     le rangement du jeu de semence — « Karim Belhadj », « Infrastructure »
+		     — sur une instance qui ne les a jamais portés. -->
 		<VueConnectee
 			vecteur={{ cas: casDeV26(), droits: ecriture ? 'ecriture' : 'lecture' }}
 			notes={[]}
+			{...donnees.session === true ? { reprises: [] } : {}}
+			{...donnees.compte === null || donnees.compte === undefined
+				? {}
+				: { compte: donnees.compte as never }}
+			{...donnees.domaines === undefined ? {} : { domaines: donnees.domaines as never }}
 		/>
 	{:else}
 		<VuePublique vecteur={{ cas: casDeV04(page.url.pathname) }} notes={[]} />

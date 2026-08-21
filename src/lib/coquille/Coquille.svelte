@@ -401,12 +401,14 @@
 	/* L'ARBORESCENCE RÉELLE L'EMPORTE, MÊME MOTIF QUE L'IDENTITÉ. Hors
 	   application — le rendu par défaut d'une vue —, le contexte est absent et
 	   les propriétés du jeu de semence s'appliquent : le gel ne bouge pas. */
-	const universEffectif = $derived(
-		identite === undefined || identite.univers.length === 0 ? univers : identite.univers
-	);
-	const domainesEffectifs = $derived(
-		identite === undefined || identite.domaines.length === 0 ? domaines : identite.domaines
-	);
+	/* LA PRÉSENCE DU CONTEXTE DÉCIDE, PAS SON CONTENU. Une première écriture
+	   retombait sur les propriétés du gel quand la liste servie était VIDE : sur
+	   une instance neuve — zéro univers, l'état normal au premier démarrage —,
+	   le rail affichait donc l'arborescence des maquettes, et proposait des
+	   adresses en 404. Une base vide n'est pas une absence de base : elle se
+	   rend vide. */
+	const universEffectif = $derived(identite === undefined ? univers : identite.univers);
+	const domainesEffectifs = $derived(identite === undefined ? domaines : identite.domaines);
 	const compteEffectif = $derived(identite?.compte ?? compte);
 	const roleEffectif = $derived(
 		identite === undefined ? role : identite.administrateur ? 'admin' : 'referent'
@@ -437,7 +439,7 @@
 	const sectionsAbregees = $derived(
 		forme !== 'abregee'
 			? []
-			: identite === undefined || identite.univers.length === 0
+			: identite === undefined
 				? railAbregeRendu(courant)
 				: railAbregeRendu(
 						courant,
