@@ -93,9 +93,14 @@
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
+		/**
+		 * CE QUE LE SERVEUR A REFUSÉ, quand il a refusé. Absent : rien n'a été
+		 * soumis, et le bloc de contexte reste celui de l'arrivée.
+		 */
+		refus?: Contexte | null;
 	}
 
-	const { vecteur }: Proprietes = $props();
+	const { vecteur, refus = null }: Proprietes = $props();
 
 	/**
 	 * Le message contextuel, tel que `ARRIVEES` du gel le déclare (`V-05:667`).
@@ -127,7 +132,21 @@
 	const AU_BALISAGE = ARRIVEES['protegee'] as Contexte;
 
 	const arrivee = $derived(typeof vecteur?.arrivee === 'string' ? vecteur.arrivee : 'protegee');
-	const contexte = $derived(ARRIVEES[arrivee] ?? null);
+	/**
+	 * LE REFUS L'EMPORTE SUR L'ARRIVÉE, et il fallait qu'il l'emporte.
+	 *
+	 * Une identification refusée rendait `401`, la page se réaffichait à
+	 * l'identique, les champs vidés, et RIEN ne le disait : de l'utilisateur, ça
+	 * s'appelle « je clique et rien ne se passe ». Le gel, lui, a les deux
+	 * messages — `echec()` et `verrouiller()`, `mockups/V-05-connexion.html:697`
+	 * et `:712` — et il les écrit dans ce même bloc de contexte.
+	 *
+	 * Les mots sont ceux du gel, à la lettre. `RG-ACC-04` tient : un seul et même
+	 * message quelle que soit la cause, et aucun marquage d'un champ plutôt que
+	 * de l'autre — ni l'existence de l'identifiant ni la validité du mot de passe
+	 * ne sont révélées.
+	 */
+	const contexte = $derived(refus ?? ARRIVEES[arrivee] ?? null);
 	/** Masqué, mais toujours présent, et avec le contenu que le balisage porte. */
 	const affiche = $derived(contexte ?? AU_BALISAGE);
 </script>
