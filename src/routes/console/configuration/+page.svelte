@@ -27,7 +27,7 @@
 	import Vue from '../../../vues/V-33.svelte';
 	import '../../../vues/V-33.css';
 	import { cablerLaConfiguration } from '../cablage';
-	import { cablerLeTemoinDeConfiguration } from './cablage';
+	import { cablerLeTemoinDeConfiguration, peindreLesRefusDeConfiguration } from './cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -40,7 +40,9 @@
 	 * la raison du partage.
 	 */
 	onMount(() => {
-		const commun = cablerLaConfiguration(document);
+		const commun = cablerLaConfiguration(document, {
+			surRefus: peindreLesRefusDeConfiguration(document)
+		});
 		const temoin = cablerLeTemoinDeConfiguration(document);
 		return () => {
 			commun();
