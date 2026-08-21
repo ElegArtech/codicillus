@@ -30,6 +30,7 @@ Usage : node base/base.mjs <commande>
   empreinte [--lignes]  imprime l'empreinte structurelle du schéma
   reversibilite     monte, descend, remonte, et compare les empreintes
   semer             charge seeds/corpus.ts dans la base
+  reindexer         reconstruit l’index de recherche depuis la base
   unicite           joue les sondes d'unicité (refus ET acceptations)
   coherence         compare src/lib/base/schema.ts au catalogue de la base
   pieces [--racine=<chemin>]
@@ -235,6 +236,17 @@ try {
 				if (!p.reussi) code = 1;
 			}
 			console.log(`\n${pas.filter((p) => p.reussi).length}/${pas.length} pas conformes.`);
+			break;
+		}
+
+		case 'reindexer': {
+			/** @type {import('../src/lib/recherche/commandes.ts')} */
+			const R = await vite.ssrLoadModule('/src/lib/recherche/commandes.ts');
+			const rapport = await R.reindexerLeCorpus(session.db, process.env);
+			ligne('notes projetées depuis la base', String(rapport.projetees));
+			ligne('entrées portées par l’index après', String(rapport.indexees));
+			ligne('entrées que l’index portait avant', String(rapport.precedentes));
+			ligne('index échangé', rapport.echange ? 'oui' : 'non — première pose');
 			break;
 		}
 
