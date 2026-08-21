@@ -98,3 +98,56 @@ export function cablerLeTemoinDeConfiguration(racine: ParentNode): Debranchement
 		for (const d of defaire) d();
 	};
 }
+
+/**
+ * L'AFFICHAGE DES REFUS DE SEUIL — le dernier maillon, et il manquait.
+ *
+ * MESURÉ LE 21/08/2026 : un seuil « frais » à 999 jours, un clic sur
+ * « Enregistrer », l'action répond `400` avec ses messages rattachés à leur
+ * champ — et l'écran ne bouge pas d'un pixel. Le témoin restait sur
+ * « Modifications non enregistrées », le bouton restait actif, rien n'expliquait
+ * rien. C'est « je clique et rien ne se passe », reparu au dernier maillon de la
+ * chaîne que cette campagne venait de raccorder partout ailleurs.
+ *
+ * LES BLOCS EXISTAIENT DÉJÀ, TOUS LES QUATRE. `V-33` transcrit `#erreur-frais`,
+ * `#erreur-vieil`, `#erreur-portail` et `#erreur-mot`, chacun avec son `-txt` et
+ * son `data-etat="erreur"` sur le bloc de champ. Le gel avait prévu l'état
+ * « Valeurs refusées » — c'est l'une de ses quatre positions. Personne ne le
+ * remplissait.
+ *
+ * POURQUOI ICI ET NON DANS LE MODULE PARTAGÉ. `cablerLaConfiguration()` sert
+ * aussi V-27 à V-32, qui n'ont aucun de ces quatre blocs. Le module partagé
+ * rend le refus, cette fonction le peint.
+ */
+export function peindreLesRefusDeConfiguration(
+	racine: ParentNode
+): (erreurs: readonly { readonly champ: string; readonly message: string }[]) => void {
+	/* Les quatre champs que l'action sait refuser — `ErreurDeConfiguration`. */
+	const CHAMPS_REFUSABLES = ['frais', 'vieil', 'portail', 'mot'] as const;
+
+	return (erreurs) => {
+		const parChamp = new Map(erreurs.map((e) => [e.champ, e.message]));
+		for (const champ of CHAMPS_REFUSABLES) {
+			const message = parChamp.get(champ);
+			const bloc = racine.querySelector<HTMLElement>(`#champ-${champ}`);
+			const erreur = racine.querySelector<HTMLElement>(`#erreur-${champ}`);
+			const texte = racine.querySelector<HTMLElement>(`#erreur-${champ}-txt`);
+			if (message === undefined) {
+				bloc?.removeAttribute('data-etat');
+				if (erreur !== null) erreur.hidden = true;
+				continue;
+			}
+			bloc?.setAttribute('data-etat', 'erreur');
+			if (texte !== null) texte.textContent = message;
+			if (erreur !== null) erreur.hidden = false;
+		}
+		/* Le premier champ refusé reçoit le foyer : sans quoi le message peut
+		   naître hors de la fenêtre, et le refus reste aussi muet qu'avant. */
+		const premier = CHAMPS_REFUSABLES.find((c) => parChamp.has(c));
+		if (premier !== undefined) {
+			const champ = racine.querySelector<HTMLInputElement>(`#c-${premier}`);
+			champ?.focus();
+			champ?.scrollIntoView({ block: 'center' });
+		}
+	};
+}

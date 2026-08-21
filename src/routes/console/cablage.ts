@@ -186,7 +186,31 @@ const CHAMPS_DE_CONFIGURATION = [
  * qu'il vaut mieux ne pas poser à moitié. En attendant, une valeur refusée
  * laisse l'écran inchangé plutôt que de mentir sur un enregistrement.
  */
-export function cablerLaConfiguration(racine: ParentNode): Debranchement {
+/** Ce qu'un refus de configuration porte — `ErreurDeConfiguration`, côté client. */
+export interface RefusDeConfiguration {
+	readonly champ: string;
+	readonly message: string;
+}
+
+/** Ce que l'appelant peut brancher sur le retour de l'action. */
+export interface OptionsDeConfiguration {
+	/**
+	 * Appelé quand l'action REFUSE. Sans lui, le refus se perdait : le
+	 * gestionnaire faisait `void envoyerAUneAction(...)` et jetait le résultat.
+	 * Mesuré le 21/08/2026 — un seuil de 999 jours, un clic sur « Enregistrer »,
+	 * un `400` avec ses messages, et RIEN à l'écran. C'est le défaut même que
+	 * cette campagne répare, reparu au dernier maillon.
+	 *
+	 * L'affichage n'est pas fait ici : les quatre blocs d'erreur appartiennent à
+	 * `V-33`, et ce module sert aussi V-27 à V-32, qui n'en ont pas.
+	 */
+	readonly surRefus?: (erreurs: readonly RefusDeConfiguration[]) => void;
+}
+
+export function cablerLaConfiguration(
+	racine: ParentNode,
+	options: OptionsDeConfiguration = {}
+): Debranchement {
 	const attaches = new Attaches();
 	const champs = CHAMPS_DE_CONFIGURATION.map((id) =>
 		noeud<HTMLInputElement | HTMLSelectElement>(racine, `#${id}`)
@@ -220,7 +244,16 @@ export function cablerLaConfiguration(racine: ParentNode): Debranchement {
 		attaches.ecouter(enregistrer, 'click', () => {
 			const charge: Record<string, string> = {};
 			for (const champ of champs) charge[champ.id] = champ.value;
-			void envoyerAUneAction(enregistrer.ownerDocument, '?/enregistrer', charge);
+			void envoyerAUneAction(enregistrer.ownerDocument, '?/enregistrer', charge).then((retour) => {
+				if (retour.succes) return;
+				/* Un refus rend `{ issue: 'valeurs-refusees', erreurs: [...] }`
+				   (`administration.ts:457`). Sans erreur nommée — un refus d'une
+				   autre nature —, on rend une liste vide : l'appelant décide quoi
+				   en dire, il ne reçoit jamais `undefined`. */
+				const donnees = retour.donnees as
+					{ readonly erreurs?: readonly RefusDeConfiguration[] } | undefined;
+				options.surRefus?.(donnees?.erreurs ?? []);
+			});
 		});
 	}
 
