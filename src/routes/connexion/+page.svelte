@@ -9,10 +9,12 @@
 	 *
 	 * LOT T-012 y a ajouté le CHARGEUR ET L'ACTION — `+page.server.ts`, qui porte
 	 * l'authentification, le barème de ralentissement et l'ouverture de session.
-	 * Ce fichier POSE EN OUTRE, depuis `ARB-063`, la méthode et les trois noms de
-	 * champ que le gel n'écrit pas — `$lib/cablage/formulaires.ts`, qui dit
-	 * pourquoi ce geste vit dans une route et nulle part ailleurs. Il LIT aussi
-	 * `?motif=` par son chargeur, comme
+	 * IL NE CÂBLE PLUS RIEN, ET C'EST DÉLIBÉRÉ. La méthode et les trois noms de
+	 * champ étaient posés ici depuis `onMount` : la parade n'existait donc pas
+	 * avant le montage, et une soumission dans cette fenêtre partait en `GET`
+	 * avec le mot de passe dans l'adresse. Les quatre attributs sont désormais
+	 * dans le balisage de la vue, et la connexion fonctionne sans JavaScript.
+	 * Ce fichier LIT `?motif=` par son chargeur, comme
 	 * `docs/routes.md:286` le prescrit — `page-protegee` / `session-expiree` /
 	 * (absent) → `protegee` / `expiree` / `directe`, les trois positions de l'axe
 	 * « Arrivée » de la planche V-05. La correspondance vient de la source ; elle
@@ -42,19 +44,11 @@
 	 * V-07 porte même son numéro de vue —, et en inventer un serait un
 	 * comblement.
 	 */
-	import { onMount } from 'svelte';
 	import Vue from '../../vues/V-05.svelte';
 	import '../../vues/V-05.css';
-	import { cablerLaConnexion } from '$lib/cablage/formulaires';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
-
-	let enveloppe: HTMLDivElement;
-
-	onMount(() => cablerLaConnexion(enveloppe));
 </script>
 
-<div bind:this={enveloppe} style="display:contents">
-	<Vue vecteur={{ arrivee: data.arrivee }} />
-</div>
+<Vue vecteur={{ arrivee: data.arrivee }} />
