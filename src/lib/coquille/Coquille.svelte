@@ -166,7 +166,7 @@
 		adresseDesSignetsDuDomaine
 	} from '$lib/rangement/adresses';
 	import { railRendu, sectionsDuRail } from './arborescence';
-	import { railAbregeRendu } from './arborescence-abregee';
+	import { railAbregeRendu, sectionsAbregeesDuCorpus } from './arborescence-abregee';
 	import BarreSuperieure from './BarreSuperieure.svelte';
 	import Rail from './Rail.svelte';
 	import PileDeNotifications from './PileDeNotifications.svelte';
@@ -398,6 +398,15 @@
 	 * par défaut `'referent'` la rendait invisible à l'administrateur lui-même.
 	 */
 	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	/* L'ARBORESCENCE RÉELLE L'EMPORTE, MÊME MOTIF QUE L'IDENTITÉ. Hors
+	   application — le rendu par défaut d'une vue —, le contexte est absent et
+	   les propriétés du jeu de semence s'appliquent : le gel ne bouge pas. */
+	const universEffectif = $derived(
+		identite === undefined || identite.univers.length === 0 ? univers : identite.univers
+	);
+	const domainesEffectifs = $derived(
+		identite === undefined || identite.domaines.length === 0 ? domaines : identite.domaines
+	);
 	const compteEffectif = $derived(identite?.compte ?? compte);
 	const roleEffectif = $derived(
 		identite === undefined ? role : identite.administrateur ? 'admin' : 'referent'
@@ -414,9 +423,27 @@
 	const sections = $derived(
 		forme === 'abregee'
 			? []
-			: railRendu(sectionsDuRail(univers, domaines, notes), courant, brancheEnChargement)
+			: railRendu(
+					sectionsDuRail(universEffectif, domainesEffectifs, notes),
+					courant,
+					brancheEnChargement
+				)
 	);
-	const sectionsAbregees = $derived(forme === 'abregee' ? railAbregeRendu(courant) : []);
+	/* LA FORME ABRÉGÉE SUIT LA BASE DÈS QU'ELLE EN A UNE. Elle portait l'arbre
+	   du gel écrit en dur, sur vingt-deux vues : le rail y ignorait la base et
+	   proposait des adresses qui rendent 404. Sans contexte — le rendu par défaut
+	   d'une vue —, `railAbregeRendu()` retombe sur `SECTIONS_ABREGEES`, et le gel
+	   ne bouge pas. */
+	const sectionsAbregees = $derived(
+		forme !== 'abregee'
+			? []
+			: identite === undefined || identite.univers.length === 0
+				? railAbregeRendu(courant)
+				: railAbregeRendu(
+						courant,
+						sectionsAbregeesDuCorpus(sectionsDuRail(universEffectif, domainesEffectifs, notes))
+					)
+	);
 
 	/**
 	 * La cible effective du lien d'évitement : l'ancre déclarée par la vue, à

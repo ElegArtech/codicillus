@@ -41,12 +41,37 @@ export interface CompteAffiche {
 	readonly domaine: string;
 }
 
+/** Un univers, tel que le rail de navigation le nomme. */
+export interface UniversDeRail {
+	readonly nom: string;
+	readonly couleur: string;
+	readonly glyphe: string;
+	readonly ordre: number;
+	readonly systeme: boolean;
+	readonly description: string;
+}
+
+/** Un domaine, rattaché à son univers par le nom. */
+export interface DomaineDeRail {
+	readonly nom: string;
+	readonly univers: string;
+	readonly couleur: string;
+}
+
 /**
- * Le contexte lui-même. Les deux membres sont des accesseurs : le gabarit
+ * Le contexte lui-même. Tous les membres sont des accesseurs : le gabarit
  * racine les câble sur `data`, et la coquille suit une navigation sans qu'on
  * réémette le contexte.
+ *
+ * `univers` et `domaines` réparent le MÊME défaut que `compte` : le rail de
+ * navigation était bâti sur les constantes de `seeds/corpus.ts`, et aucune route
+ * ne passait les vraies. Un univers créé dans la console n'apparaissait donc
+ * JAMAIS dans le rail — mesuré le 21/08/2026, l'univers « Organisation » était
+ * absent des quatre sections rendues alors qu'il portait quatorze notes.
  */
 export interface IdentiteDeCoquille {
 	readonly compte: CompteAffiche | null;
 	readonly administrateur: boolean;
+	readonly univers: readonly UniversDeRail[];
+	readonly domaines: readonly DomaineDeRail[];
 }

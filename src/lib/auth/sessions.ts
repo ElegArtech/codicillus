@@ -48,6 +48,7 @@
  * lent n'y ajouterait rien, et il coûterait sa durée À CHAQUE REQUÊTE.
  */
 import { createHash, randomBytes } from 'node:crypto';
+import { CONFIGURATION_PAR_DEFAUT } from '../base/schema';
 
 /**
  * Le nom du cookie. Aucune source ne le fixe ; il est nommé du produit et du
@@ -99,13 +100,30 @@ export class DureeDeSessionIllisibleErreur extends Error {
 /**
  * La durée d'inactivité, en minutes, telle que `parametres` la porte.
  *
- * ELLE ÉCHOUE PLUTÔT QUE DE SE DONNER UN DÉFAUT. Un repli codé en dur serait
- * une seconde définition — le défaut du gel est 120 (`V-33:2663`), et il vit
- * déjà dans le jeu de semence qui alimente la table. Une base sans ce paramètre
- * est une base non semée : un échec nommé le dit, là où un repli silencieux
- * ferait vivre le produit sur une valeur que personne n'a réglée.
+ * UN PARAMÈTRE ABSENT PREND LE DÉFAUT DU PRODUIT ; UN PARAMÈTRE ILLISIBLE LÈVE.
+ *
+ * Cette fonction levait dans LES DEUX CAS, au motif qu'un repli serait « une
+ * seconde définition » de la durée. Le raisonnement ne tient pas : un défaut
+ * n'est pas une seconde définition, c'est la valeur AVANT tout réglage — et il
+ * ne survit à rien, puisque la valeur réglée l'emporte dès qu'elle existe.
+ *
+ * Ce qu'il coûtait, en revanche, est mesuré : sur une base migrée et NON SEMÉE
+ * — c'est-à-dire une INSTALLATION NEUVE, l'état normal du produit au premier
+ * démarrage — `parametres` est vide et LES DIX-HUIT PAGES ESSAYÉES SORTAIENT EN
+ * 500. Le commentaire disait « une base sans ce paramètre est une base non
+ * semée » : c'est exact, et c'est précisément le cas qu'un produit doit servir.
+ * Un outil de gestion des connaissances commence vide.
+ *
+ * LE DÉFAUT N'EST PAS ÉCRIT ICI, il est lu de `CONFIGURATION_PAR_DEFAUT`
+ * (`$lib/base/schema`), au même endroit que les six autres : c'est ce qui
+ * empêche la seconde définition que le commentaire précédent redoutait.
+ *
+ * UNE VALEUR PRÉSENTE MAIS ILLISIBLE LÈVE ENCORE — une chaîne, un nombre
+ * négatif, un zéro. Ce n'est plus une base neuve, c'est une base corrompue, et
+ * la faire vivre sur un défaut masquerait le défaut.
  */
 export function dureeDInactiviteEnMinutes(valeur: unknown): number {
+	if (valeur === undefined || valeur === null) return CONFIGURATION_PAR_DEFAUT.dureeSession;
 	const nombre = typeof valeur === 'number' ? valeur : Number(valeur);
 	if (!Number.isFinite(nombre) || nombre <= 0) throw new DureeDeSessionIllisibleErreur(valeur);
 	return nombre;

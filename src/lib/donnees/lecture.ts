@@ -49,6 +49,7 @@ import type { Base } from '../base/acces';
 import {
 	champsDeTypeDeFiche,
 	CLES_DE_PARAMETRE,
+	CONFIGURATION_PAR_DEFAUT,
 	comptes,
 	domaines,
 	dossiers,
@@ -762,15 +763,23 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 		.from(parametres);
 	const par = new Map(lignes.map((p) => [p.cle, p.valeur]));
 
-	const nombre = (cle: string): number => {
+	/* UN PARAMÈTRE ABSENT PREND SON DÉFAUT — IL NE FAIT PAS TOMBER LA PAGE.
+	   Ces deux lecteurs levaient. Sur une INSTALLATION NEUVE — base migrée, non
+	   semée —, `parametres` est vide : les quinze pages essayées sortaient en
+	   500, et le produit ne s'ouvrait que sur un jeu de démonstration chargé.
+	   Un paramètre PRÉSENT MAIS DU MAUVAIS TYPE reste une faute, et lève encore :
+	   c'est une base corrompue, pas une base neuve. */
+	const nombre = (cle: string, defaut: number): number => {
 		const valeur = par.get(cle);
+		if (valeur === undefined) return defaut;
 		if (typeof valeur !== 'number') {
 			throw new Error(`paramètre ${cle} attendu numérique, obtenu ${typeof valeur}`);
 		}
 		return valeur;
 	};
-	const chaine = (cle: string): string => {
+	const chaine = (cle: string, defaut: string): string => {
 		const valeur = par.get(cle);
+		if (valeur === undefined) return defaut;
 		if (typeof valeur !== 'string') {
 			throw new Error(`paramètre ${cle} attendu textuel, obtenu ${typeof valeur}`);
 		}
@@ -784,13 +793,22 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 	   l'écriture posait une clé que cette lecture n'interroge pas. Une seule
 	   table de clés rend ce cas INÉCRIVABLE. */
 	return {
-		seuilFrais: nombre(CLES_DE_PARAMETRE.seuilFrais),
-		seuilVieillissant: nombre(CLES_DE_PARAMETRE.seuilVieillissant),
-		versionsMax: nombre(CLES_DE_PARAMETRE.versionsMax),
-		portailAssistance: chaine(CLES_DE_PARAMETRE.portailAssistance),
-		motFiche: chaine(CLES_DE_PARAMETRE.motFiche),
-		tailleMaxPieceJointe: nombre(CLES_DE_PARAMETRE.tailleMaxPieceJointe),
-		dureeSession: nombre(CLES_DE_PARAMETRE.dureeSession)
+		seuilFrais: nombre(CLES_DE_PARAMETRE.seuilFrais, CONFIGURATION_PAR_DEFAUT.seuilFrais),
+		seuilVieillissant: nombre(
+			CLES_DE_PARAMETRE.seuilVieillissant,
+			CONFIGURATION_PAR_DEFAUT.seuilVieillissant
+		),
+		versionsMax: nombre(CLES_DE_PARAMETRE.versionsMax, CONFIGURATION_PAR_DEFAUT.versionsMax),
+		portailAssistance: chaine(
+			CLES_DE_PARAMETRE.portailAssistance,
+			CONFIGURATION_PAR_DEFAUT.portailAssistance
+		),
+		motFiche: chaine(CLES_DE_PARAMETRE.motFiche, CONFIGURATION_PAR_DEFAUT.motFiche),
+		tailleMaxPieceJointe: nombre(
+			CLES_DE_PARAMETRE.tailleMaxPieceJointe,
+			CONFIGURATION_PAR_DEFAUT.tailleMaxPieceJointe
+		),
+		dureeSession: nombre(CLES_DE_PARAMETRE.dureeSession, CONFIGURATION_PAR_DEFAUT.dureeSession)
 	};
 }
 

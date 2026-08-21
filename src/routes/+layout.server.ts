@@ -116,6 +116,43 @@ async function identiteAffichable(
 	};
 }
 
+/**
+ * L'ARBORESCENCE DU RAIL, DEPUIS LA BASE.
+ *
+ * Le rail était bâti sur `UNIVERS` et `DOMAINES` de `seeds/corpus.ts` : les
+ * vues les portent en propriétés par défaut, et AUCUNE route ne passait les
+ * vraies. Un univers créé dans la console n'entrait donc jamais dans la
+ * navigation. Comme pour l'identité, la lecture se fait UNE FOIS ici et descend
+ * par contexte — trente routes qui la recopieraient divergeraient (`P-35`).
+ */
+async function arborescenceDeNavigation(base: Base): Promise<{
+	univers: {
+		nom: string;
+		couleur: string;
+		glyphe: string;
+		ordre: number;
+		systeme: boolean;
+		description: string;
+	}[];
+	domaines: { nom: string; univers: string; couleur: string }[];
+}> {
+	const lignesUnivers = await base
+		.select({
+			nom: univers.nom,
+			couleur: univers.couleur,
+			glyphe: univers.glyphe,
+			ordre: univers.ordre,
+			systeme: univers.systeme,
+			description: univers.description
+		})
+		.from(univers);
+	const lignesDomaines = await base
+		.select({ nom: domaines.nom, univers: univers.nom, couleur: domaines.couleur })
+		.from(domaines)
+		.innerJoin(univers, eq(univers.id, domaines.universId));
+	return { univers: lignesUnivers, domaines: lignesDomaines };
+}
+
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
@@ -151,6 +188,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		 * mène nulle part est un lien mort, et `P-03` n'en admet aucun.
 		 */
 		rangement: await rangementDuCompte(base, locals.identite.compteId),
-		compte: await identiteAffichable(base, locals.identite.compteId)
+		compte: await identiteAffichable(base, locals.identite.compteId),
+		...(await arborescenceDeNavigation(base))
 	};
 };
