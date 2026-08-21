@@ -47,13 +47,14 @@
 		cablerLesGestesDEdition,
 		resolveurDuCorpusServi,
 		DOCUMENT_VIDE,
-		type GestesCables
+		type GestesCables,
+		peindreLeRefusDEdition
 	} from '$lib/edition/gestes';
 	import { cablerLeChoixDeDepart } from './cablage';
 	import { MOI } from '../../../../seeds/corpus';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	const { data }: { data: PageData } = $props();
+	const { data, form }: { data: PageData; form: ActionData } = $props();
 
 	/** Le domaine demandé par l'adresse, à défaut celui du compte du jeu. */
 	const domaineDemande = $derived(page.url.searchParams.get('domaine'));
@@ -62,6 +63,17 @@
 	);
 
 	let formulaire: HTMLFormElement;
+
+	/**
+	 * LE REFUS D'ENREGISTREMENT SE VOIT — mesuré muet le 21/08/2026.
+	 * Créer sans choisir de dossier renvoyait `400 { motif: 'dossier manquant' }`
+	 * et l'écran ne disait rien : ni message, ni témoin, ni foyer. Les deux blocs
+	 * du gel — `#erreur-titre`, `#erreur-dossier` — existaient depuis le début.
+	 */
+	$effect(() => {
+		if (formulaire === undefined) return;
+		peindreLeRefusDEdition(formulaire, form ?? null);
+	});
 
 	/**
 	 * L'ÉDITEUR SE MONTE SUR LA ZONE DU GEL, ET C'EST LUI QUI DONNE LE CORPS.
