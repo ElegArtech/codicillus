@@ -26,45 +26,47 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { cablerLeDepot } from '../cablage';
+	import { deposerLotEnAttente } from '../../importer/lot-en-attente';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
 
 	/**
-	 * LA ZONE DE DÉPÔT ET « PARCOURIR » — CE QU'ELLES FONT, ET CE QU'ELLES NE
-	 * PEUVENT PAS FAIRE.
+	 * LA ZONE DE DÉPÔT ET « PARCOURIR » — ET LES OCTETS TRAVERSENT.
 	 *
-	 * CE QU'ELLES FONT. Les quatre écouteurs du gel sont posés
-	 * (`cablerLeDepot()`), `data-survol` répond au survol, le dépôt et le
-	 * sélecteur de fichiers rendent un lot RÉEL — des `File`, pas un décompte —,
-	 * et le parcours d'import s'ouvre. C'est mot pour mot ce que le gel annonce :
+	 * Les quatre écouteurs du gel sont posés (`cablerLeDepot()`), `data-survol`
+	 * répond au survol, le dépôt et le sélecteur de fichiers rendent un lot
+	 * RÉEL — des `File`, pas un décompte —, et le parcours d'import s'ouvre AVEC
+	 * ce lot. C'est mot pour mot ce que le gel annonce :
 	 * « Lot reçu — parcours d'import à l'étape du choix de scénario, vue V-24 »
 	 * (`mockups/V-35-console-imports.html:3000`). La destination est nommée par la
 	 * maquette, donc l'adresse l'est aussi : `/importer`.
 	 *
-	 * CE QU'ELLES NE FONT PAS, ET IL FAUT LE DIRE PLUTÔT QUE DE LE MASQUER : LES
-	 * OCTETS NE TRAVERSENT PAS. Le lot reçu ici ne peut pas être remis à V-24 en
-	 * l'état actuel du parcours, et la raison est dans V-24, pas ici :
+	 * CE QUI MANQUAIT N'ÉTAIT PAS ICI, ET LA RÉPARATION NON PLUS. Le parcours de
+	 * V-24 ne retenait des fichiers qu'à son étape 2, une fois un scénario
+	 * choisi ; le gel de V-35, lui, fait atterrir le lot à l'étape du CHOIX DE
+	 * SCÉNARIO. C'est donc le PARCOURS qui a reçu de quoi tenir un lot avant ce
+	 * choix — propriété `lotRecu` de `src/vues/V-24.svelte` —, et cet écran ne
+	 * fait que le lui remettre. Le scénario reste choisi par l'utilisateur : le
+	 * décider à sa place pour pouvoir lui rendre ses fichiers aurait été un
+	 * comblement, pas un service.
 	 *
-	 *   · sa zone de dépôt n'existe qu'à l'ÉTAPE 2, une fois un scénario choisi
-	 *     (`V-24.svelte` : les écouteurs ne sont posés que si le parcours est
-	 *     vivant) — or le gel de V-35 fait atterrir le lot à l'étape du CHOIX DE
-	 *     SCÉNARIO, où le parcours n'a aucun état pour retenir des fichiers ;
-	 *   · lui en donner un demanderait d'ouvrir `src/vues/V-24.svelte` et
-	 *     `src/routes/importer/`, hors du périmètre de ce lot.
+	 * LE LOT NE PASSE PAS PAR LE RÉSEAU EN CHEMIN. `deposerLotEnAttente()` le
+	 * confie à une variable de module que la navigation client traverse ; il
+	 * n'est envoyé au serveur qu'à l'étape 2 du parcours, par l'action
+	 * `analyser`, comme n'importe quel dépôt. Une analyse lancée d'ici aurait
+	 * demandé un `domaine-cible` que cet écran ne propose nulle part.
 	 *
-	 * L'utilisateur redépose donc son lot à l'étape 2. Choisir un scénario à sa
-	 * place pour pouvoir lui remettre ses fichiers serait décider pour lui du
-	 * traitement de son import : un comblement, pas un service.
-	 *
-	 * LE RAPPEL NE SE SERT DONC PAS DE SON ARGUMENT, ET C'EST VISIBLE EN TROIS
-	 * LIGNES. C'est préférable à un envoi qui traverserait le réseau pour rien :
-	 * une analyse lancée d'ici demanderait un `domaine-cible` que cet écran ne
-	 * propose nulle part, donc un domaine choisi à la place de l'utilisateur.
+	 * L'ARBORESCENCE D'UN DOSSIER DÉPOSÉ N'EST PAS DESCENDUE ICI, et c'est une
+	 * limite connue : `cablerLeDepot()` prend les fichiers PLATS, et il vit dans
+	 * `src/routes/console/cablage.ts`, hors du périmètre de ce lot. Des fichiers
+	 * déposés un à un arrivent entiers et à la racine du lot, ce qui est leur
+	 * place ; un DOSSIER déposé perd sa structure. Remonté au rapport.
 	 */
 	onMount(() =>
 		cablerLeDepot(document, {
-			surLot: () => {
+			surLot: (fichiers) => {
+				deposerLotEnAttente(fichiers);
 				void goto(resolve('/importer'));
 			}
 		})
