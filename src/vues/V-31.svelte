@@ -89,6 +89,33 @@
 		onSupprimer?: (template: string) => void;
 		/** `RG-REF-02` — « Cocher décochera "X", qui l'est actuellement » (`V-31:380`). */
 		onMarquerParDefaut?: (template: string) => void;
+		/**
+		 * DUPLIQUER UN TEMPLATE — `dupliquer(t)` du gel (`V-31:3385`), qui copie
+		 * tout sauf le caractère « par défaut » et suffixe le nom par « (copie) ».
+		 * Le suffixe est composé par la page, qui connaît le nom : la vue ne
+		 * transmet que la DÉSIGNATION du modèle, comme les deux rappels ci-dessus.
+		 */
+		onDupliquer?: (template: string) => void;
+		/**
+		 * CE QUE LA VUE FAIT QUAND « CRÉER LE TEMPLATE » OU « ENREGISTRER » EST
+		 * CLIQUÉ — même partage qu'en `V-32` : la vue relève les cinq nœuds de son
+		 * panneau et rend la demande, la page tient le réseau et l'action.
+		 *
+		 * ELLE REND UNE PROMESSE parce qu'un refus s'affiche DANS le formulaire :
+		 * `#champ-nom` et `#erreur-nom` sont des nœuds du gel, révélés au refus, et
+		 * la vue a donc besoin de savoir ce que le serveur a répondu.
+		 *
+		 * `id` NUL DÉSIGNE UNE CRÉATION. C'est la seule chose qui distingue les
+		 * deux gestes : le formulaire, ses champs et sa validation sont les mêmes.
+		 */
+		onEnregistrer?: (demande: {
+			readonly id: string | null;
+			readonly nom: string;
+			readonly description: string;
+			readonly type: string;
+			readonly defaut: boolean;
+			readonly contenu: string;
+		}) => Promise<{ readonly enregistre: boolean; readonly message: string | null }>;
 	}
 
 	const {
@@ -101,7 +128,9 @@
 		templates = TEMPLATES,
 		typesNote = TYPES_NOTE,
 		onSupprimer,
-		onMarquerParDefaut
+		onMarquerParDefaut,
+		onDupliquer,
+		onEnregistrer
 	}: Proprietes = $props();
 
 	/**
@@ -167,12 +196,211 @@
 	const reglage = $derived(vecteur ?? {});
 	const form = $derived(String(reglage['form'] ?? 'ferme'));
 	const sup = $derived(String(reglage['sup'] ?? 'defaut'));
-	const panneauOuvert = $derived(form !== 'ferme');
 
-	/** Le template édité par la position « Édition · Procédure » (`V-31:3571`). */
-	const edite = $derived<Template | null>(form === 'edition' ? (templates[0] ?? null) : null);
+	/**
+	 * LE PANNEAU DEMANDÉ DEPUIS L'ÉCRAN — `ouvrirForm(t)` du gel (`V-31:3456`).
+	 *
+	 * `null` AU RENDU SERVEUR : l'écran reste celui que le vecteur décrit tant
+	 * que personne n'a cliqué, et les planches du banc ne bougent pas d'un pixel.
+	 * `template` nul dans la demande, c'est « Nouveau template » — `ouvrirForm(null)`.
+	 */
+	let demandeDeFormulaire = $state<{ readonly template: string | null } | null>(null);
+
+	function ouvrirLeFormulaire(template: string | null): void {
+		demandeDeFormulaire = { template };
+		structureVive = null;
+		erreurNom = null;
+	}
+
+	/** `fermerForm()` du gel (`V-31:3494`) — le panneau se referme, rien n'est écrit. */
+	function fermerLeFormulaire(): void {
+		demandeDeFormulaire = null;
+		structureVive = null;
+		erreurNom = null;
+	}
+
+	/**
+	 * « NOUVEAU TEMPLATE » OUVRE LE PANNEAU — `V-31:3500` :
+	 * `document.getElementById("creer").addEventListener("click", …)`.
+	 *
+	 * L'ÉCOUTEUR EST POSÉ SUR LE NŒUD, PAS ÉCRIT DANS LE BALISAGE, et pour la
+	 * raison que `V-32` énonce déjà : `#creer` est rendu par
+	 * `BoutonDeCreation.svelte`, commun aux six vues à panneau, et qui ne prend
+	 * aucun comportement en propriété. `$effect` ne court qu'au navigateur.
+	 */
+	$effect(() => {
+		const bouton = document.getElementById('creer');
+		if (bouton === null) return;
+		const ouvrir = (): void => ouvrirLeFormulaire(null);
+		bouton.addEventListener('click', ouvrir);
+		return () => bouton.removeEventListener('click', ouvrir);
+	});
+
+	const panneauOuvert = $derived(demandeDeFormulaire !== null || form !== 'ferme');
+
+	/** Le template édité — celui que « Modifier » désigne, sinon celui de la
+	 *  position « Édition · Procédure » (`V-31:3571`). */
+	const edite = $derived<Template | null>(
+		demandeDeFormulaire !== null
+			? demandeDeFormulaire.template === null
+				? null
+				: (templates.find((t) => t.id === demandeDeFormulaire?.template) ?? null)
+			: form === 'edition'
+				? (templates[0] ?? null)
+				: null
+	);
 	const contenuEdite = $derived(panneauOuvert ? (edite ? edite.contenu : SQUELETTE_NEUF) : '');
-	const titresEdites = $derived(panneauOuvert ? structure(contenuEdite) : []);
+
+	/**
+	 * LA STRUCTURE ANNONCÉE PENDANT LA FRAPPE — `majStructure()` du gel
+	 * (`V-31:3434`), qui relit `f-contenu` à chaque saisie.
+	 *
+	 * ELLE EST TENUE À PART DU CONTENU RENDU, ET C'EST LE POINT DÉLICAT. Le
+	 * squelette est posé par `{@html}` : le relire dans la même expression
+	 * ferait re-rendre la zone de rédaction à chaque touche, et le point
+	 * d'insertion sauterait au début à chaque caractère. `structureVive` porte
+	 * donc la lecture du document, et le repli sur le contenu servi ne vaut que
+	 * tant que personne n'a rien tapé.
+	 */
+	let structureVive = $state<readonly string[] | null>(null);
+	const titresEdites = $derived(structureVive ?? (panneauOuvert ? structure(contenuEdite) : []));
+
+	/** Le message de refus du nom — `marquer()` du gel (`V-31:3512`). */
+	let erreurNom = $state<string | null>(null);
+
+	/* ── L'éditeur réduit du squelette (`V-31:3396-3444`) ──────────────────── */
+
+	/** Ce que chaque bouton de bloc insère — littéral du gel (`V-31:3399`). */
+	const BLOCS: Record<string, string> = {
+		h2: '<h2>Titre de section</h2>',
+		h3: '<h3>Sous-titre</h3>',
+		taches: '<ul class="taches"><li><input type="checkbox"><span>À contrôler</span></li></ul>',
+		code: '<div class="bloc-code"><div class="bloc-code__tete"><span class="etiq">bash</span></div><pre><code>commande</code></pre></div>',
+		'alerte-attention':
+			'<div class="alerte alerte--attention"><div><div class="alerte__tete"><span class="alerte__glyphe">ATTENTION</span> Titre</div><div>Ce qu\'il faut savoir avant d\'agir.</div></div></div>'
+	};
+
+	function zoneDeRedaction(): HTMLElement | null {
+		const noeud = document.getElementById('f-contenu');
+		return noeud instanceof HTMLElement ? noeud : null;
+	}
+
+	/** `ligneCourante()` du gel (`V-31:3407`) — le bloc qui porte le curseur. */
+	function ligneCourante(zone: HTMLElement): Node | null {
+		const selection = document.getSelection();
+		if (selection === null || selection.rangeCount === 0) return null;
+		let noeud: Node | null = selection.getRangeAt(0).startContainer;
+		while (
+			noeud !== null &&
+			noeud !== zone &&
+			!(noeud instanceof HTMLElement && /^(P|DIV|H2|H3|LI)$/.test(noeud.tagName))
+		) {
+			noeud = noeud.parentNode;
+		}
+		return noeud === zone ? null : noeud;
+	}
+
+	/** `majStructure()` du gel — la structure suit ce que la zone contient. */
+	function relireLaStructure(): void {
+		const zone = zoneDeRedaction();
+		if (zone !== null) structureVive = structure(zone.innerHTML);
+	}
+
+	/**
+	 * INSÉRER UN BLOC — le geste du gel, remplacement de la ligne courante
+	 * compris. Le squelette est un contenu que l'utilisateur va remplacer : la
+	 * ligne où il se trouve cède la place, elle ne s'ajoute pas au-dessus.
+	 */
+	function insererUnBloc(cle: string): void {
+		const zone = zoneDeRedaction();
+		const html = BLOCS[cle];
+		if (zone === null || html === undefined) return;
+		zone.focus();
+		const porteur = document.createElement('div');
+		porteur.innerHTML = html;
+		const noeuds = Array.from(porteur.childNodes);
+		const ligne = ligneCourante(zone);
+		const parent = ligne === null ? null : ligne.parentNode;
+		if (ligne !== null && parent !== null) {
+			for (const n of noeuds) parent.insertBefore(n, ligne);
+			parent.removeChild(ligne);
+		} else {
+			for (const n of noeuds) zone.appendChild(n);
+		}
+		relireLaStructure();
+	}
+
+	/**
+	 * GRAS, ITALIQUE ET LES DEUX LISTES — `document.execCommand` du gel
+	 * (`V-31:3431`), employé tel quel.
+	 *
+	 * TIPTAP N'EST PAS EMPLOYÉ ICI, ET C'EST MESURÉ. La zone de rédaction est un
+	 * nœud du gel — `#f-contenu`, avec ses classes et son contenu servi ; la
+	 * remplacer par l'arbre d'un éditeur tiers changerait le balisage rendu, ce
+	 * que rien dans cet écran ne demande. La commande native fait exactement ce
+	 * que la maquette fait, sur le nœud que la maquette pose.
+	 */
+	function appliquerUneCommande(commande: string): void {
+		const zone = zoneDeRedaction();
+		if (zone === null) return;
+		zone.focus();
+		document.execCommand(commande, false);
+	}
+
+	/* ── Le pied du panneau (`V-31:3500-3538`) ─────────────────────────────── */
+
+	/** La valeur courante d'un champ du panneau, relue sur le document comme le
+	 *  gel la relit (`V-31:3520`) : aucun de ces nœuds n'est lié à un état. */
+	function valeurDe(id: string): string {
+		const noeud = document.getElementById(id);
+		return noeud instanceof HTMLInputElement ||
+			noeud instanceof HTMLSelectElement ||
+			noeud instanceof HTMLTextAreaElement
+			? noeud.value
+			: '';
+	}
+
+	function estCoche(id: string): boolean {
+		const noeud = document.getElementById(id);
+		return noeud instanceof HTMLInputElement && noeud.checked;
+	}
+
+	/**
+	 * « CRÉER LE TEMPLATE » / « ENREGISTRER » — le geste de `V-31:3509`.
+	 *
+	 * LES DEUX REFUS SONT CEUX DU GEL, et ils sont éprouvés des DEUX côtés : ici
+	 * pour que la saisie ne parte pas pour rien, et à l'action pour qu'aucun
+	 * client ne les contourne. Ce n'est pas une double définition — c'est la même
+	 * règle, dont le serveur reste le juge : son message l'emporte.
+	 */
+	async function validerLeFormulaire(): Promise<void> {
+		const nom = valeurDe('f-nom').trim();
+		const doublon = templates.some((t) => t !== edite && t.nom.toLowerCase() === nom.toLowerCase());
+		if (nom === '' || doublon) {
+			erreurNom = nom === '' ? 'Donnez un nom au template.' : `« ${nom} » existe déjà.`;
+			document.getElementById('f-nom')?.focus();
+			return;
+		}
+		erreurNom = null;
+		if (onEnregistrer === undefined) {
+			fermerLeFormulaire();
+			return;
+		}
+		const zone = zoneDeRedaction();
+		const issue = await onEnregistrer({
+			id: edite?.id ?? null,
+			nom,
+			description: valeurDe('f-desc').trim(),
+			type: valeurDe('f-type'),
+			defaut: estCoche('f-defaut'),
+			contenu: zone === null ? contenuEdite : zone.innerHTML
+		});
+		if (issue.enregistre) {
+			fermerLeFormulaire();
+			return;
+		}
+		erreurNom = issue.message;
+	}
 
 	/** Le template par défaut, hors celui qu'on édite — l'aide du gel s'y règle. */
 	const defautActuel = $derived(templates.find((t) => t.defaut && t !== edite) ?? null);
@@ -196,7 +424,26 @@
 				: (templates.find((t) => !t.defaut) ?? null)
 	);
 
-	/** `showModal()` — voir `V-28.svelte` : l'attribut `open` n'obtient pas la modalité. */
+	/**
+	 * `showModal()` — ET LA RAISON POUR LAQUELLE `boite.open` NE SUFFIT PAS À LE
+	 * DÉCIDER, qui a coûté un geste inatteignable.
+	 *
+	 * La vue rend `<dialog open={…}>` : Svelte pose donc l'attribut AVANT que cet
+	 * effet ne coure. `boite.open` vaut déjà vrai, la garde `if (!boite.open)`
+	 * renonce, et la boîte reste OUVERTE SANS ÊTRE MODALE — rendue dans le flux
+	 * de la superposition, sans fond, sans couche supérieure.
+	 *
+	 * Tant que rien ne la recouvrait, la différence ne se voyait pas. Depuis le
+	 * PIED DU PANNEAU DE FORMULAIRE, le tiroir passe DEVANT elle et son bouton de
+	 * validation devient inatteignable : le dialogue s'affiche, et le geste ne
+	 * part jamais. C'est `P-5` — un chemin que rien n'avait parcouru.
+	 *
+	 * `:modal` EST LA SEULE QUESTION QUI VAILLE, parce que c'est exactement celle
+	 * qu'on pose : cette boîte est-elle dans la couche supérieure ? Un dialogue
+	 * ouvert par attribut y répond non, et on le referme pour le rouvrir comme il
+	 * faut — `showModal()` sur un dialogue déjà ouvert lève `InvalidStateError`,
+	 * et l'exception avalée était précisément ce qui masquait le défaut.
+	 */
 	$effect(() => {
 		const boite = document.getElementById('dlg-supprimer');
 		if (!(boite instanceof HTMLDialogElement)) return;
@@ -204,7 +451,9 @@
 			if (boite.open) boite.close();
 			return;
 		}
-		if (!boite.open) boite.showModal();
+		if (boite.matches(':modal')) return;
+		if (boite.open) boite.close();
+		boite.showModal();
 	});
 </script>
 
@@ -294,8 +543,14 @@
 								{(utilisations(t) ?? 0) > 1 ? 'notes' : 'note'}{/if}</span
 						>
 						<div class="tg__actions">
-							<button class="btn" type="button">Modifier</button>
-							<button class="btn" type="button" aria-label="Dupliquer {t.nom}"
+							<button class="btn" type="button" onclick={() => ouvrirLeFormulaire(t.id)}
+								>Modifier</button
+							>
+							<button
+								class="btn"
+								type="button"
+								aria-label="Dupliquer {t.nom}"
+								onclick={() => onDupliquer?.(t.id)}
 								><svg
 									width="14"
 									height="14"
@@ -347,7 +602,12 @@
 							vous écrivez ici est exactement ce que trouvera le rédacteur.{/if}
 					</div>
 				</div>
-				<button class="tiroir-form__fermer" id="form-fermer" aria-label="Fermer le formulaire">
+				<button
+					class="tiroir-form__fermer"
+					id="form-fermer"
+					aria-label="Fermer le formulaire"
+					onclick={fermerLeFormulaire}
+				>
 					<svg
 						width="17"
 						height="17"
@@ -360,7 +620,7 @@
 			</div>
 
 			<div class="tiroir-form__corps">
-				<div class="champ" id="champ-nom">
+				<div class="champ" id="champ-nom" data-etat={erreurNom === null ? undefined : 'erreur'}>
 					<label class="champ__label" for="f-nom">Nom <span class="oblig">*</span></label>
 					<input
 						class="saisie"
@@ -371,7 +631,7 @@
 						value={edite ? edite.nom : ''}
 					/>
 					<span class="champ__aide">Affiché au moment de choisir un point de départ.</span>
-					<div class="champ__erreur" id="erreur-nom" hidden>
+					<div class="champ__erreur" id="erreur-nom" hidden={erreurNom === null}>
 						<svg
 							width="13"
 							height="13"
@@ -382,7 +642,7 @@
 							style="flex:none;margin-top:1px"
 							><path d="M8 4.5v4M8 11.2v.3" /><circle cx="8" cy="8" r="6.2" /></svg
 						>
-						<span id="erreur-nom-txt"></span>
+						<span id="erreur-nom-txt">{erreurNom ?? ''}</span>
 					</div>
 				</div>
 
@@ -434,16 +694,36 @@
 
 					<div class="outils-red" role="toolbar" aria-label="Mise en forme du squelette">
 						<div class="oz">
-							<button class="ob ob--txt" type="button" data-bloc="h2" title="Titre de section"
-								>H2</button
+							<button
+								class="ob ob--txt"
+								type="button"
+								data-bloc="h2"
+								title="Titre de section"
+								onclick={() => insererUnBloc('h2')}>H2</button
 							>
-							<button class="ob ob--txt" type="button" data-bloc="h3" title="Sous-titre">H3</button>
+							<button
+								class="ob ob--txt"
+								type="button"
+								data-bloc="h3"
+								title="Sous-titre"
+								onclick={() => insererUnBloc('h3')}>H3</button
+							>
 						</div>
 						<div class="oz">
-							<button class="ob" type="button" data-cmd="bold" title="Gras"
+							<button
+								class="ob"
+								type="button"
+								data-cmd="bold"
+								title="Gras"
+								onclick={() => appliquerUneCommande('bold')}
 								><b style="font-family:var(--f-ui);font-size:13px">G</b></button
 							>
-							<button class="ob" type="button" data-cmd="italic" title="Italique"
+							<button
+								class="ob"
+								type="button"
+								data-cmd="italic"
+								title="Italique"
+								onclick={() => appliquerUneCommande('italic')}
 								><i style="font-family:var(--f-lecture);font-size:13px">I</i></button
 							>
 						</div>
@@ -454,6 +734,7 @@
 								data-cmd="insertUnorderedList"
 								title="Liste à puces"
 								aria-label="Liste à puces"
+								onclick={() => appliquerUneCommande('insertUnorderedList')}
 							>
 								<svg
 									width="15"
@@ -483,6 +764,7 @@
 								data-cmd="insertOrderedList"
 								title="Liste numérotée"
 								aria-label="Liste numérotée"
+								onclick={() => appliquerUneCommande('insertOrderedList')}
 							>
 								<svg
 									width="15"
@@ -503,6 +785,7 @@
 								data-bloc="taches"
 								title="Liste de tâches"
 								aria-label="Liste de tâches"
+								onclick={() => insererUnBloc('taches')}
 							>
 								<svg
 									width="15"
@@ -528,6 +811,7 @@
 								data-bloc="alerte-attention"
 								title="Encadré attention"
 								aria-label="Encadré attention"
+								onclick={() => insererUnBloc('alerte-attention')}
 							>
 								<svg
 									width="15"
@@ -547,6 +831,7 @@
 								data-bloc="code"
 								title="Bloc de code"
 								aria-label="Bloc de code"
+								onclick={() => insererUnBloc('code')}
 							>
 								<svg
 									width="15"
@@ -570,6 +855,7 @@
 						role="textbox"
 						aria-multiline="true"
 						aria-label="Contenu du squelette"
+						oninput={relireLaStructure}
 					>
 						<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 						{@html contenuEdite}
@@ -579,7 +865,20 @@
 				<div class="champ">
 					<span class="champ__label">Structure produite</span>
 					<div class="structure-apercu" id="apercu-structure">
-						{#if panneauOuvert}{#if titresEdites.length}{#each titresEdites as titre (titre)}<span
+						<!--
+							LA CLÉ EST LE RANG, ET C'EST UNE OBLIGATION, PAS UN CHOIX DE STYLE.
+
+							Deux sections peuvent porter le MÊME titre — le bouton « H2 » insère
+							« Titre de section » autant de fois qu'on le clique, et c'est le geste
+							du gel. Une clé sur le titre ferait alors `each_key_duplicate`, et
+							Svelte abandonne l'hydratation de la PAGE ENTIÈRE : plus un écouteur
+							ne serait posé, sur aucun écran de cette route. Le rendu resterait
+							juste, ce qui rend le défaut invisible à l'œil.
+
+							Tant que la structure venait du contenu SERVI, le cas ne pouvait pas
+							se produire. Il le peut depuis que la frappe la met à jour.
+						-->
+						{#if panneauOuvert}{#if titresEdites.length}{#each titresEdites as titre, rang (rang)}<span
 										>{titre}</span
 									>{/each}{:else}<span
 									style="font-size:var(--t-mini);color:var(--c-encre-3);background:none"
@@ -593,10 +892,27 @@
 			</div>
 
 			<div class="tiroir-form__pied">
-				<button class="btn btn--destructif" id="form-supprimer" hidden={!edite}>Supprimer</button>
-				<button class="btn" id="form-dupliquer" hidden={!edite}>Dupliquer</button>
-				<button class="btn" id="form-annuler">Annuler</button>
-				<button class="btn btn--principal" id="form-valider"
+				<button
+					class="btn btn--destructif"
+					id="form-supprimer"
+					hidden={!edite}
+					onclick={() => {
+						if (edite !== null) demande = edite.id;
+					}}>Supprimer</button
+				>
+				<button
+					class="btn"
+					id="form-dupliquer"
+					hidden={!edite}
+					onclick={() => {
+						if (edite !== null) onDupliquer?.(edite.id);
+					}}>Dupliquer</button
+				>
+				<button class="btn" id="form-annuler" onclick={fermerLeFormulaire}>Annuler</button>
+				<button
+					class="btn btn--principal"
+					id="form-valider"
+					onclick={() => void validerLeFormulaire()}
 					><span id="form-valider-txt">{edite ? 'Enregistrer' : 'Créer le template'}</span></button
 				>
 			</div>

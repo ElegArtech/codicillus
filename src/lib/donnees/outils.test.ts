@@ -148,17 +148,24 @@ describe('etatDeCartographie', () => {
 describe('les périmètres d’affichage recopiés des vues', () => {
 	it('V-19 dessine bien l’univers Production', () => {
 		expect(PERIMETRE_DE_V19).toEqual({ type: 'univers', nom: 'Production' });
-		expect(sourceDeVue('V-19')).toContain(
-			/* T-043 a ajouté le troisième argument `relations` à l'appel de la vue : le
-			   littéral a bougé, l'intention du contrôle non. On épingle le PÉRIMÈTRE,
-			   pas la signature — sinon ce test rougirait à chaque paramètre ajouté. */
-			"sousGraphe(corpus, { type: 'univers', nom: 'Production' }"
-		);
+		/* T-043 a ajouté le troisième argument `relations` à l'appel de la vue, puis
+		   le lot de câblage a donné à V-19 son périmètre EN PROPRIÉTÉ : le sélecteur
+		   du gel navigue désormais, et `?perimetre=` porte l'état (`RG-M09-05`). Le
+		   littéral a donc quitté l'appel à `sousGraphe()` pour devenir le DÉFAUT de
+		   la vue — c'est le cas que l'en-tête de `PERIMETRE_DE_V19` annonçait, mot
+		   pour mot : « le jour où la vue recevra son périmètre en propriété […] ».
+		   L'intention du contrôle ne bouge pas : la vue, sans rien recevoir, dessine
+		   l'univers Production, et c'est CE périmètre-là que le chargeur recopie. */
+		expect(sourceDeVue('V-19')).toContain("return { type: 'univers', nom: 'Production' };");
 	});
 
 	it('V-20 dessine bien le périmètre global', () => {
 		expect(PERIMETRE_DE_V20).toEqual({ type: 'global' });
-		expect(sourceDeVue('V-20')).toContain("sousGraphe(corpus, { type: 'global' }");
+		/* Même déplacement qu'en V-19 : le périmètre a quitté l'appel à
+		   `sousGraphe()` pour devenir le DÉFAUT de la vue, `?perimetre=` portant
+		   désormais l'état (`RG-M09-05`). C'est ce défaut-là que le chargeur
+		   recopie, et c'est lui qu'on épingle. */
+		expect(sourceDeVue('V-20')).toContain("return { type: 'global' };");
 	});
 
 	it('le périmètre de V-19 discrimine réellement, et son effet est mesuré', () => {

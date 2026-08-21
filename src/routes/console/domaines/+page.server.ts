@@ -31,7 +31,18 @@
  */
 import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { supprimerUnDomaine } from '$lib/donnees/administration';
+import { creerUnDomaine, modifierUnDomaine, supprimerUnDomaine } from '$lib/donnees/administration';
+import {
+	CHAMP_COULEUR,
+	CHAMP_DESCRIPTION,
+	CHAMP_DOMAINE_CIBLE,
+	CHAMP_MODULES,
+	CHAMP_NOM,
+	CHAMP_UNIVERS_CIBLE,
+	CHAMP_UNIVERS_DE_RATTACHEMENT,
+	modulesDuChamp,
+	texteDuChamp
+} from '$lib/console/structure';
 import {
 	accesALaConsole,
 	contexteDeRequete,
@@ -90,6 +101,69 @@ export const actions: Actions = {
 			domaine: String(champs.get('domaine') ?? ''),
 			saisie: champs.get('sup-saisie')
 		});
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	},
+
+	/**
+	 * CRÉER UN DOMAINE — `RG-STR-02`, `RG-STR-03`, `RG-STR-06`.
+	 *
+	 * C'EST LE GESTE QUI MANQUAIT AU PRODUIT : aucun domaine ne pouvait naître,
+	 * et sans domaine il n'y a ni dossier, ni note. `creerUnDomaine()` écrit les
+	 * trois choses que la règle exige — le domaine, son dossier racine
+	 * (`RG-STR-03`) et ses modules (`RG-STR-06`) — dans une seule transaction.
+	 *
+	 * L'UNIVERS EST DÉSIGNÉ PAR SON NOM D'AFFICHAGE ici, et non par son
+	 * identifiant : c'est ce que `#f-univers` porte au gel (`V-28:565`, dont les
+	 * options valent `u.nom`). La traduction en clé de base est faite par
+	 * l'exécutant, une fois.
+	 */
+	creer: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const resultat = await creerUnDomaine(basePartagee(), {
+			nom: texteDuChamp(champs, CHAMP_NOM) ?? '',
+			description: texteDuChamp(champs, CHAMP_DESCRIPTION) ?? '',
+			univers: texteDuChamp(champs, CHAMP_UNIVERS_DE_RATTACHEMENT) ?? '',
+			couleur: texteDuChamp(champs, CHAMP_COULEUR) ?? '',
+			modules: modulesDuChamp(champs, CHAMP_MODULES) ?? []
+		});
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	},
+
+	/**
+	 * ENREGISTRER UN DOMAINE — `RG-STR-02`, `RG-STR-06`.
+	 *
+	 * LA CIBLE EST DÉSIGNÉE PAR SA FORME CANONIQUE — les deux mêmes segments que
+	 * `?/supprimer`, pour la raison que ce voisin écrit : `RG-STR-02` ne rend
+	 * l'identifiant unique qu'au sein de son univers.
+	 */
+	enregistrer: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const nom = texteDuChamp(champs, CHAMP_NOM);
+		const description = texteDuChamp(champs, CHAMP_DESCRIPTION);
+		const rattachement = texteDuChamp(champs, CHAMP_UNIVERS_DE_RATTACHEMENT);
+		const couleur = texteDuChamp(champs, CHAMP_COULEUR);
+		const modules = modulesDuChamp(champs, CHAMP_MODULES);
+
+		const resultat = await modifierUnDomaine(
+			basePartagee(),
+			{
+				univers: texteDuChamp(champs, CHAMP_UNIVERS_CIBLE) ?? '',
+				domaine: texteDuChamp(champs, CHAMP_DOMAINE_CIBLE) ?? ''
+			},
+			{
+				...(nom === undefined ? {} : { nom }),
+				...(description === undefined ? {} : { description }),
+				...(rattachement === undefined ? {} : { univers: rattachement }),
+				...(couleur === undefined ? {} : { couleur }),
+				...(modules === undefined ? {} : { modules })
+			}
+		);
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		if (resultat.issue !== 'possible') return fail(400, resultat);
 		return resultat;

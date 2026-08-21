@@ -27,11 +27,26 @@
 	import Vue from '../../../vues/V-33.svelte';
 	import '../../../vues/V-33.css';
 	import { cablerLaConfiguration } from '../cablage';
+	import { cablerLeTemoinDeConfiguration } from './cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
 
-	onMount(() => cablerLaConfiguration(document));
+	/**
+	 * DEUX CÂBLAGES, ET LA FRONTIÈRE EST NETTE. Le commun tient les sept champs,
+	 * les deux boutons et l'envoi ; celui d'à côté tient le seul nœud qu'il
+	 * laissait derrière — `#etat-config`, la phrase qui dit à l'administrateur
+	 * que ses modifications ne s'appliquent pas encore. Voir `./cablage.ts` pour
+	 * la raison du partage.
+	 */
+	onMount(() => {
+		const commun = cablerLaConfiguration(document);
+		const temoin = cablerLeTemoinDeConfiguration(document);
+		return () => {
+			commun();
+			temoin();
+		};
+	});
 </script>
 
 <Vue

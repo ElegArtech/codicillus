@@ -46,4 +46,49 @@
 	onMarquerParDefaut={(template) => {
 		void envoyerAUneAction(document, '?/marquerParDefaut', { template });
 	}}
+	onDupliquer={(template) => {
+		/* `dupliquer(t)` du gel (`V-31:3385`) : tout est copié SAUF le caractère
+		   « par défaut », et le nom prend le suffixe « (copie) ». Le modèle est
+		   relu ici, dans la liste que le chargeur a servie — la vue n'a transmis
+		   que sa désignation. */
+		const modele = data.templates.find((t) => t.id === template);
+		if (modele === undefined) return;
+		void envoyerAUneAction(document, '?/creer', {
+			'f-nom': `${modele.nom} (copie)`,
+			'f-desc': modele.description,
+			'f-type': modele.type,
+			'f-defaut': 'non',
+			'f-contenu': modele.contenu
+		});
+	}}
+	onEnregistrer={async (demande) => {
+		/* UNE SEULE FORME DE CHARGE POUR LES DEUX ACTIONS, et les noms sont ceux
+		   du gel : `creer` et `enregistrer` lisent le même formulaire, seule la
+		   désignation de la ligne visée les sépare (`P-35`). */
+		const champs: Record<string, string> = {
+			'f-nom': demande.nom,
+			'f-desc': demande.description,
+			'f-type': demande.type,
+			'f-defaut': demande.defaut ? 'oui' : 'non',
+			'f-contenu': demande.contenu
+		};
+		if (demande.id !== null) champs['template'] = demande.id;
+
+		const retour = await envoyerAUneAction(
+			document,
+			demande.id === null ? '?/creer' : '?/enregistrer',
+			champs
+		);
+		if (retour.succes) return { enregistre: true, message: null };
+
+		/* LE REFUS EST RENDU TEL QUE L'ACTION L'A PRONONCÉ, jamais reformulé. Le
+		   seul bloc de refus du gel est celui du nom : un refus d'une autre nature
+		   n'a nulle part où se dire, et le panneau reste alors ouvert sans rien
+		   écrire — lacune déclarée, pas écran inventé. */
+		const refus = retour.donnees as { issue?: string; message?: string } | undefined;
+		return {
+			enregistre: false,
+			message: refus?.issue === 'saisie-refusee' ? (refus.message ?? null) : null
+		};
+	}}
 />

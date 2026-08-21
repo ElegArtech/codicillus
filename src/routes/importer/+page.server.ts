@@ -159,6 +159,18 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		vecteur: null,
+		/**
+		 * « LAISSER TOURNER EN ARRIÈRE-PLAN » MÈNE À LA CONSOLE, ET ELLE EST
+		 * RÉSERVÉE — `V-24:3383` : « suivez-le depuis la console, onglet Imports,
+		 * vue V-35 ». `docs/routes.md:167` : toutes les routes de console exigent
+		 * le rôle administrateur, et un autre compte y reçoit 404.
+		 *
+		 * Le bouton n'est donc POSÉ que pour l'administrateur (`P-09` : une action
+		 * interdite n'est pas rendue). C'est le seul usage de cette valeur ; elle
+		 * ne dit rien d'autre que « ce bouton a une destination atteignable ».
+		 */
+		suiviEnConsole:
+			locals.identite.type === 'authentifie' && locals.identite.role === 'administrateur',
 		notes: await lireNotesLisibles(base, acces.perimetre, acces.contexte),
 		/* Rien n'a été déposé : le lot est vide, et il le dit. */
 		lotImport: { source: '', fichiers: [] },

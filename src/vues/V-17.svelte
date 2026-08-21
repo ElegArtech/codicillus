@@ -310,7 +310,7 @@
 -->
 {#snippet niveauDeDossiers(noeuds: readonly DossierDeChoix[], prefixe: string)}
 	<ul>
-		{#each noeuds as noeud (noeud.nom)}
+		{#each noeuds as noeud, rang (rang)}
 			{@const chemin = prefixe ? `${prefixe} › ${noeud.nom}` : noeud.nom}
 			<li>
 				<label class="dc"
@@ -822,7 +822,7 @@
 					<div class="champ">
 						<label class="champ__label" for="m-domaine">Domaine <span class="oblig">*</span></label>
 						<select class="selecteur" id="m-domaine">
-							{#each domaines as domaine (domaine.nom)}<option
+							{#each domaines as domaine, rang (rang)}<option
 									value={domaine.nom}
 									selected={domaine.nom === domaineChoisi}
 									>{domaine.univers + ' › ' + domaine.nom}</option

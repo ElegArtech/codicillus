@@ -23,6 +23,7 @@
 	import '../../../vues/V-20.css';
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
+	import { Attaches, cablerLaVue } from '$lib/graphe/commandes';
 
 	import type { PageData } from './$types';
 
@@ -48,7 +49,28 @@
 			);
 		};
 		enveloppe.addEventListener('click', aller);
-		return () => enveloppe.removeEventListener('click', aller);
+
+		/**
+		 * LES TROIS OUTILS DE `div.outils-graphe` — les mêmes qu'en V-19, et par
+		 * le même code : `cablerLaVue()` écrit la transformation de `g#racine`,
+		 * l'attribut que le gel y pose déjà. Ils sont ici et non dans la vue
+		 * parce qu'ils n'agissent que sur le DOM rendu, sans rien devoir au
+		 * graphe (`ARB-063`).
+		 *
+		 * LE SÉLECTEUR DE PÉRIMÈTRE MONTRE CE QUE L'ADRESSE PORTE. Le gel n'écrit
+		 * aucun `selected` sur ses `<option>` ; le poser au balisage ferait
+		 * diverger le document servi de la référence pour un effet que cette
+		 * ligne obtient sans y toucher.
+		 */
+		const attaches = new Attaches();
+		cablerLaVue(enveloppe, attaches);
+		const perimetre = enveloppe.querySelector<HTMLSelectElement>('#perimetre');
+		if (perimetre !== null) perimetre.value = data.perimetreDemande;
+
+		return () => {
+			enveloppe.removeEventListener('click', aller);
+			attaches.debranchement()();
+		};
 	});
 </script>
 
@@ -59,5 +81,8 @@
 		relations={data.relations}
 		typesRelation={data.typesRelation}
 		relationsTechniques={data.relationsTechniques}
+		perimetreDemande={data.perimetreDemande}
+		typeMaitreDemande={data.typeMaitreDemande}
+		centreDemande={data.centreDemande}
 	/>
 </div>

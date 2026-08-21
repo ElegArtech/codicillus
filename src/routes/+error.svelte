@@ -95,6 +95,8 @@
 	import feuillePublique from '../vues/V-04.css?url';
 	import feuilleConnectee from '../vues/V-26.css?url';
 	import { casDeV04, casDeV26, vueDeLAdresseNonResolue } from '$lib/donnees/public';
+	import { onMount } from 'svelte';
+	import { cablerLaPageDErreur } from './cablage-erreur';
 
 	const donnees = $derived(page.data as { session?: boolean; ecriture?: boolean });
 	const session = $derived(donnees.session === true);
@@ -102,6 +104,14 @@
 
 	const nonResolue = $derived(page.status === 404);
 	const vue = $derived(vueDeLAdresseNonResolue(page.url.pathname, session));
+
+	/* LE CÂBLAGE DES TROIS GESTES DE LA PAGE — `ARB-063`, depuis la route.
+	   V-04 et V-26 les portent aux mêmes identifiants, à un près : le champ est
+	   `#saisie` ici, `#rech` là. `cablerLaPageDErreur` cherche les deux. */
+	onMount(() => {
+		if (!nonResolue) return;
+		return cablerLaPageDErreur(document, { creationPossible: ecriture });
+	});
 </script>
 
 <svelte:head>

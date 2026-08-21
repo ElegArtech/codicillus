@@ -81,6 +81,7 @@
 	import '../../../vues/V-14.css';
 	import { page } from '$app/state';
 	import { cablerLaSuppression, cablerLHistorique } from '$lib/cablage/formulaires';
+	import { cablerLaFermetureDeLHistorique, cablerLaLecture, cablerLaLoupe } from './cablage';
 	import Historique from '../../../vues/V-15.svelte';
 	import '../../../vues/V-15.css';
 	import Dialogues from '../../../vues/V-40.svelte';
@@ -197,11 +198,36 @@
 						titreDeLaNote: data.lecture.note.titre,
 						action: `${adresse}/relations?/ajouter`
 					});
+		/**
+		 * LES GESTES DE LA LECTURE ELLE-MÊME — la fraîcheur, les bandeaux, la
+		 * bascule de registre, le menu d'actions, la copie et la loupe.
+		 *
+		 * ILS SONT POSÉS APRÈS LA NEUTRALISATION, et jamais avant : le câblage
+		 * n'écrit aucun attribut de type, il compte sur celui que la boucle
+		 * ci-dessus a posé. Poser l'un sans l'autre rendrait « Marquer comme
+		 * vérifié » soumetteur ET écouté, donc parti deux fois — la seconde vers
+		 * l'action par défaut du formulaire, qui est la suppression.
+		 *
+		 * Quand l'historique est ouvert, c'est V-15 qui est à l'écran : elle
+		 * partage l'article de V-14 (le même bloc, à l'octet), donc les gestes de
+		 * la fraîcheur valent aussi là, et seule la fermeture du panneau s'ajoute.
+		 */
+		const defaireLecture = cablerLaLecture(formulaire, {
+			identifiant: data.lecture.note.id,
+			ecriture: data.vecteur.droits === 'ecriture'
+		});
+		const defaireLoupe = cablerLaLoupe(formulaire.ownerDocument);
+		const defaireFermeture = historiqueOuvert
+			? cablerLaFermetureDeLHistorique(formulaire.ownerDocument, adresse)
+			: () => {};
 		return () => {
 			defaireSuppression();
 			defaireHistorique();
 			defairePieces();
 			defaireRelation();
+			defaireLecture();
+			defaireLoupe();
+			defaireFermeture();
 		};
 	});
 
@@ -711,3 +737,38 @@
 		{typesRelation}
 	/>
 {/if}
+
+<!--
+	LA BOÎTE D'AGRANDISSEMENT — transcrite du gel, et montée par la route.
+
+	`mockups/V-14-lecture-note.html:1933-1941`, à l'octet. `src/vues/V-14.svelte`
+	ne la porte pas, et son en-tête dit pourquoi : un `dialog` FERMÉ ne déclare
+	aucune boîte de rendu, ne déplace aucun pixel et n'entre pas dans
+	l'instantané ARIA — le banc de comparaison ne pouvait donc pas la mesurer, et
+	l'y écrire n'aurait rien prouvé.
+
+	SANS ELLE, LE CADRE DE FIGURE EST UN BOUTON QUI NE FAIT RIEN, et
+	`rendreDocument()` en compose un pour CHAQUE figure de CHAQUE note lue
+	(`src/lib/contenu/rendu.ts`) : ce n'est pas un ornement de démonstration,
+	c'est le seul moyen de lire un schéma dense. Elle est donc montée ici, comme
+	`d-relation` juste au-dessus et pour la même raison — `docs/routes.md:211`,
+	« chaque dialogue s'exécute dans la vue qui le déclenche ».
+
+	HORS DU FORMULAIRE, et pour la raison de sa voisine : ses nœuds ne doivent
+	pas devenir des champs de l'enveloppe qui vise la suppression. Le bouton
+	porte son type explicitement, ce que le gel n'avait pas à faire.
+
+	Sa feuille est celle de V-14, déjà importée par cette page, et elle n'est pas
+	modifiée : les cinq règles de la famille y sont, telles que le gel les écrit.
+-->
+<dialog class="loupe" id="loupe">
+	<div class="loupe__boite">
+		<div id="loupe-contenu"></div>
+		<div class="loupe__pied">
+			<span id="loupe-legende"></span>
+			<button class="btn" type="button" id="loupe-fermer"
+				>Fermer <kbd class="touche">Échap</kbd></button
+			>
+		</div>
+	</div>
+</dialog>

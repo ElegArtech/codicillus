@@ -28,10 +28,20 @@
  * (`RG-ACC-04`), et le paramètre n'est même pas regardé.
  */
 import { error } from '@sveltejs/kit';
+import { basePartagee } from '$lib/base/acces';
+import { lireConfiguration } from '$lib/donnees/lecture';
 import { vecteurDeV06LienInconnu } from '$lib/donnees/profil';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = () => ({ vecteur: vecteurDeV06LienInconnu() });
+/**
+ * L'ADRESSE DU PORTAIL D'ASSISTANCE VIENT DE LA BASE — clé `portail_assistance`
+ * de la table `parametres` (M14.7). Elle ne dépend ni du jeton présenté ni de
+ * son sort : la lire ici ne dit rien de plus qu'à l'étape 1.
+ */
+export const load: PageServerLoad = async () => ({
+	vecteur: vecteurDeV06LienInconnu(),
+	portail: (await lireConfiguration(basePartagee())).portailAssistance
+});
 
 export const actions: Actions = {
 	default: () => {

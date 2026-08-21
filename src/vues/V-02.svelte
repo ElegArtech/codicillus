@@ -75,18 +75,31 @@
 	 * loi sur la forme (ordre de préséance, `CLAUDE.md` §2). Ce qui devient vrai
 	 * ici est le nombre : il reflète la requête ET les facettes retenues.
 	 *
-	 * LES ADRESSES DE RÉSULTAT RESTENT CELLES DU GEL — `href="#"`. Ouvrir un
-	 * guide depuis un résultat n'appartient pas à ce lot.
+	 * UN RÉSULTAT OUVRE SON GUIDE — `/guides/{identifiant}`, par `resolve()`. Les
+	 * adresses du gel étaient inertes ; elles ne le sont plus, et c'est la seule
+	 * modification que la campagne de câblage autorise dans une vue.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
 	 * (P-6.1) et de `src/vues/V-02.css` (P-6.3). Les deux `style=` du fichier —
 	 * `padding:4px 8px` et `padding-top:0` — figurent à l'ensemble clos du gel
 	 * (ARB-016).
 	 */
-	import { notesPubliques, type Note } from '../../seeds/corpus';
+	import { resolve } from '$app/paths';
+	import { CONFIG, notesPubliques, type Note } from '../../seeds/corpus';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { motFiche } from '$lib/vocabulaire';
+
+	/**
+	 * LES MOTIFS DE ROUTE, ÉCRITS EN CONSTANTES — `svelte/no-navigation-without-resolve`
+	 * inspecte l'EXPRESSION du `href`, et une adresse composée à la main lui est
+	 * opaque. Même écriture qu'à `V-07:455` et sur `src/lib/coquille/Rail.svelte`.
+	 *
+	 * UN RÉSULTAT S'OUVRE EN `/guides/{identifiant}`, JAMAIS EN `/notes/{…}` :
+	 * cet écran est celui du visiteur SANS SESSION, qui n'a aucun droit sur
+	 * l'adresse interne.
+	 */
+	const ROUTE_DU_GUIDE = '/guides/[identifiant]' as const;
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
@@ -103,9 +116,21 @@
 		 * facette. Absent : aucune — l'état des cinq positions de la planche.
 		 */
 		retenues?: Record<string, readonly string[]>;
+		/**
+		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — donnée d'INSTANCE, lue dans la table
+		 * `parametres` par le chargeur de la route. Absente, la valeur du jeu de
+		 * semence, qui est celle que la semence écrit en base.
+		 */
+		portail?: string;
 	}
 
-	const { vecteur, notes, recherchees = false, retenues }: Proprietes = $props();
+	const {
+		vecteur,
+		notes,
+		recherchees = false,
+		retenues,
+		portail = CONFIG.portailAssistance
+	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const etat = $derived(typeof reglage['etat'] === 'string' ? reglage['etat'] : 'nominal');
@@ -281,7 +306,7 @@
 		états en échec de structure pour cette seule cause.
 	-->
 	<!-- prettier-ignore -->
-	<a class="carte carte--publique" href="#" data-index={index}
+	<a class="carte carte--publique" href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })} data-index={index}
 		><div class="carte__haut"
 			><h2 class="carte__titre">{@render marque(n.titre, q)}</h2><span class="past past--type">{n.type === 'Fiche' ? `${motFiche} ${n.typeFiche}` : n.type}</span
 		></div
@@ -296,16 +321,25 @@
 	>
 {/snippet}
 
+<!--
+	L'ADRESSE DU PORTAIL D'ASSISTANCE EST EXTERNE, et `resolve()` ne s'y applique
+	pas : elle compose une adresse INTERNE sous la racine de déploiement, quand
+	celle-ci est une adresse absolue lue dans la table `parametres`. La règle est
+	donc levée pour ce fichier, et pour elle seule — même levée que `V-03.svelte`,
+	et pour la même raison. Tous les autres liens de la vue passent par
+	`resolve()`.
+-->
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
 <a class="saut-contenu" href="#resultats">Aller aux résultats</a>
 
 <div class="public app" id="app" data-etat={etat} data-facettes="ferme">
 	<header class="chapeau">
-		<a class="marque" href="#" aria-label="Codicillus — accueil public">
+		<a class="marque" href={resolve('/')} aria-label="Codicillus — accueil public">
 			<span class="marque__sceau" aria-hidden="true">C</span>
 			<span class="marque__nom">Codicillus</span>
 		</a>
 		<!-- Accès connexion : discret, pour les personnes qui ont déjà un compte. -->
-		<a class="btn btn--discret" href="#">Se connecter</a>
+		<a class="btn btn--discret" href={resolve('/connexion')}>Se connecter</a>
 	</header>
 
 	<div class="barre-requete">
@@ -456,7 +490,7 @@
 										>{piste}</button
 									>{/each}
 							</div>
-							<a class="btn btn--principal" href="#">Ouvrir un ticket d'assistance</a>
+							<a class="btn btn--principal" href={portail}>Ouvrir un ticket d'assistance</a>
 						</div>{:else}{#each resultats as n, index (n.id)}{@render carte(
 								n,
 								requete,
@@ -479,7 +513,7 @@
 							déclenche l'écriture du guide manquant.
 						</p>
 					</div>
-					<a class="btn btn--principal" href="#" id="ticket">
+					<a class="btn btn--principal" href={portail} id="ticket">
 						Ouvrir un ticket d'assistance
 						<svg
 							width="13"
@@ -498,7 +532,7 @@
 	<footer class="pied-public">
 		<div class="pied-public__int">
 			<span class="etiq">Codicillus · Direction technique</span>
-			<a href="#">Se connecter</a>
+			<a href={resolve('/connexion')}>Se connecter</a>
 		</div>
 	</footer>
 </div>

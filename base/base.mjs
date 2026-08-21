@@ -155,7 +155,7 @@ try {
 			console.log('');
 			console.log('CE QUE CE CHARGEMENT NE COUVRE PAS — exports de seeds/corpus.ts sans table :');
 			for (const quoi of [
-				'VERSIONS, CONTENU_VERSIONS  (M07, hors du périmètre §3)',
+				'CONTENU_VERSIONS  (les corps des versions anciennes — VERSIONS, lui, est chargé)',
 				'ACTIVITE, MESURES_7J, MESURES_7J_PREC, MODIFICATIONS  (M01/M15, agrégats)',
 				'LOT_IMPORT, JOURNAL_IMPORTS, FORMATS_IMPORT  (M12)',
 				'DISTINCTIONS, CONTRIBUTIONS, RECHERCHES  (M15/M16)',

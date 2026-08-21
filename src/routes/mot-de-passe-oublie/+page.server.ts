@@ -33,10 +33,21 @@
  * ce que `P-02` interdit.
  */
 import { error } from '@sveltejs/kit';
+import { basePartagee } from '$lib/base/acces';
+import { lireConfiguration } from '$lib/donnees/lecture';
 import { vecteurDeV06Etape1 } from '$lib/donnees/profil';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = () => ({ vecteur: vecteurDeV06Etape1() });
+/**
+ * L'ADRESSE DU PORTAIL D'ASSISTANCE VIENT DE LA BASE. V-06 pose « Ouvrir un
+ * ticket d'assistance » dans son pied ; le gel dit d'où l'adresse sort —
+ * « adresse externe configurée en console » (`V-04:2205`) —, et c'est la clé
+ * `portail_assistance` de la table `parametres` (M14.7).
+ */
+export const load: PageServerLoad = async () => ({
+	vecteur: vecteurDeV06Etape1(),
+	portail: (await lireConfiguration(basePartagee())).portailAssistance
+});
 
 export const actions: Actions = {
 	default: () => {

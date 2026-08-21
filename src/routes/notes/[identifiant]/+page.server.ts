@@ -286,6 +286,7 @@ async function complementsDeLecture(
 	lecture: LectureDeNote,
 	registre: Registre,
 	corpsDuRegistreReference: string | null,
+	corpsDuRegistreOperationnel: string | null,
 	maintenant: Date
 ): Promise<ComplementsDeLecture> {
 	const identifiant = lecture.note.id;
@@ -401,7 +402,10 @@ async function complementsDeLecture(
 		affichee: {
 			note: lecture.note,
 			reference: corpsDuRegistreReference,
-			operationnel: registre === 'operationnel' && lecture.corps.redige ? lecture.corps.html : null,
+			operationnel:
+				registre === 'operationnel' && lecture.corps.redige
+					? lecture.corps.html
+					: corpsDuRegistreOperationnel,
 			sommaire: sommaireDuDocument(ligne.corpsReference),
 			controle:
 				ligne.verifieLe === null
@@ -440,7 +444,11 @@ async function complementsDeLecture(
 					nom,
 					extension,
 					taille: tailleEnClair(pj.tailleOctets),
-					depose: `déposé le ${formaterDateFr(pj.deposeeLe)}`
+					depose: `déposé le ${formaterDateFr(pj.deposeeLe)}`,
+					/* L'ADRESSE PREND LE NOM DE FICHIER, JAMAIS LE NOM AFFICHÉ :
+					   celui-ci est amputé de son suffixe juste au-dessus. Le lien du
+					   panneau est ainsi juste AU RENDU, sans attendre l'hydratation. */
+					adresse: adresseDePieceJointe(lecture.note.id, pj.nom)
 				};
 			}),
 			relations: grouperLesRelations([...sortantes, ...entrantes]),
@@ -551,13 +559,37 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 			? lecture.corps.redige
 				? lecture.corps.html
 				: null
-			: await corpsDeReferenceCharge(base, params.identifiant, locals.identite, contexte);
+			: await corpsCharge(base, params.identifiant, 'reference', locals.identite, contexte);
+
+	/* ═══════════════════════════════════════════════════════════════════════
+	   LES DEUX CORPS SONT SERVIS ENSEMBLE, PARCE QUE LA BASCULE NE RECHARGE PAS.
+
+	   Le gel rend les deux enveloppes en permanence et n'en montre qu'une
+	   (`div#corps-operationnel[hidden]`) ; son propre script échange l'attribut
+	   « sans rechargement » (`V-14:3945`). Le câblage de cette route fait de
+	   même — c'est le geste du gel, transcrit. Il fallait donc que le SECOND
+	   corps soit là : sans lui, l'onglet « Opérationnel » ouvrait un volet vide,
+	   ce qui est pire qu'un onglet inerte.
+
+	   LE COÛT EST BORNÉ AU CAS QUI L'EXERCE. La seconde lecture n'a lieu que si
+	   la note PORTE un registre Opérationnel — ce qui est aussi la condition
+	   sous laquelle les deux onglets sont rendus (`V-14:1513`, `hidden` sinon).
+	   Une note sans second registre ne paie rien.
+
+	   ELLE PASSE PAR `lireLaNote()`, comme sa jumelle ci-dessus, et donc par la
+	   MÊME décision d'accès : il n'existe pas deux résolutions de droit à cette
+	   adresse. Un refus rend un volet vide, jamais un aveu. */
+	const corpsOperationnel =
+		registre === 'reference' && lecture.note.operationnel
+			? await corpsCharge(base, params.identifiant, 'operationnel', locals.identite, contexte)
+			: null;
 
 	const complements = await complementsDeLecture(
 		base,
 		lecture,
 		registre,
 		corpsDeReference,
+		corpsOperationnel,
 		maintenant
 	);
 
@@ -666,25 +698,26 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 };
 
 /**
- * LE CORPS DE RÉFÉRENCE, RÉSOLU UNE SECONDE FOIS — et par le même chemin.
+ * L'AUTRE CORPS DE LA NOTE, RÉSOLU UNE SECONDE FOIS — et par le même chemin.
  *
- * Elle n'est appelée que lorsque l'adresse demande l'Opérationnel. Passer par
- * `lireLaNote()` plutôt que par une requête écrite ici garantit qu'il n'existe
- * pas deux décisions d'accès à cette adresse : un refus rend `INTROUVABLE`, et
- * le volet visible reste vide plutôt que de trahir quoi que ce soit.
+ * Elle sert les deux sens, et c'est la même fonction parce que c'est le même
+ * geste : l'adresse nomme un registre, l'écran a besoin des DEUX, et le second
+ * se relit. Quand l'adresse demande l'Opérationnel, elle rend la Référence ;
+ * quand elle demande la Référence, elle rend l'Opérationnel — et seulement si
+ * la note en porte un.
+ *
+ * Passer par `lireLaNote()` plutôt que par une requête écrite ici garantit
+ * qu'il n'existe pas deux décisions d'accès à cette adresse : un refus rend
+ * `INTROUVABLE`, et le volet reste vide plutôt que de trahir quoi que ce soit.
  */
-async function corpsDeReferenceCharge(
+async function corpsCharge(
 	base: Base,
 	identifiant: string,
+	registre: Registre,
 	identite: Identite,
 	contexte: ContexteDeLecture
 ): Promise<string | null> {
-	const autre = await lireLaNote(base, {
-		identifiant,
-		registre: 'reference',
-		identite,
-		contexte
-	});
+	const autre = await lireLaNote(base, { identifiant, registre, identite, contexte });
 	if (!autre.trouve || !autre.ressource.corps.redige) return null;
 	return autre.ressource.corps.html;
 }

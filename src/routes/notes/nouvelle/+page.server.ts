@@ -83,11 +83,29 @@ async function contexte() {
 	return { base, contexte: { maintenant: new Date(), seuils: await lireSeuils(base) } };
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const { base, contexte: lecture } = await contexte();
 	const acces = await resoudreLaCreationDeNote(base, locals.identite, lecture);
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 	const creation = acces.ressource;
+
+	/**
+	 * `?template=` — LE PARAMÈTRE DE `docs/routes.md:287`, ENFIN LU.
+	 *
+	 * Il était déclaré non lu, et la conséquence n'était pas cosmétique : le
+	 * dialogue « Par quoi commencer ? » du gel n'est rendu que par l'état
+	 * `cas-template` de la vue, et aucune adresse ne le demandait. Ses deux
+	 * gestes — « Partir d'une page vierge », et le choix d'un gabarit —
+	 * n'étaient donc pas seulement inertes : ils étaient INATTEIGNABLES.
+	 *
+	 * Le paramètre PRÉSENT ouvre le choix. C'est la lecture que `RG-REF-01`
+	 * autorise — « template subsidiaire, donc paramètre facultatif » —, et c'est
+	 * la seule qui n'invente rien : la vue ne sait rendre que deux états ici,
+	 * avec ou sans le dialogue. Sa VALEUR, quand elle nomme un gabarit connu,
+	 * est rendue à l'écran pour qu'il soit présélectionné ; le câblage s'en sert,
+	 * le chargeur ne décide rien de plus.
+	 */
+	const templateDemande = url.searchParams.get('template');
 
 	return {
 		/**
@@ -101,7 +119,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		 * écran qui n'a rien enregistré — la valeur illustrative que `P-02`
 		 * proscrit.
 		 */
-		vecteur: { cas: 'vierge' },
+		vecteur: { cas: templateDemande === null ? 'vierge' : 'template' },
+		/** Le gabarit nommé par l'adresse, quand elle en nomme un. */
+		templateDemande,
 		notes: creation.notes,
 		typesNote: creation.referentiels.typesNote,
 		typesFiche: creation.referentiels.typesFiche,

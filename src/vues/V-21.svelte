@@ -72,7 +72,9 @@
 		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
-	import { segmentsDeDossier } from '$lib/rangement/adresses';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { adresseDeDossier, segmentsDeDossier } from '$lib/rangement/adresses';
 
 	/**
 	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
@@ -97,6 +99,16 @@
 		compte?: UtilisateurCourant;
 		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
 		instance?: EtatDInstance;
+		/**
+		 * LE PÉRIMÈTRE DEMANDÉ PAR L'ADRESSE — `?perimetre=`, sous la forme même du
+		 * sélecteur du gel : `tout|`, `univers|{nom}` ou `domaine|{nom}`.
+		 *
+		 * Le gel garde le sien dans une clôture (`V-21:2605`) : une carte réduite
+		 * ne s'envoie donc à personne, et le rechargement la ramène à tout le
+		 * corpus. Absent, c'est « Tout le corpus » — la première option, celle que
+		 * le gel a retenue au chargement, et l'état des trois positions de planche.
+		 */
+		perimetreDemande?: string | undefined;
 	}
 
 	const {
@@ -105,7 +117,8 @@
 		univers = UNIVERS,
 		domaines = DOMAINES,
 		compte = MOI,
-		instance = INSTANCE
+		instance = INSTANCE,
+		perimetreDemande
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -126,6 +139,46 @@
 	const domainesVisibles = $derived(
 		restreint ? domaines.filter((d) => d.nom !== 'Applications') : domaines
 	);
+
+	/**
+	 * LE PÉRIMÈTRE EFFECTIF. Une valeur illisible vaut « tout le corpus » : un
+	 * périmètre inventé rendrait un arbre vide sans jamais dire pourquoi.
+	 */
+	const perimetre = $derived.by(() => {
+		const brut = perimetreDemande ?? 'tout|';
+		const barre = brut.indexOf('|');
+		const type = barre < 0 ? brut : brut.slice(0, barre);
+		const nom = barre < 0 ? '' : brut.slice(barre + 1);
+		if ((type === 'univers' || type === 'domaine') && nom !== '') return { type, nom };
+		return { type: 'tout', nom: '' };
+	});
+
+	/** Les deux rangs supérieurs, réduits au périmètre demandé. */
+	const universDuPerimetre = $derived(
+		perimetre.type === 'univers'
+			? UNIVERS_PROPOSES.filter((u) => u.nom === perimetre.nom)
+			: UNIVERS_PROPOSES
+	);
+
+	const domainesDuPerimetre = $derived(
+		perimetre.type === 'domaine'
+			? domainesVisibles.filter((d) => d.nom === perimetre.nom)
+			: domainesVisibles
+	);
+
+	/**
+	 * CHANGER DE PÉRIMÈTRE — l'adresse le porte, comme aux deux cartographies.
+	 * `svelte/no-navigation-without-resolve` ne sait pas vérifier une adresse
+	 * composée : la règle est levée sur cette seule ligne.
+	 */
+	function changerDePerimetre(valeur: string): void {
+		const cible =
+			valeur === 'tout|'
+				? '/carte-mentale'
+				: `/carte-mentale?perimetre=${encodeURIComponent(valeur)}`;
+		/* eslint-disable-next-line svelte/no-navigation-without-resolve */
+		void goto(cible);
+	}
 
 	/* ── L'arbre ────────────────────────────────────────────────────────────
 	   Univers › domaine › dossiers (jusqu'à dix niveaux) › notes. Le rangement
@@ -188,8 +241,8 @@
 	 *  le corpus », première option du sélecteur au chargement. */
 	const racine = $derived.by<NoeudMental[]>(() => {
 		const universRendus: NoeudMental[] = [];
-		for (const u of UNIVERS_PROPOSES) {
-			const doms = domainesVisibles.filter((d) => d.univers === u.nom);
+		for (const u of universDuPerimetre) {
+			const doms = domainesDuPerimetre.filter((d) => d.univers === u.nom);
 			if (!doms.length) continue;
 			universRendus.push({
 				cle: `u:${u.nom}`,
@@ -219,9 +272,8 @@
 	 * droits n'en ouvre qu'UN — `V-21:2624` et `:2628`. C'est la seule
 	 * différence de dépliage entre les deux rendus de la vue.
 	 */
-	const deplies = $derived.by<string[]>(() => {
+	function ouvertsJusque(profondeur: number): string[] {
 		const ouverts: string[] = [];
-		const profondeur = restreint ? 1 : 2;
 		const parcourir = (noeuds: readonly NoeudMental[], niveau: number): void => {
 			for (const n of noeuds) {
 				if (niveau < profondeur && n.enfants.length) {
@@ -232,10 +284,75 @@
 		};
 		parcourir(racine, 0);
 		return ouverts;
-	});
+	}
+
+	/**
+	 * LE DÉPLIAGE DEVIENT UN ÉTAT, ET IL NE L'ÉTAIT PAS.
+	 *
+	 * Il était un DÉRIVÉ du vecteur : deux niveaux ouverts, toujours les mêmes,
+	 * et rien ne pouvait en ouvrir un troisième. Les trois gestes que le gel
+	 * dessine — le chevron d'une branche, « Déplier deux niveaux », « Tout
+	 * replier » — n'avaient donc aucun effet possible, et un arbre qu'on ne peut
+	 * pas déplier n'est pas un arbre.
+	 *
+	 * `null` SIGNIFIE « CE QUE LE DÉPLIAGE PAR DÉFAUT DONNE », et c'est ce qui
+	 * tient le gel : tant qu'aucun geste n'a eu lieu, le rendu est celui du
+	 * dérivé d'avant, à la branche près, et il suit les droits de vue comme
+	 * avant. Le premier geste fige la liste, et elle vit ensuite pour elle-même.
+	 */
+	let ouvertesChoisies = $state<string[] | null>(null);
+
+	const deplies = $derived(ouvertesChoisies ?? ouvertsJusque(restreint ? 1 : 2));
 
 	/** La branche est-elle dépliée ? */
 	const estDeplie = (cle: string): boolean => deplies.includes(cle);
+
+	/** Le chevron d'une branche — `basculer()` du gel, `V-21:2421`. */
+	function basculer(n: NoeudMental): void {
+		const courantes = deplies;
+		ouvertesChoisies = courantes.includes(n.cle)
+			? courantes.filter((c) => c !== n.cle)
+			: [...courantes, n.cle];
+	}
+
+	/**
+	 * OUVRIR UN NŒUD — `ouvrir()` du gel, `V-21:2441`. Une note s'ouvre (V-14),
+	 * un dossier s'ouvre (V-13), et tout ce qui porte des enfants se déplie.
+	 *
+	 * LES DEUX ADRESSES SORTENT DE LA FABRIQUE UNIQUE, jamais d'un gabarit écrit
+	 * à la main : l'identifiant de note est plat et stable (`RG-M03-03`), le
+	 * chemin de dossier est la forme canonique d'`ARB-001`. La clé d'un nœud les
+	 * porte — `n:{identifiant}` et `f:{domaine}:{chemin}` —, c'est elle qu'on
+	 * relit plutôt que de retraverser l'arbre.
+	 */
+	function ouvrir(n: NoeudMental): void {
+		if (n.rang === 'note') {
+			void goto(resolve('/notes/[identifiant]', { identifiant: n.cle.slice(2) }));
+			return;
+		}
+		if (n.rang === 'dossier') {
+			const reste = n.cle.slice(2);
+			const separation = reste.indexOf(':');
+			const domaine = reste.slice(0, separation);
+			const chemin = reste.slice(separation + 1);
+			const univers = domaines.find((d) => d.nom === domaine)?.univers;
+			if (univers !== undefined) {
+				/* eslint-disable-next-line svelte/no-navigation-without-resolve */
+				void goto(adresseDeDossier(univers, domaine, segmentsDeDossier(chemin)));
+				return;
+			}
+		}
+		if (n.enfants.length) basculer(n);
+	}
+
+	/** « Déplier deux niveaux » et « Tout replier » — `V-21:2608` et `:2611`. */
+	function deplierDeuxNiveaux(): void {
+		ouvertesChoisies = ouvertsJusque(2);
+	}
+
+	function toutReplier(): void {
+		ouvertesChoisies = [];
+	}
 
 	/* ── Disposition — déterministe ─────────────────────────────────────────
 	   Le calque de `disposer()` du gel : parcours SUFFIXE, qui décide de
@@ -353,6 +470,7 @@
 					role="treeitem"
 					data-rang={n.rang}
 					aria-expanded={n.enfants.length ? estDeplie(n.cle) : undefined}
+					onclick={() => (n.enfants.length ? basculer(n) : ouvrir(n))}
 					><span class="la-noeud__chev"
 						>{#if n.enfants.length}{@render chevronDeListe()}{/if}</span
 					>{#if n.couleur}<span class="la-noeud__puce" style="background:{n.couleur}"
@@ -385,7 +503,7 @@
 		<div class="controles">
 			<div style="display:flex;align-items:center;gap:var(--e-2)">
 				<label class="etiq" for="perimetre">Périmètre</label>
-				<select id="perimetre"
+				<select id="perimetre" onchange={(e) => changerDePerimetre(e.currentTarget.value)}
 					><option value="tout|">Tout le corpus</option>{#each UNIVERS_PROPOSES as u (u.nom)}<option
 							value="univers|{u.nom}">Univers {u.nom}</option
 						>{/each}{#each domainesVisibles as d (d.nom)}<option value="domaine|{d.nom}"
@@ -419,8 +537,9 @@
 			</div>
 
 			<div style="margin-left:auto;display:flex;gap:var(--e-2);flex-wrap:wrap">
-				<button class="btn" id="deplier-2">Déplier deux niveaux</button>
-				<button class="btn" id="replier">Tout replier</button>
+				<button class="btn" id="deplier-2" onclick={deplierDeuxNiveaux}>Déplier deux niveaux</button
+				>
+				<button class="btn" id="replier" onclick={toutReplier}>Tout replier</button>
 			</div>
 		</div>
 
@@ -449,6 +568,16 @@
 								role="treeitem"
 								aria-label={libelleDuNoeud(l.noeud)}
 								aria-expanded={l.noeud.enfants.length ? estDeplie(l.noeud.cle) : undefined}
+								onclick={() => ouvrir(l.noeud)}
+								onkeydown={(e) => {
+									if (e.key === 'Enter') {
+										e.preventDefault();
+										ouvrir(l.noeud);
+									} else if (e.key === ' ' && l.noeud.enfants.length) {
+										e.preventDefault();
+										basculer(l.noeud);
+									}
+								}}
 								><rect
 									class="n__boite"
 									width={LARGEUR}
@@ -480,7 +609,18 @@
 										class="chevron"
 										transform="translate({LARGEUR + 11},{HAUTEUR / 2})"
 										role="button"
+										tabindex="-1"
 										aria-label="{estDeplie(l.noeud.cle) ? 'Replier ' : 'Déplier '}{l.noeud.nom}"
+										onclick={(e) => {
+											e.stopPropagation();
+											basculer(l.noeud);
+										}}
+										onkeydown={(e) => {
+											if (e.key !== 'Enter' && e.key !== ' ') return;
+											e.preventDefault();
+											e.stopPropagation();
+											basculer(l.noeud);
+										}}
 										><circle class="chevron__fond" r="9" /><path
 											class="chevron__signe"
 											d={estDeplie(l.noeud.cle) ? 'M-4 0 H4' : 'M-4 0 H4 M0 -4 V4'}

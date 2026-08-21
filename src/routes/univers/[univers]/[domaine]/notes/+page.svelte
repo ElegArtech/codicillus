@@ -14,6 +14,7 @@
 	import '../../../../../vues/V-12.css';
 	import { onMount } from 'svelte';
 	import { cablerLesFacettes } from '$lib/cablage/facettes';
+	import { cablerLaListeDeNotes } from './cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -23,19 +24,33 @@
 	/**
 	 * LES SIX FACETTES DU GEL, DANS SON ORDRE — c'est le rang qui les identifie,
 	 * pas leur libellé : le bouton porte le nom suivi de son compteur.
+	 *
+	 * LA LISTE EST DÉCLARÉE UNE FOIS ET SERVIE AUX DEUX CÂBLAGES. `P-35` : deux
+	 * modules qui se parlent par un contrat de données — ici les clés de facette
+	 * de l'adresse — doivent le lire au même endroit. `cablerLesFacettes()` les
+	 * pose et les retire ; `cablerLaListeDeNotes()` les retire toutes d'un coup
+	 * pour « Réinitialiser les filtres ». Recopiées, elles divergeraient.
 	 */
-	onMount(() =>
-		cablerLesFacettes(enveloppe, {
-			facettes: [
-				{ id: 'type', nom: 'Type' },
-				{ id: 'fraicheur', nom: 'Fraîcheur' },
-				{ id: 'statut', nom: 'Statut' },
-				{ id: 'dossier', nom: 'Dossier' },
-				{ id: 'auteur', nom: 'Auteur' },
-				{ id: 'etiquette', nom: 'Étiquette', prefixe: '#' }
-			]
-		})
-	);
+	const FACETTES = [
+		{ id: 'type', nom: 'Type' },
+		{ id: 'fraicheur', nom: 'Fraîcheur' },
+		{ id: 'statut', nom: 'Statut' },
+		{ id: 'dossier', nom: 'Dossier' },
+		{ id: 'auteur', nom: 'Auteur' },
+		{ id: 'etiquette', nom: 'Étiquette', prefixe: '#' }
+	] as const;
+
+	onMount(() => {
+		const defaireLesFacettes = cablerLesFacettes(enveloppe, { facettes: FACETTES });
+		const defaireLaListe = cablerLaListeDeNotes(enveloppe, {
+			domaine: String(data.vecteur.dom),
+			facettes: FACETTES.map((f) => f.id)
+		});
+		return () => {
+			defaireLaListe();
+			defaireLesFacettes();
+		};
+	});
 </script>
 
 <div bind:this={enveloppe} style="display:contents">

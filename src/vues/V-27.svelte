@@ -86,6 +86,7 @@
 	import Pictogramme from '$lib/console/Pictogramme.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { filDeConsole, type TraitDePictogramme } from '$lib/console/sections';
+	import type { RefusDeSaisie, SaisieDUnivers } from '$lib/console/structure';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
@@ -117,6 +118,29 @@
 		 * où il mène, la page le sait.
 		 */
 		onRattacher?: (univers: string) => void;
+		/**
+		 * CE QUE LA VUE FAIT QUAND LE PANNEAU EST VALIDÉ — création puis
+		 * enregistrement, dans cet ordre.
+		 *
+		 * Même partage que pour la suppression : la vue tient l'état du panneau —
+		 * quel univers est édité, quel glyphe est retenu, quel rang est visé —
+		 * parce que c'est ce que `ouvrirForm(u)` tenait au gel (`V-27:3436`), et
+		 * elle ne connaît ni route, ni action, ni réseau.
+		 *
+		 * `onEnregistrer` reçoit d'abord le nom ACTUEL de l'univers : c'est la clé
+		 * par laquelle la page retrouve son identifiant lisible, et un
+		 * enregistrement peut justement changer le nom.
+		 */
+		onCreer?: (saisie: SaisieDUnivers) => void;
+		onEnregistrer?: (nom: string, saisie: SaisieDUnivers) => void;
+		/**
+		 * LE RANG SEUL — ce que les flèches « Monter » et « Descendre » envoient.
+		 * Elles ne touchent à rien d'autre, et le panneau n'a pas à s'ouvrir pour
+		 * qu'un univers change de place.
+		 */
+		onReordonner?: (nom: string, ordre: number) => void;
+		/** Le refus rendu par l'action, rattaché à son champ (`#erreur-nom`). */
+		refus?: RefusDeSaisie | null;
 	}
 
 	const {
@@ -127,7 +151,11 @@
 		compte = MOI,
 		instance = INSTANCE,
 		onSupprimer,
-		onRattacher
+		onRattacher,
+		onCreer,
+		onEnregistrer,
+		onReordonner,
+		refus = null
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -238,9 +266,49 @@
 	   ses zones d'icônes, de couleurs, de positions et d'aperçu VIDES. Ce n'est
 	   pas un oubli : la maquette ne les peuple qu'à l'ouverture. */
 
-	/** L'univers édité : le premier de la liste (`ouvrirForm(univers[0])`). */
-	const edite = $derived(form === 'edition' ? liste[0] : null);
-	const ouvert = $derived(form !== 'ferme');
+	/**
+	 * LE PANNEAU S'OUVRE, ET C'EST LA VUE QUI LE TIENT.
+	 *
+	 * `ouverture` vaut `null` tant que personne n'a cliqué : l'écran rendu est
+	 * alors exactement celui que le vecteur décrit, et le mode de conception ne
+	 * bouge pas d'un pixel. Dès qu'un geste l'ouvre, c'est cet état-là qui
+	 * commande — le même arbitrage que `demande` pour le dialogue de suppression.
+	 *
+	 * `cible` PORTE LE NOM, PAS L'OBJET. La liste est reconstruite à chaque
+	 * lecture de `univers` ; garder une référence ferait tenir un univers périmé
+	 * après un enregistrement.
+	 */
+	let ouverture = $state<'creation' | 'edition' | null>(null);
+	let cible = $state<string | null>(null);
+
+	/** Les cinq champs du panneau — `edite` du gel (`V-27:3436`), un par un. */
+	let fNom = $state('');
+	let fDescription = $state('');
+	let fGlyphe = $state('boussole');
+	let fCouleur = $state(COULEURS[0] as string);
+	let fOrdre = $state(1);
+	/** Le message de `#erreur-nom`, quand la validation de l'écran refuse. */
+	let erreurLocale = $state<string | null>(null);
+
+	/** L'univers édité : celui qu'on a désigné, ou celui que le vecteur nomme. */
+	const edite = $derived(
+		ouverture === 'creation'
+			? null
+			: ouverture === 'edition'
+				? (liste.find((u) => u.nom === cible) ?? null)
+				: form === 'edition'
+					? (liste[0] ?? null)
+					: null
+	);
+	/**
+	 * LE PANNEAU EST OUVERT SI UN GESTE L'A OUVERT, OU SI LE VECTEUR LE DEMANDE.
+	 *
+	 * C'est cette valeur qui pose `data-form` sur `div.app`, et c'est elle que la
+	 * règle gelée `.app[data-form="ouvert"] ~ .tiroir-form` attend pour lever
+	 * `translateX(100%)`. La rédaction précédente ne lisait que le vecteur : le
+	 * bouton « + » pouvait bien changer d'état, le panneau restait hors fenêtre.
+	 */
+	const ouvert = $derived(ouverture !== null || form !== 'ferme');
 
 	const titreDuForm = $derived(edite ? edite.nom : 'Nouvel univers');
 	const sousDuForm = $derived(
@@ -250,10 +318,84 @@
 				: 'Les modifications prennent effet immédiatement pour tout le monde.'
 			: 'Il apparaîtra dans la navigation latérale de tous les utilisateurs.'
 	);
-	const glypheChoisi = $derived(edite ? edite.glyphe : 'boussole');
-	const couleurChoisie = $derived(edite ? edite.couleur : (COULEURS[0] as string));
+	/*
+	   LES QUATRE VALEURS RETENUES : celles du panneau OUVERT quand il l'est, et
+	   celles que le vecteur décrit sinon. Le rendu par défaut ne bouge donc pas,
+	   et l'aperçu de navigation suit le choix en cours dès le premier clic.
+	*/
+	const glypheChoisi = $derived(ouverture !== null ? fGlyphe : edite ? edite.glyphe : 'boussole');
+	const couleurChoisie = $derived(
+		ouverture !== null ? fCouleur : edite ? edite.couleur : (COULEURS[0] as string)
+	);
 	/** `edite.ordre` : le rang de l'univers, ou la place suivante en création. */
-	const ordreChoisi = $derived(edite ? edite.ordre : liste.length + 1);
+	const ordreChoisi = $derived(
+		ouverture !== null ? fOrdre : edite ? edite.ordre : liste.length + 1
+	);
+	const nomSaisi = $derived(ouverture !== null ? fNom : edite ? edite.nom : '');
+	const descriptionSaisie = $derived(
+		ouverture !== null ? fDescription : edite ? edite.description : ''
+	);
+	/**
+	 * `RG-STR-01` — « son nom et sa suppression sont verrouillés. Sa couleur et
+	 * son rang restent modifiables » (`V-27:3443`). Le gel désactive les deux
+	 * champs de texte, et rien d'autre.
+	 */
+	const nomVerrouille = $derived(ouverture === 'edition' && edite !== null && edite.systeme);
+	/** Le message de `#erreur-nom` : celui de l'écran, ou celui de l'action. */
+	const erreurNom = $derived(
+		erreurLocale ?? (refus !== null && refus.champ === 'nom' ? refus.message : null)
+	);
+
+	/** `ouvrirForm(u)` — `null` pour une création (`V-27:3436`). */
+	function ouvrirForm(u: UniversDeTravail | null): void {
+		ouverture = u === null ? 'creation' : 'edition';
+		cible = u === null ? null : u.nom;
+		fNom = u === null ? '' : u.nom;
+		fDescription = u === null ? '' : u.description;
+		fGlyphe = u === null ? 'boussole' : u.glyphe;
+		fCouleur = u === null ? (COULEURS[0] as string) : u.couleur;
+		fOrdre = u === null ? liste.length + 1 : u.ordre;
+		erreurLocale = null;
+	}
+
+	/** `fermerForm()` — le panneau se referme, la saisie ne survit pas. */
+	function fermerForm(): void {
+		ouverture = null;
+		cible = null;
+		erreurLocale = null;
+	}
+
+	/**
+	 * `form-valider` — LA VALIDATION DE L'ÉCRAN, celle du gel (`V-27:3478`) :
+	 * nom vide, puis doublon insensible à la casse. Ce n'est pas LA règle —
+	 * `creerUnUnivers()` et `modifierUnUnivers()` refusent quoi qu'il arrive, et
+	 * rendent les mêmes messages — c'est son reflet, qui évite de proposer un
+	 * geste voué au refus.
+	 */
+	function validerLeForm(): void {
+		const nom = fNom.trim();
+		if (!nomVerrouille) {
+			if (nom === '') {
+				erreurLocale = "Donnez un nom à l'univers.";
+				return;
+			}
+			if (liste.some((u) => u.nom !== cible && u.nom.toLowerCase() === nom.toLowerCase())) {
+				erreurLocale = `« ${nom} » existe déjà.`;
+				return;
+			}
+		}
+		erreurLocale = null;
+		const saisie: SaisieDUnivers = {
+			nom: nomVerrouille && edite ? edite.nom : nom,
+			description: fDescription,
+			couleur: fCouleur,
+			glyphe: fGlyphe,
+			ordre: fOrdre
+		};
+		if (ouverture === 'edition' && cible !== null) onEnregistrer?.(cible, saisie);
+		else onCreer?.(saisie);
+		fermerForm();
+	}
 	/** `rendrePositions()` : autant de positions que d'univers, plus une en création. */
 	const positions = $derived(
 		Array.from({ length: edite ? liste.length : liste.length + 1 }, (_, k) => k + 1)
@@ -414,8 +556,8 @@
 <!-- prettier-ignore -->
 {#snippet ligne(u: UniversDeTravail, rang: number)}<div class="tg tg--univers tg--ligne" role="row"
 	><div class="rang"
-		><button type="button" disabled={rang === 0} aria-label="Monter {u.nom}"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6.5L6 3.5l3 3"/></svg></button
-		><button type="button" disabled={rang === liste.length - 1} aria-label="Descendre {u.nom}"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5.5L6 8.5l3-3"/></svg></button
+		><button type="button" disabled={rang === 0} aria-label="Monter {u.nom}" onclick={() => onReordonner?.(u.nom, rang)}><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6.5L6 3.5l3 3"/></svg></button
+		><button type="button" disabled={rang === liste.length - 1} aria-label="Descendre {u.nom}" onclick={() => onReordonner?.(u.nom, rang + 2)}><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5.5L6 8.5l3-3"/></svg></button
 	></div
 	><span class="apercu-nav__sceau" style="background:{u.couleur};width:28px;height:28px">{@render glyphe(u.glyphe, '16', '1.6')}</span
 	><div style="min-width:0"
@@ -425,7 +567,7 @@
 	><span class="tg__n tg--masquable">{domaines(u.nom).length}</span
 	><span class="tg__n tg--masquable">{compteDeNotes(u.nom)}</span
 	><div class="tg__actions"
-		><button class="btn" type="button">{u.systeme ? 'Voir' : 'Modifier'}</button
+		><button class="btn" type="button" onclick={() => ouvrirForm(u)}>{u.systeme ? 'Voir' : 'Modifier'}</button
 		><button class="btn btn--destructif" type="button" aria-label="Supprimer l'univers {u.nom}" onclick={() => (demande = u.nom)}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"/></svg></button
 	></div
 ></div>{/snippet}
@@ -460,7 +602,7 @@
 			description="La segmentation de plus haut niveau. Un univers regroupe des domaines qui partagent un contexte — ce qui tourne aujourd'hui, ce qui est en projet. Leur ordre pilote l'affichage dans la navigation latérale."
 		>
 			{#snippet action()}
-				<BoutonDeCreation libelle="Nouvel univers" />
+				<BoutonDeCreation libelle="Nouvel univers" onCliquer={() => ouvrirForm(null)} />
 			{/snippet}
 		</TeteDeSection>
 
@@ -497,7 +639,12 @@
 					<h2 class="tiroir-form__titre" id="form-titre">{titreDuForm}</h2>
 					<div class="tiroir-form__sous" id="form-sous">{sousDuForm}</div>
 				</div>
-				<button class="tiroir-form__fermer" id="form-fermer" aria-label="Fermer le formulaire">
+				<button
+					class="tiroir-form__fermer"
+					id="form-fermer"
+					aria-label="Fermer le formulaire"
+					onclick={fermerForm}
+				>
 					<svg
 						width="17"
 						height="17"
@@ -510,7 +657,7 @@
 			</div>
 
 			<div class="tiroir-form__corps">
-				<div class="champ" id="champ-nom">
+				<div class="champ" id="champ-nom" data-etat={erreurNom === null ? undefined : 'erreur'}>
 					<label class="champ__label" for="f-nom">Nom <span class="oblig">*</span></label>
 					<input
 						class="saisie"
@@ -518,9 +665,11 @@
 						id="f-nom"
 						autocomplete="off"
 						placeholder="Production"
-						value={edite ? edite.nom : ''}
+						disabled={nomVerrouille}
+						value={nomSaisi}
+						oninput={(e) => (fNom = e.currentTarget.value)}
 					/>
-					<div class="champ__erreur" id="erreur-nom" hidden>
+					<div class="champ__erreur" id="erreur-nom" hidden={erreurNom === null}>
 						<svg
 							width="13"
 							height="13"
@@ -531,7 +680,7 @@
 							style="flex:none;margin-top:1px"
 							><path d="M8 4.5v4M8 11.2v.3" /><circle cx="8" cy="8" r="6.2" /></svg
 						>
-						<span id="erreur-nom-txt"></span>
+						<span id="erreur-nom-txt">{erreurNom ?? ''}</span>
 					</div>
 				</div>
 
@@ -567,7 +716,9 @@
 						id="f-desc"
 						rows="3"
 						placeholder="Ce que cet univers regroupe, et pourquoi."
-						value={edite ? edite.description : ''}></textarea>
+						disabled={nomVerrouille}
+						oninput={(e) => (fDescription = e.currentTarget.value)}
+						value={descriptionSaisie}></textarea>
 					<span class="champ__aide"
 						>Affichée en couverture de la page d'univers. Une phrase suffit.</span
 					>
@@ -577,7 +728,7 @@
 					<span class="champ__label">Icône</span>
 					<!-- prettier-ignore -->
 					<div class="icones" id="f-icones" role="group" aria-label="Icône de l'univers"
-						>{#if ouvert}{#each Object.keys(GLYPHES) as cle (cle)}<button type="button" aria-pressed={cle === glypheChoisi} aria-label="Icône {cle}">{@render glyphe(cle, '19', '1.6')}</button>{/each}{/if}</div
+						>{#if ouvert}{#each Object.keys(GLYPHES) as cle (cle)}<button type="button" aria-pressed={cle === glypheChoisi} aria-label="Icône {cle}" onclick={() => (fGlyphe = cle)}>{@render glyphe(cle, '19', '1.6')}</button>{/each}{/if}</div
 					>
 				</div>
 
@@ -585,7 +736,7 @@
 					<span class="champ__label">Couleur</span>
 					<!-- prettier-ignore -->
 					<div class="couleurs" id="f-couleurs" role="group" aria-label="Couleur de l'univers"
-						>{#if ouvert}{#each COULEURS as c (c)}<button type="button" style="background:{c}" aria-pressed={c === couleurChoisie} aria-label="Couleur {c}"></button>{/each}{/if}</div
+						>{#if ouvert}{#each COULEURS as c (c)}<button type="button" style="background:{c}" aria-pressed={c === couleurChoisie} aria-label="Couleur {c}" onclick={() => (fCouleur = c)}></button>{/each}{/if}</div
 					>
 					<span class="champ__aide"
 						>Choisie hors des teintes de fraîcheur — vert, ambre et rouge sont réservés au signal de
@@ -599,6 +750,7 @@
 					<select
 						class="selecteur"
 						id="f-position"
+						onchange={(e) => (fOrdre = Number.parseInt(e.currentTarget.value, 10))}
 						style="width:100%;padding:8px var(--e-3);border:1px solid var(--c-trait-fort);border-radius:var(--r-2);background:var(--c-papier);font-family:var(--f-ui);font-size:var(--t-base)"
 						>{#if ouvert}{#each positions as p (p)}<option value={p} selected={p === ordreChoisi}>Position {p}{p === 1 ? ' — en tête' : p === positions.length ? ' — en dernier' : ''}</option>{/each}{/if}</select
 					>
@@ -615,11 +767,19 @@
 			</div>
 
 			<div class="tiroir-form__pied">
-				<button class="btn btn--destructif" id="form-supprimer" hidden={!edite || edite.systeme}
-					>Supprimer</button
+				<button
+					class="btn btn--destructif"
+					id="form-supprimer"
+					hidden={!edite || edite.systeme}
+					onclick={() => {
+						if (edite === null) return;
+						const vise = edite.nom;
+						fermerForm();
+						demande = vise;
+					}}>Supprimer</button
 				>
-				<button class="btn" id="form-annuler">Annuler</button>
-				<button class="btn btn--principal" id="form-valider"
+				<button class="btn" id="form-annuler" onclick={fermerForm}>Annuler</button>
+				<button class="btn btn--principal" id="form-valider" onclick={validerLeForm}
 					><span id="form-valider-txt">{edite ? 'Enregistrer' : "Créer l'univers"}</span></button
 				>
 			</div>

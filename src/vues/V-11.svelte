@@ -78,7 +78,7 @@
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
-	import { segmentsDeDossier } from '$lib/rangement/adresses';
+	import { adresseDeNote, segmentsDeDossier } from '$lib/rangement/adresses';
 
 	/**
 	 * LES NEUF SOURCES QUI NE VENAIENT DE NULLE PART — T-041.
@@ -362,6 +362,22 @@
 	}
 </script>
 
+<!--
+	`svelte/no-navigation-without-resolve` EST DÉSACTIVÉE POUR LE BALISAGE DE
+	CETTE VUE, ET LA RAISON EST LA MÊME QUE POUR LE FIL D'ARIANE DE LA COQUILLE.
+
+	La règle veille à ce qu'une adresse interne passe par `resolve()` de
+	SvelteKit. Les adresses de cette vue sont COMPOSÉES par
+	`$lib/rangement/adresses.ts`, la fabrique unique du rangement : la règle
+	inspecte l'EXPRESSION du `href`, elle ne peut pas la suivre jusque là, et
+	elle ne peut pas non plus la vérifier ici. Faire passer une adresse déjà
+	composée par `resolve()` ne prouverait rien de plus et ajouterait une
+	seconde source de vérité pour une forme qui n'en a qu'une.
+
+	Même geste, même justification qu'en V-03, V-22, V-24 et
+	`src/lib/coquille/BarreSuperieure.svelte`.
+-->
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
 <!-- Le témoin de fraîcheur — une seule fabrique, pour qu'il ne diverge pas. -->
 {#snippet temoin(n: Note)}
 	<span class="temoin {classeTemoin(n.fraicheur)}"
@@ -375,7 +391,7 @@
 
 <!-- Une ligne de palmarès : rang facultatif, titre, témoin, mesure. -->
 {#snippet ligneNote(n: Note, rang: number | null, mesure: string)}
-	<a class="ligne-note" href="#"
+	<a class="ligne-note" href={adresseDeNote(n.id)}
 		>{#if rang !== null}<span class="ligne-note__rang">{String(rang).padStart(2, '0')}</span
 			>{/if}<span class="ligne-note__corps"
 			><span class="ligne-note__titre">{n.titre}</span><span class="ligne-note__sous"
@@ -633,7 +649,7 @@
 							>
 						</div>
 						<div class="panneau__corps" id="contribs">
-							{#if !vide}{#each contribs as c (c.nom)}<div class="contrib">
+							{#if !vide}{#each contribs as c, rang (rang)}<div class="contrib">
 										<span class="contrib__av">{c.initiales}</span><span class="contrib__nom"
 											>{c.nom}</span
 										><span class="contrib__part"

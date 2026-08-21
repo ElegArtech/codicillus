@@ -47,12 +47,25 @@ import {
 	goToNextCell,
 	tableEditing
 } from '@tiptap/pm/tables';
-import type { MarkType, NodeType } from '@tiptap/pm/model';
+import { Slice, type MarkType, type NodeType } from '@tiptap/pm/model';
 import { schemaDeLEditeur } from './schema';
 import { documentDepuisNoeud, noeudDepuisDocument } from './document';
+import { GABARITS, MARQUES_DE_LA_BARRE } from './constructions';
 import type { Document } from '../contenu/document';
 
 const schema = schemaDeLEditeur;
+
+/**
+ * LES TROIS ATTRIBUTS PAR LESQUELS LE GEL NOMME UN BOUTON DE BARRE — et ils sont
+ * bien TROIS. `data-mark` manquait à ce sélecteur ; les deux boutons qu'il porte
+ * seul — « Surligné » et « Code en ligne » — n'étaient donc même pas VUS par la
+ * délégation, et ne recevaient pas l'avertissement réservé aux boutons sans
+ * commande. Un bouton muet qui ne se plaint pas est le pire des deux cas.
+ */
+const SELECTEUR_DES_BOUTONS = '[data-cmd],[data-bloc],[data-mark]';
+
+/** Les mêmes trois, dans l'ordre où un bouton est interrogé. */
+const ATTRIBUTS_DE_BOUTON = ['cmd', 'bloc', 'mark'] as const;
 
 /**
  * LE NŒUD OU LA MARQUE, OU UNE LEVÉE — jamais `undefined` silencieux.
@@ -80,8 +93,27 @@ function marqueDeSchema(nom: string): MarkType {
 export interface EditeurMonte {
 	/** Le document canonique courant — ce que la soumission enverra. */
 	document(): Document;
+	/**
+	 * INSÈRE UN DOCUMENT CANONIQUE AU POINT D'INSERTION — le squelette d'un
+	 * gabarit, le plan repris d'un autre registre. Le document entre par la porte
+	 * unique (`noeudDepuisDocument`) : rien n'est inséré qui ne soit valide.
+	 */
+	inserer(document: Document): void;
+	/** La zone est-elle vide de tout texte ? — ce que le témoin de sauvegarde lit. */
+	vide(): boolean;
 	/** Démonte la vue et rend le nœud du gel à son état inerte. */
 	detruire(): void;
+}
+
+/** Ce qu'un montage accepte en plus du corps repris. */
+export interface OptionsDeMontage {
+	/**
+	 * APPELÉ À CHAQUE TRANSACTION QUI CHANGE LE DOCUMENT — et seulement
+	 * celles-là. C'est ce qui fait passer le témoin de sauvegarde du gel de
+	 * « Aucune modification » à « Modifications non enregistrées » : l'état est
+	 * DÉDUIT d'une frappe, jamais déclaré par un bouton.
+	 */
+	surChangement?: () => void;
 }
 
 /* ═══════════════════════════════════ Les commandes de la barre ══════════ */
@@ -96,9 +128,29 @@ function inserer(type: NodeType, attrs?: Record<string, unknown>): Command {
 	};
 }
 
-/** Un bloc d'alerte de niveau donné — l'un des trois nœuds écrits en propre. */
-function alerte(niveau: 'astuce' | 'attention' | 'danger'): Command {
-	return wrapIn(noeudDeSchema('alerte'), { niveau });
+/**
+ * UN BLOC D'ALERTE — et ses TROIS attributs, jamais un seul.
+ *
+ * Le nœud `alerte` exige `niveau`, `glyphe` et `titre`, tous trois sans valeur
+ * par défaut (`./schema.ts`). N'en passer qu'un faisait lever ProseMirror au
+ * clic — « No value supplied for attribute glyphe » —, et les trois entrées du
+ * menu étendu étaient donc CASSÉES, pas seulement inertes. Relevé au navigateur.
+ *
+ * Les valeurs ne sont pas rédigées ici : `GABARITS` (`./constructions.ts`) les
+ * porte, relevées sur `V-17:3079-3081`. Une seconde écriture divergerait au
+ * premier changement de libellé du gel.
+ */
+function attributsDeGabarit(cle: string): Record<string, unknown> {
+	const gabarit = GABARITS.find((g) => g.cle === cle);
+	const bloc = gabarit?.blocs[0];
+	if (bloc === undefined || bloc.type !== 'alerte') {
+		throw new Error(`aucun gabarit d'alerte pour « ${cle} »`);
+	}
+	return { ...bloc.attrs };
+}
+
+function alerte(cle: string): Command {
+	return wrapIn(noeudDeSchema('alerte'), attributsDeGabarit(cle));
 }
 
 /**
@@ -167,35 +219,152 @@ function diagramme(fenetre: Window): Command {
 	};
 }
 
-/** La table des commandes, indexée par l'attribut que le gel porte. */
-function commandes(fenetre: Window): Record<string, Command> {
+/**
+ * LES SIX BOUTONS `data-mark` DE LA BARRE — et le seul que la pile ne sait pas
+ * porter.
+ *
+ * Le gel nomme ces six-là par un TROISIÈME attribut, `data-mark`
+ * (`V-17:1522-1531`), que la table de délégation ignorait : quatre d'entre eux
+ * sont redoublés en `data-cmd` et marchaient par là, mais « Surligné » et
+ * « Code en ligne » n'existent qu'en `data-mark` — ils étaient donc muets,
+ * SANS MÊME l'avertissement du journal, puisque le sélecteur ne les voyait pas.
+ *
+ * La correspondance clé → marque du format n'est pas réécrite ici :
+ * `MARQUES_DE_LA_BARRE` (`./constructions.ts`) la porte, relevée bouton par
+ * bouton sur la maquette. Une marque que le schéma ne porte PAS est sautée et
+ * NOMMÉE — c'est le cas de `highlight`, le surligné, qu'aucune extension
+ * installée n'apporte (`./schema.ts`, `MARQUES_DU_FORMAT_SANS_EXTENSION`).
+ * Ajouter l'extension demanderait une dépendance nouvelle ; le bouton reste
+ * donc sans commande, et il le DIT au journal au lieu de faire semblant.
+ */
+function marquesDeLaBarre(): Record<string, Command> {
+	const table: Record<string, Command> = {};
+	for (const { cle, marque } of MARQUES_DE_LA_BARRE) {
+		if (schema.marks[marque] === undefined) continue;
+		table[cle] = toggleMark(marqueDeSchema(marque));
+	}
+	return table;
+}
+
+/** Les trois attributs par lesquels le gel nomme un bouton — voir plus haut. */
+type AttributDeBouton = 'cmd' | 'bloc' | 'mark';
+
+/**
+ * LES TROIS TABLES, UNE PAR ATTRIBUT — et ce n'est pas une élégance.
+ *
+ * Une table unique confondait `code`, ET C'ÉTAIT MESURABLE : `data-bloc="code"`
+ * (le bloc de code) et `data-mark="code"` (le code en ligne) portent la MÊME
+ * clé au gel, sur deux boutons voisins de la même barre. Fondues dans un seul
+ * objet, la seconde écrasait la première selon l'ordre d'écriture — cliquer
+ * « Code en ligne » transformait le paragraphe entier en bloc préformaté.
+ * Relevé au navigateur, pas déduit.
+ *
+ * Chaque bouton est donc cherché DANS LA TABLE DE SON ATTRIBUT, et dans
+ * aucune autre.
+ */
+function commandes(fenetre: Window): Record<AttributDeBouton, Record<string, Command>> {
 	return {
-		/* data-cmd */
-		bold: toggleMark(marqueDeSchema('bold')),
-		italic: toggleMark(marqueDeSchema('italic')),
-		underline: toggleMark(marqueDeSchema('underline')),
-		strikeThrough: toggleMark(marqueDeSchema('strike')),
-		undo,
-		redo,
-		insertUnorderedList: wrapInList(noeudDeSchema('bulletList')),
-		insertOrderedList: wrapInList(noeudDeSchema('orderedList')),
-		/* data-bloc */
-		h2: setBlockType(noeudDeSchema('heading'), { level: 2 }),
-		h3: setBlockType(noeudDeSchema('heading'), { level: 3 }),
-		h4: setBlockType(noeudDeSchema('heading'), { level: 4 }),
-		citation: wrapIn(noeudDeSchema('blockquote')),
-		code: setBlockType(noeudDeSchema('codeBlock')),
-		taches: wrapInList(noeudDeSchema('taskList')),
-		separateur: inserer(noeudDeSchema('horizontalRule')),
-		'alerte-astuce': alerte('astuce'),
-		'alerte-attention': alerte('attention'),
-		'alerte-danger': alerte('danger'),
-		tableau: tableau(),
-		image: image(fenetre),
-		lien: lien(fenetre),
-		'lien-interne': lienInterne(fenetre),
-		diagramme: diagramme(fenetre)
+		cmd: {
+			bold: toggleMark(marqueDeSchema('bold')),
+			italic: toggleMark(marqueDeSchema('italic')),
+			underline: toggleMark(marqueDeSchema('underline')),
+			strikeThrough: toggleMark(marqueDeSchema('strike')),
+			undo,
+			redo,
+			insertUnorderedList: wrapInList(noeudDeSchema('bulletList')),
+			insertOrderedList: wrapInList(noeudDeSchema('orderedList'))
+		},
+		bloc: {
+			h2: setBlockType(noeudDeSchema('heading'), { level: 2 }),
+			h3: setBlockType(noeudDeSchema('heading'), { level: 3 }),
+			h4: setBlockType(noeudDeSchema('heading'), { level: 4 }),
+			citation: wrapIn(noeudDeSchema('blockquote')),
+			code: setBlockType(noeudDeSchema('codeBlock')),
+			taches: wrapInList(noeudDeSchema('taskList')),
+			separateur: inserer(noeudDeSchema('horizontalRule')),
+			'alerte-astuce': alerte('alerte-astuce'),
+			'alerte-attention': alerte('alerte-attention'),
+			'alerte-danger': alerte('alerte-danger'),
+			tableau: tableau(),
+			image: image(fenetre),
+			lien: lien(fenetre),
+			'lien-interne': lienInterne(fenetre),
+			diagramme: diagramme(fenetre)
+		},
+		mark: marquesDeLaBarre()
 	};
+}
+
+/* ═══════════════════════════════════ Les trois vues en propre ═══════════ */
+
+/**
+ * LES TROIS CONSTRUCTIONS ÉCRITES EN PROPRE N'ONT PAS DE `toDOM`, ET C'EST
+ * VOULU — mais il fallait alors leur donner une VUE.
+ *
+ * `./schema.ts` déclare `alerte`, `diagramme` et la marque `lienInterne` sans
+ * règle de sérialisation vers le DOM : le format canonique est du JSON, et
+ * `../contenu/rendu.ts` est l'implémentation UNIQUE du rendu (`ADR-004`) —
+ * poser un second `toDOM` dans le schéma en ferait une deuxième, qui
+ * divergerait.
+ *
+ * Conséquence non prévue, et MESURÉE au navigateur : ProseMirror, lui, a besoin
+ * d'une représentation pour AFFICHER un nœud dans la zone éditable. Sans elle,
+ * insérer une alerte levait « node.type.spec.toDOM is not a function » et
+ * l'écran cassait — les trois entrées d'alerte du menu étendu et le lien interne
+ * n'étaient donc pas inertes, ils étaient DESTRUCTEURS.
+ *
+ * La représentation est donnée ici, en `nodeViews` / `markViews` — du
+ * COMPORTEMENT d'éditeur, à sa place —, et elle reprend le balisage de
+ * `rendu.ts` classe pour classe : la feuille gelée s'y applique donc telle
+ * quelle, et l'édition montre ce que la lecture montrera.
+ */
+function vueDAlerte(noeud: NoeudDeVue): { dom: HTMLElement; contentDOM: HTMLElement } {
+	const attrs = noeud.attrs as { niveau: string; glyphe: string; titre: string };
+	const document = window.document;
+	const dom = document.createElement('div');
+	dom.className = `alerte alerte--${attrs.niveau}`;
+	const boite = document.createElement('div');
+	const tete = document.createElement('div');
+	tete.className = 'alerte__tete';
+	tete.contentEditable = 'false';
+	const glyphe = document.createElement('span');
+	glyphe.className = 'alerte__glyphe';
+	glyphe.textContent = attrs.glyphe;
+	tete.append(glyphe, ' ' + attrs.titre);
+	const contenu = document.createElement('div');
+	boite.append(tete, contenu);
+	dom.append(boite);
+	return { dom, contentDOM: contenu };
+}
+
+function vueDeDiagramme(noeud: NoeudDeVue): { dom: HTMLElement } {
+	const attrs = noeud.attrs as { source: string; alternative: string };
+	const document = window.document;
+	const figure = document.createElement('figure');
+	figure.className = 'figure';
+	figure.contentEditable = 'false';
+	const source = document.createElement('pre');
+	source.className = 'mermaid';
+	source.setAttribute('role', 'img');
+	source.setAttribute('aria-label', attrs.alternative);
+	source.textContent = attrs.source;
+	figure.append(source);
+	return { dom: figure };
+}
+
+function vueDeLienInterne(marque: MarqueDeVue): { dom: HTMLElement } {
+	const dom = window.document.createElement('a');
+	dom.className = 'lien-int';
+	dom.title = `Note liée : ${String((marque.attrs as { cible: string }).cible)}`;
+	return { dom };
+}
+
+/** Ce qu'une vue reçoit — le strict nécessaire, sans importer le type complet. */
+interface NoeudDeVue {
+	readonly attrs: Record<string, unknown>;
+}
+interface MarqueDeVue {
+	readonly attrs: Record<string, unknown>;
 }
 
 /* ═══════════════════════════════════ Le montage ═════════════════════════ */
@@ -211,7 +380,8 @@ function commandes(fenetre: Window): Record<string, Command> {
 export function monterLEditeur(
 	zone: HTMLElement,
 	corps: Document | null,
-	racine: ParentNode
+	racine: ParentNode,
+	options: OptionsDeMontage = {}
 ): EditeurMonte {
 	const fenetre = zone.ownerDocument.defaultView;
 	if (fenetre === null) throw new Error('la zone de rédaction n’a pas de fenêtre');
@@ -255,12 +425,28 @@ export function monterLEditeur(
 	   nommée plutôt que tue. */
 	const vue: EditorView = new EditorView({ mount: zone } as unknown as HTMLElement, {
 		state: etat,
+		/* Voir « LES TROIS CONSTRUCTIONS ÉCRITES EN PROPRE ». Les signatures de
+		   ProseMirror passent bien plus que ce que ces trois vues lisent ; le
+		   rétrécissement est local et nommé, plutôt que d'importer trois types
+		   pour ignorer leurs champs. */
+		nodeViews: {
+			alerte: ((noeud: NoeudDeVue) => vueDAlerte(noeud)) as never,
+			diagramme: ((noeud: NoeudDeVue) => vueDeDiagramme(noeud)) as never
+		},
+		markViews: {
+			lienInterne: ((marque: MarqueDeVue) => vueDeLienInterne(marque)) as never
+		},
 		dispatchTransaction(transaction: Transaction) {
 			vue.updateState(vue.state.apply(transaction));
 			/* `data-vide` commande le seul rendu visible du vide — l'invite
 			   d'amorçage que la feuille gelée écrit en `::before`. Le gel le
 			   CALCULE lui aussi ; il est déduit, jamais déclaré. */
 			zone.setAttribute('data-vide', vue.state.doc.textContent.trim() === '' ? 'oui' : 'non');
+			/* Le témoin de sauvegarde ne bouge que si le DOCUMENT a bougé : un
+			   simple déplacement du point d'insertion n'est pas une modification,
+			   et le faire passer pour telle ferait réclamer un enregistrement à qui
+			   n'a rien écrit. */
+			if (transaction.docChanged) options.surChangement?.();
 		}
 	});
 	zone.setAttribute('data-vide', vue.state.doc.textContent.trim() === '' ? 'oui' : 'non');
@@ -268,19 +454,23 @@ export function monterLEditeur(
 	/* LA BARRE D'OUTILS — un seul écouteur, délégué, sur la racine. Aucun
 	   attribut n'est posé sur un bouton du gel. */
 	const auClic = (evenement: Event): void => {
-		const cible = (evenement.target as Element | null)?.closest('[data-cmd],[data-bloc]');
+		const cible = (evenement.target as Element | null)?.closest(SELECTEUR_DES_BOUTONS);
 		if (cible === null || cible === undefined) return;
-		const nom =
-			(cible as HTMLElement).dataset['cmd'] ?? (cible as HTMLElement).dataset['bloc'] ?? '';
-		const commande = table[nom];
+		const jeu = (cible as HTMLElement).dataset;
 		evenement.preventDefault();
-		if (commande === undefined) {
-			/* Un bouton auquel rien ne répond est un lien mort. On le DIT. */
-			console.warn(`éditeur : aucune commande pour « ${nom} »`);
+		for (const attribut of ATTRIBUTS_DE_BOUTON) {
+			const nom = jeu[attribut];
+			if (nom === undefined) continue;
+			const commande = table[attribut][nom];
+			if (commande === undefined) {
+				/* Un bouton auquel rien ne répond est un lien mort. On le DIT. */
+				console.warn(`éditeur : aucune commande pour « data-${attribut}=${nom} »`);
+				continue;
+			}
+			commande(vue.state, vue.dispatch, vue);
+			vue.focus();
 			return;
 		}
-		commande(vue.state, vue.dispatch, vue);
-		vue.focus();
 	};
 	/**
 	 * LE `mousedown` EST NEUTRALISÉ, ET C'EST CE QUI SAUVE LA SÉLECTION.
@@ -293,7 +483,7 @@ export function monterLEditeur(
 	 * sélection intacte ; le `click` fait le reste.
 	 */
 	const auMousedown = (evenement: Event): void => {
-		if ((evenement.target as Element | null)?.closest('[data-cmd],[data-bloc]') !== null) {
+		if ((evenement.target as Element | null)?.closest(SELECTEUR_DES_BOUTONS) !== null) {
 			evenement.preventDefault();
 		}
 	};
@@ -308,6 +498,23 @@ export function monterLEditeur(
 
 	return {
 		document: () => documentDepuisNoeud(vue.state.doc),
+		/**
+		 * L'INSERTION D'UN DOCUMENT ENTIER — le squelette d'un gabarit (V-17), le
+		 * plan repris de la Référence (V-18).
+		 *
+		 * Ce sont les BLOCS du document qui sont insérés, jamais le nœud `doc`
+		 * lui-même : `doc` n'est admis nulle part dans un document, et le poser
+		 * ferait lever ProseMirror au lieu d'écrire. Le document passe d'abord par
+		 * `noeudDepuisDocument()`, la porte unique — un gabarit mal formé est
+		 * refusé ici, avant d'entrer, jamais réparé (`ADR-003`).
+		 */
+		inserer: (document: Document) => {
+			const noeud = noeudDepuisDocument(document);
+			const tranche = new Slice(noeud.content, 0, 0);
+			vue.dispatch(vue.state.tr.replaceSelection(tranche).scrollIntoView());
+			vue.focus();
+		},
+		vide: () => vue.state.doc.textContent.trim() === '',
 		detruire: () => {
 			racine.removeEventListener('mousedown', auMousedown);
 			racine.removeEventListener('click', auClic);

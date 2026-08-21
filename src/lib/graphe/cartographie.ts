@@ -340,3 +340,178 @@ export function typesPresents(g: Graphe): { cle: string; type: EncodageDeType; n
 		.sort((a, b) => b[1] - a[1])
 		.map(([cle, n]) => ({ cle, type: encodageDuType(cle), n }));
 }
+
+/* ═══════════════════════════ La disposition ═════════════════════════════ */
+
+/** La place d'un nœud dans le repère du dessin. */
+export interface Place {
+	readonly x: number;
+	readonly y: number;
+}
+
+/** Le repère du dessin — le `viewBox` que les trois vues déclarent. */
+const LARGEUR = 1000;
+const HAUTEUR = 620;
+
+/** Les constantes de `disposer()` du gel — `V-19:2566-2626`, à la valeur près. */
+const RAYON_INITIAL_X = 220;
+const RAYON_INITIAL_Y = 190;
+const REPULSION = 26000;
+const LONGUEUR_DE_RESSORT = 168;
+const RAIDEUR = 0.045;
+const RAPPEL_AU_CENTRE = 0.006;
+const PAS = 0.55;
+const AMORTISSEMENT = 0.72;
+const MARGE = 92;
+const ZOOM_MAX_DE_CADRAGE = 1.3;
+
+/** Le nombre de tours que le gel demande — `V-19:3096`, `disposer(graphe, 320)`. */
+export const ITERATIONS_DE_DISPOSITION = 320;
+
+/**
+ * LA DISPOSITION DU GRAPHE — le calque de `disposer()` du gel
+ * (`V-19:2566-2626`), transcrit ligne pour ligne, constantes comprises.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * ELLE EST DÉTERMINISTE, ET C'EST LA PROPRIÉTÉ QUI COMPTE
+ *
+ * Le gel l'écrit en toutes lettres : « les positions initiales sont
+ * déterministes : deux chargements du même périmètre donnent exactement la même
+ * carte, ce qui est indispensable pour s'y repérer d'une session à l'autre »
+ * (`V-19:2561`). Aucun tirage, aucune horloge, aucune mesure du document : la
+ * place d'un nœud ne dépend que de l'ENSEMBLE des nœuds et de leur ORDRE.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * POURQUOI ELLE ENTRE ICI, ALORS QUE LES VUES PORTAIENT DES POSITIONS FIGÉES
+ *
+ * `src/vues/V-19.svelte` porte une table de seize positions relevées sur la
+ * maquette servie, et sa réserve était juste tant que le périmètre ne bougeait
+ * pas : « le recalcul serait du comportement » (ARB-011). Le périmètre bouge
+ * désormais — le sélecteur du gel navigue, `RG-M09-05` veut l'état de la
+ * cartographie partageable —, et un nœud absent de la table se dessinait à
+ * l'origine, empilé dans le coin de la scène. Une carte dont la moitié des
+ * nœuds sont au même point n'est pas une carte.
+ *
+ * LES SEIZE POSITIONS RELEVÉES RESTENT LA SOURCE quand elles suffisent : voir
+ * `placesDuGraphe()`, qui ne calcule que si la table ne couvre pas tout.
+ */
+export function disposer(g: Graphe, iterations = ITERATIONS_DE_DISPOSITION): Map<string, Place> {
+	interface Corps {
+		x: number;
+		y: number;
+		vx: number;
+		vy: number;
+	}
+
+	const ids = g.noeuds.map((n) => n.id);
+	const n = ids.length;
+	const p = new Map<string, Corps>();
+	ids.forEach((id, i) => {
+		const a = (i / n) * Math.PI * 2;
+		p.set(id, {
+			x: LARGEUR / 2 + Math.cos(a) * RAYON_INITIAL_X,
+			y: HAUTEUR / 2 + Math.sin(a) * RAYON_INITIAL_Y,
+			vx: 0,
+			vy: 0
+		});
+	});
+	if (n === 0) return new Map();
+
+	const liens = g.aretes.filter((r) => p.has(r.de) && p.has(r.vers));
+
+	for (let t = 0; t < iterations; t++) {
+		const refroid = 1 - t / iterations;
+
+		/* Répulsion entre tous les nœuds : ils ne se chevauchent pas. */
+		for (let i = 0; i < n; i++) {
+			for (let j = i + 1; j < n; j++) {
+				const a = p.get(ids[i] as string) as Corps;
+				const b = p.get(ids[j] as string) as Corps;
+				const dx = b.x - a.x;
+				const dy = b.y - a.y;
+				const d2 = dx * dx + dy * dy || 0.01;
+				const d = Math.sqrt(d2);
+				const f = REPULSION / d2;
+				const ux = dx / d;
+				const uy = dy / d;
+				a.vx -= ux * f;
+				a.vy -= uy * f;
+				b.vx += ux * f;
+				b.vy += uy * f;
+			}
+		}
+
+		/* Ressorts sur les arêtes. */
+		for (const r of liens) {
+			const a = p.get(r.de) as Corps;
+			const b = p.get(r.vers) as Corps;
+			const dx = b.x - a.x;
+			const dy = b.y - a.y;
+			const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+			const f = (d - LONGUEUR_DE_RESSORT) * RAIDEUR;
+			const ux = dx / d;
+			const uy = dy / d;
+			a.vx += ux * f;
+			a.vy += uy * f;
+			b.vx -= ux * f;
+			b.vy -= uy * f;
+		}
+
+		/* Rappel vers le centre, puis amortissement : la disposition converge. */
+		for (const id of ids) {
+			const q = p.get(id) as Corps;
+			q.vx += (LARGEUR / 2 - q.x) * RAPPEL_AU_CENTRE;
+			q.vy += (HAUTEUR / 2 - q.y) * RAPPEL_AU_CENTRE;
+			q.x += q.vx * PAS * refroid;
+			q.y += q.vy * PAS * refroid;
+			q.vx *= AMORTISSEMENT;
+			q.vy *= AMORTISSEMENT;
+		}
+	}
+
+	/* Cadrage sur l'ensemble. */
+	let minX = Infinity;
+	let maxX = -Infinity;
+	let minY = Infinity;
+	let maxY = -Infinity;
+	for (const id of ids) {
+		const q = p.get(id) as Corps;
+		minX = Math.min(minX, q.x);
+		maxX = Math.max(maxX, q.x);
+		minY = Math.min(minY, q.y);
+		maxY = Math.max(maxY, q.y);
+	}
+	const ex = maxX - minX || 1;
+	const ey = maxY - minY || 1;
+	const k = Math.min((LARGEUR - MARGE * 2) / ex, (HAUTEUR - MARGE * 2) / ey, ZOOM_MAX_DE_CADRAGE);
+
+	const places = new Map<string, Place>();
+	for (const id of ids) {
+		const q = p.get(id) as Corps;
+		places.set(id, {
+			x: MARGE + (q.x - minX) * k + (LARGEUR - MARGE * 2 - ex * k) / 2,
+			y: MARGE + (q.y - minY) * k + (HAUTEUR - MARGE * 2 - ey * k) / 2
+		});
+	}
+	return places;
+}
+
+/**
+ * LES PLACES EFFECTIVES D'UN GRAPHE — la table relevée quand elle suffit, la
+ * disposition calculée sinon.
+ *
+ * LA TABLE RELEVÉE L'EMPORTE TANT QU'ELLE COUVRE TOUT LE GRAPHE, et c'est ce
+ * qui tient la conformité au gel : le périmètre de la planche est exactement
+ * celui qu'elle décrit, et son rendu ne bouge pas d'un pixel. Dès qu'un seul
+ * nœud lui manque — un autre périmètre, une note ajoutée en base —, la table
+ * est ABANDONNÉE EN BLOC plutôt que complétée : mélanger deux dispositions
+ * placerait les nœuds calculés sans égard pour ceux qui ne le sont pas, et la
+ * carte serait fausse là où elle a l'air juste.
+ */
+export function placesDuGraphe(
+	g: Graphe,
+	relevees: ReadonlyMap<string, Place>
+): ReadonlyMap<string, Place> {
+	if (g.noeuds.every((n) => relevees.has(n.id))) return relevees;
+	return disposer(g);
+}

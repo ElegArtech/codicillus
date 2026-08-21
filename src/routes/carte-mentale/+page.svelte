@@ -23,6 +23,7 @@
 	import Vue from '../../vues/V-21.svelte';
 	import '../../vues/V-21.css';
 	import { onMount } from 'svelte';
+	import { Attaches, cablerLaVue } from '$lib/graphe/commandes';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -44,11 +45,26 @@
 	 * d'assistance par le gel lui-même.
 	 */
 	onMount(() => {
+		/**
+		 * LES TROIS OUTILS DE `div.outils-graphe` — les mêmes qu'aux deux
+		 * cartographies, et par le même code. `cablerLaVue()` écrit la
+		 * transformation de `g#racine`, l'attribut que le gel y pose déjà
+		 * (`transform="translate(0,0) scale(1)"`), et rien d'autre.
+		 */
+		const attaches = new Attaches();
+		cablerLaVue(enveloppe, attaches);
+
+		/* Le sélecteur montre ce que l'adresse porte. Le gel n'écrit aucun
+		   `selected` : le poser au balisage ferait diverger le document servi de
+		   la référence pour un effet que cette ligne obtient sans y toucher. */
+		const perimetre = enveloppe.querySelector<HTMLSelectElement>('#perimetre');
+		if (perimetre !== null) perimetre.value = data.perimetreDemande;
+
 		const app = enveloppe.querySelector('.app');
 		const boutons = Array.from(
 			enveloppe.querySelectorAll<HTMLButtonElement>('button[data-affichage]')
 		);
-		if (app === null || boutons.length === 0) return;
+		if (app === null || boutons.length === 0) return attaches.debranchement();
 		const basculer = (evenement: Event): void => {
 			const bouton = (evenement.target as Element | null)?.closest<HTMLButtonElement>(
 				'button[data-affichage]'
@@ -62,10 +78,19 @@
 			}
 		};
 		enveloppe.addEventListener('click', basculer);
-		return () => enveloppe.removeEventListener('click', basculer);
+		return () => {
+			enveloppe.removeEventListener('click', basculer);
+			attaches.debranchement()();
+		};
 	});
 </script>
 
 <div bind:this={enveloppe} style="display:contents">
-	<Vue vecteur={data.vecteur} notes={data.notes} univers={data.univers} domaines={data.domaines} />
+	<Vue
+		vecteur={data.vecteur}
+		notes={data.notes}
+		univers={data.univers}
+		domaines={data.domaines}
+		perimetreDemande={data.perimetreDemande}
+	/>
 </div>

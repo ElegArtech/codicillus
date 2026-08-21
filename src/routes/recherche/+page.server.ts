@@ -103,7 +103,7 @@
  * la vue continue de rendre l'ordre qu'elle reçoit.
  */
 import { basePartagee } from '$lib/base/acces';
-import { type ContexteDeLecture, lireNotes, lireSeuils } from '$lib/donnees/lecture';
+import { type ContexteDeLecture, lireConfiguration, lireNotes } from '$lib/donnees/lecture';
 import {
 	SENS_DISPONIBLE,
 	capaciteDEcriture,
@@ -253,6 +253,13 @@ interface DonneesDeRecherche {
 	readonly retenues: Record<string, readonly string[]>;
 	/** Le nombre de notes que l'identité peut lire, toutes requêtes confondues. */
 	readonly perimetre: number;
+	/**
+	 * L'ADRESSE DU PORTAIL D'ASSISTANCE — clé `portail_assistance` de la table
+	 * `parametres` (M14.7), « adresse externe configurée en console »
+	 * (`V-04:2205`). V-02 l'emploie pour ses deux appels à l'assistance ; V-08 ne
+	 * les a pas, et ne la reçoit donc pas.
+	 */
+	readonly portail: string;
 	/** Les notes reçues SONT le résultat du moteur : la vue ne cherche plus. */
 	readonly recherchees: true;
 	/** L'ordre demandé par l'adresse — celui dans lequel les notes arrivent. */
@@ -282,7 +289,8 @@ async function lireLaRecherche(
 	client: Meilisearch,
 	identite: Identite,
 	url: URL,
-	contexte: ContexteDeLecture
+	contexte: ContexteDeLecture,
+	portail: string
 ): Promise<DonneesDeRecherche> {
 	const session = identite.type === 'authentifie';
 	const demande = honores(url.searchParams, session);
@@ -306,6 +314,7 @@ async function lireLaRecherche(
 	);
 	const commun = {
 		notes,
+		portail,
 		requete,
 		retenues: facettesRetenues(
 			demande,
@@ -343,6 +352,20 @@ async function lireLaRecherche(
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const base = basePartagee();
-	const contexte = { maintenant: new Date(), seuils: await lireSeuils(base) };
-	return await lireLaRecherche(base, moteurPartage(), locals.identite, url, contexte);
+	/* UNE SEULE LECTURE DE `parametres` : les seuils et l'adresse du portail en
+	   sortent ensemble. `lireSeuils()` faisait déjà cette requête et jetait le
+	   reste ; `P-01` reste tenue — les seuils viennent toujours du même endroit. */
+	const config = await lireConfiguration(base);
+	const contexte = {
+		maintenant: new Date(),
+		seuils: { frais: config.seuilFrais, vieillissant: config.seuilVieillissant }
+	};
+	return await lireLaRecherche(
+		base,
+		moteurPartage(),
+		locals.identite,
+		url,
+		contexte,
+		config.portailAssistance
+	);
 };

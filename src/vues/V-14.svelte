@@ -83,6 +83,27 @@
 		type NiveauFraicheur
 	} from '$lib/fraicheur';
 	import { NOTE, rangementDe, type LectureAffichee } from '$lib/lecture/note-de-demonstration';
+	/**
+	 * LA FABRIQUE D'ADRESSES — jamais un gabarit d'URL écrit à la main.
+	 *
+	 * C'est la seule modification que le motif de câblage autorise dans
+	 * `src/vues/` : un lien mort du gel devient une vraie adresse, et il la
+	 * prend de `$lib/rangement/adresses.ts`, qui est l'unique endroit où la
+	 * forme d'une adresse est composée. Les six liens de cette vue en sortent
+	 * — le domaine et le dossier du panneau « Position », les notes voisines,
+	 * les notes liées et les rétroliens. Celle d'une pièce jointe est SERVIE par
+	 * le chargeur : le nom qu'affiche le panneau est amputé de son suffixe, et
+	 * ne permet donc pas de la recomposer.
+	 *
+	 * Le gel les écrit tous en ancre vide, faute de serveur ; le produit en a
+	 * un, et un lien qui ne mène nulle part est un défaut, pas une fidélité.
+	 */
+	import {
+		adresseDeDomaine,
+		adresseDeDossier,
+		adresseDeNote,
+		segmentsDeDossier
+	} from '$lib/rangement/adresses';
 	import type { PanneauxDeLaNote } from '$lib/lecture/panneaux';
 
 	interface Proprietes {
@@ -221,6 +242,19 @@
 	 */
 	const domaineDeLaNote = $derived(rangement[1] ?? note.domaine);
 	const dossierDeLaNote = $derived(rangement.length > 2 ? (rangement.at(-1) ?? '') : '');
+
+	/**
+	 * ET LEURS DEUX ADRESSES — la forme canonique d'ARB-001, et elle seule.
+	 *
+	 * Le dossier visé est celui qui porte DIRECTEMENT la note, donc le chemin
+	 * complet de ses dossiers : `adresseDeDossier` attend la suite des segments
+	 * du dossier racine au dossier courant, ce que `segmentsDeDossier` découpe
+	 * du chemin que le corpus porte.
+	 */
+	const adresseDuDomaine = $derived(adresseDeDomaine(note.univers, note.domaine));
+	const adresseDuDossier = $derived(
+		adresseDeDossier(note.univers, note.domaine, segmentsDeDossier(note.dossier))
+	);
 
 	/**
 	 * LE LIBELLÉ D'UNE NOTE VOISINE, dans la forme COMPACTE du gel — « il y a
@@ -396,27 +430,33 @@
 				</div>
 			</section>
 
+			<!-- eslint-disable svelte/no-navigation-without-resolve -- les adresses de ce bloc
+				sortent de la fabrique unique, `$lib/rangement/adresses.ts`, qui les compose dans
+				la forme canonique d'ARB-001 et nulle part ailleurs. La règle inspecte
+				l'EXPRESSION du href et ne peut pas la suivre jusqu'à la fabrique : elle ne
+				saurait pas plus la vérifier ici. Même geste qu'en V-03, V-22, V-24 et dans la
+				barre supérieure. -->
 			<!-- Position -->
 			<section class="panneau repliable" data-ouvert="oui">
 				<div class="panneau__tete"><span class="etiq">Position</span></div>
 				<div class="panneau__corps">
 					<div class="item__sous" style="margin-bottom:var(--e-3)">
 						<a
-							href="#"
+							href={adresseDuDomaine}
 							style="color:var(--c-encre);text-decoration:none;border-bottom:1px solid var(--c-trait-fort)"
 							>{domaineDeLaNote}</a
 						>
 						{#if dossierDeLaNote}
 							›
 							<a
-								href="#"
+								href={adresseDuDossier}
 								style="color:var(--c-encre);text-decoration:none;border-bottom:1px solid var(--c-trait-fort)"
 								>{dossierDeLaNote}</a
 							>
 						{/if}
 					</div>
 					{#each voisines as voisine (voisine.identifiant)}
-						<a class="item" href="#">
+						<a class="item" href={adresseDeNote(voisine.identifiant)}>
 							<span style="color:var(--c-encre-4)">{voisine.sens}</span>
 							<span
 								><span class="item__nom">{voisine.titre}</span>
@@ -443,8 +483,8 @@
 					<span class="etiq">Pièces jointes</span><span class="chiffre">{pieces.length}</span>
 				</div>
 				<div class="panneau__corps panneau__corps--serre">
-					{#each pieces as piece (piece.nom)}
-						<a class="pj" href="#">
+					{#each pieces as piece, rang (rang)}
+						<a class="pj" href={piece.adresse}>
 							<span class="pj__ext">{piece.extension}</span>
 							<span
 								><span class="item__nom">{piece.nom}</span>
@@ -474,7 +514,7 @@
 						<div class="rel-groupe">
 							<div class="rel-groupe__titre etiq">{groupe.libelle}</div>
 							{#each groupe.notes as liee (liee.identifiant)}
-								<a class="item" href="#"
+								<a class="item" href={adresseDeNote(liee.identifiant)}
 									><span
 										><span class="item__nom">{liee.titre}</span>
 										<span class="item__sous"
@@ -503,7 +543,7 @@
 				</div>
 				<div class="panneau__corps panneau__corps--serre">
 					{#each retroliens as retrolien (retrolien.identifiant)}
-						<a class="item" href="#"
+						<a class="item" href={adresseDeNote(retrolien.identifiant)}
 							><span
 								><span class="item__nom">{retrolien.titre}</span><span class="item__sous"
 									>{retrolien.domaine}</span
@@ -519,13 +559,22 @@
 				</div>
 			</section>
 
+			<!-- eslint-enable svelte/no-navigation-without-resolve -->
+
 			<!-- Historique de vérification -->
 			<section class="panneau repliable" data-ouvert="oui">
 				<div class="panneau__tete"><span class="etiq">Historique de vérification</span></div>
 				<div class="panneau__corps">
 					{#if verifications.length}
 						<ul class="chrono" id="chrono">
-							{#each verifications as attestation (attestation.iso)}
+							<!-- LA CLÉ EST LE RANG, ET C'EST UNE CORRECTION MESURÉE. Elle était
+							     la date ISO, or `RG-M06-02` n'interdit pas deux vérifications le
+							     MÊME JOUR : deux attestations du 21 août ont fait lever
+							     `each_key_duplicate` à l'hydratation, ce qui tuait tout le
+							     JavaScript de la page — donc « Marquer comme vérifié » avec.
+							     Le rang est unique par construction, et l'ordre est celui que
+							     le chargeur sert. -->
+							{#each verifications as attestation, rang (rang)}
 								<li>
 									<span class="item__nom">{attestation.par ?? 'auteur non journalisé'}</span><time
 										datetime={attestation.iso}>{attestation.jour}</time

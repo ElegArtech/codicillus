@@ -43,6 +43,13 @@
 	import '../../../vues/V-17.css';
 	import { cablerLEditeur } from '$lib/cablage/formulaires';
 	import { monterLEditeur } from '$lib/edition/editeur-client';
+	import {
+		cablerLesGestesDEdition,
+		resolveurDuCorpusServi,
+		DOCUMENT_VIDE,
+		type GestesCables
+	} from '$lib/edition/gestes';
+	import { cablerLeChoixDeDepart } from './cablage';
 	import { MOI } from '../../../../seeds/corpus';
 	import type { PageData } from './$types';
 
@@ -66,13 +73,58 @@
 	 * mélangent pas (`P-35`).
 	 */
 	onMount(() => {
+		/* `?titre=` — LE QUATRIÈME PARAMÈTRE DE `docs/routes.md:287`, LU ICI.
+		   TROIS ÉCRANS L'ÉMETTAIENT DÉJÀ, ET PERSONNE NE LE LISAIT : la recherche
+		   sans résultat (`V-08:659`), la page d'adresse non résolue
+		   (`cablage-erreur.ts`) et la console analytique, toutes trois par
+		   « Créer la note « … » ». Le titre cherché se perdait donc en chemin, et
+		   l'utilisateur retrouvait une page blanche là où le produit lui promettait
+		   sa requête. C'est le trou que `P-35` décrit : un contrat émis d'un côté,
+		   jamais honoré de l'autre.
+		   Le champ est posé DIRECTEMENT plutôt que passé en propriété : le titre
+		   n'est pas un état de départ que le serveur décide, c'est une amorce que
+		   l'utilisateur va récrire — et `src/vues/` ne se touche pas (`ARB-063`). */
+		const titreDemande = page.url.searchParams.get('titre');
+		const champTitre = formulaire.querySelector<HTMLTextAreaElement>('#titre');
+		if (titreDemande !== null && titreDemande !== '' && champTitre !== null) {
+			champTitre.value = titreDemande;
+		}
+
 		const zone = formulaire.querySelector<HTMLElement>('#redaction');
-		const editeur = zone === null ? null : monterLEditeur(zone, null, formulaire);
+		/* LE NŒUD ENTRE LES DEUX CÂBLAGES. L'éditeur est monté AVANT les gestes —
+		   il prend la zone du gel, que les gestes interrogent ensuite — et il ne
+		   peut donc pas se référer à eux à sa construction. Le renvoi est différé
+		   par cette variable : c'est ce qui fait passer le témoin de sauvegarde à
+		   « Modifications non enregistrées » à la première frappe. */
+		let gestes: GestesCables | null = null;
+		const editeur =
+			zone === null
+				? null
+				: monterLEditeur(zone, null, formulaire, {
+						surChangement: () => gestes?.signalerUneModification()
+					});
 		const defaire = cablerLEditeur(formulaire, {
 			rechargerSurDomaine: (domaine) => `/notes/nouvelle?domaine=${encodeURIComponent(domaine)}`,
 			...(editeur === null ? {} : { editeur: () => editeur.document() })
 		});
+		gestes = cablerLesGestesDEdition(formulaire, {
+			document: () => editeur?.document() ?? DOCUMENT_VIDE,
+			resoudre: resolveurDuCorpusServi(data.notes)
+			/* « Annuler » ramène à la page précédente : une note qui n'existe pas
+			   encore n'a pas d'adresse où revenir, et en inventer une serait
+			   décider d'une navigation qu'aucune source ne porte. */
+		});
+		const defaireLeChoix =
+			editeur === null
+				? () => undefined
+				: cablerLeChoixDeDepart(formulaire, {
+						templates: data.templates,
+						inserer: (document) => editeur.inserer(document),
+						demande: data.templateDemande
+					});
 		return () => {
+			defaireLeChoix();
+			gestes?.defaire();
 			defaire();
 			editeur?.detruire();
 		};
