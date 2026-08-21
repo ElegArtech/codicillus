@@ -76,4 +76,51 @@
 			'f-role': demande.role
 		});
 	}}
+	onCreerUnCompte={async (demande) => {
+		/* LA VUE DÉSIGNE LE DOMAINE PAR SON NOM, LE GESTE PAR SA FORME CANONIQUE —
+		   même traduction qu'à `/console/domaines`, par la table que le chargeur a
+		   servie. Une désignation absente vaut « aucun rattachement » plutôt qu'un
+		   rattachement deviné : `#f-domaine` n'est pas obligatoire au gel, et la
+		   colonne est nullable par exigence (`RG-M14-04`). */
+		const canonique = data.designations[demande.domaine];
+
+		/* PAS DE RECHARGEMENT AU SUCCÈS : la boîte « Compte créé » doit encore
+		   montrer le mot de passe initial, qui n'existe nulle part ailleurs. La
+		   page se relit à la fermeture de cette boîte — `onMotDePasseTransmis`. */
+		const retour = await envoyerAUneAction(
+			document,
+			'?/creer',
+			{
+				'f-ident': demande.identifiant,
+				'f-nom': demande.nom,
+				'f-courriel': demande.courriel,
+				'f-mdp': demande.motDePasse,
+				'f-role': demande.role,
+				'f-verrou': demande.motDePasseVerrouille ? 'oui' : 'non',
+				univers: canonique?.univers ?? '',
+				domaine: canonique?.domaine ?? ''
+			},
+			{ rechargerAuSucces: false }
+		);
+		if (retour.succes) return { cree: true, erreurs: [] };
+
+		/* LE REFUS EST RENDU TEL QUE LE VERDICT L'A PRONONCÉ, jamais reformulé :
+		   les messages sont ceux du gel, et `verdictDeCreationDeCompte()` les
+		   transcrit. Un refus d'une autre nature — mot de passe vide, adresse
+		   indisponible — n'a AUCUN bloc au gel pour se dire : il ne rend aucune
+		   erreur de champ, le panneau reste ouvert, et rien n'est écrit. C'est une
+		   lacune déclarée, pas un écran inventé. */
+		const refus = retour.donnees as { issue?: string; erreurs?: unknown } | undefined;
+		const erreurs =
+			refus?.issue === 'saisie-refusee' && Array.isArray(refus.erreurs)
+				? (refus.erreurs as { champ: 'ident' | 'nom'; message: string }[])
+				: [];
+		return { cree: false, erreurs };
+	}}
+	onMotDePasseTransmis={() => {
+		/* LA LISTE VIENT DU SERVEUR : le compte créé n'y entre qu'à la relecture.
+		   Le rechargement est différé jusqu'ici parce que le mot de passe initial,
+		   « affiché une seule fois », disparaîtrait avec la page. */
+		document.location.reload();
+	}}
 />
