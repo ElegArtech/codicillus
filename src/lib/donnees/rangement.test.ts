@@ -192,7 +192,7 @@ describe('RG-STR-06 — l’activation d’un module, dans les DEUX polarités',
 		   doivent donc être refusées. Le compte est ici pour rougir si le jeu
 		   changeait — auquel cas la route perdrait son cas d'épreuve réel. */
 		const sans = DOMAINES.map((d) => d.nom).filter(
-			(nom) => !moduleActif(new Set(DETAIL_DOMAINES[nom].modules), 'dossiers')
+			(nom) => !moduleActif(new Set(DETAIL_DOMAINES[nom]?.modules ?? []), 'dossiers')
 		);
 		expect(sans).toEqual(['Applications', 'Migration 2026']);
 		expect(DOMAINES.length).toBe(4);
@@ -204,7 +204,7 @@ describe('RG-STR-06 — l’activation d’un module, dans les DEUX polarités',
 		   plutôt que de laisser croire. Son épreuve est celle, synthétique, des deux
 		   cas ci-dessus. */
 		const sans = DOMAINES.map((d) => d.nom).filter(
-			(nom) => !moduleActif(new Set(DETAIL_DOMAINES[nom].modules), 'notes')
+			(nom) => !moduleActif(new Set(DETAIL_DOMAINES[nom]?.modules ?? []), 'notes')
 		);
 		expect(sans).toEqual([]);
 	});

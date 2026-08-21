@@ -145,6 +145,8 @@
 		 */
 		univers?: readonly Univers[];
 		domaines?: readonly Domaine[];
+		/** L'univers de rattachement du compte. Défaut : celui du jeu de semence. */
+		universDuCompte?: string;
 		compte?: UtilisateurCourant;
 		instance?: EtatDInstance;
 		/**
@@ -204,6 +206,11 @@
 		notes: corpus,
 		univers = UNIVERS,
 		domaines = DOMAINES,
+		/* L'UNIVERS DU COMPTE, POUR LE FIL D'ARIANE. Il était écrit « Production »
+		   en littéral : sur une instance qui n'a pas d'univers de ce nom, le fil
+		   proposait `/univers/production/…`, qui rend 404. Défaut : la valeur du
+		   gel, pour que le rendu d'une vue sans propriété ne bouge pas. */
+		universDuCompte = 'Production',
 		compte = MOI,
 		instance = INSTANCE,
 		typesNote = TYPES_NOTE,
@@ -294,8 +301,8 @@
 	/** Le fil d'Ariane et le chemin courant du rail — `coquille({…})`, `V-17:3568`. */
 	const fil = $derived(
 		cas === 'modif'
-			? ['Accueil', 'Production', domaineChoisi, 'Modifier']
-			: ['Accueil', 'Production', compte.domaine, 'Nouvelle note']
+			? ['Accueil', universDuCompte, domaineChoisi, 'Modifier']
+			: ['Accueil', universDuCompte, compte.domaine, 'Nouvelle note']
 	);
 </script>
 

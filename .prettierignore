@@ -32,3 +32,9 @@ playwright-report/
 *.md
 .claude/
 docs/
+
+# Le site de présentation. `presentation-codicillus.html` est la toile de
+# conception assemblée — 3,4 Mo dont le gros est du code d'éditeur minifié :
+# la reformater n'a aucun sens et casserait son bloc d'état. `Main.dc.html`
+# est sa source, écrite au format des composants de conception.
+site/

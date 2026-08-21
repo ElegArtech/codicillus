@@ -418,6 +418,35 @@ export const CLES_DE_PARAMETRE: Readonly<Record<keyof Configuration, string>> = 
 	dureeSession: 'duree_session'
 });
 
+/**
+ * LES VALEURS PAR DÉFAUT DE LA CONFIGURATION — CE QU'UNE INSTANCE VIERGE VAUT.
+ *
+ * MESURÉ LE 21/08/2026 : sur une base migrée mais NON SEMÉE — c'est-à-dire une
+ * INSTALLATION NEUVE, l'état normal du produit au premier démarrage — la table
+ * `parametres` est vide, `lireConfiguration()` levait sur la première clé
+ * absente, et LES QUINZE PAGES ESSAYÉES SORTAIENT EN 500. Le produit était
+ * inutilisable tant qu'on ne l'avait pas semé avec le jeu de démonstration.
+ *
+ * Ce n'était pas un oubli de câblage : c'était l'absence de tout défaut. Un
+ * réglage d'instance a une valeur tant que l'administrateur n'en a pas décidé
+ * une autre, et cette valeur est ici — au même endroit que les clés, pour
+ * qu'une clé ajoutée sans son défaut se voie au premier coup d'œil.
+ *
+ * Les deux seuils viennent de `SEUILS_PAR_DEFAUT` (`$lib/fraicheur`), la
+ * fabrique unique de `P-01` : les redéclarer ici les ferait diverger.
+ * `portailAssistance` est VIDE par défaut — inventer une adresse d'assistance
+ * serait poser un lien mort dans le produit de quelqu'un d'autre.
+ */
+export const CONFIGURATION_PAR_DEFAUT: Readonly<Configuration> = Object.freeze({
+	seuilFrais: 90,
+	seuilVieillissant: 180,
+	versionsMax: 50,
+	portailAssistance: '',
+	motFiche: 'Fiche',
+	tailleMaxPieceJointe: 25,
+	dureeSession: 120
+});
+
 /* ══════════════════════════════════════════════════════ La note ═════════ */
 
 /**

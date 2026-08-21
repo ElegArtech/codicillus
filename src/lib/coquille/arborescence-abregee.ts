@@ -1,4 +1,5 @@
-import { identifiantLisible } from '../rangement/adresses'; /**
+import { identifiantLisible } from '../rangement/adresses';
+import type { NoeudDeDossier, SectionDUnivers } from './arborescence'; /**
  * Coquille applicative — l'arborescence de rail de la FORME ABRÉGÉE.
  *
  * TROISIÈME AMENDEMENT DU GABARIT — ARB-021, amendement A-1e.
@@ -204,9 +205,70 @@ export function rendreNoeudsAbreges(
 	});
 }
 
-/** L'arborescence abrégée, balisage et chemin courant réunis. */
-export function railAbregeRendu(courant: readonly string[]): readonly SectionAbregeeRendue[] {
-	return SECTIONS_ABREGEES.map((s) => ({
+/* ═══════════════════════════════ La dérivation depuis les données ═══════ */
+
+/**
+ * L'ARBORESCENCE ABRÉGÉE, DÉRIVÉE DU CORPUS RÉEL.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE QUE CETTE FONCTION RÉPARE, ET POURQUOI L'EN-TÊTE CI-DESSUS ÉTAIT JUSTE
+ * SUR LES FAITS ET FAUX SUR LA CONCLUSION
+ *
+ * `SECTIONS_ABREGEES` porte l'arbre des maquettes ÉCRIT EN DUR — Production,
+ * Infrastructure, Exploitation, Sauvegardes, Ordonnancement, Astreinte,
+ * Supervision, Sondes, Réseau, Adressage, Applications, Poste de travail,
+ * Projets, Migration 2026. Vingt-deux vues sur quarante et une emploient la
+ * forme abrégée. Sur ces vingt-deux écrans, LE RAIL DE NAVIGATION IGNORAIT LA
+ * BASE.
+ *
+ * MESURÉ LE 21/08/2026 sur une instance NEUVE — un seul univers créé en
+ * console, « Direction juridique » : dix pages sur douze affichaient dans leur
+ * rail « Infrastructure », « Migration 2026 », « Poste de travail ». Des
+ * univers et des domaines QUI N'EXISTAIENT PAS. Le rail proposait de naviguer
+ * vers `/univers/production/infrastructure`, qui rend 404.
+ *
+ * L'EN-TÊTE DE CE FICHIER A RAISON SUR LES FAITS : le balisage abrégé du gel
+ * n'est PAS emboîté avec l'arbre du corpus, et aucune fonction ne déduit l'un
+ * de l'autre. Mais il en tire la mauvaise conclusion. Ce que dessine une
+ * maquette est du CONTENU DE DÉMONSTRATION, au même titre que les titres de
+ * notes qu'on y lit — et personne n'a jamais proposé de servir « Restaurer une
+ * sauvegarde PostgreSQL » à toutes les instances au motif que la maquette la
+ * dessine. La forme abrégée est une FAÇON DE RENDRE, pas une donnée.
+ *
+ * `SECTIONS_ABREGEES` reste, et reste le DÉFAUT : hors application, une vue
+ * rendue sans données doit montrer ce que sa maquette montre. C'est ce qui
+ * garde le gel intact et les batteries de propriétés vertes.
+ */
+export function sectionsAbregeesDuCorpus(
+	sections: readonly SectionDUnivers[]
+): readonly SectionAbregee[] {
+	const enNoeud = (n: NoeudDeDossier): NoeudAbrege => ({
+		nom: n.nom,
+		/* `deplie` est l'état ÉCRIT du balisage, distinct de `ouvert` que le
+		   chemin courant calcule. Rien dans la base ne porte un état de dépliage :
+		   on le laisse fermé, et `rendreNoeudsAbreges()` ouvrira les ancêtres de
+		   la page courante, comme il le fait déjà pour le gel. */
+		deplie: false,
+		enfants: n.enfants.map(enNoeud)
+	});
+	return sections.map((s) => ({
+		nom: s.nom,
+		arbre: s.domaines.map((d) => ({ nom: d.nom, deplie: false, enfants: d.enfants.map(enNoeud) }))
+	}));
+}
+
+/**
+ * L'arborescence abrégée, rendue pour un chemin courant.
+ *
+ * `sections` vaut `SECTIONS_ABREGEES` par défaut — le gel, pour le rendu d'une
+ * vue hors application. En application, la coquille passe l'arbre dérivé de la
+ * base par `sectionsAbregeesDuCorpus()`.
+ */
+export function railAbregeRendu(
+	courant: readonly string[],
+	sections: readonly SectionAbregee[] = SECTIONS_ABREGEES
+): readonly SectionAbregeeRendue[] {
+	return sections.map((s) => ({
 		nom: s.nom,
 		arbre: rendreNoeudsAbreges(s.arbre, courant, s.nom, null)
 	}));

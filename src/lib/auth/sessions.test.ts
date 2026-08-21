@@ -11,6 +11,7 @@
  * PAS. Une épreuve qui n'aurait que la première laisserait l'exemption
  * inéprouvée — c'est-à-dire espérée.
  */
+import { CONFIGURATION_PAR_DEFAUT } from '../base/schema';
 import { describe, expect, it } from 'vitest';
 import {
 	ATTRIBUTS_DU_COOKIE,
@@ -74,15 +75,29 @@ describe('la durée est LUE, jamais codée en dur (RG-M14-08 lu avec M14.7)', ()
 		expect(dureeDInactiviteEnMinutes('120')).toBe(120);
 	});
 
-	it('ÉCHOUE plutôt que de se donner un défaut', () => {
-		for (const valeur of [undefined, null, 0, -1, 'deux heures', {}]) {
+	/* CE TEST DISAIT L'INVERSE — « ÉCHOUE plutôt que de se donner un défaut ». Il
+	   gravait une doctrine qui rendait le produit inutilisable au premier
+	   démarrage : sur une base migrée et NON SEMÉE — l'état normal d'une
+	   installation neuve —, `parametres` est vide et les dix-huit pages essayées
+	   sortaient en 500 (mesuré le 21/08/2026). Un défaut n'est pas une seconde
+	   définition : c'est la valeur avant tout réglage, et la valeur réglée
+	   l'emporte dès qu'elle existe. */
+	it('rend le défaut du produit quand le paramètre est ABSENT', () => {
+		expect(dureeDInactiviteEnMinutes(undefined)).toBe(CONFIGURATION_PAR_DEFAUT.dureeSession);
+		expect(dureeDInactiviteEnMinutes(null)).toBe(CONFIGURATION_PAR_DEFAUT.dureeSession);
+	});
+
+	it('ÉCHOUE encore sur une valeur PRÉSENTE mais illisible', () => {
+		/* Ce n'est plus une base neuve, c'est une base corrompue : la faire vivre
+		   sur un défaut masquerait le défaut. */
+		for (const valeur of [0, -1, 'deux heures', {}]) {
 			expect(() => dureeDInactiviteEnMinutes(valeur)).toThrow(DureeDeSessionIllisibleErreur);
 		}
 	});
 
 	it('nomme la cause et l’endroit du réglage', () => {
-		expect(() => dureeDInactiviteEnMinutes(undefined)).toThrow(/duree_session/);
-		expect(() => dureeDInactiviteEnMinutes(undefined)).toThrow(/semence/);
+		expect(() => dureeDInactiviteEnMinutes('deux heures')).toThrow(/duree_session/);
+		expect(() => dureeDInactiviteEnMinutes('deux heures')).toThrow(/console/);
 	});
 });
 

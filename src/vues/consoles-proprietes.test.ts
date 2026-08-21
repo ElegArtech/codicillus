@@ -177,7 +177,7 @@ describe('V-28 — Domaines', () => {
 	test('absente, le défaut du jeu de semence s’applique', async () => {
 		const rendu = await rendre('V-28');
 		coquilleDuJeu(rendu);
-		expect(rendu).toContain(DETAIL_DOMAINES.Applications.description);
+		expect(rendu).toContain(DETAIL_DOMAINES.Applications?.description ?? '');
 		expect(rendu).toContain(MODULES.notes.nom);
 		expect(rendu).not.toContain('Carnets');
 	});
@@ -191,8 +191,8 @@ describe('V-28 — Domaines', () => {
 		coquilleFournie(rendu);
 		// `domaines` : le tableau ne porte plus que « Migration 2026 » et le
 		// domaine littéral du gel ; la description d'« Applications » a disparu.
-		expect(rendu).not.toContain(DETAIL_DOMAINES.Applications.description);
-		expect(rendu).toContain(DETAIL_DOMAINES['Migration 2026'].description);
+		expect(rendu).not.toContain(DETAIL_DOMAINES.Applications?.description ?? '');
+		expect(rendu).toContain(DETAIL_DOMAINES['Migration 2026']?.description ?? '');
 		// `modules` : le nom du module vient de la table fournie.
 		expect(rendu).toContain('Carnets');
 	});

@@ -211,7 +211,10 @@
 	const railCourant = $derived(
 		courant.nom === DOMAINE_INITIAL ? [courant.nom] : [DOMAINE_INITIAL, courant.nom]
 	);
-	const detail = $derived(detailDomaines[courant.nom]);
+	/* `NomDeDomaine` est une chaîne : la table de détail peut ne rien porter
+	   pour un domaine créé dans la console. Le repli vide évite la page en
+	   erreur, et ne change rien au gel — tous ses domaines ont leur détail. */
+	const detail = $derived(detailDomaines[courant.nom] ?? { description: '', modules: [] });
 	const notesDuDomaine = $derived(vide ? [] : corpus.filter((n) => n.domaine === courant.nom));
 
 	/* ── Fraîcheur ──────────────────────────────────────────────────────────

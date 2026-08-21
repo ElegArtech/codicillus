@@ -98,9 +98,16 @@ export type CheminDeDossier = string;
 /** Date au format d'affichage des maquettes : JJ/MM/AAAA. */
 export type DateCourte = string;
 
-export type NomDUnivers = 'Production' | 'Projets' | 'Non classé';
-export type NomDeDomaine =
-	'Infrastructure' | 'Applications' | 'Poste de travail' | 'Migration 2026';
+/* LE NOM D'UN UNIVERS EST UNE CHAÎNE, ET C'EST UNE DÉCISION DE PRODUIT.
+   Il fut une union littérale — 'Production' | 'Projets' | 'Non classé' —, ce
+   qui typait la coquille SUR LE VOCABULAIRE DU JEU DE SEMENCE : le rail de
+   navigation ne pouvait alors nommer que les trois univers des maquettes. Or un
+   univers se crée dans la console, comme un domaine, un type de fiche ou un type
+   de relation : rien dans ce produit ne connaît de métier. L'union rendait la
+   promesse intenable dès la première instance réelle. */
+export type NomDUnivers = string;
+/** Même raison que `NomDUnivers` : un domaine se crée, il ne s'énumère pas. */
+export type NomDeDomaine = string;
 export type NomDAuteur = 'Sophie Nguyen' | 'Marc Ferreira' | 'Karim Belhadj';
 
 /** Les trente-deux identifiants du jeu complet. Aucun autre n'existe dans les

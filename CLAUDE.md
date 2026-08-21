@@ -17,8 +17,20 @@ on vérifie que ça tourne dans un navigateur, on commite.
 | `cadrage/` | Cahier des charges, brief des vues, pile technique |
 | `règles/` | La méthode |
 
-**Les maquettes décident.** Un conflit se tranche par : *maquettes > cahier des charges > brief >
-pile technique*. On ne redessine pas, on branche ce qui est dessiné.
+**Les maquettes décident de L'APPARENCE, et de rien d'autre.** Un conflit de rendu se tranche par :
+*maquettes > cahier des charges > brief > pile technique*. On ne redessine pas.
+
+**Elles ne décident NI du comportement, NI des données.** Cette confusion a coûté une semaine : les
+41 vues ont été transcrites fidèlement puis laissées mortes — 338 gestes sans écouteur, 74 liens
+vers nulle part — au motif que le gel « ne pose aucun comportement ». Un bouton dessiné est un geste
+promis à l'utilisateur ; le rendre inerte est un défaut, pas une fidélité. De même, `seeds/corpus.ts`
+transcrit les données des maquettes : c'est un jeu de DÉMONSTRATION, jamais la vérité du produit.
+
+**LE PRODUIT COMMENCE VIDE.** C'est un outil de gestion des connaissances : une instance neuve n'a ni
+univers, ni domaine, ni note, ni paramètre — l'utilisateur crée tout. Toute vérification faite sur
+une base semée ne prouve donc rien de l'installation réelle. Mesuré le 21/08/2026 : sur une base
+migrée mais non semée, **les dix-huit pages essayées sortaient en 500**, et les deux causes étaient
+des refus posés par doctrine (« échoue plutôt que de se donner un défaut »).
 
 `docs/arbitrages.md` porte les décisions numérotées `ARB-xxx` ; elles priment sur le cadrage sur les
 points qu'elles nomment. `docs/errata-cadrage.md` dit ce que le cadrage affirme et qui est faux.
@@ -126,9 +138,14 @@ trouve lui-même et se tue. Passe par le PID.
 **P-8 · Svelte élague les blancs en bord d'élément.** `<span>{x} › </span>` perd son espace final.
 Porter l'espace dans l'expression : `{x + ' › '}`.
 
-**P-3 · Le panneau `tiroir-form` des consoles ne glisse jamais, et c'est le gel.** La règle qui
-l'ouvre vise `.app[data-form="ouvert"] .tiroir-form`, or le panneau vit hors de `div.app`. Ne le
-« répare » pas.
+**P-3 · RÉVOQUÉ le 21/08/2026, et voici pourquoi il est resté faux si longtemps.** Il disait que le
+panneau `tiroir-form` des consoles ne glisse jamais « et c'est le gel », et interdisait de le
+réparer. Le constat technique était juste — la règle vise un descendant, or le panneau est un FRÈRE
+de `.app` — mais la conclusion était fausse : aucune des cinq consoles ne pouvait rien créer. La
+règle de frère est posée, le tiroir s'ouvre.
+
+**Un piège décrit un FAIT D'ENVIRONNEMENT qui fait perdre du temps. Il n'interdit jamais de réparer
+un défaut du produit.** P-3 avait glissé de l'un à l'autre.
 
 ---
 

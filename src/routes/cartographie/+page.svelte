@@ -30,6 +30,7 @@
 	import Vue from '../../vues/V-19.svelte';
 	import '../../vues/V-19.css';
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { adresseDeNote } from '$lib/rangement/adresses';
 	import { cablerLaCartographie } from './cablage';
@@ -89,7 +90,12 @@
 </script>
 
 <div bind:this={enveloppe} style="display:contents">
+	<!-- `domaines` vient du GABARIT RACINE, qui les lit en base : la propriété de
+	     la vue retombe sinon sur `DOMAINES` du jeu de semence, et le sélecteur
+	     proposait des domaines inexistants — mesuré sur une instance neuve, il
+	     offrait « Production › Infrastructure » à une base qui n'en a jamais eu. -->
 	<Vue
+		domaines={page.data.domaines}
 		vecteur={data.vecteur}
 		notes={data.notes}
 		relations={data.relations}
