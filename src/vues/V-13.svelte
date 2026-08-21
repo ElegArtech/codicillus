@@ -41,14 +41,36 @@
 	 *
 	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011).
 	 *
-	 * NON RENDUS, ET DÉCLARÉS : les TROIS `dialog.dlg` FERMÉS de la maquette —
-	 * `#dlg-creer`, `#dlg-deplacer`, `#dlg-supprimer` —, `template#tpl-palette` et
-	 * `dialog#palette`. `docs/releve-vues.md` §4.1 les mesure : un `<dialog>`
-	 * fermé ne porte AUCUNE boîte de rendu, ne déplace aucun pixel et n'entre pas
-	 * dans l'instantané ARIA. Le gabarit n'ouvre sa `superposition` qu'aux neuf
-	 * nœuds hors `div.app` qui rendent, et aucun n'est de V-13. Leur ouverture
-	 * est du comportement, donc hors de ce lot. Et `div.planche`, bloc hors
-	 * produit (§2.G), qui ne se porte jamais.
+	 * LES TROIS `dialog.dlg` DU GEL SONT DÉSORMAIS TRANSCRITS, ET FERMÉS —
+	 * `#dlg-creer` (`V-13:1203`), `#dlg-deplacer` (`:1231`), `#dlg-supprimer`
+	 * (`:1262`). Ils ne rendaient pas jusqu'ici, et le motif était juste :
+	 * `docs/releve-vues.md` §4.1 le mesure, un `<dialog>` fermé ne porte AUCUNE
+	 * boîte de rendu, ne déplace aucun pixel et n'entre pas dans l'instantané
+	 * ARIA — `.dlg { display: none }` (`src/vues/V-13.css:284`), et `[open]`
+	 * seul le révèle. Ce qui a changé n'est donc pas le rendu, c'est qu'une
+	 * route peut maintenant les OUVRIR : quatre gestes du gel n'avaient aucun
+	 * écran où atterrir.
+	 *
+	 * LE CONTENU EST CELUI QUE LE GEL COMPOSE À L'OUVERTURE, non celui de son
+	 * HTML statique — le script de la maquette réécrit `#creer-parent`,
+	 * `#creer-aide`, `#dep-nom`, `#arbre-choix`, `#sup-cible`, `#decompte-liste`
+	 * et `#decompte-note` avant chaque `showModal()`. Transcrire l'état d'avant
+	 * l'ouverture rendrait un dialogue que personne ne voit jamais.
+	 *
+	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette` et `dialog#palette`. Le
+	 * gabarit n'ouvre sa `superposition` qu'aux neuf nœuds hors `div.app` qui
+	 * rendent, et aucun n'est de V-13. Et `div.planche`, bloc hors produit
+	 * (§2.G), qui ne se porte jamais.
+	 *
+	 * PAS DE DIALOGUE DE DROITS, ET CE N'EST PAS UN OUBLI. `#a-droits` existe au
+	 * gel (`V-13:1163`) ; le dialogue qu'il ouvrirait N'EXISTE PAS dans V-13 —
+	 * son gestionnaire notifie « Gestion des droits du dossier — boîte de
+	 * dialogue, vue V-40 » (`V-13:2376`-`2378`). V-40 en porte un, `#d-droits`
+	 * (`V-40:1184`), bâti sur `.droits`, `.dr`, `.dr__origine`, `.dr-ajout` et
+	 * `.selecteur` : `docs/DESIGN.md:1336` range les quatre premières parmi les
+	 * classes de **V-40 seulement**, et aucune n'est déclarée par
+	 * `src/vues/V-13.css`. Le transcrire ici sortirait de l'inventaire fermé et
+	 * rendrait sans style. Le geste reste donc à faire, et il est déclaré.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
 	 * `src/vues/V-13.css`, posé par `node verif/feuilles-de-vue.mjs V-13
@@ -115,6 +137,59 @@
 		 * une ancienneté inventée.
 		 */
 		modifications?: Partial<Record<IdentifiantNote, number>>;
+		/**
+		 * LE RANGEMENT RÉEL DU DOMAINE, quand une route en a lu un.
+		 *
+		 * ABSENT, LA VUE DÉDUIT SON ARBORESCENCE DES NOTES, comme le gel le fait
+		 * (`V-13:1965`-`1982`) et comme cette vue l'a toujours fait : le mode de
+		 * conception ne passe que `vecteur` et `notes`, et le banc ne bouge donc
+		 * pas d'un octet.
+		 *
+		 * PRÉSENT, IL PREND LA PLACE DE LA DÉDUCTION, et c'est ce que le produit
+		 * exige : un dossier VIDE n'apparaît dans aucune note, donc l'arbre déduit
+		 * ne le voit pas. Un sous-dossier fraîchement créé serait resté invisible
+		 * de sa propre page parente — et le sélecteur de destination du dialogue
+		 * de déplacement n'aurait proposé que les dossiers qui contiennent des
+		 * notes.
+		 */
+		rangement?: RangementReel | null;
+		/**
+		 * L'ORIGINE DU DROIT EFFECTIF — le texte de `.droit__source` (`V-13:1146`).
+		 *
+		 * ABSENTE, la vue rend la tournure de la planche, qui est celle du gel.
+		 * PRÉSENTE, elle dit d'où le droit vient RÉELLEMENT — `RG-DRO-01`, « le
+		 * droit explicite le plus proche en remontant l'arborescence ». Le gel
+		 * fige « — hérité du domaine Infrastructure » ; la servir telle quelle sur
+		 * un droit accordé ailleurs serait une valeur illustrative (`P-02`).
+		 */
+		origineDuDroit?: string | null;
+		/** Le refus affiché par `#creer-erreur` (`V-13:1223`), s'il y en a un. */
+		erreurDeCreation?: string | null;
+		/** Le refus affiché par `#dep-erreur` (`V-13:1252`), s'il y en a un. */
+		erreurDeDeplacement?: string | null;
+	}
+
+	/**
+	 * UNE DESTINATION POSSIBLE DU DIALOGUE « Renommer ou déplacer », telle que la
+	 * route la calcule. `refus` porte le motif du gel, jamais un booléen : le gel
+	 * MONTRE les destinations impossibles avec leur motif plutôt que de les
+	 * masquer, « sans cela, on cherche longtemps un dossier qui n'apparaît nulle
+	 * part » (`V-13:1247`).
+	 */
+	interface DestinationReelle {
+		readonly id: string;
+		/** Les segments affichés, racine du domaine EXCLUE — vides pour la racine. */
+		readonly segments: readonly string[];
+		readonly refus: string | null;
+	}
+
+	/** L'arborescence réelle d'un domaine, et la place du dossier consulté. */
+	interface RangementReel {
+		/** Tous les dossiers du domaine, racine comprise (segments vides). */
+		readonly destinations: readonly DestinationReelle[];
+		readonly dossierId: string;
+		/** Le parent du dossier consulté — la destination cochée par défaut. */
+		readonly parentId: string;
 	}
 
 	const {
@@ -125,7 +200,11 @@
 		compte = MOI,
 		instance = INSTANCE,
 		domaine: DOMAINE = 'Infrastructure',
-		modifications = MODIFICATIONS
+		modifications = MODIFICATIONS,
+		rangement = null,
+		origineDuDroit = null,
+		erreurDeCreation = null,
+		erreurDeDeplacement = null
 	}: Proprietes = $props();
 
 	/** L'univers du domaine affiché — lu à la liste des domaines, jamais supposé. */
@@ -155,6 +234,17 @@
 	const droitEffectif = $derived(DROITS[niveau]);
 
 	/**
+	 * L'ORIGINE AFFICHÉE — celle que la route a résolue, à défaut celle du gel.
+	 *
+	 * `RG-DRO-01` décide de l'origine réelle ; la tournure, elle, est relevée au
+	 * gel et composée par `libelleDOrigine()` (`$lib/donnees/dossiers-ecriture`).
+	 * Une chaîne vide est une origine que le produit ne sait pas nommer — un
+	 * administrateur tient son droit de son rôle, non d'un dossier — et la source
+	 * reste alors muette plutôt que d'affirmer un héritage qui n'existe pas.
+	 */
+	const sourceDuDroit = $derived(origineDuDroit ?? droitEffectif.source);
+
+	/**
 	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
 	 *
 	 * Le gel POSE les actions puis les cache, et ici avec la POLARITÉ INVERSE du
@@ -176,28 +266,68 @@
 	const gestionnaire = $derived(niveau === 'gestionnaire');
 	const redacteur = $derived(niveau === 'gestionnaire' || niveau === 'redacteur');
 
-	/* ── Arborescence — déduite du rangement réel des notes ──────────────────
-	   Aucune structure séparée : le rangement affiché est celui qui existe. Un
-	   chemin que le corpus ne porte pas ne rend donc aucun nœud, et c'est ainsi
-	   que la planche présente son dossier vide. */
+	/* ── Arborescence ─────────────────────────────────────────────────────────
+	   DEUX SOURCES, ET UNE SEULE STRUCTURE. Sans `rangement`, l'arbre est déduit
+	   du rangement réel des NOTES, comme le gel le fait et comme cette vue l'a
+	   toujours fait : un chemin que le corpus ne porte pas ne rend aucun nœud, et
+	   c'est ainsi que la planche présente son dossier vide. Avec `rangement`,
+	   c'est l'arborescence de la BASE qui est rendue — celle qui porte aussi les
+	   dossiers vides, qu'aucune note ne peut trahir. */
 	interface NoeudDeDossier {
+		/** L'identifiant de base, `''` quand l'arbre est déduit des notes. */
+		readonly id: string;
+		/** Le motif qui interdit d'en faire une destination, `null` sinon. */
+		readonly refus: string | null;
 		readonly enfants: Record<string, NoeudDeDossier>;
+	}
+
+	function creuser(
+		racines: Record<string, NoeudDeDossier>,
+		segments: readonly string[]
+	): NoeudDeDossier | null {
+		let courant = racines;
+		let dernier: NoeudDeDossier | null = null;
+		for (const segment of segments) {
+			const existant = courant[segment];
+			const noeud: NoeudDeDossier = existant ?? { id: '', refus: null, enfants: {} };
+			if (!existant) courant[segment] = noeud;
+			dernier = noeud;
+			courant = noeud.enfants;
+		}
+		return dernier;
 	}
 
 	const arbre = $derived.by<Record<string, NoeudDeDossier>>(() => {
 		const racines: Record<string, NoeudDeDossier> = {};
+		if (rangement !== null) {
+			/* L'ordre des destinations est celui de la route ; `creuser()` crée les
+			   maillons manquants, puis la ligne terminale reçoit son identifiant et
+			   son motif de refus. Un maillon créé par un descendant garderait `id`
+			   vide s'il n'était pas lui-même dans la liste — il l'est toujours, la
+			   route passant l'arborescence entière. */
+			for (const d of rangement.destinations) {
+				const noeud = creuser(racines, d.segments);
+				if (noeud === null) continue;
+				const remplace: NoeudDeDossier = { id: d.id, refus: d.refus, enfants: noeud.enfants };
+				const parent = creuser(racines, d.segments.slice(0, -1));
+				const cle = d.segments[d.segments.length - 1];
+				if (cle === undefined) continue;
+				if (parent === null) racines[cle] = remplace;
+				else parent.enfants[cle] = remplace;
+			}
+			return racines;
+		}
 		for (const n of corpus) {
 			if (n.domaine !== DOMAINE || !n.dossier) continue;
-			let courant = racines;
-			for (const segment of segmentsDeDossier(n.dossier)) {
-				const existant = courant[segment];
-				const noeud = existant ?? { enfants: {} };
-				if (!existant) courant[segment] = noeud;
-				courant = noeud.enfants;
-			}
+			creuser(racines, segmentsDeDossier(n.dossier));
 		}
 		return racines;
 	});
+
+	/** La racine du domaine, telle que le sélecteur de destination l'offre. */
+	const racineDuDomaine = $derived<DestinationReelle | null>(
+		rangement?.destinations.find((d) => d.segments.length === 0) ?? null
+	);
 
 	function noeudDe(c: readonly string[]): NoeudDeDossier | null {
 		let niveauCourant = arbre;
@@ -294,6 +424,68 @@
 	function nb(x: number): string {
 		return x.toLocaleString('fr-FR');
 	}
+
+	/* ── Ce que les trois dialogues montrent ──────────────────────────────────
+	   Aucun chiffre n'est saisi : les décomptes sortent de l'arborescence et du
+	   corpus, exactement comme ceux de l'en-tête (`P-02`). */
+
+	/**
+	 * LE PLAFOND DE `RG-STR-04`, DANS LA NUMÉROTATION D'ÉCRAN DU GEL — `V-13:1958`
+	 * le déclare de la même façon, et le texte d'aide de `#dlg-creer` le cite deux
+	 * fois. Le gel compte les niveaux à partir du premier dossier SOUS la racine
+	 * du domaine ; `PROFONDEUR_MAX` de `$lib/donnees/rangement` compte la racine,
+	 * comme la contrainte `dossiers_profondeur_plafonnee`. Les deux numérotations
+	 * disent le même plafond et diffèrent d'une unité.
+	 *
+	 * CE NOMBRE N'EST PAS L'AUTORITÉ, et il ne peut pas l'être : une vue ne peut
+	 * importer `rangement.ts` sans faire entrer le connecteur de base dans le
+	 * paquet du navigateur. L'autorité est le serveur, qui refuse ; ceci n'est
+	 * que le chiffre que la phrase du gel affiche.
+	 */
+	const PROFONDEUR_MAX = 10;
+
+	/** Le niveau qu'aurait le sous-dossier à créer — `V-13:2196`. */
+	const niveauDuSousDossier = $derived(chemin.length + 1);
+
+	/** Le décompte de `RG-M03-04` — `V-13:2333`-`2351`. */
+	const sousArbreDetruit = $derived(compterSousArbre(chemin));
+	const brouillonsDetruits = $derived(toutes.filter((n) => n.brouillon).length);
+	const consultationsDetruites = $derived(toutes.reduce((s, n) => s + n.vues, 0));
+
+	/**
+	 * LA NOTE DU DÉCOMPTE — `V-13:2354`-`2360`, tournure pour tournure. Elle dit
+	 * ce que la seule liste ne dit pas : que les liens entrants vont casser.
+	 */
+	const noteDuDecompte = $derived(
+		toutes.length === 0
+			? 'Ce dossier ne contient aucune note.'
+			: `Ces notes totalisent ${nb(consultationsDetruites)} consultations${
+					brouillonsDetruits === 0
+						? ''
+						: `, dont ${String(brouillonsDetruits)} brouillon${brouillonsDetruits > 1 ? 's' : ''}`
+				}. Les liens qui pointent vers elles deviendront cassés.`
+	);
+
+	/** Une ligne du sélecteur de destination, prête à rendre. */
+	interface RameauDeChoix {
+		readonly cle: string;
+		readonly nom: string;
+		readonly id: string;
+		readonly refus: string | null;
+		readonly enfants: readonly RameauDeChoix[];
+	}
+
+	function rameaux(niveauCourant: Record<string, NoeudDeDossier>): readonly RameauDeChoix[] {
+		return Object.entries(niveauCourant).map(([cle, n]) => ({
+			cle,
+			nom: cle,
+			id: n.id,
+			refus: n.refus,
+			enfants: rameaux(n.enfants)
+		}));
+	}
+
+	const choixDeDestination = $derived(rameaux(arbre));
 </script>
 
 {#snippet temoin(n: Note)}
@@ -331,7 +523,7 @@
 					<span class="droit" id="droit" data-niveau={niveau}>
 						<span class="droit__pastille"></span>
 						<span id="droit-nom">{droitEffectif.nom}</span>
-						<span class="droit__source" id="droit-source">{droitEffectif.source}</span>
+						<span class="droit__source" id="droit-source">{sourceDuDroit}</span>
 					</span>
 				</div>
 				<h1>
@@ -472,3 +664,264 @@
 		</section>
 	{/snippet}
 </Coquille>
+
+<!--
+	LES TROIS DIALOGUES DU GEL, HORS `div.app` COMME DANS LA MAQUETTE ET FERMÉS.
+
+	Ils suivent `</div></div>` dans le gel (`V-13:1202`), donc la coquille ici. Un
+	`dialog` sans `open` ne génère aucune boîte et n'entre pas dans l'instantané
+	ARIA : leur présence ne déplace pas un pixel, et c'est ce qui autorise à les
+	transcrire sans toucher au rendu mesuré.
+
+	AUCUN `name`, AUCUN `method`, AUCUNE `action` — `ARB-063` : les vues sont la
+	transcription du gel, et le gel n'en porte aucun. C'est la route qui nomme les
+	champs à l'installation, et elle seule.
+-->
+
+<!--
+	LES TROIS DIALOGUES SONT DES GESTES DE GESTIONNAIRE, ET ILS SUIVENT LEURS
+	BOUTONS — `P-09` / `ARB-040`, « ni grisée, NI MASQUÉE ».
+
+	Émettre un `dialog` fermé que l'appelant ne peut pas ouvrir laisserait
+	`#creer-valider`, `#dep-valider` et `#sup-valider` dans le DOM d'un rédacteur :
+	des actions interdites, présentes. La condition est la même que celle des
+	boutons de `.actions-dossier` — une seule règle, écrite deux fois au même
+	endroit, plutôt que deux polarités à tenir d'accord.
+-->
+{#if gestionnaire}
+	<!-- ============================ DIALOGUE 1 — Créer un sous-dossier ============================ -->
+	<dialog class="dlg" id="dlg-creer" aria-labelledby="dlg-creer-titre">
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.6"
+						><path
+							d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"
+						/><path d="M8 7v4M6 9h4" stroke-width="1.4" /></svg
+					>
+				</span>
+				<h2 class="dlg__titre" id="dlg-creer-titre">Nouveau sous-dossier</h2>
+				<button class="dlg__fermer" data-fermer aria-label="Fermer">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8" /></svg
+					>
+				</button>
+			</div>
+			<div class="dlg__corps">
+				<p class="dlg__texte">
+					Il sera créé dans <strong id="creer-parent">{cheminTexte(chemin)}</strong>.
+				</p>
+				<div
+					class="champ"
+					id="champ-creer"
+					data-etat={erreurDeCreation === null ? undefined : 'erreur'}
+				>
+					<label class="champ__label" for="creer-nom"
+						>Nom du dossier <span class="oblig">*</span></label
+					>
+					<input
+						class="saisie"
+						type="text"
+						id="creer-nom"
+						placeholder="Restauration"
+						autocomplete="off"
+					/>
+					<span class="champ__aide" id="creer-aide"
+						>Un nom court et parlant. Ce dossier sera au niveau {niveauDuSousDossier} sur {PROFONDEUR_MAX}
+						— il restera {PROFONDEUR_MAX - niveauDuSousDossier} niveaux disponibles en dessous.</span
+					>
+					<div class="champ__erreur" id="creer-erreur" hidden={erreurDeCreation === null}>
+						{erreurDeCreation ?? ''}
+					</div>
+				</div>
+			</div>
+			<div class="dlg__pied">
+				<button class="btn" data-fermer>Annuler</button>
+				<button class="btn btn--principal" id="creer-valider">Créer le dossier</button>
+			</div>
+		</div>
+	</dialog>
+
+	<!-- ============================ DIALOGUE 2 — Renommer ou déplacer ============================ -->
+	<dialog class="dlg dlg--large" id="dlg-deplacer" aria-labelledby="dlg-deplacer-titre">
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.6"><path d="M2 8h9M8 4.5L11.5 8 8 11.5M13.5 3v10" /></svg
+					>
+				</span>
+				<h2 class="dlg__titre" id="dlg-deplacer-titre">Renommer ou déplacer</h2>
+				<button class="dlg__fermer" data-fermer aria-label="Fermer">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8" /></svg
+					>
+				</button>
+			</div>
+			<div class="dlg__corps">
+				<div class="champ">
+					<label class="champ__label" for="dep-nom">Nom</label>
+					<input class="saisie" type="text" id="dep-nom" autocomplete="off" value={nom} />
+				</div>
+				<div class="champ">
+					<span class="champ__label">Emplacement</span>
+					<span class="champ__aide"
+						>Les destinations impossibles sont montrées avec leur motif plutôt que masquées : sans
+						cela, on cherche longtemps un dossier qui n'apparaît nulle part.</span
+					>
+					<div class="arbre-choix" id="arbre-choix">
+						<ul>
+							<li>
+								{@render choix(
+									racineDuDomaine?.id ?? '',
+									`Racine du domaine ${DOMAINE}`,
+									racineDuDomaine?.refus ?? null
+								)}
+								{@render sousChoix(choixDeDestination)}
+							</li>
+						</ul>
+					</div>
+				</div>
+				<div class="champ__erreur" id="dep-erreur" hidden={erreurDeDeplacement === null}>
+					{erreurDeDeplacement ?? ''}
+				</div>
+			</div>
+			<div class="dlg__pied">
+				<button class="btn" data-fermer>Annuler</button>
+				<button class="btn btn--principal" id="dep-valider">Enregistrer</button>
+			</div>
+		</div>
+	</dialog>
+
+	<!-- ============================ DIALOGUE 3 — Supprimer ============================ -->
+	<dialog class="dlg dlg--destructif" id="dlg-supprimer" aria-labelledby="dlg-supprimer-titre">
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.6"
+						><path d="M8 4.5v4.2M8 11.4v.3" /><path
+							d="M7 1.9L1.3 12.4a.9.9 0 0 0 .8 1.3h11.8a.9.9 0 0 0 .8-1.3L9 1.9a1.1 1.1 0 0 0-2 0z"
+						/></svg
+					>
+				</span>
+				<h2 class="dlg__titre" id="dlg-supprimer-titre">Supprimer ce dossier</h2>
+				<button class="dlg__fermer" data-fermer aria-label="Fermer">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8" /></svg
+					>
+				</button>
+			</div>
+			<div class="dlg__corps">
+				<div class="decompte">
+					<div class="decompte__titre">Cette suppression est définitive</div>
+					<ul id="decompte-liste">
+						<li><b>1</b>dossier — {cheminTexte(chemin)}</li>
+						{#if sousArbreDetruit > 0}<li>
+								<b>{sousArbreDetruit}</b>{sousArbreDetruit > 1 ? 'sous-dossiers' : 'sous-dossier'}
+							</li>{/if}
+						{#if toutes.length > 0}<li>
+								<b>{toutes.length}</b>{toutes.length > 1
+									? 'notes, tous sous-dossiers compris'
+									: 'note'}
+							</li>{/if}
+					</ul>
+					<div class="decompte__note" id="decompte-note">{noteDuDecompte}</div>
+				</div>
+				<div class="champ" id="champ-sup">
+					<label class="champ__label" for="sup-saisie">
+						Pour confirmer, saisissez le nom exact du dossier :
+						<span class="confirmation__cible" id="sup-cible">{nom}</span>
+					</label>
+					<input
+						class="saisie"
+						type="text"
+						id="sup-saisie"
+						autocomplete="off"
+						spellcheck="false"
+						placeholder="Nom du dossier"
+					/>
+				</div>
+			</div>
+			<div class="dlg__pied">
+				<button class="btn" data-fermer>Annuler</button>
+				<button
+					class="btn btn--principal btn--destructif"
+					id="sup-valider"
+					disabled
+					style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
+				>
+					Supprimer définitivement
+				</button>
+			</div>
+		</div>
+	</dialog>
+{/if}
+
+<!--
+	LE SÉLECTEUR ARBORESCENT DE DESTINATION — `V-13:2252`-`2306`.
+
+	La récursion est celle du gel : une ligne, puis la liste de ses enfants si
+	elle en a. La racine du domaine fait exception, elle porte toujours sa liste,
+	fût-elle vide (`racine.appendChild(sousUl)`, `V-13:2303`).
+
+	Le bouton radio est COCHÉ sur le parent actuel et DÉSACTIVÉ sur toute
+	destination refusée : « refuser après le clic serait une porte fermée. »
+-->
+{#snippet choix(id: string, libelle: string, refus: string | null)}
+	<label class="choix" data-refuse={refus === null ? undefined : 'oui'}>
+		<input
+			type="radio"
+			name="destination"
+			value={id}
+			disabled={refus !== null}
+			checked={refus === null && id !== '' && id === rangement?.parentId}
+		/>
+		<span class="choix__corps">
+			<span class="choix__nom">{libelle}</span>
+			{#if refus !== null}<span class="choix__motif">{refus}</span>{/if}
+		</span>
+	</label>
+{/snippet}
+
+{#snippet sousChoix(branches: readonly RameauDeChoix[])}
+	<ul>
+		{#each branches as branche (branche.cle)}
+			<li>
+				{@render choix(branche.id, branche.nom, branche.refus)}
+				{#if branche.enfants.length}{@render sousChoix(branche.enfants)}{/if}
+			</li>
+		{/each}
+	</ul>
+{/snippet}
