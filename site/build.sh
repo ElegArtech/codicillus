@@ -23,7 +23,7 @@ pathlib.Path('dist/index.html').write_text(
   '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
   '<meta name="robots" content="noindex, nofollow">\n'
   '<title>Codicillus — une documentation dont on sait si elle est encore vraie</title>\n'
-  '<meta name="description" content="Base de connaissances documentaire auto-hébergée pour une direction technique. Chaque note affiche si elle est encore digne de confiance.">\n'
+  '<meta name="description" content="Outil de gestion des connaissances auto-hébergé. Chaque note affiche si elle est encore digne de confiance, et se remet au vert en un clic.">\n'
   + helmet +
   '</head>\n<body>' + corps + '</body>\n</html>\n',
   encoding='utf-8')
