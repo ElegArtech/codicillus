@@ -185,6 +185,40 @@
 	 * et le contrôle de navigation d'eslint s'en satisfait parce que le chemin,
 	 * lui, passe bien par la résolution du cadre.
 	 */
+
+	/**
+	 * L'ADRESSE D'UN NŒUD DU RAIL, passée par `resolve()`.
+	 *
+	 * `svelte/no-navigation-without-resolve` l'exige, et il a raison : une
+	 * adresse composée à la main casserait sous un `base` de déploiement. Les
+	 * adresses viennent de `$lib/rangement/adresses.ts`, qui les compose déjà
+	 * dans la forme canonique ; `resolve()` n'y ajoute que la racine de
+	 * déploiement.
+	 *
+	 * Le cast est nécessaire parce que ces adresses sont calculées, donc
+	 * inconnues du type littéral que SvelteKit dérive de l'arbre des routes.
+	 */
+	/**
+	 * LES TROIS MOTIFS DE ROUTE DU RAIL, écrits en constantes.
+	 *
+	 * `svelte/no-navigation-without-resolve` inspecte l'EXPRESSION du `href` : il
+	 * veut voir `resolve()` appelée sur un motif connu, et il a raison — une
+	 * adresse concaténée à la main casse sous une racine de déploiement. Même
+	 * écriture qu'en `V-07:455` et sur la route des relations.
+	 */
+	const ROUTE_UNIVERS = '/univers/[univers]' as const;
+	const ROUTE_DOMAINE = '/univers/[univers]/[domaine]' as const;
+	const ROUTE_DOSSIER = '/univers/[univers]/[domaine]/dossiers/[...chemin]' as const;
+
+	/**
+	 * L'ADRESSE D'UN NŒUD DU RAIL EST COMPOSÉE DANS LE BALISAGE, pas dans une
+	 * fonction d'aide.
+	 *
+	 * `svelte/no-navigation-without-resolve` inspecte l'expression du `href` et
+	 * veut y voir `resolve()` : une fonction d'aide la lui cache, et il a raison
+	 * de refuser — c'est ainsi qu'une adresse concaténée passe inaperçue. Les
+	 * trois cas sont donc composés à l'endroit où ils sont lus.
+	 */
 </script>
 
 {#snippet branche(n: NoeudRendu)}
@@ -200,7 +234,17 @@
 					></button
 				>{:else}<span style="width: 20px; flex: none;"></span>{/if}<a
 				class="noeud__nom"
-				href="#"
+				href={n.cible === null
+					? '#'
+					: n.cible.chemin.length > 0
+						? resolve(ROUTE_DOSSIER, {
+								univers: n.cible.univers,
+								domaine: n.cible.domaine,
+								chemin: n.cible.chemin.join('/')
+							})
+						: n.cible.domaine !== ''
+							? resolve(ROUTE_DOMAINE, { univers: n.cible.univers, domaine: n.cible.domaine })
+							: resolve(ROUTE_UNIVERS, { univers: n.cible.univers })}
 				aria-current={n.page ? 'page' : undefined}>{n.nom}</a
 			>{#if n.chargement}<span class="noeud__rouet" aria-label="Chargement"></span>{/if}
 		</div>
@@ -231,7 +275,17 @@
 					></button
 				>{:else}<span style="width:20px"></span>{/if}<a
 				class="noeud__nom"
-				href="#"
+				href={n.cible === null
+					? '#'
+					: n.cible.chemin.length > 0
+						? resolve(ROUTE_DOSSIER, {
+								univers: n.cible.univers,
+								domaine: n.cible.domaine,
+								chemin: n.cible.chemin.join('/')
+							})
+						: n.cible.domaine !== ''
+							? resolve(ROUTE_DOMAINE, { univers: n.cible.univers, domaine: n.cible.domaine })
+							: resolve(ROUTE_UNIVERS, { univers: n.cible.univers })}
 				aria-current={n.page ? 'page' : undefined}>{n.nom}</a
 			>
 		</div>
@@ -296,16 +350,20 @@
 	{#if forme === 'abregee'}
 		<div class="rail__section">
 			<div class="rail__titre etiq">Outils</div>
-			<a class="rail__lien" href="#">Cartographie</a>
-			<a class="rail__lien" href="#">Carte mentale</a>
-			<a class="rail__lien" href="#">Signets</a>
-			{#if ecriture}<a class="rail__lien si-ecriture" href="#">Import</a>{/if}
+			<!-- LA FORME ABRÉGÉE PORTE LES MÊMES ADRESSES QUE LA COMPLÈTE. Elle les
+				laissait à `href="#"` : quatre liens morts, et `P-03` n'en admet aucun.
+				« Signets » vise les notes de type Signet, adresse globale, comme dans
+				la forme complète. -->
+			<a class="rail__lien" href={resolve('/cartographie')}>Cartographie</a>
+			<a class="rail__lien" href={resolve('/carte-mentale')}>Carte mentale</a>
+			<a class="rail__lien" href="{resolve('/recherche')}?type=Signet">Signets</a>
+			{#if ecriture}<a class="rail__lien si-ecriture" href={resolve('/importer')}>Import</a>{/if}
 		</div>
 
 		{#if ecriture}
 			<div class="rail__section si-ecriture">
 				<div class="rail__titre etiq">Gestion</div>
-				<a class="rail__lien" href="#">Console</a>
+				<a class="rail__lien" href={resolve('/console')}>Console</a>
 			</div>
 		{/if}
 	{:else}
