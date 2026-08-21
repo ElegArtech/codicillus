@@ -398,7 +398,7 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 		/* Les dossiers, de la racine vers les feuilles : le parent doit exister. */
 		const dossierParChemin = new Map<string, string>();
 		const cleDeChemin = (domaine: string, chemin: readonly string[]): string =>
-			`${domaine} ${chemin.join(' ')}`;
+			`${domaine}\0${chemin.join('\0')}`;
 		const lignesDossier = [...lignesDeDossier()].sort((a, b) => a.profondeur - b.profondeur);
 		for (const ligne of lignesDossier) {
 			const parentChemin = ligne.chemin.slice(0, -1);

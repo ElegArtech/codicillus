@@ -222,7 +222,7 @@ export const SONDES: readonly Sonde[] = [
 			let touches = 0;
 			const mutees = notes.map((n) => {
 				const trie = [...n.etiquettes].sort((a, b) => a.localeCompare(b, 'fr'));
-				if (trie.join('') === n.etiquettes.join('')) return n;
+				if (trie.join('\x1f') === n.etiquettes.join('\x1f')) return n;
 				touches += 1;
 				return { ...n, etiquettes: trie };
 			});

@@ -399,6 +399,9 @@
   transition: transform var(--m-doux);
 }
 .app[data-form="ouvert"] .tiroir-form { transform: none; }
+/* Le panneau est un FRÈRE de `.app`, jamais un descendant : la règle ci-dessus
+   ne peut donc pas l’atteindre. Celle-ci le peut. */
+.app[data-form="ouvert"] ~ .tiroir-form { transform: none; }
 .tiroir-form__tete {
   flex: none; display: flex; align-items: flex-start; justify-content: space-between;
   gap: var(--e-3); padding: var(--e-4) var(--e-4) var(--e-3);
