@@ -73,14 +73,16 @@
  * recalculé sur le nouveau titre : `RG-M03-03` (`CDC:484`) et `ARB-062` §2.6.
  */
 import { error, fail, redirect } from '@sveltejs/kit';
-import { basePartagee } from '$lib/base/acces';
+import { desc, eq } from 'drizzle-orm';
+import { basePartagee, type Base } from '$lib/base/acces';
+import { notes as notesDuSchema, versions } from '$lib/base/schema';
 import {
 	enregistrerLaNote,
 	lireLaModification,
 	resoudreLEditionDUneNote,
 	type LectureDuFormulaire
 } from '$lib/donnees/edition';
-import { lireSeuils } from '$lib/donnees/lecture';
+import { joursEcoules, lireSeuils } from '$lib/donnees/lecture';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import { DocumentInvalide } from '$lib/contenu/document';
 import { MarkdownInvalide } from '$lib/contenu/markdown';
@@ -91,6 +93,31 @@ import type { Actions, PageServerLoad } from './$types';
 async function contexteDe() {
 	const base = basePartagee();
 	return { base, lecture: { maintenant: new Date(), seuils: await lireSeuils(base) } };
+}
+
+/**
+ * L'ANCIENNETÉ DE LA DERNIÈRE VERSION, EN JOURS — ou `null` quand la note n'en a
+ * aucune.
+ *
+ * La barre d'état des deux éditeurs écrivait « dernière version il y a
+ * 3 semaines » sur n'importe quelle note : la chaîne du gel, figée dans la vue,
+ * donc une valeur illustrative sur une note réelle (`P-02`). Elle est désormais
+ * LUE, et `null` fait dire à l'écran l'autre phrase du gel — « Aucune
+ * modification » —, qui est exactement vraie d'une note sans version.
+ */
+async function ancienneteDeLaDerniereVersion(
+	base: Base,
+	identifiant: string,
+	maintenant: Date
+): Promise<number | null> {
+	const [ligne] = await base
+		.select({ le: versions.le })
+		.from(versions)
+		.innerJoin(notesDuSchema, eq(notesDuSchema.id, versions.noteId))
+		.where(eq(notesDuSchema.identifiant, identifiant))
+		.orderBy(desc(versions.numero))
+		.limit(1);
+	return ligne === undefined ? null : joursEcoules(ligne.le, maintenant);
 }
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -107,6 +134,11 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	return {
 		/** L'entrée est une modification — `charger()`, `V-17:3549`. */
 		vecteur: { cas: 'modif' },
+		dernierEnregistrement: await ancienneteDeLaDerniereVersion(
+			base,
+			params.identifiant,
+			lecture.maintenant
+		),
 		notes: edition.lecture.notes,
 		noteModifiee: edition.lecture.note,
 		typesNote: edition.referentiels.typesNote,

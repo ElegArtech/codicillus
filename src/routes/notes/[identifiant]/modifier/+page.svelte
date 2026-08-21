@@ -78,5 +78,6 @@
 		typesNote={data.typesNote}
 		typesFiche={data.typesFiche}
 		templates={data.templates}
+		dernierEnregistrement={data.dernierEnregistrement}
 	/>
 </form>

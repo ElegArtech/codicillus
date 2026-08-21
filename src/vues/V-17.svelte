@@ -178,6 +178,25 @@
 		 * l'identique.
 		 */
 		noteModifiee?: Note | undefined;
+		/**
+		 * L'ANCIENNETÉ DU DERNIER ENREGISTREMENT, quand la route la connaît.
+		 *
+		 * La barre d'état écrivait « dernière version il y a 3 semaines » sur
+		 * n'importe quelle note : la chaîne du gel, figée, donc une valeur
+		 * illustrative sur une note réelle — ce que `P-02` proscrit.
+		 *
+		 * Les deux phrases restent celles du gel, et il n'en existe pas de
+		 * troisième :
+		 *
+		 *   un nombre  « Enregistré · dernière version il y a N jours »
+		 *   `null`     « Aucune modification » — la note n'a aucune version, et
+		 *              c'est exactement ce que cette phrase dit
+		 *
+		 * ABSENTE, le rendu ne bouge pas d'un octet : la vue garde la dérivation
+		 * qu'elle avait, et le mode de conception, qui ne passe pas cette
+		 * propriété, rend ce qu'il rendait.
+		 */
+		dernierEnregistrement?: number | null;
 	}
 
 	const {
@@ -191,7 +210,8 @@
 		typesFiche = TYPES_FICHE,
 		templates = TEMPLATES,
 		modifications = modificationsPourVue('V-17'),
-		noteModifiee = noteParIdentifiant('n-planifier-sauv')
+		noteModifiee = noteParIdentifiant('n-planifier-sauv'),
+		dernierEnregistrement = undefined
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -264,9 +284,11 @@
 	/** L'état du témoin de sauvegarde, et son libellé — `charger()`, `V-17:3537`. */
 	const etatSauvegarde = $derived(cas === 'modif' ? 'enregistre' : 'vierge');
 	const texteSauvegarde = $derived(
-		cas === 'modif'
-			? `Enregistré · dernière version il y a ${JOURS_DEPUIS_MODIF} jours`
-			: 'Aucune modification'
+		dernierEnregistrement === null
+			? 'Aucune modification'
+			: cas === 'modif'
+				? `Enregistré · dernière version il y a ${dernierEnregistrement ?? JOURS_DEPUIS_MODIF} jours`
+				: 'Aucune modification'
 	);
 
 	/** Le fil d'Ariane et le chemin courant du rail — `coquille({…})`, `V-17:3568`. */
