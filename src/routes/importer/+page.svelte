@@ -50,10 +50,26 @@
 	import { deserialize } from '$app/forms';
 	import Vue from '../../vues/V-24.svelte';
 	import '../../vues/V-24.css';
+	import { reprendreLotEnAttente } from './lot-en-attente';
 	import type { LotDImport } from '../../../seeds/corpus';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	/**
+	 * LE LOT QUE LA CONSOLE A REÇU, REPRIS ICI — et repris UNE FOIS.
+	 *
+	 * `mockups/V-35-console-imports.html:3000` : le dépôt de `/console/imports`
+	 * fait atterrir son lot « à l'étape du choix de scénario, vue V-24 ». C'est
+	 * cette adresse, et c'est l'étape 1. La lecture est faite à l'initialisation
+	 * du composant, donc une fois par ouverture du parcours : un lot déposé n'est
+	 * remis qu'au parcours qui s'ouvre derrière lui.
+	 *
+	 * VIDE DANS TOUS LES AUTRES CAS — une requête directe, un rechargement, un
+	 * retour arrière. `docs/routes.md:297` : « un parcours qui porte des fichiers
+	 * déposés n'est pas restaurable depuis une adresse. »
+	 */
+	const lotRecu = reprendreLotEnAttente();
 
 	/** Ce que la vue attend du rapport — la description de la frontière. */
 	interface RapportDeLot {
@@ -139,6 +155,7 @@
 	lotImport={data.lotImport}
 	formatsImport={data.formatsImport}
 	domaineParDefaut={data.domaineParDefaut}
+	{lotRecu}
 	{analyser}
 	{importer}
 />

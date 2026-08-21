@@ -14,6 +14,21 @@
 	 * SEUL OUVERT. Rendre un dialogue unique ferait échouer la résolution du rang
 	 * — le rang ne veut rien dire hors de l'ordre du document complet.
 	 *
+	 * DEUX RÉGIMES DEPUIS CE LOT, ET LE SECOND EST CELUI DU PRODUIT.
+	 *
+	 * `catalogue` vraie — le défaut — laisse tout ce qui précède exact au mot
+	 * près : le cadre, les dix boîtes, l'ordre, l'état par l'adresse. `catalogue`
+	 * fausse rend LE SEUL dialogue nommé par `etat`, sans cadre et sans `open`,
+	 * pour que la vue qui le déclenche puisse le monter chez elle — ce que
+	 * `docs/routes.md:211` décrit depuis toujours, et que rien n'implémentait :
+	 * « chaque dialogue s'exécute dans la vue qui le déclenche ». `d-relation`
+	 * porte `ou: "V-14"` en toutes lettres (`V-40:3252`), et c'est V-14 qui le
+	 * monte désormais, par sa route.
+	 *
+	 * LA NOTE N'EST PLUS FIXÉE ICI. `d-relation` composait son aperçu autour de
+	 * `n-restaurer-pg` quelle que fût la note regardée ; la propriété `note` la
+	 * reçoit, et le jeu de semence reste le défaut.
+	 *
 	 * AUCUN PILOTAGE, AUCUNE OUVERTURE AU CLIC — ARB-011. La maquette ouvre le
 	 * dialogue en cliquant son entrée de catalogue et prépare son contenu à ce
 	 * moment-là ; le squelette reçoit l'état par l'adresse et rend cet état. Les
@@ -63,7 +78,6 @@
 		TYPES_RELATION,
 		UNIVERS,
 		VERSIONS,
-		type CleDeTypeDeRelation,
 		type Compte,
 		type Domaine,
 		type EtatDInstance,
@@ -84,6 +98,31 @@
 		etat: string;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-40')`, variante complète. */
 		notes: readonly Note[];
+		/**
+		 * LE CATALOGUE, OU UN SEUL DIALOGUE — et le second régime est celui que
+		 * les sources décrivent pour le PRODUIT.
+		 *
+		 * `docs/routes.md:211` : V-40 n'a aucune adresse propre, « chaque dialogue
+		 * s'exécute dans la vue qui le déclenche ». Le catalogue, lui, est une
+		 * planche de revue : il existe pour montrer les dix boîtes côte à côte.
+		 *
+		 * VRAIE — LE DÉFAUT —, la page rend le catalogue et les dix `dialog.dlg`
+		 * dans l'ordre de la maquette, celui de `etat` étant seul ouvert. C'est
+		 * le protocole « page-entiere-zone-isolee », et rien n'y bouge.
+		 *
+		 * FAUSSE, la vue rend LE SEUL dialogue nommé par `etat`, sans cadre et
+		 * SANS l'attribut `open` : c'est l'hôte qui pilote la modalité, par
+		 * `showModal()`, parce que la modalité est un COMPORTEMENT — le voile,
+		 * le piège de focus et Échap n'existent qu'en modal, et l'attribut `open`
+		 * seul ne les donne pas.
+		 *
+		 * LES NEUF AUTRES NE SONT PAS RENDUS, ET CE N'EST PAS UNE COMMODITÉ : ils
+		 * portent des actions — « Supprimer définitivement », « Enregistrer les
+		 * droits » — que l'hôte n'a aucune raison d'offrir. Les poser fermés dans
+		 * son document les mettrait dans le DOM, ce que `P-09` refuse (`ni grisée,
+		 * ni masquée`).
+		 */
+		catalogue?: boolean;
 		/**
 		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
 		 *
@@ -106,19 +145,46 @@
 		relations?: readonly Relation[];
 		/** Les gabarits de note. Absente, `TEMPLATES` du jeu de semence. */
 		templates?: readonly Template[];
-		/** Les libellés des types de relation. Absente, `TYPES_RELATION` du jeu. */
-		typesRelation?: Record<CleDeTypeDeRelation, LibellesDeRelation>;
+		/**
+		 * Les libellés des types de relation. Absente, `TYPES_RELATION` du jeu.
+		 *
+		 * LES CLÉS SONT CELLES DU RÉFÉRENTIEL, ET ELLES NE SONT PAS FERMÉES.
+		 * `CleDeTypeDeRelation` énumère les six types du jeu de semence ; le
+		 * produit, lui, les fait ADMINISTRER (`/console/types-de-relations`,
+		 * `M14`), et un chargeur qui sert la table réelle ne peut donc promettre
+		 * aucune de ces six clés. Le type est celui d'un référentiel ouvert ;
+		 * l'ORDRE de la table est celui d'administration, et le premier type y
+		 * est celui qu'un sélecteur propose d'entrée.
+		 */
+		typesRelation?: Readonly<Record<string, LibellesDeRelation>>;
 		/**
 		 * L'historique par note. Absente, `VERSIONS` du jeu de semence. La table
 		 * est PARTIELLE : une note sans historique n'a pas d'entrée, et exiger
 		 * les trente-deux clés interdirait à un chargeur l'état neutre (`P-02`).
 		 */
 		versions?: Partial<Record<IdentifiantNote, readonly Version[]>>;
+		/**
+		 * LA NOTE DONT LES DIALOGUES PARLENT — et sans elle, ils parlaient tous de
+		 * la même.
+		 *
+		 * `d-relation` compose l'aperçu « Ce que cela produira » autour du TITRE de
+		 * la note d'où part la relation (`V-40:3450`, `NOTE.titre`). Ce fichier la
+		 * fixait à `n-restaurer-pg`, la note de démonstration du gel : monté dans
+		 * la vue qui le déclenche, le dialogue aurait annoncé une relation partant
+		 * d'une AUTRE note que celle qu'on regarde — la valeur illustrative que
+		 * `P-02` proscrit, sur l'écran même où le geste s'engage.
+		 *
+		 * ABSENTE, LA NOTE DU JEU DE SEMENCE, à l'identique : c'est ce que la
+		 * planche montre, et rien n'y bouge.
+		 */
+		note?: Note;
 	}
 
 	const {
 		etat,
 		notes,
+		catalogue = true,
+		note: noteAffichee,
 		univers = UNIVERS,
 		domaines = DOMAINES,
 		compte = MOI,
@@ -130,15 +196,48 @@
 		versions = VERSIONS
 	}: Proprietes = $props();
 
-	/** Le dialogue ouvert à cet état. Aucun autre ne l'est. */
+	/** Le dialogue dont le CONTENU est préparé. Aucun autre ne l'est. */
 	const ouvert = $derived(etat);
+
+	/**
+	 * Le dialogue RENDU. Au catalogue, les dix ; hors catalogue, celui-là seul.
+	 */
+	function rendu(cle: string): boolean {
+		return catalogue || etat === cle;
+	}
+
+	/**
+	 * Le dialogue qui porte l'attribut `open`.
+	 *
+	 * HORS CATALOGUE, AUCUN — et c'est la différence entre une planche et un
+	 * produit. La planche reçoit son état par l'adresse et le rend ; le produit
+	 * ouvre sa boîte au clic, par `showModal()`, seul appel qui donne le voile,
+	 * le piège de focus et la fermeture par Échap (`RG-M18-08`). Poser `open`
+	 * ici mettrait la boîte dans le flux avant que l'hôte n'ait rien demandé.
+	 */
+	function revele(cle: string): boolean {
+		return catalogue && ouvert === cle;
+	}
 
 	/** Le dossier dont la maquette démontre la suppression et les droits. */
 	const DOSSIER = 'Exploitation › Sauvegardes';
 	const DOMAINE_DOSSIER = 'Infrastructure';
 
-	/** La note de démonstration — celle de V-14, V-15 et V-37. */
-	const NOTE = $derived(notes.find((n) => n.id === 'n-restaurer-pg'));
+	/** La note de démonstration — celle de V-14, V-15 et V-37 — ou celle qu'on lit. */
+	const NOTE = $derived(noteAffichee ?? notes.find((n) => n.id === 'n-restaurer-pg'));
+
+	/**
+	 * LE TYPE DE RELATION PROPOSÉ D'ENTRÉE — le premier du référentiel.
+	 *
+	 * `prepRelation()` du gel remplit le sélecteur dans l'ordre des clés puis
+	 * appelle `majUsage()` et `majApercuRel()`, qui lisent `select.value` : à
+	 * l'ouverture, c'est la PREMIÈRE option. Le gel écrivait donc `heberge`
+	 * parce que `heberge` est la première clé de `TYPES_RELATION`, non parce que
+	 * ce type-là aurait un statut. Sur le jeu de semence, le rendu est identique.
+	 */
+	const premierType = $derived<LibellesDeRelation>(
+		Object.values(typesRelation)[0] ?? { sortant: '', entrant: '' }
+	);
 	/**
 	 * Pour la suppression, une note effectivement citée : le décompte de
 	 * rétroliens n'a d'intérêt à être maquetté que s'il n'est pas nul.
@@ -420,628 +519,659 @@
 	</li>
 {/snippet}
 
-<Coquille
-	fil={['Accueil', 'Boîtes de dialogue']}
-	{univers}
-	{domaines}
-	{notes}
-	{compte}
-	version={instance.version}
-	classeContenu="doc"
->
-	{#snippet enfants()}
-		<header class="doc__tete">
-			<h1>Boîtes de dialogue</h1>
-			<p>
-				Confirmer, saisir une information courte, ou présenter un formulaire secondaire sans quitter
-				le contexte. Les dialogues ouverts depuis cette page sont ceux du produit, avec leurs
-				décomptes réels : ouvrez-les, essayez de les fermer, saisissez quelque chose puis appuyez
-				sur Échap.
-			</p>
-		</header>
+{#if catalogue}
+	<Coquille
+		fil={['Accueil', 'Boîtes de dialogue']}
+		{univers}
+		{domaines}
+		{notes}
+		{compte}
+		version={instance.version}
+		classeContenu="doc"
+	>
+		{#snippet enfants()}
+			<header class="doc__tete">
+				<h1>Boîtes de dialogue</h1>
+				<p>
+					Confirmer, saisir une information courte, ou présenter un formulaire secondaire sans
+					quitter le contexte. Les dialogues ouverts depuis cette page sont ceux du produit, avec
+					leurs décomptes réels : ouvrez-les, essayez de les fermer, saisissez quelque chose puis
+					appuyez sur Échap.
+				</p>
+			</header>
 
-		<div class="catalogue" id="catalogue">
-			{#each CATALOGUE as entree (entree.id)}<article class="entree">
-					<div class="entree__nom">{entree.nom}</div>
-					<div class="entree__quoi">{entree.quoi}</div>
-					<div class="entree__ou">{entree.ou}</div>
-					<button class="btn" type="button">Ouvrir</button>
-				</article>{/each}
-		</div>
+			<div class="catalogue" id="catalogue">
+				{#each CATALOGUE as entree (entree.id)}<article class="entree">
+						<div class="entree__nom">{entree.nom}</div>
+						<div class="entree__quoi">{entree.quoi}</div>
+						<div class="entree__ou">{entree.ou}</div>
+						<button class="btn" type="button">Ouvrir</button>
+					</article>{/each}
+			</div>
 
-		<div class="regles-d" id="regles">
-			{#each REGLES as [nom, texte] (nom)}<div class="regle-d">
-					<div class="regle-d__nom">{nom}</div>
-					<div class="regle-d__txt">{texte}</div>
-				</div>{/each}
-		</div>
-	{/snippet}
-</Coquille>
+			<div class="regles-d" id="regles">
+				{#each REGLES as [nom, texte] (nom)}<div class="regle-d">
+						<div class="regle-d__nom">{nom}</div>
+						<div class="regle-d__txt">{texte}</div>
+					</div>{/each}
+			</div>
+		{/snippet}
+	</Coquille>
+{/if}
 
 <!-- ============================ Confirmation simple ============================ -->
-<dialog class="dlg" id="d-simple" aria-labelledby="t-simple" open={ouvert === 'd-simple'}>
-	<div class="dlg__boite">
-		<div class="dlg__tete">
-			<span class="dlg__marque" aria-hidden="true">
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.6"><path d="M8 4.5v4.2M8 11.4v.3" /><circle cx="8" cy="8" r="6.2" /></svg
-				>
-			</span>
-			<h2 class="dlg__titre" id="t-simple">Quitter la comparaison ?</h2>
-			<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
-				{@render croix()}
-			</button>
+{#if rendu('d-simple')}
+	<dialog class="dlg" id="d-simple" aria-labelledby="t-simple" open={revele('d-simple')}>
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.6"
+						><path d="M8 4.5v4.2M8 11.4v.3" /><circle cx="8" cy="8" r="6.2" /></svg
+					>
+				</span>
+				<h2 class="dlg__titre" id="t-simple">Quitter la comparaison ?</h2>
+				<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
+					{@render croix()}
+				</button>
+			</div>
+			<div class="dlg__corps">
+				<p class="dlg__texte">
+					Vous reviendrez à la lecture de la version courante. Rien n'est modifié.
+				</p>
+			</div>
+			<div class="dlg__pied">
+				<button class="btn" data-fermer="">Rester ici</button>
+				<!-- svelte-ignore a11y_autofocus -->
+				<button class="btn btn--principal" data-fermer="" autofocus>Quitter</button>
+			</div>
 		</div>
-		<div class="dlg__corps">
-			<p class="dlg__texte">
-				Vous reviendrez à la lecture de la version courante. Rien n'est modifié.
-			</p>
-		</div>
-		<div class="dlg__pied">
-			<button class="btn" data-fermer="">Rester ici</button>
-			<!-- svelte-ignore a11y_autofocus -->
-			<button class="btn btn--principal" data-fermer="" autofocus>Quitter</button>
-		</div>
-	</div>
-</dialog>
+	</dialog>
+{/if}
 
 <!-- ============================ Suppression d'une note ============================ -->
-<dialog class="dlg dlg--destructif" id="d-note" aria-labelledby="t-note" open={ouvert === 'd-note'}>
-	<div class="dlg__boite">
-		<div class="dlg__tete">
-			<span class="dlg__marque" aria-hidden="true">
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.6"
-					><path d="M8 4.5v4.2M8 11.4v.3" /><path
-						d="M7 1.9L1.3 12.4a.9.9 0 0 0 .8 1.3h11.8a.9.9 0 0 0 .8-1.3L9 1.9a1.1 1.1 0 0 0-2 0z"
-					/></svg
-				>
-			</span>
-			<h2 class="dlg__titre" id="t-note">Supprimer cette note</h2>
-			<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
-				{@render croix()}
-			</button>
-		</div>
-		<div class="dlg__corps">
-			<p class="dlg__texte" id="note-titre">
-				{#if ouvert === 'd-note' && NOTE_SUP}« {NOTE_SUP.titre} » — {NOTE_SUP.domaine} › {NOTE_SUP.dossier}.{:else}—{/if}
-			</p>
-			<div class="decompte">
-				<div class="decompte__titre">Ce qui disparaît avec elle</div>
-				<ul id="note-decompte">
-					{#if ouvert === 'd-note' && NOTE_SUP}<li>
-							<b>{versionsSup}</b>{versionsSup > 1
-								? 'versions de son historique'
-								: 'version de son historique'}
-						</li>
-						<li>
-							<b>{retroliensSup}</b>{retroliensSup > 1
-								? 'notes qui pointent vers elle'
-								: 'note qui pointe vers elle'}
-						</li>
-						<li><b>{NOTE_SUP.pj}</b>{NOTE_SUP.pj > 1 ? 'pièces jointes' : 'pièce jointe'}</li>{/if}
-				</ul>
-				<div class="decompte__note" id="note-liens">
-					{#if ouvert === 'd-note'}{retroliensSup
-							? `Les ${retroliensSup} liens qui mènent à cette note deviendront cassés dans les notes d'origine. Elles resteront lisibles, mais le lien ne mènera plus nulle part.`
-							: 'Aucune note ne pointe vers celle-ci : sa suppression ne cassera aucun lien.'}{:else}—{/if}
-				</div>
+{#if rendu('d-note')}
+	<dialog class="dlg dlg--destructif" id="d-note" aria-labelledby="t-note" open={revele('d-note')}>
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.6"
+						><path d="M8 4.5v4.2M8 11.4v.3" /><path
+							d="M7 1.9L1.3 12.4a.9.9 0 0 0 .8 1.3h11.8a.9.9 0 0 0 .8-1.3L9 1.9a1.1 1.1 0 0 0-2 0z"
+						/></svg
+					>
+				</span>
+				<h2 class="dlg__titre" id="t-note">Supprimer cette note</h2>
+				<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
+					{@render croix()}
+				</button>
 			</div>
-		</div>
-		<div class="dlg__pied">
-			<button class="btn" data-fermer="">Annuler</button>
-			<!-- svelte-ignore a11y_autofocus -->
-			<button
-				class="btn btn--principal btn--destructif"
-				autofocus
-				data-fermer=""
-				style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
-				>Supprimer la note</button
-			>
-		</div>
-	</div>
-</dialog>
-
-<!-- ============================ Suppression d'un dossier ============================ -->
-<dialog
-	class="dlg dlg--destructif"
-	id="d-dossier"
-	aria-labelledby="t-dossier"
-	open={ouvert === 'd-dossier'}
->
-	<div class="dlg__boite">
-		<div class="dlg__tete">
-			<span class="dlg__marque" aria-hidden="true">
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.6"
-					><path d="M8 4.5v4.2M8 11.4v.3" /><path
-						d="M7 1.9L1.3 12.4a.9.9 0 0 0 .8 1.3h11.8a.9.9 0 0 0 .8-1.3L9 1.9a1.1 1.1 0 0 0-2 0z"
-					/></svg
-				>
-			</span>
-			<h2 class="dlg__titre" id="t-dossier">Supprimer le dossier</h2>
-			<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
-				{@render croix()}
-			</button>
-		</div>
-		<div class="dlg__corps">
-			<div class="decompte">
-				<div class="decompte__titre">Ce qui sera détruit</div>
-				<ul id="dossier-decompte">
-					{#if ouvert === 'd-dossier'}<li>
-							<b>{notesDuDossier}</b>{notesDuDossier > 1 ? 'notes rangées ici' : 'note rangée ici'}
-						</li>
-						<li><b style="color:var(--c-encre-3)">0</b>sous-dossier</li>{/if}
-				</ul>
-				<div class="decompte__note">La suppression est définitive : il n'y a pas de corbeille.</div>
-			</div>
-			<div class="champ">
-				<label class="champ__label" for="dossier-saisie">
-					Pour confirmer, retapez le nom du dossier :
-					<span class="confirmation__cible" id="dossier-cible">Sauvegardes</span>
-				</label>
-				<!-- svelte-ignore a11y_autofocus -->
-				<input
-					class="saisie"
-					autofocus
-					type="text"
-					id="dossier-saisie"
-					autocomplete="off"
-					spellcheck="false"
-					placeholder="Nom du dossier"
-				/>
-			</div>
-		</div>
-		<div class="dlg__pied">
-			<button class="btn" data-fermer="">Annuler</button>
-			<button
-				class="btn btn--principal btn--destructif"
-				id="dossier-valider"
-				disabled
-				style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
-				>Supprimer définitivement</button
-			>
-		</div>
-	</div>
-</dialog>
-
-<!-- ============================ Restauration d'une version ============================ -->
-<dialog class="dlg" id="d-restaurer" aria-labelledby="t-restaurer" open={ouvert === 'd-restaurer'}>
-	<div class="dlg__boite">
-		<div class="dlg__tete">
-			<span class="dlg__marque" aria-hidden="true">
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.5"><path d="M2.5 8a5.5 5.5 0 1 0 1.7-4" /><path d="M2 2.5v3.6h3.6" /></svg
-				>
-			</span>
-			<h2 class="dlg__titre" id="t-restaurer">Restaurer la version 11</h2>
-			<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
-				{@render croix()}
-			</button>
-		</div>
-		<div class="dlg__corps">
-			<p class="dlg__texte">
-				Le contenu de la version 11, écrite par Sophie Nguyen le 12 mai 2026, redeviendra le contenu
-				courant de la note.
-			</p>
-			<!-- L'inquiétude est « vais-je perdre l'état actuel ». La réponse passe
-			     avant tout le reste. -->
-			<div class="contexte contexte--succes" style="margin:0">
-				<span class="contexte__marque" aria-hidden="true">✓</span>
-				<div>
-					<div class="contexte__titre">Rien n'est perdu, l'opération est réversible</div>
-					<div>
-						L'état actuel devient la version 15 et reste consultable dans l'historique. Restaurer
-						n'écrase pas : cela ajoute une version au sommet de la pile.
+			<div class="dlg__corps">
+				<p class="dlg__texte" id="note-titre">
+					{#if ouvert === 'd-note' && NOTE_SUP}« {NOTE_SUP.titre} » — {NOTE_SUP.domaine} › {NOTE_SUP.dossier}.{:else}—{/if}
+				</p>
+				<div class="decompte">
+					<div class="decompte__titre">Ce qui disparaît avec elle</div>
+					<ul id="note-decompte">
+						{#if ouvert === 'd-note' && NOTE_SUP}<li>
+								<b>{versionsSup}</b>{versionsSup > 1
+									? 'versions de son historique'
+									: 'version de son historique'}
+							</li>
+							<li>
+								<b>{retroliensSup}</b>{retroliensSup > 1
+									? 'notes qui pointent vers elle'
+									: 'note qui pointe vers elle'}
+							</li>
+							<li>
+								<b>{NOTE_SUP.pj}</b>{NOTE_SUP.pj > 1 ? 'pièces jointes' : 'pièce jointe'}
+							</li>{/if}
+					</ul>
+					<div class="decompte__note" id="note-liens">
+						{#if ouvert === 'd-note'}{retroliensSup
+								? `Les ${retroliensSup} liens qui mènent à cette note deviendront cassés dans les notes d'origine. Elles resteront lisibles, mais le lien ne mènera plus nulle part.`
+								: 'Aucune note ne pointe vers celle-ci : sa suppression ne cassera aucun lien.'}{:else}—{/if}
 					</div>
 				</div>
 			</div>
-		</div>
-		<div class="dlg__pied">
-			<button class="btn" data-fermer="">Annuler</button>
-			<!-- svelte-ignore a11y_autofocus -->
-			<button class="btn btn--principal" data-fermer="" autofocus>Restaurer cette version</button>
-		</div>
-	</div>
-</dialog>
-
-<!-- ============================ Signalement à réviser ============================ -->
-<dialog class="dlg" id="d-reviser" aria-labelledby="t-reviser" open={ouvert === 'd-reviser'}>
-	<div class="dlg__boite">
-		<div class="dlg__tete">
-			<span class="dlg__marque" aria-hidden="true" style="background:var(--c-alerte)">
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.6"
-					><path d="M8 5.5v3.5M8 11.4v.3" /><path
-						d="M7 2.4L1.6 12a.85.85 0 0 0 .75 1.25h11.3A.85.85 0 0 0 14.4 12L9 2.4a1.15 1.15 0 0 0-2 0z"
-					/></svg
-				>
-			</span>
-			<h2 class="dlg__titre" id="t-reviser">Signaler cette note à réviser</h2>
-			<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
-				{@render croix()}
-			</button>
-		</div>
-		<div class="dlg__corps">
-			<p class="dlg__texte">
-				Le référent du domaine recevra la demande. Elle apparaîtra sur son accueil et un bandeau
-				sera visible en tête de la note.
-			</p>
-			<div class="champ">
-				<label class="champ__label" for="reviser-txt">Qu'est-ce qui doit être revu ?</label>
+			<div class="dlg__pied">
+				<button class="btn" data-fermer="">Annuler</button>
 				<!-- svelte-ignore a11y_autofocus -->
-				<textarea
-					class="saisie"
+				<button
+					class="btn btn--principal btn--destructif"
 					autofocus
-					id="reviser-txt"
-					rows="3"
-					placeholder="La commande de l'étape 4 a changé depuis la version 3.11 de Barman."
-				></textarea>
-				<span class="champ__aide"
-					>Décrivez ce qui vous semble faux ou périmé. Une demande précise est traitée en quelques
-					minutes ; une demande vague dort des semaines.</span
+					data-fermer=""
+					style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
+					>Supprimer la note</button
 				>
 			</div>
 		</div>
-		<div class="dlg__pied">
-			<button class="btn" data-fermer="">Annuler</button>
-			<button class="btn btn--principal" data-fermer="">Envoyer la demande</button>
-		</div>
-	</div>
-</dialog>
+	</dialog>
+{/if}
 
-<!-- ============================ Droits d'un dossier ============================ -->
-<dialog
-	class="dlg dlg--large"
-	id="d-droits"
-	aria-labelledby="t-droits"
-	open={ouvert === 'd-droits'}
->
-	<div class="dlg__boite">
-		<div class="dlg__tete">
-			<span class="dlg__marque" aria-hidden="true">
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.5"
-					><rect x="3" y="7" width="10" height="6.5" rx="1.3" /><path
-						d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7"
-					/></svg
-				>
-			</span>
-			<div style="flex:1;min-width:0">
-				<h2 class="dlg__titre" id="t-droits">Droits du dossier Sauvegardes</h2>
-				<div style="font-size:var(--t-mini);color:var(--c-encre-3);margin-top:2px">
-					Infrastructure › Exploitation › Sauvegardes
+<!-- ============================ Suppression d'un dossier ============================ -->
+{#if rendu('d-dossier')}
+	<dialog
+		class="dlg dlg--destructif"
+		id="d-dossier"
+		aria-labelledby="t-dossier"
+		open={revele('d-dossier')}
+	>
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.6"
+						><path d="M8 4.5v4.2M8 11.4v.3" /><path
+							d="M7 1.9L1.3 12.4a.9.9 0 0 0 .8 1.3h11.8a.9.9 0 0 0 .8-1.3L9 1.9a1.1 1.1 0 0 0-2 0z"
+						/></svg
+					>
+				</span>
+				<h2 class="dlg__titre" id="t-dossier">Supprimer le dossier</h2>
+				<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
+					{@render croix()}
+				</button>
+			</div>
+			<div class="dlg__corps">
+				<div class="decompte">
+					<div class="decompte__titre">Ce qui sera détruit</div>
+					<ul id="dossier-decompte">
+						{#if ouvert === 'd-dossier'}<li>
+								<b>{notesDuDossier}</b>{notesDuDossier > 1
+									? 'notes rangées ici'
+									: 'note rangée ici'}
+							</li>
+							<li><b style="color:var(--c-encre-3)">0</b>sous-dossier</li>{/if}
+					</ul>
+					<div class="decompte__note">
+						La suppression est définitive : il n'y a pas de corbeille.
+					</div>
+				</div>
+				<div class="champ">
+					<label class="champ__label" for="dossier-saisie">
+						Pour confirmer, retapez le nom du dossier :
+						<span class="confirmation__cible" id="dossier-cible">Sauvegardes</span>
+					</label>
+					<!-- svelte-ignore a11y_autofocus -->
+					<input
+						class="saisie"
+						autofocus
+						type="text"
+						id="dossier-saisie"
+						autocomplete="off"
+						spellcheck="false"
+						placeholder="Nom du dossier"
+					/>
 				</div>
 			</div>
-			<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
-				{@render croix()}
-			</button>
+			<div class="dlg__pied">
+				<button class="btn" data-fermer="">Annuler</button>
+				<button
+					class="btn btn--principal btn--destructif"
+					id="dossier-valider"
+					disabled
+					style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
+					>Supprimer définitivement</button
+				>
+			</div>
 		</div>
-		<div class="dlg__corps">
-			<span class="etiq">Droits accordés</span>
-			<div class="droits" id="liste-droits">
-				{#if ouvert === 'd-droits'}{#each DROITS as d (d.qui)}<div
-							class="dr"
-							data-herite={d.herite ? 'oui' : 'non'}
-						>
-							<span class="dr__avatar">{initiales(d.qui)}</span>
-							<div style="min-width:0">
-								<div class="dr__nom">{d.qui}</div>
-								{#if d.herite}<div class="dr__origine">
-										<svg
-											width="10"
-											height="10"
+	</dialog>
+{/if}
+
+<!-- ============================ Restauration d'une version ============================ -->
+{#if rendu('d-restaurer')}
+	<dialog class="dlg" id="d-restaurer" aria-labelledby="t-restaurer" open={revele('d-restaurer')}>
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						><path d="M2.5 8a5.5 5.5 0 1 0 1.7-4" /><path d="M2 2.5v3.6h3.6" /></svg
+					>
+				</span>
+				<h2 class="dlg__titre" id="t-restaurer">Restaurer la version 11</h2>
+				<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
+					{@render croix()}
+				</button>
+			</div>
+			<div class="dlg__corps">
+				<p class="dlg__texte">
+					Le contenu de la version 11, écrite par Sophie Nguyen le 12 mai 2026, redeviendra le
+					contenu courant de la note.
+				</p>
+				<!-- L'inquiétude est « vais-je perdre l'état actuel ». La réponse passe
+			     avant tout le reste. -->
+				<div class="contexte contexte--succes" style="margin:0">
+					<span class="contexte__marque" aria-hidden="true">✓</span>
+					<div>
+						<div class="contexte__titre">Rien n'est perdu, l'opération est réversible</div>
+						<div>
+							L'état actuel devient la version 15 et reste consultable dans l'historique. Restaurer
+							n'écrase pas : cela ajoute une version au sommet de la pile.
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="dlg__pied">
+				<button class="btn" data-fermer="">Annuler</button>
+				<!-- svelte-ignore a11y_autofocus -->
+				<button class="btn btn--principal" data-fermer="" autofocus>Restaurer cette version</button>
+			</div>
+		</div>
+	</dialog>
+{/if}
+
+<!-- ============================ Signalement à réviser ============================ -->
+{#if rendu('d-reviser')}
+	<dialog class="dlg" id="d-reviser" aria-labelledby="t-reviser" open={revele('d-reviser')}>
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true" style="background:var(--c-alerte)">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.6"
+						><path d="M8 5.5v3.5M8 11.4v.3" /><path
+							d="M7 2.4L1.6 12a.85.85 0 0 0 .75 1.25h11.3A.85.85 0 0 0 14.4 12L9 2.4a1.15 1.15 0 0 0-2 0z"
+						/></svg
+					>
+				</span>
+				<h2 class="dlg__titre" id="t-reviser">Signaler cette note à réviser</h2>
+				<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
+					{@render croix()}
+				</button>
+			</div>
+			<div class="dlg__corps">
+				<p class="dlg__texte">
+					Le référent du domaine recevra la demande. Elle apparaîtra sur son accueil et un bandeau
+					sera visible en tête de la note.
+				</p>
+				<div class="champ">
+					<label class="champ__label" for="reviser-txt">Qu'est-ce qui doit être revu ?</label>
+					<!-- svelte-ignore a11y_autofocus -->
+					<textarea
+						class="saisie"
+						autofocus
+						id="reviser-txt"
+						rows="3"
+						placeholder="La commande de l'étape 4 a changé depuis la version 3.11 de Barman."
+					></textarea>
+					<span class="champ__aide"
+						>Décrivez ce qui vous semble faux ou périmé. Une demande précise est traitée en quelques
+						minutes ; une demande vague dort des semaines.</span
+					>
+				</div>
+			</div>
+			<div class="dlg__pied">
+				<button class="btn" data-fermer="">Annuler</button>
+				<button class="btn btn--principal" data-fermer="">Envoyer la demande</button>
+			</div>
+		</div>
+	</dialog>
+{/if}
+
+<!-- ============================ Droits d'un dossier ============================ -->
+{#if rendu('d-droits')}
+	<dialog class="dlg dlg--large" id="d-droits" aria-labelledby="t-droits" open={revele('d-droits')}>
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						><rect x="3" y="7" width="10" height="6.5" rx="1.3" /><path
+							d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7"
+						/></svg
+					>
+				</span>
+				<div style="flex:1;min-width:0">
+					<h2 class="dlg__titre" id="t-droits">Droits du dossier Sauvegardes</h2>
+					<div style="font-size:var(--t-mini);color:var(--c-encre-3);margin-top:2px">
+						Infrastructure › Exploitation › Sauvegardes
+					</div>
+				</div>
+				<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
+					{@render croix()}
+				</button>
+			</div>
+			<div class="dlg__corps">
+				<span class="etiq">Droits accordés</span>
+				<div class="droits" id="liste-droits">
+					{#if ouvert === 'd-droits'}{#each DROITS as d (d.qui)}<div
+								class="dr"
+								data-herite={d.herite ? 'oui' : 'non'}
+							>
+								<span class="dr__avatar">{initiales(d.qui)}</span>
+								<div style="min-width:0">
+									<div class="dr__nom">{d.qui}</div>
+									{#if d.herite}<div class="dr__origine">
+											<svg
+												width="10"
+												height="10"
+												viewBox="0 0 16 16"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"><path d="M4 2v8a2 2 0 0 0 2 2h6" /></svg
+											>hérité du {d.origine}
+										</div>{/if}
+								</div>
+								<span class="dr__role">{d.role}</span>{#if d.herite}<span style="width:27px"
+									></span>{:else}<button
+										class="dr__retirer"
+										type="button"
+										aria-label="Retirer l'accès de {d.qui}"
+										><svg
+											width="14"
+											height="14"
 											viewBox="0 0 16 16"
 											fill="none"
 											stroke="currentColor"
-											stroke-width="2"><path d="M4 2v8a2 2 0 0 0 2 2h6" /></svg
-										>hérité du {d.origine}
-									</div>{/if}
-							</div>
-							<span class="dr__role">{d.role}</span>{#if d.herite}<span style="width:27px"
-								></span>{:else}<button
-									class="dr__retirer"
-									type="button"
-									aria-label="Retirer l'accès de {d.qui}"
-									><svg
-										width="14"
-										height="14"
-										viewBox="0 0 16 16"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8" /></svg
-									></button
-								>{/if}
-						</div>{/each}{/if}
-			</div>
+											stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8" /></svg
+										></button
+									>{/if}
+							</div>{/each}{/if}
+				</div>
 
-			<div class="champ">
-				<span class="champ__label">Ajouter un accès</span>
-				<div class="dr-ajout">
-					<!-- svelte-ignore a11y_autofocus -->
-					<select
-						class="selecteur"
-						autofocus
-						id="droit-qui"
-						aria-label="Personne"
-						disabled={ouvert === 'd-droits' && comptesSansAcces.length === 0}
-						>{#if ouvert === 'd-droits'}{#if comptesSansAcces.length}{#each comptesSansAcces as c (c.nom)}<option
-										value={c.nom}>{c.nom} — {c.role}</option
-									>{/each}{:else}<option>Tous les comptes ont déjà un accès</option
-								>{/if}{/if}</select
-					>
-					<select class="selecteur" id="droit-role" aria-label="Rôle sur ce dossier">
-						<option value="Lecture">Lecture</option>
-						<option value="Écriture">Écriture</option>
-						<option value="Gestion">Gestion</option>
-					</select>
-					<button class="btn btn--principal" id="droit-ajouter">Ajouter</button>
+				<div class="champ">
+					<span class="champ__label">Ajouter un accès</span>
+					<div class="dr-ajout">
+						<!-- svelte-ignore a11y_autofocus -->
+						<select
+							class="selecteur"
+							autofocus
+							id="droit-qui"
+							aria-label="Personne"
+							disabled={ouvert === 'd-droits' && comptesSansAcces.length === 0}
+							>{#if ouvert === 'd-droits'}{#if comptesSansAcces.length}{#each comptesSansAcces as c (c.nom)}<option
+											value={c.nom}>{c.nom} — {c.role}</option
+										>{/each}{:else}<option>Tous les comptes ont déjà un accès</option
+									>{/if}{/if}</select
+						>
+						<select class="selecteur" id="droit-role" aria-label="Rôle sur ce dossier">
+							<option value="Lecture">Lecture</option>
+							<option value="Écriture">Écriture</option>
+							<option value="Gestion">Gestion</option>
+						</select>
+						<button class="btn btn--principal" id="droit-ajouter">Ajouter</button>
+					</div>
+				</div>
+
+				<div class="decompte">
+					<div class="decompte__titre">Droits explicites et droits hérités</div>
+					<div class="decompte__note">
+						Les droits en pointillé sont hérités d'un dossier parent ou du domaine. <b
+							>Retirer un droit explicite ne retire pas un droit hérité</b
+						> : si Sophie Nguyen a l'écriture sur tout le domaine, lui retirer l'écriture ici la lui laisse
+						— il faut la retirer là où elle a été accordée. Le nom du dossier d'origine est indiqué sous
+						chaque droit hérité.
+					</div>
 				</div>
 			</div>
-
-			<div class="decompte">
-				<div class="decompte__titre">Droits explicites et droits hérités</div>
-				<div class="decompte__note">
-					Les droits en pointillé sont hérités d'un dossier parent ou du domaine. <b
-						>Retirer un droit explicite ne retire pas un droit hérité</b
-					> : si Sophie Nguyen a l'écriture sur tout le domaine, lui retirer l'écriture ici la lui laisse
-					— il faut la retirer là où elle a été accordée. Le nom du dossier d'origine est indiqué sous
-					chaque droit hérité.
-				</div>
+			<div class="dlg__pied">
+				<button class="btn" data-fermer="">Fermer</button>
+				<button class="btn btn--principal" data-fermer="">Enregistrer les droits</button>
 			</div>
 		</div>
-		<div class="dlg__pied">
-			<button class="btn" data-fermer="">Fermer</button>
-			<button class="btn btn--principal" data-fermer="">Enregistrer les droits</button>
-		</div>
-	</div>
-</dialog>
+	</dialog>
+{/if}
 
 <!-- ============================ Ajout d'une relation ============================ -->
-<dialog class="dlg" id="d-relation" aria-labelledby="t-relation" open={ouvert === 'd-relation'}>
-	<div class="dlg__boite">
-		<div class="dlg__tete">
-			<span class="dlg__marque" aria-hidden="true">
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.5"
-					><circle cx="4" cy="4" r="2" /><circle cx="12" cy="12" r="2" /><path
-						d="M5.6 5.6l4.8 4.8"
-					/></svg
-				>
-			</span>
-			<h2 class="dlg__titre" id="t-relation">Ajouter une relation</h2>
-			<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
-				{@render croix()}
-			</button>
+{#if rendu('d-relation')}
+	<dialog class="dlg" id="d-relation" aria-labelledby="t-relation" open={revele('d-relation')}>
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						><circle cx="4" cy="4" r="2" /><circle cx="12" cy="12" r="2" /><path
+							d="M5.6 5.6l4.8 4.8"
+						/></svg
+					>
+				</span>
+				<h2 class="dlg__titre" id="t-relation">Ajouter une relation</h2>
+				<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
+					{@render croix()}
+				</button>
+			</div>
+			<div class="dlg__corps">
+				<div class="champ">
+					<label class="champ__label" for="rel-type">Type de relation</label>
+					<!-- svelte-ignore a11y_autofocus -->
+					<select class="selecteur" id="rel-type" autofocus
+						>{#if ouvert === 'd-relation'}{#each Object.entries(typesRelation) as [cle, libelles] (cle)}<option
+									value={cle}>{libelles.sortant}</option
+								>{/each}{/if}</select
+					>
+					<span class="champ__aide" id="rel-usage"
+						>{#if ouvert === 'd-relation'}Se lira « {premierType.sortant} » depuis cette note, et « {premierType.entrant}
+							» depuis l'autre.{/if}</span
+					>
+				</div>
+				<div class="champ rel-cible">
+					<label class="champ__label" for="rel-cherche">Note visée</label>
+					<input
+						class="saisie"
+						type="search"
+						id="rel-cherche"
+						autocomplete="off"
+						placeholder="Chercher une note…"
+					/>
+					<div class="rel-liste" id="rel-liste" role="listbox"></div>
+				</div>
+				<div class="champ">
+					<span class="champ__label">Ce que cela produira</span>
+					<div id="rel-apercu">
+						{#if ouvert === 'd-relation' && NOTE}<div class="phrase-rel">
+								<span class="phrase-rel__sens">sens direct</span><span
+									><i>{NOTE.titre}</i> <b>{premierType.sortant}</b>
+									<span class="phrase-rel__vide">…note à choisir…</span>.</span
+								>
+							</div>
+							<div class="phrase-rel">
+								<span class="phrase-rel__sens">sens inverse</span><span
+									><span class="phrase-rel__vide">…note à choisir…</span>
+									<b>{premierType.entrant}</b> <i>{NOTE.titre}</i>.</span
+								>
+							</div>{/if}
+					</div>
+				</div>
+			</div>
+			<div class="dlg__pied">
+				<button class="btn" data-fermer="">Annuler</button>
+				<button class="btn btn--principal" id="rel-valider" disabled>Déclarer la relation</button>
+			</div>
 		</div>
-		<div class="dlg__corps">
-			<div class="champ">
-				<label class="champ__label" for="rel-type">Type de relation</label>
+	</dialog>
+{/if}
+
+<!-- ============================ Sélecteur de template ============================ -->
+{#if rendu('d-template')}
+	<dialog
+		class="dlg dlg--large"
+		id="d-template"
+		aria-labelledby="t-template"
+		open={revele('d-template')}
+	>
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						><rect x="2" y="2.5" width="12" height="11" rx="1.4" /><path d="M2 6h12M6 6v7.5" /></svg
+					>
+				</span>
+				<h2 class="dlg__titre" id="t-template">Par quoi commencer ?</h2>
+				<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
+					{@render croix()}
+				</button>
+			</div>
+			<div class="dlg__corps">
 				<!-- svelte-ignore a11y_autofocus -->
-				<select class="selecteur" id="rel-type" autofocus
-					>{#if ouvert === 'd-relation'}{#each Object.entries(typesRelation) as [cle, libelles] (cle)}<option
-								value={cle}>{libelles.sortant}</option
-							>{/each}{/if}</select
+				<button
+					class="btn btn--principal"
+					autofocus
+					data-fermer=""
+					style="width:100%;padding:12px;justify-content:flex-start;gap:var(--e-3)"
 				>
-				<span class="champ__aide" id="rel-usage"
-					>{#if ouvert === 'd-relation'}Se lira « {typesRelation.heberge.sortant} » depuis cette note,
-						et « {typesRelation.heberge.entrant} » depuis l'autre.{/if}</span
-				>
-			</div>
-			<div class="champ rel-cible">
-				<label class="champ__label" for="rel-cherche">Note visée</label>
-				<input
-					class="saisie"
-					type="search"
-					id="rel-cherche"
-					autocomplete="off"
-					placeholder="Chercher une note…"
-				/>
-				<div class="rel-liste" id="rel-liste" role="listbox"></div>
-			</div>
-			<div class="champ">
-				<span class="champ__label">Ce que cela produira</span>
-				<div id="rel-apercu">
-					{#if ouvert === 'd-relation' && NOTE}<div class="phrase-rel">
-							<span class="phrase-rel__sens">sens direct</span><span
-								><i>{NOTE.titre}</i> <b>{typesRelation.heberge.sortant}</b>
-								<span class="phrase-rel__vide">…note à choisir…</span>.</span
-							>
-						</div>
-						<div class="phrase-rel">
-							<span class="phrase-rel__sens">sens inverse</span><span
-								><span class="phrase-rel__vide">…note à choisir…</span>
-								<b>{typesRelation.heberge.entrant}</b> <i>{NOTE.titre}</i>.</span
-							>
-						</div>{/if}
+					<svg
+						width="17"
+						height="17"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.4"
+						><path
+							d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5L9 1.5zM9 1.5v4h4"
+						/></svg
+					>
+					Partir d'une page vierge
+				</button>
+				<span class="etiq">Ou reprendre une structure éprouvée</span>
+				<div class="tpl-liste" id="templates">
+					{#if ouvert === 'd-template'}{#each templates as t (t.id)}<button
+								class="tpl"
+								type="button"
+								><span class="tpl__ic">{t.type.slice(0, 3).toUpperCase()}</span><span
+									><span class="tpl__nom">{t.nom}</span><span class="tpl__desc"
+										>{t.description}</span
+									><span class="tpl__struct">{t.structure.join(' › ')}</span></span
+								></button
+							>{/each}{/if}
 				</div>
 			</div>
 		</div>
-		<div class="dlg__pied">
-			<button class="btn" data-fermer="">Annuler</button>
-			<button class="btn btn--principal" id="rel-valider" disabled>Déclarer la relation</button>
-		</div>
-	</div>
-</dialog>
-
-<!-- ============================ Sélecteur de template ============================ -->
-<dialog
-	class="dlg dlg--large"
-	id="d-template"
-	aria-labelledby="t-template"
-	open={ouvert === 'd-template'}
->
-	<div class="dlg__boite">
-		<div class="dlg__tete">
-			<span class="dlg__marque" aria-hidden="true">
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.5"
-					><rect x="2" y="2.5" width="12" height="11" rx="1.4" /><path d="M2 6h12M6 6v7.5" /></svg
-				>
-			</span>
-			<h2 class="dlg__titre" id="t-template">Par quoi commencer ?</h2>
-			<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
-				{@render croix()}
-			</button>
-		</div>
-		<div class="dlg__corps">
-			<!-- svelte-ignore a11y_autofocus -->
-			<button
-				class="btn btn--principal"
-				autofocus
-				data-fermer=""
-				style="width:100%;padding:12px;justify-content:flex-start;gap:var(--e-3)"
-			>
-				<svg
-					width="17"
-					height="17"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.4"
-					><path
-						d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5L9 1.5zM9 1.5v4h4"
-					/></svg
-				>
-				Partir d'une page vierge
-			</button>
-			<span class="etiq">Ou reprendre une structure éprouvée</span>
-			<div class="tpl-liste" id="templates">
-				{#if ouvert === 'd-template'}{#each templates as t (t.id)}<button class="tpl" type="button"
-							><span class="tpl__ic">{t.type.slice(0, 3).toUpperCase()}</span><span
-								><span class="tpl__nom">{t.nom}</span><span class="tpl__desc">{t.description}</span
-								><span class="tpl__struct">{t.structure.join(' › ')}</span></span
-							></button
-						>{/each}{/if}
-			</div>
-		</div>
-	</div>
-</dialog>
+	</dialog>
+{/if}
 
 <!-- ============================ Avertissement de doublon ============================ -->
-<dialog class="dlg" id="d-doublon" aria-labelledby="t-doublon" open={ouvert === 'd-doublon'}>
-	<div class="dlg__boite">
-		<div class="dlg__tete">
-			<span class="dlg__marque" aria-hidden="true" style="background:var(--c-alerte)">
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.6"><path d="M8 4.5v4.2M8 11.4v.3" /><circle cx="8" cy="8" r="6.2" /></svg
+{#if rendu('d-doublon')}
+	<dialog class="dlg" id="d-doublon" aria-labelledby="t-doublon" open={revele('d-doublon')}>
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true" style="background:var(--c-alerte)">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.6"
+						><path d="M8 4.5v4.2M8 11.4v.3" /><circle cx="8" cy="8" r="6.2" /></svg
+					>
+				</span>
+				<h2 class="dlg__titre" id="t-doublon">Une note très proche existe déjà</h2>
+				<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
+					{@render croix()}
+				</button>
+			</div>
+			<div class="dlg__corps">
+				<p class="dlg__texte" id="doublon-txt">
+					{#if ouvert === 'd-doublon' && doublon}« {doublon.titre} » — {doublon.domaine}, {libelleFraicheur(
+							doublon
+						).toLowerCase()}, consultée {doublon.vues} fois.{:else}—{/if}
+				</p>
+				<p class="dlg__texte">
+					Deux notes sur le même sujet finissent toujours par diverger, et personne ne sait plus
+					laquelle fait foi. Compléter l'existante rend en général plus service.
+				</p>
+			</div>
+			<div class="dlg__pied dlg__pied--reparti">
+				<button class="btn" data-fermer="">Continuer quand même</button>
+				<!-- svelte-ignore a11y_autofocus -->
+				<button class="btn btn--principal" data-fermer="" autofocus>Ouvrir la note existante</button
 				>
-			</span>
-			<h2 class="dlg__titre" id="t-doublon">Une note très proche existe déjà</h2>
-			<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
-				{@render croix()}
-			</button>
+			</div>
 		</div>
-		<div class="dlg__corps">
-			<p class="dlg__texte" id="doublon-txt">
-				{#if ouvert === 'd-doublon' && doublon}« {doublon.titre} » — {doublon.domaine}, {libelleFraicheur(
-						doublon
-					).toLowerCase()}, consultée {doublon.vues} fois.{:else}—{/if}
-			</p>
-			<p class="dlg__texte">
-				Deux notes sur le même sujet finissent toujours par diverger, et personne ne sait plus
-				laquelle fait foi. Compléter l'existante rend en général plus service.
-			</p>
-		</div>
-		<div class="dlg__pied dlg__pied--reparti">
-			<button class="btn" data-fermer="">Continuer quand même</button>
-			<!-- svelte-ignore a11y_autofocus -->
-			<button class="btn btn--principal" data-fermer="" autofocus>Ouvrir la note existante</button>
-		</div>
-	</div>
-</dialog>
+	</dialog>
+{/if}
 
 <!-- ============================ Sélecteur de dossier ============================ -->
-<dialog class="dlg" id="d-deplacer" aria-labelledby="t-deplacer" open={ouvert === 'd-deplacer'}>
-	<div class="dlg__boite">
-		<div class="dlg__tete">
-			<span class="dlg__marque" aria-hidden="true">
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.5"
-					><path
-						d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"
-					/></svg
-				>
-			</span>
-			<h2 class="dlg__titre" id="t-deplacer">Déplacer « {NOTE ? NOTE.titre : ''} »</h2>
-			<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
-				{@render croix()}
-			</button>
-		</div>
-		<div class="dlg__corps">
-			<span class="etiq">Choisissez le dossier de destination</span>
-			<div class="arbre-choix" id="arbre-choix">
-				{#if ouvert === 'd-deplacer'}{#each arbresDeDestination as domaine (domaine.nom)}<div
-							class="etiq"
-							style="margin:var(--e-2) 0 var(--e-1)"
-						>
-							{domaine.nom}
-						</div>
-						<ul>
-							{#each domaine.racines as racine (racine.chemin)}{@render branche(
-									racine,
-									domaine.nom
-								)}{/each}
-						</ul>{/each}{/if}
+{#if rendu('d-deplacer')}
+	<dialog class="dlg" id="d-deplacer" aria-labelledby="t-deplacer" open={revele('d-deplacer')}>
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						><path
+							d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"
+						/></svg
+					>
+				</span>
+				<h2 class="dlg__titre" id="t-deplacer">Déplacer « {NOTE ? NOTE.titre : ''} »</h2>
+				<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
+					{@render croix()}
+				</button>
 			</div>
-			<p class="dlg__texte" id="deplacer-etat">
-				Emplacement actuel : {DOMAINE_DOSSIER} › {DOSSIER}
-			</p>
+			<div class="dlg__corps">
+				<span class="etiq">Choisissez le dossier de destination</span>
+				<div class="arbre-choix" id="arbre-choix">
+					{#if ouvert === 'd-deplacer'}{#each arbresDeDestination as domaine (domaine.nom)}<div
+								class="etiq"
+								style="margin:var(--e-2) 0 var(--e-1)"
+							>
+								{domaine.nom}
+							</div>
+							<ul>
+								{#each domaine.racines as racine (racine.chemin)}{@render branche(
+										racine,
+										domaine.nom
+									)}{/each}
+							</ul>{/each}{/if}
+				</div>
+				<p class="dlg__texte" id="deplacer-etat">
+					Emplacement actuel : {DOMAINE_DOSSIER} › {DOSSIER}
+				</p>
+			</div>
+			<div class="dlg__pied">
+				<button class="btn" data-fermer="">Annuler</button>
+				<!-- svelte-ignore a11y_autofocus -->
+				<button class="btn btn--principal" id="deplacer-valider" disabled autofocus>Déplacer</button
+				>
+			</div>
 		</div>
-		<div class="dlg__pied">
-			<button class="btn" data-fermer="">Annuler</button>
-			<!-- svelte-ignore a11y_autofocus -->
-			<button class="btn btn--principal" id="deplacer-valider" disabled autofocus>Déplacer</button>
-		</div>
-	</div>
-</dialog>
+	</dialog>
+{/if}
