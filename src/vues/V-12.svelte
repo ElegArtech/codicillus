@@ -101,6 +101,24 @@
 		compte?: UtilisateurCourant;
 		instance?: EtatDInstance;
 		/**
+		 * LES VALEURS DE FACETTE RETENUES, telles que L'ADRESSE les porte.
+		 *
+		 * Les six facettes du gel étaient inertes : cliquer « Type » n'ouvrait
+		 * rien, cocher une valeur ne filtrait rien. Elles sont désormais
+		 * gouvernées par l'adresse — même régime que `/recherche`, et pour la même
+		 * raison : un état de filtrage se partage par son adresse.
+		 *
+		 * ABSENTE, la vue garde la dérivation du gel — les valeurs que l'arrivée
+		 * pose elle-même —, et le rendu ne bouge pas d'un octet.
+		 */
+		retenues?: Record<string, readonly string[]>;
+		/**
+		 * L'ORDRE DEMANDÉ. Les quatre valeurs sont celles des `option` du gel :
+		 * `modification`, `verification`, `consultations`, `alpha`. Absente,
+		 * l'ordre est celui que le gel applique — l'ancienneté de modification.
+		 */
+		tri?: string;
+		/**
 		 * L'ANCIENNETÉ DE MODIFICATION DE CHAQUE NOTE — `window.modifJours` du gel.
 		 *
 		 * `Partial` ET NON `Record` TOTAL, et c'est une exigence de P-02 : un
@@ -119,6 +137,8 @@
 		domaines = DOMAINES,
 		compte = MOI,
 		instance = INSTANCE,
+		retenues = undefined,
+		tri = undefined,
 		modifications = MODIFICATIONS
 	}: Proprietes = $props();
 
@@ -204,11 +224,12 @@
 	 * un pré-réglage de maquette : c'est le comportement de la vue.
 	 */
 	const choisis = $derived<Record<string, readonly string[]>>(
-		arrivee === 'obsolete'
-			? { fraicheur: ['Obsolète probable'] }
-			: arrivee === 'brouillon'
-				? { statut: ['Brouillon'] }
-				: {}
+		retenues ??
+			(arrivee === 'obsolete'
+				? { fraicheur: ['Obsolète probable'] }
+				: arrivee === 'brouillon'
+					? { statut: ['Brouillon'] }
+					: {})
 	);
 
 	/** Un résultat passe chaque facette ayant au moins une valeur retenue ; à
@@ -287,11 +308,26 @@
 		return modifications[n.id] ?? 999;
 	}
 
+	/**
+	 * L'ORDRE DEMANDÉ — les quatre que le gel offre, et pas un de plus.
+	 *
+	 * Les comparaisons sont celles de `mockups/V-12-liste-notes.html:2117-2124`,
+	 * reprises telles quelles : trier par ancienneté croissante, c'est trier par
+	 * date décroissante. Une valeur inconnue retombe sur l'ordre du gel plutôt
+	 * que de refuser — un paramètre d'adresse ne se refuse pas, il s'ignore.
+	 */
+	function comparer(a: Note, b: Note): number {
+		if (tri === 'alpha') return a.titre.localeCompare(b.titre, 'fr');
+		if (tri === 'consultations') return b.vues - a.vues;
+		if (tri === 'verification') return a.jours - b.jours;
+		return ancienneteDeModification(a) - ancienneteDeModification(b);
+	}
+
 	const filtrees = $derived(
 		base
 			.filter((n) => passe(n))
 			.slice()
-			.sort((a, b) => ancienneteDeModification(a) - ancienneteDeModification(b))
+			.sort(comparer)
 	);
 
 	/** Nombre en français — `x.toLocaleString("fr-FR")` du gel. */
@@ -414,10 +450,14 @@
 				<div class="tri">
 					<label class="etiq" for="tri">Trier par</label>
 					<select id="tri">
-						<option value="modification">Date de modification</option>
-						<option value="verification">Date de vérification</option>
-						<option value="consultations">Consultations</option>
-						<option value="alpha">Alphabétique</option>
+						<option value="modification" selected={tri === undefined || tri === 'modification'}
+							>Date de modification</option
+						>
+						<option value="verification" selected={tri === 'verification'}
+							>Date de vérification</option
+						>
+						<option value="consultations" selected={tri === 'consultations'}>Consultations</option>
+						<option value="alpha" selected={tri === 'alpha'}>Alphabétique</option>
 					</select>
 				</div>
 				<div class="densite" role="group" aria-label="Densité d'affichage">

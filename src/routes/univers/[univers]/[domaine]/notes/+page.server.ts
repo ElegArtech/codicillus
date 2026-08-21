@@ -100,6 +100,37 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			   vide de `RG-M18-03`, décidé sur les notes réellement lisibles. */
 			etat: aDesNotes ? 'nominal' : 'vide'
 		},
-		notes
+		notes,
+		/**
+		 * LES VALEURS DE FACETTE RETENUES, LUES DANS L'ADRESSE — les six clés du
+		 * gel, chacune répétable.
+		 *
+		 * Les menus de filtre de V-12 étaient inertes : cliquer « Type » n'ouvrait
+		 * rien et cocher une valeur ne filtrait rien. Ils sont désormais gouvernés
+		 * par l'adresse, comme `/recherche` : à l'intérieur d'une facette les
+		 * valeurs sont en OU, entre facettes en ET, et l'état se partage en
+		 * envoyant le lien.
+		 *
+		 * Une clé absente de l'adresse n'est PAS posée : la vue retombe alors sur
+		 * la dérivation du gel, qui pose elle-même un filtre quand on arrive
+		 * depuis un indicateur.
+		 */
+		retenues: retenuesDeLAdresse(url.searchParams),
+		/** Les quatre ordres du gel ; une valeur inconnue s'ignore, jamais ne refuse. */
+		tri: url.searchParams.get('tri') ?? undefined
 	};
 };
+
+/** Les six clés de facette que V-12 déclare, dans son ordre. */
+const CLES_DE_FACETTE = ['type', 'fraicheur', 'statut', 'dossier', 'auteur', 'etiquette'] as const;
+
+function retenuesDeLAdresse(
+	parametres: URLSearchParams
+): Record<string, readonly string[]> | undefined {
+	const retenues: Record<string, readonly string[]> = {};
+	for (const cle of CLES_DE_FACETTE) {
+		const valeurs = parametres.getAll(cle).filter((v) => v !== '');
+		if (valeurs.length > 0) retenues[cle] = valeurs;
+	}
+	return Object.keys(retenues).length === 0 ? undefined : retenues;
+}
