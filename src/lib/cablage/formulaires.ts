@@ -434,49 +434,22 @@ export function cablerLaSuppression(
 /* ═══════════════════════════════════ La connexion — V-05 ════════════════ */
 
 /**
- * LE CÂBLAGE DE LA CONNEXION — le seul des sept formulaires que le gel écrit
- * VRAIMENT comme un formulaire.
+ * IL N'Y A PLUS RIEN À CÂBLER SUR LA CONNEXION, ET C'EST LA BONNE NOUVELLE.
  *
- * `V-05:152` porte un `form#form` avec un `button[type=submit]#valider` : il ne
- * lui manque que la méthode et les trois attributs de nom. Aucune enveloppe
- * n'est donc posée — un formulaire dans un formulaire n'est pas du HTML —, et
- * ce câblage se borne à compléter l'élément existant, après le montage.
+ * Ce module posait ici la méthode et les trois noms de champ depuis `onMount`.
+ * La parade n'existait donc pas AVANT le montage — et c'est exactement la
+ * fenêtre du défaut qu'elle prétendait fermer : une soumission avant
+ * hydratation partait en `GET`, avec le mot de passe dans l'adresse. Mesuré sur
+ * le HTML servi, `name="motdepasse"` présent et `method` absent.
  *
- * Les trois noms attendus par l'action sont `identifiant`, `motdepasse` et
- * `souvenir`, et ce sont exactement les identifiants que le gel porte déjà sur
- * ses trois champs. Rien n'est donc traduit : le nom est repris de l'identifiant.
+ * `P-5` mot pour mot : une règle qu'aucun cas n'exerçait. Les quatre attributs
+ * sont désormais dans le balisage de `src/vues/V-05.svelte`, où aucune fenêtre
+ * ne subsiste, et la connexion fonctionne **sans JavaScript** — vérifié,
+ * navigateur script désactivé, `POST /connexion` puis `303`.
  *
- * `novalidate` est du gel et reste : la validation du produit est côté serveur,
- * et le barème de ralentissement en dépend.
+ * La fonction est retirée plutôt que laissée vide : un câblage sans objet est
+ * un contrôle inerte, et ce dépôt en a assez payé (`P-26`).
  */
-export function cablerLaConnexion(racine: ParentNode): Debranchement {
-	const formulaire = noeud<HTMLFormElement>(racine, '#form');
-	if (formulaire === null) return () => {};
-
-	/**
-	 * L'ORDRE COMPTE, ET IL EST UNE QUESTION DE SÛRETÉ.
-	 *
-	 * La méthode est posée AVANT les noms. Dans l'ordre inverse, une soumission
-	 * qui partirait entre les deux serait un `GET` portant des champs nommés :
-	 * le mot de passe irait dans l'adresse, donc dans l'historique du navigateur
-	 * et dans les journaux du frontal. Observé une fois, sur une hydratation
-	 * partielle : `GET /connexion?identifiant=…&motdepasse=…`.
-	 *
-	 * La garde ci-dessous ferme le cas restant — celui où la page est soumise
-	 * avant que ce câblage n'ait tourné. Sans noms, un tel envoi ne transporte
-	 * rien ; la garde s'assure qu'il ne transporte rien EN ADRESSE non plus.
-	 */
-	formulaire.method = 'post';
-	const garde = (evenement: Event): void => {
-		if (formulaire.method.toLowerCase() !== 'post') evenement.preventDefault();
-	};
-	formulaire.addEventListener('submit', garde);
-	for (const id of ['identifiant', 'motdepasse', 'souvenir']) {
-		const champ = noeud<HTMLInputElement>(formulaire, `#${id}`);
-		if (champ !== null) champ.name = id;
-	}
-	return () => formulaire.removeEventListener('submit', garde);
-}
 
 /* ═══════════════════════════════════ Le signet — V-23 ═══════════════════ */
 

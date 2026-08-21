@@ -149,7 +149,27 @@
 			<h1 class="auth__titre">Connexion</h1>
 			<p class="auth__sous">Utilisez les identifiants de votre compte de la direction technique.</p>
 
-			<form class="auth__form" id="form" novalidate>
+			<!--
+				`method="post"` EST DANS LE BALISAGE, ET C'EST UNE QUESTION DE SÛRETÉ.
+
+				Les trois champs portent leur `name` depuis le lot de liaison. Un
+				formulaire sans méthode soumet en **GET** : tant que l'hydratation n'a
+				pas eu lieu, une soumission envoyait donc
+				`…/connexion?identifiant=…&motdepasse=…` — le mot de passe dans
+				l'adresse, donc dans l'historique du navigateur et dans les journaux du
+				frontal. Mesuré sur le HTML servi.
+
+				La parade a d'abord été posée par le câblage, dans `onMount` : elle
+				n'existait pas AVANT lui, ce qui est exactement la fenêtre du défaut.
+				C'est `P-5` — une règle qu'aucun cas n'exerçait. Elle est donc dans le
+				balisage, où aucune fenêtre ne subsiste.
+
+				DIVERGENCE ASSUMÉE AVEC LE GEL : `mockups/V-05-connexion.html` n'écrit
+				pas cet attribut. Il ne déplace aucun pixel, ne change aucun nom
+				accessible et n'ajoute aucun nœud ; il fait ce que la maquette
+				décrivait sans pouvoir le dire, faute de serveur.
+			-->
+			<form class="auth__form" id="form" method="post" novalidate>
 				<fieldset id="champs">
 					<div class="champ" id="champ-id">
 						<label class="champ__label" for="identifiant">Identifiant</label>
@@ -228,7 +248,9 @@
 
 					<div class="auth__ligne">
 						<label class="case">
-							<input type="checkbox" id="souvenir" />
+							<!-- Le `name` accompagne les deux autres : l'action lit la PRÉSENCE de
+								ce champ, jamais sa valeur (`+page.server.ts`). -->
+							<input type="checkbox" id="souvenir" name="souvenir" />
 							<span class="case__txt"
 								>Se souvenir de moi
 								<span class="case__aide">À éviter sur un poste partagé</span>
