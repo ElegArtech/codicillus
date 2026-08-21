@@ -325,8 +325,25 @@ export async function resoudreLaCible(
 		.from(dossiers)
 		.where(eq(dossiers.domaineId, domaineId));
 
-	const segments = segmentsDeDossier(saisie.dossier).map(identifiantLisible);
-	const dossier = resoudreLeChemin(lignes, segments);
+	/* LA RACINE D'UN DOMAINE EST UNE DESTINATION VALABLE — et `resoudreLeChemin()`
+	   n'en veut pas, à raison : elle sert D'ABORD à résoudre une ADRESSE
+	   (`/univers/{u}/{d}/dossiers/{chemin…}`), où un chemin vide ne désigne rien.
+	   Créer une note est un autre usage : un domaine tout neuf n'a que sa racine,
+	   et il faut bien y écrire la première note.
+
+	   MESURÉ LE 21/08/2026 sur une instance neuve : le sélecteur proposait la
+	   racine — seul dossier existant —, et l'enregistrement rendait 404. Le
+	   rédacteur ne pouvait écrire nulle part.
+
+	   Le chemin soumis nomme la racine par son nom de domaine, comme le fait
+	   l'arborescence de choix. On le retire donc en tête, et ce qui reste se
+	   résout comme avant. */
+	const racine = lignes.find((d) => d.parentId === null) ?? null;
+	let segments = segmentsDeDossier(saisie.dossier).map(identifiantLisible);
+	if (racine !== null && segments[0] === identifiantLisible(racine.nom)) {
+		segments = segments.slice(1);
+	}
+	const dossier = segments.length === 0 ? racine : resoudreLeChemin(lignes, segments);
 	if (dossier === null) return null;
 
 	return { typeDeNoteId: type.id, domaineId, dossierId: dossier.id };

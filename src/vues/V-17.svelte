@@ -147,6 +147,8 @@
 		domaines?: readonly Domaine[];
 		/** L'univers de rattachement du compte. Défaut : celui du jeu de semence. */
 		universDuCompte?: string;
+		/** Les dossiers de chaque domaine, lus en base. Défaut : déduits des notes. */
+		dossiersParDomaine?: Readonly<Record<string, readonly DossierDeChoix[]>> | null;
 		compte?: UtilisateurCourant;
 		instance?: EtatDInstance;
 		/**
@@ -211,6 +213,11 @@
 		   proposait `/univers/production/…`, qui rend 404. Défaut : la valeur du
 		   gel, pour que le rendu d'une vue sans propriété ne bouge pas. */
 		universDuCompte = 'Production',
+		/* L'ARBORESCENCE DE CHOIX, SERVIE PAR LA ROUTE DEPUIS LA TABLE `dossiers`.
+		   Absente — le rendu par défaut d'une vue —, elle se déduit des chemins des
+		   notes, comme la maquette le fait : le gel ne bouge pas. Servie, elle
+		   l'emporte, et un domaine sans aucune note offre enfin ses dossiers. */
+		dossiersParDomaine = null,
 		compte = MOI,
 		instance = INSTANCE,
 		typesNote = TYPES_NOTE,
@@ -286,7 +293,9 @@
 		return racines;
 	}
 
-	const dossiers = $derived(dossiersDuDomaine(domaineChoisi));
+	const dossiers = $derived(
+		dossiersParDomaine?.[domaineChoisi] ?? dossiersDuDomaine(domaineChoisi)
+	);
 
 	/** L'état du témoin de sauvegarde, et son libellé — `charger()`, `V-17:3537`. */
 	const etatSauvegarde = $derived(cas === 'modif' ? 'enregistre' : 'vierge');
