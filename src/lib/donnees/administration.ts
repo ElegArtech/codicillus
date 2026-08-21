@@ -68,6 +68,7 @@ import {
 	typesDeRelation,
 	univers
 } from '../base/schema';
+import { hacherMotDePasse } from '../auth/mots-de-passe';
 import type { RoleDeCompte } from '../droits/resolution';
 import { entretenirLIndex } from '../recherche/entretien';
 import { ROLE_DEPUIS_ENUM } from './lecture';
@@ -1248,6 +1249,297 @@ export async function enregistrerLaConfiguration(
 				.set({ valeur: ligne.valeur, modifieLe: ligne.modifieLe })
 				.where(eq(parametres.cle, ligne.cle));
 		}
+	});
+
+	return verdict;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   11. CRÉER UN COMPTE — `UC-M14-07`, `RG-CPT-01`, `RG-CPT-02`
+
+   ═════════════════════════════════════════════════════════════════════════
+   LA RÈGLE N'EST PAS CELLE QUE `docs/reprise.md` NOMME
+
+   `docs/reprise.md:73` rattache « créer un compte » à `RG-M14-06`. Ce numéro est
+   déjà pris, et par une tout autre règle : `CDC:1159` — « supprimer un type de
+   fiche utilisé est refusé ». La création de compte n'a AUCUNE règle numérotée ;
+   elle est un cas d'usage, `UC-M14-07` (`CDC:1174-1181`) :
+
+       « Créer un compte : identifiant, mot de passe initial, rôle, domaine
+         principal. »
+
+   Deux règles numérotées l'encadrent, et ce sont elles qui contraignent ici :
+   `RG-CPT-01` (`CDC:137`) et `RG-CPT-02` (`CDC:139`).
+
+   ═════════════════════════════════════════════════════════════════════════
+   `RG-CPT-02` — CE QUE LA SOURCE DIT, ET CE QU'ELLE NE DIT PAS
+
+   « L'accès administrateur ne peut pas être AUTO-attribué. La création du
+     PREMIER compte administrateur est une opération d'exploitation, hors
+     interface. »
+
+   Elle interdit deux choses, et deux seulement : qu'un compte s'attribue à
+   LUI-MÊME le rôle d'administrateur, et que le PREMIER administrateur naisse de
+   l'interface. Elle n'interdit pas qu'un administrateur en nomme un autre — le
+   mot « premier » serait vide de sens s'il l'interdisait.
+
+   LE GEL TRANCHE DANS LE MÊME SENS, ET IL PRIME. `V-32:2947-2952` met les quatre
+   rôles dans le sélecteur, « Administrateur » compris, et `V-32:3134` ne
+   verrouille ce sélecteur QUE hors création (`sr.disabled = !nouveau && …`) : à
+   la création, les quatre rôles sont offerts sans exception.
+
+   LES DEUX INTERDITS SONT TENUS SANS QU'UNE LIGNE NE LES RÉÉCRIVE :
+
+     1. L'AUTO-ATTRIBUTION EST IMPOSSIBLE PAR CONSTRUCTION. Ce geste crée un
+        compte NOUVEAU ; son identifiant est libre, donc différent de celui de
+        l'appelant, que le refus de doublon ci-dessous garantit. Nul ne peut se
+        créer soi-même.
+     2. LE PREMIER ADMINISTRATEUR NE PEUT PAS NAÎTRE ICI. La route exige déjà le
+        rôle administrateur (`resoudreLaConsole()`, `docs/routes.md:167`) : sur
+        une instance qui n'en a aucun, personne n'atteint cet écran. La règle est
+        portée par la GARDE, pas par une seconde condition — en écrire une ici
+        ferait la définition concurrente que `P-01` nomme pour la fraîcheur.
+
+   ═════════════════════════════════════════════════════════════════════════
+   CE QUE LE GEL N'OFFRE PAS, ET QUI EST OBLIGATOIRE EN BASE
+
+   Deux colonnes de `comptes` sont `NOT NULL` sans qu'un nœud du gel les
+   renseigne, et ce module ne les comble pas en silence :
+
+     • `arrive_le` (`002_socle.montee.sql:68`, sans valeur par défaut) — AUCUN
+       nœud du formulaire ne la porte. La valeur posée est la DATE DU GESTE, qui
+       est la seule que la requête connaisse ; c'est une décision, elle est
+       déclarée au rapport de lot, et elle attend un arbitrage.
+     • `courriel` — `NOT NULL` ET `UNIQUE` (`comptes_courriel_unique`), quand
+       `V-32:1366` l'offre SANS l'étoile d'obligation et que `CDC:1178`
+       n'énumère pas l'adresse parmi les champs de création. Une seconde
+       création sans adresse violerait donc la contrainte. Le verdict la refuse
+       AVANT l'écriture — voir `courriel-indisponible` —, et ce refus n'a AUCUN
+       nœud au gel pour se dire : le panneau reste ouvert, rien n'est écrit, et
+       rien n'est affiché. Inventer un message serait combler.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * LA DÉSIGNATION CANONIQUE D'UN DOMAINE — la même forme que
+ * `mesurerUnDomaine()` attend, et pour la même raison : `RG-STR-02` ne rend
+ * l'identifiant d'un domaine unique qu'au sein de son univers.
+ *
+ * Elle est REDÉCLARÉE ici plutôt qu'importée de `./consoles.ts`, qui importe
+ * déjà ce module : l'importer en retour ferait un cycle. La forme est celle de
+ * `DesignationDeDomaine` de `./consoles.ts`, et les deux se satisfont l'une
+ * l'autre par structure.
+ */
+export interface DomaineCanonique {
+	readonly univers: string;
+	readonly domaine: string;
+}
+
+/**
+ * Ce qu'une création de compte demande — les sept nœuds du formulaire de
+ * `V-32:1344-1401`, et pas un de plus.
+ */
+export interface DemandeDeCompte {
+	/** `#f-ident` — l'identifiant de connexion, « définitif après création ». */
+	readonly identifiant: string;
+	/** `#f-nom` — le nom affiché. */
+	readonly nom: string;
+	/** `#f-courriel` — l'adresse électronique. Vide est permis au gel. */
+	readonly courriel: string;
+	/** `#f-mdp` — le mot de passe initial, en clair. Jamais écrit tel quel. */
+	readonly motDePasse: string;
+	/** `#f-role` — déjà converti par `roleDepuisLeLibelle()`. */
+	readonly role: RoleDeCompte;
+	/**
+	 * `#f-domaine` — le rattachement, sous sa forme CANONIQUE. `null` quand
+	 * aucun domaine n'est choisi : la colonne est nullable par exigence
+	 * (`RG-M14-04`).
+	 */
+	readonly domaine: DomaineCanonique | null;
+	/** `#f-verrou` — `RG-CPT-01`, « mot de passe verrouillé ». */
+	readonly motDePasseVerrouille: boolean;
+}
+
+/**
+ * UNE ERREUR DE SAISIE, RATTACHÉE AU BLOC DU GEL QUI SAIT LA DIRE.
+ *
+ * `champ` nomme le suffixe des identifiants du gel — `champ-ident` et
+ * `erreur-ident` pour `'ident'` —, exactement comme `ErreurDeConfiguration` le
+ * fait pour `V-33`. Il n'existe que DEUX blocs d'erreur au gel (`V-32:1352` et
+ * `V-32:1362`) : aucun troisième champ ne peut donc porter un message, et le
+ * verdict n'en fabrique pas.
+ */
+export interface ErreurDeSaisieDeCompte {
+	readonly champ: 'ident' | 'nom';
+	/** Le message, TRANSCRIT du gel — `V-32:3179-3186`. */
+	readonly message: string;
+}
+
+/* Les trois messages fixes du gel, à la lettre — `V-32:3179-3186`. */
+export const MESSAGE_IDENTIFIANT_VIDE = 'Saisissez un identifiant.';
+export const MESSAGE_IDENTIFIANT_MAL_FORME = 'Lettres, chiffres, points et tirets uniquement.';
+export const MESSAGE_NOM_VIDE = 'Donnez un nom affiché.';
+
+/** « … est déjà pris. » — `V-32:3181`, guillemets du gel compris. */
+export function messageIdentifiantPris(identifiant: string): string {
+	return `« ${identifiant} » est déjà pris.`;
+}
+
+/**
+ * LA FORME D'UN IDENTIFIANT DE CONNEXION — l'expression du gel, recopiée
+ * caractère par caractère depuis `V-32:3183`.
+ */
+const FORME_DE_LIDENTIFIANT = /^[a-z0-9]+([._-][a-z0-9]+)*$/;
+
+/**
+ * LA NORMALISATION QUE LE GEL APPLIQUE AVANT DE JUGER — `V-32:3175` :
+ * `.value.trim().toLowerCase()`. Elle est faite ICI et une seule fois : le
+ * doublon se cherche sur la forme normalisée, et c'est elle qui est écrite.
+ */
+export function identifiantNormalise(saisie: unknown): string {
+	return typeof saisie === 'string' ? saisie.trim().toLowerCase() : '';
+}
+
+/** L'état mesuré au moment où un compte est créé. */
+export interface EtatDeCreationDeCompte {
+	readonly identifiantPris: boolean;
+	readonly courrielPris: boolean;
+}
+
+/** Le verdict d'une création — quatre issues, dont trois refus. */
+export type VerdictDeCreationDeCompte =
+	/** Des saisies refusées, chacune rattachée à son bloc du gel. */
+	| { readonly issue: 'saisie-refusee'; readonly erreurs: readonly ErreurDeSaisieDeCompte[] }
+	/** `#f-mdp` vide — obligatoire au gel (`V-32:1372`), sans bloc d'erreur. */
+	| { readonly issue: 'mot-de-passe-vide' }
+	/** L'adresse est déjà portée par un autre compte. Aucun bloc d'erreur au gel. */
+	| { readonly issue: 'courriel-indisponible'; readonly courriel: string }
+	| { readonly issue: 'possible'; readonly identifiant: string; readonly nom: string };
+
+/**
+ * LE VERDICT D'UNE CRÉATION — fonction PURE, sans base et sans horloge.
+ *
+ * L'ORDRE DES TROIS CONTRÔLES D'IDENTIFIANT EST CELUI DU GEL, et il n'est pas
+ * indifférent : vide, puis doublon, puis forme (`V-32:3179-3183`). Un
+ * identifiant vide n'est pas « mal formé », il est absent — et le juger dans
+ * l'autre ordre changerait le message que l'écran affiche.
+ *
+ * LES DEUX CHAMPS SONT JUGÉS ENSEMBLE, jamais l'un après l'autre : le gel
+ * marque les deux blocs dans la même passe — `marquer()` est appelé deux fois
+ * avant le `if (faute) return` — et un formulaire qui ne dirait qu'une faute à
+ * la fois ferait retaper l'utilisateur deux fois.
+ */
+export function verdictDeCreationDeCompte(
+	demande: DemandeDeCompte,
+	etat: EtatDeCreationDeCompte
+): VerdictDeCreationDeCompte {
+	const identifiant = demande.identifiant;
+	const nom = demande.nom.trim();
+	const erreurs: ErreurDeSaisieDeCompte[] = [];
+
+	if (identifiant === '') {
+		erreurs.push({ champ: 'ident', message: MESSAGE_IDENTIFIANT_VIDE });
+	} else if (etat.identifiantPris) {
+		erreurs.push({ champ: 'ident', message: messageIdentifiantPris(identifiant) });
+	} else if (!FORME_DE_LIDENTIFIANT.test(identifiant)) {
+		erreurs.push({ champ: 'ident', message: MESSAGE_IDENTIFIANT_MAL_FORME });
+	}
+	if (nom === '') erreurs.push({ champ: 'nom', message: MESSAGE_NOM_VIDE });
+	if (erreurs.length > 0) return { issue: 'saisie-refusee', erreurs };
+
+	/* `#f-mdp` PORTE L'ÉTOILE D'OBLIGATION (`V-32:1372`) mais aucun bloc
+	   d'erreur : le refus est prononcé, il ne peut pas être affiché. Déclaré. */
+	if (demande.motDePasse === '') return { issue: 'mot-de-passe-vide' };
+
+	/* L'ADRESSE EST `NOT NULL UNIQUE` EN BASE ET FACULTATIVE AU GEL — voir
+	   l'en-tête de section. Le refus vient AVANT l'écriture parce que la
+	   contrainte, elle, sortirait en erreur de serveur. */
+	if (etat.courrielPris) {
+		return { issue: 'courriel-indisponible', courriel: demande.courriel };
+	}
+
+	return { issue: 'possible', identifiant, nom };
+}
+
+/**
+ * CRÉER UN COMPTE — l'exécutant. Il mesure, appelle le verdict, et n'écrit que
+ * si le verdict est `possible`.
+ *
+ * LE MOT DE PASSE EN CLAIR NE SORT PAS DE CETTE FONCTION. Il y entre, il est
+ * condensé par `hacherMotDePasse()` — le seul chemin du dépôt vers Argon2id
+ * (`../auth/mots-de-passe.ts`, `STACK §4.7`) — et seul le condensat est écrit.
+ * Aucune valeur rendue ne le porte : c'est l'ÉCRAN qui l'affiche une fois, à
+ * partir de la valeur qu'il a lui-même engendrée, jamais depuis une réponse du
+ * serveur.
+ *
+ * LA COURSE ENTRE LA MESURE ET L'ÉCRITURE RESTE POSSIBLE, et la base a le
+ * dernier mot : `comptes_identifiant_unique` et `comptes_courriel_unique`
+ * refuseront un doublon glissé entre les deux. Deux gardes valent mieux qu'une
+ * quand l'une des deux est une course — la rédaction est celle de
+ * `supprimerUnUnivers()`, et pour le même motif.
+ */
+export async function creerUnCompte(
+	base: Base,
+	demande: DemandeDeCompte,
+	maintenant: Date
+): Promise<IssueDUnGeste<VerdictDeCreationDeCompte>> {
+	const identifiant = demande.identifiant;
+	const courriel = demande.courriel.trim();
+
+	const [prisParIdentifiant] = await base
+		.select({ identifiant: comptes.identifiant })
+		.from(comptes)
+		.where(eq(comptes.identifiant, identifiant))
+		.limit(1);
+	const [prisParCourriel] = await base
+		.select({ courriel: comptes.courriel })
+		.from(comptes)
+		.where(eq(comptes.courriel, courriel))
+		.limit(1);
+
+	const verdict = verdictDeCreationDeCompte(
+		{ ...demande, courriel },
+		{
+			identifiantPris: prisParIdentifiant !== undefined,
+			courrielPris: prisParCourriel !== undefined
+		}
+	);
+	if (verdict.issue !== 'possible') return verdict;
+
+	/* LE RATTACHEMENT EST RÉSOLU, JAMAIS DEVINÉ. Une désignation qui ne
+	   correspond à aucun domaine rend `introuvable` plutôt que d'écrire un
+	   compte sans rattachement : l'administrateur a choisi un domaine, et le
+	   rattacher ailleurs — ou nulle part — serait un geste qu'il n'a pas
+	   demandé. `null` demandé reste `null` écrit, ce que `RG-M14-04` exige. */
+	let domaineId: string | null = null;
+	if (demande.domaine !== null) {
+		const [ligne] = await base
+			.select({ id: domaines.id })
+			.from(domaines)
+			.innerJoin(univers, eq(domaines.universId, univers.id))
+			.where(
+				and(
+					eq(univers.identifiant, demande.domaine.univers),
+					eq(domaines.identifiant, demande.domaine.domaine)
+				)
+			)
+			.limit(1);
+		if (ligne === undefined) return { issue: 'introuvable' };
+		domaineId = ligne.id;
+	}
+
+	await base.insert(comptes).values({
+		identifiant,
+		nom: verdict.nom,
+		courriel,
+		role: demande.role,
+		actif: true,
+		motDePasseVerrouille: demande.motDePasseVerrouille,
+		condensatMotDePasse: await hacherMotDePasse(demande.motDePasse),
+		/* Voir l'en-tête de section : aucun nœud du gel ne porte cette date. */
+		arriveLe: maintenant.toISOString().slice(0, 10),
+		creeLe: maintenant,
+		modifieLe: maintenant,
+		domaineId
 	});
 
 	return verdict;
