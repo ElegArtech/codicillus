@@ -116,6 +116,7 @@ import {
 	verifierLaNote
 } from '$lib/donnees/verification';
 import { moteurPartage } from '$lib/recherche/acces';
+import { lireLesCiblesPossibles, lireLesTypesOfferts } from '$lib/donnees/relations';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import type { Note } from '../../../../seeds/corpus';
@@ -628,7 +629,39 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		 * avec un `href="#"` (`V-14:1830`, `:1835`) : sans cette liste, aucun de
 		 * ces liens ne mène nulle part, et le panneau reste une vitrine.
 		 */
-		piecesJointes: complements.piecesJointes
+		piecesJointes: complements.piecesJointes,
+		/**
+		 * DE QUOI DÉCLARER UNE RELATION SANS QUITTER LA NOTE — le dialogue
+		 * `d-relation` du gel, monté ici parce que c'est ici que le gel le place.
+		 *
+		 * `mockups/V-14-lecture-note.html:1848` dessine le bouton « + Ajouter »
+		 * dans le panneau « Relations » ; `mockups/V-40-dialogues.html:3252` dit
+		 * de `d-relation` : `ou: "V-14"`. Le geste existait, mais sur
+		 * `/notes/{identifiant}/relations`, une adresse qu'aucune source ne
+		 * prévoit. Il est désormais atteignable d'où le gel le montre.
+		 *
+		 * `P-09` — LES MOYENS D'ÉCRIRE NE SONT PRÉPARÉS QUE POUR QUI PEUT ÉCRIRE.
+		 * `null` sinon, et la page ne monte alors aucun dialogue : ni le bouton,
+		 * ni la boîte, ni le sélecteur de cibles n'entrent dans le DOM. C'est le
+		 * même partage qu'à `/notes/{identifiant}/relations`, et les deux appels
+		 * sont les mêmes — il n'existe pas deux lectures des types offerts, ni
+		 * deux résolutions des cibles possibles.
+		 *
+		 * LES CIBLES SONT CELLES SUR LESQUELLES L'APPELANT PEUT ÉCRIRE
+		 * (`RG-M08-04`, les deux extrémités) : une note qu'il ne pourrait pas
+		 * relier n'est pas proposée, plutôt que refusée après le clic.
+		 */
+		relation: lecture.capacites.ecrireDesNotes
+			? {
+					types: await lireLesTypesOfferts(base),
+					cibles: await lireLesCiblesPossibles(
+						base,
+						locals.identite,
+						params.identifiant,
+						lecture.notes.map((n) => n.id)
+					)
+				}
+			: null
 	};
 };
 
