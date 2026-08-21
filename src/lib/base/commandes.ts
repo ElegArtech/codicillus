@@ -1127,3 +1127,73 @@ export async function compter(session: Session, table: string): Promise<number> 
 
 /** Réexporté pour le lanceur : la marque d'un SQL brut piloté par Drizzle. */
 export { sql };
+
+/* ═══════════════════════════════ Le premier administrateur ══════════════ */
+
+/** Ce qu'il faut pour ouvrir la porte d'une instance neuve. */
+export interface PremierAdministrateur {
+	readonly identifiant: string;
+	readonly nom: string;
+	readonly courriel: string;
+	readonly motDePasse: string;
+}
+
+/**
+ * CRÉE LE PREMIER ADMINISTRATEUR D'UNE INSTANCE.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * POURQUOI CETTE COMMANDE MANQUAIT, ET CE QUE SON ABSENCE COÛTAIT
+ *
+ * MESURÉ LE 21/08/2026 : une instance fraîchement migrée n'a AUCUN compte, et
+ * rien dans le dépôt n'en crée un — ni commande, ni route d'installation, ni
+ * ligne de documentation. On ne pouvait donc pas SE CONNECTER à une instance
+ * neuve. Le seul chemin praticable était `base:semer`, qui charge les cinq
+ * comptes du jeu de démonstration — c'est-à-dire d'ouvrir une instance de
+ * production avec les identités d'une maquette.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * ELLE REFUSE DE S'EXÉCUTER DEUX FOIS
+ *
+ * « Premier » n'est pas un mot de commodité : la commande n'écrit que si la
+ * table est VIDE. Un administrateur créé en ligne de commande contourne toute
+ * traçabilité — pas de demandeur, pas de validation, pas de journal —, et ce
+ * contournement ne se justifie que pour l'amorçage. Les comptes suivants se
+ * créent dans la console, par quelqu'un qui répond de ce qu'il fait.
+ *
+ * LE MOT DE PASSE N'EST NI ENGENDRÉ, NI IMPRIMÉ, NI DEVINÉ : l'appelant le
+ * fournit, et seul son condensat Argon2id est écrit — même chemin que la
+ * connexion, `$lib/auth/mots-de-passe`.
+ *
+ * AUCUN DOMAINE DE RATTACHEMENT : une instance neuve n'en a pas encore. La
+ * colonne l'admet, et `RG-DRO-03` dispense de toute façon l'administrateur des
+ * droits de dossier.
+ */
+export async function creerLePremierAdministrateur(
+	session: Session,
+	qui: PremierAdministrateur
+): Promise<{ cree: boolean; motif?: string }> {
+	for (const [champ, valeur] of Object.entries(qui)) {
+		if (valeur.trim() === '') return { cree: false, motif: `${champ} manquant` };
+	}
+	if (qui.motDePasse.length < 12) {
+		return { cree: false, motif: 'mot de passe trop court — douze caractères au minimum' };
+	}
+	const [dejaLa] = await session.db.select({ id: comptes.id }).from(comptes).limit(1);
+	if (dejaLa !== undefined) {
+		return {
+			cree: false,
+			motif: "l'instance porte déjà au moins un compte — les suivants se créent en console"
+		};
+	}
+	const { hacherMotDePasse } = await import('../auth/mots-de-passe');
+	await session.db.insert(comptes).values({
+		identifiant: qui.identifiant.trim(),
+		nom: qui.nom.trim(),
+		courriel: qui.courriel.trim(),
+		role: 'administrateur',
+		actif: true,
+		arriveLe: new Date().toISOString().slice(0, 10),
+		condensatMotDePasse: await hacherMotDePasse(qui.motDePasse)
+	});
+	return { cree: true };
+}

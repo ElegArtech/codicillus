@@ -31,6 +31,12 @@ Usage : node base/base.mjs <commande>
   reversibilite     monte, descend, remonte, et compare les empreintes
   semer             charge seeds/corpus.ts dans la base
   reindexer         reconstruit l’index de recherche depuis la base
+  administrateur    crée le PREMIER administrateur d’une instance neuve.
+                    Refuse si un compte existe déjà — les suivants se créent en
+                    console. Le mot de passe se donne par MDP_ADMINISTRATEUR :
+                      ADMIN_IDENTIFIANT=a.berge ADMIN_NOM="Alexandre Bergé" \
+                      ADMIN_COURRIEL=ab@exemple.fr MDP_ADMINISTRATEUR='…' \
+                        pnpm base:administrateur
   unicite           joue les sondes d'unicité (refus ET acceptations)
   coherence         compare src/lib/base/schema.ts au catalogue de la base
   pieces [--racine=<chemin>]
@@ -247,6 +253,26 @@ try {
 			ligne('entrées portées par l’index après', String(rapport.indexees));
 			ligne('entrées que l’index portait avant', String(rapport.precedentes));
 			ligne('index échangé', rapport.echange ? 'oui' : 'non — première pose');
+			break;
+		}
+
+		case 'administrateur': {
+			const qui = {
+				identifiant: process.env.ADMIN_IDENTIFIANT ?? '',
+				nom: process.env.ADMIN_NOM ?? '',
+				courriel: process.env.ADMIN_COURRIEL ?? '',
+				motDePasse: process.env.MDP_ADMINISTRATEUR ?? ''
+			};
+			const fait = await B.creerLePremierAdministrateur(session, qui);
+			if (!fait.cree) {
+				console.log(`REFUSÉ — ${fait.motif}`);
+				code = 1;
+				break;
+			}
+			ligne('administrateur créé', qui.identifiant);
+			console.log('');
+			console.log('Il peut se connecter et créer le reste depuis la console : univers,');
+			console.log('domaines, types de fiches, types de relations, templates et comptes.');
 			break;
 		}
 
