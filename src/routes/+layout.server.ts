@@ -47,13 +47,53 @@
  * remonté au rapport du lot, non comblé.
  */
 import { basePartagee } from '$lib/base/acces';
+import { eq } from 'drizzle-orm';
+import { comptes, domaines, univers } from '$lib/base/schema';
 import { capaciteDEcriture } from '$lib/donnees/public';
+import type { Base } from '$lib/base/acces';
+
+/** Les deux identifiants d'adresse du domaine de rattachement, ou `null`. */
+async function rangementDuCompte(
+	base: Base,
+	compteId: string
+): Promise<{ univers: string; domaine: string } | null> {
+	const [ligne] = await base
+		.select({ univers: univers.identifiant, domaine: domaines.identifiant })
+		.from(comptes)
+		.innerJoin(domaines, eq(domaines.id, comptes.domaineId))
+		.innerJoin(univers, eq(univers.id, domaines.universId))
+		.where(eq(comptes.id, compteId))
+		.limit(1);
+	return ligne ?? null;
+}
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
-	if (locals.identite.type !== 'authentifie') return { session: false, ecriture: false };
+	if (locals.identite.type !== 'authentifie') {
+		return { session: false, ecriture: false, administrateur: false, rangement: null };
+	}
+	const base = basePartagee();
 	return {
 		session: true,
-		ecriture: await capaciteDEcriture(basePartagee(), locals.identite)
+		ecriture: await capaciteDEcriture(base, locals.identite),
+		/**
+		 * `RG-DRO-03` — l'administrateur contourne tous les droits de dossier, et
+		 * lui seul voit l'entrée « Console d'administration ». Une entrée de
+		 * navigation visible est une entrée qui fonctionne (`P-03`), et une action
+		 * interdite n'est pas affichée (`P-09`) : les deux se rejoignent ici.
+		 */
+		administrateur: locals.identite.role === 'administrateur',
+		/**
+		 * LE RANGEMENT DE RATTACHEMENT DU COMPTE — les identifiants d'univers et de
+		 * domaine, sous la forme que les adresses emploient.
+		 *
+		 * Le menu « Créer » de la barre supérieure offre « Nouveau signet » et
+		 * « Nouveau dossier », et les deux adresses exigent un domaine. Le seul que
+		 * le produit puisse choisir sans décider à la place de l'utilisateur est
+		 * celui auquel son compte est rattaché (migration `005`). Sans
+		 * rattachement, les deux entrées ne sont pas émises — une entrée qui ne
+		 * mène nulle part est un lien mort, et `P-03` n'en admet aucun.
+		 */
+		rangement: await rangementDuCompte(base, locals.identite.compteId)
 	};
 };

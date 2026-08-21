@@ -47,7 +47,10 @@
  * dossier ne rendent donc rien, et c'est ce qui rend cette règle éprouvée sur un
  * cas réel plutôt qu'espérée (`P-5`).
  */
+import { error, fail, redirect } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
+import { dossiers } from '$lib/base/schema';
+import { identifiantLisible } from '$lib/rangement/adresses';
 import { capacites, resoudre } from '$lib/droits/resolution';
 import {
 	cheminAffiche,
@@ -60,9 +63,11 @@ import {
 	ouvrirLAcces,
 	refuserLAdresse,
 	resoudreLeChemin,
-	segmentsAffiches
+	segmentsAffiches,
+	MESSAGE_INTROUVABLE,
+	PROFONDEUR_MAX
 } from '$lib/donnees/rangement';
-import type { PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const base = basePartagee();
@@ -103,4 +108,74 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		},
 		notes: await lireNotesLisibles(base, acces.perimetre, acces.contexte)
 	};
+};
+
+/* ═══════════════════════════════════ La création d'un sous-dossier ══════ */
+
+/**
+ * `RG-STR-03` — CRÉER UN SOUS-DOSSIER, le geste que le gel dessine et que rien
+ * n'atteignait.
+ *
+ * `mockups/V-13-page-dossier.html:1161` pose le bouton `#a-sousdossier` sous la
+ * classe `si-gestionnaire`, et `:1209` son dialogue : un seul champ, « Nom du
+ * dossier », obligatoire. Le parent est le dossier de l'adresse — le dialogue le
+ * rappelle en toutes lettres, « il sera créé dans … ».
+ *
+ * LE DROIT EST CELUI DU GEL : « créer des sous-dossiers » est la troisième
+ * colonne de `CDC` §2.3, et seul le **gestionnaire** la porte. Le refus est le
+ * même `404` que partout dans cette famille (`RG-ACC-04`).
+ *
+ * LA PROFONDEUR EST PLAFONNÉE À DIX (`PROFONDEUR_MAX`), et le refus le dit :
+ * c'est la seule limite que le rangement connaisse, et elle est du cahier.
+ */
+export const actions: Actions = {
+	creerSousDossier: async ({ params, locals, request }) => {
+		const base = basePartagee();
+		const acces = await ouvrirLAcces(base, locals.identite, new Date());
+		const domaine = await lireDomaineParIdentifiants(base, params.univers, params.domaine);
+		if (domaine === null) error(404, MESSAGE_INTROUVABLE);
+
+		const lignes = dossiersDuDomaine(acces, domaine.id);
+		const parent = resoudreLeChemin(
+			lignes,
+			params.chemin.split('/').filter((s) => s !== '')
+		);
+		if (parent === null) error(404, MESSAGE_INTROUVABLE);
+
+		/* Le droit d'abord, et par la même résolution que la lecture. */
+		const droit = droitEffectif(acces, parent.id);
+		if (capacites(droit).creerDesSousDossiers !== true) error(404, MESSAGE_INTROUVABLE);
+
+		const brut = (await request.formData()).get('nom');
+		const nom = typeof brut === 'string' ? brut.trim() : '';
+		if (nom === '') return fail(400, { motif: 'nom manquant' });
+
+		if (parent.profondeur + 1 > PROFONDEUR_MAX) {
+			return fail(422, {
+				motif: `la profondeur maximale est de ${String(PROFONDEUR_MAX)} niveaux`
+			});
+		}
+
+		/* Un frère du même nom rendrait deux adresses identiques : refus, pas de
+		   réparation silencieuse. */
+		const existe = lignes.some(
+			(d) => d.parentId === parent.id && identifiantLisible(d.nom) === identifiantLisible(nom)
+		);
+		if (existe) return fail(409, { motif: 'un dossier de ce nom existe déjà ici' });
+
+		const freres = lignes.filter((d) => d.parentId === parent.id);
+		await base.insert(dossiers).values({
+			domaineId: domaine.id,
+			parentId: parent.id,
+			nom,
+			position: freres.length,
+			profondeur: parent.profondeur + 1
+		});
+
+		const chemin = params.chemin === '' ? '' : `${params.chemin}/`;
+		redirect(
+			303,
+			`/univers/${params.univers}/${params.domaine}/dossiers/${chemin}${identifiantLisible(nom)}`
+		);
+	}
 };
