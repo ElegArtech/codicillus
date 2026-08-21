@@ -23,15 +23,43 @@
 	 */
 	import Vue from '../../vues/V-19.svelte';
 	import '../../vues/V-19.css';
+	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
+
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	let enveloppe: HTMLDivElement;
+
+	/**
+	 * LES DEUX ONGLETS DE LA CARTOGRAPHIE — « Vue complète » et « Par type
+	 * maître » — ne faisaient rien, alors que le produit porte DEUX routes pour
+	 * eux : `/cartographie` et `/cartographie/par-type`. Le gel les pose en
+	 * `role="tab"` avec `data-vue`, sans comportement (`ARB-011`) ; la route le
+	 * leur donne, et la navigation est une vraie navigation, donc partageable.
+	 */
+	onMount(() => {
+		const aller = (evenement: Event): void => {
+			const onglet = (evenement.target as Element | null)?.closest('[data-vue]');
+			if (onglet === null || onglet === undefined) return;
+			evenement.preventDefault();
+			const vue = (onglet as HTMLElement).dataset['vue'];
+			location.assign(
+				vue === 'maitre' ? resolve('/cartographie/par-type') : resolve('/cartographie')
+			);
+		};
+		enveloppe.addEventListener('click', aller);
+		return () => enveloppe.removeEventListener('click', aller);
+	});
 </script>
 
-<Vue
-	vecteur={data.vecteur}
-	notes={data.notes}
-	relations={data.relations}
-	typesRelation={data.typesRelation}
-	relationsTechniques={data.relationsTechniques}
-/>
+<div bind:this={enveloppe} style="display:contents">
+	<Vue
+		vecteur={data.vecteur}
+		notes={data.notes}
+		relations={data.relations}
+		typesRelation={data.typesRelation}
+		relationsTechniques={data.relationsTechniques}
+	/>
+</div>
