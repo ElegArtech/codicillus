@@ -12,11 +12,35 @@
 	// `pnpm socle:extraire` ; sa non-divergence est prouvée par
 	// `pnpm verif:jetons` (batterie 2, ADR-002, ÉCART-007). Il ne s'édite pas.
 	import '../socle.css';
-	import { onMount } from 'svelte';
+	import { onMount, setContext } from 'svelte';
 	import { cablerLaCoquille } from '$lib/cablage/coquille';
+	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 	import type { LayoutData } from './$types';
 
 	let { children, data }: { children: import('svelte').Snippet; data: LayoutData } = $props();
+
+	/**
+	 * L'IDENTITÉ RÉELLE DESCEND PAR CONTEXTE, ET D'ICI SEULEMENT.
+	 *
+	 * `Coquille.svelte` exige une propriété `compte` ; les vues la remplissent
+	 * depuis `MOI` de `seeds/corpus.ts` et aucune route ne la passait — la barre
+	 * supérieure affichait donc « Karim Belhadj — Référent » pour tout le monde,
+	 * sur les huit pages qui montent une coquille. Mesuré le 21/08/2026.
+	 *
+	 * Le contexte plutôt que la propriété : trente `+page.svelte` qui recopieraient
+	 * chacun le même passage divergeraient au premier oubli (`P-35`), et le défaut
+	 * se lirait comme une identité fausse sur une page et juste sur la voisine.
+	 * La coquille lit le contexte quand il existe, et retombe sur sa propriété
+	 * sinon — le rendu par défaut des vues ne bouge donc pas d'un pixel.
+	 */
+	setContext<IdentiteDeCoquille>(CLE_IDENTITE, {
+		get compte() {
+			return data.compte;
+		},
+		get administrateur() {
+			return data.administrateur;
+		}
+	});
 
 	/**
 	 * LA COQUILLE EST CÂBLÉE ICI, ET UNE SEULE FOIS.

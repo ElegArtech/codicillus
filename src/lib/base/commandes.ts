@@ -52,7 +52,8 @@ import {
 	typesDeNote,
 	typesDeRelation,
 	univers,
-	verifications
+	verifications,
+	versions
 } from './schema';
 import {
 	anciennete,
@@ -66,6 +67,7 @@ import {
 	lignesDeNote,
 	lignesDeParametre,
 	lignesDeRelation,
+	lignesDeVersion,
 	lignesDeTemplate,
 	lignesDeTypeDeFiche,
 	lignesDeTypeDeNote,
@@ -309,6 +311,7 @@ export interface RapportDeSemence {
 	readonly notes: number;
 	readonly etiquettesDeNote: number;
 	readonly relations: number;
+	readonly versions: number;
 	readonly verifications: number;
 	readonly parametres: number;
 }
@@ -595,6 +598,32 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 			}))
 		);
 
+		/* LES VERSIONS — sans elles, l'historique (V-15) et la comparaison (V-16)
+		   n'ont rien à montrer. Ce chargement était déclaré hors périmètre et
+		   imprimé comme tel à chaque exécution ; le périmètre est rouvert.
+		   `versions.numero` est unique PAR NOTE, et le corpus donne les numéros :
+		   ils sont repris tels quels, jamais renumérotés. */
+		const lignesVersion = lignesDeVersion();
+		if (lignesVersion.length > 0) {
+			await tx.insert(versions).values(
+				lignesVersion.map((v) => ({
+					noteId: exigerDefini(
+						noteParIdentifiant.get(v.noteIdentifiant),
+						`note ${v.noteIdentifiant}`
+					),
+					numero: v.numero,
+					le: v.le,
+					auteurId: exigerDefini(compteParNom.get(v.auteurNom), `compte ${v.auteurNom}`),
+					resume: v.resume,
+					ajout: v.ajout,
+					retrait: v.retrait,
+					titre: v.titre,
+					corpsReference: v.corpsReference,
+					corpsOperationnel: null
+				}))
+			);
+		}
+
 		/* L'historique des vérifications : une entrée par note vérifiée. Le
 		   VÉRIFICATEUR n'est nulle part dans les maquettes — la colonne reste
 		   nulle plutôt que de désigner quelqu'un au hasard. */
@@ -661,6 +690,7 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 			notes: notesPosees.length,
 			etiquettesDeNote: lignesEtiquetteDeNote.length,
 			relations: lignesRelation.length,
+			versions: lignesVersion.length,
 			verifications: lignesVerification.length,
 			parametres: lignesDeParametre().length
 		};

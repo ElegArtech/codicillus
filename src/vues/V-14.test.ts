@@ -31,6 +31,7 @@ import {
 import { documentDuGel, resoudreDansLeCorpus } from '../lib/contenu/documents-du-gel';
 import { rendreDocument } from '../lib/contenu/rendu';
 import { NOTE, type LectureAffichee } from '../lib/lecture/note-de-demonstration';
+import { adresseDeDomaine } from '../lib/rangement/adresses';
 
 const NOTES = corpusPourVue('V-14');
 
@@ -132,7 +133,13 @@ describe('V-14 — la propriété fournie l’emporte', () => {
 		const html = await rendu({ affichee: AFFICHEE });
 		expect(html).toContain(AUTRE_NOTE.titre);
 		expect(html).not.toContain(NOTE.titre);
-		expect(html).toContain(`<a href="#">${AUTRE_NOTE.domaine}</a>`);
+		/* LE LIEN DE RANGEMENT N'EST PLUS UNE ANCRE VIDE : il porte l'adresse
+		   canonique du domaine, composée par la fabrique unique. Le contrôle
+		   suit la vue, et il vérifie toujours la même chose — que la ligne
+		   « Rangement » parle de la note REÇUE, et non de celle du gel. */
+		expect(html).toContain(
+			`<a href="${adresseDeDomaine(AUTRE_NOTE.univers, AUTRE_NOTE.domaine)}">${AUTRE_NOTE.domaine}</a>`
+		);
 	});
 
 	it('rend le corps de la note reçue, rendu par l’implémentation unique', async () => {
@@ -186,7 +193,13 @@ describe('V-14 — la propriété fournie l’emporte', () => {
 			panneaux: {
 				voisines: [],
 				pieces: [
-					{ nom: 'Journal', extension: 'CSV', taille: '18 Ko', depose: 'déposé le 4 juin 2026' }
+					{
+						nom: 'Journal',
+						extension: 'CSV',
+						taille: '18 Ko',
+						depose: 'déposé le 4 juin 2026',
+						adresse: '/notes/n-restaurer-pg/pieces-jointes/Journal.csv'
+					}
 				],
 				relations: [
 					{
@@ -233,7 +246,9 @@ describe('V-14 — la propriété absente rend la transcription figée du gel', 
 	it('rend la note de démonstration, son rangement et son contexte', async () => {
 		const html = await rendu({});
 		expect(html).toContain(NOTE.titre);
-		expect(html).toContain('<a href="#">Infrastructure</a>');
+		expect(html).toContain(
+			`<a href="${adresseDeDomaine(NOTE.univers, NOTE.domaine)}">Infrastructure</a>`
+		);
 		expect(html).toContain(`${MOI.nom} — menu utilisateur`);
 		expect(html).toContain(INSTANCE.version);
 	});

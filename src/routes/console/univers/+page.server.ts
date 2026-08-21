@@ -59,7 +59,17 @@
  */
 import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { supprimerUnUnivers } from '$lib/donnees/administration';
+import { creerUnUnivers, modifierUnUnivers, supprimerUnUnivers } from '$lib/donnees/administration';
+import {
+	CHAMP_COULEUR,
+	CHAMP_DESCRIPTION,
+	CHAMP_GLYPHE,
+	CHAMP_NOM,
+	CHAMP_POSITION,
+	CHAMP_UNIVERS_CIBLE,
+	rangDuChamp,
+	texteDuChamp
+} from '$lib/console/structure';
 import {
 	accesALaConsole,
 	contexteDeRequete,
@@ -117,6 +127,66 @@ export const actions: Actions = {
 		consoleOuverte(locals);
 		const champs = await request.formData();
 		const resultat = await supprimerUnUnivers(basePartagee(), String(champs.get('univers') ?? ''));
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	},
+
+	/**
+	 * CRÉER UN UNIVERS — `RG-STR-01`.
+	 *
+	 * LES CINQ CHAMPS SONT CEUX DU PANNEAU, et leurs noms viennent de
+	 * `$lib/console/structure.ts` — le contrat que la vue, cette page et cette
+	 * action lisent au même endroit (`P-35`). Aucun n'est composé ici.
+	 *
+	 * LE REFUS N'EST PAS UNE PANNE, c'est un ÉTAT de l'écran : `V-27:1276` porte
+	 * le bloc `#erreur-nom`, révélé sur un nom vide ou déjà pris. Il sort donc en
+	 * `fail(400, …)` avec son message rattaché au champ, jamais en exception.
+	 */
+	creer: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const resultat = await creerUnUnivers(basePartagee(), {
+			nom: texteDuChamp(champs, CHAMP_NOM) ?? '',
+			description: texteDuChamp(champs, CHAMP_DESCRIPTION) ?? '',
+			couleur: texteDuChamp(champs, CHAMP_COULEUR) ?? '',
+			glyphe: texteDuChamp(champs, CHAMP_GLYPHE) ?? '',
+			ordre: rangDuChamp(champs, CHAMP_POSITION) ?? Number.POSITIVE_INFINITY
+		});
+		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	},
+
+	/**
+	 * ENREGISTRER UN UNIVERS — et il porte DEUX gestes de l'écran, pas un.
+	 *
+	 * « Enregistrer » transmet les cinq champs du panneau ; « Monter » et
+	 * « Descendre » (`V-27:417-418`) ne transmettent QUE `f-position`. C'est
+	 * pourquoi la lecture est facultative champ par champ : un champ absent n'est
+	 * pas un champ vide, et `modifierUnUnivers()` ne touche que ce qui lui est
+	 * transmis. Deux actions pour un même verbe auraient fait deux définitions du
+	 * même geste (`P-01` transposé).
+	 */
+	enregistrer: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const nom = texteDuChamp(champs, CHAMP_NOM);
+		const description = texteDuChamp(champs, CHAMP_DESCRIPTION);
+		const couleur = texteDuChamp(champs, CHAMP_COULEUR);
+		const glyphe = texteDuChamp(champs, CHAMP_GLYPHE);
+		const ordre = rangDuChamp(champs, CHAMP_POSITION);
+
+		const resultat = await modifierUnUnivers(
+			basePartagee(),
+			texteDuChamp(champs, CHAMP_UNIVERS_CIBLE) ?? '',
+			{
+				...(nom === undefined ? {} : { nom }),
+				...(description === undefined ? {} : { description }),
+				...(couleur === undefined ? {} : { couleur }),
+				...(glyphe === undefined ? {} : { glyphe }),
+				...(ordre === undefined ? {} : { ordre })
+			}
+		);
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		if (resultat.issue !== 'possible') return fail(400, resultat);
 		return resultat;

@@ -137,6 +137,11 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { BARRES_DE_JAUGE, temoinFraicheur } from '$lib/fraicheur';
 	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
+	import {
+		adresseDeCreationDeSignet,
+		adresseDeDomaine,
+		adresseDesNotesDuDomaine
+	} from '$lib/rangement/adresses';
 
 	/**
 	 * LES NEUF SOURCES QUI NE VENAIENT DE NULLE PART — T-041.
@@ -267,7 +272,15 @@
 	 * (`V-07:3899`). Le stockage local ne joue pas ici — un état, pas une
 	 * mémoire.
 	 */
-	const aideVisible = $derived(reglage['c-aide'] !== false);
+	/**
+	 * L'AIDE DE PREMIÈRE VISITE SE REFERME — `V-07:3895`. Le gel pose l'état sur
+	 * la case de sa planche ; ici, la fermeture est un état LOCAL qui l'emporte
+	 * sur le vecteur, et qui ne survit pas au rechargement : le gel ne mémorise
+	 * rien non plus (`aideVue()` lit sa case, pas un stockage).
+	 */
+	let aideRefermee = $state(false);
+
+	const aideVisible = $derived(!aideRefermee && reglage['c-aide'] !== false);
 
 	/** Nombre en français — `x.toLocaleString("fr-FR")` du gel (`V-07:3328`). */
 	function nb(x: number): string {
@@ -469,6 +482,114 @@
 		void goto(resolve(ROUTE_DE_NOTE, { identifiant: n.id }));
 	}
 
+	/**
+	 * LES ADRESSES QUE `resolve()` NE SAIT PAS COMPOSER — et pourquoi elles
+	 * passent par le dépôt d'adresses plutôt que par lui.
+	 *
+	 * `resolve()` prend un IDENTIFIANT DE ROUTE et ses paramètres ; il ne connaît
+	 * ni la dérivation d'un identifiant lisible à partir d'un nom d'univers ou de
+	 * domaine, ni la forme canonique qu'`ARB-001` impose. `$lib/rangement/adresses`
+	 * est la fabrique UNIQUE de ces adresses-là — six écrans les émettent déjà par
+	 * elle —, et la recopier ici en ferait une seconde.
+	 *
+	 * `svelte/no-navigation-without-resolve` inspecte l'expression passée à
+	 * `goto()` : une chaîne qu'une fabrique a produite lui est opaque, et elle
+	 * rougit à bon droit puisqu'elle ne peut rien vérifier. La règle est donc
+	 * levée SUR CETTE SEULE LIGNE, comme `V-24` la lève pour les adresses que son
+	 * rapport d'import compose — même raison, même portée.
+	 */
+	function allerA(adresse: string): void {
+		/* eslint-disable-next-line svelte/no-navigation-without-resolve */
+		void goto(adresse);
+	}
+
+	/**
+	 * LES CINQ DESTINATIONS QUE LA MAQUETTE NOMME PAR LEUR NUMÉRO DE VUE —
+	 * `V-07:3908-3912`. Le gel n'a pas de route à atteindre et se contente de les
+	 * annoncer ; le produit en a une pour chacune.
+	 *
+	 *   `r-note`, `v-creer`   → V-17, l'éditeur de note      → `/notes/nouvelle`
+	 *   `r-import`, `v-importer` → V-24, l'import            → `/importer`
+	 *   `r-signet`            → V-23, la création de signet  → le domaine du compte
+	 *
+	 * LE SIGNET SE CRÉE DANS UN DOMAINE, et le gel n'en nomme aucun : l'adresse de
+	 * V-23 en exige un (`RG-STR-02` — un domaine ne s'identifie que dans son
+	 * univers). Celui du compte connecté est le seul choix qui ne devine rien :
+	 * c'est déjà le domaine pré-choisi de la note vierge de V-17 (`V-17:3537`).
+	 * Faute de le trouver dans les domaines accessibles, le geste mène à la page
+	 * du domaine plutôt que nulle part.
+	 */
+	const domaineDuCompte = $derived(domainesAccessibles.find((d) => d.nom === moi.domaine));
+
+	function creerUnSignet(): void {
+		if (domaineDuCompte === undefined) return;
+		allerA(adresseDeCreationDeSignet(domaineDuCompte.univers, domaineDuCompte.nom));
+	}
+
+	/**
+	 * LES QUATRE INDICATEURS MÈNENT QUELQUE PART — « un indicateur qui ne mène
+	 * nulle part n'est qu'une décoration », dit le commentaire du gabarit, et le
+	 * gel nomme les quatre destinations (`V-07:3512`, `:3523`, `:3542`, `:3551`).
+	 *
+	 * TROIS SONT DES LISTES PRÉ-FILTRÉES, ET LE PRODUIT N'A PAS DE V-12 GLOBALE :
+	 * V-12 est la liste des notes D'UN DOMAINE. La liste de tout le corpus, elle,
+	 * existe — c'est `/recherche` sans requête, dont les sept facettes portent
+	 * `statut` et `fraicheur` sous les mêmes libellés que V-12. C'est donc elle
+	 * qui reçoit « Notes au total » et « Brouillons ».
+	 *
+	 * « CONSULTATIONS · 7 JOURS » MÈNE À LA CONSOLE ANALYTIQUE (V-34), et elle
+	 * n'est ouverte qu'à l'administrateur. Le geste n'est POSÉ que pour lui : un
+	 * bouton qui mènerait un référent à un refus serait pire qu'un bouton inerte.
+	 *
+	 * « EN ATTENTE DE RÉVISION » NE NAVIGUE PAS : la corbeille de révisions est
+	 * SUR CET ÉCRAN, panneau `#p-revisions`. L'indicateur y amène — c'est ce que
+	 * son filet d'appel promet — sans quitter la page.
+	 */
+	function voirLesRevisions(): void {
+		document.querySelector('#p-revisions')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	}
+
+	/**
+	 * LA BARRE DE RÉPARTITION OUVRE LA LISTE DU DOMAINE, PRÉ-FILTRÉE — le gel
+	 * l'annonce « N notes obsolètes de D — liste pré-filtrée, vue V-12 »
+	 * (`V-07:3685`).
+	 *
+	 * `?fraicheur=Obsolète probable` EST LE SEUL COUPLE QUE V-12 HONORE de cette
+	 * famille : son chargeur ne lit qu'un axe d'arrivée à trois positions, dont
+	 * deux sont nommées par `docs/routes.md` §4.2 — l'obsolescence et le
+	 * brouillon. Les deux autres parts mènent donc à la liste ENTIÈRE du domaine
+	 * plutôt qu'à un filtre que rien n'appliquerait : un paramètre non honoré est
+	 * ignoré, jamais refusé, et surtout jamais promis.
+	 */
+	const FRAICHEUR_OBSOLETE = 'Obsolète probable';
+
+	function ouvrirLaPart(d: Domaine, part: Part): void {
+		const liste = adresseDesNotesDuDomaine(d.univers, d.nom);
+		allerA(
+			part.cle === 'obs' ? `${liste}?fraicheur=${encodeURIComponent(FRAICHEUR_OBSOLETE)}` : liste
+		);
+	}
+
+	/**
+	 * LA RECHERCHE DE L'ACCUEIL — priorité 1 de la maquette, et le chemin le plus
+	 * court vers une note. Le gel la relie à sa palette (`Ctrl` `K`) ; le produit
+	 * a une route de recherche, et `RG-M02-06` veut la requête dans l'adresse.
+	 * `Échap` vide le champ, comme dans la barre de V-08.
+	 */
+	function chercherDepuisLAccueil(saisie: string): void {
+		const q = saisie.trim();
+		allerA(q === '' ? '/recherche' : `/recherche?q=${encodeURIComponent(q)}`);
+	}
+
+	/**
+	 * « RÉESSAYER » d'une zone en erreur — `V-07:3752`. Le gel remet sa planche à
+	 * « nominal » et rejoue son rendu ; le produit n'a pas de planche, il a un
+	 * chargeur : relire la page EST le nouvel essai.
+	 */
+	function reessayer(): void {
+		location.reload();
+	}
+
 	/* ── Pied de page ───────────────────────────────────────────────────────── */
 	const signets = $derived(corpus.length - toutesLesNotes.length);
 </script>
@@ -484,7 +605,7 @@
      issue quand il y en a une. Jamais une zone blanche (`V-07:3352`). -->
 {#snippet zoneEtat(titre: string, texte: string, action: string | null)}
 	<!-- prettier-ignore -->
-	<div class="zone-etat"><p class="zone-etat__titre">{titre}</p><p class="zone-etat__txt">{texte}</p>{#if action}<button class="btn" type="button">{action}</button>{/if}</div>
+	<div class="zone-etat"><p class="zone-etat__titre">{titre}</p><p class="zone-etat__txt">{texte}</p>{#if action}<button class="btn" type="button" onclick={reessayer}>{action}</button>{/if}</div>
 {/snippet}
 
 <!-- Le témoin de fraîcheur — une seule fabrique, pour qu'il ne diverge pas
@@ -505,10 +626,11 @@
 	appel: boolean,
 	nulle: boolean,
 	sous: string | null,
-	avecTendance: boolean
+	avecTendance: boolean,
+	mene: (() => void) | null
 )}
 	<!-- prettier-ignore -->
-	<div class="ind{appel ? ' ind--appel' : ''}{nulle ? ' ind--nulle' : ''}"><button class="ind__lien" type="button"><span class="ind__nom etiq">{nom}</span><span class="ind__val">{valeur}</span>{#if avecTendance}<span class="tendance tendance--{sens}"><span style="line-height:0" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">{#if sens === 'hausse'}<path d="M8 12.5V4M4.4 7.2L8 3.5l3.6 3.7"/>{:else if sens === 'baisse'}<path d="M8 3.5V12M4.4 8.8L8 12.5l3.6-3.7"/>{:else}<path d="M3 8h10M9.6 5.2L12.5 8l-2.9 2.8"/>{/if}</svg></span>{tendanceTexte}<span>vs semaine précédente</span></span>{/if}{#if sous}<span class="ind__sous">{sous}</span>{/if}</button></div>
+	<div class="ind{appel ? ' ind--appel' : ''}{nulle ? ' ind--nulle' : ''}"><button class="ind__lien" type="button" disabled={mene === null} onclick={() => mene?.()}><span class="ind__nom etiq">{nom}</span><span class="ind__val">{valeur}</span>{#if avecTendance}<span class="tendance tendance--{sens}"><span style="line-height:0" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">{#if sens === 'hausse'}<path d="M8 12.5V4M4.4 7.2L8 3.5l3.6 3.7"/>{:else if sens === 'baisse'}<path d="M8 3.5V12M4.4 8.8L8 12.5l3.6-3.7"/>{:else}<path d="M3 8h10M9.6 5.2L12.5 8l-2.9 2.8"/>{/if}</svg></span>{tendanceTexte}<span>vs semaine précédente</span></span>{/if}{#if sous}<span class="ind__sous">{sous}</span>{/if}</button></div>
 {/snippet}
 
 <Coquille
@@ -586,7 +708,12 @@
 				ouvre la recherche sans quitter la page. C'est le chemin le plus court vers une note : les premiers
 				résultats apparaissent dès la deuxième lettre.
 			</div>
-			<button class="aide__fermer" id="fermer-aide" aria-label="Ne plus afficher cette aide">
+			<button
+				class="aide__fermer"
+				id="fermer-aide"
+				aria-label="Ne plus afficher cette aide"
+				onclick={() => (aideRefermee = true)}
+			>
 				<svg
 					width="15"
 					height="15"
@@ -619,6 +746,10 @@
 				autofocus
 				placeholder="Chercher une note, une {motFicheMinuscule}, un signet…"
 				aria-label="Rechercher dans le corpus"
+				onkeydown={(e) => {
+					if (e.key === 'Enter') chercherDepuisLAccueil(e.currentTarget.value);
+					else if (e.key === 'Escape') e.currentTarget.value = '';
+				}}
 			/>
 			<span class="quete__rappel"
 				><kbd class="touche">Ctrl</kbd><kbd class="touche">K</kbd> depuis n'importe où</span
@@ -639,7 +770,8 @@
 					false,
 					false,
 					`dans ${domainesAccessibles.length}${domainesAccessibles.length > 1 ? ' domaines' : ' domaine'}`,
-					false
+					false,
+					() => void goto(resolve('/recherche'))
 				)}
 				{#if etatPage === 'erreur'}
 					{@render indicateur(
@@ -648,7 +780,8 @@
 						false,
 						true,
 						"Mesure indisponible — le calcul des consultations n'a pas répondu",
-						false
+						false,
+						null
 					)}
 				{:else}
 					{@render indicateur(
@@ -657,7 +790,8 @@
 						false,
 						false,
 						null,
-						true
+						true,
+						profil === 'admin' ? () => void goto(resolve('/console/analytique')) : null
 					)}
 				{/if}
 				{@render indicateur(
@@ -666,7 +800,8 @@
 					false,
 					brouillons === 0,
 					brouillons ? 'Non visibles du public' : 'Rien en attente de publication',
-					false
+					false,
+					() => allerA('/recherche?statut=Brouillon')
 				)}
 				{@render indicateur(
 					'En attente de révision',
@@ -674,7 +809,8 @@
 					revisionsCourantes.length > 0,
 					revisionsCourantes.length === 0,
 					revisionsCourantes.length ? 'Signalées par des collègues' : 'Rien de signalé',
-					false
+					false,
+					revisionsCourantes.length ? voirLesRevisions : null
 				)}
 			{/if}
 		</section>
@@ -689,10 +825,18 @@
 				</p>
 				<div class="amorce__actions">
 					<!-- P-09 · ARB-040 — omises, jamais masquées. `V-07:1265`, `:1266` -->
-					{#if ecriture}<button class="btn btn--principal si-ecriture" id="v-importer"
+					{#if ecriture}<button
+							class="btn btn--principal si-ecriture"
+							id="v-importer"
+							onclick={() => void goto(resolve('/importer'))}
 							>Importer votre patrimoine existant</button
 						>
-						<button class="btn si-ecriture" id="v-creer">Créer votre première note</button>{/if}
+						<button
+							class="btn si-ecriture"
+							id="v-creer"
+							onclick={() => void goto(resolve('/notes/nouvelle'))}
+							>Créer votre première note</button
+						>{/if}
 				</div>
 			</div>
 		</div>
@@ -795,7 +939,7 @@
 									{@const notesDom = notesDuDomaine(d)}
 									{@const mesurables = publiees(notesDom)}
 									<!-- prettier-ignore -->
-									<div class="dom" style="--teinte:{d.couleur}"><div class="dom__tete"><span class="dom__puce" aria-hidden="true"></span><button class="dom__nom" type="button">{d.nom}</button><span class="dom__n">{nb(notesDom.length) + (notesDom.length > 1 ? ' notes' : ' note')}</span></div>{#if mesurables.length}<div class="repart" role="img" aria-label={resumeRepartition(mesurables)}>{#each partsPresentes(mesurables) as p (p.cle)}{@const libelle = libellePart(p, mesurables, d.nom)}<button type="button" class={p.classe} style="flex:{compte(mesurables, p.cle)}" title={libelle} aria-label={libelle}></button>{/each}</div>{:else}<div class="dom__vide">{notesDom.length ? 'Aucune note publiée à mesurer.' : "Aucune note pour l'instant."}</div>{/if}</div>
+									<div class="dom" style="--teinte:{d.couleur}"><div class="dom__tete"><span class="dom__puce" aria-hidden="true"></span><button class="dom__nom" type="button" onclick={() => allerA(adresseDeDomaine(d.univers, d.nom))}>{d.nom}</button><span class="dom__n">{nb(notesDom.length) + (notesDom.length > 1 ? ' notes' : ' note')}</span></div>{#if mesurables.length}<div class="repart" role="img" aria-label={resumeRepartition(mesurables)}>{#each partsPresentes(mesurables) as p (p.cle)}{@const libelle = libellePart(p, mesurables, d.nom)}<button type="button" class={p.classe} style="flex:{compte(mesurables, p.cle)}" title={libelle} aria-label={libelle} onclick={() => ouvrirLaPart(d, p)}></button>{/each}</div>{:else}<div class="dom__vide">{notesDom.length ? 'Aucune note publiée à mesurer.' : "Aucune note pour l'instant."}</div>{/if}</div>
 								{/each}
 							{/if}
 						</div>
@@ -809,7 +953,11 @@
 							</div>
 							<div class="panneau__corps">
 								<div class="raccourcis">
-									<button class="btn btn--plein btn--principal" id="r-note">
+									<button
+										class="btn btn--plein btn--principal"
+										id="r-note"
+										onclick={() => void goto(resolve('/notes/nouvelle'))}
+									>
 										<svg
 											width="15"
 											height="15"
@@ -823,7 +971,11 @@
 										>
 										Nouvelle note
 									</button>
-									<button class="btn btn--plein" id="r-import">
+									<button
+										class="btn btn--plein"
+										id="r-import"
+										onclick={() => void goto(resolve('/importer'))}
+									>
 										<svg
 											width="15"
 											height="15"
@@ -835,7 +987,12 @@
 										>
 										Importer des fichiers
 									</button>
-									<button class="btn btn--plein" id="r-signet">
+									<button
+										class="btn btn--plein"
+										id="r-signet"
+										disabled={domaineDuCompte === undefined}
+										onclick={creerUnSignet}
+									>
 										<svg
 											width="15"
 											height="15"

@@ -32,6 +32,10 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { soumettreVers } from '$lib/cablage/formulaires';
+	import {
+		adresseDeCreationDeSignet,
+		adresseDeModificationDeSignet
+	} from '$lib/rangement/adresses';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -51,6 +55,20 @@
 	 * `P-09` est servie par la vue : les deux boutons ne sont rendus qu'en
 	 * écriture.
 	 */
+	/**
+	 * LES DEUX SEGMENTS DE L'ADRESSE, TELS QUE LA ROUTE LES A REÇUS.
+	 *
+	 * Ce sont déjà des identifiants lisibles ; `identifiantLisible()` est
+	 * idempotente sur eux, et les passer à la fabrique d'adresses coûte donc
+	 * exactement rien — tandis qu'écrire le gabarit à la main, ce que ce fichier
+	 * faisait, crée une seconde source de vérité pour une forme qui n'en a
+	 * qu'une (`$lib/rangement/adresses`, en-tête).
+	 */
+	const segments = $derived({
+		univers: String(page.params['univers'] ?? ''),
+		domaine: String(page.params['domaine'] ?? '')
+	});
+
 	onMount(() => {
 		for (const bouton of Array.from(formulaire.querySelectorAll('button'))) {
 			if (!bouton.hasAttribute('type')) bouton.type = 'button';
@@ -64,7 +82,63 @@
 			return trouve?.identifiant ?? null;
 		};
 		const auClic = (evenement: Event): void => {
-			const bouton = (evenement.target as Element | null)?.closest('.sig__actions button');
+			const vise = evenement.target as Element | null;
+			if (vise === null) return;
+
+			/* 1. NOUVEAU SIGNET — l'action de la barre de titre, et sa jumelle de
+			   l'état vide. Le gel ne donne pas d'identifiant à la seconde : elle se
+			   reconnaît à son libellé, dans le bloc qui n'accueille qu'elle. */
+			const amorce = vise.closest('.vide-signets .btn');
+			if (
+				vise.closest('#nouveau') !== null ||
+				(amorce?.textContent ?? '').trim() === 'Ajouter le premier signet'
+			) {
+				evenement.preventDefault();
+				location.assign(adresseDeCreationDeSignet(segments.univers, segments.domaine));
+				return;
+			}
+
+			/* 2. LE RAPPEL DE SORTIE — « Ne plus afficher ce rappel ». Le gel pose
+			   déjà l'attribut sur le bandeau (`V-22:353`) ; le fermer, c'est le
+			   poser. Aucun style n'est écrit. */
+			if (vise.closest('#fermer-rappel') !== null) {
+				formulaire.querySelector('#sortie-rappel')?.setAttribute('hidden', '');
+				evenement.preventDefault();
+				return;
+			}
+
+			/* 3. UN MENU DE FACETTE — OUVERTURE SEULE, et c'est un fait mesuré, non
+			   une paresse : V-22 n'a AUCUNE propriété de valeurs retenues (voir
+			   `src/vues/V-22.svelte`, « aucun état de V-22 ne retient de valeur »),
+			   et son chargeur ne lit aucun paramètre de facette. Cocher une valeur
+			   ne pourrait donc rien filtrer ; poser le paramètre dans l'adresse
+			   ferait recharger la page sans le moindre effet, ce qui est pire qu'un
+			   menu qui s'ouvre. L'ouverture est l'attribut du gel
+			   (`.fac-menu[data-ouvert="oui"]`), et rien d'autre. */
+			const menuBouton = vise.closest('.fac-menu__bouton');
+			if (menuBouton !== null) {
+				const menu = menuBouton.closest('.fac-menu');
+				const ouvert = menu?.getAttribute('data-ouvert') === 'oui';
+				for (const autre of Array.from(formulaire.querySelectorAll('.fac-menu'))) {
+					autre.removeAttribute('data-ouvert');
+					autre.querySelector('.fac-menu__bouton')?.setAttribute('aria-expanded', 'false');
+				}
+				if (!ouvert && menu !== null && menu !== undefined) {
+					menu.setAttribute('data-ouvert', 'oui');
+					menuBouton.setAttribute('aria-expanded', 'true');
+				}
+				evenement.preventDefault();
+				return;
+			}
+			if (vise.closest('.fac-menu') === null) {
+				for (const menu of Array.from(formulaire.querySelectorAll('.fac-menu[data-ouvert]'))) {
+					menu.removeAttribute('data-ouvert');
+					menu.querySelector('.fac-menu__bouton')?.setAttribute('aria-expanded', 'false');
+				}
+			}
+
+			/* 4. LES DEUX BOUTONS D'UNE CARTE — modifier, supprimer. */
+			const bouton = vise.closest('.sig__actions button');
 			if (bouton === null || bouton === undefined) return;
 			const carte = bouton.closest('.sig');
 			if (carte === null) return;
@@ -74,7 +148,7 @@
 			const titre = (carte.querySelector('.sig__titre')?.textContent ?? '').trim();
 			if ((bouton.textContent ?? '').trim() === 'Modifier') {
 				location.assign(
-					`/univers/${page.params['univers']}/${page.params['domaine']}/signets/${identifiant}/modifier`
+					adresseDeModificationDeSignet(segments.univers, segments.domaine, identifiant)
 				);
 				return;
 			}

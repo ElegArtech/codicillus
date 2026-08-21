@@ -59,6 +59,7 @@
 		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
+	import type { RefusDeSaisie, SaisieDeTypeDeRelation } from '$lib/console/structure';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — formulaire × suppression. */
@@ -95,6 +96,21 @@
 			readonly sortie: 'reaffecter' | 'supprimer';
 			readonly vers: string;
 		}) => void;
+		/**
+		 * CE QUE LA VUE FAIT QUAND LE PANNEAU EST VALIDÉ — création puis
+		 * enregistrement. La vue tient l'état du panneau — les deux libellés, le
+		 * caractère technique, le couple d'épreuve retenu — parce que c'est ce que
+		 * `ouvrirForm(t)` tenait au gel (`V-30:3035`), et elle ne connaît ni route,
+		 * ni action, ni réseau.
+		 *
+		 * `onEnregistrer` reçoit d'abord la CLÉ du type — son identifiant lisible —
+		 * parce que c'est elle qui le désigne en base, et que l'enregistrement peut
+		 * justement changer les deux libellés.
+		 */
+		onCreer?: (saisie: SaisieDeTypeDeRelation) => void;
+		onEnregistrer?: (cle: string, saisie: SaisieDeTypeDeRelation) => void;
+		/** Les refus rendus par l'action, rattachés à leur champ du gel. */
+		refus?: RefusDeSaisie | null;
 	}
 
 	const {
@@ -107,7 +123,10 @@
 		typesRelation = TYPES_RELATION,
 		relationsTechniques = RELATIONS_TECHNIQUES,
 		onSupprimer,
-		relations = RELATIONS
+		relations = RELATIONS,
+		onCreer,
+		onEnregistrer,
+		refus = null
 	}: Proprietes = $props();
 
 	/**
@@ -197,31 +216,143 @@
 	const reglage = $derived(vecteur ?? {});
 	const form = $derived(String(reglage['form'] ?? 'ferme'));
 	const sup = $derived(String(reglage['sup'] ?? 'utilise'));
-	const panneauOuvert = $derived(form !== 'ferme');
+
+	/**
+	 * LE PANNEAU S'OUVRE, ET C'EST LA VUE QUI LE TIENT — même arbitrage que pour
+	 * le dialogue de suppression : `ouverture` vaut `null` tant que personne n'a
+	 * cliqué, si bien que l'écran rendu est celui que le vecteur décrit.
+	 */
+	let ouverture = $state<'creation' | 'edition' | null>(null);
+	let cible = $state<string | null>(null);
+
+	/** Les quatre champs du panneau — `edite` du gel (`V-30:3035`), un par un. */
+	let fDirect = $state('');
+	let fInverse = $state('');
+	let fUsage = $state('');
+	let fTechnique = $state(false);
+	/**
+	 * LE COUPLE D'ÉPREUVE RETENU — « Changez les sujets pour éprouver la
+	 * formulation sur un autre couple » (`V-30:507`). C'est un réglage de
+	 * l'aperçu, pas une donnée : il ne sort jamais de la vue.
+	 */
+	let coupleRetenu = $state<readonly [string, string]>(COUPLE_COURANT);
+	/** Les messages de `#erreur-direct` et `#erreur-inverse`, quand l'écran refuse. */
+	let erreursLocales = $state<readonly RefusDeSaisie[]>([]);
+	/**
+	 * LE PANNEAU EST OUVERT SI UN GESTE L'A OUVERT, OU SI LE VECTEUR LE DEMANDE.
+	 *
+	 * C'est cette valeur qui pose `data-form` sur `div.app`, et c'est elle que la
+	 * règle gelée `.app[data-form="ouvert"] ~ .tiroir-form` attend pour lever
+	 * `translateX(100%)`. La rédaction précédente ne lisait que le vecteur : le
+	 * bouton « + » pouvait bien changer d'état, le panneau restait hors fenêtre.
+	 *
+	 * ELLE EST DÉCLARÉE APRÈS `ouverture`, ET CE N'EST PAS UN DÉTAIL DE STYLE.
+	 * Au rendu SERVEUR, `$derived` est évalué à la ligne où il est écrit : placée
+	 * plus haut, cette dérivation lisait une variable encore en zone morte et les
+	 * quatre écrans sortaient en 500.
+	 */
+	const panneauOuvert = $derived(ouverture !== null || form !== 'ferme');
 
 	/** Le type édité par la position « Édition · héberge » (`V-30:3234`). */
 	const edite = $derived(
-		form === 'edition' ? (types.find((t) => t.cle === 'heberge') ?? null) : null
+		ouverture === 'creation'
+			? null
+			: ouverture === 'edition'
+				? (types.find((t) => t.cle === cible) ?? null)
+				: form === 'edition'
+					? (types.find((t) => t.cle === 'heberge') ?? null)
+					: null
 	);
 	const relationsEditees = $derived(edite ? usage(edite.cle) : 0);
+
+	const directSaisi = $derived(ouverture !== null ? fDirect : edite ? edite.direct : '');
+	const inverseSaisi = $derived(ouverture !== null ? fInverse : edite ? edite.inverse : '');
+	const usageSaisi = $derived(ouverture !== null ? fUsage : edite ? edite.usage : '');
+	const techniqueSaisi = $derived(
+		ouverture !== null ? fTechnique : edite ? edite.technique : false
+	);
+
+	/** Le message d'un champ : celui de l'écran, ou celui de l'action. */
+	function messageDuChamp(champ: string): string | null {
+		const locale = erreursLocales.find((e) => e.champ === champ);
+		if (locale !== undefined) return locale.message;
+		return refus !== null && refus.champ === champ ? refus.message : null;
+	}
+	const erreurDirect = $derived(messageDuChamp('direct'));
+	const erreurInverse = $derived(messageDuChamp('inverse'));
 
 	/** Les deux phrases de l'aperçu, dans l'ordre du gel. */
 	const phrases = $derived([
 		{
-			sujet: COUPLE_COURANT[0],
-			libelle: edite ? edite.direct : '',
-			objet: COUPLE_COURANT[1],
+			sujet: coupleRetenu[0],
+			libelle: directSaisi,
+			objet: coupleRetenu[1],
 			sens: 'sens direct',
 			modificateur: ''
 		},
 		{
-			sujet: COUPLE_COURANT[1],
-			libelle: edite ? edite.inverse : '',
-			objet: COUPLE_COURANT[0],
+			sujet: coupleRetenu[1],
+			libelle: inverseSaisi,
+			objet: coupleRetenu[0],
 			sens: 'sens inverse',
 			modificateur: 'phrase--inverse'
 		}
 	]);
+
+	/** `ouvrirForm(t)` — `null` pour une création (`V-30:3035`). */
+	function ouvrirForm(t: TypeDeRelationRendu | null): void {
+		ouverture = t === null ? 'creation' : 'edition';
+		cible = t === null ? null : t.cle;
+		fDirect = t === null ? '' : t.direct;
+		fInverse = t === null ? '' : t.inverse;
+		fUsage = t === null ? '' : t.usage;
+		fTechnique = t === null ? false : t.technique;
+		coupleRetenu = COUPLE_COURANT;
+		erreursLocales = [];
+	}
+
+	/** `fermerForm()` — le panneau se referme, la saisie ne survit pas. */
+	function fermerForm(): void {
+		ouverture = null;
+		cible = null;
+		erreursLocales = [];
+	}
+
+	/**
+	 * `form-valider` — LA VALIDATION DE L'ÉCRAN, celle du gel (`V-30:3086-3098`),
+	 * dans son ordre : libellé direct manquant, libellé inverse manquant ou
+	 * identique au direct, puis doublon — ce dernier seulement si les deux
+	 * premiers passent. `creerUnTypeDeRelation()` refuse de la même façon, avec
+	 * les mêmes messages ; ceci n'en est que le reflet.
+	 */
+	function validerLeForm(): void {
+		const direct = fDirect.trim();
+		const inverse = fInverse.trim();
+		const fautes: RefusDeSaisie[] = [];
+		if (direct === '') fautes.push({ champ: 'direct', message: 'Saisissez le libellé direct.' });
+		if (inverse === '') {
+			fautes.push({ champ: 'inverse', message: 'Saisissez le libellé inverse.' });
+		} else if (inverse.toLowerCase() === direct.toLowerCase()) {
+			fautes.push({
+				champ: 'inverse',
+				message:
+					"Le libellé inverse est identique au direct. Relisez l'aperçu : la seconde phrase doit se lire naturellement."
+			});
+		}
+		if (
+			fautes.length === 0 &&
+			types.some((t) => t.cle !== cible && t.direct.toLowerCase() === direct.toLowerCase())
+		) {
+			fautes.push({ champ: 'direct', message: `« ${direct} » existe déjà.` });
+		}
+		erreursLocales = fautes;
+		if (fautes.length > 0) return;
+
+		const saisie: SaisieDeTypeDeRelation = { direct, inverse, technique: fTechnique };
+		if (ouverture === 'edition' && cible !== null) onEnregistrer?.(cible, saisie);
+		else onCreer?.(saisie);
+		fermerForm();
+	}
 
 	/**
 	 * LE TYPE PROPOSÉ À LA SUPPRESSION (`V-30:3237`) : le premier type sans
@@ -295,7 +426,7 @@
 			description={`Le vocabulaire qui relie les ${motFichePlurielMinuscule} entre elles. Chaque type se lit dans les deux sens : « héberge » d'un côté, « est hébergé par » de l'autre. C'est ce couple qui rend le graphe compréhensible sans légende.`}
 		>
 			{#snippet action()}
-				<BoutonDeCreation libelle="Nouveau type" />
+				<BoutonDeCreation libelle="Nouveau type" onCliquer={() => ouvrirForm(null)} />
 			{/snippet}
 		</TeteDeSection>
 
@@ -343,7 +474,7 @@
 							>{n} {n > 1 ? 'relations' : 'relation'}</span
 						>
 						<div class="tg__actions">
-							<button class="btn" type="button">Modifier</button>
+							<button class="btn" type="button" onclick={() => ouvrirForm(t)}>Modifier</button>
 							<button
 								class="btn btn--destructif"
 								type="button"
@@ -387,7 +518,12 @@
 							lecture.{/if}
 					</div>
 				</div>
-				<button class="tiroir-form__fermer" id="form-fermer" aria-label="Fermer le formulaire">
+				<button
+					class="tiroir-form__fermer"
+					id="form-fermer"
+					aria-label="Fermer le formulaire"
+					onclick={fermerForm}
+				>
 					<svg
 						width="17"
 						height="17"
@@ -400,7 +536,11 @@
 			</div>
 
 			<div class="tiroir-form__corps">
-				<div class="champ" id="champ-direct">
+				<div
+					class="champ"
+					id="champ-direct"
+					data-etat={erreurDirect === null ? undefined : 'erreur'}
+				>
 					<label class="champ__label" for="f-direct"
 						>Libellé direct <span class="oblig">*</span></label
 					>
@@ -410,13 +550,14 @@
 						id="f-direct"
 						autocomplete="off"
 						placeholder="héberge"
-						value={edite ? edite.direct : ''}
+						value={directSaisi}
+						oninput={(e) => (fDirect = e.currentTarget.value)}
 					/>
 					<span class="champ__aide"
 						>Se lit de la {motFicheMinuscule} d'origine vers la {motFicheMinuscule} cible. En minuscules,
 						à la troisième personne.</span
 					>
-					<div class="champ__erreur" id="erreur-direct" hidden>
+					<div class="champ__erreur" id="erreur-direct" hidden={erreurDirect === null}>
 						<svg
 							width="13"
 							height="13"
@@ -427,11 +568,15 @@
 							style="flex:none;margin-top:1px"
 							><path d="M8 4.5v4M8 11.2v.3" /><circle cx="8" cy="8" r="6.2" /></svg
 						>
-						<span id="erreur-direct-txt"></span>
+						<span id="erreur-direct-txt">{erreurDirect ?? ''}</span>
 					</div>
 				</div>
 
-				<div class="champ" id="champ-inverse">
+				<div
+					class="champ"
+					id="champ-inverse"
+					data-etat={erreurInverse === null ? undefined : 'erreur'}
+				>
 					<label class="champ__label" for="f-inverse"
 						>Libellé inverse <span class="oblig">*</span></label
 					>
@@ -441,13 +586,14 @@
 						id="f-inverse"
 						autocomplete="off"
 						placeholder="est hébergé par"
-						value={edite ? edite.inverse : ''}
+						value={inverseSaisi}
+						oninput={(e) => (fInverse = e.currentTarget.value)}
 					/>
 					<span class="champ__aide"
 						>Se lit de la cible vers l'origine. C'est lui qui apparaît dans le panneau Relations de
 						la {motFicheMinuscule} visée.</span
 					>
-					<div class="champ__erreur" id="erreur-inverse" hidden>
+					<div class="champ__erreur" id="erreur-inverse" hidden={erreurInverse === null}>
 						<svg
 							width="13"
 							height="13"
@@ -458,7 +604,7 @@
 							style="flex:none;margin-top:1px"
 							><path d="M8 4.5v4M8 11.2v.3" /><circle cx="8" cy="8" r="6.2" /></svg
 						>
-						<span id="erreur-inverse-txt"></span>
+						<span id="erreur-inverse-txt">{erreurInverse ?? ''}</span>
 					</div>
 				</div>
 
@@ -469,7 +615,8 @@
 						id="f-desc"
 						rows="2"
 						placeholder="Quand employer ce type plutôt qu'un autre."
-						value={edite ? edite.usage : ''}></textarea>
+						oninput={(e) => (fUsage = e.currentTarget.value)}
+						value={usageSaisi}></textarea>
 					<span class="champ__aide"
 						>Affiché au moment de déclarer une relation. C'est ce qui évite que deux types voisins
 						soient employés au hasard.</span
@@ -478,7 +625,12 @@
 
 				<div class="champ">
 					<label class="case" style="align-items:flex-start">
-						<input type="checkbox" id="f-technique" checked={edite ? edite.technique : false} />
+						<input
+							type="checkbox"
+							id="f-technique"
+							checked={techniqueSaisi}
+							onchange={(e) => (fTechnique = e.currentTarget.checked)}
+						/>
 						<span class="case__txt"
 							>Dépendance technique
 							<span class="case__aide"
@@ -509,18 +661,31 @@
 					<div class="exemples" id="exemples">
 						{#if panneauOuvert}{#each COUPLES as couple (couple[0])}<button
 									type="button"
-									style={couple === COUPLE_COURANT
+									style={couple === coupleRetenu
 										? 'border-color:var(--c-accent);background:var(--c-accent-voile);color:var(--c-accent-fonce)'
-										: undefined}>{couple[0]} / {couple[1]}</button
+										: undefined}
+									onclick={() => (coupleRetenu = couple)}>{couple[0]} / {couple[1]}</button
 								>{/each}{/if}
 					</div>
 				</div>
 			</div>
 
 			<div class="tiroir-form__pied">
-				<button class="btn btn--destructif" id="form-supprimer" hidden={!edite}>Supprimer</button>
-				<button class="btn" id="form-annuler">Annuler</button>
-				<button class="btn btn--principal" id="form-valider"
+				<button
+					class="btn btn--destructif"
+					id="form-supprimer"
+					hidden={!edite}
+					onclick={() => {
+						if (edite === null) return;
+						const vise = edite.cle;
+						fermerForm();
+						demande = vise;
+						sortie = 'reaffecter';
+						versLeType = '';
+					}}>Supprimer</button
+				>
+				<button class="btn" id="form-annuler" onclick={fermerForm}>Annuler</button>
+				<button class="btn btn--principal" id="form-valider" onclick={validerLeForm}
 					><span id="form-valider-txt">{edite ? 'Enregistrer' : 'Créer le type'}</span></button
 				>
 			</div>

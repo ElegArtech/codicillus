@@ -80,6 +80,7 @@
 		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import { adresseDeDomaine, adresseDeNote } from '$lib/rangement/adresses';
 
 	/**
 	 * LES SEPT SOURCES QUI NE VENAIENT DE NULLE PART — T-041.
@@ -289,6 +290,22 @@
 </script>
 
 <!--
+	`svelte/no-navigation-without-resolve` EST DÉSACTIVÉE POUR LE BALISAGE DE
+	CETTE VUE, ET LA RAISON EST LA MÊME QUE POUR LE FIL D'ARIANE DE LA COQUILLE.
+
+	La règle veille à ce qu'une adresse interne passe par `resolve()` de
+	SvelteKit. Les adresses de cette vue sont COMPOSÉES par
+	`$lib/rangement/adresses.ts`, la fabrique unique du rangement : la règle
+	inspecte l'EXPRESSION du `href`, elle ne peut pas la suivre jusque là, et
+	elle ne peut pas non plus la vérifier ici. Faire passer une adresse déjà
+	composée par `resolve()` ne prouverait rien de plus et ajouterait une
+	seconde source de vérité pour une forme qui n'en a qu'une.
+
+	Même geste, même justification qu'en V-03, V-22, V-24 et
+	`src/lib/coquille/BarreSuperieure.svelte`.
+-->
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
+<!--
 	La barre de répartition de fraîcheur, et sa légende chiffrée. Deux emplois
 	dans cette vue : l'indicateur consolidé de l'univers et chaque carte de
 	domaine. Un ensemble vide n'affiche pas zéro — il le dit (P-02).
@@ -447,7 +464,7 @@
 						{@const notesDom = corpus.filter((n) => n.domaine === d.nom)}
 						<article class="carte-dom" style="--teinte:{d.couleur}">
 							<div class="carte-dom__tete">
-								<a class="carte-dom__nom" href="#">{d.nom}</a>
+								<a class="carte-dom__nom" href={adresseDeDomaine(d.univers, d.nom)}>{d.nom}</a>
 								<span class="carte-dom__n"
 									>{notesDom.length} {notesDom.length > 1 ? 'notes' : 'note'}</span
 								>
@@ -487,7 +504,7 @@
 								<div class="flux__txt">
 									<span style="font-weight:var(--g-fort)">{e.qui}</span>
 									{GESTES[e.type]}
-									{#if n}<a href="#">{n.titre}</a><span class="flux__ou"
+									{#if n}<a href={adresseDeNote(n.id)}>{n.titre}</a><span class="flux__ou"
 											>{' dans ' + n.domaine}</span
 										>{:else if e.detail}— {e.detail}{/if}<span class="flux__quand"
 										>{relatif(e.heures)}</span

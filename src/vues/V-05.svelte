@@ -64,11 +64,11 @@
 	 * squelette rend l'état que la référence montre à l'instant capturé, et
 	 * `div.notifs` reste vide — la référence le montre vide sur les six états.
 	 *
-	 * LES ADRESSES RESTENT CELLES DU GEL — voir l'en-tête de `V-04.svelte`.
-	 * ARB-013 retire les lignes `/url:` de l'instantané, mais le filtre ne
-	 * reconnaît pas la forme que Playwright imprime : toute adresse réelle fait
-	 * échouer le niveau 1. Le fait est remonté au rapport du lot, et l'instrument
-	 * ne se modifie pas depuis un lot de vue.
+	 * LES ADRESSES DU GEL SONT DÉSORMAIS DE VRAIES ADRESSES. `ARB-013` retire les
+	 * lignes `/url:` de la comparaison de structure précisément pour que le
+	 * produit porte SES adresses ; la campagne de câblage du 21/08/2026 lève la
+	 * réserve qui les avait laissées à `#`, et c'est la seule modification
+	 * qu'elle autorise dans une vue. Elles passent toutes par `resolve()`.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
 	 * (P-6.1) et de `src/vues/V-05.css` (P-6.3), posé par
@@ -88,6 +88,7 @@
 	 * VOCABULAIRE : aucun des douze termes contractuels n'apparaît dans cette
 	 * vue ; rien à y contrôler (P-07).
 	 */
+	import { resolve } from '$app/paths';
 	import Marque from '$lib/auth/Marque.svelte';
 
 	interface Proprietes {
@@ -289,13 +290,17 @@
 			</form>
 
 			<div class="auth__ligne" style="margin-top:var(--e-4);justify-content:center">
-				<a class="auth__lien" href="#" id="oublie">Mot de passe oublié&nbsp;?</a>
+				<a class="auth__lien" href={resolve('/mot-de-passe-oublie')} id="oublie"
+					>Mot de passe oublié&nbsp;?</a
+				>
 			</div>
 		</div>
 
 		<div class="auth__pied">
 			<p>Pas de compte&nbsp;? Les guides ouverts à tous restent consultables.</p>
-			<a class="btn" href="#" id="public">Consulter la documentation publique sans compte</a>
+			<a class="btn" href={resolve('/')} id="public"
+				>Consulter la documentation publique sans compte</a
+			>
 		</div>
 	</div>
 </main>

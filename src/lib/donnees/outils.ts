@@ -187,6 +187,50 @@ export const PERIMETRE_DE_V19: PerimetreDAffichage = { type: 'univers', nom: 'Pr
 /** Le périmètre de V-20 — « Tous les domaines » (`src/vues/V-20.svelte:130`). */
 export const PERIMETRE_DE_V20: PerimetreDAffichage = { type: 'global' };
 
+/* ═══════════════════════════ Le périmètre porté par l'adresse ══════════ */
+
+/**
+ * LE PÉRIMÈTRE DEMANDÉ PAR L'ADRESSE — `?perimetre=`, sous la forme même du
+ * sélecteur du gel : `type|nom`.
+ *
+ * `RG-M09-05` veut l'état de cartographie partageable. Le gel garde le sien
+ * dans une clôture (`charger()`, `V-19:3089`) : une carte réduite ne s'envoie
+ * donc à personne. Le chargeur est le seul à voir `url` ; c'est ici que la
+ * valeur se lit, une fois, pour les deux cartographies.
+ *
+ * UNE VALEUR ILLISIBLE VAUT ABSENCE, jamais refus — `docs/routes.md` §4.2 pour
+ * tout paramètre non honoré. Un type inconnu, une barre manquante, un nom vide
+ * ramènent au périmètre par défaut de la vue : un périmètre inventé montrerait
+ * un graphe vide sans jamais dire pourquoi.
+ *
+ * LE NOM N'EST PAS VALIDÉ CONTRE LES UNIVERS OU LES DOMAINES EXISTANTS, et
+ * c'est délibéré : `sousGraphe()` filtre sur l'égalité de nom, un nom qui ne
+ * désigne rien rend donc un graphe vide, et la vue a un voile qui le DIT —
+ * « Aucune relation dans ce périmètre ». Refuser ici demanderait de lire les
+ * référentiels pour n'ajouter aucune information à l'écran.
+ */
+export function perimetreDeLAdresse(
+	demande: string | null,
+	defaut: PerimetreDAffichage
+): PerimetreDAffichage {
+	if (demande === null) return defaut;
+	const barre = demande.indexOf('|');
+	const type = barre < 0 ? demande : demande.slice(0, barre);
+	const nom = barre < 0 ? '' : demande.slice(barre + 1);
+	if (type === 'global') return { type: 'global' };
+	if ((type === 'univers' || type === 'domaine') && nom !== '') return { type, nom };
+	return defaut;
+}
+
+/**
+ * La valeur que le sélecteur du gel porte pour un périmètre — l'exacte inverse
+ * de `perimetreDeLAdresse()`. Les deux sont côte à côte pour qu'aucune des deux
+ * ne dérive sans l'autre (`P-35`).
+ */
+export function valeurDeSelecteur(perimetre: PerimetreDAffichage): string {
+	return perimetre.type === 'global' ? 'global|' : `${perimetre.type}|${perimetre.nom ?? ''}`;
+}
+
 /**
  * LE SOUS-GRAPHE QUE LA VUE DESSINERA, calculé sur les données réelles.
  *

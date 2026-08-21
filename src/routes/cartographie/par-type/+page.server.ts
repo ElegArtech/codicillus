@@ -31,13 +31,23 @@
  * elles le tirent du même jeu d'arêtes. Les effectifs par type de la barre
  * « Type maître » sont comptés sur ce sous-graphe, jamais saisis (`P-02`).
  *
- * LES MOMENTS DE LA PLANCHE NE SONT PAS DÉRIVÉS DE L'ADRESSE. Le type maître et
- * le nœud centré sont, dans le gel, des constantes de la maquette — un
- * identifiant de note du jeu de semence. Les honorer depuis `?noeud=` exigerait
- * une propriété que `src/vues/V-20.svelte` n'a pas, et que ce lot n'a pas le
- * droit de lui ajouter : la sélection d'un nœud est un COMPORTEMENT, qu'ARB-011
- * met hors du squelette. Le vecteur est donc laissé à son défaut, la vue rend
- * « aucun type choisi », et le paramètre est IGNORÉ — jamais refusé, §4.2.
+ * LES TROIS AXES SONT DÉSORMAIS DÉRIVÉS DE L'ADRESSE — `?perimetre=`, `?type=`,
+ * `?centre=`. Cette section disait l'inverse, et elle avait raison tant que la
+ * doctrine du squelette valait : « la sélection d'un nœud est un COMPORTEMENT,
+ * qu'ARB-011 met hors du squelette ». `ARB-011` ne s'applique plus, et
+ * `RG-M09-05` — « état de cartographie partageable » — reprend la main : une
+ * carte explorée doit s'envoyer à un collègue, et le rechargement doit la
+ * rendre telle quelle.
+ *
+ * LES TROIS SONT PASSÉS À LA VUE, MÊME NULS, et c'est ce qui fait la bascule :
+ * `typeMaitreDemande` posé — fût-ce à `null` — dit à V-20 qu'elle est branchée
+ * sur une adresse, et ses trois moments de planche cessent alors de décider.
+ * Le mode de conception, lui, ne pose rien : les cinq états déclarés ne bougent
+ * pas d'un pixel.
+ *
+ * AUCUNE VALEUR N'EST VALIDÉE CONTRE LE GRAPHE, et c'est le régime de §4.2 : un
+ * type qui n'existe pas rend un anneau vide, un centre qui ne désigne rien rend
+ * le voile « Choisissez une famille d'objets ». Ignorer plutôt que refuser.
  *
  * AUCUN ÉTAT DE ZONE N'EST DÉCIDÉ ICI, contrairement à V-19 : les cinq états de
  * `verif/scenarios/V-20.json` sont des moments d'interaction, aucun n'est un
@@ -45,19 +55,26 @@
  * position que la planche ne porte pas.
  */
 import { basePartagee } from '$lib/base/acces';
+import { PERIMETRE_DE_V20, perimetreDeLAdresse, valeurDeSelecteur } from '$lib/donnees/outils';
 import { ouvrirLAcces } from '$lib/donnees/rangement';
 import { lireLeGraphe } from '../lecture-du-graphe';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const base = basePartagee();
 	const acces = await ouvrirLAcces(base, locals.identite, new Date());
 
 	const { notes, relations, typesRelation, relationsTechniques } = await lireLeGraphe(base, acces);
 
+	const perimetre = perimetreDeLAdresse(url.searchParams.get('perimetre'), PERIMETRE_DE_V20);
+
 	return {
 		/* Le défaut de la planche : « Moment — aucun type choisi ». */
 		vecteur: null,
+		/** Les trois axes de `RG-M09-05`, tels que l'adresse les porte. */
+		perimetreDemande: valeurDeSelecteur(perimetre),
+		typeMaitreDemande: url.searchParams.get('type'),
+		centreDemande: url.searchParams.get('centre'),
 		notes,
 		/* Les arêtes et leur origine (`P-08`) — mêmes réserves qu'à
 		   `/cartographie` : aucun nœud des deux gels ne sait écrire l'origine. */

@@ -112,7 +112,7 @@ async function lireDomainesLisibles(
 		.map((d) => ({ nom: d.nom, univers: d.universNom, couleur: d.couleur }) as Domaine);
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const base = basePartagee();
 	const acces = await ouvrirLAcces(base, locals.identite, new Date());
 
@@ -125,6 +125,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 		   pas l'appelant, et il n'a plus à le faire : le rabattement est dans la
 		   liste de domaines. Voir l'en-tête. */
 		vecteur: null,
+		/**
+		 * LE PÉRIMÈTRE, TEL QUE L'ADRESSE LE PORTE — `?perimetre=`, sous la forme
+		 * même du sélecteur du gel. Il n'est pas VALIDÉ ici : la vue filtre sur
+		 * l'égalité de nom, un nom qui ne désigne rien rend un arbre vide, et
+		 * refuser demanderait de relire les référentiels pour n'ajouter aucune
+		 * information à l'écran. Ignorer plutôt que refuser — §4.2.
+		 */
+		perimetreDemande: url.searchParams.get('perimetre') ?? 'tout|',
 		notes,
 		univers: universDeclares,
 		domaines: domainesVisibles

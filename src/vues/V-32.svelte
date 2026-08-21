@@ -179,6 +179,22 @@
 		 * page, et il efface la valeur par la même occasion.
 		 */
 		onMotDePasseTransmis?: () => void;
+		/**
+		 * RÉINITIALISER LE MOT DE PASSE D'UN COMPTE — `RG-CPT-01`, dernière phrase :
+		 * « La réinitialisation par un administrateur reste possible », y compris
+		 * sur un compte dont le mot de passe est verrouillé.
+		 *
+		 * `reinitialiser(c)` du gel (`V-32:3228`) engendre la valeur AU NAVIGATEUR
+		 * et ouvre `#dlg-mdp` dessus. Le partage est celui de la création : la vue
+		 * engendre et affiche, la page envoie ; la base n'en garde que le condensat,
+		 * et aucune réponse ne reporte la valeur claire.
+		 *
+		 * ABSENTE, LA BOÎTE S'OUVRE SANS RIEN ENVOYER : c'est l'état d'une planche.
+		 */
+		onReinitialiserLeMotDePasse?: (demande: {
+			readonly identifiant: string;
+			readonly motDePasse: string;
+		}) => Promise<boolean>;
 	}
 
 	const {
@@ -192,7 +208,8 @@
 		onChangerLActivation,
 		onEnregistrerLeRole,
 		onCreerUnCompte,
-		onMotDePasseTransmis
+		onMotDePasseTransmis,
+		onReinitialiserLeMotDePasse
 	}: Proprietes = $props();
 
 	/**
@@ -515,9 +532,56 @@
 		erreurNom = issue.erreurs.some((e) => e.champ === 'nom');
 	}
 
+	/**
+	 * LE COMPTE DONT LE MOT DE PASSE VIENT D'ÊTRE REMPLACÉ, et la valeur qui l'a
+	 * remplacé. `null` au rendu serveur : l'écran reste celui que le vecteur
+	 * décrit tant que personne n'a cliqué.
+	 */
+	let reinitialise = $state<{ readonly compte: CompteRendu; readonly motDePasse: string } | null>(
+		null
+	);
+
+	/**
+	 * `reinitialiser(c)` du gel (`V-32:3228`) — la valeur est engendrée ICI, puis
+	 * envoyée. La boîte ne s'ouvre qu'une fois l'écriture faite : ouvrir d'abord
+	 * annoncerait un mot de passe que la base n'a peut-être pas accepté.
+	 */
+	async function reinitialiserLeMotDePasse(c: CompteRendu): Promise<void> {
+		const clair = motDePasse();
+		if (onReinitialiserLeMotDePasse === undefined) {
+			reinitialise = { compte: c, motDePasse: clair };
+			return;
+		}
+		const fait = await onReinitialiserLeMotDePasse({
+			identifiant: c.compte.identifiant,
+			motDePasse: clair
+		});
+		if (fait) reinitialise = { compte: c, motDePasse: clair };
+	}
+
+	/**
+	 * « COPIER LE MOT DE PASSE » — `V-32:3243`, et le libellé qui accuse réception.
+	 *
+	 * LE PRESSE-PAPIERS PEUT MANQUER, et le gel le prévoit : sans lui, le libellé
+	 * change quand même. C'est délibéré de sa part — l'utilisateur voit la valeur,
+	 * il peut la recopier à la main, et un bouton qui ne réagit pas laisserait
+	 * croire à une panne. Les deux issues de la promesse mènent au même libellé.
+	 */
+	const LIBELLE_DE_COPIE = 'Copier le mot de passe';
+	let libelleDeCopie = $state(LIBELLE_DE_COPIE);
+
+	function copierLeMotDePasse(): void {
+		const valeur = document.getElementById('mdp-valeur')?.textContent ?? '';
+		const fini = (): void => {
+			libelleDeCopie = 'Copié dans le presse-papiers';
+		};
+		if (navigator.clipboard) void navigator.clipboard.writeText(valeur).then(fini, fini);
+		else fini();
+	}
+
 	/** `mdp` réinitialise le premier compte du jeu — `comptes[0]` (`V-32:3345`). */
-	const compteReinitialise = $derived(casMdp ? comptes[0] : null);
-	const motDePasseAffiche = $derived(casMdp ? motDePasse() : '—');
+	const compteReinitialise = $derived(reinitialise?.compte ?? (casMdp ? comptes[0] : null));
+	const motDePasseAffiche = $derived(reinitialise?.motDePasse ?? (casMdp ? motDePasse() : '—'));
 
 	/**
 	 * LE COMPTE DONT LA DÉSACTIVATION EST EXAMINÉE.
@@ -541,7 +605,14 @@
 				: null
 	);
 
-	/** `showModal()` — voir `V-28.svelte` : l'attribut `open` n'obtient pas la modalité. */
+	/**
+	 * `showModal()` — ET `boite.open` NE SUFFIT PAS À LE DÉCIDER. La vue rend
+	 * `<dialog open={…}>` : Svelte pose l'attribut avant que cet effet ne coure,
+	 * la garde sur `open` renonce, et la boîte reste ouverte SANS être modale —
+	 * dans le flux, sans couche supérieure, donc recouvrable par le tiroir de
+	 * formulaire. `:modal` pose la seule question qui vaille. Le raisonnement
+	 * complet est à l'effet homologue de `V-31`.
+	 */
 	$effect(() => {
 		const boite = document.getElementById('dlg-desactiver');
 		if (!(boite instanceof HTMLDialogElement)) return;
@@ -549,7 +620,9 @@
 			if (boite.open) boite.close();
 			return;
 		}
-		if (!boite.open) boite.showModal();
+		if (boite.matches(':modal')) return;
+		if (boite.open) boite.close();
+		boite.showModal();
 	});
 	const refusDeDesactivation = $derived(
 		compteDesactive !== null && estDernierAdmin(compteDesactive)
@@ -654,6 +727,7 @@
 									type="button"
 									aria-label="Réinitialiser le mot de passe de {c.compte.nom}"
 									title="Réinitialiser le mot de passe"
+									onclick={() => void reinitialiserLeMotDePasse(c)}
 									><svg
 										width="14"
 										height="14"
@@ -940,7 +1014,7 @@
 			class="dlg"
 			id="dlg-mdp"
 			aria-labelledby="dlg-mdp-titre"
-			open={casMdp || compteCree !== null}
+			open={casMdp || compteCree !== null || reinitialise !== null}
 		>
 			<div class="dlg__boite">
 				<div class="dlg__tete">
@@ -1001,7 +1075,7 @@
 					<div class="mdp-unique">
 						<!-- prettier-ignore -->
 						<div class="mdp-unique__valeur" id="mdp-valeur">{compteCree ? compteCree.motDePasse : motDePasseAffiche}</div>
-						<button class="btn btn--principal" id="mdp-copier">
+						<button class="btn btn--principal" id="mdp-copier" onclick={copierLeMotDePasse}>
 							<svg
 								width="15"
 								height="15"
@@ -1013,7 +1087,7 @@
 									d="M10.5 5.5v-3a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h3"
 								/></svg
 							>
-							<span id="mdp-copier-txt">Copier le mot de passe</span>
+							<span id="mdp-copier-txt">{libelleDeCopie}</span>
 						</button>
 					</div>
 
@@ -1037,6 +1111,8 @@
 						onclick={() => {
 							const avaitCree = compteCree !== null;
 							compteCree = null;
+							reinitialise = null;
+							libelleDeCopie = LIBELLE_DE_COPIE;
 							if (avaitCree) onMotDePasseTransmis?.();
 						}}>J'ai noté le mot de passe</button
 					>

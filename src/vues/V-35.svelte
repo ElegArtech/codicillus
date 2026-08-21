@@ -126,6 +126,12 @@
 		 * décide pas où cela mène ; la page le sait.
 		 */
 		onScenario?: (scenario: string) => void;
+		/**
+		 * « OUVRIR LE DOMAINE » DU RAPPORT DE LOT — le pied de `#dlg-rapport`. La
+		 * vue rend le NOM du domaine où le lot a atterri ; la page sait à quelle
+		 * adresse il correspond, comme partout ailleurs en console.
+		 */
+		onOuvrirLeDomaine?: (domaine: string) => void;
 		/** Le dernier lot déposé. Absente, `LOT_IMPORT` du jeu de semence. */
 		lotImport?: LotDImport;
 		/** Le journal des imports. Absente, `JOURNAL_IMPORTS` du jeu de semence. */
@@ -141,7 +147,8 @@
 		instance = INSTANCE,
 		lotImport = LOT_IMPORT,
 		journalImports = JOURNAL_IMPORTS,
-		onScenario
+		onScenario,
+		onOuvrirLeDomaine
 	}: Proprietes = $props();
 
 	/**
@@ -170,8 +177,20 @@
 	 * journal, donc la première entrée. La correspondance est mécanique, elle
 	 * n'est pas choisie ici.
 	 */
-	const rapportOuvert = $derived(etat === 'rapport-de-lot');
-	const lot = $derived(rapportOuvert ? journalImports[0] : undefined);
+	/**
+	 * LE LOT DEMANDÉ DEPUIS LE JOURNAL — `ouvrirRapport(i)` du gel (`V-35:3067`).
+	 * `null` au rendu serveur : l'écran reste celui que la clé d'état décrit.
+	 */
+	let lotDemande = $state<string | null>(null);
+
+	const rapportOuvert = $derived(lotDemande !== null || etat === 'rapport-de-lot');
+	const lot = $derived(
+		lotDemande !== null
+			? journalImports.find((i) => i.id === lotDemande)
+			: etat === 'rapport-de-lot'
+				? journalImports[0]
+				: undefined
+	);
 
 	/** `ouvrirRapport()` (`V-35:3067`) — les fichiers nommés au rapport. */
 	const echoues = $derived(
@@ -189,6 +208,24 @@
 				] as const)
 			: []
 	);
+
+	/**
+	 * `showModal()` — voir `V-31` et `V-28` : l'attribut `open` seul n'obtient pas
+	 * la modalité, et un rapport rendu en flux au haut de la page n'est pas ce que
+	 * le gel dessine. L'effet ne court qu'au navigateur ; le rendu serveur, donc
+	 * le banc, ne le traverse jamais.
+	 */
+	$effect(() => {
+		const boite = document.getElementById('dlg-rapport');
+		if (!(boite instanceof HTMLDialogElement)) return;
+		if (lotDemande === null) {
+			if (boite.open && !rapportOuvert) boite.close();
+			return;
+		}
+		if (boite.matches(':modal')) return;
+		if (boite.open) boite.close();
+		boite.showModal();
+	});
 
 	/** La couleur d'un chiffre de bilan (`V-35:3108-3109`) : l'absence se
 	 *  décolore, l'échec s'alarme. Les deux valeurs sont à l'ensemble clos. */
@@ -212,7 +249,7 @@
 					><h2 class="dlg__titre" id="dlg-rap-titre">Rapport d'import</h2
 					><div style="font-size:var(--t-mini);color:var(--c-encre-3);margin-top:2px" id="rap-sous">{lot ? `${lot.date} à ${lot.heure} · ${lot.auteur} · ${lot.source}` : '—'}</div
 				></div
-				><button class="dlg__fermer" data-fermer aria-label="Fermer"
+				><button class="dlg__fermer" data-fermer aria-label="Fermer" onclick={() => (lotDemande = null)}
 					><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8"/></svg
 				></button
 			></div
@@ -234,8 +271,8 @@
 				>{/if}<div class="rl-conserve">Les notes issues de ce lot portent la mention de leur origine dans leur historique. Rejouer le même import ne créerait pas de doublons pour un corpus préparé ; pour les autres scénarios, il produirait une seconde copie.</div
 				>{/if}</div
 			><div class="dlg__pied"
-				><button class="btn" data-fermer>Fermer</button
-				><button class="btn btn--principal" id="rap-domaine">Ouvrir le domaine</button
+				><button class="btn" data-fermer onclick={() => (lotDemande = null)}>Fermer</button
+				><button class="btn btn--principal" id="rap-domaine" onclick={() => { if (lot) onOuvrirLeDomaine?.(lot.domaine); }}>Ouvrir le domaine</button
 			></div
 		></div
 	></dialog>{/snippet}
@@ -299,7 +336,7 @@
 					><span class="tg__n">{i.notes}</span
 					><span class="tg__n tg--masquable{i.ignores ? '' : ' n-nul'}">{i.ignores}</span
 					><span class="tg__n {i.echecs ? 'n-echec' : 'n-nul'}">{i.echecs}</span
-					><div class="tg__actions"><button class="btn" type="button">Rapport</button></div
+					><div class="tg__actions"><button class="btn" type="button" onclick={() => (lotDemande = i.id)}>Rapport</button></div
 				></div>{/each}</div
 		></div>
 	{/snippet}

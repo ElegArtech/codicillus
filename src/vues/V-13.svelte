@@ -92,7 +92,7 @@
 	} from '../../seeds/corpus';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import Coquille from '$lib/coquille/Coquille.svelte';
-	import { segmentsDeDossier } from '$lib/rangement/adresses';
+	import { adresseDeDossier, adresseDeNote, segmentsDeDossier } from '$lib/rangement/adresses';
 	import { motFiche, motFichePluriel } from '$lib/vocabulaire';
 
 	interface Proprietes {
@@ -488,6 +488,22 @@
 	const choixDeDestination = $derived(rameaux(arbre));
 </script>
 
+<!--
+	`svelte/no-navigation-without-resolve` EST DÉSACTIVÉE POUR LE BALISAGE DE
+	CETTE VUE, ET LA RAISON EST LA MÊME QUE POUR LE FIL D'ARIANE DE LA COQUILLE.
+
+	La règle veille à ce qu'une adresse interne passe par `resolve()` de
+	SvelteKit. Les adresses de cette vue sont COMPOSÉES par
+	`$lib/rangement/adresses.ts`, la fabrique unique du rangement : la règle
+	inspecte l'EXPRESSION du `href`, elle ne peut pas la suivre jusque là, et
+	elle ne peut pas non plus la vérifier ici. Faire passer une adresse déjà
+	composée par `resolve()` ne prouverait rien de plus et ajouterait une
+	seconde source de vérité pour une forme qui n'en a qu'une.
+
+	Même geste, même justification qu'en V-03, V-22, V-24 et
+	`src/lib/coquille/BarreSuperieure.svelte`.
+-->
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
 {#snippet temoin(n: Note)}
 	<span class="temoin {classeTemoin(n.fraicheur)}"
 		><span class="temoin__jauge" aria-hidden="true"
@@ -587,7 +603,7 @@
 					{@const sousChemin = [...chemin, s]}
 					{@const nbNotes = notesRecursives(sousChemin).length}
 					{@const nbSous = compterSousArbre(sousChemin)}
-					<a class="tuile" href="#"
+					<a class="tuile" href={adresseDeDossier(UNIVERS_DU_DOMAINE, DOMAINE, sousChemin)}
 						><span class="tuile__ic"
 							><svg
 								width="18"
@@ -628,7 +644,7 @@
 							<h3 class="groupe__nom">{liste.length > 1 ? pluriel(type) : type}</h3>
 							<span class="groupe__n">{liste.length}</span>
 						</div>
-						{#each liste as n (n.id)}<a class="note-ligne" href="#"
+						{#each liste as n (n.id)}<a class="note-ligne" href={adresseDeNote(n.id)}
 								><span class="note-ligne__corps"
 									><span class="note-ligne__titre"
 										>{n.titre}{#if n.brouillon}<span class="past past--brouillon">Brouillon</span

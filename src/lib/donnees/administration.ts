@@ -59,6 +59,7 @@ import {
 	comptes,
 	domaines,
 	dossiers,
+	modulesDeDomaine,
 	notes,
 	parametres,
 	relations,
@@ -72,7 +73,8 @@ import { hacherMotDePasse } from '../auth/mots-de-passe';
 import type { RoleDeCompte } from '../droits/resolution';
 import { entretenirLIndex } from '../recherche/entretien';
 import { ROLE_DEPUIS_ENUM } from './lecture';
-import type { Configuration } from '../../../seeds/corpus';
+import type { CleDeModule, Configuration } from '../../../seeds/corpus';
+import { identifiantLisible } from '../rangement/adresses';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    1. LES DÉCOMPTES — ce que la base mesure, jamais ce qu'on suppose
@@ -778,7 +780,19 @@ export async function supprimerUnUnivers(
 	const verdict = verdictDeSuppressionDUnUnivers(etat);
 	if (verdict.issue !== 'possible') return verdict;
 
-	await base.delete(univers).where(eq(univers.id, etat.id));
+	/* LES RANGS RESTENT CONTIGUS APRÈS LA SUPPRESSION, et c'est la même dernière
+	   ligne que la validation du panneau : « univers.sort(…) puis u.ordre = k++ »
+	   (`V-27:3513`). Sans elle, un trou survit au geste et le rang « Position 3 »
+	   du sélecteur ne désigne plus le troisième univers. La transaction tient les
+	   deux écritures ensemble — voir `renumeroterLesUnivers()`. */
+	await base.transaction(async (tx) => {
+		await tx.delete(univers).where(eq(univers.id, etat.id));
+		const restants = await tx.select({ id: univers.id }).from(univers).orderBy(univers.ordre);
+		await renumeroterLesUnivers(
+			tx,
+			restants.map((u) => u.id)
+		);
+	});
 	return verdict;
 }
 
@@ -1543,4 +1557,737 @@ export async function creerUnCompte(
 	});
 
 	return verdict;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   10. LA STRUCTURE — CRÉER ET MODIFIER
+
+   Les quatre consoles de structure savaient SUPPRIMER, et rien d'autre : aucun
+   domaine ne pouvait naître dans le produit. Cette section porte les huit
+   exécutants qui manquaient, sur le motif exact des précédents — on mesure, on
+   rend un verdict, on n'écrit que si le verdict est `possible`.
+
+   LES MESSAGES DE REFUS SONT CEUX DU GEL, recopiés depuis lui : `V-27:3488` et
+   `:3493`, `V-28:3167`, `V-29:3393`, `V-30:3087-3098`. Rien n'est reformulé.
+
+   LES CONTRAINTES DE BASE RESTENT LE DERNIER MOT. `univers_nom_unique`,
+   `domaines_identifiant_par_univers_unique`, `types_de_fiche_nom_unique` et
+   `types_de_relation_libelle_sortant_unique` refuseront un doublon glissé entre
+   la mesure et l'écriture. Deux gardes valent mieux qu'une quand l'une des deux
+   est une course — la rédaction est celle de `creerUnCompte()`.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/** `V-27:3488` — le nom manquant, mot pour mot. */
+export const MESSAGE_NOM_DUNIVERS_VIDE = "Donnez un nom à l'univers.";
+/** `V-28:3167`. */
+export const MESSAGE_NOM_DE_DOMAINE_VIDE = 'Donnez un nom au domaine.';
+/** `V-29:3393`. */
+export const MESSAGE_NOM_DE_TYPE_VIDE = 'Donnez un nom au type.';
+/** `V-30:3087`. */
+export const MESSAGE_LIBELLE_DIRECT_VIDE = 'Saisissez le libellé direct.';
+/** `V-30:3090`. */
+export const MESSAGE_LIBELLE_INVERSE_VIDE = 'Saisissez le libellé inverse.';
+/**
+ * `V-30:3092` — « Deux libellés identiques signalent presque toujours un
+ * oubli : sans inverse distinct, le panneau Relations de la cible devient
+ * illisible. »
+ */
+export const MESSAGE_LIBELLES_IDENTIQUES =
+	"Le libellé inverse est identique au direct. Relisez l'aperçu : la seconde phrase doit se lire naturellement.";
+
+/** « … existe déjà. » — `V-27:3493`, guillemets du gel compris. */
+export function messageDejaPris(nom: string): string {
+	return `« ${nom} » existe déjà.`;
+}
+
+/**
+ * UNE ERREUR DE SAISIE, RATTACHÉE AU CHAMP DU GEL.
+ *
+ * `champ` porte la clé que les quatre écrans emploient pour révéler leur bloc
+ * `.champ__erreur` — `nom` pour V-27, V-28 et V-29 ; `direct` et `inverse` pour
+ * V-30 (`erreur-<clé>-txt`). C'est le nom du gel, jamais un nom choisi.
+ */
+export interface RefusDeSaisie {
+	readonly champ: string;
+	readonly message: string;
+}
+
+/** Le verdict d'une création ou d'un enregistrement de structure. */
+export type VerdictDeStructure =
+	| { readonly issue: 'saisie-refusee'; readonly erreurs: readonly RefusDeSaisie[] }
+	| { readonly issue: 'possible'; readonly identifiant: string; readonly nom: string };
+
+function refuser(champ: string, message: string): VerdictDeStructure {
+	return { issue: 'saisie-refusee', erreurs: [{ champ, message }] };
+}
+
+/**
+ * L'IDENTIFIANT LISIBLE, DÉRIVÉ DU NOM PUIS RENDU LIBRE.
+ *
+ * `identifiantLisible()` de `$lib/rangement/adresses.ts` est la seule
+ * dérivation du dépôt, et elle n'est pas réécrite ici. Deux noms distincts
+ * peuvent lui donner le même identifiant — « Poste de travail » et « Poste
+ * De Travail » —, or la colonne est unique : le suffixe numéroté est la sortie,
+ * et il est déterministe.
+ *
+ * UN NOM SANS AUCUN CARACTÈRE ALPHANUMÉRIQUE rend une chaîne vide, qui ne
+ * désigne rien et ne peut pas entrer dans une adresse. Le repli est alors
+ * `element`, puis la numérotation ordinaire.
+ */
+function identifiantLibre(nom: string, pris: readonly string[]): string {
+	const racine = identifiantLisible(nom) || 'element';
+	const occupes = new Set(pris);
+	if (!occupes.has(racine)) return racine;
+	for (let suffixe = 2; ; suffixe += 1) {
+		const candidat = `${racine}-${suffixe}`;
+		if (!occupes.has(candidat)) return candidat;
+	}
+}
+
+/** La comparaison de doublon du gel : insensible à la casse, sur le nom. */
+function memeNom(a: string, b: string): boolean {
+	return a.toLowerCase() === b.toLowerCase();
+}
+
+/**
+ * LA PLACE DEMANDÉE DANS UNE LISTE ORDONNÉE, RAMENÉE DANS SES BORNES.
+ *
+ * Le rang du gel est un ENTIER À PARTIR DE 1 (`rendrePositions()`,
+ * `V-27:3400`). Une valeur hors bornes ne fait pas échouer le geste : elle est
+ * ramenée au premier ou au dernier rang, ce que le sélecteur du gel ne permet
+ * pas d'atteindre autrement.
+ */
+function placeDemandee(rang: number, combien: number): number {
+	if (!Number.isFinite(rang)) return combien;
+	return Math.min(Math.max(Math.trunc(rang), 1), combien);
+}
+
+/**
+ * RENUMÉROTER `ordre` DE 1 À N SUR UNE LISTE D'IDENTIFIANTS TECHNIQUES.
+ *
+ * C'est la dernière ligne du geste de validation du gel : « `univers.sort(…)`
+ * puis `u.ordre = k++` » (`V-27:3513`). Les rangs restent donc contigus quoi
+ * qu'il arrive, et aucun trou ne survit à un enregistrement.
+ */
+async function renumeroterLesUnivers(
+	executeur: Base | Parameters<Parameters<Base['transaction']>[0]>[0],
+	idsEnOrdre: readonly string[]
+): Promise<void> {
+	let rang = 1;
+	for (const id of idsEnOrdre) {
+		await executeur.update(univers).set({ ordre: rang }).where(eq(univers.id, id));
+		rang += 1;
+	}
+}
+
+/* ─────────────────────────────── Les univers — V-27 ─────────────────────── */
+
+/** Ce que le panneau de `V-27` porte, champ pour champ. */
+export interface SaisieDUnUnivers {
+	readonly nom: string;
+	readonly description: string;
+	readonly couleur: string;
+	readonly glyphe: string;
+	/** La place demandée dans la navigation — `#f-position`, à partir de 1. */
+	readonly ordre: number;
+}
+
+/**
+ * CRÉER UN UNIVERS — `RG-STR-01`.
+ *
+ * L'INSERTION ET LA RENUMÉROTATION SONT INDISSOCIABLES, d'où la transaction :
+ * un univers inséré sans que les suivants aient reculé porterait le rang d'un
+ * autre, et la navigation de tout le monde en dépend.
+ */
+export async function creerUnUnivers(
+	base: Base,
+	saisie: SaisieDUnUnivers
+): Promise<VerdictDeStructure> {
+	const nom = saisie.nom.trim();
+	if (nom === '') return refuser('nom', MESSAGE_NOM_DUNIVERS_VIDE);
+
+	const existants = await base
+		.select({ id: univers.id, nom: univers.nom, identifiant: univers.identifiant })
+		.from(univers)
+		.orderBy(univers.ordre);
+	if (existants.some((u) => memeNom(u.nom, nom))) return refuser('nom', messageDejaPris(nom));
+
+	const identifiant = identifiantLibre(
+		nom,
+		existants.map((u) => u.identifiant)
+	);
+	const place = placeDemandee(saisie.ordre, existants.length + 1);
+
+	await base.transaction(async (tx) => {
+		const [insere] = await tx
+			.insert(univers)
+			.values({
+				identifiant,
+				nom,
+				description: saisie.description.trim(),
+				couleur: saisie.couleur,
+				glyphe: saisie.glyphe,
+				ordre: existants.length + 1,
+				systeme: false
+			})
+			.returning({ id: univers.id });
+		if (insere === undefined) throw new Error("l'univers créé n'a pas été rendu");
+
+		const ids = existants.map((u) => u.id);
+		ids.splice(place - 1, 0, insere.id);
+		await renumeroterLesUnivers(tx, ids);
+	});
+
+	return { issue: 'possible', identifiant, nom };
+}
+
+/**
+ * ENREGISTRER UN UNIVERS — les champs ABSENTS ne sont pas touchés.
+ *
+ * LA PARTIALITÉ N'EST PAS UNE COMMODITÉ, ELLE EST LE GESTE DES FLÈCHES. « Monter »
+ * et « Descendre » (`V-27:417-418`) ne changent QUE le rang ; leur envoyer un nom
+ * et une couleur relus dans le document serait recopier l'écran dans la base à
+ * chaque clic de flèche. Un champ non transmis reste donc ce qu'il était.
+ *
+ * `RG-STR-01` — L'UNIVERS SYSTÈME GARDE SON NOM. Le gel le dit à l'écran :
+ * « son nom et sa suppression sont verrouillés. Sa couleur et son rang restent
+ * modifiables » (`V-27:3443`). Le nom et la description proposés pour un univers
+ * système sont donc IGNORÉS, sans que le geste échoue : le reste s'enregistre.
+ */
+export async function modifierUnUnivers(
+	base: Base,
+	identifiant: string,
+	changements: Partial<SaisieDUnUnivers>
+): Promise<IssueDUnGeste<VerdictDeStructure>> {
+	const existants = await base
+		.select({
+			id: univers.id,
+			nom: univers.nom,
+			identifiant: univers.identifiant,
+			systeme: univers.systeme
+		})
+		.from(univers)
+		.orderBy(univers.ordre);
+	const cible = existants.find((u) => u.identifiant === identifiant);
+	if (cible === undefined) return { issue: 'introuvable' };
+
+	const modifie: Record<string, unknown> = {};
+	let nomRetenu = cible.nom;
+
+	if (changements.nom !== undefined && !cible.systeme) {
+		const nom = changements.nom.trim();
+		if (nom === '') return refuser('nom', MESSAGE_NOM_DUNIVERS_VIDE);
+		if (existants.some((u) => u.id !== cible.id && memeNom(u.nom, nom))) {
+			return refuser('nom', messageDejaPris(nom));
+		}
+		modifie['nom'] = nom;
+		nomRetenu = nom;
+	}
+	if (changements.description !== undefined && !cible.systeme) {
+		modifie['description'] = changements.description.trim();
+	}
+	if (changements.couleur !== undefined) modifie['couleur'] = changements.couleur;
+	if (changements.glyphe !== undefined) modifie['glyphe'] = changements.glyphe;
+
+	await base.transaction(async (tx) => {
+		if (Object.keys(modifie).length > 0) {
+			modifie['modifieLe'] = new Date();
+			await tx.update(univers).set(modifie).where(eq(univers.id, cible.id));
+		}
+		if (changements.ordre !== undefined) {
+			const autres = existants.filter((u) => u.id !== cible.id).map((u) => u.id);
+			const place = placeDemandee(changements.ordre, autres.length + 1);
+			autres.splice(place - 1, 0, cible.id);
+			await renumeroterLesUnivers(tx, autres);
+		}
+	});
+
+	return { issue: 'possible', identifiant, nom: nomRetenu };
+}
+
+/* ─────────────────────────────── Les domaines — V-28 ────────────────────── */
+
+/** Les six modules, de la clé du gel vers la valeur de l'énumération de base. */
+const MODULE_VERS_ENUM: Record<
+	CleDeModule,
+	'notes' | 'dossiers' | 'fiches' | 'cartographie' | 'signets' | 'carte_mentale'
+> = {
+	notes: 'notes',
+	dossiers: 'dossiers',
+	fiches: 'fiches',
+	cartographie: 'cartographie',
+	signets: 'signets',
+	carteMentale: 'carte_mentale'
+};
+
+/**
+ * `RG-STR-06` — « Un domaine active 1 à N modules. » `notes` est le module que
+ * le gel verrouille (`V-28:432`, `data-verrou`), et c'est lui qui garantit le
+ * plancher de 1 : une saisie qui ne l'aurait pas le reçoit.
+ */
+function modulesRetenus(demandes: readonly CleDeModule[]): readonly CleDeModule[] {
+	const retenus = demandes.filter((m) => m in MODULE_VERS_ENUM);
+	return retenus.includes('notes') ? retenus : ['notes', ...retenus];
+}
+
+/** Ce que le panneau de `V-28` porte, champ pour champ. */
+export interface SaisieDUnDomaine {
+	readonly nom: string;
+	readonly description: string;
+	/** Le NOM d'affichage de l'univers de rattachement — `#f-univers`. */
+	readonly univers: string;
+	readonly couleur: string;
+	readonly modules: readonly CleDeModule[];
+}
+
+/**
+ * CRÉER UN DOMAINE — `RG-STR-02`, `RG-STR-03`, `RG-STR-06`.
+ *
+ * TROIS ÉCRITURES, ET AUCUNE NE VA SANS LES DEUX AUTRES : le domaine, son
+ * DOSSIER RACINE et ses modules. `RG-STR-03` — « chaque domaine dispose à sa
+ * création d'un dossier racine par défaut. Toute note appartient à un dossier »
+ * — n'est pas une intention : sans racine, aucune note ne peut naître dans le
+ * domaine, et l'écran de rangement n'a rien à montrer. La transaction porte les
+ * trois, ou aucune.
+ *
+ * LA RACINE PORTE LE NOM DU DOMAINE, comme les quatre racines du jeu de
+ * semence, sans exception. Elle est de profondeur 1 et sans parent, ce que
+ * `dossiers_racine_sans_parent` exige.
+ *
+ * L'UNICITÉ EST CHERCHÉE SUR LE NOM, ET GLOBALEMENT — alors que la base ne
+ * l'exige que sur `(univers, identifiant)`. Ce n'est pas un durcissement
+ * gratuit : `lireLesDesignationsDeDomaine()` et `lireLeDetailDesDomaines()`
+ * INDEXENT PAR LE NOM D'AFFICHAGE, et deux domaines homonymes en feraient
+ * disparaître un des deux consoles sans que rien ne s'en plaigne. Le gel refuse
+ * d'ailleurs le doublon de la même façon (`V-28:3163`).
+ */
+export async function creerUnDomaine(
+	base: Base,
+	saisie: SaisieDUnDomaine
+): Promise<IssueDUnGeste<VerdictDeStructure>> {
+	const nom = saisie.nom.trim();
+	if (nom === '') return refuser('nom', MESSAGE_NOM_DE_DOMAINE_VIDE);
+
+	const [accueil] = await base
+		.select({ id: univers.id })
+		.from(univers)
+		.where(eq(univers.nom, saisie.univers))
+		.limit(1);
+	if (accueil === undefined) return { issue: 'introuvable' };
+
+	const existants = await base
+		.select({ nom: domaines.nom, identifiant: domaines.identifiant, universId: domaines.universId })
+		.from(domaines);
+	if (existants.some((d) => memeNom(d.nom, nom))) return refuser('nom', messageDejaPris(nom));
+
+	const identifiant = identifiantLibre(
+		nom,
+		existants.filter((d) => d.universId === accueil.id).map((d) => d.identifiant)
+	);
+	const modules = modulesRetenus(saisie.modules);
+
+	await base.transaction(async (tx) => {
+		const [insere] = await tx
+			.insert(domaines)
+			.values({
+				universId: accueil.id,
+				identifiant,
+				nom,
+				description: saisie.description.trim(),
+				couleur: saisie.couleur
+			})
+			.returning({ id: domaines.id });
+		if (insere === undefined) throw new Error("le domaine créé n'a pas été rendu");
+
+		await tx.insert(dossiers).values({ domaineId: insere.id, nom, profondeur: 1, position: 0 });
+		await tx
+			.insert(modulesDeDomaine)
+			.values(modules.map((m) => ({ domaineId: insere.id, module: MODULE_VERS_ENUM[m] })));
+	});
+
+	return { issue: 'possible', identifiant, nom };
+}
+
+/**
+ * ENREGISTRER UN DOMAINE — `RG-STR-02`, `RG-STR-06`.
+ *
+ * LE RATTACHEMENT PEUT CHANGER, ET L'IDENTIFIANT NE SUIT PAS. « Le rattachement
+ * change la place du domaine dans la navigation, jamais son contenu »
+ * (`V-28:567`) : le domaine garde son identifiant lisible dans son nouvel
+ * univers, sauf si un homonyme l'y occupe déjà — auquel cas il en reçoit un
+ * libre, parce que `domaines_identifiant_par_univers_unique` ne laisse pas le
+ * choix. Le nom d'affichage, lui, ne bouge que si la saisie le demande.
+ *
+ * LES MODULES SONT RÉÉCRITS EN BLOC. La table n'est qu'un ensemble de couples
+ * `(domaine, module)` sans donnée propre : la différence ne se calcule pas, elle
+ * se remplace. `P-04` s'y joue — un module retiré disparaît réellement.
+ */
+export async function modifierUnDomaine(
+	base: Base,
+	designation: DomaineCanonique,
+	changements: Partial<SaisieDUnDomaine>
+): Promise<IssueDUnGeste<VerdictDeStructure>> {
+	const [cible] = await base
+		.select({ id: domaines.id, nom: domaines.nom, universId: domaines.universId })
+		.from(domaines)
+		.innerJoin(univers, eq(domaines.universId, univers.id))
+		.where(
+			and(
+				eq(univers.identifiant, designation.univers),
+				eq(domaines.identifiant, designation.domaine)
+			)
+		)
+		.limit(1);
+	if (cible === undefined) return { issue: 'introuvable' };
+
+	const existants = await base
+		.select({
+			id: domaines.id,
+			nom: domaines.nom,
+			identifiant: domaines.identifiant,
+			universId: domaines.universId
+		})
+		.from(domaines);
+
+	const modifie: Record<string, unknown> = {};
+	let nomRetenu = cible.nom;
+
+	if (changements.nom !== undefined) {
+		const nom = changements.nom.trim();
+		if (nom === '') return refuser('nom', MESSAGE_NOM_DE_DOMAINE_VIDE);
+		if (existants.some((d) => d.id !== cible.id && memeNom(d.nom, nom))) {
+			return refuser('nom', messageDejaPris(nom));
+		}
+		modifie['nom'] = nom;
+		nomRetenu = nom;
+	}
+	if (changements.description !== undefined) {
+		modifie['description'] = changements.description.trim();
+	}
+	if (changements.couleur !== undefined) modifie['couleur'] = changements.couleur;
+
+	if (changements.univers !== undefined) {
+		const [accueil] = await base
+			.select({ id: univers.id })
+			.from(univers)
+			.where(eq(univers.nom, changements.univers))
+			.limit(1);
+		if (accueil === undefined) return { issue: 'introuvable' };
+		if (accueil.id !== cible.universId) {
+			modifie['universId'] = accueil.id;
+			/* L'IDENTIFIANT NE SUIT NI LE NOM NI L'UNIVERS — `RG-M12-11` : dérivé à
+			   la création, puis stable. Il n'est reforgé que si un homonyme occupe
+			   déjà la place dans l'univers d'accueil, ce que
+			   `domaines_identifiant_par_univers_unique` ne laisse pas passer. */
+			const occupes = existants
+				.filter((d) => d.id !== cible.id && d.universId === accueil.id)
+				.map((d) => d.identifiant);
+			if (occupes.includes(designation.domaine)) {
+				modifie['identifiant'] = identifiantLibre(nomRetenu, occupes);
+			}
+		}
+	}
+
+	await base.transaction(async (tx) => {
+		if (Object.keys(modifie).length > 0) {
+			modifie['modifieLe'] = new Date();
+			await tx.update(domaines).set(modifie).where(eq(domaines.id, cible.id));
+		}
+		if (changements.modules !== undefined) {
+			await tx.delete(modulesDeDomaine).where(eq(modulesDeDomaine.domaineId, cible.id));
+			await tx.insert(modulesDeDomaine).values(
+				modulesRetenus(changements.modules).map((m) => ({
+					domaineId: cible.id,
+					module: MODULE_VERS_ENUM[m]
+				}))
+			);
+		}
+	});
+
+	const identifiantRetenu =
+		typeof modifie['identifiant'] === 'string' ? modifie['identifiant'] : designation.domaine;
+	return { issue: 'possible', identifiant: identifiantRetenu, nom: nomRetenu };
+}
+
+/* ────────────────────── Les types de fiche — V-29 ───────────────────────── */
+
+/**
+ * LES QUATRE TYPES DE VALEUR QUI FONT L'ALLER-RETOUR, ET C'EST UNE BORNE
+ * MESURÉE, PAS UN CHOIX D'ERGONOMIE.
+ *
+ * L'énumération `type_de_champ` en porte SIX — `date` et `lien` en plus —, et
+ * le panneau de `V-29` en propose HUIT (`TYPES_VALEUR`, `V-29:125`). Mais
+ * `lireTypesDeFiche()` de `lecture.ts` ne sait relire que quatre valeurs et
+ * LÈVE sur les autres : « type de champ inconnu en base ». Écrire `date`
+ * rendrait donc la console, l'éditeur et la lecture de fiche inaccessibles à la
+ * requête suivante — une panne franche pour un champ décoratif.
+ *
+ * `lecture.ts` n'appartient pas à ce périmètre. La borne est donc posée ici, à
+ * l'écriture, et DÉCLARÉE : les quatre types absents de la table de retour sont
+ * ramenés à `texte`, qui les accepte tous à la saisie. Le jour où `lecture.ts`
+ * complètera sa table, cette fonction sera le seul endroit à changer.
+ */
+export type TypeDePropriete = 'texte' | 'nombre' | 'liste' | 'booleen';
+
+function typeDeProprieteRetenu(demande: string): TypeDePropriete {
+	if (demande === 'nombre' || demande === 'liste' || demande === 'booleen') return demande;
+	return 'texte';
+}
+
+/** Une propriété du schéma, telle que le constructeur de `V-29` la porte. */
+export interface SaisieDeProprieteDeFiche {
+	readonly cle: string;
+	readonly nom: string;
+	readonly type: string;
+	readonly valeurs: readonly string[];
+}
+
+/** Ce que le panneau de `V-29` porte, champ pour champ. */
+export interface SaisieDUnTypeDeFiche {
+	readonly nom: string;
+	readonly proprietes: readonly SaisieDeProprieteDeFiche[];
+}
+
+/**
+ * LES PROPRIÉTÉS D'UN TYPE, ÉCRITES EN BLOC.
+ *
+ * `champs_cle_par_type_unique` porte sur `(type, clé)` : deux propriétés de même
+ * clé ne peuvent pas coexister, et le constructeur de l'écran ne l'interdit pas
+ * — deux « Nouvelle propriété » suffisent. Les doublons sont donc écartés ici,
+ * en gardant le PREMIER, plutôt que de faire échouer un enregistrement entier
+ * sur une clé recopiée.
+ *
+ * `champs_valeurs_reservees_a_la_liste` interdit `valeurs` hors du type `liste`.
+ * `null` est donc écrit partout ailleurs, sans exception.
+ */
+async function ecrireLesProprietes(
+	executeur: Parameters<Parameters<Base['transaction']>[0]>[0],
+	typeDeFicheId: string,
+	proprietes: readonly SaisieDeProprieteDeFiche[]
+): Promise<void> {
+	await executeur
+		.delete(champsDeTypeDeFiche)
+		.where(eq(champsDeTypeDeFiche.typeDeFicheId, typeDeFicheId));
+
+	const vues = new Set<string>();
+	const lignes: {
+		typeDeFicheId: string;
+		cle: string;
+		nom: string;
+		type: TypeDePropriete;
+		ordre: number;
+		valeurs: string[] | null;
+	}[] = [];
+	for (const p of proprietes) {
+		const cle = identifiantLisible(p.cle.trim()).replace(/-/g, '_') || `propriete_${vues.size + 1}`;
+		if (vues.has(cle)) continue;
+		vues.add(cle);
+		const type = typeDeProprieteRetenu(p.type);
+		lignes.push({
+			typeDeFicheId,
+			cle,
+			nom: p.nom.trim() === '' ? cle : p.nom.trim(),
+			type,
+			ordre: lignes.length,
+			valeurs: type === 'liste' ? p.valeurs.map((v) => v.trim()).filter((v) => v !== '') : null
+		});
+	}
+	if (lignes.length > 0) await executeur.insert(champsDeTypeDeFiche).values(lignes);
+}
+
+/** CRÉER UN TYPE DE FICHE — `RG-M14-06` en négatif : ce qui se supprime se crée. */
+export async function creerUnTypeDeFiche(
+	base: Base,
+	saisie: SaisieDUnTypeDeFiche
+): Promise<VerdictDeStructure> {
+	const nom = saisie.nom.trim();
+	if (nom === '') return refuser('nom', MESSAGE_NOM_DE_TYPE_VIDE);
+
+	const existants = await base
+		.select({
+			nom: typesDeFiche.nom,
+			identifiant: typesDeFiche.identifiant,
+			ordre: typesDeFiche.ordre
+		})
+		.from(typesDeFiche);
+	if (existants.some((t) => memeNom(t.nom, nom))) return refuser('nom', messageDejaPris(nom));
+
+	const identifiant = identifiantLibre(
+		nom,
+		existants.map((t) => t.identifiant)
+	);
+	const rang = existants.reduce((haut, t) => Math.max(haut, t.ordre + 1), 0);
+
+	await base.transaction(async (tx) => {
+		const [insere] = await tx
+			.insert(typesDeFiche)
+			.values({ identifiant, nom, ordre: rang })
+			.returning({ id: typesDeFiche.id });
+		if (insere === undefined) throw new Error("le type créé n'a pas été rendu");
+		await ecrireLesProprietes(tx, insere.id, saisie.proprietes);
+	});
+
+	return { issue: 'possible', identifiant, nom };
+}
+
+/**
+ * ENREGISTRER UN TYPE DE FICHE.
+ *
+ * LES NOTES NE SONT PAS TOUCHÉES. « Les modifications d'ordre, de libellé et
+ * d'aide s'appliquent immédiatement, sans effet sur les valeurs saisies »
+ * (`V-29:469`) : rien de ce geste n'écrit dans `notes`, et une propriété retirée
+ * du schéma laisse la valeur qu'une note portait — c'est le schéma qui cesse de
+ * la demander, pas la note qui la perd.
+ */
+export async function modifierUnTypeDeFiche(
+	base: Base,
+	identifiant: string,
+	changements: Partial<SaisieDUnTypeDeFiche>
+): Promise<IssueDUnGeste<VerdictDeStructure>> {
+	const existants = await base
+		.select({ id: typesDeFiche.id, nom: typesDeFiche.nom, identifiant: typesDeFiche.identifiant })
+		.from(typesDeFiche);
+	const cible = existants.find((t) => t.identifiant === identifiant);
+	if (cible === undefined) return { issue: 'introuvable' };
+
+	let nomRetenu = cible.nom;
+	if (changements.nom !== undefined) {
+		const nom = changements.nom.trim();
+		if (nom === '') return refuser('nom', MESSAGE_NOM_DE_TYPE_VIDE);
+		if (existants.some((t) => t.id !== cible.id && memeNom(t.nom, nom))) {
+			return refuser('nom', messageDejaPris(nom));
+		}
+		nomRetenu = nom;
+	}
+
+	await base.transaction(async (tx) => {
+		if (nomRetenu !== cible.nom) {
+			await tx.update(typesDeFiche).set({ nom: nomRetenu }).where(eq(typesDeFiche.id, cible.id));
+		}
+		if (changements.proprietes !== undefined) {
+			await ecrireLesProprietes(tx, cible.id, changements.proprietes);
+		}
+	});
+
+	return { issue: 'possible', identifiant, nom: nomRetenu };
+}
+
+/* ──────────────────── Les types de relation — V-30 ──────────────────────── */
+
+/** Ce que le panneau de `V-30` porte, champ pour champ. */
+export interface SaisieDUnTypeDeRelation {
+	readonly direct: string;
+	readonly inverse: string;
+	/** `RG-M08-07` — entre-t-il dans le calcul des points de rupture ? */
+	readonly technique: boolean;
+}
+
+/**
+ * LES TROIS REFUS DE `V-30`, DANS L'ORDRE DU GEL (`V-30:3086-3098`) : libellé
+ * direct manquant, libellé inverse manquant ou identique au direct, puis
+ * doublon de libellé direct. Le doublon n'est cherché qu'une fois les deux
+ * premiers passés — « if (!faute && doublon) ».
+ */
+function verdictDesLibelles(
+	direct: string,
+	inverse: string,
+	pris: readonly string[]
+): readonly RefusDeSaisie[] {
+	const erreurs: RefusDeSaisie[] = [];
+	if (direct === '') erreurs.push({ champ: 'direct', message: MESSAGE_LIBELLE_DIRECT_VIDE });
+	if (inverse === '') erreurs.push({ champ: 'inverse', message: MESSAGE_LIBELLE_INVERSE_VIDE });
+	else if (memeNom(inverse, direct)) {
+		erreurs.push({ champ: 'inverse', message: MESSAGE_LIBELLES_IDENTIQUES });
+	}
+	if (erreurs.length > 0) return erreurs;
+	if (pris.some((p) => memeNom(p, direct))) {
+		return [{ champ: 'direct', message: messageDejaPris(direct) }];
+	}
+	return [];
+}
+
+/** CRÉER UN TYPE DE RELATION — `RG-M08-06`. */
+export async function creerUnTypeDeRelation(
+	base: Base,
+	saisie: SaisieDUnTypeDeRelation
+): Promise<VerdictDeStructure> {
+	const direct = saisie.direct.trim();
+	const inverse = saisie.inverse.trim();
+
+	const existants = await base
+		.select({
+			identifiant: typesDeRelation.identifiant,
+			sortant: typesDeRelation.libelleSortant,
+			ordre: typesDeRelation.ordre
+		})
+		.from(typesDeRelation);
+
+	const erreurs = verdictDesLibelles(
+		direct,
+		inverse,
+		existants.map((t) => t.sortant)
+	);
+	if (erreurs.length > 0) return { issue: 'saisie-refusee', erreurs };
+
+	const identifiant = identifiantLibre(
+		direct,
+		existants.map((t) => t.identifiant)
+	);
+	const rang = existants.reduce((haut, t) => Math.max(haut, t.ordre + 1), 0);
+
+	await base.insert(typesDeRelation).values({
+		identifiant,
+		libelleSortant: direct,
+		libelleEntrant: inverse,
+		technique: saisie.technique,
+		ordre: rang
+	});
+
+	return { issue: 'possible', identifiant, nom: direct };
+}
+
+/**
+ * ENREGISTRER UN TYPE DE RELATION.
+ *
+ * L'IDENTIFIANT NE SUIT PAS LE LIBELLÉ, et c'est `RG-M12-11` transposé : il est
+ * dérivé à la création, puis stable. Les relations déclarées le portent, et les
+ * renommer ferait changer d'étiquette à des liens que personne n'a touchés —
+ * « N relations existantes affichent le nouveau libellé » (`V-30:3109`) dit
+ * exactement l'inverse : ce sont les LIBELLÉS qui changent, pas les liens.
+ */
+export async function modifierUnTypeDeRelation(
+	base: Base,
+	identifiant: string,
+	changements: Partial<SaisieDUnTypeDeRelation>
+): Promise<IssueDUnGeste<VerdictDeStructure>> {
+	const existants = await base
+		.select({
+			id: typesDeRelation.id,
+			identifiant: typesDeRelation.identifiant,
+			sortant: typesDeRelation.libelleSortant,
+			entrant: typesDeRelation.libelleEntrant
+		})
+		.from(typesDeRelation);
+	const cible = existants.find((t) => t.identifiant === identifiant);
+	if (cible === undefined) return { issue: 'introuvable' };
+
+	const direct = (changements.direct ?? cible.sortant).trim();
+	const inverse = (changements.inverse ?? cible.entrant).trim();
+	const erreurs = verdictDesLibelles(
+		direct,
+		inverse,
+		existants.filter((t) => t.id !== cible.id).map((t) => t.sortant)
+	);
+	if (erreurs.length > 0) return { issue: 'saisie-refusee', erreurs };
+
+	await base
+		.update(typesDeRelation)
+		.set({
+			libelleSortant: direct,
+			libelleEntrant: inverse,
+			...(changements.technique === undefined ? {} : { technique: changements.technique })
+		})
+		.where(eq(typesDeRelation.id, cible.id));
+
+	return { issue: 'possible', identifiant, nom: direct };
 }

@@ -54,6 +54,17 @@ function rendu(proprietes: Record<string, unknown>): Promise<string> {
 	return rendreLaVue('V-17', { vecteur: null, notes: NOTES, ...proprietes });
 }
 
+/**
+ * Le fil d'Ariane seul, découpé du rendu — même raison qu'en `V-13.test.ts` :
+ * le segment était repéré par `<a href="#">Nom</a>`, et le fil porte désormais
+ * de vraies adresses (plan de remédiation §3.6). Le fait éprouvé ne change pas,
+ * seul le marqueur ; le découpage lui rend son unicité, le rail nommant les
+ * mêmes domaines hors de ce `<nav>`.
+ */
+function filDe(html: string): string {
+	return /<nav class="fil"[\s\S]*?<\/nav>/.exec(html)?.[0] ?? '';
+}
+
 afterAll(fermerLeHarnais);
 
 describe('V-17 — la propriété fournie l’emporte', () => {
@@ -64,10 +75,10 @@ describe('V-17 — la propriété fournie l’emporte', () => {
 	});
 
 	it('ouvre la note vierge dans le domaine du compte reçu', async () => {
-		expect(await rendu({})).toContain(`<a href="#">${MOI.domaine}</a>`);
+		expect(filDe(await rendu({}))).toContain(`>${MOI.domaine}</a>`);
 		const html = await rendu({ compte: SOPHIE });
-		expect(html).toContain(`<a href="#">${SOPHIE.domaine}</a>`);
-		expect(html).not.toContain(`<a href="#">${MOI.domaine}</a>`);
+		expect(filDe(html)).toContain(`>${SOPHIE.domaine}</a>`);
+		expect(filDe(html)).not.toContain(`>${MOI.domaine}</a>`);
 	});
 
 	it('sert la version d’instance reçue', async () => {

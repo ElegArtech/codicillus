@@ -83,7 +83,7 @@ import { analyserDocument, titres, type Titre } from '$lib/contenu/document';
 import { rendreDocument } from '$lib/contenu/rendu';
 import { formaterDateFr, formaterDateIso } from '$lib/dates';
 import { compteDeLEspacePublic, journaliserUneConsultation } from '$lib/donnees/consultation';
-import { lireNotes, lireSeuils } from '$lib/donnees/lecture';
+import { lireConfiguration, lireNotes } from '$lib/donnees/lecture';
 import { noteVisibleEnAnonyme } from '$lib/droits/resolution';
 import { refuserLAdresse } from '$lib/donnees/rangement';
 import { resoudreLeGuide } from '$lib/donnees/public';
@@ -213,7 +213,11 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
 	/* La forme d'affichage vient de la couche de lecture, et d'elle seule : la
 	   fraîcheur y est calculée par l'implémentation unique (`P-01`). */
-	const contexte = { maintenant, seuils: await lireSeuils(base) };
+	const config = await lireConfiguration(base);
+	const contexte = {
+		maintenant,
+		seuils: { frais: config.seuilFrais, vieillissant: config.seuilVieillissant }
+	};
 	const [note] = await lireNotes(base, contexte, [params.identifiant]);
 	if (note === undefined) refuserLAdresse(url.pathname);
 
@@ -242,6 +246,11 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	return {
 		/* Les deux axes de la planche décrivent la note ; la note les porte. */
 		vecteur: null,
+		/* L'ADRESSE DU PORTAIL D'ASSISTANCE — clé `portail_assistance` de la table
+		   `parametres` (M14.7), « adresse externe configurée en console »
+		   (`V-04:2205`). Elle sort de la MÊME lecture que les seuils : une requête,
+		   et `P-01` inchangée. */
+		portail: config.portailAssistance,
 		guide: {
 			titre: note.titre,
 			type: note.type,

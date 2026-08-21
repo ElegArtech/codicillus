@@ -54,13 +54,28 @@
 	 * style n'est écrite ici, et les deux feuilles restent identiques à l'octet à
 	 * leur source gelée (P-6.3) — elles ne sont pas éditées, seulement liées.
 	 */
+	import { onMount } from 'svelte';
 	import VuePublique from '../../vues/V-02.svelte';
 	import VueConnectee from '../../vues/V-08.svelte';
 	import feuillePublique from '../../vues/V-02.css?url';
 	import feuilleConnectee from '../../vues/V-08.css?url';
+	import { cablerLesFacettes } from './cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	/**
+	 * LE CÂBLAGE S'ACCROCHE DEPUIS LA ROUTE — `ARB-063` —, et SEULEMENT SUR LA
+	 * BRANCHE ANONYME : `#ouvrir-facettes` est le bouton de V-02, et V-08 porte
+	 * sa propre commande. La racine est cherchée dans le document plutôt que liée
+	 * par `bind:this` : la lier demanderait un nœud d'enveloppe que le gel ne
+	 * porte pas.
+	 */
+	onMount(() => {
+		if (data.session) return undefined;
+		const racine = document.getElementById('app');
+		return racine === null ? undefined : cablerLesFacettes(racine);
+	});
 </script>
 
 <svelte:head>
@@ -85,10 +100,16 @@
 		modeDemande={data.mode}
 	/>
 {:else}
+	<!--
+		`portail` est une donnée d'INSTANCE — la clé `portail_assistance` de la
+		table `parametres`. V-08 ne porte aucun appel à l'assistance : elle ne va
+		qu'à la vue publique.
+	-->
 	<VuePublique
 		vecteur={data.vecteur}
 		notes={data.notes}
 		recherchees={data.recherchees}
 		retenues={data.retenues}
+		portail={data.portail}
 	/>
 {/if}

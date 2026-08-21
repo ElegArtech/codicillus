@@ -39,9 +39,11 @@
 	 * sont du comportement : ils relèvent de T-017. Le squelette rend l'état que
 	 * la référence montre à l'instant capturé, et `div.notifs` reste vide.
 	 *
-	 * LES ADRESSES RESTENT CELLES DU GEL — voir l'en-tête de `V-04.svelte` : le
-	 * filtre d'ARB-013 ne reconnaît pas la forme d'instantané que Playwright
-	 * produit, et toute adresse réelle fait échouer le niveau 1. Constat remonté.
+	 * LES ADRESSES DU GEL SONT DÉSORMAIS DE VRAIES ADRESSES. `ARB-013` retire les
+	 * lignes `/url:` de la comparaison de structure précisément pour que le
+	 * produit porte SES adresses ; la campagne de câblage du 21/08/2026 lève la
+	 * réserve qui les avait laissées à `#`, et c'est la seule modification
+	 * qu'elle autorise dans une vue. Elles passent toutes par `resolve()`.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
 	 * (P-6.1) et de `src/vues/V-01.css` (P-6.3), posé par
@@ -49,18 +51,41 @@
 	 * fichier — `font-family:var(--f-donnee)` — figure à l'ensemble clos du gel
 	 * (ARB-016).
 	 */
-	import { notesPubliques, type Note } from '../../seeds/corpus';
+	import { resolve } from '$app/paths';
+	import { CONFIG, notesPubliques, type Note } from '../../seeds/corpus';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
+
+	/**
+	 * LES MOTIFS DE ROUTE, ÉCRITS EN CONSTANTES — même raison qu'à `V-07:455` et
+	 * sur `src/lib/coquille/Rail.svelte` : `svelte/no-navigation-without-resolve`
+	 * inspecte l'EXPRESSION du `href`, et une adresse composée à la main lui est
+	 * opaque. `resolve()` est aussi ce qui rend l'adresse juste sous une racine de
+	 * déploiement.
+	 *
+	 * UN GUIDE S'OUVRE EN `/guides/{identifiant}`, JAMAIS EN `/notes/{…}` : cet
+	 * écran est servi à un visiteur SANS SESSION, qui n'a aucun droit sur
+	 * l'adresse interne. C'est déjà le choix du chargeur de `/guides/{id}` pour
+	 * les liens internes d'un corps public.
+	 */
+	const ROUTE_DU_GUIDE = '/guides/[identifiant]' as const;
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-01')`, variante « lecture ». */
 		notes: readonly Note[];
+		/**
+		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — « adresse externe configurée en
+		 * console » (`V-04:2205`). Elle est une donnée d'INSTANCE : la table
+		 * `parametres` la porte sous la clé `portail_assistance`, et le chargeur de
+		 * la route l'y lit. Absente, la valeur du jeu de semence, qui est celle que
+		 * la semence écrit en base.
+		 */
+		portail?: string;
 	}
 
-	const { vecteur, notes }: Proprietes = $props();
+	const { vecteur, notes, portail = CONFIG.portailAssistance }: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 
@@ -102,6 +127,16 @@
 
 	const listeEnErreur = $derived(donneeGuides === 'erreur');
 	const listeVide = $derived(donneeEtat === 'vide' || populaires.length === 0);
+
+	/**
+	 * LA BASCULE VERS LA RECHERCHE PUBLIQUE COMPLÈTE — V-02, `/recherche`.
+	 *
+	 * `resolve()` n'accepte pas de chaîne de requête : elle est concaténée après,
+	 * exactement comme `src/lib/coquille/Rail.svelte` le fait pour ses nœuds. `q`
+	 * est le paramètre honoré en anonyme (`docs/routes.md:248`), et la requête
+	 * traverse donc l'écran d'accueil jusqu'à la recherche complète.
+	 */
+	const suffixeDeRequete = $derived(requete ? `?q=${encodeURIComponent(requete)}` : '');
 </script>
 
 <!--
@@ -124,6 +159,15 @@
 )}{#each segmenter(texte, q) as s, rang (rang)}{#if s.marque}<mark>{s.texte}</mark
 			>{:else}{s.texte}{/if}{/each}{/snippet}
 
+<!--
+	L'ADRESSE DU PORTAIL D'ASSISTANCE EST EXTERNE, et `resolve()` ne s'y applique
+	pas : elle compose une adresse INTERNE sous la racine de déploiement, quand
+	celle-ci est une adresse absolue lue dans la table `parametres`. La règle est
+	donc levée pour ce fichier, et pour elle seule — même levée que `V-03.svelte`,
+	et pour la même raison. Tous les autres liens de la vue passent par
+	`resolve()`.
+-->
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
 <a class="saut-contenu" href="#recherche">Aller à la recherche</a>
 
 <div class="public app" id="app" data-etat={donneeEtat} data-guides={donneeGuides}>
@@ -133,7 +177,7 @@
 			<div class="marque__nom">Codicillus</div>
 		</div>
 		<!-- Accès connexion : discret, pour les personnes qui ont déjà un compte. -->
-		<a class="btn btn--discret" href="#">Se connecter</a>
+		<a class="btn btn--discret" href={resolve('/connexion')}>Se connecter</a>
 	</header>
 
 	<section class="hamecon">
@@ -221,7 +265,7 @@
 								Rien de public ne correspond à <em>« {requete} »</em>. L'assistance saura vous
 								répondre, et votre demande signalera le guide manquant.
 							</p>
-							<a class="btn btn--principal" href="#">Ouvrir un ticket d'assistance</a>
+							<a class="btn btn--principal" href={portail}>Ouvrir un ticket d'assistance</a>
 						</div>{:else}
 						<!--
 							AUCUN BLANC ENTRE LES NŒUDS DE LA LISTE, et il doit le rester : le
@@ -231,7 +275,7 @@
 							cause.
 						-->
 						<!-- prettier-ignore -->
-						<div class="res-public">{#each resultats as n (n.id)}<a class="res" href="#"
+						<div class="res-public">{#each resultats as n (n.id)}<a class="res" href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
 							><h3 class="res__titre">{@render marque(n.titre, requete)}</h3><p class="res__extrait">{@render marque(n.extrait, requete)}</p><div class="res__pied"
 								>{@render temoin(n)}<span>{n.domaine}</span><span style="font-family:var(--f-donnee)">{nombreFr(n.vues)} consultations</span
 							></div
@@ -241,8 +285,9 @@
 							son effet est du comportement, donc du temps 3.
 						-->
 						<div class="passe-v02">
-							Affiner par domaine, par type de guide ou par fraîcheur<a class="btn" href="#"
-								>Ouvrir la recherche complète</a
+							Affiner par domaine, par type de guide ou par fraîcheur<a
+								class="btn"
+								href="{resolve('/recherche')}{suffixeDeRequete}">Ouvrir la recherche complète</a
 							>
 						</div>{/if}{:else if listeEnErreur}<!--
 						La recherche reste utilisable même si les guides échouent : une zone en
@@ -261,11 +306,11 @@
 							Les équipes techniques n'ont pas encore ouvert de guide au public. En attendant,
 							l'assistance répond directement à vos questions.
 						</p>
-						<a class="btn btn--principal" href="#">Ouvrir un ticket d'assistance</a>
+						<a class="btn btn--principal" href={portail}>Ouvrir un ticket d'assistance</a>
 					</div>{:else}
 					<!-- Même raison que ci-dessus : aucun blanc entre les nœuds. -->
 					<!-- prettier-ignore -->
-					<div class="guides">{#each populaires as n, rang (n.id)}<a class="guide" href="#"
+					<div class="guides">{#each populaires as n, rang (n.id)}<a class="guide" href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
 						><span class="guide__rang">{String(rang + 1).padStart(2, '0')}</span><h3 class="guide__titre">{n.titre}</h3><p class="guide__extrait">{n.extrait}</p><div class="guide__pied"
 							>{@render temoin(n)}<span>{n.domaine}</span><span class="guide__vues">{nombreFr(n.vues)} consultations</span
 						></div
@@ -288,7 +333,7 @@
 					qui déclenche l'écriture du guide manquant.
 				</p>
 			</div>
-			<a class="btn btn--principal" href="#" id="ticket">
+			<a class="btn btn--principal" href={portail} id="ticket">
 				Ouvrir un ticket d'assistance
 				<svg
 					width="13"
@@ -305,7 +350,7 @@
 	<footer class="pied-public">
 		<div class="pied-public__int">
 			<span class="etiq">Codicillus · Direction technique</span>
-			<a href="#">Se connecter</a>
+			<a href={resolve('/connexion')}>Se connecter</a>
 		</div>
 	</footer>
 </div>

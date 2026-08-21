@@ -93,6 +93,7 @@
 		estTechnique,
 		pointsArticulation,
 		relationsDe,
+		placesDuGraphe,
 		sousGraphe,
 		titreDe,
 		typeDe,
@@ -136,6 +137,21 @@
 		typesRelation?: Record<CleDeTypeDeRelation, LibellesDeRelation>;
 		/** Les types de relation qui portent une dépendance technique. Défaut : ceux du jeu de semence. */
 		relationsTechniques?: readonly CleDeTypeDeRelation[];
+		/**
+		 * LE PÉRIMÈTRE DEMANDÉ PAR L'ADRESSE — `?perimetre=`, sous la forme même du
+		 * sélecteur du gel : `type|nom`, où le type vaut `univers` ou `domaine`.
+		 *
+		 * `RG-M09-05` veut l'état de cartographie partageable ; le gel, lui, garde
+		 * son périmètre dans une clôture (`charger()`, `V-19:3089`) et une carte
+		 * réduite ne s'envoie donc pas à un collègue. Le chargeur — seul lecteur de
+		 * `url` — l'extrait, et cette propriété est le chemin par lequel il
+		 * atteint le graphe.
+		 *
+		 * ABSENTE, C'EST LE PÉRIMÈTRE DE LA PLANCHE : « Univers Production », la
+		 * première option du sélecteur, celle que le gel a retenue au chargement.
+		 * Les six états déclarés ne bougent donc pas d'un pixel.
+		 */
+		perimetreDemande?: string | undefined;
 	}
 
 	const {
@@ -147,7 +163,8 @@
 		instance = INSTANCE,
 		relations = RELATIONS,
 		typesRelation = TYPES_RELATION,
-		relationsTechniques = RELATIONS_TECHNIQUES
+		relationsTechniques = RELATIONS_TECHNIQUES,
+		perimetreDemande
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -157,7 +174,25 @@
 	   Le périmètre est la première option du sélecteur, celle que le gel a
 	   sélectionnée au chargement : « Univers Production », l'option globale
 	   n'étant jamais posée (voir l'en-tête). */
-	const graphe = $derived(sousGraphe(corpus, { type: 'univers', nom: 'Production' }, relations));
+	const PERIMETRE_DE_PLANCHE = 'univers|Production';
+
+	/**
+	 * LE PÉRIMÈTRE EFFECTIF — la valeur du sélecteur, découpée. Une valeur que
+	 * l'adresse porterait sans barre verticale, ou avec un type inconnu, retombe
+	 * sur celui de la planche : un périmètre inventé montrerait un graphe vide
+	 * sans jamais dire pourquoi.
+	 */
+	const perimetre = $derived.by(() => {
+		const brut = perimetreDemande ?? PERIMETRE_DE_PLANCHE;
+		const barre = brut.indexOf('|');
+		const type = barre < 0 ? brut : brut.slice(0, barre);
+		const nom = barre < 0 ? '' : brut.slice(barre + 1);
+		if (type === 'global') return { type: 'global' };
+		if ((type === 'univers' || type === 'domaine') && nom !== '') return { type, nom };
+		return { type: 'univers', nom: 'Production' };
+	});
+
+	const graphe = $derived(sousGraphe(corpus, perimetre, relations));
 	const deg = $derived(degres(graphe));
 	const ruptures = $derived(pointsArticulation(graphe, relationsTechniques));
 	const types = $derived(typesPresents(graphe));
@@ -210,8 +245,23 @@
 		['n-passerelle-edi', { x: 523.882106263361, y: 176.5086362476089 }]
 	]);
 
+	/**
+	 * LES PLACES EFFECTIVEMENT DESSINÉES — la table relevée ci-dessus tant qu'elle
+	 * couvre tout le graphe, la disposition déterministe du gel sinon.
+	 *
+	 * CE QUE ÇA CHANGE, ET POURQUOI IL LE FALLAIT. Tant que le périmètre était
+	 * figé, la table suffisait et le rendu était celui de la référence, au pixel.
+	 * Le sélecteur de périmètre NAVIGUE désormais — `RG-M09-05`, « état de
+	 * cartographie partageable » — et tout nœud hors de la table se dessinait à
+	 * l'origine : les seize places relevées valent pour l'univers Production du
+	 * jeu, et pour lui seul. `placesDuGraphe()` garde la table quand elle est
+	 * complète, et `disposer()` — le calque de la fabrique du gel, déterministe et
+	 * transcrit constante par constante — reprend la main dès qu'elle ne l'est pas.
+	 */
+	const places = $derived(placesDuGraphe(graphe, POSITIONS));
+
 	const ORIGINE = { x: 0, y: 0 };
-	const positionDe = (id: string): { x: number; y: number } => POSITIONS.get(id) ?? ORIGINE;
+	const positionDe = (id: string): { x: number; y: number } => places.get(id) ?? ORIGINE;
 	const degreDe = (id: string): number => deg.get(id) ?? 0;
 
 	/** Le rayon d'un nœud : proportionnel à ses connexions, plafonné à huit. */

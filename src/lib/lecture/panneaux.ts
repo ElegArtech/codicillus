@@ -56,6 +56,21 @@ export interface PieceAffichee {
 	readonly taille: string;
 	/** La date de dépôt en toutes lettres. */
 	readonly depose: string;
+	/**
+	 * L'ADRESSE DE TÉLÉCHARGEMENT — `adresseDePieceJointe()`, et elle ne se
+	 * recompose PAS depuis les champs ci-dessus.
+	 *
+	 * `nom` est ce que le GEL rend : le nom AMPUTÉ de son suffixe, l'extension
+	 * étant montrée à part en cartouche (`V-14:1830-1834`). L'adresse, elle,
+	 * prend le nom de FICHIER que `pieces_jointes.nom` porte, suffixe compris —
+	 * les recoller à l'écran redonnerait « rapport.PDF » là où la base porte
+	 * « rapport.pdf », et la route rendrait 404 sur une pièce qui existe.
+	 *
+	 * Elle est donc SERVIE par le chargeur, qui a le nom de fichier sous la
+	 * main, et le gel n'avait aucun moyen de la porter : il écrit une ancre
+	 * vide, faute de serveur.
+	 */
+	readonly adresse: string;
 }
 
 /** Un kibioctet, et son carré. Les deux seules bornes que le gel exerce. */

@@ -66,11 +66,67 @@ async function rangementDuCompte(
 		.limit(1);
 	return ligne ?? null;
 }
+/**
+ * L'IDENTITÉ AFFICHABLE DU COMPTE CONNECTÉ — nom, initiales, rôle et domaine.
+ *
+ * POURQUOI ELLE MONTE JUSQU'ICI. La barre supérieure affichait « Karim Belhadj —
+ * Référent — Infrastructure » pour TOUT LE MONDE : `Coquille.svelte` exige une
+ * propriété `compte`, les vues la remplissent depuis `MOI` de `seeds/corpus.ts`,
+ * et AUCUNE route ne la passait. Mesuré le 21/08/2026 sur les huit pages qui
+ * montent une coquille. La constante de semence tenait donc lieu d'identité sur
+ * tout le produit.
+ *
+ * ELLE EST LUE UNE FOIS, AU GABARIT RACINE, et descend par contexte : trente
+ * routes qui la recopieraient chacune divergeraient au premier oubli (`P-35`).
+ *
+ * Les initiales sont DÉRIVÉES du nom, jamais stockées : une colonne de plus
+ * pourrait contredire le nom qu'elle abrège.
+ */
+function initialesDe(nom: string): string {
+	const mots = nom.split(/\s+/u).filter((m) => m !== '');
+	const premier = mots[0]?.[0] ?? '';
+	const dernier = mots.length > 1 ? (mots[mots.length - 1]?.[0] ?? '') : '';
+	return (premier + dernier).toUpperCase();
+}
+
+/** Le libellé du rôle, tel que la barre supérieure l'affiche. */
+const LIBELLE_DU_ROLE: Readonly<Record<string, string>> = {
+	lecteur: 'Lecteur',
+	contributeur: 'Contributeur',
+	referent: 'Référent',
+	administrateur: 'Administrateur'
+};
+
+async function identiteAffichable(
+	base: Base,
+	compteId: string
+): Promise<{ nom: string; initiales: string; role: string; domaine: string } | null> {
+	const [ligne] = await base
+		.select({ nom: comptes.nom, role: comptes.role, domaine: domaines.nom })
+		.from(comptes)
+		.leftJoin(domaines, eq(domaines.id, comptes.domaineId))
+		.where(eq(comptes.id, compteId))
+		.limit(1);
+	if (ligne === undefined) return null;
+	return {
+		nom: ligne.nom,
+		initiales: initialesDe(ligne.nom),
+		role: LIBELLE_DU_ROLE[ligne.role] ?? ligne.role,
+		domaine: ligne.domaine ?? ''
+	};
+}
+
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	if (locals.identite.type !== 'authentifie') {
-		return { session: false, ecriture: false, administrateur: false, rangement: null };
+		return {
+			session: false,
+			ecriture: false,
+			administrateur: false,
+			rangement: null,
+			compte: null
+		};
 	}
 	const base = basePartagee();
 	return {
@@ -94,6 +150,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		 * rattachement, les deux entrées ne sont pas émises — une entrée qui ne
 		 * mène nulle part est un lien mort, et `P-03` n'en admet aucun.
 		 */
-		rangement: await rangementDuCompte(base, locals.identite.compteId)
+		rangement: await rangementDuCompte(base, locals.identite.compteId),
+		compte: await identiteAffichable(base, locals.identite.compteId)
 	};
 };

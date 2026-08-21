@@ -48,6 +48,8 @@
 	 * planches de revue, et en inventer un serait un comblement.
 	 */
 	import { deserialize } from '$app/forms';
+	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
 	import Vue from '../../vues/V-24.svelte';
 	import '../../vues/V-24.css';
 	import { reprendreLotEnAttente } from './lot-en-attente';
@@ -147,6 +149,32 @@
 		const charge = await envoyer('importer', fichiers, reglages);
 		return (charge?.['rapport'] as RapportDeLot | undefined) ?? null;
 	}
+
+	/**
+	 * « LAISSER TOURNER EN ARRIÈRE-PLAN » — `V-24:3382`, qui annonce « suivez-le
+	 * depuis la console, onglet Imports, vue V-35 ».
+	 *
+	 * LE TRAITEMENT NE S'INTERROMPT PAS QUAND ON QUITTE L'ÉCRAN, et c'est ce qui
+	 * rend la promesse honnête : la requête est DÉJÀ partie, l'action de route
+	 * s'exécute côté serveur jusqu'au bout, et la navigation n'annule que la
+	 * lecture de sa réponse. Le rapport, lui, se lit ensuite dans la console.
+	 *
+	 * LE BOUTON EST RETIRÉ QUAND LA CONSOLE EST HORS DE PORTÉE — `P-09`, une
+	 * action interdite n'est pas rendue. `[hidden]` du socle le sort de la boîte
+	 * de rendu comme de l'arbre d'accessibilité ; le nœud du gel n'est ni
+	 * supprimé, ni grisé, ni déplacé.
+	 */
+	onMount(() => {
+		const bouton = document.querySelector<HTMLButtonElement>('#arriere-plan');
+		if (bouton === null) return;
+		if (!data.suiviEnConsole) {
+			bouton.hidden = true;
+			return;
+		}
+		const suivre = (): void => location.assign(resolve('/console/imports'));
+		bouton.addEventListener('click', suivre);
+		return () => bouton.removeEventListener('click', suivre);
+	});
 </script>
 
 <Vue

@@ -25,6 +25,7 @@
 	import '../../../vues/V-35.css';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { adresseDeDomaine } from '$lib/rangement/adresses';
 	import { cablerLeDepot } from '../cablage';
 	import { deposerLotEnAttente } from '../../importer/lot-en-attente';
 	import type { PageData } from './$types';
@@ -79,6 +80,28 @@
 	domaines={data.domaines}
 	compte={data.compte}
 	journalImports={[]}
+	onOuvrirLeDomaine={(domaine) => {
+		/* « OUVRIR LE DOMAINE » DU RAPPORT — la désignation est canonique, comme
+		   partout ailleurs en console : le rapport porte un nom d'affichage,
+		   l'adresse attend deux identifiants lisibles. La table vient du chargeur.
+
+		   CE GESTE N'EST ATTEIGNABLE PAR PERSONNE AUJOURD'HUI : le journal est
+		   vide — aucune table n'enregistre d'import —, donc aucun rapport ne
+		   s'ouvre. Il est câblé pour le jour où un lot y entrera, pas maquillé. */
+		const canonique = data.designations[domaine];
+		if (canonique === undefined) return;
+		/* LA RÈGLE EST DÉSARMÉE, ET LE PRÉCÉDENT EST CELUI DU DÉPÔT.
+		   `svelte/no-navigation-without-resolve` veut voir `resolve()` au point
+		   d'appel. L'adresse vient ici de `$lib/rangement/adresses.ts`, que le plan
+		   de remédiation §3.3 rend OBLIGATOIRE — « les adresses sortent de la
+		   fabrique, jamais un gabarit écrit à la main » — et la fabrique rend une
+		   chaîne déjà composée : la règle ne sait pas la reconnaître. Passer par
+		   `resolve()` ici reviendrait à recomposer le chemin à côté de la fabrique,
+		   c'est-à-dire à faire exactement ce que le plan interdit. Même désarmement
+		   qu'en `V-03`, `V-13`, `V-22` et `V-24`. */
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		void goto(adresseDeDomaine(canonique.univers, canonique.domaine));
+	}}
 	onScenario={() => {
 		/* LE GEL ANNONCE LA DESTINATION, PAS LE FILTRE. Il notifie « Parcours
 		   d'import, scénario "X" — vue V-24 » : la vue cible est nommée, donc

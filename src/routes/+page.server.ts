@@ -38,11 +38,29 @@
  */
 import { basePartagee } from '$lib/base/acces';
 import { lireAccueil } from '$lib/donnees/accueil';
-import { lireSeuils } from '$lib/donnees/lecture';
+import { lireConfiguration } from '$lib/donnees/lecture';
 import type { PageServerLoad } from './$types';
 
+/**
+ * L'ADRESSE DU PORTAIL D'ASSISTANCE VIENT DE LA BASE, PAS D'UNE CONSTANTE.
+ *
+ * V-01 pose trois fois « Ouvrir un ticket d'assistance », et le gel dit d'où
+ * l'adresse sort : « adresse externe configurée en console » (`V-04:2205`).
+ * C'est la clé `portail_assistance` de la table `parametres` (M14.7), lue par
+ * `lireConfiguration()` — l'unique lecture de cette table.
+ *
+ * ELLE NE COÛTE AUCUNE REQUÊTE DE PLUS. `lireSeuils()` appelait déjà
+ * `lireConfiguration()` et n'en gardait que deux nombres ; la configuration
+ * entière est désormais lue une fois, et les seuils en sont dérivés ici. Une
+ * requête au lieu de deux, et `P-01` reste tenue — les seuils sortent toujours
+ * du même endroit.
+ */
 export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
-	const seuils = await lireSeuils(base);
-	return await lireAccueil(base, locals.identite, { maintenant: new Date(), seuils });
+	const config = await lireConfiguration(base);
+	const seuils = { frais: config.seuilFrais, vieillissant: config.seuilVieillissant };
+	return {
+		...(await lireAccueil(base, locals.identite, { maintenant: new Date(), seuils })),
+		portail: config.portailAssistance
+	};
 };

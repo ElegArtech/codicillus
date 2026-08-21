@@ -44,11 +44,24 @@
 	 * V-07 porte même son numéro de vue —, et en inventer un serait un
 	 * comblement.
 	 */
+	import { onMount } from 'svelte';
 	import Vue from '../../vues/V-05.svelte';
 	import '../../vues/V-05.css';
+	import { cablerLaConnexion } from './cablage';
 	import type { ActionData, PageData } from './$types';
 
 	const { data, form }: { data: PageData; form: ActionData } = $props();
+
+	/**
+	 * LE CÂBLAGE S'ACCROCHE DEPUIS LA ROUTE — `ARB-063`. La vue reste une
+	 * transcription du gel. La racine est cherchée dans le document plutôt que
+	 * liée par `bind:this` : la lier demanderait un nœud d'enveloppe que le gel
+	 * ne porte pas.
+	 */
+	onMount(() => {
+		const racine = document.getElementById('app');
+		return racine === null ? undefined : cablerLaConnexion(racine);
+	});
 
 	/**
 	 * CE QUE LE SERVEUR A REFUSÉ, DIT À L'ÉCRAN — et il ne l'était pas.

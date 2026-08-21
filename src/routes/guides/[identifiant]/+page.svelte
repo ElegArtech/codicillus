@@ -15,11 +15,28 @@
 	 * qu'une vue : l'import direct suffit, et aucun croisement de feuille n'est à
 	 * mesurer.
 	 */
+	import { onMount } from 'svelte';
 	import Vue from '../../../vues/V-03.svelte';
 	import '../../../vues/V-03.css';
+	import { cablerLeGuide } from './cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	/**
+	 * LE CÂBLAGE S'ACCROCHE DEPUIS LA ROUTE — `ARB-063`. La vue reste une
+	 * transcription du gel ; les quatre gestes de la lecture publique — sommaire
+	 * replié, bascule de registre, agrandissement du schéma, impression — sont
+	 * posés par `./cablage.ts` au montage, et retirés au démontage.
+	 *
+	 * LA RACINE EST CHERCHÉE DANS LE DOCUMENT, et non liée par `bind:this` : la
+	 * lier demanderait un nœud d'enveloppe autour de la vue, donc une boîte de
+	 * rendu de plus, ce que le gel ne porte pas.
+	 */
+	onMount(() => {
+		const racine = document.getElementById('app');
+		return racine === null ? undefined : cablerLeGuide(racine);
+	});
 </script>
 
-<Vue vecteur={data.vecteur} guide={data.guide} />
+<Vue vecteur={data.vecteur} guide={data.guide} portail={data.portail} />

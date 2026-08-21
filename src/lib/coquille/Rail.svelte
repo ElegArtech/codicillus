@@ -66,12 +66,18 @@
 	 *   Import         « Import — vue V-24 »                →  `/importer`
 	 *   Console        « Console — vue V-27 »               →  `/console/univers`
 	 *
-	 * TROIS ENTRÉES RESTENT À `href="#"`, ET C'EST LE BON CLASSEMENT :
+	 * UNE SEULE ENTRÉE RESTE À `href="#"`, ET C'EST LE BON CLASSEMENT :
 	 *
-	 *   · la FORME ABRÉGÉE tout entière — son gel ne porte AUCUN `data-vers`
-	 *     (vérifié sur V-11:1056-1064 et V-22:1209-1217). Deviner sa destination
-	 *     serait un comblement ; `verif:menus` la compte en `inerte-au-gel`, qui
-	 *     est un CONSTAT et non un rouge ;
+	 *   · la FORME ABRÉGÉE tout entière — CLASSEMENT RÉVOQUÉ. Il tenait à ceci :
+	 *     son gel ne porte AUCUN `data-vers` (V-11:1056-1064, V-22:1209-1217),
+	 *     donc deviner sa destination serait un comblement. Or il n'y avait rien à
+	 *     deviner : les deux formes rendent LE MÊME RAIL, entrée pour entrée et
+	 *     libellé pour libellé — seuls les pictogrammes et le `data-vers` les
+	 *     séparent. « Accueil » mène à l'accueil dans les deux, et vingt-six vues
+	 *     portaient un rail dont la PREMIÈRE entrée ne menait nulle part. Les
+	 *     quatre entrées d'outils ont été résolues avant celle-ci, pour la même
+	 *     raison ; `P-03` n'admet aucun lien mort, et le plan de remédiation §3.6
+	 *     tranche — un lien mort devient une vraie adresse ;
 	 *   · l'Accueil de V-07, dont le gel déclare « Vous êtes déjà sur l'accueil »
 	 *     (`V-07:1150`) — une non-destination, qu'aucune règle de
 	 *     `REGLES_DE_DESTINATION` ne résout, et qui ne doit pas l'être ;
@@ -306,7 +312,7 @@
 	<div class="rail__section">
 		<a
 			class="rail__lien"
-			href={forme === 'abregee' || accueilCourant ? '#' : resolve('/')}
+			href={accueilCourant ? '#' : resolve('/')}
 			aria-current={accueilCourant ? 'page' : undefined}
 			data-vers={forme === 'abregee'
 				? undefined

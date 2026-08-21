@@ -19,9 +19,35 @@
 	import Vue from '../../../vues/V-29.svelte';
 	import '../../../vues/V-29.css';
 	import { envoyerAUneAction } from '../cablage';
+	import {
+		CHAMP_TYPE_DE_FICHE_CIBLE,
+		champsDeTypeDeFiche,
+		type RefusDeSaisie,
+		type SaisieDeTypeDeFiche
+	} from '$lib/console/structure';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	/**
+	 * LE REFUS RENDU PAR L'ACTION, REMIS À LA VUE — voir `/console/univers`, qui
+	 * porte le motif au long. Il est effacé avant chaque envoi.
+	 */
+	let refus = $state<RefusDeSaisie | null>(null);
+
+	function premierRefus(donnees: unknown): RefusDeSaisie | null {
+		if (typeof donnees !== 'object' || donnees === null) return null;
+		const erreurs = (donnees as { erreurs?: unknown }).erreurs;
+		if (!Array.isArray(erreurs)) return null;
+		const [premiere] = erreurs as RefusDeSaisie[];
+		return premiere ?? null;
+	}
+
+	async function envoyer(action: string, champs: Record<string, string>): Promise<void> {
+		refus = null;
+		const retour = await envoyerAUneAction(document, action, champs);
+		if (!retour.succes) refus = premierRefus(retour.donnees);
+	}
 </script>
 
 <!--
@@ -51,5 +77,17 @@
 		const identifiant = data.designations[type];
 		if (identifiant === undefined) return;
 		void envoyerAUneAction(document, '?/delester', { 'type-de-fiche': identifiant });
+	}}
+	{refus}
+	onCreer={(saisie: SaisieDeTypeDeFiche) => {
+		void envoyer('?/creer', champsDeTypeDeFiche(saisie));
+	}}
+	onEnregistrer={(nom: string, saisie: SaisieDeTypeDeFiche) => {
+		const identifiant = data.designations[nom];
+		if (identifiant === undefined) return;
+		void envoyer('?/enregistrer', {
+			[CHAMP_TYPE_DE_FICHE_CIBLE]: identifiant,
+			...champsDeTypeDeFiche(saisie)
+		});
 	}}
 />

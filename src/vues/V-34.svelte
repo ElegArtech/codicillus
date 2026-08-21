@@ -131,6 +131,35 @@
 		modifications?: Partial<Record<IdentifiantNote, number>>;
 		revisions?: readonly DemandeDeRevision[];
 		recherches?: readonly RequeteDeRecherche[];
+		/**
+		 * OUVRIR LA LISTE DES NOTES D'UN DOMAINE, DÉJÀ FILTRÉE SUR UN NIVEAU DE
+		 * FRAÎCHEUR — `surPart()` du gel (`V-34:3140`) : « X notes obsolètes de
+		 * Applications — liste pré-filtrée, vue V-12 ».
+		 *
+		 * LA VUE DÉSIGNE LE DOMAINE PAR SON NOM, comme partout ailleurs en console ;
+		 * la page sait à quelle adresse il correspond. Le niveau voyage sous le
+		 * LIBELLÉ que la facette de V-12 emploie, jamais sous la clé interne.
+		 */
+		onVoirLesNotes?: (demande: { readonly domaine: string; readonly fraicheur: string }) => void;
+		/** OUVRIR UNE NOTE — `V-34:3251` et `V-34:3304`, « vue V-14 ». */
+		onOuvrirLaNote?: (identifiant: string) => void;
+		/**
+		 * TRAITER UN TROU DOCUMENTAIRE — `V-34:3100`. Le gel a deux issues et
+		 * l'écran les nomme : écrire la note qui manque quand la requête ne rend
+		 * rien, examiner les résultats quand elle en rend sans qu'aucun ne soit
+		 * ouvert. La vue transmet la requête et son décompte ; la page choisit
+		 * l'adresse.
+		 */
+		onTrou?: (demande: { readonly terme: string; readonly resultats: number }) => void;
+		/**
+		 * L'ACTION PROPRE À UNE FAMILLE D'ORPHELINES — `V-34:3247`, où chaque
+		 * famille porte son libellé et sa destination. La vue transmet la famille
+		 * et la note ; la page décide, parce qu'elle seule connaît les adresses.
+		 */
+		onOrpheline?: (demande: {
+			readonly famille: FamilleOrpheline;
+			readonly identifiant: IdentifiantNote;
+		}) => void;
 	}
 
 	const {
@@ -145,7 +174,11 @@
 		mesures7jPrec = MESURES_7J_PREC,
 		modifications = MODIFICATIONS,
 		revisions = REVISIONS,
-		recherches = RECHERCHES
+		recherches = RECHERCHES,
+		onVoirLesNotes,
+		onOuvrirLaNote,
+		onTrou,
+		onOrpheline
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -239,10 +272,29 @@
 		}
 	] as const;
 
+	/** Les trois familles, par leur clé — la seule chose qui les désigne. */
+	type FamilleOrpheline = (typeof ORPH)[number]['cle'];
+
+	/** Les libellés de fraîcheur de la facette de `V-12`, et pas d'autres : c'est
+	 *  eux que l'adresse pré-filtrée attend (`docs/routes.md` §4.2). */
+	const LIBELLE_DE_FRAICHEUR: Record<string, string> = {
+		frais: 'Frais',
+		vieil: 'Vieillissant',
+		obs: 'Obsolète probable'
+	};
+
 	/** L'onglet courant au chargement (`var orphCourant`, `V-34:3183`). */
 	const ORPH_COURANT = 'jamaisVerifiees';
-	const familleCourante = $derived(ORPH.find((o) => o.cle === ORPH_COURANT)!);
-	const listeCourante = $derived(orphelines[ORPH_COURANT]);
+
+	/**
+	 * L'ONGLET DEMANDÉ DEPUIS L'ÉCRAN — `orphCourant = o.id; rendreOrphelines()`
+	 * du gel (`V-34:3197`). `null` au rendu serveur : la planche du banc reçoit
+	 * exactement ce qu'elle recevait, et le premier onglet reste celui du gel.
+	 */
+	let ongletDemande = $state<FamilleOrpheline | null>(null);
+	const orphCourant = $derived<FamilleOrpheline>(ongletDemande ?? ORPH_COURANT);
+	const familleCourante = $derived(ORPH.find((o) => o.cle === orphCourant)!);
+	const listeCourante = $derived(orphelines[orphCourant]);
 
 	/* ── La barre de répartition, calque de `V-34:2960` ────────────────────── */
 
@@ -356,15 +408,15 @@
 
 <!-- La barre de répartition du produit, et sa légende chiffrée (`V-34:2960`). -->
 <!-- prettier-ignore -->
-{#snippet barreRepartition(r: Repartition, contexte: string)}<div class="repart" role="img" aria-label={libelleDeBarre(r)}
-		>{#each partsDe(r, contexte) as p (p.cle)}<button type="button" class={p.classe} style="flex:{p.n}" title={p.libelle} aria-label={p.libelle}></button>{/each}</div
+{#snippet barreRepartition(r: Repartition, dom: Domaine)}<div class="repart" role="img" aria-label={libelleDeBarre(r)}
+		>{#each partsDe(r, dom.nom) as p (p.cle)}<button type="button" class={p.classe} style="flex:{p.n}" title={p.libelle} aria-label={p.libelle} onclick={() => onVoirLesNotes?.({ domaine: dom.nom, fraicheur: LIBELLE_DE_FRAICHEUR[p.cle] ?? p.cle })}></button>{/each}</div
 	><div class="legende"
 		>{#each partsDe(r) as p (p.cle)}<span><i class={p.classe}></i><b>{p.n}</b>{` ${p.n > 1 ? p.pluriel : p.singulier}`}</span>{/each}</div
 	>{/snippet}
 
 <!-- Une ligne de classement (`V-34:3318`) — avec rang et cliquable, ou sans. -->
 <!-- prettier-ignore -->
-{#snippet ligneDeClassement(rang: number | null, nom: string, valeur: number, maxi: number, unite: string)}{#if rang !== null}<button class="cl" type="button" style="width:100%;border:0;background:none;text-align:left;cursor:pointer;font:inherit;color:inherit"
+{#snippet ligneDeClassement(rang: number | null, nom: string, valeur: number, maxi: number, unite: string, surClic?: () => void)}{#if rang !== null}<button class="cl" type="button" style="width:100%;border:0;background:none;text-align:left;cursor:pointer;font:inherit;color:inherit" onclick={surClic}
 		><span class="cl__rang">{String(rang).padStart(2, '0')}</span
 		><span class="cl__nom">{nom}</span
 		><span class="cl__barre"><i style="width:{Math.round((valeur / maxi) * 100)}%"></i></span
@@ -439,7 +491,7 @@
 								><span class="tendance" data-sens={r.evolution > 0 ? 'hausse' : 'baisse'}>{`${r.evolution > 0 ? '▲ +' : '▼ '}${r.evolution} % sur un mois`}</span
 							></div
 						></div
-						><button class="btn btn--principal" style="white-space:nowrap">{r.resultats === 0 ? 'Écrire cette note' : 'Examiner les résultats'}</button
+						><button class="btn btn--principal" style="white-space:nowrap" onclick={() => onTrou?.({ terme: r.terme, resultats: r.resultats })}>{r.resultats === 0 ? 'Écrire cette note' : 'Examiner les résultats'}</button
 					></div>{/each}</div
 			></section>
 
@@ -459,7 +511,7 @@
 							><span class="sante-dom__nom">{s.dom.nom}</span
 							><span class="sante-dom__n">{`${s.liste.length} notes · ${s.contributeurs} contributeurs`}</span
 						></div
-						>{@render barreRepartition(s.repartition, s.dom.nom)}<div class="alertes-dom"
+						>{@render barreRepartition(s.repartition, s.dom)}<div class="alertes-dom"
 							>{#each s.alertes as [n, quoi] (quoi)}<span class="alerte-dom" data-appel={n ? 'oui' : 'non'} data-nul={n ? 'non' : 'oui'}><b>{n}</b>{quoi}</span>{/each}</div
 					></div>{/each}</div
 			></section>
@@ -475,7 +527,7 @@
 				></div
 				><div class="bloc-a__corps"
 					><div class="onglets-o" id="onglets-o" role="tablist" aria-label="Type d'orphelines"
-						>{#each ORPH as o (o.cle)}<button type="button" role="tab" aria-selected={o.cle === ORPH_COURANT}>{o.nom}<span class="n">{orphelines[o.cle].length}</span></button>{/each}</div
+						>{#each ORPH as o (o.cle)}<button type="button" role="tab" aria-selected={o.cle === orphCourant} onclick={() => (ongletDemande = o.cle)}>{o.nom}<span class="n">{orphelines[o.cle].length}</span></button>{/each}</div
 					><div id="orphelines"
 						><p style="font-size:var(--t-mini);color:var(--c-encre-3);line-height:1.5;margin:0 0 var(--e-2);max-width:64ch">{familleCourante.quoi}</p
 						>{#if !listeCourante.length}<div class="zone-etat"><div class="zone-etat__titre">Aucune note dans ce cas</div></div
@@ -487,8 +539,8 @@
 								></div
 							></div
 							><div class="orph__actions"
-								><button class="btn">{familleCourante.action}</button
-								><button class="btn">Ouvrir</button
+								><button class="btn" onclick={() => onOrpheline?.({ famille: orphCourant, identifiant: n.id })}>{familleCourante.action}</button
+								><button class="btn" onclick={() => onOuvrirLaNote?.(n.id)}>Ouvrir</button
 							></div
 						></div>{/each}{#if listeCourante.length > 8}<div style="padding:var(--e-2) 0;font-size:var(--t-mini);color:var(--c-encre-3)">{`et ${listeCourante.length - 8} autres.`}</div>{/if}{/if}</div
 				></div
@@ -508,7 +560,7 @@
 						>{#each adoption as [valeur, nom, sous] (nom)}<div class="mesure-a"><div class="mesure-a__val">{valeur}</div><span class="mesure-a__nom">{nom}</span><span class="mesure-a__nom" style="color:var(--c-encre-4)">{sous}</span></div>{/each}</div
 					><span class="etiq" style="display:block;margin-bottom:var(--e-2)">Notes les plus consultées</span
 					><div class="classement" id="top-notes"
-						>{#each plusConsultees as n, rang (n.id)}{@render ligneDeClassement(rang + 1, n.titre, mesures7j[n.id] ?? 0, maxiConsultations, ' vues')}{/each}</div
+						>{#each plusConsultees as n, rang (n.id)}{@render ligneDeClassement(rang + 1, n.titre, mesures7j[n.id] ?? 0, maxiConsultations, ' vues', () => onOuvrirLaNote?.(n.id))}{/each}</div
 					><span class="etiq" style="display:block;margin:var(--e-5) 0 var(--e-2)">Volumes de contribution</span
 					><div class="classement" id="top-contrib"
 						>{#each volumesDeContribution as c (c.nom)}{@render ligneDeClassement(null, c.nom, c.notes, maxiContributions, c.notes > 1 ? ' notes' : ' note')}{/each}</div

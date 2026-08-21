@@ -23,9 +23,36 @@
 	import Vue from '../../../vues/V-28.svelte';
 	import '../../../vues/V-28.css';
 	import { envoyerAUneAction } from '../cablage';
+	import {
+		CHAMP_DOMAINE_CIBLE,
+		CHAMP_UNIVERS_CIBLE,
+		champsDeDomaine,
+		type RefusDeSaisie,
+		type SaisieDeDomaine
+	} from '$lib/console/structure';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	/**
+	 * LE REFUS RENDU PAR L'ACTION, REMIS À LA VUE — voir `/console/univers`, qui
+	 * porte le motif au long. Il est effacé avant chaque envoi.
+	 */
+	let refus = $state<RefusDeSaisie | null>(null);
+
+	function premierRefus(donnees: unknown): RefusDeSaisie | null {
+		if (typeof donnees !== 'object' || donnees === null) return null;
+		const erreurs = (donnees as { erreurs?: unknown }).erreurs;
+		if (!Array.isArray(erreurs)) return null;
+		const [premiere] = erreurs as RefusDeSaisie[];
+		return premiere ?? null;
+	}
+
+	async function envoyer(action: string, champs: Record<string, string>): Promise<void> {
+		refus = null;
+		const retour = await envoyerAUneAction(document, action, champs);
+		if (!retour.succes) refus = premierRefus(retour.donnees);
+	}
 </script>
 
 <!--
@@ -62,6 +89,22 @@
 			univers: canonique.univers,
 			domaine: canonique.domaine,
 			'sup-saisie': demande.saisie
+		});
+	}}
+	{refus}
+	onCreer={(saisie: SaisieDeDomaine) => {
+		void envoyer('?/creer', champsDeDomaine(saisie));
+	}}
+	onEnregistrer={(nom: string, saisie: SaisieDeDomaine) => {
+		/* LA CIBLE EST DÉSIGNÉE PAR SA FORME CANONIQUE, comme la suppression, et
+		   pour la même raison : `RG-STR-02` ne rend l'identifiant d'un domaine
+		   unique qu'au sein de son univers. La table vient du chargeur. */
+		const canonique = data.designations[nom];
+		if (canonique === undefined) return;
+		void envoyer('?/enregistrer', {
+			[CHAMP_UNIVERS_CIBLE]: canonique.univers,
+			[CHAMP_DOMAINE_CIBLE]: canonique.domaine,
+			...champsDeDomaine(saisie)
 		});
 	}}
 />

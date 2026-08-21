@@ -18,6 +18,7 @@
 	 */
 	import Vue from '../../../vues/V-36.svelte';
 	import '../../../vues/V-36.css';
+	import { adresseDeLArchive } from './cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -50,9 +51,10 @@
 		if (canonique === undefined) return;
 		/* UNE NAVIGATION DU DOCUMENT, PAS UNE NAVIGATION D'APPLICATION : la réponse
 		   est une archive avec `content-disposition: attachment`, pas une page.
-		   `goto()` de SvelteKit attend une page et ne saurait qu'en faire. */
-		document.location.assign(
-			`/console/exports/${encodeURIComponent(canonique.univers)}/${encodeURIComponent(canonique.domaine)}`
-		);
+		   `goto()` de SvelteKit attend une page et ne saurait qu'en faire.
+
+		   L'ADRESSE SORT D'UNE FABRIQUE, jamais d'un gabarit écrit ici — voir
+		   `./cablage.ts`, qui dit pourquoi elle n'est pas dans la fabrique partagée. */
+		document.location.assign(adresseDeLArchive(canonique));
 	}}
 />

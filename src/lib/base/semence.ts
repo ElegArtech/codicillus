@@ -46,9 +46,9 @@ import { analyserDocument, type Document } from '../contenu/document';
 import { SEUILS_PAR_DEFAUT, niveauFraicheur } from '../fraicheur';
 import { identifiantLisible, segmentsDeDossier } from '../rangement/adresses';
 import {
-	CORPUS,
 	COMPTES,
 	CONFIG,
+	CORPUS,
 	DATE_REFERENCE,
 	DETAIL_DOMAINES,
 	DOMAINES,
@@ -61,6 +61,7 @@ import {
 	TYPES_NOTE,
 	TYPES_RELATION,
 	UNIVERS,
+	VERSIONS,
 	type CleDeModule,
 	type CleDeTypeDeRelation,
 	type Note,
@@ -631,6 +632,67 @@ export function lignesDeNote(notes: readonly Note[] = CORPUS): readonly LigneDeN
 			revisionLe: revision === undefined ? null : instantDeDateCourte(revision.le)
 		};
 	});
+}
+
+export interface LigneDeVersion {
+	readonly noteIdentifiant: string;
+	readonly numero: number;
+	readonly le: Date;
+	readonly auteurNom: string;
+	readonly resume: string;
+	readonly ajout: number;
+	readonly retrait: number;
+	readonly titre: string;
+	readonly corpsReference: DocumentDeNote;
+}
+
+/**
+ * LES VERSIONS DU CORPUS — l'historique et la comparaison n'ont rien à montrer
+ * sans elles.
+ *
+ * MESURÉ LE 21/08/2026 : la table `versions` portait ZÉRO ligne pour 32 notes.
+ * Deux causes distinctes, et il fallait les deux :
+ *   1. `creerUneNote()` n'écrivait aucune version (corrigé dans `creation.ts`) ;
+ *   2. le semeur n'en chargeait aucune — c'est ce que cette projection répare.
+ *      `base/base.mjs` l'imprimait lui-même à chaque exécution, dans la liste de
+ *      ce que le chargement ne couvre pas : « VERSIONS, CONTENU_VERSIONS (M07,
+ *      hors du périmètre §3) ». Le périmètre est rouvert.
+ *
+ * CE QUE LE CORPUS PORTE, ET CE QU'IL NE PORTE PAS. `VERSIONS` donne le journal
+ * — numéro, ancienneté, auteur, quantités, résumé — pour les deux notes que V-15
+ * et V-16 mettent en scène. Il ne donne PAS le corps de chaque version :
+ * `CONTENU_VERSIONS` n'en porte que trois, celles que V-16 compare. Le corps est
+ * donc dérivé de l'extrait de la note, comme `lignesDeNote()` le fait déjà pour
+ * le corps courant — la seule matière rédigée que le corpus expose. Un corps
+ * inventé serait une semence inventée ; un corps absent violerait
+ * `versions.corps_reference NOT NULL`.
+ *
+ * LE TITRE EST CELUI DE LA NOTE. Aucune version du corpus n'en porte d'autre :
+ * le gel ne montre jamais un titre qui aurait changé.
+ */
+export function lignesDeVersion(notes: readonly Note[] = CORPUS): readonly LigneDeVersion[] {
+	const parIdentifiant = new Map(notes.map((n) => [n.id, n]));
+	const lignes: LigneDeVersion[] = [];
+	for (const [identifiant, versions] of Object.entries(VERSIONS)) {
+		const note = parIdentifiant.get(identifiant as Note['id']);
+		/* Une version sans sa note ne s'insère pas : la clé étrangère la refuse,
+		   et le corpus peut décrire un historique pour une note écartée du jeu. */
+		if (note === undefined || versions === undefined) continue;
+		for (const v of versions) {
+			lignes.push({
+				noteIdentifiant: identifiant,
+				numero: v.n,
+				le: instantAvantReference(v.jours),
+				auteurNom: v.auteur,
+				resume: v.resume,
+				ajout: v.ajout,
+				retrait: v.retrait,
+				titre: note.titre,
+				corpsReference: corpsDepuisTexte(note.extrait)
+			});
+		}
+	}
+	return lignes;
 }
 
 export interface LigneDeRelation {

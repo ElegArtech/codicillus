@@ -132,6 +132,7 @@
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { motFiche } from '$lib/vocabulaire';
+	import { resolve } from '$app/paths';
 
 	/**
 	 * LES DEUX DÉFAUTS DE L'ADRESSE, RECOPIÉS ICI PLUTÔT QU'IMPORTÉS.
@@ -627,6 +628,36 @@
 		if (voulu === modeDemande) return;
 		aller(adresse(choisis, q, tri, voulu));
 	}
+
+	/**
+	 * « AFFINER » — le seul geste de cette vue qui ne passe PAS par l'adresse, et
+	 * c'est le gel qui le décide.
+	 *
+	 * `#ouvrir-facettes` n'a de boîte de rendu qu'en dessous du point de rupture
+	 * (`V-08.css:406` le masque, `:560` le révèle) : c'est le tiroir de facettes
+	 * du petit écran, et il ouvre `aside.facettes` par l'attribut `data-facettes`
+	 * de `div.app` (`V-08.css:559`). Ce n'est pas un état de recherche — deux
+	 * écrans dont l'un a le tiroir ouvert montrent les MÊMES résultats —, donc
+	 * il n'a rien à faire dans une adresse partageable (`RG-M02-06`).
+	 *
+	 * AUCUNE RÈGLE N'EST ÉCRITE : on pose la valeur que la règle GELÉE attend.
+	 */
+	let facettesOuvertes = $state(false);
+
+	/**
+	 * « CRÉER LA NOTE « … » » — l'issue de l'état sans résultat, et la seule
+	 * action d'écriture de cet écran.
+	 *
+	 * `docs/routes.md:287` déclare `titre` parmi les paramètres de pré-remplissage
+	 * de `/notes/nouvelle`. Il est ÉMIS ici parce que c'est la requête restée sans
+	 * réponse qui doit devenir le titre ; `/notes/nouvelle` ne le lit pas encore —
+	 * son chargeur le déclare et le range en écart —, et l'écrire ici est ce qui
+	 * rendra le pré-remplissage effectif le jour où il le lira, sans qu'une ligne
+	 * bouge de ce côté.
+	 */
+	function creerLaNote(): void {
+		aller(`/notes/nouvelle?titre=${encodeURIComponent(requeteAffichee)}`);
+	}
 </script>
 
 <!--
@@ -683,7 +714,7 @@
 	d'élément, que Svelte élaguerait (P-8).
 -->
 <!-- prettier-ignore -->
-{#snippet carte(n: Note, q: string, index: number)}<a class="carte" href="#" data-index={index}
+{#snippet carte(n: Note, q: string, index: number)}<a class="carte" href={resolve('/notes/[identifiant]', { identifiant: n.id })} data-index={index}
 		><div class="carte__haut"
 			><h2 class="carte__titre">{@render marque(n.titre, q)}</h2>{#if n.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}<span class="past past--type">{n.type === 'Fiche' ? `${motFiche} ${n.typeFiche}` : n.type}</span
 		></div
@@ -710,7 +741,7 @@
 		'data-mode': mode,
 		'data-degrade': degrade ? 'oui' : 'non',
 		'data-trop': rendreLesResultats && affluence && nbFiltres === 0 ? 'oui' : 'non',
-		'data-facettes': 'ferme'
+		'data-facettes': facettesOuvertes ? 'ouvert' : 'ferme'
 	}}
 	{univers}
 	{domaines}
@@ -865,7 +896,12 @@
 				<!-- prettier-ignore -->
 				<span class="compteur" id="compteur">{#if rendreLesResultats && !sansResultat}<b>{`${affiches.length} résultat${affiches.length > 1 ? 's' : ''}`}</b>{` en ${duree} s`}{/if}</span>
 				<div style="display:flex;align-items:center;gap:var(--e-3)">
-					<button class="btn bouton-facettes" id="ouvrir-facettes">
+					<button
+						class="btn bouton-facettes"
+						id="ouvrir-facettes"
+						aria-expanded={facettesOuvertes}
+						onclick={() => (facettesOuvertes = !facettesOuvertes)}
+					>
 						Affiner <span class="compte-filtres" id="compte-filtres" hidden={!nbFiltres}
 							>{nbFiltres}</span
 						>
@@ -953,7 +989,7 @@
 					><h2 class="vide__titre">Aucun résultat pour <span class="vide__requete">{`« ${requeteAffichee} »`}</span></h2
 					><p class="vide__txt">Cette connaissance n'est pas encore écrite. Si vous la détenez, c'est le bon moment : une note d'une dizaine de lignes vaut mieux que rien.</p
 					><div class="vide__pistes">{#each PISTES as piste (piste)}<button class="piste" onclick={() => essayer(piste)}>{`Essayer « ${piste} »`}</button>{/each}</div
-					>{#if ecriture}<button class="btn btn--principal si-ecriture">{`Créer la note « ${requeteAffichee} »`}</button
+					>{#if ecriture}<button class="btn btn--principal si-ecriture" onclick={creerLaNote}>{`Créer la note « ${requeteAffichee} »`}</button
 				>{/if}</div>{:else}{#each affiches as n, index (n.id)}{@render carte(n, q, index)}{/each}{/if}</div>
 
 			<div class="si-chargement" aria-hidden="true">

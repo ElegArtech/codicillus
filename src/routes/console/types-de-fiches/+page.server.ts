@@ -28,7 +28,19 @@
  */
 import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { delesterUnTypeDeFiche, supprimerUnTypeDeFiche } from '$lib/donnees/administration';
+import {
+	creerUnTypeDeFiche,
+	delesterUnTypeDeFiche,
+	modifierUnTypeDeFiche,
+	supprimerUnTypeDeFiche
+} from '$lib/donnees/administration';
+import {
+	CHAMP_NOM,
+	CHAMP_PROPRIETES,
+	CHAMP_TYPE_DE_FICHE_CIBLE,
+	proprietesDuChamp,
+	texteDuChamp
+} from '$lib/console/structure';
 import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
 import { lireTypesDeFiche } from '$lib/donnees/lecture';
 import { lireLesDesignationsDeTypeDeFiche } from '$lib/donnees/consoles';
@@ -101,6 +113,54 @@ export const actions: Actions = {
 			String(champs.get('type-de-fiche') ?? '')
 		);
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		return resultat;
+	},
+
+	/**
+	 * CRÉER UN TYPE DE FICHE, ET SON SCHÉMA DE PROPRIÉTÉS.
+	 *
+	 * DEUX TABLES, UNE TRANSACTION : `types_de_fiche` et
+	 * `champs_de_type_de_fiche`. Un type créé sans ses propriétés serait un
+	 * schéma vide que l'administrateur croirait avoir défini.
+	 *
+	 * TROIS ATTRIBUTS DU PANNEAU NE SONT PAS PERSISTÉS, ET C'EST DÉCLARÉ :
+	 * la description, l'icône et le caractère obligatoire d'une propriété n'ont
+	 * AUCUNE colonne — `types_de_fiche` porte quatre colonnes, et
+	 * `champs_de_type_de_fiche` n'en a ni pour l'aide à la saisie, ni pour la
+	 * valeur par défaut, ni pour l'obligation. `V-29.svelte` les tient d'ailleurs
+	 * de tables écrites à la main (`DESCRIPTIONS`, `ICONE_PAR_TYPE`,
+	 * `PROPRIETES_OBLIGATOIRES`), et le dit. `$lib/base/schema.ts` est en lecture
+	 * seule pour ce lot : la lacune est nommée, jamais comblée par une colonne
+	 * détournée.
+	 */
+	creer: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const resultat = await creerUnTypeDeFiche(basePartagee(), {
+			nom: texteDuChamp(champs, CHAMP_NOM) ?? '',
+			proprietes: proprietesDuChamp(champs, CHAMP_PROPRIETES) ?? []
+		});
+		if (resultat.issue !== 'possible') return fail(400, resultat);
+		return resultat;
+	},
+
+	/** ENREGISTRER UN TYPE DE FICHE — le nom, et le schéma en bloc. */
+	enregistrer: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const nom = texteDuChamp(champs, CHAMP_NOM);
+		const proprietes = proprietesDuChamp(champs, CHAMP_PROPRIETES);
+
+		const resultat = await modifierUnTypeDeFiche(
+			basePartagee(),
+			texteDuChamp(champs, CHAMP_TYPE_DE_FICHE_CIBLE) ?? '',
+			{
+				...(nom === undefined ? {} : { nom }),
+				...(proprietes === undefined ? {} : { proprietes })
+			}
+		);
+		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		if (resultat.issue !== 'possible') return fail(400, resultat);
 		return resultat;
 	}
 };

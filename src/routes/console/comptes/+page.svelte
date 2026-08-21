@@ -17,24 +17,24 @@
 	 *
 	 * AUCUN `<svelte:head>` : rien ne déclare de titre de page pour le PRODUIT.
 	 */
-	import { onMount } from 'svelte';
 	import Vue from '../../../vues/V-32.svelte';
 	import '../../../vues/V-32.css';
-	import { cablerLeTiroirDeFormulaire, envoyerAUneAction } from '../cablage';
+	import { envoyerAUneAction } from '../cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
 
-	/**
-	 * LE PANNEAU DE FORMULAIRE EST RENDU ATTEIGNABLE AU MONTAGE — voir
-	 * `cablerLeTiroirDeFormulaire()`, qui dit pourquoi et ce qu'il ne fait pas.
+	/*
+	 * LE PANNEAU DE FORMULAIRE N'EST PLUS DÉPLACÉ AU MONTAGE, ET C'EST UNE
+	 * RÉPARATION, PAS UN RENONCEMENT.
 	 *
-	 * Ce n'est pas un ornement : `#f-role`, le déclencheur de `RG-M14-07`, vit
-	 * dans ce panneau. Sans ce geste, l'action `changerLeRole` d'à côté est juste,
-	 * éprouvée, et inatteignable — six lots ont écrit des actions que rien ne
-	 * pouvait atteindre (`ARB-063`).
+	 * `cablerLeTiroirDeFormulaire()` rendait le panneau DESCENDANT de `.app` pour
+	 * que la règle `.app[data-form="ouvert"] .tiroir-form` puisse enfin
+	 * l'atteindre — le panneau vit hors de `div.app` (`ARB-021`, A-4), et la règle
+	 * ne pouvait donc jamais s'appliquer (`P-3`). La feuille porte désormais la
+	 * règle de FRÈRE à côté de celle de descendant : le panneau s'ouvre à sa place
+	 * d'origine, et le document servi redevient celui de la maquette, au nœud près.
 	 */
-	onMount(() => cablerLeTiroirDeFormulaire(document));
 </script>
 
 <!--
@@ -116,6 +116,19 @@
 				? (refus.erreurs as { champ: 'ident' | 'nom'; message: string }[])
 				: [];
 		return { cree: false, erreurs };
+	}}
+	onReinitialiserLeMotDePasse={async (demande) => {
+		/* PAS DE RECHARGEMENT AU SUCCÈS : la boîte « Mot de passe réinitialisé »
+		   doit encore montrer la valeur, qui n'existe nulle part ailleurs — seul
+		   le condensat est en base. Et la liste, elle, n'a pas bougé : aucune
+		   colonne rendue ne change à la réinitialisation. */
+		const retour = await envoyerAUneAction(
+			document,
+			'?/reinitialiserLeMotDePasse',
+			{ 'f-ident': demande.identifiant, 'f-mdp': demande.motDePasse },
+			{ rechargerAuSucces: false }
+		);
+		return retour.succes;
 	}}
 	onMotDePasseTransmis={() => {
 		/* LA LISTE VIENT DU SERVEUR : le compte créé n'y entre qu'à la relecture.

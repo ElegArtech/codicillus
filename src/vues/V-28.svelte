@@ -80,6 +80,7 @@
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { filDeConsole } from '$lib/console/sections';
 	import { motFicheMinuscule, motFichePluriel, motFichePlurielMinuscule } from '$lib/vocabulaire';
+	import type { RefusDeSaisie, SaisieDeDomaine } from '$lib/console/structure';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
@@ -120,6 +121,20 @@
 		}) => void;
 		/** Le registre des modules de domaine. Absente, la constante du jeu. */
 		modules?: Record<CleDeModule, Module>;
+		/**
+		 * CE QUE LA VUE FAIT QUAND LE PANNEAU EST VALIDÉ — création puis
+		 * enregistrement. Même partage que pour la suppression : la vue tient
+		 * l'état du panneau — quel domaine est édité, quels modules sont cochés —
+		 * parce que c'est ce que `ouvrirForm(d)` tenait au gel (`V-28:3108`), et
+		 * elle ne connaît ni route, ni action, ni réseau.
+		 *
+		 * `onEnregistrer` reçoit d'abord le nom ACTUEL du domaine : c'est la clé
+		 * par laquelle la page retrouve sa désignation canonique.
+		 */
+		onCreer?: (saisie: SaisieDeDomaine) => void;
+		onEnregistrer?: (nom: string, saisie: SaisieDeDomaine) => void;
+		/** Le refus rendu par l'action, rattaché à son champ (`#erreur-nom`). */
+		refus?: RefusDeSaisie | null;
 	}
 
 	const {
@@ -131,7 +146,10 @@
 		instance = INSTANCE,
 		detailDomaines = DETAIL_DOMAINES,
 		onSupprimer,
-		modules = MODULES
+		modules = MODULES,
+		onCreer,
+		onEnregistrer,
+		refus = null
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -286,11 +304,43 @@
 	   `ouvrirForm(d)` — à défaut d'appel, le panneau garde son BALISAGE
 	   INITIAL : sélecteur d'univers, nuancier et liste de modules VIDES. */
 
+	/**
+	 * LE PANNEAU S'OUVRE, ET C'EST LA VUE QUI LE TIENT — même arbitrage que pour
+	 * le dialogue de suppression, et même motif : `ouverture` vaut `null` tant
+	 * que personne n'a cliqué, si bien que l'écran rendu est exactement celui que
+	 * le vecteur décrit.
+	 */
+	let ouverture = $state<'creation' | 'edition' | null>(null);
+	let cible = $state<string | null>(null);
+
+	/** Les cinq champs du panneau — `edite` du gel (`V-28:3108`), un par un. */
+	let fNom = $state('');
+	let fDescription = $state('');
+	let fUnivers = $state('');
+	let fCouleur = $state(COULEURS[0] as string);
+	let fModules = $state<readonly CleDeModule[]>(['notes']);
+	/** Le message de `#erreur-nom`, quand la validation de l'écran refuse. */
+	let erreurLocale = $state<string | null>(null);
+
 	/** L'édition porte sur Infrastructure — la planche le nomme (`V-28:3261`). */
 	const edite = $derived(
-		form === 'edition' ? (domaines.find((d) => d.nom === 'Infrastructure') ?? null) : null
+		ouverture === 'creation'
+			? null
+			: ouverture === 'edition'
+				? (domaines.find((d) => d.nom === cible) ?? null)
+				: form === 'edition'
+					? (domaines.find((d) => d.nom === 'Infrastructure') ?? null)
+					: null
 	);
-	const ouvert = $derived(form !== 'ferme');
+	/**
+	 * LE PANNEAU EST OUVERT SI UN GESTE L'A OUVERT, OU SI LE VECTEUR LE DEMANDE.
+	 *
+	 * C'est cette valeur qui pose `data-form` sur `div.app`, et c'est elle que la
+	 * règle gelée `.app[data-form="ouvert"] ~ .tiroir-form` attend pour lever
+	 * `translateX(100%)`. La rédaction précédente ne lisait que le vecteur : le
+	 * bouton « + » pouvait bien changer d'état, le panneau restait hors fenêtre.
+	 */
+	const ouvert = $derived(ouverture !== null || form !== 'ferme');
 
 	const titreDuForm = $derived(edite ? edite.nom : 'Nouveau domaine');
 	const sousDuForm = $derived(
@@ -298,11 +348,82 @@
 			? 'Les modifications prennent effet immédiatement.'
 			: 'Il apparaîtra dans la navigation de ceux qui y ont accès.'
 	);
-	const couleurChoisie = $derived(edite ? edite.couleur : COULEURS[0]);
+	const couleurChoisie = $derived(
+		ouverture !== null ? fCouleur : edite ? edite.couleur : COULEURS[0]
+	);
 	/** `su.value` : l'univers du domaine, ou le premier du registre en création. */
-	const universChoisi = $derived(edite ? edite.univers : (univers[0] as Univers).nom);
+	const universChoisi = $derived(
+		ouverture !== null ? fUnivers : edite ? edite.univers : (univers[0] as Univers).nom
+	);
 	/** `edite.modules` : ceux du domaine, ou le seul module obligatoire. */
-	const modulesActifs: readonly CleDeModule[] = $derived(edite ? edite.modules : ['notes']);
+	const modulesActifs: readonly CleDeModule[] = $derived(
+		ouverture !== null ? fModules : edite ? edite.modules : ['notes']
+	);
+	const nomSaisi = $derived(ouverture !== null ? fNom : edite ? edite.nom : '');
+	const descriptionSaisie = $derived(
+		ouverture !== null ? fDescription : edite ? edite.description : ''
+	);
+	/** Le message de `#erreur-nom` : celui de l'écran, ou celui de l'action. */
+	const erreurNom = $derived(
+		erreurLocale ?? (refus !== null && refus.champ === 'nom' ? refus.message : null)
+	);
+
+	/** `ouvrirForm(d)` — `null` pour une création (`V-28:3108`). */
+	function ouvrirForm(d: DomaineDeTravail | null): void {
+		ouverture = d === null ? 'creation' : 'edition';
+		cible = d === null ? null : d.nom;
+		fNom = d === null ? '' : d.nom;
+		fDescription = d === null ? '' : d.description;
+		fUnivers = d === null ? ((univers[0] as Univers)?.nom ?? '') : d.univers;
+		fCouleur = d === null ? (COULEURS[0] as string) : d.couleur;
+		fModules = d === null ? ['notes'] : [...d.modules];
+		erreurLocale = null;
+	}
+
+	/** `fermerForm()` — le panneau se referme, la saisie ne survit pas. */
+	function fermerForm(): void {
+		ouverture = null;
+		cible = null;
+		erreurLocale = null;
+	}
+
+	/**
+	 * `RG-STR-06` — « un domaine active 1 à N modules ». `notes` est verrouillé
+	 * au gel (`data-verrou`), il ne se décoche donc jamais : c'est lui qui tient
+	 * le plancher de 1, ici comme dans `creerUnDomaine()`.
+	 */
+	function basculerLeModule(cle: CleDeModule, actif: boolean): void {
+		if (cle === 'notes') return;
+		fModules = actif ? [...fModules, cle] : fModules.filter((m) => m !== cle);
+	}
+
+	/**
+	 * `form-valider` — LA VALIDATION DE L'ÉCRAN, celle du gel (`V-28:3157`) : nom
+	 * vide ou doublon insensible à la casse, un seul message pour les deux cas.
+	 * Ce n'est pas LA règle — `creerUnDomaine()` refuse quoi qu'il arrive — c'est
+	 * son reflet, qui évite de proposer un geste voué au refus.
+	 */
+	function validerLeForm(): void {
+		const nom = fNom.trim();
+		const doublon = domaines.some(
+			(d) => d.nom !== cible && d.nom.toLowerCase() === nom.toLowerCase()
+		);
+		if (nom === '' || doublon) {
+			erreurLocale = nom === '' ? 'Donnez un nom au domaine.' : `« ${nom} » existe déjà.`;
+			return;
+		}
+		erreurLocale = null;
+		const saisie: SaisieDeDomaine = {
+			nom,
+			description: fDescription,
+			univers: fUnivers,
+			couleur: fCouleur,
+			modules: fModules
+		};
+		if (ouverture === 'edition' && cible !== null) onEnregistrer?.(cible, saisie);
+		else onCreer?.(saisie);
+		fermerForm();
+	}
 
 	/* ── La suppression ─────────────────────────────────────────────────── */
 
@@ -417,7 +538,7 @@
 	>{@render nombre(m.notes, 'tg__n tg--reduit')}{@render nombre(m.fiches, 'tg__n tg--reduit')}{@render nombre(m.signets, 'tg__n tg--masquable tg--reduit')}{@render nombre(m.dossiers, 'tg__n tg--masquable tg--reduit')}{@render nombre(m.contributeurs, 'tg__n tg--masquable tg--reduit')}<div class="tg__modules tg--reduit"
 		>{#each d.modules as cle (cle)}<span class="mod-pastille" title={modules[cle].nom}>{CODES_MODULES[cle]}</span>{/each}</div
 	><div class="tg__actions"
-		><button class="btn" type="button">Modifier</button
+		><button class="btn" type="button" onclick={() => ouvrirForm(d)}>Modifier</button
 		><button class="btn btn--destructif" type="button" aria-label="Supprimer le domaine {d.nom}" onclick={() => { demande = d.nom; saisie = ''; }}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"/></svg></button
 	></div
 ></div>{/snippet}
@@ -430,7 +551,7 @@
 -->
 <!-- prettier-ignore -->
 {#snippet moduleDuForm(cle: CleDeModule)}{@const verrou = cle === 'notes'}<label class="mod" data-verrou={verrou ? 'oui' : undefined} data-consequence="non"
-	><input type="checkbox" checked={modulesActifs.includes(cle) || verrou} disabled={verrou}
+	><input type="checkbox" checked={modulesActifs.includes(cle) || verrou} disabled={verrou} onchange={(e) => basculerLeModule(cle, e.currentTarget.checked)}
 	/><span class="mod__corps"
 		><span class="mod__nom">{modules[cle].nom}{#if verrou}<span class="mod__oblig">toujours actif</span>{/if}</span
 		><span class="mod__aide">{AIDES_MODULES[cle]}</span
@@ -468,7 +589,7 @@
 			description="Les espaces de connaissance. Chaque domaine a ses contributeurs, son rangement et ses modules : un domaine qui n'a pas besoin de cartographie ne doit pas en afficher l'onglet."
 		>
 			{#snippet action()}
-				<BoutonDeCreation libelle="Nouveau domaine" />
+				<BoutonDeCreation libelle="Nouveau domaine" onCliquer={() => ouvrirForm(null)} />
 			{/snippet}
 		</TeteDeSection>
 
@@ -486,7 +607,7 @@
 				<span></span>
 			</div>
 			<div id="liste">
-				{#each tableau as d (d.nom)}{@render ligne(d)}{/each}
+				{#each tableau as d, rang (rang)}{@render ligne(d)}{/each}
 			</div>
 		</div>
 	{/snippet}
@@ -499,7 +620,12 @@
 					<h2 class="tiroir-form__titre" id="form-titre">{titreDuForm}</h2>
 					<div class="tiroir-form__sous" id="form-sous">{sousDuForm}</div>
 				</div>
-				<button class="tiroir-form__fermer" id="form-fermer" aria-label="Fermer le formulaire">
+				<button
+					class="tiroir-form__fermer"
+					id="form-fermer"
+					aria-label="Fermer le formulaire"
+					onclick={fermerForm}
+				>
 					<svg
 						width="17"
 						height="17"
@@ -512,7 +638,7 @@
 			</div>
 
 			<div class="tiroir-form__corps">
-				<div class="champ" id="champ-nom">
+				<div class="champ" id="champ-nom" data-etat={erreurNom === null ? undefined : 'erreur'}>
 					<label class="champ__label" for="f-nom">Nom <span class="oblig">*</span></label>
 					<input
 						class="saisie"
@@ -520,9 +646,10 @@
 						id="f-nom"
 						autocomplete="off"
 						placeholder="Infrastructure"
-						value={edite ? edite.nom : ''}
+						value={nomSaisi}
+						oninput={(e) => (fNom = e.currentTarget.value)}
 					/>
-					<div class="champ__erreur" id="erreur-nom" hidden>
+					<div class="champ__erreur" id="erreur-nom" hidden={erreurNom === null}>
 						<svg
 							width="13"
 							height="13"
@@ -533,7 +660,7 @@
 							style="flex:none;margin-top:1px"
 							><path d="M8 4.5v4M8 11.2v.3" /><circle cx="8" cy="8" r="6.2" /></svg
 						>
-						<span id="erreur-nom-txt"></span>
+						<span id="erreur-nom-txt">{erreurNom ?? ''}</span>
 					</div>
 				</div>
 
@@ -550,7 +677,8 @@
 						id="f-desc"
 						rows="3"
 						placeholder="Ce que ce domaine couvre, en une phrase."
-						value={edite ? edite.description : ''}></textarea>
+						oninput={(e) => (fDescription = e.currentTarget.value)}
+						value={descriptionSaisie}></textarea>
 				</div>
 
 				<div class="champ">
@@ -561,6 +689,7 @@
 					<select
 						class="selecteur"
 						id="f-univers"
+						onchange={(e) => (fUnivers = e.currentTarget.value)}
 						style="width:100%;padding:8px var(--e-3);border:1px solid var(--c-trait-fort);border-radius:var(--r-2);background:var(--c-papier);font-family:var(--f-ui);font-size:var(--t-base)"
 						>{#if ouvert}{#each universOrdonnes(univers) as u (u.nom)}<option value={u.nom} selected={u.nom === universChoisi}>{u.nom}</option>{/each}{/if}</select
 					>
@@ -573,7 +702,7 @@
 					<span class="champ__label">Couleur</span>
 					<!-- prettier-ignore -->
 					<div class="couleurs" id="f-couleurs" role="group" aria-label="Couleur du domaine"
-						>{#if ouvert}{#each COULEURS as c (c)}<button type="button" style="background:{c}" aria-pressed={c === couleurChoisie} aria-label="Couleur {c}"></button>{/each}{/if}</div
+						>{#if ouvert}{#each COULEURS as c (c)}<button type="button" style="background:{c}" aria-pressed={c === couleurChoisie} aria-label="Couleur {c}" onclick={() => (fCouleur = c)}></button>{/each}{/if}</div
 					>
 					<span class="champ__aide">Sert au repérage. Choisie hors des teintes de fraîcheur.</span>
 				</div>
@@ -592,9 +721,20 @@
 			</div>
 
 			<div class="tiroir-form__pied">
-				<button class="btn btn--destructif" id="form-supprimer" hidden={!edite}>Supprimer</button>
-				<button class="btn" id="form-annuler">Annuler</button>
-				<button class="btn btn--principal" id="form-valider"
+				<button
+					class="btn btn--destructif"
+					id="form-supprimer"
+					hidden={!edite}
+					onclick={() => {
+						if (edite === null) return;
+						const vise = edite.nom;
+						fermerForm();
+						demande = vise;
+						saisie = '';
+					}}>Supprimer</button
+				>
+				<button class="btn" id="form-annuler" onclick={fermerForm}>Annuler</button>
+				<button class="btn btn--principal" id="form-valider" onclick={validerLeForm}
 					><span id="form-valider-txt">{edite ? 'Enregistrer' : 'Créer le domaine'}</span></button
 				>
 			</div>
