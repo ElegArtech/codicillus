@@ -46,9 +46,51 @@
 	 */
 	import Vue from '../../vues/V-05.svelte';
 	import '../../vues/V-05.css';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	const { data }: { data: PageData } = $props();
+	const { data, form }: { data: PageData; form: ActionData } = $props();
+
+	/**
+	 * CE QUE LE SERVEUR A REFUSÉ, DIT À L'ÉCRAN — et il ne l'était pas.
+	 *
+	 * L'action rendait `fail(401, { issue: 'echec' })` ou `fail(429, { issue:
+	 * 'trop', secondes })`, la page se réaffichait à l'identique, les champs
+	 * vidés, et rien ne le disait. Un utilisateur voyait « je clique et rien ne
+	 * se passe » — mesuré, c'est exactement ce que ça donne.
+	 *
+	 * Les deux messages sont ceux du gel, à la lettre : `echec()` et
+	 * `verrouiller()`, `mockups/V-05-connexion.html:697` et `:712`. Le décompte
+	 * de la seconde est du COMPORTEMENT (`ARB-011`) ; la durée annoncée, elle,
+	 * est celle que le serveur a décidée, et elle est vraie sans script.
+	 *
+	 * `RG-ACC-04` tient : un seul message quelle que soit la cause du refus.
+	 */
+	const refus = $derived.by(() => {
+		if (form?.issue === 'trop') {
+			/* `ActionData` unifie les deux formes de refus, et `secondes` n'existe
+			   que sur l'une : la lecture est gardée plutôt que forcée. */
+			const s = 'secondes' in form && typeof form.secondes === 'number' ? form.secondes : 0;
+			const minutes = Math.floor(s / 60);
+			const reste = s % 60;
+			const duree =
+				minutes > 0 ? `${minutes} min ${String(reste).padStart(2, '0')} s` : `${reste} s`;
+			return {
+				variante: 'attente',
+				marque: '⏱',
+				titre: 'Trop de tentatives',
+				txt: `Nouvelle tentative possible dans ${duree}.`
+			};
+		}
+		if (form?.issue === 'echec') {
+			return {
+				variante: 'erreur',
+				marque: '!',
+				titre: 'Identifiant ou mot de passe incorrect',
+				txt: 'Vérifiez votre saisie, puis réessayez.'
+			};
+		}
+		return null;
+	});
 </script>
 
-<Vue vecteur={{ arrivee: data.arrivee }} />
+<Vue vecteur={{ arrivee: data.arrivee }} {refus} />
