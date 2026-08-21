@@ -149,6 +149,9 @@
 		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { adresseDesNotesDuDomaine } from '$lib/rangement/adresses';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
@@ -496,6 +499,28 @@
 	/** Le titre de la note visée, cherché au corpus — `V-25:2861`. */
 	function titreDe(cible: string): string {
 		return notes.find((n) => n.id === cible)?.titre ?? cible;
+	}
+
+	/**
+	 * LE DOMAINE DU TITULAIRE, ET SON UNIVERS — l'un ne s'adresse pas sans
+	 * l'autre (`RG-STR-02` : un domaine ne s'identifie que dans son univers).
+	 * C'est ce qui donne son adresse à « Voir les notes de … », l'issue que le
+	 * gel propose au nouvel arrivant dont le flux d'activité est vide
+	 * (`V-25:2884`).
+	 */
+	const domaineDuProfil = $derived(domaines.find((d) => d.nom === profil?.domaine));
+
+	/**
+	 * L'ADRESSE VIENT DE LA FABRIQUE UNIQUE — `$lib/rangement/adresses`,
+	 * `ARB-001` —, et `svelte/no-navigation-without-resolve` ne sait pas la
+	 * vérifier : elle n'est pas un identifiant de route mais une chaîne dérivée
+	 * de deux noms. La règle est levée sur cette seule ligne, comme `V-24` la
+	 * lève pour les adresses de son rapport d'import.
+	 */
+	function voirLesNotesDuDomaine(): void {
+		if (domaineDuProfil === undefined) return;
+		/* eslint-disable-next-line svelte/no-navigation-without-resolve */
+		void goto(adresseDesNotesDuDomaine(domaineDuProfil.univers, domaineDuProfil.nom));
 	}
 
 	/**
@@ -867,11 +892,11 @@
 					>{#if evenements.length === 0}<div class="encouragement"
 						><h3>Rien à afficher pour l'instant</h3
 						><p>Vos contributions apparaîtront ici dès la première. Le plus simple pour commencer : vérifier une note de votre domaine que vous connaissez déjà — cela prend une minute et rend service à tout le monde.</p
-						><button class="btn btn--principal">{`Voir les notes de ${profil?.domaine ?? ''}`}</button
+						><button class="btn btn--principal" disabled={domaineDuProfil === undefined} onclick={() => voirLesNotesDuDomaine()}>{`Voir les notes de ${profil?.domaine ?? ''}`}</button
 					></div>{:else}<ul class="flux"
 						>{#each evenements as ev, rang (rang)}<li data-type={ev.type}
 							><div class="flux__txt"
-								>{GESTES[ev.type] + ' '}{#if ev.cible}<a href="#">{titreDe(ev.cible)}</a>{:else if ev.detail}{`— ${ev.detail}`}{/if}<span class="flux__quand">{relatif(ev.heures)}</span
+								>{GESTES[ev.type] + ' '}{#if ev.cible}<a href={resolve('/notes/[identifiant]', { identifiant: ev.cible })}>{titreDe(ev.cible)}</a>{:else if ev.detail}{`— ${ev.detail}`}{/if}<span class="flux__quand">{relatif(ev.heures)}</span
 							></div
 						></li>{/each}</ul
 					>{/if}</div>

@@ -27,6 +27,23 @@
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI (P-6.1, P-6.3).
 	 */
+	import { adresseDeNote } from '$lib/rangement/adresses';
+
+	/**
+	 * LE LIEN INTERNE DU CORPS RÉDIGÉ — il vise une note qui existe.
+	 *
+	 * Le gel l'écrit en ancre vide, faute de serveur, et la note qu'il nomme est
+	 * au corpus : « Diagnostiquer un échec de restauration Barman », identifiant
+	 * `n-diag-barman` (`seeds/corpus.ts`). L'adresse sort de la fabrique, jamais
+	 * d'un gabarit écrit ici.
+	 *
+	 * L'IDENTIFIANT EST ÉCRIT EN CLAIR PARCE QUE LE TEXTE L'EST AUSSI : ce
+	 * fichier est la transcription figée d'un corps rédigé, et le lien fait
+	 * partie de ce corps au même titre que la phrase qui le porte. Le produit ne
+	 * rend ce corps que faute de note réelle ; le corps d'une note réelle sort
+	 * de `rendreDocument`, qui compose ses liens depuis le document.
+	 */
+	const ADRESSE_DIAGNOSTIC = adresseDeNote('n-diag-barman');
 </script>
 
 <p>
@@ -335,8 +352,14 @@
 	<footer>— Retour d'expérience de l'astreinte, revue trimestrielle du 12 mars 2026</footer>
 </blockquote>
 
+<!-- eslint-disable svelte/no-navigation-without-resolve -- les adresses de ce bloc
+sortent de la fabrique unique, `$lib/rangement/adresses.ts`, qui les compose dans
+la forme canonique d'ARB-001 et nulle part ailleurs. La règle inspecte
+l'EXPRESSION du href et ne peut pas la suivre jusqu'à la fabrique : elle ne
+saurait pas plus la vérifier ici. Même geste qu'en V-03, V-22, V-24 et dans la
+barre supérieure. -->
 <p>
-	Reprenez d'abord les prérequis, puis consultez <a class="lien-int" href="#"
+	Reprenez d'abord les prérequis, puis consultez <a class="lien-int" href={ADRESSE_DIAGNOSTIC}
 		>Diagnostiquer un échec de restauration Barman</a
 	>. Si le serveur de sauvegarde lui-même est en cause, la note
 	<a class="lien-casse" id="lien-casse">Reconstruire le dépôt Barman</a>

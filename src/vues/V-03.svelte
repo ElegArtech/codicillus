@@ -71,15 +71,39 @@
 	 * en ligne, que Svelte ne sait pas émettre comme attribut littéral : sans
 	 * effet sur le rendu, l'impression relève de RG-M18-17 et de la batterie 15.
 	 *
-	 * LES ADRESSES RESTENT CELLES DU GEL — voir l'en-tête de `V-04.svelte`.
+	 * LES ADRESSES DU GEL SONT DÉSORMAIS DE VRAIES ADRESSES. `ARB-013` retire les
+	 * lignes `/url:` de la comparaison de structure précisément pour que le
+	 * produit porte SES adresses ; la campagne de câblage du 21/08/2026 lève la
+	 * réserve qui les avait laissées à `#`, et c'est la seule modification
+	 * qu'elle autorise dans une vue. Elles passent toutes par `resolve()`.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
 	 * (P-6.1) et de `src/vues/V-03.css` (P-6.3), posé par
 	 * `node verif/feuilles-de-vue.mjs V-03 --installer`. Les `style=` reproduits
 	 * figurent tous à l'ensemble clos du gel (ARB-016).
 	 */
-	import { DATE_REFERENCE, type NiveauFraicheur } from '../../seeds/corpus';
+	import { resolve } from '$app/paths';
+	import { CONFIG, DATE_REFERENCE, type NiveauFraicheur } from '../../seeds/corpus';
 	import { temoinFraicheur } from '$lib/fraicheur';
+
+	/**
+	 * LES MOTIFS DE ROUTE, ÉCRITS EN CONSTANTES — `svelte/no-navigation-without-resolve`
+	 * inspecte l'EXPRESSION du `href`. Même écriture qu'à `V-07:455`.
+	 */
+	const ROUTE_DU_GUIDE = '/guides/[identifiant]' as const;
+
+	/**
+	 * LES DEUX GUIDES QUE LE CORPS GELÉ CITE, ET LEUR IDENTIFIANT EN BASE.
+	 *
+	 * Ces deux liens ne vivent que dans l'article ÉCRIT de la maquette — la
+	 * branche `guide === null`, que la route n'emprunte jamais puisqu'elle passe
+	 * toujours la note demandée. Ils restent atteignables en rendu direct du
+	 * composant, et les deux notes existent, publiques et publiées, sous ces
+	 * titres exacts (`seeds/corpus.ts`) : les faire pointer là où elles sont est
+	 * plus juste que de les laisser inertes.
+	 */
+	const GUIDE_DEMANDER_ACCES = 'n-demander-acces';
+	const GUIDE_SIGNALER_INCIDENT = 'n-signaler-incident';
 
 	/**
 	 * UNE ENTRÉE DE SOMMAIRE — les titres de niveau 2 du corps affiché.
@@ -148,9 +172,15 @@
 		 * proscrit.
 		 */
 		guide?: GuideAffiche | null;
+		/**
+		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — donnée d'INSTANCE, lue dans la table
+		 * `parametres` par le chargeur de la route. Absente, la valeur du jeu de
+		 * semence, qui est celle que la semence écrit en base.
+		 */
+		portail?: string;
 	}
 
-	const { vecteur, guide = null }: Proprietes = $props();
+	const { vecteur, guide = null, portail = CONFIG.portailAssistance }: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	/** Un corps « En bref » existe-t-il ? Sinon le sélecteur de registre disparaît. */
@@ -281,18 +311,18 @@
 
 <div class="public app" id="app" data-registre="reference">
 	<header class="chapeau">
-		<a class="marque" href="#" aria-label="Codicillus — accueil public">
+		<a class="marque" href={resolve('/')} aria-label="Codicillus — accueil public">
 			<span class="marque__sceau" aria-hidden="true">C</span>
 			<span class="marque__nom">Codicillus</span>
 		</a>
 		<!-- Accès connexion : discret, pour les personnes qui ont déjà un compte. -->
-		<a class="btn btn--discret" href="#">Se connecter</a>
+		<a class="btn btn--discret" href={resolve('/connexion')}>Se connecter</a>
 	</header>
 
 	<nav class="fil-pub" aria-label="Fil d'Ariane">
-		<a href="#">Accueil</a><span>›</span><a href={guide?.adresseDuDomaine ?? '#'}
-			>{guide?.domaine ?? 'Poste de travail'}</a
-		><span>›</span><a href="#">Guides</a>
+		<a href={resolve('/')}>Accueil</a><span>›</span><a
+			href={guide?.adresseDuDomaine ?? resolve('/')}>{guide?.domaine ?? 'Poste de travail'}</a
+		><span>›</span><a href={resolve('/recherche')}>Guides</a>
 	</nav>
 
 	<main class="lecture-pub">
@@ -575,12 +605,20 @@
 						<li>
 							<strong>Vous n'arrivez plus à accéder à une application précise</strong> — ce n'est
 							peut-être pas votre mot de passe. Voyez
-							<a class="lien-int" href="#">Demander un accès à une application</a>.
+							<a
+								class="lien-int"
+								href={resolve(ROUTE_DU_GUIDE, { identifiant: GUIDE_DEMANDER_ACCES })}
+								>Demander un accès à une application</a
+							>.
 						</li>
 						<li>
 							<strong>Téléphone professionnel perdu</strong> — signalez-le d'abord, la
 							réinitialisation viendra ensuite. Voyez
-							<a class="lien-int" href="#">Signaler un incident au support</a>.
+							<a
+								class="lien-int"
+								href={resolve(ROUTE_DU_GUIDE, { identifiant: GUIDE_SIGNALER_INCIDENT })}
+								>Signaler un incident au support</a
+							>.
 						</li>
 					</ul>
 
@@ -656,7 +694,7 @@
 			<section class="panneau">
 				<div class="panneau__tete"><span class="etiq">Pièces jointes</span></div>
 				<div class="panneau__corps panneau__corps--serre">
-					{#if guide !== null}{#each guide.piecesJointes as pj (pj.nom)}<a
+					{#if guide !== null}{#each guide.piecesJointes as pj, rang (rang)}<a
 								class="pj"
 								href={pj.adresse}
 							>
@@ -701,7 +739,7 @@
 			<aside class="repli">
 				<h2 class="repli__titre">Toujours bloqué ?</h2>
 				<p class="repli__txt">L'assistance prend le relais et vous rappelle.</p>
-				<a class="btn btn--principal" href="#" id="ticket">
+				<a class="btn btn--principal" href={portail} id="ticket">
 					Ouvrir un ticket
 					<svg
 						width="13"
@@ -719,7 +757,7 @@
 	<footer class="pied-public">
 		<div class="pied-public__int">
 			<span class="etiq">Codicillus · Direction technique</span>
-			<a href="#">Se connecter</a>
+			<a href={resolve('/connexion')}>Se connecter</a>
 		</div>
 	</footer>
 </div>

@@ -41,8 +41,16 @@
 	import { onMount } from 'svelte';
 	import Vue from '../../../../vues/V-17.svelte';
 	import '../../../../vues/V-17.css';
+	import { page } from '$app/state';
 	import { cablerLEditeur } from '$lib/cablage/formulaires';
 	import { monterLEditeur } from '$lib/edition/editeur-client';
+	import {
+		cablerLesGestesDEdition,
+		resolveurDuCorpusServi,
+		DOCUMENT_VIDE,
+		type GestesCables
+	} from '$lib/edition/gestes';
+	import { adresseDeNote } from '$lib/rangement/adresses';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -59,11 +67,28 @@
 	 */
 	onMount(() => {
 		const zone = formulaire.querySelector<HTMLElement>('#redaction');
-		const editeur = zone === null ? null : monterLEditeur(zone, data.corps, formulaire);
+		/* LE NŒUD ENTRE LES DEUX CÂBLAGES — voir `/notes/nouvelle`, même raison :
+		   l'éditeur est monté avant les gestes et ne peut pas s'y référer. */
+		let gestes: GestesCables | null = null;
+		const editeur =
+			zone === null
+				? null
+				: monterLEditeur(zone, data.corps, formulaire, {
+						surChangement: () => gestes?.signalerUneModification()
+					});
 		const defaire = cablerLEditeur(formulaire, {
 			...(editeur === null ? {} : { editeur: () => editeur.document() })
 		});
+		gestes = cablerLesGestesDEdition(formulaire, {
+			document: () => editeur?.document() ?? data.corps ?? DOCUMENT_VIDE,
+			resoudre: resolveurDuCorpusServi(data.notes),
+			/* « Annuler » ramène à la LECTURE de la note qu'on modifiait — la
+			   destination que `docs/routes.md` donne à cette famille, et celle
+			   qu'un enregistrement réussi emprunte déjà. */
+			retour: adresseDeNote(page.params['identifiant'] ?? '')
+		});
 		return () => {
+			gestes?.defaire();
 			defaire();
 			editeur?.detruire();
 		};

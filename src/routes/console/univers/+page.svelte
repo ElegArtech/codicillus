@@ -32,9 +32,47 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { envoyerAUneAction } from '../cablage';
+	import {
+		CHAMP_POSITION,
+		CHAMP_UNIVERS_CIBLE,
+		champsDUnivers,
+		type RefusDeSaisie,
+		type SaisieDUnivers
+	} from '$lib/console/structure';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	/**
+	 * LE REFUS RENDU PAR L'ACTION, REMIS À LA VUE.
+	 *
+	 * `envoyerAUneAction()` recharge la page au succès et rend la charge du
+	 * `fail()` au refus : c'est cette charge-là qui porte le message et le champ
+	 * visé, et le bloc `#erreur-nom` du gel n'attendait que lui. Le refus est
+	 * effacé avant chaque envoi — un message d'un geste précédent qui survivrait
+	 * au suivant mentirait sur ce qui vient de se passer.
+	 */
+	let refus = $state<RefusDeSaisie | null>(null);
+
+	/** Le premier refus d'une réponse d'action, ou `null` si elle n'en porte pas. */
+	function premierRefus(donnees: unknown): RefusDeSaisie | null {
+		if (typeof donnees !== 'object' || donnees === null) return null;
+		const erreurs = (donnees as { erreurs?: unknown }).erreurs;
+		if (!Array.isArray(erreurs)) return null;
+		const [premiere] = erreurs as RefusDeSaisie[];
+		return premiere ?? null;
+	}
+
+	async function envoyer(action: string, champs: Record<string, string>): Promise<void> {
+		refus = null;
+		const retour = await envoyerAUneAction(document, action, champs);
+		if (!retour.succes) refus = premierRefus(retour.donnees);
+	}
+
+	/** L'identifiant lisible d'un univers, lu en base par le chargeur. */
+	function identifiantDe(nom: string): string | undefined {
+		return data.designations[nom];
+	}
 </script>
 
 <!--
@@ -72,5 +110,28 @@
 	}}
 	onRattacher={() => {
 		void goto(resolve('/console/domaines'));
+	}}
+	{refus}
+	onCreer={(saisie: SaisieDUnivers) => {
+		void envoyer('?/creer', champsDUnivers(saisie));
+	}}
+	onEnregistrer={(nom: string, saisie: SaisieDUnivers) => {
+		const identifiant = identifiantDe(nom);
+		if (identifiant === undefined) return;
+		void envoyer('?/enregistrer', {
+			[CHAMP_UNIVERS_CIBLE]: identifiant,
+			...champsDUnivers(saisie)
+		});
+	}}
+	onReordonner={(nom: string, ordre: number) => {
+		/* LE RANG SEUL, ET RIEN D'AUTRE. `?/enregistrer` ne touche que les champs
+		   transmis : une flèche ne recopie donc pas le nom, la description, la
+		   couleur et le glyphe relus à l'écran dans la base à chaque clic. */
+		const identifiant = identifiantDe(nom);
+		if (identifiant === undefined) return;
+		void envoyer('?/enregistrer', {
+			[CHAMP_UNIVERS_CIBLE]: identifiant,
+			[CHAMP_POSITION]: String(ordre)
+		});
 	}}
 />

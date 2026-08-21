@@ -72,8 +72,10 @@ import {
 	etiquettes,
 	etiquettesDeNote,
 	notes,
-	typesDeNote
+	typesDeNote,
+	versions
 } from '../base/schema';
+import { versionDUnEnregistrement } from '../edition/enregistrement';
 import { analyserMarkdown, markdownDeFormulaire } from '../contenu/markdown';
 import type { Document } from '../contenu/document';
 import { INTROUVABLE, type Identite, type Resolution } from '../droits/resolution';
@@ -454,6 +456,22 @@ function dateSeule(instant: Date): string {
 	return instant.toISOString().slice(0, 10);
 }
 
+/**
+ * LE RÉSUMÉ DE LA PREMIÈRE VERSION — repris du gel, jamais rédigé ici.
+ *
+ * `RG-M07-01` capture une version « à chaque enregistrement qui modifie le corps
+ * Référence » : une création écrit ce corps, de rien vers quelque chose, et elle
+ * en écrit donc la version n° 1. Elle ne l'écrivait pas, et c'est pourquoi
+ * `versions` portait ZÉRO ligne pour 32 notes — l'historique de V-15 et la
+ * comparaison de V-16 n'avaient rien à montrer d'une note créée par le produit.
+ *
+ * Le résumé n'est PAS inventé : `seeds/corpus.ts:1497` le donne mot pour mot
+ * pour `n-migration-bases`, note dont l'unique version est sa création. Il n'est
+ * donc pas `RESUME_NON_SAISI` — le vide de `enregistrement.ts` dit « aucun champ
+ * ne l'a saisi », et ici le gel l'a écrit.
+ */
+export const RESUME_DE_CREATION = 'Création de la note';
+
 export async function creerUneNote(
 	base: Base,
 	client: Meilisearch,
@@ -506,6 +524,36 @@ export async function creerUneNote(
 					})
 					.returning({ id: notes.id });
 				const noteId = (inseres[0] as { id: string }).id;
+
+				/* LA VERSION N° 1 — voir `RESUME_DE_CREATION`. Elle est composée par
+				   `versionDUnEnregistrement()`, la MÊME décision que celle de
+				   l'enregistrement : un second calcul de numéro, de quantités ou de
+				   capture divergerait, et la divergence ne se verrait qu'à
+				   l'historique. L'état d'AVANT est l'absence — la note n'existait pas
+				   —, ce qui donne « n lignes ajoutées, 0 retirée », exactement la
+				   forme que `seeds/corpus.ts:1490-1496` porte pour une création. */
+				const version = versionDUnEnregistrement({
+					dernierNumero: 0,
+					auteurId,
+					maintenant: demande.maintenant,
+					titre: demande.saisie.titre,
+					corps: { reference: corps, operationnel: null },
+					avant: { titre: demande.saisie.titre, reference: null, operationnel: null }
+				});
+				if (version !== null) {
+					await tx.insert(versions).values({
+						noteId,
+						numero: version.numero,
+						le: version.le,
+						auteurId: version.auteurId,
+						resume: RESUME_DE_CREATION,
+						ajout: version.ajout,
+						retrait: version.retrait,
+						titre: version.titre,
+						corpsReference: version.corpsReference,
+						corpsOperationnel: version.corpsOperationnel
+					});
+				}
 
 				let ordre = 0;
 				for (const libelle of demande.saisie.etiquettes) {

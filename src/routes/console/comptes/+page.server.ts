@@ -19,7 +19,10 @@
  * « Formulaire » et les deux de l'axe « Cas » sont des états d'INTERACTION.
  */
 import { error, fail } from '@sveltejs/kit';
+import { eq } from 'drizzle-orm';
 import { basePartagee } from '$lib/base/acces';
+import { comptes } from '$lib/base/schema';
+import { hacherMotDePasse } from '$lib/auth/mots-de-passe';
 import {
 	changerLActivationDUnCompte,
 	changerLeRoleDUnCompte,
@@ -199,5 +202,46 @@ export const actions: Actions = {
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		if (resultat.issue !== 'possible') return fail(400, resultat);
 		return resultat;
+	},
+
+	/**
+	 * RÉINITIALISER LE MOT DE PASSE D'UN COMPTE — `RG-CPT-01`.
+	 *
+	 * « Un compte peut être marqué mot de passe verrouillé : il conserve tous ses
+	 * droits de contenu mais ne peut pas changer son propre mot de passe. […] La
+	 * réinitialisation par un administrateur reste possible » (`CDC:137`). Le
+	 * verrou N'EST DONC PAS ÉPROUVÉ ICI : il vise le compte lui-même, jamais
+	 * l'administrateur, et le refuser ici retirerait au compte de démonstration
+	 * partagé la seule porte de sortie que la règle lui laisse.
+	 *
+	 * LA VALEUR CLAIRE ENTRE ET N'EN RESSORT PAS — même motif qu'à la création :
+	 * elle est engendrée par le NAVIGATEUR, condensée ici, et la base n'en garde
+	 * que l'Argon2id. Aucune valeur rendue ne la reporte.
+	 *
+	 * LES SESSIONS EN COURS NE SONT PAS FERMÉES, et c'est une lacune déclarée
+	 * plutôt qu'un oubli : ni le gel ni le cahier des charges ne le demandent, et
+	 * décider seul de déconnecter quelqu'un dépasse ce que le geste annonce.
+	 */
+	reinitialiserLeMotDePasse: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const identifiant = identifiantNormalise(champs.get('f-ident'));
+		const clair = String(champs.get('f-mdp') ?? '');
+		if (clair === '') return fail(422, { issue: 'mot-de-passe-vide' });
+
+		const base = basePartagee();
+		const [ligne] = await base
+			.select({ id: comptes.id, nom: comptes.nom })
+			.from(comptes)
+			.where(eq(comptes.identifiant, identifiant))
+			.limit(1);
+		if (ligne === undefined) error(404, MESSAGE_INTROUVABLE);
+
+		await base
+			.update(comptes)
+			.set({ condensatMotDePasse: await hacherMotDePasse(clair), modifieLe: new Date() })
+			.where(eq(comptes.id, ligne.id));
+
+		return { issue: 'possible' as const, compte: ligne.nom };
 	}
 };

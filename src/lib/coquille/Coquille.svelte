@@ -157,12 +157,22 @@
 	 */
 	import type { Snippet } from 'svelte';
 	import type { Domaine, Note, Univers } from '../../../seeds/corpus';
+	import {
+		adresseDUnivers,
+		adresseDeDomaine,
+		adresseDeDossier,
+		adresseDeNote,
+		adresseDesNotesDuDomaine,
+		adresseDesSignetsDuDomaine
+	} from '$lib/rangement/adresses';
 	import { railRendu, sectionsDuRail } from './arborescence';
 	import { railAbregeRendu } from './arborescence-abregee';
 	import BarreSuperieure from './BarreSuperieure.svelte';
 	import Rail from './Rail.svelte';
 	import PileDeNotifications from './PileDeNotifications.svelte';
 	import type { Notification } from './notifications';
+	import { getContext } from 'svelte';
+	import { CLE_IDENTITE, type IdentiteDeCoquille } from './identite';
 
 	interface Compte {
 		readonly nom: string;
@@ -375,6 +385,25 @@
 	}: Proprietes = $props();
 
 	/**
+	 * L'IDENTITÉ RÉELLE L'EMPORTE SUR CELLE DU GEL — `$lib/coquille/identite.ts`
+	 * porte le contrat et le motif complet.
+	 *
+	 * En application, le gabarit racine pose le contexte et l'on affiche le
+	 * compte connecté. Hors application — le rendu par défaut d'une vue, sans
+	 * gabarit —, `getContext` rend `undefined` : la propriété s'applique, et le
+	 * gel ne bouge pas d'un pixel.
+	 *
+	 * `roleEffectif` répare au passage l'entrée « Console d'administration » :
+	 * `socle.css:397` cache `.si-admin` hors de `data-role="admin"`, et la valeur
+	 * par défaut `'referent'` la rendait invisible à l'administrateur lui-même.
+	 */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const compteEffectif = $derived(identite?.compte ?? compte);
+	const roleEffectif = $derived(
+		identite === undefined ? role : identite.administrateur ? 'admin' : 'referent'
+	);
+
+	/**
 	 * L'arborescence du rail — DEUX DÉRIVATIONS, et une seule sert.
 	 *
 	 * La forme complète dérive du corpus, la forme abrégée le contredit : elle
@@ -395,6 +424,92 @@
 	 * l'octet pour les 22 vues concordantes.
 	 */
 	const cible = $derived(cibleEvitement ?? idContenu);
+
+	/**
+	 * LES ADRESSES DU FIL D'ARIANE — COMPOSÉES, PARCE QUE LE GEL N'EN DÉCLARE
+	 * AUCUNE.
+	 *
+	 * Le script de la maquette pose `href="#"` sur chaque ancêtre et se contente
+	 * d'annoncer « Retour vers « X » » (`V-37:3399-3415`) : il n'y a rien à lire,
+	 * et `ARB-013` retire de toute façon les adresses de la comparaison de
+	 * structure. Elles se composent donc ici, par la fabrique
+	 * `$lib/rangement/adresses.ts`, et par elle seule.
+	 *
+	 * LA COQUILLE EST LE SEUL ENDROIT QUI PEUT LE FAIRE. La barre supérieure ne
+	 * reçoit que des LIBELLÉS ; c'est `courant` — le chemin de rangement mis en
+	 * évidence dans le rail, du domaine au dernier dossier — qui dit lesquels de
+	 * ces libellés sont un univers, un domaine, un dossier. Un fil de rangement
+	 * se reconnaît à ceci, et à rien d'autre : son TROISIÈME segment est le
+	 * PREMIER de `courant`.
+	 *
+	 *   ['Accueil', univers, domaine, …dossiers, …feuilles]   courant = [domaine, …dossiers]
+	 *   ['Accueil', 'Console', section]                        courant = []
+	 *
+	 * `Notes` et `Signets` sont des identifiants RÉSERVÉS sous un domaine
+	 * (`docs/routes.md` §5.4) : un segment qui les porte n'est jamais un dossier,
+	 * et son adresse est celle de la liste, pas celle d'un rangement.
+	 *
+	 * CE QUI RESTE SANS ADRESSE RESTE SANS ADRESSE. Un segment que ces règles ne
+	 * résolvent pas — le titre d'une note dans le fil de V-18, par exemple, dont
+	 * l'identifiant ne remonte pas jusqu'ici — garde le `href="#"` du gel. Une
+	 * destination devinée serait pire qu'un lien qui ne mène nulle part.
+	 */
+	function adressesDuFil(
+		segments: readonly string[],
+		chemin: readonly string[],
+		corpus: readonly Note[]
+	): readonly (string | undefined)[] {
+		const adresses: (string | undefined)[] = segments.map(() => undefined);
+		/* Le dernier segment est la page courante : le gel le rend en `span`. */
+		const dernier = segments.length - 1;
+		if (segments[0] === 'Accueil' && dernier > 0) adresses[0] = '/';
+		if (segments[1] === 'Console') {
+			if (dernier > 1) adresses[1] = '/console';
+			return adresses;
+		}
+		const universDuFil = segments[1];
+		const domaineDuFil = segments[2];
+		if (universDuFil === undefined || domaineDuFil === undefined) return adresses;
+		if (chemin[0] !== domaineDuFil) return adresses;
+		if (dernier > 1) adresses[1] = adresseDUnivers(universDuFil);
+		if (dernier > 2) adresses[2] = adresseDeDomaine(universDuFil, domaineDuFil);
+		/* `courant` va du domaine au dernier dossier : la profondeur de dossiers
+		   est donc sa longueur moins un. Au-delà, le fil parle d'autre chose. */
+		const profondeur = chemin.length - 1;
+		for (let rang = 3; rang < dernier; rang += 1) {
+			const segment = segments[rang];
+			if (segment === 'Notes') {
+				adresses[rang] = adresseDesNotesDuDomaine(universDuFil, domaineDuFil);
+			} else if (segment === 'Signets') {
+				adresses[rang] = adresseDesSignetsDuDomaine(universDuFil, domaineDuFil);
+			} else if (rang - 3 < profondeur) {
+				adresses[rang] = adresseDeDossier(universDuFil, domaineDuFil, segments.slice(3, rang + 1));
+			} else if (rang - 3 === profondeur) {
+				/*
+				 * LE SEGMENT QUI SUIT LE DERNIER DOSSIER EST UN TITRE DE NOTE — c'est
+				 * le fil de `/notes/{id}/operationnel` et de `/notes/{id}/relations`,
+				 * où la note n'est plus la page courante mais son ancêtre.
+				 *
+				 * L'ADRESSE NE SE DÉRIVE PAS DU TITRE. L'identifiant lisible d'une
+				 * note est PERSISTÉ, dérivé à la création et stable sous les
+				 * renommages (`RG-M12-11`) : le recomposer donnerait une adresse
+				 * fausse dès le premier titre corrigé. Il est donc LU sur la note du
+				 * corpus que la coquille reçoit déjà pour construire son rail, et
+				 * seulement si le rangement concorde. Sans note, pas d'adresse.
+				 */
+				const note = corpus.find(
+					(candidate) =>
+						candidate.titre === segment &&
+						candidate.univers === universDuFil &&
+						candidate.domaine === domaineDuFil
+				);
+				if (note !== undefined) adresses[rang] = adresseDeNote(note.id);
+			}
+		}
+		return adresses;
+	}
+
+	const ciblesDuFil = $derived(adressesDuFil(fil, courant, notes));
 </script>
 
 <!--
@@ -414,7 +529,7 @@
 	id="app"
 	{...donnees}
 	data-rail={rail}
-	data-role={role}
+	data-role={roleEffectif}
 	data-droits={droits}
 	data-contenu={contenu}
 >
@@ -425,10 +540,18 @@
 		P-09 leur demande de ne pas ÉMETTRE ce que le socle se contentait de
 		cacher. Aucun rendu ne change tant que le droit est là.
 	-->
-	<Rail {forme} {sections} {sectionsAbregees} {version} {accueilCourant} {droits} {role} />
+	<Rail
+		{forme}
+		{sections}
+		{sectionsAbregees}
+		{version}
+		{accueilCourant}
+		{droits}
+		role={roleEffectif}
+	/>
 
 	<div class="cadre">
-		<BarreSuperieure {fil} {rail} {compte} {forme} {droits} />
+		<BarreSuperieure {fil} cibles={ciblesDuFil} {rail} compte={compteEffectif} {forme} {droits} />
 
 		{#if classeEnveloppe}<div class={classeEnveloppe}>
 				{#if avantContenu}{@render avantContenu()}{/if}

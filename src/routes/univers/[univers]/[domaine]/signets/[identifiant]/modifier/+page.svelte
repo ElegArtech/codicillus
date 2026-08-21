@@ -22,6 +22,9 @@
 	import Vue from '../../../../../../../vues/V-23.svelte';
 	import '../../../../../../../vues/V-23.css';
 	import { cablerLeSignet } from '$lib/cablage/formulaires';
+	import { page } from '$app/state';
+	import { adresseDesSignetsDuDomaine } from '$lib/rangement/adresses';
+	import { cablerLAnnulationDuSignet } from '../../cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -35,7 +38,26 @@
 
 	let enveloppe: HTMLDivElement;
 
-	onMount(() => cablerLeSignet(enveloppe, { rappelDeSuppression: rappel }));
+	/**
+	 * OÙ « ANNULER » RAMÈNE — la liste des signets du domaine, par la fabrique
+	 * d'adresses. Les deux segments de la route sont déjà des identifiants
+	 * lisibles, et `identifiantLisible()` est idempotente sur eux.
+	 */
+	const retour = $derived(
+		adresseDesSignetsDuDomaine(
+			String(page.params['univers'] ?? ''),
+			String(page.params['domaine'] ?? '')
+		)
+	);
+
+	onMount(() => {
+		const defaireLeSignet = cablerLeSignet(enveloppe, { rappelDeSuppression: rappel });
+		const defaireLAnnulation = cablerLAnnulationDuSignet(enveloppe, { retour });
+		return () => {
+			defaireLAnnulation();
+			defaireLeSignet();
+		};
+	});
 </script>
 
 <div bind:this={enveloppe} style="display:contents">

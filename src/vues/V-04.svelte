@@ -51,18 +51,11 @@
 	 * comportement et relèvent de T-017 : `div.notifs` est rendu vide, comme la
 	 * référence le montre à l'instant capturé.
 	 *
-	 * LES ADRESSES RESTENT CELLES DU GEL — ET C'EST UN CONSTAT, PAS UN CHOIX.
-	 * ARB-013 retire les lignes `/url:` de l'instantané ARIA précisément pour que
-	 * le produit puisse porter les adresses de `docs/routes.md` sans rougir. Le
-	 * filtre est le module de capture du banc, `sansAdresses()` : il retire les
-	 * lignes qui répondent à `/^\s*\/url:/`. Or l'instantané que Playwright
-	 * produit écrit `  - /url: "#"`, avec le tiret de liste : le filtre ne
-	 * reconnaît donc aucune ligne, et toute adresse réelle fait échouer le
-	 * niveau 1 — MESURÉ sur cette vue, trois états sur trois, avant correction.
-	 * `src/lib/coquille/Rail.svelte` porte quatorze `href="#"` pour la même
-	 * raison, sans que rien ne l'ait relevé. Les liens de ce fichier restent donc
-	 * ceux du gel ; le fait est remonté au rapport du lot, et l'instrument ne se
-	 * modifie pas depuis un lot de vue.
+	 * LES ADRESSES DU GEL SONT DÉSORMAIS DE VRAIES ADRESSES. `ARB-013` retire les
+	 * lignes `/url:` de la comparaison de structure précisément pour que le
+	 * produit porte SES adresses ; la campagne de câblage du 21/08/2026 lève la
+	 * réserve qui les avait laissées à `#`, et c'est la seule modification
+	 * qu'elle autorise dans une vue. Elles passent toutes par `resolve()`.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
 	 * (P-6.1) et de `src/vues/V-04.css` (P-6.3), posé par
@@ -70,20 +63,36 @@
 	 * second bloc `<style>` de la maquette gelée. Le seul `style=` du fichier —
 	 * `margin-bottom:var(--e-2)` — figure à l'ensemble clos du gel (ARB-016).
 	 */
-	import { notesPubliques, type Note } from '../../seeds/corpus';
+	import { resolve } from '$app/paths';
+	import { CONFIG, notesPubliques, type Note } from '../../seeds/corpus';
 	import { adresseNonResolue } from '$lib/public/adresse-non-resolue';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { motFiche } from '$lib/vocabulaire';
+
+	/**
+	 * LE MOTIF DE ROUTE, ÉCRIT EN CONSTANTE — `svelte/no-navigation-without-resolve`
+	 * inspecte l'EXPRESSION du `href`. Même écriture qu'à `V-07:455`.
+	 */
+	const ROUTE_DU_GUIDE = '/guides/[identifiant]' as const;
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-04')`, variante complète. */
 		notes: readonly Note[];
+		/**
+		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — « adresse externe configurée en
+		 * console » (`V-04:2205`). Elle EXISTE désormais : la table `parametres` la
+		 * porte sous la clé `portail_assistance`. Cet écran n'a pas de route propre
+		 * — il est rendu par le composant d'erreur de la racine, dont le seul canal
+		 * de donnée est le chargeur du gabarit —, et la valeur du jeu de semence
+		 * tient donc lieu de défaut : c'est celle que la semence écrit en base.
+		 */
+		portail?: string;
 	}
 
-	const { vecteur, notes }: Proprietes = $props();
+	const { vecteur, notes, portail = CONFIG.portailAssistance }: Proprietes = $props();
 
 	/**
 	 * LES TROIS ADRESSES DE LA PLANCHE DE REVUE, ET RIEN D'AUTRE.
@@ -185,7 +194,7 @@
 		états en échec de structure pour cette seule cause.
 	-->
 	<!-- prettier-ignore -->
-	<a class="carte carte--publique" href="#" data-index={index}
+	<a class="carte carte--publique" href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })} data-index={index}
 		><div class="carte__haut"
 			><h2 class="carte__titre">{@render marque(n.titre, q)}</h2><span class="past past--type">{n.type === 'Fiche' ? `${motFiche} ${n.typeFiche}` : n.type}</span
 		></div
@@ -200,16 +209,25 @@
 	>
 {/snippet}
 
+<!--
+	L'ADRESSE DU PORTAIL D'ASSISTANCE EST EXTERNE, et `resolve()` ne s'y applique
+	pas : elle compose une adresse INTERNE sous la racine de déploiement, quand
+	celle-ci est une adresse absolue lue dans la table `parametres`. La règle est
+	donc levée pour ce fichier, et pour elle seule — même levée que `V-03.svelte`,
+	et pour la même raison. Tous les autres liens de la vue passent par
+	`resolve()`.
+-->
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
 <a class="saut-contenu" href="#recherche">Aller à la recherche</a>
 
 <div class="public app" id="app">
 	<header class="chapeau">
-		<a class="marque" href="#" aria-label="Codicillus — accueil public">
+		<a class="marque" href={resolve('/')} aria-label="Codicillus — accueil public">
 			<span class="marque__sceau" aria-hidden="true">C</span>
 			<span class="marque__nom">Codicillus</span>
 		</a>
 		<!-- Accès connexion : discret, pour les personnes qui ont déjà un compte. -->
-		<a class="btn btn--discret" href="#">Se connecter</a>
+		<a class="btn btn--discret" href={resolve('/connexion')}>Se connecter</a>
 	</header>
 
 	<main class="introuvable">
@@ -293,14 +311,14 @@
 		</div>
 
 		<div class="issues">
-			<a class="btn btn--principal" href="#" id="accueil">Revenir à l'accueil</a>
+			<a class="btn btn--principal" href={resolve('/')} id="accueil">Revenir à l'accueil</a>
 			<!--
 				L'adresse du portail d'assistance est une donnée de configuration
-				(« adresse externe configurée en console », `V-04:2205`) : aucune source
-				du dépôt ne la porte, et `docs/routes.md` n'en connaît pas. La fabriquer
-				serait un comblement.
+				(« adresse externe configurée en console », `V-04:2205`). Elle est
+				désormais portée par la table `parametres` — clé `portail_assistance` —
+				et arrive par la propriété `portail`, jamais fabriquée ici.
 			-->
-			<a class="btn" href="#" id="ticket">
+			<a class="btn" href={portail} id="ticket">
 				Ouvrir un ticket d'assistance
 				<svg
 					width="13"
@@ -318,7 +336,9 @@
 			<span class="etiq">Les guides les plus consultés</span>
 			<ul class="rattrapage__liste" id="populaires">
 				{#each populaires as n (n.id)}<li>
-						<a href="#"><span class="rattrapage__nom">{n.titre}</span>{@render temoin(n)}</a>
+						<a href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
+							><span class="rattrapage__nom">{n.titre}</span>{@render temoin(n)}</a
+						>
 					</li>{/each}
 			</ul>
 		</section>
@@ -327,7 +347,7 @@
 	<footer class="pied-public">
 		<div class="pied-public__int">
 			<span class="etiq">Codicillus · Direction technique</span>
-			<a href="#">Se connecter</a>
+			<a href={resolve('/connexion')}>Se connecter</a>
 		</div>
 	</footer>
 </div>

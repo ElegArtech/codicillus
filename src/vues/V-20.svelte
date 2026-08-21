@@ -104,6 +104,8 @@
 		type Relation,
 		type UtilisateurCourant
 	} from '../../seeds/corpus';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import Rail from '$lib/coquille/Rail.svelte';
 	import { railAbregeRendu } from '$lib/coquille/arborescence-abregee';
@@ -155,6 +157,28 @@
 		typesRelation?: Record<CleDeTypeDeRelation, LibellesDeRelation>;
 		/** Les types de relation qui portent une dépendance technique. Défaut : ceux du jeu de semence. */
 		relationsTechniques?: readonly CleDeTypeDeRelation[];
+		/**
+		 * ─────────────────────────────────────────────────────────────────────
+		 * LES TROIS AXES QUE L'ADRESSE PORTE — `RG-M09-05`, « état de cartographie
+		 * partageable ».
+		 *
+		 * Le gel garde ses trois choix dans une clôture : le périmètre, la famille
+		 * d'objets et le nœud déplié. Une carte explorée ne s'envoie donc à
+		 * personne, et le rechargement la ramène à « aucun type choisi ». Ici,
+		 * `?perimetre=`, `?type=` et `?centre=` les portent, et le chargeur — seul
+		 * lecteur de `url` — les extrait.
+		 *
+		 * ABSENTS, LES TROIS MOMENTS DE LA PLANCHE RÉPONDENT SEULS, et les cinq
+		 * états déclarés ne bougent pas d'un pixel : c'est `typeMaitreDemande` qui
+		 * fait la bascule, parce que le chargeur le pose TOUJOURS — fût-ce à
+		 * `null` — et que le mode de conception ne le pose jamais.
+		 */
+		/** Le périmètre demandé — `type|nom`, la valeur même du sélecteur du gel. */
+		perimetreDemande?: string | undefined;
+		/** La famille d'objets choisie, ou `null` si aucune. */
+		typeMaitreDemande?: string | null | undefined;
+		/** Le nœud déplié, ou `null` si l'on en est à l'anneau. */
+		centreDemande?: string | null | undefined;
 	}
 
 	const {
@@ -165,8 +189,19 @@
 		instance = INSTANCE,
 		relations = RELATIONS,
 		typesRelation = TYPES_RELATION,
-		relationsTechniques = RELATIONS_TECHNIQUES
+		relationsTechniques = RELATIONS_TECHNIQUES,
+		perimetreDemande,
+		typeMaitreDemande,
+		centreDemande
 	}: Proprietes = $props();
+
+	/**
+	 * L'ÉCRAN EST-IL BRANCHÉ SUR UNE ADRESSE ? C'est le point unique où la
+	 * planche et le produit se séparent — même partage qu'en V-08 avec
+	 * `recherchees`. Le chargeur pose toujours `typeMaitreDemande`, fût-ce à
+	 * `null` ; le rendu d'une planche ne le pose jamais.
+	 */
+	const branche = $derived(typeMaitreDemande !== undefined);
 
 	const reglage = $derived(vecteur ?? {});
 	const moment = $derived(String(reglage['moment'] ?? 'aucun'));
@@ -174,7 +209,20 @@
 
 	/* ── Le graphe ──────────────────────────────────────────────────────────
 	   Le périmètre est la première option du sélecteur, « Tous les domaines ». */
-	const graphe = $derived(sousGraphe(corpus, { type: 'global' }, relations));
+	/**
+	 * LE PÉRIMÈTRE EFFECTIF — celui de l'adresse, à défaut « Tous les domaines »,
+	 * la première option du sélecteur du gel et le défaut de la planche.
+	 */
+	const perimetre = $derived.by(() => {
+		const brut = perimetreDemande ?? 'global|';
+		const barre = brut.indexOf('|');
+		const type = barre < 0 ? brut : brut.slice(0, barre);
+		const nom = barre < 0 ? '' : brut.slice(barre + 1);
+		if ((type === 'univers' || type === 'domaine') && nom !== '') return { type, nom };
+		return { type: 'global' };
+	});
+
+	const graphe = $derived(sousGraphe(corpus, perimetre, relations));
 	const deg = $derived(degres(graphe));
 	const ruptures = $derived(pointsArticulation(graphe, relationsTechniques));
 	const types = $derived(typesPresents(graphe));
@@ -187,18 +235,25 @@
 	 * laisse le moment à « aucun », donc le gestionnaire des moments ne s'est
 	 * pas exécuté, et la case pose elle-même le type maître et son centre.
 	 */
-	const typeMaitre = $derived(moment === 'aucun' && !casIsole ? null : 'Serveur');
-	const centre = $derived(
+	const typeMaitreDePlanche = $derived(moment === 'aucun' && !casIsole ? null : 'Serveur');
+	const centreDePlanche = $derived(
 		moment === 'deplie'
 			? 'n-pg-prod-01'
 			: casIsole && moment === 'aucun'
 				? 'n-coffre-hors-site'
 				: null
 	);
+
+	const typeMaitre = $derived(branche ? (typeMaitreDemande ?? null) : typeMaitreDePlanche);
+	const centre = $derived(branche ? (centreDemande ?? null) : centreDePlanche);
 	const choisi = $derived(centre);
 
-	/** `data-detail` n'est réglé que par le gestionnaire des moments. */
-	const detailOuvert = $derived(moment === 'deplie');
+	/**
+	 * `data-detail` n'est réglé que par le gestionnaire des moments — en planche.
+	 * Branché, il suit le nœud choisi : le panneau de détail EXISTE au balisage de
+	 * cette vue, il a donc quelque chose à montrer dès qu'un nœud est déplié.
+	 */
+	const detailOuvert = $derived(branche ? choisi !== null : moment === 'deplie');
 
 	/* ── Les nœuds maîtres ──────────────────────────────────────────────────
 	   Classés par titre, comparaison française — l'ordre décide de l'anneau. */
@@ -405,6 +460,111 @@
 
 	const noteDuDetail = $derived(choisi === null ? undefined : noteDe(choisi));
 	const noeudDuDetail = $derived(choisi === null ? undefined : graphe.index.get(choisi));
+
+	/* ═════════════════════════════════════════════════════════════════════
+	   L'ADRESSE PORTE L'ÉTAT — RG-M09-05
+
+	   Une seule fabrique, et tous les gestes de la vue y passent : c'est ce qui
+	   garantit qu'une carte partagée rend exactement l'écran d'où elle vient.
+	   Les trois axes ne s'écrivent que hors de leur défaut, pour la même raison
+	   qu'en V-08 : deux écrans identiques doivent rendre la même adresse.
+	   ═════════════════════════════════════════════════════════════════════ */
+
+	function adresse(
+		typeVoulu: string | null,
+		centreVoulu: string | null,
+		perimetreVoulu: string = perimetreDemande ?? 'global|'
+	): string {
+		const couples: string[] = [];
+		if (perimetreVoulu !== 'global|')
+			couples.push(`perimetre=${encodeURIComponent(perimetreVoulu)}`);
+		if (typeVoulu !== null) couples.push(`type=${encodeURIComponent(typeVoulu)}`);
+		if (centreVoulu !== null) couples.push(`centre=${encodeURIComponent(centreVoulu)}`);
+		return couples.length
+			? `/cartographie/par-type?${couples.join('&')}`
+			: '/cartographie/par-type';
+	}
+
+	/**
+	 * LA NAVIGATION N'A LIEU QUE BRANCHÉE — même règle qu'en V-08. Sans adresse,
+	 * la vue rend un état de maquette hors de toute route, et y naviguer
+	 * emmènerait la page de démonstration ailleurs.
+	 *
+	 * `svelte/no-navigation-without-resolve` inspecte l'expression passée à
+	 * `goto()` : une adresse composée lui est opaque. La règle est levée sur
+	 * cette seule ligne, comme `V-24` la lève pour les adresses de son rapport.
+	 */
+	function allerA(cible: string): void {
+		if (!branche) return;
+		/* eslint-disable-next-line svelte/no-navigation-without-resolve */
+		void goto(cible);
+	}
+
+	/** Choisir une famille d'objets — la rechoisir la referme, comme une bascule. */
+	function choisirLeType(cle: string): void {
+		allerA(adresse(typeMaitre === cle ? null : cle, null));
+	}
+
+	/** Déplier un nœud. Le même nœud rechoisi ramène à l'anneau. */
+	function deplier(identifiant: string): void {
+		allerA(adresse(typeMaitre, centre === identifiant ? null : identifiant));
+	}
+
+	/** « Revenir à l'anneau » — le centre tombe, la famille reste. */
+	function revenirALAnneau(): void {
+		allerA(adresse(typeMaitre, null));
+	}
+
+	function changerDePerimetre(valeur: string): void {
+		allerA(adresse(typeMaitre, null, valeur));
+	}
+
+	/**
+	 * « OUVRIR LA NOTE COMPLÈTE » — l'issue du panneau de détail. L'adresse d'une
+	 * note est PLATE et stable (`RG-M03-03`) ; `resolve()` la compose depuis
+	 * l'identifiant de route, ce que la règle de navigation sait vérifier.
+	 */
+	function ouvrirLaNote(): void {
+		if (!branche || choisi === null) return;
+		void goto(resolve('/notes/[identifiant]', { identifiant: choisi }));
+	}
+
+	/**
+	 * LES TROIS RACCOURCIS DE LA BARRE — la boîte de recherche, « Créer » et
+	 * l'avatar. Les trois adresses sont des identifiants de route, que
+	 * `resolve()` compose et que la règle de navigation sait vérifier.
+	 */
+	function allerALaRecherche(): void {
+		if (branche) void goto(resolve('/recherche'));
+	}
+
+	function allerALaCreation(): void {
+		if (branche) void goto(resolve('/notes/nouvelle'));
+	}
+
+	function allerAuProfil(): void {
+		if (branche) void goto(resolve('/mon-profil'));
+	}
+
+	/*
+	 * LE RAIL SE REPLIE, ET CE N'EST PAS ICI QUE ÇA SE PASSE — mesuré.
+	 *
+	 * `#bascule-rail` est déjà servi par le câblage de la coquille,
+	 * `$lib/cablage/coquille.ts`, accroché au DOCUMENT depuis `+layout.svelte` :
+	 * il lit `data-rail` sur `div.app` et le bascule, transcrit de `V-37:3270`.
+	 * Cette vue monte son cadre elle-même, mais elle vit sous la même
+	 * disposition, et le bouton y porte le même identifiant.
+	 *
+	 * UNE SECONDE BASCULE ANNULAIT LA PREMIÈRE : un état local ici posait
+	 * `data-rail="ferme"` à la volée de Svelte, puis l'écouteur du document —
+	 * atteint par la remontée de l'événement, donc APRÈS — relisait « ferme » et
+	 * reposait « ouvert ». Le bouton ne faisait rien, et les deux moitiés avaient
+	 * chacune raison. C'est `P-35` sur un état d'interface : deux détenteurs d'une
+	 * même vérité finissent par se contredire.
+	 *
+	 * L'attribut reste donc écrit au balisage, comme le gel l'écrit, et c'est le
+	 * câblage de la coquille qui le fait bouger — un seul chemin.
+	 */
 </script>
 
 <!-- Le contour d'un nœud — le calque de `forme()` du gel. -->
@@ -479,7 +639,7 @@
 {#snippet filDeroule()}{#if centre === null}<span
 			class="fil-deroule__courant"
 			>{`${maitres.length} ${(typeMaitreEncode?.nom ?? '').toLowerCase()}${maitres.length > 1 ? 's' : ''} — choisissez-en un pour déplier ses connexions`}</span
-		>{:else}<button type="button"
+		>{:else}<button type="button" onclick={revenirALAnneau}
 			>{`Tous les ${(typeMaitreEncode?.nom ?? '').toLowerCase()}s`}</button
 		><span class="fil-deroule__sep">›</span><span class="fil-deroule__courant"
 			>{titreDe(graphe, corpus, centre)}</span
@@ -516,10 +676,22 @@
 			-->
 			<!-- prettier-ignore -->
 			<nav class="fil" id="fil" aria-label="Fil d'Ariane" hidden={typeMaitre === null}>
-				{#if typeMaitre === null}<a href="#">Accueil</a><span>›</span><a href="#">Cartographie</a
+				{#if typeMaitre === null}<a href={resolve('/')}>Accueil</a><span>›</span><a
+						href={resolve('/cartographie')}>Cartographie</a
 					><span>›</span><span class="fil__courant">Par type</span>{:else}{@render filDeroule()}{/if}
 			</nav>
-			<div class="recherche" role="button" tabindex="0">
+			<div
+				class="recherche"
+				role="button"
+				tabindex="0"
+				onclick={allerALaRecherche}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						allerALaRecherche();
+					}
+				}}
+			>
 				<svg
 					width="14"
 					height="14"
@@ -531,7 +703,7 @@
 				<span class="recherche__txt" style="flex:1">Rechercher…</span>
 				<kbd class="touche">Ctrl</kbd><kbd class="touche">K</kbd>
 			</div>
-			<button class="btn si-ecriture" title="Créer">
+			<button class="btn si-ecriture" title="Créer" onclick={allerALaCreation}>
 				<svg
 					width="14"
 					height="14"
@@ -542,7 +714,9 @@
 				>
 				Créer
 			</button>
-			<button class="avatar" title="{compte.nom} — menu utilisateur">{compte.initiales}</button>
+			<button class="avatar" title="{compte.nom} — menu utilisateur" onclick={allerAuProfil}
+				>{compte.initiales}</button
+			>
 		</header>
 
 		<main class="carto" id="contenu">
@@ -554,7 +728,7 @@
 
 				<div class="controles__groupe" style="display:flex;align-items:center;gap:var(--e-2)">
 					<label class="etiq" for="perimetre">Périmètre</label>
-					<select id="perimetre"
+					<select id="perimetre" onchange={(e) => changerDePerimetre(e.currentTarget.value)}
 						><option value="global|">Tous les domaines</option>{#each domaines as d (d.nom)}<option
 								value="domaine|{d.nom}">Domaine {d.nom}</option
 							>{/each}</select
@@ -568,13 +742,18 @@
 								class="tm"
 								type="button"
 								aria-pressed={typeMaitre === t.cle}
+								onclick={() => choisirLeType(t.cle)}
 								>{@render miniature(t.type)}{t.type.nom}<span class="tm__n">{t.n}</span></button
 							>{/each}
 					</div>
 				</div>
 
-				<button class="btn" id="revenir" style="margin-left:auto" disabled={centre === null}
-					>Revenir à l'anneau</button
+				<button
+					class="btn"
+					id="revenir"
+					style="margin-left:auto"
+					disabled={centre === null}
+					onclick={revenirALAnneau}>Revenir à l'anneau</button
 				>
 			</div>
 
@@ -612,6 +791,13 @@
 											tabindex="0"
 											role="button"
 											aria-label={libelleDuNoeud(n.id)}
+											onclick={() => deplier(n.id)}
+											onkeydown={(e) => {
+												if (e.key === 'Enter' || e.key === ' ') {
+													e.preventDefault();
+													deplier(n.id);
+												}
+											}}
 											>{#if n.role === 'centre'}<circle
 													class="halo-centre"
 													r={ray + 16}
@@ -753,7 +939,10 @@
 									Aucune relation déclarée.
 								</p>{:else}{#each groupesDuDetail as g (g.libelle)}<div class="rel-groupe">
 										<div class="rel-groupe__titre etiq">{g.libelle}</div>
-										{#each g.items as x, rang (rang)}<button class="rel-item" type="button"
+										{#each g.items as x, rang (rang)}<button
+												class="rel-item"
+												type="button"
+												onclick={() => deplier(x.autre)}
 												><span class="rel-item__nom">{titreDe(graphe, corpus, x.autre)}</span
 												>{#if x.code !== null}<span class="rel-item__type">{x.code}</span
 													>{/if}</button
@@ -763,7 +952,7 @@
 						<button
 							class="btn btn--principal"
 							style="width:100%;margin-top:var(--e-4);justify-content:center"
-							>Ouvrir la note complète</button
+							onclick={ouvrirLaNote}>Ouvrir la note complète</button
 						>{/if}
 				</aside>
 			</div>

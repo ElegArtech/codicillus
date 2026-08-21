@@ -58,6 +58,13 @@
 		type InstantAffiche,
 		type RevisionCourante
 	} from './note-de-demonstration';
+	import {
+		adresseDeDomaine,
+		adresseDeDossier,
+		adresseDesNotesDuDomaine,
+		adresseDUnivers,
+		segmentsDeDossier
+	} from '$lib/rangement/adresses';
 	import type { Snippet } from 'svelte';
 
 	interface Proprietes {
@@ -168,6 +175,36 @@
 	/** La note affichée — celle qu'on lit, ou celle du gel à défaut. */
 	const note = $derived(affichee?.note ?? NOTE);
 	const rangement = $derived(rangementDe(note));
+
+	/**
+	 * LES TROIS FAMILLES DE LIENS DE L'EN-TÊTE — le rangement, l'auteur, les
+	 * étiquettes. Le gel les écrit en ancre vide, faute de serveur.
+	 *
+	 * LE CHEMIN VIENT TOUJOURS DE LA FABRIQUE (`$lib/rangement/adresses.ts`),
+	 * jamais d'un gabarit écrit ici : `rangementDe` compose le chemin lisible
+	 * — univers, domaine, puis les dossiers — et les fonctions ci-dessous en
+	 * donnent l'adresse canonique d'ARB-001, segment par segment.
+	 *
+	 * LE FILTRE, LUI, VOYAGE EN PARAMÈTRE DE REQUÊTE, ce que `docs/routes.md`
+	 * §4.2 fixe pour la liste des notes d'un domaine : `auteur` et `etiquette`
+	 * y sont deux facettes nommées. Un filtre n'est pas un niveau de rangement,
+	 * il n'entre donc pas dans le chemin.
+	 */
+	function adresseDuSegment(rang: number): string {
+		if (rang === 0) return adresseDUnivers(note.univers);
+		if (rang === 1) return adresseDeDomaine(note.univers, note.domaine);
+		return adresseDeDossier(
+			note.univers,
+			note.domaine,
+			segmentsDeDossier(note.dossier).slice(0, rang - 1)
+		);
+	}
+
+	/** La liste des notes du domaine, restreinte à une facette et une valeur. */
+	function adresseFiltree(facette: string, valeur: string): string {
+		const liste = adresseDesNotesDuDomaine(note.univers, note.domaine);
+		return `${liste}?${facette}=${encodeURIComponent(valeur)}`;
+	}
 	const consultations = $derived(
 		affichee ? affichee.consultations30j : consultationsRecentes(note)
 	);
@@ -396,25 +433,36 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 			</div>
 		</div>{/if}
 
+	<!-- eslint-disable svelte/no-navigation-without-resolve -- les adresses de ce bloc
+	sortent de la fabrique unique, `$lib/rangement/adresses.ts`, qui les compose dans
+	la forme canonique d'ARB-001 et nulle part ailleurs. La règle inspecte
+	l'EXPRESSION du href et ne peut pas la suivre jusqu'à la fabrique : elle ne
+	saurait pas plus la vérifier ici. Même geste qu'en V-03, V-22, V-24 et dans la
+	barre supérieure. -->
 	<!-- Métadonnées -->
 	<dl class="meta">
 		<dt>Rangement</dt>
 		<dd>
-			{#each rangement as segment, rang (segment)}{#if rang}{@render separateur()}{/if}
-				<a href="#">{segment}</a>
+			<!-- LA CLÉ EST LE RANG, ET NON LE NOM DU SEGMENT : rien n'interdit qu'un
+			     dossier porte le nom d'un domaine — le corpus en a le cas —, et deux
+			     segments homonymes font lever `each_key_duplicate`, ce qui tue le
+			     JavaScript de toute la page à l'hydratation. -->
+			{#each rangement as segment, rang (rang)}{#if rang}{@render separateur()}{/if}
+				<a href={adresseDuSegment(rang)}>{segment}</a>
 			{/each}
 		</dd>
 
 		<dt>Rédaction</dt>
 		<dd>
-			Créée par <a href="#">{note.auteur}</a> · modifiée
+			Créée par <a href={adresseFiltree('auteur', note.auteur)}>{note.auteur}</a> · modifiée
 			<time datetime={modifiee.iso} title={modifiee.heureDite}>{modifiee.jour}</time>
 		</dd>
 
 		<dt>Étiquettes</dt>
 		<dd>
 			{#each note.etiquettes as etiquette (etiquette)}
-				<a class="past past--etiquette" href="#">{etiquette}</a>
+				<a class="past past--etiquette" href={adresseFiltree('etiquette', etiquette)}>{etiquette}</a
+				>
 			{:else}
 				Aucune étiquette
 			{/each}
@@ -427,6 +475,7 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 			>
 		</dd>
 	</dl>
+	<!-- eslint-enable svelte/no-navigation-without-resolve -->
 </header>
 
 <!-- Sélecteur de registre -->

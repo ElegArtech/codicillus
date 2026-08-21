@@ -40,8 +40,16 @@
 	import { onMount } from 'svelte';
 	import Vue from '../../../../vues/V-18.svelte';
 	import '../../../../vues/V-18.css';
+	import { page } from '$app/state';
 	import { cablerLEditeur } from '$lib/cablage/formulaires';
 	import { monterLEditeur } from '$lib/edition/editeur-client';
+	import {
+		cablerLesGestesDEdition,
+		resolveurDuCorpusServi,
+		DOCUMENT_VIDE,
+		type GestesCables
+	} from '$lib/edition/gestes';
+	import { adresseDeNote } from '$lib/rangement/adresses';
 	import { cablerLOperationnel } from './cablage';
 	import type { PageData } from './$types';
 
@@ -64,12 +72,29 @@
 	 */
 	onMount(() => {
 		const zone = formulaire.querySelector<HTMLElement>('#redaction');
-		const editeur = zone === null ? null : monterLEditeur(zone, data.corps, formulaire);
+		const adresse = adresseDeNote(page.params['identifiant'] ?? '');
+		/* LE NŒUD ENTRE LES CÂBLAGES — voir `/notes/nouvelle`, même raison. */
+		let gestes: GestesCables | null = null;
+		const editeur =
+			zone === null
+				? null
+				: monterLEditeur(zone, data.corps, formulaire, {
+						surChangement: () => gestes?.signalerUneModification()
+					});
 		const defaireLEditeur = cablerLEditeur(formulaire, {
 			...(editeur === null ? {} : { editeur: () => editeur.document() })
 		});
-		const defaireLesActions = cablerLOperationnel(formulaire);
+		const defaireLesActions = cablerLOperationnel(formulaire, {
+			adresseDeLaNote: adresse,
+			...(editeur === null ? {} : { inserer: (document) => editeur.inserer(document) })
+		});
+		gestes = cablerLesGestesDEdition(formulaire, {
+			document: () => editeur?.document() ?? data.corps ?? DOCUMENT_VIDE,
+			resoudre: resolveurDuCorpusServi(data.notes),
+			retour: adresse
+		});
 		return () => {
+			gestes?.defaire();
 			defaireLesActions();
 			defaireLEditeur();
 			editeur?.detruire();

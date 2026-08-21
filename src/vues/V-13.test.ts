@@ -36,6 +36,20 @@ function rendu(proprietes: Record<string, unknown>): Promise<string> {
 	return rendreLaVue('V-13', { vecteur: null, notes: NOTES, ...proprietes });
 }
 
+/**
+ * Le fil d'Ariane seul, découpé du rendu.
+ *
+ * Ces cas repéraient un segment du fil par `<a href="#">Nom</a>` : le gel n'y
+ * déclarait aucune destination, et le lien mort faisait un marqueur unique. Le
+ * fil porte désormais de vraies adresses (plan de remédiation §3.6), et le
+ * marqueur ne peut plus être un `href`. Ce qui est éprouvé est INCHANGÉ — quel
+ * nom le fil porte —, et le découpage rend au marqueur l'unicité que le lien
+ * mort lui donnait : le rail nomme les mêmes domaines, mais hors de ce `<nav>`.
+ */
+function filDe(html: string): string {
+	return /<nav class="fil"[\s\S]*?<\/nav>/.exec(html)?.[0] ?? '';
+}
+
 afterAll(fermerLeHarnais);
 
 describe('V-13 — la propriété fournie l’emporte', () => {
@@ -60,12 +74,12 @@ describe('V-13 — la propriété fournie l’emporte', () => {
 		/* Le témoin de polarité — sans lui, les assertions négatives qui suivent
 		   passeraient même si la propriété était inerte (P-5). */
 		const defaut = await rendu({});
-		expect(defaut).toContain('<a href="#">Infrastructure</a>');
+		expect(filDe(defaut)).toContain('>Infrastructure</a>');
 		expect(defaut).toContain('<b>2</b> sous-dossiers');
 
 		const html = await rendu({ domaine: 'Applications' });
-		expect(html).toContain('<a href="#">Applications</a>');
-		expect(html).not.toContain('<a href="#">Infrastructure</a>');
+		expect(filDe(html)).toContain('>Applications</a>');
+		expect(filDe(html)).not.toContain('>Infrastructure</a>');
 		expect(html).toContain('<b>0</b> sous-dossier');
 	});
 
@@ -73,13 +87,13 @@ describe('V-13 — la propriété fournie l’emporte', () => {
 		/* Le fil d'Ariane, et non le rail : le rail abrégé porte une section
 		   « Projets » écrite au balisage, qu'une assertion large trouverait sans
 		   rien mesurer (P-5). */
-		expect(await rendu({})).toContain('<a href="#">Production</a>');
+		expect(filDe(await rendu({}))).toContain('>Production</a>');
 		const html = await rendu({
 			domaine: 'Migration 2026',
 			domaines: [{ nom: 'Migration 2026', univers: 'Projets', couleur: '#3e5266' }]
 		});
-		expect(html).toContain('<a href="#">Projets</a>');
-		expect(html).not.toContain('<a href="#">Production</a>');
+		expect(filDe(html)).toContain('>Projets</a>');
+		expect(filDe(html)).not.toContain('>Production</a>');
 	});
 
 	it('sert la table de modifications reçue', async () => {
@@ -105,7 +119,7 @@ describe('V-13 — la propriété absente retombe sur la valeur du gel', () => {
 
 	it('rend le domaine Infrastructure et son univers Production', async () => {
 		const html = await rendu({});
-		expect(html).toContain('<a href="#">Infrastructure</a>');
-		expect(html).toContain(`<a href="#">${UNIVERS[0]?.nom}</a>`);
+		expect(filDe(html)).toContain('>Infrastructure</a>');
+		expect(filDe(html)).toContain(`>${UNIVERS[0]?.nom}</a>`);
 	});
 });

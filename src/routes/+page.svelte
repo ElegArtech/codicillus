@@ -86,14 +86,29 @@
 	 * le produit ne se sert pas en développement. Constat remonté au rapport du
 	 * lot ; la mesure ci-dessus vaut pour les deux branches en l'état.
 	 */
+	import { onMount } from 'svelte';
 	import VuePublique from '../vues/V-01.svelte';
 	import VueContributeur from '../vues/V-07.svelte';
 	/* L'ordre compte — voir l'en-tête. V-07 d'abord, V-01 ensuite. */
 	import '../vues/V-07.css';
 	import '../vues/V-01.css';
+	import { cablerLAccueilPublic } from './cablage';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
+
+	/**
+	 * LE CÂBLAGE S'ACCROCHE DEPUIS LA ROUTE — `ARB-063` —, et SEULEMENT SUR LA
+	 * BRANCHE ANONYME : le champ de V-01 mène à la recherche publique, et V-07 a
+	 * le sien. La racine est cherchée dans le document plutôt que liée par
+	 * `bind:this` : la lier demanderait un nœud d'enveloppe que le gel ne porte
+	 * pas.
+	 */
+	onMount(() => {
+		if (data.session) return undefined;
+		const racine = document.getElementById('app');
+		return racine === null ? undefined : cablerLAccueilPublic(racine);
+	});
 </script>
 
 {#if data.session}
@@ -111,5 +126,10 @@
 		ecriture={data.ecriture}
 	/>
 {:else}
-	<VuePublique vecteur={null} notes={data.notes} />
+	<!--
+		`portail` est une donnée d'INSTANCE — la clé `portail_assistance` de la
+		table `parametres` —, et V-07 n'en a pas l'usage : elle ne va qu'à la
+		branche publique, la seule qui porte les trois appels à l'assistance.
+	-->
+	<VuePublique vecteur={null} notes={data.notes} portail={data.portail} />
 {/if}

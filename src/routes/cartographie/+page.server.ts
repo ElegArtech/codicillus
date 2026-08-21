@@ -78,27 +78,52 @@
  * n'est pas comblé.
  */
 import { basePartagee } from '$lib/base/acces';
-import { PERIMETRE_DE_V19, etatDeCartographie, grapheReel } from '$lib/donnees/outils';
+import {
+	PERIMETRE_DE_V19,
+	etatDeCartographie,
+	grapheReel,
+	perimetreDeLAdresse,
+	valeurDeSelecteur
+} from '$lib/donnees/outils';
 import { ouvrirLAcces } from '$lib/donnees/rangement';
 import { lireLeGraphe } from './lecture-du-graphe';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const base = basePartagee();
 	const acces = await ouvrirLAcces(base, locals.identite, new Date());
 
 	const { notes, relations, typesRelation, relationsTechniques } = await lireLeGraphe(base, acces);
 
-	/* L'état de zone se décide sur LE graphe que la vue dessinera : même
-	   fabrique, même périmètre d'affichage, MÊME liste d'arêtes. Voir
-	   `PERIMETRE_DE_V19`. Décider « vide » sur un jeu et dessiner l'autre
-	   afficherait le voile au-dessus d'un graphe peuplé, ou l'inverse. */
-	const graphe = grapheReel(notes, relations, PERIMETRE_DE_V19);
+	/**
+	 * LE PÉRIMÈTRE VIENT DE L'ADRESSE — `RG-M09-05`, « état de cartographie
+	 * partageable ». `?perimetre=` porte la valeur même du sélecteur du gel,
+	 * `type|nom` ; absente ou illisible, c'est celui de la planche.
+	 *
+	 * C'est le chargeur qui le lit, parce qu'il est le seul à voir `url`, et
+	 * c'est le MÊME périmètre qui décide de l'état de zone et que la vue
+	 * dessine : décider « vide » sur un jeu et dessiner l'autre afficherait le
+	 * voile au-dessus d'un graphe peuplé, ou l'inverse.
+	 */
+	const perimetre = perimetreDeLAdresse(url.searchParams.get('perimetre'), PERIMETRE_DE_V19);
+	const graphe = grapheReel(notes, relations, perimetre);
 
 	return {
 		/* Deux positions, et deux seulement : `chargement` est un moment du
 		   client, `dense` attend le seuil de RG-M09-04 que rien ne donne. */
 		vecteur: { etat: etatDeCartographie(graphe) },
+		/** La valeur que le sélecteur du gel doit montrer, et l'adresse porter. */
+		perimetreDemande: valeurDeSelecteur(perimetre),
+		/**
+		 * LE PREMIER NŒUD DU PÉRIMÈTRE — la destination de « Comment déclarer une
+		 * relation », que le gel annonce « Panneau Relations d'une note — vue V-14 »
+		 * (`V-19:3038`). Ce bouton n'apparaît QUE dans le voile « Aucune relation
+		 * dans ce périmètre » : il n'y a donc, par construction, aucun nœud du
+		 * graphe à désigner, et c'est une note du périmètre qu'il faut ouvrir pour
+		 * lui en ajouter une. La première de la liste lisible est prise ; faute de
+		 * note, le bouton est rendu inopérant plutôt que menteur.
+		 */
+		premiereNote: notes[0]?.id ?? null,
 		notes,
 		/**
 		 * LES ARÊTES DU GRAPHE, AVEC LEUR ORIGINE (`P-08`). Elles descendent

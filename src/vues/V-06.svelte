@@ -15,8 +15,10 @@
 	 * la résout en `/connexion` → V-05. `ARB-013` retire la ligne `/url:` de
 	 * l'instantané de structure : l'adresse ne déplace rien au banc.
 	 *
-	 * « Ouvrir un ticket d'assistance » (`V-06:795`) reste à `href="#"` : aucune
-	 * source ne déclare sa destination, et aucune route du dépôt ne la sert.
+	 * « Ouvrir un ticket d'assistance » (`V-06:795`) A DÉSORMAIS SA DESTINATION :
+	 * la table `parametres` porte l'adresse du portail sous la clé
+	 * `portail_assistance`, et elle arrive par la propriété `portail`. Elle n'est
+	 * pas fabriquée ici — c'est une donnée d'instance, pas une constante.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * CE QUE CE COMPOSANT NE PROUVE PAS, ET IL FAUT LE DIRE EN PREMIER
@@ -193,16 +195,22 @@
 	import { resolve } from '$app/paths';
 	import Marque from '$lib/auth/Marque.svelte';
 	import PileDeNotifications from '$lib/coquille/PileDeNotifications.svelte';
-	import { COMPTES, type Compte } from '../../seeds/corpus';
+	import { COMPTES, CONFIG, type Compte } from '../../seeds/corpus';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Les comptes de l'instance. Absente, `COMPTES` du jeu de semence. */
 		comptes?: readonly Compte[];
+		/**
+		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — donnée d'INSTANCE, lue dans la table
+		 * `parametres` par le chargeur de la route. Absente, la valeur du jeu de
+		 * semence, qui est celle que la semence écrit en base.
+		 */
+		portail?: string;
 	}
 
-	const { vecteur, comptes = COMPTES }: Proprietes = $props();
+	const { vecteur, comptes = COMPTES, portail = CONFIG.portailAssistance }: Proprietes = $props();
 
 	/**
 	 * L'étape affichée, portée du gestionnaire de la planche (`V-06:1068`) :
@@ -262,6 +270,15 @@
 	}
 </script>
 
+<!--
+	L'ADRESSE DU PORTAIL D'ASSISTANCE EST EXTERNE, et `resolve()` ne s'y applique
+	pas : elle compose une adresse INTERNE sous la racine de déploiement, quand
+	celle-ci est une adresse absolue lue dans la table `parametres`. La règle est
+	donc levée pour ce fichier, et pour elle seule — même levée que `V-03.svelte`,
+	et pour la même raison. Tous les autres liens de la vue passent par
+	`resolve()`.
+-->
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
 <main class="auth" id="app" data-etape={etape}>
 	<div class="auth__colonne">
 		<Marque />
@@ -545,7 +562,7 @@
 
 		<div class="auth__pied">
 			<p>Besoin d'aide pour retrouver votre accès&nbsp;?</p>
-			<a class="btn" href="#" id="assistance">Ouvrir un ticket d'assistance</a>
+			<a class="btn" href={portail} id="assistance">Ouvrir un ticket d'assistance</a>
 		</div>
 	</div>
 </main>

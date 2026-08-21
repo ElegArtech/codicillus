@@ -1,29 +1,31 @@
 <script lang="ts">
 	/**
-	 * Console — le bouton de création de l'en-tête de section.
+	 * LE BOUTON « + » DE LA TÊTE DE SECTION — celui que les dix consoles portent,
+	 * et qui n'ouvrait rien.
 	 *
-	 * MOTIF DES SIX REGISTRES, PAS DU MOTIF COMMUN DES DIX. La distinction est
-	 * mesurée : `.btn` et `.btn--principal` sont du socle, et le bouton
-	 * `#creer` n'apparaît que dans V-27 à V-32 — les six vues à panneau de
-	 * formulaire (`docs/releve-vues.md` §8.2). V-33 à V-36 n'en ont pas.
+	 * `#creer` EST LE DÉCLENCHEUR DU PANNEAU AU GEL, sur les dix écrans sans
+	 * exception : « document.getElementById("creer").addEventListener("click",
+	 * function () { ouvrirForm(null); }) » (`V-27:3471`, `V-28:3149`,
+	 * `V-29:3379`, `V-30:3065`). Sans lui, aucun univers, aucun domaine, aucun
+	 * type ne pouvait naître dans le produit.
 	 *
-	 * Seul le LIBELLÉ change d'une vue à l'autre : « Nouvel univers » (V-27),
-	 * « Nouveau domaine » (V-28), « Nouveau type » (V-29, V-30), « Nouveau
-	 * template » (V-31), « Nouveau compte » (V-32). Le pictogramme et
-	 * l'identifiant sont identiques au caractère près dans les six.
+	 * LE COMPORTEMENT N'EST PAS DÉCIDÉ ICI. Ce composant ne connaît ni panneau, ni
+	 * état, ni route : il rend le clic à la vue qui l'emploie, laquelle tient
+	 * l'état de son propre panneau — c'est le partage déjà établi pour les
+	 * dialogues de suppression.
 	 *
-	 * Aucun comportement : le gel y attache `ouvrirForm(null)`, qui est du
-	 * temps 3 (ARB-011).
+	 * `onCliquer` ABSENT LAISSE LE BOUTON INERTE, et c'est ce que le mode de
+	 * conception obtient : le gel rendu tel quel, sans un attribut de plus.
 	 */
 	interface Proprietes {
-		/** Le libellé, propre à chaque vue. */
 		libelle: string;
+		onCliquer?: () => void;
 	}
 
-	const { libelle }: Proprietes = $props();
+	const { libelle, onCliquer }: Proprietes = $props();
 </script>
 
-<button class="btn btn--principal" id="creer">
+<button class="btn btn--principal" id="creer" onclick={onCliquer}>
 	<svg
 		width="14"
 		height="14"

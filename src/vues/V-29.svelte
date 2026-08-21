@@ -75,6 +75,7 @@
 		type UtilisateurCourant
 	} from '../../seeds/corpus';
 	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
+	import type { RefusDeSaisie, SaisieDeTypeDeFiche } from '$lib/console/structure';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — formulaire × suppression. */
@@ -102,6 +103,17 @@
 		 * attache un geste (`V-29:3465`) et `P-03` interdit qu'il soit inerte.
 		 */
 		onDelester?: (type: string) => void;
+		/**
+		 * CE QUE LA VUE FAIT QUAND LE PANNEAU EST VALIDÉ — création puis
+		 * enregistrement. La vue tient l'état du constructeur de propriétés —
+		 * lesquelles, dans quel ordre, dépliées ou non — parce que c'est ce que
+		 * `edite.props` tenait au gel (`V-29:3330`), et elle ne connaît ni route,
+		 * ni action, ni réseau.
+		 */
+		onCreer?: (saisie: SaisieDeTypeDeFiche) => void;
+		onEnregistrer?: (nom: string, saisie: SaisieDeTypeDeFiche) => void;
+		/** Le refus rendu par l'action, rattaché à son champ (`#erreur-nom`). */
+		refus?: RefusDeSaisie | null;
 	}
 
 	const {
@@ -113,7 +125,10 @@
 		instance = INSTANCE,
 		typesFiche = TYPES_FICHE,
 		onSupprimer,
-		onDelester
+		onDelester,
+		onCreer,
+		onEnregistrer,
+		refus = null
 	}: Proprietes = $props();
 
 	/* ── Les huit types de valeur du gel (`V-29:2909`) ─────────────────────
@@ -281,13 +296,190 @@
 	const reglage = $derived(vecteur ?? {});
 	const form = $derived(String(reglage['form'] ?? 'ferme'));
 	const sup = $derived(String(reglage['sup'] ?? 'refus'));
-	const panneauOuvert = $derived(form !== 'ferme');
 	const enEdition = $derived(form === 'edition');
 
+	/**
+	 * LE PANNEAU S'OUVRE, ET C'EST LA VUE QUI LE TIENT — même arbitrage que pour
+	 * le dialogue de suppression : `ouverture` vaut `null` tant que personne n'a
+	 * cliqué, si bien que l'écran rendu est celui que le vecteur décrit.
+	 */
+	let ouverture = $state<'creation' | 'edition' | null>(null);
+	let cible = $state<string | null>(null);
+
+	/** Les trois champs de tête, et le constructeur de propriétés. */
+	let fNom = $state('');
+	let fDescription = $state('');
+	let fIcone = $state('serveur');
+	let fProps = $state<readonly ProprieteDeType[]>([]);
+	/**
+	 * LES PROPRIÉTÉS DÉPLIÉES, PAR LEUR CLÉ. Le gel porte l'état sur l'objet
+	 * (`p.ouvert`, `V-29:3372`) ; il est tenu à part ici parce que
+	 * `ProprieteDeType` décrit le SCHÉMA, pas l'état de son tiroir — et parce
+	 * qu'une propriété du gel n'en porte pas au repos.
+	 */
+	let deplies = $state<readonly string[]>([]);
+	/** Le message de `#erreur-nom`, quand la validation de l'écran refuse. */
+	let erreurLocale = $state<string | null>(null);
+	/**
+	 * LE PANNEAU EST OUVERT SI UN GESTE L'A OUVERT, OU SI LE VECTEUR LE DEMANDE.
+	 *
+	 * C'est cette valeur qui pose `data-form` sur `div.app`, et c'est elle que la
+	 * règle gelée `.app[data-form="ouvert"] ~ .tiroir-form` attend pour lever
+	 * `translateX(100%)`. La rédaction précédente ne lisait que le vecteur : le
+	 * bouton « + » pouvait bien changer d'état, le panneau restait hors fenêtre.
+	 *
+	 * ELLE EST DÉCLARÉE APRÈS `ouverture`, ET CE N'EST PAS UN DÉTAIL DE STYLE.
+	 * Au rendu SERVEUR, `$derived` est évalué à la ligne où il est écrit : placée
+	 * plus haut, cette dérivation lisait une variable encore en zone morte et les
+	 * quatre écrans sortaient en 500.
+	 */
+	const panneauOuvert = $derived(ouverture !== null || form !== 'ferme');
+
 	/** Le type édité par la position « Édition · Serveur » (`V-29:3502`). */
-	const edite = $derived(enEdition ? (types.find((t) => t.nom === 'Serveur') ?? null) : null);
+	const edite = $derived(
+		ouverture === 'creation'
+			? null
+			: ouverture === 'edition'
+				? (types.find((t) => t.nom === cible) ?? null)
+				: enEdition
+					? (types.find((t) => t.nom === 'Serveur') ?? null)
+					: null
+	);
 	const notesEditees = $derived(edite ? utilisation(edite.nom) : []);
-	const propsEditees = $derived<readonly ProprieteDeType[]>(edite ? edite.props : []);
+	const propsEditees = $derived<readonly ProprieteDeType[]>(
+		ouverture !== null ? fProps : edite ? edite.props : []
+	);
+	const nomSaisi = $derived(ouverture !== null ? fNom : edite ? edite.nom : '');
+	const descriptionSaisie = $derived(
+		ouverture !== null ? fDescription : edite ? edite.description : ''
+	);
+	const iconeChoisie = $derived(ouverture !== null ? fIcone : edite ? edite.icone : 'serveur');
+	/** Le message de `#erreur-nom` : celui de l'écran, ou celui de l'action. */
+	const erreurNom = $derived(
+		erreurLocale ?? (refus !== null && refus.champ === 'nom' ? refus.message : null)
+	);
+
+	/** `ouvrirForm(t)` — `null` pour une création (`V-29:3330`). */
+	function ouvrirForm(t: TypeDeFicheRendu | null): void {
+		ouverture = t === null ? 'creation' : 'edition';
+		cible = t === null ? null : t.nom;
+		fNom = t === null ? '' : t.nom;
+		fDescription = t === null ? '' : t.description;
+		fIcone = t === null ? 'serveur' : t.icone;
+		fProps = t === null ? [] : t.props.map((p) => ({ ...p }));
+		deplies = [];
+		erreurLocale = null;
+	}
+
+	/** `fermerForm()` — le panneau se referme, la saisie ne survit pas. */
+	function fermerForm(): void {
+		ouverture = null;
+		cible = null;
+		deplies = [];
+		erreurLocale = null;
+	}
+
+	/** Remplacer une propriété en place, par son rang — le geste des six champs. */
+	function changerLaPropriete(rang: number, changements: Partial<ProprieteDeType>): void {
+		fProps = fProps.map((p, k) => (k === rang ? { ...p, ...changements } : p));
+	}
+
+	/**
+	 * LA CLÉ TECHNIQUE EST UNIQUE, ET LA BASE L'EXIGE :
+	 * `champs_cle_par_type_unique` porte sur `(type, clé)`. Le gel numérote
+	 * « propriete_N » sur la longueur de la liste, ce qui redonne une clé déjà
+	 * prise dès qu'on en a retiré une : la numérotation cherche donc la première
+	 * place libre.
+	 */
+	function cleLibre(): string {
+		const prises = new Set(fProps.map((p) => p.cle));
+		for (let k = fProps.length + 1; ; k += 1) {
+			const candidate = `propriete_${k}`;
+			if (!prises.has(candidate)) return candidate;
+		}
+	}
+
+	/** `ajouter-prop` — la propriété naît dépliée (`V-29:3372`). */
+	function ajouterUnePropriete(): void {
+		const cle = cleLibre();
+		fProps = [
+			...fProps,
+			{
+				cle,
+				libelle: 'Nouvelle propriété',
+				type: 'texte',
+				obligatoire: false,
+				defaut: '',
+				aide: '',
+				valeurs: []
+			}
+		];
+		deplies = [...deplies, cle];
+	}
+
+	function retirerLaPropriete(rang: number): void {
+		fProps = fProps.filter((_, k) => k !== rang);
+	}
+
+	/** Les flèches du constructeur : un rang, une place. */
+	function deplacerLaPropriete(rang: number, vers: number): void {
+		if (vers < 0 || vers >= fProps.length) return;
+		const restantes = fProps.filter((_, k) => k !== rang);
+		const deplacee = fProps[rang];
+		if (deplacee === undefined) return;
+		fProps = [...restantes.slice(0, vers), deplacee, ...restantes.slice(vers)];
+	}
+
+	function basculerLeDepli(cle: string): void {
+		deplies = deplies.includes(cle) ? deplies.filter((c) => c !== cle) : [...deplies, cle];
+	}
+
+	function changerLaValeur(rang: number, rangValeur: number, valeur: string): void {
+		const propriete = fProps[rang];
+		if (propriete === undefined) return;
+		changerLaPropriete(rang, {
+			valeurs: propriete.valeurs.map((v, k) => (k === rangValeur ? valeur : v))
+		});
+	}
+
+	function retirerLaValeur(rang: number, rangValeur: number): void {
+		const propriete = fProps[rang];
+		if (propriete === undefined) return;
+		changerLaPropriete(rang, { valeurs: propriete.valeurs.filter((_, k) => k !== rangValeur) });
+	}
+
+	function ajouterUneValeur(rang: number): void {
+		const propriete = fProps[rang];
+		if (propriete === undefined) return;
+		changerLaPropriete(rang, { valeurs: [...propriete.valeurs, ''] });
+	}
+
+	/**
+	 * `form-valider` — LA VALIDATION DE L'ÉCRAN, celle du gel (`V-29:3387`) : nom
+	 * vide ou doublon insensible à la casse. `creerUnTypeDeFiche()` refuse quoi
+	 * qu'il arrive, avec les mêmes messages ; ceci n'en est que le reflet.
+	 */
+	function validerLeForm(): void {
+		const nom = fNom.trim();
+		const doublon = types.some((t) => t.nom !== cible && t.nom.toLowerCase() === nom.toLowerCase());
+		if (nom === '' || doublon) {
+			erreurLocale = nom === '' ? 'Donnez un nom au type.' : `« ${nom} » existe déjà.`;
+			return;
+		}
+		erreurLocale = null;
+		const saisie: SaisieDeTypeDeFiche = {
+			nom,
+			proprietes: fProps.map((p) => ({
+				cle: p.cle,
+				nom: p.libelle,
+				type: p.type,
+				valeurs: p.valeurs
+			}))
+		};
+		if (ouverture === 'edition' && cible !== null) onEnregistrer?.(cible, saisie);
+		else onCreer?.(saisie);
+		fermerForm();
+	}
 
 	/**
 	 * Les propriétés rendues obligatoires par rapport au schéma en vigueur
@@ -363,7 +555,7 @@
 			description={`Les schémas de propriétés structurées. Un type de ${motFicheMinuscule} transforme une note en objet exploitable : un serveur porte une adresse et une criticité, et devient un nœud de la cartographie.`}
 		>
 			{#snippet action()}
-				<BoutonDeCreation libelle="Nouveau type" />
+				<BoutonDeCreation libelle="Nouveau type" onCliquer={() => ouvrirForm(null)} />
 			{/snippet}
 		</TeteDeSection>
 
@@ -402,7 +594,7 @@
 							>{notes.length} {notes.length > 1 ? 'notes' : 'note'}</span
 						>
 						<div class="tg__actions">
-							<button class="btn" type="button">Modifier</button>
+							<button class="btn" type="button" onclick={() => ouvrirForm(t)}>Modifier</button>
 							<button
 								class="btn btn--destructif"
 								type="button"
@@ -439,7 +631,12 @@
 							propriétés que porteront les notes de ce type.{/if}
 					</div>
 				</div>
-				<button class="tiroir-form__fermer" id="form-fermer" aria-label="Fermer le formulaire">
+				<button
+					class="tiroir-form__fermer"
+					id="form-fermer"
+					aria-label="Fermer le formulaire"
+					onclick={fermerForm}
+				>
 					<svg
 						width="17"
 						height="17"
@@ -472,7 +669,7 @@
 						</ul>{/if}
 				</div>
 
-				<div class="champ" id="champ-nom">
+				<div class="champ" id="champ-nom" data-etat={erreurNom === null ? undefined : 'erreur'}>
 					<label class="champ__label" for="f-nom">Nom du type <span class="oblig">*</span></label>
 					<input
 						class="saisie"
@@ -480,9 +677,10 @@
 						id="f-nom"
 						autocomplete="off"
 						placeholder="Serveur"
-						value={edite ? edite.nom : ''}
+						value={nomSaisi}
+						oninput={(e) => (fNom = e.currentTarget.value)}
 					/>
-					<div class="champ__erreur" id="erreur-nom" hidden>
+					<div class="champ__erreur" id="erreur-nom" hidden={erreurNom === null}>
 						<svg
 							width="13"
 							height="13"
@@ -493,7 +691,7 @@
 							style="flex:none;margin-top:1px"
 							><path d="M8 4.5v4M8 11.2v.3" /><circle cx="8" cy="8" r="6.2" /></svg
 						>
-						<span id="erreur-nom-txt"></span>
+						<span id="erreur-nom-txt">{erreurNom ?? ''}</span>
 					</div>
 				</div>
 
@@ -504,7 +702,8 @@
 						id="f-desc"
 						rows="2"
 						placeholder="Ce que ce type décrit, et quand l'employer."
-						value={edite ? edite.description : ''}></textarea>
+						oninput={(e) => (fDescription = e.currentTarget.value)}
+						value={descriptionSaisie}></textarea>
 				</div>
 
 				<div class="champ">
@@ -512,8 +711,9 @@
 					<div class="icones" id="f-icones" role="group" aria-label="Icône du type">
 						{#if panneauOuvert}{#each ICONES as icone (icone.cle)}<button
 									type="button"
-									aria-pressed={icone.cle === (edite ? edite.icone : 'serveur')}
+									aria-pressed={icone.cle === iconeChoisie}
 									aria-label="Icône {icone.cle}"
+									onclick={() => (fIcone = icone.cle)}
 									><Pictogramme
 										traits={icone.traits}
 										taille="19"
@@ -533,11 +733,15 @@
 					<div class="props" id="f-props">
 						{#if panneauOuvert}{#if propsEditees.length}{#each propsEditees as p, rang (p.cle)}<div
 										class="prop-l"
-										data-ouvert="non"
+										data-ouvert={deplies.includes(p.cle) ? 'oui' : 'non'}
 									>
 										<div class="prop-tete">
 											<div class="rang">
-												<button type="button" disabled={rang === 0} aria-label="Monter {p.libelle}"
+												<button
+													type="button"
+													disabled={rang === 0}
+													aria-label="Monter {p.libelle}"
+													onclick={() => deplacerLaPropriete(rang, rang - 1)}
 													><svg
 														width="11"
 														height="11"
@@ -550,6 +754,7 @@
 													type="button"
 													disabled={rang === propsEditees.length - 1}
 													aria-label="Descendre {p.libelle}"
+													onclick={() => deplacerLaPropriete(rang, rang + 1)}
 													><svg
 														width="11"
 														height="11"
@@ -573,8 +778,9 @@
 												<button
 													class="prop-tete__bouton"
 													type="button"
-													aria-expanded="false"
+													aria-expanded={deplies.includes(p.cle)}
 													aria-label="Déplier {p.libelle}"
+													onclick={() => basculerLeDepli(p.cle)}
 													><svg
 														width="14"
 														height="14"
@@ -587,6 +793,7 @@
 													class="prop-tete__bouton"
 													type="button"
 													aria-label="Retirer {p.libelle}"
+													onclick={() => retirerLaPropriete(rang)}
 													><svg
 														width="14"
 														height="14"
@@ -607,15 +814,25 @@
 														type="text"
 														style="padding:6px var(--e-2);font-size:var(--t-petit)"
 														value={p.libelle}
+														oninput={(e) =>
+															changerLaPropriete(rang, { libelle: e.currentTarget.value })}
 													/>
 												</div>
 												<div class="champ">
 													<label class="champ__label">Nom technique</label>
+													<!--
+	LA CLÉ EST RELUE À LA SORTIE DU CHAMP, PAS À CHAQUE FRAPPE. Le bloc
+	`{#each}` est indexé PAR ELLE : la changer à chaque touche recréerait
+	la ligne, et le champ perdrait le focus au premier caractère.
+	`change` la relit une fois, la saisie finie.
+-->
 													<input
 														class="saisie"
 														type="text"
 														style="padding:6px var(--e-2);font-size:var(--t-petit)"
 														value={p.cle}
+														onchange={(e) =>
+															changerLaPropriete(rang, { cle: e.currentTarget.value })}
 													/>
 													<span class="champ__aide"
 														>Sert aux imports et aux exports. Modifiable, mais stable de préférence.</span
@@ -625,7 +842,12 @@
 											<div class="prop-duo">
 												<div class="champ">
 													<label class="champ__label">Type de valeur</label>
-													<select class="selecteur"
+													<select
+														class="selecteur"
+														onchange={(e) =>
+															changerLaPropriete(rang, {
+																type: e.currentTarget.value as CleDeTypeDeValeur
+															})}
 														>{#each TYPES_VALEUR as t (t.cle)}<option
 																value={t.cle}
 																selected={t.cle === p.type}>{t.nom}</option
@@ -639,6 +861,8 @@
 														type="text"
 														style="padding:6px var(--e-2);font-size:var(--t-petit)"
 														value={p.defaut}
+														oninput={(e) =>
+															changerLaPropriete(rang, { defaut: e.currentTarget.value })}
 													/>
 												</div>
 											</div>
@@ -649,11 +873,17 @@
 													type="text"
 													style="padding:6px var(--e-2);font-size:var(--t-petit)"
 													value={p.aide}
+													oninput={(e) => changerLaPropriete(rang, { aide: e.currentTarget.value })}
 												/>
 												<span class="champ__aide">Affichée sous le champ dans l'éditeur.</span>
 											</div>
 											<label class="case">
-												<input type="checkbox" checked={p.obligatoire} />
+												<input
+													type="checkbox"
+													checked={p.obligatoire}
+													onchange={(e) =>
+														changerLaPropriete(rang, { obligatoire: e.currentTarget.checked })}
+												/>
 												<span class="case__txt"
 													>Propriété obligatoire<span class="case__aide"
 														>La note ne pourra pas être enregistrée sans cette valeur.</span
@@ -663,10 +893,17 @@
 											{#if p.type === 'liste'}<div class="champ">
 													<span class="champ__label">Valeurs autorisées</span>
 													<div class="valeurs">
-														{#each p.valeurs as v (v)}<div class="valeur-l">
-																<input class="saisie" type="text" value={v} /><button
+														{#each p.valeurs as v, rangValeur (rangValeur)}<div class="valeur-l">
+																<input
+																	class="saisie"
+																	type="text"
+																	value={v}
+																	onchange={(e) =>
+																		changerLaValeur(rang, rangValeur, e.currentTarget.value)}
+																/><button
 																	type="button"
 																	aria-label="Retirer la valeur {v}"
+																	onclick={() => retirerLaValeur(rang, rangValeur)}
 																	><svg
 																		width="13"
 																		height="13"
@@ -682,7 +919,7 @@
 														class="btn"
 														type="button"
 														style="margin-top:var(--e-2);padding:4px var(--e-2);font-size:var(--t-mini)"
-														>+ Ajouter une valeur</button
+														onclick={() => ajouterUneValeur(rang)}>+ Ajouter une valeur</button
 													>
 												</div>{/if}
 										</div>
@@ -698,6 +935,7 @@
 						class="btn"
 						id="ajouter-prop"
 						style="margin-top:var(--e-2);width:100%;justify-content:center"
+						onclick={ajouterUnePropriete}
 					>
 						<svg
 							width="14"
@@ -737,9 +975,19 @@
 			</div>
 
 			<div class="tiroir-form__pied">
-				<button class="btn btn--destructif" id="form-supprimer" hidden={!edite}>Supprimer</button>
-				<button class="btn" id="form-annuler">Annuler</button>
-				<button class="btn btn--principal" id="form-valider"
+				<button
+					class="btn btn--destructif"
+					id="form-supprimer"
+					hidden={!edite}
+					onclick={() => {
+						if (edite === null) return;
+						const vise = edite.nom;
+						fermerForm();
+						demande = vise;
+					}}>Supprimer</button
+				>
+				<button class="btn" id="form-annuler" onclick={fermerForm}>Annuler</button>
+				<button class="btn btn--principal" id="form-valider" onclick={validerLeForm}
 					><span id="form-valider-txt">{edite ? 'Enregistrer' : 'Créer le type'}</span></button
 				>
 			</div>

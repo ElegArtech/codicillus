@@ -86,6 +86,19 @@
 	interface Proprietes {
 		/** Le chemin de la page, du premier segment au titre courant. */
 		fil: readonly string[];
+		/**
+		 * L'ADRESSE DE CHAQUE SEGMENT DU FIL, dans l'ordre du fil.
+		 *
+		 * Le gel ne déclare AUCUNE destination pour le fil d'Ariane : son script
+		 * pose `href="#"` et notifie « Retour vers « X » » (`V-37:3410`). Les
+		 * adresses ne se lisent donc pas sur la maquette — elles se composent, et
+		 * `Coquille.svelte` les compose, parce qu'elle est la seule à connaître le
+		 * chemin de rangement courant qui donne son sens à chaque segment.
+		 *
+		 * Une case absente laisse le segment à `href="#"` : mieux vaut un lien
+		 * sans destination qu'une destination inventée.
+		 */
+		cibles?: readonly (string | undefined)[];
 		/** L'état du rail : le bouton de bascule annonce l'action opposée. */
 		rail: 'ouvert' | 'ferme';
 		compte: Compte;
@@ -100,7 +113,7 @@
 		droits?: 'ecriture' | 'lecture' | undefined;
 	}
 
-	const { fil, rail, compte, forme = 'complete', droits }: Proprietes = $props();
+	const { fil, cibles = [], rail, compte, forme = 'complete', droits }: Proprietes = $props();
 
 	/* La TRANSCRIPTION de la règle du socle, pas une interprétation. */
 	const ecriture = $derived(droits !== 'lecture');
@@ -126,10 +139,16 @@
 			><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" /><path d="M6 2.5v11" /></svg
 		>
 	</button>
+	<!-- eslint-disable svelte/no-navigation-without-resolve -- l'adresse d'un segment
+		du fil est COMPOSÉE par `Coquille.svelte`, seule à savoir lequel est un univers,
+		un domaine ou un dossier, et elle la compose par `$lib/rangement/adresses.ts`.
+		La règle inspecte l'EXPRESSION du `href` : elle ne peut pas la suivre jusque
+		là, et elle ne peut pas non plus la vérifier ici. Même geste qu'en V-03, V-22
+		et V-24. -->
 	<nav class="fil" id="fil" aria-label="Fil d'Ariane">
 		{#each fil as segment, rang (rang)}{#if rang}<span>›</span
 				>{/if}{#if rang === fil.length - 1}<span class="fil__courant">{segment}</span>{:else}<a
-					href="#">{segment}</a
+					href={cibles[rang] ?? '#'}>{segment}</a
 				>{/if}{/each}
 	</nav>
 	<div

@@ -78,6 +78,7 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { motFiche } from '$lib/vocabulaire';
+	import { adresseDeNote } from '$lib/rangement/adresses';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — domaine × arrivée × état. */
@@ -358,6 +359,22 @@
 </script>
 
 <!--
+	`svelte/no-navigation-without-resolve` EST DÉSACTIVÉE POUR LE BALISAGE DE
+	CETTE VUE, ET LA RAISON EST LA MÊME QUE POUR LE FIL D'ARIANE DE LA COQUILLE.
+
+	La règle veille à ce qu'une adresse interne passe par `resolve()` de
+	SvelteKit. Les adresses de cette vue sont COMPOSÉES par
+	`$lib/rangement/adresses.ts`, la fabrique unique du rangement : la règle
+	inspecte l'EXPRESSION du `href`, elle ne peut pas la suivre jusque là, et
+	elle ne peut pas non plus la vérifier ici. Faire passer une adresse déjà
+	composée par `resolve()` ne prouverait rien de plus et ajouterait une
+	seconde source de vérité pour une forme qui n'en a qu'une.
+
+	Même geste, même justification qu'en V-03, V-22, V-24 et
+	`src/lib/coquille/BarreSuperieure.svelte`.
+-->
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
+<!--
 	Le témoin de fraîcheur — la fabrique unique de `$lib/fraicheur` (P-01). Le
 	libellé accompagne TOUJOURS la jauge : l'information ne passe jamais par la
 	couleur seule (RG-M18-09).
@@ -378,7 +395,7 @@
 	la directive à l'intérieur d'un commentaire (P-9).
 -->
 <!-- prettier-ignore -->
-{#snippet ligneCarte(n: Note)}<a class="lc" href="#"><div class="lc__haut"><h2 class="lc__titre">{n.titre}</h2><span class="past past--type">{libelleDeType(n)}</span>{#if n.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}</div><p class="lc__extrait">{n.extrait}</p><div class="lc__meta"><span class="lc__dossier">{'▸ ' + n.dossier}</span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{modifiee(n)}</span></div><div class="lc__etiquettes">{#each n.etiquettes.slice(0, 4) as e (e)}<span class="past past--etiquette">{e}</span>{/each}</div><div class="lc__droite">{@render temoin(n)}<span class="lc__vues">{nb(n.vues) + ' consultations'}</span></div></a>{/snippet}
+{#snippet ligneCarte(n: Note)}<a class="lc" href={adresseDeNote(n.id)}><div class="lc__haut"><h2 class="lc__titre">{n.titre}</h2><span class="past past--type">{libelleDeType(n)}</span>{#if n.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}</div><p class="lc__extrait">{n.extrait}</p><div class="lc__meta"><span class="lc__dossier">{'▸ ' + n.dossier}</span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{modifiee(n)}</span></div><div class="lc__etiquettes">{#each n.etiquettes.slice(0, 4) as e (e)}<span class="past past--etiquette">{e}</span>{/each}</div><div class="lc__droite">{@render temoin(n)}<span class="lc__vues">{nb(n.vues) + ' consultations'}</span></div></a>{/snippet}
 
 <Coquille
 	forme="abregee"
