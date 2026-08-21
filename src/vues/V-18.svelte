@@ -158,6 +158,13 @@
 		 * pas.
 		 */
 		desynchronisation?: { quand: string; par: string | null };
+		/**
+		 * L'ANCIENNETÉ DU DERNIER ENREGISTREMENT, quand la route la connaît.
+		 * Un nombre : la phrase du gel avec la vraie valeur. `null` : la note n'a
+		 * aucune version, et « Aucune modification » — l'autre phrase du gel — le
+		 * dit exactement. Absente : le rendu ne bouge pas d'un octet.
+		 */
+		dernierEnregistrement?: number | null;
 	}
 
 	const {
@@ -168,7 +175,8 @@
 		compte = MOI,
 		instance = INSTANCE,
 		affichee,
-		desynchronisation
+		desynchronisation,
+		dernierEnregistrement = undefined
 	}: Proprietes = $props();
 
 	/** La note éditée — celle qu'on modifie, ou celle du gel à défaut. */
@@ -206,8 +214,19 @@
 	);
 
 	const etatSauvegarde = $derived(cas === 'vierge' ? 'vierge' : 'enregistre');
+	/**
+	 * LA BARRE D'ÉTAT NE PEUT PLUS DIRE « il y a 3 semaines » SUR N'IMPORTE QUELLE
+	 * NOTE. La chaîne était figée dans la vue : une valeur illustrative sur une
+	 * note réelle, ce que `P-02` proscrit. Les deux phrases restent celles du gel,
+	 * et `dernierEnregistrement` décide laquelle — absente, le rendu est celui
+	 * d'avant, à l'octet.
+	 */
 	const texteSauvegarde = $derived(
-		cas === 'vierge' ? 'Aucune modification' : 'Enregistré · dernière version il y a 3 semaines'
+		cas === 'vierge' || dernierEnregistrement === null
+			? 'Aucune modification'
+			: dernierEnregistrement === undefined
+				? 'Enregistré · dernière version il y a 3 semaines'
+				: `Enregistré · dernière version il y a ${dernierEnregistrement} jours`
 	);
 </script>
 
