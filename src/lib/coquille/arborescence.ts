@@ -17,6 +17,7 @@
  * rangée dans un chemin crée tous les dossiers de ce chemin.
  */
 import type { Domaine, Note, Univers } from '../../../seeds/corpus';
+import { identifiantLisible } from '../rangement/adresses';
 
 /** Le séparateur de chemin de dossier employé par le corpus. */
 const SEPARATEUR = '›';
@@ -50,6 +51,24 @@ export interface SectionDUnivers {
 export interface NoeudRendu {
 	readonly nom: string;
 	readonly cle: string;
+	/**
+	 * L'ADRESSE DU NŒUD — et c'est elle qui manquait.
+	 *
+	 * Le gel écrit `href="#"` sur toutes les entrées du rail : une maquette
+	 * statique n'a pas d'adresses, et `ARB-013` retire d'ailleurs les lignes
+	 * d'adresse de la comparaison de structure « précisément pour que le produit
+	 * porte SES adresses et non les `href="#"` du gel ». Personne ne les avait
+	 * portées : cliquer un univers, un domaine ou un dossier ne faisait rien.
+	 *
+	 * Elle est calculée ICI, à la construction, parce que c'est le seul endroit
+	 * qui connaisse à la fois l'univers, le domaine et le chemin — la clé
+	 * `f:<domaine>:<segment>…` ne porte pas l'univers.
+	 */
+	readonly cible: {
+		readonly univers: string;
+		readonly domaine: string;
+		readonly chemin: readonly string[];
+	} | null;
 	readonly enfants: readonly NoeudRendu[];
 	/** Déplié : le nœud est courant, ou l'un de ses descendants l'est. */
 	readonly ouvert: boolean;
@@ -64,6 +83,12 @@ export interface NoeudRendu {
 /** Une section d'univers prête à rendre. */
 export interface SectionRendue {
 	readonly nom: string;
+	/** `/univers/{univers}` — la page de l'univers lui-même. */
+	readonly cible: {
+		readonly univers: string;
+		readonly domaine: string;
+		readonly chemin: readonly string[];
+	} | null;
 	readonly domaines: readonly NoeudRendu[];
 }
 
@@ -142,15 +167,49 @@ export function sectionsDuRail(
 export function rendreNoeuds(
 	noeuds: readonly (NoeudDeDomaine | NoeudDeDossier)[],
 	courant: readonly string[],
-	brancheEnChargement: string | null
+	brancheEnChargement: string | null,
+	/**
+	 * L'UNIVERS ET LE DOMAINE PORTEURS, pour composer l'adresse. Ils descendent
+	 * avec la récursion parce que la clé d'un dossier — `f:<domaine>:<segment>…`
+	 * — ne porte pas l'univers, et qu'une adresse de dossier en a besoin.
+	 * Absents, l'adresse est vide et le rendu est celui d'avant : c'est ce qui
+	 * laisse les appelants qui ne les connaissent pas rendre ce qu'ils rendaient.
+	 */
+	univers = '',
+	domaine: string | null = null,
+	chemin: readonly string[] = []
 ): readonly NoeudRendu[] {
 	const dernier = courant.length ? courant[courant.length - 1] : null;
 	return noeuds.map((n) => {
-		const enfants = rendreNoeuds(n.enfants, courant, brancheEnChargement);
+		/* Un nœud de DOMAINE ouvre un domaine ; un nœud de DOSSIER prolonge le
+		   chemin du domaine déjà ouvert. */
+		const domaineDuNoeud = domaine ?? n.nom;
+		const cheminDuNoeud = domaine === null ? [] : [...chemin, n.nom];
+		const enfants = rendreNoeuds(
+			n.enfants,
+			courant,
+			brancheEnChargement,
+			univers,
+			domaineDuNoeud,
+			cheminDuNoeud
+		);
 		const estCourant = courant.includes(n.nom);
 		return {
 			nom: n.nom,
 			cle: n.cle,
+			/* LES PARTIES, PAS L'ADRESSE COMPOSÉE. `resolve()` de SvelteKit n'admet
+			   qu'un motif de route et ses paramètres — une chaîne composée à la main
+			   lui est opaque, et `svelte/no-navigation-without-resolve` a raison de
+			   l'exiger : une adresse concaténée casse sous une racine de
+			   déploiement. La vue compose, avec le motif sous les yeux. */
+			cible:
+				univers === ''
+					? null
+					: {
+							univers: identifiantLisible(univers),
+							domaine: identifiantLisible(domaineDuNoeud),
+							chemin: cheminDuNoeud.map(identifiantLisible)
+						},
 			enfants,
 			ouvert: estCourant || enfants.some((e) => e.ouvert),
 			courant: estCourant,
@@ -168,6 +227,7 @@ export function railRendu(
 ): readonly SectionRendue[] {
 	return sections.map((s) => ({
 		nom: s.nom,
-		domaines: rendreNoeuds(s.domaines, courant, brancheEnChargement)
+		cible: { univers: identifiantLisible(s.nom), domaine: '', chemin: [] },
+		domaines: rendreNoeuds(s.domaines, courant, brancheEnChargement, s.nom, null)
 	}));
 }

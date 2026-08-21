@@ -1,4 +1,4 @@
-/**
+import { identifiantLisible } from '../rangement/adresses'; /**
  * Coquille applicative — l'arborescence de rail de la FORME ABRÉGÉE.
  *
  * TROISIÈME AMENDEMENT DU GABARIT — ARB-021, amendement A-1e.
@@ -73,6 +73,16 @@ export interface SectionAbregee {
 /** Un nœud abrégé prêt à rendre : le balisage, plus l'état de la page courante. */
 export interface NoeudAbregeRendu {
 	readonly nom: string;
+	/**
+	 * L'ADRESSE DU NŒUD — même raison que dans l'arborescence complète : le gel
+	 * écrit `href="#"`, et le produit doit porter les siennes. Le premier niveau
+	 * est un DOMAINE, les suivants ses dossiers.
+	 */
+	readonly cible: {
+		readonly univers: string;
+		readonly domaine: string;
+		readonly chemin: readonly string[];
+	} | null;
 	readonly enfants: readonly NoeudAbregeRendu[];
 	/** Déplié au balisage — pilote le seul `aria-label` du chevron. */
 	readonly deplie: boolean;
@@ -159,14 +169,32 @@ export const SECTIONS_ABREGEES: readonly SectionAbregee[] = [
  */
 export function rendreNoeudsAbreges(
 	noeuds: readonly NoeudAbrege[],
-	courant: readonly string[]
+	courant: readonly string[],
+	univers = '',
+	domaine: string | null = null,
+	chemin: readonly string[] = []
 ): readonly NoeudAbregeRendu[] {
 	const dernier = courant.length ? courant[courant.length - 1] : null;
 	return noeuds.map((n) => {
-		const enfants = rendreNoeudsAbreges(n.enfants, courant);
+		const domaineDuNoeud = domaine ?? n.nom;
+		const cheminDuNoeud = domaine === null ? [] : [...chemin, n.nom];
+		const enfants = rendreNoeudsAbreges(n.enfants, courant, univers, domaineDuNoeud, cheminDuNoeud);
 		const estCourant = courant.includes(n.nom);
 		return {
 			nom: n.nom,
+			/* LES PARTIES, PAS L'ADRESSE COMPOSÉE. `resolve()` de SvelteKit n'admet
+			   qu'un motif de route et ses paramètres — une chaîne composée à la main
+			   lui est opaque, et `svelte/no-navigation-without-resolve` a raison de
+			   l'exiger : une adresse concaténée casse sous une racine de
+			   déploiement. La vue compose, avec le motif sous les yeux. */
+			cible:
+				univers === ''
+					? null
+					: {
+							univers: identifiantLisible(univers),
+							domaine: identifiantLisible(domaineDuNoeud),
+							chemin: cheminDuNoeud.map(identifiantLisible)
+						},
 			enfants,
 			deplie: n.deplie,
 			ouvert: n.deplie || estCourant || enfants.some((e) => e.ouvert),
@@ -180,6 +208,6 @@ export function rendreNoeudsAbreges(
 export function railAbregeRendu(courant: readonly string[]): readonly SectionAbregeeRendue[] {
 	return SECTIONS_ABREGEES.map((s) => ({
 		nom: s.nom,
-		arbre: rendreNoeudsAbreges(s.arbre, courant)
+		arbre: rendreNoeudsAbreges(s.arbre, courant, s.nom, null)
 	}));
 }
