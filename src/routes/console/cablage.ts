@@ -47,6 +47,8 @@
  * Sans JavaScript, ces écrans ne soumettent pas — même régime que `ARB-063` §4.
  */
 
+import { deserialize } from '$app/forms';
+
 /** Ce qu'un câblage rend : de quoi le défaire. */
 export type Debranchement = () => void;
 
@@ -75,11 +77,35 @@ function noeud<T extends Element>(racine: ParentNode, selecteur: string): T | nu
 	return racine.querySelector<T>(selecteur);
 }
 
+/** Ce qu'une action de route rend à l'appelant. */
+export interface RetourDAction {
+	readonly succes: boolean;
+	/** Ce que l'action a renvoyé — la valeur de `fail()` ou celle du succès. */
+	readonly donnees: unknown;
+}
+
+/** Ce qui module l'envoi. */
+export interface OptionsDEnvoi {
+	/**
+	 * RECHARGER LA PAGE AU SUCCÈS — vrai par défaut, parce que c'est ce dont ces
+	 * écrans ont besoin : la liste rendue vient du serveur, et un geste qui
+	 * l'a modifiée doit la faire relire.
+	 *
+	 * FAUX QUAND L'ÉCRAN A ENCORE QUELQUE CHOSE À MONTRER. La création d'un
+	 * compte est le seul cas à ce jour : le gel ouvre `#dlg-mdp` sur le mot de
+	 * passe initial, « affiché une seule fois » (`V-32:1427`). Recharger
+	 * l'emporterait avec la page, et la valeur n'existe nulle part ailleurs —
+	 * seul le condensat est en base. Le rechargement est alors différé jusqu'à
+	 * la fermeture de la boîte, que le gel commande par `#mdp-fermer`.
+	 */
+	readonly rechargerAuSucces?: boolean;
+}
+
 /**
  * L'ENVOI À UNE ACTION DE ROUTE, et le rechargement qui suit.
  *
- * SvelteKit répond aux actions par une enveloppe JSON dont `type` vaut
- * `success`, `failure` ou `error`. Le rechargement n'est demandé qu'au succès :
+ * SvelteKit répond aux actions par une enveloppe dont `type` vaut `success`,
+ * `failure`, `redirect` ou `error`. Le rechargement n'est demandé qu'au succès :
  * un refus doit rester à l'écran, avec le dialogue ouvert et la saisie en place,
  * puisque c'est un ÉTAT de l'écran et non une panne — les planches de V-27, V-28
  * et V-29 nomment ces refus et les montrent.
@@ -87,12 +113,21 @@ function noeud<T extends Element>(racine: ParentNode, selecteur: string): T | nu
  * `x-sveltekit-action` est l'en-tête que SvelteKit attend d'une soumission
  * programmée ; sans lui, il répond par une redirection destinée à un formulaire
  * natif, et la réponse n'est pas lisible ici.
+ *
+ * LE CORPS N'EST PAS DU JSON ORDINAIRE, ET LE LIRE COMME TEL PERDAIT LES
+ * DONNÉES. `data` est une CHAÎNE produite par `devalue`, pas un objet : la
+ * première rédaction rendait donc `donnees` sous la forme d'un texte
+ * inexploitable, ce qui n'avait aucune conséquence tant qu'aucun appelant ne
+ * s'en servait — `P-5` exactement. `deserialize()` de `$app/forms` est la porte
+ * officielle, elle vient de SvelteKit lui-même, et elle n'ajoute aucune
+ * dépendance (`P-24`).
  */
 export async function envoyerAUneAction(
 	document: Document,
 	action: string,
-	champs: Record<string, string>
-): Promise<{ readonly succes: boolean; readonly donnees: unknown }> {
+	champs: Record<string, string>,
+	options: OptionsDEnvoi = {}
+): Promise<RetourDAction> {
 	const corps = new FormData();
 	for (const [nom, valeur] of Object.entries(champs)) corps.append(nom, valeur);
 
@@ -101,10 +136,13 @@ export async function envoyerAUneAction(
 		headers: { 'x-sveltekit-action': 'true' },
 		body: corps
 	});
-	const enveloppe = (await reponse.json()) as { type?: string; data?: unknown };
-	const succes = enveloppe.type === 'success';
-	if (succes) document.location.reload();
-	return { succes, donnees: enveloppe.data };
+	const resultat = deserialize(await reponse.text());
+	const succes = resultat.type === 'success';
+	if (succes && options.rechargerAuSucces !== false) document.location.reload();
+	return {
+		succes,
+		donnees: resultat.type === 'success' || resultat.type === 'failure' ? resultat.data : undefined
+	};
 }
 
 /* ═══════════════════════════════ La configuration — V-33 ════════════════ */

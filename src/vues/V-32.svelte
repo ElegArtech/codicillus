@@ -132,6 +132,53 @@
 			readonly identifiant: string;
 			readonly role: RoleDeCompte;
 		}) => void;
+		/**
+		 * CE QUE LA VUE FAIT QUAND « CRÉER LE COMPTE » EST CLIQUÉ — `UC-M14-07`.
+		 *
+		 * MÊME PARTAGE QUE LES DEUX PRÉCÉDENTES : la vue relève les sept nœuds de
+		 * son panneau et rend la demande ; la page tient le réseau et l'action. Le
+		 * gel fait exactement ce partage — `V-32:3175-3206` relit les champs par
+		 * `getElementById` au clic, puis écrit.
+		 *
+		 * ELLE REND UNE PROMESSE, ET C'EST LA SEULE DES TROIS. Un refus de création
+		 * s'affiche DANS le formulaire — `#erreur-ident` et `#erreur-nom` sont des
+		 * nœuds du gel, révélés par `marquer()` (`V-32:3186`) — et un succès ouvre
+		 * `#dlg-mdp` sur le mot de passe initial. La vue a donc besoin de savoir ce
+		 * que le serveur a répondu ; les deux autres gestes rechargent la page et
+		 * n'ont rien à attendre.
+		 *
+		 * SEULS LES DEUX CHAMPS QUE LE GEL SAIT MARQUER PEUVENT PORTER UN MESSAGE.
+		 * Le formulaire n'a que deux blocs `.champ__erreur` (`V-32:1352`,
+		 * `V-32:1362`) : un refus qui viserait un autre champ n'a nulle part où se
+		 * dire, et la vue n'invente pas d'endroit — le panneau reste simplement
+		 * ouvert, sans rien écrire.
+		 *
+		 * ABSENTE, « CRÉER LE COMPTE » FERME LE PANNEAU SANS RIEN ENVOYER : c'est
+		 * l'état d'une planche, qui n'a ni route ni action derrière elle.
+		 */
+		onCreerUnCompte?: (demande: {
+			readonly identifiant: string;
+			readonly nom: string;
+			readonly courriel: string;
+			readonly motDePasse: string;
+			readonly role: RoleDeCompte;
+			/** Le NOM d'affichage du domaine choisi. Vide : aucun rattachement. */
+			readonly domaine: string;
+			readonly motDePasseVerrouille: boolean;
+		}) => Promise<{
+			readonly cree: boolean;
+			readonly erreurs: readonly { readonly champ: 'ident' | 'nom'; readonly message: string }[];
+		}>;
+		/**
+		 * CE QUE LA VUE FAIT QUAND LE MOT DE PASSE A ÉTÉ NOTÉ — `#mdp-fermer`.
+		 *
+		 * Le gel efface la valeur du document en même temps qu'elle disparaît de
+		 * l'écran (`V-32:3255`) : « elle ne doit pas rester récupérable dans la
+		 * page ». Côté produit, la liste rendue vient du serveur et le compte
+		 * nouvellement créé n'y est pas encore : c'est ce rappel qui fait relire la
+		 * page, et il efface la valeur par la même occasion.
+		 */
+		onMotDePasseTransmis?: () => void;
 	}
 
 	const {
@@ -143,7 +190,9 @@
 		instance = INSTANCE,
 		comptes: registreDeComptes = COMPTES,
 		onChangerLActivation,
-		onEnregistrerLeRole
+		onEnregistrerLeRole,
+		onCreerUnCompte,
+		onMotDePasseTransmis
 	}: Proprietes = $props();
 
 	/**
@@ -276,21 +325,86 @@
 	 */
 	let demandeDEdition = $state<string | null>(null);
 
+	/**
+	 * `ouvrirForm(null)` DU GEL (`V-32:3216`) — « Nouveau compte » a été cliqué.
+	 *
+	 * `false` AU RENDU SERVEUR, comme `demandeDEdition` : les sept positions de
+	 * planche rendent exactement ce qu'elles rendaient, et la position `creation`
+	 * du vecteur continue d'ouvrir le panneau par `form`.
+	 */
+	let demandeDeCreation = $state(false);
+
 	/** Le rôle retenu dans le sélecteur, tant que le panneau est ouvert. */
 	let roleChoisi = $state<RoleDeCompte | null>(null);
 
+	/**
+	 * LES DEUX BLOCS D'ERREUR DU FORMULAIRE — `marquer()` du gel (`V-32:3186`).
+	 *
+	 * `erreurIdent` porte le TEXTE parce que le gel en écrit trois différents
+	 * dans `#erreur-ident-txt` ; `erreurNom` n'est qu'un drapeau parce que le
+	 * message de `#erreur-nom` est ÉCRIT EN DUR dans le balisage gelé
+	 * (`V-32:1364`) — le reproduire depuis le serveur en ferait une seconde
+	 * source pour la même phrase.
+	 *
+	 * Les deux valent leur état de repos au rendu serveur : les blocs restent
+	 * `hidden` et `#champ-ident` ne porte aucun `data-etat`, ce qui est le gel.
+	 */
+	let erreurIdent = $state<string | null>(null);
+	let erreurNom = $state(false);
+
 	function ouvrirLeFormulaire(identifiant: string): void {
 		demandeDEdition = identifiant;
+		demandeDeCreation = false;
 		roleChoisi = null;
+		effacerLesErreurs();
+	}
+
+	/** `ouvrirForm(null)` — le panneau s'ouvre vide, sur un mot de passe frais. */
+	function ouvrirLaCreation(): void {
+		demandeDEdition = null;
+		demandeDeCreation = true;
+		roleChoisi = null;
+		motDePasseSaisi = motDePasse();
+		effacerLesErreurs();
+	}
+
+	/** `marquer(k, null)` du gel, pour les deux champs à la fois (`V-32:3134`). */
+	function effacerLesErreurs(): void {
+		erreurIdent = null;
+		erreurNom = false;
 	}
 
 	/** `fermerForm()` du gel (`V-32:3225`) — l'écran revient à sa liste. */
 	function fermerLeFormulaire(): void {
 		demandeDEdition = null;
+		demandeDeCreation = false;
 		roleChoisi = null;
+		motDePasseSaisi = null;
+		effacerLesErreurs();
 	}
 
-	const panneauOuvert = $derived(form !== 'ferme' || demandeDEdition !== null);
+	/**
+	 * « NOUVEAU COMPTE » OUVRE LE PANNEAU — `V-32:3217` :
+	 * `document.getElementById("creer").addEventListener("click", …)`.
+	 *
+	 * L'ÉCOUTEUR EST POSÉ SUR LE NŒUD, PAS ÉCRIT DANS LE BALISAGE, et ce n'est pas
+	 * un contournement : `#creer` est rendu par `BoutonDeCreation.svelte`, commun
+	 * aux six vues à panneau de formulaire, et qui ne prend aucun comportement en
+	 * propriété. Lui en ajouter une changerait les cinq autres vues ; le geste du
+	 * gel, lui, ne touche que celle-ci.
+	 *
+	 * `$effect` NE COURT QU'AU NAVIGATEUR : le rendu serveur — donc le banc — ne
+	 * le traverse jamais, et pas un pixel ne bouge de son fait. C'est la même
+	 * construction que l'effet de `#dlg-desactiver`, plus bas.
+	 */
+	$effect(() => {
+		const bouton = document.getElementById('creer');
+		if (bouton === null) return;
+		bouton.addEventListener('click', ouvrirLaCreation);
+		return () => bouton.removeEventListener('click', ouvrirLaCreation);
+	});
+
+	const panneauOuvert = $derived(form !== 'ferme' || demandeDEdition !== null || demandeDeCreation);
 
 	/**
 	 * Le compte édité : celui que « Modifier » désigne, sinon « Karim Belhadj »
@@ -298,15 +412,17 @@
 	 * (`V-32:3342`).
 	 */
 	const edite = $derived<CompteRendu | null>(
-		demandeDEdition !== null
-			? (comptes.find((c) => c.compte.identifiant === demandeDEdition) ?? null)
-			: form === 'edition'
-				? (comptes.find((c) => c.compte.identifiant === 'karim.belhadj') ?? null)
-				: form === 'admin'
-					? (administrateurs[0] ?? null)
-					: null
+		demandeDeCreation
+			? null
+			: demandeDEdition !== null
+				? (comptes.find((c) => c.compte.identifiant === demandeDEdition) ?? null)
+				: form === 'edition'
+					? (comptes.find((c) => c.compte.identifiant === 'karim.belhadj') ?? null)
+					: form === 'admin'
+						? (administrateurs[0] ?? null)
+						: null
 	);
-	const nouveau = $derived(form === 'creation');
+	const nouveau = $derived(form === 'creation' || demandeDeCreation);
 	const dernierAdminEdite = $derived(edite !== null && estDernierAdmin(edite));
 
 	/** Le rôle porté par le sélecteur, et l'aide qui va avec (`V-32:3136`). */
@@ -315,8 +431,89 @@
 	);
 	const aideDuRole = $derived(ROLES.find((r) => r.cle === roleCourant)?.aide ?? '');
 
-	/** Le mot de passe initial, généré à l'ouverture d'un formulaire de création. */
-	const motDePasseInitial = $derived(nouveau ? motDePasse() : '');
+	/**
+	 * LE MOT DE PASSE INITIAL, ET POURQUOI IL EST UN ÉTAT PLUTÔT QU'UN DÉRIVÉ.
+	 *
+	 * `#regenerer` du gel (`V-32:3213`) en tire un autre sans que rien d'autre ne
+	 * change à l'écran : un dérivé ne se recalculerait pas, faute de dépendance
+	 * modifiée. L'état porte donc la valeur DEMANDÉE, et le dérivé ci-dessous
+	 * garde le comportement d'origine tant que personne n'a rien demandé — au
+	 * rendu serveur, `motDePasseSaisi` vaut `null` et la position `creation` de la
+	 * planche rend exactement ce qu'elle rendait.
+	 */
+	let motDePasseSaisi = $state<string | null>(null);
+	const motDePasseInitial = $derived(motDePasseSaisi ?? (nouveau ? motDePasse() : ''));
+
+	/**
+	 * LE COMPTE QUI VIENT D'ÊTRE CRÉÉ — `afficherMotDePasse(nom, mdp, true)` du
+	 * gel (`V-32:3196`), qui ouvre `#dlg-mdp` sur son mot de passe initial.
+	 *
+	 * LA VALEUR VIENT DU NAVIGATEUR, JAMAIS DU SERVEUR. C'est cette page qui l'a
+	 * engendrée et envoyée ; la base n'en garde que le condensat Argon2id, et
+	 * aucune réponse d'action ne la reporte. L'avertissement du gel dit
+	 * exactement cela : « il n'est pas conservé en clair et ne pourra plus être
+	 * consulté, ni par vous, ni par personne » (`V-32:1428`).
+	 *
+	 * `null` au rendu serveur : la boîte reste celle que le vecteur décrit.
+	 */
+	let compteCree = $state<{ readonly nom: string; readonly motDePasse: string } | null>(null);
+
+	/**
+	 * LES SEPT CHAMPS SONT RELUS SUR LE DOCUMENT AU CLIC, comme le gel les relit
+	 * (`V-32:3175-3201`, `getElementById(...).value`), et pour la même raison :
+	 * aucun de ces nœuds n'est lié à un état — ils portent la valeur INITIALE que
+	 * le rendu leur a donnée, et la frappe de l'utilisateur ne vit que dans le
+	 * document. Y ajouter des liaisons ferait un second état pour la même donnée.
+	 */
+	function valeurDe(id: string): string {
+		const noeud = document.getElementById(id);
+		return noeud instanceof HTMLInputElement || noeud instanceof HTMLSelectElement
+			? noeud.value
+			: '';
+	}
+
+	function estCoche(id: string): boolean {
+		const noeud = document.getElementById(id);
+		return noeud instanceof HTMLInputElement && noeud.checked;
+	}
+
+	/**
+	 * « CRÉER LE COMPTE » — le geste de `V-32:3174-3197`, moins la validation.
+	 *
+	 * LA VALIDATION N'EST PAS REFAITE ICI, ET C'EST DÉLIBÉRÉ. Le gel valide au
+	 * navigateur parce qu'il n'a pas de serveur ; le produit en a un, et c'est lui
+	 * qui décide — il est le seul à savoir si un identifiant est déjà pris. Écrire
+	 * les mêmes trois conditions des deux côtés ferait deux définitions d'une même
+	 * règle, dont l'une finirait par diverger : c'est la faute que `P-01` nomme
+	 * pour la fraîcheur. Les MESSAGES, eux, restent ceux du gel — ils viennent du
+	 * verdict, qui les transcrit.
+	 */
+	async function creerLeCompte(): Promise<void> {
+		if (onCreerUnCompte === undefined) {
+			fermerLeFormulaire();
+			return;
+		}
+		const nom = valeurDe('f-nom').trim();
+		const motDePasseEnvoye = valeurDe('f-mdp');
+		const issue = await onCreerUnCompte({
+			identifiant: valeurDe('f-ident'),
+			nom,
+			courriel: valeurDe('f-courriel'),
+			motDePasse: motDePasseEnvoye,
+			role: roleCourant,
+			domaine: valeurDe('f-domaine'),
+			motDePasseVerrouille: estCoche('f-verrou')
+		});
+		if (issue.cree) {
+			compteCree = { nom, motDePasse: motDePasseEnvoye };
+			fermerLeFormulaire();
+			return;
+		}
+		/* `marquer()` du gel, dans les deux polarités : un champ que le refus ne
+		   nomme pas est un champ dont la marque est RETIRÉE (`V-32:3186`). */
+		erreurIdent = issue.erreurs.find((e) => e.champ === 'ident')?.message ?? null;
+		erreurNom = issue.erreurs.some((e) => e.champ === 'nom');
+	}
 
 	/** `mdp` réinitialise le premier compte du jeu — `comptes[0]` (`V-32:3345`). */
 	const compteReinitialise = $derived(casMdp ? comptes[0] : null);
@@ -532,7 +729,7 @@
 						</div>{/if}
 				</div>
 
-				<div class="champ" id="champ-ident">
+				<div class="champ" id="champ-ident" data-etat={erreurIdent === null ? undefined : 'erreur'}>
 					<label class="champ__label" for="f-ident">Identifiant <span class="oblig">*</span></label>
 					<input
 						class="saisie"
@@ -550,7 +747,7 @@
 							contributions passées.{:else}Sert à se connecter. Il ne pourra plus être modifié
 							ensuite.{/if}</span
 					>
-					<div class="champ__erreur" id="erreur-ident" hidden>
+					<div class="champ__erreur" id="erreur-ident" hidden={erreurIdent === null}>
 						<svg
 							width="13"
 							height="13"
@@ -561,11 +758,11 @@
 							style="flex:none;margin-top:1px"
 							><path d="M8 4.5v4M8 11.2v.3" /><circle cx="8" cy="8" r="6.2" /></svg
 						>
-						<span id="erreur-ident-txt"></span>
+						<span id="erreur-ident-txt">{erreurIdent ?? ''}</span>
 					</div>
 				</div>
 
-				<div class="champ" id="champ-nom">
+				<div class="champ" id="champ-nom" data-etat={erreurNom ? 'erreur' : undefined}>
 					<label class="champ__label" for="f-nom">Nom affiché <span class="oblig">*</span></label>
 					<input
 						class="saisie"
@@ -576,7 +773,7 @@
 						value={edite ? edite.compte.nom : ''}
 					/>
 					<span class="champ__aide">Apparaît sur les notes et dans l'activité.</span>
-					<div class="champ__erreur" id="erreur-nom" hidden>
+					<div class="champ__erreur" id="erreur-nom" hidden={!erreurNom}>
 						<svg
 							width="13"
 							height="13"
@@ -625,6 +822,7 @@
 							id="regenerer"
 							aria-label="Générer un autre mot de passe"
 							title="Générer un autre"
+							onclick={() => (motDePasseSaisi = motDePasse())}
 						>
 							<svg
 								width="16"
@@ -698,12 +896,14 @@
 				n'en pose pas, et le danger d'un bouton sans type — soumettre — n'existe
 				qu'à l'intérieur d'un `<form>`, qui n'existe pas ici.
 
-				« CRÉER LE COMPTE » N'EST PAS CÂBLÉ, ET C'EST DÉCLARÉ. La création d'un
-				compte (`RG-M14-06`) n'a pas d'action de route : la câbler à
-				`changerLeRole` enverrait un rôle pour un identifiant qui n'existe pas,
-				et l'écran mentirait sur une création qui n'a pas eu lieu. Le bouton
-				ferme donc le panneau sans rien envoyer quand il crée — l'état de la
-				planche —, et n'appelle l'action que sur un compte EXISTANT.
+				« CRÉER LE COMPTE » PORTE DÉSORMAIS `UC-M14-07`, et le bouton fait donc
+				DEUX choses selon l'état du panneau : sur un compte existant il rend le
+				rôle choisi (`RG-M14-07`), sur un panneau vide il rend la demande de
+				création. C'est le partage du gel lui-même, dont le seul écouteur
+				branche sur `edite.nouveau` (`V-32:3184`).
+
+				SANS RAPPEL DE CRÉATION — le cas des planches, qui n'ont ni route ni
+				action derrière elles —, il ferme le panneau sans rien envoyer.
 			-->
 			<div class="tiroir-form__pied">
 				<button
@@ -719,16 +919,29 @@
 					class="btn btn--principal"
 					id="form-valider"
 					onclick={() => {
-						if (edite !== null) {
-							onEnregistrerLeRole?.({ identifiant: edite.compte.identifiant, role: roleCourant });
+						if (edite === null) {
+							void creerLeCompte();
+							return;
 						}
+						onEnregistrerLeRole?.({ identifiant: edite.compte.identifiant, role: roleCourant });
 						fermerLeFormulaire();
 					}}><span id="form-valider-txt">{edite ? 'Enregistrer' : 'Créer le compte'}</span></button
 				>
 			</div>
 		</aside>
 
-		<dialog class="dlg" id="dlg-mdp" aria-labelledby="dlg-mdp-titre" open={casMdp}>
+		<!--
+			LA MÊME BOÎTE SERT LES DEUX GESTES, ET C'EST LE GEL QUI LE DÉCIDE :
+			`afficherMotDePasse(nom, mdp, creation)` (`V-32:3235`) n'ouvre qu'un
+			dialogue, et son troisième paramètre change le titre et la phrase — rien
+			d'autre. Les deux textes ci-dessous en sont la transcription.
+		-->
+		<dialog
+			class="dlg"
+			id="dlg-mdp"
+			aria-labelledby="dlg-mdp-titre"
+			open={casMdp || compteCree !== null}
+		>
 			<div class="dlg__boite">
 				<div class="dlg__tete">
 					<span class="dlg__marque" aria-hidden="true">
@@ -744,11 +957,22 @@
 							/></svg
 						>
 					</span>
-					<h2 class="dlg__titre" id="dlg-mdp-titre">Mot de passe réinitialisé</h2>
+					<h2 class="dlg__titre" id="dlg-mdp-titre">
+						{compteCree ? 'Compte créé' : 'Mot de passe réinitialisé'}
+					</h2>
 				</div>
 				<div class="dlg__corps">
+					<!--
+						LA RÉGION EST SOUSTRAITE AU FORMATEUR, ET LA RAISON EST MESURÉE
+						(`P-6`). Le reflux du formateur déplace les blancs À L'INTÉRIEUR du
+						texte : la branche de RÉINITIALISATION — celle que la position de
+						planche `c-mdp` rend — ne sortait plus les mêmes octets qu'avant ce
+						lot, sur une phrase pourtant inchangée. La branche est donc écrite
+						exactement comme elle l'était, retours de ligne compris.
+					-->
+					<!-- prettier-ignore -->
 					<p class="dlg__texte" id="mdp-qui">
-						{#if compteReinitialise}Le mot de passe de {compteReinitialise.compte.nom} a été remplacé.
+						{#if compteCree}Le compte de {compteCree.nom} est créé. Voici son mot de passe initial.{:else if compteReinitialise}Le mot de passe de {compteReinitialise.compte.nom} a été remplacé.
 							L'ancien ne fonctionne plus.{:else}—{/if}
 					</p>
 
@@ -775,7 +999,8 @@
 					</div>
 
 					<div class="mdp-unique">
-						<div class="mdp-unique__valeur" id="mdp-valeur">{motDePasseAffiche}</div>
+						<!-- prettier-ignore -->
+						<div class="mdp-unique__valeur" id="mdp-valeur">{compteCree ? compteCree.motDePasse : motDePasseAffiche}</div>
 						<button class="btn btn--principal" id="mdp-copier">
 							<svg
 								width="15"
@@ -799,7 +1024,22 @@
 					</p>
 				</div>
 				<div class="dlg__pied">
-					<button class="btn btn--principal" id="mdp-fermer">J'ai noté le mot de passe</button>
+					<!--
+						« J'AI NOTÉ LE MOT DE PASSE » — le gel ferme la boîte ET EFFACE LA
+						VALEUR du document (`V-32:3255`) : « elle ne doit pas rester
+						récupérable dans la page ». Ici, `compteCree` remis à `null` fait
+						les deux d'un coup, et le rappel demande à la page de se relire —
+						c'est ainsi que le compte créé rejoint la liste.
+					-->
+					<button
+						class="btn btn--principal"
+						id="mdp-fermer"
+						onclick={() => {
+							const avaitCree = compteCree !== null;
+							compteCree = null;
+							if (avaitCree) onMotDePasseTransmis?.();
+						}}>J'ai noté le mot de passe</button
+					>
 				</div>
 			</div>
 		</dialog>
