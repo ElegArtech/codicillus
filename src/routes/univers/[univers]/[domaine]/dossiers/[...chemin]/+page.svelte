@@ -2,64 +2,238 @@
 	/**
 	 * `/univers/{univers}/{domaine}/dossiers/{chemin…}` — V-13 Page d'un dossier.
 	 *
-	 * Ce fichier ne fait que rendre la vue avec ce que son chargeur a lu en base.
-	 * Le vecteur et les notes viennent de `+page.server.ts`, qui porte la
-	 * traduction du chemin, l'exigence du module `dossiers` (RG-STR-06), le
-	 * périmètre et le droit effectif.
+	 * Ce fichier rend la vue avec ce que son chargeur a lu en base, et il CÂBLE
+	 * les gestes du gel. Le vecteur, les notes, l'arborescence, l'origine du droit
+	 * et les refus viennent de `+page.server.ts`, qui porte la traduction du
+	 * chemin, l'exigence du module `dossiers` (RG-STR-06), le périmètre et le
+	 * droit effectif.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert.
 	 * Elle est identique à l'octet à sa source gelée (P-6.3).
+	 *
+	 * ═════════════════════════════════════════════════════════════════════════
+	 * LE BANC NE PASSE JAMAIS PAR ICI — `ARB-063`
+	 *
+	 * Il rend les composants par le mode de conception, qui ne passe que `vecteur`
+	 * et `notes`. Rien de ce fichier n'entre dans son verdict : c'est ce qui
+	 * autorise à nommer ici les champs du gel, que `src/vues/V-13.svelte` ne porte
+	 * pas — aucune vue ne porte `method`, `action` ni `name`.
+	 *
+	 * ═════════════════════════════════════════════════════════════════════════
+	 * QUATRE GESTES, ET UN CINQUIÈME QUI N'A PAS D'ÉCRAN
+	 *
+	 *   `#a-note`, `#v-note`            → `/notes/nouvelle`, navigation
+	 *   `#a-sousdossier`, `#v-sousdossier` → `#dlg-creer`   → `?/creerSousDossier`
+	 *   `#a-renommer`                   → `#dlg-deplacer`   → `?/renommerOuDeplacer`
+	 *   `#a-supprimer`                  → `#dlg-supprimer`  → `?/supprimer`
+	 *   `#a-droits`                     → RIEN. Le dialogue des droits n'existe
+	 *                                     pas dans V-13 : son gestionnaire de gel
+	 *                                     renvoie à V-40 (`V-13:2376`). Voir
+	 *                                     l'en-tête de `src/vues/V-13.svelte` —
+	 *                                     le geste est déclaré, pas comblé.
+	 *
+	 * TROIS PIÈGES SONT ÉVITÉS ICI, ET CHACUN A COÛTÉ :
+	 *
+	 *  · un `button` sans attribut `type` dans un formulaire SOUMET. Le gel en
+	 *    porte huit dans ces trois dialogues, dont « Annuler » et « Fermer » :
+	 *    tous passent en `type="button"` à l'installation, et un seul geste
+	 *    soumet — celui qu'on appelle explicitement ;
+	 *  · `formulaire.action` ne se réécrit JAMAIS avant `requestSubmit()` :
+	 *    `soumettreVers()` pose un soumetteur caché portant `formAction`, ce qui
+	 *    laisse le formulaire intact ;
+	 *  · `svelte/no-dom-manipulating` refuse qu'on insère un nœud sous un arbre que
+	 *    le compilateur croit connaître : aucun champ n'est créé à la volée ici —
+	 *    les trois sont ceux du gel, transcrits par la vue. Poser un `name` sur un
+	 *    nœud existant, en revanche, n'insère rien, et c'est ce que
+	 *    `cablerLEditeur()` fait depuis `T-042`.
 	 */
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import Vue from '../../../../../../vues/V-13.svelte';
 	import '../../../../../../vues/V-13.css';
 	import { soumettreVers } from '$lib/cablage/formulaires';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	const { data }: { data: PageData } = $props();
-
-	let formulaire: HTMLFormElement;
-	let champNom: HTMLInputElement;
+	const { data, form }: { data: PageData; form: ActionData } = $props();
 
 	/**
-	 * « NOUVEAU SOUS-DOSSIER » — le geste que le gel dessine et que rien
-	 * n'atteignait.
-	 *
-	 * `mockups/V-13-page-dossier.html:1161` pose le bouton, `:1209` son dialogue :
-	 * un champ, « Nom du dossier », obligatoire, et le parent rappelé en toutes
-	 * lettres. `src/vues/V-13.svelte` transcrit le bouton et PAS le dialogue — un
-	 * `dialog` fermé ne portant aucune boîte de rendu, la transcription l'a
-	 * déclaré non rendu.
-	 *
-	 * La demande passe donc par l'invite du navigateur, comme la confirmation de
-	 * suppression : c'est le même écart, déjà déclaré, et non une nouvelle
-	 * famille. Le fond est tenu — aucun dossier n'est créé sans nom, et le parent
-	 * est nommé —, la forme ne l'est pas. Elle attend un regel.
-	 *
-	 * `P-09` est servie par la vue : le bouton n'est rendu qu'au gestionnaire.
+	 * LES TROIS REFUS, LUS SANS DÉTOUR. `fail()` rend un objet par action ; les
+	 * trois formes sont disjointes, et une lecture par champ optionnel les
+	 * distingue sans avoir à deviner laquelle est arrivée.
 	 */
+	interface Refus {
+		readonly creation?: string;
+		readonly deplacement?: string;
+		readonly suppression?: string;
+	}
+	const refus = $derived((form ?? null) as Refus | null);
+
+	let formulaire: HTMLFormElement;
+
+	/**
+	 * LES NOMS DES CHAMPS DU GEL — posés ici, jamais dans la vue (`ARB-063`).
+	 *
+	 * Le gel ne nomme aucun de ses champs : soumis tels quels, ils n'enverraient
+	 * rien. Chaque nom est distinct des autres parce que TOUS les champs du
+	 * formulaire voyagent à CHAQUE soumission — les dialogues vivent dans le même
+	 * formulaire, fermés. Deux champs de même nom, et l'action lirait celui de
+	 * l'autre dialogue.
+	 */
+	const NOMS: Record<string, string> = {
+		'creer-nom': 'nom',
+		'dep-nom': 'nouveauNom',
+		'sup-saisie': 'confirmation'
+	};
+
+	function dialogue(racine: HTMLFormElement, id: string): HTMLDialogElement | null {
+		return racine.querySelector<HTMLDialogElement>(`#${id}`);
+	}
+
 	onMount(() => {
+		const debranchements: (() => void)[] = [];
+		function surClic(cible: Element | null, faire: () => void): void {
+			if (cible === null) return;
+			const ecoute = (): void => {
+				faire();
+			};
+			cible.addEventListener('click', ecoute);
+			debranchements.push(() => {
+				cible.removeEventListener('click', ecoute);
+			});
+		}
+
+		/* 1. Aucun bouton du gel ne soumet par accident. */
 		for (const bouton of Array.from(formulaire.querySelectorAll('button'))) {
 			if (!bouton.hasAttribute('type')) bouton.type = 'button';
 		}
-		const bouton = formulaire.querySelector<HTMLButtonElement>('#a-sousdossier');
-		if (bouton === null) return;
-		const creer = (): void => {
-			const parent = data.vecteur.dos;
-			const nom = window.prompt(`Nom du sous-dossier à créer dans ${parent}`);
-			if (nom === null || nom.trim() === '') return;
-			/* Le champ est DÉCLARÉ dans le balisage plutôt que créé à la volée :
-			   `svelte/no-dom-manipulating` refuse, à juste titre, qu'on insère un
-			   nœud sous un arbre que le compilateur croit connaître. */
-			champNom.value = nom.trim();
+
+		/* 2. Les champs du gel reçoivent leur nom. */
+		for (const [id, nom] of Object.entries(NOMS)) {
+			const champ = formulaire.querySelector<HTMLInputElement>(`#${id}`);
+			if (champ !== null) champ.name = nom;
+		}
+
+		/* 3. Toute croix et tout « Annuler » ferme son dialogue — `V-13:2183`. */
+		for (const bouton of Array.from(formulaire.querySelectorAll('[data-fermer]'))) {
+			surClic(bouton, () => bouton.closest('dialog')?.close());
+		}
+
+		const dlgCreer = dialogue(formulaire, 'dlg-creer');
+		const dlgDeplacer = dialogue(formulaire, 'dlg-deplacer');
+		const dlgSupprimer = dialogue(formulaire, 'dlg-supprimer');
+		const champCreer = formulaire.querySelector<HTMLInputElement>('#creer-nom');
+		const champDep = formulaire.querySelector<HTMLInputElement>('#dep-nom');
+		const champSup = formulaire.querySelector<HTMLInputElement>('#sup-saisie');
+		const validerSup = formulaire.querySelector<HTMLButtonElement>('#sup-valider');
+
+		/* 4. NOUVELLE NOTE — une NAVIGATION, pas une action : rien n'est écrit ici,
+		   et le droit qui la gouverne est celui de la route d'arrivée.
+
+		   `docs/routes.md:287` prévoit quatre paramètres de pré-remplissage sur
+		   `/notes/nouvelle` — `titre`, `domaine`, `dossier`, `template`. SEUL
+		   `domaine` est honoré, et il l'est LÀ-BAS : `notes/nouvelle/+page.svelte`
+		   le lit et le porte à la vue par `compte.domaine`, dont l'arborescence du
+		   choix de dossier se déduit.
+
+		   `dossier` N'EST PAS ÉMIS, et c'est délibéré : V-17 n'a AUCUNE propriété
+		   qui le recevrait. L'émettre le ferait ignorer en silence — un paramètre
+		   honoré à moitié est pire que pas de paramètre —, et la vue est hors du
+		   périmètre de ce lot. Le brief de V-13 demande « nouvelle note DANS CE
+		   DOSSIER » : ce qui est livré mène à l'éditeur sur le bon DOMAINE, et
+		   l'écart est déclaré plutôt que masqué par un paramètre inerte. */
+		for (const id of ['a-note', 'v-note']) {
+			surClic(formulaire.querySelector(`#${id}`), () => {
+				/* L'adresse est composée en OBJET plutôt qu'en chaîne : `resolve()` rend
+				   le chemin de la route, et le paramètre est posé par `searchParams`,
+				   qui l'encode. Rien n'est concaténé, donc rien n'est à échapper —
+				   c'est la forme d'`ARB-038` appliquée à une adresse.
+
+				   LA RÈGLE EST DÉSARMÉE ICI, ET SUR UNE LIGNE. `ResolvedPathname` est
+				   un type de CHEMIN — `.svelte-kit/non-ambient.d.ts:104` : préfixe de
+				   base suivi d'un `Pathname` de route. Une chaîne de requête n'en fait
+				   pas partie, donc aucune adresse portant `?…` ne peut satisfaire la
+				   règle, quelle que soit la façon de l'écrire. Le chemin, lui, PASSE
+				   bien par `resolve()` — ce que la règle protège est tenu ; ce qu'elle
+				   ne sait pas exprimer est le paramètre. Même désarmement qu'en
+				   `V-03`, `V-22` et `V-24`. */
+				const cible = new URL(resolve('/notes/nouvelle'), window.location.origin);
+				cible.searchParams.set('domaine', data.domaine);
+				// eslint-disable-next-line svelte/no-navigation-without-resolve
+				void goto(cible);
+			});
+		}
+
+		/* 5. Nouveau sous-dossier — `V-13:2189`-`2202`. */
+		for (const id of ['a-sousdossier', 'v-sousdossier']) {
+			surClic(formulaire.querySelector(`#${id}`), () => {
+				if (champCreer !== null) champCreer.value = '';
+				dlgCreer?.showModal();
+				champCreer?.focus();
+			});
+		}
+		surClic(formulaire.querySelector('#creer-valider'), () => {
 			soumettreVers(formulaire, '?/creerSousDossier');
+		});
+
+		/* 6. Renommer ou déplacer — `V-13:2308`-`2313`. Le nom est resélectionné,
+		   comme au gel : on renomme plus souvent qu'on ne déplace. */
+		surClic(formulaire.querySelector('#a-renommer'), () => {
+			dlgDeplacer?.showModal();
+			champDep?.focus();
+			champDep?.select();
+		});
+		surClic(formulaire.querySelector('#dep-valider'), () => {
+			soumettreVers(formulaire, '?/renommerOuDeplacer');
+		});
+
+		/* 7. Supprimer — `RG-M03-04`. Le bouton reste inactif tant que la saisie ne
+		   correspond pas au nom exact (`V-13:2360`-`2368`). Le serveur refuse de
+		   toute façon : une désactivation d'écran n'est pas un contrôle.
+
+		   LE NOM COMPARÉ EST CELUI QUE LE DIALOGUE AFFICHE — `#sup-cible` —, et non
+		   une seconde copie tirée de l'adresse : comparer à autre chose que ce qui
+		   est montré serait demander un mot qu'on n'a pas donné. */
+		const cible = formulaire.querySelector('#sup-cible')?.textContent ?? '';
+		surClic(formulaire.querySelector('#a-supprimer'), () => {
+			if (champSup !== null) champSup.value = '';
+			if (validerSup !== null) validerSup.disabled = true;
+			dlgSupprimer?.showModal();
+			champSup?.focus();
+		});
+		if (champSup !== null && validerSup !== null) {
+			const surSaisie = (): void => {
+				validerSup.disabled = champSup.value !== cible;
+			};
+			champSup.addEventListener('input', surSaisie);
+			debranchements.push(() => {
+				champSup.removeEventListener('input', surSaisie);
+			});
+		}
+		surClic(validerSup, () => {
+			soumettreVers(formulaire, '?/supprimer');
+		});
+
+		/* 8. Un refus rouvre SON dialogue, jamais un autre : le message est déjà
+		   rendu par la vue, mais un dialogue fermé ne montre rien. */
+		if (refus?.creation !== undefined) dlgCreer?.showModal();
+		if (refus?.deplacement !== undefined) dlgDeplacer?.showModal();
+		if (refus?.suppression !== undefined) dlgSupprimer?.showModal();
+
+		return () => {
+			for (const defaire of debranchements) defaire();
 		};
-		bouton.addEventListener('click', creer);
-		return () => bouton.removeEventListener('click', creer);
 	});
 </script>
 
 <form method="POST" bind:this={formulaire} style="display:contents">
-	<input type="hidden" name="nom" bind:this={champNom} />
-	<Vue vecteur={data.vecteur} notes={data.notes} />
+	<Vue
+		vecteur={data.vecteur}
+		notes={data.notes}
+		domaine={data.domaine}
+		rangement={data.rangement}
+		origineDuDroit={data.origineDuDroit}
+		erreurDeCreation={refus?.creation ?? null}
+		erreurDeDeplacement={refus?.deplacement ?? null}
+	/>
 </form>
