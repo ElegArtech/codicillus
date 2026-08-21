@@ -48,14 +48,26 @@
 		cablerLesGestesDEdition,
 		resolveurDuCorpusServi,
 		DOCUMENT_VIDE,
-		type GestesCables
+		type GestesCables,
+		peindreLeRefusDEdition
 	} from '$lib/edition/gestes';
 	import { adresseDeNote } from '$lib/rangement/adresses';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	const { data }: { data: PageData } = $props();
+	const { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let formulaire: HTMLFormElement;
+
+	/**
+	 * LE REFUS D'ENREGISTREMENT SE VOIT — mesuré muet le 21/08/2026.
+	 * Créer sans choisir de dossier renvoyait `400 { motif: 'dossier manquant' }`
+	 * et l'écran ne disait rien : ni message, ni témoin, ni foyer. Les deux blocs
+	 * du gel — `#erreur-titre`, `#erreur-dossier` — existaient depuis le début.
+	 */
+	$effect(() => {
+		if (formulaire === undefined) return;
+		peindreLeRefusDEdition(formulaire, form ?? null);
+	});
 
 	/**
 	 * L'ÉDITEUR REÇOIT LE DOCUMENT CANONIQUE, pas une transposition.

@@ -295,3 +295,89 @@ export function cablerLesGestesDEdition(
 		}
 	};
 }
+
+/* ═══════════════════════════════ Le refus d'enregistrement ══════════════ */
+
+/** Ce qu'une action d'édition rend quand elle REFUSE — `creation.ts:209-233`. */
+export interface RefusDEnregistrement {
+	readonly motif?: string;
+	readonly manquements?: readonly string[];
+}
+
+/**
+ * LE MOTIF DU REFUS, RATTACHÉ AU CHAMP QUI L'A CAUSÉ.
+ *
+ * Les deux seuls motifs que l'utilisateur peut corriger sur place ont leur bloc
+ * au gel — `#erreur-titre` (`V-17:467`) et `#erreur-dossier` (`V-17:839`). Les
+ * autres — type, domaine, visibilité, statut — désignent des `select` toujours
+ * renseignés : les voir signifierait que la charge est corrompue, pas que
+ * l'utilisateur a mal rempli. Ils vont au témoin, qui sait dire « erreur ».
+ */
+const CHAMP_DU_MOTIF: Readonly<Record<string, string>> = {
+	'titre manquant': 'erreur-titre',
+	'dossier manquant': 'erreur-dossier'
+};
+
+/** La phrase montrée, par motif. Celles du gel quand le gel en porte une. */
+const PHRASE_DU_MOTIF: Readonly<Record<string, string>> = {
+	'titre manquant': 'Une note sans titre est introuvable. Donnez-lui-en un, même approximatif.',
+	'dossier manquant': 'Choisissez le dossier qui recevra la note.',
+	'type manquant': 'Le type de la note n’a pas été transmis.',
+	'domaine manquant': 'Le domaine de la note n’a pas été transmis.',
+	'corps illisible': 'Le corps de la note n’a pas pu être lu. Rien n’a été enregistré.',
+	'document refusé': 'Le corps de la note comporte des constructions refusées.',
+	'markdown refusé': 'Le Markdown soumis n’a pas pu être analysé.'
+};
+
+/**
+ * PEINT LE REFUS, OU L'EFFACE.
+ *
+ * MESURÉ LE 21/08/2026 : créer une note sans choisir de dossier renvoie `400
+ * { motif: 'dossier manquant' }`, et l'écran ne dit RIEN — ni message, ni
+ * témoin, ni foyer. Le rédacteur reclique, et reclique. Ni
+ * `/notes/nouvelle/+page.svelte` ni `/notes/{id}/modifier/+page.svelte` ne
+ * lisaient leur `form` : TOUT refus d'enregistrement était muet, sur les deux
+ * écrans d'écriture les plus employés du produit.
+ *
+ * Les blocs, eux, existaient depuis le gel. Comme partout dans cette campagne,
+ * ce n'est pas l'affichage qui manquait : c'est le fil entre les deux.
+ */
+export function peindreLeRefusDEdition(
+	racine: ParentNode,
+	refus: RefusDEnregistrement | null
+): void {
+	/* On efface toujours d'abord : un refus corrigé ne doit pas laisser sa trace
+	   sur le champ voisin. */
+	for (const id of Object.values(CHAMP_DU_MOTIF)) {
+		const bloc = racine.querySelector<HTMLElement>(`#${id}`);
+		if (bloc !== null) bloc.hidden = true;
+	}
+	const motif = refus?.motif;
+	if (motif === undefined) return;
+
+	const phrase = PHRASE_DU_MOTIF[motif] ?? motif;
+	const manquements = refus?.manquements ?? [];
+	const idBloc = CHAMP_DU_MOTIF[motif];
+
+	if (idBloc !== undefined) {
+		const bloc = racine.querySelector<HTMLElement>(`#${idBloc}`);
+		if (bloc !== null) {
+			/* Le gel écrit son texte en clair dans le bloc ; on ne remplace que le
+			   texte, jamais le pictogramme qui le précède. */
+			const texte = bloc.querySelector<HTMLElement>('span') ?? bloc;
+			if (texte !== bloc || texte.childElementCount === 0) texte.textContent = phrase;
+			bloc.hidden = false;
+			bloc.scrollIntoView({ block: 'center' });
+		}
+	}
+
+	/* Le témoin dit toujours qu'il y a eu refus — y compris quand le motif a son
+	   bloc : la barre d'état est le seul point que le rédacteur regarde après
+	   avoir cliqué « Enregistrer ». */
+	poserLeTemoin(racine, 'erreur');
+	const texteDuTemoin = racine.querySelector<HTMLElement>('#sauvegarde-txt');
+	if (texteDuTemoin !== null) {
+		texteDuTemoin.textContent =
+			manquements.length > 0 ? `${phrase} (${manquements[0] ?? ''})` : phrase;
+	}
+}
