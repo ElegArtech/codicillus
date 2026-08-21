@@ -730,7 +730,26 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
    Panneau latéral superposé à droite de la lecture. On ne quitte pas la note :
    c'est ce qui permet de comparer un état antérieur à ce qu'on a sous les yeux.
    ========================================================================== */
-.lecture {
+/* LA GRILLE DE V-15 EST PORTÉE PAR `.app[data-historique]`, ET NON PAR
+   `.lecture` NUE — sans quoi elle écrase celle de V-14.
+
+   Les deux maquettes sont des PAGES SÉPARÉES et nomment leur colonne centrale
+   de la même façon. Le produit, lui, sert les DEUX depuis `/notes/{id}` :
+   `+page.svelte` rend V-15 quand l'adresse porte `?version`, V-14 sinon — mais
+   il importe les DEUX feuilles, toujours, et `V-15.css` arrive après.
+
+   MESURÉ LE 21/08/2026 sur `/notes/n-restaurer-pg`, fenêtre 1440 :
+   `grid-template-columns` calculait `204px 876px` — DEUX colonnes au lieu des
+   trois de V-14 — et `max-width` valait 1160px au lieu de 1560px. La troisième
+   colonne, `aside.panneaux`, passait donc à la ligne suivante, première
+   colonne : la barre d'actions se retrouvait en bas à gauche au lieu d'être à
+   droite. C'est le défaut que le commanditaire a vu à l'écran.
+
+   `data-historique` n'est posé que par V-15 (`V-15.svelte:386`), `data-etat`
+   que par V-14 (`V-14.svelte:298`) : le discriminant existait déjà, il n'est
+   pas inventé ici. Aucune déclaration n'est modifiée — seule leur PORTÉE l'est,
+   et le rendu de chacune des deux maquettes reste celui de son gel. */
+.app[data-historique] .lecture {
   display: grid; align-items: start;
   grid-template-columns: var(--l-sommaire) minmax(0, 1fr);
   gap: var(--e-6);
@@ -892,13 +911,13 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
 @media (max-width: 1240px) {
   .app { grid-template-columns: minmax(0,1fr); }
   .rail { display: none; }
-  .lecture { grid-template-columns: minmax(0, 1fr); }
+  .app[data-historique] .lecture { grid-template-columns: minmax(0, 1fr); }
   .sommaire { display: none; }
 }
 @media (max-width: 700px) {
   /* Le panneau devient une superposition pleine hauteur. */
   .tiroir { top: 0; width: 100vw; border-left: 0; }
-  .lecture { padding: var(--e-4) var(--e-4) var(--e-7); }
+  .app[data-historique] .lecture { padding: var(--e-4) var(--e-4) var(--e-7); }
   .article { max-width: none; }
   .planche { display: none; }
 }
