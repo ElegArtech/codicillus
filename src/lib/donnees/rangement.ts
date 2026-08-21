@@ -125,6 +125,19 @@ export interface LigneDeDossier {
 	readonly domaineId: string;
 	readonly nom: string;
 	readonly profondeur: number;
+	/**
+	 * LE RANG DANS LA FRATRIE — `dossiers.position`, et c'est la SEULE règle
+	 * d'ordre que le produit connaisse entre frères. Ni le nom, ni la date de
+	 * création : la colonne existe pour cela, et la semence la renseigne de sorte
+	 * que l'ordre affiché soit celui des maquettes.
+	 *
+	 * OPTIONNELLE, et c'est délibéré : ce type est STRUCTUREL — une ligne de base
+	 * le satisfait, une ligne écrite à la main dans un cas d'épreuve aussi. Le
+	 * rendre obligatoire forcerait tout cas synthétique à renseigner un rang dont
+	 * il n'a que faire, et un cas qu'on alourdit est un cas qu'on n'écrit pas.
+	 * Absente, elle vaut `0` chez l'appelant qui trie.
+	 */
+	readonly position?: number;
 }
 
 /** Le chemin affiché d'une suite de segments — la forme de `Note.dossier`. */
@@ -302,7 +315,8 @@ export async function ouvrirLAcces(
 			parentId: dossiers.parentId,
 			domaineId: dossiers.domaineId,
 			nom: dossiers.nom,
-			profondeur: dossiers.profondeur
+			profondeur: dossiers.profondeur,
+			position: dossiers.position
 		})
 		.from(dossiers);
 

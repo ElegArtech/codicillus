@@ -26,6 +26,22 @@
  * sont citées dans l'en-tête de `rangement.ts`.
  *
  * ═════════════════════════════════════════════════════════════════════════
+ * L'ARBORESCENCE SERVIE EST CELLE DE LA BASE, PLUS CELLE DES NOTES
+ *
+ * La vue sait déduire son arborescence du rangement des notes — c'est ce que le
+ * gel fait, faute de serveur. LE PRODUIT NE PEUT PAS S'EN CONTENTER : un dossier
+ * VIDE n'apparaît dans aucune note. Un sous-dossier fraîchement créé restait
+ * donc invisible sur la page de son propre parent, et le sélecteur de
+ * destination du dialogue de déplacement n'offrait que les dossiers portant des
+ * notes. La propriété `rangement` porte l'arborescence réelle ; son absence
+ * laisse la vue exactement comme elle était, ce qui est la garantie que le banc
+ * ne bouge pas.
+ *
+ * ELLE EST RABATTUE SUR LE PÉRIMÈTRE, jamais servie entière : `ADR-006` veut le
+ * filtre dans la requête plutôt qu'après elle, et un dossier hors périmètre n'a
+ * pas à être nommé — pas même comme destination impossible.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
  * LE DROIT EFFECTIF EST CELUI DE LA RÉSOLUTION UNIQUE
  *
  * `docs/routes.md:127` : « connecté + lecteur (écriture selon droit effectif) ».
@@ -41,17 +57,38 @@
  * sous-arbre, parce que la remontée de `resolution.ts` l'atteint depuis
  * n'importe quel descendant.
  *
+ * ET SON ORIGINE EST DÉSORMAIS DITE. `.droit__source` (`V-13:1146`) affichait
+ * « — hérité du domaine Infrastructure » quel que fût le domaine et quelle que
+ * fût l'origine : une valeur illustrative, c'est-à-dire `P-02`. Elle est
+ * remplacée par ce que `RG-DRO-01` a réellement trouvé — le dossier le plus
+ * proche portant un droit explicite —, dans les trois tournures du gel.
+ *
  * RG-STR-06 — le module `dossiers` est EXIGÉ. Deux domaines du corpus ne
  * l'activent pas alors que la base leur donne des dossiers : « Applications »
  * (trois dossiers sous la racine) et « Migration 2026 » (un). Leurs adresses de
  * dossier ne rendent donc rien, et c'est ce qui rend cette règle éprouvée sur un
  * cas réel plutôt qu'espérée (`P-5`).
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * QUATRE ACTIONS, ET LEURS DROITS NE SONT PAS LES MÊMES
+ *
+ * `CDC` §2.3 réserve « créer des sous-dossiers », « renommer / déplacer /
+ * supprimer le dossier » et « gérer les droits » au GESTIONNAIRE, et « créer et
+ * modifier des notes » au RÉDACTEUR. Aucune de ces distinctions n'est écrite
+ * ici : `capacites()` porte la table, colonne par colonne, et chaque action lui
+ * demande la capacité qui la concerne. Le refus est le `404` de partout ailleurs
+ * (`RG-ACC-04`) — refus et inexistence ne se distinguent pas.
+ *
+ * « NOUVELLE NOTE » N'EST PAS UNE ACTION, c'est une navigation vers
+ * `/notes/nouvelle` : elle n'écrit rien ici, et le droit qui la gouverne est
+ * celui de la route d'arrivée. La vue n'affiche son bouton qu'au rédacteur.
  */
 import { error, fail, redirect } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { dossiers } from '$lib/base/schema';
-import { identifiantLisible } from '$lib/rangement/adresses';
-import { capacites, resoudre } from '$lib/droits/resolution';
+import { moteurPartage } from '$lib/recherche/acces';
+import { adresseDeDomaine, adresseDeDossier, identifiantLisible } from '$lib/rangement/adresses';
+import { capacites, perimetreContient, resoudre } from '$lib/droits/resolution';
 import {
 	cheminAffiche,
 	dossiersDuDomaine,
@@ -65,13 +102,53 @@ import {
 	resoudreLeChemin,
 	segmentsAffiches,
 	MESSAGE_INTROUVABLE,
-	PROFONDEUR_MAX
+	PROFONDEUR_MAX,
+	type AccesAuRangement,
+	type DomaineResolu,
+	type LigneDeDossier
 } from '$lib/donnees/rangement';
+import type { DroitDeDossier } from '$lib/droits/resolution';
+import {
+	libelleDOrigine,
+	motifDeRefusDeDestination,
+	nomDejaPris,
+	origineDUnDroit,
+	renommerOuDeplacerUnDossier,
+	supprimerUnDossier,
+	tropProfond,
+	NOM_MANQUANT
+} from '$lib/donnees/dossiers-ecriture';
+import type { NomDeDomaine } from '../../../../../../../seeds/corpus';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals, url }) => {
+/* ═══════════════════════════════════ Le contexte, résolu une fois ═══════ */
+
+/** Ce que toute requête de cette route établit avant de décider quoi que ce soit. */
+interface ContexteDeDossier {
+	readonly acces: AccesAuRangement;
+	readonly domaine: DomaineResolu;
+	readonly lignes: readonly LigneDeDossier[];
+	readonly dossier: LigneDeDossier;
+	/** Le droit effectif sur ce dossier — JAMAIS nul : sans lui, on a refusé. */
+	readonly droit: DroitDeDossier;
+}
+
+/**
+ * OUVRE L'ACCÈS, RÉSOUT LE DOMAINE ET LE DOSSIER, OU REFUSE — un seul chemin
+ * pour le chargeur et pour les quatre actions.
+ *
+ * L'écrire une fois n'est pas une commodité : c'est ce qui garantit qu'une
+ * action ne puisse pas franchir une porte que la lecture ferme. Le module
+ * `dossiers` exigé (`RG-STR-06`), la lecture du dossier (`capacites().lire`) et
+ * la résolution du chemin sont les mêmes pour les cinq entrées.
+ */
+async function ouvrirLeDossier(
+	params: { univers: string; domaine: string; chemin: string },
+	identite: AccesAuRangement['identite'],
+	adresse: string
+): Promise<ContexteDeDossier> {
 	const base = basePartagee();
-	const acces = await ouvrirLAcces(base, locals.identite, new Date());
+	const acces = await ouvrirLAcces(base, identite, new Date());
 
 	const domaine = await lireDomaineParIdentifiants(base, params.univers, params.domaine);
 	const modules =
@@ -80,8 +157,8 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	/* Les segments vides sont écartés : `/dossiers/` et `/dossiers//a` ne sont pas
 	   des chemins plus profonds, ce sont les mêmes chemins écrits autrement. */
 	const segments = params.chemin.split('/').filter((s) => s !== '');
-	const dossier =
-		domaine === null ? null : resoudreLeChemin(dossiersDuDomaine(acces, domaine.id), segments);
+	const lignes = domaine === null ? [] : dossiersDuDomaine(acces, domaine.id);
+	const dossier = domaine === null ? null : resoudreLeChemin(lignes, segments);
 
 	/* Le droit est résolu AVANT le verdict, et par l'implémentation unique. La
 	   fermeture par défaut de `RG-DRO-02` répond d'elle-même quand le dossier est
@@ -93,7 +170,38 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		dossier,
 		() => moduleActif(modules, 'dossiers') && capacites(droit).lire
 	);
-	if (!resolution.trouve || droit === null) refuserLAdresse(url.pathname);
+	if (!resolution.trouve || droit === null || domaine === null) refuserLAdresse(adresse);
+
+	return { acces, domaine, lignes, dossier: resolution.ressource, droit };
+}
+
+export const load: PageServerLoad = async ({ params, locals, url }) => {
+	const base = basePartagee();
+	const { acces, domaine, lignes, dossier, droit } = await ouvrirLeDossier(
+		params,
+		locals.identite,
+		url.pathname
+	);
+
+	/**
+	 * LES DESTINATIONS — tout le domaine, rabattu sur le périmètre, chacune avec
+	 * son motif de refus. Le motif est calculé ICI plutôt que dans la vue pour
+	 * deux raisons : il dépend de la profondeur RÉELLE des lignes, que la vue n'a
+	 * pas, et la fonction qui le rend vit dans un module qui parle à la base.
+	 */
+	const visibles = lignes.filter((d) => perimetreContient(acces.perimetre, d.id));
+	const destinations = [...visibles]
+		/* L'ORDRE EST CELUI DE LA FRATRIE, jamais l'alphabet : `dossiers.position`
+		   est la seule règle d'ordre du produit, et c'est elle qui reproduit
+		   l'ordre des maquettes. Le tri par profondeur d'abord n'est pas
+		   cosmétique — il garantit qu'un parent est rencontré avant ses enfants,
+		   ce dont la vue a besoin pour bâtir son arborescence en une passe. */
+		.sort((a, b) => a.profondeur - b.profondeur || (a.position ?? 0) - (b.position ?? 0))
+		.map((d) => ({
+			id: d.id,
+			segments: segmentsAffiches(acces.dossiers, d.id),
+			refus: motifDeRefusDeDestination(lignes, dossier.id, d.id)
+		}));
 
 	return {
 		vecteur: {
@@ -103,79 +211,186 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			   l'arborescence entière, non sur les seuls dossiers du domaine : le
 			   chemin d'un dossier passe par ses ancêtres, qu'ils soient ou non dans le
 			   périmètre — c'est le chemin de la ressource, pas un droit. */
-			dos: cheminAffiche(segmentsAffiches(acces.dossiers, resolution.ressource.id)),
+			dos: cheminAffiche(segmentsAffiches(acces.dossiers, dossier.id)),
 			dr: droit
 		},
-		notes: await lireNotesLisibles(base, acces.perimetre, acces.contexte)
+		notes: await lireNotesLisibles(base, acces.perimetre, acces.contexte),
+		domaine: domaine.nom as NomDeDomaine,
+		rangement: {
+			destinations,
+			dossierId: dossier.id,
+			/* Un dossier de page a toujours un parent : la racine n'a pas de page. */
+			parentId: dossier.parentId ?? ''
+		},
+		origineDuDroit: libelleDOrigine(
+			locals.identite.type === 'authentifie'
+				? origineDUnDroit(
+						acces.index,
+						acces.dossiers,
+						dossier.id,
+						locals.identite.compteId,
+						domaine.nom
+					)
+				: null
+		)
 	};
 };
 
-/* ═══════════════════════════════════ La création d'un sous-dossier ══════ */
+/* ═══════════════════════════════════ Les quatre gestes du gel ═══════════ */
 
 /**
- * `RG-STR-03` — CRÉER UN SOUS-DOSSIER, le geste que le gel dessine et que rien
- * n'atteignait.
+ * Les gestes de `.actions-dossier` (`V-13:1156`-`1165`), et ce que chacun exige.
  *
- * `mockups/V-13-page-dossier.html:1161` pose le bouton `#a-sousdossier` sous la
- * classe `si-gestionnaire`, et `:1209` son dialogue : un seul champ, « Nom du
- * dossier », obligatoire. Le parent est le dossier de l'adresse — le dialogue le
- * rappelle en toutes lettres, « il sera créé dans … ».
+ *   `#a-note`         navigation vers `/notes/nouvelle` — rédacteur, hors d'ici
+ *   `#a-sousdossier`  `creerSousDossier`      — `creerDesSousDossiers`
+ *   `#a-renommer`     `renommerOuDeplacer`    — `administrerLeDossier`
+ *   `#a-droits`       — le dialogue n'existe pas dans V-13 (voir `V-13.svelte`)
+ *   `#a-supprimer`    `supprimer`             — `administrerLeDossier`
  *
- * LE DROIT EST CELUI DU GEL : « créer des sous-dossiers » est la troisième
- * colonne de `CDC` §2.3, et seul le **gestionnaire** la porte. Le refus est le
- * même `404` que partout dans cette famille (`RG-ACC-04`).
- *
- * LA PROFONDEUR EST PLAFONNÉE À DIX (`PROFONDEUR_MAX`), et le refus le dit :
- * c'est la seule limite que le rangement connaisse, et elle est du cahier.
+ * AUCUNE ACTION PAR DÉFAUT : SvelteKit refuse qu'une action anonyme cohabite
+ * avec des actions nommées, et le refus est un `500`. Les trois sont nommées.
  */
 export const actions: Actions = {
-	creerSousDossier: async ({ params, locals, request }) => {
+	/**
+	 * `RG-STR-03` — CRÉER UN SOUS-DOSSIER, le geste que `#dlg-creer` dessine.
+	 *
+	 * `mockups/V-13-page-dossier.html:1161` pose le bouton `#a-sousdossier` sous
+	 * la classe `si-gestionnaire`, `:1192` son jumeau `#v-sousdossier` du dossier
+	 * vide, et `:1203` leur dialogue : un seul champ, « Nom du dossier »,
+	 * obligatoire. Le parent est le dossier de l'adresse — le dialogue le rappelle
+	 * en toutes lettres, « il sera créé dans … ».
+	 *
+	 * LE DROIT EST CELUI DU GEL : « créer des sous-dossiers » est la troisième
+	 * colonne de `CDC` §2.3, et seul le **gestionnaire** la porte. Le refus est le
+	 * même `404` que partout dans cette famille (`RG-ACC-04`).
+	 *
+	 * LA PROFONDEUR EST PLAFONNÉE À DIX (`PROFONDEUR_MAX`), et le refus le dit
+	 * dans les mots du gel : c'est la seule limite que le rangement connaisse, et
+	 * elle est du cahier.
+	 */
+	creerSousDossier: async ({ params, locals, request, url }) => {
 		const base = basePartagee();
-		const acces = await ouvrirLAcces(base, locals.identite, new Date());
-		const domaine = await lireDomaineParIdentifiants(base, params.univers, params.domaine);
-		if (domaine === null) error(404, MESSAGE_INTROUVABLE);
-
-		const lignes = dossiersDuDomaine(acces, domaine.id);
-		const parent = resoudreLeChemin(
-			lignes,
-			params.chemin.split('/').filter((s) => s !== '')
+		const { acces, domaine, lignes, dossier } = await ouvrirLeDossier(
+			params,
+			locals.identite,
+			url.pathname
 		);
-		if (parent === null) error(404, MESSAGE_INTROUVABLE);
-
-		/* Le droit d'abord, et par la même résolution que la lecture. */
-		const droit = droitEffectif(acces, parent.id);
-		if (capacites(droit).creerDesSousDossiers !== true) error(404, MESSAGE_INTROUVABLE);
+		if (capacites(droitEffectif(acces, dossier.id)).creerDesSousDossiers !== true) {
+			error(404, MESSAGE_INTROUVABLE);
+		}
 
 		const brut = (await request.formData()).get('nom');
 		const nom = typeof brut === 'string' ? brut.trim() : '';
-		if (nom === '') return fail(400, { motif: 'nom manquant' });
+		if (nom === '') return fail(400, { creation: NOM_MANQUANT });
 
-		if (parent.profondeur + 1 > PROFONDEUR_MAX) {
-			return fail(422, {
-				motif: `la profondeur maximale est de ${String(PROFONDEUR_MAX)} niveaux`
-			});
+		/* Le niveau annoncé est celui du GEL — la racine du domaine ne s'y compte
+		   pas —, tandis que la contrainte de base compte depuis la racine. Le
+		   plafond est le même ; seule la façon de le dire diffère. */
+		if (dossier.profondeur + 1 > PROFONDEUR_MAX) {
+			return fail(422, { creation: tropProfond(dossier.profondeur) });
 		}
 
 		/* Un frère du même nom rendrait deux adresses identiques : refus, pas de
-		   réparation silencieuse. */
+		   réparation silencieuse. Le refus porte sur l'ADRESSE, pas sur le nom. */
 		const existe = lignes.some(
-			(d) => d.parentId === parent.id && identifiantLisible(d.nom) === identifiantLisible(nom)
+			(d) => d.parentId === dossier.id && identifiantLisible(d.nom) === identifiantLisible(nom)
 		);
-		if (existe) return fail(409, { motif: 'un dossier de ce nom existe déjà ici' });
+		if (existe) return fail(409, { creation: nomDejaPris(nom) });
 
-		const freres = lignes.filter((d) => d.parentId === parent.id);
+		const freres = lignes.filter((d) => d.parentId === dossier.id);
 		await base.insert(dossiers).values({
 			domaineId: domaine.id,
-			parentId: parent.id,
+			parentId: dossier.id,
 			nom,
 			position: freres.length,
-			profondeur: parent.profondeur + 1
+			profondeur: dossier.profondeur + 1
 		});
 
 		const chemin = params.chemin === '' ? '' : `${params.chemin}/`;
 		redirect(
 			303,
 			`/univers/${params.univers}/${params.domaine}/dossiers/${chemin}${identifiantLisible(nom)}`
+		);
+	},
+
+	/**
+	 * `RG-STR-04`, `RG-STR-05` — RENOMMER OU DÉPLACER, le geste de `#dlg-deplacer`
+	 * (`V-13:1231`). Un champ de nom, un sélecteur arborescent de destination, un
+	 * bouton « Enregistrer » : le gel n'en fait qu'un geste, et l'action non plus.
+	 *
+	 * TOUTE LA DÉCISION EST DANS `renommerOuDeplacerUnDossier()`. Rien ici ne
+	 * compare un droit, ne mesure une profondeur ni ne cherche un cycle : cette
+	 * fonction rend soit le chemin d'arrivée, soit un refus — muet quand c'est un
+	 * droit qui manque, ce que la route traduit en `404`.
+	 *
+	 * L'ADRESSE D'ARRIVÉE EST CELLE DU NOUVEAU NOM, et l'ancienne cesse de
+	 * résoudre. Voir l'en-tête de `dossiers-ecriture.ts` : `RG-M03-03` protège
+	 * l'adresse d'une NOTE, jamais celle d'un dossier, qui se dérive de son nom.
+	 */
+	renommerOuDeplacer: async ({ params, locals, request, url }) => {
+		const { acces, domaine, lignes, dossier } = await ouvrirLeDossier(
+			params,
+			locals.identite,
+			url.pathname
+		);
+		const formulaire = await request.formData();
+		const brutNom = formulaire.get('nouveauNom');
+		const brutDestination = formulaire.get('destination');
+
+		const fait = await renommerOuDeplacerUnDossier(basePartagee(), {
+			dossierId: dossier.id,
+			destinationId: typeof brutDestination === 'string' ? brutDestination : '',
+			nom: typeof brutNom === 'string' ? brutNom : '',
+			lignes,
+			droit: (id) => droitEffectif(acces, id)
+		});
+		if (!fait.fait) {
+			if (fait.message === '') error(404, MESSAGE_INTROUVABLE);
+			return fail(422, { deplacement: fait.message });
+		}
+
+		redirect(303, adresseDeDossier(domaine.universNom, domaine.nom, fait.segments));
+	},
+
+	/**
+	 * `RG-M03-04` — SUPPRIMER, le geste de `#dlg-supprimer` (`V-13:1262`).
+	 *
+	 * LE DÉCOMPTE EST À L'ÉCRAN, LA SAISIE EST ICI. La règle exige les deux : « la
+	 * suppression d'un dossier affiche le décompte des sous-dossiers et des notes
+	 * qui seront détruits, ET exige la saisie du nom exact du dossier pour être
+	 * confirmée ». Le dialogue désactive son bouton tant que la saisie diffère
+	 * (`V-13:2366`) ; le serveur refuse quand même — une désactivation d'écran
+	 * n'est pas un contrôle.
+	 *
+	 * LE RETOUR SE FAIT AU PARENT, et il faut le calculer AVANT : après la
+	 * transaction, le dossier n'a plus de chemin. Quand le parent est la racine du
+	 * domaine, il n'y a pas de page de dossier où revenir — c'est la page du
+	 * domaine, V-11 (`ARB-001`, forme canonique).
+	 */
+	supprimer: async ({ params, locals, request, url }) => {
+		const { acces, domaine, lignes, dossier } = await ouvrirLeDossier(
+			params,
+			locals.identite,
+			url.pathname
+		);
+		const brut = (await request.formData()).get('confirmation');
+
+		const fait = await supprimerUnDossier(basePartagee(), moteurPartage(), {
+			dossierId: dossier.id,
+			saisie: typeof brut === 'string' ? brut : '',
+			lignes,
+			droit: (id) => droitEffectif(acces, id)
+		});
+		if (!fait.fait) {
+			if (fait.message === '') error(404, MESSAGE_INTROUVABLE);
+			return fail(422, { suppression: fait.message });
+		}
+
+		redirect(
+			303,
+			fait.segmentsDuParent.length === 0
+				? adresseDeDomaine(domaine.universNom, domaine.nom)
+				: adresseDeDossier(domaine.universNom, domaine.nom, fait.segmentsDuParent)
 		);
 	}
 };
