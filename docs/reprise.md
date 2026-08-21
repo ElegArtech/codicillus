@@ -55,55 +55,60 @@ POST /notes/nouvelle                           303 → /notes/n-bascule-du-resea
 POST /notes/{id}/operationnel?/enregistrer     200      le second registre
 POST /notes/{id}/modifier                      303      version capturée
 GET  /notes/{id}?version                       200      Version 2 | Version 1
-POST /notes/{id}?/deposerPiece                 200      TXT · plan-bascule · 21 o
-POST /notes/{id}/relations?/ajouter            200      origine visible
+POST /notes/{id}?/deposerPiece                 200      TXT · plan · 15 o
+POST /notes/{id}/relations?/ajouter            200      HÉBERGE Coffre hors site
+POST …/dossiers/exploitation?/creerSousDossier 303 → …/dossiers/exploitation/bascule-reseau
 GET  /recherche?q=bascule                      200      la note y est
-GET  /recherche?q=sauvegarde&tri=alpha         200      tri appliqué
 POST /notes/{id}?/supprimer                    303 → /univers/production/infrastructure
 GET  /notes/{id}                               404
 ```
 
-Le titre affiché est celui qui a été saisi, le corps est celui qui a été frappé à la barre d'outils
-— titre de niveau 2 et liste à puces —, et la note disparaît vraiment.
+Le titre affiché est celui saisi ; le corps est celui frappé **à la barre d'outils** — titre de
+niveau 2, liste à puces. La connexion fonctionne **sans JavaScript**.
 
 ## Ce qui ne marche pas encore
 
-### 1. Trois gestes que le gel dessine et que rien n'atteint
+### 1. Un geste, et un seul, reste inatteignable
 
-- **Créer un compte** (`RG-M14-06`) : aucune action de route. Le bouton ferme le panneau sans rien
-  envoyer plutôt que de mentir sur une création.
-- **Les octets d'un lot déposé sur l'écran d'import de la console** ne traversent pas : V-35 fait
-  atterrir le lot à l'étape du *choix de scénario*, où le parcours d'import n'a aucun état pour les
-  tenir. Le dépôt et « Parcourir » répondent, la navigation se fait, les fichiers restent en route.
-- **Ajouter une relation depuis la note** : le gel dessine le bouton dans V-14 et le dialogue dans
-  V-40, mais V-40 fixe sa note de démonstration en dur — le monter ferait parler l'écran d'une autre
-  note que celle regardée. Le geste vit sur `/notes/{id}/relations`.
+**« Gérer les droits » d'un dossier.** Le gel de V-13 ne porte pas de dialogue pour ce geste : il
+renvoie à celui de V-40, bâti sur des classes que `docs/DESIGN.md` range en V-40 seulement et que
+`V-13.css` ne déclare pas. Le transcrire le rendrait sans style ; importer la feuille de V-40
+mêlerait 85 sélecteurs communs. **Ce que le gel de V-13 porte est livré** : l'origine d'un droit —
+« accordé sur ce dossier », « hérité du domaine X », « hérité du dossier Y » — est désormais vraie
+(`RG-DRO-01`) au lieu d'être figée.
 
-### 2. Ce que le gel dit et que la base ne porte pas
+### 2. Trois finesses déclarées
+
+- **Un dossier déposé sur l'écran d'import de la console perd son arborescence** ; les fichiers
+  déposés un à un arrivent entiers. Le gel promet « l'arborescence est conservée telle quelle ».
+- **`?dossier=` n'est pas émis** vers `/notes/nouvelle` : V-17 n'a aucune propriété qui le
+  recevrait. `?domaine=` l'est, et il est honoré.
+- **Les indicateurs de l'accueil et les tuiles de module d'un domaine ne naviguent pas.** V-12
+  sait pourtant s'ouvrir déjà filtrée — c'est l'arrivée que son propre commentaire décrit.
+
+### 3. Ce que le gel dit et que la base ne porte pas
 
 `instance` (version, dernière synchronisation), le résumé d'une version, les utilisations d'un
-gabarit, la dernière connexion en relatif, la prose chiffrée de V-34, et « dernière version il y a
-3 semaines » dans la barre d'état des deux éditeurs. Tout cela s'affiche en état neutre explicite —
-sauf la dernière, qui reste la chaîne du gel et **est** une valeur illustrative sur une note réelle.
+gabarit, la dernière connexion en relatif, la prose chiffrée de V-34. Tout s'affiche en état neutre
+explicite. `arrive_le` et le refus d'un courriel indisponible n'ont **aucun nœud** au gel pour se
+dire.
 
-### 3. Cinq divergences avec le gel, assumées et à regeler
+### 4. Divergences avec le gel, assumées et à regeler
 
-- **Le panneau d'historique** (V-15) et **le tiroir de formulaire des comptes** (V-32) sont rendus
-  descendants de `.app` pour que la règle GELÉE qui les ouvre puisse s'appliquer — elle vise
-  `.app[data-…="ouvert"] …` et les panneaux vivent hors de `.app`. Aucune déclaration inventée.
-- **Le dépôt et le retrait d'une pièce jointe** : le gel ne les dessine pas. Les deux nœuds posés
-  empruntent leurs formes au gel voisin, depuis la route.
-- **La confirmation de suppression** est celle du navigateur, pas le dialogue de V-40.
+- **`method="post"` sur le formulaire de connexion.** La maquette ne l'écrit pas, faute de serveur.
+  Sans lui, une soumission avant hydratation partait en `GET` **avec le mot de passe dans
+  l'adresse** — mesuré sur le HTML servi.
+- **Deux panneaux rendus atteignables** — l'historique (V-15) et le tiroir de formulaire des comptes
+  (V-32) : la règle GELÉE qui les ouvre vise `.app[data-…]` et les panneaux vivent hors de `.app`.
+- **Le dépôt et le retrait d'une pièce jointe** : le gel ne les dessine pas.
+- **Les confirmations de suppression** sont natives, pas les dialogues de V-40 ; un refus de
+  relation est annoncé par une alerte, le gel employant `window.notifier`, que le produit n'a pas.
 - **`RG-M04-10` contre `V-40:3295`** : le cahier nomme trois quantités à rappeler, la maquette en
-  construit quatre. Les maquettes priment, le produit porte les quatre.
+  construit quatre. Les maquettes priment.
 - **`P-08`, l'origine d'une relation**, n'a de place dans aucun gel : elle est rendue sur la route
-  dédiée. Le principe est tenu sur le fond, pas à l'endroit que la maquette aurait choisi.
-
-### 4. Trois divergences de tri, mesurées
-
-`alpha` suit l'ordre du moteur et non `localeCompare('fr')` · `verification` range en dernier les
-notes jamais vérifiées · `consultations` classe sur la valeur **indexée**, qui dérive de celle de la
-base entre deux indexations.
+  dédiée.
+- **Le repli sur deux lignes de `.droit`** quand un gestionnaire hérite son droit : le gel n'a pas
+  ce cas, aucune règle ne réserve la largeur.
 
 ## Comment on travaille maintenant
 
