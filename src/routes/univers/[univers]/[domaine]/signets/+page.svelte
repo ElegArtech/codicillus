@@ -27,6 +27,8 @@
 	 * Les `<title>` des maquettes sont ceux des planches de revue, et en
 	 * inventer un serait un comblement.
 	 */
+	import { resolve } from '$app/paths';
+	import { goto } from '$app/navigation';
 	import Vue from '../../../../../vues/V-22.svelte';
 	import '../../../../../vues/V-22.css';
 	import { onMount } from 'svelte';
@@ -164,5 +166,16 @@
 
 <form method="POST" bind:this={formulaire} style="display:contents">
 	<input type="hidden" name="signet" bind:this={champSignet} />
-	<Vue vecteur={data.vecteur} notes={data.notes} />
+	<Vue
+		vecteur={data.vecteur}
+		notes={data.notes}
+		onModifier={(identifiant) =>
+			goto(
+				resolve('/univers/[univers]/[domaine]/signets/[identifiant]/modifier', {
+					univers: page.params.univers ?? '',
+					domaine: page.params.domaine ?? '',
+					identifiant
+				})
+			)}
+	/>
 </form>

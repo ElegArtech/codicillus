@@ -52,13 +52,16 @@
  *   où une septième est déclarée (`V-12.svelte` et `notes/+page.server.ts`),
  *   une entrée de `FILTRE_PAR_INDICATEUR` suffit ici.
  *
- * · LE MODULE « DOSSIERS » n'a pas d'adresse propre : la seule route est
- *   `/univers/{u}/{d}/dossiers/{chemin…}` et elle exige au moins un segment —
- *   `resoudreLeChemin()` rend `null` sur zéro segment, mesuré `404`. Désigner
- *   un sous-dossier au hasard serait choisir à la place de l'utilisateur ; la
- *   pastille ouvre la liste, où la facette « Dossier » porte le rangement.
+ * · LE MODULE « DOSSIERS » mène à la RACINE du domaine. Elle n'avait aucune
+ *   adresse — `resoudreLeChemin()` descend depuis elle sans la consommer —, et
+ *   le premier dossier d'un domaine était donc incréable. Elle s'adresse
+ *   maintenant par son seul nom.
  */
-import { adresseDesNotesDuDomaine, adresseDesSignetsDuDomaine } from '$lib/rangement/adresses';
+import {
+	adresseDeDossier,
+	adresseDesNotesDuDomaine,
+	adresseDesSignetsDuDomaine
+} from '$lib/rangement/adresses';
 
 /** Ce qu'un câblage rend : de quoi le défaire. Même contrat que ses voisins. */
 export type Debranchement = () => void;
@@ -172,9 +175,15 @@ export function cablerLeDomaine(racine: HTMLElement, options: OptionsDuDomaine):
 			adresse.searchParams.set('type', 'Fiche');
 			return adresse;
 		}
-		/* « Dossiers — rangement arborescent » : le rangement n'a pas d'écran à
-		   lui (voir l'en-tête). La liste du domaine en porte la facette. */
-		if (nom === 'Dossiers') return listeDuDomaine();
+		/* « Dossiers — rangement arborescent » : la RACINE du domaine a désormais
+		   une adresse — celle qui porte son seul nom — et c'est l'écran du
+		   rangement. Sans elle, le module n'en avait aucun. */
+		if (nom === 'Dossiers') {
+			return new URL(
+				adresseDeDossier(options.univers, options.domaine, [options.domaine]),
+				origine
+			);
+		}
 		return null;
 	}
 

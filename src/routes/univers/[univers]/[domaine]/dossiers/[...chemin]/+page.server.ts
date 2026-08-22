@@ -158,7 +158,25 @@ async function ouvrirLeDossier(
 	   des chemins plus profonds, ce sont les mêmes chemins écrits autrement. */
 	const segments = params.chemin.split('/').filter((s) => s !== '');
 	const lignes = domaine === null ? [] : dossiersDuDomaine(acces, domaine.id);
-	const dossier = domaine === null ? null : resoudreLeChemin(lignes, segments);
+
+	/**
+	 * LA RACINE A UNE ADRESSE : celle qui porte son seul nom.
+	 *
+	 * `resoudreLeChemin()` descend depuis la racine SANS la consommer — elle ne
+	 * peut donc désigner qu'un descendant, et la racine n'avait aucune page.
+	 * Conséquence mesurée le 22/08/2026 sur un domaine neuf, qui n'a que sa
+	 * racine : `?/creerSousDossier` n'était atteignable de NULLE PART, et le
+	 * premier dossier d'un domaine ne pouvait donc jamais être créé.
+	 *
+	 * UN SEUL SEGMENT, ET SEULEMENT SEUL. Accepter le nom de la racine en tête
+	 * d'un chemin plus long donnerait deux adresses au même dossier ; ici on
+	 * n'en ajoute qu'une, et elle ne désignait rien auparavant.
+	 */
+	const racine = lignes.find((d) => d.parentId === null) ?? null;
+	const viseLaRacine =
+		racine !== null && segments.length === 1 && segments[0] === identifiantLisible(racine.nom);
+	const dossier =
+		domaine === null ? null : viseLaRacine ? racine : resoudreLeChemin(lignes, segments);
 
 	/* Le droit est résolu AVANT le verdict, et par l'implémentation unique. La
 	   fermeture par défaut de `RG-DRO-02` répond d'elle-même quand le dossier est
@@ -306,10 +324,18 @@ export const actions: Actions = {
 			profondeur: dossier.profondeur + 1
 		});
 
-		const chemin = params.chemin === '' ? '' : `${params.chemin}/`;
+		/* L'adresse du nouveau dossier se compose des segments AFFICHÉS de son
+		   parent, jamais du chemin reçu : quand le parent est la racine, le chemin
+		   reçu la NOMME (c'est sa seule adresse) alors que ses enfants s'adressent
+		   sans elle. Concaténer aurait rendu une adresse en 404 juste après une
+		   création réussie. */
+		const segmentsDuParent = segmentsAffiches(lignes, dossier.id).map(identifiantLisible);
 		redirect(
 			303,
-			`/univers/${params.univers}/${params.domaine}/dossiers/${chemin}${identifiantLisible(nom)}`
+			adresseDeDossier(domaine.universNom, domaine.nom, [
+				...segmentsDuParent,
+				identifiantLisible(nom)
+			])
 		);
 	},
 
