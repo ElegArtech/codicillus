@@ -334,7 +334,10 @@
 
 	{#if forme === 'abregee'}
 		{#each sectionsAbregees as section (section.nom)}<div class="rail__section">
-				<div class="rail__titre etiq">{section.nom}</div>
+				{#if section.cible === undefined}<div class="rail__titre etiq">{section.nom}</div>{:else}<a
+						class="rail__titre rail__titre--lien etiq"
+						href={resolve(ROUTE_UNIVERS, { univers: section.cible })}>{section.nom}</a
+					>{/if}
 				<ul class="arbre">
 					{#each section.arbre as noeud (noeud.nom)}{@render brancheAbregee(noeud)}{/each}
 				</ul>
@@ -345,7 +348,10 @@
 					Aucun domaine ne vous est accessible pour l'instant. Demandez à un administrateur de vous
 					rattacher à un domaine — votre compte existe, il n'a simplement pas encore de périmètre.
 				</div>{:else}{#each sections as section (section.nom)}<div class="rail__section">
-						<div class="rail__titre etiq">{section.nom}</div>
+						{#if section.cible === null}<div class="rail__titre etiq">{section.nom}</div>{:else}<a
+								class="rail__titre rail__titre--lien etiq"
+								href={resolve(ROUTE_UNIVERS, { univers: section.cible.univers })}>{section.nom}</a
+							>{/if}
 						<ul class="arbre">
 							{#each section.domaines as domaine (domaine.cle)}{@render branche(domaine)}{/each}
 						</ul>
