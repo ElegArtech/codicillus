@@ -55,6 +55,12 @@ export interface OptionsDeLaLecture {
 	readonly identifiant: string;
 	/** `RG-M05-08` / `P-09` — sans le droit d'écrire, aucun geste n'est posé. */
 	readonly ecriture: boolean;
+	/**
+	 * Où mène « Exporter », ou `null` quand l'appelant ne peut pas exporter.
+	 * `RG-M13-03` réserve l'export à l'administrateur ; sans ce droit l'entrée
+	 * n'a aucune destination, et une entrée sans destination se RETIRE.
+	 */
+	readonly exports: string | null;
 }
 
 /** Le libellé d'un nœud, débarrassé de ses blancs. */
@@ -253,6 +259,28 @@ export function cablerLaLecture(
 	/* `RG-M18-17` — l'impression est celle du navigateur, et la feuille gelée
 	   porte déjà ses règles d'impression (`V-14.css`, la requête de média). */
 	agir(boutonNomme(menu, 'Imprimer'), () => fenetre?.print());
+
+	/**
+	 * « EXPORTER » — LE PÉRIMÈTRE DE L'EXPORT EST LE DOMAINE, PAS LA NOTE.
+	 *
+	 * Le produit n'a aucune adresse qui rende une note seule : `RG-M13-01` fait
+	 * du domaine l'unité exportable, et `/console/exports` est l'écran qui le
+	 * dit et qui offre l'archive. L'entrée y mène — c'est déjà la destination
+	 * que le même mot reçoit sur la page d'un domaine
+	 * (`univers/{u}/{d}/cablage.ts`, `#a-exporter`), et deux destinations pour
+	 * un mot finiraient par diverger.
+	 *
+	 * SANS LE DROIT DE CONSOLE, L'ENTRÉE EST RETIRÉE et non laissée morte : la
+	 * route rend 404 à qui n'est pas administrateur (`RG-M13-03`), et `P-03`
+	 * n'admet pas un geste visible qui ne mène nulle part. C'est le geste de
+	 * `cablerLaCoquille()`, qui élague ses entrées sans adresse.
+	 */
+	const exporter = boutonNomme(menu, 'Exporter');
+	const ouExporter = options.exports;
+	if (exporter !== null) {
+		if (ouExporter === null) exporter.remove();
+		else agir(exporter, () => aller(ouExporter));
+	}
 
 	/* Le panneau en erreur : « Réessayer » redemande la page, ce qui est
 	   exactement ce que le bouton promet — rien n'est rechargé partiellement. */

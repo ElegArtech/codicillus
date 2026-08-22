@@ -46,7 +46,18 @@
 		},
 		get domaines() {
 			return data.domaines ?? [];
-		}
+		},
+		/* La version du paquet, pas le `1.0.0` du jeu de semence. `null` sur la
+		   page d'erreur, qui peut être rendue sans données de gabarit. */
+		get version() {
+			return data.version ?? null;
+		},
+		/* AUCUNE SOURCE N'EXISTE — aucune table ne porte l'instant de la dernière
+		   synchronisation. Constante, et non un accesseur sur `data` : il n'y a
+		   rien à suivre. `V-07.svelte` lit ce `null` et n'émet pas la ligne
+		   « Dernière synchronisation … » du pied, plutôt que la date fabriquée du
+		   jeu de semence. */
+		synchro: null
 	});
 
 	/**

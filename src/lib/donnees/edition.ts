@@ -62,7 +62,7 @@
  * `chercherLesNotes()`, dont l'en-tête l'explique — « c'est la forme qui tient la
  * propriété, pas la relecture ».
  */
-import { and, desc, eq, max } from 'drizzle-orm';
+import { and, count, desc, eq, max } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import {
@@ -146,6 +146,75 @@ export async function lireLesReferentiels(base: Base): Promise<ReferentielsDeSai
 		typesFiche: typesFiche as Record<TypeDeFiche, readonly ChampDeFiche[]>,
 		templates
 	};
+}
+
+/* ═══════════════════════════════════ L'arborescence de choix ════════════ */
+
+/** Un nœud de l'arborescence de choix de dossier, tel que `V-17` l'attend. */
+export interface DossierDeChoix {
+	readonly nom: string;
+	readonly notes: number;
+	readonly enfants: readonly DossierDeChoix[];
+}
+
+/**
+ * L'ARBORESCENCE DE CHOIX, PAR DOMAINE — lue dans la table `dossiers`, jamais
+ * déduite des chemins portés par les notes.
+ *
+ * Les deux éditeurs la demandent — `/notes/nouvelle` pour ranger la note qu'on
+ * crée, `/notes/{identifiant}/modifier` pour la déplacer —, et ils l'appellent
+ * ICI : le calcul n'existe qu'à un endroit. Sans elle, V-17 retombe sur ce
+ * qu'elle sait tirer du corpus servi — et le corpus ne porte aucun dossier tant
+ * qu'aucune note n'en nomme un. Deux mesures : le 21/08/2026, sur une instance
+ * neuve à zéro note, l'éditeur de création n'offrait AUCUN dossier et refusait
+ * en « dossier manquant » — pas de note, pas de dossier ; pas de dossier, pas de
+ * note ; le 22/08/2026, la liste de l'écran de modification sortait VIDE.
+ *
+ * LA RACINE EST OFFERTE À CÔTÉ DE SES ENFANTS, jamais au-dessus d'eux : elle
+ * est le premier choix de la liste, sous le nom du domaine, et les chemins de
+ * ses enfants n'en portent pas le préfixe — ils restent ceux de `Note.dossier`.
+ * Ne l'offrir QUE lorsqu'elle n'a aucun enfant laissait sans destination la note
+ * rangée à la racine d'un domaine qui, lui, a des sous-dossiers : le formulaire
+ * ne pouvait pas la cocher et l'enregistrement rendait 400. `Note.dossier` étant
+ * VIDE pour une telle note, c'est V-17 qui fait l'équivalence « vide = nom du
+ * domaine » ; `dossierDeDestination()` retire ce segment en tête à l'écriture.
+ */
+export async function lireLArborescenceDeChoix(
+	base: Base
+): Promise<Readonly<Record<string, readonly DossierDeChoix[]>>> {
+	const lignes = await base
+		.select({
+			id: dossiers.id,
+			parentId: dossiers.parentId,
+			nom: dossiers.nom,
+			position: dossiers.position,
+			domaine: domaines.nom
+		})
+		.from(dossiers)
+		.innerJoin(domaines, eq(domaines.id, dossiers.domaineId));
+
+	const decomptes = await base
+		.select({ dossierId: notes.dossierId, combien: count() })
+		.from(notes)
+		.groupBy(notes.dossierId);
+	const parDossier = new Map(decomptes.map((c) => [c.dossierId, Number(c.combien)]));
+
+	const enfantsDe = new Map<string | null, typeof lignes>();
+	for (const l of lignes) enfantsDe.set(l.parentId, [...(enfantsDe.get(l.parentId) ?? []), l]);
+
+	const batir = (parentId: string | null): readonly DossierDeChoix[] =>
+		[...(enfantsDe.get(parentId) ?? [])]
+			.sort((a, b) => a.position - b.position || a.nom.localeCompare(b.nom, 'fr'))
+			.map((l) => ({ nom: l.nom, notes: parDossier.get(l.id) ?? 0, enfants: batir(l.id) }));
+
+	const parDomaine: Record<string, readonly DossierDeChoix[]> = {};
+	for (const racine of enfantsDe.get(null) ?? []) {
+		parDomaine[racine.domaine] = [
+			{ nom: racine.nom, notes: parDossier.get(racine.id) ?? 0, enfants: [] },
+			...batir(racine.id)
+		];
+	}
+	return parDomaine;
 }
 
 /* ═══════════════════════════════════ La création — `/notes/nouvelle` ════ */
@@ -703,9 +772,14 @@ export type IssueDeModification =
  * `identifiantLisible()`, celle-là même que la composition d'adresse emploie —
  * un second normaliseur rendrait deux dossiers différents pour un même nom.
  *
- * Le chemin VIDE ne désigne rien : la racine d'un domaine n'est pas un choix de
- * rangement offert par le gel, dont l'arbre ne montre que les dossiers SOUS la
- * racine (`V-17-editeur.html:2806`, `window.dossiersDuDomaine`).
+ * LA RACINE D'UN DOMAINE EST UNE DESTINATION VALABLE, et c'est le même geste que
+ * `resoudreLaCible()` (`./creation.ts`) : un domaine sans sous-dossier n'offre
+ * que sa racine, que l'arbre de choix nomme par le nom du domaine. Le chemin
+ * `Migration` était refusé alors que la note s'y crée — mesuré le 22/08/2026,
+ * `400 rangement introuvable` sur un domaine et un dossier existants. Le segment
+ * de racine est donc retiré en tête, et ce qui reste se résout comme avant.
+ *
+ * Le chemin VIDE, lui, ne désigne toujours rien : aucun choix n'a été fait.
  */
 export function dossierDeDestination(
 	lignes: readonly LigneDeDossier[],
@@ -714,9 +788,15 @@ export function dossierDeDestination(
 	const segments = chemin
 		.split(SEPARATEUR_DE_CHEMIN.trim())
 		.map((s) => s.trim())
-		.filter((s) => s !== '');
+		.filter((s) => s !== '')
+		.map(identifiantLisible);
 	if (segments.length === 0) return null;
-	return resoudreLeChemin(lignes, segments.map(identifiantLisible));
+	const racine = lignes.find((d) => d.parentId === null) ?? null;
+	if (racine === null || segments[0] !== identifiantLisible(racine.nom)) {
+		return resoudreLeChemin(lignes, segments);
+	}
+	const sousLaRacine = segments.slice(1);
+	return sousLaRacine.length === 0 ? racine : resoudreLeChemin(lignes, sousLaRacine);
 }
 
 /**

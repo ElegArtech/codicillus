@@ -47,6 +47,7 @@
  * remonté au rapport du lot, non comblé.
  */
 import { basePartagee } from '$lib/base/acces';
+import paquet from '../../package.json';
 import { eq } from 'drizzle-orm';
 import { comptes, domaines, univers } from '$lib/base/schema';
 import { capaciteDEcriture } from '$lib/donnees/public';
@@ -155,6 +156,15 @@ async function arborescenceDeNavigation(base: Base): Promise<{
 
 import type { LayoutServerLoad } from './$types';
 
+/**
+ * LA VERSION DU PRODUIT — celle que le paquet déclare, et rien d'autre.
+ * Le pied du rail la servait depuis `INSTANCE` de `seeds/corpus.ts` : un chiffre
+ * de démonstration présenté comme un fait de l'instance. Le paquet est le seul
+ * endroit qui la porte ; c'est donc à lui de la tenir à jour, et non à une
+ * constante de semence.
+ */
+const VERSION_DU_PRODUIT = paquet.version;
+
 export const load: LayoutServerLoad = async ({ locals }) => {
 	if (locals.identite.type !== 'authentifie') {
 		return {
@@ -162,7 +172,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			ecriture: false,
 			administrateur: false,
 			rangement: null,
-			compte: null
+			compte: null,
+			version: VERSION_DU_PRODUIT
 		};
 	}
 	const base = basePartagee();
@@ -189,6 +200,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		 */
 		rangement: await rangementDuCompte(base, locals.identite.compteId),
 		compte: await identiteAffichable(base, locals.identite.compteId),
+		version: VERSION_DU_PRODUIT,
 		...(await arborescenceDeNavigation(base))
 	};
 };

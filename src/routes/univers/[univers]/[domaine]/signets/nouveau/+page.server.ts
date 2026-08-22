@@ -61,7 +61,14 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	);
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
-	return { vecteur: vecteurDeV23('creation'), notes: acces.ressource.notes };
+	/* LE DOMAINE DE L'ADRESSE, celui dont le droit vient d'être résolu, et le seul
+	   que l'action accepte à la soumission. La vue en fait le domaine pré-choisi
+	   du sélecteur : sans lui, elle retombait sur le domaine du jeu de semence. */
+	return {
+		vecteur: vecteurDeV23('creation'),
+		notes: acces.ressource.notes,
+		domaine: acces.ressource.domaine
+	};
 };
 
 export const actions: Actions = {

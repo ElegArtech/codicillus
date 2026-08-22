@@ -153,10 +153,7 @@ export interface OptionsDesGestes {
 	document: () => Document;
 	/** La résolution des liens internes, pour l'aperçu. */
 	resoudre: ResolveurDeNote;
-	/**
-	 * Où « Annuler » ramène. Absent, le bouton ramène à la page précédente — le
-	 * seul retour qu'une création puisse promettre, faute de note à rejoindre.
-	 */
+	/** Où « Annuler » ramène. Absent, le bouton ramène à l'accueil. */
 	retour?: string;
 }
 
@@ -273,15 +270,18 @@ export function cablerLesGestesDEdition(
 	      `signalerUneModification()`. */
 	ecouter(formulaire, 'submit', () => poserLeTemoin(formulaire, 'encours'));
 
-	/* 6. ANNULER — on quitte, et on prévient si quelque chose serait perdu. */
+	/* 6. ANNULER — on quitte vers une ADRESSE DU PRODUIT, et on prévient si
+	      quelque chose serait perdu. Jamais `history.back()` : quand l'éditeur
+	      est la première page de l'onglet — lien ouvert à côté, signet, adresse
+	      saisie — l'historique est vide et le bouton jetait l'utilisateur hors
+	      de l'application (mesuré : l'URL devenait `about:blank`). Toute route
+	      d'édition sait nommer son retour ; à défaut, c'est l'accueil. */
 	const annuler = noeud<HTMLButtonElement>('#annuler');
 	if (annuler !== null) {
 		annuler.type = 'button';
 		ecouter(annuler, 'click', () => {
 			if (modifie && fenetre?.confirm(RAPPEL_DE_SORTIE) !== true) return;
-			const retour = options.retour;
-			if (retour === undefined) fenetre?.history.back();
-			else document.location.assign(retour);
+			document.location.assign(options.retour ?? '/');
 		});
 	}
 

@@ -198,16 +198,34 @@
 	}
 
 	/**
-	 * LES TROIS COUPLES D'ÉPREUVE DE L'APERÇU sont ceux du gel (`V-30:2900`) :
-	 * des sujets choisis pour éprouver la formulation, pas des données. Le
-	 * premier est le couple courant au chargement.
+	 * LES COUPLES D'ÉPREUVE DE L'APERÇU VIENNENT DU CORPUS, ET DE LUI SEUL.
+	 *
+	 * Le gel en écrivait trois en dur — « srv-app-01 / Facturation », « bkp-01.prod
+	 * / pg-prod-01 », « Restaurer une sauvegarde PostgreSQL / pg-prod-02 » : sur une
+	 * instance réelle, ce sont des serveurs qui n'existent nulle part. On prend donc
+	 * un couple par type de relation déclaré, dans l'ordre du graphe — c'est ce que
+	 * le gel montrait, trois types différents — puis on complète avec les notes
+	 * prises deux à deux. Moins de deux notes : aucun couple, et l'aperçu le dit.
 	 */
-	const COUPLE_COURANT: readonly [string, string] = ['srv-app-01', 'Facturation'];
-	const COUPLES: readonly (readonly [string, string])[] = [
-		COUPLE_COURANT,
-		['bkp-01.prod', 'pg-prod-01'],
-		['Restaurer une sauvegarde PostgreSQL', 'pg-prod-02']
-	];
+	const titresDuCorpus = $derived(new Map<string, string>(corpus.map((n) => [n.id, n.titre])));
+	const COUPLES: readonly (readonly [string, string])[] = $derived.by(() => {
+		/* Accumulateurs de tableau, jamais d'ensemble : trois couples au plus, et
+		   `svelte/prefer-svelte-reactivity` refuse un `Set` mutable dans un composant. */
+		const couples: [string, string][] = [];
+		const ajouter = (a: string | undefined, b: string | undefined): void => {
+			if (a === undefined || b === undefined || a === b || couples.length >= 3) return;
+			if (couples.some(([x, y]) => x === a && y === b)) return;
+			couples.push([a, b]);
+		};
+		const typesVus: string[] = [];
+		for (const r of relations) {
+			if (typesVus.includes(r.type)) continue;
+			typesVus.push(r.type);
+			ajouter(titresDuCorpus.get(r.de), titresDuCorpus.get(r.vers));
+		}
+		for (let i = 0; i + 1 < corpus.length; i += 2) ajouter(corpus[i]?.titre, corpus[i + 1]?.titre);
+		return couples;
+	});
 
 	/* ── L'état, tel que le vecteur de planche le décrit ───────────────────
 	   Le panneau et le dialogue ne s'ouvrent que si la position DÉVIE du
@@ -233,9 +251,11 @@
 	/**
 	 * LE COUPLE D'ÉPREUVE RETENU — « Changez les sujets pour éprouver la
 	 * formulation sur un autre couple » (`V-30:507`). C'est un réglage de
-	 * l'aperçu, pas une donnée : il ne sort jamais de la vue.
+	 * l'aperçu, pas une donnée : il ne sort jamais de la vue. On en tient le RANG,
+	 * pas la valeur : `COUPLES` est dérivé du corpus et se recalcule.
 	 */
-	let coupleRetenu = $state<readonly [string, string]>(COUPLE_COURANT);
+	let rangDuCouple = $state(0);
+	const coupleRetenu = $derived(COUPLES[rangDuCouple] ?? COUPLES[0] ?? null);
 	/** Les messages de `#erreur-direct` et `#erreur-inverse`, quand l'écran refuse. */
 	let erreursLocales = $state<readonly RefusDeSaisie[]>([]);
 	/**
@@ -281,19 +301,27 @@
 	const erreurDirect = $derived(messageDuChamp('direct'));
 	const erreurInverse = $derived(messageDuChamp('inverse'));
 
+	/** Sans couple à éprouver, la phrase nomme les deux rôles — jamais un sujet inventé. */
+	const ORIGINE = `la ${motFicheMinuscule} d'origine`;
+	const CIBLE = `la ${motFicheMinuscule} cible`;
+
 	/** Les deux phrases de l'aperçu, dans l'ordre du gel. */
 	const phrases = $derived([
 		{
-			sujet: coupleRetenu[0],
+			sujet: coupleRetenu?.[0] ?? null,
+			sujetVide: ORIGINE,
 			libelle: directSaisi,
-			objet: coupleRetenu[1],
+			objet: coupleRetenu?.[1] ?? null,
+			objetVide: CIBLE,
 			sens: 'sens direct',
 			modificateur: ''
 		},
 		{
-			sujet: coupleRetenu[1],
+			sujet: coupleRetenu?.[1] ?? null,
+			sujetVide: CIBLE,
 			libelle: inverseSaisi,
-			objet: coupleRetenu[0],
+			objet: coupleRetenu?.[0] ?? null,
+			objetVide: ORIGINE,
 			sens: 'sens inverse',
 			modificateur: 'phrase--inverse'
 		}
@@ -307,7 +335,7 @@
 		fInverse = t === null ? '' : t.inverse;
 		fUsage = t === null ? '' : t.usage;
 		fTechnique = t === null ? false : t.technique;
-		coupleRetenu = COUPLE_COURANT;
+		rangDuCouple = 0;
 		erreursLocales = [];
 	}
 
@@ -647,24 +675,30 @@
 					<div class="apercu-phrases" id="apercu">
 						{#if panneauOuvert}{#each phrases as p (p.sens)}<div class="phrase {p.modificateur}">
 									<span class="phrase__sens">{p.sens}</span><span
-										><i>{p.sujet}</i>
+										>{#if p.sujet}<i>{p.sujet}</i>{:else}<span class="phrase__manque"
+												>{p.sujetVide}</span
+											>{/if}
 										{#if p.libelle}<b>{p.libelle}</b>{:else}<span class="phrase__manque"
 												>…libellé à saisir…</span
 											>{/if}
-										<i>{p.objet}</i>.</span
+										{#if p.objet}<i>{p.objet}</i>{:else}<span class="phrase__manque"
+												>{p.objetVide}</span
+											>{/if}.</span
 									>
 								</div>{/each}{/if}
 					</div>
 					<span class="champ__aide" style="margin-top:var(--e-2)"
-						>Changez les sujets pour éprouver la formulation sur un autre couple :</span
+						>{COUPLES.length > 0
+							? 'Changez les sujets pour éprouver la formulation sur un autre couple :'
+							: `Aucun couple à éprouver : le corpus porte moins de deux ${motFichePlurielMinuscule}.`}</span
 					>
 					<div class="exemples" id="exemples">
-						{#if panneauOuvert}{#each COUPLES as couple (couple[0])}<button
+						{#if panneauOuvert}{#each COUPLES as couple, rang (couple[0] + ' / ' + couple[1])}<button
 									type="button"
-									style={couple === coupleRetenu
+									style={rang === rangDuCouple
 										? 'border-color:var(--c-accent);background:var(--c-accent-voile);color:var(--c-accent-fonce)'
 										: undefined}
-									onclick={() => (coupleRetenu = couple)}>{couple[0]} / {couple[1]}</button
+									onclick={() => (rangDuCouple = rang)}>{couple[0]} / {couple[1]}</button
 								>{/each}{/if}
 					</div>
 				</div>

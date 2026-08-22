@@ -47,6 +47,9 @@
  * d'ailleurs la règle de §4.2 pour tout paramètre non honoré.
  */
 import { basePartagee } from '$lib/base/acces';
+import type { Base } from '$lib/base/acces';
+import { notes as tableDesNotes } from '$lib/base/schema';
+import { joursEcoules } from '$lib/donnees/lecture';
 import { resoudre } from '$lib/droits/resolution';
 import {
 	domaineLisible,
@@ -57,6 +60,8 @@ import {
 	ouvrirLAcces,
 	refuserLAdresse
 } from '$lib/donnees/rangement';
+import { inArray } from 'drizzle-orm';
+import type { IdentifiantNote, Note } from '../../../../../../seeds/corpus';
 import type { PageServerLoad } from './$types';
 
 /** Les deux valeurs de facette que §4.2 nomme, recopiées telles quelles. */
@@ -77,7 +82,8 @@ function arriveeDepuisLAdresse(parametres: URLSearchParams): 'tout' | 'obsolete'
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const base = basePartagee();
-	const acces = await ouvrirLAcces(base, locals.identite, new Date());
+	const maintenant = new Date();
+	const acces = await ouvrirLAcces(base, locals.identite, maintenant);
 
 	const domaine = await lireDomaineParIdentifiants(base, params.univers, params.domaine);
 	const modules =
@@ -117,9 +123,42 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		 */
 		retenues: retenuesDeLAdresse(url.searchParams),
 		/** Les quatre ordres du gel ; une valeur inconnue s'ignore, jamais ne refuse. */
-		tri: url.searchParams.get('tri') ?? undefined
+		tri: url.searchParams.get('tri') ?? undefined,
+		/**
+		 * L'ANCIENNETÉ DE MODIFICATION DE CHAQUE NOTE, lue sur `notes.modifie_le`.
+		 *
+		 * Sans elle, la vue retombait sur la table du jeu de semence, dont les
+		 * clés sont des identifiants de semence : aucune note réelle n'y figure,
+		 * et les trois lignes annonçaient « date de modification inconnue » alors
+		 * que la colonne est renseignée. C'est aussi elle qui ordonne la liste,
+		 * dont le tri par défaut est l'ancienneté de modification.
+		 */
+		modifications: await ancienneteDeModification(base, notes, maintenant)
 	};
 };
+
+/**
+ * L'ancienneté de la dernière modification, en jours — `notes.modifie_le`.
+ *
+ * CE N'EST PAS `Note.jours`, qui porte l'âge de la VÉRIFICATION : une note
+ * vérifiée hier n'a pas été modifiée hier. Le comptage passe par
+ * `joursEcoules()`, la seule façon de compter un jour dans ce produit.
+ */
+async function ancienneteDeModification(
+	base: Base,
+	lisibles: readonly Note[],
+	maintenant: Date
+): Promise<Partial<Record<IdentifiantNote, number>>> {
+	const identifiants = lisibles.map((n) => n.id as string);
+	if (identifiants.length === 0) return {};
+	const lignes = await base
+		.select({ identifiant: tableDesNotes.identifiant, modifieLe: tableDesNotes.modifieLe })
+		.from(tableDesNotes)
+		.where(inArray(tableDesNotes.identifiant, identifiants));
+	const table: Record<string, number> = {};
+	for (const ligne of lignes) table[ligne.identifiant] = joursEcoules(ligne.modifieLe, maintenant);
+	return table as Partial<Record<IdentifiantNote, number>>;
+}
 
 /** Les six clés de facette que V-12 déclare, dans son ordre. */
 const CLES_DE_FACETTE = ['type', 'fraicheur', 'statut', 'dossier', 'auteur', 'etiquette'] as const;
