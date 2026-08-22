@@ -262,38 +262,14 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const lisibles = domainesDeLUnivers.filter((d) => domaineLisible(acces, d.id));
 
 	/**
-	 * UN UNIVERS QUI NE PORTE AUCUN DOMAINE S’OUVRE — `ARB-065`.
+	 * UN UNIVERS SANS AUCUN DOMAINE S'OUVRE, et rend l'état vide du gel
+	 * (`.vide-univers`, `V-10.svelte:449`). Il rendait 404 : on crée un univers
+	 * en premier sur une instance neuve, et aucun chemin ne l'ouvrait ensuite.
 	 *
-	 * LA RÉDACTION PRÉCÉDENTE REFUSAIT LES DEUX CAS PAR LA MÊME LIGNE, et elle
-	 * l'assumait : « la position "sans domaine" de la planche ne peut pas être
-	 * atteinte par cette route, puisque zéro domaine lisible rend 404 ». Le
-	 * constat était juste et la conclusion fausse, exactement comme `P-3`.
-	 *
-	 * CE QUE CELA COÛTAIT, MESURÉ LE 22/08/2026 : sur une instance neuve, on
-	 * crée un univers par la console — c'est le premier geste du produit, celui
-	 * que `pnpm base:administrateur` annonce en toutes lettres — et cet univers
-	 * N'EST OUVRABLE PAR AUCUN CHEMIN. Le rail l'écarte (il ne liste que les
-	 * univers porteurs d'un domaine, et c'est la règle du gel lui-même,
-	 * `V-07:construireRail`), la console n'y mène pas, et l'adresse rend 404. Le
-	 * produit demande de commencer par un geste dont il refuse ensuite le
-	 * résultat.
-	 *
-	 * ET LE GEL DESSINE CET ÉTAT. `mockups/V-10-page-univers.html` porte un bloc
-	 * `.vide-univers` COMPLET — sa feuille de style, son titre « Cet univers ne
-	 * contient aucun domaine », sa phrase, et un bouton « Créer un domaine dans
-	 * {nom} ». `src/vues/V-10.svelte:449` le transcrit déjà. Un état dessiné,
-	 * stylé et transcrit, qu'aucune adresse ne peut atteindre, est un défaut.
-	 *
-	 * LES DEUX REFUS DE `RG-ACC-04` NE BOUGENT PAS, et c'est ce qui rend
-	 * l'ouverture sûre : un univers ABSENT rend 404 ; un univers qui porte des
-	 * domaines dont AUCUN n'est lisible rend 404, par le même point de sortie et
-	 * sans se distinguer du premier (`ADR-007`). Seul s'ouvre l'univers dont la
-	 * base dit qu'il ne porte RIEN — il n'y a alors aucun contenu à protéger, et
-	 * le refuser ne protège que du vide.
-	 *
-	 * L'ANONYME RESTE DEHORS. `docs/routes.md` §5.5 le veut en 404 sur toute la
-	 * famille `/univers/…`, et ce n'est pas ce point-ci qui l'ouvrirait : un nom
-	 * d'univers est une information d'instance.
+	 * Les deux refus ne bougent pas — univers absent, ou univers dont aucun
+	 * domaine n'est lisible : 404 par le même point de sortie (`ADR-007`), et
+	 * l'anonyme reste dehors. Seul s'ouvre celui qui ne porte rien, où il n'y a
+	 * aucun contenu à protéger.
 	 */
 	const vide = univers !== null && domainesDeLUnivers.length === 0;
 	const ouvrable = locals.identite.type === 'authentifie' && vide;
@@ -308,21 +284,11 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 
 	const rangement = await lireLeRangementLisible(base, acces);
 
-	/**
-	 * L'UNIVERS OUVERT DOIT ÊTRE DANS LA LISTE QU'ON PASSE, MÊME VIDE.
-	 *
-	 * `lireLeRangementLisible()` réduit les univers à ceux qui portent au moins
-	 * un domaine lisible — c'est ce qu'il doit faire, une carte d'univers menant
-	 * à une page atteignable (`P-03`). Un univers sans domaine en est donc
-	 * absent, et `V-10.svelte:163` cherche `univers.find(…) ?? univers[0]` : sur
-	 * une liste vide, `univers[0]` vaut `undefined` et la vue rompt en lisant
-	 * `.nom`. Mesuré — 500, pas 404.
-	 *
-	 * ON N'AJOUTE QUE L'UNIVERS QUE L'ADRESSE NOMME DÉJÀ. Passer la liste
-	 * complète réparerait le rendu et ouvrirait au passage les noms des autres
-	 * univers à qui n'y a aucun droit ; ici, rien n'est révélé que le segment
-	 * d'adresse ne porte.
-	 */
+	/* L'univers ouvert doit être dans la liste passée à la vue, même vide :
+	   `lireLeRangementLisible()` ne garde que ceux qui portent un domaine lisible,
+	   et `V-10.svelte:163` lit `univers[0].nom` — sur une liste vide, c'est un 500.
+	   On n'ajoute que celui que l'adresse nomme déjà : la liste complète révélerait
+	   les autres. */
 	const universOuvert = rangement.univers.some((u) => u.nom === resolution.ressource.nom)
 		? rangement.univers
 		: [
@@ -336,29 +302,14 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		   `Production` et `Projets`), et ce que la vue cherche dans les univers
 		   qu'elle reçoit.
 
-		   `etat` VAUT « vide » QUAND L'UNIVERS NE PORTE AUCUN DOMAINE, et la vue
-		   rend alors son bloc `.vide-univers` (`V-10.svelte:449`). C'est la
-		   position que la rédaction précédente déclarait inatteignable ; `ARB-065`
-		   ci-dessus dit pourquoi elle l'est devenue. Hors de ce cas, `etat` n'est
-		   pas posé et vaut « nominal ». */
+		   `etat` vaut « vide » quand l'univers ne porte aucun domaine ; hors de ce
+		   cas il n'est pas posé et vaut « nominal ». */
 		vecteur: {
 			uni: resolution.ressource.nom,
-			/**
-			 * SUR UN UNIVERS VIDE, C'EST L'ACCÈS À LA CONSOLE QUI DÉCIDE.
-			 *
-			 * `peutEcrireDansLUn()` interroge les DOSSIERS lisibles, et un univers
-			 * sans domaine n'en a aucun : il rendrait donc toujours « lecture », et
-			 * le seul geste de l'état vide — « Créer un domaine dans {nom} »,
-			 * `V-10.svelte:457`, rendu sous `si-ecriture` — resterait caché à
-			 * l'administrateur lui-même. Ce serait le défaut d'hier : ouvrir la
-			 * page et y taire la sortie.
-			 *
-			 * La question que pose ce bouton n'est PAS « peut-il écrire une note
-			 * ici » — il n'y a pas de « ici » — mais « peut-il créer un domaine »,
-			 * et un domaine ne se crée qu'à la console (`/console/domaines`).
-			 * `accesALaConsole()` est donc le prédicat exact, et c'est le même que
-			 * la route de destination appliquera : le bouton ne mène pas à un refus.
-			 */
+			/* Sur un univers vide, c'est l'accès à la console qui décide :
+			   `peutEcrireDansLUn()` interroge les dossiers, il n'y en a aucun, et le
+			   bouton « Créer un domaine » resterait caché à l'administrateur. Un
+			   domaine ne se crée qu'à la console — même prédicat que la destination. */
 			droits: (vide ? accesALaConsole(locals.identite) : peutEcrireDansLUn(acces, dossiersLisibles))
 				? 'ecriture'
 				: 'lecture',
