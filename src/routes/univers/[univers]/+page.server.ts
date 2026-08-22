@@ -102,6 +102,7 @@ import {
 	type AccesAuRangement
 } from '$lib/donnees/rangement';
 import { lireModulesParDomaine, lireUnivers } from '$lib/donnees/lecture';
+import { accesALaConsole } from '$lib/donnees/consoles';
 import { and, eq, gte, inArray } from 'drizzle-orm';
 import type {
 	DetailDeDomaine,
@@ -260,10 +261,43 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const domainesDeLUnivers = univers === null ? [] : await lireDomainesDeLUnivers(base, univers.id);
 	const lisibles = domainesDeLUnivers.filter((d) => domaineLisible(acces, d.id));
 
-	/* `resoudre()` rapporte « une ressource ou rien » : l'univers absent et
-	   l'univers sans aucun domaine lisible rendent le MÊME objet, `INTROUVABLE`,
-	   par le même retour. C'est la moitié de `RG-ACC-04` que le type garantit. */
-	const resolution = resoudre(univers, () => lisibles.length > 0);
+	/**
+	 * UN UNIVERS QUI NE PORTE AUCUN DOMAINE S’OUVRE — `ARB-065`.
+	 *
+	 * LA RÉDACTION PRÉCÉDENTE REFUSAIT LES DEUX CAS PAR LA MÊME LIGNE, et elle
+	 * l'assumait : « la position "sans domaine" de la planche ne peut pas être
+	 * atteinte par cette route, puisque zéro domaine lisible rend 404 ». Le
+	 * constat était juste et la conclusion fausse, exactement comme `P-3`.
+	 *
+	 * CE QUE CELA COÛTAIT, MESURÉ LE 22/08/2026 : sur une instance neuve, on
+	 * crée un univers par la console — c'est le premier geste du produit, celui
+	 * que `pnpm base:administrateur` annonce en toutes lettres — et cet univers
+	 * N'EST OUVRABLE PAR AUCUN CHEMIN. Le rail l'écarte (il ne liste que les
+	 * univers porteurs d'un domaine, et c'est la règle du gel lui-même,
+	 * `V-07:construireRail`), la console n'y mène pas, et l'adresse rend 404. Le
+	 * produit demande de commencer par un geste dont il refuse ensuite le
+	 * résultat.
+	 *
+	 * ET LE GEL DESSINE CET ÉTAT. `mockups/V-10-page-univers.html` porte un bloc
+	 * `.vide-univers` COMPLET — sa feuille de style, son titre « Cet univers ne
+	 * contient aucun domaine », sa phrase, et un bouton « Créer un domaine dans
+	 * {nom} ». `src/vues/V-10.svelte:449` le transcrit déjà. Un état dessiné,
+	 * stylé et transcrit, qu'aucune adresse ne peut atteindre, est un défaut.
+	 *
+	 * LES DEUX REFUS DE `RG-ACC-04` NE BOUGENT PAS, et c'est ce qui rend
+	 * l'ouverture sûre : un univers ABSENT rend 404 ; un univers qui porte des
+	 * domaines dont AUCUN n'est lisible rend 404, par le même point de sortie et
+	 * sans se distinguer du premier (`ADR-007`). Seul s'ouvre l'univers dont la
+	 * base dit qu'il ne porte RIEN — il n'y a alors aucun contenu à protéger, et
+	 * le refuser ne protège que du vide.
+	 *
+	 * L'ANONYME RESTE DEHORS. `docs/routes.md` §5.5 le veut en 404 sur toute la
+	 * famille `/univers/…`, et ce n'est pas ce point-ci qui l'ouvrirait : un nom
+	 * d'univers est une information d'instance.
+	 */
+	const vide = univers !== null && domainesDeLUnivers.length === 0;
+	const ouvrable = locals.identite.type === 'authentifie' && vide;
+	const resolution = resoudre(univers, () => lisibles.length > 0 || ouvrable);
 	if (!resolution.trouve) refuserLAdresse(url.pathname);
 
 	/* Les dossiers des seuls domaines lisibles : c'est sur eux que se lit la
@@ -274,22 +308,64 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 
 	const rangement = await lireLeRangementLisible(base, acces);
 
+	/**
+	 * L'UNIVERS OUVERT DOIT ÊTRE DANS LA LISTE QU'ON PASSE, MÊME VIDE.
+	 *
+	 * `lireLeRangementLisible()` réduit les univers à ceux qui portent au moins
+	 * un domaine lisible — c'est ce qu'il doit faire, une carte d'univers menant
+	 * à une page atteignable (`P-03`). Un univers sans domaine en est donc
+	 * absent, et `V-10.svelte:163` cherche `univers.find(…) ?? univers[0]` : sur
+	 * une liste vide, `univers[0]` vaut `undefined` et la vue rompt en lisant
+	 * `.nom`. Mesuré — 500, pas 404.
+	 *
+	 * ON N'AJOUTE QUE L'UNIVERS QUE L'ADRESSE NOMME DÉJÀ. Passer la liste
+	 * complète réparerait le rendu et ouvrirait au passage les noms des autres
+	 * univers à qui n'y a aucun droit ; ici, rien n'est révélé que le segment
+	 * d'adresse ne porte.
+	 */
+	const universOuvert = rangement.univers.some((u) => u.nom === resolution.ressource.nom)
+		? rangement.univers
+		: [
+				...rangement.univers,
+				...(await lireUnivers(base)).filter((u) => u.nom === resolution.ressource.nom)
+			];
+
 	return {
 		/* `uni` porte le NOM, non l'identifiant d'adresse : c'est ce que l'axe
 		   « Univers » de la planche emploie (`verif/scenarios/V-10.json`, valeurs
 		   `Production` et `Projets`), et ce que la vue cherche dans les univers
 		   qu'elle reçoit.
 
-		   `etat` n'est pas posé, et c'est un fait à déclarer plutôt qu'un oubli :
-		   la position « sans domaine » de la planche ne peut pas être atteinte par
-		   cette route, puisque zéro domaine lisible rend 404 par la ligne de §3
-		   ci-dessus. Absent, il vaut « nominal ». */
+		   `etat` VAUT « vide » QUAND L'UNIVERS NE PORTE AUCUN DOMAINE, et la vue
+		   rend alors son bloc `.vide-univers` (`V-10.svelte:449`). C'est la
+		   position que la rédaction précédente déclarait inatteignable ; `ARB-065`
+		   ci-dessus dit pourquoi elle l'est devenue. Hors de ce cas, `etat` n'est
+		   pas posé et vaut « nominal ». */
 		vecteur: {
 			uni: resolution.ressource.nom,
-			droits: peutEcrireDansLUn(acces, dossiersLisibles) ? 'ecriture' : 'lecture'
+			/**
+			 * SUR UN UNIVERS VIDE, C'EST L'ACCÈS À LA CONSOLE QUI DÉCIDE.
+			 *
+			 * `peutEcrireDansLUn()` interroge les DOSSIERS lisibles, et un univers
+			 * sans domaine n'en a aucun : il rendrait donc toujours « lecture », et
+			 * le seul geste de l'état vide — « Créer un domaine dans {nom} »,
+			 * `V-10.svelte:457`, rendu sous `si-ecriture` — resterait caché à
+			 * l'administrateur lui-même. Ce serait le défaut d'hier : ouvrir la
+			 * page et y taire la sortie.
+			 *
+			 * La question que pose ce bouton n'est PAS « peut-il écrire une note
+			 * ici » — il n'y a pas de « ici » — mais « peut-il créer un domaine »,
+			 * et un domaine ne se crée qu'à la console (`/console/domaines`).
+			 * `accesALaConsole()` est donc le prédicat exact, et c'est le même que
+			 * la route de destination appliquera : le bouton ne mène pas à un refus.
+			 */
+			droits: (vide ? accesALaConsole(locals.identite) : peutEcrireDansLUn(acces, dossiersLisibles))
+				? 'ecriture'
+				: 'lecture',
+			...(vide ? { etat: 'vide' } : {})
 		},
 		notes: await lireNotesLisibles(base, acces.perimetre, acces.contexte),
-		univers: rangement.univers,
+		univers: universOuvert,
 		domaines: rangement.domaines,
 		detailDomaines: rangement.detailDomaines,
 		activite: await lireLActiviteRecente(base, acces, maintenant)
