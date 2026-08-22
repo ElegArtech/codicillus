@@ -33,6 +33,7 @@
 	 * moindre littéral de style y retomberait sous P-1 en entier (ADR-002).
 	 * Il n'en porte aucun, et `aside.nav2` du gel n'en porte aucun non plus.
 	 */
+	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
@@ -41,6 +42,7 @@
 		type CleDeSection,
 		type TraitDePictogramme
 	} from './sections';
+	import { CLE_EFFECTIFS, groupesAvecEffectifs, type EffectifsDeConsole } from './effectifs';
 
 	interface Proprietes {
 		/** La section que la vue rend — elle porte `aria-current="page"`. */
@@ -48,6 +50,24 @@
 	}
 
 	const { courante }: Proprietes = $props();
+
+	/**
+	 * LES SEPT COMPTEURS VIENNENT DE LA BASE DÈS QU'IL Y EN A UNE.
+	 *
+	 * `GROUPES_DE_CONSOLE` dérive ses `compte` de `seeds/corpus.ts` : c'est le
+	 * contenu d'exemple du gel, juste pour le rendu d'une planche, faux pour une
+	 * instance. `$lib/console/effectifs.ts` porte le motif complet et la mesure.
+	 *
+	 * LA PRÉSENCE DU CONTEXTE DÉCIDE, PAS SON CONTENU — même leçon que le rail de
+	 * `Coquille.svelte` : une base à zéro univers n'est pas une base absente, et
+	 * elle annonce zéro. Hors application — le rendu par défaut d'une vue —,
+	 * `getContext` rend `undefined`, le catalogue s'applique tel quel, et le gel
+	 * garde ses sept nombres au pixel.
+	 */
+	const effectifs = getContext<EffectifsDeConsole | undefined>(CLE_EFFECTIFS);
+	const groupes = $derived(
+		effectifs === undefined ? GROUPES_DE_CONSOLE : groupesAvecEffectifs(effectifs)
+	);
 
 	/**
 	 * LA SECTION VISÉE DEVIENT UNE NAVIGATION — la section courante, rien : le
@@ -135,7 +155,7 @@
 			id="nav2-selecteur"
 			aria-label="Section de la console"
 			onchange={(e) => allerA(e.currentTarget.value as CleDeSection)}
-			>{#each GROUPES_DE_CONSOLE as groupe (groupe.nom)}<optgroup label={groupe.nom}
+			>{#each groupes as groupe (groupe.nom)}<optgroup label={groupe.nom}
 					>{#each groupe.sections as section (section.cle)}<option
 							value={section.cle}
 							selected={section.cle === courante}>{libelleDOption(section)}</option
@@ -144,7 +164,7 @@
 		>
 	</div>
 	<div id="nav2-groupes">
-		{#each GROUPES_DE_CONSOLE as groupe (groupe.nom)}<div class="nav2__groupe">
+		{#each groupes as groupe (groupe.nom)}<div class="nav2__groupe">
 				<div class="nav2__titre etiq">{groupe.nom}</div>
 				{#each groupe.sections as section (section.cle)}<button
 						class="nav2__lien"
