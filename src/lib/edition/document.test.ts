@@ -11,67 +11,48 @@
  *
  * ET UN CINQUIÈME REFUS, QUI N'EST PAS UNE INVALIDITÉ : le document valide que
  * l'éditeur ne sait pas porter. Confondre les deux ferait passer une lacune
- * d'outillage pour une donnée corrompue.
+ * d'outillage pour une donnée corrompue. Le schéma porte aujourd'hui TOUTES les
+ * marques du format — `MARQUES_DU_FORMAT_SANS_EXTENSION` est vide —, donc aucun
+ * document ne peut plus déclencher ce refus-là par une marque ; la lacune de
+ * STRUCTURE, elle, existe encore et le dernier `describe` la mesure.
  */
 import { describe, expect, it } from 'vitest';
 import { CAS_INVALIDES } from '../contenu/commandes';
 import { analyserDocument, DocumentInvalide, verifierDocument } from '../contenu/document';
 import { DOCUMENTS_DU_GEL } from '../contenu/documents-du-gel';
-import {
-	cequeLEditeurNeSaitPasPorter,
-	documentDepuisNoeud,
-	EditeurIncapable,
-	noeudDepuisDocument
-} from './document';
+import { cequeLEditeurNeSaitPasPorter, documentDepuisNoeud, noeudDepuisDocument } from './document';
+import { MARQUES_DU_FORMAT_SANS_EXTENSION } from './schema';
 
 /* ═══════════════════════════════════ L'aller-retour ═════════════════════ */
 
 describe('l’aller-retour par l’éditeur, sur les quatre corps transcrits du gel', () => {
 	/**
-	 * DEUX PASSENT, DEUX SONT REFUSÉS, ET LA CAUSE EST UNE SEULE MARQUE.
+	 * LES QUATRE PASSENT, AU CARACTÈRE PRÈS.
 	 *
-	 * Mesuré : les deux corps du registre Référence portent la marque du surligné
-	 * — `pnpm contenu:constructions` la compte, « highlight 2 » —, qu'aucune
-	 * extension installée n'apporte. Les deux corps Opérationnels ne la portent
-	 * pas et traversent l'éditeur À L'IDENTIQUE, au caractère près.
-	 *
-	 * Ce n'est pas un contournement de l'épreuve : c'est le chiffre que le
-	 * rapport de lot doit porter. Une épreuve qui aurait retiré la marque avant
-	 * de comparer aurait rendu quatre verts et effacé le fait.
+	 * Les deux corps du registre Référence portent la marque du surligné
+	 * (`pnpm contenu:constructions` la compte, « highlight 2 »). Elle était
+	 * sautée du schéma faute d'extension qui l'apporte, et ces deux corps ne
+	 * pouvaient pas s'ouvrir ; le surligné est désormais écrit en propre
+	 * (`schema.ts`, `MARQUES_EN_PROPRE`) et les quatre traversent l'éditeur À
+	 * L'IDENTIQUE.
 	 */
 	for (const corps of DOCUMENTS_DU_GEL) {
-		const nom = `${corps.note} / ${corps.registre}`;
-		const porteLeSurligne = cequeLEditeurNeSaitPasPorter(corps.document).length > 0;
-
-		if (porteLeSurligne) {
-			it(`${nom} — REFUSÉ, et le refus nomme la marque manquante`, () => {
-				expect(() => noeudDepuisDocument(corps.document)).toThrow(EditeurIncapable);
-				try {
-					noeudDepuisDocument(corps.document);
-					expect.unreachable('le document a été accepté');
-				} catch (cause) {
-					expect(cause).toBeInstanceOf(EditeurIncapable);
-					expect((cause as EditeurIncapable).manque).toEqual(['highlight']);
-				}
-			});
-			continue;
-		}
-
-		it(`${nom} — traverse l’éditeur et revient IDENTIQUE`, () => {
+		it(`${corps.note} / ${corps.registre} — traverse l’éditeur et revient IDENTIQUE`, () => {
 			const retour = documentDepuisNoeud(noeudDepuisDocument(corps.document));
 			expect(retour).toEqual(corps.document);
-			/* L'identité de sérialisation, et non la seule égalité structurelle :
-			   c'est elle que la batterie 4 mesure sur le format. */
+			/* L'identité de sérialisation, et non la seule égalité structurelle. */
 			expect(JSON.stringify(retour)).toBe(JSON.stringify(corps.document));
 		});
 	}
 
-	it('deux des quatre corps du gel sont hors de portée de l’éditeur — compté', () => {
+	it('aucun des quatre corps du gel n’est hors de portée de l’éditeur — compté', () => {
 		const hors = DOCUMENTS_DU_GEL.filter(
 			(c) => cequeLEditeurNeSaitPasPorter(c.document).length > 0
 		);
-		expect(hors).toHaveLength(2);
-		expect(hors.map((c) => c.registre)).toEqual(['reference', 'reference']);
+		expect(hors.map((c) => `${c.note} / ${c.registre}`)).toEqual([]);
+		/* La cause, et non le seul effet : le compte ci-dessus retomberait à deux
+		   si une marque du format quittait le schéma de l'éditeur. */
+		expect(MARQUES_DU_FORMAT_SANS_EXTENSION).toEqual([]);
 	});
 });
 

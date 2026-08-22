@@ -78,6 +78,7 @@ import { basePartagee, type Base } from '$lib/base/acces';
 import { notes as notesDuSchema, versions } from '$lib/base/schema';
 import {
 	enregistrerLaNote,
+	lireLArborescenceDeChoix,
 	lireLaModification,
 	resoudreLEditionDUneNote,
 	type LectureDuFormulaire
@@ -144,6 +145,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		typesNote: edition.referentiels.typesNote,
 		typesFiche: edition.referentiels.typesFiche,
 		templates: edition.referentiels.templates,
+		/* L'ARBORESCENCE DE CHOIX, LA MÊME LECTURE QU'À LA CRÉATION. Sans elle, la
+		   liste des dossiers de l'écran sortait vide et aucun déplacement n'était
+		   possible — mesuré le 22/08/2026. */
+		dossiersParDomaine: await lireLArborescenceDeChoix(base),
 		/**
 		 * LE CORPS À ÉDITER, ET CE QUE L'ÉDITEUR N'EN SAIT PAS PORTER. Le second
 		 * champ n'est pas décoratif : une marque que le schéma de l'éditeur ne

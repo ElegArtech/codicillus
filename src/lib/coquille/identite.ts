@@ -74,4 +74,26 @@ export interface IdentiteDeCoquille {
 	readonly administrateur: boolean;
 	readonly univers: readonly UniversDeRail[];
 	readonly domaines: readonly DomaineDeRail[];
+	/**
+	 * LA VERSION DU PRODUIT, LUE SUR `package.json` — la vraie, pas celle du gel.
+	 * Le pied du rail affichait `1.0.0`, qui vient de `INSTANCE` de
+	 * `seeds/corpus.ts` : un numéro de démonstration, servi comme un fait.
+	 * `null` hors gabarit racine (page d'erreur) : la propriété reprend la main.
+	 */
+	readonly version: string | null;
+	/**
+	 * L'INSTANT DE LA DERNIÈRE SYNCHRONISATION — IL N'EN EXISTE AUCUN.
+	 *
+	 * Aucune table de la base ne le porte (vérifié le 22/08/2026 sur les 23
+	 * tables du schéma public). Le gel écrit « il y a 6 minutes » ; c'est du
+	 * contenu d'exemple, et un utilisateur le lit comme un fait sur SON
+	 * instance. Le champ vaut donc TOUJOURS `null` en application, et `null` est
+	 * lu par son unique consommateur — le pied du tableau de bord,
+	 * `src/vues/V-07.svelte` —, qui n'émet alors pas la ligne. On ne fabrique
+	 * pas une date à partir de rien.
+	 *
+	 * Le type reste `string | null` : le jour où une table porte cet instant, le
+	 * gabarit racine le sert et le pied se rallume sans rien changer ici.
+	 */
+	readonly synchro: string | null;
 }

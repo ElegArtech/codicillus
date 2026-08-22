@@ -37,12 +37,15 @@
 	 * du BALISAGE, qui écrit « 1er août 2026 » là où la fonction écrirait
 	 * « 1<sup>er</sup> août 2026 ». Huit états sur onze en dépendent.
 	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011). Ni le tampon de
-	 * vérification, ni la bascule de registre, ni le repliage des panneaux sur
-	 * petit écran, ni l'agrandissement du schéma, ni la copie d'un bloc de code.
-	 * L'attribut `onclick="window.print()"` du bouton « Imprimer » n'est pas
-	 * porté : c'est un comportement, et **ce lot ne déclare pas `RG-M18-17`
-	 * tenue**. Le bouton est rendu, son effet appartient au lot d'impression.
+	 * AUCUN COMPORTEMENT N'EST ÉCRIT ICI, ET CE N'EST PLUS UN REFUS.
+	 * `ARB-011` est RÉVOQUÉ : un geste dessiné est un geste promis, et tous les
+	 * gestes de cet écran agissent. Ils sont simplement câblés depuis la route,
+	 * `src/routes/notes/{identifiant}/cablage.ts` et son `+page.svelte`
+	 * (`ARB-063`) — la bascule de registre, le tampon de vérification, la copie
+	 * d'un bloc, la loupe, « Imprimer » (`window.print()`, ce que la maquette
+	 * écrit), « Exporter » et le « + Ajouter » du panneau « Relations ».
+	 * Le seul mot à retenir en écrivant ici : ne rien renommer ni retirer de ce
+	 * que ces câblages visent — un libellé de bouton, un identifiant, une classe.
 	 *
 	 * **CE LOT NE DÉCLARE PAS `P-09` TENUE.** Les actions d'écriture disparaissent
 	 * en lecture seule par `si-ecriture` et `.app[data-droits="lecture"]`

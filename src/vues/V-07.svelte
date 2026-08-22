@@ -53,9 +53,10 @@
 	 * passe le compte connecté, les univers, les domaines, les consultations des
 	 * sept derniers jours et de la semaine précédente, les anciennetés de
 	 * modification, l'activité et les demandes de révision, toutes bornées au
-	 * périmètre autorisé par `$lib/donnees/accueil`. Seul `instance` reste la
-	 * constante du jeu — la base ne porte ni la version du produit, ni l'instant
-	 * de la dernière synchronisation (`SANS_CONTREPARTIE_EN_BASE`).
+	 * périmètre autorisé par `$lib/donnees/accueil`. Le pied lit les deux faits
+	 * d'instance dans le contexte d'identité — version réelle, et pas de ligne de
+	 * synchronisation, faute d'une telle donnée en base ; `instance` n'est plus
+	 * que le défaut de revue.
 	 *
 	 * `RG-M01-02` : l'indicateur « En attente de révision » et la corbeille de
 	 * révisions lisent LA MÊME SOURCE — `revisionsCourantes`, une seule fois.
@@ -132,9 +133,11 @@
 		type Univers,
 		type UtilisateurCourant
 	} from '../../seeds/corpus';
+	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 	import { BARRES_DE_JAUGE, temoinFraicheur } from '$lib/fraicheur';
 	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
 	import {
@@ -238,6 +241,30 @@
 
 	const reglage = $derived(vecteur ?? {});
 	const profil = $derived(String(reglage['role'] ?? 'referent'));
+
+	/**
+	 * LE PIED DU TABLEAU DE BORD DIT DEUX FAITS SUR L'INSTANCE — il les lit donc
+	 * où le rail les lit : `$lib/coquille/identite.ts`. Sans ce contexte — hors
+	 * application, en revue de vue —, `instance` reprend la main, et le rendu par
+	 * défaut ne bouge pas.
+	 *
+	 * La version venait de `INSTANCE`, un numéro de démonstration, sur la même
+	 * page dont le rail affiche déjà celle de `package.json` : deux chiffres
+	 * pour un seul fait. La synchronisation, elle, n'existe nulle part en base ;
+	 * le contexte rend `null`, et `null` veut dire : ne rends pas la ligne. On
+	 * ne fabrique pas une date à partir de rien (P-02).
+	 */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const versionAffichee = $derived(identite?.version ?? instance.version);
+	const synchroAffichee = $derived(identite === undefined ? instance.synchro : identite.synchro);
+	/**
+	 * QUI EST ADMINISTRATEUR — LE CONTEXTE LE SAIT, LE VECTEUR NE FAIT QUE LE
+	 * JOUER. `profil` vient du vecteur de planche, et aucune route ne passe de
+	 * vecteur : il valait donc toujours « referent » dans le produit, et la
+	 * tuile « Consultations » sortait désactivée même pour un administrateur.
+	 * Hors application, le contexte est absent et le profil reprend la main.
+	 */
+	const administrateur = $derived(identite?.administrateur ?? profil === 'admin');
 	/**
 	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
 	 *
@@ -305,8 +332,17 @@
 	/* ── Salutation ─────────────────────────────────────────────────────────
 	   Le chiffre marquant porte sur le périmètre de la personne, pas sur le
 	   corpus entier : c'est ce qui fait la différence entre une salutation et
-	   une statistique. */
-	const mien = $derived(corpus.filter((n) => n.domaine === moi.domaine && estNote(n)));
+	   une statistique.
+
+	   SANS RATTACHEMENT, LE PÉRIMÈTRE EST LA BASE ENTIÈRE. `comptes.domaine_id`
+	   est nullable, et c'est le cas de TOUT compte d'amorçage : le domaine rendu
+	   est alors la chaîne vide. Le filtrer dessus donnerait 0 note, démenti par
+	   la tuile « Notes au total » trois lignes plus bas. La salutation compte
+	   donc tout le corpus, et sa phrase le dit (« Votre base compte … »). */
+	const sansPerimetre = $derived(moi.domaine.trim() === '');
+	const mien = $derived(
+		sansPerimetre ? toutesLesNotes : corpus.filter((n) => n.domaine === moi.domaine && estNote(n))
+	);
 	const recentes = $derived(
 		mien.filter((n) => {
 			const j = modifications[n.id];
@@ -510,20 +546,26 @@
 	 *
 	 *   `r-note`, `v-creer`   → V-17, l'éditeur de note      → `/notes/nouvelle`
 	 *   `r-import`, `v-importer` → V-24, l'import            → `/importer`
-	 *   `r-signet`            → V-23, la création de signet  → le domaine du compte
+	 *   `r-signet`            → V-23, la création de signet  → un domaine
 	 *
 	 * LE SIGNET SE CRÉE DANS UN DOMAINE, et le gel n'en nomme aucun : l'adresse de
 	 * V-23 en exige un (`RG-STR-02` — un domaine ne s'identifie que dans son
-	 * univers). Celui du compte connecté est le seul choix qui ne devine rien :
-	 * c'est déjà le domaine pré-choisi de la note vierge de V-17 (`V-17:3537`).
-	 * Faute de le trouver dans les domaines accessibles, le geste mène à la page
-	 * du domaine plutôt que nulle part.
+	 * univers). Le domaine de rattachement du compte est le premier choix.
+	 *
+	 * `comptes.domaine_id` EST NULLABLE, et il est vide sur tout compte d'amorçage :
+	 * s'y arrêter rendait le raccourci mort-né sur une installation neuve. À défaut
+	 * de rattachement, on ouvre V-23 sur le premier domaine accessible — le formulaire
+	 * y nomme son domaine, la personne voit où elle range. Le geste ne s'éteint que
+	 * si AUCUN domaine n'existe : il n'y a alors nulle part où poser un signet, et le
+	 * bouton le dit.
 	 */
-	const domaineDuCompte = $derived(domainesAccessibles.find((d) => d.nom === moi.domaine));
+	const domaineDuSignet = $derived(
+		domainesAccessibles.find((d) => d.nom === moi.domaine) ?? domainesAccessibles[0]
+	);
 
 	function creerUnSignet(): void {
-		if (domaineDuCompte === undefined) return;
-		allerA(adresseDeCreationDeSignet(domaineDuCompte.univers, domaineDuCompte.nom));
+		if (domaineDuSignet === undefined) return;
+		allerA(adresseDeCreationDeSignet(domaineDuSignet.univers, domaineDuSignet.nom));
 	}
 
 	/**
@@ -540,6 +582,8 @@
 	 * « CONSULTATIONS · 7 JOURS » MÈNE À LA CONSOLE ANALYTIQUE (V-34), et elle
 	 * n'est ouverte qu'à l'administrateur. Le geste n'est POSÉ que pour lui : un
 	 * bouton qui mènerait un référent à un refus serait pire qu'un bouton inerte.
+	 * C'est `administrateur` — le contexte d'identité — qui tranche, jamais le
+	 * profil du vecteur, qu'aucune route ne passe.
 	 *
 	 * « EN ATTENTE DE RÉVISION » NE NAVIGUE PAS : la corbeille de révisions est
 	 * SUR CET ÉCRAN, panneau `#p-revisions`. L'indicateur y amène — c'est ce que
@@ -650,7 +694,7 @@
 		role: moi.role,
 		domaine: moi.domaine
 	}}
-	version={instance.version}
+	version={versionAffichee}
 >
 	{#snippet enfants()}
 		<!-- ---------- Salutation ---------- -->
@@ -686,7 +730,7 @@
 				</div>
 			{:else}
 				<!-- prettier-ignore -->
-				<p class="salut__sous" id="salut-sous">{'Votre périmètre, ' + moi.domaine + ', compte '}<b>{nb(mien.length)}</b>{#if recentes.length}{(mien.length > 1 ? ' notes' : ' note') + ', dont '}<b>{nb(recentes.length)}</b>{recentes.length > 1 ? ' mises à jour cette semaine.' : ' mise à jour cette semaine.'}{:else}{(mien.length > 1 ? ' notes' : ' note') + ". Aucune n'a bougé cette semaine."}{/if}</p>
+				<p class="salut__sous" id="salut-sous">{sansPerimetre ? 'Votre base compte ' : 'Votre périmètre, ' + moi.domaine + ', compte '}<b>{nb(mien.length)}</b>{#if recentes.length}{(mien.length > 1 ? ' notes' : ' note') + ', dont '}<b>{nb(recentes.length)}</b>{recentes.length > 1 ? ' mises à jour cette semaine.' : ' mise à jour cette semaine.'}{:else}{(mien.length > 1 ? ' notes' : ' note') + ". Aucune n'a bougé cette semaine."}{/if}</p>
 			{/if}
 		</header>
 
@@ -791,7 +835,7 @@
 						false,
 						null,
 						true,
-						profil === 'admin' ? () => void goto(resolve('/console/analytique')) : null
+						administrateur ? () => void goto(resolve('/console/analytique')) : null
 					)}
 				{/if}
 				{@render indicateur(
@@ -990,7 +1034,10 @@
 									<button
 										class="btn btn--plein"
 										id="r-signet"
-										disabled={domaineDuCompte === undefined}
+										disabled={domaineDuSignet === undefined}
+										title={domaineDuSignet === undefined
+											? 'Aucun domaine où ranger un signet.'
+											: undefined}
 										onclick={creerUnSignet}
 									>
 										<svg
@@ -1014,10 +1061,11 @@
 				{#if etatPage === 'chargement'}
 					{@render esquisse('esq-l', '38%')}
 				{:else if etatPage !== 'vide'}
-					<span>{'Codicillus ' + instance.version}</span>
+					<span>{'Codicillus ' + versionAffichee}</span>
 					<!-- prettier-ignore -->
 					<span><span><b>{nb(toutesLesNotes.length)}</b>{' ' + (toutesLesNotes.length > 1 ? 'notes' : 'note')}</span> · <span><b>{nb(signets)}</b>{' ' + (signets > 1 ? 'signets' : 'signet')}</span></span>
-					<span>{'Dernière synchronisation ' + instance.synchro}</span>
+					{#if synchroAffichee !== null}<span>{'Dernière synchronisation ' + synchroAffichee}</span
+						>{/if}
 				{/if}
 			</footer>
 		</div>
