@@ -2557,3 +2557,80 @@ inventer en cours d'exécution aurait été un défaut de contrat. Elles sont tr
 
 **Ce que cet arbitrage ne fait pas** : il ne déplace pas un signet d'un domaine à un autre — cela
 demanderait le droit de rédaction sur les deux (`RG-M05-09`) et l'écran ne l'offre pas.
+
+---
+
+## ARB-065 — Un univers sans domaine S'OUVRE, il ne rend plus 404
+
+*Rendu le 22 août 2026, sur le signalement de l'utilisateur : « pas possible de cliquer en side
+bar sur le nom de l'univers pour arriver à sa page ».*
+
+### §1 — Le constat
+
+Sur une instance neuve, le premier geste du produit est de **créer un univers** — c'est ce que
+`pnpm base:administrateur` annonce en toutes lettres : « il peut se connecter et créer le reste
+depuis la console : univers, domaines… ». Cet univers n'était ouvrable **par aucun chemin** :
+
+| Chemin | Ce qu'il faisait |
+|---|---|
+| le rail | l'écartait — il ne liste que les univers porteurs d'un domaine |
+| la console V-27 | n'y mène pas : aucun lien vers `/univers/{u}` |
+| l'adresse directe | **404** |
+
+Le produit demandait donc de commencer par un geste dont il refusait ensuite le résultat.
+
+Le refus était **écrit et assumé** dans `src/routes/univers/[univers]/+page.server.ts` :
+« la position "sans domaine" de la planche ne peut pas être atteinte par cette route, puisque
+zéro domaine lisible rend 404 ». Le constat technique était juste ; la conclusion était fausse.
+C'est le glissement de `P-3`, et le CLAUDE.md le nomme déjà : *« les deux causes étaient des
+refus posés par doctrine — échoue plutôt que de se donner un défaut »*.
+
+### §2 — Ce que le gel dessine, et que rien n'atteignait
+
+`mockups/V-10-page-univers.html` porte un bloc `.vide-univers` **complet** : sa feuille de style
+(`/* --- Univers sans domaine --- */`), son titre « Cet univers ne contient aucun domaine », sa
+phrase d'explication, et un bouton « Créer un domaine dans {nom} ». `src/vues/V-10.svelte:449`
+le transcrit déjà, fidèlement.
+
+Un état dessiné, stylé, transcrit — et qu'aucune adresse ne peut atteindre — est un défaut, pas
+une fidélité.
+
+### §3 — Ce qui est décidé
+
+**Un univers dont la base dit qu'il ne porte AUCUN domaine s'ouvre pour un appelant authentifié**,
+et rend l'état vide du gel.
+
+Les deux refus de `RG-ACC-04` ne bougent pas, et c'est ce qui rend l'ouverture sûre :
+
+- un univers **absent** rend 404 ;
+- un univers qui porte des domaines dont **aucun n'est lisible** rend 404, par le même point de
+  sortie et sans se distinguer du premier (`ADR-007`) ;
+- l'**anonyme** reste dehors — `docs/routes.md` §5.5 le veut en 404 sur toute la famille
+  `/univers/…`, et un nom d'univers est une information d'instance.
+
+Seul s'ouvre l'univers qui ne porte rien. Il n'y a alors **aucun contenu à protéger**, et le
+refuser ne protège que du vide.
+
+### §4 — Deux conséquences qu'il a fallu tirer en même temps
+
+**La liste d'univers passée à la vue.** `lireLeRangementLisible()` réduit les univers à ceux qui
+portent un domaine lisible — ce qu'il doit faire (`P-03`). Un univers vide en est donc absent, et
+`V-10.svelte:163` cherche `univers.find(…) ?? univers[0]` : sur une liste vide, la vue rompt en
+lisant `.nom`. Mesuré — **500, pas 404**. L'univers que l'adresse nomme est désormais ajouté à la
+liste, et lui seul : passer la liste complète aurait révélé les noms des autres.
+
+**Le droit qui gouverne le bouton.** `peutEcrireDansLUn()` interroge les DOSSIERS lisibles, et un
+univers sans domaine n'en a aucun : il rendait toujours « lecture », et le seul geste de l'état
+vide serait resté caché à l'administrateur lui-même — le défaut d'hier, ouvrir la page et y taire
+la sortie. La question que pose ce bouton n'est pas « peut-il écrire une note ici » (il n'y a pas
+de « ici ») mais « peut-il créer un domaine », et un domaine ne se crée qu'à la console.
+`accesALaConsole()` est donc le prédicat, et c'est le même que la route de destination applique :
+le bouton ne mène pas à un refus.
+
+### §5 — Ce qui n'est PAS décidé ici
+
+**Le rail continue d'écarter les univers sans domaine, et c'est le gel lui-même** :
+`mockups/V-07-accueil-contributeur.html`, `construireRail()` — `universOrdonnes().filter(u =>
+domainesDe(u.nom).length)`. La transcription est fidèle et n'est pas touchée. Un univers vide se
+rejoint donc par son adresse, non par le rail ; **aucun lien du produit n'y mène encore**, et
+c'est un manque déclaré, pas un point réglé.
