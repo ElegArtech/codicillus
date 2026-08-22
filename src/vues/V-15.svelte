@@ -143,6 +143,16 @@
 		 */
 		note?: Note;
 		/**
+		 * COMPARER DEUX VERSIONS. Absente — le rendu d'une planche —, les cases
+		 * restent inertes et « Comparer » désactivé, comme au gel. Passée par la
+		 * route, la sélection s'arme et le bouton navigue.
+		 *
+		 * Le gel écrit `disabled` en dur sur `#comparer` et n'attache rien aux
+		 * cases : `/notes/{id}/comparaison` existait donc sans qu'aucun clic n'y
+		 * mène. Mesuré le 22/08/2026.
+		 */
+		onComparer?: (a: number, b: number) => void;
+		/**
 		 * LE NUMÉRO DE LA VERSION CONSULTÉE — `?version={n}`, `docs/routes.md:224`.
 		 *
 		 * `null`, absent, ou désignant la version courante : le bandeau reste
@@ -163,7 +173,8 @@
 		versions: historique = VERSIONS,
 		retentionVersions = RETENTION_VERSIONS,
 		note = undefined,
-		versionAffichee = null
+		versionAffichee = null,
+		onComparer
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -297,13 +308,25 @@
 				: null
 	);
 
+	/** Les numéros de version cochés, au plus deux. */
+	let choisies = $state<number[]>([]);
+	function basculerChoix(n: number): void {
+		choisies = choisies.includes(n) ? choisies.filter((x) => x !== n) : [...choisies, n].slice(-2);
+	}
+
 	/**
 	 * Le pied du panneau. Aucune version n'est sélectionnée à l'état de départ :
 	 * « Comparer » est donc toujours désactivé ici, et le compte annonce ce
 	 * qu'il reste à faire — ou l'impossibilité de comparer.
 	 */
 	const compte = $derived(
-		versions.length < 2 ? 'Comparaison indisponible' : 'Sélectionnez deux versions'
+		versions.length < 2
+			? 'Comparaison indisponible'
+			: onComparer === undefined || choisies.length === 0
+				? 'Sélectionnez deux versions'
+				: choisies.length === 1
+					? 'Une version sélectionnée'
+					: 'Deux versions sélectionnées'
 	);
 
 	/** L'ancienneté d'une version, en clair — `relatif()`, `V-15:2761`. */
@@ -337,6 +360,8 @@
 			><input
 				type="checkbox"
 				disabled={versions.length < 2}
+				checked={choisies.includes(v.n)}
+				onchange={() => basculerChoix(v.n)}
 				aria-label="Sélectionner la version {v.n} pour comparaison"
 			/></label
 		><button class="ver__corps" type="button"
@@ -462,7 +487,15 @@
 
 			<div class="tiroir__pied">
 				<span class="tiroir__compte" id="selection">{compte}</span>
-				<button class="btn btn--principal" id="comparer" disabled>Comparer</button>
+				<button
+					class="btn btn--principal"
+					id="comparer"
+					disabled={onComparer === undefined || choisies.length !== 2}
+					onclick={() => {
+						const [a, b] = [...choisies].sort((x, y) => x - y);
+						if (a !== undefined && b !== undefined) onComparer?.(a, b);
+					}}>Comparer</button
+				>
 			</div>
 		</aside>
 	{/snippet}

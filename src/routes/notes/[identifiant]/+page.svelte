@@ -75,6 +75,8 @@
 	 * `formulaire.action` avant `requestSubmit()` est une COURSE, et elle a fait
 	 * partir une restauration vers une suppression.
 	 */
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { deserialize } from '$app/forms';
 	import Vue from '../../../vues/V-14.svelte';
@@ -706,9 +708,23 @@
 			versions={{ [data.lecture.note.id]: data.histoire.versions }}
 			retentionVersions={data.histoire.retention}
 			versionAffichee={data.histoire.affichee?.numero ?? null}
+			onComparer={(a, b) => {
+				/* `resolve()` compose le CHEMIN ; la chaîne de requête s'ajoute après,
+				   et la règle ne sait pas la reconnaître — même désarmement qu'en
+				   V-03, V-13, V-22, V-24 et à la console analytique. */
+				const adresse =
+					resolve('/notes/[identifiant]/comparaison', {
+						identifiant: data.lecture.note.id
+					}) + `?versions=${a}-${b}`;
+				// eslint-disable-next-line svelte/no-navigation-without-resolve
+				void goto(adresse);
+			}}
 		/>
 	{:else}
 		<Vue
+			adresseDesRelations={resolve('/notes/[identifiant]/relations', {
+				identifiant: data.lecture.note.id
+			})}
 			vecteur={data.vecteur}
 			notes={data.notes}
 			affichee={data.affichee}
