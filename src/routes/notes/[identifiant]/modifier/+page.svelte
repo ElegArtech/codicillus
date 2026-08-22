@@ -27,13 +27,14 @@
 	 * `pnpm test:aller-retour` est ce qui rend cette phrase vraie.
 	 *
 	 * ═════════════════════════════════════════════════════════════════════════
-	 * CE QUE CET ÉCRAN NE PROPOSE PAS ENCORE
+	 * LE RANGEMENT SERVI EST CELUI DE LA BASE
 	 *
-	 * Le sélecteur de domaine ne recharge PAS : déplacer une note exige le droit
-	 * de rédaction sur le dossier d'origine ET sur celui de destination
-	 * (`RG-M05-09`, `CDC:752`), et l'arborescence rendue est celle du domaine
-	 * courant. Le déplacement se soumet donc, mais il ne s'explore pas depuis cet
-	 * écran. Écart déclaré.
+	 * Le sélecteur de domaine et l'arborescence de dossiers viennent du chargeur
+	 * et du gabarit racine, comme à la création. Sans eux, V-17 retombait sur les
+	 * constantes du jeu de semence : mesuré le 22/08/2026, l'écran offrait
+	 * « Production › Applications », « Production › Poste de travail » et
+	 * « Projets › Migration 2026 » — trois domaines qui n'existent nulle part en
+	 * base — et sa liste de dossiers sortait vide.
 	 *
 	 * `horsDePorteeDeLEditeur` reste non montré : la liste est vide quand la note
 	 * s'ouvre entière, et aucun nœud du gel ne l'accueillerait autrement.
@@ -52,9 +53,23 @@
 		peindreLeRefusDEdition
 	} from '$lib/edition/gestes';
 	import { adresseDeNote } from '$lib/rangement/adresses';
+	import { MOI } from '../../../../../seeds/corpus';
 	import type { ActionData, PageData } from './$types';
 
 	const { data, form }: { data: PageData; form: ActionData } = $props();
+
+	/* LE COMPTE RÉEL, ET L'UNIVERS DE LA NOTE. Sans eux, la pastille nomme
+	   « Karim Belhadj » et le fil d'Ariane place la note dans l'univers du jeu de
+	   semence. `universDuCompte` est ici l'univers du domaine PORTEUR : c'est lui
+	   que le fil rend en modification, aux côtés du domaine de la note. */
+	const compteServi = $derived(page.data.compte ?? MOI);
+	const compte = $derived({
+		...MOI,
+		nom: compteServi.nom,
+		initiales: compteServi.initiales,
+		role: compteServi.role,
+		domaine: compteServi.domaine
+	});
 
 	let formulaire: HTMLFormElement;
 
@@ -88,6 +103,11 @@
 				: monterLEditeur(zone, data.corps, formulaire, {
 						surChangement: () => gestes?.signalerUneModification()
 					});
+		/* PAS DE `rechargerSurDomaine` ICI, ET C'EST VOULU. Changer de domaine doit
+		   refaire l'arbre des dossiers — sans quoi déplacer une note est impossible
+		   —, mais un rechargement de page jetterait le corps en cours de rédaction.
+		   V-17 suit désormais la valeur vive du sélecteur et refait l'arbre
+		   elle-même ; le dossier repris tombe, comme l'aide du champ le promet. */
 		const defaire = cablerLEditeur(formulaire, {
 			...(editeur === null ? {} : { editeur: () => editeur.document() })
 		});
@@ -109,6 +129,10 @@
 
 <form method="POST" bind:this={formulaire} style="display:contents">
 	<Vue
+		domaines={page.data.domaines}
+		universDuCompte={data.noteModifiee.univers}
+		dossiersParDomaine={data.dossiersParDomaine}
+		{compte}
 		vecteur={data.vecteur}
 		notes={data.notes}
 		noteModifiee={data.noteModifiee}

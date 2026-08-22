@@ -22,7 +22,7 @@
 import { describe, expect, it } from 'vitest';
 import { compterLesLiensDUnDocument, compterPorteur } from '../contenu/commandes';
 import { analyserDocument, CONSTRUCTIONS, type Bloc, type Document } from '../contenu/document';
-import { documentDepuisNoeud, EditeurIncapable, noeudDepuisDocument } from './document';
+import { documentDepuisNoeud, noeudDepuisDocument } from './document';
 import {
 	compteDesConstructions,
 	CONSTRUCTIONS_DE_LEDITEUR,
@@ -54,30 +54,32 @@ describe('chaque gabarit d’insertion du gel est un document canonique que l’
 	});
 });
 
+/* Les six sont portées depuis que `schema.ts` écrit le surligné en propre. Le
+   septième cas ci-dessous le vérifie NOMMÉMENT, pour que sa disparition rougisse. */
 describe('les six marques de caractère de la barre gelée', () => {
 	for (const bouton of MARQUES_DE_LA_BARRE) {
-		const manquante = bouton.marque === 'highlight';
-		it(`« ${bouton.libelle} » — ${manquante ? 'HORS DE PORTÉE, et c’est la lacune n° 2' : 'portée par l’éditeur'}`, () => {
+		it(`« ${bouton.libelle} » — portée par l’éditeur`, () => {
 			const gabarit = analyserDocument(gabaritDeMarque(bouton.marque, bouton.libelle));
-			/* Le format l'accepte dans les six cas : la lacune n'est pas dans le
-				   format, elle est dans l'outillage. */
 			expect(compterPorteur(gabarit, bouton.marque)).toBe(1);
-			if (manquante) {
-				expect(() => noeudDepuisDocument(gabarit)).toThrow();
-				return;
-			}
 			expect(JSON.stringify(documentDepuisNoeud(noeudDepuisDocument(gabarit)))).toBe(
 				JSON.stringify(gabarit)
 			);
 		});
 	}
+
+	it('le surligné est du lot — c’était la seule marque hors de portée', () => {
+		const surligne = MARQUES_DE_LA_BARRE.find((b) => b.marque === 'highlight');
+		expect(surligne, 'le bouton « Surligné » du gel (V-17:1526)').toBeDefined();
+		const gabarit = analyserDocument(gabaritDeMarque('highlight', 'Surligné'));
+		expect(compterPorteur(documentDepuisNoeud(noeudDepuisDocument(gabarit)), 'highlight')).toBe(1);
+	});
 });
 
 /* ═══════════════════════════════════ Les porteurs, un par un ════════════ */
 
 /**
  * TOUT CE QUE L'ÉDITEUR SAIT INSÉRER, en un seul document — les gabarits du gel,
- * les cinq marques portées, les trois fabriques paramétrées, et les niveaux de
+ * les six marques de la barre, les trois fabriques paramétrées, et les niveaux de
  * titre que le schéma admet et que la barre n'offre pas.
  *
  * Les valeurs des fabriques sont celles du gel là où il en donne
@@ -87,11 +89,10 @@ describe('les six marques de caractère de la barre gelée', () => {
  * l'écran devra fournir, et les lacunes 10 et 12 disent qu'aucun écran ne les
  * fournit encore.
  */
-function toutCeQueLEditeurInsere(avecLeSurligne: boolean): Document {
+function toutCeQueLEditeurInsere(): Document {
 	const blocs: Bloc[] = [];
 	for (const gabarit of GABARITS) blocs.push(...gabarit.blocs);
 	for (const bouton of MARQUES_DE_LA_BARRE) {
-		if (!avecLeSurligne && bouton.marque === 'highlight') continue;
 		blocs.push(...gabaritDeMarque(bouton.marque, bouton.libelle).content);
 	}
 	blocs.push(...gabaritDeLienInterne('n-restaurer-pg', 'Restaurer une base PostgreSQL').content);
@@ -119,11 +120,8 @@ function toutCeQueLEditeurInsere(avecLeSurligne: boolean): Document {
 	return analyserDocument(document(blocs));
 }
 
-/** Tout ce que la BARRE GELÉE commande — le surligné compris, que le format admet. */
-const TOUT = toutCeQueLEditeurInsere(true);
-
-/** Le même, moins la seule marque que l'éditeur ne sait pas porter (lacune n° 2). */
-const TOUT_PORTE = toutCeQueLEditeurInsere(false);
+/** Tout ce que la BARRE GELÉE commande — le surligné compris, et l'éditeur le porte. */
+const TOUT = toutCeQueLEditeurInsere();
 
 describe('les quinze constructions de M04.6, porteur par porteur', () => {
 	for (const construction of CONSTRUCTIONS) {
@@ -157,20 +155,18 @@ describe('les quinze constructions de M04.6, porteur par porteur', () => {
 		expect(GABARITS.filter((g) => g.cle.startsWith('h'))).toHaveLength(3);
 	});
 
-	it('tout ce que l’éditeur PORTE traverse ses deux portes sans perte', () => {
-		expect(JSON.stringify(documentDepuisNoeud(noeudDepuisDocument(TOUT_PORTE)))).toBe(
-			JSON.stringify(TOUT_PORTE)
+	it('tout ce que la barre gelée commande traverse les deux portes sans perte', () => {
+		expect(JSON.stringify(documentDepuisNoeud(noeudDepuisDocument(TOUT)))).toBe(
+			JSON.stringify(TOUT)
 		);
 	});
 
-	it('et ce que la barre gelée commande de PLUS est exactement le surligné', () => {
-		/* La différence entre les deux documents chiffre la lacune n° 2 : elle vaut
-		   un bloc, celui du bouton « Surligné » (V-17:1526). Un jour où l'extension
-		   serait posée, ce cas rougirait — c'est ce qu'on veut d'une lacune. */
-		expect(() => noeudDepuisDocument(TOUT)).toThrow(EditeurIncapable);
-		expect(TOUT.content.length - TOUT_PORTE.content.length).toBe(1);
+	it('le surligné y est, et il ressort — plus rien n’est retiré du document d’épreuve', () => {
+		/* Ce cas portait la lacune n° 2 : le document devait être amputé du bouton
+		   « Surligné » (V-17:1526) pour entrer. La marque est écrite en propre au
+		   schéma, l'amputation n'a plus lieu d'être. */
 		expect(compterPorteur(TOUT, 'highlight')).toBe(1);
-		expect(compterPorteur(TOUT_PORTE, 'highlight')).toBe(0);
+		expect(compterPorteur(documentDepuisNoeud(noeudDepuisDocument(TOUT)), 'highlight')).toBe(1);
 	});
 });
 
@@ -195,8 +191,11 @@ describe('les lacunes sont nommées, comptées, et la liste est opposable', () =
 		}
 	});
 
-	it('la seule marque sans extension est celle que la lacune n° 2 nomme', () => {
-		expect(compteDesConstructions().marquesSansExtension).toEqual(['highlight']);
+	it('aucune marque du format n’est sans porteur — le surligné était la dernière', () => {
+		/* La liste est calculée par `schema.ts` ; le surligné y figurait, il est
+		   désormais écrit en propre. Une marque nouvelle au format sans porteur au
+		   schéma ferait rougir ce cas. */
+		expect(compteDesConstructions().marquesSansExtension).toEqual([]);
 	});
 
 	it('les quinze entrées du relevé nomment une origine et au moins une commande', () => {

@@ -173,13 +173,14 @@ describe('les marques du schéma suivent l’ordre du format — règle 7, ARB-0
 /* ═══════════════════════════════════ Ce qui manque, nommé et compté ═════ */
 
 describe('ce que les extensions installées n’apportent pas est nommé et compté', () => {
-	it('une seule marque du format n’a aucune extension, et c’est le surligné', () => {
-		expect(MARQUES_DU_FORMAT_SANS_EXTENSION).toEqual(['highlight']);
+	it('aucune marque du format ne manque au schéma de l’éditeur', () => {
+		/* Le surligné y figurait ; `schema.ts` l'écrit désormais en propre. */
+		expect(MARQUES_DU_FORMAT_SANS_EXTENSION).toEqual([]);
 	});
 
-	it('elle est bien du format, et le format lui donne un rang', () => {
-		/* Ce n'est donc pas une marque imaginaire : le vide est réel. */
+	it('le surligné est du format, et le schéma le porte', () => {
 		expect(RANG_DE_MARQUE['highlight']).toBe(5);
+		expect(schemaDeLEditeur.marks['highlight']).toBeDefined();
 	});
 
 	it('les trois extensions que la pile nomme et qui manquent sont énumérées', () => {

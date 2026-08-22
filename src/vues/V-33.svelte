@@ -89,9 +89,10 @@
 	 * `P-09`, ni `P-02`, ni `RG-M15-03` ne sont déclarées tenues par ce lot.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
-	 * (P-6.1) et de `src/vues/V-33.css` (P-6.3), posé par
-	 * `node verif/feuilles-de-vue.mjs V-33 --installer`. Les `style=` reproduits
-	 * figurent tous à l'ensemble clos du gel (ARB-016).
+	 * et de `src/vues/V-33.css`, extraite du gel. Cette feuille n'en est plus la
+	 * copie à l'octet : les règles de `.repart` y suivent les `span` de
+	 * l'aperçu d'impact (voir `barreRepartition` plus bas). Le rendu, lui, est
+	 * inchangé. Les `style=` reproduits figurent tous à l'ensemble clos du gel.
 	 */
 	import {
 		CONFIG,
@@ -336,10 +337,21 @@
 	« Aucune note à mesurer. ». Le corpus natif de V-33 ne l'exerce jamais :
 	`verif:maquette` était vert sans que ce chemin soit parcouru une seule fois
 	(CLAUDE.md §6, P-5). C'est `pnpm test:vide` — corpus vierge — qui l'a levé.
+
+	ICI LES SEGMENTS SONT DES `span`, ET NON DES BOUTONS. Ailleurs (V-07, V-10,
+	V-11) une part de barre ouvre la liste filtrée sur son niveau ; ces deux
+	barres-là ne le peuvent pas. « Avec ces seuils » compte selon des seuils
+	SAISIS, pas encore enregistrés : aucune liste ne sait reproduire ce filtre,
+	le serveur ne connaît que la configuration en vigueur. Et rendre sa jumelle
+	« Actuellement » cliquable seule ferait d'une comparaison deux objets de
+	nature différente. Un bouton dessiné est un geste promis : on ne dessine donc
+	pas de bouton. Le gel fait le même choix — il appelle sa fabrique sans
+	`surPart` (`V-33:3084`), les segments y étaient inertes. La barre reste ce
+	qu'annonce son rôle d'image, une illustration, avec son nom accessible.
 -->
 <!-- prettier-ignore -->
 {#snippet barreRepartition(r: Repartition, sansLegende: boolean)}{#if !r.total}<div class="zone-etat__txt" style="margin:0">Aucune note à mesurer.</div>{:else}<div class="repart" role="img" aria-label={libelleDeBarre(r)}
-		>{#each partsDe(r) as p (p.cle)}<button type="button" class={p.classe} style="flex:{p.n}" title={p.libelle} aria-label={p.libelle}></button>{/each}</div
+		>{#each partsDe(r) as p (p.cle)}<span class={p.classe} style="flex:{p.n}" title={p.libelle}></span>{/each}</div
 	>{#if !sansLegende}<div class="legende"
 		>{#each partsDe(r) as p (p.cle)}<span><i class={p.classe}></i><b>{p.n}</b>{` ${p.n > 1 ? p.pluriel : p.singulier}`}</span>{/each}</div
 	>{/if}{/if}{/snippet}

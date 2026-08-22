@@ -193,7 +193,11 @@
 		/** Les notes dont se déduit l'arborescence des dossiers. */
 		notes: readonly Note[];
 		compte: Compte;
-		/** La version de l'instance, affichée au pied du rail. */
+		/**
+		 * La version affichée au pied du rail. En application, le contexte —
+		 * `package.json` — l'emporte ; cette propriété ne sert qu'au rendu par
+		 * défaut des vues, où elle porte le `1.0.0` du jeu de semence.
+		 */
 		version: string;
 		/** Navigation ouverte, ou escamotée en mode concentration. */
 		rail?: 'ouvert' | 'ferme';
@@ -410,6 +414,11 @@
 	const universEffectif = $derived(identite === undefined ? univers : identite.univers);
 	const domainesEffectifs = $derived(identite === undefined ? domaines : identite.domaines);
 	const compteEffectif = $derived(identite?.compte ?? compte);
+	/* LA VERSION AFFICHÉE EST CELLE DU PAQUET. La propriété vaut `1.0.0` parce
+	   que les vues la prennent sur `INSTANCE` de `seeds/corpus.ts` — un numéro de
+	   démonstration. Hors application, ou sur la page d'erreur, le contexte est
+	   absent ou `null` et la propriété reprend la main : le gel ne bouge pas. */
+	const versionEffective = $derived(identite?.version ?? version);
 	const roleEffectif = $derived(
 		identite === undefined ? role : identite.administrateur ? 'admin' : 'referent'
 	);
@@ -573,7 +582,7 @@
 		{forme}
 		{sections}
 		{sectionsAbregees}
-		{version}
+		version={versionEffective}
 		{accueilCourant}
 		{droits}
 		role={roleEffectif}

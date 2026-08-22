@@ -159,6 +159,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .rail__titre--lien { display: block; text-decoration: none; }
 .rail__titre--lien:hover { color: var(--c-encre); }
 
+/* Dans les tables de la console, le nom d'un univers ou d'un domaine ouvre sa
+   page. Le gel rend un `div` : il n'a pas de serveur, donc nulle part où aller.
+   La console est l'endroit où on les CRÉE — sans ce lien, on ne peut pas aller
+   voir ce qu'on vient de créer. */
+.tg__ouvrir { color: inherit; text-decoration: none; }
+.tg__ouvrir:hover { text-decoration: underline; }
+
 .etiq {
   font-family: var(--f-donnee);
   font-size: var(--t-micro);

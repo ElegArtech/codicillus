@@ -309,14 +309,13 @@ export function initialesDuNom(nom: string): string {
  * L'utilisateur connecté, tel que la salutation et la barre supérieure le
  * nomment.
  *
- * LE RATTACHEMENT VIDE EST RENDU VIDE, ET C'EST UNE LACUNE CONNUE.
+ * LE RATTACHEMENT VIDE EST RENDU VIDE, ET LA VUE SAIT LE DIRE.
  * `comptes.domaine_id` est nullable PAR EXIGENCE — `RG-M14-04` (CDC:1149) veut
- * qu'un compte survive à la suppression de son domaine, rattachement vidé. La
- * salutation de V-07 NOMME le périmètre — « Votre périmètre, Infrastructure,
- * compte 14 notes » — et aucune source ne dit ce que cette phrase devient sans
- * domaine. Le nom rendu est alors la chaîne vide : le périmètre se calcule sur
- * elle, donc il est vide, ce qui est exact. La PHRASE, elle, reste boiteuse, et
- * c'est un vide de spécification remonté au rapport, pas comblé ici.
+ * qu'un compte survive à la suppression de son domaine, rattachement vidé ; et
+ * le compte d'amorçage d'une instance neuve n'en a jamais eu. Le nom rendu est
+ * alors la chaîne vide, ce qui est exact. V-07 ne la coule PAS dans « Votre
+ * périmètre, …, compte » : sans rattachement, sa salutation porte sur le corpus
+ * entier (« Votre base compte … »).
  */
 export async function lireCompteCourant(
 	base: Base,

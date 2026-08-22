@@ -63,5 +63,6 @@
 		notes={data.notes}
 		{...data.retenues === undefined ? {} : { retenues: data.retenues }}
 		{...data.tri === undefined ? {} : { tri: data.tri }}
+		modifications={data.modifications}
 	/>
 </div>
