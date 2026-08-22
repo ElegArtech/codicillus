@@ -90,7 +90,7 @@ describe('V-07 — accueil contributeur', () => {
 		const b = await corps('V-07', {});
 		expect(b).toContain('Bonjour Karim.'); // compte
 		expect(b).toContain('Codicillus 1.0.0'); // instance
-		expect(b).toContain('rail__titre etiq">Projets<'); // univers
+		expect(b).toContain('>Projets</a>'); // univers
 		expect(b).toContain('dans 4 domaines'); // domaines
 		expect(b).toContain('Signalées par des collègues'); // revisions
 		expect(b).toContain('evt evt--'); // activite
@@ -102,9 +102,7 @@ describe('V-07 — accueil contributeur', () => {
 	it('la propriété fournie l’emporte', async () => {
 		expect(await corps('V-07', { compte: SOPHIE })).toContain('Bonjour Sophie.');
 		expect(await corps('V-07', { instance: AUTRE_INSTANCE })).toContain('Codicillus 9.9.9');
-		expect(await corps('V-07', { univers: [UNIVERS[0]] })).not.toContain(
-			'rail__titre etiq">Projets<'
-		);
+		expect(await corps('V-07', { univers: [UNIVERS[0]] })).not.toContain('>Projets</a>');
 		expect(await corps('V-07', { domaines: [DOMAINES[3]] })).toContain('dans 1 domaine');
 		expect(await corps('V-07', { revisions: [] })).toContain('Rien de signalé');
 		expect(await corps('V-07', { activite: [] })).toContain('Rien de neuf cette semaine');
