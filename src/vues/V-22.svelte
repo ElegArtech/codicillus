@@ -90,6 +90,13 @@
 		compte?: UtilisateurCourant;
 		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
 		instance?: EtatDInstance;
+		/**
+		 * MODIFIER UN SIGNET. Absente — le rendu d'une planche —, le bouton reste
+		 * inerte comme au gel. Passée par la route, il mène à
+		 * `/univers/{u}/{d}/signets/{identifiant}/modifier`, un écran qui
+		 * existait sans qu'aucun clic n'y mène. Mesuré le 22/08/2026.
+		 */
+		onModifier?: (identifiant: string) => void;
 	}
 
 	const {
@@ -98,7 +105,8 @@
 		univers = UNIVERS,
 		domaines = DOMAINES,
 		compte = MOI,
-		instance = INSTANCE
+		instance = INSTANCE,
+		onModifier
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -282,7 +290,7 @@
 -->
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
 <!-- prettier-ignore -->
-{#snippet carteSignet(n: Note)}<article class="sig"><span class="sig__sceau" aria-hidden="true">{monogramme(n.url ?? '')}</span><div style="min-width:0"><a class="sig__titre" href={n.url} target="_blank" rel="noopener noreferrer" aria-label={n.titre + " — site externe, s'ouvre dans un nouvel onglet"}>{n.titre}</a><div class="sig__adresse"><span class="sig__hote">{hoteDe(n.url ?? '')}</span>{#if cheminAffiche(n.url ?? '')}<span class="sig__chemin">{cheminAffiche(n.url ?? '')}</span>{/if}<span class="sig__sortie"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg>site externe</span></div></div>{#if ecriture}<div class="sig__actions si-ecriture"><button class="btn" type="button">Modifier</button><button class="btn btn--destructif" type="button" aria-label={'Supprimer le signet ' + n.titre}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"/></svg></button></div>{/if}<p class="sig__desc">{n.extrait}</p><div class="sig__pied"><span class="sig__etq">{#each n.etiquettes as e (e)}<span class="past past--etiquette">{e}</span>{/each}</span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{'ajouté le ' + (n.ajoute ?? n.revise)}</span></div></article>{/snippet}
+{#snippet carteSignet(n: Note)}<article class="sig"><span class="sig__sceau" aria-hidden="true">{monogramme(n.url ?? '')}</span><div style="min-width:0"><a class="sig__titre" href={n.url} target="_blank" rel="noopener noreferrer" aria-label={n.titre + " — site externe, s'ouvre dans un nouvel onglet"}>{n.titre}</a><div class="sig__adresse"><span class="sig__hote">{hoteDe(n.url ?? '')}</span>{#if cheminAffiche(n.url ?? '')}<span class="sig__chemin">{cheminAffiche(n.url ?? '')}</span>{/if}<span class="sig__sortie"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg>site externe</span></div></div>{#if ecriture}<div class="sig__actions si-ecriture"><button class="btn" type="button" onclick={() => onModifier?.(n.id)}>Modifier</button><button class="btn btn--destructif" type="button" aria-label={'Supprimer le signet ' + n.titre}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"/></svg></button></div>{/if}<p class="sig__desc">{n.extrait}</p><div class="sig__pied"><span class="sig__etq">{#each n.etiquettes as e (e)}<span class="past past--etiquette">{e}</span>{/each}</span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{'ajouté le ' + (n.ajoute ?? n.revise)}</span></div></article>{/snippet}
 <!-- eslint-enable svelte/no-navigation-without-resolve -->
 
 <Coquille
