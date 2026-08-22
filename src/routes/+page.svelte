@@ -37,9 +37,10 @@
 	 * `T-041` avait rendu les sources de V-07 OPTIONNELLES sans que rien ne les
 	 * passe : l'écran affichait donc le jeu de semence. Elles arrivent
 	 * désormais du chargeur, toutes bornées au périmètre autorisé. `instance` —
-	 * la version et la dernière synchronisation du pied — reste la constante du
-	 * jeu : la base n'en porte AUCUNE des deux, et
-	 * `SANS_CONTREPARTIE_EN_BASE` le dit plutôt que ce fichier ne le taise.
+	 * la version et la dernière synchronisation du pied — ne passe pas par ici :
+	 * V-07 lit ces deux faits dans le contexte d'identité, comme le rail. La
+	 * version y est celle de `package.json` ; la synchronisation vaut `null`,
+	 * aucune table ne la portant, et la ligne n'est alors pas rendue.
 	 *
 	 * `ecriture` VIENT DU GABARIT, PAS DE LA VUE. `+layout.server.ts` calcule la
 	 * capacité d'écriture EN BASE (`capaciteDEcriture`, deux projections sur les

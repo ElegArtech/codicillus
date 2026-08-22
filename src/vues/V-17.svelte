@@ -244,8 +244,39 @@
 
 	const titre = $derived(cas === 'modif' ? (noteModifiee?.titre ?? '') : '');
 	const typeChoisi = $derived(cas === 'modif' ? (noteModifiee?.type ?? 'Procédure') : 'Procédure');
-	const domaineChoisi = $derived(cas === 'modif' ? (noteModifiee?.domaine ?? '') : compte.domaine);
-	const dossierChoisi = $derived(cas === 'modif' ? (noteModifiee?.dossier ?? null) : null);
+	/* LE DOMAINE VIF — celui que le sélecteur porte MAINTENANT, et non plus le
+	   seul domaine de la note reprise. Sans lui, changer de domaine ne changeait
+	   pas l'arbre des dossiers : le seul dossier cochable restait celui du
+	   domaine qu'on quitte, et l'enregistrement sortait en 400 « Choisissez un
+	   dossier de rangement. » — déplacer une note était impossible depuis
+	   l'écran. L'aide du champ promet l'inverse : « Changer de domaine
+	   réinitialise le dossier. » */
+	let domaineVif = $state<string | null>(null);
+	const domaineDeDepart = $derived(
+		cas === 'modif' ? (noteModifiee?.domaine ?? '') : compte.domaine
+	);
+	const domaineChoisi = $derived(domaineVif ?? domaineDeDepart);
+	/** L'univers du domaine choisi, tel que la liste servie le nomme. */
+	const universDuDomaineChoisi = $derived(
+		domaines.find((d) => d.nom === domaineChoisi)?.univers ?? universDuCompte
+	);
+	/* Le dossier repris ne vaut que dans SON domaine : on en sort, il tombe.
+
+	   UN DOSSIER VIDE DÉSIGNE LA RACINE, et c'est un chemin, pas une absence.
+	   `Note.dossier` ne porte que les segments SOUS la racine ; une note rangée
+	   dans la racine du domaine en a donc zéro. L'arborescence, elle, offre cette
+	   racine sous le nom du domaine — c'est ce que la soumission doit envoyer, et
+	   ce que la résolution d'écriture retire en tête. Sans cette équivalence,
+	   AUCUN dossier n'était coché à l'ouverture, la soumission partait sans
+	   dossier et l'enregistrement rendait `400 rangement incomplet` : modifier
+	   une note était impossible sur toute base où les notes sont à la racine. */
+	const dossierChoisi = $derived(
+		cas === 'modif' && domaineChoisi === domaineDeDepart
+			? noteModifiee === undefined
+				? null
+				: noteModifiee.dossier || domaineDeDepart
+			: null
+	);
 	const etiquettes = $derived(cas === 'modif' ? (noteModifiee?.etiquettes ?? []) : []);
 
 	/**
@@ -310,8 +341,8 @@
 	/** Le fil d'Ariane et le chemin courant du rail — `coquille({…})`, `V-17:3568`. */
 	const fil = $derived(
 		cas === 'modif'
-			? ['Accueil', universDuCompte, domaineChoisi, 'Modifier']
-			: ['Accueil', universDuCompte, compte.domaine, 'Nouvelle note']
+			? ['Accueil', universDuDomaineChoisi, domaineChoisi, 'Modifier']
+			: ['Accueil', universDuDomaineChoisi, domaineChoisi, 'Nouvelle note']
 	);
 </script>
 
@@ -330,7 +361,7 @@
 			{@const chemin = prefixe ? `${prefixe} › ${noeud.nom}` : noeud.nom}
 			<li>
 				<label class="dc"
-					><input type="radio" name="dossier" checked={dossierChoisi === chemin} /><span
+					><input type="radio" name="choix-de-dossier" checked={dossierChoisi === chemin} /><span
 						>{noeud.nom}</span
 					><span class="dc__n">{noeud.notes || ''}</span></label
 				>
@@ -443,7 +474,7 @@
 	libelleEvitement="Aller à la rédaction"
 	donnees={{ 'data-vue': 'redaction', 'data-meta': 'ferme', 'data-numerote': 'non' }}
 	{fil}
-	courant={[cas === 'modif' ? domaineChoisi : compte.domaine]}
+	courant={[domaineChoisi]}
 	{univers}
 	{domaines}
 	notes={corpus}
@@ -837,7 +868,11 @@
 
 					<div class="champ">
 						<label class="champ__label" for="m-domaine">Domaine <span class="oblig">*</span></label>
-						<select class="selecteur" id="m-domaine">
+						<select
+							class="selecteur"
+							id="m-domaine"
+							onchange={(evenement) => (domaineVif = evenement.currentTarget.value)}
+						>
 							{#each domaines as domaine, rang (rang)}<option
 									value={domaine.nom}
 									selected={domaine.nom === domaineChoisi}
@@ -850,7 +885,7 @@
 					<div class="champ" id="champ-dossier">
 						<span class="champ__label">Dossier <span class="oblig">*</span></span>
 						<div class="dossier-choix" id="m-dossier">
-							{@render niveauDeDossiers(dossiers, '')}
+							{#key domaineChoisi}{@render niveauDeDossiers(dossiers, '')}{/key}
 						</div>
 						<div class="champ__erreur" id="erreur-dossier" hidden>
 							<svg

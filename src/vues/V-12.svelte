@@ -393,9 +393,13 @@
 	`textContent`, où un blanc inséré par le formateur se voit (CLAUDE.md §6,
 	P-6). Le bloc est protégé du formateur ; ne jamais citer la forme exacte de
 	la directive à l'intérieur d'un commentaire (P-9).
+
+	UNE NOTE RANGÉE À LA RACINE DU DOMAINE N'A PAS DE CHEMIN DE DOSSIER : le
+	chevron et son séparateur sont alors omis. Les rendre laissait « ▸ · » seul
+	sur chaque ligne.
 -->
 <!-- prettier-ignore -->
-{#snippet ligneCarte(n: Note)}<a class="lc" href={adresseDeNote(n.id)}><div class="lc__haut"><h2 class="lc__titre">{n.titre}</h2><span class="past past--type">{libelleDeType(n)}</span>{#if n.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}</div><p class="lc__extrait">{n.extrait}</p><div class="lc__meta"><span class="lc__dossier">{'▸ ' + n.dossier}</span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{modifiee(n)}</span></div><div class="lc__etiquettes">{#each n.etiquettes.slice(0, 4) as e (e)}<span class="past past--etiquette">{e}</span>{/each}</div><div class="lc__droite">{@render temoin(n)}<span class="lc__vues">{nb(n.vues) + ' consultations'}</span></div></a>{/snippet}
+{#snippet ligneCarte(n: Note)}<a class="lc" href={adresseDeNote(n.id)}><div class="lc__haut"><h2 class="lc__titre">{n.titre}</h2><span class="past past--type">{libelleDeType(n)}</span>{#if n.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}</div><p class="lc__extrait">{n.extrait}</p><div class="lc__meta">{#if n.dossier}<span class="lc__dossier">{'▸ ' + n.dossier}</span><span class="sep">·</span>{/if}<span>{n.auteur}</span><span class="sep">·</span><span>{modifiee(n)}</span></div><div class="lc__etiquettes">{#each n.etiquettes.slice(0, 4) as e (e)}<span class="past past--etiquette">{e}</span>{/each}</div><div class="lc__droite">{@render temoin(n)}<span class="lc__vues">{nb(n.vues) + ' consultations'}</span></div></a>{/snippet}
 
 <Coquille
 	forme="abregee"

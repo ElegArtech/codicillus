@@ -219,6 +219,12 @@
 	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
 	const domainesEffectifs = $derived(identite === undefined ? domaines : identite.domaines);
 	const compteEffectif = $derived(identite?.compte ?? compte);
+	/* LA VERSION DU PIED DE RAIL EST CELLE DU PAQUET, comme dans `Coquille.svelte`.
+	   La propriété `instance` porte le `1.0.0` de `seeds/corpus.ts` — un numéro de
+	   démonstration : V-20 câblant `Rail` en direct, elle l'annonçait comme un fait,
+	   seule de toutes les pages. Hors application, le contexte est absent et la
+	   propriété reprend la main : le gel ne bouge pas. */
+	const versionEffective = $derived(identite?.version ?? instance.version);
 
 	/**
 	 * LE RAIL ABRÉGÉ SUIT LA BASE DÈS QU'ELLE EN A UNE — la copie exacte de ce
@@ -693,7 +699,7 @@
 <a class="saut-contenu" href="#contenu">Aller au contenu</a>
 
 <div class="app" id="app" data-rail="ouvert" data-detail={detailOuvert ? 'ouvert' : 'ferme'}>
-	<Rail forme="abregee" {sectionsAbregees} version={instance.version} />
+	<Rail forme="abregee" {sectionsAbregees} version={versionEffective} />
 
 	<div class="cadre">
 		<header class="barre">

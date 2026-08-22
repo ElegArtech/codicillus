@@ -139,7 +139,11 @@
 		sections?: readonly SectionRendue[];
 		/** Forme abrégée : les deux sections écrites au balisage du gel. */
 		sectionsAbregees?: readonly SectionAbregeeRendue[];
-		/** La version de l'instance, affichée au pied du rail. */
+		/**
+		 * La version affichée au pied du rail. La coquille passe celle du paquet
+		 * dès qu'un gabarit racine la lui donne ; hors application, celle que la
+		 * vue porte. Rien n'est calculé ici.
+		 */
 		version: string;
 		/**
 		 * L'entrée « Accueil » est la page courante (ARB-021, A-5). V-07 seule :

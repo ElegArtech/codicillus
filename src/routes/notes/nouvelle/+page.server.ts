@@ -66,88 +66,20 @@
  * par un `POST` en `application/x-www-form-urlencoded` dès aujourd'hui.
  */
 import { error, fail, redirect } from '@sveltejs/kit';
-import { count, eq } from 'drizzle-orm';
-import type { Base } from '$lib/base/acces';
-import { notes as notesDuSchema } from '$lib/base/schema';
 import { basePartagee } from '$lib/base/acces';
 import { DocumentInvalide } from '$lib/contenu/document';
 import { MarkdownInvalide } from '$lib/contenu/markdown';
 import { creerUneNote, lireLaSaisie, resoudreLaCible } from '$lib/donnees/creation';
-import { peutEcrireSurLeDossier, resoudreLaCreationDeNote } from '$lib/donnees/edition';
+import {
+	lireLArborescenceDeChoix,
+	peutEcrireSurLeDossier,
+	resoudreLaCreationDeNote
+} from '$lib/donnees/edition';
 import { lireSeuils } from '$lib/donnees/lecture';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import { adresseDeNote } from '$lib/rangement/adresses';
 import { moteurPartage } from '$lib/recherche/acces';
-import { dossiers as tableDossiers, domaines as tableDomaines } from '$lib/base/schema';
 import type { Actions, PageServerLoad } from './$types';
-
-/** Un nœud de l'arborescence de choix, tel que `V-17` l'attend. */
-interface DossierDeChoix {
-	readonly nom: string;
-	readonly notes: number;
-	readonly enfants: readonly DossierDeChoix[];
-}
-
-/**
- * L'ARBORESCENCE DE CHOIX, LUE DANS LA TABLE `dossiers` — ET NON DÉDUITE DES
- * NOTES.
- *
- * `V-17` construisait sa liste en parcourant les notes du corpus et en découpant
- * leur chemin de rangement. C'est ce que fait la MAQUETTE, qui n'a pas de table
- * de dossiers. Le produit en a une, et la différence est bloquante :
- *
- *   MESURÉ LE 21/08/2026 sur une instance neuve — un univers, un domaine, son
- *   dossier racine, ZÉRO note : l'éditeur ne proposait AUCUN dossier, et la
- *   création était refusée en « dossier manquant ». On ne pouvait donc jamais
- *   écrire la première note. Un cercle : pas de note, pas de dossier ; pas de
- *   dossier, pas de note.
- *
- * Le décompte de notes par dossier reste ce qu'il était — un renseignement pour
- * le rédacteur —, mais il ne commande plus l'existence du nœud.
- */
-async function arborescenceParDomaine(
-	base: Base
-): Promise<Readonly<Record<string, readonly DossierDeChoix[]>>> {
-	const lignes = await base
-		.select({
-			id: tableDossiers.id,
-			parentId: tableDossiers.parentId,
-			nom: tableDossiers.nom,
-			position: tableDossiers.position,
-			domaine: tableDomaines.nom
-		})
-		.from(tableDossiers)
-		.innerJoin(tableDomaines, eq(tableDomaines.id, tableDossiers.domaineId));
-
-	const comptes = await base
-		.select({ dossierId: notesDuSchema.dossierId, combien: count() })
-		.from(notesDuSchema)
-		.groupBy(notesDuSchema.dossierId);
-	const parDossier = new Map(comptes.map((c) => [c.dossierId, Number(c.combien)]));
-
-	const enfantsDe = new Map<string | null, typeof lignes>();
-	for (const l of lignes) {
-		const cle = l.parentId;
-		enfantsDe.set(cle, [...(enfantsDe.get(cle) ?? []), l]);
-	}
-	const batir = (parentId: string | null): readonly DossierDeChoix[] =>
-		[...(enfantsDe.get(parentId) ?? [])]
-			.sort((a, b) => a.position - b.position || a.nom.localeCompare(b.nom, 'fr'))
-			.map((l) => ({ nom: l.nom, notes: parDossier.get(l.id) ?? 0, enfants: batir(l.id) }));
-
-	/* La RACINE d'un domaine porte le nom du domaine et n'est pas un choix : le
-	   gel présente ses ENFANTS. Un domaine sans sous-dossier offre donc sa
-	   racine, pour qu'il reste toujours une destination possible. */
-	const parDomaine: Record<string, readonly DossierDeChoix[]> = {};
-	for (const racine of enfantsDe.get(null) ?? []) {
-		const sous = batir(racine.id);
-		parDomaine[racine.domaine] =
-			sous.length > 0
-				? sous
-				: [{ nom: racine.nom, notes: parDossier.get(racine.id) ?? 0, enfants: [] }];
-	}
-	return parDomaine;
-}
 
 /** L'instant de référence est pris ICI, une fois : voir `/notes/{identifiant}`. */
 async function contexte() {
@@ -198,7 +130,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		typesNote: creation.referentiels.typesNote,
 		typesFiche: creation.referentiels.typesFiche,
 		templates: creation.referentiels.templates,
-		dossiersParDomaine: await arborescenceParDomaine(base)
+		dossiersParDomaine: await lireLArborescenceDeChoix(base)
 	};
 };
 

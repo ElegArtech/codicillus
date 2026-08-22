@@ -288,16 +288,32 @@ const NOEUDS_EN_PROPRE: Readonly<Record<string, NodeSpec>> = {
 };
 
 /**
- * LA MARQUE ÉCRITE EN PROPRE — le lien interne, qui porte l'IDENTIFIANT de la
- * note cible. ADR-003 : c'est ce qui le rend insensible au renommage et ce qui
- * permet de le signaler cassé si la cible disparaît.
+ * LES DEUX MARQUES ÉCRITES EN PROPRE.
  *
- * Elle appartient au groupe des liens et l'exclut : un texte ne porte pas à la
- * fois un lien interne et un lien externe (règle 6). L'exclusion est posée des
- * DEUX côtés — poser `excludes` d'un seul côté ne fait retirer l'autre que dans
- * un sens, et l'ordre d'application deviendrait la règle.
+ * `lienInterne` porte l'IDENTIFIANT de la note cible. ADR-003 : c'est ce qui le
+ * rend insensible au renommage et ce qui permet de le signaler cassé si la
+ * cible disparaît. Elle appartient au groupe des liens et l'exclut : un texte
+ * ne porte pas à la fois un lien interne et un lien externe (règle 6).
+ * L'exclusion est posée des DEUX côtés — poser `excludes` d'un seul côté ne
+ * fait retirer l'autre que dans un sens, et l'ordre d'application deviendrait
+ * la règle.
+ *
+ * `highlight` — le surligné — est du format en entier : `document.ts` la
+ * déclare et lui donne son rang, `rendu.ts` la rend `mark`, `markdown.ts`
+ * l'écrit avec deux signes égal. Aucune extension installée ne l'apporte, et
+ * elle était pour cette seule raison SAUTÉE : le bouton du gel (V-17:1526)
+ * restait alors muet et deux corps du gel ne pouvaient pas s'ouvrir. Une marque
+ * sans attribut ne demande aucune dépendance — elle s'écrit, comme les deux
+ * nœuds ci-dessus.
  */
 const LIEN_INTERNE: MarkSpec = { group: 'lien', excludes: 'lien', attrs: { cible: {} } };
+const SURLIGNE: MarkSpec = {};
+
+/** Les marques que ce module fabrique lui-même, par nom du format. */
+const MARQUES_EN_PROPRE: Readonly<Record<string, MarkSpec>> = {
+	lienInterne: LIEN_INTERNE,
+	highlight: SURLIGNE
+};
 
 /* ═══════════════════════════════════ La composition ═════════════════════ */
 
@@ -363,16 +379,16 @@ function noeudsDuSchema(): Record<string, NodeSpec> {
  * lecture de `RANG_DE_MARQUE` de `document.ts` : ce module ne réordonne rien de
  * sa propre autorité.
  *
- * Une marque du format qu'aucune extension n'apporte est SAUTÉE et comptée,
- * jamais fabriquée : c'est le cas de `highlight`, et `constructions.ts` en dit
- * le coût.
+ * Une marque que ni une extension ni `MARQUES_EN_PROPRE` ne porte serait
+ * comptée `absentes` — il n'y en a aucune aujourd'hui.
  */
 function marquesDuSchema(): { marques: Record<string, MarkSpec>; absentes: readonly string[] } {
 	const marques: Record<string, MarkSpec> = {};
 	const absentes: string[] = [];
 	for (const nom of MARQUES_ORDONNEES) {
-		if (nom === 'lienInterne') {
-			marques[nom] = LIEN_INTERNE;
+		const enPropre = MARQUES_EN_PROPRE[nom];
+		if (enPropre !== undefined) {
+			marques[nom] = enPropre;
 			continue;
 		}
 		if (schemaDesExtensions.marks[nom] === undefined) {
@@ -391,19 +407,14 @@ function marquesDuSchema(): { marques: Record<string, MarkSpec>; absentes: reado
 const composition = marquesDuSchema();
 
 /**
- * LES MARQUES DU FORMAT QU'AUCUNE EXTENSION INSTALLÉE N'APPORTE.
+ * LES MARQUES DU FORMAT QUE LE SCHÉMA DE L'ÉDITEUR NE PORTE PAS.
  *
- * Mesuré, non supposé : la liste est calculée sur `schemaDesExtensions`. Elle
- * vaut aujourd'hui `highlight` — la marque du surligné, sixième porteur de la
- * construction n° 2 de M04.6, que le gel offre en bouton (V-17:1526) et que
- * DEUX corps du gel emploient (relevé par `pnpm contenu:constructions` :
- * `highlight 2`).
- *
- * CONSÉQUENCE, ET ELLE EST DITE PLUTÔT QUE CONTOURNÉE : un document canonique
- * qui porte cette marque ne peut pas ENTRER dans l'éditeur. `./document.ts` le
- * REFUSE nommément au lieu de laisser ProseMirror l'effacer en silence — une
- * marque perdue à l'ouverture serait une perte de donnée sans témoin, et ce
- * serait « la réparation silencieuse » qu'ADR-003 proscrit.
+ * Mesuré, non supposé : la liste est calculée. Elle est VIDE — `highlight` y
+ * figurait, et le surligné est désormais écrit en propre (voir
+ * `MARQUES_EN_PROPRE`). Le garde de `./document.ts`, qui refuse d'ouvrir un
+ * document portant une marque absente plutôt que de laisser ProseMirror
+ * l'effacer en silence, reste en place : c'est lui qui empêcherait la perte
+ * sans témoin si une marque nouvelle arrivait au format sans arriver ici.
  */
 export const MARQUES_DU_FORMAT_SANS_EXTENSION: readonly string[] = composition.absentes;
 
