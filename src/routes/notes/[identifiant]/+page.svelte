@@ -91,6 +91,9 @@
 
 	const { data }: { data: PageData } = $props();
 
+	/** L'écran d'export — le seul du produit, et son périmètre est le domaine. */
+	const ADRESSE_DES_EXPORTS = '/console/exports';
+
 	/**
 	 * LES TYPES DE RELATION, DANS LA FORME QUE LE DIALOGUE LIT.
 	 *
@@ -214,7 +217,10 @@
 		 */
 		const defaireLecture = cablerLaLecture(formulaire, {
 			identifiant: data.lecture.note.id,
-			ecriture: data.vecteur.droits === 'ecriture'
+			ecriture: data.vecteur.droits === 'ecriture',
+			/* `RG-M13-03` — l'export est réservé à l'administrateur. Pour les
+			   autres, l'entrée n'a pas de destination, et le câblage la retire. */
+			exports: data.administrateur ? ADRESSE_DES_EXPORTS : null
 		});
 		const defaireLoupe = cablerLaLoupe(formulaire.ownerDocument);
 		const defaireFermeture = historiqueOuvert

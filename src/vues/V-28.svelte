@@ -47,14 +47,17 @@
 	 * l'attribut `open`, et rien de plus : c'est le banc qui établit la
 	 * modalité, des deux côtés.
 	 *
-	 * AUCUN COMPORTEMENT — ARB-011. La confirmation par le nom, la bascule des
-	 * modules et leurs conséquences sont du temps 3 ; le squelette rend l'état
-	 * INITIAL de chacun, celui que le gel écrit à l'ouverture.
+	 * LES GESTES SONT BRANCHÉS. Le nom d'un domaine ouvre sa page, « Modifier »
+	 * ouvre le tiroir, la suppression demande le nom, les modules basculent. La
+	 * mention « aucun comportement, temps 3 » qui tenait ici était fausse : un
+	 * geste dessiné est un geste promis.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
 	 * `src/vues/V-28.css` (P-6.3). Les `style=` reproduits figurent à
 	 * l'ensemble clos du gel de V-28 (ARB-016, P-6.4).
 	 */
+	import { resolve } from '$app/paths';
+	import { identifiantLisible } from '$lib/rangement/adresses';
 	import {
 		DETAIL_DOMAINES,
 		DOMAINES,
@@ -531,7 +534,10 @@
 {#snippet ligne(d: DomaineDeTravail)}{@const m = mesures(d.nom)}<div class="tg tg--domaines tg--ligne" role="row"
 	><span class="tg__puce" style="background:{d.couleur}"></span
 	><div style="min-width:0"
-		><div class="tg__nom">{d.nom}</div
+		><div class="tg__nom"><a class="tg__ouvrir" href={resolve('/univers/[univers]/[domaine]', {
+			univers: identifiantLisible(d.univers),
+			domaine: identifiantLisible(d.nom)
+		})}>{d.nom}</a></div
 		><div class="tg__desc">{d.description}</div
 	></div
 	><span class="tg__univers"><i style="background:{couleurUnivers(d.univers)}"></i>{d.univers}</span

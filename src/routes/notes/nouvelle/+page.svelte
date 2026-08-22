@@ -50,6 +50,7 @@
 		type GestesCables,
 		peindreLeRefusDEdition
 	} from '$lib/edition/gestes';
+	import { adresseDesNotesDuDomaine } from '$lib/rangement/adresses';
 	import { cablerLeChoixDeDepart } from './cablage';
 	import { MOI } from '../../../../seeds/corpus';
 	import type { ActionData, PageData } from './$types';
@@ -83,6 +84,17 @@
 	const universDuCompte = $derived(
 		page.data.domaines?.find((d: { nom: string }) => d.nom === compte.domaine)?.univers ??
 			'Production'
+	);
+	/* OÙ « ANNULER » RAMÈNE : la liste des notes du domaine visé, l'accueil quand
+	   la base n'en porte aucun. Faute d'adresse nommée, le bouton faisait
+	   `history.back()` — mesuré le 22/08/2026 sur un onglet neuf ouvert
+	   directement sur cet écran : l'URL devenait `about:blank`, l'utilisateur
+	   était hors du produit. Une note à naître n'a pas d'adresse, mais le domaine
+	   qui va la recevoir en a une. */
+	const retourDAnnulation = $derived(
+		page.data.domaines?.some((d: { nom: string }) => d.nom === compte.domaine) === true
+			? adresseDesNotesDuDomaine(universDuCompte, compte.domaine)
+			: '/'
 	);
 
 	let formulaire: HTMLFormElement;
@@ -144,10 +156,8 @@
 		});
 		gestes = cablerLesGestesDEdition(formulaire, {
 			document: () => editeur?.document() ?? DOCUMENT_VIDE,
-			resoudre: resolveurDuCorpusServi(data.notes)
-			/* « Annuler » ramène à la page précédente : une note qui n'existe pas
-			   encore n'a pas d'adresse où revenir, et en inventer une serait
-			   décider d'une navigation qu'aucune source ne porte. */
+			resoudre: resolveurDuCorpusServi(data.notes),
+			retour: retourDAnnulation
 		});
 		const defaireLeChoix =
 			editeur === null

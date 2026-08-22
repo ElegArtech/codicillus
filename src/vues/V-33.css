@@ -522,9 +522,11 @@
    ========================================================================== */
 
 .repart { display: flex; height: 14px; border-radius: var(--r-1); overflow: hidden; border: 1px solid var(--c-trait); }
-.repart button { border: 0; padding: 0; cursor: pointer; transition: filter var(--m-vif); }
-.repart button:hover { filter: brightness(.9); }
-.repart button + button { border-left: 1px solid var(--c-papier); }
+/* Les segments de V-33 sont des `span` : l'aperçu d'impact n'a pas de liste où
+   mener (voir V-33.svelte, en-tête de `barreRepartition`). Ni curseur de main
+   ni survol — rien n'est promis. Seul le filet de séparation demeure. */
+.repart > span { border: 0; padding: 0; }
+.repart > span + span { border-left: 1px solid var(--c-papier); }
 .repart .p-frais { background: var(--c-frais); }
 .repart .p-vieil {
   background: repeating-linear-gradient(90deg, var(--c-vieil) 0 2px, #c99a3d 2px 5px);

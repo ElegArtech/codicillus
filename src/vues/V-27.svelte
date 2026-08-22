@@ -68,6 +68,8 @@
 	 * compris ceux que le script de la maquette pose par `.style.propriété`,
 	 * que l'instrument lit aussi (`verif/styles-en-ligne.mjs`).
 	 */
+	import { resolve } from '$app/paths';
+	import { identifiantLisible } from '$lib/rangement/adresses';
 	import {
 		DOMAINES,
 		INSTANCE,
@@ -561,7 +563,7 @@
 	></div
 	><span class="apercu-nav__sceau" style="background:{u.couleur};width:28px;height:28px">{@render glyphe(u.glyphe, '16', '1.6')}</span
 	><div style="min-width:0"
-		><div class="tg__nom">{u.nom}{#if u.systeme}<span class="past past--systeme" style="margin-left:var(--e-2)">système</span>{/if}</div
+		><div class="tg__nom"><a class="tg__ouvrir" href={resolve('/univers/[univers]', { univers: identifiantLisible(u.nom) })}>{u.nom}</a>{#if u.systeme}<span class="past past--systeme" style="margin-left:var(--e-2)">système</span>{/if}</div
 		><div class="tg__desc">{u.description}</div
 	></div
 	><span class="tg__n tg--masquable">{domaines(u.nom).length}</span

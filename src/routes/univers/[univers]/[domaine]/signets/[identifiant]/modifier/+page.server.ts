@@ -27,18 +27,12 @@
  * l'éditeur de signet n'édite que des signets.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CE CHARGEUR RÉSOUT JUSTE ET QUE LA VUE NE PEUT PAS AFFICHER
+ * CE QUE LA VUE AFFICHE
  *
- * `src/vues/V-23.svelte` lit le signet édité PAR SON IDENTIFIANT LITTÉRAL :
- * `corpus.find((n) => n.id === 'n-sig-statut')`, avec repli sur le jeu de
- * semence. C'est le port fidèle du gel, qui nomme lui-même cette note
- * (`V-23:2723`). La conséquence est que le formulaire affiche les champs de
- * `n-sig-statut` quel que soit le signet demandé, et le contrat de ce lot
- * interdit de toucher `src/vues/**`.
- *
- * Ce chargeur ne comble pas : il résout, il refuse ce qu'il doit refuser, il
- * passe les notes RÉELLES du périmètre — et l'écart d'affichage est déclaré,
- * chiffré, au rapport du lot. Il se ferme par un lot de vue, jamais par ici.
+ * Le signet résolu descend en `data.signet` et la vue le lit par cette
+ * propriété : titre, adresse, description, domaine et étiquettes de l'écran en
+ * sortent tous. Le sélecteur de domaine, lui, est peuplé par `page.data.domaines`
+ * — les domaines RÉELS, servis par le gabarit racine.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * L'ACTION — voir l'en-tête de `…/signets/nouveau/+page.server.ts`

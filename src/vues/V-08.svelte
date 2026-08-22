@@ -620,12 +620,14 @@
 	 * CHANGER LE MODE — `V-08:2077-2083`, où le clic pose `data-mode` et rejoue le
 	 * rendu. Ici encore, l'adresse porte l'état.
 	 *
-	 * LE BOUTON DU MODE COURANT NE NAVIGUE PAS : le gel repose `aria-pressed` et
-	 * refait le même rendu, ce qui ne change rien ; recharger la page pour rien
-	 * serait la seule différence, et ce serait une régression.
+	 * LE BOUTON DU MODE SERVI NE NAVIGUE PAS : il rejouerait la même page. La
+	 * comparaison porte donc sur le mode EFFECTIF et non sur celui qu'on a
+	 * demandé — en dégradé l'écran sert « mots-clés » pendant que la demande vaut
+	 * « hybride », et comparer à la demande faisait sortir le clic d'« Hybride »
+	 * sans rien faire du tout.
 	 */
 	function changerLeMode(voulu: string): void {
-		if (voulu === modeDemande) return;
+		if (voulu === mode) return;
 		aller(adresse(choisis, q, tri, voulu));
 	}
 
@@ -695,6 +697,8 @@
 	      span.marque-op                   V-02:1198-1201  connecté seul
 	    div.carte__pied                    V-02:1205-1243
 	      span.carte__chemin               V-02:1209-1220  univers › DOMAINE › dossier
+	        Le segment de dossier est CONDITIONNEL : une note posée à la racine
+	        d'un domaine a un chemin vide, et le séparateur resterait pendu.
 	      · auteur · consultations         V-02:1223-1230
 	      · pièces jointes                 V-02:1232-1235  si pj
 	      · span.carte__visibilite         V-02:1236-1242  connecté seul
@@ -723,7 +727,7 @@
 			>{@render temoin(n)}<span class="carte__revision" data-jamais={n.revise ? undefined : 'oui'}>{n.revise ? `Révisé le ${n.revise}` : 'Jamais révisé'}</span
 			>{#if n.operationnel}<span class="marque-op">↳ Trouvé dans le registre Opérationnel</span>{/if}</div
 		><div class="carte__pied"
-			><span class="carte__chemin"><span>{n.univers + ' › '}</span><b>{n.domaine}</b><span>{' › ' + n.dossier}</span></span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{nombreFr(n.vues) + ' consultations'}</span
+			><span class="carte__chemin"><span>{n.univers + ' › '}</span><b>{n.domaine}</b>{#if n.dossier}<span>{' › ' + n.dossier}</span>{/if}</span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{nombreFr(n.vues) + ' consultations'}</span
 			>{#if n.pj}<span class="sep">·</span><span>{n.pj + (n.pj > 1 ? ' pièces jointes' : ' pièce jointe')}</span>{/if}{#if n.visibilite === 'Publique'}<span class="sep">·</span><span class="carte__visibilite">Publique</span>{/if}</div
 		></a
 	>{/snippet}
@@ -825,10 +829,11 @@
 				</div>
 
 				<!--
-					Les trois modes. `aria-pressed` suit `data-mode`, et le bouton « Sens »
-					est désactivé quand la brique est tombée : c'est ce que le gestionnaire
-					`c-degrade` pose, et il y parvient parce que l'exception de `rendre()`
-					est absorbée par la répartition d'événement du `.click()` qu'il émet.
+					Les trois modes. `aria-pressed` suit le mode EFFECTIF. « Sens » ET
+					« Hybride » sont désactivés quand la brique de sens est tombée : les
+					deux ont besoin des vecteurs, et un bouton qui ne peut rien servir ne
+					doit pas se donner pour actif. Le gel ne désactive que « Sens » — sa
+					planche n'a aucun moteur derrière.
 				-->
 				<div class="modes" role="group" aria-label="Mode de recherche">
 					<button
@@ -844,7 +849,7 @@
 					</button>
 					<button
 						data-mode="sens"
-						aria-pressed="false"
+						aria-pressed={mode === 'sens'}
 						disabled={degrade}
 						onclick={() => changerLeMode('sens')}
 					>
@@ -857,6 +862,7 @@
 					<button
 						data-mode="hybride"
 						aria-pressed={mode === 'hybride'}
+						disabled={degrade}
 						onclick={() => changerLeMode('hybride')}
 					>
 						Hybride

@@ -34,7 +34,7 @@
  * répond est signalé au journal de la console plutôt que d'être silencieux —
  * un bouton inerte est un lien mort, et le produit n'en admet pas.
  */
-import { EditorState, type Command, type Transaction } from '@tiptap/pm/state';
+import { EditorState, Selection, type Command, type Transaction } from '@tiptap/pm/state';
 import { EditorView } from '@tiptap/pm/view';
 import { history, redo, undo } from '@tiptap/pm/history';
 import { keymap } from '@tiptap/pm/keymap';
@@ -187,24 +187,42 @@ function image(fenetre: Window): Command {
 	};
 }
 
+/* Le gel insère un tableau REMPLI (`V-17:3075`) : deux colonnes, un en-tête
+   « Colonne », deux lignes de tirets. Six cellules vides ne se distinguaient de
+   rien. La largeur nulle du tableau, elle, se répare à `vueDeTableau`. */
+const COLONNES_DU_TABLEAU = 2;
+
 function tableau(): Command {
 	return (etat, envoyer) => {
 		const rangee = noeudDeSchema('tableRow');
-		const entete = noeudDeSchema('tableHeader');
-		const cellule = noeudDeSchema('tableCell');
-		const cellules = (type: NodeType): ReturnType<NodeType['create']>[] =>
-			Array.from({ length: 3 }, () => {
-				const c = type.createAndFill();
-				if (c === null) throw new Error('cellule de tableau non constructible');
-				return c;
-			});
+		const paragraphe = noeudDeSchema('paragraph');
+		const cellules = (type: NodeType, texte: string): ReturnType<NodeType['create']>[] =>
+			Array.from({ length: COLONNES_DU_TABLEAU }, () =>
+				type.create(null, paragraphe.create(null, schema.text(texte)))
+			);
 		const noeud = noeudDeSchema('table').create(null, [
-			rangee.create(null, cellules(entete)),
-			rangee.create(null, cellules(cellule))
+			rangee.create(null, cellules(noeudDeSchema('tableHeader'), 'Colonne')),
+			rangee.create(null, cellules(noeudDeSchema('tableCell'), '—')),
+			rangee.create(null, cellules(noeudDeSchema('tableCell'), '—'))
 		]);
-		if (envoyer) envoyer(etat.tr.replaceSelectionWith(noeud).scrollIntoView());
+		if (envoyer) {
+			const transaction = etat.tr.replaceSelectionWith(noeud);
+			envoyer(placerDansLaPremiereCellule(transaction).scrollIntoView());
+		}
 		return true;
 	};
+}
+
+/**
+ * Après l'insertion, le point d'insertion tombe dans la dernière cellule. On le
+ * ramène à la première : trois niveaux depuis le début du contenu du tableau —
+ * la rangée, la cellule, le paragraphe. Si l'arbre n'a pas cette forme, on ne
+ * force rien et la sélection reste où elle est.
+ */
+function placerDansLaPremiereCellule(transaction: Transaction): Transaction {
+	const $depuis = transaction.selection.$from;
+	if ($depuis.depth < 1 || $depuis.node(1).type !== noeudDeSchema('table')) return transaction;
+	return transaction.setSelection(Selection.near(transaction.doc.resolve($depuis.start(1) + 3)));
 }
 
 function diagramme(fenetre: Window): Command {
@@ -220,8 +238,7 @@ function diagramme(fenetre: Window): Command {
 }
 
 /**
- * LES SIX BOUTONS `data-mark` DE LA BARRE — et le seul que la pile ne sait pas
- * porter.
+ * LES SIX BOUTONS `data-mark` DE LA BARRE — les six sont branchés.
  *
  * Le gel nomme ces six-là par un TROISIÈME attribut, `data-mark`
  * (`V-17:1522-1531`), que la table de délégation ignorait : quatre d'entre eux
@@ -229,13 +246,16 @@ function diagramme(fenetre: Window): Command {
  * « Code en ligne » n'existent qu'en `data-mark` — ils étaient donc muets,
  * SANS MÊME l'avertissement du journal, puisque le sélecteur ne les voyait pas.
  *
+ * « Surligné » restait ensuite muet une seconde fois : le schéma ne portait pas
+ * la marque `highlight`, faute d'extension qui l'apporte, et la boucle la
+ * sautait. Le surligné est maintenant écrit en propre (`./schema.ts`,
+ * `MARQUES_EN_PROPRE`) — un bouton dessiné est un geste promis.
+ *
  * La correspondance clé → marque du format n'est pas réécrite ici :
  * `MARQUES_DE_LA_BARRE` (`./constructions.ts`) la porte, relevée bouton par
- * bouton sur la maquette. Une marque que le schéma ne porte PAS est sautée et
- * NOMMÉE — c'est le cas de `highlight`, le surligné, qu'aucune extension
- * installée n'apporte (`./schema.ts`, `MARQUES_DU_FORMAT_SANS_EXTENSION`).
- * Ajouter l'extension demanderait une dépendance nouvelle ; le bouton reste
- * donc sans commande, et il le DIT au journal au lieu de faire semblant.
+ * bouton sur la maquette. La garde reste : une marque que le schéma ne porterait
+ * pas est sautée plutôt que de casser le montage de l'éditeur entier, et le
+ * bouton le DIT alors au journal au lieu de faire semblant.
  */
 function marquesDeLaBarre(): Record<string, Command> {
 	const table: Record<string, Command> = {};
@@ -295,17 +315,17 @@ function commandes(fenetre: Window): Record<AttributDeBouton, Record<string, Com
 	};
 }
 
-/* ═══════════════════════════════════ Les trois vues en propre ═══════════ */
+/* ═══════════════════════════════════ Les vues en propre ═════════════════ */
 
 /**
- * LES TROIS CONSTRUCTIONS ÉCRITES EN PROPRE N'ONT PAS DE `toDOM`, ET C'EST
- * VOULU — mais il fallait alors leur donner une VUE.
+ * LES CONSTRUCTIONS ÉCRITES EN PROPRE N'ONT PAS DE `toDOM`, ET C'EST VOULU —
+ * mais il fallait alors leur donner une VUE.
  *
- * `./schema.ts` déclare `alerte`, `diagramme` et la marque `lienInterne` sans
- * règle de sérialisation vers le DOM : le format canonique est du JSON, et
- * `../contenu/rendu.ts` est l'implémentation UNIQUE du rendu (`ADR-004`) —
- * poser un second `toDOM` dans le schéma en ferait une deuxième, qui
- * divergerait.
+ * `./schema.ts` déclare `alerte`, `diagramme` et les marques `lienInterne` et
+ * `highlight` sans règle de sérialisation vers le DOM : le format canonique est
+ * du JSON, et `../contenu/rendu.ts` est l'implémentation UNIQUE du rendu
+ * (`ADR-004`) — poser un second `toDOM` dans le schéma en ferait une deuxième,
+ * qui divergerait.
  *
  * Conséquence non prévue, et MESURÉE au navigateur : ProseMirror, lui, a besoin
  * d'une représentation pour AFFICHER un nœud dans la zone éditable. Sans elle,
@@ -357,6 +377,40 @@ function vueDeLienInterne(marque: MarqueDeVue): { dom: HTMLElement } {
 	dom.className = 'lien-int';
 	dom.title = `Note liée : ${String((marque.attrs as { cible: string }).cible)}`;
 	return { dom };
+}
+
+/* Le surligné est écrit en propre lui aussi, donc sans sérialisation vers le
+   DOM : il lui faut une vue. La balise est celle de `rendu.ts` — `mark`. */
+function vueDeSurligne(): { dom: HTMLElement } {
+	return { dom: window.document.createElement('mark') };
+}
+
+/**
+ * LE TABLEAU A UNE VUE PARCE QUE CELLE DU SCHÉMA LE REND INVISIBLE — mesuré :
+ * une largeur en ligne de zéro pixel et un groupe de colonnes vide, un tableau
+ * de 72 × 78 pixels qu'aucune capture d'écran ne montrait.
+ *
+ * La cause est dans l'extension : son `toDOM` somme l'attribut `colwidth` de
+ * chaque cellule pour écrire la largeur du tableau, et le format ne porte pas
+ * cet attribut de confort (`./schema.ts`). La somme vaut zéro, et zéro en ligne
+ * bat la largeur pleine de la feuille gelée.
+ *
+ * La vue reprend le balisage du gel (`V-17:3075`) : la boîte à défilement
+ * horizontal, le tableau, le corps. Aucune largeur n'est écrite — c'est la
+ * feuille gelée qui la donne, comme en lecture. Les rangées vivent toutes dans
+ * le corps, ligne d'en-tête comprise : une vue n'a qu'un seul contenu, et
+ * ProseMirror ne sait pas le couper en deux. Les cellules d'en-tête restent des
+ * cellules d'en-tête, avec leur mise en forme de cellule.
+ */
+function vueDeTableau(): { dom: HTMLElement; contentDOM: HTMLElement } {
+	const document = window.document;
+	const boite = document.createElement('div');
+	boite.className = 'tableau-boite';
+	const tableau = document.createElement('table');
+	const corps = document.createElement('tbody');
+	tableau.append(corps);
+	boite.append(tableau);
+	return { dom: boite, contentDOM: corps };
 }
 
 /** Ce qu'une vue reçoit — le strict nécessaire, sans importer le type complet. */
@@ -431,10 +485,12 @@ export function monterLEditeur(
 		   pour ignorer leurs champs. */
 		nodeViews: {
 			alerte: ((noeud: NoeudDeVue) => vueDAlerte(noeud)) as never,
-			diagramme: ((noeud: NoeudDeVue) => vueDeDiagramme(noeud)) as never
+			diagramme: ((noeud: NoeudDeVue) => vueDeDiagramme(noeud)) as never,
+			table: (() => vueDeTableau()) as never
 		},
 		markViews: {
-			lienInterne: ((marque: MarqueDeVue) => vueDeLienInterne(marque)) as never
+			lienInterne: ((marque: MarqueDeVue) => vueDeLienInterne(marque)) as never,
+			highlight: (() => vueDeSurligne()) as never
 		},
 		dispatchTransaction(transaction: Transaction) {
 			vue.updateState(vue.state.apply(transaction));

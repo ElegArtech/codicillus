@@ -24,30 +24,39 @@
  *    `…/notes/+page.server.ts` honore, et les valeurs sont celles que V-12
  *    déclare — un seul vocabulaire de facette pour les deux écrans.
  *
- * 3. LES QUATRE INDICATEURS DE SANTÉ. Un seul a une liste qui sache le
- *    recevoir — voir ci-dessous.
+ * 3. LES QUATRE INDICATEURS DE SANTÉ. Chacun ouvre la liste du domaine — sur la
+ *    facette qui le nomme quand la liste en a une (`FILTRE_PAR_INDICATEUR`),
+ *    sans filtre sinon ; voir ci-dessous.
  *
- * 4. LES PASTILLES DE MODULE. Chaque module actif mène à son écran.
+ * 4. LES PASTILLES DE MODULE. Chaque module actif mène à son écran, RÉDUIT À CE
+ *    DOMAINE. Les deux cartographies se réduisent par `?perimetre=domaine|{nom}`
+ *    — la forme même du sélecteur du gel, que les deux chargeurs lisent déjà
+ *    (`perimetreDeLAdresse()` pour V-19/V-20, `perimetreDemande` pour V-21). Les
+ *    envoyer sans périmètre montrait le corpus entier depuis la page d'un
+ *    domaine : le libellé promet « Cartographie — Infrastructure », l'écran
+ *    rendait tout Production.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * TROIS GESTES SONT DÉCLARÉS PLUTÔT QUE COMBLÉS — `P-26`
+ * TROIS GESTES OUVRENT LA LISTE SANS FILTRE — ET AUCUN NE RESTE INERTE
  *
- * · « JAMAIS VÉRIFIÉES » et « EN ATTENTE DE RÉVISION ». Aucune liste du produit
- *   ne sait recevoir ces deux demandes : les six facettes de V-12 sont `type`,
- *   `fraicheur`, `statut`, `dossier`, `auteur`, `etiquette` (`V-12:205`), les
- *   sept de `/recherche` y ajoutent `univers`, `domaine` et `visibilite`
- *   (`recherche/+page.server.ts:139`), et « jamais vérifiée » comme « révision
- *   demandée » n'en sont aucune. Les envoyer vers la liste NON filtrée serait
- *   mentir sur ce qu'on montre ; leur inventer une facette demanderait de
- *   toucher V-12 et son chargeur, hors du motif de câblage. Les deux restent
- *   donc sans destination, et le rapport de lot le dit.
+ * Un bouton dessiné est un geste promis : ne rien faire au clic est un défaut.
+ * Trois d'entre eux n'ont pas d'arrivée EXACTE dans le produit ; ils ouvrent
+ * alors la liste du domaine, qui est l'écran dont ils comptent les notes, et
+ * n'y posent AUCUNE facette — un filtre approchant mentirait sur ce qu'on
+ * montre, un état neutre non.
  *
- * · LE MODULE « DOSSIERS ». Le rangement d'un domaine n'a PAS d'adresse :
- *   `docs/routes.md` §3.3 ne déclare que `/univers/{u}/{d}/dossiers/{chemin…}`,
- *   et un `{chemin…}` vide ne désigne aucun dossier — mesuré, `404`. Le dossier
- *   racine porte le nom du domaine et n'apparaît dans aucun chemin affiché,
- *   c'est le choix du produit. Ouvrir un sous-dossier arbitraire à la place
- *   serait désigner un dossier que l'utilisateur n'a pas demandé.
+ * · « JAMAIS VÉRIFIÉES » et « EN ATTENTE DE RÉVISION » se lisent sur
+ *   `notes.verifie_le IS NULL` et `notes.revision_demandee` ; la liste
+ *   d'arrivée ne sait recevoir que six facettes — `type`, `fraicheur`,
+ *   `statut`, `dossier`, `auteur`, `etiquette` —, et aucune ne les dit. Le jour
+ *   où une septième est déclarée (`V-12.svelte` et `notes/+page.server.ts`),
+ *   une entrée de `FILTRE_PAR_INDICATEUR` suffit ici.
+ *
+ * · LE MODULE « DOSSIERS » n'a pas d'adresse propre : la seule route est
+ *   `/univers/{u}/{d}/dossiers/{chemin…}` et elle exige au moins un segment —
+ *   `resoudreLeChemin()` rend `null` sur zéro segment, mesuré `404`. Désigner
+ *   un sous-dossier au hasard serait choisir à la place de l'utilisateur ; la
+ *   pastille ouvre la liste, où la facette « Dossier » porte le rangement.
  */
 import { adresseDesNotesDuDomaine, adresseDesSignetsDuDomaine } from '$lib/rangement/adresses';
 
@@ -61,8 +70,17 @@ const FRAICHEUR_PAR_CLASSE: Record<string, string> = {
 	'p-obs': 'Obsolète probable'
 };
 
-/** La valeur de la facette `statut` que le gel nomme « Brouillons ». */
-const STATUT_BROUILLON = 'Brouillon';
+/**
+ * LES TROIS INDICATEURS DE SANTÉ DU GEL, et la facette qui porte chacun — la
+ * clé et la valeur que `…/notes/+page.server.ts` sait appliquer. `null` : la
+ * liste s'ouvre sans filtre, faute de facette (voir l'en-tête). Un libellé
+ * absent de la table n'est pas un indicateur, et ne déclenche rien.
+ */
+const FILTRE_PAR_INDICATEUR: Record<string, readonly [cle: string, valeur: string] | null> = {
+	Brouillons: ['statut', 'Brouillon'],
+	'Jamais vérifiées': null,
+	'En attente de révision': null
+};
 
 /** Les adresses sans paramètre — des chemins de route, non des formes de rangement. */
 const ADRESSE_DE_LIMPORT = '/importer';
@@ -129,14 +147,24 @@ export function cablerLeDomaine(racine: HTMLElement, options: OptionsDuDomaine):
 		return adresse;
 	};
 
+	/**
+	 * UN ÉCRAN DE MODULE RÉDUIT À CE DOMAINE. `?perimetre=` porte la valeur même
+	 * du sélecteur du gel — `type|nom` —, posée par `searchParams`, qui l'encode.
+	 */
+	const adresseAuPerimetreDuDomaine = (chemin: string): URL => {
+		const adresse = new URL(chemin, origine);
+		adresse.searchParams.set('perimetre', `domaine|${options.domaine}`);
+		return adresse;
+	};
+
 	/** L'écran d'un module actif, ou rien quand le produit n'en a pas. */
 	function adresseDuModule(nom: string): string | URL | null {
 		if (nom === 'Notes') return listeDuDomaine();
 		if (nom === 'Signets') {
 			return new URL(adresseDesSignetsDuDomaine(options.univers, options.domaine), origine);
 		}
-		if (nom === 'Cartographie') return ADRESSE_DE_LA_CARTOGRAPHIE;
-		if (nom === 'Carte mentale') return ADRESSE_DE_LA_CARTE_MENTALE;
+		if (nom === 'Cartographie') return adresseAuPerimetreDuDomaine(ADRESSE_DE_LA_CARTOGRAPHIE);
+		if (nom === 'Carte mentale') return adresseAuPerimetreDuDomaine(ADRESSE_DE_LA_CARTE_MENTALE);
 		/* « Fiches — objets typés et leurs relations » : ce sont les notes de type
 		   `Fiche` du domaine, et la facette `type` de la liste les nomme ainsi. */
 		if (nom === 'Fiches') {
@@ -144,7 +172,9 @@ export function cablerLeDomaine(racine: HTMLElement, options: OptionsDuDomaine):
 			adresse.searchParams.set('type', 'Fiche');
 			return adresse;
 		}
-		/* « Dossiers » — pas d'adresse, et c'est voulu. Voir l'en-tête. */
+		/* « Dossiers — rangement arborescent » : le rangement n'a pas d'écran à
+		   lui (voir l'en-tête). La liste du domaine en porte la facette. */
+		if (nom === 'Dossiers') return listeDuDomaine();
 		return null;
 	}
 
@@ -181,12 +211,15 @@ export function cablerLeDomaine(racine: HTMLElement, options: OptionsDuDomaine):
 			return;
 		}
 
-		/* 3. LES INDICATEURS DE SANTÉ — un seul a sa liste. Voir l'en-tête. */
+		/* 3. UN INDICATEUR DE SANTÉ — la liste du domaine, sur sa facette quand
+		      elle existe, sans filtre sinon. */
 		const indicateur = cible.closest('.mesure__lien');
 		if (indicateur !== null) {
-			if (libelle(indicateur.querySelector('.mesure__nom')) !== 'Brouillons') return;
+			const nom = libelle(indicateur.querySelector('.mesure__nom'));
+			if (!(nom in FILTRE_PAR_INDICATEUR)) return;
+			const filtre = FILTRE_PAR_INDICATEUR[nom];
 			const adresse = listeDuDomaine();
-			adresse.searchParams.set('statut', STATUT_BROUILLON);
+			if (filtre) adresse.searchParams.set(filtre[0], filtre[1]);
 			evenement.preventDefault();
 			aller(adresse);
 			return;
