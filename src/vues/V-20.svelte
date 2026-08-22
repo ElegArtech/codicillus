@@ -104,11 +104,14 @@
 		type Relation,
 		type UtilisateurCourant
 	} from '../../seeds/corpus';
+	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import Rail from '$lib/coquille/Rail.svelte';
-	import { railAbregeRendu } from '$lib/coquille/arborescence-abregee';
+	import { railAbregeRendu, sectionsAbregeesDuCorpus } from '$lib/coquille/arborescence-abregee';
+	import { sectionsDuRail } from '$lib/coquille/arborescence';
+	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 	import {
 		contourDeForme,
 		degres,
@@ -194,6 +197,46 @@
 		typeMaitreDemande,
 		centreDemande
 	}: Proprietes = $props();
+
+	/**
+	 * L'IDENTITÉ ET LE RANGEMENT RÉELS L'EMPORTENT — `$lib/coquille/identite.ts`
+	 * porte le contrat et le motif complet.
+	 *
+	 * CE QUE CELA RÉPARE, ET C'EST MESURÉ. V-20 ne compose pas `Coquille.svelte`
+	 * (le commentaire d'en-tête dit pourquoi) : elle monte son en-tête et son
+	 * rail elle-même, et elle était donc RESTÉE HORS de la réparation que la
+	 * coquille a reçue. Relevé le 22/08/2026 sur une base à zéro univers, alors
+	 * que `/cartographie` — sa jumelle, même écran, autre onglet — était juste :
+	 * l'avatar annonçait « Karim Belhadj », le rail dépliait « Migration 2026 »,
+	 * et le sélecteur de périmètre proposait les quatre domaines du jeu de
+	 * semence. Trois nœuds, trois adresses en 404 au clic.
+	 *
+	 * LA PRÉSENCE DU CONTEXTE DÉCIDE, PAS SON CONTENU. Une base vide n'est pas
+	 * une base absente : elle se rend vide. Hors application — le rendu par
+	 * défaut d'une vue, sans gabarit racine —, `getContext` rend `undefined`,
+	 * les propriétés du jeu s'appliquent, et le gel ne bouge pas d'un pixel.
+	 */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const domainesEffectifs = $derived(identite === undefined ? domaines : identite.domaines);
+	const compteEffectif = $derived(identite?.compte ?? compte);
+
+	/**
+	 * LE RAIL ABRÉGÉ SUIT LA BASE DÈS QU'ELLE EN A UNE — la copie exacte de ce
+	 * que `Coquille.svelte` fait pour les vingt-deux autres vues. Sans contexte,
+	 * `railAbregeRendu()` retombe sur `SECTIONS_ABREGEES`, l'arbre du gel.
+	 *
+	 * V-20 NE DÉCLARE TOUJOURS PAS DE PROPRIÉTÉ `univers`, et c'est délibéré :
+	 * le contexte la porte, et une propriété de plus serait un second chemin
+	 * pour une seule vérité (`P-35`).
+	 */
+	const sectionsAbregees = $derived(
+		identite === undefined
+			? railAbregeRendu([])
+			: railAbregeRendu(
+					[],
+					sectionsAbregeesDuCorpus(sectionsDuRail(identite.univers, identite.domaines, corpus))
+				)
+	);
 
 	/**
 	 * L'ÉCRAN EST-IL BRANCHÉ SUR UNE ADRESSE ? C'est le point unique où la
@@ -650,7 +693,7 @@
 <a class="saut-contenu" href="#contenu">Aller au contenu</a>
 
 <div class="app" id="app" data-rail="ouvert" data-detail={detailOuvert ? 'ouvert' : 'ferme'}>
-	<Rail forme="abregee" sectionsAbregees={railAbregeRendu([])} version={instance.version} />
+	<Rail forme="abregee" {sectionsAbregees} version={instance.version} />
 
 	<div class="cadre">
 		<header class="barre">
@@ -714,8 +757,8 @@
 				>
 				Créer
 			</button>
-			<button class="avatar" title="{compte.nom} — menu utilisateur" onclick={allerAuProfil}
-				>{compte.initiales}</button
+			<button class="avatar" title="{compteEffectif.nom} — menu utilisateur" onclick={allerAuProfil}
+				>{compteEffectif.initiales}</button
 			>
 		</header>
 
@@ -729,8 +772,9 @@
 				<div class="controles__groupe" style="display:flex;align-items:center;gap:var(--e-2)">
 					<label class="etiq" for="perimetre">Périmètre</label>
 					<select id="perimetre" onchange={(e) => changerDePerimetre(e.currentTarget.value)}
-						><option value="global|">Tous les domaines</option>{#each domaines as d (d.nom)}<option
-								value="domaine|{d.nom}">Domaine {d.nom}</option
+						><option value="global|">Tous les domaines</option
+						>{#each domainesEffectifs as d (d.nom)}<option value="domaine|{d.nom}"
+								>Domaine {d.nom}</option
 							>{/each}</select
 					>
 				</div>
