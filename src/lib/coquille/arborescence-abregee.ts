@@ -68,6 +68,8 @@ export interface NoeudAbrege {
 /** Une section d'univers de la forme abrégée. */
 export interface SectionAbregee {
 	readonly nom: string;
+	/** `/univers/{univers}` — la page de l'univers. Absente au gel, qui n'en a pas. */
+	readonly cible?: string;
 	readonly arbre: readonly NoeudAbrege[];
 }
 
@@ -98,6 +100,8 @@ export interface NoeudAbregeRendu {
 /** Une section abrégée prête à rendre. */
 export interface SectionAbregeeRendue {
 	readonly nom: string;
+	/** `/univers/{univers}` — la page de l'univers. Absente au gel, qui n'en a pas. */
+	readonly cible?: string;
 	readonly arbre: readonly NoeudAbregeRendu[];
 }
 
@@ -253,6 +257,7 @@ export function sectionsAbregeesDuCorpus(
 	});
 	return sections.map((s) => ({
 		nom: s.nom,
+		cible: identifiantLisible(s.nom),
 		arbre: s.domaines.map((d) => ({ nom: d.nom, deplie: false, enfants: d.enfants.map(enNoeud) }))
 	}));
 }
@@ -270,6 +275,7 @@ export function railAbregeRendu(
 ): readonly SectionAbregeeRendue[] {
 	return sections.map((s) => ({
 		nom: s.nom,
+		...(s.cible === undefined ? {} : { cible: s.cible }),
 		arbre: rendreNoeudsAbreges(s.arbre, courant, s.nom, null)
 	}));
 }

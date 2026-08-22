@@ -120,13 +120,17 @@ describe('V-14 — la propriété fournie l’emporte', () => {
 	 * n'est pas le cas des quatre vues abrégées (`Coquille.svelte` le dit).
 	 */
 	it('dérive son rail des univers et domaines reçus', async () => {
+		/* Le titre d'une section du rail est un LIEN vers la page de son univers
+		   depuis qu'un univers sans domaine doit pouvoir s'atteindre. */
+		const titre = (nom: string) => `href="/univers/${nom.toLowerCase()}">${nom}</a>`;
+
 		const defaut = await rendu({});
-		expect(defaut).toContain('<div class="rail__titre etiq">Production</div>');
-		expect(defaut).toContain('<div class="rail__titre etiq">Projets</div>');
+		expect(defaut).toContain(titre('Production'));
+		expect(defaut).toContain(titre('Projets'));
 
 		const html = await rendu({ univers: UNIVERS.filter((u) => u.nom === 'Production') });
-		expect(html).toContain('<div class="rail__titre etiq">Production</div>');
-		expect(html).not.toContain('<div class="rail__titre etiq">Projets</div>');
+		expect(html).toContain(titre('Production'));
+		expect(html).not.toContain(titre('Projets'));
 	});
 
 	it('rend la note reçue — titre, rangement et pièces jointes', async () => {
