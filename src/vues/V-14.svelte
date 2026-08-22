@@ -130,6 +130,8 @@
 		domaines?: readonly Domaine[];
 		compte?: UtilisateurCourant;
 		instance?: EtatDInstance;
+		/** `/notes/{identifiant}/relations`. Absente : le lien n'est pas rendu. */
+		adresseDesRelations?: string;
 		/**
 		 * LA NOTE LUE ET SES DEUX CORPS RENDUS — T-042, et c'est le défaut le
 		 * plus visible du produit : `/notes/{identifiant}` servait l'article de
@@ -178,7 +180,8 @@
 		compte = MOI,
 		instance = INSTANCE,
 		affichee,
-		panneaux
+		panneaux,
+		adresseDesRelations
 	}: Proprietes = $props();
 
 	/** Les cinq listes des panneaux — vides tant que rien n'est servi. */
@@ -508,7 +511,14 @@
 				<div class="panneau__tete">
 					<span class="etiq">Relations</span>
 					<!-- P-09 · ARB-040 — omise, jamais masquée. `V-14:1848` -->
-					{#if ecriture}<button class="btn btn--discret si-ecriture" style="padding:4px 8px"
+					<!-- `/notes/{id}/relations` rend l'ORIGINE de chaque relation, que ce
+					     panneau ne montre pas, et aucun clic n'y menait. Absente, la
+					     propriété laisse le gel intact : le lien n'est pas rendu. -->
+					{#if adresseDesRelations !== undefined}<a
+							class="btn btn--discret"
+							style="padding:4px 8px"
+							href={adresseDesRelations}>Toutes les relations</a
+						>{/if}{#if ecriture}<button class="btn btn--discret si-ecriture" style="padding:4px 8px"
 							>+ Ajouter</button
 						>{/if}
 				</div>
