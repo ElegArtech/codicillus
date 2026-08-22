@@ -88,8 +88,16 @@ import {
 	type ContexteDeLecture
 } from './lecture';
 import { contexteDeRequete } from './signets';
-import { eq } from 'drizzle-orm';
-import { comptes, domaines, typesDeFiche, univers } from '../base/schema';
+import type { EffectifsDeConsole } from '../console/effectifs';
+import { count, eq } from 'drizzle-orm';
+import {
+	comptes,
+	domaines,
+	templates,
+	typesDeFiche,
+	typesDeRelation,
+	univers
+} from '../base/schema';
 import type {
 	Compte,
 	DetailDeDomaine,
@@ -599,6 +607,14 @@ export interface AccesALaConsole {
 	 * saurait si elles marchent (`P-5`).
 	 */
 	readonly compte: UtilisateurCourant;
+	/**
+	 * LES SEPT COMPTEURS DE `aside.nav2`, LUS EN BASE.
+	 *
+	 * Ils venaient de `seeds/corpus.ts` par le catalogue de `sections.ts`, et
+	 * annonçaient donc « Univers (3) · Domaines (4) … » à une instance vide.
+	 * `$lib/console/effectifs.ts` porte le motif complet.
+	 */
+	readonly effectifs: EffectifsDeConsole;
 }
 
 /**
@@ -612,6 +628,44 @@ export interface AccesALaConsole {
  * l'anonyme décidée sur le préfixe par `garde.ts` (`ARB-052`), et d'où l'absence
  * ici de toute lecture d'identifiant.
  */
+/**
+ * LES SEPT COMPTEURS DE LA NAVIGATION SECONDAIRE.
+ *
+ * SIX REQUÊTES, PAS SEPT. `imports` n'a AUCUNE TABLE — le journal d'imports du
+ * gel n'a pas de nœud en base, et `sections.ts` le dit déjà de son côté :
+ * « la maquette écrit `compte: function () { return 1; }` […] la valeur est
+ * recopiée du gel ». Recopier 1 ici serait annoncer un import à une instance
+ * qui n'en a jamais reçu ; la section est donc laissée hors de la table, et
+ * `groupesAvecEffectifs()` la rend à zéro. C'est la seule valeur vraie.
+ *
+ * LES COMPTES SONT COMPTÉS ACTIFS, comme au gel — `COMPTES.filter((c) =>
+ * c.actif).length` (`sections.ts`). Un compte désactivé reste une ligne ; il
+ * n'est pas un utilisateur de l'instance.
+ *
+ * Les six lectures sont indépendantes et partent ensemble : ce sont six
+ * `count(*)` sur des tables indexées, elles ne pèsent rien, et les mettre en
+ * file coûterait six allers-retours pour rien.
+ */
+export async function lireLesEffectifsDeConsole(base: Base): Promise<EffectifsDeConsole> {
+	const [u, d, f, r, t, c] = await Promise.all([
+		base.select({ combien: count() }).from(univers),
+		base.select({ combien: count() }).from(domaines),
+		base.select({ combien: count() }).from(typesDeFiche),
+		base.select({ combien: count() }).from(typesDeRelation),
+		base.select({ combien: count() }).from(templates),
+		base.select({ combien: count() }).from(comptes).where(eq(comptes.actif, true))
+	]);
+
+	return {
+		univers: u[0]?.combien ?? 0,
+		domaines: d[0]?.combien ?? 0,
+		fiches: f[0]?.combien ?? 0,
+		relations: r[0]?.combien ?? 0,
+		templates: t[0]?.combien ?? 0,
+		comptes: c[0]?.combien ?? 0
+	};
+}
+
 export async function resoudreLaConsole(
 	base: Base,
 	contexte: ContexteDeLecture,
@@ -622,10 +676,11 @@ export async function resoudreLaConsole(
 	/* Les quatre lectures sont indépendantes : elles partent ensemble plutôt
 	   qu'en file, et l'instant de `contexte` est commun aux quatre — c'est ce
 	   que `contexteDeRequete()` garantit, une horloge lue une seule fois. */
-	const [notes, rangement, compte] = await Promise.all([
+	const [notes, rangement, compte, effectifs] = await Promise.all([
 		lireNotes(base, contexte),
 		lireLeRangement(base),
-		lireLUtilisateurCourant(base, identite)
+		lireLUtilisateurCourant(base, identite),
+		lireLesEffectifsDeConsole(base)
 	]);
 
 	/* La session porte un identifiant de compte que la base ne connaît plus :
@@ -634,6 +689,12 @@ export async function resoudreLaConsole(
 
 	return {
 		trouve: true,
-		ressource: { notes, univers: rangement.univers, domaines: rangement.domaines, compte }
+		ressource: {
+			notes,
+			univers: rangement.univers,
+			domaines: rangement.domaines,
+			compte,
+			effectifs
+		}
 	};
 }
