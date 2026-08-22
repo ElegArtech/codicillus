@@ -154,6 +154,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* --------------------------------------------------------------------------
    3. ÉTIQUETTE MONO — le label d'instrument, utilisé partout
    -------------------------------------------------------------------------- */
+/* Le titre d'une section du rail mène à la page de son univers. Le gel rend un
+   `div` — il n'a pas de serveur, donc nulle part où aller ; le produit, si. */
+.rail__titre--lien { display: block; text-decoration: none; }
+.rail__titre--lien:hover { color: var(--c-encre); }
+
 .etiq {
   font-family: var(--f-donnee);
   font-size: var(--t-micro);
