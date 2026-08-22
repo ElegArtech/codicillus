@@ -137,22 +137,28 @@ export function dossiersDuDomaine(
 	return figer(racines, `f:${domaine}`);
 }
 
-/** Le rail : les univers porteurs d'au moins un domaine, et leurs arborescences. */
+/**
+ * Le rail : TOUS les univers, et leurs arborescences.
+ *
+ * Un univers sans domaine y figure, avec une liste vide. Il en était écarté —
+ * c'est ce que fait le script du gel (`V-07:construireRail`) —, et sur une
+ * instance neuve cela rendait le premier geste du produit invisible : on crée un
+ * univers à la console, et rien dans la navigation ne le montrait ni ne menait
+ * à sa page.
+ */
 export function sectionsDuRail(
 	univers: readonly Univers[],
 	domaines: readonly Domaine[],
 	notes: readonly Note[]
 ): readonly SectionDUnivers[] {
-	return universOrdonnes(univers)
-		.map((u) => ({
-			nom: u.nom,
-			domaines: domainesDe(domaines, u.nom).map((d) => ({
-				nom: d.nom,
-				cle: `d:${d.nom}`,
-				enfants: dossiersDuDomaine(notes, d.nom)
-			}))
+	return universOrdonnes(univers).map((u) => ({
+		nom: u.nom,
+		domaines: domainesDe(domaines, u.nom).map((d) => ({
+			nom: d.nom,
+			cle: `d:${d.nom}`,
+			enfants: dossiersDuDomaine(notes, d.nom)
 		}))
-		.filter((s) => s.domaines.length > 0);
+	}));
 }
 
 /**
