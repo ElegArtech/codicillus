@@ -52,6 +52,8 @@ import { eq } from 'drizzle-orm';
 import { comptes, domaines, univers } from '$lib/base/schema';
 import { capaciteDEcriture } from '$lib/donnees/public';
 import type { Base } from '$lib/base/acces';
+import { domaineLisible, ouvrirLAcces } from '$lib/donnees/rangement';
+import type { Identite } from '$lib/droits/resolution';
 
 /** Les deux identifiants d'adresse du domaine de rattachement, ou `null`. */
 async function rangementDuCompte(
@@ -126,7 +128,10 @@ async function identiteAffichable(
  * navigation. Comme pour l'identité, la lecture se fait UNE FOIS ici et descend
  * par contexte — trente routes qui la recopieraient divergeraient (`P-35`).
  */
-async function arborescenceDeNavigation(base: Base): Promise<{
+async function arborescenceDeNavigation(
+	base: Base,
+	identite: Identite
+): Promise<{
 	univers: {
 		nom: string;
 		couleur: string;
@@ -148,10 +153,41 @@ async function arborescenceDeNavigation(base: Base): Promise<{
 		})
 		.from(univers);
 	const lignesDomaines = await base
-		.select({ nom: domaines.nom, univers: univers.nom, couleur: domaines.couleur })
+		.select({
+			id: domaines.id,
+			nom: domaines.nom,
+			univers: univers.nom,
+			couleur: domaines.couleur
+		})
 		.from(domaines)
 		.innerJoin(univers, eq(univers.id, domaines.universId));
-	return { univers: lignesUnivers, domaines: lignesDomaines };
+
+	/**
+	 * LE RAIL NE MONTRE QUE CE QUE L'APPELANT PEUT OUVRIR.
+	 *
+	 * Il servait la structure ENTIÈRE à tout le monde. Mesuré le 23/08/2026 sur
+	 * une contributrice ayant droit sur deux domaines : son rail en listait six,
+	 * plus les trois univers, et **chacun de ces liens rendait 404**. Deux fautes
+	 * en une — `P-03`, une entrée de navigation visible est une entrée qui
+	 * fonctionne ; et `RG-ACC-01`, la structure de l'instance est une information
+	 * qu'un compte sans droit n'a pas à lire. Les noms d'univers et de domaines
+	 * disent l'organisation de la direction.
+	 *
+	 * L'ADMINISTRATEUR VOIT TOUT, et c'est `RG-DRO-03` : `ouvrirLAcces()` lui rend
+	 * un périmètre total, aucun filtre ne le retire donc.
+	 *
+	 * UN DOMAINE VIDE RESTE VISIBLE à qui a un droit dessus : la lisibilité se lit
+	 * sur les DOSSIERS, pas sur les notes, et un domaine qu'on vient de créer n'a
+	 * que sa racine.
+	 */
+	const acces = await ouvrirLAcces(base, identite, new Date());
+	const lisibles = lignesDomaines.filter((d) => domaineLisible(acces, d.id));
+	const universPorteurs = new Set(lisibles.map((d) => d.univers));
+
+	return {
+		univers: lignesUnivers.filter((u) => universPorteurs.has(u.nom)),
+		domaines: lisibles.map((d) => ({ nom: d.nom, univers: d.univers, couleur: d.couleur }))
+	};
 }
 
 import type { LayoutServerLoad } from './$types';
@@ -201,6 +237,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		rangement: await rangementDuCompte(base, locals.identite.compteId),
 		compte: await identiteAffichable(base, locals.identite.compteId),
 		version: VERSION_DU_PRODUIT,
-		...(await arborescenceDeNavigation(base))
+		...(await arborescenceDeNavigation(base, locals.identite))
 	};
 };
