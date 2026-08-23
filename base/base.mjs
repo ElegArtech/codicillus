@@ -31,6 +31,9 @@ Usage : node base/base.mjs <commande>
   reversibilite     monte, descend, remonte, et compare les empreintes
   semer             charge seeds/corpus.ts dans la base
   reindexer         reconstruit l’index de recherche depuis la base
+  peupler           REMPLACE le contenu par le jeu de démonstration : une DSI de
+                    120 personnes, sa gouvernance, sa comitologie, ses notes de
+                    service et sa documentation technique. Reproductible.
   administrateur    crée le PREMIER administrateur d’une instance neuve.
                     Refuse si un compte existe déjà — les suivants se créent en
                     console. Le mot de passe se donne par MDP_ADMINISTRATEUR :
@@ -256,6 +259,20 @@ try {
 			break;
 		}
 
+		case 'peupler': {
+			const D = await vite.ssrLoadModule('/src/lib/base/demonstration.ts');
+			const rapport = await D.peupler(session);
+			for (const [quoi, combien] of Object.entries(rapport)) ligne(quoi, String(combien));
+			console.log('');
+			console.log(
+				`Tous les comptes du jeu ont le mot de passe : ${D.MOT_DE_PASSE_DE_DEMONSTRATION}`
+			);
+			console.log("Le compte a.berge, s'il existait, est conservé avec son mot de passe.");
+			console.log('');
+			console.log('Pense à réindexer la recherche : pnpm base:reindexer');
+			break;
+		}
+
 		case 'administrateur': {
 			const qui = {
 				identifiant: process.env.ADMIN_IDENTIFIANT ?? '',
@@ -283,6 +300,9 @@ try {
 	}
 } catch (erreur) {
 	console.error(`ÉCHEC — ${erreur instanceof Error ? erreur.message : String(erreur)}`);
+	if (erreur instanceof Error && erreur.cause instanceof Error) {
+		console.error(`CAUSE  — ${erreur.cause.message}`);
+	}
 	code = 1;
 } finally {
 	await session.fermer();

@@ -20,6 +20,7 @@
 		"base:annuler": "node base/base.mjs annuler",
 		"base:etat": "node base/base.mjs etat",
 		"base:semer": "node base/base.mjs semer",
+		"base:peupler": "node base/base.mjs peupler",
 		"base:reindexer": "node base/base.mjs reindexer",
 		"base:administrateur": "node base/base.mjs administrateur"
 	},
