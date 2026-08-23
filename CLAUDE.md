@@ -39,7 +39,10 @@ rapportent pas leurs erreurs de la même façon ; compter les lignes `ERROR` n'e
 pnpm check >/dev/null 2>&1; echo $?     # 0, ou rien n'est vert
 ```
 
-Compte de développement : `a.berge` / `ardoise-brume-clairiere-sextant-vergue-73`.
+Les identifiants de développement ne sont PAS ici : ce fichier est versionné et le dépôt est
+public. Ils vivent dans `.env`, qui est ignoré. Pour ouvrir une instance neuve :
+`pnpm base:administrateur` avec `ADMIN_IDENTIFIANT`, `ADMIN_NOM`, `ADMIN_COURRIEL` et
+`MDP_ADMINISTRATEUR`. Pour un jeu de démonstration complet : `pnpm base:peupler`.
 
 ---
 
