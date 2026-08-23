@@ -167,6 +167,11 @@
 		erreurDeCreation?: string | null;
 		/** Le refus affiché par `#dep-erreur` (`V-13:1252`), s'il y en a un. */
 		erreurDeDeplacement?: string | null;
+		/**
+		 * L'univers porteur du domaine, tel que l'adresse le nomme. Absent, on le
+		 * cherche dans `domaines` — c'est le rendu d'une planche.
+		 */
+		universDuDomaine?: string;
 	}
 
 	/**
@@ -204,12 +209,25 @@
 		rangement = null,
 		origineDuDroit = null,
 		erreurDeCreation = null,
-		erreurDeDeplacement = null
+		erreurDeDeplacement = null,
+		universDuDomaine
 	}: Proprietes = $props();
 
-	/** L'univers du domaine affiché — lu à la liste des domaines, jamais supposé. */
+	/**
+	 * L'UNIVERS DU DOMAINE AFFICHÉ, ET IL VIENT DE L'ADRESSE.
+	 *
+	 * Il était cherché dans `domaines` — que la route ne passe pas —, donc dans
+	 * la constante du jeu de démonstration, avec « Production » pour défaut.
+	 * Mesuré le 23/08/2026 : sur un domaine absent du jeu, TOUS les liens de la
+	 * page pointaient vers `/univers/production/…`, et rendaient 404. Le fil
+	 * d'Ariane annonçait le mauvais univers par-dessus le marché.
+	 *
+	 * La route connaît l'univers : il est dans son adresse. Absent — le rendu
+	 * d'une planche —, on retombe sur la liste puis sur le jeu, et le gel ne
+	 * bouge pas.
+	 */
 	const UNIVERS_DU_DOMAINE = $derived(
-		domaines.find((d) => d.nom === DOMAINE)?.univers ?? 'Production'
+		universDuDomaine ?? domaines.find((d) => d.nom === DOMAINE)?.univers ?? 'Production'
 	);
 
 	/** Les trois droits effectifs de la planche, et rien d'autre. */
