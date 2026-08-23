@@ -14,10 +14,13 @@
  * Markdown vit donc dans des fichiers Markdown.
  *
  * IL REMPLACE LE CONTENU, IL NE S'Y AJOUTE PAS. Relancer la commande rend la
- * même instance : c'est ce qui en fait une démonstration reproductible. Les
- * comptes, les sessions ouvertes et le journal des migrations sont effacés avec
- * le reste — sauf le compte d'administration d'origine, qui reste, sans quoi on
- * se fermerait la porte.
+ * même instance : c'est ce qui en fait une démonstration reproductible.
+ *
+ * LES COMPTES QUI NE SONT PAS DU JEU NE SONT PAS TOUCHÉS. Une première
+ * rédaction employait `truncate … cascade`, et a détruit un compte
+ * d'administration réel : `comptes` référence `domaines`, le CASCADE l'a donc
+ * emporté. Les suppressions sont désormais explicites, des filles vers les
+ * mères, et aucune ne vise `comptes` au-delà des huit identifiants du jeu.
  */
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -161,15 +164,45 @@ export async function peupler(
 	const condensat = await hacherMotDePasse(MOT_DE_PASSE_DE_DEMONSTRATION);
 
 	return session.db.transaction(async (tx) => {
-		/* On efface le contenu, jamais le schéma. `restart identity cascade`
-		   emporte les tables filles sans qu'on ait à les nommer une à une — un
-		   oubli dans cette liste laisserait des orphelins invisibles. */
+		/**
+		 * ON EFFACE LE CONTENU, ET SURTOUT PAS LES COMPTES.
+		 *
+		 * La rédaction précédente employait `truncate … cascade` sur `domaines`.
+		 * C'était une faute, et elle a détruit un compte réel : `comptes` porte
+		 * une clé étrangère vers `domaines` (`comptes_domaine_fk`), donc le
+		 * CASCADE emportait la table des comptes ENTIÈRE — avant même que la
+		 * ligne suivante, censée en préserver un, ne s'exécute. Un `cascade` ne
+		 * se raisonne pas sur les tables qu'on nomme, mais sur toutes celles qui
+		 * les référencent, et cette liste ne se devine pas.
+		 *
+		 * On supprime donc explicitement, des filles vers les mères. C'est plus
+		 * long à écrire et cela ne peut pas emporter ce qu'on n'a pas nommé.
+		 */
+		await tx.execute(sql`delete from ${etiquettesDeNote}`);
+		await tx.execute(sql`delete from ${relations}`);
+		await tx.execute(sql`delete from ${verifications}`);
+		await tx.execute(sql`delete from consultations`);
+		await tx.execute(sql`delete from versions`);
+		await tx.execute(sql`delete from pieces_jointes`);
+		await tx.execute(sql`delete from ${droitsDeDossier}`);
+		await tx.execute(sql`delete from ${champsDeTypeDeFiche}`);
+		await tx.execute(sql`delete from ${modulesDeDomaine}`);
+		await tx.execute(sql`delete from ${notes}`);
+		await tx.execute(sql`delete from ${dossiers}`);
+		await tx.execute(sql`delete from ${etiquettes}`);
+		await tx.execute(sql`delete from ${typesDeFiche}`);
+		await tx.execute(sql`delete from ${typesDeRelation}`);
+		/* Le rattachement d'un compte à un domaine s'efface avec le domaine
+		   (`on delete set null`) ; le compte, lui, reste. */
+		await tx.execute(sql`delete from ${domaines}`);
+		await tx.execute(sql`delete from ${univers}`);
+
+		/* Les comptes du JEU seulement, désignés un à un. Tout autre compte —
+		   celui d'un administrateur réel — n'est pas touché. */
+		const identifiantsDuJeu = COMPTES.map((c) => c.identifiant);
 		await tx.execute(
-			sql`truncate table ${univers}, ${domaines}, ${dossiers}, ${notes}, ${etiquettes},
-			    ${typesDeFiche}, ${typesDeRelation}, ${relations}, ${verifications}
-			    restart identity cascade`
+			sql`delete from ${comptes} where ${comptes.identifiant} in ${identifiantsDuJeu}`
 		);
-		await tx.execute(sql`delete from ${comptes} where ${comptes.identifiant} <> 'a.berge'`);
 
 		/* Les comptes. */
 		const comptesPoses = await tx
