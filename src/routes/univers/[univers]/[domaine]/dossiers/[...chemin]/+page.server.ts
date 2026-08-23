@@ -234,6 +234,9 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		},
 		notes: await lireNotesLisibles(base, acces.perimetre, acces.contexte),
 		domaine: domaine.nom as NomDeDomaine,
+		/* L'univers porteur, pour que la vue ne le devine pas : elle le cherchait
+		   dans le jeu de démonstration et retombait sur « Production ». */
+		universDuDomaine: domaine.universNom,
 		rangement: {
 			destinations,
 			dossierId: dossier.id,

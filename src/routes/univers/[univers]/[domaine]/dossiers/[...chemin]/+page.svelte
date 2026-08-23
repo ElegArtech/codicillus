@@ -231,6 +231,7 @@
 		vecteur={data.vecteur}
 		notes={data.notes}
 		domaine={data.domaine}
+		universDuDomaine={data.universDuDomaine}
 		rangement={data.rangement}
 		origineDuDroit={data.origineDuDroit}
 		erreurDeCreation={refus?.creation ?? null}
