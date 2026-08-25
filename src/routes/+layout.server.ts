@@ -52,22 +52,45 @@ import { eq } from 'drizzle-orm';
 import { comptes, domaines, univers } from '$lib/base/schema';
 import { capaciteDEcriture } from '$lib/donnees/public';
 import type { Base } from '$lib/base/acces';
-import { domaineLisible, ouvrirLAcces } from '$lib/donnees/rangement';
-import type { Identite } from '$lib/droits/resolution';
+import { domaineLisible, ouvrirLAcces, type AccesAuRangement } from '$lib/donnees/rangement';
 
-/** Les deux identifiants d'adresse du domaine de rattachement, ou `null`. */
+/**
+ * Les deux identifiants d'adresse du domaine de rattachement, ou `null`.
+ *
+ * LE RATTACHEMENT N'EST PAS UN TITRE D'ACCÈS. Un compte se crée avec un domaine
+ * principal et AUCUN droit de dossier — `UC-M14-07` n'en énumère pas, et
+ * `RG-M14-04` laisse même le rattachement survivre à la suppression de sa cible.
+ * `RG-DRO-02` répond seule pour ce compte : sans droit explicite, aucun accès.
+ *
+ * Le rangement était rendu SANS cette garde, et le même chargeur sortait donc
+ * deux vérités contradictoires — un rail vide et un rattachement non nul. Les
+ * deux entrées composées sur ce rattachement, le bouton « Voir les notes de
+ * {domaine} » de `/mon-profil` et le menu « Créer » de la barre supérieure,
+ * menaient en 404. La garde est ici, à la source, et non dans chaque vue :
+ * `null` est ce que les deux savent déjà traiter.
+ *
+ * LE PRÉDICAT EST CELUI DE LA CIBLE — `[domaine]/+page.server.ts` refuse
+ * l'adresse sur le même `domaineLisible`. L'administrateur n'est pas touché :
+ * `RG-DRO-03` lui donne un périmètre total.
+ */
 async function rangementDuCompte(
 	base: Base,
-	compteId: string
+	compteId: string,
+	acces: AccesAuRangement
 ): Promise<{ univers: string; domaine: string } | null> {
 	const [ligne] = await base
-		.select({ univers: univers.identifiant, domaine: domaines.identifiant })
+		.select({
+			id: domaines.id,
+			univers: univers.identifiant,
+			domaine: domaines.identifiant
+		})
 		.from(comptes)
 		.innerJoin(domaines, eq(domaines.id, comptes.domaineId))
 		.innerJoin(univers, eq(univers.id, domaines.universId))
 		.where(eq(comptes.id, compteId))
 		.limit(1);
-	return ligne ?? null;
+	if (ligne === undefined || !domaineLisible(acces, ligne.id)) return null;
+	return { univers: ligne.univers, domaine: ligne.domaine };
 }
 /**
  * L'IDENTITÉ AFFICHABLE DU COMPTE CONNECTÉ — nom, initiales, rôle et domaine.
@@ -130,7 +153,7 @@ async function identiteAffichable(
  */
 async function arborescenceDeNavigation(
 	base: Base,
-	identite: Identite
+	acces: AccesAuRangement
 ): Promise<{
 	univers: {
 		nom: string;
@@ -180,7 +203,6 @@ async function arborescenceDeNavigation(
 	 * sur les DOSSIERS, pas sur les notes, et un domaine qu'on vient de créer n'a
 	 * que sa racine.
 	 */
-	const acces = await ouvrirLAcces(base, identite, new Date());
 	const lisibles = lignesDomaines.filter((d) => domaineLisible(acces, d.id));
 	const universPorteurs = new Set(lisibles.map((d) => d.univers));
 
@@ -213,6 +235,12 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		};
 	}
 	const base = basePartagee();
+	/**
+	 * L'ACCÈS EST OUVERT UNE FOIS, ET LES DEUX LECTEURS DE LISIBILITÉ LE PARTAGENT.
+	 * Il l'était déjà pour le rail seul ; il est simplement déplacé d'un cran, ce
+	 * qui ne coûte aucune requête de plus et interdit aux deux de diverger.
+	 */
+	const acces = await ouvrirLAcces(base, locals.identite, new Date());
 	return {
 		session: true,
 		ecriture: await capaciteDEcriture(base, locals.identite),
@@ -231,12 +259,13 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		 * « Nouveau dossier », et les deux adresses exigent un domaine. Le seul que
 		 * le produit puisse choisir sans décider à la place de l'utilisateur est
 		 * celui auquel son compte est rattaché (migration `005`). Sans
-		 * rattachement, les deux entrées ne sont pas émises — une entrée qui ne
-		 * mène nulle part est un lien mort, et `P-03` n'en admet aucun.
+		 * rattachement, ou sans DROIT DE LECTURE sur ce rattachement, les deux
+		 * entrées ne sont pas émises — une entrée qui ne mène nulle part est un
+		 * lien mort, et `P-03` n'en admet aucun.
 		 */
-		rangement: await rangementDuCompte(base, locals.identite.compteId),
+		rangement: await rangementDuCompte(base, locals.identite.compteId, acces),
 		compte: await identiteAffichable(base, locals.identite.compteId),
 		version: VERSION_DU_PRODUIT,
-		...(await arborescenceDeNavigation(base, locals.identite))
+		...(await arborescenceDeNavigation(base, acces))
 	};
 };
