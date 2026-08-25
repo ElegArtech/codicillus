@@ -247,17 +247,29 @@ function pastille(document: Document, nom: string): HTMLElement {
 /* ═══════════════════════════════ Les propriétés d'une fiche ════════════ */
 
 /**
- * LES DEUX VALEURS D'UN CHAMP « interrupteur », ET ELLES NE SONT PAS INVENTÉES.
+ * LES DEUX VALEURS D'UN CHAMP « interrupteur », ET LEUR SOURCE EST UNE SPEC.
  *
- * `notes.proprietes_typees` est une table de chaînes — `lireLesProprietes()`
- * (`../base/demonstration.ts`) n'en produit pas d'autre forme, et
- * `lireLesProprietesDeFiche()` (`../donnees/lecture.ts`) rend ce que la colonne
- * porte. Les deux mots retenus sont ceux que le jeu de démonstration écrit
- * déjà : `seeds/demonstration/60-fiche-pg-prod-01.md` porte `sauvegarde=oui` et
- * `…/61-fiche-bkp-01.md` porte `sauvegarde=non`. Un troisième vocabulaire —
- * `true` / `1` / la clé absente — ferait deux écritures pour un même fait, et
- * le panneau de propriétés de V-20 rendrait l'un ou l'autre selon l'origine de
- * la ligne.
+ * `notes.proprietes_typees` est une table de chaînes — `lireLesProprietesDeFiche()`
+ * (`../donnees/lecture.ts`) rend le texte que la colonne porte, et rien d'autre :
+ * un champ booléen doit donc s'y écrire en toutes lettres, et les deux lettres
+ * ne se choisissent pas au jugé.
+ *
+ * ELLES VIENNENT DE LA CONSOLE, PAS DU JEU DE DÉMONSTRATION. Le type de champ
+ * s'appelle `booleen` au schéma (`002_socle.montee.sql`, l'énumération
+ * `type_de_champ`), et l'écran qui le fait choisir à l'administrateur le nomme
+ * « Oui ou non » — gel de V-29, catalogue des types de propriété, porté tel quel
+ * par le produit. Le mot que la console PROMET à celui qui définit le champ est
+ * donc celui que la note doit porter ; l'écrire autrement ferait mentir l'écran
+ * qui l'a fait choisir. La forme stockée est la forme machine, en minuscules,
+ * comme toutes les valeurs de cette colonne.
+ *
+ * Que le jeu de démonstration écrive déjà ces deux mots ne fonde rien — un jeu
+ * de démonstration n'est jamais la vérité du produit (`P-02`) : il concorde,
+ * c'est tout, et cette concordance est ce qui évite une reprise de données.
+ *
+ * Un troisième vocabulaire — `true`, `1`, ou la clé absente — ferait deux
+ * écritures pour un même fait, et le panneau de propriétés de V-20 rendrait
+ * l'une ou l'autre selon l'origine de la ligne.
  */
 export const COCHE = 'oui';
 export const DECOCHE = 'non';
