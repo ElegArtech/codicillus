@@ -88,6 +88,7 @@ import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import { DocumentInvalide } from '$lib/contenu/document';
 import { MarkdownInvalide } from '$lib/contenu/markdown';
 import { EditeurIncapable } from '$lib/edition/document';
+import { MOTIF_DE_PROPRIETE_OBLIGATOIRE } from '$lib/edition/gestes';
 import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -271,6 +272,18 @@ export const actions: Actions = {
 			   référentiel administrable a pu changer entre l'ouverture de l'écran
 			   et l'enregistrement. La note existe : ce n'est pas un 404. */
 			return fail(400, { motif: 'type de fiche introuvable' });
+		}
+		/* C'EST ICI QUE L'OBLIGATION MORD SUR L'EXISTANT — `mockups/V-29:3308` :
+		   une note déjà écrite n'est pas invalidée par une propriété devenue
+		   obligatoire, mais sa PROCHAINE MODIFICATION en demande la valeur. Rien
+		   n'a encore été écrit à cette ligne : le brouillon reste entier. */
+		if (issue.ressource.sort === 'proprietes-manquantes') {
+			const manquantes = issue.ressource.manquantes;
+			return fail(400, {
+				motif: MOTIF_DE_PROPRIETE_OBLIGATOIRE,
+				manquements: manquantes.map((p) => p.nom),
+				proprietesManquantes: manquantes.map((p) => p.cle)
+			});
 		}
 
 		/* L'ADRESSE DE DESTINATION EST CELLE DE L'ADRESSE DEMANDÉE. Un identifiant
