@@ -447,7 +447,7 @@ export function verdictDuChangementDeRole(
 /** Une erreur de validation, rattachée AU CHAMP concerné — `V-33:2992-3001`. */
 export interface ErreurDeConfiguration {
 	/** Le champ du gel, par son identifiant de bloc (`champ-frais`, `V-33:2993`). */
-	readonly champ: 'frais' | 'vieil' | 'portail' | 'mot';
+	readonly champ: 'frais' | 'vieil' | 'portail' | 'mot' | 'versions' | 'taille' | 'session';
 	/** Le message, transcrit du gel. */
 	readonly message: string;
 }
@@ -465,6 +465,28 @@ export const MESSAGE_ADRESSE_INVALIDE =
 /** `V-33:3024` — le libellé du concept renommable de M14.7. */
 export const MESSAGE_LIBELLE_VIDE =
 	'Ce mot apparaît dans toute l’interface : il ne peut pas être vide.';
+
+/**
+ * `RG-M07-03` (`CDC:834`) — « le nombre de versions conservées par note est
+ * plafonné, valeur configurable (défaut : 50) ». Le domaine annoncé à l'écran
+ * est celui du champ lui-même (`V-33:434`, de 5 à 500) : la validation tient
+ * ce que le champ affiche.
+ */
+export const MESSAGE_PLAFOND_HORS_DOMAINE =
+	'Le nombre de versions conservées doit être un entier compris entre 5 et 500.';
+/**
+ * `V-33:503` — le champ va de 1 à 500 Mo. Un plafond nul refuserait TOUTE pièce
+ * jointe (`fichiers/epreuve.ts:229`, qui en fait des octets).
+ */
+export const MESSAGE_TAILLE_HORS_DOMAINE =
+	'La taille maximale d’une pièce jointe doit être un entier de 1 à 500 Mo.';
+/**
+ * `sessions.ts:126-130` REFUSE déjà une durée nulle ou négative, et il la refuse
+ * en LEVANT, depuis `hooks.server.ts` : toute requête authentifiée sortirait en
+ * 500. Le domaine du message est donc exactement celui de ce lecteur.
+ */
+export const MESSAGE_SESSION_HORS_DOMAINE =
+	'La durée de session doit être un nombre de minutes strictement positif.';
 
 /**
  * `V-33:3016` — le second seuil doit DÉPASSER le premier, et le gel dit
@@ -537,13 +559,32 @@ const ADRESSE_DE_PORTAIL = /^https?:\/\/[\w-]+(\.[\w-]+)+/;
  * incohérentes (seuil jaune inférieur ou égal au seuil vert, plafond
  * négatif…) avec un message explicite. »
  *
- * LES QUATRE CONTRÔLES SONT CEUX DE `valider()` (`V-33:3003-3027`), DANS SON
- * ORDRE, et aucun de plus. Le cahier cite « plafond négatif » parmi ses
- * exemples ; le gel ne valide PAS le plafond de versions — son champ n'a pas de
- * bloc d'erreur, et `marquer()` rend vrai pour un champ qu'il ne trouve pas
- * (`V-33:2995`). Écrire ce contrôle serait combler un vide que la maquette a
- * laissé, et la maquette prime : il est déclaré au rapport du lot, jamais ajouté
- * ici.
+ * LES QUATRE PREMIERS CONTRÔLES SONT CEUX DE `valider()` (`V-33:3003-3027`),
+ * DANS SON ORDRE. LES TROIS DERNIERS SONT CEUX QUE LE CAHIER NOMME ET QUE LE GEL
+ * N'A PAS DESSINÉS — et ce n'était pas un vide laissé, c'était une porte ouverte.
+ *
+ * Une première rédaction s'est arrêtée aux quatre du gel, au motif que le
+ * plafond de versions n'a pas de bloc d'erreur dessiné. Ce qu'elle coûtait est
+ * MESURÉ, et sur les trois champs à la fois :
+ *
+ *   `c-versions` vidé  → `Number('') === 0` → `versions_max = 0` en base, et
+ *                        l'historique de V-15 annonçait « les 0 dernières sont
+ *                        gardées » ;
+ *   `c-taille` à 0     → plafond de pièce jointe à zéro octet, tout dépôt refusé ;
+ *   `c-session` à 0    → `dureeDInactiviteEnMinutes()` LÈVE depuis
+ *                        `hooks.server.ts`, et TOUTE requête authentifiée sort
+ *                        en 500. Mesuré : `GET /console` → 500.
+ *
+ * Le `min` des champs ne garde rien : `console/cablage.ts:244-248` écoute un
+ * `click`, compose la charge depuis `champ.value` et l'envoie — sans
+ * `checkValidity()`, sans `requestSubmit()`. Le navigateur n'évalue JAMAIS ces
+ * bornes. La seule garde qui existe est celle-ci.
+ *
+ * `RG-M14-10` nomme d'ailleurs « plafond négatif » parmi ce que la validation
+ * DOIT refuser avec un message explicite : le contrôle n'est pas un ajout à la
+ * maquette, il est écrit au cahier. Les trois blocs d'erreur manquants ont été
+ * ajoutés à `V-33` sur le patron de `#champ-frais`, et `peindreLesRefusDeConfiguration`
+ * les peint : un refus qu'aucun écran ne montre serait le même défaut ailleurs.
  *
  * TOUTES LES ERREURS SONT RENDUES, jamais la première : le gel marque les quatre
  * champs en un seul passage (`ok = marquer(…) && ok`, quatre fois), et un
@@ -566,6 +607,23 @@ export function validerLaConfiguration(valeurs: Configuration): VerdictDeConfigu
 	}
 	if (valeurs.motFiche === '') {
 		erreurs.push({ champ: 'mot', message: MESSAGE_LIBELLE_VIDE });
+	}
+	if (
+		!Number.isSafeInteger(valeurs.versionsMax) ||
+		valeurs.versionsMax < 5 ||
+		valeurs.versionsMax > 500
+	) {
+		erreurs.push({ champ: 'versions', message: MESSAGE_PLAFOND_HORS_DOMAINE });
+	}
+	if (
+		!Number.isSafeInteger(valeurs.tailleMaxPieceJointe) ||
+		valeurs.tailleMaxPieceJointe < 1 ||
+		valeurs.tailleMaxPieceJointe > 500
+	) {
+		erreurs.push({ champ: 'taille', message: MESSAGE_TAILLE_HORS_DOMAINE });
+	}
+	if (!Number.isFinite(valeurs.dureeSession) || valeurs.dureeSession < 1) {
+		erreurs.push({ champ: 'session', message: MESSAGE_SESSION_HORS_DOMAINE });
 	}
 
 	if (erreurs.length > 0) return { issue: 'valeurs-refusees', erreurs };
@@ -1240,6 +1298,23 @@ export async function changerLActivationDUnCompte(
  * (`./lecture.ts`, `lireSeuils()` puis `niveauFraicheur()`). C'est `P-01` qui
  * rend `RG-M14-09` vraie pour TOUS les badges à la fois : ils n'ont qu'une
  * implémentation à suivre.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CHAQUE LIGNE EST POSÉE, PAS SEULEMENT MISE À JOUR — LE CHEMIN À ZÉRO DONNÉE
+ *
+ * Ces sept écritures étaient des `update` nus. Sur une instance NEUVE — base
+ * migrée, jamais semée —, `parametres` est VIDE : `lireConfiguration()` le dit
+ * en propres termes, et c'est pour ce cas qu'elle retombe sur les défauts. Un
+ * `update` sur une table vide touche zéro ligne, ne lève pas, et l'action rend
+ * son verdict « possible ». MESURÉ sur une instance montée par `base:migrer`
+ * puis `base:peupler` : `parametres` compte zéro ligne, l'écran de
+ * configuration accepte les sept champs, rend 200 — et rien n'est écrit. Les
+ * sept réglages de M14.7 étaient inertes sur toute installation réelle, et le
+ * plafond de versions en premier, dont l'écran promet un effet immédiat.
+ *
+ * L'insertion avec reprise sur conflit de clé est la seule forme qui vaut dans
+ * les deux états, et `parametres.cle` est la clé primaire (`002_socle`) : il
+ * n'y a pas de second discriminant à choisir.
  */
 export async function enregistrerLaConfiguration(
 	base: Base,
@@ -1259,9 +1334,12 @@ export async function enregistrerLaConfiguration(
 	await base.transaction(async (tx) => {
 		for (const ligne of lignes) {
 			await tx
-				.update(parametres)
-				.set({ valeur: ligne.valeur, modifieLe: ligne.modifieLe })
-				.where(eq(parametres.cle, ligne.cle));
+				.insert(parametres)
+				.values(ligne)
+				.onConflictDoUpdate({
+					target: parametres.cle,
+					set: { valeur: ligne.valeur, modifieLe: ligne.modifieLe }
+				});
 		}
 	});
 
