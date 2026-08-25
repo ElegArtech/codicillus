@@ -50,7 +50,6 @@
 	domaines={data.domaines}
 	compte={data.compte}
 	nomsDArchive={data.nomsDArchive}
-	dossiersParDomaine={data.dossiersParDomaine}
 	onExporter={(domaine) => {
 		/* LA DÉSIGNATION EST CANONIQUE, comme partout ailleurs : le sélecteur rend
 		   un NOM de domaine, l'adresse attend deux identifiants lisibles
