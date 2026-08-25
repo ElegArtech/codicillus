@@ -434,6 +434,8 @@ export interface DomaineResolu {
 	readonly nom: string;
 	readonly universId: string;
 	readonly universNom: string;
+	/** La teinte du domaine — les vues la portent en variable de style. */
+	readonly couleur: string;
 }
 
 /** L'univers d'un identifiant d'adresse, ou `null`. */
@@ -465,6 +467,7 @@ export async function lireDomaineParIdentifiants(
 		.select({
 			id: domaines.id,
 			nom: domaines.nom,
+			couleur: domaines.couleur,
 			universId: univers.id,
 			universNom: univers.nom
 		})

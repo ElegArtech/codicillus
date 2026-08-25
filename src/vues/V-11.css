@@ -442,7 +442,15 @@
 .type-ligne__n { font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-3); flex: none; width: 20px; text-align: right; }
 
 /* --- Contributeurs ----------------------------------------------------------------------- */
-.contrib { display: flex; align-items: center; gap: var(--e-3); padding: var(--e-2) 0; }
+/* Une ligne de contributeur est un BOUTON — elle ouvre la liste des notes du
+   domaine sur la facette `auteur`. Le gel la dessine en div faute de
+   destination ; la neutralisation reprend celle de `.type-ligne`, sa jumelle
+   de la colonne, pour que le rendu ne bouge pas d un pixel. */
+.contrib {
+  display: flex; align-items: center; gap: var(--e-3); padding: var(--e-2) 0;
+  width: 100%; background: none; border: 0; text-align: left;
+  color: inherit; font: inherit; cursor: pointer;
+}
 .contrib + .contrib { border-top: 1px solid var(--c-trait-fin); }
 .contrib__av {
   width: 30px; height: 30px; border-radius: 50%; flex: none;

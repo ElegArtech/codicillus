@@ -11,7 +11,7 @@
  * propre page — il s'écrit en console —, et aucune action serveur n'existe ici.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * LES QUATRE FAMILLES DE GESTES, ET CE QUE CHACUNE VISE
+ * LES CINQ FAMILLES DE GESTES, ET CE QUE CHACUNE VISE
  *
  * 1. LES TROIS ACTIONS DE COUVERTURE et leurs jumelles de l'état vide. Le gel
  *    pose la même action à deux endroits — `#a-creer` en couverture, `#v-creer`
@@ -35,6 +35,14 @@
  *    envoyer sans périmètre montrait le corpus entier depuis la page d'un
  *    domaine : le libellé promet « Cartographie — Infrastructure », l'écran
  *    rendait tout Production.
+ *
+ * 5. LES LIGNES DE CONTRIBUTEUR. Chacune ouvre la liste du domaine sur la
+ *    facette `auteur`, qui existe et est honorée (`V-12.svelte`, table
+ *    `FACETTES` ; `…/notes/+page.server.ts`, `CLES_DE_FACETTE`). Le panneau
+ *    comptait les notes de chacun sans qu'aucun clic n'y mène ; le compte de
+ *    TÊTE du panneau, lui, reste inerte — il compte des contributeurs, et
+ *    `auteur` prend un NOM, pas un nombre. Aucune cible exacte n'existe pour
+ *    lui, et la liste qu'il compte est immédiatement dessous.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * TROIS GESTES OUVRENT LA LISTE SANS FILTRE — ET AUCUN NE RESTE INERTE
@@ -251,6 +259,20 @@ export function cablerLeDomaine(racine: HTMLElement, options: OptionsDuDomaine):
 			if (type === '') return;
 			const adresse = listeDuDomaine();
 			adresse.searchParams.set('type', type);
+			evenement.preventDefault();
+			aller(adresse);
+			return;
+		}
+
+		/* 6. UNE LIGNE DE CONTRIBUTEUR — la liste, filtrée sur son nom. Le nom
+		      est lu sur `.contrib__nom`, qui ne porte que lui : le compte de
+		      notes vit dans `.contrib__n`, hors de ce nœud. */
+		const contributeur = cible.closest('.contrib');
+		if (contributeur !== null) {
+			const nom = libelle(contributeur.querySelector('.contrib__nom'));
+			if (nom === '') return;
+			const adresse = listeDuDomaine();
+			adresse.searchParams.set('auteur', nom);
 			evenement.preventDefault();
 			aller(adresse);
 		}
