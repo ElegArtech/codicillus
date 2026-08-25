@@ -409,7 +409,29 @@
 		rangement?.destinations.find((d) => d.segments.length === 0) ?? null
 	);
 
+	/**
+	 * LE CHEMIN VIDE EST LA RACINE DU DOMAINE, ET NON « rien ».
+	 *
+	 * La racine a une page depuis le 22/08/2026 — `viseLaRacine` du chargeur —,
+	 * et son chemin AFFICHÉ est la suite vide : `segmentsAffiches()` remonte les
+	 * ancêtres sans consommer la racine. Sans ce cas, la boucle ci-dessous ne
+	 * s'exécutait pas, `noeudDe([])` rendait `null`, et la page de la racine
+	 * n'annonçait JAMAIS ses sous-dossiers : on en créait un, il disparaissait de
+	 * l'écran qui venait de le créer.
+	 *
+	 * `arbre` EST DÉJÀ L'ENSEMBLE DES ENFANTS DE LA RACINE : la destination de la
+	 * racine porte des segments vides, `creuser()` n'y descend d'aucun maillon et
+	 * la boucle de construction la saute. Son premier niveau est donc exactement
+	 * la fratrie cherchée.
+	 */
 	function noeudDe(c: readonly string[]): NoeudDeDossier | null {
+		if (c.length === 0) {
+			return {
+				id: racineDuDomaine?.id ?? '',
+				refus: racineDuDomaine?.refus ?? null,
+				enfants: arbre
+			};
+		}
 		let niveauCourant = arbre;
 		let trouve: NoeudDeDossier | null = null;
 		for (const segment of c) {
@@ -454,7 +476,20 @@
 		return n ? compterDossiers(n.enfants) : 0;
 	}
 
-	const nom = $derived(chemin[chemin.length - 1] ?? '');
+	/**
+	 * LE NOM DU DOSSIER — dernier segment du chemin, et LE NOM DU DOMAINE sur la
+	 * racine, qui n'a pas de segment sous elle.
+	 *
+	 * `RG-STR-03` donne à la racine le nom de son domaine, et c'est sous ce nom
+	 * que le sélecteur de destination l'offre déjà. Le repli sur la chaîne vide
+	 * laissait le `h1` réduit à son pictogramme et le dialogue des droits titré
+	 * « Droits du dossier » sans dossier.
+	 */
+	const nom = $derived(chemin[chemin.length - 1] ?? DOMAINE);
+	/** La racine du domaine est le seul dossier sans parent — RG-STR-03. */
+	const surLaRacine = $derived(chemin.length === 0);
+	/** Le chemin affiché de ce dossier, la racine étant nommée par son domaine. */
+	const cheminDuDossier = $derived(surLaRacine ? DOMAINE : cheminTexte(chemin));
 	const sous = $derived(sousDossiers(chemin));
 	const notesDuDossier = $derived(notesDirectes(chemin));
 	const toutes = $derived(notesRecursives(chemin));
@@ -747,13 +782,30 @@
 						>
 						Nouvelle note
 					</button>{/if}
+				<!--
+					RENOMMER ET SUPPRIMER SONT OMIS SUR LA RACINE — `P-03`, un geste
+					offert est un geste qui marche.
+
+					`renommerOuDeplacerUnDossier()` et `supprimerUnDossier()`
+					(`$lib/donnees/dossiers-ecriture`) refusent tout dossier sans parent,
+					et leur refus est MUET : la racine porte le nom de son domaine
+					(`RG-STR-03`) et disparaîtrait avec lui. Les deux boutons étaient
+					donc rendus et ne pouvaient rien produire.
+
+					« Nouveau sous-dossier » et « Gérer les droits », eux, marchent sur la
+					racine — c'est même le seul endroit d'où le premier dossier d'un
+					domaine se crée.
+				-->
 				{#if gestionnaire}<button class="btn si-gestionnaire" id="a-sousdossier"
 						>Nouveau sous-dossier</button
 					>
-					<button class="btn si-gestionnaire" id="a-renommer">Renommer ou déplacer</button>
+					{#if !surLaRacine}<button class="btn si-gestionnaire" id="a-renommer"
+							>Renommer ou déplacer</button
+						>{/if}
 					<button class="btn si-gestionnaire" id="a-droits">Gérer les droits</button>
-					<button class="btn btn--destructif si-gestionnaire" id="a-supprimer">Supprimer</button
-					>{/if}
+					{#if !surLaRacine}<button class="btn btn--destructif si-gestionnaire" id="a-supprimer"
+							>Supprimer</button
+						>{/if}{/if}
 			</div>
 		</header>
 
@@ -903,7 +955,7 @@
 			</div>
 			<div class="dlg__corps">
 				<p class="dlg__texte">
-					Il sera créé dans <strong id="creer-parent">{cheminTexte(chemin)}</strong>.
+					Il sera créé dans <strong id="creer-parent">{cheminDuDossier}</strong>.
 				</p>
 				<div
 					class="champ"
@@ -937,139 +989,147 @@
 	</dialog>
 
 	<!-- ============================ DIALOGUE 2 — Renommer ou déplacer ============================ -->
-	<dialog class="dlg dlg--large" id="dlg-deplacer" aria-labelledby="dlg-deplacer-titre">
-		<div class="dlg__boite">
-			<div class="dlg__tete">
-				<span class="dlg__marque" aria-hidden="true">
-					<svg
-						width="16"
-						height="16"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.6"><path d="M2 8h9M8 4.5L11.5 8 8 11.5M13.5 3v10" /></svg
-					>
-				</span>
-				<h2 class="dlg__titre" id="dlg-deplacer-titre">Renommer ou déplacer</h2>
-				<button class="dlg__fermer" data-fermer aria-label="Fermer">
-					<svg
-						width="16"
-						height="16"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8" /></svg
-					>
-				</button>
-			</div>
-			<div class="dlg__corps">
-				<div class="champ">
-					<label class="champ__label" for="dep-nom">Nom</label>
-					<input class="saisie" type="text" id="dep-nom" autocomplete="off" value={nom} />
+	<!--
+		LES DEUX DIALOGUES SUIVENT LEURS BOUTONS, RACINE COMPRISE — même règle
+		qu'au-dessus, et pour la même raison : `#dep-valider` et `#sup-valider`
+		laissés dans le DOM d'une racine seraient deux gestes que le module de
+		données refuse par construction.
+	-->
+	{#if !surLaRacine}
+		<dialog class="dlg dlg--large" id="dlg-deplacer" aria-labelledby="dlg-deplacer-titre">
+			<div class="dlg__boite">
+				<div class="dlg__tete">
+					<span class="dlg__marque" aria-hidden="true">
+						<svg
+							width="16"
+							height="16"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.6"><path d="M2 8h9M8 4.5L11.5 8 8 11.5M13.5 3v10" /></svg
+						>
+					</span>
+					<h2 class="dlg__titre" id="dlg-deplacer-titre">Renommer ou déplacer</h2>
+					<button class="dlg__fermer" data-fermer aria-label="Fermer">
+						<svg
+							width="16"
+							height="16"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8" /></svg
+						>
+					</button>
 				</div>
-				<div class="champ">
-					<span class="champ__label">Emplacement</span>
-					<span class="champ__aide"
-						>Les destinations impossibles sont montrées avec leur motif plutôt que masquées : sans
-						cela, on cherche longtemps un dossier qui n'apparaît nulle part.</span
-					>
-					<div class="arbre-choix" id="arbre-choix">
-						<ul>
-							<li>
-								{@render choix(
-									racineDuDomaine?.id ?? '',
-									`Racine du domaine ${DOMAINE}`,
-									racineDuDomaine?.refus ?? null
-								)}
-								{@render sousChoix(choixDeDestination)}
-							</li>
-						</ul>
+				<div class="dlg__corps">
+					<div class="champ">
+						<label class="champ__label" for="dep-nom">Nom</label>
+						<input class="saisie" type="text" id="dep-nom" autocomplete="off" value={nom} />
+					</div>
+					<div class="champ">
+						<span class="champ__label">Emplacement</span>
+						<span class="champ__aide"
+							>Les destinations impossibles sont montrées avec leur motif plutôt que masquées : sans
+							cela, on cherche longtemps un dossier qui n'apparaît nulle part.</span
+						>
+						<div class="arbre-choix" id="arbre-choix">
+							<ul>
+								<li>
+									{@render choix(
+										racineDuDomaine?.id ?? '',
+										`Racine du domaine ${DOMAINE}`,
+										racineDuDomaine?.refus ?? null
+									)}
+									{@render sousChoix(choixDeDestination)}
+								</li>
+							</ul>
+						</div>
+					</div>
+					<div class="champ__erreur" id="dep-erreur" hidden={erreurDeDeplacement === null}>
+						{erreurDeDeplacement ?? ''}
 					</div>
 				</div>
-				<div class="champ__erreur" id="dep-erreur" hidden={erreurDeDeplacement === null}>
-					{erreurDeDeplacement ?? ''}
+				<div class="dlg__pied">
+					<button class="btn" data-fermer>Annuler</button>
+					<button class="btn btn--principal" id="dep-valider">Enregistrer</button>
 				</div>
 			</div>
-			<div class="dlg__pied">
-				<button class="btn" data-fermer>Annuler</button>
-				<button class="btn btn--principal" id="dep-valider">Enregistrer</button>
-			</div>
-		</div>
-	</dialog>
+		</dialog>
 
-	<!-- ============================ DIALOGUE 3 — Supprimer ============================ -->
-	<dialog class="dlg dlg--destructif" id="dlg-supprimer" aria-labelledby="dlg-supprimer-titre">
-		<div class="dlg__boite">
-			<div class="dlg__tete">
-				<span class="dlg__marque" aria-hidden="true">
-					<svg
-						width="16"
-						height="16"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.6"
-						><path d="M8 4.5v4.2M8 11.4v.3" /><path
-							d="M7 1.9L1.3 12.4a.9.9 0 0 0 .8 1.3h11.8a.9.9 0 0 0 .8-1.3L9 1.9a1.1 1.1 0 0 0-2 0z"
-						/></svg
-					>
-				</span>
-				<h2 class="dlg__titre" id="dlg-supprimer-titre">Supprimer ce dossier</h2>
-				<button class="dlg__fermer" data-fermer aria-label="Fermer">
-					<svg
-						width="16"
-						height="16"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8" /></svg
-					>
-				</button>
-			</div>
-			<div class="dlg__corps">
-				<div class="decompte">
-					<div class="decompte__titre">Cette suppression est définitive</div>
-					<ul id="decompte-liste">
-						<li><b>1</b>dossier — {cheminTexte(chemin)}</li>
-						{#if sousArbreDetruit > 0}<li>
-								<b>{sousArbreDetruit}</b>{sousArbreDetruit > 1 ? 'sous-dossiers' : 'sous-dossier'}
-							</li>{/if}
-						{#if toutes.length > 0}<li>
-								<b>{toutes.length}</b>{toutes.length > 1
-									? 'notes, tous sous-dossiers compris'
-									: 'note'}
-							</li>{/if}
-					</ul>
-					<div class="decompte__note" id="decompte-note">{noteDuDecompte}</div>
+		<!-- ============================ DIALOGUE 3 — Supprimer ============================ -->
+		<dialog class="dlg dlg--destructif" id="dlg-supprimer" aria-labelledby="dlg-supprimer-titre">
+			<div class="dlg__boite">
+				<div class="dlg__tete">
+					<span class="dlg__marque" aria-hidden="true">
+						<svg
+							width="16"
+							height="16"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.6"
+							><path d="M8 4.5v4.2M8 11.4v.3" /><path
+								d="M7 1.9L1.3 12.4a.9.9 0 0 0 .8 1.3h11.8a.9.9 0 0 0 .8-1.3L9 1.9a1.1 1.1 0 0 0-2 0z"
+							/></svg
+						>
+					</span>
+					<h2 class="dlg__titre" id="dlg-supprimer-titre">Supprimer ce dossier</h2>
+					<button class="dlg__fermer" data-fermer aria-label="Fermer">
+						<svg
+							width="16"
+							height="16"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8" /></svg
+						>
+					</button>
 				</div>
-				<div class="champ" id="champ-sup">
-					<label class="champ__label" for="sup-saisie">
-						Pour confirmer, saisissez le nom exact du dossier :
-						<span class="confirmation__cible" id="sup-cible">{nom}</span>
-					</label>
-					<input
-						class="saisie"
-						type="text"
-						id="sup-saisie"
-						autocomplete="off"
-						spellcheck="false"
-						placeholder="Nom du dossier"
-					/>
+				<div class="dlg__corps">
+					<div class="decompte">
+						<div class="decompte__titre">Cette suppression est définitive</div>
+						<ul id="decompte-liste">
+							<li><b>1</b>dossier — {cheminTexte(chemin)}</li>
+							{#if sousArbreDetruit > 0}<li>
+									<b>{sousArbreDetruit}</b>{sousArbreDetruit > 1 ? 'sous-dossiers' : 'sous-dossier'}
+								</li>{/if}
+							{#if toutes.length > 0}<li>
+									<b>{toutes.length}</b>{toutes.length > 1
+										? 'notes, tous sous-dossiers compris'
+										: 'note'}
+								</li>{/if}
+						</ul>
+						<div class="decompte__note" id="decompte-note">{noteDuDecompte}</div>
+					</div>
+					<div class="champ" id="champ-sup">
+						<label class="champ__label" for="sup-saisie">
+							Pour confirmer, saisissez le nom exact du dossier :
+							<span class="confirmation__cible" id="sup-cible">{nom}</span>
+						</label>
+						<input
+							class="saisie"
+							type="text"
+							id="sup-saisie"
+							autocomplete="off"
+							spellcheck="false"
+							placeholder="Nom du dossier"
+						/>
+					</div>
+				</div>
+				<div class="dlg__pied">
+					<button class="btn" data-fermer>Annuler</button>
+					<button
+						class="btn btn--principal btn--destructif"
+						id="sup-valider"
+						disabled
+						style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
+					>
+						Supprimer définitivement
+					</button>
 				</div>
 			</div>
-			<div class="dlg__pied">
-				<button class="btn" data-fermer>Annuler</button>
-				<button
-					class="btn btn--principal btn--destructif"
-					id="sup-valider"
-					disabled
-					style="background:var(--c-danger);border-color:var(--c-danger);color:#fff"
-				>
-					Supprimer définitivement
-				</button>
-			</div>
-		</div>
-	</dialog>
+		</dialog>
+	{/if}
 
 	<!-- ============================ DIALOGUE 4 — Gérer les droits ============================ -->
 	<!--
