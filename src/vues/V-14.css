@@ -555,6 +555,18 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
   color: var(--c-encre-2);
 }
 
+/* --- Propriétés de fiche ----------------------------------------------------
+   LE HUITIÈME PANNEAU, absent du gel et exigé par le cadrage (BRIEF-VUES:797,
+   CDC:886). Les règles sont DÉCLARÉES ICI, et non empruntées à V-20 : `.prop`
+   et `.prop__cle` y sont propres à cette vue-là (DESIGN.md:1205-1206, deux
+   vues), et P-1 autorise une règle propre qui n'emploie que des jetons du
+   socle — c'est le cas des trois ci-dessous. */
+.propriete { display: flex; align-items: baseline; gap: var(--e-2); font-size: var(--t-petit); }
+.propriete + .propriete { margin-top: var(--e-1); }
+.propriete__cle { flex: none; width: 92px; font-size: var(--t-mini); color: var(--c-encre-3); }
+.propriete__valeur { min-width: 0; overflow-wrap: anywhere; }
+.propriete__valeur[data-vide="oui"] { color: var(--c-encre-3); font-style: italic; }
+
 /* --- Signalement à réviser -------------------------------------------------- */
 .reviser { margin-top: var(--e-3); display: none; }
 .reviser[data-ouvert="oui"] { display: block; }

@@ -255,8 +255,8 @@
 	 * LE PANNEAU « PIÈCES JOINTES », REPÉRÉ PAR SON LIBELLÉ.
 	 *
 	 * Le gel ne donne à ce panneau ni identifiant, ni classe distinctive : les
-	 * sept panneaux latéraux sont sept `section.panneau.repliable` identiques,
-	 * et seul le texte de leur `.etiq` les sépare (`V-14:1829`). C'est donc lui
+	 * panneaux latéraux sont autant de `section.panneau.repliable` identiques, et
+	 * seul le texte de leur `.etiq` les sépare (`V-14:1829`). C'est donc lui
 	 * qu'on lit — la même méthode que `ouvrirLHistorique()`, qui reconnaît son
 	 * bouton au texte faute d'attribut.
 	 */
@@ -701,10 +701,19 @@
 
 <form method="POST" action="?/supprimer" bind:this={formulaire} style="display:contents">
 	{#if historiqueOuvert}
+		<!--
+			L’ARTICLE SUIT L’ADRESSE. `?version={n}` désignant une version
+			antérieure, c’est l’état CAPTURÉ par cette version que le chargeur rend
+			— son titre et ses deux corps —, et non celui d’aujourd’hui : le
+			bandeau annonce « vous consultez un état antérieur », et le corps sous
+			lui doit être celui-là. `?version` nu ne désigne aucune version, la
+			note courante EST la réponse, et `afficheeDeLaVersion` vaut `null`.
+		-->
 		<Historique
 			vecteur={{ panneau: 'ouvert', droits: data.vecteur.droits }}
 			notes={data.notes}
 			note={data.lecture.note}
+			affichee={data.afficheeDeLaVersion ?? data.affichee}
 			versions={{ [data.lecture.note.id]: data.histoire.versions }}
 			retentionVersions={data.histoire.retention}
 			versionAffichee={data.histoire.affichee?.numero ?? null}

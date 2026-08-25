@@ -188,6 +188,11 @@
 	const voisines = $derived(panneaux?.voisines ?? []);
 	const pieces = $derived(panneaux?.pieces ?? []);
 	const relations = $derived(panneaux?.relations ?? []);
+	/**
+	 * LES PROPRIÉTÉS TYPÉES DE LA FICHE, dans l'ordre du référentiel — vides
+	 * tant que rien n'est servi, et le panneau n'est alors pas rendu.
+	 */
+	const proprietes = $derived(panneaux?.proprietes ?? []);
 	const retroliens = $derived(panneaux?.retroliens ?? []);
 	const verifications = $derived(panneaux?.verifications ?? []);
 
@@ -234,6 +239,13 @@
 	 */
 	const note = $derived(affichee?.note ?? NOTE);
 	const titre = $derived(note.titre);
+	/**
+	 * LE PANNEAU DE PROPRIÉTÉS N'EXISTE QUE POUR UNE FICHE —
+	 * `BRIEF-VUES.md:797`, « si la note est une fiche ». Une note ordinaire n'a
+	 * pas de propriétés typées, et un panneau vide lui annoncerait une capacité
+	 * qu'elle n'a pas.
+	 */
+	const estUneFiche = $derived(note.typeFiche !== undefined);
 	const rangement = $derived(rangementDe(note));
 
 	/**
@@ -548,6 +560,66 @@
 					{/each}
 				</div>
 			</section>
+
+			<!--
+				Propriétés de fiche — LE HUITIÈME PANNEAU, celui que le gel ne dessine
+				pas et que le cadrage nomme.
+
+				`BRIEF-VUES.md:797` énumère huit panneaux pour la colonne droite de
+				V-14 : « Propriétés de fiche | Champs typés de la fiche, sous forme
+				structurée et lisible | Si la note est une fiche ». Le gel en dessine
+				sept. `CDC:886` le redit en propres termes — « la lecture présente ces
+				propriétés dans un panneau structuré et lisible » — et nomme les trois
+				débouchés d'une propriété typée : l'éditeur, la lecture, la recherche.
+				Seule la lecture manquait. `RG-NOT-01` interdit de faire de la fiche un
+				objet séparé de la note ; une fiche dont les propriétés ne se lisent que
+				dans l'éditeur EST cet objet séparé.
+
+				DIVERGENCE ASSUMÉE AVEC LE GEL, et elle déplace des pixels : elle ne
+				relève donc pas de la tolérance d'ARB-027, bornée à ce qui n'en déplace
+				aucun.
+
+				LES CLASSES SONT PROPRES À CETTE VUE. `.prop` et `.prop__cle`
+				appartiennent à V-20 (`docs/DESIGN.md:1205-1206` les inventorie sur deux
+				vues, donc PROPRES et non transverses) : les emprunter est interdit.
+				`.meta` existe bien ici, mais ses filets et son rembourrage sont
+				calibrés pour l'en-tête de la note, pas pour un panneau. Les trois
+				règles de `.propriete` sont donc déclarées dans `src/vues/V-14.css`, ce
+				que P-1 autorise parce qu'elles n'emploient que des jetons du socle.
+			-->
+			{#if estUneFiche}
+				<section class="panneau repliable" data-ouvert="oui">
+					<div class="panneau__tete">
+						<span class="etiq">Propriétés de fiche</span><span class="chiffre"
+							>{proprietes.length}</span
+						>
+					</div>
+					<div class="panneau__corps">
+						{#each proprietes as propriete (propriete.nom)}
+							<div class="propriete">
+								<span class="propriete__cle">{propriete.nom}</span>
+								<!--
+									UNE PROPRIÉTÉ NON RENSEIGNÉE EST DITE, JAMAIS COMBLÉE
+									(`RG-M18-03`). L'exemple du référentiel serait la valeur d'une
+									note inventée — exactement ce que P-02 proscrit.
+								-->
+								<span
+									class="propriete__valeur"
+									data-vide={propriete.valeur === null ? 'oui' : undefined}
+									>{propriete.valeur ?? 'Non renseignée'}</span
+								>
+							</div>
+						{:else}
+							<div class="zone-etat">
+								<div class="zone-etat__titre">Aucune propriété</div>
+								<div class="zone-etat__txt">
+									Ce type de fiche ne définit aucune propriété typée.
+								</div>
+							</div>
+						{/each}
+					</div>
+				</section>
+			{/if}
 
 			<!-- Rétroliens -->
 			<section class="panneau repliable" data-ouvert="oui">

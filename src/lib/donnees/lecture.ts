@@ -690,6 +690,42 @@ export async function lirePresentationsDeTypeDeFiche(
 	return rendu;
 }
 
+/** Le libellé et le rang d'un champ, tels que la lecture d'une fiche les emploie. */
+export interface ChampNommeDeFiche {
+	readonly cle: string;
+	readonly nom: string;
+}
+
+/**
+ * LES CHAMPS D'UN SEUL TYPE DE FICHE, DANS L'ORDRE DU RÉFÉRENTIEL — le libellé
+ * et la clé, et rien d'autre.
+ *
+ * POURQUOI CETTE PORTE PLUTÔT QUE `lireTypesDeFiche()`. Celle-là lit TOUT le
+ * référentiel et convertit l'énumération `type_de_champ` en type d'écran ; sa
+ * table de conversion ne couvre que quatre des six valeurs que la base accepte,
+ * et une valeur non couverte fait LEVER la lecture. Un panneau de lecture qui
+ * n'a besoin ni du type de saisie, ni de l'exemple, ni des valeurs de liste n'a
+ * aucune raison de payer ce risque : un champ `date` posé n'importe où dans le
+ * référentiel ferait alors tomber la lecture de TOUTE fiche.
+ *
+ * ELLE NE CONVERTIT DONC RIEN, et ne peut pas lever. Elle ne remplace pas
+ * `lireTypesDeFiche()` : l'éditeur et la console ont besoin du type de saisie,
+ * et c'est là que la conversion doit vivre.
+ *
+ * LA RESTRICTION EST DANS LA REQUÊTE — un seul type, un seul aller-retour.
+ */
+export async function lireLesChampsDUnTypeDeFiche(
+	base: Base,
+	nomDuType: string
+): Promise<readonly ChampNommeDeFiche[]> {
+	return await base
+		.select({ cle: champsDeTypeDeFiche.cle, nom: champsDeTypeDeFiche.nom })
+		.from(champsDeTypeDeFiche)
+		.innerJoin(typesDeFiche, eq(champsDeTypeDeFiche.typeDeFicheId, typesDeFiche.id))
+		.where(eq(typesDeFiche.nom, nomDuType))
+		.orderBy(champsDeTypeDeFiche.ordre);
+}
+
 /**
  * LES PROPRIÉTÉS TYPÉES DES NOTES DEMANDÉES — `notes.proprietes_typees`.
  *
