@@ -701,11 +701,19 @@
 
 <form method="POST" action="?/supprimer" bind:this={formulaire} style="display:contents">
 	{#if historiqueOuvert}
+		<!--
+			L’ARTICLE SUIT L’ADRESSE. `?version={n}` désignant une version
+			antérieure, c’est l’état CAPTURÉ par cette version que le chargeur rend
+			— son titre et ses deux corps —, et non celui d’aujourd’hui : le
+			bandeau annonce « vous consultez un état antérieur », et le corps sous
+			lui doit être celui-là. `?version` nu ne désigne aucune version, la
+			note courante EST la réponse, et `afficheeDeLaVersion` vaut `null`.
+		-->
 		<Historique
 			vecteur={{ panneau: 'ouvert', droits: data.vecteur.droits }}
 			notes={data.notes}
 			note={data.lecture.note}
-			affichee={data.affichee}
+			affichee={data.afficheeDeLaVersion ?? data.affichee}
 			versions={{ [data.lecture.note.id]: data.histoire.versions }}
 			retentionVersions={data.histoire.retention}
 			versionAffichee={data.histoire.affichee?.numero ?? null}
