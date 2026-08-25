@@ -122,6 +122,17 @@
  * de conversion est du texte, jamais du Markdown, et pour la même raison.
  */
 import { analyserMarkdown, serialiserEnMarkdown } from '../contenu/markdown';
+import {
+	ALLONGEMENT,
+	DOSSIER_DES_PIECES,
+	NOM_DU_RAPPORT,
+	SUFFIXE_DE_NOTE,
+	cheminDArchive,
+	dossierDesPiecesDe,
+	echapperSegment,
+	nomDeFichierDeNote,
+	segmentsDepuisLArchive
+} from './noms';
 import { ecrireZip, lireZip, type EntreeDeZip } from './zip';
 
 /* ═════════════════════════════════════════════════ Le domaine exporté ═══ */
@@ -266,17 +277,28 @@ export const FAMILLE_SANS_CAS =
 
 /* ═════════════════════════════════════════════ Les noms de l'archive ════ */
 
-/** Le dossier voisin des pièces jointes — `V-36:2932`. */
-export const DOSSIER_DES_PIECES = 'pieces-jointes';
-
-/** Le rapport de conversion — `V-36:2937`. Du texte, jamais du Markdown. */
-export const NOM_DU_RAPPORT = 'rapport-de-conversion.txt';
-
-/** Le suffixe d'un fichier de note. */
-export const SUFFIXE_DE_NOTE = '.md';
-
-/** Les deux noms que la racine de l'archive se réserve. */
-const RESERVES: readonly string[] = [DOSSIER_DES_PIECES, NOM_DU_RAPPORT];
+/**
+ * LES NOMS ET LEURS FABRIQUES VIVENT DANS `./noms`, ET C'EST LE CORRECTIF.
+ *
+ * Ce module dépend de `node:zlib` par `./zip` : aucun écran ne pouvait en
+ * importer quoi que ce soit sans faire entrer un module de plateforme dans le
+ * paquet de navigateur. `V-36` réécrivait donc les noms en littéraux — et les
+ * littéraux ont divergé de l'archive produite. `./noms` ne dépend de rien ;
+ * l'écran qui DÉCRIT l'archive lit désormais la même définition que celle qui
+ * la PRODUIT. Le réexport garde intactes toutes les adresses d'importation.
+ */
+export {
+	ALLONGEMENT,
+	DOSSIER_DES_PIECES,
+	NOM_DU_RAPPORT,
+	SUFFIXE_DE_NOTE,
+	cheminDArchive,
+	desechapperSegment,
+	dossierDesPiecesDe,
+	echapperSegment,
+	nomDeFichierDeNote,
+	segmentsDepuisLArchive
+} from './noms';
 
 /** L'ouverture et la clôture du bloc de métadonnées — `V-36:2929`. */
 const CLOTURE_DEN_TETE = '-'.repeat(3);
@@ -284,62 +306,9 @@ const CLOTURE_DEN_TETE = '-'.repeat(3);
 /** Le séparateur de registre, avant tout allongement. */
 const SEPARATEUR_DE_REGISTRE = '%%% registre operationnel %%%';
 
-/** Le caractère dont l'allongement du séparateur ajoute une occurrence. */
-const ALLONGEMENT = '%';
-
 /** Le nom du fichier de l'archive — `V-36:3061` en fixe la forme. */
 export function nomDArchive(identifiantDeDomaine: string, dateISO: string): string {
 	return identifiantDeDomaine + '-' + dateISO.slice(0, 10) + '.zip';
-}
-
-/**
- * Un segment de chemin, rendu écrivable sans rien perdre. Deux caractères
- * seulement sont échappés, et le second l'est pour que le premier soit
- * inversible.
- */
-export function echapperSegment(segment: string): string {
-	let out = '';
-	for (const c of segment) {
-		if (c === ALLONGEMENT) out += '%25';
-		else if (c === '/') out += '%2F';
-		else out += c;
-	}
-	return out;
-}
-
-/**
- * L'inverse exact. Il décode TOUTE séquence de pour cent, et non les deux
- * seules qu'écrit l'échappement : le nom réservé est évité en échappant le
- * premier caractère du segment, quel qu'il soit.
- */
-export function desechapperSegment(segment: string): string {
-	return segment.replace(/%[0-9A-Fa-f]{2}/g, (m) =>
-		String.fromCodePoint(Number.parseInt(m.slice(1), 16))
-	);
-}
-
-/**
- * Le premier caractère d'un segment, échappé en séquence de pour cent —
- * l'unique parade à la collision avec un nom réservé de la racine.
- */
-function eviterLeNomReserve(segmentEchappe: string): string {
-	if (!RESERVES.includes(segmentEchappe)) return segmentEchappe;
-	const premier = segmentEchappe.codePointAt(0);
-	if (premier === undefined) return segmentEchappe;
-	const hexa = premier.toString(16).toUpperCase().padStart(2, '0');
-	return ALLONGEMENT + hexa + segmentEchappe.slice(String.fromCodePoint(premier).length);
-}
-
-/** Le chemin d'archive d'un dossier, dossier racine compris. */
-export function cheminDArchive(chemin: readonly string[]): string {
-	return chemin
-		.map((s, rang) => (rang === 0 ? eviterLeNomReserve(echapperSegment(s)) : echapperSegment(s)))
-		.join('/');
-}
-
-/** L'inverse : les segments vrais d'un chemin d'archive. */
-export function segmentsDepuisLArchive(chemin: string): readonly string[] {
-	return chemin.split('/').map(desechapperSegment);
 }
 
 /* ═════════════════════════════════════════ L'en-tête de métadonnées ═════ */
@@ -456,11 +425,6 @@ export function lireFichierDeNote(texte: string): FichierLu {
 }
 
 /* ═══════════════════════════════════════ Les images et leur chemin ══════ */
-
-/** Le dossier des pièces d'une note — un par note, pour que deux noms égaux tiennent. */
-function dossierDesPiecesDe(identifiant: string): string {
-	return DOSSIER_DES_PIECES + '/' + echapperSegment(identifiant);
-}
 
 /**
  * Le chemin relatif, depuis le fichier d'une note, vers son dossier de pièces.
@@ -724,7 +688,10 @@ function nommerLeFichier(
 ): { nom: string; avertissement: AvertissementDeConversion | null } {
 	const echappe = echapperSegment(note.titre);
 	const cle = cheminDArchive(note.cheminDeDossier) + '/' + echappe.toLowerCase();
-	let nom = echappe + SUFFIXE_DE_NOTE;
+	/* LE NOM SANS HOMONYME SORT DE LA FABRIQUE PARTAGÉE — celle-là même que
+	   `V-36` appelle pour ANNONCER le nom du fichier. Deux compositions
+	   séparées avaient déjà divergé une fois. */
+	let nom = nomDeFichierDeNote(note.titre);
 	let rang = 1;
 	let cleFinale = cle;
 	while (pris.has(cleFinale)) {
