@@ -84,9 +84,9 @@
 	 * COQUILLE DE FORME ABRÉGÉE — ARB-021, A-1. `<main id="contenu">` SANS
 	 * CLASSE : V-23 est, avec V-37, l'une des deux seules maquettes à coquille
 	 * qui n'en portent pas (ARB-015). Lien d'évitement `#adresse` « Aller au
-	 * formulaire » (ARB-019). Chemin courant du rail `["Infrastructure"]`, appelé
-	 * UNE SEULE FOIS par le gel : aucune accumulation de marque ici,
-	 * contrairement à V-11, V-12 et V-22.
+	 * formulaire » (ARB-019). Le chemin courant du rail est le domaine du signet,
+	 * appelé UNE SEULE FOIS : aucune accumulation de marque ici, contrairement à
+	 * ce que le gel de V-11, V-12 et V-22 produisait.
 	 *
 	 * `data-droits` N'EST PAS POSÉ, et c'est le gel : `div.app` ne porte que
 	 * `data-rail`, `data-enveloppe` et `data-mode` (`V-23:1006`). La seule règle
@@ -100,8 +100,8 @@
 	 * serait deux formulaires à maintenir, et le gel dit lui-même « formulaire,
 	 * unique et migrant ».
 	 *
-	 * AUCUN CHIFFRE N'EST SAISI (P-02) : le contenu du mode « édition » vient de
-	 * `seeds/corpus.ts`, note `n-sig-statut`, celle que le gel édite.
+	 * AUCUN CHIFFRE N'EST SAISI (P-02) : le contenu du mode « édition » vient du
+	 * signet que la route désigne, et de nulle part ailleurs.
 	 *
 	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette` et `dialog#palette`
 	 * (divergence mesurée nulle, `docs/releve-vues.md` §4.1) et `div.planche`,
@@ -111,89 +111,102 @@
 	 * `src/vues/V-23.css`, posé par `node verif/feuilles-de-vue.mjs V-23
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		UNIVERS,
-		noteParIdentifiant,
-		type Domaine,
-		type EtatDInstance,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../seeds/corpus';
+	import type { Domaine, Note, Univers } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 
 	/**
-	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
-	 * DÉFAUT EST LA CONSTANTE DU JEU DE SEMENCE.
+	 * LE RANGEMENT ET L'IDENTITÉ — plus aucun défaut tiré du jeu.
 	 *
-	 * La vue devient capable de recevoir ce qu'un chargeur de route lit en base
-	 * — univers, domaines, compte courant, état de l'instance — sans qu'aucun
-	 * rendu ne change tant que rien ne lui est passé : le mode de conception ne
-	 * passe que `vecteur` et `notes`, la vue reçoit donc exactement ce qu'elle
-	 * recevait, et le banc de comparaison ne bouge pas d'un pixel.
+	 * Ces propriétés ont eu pour défaut `UNIVERS`, `DOMAINES`, `MOI` et
+	 * `INSTANCE` de `seeds/corpus.ts` : une route qui oubliait d'en passer une
+	 * offrait au sélecteur de destination les domaines du jeu de démonstration —
+	 * mesuré : quatre domaines proposés, trois absents de la base.
+	 *
+	 * `domaines` EST REQUISE : les deux routes la passent, et `svelte-check`
+	 * refuse désormais de compiler un appel qui l'oublierait. `univers` peut être
+	 * vide — en forme abrégée le rail est écrit au balisage. `compte` peut
+	 * manquer, et son état vide est `null`. `instance` a disparu : le contexte de
+	 * coquille sert la version du paquet.
 	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — enveloppe × mode × récupération. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-23')`, variante « complète ». */
+		/** Les notes lisibles, servies par le chargeur. */
 		notes: readonly Note[];
-		/** Les univers du produit. Défaut : ceux du jeu de semence. */
+		/** Les univers déclarés — vides tant que l'instance n'en porte aucun. */
 		univers?: readonly Univers[];
-		/** Les domaines du produit. Défaut : ceux du jeu de semence. */
-		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Défaut : celui du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
-		instance?: EtatDInstance;
+		/** Les domaines accessibles — les deux routes les servent. */
+		domaines: readonly Domaine[];
+		/** L'utilisateur connecté. `null` : aucun compte connu. */
+		compte?: CompteAffiche | null;
 		/**
-		 * LE SIGNET ÉDITÉ, quand la route en désigne un.
+		 * LE DOMAINE PRÉ-CHOISI À LA CRÉATION — celui que l'adresse porte.
 		 *
-		 * Le jeu de semence de la vue porte SIX notes de type « Signet » (compté sur
-		 * `corpusPourVue('V-23')`) ; la vue en cherchait UNE, `n-sig-statut`, en
-		 * dur — le chargeur résolvait la bonne note et la vue en affichait une
-		 * autre. La propriété l'emporte désormais ; absente, le repli reste celui
-		 * que le gel désigne nommément, et le banc ne bouge pas.
+		 * Il venait du compte, donc de `MOI.domaine` du jeu de démonstration
+		 * quand aucune route ne passait le compte. C'est le seul domaine que
+		 * l'action accepte, et un administrateur n'a pas de rattachement : il
+		 * vient de l'adresse, jamais d'une identité. Vide, aucune option n'est
+		 * pré-sélectionnée.
 		 */
-		signet?: Note;
+		domaineDeDepart?: string;
+		/**
+		 * LE SIGNET ÉDITÉ, quand la route en désigne un — `null` sinon.
+		 *
+		 * La vue cherchait `n-sig-statut` DANS LE JEU DE DÉMONSTRATION quand la
+		 * propriété manquait : `/…/signets/nouveau` ne la passe pas, et le mode
+		 * création n'en a que faire, mais le repli restait une note de
+		 * démonstration importée en produit. `null` est l'état vide, et le
+		 * formulaire est alors vierge.
+		 */
+		signet?: Note | null;
 	}
 
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		signet
+		univers = [],
+		domaines,
+		compte = null,
+		domaineDeDepart = '',
+		signet = null
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const enveloppe = $derived(reglage['env'] === 'page' ? 'page' : 'dialogue');
 	const edition = $derived(reglage['mode'] === 'edition');
 
-	/**
-	 * LE SIGNET ÉDITÉ — celui que la route désigne, sinon `n-sig-statut`, celui
-	 * que le gel désigne nommément (`V-23:2723`) :
-	 * `window.CORPUS.filter(n => n.id === "n-sig-statut")[0]`. Le repli est lu
-	 * DANS LE JEU DE SEMENCE DE LA VUE, comme le gel le lit dans le sien.
-	 */
-	const SIGNET = $derived(
-		(signet ??
-			corpus.find((n) => n.id === 'n-sig-statut') ??
-			noteParIdentifiant('n-sig-statut')) as Note
-	);
-
 	/* ── Les valeurs du formulaire, selon le mode ─────────────────────────── */
-	const adresse = $derived(edition ? (SIGNET.url ?? '') : '');
-	const titre = $derived(edition ? SIGNET.titre : '');
-	const description = $derived(edition ? SIGNET.extrait : '');
-	const domaineChoisi = $derived(edition ? SIGNET.domaine : compte.domaine);
-	const etiquettes = $derived<readonly string[]>(edition ? SIGNET.etiquettes : []);
+	/* LE MODE ÉDITION EXIGE UN SIGNET. Le vecteur peut demander « édition » sans
+	   qu'aucun signet ne soit servi — c'est un état qu'aucune route ne produit,
+	   et le formulaire y est vierge plutôt que peuplé d'une note d'exemple. */
+	const enEdition = $derived(edition && signet !== null);
+	const adresse = $derived(enEdition ? (signet?.url ?? '') : '');
+	const titre = $derived(enEdition ? (signet?.titre ?? '') : '');
+	const description = $derived(enEdition ? (signet?.extrait ?? '') : '');
+	const domaineChoisi = $derived(enEdition ? (signet?.domaine ?? '') : domaineDeDepart);
+	const etiquettes = $derived<readonly string[]>(enEdition ? (signet?.etiquettes ?? []) : []);
 
 	const libelle = $derived(edition ? 'Modifier le signet' : 'Nouveau signet');
+
+	/**
+	 * LE FIL D'ARIANE — le rangement RÉEL du signet, jamais celui du gel.
+	 *
+	 * Il portait `['Accueil', 'Production', 'Infrastructure', 'Signets',
+	 * 'Nouveau']` en dur : les noms d'un univers et d'un domaine du jeu de
+	 * démonstration, annoncés comme un fait quel que fût le domaine visité. Les
+	 * deux segments de rangement viennent du domaine choisi et de la liste
+	 * servie ; ce qui n'est pas connu ne s'écrit pas.
+	 */
+	const universDuSignet = $derived(domaines.find((d) => d.nom === domaineChoisi)?.univers ?? '');
+	const filDAriane = $derived([
+		'Accueil',
+		...(universDuSignet === '' ? [] : [universDuSignet]),
+		...(domaineChoisi === '' ? [] : [domaineChoisi]),
+		'Signets',
+		edition ? 'Modifier' : 'Nouveau'
+	]);
 	const libelleValider = $derived(
 		edition ? 'Enregistrer les modifications' : 'Enregistrer le signet'
 	);
@@ -502,19 +515,14 @@
 	forme="abregee"
 	cibleEvitement="adresse"
 	libelleEvitement="Aller au formulaire"
-	fil={['Accueil', 'Production', 'Infrastructure', 'Signets', 'Nouveau']}
-	courant={['Infrastructure']}
+	fil={filDAriane}
+	courant={domaineChoisi === '' ? [] : [domaineChoisi]}
 	donnees={{ 'data-enveloppe': enveloppe, 'data-mode': edition ? 'edition' : 'creation' }}
 	{univers}
 	{domaines}
 	notes={corpus}
-	compte={{
-		nom: compte.nom,
-		initiales: compte.initiales,
-		role: compte.role,
-		domaine: compte.domaine
-	}}
-	version={instance.version}
+	compte={compte ?? COMPTE_VIDE}
+	version=""
 	superposition={boiteDeDialogue}
 >
 	{#snippet enfants()}
