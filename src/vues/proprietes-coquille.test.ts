@@ -122,6 +122,31 @@ const TROIS_VERSIONS: readonly Version[] = (
 	Object.values(VERSIONS).find((v) => v !== undefined) ?? []
 ).slice(0, 3);
 
+/**
+ * CE QUE `/importer` ET `/mon-profil` SERVENT TOUJOURS — donc ce que les deux
+ * vues EXIGENT désormais.
+ *
+ * Ces propriétés étaient optionnelles, de défaut la constante de
+ * `seeds/corpus.ts` : une route qui en oubliait une servait le lot, les
+ * domaines, l'identité et les contributions du jeu de démonstration sans que
+ * rien ne proteste. Elles n'ont plus de défaut, et le socle du cas les passe
+ * comme la route les sert.
+ */
+const SOCLE_V24: Proprietes = {
+	domaines: DOMAINES,
+	lotImport: LOT_IMPORT,
+	formatsImport: FORMATS_IMPORT,
+	domaineParDefaut: DOMAINES[0]!.nom
+};
+
+const SOCLE_V25: Proprietes = {
+	domaines: DOMAINES,
+	compte: MOI,
+	contributions: CONTRIBUTIONS,
+	activite: ACTIVITE,
+	relations: RELATIONS
+};
+
 /** Les quatre sources de la coquille, communes aux vues qui la portent. */
 function coquille(inertes: readonly string[] = []): readonly Source[] {
 	const inerte = (cle: string) => (inertes.includes(cle) ? ({ inerte: true } as const) : {});
@@ -150,6 +175,10 @@ function coquille(inertes: readonly string[] = []): readonly Source[] {
  * balisage et ne se dérive pas du corpus : `univers` et `domaines` y sont
  * acceptées sans qu'aucun nœud n'en dépende. V-24, abrégée elle aussi, lit
  * pourtant `domaines` — son sélecteur de domaine de destination les énumère.
+ *
+ * POUR V-24 ET V-25, `defaut` N'EST PLUS LA CONSTANTE DU JEU : ce qui n'a pas
+ * de source en base porte un ÉTAT VIDE — tableau vide, `null` —, et ce que la
+ * route sert toujours est passé par le socle du cas, la propriété étant exigée.
  */
 const VUES: Readonly<
 	Record<string, { readonly base: Proprietes; readonly sources: readonly Source[] }>
@@ -171,28 +200,39 @@ const VUES: Readonly<
 		]
 	},
 	'V-24': {
-		base: { vecteur: { et: '2' } },
+		base: { ...SOCLE_V24, vecteur: { et: '2' } },
 		sources: [
-			...coquille(['univers']),
+			/* `univers` N'A PLUS LE JEU POUR DÉFAUT — le rail abrégé ne s'en dérive
+			   pas, et son état vide est un tableau vide, jamais les univers du jeu. */
+			{ cle: 'univers', defaut: [], autre: AUTRES_UNIVERS, inerte: true },
+			{ cle: 'domaines', defaut: DOMAINES, autre: AUTRES_DOMAINES },
+			{ cle: 'compte', defaut: null, autre: AUTRE_COMPTE, marqueur: 'ZQ' },
 			{
 				cle: 'lotImport',
 				defaut: LOT_IMPORT,
 				autre: { ...LOT_IMPORT, fichiers: LOT_IMPORT.fichiers.slice(0, 4) },
 				/* L'étape 3 est celle de l'aperçu : c'est là que le lot est compté. */
-				base: { vecteur: { et: '3' } }
+				base: { ...SOCLE_V24, vecteur: { et: '3' } }
 			},
 			{
 				cle: 'formatsImport',
 				defaut: FORMATS_IMPORT,
 				autre: {},
-				base: { vecteur: { et: '3' } }
+				base: { ...SOCLE_V24, vecteur: { et: '3' } }
 			}
 		]
 	},
+	/* LE SOCLE DE V-25 PORTE `comptes`, ET C'EST LE CHEMIN DE LA PLANCHE : sans
+	   profil lu en base, la vue cherche le titulaire dans la liste servie, et
+	   sans titulaire aucun indicateur, aucune jauge, aucun flux n'est rendu — il
+	   n'y aurait alors rien à mesurer. Que son DÉFAUT soit désormais la liste
+	   VIDE, et non l'annuaire du jeu, est éprouvé par le cas nommé plus bas. */
 	'V-25': {
-		base: { vecteur: null },
+		base: { ...SOCLE_V25, vecteur: null, comptes: COMPTES },
 		sources: [
-			...coquille(['univers', 'domaines']),
+			{ cle: 'univers', defaut: [], autre: AUTRES_UNIVERS, inerte: true },
+			{ cle: 'domaines', defaut: DOMAINES, autre: AUTRES_DOMAINES, inerte: true },
+			{ cle: 'compte', defaut: MOI, autre: AUTRE_COMPTE, marqueur: 'ZQ' },
 			{
 				cle: 'comptes',
 				defaut: COMPTES,
@@ -207,7 +247,9 @@ const VUES: Readonly<
 					'Karim Belhadj': { ...CONTRIBUTIONS['Karim Belhadj'], verifiees: 999 }
 				}
 			},
-			{ cle: 'distinctions', defaut: DISTINCTIONS, autre: DISTINCTIONS.slice(0, 1) },
+			/* `distinctions` N'A PLUS LE JEU POUR DÉFAUT : aucune table ne porte le
+			   barème, et des seuils inventés mesureraient le titulaire contre rien. */
+			{ cle: 'distinctions', defaut: [], autre: DISTINCTIONS.slice(0, 1) },
 			{ cle: 'activite', defaut: ACTIVITE, autre: ACTIVITE.slice(0, 1) },
 			{ cle: 'relations', defaut: RELATIONS, autre: [] }
 		]
@@ -347,7 +389,7 @@ describe.each(NOMS)('%s — les sources en propriétés optionnelles', (vue) => 
 	for (const source of sources) {
 		const etat = source.base ?? base;
 
-		it(`absente, \`${source.cle}\` retombe sur la constante du jeu de semence`, () => {
+		it(`absente, \`${source.cle}\` retombe sur le défaut que la vue déclare`, () => {
 			expect(corps(vue, etat, { [source.cle]: source.defaut })).toBe(corps(vue, etat));
 		});
 
@@ -356,7 +398,7 @@ describe.each(NOMS)('%s — les sources en propriétés optionnelles', (vue) => 
 				expect(corps(vue, etat, { [source.cle]: source.autre })).toBe(corps(vue, etat));
 			});
 		} else {
-			it(`fournie, \`${source.cle}\` l’emporte sur la constante`, () => {
+			it(`fournie, \`${source.cle}\` l’emporte sur le défaut`, () => {
 				expect(corps(vue, etat, { [source.cle]: source.autre })).not.toBe(corps(vue, etat));
 			});
 
@@ -368,6 +410,31 @@ describe.each(NOMS)('%s — les sources en propriétés optionnelles', (vue) => 
 			}
 		}
 	}
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   V-25 — LES DÉFAUTS QUI SERVAIENT LE JEU DE DÉMONSTRATION SONT DES ÉTATS VIDES
+
+   `comptes` valait `COMPTES` et `distinctions` valait `DISTINCTIONS` : aucun
+   chargeur ne sert l'un ni l'autre, si bien que l'écran affichait l'annuaire et
+   le barème du jeu comme s'ils étaient ceux de l'instance. Les deux valent
+   désormais la liste vide, et l'écran ne montre rien plutôt que d'inventer.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('V-25 — les défauts ne servent plus le jeu de démonstration', () => {
+	const socle = { ...SOCLE_V25, vecteur: null };
+
+	it('sans comptes servis, aucune adresse de l’annuaire du jeu n’est rendue', () => {
+		const rendu = corps('V-25', socle);
+		expect(corps('V-25', { ...socle, comptes: COMPTES })).toContain(COMPTES[0]!.courriel);
+		expect(rendu).not.toContain(COMPTES[0]!.courriel);
+	});
+
+	it('sans distinctions servies, aucun seuil du barème du jeu n’est rendu', () => {
+		const avec = corps('V-25', { ...socle, comptes: COMPTES, distinctions: DISTINCTIONS });
+		const sans = corps('V-25', { ...socle, comptes: COMPTES });
+		expect(avec).toContain(DISTINCTIONS[0]!.nom);
+		expect(sans).not.toContain(DISTINCTIONS[0]!.nom);
+	});
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -394,7 +461,7 @@ describe('V-25 — l’issue « Voir les notes de … »', () => {
 		arrivee: '3 février 2026',
 		derniereConnexion: 'à l’instant'
 	};
-	const base = { vecteur: null, profilDuCompte: TITULAIRE };
+	const base = { ...SOCLE_V25, vecteur: null, profilDuCompte: TITULAIRE };
 
 	it('sans rattachement lu, le bouton n’est pas ÉMIS', () => {
 		/* `P-09` — « ni grisée, ni masquée ». Le bouton était rendu INERTE, et
@@ -501,7 +568,7 @@ describe('V-06 — le ticket d’assistance n’est offert qu’avec une destina
 });
 
 describe('V-25 — l’interrupteur de notification par courriel n’est plus émis', () => {
-	const rendu = (): string => corps('V-25', { vecteur: null });
+	const rendu = (): string => corps('V-25', { ...SOCLE_V25, vecteur: null });
 
 	it('ne pose plus le contrôle que le gel laissait coché sans gestionnaire', () => {
 		expect(rendu()).not.toContain('p-courriels');
