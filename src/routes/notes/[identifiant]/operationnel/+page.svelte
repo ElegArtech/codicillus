@@ -108,5 +108,6 @@
 		notes={data.notes}
 		affichee={data.affichee}
 		desynchronisation={data.desynchronisation}
+		dernierEnregistrement={data.dernierEnregistrement}
 	/>
 </form>

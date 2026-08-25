@@ -46,8 +46,10 @@
  *     montre un diagramme produit à partir d'une source : cette forme est un
  *     ÉCART déclaré, pas une lecture du gel.
  */
+import { identifiantLisible } from '../rangement/adresses';
 import {
 	analyserDocument,
+	titres,
 	type Alerte,
 	type Bloc,
 	type BlocDeCode,
@@ -84,6 +86,72 @@ export type ContexteDeLecture = 'interne' | 'public';
 export interface OptionsDeRendu {
 	readonly resoudre: ResolveurDeNote;
 	readonly contexte: ContexteDeLecture;
+}
+
+/**
+ * CE QUE LE RENDU AJOUTE AUX OPTIONS DE SON APPELANT — les ancres des titres,
+ * relevées UNE FOIS sur le document entier.
+ *
+ * Elles ne peuvent pas se calculer titre par titre : l'unicité se juge sur tout
+ * le document. Le relevé est donc fait à l'entrée et voyage avec les options.
+ */
+interface Rendu extends OptionsDeRendu {
+	readonly ancres: ReadonlyMap<Titre, string>;
+}
+
+/* ═══════════════════════════════════════════════ Les ancres ═════════════ */
+
+/**
+ * LES ANCRES DES TITRES DE NIVEAU 2 ET 3, DÉRIVÉES DU TEXTE QUAND LE DOCUMENT
+ * N'EN PORTE PAS — et c'est ce qui rend le sommaire d'une note écrite dans le
+ * produit.
+ *
+ * L'éditeur ne pose JAMAIS d'ancre : `edition/schema.ts` déclare
+ * `ancre: null` par défaut et rien ne l'écrit. Le sommaire écartait donc tout
+ * titre sans ancre, et le panneau disait « Aucun titre dans cette note »
+ * au-dessus d'un article qui en portait six.
+ *
+ * ELLE EST DÉRIVÉE ICI, ET NON PERSISTÉE, POUR UNE RAISON MESURÉE :
+ * `empreinteDeNoeud()` (`$lib/donnees/histoire.ts`) sérialise les ATTRIBUTS
+ * d'un nœud. Poser une ancre changerait l'empreinte de chaque titre, donc
+ * `contenuModifie()` rendrait vrai, donc une version serait capturée au premier
+ * ré-enregistrement de CHAQUE note existante, sans une frappe. Et
+ * `edition/document.ts` interdit toute normalisation dans la porte de sortie de
+ * l'éditeur : « un document que l'éditeur produirait mal est REFUSÉ, jamais
+ * réparé ». La dérivation reste donc HORS du document canonique.
+ *
+ * BORNÉE AUX NIVEAUX 2 ET 3, comme le sommaire lui-même (`V-14:1704`) : un
+ * `h4` n'est la cible d'aucun sommaire, et le gel ne lui pose pas d'ancre.
+ *
+ * UNE ANCRE ÉCRITE DANS LE DOCUMENT L'EMPORTE — un import Markdown en pose
+ * (`{#id}`), les documents du gel en portent. Elle entre dans le décompte
+ * d'unicité : deux titres ne partagent jamais une ancre, y compris quand la
+ * source en a écrit deux fois la même.
+ */
+export function ancresDuDocument(document: Document): ReadonlyMap<Titre, string> {
+	const ancres = new Map<Titre, string>();
+	const prises = new Set<string>();
+	for (const titre of titres(document)) {
+		if (titre.attrs.level !== 2 && titre.attrs.level !== 3) continue;
+		const souche = titre.attrs.ancre ?? ancreDeriveeDuTexte(titre);
+		let candidate = souche;
+		let rang = 2;
+		while (prises.has(candidate)) candidate = `${souche}-${rang++}`;
+		prises.add(candidate);
+		ancres.set(titre, candidate);
+	}
+	return ancres;
+}
+
+/**
+ * L'ancre d'un titre qui n'en porte pas : le préfixe `s-` du gel
+ * (`V-14:1528`, « s-avant ») et le texte translittéré par
+ * `identifiantLisible()`, la fabrique unique du dépôt. Un titre dont le texte
+ * ne laisse aucune lettre retombe sur `s-titre`, que l'unicité numérote.
+ */
+function ancreDeriveeDuTexte(titre: Titre): string {
+	const lisible = identifiantLisible((titre.content ?? []).map((t) => t.text).join(''));
+	return `s-${lisible === '' ? 'titre' : lisible}`;
 }
 
 /* ═══════════════════════════════════════════════ L'échappement ══════════ */
@@ -133,7 +201,7 @@ const BALISE_DE_MARQUE: Readonly<Record<string, string>> = {
 	code: 'code'
 };
 
-function rendreTexte(texte: Texte, options: OptionsDeRendu): string {
+function rendreTexte(texte: Texte, options: Rendu): string {
 	const marques = [...(texte.marks ?? [])].sort(
 		(a, b) => ORDRE_DES_MARQUES.indexOf(a.type) - ORDRE_DES_MARQUES.indexOf(b.type)
 	);
@@ -142,7 +210,7 @@ function rendreTexte(texte: Texte, options: OptionsDeRendu): string {
 	return html;
 }
 
-function envelopper(marque: Marque, dedans: string, options: OptionsDeRendu): string {
+function envelopper(marque: Marque, dedans: string, options: Rendu): string {
 	if (marque.type === 'link') {
 		/* `V-14:1687` — lien externe : nouvel onglet, et `rel` qui va avec. */
 		return (
@@ -167,7 +235,7 @@ function envelopper(marque: Marque, dedans: string, options: OptionsDeRendu): st
  * interne ne soit atteignable en anonyme, « par aucun chemin ». Un lien interne
  * rendu cliquable en lecture publique serait ce chemin.
  */
-function rendreLienInterne(cible: string, dedans: string, options: OptionsDeRendu): string {
+function rendreLienInterne(cible: string, dedans: string, options: Rendu): string {
 	const note = options.resoudre(cible);
 	if (note === null) return `<a class="lien-casse">${dedans}</a>`;
 	if (options.contexte === 'public' && !note.publique) {
@@ -176,7 +244,7 @@ function rendreLienInterne(cible: string, dedans: string, options: OptionsDeRend
 	return `<a class="lien-int" href="${echapper(note.adresse)}">${dedans}</a>`;
 }
 
-function rendreEnLigne(contenu: readonly Texte[] | undefined, options: OptionsDeRendu): string {
+function rendreEnLigne(contenu: readonly Texte[] | undefined, options: Rendu): string {
 	return (contenu ?? []).map((t) => rendreTexte(t, options)).join('');
 }
 
@@ -202,15 +270,11 @@ const PARAGRAPHE_SELON_ENVELOPPE: Readonly<Record<Enveloppe, [string, string]>> 
 	cellule: ['', '']
 };
 
-function rendreBlocs(
-	blocs: readonly Bloc[],
-	enveloppe: Enveloppe,
-	options: OptionsDeRendu
-): string {
+function rendreBlocs(blocs: readonly Bloc[], enveloppe: Enveloppe, options: Rendu): string {
 	return blocs.map((b) => rendreBloc(b, enveloppe, options)).join('');
 }
 
-function rendreBloc(bloc: Bloc, enveloppe: Enveloppe, options: OptionsDeRendu): string {
+function rendreBloc(bloc: Bloc, enveloppe: Enveloppe, options: Rendu): string {
 	switch (bloc.type) {
 		case 'paragraph': {
 			const [ouvre, ferme] = PARAGRAPHE_SELON_ENVELOPPE[enveloppe];
@@ -249,10 +313,17 @@ function rendreBloc(bloc: Bloc, enveloppe: Enveloppe, options: OptionsDeRendu): 
 	}
 }
 
-/** `V-14:1528` — le titre porte son ancre, cible du sommaire de M04.5. */
-function rendreTitre(titre: Titre, options: OptionsDeRendu): string {
+/**
+ * `V-14:1528` — le titre porte son ancre, cible du sommaire de M04.5.
+ *
+ * L'ancre vient du relevé fait sur le document entier : celle du document quand
+ * il en porte une, dérivée du texte sinon. `sommaireDe()` consulte LE MÊME
+ * relevé — deux règles feraient diverger le sommaire du corps.
+ */
+function rendreTitre(titre: Titre, options: Rendu): string {
 	const n = titre.attrs.level;
-	const ancre = titre.attrs.ancre === null ? '' : ` id="${echapper(titre.attrs.ancre)}"`;
+	const relevee = options.ancres.get(titre);
+	const ancre = relevee === undefined ? '' : ` id="${echapper(relevee)}"`;
 	return `<h${n}${ancre}>${rendreEnLigne(titre.content, options)}</h${n}>`;
 }
 
@@ -277,12 +348,12 @@ function rendreBlocDeCode(bloc: BlocDeCode): string {
 }
 
 /** `V-14:1533-1540` — l'élément de liste, et ses listes imbriquées. */
-function rendreElement(element: ElementDeListe, options: OptionsDeRendu): string {
+function rendreElement(element: ElementDeListe, options: Rendu): string {
 	return `<li>${rendreBlocs(element.content, 'element', options)}</li>`;
 }
 
 /** `V-14:1682-1686` — la citation, et son attribution en pied. */
-function rendreCitation(citation: Citation, options: OptionsDeRendu): string {
+function rendreCitation(citation: Citation, options: Rendu): string {
 	const pied =
 		citation.attrs.attribution === null
 			? ''
@@ -299,7 +370,7 @@ function rendreCitation(citation: Citation, options: OptionsDeRendu): string {
  * `docs/DESIGN.md` P-7.2 fait d'une alerte sans glyphe un interdit détectable,
  * parce que la couleur ne doit jamais porter seule l'information (RG-M18-09).
  */
-function rendreAlerte(alerte: Alerte, options: OptionsDeRendu): string {
+function rendreAlerte(alerte: Alerte, options: Rendu): string {
 	return (
 		`<div class="alerte alerte--${alerte.attrs.niveau}"><div>` +
 		`<div class="alerte__tete"><span class="alerte__glyphe">${echapper(alerte.attrs.glyphe)}` +
@@ -316,7 +387,7 @@ function rendreAlerte(alerte: Alerte, options: OptionsDeRendu): string {
  * d'en-tête, et elles ne peuvent qu'ouvrir le tableau : c'est ce que le gel
  * écrit, et c'est la seule lecture qui donne un `thead` bien formé.
  */
-function rendreTableau(tableau: Tableau, options: OptionsDeRendu): string {
+function rendreTableau(tableau: Tableau, options: Rendu): string {
 	const lignes = tableau.content;
 	let tete = 0;
 	while (
@@ -412,5 +483,8 @@ function rendreDiagramme(diagramme: Diagramme): string {
  */
 export function rendreDocument(valeur: unknown, options: OptionsDeRendu): string {
 	const document: Document = analyserDocument(valeur);
-	return rendreBlocs(document.content, 'corps', options);
+	return rendreBlocs(document.content, 'corps', {
+		...options,
+		ancres: ancresDuDocument(document)
+	});
 }
