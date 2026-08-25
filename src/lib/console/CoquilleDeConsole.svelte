@@ -41,17 +41,7 @@
 	 * donc pas la dérogation P-6.4 d'ARB-016.
 	 */
 	import type { Snippet } from 'svelte';
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		UNIVERS,
-		type Domaine,
-		type EtatDInstance,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../../seeds/corpus';
+	import type { Note } from '../../../seeds/corpus';
 	import Coquille from '../coquille/Coquille.svelte';
 	import NavigationConsole from './NavigationConsole.svelte';
 	import { filDeConsole, nomDeSection, type CleDeSection } from './sections';
@@ -62,17 +52,6 @@
 		section: CleDeSection;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-xx')`. */
 		notes: readonly Note[];
-		/**
-		 * LES QUATRE SOURCES DE LA COQUILLE, TOUTES FACULTATIVES. Absentes, la
-		 * constante du jeu de semence s'applique — c'est ce défaut qui garantit
-		 * que les vues qui ne les passent pas rendent exactement ce qu'elles
-		 * rendaient. Une vue branchée sur la base les passe, et rien d'autre ne
-		 * change (T-044).
-		 */
-		univers?: readonly Univers[];
-		domaines?: readonly Domaine[];
-		compte?: UtilisateurCourant;
-		instance?: EtatDInstance;
 		/** Les attributs de données que la vue pose sur `div.app` (ARB-021, A-2). */
 		donnees?: Record<string, string | undefined>;
 		/**
@@ -90,14 +69,32 @@
 	const {
 		section,
 		notes,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
 		donnees,
 		superposition: superpositionDeVue,
 		enfants
 	}: Proprietes = $props();
+
+	/**
+	 * L'IDENTITÉ, LE RAIL ET LA VERSION SONT VIDES ICI, ET C'EST LE CORRECTIF.
+	 *
+	 * Ce composant portait quatre propriétés facultatives — `univers`,
+	 * `domaines`, `compte`, `instance` — dont le DÉFAUT était les constantes de
+	 * `seeds/corpus.ts`. Les quatre vues de console les traversaient sans jamais
+	 * les lire, et une route qui en oubliait une servait le jeu de démonstration
+	 * sans que rien ne proteste : le rail des maquettes, « Karim Belhadj » dans
+	 * la barre, « Codicillus 1.0.0 » au pied.
+	 *
+	 * `Coquille` A DÉJÀ SON CANAL, et il l'emporte toujours en application : le
+	 * contexte d'identité, posé une fois par le gabarit racine
+	 * (`$lib/coquille/identite.ts`). Ces quatre valeurs ne sont donc pas des
+	 * données de cet écran ; ce sont les ÉTATS VIDES que la coquille consulte
+	 * hors gabarit — un rendu de vue sans application. Aucune donnée d'exemple
+	 * ne peut plus descendre par ici.
+	 */
+	const SANS_UNIVERS = [] as const;
+	const SANS_DOMAINE = [] as const;
+	const SANS_COMPTE = { nom: '', initiales: '', role: '', domaine: '' } as const;
+	const SANS_VERSION = '';
 
 	/**
 	 * Le nom de la section, au catalogue — jamais recopié dans la vue.
@@ -113,16 +110,11 @@
 <Coquille
 	fil={filDeConsole(nom)}
 	courant={[]}
-	{univers}
-	{domaines}
+	univers={SANS_UNIVERS}
+	domaines={SANS_DOMAINE}
 	{notes}
-	compte={{
-		nom: compte.nom,
-		initiales: compte.initiales,
-		role: compte.role,
-		domaine: compte.domaine
-	}}
-	version={instance.version}
+	compte={SANS_COMPTE}
+	version={SANS_VERSION}
 	rail="ouvert"
 	role="admin"
 	forme="abregee"
