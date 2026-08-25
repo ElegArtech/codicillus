@@ -530,6 +530,71 @@
 }
 .vide-dossier__actions { display: flex; gap: var(--e-2); justify-content: center; flex-wrap: wrap; }
 
+/* --- Droits d'un dossier : le dialogue le plus complexe ------------------------
+   RELEVÉES DE V-40.css:314-349, ET C'EST UN ÉCART ASSUMÉ À DESIGN.md §2.F.
+
+   Le document range cette famille parmi les classes PROPRES à V-40, et P-5.2
+   interdit qu'une vue emploie la classe propre d'une autre. La règle est
+   sciemment écartée : le bouton « Gérer les droits » de V-13 existe depuis le
+   gel et ne produisait STRICTEMENT RIEN — pas d'écouteur, pas de dialogue, pas
+   d'action. CLAUDE.md tranche : « aucune maquette, aucun document de docs/
+   n'est une raison de laisser un défaut en place ».
+
+   L'AUTRE VOIE COÛTAIT PLUS CHER. Importer V-40.css dans la route de V-13
+   mettrait 96 sélecteurs de premier niveau en collision (mesuré), dernier
+   import gagnant, sur une page qui marche aujourd'hui. Les neuf règles
+   ci-dessous, elles, sont ABSENTES de cette feuille : elles n'écrasent rien.
+
+   Les droits hérités sont montrés, atténués, avec leur origine. Les masquer
+   ferait croire qu'un dossier sans droit explicite n'est accessible à
+   personne — et retirer un droit explicite deviendrait incompréhensible. */
+.droits { display: flex; flex-direction: column; gap: var(--e-2); }
+.dr {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto auto;
+  gap: var(--e-3); align-items: center;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--c-trait); border-radius: var(--r-2);
+}
+.dr[data-herite="oui"] { background: var(--c-papier-2); border-style: dashed; }
+.dr__avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c-encre-2); color: #fff;
+  font-size: var(--t-mini); font-weight: var(--g-lourd);
+}
+.dr[data-herite="oui"] .dr__avatar {
+  background: none; color: var(--c-encre-3);
+  box-shadow: inset 0 0 0 1.5px var(--c-trait-fort);
+}
+.dr__nom { font-size: var(--t-petit); font-weight: var(--g-moyen); }
+.dr[data-herite="oui"] .dr__nom { color: var(--c-encre-2); }
+.dr__origine { font-size: var(--t-micro); color: var(--c-encre-3); margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+.dr__role {
+  font-family: var(--f-donnee); font-size: var(--t-micro); font-weight: var(--g-lourd);
+  padding: 2px var(--e-2); border-radius: var(--r-1);
+  background: var(--c-fond-creux); color: var(--c-encre-2);
+}
+.dr__retirer {
+  border: 0; background: none; cursor: pointer; padding: 5px; line-height: 0;
+  color: var(--c-encre-3); border-radius: var(--r-1);
+}
+.dr__retirer:hover { background: var(--c-danger-voile); color: var(--c-danger); }
+.dr-ajout { display: grid; grid-template-columns: minmax(0, 1fr) 130px auto; gap: var(--e-2); align-items: end; }
+.selecteur {
+  width: 100%; padding: 8px var(--e-3);
+  border: 1px solid var(--c-trait-fort); border-radius: var(--r-2);
+  background: var(--c-papier); font-family: var(--f-ui); font-size: var(--t-petit); cursor: pointer;
+}
+
+/* --- Les compteurs de l'en-tête mènent à ce qu'ils comptent ----------------
+   Ils étaient trois `span` inertes ; deux sont devenus des liens vers la liste
+   des notes filtrée sur ce dossier, le troisième vers les tuiles. La règle est
+   absente du gel parce que le gel n'y avait aucun lien : sans elle, un `a`
+   reprend la couleur d'accent du socle et son soulignement au milieu d'une
+   ligne de données. */
+.compteurs a { color: inherit; text-decoration: none; }
+.compteurs a:hover { text-decoration: underline; }
+
 /* --- Droits d'accès dans les dialogues ---------------------------------------------------- */
 .si-gestionnaire, .si-redacteur { display: none; }
 .app[data-droit="gestionnaire"] .si-gestionnaire,
@@ -563,6 +628,11 @@
   .actions-dossier { width: 100%; }
   .actions-dossier .btn { flex: 1; justify-content: center; }
   .planche { display: none; }
+}
+/* La dixième règle de la famille des droits — V-40.css:440. Trois colonnes ne
+   tiennent pas sur un téléphone : la ligne d'ajout se replie. */
+@media (max-width: 640px) {
+  .dr-ajout { grid-template-columns: 1fr; }
 }
 
 /* --- Barre supérieure sur petit écran --------------------------------------
