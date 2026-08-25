@@ -47,7 +47,7 @@
 	 * composant d'être unique. Les styles en ligne sont ceux du gel (P-6.4).
 	 */
 	import { BARRES_DE_JAUGE, temoinFraicheur, type NiveauFraicheur } from '$lib/fraicheur';
-	import { motFiche } from '$lib/vocabulaire';
+	import { vocabulaireRendu } from '$lib/vocabulaire';
 	import CorpsOperationnel from './CorpsOperationnel.svelte';
 	import CorpsReference from './CorpsReference.svelte';
 	import {
@@ -68,6 +68,13 @@
 		segmentsDeDossier
 	} from '$lib/rangement/adresses';
 	import type { Snippet } from 'svelte';
+
+	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
+	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
+	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
+	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	const motsDuProduit = vocabulaireRendu();
+	const motFiche = $derived(motsDuProduit.fiche);
 
 	interface Proprietes {
 		/**

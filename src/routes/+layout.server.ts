@@ -37,6 +37,13 @@
  *               compris à une instance qui avait configuré le sien en console.
  *               Une lecture par clé, et c'est ce qui la fait passer pour
  *               l'anonyme aussi — V-04 est l'écran du visiteur sans session.
+ *   `motFiche` — le terme renommable de `M14.7`. Il n'a pas de chargeur propre
+ *               parce qu'il n'a pas d'écran propre : il est affiché par la barre
+ *               de recherche de la coquille, par la pastille de type d'une carte
+ *               de résultat et par le fil de la console, donc sous TOUTES les
+ *               routes. Il se lisait sur `seeds/corpus.ts`, et la configuration
+ *               n'avait aucun effet. Lu ici avec `portailAssistance`, dans la
+ *               MÊME requête, et fait descendre par le contexte de coquille.
  *
  * NI ROLE, NI IDENTIFIANT DE COMPTE, NI PÉRIMÈTRE ne sortent d'ici : `ADR-006`
  * interdit « toute exposition des droits au navigateur pour qu'il compose
@@ -54,7 +61,7 @@
  */
 import { basePartagee } from '$lib/base/acces';
 import paquet from '../../package.json';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import {
 	CLES_DE_PARAMETRE,
 	CONFIGURATION_PAR_DEFAUT,
@@ -307,14 +314,58 @@ const VERSION_DU_PRODUIT = paquet.version;
  * valeur d'un autre type est une base corrompue, pas une base neuve — elle
  * prend le défaut plutôt que de faire tomber toutes les pages du produit.
  */
-async function portailDAssistance(base: Base): Promise<string> {
-	const [ligne] = await base
-		.select({ valeur: parametres.valeur })
+/**
+ * LE MOT RENOMMABLE DE `M14.7` MONTE PAR LE MÊME CHEMIN, ET POUR LA MÊME
+ * RAISON — clé `mot_fiche` de `parametres`.
+ *
+ * `$lib/vocabulaire.ts` en calculait QUATRE CONSTANTES À L'IMPORT, depuis
+ * `CONFIG.motFiche` de `seeds/corpus.ts`. La clé existe en base, la console
+ * l'écrit, `lireConfiguration()` la lit — et rien ne branchait la lecture sur
+ * l'affichage : renommer « Fiche » en « Modèle » depuis `/console/configuration`
+ * ne changeait rien aux quinze vues qui affichent le mot, ni à la pastille
+ * « Types de fiches » de la console. `RG-M14-09` (« recalcul immédiat ») était
+ * faux à la lettre.
+ *
+ * Le mot est affiché par des vues que TOUTES les routes montent — la barre de
+ * recherche de la coquille, la pastille de type d'une carte de résultat, le fil
+ * d'Ariane de la console. Il n'a donc pas plus de chargeur propre que le portail
+ * d'assistance, et c'est ici qu'il se lit : un seul endroit, et le contexte de
+ * coquille le fait descendre.
+ *
+ * LES DEUX CLÉS SONT LUES EN UNE REQUÊTE. Ce chargeur s'exécute à CHAQUE
+ * requête du produit ; deux `select` là où un `in` suffit se paieraient sur
+ * toutes les pages. Le résultat est indexé par clé plutôt que positionnel : une
+ * clé absente d'une base neuve ne rend aucune ligne, et son défaut s'applique.
+ *
+ * LES DÉFAUTS NE SONT PAS RECOPIÉS : ils viennent de `CONFIGURATION_PAR_DEFAUT`,
+ * la même table sur laquelle `lireConfiguration()` retombe clé par clé. Une
+ * valeur d'un autre type est une base corrompue, pas une base neuve — elle prend
+ * le défaut plutôt que de faire tomber toutes les pages du produit.
+ */
+interface ParametresDeCoquille {
+	readonly portailAssistance: string;
+	readonly motFiche: string;
+}
+
+async function parametresDeCoquille(base: Base): Promise<ParametresDeCoquille> {
+	const lignes = await base
+		.select({ cle: parametres.cle, valeur: parametres.valeur })
 		.from(parametres)
-		.where(eq(parametres.cle, CLES_DE_PARAMETRE.portailAssistance))
-		.limit(1);
-	const valeur = ligne?.valeur;
-	return typeof valeur === 'string' ? valeur : CONFIGURATION_PAR_DEFAUT.portailAssistance;
+		.where(
+			inArray(parametres.cle, [CLES_DE_PARAMETRE.portailAssistance, CLES_DE_PARAMETRE.motFiche])
+		);
+	const lues = new Map(lignes.map((l) => [l.cle, l.valeur]));
+	const chaine = (cle: string, defaut: string): string => {
+		const valeur = lues.get(cle);
+		return typeof valeur === 'string' ? valeur : defaut;
+	};
+	return {
+		portailAssistance: chaine(
+			CLES_DE_PARAMETRE.portailAssistance,
+			CONFIGURATION_PAR_DEFAUT.portailAssistance
+		),
+		motFiche: chaine(CLES_DE_PARAMETRE.motFiche, CONFIGURATION_PAR_DEFAUT.motFiche)
+	};
 }
 
 export const load: LayoutServerLoad = async ({ locals }) => {
@@ -326,7 +377,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			rangement: null,
 			compte: null,
 			version: VERSION_DU_PRODUIT,
-			portailAssistance: await portailDAssistance(basePartagee())
+			...(await parametresDeCoquille(basePartagee()))
 		};
 	}
 	const base = basePartagee();
@@ -364,7 +415,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		rangement: await rangementDuCompte(base, locals.identite.compteId, acces),
 		compte: await identiteAffichable(base, locals.identite.compteId, acces),
 		version: VERSION_DU_PRODUIT,
-		portailAssistance: await portailDAssistance(base),
+		...(await parametresDeCoquille(base)),
 		...(await arborescenceDeNavigation(base, acces))
 	};
 };
