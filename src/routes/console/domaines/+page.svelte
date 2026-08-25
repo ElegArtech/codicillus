@@ -76,6 +76,7 @@
 	domaines={data.domaines}
 	compte={data.compte}
 	detailDomaines={data.detailDomaines}
+	modules={data.modules}
 	onSupprimer={(demande) => {
 		/* LA VUE DÉSIGNE PAR LE NOM, LE GESTE PAR LA FORME CANONIQUE. La table
 		   vient du chargeur — `lireLesDesignationsDeDomaine()` —, jamais d'une
