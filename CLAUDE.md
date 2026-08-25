@@ -69,9 +69,11 @@ corps si le pourquoi n'est pas évident.
 branchement applicatif, et il a été supprimé. La preuve qu'une chose marche est qu'elle marche dans
 un navigateur.
 
-**Brancher une vue**, quand `src/vues/` porte encore le contenu d'exemple en dur : déclare une
-propriété optionnelle dont le défaut est la constante de `seeds/corpus.ts`, remplace le contenu en
-dur par la propriété, passe la donnée depuis `+page.svelte`. Le rendu par défaut ne bouge pas.
+**Brancher une vue**, quand `src/vues/` porte encore le contenu d'exemple en dur : la donnée vient
+du chargeur. Si toutes les routes la passent, la propriété est **requise** — le compilateur garde la
+porte. Sinon son défaut est un **état vide explicite** — tableau vide, `null`, chaîne vide — jamais
+une constante de `seeds/corpus.ts` : la route qui oublie la donnée servirait le jeu sans que rien ne
+proteste. Quatre campagnes y ont couru ; `eslint.config.js` l'interdit désormais.
 
 ---
 
