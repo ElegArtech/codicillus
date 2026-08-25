@@ -25,21 +25,21 @@
  *     ni forme, ni sous-graphe. Elle dessine l'arborescence du corpus, pas le
  *     graphe des relations. La factoriser avec les deux autres aurait été un
  *     regroupement par nom de lot, jamais par contenu.
- *   • LA DISPOSITION. Elle n'est pas calculée ici, et elle ne l'est nulle part
- *     (ARB-011) : V-19 rend les positions du gel telles quelles, V-20 rend une
- *     géométrie d'anneau et d'étoile que sa propre maquette qualifie de
- *     « déterministe, jamais simulée ».
+ *   • LA DISPOSITION DE V-20 — une géométrie d'anneau et d'étoile que sa
+ *     propre maquette qualifie de « déterministe, jamais simulée », et qui
+ *     reste écrite dans la vue. Celle de V-19, elle, EST ici : `disposer()`,
+ *     déterministe elle aussi, depuis que la table de positions indexée sur
+ *     les identifiants du jeu de démonstration a quitté la vue.
  *
- * AUCUNE DONNÉE PROPRE (RG-M09-01) : tout vient de `seeds/corpus.ts` —
- * `RELATIONS`, `RELATIONS_TECHNIQUES`, `TYPES_RELATION` et le jeu de notes que
- * le mode démo passe en propriété.
- *
- * LES DEUX TABLEAUX SONT DES PARAMÈTRES, DE DÉFAUT LA CONSTANTE (T-043). La
- * base porte les relations réellement ; une vue qui les reçoit d'un chargeur
- * de route les fait descendre ici. Le défaut garde le comportement d'avant à
- * l'octet : aucun appel existant ne change, et le banc ne bouge pas d'un pixel.
+ * AUCUNE DONNÉE PROPRE (RG-M09-01), ET PLUS AUCUN DÉFAUT TIRÉ DU JEU. Les
+ * relations et les types techniques sont des PARAMÈTRES EXIGÉS : ils valaient
+ * les constantes de `seeds/corpus.ts` quand on ne les passait pas, si bien
+ * qu'un appelant qui les oubliait dessinait le graphe du jeu de démonstration
+ * sans que rien ne proteste. Le compilateur garde désormais la porte — un
+ * appel sans relations ne compile plus. Seul le type des deux tableaux vient
+ * encore de `seeds/corpus.ts`, et un type ne descend dans aucun rendu.
  */
-import { RELATIONS, RELATIONS_TECHNIQUES, type Note, type Relation } from '../../../seeds/corpus';
+import type { Note, Relation } from '../../../seeds/corpus';
 
 /* ── L'encodage des types ──────────────────────────────────────────────────
    « Chaque type a sa géométrie ET son code de trois lettres : la couleur ne
@@ -363,12 +363,12 @@ export interface Graphe {
  *
  * @param notes le jeu de semence de la vue, `corpusPourVue()`
  * @param perimetre `global`, `univers` ou `domaine`
- * @param relations les relations du corpus. Défaut : celles du jeu de semence.
+ * @param relations les relations du corpus, telles que la base les porte.
  */
 export function sousGraphe(
 	notes: readonly Note[],
 	perimetre: Perimetre,
-	relations: readonly Relation[] = RELATIONS
+	relations: readonly Relation[]
 ): Graphe {
 	const dedans = (n: Note): boolean => {
 		if (perimetre.type === 'global') return true;
@@ -424,7 +424,7 @@ export function degres(g: Graphe): ReadonlyMap<string, number> {
  */
 export function pointsArticulation(
 	g: Graphe,
-	techniques: readonly Relation['type'][] = RELATIONS_TECHNIQUES
+	techniques: readonly Relation['type'][]
 ): ReadonlySet<string> {
 	const voisins = new Map<string, string[]>();
 	for (const n of g.noeuds) voisins.set(n.id, []);
@@ -476,10 +476,7 @@ export interface RelationOrientee {
 }
 
 /** Les relations touchant un nœud, dans l'ordre où elles sont données. */
-export function relationsDe(
-	id: string,
-	relations: readonly Relation[] = RELATIONS
-): RelationOrientee[] {
+export function relationsDe(id: string, relations: readonly Relation[]): RelationOrientee[] {
 	return relations
 		.filter((r) => r.de === id || r.vers === id)
 		.map((r) => ({
@@ -492,7 +489,7 @@ export function relationsDe(
 /** Une relation porte-t-elle une dépendance technique ? */
 export function estTechnique(
 	type: Relation['type'],
-	techniques: readonly Relation['type'][] = RELATIONS_TECHNIQUES
+	techniques: readonly Relation['type'][]
 ): boolean {
 	return (techniques as readonly string[]).includes(type);
 }
@@ -561,18 +558,16 @@ export const ITERATIONS_DE_DISPOSITION = 320;
  * place d'un nœud ne dépend que de l'ENSEMBLE des nœuds et de leur ORDRE.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI ELLE ENTRE ICI, ALORS QUE LES VUES PORTAIENT DES POSITIONS FIGÉES
+ * POURQUOI ELLE DÉCIDE SEULE, ALORS QUE LA VUE PORTAIT DES POSITIONS FIGÉES
  *
- * `src/vues/V-19.svelte` porte une table de seize positions relevées sur la
- * maquette servie, et sa réserve était juste tant que le périmètre ne bougeait
- * pas : « le recalcul serait du comportement » (ARB-011). Le périmètre bouge
- * désormais — le sélecteur du gel navigue, `RG-M09-05` veut l'état de la
- * cartographie partageable —, et un nœud absent de la table se dessinait à
- * l'origine, empilé dans le coin de la scène. Une carte dont la moitié des
- * nœuds sont au même point n'est pas une carte.
- *
- * LES SEIZE POSITIONS RELEVÉES RESTENT LA SOURCE quand elles suffisent : voir
- * `placesDuGraphe()`, qui ne calcule que si la table ne couvre pas tout.
+ * `src/vues/V-19.svelte` portait une table de seize positions relevées sur la
+ * maquette servie, INDEXÉE PAR LES IDENTIFIANTS DE SEIZE NOTES DU JEU DE
+ * DÉMONSTRATION. Une instance qui charge ce jeu — et elle seule — recevait donc
+ * une disposition privilégiée que le corpus d'un client n'obtenait jamais : le
+ * jeu descendait dans le produit par la géométrie. La table est retirée, et
+ * cette fabrique dispose TOUS les corpus de la même façon. Elle est
+ * déterministe : « deux chargements du même périmètre donnent exactement la
+ * même carte » reste vrai, sans table.
  */
 export function disposer(g: Graphe, iterations = ITERATIONS_DE_DISPOSITION): Map<string, Place> {
 	interface Corps {
@@ -673,24 +668,4 @@ export function disposer(g: Graphe, iterations = ITERATIONS_DE_DISPOSITION): Map
 		});
 	}
 	return places;
-}
-
-/**
- * LES PLACES EFFECTIVES D'UN GRAPHE — la table relevée quand elle suffit, la
- * disposition calculée sinon.
- *
- * LA TABLE RELEVÉE L'EMPORTE TANT QU'ELLE COUVRE TOUT LE GRAPHE, et c'est ce
- * qui tient la conformité au gel : le périmètre de la planche est exactement
- * celui qu'elle décrit, et son rendu ne bouge pas d'un pixel. Dès qu'un seul
- * nœud lui manque — un autre périmètre, une note ajoutée en base —, la table
- * est ABANDONNÉE EN BLOC plutôt que complétée : mélanger deux dispositions
- * placerait les nœuds calculés sans égard pour ceux qui ne le sont pas, et la
- * carte serait fausse là où elle a l'air juste.
- */
-export function placesDuGraphe(
-	g: Graphe,
-	relevees: ReadonlyMap<string, Place>
-): ReadonlyMap<string, Place> {
-	if (g.noeuds.every((n) => relevees.has(n.id))) return relevees;
-	return disposer(g);
 }

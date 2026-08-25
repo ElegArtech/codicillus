@@ -4,21 +4,22 @@
 	 * (`docs/routes.md` §3). Aucune entrée de rail ne la vise : on y arrive par
 	 * la bascule « Par type maître » de V-19.
 	 *
-	 * AUCUNE DONNÉE PROPRE (`RG-M09-01`) : `RELATIONS`, `RELATIONS_TECHNIQUES`,
-	 * `TYPES_RELATION`, `TYPES_FICHE` de `seeds/corpus.ts`, et le jeu de semence
-	 * que le mode démo passe en propriété (`corpusPourVue('V-20')`, variante
-	 * « complete », 32 notes dont cinq signets sans relation, donc absents du
-	 * graphe). Les trois tableaux de relations sont désormais REÇUS EN PROPRIÉTÉ,
-	 * de défaut la constante du jeu (T-043).
+	 * AUCUNE DONNÉE PROPRE (`RG-M09-01`), ET PLUS AUCUN DÉFAUT TIRÉ DU JEU. Les
+	 * quatre tables du graphe — relations, types de relation, types techniques,
+	 * référentiel des types de fiche — étaient des propriétés OPTIONNELLES dont
+	 * le défaut était la constante de `seeds/corpus.ts` : une route qui en
+	 * oubliait une dessinait la carte du jeu de démonstration sans que rien ne
+	 * proteste. Elles sont EXIGÉES ; la route les sert depuis la base, et une
+	 * route qui en oublierait une ne bâtirait plus.
 	 *
-	 * `TYPES_FICHE` A CESSÉ D'ÊTRE UNE CONSTANTE NUE, ET C'EST UNE RÉPARATION.
-	 * Elle était importée au niveau du module et employée SANS PROPRIÉTÉ : aucun
-	 * chargeur ne pouvait donc la corriger. Le panneau de détail rendait alors,
-	 * sous l'intitulé « Propriétés », les noms de champ du JEU DE SEMENCE et
-	 * leurs valeurs d'EXEMPLE, présentés comme les propriétés de la note réelle
-	 * choisie — et un type de fiche créé en console, absent de la constante,
-	 * faisait LEVER `.slice()` au clic sur le nœud. Le référentiel et les
-	 * valeurs sont désormais reçus ; la constante n'est plus que le défaut.
+	 * `TYPES_FICHE` A CESSÉ D'ÊTRE UNE CONSTANTE NUE, ET C'ÉTAIT DÉJÀ UNE
+	 * RÉPARATION. Elle était importée au niveau du module et employée SANS
+	 * PROPRIÉTÉ : aucun chargeur ne pouvait donc la corriger. Le panneau de
+	 * détail rendait alors, sous l'intitulé « Propriétés », les noms de champ du
+	 * JEU DE SEMENCE et leurs valeurs d'EXEMPLE, présentés comme les propriétés
+	 * de la note réelle choisie — et un type de fiche créé en console, absent de
+	 * la constante, faisait LEVER `.slice()` au clic sur le nœud. Le référentiel
+	 * et les valeurs sont reçus, et le jeu n'en est plus le défaut.
 	 * Ce lot NE DÉCLARE PAS `RG-M09-01` tenue.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
@@ -97,22 +98,13 @@
 	 * `src/vues/V-20.css`, posé par `node verif/feuilles-de-vue.mjs V-20
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		RELATIONS,
-		RELATIONS_TECHNIQUES,
-		TYPES_FICHE,
-		TYPES_RELATION,
-		type ChampDeFiche,
-		type CleDeTypeDeRelation,
-		type Domaine,
-		type EtatDInstance,
-		type LibellesDeRelation,
-		type Note,
-		type Relation,
-		type UtilisateurCourant
+	import type {
+		ChampDeFiche,
+		CleDeTypeDeRelation,
+		Domaine,
+		LibellesDeRelation,
+		Note,
+		Relation
 	} from '../../seeds/corpus';
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -121,7 +113,11 @@
 	import Rail from '$lib/coquille/Rail.svelte';
 	import { railAbregeRendu, sectionsAbregeesDuCorpus } from '$lib/coquille/arborescence-abregee';
 	import { sectionsDuRail } from '$lib/coquille/arborescence';
-	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
+	import {
+		CLE_IDENTITE,
+		type CompteAffiche,
+		type IdentiteDeCoquille
+	} from '$lib/coquille/identite';
 	import {
 		contourDeForme,
 		degres,
@@ -138,41 +134,46 @@
 	} from '$lib/graphe/cartographie';
 
 	/**
-	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
-	 * DÉFAUT EST LA CONSTANTE DU JEU DE SEMENCE.
+	 * LES QUATRE SOURCES DU GRAPHE SONT EXIGÉES, ET C'EST LE LEVIER.
+	 *
+	 * Relations, types de relation, types techniques et référentiel des types de
+	 * fiche étaient OPTIONNELS, de défaut la constante de `seeds/corpus.ts` : une
+	 * route qui en oubliait un dessinait la carte du jeu de démonstration sans
+	 * que rien ne proteste. Exigés, ils sont gardés par le compilateur — une
+	 * route qui en oublierait un ne bâtirait plus.
 	 *
 	 * V-20 ne compose pas la coquille : elle monte le rail elle-même, et n'a donc
 	 * pas d'univers à recevoir — la propriété n'est pas déclarée parce qu'aucun
 	 * nœud de cette vue n'en dépendrait, et une propriété inerte est une promesse
-	 * sans effet. Pour le reste, le défaut est la constante du jeu : le mode de
-	 * conception ne passe que `vecteur` et `notes`, la vue reçoit donc exactement
-	 * ce qu'elle recevait, et le banc de comparaison ne bouge pas d'un pixel.
+	 * sans effet. `domaines` et `compte` restent optionnelles, avec un ÉTAT VIDE
+	 * pour défaut : aucune route ne les passe, le contexte de coquille porte le
+	 * rangement et l'identité réels, et un domaine ou un compte du jeu en défaut
+	 * serait une donnée inventée. `instance` a disparu : elle ne servait qu'à
+	 * donner sa version au pied du rail, que le contexte sert déjà.
 	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — moment × cas limites. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-20')`. */
 		notes: readonly Note[];
-		/** Les domaines du produit. Défaut : ceux du jeu de semence. */
+		/** Les domaines du produit. Absente, aucun domaine — jamais ceux du jeu. */
 		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Défaut : celui du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
-		instance?: EtatDInstance;
+		/** L'utilisateur courant. Absente, un compte VIDE — jamais celui du jeu. */
+		compte?: CompteAffiche | null;
 		/**
-		 * Les relations du corpus. Défaut : celles du jeu de semence.
+		 * Les relations du corpus, telles que la base les porte.
 		 *
-		 * La base les porte réellement. La vue n'en fabrique aucune : elle les
-		 * descend au socle commun des cartographies, qui en dérive le sous-graphe.
+		 * La vue n'en fabrique aucune : elle les descend au socle commun des
+		 * cartographies, qui en dérive le sous-graphe.
 		 */
-		relations?: readonly Relation[];
-		/** Les types de relation et leurs deux libellés. Défaut : ceux du jeu de semence. */
-		typesRelation?: Record<CleDeTypeDeRelation, LibellesDeRelation>;
-		/** Les types de relation qui portent une dépendance technique. Défaut : ceux du jeu de semence. */
-		relationsTechniques?: readonly CleDeTypeDeRelation[];
+		relations: readonly Relation[];
+		/** Les types de relation et leurs deux libellés, tels que la base les porte. */
+		typesRelation: Record<CleDeTypeDeRelation, LibellesDeRelation>;
+		/** Les types de relation qui portent une dépendance technique. */
+		relationsTechniques: readonly CleDeTypeDeRelation[];
 		/**
 		 * LE RÉFÉRENTIEL DES TYPES DE FICHE — un schéma de champs par type, tel que
-		 * la table le porte. Défaut : celui du jeu de semence.
+		 * la table le porte. Exigé : il valait celui du jeu de semence.
 		 *
 		 * L'INDEX EST UNE CHAÎNE, ET C'EST LE FAIT DE LA BASE. Le jeu n'en connaît
 		 * que trois, la table en porte autant que la console en crée, et `typeFiche`
@@ -180,7 +181,7 @@
 		 * référentiel reçu ne porte pas est donc un cas ORDINAIRE, pas une anomalie :
 		 * il se rend en état neutre, il ne lève pas.
 		 */
-		typesFiche?: Record<string, readonly ChampDeFiche[]>;
+		typesFiche: Record<string, readonly ChampDeFiche[]>;
 		/**
 		 * LES VALEURS DE PROPRIÉTÉ DE CHAQUE FICHE — par identifiant de note, puis
 		 * par clé de champ. La colonne `proprietes_typees` les porte.
@@ -220,18 +221,24 @@
 	const {
 		vecteur,
 		notes: corpus,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		relations = RELATIONS,
-		typesRelation = TYPES_RELATION,
-		relationsTechniques = RELATIONS_TECHNIQUES,
-		typesFiche = TYPES_FICHE,
+		domaines = [],
+		compte = null,
+		relations,
+		typesRelation,
+		relationsTechniques,
+		typesFiche,
 		proprietesDeFiche,
 		perimetreDemande,
 		typeMaitreDemande,
 		centreDemande
 	}: Proprietes = $props();
+
+	/**
+	 * LE COMPTE RENDU QUAND AUCUNE IDENTITÉ N'EST SERVIE — un état VIDE, jamais
+	 * un compte du jeu de démonstration. En application, le contexte de coquille
+	 * l'emporte et cette valeur n'atteint aucun écran.
+	 */
+	const COMPTE_VIDE = { nom: '', initiales: '', role: '', domaine: '' } satisfies CompteAffiche;
 
 	/**
 	 * L'IDENTITÉ ET LE RANGEMENT RÉELS L'EMPORTENT — `$lib/coquille/identite.ts`
@@ -253,13 +260,13 @@
 	 */
 	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
 	const domainesEffectifs = $derived(identite === undefined ? domaines : identite.domaines);
-	const compteEffectif = $derived(identite?.compte ?? compte);
+	const compteEffectif = $derived(identite?.compte ?? compte ?? COMPTE_VIDE);
 	/* LA VERSION DU PIED DE RAIL EST CELLE DU PAQUET, comme dans `Coquille.svelte`.
-	   La propriété `instance` porte le `1.0.0` de `seeds/corpus.ts` — un numéro de
-	   démonstration : V-20 câblant `Rail` en direct, elle l'annonçait comme un fait,
-	   seule de toutes les pages. Hors application, le contexte est absent et la
-	   propriété reprend la main : le gel ne bouge pas. */
-	const versionEffective = $derived(identite?.version ?? instance.version);
+	   Une propriété `instance` la portait, et son défaut était le `1.0.0` de
+	   `seeds/corpus.ts` : V-20 câblant `Rail` en direct, elle annonçait un numéro
+	   de démonstration comme un fait, seule de toutes les pages. La propriété est
+	   partie ; hors application, la version est VIDE, jamais inventée. */
+	const versionEffective = $derived(identite?.version ?? '');
 
 	/**
 	 * LE RAIL ABRÉGÉ SUIT LA BASE DÈS QU'ELLE EN A UNE — la copie exacte de ce

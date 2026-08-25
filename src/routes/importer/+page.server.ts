@@ -40,12 +40,24 @@
  * de CDC §2.3 qui décide qu'un rédacteur écrit des notes et qu'un lecteur n'en
  * écrit pas, jamais une comparaison recopiée ici.
  *
- * LE DROIT EST CHERCHÉ SUR TOUS LES DOSSIERS DU PRODUIT, et c'est la question
- * que l'adresse pose : `/importer` n'est pas l'import d'un domaine, c'est
- * l'écran d'import. Un compte qui peut écrire dans un seul sous-dossier d'un
- * seul domaine a quelque chose à y importer ; `RG-DRO-05` ne réserve pas
- * l'écriture aux porteurs d'un droit de racine, et l'exiger fermerait une porte
- * que les droits ouvrent.
+ * LE DROIT EST CHERCHÉ SUR LES RACINES DE DOMAINE, ET C'EST LA QUESTION QUE
+ * L'ÉCRAN SAIT RÉSOUDRE. Cette garde interrogeait TOUS les dossiers du produit,
+ * en disant qu'un compte pouvant écrire dans un seul sous-dossier « a quelque
+ * chose à y importer ». L'import, lui, n'écrit QUE dans une racine de domaine :
+ * `racineDuDomaine()` la cherche, le classement part de sa profondeur, et
+ * `preparerLeLot()` refuse en 403 qui n'a pas le droit dessus. Les deux
+ * questions ne coïncidaient pas : un compte à qui un sous-dossier seul est
+ * ouvert franchissait la garde, et `domainesOuEcrire()` — qui ne retient que les
+ * racines — lui rendait une liste VIDE. Il recevait alors l'écran d'import avec
+ * un sélecteur de destination sans option, et une soumission que le 403 attendait.
+ *
+ * La garde pose donc désormais la MÊME question que la liste des cibles. Un
+ * compte sans racine ouverte reçoit 404 plutôt qu'un écran qui ne mène nulle
+ * part — `P-09`, une action interdite n'est pas rendue. `RG-DRO-05` ne réserve
+ * pas l'écriture aux porteurs d'un droit de racine, et rien ici ne le prétend :
+ * c'est l'IMPORT qui écrit à la racine, et l'écran ne promet que ce que l'import
+ * exécute. Rendre les sous-dossiers importables est un geste d'écran, pas de
+ * garde, et il n'appartient pas à ce lot.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * UN SEUL CHEMIN DE SORTIE EN REFUS — ADR-007, RG-ACC-04
@@ -162,10 +174,13 @@ async function importateur(locals: App.Locals): Promise<{
 
 	const base = basePartagee();
 	const acces = await ouvrirLAcces(base, identite, new Date());
+	/* LES RACINES DE DOMAINE, ET RIEN D'AUTRE — voir l'en-tête. C'est le même
+	   ensemble que `domainesOuEcrire()` filtre, et il est cherché ici sur les
+	   dossiers DÉJÀ LUS par `ouvrirLAcces()` : aucune seconde lecture. */
 	if (
 		!peutEcrireDansLUn(
 			acces,
-			acces.dossiers.map((d) => d.id)
+			acces.dossiers.filter((d) => d.parentId === null).map((d) => d.id)
 		)
 	) {
 		error(404, MESSAGE_INTROUVABLE);
@@ -214,8 +229,11 @@ export const load: PageServerLoad = async ({ locals }) => {
  * LES DOMAINES OÙ L'APPELANT PEUT ÉCRIRE, dans l'ordre des noms — la liste des
  * cibles d'import possibles, et rien d'autre.
  *
- * VIDE EST INATTEIGNABLE : la garde d'entrée refuse déjà un compte qui n'écrit
- * nulle part. La forme rendue est celle que la vue attend d'un domaine — nom,
+ * VIDE EST INATTEIGNABLE, ET LA GARDE D'ENTRÉE POSE LA MÊME QUESTION : elle
+ * interroge les racines de domaine, exactement celles que ce filtre retient.
+ * Tant que les deux ensembles coïncident, un appelant arrivé jusqu'ici a au
+ * moins une cible ; qu'ils divergent, et c'est un sélecteur vide qui est rendu.
+ * La forme rendue est celle que la vue attend d'un domaine — nom,
  * univers, couleur —, la même que celle du rail, pour que le sélecteur affiche
  * « Univers › Domaine » comme le gel le dessine.
  *

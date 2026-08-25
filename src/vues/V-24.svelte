@@ -61,12 +61,15 @@
 	 * (ARB-019). Un attribut de données hors gabarit — `data-etape` (ARB-021,
 	 * A-2) —, que la feuille de la vue lit pour l'avancement du fil de jalons.
 	 *
-	 * TOUT VIENT DU CORPUS — `LOT_IMPORT` (30 fichiers), `FORMATS_IMPORT` (9
-	 * libellés) et `DOMAINES` de `seeds/corpus.ts`, exactement ce que le gel lit
-	 * dans `window.LOT_IMPORT` et `window.FORMATS_IMPORT`. L'arborescence
-	 * détectée, le récapitulatif chiffré, les fichiers écartés et leurs motifs
-	 * sont tous DÉRIVÉS du lot par les fonctions du gel, transcrites ici :
-	 * `arborescenceLot()` (`V-24:2532`) et `resumeLot()` (`V-24:2552`).
+	 * TOUT VIENT DE CE QUE LA ROUTE SERT — le lot déposé, les libellés de format
+	 * et les domaines où écrire sont EXIGÉS en propriété. Ils étaient
+	 * optionnels, de défaut `LOT_IMPORT`, `FORMATS_IMPORT` et `DOMAINES` de
+	 * `seeds/corpus.ts` : un écran d'import sans chargeur montrait donc trente
+	 * fichiers de démonstration comme s'ils venaient d'être déposés.
+	 * L'arborescence détectée, le récapitulatif chiffré, les fichiers écartés et
+	 * leurs motifs sont tous DÉRIVÉS du lot par les fonctions du gel,
+	 * transcrites ici : `arborescenceLot()` (`V-24:2532`) et `resumeLot()`
+	 * (`V-24:2552`).
 	 *
 	 * `JOURNAL_IMPORTS` n'est PAS employé : le journal des imports est une
 	 * section de console (ARB-003, V-35), et aucun des sept états de V-24 ne le
@@ -88,24 +91,17 @@
 	 * clos du gel de V-24 (ARB-016, P-6.4), y compris la largeur que le script
 	 * de la maquette pose par `.style.width`.
 	 */
-	import {
-		DOMAINES,
-		FORMATS_IMPORT,
-		INSTANCE,
-		LOT_IMPORT,
-		MOI,
-		UNIVERS,
-		type Domaine,
-		type EtatDInstance,
-		type FichierDuLot,
-		type FormatDImport,
-		type LotDImport,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
+	import type {
+		Domaine,
+		FichierDuLot,
+		FormatDImport,
+		LotDImport,
+		Note,
+		Univers
 	} from '../../seeds/corpus';
 	import { onMount } from 'svelte';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { adresseDeDomaine } from '$lib/rangement/adresses';
 	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
 	import {
@@ -117,33 +113,38 @@
 	interface Proprietes {
 		/** Le vecteur complet de l'état — deux contrôles de planche. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-24')`, variante complète. */
+		/** Les notes du périmètre, telles que le chargeur les lit. */
 		notes: readonly Note[];
 		/**
-		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
+		 * CE QUE LA ROUTE SERT EST EXIGÉ, LE RESTE A UN ÉTAT VIDE.
 		 *
-		 * Absentes, les constantes du jeu de semence s'appliquent : c'est ce que le
-		 * mode démo passe, et c'est ce qui garantit que le banc ne bouge pas d'un
-		 * pixel. Fournies — par un chargeur de route —, elles l'emportent, et la vue
-		 * cesse de servir une valeur figée, indépendante de la base et de l'identité.
+		 * Les sources de cet écran étaient OPTIONNELLES, de défaut la constante de
+		 * `seeds/corpus.ts` : une route qui en oubliait une servait le lot, les
+		 * domaines et l'identité du jeu de démonstration sans que rien ne
+		 * proteste. `/importer` sert les domaines où écrire, le lot déposé, les
+		 * libellés de format et le domaine proposé : ces quatre-là sont EXIGÉS, et
+		 * une route qui en oublierait un ne bâtirait plus.
+		 *
+		 * `univers` et `compte` restent optionnelles, avec un ÉTAT VIDE pour
+		 * défaut — le contexte de coquille porte le rail et l'identité réels.
+		 * `instance` a disparu : le contexte sert déjà la version.
 		 */
-		/** Les univers déclarés. Absente, `UNIVERS` du jeu de semence. */
+		/** Les univers déclarés. Absente, aucun univers — jamais ceux du jeu. */
 		univers?: readonly Univers[];
-		/** Les domaines du périmètre du compte. Absente, `DOMAINES` du jeu de semence. */
-		domaines?: readonly Domaine[];
-		/** Le compte connecté. Absente, `MOI` du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance. Absente, `INSTANCE` du jeu de semence. */
-		instance?: EtatDInstance;
-		/** Le lot déposé. Absente, `LOT_IMPORT` du jeu de semence. */
-		lotImport?: LotDImport;
+		/** Les domaines où l'utilisateur a le droit d'écrire. */
+		domaines: readonly Domaine[];
+		/** Le compte connecté. Absente, un compte VIDE — jamais celui du jeu. */
+		compte?: CompteAffiche | null;
+		/** Le lot déposé, tel que l'analyse le rend. */
+		lotImport: LotDImport;
 		/**
-		 * Les libellés des formats admis. Absente, `FORMATS_IMPORT` du jeu de
-		 * semence. La table est PARTIELLE : un service de conversion qui n'en
-		 * reconnaîtrait qu'une partie ne doit pas être empêché de le dire, et le
-		 * rendu retombe déjà sur l'extension quand le libellé manque.
+		 * Les libellés des formats admis — `LIBELLE_PAR_FORMAT` de
+		 * `$lib/donnees/import.ts`, un référentiel du produit. La table est reçue
+		 * PARTIELLE : un service de conversion qui n'en reconnaîtrait qu'une partie
+		 * ne doit pas être empêché de le dire, et le rendu retombe déjà sur
+		 * l'extension quand le libellé manque.
 		 */
-		formatsImport?: Partial<Record<FormatDImport, string>>;
+		formatsImport: Partial<Record<FormatDImport, string>>;
 		/**
 		 * UN LOT DÉJÀ DÉPOSÉ, REMIS PAR L'ÉCRAN QUI L'A REÇU — le gel de V-35.
 		 *
@@ -188,8 +189,16 @@
 			fichiers: readonly File[],
 			reglages: ReglagesDuDepot
 		) => Promise<Issue<RapportAffiche>>;
-		/** Le domaine de destination proposé. Absente, celui du compte. */
-		domaineParDefaut?: string;
+		/**
+		 * LE DOMAINE DE DESTINATION PROPOSÉ — exigé.
+		 *
+		 * Il était optionnel et retombait sur `compte.domaine`, dont le défaut
+		 * était `MOI` du jeu de démonstration : un import sans destination visait
+		 * alors « Infrastructure », un domaine que rien ne pose sur une instance
+		 * réelle. La route le sert toujours ; la branche de repli est supprimée,
+		 * pas neutralisée.
+		 */
+		domaineParDefaut: string;
 	}
 
 	/**
@@ -270,17 +279,24 @@
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		lotImport = LOT_IMPORT,
-		formatsImport = FORMATS_IMPORT,
+		univers = [],
+		domaines,
+		compte = null,
+		lotImport,
+		formatsImport,
 		lotRecu = [],
 		analyser,
 		importer,
 		domaineParDefaut
 	}: Proprietes = $props();
+
+	/**
+	 * LE COMPTE RENDU QUAND AUCUNE IDENTITÉ N'EST SERVIE — un état VIDE, jamais
+	 * un compte du jeu de démonstration. En application, le contexte de coquille
+	 * l'emporte et cette valeur n'atteint aucun écran.
+	 */
+	const COMPTE_VIDE = { nom: '', initiales: '', role: '', domaine: '' } satisfies CompteAffiche;
+	const compteRendu = $derived(compte ?? COMPTE_VIDE);
 
 	/* ═══════════════════════════════════════════════════════════════════════
 	   L'ÉTAT DU PARCOURS — local, et seulement quand il y a un parcours
@@ -845,7 +861,7 @@
 	});
 
 	/** Le domaine effectivement visé — celui qu'on a choisi, sinon le proposé. */
-	const domaineCible = $derived(domaineRetenu || (domaineParDefaut ?? compte.domaine));
+	const domaineCible = $derived(domaineRetenu || domaineParDefaut);
 
 	const reglages = $derived({
 		scenario: scenarioChoisi ?? SCENARIO_LIVRE,
@@ -1030,12 +1046,12 @@
 	{domaines}
 	notes={corpus}
 	compte={{
-		nom: compte.nom,
-		initiales: compte.initiales,
-		role: compte.role,
-		domaine: compte.domaine
+		nom: compteRendu.nom,
+		initiales: compteRendu.initiales,
+		role: compteRendu.role,
+		domaine: compteRendu.domaine
 	}}
-	version={instance.version}
+	version=""
 	{notifications}
 >
 	{#snippet enfants()}

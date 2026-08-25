@@ -7,10 +7,12 @@
  * Ce que ces tests regardent, et pourquoi ce sont ceux-là :
  *
  *   1. L'INJECTION DES ARÊTES. Le troisième paramètre de `sousGraphe()` est
- *      arrivé avec ce lot ; un paramètre qu'aucun cas n'exerce est un paramètre
- *      dont on ignore s'il marche (`P-5`). Il est donc éprouvé sur un jeu qui
- *      donne un graphe DIFFÉRENT du défaut — sinon le test passerait aussi bien
- *      si l'argument était ignoré.
+ *      EXIGÉ : il valait `RELATIONS` du jeu de démonstration quand on
+ *      l'omettait, si bien qu'un appelant qui l'oubliait dessinait le graphe du
+ *      jeu sans que rien ne proteste. Il est éprouvé sur un jeu d'arêtes qui
+ *      donne un graphe DIFFÉRENT de celui du corpus — sinon le cas passerait
+ *      aussi bien si l'argument était ignoré — et dans son état VIDE, qui ne
+ *      rend aucun nœud.
  *   2. L'ÉTAT DE ZONE DANS SES DEUX POLARITÉS, sur des cas SYNTHÉTIQUES,
  *      indépendants de l'état du dépôt (`P-26`). Le cas qui compte est le plus
  *      contre-intuitif : des notes sans aucune relation, qui est un périmètre
@@ -58,10 +60,10 @@ describe('sousGraphe — les arêtes injectées', () => {
 	const A = 'n-restaurer-maria';
 	const B = 'n-tester-pra';
 
-	it('ne relie pas ces deux notes sans arête injectée', () => {
-		const parDefaut = sousGraphe(CORPUS, { type: 'global' });
-		expect(parDefaut.index.has(A)).toBe(false);
-		expect(parDefaut.index.has(B)).toBe(false);
+	it('ne relie pas ces deux notes quand aucune arête ne les touche', () => {
+		const duJeu = sousGraphe(CORPUS, { type: 'global' }, RELATIONS);
+		expect(duJeu.index.has(A)).toBe(false);
+		expect(duJeu.index.has(B)).toBe(false);
 	});
 
 	it('emploie les arêtes reçues, et elles seules', () => {
@@ -74,11 +76,14 @@ describe('sousGraphe — les arêtes injectées', () => {
 		expect(graphe.aretes.length).toBe(1);
 	});
 
-	it('rend le graphe du jeu de semence quand on ne lui passe rien', () => {
-		const implicite = sousGraphe(CORPUS, { type: 'global' });
-		const explicite = sousGraphe(CORPUS, { type: 'global' }, RELATIONS);
-		expect(implicite.aretes).toEqual(explicite.aretes);
-		expect(implicite.noeuds.map((n) => n.id)).toEqual(explicite.noeuds.map((n) => n.id));
+	it('sans aucune arête, ne rend aucun nœud — il n’y a plus de défaut caché', () => {
+		/* LE MOTIF RETIRÉ : `relations` avait pour défaut `RELATIONS` du jeu de
+		   démonstration. Une instance neuve, dont la table des relations est vide,
+		   recevait donc les vingt-deux arêtes du jeu. Le paramètre est exigé, et
+		   son état vide se rend vide. */
+		const vide = sousGraphe(CORPUS, { type: 'global' }, []);
+		expect(vide.aretes).toEqual([]);
+		expect(vide.noeuds).toEqual([]);
 	});
 
 	it("conserve l'ordre des arêtes reçues, qui décide de l'ordre du balisage", () => {
