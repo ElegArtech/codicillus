@@ -73,7 +73,12 @@ export const TYPES: ReadonlyMap<string, EncodageDeType> = new Map([
 	['Signet', { forme: 'losange', code: 'LIE', couleur: '#6b7c87', nom: 'Signet' }]
 ] as const);
 
-/** Le repli du gel : `TYPES[k] || TYPES["Note"]`. */
+/**
+ * Le repli du gel, réduit à sa seule justification : un nom de type VIDE.
+ *
+ * Ce n'était pas son emploi. Il servait à TOUT nom absent de la table, et
+ * c'était le défaut : voir la dérivation ci-dessous.
+ */
 const TYPE_PAR_DEFAUT: EncodageDeType = {
 	forme: 'losange',
 	code: 'NOT',
@@ -81,9 +86,183 @@ const TYPE_PAR_DEFAUT: EncodageDeType = {
 	nom: 'Note'
 };
 
-/** L'encodage d'un type cartographique, repli du gel compris. */
+/* ── Les types que la console crée ─────────────────────────────────────────
+   LA TABLE CI-DESSUS EST CLOSE ; LE RÉFÉRENTIEL, LUI, EST OUVERT. Un
+   administrateur crée un type de fiche depuis la console (`types_de_fiche` :
+   identifiant, nom, ordre — aucune colonne de présentation), et son nom
+   arrivait ici comme une clé inconnue. Le repli rendait alors l'objet du gel TEL
+   QUEL : deux types créés en console produisaient DEUX PASTILLES RIGOUREUSEMENT
+   IDENTIQUES — losange, code NOT, libellé « Note » — dont les deux filtres
+   portaient pourtant deux types différents. Le libellé mentait, la forme et le
+   code confondaient, et `RG-M18-09` — « la forme et le code portent le type ; la
+   couleur ne fait que les répéter » (`V-19:1145`) — tombait.
+
+   LE NOM N'A JAMAIS QUITTÉ LE CIRCUIT : la clé EST le nom. Il suffit de le
+   rendre. Pour la forme, le code et la teinte, le cahier tranche le point de
+   conception : « chaque type de fiche a une couleur et une icône propres,
+   ASSIGNÉES DE FAÇON DÉTERMINISTE » (`CAHIER:951`). *Assignées*, non *stockées*
+   — une dérivation, pas une colonne. Le calcul ci-dessous est donc PUR : même
+   nom, même encodage, sur toute machine et à toute exécution.
+
+   CE QU'IL PROMET, ET CE QU'IL NE PROMET PAS. Un type dérivé ne prend jamais un
+   code du gel, ni un couple forme-teinte du gel : il ne peut donc pas se faire
+   passer pour un type de la table. En revanche deux noms dérivés peuvent
+   partager un code de trois caractères — « Routeur » et « Routeurs » donnent
+   tous deux ROU : aucune fonction d'un seul nom ne peut garantir l'unicité dans
+   un ensemble qu'elle ne voit pas. La forme et la teinte étant tirées d'un
+   hachage du nom ENTIER, deux types ne se confondent tout à fait que si le code,
+   la forme et la teinte coïncident tous les trois. Le gel, lui, les confondait
+   toujours. */
+
+/** Les géométries offertes au choix : celles du gel, tirées de la table. */
+const FORMES: readonly FormeDeNoeud[] = [...new Set([...TYPES.values()].map((t) => t.forme))];
+
+/** Les teintes offertes au choix : celles du gel, tirées de la table. */
+const TEINTES: readonly string[] = [...new Set([...TYPES.values()].map((t) => t.couleur))];
+
+/** Les codes que le gel a déjà pris : un type créé en console n'en prend aucun. */
+const CODES_DU_GEL: ReadonlySet<string> = new Set([...TYPES.values()].map((t) => t.code));
+
+/** Ce qui identifie un couple de présentation, pour comparer sans objet. */
+function empreinteDePresentation(forme: FormeDeNoeud, couleur: string): string {
+	return forme + '|' + couleur;
+}
+
+/**
+ * LES COUPLES FORME-TEINTE ENCORE LIBRES — cinq géométries par cinq teintes,
+ * MOINS les sept que la table du gel occupe déjà.
+ *
+ * Retirer les couples pris est ce qui empêche « Fiche » de se présenter en
+ * carré teal comme « Serveur » : un type créé en console ne peut alors ressembler
+ * en tout point à aucun type du gel, et il reste dix-huit couples pour le
+ * distinguer de ses semblables.
+ */
+const PRESENTATIONS_LIBRES: readonly { readonly forme: FormeDeNoeud; readonly couleur: string }[] =
+	(() => {
+		const prises = new Set(
+			[...TYPES.values()].map((t) => empreinteDePresentation(t.forme, t.couleur))
+		);
+		const libres: { forme: FormeDeNoeud; couleur: string }[] = [];
+		for (const forme of FORMES) {
+			for (const couleur of TEINTES) {
+				if (!prises.has(empreinteDePresentation(forme, couleur))) libres.push({ forme, couleur });
+			}
+		}
+		return libres;
+	})();
+
+/**
+ * L'alphabet de désambiguïsation, parcouru en boucle depuis un rang haché. Les
+ * chiffres en sont exclus À DESSEIN : dans un code de trois capitales, le zéro
+ * se lit comme un O et le un comme un I — la désambiguïsation retomberait dans
+ * la confusion qu'elle vient lever.
+ */
+const ALPHABET_DE_CODE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+/** Ce qui complète un nom trop court pour donner trois caractères. */
+const REMPLISSAGE_DE_CODE = 'X';
+
+/**
+ * UN HACHAGE STABLE — FNV-1a sur 32 bits, en arithmétique entière.
+ *
+ * Il ne sert qu'à choisir dans deux listes closes : il n'a besoin d'aucune
+ * qualité cryptographique, seulement d'être LE MÊME PARTOUT ET TOUJOURS. Il
+ * l'est : il ne dépend ni de la locale, ni du fuseau, ni d'un ordre de
+ * propriétés, ni d'une valeur de session.
+ */
+function hachageStable(texte: string): number {
+	let h = 2166136261;
+	for (let i = 0; i < texte.length; i += 1) {
+		h ^= texte.charCodeAt(i);
+		h = Math.imul(h, 16777619);
+	}
+	return h >>> 0;
+}
+
+/**
+ * Les mots d'un nom, réduits aux capitales sans accent et aux chiffres.
+ *
+ * La décomposition retire les signes diacritiques AVANT la coupe : « Équipement
+ * réseau » donne EQUIPEMENT et RESEAU, jamais un premier mot amputé.
+ */
+function motsDuNom(nom: string): string[] {
+	return nom
+		.normalize('NFD')
+		.replace(/\p{M}/gu, '')
+		.toUpperCase()
+		.split(/[^A-Z0-9]+/)
+		.filter((mot) => mot !== '');
+}
+
+/**
+ * Le code de trois caractères d'un nom, avant désambiguïsation.
+ *
+ * La règle suit la lecture : un seul mot donne ses trois premières lettres
+ * (« Commutateur » donne COM) ; deux mots donnent deux lettres puis une
+ * (« Équipement réseau » donne EQR) ; trois mots ou plus donnent leurs
+ * initiales. Un nom trop court est complété, jamais rendu plus court.
+ */
+function codeDeTroisCaracteres(nom: string): string {
+	const mots = motsDuNom(nom);
+	const premier = mots[0] ?? '';
+	const second = mots[1] ?? '';
+	let brut: string;
+	if (mots.length === 1) brut = premier.slice(0, 3);
+	else if (mots.length === 2) brut = premier.slice(0, 2) + second.slice(0, 1);
+	else
+		brut = mots
+			.slice(0, 3)
+			.map((mot) => mot.slice(0, 1))
+			.join('');
+	return (brut + REMPLISSAGE_DE_CODE.repeat(3)).slice(0, 3);
+}
+
+/**
+ * Le code d'un type créé en console, jamais l'un des sept du gel.
+ *
+ * Le cas est réel, non théorique : le jeu de peuplement pose un type
+ * « Processus », dont les trois premières lettres sont celles de « Procédure ».
+ * Sans cette reprise, les deux porteraient PRO et le code cesserait de
+ * distinguer. Le troisième caractère est alors repris dans l'alphabet à partir
+ * d'un rang haché sur le nom — donc stable, et différent d'un nom à l'autre.
+ */
+function codeDerive(nom: string): string {
+	const brut = codeDeTroisCaracteres(nom);
+	if (!CODES_DU_GEL.has(brut)) return brut;
+	const depart = hachageStable(nom) % ALPHABET_DE_CODE.length;
+	for (let i = 0; i < ALPHABET_DE_CODE.length; i += 1) {
+		const candidat =
+			brut.slice(0, 2) + ALPHABET_DE_CODE.charAt((depart + i) % ALPHABET_DE_CODE.length);
+		if (!CODES_DU_GEL.has(candidat)) return candidat;
+	}
+	return brut;
+}
+
+/** La forme et la teinte d'un type créé en console, par hachage stable du nom. */
+function presentationDerivee(nom: string): { forme: FormeDeNoeud; couleur: string } {
+	const rang = hachageStable(nom) % PRESENTATIONS_LIBRES.length;
+	return (
+		PRESENTATIONS_LIBRES[rang] ?? {
+			forme: TYPE_PAR_DEFAUT.forme,
+			couleur: TYPE_PAR_DEFAUT.couleur
+		}
+	);
+}
+
+/**
+ * L'encodage d'un type cartographique.
+ *
+ * Les sept clés du gel rendent l'objet du gel, à l'octet : le banc et le corpus
+ * de démonstration ne bougent pas d'un pixel. Tout autre nom — un type de fiche
+ * créé en console, un type de note que la table n'énumère pas — est NOMMÉ, et sa
+ * présentation est dérivée de son nom.
+ */
 export function encodageDuType(cle: string): EncodageDeType {
-	return TYPES.get(cle) ?? TYPE_PAR_DEFAUT;
+	const duGel = TYPES.get(cle);
+	if (duGel !== undefined) return duGel;
+	if (cle.trim() === '') return TYPE_PAR_DEFAUT;
+	const { forme, couleur } = presentationDerivee(cle);
+	return { forme, code: codeDerive(cle), couleur, nom: cle };
 }
 
 /** Le type cartographique d'une note : le type de fiche s'il existe, sinon le
@@ -92,7 +271,7 @@ export function typeCarto(n: Note): string {
 	return n.typeFiche ?? n.type;
 }
 
-/** L'encodage d'une note. Un type inconnu retombe sur « Note », comme au gel. */
+/** L'encodage d'une note, son type fût-il créé en console. */
 export function typeDe(n: Note): EncodageDeType {
 	return encodageDuType(typeCarto(n));
 }
