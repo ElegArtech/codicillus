@@ -758,13 +758,12 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		 * — le seul état de V-15 que `docs/routes.md` §S2 connaisse — qui décide
 		 * lequel des deux écrans s’affiche.
 		 *
-		 * `affichee` NE VA PAS À LA VUE PAR CE CHEMIN-LÀ. Son `numero` sert à
-		 * marquer la ligne courante du panneau ; ses trois autres champs — le
-		 * titre et les deux corps capturés — sont des DOCUMENTS, que la vue ne
-		 * sait pas rendre. Ils passent par `afficheeDeLaVersion` ci-dessous,
-		 * rendus en HTML par l’implémentation unique (`ADR-004`). Le champ reste
-		 * servi tel quel parce que l’action `restaurer` le relit, elle, sous sa
-		 * forme de document.
+		 * DE `affichee`, LA VUE NE LIT QUE `numero` — il marque la ligne consultée
+		 * du panneau. Les trois autres champs — le titre capturé et les deux corps
+		 * — sont des DOCUMENTS, que la vue ne sait pas rendre : ils atteignent
+		 * l’écran par `afficheeDeLaVersion` ci-dessous, rendus en HTML par
+		 * l’implémentation unique (`ADR-004`). Ils restent servis ici parce que
+		 * `Historique` est un objet et que rien ne gagnerait à le découper.
 		 *
 		 * `retention` est `versions_max` de `parametres`, lu et jamais redéclaré.
 		 */
@@ -792,7 +791,7 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		 * l'absence faisait afficher la note du gel pour toutes les autres.
 		 */
 		affichee: complements.affichee,
-		/** Les sept panneaux latéraux, tous lus en base, aucun transcrit. */
+		/** Les panneaux latéraux, tous lus en base, aucun transcrit. */
 		panneaux: complements.panneaux,
 		/**
 		 * LES PIÈCES, SOUS LA FORME QUE LE CÂBLAGE ADRESSE — nom de fichier et
