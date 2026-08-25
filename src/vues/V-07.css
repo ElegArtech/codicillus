@@ -339,7 +339,16 @@
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .dom__nom:hover { color: var(--c-accent); }
-.dom__n { flex: none; font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-3); }
+/* Le compte de notes d un domaine et les deux nombres du pied sont des
+   BOUTONS : ils ouvrent la liste des notes du domaine pour le premier, la
+   recherche pour les seconds. Le gel les dessine en span faute de
+   destination — il n a pas de serveur. La neutralisation ne fait que rendre
+   au bouton l apparence du span : rien d autre n est ajouté. */
+.dom__n {
+  flex: none; font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-3);
+  background: none; border: 0; padding: 0; line-height: inherit; cursor: pointer;
+}
+.dom__n:hover { color: var(--c-accent); }
 .dom .repart { margin-top: var(--e-2); }
 .dom__vide { font-size: var(--t-mini); color: var(--c-encre-3); margin-top: var(--e-2); }
 
@@ -379,6 +388,11 @@
   font-size: var(--t-mini); color: var(--c-encre-3);
 }
 .pied-tdb b { font-family: var(--f-donnee); font-weight: var(--g-moyen); color: var(--c-encre-2); }
+.pied-tdb button {
+  background: none; border: 0; padding: 0; font: inherit; color: inherit;
+  line-height: inherit; cursor: pointer;
+}
+.pied-tdb button:hover { color: var(--c-accent); }
 
 /* --- Amorçage : base neuve -----------------------------------------------
    Un corpus vide ne produit pas un tableau de bord à zéro : il produit un
