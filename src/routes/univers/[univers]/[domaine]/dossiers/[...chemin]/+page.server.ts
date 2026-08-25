@@ -85,10 +85,16 @@
  */
 import { error, fail, redirect } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
+import { accesALaConsole } from '$lib/donnees/consoles';
 import { dossiers } from '$lib/base/schema';
 import { moteurPartage } from '$lib/recherche/acces';
 import { adresseDeDomaine, adresseDeDossier, identifiantLisible } from '$lib/rangement/adresses';
-import { capacites, perimetreContient, resoudre } from '$lib/droits/resolution';
+import {
+	capacites,
+	contourneLesDroitsDeDossier,
+	perimetreContient,
+	resoudre
+} from '$lib/droits/resolution';
 import {
 	cheminAffiche,
 	dossiersDuDomaine,
@@ -256,19 +262,34 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		/**
 		 * LES DROITS DU DOSSIER — servis AU SEUL GESTIONNAIRE, et `null` sinon.
 		 *
-		 * Cette réponse porte la liste des comptes de l'instance et ce que chacun
-		 * peut faire ici. `ADR-006` veut le filtre au plus près de la donnée : la
-		 * lire pour un lecteur, quitte à ce que la vue n'en fasse rien, mettrait
-		 * l'annuaire des comptes dans la charge utile de tout le monde. La
-		 * capacité qui gouverne le GESTE gouverne donc aussi sa LECTURE, et c'est
-		 * le même `capacites().gererLesDroits` que les trois actions consultent.
+		 * `ADR-006` veut le filtre au plus près de la donnée : lire ces droits pour
+		 * un lecteur, quitte à ce que la vue n'en fasse rien, mettrait les droits
+		 * du dossier dans la charge utile de tout le monde. La capacité qui
+		 * gouverne le GESTE gouverne donc aussi sa LECTURE, et c'est le même
+		 * `capacites().gererLesDroits` que les trois actions consultent.
+		 *
+		 * MAIS CETTE CAPACITÉ EST LOCALE, ET ELLE NE SUFFIT PAS À TOUT SERVIR.
+		 * Elle s'obtient sur UN dossier : le rédacteur d'un autre domaine la tient
+		 * ici dès qu'on la lui accorde ici. Les droits de CE dossier sont
+		 * exactement ce qu'elle gouverne, et ils lui reviennent. L'annuaire des
+		 * comptes de l'instance ne l'est pas : `docs/routes.md:167` le réserve au
+		 * rôle `administrateur`, à qui seul `/console/comptes` répond autrement que
+		 * par `404`. Les deux périmètres voyagent donc séparément jusqu'à la
+		 * requête, qui les rabat elle-même — le champ `annuaireLisible`.
+		 *
+		 * ET LE SECOND PÉRIMÈTRE N'EST PAS ÉCRIT ICI : c'est `accesALaConsole()`,
+		 * le prédicat que les douze écrans de console consultent déjà. Le recopier
+		 * en lisant le rôle sur place aurait fait deux définitions de la même
+		 * porte, et une porte définie deux fois s'ouvre un jour d'un seul côté.
 		 */
 		droits: capacites(droit).gererLesDroits
 			? await lireLesDroitsDUnDossier(base, {
 					dossierId: dossier.id,
 					lignes: acces.dossiers,
 					nomDuDomaine: domaine.nom,
-					appelantId: locals.identite.type === 'authentifie' ? locals.identite.compteId : null
+					appelantId: locals.identite.type === 'authentifie' ? locals.identite.compteId : null,
+					annuaireLisible: accesALaConsole(locals.identite),
+					appelantContourne: contourneLesDroitsDeDossier(locals.identite)
 				})
 			: null,
 		origineDuDroit: libelleDOrigine(
@@ -307,10 +328,19 @@ type EcritureDeDroit = (
  * `NIVEAU_INCONNU` : aucun défaut n'est supposé, se tromper de défaut ici serait
  * accorder un droit.
  *
+ * ET SON PÉRIMÈTRE D'ANNUAIRE AVEC — `annuaireLisible`, le même champ qu'au
+ * chargeur. Le dialogue n'offre « Ajouter un accès » qu'à qui voit l'annuaire des
+ * comptes ; l'action refuse d'accorder à qui ne le voit pas. Une garde d'écran
+ * que l'action ne tient pas n'est pas une garde : l'adresse se construit à la
+ * main.
+ *
  * LE COMPTE DE L'APPELANT VOYAGE JUSQU'AU MODULE, parce que c'est lui qui refuse
  * l'auto-retrait de gestion. `null` en anonyme — cas qui n'arrive pas,
  * `ouvrirLeDossier()` ayant déjà refusé faute de droit, et le type l'exprime
- * plutôt que de le supposer.
+ * plutôt que de le supposer. ET SON RÉGIME AVEC LUI : un administrateur tient sa
+ * gestion de `RG-DRO-03`, sans ligne dans la table, donc aucune écriture d'ici
+ * ne la lui retire — lui opposer l'auto-retrait serait refuser par un motif qui
+ * ne s'applique pas.
  *
  * LE RETOUR EST UN `303` VERS LA MÊME ADRESSE, non la charge utile de l'action :
  * la liste des droits est relue par le chargeur, donc elle est juste, et un
@@ -334,7 +364,9 @@ async function reponseDeDroit(
 		niveau: niveauDeDroitDepuisLaSaisie(champs.get(nomDuNiveau(identifiantDuCompte))),
 		droit: (id) => droitEffectif(acces, id),
 		appelantId:
-			evenement.locals.identite.type === 'authentifie' ? evenement.locals.identite.compteId : null
+			evenement.locals.identite.type === 'authentifie' ? evenement.locals.identite.compteId : null,
+		appelantContourne: contourneLesDroitsDeDossier(evenement.locals.identite),
+		annuaireLisible: accesALaConsole(evenement.locals.identite)
 	});
 	if (!fait.fait) {
 		if (fait.message === '') error(404, MESSAGE_INTROUVABLE);
