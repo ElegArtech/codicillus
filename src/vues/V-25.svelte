@@ -127,26 +127,16 @@
 	 * `node verif/feuilles-de-vue.mjs V-25 --installer`. Les `style=` reproduits
 	 * figurent tous à l'ensemble clos du gel de V-25 (ARB-016).
 	 */
-	import {
-		ACTIVITE,
-		COMPTES,
-		CONTRIBUTIONS,
-		DISTINCTIONS,
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		RELATIONS,
-		UNIVERS,
-		type Compte,
-		type Distinction,
-		type Domaine,
-		type EtatDInstance,
-		type EvenementDActivite,
-		type Note,
-		type Relation,
-		type TypeDEvenement,
-		type Univers,
-		type UtilisateurCourant
+	import type {
+		Compte,
+		Distinction,
+		Domaine,
+		EvenementDActivite,
+		Note,
+		Relation,
+		TypeDEvenement,
+		Univers,
+		UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { goto } from '$app/navigation';
@@ -159,27 +149,34 @@
 		/** Le jeu de semence de la vue — `corpusPourVue('V-25')`, variante complète. */
 		notes: readonly Note[];
 		/**
-		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
+		 * CE QUE LA ROUTE SERT EST EXIGÉ, LE RESTE A UN ÉTAT VIDE.
 		 *
-		 * Absentes, les constantes du jeu de semence s'appliquent : c'est ce que le
-		 * mode démo passe, et c'est ce qui garantit que le banc ne bouge pas d'un
-		 * pixel. Fournies — par un chargeur de route —, elles l'emportent, et la vue
-		 * cesse de servir une valeur figée, indépendante de la base et de l'identité.
+		 * Les sources de cet écran étaient OPTIONNELLES, de défaut la constante de
+		 * `seeds/corpus.ts` : une route qui en oubliait une affichait l'identité,
+		 * les contributions et le flux d'activité d'un contributeur de
+		 * démonstration comme s'ils étaient ceux du titulaire de la session.
+		 * `/mon-profil` sert les domaines, le compte, les contributions, les
+		 * relations et l'activité : ces cinq-là sont EXIGÉS, et une route qui en
+		 * oublierait un ne bâtirait plus.
+		 *
+		 * `univers`, `comptes` et `distinctions` restent optionnelles, avec un ÉTAT
+		 * VIDE pour défaut : le contexte de coquille porte le rail réel, aucun
+		 * chargeur ne sert la liste des comptes à cet écran, et le barème des
+		 * distinctions n'a aucune table. `instance` a disparu : le contexte sert
+		 * déjà la version.
 		 */
-		/** Les univers déclarés. Absente, `UNIVERS` du jeu de semence. */
+		/** Les univers déclarés. Absente, aucun univers — jamais ceux du jeu. */
 		univers?: readonly Univers[];
-		/** Les domaines du périmètre du compte. Absente, `DOMAINES` du jeu de semence. */
-		domaines?: readonly Domaine[];
-		/** Le compte connecté. Absente, `MOI` du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance. Absente, `INSTANCE` du jeu de semence. */
-		instance?: EtatDInstance;
-		/** Les comptes de l'instance. Absente, `COMPTES` du jeu de semence. */
+		/** Les domaines du périmètre du compte, tels que la base les porte. */
+		domaines: readonly Domaine[];
+		/** Le compte connecté — le titulaire de la session. */
+		compte: UtilisateurCourant;
+		/** Les comptes de l'instance. Absente, aucun — jamais ceux du jeu. */
 		comptes?: readonly Compte[];
 		/**
-		 * Les contributions déclarées, par auteur. Absente, `CONTRIBUTIONS` du jeu
-		 * de semence. La table est PARTIELLE : un compte sans contribution
-		 * déclarée existe — le gel en montre un —, et le rendu le traite déjà.
+		 * Les contributions déclarées, par auteur, telles que la base les compte.
+		 * La table est PARTIELLE : un compte sans contribution déclarée existe —
+		 * le gel en montre un —, et le rendu le traite déjà.
 		 *
 		 * `null` N'EST PAS ZÉRO — `P-02`. Un chargeur de route qui compte en base
 		 * ce qui est comptable et ne peut PAS attribuer les liens internes
@@ -188,13 +185,17 @@
 		 * état neutre explicite, jamais en zéro muet. Le jeu de semence, lui,
 		 * déclare deux nombres, et rien ne change pour lui.
 		 */
-		contributions?: Partial<Record<string, ContributionAffichee>>;
-		/** Les distinctions du barème. Absente, `DISTINCTIONS` du jeu de semence. */
+		contributions: Partial<Record<string, ContributionAffichee>>;
+		/**
+		 * Les distinctions du barème. Absente, aucune — le barème vivait dans le
+		 * jeu de démonstration, et aucune table ne le porte : un barème inventé
+		 * mesurerait le titulaire contre des seuils qui ne sont d'aucune instance.
+		 */
 		distinctions?: readonly Distinction[];
-		/** Le flux d'activité. Absente, `ACTIVITE` du jeu de semence. */
-		activite?: readonly EvenementDActivite[];
-		/** Les relations du corpus. Absente, `RELATIONS` du jeu de semence. */
-		relations?: readonly Relation[];
+		/** Le flux d'activité, tel que la base le porte — vide tant qu'aucune table ne l'écrit. */
+		activite: readonly EvenementDActivite[];
+		/** Les relations du périmètre, telles que la base les porte. */
+		relations: readonly Relation[];
 		/**
 		 * LE PROFIL DU COMPTE CONNECTÉ, tel que la base le porte.
 		 *
@@ -251,15 +252,14 @@
 	const {
 		vecteur,
 		notes,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		comptes = COMPTES,
-		contributions = CONTRIBUTIONS,
-		distinctions = DISTINCTIONS,
-		activite = ACTIVITE,
-		relations = RELATIONS,
+		univers = [],
+		domaines,
+		compte,
+		comptes = [],
+		contributions,
+		distinctions = [],
+		activite,
+		relations,
 		profilDuCompte = null,
 		rangementDuProfil,
 		preferenceDeSession = false
@@ -585,7 +585,7 @@
 		role: compte.role,
 		domaine: compte.domaine
 	}}
-	version={instance.version}
+	version=""
 	rail="ouvert"
 	forme="abregee"
 	donnees={{

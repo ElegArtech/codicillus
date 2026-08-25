@@ -5,7 +5,7 @@
 	 *
 	 * AUCUNE STRUCTURE SÉPARÉE : « l'arborescence est celle du corpus, filtrée
 	 * par ce que l'utilisateur a le droit de voir » (`V-21:2185`). Univers,
-	 * domaines et dossiers sortent de `seeds/corpus.ts` et du jeu de semence que
+	 * domaines et dossiers sortaient de `seeds/corpus.ts` et du jeu de semence que
 	 * le mode démo passe en propriété (`corpusPourVue('V-21')`, variante
 	 * « cartographie », 27 notes) ; les dossiers sont DÉDUITS du champ `dossier`
 	 * des notes, qu'aucune table ne double (`seeds/corpus.ts:84`).
@@ -60,45 +60,38 @@
 	 * `src/vues/V-21.css`, posé par `node verif/feuilles-de-vue.mjs V-21
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		UNIVERS,
-		type Domaine,
-		type EtatDInstance,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../seeds/corpus';
+	import type { Domaine, Note, Univers } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { adresseDeDossier, segmentsDeDossier } from '$lib/rangement/adresses';
 
 	/**
-	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
-	 * DÉFAUT EST LA CONSTANTE DU JEU DE SEMENCE.
+	 * LE RANGEMENT EST EXIGÉ, L'IDENTITÉ A UN ÉTAT VIDE.
 	 *
-	 * La vue devient capable de recevoir ce qu'un chargeur de route lit en base
-	 * — univers, domaines, compte courant, état de l'instance — sans qu'aucun
-	 * rendu ne change tant que rien ne lui est passé : le mode de conception ne
-	 * passe que `vecteur` et `notes`, la vue reçoit donc exactement ce qu'elle
-	 * recevait, et le banc de comparaison ne bouge pas d'un pixel.
+	 * `univers` et `domaines` étaient optionnels, de défaut la constante de
+	 * `seeds/corpus.ts` : une route qui les oubliait dessinait l'arborescence du
+	 * jeu de démonstration sans que rien ne proteste — et chacun de ses nœuds
+	 * ouvrait une adresse en 404. La route les sert depuis la base, ils sont
+	 * donc EXIGÉS, et une route qui les oublierait ne bâtirait plus.
+	 *
+	 * `compte` reste optionnelle, avec un ÉTAT VIDE pour défaut : aucune route
+	 * ne la passe et le contexte de coquille porte l'identité réelle. `instance`
+	 * a disparu — elle ne servait qu'à donner sa version au pied du rail, que le
+	 * contexte sert déjà.
 	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — droits de vue × chargement. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-21')`. */
 		notes: readonly Note[];
-		/** Les univers du produit. Défaut : ceux du jeu de semence. */
-		univers?: readonly Univers[];
-		/** Les domaines du produit. Défaut : ceux du jeu de semence. */
-		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Défaut : celui du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
-		instance?: EtatDInstance;
+		/** Les univers du produit, tels que la base les porte. */
+		univers: readonly Univers[];
+		/** Les domaines du produit, tels que la base les porte. */
+		domaines: readonly Domaine[];
+		/** L'utilisateur courant. Absente, un compte VIDE — jamais celui du jeu. */
+		compte?: CompteAffiche | null;
 		/**
 		 * LE PÉRIMÈTRE DEMANDÉ PAR L'ADRESSE — `?perimetre=`, sous la forme même du
 		 * sélecteur du gel : `tout|`, `univers|{nom}` ou `domaine|{nom}`.
@@ -114,12 +107,19 @@
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
+		univers,
+		domaines,
+		compte = null,
 		perimetreDemande
 	}: Proprietes = $props();
+
+	/**
+	 * LE COMPTE RENDU QUAND AUCUNE IDENTITÉ N'EST SERVIE — un état VIDE, jamais
+	 * un compte du jeu de démonstration. En application, le contexte de coquille
+	 * l'emporte et cette valeur n'atteint aucun écran.
+	 */
+	const COMPTE_VIDE = { nom: '', initiales: '', role: '', domaine: '' } satisfies CompteAffiche;
+	const compteRendu = $derived(compte ?? COMPTE_VIDE);
 
 	const reglage = $derived(vecteur ?? {});
 	const restreint = $derived(reglage['dv'] === 'restreints');
@@ -492,12 +492,12 @@
 	{domaines}
 	notes={corpus}
 	compte={{
-		nom: compte.nom,
-		initiales: compte.initiales,
-		role: compte.role,
-		domaine: compte.domaine
+		nom: compteRendu.nom,
+		initiales: compteRendu.initiales,
+		role: compteRendu.role,
+		domaine: compteRendu.domaine
 	}}
-	version={instance.version}
+	version=""
 >
 	{#snippet enfants()}
 		<div class="controles">
