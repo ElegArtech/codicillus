@@ -344,13 +344,26 @@ export function segmentsDepuisLArchive(chemin: string): readonly string[] {
 
 /* ═════════════════════════════════════════ L'en-tête de métadonnées ═════ */
 
+/**
+ * LES DEUX CLÉS DE FICHE, NOMMÉES — parce qu'un autre module les relit.
+ *
+ * `src/lib/donnees/import.ts` reprend un fichier de note écrit ici et doit en
+ * retrouver le type de fiche et ses propriétés. Une archive exportée puis
+ * réimportée perdait les deux : elles étaient écrites, jamais relues. Les deux
+ * noms sont exportés plutôt que recopiés — un littéral de chaque côté ferait
+ * deux définitions du format, et la divergence ne se verrait qu'à
+ * l'aller-retour.
+ */
+export const CLE_TYPE_DE_FICHE = 'type_de_fiche';
+export const CLE_PROPRIETES_DE_FICHE = 'proprietes_de_fiche';
+
 /** Les clés de l'en-tête, dans l'ordre où elles sont écrites. */
 const CLES = [
 	'titre',
 	'identifiant',
 	'type',
-	'type_de_fiche',
-	'proprietes_de_fiche',
+	CLE_TYPE_DE_FICHE,
+	CLE_PROPRIETES_DE_FICHE,
 	'univers',
 	'univers_identifiant',
 	'domaine',
@@ -627,8 +640,8 @@ function ecrireLaNote(
 		['titre', note.titre],
 		['identifiant', note.identifiant],
 		['type', note.typeDeNote],
-		['type_de_fiche', note.typeDeFiche],
-		['proprietes_de_fiche', note.proprietesDeFiche],
+		[CLE_TYPE_DE_FICHE, note.typeDeFiche],
+		[CLE_PROPRIETES_DE_FICHE, note.proprietesDeFiche],
 		['univers', domaine.universNom],
 		['univers_identifiant', domaine.universIdentifiant],
 		['domaine', domaine.nom],
@@ -994,8 +1007,8 @@ export function lireLArchive(entrees: readonly EntreeDeZip[]): DomaineAExporter 
 			identifiant,
 			titre: texteExige(champs, 'titre'),
 			typeDeNote: texteExige(champs, 'type'),
-			typeDeFiche: texteOuNull(champs, 'type_de_fiche'),
-			proprietesDeFiche: champs.get('proprietes_de_fiche') ?? null,
+			typeDeFiche: texteOuNull(champs, CLE_TYPE_DE_FICHE),
+			proprietesDeFiche: champs.get(CLE_PROPRIETES_DE_FICHE) ?? null,
 			cheminDeDossier: listeDeTextes(champs, 'dossier'),
 			auteur: texteExige(champs, 'auteur'),
 			etiquettes: listeDeTextes(champs, 'etiquettes'),

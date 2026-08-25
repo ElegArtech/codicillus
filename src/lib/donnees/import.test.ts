@@ -56,6 +56,12 @@ import {
 	type FichierDepose,
 	type ResultatDeConversion
 } from './import';
+import {
+	construireLArchive,
+	NOM_DU_RAPPORT,
+	SUFFIXE_DE_NOTE,
+	type NoteAExporter
+} from '../export/archive';
 
 /* ═══════════════════════════════════════════ Le catalogue des formats ══ */
 
@@ -391,6 +397,95 @@ describe('l’en-tête de métadonnées — RG-M12-05, RG-M12-06, RG-M12-03', ()
 
 	it('accepte une valeur seule là où une liste est attendue', () => {
 		expect(detacherLEnTete('---\netiquettes: barman\n---\nx').etiquettes).toEqual(['barman']);
+	});
+});
+
+/**
+ * L'ALLER-RETOUR DE LA FICHE — et le fichier est PRODUIT PAR L'EXPORT, jamais
+ * écrit à la main.
+ *
+ * C'est la condition sans laquelle ces cas ne prouveraient rien. L'en-tête de
+ * l'export a sa propre grammaire — une valeur JSON par ligne, `ecrireEnTete()`
+ * — et un fichier composé ici partagerait avec le lecteur l'hypothèse même
+ * qu'il faut mettre à l'épreuve. `construireLArchive()` écrit donc le fichier,
+ * et `detacherLEnTete()` le relit : si l'une des deux grammaires bouge, ces cas
+ * tombent.
+ *
+ * LE DÉFAUT QU'ILS FERMENT : l'export ÉCRIVAIT le type de fiche et les
+ * propriétés typées, et l'import les JETAIT. Une note exportée puis reprise
+ * redevenait une note simple, sans que rien ne le dise.
+ */
+describe('l’en-tête de l’export, relu par l’import', () => {
+	/** Le fichier de la note, tel que l'archive le produit. */
+	function fichierExporte(typeDeFiche: string | null, proprietes: unknown): string {
+		const uneNote: NoteAExporter = {
+			identifiant: 'n-pg-prod-01',
+			titre: 'pg-prod-01',
+			typeDeNote: 'Fiche',
+			typeDeFiche,
+			proprietesDeFiche: proprietes,
+			cheminDeDossier: ['Racine'],
+			auteur: 'sophie.nguyen',
+			etiquettes: ['postgresql'],
+			visibilite: 'interne',
+			statut: 'publiee',
+			creeLe: '2026-08-01T00:00:00.000Z',
+			modifieLe: '2026-08-01T00:00:00.000Z',
+			corpsReferenceModifieLe: '2026-08-01T00:00:00.000Z',
+			corpsOperationnelModifieLe: null,
+			verifieLe: null,
+			consultations: 0,
+			signetAdresse: null,
+			signetAjouteLe: null,
+			revisionDemandee: false,
+			revisionCommentaire: null,
+			revisionPar: null,
+			revisionLe: null,
+			relations: [],
+			corpsReference: {
+				type: 'doc',
+				content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Le corps.' }] }]
+			},
+			corpsOperationnel: null,
+			piecesJointes: []
+		};
+		const entrees = construireLArchive({
+			universIdentifiant: 'production',
+			universNom: 'Production',
+			identifiant: 'infrastructure',
+			nom: 'Infrastructure',
+			dossiers: [{ chemin: ['Racine'] }],
+			notes: [uneNote]
+		}).entrees;
+		const trouvee = entrees.find(
+			(e) => e.chemin.endsWith(SUFFIXE_DE_NOTE) && e.chemin !== NOM_DU_RAPPORT
+		);
+		if (trouvee === undefined) throw new Error('aucun fichier de note dans l’archive');
+		return Buffer.from(trouvee.octets).toString('utf8');
+	}
+
+	it('retrouve le type de fiche et ses propriétés dans le fichier écrit par l’export', () => {
+		const lu = detacherLEnTete(
+			fichierExporte('Serveur', { hote: 'pg-prod-01', vcpu: '16', sauvegarde: 'oui' })
+		);
+		expect(lu.fiche).toBe('Serveur');
+		expect(lu.proprietes).toEqual({ hote: 'pg-prod-01', vcpu: '16', sauvegarde: 'oui' });
+		/* Les trois clés du gel de V-24 continuent d'arriver : l'en-tête de
+		   l'export les porte sous les mêmes noms. */
+		expect(lu.titre).toBe('pg-prod-01');
+		expect(lu.etiquettes).toEqual(['postgresql']);
+	});
+
+	it('une note SIMPLE exportée revient simple — l’export omet les deux clés', () => {
+		const lu = detacherLEnTete(fichierExporte(null, null));
+		expect(lu.fiche).toBeNull();
+		expect(lu.proprietes).toEqual({});
+	});
+
+	it('un type sans propriété revient avec une table vide, jamais avec un motif inventé', () => {
+		const lu = detacherLEnTete(fichierExporte('Contact', null));
+		expect(lu.fiche).toBe('Contact');
+		expect(lu.proprietes).toEqual({});
 	});
 });
 
