@@ -158,3 +158,81 @@ describe('V-17 — la propriété absente retombe sur la constante du jeu', () =
 		expect(html).toContain('dernière version il y a');
 	});
 });
+
+/**
+ * LE DOSSIER DE DÉPART — `?dossier=`, et le défaut qu'il répare.
+ *
+ * `dossierChoisi` était une valeur DÉRIVÉE, nulle hors du cas `modif` : en
+ * création aucun bouton radio n'était jamais coché, et rien ne pouvait le
+ * changer. La page d'un dossier promet pourtant « nouvelle note DANS CE
+ * DOSSIER » (`V-13:2379`, `docs/routes.md:288`) ; l'éditeur s'ouvrait sur le
+ * DOMAINE seulement, à charge pour qui rédige de retrouver son dossier.
+ *
+ * Ce qui est éprouvé ici, et rien d'autre : la propriété absente ne change pas
+ * un octet du rendu, la propriété posée coche son dossier — et lui seul.
+ */
+const ARBRE_DE_CHOIX = {
+	[MOI.domaine]: [
+		{ nom: MOI.domaine, notes: 1, enfants: [] },
+		{ nom: 'Serveurs', notes: 0, enfants: [{ nom: 'Bases', notes: 2, enfants: [] }] },
+		{ nom: 'Réseau', notes: 3, enfants: [] }
+	]
+};
+
+/** Les dossiers cochés du rendu, dans l'ordre où l'arborescence les rend. */
+function dossiersCoches(html: string): readonly string[] {
+	const coches: string[] = [];
+	const motif = /name="choix-de-dossier"([^>]*)><span>([^<]*)<\/span>/g;
+	for (const trouve of html.matchAll(motif)) {
+		if ((trouve[1] ?? '').includes('checked')) coches.push(trouve[2] ?? '');
+	}
+	return coches;
+}
+
+describe('V-17 — le dossier de départ', () => {
+	it('ne coche aucun dossier quand la propriété est absente', async () => {
+		expect(dossiersCoches(await rendu({ dossiersParDomaine: ARBRE_DE_CHOIX }))).toEqual([]);
+	});
+
+	it('coche le dossier reçu, et lui seul', async () => {
+		const html = await rendu({
+			dossiersParDomaine: ARBRE_DE_CHOIX,
+			dossierDeDepart: 'Serveurs › Bases'
+		});
+		expect(dossiersCoches(html)).toEqual(['Bases']);
+	});
+
+	it('coche la racine du domaine, qui est un chemin et non une absence', async () => {
+		const html = await rendu({
+			dossiersParDomaine: ARBRE_DE_CHOIX,
+			dossierDeDepart: MOI.domaine
+		});
+		expect(dossiersCoches(html)).toEqual([MOI.domaine]);
+	});
+
+	it('ne coche rien d’un chemin qui ne désigne aucun dossier', async () => {
+		const html = await rendu({
+			dossiersParDomaine: ARBRE_DE_CHOIX,
+			dossierDeDepart: 'Serveurs › Disparu'
+		});
+		expect(dossiersCoches(html)).toEqual([]);
+	});
+
+	it('absente, elle ne change pas un octet du rendu — création comme modification', async () => {
+		expect(await rendu({ dossierDeDepart: null })).toEqual(await rendu({}));
+		expect(await rendu({ vecteur: MODIF, dossierDeDepart: null })).toEqual(
+			await rendu({ vecteur: MODIF })
+		);
+	});
+
+	it('l’emporte sur le dossier de la note reprise en modification', async () => {
+		const gel = await rendu({ vecteur: MODIF, dossiersParDomaine: ARBRE_DE_CHOIX });
+		const html = await rendu({
+			vecteur: MODIF,
+			dossiersParDomaine: ARBRE_DE_CHOIX,
+			dossierDeDepart: 'Réseau'
+		});
+		expect(dossiersCoches(html)).toEqual(['Réseau']);
+		expect(dossiersCoches(gel)).not.toEqual(['Réseau']);
+	});
+});

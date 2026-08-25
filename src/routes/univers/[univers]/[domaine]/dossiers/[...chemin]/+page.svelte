@@ -130,18 +130,36 @@
 		/* 4. NOUVELLE NOTE — une NAVIGATION, pas une action : rien n'est écrit ici,
 		   et le droit qui la gouverne est celui de la route d'arrivée.
 
-		   `docs/routes.md:287` prévoit quatre paramètres de pré-remplissage sur
-		   `/notes/nouvelle` — `titre`, `domaine`, `dossier`, `template`. SEUL
-		   `domaine` est honoré, et il l'est LÀ-BAS : `notes/nouvelle/+page.svelte`
-		   le lit et le porte à la vue par `compte.domaine`, dont l'arborescence du
-		   choix de dossier se déduit.
+		   `docs/routes.md:287-288` prévoit quatre paramètres de pré-remplissage sur
+		   `/notes/nouvelle` — `titre`, `domaine`, `dossier`, `template`. Les deux
+		   qui font sens ici sont émis, et tous deux sont honorés LÀ-BAS :
+		   `notes/nouvelle/+page.svelte` lit `domaine` et le porte à la vue par
+		   `compte.domaine`, dont l'arborescence du choix se déduit ; il lit
+		   `dossier` et le porte par `dossierDeDepart`, qui coche le bouton radio.
 
-		   `dossier` N'EST PAS ÉMIS, et c'est délibéré : V-17 n'a AUCUNE propriété
-		   qui le recevrait. L'émettre le ferait ignorer en silence — un paramètre
-		   honoré à moitié est pire que pas de paramètre —, et la vue est hors du
-		   périmètre de ce lot. Le brief de V-13 demande « nouvelle note DANS CE
-		   DOSSIER » : ce qui est livré mène à l'éditeur sur le bon DOMAINE, et
-		   l'écart est déclaré plutôt que masqué par un paramètre inerte. */
+		   `dossier` PORTE LA FORME AFFICHÉE DU CHEMIN — celle que `Note.dossier`
+		   porte, celle que V-17 compare pour cocher, celle que la soumission
+		   renvoie. `data.vecteur.dos` la tient déjà, remontée par le chargeur. La
+		   forme d'adresse, en segments slugifiés, ne conviendrait pas : rien à
+		   l'arrivée ne saurait la relire contre l'arborescence de choix.
+
+		   LA RACINE D'UN DOMAINE A UNE PAGE, ET C'EST LÀ QUE `dos` EST VIDE.
+		   `+page.server.ts` l'ouvre depuis le 22/08/2026 — « LA RACINE A UNE
+		   ADRESSE : celle qui porte son seul nom » — et la tuile « Dossiers » de
+		   V-11 y mène. Or `segmentsAffiches()` remonte les ancêtres SANS
+		   consommer la racine : le chemin affiché d'une racine est la suite vide,
+		   donc la chaîne vide. Ce n'est pas une absence de dossier, c'est le
+		   dossier qui n'a pas de segment sous lui.
+
+		   L'ARBORESCENCE DE CHOIX, ELLE, OFFRE CETTE RACINE SOUS LE NOM DU
+		   DOMAINE — `lireLArborescenceDeChoix()` la pose en premier choix, à côté
+		   de ses enfants et non au-dessus. C'est donc le nom du domaine qu'il
+		   faut émettre là, et non rien : sans quoi le seul écran où un domaine
+		   NEUF offre ces deux gestes — il n'a que sa racine, et c'est `v-note`
+		   qui s'y affiche — serait précisément celui qui ne tiendrait pas la
+		   promesse. Si les deux noms venaient à diverger, la vérification faite à
+		   l'arrivée n'y reconnaît aucun dossier et ignore le paramètre en
+		   silence : la dégradation est celle d'un lien périmé, pas une erreur. */
 		for (const id of ['a-note', 'v-note']) {
 			surClic(formulaire.querySelector(`#${id}`), () => {
 				/* L'adresse est composée en OBJET plutôt qu'en chaîne : `resolve()` rend
@@ -159,6 +177,10 @@
 				   `V-03`, `V-22` et `V-24`. */
 				const cible = new URL(resolve('/notes/nouvelle'), window.location.origin);
 				cible.searchParams.set('domaine', data.domaine);
+				cible.searchParams.set(
+					'dossier',
+					data.vecteur.dos === '' ? data.domaine : data.vecteur.dos
+				);
 				// eslint-disable-next-line svelte/no-navigation-without-resolve
 				void goto(cible);
 			});
