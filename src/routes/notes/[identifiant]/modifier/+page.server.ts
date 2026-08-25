@@ -83,7 +83,7 @@ import {
 	resoudreLEditionDUneNote,
 	type LectureDuFormulaire
 } from '$lib/donnees/edition';
-import { joursEcoules, lireSeuils } from '$lib/donnees/lecture';
+import { joursEcoules, lireLesProprietesDeFiche, lireSeuils } from '$lib/donnees/lecture';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import { DocumentInvalide } from '$lib/contenu/document';
 import { MarkdownInvalide } from '$lib/contenu/markdown';
@@ -144,6 +144,17 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		noteModifiee: edition.lecture.note,
 		typesNote: edition.referentiels.typesNote,
 		typesFiche: edition.referentiels.typesFiche,
+		/**
+		 * CE QUE CETTE NOTE A MIS DANS LES CHAMPS DE SON TYPE.
+		 *
+		 * `noteModifiee` porte le NOM du type de fiche, jamais ses valeurs — la
+		 * colonne `proprietes_typees` a sa propre lecture, et elle est restreinte
+		 * dans la requête (`ADR-006`). Sans les deux, l'éditeur rouvrait une fiche
+		 * « Serveur » sur « Aucun — note simple », panneau vide : l'écran mentait
+		 * sur l'état de la note, et un enregistrement l'aurait dépouillée.
+		 */
+		proprietesDeFiche:
+			(await lireLesProprietesDeFiche(base, [params.identifiant]))[params.identifiant] ?? {},
 		templates: edition.referentiels.templates,
 		/* L'ARBORESCENCE DE CHOIX, LA MÊME LECTURE QU'À LA CRÉATION. Sans elle, la
 		   liste des dossiers de l'écran sortait vide et aucun déplacement n'était
@@ -247,6 +258,12 @@ export const actions: Actions = {
 			   seule issue pour les quatre causes, `RG-ACC-04`. La note, elle,
 			   existe : ce n'est donc pas un 404. */
 			return fail(400, { motif: 'rangement introuvable' });
+		}
+		if (issue.ressource.sort === 'fiche-introuvable') {
+			/* Le type de fiche soumis n'existe pas dans cette instance — un
+			   référentiel administrable a pu changer entre l'ouverture de l'écran
+			   et l'enregistrement. La note existe : ce n'est pas un 404. */
+			return fail(400, { motif: 'type de fiche introuvable' });
 		}
 
 		/* L'ADRESSE DE DESTINATION EST CELLE DE L'ADRESSE DEMANDÉE. Un identifiant
