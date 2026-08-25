@@ -56,6 +56,15 @@ export interface SessionEtCompte {
 	readonly souvenir: boolean;
 	readonly derniereActiviteLe: Date;
 	readonly compte: CompteAAuthentifier;
+	/**
+	 * LE COMPTE DOIT-IL CHANGER SON MOT DE PASSE AVANT D'ALLER PLUS LOIN ?
+	 *
+	 * LES DEUX COLONNES SONT LUES ENSEMBLE, ET LE VERROU L'EMPORTE. `RG-CPT-01`
+	 * interdit à un compte à mot de passe verrouillé de changer le sien : lui
+	 * imposer le changement l'enfermerait dehors, sur un écran qui refuserait
+	 * précisément le geste exigé.
+	 */
+	readonly motDePasseAChanger: boolean;
 }
 
 /**
@@ -76,7 +85,9 @@ export async function sessionParCondensat(
 			compteId: comptes.id,
 			role: comptes.role,
 			actif: comptes.actif,
-			condensatMotDePasse: comptes.condensatMotDePasse
+			condensatMotDePasse: comptes.condensatMotDePasse,
+			motDePasseAChanger: comptes.motDePasseAChanger,
+			motDePasseVerrouille: comptes.motDePasseVerrouille
 		})
 		.from(sessions)
 		.innerJoin(comptes, eq(comptes.id, sessions.compteId))
@@ -93,7 +104,8 @@ export async function sessionParCondensat(
 			role: l.role as RoleDeCompte,
 			actif: l.actif,
 			condensatMotDePasse: l.condensatMotDePasse
-		}
+		},
+		motDePasseAChanger: l.motDePasseAChanger && !l.motDePasseVerrouille
 	};
 }
 

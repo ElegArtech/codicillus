@@ -112,6 +112,16 @@ export const comptes = pgTable(
 		/** RG-CPT-01 — compte de démonstration partagé : droits intacts, mot de passe figé. */
 		motDePasseVerrouille: boolean('mot_de_passe_verrouille').notNull().default(false),
 		/**
+		 * LE MOT DE PASSE A ÉTÉ POSÉ PAR UN ADMINISTRATEUR, ET IL EST À USAGE
+		 * UNIQUE — V-32 l'écrit sous le champ engendré : « il devra être changé à
+		 * la première connexion ». Rien ne le forçait avant cette colonne.
+		 *
+		 * ELLE NE SE LIT JAMAIS SEULE : `mot_de_passe_verrouille` dit qui ne PEUT
+		 * PAS changer son mot de passe (`RG-CPT-01`), et lui imposer le changement
+		 * l'enfermerait dehors. La garde exige les deux.
+		 */
+		motDePasseAChanger: boolean('mot_de_passe_a_changer').notNull().default(false),
+		/**
 		 * UC-M16-01, STACK §4.7 — le condensat Argon2id du mot de passe, et jamais
 		 * le mot de passe (`003_authentification.montee.sql`). NULLABLE : un compte
 		 * sans condensat ne peut pas s'authentifier, ce qui est la fermeture par
@@ -326,7 +336,11 @@ export const typesDeFiche = pgTable(
 		id: uuid('id').primaryKey().defaultRandom(),
 		identifiant: text('identifiant').notNull(),
 		nom: text('nom').notNull(),
-		ordre: integer('ordre').notNull()
+		ordre: integer('ordre').notNull(),
+		/** `#f-desc` de V-29 — « ce que ce type décrit, et quand l'employer ». */
+		description: text('description'),
+		/** `#f-icones` de V-29 — la clé de l'icône choisie par l'administrateur. */
+		glyphe: text('glyphe')
 	},
 	(t) => [
 		unique('types_de_fiche_identifiant_unique').on(t.identifiant),
@@ -347,6 +361,12 @@ export const champsDeTypeDeFiche = pgTable(
 		type: typeDeChamp('type').notNull(),
 		ordre: integer('ordre').notNull(),
 		exemple: text('exemple'),
+		/** `#f-props` de V-29 — l'aide à la saisie, telle que l'administrateur l'écrit. */
+		aide: text('aide'),
+		/** La valeur proposée quand la note n'en porte aucune. */
+		defaut: text('defaut'),
+		/** V-29 — la propriété est-elle requise par le schéma de son type ? */
+		obligatoire: boolean('obligatoire').notNull().default(false),
 		valeurs: jsonb('valeurs')
 	},
 	(t) => [
