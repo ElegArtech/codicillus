@@ -99,6 +99,7 @@
 	}
 
 	interface Reglages {
+		readonly scenario: string;
 		readonly domaine: string;
 		readonly simulation: boolean;
 	}
@@ -127,12 +128,13 @@
 	 * LE REPLI QUAND LA RÉPONSE N'EST PAS LISIBLE — ET AUCUNE ACTION NE L'ÉMET.
 	 *
 	 * `fail()` produit un résultat de type `failure` dont `data` porte l'objet
-	 * passé à l'appel — ici `issue` —, et les trois seuls motifs que les actions
-	 * de ce dossier rendent sont ceux-là. Ce code-ci n'en fait pas partie : il
-	 * est posé PAR CET ÉCRAN, et seulement quand la réponse ne porte pas de
-	 * motif lisible — un `error()` non intercepté, ou un succès dont la charge
-	 * n'a pas la forme attendue. Il ne dit donc rien de ce que le serveur a
-	 * fait, et sa mise en français dans la vue ne doit rien affirmer non plus.
+	 * passé à l'appel — ici `issue` —, et les QUATRE seuls motifs que les actions
+	 * de ce dossier rendent sont ceux-là : cible inconnue, cible interdite, lot
+	 * vide, et depuis ce lot le scénario non livré. Ce code-ci n'en fait pas
+	 * partie : il est posé PAR CET ÉCRAN, et seulement quand la réponse ne porte
+	 * pas de motif lisible — un `error()` non intercepté, ou un succès dont la
+	 * charge n'a pas la forme attendue. Il ne dit donc rien de ce que le serveur
+	 * a fait, et sa mise en français dans la vue ne doit rien affirmer non plus.
 	 *
 	 * UNE REDIRECTION N'EN EST PAS UN CAS : elle se suit, voir `envoyer()`.
 	 */
@@ -147,6 +149,12 @@
 	 * c'est le seul nom de ce câblage qu'aucune source ne fonde, et le chargeur
 	 * le déclare comme tel.
 	 *
+	 * `scenario` VOYAGE DÉSORMAIS, ET IL NE VOYAGEAIT PAS. L'étape 1 offrait
+	 * trois scénarios ; aucun n'était transmis, et l'action traitait les trois
+	 * comme celui qu'elle sait faire. Un lot choisi « domaine complet »
+	 * atterrissait donc dans le domaine proposé par défaut, sans que rien ne le
+	 * dise. Le champ est éprouvé par l'action avant la moindre écriture.
+	 *
 	 * LE CHEMIN DE CHAQUE FICHIER VOYAGE, pas seulement son nom. `File.name` perd
 	 * l'arborescence ; or c'est elle qui deviendra celle des dossiers, « à
 	 * l'identique » comme le scénario le promet. Le troisième argument de
@@ -158,6 +166,7 @@
 		reglages: Reglages
 	): Promise<Issue<Record<string, unknown>>> {
 		const corps = new FormData();
+		corps.append('scenario', reglages.scenario);
 		corps.append('domaine-cible', reglages.domaine);
 		if (reglages.simulation) corps.append('simulation', 'oui');
 		for (const f of fichiers) corps.append('fichiers', f, cheminDuFichier(f));
