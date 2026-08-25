@@ -31,6 +31,12 @@
  *               l'appelant, jamais sur son rôle. Deux projections, et
  *               seulement pour un authentifié — `RG-DRO-02` répond seule pour
  *               l'anonyme, sans aucune requête.
+ *   `portailAssistance` — la SEULE issue externe de V-04, et la seule route du
+ *               produit qui offrait ce bouton sans lire la table `parametres` :
+ *               elle servait le domaine d'exemple du jeu de démonstration, y
+ *               compris à une instance qui avait configuré le sien en console.
+ *               Une lecture par clé, et c'est ce qui la fait passer pour
+ *               l'anonyme aussi — V-04 est l'écran du visiteur sans session.
  *
  * NI ROLE, NI IDENTIFIANT DE COMPTE, NI PÉRIMÈTRE ne sortent d'ici : `ADR-006`
  * interdit « toute exposition des droits au navigateur pour qu'il compose
@@ -49,7 +55,14 @@
 import { basePartagee } from '$lib/base/acces';
 import paquet from '../../package.json';
 import { eq } from 'drizzle-orm';
-import { comptes, domaines, univers } from '$lib/base/schema';
+import {
+	CLES_DE_PARAMETRE,
+	CONFIGURATION_PAR_DEFAUT,
+	comptes,
+	domaines,
+	parametres,
+	univers
+} from '$lib/base/schema';
 import { capaciteDEcriture } from '$lib/donnees/public';
 import type { Base } from '$lib/base/acces';
 import {
@@ -271,6 +284,39 @@ import type { LayoutServerLoad } from './$types';
  */
 const VERSION_DU_PRODUIT = paquet.version;
 
+/**
+ * L'ADRESSE DU PORTAIL D'ASSISTANCE — clé `portail_assistance` de `parametres`.
+ *
+ * POURQUOI ELLE MONTE JUSQU'ICI, alors que ce chargeur ne porte que ce que la
+ * page non résolue ne peut obtenir d'ailleurs. C'est exactement son cas : V-04
+ * offre « Ouvrir un ticket d'assistance » comme l'une de ses DEUX issues, et
+ * l'écran n'a pas de route propre. Faute de canal, la vue retombait sur la
+ * constante du jeu de démonstration — `assistance.exemple.fr` — et cette valeur
+ * l'emportait **même sur une adresse que l'administrateur avait configurée en
+ * console**. Toutes les autres routes qui offrent ce bouton lisent bien la
+ * table ; celle-ci est la seule qui servait un domaine d'exemple.
+ *
+ * LA LECTURE EST BORNÉE À UNE CLÉ, et elle est faite pour L'ANONYME AUSSI —
+ * V-04 est précisément l'écran du visiteur sans session. C'est la seule requête
+ * que le chemin anonyme ait jamais coûtée : une recherche par clé primaire sur
+ * une table de sept lignes. Le reste du chargeur reste fermé à l'anonyme, et
+ * `RG-DRO-02` continue de répondre seule sur les droits.
+ *
+ * LE DÉFAUT N'EST PAS RECOPIÉ : il vient de `CONFIGURATION_PAR_DEFAUT`, la même
+ * table de défauts sur laquelle `lireConfiguration()` retombe clé par clé. Une
+ * valeur d'un autre type est une base corrompue, pas une base neuve — elle
+ * prend le défaut plutôt que de faire tomber toutes les pages du produit.
+ */
+async function portailDAssistance(base: Base): Promise<string> {
+	const [ligne] = await base
+		.select({ valeur: parametres.valeur })
+		.from(parametres)
+		.where(eq(parametres.cle, CLES_DE_PARAMETRE.portailAssistance))
+		.limit(1);
+	const valeur = ligne?.valeur;
+	return typeof valeur === 'string' ? valeur : CONFIGURATION_PAR_DEFAUT.portailAssistance;
+}
+
 export const load: LayoutServerLoad = async ({ locals }) => {
 	if (locals.identite.type !== 'authentifie') {
 		return {
@@ -279,7 +325,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			administrateur: false,
 			rangement: null,
 			compte: null,
-			version: VERSION_DU_PRODUIT
+			version: VERSION_DU_PRODUIT,
+			portailAssistance: await portailDAssistance(basePartagee())
 		};
 	}
 	const base = basePartagee();
@@ -317,6 +364,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		rangement: await rangementDuCompte(base, locals.identite.compteId, acces),
 		compte: await identiteAffichable(base, locals.identite.compteId, acces),
 		version: VERSION_DU_PRODUIT,
+		portailAssistance: await portailDAssistance(base),
 		...(await arborescenceDeNavigation(base, acces))
 	};
 };

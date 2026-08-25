@@ -108,6 +108,25 @@
 		reprises?: readonly { nom: string; sous: string; trace: string | null }[] | null;
 		/** L'état de l'instance. Absente, `INSTANCE` du jeu de semence. */
 		instance?: EtatDInstance;
+		/**
+		 * L'ADRESSE RÉELLEMENT DEMANDÉE — la seule entrée d'`adresseNonResolue()`.
+		 *
+		 * La vue n'a jamais eu de moyen de la recevoir : elle retombait sur la
+		 * table `ADRESSES` de la planche, et TOUTE adresse cassée de l'instance
+		 * annonçait « Adresse demandée /notes/bascule-telephonie-voip ». La
+		 * conséquence n'était pas seulement un mensonge d'affichage : la requête
+		 * s'en dérive, et le bouton « Créer la note » ouvrait l'éditeur avec le
+		 * titre d'une note de démonstration, prêt à être enregistré en base.
+		 *
+		 * Absente, la constante de la planche reste le défaut : le banc ne bouge
+		 * pas d'un pixel. Fournie — par le composant d'erreur de la racine, qui
+		 * lit `page.url.pathname` —, elle l'emporte.
+		 *
+		 * ELLE NE DISTINGUE RIEN, et c'est `ADR-007` : c'est un CHEMIN, pas une
+		 * raison. Le rendu reste le même que l'adresse désigne une note
+		 * inexistante ou une note hors du périmètre de l'appelant.
+		 */
+		adresse?: string;
 	}
 
 	const {
@@ -117,7 +136,8 @@
 		domaines = DOMAINES,
 		compte = MOI,
 		reprises = null,
-		instance = INSTANCE
+		instance = INSTANCE,
+		adresse
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -193,10 +213,11 @@
 	const tombe = $derived(cas === 'supprimee');
 	/** Le point d'entrée partagé avec V-04, pour les seuls cas non résolus. */
 	const resolution = $derived(
-		tombe ? null : adresseNonResolue(ADRESSES[cas] ?? ADRESSE_PAR_DEFAUT)
+		tombe ? null : adresseNonResolue(adresse ?? ADRESSES[cas] ?? ADRESSE_PAR_DEFAUT)
 	);
 
-	const adresse = $derived(tombe ? SUPPRIMEE.adresse : (resolution?.adresse ?? ''));
+	/** Ce que la ligne « Adresse demandée » porte à l'écran. */
+	const adresseAffichee = $derived(tombe ? SUPPRIMEE.adresse : (resolution?.adresse ?? ''));
 	const titre = $derived(tombe ? SUPPRIMEE.titre : TITRE_NON_RESOLUE);
 	const texte = $derived(tombe ? SUPPRIMEE.texte : TEXTE_NON_RESOLUE);
 	const requete = $derived((tombe ? SUPPRIMEE.requete : (resolution?.requete ?? '')).trim());
@@ -330,7 +351,7 @@
 
 		<div class="adresse-demandee">
 			<span class="etiq">Adresse demandée</span>
-			<span id="adresse">{adresse}</span>
+			<span id="adresse">{adresseAffichee}</span>
 		</div>
 
 		<!-- ---------- Note supprimée ---------- -->
