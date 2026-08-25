@@ -12,8 +12,9 @@
  * LES TEMPLATES AFFICHÉS SONT CEUX DE LA BASE — l'écart est refermé pour
  * l'essentiel. Ce commentaire disait : « la vue lit `TEMPLATES` et `TYPES_NOTE`
  * du jeu de semence, le chargeur ne peut pas la corriger ». Les deux sont
- * désormais des propriétés de `V-31`, de défaut les constantes du jeu, et ce
- * chargeur les sert depuis les tables.
+ * désormais des propriétés REQUISES de `V-31`, que ce chargeur sert depuis les
+ * tables : elles n'ont plus de valeur par défaut, et une rédaction de cette page
+ * qui en oublierait une ne compilerait plus.
  *
  * CE QUI RESTE EN LACUNE, ET CE N'EST PAS UN OUBLI : `Template.utilisations`
  * n'a aucune colonne — « c'est un compteur d'EMPLOI, qui se calcule sur les
