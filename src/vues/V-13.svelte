@@ -18,7 +18,7 @@
 	 *
 	 * COQUILLE DE FORME ABRÉGÉE — ARB-021, A-1, vérifié sur le gel. `<main>` porte
 	 * la classe `dossier-vue` (ARB-015) ; le chemin courant du rail est
-	 * `[Infrastructure, …chemin]`, ce qui déplie la branche et met en évidence le
+	 * `[domaine, …chemin]`, ce qui déplie la branche et met en évidence le
 	 * dossier atteint.
 	 *
 	 * `.noeud` N'EST PAS PORTÉE ICI — nœud d'arborescence du rail, rendu par la
@@ -36,8 +36,8 @@
 	 * une preuve d'étanchéité.
 	 *
 	 * AUCUN CHIFFRE N'EST SAISI (P-02) : sous-dossiers, notes directes, notes
-	 * totales et groupes par type sont déduits du rangement réel des notes de
-	 * `seeds/corpus.ts` — aucune structure de dossiers séparée n'existe.
+	 * totales et groupes par type sont déduits du rangement réel des notes
+	 * servies, à défaut de l'arborescence que la route lit.
 	 *
 	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011).
 	 *
@@ -86,22 +86,11 @@
 	 * `src/vues/V-13.css`, posé par `node verif/feuilles-de-vue.mjs V-13
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import {
-		DOMAINES,
-		INSTANCE,
-		MODIFICATIONS,
-		MOI,
-		UNIVERS,
-		type Domaine,
-		type EtatDInstance,
-		type IdentifiantNote,
-		type NomDeDomaine,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../seeds/corpus';
+	import type { Domaine, IdentifiantNote, NomDeDomaine, Note, Univers } from '../../seeds/corpus';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 	import {
 		adresseDeDossier,
 		adresseDeNote,
@@ -124,32 +113,32 @@
 		/** Le jeu de semence de la vue — `corpusPourVue('V-13')`, variante « lecture ». */
 		notes: readonly Note[];
 		/**
-		 * LES QUATRE PROPRIÉTÉS DE CONTEXTE — T-042, et elles sont OPTIONNELLES.
+		 * LE RANGEMENT ET L'IDENTITÉ — plus aucun défaut tiré du jeu.
 		 *
-		 * Avant ce lot, cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et
-		 * `INSTANCE` au niveau du module : un chargeur de route ne pouvait rien
-		 * y substituer, et l'écran servait le contexte du jeu de semence quelle
-		 * que fût l'identité de l'appelant.
+		 * Ces propriétés ont eu pour défaut `UNIVERS`, `DOMAINES`, `MOI` et
+		 * `INSTANCE` de `seeds/corpus.ts` : une route qui oubliait d'en passer une
+		 * servait le contexte du jeu de démonstration, et rien ne protestait.
 		 *
-		 * LE DÉFAUT EST LA CONSTANTE DU JEU, et c'est ce qui garantit que le banc
-		 * ne bouge pas : le mode de conception ne passe que `vecteur` et `notes`,
-		 * la vue reçoit donc exactement ce qu'elle avait.
+		 * La route de cet écran n'en passe aucune des deux premières : le rail y
+		 * est de forme abrégée, écrit au balisage, et le fil d'Ariane vient de
+		 * l'adresse. Leur état vide est donc le TABLEAU VIDE, jamais le jeu.
+		 * `compte` peut manquer, et son état vide est `null`. `instance` a
+		 * disparu : le contexte de coquille sert la version du paquet.
 		 */
 		univers?: readonly Univers[];
 		domaines?: readonly Domaine[];
-		compte?: UtilisateurCourant;
-		instance?: EtatDInstance;
+		compte?: CompteAffiche | null;
 		/**
-		 * LE DOMAINE DE LA PAGE DE DOSSIER — T-042, et c'est le défaut mesuré
-		 * par `T-032` : la maquette fixe `Infrastructure` en tête de son script
-		 * (`V-13:1957`), la vue le recopiait en constante, et une adresse d'un
-		 * AUTRE domaine rendait donc l'arborescence d'Infrastructure.
+		 * LE DOMAINE DE LA PAGE DE DOSSIER — REQUIS, et c'est le défaut mesuré
+		 * par `T-032` qui l'exige : la maquette fixe `Infrastructure` en tête de
+		 * son script (`V-13:1957`), la vue le recopiait en constante, et une
+		 * adresse d'un AUTRE domaine rendait l'arborescence d'Infrastructure.
 		 *
-		 * Le défaut de la propriété est `Infrastructure` — la valeur du gel — :
-		 * ni le banc ni les onze états de la planche ne bougent, et un chargeur
-		 * de route peut désormais nommer le domaine que l'adresse porte.
+		 * Le défaut a été cette même valeur, ce qui ne réparait rien tant qu'une
+		 * route pouvait l'oublier. Il n'y en a plus : la route le passe, et
+		 * l'oublier ne compile pas.
 		 */
-		domaine?: NomDeDomaine;
+		domaine: NomDeDomaine;
 		/**
 		 * L'ANCIENNETÉ DE MODIFICATION DE CHAQUE NOTE — `window.modifJours` du gel.
 		 *
@@ -159,7 +148,7 @@
 		 * note absente de la table s'affiche « modification inconnue », jamais
 		 * une ancienneté inventée.
 		 */
-		modifications?: Partial<Record<IdentifiantNote, number>>;
+		modifications: Partial<Record<IdentifiantNote, number>>;
 		/**
 		 * LE RANGEMENT RÉEL DU DOMAINE, quand une route en a lu un.
 		 *
@@ -177,15 +166,23 @@
 		 */
 		rangement?: RangementReel | null;
 		/**
-		 * L'ORIGINE DU DROIT EFFECTIF — le texte de `.droit__source` (`V-13:1146`).
+		 * L'ORIGINE DU DROIT EFFECTIF — le texte de `.droit__source` (`V-13:1146`),
+		 * REQUIS.
 		 *
-		 * ABSENTE, la vue rend la tournure de la planche, qui est celle du gel.
-		 * PRÉSENTE, elle dit d'où le droit vient RÉELLEMENT — `RG-DRO-01`, « le
-		 * droit explicite le plus proche en remontant l'arborescence ». Le gel
-		 * fige « — hérité du domaine Infrastructure » ; la servir telle quelle sur
-		 * un droit accordé ailleurs serait une valeur illustrative (`P-02`).
+		 * Elle dit d'où le droit vient RÉELLEMENT — `RG-DRO-01`, « le droit
+		 * explicite le plus proche en remontant l'arborescence » —, et
+		 * `libelleDOrigine()` (`$lib/donnees/dossiers-ecriture`) en compose la
+		 * tournure. Le gel, lui, fige « — hérité du domaine Infrastructure », et
+		 * cette tournure était le REPLI de la propriété : un droit accordé
+		 * ailleurs, sur une instance qui ne porte pas ce domaine, affichait quand
+		 * même un héritage de « Infrastructure ». C'était une valeur illustrative
+		 * servie comme un fait (`P-02`).
+		 *
+		 * LA CHAÎNE VIDE EST L'ÉTAT VIDE, et elle est dite : une origine que le
+		 * produit ne sait pas nommer — un administrateur tient son droit de son
+		 * rôle, non d'un dossier — laisse la source MUETTE.
 		 */
-		origineDuDroit?: string | null;
+		origineDuDroit: string;
 		/** Le refus affiché par `#creer-erreur` (`V-13:1223`), s'il y en a un. */
 		erreurDeCreation?: string | null;
 		/** Le refus affiché par `#dep-erreur` (`V-13:1252`), s'il y en a un. */
@@ -206,10 +203,18 @@
 		/** Le refus affiché par `#droits-erreur`, s'il y en a un. */
 		erreurDeDroits?: string | null;
 		/**
-		 * L'univers porteur du domaine, tel que l'adresse le nomme. Absent, on le
-		 * cherche dans `domaines` — c'est le rendu d'une planche.
+		 * L'UNIVERS PORTEUR DU DOMAINE, TEL QUE L'ADRESSE LE NOMME — requis.
+		 *
+		 * Il était cherché dans `domaines` — que la route ne passe pas —, donc
+		 * dans la constante du jeu de démonstration, avec « Production » pour
+		 * dernier repli. Mesuré le 23/08/2026 : sur un domaine absent du jeu, TOUS
+		 * les liens de la page pointaient vers `/univers/production/…` et rendaient
+		 * 404, et le fil d'Ariane annonçait le mauvais univers.
+		 *
+		 * La route le connaît : il est dans son adresse. Il n'y a donc plus de
+		 * repli du tout, et l'oublier ne compile pas.
 		 */
-		universDuDomaine?: string;
+		universDuDomaine: string;
 	}
 
 	/**
@@ -268,14 +273,13 @@
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		domaine: DOMAINE = 'Infrastructure',
-		modifications = MODIFICATIONS,
+		univers = [],
+		domaines = [],
+		compte = null,
+		domaine: DOMAINE,
+		modifications,
 		rangement = null,
-		origineDuDroit = null,
+		origineDuDroit,
 		erreurDeCreation = null,
 		erreurDeDeplacement = null,
 		droits = null,
@@ -283,28 +287,18 @@
 		universDuDomaine
 	}: Proprietes = $props();
 
-	/**
-	 * L'UNIVERS DU DOMAINE AFFICHÉ, ET IL VIENT DE L'ADRESSE.
-	 *
-	 * Il était cherché dans `domaines` — que la route ne passe pas —, donc dans
-	 * la constante du jeu de démonstration, avec « Production » pour défaut.
-	 * Mesuré le 23/08/2026 : sur un domaine absent du jeu, TOUS les liens de la
-	 * page pointaient vers `/univers/production/…`, et rendaient 404. Le fil
-	 * d'Ariane annonçait le mauvais univers par-dessus le marché.
-	 *
-	 * La route connaît l'univers : il est dans son adresse. Absent — le rendu
-	 * d'une planche —, on retombe sur la liste puis sur le jeu, et le gel ne
-	 * bouge pas.
-	 */
-	const UNIVERS_DU_DOMAINE = $derived(
-		universDuDomaine ?? domaines.find((d) => d.nom === DOMAINE)?.univers ?? 'Production'
-	);
+	/** L'univers du domaine affiché — celui de l'adresse, et rien d'autre. */
+	const UNIVERS_DU_DOMAINE = $derived(universDuDomaine);
 
 	/** Les trois droits effectifs de la planche, et rien d'autre. */
 	type NiveauDeDroit = 'gestionnaire' | 'redacteur' | 'lecteur';
 
 	const reglage = $derived(vecteur ?? {});
-	const chemin = $derived(segmentsDeDossier(String(reglage['dos'] ?? 'Exploitation')));
+	/* `dos` PORTE LE CHEMIN AFFICHÉ DU DOSSIER, racine du domaine exclue — la
+	   route le sert toujours, et la chaîne vide y désigne la racine. Le repli
+	   était `Exploitation`, un dossier du jeu de démonstration : sur une instance
+	   qui ne le porte pas, la page dépliait une branche qui n'existe pas. */
+	const chemin = $derived(segmentsDeDossier(String(reglage['dos'] ?? '')));
 	const niveau = $derived<NiveauDeDroit>(
 		reglage['dr'] === 'redacteur'
 			? 'redacteur'
@@ -313,24 +307,16 @@
 				: 'gestionnaire'
 	);
 
-	/** Le droit effectif : son nom, et d'où il vient. Trois états, pas plus. */
-	const DROITS: Record<NiveauDeDroit, { nom: string; source: string }> = {
-		lecteur: { nom: 'Lecteur', source: '— hérité du domaine Infrastructure' },
-		redacteur: { nom: 'Rédacteur', source: '— hérité du domaine Infrastructure' },
-		gestionnaire: { nom: 'Gestionnaire', source: '— accordé sur ce dossier' }
+	/** Le nom du droit effectif. Trois états, pas plus — son origine est servie. */
+	const DROITS: Record<NiveauDeDroit, string> = {
+		lecteur: 'Lecteur',
+		redacteur: 'Rédacteur',
+		gestionnaire: 'Gestionnaire'
 	};
 	const droitEffectif = $derived(DROITS[niveau]);
 
-	/**
-	 * L'ORIGINE AFFICHÉE — celle que la route a résolue, à défaut celle du gel.
-	 *
-	 * `RG-DRO-01` décide de l'origine réelle ; la tournure, elle, est relevée au
-	 * gel et composée par `libelleDOrigine()` (`$lib/donnees/dossiers-ecriture`).
-	 * Une chaîne vide est une origine que le produit ne sait pas nommer — un
-	 * administrateur tient son droit de son rôle, non d'un dossier — et la source
-	 * reste alors muette plutôt que d'affirmer un héritage qui n'existe pas.
-	 */
-	const sourceDuDroit = $derived(origineDuDroit ?? droitEffectif.source);
+	/** L'origine affichée — celle que la route a résolue, et elle seule. */
+	const sourceDuDroit = $derived(origineDuDroit);
 
 	/**
 	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
@@ -540,7 +526,8 @@
 	function modification(n: Note): string {
 		const j = modifications[n.id];
 		if (typeof j !== 'number') return 'modification inconnue';
-		return j <= 1 ? 'modifiée hier' : `modifiée il y a ${j} jours`;
+		if (j <= 0) return "modifiée aujourd'hui";
+		return j === 1 ? 'modifiée hier' : `modifiée il y a ${j} jours`;
 	}
 
 	/** Nombre en français — `x.toLocaleString("fr-FR")` du gel. */
@@ -707,13 +694,8 @@
 	{univers}
 	{domaines}
 	notes={corpus}
-	compte={{
-		nom: compte.nom,
-		initiales: compte.initiales,
-		role: compte.role,
-		domaine: compte.domaine
-	}}
-	version={instance.version}
+	compte={compte ?? COMPTE_VIDE}
+	version=""
 >
 	{#snippet enfants()}
 		<header class="tete-dossier">
@@ -721,7 +703,7 @@
 				<div class="tete-dossier__sur">
 					<span class="droit" id="droit" data-niveau={niveau}>
 						<span class="droit__pastille"></span>
-						<span id="droit-nom">{droitEffectif.nom}</span>
+						<span id="droit-nom">{droitEffectif}</span>
 						<span class="droit__source" id="droit-source">{sourceDuDroit}</span>
 					</span>
 				</div>
