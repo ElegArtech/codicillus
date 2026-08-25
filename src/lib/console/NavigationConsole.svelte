@@ -37,12 +37,13 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
-		GROUPES_DE_CONSOLE,
+		groupesDeConsole,
 		libelleDOption,
 		type CleDeSection,
 		type TraitDePictogramme
 	} from './sections';
 	import { CLE_EFFECTIFS, groupesAvecEffectifs, type EffectifsDeConsole } from './effectifs';
+	import { vocabulaireRendu } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** La section que la vue rend — elle porte `aria-current="page"`. */
@@ -52,21 +53,24 @@
 	const { courante }: Proprietes = $props();
 
 	/**
-	 * LES SEPT COMPTEURS VIENNENT DE LA BASE DÈS QU'IL Y EN A UNE.
+	 * LES SEPT COMPTEURS VIENNENT DE LA BASE, ET LE LIBELLÉ DE LA CONFIGURATION.
 	 *
-	 * `GROUPES_DE_CONSOLE` dérive ses `compte` de `seeds/corpus.ts` : c'est le
-	 * contenu d'exemple du gel, juste pour le rendu d'une planche, faux pour une
-	 * instance. `$lib/console/effectifs.ts` porte le motif complet et la mesure.
+	 * Le catalogue de `sections.ts` dérivait les deux de `seeds/corpus.ts` : sept
+	 * nombres qui décrivaient le corpus de démonstration à qui regardait SON
+	 * instance, et une pastille « Types de fiches » que le renommage de `M14.7`
+	 * ne touchait pas. `$lib/console/effectifs.ts` porte le motif des compteurs,
+	 * `$lib/vocabulaire.ts` celui du mot ; les deux descendent par contexte.
 	 *
 	 * LA PRÉSENCE DU CONTEXTE DÉCIDE, PAS SON CONTENU — même leçon que le rail de
 	 * `Coquille.svelte` : une base à zéro univers n'est pas une base absente, et
 	 * elle annonce zéro. Hors application — le rendu par défaut d'une vue —,
-	 * `getContext` rend `undefined`, le catalogue s'applique tel quel, et le gel
-	 * garde ses sept nombres au pixel.
+	 * `getContext` rend `undefined`, le catalogue nu s'applique, et ses sept
+	 * compteurs valent zéro.
 	 */
+	const mots = vocabulaireRendu();
 	const effectifs = getContext<EffectifsDeConsole | undefined>(CLE_EFFECTIFS);
 	const groupes = $derived(
-		effectifs === undefined ? GROUPES_DE_CONSOLE : groupesAvecEffectifs(effectifs)
+		effectifs === undefined ? groupesDeConsole(mots) : groupesAvecEffectifs(mots, effectifs)
 	);
 
 	/**

@@ -58,8 +58,16 @@
 		type Univers,
 		type UtilisateurCourant
 	} from '../../seeds/corpus';
-	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
+	import { vocabulaireRendu } from '$lib/vocabulaire';
 	import type { RefusDeSaisie, SaisieDeTypeDeRelation } from '$lib/console/structure';
+
+	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
+	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
+	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
+	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	const motsDuProduit = vocabulaireRendu();
+	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
+	const motFichePlurielMinuscule = $derived(motsDuProduit.fichesMin);
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — formulaire × suppression. */
@@ -302,8 +310,8 @@
 	const erreurInverse = $derived(messageDuChamp('inverse'));
 
 	/** Sans couple à éprouver, la phrase nomme les deux rôles — jamais un sujet inventé. */
-	const ORIGINE = `la ${motFicheMinuscule} d'origine`;
-	const CIBLE = `la ${motFicheMinuscule} cible`;
+	const ORIGINE = $derived(`la ${motFicheMinuscule} d'origine`);
+	const CIBLE = $derived(`la ${motFicheMinuscule} cible`);
 
 	/** Les deux phrases de l'aperçu, dans l'ordre du gel. */
 	const phrases = $derived([
