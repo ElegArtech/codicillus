@@ -27,7 +27,7 @@
 	 *
 	 * LA NOTE N'EST PLUS FIXÉE ICI. `d-relation` composait son aperçu autour de
 	 * `n-restaurer-pg` quelle que fût la note regardée ; la propriété `note` la
-	 * reçoit, et le jeu de semence reste le défaut.
+	 * reçoit, et elle est REQUISE — il n'y a plus de repli sur le jeu.
 	 *
 	 * AUCUN PILOTAGE, AUCUNE OUVERTURE AU CLIC — ARB-011. La maquette ouvre le
 	 * dialogue en cliquant son entrée de catalogue et prépare son contenu à ce
@@ -42,9 +42,11 @@
 	 * étant en `position: fixed`, la boîte se pose au même endroit de la fenêtre.
 	 * Le voile `::backdrop`, lui, n'existe qu'en modal — écart déclaré au rapport.
 	 *
-	 * TOUTES LES DONNÉES VIENNENT DE `seeds/corpus.ts`. Les décomptes de
-	 * suppression sont calculés, jamais saisis : une confirmation destructive
-	 * annonce le volume réel de ce qu'elle détruit (brief §3.6, point dur n° 8).
+	 * TOUTES LES DONNÉES VIENNENT DE L'HÔTE, ET AUCUNE DU JEU DE DÉMONSTRATION.
+	 * Les décomptes de suppression sont calculés sur ce qui est servi, jamais
+	 * saisis et jamais repliés sur une valeur de maquette : une confirmation
+	 * destructive annonce le volume réel de ce qu'elle détruit (brief §3.6,
+	 * point dur n° 8), et zéro quand rien ne lui est servi.
 	 *
 	 * LE CADRE VIENT DU GABARIT — `$lib/coquille/Coquille.svelte`, amendé par
 	 * T-101b (ARB-015). La classe `doc` de `<main>` lui est passée en propriété :
@@ -68,28 +70,18 @@
 	 * ci-dessous sont ceux de la maquette gelée — voir l'écart déclaré au rapport
 	 * du lot : P-1.7 les refuse, la conformité pixel les impose.
 	 */
-	import {
-		COMPTES,
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		RELATIONS,
-		TEMPLATES,
-		TYPES_RELATION,
-		UNIVERS,
-		VERSIONS,
-		type Compte,
-		type Domaine,
-		type EtatDInstance,
-		type IdentifiantNote,
-		type LibellesDeRelation,
-		type Note,
-		type Relation,
-		type Template,
-		type Univers,
-		type UtilisateurCourant,
-		type Version
+	import type {
+		Compte,
+		Domaine,
+		IdentifiantNote,
+		LibellesDeRelation,
+		Note,
+		Relation,
+		Template,
+		Univers,
+		Version
 	} from '../../seeds/corpus';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { libelleFraicheur } from '$lib/fraicheur';
 
@@ -122,31 +114,30 @@
 		 * son document les mettrait dans le DOM, ce que `P-09` refuse (`ni grisée,
 		 * ni masquée`).
 		 */
-		catalogue?: boolean;
+		catalogue: boolean;
 		/**
-		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
+		 * LES SOURCES DE LA COQUILLE ET DES DIALOGUES, ET LEUR DÉFAUT EST L'ENSEMBLE
+		 * VIDE.
 		 *
-		 * Absentes, les constantes du jeu de semence s'appliquent : c'est ce que le
-		 * mode démo passe, et c'est ce qui garantit que le banc ne bouge pas d'un
-		 * pixel. Fournies — par un chargeur de route —, elles l'emportent, et la vue
-		 * cesse de servir une valeur figée, indépendante de la base et de l'identité.
+		 * Leur défaut était la constante du jeu de démonstration : les dialogues
+		 * annonçaient donc les comptes, les relations, les gabarits et l'historique
+		 * des maquettes sur toute instance, et rien ne le signalait. Aucune route
+		 * ne les sert ; elles rendent vide.
 		 */
-		/** Les univers déclarés. Absente, `UNIVERS` du jeu de semence. */
+		/** Les univers déclarés — le contexte de coquille les porte. Vide : aucun. */
 		univers?: readonly Univers[];
-		/** Les domaines du périmètre du compte. Absente, `DOMAINES` du jeu de semence. */
+		/** Les domaines du périmètre du compte — même canal. */
 		domaines?: readonly Domaine[];
-		/** Le compte connecté. Absente, `MOI` du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance. Absente, `INSTANCE` du jeu de semence. */
-		instance?: EtatDInstance;
-		/** Les comptes de l'instance. Absente, `COMPTES` du jeu de semence. */
+		/** Le compte connecté — même canal. `null` : personne n'est connecté. */
+		compte?: CompteAffiche | null;
+		/** Les comptes de l'instance. Vide : aucun n'est lu. */
 		comptes?: readonly Compte[];
-		/** Les relations du corpus. Absente, `RELATIONS` du jeu de semence. */
+		/** Les relations du corpus. Vide : aucune n'est lue. */
 		relations?: readonly Relation[];
-		/** Les gabarits de note. Absente, `TEMPLATES` du jeu de semence. */
+		/** Les gabarits de note. Vide : aucun n'est lu. */
 		templates?: readonly Template[];
 		/**
-		 * Les libellés des types de relation. Absente, `TYPES_RELATION` du jeu.
+		 * LES LIBELLÉS DES TYPES DE RELATION — REQUISE : la route les lit en base.
 		 *
 		 * LES CLÉS SONT CELLES DU RÉFÉRENTIEL, ET ELLES NE SONT PAS FERMÉES.
 		 * `CleDeTypeDeRelation` énumère les six types du jeu de semence ; le
@@ -156,11 +147,11 @@
 		 * l'ORDRE de la table est celui d'administration, et le premier type y
 		 * est celui qu'un sélecteur propose d'entrée.
 		 */
-		typesRelation?: Readonly<Record<string, LibellesDeRelation>>;
+		typesRelation: Readonly<Record<string, LibellesDeRelation>>;
 		/**
-		 * L'historique par note. Absente, `VERSIONS` du jeu de semence. La table
-		 * est PARTIELLE : une note sans historique n'a pas d'entrée, et exiger
-		 * les trente-deux clés interdirait à un chargeur l'état neutre (`P-02`).
+		 * L'historique par note. Vide : aucun n'est lu. La table est PARTIELLE —
+		 * une note sans historique n'a pas d'entrée, et exiger les clés du corpus
+		 * interdirait l'état neutre (`P-02`).
 		 */
 		versions?: Partial<Record<IdentifiantNote, readonly Version[]>>;
 		/**
@@ -174,27 +165,44 @@
 		 * d'une AUTRE note que celle qu'on regarde — la valeur illustrative que
 		 * `P-02` proscrit, sur l'écran même où le geste s'engage.
 		 *
-		 * ABSENTE, LA NOTE DU JEU DE SEMENCE, à l'identique : c'est ce que la
-		 * planche montre, et rien n'y bouge.
+		 * ELLE EST REQUISE : son repli était `n-restaurer-pg`, retrouvée dans le
+		 * corpus servi, et tous les dialogues parlaient donc de la même note.
 		 */
-		note?: Note;
+		note: Note;
+		/**
+		 * LE DOSSIER DONT `d-dossier` ET `d-droits` PARLENT — `null` : AUCUN.
+		 *
+		 * C'étaient deux littéraux du jeu de démonstration posés au niveau du
+		 * module — « Infrastructure » et « Exploitation › Sauvegardes » — lus par
+		 * le décompte de suppression et écrits en toutes lettres par le titre et
+		 * le sous-titre des droits. Les boîtes annonçaient donc la destruction
+		 * d'un dossier des maquettes sur toute instance. Aucune route ne les
+		 * monte : sans dossier servi, elles ne nomment rien et ne comptent rien.
+		 */
+		dossier?: { readonly domaine: string; readonly chemin: string } | null;
 	}
 
 	const {
 		etat,
 		notes,
-		catalogue = true,
-		note: noteAffichee,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		comptes = COMPTES,
-		relations = RELATIONS,
-		templates = TEMPLATES,
-		typesRelation = TYPES_RELATION,
-		versions = VERSIONS
+		catalogue,
+		note,
+		univers = [],
+		domaines = [],
+		compte = null,
+		comptes = [],
+		relations = [],
+		templates = [],
+		typesRelation,
+		versions = {},
+		dossier = null
 	}: Proprietes = $props();
+
+	/**
+	 * LE COMPTE SERVI À LA COQUILLE. En application, le contexte l'emporte
+	 * toujours. Hors gabarit racine, il n'y a PAS de compte connecté.
+	 */
+	const COMPTE_ABSENT: CompteAffiche = { nom: '', initiales: '', role: '', domaine: '' };
 
 	/** Le dialogue dont le CONTENU est préparé. Aucun autre ne l'est. */
 	const ouvert = $derived(etat);
@@ -219,12 +227,24 @@
 		return catalogue && ouvert === cle;
 	}
 
-	/** Le dossier dont la maquette démontre la suppression et les droits. */
-	const DOSSIER = 'Exploitation › Sauvegardes';
-	const DOMAINE_DOSSIER = 'Infrastructure';
+	/** Le dernier segment du chemin — le nom propre du dossier. Aucun : vide. */
+	const nomDuDossier = $derived(dossier === null ? '' : (dossier.chemin.split(' › ').pop() ?? ''));
+	/** Le chemin complet, domaine compris, tel que le sous-titre des droits l'écrit. */
+	const cheminDuDossier = $derived(
+		dossier === null ? '' : `${dossier.domaine} › ${dossier.chemin}`
+	);
 
-	/** La note de démonstration — celle de V-14, V-15 et V-37 — ou celle qu'on lit. */
-	const NOTE = $derived(noteAffichee ?? notes.find((n) => n.id === 'n-restaurer-pg'));
+	/** La note dont les dialogues parlent — celle qu'on lit, et aucune autre. */
+	const NOTE = $derived(note);
+
+	/* OÙ LA NOTE EST RANGÉE MAINTENANT — ce que `d-deplacer` annonce, et le seul
+	   emplacement qu'il interdit de choisir. Les deux sites lisaient les deux
+	   littéraux du jeu : la boîte disait « Infrastructure › Exploitation ›
+	   Sauvegardes » pour n'importe quelle note. Un dossier vide désigne la racine
+	   du domaine, qui n'a pas de segment propre à écrire. */
+	const emplacementDeLaNote = $derived(
+		NOTE.dossier ? `${NOTE.domaine} › ${NOTE.dossier}` : NOTE.domaine
+	);
 
 	/**
 	 * LE TYPE DE RELATION PROPOSÉ D'ENTRÉE — le premier du référentiel.
@@ -239,23 +259,26 @@
 		Object.values(typesRelation)[0] ?? { sortant: '', entrant: '' }
 	);
 	/**
-	 * Pour la suppression, une note effectivement citée : le décompte de
-	 * rétroliens n'a d'intérêt à être maquetté que s'il n'est pas nul.
+	 * LA NOTE QUE LA CONFIRMATION DE SUPPRESSION NOMME. C'était `n-pg-prod-01`,
+	 * une note du jeu retrouvée dans le corpus servi : la boîte annonçait la
+	 * destruction d'une AUTRE note que celle qu'on regarde.
 	 */
-	const NOTE_SUP = $derived(notes.find((n) => n.id === 'n-pg-prod-01'));
+	const NOTE_SUP = $derived(note);
 
-	/** Rétention par défaut quand la note n'a pas d'historique détaillé. */
-	const VERSIONS_PAR_DEFAUT = 6;
-
-	const versionsSup = $derived(
-		NOTE_SUP ? (versions[NOTE_SUP.id]?.length ?? 0) || VERSIONS_PAR_DEFAUT : 0
-	);
-	const retroliensSup = $derived(
-		NOTE_SUP ? relations.filter((r) => r.vers === NOTE_SUP.id).length : 0
-	);
+	/* CE QUI DISPARAÎT AVEC LA NOTE, COMPTÉ SUR CE QUI EST SERVI — ET RIEN DE PLUS.
+	   Le décompte se repliait sur `|| VERSIONS_PAR_DEFAUT`, six versions tirées
+	   de la maquette : depuis que l'historique n'a plus le jeu pour défaut, ce
+	   repli valait TOUJOURS, et la boîte annonçait six versions détruites quel
+	   que soit l'historique réel. Un décompte non servi est nul, ce que la
+	   dernière ligne du bloc dit déjà pour les rétroliens. */
+	const versionsSup = $derived(versions[NOTE_SUP.id]?.length ?? 0);
+	const retroliensSup = $derived(relations.filter((r) => r.vers === NOTE_SUP.id).length);
 	/** Les notes rangées dans le dossier à supprimer, sous-dossiers compris. */
 	const notesDuDossier = $derived(
-		notes.filter((n) => n.domaine === DOMAINE_DOSSIER && n.dossier.startsWith(DOSSIER)).length
+		dossier === null
+			? 0
+			: notes.filter((n) => n.domaine === dossier.domaine && n.dossier.startsWith(dossier.chemin))
+					.length
 	);
 
 	/** Les notes dont le titre recouvre au moins 60 % des mots significatifs. */
@@ -275,7 +298,13 @@
 			.map((x) => x.note);
 	}
 
-	const doublon = $derived(notesProches('Restaurer une sauvegarde PostgreSQL')[0] ?? NOTE);
+	/**
+	 * LA NOTE PROCHE DE CELLE QU'ON ÉCRIT. Le titre cherché était le littéral
+	 * « Restaurer une sauvegarde PostgreSQL », celui du gel : l'avertissement de
+	 * doublon désignait donc toujours la même note. Il se cherche sur le titre de
+	 * la note dont la boîte parle, ce qui est le seul sens qu'il ait.
+	 */
+	const doublon = $derived(notesProches(NOTE.titre)[0] ?? NOTE);
 
 	interface Droit {
 		readonly qui: string;
@@ -284,13 +313,16 @@
 		readonly origine?: string;
 	}
 
-	/** Les droits posés sur le dossier de démonstration, explicites et hérités. */
-	const DROITS: readonly Droit[] = [
-		{ qui: 'Karim Belhadj', role: 'Gestion', herite: false },
-		{ qui: 'Marc Ferreira', role: 'Écriture', herite: false },
-		{ qui: 'Sophie Nguyen', role: 'Écriture', herite: true, origine: 'domaine Infrastructure' },
-		{ qui: 'Léa Marchand', role: 'Lecture', herite: true, origine: 'dossier Exploitation' }
-	];
+	/**
+	 * LES DROITS POSÉS SUR LE DOSSIER — AUCUN N'EST LU, ET LA TABLE EST DONC VIDE.
+	 *
+	 * Elle nommait quatre comptes du jeu de démonstration — Karim Belhadj, Marc
+	 * Ferreira, Sophie Nguyen, Léa Marchand — avec leurs rôles et l'origine de
+	 * leur héritage, servis comme des faits sur l'instance qu'on regarde. Rien
+	 * ne les sert : `droits_de_dossier` n'est lue par aucun chargeur qui monte
+	 * cette vue. Vide, la boîte n'affirme rien.
+	 */
+	const DROITS: readonly Droit[] = [];
 
 	/** Les comptes actifs à qui aucun accès explicite ni hérité n'est encore posé. */
 	const comptesSansAcces = $derived(
@@ -507,7 +539,7 @@
 {/snippet}
 
 {#snippet branche(d: Destination, domaine: string)}
-	{@const courant = domaine === DOMAINE_DOSSIER && d.chemin === DOSSIER}
+	{@const courant = domaine === NOTE.domaine && d.chemin === NOTE.dossier}
 	<li>
 		<label class="ac{courant ? ' ac--interdit' : ''}"
 			><input type="radio" name="dest" disabled={courant} />{d.nom}<span class="ac__n"
@@ -525,8 +557,8 @@
 		{univers}
 		{domaines}
 		{notes}
-		{compte}
-		version={instance.version}
+		compte={compte ?? COMPTE_ABSENT}
+		version=""
 		classeContenu="doc"
 	>
 		{#snippet enfants()}
@@ -706,7 +738,7 @@
 				<div class="champ">
 					<label class="champ__label" for="dossier-saisie">
 						Pour confirmer, retapez le nom du dossier :
-						<span class="confirmation__cible" id="dossier-cible">Sauvegardes</span>
+						<span class="confirmation__cible" id="dossier-cible">{nomDuDossier}</span>
 					</label>
 					<!-- svelte-ignore a11y_autofocus -->
 					<input
@@ -853,9 +885,11 @@
 					>
 				</span>
 				<div style="flex:1;min-width:0">
-					<h2 class="dlg__titre" id="t-droits">Droits du dossier Sauvegardes</h2>
+					<h2 class="dlg__titre" id="t-droits">
+						{nomDuDossier === '' ? 'Droits du dossier' : `Droits du dossier ${nomDuDossier}`}
+					</h2>
 					<div style="font-size:var(--t-mini);color:var(--c-encre-3);margin-top:2px">
-						Infrastructure › Exploitation › Sauvegardes
+						{cheminDuDossier}
 					</div>
 				</div>
 				<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
@@ -1163,7 +1197,7 @@
 							</ul>{/each}{/if}
 				</div>
 				<p class="dlg__texte" id="deplacer-etat">
-					Emplacement actuel : {DOMAINE_DOSSIER} › {DOSSIER}
+					Emplacement actuel : {emplacementDeLaNote}
 				</p>
 			</div>
 			<div class="dlg__pied">

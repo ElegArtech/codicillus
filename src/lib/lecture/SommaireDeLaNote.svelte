@@ -30,8 +30,18 @@
 		 * V-15 n'en a pas et porte `sommaire` seule.
 		 */
 		classe?: string;
-		/** Les titres du corps affiché. Par défaut, ceux du registre Référence. */
-		entrees?: readonly EntreeDeSommaire[] | undefined;
+		/**
+		 * LES TITRES DU CORPS AFFICHÉ — REQUISE, et c'est ce qui ferme le défaut.
+		 *
+		 * Elle était optionnelle et retombait sur les ONZE TITRES DE LA NOTE DE
+		 * DÉMONSTRATION : une vue qui oubliait de la passer affichait le sommaire
+		 * de « Restaurer une sauvegarde PostgreSQL » au-dessus d'un tout autre
+		 * article, sans que rien ne proteste. Les deux vues qui montent ce
+		 * composant la passent ; le compilateur garde désormais la porte.
+		 *
+		 * VIDE, LE SOMMAIRE LE DIT — « Aucun titre dans cette note ».
+		 */
+		entrees: readonly EntreeDeSommaire[];
 	}
 
 	const { classe = 'sommaire', entrees }: Proprietes = $props();

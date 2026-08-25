@@ -76,35 +76,22 @@
 	 * `src/vues/V-15.css`, posé par `node verif/feuilles-de-vue.mjs V-15
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		RETENTION_VERSIONS,
-		UNIVERS,
-		VERSIONS,
-		type Domaine,
-		type EtatDInstance,
-		type IdentifiantNote,
-		type Note,
-		type Univers,
-		type UtilisateurCourant,
-		type Version
-	} from '../../seeds/corpus';
+	import type { Domaine, IdentifiantNote, Note, Univers, Version } from '../../seeds/corpus';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import NoteDeDemonstration from '$lib/lecture/NoteDeDemonstration.svelte';
 	import SommaireDeLaNote from '$lib/lecture/SommaireDeLaNote.svelte';
-	import { NOTE, type LectureAffichee } from '$lib/lecture/note-de-demonstration';
+	import type { LectureAffichee } from '$lib/lecture/note-de-demonstration';
 
 	/**
-	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
-	 * DÉFAUT EST LA CONSTANTE DU JEU DE SEMENCE.
+	 * CE QUE LA ROUTE PASSE EST REQUIS ; CE QU'ELLE NE PASSE PAS EST VIDE.
 	 *
-	 * La vue devient capable de recevoir ce qu'un chargeur de route lit en base
-	 * — univers, domaines, compte courant, état de l'instance — sans qu'aucun
-	 * rendu ne change tant que rien ne lui est passé : le mode de conception ne
-	 * passe que `vecteur` et `notes`, la vue reçoit donc exactement ce qu'elle
-	 * recevait, et le banc de comparaison ne bouge pas d'un pixel.
+	 * Toutes ces propriétés étaient optionnelles, et leur défaut était une
+	 * constante du jeu de démonstration : l'historique d'une note quelconque
+	 * servait les dix versions de `n-restaurer-pg` et l'identité des maquettes,
+	 * sans que rien ne proteste. Les six que le chargeur sert sont REQUISES —
+	 * une route qui les oublierait ne compilerait plus ; les trois que le
+	 * contexte de coquille porte déjà rendent leur ensemble VIDE.
 	 *
 	 * `compte` est reçu SOUS LE NOM LOCAL `moi` : la vue porte déjà un `compte`,
 	 * qui est le libellé du pied du panneau d'historique. Le nom de la propriété
@@ -115,33 +102,25 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-15')`, variante « lecture ». */
 		notes: readonly Note[];
-		/** Les univers du produit. Défaut : ceux du jeu de semence. */
+		/** Les univers du produit — le contexte de coquille les porte. Vide : aucun. */
 		univers?: readonly Univers[];
-		/** Les domaines du produit. Défaut : ceux du jeu de semence. */
+		/** Les domaines du produit — même canal. Vide : aucun périmètre. */
 		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Défaut : celui du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
-		instance?: EtatDInstance;
+		/** L'utilisateur courant — même canal. `null` : personne n'est connecté. */
+		compte?: CompteAffiche | null;
+		/** L'historique, par note — servi par le chargeur, jamais par le jeu. */
+		versions: Partial<Record<IdentifiantNote, readonly Version[]>>;
+		/** Le nombre de versions conservées par note, lu en configuration. */
+		retentionVersions: number;
 		/**
-		 * L'historique, par note. Défaut : celui du jeu de semence.
+		 * LA NOTE DONT L'HISTORIQUE EST MONTRÉ — REQUISE.
 		 *
-		 * `T-030` a posé la table des versions ; la semence la laisse VIDE. La vue
-		 * est rendue capable de recevoir un historique réel, elle n'en transpose
-		 * aucun : tant que rien ne lui est passé, elle lit le jeu de semence.
+		 * Elle décide de TOUT ce qui nomme la note : les versions lues dans
+		 * `versions`, le titre du fil et du panneau, le rangement du fil. Son
+		 * défaut était l'un des trois cas de la planche, c'est-à-dire une note
+		 * du jeu choisie par le vecteur.
 		 */
-		versions?: Partial<Record<IdentifiantNote, readonly Version[]>>;
-		/** Le nombre de versions conservées par note. Défaut : celui du jeu de semence. */
-		retentionVersions?: number;
-		/**
-		 * LA NOTE DONT L'HISTORIQUE EST MONTRÉ. Défaut : aucune, et les trois cas
-		 * de la planche décident alors — l'état du gel, inchangé.
-		 *
-		 * Passée, elle décide de TOUT ce qui nomme la note : les versions lues
-		 * dans `versions`, le titre du fil et du panneau, le rangement du fil.
-		 * Rien n'est alors saisi (P-02).
-		 */
-		note?: Note;
+		note: Note;
 		/**
 		 * LA NOTE TELLE QU'ELLE S'AFFICHE — l'identité, les deux corps rendus, le
 		 * sommaire, le dernier contrôle, les dates et les mesures de consultation.
@@ -167,44 +146,49 @@
 		 * plus récent, et « Restaurer cette version » écrasait la note avec un
 		 * contenu jamais montré (`RG-M18-05`).
 		 *
-		 * ABSENTE, la transcription figée du gel, à l'identique.
+		 * ELLE EST REQUISE : absente, la transcription figée du gel prenait sa
+		 * place, et rien ne le signalait.
 		 */
-		affichee?: LectureAffichee;
+		affichee: LectureAffichee;
 		/**
-		 * COMPARER DEUX VERSIONS. Absente — le rendu d'une planche —, les cases
-		 * restent inertes et « Comparer » désactivé, comme au gel. Passée par la
-		 * route, la sélection s'arme et le bouton navigue.
+		 * COMPARER DEUX VERSIONS — REQUISE.
 		 *
 		 * Le gel écrit `disabled` en dur sur `#comparer` et n'attache rien aux
 		 * cases : `/notes/{id}/comparaison` existait donc sans qu'aucun clic n'y
 		 * mène. Mesuré le 22/08/2026.
 		 */
-		onComparer?: (a: number, b: number) => void;
+		onComparer: (a: number, b: number) => void;
 		/**
 		 * LE NUMÉRO DE LA VERSION CONSULTÉE — `?version={n}`, `docs/routes.md:224`.
 		 *
-		 * `null`, absent, ou désignant la version courante : le bandeau reste
-		 * replié, `data-version` vaut « courante ». Un numéro qui ne désigne
-		 * aucune version vaut la version courante — une adresse forgée ne
-		 * fabrique pas un troisième état.
+		 * `null`, ou désignant la version courante : le bandeau reste replié,
+		 * `data-version` vaut « courante ». Un numéro qui ne désigne aucune
+		 * version vaut la version courante — une adresse forgée ne fabrique pas
+		 * un troisième état.
 		 */
-		versionAffichee?: number | null;
+		versionAffichee: number | null;
 	}
 
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte: moi = MOI,
-		instance = INSTANCE,
-		versions: historique = VERSIONS,
-		retentionVersions = RETENTION_VERSIONS,
-		note = undefined,
-		affichee = undefined,
-		versionAffichee = null,
+		univers = [],
+		domaines = [],
+		compte: moi = null,
+		versions: historique,
+		retentionVersions,
+		note,
+		affichee,
+		versionAffichee,
 		onComparer
 	}: Proprietes = $props();
+
+	/**
+	 * LE COMPTE SERVI À LA COQUILLE. En application, le contexte l'emporte
+	 * toujours. Hors gabarit racine, il n'y a PAS de compte connecté : la barre
+	 * le rend vide plutôt que de nommer un utilisateur du jeu de démonstration.
+	 */
+	const COMPTE_ABSENT: CompteAffiche = { nom: '', initiales: '', role: '', domaine: '' };
 
 	const reglage = $derived(vecteur ?? {});
 
@@ -227,29 +211,20 @@
 	const ecriture = $derived(droits !== 'lecture');
 
 	/**
-	 * LES TROIS CAS D'HISTORIQUE DE LA PLANCHE — `charger()`, `V-15:2990-2994`.
-	 * Deux notes du corpus et le vide : dix versions pour la note de
-	 * démonstration, une seule pour une note créée et jamais retouchée, aucune
-	 * pour le cas où l'historique n'a rien à montrer.
+	 * LES VERSIONS DE LA NOTE OUVERTE, ET D'AUCUNE AUTRE.
+	 *
+	 * Le levier `hist` de la planche choisissait entre trois cas — deux notes du
+	 * jeu de démonstration et le vide — quand aucune note n'était passée. La
+	 * note est requise : l'historique se lit sur ELLE, et le vide, quand il y a
+	 * lieu, est celui de la note ouverte.
 	 */
-	const NOTE_PAR_CAS: Record<string, IdentifiantNote | null> = {
-		riche: 'n-restaurer-pg',
-		une: 'n-migration-bases',
-		aucune: null
-	};
-
-	const cas = $derived(
-		reglage['hist'] === 'une' ? 'une' : reglage['hist'] === 'aucune' ? 'aucune' : 'riche'
-	);
-	const source = $derived(note ? note.id : NOTE_PAR_CAS[cas]);
-	const versions = $derived<readonly Version[]>(source ? (historique[source] ?? []) : []);
+	const versions = $derived<readonly Version[]>(historique[note.id] ?? []);
 
 	/**
 	 * LE TITRE DE LA NOTE ferme le fil d'Ariane et coiffe le panneau
-	 * (`V-15:3271`, `V-15:2859`). Il vient de la note reçue, ou du corpus par le
-	 * module partagé quand aucune n'est passée.
+	 * (`V-15:3271`, `V-15:2859`).
 	 */
-	const titre = $derived(note ? note.titre : NOTE.titre);
+	const titre = $derived(note.titre);
 
 	/**
 	 * LE RANGEMENT DE LA NOTE, tel que le fil le déroule. Le chemin de dossier
@@ -259,12 +234,10 @@
 	 * domaine n'a aucun segment.
 	 */
 	const segments = $derived(
-		note
-			? note.dossier
-					.split('›')
-					.map((s) => s.trim())
-					.filter((s) => s !== '')
-			: []
+		note.dossier
+			.split('›')
+			.map((s) => s.trim())
+			.filter((s) => s !== '')
 	);
 
 	/**
@@ -278,17 +251,11 @@
 	 * qu’il coiffe. Le panneau, lui, garde `titre` — il nomme LA NOTE dont
 	 * l’historique est ouvert, pas l’état consulté.
 	 */
-	const titreAffiche = $derived(affichee ? affichee.note.titre : titre);
+	const titreAffiche = $derived(affichee.note.titre);
 
 	/** Le fil d'Ariane — identique à celui de V-14 : l'historique n'a pas de chemin propre. */
-	const fil = $derived(
-		note
-			? ['Accueil', note.univers, note.domaine, ...segments, titreAffiche]
-			: ['Accueil', 'Production', 'Infrastructure', 'Exploitation', 'Sauvegardes', titreAffiche]
-	);
-	const courant = $derived(
-		note ? [note.domaine, ...segments] : ['Infrastructure', 'Exploitation', 'Sauvegardes']
-	);
+	const fil = $derived(['Accueil', note.univers, note.domaine, ...segments, titreAffiche]);
+	const courant = $derived([note.domaine, ...segments]);
 
 	/**
 	 * LA VERSION ANTÉRIEURE CONSULTÉE — `afficher()`, `V-15:2905`.
@@ -298,7 +265,7 @@
 	 * un état qui est celui de la note.
 	 */
 	const anterieure = $derived(
-		versionAffichee === null || versionAffichee === undefined || versionAffichee === versions[0]?.n
+		versionAffichee === null || versionAffichee === versions[0]?.n
 			? null
 			: (versions.find((v) => v.n === versionAffichee) ?? null)
 	);
@@ -364,16 +331,27 @@
 	const compte = $derived(
 		versions.length < 2
 			? 'Comparaison indisponible'
-			: onComparer === undefined || choisies.length === 0
+			: choisies.length === 0
 				? 'Sélectionnez deux versions'
 				: choisies.length === 1
 					? 'Une version sélectionnée'
 					: 'Deux versions sélectionnées'
 	);
 
-	/** L'ancienneté d'une version, en clair — `relatif()`, `V-15:2761`. */
+	/**
+	 * L'ancienneté d'une version, en clair — `relatif()`, `V-15:2761`.
+	 *
+	 * LE GEL DIT « HIER » DÈS ZÉRO JOUR, ET C'EST FAUX. `joursEcoules()`
+	 * (`$lib/donnees/lecture.ts`) compte des jours PLEINS : une version capturée
+	 * il y a dix minutes vaut 0, et la ligne annonçait qu'elle datait de la
+	 * veille. Le mot juste est celui que le gel écrit lui-même quand il a la
+	 * donnée du jour — `V-14:4026`, `<time datetime="2026-08-13">aujourd'hui</time>`.
+	 * « À l'instant » exigerait une entrée en HEURES que `Version.jours` ne
+	 * porte pas.
+	 */
 	function relatif(jours: number): string {
-		if (jours <= 1) return 'hier';
+		if (jours <= 0) return "aujourd'hui";
+		if (jours === 1) return 'hier';
 		if (jours < 31) return `il y a ${jours} jours`;
 		const mois = Math.round(jours / 30);
 		return mois < 12 ? `il y a ${mois} mois` : `il y a ${Math.round(jours / 365)} an(s)`;
@@ -456,16 +434,11 @@
 	{univers}
 	{domaines}
 	notes={corpus}
-	compte={{
-		nom: moi.nom,
-		initiales: moi.initiales,
-		role: moi.role,
-		domaine: moi.domaine
-	}}
-	version={instance.version}
+	compte={moi ?? COMPTE_ABSENT}
+	version=""
 >
 	{#snippet enfants()}
-		<SommaireDeLaNote entrees={affichee?.sommaire} />
+		<SommaireDeLaNote entrees={affichee.sommaire} />
 
 		<article class="article" id="article">
 			<!--
@@ -532,10 +505,10 @@
 				<button
 					class="btn btn--principal"
 					id="comparer"
-					disabled={onComparer === undefined || choisies.length !== 2}
+					disabled={choisies.length !== 2}
 					onclick={() => {
 						const [a, b] = [...choisies].sort((x, y) => x - y);
-						if (a !== undefined && b !== undefined) onComparer?.(a, b);
+						if (a !== undefined && b !== undefined) onComparer(a, b);
 					}}>Comparer</button
 				>
 			</div>
