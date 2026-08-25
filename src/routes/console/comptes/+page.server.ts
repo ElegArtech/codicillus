@@ -9,11 +9,18 @@
  * `src/lib/droits/resolution.ts` et rend `INTROUVABLE` ; le seul `error(404, MESSAGE_INTROUVABLE)`
  * du fichier est SANS MESSAGE (`ADR-007`).
  *
- * CE QUE CE CHARGEUR SERT, ET CE QU'IL NE SERT PAS. La liste des comptes vient
- * de la TABLE — `lireLesComptesDeConsole()` —, et la vue la reçoit en
- * propriété : un compte créé apparaît donc à la relecture de la page. Le jeu de
- * semence de `V-32:65` ne sert plus que de valeur par défaut, pour les planches
- * du banc, qui n'ont pas de chargeur derrière elles.
+ * CE QUE CE CHARGEUR SERT. La liste des comptes vient de la TABLE —
+ * `lireLesComptesDeConsole()` —, et la vue la reçoit en propriété REQUISE : un
+ * compte créé apparaît donc à la relecture de la page, et une rédaction qui
+ * oublierait de la passer ne compilerait plus.
+ *
+ * LE VERROU DE MOT DE PASSE EST SERVI, LUI AUSSI, ET IL NE L'ÉTAIT PAS.
+ * `interface Compte` du jeu de démonstration n'en porte pas de champ ; la vue
+ * décidait donc du verrou en comparant l'identifiant à `'lea.marchand'` — un
+ * compte du jeu, écrit en dur. Sur une instance réelle, la pastille « mot de
+ * passe verrouillé » ne s'allumait pour personne, alors que `f-verrou` est
+ * coché à la création et que `comptes.mot_de_passe_verrouille` l'a enregistré
+ * depuis. La colonne est donc lue, et servie à part.
  *
  * `vecteur: null` demande l'état au repos : les quatre positions de l'axe
  * « Formulaire » et les deux de l'axe « Cas » sont des états d'INTERACTION.
@@ -40,6 +47,23 @@ import {
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
+/**
+ * `comptes.mot_de_passe_verrouille`, par identifiant de connexion.
+ *
+ * SERVI À PART DE LA LISTE, et c'est la forme la plus honnête : `interface
+ * Compte` décrit ce que le jeu de démonstration porte, pas ce que la table
+ * porte — lui ajouter un champ ferait diverger la description du jeu de la
+ * donnée du produit. Un identifiant absent de la table vaut « non verrouillé ».
+ */
+async function lireLesVerrousDeMotDePasse(
+	base: ReturnType<typeof basePartagee>
+): Promise<Record<string, boolean>> {
+	const lignes = await base
+		.select({ identifiant: comptes.identifiant, verrouille: comptes.motDePasseVerrouille })
+		.from(comptes);
+	return Object.fromEntries(lignes.map((l) => [l.identifiant, l.verrouille]));
+}
+
 export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
@@ -52,6 +76,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		domaines: acces.ressource.domaines,
 		compte: acces.ressource.compte,
 		comptes: await lireLesComptesDeConsole(base),
+		verrous: await lireLesVerrousDeMotDePasse(base),
 		/**
 		 * LA TABLE DES DÉSIGNATIONS — le nom d'affichage d'un domaine vers sa forme
 		 * canonique. Même motif qu'à `/console/domaines`, et pour le même motif :
