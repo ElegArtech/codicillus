@@ -103,7 +103,12 @@
  * la vue continue de rendre l'ordre qu'elle reçoit.
  */
 import { basePartagee } from '$lib/base/acces';
-import { type ContexteDeLecture, lireConfiguration, lireNotes } from '$lib/donnees/lecture';
+import {
+	type ContexteDeLecture,
+	lireConfiguration,
+	lireEtiquettesParNote,
+	lireNotes
+} from '$lib/donnees/lecture';
 import {
 	SENS_DISPONIBLE,
 	capaciteDEcriture,
@@ -239,6 +244,52 @@ function dansLOrdreDuMoteur(lues: readonly Note[], ordre: readonly string[]): re
 	return rangees;
 }
 
+/**
+ * LE PLAFOND DES PISTES — celui des valeurs de facette de V-08 (`max: 8`,
+ * `V-08:1952`). Les pistes comptent les mêmes étiquettes que la facette
+ * « Étiquette » ; elles s'arrêtent au même nombre.
+ */
+const MAX_PISTES = 8;
+
+/**
+ * LES PISTES DE REFORMULATION — LES ÉTIQUETTES RÉELLES DU PÉRIMÈTRE, OU RIEN.
+ *
+ * Les deux vues énuméraient des pistes ÉCRITES DANS LEUR MAQUETTE — V-08 :
+ * « restauration », « sauvegarde », « barman », « plan de reprise » ; V-02 :
+ * « mot de passe », « accès », « salle de réunion » —, chacune ouvrant
+ * `/recherche?q=…` à zéro résultat sur une instance qui ne porte rien de tel.
+ *
+ * LA SOURCE EST LE PÉRIMÈTRE LISIBLE, ET NON LE JEU DE RÉSULTATS. La nuance
+ * décide de tout : le bloc ne se rend QUE lorsque la recherche n'a rien rendu,
+ * donc compter sur les résultats ne pourrait jamais rendre qu'une liste vide.
+ * Les identifiants reçus ici sont ceux de la requête VIDE — le périmètre entier
+ * que `chercherLesNotes()` a consenti à l'appelant, que ce chargeur demande
+ * déjà pour la règle d'affluence.
+ *
+ * LA REQUÊTE COURANTE EST ÉCARTÉE : proposer à l'utilisateur le mot qu'il vient
+ * de taper n'est pas une reformulation.
+ *
+ * Ordre : la plus employée d'abord, puis l'ordre alphabétique français — celui
+ * que `parFrequence()` de V-08 applique à ses valeurs de facette.
+ */
+function pistesDeReformulation(
+	identifiants: readonly string[],
+	etiquettesParNote: ReadonlyMap<string, readonly string[]>,
+	requete: string
+): readonly string[] {
+	const ecartee = requete.trim().toLowerCase();
+	const comptes = new Map<string, number>();
+	for (const identifiant of identifiants) {
+		for (const etiquette of etiquettesParNote.get(identifiant) ?? []) {
+			if (etiquette.toLowerCase() === ecartee) continue;
+			comptes.set(etiquette, (comptes.get(etiquette) ?? 0) + 1);
+		}
+	}
+	return [...comptes.keys()]
+		.sort((a, b) => (comptes.get(b) ?? 0) - (comptes.get(a) ?? 0) || a.localeCompare(b, 'fr'))
+		.slice(0, MAX_PISTES);
+}
+
 /** Ce que le chargeur de `/recherche` rend à la page. */
 interface DonneesDeRecherche {
 	/** `false` en anonyme — V-02 ; `true` avec une session — V-08. */
@@ -253,6 +304,17 @@ interface DonneesDeRecherche {
 	readonly retenues: Record<string, readonly string[]>;
 	/** Le nombre de notes que l'identité peut lire, toutes requêtes confondues. */
 	readonly perimetre: number;
+	/**
+	 * LES PISTES DE REFORMULATION — les étiquettes les plus employées du
+	 * PÉRIMÈTRE LISIBLE, jamais celles du jeu de résultats.
+	 *
+	 * V-02 et V-08 les offrent quand la recherche ne rend rien. Les dériver du
+	 * jeu SERVI aux vues serait une promesse impossible : dans l'état où le bloc
+	 * se rend, ce jeu est vide par définition. Elles se comptent donc ici, sur
+	 * les notes que le moteur a consenti à rendre pour une requête VIDE — la
+	 * seconde requête que ce chargeur émet déjà.
+	 */
+	readonly pistes: readonly string[];
 	/**
 	 * L'ADRESSE DU PORTAIL D'ASSISTANCE — clé `portail_assistance` de la table
 	 * `parametres` (M14.7), « adresse externe configurée en console »
@@ -312,15 +374,33 @@ async function lireLaRecherche(
 		await lireNotes(base, contexte, trouvees.identifiants),
 		trouvees.identifiants
 	);
+	const retenues = facettesRetenues(
+		demande,
+		session ? FACETTES_DE_LA_RECHERCHE : FACETTES_HONOREES_EN_ANONYME
+	);
+
+	/* LES PISTES NE SE CALCULENT QUE DANS L'ÉTAT OÙ ELLES SE RENDENT, et les deux
+	   vues n'y arrivent que de deux façons : le moteur n'a rien rapporté, ou les
+	   facettes retenues excluent tout ce qu'il a rapporté — l'arithmétique du gel
+	   s'appliquant dans la vue, ce chargeur ne peut que la prévoir. Hors de ces
+	   deux cas, la requête d'étiquettes ne part pas. */
+	const facettesEmployees = Object.values(retenues).some((v) => v.length > 0);
+	const pistes =
+		trouvees.total === 0 || facettesEmployees
+			? pistesDeReformulation(
+					toutLeLisible.identifiants,
+					await lireEtiquettesParNote(base),
+					requete
+				)
+			: [];
+
 	const commun = {
 		notes,
 		portail,
 		requete,
-		retenues: facettesRetenues(
-			demande,
-			session ? FACETTES_DE_LA_RECHERCHE : FACETTES_HONOREES_EN_ANONYME
-		),
+		retenues,
 		perimetre: toutLeLisible.total,
+		pistes,
 		recherchees: true as const,
 		tri,
 		mode
