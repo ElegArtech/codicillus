@@ -393,6 +393,16 @@ export interface FichierDuLot {
 	readonly s: SortDeFichier;
 	/** Motif, pour les fichiers ignorés ou en échec. */
 	readonly m?: string;
+	/**
+	 * `RG-M12-01` — LA CIBLE PORTE DÉJÀ CETTE NOTE, À CETTE PLACE : l'écriture
+	 * sera une mise à jour, pas une création.
+	 *
+	 * Le champ est OPTIONNEL parce qu'il n'a de sens que face à une cible. Le jeu
+	 * de semence n'en a aucune — son lot d'exemple est un lot nu, tiré d'un
+	 * partage réseau fictif —, et l'absence vaut « rien de connu », donc
+	 * « création », ce que le gel rend déjà.
+	 */
+	readonly maj?: boolean;
 }
 
 export interface LotDImport {
