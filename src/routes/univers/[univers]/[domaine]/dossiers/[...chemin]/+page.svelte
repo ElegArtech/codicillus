@@ -26,11 +26,14 @@
 	 *   `#a-sousdossier`, `#v-sousdossier` → `#dlg-creer`   → `?/creerSousDossier`
 	 *   `#a-renommer`                   → `#dlg-deplacer`   → `?/renommerOuDeplacer`
 	 *   `#a-supprimer`                  → `#dlg-supprimer`  → `?/supprimer`
-	 *   `#a-droits`                     → RIEN. Le dialogue des droits n'existe
-	 *                                     pas dans V-13 : son gestionnaire de gel
-	 *                                     renvoie à V-40 (`V-13:2376`). Voir
-	 *                                     l'en-tête de `src/vues/V-13.svelte` —
-	 *                                     le geste est déclaré, pas comblé.
+	 *   `#a-droits`                     → `#dlg-droits`, et TROIS actions :
+	 *                                     `?/accorderLeDroit` depuis la ligne
+	 *                                     d'ajout, `?/changerLeDroit` au
+	 *                                     changement d'un sélecteur de niveau,
+	 *                                     `?/retirerLeDroit` sur la croix d'une
+	 *                                     ligne. Le bouton existait au gel et ne
+	 *                                     produisait rien : ni écouteur, ni
+	 *                                     dialogue, ni action.
 	 *
 	 * TROIS PIÈGES SONT ÉVITÉS ICI, ET CHACUN A COÛTÉ :
 	 *
@@ -53,6 +56,7 @@
 	import Vue from '../../../../../../vues/V-13.svelte';
 	import '../../../../../../vues/V-13.css';
 	import { soumettreVers } from '$lib/cablage/formulaires';
+	import { NOM_DU_COMPTE_VISE, nomDuNiveau } from './champs-de-droits';
 	import type { ActionData, PageData } from './$types';
 
 	const { data, form }: { data: PageData; form: ActionData } = $props();
@@ -66,6 +70,7 @@
 		readonly creation?: string;
 		readonly deplacement?: string;
 		readonly suppression?: string;
+		readonly droits?: string;
 	}
 	const refus = $derived((form ?? null) as Refus | null);
 
@@ -214,11 +219,70 @@
 			soumettreVers(formulaire, '?/supprimer');
 		});
 
-		/* 8. Un refus rouvre SON dialogue, jamais un autre : le message est déjà
+		/* 8. GÉRER LES DROITS — `#a-droits`, le geste que le gel dessinait sans lui
+		   donner d'écran. Trois actions, et le COMPTE VISÉ voyage par le
+		   SOUMETTEUR : un formulaire n'envoie que celui qui l'a déclenché, ce qui
+		   est la seule façon de désigner une ligne parmi plusieurs sans que deux
+		   champs de même nom se marchent dessus (`./champs-de-droits.ts`).
+
+		   LE NIVEAU, LUI, EST UN CHAMP ORDINAIRE, donc il voyage TOUJOURS — comme
+		   les trois champs du gel. Son nom porte l'identifiant du compte de sa
+		   ligne, ce qui rend la collision impossible par construction. Poser un
+		   `name` sur un nœud existant n'insère rien dans l'arbre : c'est le même
+		   geste qu'au point 2, et `svelte/no-dom-manipulating` n'y voit rien. */
+		const dlgDroits = dialogue(formulaire, 'dlg-droits');
+		surClic(formulaire.querySelector('#a-droits'), () => {
+			dlgDroits?.showModal();
+		});
+
+		for (const selecteur of Array.from(
+			formulaire.querySelectorAll<HTMLSelectElement>('#liste-droits select[data-compte]')
+		)) {
+			const compte = selecteur.dataset['compte'] ?? '';
+			selecteur.name = nomDuNiveau(compte);
+			const surChangement = (): void => {
+				soumettreVers(formulaire, '?/changerLeDroit', {
+					nom: NOM_DU_COMPTE_VISE,
+					valeur: compte
+				});
+			};
+			selecteur.addEventListener('change', surChangement);
+			debranchements.push(() => {
+				selecteur.removeEventListener('change', surChangement);
+			});
+		}
+
+		for (const croix of Array.from(
+			formulaire.querySelectorAll<HTMLButtonElement>('#liste-droits button[data-compte]')
+		)) {
+			surClic(croix, () => {
+				soumettreVers(formulaire, '?/retirerLeDroit', {
+					nom: NOM_DU_COMPTE_VISE,
+					valeur: croix.dataset['compte'] ?? ''
+				});
+			});
+		}
+
+		/* LE NIVEAU DE LA LIGNE D'AJOUT REÇOIT SON NOM AU DERNIER MOMENT, parce
+		   qu'il dépend du compte choisi juste au-dessus — et que ce choix change
+		   jusqu'au clic. Le nommer au montage figerait le premier candidat. */
+		const quiDoter = formulaire.querySelector<HTMLSelectElement>('#droit-qui');
+		const niveauADoter = formulaire.querySelector<HTMLSelectElement>('#droit-role');
+		surClic(formulaire.querySelector('#droit-ajouter'), () => {
+			const compte = quiDoter?.value ?? '';
+			if (niveauADoter !== null) niveauADoter.name = nomDuNiveau(compte);
+			soumettreVers(formulaire, '?/accorderLeDroit', {
+				nom: NOM_DU_COMPTE_VISE,
+				valeur: compte
+			});
+		});
+
+		/* 9. Un refus rouvre SON dialogue, jamais un autre : le message est déjà
 		   rendu par la vue, mais un dialogue fermé ne montre rien. */
 		if (refus?.creation !== undefined) dlgCreer?.showModal();
 		if (refus?.deplacement !== undefined) dlgDeplacer?.showModal();
 		if (refus?.suppression !== undefined) dlgSupprimer?.showModal();
+		if (refus?.droits !== undefined) dlgDroits?.showModal();
 
 		return () => {
 			for (const defaire of debranchements) defaire();
@@ -236,5 +300,7 @@
 		origineDuDroit={data.origineDuDroit}
 		erreurDeCreation={refus?.creation ?? null}
 		erreurDeDeplacement={refus?.deplacement ?? null}
+		droits={data.droits}
+		erreurDeDroits={refus?.droits ?? null}
 	/>
 </form>

@@ -32,23 +32,36 @@
  * serait une intention.
  */
 import { describe, expect, it } from 'vitest';
+import type { Base } from '../base/acces';
 import {
 	identiteAuthentifiee,
 	indexerLesDroits,
 	resoudreDroitDeDossier,
+	type DroitDeDossier,
 	type DroitExplicite
 } from '../droits/resolution';
 import { PROFONDEUR_MAX, type LigneDeDossier } from './rangement';
 import {
+	accorderUnDroitDeDossier,
+	changerUnDroitDeDossier,
 	depasseLePlafond,
+	droitsResolusDUnDossier,
 	hauteurDuSousArbre,
 	libelleDOrigine,
 	motifDeRefusDeDestination,
+	niveauDeDroitDepuisLaSaisie,
 	origineDUnDroit,
+	retirerUnDroitDeDossier,
 	sousArbre,
+	AUTO_RETRAIT_DE_GESTION,
+	COMPTE_DESACTIVE,
+	COMPTE_INTROUVABLE,
 	DEPLACE_DANS_LUI_MEME,
 	DESTINATION_INTERIEURE,
-	DESTINATION_MANQUANTE
+	DESTINATION_MANQUANTE,
+	DROIT_NON_PROPRE,
+	NIVEAU_INCONNU,
+	REFUS_MUET
 } from './dossiers-ecriture';
 
 /* ═══════════════════════════════════ L'arborescence d'épreuve ═══════════ */
@@ -223,5 +236,390 @@ describe('l’origine et la résolution lisent la MÊME chaîne — P-26', () =>
 		}
 		/* Quatre comptes × treize dossiers : le cas est exercé, pas espéré. */
 		expect(compares).toBe(4 * ARBRE.length);
+	});
+});
+
+/* ═══════════════════════════════════ Le dialogue des droits ════════════ */
+
+/**
+ * LES COMPTES D'ÉPREUVE — trois qui portent un droit quelque part sur la
+ * branche `a`, un actif qui n'en a aucun, un DÉSACTIVÉ qui en a un.
+ *
+ * Le dernier n'est pas décoratif : `RG-M14-08` conserve un compte désactivé et
+ * ses contributions, donc sa ligne de droit lui survit. Un dialogue qui ne la
+ * montrerait pas laisserait en base un accès que personne ne pourrait retirer.
+ */
+const COMPTES = [
+	{ id: 'karim', identifiant: 'karim.belhadj', nom: 'Karim Belhadj', actif: true },
+	{ id: 'marc', identifiant: 'marc.ferreira', nom: 'Marc Ferreira', actif: true },
+	{ id: 'lea', identifiant: 'lea.marchand', nom: 'Léa Marchand', actif: true },
+	{ id: 'sophie', identifiant: 'sophie.nguyen', nom: 'Sophie Nguyen', actif: true },
+	{ id: 'pierre', identifiant: 'pierre.dubois', nom: 'Pierre Dubois', actif: false }
+];
+
+describe('les droits d’un dossier, tous comptes — la lecture qui n’existait pas', () => {
+	it('distingue le droit PROPRE du droit HÉRITÉ, et nomme l’origine de chacun', () => {
+		/* Sur `a1` : Marc y a un droit posé, Karim l’hérite de la racine. */
+		const rendus = droitsResolusDUnDossier(INDEX, ARBRE, 'a1', COMPTES, 'Infrastructure');
+		const parCompte = new Map(rendus.map((d) => [d.identifiant, d]));
+
+		expect(parCompte.get('marc.ferreira')).toMatchObject({
+			niveau: 'lecteur',
+			herite: false,
+			origine: '— accordé sur ce dossier'
+		});
+		expect(parCompte.get('karim.belhadj')).toMatchObject({
+			niveau: 'gestionnaire',
+			herite: true,
+			origine: '— hérité du domaine Infrastructure'
+		});
+	});
+
+	it('nomme le DOSSIER intermédiaire quand le droit vient de lui', () => {
+		/* Sur `a2`, le droit de Marc vient de `a1` — le plus proche, RG-DRO-01. */
+		const rendus = droitsResolusDUnDossier(INDEX, ARBRE, 'a2', COMPTES, 'Infrastructure');
+		expect(rendus.find((d) => d.identifiant === 'marc.ferreira')).toMatchObject({
+			niveau: 'lecteur',
+			herite: true,
+			origine: '— hérité du dossier Alpha un'
+		});
+	});
+
+	it('RG-DRO-02 — n’invente aucune ligne pour un compte qui n’a rien sur la chaîne', () => {
+		const rendus = droitsResolusDUnDossier(INDEX, ARBRE, 'a1', COMPTES, 'Infrastructure');
+		expect(rendus.map((d) => d.identifiant)).not.toContain('sophie.nguyen');
+		/* Léa n’a un droit que sur `b` : la branche `a` ne le voit pas. */
+		expect(rendus.map((d) => d.identifiant)).not.toContain('lea.marchand');
+	});
+
+	it('met les droits PROPRES en tête, les hérités ensuite', () => {
+		const rendus = droitsResolusDUnDossier(INDEX, ARBRE, 'a1', COMPTES, 'Infrastructure');
+		expect(rendus.map((d) => d.herite)).toEqual([...rendus.map((d) => d.herite)].sort());
+		expect(rendus[0]?.herite).toBe(false);
+	});
+
+	it('marque la ligne de l’appelant, et elle seule — P-09', () => {
+		const rendus = droitsResolusDUnDossier(INDEX, ARBRE, 'a1', COMPTES, 'Infrastructure', 'marc');
+		expect(rendus.filter((d) => d.soiMeme).map((d) => d.identifiant)).toEqual(['marc.ferreira']);
+		/* Sans appelant, aucune ligne n’est la sienne. */
+		const anonymes = droitsResolusDUnDossier(INDEX, ARBRE, 'a1', COMPTES, 'Infrastructure');
+		expect(anonymes.some((d) => d.soiMeme)).toBe(false);
+	});
+});
+
+/* ═══════════════════════════════════ L’écriture d’un droit ═════════════ */
+
+describe('le niveau reçu — trois valeurs, et rien d’autre', () => {
+	it('accepte les trois de l’énumération', () => {
+		expect(niveauDeDroitDepuisLaSaisie('lecteur')).toBe('lecteur');
+		expect(niveauDeDroitDepuisLaSaisie('redacteur')).toBe('redacteur');
+		expect(niveauDeDroitDepuisLaSaisie('gestionnaire')).toBe('gestionnaire');
+	});
+
+	it('refuse tout le reste, et ne retombe sur AUCUN défaut', () => {
+		/* Se tromper de défaut ici, c’est accorder un droit. */
+		for (const brut of [null, undefined, '', 'Gestion', 'GESTIONNAIRE', 'admin', 42, {}]) {
+			expect(niveauDeDroitDepuisLaSaisie(brut)).toBeNull();
+		}
+	});
+});
+
+/**
+ * UNE BASE DE PAILLE — elle ne comprend AUCUNE condition, et c’est voulu.
+ *
+ * Ce qui se mesure ici n’est pas le SQL, que la base seule sait exécuter, mais
+ * l’ORDRE DES PORTES et ce qui atteint la base. Le cas le plus important est
+ * celui où RIEN ne doit l’atteindre : un appelant sans `gererLesDroits` ne doit
+ * déclencher aucune requête, pas même une lecture de compte — c’est ce que
+ * `journal` atteste, et aucune assertion sur une valeur de retour ne le dirait.
+ *
+ * Les lignes rendues sont programmées cas par cas, ce qui rend chaque épreuve
+ * indépendante de l’état du dépôt (`P-26`).
+ */
+interface BaseDePaille {
+	readonly journal: string[];
+	select: (colonnes: unknown) => {
+		from: (table: unknown) => {
+			where: (condition: unknown) => { limit: (n: number) => Promise<unknown[]> };
+		};
+	};
+	insert: (table: unknown) => {
+		values: (valeurs: unknown) => { onConflictDoUpdate: (options: unknown) => Promise<void> };
+	};
+	update: (table: unknown) => {
+		set: (valeurs: unknown) => { where: (condition: unknown) => Promise<void> };
+	};
+	delete: (table: unknown) => { where: (condition: unknown) => Promise<void> };
+}
+
+function baseDePaille(reponses: {
+	compte?: { id: string; nom: string; actif: boolean } | null;
+	droitPropre?: DroitDeDossier | null;
+}): BaseDePaille {
+	const journal: string[] = [];
+	let lecture = 0;
+	return {
+		journal,
+		select: () => ({
+			from: () => ({
+				where: () => ({
+					limit: () => {
+						/* La première lecture est celle du compte, la seconde celle du
+						   droit propre — l’ordre est celui du module, et il est fixe. */
+						lecture += 1;
+						if (lecture === 1) {
+							journal.push('lire-compte');
+							return Promise.resolve(reponses.compte ? [reponses.compte] : []);
+						}
+						journal.push('lire-droit-propre');
+						return Promise.resolve(reponses.droitPropre ? [{ droit: reponses.droitPropre }] : []);
+					}
+				})
+			})
+		}),
+		insert: () => ({
+			values: () => ({
+				onConflictDoUpdate: (options) => {
+					/* La cible de la reprise est faite de COLONNES Drizzle, qui se
+					   référencent l'une l'autre : seuls leurs noms sont relevés. */
+					const cible = (options as { target?: readonly { name?: string }[] }).target ?? [];
+					journal.push(`inserer-avec-reprise:${cible.map((c) => c.name ?? '?').join(',')}`);
+					return Promise.resolve();
+				}
+			})
+		}),
+		update: () => ({
+			set: () => ({
+				where: () => {
+					journal.push('mettre-a-jour');
+					return Promise.resolve();
+				}
+			})
+		}),
+		delete: () => ({
+			where: () => {
+				journal.push('supprimer');
+				return Promise.resolve();
+			}
+		})
+	};
+}
+
+/** Le droit effectif d’un appelant, tel que les trois écritures le reçoivent. */
+function droitDe(niveau: DroitDeDossier | null): (dossierId: string) => DroitDeDossier | null {
+	return () => niveau;
+}
+
+describe('accorder, changer, retirer — la porte du droit passe AVANT tout', () => {
+	it('un non-gestionnaire n’atteint AUCUNE des trois actions, et n’ouvre aucune requête', async () => {
+		for (const niveau of [null, 'lecteur', 'redacteur'] as const) {
+			for (const ecrire of [
+				accorderUnDroitDeDossier,
+				changerUnDroitDeDossier,
+				retirerUnDroitDeDossier
+			]) {
+				const base = baseDePaille({ compte: { id: 'marc', nom: 'M', actif: true } });
+				const refus = await ecrire(base as unknown as Base, {
+					dossierId: 'a1',
+					identifiantDuCompte: 'marc.ferreira',
+					niveau: 'gestionnaire',
+					droit: droitDe(niveau),
+					appelantId: 'karim'
+				});
+				expect(refus).toEqual(REFUS_MUET);
+				/* Le refus est MUET — RG-ACC-04 — et la base n’a rien vu. */
+				expect(base.journal).toEqual([]);
+			}
+		}
+	});
+
+	it('un gestionnaire accorde, et l’écriture est une REPRISE SUR LA CLÉ PRIMAIRE', async () => {
+		const base = baseDePaille({ compte: { id: 'lea', nom: 'Léa Marchand', actif: true } });
+		const fait = await accorderUnDroitDeDossier(base as unknown as Base, {
+			dossierId: 'a1',
+			identifiantDuCompte: 'lea.marchand',
+			niveau: 'redacteur',
+			droit: droitDe('gestionnaire'),
+			appelantId: 'karim'
+		});
+		expect(fait).toEqual({ fait: true, nom: 'Léa Marchand', niveau: 'redacteur' });
+		/* Le couple `(dossier_id, compte_id)` est la cible de la reprise : c’est
+		   l’unicité qui donne son sens à RG-DRO-01, un droit AU PLUS par couple. */
+		const reprise = base.journal.find((l) => l.startsWith('inserer-avec-reprise'));
+		expect(reprise).toBeDefined();
+		expect(reprise).toContain('dossier_id');
+		expect(reprise).toContain('compte_id');
+	});
+
+	it('refuse un niveau que l’énumération ne connaît pas, sans rien écrire', async () => {
+		const base = baseDePaille({ compte: { id: 'lea', nom: 'Léa', actif: true } });
+		const refus = await accorderUnDroitDeDossier(base as unknown as Base, {
+			dossierId: 'a1',
+			identifiantDuCompte: 'lea.marchand',
+			niveau: null,
+			droit: droitDe('gestionnaire'),
+			appelantId: 'karim'
+		});
+		expect(refus).toEqual({ fait: false, message: NIVEAU_INCONNU });
+		expect(base.journal).toEqual([]);
+	});
+
+	it('refuse un identifiant de connexion que personne ne porte', async () => {
+		const base = baseDePaille({ compte: null });
+		const refus = await accorderUnDroitDeDossier(base as unknown as Base, {
+			dossierId: 'a1',
+			identifiantDuCompte: 'fantome',
+			niveau: 'lecteur',
+			droit: droitDe('gestionnaire'),
+			appelantId: 'karim'
+		});
+		expect(refus).toEqual({ fait: false, message: COMPTE_INTROUVABLE });
+		expect(base.journal).toEqual(['lire-compte']);
+	});
+
+	it('RG-M14-08 — refuse d’accorder à un compte désactivé, mais laisse RETIRER le sien', async () => {
+		const pierre = { id: 'pierre', nom: 'Pierre Dubois', actif: false };
+
+		const refus = await accorderUnDroitDeDossier(
+			baseDePaille({ compte: pierre }) as unknown as Base,
+			{
+				dossierId: 'a1',
+				identifiantDuCompte: 'pierre.dubois',
+				niveau: 'lecteur',
+				droit: droitDe('gestionnaire'),
+				appelantId: 'karim'
+			}
+		);
+		expect(refus).toEqual({ fait: false, message: COMPTE_DESACTIVE });
+
+		/* Le droit d’un compte désactivé reste RETIRABLE : sans quoi il resterait
+		   en base sans qu’aucun écran ne puisse le défaire. */
+		const retire = await retirerUnDroitDeDossier(
+			baseDePaille({ compte: pierre, droitPropre: 'lecteur' }) as unknown as Base,
+			{
+				dossierId: 'a1',
+				identifiantDuCompte: 'pierre.dubois',
+				niveau: null,
+				droit: droitDe('gestionnaire'),
+				appelantId: 'karim'
+			}
+		);
+		expect(retire).toEqual({ fait: true, nom: 'Pierre Dubois', niveau: null });
+	});
+});
+
+describe('un droit HÉRITÉ ne se change ni ne se retire ici', () => {
+	it('refuse le retrait d’un droit qui n’est pas posé sur ce dossier', async () => {
+		/* `DELETE` sans ligne réussit en silence : l’appelant repartirait
+		   convaincu d’avoir fermé un accès resté grand ouvert. */
+		const base = baseDePaille({
+			compte: { id: 'karim', nom: 'Karim Belhadj', actif: true },
+			droitPropre: null
+		});
+		const refus = await retirerUnDroitDeDossier(base as unknown as Base, {
+			dossierId: 'a1',
+			identifiantDuCompte: 'karim.belhadj',
+			niveau: null,
+			droit: droitDe('gestionnaire'),
+			appelantId: 'marc'
+		});
+		expect(refus).toEqual({ fait: false, message: DROIT_NON_PROPRE });
+		expect(base.journal).toEqual(['lire-compte', 'lire-droit-propre']);
+	});
+
+	it('refuse d’en changer le niveau, pour la même raison', async () => {
+		const base = baseDePaille({
+			compte: { id: 'karim', nom: 'Karim Belhadj', actif: true },
+			droitPropre: null
+		});
+		const refus = await changerUnDroitDeDossier(base as unknown as Base, {
+			dossierId: 'a1',
+			identifiantDuCompte: 'karim.belhadj',
+			niveau: 'lecteur',
+			droit: droitDe('gestionnaire'),
+			appelantId: 'marc'
+		});
+		expect(refus).toEqual({ fait: false, message: DROIT_NON_PROPRE });
+		expect(base.journal).not.toContain('mettre-a-jour');
+	});
+
+	it('change bien un droit PROPRE — l’autre polarité, P-5', async () => {
+		const base = baseDePaille({
+			compte: { id: 'marc', nom: 'Marc Ferreira', actif: true },
+			droitPropre: 'lecteur'
+		});
+		const fait = await changerUnDroitDeDossier(base as unknown as Base, {
+			dossierId: 'a1',
+			identifiantDuCompte: 'marc.ferreira',
+			niveau: 'gestionnaire',
+			droit: droitDe('gestionnaire'),
+			appelantId: 'karim'
+		});
+		expect(fait).toEqual({ fait: true, nom: 'Marc Ferreira', niveau: 'gestionnaire' });
+		expect(base.journal).toContain('mettre-a-jour');
+	});
+});
+
+describe('un gestionnaire ne se ferme pas la porte', () => {
+	it('refuse qu’il retire son PROPRE droit de gestion sur ce dossier', async () => {
+		const base = baseDePaille({
+			compte: { id: 'karim', nom: 'Karim Belhadj', actif: true },
+			droitPropre: 'gestionnaire'
+		});
+		const refus = await retirerUnDroitDeDossier(base as unknown as Base, {
+			dossierId: 'a1',
+			identifiantDuCompte: 'karim.belhadj',
+			niveau: null,
+			droit: droitDe('gestionnaire'),
+			appelantId: 'karim'
+		});
+		expect(refus).toEqual({ fait: false, message: AUTO_RETRAIT_DE_GESTION });
+		expect(base.journal).not.toContain('supprimer');
+	});
+
+	it('refuse aussi qu’il l’ABAISSE — la porte se ferme pareil', async () => {
+		for (const niveau of ['lecteur', 'redacteur'] as const) {
+			const base = baseDePaille({
+				compte: { id: 'karim', nom: 'Karim Belhadj', actif: true },
+				droitPropre: 'gestionnaire'
+			});
+			const refus = await changerUnDroitDeDossier(base as unknown as Base, {
+				dossierId: 'a1',
+				identifiantDuCompte: 'karim.belhadj',
+				niveau,
+				droit: droitDe('gestionnaire'),
+				appelantId: 'karim'
+			});
+			expect(refus).toEqual({ fait: false, message: AUTO_RETRAIT_DE_GESTION });
+			expect(base.journal).not.toContain('mettre-a-jour');
+		}
+	});
+
+	it('mais le laisse RETIRER le droit d’un AUTRE gestionnaire — l’autre polarité', async () => {
+		const base = baseDePaille({
+			compte: { id: 'marc', nom: 'Marc Ferreira', actif: true },
+			droitPropre: 'gestionnaire'
+		});
+		const fait = await retirerUnDroitDeDossier(base as unknown as Base, {
+			dossierId: 'a1',
+			identifiantDuCompte: 'marc.ferreira',
+			niveau: null,
+			droit: droitDe('gestionnaire'),
+			appelantId: 'karim'
+		});
+		expect(fait).toEqual({ fait: true, nom: 'Marc Ferreira', niveau: null });
+		expect(base.journal).toContain('supprimer');
+	});
+
+	it('et le laisse SE MAINTENIR gestionnaire — un réaccord sans abaissement passe', async () => {
+		const base = baseDePaille({ compte: { id: 'karim', nom: 'Karim Belhadj', actif: true } });
+		const fait = await accorderUnDroitDeDossier(base as unknown as Base, {
+			dossierId: 'a1',
+			identifiantDuCompte: 'karim.belhadj',
+			niveau: 'gestionnaire',
+			droit: droitDe('gestionnaire'),
+			appelantId: 'karim'
+		});
+		expect(fait).toEqual({ fait: true, nom: 'Karim Belhadj', niveau: 'gestionnaire' });
 	});
 });
