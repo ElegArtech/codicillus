@@ -137,6 +137,50 @@ export function segmentsDeDossier(chemin: string): readonly string[] {
 		.filter(Boolean);
 }
 
+/**
+ * Un nœud d'arborescence de dossiers, réduit à ce qu'une descente par nom lit.
+ *
+ * La forme complète — avec son décompte de notes — vit en `$lib/donnees/edition`
+ * sous le nom `DossierDeChoix`. Elle n'est pas importée ici : ce module est PUR
+ * et ne connaît rien de la base.
+ */
+export interface NoeudDeDossier {
+	readonly nom: string;
+	readonly enfants: readonly NoeudDeDossier[];
+}
+
+/**
+ * LE CHEMIN AFFICHÉ DÉSIGNE-T-IL UN DOSSIER DE CETTE ARBORESCENCE ?
+ *
+ * Rend le chemin quand il en désigne un, `null` sinon. Écrit pour `?dossier=`
+ * de `/notes/nouvelle`, qui porte la forme AFFICHÉE du chemin — celle que
+ * `Note.dossier` porte, celle que V-17 compare pour cocher son bouton radio,
+ * celle que la soumission renvoie. La forme d'ADRESSE, en segments slugifiés
+ * séparés par des barres obliques, ne descend pas cette arborescence : les deux
+ * représentations ne se confondent jamais, et c'est tout l'objet de ce fichier.
+ *
+ * POURQUOI VÉRIFIER PLUTÔT QUE FAIRE CONFIANCE. Un lien mis en signet survit au
+ * dossier qu'il nomme : renommé, déplacé, supprimé, le chemin ne désigne plus
+ * rien. Un chemin inconnu est alors IGNORÉ EN SILENCE par l'appelant — le
+ * formulaire s'ouvre, rien n'est coché, aucune erreur n'est levée. Un lien
+ * périmé ne doit pas empêcher d'écrire une note.
+ */
+export function dossierDeLArborescence(
+	arbre: readonly NoeudDeDossier[] | undefined,
+	chemin: string | null
+): string | null {
+	if (arbre === undefined || chemin === null || chemin === '') return null;
+	const segments = segmentsDeDossier(chemin);
+	if (segments.length === 0) return null;
+	let niveau: readonly NoeudDeDossier[] = arbre;
+	for (const segment of segments) {
+		const branche = niveau.find((n) => n.nom === segment);
+		if (branche === undefined) return null;
+		niveau = branche.enfants;
+	}
+	return chemin;
+}
+
 /* ═════════════════════════════════════════════════════════════════════════
    LE PROLONGEMENT DU LOT P-10 — `/notes`, `/signets`, ET LES DEUX FORMES DU
    FORMULAIRE DE SIGNET
