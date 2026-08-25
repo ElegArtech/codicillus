@@ -115,6 +115,13 @@ export function cablerLeTemoinDeConfiguration(racine: ParentNode): Debranchement
  * « Valeurs refusées » — c'est l'une de ses quatre positions. Personne ne le
  * remplissait.
  *
+ * TROIS BLOCS SE SONT AJOUTÉS AUX QUATRE, ET SUR LE MÊME PATRON. Le plafond de
+ * versions, la taille de pièce jointe et la durée de session sont désormais
+ * validés (`RG-M14-10` nomme « plafond négatif ») : sans bloc pour se dire,
+ * leur refus serait un enregistrement qui n'aboutit pas et qui ne l'annonce
+ * pas — le défaut de l'échec muet, réintroduit par le correctif qui rend ces
+ * trois écritures vivantes.
+ *
  * POURQUOI ICI ET NON DANS LE MODULE PARTAGÉ. `cablerLaConfiguration()` sert
  * aussi V-27 à V-32, qui n'ont aucun de ces quatre blocs. Le module partagé
  * rend le refus, cette fonction le peint.
@@ -122,8 +129,16 @@ export function cablerLeTemoinDeConfiguration(racine: ParentNode): Debranchement
 export function peindreLesRefusDeConfiguration(
 	racine: ParentNode
 ): (erreurs: readonly { readonly champ: string; readonly message: string }[]) => void {
-	/* Les quatre champs que l'action sait refuser — `ErreurDeConfiguration`. */
-	const CHAMPS_REFUSABLES = ['frais', 'vieil', 'portail', 'mot'] as const;
+	/* Les sept champs que l'action sait refuser — `ErreurDeConfiguration`. */
+	const CHAMPS_REFUSABLES = [
+		'frais',
+		'vieil',
+		'portail',
+		'mot',
+		'versions',
+		'taille',
+		'session'
+	] as const;
 
 	return (erreurs) => {
 		const parChamp = new Map(erreurs.map((e) => [e.champ, e.message]));
