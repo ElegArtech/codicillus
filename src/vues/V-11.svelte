@@ -13,11 +13,20 @@
 	 * Le gabarit d'adresse est `$lib/rangement/adresses` ; P-10 le prolongera en
 	 * `/notes` et `/signets`.
 	 *
-	 * LES LIENS RESTENT CEUX DU GEL — `href="#"`, comme `src/lib/coquille/*`.
-	 * ARB-013 devait permettre l'adresse réelle ; mesuré sur ce lot, le filtre de
-	 * le module de capture du banc ne retire pas les lignes `/url:` de l'instantané
-	 * ARIA. Le constat est déclaré au rapport ; l'instrument est en écriture
-	 * humaine seule. Voir l'en-tête de `V-10.svelte`.
+	 * LES GESTES DE CET ÉCRAN MÈNENT QUELQUE PART, et c'est la route qui les
+	 * accroche, par sélecteur et jamais par balisage réécrit (`ARB-063`,
+	 * `[domaine]/cablage.ts`) : les segments de la barre de fraîcheur, les quatre
+	 * indicateurs de santé, les six pastilles de module, les lignes de type et les
+	 * lignes de contributeur ouvrent la liste des notes du domaine, sur la facette
+	 * qui les nomme quand elle existe. Trois n'en ont pas et ouvrent la liste sans
+	 * filtre — un filtre approchant mentirait ; le câblage le dit et l'énumère.
+	 *
+	 * UNE LIGNE DE CONTRIBUTEUR EST UN BOUTON, comme la ligne de type qui lui fait
+	 * face dans la colonne. Le gel la dessine en `<div>` faute de destination —
+	 * il n'a pas de serveur —, et elle ne menait donc nulle part : la facette
+	 * `auteur` de la liste existe et est honorée, la ligne y mène. La règle de
+	 * neutralisation est celle de `.type-ligne`, sa jumelle, et le rendu ne bouge
+	 * pas d'un pixel.
 	 *
 	 * HUIT ÉTATS — `verif/scenarios/V-11.json`. Trois axes, vecteur complet :
 	 * domaine × profil × état.
@@ -652,16 +661,8 @@
 							>
 						</div>
 						<div class="panneau__corps" id="contribs">
-							{#if !vide}{#each contribs as c, rang (rang)}<div class="contrib">
-										<span class="contrib__av">{c.initiales}</span><span class="contrib__nom"
-											>{c.nom}</span
-										><span class="contrib__part"
-											><span class="contrib__barre"
-												><i style="width:{Math.round((c.notes / maxiContrib) * 100)}%"></i></span
-											><span class="contrib__n">{c.notes} {c.notes > 1 ? 'notes' : 'note'}</span
-											></span
-										>
-									</div>{/each}{/if}
+							<!-- prettier-ignore -->
+							{#if !vide}{#each contribs as c, rang (rang)}<button class="contrib" type="button"><span class="contrib__av">{c.initiales}</span><span class="contrib__nom">{c.nom}</span><span class="contrib__part"><span class="contrib__barre"><i style="width:{Math.round((c.notes / maxiContrib) * 100)}%"></i></span><span class="contrib__n">{c.notes + (c.notes > 1 ? ' notes' : ' note')}</span></span></button>{/each}{/if}
 						</div>
 					</section>
 				</div>

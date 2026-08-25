@@ -30,21 +30,39 @@
  * repose pas sur un cas que le corpus ne présente pas (`P-5`, `P-26`).
  *
  * ═════════════════════════════════════════════════════════════════════════
- * LES DEUX POINTS D'ENTRÉE FILTRÉS, ET EUX SEULS
+ * LES SEPT PARAMÈTRES DE CETTE ROUTE SONT TOUS HONORÉS
  *
- * `docs/routes.md` §4.2 nomme sept paramètres pour cette route et donne les deux
- * qui ouvrent la liste DÉJÀ FILTRÉE : « depuis la barre de fraîcheur ·
- * obsolètes » vaut `?fraicheur=Obsolète probable`, « depuis l'accueil ·
- * brouillons » vaut `?statut=Brouillon`. Ce sont exactement les deux positions
- * de l'axe « Arrivée » de la planche, et les seules que la vue sache recevoir :
- * `src/vues/V-12.svelte:89` ne lit qu'`arr`, et le gel calcule lui-même les
- * valeurs retenues à partir de cette unique clé (`V-12:2303`, « la liste s'ouvre
- * déjà filtrée, et le filtre est visible et retirable comme n'importe quel
- * autre »). Les cinq autres paramètres — `type`, `dossier`, `auteur`,
- * `etiquette`, `tri` — n'ont aucun chemin jusqu'à la vue sans lui ajouter une
- * propriété, ce que le contrat de ce lot interdit : ils sont IGNORÉS, jamais
- * refusés, et l'écart est déclaré au rapport. Ignorer plutôt que refuser est
- * d'ailleurs la règle de §4.2 pour tout paramètre non honoré.
+ * `docs/routes.md` §4.2 en nomme sept, et ce chargeur les lit tous : les six
+ * facettes RÉPÉTABLES — `type`, `fraicheur`, `statut`, `dossier`, `auteur`,
+ * `etiquette` — par `retenuesDeLAdresse()`, plus l'ordre `tri`. À l'intérieur
+ * d'une facette les valeurs sont en OU, entre facettes en ET.
+ *
+ * L'AXE « ARRIVÉE » DE LA PLANCHE SUBSISTE À CÔTÉ, et ce n'est pas une
+ * contradiction : `arriveeDepuisLAdresse()` reconnaît les deux points d'entrée
+ * que §4.2 nomme — « depuis la barre de fraîcheur · obsolètes » vaut
+ * `?fraicheur=Obsolète probable`, « depuis l'accueil · brouillons » vaut
+ * `?statut=Brouillon` — et la vue s'en sert pour DÉRIVER elle-même le filtre
+ * quand aucune valeur retenue ne lui est passée. `retenues` a la priorité
+ * (`V-12.svelte`, `choisis`), et les deux mêmes couples d'adresse produisent
+ * donc le même résultat par les deux chemins. Redondance, pas contradiction.
+ *
+ * Un paramètre inconnu s'IGNORE, jamais ne refuse : c'est la règle de §4.2 pour
+ * tout paramètre non honoré, et elle vaut aussi pour une valeur d'ordre
+ * inconnue, qui retombe sur l'ordre du gel.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LE DOMAINE SERVI EST LE DOMAINE RÉSOLU, ET IL FAUT DIRE CE QUE ÇA RÉPARE
+ *
+ * `src/vues/V-12.svelte` retrouve son domaine courant par son NOM, dans la
+ * liste `domaines` qu'on lui passe — à défaut, celle du jeu de semence, qui
+ * n'en porte que quatre. Ce chargeur ne la passait pas : sur un domaine que le
+ * jeu ne nomme pas, la vue retombait sur le PREMIER de la liste de semence et
+ * l'écran titrait « Notes de Infrastructure » en servant les notes
+ * d'Infrastructure — sur l'adresse d'un autre domaine. Mesuré le 25/08/2026 sur
+ * `/univers/gouvernance/doctrine/notes`.
+ *
+ * La liste passée n'a qu'un élément, et c'est exact : cet écran est la liste
+ * d'UN domaine, il n'en montre jamais un autre.
  */
 import { basePartagee } from '$lib/base/acces';
 import type { Base } from '$lib/base/acces';
@@ -61,7 +79,7 @@ import {
 	refuserLAdresse
 } from '$lib/donnees/rangement';
 import { inArray } from 'drizzle-orm';
-import type { IdentifiantNote, Note } from '../../../../../../seeds/corpus';
+import type { Domaine, IdentifiantNote, Note } from '../../../../../../seeds/corpus';
 import type { PageServerLoad } from './$types';
 
 /** Les deux valeurs de facette que §4.2 nomme, recopiées telles quelles. */
@@ -99,6 +117,17 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const aDesNotes = notes.some((n) => n.domaine === resolution.ressource.nom);
 
 	return {
+		/**
+		 * LE DOMAINE RÉSOLU, ET LUI SEUL — voir l'en-tête. Sans lui, la vue
+		 * retombe sur le premier domaine du jeu de semence.
+		 */
+		domaines: [
+			{
+				nom: resolution.ressource.nom,
+				univers: resolution.ressource.universNom,
+				couleur: resolution.ressource.couleur
+			} as Domaine
+		],
 		vecteur: {
 			dom: resolution.ressource.nom,
 			arr: arriveeDepuisLAdresse(url.searchParams),

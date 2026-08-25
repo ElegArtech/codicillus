@@ -39,6 +39,35 @@ export interface OptionsDesFacettes {
 	readonly preserves?: readonly string[];
 }
 
+/** L'attribut par lequel un menu rendu dit QUELLE facette il porte. */
+export const ATTRIBUT_DE_FACETTE = 'data-facette';
+
+/**
+ * LA FACETTE QU'UN MENU RENDU DÉSIGNE — par son identifiant, et par son rang
+ * seulement à défaut.
+ *
+ * Le rang seul MENTAIT. Une vue ne rend un menu que si la facette a au moins
+ * une valeur — V-22 écarte les facettes vides, et les étiquettes d'un signet
+ * sont facultatives : sur un domaine dont aucun signet n'en porte, le seul
+ * menu rendu est « Auteur », au rang 0, et cocher un auteur écrivait
+ * `?etiquette={nom de l'auteur}`. L'écran d'arrivée affichait alors la
+ * pastille « Étiquette : #{nom} » et « 0 sur N signets ». Le défaut se
+ * déclenche au premier signet sans étiquette, et V-12 porte le même risque dès
+ * que toutes ses notes sont à la racine.
+ *
+ * Le libellé ne peut pas servir d'identifiant : le bouton du gel porte le nom
+ * SUIVI de son compteur — « Type3 » —, et le découper serait une devinette. Le
+ * rang reste le repli pour un balisage qui ne porte pas encore l'attribut.
+ */
+export function facetteDuMenu(
+	facettes: readonly DeclarationDeFacette[],
+	identifiant: string | null,
+	rang: number
+): DeclarationDeFacette | undefined {
+	if (identifiant !== null && identifiant !== '') return facettes.find((f) => f.id === identifiant);
+	return rang < 0 ? undefined : facettes[rang];
+}
+
 /** Le libellé d'un nœud, blancs réduits. */
 function libelle(noeud: Element | null | undefined): string {
 	return (noeud?.textContent ?? '').replace(/\s+/g, ' ').trim();
@@ -132,14 +161,17 @@ export function cablerLesFacettes(
 		/* 4. COCHER OU DÉCOCHER UNE VALEUR. */
 		const boite = cible.closest('.fac-menu .val');
 		if (boite !== null) {
-			/* LA FACETTE SE RECONNAÎT À SON RANG, PAS À SON LIBELLÉ. Le bouton du
-			   gel porte le nom SUIVI de son compteur — « Type3 » — et le découper
-			   serait une devinette. Les menus sont rendus dans l'ordre de
-			   déclaration : le rang est exact, et il le reste si un libellé change. */
+			/* LA FACETTE SE RECONNAÎT À SON IDENTIFIANT, que le menu rendu porte.
+			   Voir `facetteDuMenu()` : le rang seul se décale dès qu'une vue
+			   n'émet pas un menu, et il écrivait alors la mauvaise clé. */
 			const menu = boite.closest('.fac-menu');
 			const menus = Array.from(racine.querySelectorAll('.fac-menu'));
 			const rang = menu === null ? -1 : menus.indexOf(menu);
-			const declaration = rang < 0 ? undefined : options.facettes[rang];
+			const declaration = facetteDuMenu(
+				options.facettes,
+				menu?.getAttribute(ATTRIBUT_DE_FACETTE) ?? null,
+				rang
+			);
 			const nom = libelle(boite.querySelector('.val__nom'));
 			if (declaration === undefined) return;
 			const valeur = valeurNue(declaration, nom);
