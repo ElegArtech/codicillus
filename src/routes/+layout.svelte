@@ -57,7 +57,15 @@
 		   rien à suivre. `V-07.svelte` lit ce `null` et n'émet pas la ligne
 		   « Dernière synchronisation … » du pied, plutôt que la date fabriquée du
 		   jeu de semence. */
-		synchro: null
+		synchro: null,
+		/* LE RATTACHEMENT DÉCIDE DE CE QUE LA BARRE ÉMET. Les deux entrées du
+		   menu « Créer » qui exigent un domaine étaient servies puis retirées
+		   par le câblage, après hydratation : `P-09` les veut absentes, donc
+		   non émises. La page d'erreur peut être rendue sans données de
+		   gabarit — la coquille retombe alors sur son rendu par défaut. */
+		get rangement() {
+			return data.rangement;
+		}
 	});
 
 	/**

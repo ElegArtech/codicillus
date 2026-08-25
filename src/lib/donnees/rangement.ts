@@ -390,6 +390,44 @@ export function domaineLisible(acces: AccesAuRangement, domaineId: string): bool
 	);
 }
 
+/** Un domaine que l'appelant peut ouvrir, dans l'ordre d'affichage du rail. */
+export interface DomaineLisible {
+	readonly id: string;
+	readonly nom: string;
+	readonly univers: string;
+	readonly couleur: string;
+}
+
+/**
+ * LES DOMAINES QUE L'APPELANT PEUT OUVRIR — une seule décision pour tous ceux
+ * qui les NOMMENT.
+ *
+ * Le rail était filtré ici, et le tableau de bord de l'accueil lisait la table
+ * entière : la MÊME réponse portait donc un rail vide et des cartes de domaines
+ * cliquables dont chacune menait en 404. `RG-ACC-01` — la structure de
+ * l'instance est une information qu'un compte sans droit n'a pas à lire — et
+ * `P-03` — une entrée visible est une entrée qui fonctionne.
+ *
+ * La fonction est ici, et non recopiée dans chaque chargeur, précisément pour
+ * que deux écrans de la même réponse ne PUISSENT plus se contredire.
+ */
+export async function lireLesDomainesLisibles(
+	base: Base,
+	acces: AccesAuRangement
+): Promise<readonly DomaineLisible[]> {
+	const lignes = await base
+		.select({
+			id: domaines.id,
+			nom: domaines.nom,
+			univers: univers.nom,
+			couleur: domaines.couleur
+		})
+		.from(domaines)
+		.innerJoin(univers, eq(univers.id, domaines.universId))
+		.orderBy(univers.ordre, domaines.nom);
+	return lignes.filter((d) => domaineLisible(acces, d.id));
+}
+
 /* ═══════════════════════════════════════════ Le refus ══════════════════ */
 
 /**
