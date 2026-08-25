@@ -44,7 +44,10 @@ import {
 	estLeDernierAdministrateur,
 	MESSAGE_ADRESSE_INVALIDE,
 	MESSAGE_LIBELLE_VIDE,
+	MESSAGE_PLAFOND_HORS_DOMAINE,
+	MESSAGE_SESSION_HORS_DOMAINE,
 	MESSAGE_SEUIL_MINIMAL,
+	MESSAGE_TAILLE_HORS_DOMAINE,
 	messageSeuilNonCroissant,
 	nomConfirme,
 	roleDepuisLeLibelle,
@@ -59,6 +62,7 @@ import {
 	verdictDuChangementDeRole
 } from './administration';
 import { ROLE_DEPUIS_ENUM } from './lecture';
+import { dureeDInactiviteEnMinutes } from '../auth/sessions';
 import type { Configuration } from '../../../seeds/corpus';
 
 /* ═══════════════════════════════════ `RG-M14-01` ════════════════════════ */
@@ -486,6 +490,69 @@ describe('RG-M14-10 — la validation refuse les combinaisons incohérentes', ()
 		expect(verdict.issue).toBe('valeurs-refusees');
 		if (verdict.issue !== 'valeurs-refusees') return;
 		expect(verdict.erreurs).toEqual([{ champ: 'mot', message: MESSAGE_LIBELLE_VIDE }]);
+	});
+
+	/* LES TROIS CONTRÔLES QUI MANQUAIENT, ET CE QU'ILS COÛTAIENT.
+
+	   `enregistrerLaConfiguration()` posait ses lignes par `update` nu : sur une
+	   instance neuve, `parametres` est vide, l'ordre touchait zéro ligne et les
+	   sept réglages étaient inertes. En rendant ces écritures vivantes, on a
+	   rendu vivantes trois valeurs que RIEN ne validait — et le `min` des champs
+	   ne garde rien, puisque `console/cablage.ts` compose sa charge depuis
+	   `champ.value` sur un `click`, sans jamais faire évaluer les bornes par le
+	   navigateur. */
+
+	it('refuse un plafond de versions vidé, négatif ou hors des bornes du champ', () => {
+		/* `Number('')` vaut zéro : le champ vidé arrive comme un plafond nul. */
+		for (const versions of [0, -3, 4, 501, 2.5, Number.NaN]) {
+			const verdict = validerLaConfiguration({ ...CONFIGURATION_VALABLE, versionsMax: versions });
+			expect(verdict.issue).toBe('valeurs-refusees');
+			if (verdict.issue !== 'valeurs-refusees') continue;
+			expect(verdict.erreurs).toEqual([
+				{ champ: 'versions', message: MESSAGE_PLAFOND_HORS_DOMAINE }
+			]);
+		}
+		/* Les deux bornes du champ passent — refuser 5 ou 500 serait ajouter une
+		   règle que l'écran ne montre pas. */
+		for (const versions of [5, 500]) {
+			expect(
+				validerLaConfiguration({ ...CONFIGURATION_VALABLE, versionsMax: versions }).issue
+			).toBe('possible');
+		}
+	});
+
+	it('refuse une taille de pièce jointe nulle — elle refuserait tout dépôt', () => {
+		for (const taille of [0, -1, 501, Number.NaN]) {
+			const verdict = validerLaConfiguration({
+				...CONFIGURATION_VALABLE,
+				tailleMaxPieceJointe: taille
+			});
+			expect(verdict.issue).toBe('valeurs-refusees');
+			if (verdict.issue !== 'valeurs-refusees') continue;
+			expect(verdict.erreurs).toEqual([{ champ: 'taille', message: MESSAGE_TAILLE_HORS_DOMAINE }]);
+		}
+	});
+
+	it('refuse une durée de session nulle — le lecteur de session LÈVE dessus', () => {
+		/* Le domaine n'est pas choisi ici : `dureeDInactiviteEnMinutes()` refuse
+		   déjà zéro et les négatifs, et il le fait en levant depuis
+		   `hooks.server.ts`. Écrire un zéro sortait TOUTE requête authentifiée en
+		   500 — mesuré : `GET /console` → 500 après un enregistrement à zéro. */
+		expect(() => dureeDInactiviteEnMinutes(0)).toThrow();
+		for (const duree of [0, -30, Number.NaN]) {
+			const verdict = validerLaConfiguration({ ...CONFIGURATION_VALABLE, dureeSession: duree });
+			expect(verdict.issue).toBe('valeurs-refusees');
+			if (verdict.issue !== 'valeurs-refusees') continue;
+			expect(verdict.erreurs).toEqual([
+				{ champ: 'session', message: MESSAGE_SESSION_HORS_DOMAINE }
+			]);
+		}
+		/* Les cinq durées que le sélecteur propose passent toutes. */
+		for (const duree of [30, 60, 120, 240, 480]) {
+			expect(validerLaConfiguration({ ...CONFIGURATION_VALABLE, dureeSession: duree }).issue).toBe(
+				'possible'
+			);
+		}
 	});
 
 	it('rend TOUTES les erreurs, jamais la première — un aller-retour par faute serait cruel', () => {

@@ -62,7 +62,7 @@
  * `chercherLesNotes()`, dont l'en-tête l'explique — « c'est la forme qui tient la
  * propriété, pas la relecture ».
  */
-import { and, count, desc, eq, max } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, max } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import {
@@ -87,6 +87,7 @@ import {
 } from '../edition/document';
 import {
 	empreinteDuCorps,
+	numerosExcedentaires,
 	versionDUnEnregistrement,
 	type CorpsDeLaNote,
 	type EtatEnBase,
@@ -113,6 +114,7 @@ import {
 	type Registre
 } from './note';
 import {
+	lireConfiguration,
 	lireTemplates,
 	lireTypesDeFiche,
 	lireTypesDeNote,
@@ -859,6 +861,58 @@ async function destinationDuRangement(
  */
 type Transaction = Parameters<Parameters<Base['transaction']>[0]>[0];
 
+/**
+ * LA PURGE DU PLAFOND DE VERSIONS — `RG-M07-03`, et les trois phrases d'écran
+ * qui l'affirmaient sans que rien ne la fasse.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * ELLE EST DANS LA TRANSACTION D'ENREGISTREMENT, ET NON DANS UNE TÂCHE DE FOND
+ *
+ * `004_versions.montee.sql:22-24` la rangeait en tâche de fond. Le produit n'a
+ * AUCUN ordonnanceur — ni tâche périodique, ni file —, et une purge confiée à
+ * un ordonnanceur qui n'existe pas est exactement ce que trois écrans ont
+ * promis pendant que rien ne se supprimait. Purger ici la met sous la même
+ * transaction que l'insertion qui vient de creuser l'excédent : ou les deux
+ * tiennent, ou aucune. C'est une convention de lot qui est levée, pas une règle
+ * de produit — le déclencheur d'immuabilité ne porte que l'UPDATE, et le
+ * commentaire de la migration nomme déjà ce DELETE « légitime ».
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE QUE LA PURGE NE PEUT PAS FAIRE DISPARAÎTRE SOUS UN LECTEUR
+ *
+ * RESTAURER n'est pas un retour en arrière mais un ENREGISTREMENT du corps
+ * ancien (`/notes/{identifiant}/+page.server.ts`, action `restaurer`) : le
+ * contenu restauré devient la version de plus haut numéro, celle que la purge
+ * garde en premier. Purger la version d'origine ne perd donc aucun contenu.
+ *
+ * Une COMPARAISON déjà ouverte sur une borne purgée ne casse pas non plus :
+ * `lireLaComparaison()` (`histoire.ts`) rend `presentes: { a, b }`, deux
+ * booléens, et l'écran dit « la version n n'existe pas » — le cas d'une borne
+ * absente était déjà tenu, parce qu'une adresse forgée le produisait déjà.
+ *
+ * La fonction rend le NOMBRE de versions retirées : c'est ce qui rend la purge
+ * observable par l'appelant sans relire la table.
+ */
+async function purgerLesVersions(
+	tx: Transaction,
+	noteId: string,
+	plafond: number
+): Promise<number> {
+	const presentes = await tx
+		.select({ numero: versions.numero })
+		.from(versions)
+		.where(eq(versions.noteId, noteId));
+	const excedent = numerosExcedentaires(
+		presentes.map((v) => v.numero),
+		plafond
+	);
+	if (excedent.length === 0) return 0;
+	await tx
+		.delete(versions)
+		.where(and(eq(versions.noteId, noteId), inArray(versions.numero, excedent)));
+	return excedent.length;
+}
+
 async function etiquetteDuLibelle(tx: Transaction, libelle: string): Promise<string> {
 	const deja = await tx
 		.select({ id: etiquettes.id })
@@ -1059,6 +1113,12 @@ export async function enregistrerLaNote(
 		.from(versions)
 		.where(eq(versions.noteId, ligne.id));
 
+	/* LE PLAFOND EST LU À CHAQUE ENREGISTREMENT, jamais retenu : `RG-M14-09` —
+	   « toute modification de seuil provoque un recalcul immédiat » — et V-33
+	   annonce l'effet « dès le prochain enregistrement d'une note ». Un plafond
+	   mémorisé au démarrage rendrait cette phrase fausse jusqu'au redémarrage. */
+	const plafondDeVersions = (await lireConfiguration(base)).versionsMax;
+
 	/* La version capture ce que l'enregistrement PRODUIT — `RG-M07-02`, et
 	   l'en-tête de `enregistrement.ts`, où quatre relevés de V-15 le tranchent.
 	   Le titre passé est donc celui d'APRÈS. */
@@ -1138,6 +1198,14 @@ export async function enregistrerLaNote(
 				corpsOperationnel: version.corpsOperationnel
 			});
 		}
+		/* LA PURGE SUIT L'INSERTION, DANS LA MÊME TRANSACTION, ET ELLE TOURNE MÊME
+		   QUAND AUCUNE VERSION N'A ÉTÉ ÉCRITE. V-33 : « Réduire cette valeur
+		   supprimera les versions excédentaires DÈS LE PROCHAIN ENREGISTREMENT
+		   d'une note » — l'écran engage l'enregistrement, pas la capture d'une
+		   version, et un enregistrement qui ne change que le titre n'en écrit
+		   aucune (`RG-M07-01`). La gager sur la capture rendrait la phrase fausse
+		   pour ce cas-là. */
+		await purgerLesVersions(tx, ligne.id, plafondDeVersions);
 		/* LA LISTE SOUMISE REMPLACE LA LISTE COURANTE — la liaison est vidée pour
 		   cette note, puis réécrite dans l'ordre soumis. Le rang est l'ordre de
 		   saisie : `etiquettes_de_note_ordre_unique` en fait une colonne
