@@ -147,11 +147,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		/**
 		 * CE QUE CETTE NOTE A MIS DANS LES CHAMPS DE SON TYPE.
 		 *
-		 * `noteModifiee` porte le NOM du type de fiche, jamais ses valeurs — la
-		 * colonne `proprietes_typees` a sa propre lecture, et elle est restreinte
-		 * dans la requête (`ADR-006`). Sans les deux, l'éditeur rouvrait une fiche
-		 * « Serveur » sur « Aucun — note simple », panneau vide : l'écran mentait
-		 * sur l'état de la note, et un enregistrement l'aurait dépouillée.
+		 * `noteModifiee` porte le NOM du type de fiche, jamais ses valeurs : la
+		 * colonne `proprietes_typees` a sa propre lecture.
+		 *
+		 * CE QUI GARDE CETTE LECTURE EST EN AMONT, PAS DANS LA REQUÊTE.
+		 * `lireLesProprietesDeFiche()` ne filtre que sur les identifiants qu'on
+		 * lui nomme ; le seul nommé ici est celui que `resoudreLEditionDUneNote()`
+		 * vient d'accorder à l'identité — l'appel est sous son refus, et l'appeler
+		 * ailleurs sans cette porte lirait une note interdite.
+		 *
+		 * Sans les deux, l'éditeur rouvrait une fiche « Serveur » sur « Aucun —
+		 * note simple », panneau vide : l'écran mentait sur l'état de la note, et
+		 * un enregistrement l'aurait dépouillée.
 		 */
 		proprietesDeFiche:
 			(await lireLesProprietesDeFiche(base, [params.identifiant]))[params.identifiant] ?? {},
