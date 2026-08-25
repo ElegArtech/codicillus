@@ -190,6 +190,7 @@
 		 * Les distinctions du barème. Absente, aucune — le barème vivait dans le
 		 * jeu de démonstration, et aucune table ne le porte : un barème inventé
 		 * mesurerait le titulaire contre des seuils qui ne sont d'aucune instance.
+		 * Aucune servie, le bloc de l'onglet SE TAIT tout entier.
 		 */
 		distinctions?: readonly Distinction[];
 		/** Le flux d'activité, tel que la base le porte — vide tant qu'aucune table ne l'écrit. */
@@ -889,13 +890,15 @@
 			data-actif={onglet === 'distinctions' ? 'oui' : 'non'}
 			role="tabpanel"
 		>
-			<p
-				class="etape__sous"
-				style="font-family:var(--f-lecture);font-size:var(--t-base);color:var(--c-encre-2);line-height:1.6;margin:0 0 var(--e-5);max-width:64ch"
-			>
-				Ces distinctions sont les vôtres et ne sont visibles que de vous. Elles ne donnent lieu à
-				aucun classement : documenter n'est pas une compétition.
-			</p>
+			{#if jauges.length > 0}
+				<p
+					class="etape__sous"
+					style="font-family:var(--f-lecture);font-size:var(--t-base);color:var(--c-encre-2);line-height:1.6;margin:0 0 var(--e-5);max-width:64ch"
+				>
+					Ces distinctions sont les vôtres et ne sont visibles que de vous. Elles ne donnent lieu à
+					aucun classement : documenter n'est pas une compétition.
+				</p>
+			{/if}
 
 			<span class="etiq" style="display:block;margin-bottom:var(--e-3)">Vos contributions</span>
 			<!-- prettier-ignore -->
@@ -906,26 +909,31 @@
 					><span class="stat__sous">{i[2]}</span
 				></div>{/each}</div>
 
-			<span class="etiq" style="display:block;margin:var(--e-6) 0 var(--e-3)">Distinctions</span>
 			<!--
-				Les six sont toujours affichées, obtenues ou non : une zone vide serait
-				décourageante là où une progression est une invitation.
+				LE BARÈME NE VIENT D'AUCUNE TABLE, ET SANS DISTINCTION SERVIE LE BLOC SE
+				TAIT. Une étiquette au-dessus d'un conteneur vide ne dit rien : elle
+				annonce une zone que l'écran ne peut pas remplir. Servi, le barème
+				s'affiche entier, distinctions obtenues ou non — une progression est une
+				invitation.
 			-->
-			<!-- prettier-ignore -->
-			<div class="distinctions" id="distinctions"
-				>{#each jauges as j (j.distinction.id)}<article class="dist" data-obtenue={j.obtenue ? 'oui' : 'non'} aria-label={`${j.distinction.nom}, ${j.distinction.critere}, ${etatDeLaJauge(j)}`}
-					><span class="dist__sceau" aria-hidden="true"
-						>{#if j.obtenue}<svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg>{:else if j.valeur === null}{RIEN}{:else}{`${Math.min(99, j.part)}%`}{/if}</span
-					><div class="dist__nom">{j.distinction.nom}</div
-					><div class="dist__critere">{j.distinction.critere}</div
-					><div class="dist__jauge"
-						><div class="dist__piste"><i style="width:{j.part}%"></i></div
-						><div class="dist__chiffre"
-							><b>{`${j.valeur === null ? RIEN : nb(Math.min(j.valeur, j.distinction.seuil))} / ${nb(j.distinction.seuil)}`}</b
-							><span class="dist__reste">{j.valeur === null ? 'mesure indisponible' : j.obtenue ? 'obtenue' : `encore ${nb(j.distinction.seuil - j.valeur)} ${j.distinction.quoi}`}</span
+			{#if jauges.length > 0}
+				<span class="etiq" style="display:block;margin:var(--e-6) 0 var(--e-3)">Distinctions</span>
+				<!-- prettier-ignore -->
+				<div class="distinctions" id="distinctions"
+					>{#each jauges as j (j.distinction.id)}<article class="dist" data-obtenue={j.obtenue ? 'oui' : 'non'} aria-label={`${j.distinction.nom}, ${j.distinction.critere}, ${etatDeLaJauge(j)}`}
+						><span class="dist__sceau" aria-hidden="true"
+							>{#if j.obtenue}<svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg>{:else if j.valeur === null}{RIEN}{:else}{`${Math.min(99, j.part)}%`}{/if}</span
+						><div class="dist__nom">{j.distinction.nom}</div
+						><div class="dist__critere">{j.distinction.critere}</div
+						><div class="dist__jauge"
+							><div class="dist__piste"><i style="width:{j.part}%"></i></div
+							><div class="dist__chiffre"
+								><b>{`${j.valeur === null ? RIEN : nb(Math.min(j.valeur, j.distinction.seuil))} / ${nb(j.distinction.seuil)}`}</b
+								><span class="dist__reste">{j.valeur === null ? 'mesure indisponible' : j.obtenue ? 'obtenue' : `encore ${nb(j.distinction.seuil - j.valeur)} ${j.distinction.quoi}`}</span
+							></div
 						></div
-					></div
-				></article>{/each}</div>
+					></article>{/each}</div>
+			{/if}
 		</section>
 
 		<!-- ============ ACTIVITÉ ============ -->

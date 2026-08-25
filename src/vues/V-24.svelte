@@ -388,11 +388,7 @@
 		readonly illus: readonly SegmentIllustre[];
 	}
 
-	/* L'ILLUSTRATION NOMMAIT « Infrastructure », UN DOMAINE DU JEU DE
-	   DÉMONSTRATION. Sur une instance neuve, la vignette montrait donc un
-	   domaine qui n'existe pas et que rien ne pose : elle nomme désormais le
-	   domaine RÉELLEMENT proposé pour la destination. */
-	const SCENARIOS: readonly Scenario[] = $derived([
+	const SCENARIOS: readonly Scenario[] = [
 		{
 			id: SCENARIO_LIVRE,
 			nom: 'Importer des notes dans un domaine existant',
@@ -400,7 +396,7 @@
 			illus: [
 				{
 					gras: false,
-					texte: `Exploitation/\n  Sauvegardes/\n    Restauration.docx\n\n→ ${domaineParDefaut}\n   └ `
+					texte: 'Exploitation/\n  Sauvegardes/\n    Restauration.docx\n\n→ Infrastructure\n   └ '
 				},
 				{ gras: true, texte: 'Exploitation' },
 				{ gras: false, texte: '\n      └ ' },
@@ -408,7 +404,7 @@
 				{ gras: false, texte: '\n         └ Restauration' }
 			]
 		}
-	]);
+	];
 
 	/**
 	 * CE QUI EST OFFERT — le filtre est ici, et il est PORTÉ PAR LA SOURCE.
