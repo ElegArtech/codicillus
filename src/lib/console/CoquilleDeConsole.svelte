@@ -54,7 +54,8 @@
 	} from '../../../seeds/corpus';
 	import Coquille from '../coquille/Coquille.svelte';
 	import NavigationConsole from './NavigationConsole.svelte';
-	import { GROUPES_DE_CONSOLE, filDeConsole, type CleDeSection } from './sections';
+	import { filDeConsole, nomDeSection, type CleDeSection } from './sections';
+	import { vocabulaireRendu } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** La section rendue — elle porte `aria-current="page"` et clôt le fil. */
@@ -98,10 +99,15 @@
 		enfants
 	}: Proprietes = $props();
 
-	/** Le nom de la section, au catalogue — jamais recopié dans la vue. */
-	const nom = $derived(
-		GROUPES_DE_CONSOLE.flatMap((g) => g.sections).find((s) => s.cle === section)?.nom ?? section
-	);
+	/**
+	 * Le nom de la section, au catalogue — jamais recopié dans la vue.
+	 *
+	 * Le catalogue est devenu une FONCTION DE SON VOCABULAIRE : « Types de
+	 * fiches » porte le terme renommable de `M14.7`, et le figer à l'import
+	 * rendait le renommage inopérant. Le mot descend par le contexte de coquille.
+	 */
+	const mots = vocabulaireRendu();
+	const nom = $derived(nomDeSection(section, mots));
 </script>
 
 <Coquille
