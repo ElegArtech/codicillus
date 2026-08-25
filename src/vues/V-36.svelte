@@ -42,6 +42,11 @@
 	 * de dossiers annoncé par « L'arborescence de dossiers, reproduite » et
 	 * l'arborescence d'archive en sortent tous.
 	 *
+	 * LES NOMS DE L'ARCHIVE, EUX, N'EN SORTENT PLUS. Ils étaient des littéraux
+	 * écrits ici, et ils avaient divergé de la fabrique sur cinq lignes d'un
+	 * bloc de six ; ils viennent désormais de `$lib/export/noms.ts`, la source
+	 * que `construireLArchive()` lit elle-même.
+	 *
 	 * LE NOM D'ARCHIVE PORTE UNE DATE, ET ELLE N'EST PAS ÉCRITE À LA MAIN. Le
 	 * gel écrit `ardoise(dom) + "-2026-08-13.zip"` (`V-36:2964`, `V-36:3061`).
 	 * `2026-08-13` est `DATE_REFERENCE` de `seeds/corpus.ts` — « la date à
@@ -99,6 +104,18 @@
 	} from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
+	/* LES NOMS DE L'ARCHIVE VIENNENT DE LA FABRIQUE QUI LA PRODUIT, jamais de
+	   littéraux écrits ici. `$lib/export/archive.ts` dépend de `node:zlib` par
+	   son écriture de zip et ne peut pas entrer dans un paquet de navigateur ;
+	   `./noms` porte les noms seuls, sans aucune dépendance, et `archive.ts`
+	   les réexporte. Une seule définition, deux lecteurs. */
+	import {
+		DOSSIER_DES_PIECES,
+		NOM_DU_RAPPORT,
+		cheminDArchive,
+		echapperSegment,
+		nomDeFichierDeNote
+	} from '$lib/export/noms';
 	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
 
 	interface Proprietes {
@@ -297,21 +314,72 @@
 		return nomsDArchive[domaineCourant] ?? null;
 	});
 
-	/** L'arborescence d'archive (`V-36:2955-2969`), montrée plutôt que décrite. */
+	/**
+	 * L'ARBORESCENCE D'ARCHIVE — CINQ LIGNES SUR CINQ ÉTAIENT FAUSSES.
+	 *
+	 * Cet écran DÉCRIT un artefact que l'utilisateur va ouvrir. La description
+	 * était composée de littéraux, et les littéraux avaient divergé de la
+	 * fabrique : elle annonçait un rapport en Markdown là où l'archive écrit du
+	 * texte nu, un fichier d'index que `construireLArchive()` n'a jamais
+	 * produit, un nom de note mis en ardoise là où le fichier reprend le titre
+	 * au caractère près, un dossier de pièces jointes sans le dossier par note
+	 * qu'il contient, et pas de racine là où l'archive range tout sous le
+	 * dossier racine du domaine.
+	 *
+	 * PLUS AUCUN NOM N'EST ÉCRIT ICI. Les trois noms et les deux fabriques
+	 * viennent de `$lib/export/noms.ts`, la source que `construireLArchive()`
+	 * lit elle-même. Un nom qui changerait à la source changerait ici.
+	 *
+	 * CE QUE L'ARCHIVE CONTIENT, ligne à ligne (`export/archive.ts:765-818`) :
+	 * une entrée par dossier du domaine, RACINE COMPRISE ; un fichier par note,
+	 * à la place de son dossier ; un dossier de pièces PAR NOTE sous le dossier
+	 * voisin ; et le rapport de conversion, à la racine.
+	 *
+	 * LA RACINE EST NOMMÉE PAR LE NOM DU DOMAINE, ET C'EST EXACT TANT QUE LE
+	 * DOMAINE N'A PAS ÉTÉ RENOMMÉ. L'archive range sous le nom du DOSSIER racine
+	 * (`export/archive.ts:744`, chemin bâti par `donnees/export.ts:119-127`), que
+	 * la création pose égal au nom du domaine (`donnees/administration.ts:1853`)
+	 * mais que `modifierUnDomaine()` (`:1953-1996`) ne suit pas. Le nom du
+	 * dossier racine n'atteint pas cet écran ; le corriger demande de le servir,
+	 * ce qui déborde ce lot. L'écart est consigné, non masqué.
+	 *
+	 * LE CHEMIN MONTRÉ EST CELUI D'UNE VRAIE NOTE, pas la première branche d'un
+	 * arbre où la note montrée pouvait ne pas se trouver : chaque segment sort
+	 * du rangement de la note dont le nom de fichier est affiché en dessous.
+	 */
 	const archive = $derived.by(() => {
-		const arbre = dossiersDuDomaine(domaineCourant);
-		const [premier, racine] = Object.entries(arbre)[0] ?? [];
-		const sous = racine ? Object.keys(racine.enfants)[0] : undefined;
-		const note = notesDuDomaine(domaineCourant)[0];
-		const feuille = note ? ardoise(note.titre) : 'note';
+		const liste = notesDuDomaine(domaineCourant);
+		const note = liste[0];
+		/* `Note.dossier` n'affiche PAS la racine — `lecture.ts:295-299` : elle
+		   porte le nom du domaine et le rangement la sous-entend. L'archive, elle,
+		   l'écrit. C'est l'écart que l'écran taisait. */
+		const sousLaRacine = (note?.dossier ?? '')
+			.split('›')
+			.map((s) => s.trim())
+			.filter(Boolean);
+		const avecPieces = liste.find((n) => n.pj > 0);
+
+		/* Le tirage des branches : un seul enfant montré par niveau, donc un
+		   dernier-né à chaque cran. Le trait vertical du premier cran tient parce
+		   que l'entrée de racine qu'il prolonge est suivie d'autres ; les crans
+		   suivants sont des blancs, une branche close ne se prolongeant pas. */
+		const rameau = (profondeur: number, texte: string): string =>
+			'│   ' + '    '.repeat(profondeur - 1) + '└── ' + texte + '\n';
+
+		const dossiers = sousLaRacine
+			.map((segment, rang) => rameau(rang + 1, echapperSegment(segment) + '/'))
+			.join('');
+
 		return {
 			nom: nomDeLArchive,
 			corps:
-				`\n├── ${premier ?? 'notes'}/\n` +
-				(sous ? `│   └── ${sous}/\n│       └── ${feuille}.md\n` : `│   └── ${feuille}.md\n`) +
-				(apercu.pieces ? '├── pieces-jointes/\n' : '') +
-				'├── rapport-de-conversion.md\n' +
-				'└── domaine.json'
+				`\n├── ${cheminDArchive([domaineCourant])}/\n` +
+				dossiers +
+				(note ? rameau(sousLaRacine.length + 1, nomDeFichierDeNote(note.titre)) : '') +
+				(avecPieces
+					? `├── ${DOSSIER_DES_PIECES}/\n` + rameau(1, echapperSegment(avecPieces.id) + '/')
+					: '') +
+				`└── ${NOM_DU_RAPPORT}`
 		};
 	});
 </script>
@@ -339,14 +407,29 @@
 			forme est exacte et obligatoire : un commentaire rédigé autrement
 			n'est pas reconnu par le formateur.
 		-->
+		<!--
+			CET ÉCRAN A PROMIS LA RÉIMPORTATION, ET ELLE N'EXISTE PAS.
+
+			Le texte affirmait que « réimporter l'archive reconstitue le domaine à
+			l'identique […] ce qui garantit que vous n'êtes pas prisonnier de ce
+			produit ». Aucun chemin d'import d'archive n'existe dans le produit :
+			l'import écarte le format d'archive (`donnees/import.ts:118`) et la
+			relecture d'archive (`export/archive.ts`) n'est appelée que par ses
+			propres contrôles. La phrase promettait l'inverse exact de ce qui est.
+
+			CE QUI EST VRAI ET QUI SE DIT — l'archive est du texte, un fichier par
+			note, rangé comme le domaine, métadonnées en tête de chaque fichier. Ce
+			bloc de métadonnées est ce qui RENDRA la réimportation possible ; il ne
+			la rend pas disponible aujourd'hui, et l'écran ne l'annonce plus.
+		-->
 		<!-- prettier-ignore -->
 		<section class="reversible"
 			><div class="reversible__ic"
-				><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 12a9 9 0 0 1 15.3-6.4M21 12a9 9 0 0 1-15.3 6.4"/><path d="M18 2.5V6h-3.5M6 21.5V18h3.5"/></svg
+				><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9 2.5H5.5a1.5 1.5 0 0 0-1.5 1.5v16a1.5 1.5 0 0 0 1.5 1.5h13a1.5 1.5 0 0 0 1.5-1.5V8.5L14 2.5H9zM14 2.5V8h5.5"/><path d="M7.5 12.5h9M7.5 16h6"/></svg
 			></div
 			><div
-				><h2>Cet export est réimportable</h2
-				><p>Réimporter l'archive reconstitue le domaine <b>à l'identique</b> : mêmes notes, même arborescence, mêmes métadonnées, mêmes liens entre notes. C'est ce qui distingue une sauvegarde d'une copie morte — et ce qui garantit que vous n'êtes pas prisonnier de ce produit.</p
+				><h2>Cet export s'ouvre sans ce produit</h2
+				><p>L'archive est du texte : un fichier par note, rangé dans la même arborescence, avec ses métadonnées en tête de fichier. Elle se lit dans n'importe quel éditeur, se met sous gestion de versions et se conserve telle quelle. <b>La réimporter dans Codicillus n'est pas encore possible</b> : l'import accepte un dossier de fichiers, et écarte les archives.</p
 			></div
 		></section>
 
@@ -388,7 +471,7 @@
 						><span class="ca__ic"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3" width="12" height="10" rx="1.4"/><path d="M2 6h12M5.5 9h5"/></svg></span
 						><div
 							><div class="ca__nom">Les métadonnées, en en-tête de chaque fichier</div
-							><div class="ca__txt">Type, étiquettes, auteur, date de dernière vérification, visibilité et propriétés de {motFicheMinuscule}, dans un bloc <code>---</code> en tête de fichier. C'est ce bloc qui rend l'archive réimportable.</div
+							><div class="ca__txt">Type, étiquettes, auteur, date de dernière vérification, visibilité et propriétés de {motFicheMinuscule}, dans un bloc <code>---</code> en tête de fichier. Rien de ce que porte une note n'est laissé au seul nom du fichier.</div
 						></div
 					></div
 					><div class="ca"
