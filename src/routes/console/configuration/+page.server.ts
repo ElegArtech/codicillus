@@ -9,15 +9,14 @@
  * `src/lib/droits/resolution.ts` et rend `INTROUVABLE` ; le seul `error(404, MESSAGE_INTROUVABLE)`
  * du fichier est SANS MESSAGE (`ADR-007`).
  *
- * CE QUE CE CHARGEUR NE FAIT PAS, ET `P-01` EN DÉPEND. Il ne touche pas
- * `src/vues/V-33.svelte`, qui importe `CONFIG` et `CORPUS` au niveau du module
- * (`V-33:93`) : les seuils de fraîcheur AFFICHÉS sont ceux du jeu de semence.
- * La base les porte — table `parametres`, lus par `lireSeuils()` de `T-030` —
- * et ce sont eux que le PRODUIT applique, puisque `contexteDeRequete()` les
- * passe à `lireNotes()`. Les deux coïncident aujourd'hui parce que la base a été
- * semée depuis le jeu ; le jour où un administrateur les changerait, l'écran qui
- * les règle afficherait autre chose que ce que le produit applique. C'est le
- * plus contrariant des écarts de ce lot, et il est déclaré au rapport.
+ * LES SEUILS AFFICHÉS SONT CEUX DE LA BASE — l'écart est refermé. Ce commentaire
+ * a longtemps dit l'inverse : « la vue importe `CONFIG` au niveau du module, les
+ * seuils AFFICHÉS sont ceux du jeu de semence », et il concluait que l'écran qui
+ * règle les seuils afficherait autre chose que ce que le produit applique. Ce
+ * n'est plus vrai : `config` est une PROPRIÉTÉ de `V-33`, de défaut la constante
+ * du jeu, et ce chargeur la sert par `lireConfiguration()` depuis la table
+ * `parametres` — celle-là même dont `contexteDeRequete()` tire les seuils qu'il
+ * passe à `lireNotes()`. L'écran règle et affiche la même vérité.
  *
  * `vecteur: null` demande l'état au repos — les quatre positions de l'axe
  * « Seuils » sont des états de SAISIE, que la vue lit de son propre réglage.
