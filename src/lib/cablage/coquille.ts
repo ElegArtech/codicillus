@@ -51,9 +51,11 @@ function destinations(contexte: ContexteDeCoquille): Map<string, string | null> 
 		/* LE GESTE VIT SUR LA PAGE D'UN DOSSIER — `#a-sousdossier` et son dialogue,
 		   `mockups/V-13-page-dossier.html:1161` et `:1209` : on crée un SOUS-dossier,
 		   donc il faut d'abord dire lequel. L'entrée mène à la page du domaine, où
-		   l'arborescence est offerte au choix. `…/dossiers` sans chemin n'est pas
-		   une adresse du produit — elle rend 404, et `P-03` n'admet pas un lien
-		   mort dans un menu. */
+		   l'arborescence est offerte au choix — ce qui n'était vrai qu'à moitié :
+		   la pastille « Dossiers » n'y était pas rendue tant que le domaine ne
+		   portait aucune note lisible, et l'entrée était donc un cul-de-sac sur
+		   un domaine neuf. `V-11.svelte` rend désormais cette pastille quel que
+		   soit l'état, et la page du domaine tient sa promesse. */
 		['Nouveau dossier', domaine],
 		['Nouveau signet', domaine === null ? null : `${domaine}/signets/nouveau`],
 		['Importer des fichiers', '/importer'],
