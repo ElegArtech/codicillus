@@ -38,9 +38,10 @@
  * `STACK-TECHNIQUE.md:284` : « le seuil de bascule vers l'exploration
  * progressive exigé par RG-M09-04 est un PARAMÈTRE, réglé après mesure ».
  * Un seuil ne se mesure pas sur un point : il se mesure sur une COURBE. Les
- * paliers sont donc des tailles de graphe CUMULÉES dans l'univers que
- * `PERIMETRE_DE_V19` désigne (« Production »), chargées l'une après l'autre, et
- * la mesure rend la taille à laquelle le budget de 3 s est franchi.
+ * paliers sont donc des tailles de graphe CUMULÉES dans un seul univers —
+ * `Existant.universDuGraphe`, celui du corpus gelé où le jeu concentre ses
+ * relations —, chargées l'une après l'autre, et la mesure rend la taille à
+ * laquelle le budget de 3 s est franchi.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * CE QUE CE JEU N'INVENTE PAS
@@ -75,7 +76,7 @@ export interface Volumes {
 	/** Étiquettes posées par note, prises dans celles du corpus gelé. */
 	readonly etiquettesParNote: number;
 	/**
-	 * Les tailles de graphe visées, CUMULÉES, dans l'univers de `PERIMETRE_DE_V19`.
+	 * Les tailles de graphe visées, CUMULÉES, dans `Existant.universDuGraphe`.
 	 * Le premier palier est celui du budget (500 nœuds) ; le troisième est celui
 	 * de `R-01` (2 000) ; LES SUIVANTS SORTENT DE LA VOLUMÉTRIE ANNONCÉE, et
 	 * c'est délibéré : un seuil ne se lit pas sur une courbe qui ne franchit
@@ -238,7 +239,7 @@ export interface Existant {
 	readonly universExistants: readonly string[];
 	/** Les noms des domaines du corpus gelé, par univers. */
 	readonly domainesExistants: ReadonlyMap<string, readonly string[]>;
-	/** L'univers du périmètre de V-19 — celui dont les notes font le graphe. */
+	/** L'univers où le jeu concentre ses relations — celui dont les notes font le graphe. */
 	readonly universDuGraphe: string;
 	/** Le nombre de notes que le corpus gelé pose déjà dans cet univers. */
 	readonly notesDejaDansLeGraphe: number;
