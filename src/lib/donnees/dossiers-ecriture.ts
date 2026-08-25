@@ -65,16 +65,18 @@
  * cessera d'être la dérivation et ce défaut tombera de lui-même. D'ici là, c'est
  * un fait connu du renommage, déclaré plutôt que tu.
  */
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
-import { dossiers, notes } from '../base/schema';
+import { comptes, dossiers, droitsDeDossier, notes } from '../base/schema';
 import {
 	capacites,
 	chaineDAncetres,
+	indexerLesDroits,
 	type DroitDeDossier,
 	type IndexDesDroits
 } from '../droits/resolution';
+import { initialesDuNom } from './accueil';
 import { identifiantLisible } from '../rangement/adresses';
 import { entretenirLIndex } from '../recherche/entretien';
 import { PROFONDEUR_MAX, segmentsAffiches, type LigneDeDossier } from './rangement';
@@ -293,6 +295,230 @@ export function libelleDOrigine(origine: OrigineDeDroit | null): string {
 	if (origine.propre) return '— accordé sur ce dossier';
 	if (origine.racine) return `— hérité du domaine ${origine.nom}`;
 	return `— hérité du dossier ${origine.nom}`;
+}
+
+/* ═══════════════════════════════════ Les droits d'un dossier, tous comptes ═ */
+
+/**
+ * UN COMPTE, TEL QUE LE DIALOGUE DES DROITS LE NOMME.
+ *
+ * `identifiant` est l'identifiant de CONNEXION, et c'est lui qui désigne le
+ * compte dans les trois écritures ci-dessous — le même choix que
+ * `changerLeRoleDUnCompte()` (`./administration.ts`), et pour le même motif :
+ * il est « définitif après création » (`V-32:3109`), là où le nom ne l'est pas.
+ * L'identifiant interne ne voyage jamais jusqu'au navigateur.
+ */
+export interface CompteDeDroit {
+	readonly identifiant: string;
+	readonly nom: string;
+	/** Deux initiales au plus — `.dr__avatar` (`V-40:1200`). */
+	readonly initiales: string;
+}
+
+/** Une ligne de `.droits` : un droit effectif sur ce dossier, et son origine. */
+export interface DroitAffiche extends CompteDeDroit {
+	readonly niveau: DroitDeDossier;
+	/** Le droit vient d'un ancêtre — le dossier n'est pas celui qui l'a accordé. */
+	readonly herite: boolean;
+	/** La tournure de `libelleDOrigine()`, jamais une composée sur place. */
+	readonly origine: string;
+	/**
+	 * CETTE LIGNE EST CELLE SUR LAQUELLE LE SERVEUR REFUSERA — `P-09` / `ARB-040`.
+	 *
+	 * C'est celle de l'appelant quand il tient sa gestion de la TABLE : abaisser
+	 * ou retirer sa propre ligne le priverait du dossier, et le serveur le refuse.
+	 * Un geste refusé ne doit pas être OFFERT : la vue omet le retrait sur cette
+	 * ligne, plutôt que de le griser.
+	 *
+	 * FAUX quand sa gestion vient de son RÔLE (`RG-DRO-03`) : le serveur accepte
+	 * alors les deux gestes, et les omettre serait omettre un geste possible.
+	 */
+	readonly soiMeme: boolean;
+}
+
+/** Ce que le dialogue des droits d'un dossier montre. */
+export interface DroitsDUnDossier {
+	/** Les droits en vigueur sur ce dossier, propres d'abord, puis hérités. */
+	readonly accordes: readonly DroitAffiche[];
+	/** Les comptes actifs qui n'en ont aucun — la liste d'« Ajouter un accès ». */
+	readonly candidats: readonly CompteDeDroit[];
+}
+
+/** Ce qu'une ligne de compte doit porter pour entrer dans la composition. */
+interface LigneDeCompte {
+	readonly id: string;
+	readonly identifiant: string;
+	readonly nom: string;
+	readonly actif: boolean;
+}
+
+/**
+ * LES DROITS EN VIGUEUR SUR UN DOSSIER, COMPTE PAR COMPTE — fonction PURE.
+ *
+ * `ouvrirLAcces()` (`./rangement.ts`) ne lit que les droits DU COMPTE APPELANT,
+ * et c'est justifié là-bas : « les droits des autres comptes ne concernent pas
+ * cette réponse ». Le dialogue des droits est la seule réponse du produit à qui
+ * ils concernent, et cette fonction est le seul endroit où ils se composent.
+ *
+ * ELLE NE REND AUCUN SECOND VERDICT. L'origine sort d'`origineDUnDroit()`, qui
+ * remonte la chaîne de `RG-DRO-01` ; le NIVEAU est relu dans l'index AU DOSSIER
+ * D'ORIGINE, donc à l'endroit même où la remontée s'est arrêtée. Aucune
+ * comparaison de force entre deux droits n'est écrite ici, et il ne faut pas
+ * qu'il y en ait une : deux résolutions concurrentes, et la sécurité du produit
+ * devient une question d'opinion (en-tête de ce module).
+ *
+ * `RG-DRO-03` N'A PAS DE LIGNE ICI, ET C'EST VOULU. Un administrateur contourne
+ * tous les droits de dossier PAR SON RÔLE, sans ligne dans la table : il ne
+ * tient son droit d'aucun dossier, `libelleDOrigine()` le dit déjà en restant
+ * muet, et l'afficher comme un droit du dossier laisserait croire qu'on peut le
+ * lui retirer ici. Ce dialogue montre les droits DE CE DOSSIER, pas la liste des
+ * comptes capables de l'ouvrir.
+ */
+export function droitsResolusDUnDossier(
+	index: IndexDesDroits,
+	lignes: readonly LigneDeDossier[],
+	dossierId: string,
+	comptesConnus: readonly LigneDeCompte[],
+	nomDuDomaine: string,
+	appelantId: string | null = null
+): readonly DroitAffiche[] {
+	const rendus: DroitAffiche[] = [];
+	for (const compte of comptesConnus) {
+		const origine = origineDUnDroit(index, lignes, dossierId, compte.id, nomDuDomaine);
+		if (origine === null) continue;
+		const niveau = index.explicites.get(origine.dossierId)?.get(compte.id);
+		if (niveau === undefined) continue;
+		rendus.push({
+			identifiant: compte.identifiant,
+			nom: compte.nom,
+			initiales: initialesDuNom(compte.nom),
+			niveau,
+			herite: !origine.propre,
+			origine: libelleDOrigine(origine),
+			soiMeme: compte.id === appelantId
+		});
+	}
+	/* Les droits PROPRES d'abord : ce sont les seuls sur lesquels le dialogue
+	   offre un geste, et les faire chercher au milieu des hérités les rendrait
+	   introuvables sur un dossier profond. À égalité, l'ordre est celui des noms. */
+	return rendus.sort(
+		(a, b) => Number(a.herite) - Number(b.herite) || a.nom.localeCompare(b.nom, 'fr')
+	);
+}
+
+/**
+ * LES DROITS D'UN DOSSIER, LUS EN BASE — la requête que le produit n'avait pas.
+ *
+ * DEUX LECTURES, ET LE FILTRE EST DANS LA REQUÊTE (`ADR-006`) : les lignes de
+ * `droits_de_dossier` posées sur la CHAÎNE D'ANCÊTRES du dossier — aucune autre
+ * ne peut le gouverner, `RG-DRO-01` ne regardant que celle-là —, et les comptes.
+ *
+ * LA SECONDE LECTURE EST RABATTUE SUR CE QUE L'APPELANT A LE DROIT DE VOIR, ET
+ * C'EST LE POINT DÉLICAT DE CETTE FONCTION.
+ *
+ * `gererLesDroits` est une capacité LOCALE : elle s'obtient sur UN dossier, et
+ * un rédacteur du domaine voisin peut la tenir ici. L'annuaire des comptes de
+ * l'instance, lui, est une donnée GLOBALE, que `docs/routes.md:167` réserve au
+ * rôle `administrateur` — `/console/comptes` rend `404` à tout autre. Servir la
+ * table entière à quiconque gère un dossier mettrait les IDENTIFIANTS DE
+ * CONNEXION de toute l'instance dans le DOM d'une page de dossier, quand
+ * `connexion/+page.server.ts` rend un refus unique pour « identifiant inconnu »
+ * et « mot de passe faux » PRÉCISÉMENT pour interdire cette énumération
+ * (`ARB-005`). `RG-ACC-01` veut le filtre au plus près de la donnée : il est
+ * DANS la requête, pas après elle.
+ *
+ * Deux périmètres, donc, et le second est le défaut :
+ *
+ *   annuaire lisible — la table entière, ACTIFS COMME INACTIFS. `RG-M14-08`
+ *     conserve un compte désactivé et ses contributions, donc sa ligne de droit
+ *     lui survit ; la masquer laisserait en base un droit que personne ne
+ *     verrait plus, ni ne pourrait retirer.
+ *   sinon — les SEULS comptes déjà portés par une ligne de la chaîne
+ *     d'ancêtres. Ce sont les droits DE CE DOSSIER, c'est-à-dire ce que la
+ *     capacité locale gouverne, et rien de plus.
+ *
+ * LES CANDIDATS suivent le même partage. Ce sont les comptes actifs sans aucun
+ * droit ici — le crible du gel lui-même (`V-40:3399`, `c.actif` et aucun
+ * droit) —, donc exactement l'annuaire moins les dotés : sans l'annuaire, il
+ * n'y a pas de candidat, et la liste est VIDE plutôt qu'approchante. La vue
+ * omet alors « Ajouter un accès », `P-09` : un geste qu'on ne peut pas rendre
+ * ne se dessine pas.
+ */
+export async function lireLesDroitsDUnDossier(
+	base: Base,
+	demande: {
+		readonly dossierId: string;
+		/** L'arborescence ENTIÈRE — la remontée passe par des ancêtres hors périmètre. */
+		readonly lignes: readonly LigneDeDossier[];
+		readonly nomDuDomaine: string;
+		/** Le compte qui consulte — la ligne qui le concerne n'offre aucun geste. */
+		readonly appelantId: string | null;
+		/**
+		 * L'APPELANT PEUT-IL VOIR L'ANNUAIRE DES COMPTES DE L'INSTANCE ?
+		 *
+		 * Le rôle `administrateur`, et lui seul — c'est le périmètre de
+		 * `/console/comptes` (`docs/routes.md:167`). Le champ est OBLIGATOIRE, sans
+		 * valeur par défaut : un défaut permissif se serait oublié à l'appel, un
+		 * défaut restrictif aurait masqué l'oubli. L'appelant le dit.
+		 */
+		readonly annuaireLisible: boolean;
+		/**
+		 * L'appelant tient-il sa gestion de son RÔLE (`RG-DRO-03`) ? Alors aucune
+		 * ligne de cette table ne la lui retire, et sa propre ligne — s'il en a
+		 * une — lui offre les mêmes gestes qu'à un autre.
+		 */
+		readonly appelantContourne: boolean;
+	}
+): Promise<DroitsDUnDossier> {
+	const ancetres = chaineDAncetres(indexerLesDroits(demande.lignes), demande.dossierId);
+	const lignesDeDroit =
+		ancetres.length === 0
+			? []
+			: await base
+					.select({
+						dossierId: droitsDeDossier.dossierId,
+						compteId: droitsDeDossier.compteId,
+						droit: droitsDeDossier.droit
+					})
+					.from(droitsDeDossier)
+					.where(inArray(droitsDeDossier.dossierId, [...ancetres]));
+
+	const dotesEnBase = [...new Set(lignesDeDroit.map((l) => l.compteId))];
+	const colonnes = {
+		id: comptes.id,
+		identifiant: comptes.identifiant,
+		nom: comptes.nom,
+		actif: comptes.actif
+	};
+	const comptesConnus: LigneDeCompte[] = demande.annuaireLisible
+		? await base.select(colonnes).from(comptes)
+		: dotesEnBase.length === 0
+			? []
+			: await base.select(colonnes).from(comptes).where(inArray(comptes.id, dotesEnBase));
+
+	const index = indexerLesDroits(demande.lignes, lignesDeDroit);
+	const accordes = droitsResolusDUnDossier(
+		index,
+		demande.lignes,
+		demande.dossierId,
+		comptesConnus,
+		demande.nomDuDomaine,
+		/* `soiMeme` marque la ligne SUR LAQUELLE LE SERVEUR REFUSERA — pas celle
+		   de l'appelant. Les deux coïncident tant que sa gestion vient de la
+		   table ; quand elle vient de son rôle, aucun geste ne la menace, et
+		   omettre le retrait serait omettre un geste possible (`P-09` dans
+		   l'autre sens). */
+		demande.appelantContourne ? null : demande.appelantId
+	);
+	const dotes = new Set(accordes.map((d) => d.identifiant));
+	const candidats = demande.annuaireLisible
+		? comptesConnus
+				.filter((c) => c.actif && !dotes.has(c.identifiant))
+				.map((c) => ({ identifiant: c.identifiant, nom: c.nom, initiales: initialesDuNom(c.nom) }))
+				.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+		: [];
+
+	return { accordes, candidats };
 }
 
 /* ═══════════════════════════════════ Ce qu'une écriture rend ════════════ */
@@ -552,4 +778,303 @@ export async function supprimerUnDossier(
 		notesDetruites: detruites.length,
 		segmentsDuParent: segmentsAffiches(demande.lignes, dossier.parentId)
 	};
+}
+
+/* ═══════════════════════════════════ Écrire un droit de dossier ═════════ */
+
+/**
+ * LES TROIS NIVEAUX, ET RIEN D'AUTRE — l'énumération de base
+ * (`002_socle.montee.sql:36`), reprise ici sous la forme d'un crible.
+ *
+ * `null` SUR TOUT LE RESTE, jamais un niveau par défaut : se tromper de défaut,
+ * ici, c'est accorder un droit. C'est la règle de `roleDepuisLeLibelle()`
+ * (`./administration.ts`), et pour une raison plus forte encore — celui-là
+ * gouverne un rôle de compte, celui-ci gouverne l'accès à un contenu.
+ */
+export function niveauDeDroitDepuisLaSaisie(brut: unknown): DroitDeDossier | null {
+	if (brut === 'lecteur' || brut === 'redacteur' || brut === 'gestionnaire') return brut;
+	return null;
+}
+
+/** Le niveau reçu n'est aucun des trois. */
+export const NIVEAU_INCONNU = 'Choisissez un niveau de droit.';
+
+/** L'identifiant de connexion ne désigne aucun compte. */
+export const COMPTE_INTROUVABLE = 'Aucun compte ne porte cet identifiant de connexion.';
+
+/**
+ * `RG-M14-08` — « un compte désactivé perd IMMÉDIATEMENT l'accès ». Lui accorder
+ * un droit ne lui ouvrirait rien et ferait croire le contraire à qui l'accorde.
+ * Le gel écarte déjà ces comptes de sa liste d'ajout (`V-40:3399`) ; le refuser
+ * ici est le filet, une liste d'écran n'étant pas un contrôle.
+ */
+export const COMPTE_DESACTIVE = 'Ce compte est désactivé : il ne peut recevoir aucun droit.';
+
+/**
+ * LE DROIT VISÉ N'EST PAS POSÉ SUR CE DOSSIER — il est hérité, ou il n'existe
+ * pas. Le dialogue du gel le dit déjà en toutes lettres : « Retirer un droit
+ * explicite ne retire pas un droit hérité […] il faut la retirer là où elle a
+ * été accordée » (`V-40:1220`). Un succès silencieux qui ne retirerait rien
+ * serait la pire réponse : l'appelant croirait l'accès fermé.
+ */
+export const DROIT_NON_PROPRE =
+	"Ce droit n'est pas posé sur ce dossier : il est hérité. Il se change là où il a été accordé.";
+
+/**
+ * UN GESTIONNAIRE NE SE FERME PAS LA PORTE — et rien dans le schéma ne l'en
+ * empêche. Retirer, ou abaisser, son propre droit de gestion sur ce dossier le
+ * laisserait sans aucun recours DANS LE PRODUIT : plus de dialogue, plus
+ * d'action, et aucun écran de console ne touche `droits_de_dossier`. Le message
+ * dit pourquoi, parce qu'un refus muet ferait chercher un défaut.
+ */
+export const AUTO_RETRAIT_DE_GESTION =
+	'Vous ne pouvez pas retirer ni abaisser votre propre droit de gestion sur ce dossier : plus aucun écran ne vous le rendrait.';
+
+/** Ce qu'une écriture de droit réussie rend — de quoi le dire à l'écran. */
+export interface DroitEcrit {
+	readonly fait: true;
+	/** Le nom du compte visé, tel que la base le porte. */
+	readonly nom: string;
+	/** Le niveau désormais posé, `null` après un retrait. */
+	readonly niveau: DroitDeDossier | null;
+}
+
+/** Ce qu'une écriture de droit demande. */
+export interface DemandeDeDroit {
+	readonly dossierId: string;
+	/** L'identifiant de CONNEXION du compte visé — jamais son identifiant interne. */
+	readonly identifiantDuCompte: string;
+	/** Le niveau demandé. Non lu au retrait. */
+	readonly niveau: DroitDeDossier | null;
+	/** Le droit effectif de l'appelant, dossier par dossier. */
+	readonly droit: (dossierId: string) => DroitDeDossier | null;
+	/** Le compte de l'appelant, `null` en anonyme — le refus d'auto-retrait le lit. */
+	readonly appelantId: string | null;
+	/**
+	 * L'APPELANT TIENT-IL SA GESTION DE SON RÔLE ? — `contourneLesDroitsDeDossier()`
+	 * de `../droits/resolution.ts`, seule écriture de `RG-DRO-03`.
+	 *
+	 * C'est ce qui décide si `AUTO_RETRAIT_DE_GESTION` s'applique. Un
+	 * gestionnaire qui tient sa gestion d'une ligne de `droits_de_dossier` se
+	 * ferme la porte en s'abaissant : `RG-DRO-01` fait gagner le droit le plus
+	 * proche, donc la ligne qu'il vient d'écrire, et plus aucun écran ne lui
+	 * rendrait le geste. Un administrateur ne se ferme rien — la table n'est pas
+	 * lue pour lui. Refuser les deux au même titre refusait par un motif qui ne
+	 * s'applique pas, et sur une instance neuve — `droits_de_dossier` VIDE, un
+	 * seul compte — c'était DEUX des trois niveaux offerts par le dialogue.
+	 */
+	readonly appelantContourne: boolean;
+	/**
+	 * L'APPELANT PEUT-IL VOIR L'ANNUAIRE DES COMPTES DE L'INSTANCE ? — le même
+	 * périmètre qu'à la lecture, et il gouverne ici DEUX choses.
+	 *
+	 * Il gouverne l'ACCORD, parce qu'accorder, c'est NOMMER un compte qui n'a
+	 * aucun droit ici : sans l'annuaire, il n'y a personne à nommer, et le
+	 * dialogue n'offre pas le geste. Le serveur ne l'offre pas davantage — une
+	 * garde d'écran que l'action ne tient pas n'est pas une garde.
+	 *
+	 * Il gouverne le MESSAGE de refus des deux autres, et c'est la même raison
+	 * qui fait de « identifiant inconnu » et « mot de passe faux » un refus
+	 * UNIQUE à la connexion (`ARB-005`) : deux messages distincts répondraient
+	 * « ce compte existe » à qui essaie des identifiants au hasard, ce qui rend à
+	 * l'unité l'énumération qu'on vient de refuser en bloc.
+	 */
+	readonly annuaireLisible: boolean;
+}
+
+/** Le compte visé, ou `null`. Une seule requête, une seule forme. */
+async function compteVise(
+	base: Base,
+	identifiant: string
+): Promise<{ id: string; nom: string; actif: boolean } | null> {
+	if (identifiant === '') return null;
+	const lignes = await base
+		.select({ id: comptes.id, nom: comptes.nom, actif: comptes.actif })
+		.from(comptes)
+		.where(eq(comptes.identifiant, identifiant))
+		.limit(1);
+	return lignes[0] ?? null;
+}
+
+/** Le droit EXPLICITE posé sur ce dossier même, ou `null` s'il n'y en a pas. */
+async function droitPropre(
+	base: Base,
+	dossierId: string,
+	compteId: string
+): Promise<DroitDeDossier | null> {
+	const lignes = await base
+		.select({ droit: droitsDeDossier.droit })
+		.from(droitsDeDossier)
+		.where(and(eq(droitsDeDossier.dossierId, dossierId), eq(droitsDeDossier.compteId, compteId)))
+		.limit(1);
+	return lignes[0]?.droit ?? null;
+}
+
+/**
+ * LE REFUS D'UN IDENTIFIANT QUI NE DÉSIGNE AUCUN COMPTE, sur les deux gestes qui
+ * visent une ligne DÉJÀ POSÉE.
+ *
+ * Il dit « aucun compte ne porte cet identifiant » à qui a le droit de le
+ * savoir, et « ce droit n'est pas posé sur ce dossier » à tous les autres —
+ * c'est-à-dire exactement ce qu'ils entendraient d'un compte qui existe sans
+ * droit propre ici. Les deux causes deviennent indiscernables, `ARB-005`, et il
+ * n'y a plus d'oracle d'existence à interroger un identifiant à la fois.
+ */
+function refusDUnIdentifiantSansCompte(demande: DemandeDeDroit): string {
+	return demande.annuaireLisible ? COMPTE_INTROUVABLE : DROIT_NON_PROPRE;
+}
+
+/**
+ * L'APPELANT SE FERMERAIT-IL LA PORTE ? — le seul motif d'`AUTO_RETRAIT_DE_GESTION`
+ * sur les deux gestes qui POSENT un niveau, et il tient en trois conditions.
+ *
+ * Il faut que le compte visé soit l'appelant ; que le niveau posé ne soit pas
+ * `gestionnaire` — un gestionnaire qui se réaccorde la gestion ne perd rien ; et
+ * que sa gestion vienne de la TABLE et non de son rôle. La troisième condition
+ * manquait, et c'est elle qui rendait le refus faux sur une instance neuve : le
+ * premier administrateur, sans aucune ligne dans `droits_de_dossier`, s'entendait
+ * dire qu'il ne pouvait pas « abaisser son propre droit de gestion sur ce
+ * dossier » alors qu'il n'en tenait aucun.
+ *
+ * LE DROIT PROPRE N'EST PAS RELU ICI, ET C'EST VOULU. Que sa gestion soit posée
+ * sur ce dossier ou héritée d'un ancêtre, écrire une ligne PROPRE plus faible la
+ * lui retire : `RG-DRO-01` s'arrête au droit le plus proche, et le plus proche
+ * devient celui qu'il vient d'écrire. Ne regarder que le droit propre aurait
+ * laissé passer l'auto-abaissement d'un gestionnaire hérité, qui se serait fermé
+ * la porte sur un sous-dossier sans que rien ne l'en avertisse.
+ */
+function sAbaisseraitLuiMeme(demande: DemandeDeDroit, compteVisee: string): boolean {
+	if (compteVisee !== demande.appelantId) return false;
+	if (demande.niveau === 'gestionnaire') return false;
+	return !demande.appelantContourne;
+}
+
+/**
+ * ACCORDER UN DROIT — la première écriture de droits du produit.
+ *
+ * QUATRE PORTES, DANS CET ORDRE, ET LA PREMIÈRE EST LE DROIT.
+ *
+ *  1. `capacites().gererLesDroits` — quatrième colonne de `CDC` §2.3, et le
+ *     garde était écrit depuis `T-011` sans être lu nulle part. Le refus est
+ *     MUET (`RG-ACC-04`) : la route en fait le `404` de partout ailleurs, et
+ *     l'ordre n'est pas cosmétique — un message de forme rendu avant le contrôle
+ *     de droit dirait à un rédacteur que le dossier existe.
+ *  1 bis. L'ANNUAIRE — accorder, c'est nommer un compte qui n'a aucun droit ici.
+ *     Même refus muet, et pour la même raison : le message viendrait avant.
+ *  2. LE NIVEAU — l'un des trois, ou refus. Jamais de défaut.
+ *  3. LE COMPTE — il existe, et il est actif (`RG-M14-08`).
+ *  4. L'AUTO-ABAISSEMENT — refusé, voir `sAbaisseraitLuiMeme()`.
+ *
+ * L'ÉCRITURE EST UNE REPRISE SUR LA CLÉ PRIMAIRE, non un « insérer sinon mettre
+ * à jour » écrit à la main : `droits_de_dossier_pk` porte le couple
+ * `(dossier_id, compte_id)` (`002_socle.montee.sql:197`-`208`), et c'est cette
+ * unicité qui donne son sens à `RG-DRO-01` — un droit AU PLUS par couple, donc
+ * une remontée qui ne peut pas trouver deux réponses au même niveau. Lire puis
+ * écrire laisserait une fenêtre où deux gestionnaires simultanés violeraient la
+ * clé ; la reprise la referme dans la base.
+ */
+export async function accorderUnDroitDeDossier(
+	base: Base,
+	demande: DemandeDeDroit
+): Promise<DroitEcrit | RefusDEcriture> {
+	if (!capacites(demande.droit(demande.dossierId)).gererLesDroits) return REFUS_MUET;
+	/* ACCORDER, C'EST NOMMER UN COMPTE SANS DROIT ICI — donc puiser dans
+	   l'annuaire. Qui ne le voit pas n'a personne à nommer : le dialogue n'offre
+	   pas le geste, et l'action le refuse du même refus MUET que partout, sans
+	   quoi il resterait joignable par une adresse construite à la main et
+	   rendrait, un identifiant à la fois, l'existence des comptes de l'instance. */
+	if (!demande.annuaireLisible) return REFUS_MUET;
+	if (demande.niveau === null) return { fait: false, message: NIVEAU_INCONNU };
+
+	const compte = await compteVise(base, demande.identifiantDuCompte);
+	if (compte === null) return { fait: false, message: COMPTE_INTROUVABLE };
+	if (!compte.actif) return { fait: false, message: COMPTE_DESACTIVE };
+	if (sAbaisseraitLuiMeme(demande, compte.id)) {
+		return { fait: false, message: AUTO_RETRAIT_DE_GESTION };
+	}
+
+	await base
+		.insert(droitsDeDossier)
+		.values({ dossierId: demande.dossierId, compteId: compte.id, droit: demande.niveau })
+		.onConflictDoUpdate({
+			target: [droitsDeDossier.dossierId, droitsDeDossier.compteId],
+			set: { droit: demande.niveau }
+		});
+
+	return { fait: true, nom: compte.nom, niveau: demande.niveau };
+}
+
+/**
+ * CHANGER LE NIVEAU D'UN DROIT DÉJÀ POSÉ SUR CE DOSSIER.
+ *
+ * LA DIFFÉRENCE AVEC `accorderUnDroitDeDossier()` TIENT EN UNE PORTE, et elle
+ * compte : le droit doit être PROPRE. Le geste est offert sur la ligne d'un
+ * droit hérité par erreur d'écran, ou composé à la main par un client, et
+ * l'accepter écrirait sur ce dossier un droit que personne n'y a accordé —
+ * l'inverse de ce que la ligne montrait. C'est le même refus qu'au retrait, et
+ * pour la même raison.
+ */
+export async function changerUnDroitDeDossier(
+	base: Base,
+	demande: DemandeDeDroit
+): Promise<DroitEcrit | RefusDEcriture> {
+	if (!capacites(demande.droit(demande.dossierId)).gererLesDroits) return REFUS_MUET;
+	if (demande.niveau === null) return { fait: false, message: NIVEAU_INCONNU };
+
+	const compte = await compteVise(base, demande.identifiantDuCompte);
+	if (compte === null) return { fait: false, message: refusDUnIdentifiantSansCompte(demande) };
+
+	const propre = await droitPropre(base, demande.dossierId, compte.id);
+	if (propre === null) return { fait: false, message: DROIT_NON_PROPRE };
+	if (sAbaisseraitLuiMeme(demande, compte.id)) {
+		return { fait: false, message: AUTO_RETRAIT_DE_GESTION };
+	}
+
+	await base
+		.update(droitsDeDossier)
+		.set({ droit: demande.niveau })
+		.where(
+			and(eq(droitsDeDossier.dossierId, demande.dossierId), eq(droitsDeDossier.compteId, compte.id))
+		);
+
+	return { fait: true, nom: compte.nom, niveau: demande.niveau };
+}
+
+/**
+ * RETIRER UN DROIT POSÉ SUR CE DOSSIER.
+ *
+ * UN DROIT HÉRITÉ N'A RIEN À SUPPRIMER ICI, et le dire est tout l'enjeu :
+ * `DELETE` sans ligne correspondante réussit, la base ne s'en émeut pas, et
+ * l'appelant repartirait convaincu d'avoir fermé un accès qui reste grand
+ * ouvert. Le refus est explicite, et il nomme où le droit se retire vraiment.
+ *
+ * ET UN GESTIONNAIRE NE SE RETIRE PAS SA PROPRE LIGNE — `AUTO_RETRAIT_DE_
+ * GESTION`. La ligne à détruire est PROPRE, `DROIT_NON_PROPRE` l'ayant déjà
+ * exigé, et elle porte donc le droit effectif de l'appelant : la retirer le
+ * ramène à ce qu'un ancêtre lui laisse, c'est-à-dire à moins. Sauf s'il tient sa
+ * gestion de son RÔLE, auquel cas la table ne la lui donnait pas et ne la lui
+ * reprend pas — `appelantContourne`.
+ */
+export async function retirerUnDroitDeDossier(
+	base: Base,
+	demande: DemandeDeDroit
+): Promise<DroitEcrit | RefusDEcriture> {
+	if (!capacites(demande.droit(demande.dossierId)).gererLesDroits) return REFUS_MUET;
+
+	const compte = await compteVise(base, demande.identifiantDuCompte);
+	if (compte === null) return { fait: false, message: refusDUnIdentifiantSansCompte(demande) };
+
+	const propre = await droitPropre(base, demande.dossierId, compte.id);
+	if (propre === null) return { fait: false, message: DROIT_NON_PROPRE };
+	if (compte.id === demande.appelantId && !demande.appelantContourne) {
+		return { fait: false, message: AUTO_RETRAIT_DE_GESTION };
+	}
+
+	await base
+		.delete(droitsDeDossier)
+		.where(
+			and(eq(droitsDeDossier.dossierId, demande.dossierId), eq(droitsDeDossier.compteId, compte.id))
+		);
+
+	return { fait: true, nom: compte.nom, niveau: null };
 }
