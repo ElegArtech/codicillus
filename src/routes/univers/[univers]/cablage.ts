@@ -18,8 +18,32 @@
  * Les trois formes employées sortent de `$lib/rangement/adresses` —
  * `adresseDesNotesDuDomaine()` pour la liste d'un domaine, et rien d'autre.
  * Les deux adresses fixes — `/cartographie` et `/console/domaines` — sont des
- * chemins de route SANS paramètre, que la fabrique d'adresses ne porte pas et
- * n'a pas à porter : elle porte les formes du RANGEMENT.
+ * CHEMINS de route sans segment dynamique, que la fabrique d'adresses ne porte
+ * pas et n'a pas à porter : elle porte les formes du RANGEMENT. La première
+ * reçoit néanmoins un paramètre de REQUÊTE, posé par `searchParams` — voir
+ * ci-dessous.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LA CARTOGRAPHIE EST RÉDUITE À CET UNIVERS
+ *
+ * Le bouton de la couverture est libellé « Cartographie de l'univers »
+ * (`#carto`, dans `V-10`) et menait à `/cartographie` nu : le périmètre y retombait sur
+ * celui de la planche de V-19, si bien que depuis la page de l'univers
+ * « Projets » l'écran montrait « Production ». C'est le défaut que le jumeau de
+ * la page d'un domaine avait déjà réparé — `adresseAuPerimetreDuDomaine()`,
+ * `[domaine]/cablage.ts` —, et le raisonnement y est écrit : « le libellé promet
+ * Cartographie — Infrastructure, l'écran rendait tout Production ».
+ *
+ * LE COMMENTAIRE QUI PORTAIT L'ERREUR DISAIT « §3.4, SANS PARAMÈTRE ». §3.4
+ * déclare que le CHEMIN de la cartographie n'a pas de segment dynamique ; il ne
+ * dit rien de `?perimetre=`, qui est un paramètre de REQUÊTE, honoré par le
+ * chargeur et documenté à §4.3. Les deux phrases avaient été confondues.
+ *
+ * LA FORME `univers|{nom}` EST HONORÉE DE BOUT EN BOUT : `perimetreDeLAdresse()`
+ * l'accepte au même titre que `domaine|{nom}`, le filtre du sous-graphe la
+ * distingue, et le sélecteur de V-19 émet lui-même cette valeur — depuis que la
+ * route de la cartographie lui passe les univers réels, il la propose donc aussi
+ * pour celui-ci, et le libellé du menu s'accorde au graphe.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * LES SEGMENTS DE FRAÎCHEUR — DEUX DESTINATIONS, PARCE QU'IL Y A DEUX BARRES
@@ -80,7 +104,10 @@ const FRAICHEUR_PAR_CLASSE: Record<string, string> = {
 const ADRESSE_DE_LA_RECHERCHE = '/recherche';
 /** La valeur de la facette `statut`, telle que V-12 et V-08 la déclarent. */
 const STATUT_BROUILLON = 'Brouillon';
-/** L'adresse de la cartographie — `docs/routes.md` §3.4, sans paramètre. */
+/**
+ * Le CHEMIN de la cartographie — `docs/routes.md` §3.4, sans segment dynamique.
+ * Le périmètre s'y ajoute en paramètre de requête (§4.3), voir l'en-tête.
+ */
 const ADRESSE_DE_LA_CARTOGRAPHIE = '/cartographie';
 /** La console des domaines — le seul écran qui crée un domaine. */
 const ADRESSE_DE_LA_CONSOLE_DES_DOMAINES = '/console/domaines';
@@ -129,14 +156,27 @@ export function cablerLUnivers(racine: HTMLElement, options: OptionsDeLUnivers):
 		return adresse;
 	};
 
+	/**
+	 * LA CARTOGRAPHIE RÉDUITE À CET UNIVERS. `?perimetre=` porte la valeur même
+	 * du sélecteur de V-19 — `type|nom` —, posée par `searchParams`, qui
+	 * l'encode : rien n'est concaténé, donc rien n'est à échapper. La forme du
+	 * jumeau de la page d'un domaine, appliquée au niveau au-dessus.
+	 */
+	const cartographieDeLUnivers = (): URL => {
+		const adresse = new URL(ADRESSE_DE_LA_CARTOGRAPHIE, document.location.origin);
+		adresse.searchParams.set('perimetre', `univers|${options.univers}`);
+		return adresse;
+	};
+
 	const auClic = (evenement: Event): void => {
 		const cible = evenement.target as Element | null;
 		if (cible === null) return;
 
-		/* 1. LA CARTOGRAPHIE DE L'UNIVERS — `#carto`, l'action de la couverture. */
+		/* 1. LA CARTOGRAPHIE DE L'UNIVERS — `#carto`, l'action de la couverture.
+		      Réduite à cet univers : le libellé le promet, l'adresse le tient. */
 		if (cible.closest('#carto') !== null) {
 			evenement.preventDefault();
-			aller(ADRESSE_DE_LA_CARTOGRAPHIE);
+			aller(cartographieDeLUnivers().toString());
 			return;
 		}
 
