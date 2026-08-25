@@ -58,22 +58,15 @@
 	 */
 	import { resolve } from '$app/paths';
 	import { identifiantLisible } from '$lib/rangement/adresses';
-	import {
-		DETAIL_DOMAINES,
-		DOMAINES,
-		INSTANCE,
-		MODULES,
-		MOI,
-		UNIVERS,
-		type CleDeModule,
-		type DetailDeDomaine,
-		type Domaine,
-		type EtatDInstance,
-		type Module,
-		type NomDeDomaine,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
+	import type {
+		CleDeModule,
+		DetailDeDomaine,
+		Domaine,
+		Module,
+		NomDeDomaine,
+		Note,
+		Univers,
+		UtilisateurCourant
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { dossiersDuDomaine, universOrdonnes } from '$lib/coquille/arborescence';
@@ -99,16 +92,14 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-28')`, variante complète. */
 		notes: readonly Note[];
-		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
-		univers?: readonly Univers[];
-		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
-		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
-		instance?: EtatDInstance;
-		/** Description et modules de chaque domaine. Absente, la constante du jeu. */
-		detailDomaines?: Record<NomDeDomaine, DetailDeDomaine>;
+		/** Les univers déclarés, servis par la route. Vide : aucun périmètre. */
+		univers: readonly Univers[];
+		/** Les domaines déclarés, servis par la route. Vide : aucun domaine. */
+		domaines: readonly Domaine[];
+		/** L'utilisateur courant, servi par la route. */
+		compte: UtilisateurCourant;
+		/** Description et modules de chaque domaine, servies par la route. */
+		detailDomaines: Record<NomDeDomaine, DetailDeDomaine>;
 		/**
 		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE — et rien d'autre.
 		 *
@@ -131,8 +122,13 @@
 			readonly domaine: string;
 			readonly saisie: string;
 		}) => void;
-		/** Le registre des modules de domaine. Absente, la constante du jeu. */
-		modules?: Record<CleDeModule, Module>;
+		/**
+		 * LE CATALOGUE DES SIX MODULES — leur libellé et leur sous-titre, servis
+		 * par la route. Ce n'est pas de la démonstration : c'est le référentiel
+		 * d'interface du produit, et ce qui varie d'un domaine à l'autre — quels
+		 * modules sont ACTIVÉS — entre par `detailDomaines`.
+		 */
+		modules: Record<CleDeModule, Module>;
 		/**
 		 * CE QUE LA VUE FAIT QUAND LE PANNEAU EST VALIDÉ — création puis
 		 * enregistrement. Même partage que pour la suppression : la vue tient
@@ -152,13 +148,12 @@
 	const {
 		vecteur,
 		notes,
-		univers = UNIVERS,
-		domaines: registreDeDomaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		detailDomaines = DETAIL_DOMAINES,
+		univers,
+		domaines: registreDeDomaines,
+		compte,
+		detailDomaines,
 		onSupprimer,
-		modules = MODULES,
+		modules,
 		onCreer,
 		onEnregistrer,
 		refus = null
@@ -183,51 +178,27 @@
 	}
 
 	/**
-	 * LE DOMAINE « TÉLÉPHONIE » EST UN LITTÉRAL DU GEL, et il est porté comme
-	 * tel. `V-28:2918` l'ajoute à la copie de travail sous un commentaire qui
-	 * en donne le motif : « le brief demande que ce cas soit maquetté, et il
-	 * existe réellement en exploitation ». Aucune table du jeu de semence ne le
-	 * contient — `DOMAINES` en compte quatre, tous peuplés. Le fabriquer par
-	 * dérivation serait inventer une donnée que le gel n'a pas ; il est donc
-	 * recopié, et le fait est écrit plutôt que tu.
-	 */
-	const TELEPHONIE: DomaineDeTravail = {
-		nom: 'Téléphonie',
-		univers: 'Production',
-		couleur: '#5b4636',
-		description: 'Postes fixes, standard et messagerie vocale. Espace ouvert, pas encore alimenté.',
-		modules: ['notes', 'dossiers']
-	};
-
-	/**
-	 * La copie de travail : le registre des domaines — plus le domaine vide,
-	 * MAIS SEULEMENT QUAND LE REGISTRE EST CELUI DU JEU DE SEMENCE.
+	 * LA COPIE DE TRAVAIL : LE REGISTRE SERVI, ET RIEN QUE LUI.
 	 *
-	 * `TELEPHONIE` est un littéral de démonstration (voir juste au-dessus) : il
-	 * donne à la maquette le cas « domaine vide » que le brief demande de
-	 * montrer, et il n'existe dans aucune table. Servi À CÔTÉ des domaines réels
-	 * d'une instance, c'est une ligne que l'administrateur voit, ne peut ni
-	 * éditer ni supprimer, et qui ne correspond à rien — la valeur illustrative
-	 * que `P-02` proscrit, sur l'écran qui gouverne le rangement.
-	 *
-	 * LA CONDITION EST UNE COMPARAISON D'IDENTITÉ, ET C'EST LE PLUS PETIT GESTE
-	 * POSSIBLE. `registreDeDomaines === DOMAINES` n'est vrai que lorsque la
-	 * propriété n'a pas été passée, c'est-à-dire quand la vue tourne sur le jeu
-	 * de semence : la maquette garde alors exactement ce qu'elle montrait, au
-	 * nœud près. Dès qu'un chargeur passe les domaines de la base, la ligne
-	 * disparaît. Rien de la structure, des classes, des styles ni de l'ordre
-	 * n'est touché — seul le CONTENU l'est, et c'est ce que ce lot a à faire.
+	 * Une ligne « Téléphonie » y était ajoutée — un littéral du gel, recopié
+	 * pour donner à la maquette le cas « domaine vide », et qu'aucune table ne
+	 * porte. Elle n'était retenue que par une COMPARAISON D'IDENTITÉ,
+	 * `registreDeDomaines === DOMAINES` : la propriété était facultative, et
+	 * une route qui l'oubliait servait donc, à côté des domaines réels, un
+	 * domaine que l'administrateur voyait, ne pouvait ni éditer ni supprimer,
+	 * et qui ne correspondait à rien. La propriété est désormais REQUISE — le
+	 * compilateur refuse la route qui l'oublierait —, la sentinelle n'a plus
+	 * d'objet, et elle part avec le littéral qu'elle gardait.
 	 */
-	const domaines: readonly DomaineDeTravail[] = $derived([
-		...registreDeDomaines.map((d) => ({
+	const domaines: readonly DomaineDeTravail[] = $derived(
+		registreDeDomaines.map((d) => ({
 			nom: d.nom,
 			univers: d.univers,
 			couleur: d.couleur,
 			description: detailDomaines[d.nom]?.description ?? '',
 			modules: detailDomaines[d.nom]?.modules ?? []
-		})),
-		...(registreDeDomaines === DOMAINES ? [TELEPHONIE] : [])
-	]);
+		}))
+	);
 
 	/** Le tableau : par univers, puis par nom, en français (`rendreListe()`). */
 	const tableau = $derived(
@@ -334,14 +305,16 @@
 	/** Le message de `#erreur-nom`, quand la validation de l'écran refuse. */
 	let erreurLocale = $state<string | null>(null);
 
-	/** L'édition porte sur Infrastructure — la planche le nomme (`V-28:3261`). */
+	/* L'ÉDITION PORTE SUR LE PREMIER DOMAINE SERVI. La planche nomme
+	   « Infrastructure » (`V-28:3261`), premier domaine de son registre : le
+	   désigner par son rang dit la même chose sans écrire un domaine du jeu. */
 	const edite = $derived(
 		ouverture === 'creation'
 			? null
 			: ouverture === 'edition'
 				? (domaines.find((d) => d.nom === cible) ?? null)
 				: form === 'edition'
-					? (domaines.find((d) => d.nom === 'Infrastructure') ?? null)
+					? (domaines[0] ?? null)
 					: null
 	);
 	/**
@@ -455,11 +428,15 @@
 	 * contredit pas : tant que personne n'a cliqué, `demande` est `null` et l'état
 	 * reste celui que le scénario demande.
 	 */
+	/* `sup === 'vide'` DÉSIGNE UN DOMAINE SANS AUCUNE NOTE, ET LE CHERCHE DANS
+	   CE QUI A ÉTÉ SERVI. Il désignait un littéral de démonstration ; le cas que
+	   la position décrit — « le domaine est vide, la suppression est possible » —
+	   se lit sur le corpus reçu, et n'a jamais eu besoin d'être inventé. */
 	const aSupprimer = $derived(
 		demande !== null
 			? (domaines.find((d) => d.nom === demande) ?? null)
 			: sup === 'vide'
-				? TELEPHONIE
+				? (domaines.find((d) => mesures(d.nom).notes === 0) ?? null)
 				: null
 	);
 
@@ -574,6 +551,15 @@
 	></span
 ></label>{/snippet}
 
+<!--
+	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI.
+	La vue passait `instance.version` — le `1.0.0` d'`INSTANCE` du jeu de
+	démonstration, servi comme un fait sur le pied du rail d'une instance
+	réelle. Aucune route ne passe de version : `Coquille` lit celle du paquet
+	sur le contexte que le gabarit racine pose, et la propriété n'est plus
+	qu'un état vide explicite — hors gabarit racine, le pied ne nomme rien
+	plutôt que de nommer un numéro de démonstration.
+-->
 <Coquille
 	fil={filDeConsole('Domaines')}
 	{univers}
@@ -585,7 +571,7 @@
 		role: compte.role,
 		domaine: compte.domaine
 	}}
-	version={instance.version}
+	version=""
 	rail="ouvert"
 	role="admin"
 	forme="abregee"

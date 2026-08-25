@@ -7,10 +7,10 @@
 	 * `T-036` la monte avec sa garde : le rôle administrateur est éprouvé côté
 	 * serveur par `+page.server.ts`, à côté de ce fichier.
 	 *
-	 * CE FICHIER NE FAIT QUE RENDRE CE QUE LE CHARGEUR A RÉSOLU. Les notes
-	 * viennent de la base ; la liste des comptes, non — voir le chargeur. LE
-	 * BANC NE PASSE JAMAIS PAR ICI : il atteint la vue par le mode de
-	 * conception, qui rend le composant directement.
+	 * CE FICHIER NE FAIT QUE RENDRE CE QUE LE CHARGEUR A RÉSOLU. Les notes, les
+	 * univers, les domaines, l'utilisateur courant, la liste des comptes et
+	 * l'état de leur verrou de mot de passe viennent tous de la base, et les six
+	 * sont des propriétés REQUISES : en oublier une ne compile plus.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
 	 * sert ; elle est identique à l'octet à sa source gelée (P-6.3).
@@ -77,6 +77,7 @@
 	domaines={data.domaines}
 	compte={data.compte}
 	comptes={data.comptes}
+	verrous={data.verrous}
 	onChangerLActivation={(demande) => {
 		void envoyerAUneAction(document, '?/changerLActivation', {
 			'f-ident': demande.identifiant,

@@ -47,20 +47,13 @@
 	import NavigationConsole from '$lib/console/NavigationConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { filDeConsole } from '$lib/console/sections';
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		TEMPLATES,
-		TYPES_NOTE,
-		UNIVERS,
-		type Domaine,
-		type EtatDInstance,
-		type Note,
-		type Template,
-		type TypeDeNote,
-		type Univers,
-		type UtilisateurCourant
+	import type {
+		Domaine,
+		Note,
+		Template,
+		TypeDeNote,
+		Univers,
+		UtilisateurCourant
 	} from '../../seeds/corpus';
 
 	interface Proprietes {
@@ -68,18 +61,16 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-31')`. */
 		notes: readonly Note[];
-		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
-		univers?: readonly Univers[];
-		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
-		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
-		instance?: EtatDInstance;
-		/** Les squelettes déclarés. Absente, la constante du jeu de semence. */
-		templates?: readonly Template[];
-		/** Les types de note proposés. Absente, la constante du jeu de semence. */
-		typesNote?: readonly TypeDeNote[];
+		/** Les univers déclarés, servis par la route. Vide : aucun périmètre. */
+		univers: readonly Univers[];
+		/** Les domaines déclarés, servis par la route. Vide : aucun domaine. */
+		domaines: readonly Domaine[];
+		/** L'utilisateur courant, servi par la route. */
+		compte: UtilisateurCourant;
+		/** Les squelettes déclarés, servis par la route. Vide : aucun squelette. */
+		templates: readonly Template[];
+		/** Les types de note proposés, servis par la route. */
+		typesNote: readonly TypeDeNote[];
 		/**
 		 * CE QUE LA VUE FAIT QUAND UN GESTE EST CONFIRMÉ — deux rappels, deux
 		 * gestes. Même partage qu'en `V-27`, `V-28`, `V-29`, `V-30` et `V-32` : la
@@ -121,12 +112,11 @@
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		templates = TEMPLATES,
-		typesNote = TYPES_NOTE,
+		univers,
+		domaines,
+		compte,
+		templates,
+		typesNote,
 		onSupprimer,
 		onMarquerParDefaut,
 		onDupliquer,
@@ -457,6 +447,15 @@
 	});
 </script>
 
+<!--
+	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI.
+	La vue passait `instance.version` — le `1.0.0` d'`INSTANCE` du jeu de
+	démonstration, servi comme un fait sur le pied du rail d'une instance
+	réelle. Aucune route ne passe de version : `Coquille` lit celle du paquet
+	sur le contexte que le gabarit racine pose, et la propriété n'est plus
+	qu'un état vide explicite — hors gabarit racine, le pied ne nomme rien
+	plutôt que de nommer un numéro de démonstration.
+-->
 <Coquille
 	forme="abregee"
 	role="admin"
@@ -474,7 +473,7 @@
 		role: compte.role,
 		domaine: compte.domaine
 	}}
-	version={instance.version}
+	version=""
 >
 	{#snippet avantContenu()}
 		<NavigationConsole courante="templates" />

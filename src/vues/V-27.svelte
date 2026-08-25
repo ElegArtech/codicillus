@@ -70,17 +70,7 @@
 	 */
 	import { resolve } from '$app/paths';
 	import { identifiantLisible } from '$lib/rangement/adresses';
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		UNIVERS,
-		type Domaine,
-		type EtatDInstance,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../seeds/corpus';
+	import type { Domaine, Note, Univers, UtilisateurCourant } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { domainesDe, universOrdonnes } from '$lib/coquille/arborescence';
 	import BoutonDeCreation from '$lib/console/BoutonDeCreation.svelte';
@@ -95,14 +85,12 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-27')`, variante complète. */
 		notes: readonly Note[];
-		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
-		univers?: readonly Univers[];
-		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
-		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
-		instance?: EtatDInstance;
+		/** Les univers déclarés, servis par la route. Vide : aucun périmètre. */
+		univers: readonly Univers[];
+		/** Les domaines déclarés, servis par la route. Vide : aucun périmètre. */
+		domaines: readonly Domaine[];
+		/** L'utilisateur courant, servi par la route. */
+		compte: UtilisateurCourant;
 		/**
 		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE — et rien d'autre.
 		 *
@@ -148,10 +136,9 @@
 	const {
 		vecteur,
 		notes,
-		univers = UNIVERS,
-		domaines: tousLesDomaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
+		univers,
+		domaines: tousLesDomaines,
+		compte,
 		onSupprimer,
 		onRattacher,
 		onCreer,
@@ -574,6 +561,15 @@
 	></div
 ></div>{/snippet}
 
+<!--
+	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI.
+	La vue passait `instance.version` — le `1.0.0` d'`INSTANCE` du jeu de
+	démonstration, servi comme un fait sur le pied du rail d'une instance
+	réelle. Aucune route ne passe de version : `Coquille` lit celle du paquet
+	sur le contexte que le gabarit racine pose, et la propriété n'est plus
+	qu'un état vide explicite — hors gabarit racine, le pied ne nomme rien
+	plutôt que de nommer un numéro de démonstration.
+-->
 <Coquille
 	fil={filDeConsole('Univers')}
 	{univers}
@@ -585,7 +581,7 @@
 		role: compte.role,
 		domaine: compte.domaine
 	}}
-	version={instance.version}
+	version=""
 	rail="ouvert"
 	role="admin"
 	forme="complete"
