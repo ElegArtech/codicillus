@@ -479,12 +479,16 @@
 	}
 
 	/**
-	 * LES REFUS DU SERVEUR, MIS EN FRANÇAIS — même régime que les motifs.
+	 * LES REFUS, MIS EN FRANÇAIS — même régime que les motifs.
 	 *
-	 * Les trois codes sont ceux que la route rend : cible inconnue, cible
-	 * interdite, lot vide. Aucun n'était visible : le parcours restait où il
-	 * était, sans un mot. Un code inconnu passe tel quel plutôt que d'être
-	 * remplacé par une phrase rassurante qui cacherait ce qui s'est passé.
+	 * TROIS CODES VIENNENT DE LA ROUTE, LE QUATRIÈME NON. Cible inconnue, cible
+	 * interdite, lot vide : ce sont les trois seuls motifs que les actions
+	 * rendent, chacun avant la moindre écriture, et aucun n'était visible — le
+	 * parcours restait où il était, sans un mot. `erreur-serveur` est le repli de
+	 * l'écran lui-même, posé quand la réponse ne porte aucun motif lisible : il
+	 * ne sait donc PAS ce que le serveur a fait du lot, et sa phrase se garde de
+	 * l'affirmer. Un code inconnu passe tel quel plutôt que d'être remplacé par
+	 * une phrase rassurante qui cacherait ce qui s'est passé.
 	 */
 	const LIBELLE_DU_REFUS: Readonly<Record<string, string>> = {
 		'domaine-inconnu':
@@ -492,7 +496,8 @@
 		'sans-droit-sur-la-cible':
 			"Vous n'avez pas le droit d'écrire dans ce domaine. Rien n'a été déposé.",
 		'lot-vide': 'Aucun fichier n’est parti. Reprenez le dépôt et relancez.',
-		'erreur-serveur': "Le serveur n'a pas traité le lot. Rien n'a été déposé."
+		'erreur-serveur':
+			"Le serveur n'a pas rendu de réponse lisible. Ce qu'il a fait du lot n'est pas connu d'ici : rouvrez le domaine de destination avant de relancer."
 	};
 
 	/** Le refus à l'écran — une notification d'erreur, ou rien du tout. */
@@ -739,20 +744,19 @@
 	const rapportSimule = $derived(rapport !== null && rapport.simulation);
 	/** L'étape 4 close sur un rapport de SIMULATION : rien n'a été écrit. */
 	const simulationTerminee = $derived(termine && rapportSimule);
-	/**
-	 * Le retour en arrière reste possible jusqu'à la validation, pas au-delà.
-	 *
-	 * UNE SIMULATION N'EST PAS UNE VALIDATION — rien n'a été écrit, et la règle
-	 * ci-dessus dit donc elle-même que le retour reste ouvert. C'est aussi la
-	 * seule sortie honnête de l'étape 4 après une simulation : « Ouvrir le
-	 * domaine » n'y a plus de sens, et un écran sans aucun geste serait une
-	 * impasse. On revient à l'aperçu, d'où l'import réel se lance.
-	 */
-	const precedentMasque = $derived(etape === 1 || (etape === 4 && !simulationTerminee));
+	/** Le retour en arrière reste possible jusqu'à la validation, pas au-delà. */
+	const precedentMasque = $derived(etape === 1 || etape === 4);
 	/**
 	 * « OUVRIR LE DOMAINE » N'EST OFFERT QUE SI QUELQUE CHOSE Y A ÉTÉ ÉCRIT.
 	 * Après une simulation, le domaine ne porte aucune des notes annoncées :
 	 * proposer d'y aller serait promettre ce qui n'existe pas (`P-03`).
+	 *
+	 * CE QUE CELA LAISSE, ET QUI N'EST PAS COMBLÉ ICI : le pied n'a que trois
+	 * boutons, et les trois sont alors retirés — « Renoncer » ne vit qu'à
+	 * l'étape 3, « Retour » pas au-delà de la validation. L'étape 4 d'une
+	 * simulation ne porte donc aucun geste de parcours, et on en sort par la
+	 * coquille. Y ajouter une sortie serait un geste que rien ne demande : le
+	 * vide est remonté tel quel.
 	 */
 	const ouvrirLeDomaine = $derived(termine && !simulationTerminee);
 	/* L'import lancé, « Continuer » disparaît jusqu'à ce que le rapport soit là ;
