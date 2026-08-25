@@ -649,8 +649,17 @@
 							style="max-width:380px"
 							value={profil?.courriel ?? ''}
 						/>
+						<!--
+							LE GEL ÉCRIVAIT ICI « Sert aux notifications et à la
+							réinitialisation du mot de passe ». Les deux usages sont faux : le
+							produit n'a AUCUN expéditeur de courriel, et la réinitialisation
+							par lien n'existe pas — V-06 le dit désormais en toutes lettres.
+							Ce qui reste vrai de cette adresse est ce qu'elle EST : une donnée
+							du compte, enregistrée et relue par la console des comptes.
+						-->
 						<span class="champ__aide"
-							>Sert aux notifications et à la réinitialisation du mot de passe.</span
+							>Enregistrée sur votre compte, et visible dans la console des comptes. Ce produit
+							n'envoie aucun message&nbsp;: ni notification, ni lien de réinitialisation.</span
 						>
 					</div>
 					<div>
@@ -838,16 +847,23 @@
 							<!-- prettier-ignore -->
 							<span class="interrupteur"><input type="checkbox" id="p-session" checked={preferenceDeSession}><span class="interrupteur__piste"></span></span>
 						</label>
-						<label class="pref">
-							<span class="pref__txt">
-								<span class="pref__nom">Recevoir les demandes de révision par courriel</span>
-								<span class="pref__aide"
-									>Un message quand un collègue signale une de vos notes à revoir.</span
-								>
-							</span>
-							<!-- prettier-ignore -->
-							<span class="interrupteur"><input type="checkbox" id="p-courriels" checked><span class="interrupteur__piste"></span></span>
-						</label>
+						<!--
+							L'INTERRUPTEUR « Recevoir les demandes de révision par courriel »
+							N'EST PLUS ÉMIS, et il ne s'agit pas d'un oubli de portage.
+
+							Le gel le posait coché au balisage, sans lui attacher aucun
+							gestionnaire. Rien ne pouvait le tenir : `comptes` n'a aucune
+							colonne de préférence de notification, aucune table de préférences
+							n'existe, et le produit n'a AUCUN expéditeur de courriel — le
+							message promis « quand un collègue signale une de vos notes à
+							revoir » ne partirait de nulle part. Un interrupteur coché est une
+							promesse tenue pour acquise ; celle-ci ne peut pas l'être.
+
+							Le geste est celui que `+layout.svelte` fait pour la donnée de
+							synchronisation de V-07 : ce qui n'a pas de contrepartie n'est pas
+							émis. La lacune reste comptée par `SANS_CONTREPARTIE_EN_BASE`
+							(`$lib/donnees/profil`), qui rougira le jour où la colonne arrive.
+						-->
 					</div>
 					<div>
 						<button class="btn btn--destructif" id="fermer-sessions"
