@@ -124,12 +124,17 @@
 	type Issue<T> = { readonly valeur: T } | { readonly refus: string };
 
 	/**
-	 * LES DEUX FORMES DE RÉPONSE D'UNE ACTION, TELLES QUE `deserialize` LES REND.
+	 * LE REPLI QUAND LA RÉPONSE N'EST PAS LISIBLE — ET AUCUNE ACTION NE L'ÉMET.
 	 *
 	 * `fail()` produit un résultat de type `failure` dont `data` porte l'objet
-	 * passé à l'appel — ici `issue`. Un `error()` non intercepté produit un
-	 * résultat de type `error`. Ni l'un ni l'autre n'est un succès, et aucun des
-	 * deux ne doit disparaître.
+	 * passé à l'appel — ici `issue` —, et les trois seuls motifs que les actions
+	 * de ce dossier rendent sont ceux-là. Ce code-ci n'en fait pas partie : il
+	 * est posé PAR CET ÉCRAN, et seulement quand la réponse ne porte pas de
+	 * motif lisible — un `error()` non intercepté, ou un succès dont la charge
+	 * n'a pas la forme attendue. Il ne dit donc rien de ce que le serveur a
+	 * fait, et sa mise en français dans la vue ne doit rien affirmer non plus.
+	 *
+	 * UNE REDIRECTION N'EN EST PAS UN CAS : elle se suit, voir `envoyer()`.
 	 */
 	const REFUS_SANS_MOTIF = 'erreur-serveur';
 
@@ -157,10 +162,40 @@
 		if (reglages.simulation) corps.append('simulation', 'oui');
 		for (const f of fichiers) corps.append('fichiers', f, cheminDuFichier(f));
 		const reponse = await fetch(`?/${action}`, { method: 'POST', body: corps });
+
+		/* UNE REDIRECTION SE SUIT, ELLE NE SE RACONTE PAS — et il y en a DEUX
+		   FORMES, mesurées sur le produit plutôt que supposées.
+
+		   Celle qui arrive vraiment est la session close pendant le parcours :
+		   `garde.ts` range `/importer` au régime `redirection`, et les hooks
+		   répondent 302 vers `/connexion` AVANT que l'action existe. Relevé au
+		   dev sur un envoi sans session : `POST /importer?/analyser` -> 302 vers
+		   `/connexion?motif=page-protegee&suite=…`. Un envoi programmé suit ce
+		   renvoi tout seul, et ce qui revient est alors la PAGE DE CONNEXION :
+		   la relire comme un résultat d'action lève, et le parcours restait de
+		   nouveau sans un mot. `redirected` dit que le renvoi a eu lieu, `url`
+		   dit où — c'est là qu'il faut emmener la fenêtre.
+
+		   L'autre est le `redirect` d'une action, que `deserialize` sait rendre.
+		   Aucune des deux actions de ce dossier n'en lève aujourd'hui ; le motif
+		   de refus lui étant attribué affirmait pourtant que le lot n'avait pas
+		   été traité. On la suit aussi, plutôt que de la raconter de travers.
+
+		   Le repli rendu ensuite ne sert qu'à honorer la signature, le temps que
+		   la page parte — et il n'affirme rien de ce qu'est devenu le lot. */
+		if (reponse.redirected) {
+			window.location.assign(reponse.url);
+			return { refus: REFUS_SANS_MOTIF };
+		}
+
 		const resultat = deserialize(await reponse.text());
 		if (resultat.type === 'failure') {
 			const motif = (resultat.data as Record<string, unknown> | undefined)?.['issue'];
 			return { refus: typeof motif === 'string' ? motif : REFUS_SANS_MOTIF };
+		}
+		if (resultat.type === 'redirect') {
+			window.location.assign(resultat.location);
+			return { refus: REFUS_SANS_MOTIF };
 		}
 		if (resultat.type !== 'success') return { refus: REFUS_SANS_MOTIF };
 		return { valeur: (resultat.data ?? {}) as Record<string, unknown> };
