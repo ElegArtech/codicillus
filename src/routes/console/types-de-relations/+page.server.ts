@@ -9,15 +9,13 @@
  * `src/lib/droits/resolution.ts` et rend `INTROUVABLE` ; le seul `error(404, MESSAGE_INTROUVABLE)`
  * du fichier est SANS MESSAGE (`ADR-007`).
  *
- * CE QUE CE CHARGEUR NE FAIT PAS. Il ne touche pas `src/vues/V-30.svelte`, et
- * ne peut donc pas corriger ce que la vue lit du jeu de semence :
- * `TYPES_RELATION`, `RELATIONS` et `RELATIONS_TECHNIQUES` y sont importés au
- * niveau du module (`V-30:54`), alors que la base porte `types_de_relation` et
- * `relations` et que `lireTypesDeRelation()`, `lireRelations()` et
- * `lireRelationsTechniques()` de `T-030` les rendent. La donnée existe des deux
- * côtés et n'a AUCUN chemin jusqu'à l'écran — c'est le compte d'emploi de
- * chaque type qui en dépend, celui-là même qui décide si une suppression est
- * refusée. Écart déclaré au rapport du lot.
+ * LE VOCABULAIRE ET LES LIENS AFFICHÉS SONT CEUX DE LA BASE — l'écart est
+ * refermé. Ce commentaire disait : « la vue lit `TYPES_RELATION`, `RELATIONS` et
+ * `RELATIONS_TECHNIQUES` du jeu de semence, la donnée n'a AUCUN chemin jusqu'à
+ * l'écran ». Les trois sont désormais des propriétés de `V-30`, de défaut les
+ * constantes du jeu, et ce chargeur les sert depuis `types_de_relation` et
+ * `relations` — le compte d'emploi de chaque type, celui-là même qui décide si
+ * une suppression est refusée, se compte donc sur les liens réels.
  *
  * `vecteur: null` demande l'état au repos.
  */

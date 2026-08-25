@@ -16,12 +16,12 @@
  * `$lib/vocabulaire`. L'ADRESSE, elle, ne se renomme pas — la déduire du
  * réglage rendrait un chemin instable.
  *
- * CE QUE CE CHARGEUR NE FAIT PAS. Il ne touche pas `src/vues/V-29.svelte`, et
- * ne peut donc pas corriger ce que la vue lit du jeu de semence : `TYPES_FICHE`
- * et ses champs y sont importés au niveau du module (`V-29:72`), alors que la
- * base porte `types_de_fiche` et `champs_de_type_de_fiche` et que
- * `lireTypesDeFiche()` de `T-030` les rend. La donnée existe des deux côtés et
- * n'a AUCUN chemin jusqu'à l'écran. Écart déclaré au rapport du lot.
+ * LE RÉFÉRENTIEL AFFICHÉ EST CELUI DE LA BASE — l'écart est refermé. Ce
+ * commentaire disait : « la vue lit `TYPES_FICHE` du jeu de semence, la donnée
+ * existe des deux côtés et n'a AUCUN chemin jusqu'à l'écran ». Le chemin
+ * existe : `typesFiche` est une propriété de `V-29`, de défaut la constante du
+ * jeu, et ce chargeur la sert par `lireTypesDeFiche()` depuis `types_de_fiche`
+ * et `champs_de_type_de_fiche`.
  *
  * `vecteur: null` demande l'état au repos — formulaire fermé, aucun refus de
  * suppression ouvert.

@@ -39,6 +39,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import Vue from '../../vues/V-25.svelte';
 	import '../../vues/V-25.css';
 	import type { PageData } from './$types';
@@ -169,7 +170,26 @@
 	});
 </script>
 
+<!--
+	`domaines` VIENT DU GABARIT RACINE, QUI LES LIT EN BASE : c'est le rail de la
+	coquille, et il portait sinon les domaines du jeu de semence.
+
+	`rangementDuProfil` EST L'ADRESSE DU BOUTON « VOIR LES NOTES DE … », ET ELLE
+	EST LUE, JAMAIS DÉRIVÉE. `page.data.rangement` vient de `rangementDuCompte()`
+	du gabarit racine, qui joint comptes → domaines → univers et rend les deux
+	IDENTIFIANTS du domaine de rattachement du titulaire — exactement ce que
+	l'adresse demande.
+
+	POURQUOI LA LISTE DE DOMAINES NE SUFFISAIT PAS. Elle ne porte que des NOMS, et
+	V-25 y retrouvait le domaine du titulaire par son nom d'affichage avant de
+	composer l'adresse. Or `RG-M12-11` fige l'identifiant à la création et le
+	laisse stable : après le seul renommage que la console permet, l'adresse
+	composée du nouveau nom rend 404. Deux univers portant un même nom de domaine
+	produisaient, eux, l'adresse de l'homonyme. Le rattachement lu ferme les deux.
+-->
 <Vue
+	domaines={page.data.domaines}
+	rangementDuProfil={page.data.rangement}
 	vecteur={data.vecteur}
 	notes={data.notes}
 	profilDuCompte={data.profilDuCompte}
