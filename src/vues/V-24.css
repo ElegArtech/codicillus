@@ -631,9 +631,12 @@
   text-decoration: none; color: inherit;
 }
 .note-creee + .note-creee { border-top: 1px solid var(--c-trait-fin); border-radius: 0; }
-.note-creee:hover { background: var(--c-papier-2); }
+/* Le survol ne s'allume que sur une ligne QUI MÈNE QUELQUE PART. Le rapport
+   d'une simulation rend ses lignes sans lien — rien n'a été écrit, l'adresse
+   n'ouvrirait rien —, et le gel ne connaissait que le cas du lien. */
+a.note-creee:hover { background: var(--c-papier-2); }
 .note-creee__nom { flex: 1; min-width: 0; font-size: var(--t-petit); font-weight: var(--g-moyen); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.note-creee:hover .note-creee__nom { color: var(--c-accent-fonce); }
+a.note-creee:hover .note-creee__nom { color: var(--c-accent-fonce); }
 .note-creee__ou { font-family: var(--f-donnee); font-size: var(--t-micro); color: var(--c-encre-3); }
 
 /* --- Pied de parcours ------------------------------------------------------------------- */
