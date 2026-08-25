@@ -25,26 +25,9 @@
 	import { page } from '$app/state';
 	import { adresseDesSignetsDuDomaine } from '$lib/rangement/adresses';
 	import { cablerLAnnulationDuSignet } from '../cablage';
-	import { MOI } from '../../../../../../../seeds/corpus';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
-
-	/* LE RANGEMENT RÉEL, SERVI PAR LE GABARIT RACINE. Sans lui, la vue retombe
-	   sur `DOMAINES` du jeu de semence et le sélecteur n'offre que des
-	   destinations inexistantes — mesuré : quatre domaines proposés, trois
-	   absents de la base, et « Projets › Migration » manquant. */
-	const compteServi = $derived(page.data.compte ?? MOI);
-	/* Le domaine pré-choisi est celui de L'ADRESSE, pas celui du compte : c'est
-	   le seul que l'action accepte, et un administrateur n'a pas de domaine de
-	   rattachement. */
-	const compte = $derived({
-		...MOI,
-		nom: compteServi.nom,
-		initiales: compteServi.initiales,
-		role: compteServi.role,
-		domaine: data.domaine.nom
-	});
 
 	let enveloppe: HTMLDivElement;
 
@@ -71,5 +54,18 @@
 </script>
 
 <div bind:this={enveloppe} style="display:contents">
-	<Vue vecteur={data.vecteur} notes={data.notes} domaines={page.data.domaines} {compte} />
+	<!-- LE DOMAINE PRÉ-CHOISI EST CELUI DE L'ADRESSE, jamais celui d'un compte :
+	     c'est le seul que l'action accepte, et un administrateur n'a pas de
+	     domaine de rattachement. Il descendait par `compte.domaine`, dont le
+	     dernier repli était `MOI` de `seeds/corpus.ts` — le sélecteur proposait
+	     alors quatre domaines dont trois absents de la base.
+	     `signet` EST EXPLICITEMENT NUL : rien n'est édité ici. Sans cela la vue
+	     retombait sur `n-sig-statut` du jeu de démonstration. -->
+	<Vue
+		vecteur={data.vecteur}
+		notes={data.notes}
+		domaines={page.data.domaines}
+		domaineDeDepart={data.domaine.nom}
+		signet={null}
+	/>
 </div>

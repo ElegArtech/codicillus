@@ -10,8 +10,9 @@
 	 *
 	 * LE SIGNET ÉDITÉ EST CELUI QUE L'ADRESSE DÉSIGNE : le chargeur le résout et
 	 * la vue le lit par sa propriété `signet`. Les domaines du sélecteur viennent
-	 * du gabarit racine, qui les lit en base — sans eux, la vue retombe sur
-	 * `DOMAINES` du jeu de semence et propose des domaines qui n'existent pas.
+	 * du gabarit racine, qui les lit en base ; la vue les EXIGE désormais — elle
+	 * retombait sur `DOMAINES` du jeu de démonstration et proposait des domaines
+	 * qui n'existent pas.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
 	 * sert ; elle est identique à l'octet à sa source gelée (P-6.3).

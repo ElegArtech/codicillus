@@ -40,8 +40,8 @@
 	 * règles inconciliables (`docs/DESIGN.md` §2.H). Aucune factorisation.
 	 *
 	 * AUCUN CHIFFRE N'EST SAISI (P-02) : notes, domaines, contributeurs et
-	 * répartition de fraîcheur sont calculés depuis `seeds/corpus.ts`, comme la
-	 * maquette les calcule depuis `window.CORPUS`.
+	 * répartition de fraîcheur sont calculés depuis les propriétés servies, comme
+	 * la maquette les calcule depuis `window.CORPUS`.
 	 *
 	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011) : l'état est rendu, jamais
 	 * la transition. Les gestes de la maquette — notifications au clic sur une
@@ -60,76 +60,72 @@
 	 * second bloc `<style>` du gel (P-6.3). Les styles en ligne reproduits sont
 	 * ceux du gel, et eux seuls (P-6.4, ARB-016).
 	 */
-	import {
-		ACTIVITE,
-		DETAIL_DOMAINES,
-		DOMAINES,
-		INSTANCE,
-		MODULES,
-		MOI,
-		UNIVERS,
-		type CleDeModule,
-		type DetailDeDomaine,
-		type Domaine,
-		type EtatDInstance,
-		type EvenementDActivite,
-		type Module,
-		type NomDeDomaine,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
+	import type {
+		CleDeModule,
+		DetailDeDomaine,
+		Domaine,
+		EvenementDActivite,
+		Module,
+		NomDeDomaine,
+		Note,
+		Univers
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
+	import type { CompteAffiche } from '$lib/coquille/identite';
+	import { libelleDeModule } from '$lib/rangement/modules';
 	import { adresseDeDomaine, adresseDeNote } from '$lib/rangement/adresses';
 
 	/**
-	 * LES SEPT SOURCES QUI NE VENAIENT DE NULLE PART — T-041.
+	 * LES SOURCES DE L'ÉCRAN SONT REQUISES — le motif est retiré, pas contourné.
 	 *
-	 * Jusqu'ici les constantes du jeu de semence étaient lues AU NIVEAU DU
-	 * MODULE : un chargeur de route pouvait passer `notes`, et rien d'autre
-	 * n'atteignait l'écran. Elles sont désormais des PROPRIÉTÉS OPTIONNELLES.
+	 * Elles ont été OPTIONNELLES, de défaut la constante de `seeds/corpus.ts`, et
+	 * cette forme garantissait qu'une route qui en oubliait une servait le jeu de
+	 * démonstration SANS QUE RIEN NE PROTESTE : ni le compilateur, ni un test, ni
+	 * l'écran, qui affichait un contenu plausible. Quatre campagnes ont couru
+	 * après les symptômes de ce défaut de défaut.
 	 *
-	 * LE DÉFAUT EST LA CONSTANTE, ET C'EST CE QUI TIENT LE GEL. Le mode démo ne
-	 * passe que `etat`, `vecteur` et `notes` : la vue reçoit exactement ce qu'elle
-	 * recevait, et les 28 couples du banc ne bougent pas. Ce lot rend le passage
-	 * POSSIBLE ; il ne décide pas de ce qui sera passé.
+	 * `exactOptionalPropertyTypes` et `strict` sont actifs, `svelte-check` est
+	 * dans `pnpm check` : une route qui oublierait l'une d'elles NE COMPILE PLUS.
+	 * C'est le seul garde-fou qui tienne sans qu'on ouvre l'écran.
 	 *
-	 * `detailDomaines` ET `modules` SONT CEUX QUI RENDENT `P-04` EFFECTIVE. Les
-	 * pastilles de module des cartes de domaine sortaient de la constante et
-	 * COÏNCIDAIENT avec la table `modules_de_domaine` sans en être PILOTÉES
-	 * (mesuré par T-032). Un chargeur peut désormais les piloter.
+	 * `detailDomaines` ET `modules` RENDENT `P-04` EFFECTIVE, et leurs deux
+	 * sources sont distinctes : les CLÉS actives d'un domaine viennent de
+	 * `modules_de_domaine` (`RG-STR-06`), les LIBELLÉS du catalogue de produit
+	 * `$lib/rangement/modules.ts`. Ni l'un ni l'autre n'est de la démonstration.
+	 *
+	 * `compte` PEUT LÉGITIMEMENT MANQUER — une page rendue hors gabarit racine
+	 * n'a pas d'identité —, et son état vide est `null` : la barre supérieure
+	 * n'annonce alors personne, plutôt que d'annoncer quelqu'un du jeu.
 	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — droits × univers × état. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-10')`, variante « lecture ». */
+		/** Les notes lisibles, servies par le chargeur. */
 		notes: readonly Note[];
-		/** Les univers déclarés. Absents, ceux du jeu de semence. */
-		univers?: readonly Univers[];
-		/** Les domaines accessibles. Absents, ceux du jeu de semence. */
-		domaines?: readonly Domaine[];
-		/** L'utilisateur connecté. Absent, celui du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance — version, synchronisation. Absent, celui du jeu. */
-		instance?: EtatDInstance;
-		/** Les évènements du corpus. Absents, ceux du jeu de semence. */
-		activite?: readonly EvenementDActivite[];
-		/** Description et modules activés, par domaine — porté par la base. */
-		detailDomaines?: Record<NomDeDomaine, DetailDeDomaine>;
+		/** Les univers déclarés — vides tant que l'instance n'en porte aucun. */
+		univers: readonly Univers[];
+		/** Les domaines accessibles — vides tant que l'instance n'en porte aucun. */
+		domaines: readonly Domaine[];
+		/** L'utilisateur connecté. `null` : aucun compte connu. */
+		compte?: CompteAffiche | null;
+		/** Les évènements du corpus — vides quand rien n'a bougé. */
+		activite: readonly EvenementDActivite[];
+		/** Description et modules activés, par domaine — lus en base. */
+		detailDomaines: Record<NomDeDomaine, DetailDeDomaine>;
 		/** Le catalogue des modules — nom et sous-titre de chaque clé. */
-		modules?: Record<CleDeModule, Module>;
+		modules: Record<CleDeModule, Module>;
 	}
 
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines: tousLesDomaines = DOMAINES,
-		compte: moi = MOI,
-		instance = INSTANCE,
-		activite = ACTIVITE,
-		detailDomaines = DETAIL_DOMAINES,
-		modules = MODULES
+		univers,
+		domaines: tousLesDomaines,
+		compte: compteConnecte = null,
+		activite,
+		detailDomaines,
+		modules
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -156,12 +152,20 @@
 	);
 
 	/**
+	 * AUCUN UNIVERS — l'état vide, écrit plutôt que subi. La liste servie ne peut
+	 * pas être vide sur cette route : le chargeur y AJOUTE celui que l'adresse
+	 * nomme, même quand aucun de ses domaines n'est lisible. Le repli est là pour
+	 * que la propriété soit honnête sur toute sa forme — un tableau vide rendait
+	 * `univers[0].nom` et sortait en 500.
+	 */
+	const AUCUN_UNIVERS: Univers = { nom: '', couleur: '', glyphe: '', description: '' };
+
+	/**
 	 * L'univers rendu. La maquette le cherche par son nom dans `window.UNIVERS`
-	 * (`V-10:1814`) ; le corpus en porte un troisième — « Non classé », univers
-	 * système — que la planche ne présente pas et que le gel ignore donc.
+	 * (`V-10:1814`) ; le produit le cherche dans la liste que le chargeur sert.
 	 */
 	const courant = $derived(
-		(univers.find((u) => u.nom === reglage['uni']) ?? univers[0]) as Univers
+		univers.find((u) => u.nom === reglage['uni']) ?? univers[0] ?? AUCUN_UNIVERS
 	);
 
 	/** L'état « sans domaine » vide l'univers de ses deux dérivés à la fois. */
@@ -272,13 +276,19 @@
 
 	/**
 	 * L'activité de l'univers. Elle est indépendante de l'état « sans domaine » :
-	 * la maquette la filtre sur `window.ACTIVITE` et le corpus entier, jamais sur
-	 * l'ensemble vidé (`V-10:1974`). L'événement sans cible — l'import — est
-	 * rattaché à Production.
+	 * la maquette la filtre sur le corpus entier, jamais sur l'ensemble vidé
+	 * (`V-10:1974`).
+	 *
+	 * UN ÉVÉNEMENT SANS CIBLE N'APPARTIENT À AUCUN UNIVERS. Il était rattaché à
+	 * « Production » — un nom d'univers du jeu de démonstration, écrit en dur dans
+	 * une règle : sur une instance qui ne porte pas ce nom, la règle décidait
+	 * quand même, et sur une qui le porte elle y versait un événement dont rien
+	 * ne dit qu'il en vient. Les trois traces que le chargeur lit portent TOUTES
+	 * une note en cible ; ce qui n'en porte pas n'est rattachable à rien.
 	 */
 	const evenements = $derived(
 		activite.filter((e) => {
-			if (!e.cible) return courant.nom === 'Production';
+			if (!e.cible) return false;
 			const n = noteParId(e.cible);
 			return n !== undefined && n.univers === courant.nom;
 		})
@@ -344,13 +354,8 @@
 	{univers}
 	domaines={tousLesDomaines}
 	notes={corpus}
-	compte={{
-		nom: moi.nom,
-		initiales: moi.initiales,
-		role: moi.role,
-		domaine: moi.domaine
-	}}
-	version={instance.version}
+	compte={compteConnecte ?? COMPTE_VIDE}
+	version=""
 >
 	{#snippet enfants()}
 		<header class="couverture" id="couverture" style="--teinte:{courant.couleur}">
@@ -481,9 +486,9 @@
 							<p class="carte-dom__desc">{detail.description}</p>
 							<div>{@render repartition(notesDom, d.nom)}</div>
 							<div class="carte-dom__modules">
-								{#each detail.modules as m (m)}<span
+								{#each detail.modules as m (m)}{@const libelle = libelleDeModule(modules, m)}<span
 										class="past"
-										title={modules[m as CleDeModule].sous}>{modules[m as CleDeModule].nom}</span
+										title={libelle.sous}>{libelle.nom}</span
 									>{/each}
 							</div>
 						</article>
