@@ -18,11 +18,14 @@
  * l'affirmation était fausse, et elle coûtait un écran entier de données
  * illustratives. Les quatre sont passées.
  *
- * `modules` RESTE AU DÉFAUT, ET CE N'EST PAS LA MÊME CHOSE. `MODULES` est le
- * catalogue des LIBELLÉS des six modules — « Notes », « Arborescence de
- * dossiers »… —, pas la liste des modules d'un domaine. Aucune table ne le
- * porte, et il n'en existe qu'un : c'est un référentiel d'interface, pas une
- * donnée. Ce qui varie par domaine — quels modules sont ACTIVÉS — entre par
+ * `modules` EST SERVI, LUI AUSSI, ET CE N'EST PAS LA MÊME CHOSE QUE LES QUATRE
+ * AUTRES. C'est le catalogue des LIBELLÉS des six modules — « Notes »,
+ * « Dossiers »… —, pas la liste des modules d'un domaine : aucune table ne le
+ * porte, et il n'en existe qu'un. C'est un référentiel d'interface du produit,
+ * pas une donnée de démonstration. Il était lu sur `seeds/corpus.ts` PAR LA VUE
+ * ELLE-MÊME, en valeur par défaut d'une propriété facultative ; il est déclaré
+ * ici et passé, pour que plus rien du jeu de démonstration ne descende dans
+ * l'écran. Ce qui varie par domaine — quels modules sont ACTIVÉS — entre par
  * `detailDomaines`, lu dans `modules_de_domaine` (`P-04`).
  *
  * `vecteur: null` demande l'état au repos : les trois positions de l'axe
@@ -53,6 +56,24 @@ import {
 import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
+import type { CleDeModule, Module } from '../../../../seeds/corpus';
+
+/**
+ * LE CATALOGUE DES SIX MODULES ACTIVABLES SUR UN DOMAINE.
+ *
+ * Le type `Record<CleDeModule, Module>` LE LIE AU PRODUIT : les six clés sont
+ * celles de `CleDeModule`, et il en manquerait une que le compilateur le dirait.
+ * Les libellés, eux, sont ceux de l'interface — `RG-STR-06` gouverne quelles
+ * clés sont actives sur un domaine, jamais comment elles se nomment.
+ */
+const CATALOGUE_DE_MODULES: Record<CleDeModule, Module> = {
+	notes: { nom: 'Notes', sous: 'Toutes les notes du domaine' },
+	dossiers: { nom: 'Dossiers', sous: 'Rangement arborescent' },
+	fiches: { nom: 'Fiches', sous: 'Objets typés et leurs relations' },
+	cartographie: { nom: 'Cartographie', sous: 'Graphe des dépendances' },
+	signets: { nom: 'Signets', sous: 'Liens web curatés' },
+	carteMentale: { nom: 'Carte mentale', sous: 'Arbre dépliable du domaine' }
+};
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
@@ -66,6 +87,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		domaines: acces.ressource.domaines,
 		compte: acces.ressource.compte,
 		detailDomaines: await lireLeDetailDesDomaines(base),
+		modules: CATALOGUE_DE_MODULES,
 		designations: await lireLesDesignationsDeDomaine(base)
 	};
 };
