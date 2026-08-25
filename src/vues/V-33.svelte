@@ -428,13 +428,16 @@
 				></div
 			></div
 			><div class="groupe__corps"
-				><div class="champ"
+				><div class="champ" id="champ-versions"
 					><label class="champ__label" for="c-versions">Versions conservées par note</label
 					><div class="champ-nombre"
 						><input class="saisie" type="number" id="c-versions" min="5" max="500" step="1" value={config.versionsMax}
 						><span class="champ-nombre__unite">versions</span
 					></div
 					><span class="champ__aide" id="aide-versions">{aideVersions}</span
+					><div class="champ__erreur" id="erreur-versions" hidden
+						>{@render marqueurDErreur()}<span id="erreur-versions-txt"></span
+					></div
 				></div
 			></div
 		></section>
@@ -497,19 +500,25 @@
 			></div
 			><div class="groupe__corps"
 				><div class="duo-champs"
-					><div class="champ"
+					><div class="champ" id="champ-taille"
 						><label class="champ__label" for="c-taille">Taille maximale d'une pièce jointe</label
 						><div class="champ-nombre"
 							><input class="saisie" type="number" id="c-taille" min="1" max="500" step="1" value={config.tailleMaxPieceJointe}
 							><span class="champ-nombre__unite">Mo</span
 						></div
 						><span class="champ__aide">Les fichiers déjà déposés au-delà de cette limite restent accessibles.</span
+						><div class="champ__erreur" id="erreur-taille" hidden
+							>{@render marqueurDErreur()}<span id="erreur-taille-txt"></span
+						></div
 					></div
-					><div class="champ"
+					><div class="champ" id="champ-session"
 						><label class="champ__label" for="c-session">Durée de session</label
 						><select class="selecteur" id="c-session"
 							>{#each DUREES as d (d)}<option value={d} selected={d === config.dureeSession}>{libelleDuree(d)}</option>{/each}</select
 						><span class="champ__aide">Délai d'inactivité au bout duquel la session se ferme, sauf si l'utilisateur a choisi de rester connecté.</span
+						><div class="champ__erreur" id="erreur-session" hidden
+							>{@render marqueurDErreur()}<span id="erreur-session-txt"></span
+						></div
 					></div
 				></div
 			></div

@@ -174,9 +174,9 @@ export interface DemandeDEnregistrement {
  * Le numéro suit le plus grand écrit, jamais le NOMBRE de lignes : la purge de
  * `RG-M07-03` retire les plus anciennes, et compter les lignes ferait alors
  * réémettre un numéro déjà employé — que la contrainte d'unicité par note
- * refuserait, et au plus mauvais moment. La purge elle-même n'est pas de ce
- * lot : `004_versions.montee.sql` la range en `T-019`, et le plafond vit dans
- * les paramètres (`versions_max`), jamais en dur.
+ * refuserait, et au plus mauvais moment. La purge est plus bas, dans ce même
+ * module (`numerosExcedentaires`), et le plafond vit dans les paramètres
+ * (`versions_max`), jamais en dur.
  */
 export function versionDUnEnregistrement(demande: DemandeDEnregistrement): VersionAEcrire | null {
 	if (!contenuModifie(demande.avant, demande.corps)) return null;
@@ -192,4 +192,62 @@ export function versionDUnEnregistrement(demande: DemandeDEnregistrement): Versi
 		corpsReference: demande.corps.reference,
 		corpsOperationnel: demande.corps.operationnel
 	};
+}
+
+/* ═══════════════════════════════════ La purge du plafond ═══════════════ */
+
+/**
+ * `RG-M07-03` — « Le nombre de versions conservées par note est plafonné,
+ * valeur configurable (défaut : 50). Au-delà, les plus anciennes sont purgées. »
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * ELLE RATTRAPE, ELLE NE FAIT PAS QUE PLAFONNER
+ *
+ * V-33 ne promet pas seulement un plafond glissant : « RÉDUIRE CETTE VALEUR
+ * SUPPRIMERA LES VERSIONS EXCÉDENTAIRES dès le prochain enregistrement d'une
+ * note ». Retirer la seule plus ancienne à chaque enregistrement tiendrait la
+ * première phrase de l'écran et pas la seconde : une note de cinquante versions
+ * mettrait quarante-cinq enregistrements à redescendre à cinq. Cette fonction
+ * rend donc TOUT l'excédent d'un coup.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE QUI EST GARDÉ EST DÉSIGNÉ PAR LE NUMÉRO, JAMAIS PAR UN SEUIL CALCULÉ
+ *
+ * `numero - plafond` serait juste tant que les numéros restent contigus, et
+ * faux le jour où ils ne le sont plus — la purge elle-même creuse la suite par
+ * le bas, et rien n'interdit à une reprise de base d'en creuser le milieu. Les
+ * numéros PRÉSENTS sont donc triés, les `plafond` plus grands sont gardés, le
+ * reste part. La liste rendue est celle des numéros À SUPPRIMER.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * AUCUNE POLITIQUE SUR LE PLAFOND N'EST ÉCRITE ICI — DEUX SOURCES LA TIENNENT
+ *
+ * Une première rédaction inventait sa propre règle — « un plafond hors domaine
+ * ne purge rien » —, et cette règle n'est écrite nulle part. Ce qu'elle coûtait
+ * était pire que le silence : elle neutralisait la destruction et LAISSAIT
+ * l'écran annoncer « les 0 dernières sont gardées, les plus anciennes sont
+ * supprimées automatiquement » (`V-15:288`) sur un plafond nul atteignable au
+ * clic. Le mensonge restait, seul le dégât partait.
+ *
+ * Deux sources disent quoi faire, et elles ont été suivies l'une et l'autre :
+ *
+ *   `RG-M14-10` (`CDC:1202`) nomme « plafond négatif » parmi ce que la
+ *   validation doit refuser AVEC UN MESSAGE EXPLICITE — c'est
+ *   `validerLaConfiguration()` (`donnees/administration.ts`), et le champ vidé
+ *   n'atteint plus la base ;
+ *
+ *   `RG-M07-03` (`CDC:834`) donne au plafond un défaut, 50 — c'est
+ *   `lireConfiguration()` (`donnees/lecture.ts`), qui replie sur lui toute
+ *   valeur inutilisable venue d'une reprise de base, POUR TOUS SES LECTEURS À
+ *   LA FOIS : l'écran d'historique et cette purge lisent le même nombre.
+ *
+ * Cette fonction reçoit donc un plafond déjà tenu, et ne fait que compter.
+ */
+export function numerosExcedentaires(
+	numeros: readonly number[],
+	plafond: number
+): readonly number[] {
+	if (numeros.length <= plafond) return [];
+	const parNumeroDecroissant = [...numeros].sort((a, b) => b - a);
+	return parNumeroDecroissant.slice(plafond);
 }
