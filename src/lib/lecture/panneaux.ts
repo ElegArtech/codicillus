@@ -169,6 +169,35 @@ export interface VerificationAffichee {
 	readonly jour: string;
 }
 
+/* ══════════════════════════════ Le panneau « Propriétés de fiche » ══════ */
+
+/**
+ * UNE PROPRIÉTÉ TYPÉE, TELLE QUE LA LECTURE LA PRÉSENTE — `CDC:886` : « la
+ * lecture présente ces propriétés dans un panneau structuré et lisible ».
+ *
+ * ELLE NE SE LISAIT NULLE PART HORS DE L'ÉDITEUR. La valeur s'écrivait dans
+ * `notes.proprietes_typees`, se remontrait en modification et partait dans
+ * l'archive — la page de lecture n'en affichait aucune. `RG-NOT-01` interdit
+ * de faire de la fiche un objet séparé de la note ; une fiche dont les
+ * propriétés ne se relisent que dans l'éditeur EST cet objet séparé.
+ *
+ * LE LIBELLÉ ET L'ORDRE VIENNENT DU RÉFÉRENTIEL, JAMAIS DE LA COLONNE.
+ * `proprietes_typees` est indexé par la CLÉ du champ (`nom-dns`) ; le nom
+ * affichable (« Nom DNS ») et le rang sont ceux de `champs_de_type_de_fiche`.
+ * Une propriété que le référentiel ne porte plus n'est donc pas rendue — le
+ * schéma décide de ce qui se lit, comme il décide de ce qui se saisit.
+ */
+export interface ProprieteDeFicheAffichee {
+	/** Le nom affichable du champ, tel que le référentiel le porte. */
+	readonly nom: string;
+	/**
+	 * La valeur portée par la note. `null` : la note ne porte rien pour ce
+	 * champ — l'absence est DITE (`RG-M18-03`), jamais comblée par l'exemple du
+	 * référentiel, qui serait la valeur d'une note inventée (P-02).
+	 */
+	readonly valeur: string | null;
+}
+
 /* ═══════════════════════════════════════════════════ L'ensemble ═════════ */
 
 /** Tout ce que les panneaux latéraux de V-14 lisent, et rien de plus. */
@@ -178,4 +207,10 @@ export interface PanneauxDeLaNote {
 	readonly relations: readonly GroupeDeRelations[];
 	readonly retroliens: readonly RetrolienAffiche[];
 	readonly verifications: readonly VerificationAffichee[];
+	/**
+	 * LES PROPRIÉTÉS TYPÉES, DANS L'ORDRE DU RÉFÉRENTIEL — vides quand la note
+	 * n'est pas une fiche, et le panneau n'est alors pas rendu du tout
+	 * (`BRIEF-VUES.md:797` : « si la note est une fiche »).
+	 */
+	readonly proprietes: readonly ProprieteDeFicheAffichee[];
 }

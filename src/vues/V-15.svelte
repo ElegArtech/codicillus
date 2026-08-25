@@ -94,7 +94,7 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import NoteDeDemonstration from '$lib/lecture/NoteDeDemonstration.svelte';
 	import SommaireDeLaNote from '$lib/lecture/SommaireDeLaNote.svelte';
-	import { NOTE } from '$lib/lecture/note-de-demonstration';
+	import { NOTE, type LectureAffichee } from '$lib/lecture/note-de-demonstration';
 
 	/**
 	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
@@ -143,6 +143,27 @@
 		 */
 		note?: Note;
 		/**
+		 * LA NOTE TELLE QU'ELLE S'AFFICHE — l'identité, les deux corps rendus, le
+		 * sommaire, le dernier contrôle, les dates et les mesures de consultation.
+		 *
+		 * SANS ELLE, L'HISTORIQUE SERVAIT L'ARTICLE DE LA NOTE DE DÉMONSTRATION.
+		 * Le bloc partagé retombe, faute de note affichée, sur `n-restaurer-pg` :
+		 * `/notes/{identifiant}?version` rendait donc, POUR N'IMPORTE QUELLE
+		 * NOTE, le titre « Restaurer une sauvegarde PostgreSQL depuis Barman »,
+		 * son rangement, son auteur, ses 412 consultations, le sommaire de son
+		 * corps et un cartouche « Vérifié par Karim Belhadj » — sous un fil
+		 * d'Ariane qui, lui, nommait la vraie note. Ses deux liens internes
+		 * menaient à une note qui rend 404 sur une instance réelle.
+		 *
+		 * `note` NE LA REMPLACE PAS, ET NE FAIT PAS DOUBLE EMPLOI : `note` porte
+		 * le fil d'Ariane, le titre du panneau et la clé de lecture des versions
+		 * — l'enveloppe de l'écran ; `affichee` porte l'ARTICLE. Les deux
+		 * décrivent la même note, et la route les prend à la même source.
+		 *
+		 * ABSENTE, la transcription figée du gel, à l'identique.
+		 */
+		affichee?: LectureAffichee;
+		/**
 		 * COMPARER DEUX VERSIONS. Absente — le rendu d'une planche —, les cases
 		 * restent inertes et « Comparer » désactivé, comme au gel. Passée par la
 		 * route, la sélection s'arme et le bouton navigue.
@@ -173,6 +194,7 @@
 		versions: historique = VERSIONS,
 		retentionVersions = RETENTION_VERSIONS,
 		note = undefined,
+		affichee = undefined,
 		versionAffichee = null,
 		onComparer
 	}: Proprietes = $props();
@@ -423,7 +445,7 @@
 	version={instance.version}
 >
 	{#snippet enfants()}
-		<SommaireDeLaNote />
+		<SommaireDeLaNote entrees={affichee?.sommaire} />
 
 		<article class="article" id="article">
 			<!--
@@ -447,7 +469,7 @@
 			</div>
 
 			<!-- P-09 · ARB-040 — le bloc partagé OMET ses actions d'écriture en lecture seule. -->
-			<NoteDeDemonstration {droits} {separateur} />
+			<NoteDeDemonstration {droits} {separateur} {affichee} />
 		</article>
 	{/snippet}
 
