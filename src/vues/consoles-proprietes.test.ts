@@ -65,7 +65,18 @@ beforeAll(async () => {
 	serveur = await createServer({
 		configFile: join(racine, 'vite.config.ts'),
 		root: racine,
-		server: { middlewareMode: true },
+		// LE SURVEILLANT NE DOIT PAS DESCENDRE DANS .claude/worktrees/ NI DANS build/.
+		// Il parcourt toute la racine ; sous .claude/worktrees/ vivent des copies
+		// complètes du dépôt, et les veilleurs du système s'épuisent : la série sort
+		// en ENOSPC, ses tests verts compris. Le surveillant attend un prédicat, pas
+		// un motif : les jokers y sont inertes, et `watch: null` ne l'éteint pas —
+		// il ne fait que lui retirer ce filtre.
+		server: {
+			middlewareMode: true,
+			watch: {
+				ignored: (chemin: string) => chemin.includes('/.claude') || chemin.includes('/build/')
+			}
+		},
 		appType: 'custom',
 		logLevel: 'error'
 	});
