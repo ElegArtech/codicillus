@@ -35,6 +35,8 @@ import {
 	supprimerUnTypeDeFiche
 } from '$lib/donnees/administration';
 import {
+	CHAMP_DESCRIPTION,
+	CHAMP_GLYPHE,
 	CHAMP_NOM,
 	CHAMP_PROPRIETES,
 	CHAMP_TYPE_DE_FICHE_CIBLE,
@@ -42,7 +44,7 @@ import {
 	texteDuChamp
 } from '$lib/console/structure';
 import { accesALaConsole, contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
-import { lireTypesDeFiche } from '$lib/donnees/lecture';
+import { lirePresentationsDeTypeDeFiche, lireTypesDeFiche } from '$lib/donnees/lecture';
 import { lireLesDesignationsDeTypeDeFiche } from '$lib/donnees/consoles';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
@@ -59,6 +61,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		domaines: acces.ressource.domaines,
 		compte: acces.ressource.compte,
 		typesFiche: await lireTypesDeFiche(base),
+		presentations: await lirePresentationsDeTypeDeFiche(base),
 		designations: await lireLesDesignationsDeTypeDeFiche(base)
 	};
 };
@@ -123,21 +126,21 @@ export const actions: Actions = {
 	 * `champs_de_type_de_fiche`. Un type créé sans ses propriétés serait un
 	 * schéma vide que l'administrateur croirait avoir défini.
 	 *
-	 * TROIS ATTRIBUTS DU PANNEAU NE SONT PAS PERSISTÉS, ET C'EST DÉCLARÉ :
-	 * la description, l'icône et le caractère obligatoire d'une propriété n'ont
-	 * AUCUNE colonne — `types_de_fiche` porte quatre colonnes, et
-	 * `champs_de_type_de_fiche` n'en a ni pour l'aide à la saisie, ni pour la
-	 * valeur par défaut, ni pour l'obligation. `V-29.svelte` les tient d'ailleurs
-	 * de tables écrites à la main (`DESCRIPTIONS`, `ICONE_PAR_TYPE`,
-	 * `PROPRIETES_OBLIGATOIRES`), et le dit. `$lib/base/schema.ts` est en lecture
-	 * seule pour ce lot : la lacune est nommée, jamais comblée par une colonne
-	 * détournée.
+	 * LES CINQ ATTRIBUTS QUE CE PANNEAU JETAIT SONT ÉCRITS. La description,
+	 * l'icône, et par propriété l'aide à la saisie, la valeur par défaut et le
+	 * caractère obligatoire n'avaient AUCUNE colonne : l'administrateur les
+	 * saisissait, l'écran les affichait comme acquises, et l'enregistrement les
+	 * perdait sans un mot. `008_saisies_de_console` les pose, et ce chargeur les
+	 * relit — `V-29.svelte` ne tient plus de table écrite à la main que pour le
+	 * jeu de démonstration, où elle est le défaut de sa propriété.
 	 */
 	creer: async ({ locals, request }) => {
 		consoleOuverte(locals);
 		const champs = await request.formData();
 		const resultat = await creerUnTypeDeFiche(basePartagee(), {
 			nom: texteDuChamp(champs, CHAMP_NOM) ?? '',
+			description: texteDuChamp(champs, CHAMP_DESCRIPTION) ?? '',
+			glyphe: texteDuChamp(champs, CHAMP_GLYPHE) ?? '',
 			proprietes: proprietesDuChamp(champs, CHAMP_PROPRIETES) ?? []
 		});
 		if (resultat.issue !== 'possible') return fail(400, resultat);
@@ -149,6 +152,8 @@ export const actions: Actions = {
 		consoleOuverte(locals);
 		const champs = await request.formData();
 		const nom = texteDuChamp(champs, CHAMP_NOM);
+		const description = texteDuChamp(champs, CHAMP_DESCRIPTION);
+		const glyphe = texteDuChamp(champs, CHAMP_GLYPHE);
 		const proprietes = proprietesDuChamp(champs, CHAMP_PROPRIETES);
 
 		const resultat = await modifierUnTypeDeFiche(
@@ -156,6 +161,8 @@ export const actions: Actions = {
 			texteDuChamp(champs, CHAMP_TYPE_DE_FICHE_CIBLE) ?? '',
 			{
 				...(nom === undefined ? {} : { nom }),
+				...(description === undefined ? {} : { description }),
+				...(glyphe === undefined ? {} : { glyphe }),
 				...(proprietes === undefined ? {} : { proprietes })
 			}
 		);

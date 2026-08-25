@@ -359,8 +359,22 @@ export interface ChampDeFiche {
 	readonly nom: string;
 	readonly type: TypeDeChamp;
 	readonly exemple?: string;
+	/**
+	 * LES TROIS ATTRIBUTS QUE LA CONSOLE ÉCRIT, ET QUE LE JEU DE DÉMONSTRATION NE
+	 * PORTE PAS. Ils sont facultatifs pour cette raison exactement : absent vaut
+	 * « rien saisi », et le rendu du jeu ne bouge pas d'un pixel.
+	 */
+	readonly aide?: string;
+	readonly defaut?: string;
+	readonly obligatoire?: boolean;
 	/** Champs de type « liste » seulement. */
 	readonly valeurs?: readonly string[];
+}
+
+/** La présentation d'un type de fiche en console — `#f-desc` et `#f-icones`. */
+export interface PresentationDeTypeDeFiche {
+	readonly description: string;
+	readonly glyphe: string;
 }
 
 export type CleDeTypeDeRelation =
