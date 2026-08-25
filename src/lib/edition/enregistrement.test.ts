@@ -223,7 +223,16 @@ describe('la purge du plafond retire TOUT l’excédent, jamais la seule plus an
 	/* CE QUE CES CAS NE PROUVENT PAS. La liste de numéros est construite ici :
 	   ils éprouvent la DÉCISION, pas la forme de ce que la base rend. Le
 	   comptage réel des lignes restantes après des enregistrements en chaîne est
-	   relevé au navigateur, sur la base, et il est au rapport du lot. */
+	   relevé au navigateur, sur la base, et il est au rapport du lot.
+
+	   ET AUCUN CAS N'ÉPROUVE ICI UN PLAFOND HORS DOMAINE, parce que la fonction
+	   n'en décide plus rien : le domaine est tenu en amont, par
+	   `validerLaConfiguration()` à l'écriture (`RG-M14-10`) et par
+	   `lireConfiguration()` à la lecture (`RG-M07-03`, défaut 50). Une première
+	   rédaction lui faisait inventer sa propre règle — « hors domaine, on ne
+	   purge rien » —, ce qui neutralisait la destruction et laissait `V-15:288`
+	   annoncer « les 0 dernières sont gardées ». Le mensonge se répare en amont,
+	   pas ici. */
 
 	it('sous le plafond, rien n’est retiré', () => {
 		expect(numerosExcedentaires([1, 2, 3], 5)).toEqual([]);
@@ -252,17 +261,6 @@ describe('la purge du plafond retire TOUT l’excédent, jamais la seule plus an
 		/* Un seuil composé du plus grand numéro moins le plafond serait juste tant
 		   que les numéros restent contigus, et faux dès qu'un trou apparaît. */
 		expect(numerosExcedentaires([2, 9, 40, 41, 42], 3)).toEqual([9, 2]);
-	});
-
-	it('un plafond hors domaine ne purge RIEN — la direction qui ne détruit pas', () => {
-		/* La validation de la configuration ne contrôle pas ce champ : le champ
-		   vidé donne zéro, et ce zéro peut atteindre la table des paramètres. Pris
-		   à la lettre, il effacerait tout l'historique de la première note
-		   enregistrée après la faute de frappe. */
-		expect(numerosExcedentaires([1, 2, 3, 4, 5, 6], 0)).toEqual([]);
-		expect(numerosExcedentaires([1, 2, 3, 4, 5, 6], -3)).toEqual([]);
-		expect(numerosExcedentaires([1, 2, 3, 4, 5, 6], Number.NaN)).toEqual([]);
-		expect(numerosExcedentaires([1, 2, 3, 4, 5, 6], 2.5)).toEqual([]);
 	});
 
 	it('un plafond de 1 garde la version courante, et elle seule', () => {
