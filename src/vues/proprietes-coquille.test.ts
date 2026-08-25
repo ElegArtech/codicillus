@@ -52,6 +52,7 @@ import {
 	UNIVERS,
 	VERSIONS,
 	corpusDeVariante,
+	noteParIdentifiant,
 	type Compte,
 	type Domaine,
 	type EtatDInstance,
@@ -117,10 +118,35 @@ const COMPTE_SYNTHETIQUE: Compte = {
 	actif: true
 };
 
+/**
+ * LA NOTE DONT LES BOÎTES DE V-40 PARLENT — elle est REQUISE depuis que la vue
+ * a cessé de la retrouver elle-même dans le corpus servi. Elle est citée par
+ * d'autres notes : sans rétrolien, le décompte de suppression serait nul et le
+ * cas de `relations` ne mesurerait rien.
+ */
+const NOTE_DE_BOITE: Note = (() => {
+	const note = noteParIdentifiant('n-pg-prod-01');
+	if (!note) throw new Error('seeds/corpus.ts : « n-pg-prod-01 » a disparu');
+	return note;
+})();
+
 /** Un historique posé sur une note qui n'en a pas au jeu de semence. */
 const TROIS_VERSIONS: readonly Version[] = (
 	Object.values(VERSIONS).find((v) => v !== undefined) ?? []
 ).slice(0, 3);
+
+/**
+ * LE SOCLE DE V-40 — ce que ses dix boîtes exigent avant toute source.
+ * `catalogue`, `note` et `typesRelation` sont REQUISES : la vue retrouvait
+ * elle-même sa note dans le corpus servi, et les trois autres tombaient d'un
+ * défaut tiré du jeu de démonstration.
+ */
+const SOCLE_V40 = {
+	etat: 'd-note',
+	catalogue: true,
+	note: NOTE_DE_BOITE,
+	typesRelation: TYPES_RELATION
+};
 
 /** Les quatre sources de la coquille, communes aux vues qui la portent. */
 function coquille(inertes: readonly string[] = []): readonly Source[] {
@@ -251,25 +277,48 @@ const VUES: Readonly<
 	'V-37': { base: { vecteur: null }, sources: coquille() },
 	'V-38': { base: { etat: 'succes' }, sources: coquille() },
 	'V-39': { base: { etat: 'vide' }, sources: coquille() },
+	/*
+	   V-40 N'A PLUS DE DÉFAUT TIRÉ DU JEU DE DÉMONSTRATION, et c'est pourquoi
+	   elle n'emprunte plus `coquille()`.
+
+	   Ses dix boîtes annonçaient les comptes, les relations, les gabarits et
+	   l'historique des MAQUETTES sur toute instance : une confirmation de
+	   suppression comptait les versions d'une note du jeu, et le dialogue des
+	   droits nommait quatre personnes qui n'existent nulle part. Chaque défaut
+	   est désormais l'ENSEMBLE VIDE, et la note dont les boîtes parlent est
+	   REQUISE — le « défaut » qu'éprouve chaque cas est donc le vide, et la
+	   valeur servie est celle du jeu.
+
+	   `domaines` NE SE MESURE QUE SOUS UN UNIVERS SERVI : le rail est fait de
+	   sections d'univers, et sans univers il n'a aucune section où ranger un
+	   domaine. Son cas sert donc les univers du jeu, et rien de plus.
+	*/
 	'V-40': {
-		base: { etat: 'd-note' },
+		base: SOCLE_V40,
 		sources: [
-			...coquille(),
+			{ cle: 'univers', defaut: [], autre: AUTRES_UNIVERS },
+			{
+				cle: 'domaines',
+				defaut: [],
+				autre: AUTRES_DOMAINES,
+				base: { ...SOCLE_V40, univers: UNIVERS }
+			},
+			{ cle: 'compte', defaut: null, autre: AUTRE_COMPTE, marqueur: 'ZQ' },
 			{
 				cle: 'comptes',
-				defaut: COMPTES,
-				autre: [...COMPTES, COMPTE_SYNTHETIQUE],
+				defaut: [],
+				autre: [COMPTE_SYNTHETIQUE],
 				/* Le dialogue des droits est le seul à énumérer les comptes. */
-				base: { etat: 'd-droits' },
+				base: { ...SOCLE_V40, etat: 'd-droits' },
 				marqueur: 'Zoé Quintard'
 			},
-			{ cle: 'relations', defaut: RELATIONS, autre: [] },
-			{ cle: 'versions', defaut: VERSIONS, autre: { ...VERSIONS, 'n-pg-prod-01': TROIS_VERSIONS } },
+			{ cle: 'relations', defaut: [], autre: RELATIONS },
+			{ cle: 'versions', defaut: {}, autre: { [NOTE_DE_BOITE.id]: TROIS_VERSIONS } },
 			{
 				cle: 'templates',
-				defaut: TEMPLATES,
+				defaut: [],
 				autre: TEMPLATES.slice(0, 1),
-				base: { etat: 'd-template' }
+				base: { ...SOCLE_V40, etat: 'd-template' }
 			},
 			{
 				cle: 'typesRelation',
@@ -278,7 +327,7 @@ const VUES: Readonly<
 					...TYPES_RELATION,
 					heberge: { sortant: 'zq-sortant', entrant: 'zq-entrant' }
 				},
-				base: { etat: 'd-relation' },
+				base: { ...SOCLE_V40, etat: 'd-relation' },
 				marqueur: 'zq-sortant'
 			}
 		]

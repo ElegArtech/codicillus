@@ -39,13 +39,16 @@ import {
 	RELATIONS,
 	TYPES_RELATION,
 	UNIVERS,
+	VERSIONS,
 	corpusPourVue,
 	noteParIdentifiant,
 	type ChampDeFiche,
 	type EtatDInstance,
+	type Note,
 	type TypeDeChamp,
 	type UtilisateurCourant
 } from '../../seeds/corpus';
+import type { LectureAffichee } from '../lib/lecture/note-de-demonstration';
 import { TYPES_DE_FICHE as TYPES_DE_FICHE_PEUPLES } from '../../seeds/demonstration';
 
 /* ── Le harnais ───────────────────────────────────────────────────────────
@@ -112,6 +115,32 @@ const v23 = (p: ComponentProps<typeof import('./V-23.svelte').default>) => rendr
    de route passera vient de la base, et il vaut mieux que le cas d'épreuve lui
    ressemble. Seuls les libellés de relation sont marqués, pour être
    reconnaissables sans ambiguïté dans le balisage. */
+
+/**
+ * LA NOTE TELLE QUE LE CHARGEUR L'AFFICHE — l'enveloppe minimale.
+ *
+ * Les deux corps sont `null` et le sommaire est vide : ce sont des états que
+ * `LectureAffichee` déclare, et ils suffisent à ce que la vue rende son
+ * enveloppe. Aucun corps n'est écrit à la main — ce serait le second
+ * convertisseur qu'`ADR-004` interdit, y compris dans un test.
+ */
+function afficheeDe(note: Note): LectureAffichee {
+	const instant = { iso: '2026-03-02', jour: '2 mars 2026', heureDite: '2 mars 2026 à 17:40' };
+	return {
+		note,
+		reference: null,
+		operationnel: null,
+		sommaire: [],
+		controle: null,
+		joursDepuisControle: 4,
+		modifiee: instant,
+		referenceModifiee: instant,
+		resync: false,
+		revision: null,
+		consultations30j: 7,
+		consultationsTotal: 431
+	};
+}
 
 /** Une autre identité que `MOI` : autres initiales, autre nom, autre domaine. */
 const AUTRE_COMPTE: UtilisateurCourant = {
@@ -184,78 +213,88 @@ function compter(html: string, motif: RegExp): number {
 
 describe('V-15 — historique des versions', () => {
 	const notes = corpusPourVue('V-15');
+	/* LA NOTE DONT L'HISTORIQUE EST OUVERT. Elle vient du corpus servi, jamais
+	   d'une saisie : c'est la forme qu'un chargeur produit. */
+	const LA_NOTE = notes[0]!;
+	const AFFICHEE = afficheeDe(LA_NOTE);
+	const SOCLE = {
+		vecteur: null,
+		notes,
+		note: LA_NOTE,
+		affichee: AFFICHEE,
+		versions: {},
+		retentionVersions: 50,
+		versionAffichee: null,
+		onComparer: () => undefined
+	};
 
-	it("absente, la constante du jeu s'applique", async () => {
-		const body = await v15({ vecteur: null, notes });
-		expect(body).toContain('Karim Belhadj');
-		expect(body).toContain('>KB<');
-		expect(body).toContain('Codicillus 1.0.0');
-		expect(body).toContain('Version 14');
-		expect(body).toContain('les 50 dernières sont gardées');
+	it("sans identité servie, aucun compte du jeu de démonstration n'est nommé", async () => {
+		const body = await v15(SOCLE);
+		expect(body).not.toContain('Karim Belhadj — menu utilisateur');
+		expect(body).not.toContain('>KB<');
 	});
 
-	it("fournie, la propriété l'emporte", async () => {
-		const body = await v15({
-			vecteur: null,
-			notes,
-			compte: AUTRE_COMPTE,
-			instance: AUTRE_INSTANCE,
-			retentionVersions: 7
-		});
+	it("l'identité servie est celle qui est rendue", async () => {
+		const body = await v15({ ...SOCLE, compte: AUTRE_COMPTE });
 		expect(body).toContain('Sophie Nguyen');
 		expect(body).toContain('>SN<');
-		expect(body).toContain('Codicillus 9.9.9');
-		expect(body).toContain('les 7 dernières sont gardées');
-		// `Karim Belhadj` reste dans la note et dans l'historique — il y est AUTEUR,
-		// pas utilisateur courant. Seule la pastille d'identité doit changer.
-		expect(body).not.toContain('>KB<');
-		expect(body).not.toContain('Karim Belhadj — menu utilisateur');
 	});
 
-	it('un historique vide se lit comme tel, il ne se devine pas', async () => {
-		const body = await v15({ vecteur: null, notes, versions: {} });
-		expect(body).toContain('Aucune version antérieure');
-		expect(body).not.toContain('Version 14');
+	/* La rétention n'est annoncée que lorsqu'il y a quelque chose à conserver :
+	   le gel efface le texte plutôt que d'annoncer zéro. */
+	it('annonce la rétention servie, et non celle du jeu', async () => {
+		const body = await v15({
+			...SOCLE,
+			versions: { [LA_NOTE.id]: VERSIONS['n-restaurer-pg']! },
+			retentionVersions: 7
+		});
+		expect(body).toContain('les 7 dernières sont gardées');
+		expect(body).not.toContain('les 50 dernières sont gardées');
+	});
+
+	it("l'historique rendu est celui de la note ouverte, et rien d'autre", async () => {
+		const vide = await v15(SOCLE);
+		expect(vide).toContain('Aucune version antérieure');
+		expect(vide).not.toContain('Version 14');
+
+		/* L'historique est lu SOUS LA CLÉ DE LA NOTE OUVERTE : servi sous une
+		   autre clé, il ne se rend pas. C'est ce que le levier `hist` de la
+		   planche contournait, en choisissant une note du jeu. */
+		const servi = await v15({ ...SOCLE, versions: { [LA_NOTE.id]: VERSIONS['n-restaurer-pg']! } });
+		expect(servi).toContain('Version 14');
 	});
 
 	it("la forme abrégée ne dérive rien des univers ni des domaines — la propriété est acceptée, elle n'est pas exercée", async () => {
-		const temoin = await v15({ vecteur: null, notes });
-		const restreint = await v15({
-			vecteur: null,
-			notes,
-			univers: UN_UNIVERS,
-			domaines: UN_DOMAINE
-		});
+		const temoin = await v15(SOCLE);
+		const restreint = await v15({ ...SOCLE, univers: UN_UNIVERS, domaines: UN_DOMAINE });
 		expect(restreint).toBe(temoin);
 	});
 });
 
 describe('V-16 — comparaison de versions', () => {
 	const notes = corpusPourVue('V-16');
-
-	it("absente, la constante du jeu s'applique", async () => {
-		const body = await v16({ vecteur: null, notes });
-		expect(body).toContain('Karim Belhadj');
-		expect(body).toContain('Codicillus 1.0.0');
-		expect(body).toContain('22/07/2026');
-		expect(body).toContain("Cette procédure décrit la restauration d'une base PostgreSQL");
-	});
-
-	it("fournie, la propriété l'emporte", async () => {
-		const body = await v16({
-			vecteur: null,
-			notes,
-			compte: AUTRE_COMPTE,
-			instance: AUTRE_INSTANCE
-		});
-		expect(body).toContain('>SN<');
-		expect(body).toContain('Codicillus 9.9.9');
-	});
+	const LA_NOTE = notes[0]!;
+	const SOCLE = { vecteur: null, notes, note: LA_NOTE, versions: {}, contenuVersions: {} };
 
 	it('sans historique ni contenu de version, rien ne se fabrique', async () => {
-		const body = await v16({ vecteur: null, notes, versions: {}, contenuVersions: {} });
+		const body = await v16(SOCLE);
 		expect(body).not.toContain('22/07/2026');
 		expect(body).not.toContain("Cette procédure décrit la restauration d'une base PostgreSQL");
+		expect(body).not.toContain('Karim Belhadj — menu utilisateur');
+	});
+
+	it("l'historique servi est lu sous la clé de la note comparée", async () => {
+		const body = await v16({
+			...SOCLE,
+			vecteur: { cmp: '13-14' },
+			versions: { [LA_NOTE.id]: VERSIONS['n-restaurer-pg']! }
+		});
+		expect(body).toContain('22/07/2026');
+	});
+
+	it("l'identité servie est celle qui est rendue", async () => {
+		const body = await v16({ ...SOCLE, compte: AUTRE_COMPTE });
+		expect(body).toContain('>SN<');
 	});
 });
 
