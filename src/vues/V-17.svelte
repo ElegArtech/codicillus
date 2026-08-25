@@ -149,6 +149,22 @@
 		universDuCompte?: string;
 		/** Les dossiers de chaque domaine, lus en base. Défaut : déduits des notes. */
 		dossiersParDomaine?: Readonly<Record<string, readonly DossierDeChoix[]>> | null;
+		/**
+		 * LE DOSSIER SUR LEQUEL L'ÉDITEUR S'OUVRE PRÉ-REMPLI — le point
+		 * d'injection que le gel offrait et que le port avait supprimé.
+		 *
+		 * Le gel tient `dossierChoisi` en variable de module assignable
+		 * (`V-17:2638`) et redessine l'arborescence par `rendreDossiers(domaine,
+		 * garderChoix)` (`V-17:2804`) : une entrée extérieure pouvait donc cocher
+		 * un dossier. Le port l'avait durcie en valeur dérivée, nulle hors du cas
+		 * `modif` : en création, AUCUN dossier ne pouvait être coché, et la
+		 * promesse de V-13 — « nouvelle note DANS CE DOSSIER » — était intenable.
+		 *
+		 * La valeur est le chemin AFFICHÉ, celui que `Note.dossier` porte et que
+		 * le rendu compare pour cocher son bouton radio. Absente, le rendu ne
+		 * bouge pas d'un octet : la vue reprend l'amorce qu'elle avait.
+		 */
+		dossierDeDepart?: string | null;
 		compte?: UtilisateurCourant;
 		instance?: EtatDInstance;
 		/**
@@ -218,6 +234,9 @@
 		   notes, comme la maquette le fait : le gel ne bouge pas. Servie, elle
 		   l'emporte, et un domaine sans aucune note offre enfin ses dossiers. */
 		dossiersParDomaine = null,
+		/* LE DOSSIER DE DÉPART, SERVI PAR LA ROUTE DEPUIS `?dossier=`. Absent, la
+		   vue reprend l'amorce qu'elle avait — rien ne bouge au banc. */
+		dossierDeDepart = null,
 		compte = MOI,
 		instance = INSTANCE,
 		typesNote = TYPES_NOTE,
@@ -269,13 +288,33 @@
 	   ce que la résolution d'écriture retire en tête. Sans cette équivalence,
 	   AUCUN dossier n'était coché à l'ouverture, la soumission partait sans
 	   dossier et l'enregistrement rendait `400 rangement incomplet` : modifier
-	   une note était impossible sur toute base où les notes sont à la racine. */
+	   une note était impossible sur toute base où les notes sont à la racine.
+
+	   L'AMORCE DU CHOIX est donc le dossier de départ que la route sert, à défaut
+	   celui de la note reprise. `garderChoix` du gel ne vaut vrai qu'au cas
+	   `modif` (`V-17:3554`), d'où la condition sur `cas`. */
+	const dossierAmorce = $derived(
+		dossierDeDepart ??
+			(cas === 'modif' && domaineChoisi === domaineDeDepart
+				? noteModifiee === undefined
+					? null
+					: noteModifiee.dossier || domaineDeDepart
+				: null)
+	);
+	/* LE CHOIX VIF — assignable, comme au gel, et c'est tout le défaut réparé.
+
+	   `dossierChoisi` était une valeur DÉRIVÉE, nulle hors du cas `modif` : en
+	   création aucun bouton radio n'était jamais coché, et RIEN NE POUVAIT LE
+	   CHANGER — ni une propriété, ni un geste. Le gel, lui, tient la même
+	   variable assignable (`V-17:2638`) et redessine l'arborescence en gardant ou
+	   non le choix (`rendreDossiers(domaine, garderChoix)`, `V-17:2804`) : c'est
+	   ce point d'injection que le port avait supprimé.
+
+	   `undefined` dit « rien d'écarté ni de choisi depuis l'ouverture » et laisse
+	   l'amorce parler ; changer de domaine y pose `null`, ce qui décoche tout. */
+	let choixVifDeDossier = $state<string | null | undefined>(undefined);
 	const dossierChoisi = $derived(
-		cas === 'modif' && domaineChoisi === domaineDeDepart
-			? noteModifiee === undefined
-				? null
-				: noteModifiee.dossier || domaineDeDepart
-			: null
+		choixVifDeDossier === undefined ? dossierAmorce : choixVifDeDossier
 	);
 	const etiquettes = $derived(cas === 'modif' ? (noteModifiee?.etiquettes ?? []) : []);
 
@@ -871,7 +910,12 @@
 						<select
 							class="selecteur"
 							id="m-domaine"
-							onchange={(evenement) => (domaineVif = evenement.currentTarget.value)}
+							onchange={(evenement) => {
+								domaineVif = evenement.currentTarget.value;
+								/* « Changer de domaine réinitialise le dossier. » — l'aide du
+							   champ, deux lignes plus bas, et `garderChoix = false` du gel. */
+								choixVifDeDossier = null;
+							}}
 						>
 							{#each domaines as domaine, rang (rang)}<option
 									value={domaine.nom}

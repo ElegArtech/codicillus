@@ -130,18 +130,22 @@
 		/* 4. NOUVELLE NOTE — une NAVIGATION, pas une action : rien n'est écrit ici,
 		   et le droit qui la gouverne est celui de la route d'arrivée.
 
-		   `docs/routes.md:287` prévoit quatre paramètres de pré-remplissage sur
-		   `/notes/nouvelle` — `titre`, `domaine`, `dossier`, `template`. SEUL
-		   `domaine` est honoré, et il l'est LÀ-BAS : `notes/nouvelle/+page.svelte`
-		   le lit et le porte à la vue par `compte.domaine`, dont l'arborescence du
-		   choix de dossier se déduit.
+		   `docs/routes.md:287-288` prévoit quatre paramètres de pré-remplissage sur
+		   `/notes/nouvelle` — `titre`, `domaine`, `dossier`, `template`. Les deux
+		   qui font sens ici sont émis, et tous deux sont honorés LÀ-BAS :
+		   `notes/nouvelle/+page.svelte` lit `domaine` et le porte à la vue par
+		   `compte.domaine`, dont l'arborescence du choix se déduit ; il lit
+		   `dossier` et le porte par `dossierDeDepart`, qui coche le bouton radio.
 
-		   `dossier` N'EST PAS ÉMIS, et c'est délibéré : V-17 n'a AUCUNE propriété
-		   qui le recevrait. L'émettre le ferait ignorer en silence — un paramètre
-		   honoré à moitié est pire que pas de paramètre —, et la vue est hors du
-		   périmètre de ce lot. Le brief de V-13 demande « nouvelle note DANS CE
-		   DOSSIER » : ce qui est livré mène à l'éditeur sur le bon DOMAINE, et
-		   l'écart est déclaré plutôt que masqué par un paramètre inerte. */
+		   `dossier` PORTE LA FORME AFFICHÉE DU CHEMIN — celle que `Note.dossier`
+		   porte, celle que V-17 compare pour cocher, celle que la soumission
+		   renvoie. `data.vecteur.dos` la tient déjà, remontée par le chargeur. La
+		   forme d'adresse, en segments slugifiés, ne conviendrait pas : rien à
+		   l'arrivée ne saurait la relire contre l'arborescence de choix.
+
+		   Le dossier RACINE d'un domaine n'a pas de page : `dos` n'est donc jamais
+		   vide ici. Il l'est par prudence si le chargeur venait à changer, et un
+		   paramètre vide vaut un paramètre absent. */
 		for (const id of ['a-note', 'v-note']) {
 			surClic(formulaire.querySelector(`#${id}`), () => {
 				/* L'adresse est composée en OBJET plutôt qu'en chaîne : `resolve()` rend
@@ -159,6 +163,7 @@
 				   `V-03`, `V-22` et `V-24`. */
 				const cible = new URL(resolve('/notes/nouvelle'), window.location.origin);
 				cible.searchParams.set('domaine', data.domaine);
+				if (data.vecteur.dos !== '') cible.searchParams.set('dossier', data.vecteur.dos);
 				// eslint-disable-next-line svelte/no-navigation-without-resolve
 				void goto(cible);
 			});
