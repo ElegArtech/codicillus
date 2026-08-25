@@ -32,6 +32,7 @@ import { documentDuGel, resoudreDansLeCorpus } from '../lib/contenu/documents-du
 import { rendreDocument } from '../lib/contenu/rendu';
 import { NOTE, type LectureAffichee } from '../lib/lecture/note-de-demonstration';
 import { adresseDeDomaine } from '../lib/rangement/adresses';
+import { motFiche } from '../lib/vocabulaire';
 
 const NOTES = corpusPourVue('V-14');
 
@@ -94,7 +95,11 @@ const AFFICHEE: LectureAffichee = {
 	},
 	resync: false,
 	revision: null,
-	consultations30j: 7
+	consultations30j: 7,
+	/* TROIS NOMBRES DISTINCTS, ET C'EST LE POINT. `Note.vues` du corpus, le
+	   cumul servi et la fenêtre de trente jours ne coïncident pas : sans cela,
+	   un rendu qui lirait encore `note.vues` passerait pour juste. */
+	consultationsTotal: 431
 };
 
 function rendu(proprietes: Record<string, unknown>): Promise<string> {
@@ -163,7 +168,11 @@ describe('V-14 — la propriété fournie l’emporte', () => {
 		/* La ligne « Rédaction » et la mesure de consultation. */
 		expect(html).toContain('2 mars 2026 à 17:40');
 		expect(html).not.toContain('il y a 3 semaines');
-		expect(html).toContain('7 sur les 30 derniers jours');
+		/* LE CUMUL EST CELUI QUE LE CHARGEUR A RELU APRÈS AVOIR COMPTÉ
+		   L'OUVERTURE, jamais `Note.vues`, projeté avant elle : les afficher
+		   côte à côte donnait un total inférieur à sa propre fenêtre. */
+		expect(html).toContain('431 consultations · 7 sur les 30 derniers jours');
+		expect(html).not.toContain(`${AUTRE_NOTE.vues} consultations`);
 		/* Le sommaire suit le corps affiché, et non les onze titres du gel. */
 		expect(html).toContain("Un titre d'épreuve");
 		expect(html).not.toContain('s-prerequis');
@@ -221,7 +230,8 @@ describe('V-14 — la propriété fournie l’emporte', () => {
 				retroliens: [
 					{ identifiant: 'n-astreinte', titre: 'Consignes d’astreinte', domaine: 'Infrastructure' }
 				],
-				verifications: [{ par: null, iso: '2026-03-05', jour: '5 mars 2026' }]
+				verifications: [{ par: null, iso: '2026-03-05', jour: '5 mars 2026' }],
+				proprietes: []
 			}
 		});
 		expect(html).toContain('Journal');
@@ -243,6 +253,86 @@ describe('V-14 — la propriété fournie l’emporte', () => {
 		const contenu = enveloppe.slice(0, enveloppe.indexOf('</div>')).replaceAll(/<!--.*?-->/gu, '');
 		expect(contenu).toBe('id="corps-operationnel" hidden="">');
 		expect(html).not.toContain('id="o-preparer"');
+	});
+});
+
+/**
+ * LE PANNEAU DE PROPRIÉTÉS ET LA PASTILLE DE TYPE — le huitième panneau que
+ * `BRIEF-VUES.md:797` énumère, que le gel ne dessine pas, et sans lequel les
+ * propriétés typées d'une fiche ne se relisaient NULLE PART hors de l'éditeur.
+ *
+ * CE QUE CES CAS NE PROUVENT PAS, et il faut le dire : ils éprouvent le RENDU
+ * à partir d'une liste construite ici. Ils ne prouvent rien de la forme que le
+ * chargeur produit — l'appariement `champs[i].cle → valeurs[cle]`, l'ordre du
+ * référentiel, l'écart d'une colonne `jsonb` de forme non garantie. Cela se
+ * mesure sur une base réelle, dans un navigateur, et le relevé du lot le porte.
+ */
+describe('V-14 — les propriétés typées d’une fiche se relisent', () => {
+	/** Une note du corpus qui EST une fiche — le type vient d'elle, pas d'ici. */
+	const FICHE = (() => {
+		const note = noteParIdentifiant('n-pg-prod-01');
+		if (!note?.typeFiche)
+			throw new Error('seeds/corpus.ts : « n-pg-prod-01 » n’est plus une fiche');
+		return note;
+	})();
+
+	const AFFICHEE_FICHE: LectureAffichee = { ...AFFICHEE, note: FICHE };
+
+	const PANNEAUX_VIDES = {
+		voisines: [],
+		pieces: [],
+		relations: [],
+		retroliens: [],
+		verifications: []
+	};
+
+	it('rend la pastille « Fiche <type> », et non le seul type de note', async () => {
+		const html = await rendu({ affichee: AFFICHEE_FICHE });
+		expect(html).toContain(`<span class="past past--type">${motFiche} ${FICHE.typeFiche}</span>`);
+	});
+
+	it('rend les propriétés servies, dans l’ordre reçu', async () => {
+		const html = await rendu({
+			affichee: AFFICHEE_FICHE,
+			panneaux: {
+				...PANNEAUX_VIDES,
+				proprietes: [
+					{ nom: 'Nom DNS', valeur: 'pg-prod-01.interne' },
+					{ nom: 'Salle', valeur: 'Datacentre A' }
+				]
+			}
+		});
+		expect(html).toContain('Propriétés de fiche');
+		expect(html).toContain('pg-prod-01.interne');
+		expect(html).toContain('Datacentre A');
+		/* L'ORDRE EST MESURÉ DANS LE PANNEAU, et non dans la page : « Salle »
+		   est aussi un dossier du rail, et un relevé fait sur la page entière
+		   mesurerait la coquille au lieu du panneau. */
+		const panneau = html.slice(html.indexOf('Propriétés de fiche'));
+		expect(panneau.indexOf('Nom DNS')).toBeLessThan(panneau.indexOf('Salle'));
+	});
+
+	/** `RG-M18-03` — l'absence est DITE, jamais comblée par l'exemple du référentiel. */
+	it('dit qu’une propriété n’est pas renseignée plutôt que d’inventer une valeur', async () => {
+		const html = await rendu({
+			affichee: AFFICHEE_FICHE,
+			panneaux: { ...PANNEAUX_VIDES, proprietes: [{ nom: 'vCPU', valeur: null }] }
+		});
+		expect(html).toContain('Non renseignée');
+	});
+
+	/**
+	 * P-5 — la polarité. Sans ce cas, un panneau rendu inconditionnellement
+	 * passerait pour conforme : `BRIEF-VUES.md:797` le borne à « si la note est
+	 * une fiche », et une note ordinaire n'a pas de propriétés typées.
+	 */
+	it('ne rend aucun panneau de propriétés sur une note qui n’est pas une fiche', async () => {
+		const html = await rendu({
+			affichee: AFFICHEE,
+			panneaux: { ...PANNEAUX_VIDES, proprietes: [] }
+		});
+		expect(AUTRE_NOTE.typeFiche).toBeUndefined();
+		expect(html).not.toContain('Propriétés de fiche');
 	});
 });
 

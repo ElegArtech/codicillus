@@ -78,11 +78,18 @@ import {
 	typesDeRelation,
 	verifications
 } from '$lib/base/schema';
-import { analyserDocument, titres } from '$lib/contenu/document';
+import { analyserDocument, titres, type Document } from '$lib/contenu/document';
+import { rendreDocument, type ResolveurDeNote } from '$lib/contenu/rendu';
 import { formaterDateFr, formaterDateHeureFr, formaterDateIso } from '$lib/dates';
 import { compteDe, journaliserUneConsultation } from '$lib/donnees/consultation';
-import { lireLHistoire, versionDemandee } from '$lib/donnees/histoire';
-import { joursEcoules, lireSeuils, type ContexteDeLecture } from '$lib/donnees/lecture';
+import { lireLHistoire, versionDemandee, type VersionCapturee } from '$lib/donnees/histoire';
+import {
+	joursEcoules,
+	lireLesChampsDUnTypeDeFiche,
+	lireLesProprietesDeFiche,
+	lireSeuils,
+	type ContexteDeLecture
+} from '$lib/donnees/lecture';
 import type { Identite } from '$lib/droits/resolution';
 import { lireLaNote, registreDemande, type LectureDeNote, type Registre } from '$lib/donnees/note';
 import type {
@@ -96,6 +103,7 @@ import {
 	type GroupeDeRelations,
 	type NoteLiee,
 	type PanneauxDeLaNote,
+	type ProprieteDeFicheAffichee,
 	type VoisineAffichee
 } from '$lib/lecture/panneaux';
 import { enregistrerLaNote, operationnelDesynchronise } from '$lib/donnees/edition';
@@ -177,8 +185,17 @@ function instantAffiche(valeur: Date): InstantAffiche {
  * (`V-14:1704`), et un titre sans ancre n'est la cible d'aucun lien.
  */
 function sommaireDuDocument(valeur: unknown): readonly EntreeDeSommaire[] {
+	return sommaireDe(analyserDocument(valeur));
+}
+
+/**
+ * LE MÊME SOMMAIRE, SUR UN DOCUMENT DÉJÀ ANALYSÉ — le corps CAPTURÉ d'une
+ * version antérieure, que `$lib/donnees/histoire.ts` rend sous cette forme.
+ * Une seule règle de sélection des titres, jamais deux (`P-01`).
+ */
+function sommaireDe(document: Document): readonly EntreeDeSommaire[] {
 	const retenus: EntreeDeSommaire[] = [];
-	for (const titre of titres(analyserDocument(valeur))) {
+	for (const titre of titres(document)) {
 		const { level, ancre } = titre.attrs;
 		if ((level !== 2 && level !== 3) || ancre === null) continue;
 		retenus.push({
@@ -281,6 +298,97 @@ interface ComplementsDeLecture {
 	readonly piecesJointes: readonly PieceJointeCablee[];
 }
 
+/**
+ * LES PROPRIÉTÉS TYPÉES DE LA NOTE, DANS L'ORDRE DU RÉFÉRENTIEL — `CDC:886`,
+ * `BRIEF-VUES.md:797`.
+ *
+ * UNE NOTE QUI N'EST PAS UNE FICHE NE PAIE RIEN : la liste est vide et aucune
+ * requête n'est faite. Le brief conditionne le panneau à « si la note est une
+ * fiche », et c'est la même condition qui borne le coût.
+ *
+ * LES DEUX SOURCES SONT CELLES QUI EXISTENT DÉJÀ, et aucune n'est redite ici :
+ * `lireLesChampsDUnTypeDeFiche()` porte le SCHÉMA — le nom affichable et le
+ * rang de chaque champ, que la colonne `proprietes_typees` ne porte pas —, et
+ * `lireLesProprietesDeFiche()` porte les VALEURS, déjà normalisées : la colonne
+ * est un `jsonb` de forme non garantie, et cette fonction est le seul endroit
+ * du produit qui décide ce qui, dedans, se rend en texte.
+ *
+ * CE PANNEAU N'APPELLE PAS `lireTypesDeFiche()`, ET C'EST DÉLIBÉRÉ. Celle-là
+ * convertit l'énumération `type_de_champ` en type d'écran et LÈVE sur une
+ * valeur que sa table ne couvre pas — elle en couvre quatre, la base en accepte
+ * six. L'appeler d'ici aurait fait tomber en 500 la lecture de TOUTE fiche le
+ * jour où un champ `date` serait posé n'importe où dans le référentiel : un
+ * panneau qui n'affiche qu'un libellé et une valeur n'a aucune raison
+ * d'élargir la surface de panne de la route de lecture (`RG-NF-06`).
+ *
+ * L'ORDRE EST CELUI DU SCHÉMA, JAMAIS CELUI DE LA COLONNE : un objet JSON n'a
+ * pas d'ordre contractuel, et `champs_de_type_de_fiche.ordre` est ce que la
+ * console règle. Un champ que le référentiel ne porte plus n'est pas rendu ; un
+ * champ que la note ne renseigne pas est rendu VIDE, et le dit.
+ */
+async function proprietesDeLaFiche(
+	base: Base,
+	lecture: LectureDeNote
+): Promise<readonly ProprieteDeFicheAffichee[]> {
+	const typeFiche = lecture.note.typeFiche;
+	if (typeFiche === undefined) return [];
+
+	const [champs, valeursParNote] = await Promise.all([
+		lireLesChampsDUnTypeDeFiche(base, typeFiche),
+		lireLesProprietesDeFiche(base, [lecture.note.id])
+	]);
+
+	const valeurs = valeursParNote[lecture.note.id] ?? {};
+	return champs.map((champ) => ({ nom: champ.nom, valeur: valeurs[champ.cle] ?? null }));
+}
+
+/**
+ * L’ARTICLE D’UNE VERSION ANTÉRIEURE — `?version={n}`, `docs/routes.md:224`.
+ *
+ * LE DÉFAUT QUE CETTE FONCTION FERME. V-15 recevait `affichee`, c’est-à-dire
+ * l’état COURANT de la note, sous un bandeau qui annonce « vous consultez un
+ * état antérieur » : le titre, les deux corps et le sommaire étaient ceux du
+ * texte le plus récent, et le bouton « Restaurer cette version » portait sur un
+ * contenu que l’écran n’avait jamais montré — ce que `RG-M18-05` refuse d’une
+ * action irréversible. `lireLHistoire()` chargeait pourtant les trois champs
+ * capturés, les servait au navigateur, et aucun nœud ne les lisait.
+ *
+ * TROIS CHAMPS CHANGENT, ET TROIS SEULEMENT. Le titre, le corps Référence et le
+ * corps Opérationnel sont ceux que la version a CAPTURÉS — `versions.titre`,
+ * `versions.corps_reference`, `versions.corps_operationnel` —, et le sommaire
+ * suit le corps affiché, faute de quoi ses ancres pointeraient sur des titres
+ * absents de la page.
+ *
+ * CE QUI NE CHANGE PAS N’EST PAS CAPTURÉ. Le dernier contrôle, la fraîcheur, les
+ * dates de modification, la demande de révision et les deux mesures de
+ * consultation sont des faits de LA NOTE, que la table `versions` ne porte pas :
+ * les recomposer pour une version donnée serait les inventer (`P-02`), et le
+ * bandeau dit déjà que la note courante n’est pas modifiée.
+ *
+ * LE CORPS EST RENDU PAR `rendreDocument`, ET PAR RIEN D’AUTRE (`ADR-004`), avec
+ * le résolveur de liens que `lireLaNote()` a construit sur le périmètre de
+ * l’appelant : une version qui citait une note devenue illisible ne fait pas
+ * réapparaître son titre.
+ */
+function articleDeLaVersion(
+	courante: LectureAffichee,
+	version: VersionCapturee,
+	resoudreUneNote: ResolveurDeNote
+): LectureAffichee {
+	const rendre = (document: Document): string =>
+		rendreDocument(document, { resoudre: resoudreUneNote, contexte: 'interne' });
+	return {
+		...courante,
+		/* LE TITRE EST RENOMMABLE (`RG-M07-02`), et c’est pour cela que la version
+		   le capture. Le reste de la note — son rangement, son type, sa visibilité
+		   — est celui d’aujourd’hui : la version ne le porte pas. */
+		note: { ...courante.note, titre: version.titre },
+		reference: rendre(version.reference),
+		operationnel: version.operationnel === null ? null : rendre(version.operationnel),
+		sommaire: sommaireDe(version.reference)
+	};
+}
+
 async function complementsDeLecture(
 	base: Base,
 	lecture: LectureDeNote,
@@ -292,10 +400,18 @@ async function complementsDeLecture(
 	const identifiant = lecture.note.id;
 
 	/* La ligne brute de la note : les colonnes que la couche de lecture ne
-	   projette pas, et le compte qui a demandé la révision. */
+	   projette pas, et le compte qui a demandé la révision.
+
+	   LE COMPTEUR DE CONSULTATIONS EN FAIT PARTIE, ET C'EST LE POINT. La couche
+	   de lecture le projette elle aussi — `Note.vues` —, mais elle a été
+	   appelée AVANT que l'ouverture courante ne soit comptée. Cette requête-ci
+	   s'exécute APRÈS, sur la même note, et le total qu'elle rend inclut donc
+	   l'ouverture qui l'affiche. Sans elle, la page annonçait un cumul
+	   inférieur d'une unité à sa propre fenêtre de trente jours. */
 	const [ligne] = await base
 		.select({
 			cle: notes.id,
+			consultations: notes.compteurDeConsultations,
 			modifieLe: notes.modifieLe,
 			verifieLe: notes.verifieLe,
 			corpsReference: notes.corpsReference,
@@ -390,6 +506,8 @@ async function complementsDeLecture(
 		.from(consultations)
 		.where(and(eq(consultations.noteId, ligne.cle), gte(consultations.le, depuis)));
 
+	const proprietesDeFiche = await proprietesDeLaFiche(base, lecture);
+
 	const domaineParNote = new Map<string, string>(lecture.notes.map((n) => [n.id, n.domaine]));
 
 	/* `RG-M06-01` — la fraîcheur se lit sur la dernière vérification, et à
@@ -434,9 +552,15 @@ async function complementsDeLecture(
 							commentaire: ligne.revisionCommentaire
 						}
 					: null,
-			consultations30j: mesure?.nombre ?? 0
+			consultations30j: mesure?.nombre ?? 0,
+			/* LU APRÈS `journaliserUneConsultation()`, et c'est toute la
+			   correction : `lecture.note.vues` a été projeté avant l'écriture,
+			   la fenêtre de trente jours est comptée après, et les afficher
+			   côte à côte donnait un total inférieur à sa propre fenêtre. */
+			consultationsTotal: ligne.consultations
 		},
 		panneaux: {
+			proprietes: proprietesDeFiche,
 			voisines: voisinesDe(lecture),
 			pieces: lignesDePiece.map((pj) => {
 				const { extension, nom } = extensionEtNom(pj.nom, pj.typeMedia);
@@ -599,13 +723,11 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		 * appelant-ci : ses droits.
 		 *
 		 * Les six autres leviers de la planche — `fr`, `c-revision`,
-		 * `c-brouillon`, `c-resync`, `c-op`, `etat` — décrivent LA NOTE AFFICHÉE.
-		 * Or l'article de V-14 est la transcription gelée de `n-restaurer-pg`
-		 * (`src/lib/lecture/CorpsReference.svelte`, `note-de-demonstration.ts`),
-		 * et la vue n'accepte aucune propriété de note : les piloter depuis une
-		 * AUTRE note peindrait les attributs d'une note sur le corps d'une autre
-		 * — la « valeur illustrative » que P-02 proscrit. Ils restent donc à leur
-		 * position du gel, et l'écart est déclaré au rapport du lot.
+		 * `c-brouillon`, `c-resync`, `c-op`, `etat` — décrivent LA NOTE AFFICHÉE,
+		 * et ils ne passent plus par ici : `affichee` les porte, et la vue les
+		 * lit sur la note plutôt que sur un réglage de planche. Les piloter
+		 * depuis ce vecteur peindrait les attributs d'une note sur le corps
+		 * d'une autre — la « valeur illustrative » que P-02 proscrit.
 		 *
 		 * `droits`, lui, est une propriété de l'APPELANT, vraie quelle que soit
 		 * la note : la capacité d'écrire vient de `capacites()` (CDC §2.3), et
@@ -615,13 +737,13 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		vecteur: { droits: lecture.capacites.ecrireDesNotes ? 'ecriture' : 'lecture' },
 		notes: lecture.notes,
 		/**
-		 * LA NOTE RÉELLE, SON CORPS ET SES RÉTROLIENS — chargés, servis à la page,
-		 * et QU'AUCUN NŒUD DE V-14 NE PEUT RECEVOIR à ce jour : la vue déclare
-		 * deux propriétés (`vecteur`, `notes`) et lit tout le reste de
-		 * `seeds/corpus.ts` et de `$lib/lecture/note-de-demonstration.ts`. Aucun
-		 * fichier de `src/vues/` n'est touché par ce lot — c'est la règle de la
-		 * vague —, donc l'écran reste celui du gel. Écart déclaré, chiffré au
-		 * rapport.
+		 * LA NOTE RÉELLE, SON CORPS ET SES RÉTROLIENS — ce dont le CÂBLAGE de la
+		 * page a besoin, et qui n'est pas de l'affichage : l'identifiant que les
+		 * adresses composent, le registre demandé, le compte des rétroliens que
+		 * la confirmation de suppression rappelle (`RG-M04-10`).
+		 *
+		 * CE QUE L'ÉCRAN MONTRE PASSE PAR `affichee` ET `panneaux`, plus bas :
+		 * il n'existe pas deux chemins par lesquels la note atteint la vue.
 		 */
 		lecture: {
 			note: lecture.note,
@@ -630,20 +752,36 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 			retroliens: lecture.retroliens
 		},
 		/**
-		 * L'HISTORIQUE RÉEL DE LA NOTE — T-039 —, ET QU'AUCUN NŒUD DE CETTE PAGE
-		 * NE PEUT RECEVOIR À CE JOUR. `src/vues/V-15.svelte` déclare bien
-		 * `versions` et `retentionVersions` depuis `T-043`, mais c'est `V-14` que
-		 * cette adresse monte : V-15 est une SUPERPOSITION, et rien n'adresse
-		 * l'ouverture de son panneau — `docs/routes.md` §S2 ne connaît de V-15
-		 * que `?version=` et l'ancre. Monter V-15 demanderait de décider quand le
-		 * panneau est ouvert, ce qu'aucune source ne dit : ce serait combler.
-		 * Écart déclaré, chiffré au rapport de lot.
+		 * L’HISTORIQUE RÉEL DE LA NOTE — T-039. `versions` et `retention` sont
+		 * reçus par `src/vues/V-15`, que cette page monte dès que l’adresse porte
+		 * `?version` : V-15 est une SUPERPOSITION de V-14, et c’est ce paramètre
+		 * — le seul état de V-15 que `docs/routes.md` §S2 connaisse — qui décide
+		 * lequel des deux écrans s’affiche.
 		 *
-		 * `versions` est VIDE parce que la table l'est — zéro ligne pour
-		 * 32 notes —, et non parce qu'une transposition manquerait.
+		 * DE `affichee`, LA VUE NE LIT QUE `numero` — il marque la ligne consultée
+		 * du panneau. Les trois autres champs — le titre capturé et les deux corps
+		 * — sont des DOCUMENTS, que la vue ne sait pas rendre : ils atteignent
+		 * l’écran par `afficheeDeLaVersion` ci-dessous, rendus en HTML par
+		 * l’implémentation unique (`ADR-004`). Ils restent servis ici parce que
+		 * `Historique` est un objet et que rien ne gagnerait à le découper.
+		 *
 		 * `retention` est `versions_max` de `parametres`, lu et jamais redéclaré.
 		 */
 		histoire,
+		/**
+		 * L’ARTICLE DE LA VERSION CONSULTÉE, ou `null` quand l’adresse ne désigne
+		 * aucune version — `?version` nu, ou un numéro qui n’existe pas. Dans ces
+		 * deux cas, la note COURANTE est la bonne réponse, et c’est `affichee`
+		 * qui est servie.
+		 *
+		 * SANS CE CHAMP, V-15 RENDAIT LE CORPS COURANT SOUS UN BANDEAU QUI
+		 * ANNONÇAIT UN ÉTAT ANTÉRIEUR, et « Restaurer cette version » écrasait la
+		 * note avec un texte que l’écran n’avait jamais montré (`RG-M18-05`).
+		 */
+		afficheeDeLaVersion:
+			histoire.affichee === null
+				? null
+				: articleDeLaVersion(complements.affichee, histoire.affichee, lecture.resoudreUneNote),
 		/**
 		 * LA NOTE TELLE QU'ELLE S'AFFICHE — l'identité, le corps rendu, le
 		 * sommaire, le dernier contrôle, les dates, la révision courante et la
@@ -653,7 +791,7 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		 * l'absence faisait afficher la note du gel pour toutes les autres.
 		 */
 		affichee: complements.affichee,
-		/** Les sept panneaux latéraux, tous lus en base, aucun transcrit. */
+		/** Les panneaux latéraux, tous lus en base, aucun transcrit. */
 		panneaux: complements.panneaux,
 		/**
 		 * LES PIÈCES, SOUS LA FORME QUE LE CÂBLAGE ADRESSE — nom de fichier et
