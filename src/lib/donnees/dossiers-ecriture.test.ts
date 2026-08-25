@@ -48,6 +48,7 @@ import {
 	droitsResolusDUnDossier,
 	hauteurDuSousArbre,
 	libelleDOrigine,
+	lireLesDroitsDUnDossier,
 	motifDeRefusDeDestination,
 	niveauDeDroitDepuisLaSaisie,
 	origineDUnDroit,
@@ -424,7 +425,9 @@ describe('accorder, changer, retirer — la porte du droit passe AVANT tout', ()
 					identifiantDuCompte: 'marc.ferreira',
 					niveau: 'gestionnaire',
 					droit: droitDe(niveau),
-					appelantId: 'karim'
+					appelantId: 'karim',
+					appelantContourne: false,
+					annuaireLisible: true
 				});
 				expect(refus).toEqual(REFUS_MUET);
 				/* Le refus est MUET — RG-ACC-04 — et la base n’a rien vu. */
@@ -440,7 +443,9 @@ describe('accorder, changer, retirer — la porte du droit passe AVANT tout', ()
 			identifiantDuCompte: 'lea.marchand',
 			niveau: 'redacteur',
 			droit: droitDe('gestionnaire'),
-			appelantId: 'karim'
+			appelantId: 'karim',
+			appelantContourne: false,
+			annuaireLisible: true
 		});
 		expect(fait).toEqual({ fait: true, nom: 'Léa Marchand', niveau: 'redacteur' });
 		/* Le couple `(dossier_id, compte_id)` est la cible de la reprise : c’est
@@ -458,7 +463,9 @@ describe('accorder, changer, retirer — la porte du droit passe AVANT tout', ()
 			identifiantDuCompte: 'lea.marchand',
 			niveau: null,
 			droit: droitDe('gestionnaire'),
-			appelantId: 'karim'
+			appelantId: 'karim',
+			appelantContourne: false,
+			annuaireLisible: true
 		});
 		expect(refus).toEqual({ fait: false, message: NIVEAU_INCONNU });
 		expect(base.journal).toEqual([]);
@@ -471,7 +478,9 @@ describe('accorder, changer, retirer — la porte du droit passe AVANT tout', ()
 			identifiantDuCompte: 'fantome',
 			niveau: 'lecteur',
 			droit: droitDe('gestionnaire'),
-			appelantId: 'karim'
+			appelantId: 'karim',
+			appelantContourne: false,
+			annuaireLisible: true
 		});
 		expect(refus).toEqual({ fait: false, message: COMPTE_INTROUVABLE });
 		expect(base.journal).toEqual(['lire-compte']);
@@ -487,7 +496,9 @@ describe('accorder, changer, retirer — la porte du droit passe AVANT tout', ()
 				identifiantDuCompte: 'pierre.dubois',
 				niveau: 'lecteur',
 				droit: droitDe('gestionnaire'),
-				appelantId: 'karim'
+				appelantId: 'karim',
+				appelantContourne: false,
+				annuaireLisible: true
 			}
 		);
 		expect(refus).toEqual({ fait: false, message: COMPTE_DESACTIVE });
@@ -501,7 +512,9 @@ describe('accorder, changer, retirer — la porte du droit passe AVANT tout', ()
 				identifiantDuCompte: 'pierre.dubois',
 				niveau: null,
 				droit: droitDe('gestionnaire'),
-				appelantId: 'karim'
+				appelantId: 'karim',
+				appelantContourne: false,
+				annuaireLisible: true
 			}
 		);
 		expect(retire).toEqual({ fait: true, nom: 'Pierre Dubois', niveau: null });
@@ -521,7 +534,9 @@ describe('un droit HÉRITÉ ne se change ni ne se retire ici', () => {
 			identifiantDuCompte: 'karim.belhadj',
 			niveau: null,
 			droit: droitDe('gestionnaire'),
-			appelantId: 'marc'
+			appelantId: 'marc',
+			appelantContourne: false,
+			annuaireLisible: true
 		});
 		expect(refus).toEqual({ fait: false, message: DROIT_NON_PROPRE });
 		expect(base.journal).toEqual(['lire-compte', 'lire-droit-propre']);
@@ -537,7 +552,9 @@ describe('un droit HÉRITÉ ne se change ni ne se retire ici', () => {
 			identifiantDuCompte: 'karim.belhadj',
 			niveau: 'lecteur',
 			droit: droitDe('gestionnaire'),
-			appelantId: 'marc'
+			appelantId: 'marc',
+			appelantContourne: false,
+			annuaireLisible: true
 		});
 		expect(refus).toEqual({ fait: false, message: DROIT_NON_PROPRE });
 		expect(base.journal).not.toContain('mettre-a-jour');
@@ -553,7 +570,9 @@ describe('un droit HÉRITÉ ne se change ni ne se retire ici', () => {
 			identifiantDuCompte: 'marc.ferreira',
 			niveau: 'gestionnaire',
 			droit: droitDe('gestionnaire'),
-			appelantId: 'karim'
+			appelantId: 'karim',
+			appelantContourne: false,
+			annuaireLisible: true
 		});
 		expect(fait).toEqual({ fait: true, nom: 'Marc Ferreira', niveau: 'gestionnaire' });
 		expect(base.journal).toContain('mettre-a-jour');
@@ -571,7 +590,9 @@ describe('un gestionnaire ne se ferme pas la porte', () => {
 			identifiantDuCompte: 'karim.belhadj',
 			niveau: null,
 			droit: droitDe('gestionnaire'),
-			appelantId: 'karim'
+			appelantId: 'karim',
+			appelantContourne: false,
+			annuaireLisible: true
 		});
 		expect(refus).toEqual({ fait: false, message: AUTO_RETRAIT_DE_GESTION });
 		expect(base.journal).not.toContain('supprimer');
@@ -588,7 +609,9 @@ describe('un gestionnaire ne se ferme pas la porte', () => {
 				identifiantDuCompte: 'karim.belhadj',
 				niveau,
 				droit: droitDe('gestionnaire'),
-				appelantId: 'karim'
+				appelantId: 'karim',
+				appelantContourne: false,
+				annuaireLisible: true
 			});
 			expect(refus).toEqual({ fait: false, message: AUTO_RETRAIT_DE_GESTION });
 			expect(base.journal).not.toContain('mettre-a-jour');
@@ -605,7 +628,9 @@ describe('un gestionnaire ne se ferme pas la porte', () => {
 			identifiantDuCompte: 'marc.ferreira',
 			niveau: null,
 			droit: droitDe('gestionnaire'),
-			appelantId: 'karim'
+			appelantId: 'karim',
+			appelantContourne: false,
+			annuaireLisible: true
 		});
 		expect(fait).toEqual({ fait: true, nom: 'Marc Ferreira', niveau: null });
 		expect(base.journal).toContain('supprimer');
@@ -618,8 +643,367 @@ describe('un gestionnaire ne se ferme pas la porte', () => {
 			identifiantDuCompte: 'karim.belhadj',
 			niveau: 'gestionnaire',
 			droit: droitDe('gestionnaire'),
-			appelantId: 'karim'
+			appelantId: 'karim',
+			appelantContourne: false,
+			annuaireLisible: true
 		});
 		expect(fait).toEqual({ fait: true, nom: 'Karim Belhadj', niveau: 'gestionnaire' });
+	});
+});
+
+/* ═══════════════════════════════════ RG-DRO-03 contre l'auto-abaissement ═ */
+
+/**
+ * L'APPELANT QUI TIENT SA GESTION DE SON RÔLE NE SE FERME RIEN.
+ *
+ * `RG-DRO-03` accorde `gestionnaire` à l'administrateur SANS ligne dans
+ * `droits_de_dossier`. Aucune écriture d'ici ne peut donc la lui reprendre —
+ * `resolution.ts` sort avant de lire la table. Lui opposer
+ * `AUTO_RETRAIT_DE_GESTION` refusait par un motif qui ne s'applique pas, et sur
+ * une INSTANCE NEUVE — table vide, un seul compte, qui est donc son propre
+ * unique candidat — c'était DEUX des trois niveaux offerts par le dialogue.
+ *
+ * `P-5`, les deux polarités : le même geste, au même niveau, sur le même compte,
+ * refusé quand la gestion vient de la table et accepté quand elle vient du rôle.
+ */
+describe('RG-DRO-03 — celui qui tient sa gestion de son RÔLE ne se ferme rien', () => {
+	it('s’accorde à lui-même un niveau INFÉRIEUR, sur une table vide', async () => {
+		for (const niveau of ['lecteur', 'redacteur'] as const) {
+			const base = baseDePaille({ compte: { id: 'admin', nom: 'Alex Berge', actif: true } });
+			const fait = await accorderUnDroitDeDossier(base as unknown as Base, {
+				dossierId: 'a1',
+				identifiantDuCompte: 'admin',
+				niveau,
+				droit: droitDe('gestionnaire'),
+				appelantId: 'admin',
+				appelantContourne: true,
+				annuaireLisible: true
+			});
+			expect(fait).toEqual({ fait: true, nom: 'Alex Berge', niveau });
+		}
+	});
+
+	it('abaisse et retire sa PROPRE ligne, que le motif du refus ne concerne pas', async () => {
+		const abaisse = await changerUnDroitDeDossier(
+			baseDePaille({
+				compte: { id: 'admin', nom: 'Alex Berge', actif: true },
+				droitPropre: 'gestionnaire'
+			}) as unknown as Base,
+			{
+				dossierId: 'a1',
+				identifiantDuCompte: 'admin',
+				niveau: 'lecteur',
+				droit: droitDe('gestionnaire'),
+				appelantId: 'admin',
+				appelantContourne: true,
+				annuaireLisible: true
+			}
+		);
+		expect(abaisse).toEqual({ fait: true, nom: 'Alex Berge', niveau: 'lecteur' });
+
+		const retire = await retirerUnDroitDeDossier(
+			baseDePaille({
+				compte: { id: 'admin', nom: 'Alex Berge', actif: true },
+				droitPropre: 'gestionnaire'
+			}) as unknown as Base,
+			{
+				dossierId: 'a1',
+				identifiantDuCompte: 'admin',
+				niveau: null,
+				droit: droitDe('gestionnaire'),
+				appelantId: 'admin',
+				appelantContourne: true,
+				annuaireLisible: true
+			}
+		);
+		expect(retire).toEqual({ fait: true, nom: 'Alex Berge', niveau: null });
+	});
+
+	it('mais celui qui tient sa gestion d’un ANCÊTRE se la retirerait — refus', async () => {
+		/* `RG-DRO-01` s’arrête au droit le PLUS PROCHE : une ligne propre plus
+		   faible bat la gestion héritée, et l’écran ne se rouvrirait plus. Le
+		   droit propre est ici ABSENT — le refus ne peut donc pas venir de sa
+		   lecture, il vient du régime de l’appelant. */
+		const base = baseDePaille({
+			compte: { id: 'karim', nom: 'Karim Belhadj', actif: true },
+			droitPropre: null
+		});
+		const refus = await accorderUnDroitDeDossier(base as unknown as Base, {
+			dossierId: 'a1',
+			identifiantDuCompte: 'karim.belhadj',
+			niveau: 'redacteur',
+			droit: droitDe('gestionnaire'),
+			appelantId: 'karim',
+			appelantContourne: false,
+			annuaireLisible: true
+		});
+		expect(refus).toEqual({ fait: false, message: AUTO_RETRAIT_DE_GESTION });
+		expect(base.journal).not.toContain('inserer-avec-reprise');
+	});
+});
+
+/* ═══════════════════════════════════ La lecture, et son périmètre ═══════ */
+
+/** Une ligne de compte, telle que la lecture des droits la reçoit. */
+interface LigneDAnnuaire {
+	readonly id: string;
+	readonly identifiant: string;
+	readonly nom: string;
+	readonly actif: boolean;
+}
+
+/**
+ * LA BASE DE PAILLE DE LA LECTURE — elle relève QUELLE requête part.
+ *
+ * C'est le seul point mesurable ici, et c'est celui qui compte : `RG-ACC-01`
+ * veut le filtre DANS la requête (`ADR-006`), pas après elle. Une assertion sur
+ * la valeur rendue ne distinguerait pas une table entière lue puis triée d'une
+ * table rabattue par la base — or c'est exactement cette différence qui met, ou
+ * non, l'annuaire des comptes de l'instance dans la charge utile.
+ *
+ * La seconde lecture est donc DEUX chemins distincts dans le journal :
+ * `comptes-en-entier` quand rien ne la borne — l'objet rendu est alors attendu
+ * tel quel —, `comptes-rabattus` quand une condition l'accompagne.
+ */
+function baseDeLecture(reponses: {
+	lignesDeDroit: readonly { dossierId: string; compteId: string; droit: DroitDeDossier }[];
+	annuaire: readonly LigneDAnnuaire[];
+	rabattus: readonly LigneDAnnuaire[];
+}): { readonly journal: string[]; readonly base: unknown } {
+	const journal: string[] = [];
+	let requete = 0;
+	const base = {
+		select: () => ({
+			from: () => {
+				requete += 1;
+				if (requete === 1) {
+					return {
+						where: () => {
+							journal.push('droits-de-la-chaine');
+							return Promise.resolve([...reponses.lignesDeDroit]);
+						}
+					};
+				}
+				return {
+					where: () => {
+						journal.push('comptes-rabattus');
+						return Promise.resolve([...reponses.rabattus]);
+					},
+					then: (suite: (lignes: readonly LigneDAnnuaire[]) => unknown) => {
+						journal.push('comptes-en-entier');
+						return Promise.resolve([...reponses.annuaire]).then(suite);
+					}
+				};
+			}
+		})
+	};
+	return { journal, base };
+}
+
+/** Trois dossiers en ligne : la racine du domaine, un dossier, son enfant. */
+const CHAINE: readonly LigneDeDossier[] = [
+	{
+		id: 'r',
+		parentId: null,
+		domaineId: 'dom',
+		nom: 'Infrastructure',
+		profondeur: 1
+	},
+	{
+		id: 'd1',
+		parentId: 'r',
+		domaineId: 'dom',
+		nom: 'Exploitation',
+		profondeur: 2
+	},
+	{
+		id: 'd2',
+		parentId: 'd1',
+		domaineId: 'dom',
+		nom: 'Sauvegardes',
+		profondeur: 3
+	}
+];
+
+const ANNUAIRE: readonly LigneDAnnuaire[] = [
+	{ id: 'karim', identifiant: 'k.belhadj', nom: 'Karim Belhadj', actif: true },
+	{ id: 'marc', identifiant: 'm.ferreira', nom: 'Marc Ferreira', actif: true },
+	{ id: 'claire', identifiant: 'c.marchand', nom: 'Claire Marchand', actif: true },
+	{ id: 'sophie', identifiant: 's.nguyen', nom: 'Sophie Nguyen', actif: true }
+];
+
+describe('lireLesDroitsDUnDossier — ce que la requête rapporte, et à qui', () => {
+	it('SANS l’annuaire : la requête est rabattue, et aucun candidat n’est rendu', async () => {
+		/* Le cas relevé à la contre-lecture : un rédacteur d’un seul domaine
+		   reçoit `gestionnaire` sur un dossier, et le dialogue lui servait les
+		   identifiants de connexion des deux administrateurs de l’instance — soit
+		   l’énumération que la page de connexion interdit par ailleurs en rendant
+		   un refus unique (`ARB-005`). */
+		const { journal, base } = baseDeLecture({
+			lignesDeDroit: [{ dossierId: 'd2', compteId: 'marc', droit: 'gestionnaire' }],
+			annuaire: ANNUAIRE,
+			rabattus: ANNUAIRE.filter((c) => c.id === 'marc')
+		});
+		const droits = await lireLesDroitsDUnDossier(base as unknown as Base, {
+			dossierId: 'd2',
+			lignes: CHAINE,
+			nomDuDomaine: 'Infrastructure',
+			appelantId: 'marc',
+			annuaireLisible: false,
+			appelantContourne: false
+		});
+		expect(journal).toEqual(['droits-de-la-chaine', 'comptes-rabattus']);
+		expect(droits.candidats).toEqual([]);
+		expect(droits.accordes.map((d) => d.identifiant)).toEqual(['m.ferreira']);
+	});
+
+	it('AVEC l’annuaire : la table entière est lue, et les non-dotés sont candidats', async () => {
+		const { journal, base } = baseDeLecture({
+			lignesDeDroit: [{ dossierId: 'r', compteId: 'karim', droit: 'gestionnaire' }],
+			annuaire: ANNUAIRE,
+			rabattus: []
+		});
+		const droits = await lireLesDroitsDUnDossier(base as unknown as Base, {
+			dossierId: 'd2',
+			lignes: CHAINE,
+			nomDuDomaine: 'Infrastructure',
+			appelantId: 'karim',
+			annuaireLisible: true,
+			appelantContourne: false
+		});
+		expect(journal).toEqual(['droits-de-la-chaine', 'comptes-en-entier']);
+		expect(droits.accordes.map((d) => d.origine)).toEqual(['— hérité du domaine Infrastructure']);
+		expect(droits.candidats.map((c) => c.identifiant)).toEqual([
+			'c.marchand',
+			'm.ferreira',
+			's.nguyen'
+		]);
+	});
+
+	it('`soiMeme` marque la ligne que le SERVEUR refusera, pas celle de l’appelant', async () => {
+		/* Sa gestion vient de la table : le geste lui est refusé, donc omis. */
+		const parLaTable = await lireLesDroitsDUnDossier(
+			baseDeLecture({
+				lignesDeDroit: [{ dossierId: 'd2', compteId: 'karim', droit: 'gestionnaire' }],
+				annuaire: ANNUAIRE,
+				rabattus: ANNUAIRE.filter((c) => c.id === 'karim')
+			}).base as unknown as Base,
+			{
+				dossierId: 'd2',
+				lignes: CHAINE,
+				nomDuDomaine: 'Infrastructure',
+				appelantId: 'karim',
+				annuaireLisible: false,
+				appelantContourne: false
+			}
+		);
+		expect(parLaTable.accordes.map((d) => d.soiMeme)).toEqual([true]);
+
+		/* Elle vient de son rôle : le serveur accepte, donc la vue offre. */
+		const parLeRole = await lireLesDroitsDUnDossier(
+			baseDeLecture({
+				lignesDeDroit: [{ dossierId: 'd2', compteId: 'karim', droit: 'gestionnaire' }],
+				annuaire: ANNUAIRE,
+				rabattus: ANNUAIRE.filter((c) => c.id === 'karim')
+			}).base as unknown as Base,
+			{
+				dossierId: 'd2',
+				lignes: CHAINE,
+				nomDuDomaine: 'Infrastructure',
+				appelantId: 'karim',
+				annuaireLisible: false,
+				appelantContourne: true
+			}
+		);
+		expect(parLeRole.accordes.map((d) => d.soiMeme)).toEqual([false]);
+	});
+});
+
+/* ═══════════════════════════════════ L'annuaire gouverne aussi l'écriture ═ */
+
+/**
+ * CE QUE L'ÉCRAN N'OFFRE PAS, L'ACTION NE LE TIENT PAS NON PLUS.
+ *
+ * Le dialogue omet « Ajouter un accès » à qui ne voit pas l'annuaire des comptes
+ * — il n'aurait personne à nommer. Une garde d'écran que l'action ne tient pas
+ * n'est pas une garde : l'adresse se construit à la main, et le couple
+ * `303` / `422 compte introuvable` rendrait à l'unité l'énumération qu'on vient
+ * de refuser en bloc. Le refus est MUET, comme celui du droit, et il vient AVANT
+ * toute requête — c'est `journal` qui l'atteste.
+ */
+describe('l’annuaire gouverne l’écriture autant que la lecture', () => {
+	it('ACCORDER est fermé à qui ne voit pas l’annuaire, sans ouvrir de requête', async () => {
+		const base = baseDePaille({ compte: { id: 'sophie', nom: 'Sophie Nguyen', actif: true } });
+		const refus = await accorderUnDroitDeDossier(base as unknown as Base, {
+			dossierId: 'a1',
+			identifiantDuCompte: 's.nguyen',
+			niveau: 'lecteur',
+			droit: droitDe('gestionnaire'),
+			appelantId: 'marc',
+			appelantContourne: false,
+			annuaireLisible: false
+		});
+		expect(refus).toEqual(REFUS_MUET);
+		expect(base.journal).toEqual([]);
+	});
+
+	it('et ouvert à qui le voit — l’autre polarité, même geste, même compte', async () => {
+		const base = baseDePaille({ compte: { id: 'sophie', nom: 'Sophie Nguyen', actif: true } });
+		const fait = await accorderUnDroitDeDossier(base as unknown as Base, {
+			dossierId: 'a1',
+			identifiantDuCompte: 's.nguyen',
+			niveau: 'lecteur',
+			droit: droitDe('gestionnaire'),
+			appelantId: 'marc',
+			appelantContourne: false,
+			annuaireLisible: true
+		});
+		expect(fait).toEqual({ fait: true, nom: 'Sophie Nguyen', niveau: 'lecteur' });
+	});
+
+	it('ARB-005 — un identifiant inconnu et un droit hérité rendent le MÊME refus', async () => {
+		/* Deux causes, un seul message : sans quoi le refus répondrait « ce compte
+		   existe » à qui essaie des identifiants au hasard. */
+		for (const ecrire of [changerUnDroitDeDossier, retirerUnDroitDeDossier]) {
+			const inconnu = await ecrire(baseDePaille({ compte: null }) as unknown as Base, {
+				dossierId: 'a1',
+				identifiantDuCompte: 'fantome',
+				niveau: 'lecteur',
+				droit: droitDe('gestionnaire'),
+				appelantId: 'marc',
+				appelantContourne: false,
+				annuaireLisible: false
+			});
+			const herite = await ecrire(
+				baseDePaille({
+					compte: { id: 'sophie', nom: 'Sophie Nguyen', actif: true },
+					droitPropre: null
+				}) as unknown as Base,
+				{
+					dossierId: 'a1',
+					identifiantDuCompte: 's.nguyen',
+					niveau: 'lecteur',
+					droit: droitDe('gestionnaire'),
+					appelantId: 'marc',
+					appelantContourne: false,
+					annuaireLisible: false
+				}
+			);
+			expect(inconnu).toEqual({ fait: false, message: DROIT_NON_PROPRE });
+			expect(inconnu).toEqual(herite);
+		}
+	});
+
+	it('mais l’administrateur, lui, apprend que l’identifiant n’existe pas', async () => {
+		const refus = await retirerUnDroitDeDossier(baseDePaille({ compte: null }) as unknown as Base, {
+			dossierId: 'a1',
+			identifiantDuCompte: 'fantome',
+			niveau: null,
+			droit: droitDe('gestionnaire'),
+			appelantId: 'karim',
+			appelantContourne: true,
+			annuaireLisible: true
+		});
+		expect(refus).toEqual({ fait: false, message: COMPTE_INTROUVABLE });
 	});
 });
