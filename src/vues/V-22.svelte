@@ -109,6 +109,24 @@
 		 * octet — c'est l'état que la planche rend, et le seul qu'elle rendait.
 		 */
 		retenues?: Record<string, readonly string[]>;
+		/**
+		 * L'ORDRE DEMANDÉ — le vocabulaire de la liste des notes, et pas un mot
+		 * de plus : `modification`, `verification`, `consultations`, `alpha`
+		 * (`V-12.svelte`, propriété jumelle). Deux listes du même produit ne
+		 * nomment pas leur ordre de deux façons.
+		 *
+		 * ABSENTE — et c'est le seul état que la planche rend —, l'ordre est
+		 * celui du gel : ancienneté de VÉRIFICATION croissante. Aucun sélecteur
+		 * d'ordre n'est dessiné sur cet écran (`mockups/V-22-signets.html` n'a
+		 * `.tri` qu'en règle de feuille morte) : l'ordre ne s'atteint que par
+		 * l'adresse, et rien n'est ajouté au balisage pour le proposer.
+		 *
+		 * `modification` retombe sur l'ordre du gel : cet écran n'a pas la table
+		 * des anciennetés de modification que la liste des notes reçoit, et
+		 * l'inventer serait un chiffre saisi (`P-02`). Une valeur inconnue
+		 * retombe de même — un paramètre d'adresse ne se refuse pas, il s'ignore.
+		 */
+		tri?: string;
 	}
 
 	const {
@@ -119,7 +137,8 @@
 		compte = MOI,
 		instance = INSTANCE,
 		onModifier,
-		retenues = undefined
+		retenues = undefined,
+		tri = undefined
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -161,13 +180,20 @@
 	/**
 	 * LES SIGNETS DU DOMAINE — `window.signetsDe` du gel, à la lettre : les
 	 * notes de type « Signet » du domaine, triées par ancienneté de vérification
-	 * CROISSANTE. Le tri est celui du gel, il n'est pas rejoué ici.
+	 * CROISSANTE. C'est l'ordre du gel, et c'est celui que la vue rend tant
+	 * qu'aucun ordre n'est demandé par l'adresse — voir la propriété `tri`.
 	 */
+	function comparer(a: Note, b: Note): number {
+		if (tri === 'alpha') return a.titre.localeCompare(b.titre, 'fr');
+		if (tri === 'consultations') return b.vues - a.vues;
+		return (a.jours || 0) - (b.jours || 0);
+	}
+
 	const base = $derived(
 		corpus
 			.filter((n) => n.type === 'Signet' && n.domaine === courant.nom)
 			.slice()
-			.sort((a, b) => (a.jours || 0) - (b.jours || 0))
+			.sort(comparer)
 	);
 
 	/* ═════════════════════════════════════════════════════════════════════
@@ -405,7 +431,11 @@
 		<div class="barre-outils">
 			<div class="filtres-barre" id="facettes">
 				{#each facettes as f (f.id)}
-					<div class="fac-menu">
+					<!-- LE MENU DIT QUELLE FACETTE IL PORTE. Le câblage l'identifiait par
+					     son RANG, et une facette sans aucune valeur n'est pas rendue :
+					     le rang se décalait alors et cocher une valeur écrivait la clé
+					     d'adresse de la facette voisine. -->
+					<div class="fac-menu" data-facette={f.id}>
 						<!-- prettier-ignore -->
 						<button type="button" class="fac-menu__bouton" aria-expanded="false" data-actif={f.retenues ? 'oui' : undefined}>{f.nom}{#if f.retenues}<span class="fac-menu__n">{f.retenues}</span>{/if}<span><svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4z"/></svg></span></button>
 						<div class="fac-menu__panneau">
