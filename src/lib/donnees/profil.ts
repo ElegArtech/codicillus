@@ -84,16 +84,17 @@ export const SANS_CONTREPARTIE_EN_BASE: readonly DonneeSansContrepartie[] = [
 	{
 		donnee: 'préférence « Recevoir les demandes de révision par courriel »',
 		vue: 'V-25',
-		affichage: 'le second interrupteur du panneau « Session »',
+		affichage: 'RIEN — le second interrupteur du panneau « Session » N’EST PLUS ÉMIS',
 		motif:
-			'aucune colonne de préférence de notification sur `comptes`, aucune table de préférences. Le gel pose l’interrupteur coché au balisage et ne lui attache AUCUN gestionnaire : rien ne dit ce qu’il persiste.'
+			'aucune colonne de préférence de notification sur `comptes`, aucune table de préférences, ET AUCUN EXPÉDITEUR DE COURRIEL DANS LE PRODUIT : le message promis ne partirait de nulle part. Le gel posait l’interrupteur coché au balisage sans lui attacher aucun gestionnaire — un geste dessiné qu’aucune couche ne pouvait tenir. Il est retiré, comme `+layout.svelte` retire la ligne de synchronisation de V-07.'
 	},
 	{
 		donnee: 'jeton de réinitialisation',
 		vue: 'V-06',
-		affichage: 'les étapes 3 et 4 de `/mot-de-passe-oublie/{jeton}`',
+		affichage:
+			'RIEN — le parcours de réinitialisation par courriel n’est plus offert, et l’écran le déclare',
 		motif:
-			'AUCUNE TABLE. Le schéma porte `sessions` et `tentatives_de_connexion` ; il n’existe ni table de jeton, ni colonne de jeton sur `comptes`. `base/**` n’est pas le périmètre de ce lot : la lacune est déclarée, pas migrée.'
+			'AUCUNE TABLE. Le schéma porte `sessions` et `tentatives_de_connexion` ; il n’existe ni table de jeton, ni colonne de jeton sur `comptes`. Et aucun expéditeur de courriel n’existe pour porter le lien. Les deux adresses de V-06 rendent donc l’indisponibilité et orientent vers la réinitialisation par un administrateur, qui, elle, existe.'
 	}
 ];
 
@@ -394,34 +395,12 @@ export function vecteurDeV25(
 	return { ong: onglet, 'c-verrou': verrouille };
 }
 
-/**
- * LE VECTEUR DE V-06, ÉTAPE 1 — `/mot-de-passe-oublie`.
- *
- * `cpt` reste à `connu`, sa position par défaut, ET IL NE PEUT PAS EN SORTIR :
- * la position `inconnu` empile une notification dans la vue, ce qui
- * RÉVÉLERAIT qu'un identifiant n'existe pas. `RG-ACC-04` l'interdit, et le gel
- * lui-même écrit que ce contrôle « ne change rien à l'écran d'envoi : c'est
- * précisément ce qu'il faut vérifier ». Aucun chemin de ce module ne le pose.
- */
-export function vecteurDeV06Etape1(): Record<string, string | boolean> {
-	return { et: '1', cpt: 'connu', 'c-expire': false };
-}
-
-/**
- * LE VECTEUR DE V-06 POUR UNE ADRESSE PORTEUSE D'UN JETON.
- *
- * ÉTAT RENDU : « Lien expiré ». Ce n'est pas un choix d'écran, c'est le seul
- * énoncé vrai. Aucune table ne porte de jeton de réinitialisation (§1) : il
- * n'existe donc AUCUN jeton valide, et tout jeton présenté est inconnu. Rendre
- * l'étape 3 — la saisie d'un nouveau mot de passe — laisserait croire qu'un
- * lien vient d'être honoré, et la saisie n'aboutirait nulle part.
- *
- * L'état existe au gel (`c-expire`, rang 3 de `ORDRE`), et la réponse est la
- * MÊME pour tout jeton : elle ne dit rien de l'existence d'un compte.
- */
-export function vecteurDeV06LienInconnu(): Record<string, string | boolean> {
-	return { et: '3', cpt: 'connu', 'c-expire': true };
-}
+/* V-06 N'A PLUS DE VECTEUR, ET C'EST LE CORRECTIF LUI-MÊME.
+   Ses quatre étapes décrivaient un parcours par courriel dont le produit n'a
+   aucun morceau — ni expéditeur, ni table de jeton (§1). La vue rend désormais
+   un écran unique, qui déclare l'indisponibilité et nomme le chemin réel : la
+   réinitialisation par un administrateur, servie par `/console/comptes`. Il n'y
+   a donc plus d'état à choisir, et les deux adresses de la vue rendent le même. */
 
 /* ═══════════════════════════════════════════════════════════════════════════
    4. LA POLITIQUE DE MOT DE PASSE — TRANSCRITE DU GEL, JAMAIS CHOISIE
