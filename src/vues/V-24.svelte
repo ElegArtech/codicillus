@@ -107,6 +107,7 @@
 	import { onMount } from 'svelte';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { adresseDeDomaine } from '$lib/rangement/adresses';
+	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — deux contrôles de planche. */
@@ -684,87 +685,6 @@
 		};
 	});
 
-	/** Une entrée de système de fichiers, telle que le transfert la rend. */
-	interface EntreeDeTransfert {
-		readonly isFile: boolean;
-		readonly isDirectory: boolean;
-		readonly fullPath: string;
-		file?: (retour: (f: File) => void, echec: (e: unknown) => void) => void;
-		createReader?: () => {
-			readEntries: (retour: (e: EntreeDeTransfert[]) => void, echec: (e: unknown) => void) => void;
-		};
-	}
-
-	/** Le fichier d'une entrée, son chemin complet greffé dessus. */
-	function fichierDe(entree: EntreeDeTransfert): Promise<File | null> {
-		return new Promise((rendre) => {
-			if (entree.file === undefined) {
-				rendre(null);
-				return;
-			}
-			entree.file(
-				(f) => {
-					/* Le chemin du transfert commence par une barre oblique ; le lot le
-					   veut relatif, comme `webkitRelativePath` le donne. */
-					Object.defineProperty(f, 'webkitRelativePath', {
-						value: entree.fullPath.replace(/^\//, ''),
-						configurable: true
-					});
-					rendre(f);
-				},
-				() => rendre(null)
-			);
-		});
-	}
-
-	/** Les entrées d'un répertoire, page par page — le lecteur en rend au plus cent. */
-	function entreesDe(entree: EntreeDeTransfert): Promise<EntreeDeTransfert[]> {
-		const lecteur = entree.createReader?.();
-		if (lecteur === undefined) return Promise.resolve([]);
-		const toutes: EntreeDeTransfert[] = [];
-		return new Promise((rendre) => {
-			const lire = (): void => {
-				lecteur.readEntries(
-					(lot) => {
-						if (lot.length === 0) {
-							rendre(toutes);
-							return;
-						}
-						toutes.push(...lot);
-						lire();
-					},
-					() => rendre(toutes)
-				);
-			};
-			lire();
-		});
-	}
-
-	/** Le parcours en profondeur d'une entrée déposée. */
-	async function descendre(entree: EntreeDeTransfert, recueil: File[]): Promise<void> {
-		if (entree.isFile) {
-			const f = await fichierDe(entree);
-			if (f !== null) recueil.push(f);
-			return;
-		}
-		if (!entree.isDirectory) return;
-		for (const enfant of await entreesDe(entree)) await descendre(enfant, recueil);
-	}
-
-	/** Les fichiers d'un transfert, arborescence conservée quand elle est offerte. */
-	async function fichiersDuTransfert(transfert: DataTransfer | null): Promise<readonly File[]> {
-		if (transfert === null) return [];
-		const items = Array.from(transfert.items ?? []);
-		const entrees = items
-			.map((i) => i.webkitGetAsEntry?.() ?? null)
-			.filter((e) => e !== null)
-			.map((e) => e as unknown as EntreeDeTransfert);
-		if (entrees.length === 0) return Array.from(transfert.files);
-		const recueil: File[] = [];
-		for (const e of entrees) await descendre(e, recueil);
-		return recueil;
-	}
-
 	/** Le domaine effectivement visé — celui qu'on a choisi, sinon le proposé. */
 	const domaineCible = $derived(domaineRetenu || (domaineParDefaut ?? compte.domaine));
 
@@ -775,22 +695,10 @@
 		scenarioLocal = id;
 	}
 
-	/**
-	 * LES FICHIERS RETENUS — leur chemin est celui du dépôt, jamais leur seul nom.
-	 *
-	 * `webkitRelativePath` porte l'arborescence quand le navigateur la connaît :
-	 * c'est elle qui deviendra l'arborescence des dossiers, « à l'identique »
-	 * comme le scénario le promet. À défaut, le fichier est à la racine du lot.
-	 */
-	function cheminDe(fichier: File): string {
-		const relatif = (fichier as File & { webkitRelativePath?: string }).webkitRelativePath;
-		return relatif !== undefined && relatif !== '' ? relatif : fichier.name;
-	}
-
 	/** La source affichée : le dossier de tête du lot, ou le nombre de fichiers. */
 	function sourceDe(retenus: readonly File[]): string {
 		const premiers = retenus
-			.map((f) => cheminDe(f))
+			.map((f) => cheminDuFichier(f))
 			.filter((c) => c.includes('/'))
 			.map((c) => c.slice(0, c.indexOf('/')));
 		const tete = premiers[0];
