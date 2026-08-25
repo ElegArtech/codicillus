@@ -94,7 +94,7 @@ import { identifiantLisible } from '../rangement/adresses';
 import { PROFONDEUR_MAX } from './rangement';
 import { proprietesSoumises, retenirLesProprietes } from './creation';
 import { CLE_PROPRIETES_DE_FICHE, CLE_TYPE_DE_FICHE } from '../export/archive';
-import { FORMATS_IMPORT, type FormatDImport, type SortDeFichier } from '../../../seeds/corpus';
+import type { FormatDImport, SortDeFichier } from '../../../seeds/corpus';
 
 /* ═══════════════════════════════════════════ Le catalogue des formats ══ */
 
@@ -159,17 +159,40 @@ export function formatDuChemin(chemin: string): FormatDImport | null {
 }
 
 /**
- * LES LIBELLÉS DES FORMATS, tels que la vue les affiche au récapitulatif.
+ * LES LIBELLÉS DES FORMATS — UN RÉFÉRENTIEL DU PRODUIT, PLUS UNE DONNÉE DU JEU.
  *
- * La table est celle du jeu de semence, qui transcrit celle du gel de V-24, et
- * elle est rendue ENTIÈRE. En retirer les formats indisponibles ne dirait pas
+ * La table vivait dans `seeds/corpus.ts` et le produit la SERVAIT :
+ * `libellesDeFormat()` la rendait au chargeur de `/importer`, qui la passait à
+ * V-24. Le nom des formats que le dépôt accepte n'est pourtant pas de la
+ * démonstration — c'est la contrepartie française de `VOIE_PAR_FORMAT`, la
+ * transcription de STACK §4.6 qui vit dix lignes plus haut. Les deux tables se
+ * lisent ensemble et vivent désormais ensemble.
+ *
+ * `Record` COMPLET, PAS `Partial` : le type `FormatDImport` énumère les neuf
+ * formats, et un libellé oublié ne compile pas. C'est ce qui lie cette table à
+ * son type d'origine au lieu d'en faire une copie qui pourrait diverger.
+ *
+ * ELLE EST RENDUE ENTIÈRE. En retirer les formats indisponibles ne dirait pas
  * l'indisponibilité : le rendu retombe alors sur l'extension nue, ce qui
  * dégraderait un libellé sans porter le moindre message. `P-10` demande un
  * message CLAIR, et V-24 n'a aucune prise pour le porter — écart déclaré au
  * rapport du lot, non comblé ici.
  */
+export const LIBELLE_PAR_FORMAT: Readonly<Record<FormatDImport, string>> = {
+	docx: 'Traitement de texte',
+	doc: 'Traitement de texte (ancien)',
+	pptx: 'Présentation',
+	pdf: 'PDF',
+	md: 'Markdown',
+	txt: 'Texte brut',
+	xlsx: 'Tableur',
+	png: 'Image',
+	zip: 'Archive'
+};
+
+/** Les libellés des formats, tels que la vue les affiche au récapitulatif. */
 export function libellesDeFormat(): Partial<Record<FormatDImport, string>> {
-	return FORMATS_IMPORT;
+	return LIBELLE_PAR_FORMAT;
 }
 
 /* ═══════════════════════════════════ Le service de conversion — P-10 ═══ */

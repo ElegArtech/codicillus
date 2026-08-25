@@ -10,11 +10,12 @@
 	 * branche sur la base.
 	 *
 	 * LES ARÊTES VIENNENT DE LA TABLE `relations`, PLUS DU JEU DE SEMENCE. Les
-	 * trois propriétés de relation de `src/vues/V-19.svelte` sont optionnelles
-	 * et retombent, si rien ne leur est passé, sur les constantes du jeu ; les
-	 * nourrir ici est ce qui fait de cette page la cartographie du corpus réel.
-	 * Le mode de conception, lui, ne passe que `vecteur` et `notes` : le rendu
-	 * du banc de comparaison est inchangé, à l'octet.
+	 * trois propriétés de relation de `src/vues/V-19.svelte` étaient
+	 * OPTIONNELLES et retombaient sur les constantes du jeu quand rien ne leur
+	 * était passé : cette page-ci les nourrissait, mais rien n'obligeait la
+	 * suivante à le faire. Elles sont EXIGÉES, avec les univers et les domaines,
+	 * et c'est le compilateur qui garde la porte — omettre l'une d'elles ici ne
+	 * bâtirait plus.
 	 *
 	 * LE COMPORTEMENT VIT DANS `cablage.ts`, VOISIN DE CE FICHIER — `ARB-063`,
 	 * et le motif de `src/routes/console/cablage.ts`. La vue ne porte aucun

@@ -9,15 +9,16 @@
 	 *
 	 * LES ARÊTES VIENNENT DE LA TABLE `relations`, comme à `/cartographie` et par
 	 * le même chemin de lecture : la bascule change le mode d'affichage, jamais
-	 * le corpus. Les trois propriétés de relation de `src/vues/V-20.svelte` sont
-	 * optionnelles et retombent sur les constantes du jeu de semence quand rien
-	 * ne leur est passé — le rendu du banc de comparaison est donc inchangé.
+	 * le corpus. Les trois propriétés de relation de `src/vues/V-20.svelte`
+	 * étaient OPTIONNELLES et retombaient sur les constantes du jeu de semence
+	 * quand rien ne leur était passé ; elles sont EXIGÉES, et le compilateur
+	 * garde la porte.
 	 *
 	 * LE RÉFÉRENTIEL DE FICHE ET LES VALEURS DE CHAQUE FICHE VIENNENT DE LA BASE.
 	 * La vue les lisait au jeu de semence, sans propriété : voir le chargeur, qui
-	 * dit ce que cela coûtait. Servies, elles décident seules du panneau de
-	 * détail ; absentes — le rendu par défaut d'une vue —, la planche reprend la
-	 * main et le gel ne bouge pas.
+	 * dit ce que cela coûtait. Le référentiel est EXIGÉ à son tour ; les valeurs
+	 * restent optionnelles, parce qu'une fiche sans propriété enregistrée est un
+	 * cas ordinaire et non une donnée manquante.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert.
 	 * Elle est identique à l'octet à sa source gelée (P-6.3).
