@@ -73,6 +73,7 @@ import type {
 	Compte,
 	Configuration,
 	Domaine,
+	IdentifiantNote,
 	LibellesDeRelation,
 	Note,
 	Relation,
@@ -117,6 +118,34 @@ const MILLISECONDES_PAR_JOUR = 86_400_000;
 /** Le nombre de jours entiers écoulés entre un instant et l'instant de lecture. */
 export function joursEcoules(instant: Date, maintenant: Date): number {
 	return Math.floor((maintenant.getTime() - instant.getTime()) / MILLISECONDES_PAR_JOUR);
+}
+
+/**
+ * L'ANCIENNETÉ DE LA DERNIÈRE MODIFICATION DE CHAQUE NOTE, EN JOURS.
+ *
+ * CE N'EST PAS `Note.jours`, qui porte l'âge de la VÉRIFICATION : une note
+ * vérifiée hier n'a pas été modifiée hier. La colonne lue est `notes.modifie_le`
+ * et le comptage passe par `joursEcoules()`, la seule façon de compter un jour
+ * dans ce produit.
+ *
+ * LA TABLE RENDUE EST PARTIELLE, ET C'EST `P-02` : une note dont la ligne
+ * manque s'affiche « modification inconnue » plutôt que de recevoir une
+ * ancienneté inventée.
+ */
+export async function ancienneteDeModification(
+	base: Base,
+	lisibles: readonly Note[],
+	maintenant: Date
+): Promise<Partial<Record<IdentifiantNote, number>>> {
+	const identifiants = lisibles.map((n) => n.id as string);
+	if (identifiants.length === 0) return {};
+	const lignes = await base
+		.select({ identifiant: notes.identifiant, modifieLe: notes.modifieLe })
+		.from(notes)
+		.where(inArray(notes.identifiant, identifiants));
+	const table: Record<string, number> = {};
+	for (const ligne of lignes) table[ligne.identifiant] = joursEcoules(ligne.modifieLe, maintenant);
+	return table as Partial<Record<IdentifiantNote, number>>;
 }
 
 /**
