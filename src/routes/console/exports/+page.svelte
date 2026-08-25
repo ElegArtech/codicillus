@@ -7,9 +7,15 @@
 	 * `T-036` la monte avec sa garde : le rôle administrateur est éprouvé côté
 	 * serveur par `+page.server.ts`, à côté de ce fichier.
 	 *
-	 * `notes` EST LA SEULE PROPRIÉTÉ QUE CETTE VUE LIT — elle le déclare
-	 * elle-même : ses quatre états rendent le même écran. Elle vient de la base.
-	 * L'archive, elle, n'est pas produite : voir le chargeur.
+	 * TOUT CE QUE CET ÉCRAN AFFICHE VIENT DE LA BASE, Y COMPRIS LE NOM DE
+	 * L'ARCHIVE. Il l'annonçait à la date où le jeu de semence est figé, et sous
+	 * une ardoise du nom d'affichage là où le fichier porte l'identifiant du
+	 * domaine : un nom que l'utilisateur n'obtenait jamais. Le chargeur le fait
+	 * désormais produire par la fabrique qui nomme l'archive pour de bon.
+	 *
+	 * ET SUR UNE INSTANCE NEUVE, IL N'EN AFFICHE AUCUN. Une installation réelle
+	 * n'a aucun domaine : la table est alors vide, aucun domaine n'est choisi, et
+	 * la vue ne rend pas l'arborescence d'archive plutôt que d'en nommer une.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
 	 * sert ; elle est identique à l'octet à sa source gelée (P-6.3).
@@ -43,6 +49,7 @@
 	univers={data.univers}
 	domaines={data.domaines}
 	compte={data.compte}
+	nomsDArchive={data.nomsDArchive}
 	onExporter={(domaine) => {
 		/* LA DÉSIGNATION EST CANONIQUE, comme partout ailleurs : le sélecteur rend
 		   un NOM de domaine, l'adresse attend deux identifiants lisibles
