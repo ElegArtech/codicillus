@@ -56,6 +56,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { enhance } from '$app/forms';
 	import Vue from '../../../vues/V-17.svelte';
 	import '../../../vues/V-17.css';
 	import { cablerLEditeur } from '$lib/cablage/formulaires';
@@ -207,7 +208,15 @@
 	});
 </script>
 
-<form method="POST" bind:this={formulaire} style="display:contents">
+<!-- LE REFUS NE DOIT PAS EMPORTER LE BROUILLON — mesuré le 25/08/2026.
+     Sans amélioration progressive, la soumission fait une navigation complète :
+     la réponse 400 réaffiche l'écran NEUF, et le titre, le corps, les
+     étiquettes, le type de fiche et ses valeurs sont perdus. `peindreLeRefusDEdition()`
+     n'avait alors plus de champ où se poser, et le refus d'une propriété
+     obligatoire ne pouvait pas être « signalé à l'endroit du champ »
+     (`BRIEF-VUES.md:973`) : le champ n'existait plus. Avec elle, la soumission
+     part en arrière-plan, le document reste, et le refus se peint dessus. -->
+<form method="POST" use:enhance bind:this={formulaire} style="display:contents">
 	<!-- `domaines` vient du GABARIT RACINE, qui les lit en base : la propriété de
 	     la vue retombe sinon sur `DOMAINES` du jeu de semence, et le sélecteur
 	     proposait des domaines inexistants — mesuré sur une instance neuve, il

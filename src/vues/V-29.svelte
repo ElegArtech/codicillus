@@ -710,9 +710,8 @@
 						</div>
 						<ul>
 							{#if nouvellesObligations.length}<li>
-									Propriétés rendues obligatoires : le schéma les marque requises, et les notes
-									existantes ne sont pas touchées. L'éditeur de note ne contrôle pas cette
-									obligation.
+									Propriétés rendues obligatoires : les notes existantes qui n'ont pas de valeur ne
+									seront pas bloquées, mais la valeur sera demandée à la prochaine modification.
 								</li>{:else}<li>
 									Les modifications d'ordre, de libellé et d'aide s'appliquent immédiatement, sans
 									effet sur les valeurs saisies.
@@ -926,10 +925,7 @@
 													value={p.aide}
 													oninput={(e) => changerLaPropriete(rang, { aide: e.currentTarget.value })}
 												/>
-												<span class="champ__aide"
-													>Enregistrée dans le schéma. L'éditeur de note ne l'affiche pas encore :
-													il ne rend aucune propriété typée.</span
-												>
+												<span class="champ__aide">Affichée sous le champ dans l'éditeur.</span>
 											</div>
 											<label class="case">
 												<input
@@ -940,8 +936,7 @@
 												/>
 												<span class="case__txt"
 													>Propriété obligatoire<span class="case__aide"
-														>Le schéma marque cette valeur comme requise. L'éditeur de note ne la
-														contrôle pas encore : il n'écrit aucune propriété typée.</span
+														>La note ne pourra pas être enregistrée sans cette valeur.</span
 													></span
 												>
 											</label>
@@ -1021,7 +1016,7 @@
 												class="as-faux"
 											>
 												{fauxChamp(p)}
-											</div>{/if}
+											</div>{/if}{#if p.aide}<div class="as-aide">{p.aide}</div>{/if}
 									</div>{/each}{:else}<div style="font-size:var(--t-mini);color:var(--c-encre-3)">
 									Aucun champ ne sera ajouté à l'éditeur.
 								</div>{/if}{/if}

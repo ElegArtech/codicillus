@@ -44,6 +44,10 @@
 import { rendreDocument, type ResolveurDeNote } from '../contenu/rendu';
 import type { Document } from '../contenu/document';
 import { adresseDeNote } from '../rangement/adresses';
+import {
+	PREFIXE_DE_CONTROLE_DE_PROPRIETE,
+	PREFIXE_D_ERREUR_DE_PROPRIETE
+} from '../cablage/formulaires';
 import type { Note } from '../../../seeds/corpus';
 
 /** Ce qu'un câblage rend : de quoi le défaire. Même contrat que ses voisins. */
@@ -302,16 +306,44 @@ export function cablerLesGestesDEdition(
 export interface RefusDEnregistrement {
 	readonly motif?: string;
 	readonly manquements?: readonly string[];
+	/**
+	 * LES CLÉS DES PROPRIÉTÉS DE FICHE QUI MANQUENT — jamais leurs noms.
+	 *
+	 * `manquements` porte les NOMS, pour la phrase ; celles-ci portent les
+	 * CLÉS, pour le foyer. Les deux listes disent la même chose dans deux
+	 * langues, et aucune ne se déduit de l'autre à l'écran : deux propriétés
+	 * peuvent porter le même nom d'affichage, seule la clé désigne un champ.
+	 */
+	readonly proprietesManquantes?: readonly string[];
 }
+
+/**
+ * LE MOTIF DU REFUS D'UNE PROPRIÉTÉ OBLIGATOIRE — une seule écriture.
+ *
+ * Le motif voyage du serveur à l'écran par la charge de `fail()` : il est donc
+ * un mot de protocole, et les deux bouts doivent l'écrire à l'identique. Les
+ * huit motifs qui précèdent sont des littéraux recopiés de part et d'autre ;
+ * celui-ci ne l'est pas, et c'est délibéré — un motif que le serveur émet et
+ * que l'écran n'attend pas ne se voit à aucun contrôle, seulement à l'usage.
+ */
+export const MOTIF_DE_PROPRIETE_OBLIGATOIRE = 'propriété obligatoire manquante';
 
 /**
  * LE MOTIF DU REFUS, RATTACHÉ AU CHAMP QUI L'A CAUSÉ.
  *
- * Les deux seuls motifs que l'utilisateur peut corriger sur place ont leur bloc
- * au gel — `#erreur-titre` (`V-17:467`) et `#erreur-dossier` (`V-17:839`). Les
- * autres — type, domaine, visibilité, statut — désignent des `select` toujours
- * renseignés : les voir signifierait que la charge est corrompue, pas que
- * l'utilisateur a mal rempli. Ils vont au témoin, qui sait dire « erreur ».
+ * Les deux seuls motifs FIXES que l'utilisateur peut corriger sur place ont
+ * leur bloc au gel — `#erreur-titre` (`V-17:467`) et `#erreur-dossier`
+ * (`V-17:839`). Les autres — type, domaine, visibilité, statut — désignent des
+ * `select` toujours renseignés : les voir signifierait que la charge est
+ * corrompue, pas que l'utilisateur a mal rempli. Ils vont au témoin, qui sait
+ * dire « erreur ».
+ *
+ * LE TROISIÈME MOTIF CORRIGEABLE N'A PAS SA PLACE DANS CETTE TABLE, et c'est
+ * une propriété du produit, pas une exception : les propriétés d'une fiche sont
+ * ADMINISTRABLES, leur nombre et leurs clés ne sont connus qu'à l'exécution. Un
+ * motif unique y répond, et il désigne SES champs par la liste des clés que le
+ * refus porte — voir `MOTIF_DE_PROPRIETE_OBLIGATOIRE` et le corps de
+ * `peindreLeRefusDEdition()`.
  */
 const CHAMP_DU_MOTIF: Readonly<Record<string, string>> = {
 	'titre manquant': 'erreur-titre',
@@ -320,6 +352,8 @@ const CHAMP_DU_MOTIF: Readonly<Record<string, string>> = {
 
 /** La phrase montrée, par motif. Celles du gel quand le gel en porte une. */
 const PHRASE_DU_MOTIF: Readonly<Record<string, string>> = {
+	[MOTIF_DE_PROPRIETE_OBLIGATOIRE]:
+		'Le type de fiche exige une valeur pour cette propriété. Renseignez-la, puis enregistrez.',
 	'titre manquant': 'Une note sans titre est introuvable. Donnez-lui-en un, même approximatif.',
 	'dossier manquant': 'Choisissez le dossier qui recevra la note.',
 	'type manquant': 'Le type de la note n’a pas été transmis.',
@@ -352,8 +386,37 @@ export function peindreLeRefusDEdition(
 		const bloc = racine.querySelector<HTMLElement>(`#${id}`);
 		if (bloc !== null) bloc.hidden = true;
 	}
+	/* LES BLOCS DES PROPRIÉTÉS NE SONT PAS DANS LA TABLE, et ils ne peuvent pas
+	   y être : le référentiel est administrable, leurs identifiants naissent
+	   avec les champs (`../cablage/formulaires.ts`). On les efface par la classe
+	   du gel, à l'intérieur de la seule zone qui les porte. */
+	for (const bloc of racine.querySelectorAll<HTMLElement>('#proprietes .champ__erreur')) {
+		bloc.hidden = true;
+	}
+	for (const champ of racine.querySelectorAll<HTMLElement>('#proprietes .champ')) {
+		delete champ.dataset['etat'];
+	}
 	const motif = refus?.motif;
 	if (motif === undefined) return;
+
+	/* LE REFUS D'UNE PROPRIÉTÉ SE PEINT SUR CHAQUE PROPRIÉTÉ NOMMÉE, pas sur un
+	   bloc unique en haut de page — `BRIEF-VUES.md:973` demande le signalement
+	   « à l'endroit du champ ». Le témoin dit ensuite qu'il y a eu refus, comme
+	   pour tous les autres motifs. */
+	for (const cle of refus?.proprietesManquantes ?? []) {
+		const bloc = racine.querySelector<HTMLElement>(`#${PREFIXE_D_ERREUR_DE_PROPRIETE}${cle}`);
+		if (bloc === null) continue;
+		bloc.hidden = false;
+		const champ = bloc.closest<HTMLElement>('.champ');
+		if (champ !== null) champ.dataset['etat'] = 'erreur';
+	}
+	const premiere = (refus?.proprietesManquantes ?? [])[0];
+	if (premiere !== undefined) {
+		const controle = racine.querySelector<HTMLElement>(
+			`#${PREFIXE_DE_CONTROLE_DE_PROPRIETE}${premiere}`
+		);
+		if (controle !== null) controle.scrollIntoView({ block: 'center' });
+	}
 
 	const phrase = PHRASE_DU_MOTIF[motif] ?? motif;
 	const manquements = refus?.manquements ?? [];
