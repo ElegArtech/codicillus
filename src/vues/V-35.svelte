@@ -42,13 +42,15 @@
 	 * suppression : V-35 n'en a aucun, et il n'en est écrit aucun.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * LES DONNÉES VIENNENT DU CORPUS
+	 * LES DONNÉES VIENNENT DU CHARGEUR, JAMAIS DU JEU
 	 *
-	 * Le journal est `JOURNAL_IMPORTS` de `seeds/corpus.ts` — quatre entrées,
-	 * chacune avec ses comptes de fichiers, de notes, d'ignorés et d'échecs.
-	 * Les fichiers en échec listés par le rapport sont ceux de `LOT_IMPORT`,
-	 * exactement comme au gel (`V-35:3127`) : `fichiers.filter(f => f.s ===
-	 * "echec").slice(0, i.echecs)`.
+	 * Le journal est la propriété `journalImports`, EXIGÉE : elle retombait sur
+	 * `JOURNAL_IMPORTS` de `seeds/corpus.ts` — quatre entrées datées, avec leurs
+	 * auteurs et leurs décomptes —, servies comme des imports passés de
+	 * l'instance. Les fichiers en échec nommés au rapport sont ceux de
+	 * `lotImport`, dont le défaut est `null` : sans lot, aucun fichier n'est
+	 * nommé. La mécanique du gel reste la même (`V-35:3127`) :
+	 * `fichiers.filter(f => f.s === "echec").slice(0, i.echecs)`.
 	 *
 	 * LES SCÉNARIOS SONT UN LITTÉRAL DU GEL (`V-35:2966`) : nom et sous-titre
 	 * d'accès direct, que `seeds/corpus.ts` ne porte pas. Ils sont recopiés tels
@@ -78,21 +80,7 @@
 	 * `src/vues/V-35.css` (P-6.3). Les `style=` reproduits figurent tous à
 	 * l'ensemble clos du gel de V-35 (ARB-016).
 	 */
-	import {
-		DOMAINES,
-		INSTANCE,
-		JOURNAL_IMPORTS,
-		LOT_IMPORT,
-		MOI,
-		UNIVERS,
-		type Domaine,
-		type EntreeDeJournalDImport,
-		type EtatDInstance,
-		type LotDImport,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../seeds/corpus';
+	import type { EntreeDeJournalDImport, LotDImport, Note } from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { SCENARIO_LIVRE, scenarioEstLivre } from '$lib/donnees/scenarios-d-import';
@@ -100,26 +88,8 @@
 	interface Proprietes {
 		/** La clé de l'état demandé — elle nomme la zone que le banc découpera. */
 		etat?: string;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-35')`. */
+		/** Les notes de l'instance, servies par le chargeur. */
 		notes: readonly Note[];
-		/**
-		 * LES QUATRE SOURCES DE LA COQUILLE, TOUTES FACULTATIVES — le rail de
-		 * gauche, le fil et l'identité de la barre. Absentes, les constantes du jeu
-		 * de semence s'appliquent, et cette vue rend exactement ce qu'elle rendait.
-		 * `CoquilleDeConsole.svelte:70-75` les déclare dans les mêmes termes ; elles
-		 * ne faisaient que manquer ICI, si bien que cet écran affichait le rail et
-		 * l'utilisateur du jeu de semence même servi depuis la base.
-		 */
-		univers?: readonly Univers[];
-		domaines?: readonly Domaine[];
-		compte?: UtilisateurCourant;
-		instance?: EtatDInstance;
-
-		/**
-		 * LE LOT ET LE JOURNAL, EN PROPRIÉTÉS OPTIONNELLES (T-045). Absentes, les
-		 * constantes du jeu de semence s'appliquent — c'est ce que le mode démo
-		 * passe, et c'est ce qui garantit que le banc ne bouge pas d'un pixel.
-		 */
 		/**
 		 * CE QUE LA VUE FAIT QUAND UN SCÉNARIO EST CHOISI.
 		 *
@@ -134,10 +104,26 @@
 		 * adresse il correspond, comme partout ailleurs en console.
 		 */
 		onOuvrirLeDomaine?: (domaine: string) => void;
-		/** Le dernier lot déposé. Absente, `LOT_IMPORT` du jeu de semence. */
-		lotImport?: LotDImport;
-		/** Le journal des imports. Absente, `JOURNAL_IMPORTS` du jeu de semence. */
-		journalImports?: readonly EntreeDeJournalDImport[];
+		/**
+		 * LE DERNIER LOT DÉPOSÉ, OU AUCUN — ÉTAT VIDE EXPLICITE.
+		 *
+		 * La propriété retombait sur `LOT_IMPORT` du jeu de démonstration : ses
+		 * fichiers en échec, avec leurs noms et leurs causes, étaient nommés au
+		 * rapport d'un lot qui n'avait jamais eu lieu. Aucune table ne porte de
+		 * lot (`MESURES_DE_CONSOLE_SANS_CONTREPARTIE`), et `/console/imports` ne
+		 * la passe pas : le défaut est `null`, et sans lot il n'y a aucun fichier
+		 * à nommer.
+		 */
+		lotImport?: LotDImport | null;
+		/**
+		 * LE JOURNAL DES IMPORTS, EXIGÉ.
+		 *
+		 * Il retombait sur `JOURNAL_IMPORTS` du jeu de démonstration — quatre lots
+		 * datés, leurs auteurs, leurs décomptes — sur l'écran de traçabilité même.
+		 * `/console/imports` le passe (vide, faute de table) : exigé, une route
+		 * qui l'oublierait ne compilerait plus.
+		 */
+		journalImports: readonly EntreeDeJournalDImport[];
 		/**
 		 * LE JOURNAL EST-IL ENREGISTRÉ QUELQUE PART ?
 		 *
@@ -157,15 +143,18 @@
 		journalEnregistre?: boolean;
 	}
 
+	/*
+	 * LE RAIL, LA BARRE ET LA VERSION NE PASSENT PLUS PAR ICI. Cette vue portait
+	 * `univers`, `domaines`, `compte` et `instance` sans jamais les lire : elle
+	 * ne faisait que les remettre à `CoquilleDeConsole`, qui retombait sur le jeu
+	 * de démonstration. La coquille lit désormais le contexte d'identité, seule
+	 * source, et les quatre propriétés ont disparu des deux côtés.
+	 */
 	const {
 		etat,
 		notes,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		lotImport = LOT_IMPORT,
-		journalImports = JOURNAL_IMPORTS,
+		lotImport = null,
+		journalImports,
 		journalEnregistre = true,
 		onScenario,
 		onOuvrirLeDomaine
@@ -226,7 +215,7 @@
 
 	/** `ouvrirRapport()` (`V-35:3067`) — les fichiers nommés au rapport. */
 	const echoues = $derived(
-		lot ? lotImport.fichiers.filter((f) => f.s === 'echec').slice(0, lot.echecs) : []
+		lot && lotImport ? lotImport.fichiers.filter((f) => f.s === 'echec').slice(0, lot.echecs) : []
 	);
 
 	/** Les quatre chiffres du bilan, dans l'ordre du gel (`V-35:3101`). */
@@ -309,15 +298,7 @@
 		></div
 	></dialog>{/snippet}
 
-<CoquilleDeConsole
-	section="imports"
-	{notes}
-	{univers}
-	{domaines}
-	{compte}
-	{instance}
-	superposition={rapportDeLot}
->
+<CoquilleDeConsole section="imports" {notes} superposition={rapportDeLot}>
 	{#snippet enfants()}
 		<!--
 			« CHAQUE LOT CONSERVE SON RAPPORT » N'EST VRAI QUE SI QUELQUE CHOSE LE
