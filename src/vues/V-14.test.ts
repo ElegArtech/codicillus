@@ -20,21 +20,27 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
 import {
 	corpusPourVue,
-	INSTANCE,
+	DOMAINES,
 	MOI,
 	noteParIdentifiant,
 	UNIVERS,
-	type EtatDInstance,
 	type Note,
 	type UtilisateurCourant
 } from '../../seeds/corpus';
 import { documentDuGel, resoudreDansLeCorpus } from '../lib/contenu/documents-du-gel';
 import { rendreDocument } from '../lib/contenu/rendu';
-import { NOTE, type LectureAffichee } from '../lib/lecture/note-de-demonstration';
+import type { LectureAffichee } from '../lib/lecture/note-de-demonstration';
 import { adresseDeDomaine } from '../lib/rangement/adresses';
 import { VOCABULAIRE_PAR_DEFAUT } from '../lib/vocabulaire';
 
 const NOTES = corpusPourVue('V-14');
+
+/** LA NOTE DU JEU DE DÉMONSTRATION — celle qui ne doit plus jamais paraître. */
+const NOTE_DU_GEL = (() => {
+	const note = noteParIdentifiant('n-restaurer-pg');
+	if (!note) throw new Error('seeds/corpus.ts : « n-restaurer-pg » a disparu');
+	return note;
+})();
 
 const SOPHIE: UtilisateurCourant = {
 	prenom: 'Sophie',
@@ -43,8 +49,6 @@ const SOPHIE: UtilisateurCourant = {
 	domaine: 'Applications',
 	role: 'Administrateur'
 };
-
-const AUTRE_INSTANCE: EtatDInstance = { version: '9.9.9-epreuve', synchro: "à l'instant" };
 
 /** L'AUTRE note à corps transcrit du gel — jamais celle de la démonstration. */
 const AUTRE_NOTE = (() => {
@@ -102,8 +106,30 @@ const AFFICHEE: LectureAffichee = {
 	consultationsTotal: 431
 };
 
+/** Les sept panneaux latéraux, tous vides — l'état que la vue doit DIRE. */
+const PANNEAUX_VIDES = {
+	voisines: [],
+	pieces: [],
+	relations: [],
+	retroliens: [],
+	verifications: [],
+	proprietes: []
+};
+
+/**
+ * LE SOCLE DE PROPRIÉTÉS REQUISES. La note affichée, les panneaux et l'adresse
+ * des relations ne sont plus optionnels : leur absence rendait la transcription
+ * figée du gel et ses sept panneaux transcrits, et c'était le défaut.
+ */
 function rendu(proprietes: Record<string, unknown>): Promise<string> {
-	return rendreLaVue('V-14', { vecteur: null, notes: NOTES, ...proprietes });
+	return rendreLaVue('V-14', {
+		vecteur: null,
+		notes: NOTES,
+		affichee: AFFICHEE,
+		panneaux: PANNEAUX_VIDES,
+		adresseDesRelations: `/notes/${AUTRE_NOTE.id}/relations`,
+		...proprietes
+	});
 }
 
 afterAll(fermerLeHarnais);
@@ -115,25 +141,38 @@ describe('V-14 — la propriété fournie l’emporte', () => {
 		expect(html).not.toContain(`${MOI.nom} — menu utilisateur`);
 	});
 
-	it('sert la version d’instance reçue', async () => {
-		expect(await rendu({ instance: AUTRE_INSTANCE })).toContain('9.9.9-epreuve');
-	});
-
 	/**
 	 * V-14 est la SEULE vue de forme COMPLÈTE de ce lot : son rail se dérive du
 	 * corpus, `univers` et `domaines` y ont donc un effet observable — ce qui
 	 * n'est pas le cas des quatre vues abrégées (`Coquille.svelte` le dit).
 	 */
-	it('dérive son rail des univers et domaines reçus', async () => {
+	it('dérive son rail des univers et domaines reçus, et de rien d’autre', async () => {
 		/* Le titre d'une section du rail est un LIEN vers la page de son univers
-		   depuis qu'un univers sans domaine doit pouvoir s'atteindre. */
+		   depuis qu'un univers sans domaine doit pouvoir s'atteindre. LE RELEVÉ
+		   SE FAIT DANS LE RAIL, et non dans la page : le fil d'Ariane porte le
+		   même lien pour l'univers de la note, et un relevé fait sur la page
+		   entière mesurerait le fil au lieu du rail. */
 		const titre = (nom: string) => `href="/univers/${nom.toLowerCase()}">${nom}</a>`;
+		const rail = (html: string) => /<aside class="rail"[\s\S]*?<\/aside>/.exec(html)?.[0] ?? '';
 
-		const defaut = await rendu({});
-		expect(defaut).toContain(titre('Production'));
-		expect(defaut).toContain(titre('Projets'));
+		/* SANS UNIVERS SERVI, LE RAIL EST VIDE. Le défaut était `UNIVERS` du jeu
+		   de démonstration : une instance neuve — zéro univers, l'état normal au
+		   premier démarrage — voyait l'arborescence des maquettes, et des
+		   adresses qui rendent 404. */
+		const vide = rail(await rendu({}));
+		expect(vide).not.toContain(titre('Production'));
+		expect(vide).not.toContain(titre('Projets'));
 
-		const html = await rendu({ univers: UNIVERS.filter((u) => u.nom === 'Production') });
+		const deux = rail(await rendu({ univers: UNIVERS, domaines: DOMAINES }));
+		expect(deux).toContain(titre('Production'));
+		expect(deux).toContain(titre('Projets'));
+
+		const html = rail(
+			await rendu({
+				univers: UNIVERS.filter((u) => u.nom === 'Production'),
+				domaines: DOMAINES
+			})
+		);
 		expect(html).toContain(titre('Production'));
 		expect(html).not.toContain(titre('Projets'));
 	});
@@ -141,7 +180,7 @@ describe('V-14 — la propriété fournie l’emporte', () => {
 	it('rend la note reçue — titre, rangement et pièces jointes', async () => {
 		const html = await rendu({ affichee: AFFICHEE });
 		expect(html).toContain(AUTRE_NOTE.titre);
-		expect(html).not.toContain(NOTE.titre);
+		expect(html).not.toContain(NOTE_DU_GEL.titre);
 		/* LE LIEN DE RANGEMENT N'EST PLUS UNE ANCRE VIDE : il porte l'adresse
 		   canonique du domaine, composée par la fabrique unique. Le contrôle
 		   suit la vue, et il vérifie toujours la même chose — que la ligne
@@ -278,14 +317,6 @@ describe('V-14 — les propriétés typées d’une fiche se relisent', () => {
 
 	const AFFICHEE_FICHE: LectureAffichee = { ...AFFICHEE, note: FICHE };
 
-	const PANNEAUX_VIDES = {
-		voisines: [],
-		pieces: [],
-		relations: [],
-		retroliens: [],
-		verifications: []
-	};
-
 	it('rend la pastille « Fiche <type> », et non le seul type de note', async () => {
 		const html = await rendu({ affichee: AFFICHEE_FICHE });
 		/* LE MOT VIENT DE SA SOURCE, PAS D'UN LITTÉRAL. `NoteDeDemonstration` le
@@ -342,27 +373,33 @@ describe('V-14 — les propriétés typées d’une fiche se relisent', () => {
 	});
 });
 
-describe('V-14 — la propriété absente rend la transcription figée du gel', () => {
-	it('rend la note de démonstration, son rangement et son contexte', async () => {
+/**
+ * LE MOTIF EST RETIRÉ, ET C'EST CE QUE CETTE SECTION MESURE.
+ *
+ * Chaque propriété de contexte portait pour DÉFAUT une constante du jeu de
+ * démonstration, et la note affichée était optionnelle : une route qui les
+ * oubliait servait l'article de « Restaurer une sauvegarde PostgreSQL », le
+ * compte « Karim Belhadj », la version `1.0.0` d'`INSTANCE` et les sept
+ * panneaux transcrits du gel — SANS QUE RIEN NE PROTESTE. Quatre campagnes ont
+ * couru après les symptômes de ce défaut-là.
+ *
+ * `affichee`, `panneaux` et `adresseDesRelations` sont désormais REQUISES : une
+ * route qui les oublierait ne compilerait plus. Le contexte, que le gabarit
+ * racine porte, rend VIDE.
+ */
+describe('V-14 — rien du jeu de démonstration ne subsiste au défaut', () => {
+	it('ne nomme aucun compte du jeu quand aucun ne lui est servi', async () => {
 		const html = await rendu({});
-		expect(html).toContain(NOTE.titre);
-		expect(html).toContain(
-			`<a href="${adresseDeDomaine(NOTE.univers, NOTE.domaine)}">Infrastructure</a>`
-		);
-		expect(html).toContain(`${MOI.nom} — menu utilisateur`);
-		expect(html).toContain(INSTANCE.version);
+		expect(html).not.toContain(`${MOI.nom} — menu utilisateur`);
 	});
 
-	/**
-	 * LE CŒUR DE LA GARANTIE DE BANC : sans la propriété, les deux corps sont
-	 * la transcription figée, et non un document rendu. Les titres du registre
-	 * Opérationnel du gel sont le témoin — ils n'existent nulle part ailleurs
-	 * que dans cette transcription.
-	 */
-	it('rend les deux corps transcrits, et non un document', async () => {
+	it('ne rend ni la note du gel, ni son rangement, ni ses corps transcrits', async () => {
 		const html = await rendu({});
-		expect(html).toContain('id="s-restaurer"');
-		expect(html).toContain('id="o-preparer"');
-		expect(html).not.toContain(REFERENCE_RENDUE);
+		expect(html).not.toContain(NOTE_DU_GEL.titre);
+		expect(html).not.toContain(
+			`<a href="${adresseDeDomaine(NOTE_DU_GEL.univers, NOTE_DU_GEL.domaine)}">Infrastructure</a>`
+		);
+		expect(html).not.toContain('id="s-restaurer"');
+		expect(html).not.toContain('id="o-preparer"');
 	});
 });

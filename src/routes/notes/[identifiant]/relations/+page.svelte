@@ -91,6 +91,12 @@
 	);
 </script>
 
+<!--
+	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, lu sur
+	`package.json` par le gabarit racine. Ce chargeur servait `INSTANCE.version`
+	de `seeds/corpus.ts` — un numéro de démonstration présenté comme un fait de
+	l'instance. La propriété reste, vide : le contexte l'emporte toujours ici.
+-->
 <Coquille
 	classeContenu="doc"
 	fil={['Accueil', ...rangement, data.note.titre, 'Relations']}
@@ -100,7 +106,7 @@
 	domaines={data.domaines}
 	notes={data.notes}
 	compte={data.compte}
-	version={data.version}
+	version=""
 >
 	{#snippet enfants()}
 		<div class="doc__tete">
