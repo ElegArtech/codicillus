@@ -90,11 +90,28 @@
 </script>
 
 <div bind:this={enveloppe} style="display:contents">
-	<!-- `domaines` vient du GABARIT RACINE, qui les lit en base : la propriété de
-	     la vue retombe sinon sur `DOMAINES` du jeu de semence, et le sélecteur
-	     proposait des domaines inexistants — mesuré sur une instance neuve, il
-	     offrait « Production › Infrastructure » à une base qui n'en a jamais eu. -->
+	<!-- `univers` ET `domaines` viennent du GABARIT RACINE, qui les lit en base :
+	     les propriétés de la vue retombent sinon sur `UNIVERS` et `DOMAINES` du
+	     jeu de semence, et le sélecteur proposait des rangements inexistants —
+	     mesuré sur une instance neuve, il offrait « Production › Infrastructure »
+	     à une base qui n'en a jamais eu.
+
+	     LA MOITIÉ UNIVERS DU MÊME SÉLECTEUR AVAIT ÉTÉ OUBLIÉE, et c'est pire que
+	     pour les domaines : le menu mélangeait une moitié réelle et une moitié
+	     fictive. Sur une base dont la table des univers ne porte que celui-ci, il
+	     offrait encore « Univers Projets » ; le choisir menait à un graphe vide
+	     sous le voile « Aucune relation dans ce périmètre » — faux, puisque c'est
+	     le périmètre qui n'existe pas. Symétriquement, un univers créé en console
+	     n'était jamais proposé.
+
+	     DEUX VOIES EXISTAIENT, ET C'EST LA PROPRIÉTÉ QUI EST RETENUE. V-20 lit le
+	     contexte de coquille et ne déclare pas la propriété ; V-19, elle, la
+	     déclare déjà et n'appelle jamais `getContext` — la lui passer ici est la
+	     ligne symétrique de celle des domaines, dans le fichier même où l'oubli a
+	     eu lieu, et ne touche ni la vue ni le chargeur. Le gabarit racine filtre
+	     déjà les univers au périmètre lisible de l'appelant. -->
 	<Vue
+		univers={page.data.univers}
 		domaines={page.data.domaines}
 		vecteur={data.vecteur}
 		notes={data.notes}
