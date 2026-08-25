@@ -705,6 +705,7 @@
 			vecteur={{ panneau: 'ouvert', droits: data.vecteur.droits }}
 			notes={data.notes}
 			note={data.lecture.note}
+			affichee={data.affichee}
 			versions={{ [data.lecture.note.id]: data.histoire.versions }}
 			retentionVersions={data.histoire.retention}
 			versionAffichee={data.histoire.affichee?.numero ?? null}
