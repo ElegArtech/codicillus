@@ -129,12 +129,32 @@ export function adresseDePieceJointe(identifiant: string, nom: string): string {
 /**
  * Le chemin de dossier d'une note, tel que le corpus le porte
  * (« Exploitation › Sauvegardes »), découpé en segments.
+ *
+ * LE DÉCOUPAGE EST TOLÉRANT, LA RECOMPOSITION NE L'EST PAS : on accepte un
+ * chemin dont le séparateur n'a pas ses deux espaces — une adresse tapée à la
+ * main, un lien recopié —, mais tout ce qui ressort d'ici se rejoint par
+ * `cheminCanonique()`. Sans quoi une forme approchante traverserait la
+ * vérification et n'arriverait à rien cocher.
  */
 export function segmentsDeDossier(chemin: string): readonly string[] {
 	return chemin
 		.split('›')
 		.map((s) => s.trim())
 		.filter(Boolean);
+}
+
+/**
+ * Le séparateur de chemin du corpus — `SEPARATEUR_DE_CHEMIN`,
+ * `$lib/donnees/rangement`. Il est redit ici, et non importé, parce que ce
+ * module est PUR : `$lib/donnees/rangement` parle à la base, et l'importer
+ * ferait descendre le connecteur dans le paquet de navigateur. C'est le même
+ * arrangement qu'en `$lib/cablage/formulaires`, pour la même raison.
+ */
+const SEPARATEUR = ' › ';
+
+/** La forme canonique d'un chemin affiché, recomposée depuis ses segments. */
+export function cheminCanonique(segments: readonly string[]): string {
+	return segments.join(SEPARATEUR);
 }
 
 /**
@@ -164,6 +184,14 @@ export interface NoeudDeDossier {
  * rien. Un chemin inconnu est alors IGNORÉ EN SILENCE par l'appelant — le
  * formulaire s'ouvre, rien n'est coché, aucune erreur n'est levée. Un lien
  * périmé ne doit pas empêcher d'écrire une note.
+ *
+ * CE QUI SORT D'ICI EST RECOMPOSÉ, JAMAIS RENDU TEL QUEL. La descente découpe
+ * sur le seul chevron et écarte les espaces ; rendre le chemin d'entrée
+ * laisserait donc passer une forme approchante — le séparateur sans ses
+ * espaces, par exemple — que le destinataire compare caractère pour caractère
+ * et qui ne coche RIEN. Le verdict serait « ce dossier existe » et l'effet
+ * celui d'un lien périmé : indiscernables, pour deux causes opposées. La forme
+ * canonique lève l'ambiguïté à la source.
  */
 export function dossierDeLArborescence(
 	arbre: readonly NoeudDeDossier[] | undefined,
@@ -178,7 +206,7 @@ export function dossierDeLArborescence(
 		if (branche === undefined) return null;
 		niveau = branche.enfants;
 	}
-	return chemin;
+	return cheminCanonique(segments);
 }
 
 /* ═════════════════════════════════════════════════════════════════════════

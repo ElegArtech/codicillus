@@ -143,9 +143,23 @@
 		   forme d'adresse, en segments slugifiés, ne conviendrait pas : rien à
 		   l'arrivée ne saurait la relire contre l'arborescence de choix.
 
-		   Le dossier RACINE d'un domaine n'a pas de page : `dos` n'est donc jamais
-		   vide ici. Il l'est par prudence si le chargeur venait à changer, et un
-		   paramètre vide vaut un paramètre absent. */
+		   LA RACINE D'UN DOMAINE A UNE PAGE, ET C'EST LÀ QUE `dos` EST VIDE.
+		   `+page.server.ts` l'ouvre depuis le 22/08/2026 — « LA RACINE A UNE
+		   ADRESSE : celle qui porte son seul nom » — et la tuile « Dossiers » de
+		   V-11 y mène. Or `segmentsAffiches()` remonte les ancêtres SANS
+		   consommer la racine : le chemin affiché d'une racine est la suite vide,
+		   donc la chaîne vide. Ce n'est pas une absence de dossier, c'est le
+		   dossier qui n'a pas de segment sous lui.
+
+		   L'ARBORESCENCE DE CHOIX, ELLE, OFFRE CETTE RACINE SOUS LE NOM DU
+		   DOMAINE — `lireLArborescenceDeChoix()` la pose en premier choix, à côté
+		   de ses enfants et non au-dessus. C'est donc le nom du domaine qu'il
+		   faut émettre là, et non rien : sans quoi le seul écran où un domaine
+		   NEUF offre ces deux gestes — il n'a que sa racine, et c'est `v-note`
+		   qui s'y affiche — serait précisément celui qui ne tiendrait pas la
+		   promesse. Si les deux noms venaient à diverger, la vérification faite à
+		   l'arrivée n'y reconnaît aucun dossier et ignore le paramètre en
+		   silence : la dégradation est celle d'un lien périmé, pas une erreur. */
 		for (const id of ['a-note', 'v-note']) {
 			surClic(formulaire.querySelector(`#${id}`), () => {
 				/* L'adresse est composée en OBJET plutôt qu'en chaîne : `resolve()` rend
@@ -163,7 +177,10 @@
 				   `V-03`, `V-22` et `V-24`. */
 				const cible = new URL(resolve('/notes/nouvelle'), window.location.origin);
 				cible.searchParams.set('domaine', data.domaine);
-				if (data.vecteur.dos !== '') cible.searchParams.set('dossier', data.vecteur.dos);
+				cible.searchParams.set(
+					'dossier',
+					data.vecteur.dos === '' ? data.domaine : data.vecteur.dos
+				);
 				// eslint-disable-next-line svelte/no-navigation-without-resolve
 				void goto(cible);
 			});
