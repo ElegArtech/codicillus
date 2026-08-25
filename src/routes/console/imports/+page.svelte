@@ -58,11 +58,13 @@
 	 * `analyser`, comme n'importe quel dépôt. Une analyse lancée d'ici aurait
 	 * demandé un `domaine-cible` que cet écran ne propose nulle part.
 	 *
-	 * L'ARBORESCENCE D'UN DOSSIER DÉPOSÉ N'EST PAS DESCENDUE ICI, et c'est une
-	 * limite connue : `cablerLeDepot()` prend les fichiers PLATS, et il vit dans
-	 * `src/routes/console/cablage.ts`, hors du périmètre de ce lot. Des fichiers
-	 * déposés un à un arrivent entiers et à la racine du lot, ce qui est leur
-	 * place ; un DOSSIER déposé perd sa structure. Remonté au rapport.
+	 * L'ARBORESCENCE D'UN DOSSIER DÉPOSÉ EST DESCENDUE, et c'est la MÊME descente
+	 * qu'en V-24 : `cablerLeDepot()` passe par `$lib/cablage/depot-de-fichiers.ts`,
+	 * que les deux écrans importent. Elle ne l'était pas ici, et le dépôt d'un
+	 * dossier arrivait plat — toutes ses notes à la racine du domaine, et
+	 * l'idempotence de l'import cassée avec, puisque son discriminant compte le
+	 * chemin de dossier. Des fichiers déposés un à un arrivent, comme avant,
+	 * entiers et à la racine du lot, ce qui est leur place.
 	 */
 	onMount(() =>
 		cablerLeDepot(document, {
