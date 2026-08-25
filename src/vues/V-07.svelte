@@ -141,12 +141,20 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 	import { BARRES_DE_JAUGE, temoinFraicheur } from '$lib/fraicheur';
-	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
+	import { vocabulaireRendu } from '$lib/vocabulaire';
 	import {
 		adresseDeCreationDeSignet,
 		adresseDeDomaine,
 		adresseDesNotesDuDomaine
 	} from '$lib/rangement/adresses';
+
+	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
+	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
+	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
+	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	const motsDuProduit = vocabulaireRendu();
+	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
+	const motFichePlurielMinuscule = $derived(motsDuProduit.fichesMin);
 
 	/**
 	 * LES NEUF SOURCES QUI NE VENAIENT DE NULLE PART — T-041.

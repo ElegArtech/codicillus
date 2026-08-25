@@ -30,6 +30,8 @@
  * retombe sur sa propriété. C'est ce qui garde le gel intact.
  */
 
+import type { VocabulaireRendu } from '../vocabulaire';
+
 /** La clé du contexte. Une constante, jamais une chaîne recopiée. */
 export const CLE_IDENTITE = Symbol.for('codicillus.identite-de-coquille');
 
@@ -125,4 +127,27 @@ export interface IdentiteDeCoquille {
 	 * d'erreur : la coquille les émet alors toutes, et le gel ne bouge pas.
 	 */
 	readonly rangement: RangementDeCoquille | null | undefined;
+	/**
+	 * LE MOT RENOMMABLE DE `M14.7`, DÉJÀ DÉRIVÉ EN SES QUATRE FORMES.
+	 *
+	 * `$lib/vocabulaire.ts` en calculait quatre CONSTANTES à l'import, depuis
+	 * `CONFIG.motFiche` de `seeds/corpus.ts`. La clé `mot_fiche` existe en base,
+	 * la console l'écrit, `lireConfiguration()` la lit — et rien ne branchait la
+	 * lecture sur l'affichage : renommer « Fiche » en console ne changeait rien
+	 * aux quinze vues qui affichent le mot, ni à la pastille « Types de fiches »
+	 * de la console. `RG-M14-09` (« recalcul immédiat ») était faux à la lettre.
+	 *
+	 * Une constante de module est figée au chargement et partagée par toutes les
+	 * requêtes : elle ne peut pas suivre une configuration. Le contexte, lui, est
+	 * fait d'accesseurs sur `data`, et il la suit.
+	 *
+	 * LES QUATRE FORMES DESCENDENT DÉRIVÉES, pas le mot brut : dix-sept
+	 * composants rappelleraient sinon `pluriel()` et `initialeMinuscule()` chacun
+	 * de son côté, et la dérivation aurait dix-sept sources au lieu d'une.
+	 *
+	 * `null` hors gabarit racine — le rendu par défaut d'une vue, une planche, la
+	 * page d'erreur : `vocabulaireRendu()` retombe alors sur `Fiche`, exactement
+	 * les littéraux d'avant.
+	 */
+	readonly vocabulaire: VocabulaireRendu | null;
 }
