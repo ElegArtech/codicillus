@@ -74,7 +74,19 @@ beforeAll(async () => {
 		configFile: new URL('../../vite.config.ts', import.meta.url).pathname,
 		appType: 'custom',
 		logLevel: 'silent',
-		server: { middlewareMode: true, hmr: false, watch: null }
+		// LE SURVEILLANT NE DOIT PAS DESCENDRE DANS .claude/worktrees/ NI DANS build/.
+		// Il parcourt toute la racine ; sous .claude/worktrees/ vivent des copies
+		// complètes du dépôt, et les veilleurs du système s'épuisent : la série sort
+		// en ENOSPC, ses tests verts compris. Le surveillant attend un prédicat, pas
+		// un motif : les jokers y sont inertes, et `watch: null` ne l'éteint pas —
+		// il ne fait que lui retirer ce filtre.
+		server: {
+			middlewareMode: true,
+			hmr: false,
+			watch: {
+				ignored: (chemin: string) => chemin.includes('/.claude') || chemin.includes('/build/')
+			}
+		}
 	});
 	const svelte = await serveur.ssrLoadModule('svelte/server');
 	render = svelte.render as Rendre;
