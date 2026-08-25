@@ -12,17 +12,25 @@
  * peut donc pas entrer en collision avec `/notes/{identifiant}`.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * LES QUATRE PARAMÈTRES DE PRÉ-REMPLISSAGE NE SONT PAS LUS, ET C'EST DÉCLARÉ
+ * LES PARAMÈTRES DE PRÉ-REMPLISSAGE SONT LUS — ET PAS TOUS ICI
  *
- * `docs/routes.md:287-288` prévoit cinq paramètres sur cette adresse — titre,
- * domaine, dossier, template, requête d'origine. Les lire demanderait de les
- * porter jusqu'à la vue, or `src/vues/V-17.svelte` ne déclare AUCUNE propriété
- * qui les recevrait : ses onze propriétés sont le vecteur, le corpus, quatre de
- * contexte, trois référentiels, les anciennetés et la note reprise. Les faire
- * entrer demanderait de toucher `src/vues/`, que le contrat de ce lot interdit.
- * Rien n'est donc lu de l'adresse : un paramètre honoré à moitié — retenu côté
- * serveur, invisible côté écran — serait pire que pas de paramètre du tout.
- * Écart déclaré, chiffré au rapport.
+ * `docs/routes.md:287-288` prévoit cinq paramètres sur cette adresse : titre,
+ * domaine, dossier, template, et la requête d'origine venue de V-34. Chacun est
+ * lu là où il commande quelque chose, et nulle part ailleurs.
+ *
+ * ICI : `template`, plus bas dans ce fichier, parce qu'il pilote `vecteur.cas`
+ * — le vecteur d'état est composé par le chargeur, jamais par la vue.
+ *
+ * DANS `+page.svelte` : `domaine`, `dossier` et `titre`, parce qu'ils ne
+ * commandent rien du chargement et tout de l'écran. `domaine` est porté par
+ * `compte.domaine`, `dossier` par `dossierDeDepart` — la propriété que V-17
+ * déclare pour cela —, `titre` posé sur son champ au montage.
+ *
+ * Ce partage n'est pas un demi-parcours : un paramètre retenu côté serveur et
+ * invisible côté écran serait pire que pas de paramètre du tout, et c'est
+ * exactement ce que la répartition ci-dessus évite. `dossier` est d'ailleurs
+ * VÉRIFIÉ avant d'être servi, contre l'arborescence de choix que ce chargeur
+ * rend : un chemin qui ne désigne plus rien s'ignore en silence.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * L'ACTION ÉCRIT — LE 501 EST LEVÉ, ET C'EST `ARB-062` QUI L'A LEVÉ

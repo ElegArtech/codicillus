@@ -263,8 +263,18 @@ describe('dossierDeLArborescence', () => {
 		expect(dossierDeLArborescence(ARBRE, 'serveurs/bases')).toBeNull();
 	});
 
-	it('découpe comme `segmentsDeDossier`, espaces compris', () => {
-		expect(dossierDeLArborescence(ARBRE, 'Serveurs›Bases')).toBe('Serveurs›Bases');
+	/**
+	 * LE DÉCOUPAGE EST TOLÉRANT, CE QUI SORT NE L'EST PAS. `segmentsDeDossier`
+	 * découpe sur le seul chevron et écarte les espaces : un chemin au
+	 * séparateur non canonique est donc reconnu. Rendre ce chemin TEL QUEL
+	 * servirait à V-17 une chaîne qu'elle compare caractère pour caractère et
+	 * qui ne coche RIEN — un verdict « ce dossier existe » pour un effet de lien
+	 * périmé. Ce qui sort est recomposé.
+	 */
+	it('recompose la forme canonique, quel que soit l’espacement reçu', () => {
 		expect(segmentsDeDossier('Serveurs›Bases')).toEqual(['Serveurs', 'Bases']);
+		expect(dossierDeLArborescence(ARBRE, 'Serveurs›Bases')).toBe('Serveurs › Bases');
+		expect(dossierDeLArborescence(ARBRE, '  Serveurs ›Bases  ')).toBe('Serveurs › Bases');
+		expect(dossierDeLArborescence(ARBRE, 'Serveurs › Bases')).toBe('Serveurs › Bases');
 	});
 });
