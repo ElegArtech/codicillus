@@ -97,6 +97,36 @@
 		 * existait sans qu'aucun clic n'y mène. Mesuré le 22/08/2026.
 		 */
 		onModifier?: (identifiant: string) => void;
+		/**
+		 * LES VALEURS DE FACETTE RETENUES, telles que L'ADRESSE les porte.
+		 *
+		 * Les deux facettes du gel — Étiquette, Auteur — étaient DÉCORATIVES :
+		 * cocher une valeur ne filtrait rien, et cet écran était le dernier
+		 * écran de liste que son adresse ne gouvernait pas. `docs/routes.md`
+		 * §4.2 les déclare pourtant depuis toujours pour cette route.
+		 *
+		 * ABSENTE, aucune valeur n'est retenue et le rendu ne bouge pas d'un
+		 * octet — c'est l'état que la planche rend, et le seul qu'elle rendait.
+		 */
+		retenues?: Record<string, readonly string[]>;
+		/**
+		 * L'ORDRE DEMANDÉ — le vocabulaire de la liste des notes, et pas un mot
+		 * de plus : `modification`, `verification`, `consultations`, `alpha`
+		 * (`V-12.svelte`, propriété jumelle). Deux listes du même produit ne
+		 * nomment pas leur ordre de deux façons.
+		 *
+		 * ABSENTE — et c'est le seul état que la planche rend —, l'ordre est
+		 * celui du gel : ancienneté de VÉRIFICATION croissante. Aucun sélecteur
+		 * d'ordre n'est dessiné sur cet écran (`mockups/V-22-signets.html` n'a
+		 * `.tri` qu'en règle de feuille morte) : l'ordre ne s'atteint que par
+		 * l'adresse, et rien n'est ajouté au balisage pour le proposer.
+		 *
+		 * `modification` retombe sur l'ordre du gel : cet écran n'a pas la table
+		 * des anciennetés de modification que la liste des notes reçoit, et
+		 * l'inventer serait un chiffre saisi (`P-02`). Une valeur inconnue
+		 * retombe de même — un paramètre d'adresse ne se refuse pas, il s'ignore.
+		 */
+		tri?: string;
 	}
 
 	const {
@@ -106,7 +136,9 @@
 		domaines = DOMAINES,
 		compte = MOI,
 		instance = INSTANCE,
-		onModifier
+		onModifier,
+		retenues = undefined,
+		tri = undefined
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -148,13 +180,20 @@
 	/**
 	 * LES SIGNETS DU DOMAINE — `window.signetsDe` du gel, à la lettre : les
 	 * notes de type « Signet » du domaine, triées par ancienneté de vérification
-	 * CROISSANTE. Le tri est celui du gel, il n'est pas rejoué ici.
+	 * CROISSANTE. C'est l'ordre du gel, et c'est celui que la vue rend tant
+	 * qu'aucun ordre n'est demandé par l'adresse — voir la propriété `tri`.
 	 */
+	function comparer(a: Note, b: Note): number {
+		if (tri === 'alpha') return a.titre.localeCompare(b.titre, 'fr');
+		if (tri === 'consultations') return b.vues - a.vues;
+		return (a.jours || 0) - (b.jours || 0);
+	}
+
 	const base = $derived(
 		corpus
 			.filter((n) => n.type === 'Signet' && n.domaine === courant.nom)
 			.slice()
-			.sort((a, b) => (a.jours || 0) - (b.jours || 0))
+			.sort(comparer)
 	);
 
 	/* ═════════════════════════════════════════════════════════════════════
@@ -163,10 +202,12 @@
 	   si cette valeur était retenue, les autres facettes restant appliquées ;
 	   les valeurs sont triées par compte décroissant puis alphabétiquement.
 
-	   AUCUN ÉTAT DE V-22 NE RETIENT DE VALEUR : la planche n'a pas d'axe
-	   « arrivée », contrairement à V-12. Les jetons de filtre actif et le
-	   bouton « Tout effacer » relèvent donc du lot de logique ; `.actifs` reste
-	   vide, et `.actifs:empty { display: none }` le fait disparaître.
+	   LES VALEURS RETENUES VIENNENT DE L'ADRESSE, et de nulle part ailleurs.
+	   La planche n'a pas d'axe « arrivée », contrairement à V-12 : aucun de
+	   ses six états ne retient de valeur, et sans `retenues` le rendu est
+	   celui qu'elle mesure — `.actifs` vide, que `.actifs:empty` efface.
+	   Le moteur, lui, est celui du gel à la lettre (`V-22:2540-2600`) :
+	   `passe`, `comptesDe`, les jetons de `rendreActifs`, « Tout effacer ».
 	   ═════════════════════════════════════════════════════════════════════ */
 
 	interface DefinitionDeFacette {
@@ -181,35 +222,76 @@
 		{ id: 'auteur', nom: 'Auteur', cle: (n) => [n.auteur] }
 	];
 
+	/** Les valeurs retenues, telles que l'adresse les porte. */
+	const choisis = $derived<Record<string, readonly string[]>>(retenues ?? {});
+
+	/** Un signet passe chaque facette ayant au moins une valeur retenue ; à
+	 *  l'intérieur d'une facette, les valeurs sont en « ou ». */
+	function passe(n: Note, saufFacette?: string): boolean {
+		return FACETTES.every((f) => {
+			if (f.id === saufFacette) return true;
+			const c = choisis[f.id];
+			if (!c || !c.length) return true;
+			const valeurs = f.cle(n);
+			return c.some((v) => valeurs.includes(v));
+		});
+	}
+
 	interface ValeurDeFacette {
 		readonly valeur: string;
 		readonly compte: number;
+		readonly retenue: boolean;
 	}
 
 	interface FacetteRendue {
 		readonly id: string;
 		readonly nom: string;
 		readonly prefixe: string;
+		readonly retenues: number;
 		readonly valeurs: readonly ValeurDeFacette[];
 	}
 
 	function facetteRendue(f: DefinitionDeFacette): FacetteRendue {
+		const sansCelleCi = base.filter((n) => passe(n, f.id));
 		const comptes: Record<string, number> = {};
-		for (const n of base) {
+		for (const n of sansCelleCi) {
 			for (const v of f.cle(n)) if (v) comptes[v] = (comptes[v] ?? 0) + 1;
 		}
 		const ordonnees = Object.keys(comptes).sort(
 			(a, b) => (comptes[b] ?? 0) - (comptes[a] ?? 0) || a.localeCompare(b, 'fr')
 		);
+		/* Une valeur retenue mais absente du compte est ajoutée en queue et
+		   s'affiche en retrait : la faire disparaître ferait croire à un défaut. */
+		const gardees = choisis[f.id] ?? [];
+		for (const v of gardees) if (!ordonnees.includes(v)) ordonnees.push(v);
 		return {
 			id: f.id,
 			nom: f.nom,
 			prefixe: f.prefixe ?? '',
-			valeurs: ordonnees.map((valeur) => ({ valeur, compte: comptes[valeur] ?? 0 }))
+			retenues: gardees.length,
+			valeurs: ordonnees.map((valeur) => ({
+				valeur,
+				compte: comptes[valeur] ?? 0,
+				retenue: gardees.includes(valeur)
+			}))
 		};
 	}
 
 	const facettes = $derived(FACETTES.map(facetteRendue).filter((f) => f.valeurs.length > 0));
+
+	/** Les jetons de filtre actif, dans l'ordre de déclaration des facettes. */
+	const filtresActifs = $derived(
+		FACETTES.flatMap((f) =>
+			(choisis[f.id] ?? []).map((valeur) => ({
+				nom: f.nom,
+				valeur,
+				etiquette: (f.prefixe ?? '') + valeur
+			}))
+		)
+	);
+
+	/** Les signets que les valeurs retenues laissent passer. */
+	const filtrees = $derived(base.filter((n) => passe(n)));
 
 	/* ═════════════════════════════════════════════════════════════════════
 	   L'ADRESSE EXTERNE, LUE COMME LE GEL LA LIT
@@ -259,8 +341,15 @@
 		return chemin.length > 42 ? chemin.slice(0, 41) + '…' : chemin;
 	}
 
-	/** Le compteur de tête. Aucun filtre n'étant retenu, il dit le total. */
-	const compteur = $derived(base.length > 1 ? ' signets' : ' signet');
+	/** Le compteur de tête : « N signets », ou « N sur M signets » quand un
+	 *  filtre mord — la forme du gel, `V-22:2897-2900`. */
+	const compteur = $derived(
+		filtrees.length === base.length
+			? base.length > 1
+				? ' signets'
+				: ' signet'
+			: ` sur ${base.length} signets`
+	);
 
 	/**
 	 * LE RAPPEL DE SORTIE — RG-M11-02. Il ne s'affiche que si le domaine porte
@@ -323,7 +412,7 @@
 			</div>
 			<div style="display:flex;align-items:center;gap:var(--e-3);flex-wrap:wrap">
 				<!-- prettier-ignore -->
-				<span class="tete__compteur" id="compteur">{#if base.length}<b>{base.length}</b>{compteur}{/if}</span>
+				<span class="tete__compteur" id="compteur">{#if base.length}<b>{filtrees.length}</b>{compteur}{/if}</span>
 				<!-- P-09 · ARB-040 — omise, jamais masquée. `V-22:1257` -->
 				{#if ecriture}<button class="btn btn--principal si-ecriture" id="nouveau">
 						<svg
@@ -342,13 +431,17 @@
 		<div class="barre-outils">
 			<div class="filtres-barre" id="facettes">
 				{#each facettes as f (f.id)}
-					<div class="fac-menu">
+					<!-- LE MENU DIT QUELLE FACETTE IL PORTE. Le câblage l'identifiait par
+					     son RANG, et une facette sans aucune valeur n'est pas rendue :
+					     le rang se décalait alors et cocher une valeur écrivait la clé
+					     d'adresse de la facette voisine. -->
+					<div class="fac-menu" data-facette={f.id}>
 						<!-- prettier-ignore -->
-						<button type="button" class="fac-menu__bouton" aria-expanded="false">{f.nom}<span><svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4z"/></svg></span></button>
+						<button type="button" class="fac-menu__bouton" aria-expanded="false" data-actif={f.retenues ? 'oui' : undefined}>{f.nom}{#if f.retenues}<span class="fac-menu__n">{f.retenues}</span>{/if}<span><svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4z"/></svg></span></button>
 						<div class="fac-menu__panneau">
 							<div class="facette__corps">
 								<!-- prettier-ignore -->
-								{#each f.valeurs as v (v.valeur)}<label class="val"><input type="checkbox"><span class="val__nom">{f.prefixe + v.valeur}</span><span class="val__n">{v.compte}</span></label>{/each}
+								{#each f.valeurs as v (v.valeur)}<label class="val" data-vide={v.compte ? undefined : 'oui'}><input type="checkbox" checked={v.retenue}><span class="val__nom">{f.prefixe + v.valeur}</span><span class="val__n">{v.compte}</span></label>{/each}
 							</div>
 						</div>
 					</div>
@@ -356,7 +449,8 @@
 			</div>
 		</div>
 
-		<div class="actifs" id="actifs"></div>
+		<!-- prettier-ignore -->
+		<div class="actifs" id="actifs">{#each filtresActifs as f, rang (rang)}<span class="filtre"><span><b>{f.nom + ' : '}</b>{f.etiquette}</span><button type="button" aria-label={'Retirer le filtre ' + f.nom + ' ' + f.valeur}><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></span>{/each}{#if filtresActifs.length}<button class="actifs__vider" type="button">Tout effacer</button>{/if}</div>
 
 		<div class="sortie-rappel" id="sortie-rappel" hidden={!rappelVisible}>
 			<svg
@@ -403,8 +497,20 @@
 							>Ajouter le premier signet</button
 						>{/if}
 				</div>
+			{:else if !filtrees.length}
+				<!-- L'état « aucun résultat » du gel, `V-22:2923-2937` : il dit combien
+					     le domaine en contient, et rend la sortie du filtre. -->
+				<div class="vide-signets">
+					<h2>Aucun signet ne correspond à ces filtres</h2>
+					<p>
+						{'Ce domaine en contient ' +
+							base.length +
+							', mais aucun ne réunit les conditions retenues.'}
+					</p>
+					<button class="btn btn--principal" type="button">Réinitialiser les filtres</button>
+				</div>
 			{:else}
-				{#each base as n (n.id)}{@render carteSignet(n)}{/each}
+				{#each filtrees as n (n.id)}{@render carteSignet(n)}{/each}
 			{/if}
 		</div>
 	{/snippet}

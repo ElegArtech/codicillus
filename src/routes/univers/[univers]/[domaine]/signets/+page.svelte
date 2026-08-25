@@ -34,6 +34,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { soumettreVers } from '$lib/cablage/formulaires';
+	import { cablerLesFacettes } from '$lib/cablage/facettes';
 	import {
 		adresseDeCreationDeSignet,
 		adresseDeModificationDeSignet
@@ -71,10 +72,32 @@
 		domaine: String(page.params['domaine'] ?? '')
 	});
 
+	/**
+	 * LES DEUX FACETTES DU GEL, DANS SON ORDRE. Le menu rendu porte lui-même
+	 * l'identifiant de sa facette, et c'est par lui que le câblage la retrouve :
+	 * le libellé ne peut pas servir — le bouton porte le nom SUIVI de son
+	 * compteur —, et le rang mentait dès qu'une facette sans valeur n'était pas
+	 * rendue, ce qui arrive au premier signet sans étiquette.
+	 *
+	 * La liste est déclarée une fois et servie au câblage commun, celui-là même
+	 * qui porte les menus de la liste des notes et de la recherche. Recopier le
+	 * moteur ici l'aurait fait diverger au premier oubli.
+	 */
+	const FACETTES = [
+		{ id: 'etiquette', nom: 'Étiquette', prefixe: '#' },
+		{ id: 'auteur', nom: 'Auteur' }
+	] as const;
+
 	onMount(() => {
 		for (const bouton of Array.from(formulaire.querySelectorAll('button'))) {
 			if (!bouton.hasAttribute('type')) bouton.type = 'button';
 		}
+		/* LES MENUS DE FACETTE, LES PASTILLES ET « TOUT EFFACER » — le module
+		   commun, celui de la liste des notes et de la recherche. Ce fichier ne
+		   portait que l'OUVERTURE d'un menu, faute d'un chargeur qui lise les
+		   paramètres ; il en lit deux désormais, et cocher une valeur réécrit
+		   l'adresse. */
+		const defaireLesFacettes = cablerLesFacettes(formulaire, { facettes: FACETTES });
 		const identifiantDeLaCarte = (carte: Element): string | null => {
 			const titre = (carte.querySelector('.sig__titre')?.textContent ?? '').trim();
 			const url = carte.querySelector('.sig__titre')?.getAttribute('href') ?? '';
@@ -109,34 +132,18 @@
 				return;
 			}
 
-			/* 3. UN MENU DE FACETTE — OUVERTURE SEULE, et c'est un fait mesuré, non
-			   une paresse : V-22 n'a AUCUNE propriété de valeurs retenues (voir
-			   `src/vues/V-22.svelte`, « aucun état de V-22 ne retient de valeur »),
-			   et son chargeur ne lit aucun paramètre de facette. Cocher une valeur
-			   ne pourrait donc rien filtrer ; poser le paramètre dans l'adresse
-			   ferait recharger la page sans le moindre effet, ce qui est pire qu'un
-			   menu qui s'ouvre. L'ouverture est l'attribut du gel
-			   (`.fac-menu[data-ouvert="oui"]`), et rien d'autre. */
-			const menuBouton = vise.closest('.fac-menu__bouton');
-			if (menuBouton !== null) {
-				const menu = menuBouton.closest('.fac-menu');
-				const ouvert = menu?.getAttribute('data-ouvert') === 'oui';
-				for (const autre of Array.from(formulaire.querySelectorAll('.fac-menu'))) {
-					autre.removeAttribute('data-ouvert');
-					autre.querySelector('.fac-menu__bouton')?.setAttribute('aria-expanded', 'false');
-				}
-				if (!ouvert && menu !== null && menu !== undefined) {
-					menu.setAttribute('data-ouvert', 'oui');
-					menuBouton.setAttribute('aria-expanded', 'true');
-				}
+			/* 3. RÉINITIALISER LES FILTRES — la sortie de l'état « aucun signet ne
+			   correspond à ces filtres ». La même adresse, ses deux facettes
+			   retirées. Le gel ne donne pas d'identifiant à ce bouton : il se
+			   reconnaît à son libellé, dans le bloc qui n'accueille que lui.
+			   Les menus eux-mêmes, les pastilles et « Tout effacer » sont portés
+			   par le câblage commun des facettes, monté plus haut. */
+			if ((amorce?.textContent ?? '').trim() === 'Réinitialiser les filtres') {
+				const adresse = new URL(location.href);
+				for (const f of FACETTES) adresse.searchParams.delete(f.id);
 				evenement.preventDefault();
+				location.assign(adresse.toString());
 				return;
-			}
-			if (vise.closest('.fac-menu') === null) {
-				for (const menu of Array.from(formulaire.querySelectorAll('.fac-menu[data-ouvert]'))) {
-					menu.removeAttribute('data-ouvert');
-					menu.querySelector('.fac-menu__bouton')?.setAttribute('aria-expanded', 'false');
-				}
 			}
 
 			/* 4. LES DEUX BOUTONS D'UNE CARTE — modifier, supprimer. */
@@ -160,15 +167,25 @@
 			soumettreVers(formulaire, '?/supprimer');
 		};
 		formulaire.addEventListener('click', auClic);
-		return () => formulaire.removeEventListener('click', auClic);
+		return () => {
+			formulaire.removeEventListener('click', auClic);
+			defaireLesFacettes();
+		};
 	});
 </script>
 
 <form method="POST" bind:this={formulaire} style="display:contents">
 	<input type="hidden" name="signet" bind:this={champSignet} />
+	<!-- `exactOptionalPropertyTypes` : une propriété OPTIONNELLE n'accepte pas
+	     `undefined` comme valeur — elle accepte d'être ABSENTE. Les deux ne se
+	     confondent pas, et c'est la garantie qui fait que la vue rend, sans
+	     paramètre, exactement ce qu'elle rendait. -->
 	<Vue
 		vecteur={data.vecteur}
 		notes={data.notes}
+		domaines={data.domaines}
+		{...data.retenues === undefined ? {} : { retenues: data.retenues }}
+		{...data.tri === undefined ? {} : { tri: data.tri }}
 		onModifier={(identifiant) =>
 			goto(
 				resolve('/univers/[univers]/[domaine]/signets/[identifiant]/modifier', {

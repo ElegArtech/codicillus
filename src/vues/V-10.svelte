@@ -407,10 +407,19 @@
 			{#if etatDeLaPage === 'chargement'}
 				{#each [0, 1, 2, 3] as rang (rang)}{@render esquisse('116px')}{/each}
 			{:else}
+				<!-- LES DEUX NOMBRES DE CETTE MESURE MÈNENT À LA RECHERCHE, réduite à cet
+					     univers : le total sans autre filtre, le sous-compte sur
+					     `?statut=Brouillon`. Deux boutons FRÈRES, jamais imbriqués — un
+					     bouton dans un bouton n'est pas un document. Les trois autres
+					     mesures restent inertes, et le câblage dit pourquoi. -->
 				<div class="mesure">
-					<span class="mesure__nom etiq">Notes</span>
-					<div class="mesure__val">{nb(notesDeLUnivers.length)}</div>
-					<span class="mesure__sous">{brouillons} brouillon(s)</span>
+					<button class="mesure__lien" type="button" id="m-notes">
+						<span class="mesure__nom etiq">Notes</span>
+						<div class="mesure__val">{nb(notesDeLUnivers.length)}</div>
+					</button>
+					<button class="mesure__lien" type="button" id="m-brouillons">
+						<span class="mesure__sous">{brouillons} brouillon(s)</span>
+					</button>
 				</div>
 				<div class="mesure">
 					<span class="mesure__nom etiq">Domaines</span>

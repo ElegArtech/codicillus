@@ -42,6 +42,24 @@
  * que découper serait une devinette. La classe, elle, est la clé du gel
  * (`PARTS` de `V-10:212`), et les trois valeurs de facette sont celles que
  * V-12 et V-08 déclarent — un seul vocabulaire pour les trois écrans.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LES INDICATEURS CONSOLIDÉS — UN SEUL MÈNE QUELQUE PART, ET C'EST MESURÉ
+ *
+ * · « NOTES » ET SON SOUS-COMPTE DE BROUILLONS ouvrent `/recherche` réduite à
+ *   cet univers, avec `&statut=Brouillon` pour le second. C'est exactement
+ *   l'adresse que la barre consolidée compose déjà ci-dessus, et elle est
+ *   composée par la même fonction : deux copies auraient divergé.
+ *
+ * · « CONTRIBUTEURS ACTIFS » RESTE INERTE, et ce n'est pas un oubli.
+ *   `/recherche` honore sept facettes — `univers`, `domaine`, `type`,
+ *   `statut`, `fraicheur`, `etiquette`, `visibilite` (`recherche/
+ *   +page.server.ts`) — et `auteur` n'en fait pas partie. Aucune cible exacte
+ *   n'existe : un filtre approchant mentirait sur ce qu'on montre.
+ *
+ * · « DOMAINES » RESTE INERTE lui aussi : la liste qu'il compte est
+ *   immédiatement dessous, sur le même écran. Une ancre vers un contenu déjà
+ *   visible ne déplace rien et ferait promettre un geste sans effet.
  */
 import { adresseDesNotesDuDomaine } from '$lib/rangement/adresses';
 
@@ -58,6 +76,10 @@ const FRAICHEUR_PAR_CLASSE: Record<string, string> = {
 	'p-obs': 'Obsolète probable'
 };
 
+/** La recherche, seule liste que le produit ait à l'échelle d'un univers. */
+const ADRESSE_DE_LA_RECHERCHE = '/recherche';
+/** La valeur de la facette `statut`, telle que V-12 et V-08 la déclarent. */
+const STATUT_BROUILLON = 'Brouillon';
 /** L'adresse de la cartographie — `docs/routes.md` §3.4, sans paramètre. */
 const ADRESSE_DE_LA_CARTOGRAPHIE = '/cartographie';
 /** La console des domaines — le seul écran qui crée un domaine. */
@@ -94,6 +116,19 @@ export function cablerLUnivers(racine: HTMLElement, options: OptionsDeLUnivers):
 		document.location.assign(adresse);
 	};
 
+	/**
+	 * LA RECHERCHE RÉDUITE À CET UNIVERS. Il n'existe pas de liste de notes à
+	 * l'échelle d'un univers (`docs/routes.md` §3.3 n'en déclare aucune) ;
+	 * `/recherche` porte la facette `univers`, et c'est l'écran qui sait recevoir
+	 * la demande. Une seule fonction la compose, pour les segments de la barre
+	 * consolidée comme pour les indicateurs.
+	 */
+	const rechercheDeLUnivers = (): URL => {
+		const adresse = new URL(ADRESSE_DE_LA_RECHERCHE, document.location.origin);
+		adresse.searchParams.set('univers', options.univers);
+		return adresse;
+	};
+
 	const auClic = (evenement: Event): void => {
 		const cible = evenement.target as Element | null;
 		if (cible === null) return;
@@ -124,7 +159,7 @@ export function cablerLUnivers(racine: HTMLElement, options: OptionsDeLUnivers):
 			const carte = segment.closest('.carte-dom');
 			const adresse =
 				carte === null
-					? new URL('/recherche', document.location.origin)
+					? rechercheDeLUnivers()
 					: new URL(
 							adresseDesNotesDuDomaine(
 								options.univers,
@@ -132,8 +167,19 @@ export function cablerLUnivers(racine: HTMLElement, options: OptionsDeLUnivers):
 							),
 							document.location.origin
 						);
-			if (carte === null) adresse.searchParams.set('univers', options.univers);
 			adresse.searchParams.set('fraicheur', facette);
+			evenement.preventDefault();
+			aller(adresse.toString());
+			return;
+		}
+
+		/* 4. LES DEUX NOMBRES DE LA MESURE « NOTES » — la recherche réduite à cet
+		      univers, sur `statut` pour le sous-compte de brouillons. Les trois
+		      autres mesures n'ont pas de bouton, et l'en-tête dit pourquoi. */
+		const mesure = cible.closest('#m-notes, #m-brouillons');
+		if (mesure !== null) {
+			const adresse = rechercheDeLUnivers();
+			if (mesure.id === 'm-brouillons') adresse.searchParams.set('statut', STATUT_BROUILLON);
 			evenement.preventDefault();
 			aller(adresse.toString());
 		}

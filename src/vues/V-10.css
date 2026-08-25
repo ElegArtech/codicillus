@@ -366,6 +366,15 @@
 }
 .mesure__sous { display: block; font-size: var(--t-mini); color: var(--c-encre-3); margin-top: var(--e-2); }
 .mesure--large .legende { margin-top: var(--e-2); }
+/* Les deux nombres de la mesure « Notes » sont des BOUTONS : ils ouvrent la
+   recherche réduite à cet univers. La règle est celle de V-11, où la même
+   classe neutralise le même bouton ; elle ne fait que rendre au bouton
+   l apparence du bloc que le gel dessine. */
+.mesure__lien {
+  display: block; width: 100%; text-align: left; background: none; border: 0;
+  padding: 0; cursor: pointer; color: inherit; font: inherit;
+}
+.mesure__lien:hover .mesure__val, .mesure__lien:hover .mesure__sous { color: var(--c-accent); }
 
 .avatars { display: flex; margin-top: var(--e-2); }
 .avatar-pile {

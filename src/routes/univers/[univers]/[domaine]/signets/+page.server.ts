@@ -41,11 +41,36 @@
  * ═════════════════════════════════════════════════════════════════════════
  * CE QUE CE CHARGEUR NE FAIT PAS
  *
- * Il ne touche pas `src/vues/V-22.svelte`, et il ne peut donc pas corriger ce
- * que la vue lit du jeu de semence : le rail, la liste des univers et des
- * domaines, le compte de l'utilisateur et la version de l'instance y sont
- * importés au niveau du module (`V-22.svelte:57`). Seules les NOTES entrent par
- * propriété, et c'est par là que la base entre. Écart déclaré au rapport du lot.
+ * Il ne touche pas le rail, la liste des univers et des domaines, le compte de
+ * l'utilisateur ni la version de l'instance : `src/vues/V-22.svelte` les importe
+ * au niveau du module. Les NOTES entrent par propriété, et c'est par là que la
+ * base entre. Écart déclaré au rapport du lot.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LES DEUX FACETTES DE L'ADRESSE, ET ELLES SONT DÉSORMAIS LUES
+ *
+ * `docs/routes.md` §4.2 déclare `etiquette` et `auteur` pour cette route, et
+ * ce chargeur ne lisait AUCUN paramètre : les deux menus de la vue étaient
+ * décoratifs, et cet écran était le dernier écran de liste que son adresse ne
+ * gouvernait pas. Le régime est celui de la liste des notes, à la lettre : à
+ * l'intérieur d'une facette les valeurs sont en OU (paramètre répété), entre
+ * facettes en ET, une valeur vide s'écarte, et une clé ABSENTE n'est pas posée
+ * — `exactOptionalPropertyTypes` distingue l'absence de `undefined`, et c'est
+ * elle qui laisse la vue rendre exactement ce qu'elle rendait.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * LE DOMAINE SERVI EST LE DOMAINE RÉSOLU, ET IL FAUT DIRE CE QUE ÇA RÉPARE
+ *
+ * `src/vues/V-22.svelte` retrouve son domaine courant par son NOM, dans la
+ * liste `domaines` qu'on lui passe — à défaut, celle du jeu de semence, qui
+ * n'en porte que quatre. Ce chargeur ne la passait pas : sur un domaine que le
+ * jeu ne nomme pas, la vue retombait sur le PREMIER de la liste de semence,
+ * l'écran titrait « Signets de Infrastructure » et sa liste était VIDE — aucun
+ * signet servi ne portait ce domaine-là. Mesuré le 25/08/2026 sur
+ * `/univers/gouvernance/doctrine/signets`, qui porte pourtant deux signets.
+ *
+ * La liste passée n'a qu'un élément, et c'est exact : cet écran est la liste
+ * d'UN domaine, il n'en montre jamais un autre.
  */
 import { error, redirect } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
@@ -61,7 +86,7 @@ import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const base = basePartagee();
 	const acces = await resoudreLAccesAuxSignets(
 		base,
@@ -73,7 +98,13 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	return {
 		vecteur: vecteurDeV22(acces.ressource.domaine, acces.ressource.ecriture),
+		/** Le domaine résolu, et lui seul — voir l'en-tête. */
+		domaines: [acces.ressource.domaine],
 		notes: acces.ressource.notes,
+		/** Les valeurs de facette retenues, lues dans l'adresse. */
+		retenues: retenuesDeLAdresse(url.searchParams),
+		/** L'ordre demandé, lu dans l'adresse — absent, celui du gel. */
+		tri: ordreDeLAdresse(url.searchParams),
 		/**
 		 * DE QUOI RETROUVER UN SIGNET DEPUIS SA CARTE.
 		 *
@@ -88,6 +119,45 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			.map((n) => ({ identifiant: n.id, titre: n.titre, url: n.url ?? '' }))
 	};
 };
+
+/**
+ * Les deux clés de facette que V-22 déclare, dans son ordre — `V-22.svelte`,
+ * table `FACETTES`. La liste est courte et le gel n'en promet pas d'autre :
+ * inventer une troisième serait promettre un filtre que la vue ne sait pas
+ * appliquer.
+ */
+const CLES_DE_FACETTE = ['etiquette', 'auteur'] as const;
+
+function retenuesDeLAdresse(
+	parametres: URLSearchParams
+): Record<string, readonly string[]> | undefined {
+	const retenues: Record<string, readonly string[]> = {};
+	for (const cle of CLES_DE_FACETTE) {
+		const valeurs = parametres.getAll(cle).filter((v) => v !== '');
+		if (valeurs.length > 0) retenues[cle] = valeurs;
+	}
+	return Object.keys(retenues).length === 0 ? undefined : retenues;
+}
+
+/**
+ * LES QUATRE ORDRES, ceux de la liste des notes et pas un de plus — deux
+ * listes du même produit ne nomment pas leur ordre de deux façons.
+ *
+ * Rien n'est DESSINÉ ici : `mockups/V-22-signets.html` n'a `.tri` qu'en règle
+ * de feuille morte, et `docs/routes.md` §4.2 ne déclare pour cette route que
+ * `etiquette` et `auteur`. La clé n'est donc atteignable que par l'adresse, et
+ * aucun balisage n'est ajouté pour la proposer : c'est le point de désaccord
+ * du lot, appliqué et porté au rapport.
+ *
+ * Une valeur inconnue est IGNORÉE, jamais refusée — un paramètre d'adresse ne
+ * se refuse pas —, et l'absence laisse la vue sur l'ordre du gel.
+ */
+const ORDRES = ['modification', 'verification', 'consultations', 'alpha'] as const;
+
+function ordreDeLAdresse(parametres: URLSearchParams): string | undefined {
+	const demande = parametres.get('tri');
+	return ORDRES.find((o) => o === demande);
+}
 
 export const actions: Actions = {
 	/**
