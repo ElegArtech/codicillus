@@ -35,6 +35,13 @@
 	 *                                     produisait rien : ni écouteur, ni
 	 *                                     dialogue, ni action.
 	 *
+	 * DEUX DE CES GESTES N'EXISTENT PAS SUR LA RACINE D'UN DOMAINE, et le câblage
+	 * n'a rien à en faire : la vue omet `#a-renommer`, `#a-supprimer` et leurs deux
+	 * dialogues quand le chemin est vide, parce que le module de données refuse
+	 * muettement tout dossier sans parent. Les recherches de ce fichier rendent
+	 * alors `null`, et `surClic()` s'en va — c'est déjà le régime des gestes qu'un
+	 * droit insuffisant fait disparaître.
+	 *
 	 * TROIS PIÈGES SONT ÉVITÉS ICI, ET CHACUN A COÛTÉ :
 	 *
 	 *  · un `button` sans attribut `type` dans un formulaire SOUMET. Le gel en
@@ -318,6 +325,7 @@
 		notes={data.notes}
 		domaine={data.domaine}
 		universDuDomaine={data.universDuDomaine}
+		modifications={data.modifications}
 		rangement={data.rangement}
 		origineDuDroit={data.origineDuDroit}
 		erreurDeCreation={refus?.creation ?? null}
