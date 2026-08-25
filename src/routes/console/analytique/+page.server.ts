@@ -37,14 +37,18 @@
  * contrôle garde un cas d'épreuve après une migration future (`P-26`).
  *
  * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CE CHARGEUR NE FAIT PAS
+ * LES CHIFFRES DU JEU NE SONT PLUS DANS LE DOCUMENT, ET C'EST LA VUE QUI A CÉDÉ
  *
- * Il ne touche pas `src/vues/V-34.svelte`, qui importe ses six tables de mesure
- * au niveau du module (`V-34:89`). Les blocs sont TOUJOURS tous deux dans le
- * document et la feuille en masque un (`V-34:1092-1093`) : les chiffres du jeu
- * restent donc dans le DOM, masqués, hors de portée d'un chargeur. Seule une
- * modification de la vue les en retirerait — hors périmètre de ce lot, écart
- * déclaré au rapport.
+ * Ce chargeur demandait l'état neutre, mais V-34 importait ses six tables de
+ * mesure au niveau du module : les deux blocs étant TOUJOURS rendus tous les
+ * deux et la feuille en masquant un (`V-34:1092-1093`), les chiffres du jeu de
+ * démonstration restaient dans le HTML servi, masqués, hors de portée d'un
+ * chargeur. Aucun chargeur ne pouvait les en retirer.
+ *
+ * Les défauts de `seeds/corpus.ts` ont disparu de la vue. Les deux mesures que
+ * le produit porte — les consultations de deux fenêtres de sept jours — sont
+ * EXIGÉES et comptées ici ; les trois qu'il ne porte pas ont pour défaut l'état
+ * VIDE, et vide, chaque bloc qui en dérive ne se rend pas du tout.
  */
 import { error } from '@sveltejs/kit';
 import { and, count, eq, gte, lt } from 'drizzle-orm';
@@ -101,9 +105,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		vecteur: vecteurDeV34(),
 		notes: acces.ressource.notes,
-		univers: acces.ressource.univers,
 		domaines: acces.ressource.domaines,
-		compte: acces.ressource.compte,
+		/* NI `univers` NI `compte` : LA COQUILLE LES LIT AU CONTEXTE D'IDENTITÉ.
+		   Ils descendaient jusqu'à `CoquilleDeConsole`, qui retombait sur les
+		   constantes de `seeds/corpus.ts` dès qu'une route en oubliait un. Le
+		   gabarit racine pose le contexte ; les servir ici serait une seconde
+		   source, et une charge utile que personne ne lit. */
 		relations: await lireRelations(base),
 		designations: await lireLesDesignationsDeDomaine(base),
 		mesures7j: await consultationsParNote(

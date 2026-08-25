@@ -46,9 +46,7 @@
 -->
 <Vue
 	notes={data.notes}
-	univers={data.univers}
 	domaines={data.domaines}
-	compte={data.compte}
 	nomsDArchive={data.nomsDArchive}
 	onExporter={(domaine) => {
 		/* LA DÉSIGNATION EST CANONIQUE, comme partout ailleurs : le sélecteur rend
