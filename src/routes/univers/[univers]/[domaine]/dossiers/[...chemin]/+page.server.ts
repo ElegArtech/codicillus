@@ -187,10 +187,22 @@ async function ouvrirLeDossier(
 	 * UN SEUL SEGMENT, ET SEULEMENT SEUL. Accepter le nom de la racine en tête
 	 * d'un chemin plus long donnerait deux adresses au même dossier ; ici on
 	 * n'en ajoute qu'une, et elle ne désignait rien auparavant.
+	 *
+	 * ET LE CHEMIN VIDE VISE LA RACINE, LUI AUSSI — l'incohérence tranchée.
+	 * `adresseDeDossier(u, d, [])` compose `…/dossiers` nu et `adresses.test.ts`
+	 * le nomme « la racine des dossiers » ; la route, elle, rendait 404. Ce
+	 * n'était pas une adresse théorique : la page d'une note POSÉE DANS LA
+	 * RACINE la compose — son chemin de dossier est la chaîne vide, donc zéro
+	 * segment (`V-14.svelte`, `NoteDeDemonstration.svelte`, `V-21.svelte`) —, et
+	 * le lien « dossier » de ces écrans tombait en 404. Le chargeur redirige
+	 * ensuite vers la forme canonique, celle qui porte le nom de la racine : une
+	 * seule adresse reste servie, l'autre y mène.
 	 */
 	const racine = lignes.find((d) => d.parentId === null) ?? null;
 	const viseLaRacine =
-		racine !== null && segments.length === 1 && segments[0] === identifiantLisible(racine.nom);
+		racine !== null &&
+		(segments.length === 0 ||
+			(segments.length === 1 && segments[0] === identifiantLisible(racine.nom)));
 	const dossier =
 		domaine === null ? null : viseLaRacine ? racine : resoudreLeChemin(lignes, segments);
 
@@ -216,6 +228,16 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		locals.identite,
 		url.pathname
 	);
+
+	/* LA FORME CANONIQUE DE LA RACINE PORTE SON NOM. L'adresse nue y mène plutôt
+	   que d'être servie en double : le chemin affiché, les redirections
+	   d'après-création et les tuiles de sous-dossier composent tous la forme
+	   nommée, et deux adresses servies pour un même dossier les feraient
+	   diverger. La redirection est permanente — l'adresse nue ne changera plus
+	   de sens. */
+	if (dossier.parentId === null && params.chemin.split('/').every((s) => s === '')) {
+		redirect(308, adresseDeDossier(domaine.universNom, domaine.nom, [dossier.nom]));
+	}
 
 	/**
 	 * LES DESTINATIONS — tout le domaine, rabattu sur le périmètre, chacune avec
