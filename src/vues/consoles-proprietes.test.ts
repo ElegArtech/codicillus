@@ -36,6 +36,7 @@ import { dirname, join } from 'node:path';
 import {
 	COMPTES,
 	CONFIG,
+	DATE_REFERENCE,
 	DETAIL_DOMAINES,
 	DOMAINES,
 	MODULES,
@@ -52,6 +53,7 @@ import {
 	type Univers,
 	type UtilisateurCourant
 } from '../../seeds/corpus';
+import { nomDArchive } from '../lib/export/archive';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -360,6 +362,44 @@ describe('V-34 — Analytique', () => {
 		// `mesures7j` alimente le décompte de consultations sur sept jours.
 		expect(duJeu).toContain('vues / 7 j');
 		expect(occurrences(vide, '0 vues / 7 j')).toBeGreaterThan(occurrences(duJeu, '0 vues / 7 j'));
+	});
+});
+
+describe('V-36 — Exports', () => {
+	/**
+	 * LE NOM D'ARCHIVE ANNONCÉ EST CELUI QUE L'UTILISATEUR OBTIENDRA.
+	 *
+	 * LE NOM ATTENDU N'EST PAS ÉCRIT ICI, ET C'EST TOUT LE CONTRÔLE : il est
+	 * PRODUIT par `nomDArchive()`, la fabrique que le point de téléchargement
+	 * appelle pour nommer le fichier. Un cas qui recopierait la forme du nom
+	 * pourrait rester vert pendant que la fabrique en produit une autre —
+	 * exactement la faute que ce lot répare, la vue ayant longtemps composé le
+	 * nom de son côté avec la date à laquelle le jeu de semence est figé.
+	 */
+	test('le nom d’archive annoncé est celui que la fabrique produira', async () => {
+		const duJeu = await rendre('V-36');
+		expect(duJeu).toContain('infrastructure-2026-08-13.zip');
+
+		const attendu = nomDArchive('infra-prod', '2027-01-09T10:12:00.000Z');
+		const rendu = await rendre('V-36', { nomsDArchive: { Infrastructure: attendu } });
+		expect(rendu).toContain(attendu);
+		expect(rendu).not.toContain('infrastructure-2026-08-13.zip');
+	});
+
+	/**
+	 * UNE INSTANCE NEUVE N'A AUCUN DOMAINE, ET C'EST LE CHEMIN QUI COMPTE.
+	 *
+	 * Le produit commence VIDE : la liste servie est alors vide, aucun domaine
+	 * n'est choisi, et la vue composait `-{date de semence}.zip` sur un nom de
+	 * domaine vide — la date à laquelle le jeu de semence est figé, servie par le
+	 * produit sur le premier écran d'export d'une installation réelle. Sans
+	 * domaine il n'y a rien à nommer : l'arborescence d'archive n'est pas rendue.
+	 */
+	test('une instance sans aucun domaine n’annonce aucun nom d’archive', async () => {
+		const neuve = await rendre('V-36', { domaines: [], notes: [], nomsDArchive: {} });
+		expect(neuve).not.toContain(DATE_REFERENCE);
+		expect(neuve).not.toContain('.zip');
+		expect(neuve).not.toContain('arbo-archive');
 	});
 });
 

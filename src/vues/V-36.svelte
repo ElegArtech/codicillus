@@ -47,6 +47,12 @@
 	 * `2026-08-13` est `DATE_REFERENCE` de `seeds/corpus.ts` — « la date à
 	 * laquelle le corpus est figé » —, et c'est de là qu'elle est prise.
 	 *
+	 * CETTE COMPOSITION N'EST PLUS QUE LE REPLI DE LA PLANCHE. Servi depuis le
+	 * produit, le nom annoncé est celui que la fabrique de l'archive produira —
+	 * propriété `nomsDArchive`, plus bas. L'écran annonçait sinon un fichier que
+	 * l'utilisateur n'obtenait jamais : jamais la bonne date, et l'ardoise du nom
+	 * d'affichage là où le fichier porte l'identifiant du domaine.
+	 *
 	 * LE DOMAINE COURANT EST LE PREMIER DE `DOMAINES`. Le gel ne pose aucun
 	 * `selected` : `rendreRecap()` lit `select.value`, qui est celui de la
 	 * première option (`V-36:3357-3363`, puis `:3364`).
@@ -132,6 +138,28 @@
 		 * quelle adresse il correspond.
 		 */
 		onExporter?: (domaine: string) => void;
+		/**
+		 * LE NOM DE FICHIER QUE L'EXPORT PRODUIRA, PAR NOM DE DOMAINE.
+		 *
+		 * L'écran ANNONCE un nom d'archive, en tête de l'arborescence qu'il montre.
+		 * Il le composait de deux valeurs à lui — l'ardoise du nom d'affichage et
+		 * `DATE_REFERENCE`, la date à laquelle le jeu de semence est figé — si bien
+		 * qu'il annonçait toujours le même jour de 2026, et une ardoise là où le
+		 * fichier porte l'IDENTIFIANT du domaine. Deux écarts sur un nom que
+		 * l'utilisateur va lire dans son gestionnaire de fichiers.
+		 *
+		 * SERVIE, LA TABLE VIENT DE LA FABRIQUE QUI NOMME L'ARCHIVE POUR DE BON —
+		 * `nomDArchive()` de `$lib/export/archive.ts`, celle-là même que le point
+		 * de téléchargement appelle. Le nom annoncé n'est pas RECONSTITUÉ à
+		 * l'identique : il est PRODUIT par sa source.
+		 *
+		 * ABSENTE, la vue n'est pas branchée sur une base et reprend la composition
+		 * du gel : le banc de comparaison ne bouge pas. FOURNIE, elle fait loi —
+		 * un domaine qu'elle ne nomme pas n'a pas de nom d'archive annoncé, et
+		 * retomber sur la composition du gel servirait la date de semence à un
+		 * écran branché.
+		 */
+		nomsDArchive?: Readonly<Record<string, string>>;
 	}
 
 	const {
@@ -140,7 +168,8 @@
 		univers = UNIVERS,
 		compte = MOI,
 		instance = INSTANCE,
-		onExporter
+		onExporter,
+		nomsDArchive
 	}: Proprietes = $props();
 
 	/* ── Le calque des fabriques du gel ──────────────────────────────────────
@@ -253,6 +282,21 @@
 		['Pièces jointes', apercu.pieces]
 	] as const);
 
+	/**
+	 * LE NOM DU FICHIER QUE L'EXPORT PRODUIRA, ou `null` quand il n'y en a pas.
+	 *
+	 * UNE INSTANCE NEUVE N'A AUCUN DOMAINE. `domaineCourant` vaut alors la chaîne
+	 * vide, et la composition du gel rendait `-{date de semence}.zip` : un nom de
+	 * fichier inventé, servi par le produit sur le premier écran d'export d'une
+	 * installation réelle. Sans domaine, il n'y a rien à nommer — l'arborescence
+	 * d'archive n'est pas rendue du tout.
+	 */
+	const nomDeLArchive = $derived.by(() => {
+		if (domaineCourant === '') return null;
+		if (nomsDArchive === undefined) return `${ardoise(domaineCourant)}-${DATE_REFERENCE}.zip`;
+		return nomsDArchive[domaineCourant] ?? null;
+	});
+
 	/** L'arborescence d'archive (`V-36:2955-2969`), montrée plutôt que décrite. */
 	const archive = $derived.by(() => {
 		const arbre = dossiersDuDomaine(domaineCourant);
@@ -261,7 +305,7 @@
 		const note = notesDuDomaine(domaineCourant)[0];
 		const feuille = note ? ardoise(note.titre) : 'note';
 		return {
-			nom: `${ardoise(domaineCourant)}-${DATE_REFERENCE}.zip`,
+			nom: nomDeLArchive,
 			corps:
 				`\n├── ${premier ?? 'notes'}/\n` +
 				(sous ? `│   └── ${sous}/\n│       └── ${feuille}.md\n` : `│   └── ${feuille}.md\n`) +
@@ -361,8 +405,8 @@
 							><div class="ca__txt">Liste ce qui n'a pas pu être rendu fidèlement en Markdown, avec la raison. À lire avant d'archiver.</div
 						></div
 					></div
-					><div class="arbo-archive"><b>{archive.nom}</b>{archive.corps}</div
-				></div>
+					>{#if archive.nom !== null}<div class="arbo-archive"><b>{archive.nom}</b>{archive.corps}</div>{/if}</div
+				>
 
 				<div id="resultat"></div>
 			</div>

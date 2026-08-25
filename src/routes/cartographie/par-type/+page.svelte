@@ -13,6 +13,12 @@
 	 * optionnelles et retombent sur les constantes du jeu de semence quand rien
 	 * ne leur est passé — le rendu du banc de comparaison est donc inchangé.
 	 *
+	 * LE RÉFÉRENTIEL DE FICHE ET LES VALEURS DE CHAQUE FICHE VIENNENT DE LA BASE.
+	 * La vue les lisait au jeu de semence, sans propriété : voir le chargeur, qui
+	 * dit ce que cela coûtait. Servies, elles décident seules du panneau de
+	 * détail ; absentes — le rendu par défaut d'une vue —, la planche reprend la
+	 * main et le gel ne bouge pas.
+	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert.
 	 * Elle est identique à l'octet à sa source gelée (P-6.3).
 	 *
@@ -81,6 +87,8 @@
 		relations={data.relations}
 		typesRelation={data.typesRelation}
 		relationsTechniques={data.relationsTechniques}
+		typesFiche={data.typesFiche}
+		proprietesDeFiche={data.proprietesDeFiche}
 		perimetreDemande={data.perimetreDemande}
 		typeMaitreDemande={data.typeMaitreDemande}
 		centreDemande={data.centreDemande}

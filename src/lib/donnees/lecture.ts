@@ -649,6 +649,52 @@ export async function lireTypesDeFiche(
 	return rendu;
 }
 
+/**
+ * LES PROPRIÉTÉS TYPÉES DES NOTES DEMANDÉES — `notes.proprietes_typees`.
+ *
+ * POURQUOI CETTE LECTURE EXISTE. Le schéma d'un type de fiche dit quels champs
+ * une fiche PORTE ; il ne dit rien de ce que CETTE note y a mis. La colonne le
+ * porte, `peupler()` la remplit, l'export la rend — et aucun écran ne la lisait.
+ * Le panneau de détail de la cartographie affichait donc, sous l'intitulé
+ * « Propriétés », la valeur d'EXEMPLE du référentiel : une valeur inventée,
+ * présentée comme celle de la note choisie.
+ *
+ * LA RESTRICTION EST DANS LA REQUÊTE — `ADR-006`, comme `lireNotes()`.
+ * L'appelant passe les identifiants qu'il a déjà le droit de lire ; la base ne
+ * remonte pas une ligne de plus, et une liste vide ne demande rien.
+ *
+ * LA COLONNE EST UN `jsonb`, DONC DE FORME NON GARANTIE : une reprise de
+ * données peut y écrire autre chose qu'un objet de valeurs simples. Ce qui ne
+ * se rend pas en texte est ÉCARTÉ plutôt que converti au jugé — un objet passé
+ * à `String()` afficherait sa mention d'objet à la place d'une valeur.
+ */
+export async function lireLesProprietesDeFiche(
+	base: Base,
+	identifiants: readonly string[]
+): Promise<Record<string, Record<string, string>>> {
+	if (identifiants.length === 0) return {};
+	const lignes = await base
+		.select({ identifiant: notes.identifiant, proprietes: notes.proprietesTypees })
+		.from(notes)
+		.where(inArray(notes.identifiant, [...identifiants]));
+
+	const rendu: Record<string, Record<string, string>> = {};
+	for (const ligne of lignes) {
+		const brut = ligne.proprietes;
+		if (brut === null || typeof brut !== 'object' || Array.isArray(brut)) continue;
+		const valeurs: Record<string, string> = {};
+		for (const [cle, valeur] of Object.entries(brut as Record<string, unknown>)) {
+			if (typeof valeur === 'string') {
+				if (valeur !== '') valeurs[cle] = valeur;
+			} else if (typeof valeur === 'number' || typeof valeur === 'boolean') {
+				valeurs[cle] = String(valeur);
+			}
+		}
+		if (Object.keys(valeurs).length > 0) rendu[ligne.identifiant] = valeurs;
+	}
+	return rendu;
+}
+
 /** Les templates fournis (RG-REF-01). */
 export async function lireTemplates(base: Base): Promise<readonly Template[]> {
 	const lignes = await base
