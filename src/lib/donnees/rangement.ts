@@ -59,8 +59,16 @@
  * (`Exploitation`, `Exploitation › Sauvegardes`), ni dans l'adresse que la
  * batterie 6 construit — `verif/etancheite.mjs:386` écarte explicitement le
  * premier maillon de la chaîne remontée. Les fonctions de chemin de ce module
- * l'écartent donc aussi, et un `{chemin…}` vide ne désigne rien : la page du
- * dossier racine est la page du domaine, V-11.
+ * l'écartent donc aussi, et le chemin AFFICHÉ d'une racine est la suite vide.
+ *
+ * MAIS LA RACINE A UNE PAGE, ET CE MODULE NE LA DÉCIDE PAS. Le chargeur de
+ * V-13 lui donne une adresse depuis le 22/08/2026 — celle qui porte son seul
+ * nom, `viseLaRacine` — parce qu'un domaine neuf n'a que sa racine et que le
+ * premier dossier ne pouvait sans cela être créé de nulle part. Ce module
+ * disait auparavant « la page du dossier racine est la page du domaine, V-11 » :
+ * c'est révoqué, et `resoudreLeChemin()` reste néanmoins ce qu'elle était —
+ * elle descend depuis la racine sans la consommer, donc elle ne désigne que des
+ * descendants, et la racine s'adresse hors d'elle.
  */
 import { error } from '@sveltejs/kit';
 import { and, eq, inArray, sql } from 'drizzle-orm';

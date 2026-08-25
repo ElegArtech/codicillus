@@ -19,6 +19,7 @@ import {
 	type EtatDInstance,
 	type UtilisateurCourant
 } from '../../seeds/corpus';
+import { cheminAffiche, segmentsAffiches, type LigneDeDossier } from '../lib/donnees/rangement';
 
 const NOTES = corpusPourVue('V-13');
 
@@ -121,5 +122,108 @@ describe('V-13 — la propriété absente retombe sur la valeur du gel', () => {
 		const html = await rendu({});
 		expect(filDe(html)).toContain('>Infrastructure</a>');
 		expect(filDe(html)).toContain(`>${UNIVERS[0]?.nom}</a>`);
+	});
+});
+
+/**
+ * LA PAGE DE LA RACINE D'UN DOMAINE — et la forme éprouvée est PRODUITE, non
+ * recopiée.
+ *
+ * Le défaut mesuré : `noeudDe([])` sortait de sa boucle sans rien trouver, donc
+ * la racine n'annonçait jamais ses sous-dossiers et son titre était vide. On
+ * créait un dossier, il disparaissait de l'écran qui venait de le créer.
+ *
+ * CE QUI FAIT LA VALEUR DE CE CAS, C'EST QU'IL NE FABRIQUE PAS SON ENTRÉE. La
+ * suite vide de la racine et la chaîne vide du vecteur ne sont pas écrites ici :
+ * elles sortent de `segmentsAffiches()` et de `cheminAffiche()`, les deux
+ * fonctions que le chargeur appelle pour composer `rangement.destinations` et
+ * `vecteur.dos`. Un cas qui poserait la chaîne vide à la main partagerait avec
+ * le code l'hypothèse qu'il prétend éprouver.
+ */
+const LIGNES: readonly LigneDeDossier[] = [
+	{
+		id: 'r-infra',
+		parentId: null,
+		domaineId: 'd1',
+		nom: 'Infrastructure',
+		profondeur: 1,
+		position: 0
+	},
+	{
+		id: 'expl',
+		parentId: 'r-infra',
+		domaineId: 'd1',
+		nom: 'Exploitation',
+		profondeur: 2,
+		position: 0
+	},
+	{ id: 'serv', parentId: 'r-infra', domaineId: 'd1', nom: 'Serveurs', profondeur: 2, position: 1 },
+	{ id: 'sauv', parentId: 'expl', domaineId: 'd1', nom: 'Sauvegardes', profondeur: 3, position: 0 }
+];
+
+/** Exactement ce que le chargeur compose, par les mêmes fonctions que lui. */
+function rangementDe(dossierId: string): Record<string, unknown> {
+	return {
+		destinations: LIGNES.map((d) => ({
+			id: d.id,
+			segments: segmentsAffiches(LIGNES, d.id),
+			refus: null
+		})),
+		dossierId,
+		parentId: LIGNES.find((d) => d.id === dossierId)?.parentId ?? ''
+	};
+}
+
+function renduDe(dossierId: string): Promise<string> {
+	return rendreLaVue('V-13', {
+		vecteur: { dos: cheminAffiche(segmentsAffiches(LIGNES, dossierId)), dr: 'gestionnaire' },
+		notes: NOTES,
+		domaine: 'Infrastructure',
+		universDuDomaine: 'Production',
+		rangement: rangementDe(dossierId)
+	});
+}
+
+describe('V-13 — la racine d’un domaine se comporte comme un dossier', () => {
+	it('liste ses sous-dossiers et porte le nom du domaine', async () => {
+		const html = await renduDe('r-infra');
+		expect(html).toContain('<b>2</b> sous-dossiers');
+		expect(html).toContain('<span id="titre">Infrastructure</span>');
+		expect(html).toContain('Exploitation');
+		expect(html).toContain('Serveurs');
+	});
+
+	it('n’annonce plus « aucun sous-dossier » sur une racine qui en porte', async () => {
+		/* Le bloc d'état vide est rendu masqué : c'est son attribut qu'on lit, non
+		   sa présence. */
+		expect(await renduDe('r-infra')).toContain('id="bloc-vide" hidden');
+	});
+
+	/**
+	 * `renommerOuDeplacerUnDossier()` et `supprimerUnDossier()` refusent MUETTEMENT
+	 * tout dossier sans parent. Les deux gestes sont donc omis sur la racine, avec
+	 * leurs dialogues — `P-03`, `P-09`.
+	 */
+	it('n’offre ni « Renommer ou déplacer » ni « Supprimer » sur la racine', async () => {
+		const racine = await renduDe('r-infra');
+		expect(racine).not.toContain('id="a-renommer"');
+		expect(racine).not.toContain('id="a-supprimer"');
+		expect(racine).not.toContain('id="dlg-deplacer"');
+		expect(racine).not.toContain('id="dlg-supprimer"');
+		/* Le témoin de polarité : les deux gestes existent bien un niveau plus bas. */
+		const enfant = await renduDe('expl');
+		expect(enfant).toContain('id="a-renommer"');
+		expect(enfant).toContain('id="a-supprimer"');
+	});
+
+	it('nomme le domaine comme parent du sous-dossier à créer', async () => {
+		expect(await renduDe('r-infra')).toContain('id="creer-parent">Infrastructure<');
+		expect(await renduDe('expl')).toContain('id="creer-parent">Exploitation<');
+	});
+
+	it('n’a pas fait régresser un dossier de profondeur 2', async () => {
+		const html = await renduDe('expl');
+		expect(html).toContain('<b>1</b> sous-dossier');
+		expect(html).toContain('<span id="titre">Exploitation</span>');
 	});
 });
