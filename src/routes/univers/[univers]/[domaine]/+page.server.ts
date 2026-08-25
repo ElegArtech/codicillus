@@ -326,7 +326,14 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	   lisibles de ce domaine — c'est l'état vide de `RG-M18-03`, et il n'est pas
 	   simulé. La vue refait le même filtre sur la propriété `notes` qu'elle
 	   reçoit (`src/vues/V-11.svelte`), de sorte que les deux ne peuvent pas se
-	   contredire : elles lisent la même liste. */
+	   contredire : elles lisent la même liste.
+
+	   CE QU'IL NE GOUVERNE PLUS : L'ACCÈS AUX MODULES. Il ne pèse que sur les
+	   quatre panneaux de MESURE, qui n'ont rien à mesurer sans note. La section
+	   « Accès » et ses pastilles sont rendues quel que soit l'état — sans quoi un
+	   domaine neuf n'offrait aucun chemin vers la racine de ses dossiers, et un
+	   lecteur au périmètre étroit perdait les mêmes entrées sur un domaine
+	   pourtant peuplé, faute d'y voir une seule note. */
 	const aDesNotes = notes.some((n) => n.domaine === resolution.ressource.nom);
 
 	/* La racine est exclue : elle porte le nom du domaine et n'apparaît dans

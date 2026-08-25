@@ -520,97 +520,111 @@
 			</div>
 		</div>
 
-		<div class="si-peuple">
-			<div class="section-titre">
-				<h2>Accès</h2>
-				<span class="etiq" id="n-modules"
-					>{#if !vide}{detail.modules.length}
-						{detail.modules.length > 1 ? 'modules activés' : 'module activé'}{/if}</span
-				>
-			</div>
-			<section class="modules" id="modules">
-				{#if !vide}
-					{#each detail.modules as m (m)}
-						<button class="module" type="button"
-							><span class="module__ic"
-								>{#if m === 'notes'}<svg
-										width="16"
-										height="16"
-										viewBox="0 0 16 16"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="1.4"
-										><path
-											d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5L9 1.5zM9 1.5v4h4"
-										/></svg
-									>{:else if m === 'dossiers'}<svg
-										width="16"
-										height="16"
-										viewBox="0 0 16 16"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="1.4"
-										><path
-											d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"
-										/></svg
-									>{:else if m === 'fiches'}<svg
-										width="16"
-										height="16"
-										viewBox="0 0 16 16"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="1.4"
-										><rect x="2" y="3" width="12" height="10" rx="1.4" /><path
-											d="M2 6h12M5.5 9h5"
-										/></svg
-									>{:else if m === 'cartographie'}<svg
-										width="16"
-										height="16"
-										viewBox="0 0 16 16"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="1.4"
-										><circle cx="4" cy="4" r="2" /><circle cx="12" cy="6" r="2" /><circle
-											cx="7"
-											cy="12"
-											r="2"
-										/><path d="M5.8 4.6l4.4 1M5.4 5.7l1.2 4.4" /></svg
-									>{:else if m === 'signets'}<svg
-										width="16"
-										height="16"
-										viewBox="0 0 16 16"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="1.4"><path d="M4 2.5h8v11l-4-3-4 3v-11z" /></svg
-									>{:else}<svg
-										width="16"
-										height="16"
-										viewBox="0 0 16 16"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="1.4"
-										><circle cx="3.5" cy="8" r="1.8" /><rect
-											x="9.5"
-											y="2"
-											width="5"
-											height="3.4"
-											rx="1"
-										/><rect x="9.5" y="10.6" width="5" height="3.4" rx="1" /><path
-											d="M5.3 8h2.2V3.7h2M7.5 8v4.3h2"
-										/></svg
-									>{/if}</span
-							><span class="module__corps"
-								><span class="module__nom"
-									>{modules[m].nom}{#if typeof comptes[m] === 'number'}<span class="module__n"
-											>{comptes[m]}</span
-										>{/if}</span
-								><span class="module__sous">{modules[m].sous}</span></span
-							></button
-						>
-					{/each}
-				{/if}
-			</section>
+		<!--
+			L'ACCÈS AUX MODULES EST RENDU QUEL QUE SOIT L'ÉTAT — ÉCART ASSUMÉ AU GEL.
 
+			Le gel masque le bloc entier sur un domaine sans note
+			(`mockups/V-11-page-domaine.html:882`), et le port l'a suivi. Dans une
+			maquette statique le masquage ne coûtait rien : aucune pastille n'y
+			navigue. Dans le produit il fermait le SEUL chemin vers la racine des
+			dossiers — donc vers le seul geste qui crée un dossier —, et un domaine
+			neuf n'a par définition aucune note. Le même masquage frappait aussi un
+			lecteur au périmètre étroit sur un domaine peuplé : `etat` se décide sur
+			les notes LISIBLES par l'appelant.
+
+			LA LIGNE DE PARTAGE : « Accès » offre des ENTRÉES, elles sont rendues
+			toujours ; les quatre panneaux qui suivent sont des MESURES de notes, et
+			une mesure sans note n'a rien à dire — ils restent dans `.si-peuple`.
+		-->
+		<div class="section-titre">
+			<h2>Accès</h2>
+			<span class="etiq" id="n-modules"
+				>{detail.modules.length}
+				{detail.modules.length > 1 ? 'modules activés' : 'module activé'}</span
+			>
+		</div>
+		<section class="modules" id="modules">
+			{#each detail.modules as m (m)}
+				<button class="module" type="button"
+					><span class="module__ic"
+						>{#if m === 'notes'}<svg
+								width="16"
+								height="16"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"
+								><path
+									d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5L9 1.5zM9 1.5v4h4"
+								/></svg
+							>{:else if m === 'dossiers'}<svg
+								width="16"
+								height="16"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"
+								><path
+									d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"
+								/></svg
+							>{:else if m === 'fiches'}<svg
+								width="16"
+								height="16"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"
+								><rect x="2" y="3" width="12" height="10" rx="1.4" /><path
+									d="M2 6h12M5.5 9h5"
+								/></svg
+							>{:else if m === 'cartographie'}<svg
+								width="16"
+								height="16"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"
+								><circle cx="4" cy="4" r="2" /><circle cx="12" cy="6" r="2" /><circle
+									cx="7"
+									cy="12"
+									r="2"
+								/><path d="M5.8 4.6l4.4 1M5.4 5.7l1.2 4.4" /></svg
+							>{:else if m === 'signets'}<svg
+								width="16"
+								height="16"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"><path d="M4 2.5h8v11l-4-3-4 3v-11z" /></svg
+							>{:else}<svg
+								width="16"
+								height="16"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"
+								><circle cx="3.5" cy="8" r="1.8" /><rect
+									x="9.5"
+									y="2"
+									width="5"
+									height="3.4"
+									rx="1"
+								/><rect x="9.5" y="10.6" width="5" height="3.4" rx="1" /><path
+									d="M5.3 8h2.2V3.7h2M7.5 8v4.3h2"
+								/></svg
+							>{/if}</span
+					><span class="module__corps"
+						><span class="module__nom"
+							>{modules[m].nom}{#if typeof comptes[m] === 'number'}<span class="module__n"
+									>{comptes[m]}</span
+								>{/if}</span
+						><span class="module__sous">{modules[m].sous}</span></span
+					></button
+				>
+			{/each}
+		</section>
+
+		<div class="si-peuple">
 			<div class="grille-dom" style="margin-top:var(--e-6)">
 				<div class="colonne">
 					<section class="panneau">
