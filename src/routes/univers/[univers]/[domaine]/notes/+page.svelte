@@ -61,6 +61,7 @@
 	<Vue
 		vecteur={data.vecteur}
 		notes={data.notes}
+		domaines={data.domaines}
 		{...data.retenues === undefined ? {} : { retenues: data.retenues }}
 		{...data.tri === undefined ? {} : { tri: data.tri }}
 		modifications={data.modifications}

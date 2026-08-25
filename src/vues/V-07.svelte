@@ -82,14 +82,16 @@
 	 * de relais du champ de recherche à la palette V-09 — relèvent des lots de
 	 * logique. L'aide est ici un ÉTAT, piloté par le vecteur.
 	 *
-	 * LES LIENS QUI MÈNENT QUELQUE PART Y MÈNENT — deux, et deux seulement : la
-	 * cible d'un évènement d'activité et l'ouverture d'une note de la corbeille.
-	 * Le brief les nomme (« cible cliquable », « Accès direct à la note ») et
-	 * `docs/routes.md` en donne l'adresse, plate et stable : `/notes/{id}`.
-	 * Aucun autre nœud n'est touché — les boutons de domaine, les indicateurs
-	 * cliquables et les raccourcis de création gardent le geste du gel, faute
-	 * d'une adresse que ce lot puisse citer sans l'inventer. C'est déclaré au
-	 * rapport, pas comblé.
+	 * LES GESTES DE CET ÉCRAN MÈNENT QUELQUE PART. Deux sont de vrais liens — la
+	 * cible d'un évènement d'activité et l'ouverture d'une note de la corbeille,
+	 * que `docs/routes.md` adresse en `/notes/{id}`. Les autres sont des boutons,
+	 * comme le gel les dessine, et ils naviguent : les quatre indicateurs (voir
+	 * `voirLesRevisions` et la doctrine des destinations, plus bas), les segments
+	 * de répartition, les raccourcis de création, le nom d'un domaine — vers sa
+	 * page — et son COMPTE DE NOTES — vers la liste des notes du domaine, qui
+	 * n'est pas le même écran. Le pied compte le corpus entier : ses deux nombres
+	 * ouvrent la recherche, sans filtre pour les notes, sur `?type=Signet` pour
+	 * les signets.
 	 *
 	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette` et `dialog#palette`
 	 * (divergence mesurée nulle, `docs/releve-vues.md` §4.1) et `div.planche`,
@@ -636,6 +638,15 @@
 
 	/* ── Pied de page ───────────────────────────────────────────────────────── */
 	const signets = $derived(corpus.length - toutesLesNotes.length);
+
+	/**
+	 * LES DEUX NOMBRES DU PIED COMPTENT LE CORPUS ENTIER, et le produit n'a pas
+	 * de V-12 globale : la liste de tout le corpus, c'est `/recherche` sans
+	 * requête. `type` est l'une de ses sept facettes, sous le libellé même que
+	 * V-12 emploie — un seul vocabulaire de facette pour les deux écrans.
+	 */
+	const ADRESSE_DE_LA_RECHERCHE = '/recherche';
+	const ADRESSE_DES_SIGNETS = '/recherche?type=Signet';
 </script>
 
 <!-- Une esquisse de chargement : la structure à venir, jamais un sablier. La
@@ -983,7 +994,7 @@
 									{@const notesDom = notesDuDomaine(d)}
 									{@const mesurables = publiees(notesDom)}
 									<!-- prettier-ignore -->
-									<div class="dom" style="--teinte:{d.couleur}"><div class="dom__tete"><span class="dom__puce" aria-hidden="true"></span><button class="dom__nom" type="button" onclick={() => allerA(adresseDeDomaine(d.univers, d.nom))}>{d.nom}</button><span class="dom__n">{nb(notesDom.length) + (notesDom.length > 1 ? ' notes' : ' note')}</span></div>{#if mesurables.length}<div class="repart" role="img" aria-label={resumeRepartition(mesurables)}>{#each partsPresentes(mesurables) as p (p.cle)}{@const libelle = libellePart(p, mesurables, d.nom)}<button type="button" class={p.classe} style="flex:{compte(mesurables, p.cle)}" title={libelle} aria-label={libelle} onclick={() => ouvrirLaPart(d, p)}></button>{/each}</div>{:else}<div class="dom__vide">{notesDom.length ? 'Aucune note publiée à mesurer.' : "Aucune note pour l'instant."}</div>{/if}</div>
+									<div class="dom" style="--teinte:{d.couleur}"><div class="dom__tete"><span class="dom__puce" aria-hidden="true"></span><button class="dom__nom" type="button" onclick={() => allerA(adresseDeDomaine(d.univers, d.nom))}>{d.nom}</button><button class="dom__n" type="button" onclick={() => allerA(adresseDesNotesDuDomaine(d.univers, d.nom))}>{nb(notesDom.length) + (notesDom.length > 1 ? ' notes' : ' note')}</button></div>{#if mesurables.length}<div class="repart" role="img" aria-label={resumeRepartition(mesurables)}>{#each partsPresentes(mesurables) as p (p.cle)}{@const libelle = libellePart(p, mesurables, d.nom)}<button type="button" class={p.classe} style="flex:{compte(mesurables, p.cle)}" title={libelle} aria-label={libelle} onclick={() => ouvrirLaPart(d, p)}></button>{/each}</div>{:else}<div class="dom__vide">{notesDom.length ? 'Aucune note publiée à mesurer.' : "Aucune note pour l'instant."}</div>{/if}</div>
 								{/each}
 							{/if}
 						</div>
@@ -1063,7 +1074,7 @@
 				{:else if etatPage !== 'vide'}
 					<span>{'Codicillus ' + versionAffichee}</span>
 					<!-- prettier-ignore -->
-					<span><span><b>{nb(toutesLesNotes.length)}</b>{' ' + (toutesLesNotes.length > 1 ? 'notes' : 'note')}</span> · <span><b>{nb(signets)}</b>{' ' + (signets > 1 ? 'signets' : 'signet')}</span></span>
+					<span><button type="button" onclick={() => allerA(ADRESSE_DE_LA_RECHERCHE)}><b>{nb(toutesLesNotes.length)}</b>{' ' + (toutesLesNotes.length > 1 ? 'notes' : 'note')}</button> · <button type="button" onclick={() => allerA(ADRESSE_DES_SIGNETS)}><b>{nb(signets)}</b>{' ' + (signets > 1 ? 'signets' : 'signet')}</button></span>
 					{#if synchroAffichee !== null}<span>{'Dernière synchronisation ' + synchroAffichee}</span
 						>{/if}
 				{/if}
