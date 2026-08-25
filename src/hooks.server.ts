@@ -11,6 +11,10 @@
  *   2. LES REDIRECTIONS DE §5.2 SONT APPLIQUÉES, selon le régime de l'adresse
  *      (`src/lib/auth/garde.ts`, qui porte la table et sa justification).
  *
+ * Une troisième, AVANT toute requête et une seule fois : la configuration du
+ * déploiement est constatée, et le démarrage est interrompu si elle est
+ * incomplète — voir `init` plus bas.
+ *
  * ═════════════════════════════════════════════════════════════════════════
  * CE QUE CE FICHIER NE FAIT PAS, ET C'EST AUTANT DE LOTS
  *
@@ -40,8 +44,10 @@
  * boucle. La réponse est donc composée explicitement : `Location` et
  * `Set-Cookie` sortent ensemble ou pas du tout.
  */
-import type { Handle } from '@sveltejs/kit';
+import type { Handle, ServerInit } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import { ANONYME } from '$lib/droits/resolution';
+import { verifierLaConfiguration } from '$lib/demarrage/configuration';
 import { identitePourCompte } from '$lib/auth/authentification';
 import {
 	fermerLaSession,
@@ -72,6 +78,22 @@ import { basePartagee } from '$lib/base/acces';
  *   `valide`  — session ouverte, compte actif.
  */
 type EtatDeSession = 'absente' | 'expiree' | 'valide';
+
+/**
+ * LA CONFIGURATION EST CONSTATÉE ICI, UNE FOIS, AVANT LA PREMIÈRE REQUÊTE.
+ *
+ * Le serveur bâti attend cette porte avant d'écouter : une configuration
+ * incomplète interrompt donc le démarrage, en nommant les variables qui
+ * manquent, plutôt que de laisser dix-huit écrans servir en 200 et un seul
+ * tomber en 500 à la première requête qui l'atteint. Le raisonnement complet et
+ * ce qui n'est délibérément PAS fait sont dans `$lib/demarrage/configuration`.
+ *
+ * Rien n'est ouvert ni joint ici : la porte lit des variables, elle ne décide
+ * pas qu'un service est en marche.
+ */
+export const init: ServerInit = () => {
+	verifierLaConfiguration(env);
+};
 
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.identite = ANONYME;

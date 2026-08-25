@@ -11,11 +11,17 @@
  *
  * Tous les cas sont SYNTHÉTIQUES (`P-26`) : ils ne lisent ni la base, ni l'état
  * du dépôt, et resteront exercés quand le produit aura créé ses premières notes.
+ * Une nuance, et elle a coûté un 500 : synthétique ne veut pas dire que la FORME
+ * de l'entrée peut être inventée. Le dernier bloc de ce fichier fait produire
+ * l'échec d'insertion par drizzle lui-même, sans base — voir son en-tête.
  * L'écriture elle-même — transaction, réessai, index — n'est pas éprouvée ici :
  * elle exige une base, et la base est partagée (`P-30`).
  */
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
 import { describe, expect, it } from 'vitest';
 import { corpsVide } from '../base/semence';
+import { notes } from '../base/schema';
 import {
 	CONTRAINTE_D_IDENTIFIANT,
 	corpsDeLaSaisie,
@@ -232,5 +238,90 @@ describe('ARB-062 §2.5 — la collision est reconnue par la CONTRAINTE, pas par
 		expect(estUneCollisionDIdentifiant(null)).toBe(false);
 		expect(estUneCollisionDIdentifiant(undefined)).toBe(false);
 		expect(estUneCollisionDIdentifiant('23505')).toBe(false);
+	});
+});
+
+/**
+ * L'ÉCHEC TEL QUE LE PRODUIT LE REÇOIT — enveloppé PAR DRIZZLE LUI-MÊME.
+ *
+ * Les cas ci-dessus passent à la fonction un objet plat, exactement la forme
+ * qu'elle savait lire — et exactement celle que le produit ne lui donne jamais.
+ * Le contrôle et le code partageaient la même hypothèse sur la forme de
+ * l'entrée : un titre déjà pris rendait 500 sans qu'aucun cas ne vire au rouge.
+ *
+ * Ces cas-ci ne FABRIQUENT donc pas l'enveloppe : ils la font produire par sa
+ * source, sur le vrai chemin — une insertion dans la table des notes, bâtie et
+ * exécutée par le pilote PostgreSQL de drizzle, qui enveloppe ce que le client
+ * lui lève. Le client est le seul leurre, et il ne remplace que le réseau ; ce
+ * qu'il lève est bâti par la classe d'erreur du pilote, avec le code et le nom
+ * de contrainte MESURÉS sur une vraie collision en base. Aucune base n'est
+ * ouverte : rien n'est envoyé nulle part (`P-30`).
+ */
+async function echecDUneInsertion(erreurDuPilote: Error): Promise<unknown> {
+	const leurre = {
+		query: () => Promise.reject(erreurDuPilote)
+	} as unknown as pg.Client;
+	try {
+		await drizzle(leurre).insert(notes).values({
+			identifiant: 'restaurer-postgresql',
+			titre: 'Restaurer PostgreSQL',
+			corpsReference: corpsVide(),
+			typeDeNoteId: '00000000-0000-4000-8000-000000000001',
+			domaineId: '00000000-0000-4000-8000-000000000002',
+			dossierId: '00000000-0000-4000-8000-000000000003',
+			auteurId: '00000000-0000-4000-8000-000000000004'
+		});
+		return null;
+	} catch (cause) {
+		return cause;
+	}
+}
+
+/** L'erreur du pilote, telle qu'une violation d'unicité la construit. */
+function erreurDuPilote(code: string, contrainte: string): Error {
+	const erreur = new pg.DatabaseError(
+		'duplicate key value violates unique constraint',
+		108,
+		'error'
+	);
+	return Object.assign(erreur, { code, constraint: contrainte });
+}
+
+describe('ARB-062 §2.5 — la collision est reconnue SOUS l’enveloppe de drizzle', () => {
+	it('l’enveloppe ne porte le code sur AUCUN de ses champs de surface', async () => {
+		const echec = await echecDUneInsertion(erreurDuPilote('23505', CONTRAINTE_D_IDENTIFIANT));
+		/* La démonstration du défaut : ce que la lecture à plat voyait. Si un jour
+		   drizzle cesse d'envelopper, ce cas tombe et dit pourquoi. */
+		expect(echec).toBeInstanceOf(Error);
+		expect((echec as { code?: unknown }).code).toBeUndefined();
+		expect((echec as { constraint?: unknown }).constraint).toBeUndefined();
+		expect((echec as { cause?: unknown }).cause).toBeInstanceOf(pg.DatabaseError);
+	});
+
+	it('reconnaît la collision d’identifiant sous l’enveloppe', async () => {
+		expect(
+			estUneCollisionDIdentifiant(
+				await echecDUneInsertion(erreurDuPilote('23505', CONTRAINTE_D_IDENTIFIANT))
+			)
+		).toBe(true);
+	});
+
+	it('NE reconnaît PAS, sous la même enveloppe, une autre contrainte ni un autre code', async () => {
+		expect(
+			estUneCollisionDIdentifiant(
+				await echecDUneInsertion(erreurDuPilote('23505', 'etiquettes_libelle_unique'))
+			)
+		).toBe(false);
+		expect(
+			estUneCollisionDIdentifiant(
+				await echecDUneInsertion(erreurDuPilote('23503', CONTRAINTE_D_IDENTIFIANT))
+			)
+		).toBe(false);
+	});
+
+	it('NE boucle PAS sur une erreur qui se désigne comme sa propre cause', () => {
+		const erreur = new Error('cycle');
+		Object.assign(erreur, { cause: erreur });
+		expect(estUneCollisionDIdentifiant(erreur)).toBe(false);
 	});
 });
