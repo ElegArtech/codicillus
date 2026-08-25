@@ -357,6 +357,82 @@ describe('V-22 — signets d’un domaine', () => {
 		expect(body).toContain('>SN<');
 		expect(body).toContain('Codicillus 9.9.9');
 	});
+
+	/* LES VALEURS DE FACETTE RETENUES — les deux que `docs/routes.md` §4.2
+	   déclare pour cette route. Avant ce lot, les menus étaient décoratifs :
+	   cocher une valeur ne filtrait rien, et aucune propriété ne portait un
+	   état de filtrage jusqu'à la vue. */
+
+	it('absente, aucun signet du domaine ne manque et rien n’est retenu', async () => {
+		const body = await v22({ vecteur: null, notes });
+		expect(body).toContain('PostgreSQL');
+		expect(body).toContain('ANSSI');
+		expect(body).toContain("Page d'état de l'hébergeur");
+		expect(body).not.toContain('Tout effacer');
+		expect(body).not.toContain('data-actif="oui"');
+	});
+
+	it('fournie, elle filtre la liste, coche la valeur et pose son jeton', async () => {
+		const body = await v22({ vecteur: null, notes, retenues: { auteur: ['Sophie Nguyen'] } });
+		expect(body).toContain('ANSSI');
+		expect(body).not.toContain('PostgreSQL');
+		expect(body).not.toContain("Page d'état de l'hébergeur");
+		expect(body).toContain('Auteur : ');
+		expect(body).toContain('Tout effacer');
+		expect(body).toContain('data-actif="oui"');
+	});
+
+	it('deux facettes se combinent en ET, deux valeurs d’une facette en OU', async () => {
+		const etDeux = await v22({
+			vecteur: null,
+			notes,
+			retenues: { auteur: ['Karim Belhadj'], etiquette: ['postgresql'] }
+		});
+		expect(etDeux).toContain('PostgreSQL');
+		expect(etDeux).not.toContain('Documentation officielle Barman');
+
+		const ouDeux = await v22({
+			vecteur: null,
+			notes,
+			retenues: { etiquette: ['postgresql', 'barman'] }
+		});
+		expect(ouDeux).toContain('PostgreSQL');
+		expect(ouDeux).toContain('Documentation officielle Barman');
+		expect(ouDeux).not.toContain('ANSSI');
+	});
+
+	it('une valeur qui ne mord sur rien rend l’état « aucun résultat »', async () => {
+		const body = await v22({ vecteur: null, notes, retenues: { auteur: ['Personne'] } });
+		expect(body).toContain('Aucun signet ne correspond à ces filtres');
+		expect(body).toContain('Réinitialiser les filtres');
+		expect(body).not.toContain('Aucun signet dans ce domaine');
+	});
+
+	/* LE MENU RENDU DIT QUELLE FACETTE IL PORTE.
+
+	   Le câblage retrouvait la facette d'un menu par son RANG. Or la vue
+	   n'émet un menu que si la facette a au moins une valeur, et les
+	   étiquettes d'un signet sont FACULTATIVES : sur un domaine dont aucun
+	   signet n'en porte, le seul menu rendu est « Auteur », au rang 0, et
+	   cocher un auteur écrivait `?etiquette={nom de l'auteur}`. L'autre
+	   moitié du chemin — de l'identifiant à la clé d'adresse — est éprouvée
+	   par `src/lib/cablage/facettes.test.ts`. */
+
+	/** Les mêmes signets, sans aucune étiquette — la saisie les rend vides. */
+	const sansEtiquette = notes.map((n) => ({ ...n, etiquettes: [] }));
+
+	it('chaque menu rendu porte l’identifiant de SA facette', async () => {
+		const body = await v22({ vecteur: null, notes });
+		expect(body).toContain('data-facette="etiquette"');
+		expect(body).toContain('data-facette="auteur"');
+	});
+
+	it('sans aucune étiquette, le seul menu rendu est celui de l’auteur', async () => {
+		const body = await v22({ vecteur: null, notes: sansEtiquette });
+		expect(body).toContain('data-facette="auteur"');
+		expect(body).not.toContain('data-facette="etiquette"');
+		expect(body.match(/class="fac-menu"/g) ?? []).toHaveLength(1);
+	});
 });
 
 describe('V-23 — formulaire de signet', () => {

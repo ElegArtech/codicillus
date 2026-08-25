@@ -10,10 +10,11 @@
 	 * (ARB-001) et la clause de désambiguïsation de `RG-M03-02` reste **sans
 	 * objet** (E-09) : elle ne doit jamais être implémentée.
 	 *
-	 * LES LIENS RESTENT CEUX DU GEL — `href="#"`. ARB-013 devait permettre
-	 * l'adresse réelle ; mesuré par P-9, le filtre de le module de capture du banc
-	 * ne retire pas les lignes `/url:` de l'instantané ARIA, et l'instrument est
-	 * en écriture humaine seule. Le constat est reconduit ici, pas rouvert.
+	 * CHAQUE LIGNE DE LA LISTE PORTE L'ADRESSE RÉELLE DE SA NOTE — `ligneCarte`
+	 * la compose par `adresseDeNote()`, la fabrique unique de `docs/routes.md`.
+	 * ARB-013 est donc tenu. Le gel écrivait `href="#"` faute de serveur ; le
+	 * constat de P-9 qui le reconduisait porte sur l'instrument de comparaison,
+	 * pas sur le produit, et il ne vaut plus pour cette vue.
 	 *
 	 * SEPT ÉTATS — `verif/scenarios/V-12.json`. Trois axes, vecteur complet :
 	 * domaine × arrivée × état. Deux doublons déclarés (`arr-tout` et
@@ -450,7 +451,11 @@
 		<div class="barre-outils">
 			<div class="filtres-barre" id="facettes">
 				{#each facettes as f (f.id)}
-					<div class="fac-menu">
+					<!-- LE MENU DIT QUELLE FACETTE IL PORTE. Le câblage l'identifiait par
+					     son RANG, et une facette sans aucune valeur n'est pas rendue :
+					     le rang se décalait alors et cocher une valeur écrivait la clé
+					     d'adresse de la facette voisine. -->
+					<div class="fac-menu" data-facette={f.id}>
 						<!-- prettier-ignore -->
 						<button type="button" class="fac-menu__bouton" aria-expanded="false" data-actif={f.retenues ? 'oui' : undefined}>{f.nom}{#if f.retenues}<span class="fac-menu__n">{f.retenues}</span>{/if}<span><svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4z"/></svg></span></button>
 						<div class="fac-menu__panneau">
