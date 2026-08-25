@@ -591,6 +591,11 @@ async function resoudreLeTypeDeFiche(base: Base, saisie: SaisieDeNote): Promise<
 		})
 		.from(champsDeTypeDeFiche)
 		.where(eq(champsDeTypeDeFiche.typeDeFicheId, type.id))
+		/* LE TRI N'EST PAS UN AGRÉMENT, IL ACCORDE DEUX ÉCRANS. `lireTypesDeFiche()`
+		   (`./lecture.ts`) trie par `typesDeFiche.ordre, champsDeTypeDeFiche.ordre` :
+		   c'est dans CET ordre que l'éditeur peint les champs. Sans le même tri ici,
+		   la liste des manquantes serait rendue dans l'ordre où la base répond, et le
+		   rédacteur lirait ses champs dans un ordre et ses refus dans un autre. */
 		.orderBy(champsDeTypeDeFiche.ordre);
 	const retenues = retenirLesProprietes(
 		saisie.proprietes ?? {},

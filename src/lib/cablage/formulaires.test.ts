@@ -11,27 +11,27 @@
  * « Propriété obligatoire » sur un écran qui le lui confirmait sans qu'aucune
  * ligne du produit n'exige jamais la valeur.
  *
- * DEUX CONTRÔLES DE NATURE DIFFÉRENTE VIVENT ICI :
+ * LE CORRECTIF DE FOND N'EST PAS DANS CE FICHIER, ET IL NE PEUT PAS Y ÊTRE.
+ * `ChampDeFicheAuFormulaire` n'est plus une copie : elle est DÉRIVÉE de
+ * `ChampDeFiche` par un type appliqué (`formulaires.ts`). Il n'y a donc plus
+ * rien à comparer — aucune assertion d'assignabilité n'aurait vu l'amputation
+ * de 17:13:45, un sur-ensemble structurel étant assignable au sous-ensemble
+ * dans les deux sens. Ce qui ferme le trou est qu'il n'y a plus de second
+ * endroit où écrire la forme.
  *
- *  1. UN CONTRÔLE DE TYPE — `CHAMP_DE_FICHE_EST_AU_FORMULAIRE`. Il ne s'exécute
- *     pas, il COMPILE : la constante ne s'écrit `true` que si `ChampDeFiche`
- *     reste assignable à la copie. C'est celui qui aurait fait rougir
- *     `pnpm check` à 17:13:45, et c'est le correctif de fond.
- *
- *  2. UN ALLER-RETOUR SUR LE RENDU. Les champs éprouvés sont déclarés
- *     `satisfies ChampDeFiche` — la forme est donc celle que
- *     `lireTypesDeFiche()` (`../donnees/lecture.ts`) rend, pas une forme
- *     inventée ici. Ce que ce fichier NE PEUT PAS faire, et il faut le dire :
- *     produire ces champs par leur vraie source. Aucun unitaire de ce dépôt ne
- *     touche la base — elle est partagée (`P-30`) — et la chaîne complète
- *     « console → base → référentiel → éditeur » ne s'éprouve donc que dans un
- *     navigateur. C'est là qu'elle a été relevée.
+ * CE FICHIER PORTE L'AUTRE CONTRÔLE : UN ALLER-RETOUR SUR LE RENDU. Les champs
+ * éprouvés sont déclarés `satisfies ChampDeFiche` — la forme est donc celle que
+ * `lireTypesDeFiche()` (`../donnees/lecture.ts`) rend, pas une forme inventée
+ * ici. Ce que ce fichier NE PEUT PAS faire, et il faut le dire : produire ces
+ * champs par leur vraie source. Aucun unitaire de ce dépôt ne touche la base —
+ * elle est partagée (`P-30`) — et la chaîne complète « console → base →
+ * référentiel → éditeur » ne s'éprouve donc que dans un navigateur. C'est là
+ * qu'elle a été relevée.
  */
 import { describe, expect, it } from 'vitest';
 import type { ChampDeFiche } from '../../../seeds/corpus';
 import { documentFeint, type NoeudFeint } from './document-feint.test-utils';
 import {
-	CHAMP_DE_FICHE_EST_AU_FORMULAIRE,
 	COCHE,
 	DECOCHE,
 	PHRASE_D_OBLIGATION,
@@ -39,7 +39,8 @@ import {
 	PREFIXE_D_ERREUR_DE_PROPRIETE,
 	proprietesDeFicheSaisies,
 	rendreLesProprietesDeFiche,
-	type ChampDeFicheAuFormulaire
+	type ChampDeFicheAuFormulaire,
+	type OrigineDesProprietes
 } from './formulaires';
 
 /* ── Ce que la console écrit sur une propriété, et que la base rend ────────
@@ -93,21 +94,13 @@ function zoneDesProprietes(): NoeudFeint {
 
 function rendre(
 	champs: readonly ChampDeFicheAuFormulaire[],
-	valeurs: Readonly<Record<string, string>> = {}
+	valeurs: Readonly<Record<string, string>> = {},
+	origine: OrigineDesProprietes = 'choix'
 ): NoeudFeint {
 	const zone = zoneDesProprietes();
-	rendreLesProprietesDeFiche(zone as unknown as Element, champs, valeurs, () => undefined);
+	rendreLesProprietesDeFiche(zone as unknown as Element, champs, valeurs, () => undefined, origine);
 	return zone;
 }
-
-describe('le lien de type que la jonction manquée n’avait pas', () => {
-	it('tient tant que `ChampDeFiche` reste lisible au formulaire', () => {
-		/* La valeur ne dit rien à elle seule : c'est son TYPE qui refuse de
-		   s'écrire si la source déborde la copie. Le contrôle est à la
-		   compilation ; celui-ci en fait un cas visible. */
-		expect(CHAMP_DE_FICHE_EST_AU_FORMULAIRE).toBe(true);
-	});
-});
 
 describe('mockups/V-29:3153 — la marque d’obligation est peinte au champ', () => {
 	it('pose `*` dans l’intitulé d’une propriété obligatoire', () => {
@@ -153,7 +146,7 @@ describe('mockups/V-29:3138 — l’aide est affichée sous le champ', () => {
 	});
 });
 
-describe('la valeur par défaut — en création seulement', () => {
+describe('la valeur par défaut — sur un schéma CHOISI seulement', () => {
 	it('pré-remplit la saisie, le sélecteur et la case', () => {
 		expect(rendre([ADRESSE_IP]).querySelector('input')?.value).toBe('10.0.0.');
 		expect(rendre([SALLE]).querySelector('select')?.value).toBe('C04');
@@ -181,6 +174,35 @@ describe('la valeur par défaut — en création seulement', () => {
 		expect(zone.querySelector('input')?.value).toBe('');
 	});
 
+	it('UNE REPRISE N’EN POSE AUCUN — mockups/V-29:3308, la valeur est DEMANDÉE', () => {
+		/* LE CAS MIXTE, ET C'EST CELUI QUI COMPTE : une propriété obligatoire
+		   DOTÉE D'UN DÉFAUT, sur une note écrite avant qu'elle n'existe. La note ne
+		   porte pas la clé ; si le défaut se posait ici, il serait soumis comme une
+		   valeur, le serveur ne refuserait rien, et une valeur que personne n'a
+		   saisie entrerait en base. « Les notes existantes ne seront pas bloquées,
+		   mais la valeur sera demandée à la prochaine modification. » */
+		const zone = rendre([ADRESSE_IP, SALLE, SUPERVISE], { salle: 'C03' }, 'reprise');
+		expect(zone.querySelector('#' + PREFIXE_DE_CONTROLE_DE_PROPRIETE + 'adresse_ip')?.value).toBe(
+			''
+		);
+		expect(zone.querySelector('.interrupteur input')?.checked).toBe(false);
+		/* La valeur que la note PORTE, elle, est bien reprise. */
+		expect(zone.querySelector('#' + PREFIXE_DE_CONTROLE_DE_PROPRIETE + 'salle')?.value).toBe('C03');
+	});
+
+	it('et rien n’est donc soumis à la place du rédacteur, en reprise', () => {
+		const zone = rendre([ADRESSE_IP, SALLE], { salle: 'C03' }, 'reprise');
+		const racine = documentFeint().createElement('form');
+		racine.appendChild(zone);
+		expect(proprietesDeFicheSaisies(racine as unknown as ParentNode)).toEqual({ salle: 'C03' });
+	});
+
+	it('le CHANGEMENT de type sur une note existante rouvre les défauts', () => {
+		/* La distinction n'est pas « création contre modification » : désigner un
+		   autre type de fiche est un CHOIX, et son schéma s'ouvre neuf. */
+		expect(rendre([ADRESSE_IP], {}, 'choix').querySelector('input')?.value).toBe('10.0.0.');
+	});
+
 	it('un défaut non touché EST SOUMIS — ce que l’aperçu de la console promet', () => {
 		const zone = rendre([ADRESSE_IP, SALLE, SUPERVISE]);
 		const racine = documentFeint().createElement('form');
@@ -203,5 +225,17 @@ describe('BRIEF-VUES.md:973 — le refus a sa place À L’ENDROIT DU CHAMP', ()
 		]);
 		expect(blocs.every((b) => b.hidden)).toBe(true);
 		expect(blocs[0]?.textContent).toBe(PHRASE_D_OBLIGATION);
+	});
+
+	it('porte le PICTOGRAMME du composant, comme tous les blocs du dépôt', () => {
+		/* `V-41` : « L'erreur est toujours accompagnée de son motif, jamais d'un
+		   simple contour rouge ». Le cercle barré précède la phrase dans les cinq
+		   blocs du gel ; un bloc né à l'exécution n'en est pas dispensé. */
+		const bloc = rendre([ADRESSE_IP]).querySelector('.champ__erreur');
+		const dessin = bloc?.enfants[0];
+		expect(dessin?.balise).toBe('svg');
+		expect(dessin?.getAttribute('viewBox')).toBe('0 0 16 16');
+		expect(dessin?.enfants.map((e) => e.balise)).toEqual(['path', 'circle']);
+		expect(bloc?.textContent).toBe(PHRASE_D_OBLIGATION);
 	});
 });
