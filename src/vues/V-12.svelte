@@ -45,7 +45,7 @@
 	 * réellement : six ici, deux en V-22.
 	 *
 	 * AUCUN CHIFFRE N'EST SAISI (P-02) : compteur, comptes de facettes,
-	 * consultations et anciennetés sortent de `seeds/corpus.ts`.
+	 * consultations et anciennetés sortent des propriétés servies.
 	 *
 	 * LA FRAÎCHEUR VIENT DE LA FABRIQUE UNIQUE (P-01, ADR-005) —
 	 * `$lib/fraicheur`. Aucun seuil, aucun libellé, aucun compte de barres n'est
@@ -63,20 +63,10 @@
 	 * `src/vues/V-12.css`, posé par `node verif/feuilles-de-vue.mjs V-12
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import {
-		DOMAINES,
-		INSTANCE,
-		MODIFICATIONS,
-		MOI,
-		UNIVERS,
-		type Domaine,
-		type EtatDInstance,
-		type IdentifiantNote,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../seeds/corpus';
+	import type { Domaine, IdentifiantNote, Note, Univers } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { vocabulaireRendu } from '$lib/vocabulaire';
 	import { adresseDeNote } from '$lib/rangement/adresses';
@@ -94,21 +84,26 @@
 		/** Le jeu de semence de la vue — `corpusPourVue('V-12')`, variante « lecture ». */
 		notes: readonly Note[];
 		/**
-		 * LES QUATRE PROPRIÉTÉS DE CONTEXTE — T-042, et elles sont OPTIONNELLES.
+		 * LE RANGEMENT ET L'IDENTITÉ — plus aucun défaut tiré du jeu.
 		 *
-		 * Avant ce lot, cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et
-		 * `INSTANCE` au niveau du module : un chargeur de route ne pouvait rien
-		 * y substituer, et l'écran servait le contexte du jeu de semence quelle
-		 * que fût l'identité de l'appelant.
+		 * Ces propriétés ont eu pour défaut `UNIVERS`, `DOMAINES`, `MOI` et
+		 * `INSTANCE` de `seeds/corpus.ts` : une route qui oubliait d'en passer une
+		 * servait le contexte du jeu de démonstration quelle que fût l'identité de
+		 * l'appelant, et rien ne protestait.
 		 *
-		 * LE DÉFAUT EST LA CONSTANTE DU JEU, et c'est ce qui garantit que le banc
-		 * ne bouge pas : le mode de conception ne passe que `vecteur` et `notes`,
-		 * la vue reçoit donc exactement ce qu'elle avait.
+		 * `domaines` EST REQUISE — la route la passe, et le compilateur garde
+		 * désormais la porte. `univers` peut légitimement être vide : en forme
+		 * abrégée, le rail est écrit au balisage et ne s'en déduit pas ; son état
+		 * vide est le tableau vide. `compte` peut manquer, et son état vide est
+		 * `null` : la barre supérieure n'annonce alors personne.
+		 *
+		 * `instance` A DISPARU. Elle ne servait qu'à la version du pied de rail,
+		 * que le contexte de coquille sert depuis `package.json` — la vraie, pas
+		 * le `1.0.0` du jeu.
 		 */
 		univers?: readonly Univers[];
-		domaines?: readonly Domaine[];
-		compte?: UtilisateurCourant;
-		instance?: EtatDInstance;
+		domaines: readonly Domaine[];
+		compte?: CompteAffiche | null;
 		/**
 		 * LES VALEURS DE FACETTE RETENUES, telles que L'ADRESSE les porte.
 		 *
@@ -136,51 +131,51 @@
 		 * note absente de la table s'affiche « date de modification inconnue »,
 		 * jamais une ancienneté inventée.
 		 */
-		modifications?: Partial<Record<IdentifiantNote, number>>;
+		modifications: Partial<Record<IdentifiantNote, number>>;
 	}
 
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
+		univers = [],
+		domaines,
+		compte = null,
 		retenues = undefined,
 		tri = undefined,
-		modifications = MODIFICATIONS
+		modifications
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const vide = $derived(reglage['etat'] === 'vide');
 	const arrivee = $derived(String(reglage['arr'] ?? 'tout'));
 
+	/**
+	 * AUCUN DOMAINE — l'état vide, écrit plutôt que subi. La liste servie ne peut
+	 * pas être vide sur cette route : le chargeur résout le domaine de l'adresse
+	 * avant d'ouvrir l'écran. Le repli est là pour que la propriété soit honnête
+	 * sur toute sa forme — un tableau vide rendait `domaines[0].nom` et sortait
+	 * en 500.
+	 */
+	const AUCUN_DOMAINE: Domaine = { nom: '', univers: '', couleur: '' };
+
 	const courant = $derived(
-		(domaines.find((d) => d.nom === reglage['dom']) ?? domaines[0]) as Domaine
+		domaines.find((d) => d.nom === reglage['dom']) ?? domaines[0] ?? AUCUN_DOMAINE
 	);
 
 	/**
-	 * LA MISE EN ÉVIDENCE DU RAIL — DEUX DOMAINES, ET C'EST UN FAIT DU GEL.
+	 * LA MISE EN ÉVIDENCE DU RAIL — LE DOMAINE COURANT, ET LUI SEUL.
 	 *
-	 * `coquille()` de la maquette AJOUTE la marque `noeud--courant` et ne la
-	 * retire jamais (`V-12:1827`) : la planche rend d'abord `Infrastructure` —
-	 * `changerDomaine("Infrastructure")` au chargement, `V-12:2574` —, puis le
-	 * changement de position ajoute le second domaine sans effacer le premier.
+	 * Le gel en marquait DEUX : `coquille()` de la maquette AJOUTE la marque
+	 * `noeud--courant` et ne la retire jamais (`V-12:1827`), si bien que la
+	 * planche rendait d'abord « Infrastructure » — le domaine que son scénario
+	 * charge — puis ajoutait le domaine visité sans effacer le premier. La vue
+	 * recopiait ce comportement, et donc le NOM D'UN DOMAINE DU JEU DE
+	 * DÉMONSTRATION, écrit en dur.
 	 *
-	 * MESURÉ, page stabilisée dans les conditions du banc, pas déduit : ne pas
-	 * le reproduire coûte **6 903 pixels** sur `dom-poste-de-travail`, seul état
-	 * qui dévie le domaine. C'est le chiffre exact que P-9 a relevé sur V-11, et
-	 * pour la même cause.
-	 *
-	 * CE N'EST PAS LE COMPORTEMENT DU PRODUIT, et le rapport de lot le déclare :
-	 * une liste de notes n'a qu'un domaine courant. « Corriger » le gel serait
-	 * un comblement, et il serait rouge au banc. La reprise appartient au lot de
-	 * logique, avec l'arbitrage qui va avec.
+	 * Une liste de notes n'a qu'un domaine courant. C'était déjà écrit ici, sous
+	 * la forme d'une dette assumée au banc ; le banc a été supprimé.
 	 */
-	const DOMAINE_INITIAL = 'Infrastructure';
-	const railCourant = $derived(
-		courant.nom === DOMAINE_INITIAL ? [courant.nom] : [DOMAINE_INITIAL, courant.nom]
-	);
+	const railCourant = $derived([courant.nom]);
 
 	/** Les notes du domaine — vides quand la planche demande « domaine sans note ». */
 	const base = $derived(vide ? [] : corpus.filter((n) => n.domaine === courant.nom));
@@ -357,7 +352,8 @@
 	function modifiee(n: Note): string {
 		const j = modifications[n.id];
 		if (typeof j !== 'number') return 'date de modification inconnue';
-		return j <= 1 ? 'modifiée hier' : `modifiée il y a ${j} jours`;
+		if (j <= 0) return "modifiée aujourd'hui";
+		return j === 1 ? 'modifiée hier' : `modifiée il y a ${j} jours`;
 	}
 
 	/** Le libellé de pastille de type : une fiche annonce son type de fiche. */
@@ -421,13 +417,8 @@
 	{univers}
 	{domaines}
 	notes={corpus}
-	compte={{
-		nom: compte.nom,
-		initiales: compte.initiales,
-		role: compte.role,
-		domaine: compte.domaine
-	}}
-	version={instance.version}
+	compte={compte ?? COMPTE_VIDE}
+	version=""
 >
 	{#snippet enfants()}
 		<header class="tete" style="--teinte:{courant.couleur}">
