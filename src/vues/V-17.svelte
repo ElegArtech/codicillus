@@ -120,7 +120,15 @@
 		type Univers,
 		type UtilisateurCourant
 	} from '../../seeds/corpus';
-	import { motFiche, motFicheMinuscule } from '$lib/vocabulaire';
+	import { vocabulaireRendu } from '$lib/vocabulaire';
+
+	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
+	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
+	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
+	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	const motsDuProduit = vocabulaireRendu();
+	const motFiche = $derived(motsDuProduit.fiche);
+	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — trois contrôles de planche. */
