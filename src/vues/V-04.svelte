@@ -38,8 +38,8 @@
 	 * l'endroit exact où la maquette écrit `window.CORPUS = window.corpusPublic()`
 	 * (`V-04:1975`). Aucune expression de ce fichier n'atteint une note interne,
 	 * pas même par erreur de branchement — elles n'existent plus pour lui.
-	 * `seeds/corpus.ts` porte la même déclaration au même endroit :
-	 * `VUES_A_PERIMETRE_PUBLIC` contient V-01 à V-04.
+	 * `notesPubliques()` vit dans `$lib/public/recherche` et EXIGE son argument :
+	 * aucun corpus de démonstration ne peut plus s'y substituer.
 	 *
 	 * PAS DE COQUILLE. `docs/releve-vues.md` §5.1 : V-01 à V-06 et V-09 n'en
 	 * portent pas — sept vues sur trente-sept. Le gabarit de `$lib/coquille`
@@ -64,9 +64,9 @@
 	 * `margin-bottom:var(--e-2)` — figure à l'ensemble clos du gel (ARB-016).
 	 */
 	import { resolve } from '$app/paths';
-	import { CONFIG, notesPubliques, type Note } from '../../seeds/corpus';
+	import type { Note } from '../../seeds/corpus';
 	import { adresseNonResolue } from '$lib/public/adresse-non-resolue';
-	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
+	import { chercher, nombreFr, notesPubliques, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { vocabulaireRendu } from '$lib/vocabulaire';
 
@@ -93,10 +93,22 @@
 		 * console » (`V-04:2205`). Elle EXISTE désormais : la table `parametres` la
 		 * porte sous la clé `portail_assistance`. Cet écran n'a pas de route propre
 		 * — il est rendu par le composant d'erreur de la racine, dont le seul canal
-		 * de donnée est le chargeur du gabarit —, et la valeur du jeu de semence
-		 * tient donc lieu de défaut : c'est celle que la semence écrit en base.
+		 * de donnée est le chargeur du gabarit —, et ce composant la passe
+		 * TOUJOURS : la propriété est donc EXIGÉE, et le jeu de démonstration ne
+		 * peut plus tenir lieu de défaut.
 		 */
-		portail?: string;
+		portail: string;
+		/**
+		 * LES PISTES DE REFORMULATION — une DONNÉE, et elle n'a pas de source ici.
+		 *
+		 * La vue en portait cinq en dur, tirées du gel. Chacune ouvrait
+		 * `/recherche?q=…` à zéro résultat sur une instance qui ne porte ni « salle
+		 * de réunion » ni « support ». Une page d'erreur n'a pas de chargeur : rien
+		 * ne peut les dériver ici, et une liste vide ne rend pas le bloc.
+		 *
+		 * Même forme que `reprises` de V-26, et EXIGÉE — `+error.svelte` la passe.
+		 */
+		pistes: readonly string[];
 		/**
 		 * L'ADRESSE RÉELLEMENT DEMANDÉE — la seule entrée d'`adresseNonResolue()`.
 		 *
@@ -116,7 +128,7 @@
 		adresse?: string;
 	}
 
-	const { vecteur, notes, portail = CONFIG.portailAssistance, adresse }: Proprietes = $props();
+	const { vecteur, notes, portail, pistes, adresse }: Proprietes = $props();
 
 	/**
 	 * LES TROIS ADRESSES DE LA PLANCHE DE REVUE, ET RIEN D'AUTRE.
@@ -192,9 +204,6 @@
 			.sort((a, b) => b.vues - a.vues)
 			.slice(0, 4)
 	);
-
-	/** Les cinq pistes de reformulation, telles que le gel les énumère. */
-	const PISTES = ['mot de passe', 'accès', 'salle de réunion', 'réseau', 'support'];
 </script>
 
 <!--
@@ -331,9 +340,9 @@
 							Essayez d'autres mots, ou décrivez votre besoin à l'assistance — votre demande
 							signalera le guide manquant.
 						</p>
-						<div class="reformuler">
-							{#each PISTES as piste (piste)}<button class="piste">{piste}</button>{/each}
-						</div>
+						{#if pistes.length}<div class="reformuler">
+								{#each pistes as piste (piste)}<button class="piste">{piste}</button>{/each}
+							</div>{/if}
 					</div>{:else}<div class="etiq" style="margin-bottom:var(--e-2)">
 						{resultats.length}{resultats.length > 1
 							? ' guides publics correspondent'
@@ -369,17 +378,25 @@
 				</a>{/if}
 		</div>
 
-		<!-- Rattrapage : une sortie concrète plutôt qu'une impasse. -->
-		<section class="rattrapage">
-			<span class="etiq">Les guides les plus consultés</span>
-			<ul class="rattrapage__liste" id="populaires">
-				{#each populaires as n (n.id)}<li>
-						<a href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
-							><span class="rattrapage__nom">{n.titre}</span>{@render temoin(n)}</a
-						>
-					</li>{/each}
-			</ul>
-		</section>
+		<!--
+			Rattrapage : une sortie concrète plutôt qu'une impasse — ET LA SECTION
+			ENTIÈRE PART AVEC SA LISTE. Le canal de cette vue est le composant
+			d'erreur de la racine, qui n'a pas de chargeur et lui passe `notes={[]}` :
+			la liste était donc vide sur CHAQUE 404, sous un titre qui annonçait
+			« Les guides les plus consultés ». Un cadre qui promet une sortie et ne
+			contient rien est pire qu'un cadre absent — la même règle que le bloc de
+			reformulation dix lignes plus haut.
+		-->
+		{#if populaires.length}<section class="rattrapage">
+				<span class="etiq">Les guides les plus consultés</span>
+				<ul class="rattrapage__liste" id="populaires">
+					{#each populaires as n (n.id)}<li>
+							<a href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
+								><span class="rattrapage__nom">{n.titre}</span>{@render temoin(n)}</a
+							>
+						</li>{/each}
+				</ul>
+			</section>{/if}
 	</main>
 
 	<footer class="pied-public">
