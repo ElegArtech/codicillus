@@ -15,10 +15,12 @@
  *      indépendants de l'état du dépôt (`P-26`). Le cas qui compte est le plus
  *      contre-intuitif : des notes sans aucune relation, qui est un périmètre
  *      VIDE au sens de la cartographie.
- *   3. LE PÉRIMÈTRE RECOPIÉ DE LA VUE. Ce lot n'a pas le droit d'écrire dans
- *      `src/vues/`, et il a dû recopier une constante qui y vit. La recopie est
- *      gardée par une relecture du fichier : le jour où la vue changera de
- *      périmètre, ce test rougira au lieu d'afficher un état de zone faux.
+ *   3. LE PÉRIMÈTRE RECOPIÉ DE LA VUE. Le chargeur doit décider l'état de zone
+ *      sur le MÊME sous-graphe que la vue dessine, et il recopie donc une
+ *      constante qui vit dans `src/vues/`. La recopie est gardée par une
+ *      relecture du fichier : le jour où la vue changera de périmètre, ce test
+ *      rougira au lieu d'afficher un état de zone faux. Il a rougi une fois, et
+ *      c'était le bon jour — l'ouverture sur un univers du jeu de démonstration.
  *   4. L'ORIGINE (`P-08`) N'EST NI DEVINÉE NI RÉÉCRITE. La forme rendue est
  *      exactement celle qu'une relation doit avoir pour traverser `sousGraphe()`
  *      sans conversion.
@@ -146,17 +148,18 @@ describe('etatDeCartographie', () => {
 /* ═══════════════════════════════════════════ Les périmètres recopiés ═══ */
 
 describe('les périmètres d’affichage recopiés des vues', () => {
-	it('V-19 dessine bien l’univers Production', () => {
-		expect(PERIMETRE_DE_V19).toEqual({ type: 'univers', nom: 'Production' });
-		/* T-043 a ajouté le troisième argument `relations` à l'appel de la vue, puis
-		   le lot de câblage a donné à V-19 son périmètre EN PROPRIÉTÉ : le sélecteur
-		   du gel navigue désormais, et `?perimetre=` porte l'état (`RG-M09-05`). Le
-		   littéral a donc quitté l'appel à `sousGraphe()` pour devenir le DÉFAUT de
-		   la vue — c'est le cas que l'en-tête de `PERIMETRE_DE_V19` annonçait, mot
-		   pour mot : « le jour où la vue recevra son périmètre en propriété […] ».
-		   L'intention du contrôle ne bouge pas : la vue, sans rien recevoir, dessine
-		   l'univers Production, et c'est CE périmètre-là que le chargeur recopie. */
-		expect(sourceDeVue('V-19')).toContain("return { type: 'univers', nom: 'Production' };");
+	it('V-19 dessine bien tout le corpus, et non un univers du jeu', () => {
+		expect(PERIMETRE_DE_V19).toEqual({ type: 'global' });
+		/* IL FUT « Univers Production », ET C'ÉTAIT UN DÉFAUT : ce nom est celui d'un
+		   univers du jeu de démonstration, que rien ne pose sur une instance réelle.
+		   La carte s'ouvrait donc sur zéro nœud, sous un voile qui accusait le
+		   périmètre d'être sans relation là où il n'existait pas.
+		   LES DEUX SOURCES DU LITTÉRAL SONT ÉPINGLÉES, parce qu'il en existait deux :
+		   le défaut de la propriété (`PERIMETRE_DE_PLANCHE`) et le repli du découpage.
+		   Corriger l'une sans l'autre laisserait la faute en place. */
+		expect(sourceDeVue('V-19')).toContain("const PERIMETRE_DE_PLANCHE = 'global|';");
+		expect(sourceDeVue('V-19')).toContain("return { type: 'global' };");
+		expect(sourceDeVue('V-19')).not.toContain("nom: 'Production' }");
 	});
 
 	it('V-20 dessine bien le périmètre global', () => {
@@ -168,22 +171,41 @@ describe('les périmètres d’affichage recopiés des vues', () => {
 		expect(sourceDeVue('V-20')).toContain("return { type: 'global' };");
 	});
 
-	it('le périmètre de V-19 discrimine réellement, et son effet est mesuré', () => {
-		/* Sans quoi le contrôle précédent garderait une constante sans effet.
-		   MESURE DU LOT, ET ELLE SURPREND : les vingt-deux relations du jeu
-		   touchent toutes l'univers Production, si bien que le périmètre de V-19
-		   rend EXACTEMENT le graphe global. La constante n'est donc pas inerte —
-		   un autre univers rend zéro arête —, mais elle ne se distingue pas du
-		   périmètre global SUR CE CORPUS. C'est un fait du jeu de semence, pas une
-		   propriété du produit : un corpus dont les relations traverseraient les
-		   univers les distinguerait aussitôt. */
-		const production = grapheReel(CORPUS, RELATIONS, PERIMETRE_DE_V19);
-		const global = grapheReel(CORPUS, RELATIONS, PERIMETRE_DE_V20);
+	it('le périmètre d’ouverture tient sur un corpus qui n’a pas les univers du jeu', () => {
+		/* LE DÉFAUT, ÉPROUVÉ SUR SA CAUSE — et le corpus n'est pas fabriqué ici : ce
+		   sont les notes et les relations du jeu, dont SEUL le nom d'univers est
+		   déplacé. C'est très exactement ce qu'est une instance réelle : le même
+		   genre de corpus, sous des univers que l'exploitant a nommés lui-même.
+		   L'ancien périmètre y rend une carte vide ; le nouveau la rend entière. */
+		const ailleurs = CORPUS.map((n) => ({ ...n, univers: `Socle ${n.univers}` }));
+
+		expect(etatDeCartographie(grapheReel(ailleurs, RELATIONS, PERIMETRE_DE_V19))).toBe('nominal');
+		expect(
+			etatDeCartographie(grapheReel(ailleurs, RELATIONS, { type: 'univers', nom: 'Production' }))
+		).toBe('vide');
+	});
+
+	it('sur le jeu de semence, le graphe ouvert ne bouge pas d’un nœud', () => {
+		/* MESURE DU LOT : les vingt-deux relations du jeu touchent toutes l'univers
+		   Production, si bien que l'ancien périmètre et le nouveau rendent le MÊME
+		   sous-graphe — mêmes arêtes, mêmes nœuds, aucun fantôme. Les six états
+		   déclarés de V-19 ne bougent donc pas d'un pixel, et le périmètre reste
+		   discriminant : un autre univers rend zéro arête. */
+		const gel = grapheReel(CORPUS, RELATIONS, { type: 'univers', nom: 'Production' });
+		const ouvert = grapheReel(CORPUS, RELATIONS, PERIMETRE_DE_V19);
 		const projets = grapheReel(CORPUS, RELATIONS, { type: 'univers', nom: 'Projets' });
 
-		expect(production.aretes.length).toBe(22);
-		expect(global.aretes.length).toBe(22);
+		expect(gel.aretes.length).toBe(22);
+		expect(ouvert.aretes.length).toBe(22);
+		expect(ouvert.noeuds.map((n) => n.id).sort()).toEqual(gel.noeuds.map((n) => n.id).sort());
+		expect(ouvert.noeuds.filter((n) => n.fantome)).toEqual([]);
 		expect(projets.aretes.length).toBe(0);
+	});
+
+	it('les deux cartographies ouvrent désormais sur le même périmètre', () => {
+		/* `/cartographie` était la seule dissidente : `/cartographie/par-type` et
+		   `/carte-mentale` ouvraient déjà sur tout le corpus. */
+		expect(PERIMETRE_DE_V19).toEqual(PERIMETRE_DE_V20);
 	});
 });
 
