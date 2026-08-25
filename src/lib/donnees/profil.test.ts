@@ -17,10 +17,15 @@
  *      SYNTHÉTIQUES, indépendants de l'état de la base, et c'est exactement ce
  *      que `P-26` demande d'un contrôle qui pourrait devenir inerte.
  *
- *   2. LA POSITION « Identifiant inconnu » DE V-06. Aucun chemin du produit ne
- *      doit la poser — elle révélerait l'inexistence d'un compte. Un contrôle
- *      qui se contenterait de lire le code ne verrait rien ; celui-ci appelle
- *      les deux fabriques de vecteur et exige la position sûre.
+ *   2. LES VECTEURS DE V-06 ONT DISPARU AVEC LE PARCOURS QU'ILS RÉGLAIENT.
+ *      La vue rendait quatre étapes d'une réinitialisation par courriel dont
+ *      le produit n'a ni expéditeur ni table de jeton ; elle n'en rend plus
+ *      qu'une, qui déclare l'indisponibilité. Ce que ces vecteurs gardaient —
+ *      ne jamais poser la position « Identifiant inconnu », qui révélerait
+ *      l'inexistence d'un compte — est devenu structurel : l'écran ne demande
+ *      plus d'identifiant. Le contrôle est passé sur le BALISAGE RENDU, dans
+ *      `src/vues/proprietes-coquille.test.ts`, où c'est la vue qui produit la
+ *      chaîne cherchée au lieu que le cas la fabrique.
  */
 import { describe, expect, it } from 'vitest';
 import type { Base } from '../base/acces';
@@ -33,8 +38,6 @@ import {
 	naturesDeCaracteres,
 	ongletDemande,
 	reglesDuMotDePasse,
-	vecteurDeV06Etape1,
-	vecteurDeV06LienInconnu,
 	vecteurDeV25,
 	type ProfilDuCompte
 } from './profil';
@@ -74,22 +77,8 @@ describe('vecteurDeV25 — l’onglet et le verrou, et rien d’autre', () => {
 	});
 });
 
-describe('les vecteurs de V-06 — `RG-ACC-04` avant tout', () => {
-	it('ne pose JAMAIS la position « identifiant inconnu », qui révélerait l’inexistence', () => {
-		expect(vecteurDeV06Etape1()['cpt']).toBe('connu');
-		expect(vecteurDeV06LienInconnu()['cpt']).toBe('connu');
-	});
-
-	it('rend l’étape 1 sur l’adresse sans jeton', () => {
-		expect(vecteurDeV06Etape1()).toEqual({ et: '1', cpt: 'connu', 'c-expire': false });
-	});
-
-	/* `V-06.svelte` : `etape = et === '3' && lienExpire ? 'expire' : et`. Le
-	   couple `3` + `c-expire` est le SEUL qui atteigne l'écran « Lien expiré ». */
-	it('rend « lien expiré » sur l’adresse porteuse d’un jeton — aucune table n’en porte', () => {
-		expect(vecteurDeV06LienInconnu()).toEqual({ et: '3', cpt: 'connu', 'c-expire': true });
-	});
-});
+/* V-06 n'a plus de vecteur : voir l'en-tête, §2. Ce que ses deux fabriques
+   gardaient est mesuré sur le balisage rendu, dans `proprietes-coquille`. */
 
 /* ═════════════════════════ La politique de mot de passe, du gel ════════ */
 
