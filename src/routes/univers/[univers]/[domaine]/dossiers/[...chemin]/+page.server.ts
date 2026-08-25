@@ -133,6 +133,7 @@ import {
 	type RefusDEcriture
 } from '$lib/donnees/dossiers-ecriture';
 import type { Base } from '$lib/base/acces';
+import { ancienneteDeModification } from '$lib/donnees/lecture';
 import { NOM_DU_COMPTE_VISE, nomDuNiveau } from './champs-de-droits';
 import type { NomDeDomaine } from '../../../../../../../seeds/corpus';
 import type { Actions, PageServerLoad, RequestEvent } from './$types';
@@ -237,6 +238,12 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			refus: motifDeRefusDeDestination(lignes, dossier.id, d.id)
 		}));
 
+	/* L'INSTANT DE RÉFÉRENCE EST PRIS UNE FOIS, et non à chaque comptage : deux
+	   appels à `new Date()` dans une même page peuvent tomber de part et d'autre
+	   d'une frontière de jour. */
+	const maintenant = new Date();
+	const notesLisibles = await lireNotesLisibles(base, acces.perimetre, acces.contexte);
+
 	return {
 		vecteur: {
 			/* `dos` porte le chemin AFFICHÉ, séparateur du gel compris : c'est ce que
@@ -248,7 +255,17 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			dos: cheminAffiche(segmentsAffiches(acces.dossiers, dossier.id)),
 			dr: droit
 		},
-		notes: await lireNotesLisibles(base, acces.perimetre, acces.contexte),
+		notes: notesLisibles,
+		/**
+		 * L'ANCIENNETÉ DE MODIFICATION DE CHAQUE NOTE — `notes.modifie_le`.
+		 *
+		 * Sans elle, la vue retombait sur la table du jeu de démonstration, dont
+		 * les clés sont des identifiants de semence : chaque ligne de note de ce
+		 * dossier annonçait « modifiée il y a N jours » avec le N d'une note qui
+		 * n'est pas la sienne. L'écran voisin `/…/notes` la sert depuis toujours ;
+		 * deux écrans voisins ne peuvent pas dire deux âges d'une même note.
+		 */
+		modifications: await ancienneteDeModification(base, notesLisibles, maintenant),
 		domaine: domaine.nom as NomDeDomaine,
 		/* L'univers porteur, pour que la vue ne le devine pas : elle le cherchait
 		   dans le jeu de démonstration et retombait sur « Production ». */
