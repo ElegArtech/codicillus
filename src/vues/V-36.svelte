@@ -47,16 +47,16 @@
 	 * bloc de six ; ils viennent désormais de `$lib/export/noms.ts`, la source
 	 * que `construireLArchive()` lit elle-même.
 	 *
-	 * LE NOM D'ARCHIVE PORTE UNE DATE, ET ELLE N'EST PAS ÉCRITE À LA MAIN. Le
-	 * gel écrit `ardoise(dom) + "-2026-08-13.zip"` (`V-36:2964`, `V-36:3061`).
+	 * LE NOM D'ARCHIVE PORTE UNE DATE, ET ELLE N'EST PLUS CELLE DU JEU. Le gel
+	 * écrit `ardoise(dom) + "-2026-08-13.zip"` (`V-36:2964`, `V-36:3061`), où
 	 * `2026-08-13` est `DATE_REFERENCE` de `seeds/corpus.ts` — « la date à
-	 * laquelle le corpus est figé » —, et c'est de là qu'elle est prise.
+	 * laquelle le corpus est figé ». La vue la recomposait en repli, si bien
+	 * qu'un écran branché sur une base annonçait toujours le même jour de 2026,
+	 * et l'ardoise du nom d'affichage là où le fichier porte l'identifiant du
+	 * domaine : un fichier que l'utilisateur n'obtenait jamais.
 	 *
-	 * CETTE COMPOSITION N'EST PLUS QUE LE REPLI DE LA PLANCHE. Servi depuis le
-	 * produit, le nom annoncé est celui que la fabrique de l'archive produira —
-	 * propriété `nomsDArchive`, plus bas. L'écran annonçait sinon un fichier que
-	 * l'utilisateur n'obtenait jamais : jamais la bonne date, et l'ardoise du nom
-	 * d'affichage là où le fichier porte l'identifiant du domaine.
+	 * LE REPLI A DISPARU AVEC LA DATE. Le nom annoncé est celui que la fabrique
+	 * de l'archive produira — propriété `nomsDArchive`, EXIGÉE, plus bas.
 	 *
 	 * LE DOMAINE COURANT EST LE PREMIER DE `DOMAINES`. Le gel ne pose aucun
 	 * `selected` : `rendreRecap()` lit `select.value`, qui est celui de la
@@ -90,18 +90,7 @@
 	 * reproduits figurent tous à l'ensemble clos du gel de V-36 (ARB-016,
 	 * `node verif/styles-en-ligne.mjs V-36`).
 	 */
-	import {
-		DATE_REFERENCE,
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		UNIVERS,
-		type Domaine,
-		type EtatDInstance,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../seeds/corpus';
+	import type { Domaine, Note } from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	/* LES NOMS DE L'ARCHIVE VIENNENT DE LA FABRIQUE QUI LA PRODUIT, jamais de
@@ -134,25 +123,15 @@
 		 */
 		notes: readonly Note[];
 		/**
-		 * LES DOMAINES DE L'INSTANCE, EN PROPRIÉTÉ OPTIONNELLE (T-045). Absente,
-		 * `DOMAINES` du jeu de semence s'applique — c'est ce que le mode démo
-		 * passe, et c'est ce qui garantit que le banc ne bouge pas d'un pixel.
-		 */
-		domaines?: readonly Domaine[];
-		/**
-		 * LES QUATRE SOURCES DE LA COQUILLE, TOUTES FACULTATIVES — le rail de
-		 * gauche, le fil et l'identité de la barre. Absentes, les constantes du jeu
-		 * de semence s'appliquent, et cette vue rend exactement ce qu'elle rendait.
-		 * `CoquilleDeConsole.svelte:70-75` les déclare dans les mêmes termes ; elles
-		 * ne faisaient que manquer ICI, si bien que cet écran affichait le rail et
-		 * l'utilisateur du jeu de semence même servi depuis la base.
+		 * LES DOMAINES DE L'INSTANCE, EXIGÉS — c'est le périmètre exportable.
 		 *
-		 * `domaines` est déclarée plus haut : elle servait déjà au CONTENU de cet
-		 * écran — le périmètre exportable — avant de servir au rail.
+		 * La propriété retombait sur `DOMAINES` du jeu de démonstration : le
+		 * sélecteur d'export offrait « Infrastructure », « Applications » et
+		 * « Migration 2026 » sur une instance qui n'en porte aucun, et le bouton
+		 * menait à une archive qu'aucune adresse ne servait. `/console/exports`
+		 * les passe : exigés, une route qui les oublierait ne compilerait plus.
 		 */
-		univers?: readonly Univers[];
-		compte?: UtilisateurCourant;
-		instance?: EtatDInstance;
+		domaines: readonly Domaine[];
 		/**
 		 * CE QUE LA VUE FAIT QUAND L'ARCHIVE EST DEMANDÉE.
 		 *
@@ -178,24 +157,23 @@
 		 * de téléchargement appelle. Le nom annoncé n'est pas RECONSTITUÉ à
 		 * l'identique : il est PRODUIT par sa source.
 		 *
-		 * ABSENTE, la vue n'est pas branchée sur une base et reprend la composition
-		 * du gel : le banc de comparaison ne bouge pas. FOURNIE, elle fait loi —
-		 * un domaine qu'elle ne nomme pas n'a pas de nom d'archive annoncé, et
-		 * retomber sur la composition du gel servirait la date de semence à un
-		 * écran branché.
+		 * ELLE EST EXIGÉE. Absente, la vue recomposait le nom avec `DATE_REFERENCE`
+		 * — la date à laquelle le jeu de démonstration est figé —, si bien qu'un
+		 * écran branché sur une base annonçait toujours le même jour de 2026. Un
+		 * domaine que la table ne nomme pas n'a pas de nom d'archive annoncé, et
+		 * l'arborescence n'est pas rendue pour lui.
 		 */
-		nomsDArchive?: Readonly<Record<string, string>>;
+		nomsDArchive: Readonly<Record<string, string>>;
 	}
 
-	const {
-		notes,
-		domaines = DOMAINES,
-		univers = UNIVERS,
-		compte = MOI,
-		instance = INSTANCE,
-		onExporter,
-		nomsDArchive
-	}: Proprietes = $props();
+	/*
+	 * LE RAIL, LA BARRE ET LA VERSION NE PASSENT PLUS PAR ICI. Cette vue portait
+	 * `univers`, `compte` et `instance` sans jamais les lire : elle ne faisait
+	 * que les remettre à `CoquilleDeConsole`, qui retombait sur le jeu de
+	 * démonstration. La coquille lit désormais le contexte d'identité, seule
+	 * source, et les trois propriétés ont disparu des deux côtés.
+	 */
+	const { notes, domaines, onExporter, nomsDArchive }: Proprietes = $props();
 
 	/* ── Le calque des fabriques du gel ──────────────────────────────────────
 	   `ECART-020` É-3 : un gel qui produit une valeur par une fabrique n'admet
@@ -271,13 +249,10 @@
 	const volume = (ko: number): string =>
 		ko < 1024 ? `${ko} Ko` : `${Math.round((ko / 1024) * 10) / 10} Mo`;
 
-	/** `ardoise()` (`V-36:2880`) — le nom de fichier tiré d'un libellé. */
-	const ardoise = (nom: string): string =>
-		nom
-			.toLowerCase()
-			.normalize('NFD')
-			.replace(/[\u0300-\u036f]/g, '')
-			.replace(/[^a-z0-9]+/g, '-');
+	/* `ardoise()` DU GEL (`V-36:2880`) A DISPARU AVEC SON DERNIER LECTEUR. Elle
+	   ne servait qu'à recomposer le nom d'archive de repli, avec la date à
+	   laquelle le jeu de démonstration est figé. Le nom vient de `nomsDArchive`,
+	   produit par la fabrique qui écrit l'archive pour de bon. */
 
 	/* ── L'état rendu ────────────────────────────────────────────────────────
 	   Le domaine courant est celui de la première option, faute de `selected`
@@ -316,11 +291,9 @@
 	 * installation réelle. Sans domaine, il n'y a rien à nommer — l'arborescence
 	 * d'archive n'est pas rendue du tout.
 	 */
-	const nomDeLArchive = $derived.by(() => {
-		if (domaineCourant === '') return null;
-		if (nomsDArchive === undefined) return `${ardoise(domaineCourant)}-${DATE_REFERENCE}.zip`;
-		return nomsDArchive[domaineCourant] ?? null;
-	});
+	const nomDeLArchive = $derived(
+		domaineCourant === '' ? null : (nomsDArchive[domaineCourant] ?? null)
+	);
 
 	/**
 	 * L'ARBORESCENCE D'ARCHIVE — CINQ LIGNES SUR CINQ ÉTAIENT FAUSSES.
@@ -392,15 +365,7 @@
 	});
 </script>
 
-<CoquilleDeConsole
-	section="exports"
-	{notes}
-	{univers}
-	{domaines}
-	{compte}
-	{instance}
-	donnees={{ 'data-etat': 'repos' }}
->
+<CoquilleDeConsole section="exports" {notes} donnees={{ 'data-etat': 'repos' }}>
 	{#snippet enfants()}
 		<TeteDeSection
 			titre="Exports"
