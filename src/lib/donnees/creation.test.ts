@@ -27,7 +27,9 @@ import {
 	corpsDeLaSaisie,
 	estUneCollisionDIdentifiant,
 	etiquettesDeSaisie,
-	lireLaSaisie
+	lireLaSaisie,
+	proprietesSoumises,
+	retenirLesProprietes
 } from './creation';
 
 /** Un formulaire de création complet — la base des cas ci-dessous. */
@@ -323,5 +325,107 @@ describe('ARB-062 §2.5 — la collision est reconnue SOUS l’enveloppe de driz
 		const erreur = new Error('cycle');
 		Object.assign(erreur, { cause: erreur });
 		expect(estUneCollisionDIdentifiant(erreur)).toBe(false);
+	});
+});
+
+/* ═══════════════════════════════════ Le type de fiche ═══════════════════ */
+
+/**
+ * LE TYPE DE FICHE ET SES PROPRIÉTÉS — le trou que ce lot referme.
+ *
+ * Le sélecteur « Type de fiche » de V-17 affichait les vrais types de
+ * l'instance et sa valeur ne quittait jamais l'écran : `lireLaSaisie()` ne
+ * déclarait aucun champ de fiche, et `notes.type_de_fiche_id` n'était posé par
+ * aucune route du produit. Les cas ci-dessous éprouvent la moitié PURE de la
+ * chaîne — ce que le formulaire porte et ce qu'il vaut. L'autre moitié demande
+ * la base (résolution du nom, filtrage sur les clés réelles) ou un navigateur
+ * (le câblage qui compose la soumission) ; elle est éprouvée là-bas.
+ */
+describe('la soumission porte le type de fiche, ou ne le porte pas', () => {
+	it('sans champ de fiche, la note est SIMPLE — et c’est le cas ordinaire', () => {
+		const lue = lireLaSaisie(formulaire(COMPLET));
+		expect(lue.ok).toBe(true);
+		if (!lue.ok) return;
+		expect(lue.saisie.fiche).toBeNull();
+		expect(lue.saisie.proprietes).toBeNull();
+	});
+
+	it('un champ de fiche VIDE vaut « Aucun — note simple »', () => {
+		const lue = lireLaSaisie(formulaire({ ...COMPLET, fiche: '', proprietes: '{}' }));
+		expect(lue.ok).toBe(true);
+		if (!lue.ok) return;
+		expect(lue.saisie.fiche).toBeNull();
+		expect(lue.saisie.proprietes).toBeNull();
+	});
+
+	it('un type choisi arrive avec ses propriétés, en NOM et en table de chaînes', () => {
+		const lue = lireLaSaisie(
+			formulaire({
+				...COMPLET,
+				fiche: 'Serveur',
+				proprietes: JSON.stringify({ hote: 'pg-prod-01', sauvegarde: 'oui' })
+			})
+		);
+		expect(lue.ok).toBe(true);
+		if (!lue.ok) return;
+		expect(lue.saisie.fiche).toBe('Serveur');
+		expect(lue.saisie.proprietes).toEqual({ hote: 'pg-prod-01', sauvegarde: 'oui' });
+	});
+
+	it('des propriétés SANS type sont refusées — le miroir applicatif du CHECK', () => {
+		/* `notes_proprietes_exigent_un_type_de_fiche` (`002_socle.montee.sql:380`)
+		   les refuserait en base, en 500 et sans nommer ce qui manque. */
+		const lue = lireLaSaisie(
+			formulaire({ ...COMPLET, fiche: '', proprietes: JSON.stringify({ hote: 'x' }) })
+		);
+		expect(lue).toEqual({ ok: false, motif: 'propriétés sans type de fiche' });
+	});
+
+	it('des propriétés illisibles sont refusées, jamais rognées (ADR-003)', () => {
+		for (const brut of ['ceci n’est pas du JSON', '[1,2]', '"Serveur"', '{"a":{"b":1}}']) {
+			expect(lireLaSaisie(formulaire({ ...COMPLET, fiche: 'Serveur', proprietes: brut }))).toEqual({
+				ok: false,
+				motif: 'propriétés illisibles'
+			});
+		}
+	});
+});
+
+describe('proprietesSoumises — la table de chaînes, et rien d’autre', () => {
+	it('un champ vide rend une table vide, sans lever', () => {
+		expect(proprietesSoumises('')).toEqual({ ok: true, valeurs: {} });
+	});
+
+	it('les nombres et les booléens sont ramenés à leur texte — la colonne ne porte que cela', () => {
+		expect(proprietesSoumises(JSON.stringify({ vcpu: 16, actif: true }))).toEqual({
+			ok: true,
+			valeurs: { vcpu: '16', actif: 'true' }
+		});
+	});
+
+	it('une valeur vide n’est pas une propriété', () => {
+		expect(proprietesSoumises(JSON.stringify({ hote: '', adresse: '10.0.0.1' }))).toEqual({
+			ok: true,
+			valeurs: { adresse: '10.0.0.1' }
+		});
+	});
+
+	it('un tableau, une valeur nulle ou un objet imbriqué sont refusés', () => {
+		expect(proprietesSoumises('[]').ok).toBe(false);
+		expect(proprietesSoumises(JSON.stringify({ a: null })).ok).toBe(false);
+		expect(proprietesSoumises(JSON.stringify({ a: ['x'] })).ok).toBe(false);
+	});
+});
+
+describe('retenirLesProprietes — le jsonb n’est contraint par rien d’autre', () => {
+	it('ne garde que les clés du référentiel, et écarte le reste en silence', () => {
+		expect(retenirLesProprietes({ hote: 'pg-prod-01', intrus: 'x' }, ['hote', 'adresse'])).toEqual({
+			hote: 'pg-prod-01'
+		});
+	});
+
+	it('rend une table vide quand rien ne correspond', () => {
+		expect(retenirLesProprietes({ intrus: 'x' }, ['hote'])).toEqual({});
+		expect(retenirLesProprietes({}, [])).toEqual({});
 	});
 });

@@ -109,6 +109,16 @@
 		   V-17 suit désormais la valeur vive du sélecteur et refait l'arbre
 		   elle-même ; le dossier repris tombe, comme l'aide du champ le promet. */
 		const defaire = cablerLEditeur(formulaire, {
+			/* LE RÉFÉRENTIEL ET L'ÉTAT DE FICHE — sans le premier, `#m-fiche` reste
+			   inerte et sa valeur n'est pas soumise ; sans le second, l'écran rouvre
+			   une fiche sur « Aucun — note simple » et l'enregistrement la
+			   dépouille de son type. */
+			typesFiche: data.typesFiche,
+			ficheDeDepart:
+				data.noteModifiee.typeFiche === undefined
+					? null
+					: { type: data.noteModifiee.typeFiche, proprietes: data.proprietesDeFiche },
+			surSaisie: () => gestes?.signalerUneModification(),
 			...(editeur === null ? {} : { editeur: () => editeur.document() })
 		});
 		gestes = cablerLesGestesDEdition(formulaire, {

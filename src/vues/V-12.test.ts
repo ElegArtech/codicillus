@@ -112,3 +112,43 @@ describe('V-12 — la propriété absente retombe sur la constante du jeu', () =
 		expect(html).toContain('Astreinte');
 	});
 });
+
+/**
+ * « FICHE UNDEFINED » — le gabarit gardait sur le mauvais côté.
+ *
+ * `n.type === 'Fiche' ? motFiche + ' ' + n.typeFiche : n.type` garde sur le TYPE
+ * DE NOTE, pas sur la présence du type de FICHE. Or « Fiche » est un type de
+ * note offert (`007_types_de_note.montee.sql:29`) et `lireNotes()`
+ * (`../lib/donnees/lecture.ts`) n'écrit la clé `typeFiche` que lorsque la note
+ * porte un type de fiche : la clé est ABSENTE sinon. Une note de type « Fiche »
+ * sans type de fiche rendait donc littéralement la pastille « Fiche undefined »
+ * — et le cas était atteignable depuis l'éditeur, qui n'écrivait jamais
+ * `type_de_fiche_id`.
+ *
+ * Le garde est celui de `V-09:198`, le seul qui fût correct : la présence du
+ * type de fiche.
+ *
+ * LES DEUX CAS SONT DÉRIVÉS D'UNE NOTE RÉELLE DU JEU, en retirant ou en posant
+ * la seule clé en cause — la même chose que fait la lecture en base selon que
+ * `type_de_fiche_id` est nul ou non.
+ */
+describe('V-12 — la pastille de type ne rend jamais « undefined »', () => {
+	const PREMIERE = NOTES[0];
+	if (PREMIERE === undefined) throw new Error('seeds/corpus.ts : le corpus de V-12 est vide');
+
+	it('une note de type « Fiche » SANS type de fiche rend son type de note, et rien de plus', async () => {
+		const sansTypeDeFiche = { ...PREMIERE, type: 'Fiche' as const };
+		delete (sansTypeDeFiche as { typeFiche?: unknown }).typeFiche;
+		const html = await rendu({ notes: [sansTypeDeFiche] });
+		expect(html).not.toContain('undefined');
+		expect(html).toContain('>Fiche<');
+	});
+
+	it('une note qui PORTE un type de fiche le nomme', async () => {
+		const html = await rendu({
+			notes: [{ ...PREMIERE, type: 'Fiche' as const, typeFiche: 'Serveur' as const }]
+		});
+		expect(html).toContain('Fiche Serveur');
+		expect(html).not.toContain('undefined');
+	});
+});
