@@ -64,17 +64,8 @@
 	 * `src/vues/V-14.css`, posé par `node verif/feuilles-de-vue.mjs V-14
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		UNIVERS,
-		type Domaine,
-		type EtatDInstance,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../seeds/corpus';
+	import type { Domaine, Note, Univers } from '../../seeds/corpus';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import NoteDeDemonstration from '$lib/lecture/NoteDeDemonstration.svelte';
 	import SommaireDeLaNote from '$lib/lecture/SommaireDeLaNote.svelte';
@@ -85,7 +76,7 @@
 		libelleFraicheur,
 		type NiveauFraicheur
 	} from '$lib/fraicheur';
-	import { NOTE, rangementDe, type LectureAffichee } from '$lib/lecture/note-de-demonstration';
+	import { rangementDe, type LectureAffichee } from '$lib/lecture/note-de-demonstration';
 	/**
 	 * LA FABRIQUE D'ADRESSES — jamais un gabarit d'URL écrit à la main.
 	 *
@@ -115,23 +106,23 @@
 		/** Le jeu de semence de la vue — `corpusPourVue('V-14')`, variante « complète ». */
 		notes: readonly Note[];
 		/**
-		 * LES QUATRE PROPRIÉTÉS DE CONTEXTE — T-042, et elles sont OPTIONNELLES.
+		 * LES TROIS PROPRIÉTÉS DE CONTEXTE, ET LEUR DÉFAUT EST L'ENSEMBLE VIDE.
 		 *
-		 * Avant ce lot, cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et
-		 * `INSTANCE` au niveau du module : un chargeur de route ne pouvait rien
-		 * y substituer, et l'écran servait le contexte du jeu de semence quelle
-		 * que fût l'identité de l'appelant.
+		 * Leur défaut était `UNIVERS`, `DOMAINES` et `MOI` du jeu de
+		 * démonstration : cette route ne les passe pas — le contexte de coquille
+		 * les porte —, l'écran servait donc le rail et l'identité des maquettes
+		 * sur toute instance dont le gabarit racine ne les aurait pas posés.
+		 * Une base vide n'est pas une absence de base : elle se rend vide.
 		 *
-		 * LE DÉFAUT EST LA CONSTANTE DU JEU, et c'est ce qui garantit que le banc
-		 * ne bouge pas : le mode de conception ne passe que `vecteur` et `notes`,
-		 * la vue reçoit donc exactement ce qu'elle avait.
+		 * `instance` A DISPARU. Aucune route ne la passait, et la version du
+		 * produit vient du contexte, lu sur `package.json` : la propriété ne
+		 * servait qu'à faire descendre le `1.0.0` du jeu jusqu'au pied du rail.
 		 */
 		univers?: readonly Univers[];
 		domaines?: readonly Domaine[];
-		compte?: UtilisateurCourant;
-		instance?: EtatDInstance;
-		/** `/notes/{identifiant}/relations`. Absente : le lien n'est pas rendu. */
-		adresseDesRelations?: string;
+		compte?: CompteAffiche | null;
+		/** `/notes/{identifiant}/relations` — la route la compose et la passe. */
+		adresseDesRelations: string;
 		/**
 		 * LA NOTE LUE ET SES DEUX CORPS RENDUS — T-042, et c'est le défaut le
 		 * plus visible du produit : `/notes/{identifiant}` servait l'article de
@@ -142,9 +133,11 @@
 		 * `rendreDocument` — mais l'absence d'une propriété pour les recevoir,
 		 * écart déclaré au rapport de `T-033`. C'est cette propriété.
 		 *
-		 * ABSENTE, LA TRANSCRIPTION FIGÉE DU GEL, à l'identique. FOURNIE, TOUT
-		 * ce que l'écran dit de la note : identité, corps rendus, sommaire,
-		 * cartouche de contrôle, dates, bandeaux et mesure de consultation.
+		 * ELLE EST REQUISE, ET C'EST CE QUI FERME LE MOTIF. Absente, la vue
+		 * rendait la transcription figée du gel — SANS QUE RIEN NE PROTESTE.
+		 * Elle porte TOUT ce que l'écran dit de la note : identité, corps rendus,
+		 * sommaire, cartouche de contrôle, dates, bandeaux et mesure de
+		 * consultation.
 		 *
 		 * LE CARTOUCHE ET LA DATE DE MODIFICATION EN FONT DÉSORMAIS PARTIE. Ils
 		 * en étaient exclus faute de colonnes projetées par la couche de
@@ -152,7 +145,7 @@
 		 * `notes.modifie_le` —, et un cartouche mixte, moitié note moitié
 		 * planche, n'a plus lieu d'être (P-02).
 		 */
-		affichee?: LectureAffichee;
+		affichee: LectureAffichee;
 		/**
 		 * LES SEPT PANNEAUX LATÉRAUX — T-042b, et c'est la seconde moitié du
 		 * défaut que `affichee` a ouverte.
@@ -164,51 +157,58 @@
 		 * proscrit, et le gel ne pouvait pas faire autrement : une maquette
 		 * statique n'a pas de base.
 		 *
-		 * ABSENTS, LES PANNEAUX SONT VIDES, ET ILS LE DISENT. Le défaut n'est pas
-		 * la transcription du gel — ce serait rendre l'exemple opposable une fois
-		 * de plus —, c'est l'ensemble vide, que chaque panneau rend en état neutre
-		 * explicite (`RG-M18-03`).
+		 * VIDES, LES PANNEAUX LE DISENT. Le défaut n'est pas la transcription du
+		 * gel — ce serait rendre l'exemple opposable une fois de plus —, c'est
+		 * l'ensemble vide, que chaque panneau rend en état neutre explicite
+		 * (`RG-M18-03`). La route les passe toujours, tous les sept.
 		 */
-		panneaux?: PanneauxDeLaNote;
+		panneaux: PanneauxDeLaNote;
 	}
 
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
+		univers = [],
+		domaines = [],
+		compte = null,
 		affichee,
 		panneaux,
 		adresseDesRelations
 	}: Proprietes = $props();
 
-	/** Les cinq listes des panneaux — vides tant que rien n'est servi. */
-	const voisines = $derived(panneaux?.voisines ?? []);
-	const pieces = $derived(panneaux?.pieces ?? []);
-	const relations = $derived(panneaux?.relations ?? []);
+	/**
+	 * LE COMPTE SERVI À LA COQUILLE. En application, le contexte l'emporte
+	 * toujours — `Coquille.svelte` lit `identite.compte`. Hors gabarit racine,
+	 * il n'y a PAS de compte connecté : la barre le rend vide plutôt que de
+	 * nommer un utilisateur du jeu de démonstration.
+	 */
+	const COMPTE_ABSENT: CompteAffiche = { nom: '', initiales: '', role: '', domaine: '' };
+
+	/** Les cinq listes des panneaux. */
+	const voisines = $derived(panneaux.voisines);
+	const pieces = $derived(panneaux.pieces);
+	const relations = $derived(panneaux.relations);
 	/**
 	 * LES PROPRIÉTÉS TYPÉES DE LA FICHE, dans l'ordre du référentiel — vides
 	 * tant que rien n'est servi, et le panneau n'est alors pas rendu.
 	 */
-	const proprietes = $derived(panneaux?.proprietes ?? []);
-	const retroliens = $derived(panneaux?.retroliens ?? []);
-	const verifications = $derived(panneaux?.verifications ?? []);
+	const proprietes = $derived(panneaux.proprietes);
+	const retroliens = $derived(panneaux.retroliens);
+	const verifications = $derived(panneaux.verifications);
 
 	const reglage = $derived(vecteur ?? {});
 
-	/** Les cinq leviers de la planche, lus au vecteur et jamais ailleurs. */
+	/**
+	 * LES DEUX LEVIERS QUI RESTENT — les droits et l'état de chargement.
+	 *
+	 * Cinq autres décidaient de ce que le bloc d'article montrait : le niveau de
+	 * fraîcheur, la révision, le brouillon, la resynchronisation et l'existence
+	 * d'un Opérationnel. Ils ne pilotaient rien d'autre que la transcription du
+	 * gel ; la note affichée étant requise, ces cinq états se lisent sur ELLE.
+	 */
 	const droits = $derived<'ecriture' | 'lecture'>(
 		reglage['droits'] === 'lecture' ? 'lecture' : 'ecriture'
 	);
-	const niveau = $derived<NiveauFraicheur>(
-		reglage['fr'] === 'vieil' ? 'vieil' : reglage['fr'] === 'obs' ? 'obs' : 'frais'
-	);
-	const revision = $derived(reglage['c-revision'] === true);
-	const brouillon = $derived(reglage['c-brouillon'] === true);
-	const resync = $derived(reglage['c-resync'] === true);
-	const operationnel = $derived(reglage['c-op'] !== false);
 	const etat = $derived<'nominal' | 'chargement'>(
 		reglage['etat'] === 'chargement' ? 'chargement' : 'nominal'
 	);
@@ -231,13 +231,11 @@
 	 * module partagé — la même note que celle que rend `NoteDeDemonstration`,
 	 * jamais une seconde lecture.
 	 *
-	 * T-042 — LA NOTE EST CELLE QU'ON LIT, ou celle du gel à défaut. Le fil
-	 * d'Ariane et le chemin courant du rail s'en DÉDUISENT par `rangementDe`,
-	 * là où ils étaient écrits en clair : au défaut, la déduction redonne
-	 * exactement `['Accueil', 'Production', 'Infrastructure', 'Exploitation',
-	 * 'Sauvegardes', titre]`, ce que les 44 couples vérifient.
+	 * LA NOTE EST CELLE QU'ON LIT, et il n'y a plus d'autre cas. Le fil d'Ariane
+	 * et le chemin courant du rail s'en DÉDUISENT par `rangementDe`, là où ils
+	 * étaient écrits en clair.
 	 */
-	const note = $derived(affichee?.note ?? NOTE);
+	const note = $derived(affichee.note);
 	const titre = $derived(note.titre);
 	/**
 	 * LE PANNEAU DE PROPRIÉTÉS N'EXISTE QUE POUR UNE FICHE —
@@ -317,17 +315,12 @@
 	{univers}
 	{domaines}
 	notes={corpus}
-	compte={{
-		nom: compte.nom,
-		initiales: compte.initiales,
-		role: compte.role,
-		domaine: compte.domaine
-	}}
-	version={instance.version}
+	compte={compte ?? COMPTE_ABSENT}
+	version=""
 >
 	{#snippet enfants()}
 		<!-- ---------- Sommaire ---------- -->
-		<SommaireDeLaNote classe="sommaire vue-reelle" entrees={affichee?.sommaire} />
+		<SommaireDeLaNote classe="sommaire vue-reelle" entrees={affichee.sommaire} />
 		<div class="sommaire vue-esquisse" aria-hidden="true">
 			<div class="esquisse esq-l" style="width:60%"></div>
 			<div class="esquisse esq-l" style="width:90%"></div>
@@ -340,16 +333,7 @@
 		<!-- ---------- Article ---------- -->
 		<article class="article vue-reelle" id="article">
 			<!-- P-09 · ARB-040 — le bloc partagé OMET ses actions d'écriture en lecture seule. -->
-			<NoteDeDemonstration
-				{niveau}
-				{revision}
-				{brouillon}
-				{resync}
-				{operationnel}
-				{droits}
-				{separateur}
-				{affichee}
-			/>
+			<NoteDeDemonstration {droits} {separateur} {affichee} />
 		</article>
 
 		<!-- Esquisse de chargement de l'article -->

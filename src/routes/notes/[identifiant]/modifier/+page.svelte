@@ -54,23 +54,18 @@
 		peindreLeRefusDEdition
 	} from '$lib/edition/gestes';
 	import { adresseDeNote } from '$lib/rangement/adresses';
-	import { MOI } from '../../../../../seeds/corpus';
 	import type { ActionData, PageData } from './$types';
 
 	const { data, form }: { data: PageData; form: ActionData } = $props();
 
-	/* LE COMPTE RÉEL, ET L'UNIVERS DE LA NOTE. Sans eux, la pastille nomme
-	   « Karim Belhadj » et le fil d'Ariane place la note dans l'univers du jeu de
-	   semence. `universDuCompte` est ici l'univers du domaine PORTEUR : c'est lui
-	   que le fil rend en modification, aux côtés du domaine de la note. */
-	const compteServi = $derived(page.data.compte ?? MOI);
-	const compte = $derived({
-		...MOI,
-		nom: compteServi.nom,
-		initiales: compteServi.initiales,
-		role: compteServi.role,
-		domaine: compteServi.domaine
-	});
+	/* LE COMPTE RÉEL, ET L'UNIVERS DE LA NOTE. Le repli était `MOI` de
+	   `seeds/corpus.ts` : la pastille nommait « Karim Belhadj » et le fil
+	   d'Ariane plaçait la note dans l'univers du jeu de démonstration. Le
+	   gabarit racine sert le compte connecté ; sans lui — il n'y en a pas — le
+	   compte est VIDE, jamais celui des maquettes. `universDuCompte` est ici
+	   l'univers du domaine PORTEUR : c'est lui que le fil rend en modification,
+	   aux côtés du domaine de la note. */
+	const compte = $derived(page.data.compte ?? { nom: '', initiales: '', role: '', domaine: '' });
 
 	let formulaire: HTMLFormElement;
 

@@ -24,9 +24,16 @@ import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
 import { corpusPourVue, noteParIdentifiant, VERSIONS, type Note } from '../../seeds/corpus';
 import { documentDuGel, resoudreDansLeCorpus } from '../lib/contenu/documents-du-gel';
 import { rendreDocument } from '../lib/contenu/rendu';
-import { NOTE, type LectureAffichee } from '../lib/lecture/note-de-demonstration';
+import type { LectureAffichee } from '../lib/lecture/note-de-demonstration';
 
 const NOTES = corpusPourVue('V-15');
+
+/** LA NOTE DU JEU DE DÉMONSTRATION — celle qui ne doit plus jamais paraître. */
+const NOTE_DU_GEL = (() => {
+	const note = noteParIdentifiant('n-restaurer-pg');
+	if (!note) throw new Error('seeds/corpus.ts : « n-restaurer-pg » a disparu');
+	return note;
+})();
 
 /** L'AUTRE note à corps transcrit du gel — jamais celle de la démonstration. */
 const AUTRE_NOTE = (() => {
@@ -63,8 +70,23 @@ const AFFICHEE: LectureAffichee = {
 	consultationsTotal: 431
 };
 
+/**
+ * LE SOCLE DE PROPRIÉTÉS REQUISES. L'historique ne peut plus se rendre sans la
+ * note dont il parle ni sans l'article qu'il coiffe : leur absence rendait la
+ * transcription figée du gel, et c'était le défaut.
+ */
 function rendu(proprietes: Record<string, unknown>): Promise<string> {
-	return rendreLaVue('V-15', { vecteur: null, notes: NOTES, ...proprietes });
+	return rendreLaVue('V-15', {
+		vecteur: null,
+		notes: NOTES,
+		note: AUTRE_NOTE,
+		affichee: AFFICHEE,
+		versions: {},
+		retentionVersions: 50,
+		versionAffichee: null,
+		onComparer: () => undefined,
+		...proprietes
+	});
 }
 
 afterAll(fermerLeHarnais);
@@ -85,8 +107,8 @@ describe('V-15 — l’historique sert l’article de la note demandée', () => 
 	 */
 	it('ne laisse rien de la note de démonstration', async () => {
 		const html = await rendu({ note: AUTRE_NOTE, affichee: AFFICHEE });
-		expect(html).not.toContain(NOTE.titre);
-		expect(html).not.toContain(`${NOTE.vues} consultations`);
+		expect(html).not.toContain(NOTE_DU_GEL.titre);
+		expect(html).not.toContain(`${NOTE_DU_GEL.vues} consultations`);
 		/* LE CARTOUCHE, ET NON LA PAGE : « Karim Belhadj » est aussi le compte
 		   courant du jeu, dont le nom coiffe le menu utilisateur de la barre.
 		   C'est l'attribution du contrôle qui ne doit plus venir de la planche. */
@@ -186,11 +208,24 @@ describe('V-15 — l’article suit l’état consulté, pas la note courante', 
 	});
 });
 
-describe('V-15 — la propriété absente rend la transcription figée du gel', () => {
-	it('rend la note de démonstration et son corps transcrit', async () => {
+/**
+ * LE MOTIF EST RETIRÉ, ET C'EST CE QUE CETTE SECTION MESURE.
+ *
+ * `note` et `affichee` étaient optionnelles, et leur absence rendait l'article
+ * du gel : le titre « Restaurer une sauvegarde PostgreSQL depuis Barman », son
+ * rangement, son auteur, ses consultations et son sommaire, sous un fil
+ * d'Ariane qui, lui, nommait la vraie note. Les deux sont REQUISES — une route
+ * qui les oublierait ne compilerait plus.
+ */
+describe('V-15 — rien du jeu de démonstration ne subsiste au défaut', () => {
+	it('ne rend ni la note du gel ni son corps transcrit', async () => {
 		const html = await rendu({});
-		expect(html).toContain(NOTE.titre);
-		expect(html).toContain('id="s-restaurer"');
-		expect(html).not.toContain(REFERENCE_RENDUE);
+		expect(html).not.toContain(NOTE_DU_GEL.titre);
+		expect(html).not.toContain('id="s-restaurer"');
+	});
+
+	it('ne nomme aucun compte du jeu au menu utilisateur', async () => {
+		const html = await rendu({});
+		expect(html).not.toContain('Karim Belhadj — menu utilisateur');
 	});
 });
