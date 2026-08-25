@@ -12,10 +12,12 @@
  * LE VOCABULAIRE ET LES LIENS AFFICHÉS SONT CEUX DE LA BASE — l'écart est
  * refermé. Ce commentaire disait : « la vue lit `TYPES_RELATION`, `RELATIONS` et
  * `RELATIONS_TECHNIQUES` du jeu de semence, la donnée n'a AUCUN chemin jusqu'à
- * l'écran ». Les trois sont désormais des propriétés de `V-30`, de défaut les
- * constantes du jeu, et ce chargeur les sert depuis `types_de_relation` et
- * `relations` — le compte d'emploi de chaque type, celui-là même qui décide si
- * une suppression est refusée, se compte donc sur les liens réels.
+ * l'écran ». Les trois sont désormais des propriétés REQUISES de `V-30`, que ce
+ * chargeur sert depuis `types_de_relation` et `relations` — le compte d'emploi
+ * de chaque type, celui-là même qui décide si une suppression est refusée, se
+ * compte donc sur les liens réels. Elles n'ont plus de valeur par défaut : la
+ * vue y ajoutait un type `remplace` dès que le catalogue reçu était celui du
+ * jeu, c'est-à-dire dès qu'une page oubliait de le passer.
  *
  * `vecteur: null` demande l'état au repos.
  */

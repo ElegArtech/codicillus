@@ -63,19 +63,13 @@
 	import NavigationConsole from '$lib/console/NavigationConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { filDeConsole } from '$lib/console/sections';
-	import {
-		COMPTES,
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		UNIVERS,
-		type Compte,
-		type Domaine,
-		type EtatDInstance,
-		type Note,
-		type RoleDeCompte,
-		type Univers,
-		type UtilisateurCourant
+	import type {
+		Compte,
+		Domaine,
+		Note,
+		RoleDeCompte,
+		Univers,
+		UtilisateurCourant
 	} from '../../seeds/corpus';
 
 	interface Proprietes {
@@ -83,16 +77,24 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-32')`. */
 		notes: readonly Note[];
-		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
-		univers?: readonly Univers[];
-		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
-		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
-		instance?: EtatDInstance;
-		/** Le registre des comptes. Absente, la constante du jeu de semence. */
-		comptes?: readonly Compte[];
+		/** Les univers déclarés, servis par la route. Vide : aucun périmètre. */
+		univers: readonly Univers[];
+		/** Les domaines déclarés, servis par la route. Vide : aucun domaine. */
+		domaines: readonly Domaine[];
+		/** L'utilisateur courant, servi par la route. */
+		compte: UtilisateurCourant;
+		/** Le registre des comptes, servi par la route. */
+		comptes: readonly Compte[];
+		/**
+		 * `comptes.mot_de_passe_verrouille`, PAR IDENTIFIANT DE CONNEXION.
+		 *
+		 * `interface Compte` n'en porte pas de champ : la vue lisait donc le verrou
+		 * sur un identifiant du jeu de démonstration écrit en dur, si bien que la
+		 * pastille ne s'allumait pour personne sur une instance réelle. La table
+		 * porte la colonne depuis la création du compte ; la route la sert.
+		 * Identifiant absent de la table : non verrouillé.
+		 */
+		verrous: Readonly<Record<string, boolean>>;
 		/**
 		 * CE QUE LA VUE FAIT QUAND LA DÉSACTIVATION EST CONFIRMÉE, ou quand un
 		 * compte est réactivé.
@@ -205,11 +207,11 @@
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		comptes: registreDeComptes = COMPTES,
+		univers,
+		domaines,
+		compte,
+		comptes: registreDeComptes,
+		verrous,
 		onChangerLActivation,
 		onEnregistrerLeRole,
 		onCreerUnCompte,
@@ -232,12 +234,13 @@
 		{ cle: 'Administrateur', aide: 'Accès complet, y compris la console et tous les domaines.' }
 	];
 
-	/**
-	 * LE VERROUILLAGE DE MOT DE PASSE est un attribut du gel (`V-32:2957`), et
-	 * il n'existe que là : `Compte` n'en porte pas. Le déduire d'autre chose
-	 * serait inventer une règle que rien ne pose.
+	/*
+	 * LE VERROUILLAGE DE MOT DE PASSE VIENT DE LA TABLE, ET IL N'EN VENAIT PAS.
+	 * Il était décidé par `identifiant === 'lea.marchand'` — un compte du jeu de
+	 * démonstration, écrit en dur —, au motif que `Compte` n'en porte pas de
+	 * champ. `comptes.mot_de_passe_verrouille` existe pourtant, et la création
+	 * l'écrit depuis `#f-verrou` : la route la lit désormais et la sert.
 	 */
-	const IDENTIFIANT_VERROUILLE = 'lea.marchand';
 
 	/** Le domaine proposé à la création : le premier de la liste (`V-32:3149`). */
 	const PREMIER_DOMAINE = $derived(domaines[0]?.nom ?? '');
@@ -250,7 +253,7 @@
 	const comptes: readonly CompteRendu[] = $derived(
 		registreDeComptes.map((c) => ({
 			compte: c,
-			verrouille: c.identifiant === IDENTIFIANT_VERROUILLE
+			verrouille: verrous[c.identifiant] === true
 		}))
 	);
 
@@ -451,9 +454,11 @@
 	const panneauOuvert = $derived(form !== 'ferme' || demandeDEdition !== null || demandeDeCreation);
 
 	/**
-	 * Le compte édité : celui que « Modifier » désigne, sinon « Karim Belhadj »
-	 * pour la position `edition` et le premier administrateur actif pour `admin`
-	 * (`V-32:3342`).
+	 * Le compte édité : celui que « Modifier » désigne, sinon LE PREMIER DU
+	 * REGISTRE SERVI pour la position `edition` — le gel y nomme « Karim Belhadj »
+	 * (`V-32:3342`), qui est le premier compte de son jeu : le désigner par son
+	 * rang dit la même chose sans écrire un compte de démonstration — et le
+	 * premier administrateur actif pour `admin`.
 	 */
 	const edite = $derived<CompteRendu | null>(
 		demandeDeCreation
@@ -461,7 +466,7 @@
 			: demandeDEdition !== null
 				? (comptes.find((c) => c.compte.identifiant === demandeDEdition) ?? null)
 				: form === 'edition'
-					? (comptes.find((c) => c.compte.identifiant === 'karim.belhadj') ?? null)
+					? (comptes[0] ?? null)
 					: form === 'admin'
 						? (administrateurs[0] ?? null)
 						: null
@@ -684,6 +689,15 @@
 	);
 </script>
 
+<!--
+	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI.
+	La vue passait `instance.version` — le `1.0.0` d'`INSTANCE` du jeu de
+	démonstration, servi comme un fait sur le pied du rail d'une instance
+	réelle. Aucune route ne passe de version : `Coquille` lit celle du paquet
+	sur le contexte que le gabarit racine pose, et la propriété n'est plus
+	qu'un état vide explicite — hors gabarit racine, le pied ne nomme rien
+	plutôt que de nommer un numéro de démonstration.
+-->
 <Coquille
 	forme="abregee"
 	role="admin"
@@ -701,7 +715,7 @@
 		role: compte.role,
 		domaine: compte.domaine
 	}}
-	version={instance.version}
+	version=""
 >
 	{#snippet avantContenu()}
 		<NavigationConsole courante="comptes" />
