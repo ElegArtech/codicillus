@@ -204,8 +204,19 @@ function poserChamp(formulaire: HTMLFormElement, nom: string, valeur: string): v
  * `requestSubmit(soumetteur)` le désigne explicitement. Rien n'est réécrit, rien
  * n'est à remettre, il n'y a plus de fenêtre pendant laquelle le formulaire vise
  * autre chose que ce qu'il vise d'ordinaire.
+ *
+ * LE SOUMETTEUR PEUT PORTER UN COUPLE, ET C'EST LE SEUL CHAMP QUI NE VOYAGE PAS
+ * TOUJOURS. Un formulaire n'envoie QUE le soumetteur qui l'a déclenché : là où
+ * tous les autres champs partent à chaque soumission — les trois dialogues de
+ * V-13 vivent dans le même formulaire —, celui-ci désigne l'objet du geste sans
+ * qu'aucun nom puisse entrer en collision avec un homonyme resté ouvert
+ * ailleurs. Sans couple, le soumetteur reste anonyme et n'envoie rien.
  */
-export function soumettreVers(formulaire: HTMLFormElement, action: string): void {
+export function soumettreVers(
+	formulaire: HTMLFormElement,
+	action: string,
+	couple?: { readonly nom: string; readonly valeur: string }
+): void {
 	const document = formulaire.ownerDocument;
 	const existant = formulaire.querySelector<HTMLButtonElement>('button[data-cable-action]');
 	const soumetteur = existant ?? document.createElement('button');
@@ -213,6 +224,8 @@ export function soumettreVers(formulaire: HTMLFormElement, action: string): void
 	soumetteur.hidden = true;
 	soumetteur.dataset['cableAction'] = action;
 	soumetteur.formAction = action;
+	soumetteur.name = couple?.nom ?? '';
+	soumetteur.value = couple?.valeur ?? '';
 	if (existant === null) formulaire.appendChild(soumetteur);
 	formulaire.requestSubmit(soumetteur);
 }
