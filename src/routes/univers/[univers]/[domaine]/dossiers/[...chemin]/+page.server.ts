@@ -238,10 +238,13 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			refus: motifDeRefusDeDestination(lignes, dossier.id, d.id)
 		}));
 
-	/* L'INSTANT DE RÉFÉRENCE EST PRIS UNE FOIS, et non à chaque comptage : deux
-	   appels à `new Date()` dans une même page peuvent tomber de part et d'autre
-	   d'une frontière de jour. */
-	const maintenant = new Date();
+	/* L'INSTANT DE RÉFÉRENCE EST PRIS UNE FOIS, et c'est celui de l'accès. La
+	   fraîcheur de chaque note se compte déjà sur lui — `acces.contexte` le porte
+	   jusqu'à `lireNotesLisibles()` —, et l'ancienneté de modification se compte
+	   sur la même ligne de l'écran. Un second appel à `new Date()` ici pourrait
+	   tomber de l'autre côté d'une frontière de jour : la même note annoncerait
+	   alors sa fraîcheur et son âge depuis deux dates de référence. */
+	const maintenant = acces.contexte.maintenant;
 	const notesLisibles = await lireNotesLisibles(base, acces.perimetre, acces.contexte);
 
 	return {
@@ -273,7 +276,11 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		rangement: {
 			destinations,
 			dossierId: dossier.id,
-			/* Un dossier de page a toujours un parent : la racine n'a pas de page. */
+			/* LA RACINE A UNE PAGE, ET ELLE N'A PAS DE PARENT — voir plus haut, la
+			   résolution de son adresse. La chaîne vide dit cette absence, et le
+			   sélecteur de destination du dialogue de déplacement ne coche alors
+			   aucune ligne (`V-13:1317`). Ce dialogue n'est de toute façon pas rendu
+			   sur la racine : les deux écritures y refusent muettement. */
 			parentId: dossier.parentId ?? ''
 		},
 		/**
