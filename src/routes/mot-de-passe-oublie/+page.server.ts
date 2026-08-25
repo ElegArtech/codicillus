@@ -1,41 +1,34 @@
 /**
- * `/mot-de-passe-oublie` — LE CHARGEUR de V-06, étapes 1 et 2.
+ * `/mot-de-passe-oublie` — LE CHARGEUR de V-06.
  *
- * `docs/routes.md:114` : niveau « anonyme », et la batterie 6 le range hors
- * matrice avec la forme **servi** pour les sept personas — une adresse de
- * récupération qui refuserait un connecté serait une porte fermée de plus.
- * `src/lib/auth/garde.ts` la classe `publique` : rien ne la redirige.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * L'ÉTAT RENDU EST L'ÉTAPE 1, ET LES DEUX AUTRES AXES SONT VERROUILLÉS
- *
- * `vecteurDeV06Etape1()` porte le raisonnement, et il tient en une phrase :
- * la position « Identifiant inconnu » de la planche EMPILE UNE NOTIFICATION,
- * donc elle révèle qu'un compte n'existe pas. `RG-ACC-04` l'interdit, et le gel
- * l'écrit de lui-même. Aucun chemin de ce lot ne la pose.
- *
- * L'ÉTAPE 2 — « Demande envoyée » — n'est pas atteignable par l'adresse : elle
- * suit une soumission, et le formulaire gelé ne poste pas (`ARB-054` §3).
+ * `docs/routes.md:114` : niveau « anonyme ». `src/lib/auth/garde.ts` la classe
+ * `publique` : rien ne la redirige — une adresse de récupération qui refuserait
+ * un connecté serait une porte fermée de plus.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * LA DEMANDE N'ABOUTIT PAS, ET LA CAUSE EST UNE TABLE QUI N'EXISTE PAS
+ * L'ÉCRAN A CESSÉ DE PROMETTRE UN COURRIEL, ET L'ACTION A CESSÉ DE RENDRE 501
  *
- * `SANS_CONTREPARTIE_EN_BASE` de `$lib/donnees/profil` le compte : le schéma
- * porte `sessions` et `tentatives_de_connexion`, et **aucune table de jeton de
- * réinitialisation**, aucune colonne de jeton sur `comptes`. `base/**` n'est
- * pas le périmètre de ce lot : la lacune est DÉCLARÉE, pas migrée — c'est la
- * borne 4 du contrat de `T-038`.
+ * Le produit n'a AUCUN expéditeur de courriel, et aucune table ne porte de
+ * jeton de réinitialisation. L'écran promettait pourtant « vous recevrez un
+ * lien de réinitialisation sur votre adresse professionnelle », et l'action
+ * répondait `error(501)` à qui soumettait son identifiant : sur la SEULE porte
+ * de secours d'un compte dont l'accès est perdu, c'était une page d'erreur.
  *
- * L'action rend donc **501**, la réponse qui dit « pas implémenté » sans rien
- * inventer, et elle la rend À TOUT LE MONDE : même code, même corps, quel que
- * soit l'identifiant saisi. Un envoi simulé, lui, aurait affiché « demande
- * envoyée » pour un courriel que personne n'a écrit — une valeur illustrative,
- * ce que `P-02` interdit.
+ * V-06 rend désormais ce qui est vrai — la réinitialisation par courriel n'est
+ * pas disponible sur cette instance — et nomme le chemin QUI EXISTE : la
+ * réinitialisation par un administrateur, servie par `/console/comptes`
+ * (action `reinitialiserLeMotDePasse`).
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * `RG-ACC-04` — RIEN NE PEUT PLUS RÉVÉLER QU'UN COMPTE EXISTE
+ *
+ * Le chargeur ne lit aucun compte, l'écran ne demande aucun identifiant, et
+ * l'action ci-dessous ne regarde pas son corps. La réponse est donc la même
+ * pour tout le monde — même code, même page, sans lecture en base, donc sans
+ * écart de temps entre un identifiant connu et un inconnu.
  */
-import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { lireConfiguration } from '$lib/donnees/lecture';
-import { vecteurDeV06Etape1 } from '$lib/donnees/profil';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
@@ -45,15 +38,26 @@ import type { Actions, PageServerLoad } from './$types';
  * `portail_assistance` de la table `parametres` (M14.7).
  */
 export const load: PageServerLoad = async () => ({
-	vecteur: vecteurDeV06Etape1(),
 	portail: (await lireConfiguration(basePartagee())).portailAssistance
 });
 
 export const actions: Actions = {
-	default: () => {
-		/* Aucune lecture n'est faite avant de refuser, et c'est la forme la plus
-		   sûre au regard de `RG-ACC-04` : sans requête, il n'y a pas d'écart de
-		   temps entre un identifiant connu et un inconnu. */
-		error(501, "la demande de réinitialisation n'est pas implémentée");
-	}
+	/**
+	 * L'ÉCRAN NE PORTE PLUS AUCUN FORMULAIRE : cette action n'est atteinte que
+	 * par une requête composée à la main. Elle ne rend RIEN, et ne lit ni le
+	 * corps ni la base — la réponse est donc la même pour tout envoi.
+	 *
+	 * CE QUE « NE RIEN RENDRE » PRODUIT DÉPEND DU CLIENT, et les deux cas ont
+	 * été mesurés plutôt que supposés. Un envoi de formulaire de navigateur
+	 * (`Accept: text/html`) obtient `200` et LA PAGE ELLE-MÊME, re-rendue par
+	 * le chargeur ci-dessus. Un client qui négocie `application/json` obtient
+	 * l'enveloppe d'action de SvelteKit — `204`, sans donnée —, jamais la
+	 * page : c'est l'enveloppe, pas l'écran, et la confondre avec lui fait
+	 * prendre une mesure pour une autre.
+	 *
+	 * Dans les deux cas, `error(501)` a disparu : il disait « pas implémenté »
+	 * à l'utilisateur enfermé dehors, au lieu de l'écran qui nomme le chemin
+	 * réel.
+	 */
+	default: () => {}
 };

@@ -27,9 +27,13 @@
 	 * toutes. Chaque geste vise donc `?/…` explicitement.
 	 *
 	 * LES NOMS DE CHAMP SONT LES IDENTIFIANTS DU GEL — `p-affiche`,
-	 * `p-courriel`, `p-session`, `actuel`, `nouveau`, `confirmation`. Rien n'est
-	 * traduit : le nom est repris de l'identifiant, convention posée par
-	 * `cablerLaConnexion()` et `cablerLeSignet()`.
+	 * `p-session`, `actuel`, `nouveau`, `confirmation`. Rien n'est traduit : le
+	 * nom est repris de l'identifiant, convention posée par `cablerLaConnexion()`
+	 * et `cablerLeSignet()`.
+	 *
+	 * L'interrupteur de notification par courriel du gel n'est PLUS ÉMIS par
+	 * V-25 : aucune colonne ne le porterait, et le produit n'a aucun expéditeur
+	 * de courriel. Aucun geste ne le vise donc ici.
 	 *
 	 * SANS JAVASCRIPT, CET ÉCRAN NE SOUMET PAS. `ARB-063` §4 le déclare pour les
 	 * sept formulaires du produit, et dit ce qu'il faudrait pour le combler.
