@@ -377,7 +377,70 @@ export interface CibleDeCreation {
 export type ResolutionDeCible =
 	| { readonly sort: 'cible'; readonly cible: CibleDeCreation }
 	| { readonly sort: 'introuvable' }
-	| { readonly sort: 'fiche-introuvable' };
+	| { readonly sort: 'fiche-introuvable' }
+	/**
+	 * Le type de fiche existe, et l'une au moins de ses propriétés OBLIGATOIRES
+	 * n'a pas de valeur. Ce n'est ni un 404 — la note n'est pas en cause — ni
+	 * une erreur de forme : c'est un champ que le rédacteur peut remplir. Les
+	 * manquantes sont NOMMÉES, faute de quoi l'écran ne pourrait dire ni
+	 * laquelle ni où.
+	 */
+	| {
+			readonly sort: 'proprietes-manquantes';
+			readonly manquantes: readonly ProprieteManquante[];
+	  };
+
+/**
+ * UNE PROPRIÉTÉ OBLIGATOIRE SANS VALEUR — sa CLÉ et son NOM, les deux.
+ *
+ * La clé porte le foyer (`erreur-fiche-{cle}`, `../cablage/formulaires.ts`), le
+ * nom porte la phrase. Ne rendre que la clé obligerait l'écran à retraduire un
+ * identifiant technique en libellé ; ne rendre que le nom lui interdirait de
+ * désigner le champ — deux propriétés peuvent porter le même nom d'affichage,
+ * seule la clé est unique par type (`champs_cle_par_type_unique`).
+ */
+export interface ProprieteManquante {
+	readonly cle: string;
+	readonly nom: string;
+}
+
+/**
+ * LA COLONNE QUI COMMANDE L'OBLIGATION, LIÉE AU SCHÉMA ET JAMAIS RECOPIÉE.
+ *
+ * `Pick` sur le type que drizzle DÉRIVE de la table : renommer la colonne, la
+ * retirer, ou en changer le type fait rougir `pnpm check` ici même. C'est la
+ * leçon de la jonction manquée du 25/08/2026 — une forme de donnée redéclarée
+ * à la main est une divergence qu'aucun compilateur ne voit.
+ */
+export type ChampObligeant = Pick<
+	typeof champsDeTypeDeFiche.$inferSelect,
+	'cle' | 'nom' | 'obligatoire'
+>;
+
+/**
+ * LES PROPRIÉTÉS OBLIGATOIRES QUE LA SAISIE NE RENSEIGNE PAS — fonction PURE,
+ * donc éprouvable dans les deux polarités sans base (`P-5`).
+ *
+ * Elle lit ce que `retenirLesProprietes()` a RETENU, pas ce que le formulaire a
+ * envoyé : une valeur vide y est déjà écartée, et une clé inconnue du type n'a
+ * jamais eu à être exigée. Les deux filtres restent ainsi une seule définition
+ * de « propriété renseignée ».
+ *
+ * L'ORDRE EST CELUI DU RÉFÉRENTIEL, celui-là même que l'éditeur affiche : le
+ * rédacteur lit les manquantes dans l'ordre où il voit ses champs.
+ */
+export function proprietesObligatoiresManquantes(
+	champs: readonly ChampObligeant[],
+	retenues: Readonly<Record<string, string>>
+): readonly ProprieteManquante[] {
+	const manquantes: ProprieteManquante[] = [];
+	for (const champ of champs) {
+		if (!champ.obligatoire) continue;
+		const valeur = retenues[champ.cle];
+		if (valeur === undefined || valeur === '') manquantes.push({ cle: champ.cle, nom: champ.nom });
+	}
+	return manquantes;
+}
 
 /**
  * LA CIBLE QU'UNE SAISIE DÉSIGNE, ou son refus — et il y en a deux, pas un.
@@ -456,7 +519,10 @@ export async function resoudreLaCible(
 	if (dossier === null) return { sort: 'introuvable' };
 
 	const fiche = await resoudreLeTypeDeFiche(base, saisie);
-	if (fiche === null) return { sort: 'fiche-introuvable' };
+	if (fiche.sort === 'introuvable') return { sort: 'fiche-introuvable' };
+	if (fiche.sort === 'manquantes') {
+		return { sort: 'proprietes-manquantes', manquantes: fiche.manquantes };
+	}
 
 	return {
 		sort: 'cible',
@@ -473,11 +539,10 @@ export async function resoudreLaCible(
 /**
  * LE TYPE DE FICHE QU'UNE SAISIE DÉSIGNE, ET LES PROPRIÉTÉS QU'IL AUTORISE.
  *
- * `null` est le refus : un nom de type de fiche INCONNU est refusé, jamais
- * ignoré. L'ignorer écrirait une note simple là où l'utilisateur a choisi une
- * fiche, et rien à l'écran ne le dirait — c'est exactement la famille de
- * défauts que ce lot referme. L'appelant en fait un refus À PART, distinct de
- * l'introuvable : voir `ResolutionDeCible`.
+ * TROIS ISSUES, PAS DEUX. Un nom de type de fiche INCONNU est refusé, jamais
+ * ignoré : l'ignorer écrirait une note simple là où l'utilisateur a choisi une
+ * fiche, et rien à l'écran ne le dirait. L'appelant en fait un refus À PART,
+ * distinct de l'introuvable : voir `ResolutionDeCible`.
  *
  * LES PROPRIÉTÉS SONT FILTRÉES SUR LES CLÉS RÉELLES du type.
  * `notes.proprietes_typees` est un `jsonb` : la base n'y contraint aucune clé,
@@ -485,31 +550,61 @@ export async function resoudreLaCible(
  * pas un champ du type est ÉCARTÉ — pas refusé : le référentiel est
  * administrable (M14), un champ retiré en console entre les deux moments d'une
  * saisie ferait sinon échouer un enregistrement que rien n'a rendu faux.
+ *
+ * CE QUI EST OBLIGATOIRE, EN REVANCHE, EST EXIGÉ. La dissymétrie est la même
+ * dans les deux sens : un champ que le référentiel ne connaît PLUS ne peut pas
+ * faire échouer une saisie ; un champ qu'il déclare requis ne peut pas être
+ * enregistré vide. `mockups/V-29:3153` — « La note ne pourra pas être
+ * enregistrée sans cette valeur ». Une case cochée en console qui ne refuse
+ * rien nulle part est une promesse d'écran sans effet.
  */
-async function resoudreLeTypeDeFiche(
-	base: Base,
-	saisie: SaisieDeNote
-): Promise<{
-	readonly typeDeFicheId: string | null;
-	readonly proprietesTypees: Readonly<Record<string, string>> | null;
-} | null> {
-	if (saisie.fiche === null) return { typeDeFicheId: null, proprietesTypees: null };
+type ResolutionDeFiche =
+	| {
+			readonly sort: 'fiche';
+			readonly typeDeFicheId: string | null;
+			readonly proprietesTypees: Readonly<Record<string, string>> | null;
+	  }
+	| { readonly sort: 'introuvable' }
+	| { readonly sort: 'manquantes'; readonly manquantes: readonly ProprieteManquante[] };
+
+async function resoudreLeTypeDeFiche(base: Base, saisie: SaisieDeNote): Promise<ResolutionDeFiche> {
+	if (saisie.fiche === null) {
+		return { sort: 'fiche', typeDeFicheId: null, proprietesTypees: null };
+	}
 	const [type] = await base
 		.select({ id: typesDeFiche.id })
 		.from(typesDeFiche)
 		.where(eq(typesDeFiche.nom, saisie.fiche))
 		.limit(1);
-	if (type === undefined) return null;
+	if (type === undefined) return { sort: 'introuvable' };
 
-	const clesConnues = await base
-		.select({ cle: champsDeTypeDeFiche.cle })
+	/* TROIS COLONNES SONT LUES LÀ OÙ UNE SUFFISAIT, et c'est la correction de
+	   fond : la requête était déjà faite, elle ne rapportait que les CLÉS. Le
+	   caractère obligatoire descendait de la console jusqu'à la base et
+	   s'arrêtait là — l'administrateur cochait « Propriété obligatoire »,
+	   l'écran le lui confirmait, et rien nulle part n'exigeait la valeur. */
+	const champs = await base
+		.select({
+			cle: champsDeTypeDeFiche.cle,
+			nom: champsDeTypeDeFiche.nom,
+			obligatoire: champsDeTypeDeFiche.obligatoire
+		})
 		.from(champsDeTypeDeFiche)
-		.where(eq(champsDeTypeDeFiche.typeDeFicheId, type.id));
+		.where(eq(champsDeTypeDeFiche.typeDeFicheId, type.id))
+		/* LE TRI N'EST PAS UN AGRÉMENT, IL ACCORDE DEUX ÉCRANS. `lireTypesDeFiche()`
+		   (`./lecture.ts`) trie par `typesDeFiche.ordre, champsDeTypeDeFiche.ordre` :
+		   c'est dans CET ordre que l'éditeur peint les champs. Sans le même tri ici,
+		   la liste des manquantes serait rendue dans l'ordre où la base répond, et le
+		   rédacteur lirait ses champs dans un ordre et ses refus dans un autre. */
+		.orderBy(champsDeTypeDeFiche.ordre);
 	const retenues = retenirLesProprietes(
 		saisie.proprietes ?? {},
-		clesConnues.map((c) => c.cle)
+		champs.map((c) => c.cle)
 	);
+	const manquantes = proprietesObligatoiresManquantes(champs, retenues);
+	if (manquantes.length > 0) return { sort: 'manquantes', manquantes };
 	return {
+		sort: 'fiche',
 		typeDeFicheId: type.id,
 		proprietesTypees: Object.keys(retenues).length === 0 ? null : retenues
 	};
