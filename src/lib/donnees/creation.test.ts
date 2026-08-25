@@ -29,7 +29,9 @@ import {
 	etiquettesDeSaisie,
 	lireLaSaisie,
 	proprietesSoumises,
-	retenirLesProprietes
+	proprietesObligatoiresManquantes,
+	retenirLesProprietes,
+	type ChampObligeant
 } from './creation';
 
 /** Un formulaire de création complet — la base des cas ci-dessous. */
@@ -427,5 +429,63 @@ describe('retenirLesProprietes — le jsonb n’est contraint par rien d’autre
 	it('rend une table vide quand rien ne correspond', () => {
 		expect(retenirLesProprietes({ intrus: 'x' }, ['hote'])).toEqual({});
 		expect(retenirLesProprietes({}, [])).toEqual({});
+	});
+});
+
+/**
+ * L'OBLIGATION, ET LE MOMENT OÙ ELLE MORD — la moitié PURE du refus.
+ *
+ * L'autre moitié — lire la colonne `obligatoire` de `champs_de_type_de_fiche` —
+ * demande la base, qui est partagée (`P-30`) ; elle a été relevée dans un
+ * navigateur, sur la chaîne entière « console → base → éditeur → refus ».
+ *
+ * Les champs ci-dessous sont typés `ChampObligeant`, c'est-à-dire par un `Pick`
+ * sur ce que drizzle DÉRIVE de la table : la forme éprouvée est celle du
+ * schéma, jamais une forme écrite ici. C'est le lien qui manquait le 25/08/2026
+ * à 17:13:45, quand une interface recopiée à la main a rendu trois colonnes
+ * invisibles sans qu'aucun compilateur ne bronche.
+ */
+describe('proprietesObligatoiresManquantes — ce que le schéma exige, et rien de plus', () => {
+	const CHAMPS: readonly ChampObligeant[] = [
+		{ cle: 'adresse_ip', nom: 'Adresse IP', obligatoire: true },
+		{ cle: 'salle', nom: 'Salle', obligatoire: true },
+		{ cle: 'commentaire', nom: 'Commentaire', obligatoire: false }
+	];
+
+	it('nomme chaque propriété obligatoire sans valeur — sa clé ET son nom', () => {
+		expect(proprietesObligatoiresManquantes(CHAMPS, {})).toEqual([
+			{ cle: 'adresse_ip', nom: 'Adresse IP' },
+			{ cle: 'salle', nom: 'Salle' }
+		]);
+	});
+
+	it('ne rend rien quand toutes les obligatoires sont renseignées', () => {
+		expect(
+			proprietesObligatoiresManquantes(CHAMPS, { adresse_ip: '10.0.0.99', salle: 'C03' })
+		).toEqual([]);
+	});
+
+	it('n’EXIGE JAMAIS une propriété que le schéma ne marque pas', () => {
+		expect(
+			proprietesObligatoiresManquantes(CHAMPS, { adresse_ip: '10.0.0.99', salle: 'C03' })
+		).toEqual([]);
+		expect(proprietesObligatoiresManquantes([CHAMPS[2] as ChampObligeant], {})).toEqual([]);
+	});
+
+	it('une valeur VIDE ne vaut pas une valeur — `retenirLesProprietes()` l’a déjà écartée', () => {
+		expect(proprietesObligatoiresManquantes(CHAMPS, { adresse_ip: '', salle: 'C03' })).toEqual([
+			{ cle: 'adresse_ip', nom: 'Adresse IP' }
+		]);
+	});
+
+	it('rend les manquantes DANS L’ORDRE DU RÉFÉRENTIEL, celui que l’éditeur affiche', () => {
+		const inverse: readonly ChampObligeant[] = [
+			{ cle: 'salle', nom: 'Salle', obligatoire: true },
+			{ cle: 'adresse_ip', nom: 'Adresse IP', obligatoire: true }
+		];
+		expect(proprietesObligatoiresManquantes(inverse, {}).map((p) => p.cle)).toEqual([
+			'salle',
+			'adresse_ip'
+		]);
 	});
 });
