@@ -61,6 +61,12 @@ import {
 	type Version
 } from '../../seeds/corpus';
 import { CONFIGURATION_PAR_DEFAUT } from '../lib/base/schema';
+/* LES DEUX POSITIONS DE PLANCHE SERVIES ET LA DÉRIVATION DES TERMES VIENNENT DE
+   LEURS SOURCES, celles-là mêmes que `+error.svelte` et les vues emploient. Les
+   recopier ici aurait éprouvé la copie, et la copie aurait pu diverger sans que
+   rien ne rougisse. */
+import { casDeV04, casDeV26 } from '../lib/donnees/public';
+import { requeteDepuisAdresse } from '../lib/public/adresse-non-resolue';
 
 type Proprietes = Record<string, unknown>;
 type Rendre = (composant: unknown, options: { props: Proprietes }) => { body: string };
@@ -204,6 +210,23 @@ const VUES: Readonly<
 			{ cle: 'distinctions', defaut: DISTINCTIONS, autre: DISTINCTIONS.slice(0, 1) },
 			{ cle: 'activite', defaut: ACTIVITE, autre: ACTIVITE.slice(0, 1) },
 			{ cle: 'relations', defaut: RELATIONS, autre: [] }
+		]
+	},
+	/* V-04 N'A PAS DE COQUILLE (`docs/releve-vues.md` §5.1) : l'adresse du portail
+	   d'assistance est la seule donnée d'instance qui la traverse. L'adresse
+	   demandée, elle, ne s'éprouve pas ici — son défaut est un littéral de
+	   planche que la vue n'exporte pas, et le recopier ferait de ce cas une
+	   épreuve de la copie. Elle a ses propres cas, plus bas, qui LISENT le défaut
+	   sur le rendu de la vue au lieu de le redéclarer. */
+	'V-04': {
+		base: { vecteur: null },
+		sources: [
+			{
+				cle: 'portail',
+				defaut: CONFIG.portailAssistance,
+				autre: 'https://assistance.exemple.test/autre',
+				marqueur: 'https://assistance.exemple.test/autre'
+			}
 		]
 	},
 	'V-26': { base: { vecteur: null }, sources: coquille(['univers', 'domaines']) },
@@ -487,5 +510,128 @@ describe('V-25 — l’interrupteur de notification par courriel n’est plus é
 
 	it('garde l’interrupteur de session, lui, qui a bien sa contrepartie', () => {
 		expect(rendu()).toContain('p-session');
+	});
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   V-04 ET V-26 — LA PAGE D'ADRESSE NON RÉSOLUE DIT L'ADRESSE DEMANDÉE
+
+   LE DÉFAUT N'EST PAS RECOPIÉ, IL EST LU SUR LE RENDU DE LA VUE. Les adresses
+   de planche sont des littéraux internes aux deux vues, qui ne les exportent
+   pas : les redéclarer ici aurait fait de ces cas l'épreuve d'une copie, verte
+   le jour où la vue et la copie changeraient ensemble et fausses toutes les
+   deux. Chaque cas rend donc d'abord la vue SANS adresse, relève ce que la
+   ligne « Adresse demandée » porte alors, et exige que ce relevé ait DISPARU du
+   rendu servi.
+
+   LE CHEMIN VIENT DE SON PRODUCTEUR. `+error.svelte` passe `page.url.pathname`
+   — le composant `pathname` d'une URL. Les cas le produisent de la même façon,
+   par `new URL(...)`, et non par une chaîne écrite à la main qui aurait pu ne
+   pas être un chemin. Les termes de recherche, eux, viennent de la fonction que
+   la vue emploie : `requeteDepuisAdresse()`, importée de sa source.
+
+   CE QUE CES CAS NE PROUVENT PAS : que la route passe bien la propriété. Cela
+   se voit dans un navigateur, sur une adresse cassée d'une instance réelle, et
+   c'est là que la preuve du lot a été faite.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/** Le contenu textuel du nœud d'identifiant donné, tel que le rendu le porte. */
+function contenuDe(rendu: string, identifiant: string): string {
+	const motif = new RegExp(`<span id="${identifiant}"[^>]*>([^<]*)</span>`, 'u');
+	return motif.exec(rendu)?.[1] ?? '';
+}
+
+/* Une adresse d'instance qui n'existe nulle part, produite comme le produit la
+   produit : le chemin d'une URL. L'hôte est indifférent — `pathname` ne le
+   porte pas —, et le domaine de premier niveau réservé aux essais le dit. */
+const CHEMIN_DEMANDE = new URL('https://codicillus.invalid/notes/inexistante-xyz').pathname;
+const CHEMIN_PUBLIC_DEMANDE = new URL('https://codicillus.invalid/guides/inexistant').pathname;
+
+describe('V-26 — l’adresse demandée en session', () => {
+	/* La position que le produit sert, nommée par la fonction qui la décide —
+	   jamais par un littéral. La pierre tombale, position PAR DÉFAUT de la vue,
+	   ne passe pas par `adresseNonResolue()` et ne lit donc pas cette source. */
+	const base = { vecteur: { cas: casDeV26(), droits: 'ecriture' } };
+
+	it('affiche le chemin demandé, et l’adresse de la planche a disparu', () => {
+		const planche = contenuDe(corps('V-26', base), 'adresse');
+		expect(planche).not.toBe('');
+		const rendu = corps('V-26', base, { adresse: CHEMIN_DEMANDE });
+		expect(contenuDe(rendu, 'adresse')).toBe(CHEMIN_DEMANDE);
+		expect(rendu).not.toContain(planche);
+	});
+
+	it('amorce la recherche sur les termes du chemin demandé', () => {
+		const rendu = corps('V-26', base, { adresse: CHEMIN_DEMANDE });
+		expect(rendu).toContain(`value="${requeteDepuisAdresse(CHEMIN_DEMANDE)}"`);
+	});
+
+	it('« Créer la note » ne propose plus le titre d’une note de démonstration', () => {
+		const requeteDeLaPlanche = requeteDepuisAdresse(contenuDe(corps('V-26', base), 'adresse'));
+		const rendu = corps('V-26', base, { adresse: CHEMIN_DEMANDE });
+		expect(rendu).toContain(`Créer la note « ${requeteDepuisAdresse(CHEMIN_DEMANDE)} »`);
+		expect(rendu).not.toContain(`Créer la note « ${requeteDeLaPlanche} »`);
+	});
+
+	it('la pierre tombale, elle, ne lit pas l’adresse demandée — elle n’en a pas', () => {
+		const tombe = { vecteur: { cas: 'supprimee' } };
+		expect(corps('V-26', tombe, { adresse: CHEMIN_DEMANDE })).toBe(corps('V-26', tombe));
+	});
+});
+
+describe('V-04 — l’adresse demandée en anonyme', () => {
+	const base = { vecteur: { cas: casDeV04(CHEMIN_PUBLIC_DEMANDE) } };
+
+	it('affiche le chemin demandé, et l’adresse de la planche a disparu', () => {
+		const planche = contenuDe(corps('V-04', base), 'adresse');
+		expect(planche).not.toBe('');
+		const rendu = corps('V-04', base, { adresse: CHEMIN_PUBLIC_DEMANDE });
+		expect(contenuDe(rendu, 'adresse')).toBe(CHEMIN_PUBLIC_DEMANDE);
+		expect(rendu).not.toContain(planche);
+	});
+
+	it('amorce la recherche sur les termes du chemin demandé', () => {
+		const rendu = corps('V-04', base, { adresse: CHEMIN_PUBLIC_DEMANDE });
+		expect(rendu).toContain(`value="${requeteDepuisAdresse(CHEMIN_PUBLIC_DEMANDE)}"`);
+	});
+
+	/* `/guides` nu est le seul cas où la table de la planche coïncidait avec le
+	   chemin demandé — par accident. Il coïncide encore, et pour une raison :
+	   c'est le chemin lui-même qui descend. */
+	it('l’adresse racine du corpus public reste la sienne', () => {
+		const nu = new URL('https://codicillus.invalid/guides').pathname;
+		const rendu = corps('V-04', { vecteur: { cas: casDeV04(nu) } }, { adresse: nu });
+		expect(contenuDe(rendu, 'adresse')).toBe(nu);
+	});
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   V-04 — LE TICKET D'ASSISTANCE N'EST OFFERT QU'AVEC UNE DESTINATION
+
+   MÊME RÈGLE QUE V-06, ET MÊME VALEUR ÉPROUVÉE : `CONFIGURATION_PAR_DEFAUT`,
+   le défaut sur lequel la lecture de `parametres` retombe quand la clé est
+   absente — l'état d'une instance neuve. Le bouton était la SEULE issue externe
+   de l'écran, et il portait le domaine d'exemple du jeu de démonstration.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('V-04 — l’issue d’assistance', () => {
+	const base = { vecteur: null };
+
+	it('n’émet pas le bouton quand l’instance n’a pas d’adresse', () => {
+		const rendu = corps('V-04', base, { portail: CONFIGURATION_PAR_DEFAUT.portailAssistance });
+		expect(rendu).not.toContain('id="ticket"');
+		expect(rendu).not.toContain("Ouvrir un ticket d'assistance");
+		/* L'autre issue, elle, reste rendue : l'écran n'est pas une impasse. */
+		expect(rendu).toContain('id="accueil"');
+	});
+
+	it('l’émet dès qu’une adresse est renseignée, et c’est celle-là', () => {
+		const adresse = 'https://assistance.exemple.test/nouveau';
+		const rendu = corps('V-04', base, { portail: adresse });
+		expect(rendu).toContain('id="ticket"');
+		expect(rendu).toContain(adresse);
+	});
+
+	it('une adresse blanche ne mène pas plus loin qu’une adresse absente', () => {
+		expect(corps('V-04', base, { portail: '   ' })).not.toContain('id="ticket"');
 	});
 });

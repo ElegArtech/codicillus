@@ -104,10 +104,18 @@
 			ecriture?: boolean;
 			compte?: { nom: string; initiales: string; role: string; domaine: string } | null;
 			domaines?: readonly { nom: string; univers: string; couleur: string }[];
+			portailAssistance?: string;
 		}
 	);
 	const session = $derived(donnees.session === true);
 	const ecriture = $derived(donnees.ecriture === true);
+	/**
+	 * SANS DONNÉE DE GABARIT — chargeur en échec, rendu de secours —, la chaîne
+	 * vide : V-04 n'émet alors pas le bouton, plutôt que de retomber sur le
+	 * domaine d'exemple du jeu de démonstration. Un lien d'assistance qui pointe
+	 * vers `exemple.fr` est pire que pas de lien.
+	 */
+	const portail = $derived(donnees.portailAssistance ?? '');
 
 	const nonResolue = $derived(page.status === 404);
 	const vue = $derived(vueDeLAdresseNonResolue(page.url.pathname, session));
@@ -134,9 +142,19 @@
 		     base : sans eux, la page d'adresse non résolue affichait l'identité et
 		     le rangement du jeu de semence — « Karim Belhadj », « Infrastructure »
 		     — sur une instance qui ne les a jamais portés. -->
+		<!--
+			L'ADRESSE DEMANDÉE, ET C'EST LA SEULE ENTRÉE D'`adresseNonResolue()`.
+			Les deux vues n'avaient aucune propriété pour la recevoir et retombaient
+			sur les tables d'adresses de leurs planches : toute adresse cassée de
+			l'instance annonçait celle d'une note de démonstration, et le bouton
+			« Créer la note » de V-26 ouvrait l'éditeur avec ce titre-là, prêt à être
+			enregistré en base. C'est un CHEMIN qui descend, jamais une raison —
+			`ADR-007` reste tenu : les deux cas rendent le même écran.
+		-->
 		<VueConnectee
 			vecteur={{ cas: casDeV26(), droits: ecriture ? 'ecriture' : 'lecture' }}
 			notes={[]}
+			adresse={page.url.pathname}
 			{...donnees.session === true ? { reprises: [] } : {}}
 			{...donnees.compte === null || donnees.compte === undefined
 				? {}
@@ -144,7 +162,12 @@
 			{...donnees.domaines === undefined ? {} : { domaines: donnees.domaines as never }}
 		/>
 	{:else}
-		<VuePublique vecteur={{ cas: casDeV04(page.url.pathname) }} notes={[]} />
+		<VuePublique
+			vecteur={{ cas: casDeV04(page.url.pathname) }}
+			notes={[]}
+			adresse={page.url.pathname}
+			{portail}
+		/>
 	{/if}
 {:else}
 	<h1>{page.status}</h1>
