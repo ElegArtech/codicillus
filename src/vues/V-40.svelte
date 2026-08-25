@@ -27,7 +27,7 @@
 	 *
 	 * LA NOTE N'EST PLUS FIXÉE ICI. `d-relation` composait son aperçu autour de
 	 * `n-restaurer-pg` quelle que fût la note regardée ; la propriété `note` la
-	 * reçoit, et le jeu de semence reste le défaut.
+	 * reçoit, et elle est REQUISE — il n'y a plus de repli sur le jeu.
 	 *
 	 * AUCUN PILOTAGE, AUCUNE OUVERTURE AU CLIC — ARB-011. La maquette ouvre le
 	 * dialogue en cliquant son entrée de catalogue et prépare son contenu à ce
@@ -42,9 +42,11 @@
 	 * étant en `position: fixed`, la boîte se pose au même endroit de la fenêtre.
 	 * Le voile `::backdrop`, lui, n'existe qu'en modal — écart déclaré au rapport.
 	 *
-	 * TOUTES LES DONNÉES VIENNENT DE `seeds/corpus.ts`. Les décomptes de
-	 * suppression sont calculés, jamais saisis : une confirmation destructive
-	 * annonce le volume réel de ce qu'elle détruit (brief §3.6, point dur n° 8).
+	 * TOUTES LES DONNÉES VIENNENT DE L'HÔTE, ET AUCUNE DU JEU DE DÉMONSTRATION.
+	 * Les décomptes de suppression sont calculés sur ce qui est servi, jamais
+	 * saisis et jamais repliés sur une valeur de maquette : une confirmation
+	 * destructive annonce le volume réel de ce qu'elle détruit (brief §3.6,
+	 * point dur n° 8), et zéro quand rien ne lui est servi.
 	 *
 	 * LE CADRE VIENT DU GABARIT — `$lib/coquille/Coquille.svelte`, amendé par
 	 * T-101b (ARB-015). La classe `doc` de `<main>` lui est passée en propriété :
@@ -167,6 +169,17 @@
 		 * corpus servi, et tous les dialogues parlaient donc de la même note.
 		 */
 		note: Note;
+		/**
+		 * LE DOSSIER DONT `d-dossier` ET `d-droits` PARLENT — `null` : AUCUN.
+		 *
+		 * C'étaient deux littéraux du jeu de démonstration posés au niveau du
+		 * module — « Infrastructure » et « Exploitation › Sauvegardes » — lus par
+		 * le décompte de suppression et écrits en toutes lettres par le titre et
+		 * le sous-titre des droits. Les boîtes annonçaient donc la destruction
+		 * d'un dossier des maquettes sur toute instance. Aucune route ne les
+		 * monte : sans dossier servi, elles ne nomment rien et ne comptent rien.
+		 */
+		dossier?: { readonly domaine: string; readonly chemin: string } | null;
 	}
 
 	const {
@@ -181,7 +194,8 @@
 		relations = [],
 		templates = [],
 		typesRelation,
-		versions = {}
+		versions = {},
+		dossier = null
 	}: Proprietes = $props();
 
 	/**
@@ -213,12 +227,24 @@
 		return catalogue && ouvert === cle;
 	}
 
-	/** Le dossier dont la maquette démontre la suppression et les droits. */
-	const DOSSIER = 'Exploitation › Sauvegardes';
-	const DOMAINE_DOSSIER = 'Infrastructure';
+	/** Le dernier segment du chemin — le nom propre du dossier. Aucun : vide. */
+	const nomDuDossier = $derived(dossier === null ? '' : (dossier.chemin.split(' › ').pop() ?? ''));
+	/** Le chemin complet, domaine compris, tel que le sous-titre des droits l'écrit. */
+	const cheminDuDossier = $derived(
+		dossier === null ? '' : `${dossier.domaine} › ${dossier.chemin}`
+	);
 
 	/** La note dont les dialogues parlent — celle qu'on lit, et aucune autre. */
 	const NOTE = $derived(note);
+
+	/* OÙ LA NOTE EST RANGÉE MAINTENANT — ce que `d-deplacer` annonce, et le seul
+	   emplacement qu'il interdit de choisir. Les deux sites lisaient les deux
+	   littéraux du jeu : la boîte disait « Infrastructure › Exploitation ›
+	   Sauvegardes » pour n'importe quelle note. Un dossier vide désigne la racine
+	   du domaine, qui n'a pas de segment propre à écrire. */
+	const emplacementDeLaNote = $derived(
+		NOTE.dossier ? `${NOTE.domaine} › ${NOTE.dossier}` : NOTE.domaine
+	);
 
 	/**
 	 * LE TYPE DE RELATION PROPOSÉ D'ENTRÉE — le premier du référentiel.
@@ -239,14 +265,20 @@
 	 */
 	const NOTE_SUP = $derived(note);
 
-	/** Rétention par défaut quand la note n'a pas d'historique détaillé. */
-	const VERSIONS_PAR_DEFAUT = 6;
-
-	const versionsSup = $derived((versions[NOTE_SUP.id]?.length ?? 0) || VERSIONS_PAR_DEFAUT);
+	/* CE QUI DISPARAÎT AVEC LA NOTE, COMPTÉ SUR CE QUI EST SERVI — ET RIEN DE PLUS.
+	   Le décompte se repliait sur `|| VERSIONS_PAR_DEFAUT`, six versions tirées
+	   de la maquette : depuis que l'historique n'a plus le jeu pour défaut, ce
+	   repli valait TOUJOURS, et la boîte annonçait six versions détruites quel
+	   que soit l'historique réel. Un décompte non servi est nul, ce que la
+	   dernière ligne du bloc dit déjà pour les rétroliens. */
+	const versionsSup = $derived(versions[NOTE_SUP.id]?.length ?? 0);
 	const retroliensSup = $derived(relations.filter((r) => r.vers === NOTE_SUP.id).length);
 	/** Les notes rangées dans le dossier à supprimer, sous-dossiers compris. */
 	const notesDuDossier = $derived(
-		notes.filter((n) => n.domaine === DOMAINE_DOSSIER && n.dossier.startsWith(DOSSIER)).length
+		dossier === null
+			? 0
+			: notes.filter((n) => n.domaine === dossier.domaine && n.dossier.startsWith(dossier.chemin))
+					.length
 	);
 
 	/** Les notes dont le titre recouvre au moins 60 % des mots significatifs. */
@@ -507,7 +539,7 @@
 {/snippet}
 
 {#snippet branche(d: Destination, domaine: string)}
-	{@const courant = domaine === DOMAINE_DOSSIER && d.chemin === DOSSIER}
+	{@const courant = domaine === NOTE.domaine && d.chemin === NOTE.dossier}
 	<li>
 		<label class="ac{courant ? ' ac--interdit' : ''}"
 			><input type="radio" name="dest" disabled={courant} />{d.nom}<span class="ac__n"
@@ -706,7 +738,7 @@
 				<div class="champ">
 					<label class="champ__label" for="dossier-saisie">
 						Pour confirmer, retapez le nom du dossier :
-						<span class="confirmation__cible" id="dossier-cible">Sauvegardes</span>
+						<span class="confirmation__cible" id="dossier-cible">{nomDuDossier}</span>
 					</label>
 					<!-- svelte-ignore a11y_autofocus -->
 					<input
@@ -853,9 +885,11 @@
 					>
 				</span>
 				<div style="flex:1;min-width:0">
-					<h2 class="dlg__titre" id="t-droits">Droits du dossier Sauvegardes</h2>
+					<h2 class="dlg__titre" id="t-droits">
+						{nomDuDossier === '' ? 'Droits du dossier' : `Droits du dossier ${nomDuDossier}`}
+					</h2>
 					<div style="font-size:var(--t-mini);color:var(--c-encre-3);margin-top:2px">
-						Infrastructure › Exploitation › Sauvegardes
+						{cheminDuDossier}
 					</div>
 				</div>
 				<button class="dlg__fermer" data-fermer="" aria-label="Fermer">
@@ -1163,7 +1197,7 @@
 							</ul>{/each}{/if}
 				</div>
 				<p class="dlg__texte" id="deplacer-etat">
-					Emplacement actuel : {DOMAINE_DOSSIER} › {DOSSIER}
+					Emplacement actuel : {emplacementDeLaNote}
 				</p>
 			</div>
 			<div class="dlg__pied">
