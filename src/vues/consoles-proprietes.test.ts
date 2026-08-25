@@ -36,6 +36,7 @@ import { dirname, join } from 'node:path';
 import {
 	COMPTES,
 	CONFIG,
+	DATE_REFERENCE,
 	DETAIL_DOMAINES,
 	DOMAINES,
 	MODULES,
@@ -383,6 +384,22 @@ describe('V-36 — Exports', () => {
 		const rendu = await rendre('V-36', { nomsDArchive: { Infrastructure: attendu } });
 		expect(rendu).toContain(attendu);
 		expect(rendu).not.toContain('infrastructure-2026-08-13.zip');
+	});
+
+	/**
+	 * UNE INSTANCE NEUVE N'A AUCUN DOMAINE, ET C'EST LE CHEMIN QUI COMPTE.
+	 *
+	 * Le produit commence VIDE : la liste servie est alors vide, aucun domaine
+	 * n'est choisi, et la vue composait `-{date de semence}.zip` sur un nom de
+	 * domaine vide — la date à laquelle le jeu de semence est figé, servie par le
+	 * produit sur le premier écran d'export d'une installation réelle. Sans
+	 * domaine il n'y a rien à nommer : l'arborescence d'archive n'est pas rendue.
+	 */
+	test('une instance sans aucun domaine n’annonce aucun nom d’archive', async () => {
+		const neuve = await rendre('V-36', { domaines: [], notes: [], nomsDArchive: {} });
+		expect(neuve).not.toContain(DATE_REFERENCE);
+		expect(neuve).not.toContain('.zip');
+		expect(neuve).not.toContain('arbo-archive');
 	});
 });
 

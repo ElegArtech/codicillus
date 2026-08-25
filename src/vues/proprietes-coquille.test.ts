@@ -329,3 +329,44 @@ describe.each(NOMS)('%s — les sources en propriétés optionnelles', (vue) => 
 		}
 	}
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   V-25 — « VOIR LES NOTES DE … » NE SE DÉRIVE PLUS DU NOM DU DOMAINE
+
+   CE QUE CE CONTRÔLE PROUVE, ET CE QU'IL NE PROUVE PAS. L'adresse elle-même
+   n'est composée qu'AU CLIC : le balisage rendu ne la porte pas, seul l'état
+   du bouton s'y lit. Le contrôle établit donc la seule chose observable au
+   rendu, et c'est la charnière du défaut — le bouton ne dépend plus de la
+   présence du nom du domaine dans la liste. La preuve que l'adresse ouvre bien
+   la liste des notes se fait dans un navigateur, sur un domaine RENOMMÉ : c'est
+   là que la dérivation par le nom rendait 404, et aucun rendu ne le montrerait.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('V-25 — l’issue « Voir les notes de … »', () => {
+	/* Un titulaire dont le domaine n'est dans AUCUNE entrée de `domaines` : c'est
+	   l'état d'un domaine renommé, dont la liste porte le nouveau nom et le
+	   profil l'ancien — ou l'inverse. */
+	const TITULAIRE = {
+		nom: 'Zoé Quintard',
+		identifiant: 'zquintard',
+		courriel: 'zq@exemple.test',
+		role: 'Contributeur',
+		domaine: 'Un domaine que la liste ne porte pas',
+		arrivee: '3 février 2026',
+		derniereConnexion: 'à l’instant'
+	};
+	const base = { vecteur: null, profilDuCompte: TITULAIRE };
+
+	it('sans rattachement lu, le bouton reste inerte plutôt que menteur', () => {
+		expect(corps('V-25', base, { rangementDuProfil: null })).toContain(
+			'disabled="">Voir les notes de'
+		);
+	});
+
+	it('le rattachement lu rend le bouton actif, sans que le nom soit dans la liste', () => {
+		const rendu = corps('V-25', base, {
+			rangementDuProfil: { univers: 'production', domaine: 'infra-prod' }
+		});
+		expect(rendu).toContain('Voir les notes de Un domaine que la liste ne porte pas');
+		expect(rendu).not.toContain('disabled="">Voir les notes de');
+	});
+});
