@@ -31,7 +31,15 @@ let serveur: ViteDevServer | null = null;
 async function harnais(): Promise<ViteDevServer> {
 	if (serveur === null) {
 		serveur = await createServer({
-			server: { middlewareMode: true },
+			// LE SURVEILLANT NE DOIT PAS DESCENDRE DANS LES COPIES DE TRAVAIL. Il
+			// parcourt toute la racine ; sous .claude/worktrees/ vivent des cases
+			// complètes du dépôt, et les veilleurs de fichiers du système s'épuisent :
+			// la série sort alors en ENOSPC, ses 1481 tests verts compris. Le
+			// surveillant attend un prédicat, pas un motif : les jokers y sont inertes.
+			server: {
+				middlewareMode: true,
+				watch: { ignored: (chemin: string) => chemin.includes('/.claude') }
+			},
 			appType: 'custom',
 			logLevel: 'silent'
 		});
