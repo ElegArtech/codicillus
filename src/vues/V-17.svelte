@@ -353,12 +353,20 @@
 			: 'Aucune modification'
 	);
 
-	/** Le fil d'Ariane et le chemin courant du rail — `coquille({…})`, `V-17:3568`. */
-	const fil = $derived(
-		cas === 'modif'
-			? ['Accueil', universDuDomaineChoisi, domaineChoisi, 'Modifier']
-			: ['Accueil', universDuDomaineChoisi, domaineChoisi, 'Nouvelle note']
-	);
+	/* LE FIL D'ARIANE ET LE CHEMIN COURANT DU RAIL — `coquille({…})`, `V-17:3568`.
+
+	   UN SEGMENT VIDE N'EST PAS UN RANGEMENT. Sur une instance à zéro domaine,
+	   `universDuDomaineChoisi` et `domaineChoisi` valent tous deux la chaîne
+	   vide, et `adressesDuFil()` de la coquille lisait quand même les rangs 1 et
+	   2 comme un univers et un domaine : le fil offrait deux liens vers des
+	   adresses de rangement qui n'existent pas. Sans rangement connu, le fil ne
+	   porte que l'accueil et la page courante. */
+	const rangementConnu = $derived(universDuDomaineChoisi !== '' && domaineChoisi !== '');
+	const fil = $derived([
+		'Accueil',
+		...(rangementConnu ? [universDuDomaineChoisi, domaineChoisi] : []),
+		cas === 'modif' ? 'Modifier' : 'Nouvelle note'
+	]);
 </script>
 
 <!--
@@ -489,7 +497,7 @@
 	libelleEvitement="Aller à la rédaction"
 	donnees={{ 'data-vue': 'redaction', 'data-meta': 'ferme', 'data-numerote': 'non' }}
 	{fil}
-	courant={[domaineChoisi]}
+	courant={rangementConnu ? [domaineChoisi] : []}
 	{univers}
 	{domaines}
 	notes={corpus}

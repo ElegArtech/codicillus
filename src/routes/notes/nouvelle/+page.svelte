@@ -108,10 +108,14 @@
 			page.url.searchParams.get('dossier')
 		)
 	);
-	/* L'univers auquel le domaine du compte appartient, tel que la base le nomme. */
+	/* L'UNIVERS AUQUEL LE DOMAINE DU COMPTE APPARTIENT, tel que la base le nomme.
+	   Le repli était le littéral `'Production'` — un univers du jeu de
+	   démonstration. Sur une instance à zéro domaine, la recherche échoue
+	   toujours : le fil d'Ariane devenait « Accueil › Production › » et la
+	   coquille en tirait `/univers/production`, qui rend 404. Sans domaine
+	   trouvé, l'univers est VIDE, et V-17 raccourcit son fil. */
 	const universDuCompte = $derived(
-		page.data.domaines?.find((d: { nom: string }) => d.nom === compte.domaine)?.univers ??
-			'Production'
+		page.data.domaines?.find((d: { nom: string }) => d.nom === compte.domaine)?.univers ?? ''
 	);
 	/* OÙ « ANNULER » RAMÈNE : la liste des notes du domaine visé, l'accueil quand
 	   la base n'en porte aucun. Faute d'adresse nommée, le bouton faisait
