@@ -52,11 +52,14 @@ import {
 	segmentsPlafonnes,
 	sonderLeServiceDeConversion,
 	verdictDuCorps,
+	AVERTISSEMENT_PROPRIETES_ILLISIBLES,
+	AVERTISSEMENT_TYPE_DE_FICHE_INCONNU,
 	type EtatDuServiceDeConversion,
 	type FichierDepose,
 	type ResultatDeConversion
 } from './import';
 import {
+	CLE_PROPRIETES_DE_FICHE,
 	construireLArchive,
 	NOM_DU_RAPPORT,
 	SUFFIXE_DE_NOTE,
@@ -401,6 +404,61 @@ describe('l’en-tête de métadonnées — RG-M12-05, RG-M12-06, RG-M12-03', ()
 });
 
 /**
+ * LE FICHIER D'UNE NOTE, TEL QUE L'EXPORT LE PRODUIT — jamais composé ici.
+ *
+ * C'est la condition sans laquelle les cas qui suivent ne prouveraient rien :
+ * l'en-tête de l'export a sa propre grammaire (`ecrireEnTete()`), et un fichier
+ * écrit à la main partagerait avec le lecteur l'hypothèse même qu'il faut
+ * mettre à l'épreuve.
+ */
+function fichierExporte(typeDeFiche: string | null, proprietes: unknown): string {
+	const uneNote: NoteAExporter = {
+		identifiant: 'n-pg-prod-01',
+		titre: 'pg-prod-01',
+		typeDeNote: 'Fiche',
+		typeDeFiche,
+		proprietesDeFiche: proprietes,
+		cheminDeDossier: ['Racine'],
+		auteur: 'sophie.nguyen',
+		etiquettes: ['postgresql'],
+		visibilite: 'interne',
+		statut: 'publiee',
+		creeLe: '2026-08-01T00:00:00.000Z',
+		modifieLe: '2026-08-01T00:00:00.000Z',
+		corpsReferenceModifieLe: '2026-08-01T00:00:00.000Z',
+		corpsOperationnelModifieLe: null,
+		verifieLe: null,
+		consultations: 0,
+		signetAdresse: null,
+		signetAjouteLe: null,
+		revisionDemandee: false,
+		revisionCommentaire: null,
+		revisionPar: null,
+		revisionLe: null,
+		relations: [],
+		corpsReference: {
+			type: 'doc',
+			content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Le corps.' }] }]
+		},
+		corpsOperationnel: null,
+		piecesJointes: []
+	};
+	const entrees = construireLArchive({
+		universIdentifiant: 'production',
+		universNom: 'Production',
+		identifiant: 'infrastructure',
+		nom: 'Infrastructure',
+		dossiers: [{ chemin: ['Racine'] }],
+		notes: [uneNote]
+	}).entrees;
+	const trouvee = entrees.find(
+		(e) => e.chemin.endsWith(SUFFIXE_DE_NOTE) && e.chemin !== NOM_DU_RAPPORT
+	);
+	if (trouvee === undefined) throw new Error('aucun fichier de note dans l’archive');
+	return Buffer.from(trouvee.octets).toString('utf8');
+}
+
+/**
  * L'ALLER-RETOUR DE LA FICHE — et le fichier est PRODUIT PAR L'EXPORT, jamais
  * écrit à la main.
  *
@@ -416,54 +474,6 @@ describe('l’en-tête de métadonnées — RG-M12-05, RG-M12-06, RG-M12-03', ()
  * redevenait une note simple, sans que rien ne le dise.
  */
 describe('l’en-tête de l’export, relu par l’import', () => {
-	/** Le fichier de la note, tel que l'archive le produit. */
-	function fichierExporte(typeDeFiche: string | null, proprietes: unknown): string {
-		const uneNote: NoteAExporter = {
-			identifiant: 'n-pg-prod-01',
-			titre: 'pg-prod-01',
-			typeDeNote: 'Fiche',
-			typeDeFiche,
-			proprietesDeFiche: proprietes,
-			cheminDeDossier: ['Racine'],
-			auteur: 'sophie.nguyen',
-			etiquettes: ['postgresql'],
-			visibilite: 'interne',
-			statut: 'publiee',
-			creeLe: '2026-08-01T00:00:00.000Z',
-			modifieLe: '2026-08-01T00:00:00.000Z',
-			corpsReferenceModifieLe: '2026-08-01T00:00:00.000Z',
-			corpsOperationnelModifieLe: null,
-			verifieLe: null,
-			consultations: 0,
-			signetAdresse: null,
-			signetAjouteLe: null,
-			revisionDemandee: false,
-			revisionCommentaire: null,
-			revisionPar: null,
-			revisionLe: null,
-			relations: [],
-			corpsReference: {
-				type: 'doc',
-				content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Le corps.' }] }]
-			},
-			corpsOperationnel: null,
-			piecesJointes: []
-		};
-		const entrees = construireLArchive({
-			universIdentifiant: 'production',
-			universNom: 'Production',
-			identifiant: 'infrastructure',
-			nom: 'Infrastructure',
-			dossiers: [{ chemin: ['Racine'] }],
-			notes: [uneNote]
-		}).entrees;
-		const trouvee = entrees.find(
-			(e) => e.chemin.endsWith(SUFFIXE_DE_NOTE) && e.chemin !== NOM_DU_RAPPORT
-		);
-		if (trouvee === undefined) throw new Error('aucun fichier de note dans l’archive');
-		return Buffer.from(trouvee.octets).toString('utf8');
-	}
-
 	it('retrouve le type de fiche et ses propriétés dans le fichier écrit par l’export', () => {
 		const lu = detacherLEnTete(
 			fichierExporte('Serveur', { hote: 'pg-prod-01', vcpu: '16', sauvegarde: 'oui' })
@@ -486,6 +496,33 @@ describe('l’en-tête de l’export, relu par l’import', () => {
 		const lu = detacherLEnTete(fichierExporte('Contact', null));
 		expect(lu.fiche).toBe('Contact');
 		expect(lu.proprietes).toEqual({});
+	});
+
+	/* LA LIGNE ABÎMÉE EST CELLE DE L'EXPORT, pas une ligne inventée : le fichier
+	   vient de l'archive, et seule la VALEUR de la ligne de propriétés est
+	   remplacée. La grammaire éprouvée reste donc celle de la source. */
+	it('dit au rapport qu’une ligne de propriétés ne s’est pas lue — RG-M12-04', () => {
+		const entier = fichierExporte('Serveur', { hote: 'pg-prod-01' });
+		const abime = entier
+			.split('\n')
+			.map((l) =>
+				l.startsWith(CLE_PROPRIETES_DE_FICHE + ':') ? CLE_PROPRIETES_DE_FICHE + ': {' : l
+			)
+			.join('\n');
+		expect(abime).not.toBe(entier);
+
+		const lu = detacherLEnTete(abime);
+		expect(lu.fiche).toBe('Serveur');
+		expect(lu.proprietes).toEqual({});
+		/* Le fait ne se tait pas : sans lui, la note perdait ses valeurs en
+		   silence et rien au rapport ne le disait. */
+		expect(lu.proprietesIllisibles).toBe(true);
+	});
+
+	it('ne lève aucun avertissement quand la ligne se lit', () => {
+		expect(detacherLEnTete(fichierExporte('Serveur', { hote: 'x' })).proprietesIllisibles).toBe(
+			false
+		);
 	});
 });
 
@@ -1241,6 +1278,63 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		);
 		/* Le geste a bien été tenté pour chacune — c’est ce que le champ mesure. */
 		expect(rapport.indexeALaRecherche).toBe(true);
+	});
+
+	/* ── LE TYPE DE FICHE DÉCLARÉ QUE L'INSTANCE NE PORTE PAS ────────────────
+	   La base d'épreuve n'a AUCUN type de fiche — c'est l'état d'une instance
+	   neuve, et c'est le cas que le défaut traversait en silence : la note
+	   partait simple, et rien, nulle part, ne disait pourquoi. */
+	it('consigne au rapport un nom de type de fiche inconnu — RG-M12-04', async () => {
+		const lot = classerLeLot(
+			'épreuve',
+			[
+				{
+					chemin: 'Exploitation/pg-prod-01.md',
+					octets: 42,
+					texte: fichierExporte('Serveur', { hote: 'pg-prod-01' }),
+					binaire: null
+				}
+			],
+			SANS_SERVICE
+		);
+		const essai = baseDEpreuve();
+		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, lot, {
+			simulation: false,
+			profondeurDeDepart: 1
+		});
+
+		const ligne = rapport.lignes.find((l) => l.sort === 'note');
+		expect(ligne).toBeDefined();
+		expect(ligne?.avertissements).toContain(AVERTISSEMENT_TYPE_DE_FICHE_INCONNU);
+	});
+
+	it('porte jusqu’au rapport la ligne de propriétés qui ne s’est pas lue', async () => {
+		const entier = fichierExporte('Serveur', { hote: 'pg-prod-01' });
+		const lot = classerLeLot(
+			'épreuve',
+			[
+				{
+					chemin: 'Exploitation/pg-prod-01.md',
+					octets: 42,
+					texte: entier
+						.split('\n')
+						.map((l) =>
+							l.startsWith(CLE_PROPRIETES_DE_FICHE + ':') ? CLE_PROPRIETES_DE_FICHE + ': {' : l
+						)
+						.join('\n'),
+					binaire: null
+				}
+			],
+			SANS_SERVICE
+		);
+		const essai = baseDEpreuve();
+		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, lot, {
+			simulation: false,
+			profondeurDeDepart: 1
+		});
+
+		const ligne = rapport.lignes.find((l) => l.sort === 'note');
+		expect(ligne?.avertissements).toContain(AVERTISSEMENT_PROPRIETES_ILLISIBLES);
 	});
 });
 

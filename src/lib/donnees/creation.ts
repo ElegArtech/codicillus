@@ -359,7 +359,28 @@ export interface CibleDeCreation {
 }
 
 /**
- * LA CIBLE QU'UNE SAISIE DÉSIGNE, ou `null` — et `null` est le seul refus.
+ * CE QU'UNE RÉSOLUTION DE CIBLE PEUT RENDRE — trois issues, pas deux.
+ *
+ * `introuvable` CONFLE VOLONTAIREMENT trois causes — cible inexistante, cible
+ * ambiguë, cible interdite : `RG-ACC-04` et `ADR-007` veulent qu'elles ne se
+ * distinguent pas à un octet près, et la route les rend toutes en 404.
+ *
+ * `fiche-introuvable` N'EN EST PAS. Un type de fiche n'est pas un rangement :
+ * il n'est protégé par aucun droit, il est ADMINISTRABLE (M14) et peut donc
+ * disparaître entre l'ouverture de l'écran et l'enregistrement. Le confondre
+ * avec l'introuvable rendait au rédacteur une page « note introuvable » qui
+ * nommait la mauvaise chose et lui faisait perdre son brouillon entier. La
+ * modification refuse déjà ce cas à part (`edition.ts`, `sort:
+ * 'fiche-introuvable'`) : la création le refuse pareil, et les deux écrans
+ * rendent le même refus pour le même geste.
+ */
+export type ResolutionDeCible =
+	| { readonly sort: 'cible'; readonly cible: CibleDeCreation }
+	| { readonly sort: 'introuvable' }
+	| { readonly sort: 'fiche-introuvable' };
+
+/**
+ * LA CIBLE QU'UNE SAISIE DÉSIGNE, ou son refus — et il y en a deux, pas un.
  *
  * Le formulaire gelé n'envoie que des NOMS : `#m-type` porte `t` (le nom du
  * type), `#m-domaine` porte `d.nom` — relevé sur pièce,
@@ -383,13 +404,13 @@ export interface CibleDeCreation {
 export async function resoudreLaCible(
 	base: Base,
 	saisie: SaisieDeNote
-): Promise<CibleDeCreation | null> {
+): Promise<ResolutionDeCible> {
 	const [type] = await base
 		.select({ id: typesDeNote.id })
 		.from(typesDeNote)
 		.where(eq(typesDeNote.nom, saisie.type))
 		.limit(1);
-	if (type === undefined) return null;
+	if (type === undefined) return { sort: 'introuvable' };
 
 	/* DEUX lignes sont lues, pas une : c'est la seule manière de DISTINGUER
 	   « aucun domaine de ce nom » de « plusieurs », et donc de refuser le second
@@ -399,7 +420,7 @@ export async function resoudreLaCible(
 		.from(domaines)
 		.where(eq(domaines.nom, saisie.domaine))
 		.limit(2);
-	if (homonymes.length !== 1) return null;
+	if (homonymes.length !== 1) return { sort: 'introuvable' };
 	const domaineId = (homonymes[0] as { id: string }).id;
 
 	const lignes: readonly LigneDeDossier[] = await base
@@ -432,27 +453,31 @@ export async function resoudreLaCible(
 		segments = segments.slice(1);
 	}
 	const dossier = segments.length === 0 ? racine : resoudreLeChemin(lignes, segments);
-	if (dossier === null) return null;
+	if (dossier === null) return { sort: 'introuvable' };
 
 	const fiche = await resoudreLeTypeDeFiche(base, saisie);
-	if (fiche === null) return null;
+	if (fiche === null) return { sort: 'fiche-introuvable' };
 
 	return {
-		typeDeNoteId: type.id,
-		domaineId,
-		dossierId: dossier.id,
-		typeDeFicheId: fiche.typeDeFicheId,
-		proprietesTypees: fiche.proprietesTypees
+		sort: 'cible',
+		cible: {
+			typeDeNoteId: type.id,
+			domaineId,
+			dossierId: dossier.id,
+			typeDeFicheId: fiche.typeDeFicheId,
+			proprietesTypees: fiche.proprietesTypees
+		}
 	};
 }
 
 /**
  * LE TYPE DE FICHE QU'UNE SAISIE DÉSIGNE, ET LES PROPRIÉTÉS QU'IL AUTORISE.
  *
- * `null` est le refus, comme pour les trois autres références : un nom de type
- * de fiche INCONNU est refusé, jamais ignoré. L'ignorer écrirait une note
- * simple là où l'utilisateur a choisi une fiche, et rien à l'écran ne le
- * dirait — c'est exactement la famille de défauts que ce lot referme.
+ * `null` est le refus : un nom de type de fiche INCONNU est refusé, jamais
+ * ignoré. L'ignorer écrirait une note simple là où l'utilisateur a choisi une
+ * fiche, et rien à l'écran ne le dirait — c'est exactement la famille de
+ * défauts que ce lot referme. L'appelant en fait un refus À PART, distinct de
+ * l'introuvable : voir `ResolutionDeCible`.
  *
  * LES PROPRIÉTÉS SONT FILTRÉES SUR LES CLÉS RÉELLES du type.
  * `notes.proprietes_typees` est un `jsonb` : la base n'y contraint aucune clé,

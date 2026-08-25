@@ -489,6 +489,25 @@ export type MotifDEchec =
 	| 'conversion-absente'
 	| 'contenu-illisible';
 
+/**
+ * LES DEUX AVERTISSEMENTS QUE L'IMPORT LÈVE LUI-MÊME — `RG-M12-04`.
+ *
+ * Ils rejoignent, au même rang, ceux que le service de conversion rend
+ * (`M12.1`) : des codes stables, mis en français par la vue qui en aura la
+ * prise. Ils existent parce qu'un ÉCART SILENCIEUX est un défaut : une note
+ * écrite sans le type de fiche que son en-tête déclarait, ou sans les valeurs
+ * qu'il portait, ne se distinguait en rien d'une note simple, et le rapport le
+ * taisait.
+ *
+ * Ni l'un ni l'autre n'est un échec : une note reste une note sans ses
+ * propriétés, et perdre le lot entier sur un mot de l'en-tête coûterait plus
+ * que de le dire.
+ */
+export const AVERTISSEMENT_PROPRIETES_ILLISIBLES = 'proprietes-de-fiche-illisibles';
+
+/** Le nom de type de fiche déclaré n'est dans aucun type de l'instance. */
+export const AVERTISSEMENT_TYPE_DE_FICHE_INCONNU = 'type-de-fiche-inconnu';
+
 /* ═══════════════════════════════════════════ L'en-tête de métadonnées ══ */
 
 /**
@@ -523,6 +542,12 @@ export interface EnTeteDetache {
 	readonly fiche: string | null;
 	/** Ce que la note met dans les champs de son type. Vide sans type. */
 	readonly proprietes: Readonly<Record<string, string>>;
+	/**
+	 * La ligne de propriétés était là ET NE S'EST PAS LUE. Le fait remonte
+	 * jusqu'au rapport : sans lui, un en-tête abîmé faisait perdre les valeurs
+	 * de la fiche en silence — `RG-M12-04` veut la raison au rapport.
+	 */
+	readonly proprietesIllisibles: boolean;
 	/** Le texte, en-tête retiré. C'est LUI qui part au convertisseur unique. */
 	readonly texte: string;
 }
@@ -559,6 +584,7 @@ export function detacherLEnTete(texte: string): EnTeteDetache {
 		renvois: [],
 		fiche: null,
 		proprietes: {},
+		proprietesIllisibles: false,
 		texte
 	};
 	if (!DELIMITEUR.test(lignes[0] ?? '')) return intact;
@@ -571,6 +597,7 @@ export function detacherLEnTete(texte: string): EnTeteDetache {
 	let renvois: readonly string[] = [];
 	let fiche: string | null = null;
 	let proprietes: Readonly<Record<string, string>> = {};
+	let proprietesIllisibles = false;
 
 	for (const ligne of lignes.slice(1, fin)) {
 		const separateur = ligne.indexOf(':');
@@ -591,9 +618,12 @@ export function detacherLEnTete(texte: string): EnTeteDetache {
 			/* L'export écrit cette valeur en JSON sur une ligne — `ecrireEnTete()`,
 			   `../export/archive.ts`. Ce qui ne se lit pas est ÉCARTÉ, jamais
 			   deviné : `RG-M12-04` veut une ligne de rapport, pas un lot perdu, et
-			   une note sans ses propriétés reste une note. */
+			   une note sans ses propriétés reste une note. LE FAIT REMONTE —
+			   `proprietesIllisibles` devient un avertissement au rapport, faute de
+			   quoi l'écart serait un silence, ce que la règle refuse. */
 			const lu = proprietesSoumises(valeur.trim());
 			proprietes = lu.ok ? lu.valeurs : {};
+			proprietesIllisibles = !lu.ok;
 		}
 	}
 
@@ -603,6 +633,7 @@ export function detacherLEnTete(texte: string): EnTeteDetache {
 		renvois,
 		fiche,
 		proprietes,
+		proprietesIllisibles,
 		texte: lignes.slice(fin + 1).join('\n')
 	};
 }
@@ -945,6 +976,13 @@ export function classerLeLot(
 			return;
 		}
 
+		/* L'en-tête a-t-il porté une ligne de propriétés qui ne s'est pas lue ?
+		   Le fait rejoint les avertissements de la conversion — même rang, même
+		   destination : la ligne du rapport. */
+		const avertissementsDeLaNote = entete.proprietesIllisibles
+			? [...avertissements, AVERTISSEMENT_PROPRIETES_ILLISIBLES]
+			: avertissements;
+
 		const titre = entete.titre ?? nomSansExtension(fichier.chemin);
 		/* LA PLACE SE DÉCIDE AVANT L'IDENTIFIANT, parce qu'elle en décide : c'est
 		   elle qui dit si la note existante du même identifiant est celle-ci
@@ -969,7 +1007,7 @@ export function classerLeLot(
 			segments,
 			aplatie,
 			renvois: entete.renvois,
-			avertissements,
+			avertissements: avertissementsDeLaNote,
 			images
 		});
 	});
@@ -1229,24 +1267,13 @@ export async function executerLImport(
 			.limit(1);
 		const typeDeNoteId = (typeNote[0] as { id: string } | undefined)?.id;
 
-		/* LE TYPE DE NOTE D'UNE FICHE — `RG-NOT-01`, « une note qui porte un type
-		   de fiche EST une fiche ». L'éditeur tient la règle en forçant `#m-type`
-		   (`../cablage/formulaires.ts`, geste 6 bis) ; ici elle se tient en
-		   choisissant l'autre type de note. Absent de l'instance — le référentiel
-		   est administrable —, la note reste du type générique plutôt que d'être
-		   refusée : elle garde alors son type de fiche, et c'est ce que les six
-		   pastilles gardent désormais sur la présence du type de fiche. */
-		const typeFiche = await tx
-			.select({ id: typesDeNote.id })
-			.from(typesDeNote)
-			.where(eq(typesDeNote.identifiant, 'fiche'))
-			.limit(1);
-		const typeDeNoteDUneFicheId = (typeFiche[0] as { id: string } | undefined)?.id;
-
 		/* LE RÉFÉRENTIEL DES FICHES, LU UNE FOIS — deux requêtes pour tout le lot
 		   plutôt que deux par note. Un nom de type inconnu ne fait pas échouer la
 		   ligne : la note est écrite SIMPLE, comme elle l'était avant que l'import
-		   lise ces deux clés. */
+		   lise ces deux clés — MAIS LE RAPPORT LE DIT
+		   (`AVERTISSEMENT_TYPE_DE_FICHE_INCONNU`). L'écart sans trace était le
+		   défaut : rien à l'écran ne distinguait une note simple d'une fiche dont
+		   le type avait été jeté. */
 		const ficheParNom = new Map<string, { readonly id: string; readonly cles: Set<string> }>();
 		for (const t of await tx
 			.select({ id: typesDeFiche.id, nom: typesDeFiche.nom })
@@ -1331,6 +1358,12 @@ export async function executerLImport(
 			   — et les clés sont filtrées sur le référentiel réel : le `jsonb` n'est
 			   contraint par rien, et un fichier déposé écrirait sinon ce qu'il veut. */
 			const typeDeLaFiche = ligne.fiche === null ? undefined : ficheParNom.get(ligne.fiche);
+			/* L'en-tête nommait un type que l'instance ne porte pas. La note est
+			   écrite simple, et la ligne du rapport porte le pourquoi. */
+			const avertissementsDeLaLigne =
+				ligne.fiche !== null && typeDeLaFiche === undefined
+					? [...ligne.avertissements, AVERTISSEMENT_TYPE_DE_FICHE_INCONNU]
+					: ligne.avertissements;
 			const retenues =
 				typeDeLaFiche === undefined
 					? {}
@@ -1354,10 +1387,7 @@ export async function executerLImport(
 						identifiant: ligne.identifiant,
 						titre: ligne.titre ?? ligne.identifiant,
 						corpsReference: ligne.corps,
-						typeDeNoteId:
-							typeDeLaFiche !== undefined && typeDeNoteDUneFicheId !== undefined
-								? typeDeNoteDUneFicheId
-								: typeDeNoteId,
+						typeDeNoteId,
 						domaineId: cible.domaineId,
 						dossierId,
 						auteurId: cible.auteurId,
@@ -1398,7 +1428,7 @@ export async function executerLImport(
 				miseAJour: trouvee !== undefined,
 				aplatie: ligne.aplatie,
 				renvoisNonResolus,
-				avertissements: ligne.avertissements,
+				avertissements: avertissementsDeLaLigne,
 				imagesNonReprises: ligne.images.length
 			});
 		}
