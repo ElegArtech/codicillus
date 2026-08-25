@@ -72,11 +72,29 @@
  *   `formatsImport` — la table des libellés, servie par le module d'import qui
  *                     connaît les formats (`libellesDeFormat()`).
  *
- * `univers`, `domaines`, `compte` et `instance` NE SONT PAS PASSÉS, et l'écart
- * est déclaré au rapport du lot : la coquille de toutes les routes montées lit
- * encore ces quatre sources dans le jeu de semence, et les brancher est un
- * sujet transverse qu'un lot d'import ne peut pas trancher pour les trente
- * autres routes.
+ * ═════════════════════════════════════════════════════════════════════════
+ * `domainesOuEcrire` — LA CIBLE D'IMPORT, ET POURQUOI ELLE N'EST PAS LE RAIL
+ *
+ * Un commentaire de ce fichier a longtemps dit que `univers`, `domaines`,
+ * `compte` et `instance` n'étaient pas passés parce que la COQUILLE les lisait
+ * dans le jeu de semence, et que c'était un sujet transverse. C'était vrai des
+ * trois autres, et c'est réparé ailleurs : le contexte d'identité posé par
+ * `routes/+layout.svelte` prime sur ce que la vue reçoit
+ * (`Coquille.svelte:414-421`). Pour `domaines`, c'était FAUX, et l'écart a été
+ * SOUS-QUALIFIÉ : V-24 lit `domaines` POUR SON PROPRE BALISAGE, hors coquille,
+ * et en peuple un CHAMP DE SAISIE OBLIGATOIRE — le sélecteur « Domaine de
+ * destination ». Le contexte ne l'y protège pas. Mesuré sur une instance neuve :
+ * l'écran n'offrait que des domaines de démonstration, et l'action refusait en
+ * `fail(400, domaine-inconnu)` après le dépôt des fichiers.
+ *
+ * LE RAIL NE CONVENAIT PAS NON PLUS. `page.data.domaines` est le périmètre
+ * LISIBLE, alors qu'une cible d'import doit être INSCRIPTIBLE : le sélecteur
+ * aurait encore offert des domaines où l'appelant ne peut pas écrire, et
+ * l'action aurait refusé en `fail(403, sans-droit-sur-la-cible)`. `P-09` — une
+ * action offerte est une action qui aboutit. La liste servie ici est donc celle
+ * des domaines où l'appelant PEUT ÉCRIRE, sur le même
+ * `capacites(droitEffectif(…))` que le domaine proposé par défaut : les deux
+ * sortent de la même lecture, et ne peuvent pas diverger.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * DEUX ACTIONS, ET ELLES SONT TOUTES DEUX NOMMÉES
@@ -97,7 +115,7 @@ import { eq, isNull } from 'drizzle-orm';
 import { error, fail } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { basePartagee, type Base } from '$lib/base/acces';
-import { domaines, dossiers, notes as notesDuSchema } from '$lib/base/schema';
+import { domaines, dossiers, notes as notesDuSchema, univers } from '$lib/base/schema';
 import { capacites } from '$lib/droits/resolution';
 import {
 	VOIE_PAR_FORMAT,
@@ -120,6 +138,7 @@ import {
 } from '$lib/donnees/rangement';
 import { moteurPartage } from '$lib/recherche/acces';
 import { adresseDeNote } from '$lib/rangement/adresses';
+import { estUneMiseAJour } from './reprise';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
@@ -156,6 +175,7 @@ async function importateur(locals: App.Locals): Promise<{
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const { base, acces } = await importateur(locals);
+	const cibles = await domainesOuEcrire(base, acces);
 
 	return {
 		vecteur: null,
@@ -175,34 +195,54 @@ export const load: PageServerLoad = async ({ locals }) => {
 		/* Rien n'a été déposé : le lot est vide, et il le dit. */
 		lotImport: { source: '', fichiers: [] },
 		formatsImport: libellesDeFormat(),
+		/* LES CIBLES OFFERTES AU SÉLECTEUR — voir l'en-tête. Le périmètre est
+		   celui de l'ÉCRITURE, pas celui de la lecture. */
+		domainesOuEcrire: cibles,
 		/* Le domaine proposé au dépôt : le premier où l'appelant a le droit
 		   d'écrire. Il n'est pas « son » domaine — un compte peut n'avoir aucun
 		   droit d'écriture sur le domaine auquel il est rattaché —, et le proposer
 		   quand même ferait choisir par défaut une cible que la soumission
-		   refuserait (`P-09`, esprit : pas de porte fermée). */
-		domaineParDefaut: await premierDomaineOuEcrire(base, acces)
+		   refuserait (`P-09`, esprit : pas de porte fermée). C'est la TÊTE de la
+		   liste ci-dessus, et pas une seconde lecture : deux lectures auraient
+		   fini par proposer un défaut absent du menu. */
+		domaineParDefaut: cibles[0]?.nom ?? ''
 	};
 };
 
 /**
- * LE PREMIER DOMAINE OÙ L'APPELANT PEUT ÉCRIRE, ou la chaîne vide s'il n'y en a
- * aucun — auquel cas la garde d'entrée l'aurait déjà refusé.
+ * LES DOMAINES OÙ L'APPELANT PEUT ÉCRIRE, dans l'ordre des noms — la liste des
+ * cibles d'import possibles, et rien d'autre.
  *
- * L'ordre est celui des domaines en base, et il est déterministe : « premier »
- * veut dire quelque chose. Le droit est demandé à `capacites(droitEffectif())`,
- * l'implémentation unique, jamais recalculé.
+ * VIDE EST INATTEIGNABLE : la garde d'entrée refuse déjà un compte qui n'écrit
+ * nulle part. La forme rendue est celle que la vue attend d'un domaine — nom,
+ * univers, couleur —, la même que celle du rail, pour que le sélecteur affiche
+ * « Univers › Domaine » comme le gel le dessine.
+ *
+ * L'ordre est celui des noms de domaine en base, et il est déterministe :
+ * « premier » veut dire quelque chose. Le droit est demandé à
+ * `capacites(droitEffectif())`, l'implémentation unique, jamais recalculé.
  */
-async function premierDomaineOuEcrire(base: Base, acces: AccesAuRangement): Promise<string> {
+async function domainesOuEcrire(
+	base: Base,
+	acces: AccesAuRangement
+): Promise<
+	readonly { readonly nom: string; readonly univers: string; readonly couleur: string }[]
+> {
 	const racines = await base
-		.select({ nom: domaines.nom, dossierId: dossiers.id })
+		.select({
+			nom: domaines.nom,
+			univers: univers.nom,
+			couleur: domaines.couleur,
+			dossierId: dossiers.id
+		})
 		.from(dossiers)
 		.innerJoin(domaines, eq(dossiers.domaineId, domaines.id))
+		.innerJoin(univers, eq(univers.id, domaines.universId))
 		.where(isNull(dossiers.parentId))
 		.orderBy(domaines.nom);
-	for (const r of racines) {
-		if (capacites(droitEffectif(acces, r.dossierId)).ecrireDesNotes) return r.nom;
-	}
-	return '';
+	return racines
+		.filter((r) => capacites(droitEffectif(acces, r.dossierId)).ecrireDesNotes)
+		.map((r) => ({ nom: r.nom, univers: r.univers, couleur: r.couleur }));
 }
 
 /**
@@ -240,14 +280,16 @@ async function preparerLeLot(locals: App.Locals, request: Request, fetch: typeof
 	const service = await sonderLeServiceDeConversion(fetch, env['URL_CONVERSION']);
 	const conversions = await convertirLeLot(fetch, env['URL_CONVERSION'], fichiers, service);
 
+	/* `RG-M12-01` — ce que la cible contient déjà, et OÙ. C'est ce qui permet
+	   à un réimport de retrouver ses notes plutôt que d'en créer des copies
+	   suffixées. Sans cette carte, l'idempotence n'a aucun discriminant. */
+	const cible = await contenuDeLaCible(base, acces, racine.id);
+
 	const plan = classerLeLot(nomDuDomaine, fichiers, {
 		service,
 		conversions,
 		identifiantsPris: await identifiantsPris(base),
-		/* `RG-M12-01` — ce que la cible contient déjà, et OÙ. C'est ce qui permet
-		   à un réimport de retrouver ses notes plutôt que d'en créer des copies
-		   suffixées. Sans cette carte, l'idempotence n'a aucun discriminant. */
-		notesDeLaCible: await notesDeLaCible(base, acces, racine.id),
+		notesDeLaCible: cible.notes,
 		profondeurDeDepart: racine.profondeur
 	});
 
@@ -255,6 +297,10 @@ async function preparerLeLot(locals: App.Locals, request: Request, fetch: typeof
 		base,
 		plan,
 		simulation,
+		/* LE CONTENU DE LA CIBLE REMONTE AVEC LE PLAN, et c'est le correctif de
+		   l'aperçu menteur : le classement l'a consulté, il ne l'a pas consigné.
+		   Voir `./reprise.ts`. */
+		contenuDeLaCible: cible,
 		cible: { domaineId: racine.domaineId, dossierId: racine.id, auteurId: compteId },
 		profondeurDeDepart: racine.profondeur,
 		domaine: nomDuDomaine
@@ -275,6 +321,12 @@ export const actions: Actions = {
 	 * LES MOTIFS SONT DES CODES, et ils le restent : leur mise en français est
 	 * dans la vue (`LIBELLE_DU_MOTIF`), là où `import.ts` a toujours dit qu'elle
 	 * devait aller.
+	 *
+	 * CE QUE LA CIBLE PORTE DÉJÀ VOYAGE AVEC LE LOT — `maj` par ligne, et la
+	 * liste des dossiers existants. Sans eux, l'aperçu comptait tout comme neuf :
+	 * « 4 notes seront créées / 3 dossiers créés » suivi, au rapport, de « 0
+	 * créées, 4 mises à jour, 0 dossiers créés ». L'écriture était déjà
+	 * idempotente ; c'est l'écran qui mentait sur ce qu'il allait faire.
 	 */
 	analyser: async ({ locals, request, fetch }) => {
 		const prepare = await preparerLeLot(locals, request, fetch);
@@ -293,9 +345,11 @@ export const actions: Actions = {
 					f: l.format ?? extensionDe(l.chemin),
 					o: 0,
 					s: l.sort,
-					...(l.motif === null ? {} : { m: l.motif })
+					...(l.motif === null ? {} : { m: l.motif }),
+					...(estUneMiseAJour(l, prepare.contenuDeLaCible.notes) ? { maj: true } : {})
 				}))
-			}
+			},
+			dossiersExistants: prepare.contenuDeLaCible.dossiers
 		};
 	},
 
@@ -384,12 +438,20 @@ function extensionDe(chemin: string): string {
  * relue. Seul le sous-arbre de la cible est parcouru — une note rangée ailleurs
  * n'est pas une note de ce lot, et son identifiant reste une collision au sens
  * de `RG-M12-11`.
+ *
+ * DEUX SORTIES, ET LA SECONDE NE COÛTE RIEN. Le parcours construit déjà le
+ * chemin relatif de CHAQUE dossier du sous-arbre pour placer les notes ; ce sont
+ * exactement les dossiers que l'aperçu ne doit PAS annoncer comme créés. Les
+ * notes ne suffisaient pas à le dire : un dossier vide ne porte aucune note.
  */
-async function notesDeLaCible(
+async function contenuDeLaCible(
 	base: Base,
 	acces: AccesAuRangement,
 	racineId: string
-): Promise<ReadonlyMap<string, string>> {
+): Promise<{
+	readonly notes: ReadonlyMap<string, string>;
+	readonly dossiers: readonly string[];
+}> {
 	const enfants = new Map<string, { id: string; nom: string }[]>();
 	for (const d of acces.dossiers) {
 		if (d.parentId === null) continue;
@@ -418,7 +480,9 @@ async function notesDeLaCible(
 		const place = chemins.get(n.dossierId);
 		if (place !== undefined) carte.set(n.identifiant, place);
 	}
-	return carte;
+	/* La cible elle-même vaut `''` : elle n'est pas un dossier À CRÉER, et aucun
+	   nœud de l'arborescence du lot ne porte ce chemin. Elle sort de la liste. */
+	return { notes: carte, dossiers: [...chemins.values()].filter((c) => c !== '') };
 }
 
 /**

@@ -169,7 +169,10 @@
 		 * Rend `null` quand l'analyse a échoué : le parcours reste alors où il est,
 		 * et rien n'est inventé.
 		 */
-		analyser?: (fichiers: readonly File[], reglages: ReglagesDuDepot) => Promise<LotDImport | null>;
+		analyser?: (
+			fichiers: readonly File[],
+			reglages: ReglagesDuDepot
+		) => Promise<Issue<AnalyseDuLot>>;
 		/**
 		 * L'EXÉCUTION DU LOT — réelle ou simulée, c'est le même appel. `RG-M12-02` :
 		 * « un seul chemin de code, donc un rapport de simulation qui dit
@@ -179,9 +182,36 @@
 		importer?: (
 			fichiers: readonly File[],
 			reglages: ReglagesDuDepot
-		) => Promise<RapportAffiche | null>;
+		) => Promise<Issue<RapportAffiche>>;
 		/** Le domaine de destination proposé. Absente, celui du compte. */
 		domaineParDefaut?: string;
+	}
+
+	/**
+	 * CE QU'UN GESTE SERVEUR REND — le résultat, OU LE MOTIF DE SON REFUS.
+	 *
+	 * Les deux rappels rendaient `null` sur tout ce qui n'était pas un succès, et
+	 * `avancer()` retournait en silence : « Analyser le lot » ne produisait alors
+	 * RIEN DU TOUT, sans message — une impasse muette. `P-09` veut qu'une action
+	 * offerte aboutisse ; à défaut, elle doit au moins DIRE pourquoi elle refuse.
+	 *
+	 * Le motif est un CODE, comme les motifs de classement : sa mise en français
+	 * est ici, dans `LIBELLE_DU_REFUS`.
+	 */
+	type Issue<T> = { readonly valeur: T } | { readonly refus: string };
+
+	/** Ce que l'analyse d'un lot rend : le lot classé, et l'état de la cible. */
+	interface AnalyseDuLot {
+		readonly lot: LotDImport;
+		/**
+		 * LES DOSSIERS QUE LA CIBLE PORTE DÉJÀ, en chemins relatifs à elle.
+		 *
+		 * L'aperçu marquait « dossier créé » sur chaque nœud, sans condition, et
+		 * comptait tous les segments dans « dossiers créés ». Sur le rejeu d'un lot
+		 * déjà importé, l'écran annonçait donc trois créations que l'import n'allait
+		 * pas faire. `UC-M12-04` §3 parle des dossiers « qui seront créés ».
+		 */
+		readonly dossiersExistants: readonly string[];
 	}
 
 	/** Ce que le dépôt règle, et que les deux appels transportent. */
@@ -272,10 +302,14 @@
 	// svelte-ignore state_referenced_locally
 	let sourceDuLot = $state(lotRecu.length > 0 ? sourceDe(lotRecu) : '');
 	let lotAnalyse = $state<LotDImport | null>(null);
+	/** Les dossiers que la cible porte déjà — vide tant que rien n'a été analysé. */
+	let dossiersExistants = $state<readonly string[]>([]);
 	let rapport = $state<RapportAffiche | null>(null);
 	let enCours = $state(false);
 	let simulationRetenue = $state(false);
 	let domaineRetenu = $state('');
+	/** Le motif du dernier refus serveur, en code. `null` : aucun refus en cours. */
+	let refus = $state<string | null>(null);
 
 	const reglage = $derived(vecteur ?? {});
 
@@ -445,6 +479,36 @@
 	}
 
 	/**
+	 * LES REFUS DU SERVEUR, MIS EN FRANÇAIS — même régime que les motifs.
+	 *
+	 * Les trois codes sont ceux que la route rend : cible inconnue, cible
+	 * interdite, lot vide. Aucun n'était visible : le parcours restait où il
+	 * était, sans un mot. Un code inconnu passe tel quel plutôt que d'être
+	 * remplacé par une phrase rassurante qui cacherait ce qui s'est passé.
+	 */
+	const LIBELLE_DU_REFUS: Readonly<Record<string, string>> = {
+		'domaine-inconnu':
+			"Ce domaine n'existe pas. Choisissez une destination dans la liste ; rien n'a été déposé.",
+		'sans-droit-sur-la-cible':
+			"Vous n'avez pas le droit d'écrire dans ce domaine. Rien n'a été déposé.",
+		'lot-vide': 'Aucun fichier n’est parti. Reprenez le dépôt et relancez.',
+		'erreur-serveur': "Le serveur n'a pas traité le lot. Rien n'a été déposé."
+	};
+
+	/** Le refus à l'écran — une notification d'erreur, ou rien du tout. */
+	const notifications = $derived(
+		refus === null
+			? []
+			: [
+					{
+						type: 'erreur' as const,
+						titre: 'Le lot n’a pas été traité',
+						detail: LIBELLE_DU_REFUS[refus] ?? refus
+					}
+				]
+	);
+
+	/**
 	 * LE TITRE DU BILAN — la phrase du gel, et la MISE À JOUR y prend sa place.
 	 *
 	 * Le gel écrit « N notes créées, M fichiers en échec » ou « … aucun échec ».
@@ -462,21 +526,54 @@
 	 * faux à l'écran. L'intitulé nomme alors ce que la liste contient.
 	 */
 	function intituleDesNotes(r: RapportAffiche): string {
+		if (r.simulation) return `Notes qui seraient écrites — ${r.ecrites.length}`;
 		if (r.notesMisesAJour === 0) return `Notes créées — ${r.notesCreees}`;
 		return `Notes écrites — ${r.ecrites.length}`;
 	}
 
+	/**
+	 * UNE SIMULATION N'A RIEN ÉCRIT, ET AUCUNE PHRASE DU RAPPORT NE DOIT DIRE LE
+	 * CONTRAIRE.
+	 *
+	 * `RG-M12-02` promet « un seul chemin de code, donc un rapport de simulation
+	 * qui dit rigoureusement ce que fera l'import réel ». Le rapport le tient : le
+	 * drapeau `simulation` est le SEUL champ par lequel les deux diffèrent —
+	 * `import.test.ts` le neutralise explicitement avant de comparer les deux
+	 * rapports. L'écran, lui, ne le lisait nulle part : il annonçait « Import
+	 * terminé — 3 notes créées » et offrait trois liens qui rendaient 404, alors
+	 * que la base était inchangée.
+	 *
+	 * LA DOCTRINE DE `import.ts` N'EST PAS EN CAUSE : elle porte sur l'EXÉCUTION,
+	 * où `options.simulation` est lu une seule fois, en dernière instruction de la
+	 * transaction. Un choix de mot dans une vue ne touche ni le plan, ni
+	 * l'écriture, ni le rapport.
+	 */
+	function auFuturSiSimule(r: RapportAffiche, passe: string, futur: string): string {
+		return r.simulation ? futur : passe;
+	}
+
 	function titreDuBilan(r: RapportAffiche): string {
+		const creees = auFuturSiSimule(r, 'créées', 'seraient créées');
+		const majs = auFuturSiSimule(r, 'mises à jour', 'seraient mises à jour');
 		const debut =
 			r.notesMisesAJour > 0
-				? `${r.notesCreees} notes créées, ${r.notesMisesAJour} mises à jour`
-				: `${r.notesCreees} notes créées`;
+				? `${r.notesCreees} notes ${creees}, ${r.notesMisesAJour} ${majs}`
+				: `${r.notesCreees} notes ${creees}`;
 		return r.echecs > 0 ? `${debut}, ${r.echecs} fichiers en échec` : `${debut}, aucun échec`;
 	}
 
-	/** Le sort d'un fichier décide de sa colonne : note, écarté, en échec. */
+	/**
+	 * Le sort d'un fichier décide de sa colonne : note, écarté, en échec.
+	 *
+	 * ET LA COLONNE DES NOTES SE PARTAGE EN DEUX — `maj` dit que la cible porte
+	 * déjà cette note, à cette place, donc que l'écriture sera une MISE À JOUR.
+	 * Sans lui, l'aperçu annonçait « 4 notes seront créées » là où l'import
+	 * n'allait en créer aucune. Le champ est absent du jeu de semence, qui n'a pas
+	 * de cible : le compte des mises à jour y reste nul, et l'écran ne bouge pas.
+	 */
 	const resume = $derived.by(() => {
 		let notes = 0;
+		let misesAJour = 0;
 		let ignores = 0;
 		let echecs = 0;
 		/* Une table ORDONNÉE, tenue en liste : le gel trie les formats par effectif
@@ -486,28 +583,50 @@
 		for (const f of LOT.fichiers) {
 			if (f.s === 'ignore') ignores++;
 			else if (f.s === 'echec') echecs++;
+			else if (f.maj === true) misesAJour++;
 			else notes++;
 			if (f.s === 'ignore') continue;
 			const deja = formats.find((e) => e[0] === f.f);
 			if (deja) deja[1]++;
 			else formats.push([f.f, 1]);
 		}
-		return { total: LOT.fichiers.length, notes, ignores, echecs, formats };
+		return { total: LOT.fichiers.length, notes, misesAJour, ignores, echecs, formats };
 	});
 
 	interface NoeudDuLot {
 		readonly nom: string;
+		/**
+		 * LE CHEMIN DU NŒUD SOUS LA CIBLE — ce qui permet de dire s'il existe
+		 * déjà. Le nom seul ne suffisait pas : deux branches peuvent porter un
+		 * dossier de même nom à des places différentes.
+		 */
+		readonly chemin: string;
 		readonly enfants: NoeudDuLot[];
 		readonly fichiers: { nom: string; format: FormatDImport }[];
 	}
 
 	/** Le nœud d'un niveau, créé à la première rencontre. */
-	function noeud(niveau: NoeudDuLot[], nom: string): NoeudDuLot {
+	function noeud(niveau: NoeudDuLot[], nom: string, cheminDuParent: string): NoeudDuLot {
 		const deja = niveau.find((n) => n.nom === nom);
 		if (deja) return deja;
-		const neuf: NoeudDuLot = { nom, enfants: [], fichiers: [] };
+		const neuf: NoeudDuLot = {
+			nom,
+			chemin: cheminDuParent === '' ? nom : `${cheminDuParent}/${nom}`,
+			enfants: [],
+			fichiers: []
+		};
 		niveau.push(neuf);
 		return neuf;
+	}
+
+	/**
+	 * UN DOSSIER QUE LA CIBLE PORTE DÉJÀ N'EST PAS UN DOSSIER CRÉÉ.
+	 *
+	 * Vide — le régime de la planche, où aucune cible n'est connue —, tout est
+	 * neuf, et c'est ce que le gel montre.
+	 */
+	function dossierExistant(chemin: string): boolean {
+		return dossiersExistants.includes(chemin);
 	}
 
 	/**
@@ -524,7 +643,7 @@
 			let niveau = racine;
 			let dernier: NoeudDuLot | null = null;
 			for (const s of segments) {
-				dernier = noeud(niveau, s);
+				dernier = noeud(niveau, s, dernier === null ? '' : dernier.chemin);
 				niveau = dernier.enfants;
 			}
 			if (dernier) dernier.fichiers.push({ nom, format: f.f });
@@ -532,10 +651,15 @@
 		return racine;
 	});
 
-	/** Les dossiers de l'arborescence, tous niveaux confondus. */
+	/**
+	 * Les dossiers que l'import CRÉERA, tous niveaux confondus — ceux que la
+	 * cible ne porte pas encore.
+	 */
 	function compterDossiers(niveau: readonly NoeudDuLot[]): number {
 		let total = 0;
-		for (const n of niveau) total += 1 + compterDossiers(n.enfants);
+		for (const n of niveau) {
+			total += (dossierExistant(n.chemin) ? 0 : 1) + compterDossiers(n.enfants);
+		}
 		return total;
 	}
 	const nombreDeDossiers = $derived(compterDossiers(arborescence));
@@ -608,14 +732,32 @@
 		return rang < etape ? 'faite' : rang === etape ? 'courante' : 'avenir';
 	}
 
-	/** Le retour en arrière reste possible jusqu'à la validation, pas au-delà. */
-	const precedentMasque = $derived(etape === 1 || etape === 4);
 	const renoncerMasque = $derived(etape !== 3);
 	/** `termine` de `majPied()` — l'étape 4 avec son rapport à l'écran. */
 	const termine = $derived(etape === 4 && rapport !== null);
+	/** Le rapport à l'écran est-il celui d'une simulation ? */
+	const rapportSimule = $derived(rapport !== null && rapport.simulation);
+	/** L'étape 4 close sur un rapport de SIMULATION : rien n'a été écrit. */
+	const simulationTerminee = $derived(termine && rapportSimule);
+	/**
+	 * Le retour en arrière reste possible jusqu'à la validation, pas au-delà.
+	 *
+	 * UNE SIMULATION N'EST PAS UNE VALIDATION — rien n'a été écrit, et la règle
+	 * ci-dessus dit donc elle-même que le retour reste ouvert. C'est aussi la
+	 * seule sortie honnête de l'étape 4 après une simulation : « Ouvrir le
+	 * domaine » n'y a plus de sens, et un écran sans aucun geste serait une
+	 * impasse. On revient à l'aperçu, d'où l'import réel se lance.
+	 */
+	const precedentMasque = $derived(etape === 1 || (etape === 4 && !simulationTerminee));
+	/**
+	 * « OUVRIR LE DOMAINE » N'EST OFFERT QUE SI QUELQUE CHOSE Y A ÉTÉ ÉCRIT.
+	 * Après une simulation, le domaine ne porte aucune des notes annoncées :
+	 * proposer d'y aller serait promettre ce qui n'existe pas (`P-03`).
+	 */
+	const ouvrirLeDomaine = $derived(termine && !simulationTerminee);
 	/* L'import lancé, « Continuer » disparaît jusqu'à ce que le rapport soit là ;
 	   aucun état de la planche ne l'y voit revenir. */
-	const suivantMasque = $derived(etape === 4 && !termine);
+	const suivantMasque = $derived(etape === 4 && !ouvrirLeDomaine);
 	/**
 	 * `majPied()` ne retouche l'inhibition qu'aux étapes 1 à 3 : à l'étape 4
 	 * elle reste celle du dernier passage, et le gel arrive toujours à l'étape 4
@@ -631,7 +773,7 @@
 				? simulationRetenue
 					? 'Lancer la simulation'
 					: "Lancer l'import"
-				: termine
+				: ouvrirLeDomaine
 					? 'Ouvrir le domaine'
 					: 'Continuer'
 	);
@@ -711,7 +853,9 @@
 		fichiers = retenus;
 		sourceDuLot = sourceDe(retenus);
 		lotAnalyse = null;
+		dossiersExistants = [];
 		rapport = null;
+		refus = null;
 	}
 
 	/** Le total du lot, en méga-octets à une décimale — la phrase du gel. */
@@ -739,10 +883,17 @@
 		if (etape === 2) {
 			if (fichiers.length === 0 || analyser === undefined) return;
 			enCours = true;
+			refus = null;
 			try {
-				const lot = await analyser(fichiers, reglages);
-				if (lot === null) return;
-				lotAnalyse = lot;
+				const issue = await analyser(fichiers, reglages);
+				/* LE REFUS S'AFFICHE — il retournait en silence, et le bouton
+				   « Analyser le lot » ne produisait alors rien du tout. */
+				if ('refus' in issue) {
+					refus = issue.refus;
+					return;
+				}
+				lotAnalyse = issue.valeur.lot;
+				dossiersExistants = issue.valeur.dossiersExistants;
 				etapeLocale = 3;
 			} finally {
 				enCours = false;
@@ -752,16 +903,24 @@
 		if (etape === 3) {
 			if (importer === undefined) return;
 			enCours = true;
+			refus = null;
 			etapeLocale = 4;
 			try {
-				rapport = await importer(fichiers, reglages);
+				const issue = await importer(fichiers, reglages);
+				if ('refus' in issue) {
+					refus = issue.refus;
+					/* Rien n'a été traité : on rend l'aperçu, où le geste se reprend. */
+					etapeLocale = 3;
+					return;
+				}
+				rapport = issue.valeur;
 			} finally {
 				enCours = false;
 			}
 			return;
 		}
 		/* Étape 4, rapport à l'écran : « Ouvrir le domaine ». */
-		if (termine) location.assign(adresseDuDomaine);
+		if (ouvrirLeDomaine) location.assign(adresseDuDomaine);
 	}
 
 	function reculer(): void {
@@ -773,7 +932,9 @@
 		if (!vivant) return;
 		fichiers = [];
 		lotAnalyse = null;
+		dossiersExistants = [];
 		rapport = null;
+		refus = null;
 		sourceDuLot = '';
 		etapeLocale = 1;
 	}
@@ -815,7 +976,7 @@
 					><path d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"/></svg
 				></span
 			><span class="al__nom">{d.nom}</span
-			><span class="al__neuf">dossier créé</span></div
+			><span class="al__neuf">{dossierExistant(d.chemin) ? 'dossier existant' : 'dossier créé'}</span></div
 		>{#each d.fichiers as f, k (k)}<div class="al al--fichier"
 			><span class="al__ic"
 				><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"
@@ -851,6 +1012,7 @@
 		domaine: compte.domaine
 	}}
 	version={instance.version}
+	{notifications}
 >
 	{#snippet enfants()}
 		<!-- prettier-ignore -->
@@ -1016,7 +1178,10 @@
 					>{#if etape === 3}<div class="recap__bloc"
 						><div class="recap__val">{resume.notes}</div
 						><span class="recap__nom">notes seront créées</span></div
-					><div class="recap__bloc"
+					>{#if resume.misesAJour}<div class="recap__bloc"
+						><div class="recap__val">{resume.misesAJour}</div
+						><span class="recap__nom">notes seront mises à jour</span></div
+					>{/if}<div class="recap__bloc"
 						><span class="etiq">Par format</span
 						><div class="recap__liste"
 							>{#each parFormat as [n, nom] (nom)}<div class="recap__ligne"
@@ -1045,11 +1210,17 @@
 				arrive : le titre devient « Import terminé », le sous-titre s'efface.
 			-->
 			<h1 class="etape__titre" id="titre-4">
-				{rapport === null ? 'Import en cours' : 'Import terminé'}
+				{rapport === null
+					? 'Import en cours'
+					: rapport.simulation
+						? 'Simulation terminée — rien n’a été écrit'
+						: 'Import terminé'}
 			</h1>
 			<p class="etape__sous" id="sous-4">
 				{#if rapport === null}Un fichier en erreur n'interrompt pas le lot : le traitement va
-					jusqu'au bout et le rapport détaillera chaque cas.{/if}
+					jusqu'au bout et le rapport détaillera chaque cas.{:else if rapport.simulation}Le lot a
+					été traité de bout en bout, puis annulé : la base est exactement dans l'état où elle
+					était. Revenez à l'aperçu pour lancer l'import réel.{/if}
 			</p>
 
 			<div class="progression-bloc" id="bloc-progression" hidden={rapport !== null}>
@@ -1129,17 +1300,20 @@
 						>{/each}</div
 					></section
 				>{/if}<section class="section-rapport"
-					><span class="etiq">Structure créée</span
+					><span class="etiq">{rapportSimule ? 'Structure qui serait créée' : 'Structure créée'}</span
 					><div class="section-rapport__cadre" style="padding:var(--e-3) var(--e-4);font-size:var(--t-petit)"
-						>{`${rapport.dossiersCrees} dossiers créés dans le domaine ${rapport.domaine}.`}</div
+						>{`${rapport.dossiersCrees} dossiers ${auFuturSiSimule(rapport, 'créés', 'seraient créés')} dans le domaine ${rapport.domaine}.`}</div
 					></section
 				><section class="section-rapport"
 					><span class="etiq">{intituleDesNotes(rapport)}</span
 					><div class="section-rapport__cadre"
-						>{#each rapport.ecrites.slice(0, 8) as n (n.identifiant)}<a class="note-creee" href={n.adresse}
+						>{#each rapport.ecrites.slice(0, 8) as n (n.identifiant)}{#if rapportSimule}<div class="note-creee"
+							><span class="note-creee__nom">{n.titre}</span
+							><span class="note-creee__ou">{n.ou}</span></div
+						>{:else}<a class="note-creee" href={n.adresse}
 							><span class="note-creee__nom">{n.titre}</span
 							><span class="note-creee__ou">{n.ou}</span></a
-						>{/each}{#if rapport.ecrites.length > 8}<div style="padding:var(--e-2);font-size:var(--t-mini);color:var(--c-encre-3)"
+						>{/if}{/each}{#if rapport.ecrites.length > 8}<div style="padding:var(--e-2);font-size:var(--t-mini);color:var(--c-encre-3)"
 							>{`et ${rapport.ecrites.length - 8} autres — la liste complète est dans le domaine.`}</div
 						>{/if}</div
 					></section
