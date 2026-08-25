@@ -1,50 +1,47 @@
 /**
- * V-12 — LES PROPRIÉTÉS DE CONTEXTE (T-042).
+ * V-12 — LE RANGEMENT SERVI, ET RIEN DU JEU DE DÉMONSTRATION.
  *
- * CE QUE CE FICHIER PROUVE, ET RIEN D'AUTRE : la propriété fournie l'emporte,
- * la propriété absente retombe sur la constante du jeu de semence. Il ne dit
- * rien de la conformité au gel — c'est `pnpm verif:maquette V-12 --contre=app`
- * qui la mesure, et lui seul.
+ * Cette vue a déclaré `univers`, `domaines`, `compte`, `instance` et
+ * `modifications` OPTIONNELLES, de défaut les constantes de `seeds/corpus.ts`.
+ * Ce défaut garantissait qu'une route qui en oubliait une servait le jeu de
+ * démonstration SANS QUE RIEN NE PROTESTE, et la seconde moitié de ce fichier
+ * l'épinglait comme un acquis. Elle est retirée avec lui.
  *
- * LA SECONDE MOITIÉ EST LA PLUS IMPORTANTE. Un contrôle qui n'éprouverait que
- * la substitution laisserait passer un défaut de DÉFAUT, et un défaut de défaut
- * fait bouger les 409 couples du banc sans qu'aucun unitaire ne le voie (P-5 :
- * une règle doit être éprouvée dans les deux polarités).
+ * `domaines` ET `modifications` SONT REQUISES — la route les passe, et
+ * `svelte-check` refuse désormais de compiler un appel qui les oublierait.
+ * `univers` et `compte` peuvent légitimement manquer : leurs états vides sont
+ * le tableau vide et `null`. `instance` a disparu — le contexte de coquille
+ * sert la version du paquet.
+ *
+ * CE QUI EST ÉPROUVÉ : la propriété servie décide, et rien du jeu n'atteint
+ * l'écran quand elle ne le porte pas.
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
-import {
-	corpusPourVue,
-	DOMAINES,
-	INSTANCE,
-	MODIFICATIONS,
-	MOI,
-	UNIVERS,
-	type EtatDInstance,
-	type UtilisateurCourant
-} from '../../seeds/corpus';
+import { corpusPourVue, DOMAINES, MODIFICATIONS, MOI, UNIVERS } from '../../seeds/corpus';
+import type { CompteAffiche } from '../lib/coquille/identite';
 
 const NOTES = corpusPourVue('V-12');
 
 /** Une identité qui n'est PAS celle du jeu de semence — le défaut mesuré. */
-const SOPHIE: UtilisateurCourant = {
-	prenom: 'Sophie',
+const SOPHIE: CompteAffiche = {
 	nom: 'Sophie Nguyen',
 	initiales: 'SN',
 	domaine: 'Applications',
 	role: 'Administrateur'
 };
 
-const AUTRE_INSTANCE: EtatDInstance = { version: '9.9.9-epreuve', synchro: "à l'instant" };
+/** Le socle de rendu — tout ce que la vue exige, et rien de plus. */
+const SOCLE = { vecteur: null, notes: NOTES, domaines: DOMAINES, modifications: MODIFICATIONS };
 
 function rendu(proprietes: Record<string, unknown>): Promise<string> {
-	return rendreLaVue('V-12', { vecteur: null, notes: NOTES, ...proprietes });
+	return rendreLaVue('V-12', { ...SOCLE, ...proprietes });
 }
 
 afterAll(fermerLeHarnais);
 
-describe('V-12 — la propriété fournie l’emporte', () => {
-	it('sert le compte reçu, et non celui du jeu de semence', async () => {
+describe('V-12 — la propriété servie décide', () => {
+	it('sert le compte reçu, et n’annonce personne sans compte', async () => {
 		const html = await rendu({ compte: SOPHIE });
 		/* La désignation du menu utilisateur — le seul endroit où le compte
 		   COURANT est nommé. Le nom de `MOI` figure par ailleurs comme AUTEUR de
@@ -52,15 +49,28 @@ describe('V-12 — la propriété fournie l’emporte', () => {
 		   propriété. */
 		expect(html).toContain('Sophie Nguyen — menu utilisateur');
 		expect(html).not.toContain(`${MOI.nom} — menu utilisateur`);
+		expect(await rendu({})).not.toContain(`${MOI.nom} — menu utilisateur`);
 	});
 
-	it('sert la version d’instance reçue', async () => {
-		expect(await rendu({ instance: AUTRE_INSTANCE })).toContain('9.9.9-epreuve');
+	it('ne sert aucune version de démonstration au pied du rail', async () => {
+		expect(await rendu({})).not.toContain('Codicillus 1.0.0');
 	});
 
 	it('sert la liste de domaines reçue — le domaine courant en sort', async () => {
 		const html = await rendu({ domaines: DOMAINES.filter((d) => d.nom === 'Applications') });
 		expect(html).toContain('Notes de Applications');
+		expect(html).not.toContain('Notes de Infrastructure');
+	});
+
+	/* LE RAIL NE MARQUE QUE LE DOMAINE COURANT. Il en marquait DEUX : le gel
+	   accumule la marque, et la vue recopiait « Infrastructure » en dur. */
+	it('le rail ne met en évidence que le domaine servi', async () => {
+		const html = await rendu({
+			vecteur: { dom: 'Applications' },
+			domaines: DOMAINES.filter((d) => d.nom === 'Applications')
+		});
+		expect(html).toContain('Notes de Applications');
+		expect(html).not.toContain('Notes de Infrastructure');
 	});
 
 	it('sert la table de modifications reçue', async () => {
@@ -70,6 +80,15 @@ describe('V-12 — la propriété fournie l’emporte', () => {
 		/* Une table PARTIELLE est admise, et ce qu'elle ne porte pas se DIT
 		   plutôt que de se combler par une valeur d'illustration (P-02). */
 		expect(html).toContain('date de modification inconnue');
+	});
+
+	/**
+	 * LE LIBELLÉ DE JOUR ZÉRO. `joursEcoules()` rend 0 en deçà de vingt-quatre
+	 * heures, et la vue disait « modifiée hier » d'une note modifiée le jour même.
+	 */
+	it('une modification du jour se dit « aujourd’hui », jamais « hier »', async () => {
+		const html = await rendu({ modifications: { 'n-restaurer-pg': 0 } });
+		expect(html).toContain("modifiée aujourd'hui");
 	});
 
 	/**
@@ -89,27 +108,29 @@ describe('V-12 — la propriété fournie l’emporte', () => {
 		const restreint = await rendu({ univers: UNIVERS.filter((u) => u.nom === 'Projets') });
 		expect(restreint).toEqual(await rendu({}));
 	});
-});
-
-describe('V-12 — la propriété absente retombe sur la constante du jeu', () => {
-	it('rend le compte, la version et le premier domaine du jeu de semence', async () => {
-		const html = await rendu({});
-		expect(html).toContain(`${MOI.nom} — menu utilisateur`);
-		expect(html).toContain(MOI.initiales);
-		expect(html).toContain(INSTANCE.version);
-		expect(html).toContain(`Notes de ${DOMAINES[0]?.nom}`);
-	});
-
-	it('rend les anciennetés de la table du jeu de semence', async () => {
-		const html = await rendu({});
-		expect(html).toContain(`modifiée il y a ${MODIFICATIONS['n-restaurer-pg']} jours`);
-		expect(html).not.toContain('date de modification inconnue');
-	});
 
 	it('rend l’arborescence abrégée du gel, que le corpus ne produit pas', async () => {
 		const html = await rendu({});
 		expect(html).toContain('Ordonnancement');
 		expect(html).toContain('Astreinte');
+	});
+
+	/**
+	 * LE CONTRÔLE QUI TIENT LE LOT : sur des sources qui ne portent rien du jeu,
+	 * rien du jeu ne doit apparaître dans le CONTENU. Le rail abrégé, lui, est
+	 * écrit au balisage du gel et nomme ses propres dossiers : la mesure est
+	 * découpée sur le contenu, faute de quoi elle mesurerait ce balisage.
+	 */
+	it('aucune note du jeu de démonstration n’atteint la liste', async () => {
+		const html = await rendu({
+			notes: [],
+			domaines: DOMAINES.filter((d) => d.nom === 'Migration 2026'),
+			modifications: {}
+		});
+		const contenu = /<main[\s\S]*?<\/main>/.exec(html)?.[0] ?? '';
+		expect(contenu).not.toContain('Restaurer une sauvegarde PostgreSQL');
+		expect(contenu).not.toContain('Karim Belhadj');
+		expect(html).not.toContain('Codicillus 1.0.0');
 	});
 });
 

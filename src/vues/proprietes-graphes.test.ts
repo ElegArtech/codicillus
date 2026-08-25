@@ -47,6 +47,7 @@ import {
 	type UtilisateurCourant
 } from '../../seeds/corpus';
 import { TYPES_DE_FICHE as TYPES_DE_FICHE_PEUPLES } from '../../seeds/demonstration';
+import type { CompteAffiche } from '../lib/coquille/identite';
 
 /* ── Le harnais ───────────────────────────────────────────────────────────
    Un seul serveur pour tout le fichier : le monter coûte quelques secondes,
@@ -124,6 +125,21 @@ const AUTRE_COMPTE: UtilisateurCourant = {
 
 /** Un autre état d'instance que `INSTANCE`. */
 const AUTRE_INSTANCE: EtatDInstance = { version: '9.9.9', synchro: "à l'instant" };
+
+/**
+ * LA MÊME IDENTITÉ, DANS LA FORME QUE LA COQUILLE AFFICHE.
+ *
+ * `CompteAffiche` est le contrat que le gabarit racine sert et que déclarent
+ * les vues dont le défaut tiré du jeu a été retiré. Il est DÉRIVÉ de
+ * `AUTRE_COMPTE` plutôt que recopié : deux littéraux divergeraient sans
+ * qu'aucun compilateur ne le voie, et le contrôle mesurerait sa propre copie.
+ */
+const AUTRE_COMPTE_AFFICHE: CompteAffiche = {
+	nom: AUTRE_COMPTE.nom,
+	initiales: AUTRE_COMPTE.initiales,
+	role: AUTRE_COMPTE.role,
+	domaine: AUTRE_COMPTE.domaine
+};
 
 /** Un seul univers, et ce n'est pas le premier du jeu. */
 const UN_UNIVERS = UNIVERS.filter((u) => u.nom === 'Projets');
@@ -429,34 +445,51 @@ describe('V-21 — carte mentale', () => {
 describe('V-22 — signets d’un domaine', () => {
 	const notes = corpusPourVue('V-22');
 
-	it("absente, la constante du jeu s'applique", async () => {
-		const body = await v22({ vecteur: null, notes });
-		expect(body).toContain('>Signets de Infrastructure<');
-		expect(body).toContain('Codicillus 1.0.0');
-		expect(body).toContain('>KB<');
+	/* `domaines` EST REQUISE. Elle a eu `DOMAINES` du jeu de démonstration pour
+	   défaut : une route qui l'oubliait servait un rangement qui n'existe pas.
+	   Le contrôle porte donc sur ce que la liste SERVIE décide, et sur ce que la
+	   vue ne montre plus quand cette liste ne porte pas le domaine du jeu. */
+	it('le domaine rendu est celui de la liste servie, jamais celui du jeu', async () => {
+		const body = await v22({ vecteur: null, notes, domaines: UN_DOMAINE });
+		expect(body).toContain('>Signets de Applications<');
+		expect(body).not.toContain('>Signets de Infrastructure<');
 	});
 
-	it("fournie, la propriété l'emporte", async () => {
+	/* AUCUNE IDENTITÉ, AUCUNE VERSION — les deux états vides, ensemble. La barre
+	   supérieure annonçait « Karim Belhadj » et le pied du rail « Codicillus
+	   1.0.0 » à qui n'était personne : deux valeurs du jeu servies comme des
+	   faits. Sans compte servi, rien n'est annoncé. */
+	it('sans compte ni version, rien du jeu n’est annoncé', async () => {
+		const body = await v22({ vecteur: null, notes, domaines: DOMAINES });
+		expect(body).not.toContain('>KB<');
+		expect(body).not.toContain('Karim Belhadj — menu utilisateur');
+		expect(body).not.toContain('Codicillus 1.0.0');
+	});
+
+	it('fournie, l’identité l’emporte', async () => {
 		const body = await v22({
 			vecteur: null,
 			notes,
-			domaines: UN_DOMAINE,
-			compte: AUTRE_COMPTE,
-			instance: AUTRE_INSTANCE
+			domaines: DOMAINES,
+			compte: AUTRE_COMPTE_AFFICHE
 		});
+		expect(body).toContain('>SN<');
+	});
+
+	/* LE RAIL NE MARQUE QUE LE DOMAINE COURANT. Il en marquait DEUX : le gel
+	   accumule la marque, et la vue recopiait « Infrastructure » en dur. */
+	it('le rail ne met en évidence que le domaine servi', async () => {
+		const body = await v22({ vecteur: { dom: 'Applications' }, notes, domaines: DOMAINES });
 		expect(body).toContain('>Signets de Applications<');
 		expect(body).not.toContain('>Signets de Infrastructure<');
-		expect(body).toContain('>SN<');
-		expect(body).toContain('Codicillus 9.9.9');
 	});
 
 	/* LES VALEURS DE FACETTE RETENUES — les deux que `docs/routes.md` §4.2
-	   déclare pour cette route. Avant ce lot, les menus étaient décoratifs :
-	   cocher une valeur ne filtrait rien, et aucune propriété ne portait un
-	   état de filtrage jusqu'à la vue. */
+	   déclare pour cette route. Avant leur câblage, les menus étaient
+	   décoratifs : cocher une valeur ne filtrait rien. */
 
 	it('absente, aucun signet du domaine ne manque et rien n’est retenu', async () => {
-		const body = await v22({ vecteur: null, notes });
+		const body = await v22({ vecteur: null, notes, domaines: DOMAINES });
 		expect(body).toContain('PostgreSQL');
 		expect(body).toContain('ANSSI');
 		expect(body).toContain("Page d'état de l'hébergeur");
@@ -465,7 +498,12 @@ describe('V-22 — signets d’un domaine', () => {
 	});
 
 	it('fournie, elle filtre la liste, coche la valeur et pose son jeton', async () => {
-		const body = await v22({ vecteur: null, notes, retenues: { auteur: ['Sophie Nguyen'] } });
+		const body = await v22({
+			vecteur: null,
+			notes,
+			domaines: DOMAINES,
+			retenues: { auteur: ['Sophie Nguyen'] }
+		});
 		expect(body).toContain('ANSSI');
 		expect(body).not.toContain('PostgreSQL');
 		expect(body).not.toContain("Page d'état de l'hébergeur");
@@ -478,6 +516,7 @@ describe('V-22 — signets d’un domaine', () => {
 		const etDeux = await v22({
 			vecteur: null,
 			notes,
+			domaines: DOMAINES,
 			retenues: { auteur: ['Karim Belhadj'], etiquette: ['postgresql'] }
 		});
 		expect(etDeux).toContain('PostgreSQL');
@@ -486,6 +525,7 @@ describe('V-22 — signets d’un domaine', () => {
 		const ouDeux = await v22({
 			vecteur: null,
 			notes,
+			domaines: DOMAINES,
 			retenues: { etiquette: ['postgresql', 'barman'] }
 		});
 		expect(ouDeux).toContain('PostgreSQL');
@@ -494,7 +534,12 @@ describe('V-22 — signets d’un domaine', () => {
 	});
 
 	it('une valeur qui ne mord sur rien rend l’état « aucun résultat »', async () => {
-		const body = await v22({ vecteur: null, notes, retenues: { auteur: ['Personne'] } });
+		const body = await v22({
+			vecteur: null,
+			notes,
+			domaines: DOMAINES,
+			retenues: { auteur: ['Personne'] }
+		});
 		expect(body).toContain('Aucun signet ne correspond à ces filtres');
 		expect(body).toContain('Réinitialiser les filtres');
 		expect(body).not.toContain('Aucun signet dans ce domaine');
@@ -506,7 +551,7 @@ describe('V-22 — signets d’un domaine', () => {
 	   n'émet un menu que si la facette a au moins une valeur, et les
 	   étiquettes d'un signet sont FACULTATIVES : sur un domaine dont aucun
 	   signet n'en porte, le seul menu rendu est « Auteur », au rang 0, et
-	   cocher un auteur écrivait `?etiquette={nom de l'auteur}`. L'autre
+	   cocher un auteur écrivait une clé d'adresse `etiquette`. L'autre
 	   moitié du chemin — de l'identifiant à la clé d'adresse — est éprouvée
 	   par `src/lib/cablage/facettes.test.ts`. */
 
@@ -514,13 +559,13 @@ describe('V-22 — signets d’un domaine', () => {
 	const sansEtiquette = notes.map((n) => ({ ...n, etiquettes: [] }));
 
 	it('chaque menu rendu porte l’identifiant de SA facette', async () => {
-		const body = await v22({ vecteur: null, notes });
+		const body = await v22({ vecteur: null, notes, domaines: DOMAINES });
 		expect(body).toContain('data-facette="etiquette"');
 		expect(body).toContain('data-facette="auteur"');
 	});
 
 	it('sans aucune étiquette, le seul menu rendu est celui de l’auteur', async () => {
-		const body = await v22({ vecteur: null, notes: sansEtiquette });
+		const body = await v22({ vecteur: null, notes: sansEtiquette, domaines: DOMAINES });
 		expect(body).toContain('data-facette="auteur"');
 		expect(body).not.toContain('data-facette="etiquette"');
 		expect(body.match(/class="fac-menu"/g) ?? []).toHaveLength(1);
@@ -530,35 +575,66 @@ describe('V-22 — signets d’un domaine', () => {
 describe('V-23 — formulaire de signet', () => {
 	const notes = corpusPourVue('V-23');
 
-	it("absente, la constante du jeu s'applique — le signet du gel, `n-sig-statut`", async () => {
-		const body = await v23({ vecteur: { mode: 'edition' }, notes });
-		expect(body).toContain("Page d'état de l'hébergeur");
-		expect(body).toContain('https://status.exemple-hebergeur.net');
-		expect(body).toContain('Codicillus 1.0.0');
-		expect(body).toContain('>KB<');
+	/* SANS SIGNET, LE FORMULAIRE EST VIERGE. Il retombait sur `n-sig-statut` du
+	   jeu de démonstration — la note que le gel édite —, y compris sur
+	   `/…/signets/nouveau`, qui n'en désigne aucun. `null` est l'état vide. */
+	it('sans signet, aucune valeur du jeu n’atteint le formulaire', async () => {
+		const body = await v23({
+			vecteur: { mode: 'edition' },
+			notes,
+			domaines: DOMAINES,
+			signet: null
+		});
+		expect(body).not.toContain("Page d'état de l'hébergeur");
+		expect(body).not.toContain('https://status.exemple-hebergeur.net');
+		expect(body).not.toContain('Codicillus 1.0.0');
+		expect(body).not.toContain('>KB<');
 	});
 
-	it("fourni, le signet l'emporte — chaque signet est rendu, pas toujours le même", async () => {
+	it('fourni, le signet l’emporte — chaque signet est rendu, pas toujours le même', async () => {
 		for (const id of ['n-doc-barman', 'n-sig-postgres', 'n-sig-anssi', 'n-sig-statut'] as const) {
 			const signet = noteParIdentifiant(id);
 			if (!signet) throw new Error(`le jeu de semence ne porte pas ${id}`);
-			const body = await v23({ vecteur: { mode: 'edition' }, notes, signet });
+			const body = await v23({
+				vecteur: { mode: 'edition' },
+				notes,
+				domaines: DOMAINES,
+				signet
+			});
 			expect(body).toContain(signet.titre.replace(/&/g, '&amp;'));
 			expect(body).toContain(signet.url ?? '');
 		}
 	});
 
-	it("fournie, la propriété l'emporte — domaines, identité, instance", async () => {
+	/* LE DOMAINE PRÉ-CHOISI VIENT DE L'ADRESSE, jamais d'une identité : il
+	   descendait par `compte.domaine`, dont le dernier repli était `MOI` du jeu.
+	   Et le sélecteur n'offre que les domaines SERVIS. */
+	it('le sélecteur n’offre que les domaines servis, et coche celui de l’adresse', async () => {
 		const body = await v23({
 			vecteur: { mode: 'creation' },
 			notes,
 			domaines: UN_DOMAINE,
-			compte: AUTRE_COMPTE,
-			instance: AUTRE_INSTANCE
+			domaineDeDepart: 'Applications',
+			compte: AUTRE_COMPTE_AFFICHE
 		});
 		expect(body).toContain('value="Applications"');
 		expect(body).not.toContain('value="Infrastructure"');
 		expect(body).toContain('>SN<');
-		expect(body).toContain('Codicillus 9.9.9');
+	});
+
+	/* LE FIL D'ARIANE PORTE LE RANGEMENT RÉEL. Il écrivait « Production ›
+	   Infrastructure » en dur — deux noms du jeu, annoncés comme un fait. La
+	   mesure est découpée sur le fil : le rail abrégé nomme, lui, les dossiers
+	   du gel tant qu'aucun gabarit racine ne lui sert la base. */
+	it('le fil d’Ariane nomme l’univers et le domaine servis', async () => {
+		const body = await v23({
+			vecteur: { mode: 'creation' },
+			notes,
+			domaines: UN_DOMAINE,
+			domaineDeDepart: 'Applications'
+		});
+		const fil = /<nav class="fil"[\s\S]*?<\/nav>/.exec(body)?.[0] ?? '';
+		expect(fil).toContain('>Applications</a>');
+		expect(fil).not.toContain('>Infrastructure</a>');
 	});
 });
