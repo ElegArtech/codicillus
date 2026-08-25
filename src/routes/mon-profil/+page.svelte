@@ -186,10 +186,18 @@
 	laisse stable : après le seul renommage que la console permet, l'adresse
 	composée du nouveau nom rend 404. Deux univers portant un même nom de domaine
 	produisaient, eux, l'adresse de l'homonyme. Le rattachement lu ferme les deux.
+
+	LA CIBLE DU BOUTON EST LA LISTE DES NOTES DU DOMAINE, ET ELLE DEMANDE UN
+	MODULE. `[domaine]/notes/+page.server.ts` compose `domaineLisible` ET
+	`moduleActif(modules, 'notes')` : le rattachement lisible ne suffit pas, et le
+	bouton menait encore en 404 sur un domaine dont le module Notes est éteint
+	(`RG-STR-06` — l'activation est un geste de console). Le gabarit racine rend ce
+	second verdict avec le rangement ; sans lui, l'adresse n'est pas passée, et
+	V-25 n'émet pas le bouton.
 -->
 <Vue
 	domaines={page.data.domaines}
-	rangementDuProfil={page.data.rangement}
+	rangementDuProfil={page.data.rangement?.notes === true ? page.data.rangement : null}
 	vecteur={data.vecteur}
 	notes={data.notes}
 	profilDuCompte={data.profilDuCompte}

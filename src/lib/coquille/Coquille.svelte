@@ -424,6 +424,26 @@
 	);
 
 	/**
+	 * CE QUE LE MENU « CRÉER » ÉMET — `P-03` et `P-09` ensemble.
+	 *
+	 * Les deux entrées qui exigent un domaine étaient TOUJOURS émises, puis
+	 * retirées par `$lib/cablage/coquille.ts` après hydratation. Ce qui est servi
+	 * est servi : un navigateur sans script les gardait, mortes. `P-09` ne veut ni
+	 * grisée ni masquée — il veut absente. Le verdict vient du gabarit racine, qui
+	 * a seul les droits et les modules ; ici on ne fait que ne pas rendre.
+	 *
+	 * Hors application — le rendu par défaut d'une vue, la page d'erreur —, le
+	 * contexte est absent ou ne porte rien : les deux sont émises, et le gel ne
+	 * bouge pas d'un pixel.
+	 */
+	const rangementEffectif = $derived(identite?.rangement);
+	const creations = $derived(
+		rangementEffectif === undefined
+			? { dossier: true, signet: true }
+			: { dossier: rangementEffectif !== null, signet: rangementEffectif?.signets === true }
+	);
+
+	/**
 	 * L'arborescence du rail — DEUX DÉRIVATIONS, et une seule sert.
 	 *
 	 * La forme complète dérive du corpus, la forme abrégée le contredit : elle
@@ -589,7 +609,15 @@
 	/>
 
 	<div class="cadre">
-		<BarreSuperieure {fil} cibles={ciblesDuFil} {rail} compte={compteEffectif} {forme} {droits} />
+		<BarreSuperieure
+			{fil}
+			cibles={ciblesDuFil}
+			{rail}
+			compte={compteEffectif}
+			{forme}
+			{droits}
+			{creations}
+		/>
 
 		{#if classeEnveloppe}<div class={classeEnveloppe}>
 				{#if avantContenu}{@render avantContenu()}{/if}

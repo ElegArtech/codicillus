@@ -99,10 +99,10 @@ import {
 	type ContexteDeLecture,
 	dateCourteDInstant,
 	joursEcoules,
-	lireDomaines,
 	lireNotes,
 	lireUnivers
 } from './lecture';
+import { lireLesDomainesLisibles, ouvrirLAcces } from './rangement';
 import type {
 	DemandeDeRevision,
 	Domaine,
@@ -677,8 +677,8 @@ export async function lireAccueil(
 	const [
 		notesLisibles,
 		compte,
-		listeDUnivers,
-		listeDeDomaines,
+		tousLesUnivers,
+		domainesLisibles,
 		mesures7j,
 		mesures7jPrec,
 		modifications,
@@ -688,7 +688,20 @@ export async function lireAccueil(
 		lireNotes(base, contexte, identifiants),
 		lireCompteCourant(base, identite.compteId),
 		lireUnivers(base),
-		lireDomaines(base),
+		/*
+		 * LE TABLEAU DE BORD NE NOMME QUE LES DOMAINES QUE L'APPELANT PEUT OUVRIR.
+		 *
+		 * Il lisait la table ENTIÈRE, sans aucun accès ni filtre, pendant que le
+		 * gabarit racine servait le rail filtré : la MÊME réponse portait donc un
+		 * rail vide et des cartes « Infrastructure », « Projets » — cliquables, et
+		 * chacune vers un 404. `RG-ACC-01`, `P-03`, et c'est le défaut que le rail
+		 * a refermé de son côté sans que l'accueil en reçoive la nouvelle.
+		 *
+		 * LA MÊME FONCTION QUE LE RAIL, pas une seconde écriture du même filtre :
+		 * `lireLesDomainesLisibles()` est appelée par les deux, et deux écrans de
+		 * la même réponse ne peuvent plus diverger.
+		 */
+		ouvrirLAcces(base, identite, maintenant).then((acces) => lireLesDomainesLisibles(base, acces)),
 		compterLesConsultations(base, identifiants, semaine, maintenant),
 		compterLesConsultations(base, identifiants, semainePrecedente, semaine),
 		lireLesAnciennetesDeModification(base, identifiants, maintenant),
@@ -696,11 +709,16 @@ export async function lireAccueil(
 		lireLesDemandesDeRevision(base, identifiants, maintenant)
 	]);
 
+	/* Un univers ne se montre que par les domaines lisibles qu'il porte — le
+	   geste du rail, à la lettre. Sans domaine lisible, il n'est pas nommé. */
+	const porteurs = new Set(domainesLisibles.map((d) => d.univers));
 	const rendu: DonneesDAccueil = {
 		session: true,
 		notes: notesLisibles,
-		univers: listeDUnivers,
-		domaines: listeDeDomaines,
+		univers: tousLesUnivers.filter((u) => porteurs.has(u.nom)),
+		domaines: domainesLisibles.map(
+			(d) => ({ nom: d.nom, univers: d.univers, couleur: d.couleur }) as Domaine
+		),
 		mesures7j,
 		mesures7jPrec,
 		modifications,
@@ -711,5 +729,19 @@ export async function lireAccueil(
 	/* Le compte introuvable ne se remplace pas par celui du jeu de semence : la
 	   clé est OMISE, et la vue rend son défaut. Le cas n'existe que si la session
 	   survit à la suppression de son compte. */
-	return compte === undefined ? rendu : { ...rendu, compte };
+	if (compte === undefined) return rendu;
+
+	/*
+	 * LA SALUTATION NE NOMME PAS NON PLUS UN DOMAINE QUE L'APPELANT NE PEUT PAS
+	 * LIRE. Elle dit « Votre périmètre, {domaine}, compte N notes » sur le seul
+	 * RATTACHEMENT du compte — qui n'est pas un titre d'accès (`RG-DRO-02`) —, et
+	 * elle le nommait donc dans la même réponse qui ne portait aucun domaine.
+	 *
+	 * LA CHAÎNE VIDE EST UN CAS QUE `V-07` TRAITE DÉJÀ, et qu'elle documente :
+	 * c'est celui de tout compte d'amorçage, dont le rattachement est nul. La
+	 * salutation bascule alors sur « Votre base compte … », sans nommer personne.
+	 */
+	const lisible = domainesLisibles.some((d) => d.nom === compte.domaine);
+	const ajuste = lisible ? compte : { ...compte, domaine: '' as typeof compte.domaine };
+	return { ...rendu, compte: ajuste };
 }

@@ -111,9 +111,34 @@
 		 * `data-droits="lecture"`.
 		 */
 		droits?: 'ecriture' | 'lecture' | undefined;
+		/**
+		 * LES DEUX ENTRÉES DU MENU « CRÉER » QUI EXIGENT UN DOMAINE — émises, ou
+		 * pas du tout.
+		 *
+		 * Elles étaient TOUJOURS émises, puis retirées par
+		 * `$lib/cablage/coquille.ts` au montage. Un élagage qui court après
+		 * l'hydratation ne rend pas une entrée absente : elle a été SERVIE, et un
+		 * navigateur sans script la garde, morte. `P-09` la veut absente — « ni
+		 * grisée, NI MASQUÉE » —, donc non émise, comme les deux nœuds
+		 * `si-ecriture` ci-dessus.
+		 *
+		 * Le verdict n'est pas pris ici : `+layout.server.ts` le prend, avec les
+		 * droits et les modules du domaine de rattachement, un prédicat par cible.
+		 * Absente, la propriété vaut « les deux » — le rendu par défaut d'une vue
+		 * ne bouge donc pas d'un pixel.
+		 */
+		creations?: { readonly dossier: boolean; readonly signet: boolean };
 	}
 
-	const { fil, cibles = [], rail, compte, forme = 'complete', droits }: Proprietes = $props();
+	const {
+		fil,
+		cibles = [],
+		rail,
+		compte,
+		forme = 'complete',
+		droits,
+		creations = { dossier: true, signet: true }
+	}: Proprietes = $props();
 
 	/* La TRANSCRIPTION de la règle du socle, pas une interprétation. */
 	const ecriture = $derived(droits !== 'lecture');
@@ -213,28 +238,28 @@
 								d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5L9 1.5zM9 1.5v4h4"
 							/></svg
 						>Nouvelle note</button
-					><button type="button" role="menuitem"
-						><svg
-							width="15"
-							height="15"
-							viewBox="0 0 16 16"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.4"
-							><path
-								d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"
-							/><path d="M8 7.5v4M6 9.5h4" /></svg
-						>Nouveau dossier</button
-					><button type="button" role="menuitem"
-						><svg
-							width="15"
-							height="15"
-							viewBox="0 0 16 16"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.4"><path d="M4 2.5h8v11l-4-3-4 3v-11z" /></svg
-						>Nouveau signet</button
-					>
+					>{#if creations.dossier}<button type="button" role="menuitem"
+							><svg
+								width="15"
+								height="15"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"
+								><path
+									d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"
+								/><path d="M8 7.5v4M6 9.5h4" /></svg
+							>Nouveau dossier</button
+						>{/if}{#if creations.signet}<button type="button" role="menuitem"
+							><svg
+								width="15"
+								height="15"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"><path d="M4 2.5h8v11l-4-3-4 3v-11z" /></svg
+							>Nouveau signet</button
+						>{/if}
 					<div class="menu-barre__sep"></div>
 					<button type="button" role="menuitem"
 						><svg
