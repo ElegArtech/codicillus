@@ -55,7 +55,13 @@ import {
 	toucherLaSession,
 	valeurDeDureeDeSession
 } from '$lib/auth/depot';
-import { MOTIF, adresseDeConnexion, regimeDe } from '$lib/auth/garde';
+import {
+	CIBLE_DE_CHANGEMENT_DE_MOT_DE_PASSE,
+	MOTIF,
+	adresseDeConnexion,
+	regimeDe,
+	versLeChangementDeMotDePasse
+} from '$lib/auth/garde';
 import {
 	ATTRIBUTS_DU_COOKIE,
 	NOM_DU_COOKIE,
@@ -100,6 +106,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const jeton = event.cookies.get(NOM_DU_COOKIE);
 	let etat: EtatDeSession = 'absente';
+	/* Le mot de passe a été posé par un administrateur et n'a pas encore été
+	   changé — `comptes.mot_de_passe_a_changer`, verrou déduit par le dépôt. */
+	let motDePasseAChanger = false;
 
 	if (jeton !== undefined && jeton !== '') {
 		const base = basePartagee();
@@ -122,6 +131,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 					await toucherLaSession(base, trouvee.sessionId);
 					event.locals.identite = identite;
 					event.locals.sessionId = trouvee.sessionId;
+					motDePasseAChanger = trouvee.motDePasseAChanger;
 					etat = 'valide';
 				}
 			}
@@ -133,6 +143,23 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const cookiePerime = jeton !== undefined && etat !== 'valide';
 
 	const regime = regimeDe(event.url.pathname);
+
+	/* LE MOT DE PASSE INITIAL SE CHANGE AVANT TOUT LE RESTE — c'est ce que
+	   `/console/comptes` promet en toutes lettres à l'administrateur : « il devra
+	   être changé à la première connexion ». Rien ne le forçait.
+
+	   LA GARDE PASSE AVANT LE TRI PAR RÉGIME, ET CE N'EST PAS UN DÉTAIL D'ORDRE :
+	   la règle porte sur le COMPTE, pas sur la sensibilité de l'adresse. Rangée
+	   plus bas, l'espace public sortirait avant elle, et le compte y garderait
+	   indéfiniment le mot de passe qu'un tiers lui a transmis. `versLeChangement…`
+	   laisse passer `/deconnexion` — `RG-ACC-02`, on peut toujours partir — et
+	   `/mon-profil`, où le geste exigé s'accomplit. */
+	if (etat === 'valide' && motDePasseAChanger && versLeChangementDeMotDePasse(event.url.pathname)) {
+		return new Response(null, {
+			status: 302,
+			headers: new Headers({ location: CIBLE_DE_CHANGEMENT_DE_MOT_DE_PASSE })
+		});
+	}
 
 	/* `/deconnexion` répond elle-même (RG-ACC-02 : l'espace public, jamais une
 	   page d'erreur) — y compris sans session. Rien ne la redirige ici. */
