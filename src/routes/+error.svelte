@@ -56,7 +56,7 @@
 	 * distinguer effacerait un des trois cas déclarés par la planche.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * `notes={[]}` — CE QUI MANQUE, ET IL FAUT LE DIRE
+	 * `notes={[]}` ET `pistes={[]}` — CE QUI MANQUE, ET IL FAUT LE DIRE
 	 *
 	 * Les deux vues affichent des guides suggérés, et V-04 les quatre guides les
 	 * plus consultés — « la sortie de secours ». Les leur passer demanderait de
@@ -65,6 +65,21 @@
 	 * (`P-02`), la lacune est comptée à `LACUNES_DU_CHEMIN_PUBLIC` et remontée au
 	 * rapport du lot. La contrepartie est une propriété : la réponse ne dépend
 	 * d'aucune donnée de la ressource demandée.
+	 *
+	 * `pistes` SUIT LA MÊME RÈGLE, et pour la même raison. Les deux vues
+	 * énuméraient des pistes de reformulation écrites dans leurs maquettes —
+	 * « salle de réunion », « astreinte », « supervision » —, chacune ouvrant la
+	 * recherche à zéro résultat sur une instance qui ne porte rien de tel. Une
+	 * page d'erreur n'a pas de chargeur : il n'y a rien d'où les dériver, et une
+	 * liste vide ne rend pas le bloc. `reprises` n'a plus besoin d'être passée :
+	 * son défaut EST désormais la liste vide.
+	 *
+	 * ET UNE LISTE VIDE NE LAISSE PLUS SON CADRE DERRIÈRE ELLE. V-04 rendait
+	 * « Les guides les plus consultés » au-dessus d'une liste sans un seul
+	 * élément : un titre sur du vide, annonçant une sortie de secours qui n'en
+	 * était pas une. La section entière part avec sa liste, comme le bloc de
+	 * reformulation part avec ses pistes — c'est la même règle, et elle vaut pour
+	 * les deux.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * TOUT AUTRE STATUT QUE 404 — ÉTAT NON MAQUETTÉ, DÉCLARÉ
@@ -102,8 +117,6 @@
 		page.data as {
 			session?: boolean;
 			ecriture?: boolean;
-			compte?: { nom: string; initiales: string; role: string; domaine: string } | null;
-			domaines?: readonly { nom: string; univers: string; couleur: string }[];
 			portailAssistance?: string;
 		}
 	);
@@ -138,10 +151,23 @@
 
 {#if nonResolue}
 	{#if vue === 'V-26'}
-		<!-- Le compte et les domaines viennent du gabarit racine, qui les lit en
-		     base : sans eux, la page d'adresse non résolue affichait l'identité et
-		     le rangement du jeu de semence — « Karim Belhadj », « Infrastructure »
-		     — sur une instance qui ne les a jamais portés. -->
+		<!--
+			NI `compte` NI `domaines` NE SONT PASSÉS, ET CE N'EST PAS UN OUBLI.
+
+			Ils l'étaient, par deux `as never` : les formes de V-26 les typent depuis
+			`seeds/corpus.ts`, où `nom` est l'union des trois noms du jeu, et
+			l'assertion faisait taire l'écart. `as never` est assignable à tout —
+			c'est-à-dire qu'AUCUNE vérification ne restait au seul site de montage de
+			la vue, sous la propriété même dont ce lot venait de changer le type.
+
+			Le canal juste existe déjà et il est unique : `+layout.svelte` pose
+			l'identité et le rangement RÉELS dans le contexte de coquille, et
+			`Coquille.svelte` les y lit avant de regarder ses propriétés
+			(`identite?.compte ?? compte`). La page d'erreur est rendue dans ce
+			gabarit ; elle n'a donc rien à recopier. Sans contexte — rendu de secours
+			—, la vue retombe sur son identité VIDE et sur aucun domaine, jamais sur
+			« Karim Belhadj » ni « Infrastructure ».
+		-->
 		<!--
 			L'ADRESSE DEMANDÉE, ET C'EST LA SEULE ENTRÉE D'`adresseNonResolue()`.
 			Les deux vues n'avaient aucune propriété pour la recevoir et retombaient
@@ -155,17 +181,14 @@
 			vecteur={{ cas: casDeV26(), droits: ecriture ? 'ecriture' : 'lecture' }}
 			notes={[]}
 			adresse={page.url.pathname}
-			{...donnees.session === true ? { reprises: [] } : {}}
-			{...donnees.compte === null || donnees.compte === undefined
-				? {}
-				: { compte: donnees.compte as never }}
-			{...donnees.domaines === undefined ? {} : { domaines: donnees.domaines as never }}
+			pistes={[]}
 		/>
 	{:else}
 		<VuePublique
 			vecteur={{ cas: casDeV04(page.url.pathname) }}
 			notes={[]}
 			adresse={page.url.pathname}
+			pistes={[]}
 			{portail}
 		/>
 	{/if}

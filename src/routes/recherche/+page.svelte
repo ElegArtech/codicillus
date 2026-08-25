@@ -89,6 +89,14 @@
 		« supprime la bascule de mode » (`docs/routes.md:248`). Les lui passer
 		reviendrait à lui donner un état qu'elle n'a aucun moyen de montrer.
 	-->
+	<!--
+		`pistes` — LES PISTES DE REFORMULATION, ET ELLES VIENNENT DU CHARGEUR.
+		Les deux vues en portaient d'écrites dans leurs maquettes, chacune ouvrant
+		`/recherche?q=…` à zéro résultat. Le chargeur les compte sur le PÉRIMÈTRE
+		LISIBLE — jamais sur le jeu de résultats, qui est vide dans l'état même où
+		le bloc se rend. Aucune étiquette dans le périmètre : liste vide, et le
+		bloc n'est pas rendu.
+	-->
 	<VueConnectee
 		vecteur={data.vecteur}
 		notes={data.notes}
@@ -96,6 +104,7 @@
 		requete={data.requete}
 		retenues={data.retenues}
 		perimetre={data.perimetre}
+		pistes={data.pistes}
 		tri={data.tri}
 		modeDemande={data.mode}
 	/>
@@ -105,11 +114,19 @@
 		table `parametres`. V-08 ne porte aucun appel à l'assistance : elle ne va
 		qu'à la vue publique.
 	-->
+	<!--
+		`pistes` — LA MÊME SOURCE QUE POUR V-08, et le même chargeur la sert. V-02
+		en portait cinq écrites dans sa maquette — « mot de passe », « accès »,
+		« salle de réunion », « réseau », « support ». Le périmètre d'un anonyme
+		étant celui des notes publiques, les étiquettes proposées ici sont celles
+		que le visiteur peut effectivement atteindre.
+	-->
 	<VuePublique
 		vecteur={data.vecteur}
 		notes={data.notes}
 		recherchees={data.recherchees}
 		retenues={data.retenues}
 		portail={data.portail}
+		pistes={data.pistes}
 	/>
 {/if}
