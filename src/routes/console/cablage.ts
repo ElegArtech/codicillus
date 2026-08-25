@@ -48,6 +48,7 @@
  */
 
 import { deserialize } from '$app/forms';
+import { fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
 
 /** Ce qu'un câblage rend : de quoi le défaire. */
 export type Debranchement = () => void;
@@ -367,12 +368,15 @@ export interface OptionsDuDepot {
  * même constat qu'en `V-24`, qui pose le sien caché faute de pouvoir faire
  * autrement dans un balisage de vue.
  *
- * LES FICHIERS SONT PRIS PLATS, ET C'EST DÉLIBÉRÉ. `V-24` descend
- * l'arborescence des entrées du transfert parce qu'elle en a besoin : c'est
- * elle qui l'envoie au serveur, et le scénario promet une arborescence
- * conservée « à l'identique ». Ici, rien n'est envoyé (voir la route) : refaire
- * cette descente ferait une SECONDE implémentation du même parcours, qui
- * finirait par diverger de celle qui compte.
+ * L'ARBORESCENCE D'UN RÉPERTOIRE DÉPOSÉ EST DESCENDUE ICI AUSSI, et c'est la
+ * MÊME descente qu'en `V-24` — `$lib/cablage/depot-de-fichiers.ts`, importée par
+ * les deux écrans. Elle l'était naguère par `V-24` seule, et cet écran prenait
+ * la liste plate des fichiers du transfert : un répertoire déposé ici perdait sa
+ * structure alors que le gel de cet écran-là promet, mot pour mot,
+ * « L'arborescence est conservée telle quelle »
+ * (`mockups/V-35-console-imports.html:1310`). Le lot part vers le parcours
+ * d'import, qui l'envoie au serveur : le chemin de chaque fichier compte donc
+ * autant d'ici que de là.
  */
 export function cablerLeDepot(racine: ParentNode, options: OptionsDuDepot): Debranchement {
 	const attaches = new Attaches();
@@ -392,9 +396,9 @@ export function cablerLeDepot(racine: ParentNode, options: OptionsDuDepot): Debr
 	attaches.ecouter(zone, 'dragleave', sortie);
 	attaches.ecouter(zone, 'drop', (evenement) => {
 		sortie(evenement);
-		const transfert = (evenement as DragEvent).dataTransfer;
-		const recus = transfert === null ? [] : Array.from(transfert.files);
-		if (recus.length > 0) options.surLot(recus);
+		void fichiersDuTransfert((evenement as DragEvent).dataTransfer).then((recus) => {
+			if (recus.length > 0) options.surLot(recus);
+		});
 	});
 
 	const parcourir = noeud<HTMLButtonElement>(racine, '#parcourir');
