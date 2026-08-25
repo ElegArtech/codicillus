@@ -32,10 +32,27 @@
 	 * elle l'offre : `compte` est optionnelle depuis `T-042`, son défaut est la
 	 * constante du jeu, et le mode de conception ne la passe pas.
 	 *
-	 * Les trois autres paramètres de `docs/routes.md:287-288` — titre, dossier,
-	 * template — restent non lus : aucune propriété de la vue ne les recevrait,
-	 * et un paramètre honoré à moitié serait pire que pas de paramètre. Écart
-	 * inchangé, déclaré.
+	 * ═════════════════════════════════════════════════════════════════════════
+	 * LE DOSSIER VIENT DE L'ADRESSE, ET IL COCHE SON BOUTON RADIO
+	 *
+	 * `docs/routes.md:288` prévoit `?dossier=`, et le brief de V-13 promet une
+	 * « nouvelle note DANS CE DOSSIER ». Le paramètre était émis par personne et
+	 * lu par personne : les deux gestes de la page d'un dossier ouvraient
+	 * l'éditeur sur le bon DOMAINE et rien de plus, à charge pour l'utilisateur
+	 * de retrouver dans l'arborescence le dossier d'où il venait de cliquer.
+	 *
+	 * Il est désormais lu, et il l'est PAR LA VUE — `dossierDeDepart` —, parce
+	 * que c'est elle qui rend l'arborescence et décide quel bouton radio est
+	 * coché. La valeur porte la forme AFFICHÉE du chemin, la seule que ce
+	 * cochage sache comparer.
+	 *
+	 * ELLE EST VÉRIFIÉE AVANT D'ÊTRE SERVIE. Un chemin qui ne désigne aucun
+	 * dossier du domaine — lien périmé, dossier renommé — est ignoré en silence :
+	 * le formulaire s'ouvre, rien n'est coché, aucune erreur. Voir
+	 * `dossierDeLArborescence()`.
+	 *
+	 * Les deux autres paramètres de `docs/routes.md:287-288` — titre et
+	 * template — sont lus plus bas et par le câblage du choix de départ.
 	 */
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
@@ -50,7 +67,7 @@
 		type GestesCables,
 		peindreLeRefusDEdition
 	} from '$lib/edition/gestes';
-	import { adresseDesNotesDuDomaine } from '$lib/rangement/adresses';
+	import { adresseDesNotesDuDomaine, dossierDeLArborescence } from '$lib/rangement/adresses';
 	import { cablerLeChoixDeDepart } from './cablage';
 	import { MOI } from '../../../../seeds/corpus';
 	import type { ActionData, PageData } from './$types';
@@ -80,6 +97,15 @@
 		   d'un clic. */
 		domaine: domaineDemande ?? (compteServi.domaine || premierDomaine)
 	});
+	/* LE DOSSIER DEMANDÉ PAR L'ADRESSE, vérifié contre l'arborescence du domaine
+	   servie par le chargeur — jamais contre celle d'un autre domaine, sans quoi
+	   changer de domaine dans l'adresse cocherait un dossier étranger. */
+	const dossierDeDepart = $derived(
+		dossierDeLArborescence(
+			data.dossiersParDomaine?.[compte.domaine],
+			page.url.searchParams.get('dossier')
+		)
+	);
 	/* L'univers auquel le domaine du compte appartient, tel que la base le nomme. */
 	const universDuCompte = $derived(
 		page.data.domaines?.find((d: { nom: string }) => d.nom === compte.domaine)?.univers ??
@@ -185,6 +211,7 @@
 		domaines={page.data.domaines}
 		{universDuCompte}
 		dossiersParDomaine={data.dossiersParDomaine}
+		{dossierDeDepart}
 		vecteur={data.vecteur}
 		notes={data.notes}
 		{compte}
