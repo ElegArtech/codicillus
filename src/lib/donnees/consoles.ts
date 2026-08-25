@@ -253,13 +253,46 @@ export const MESURES_DE_CONSOLE_SANS_CONTREPARTIE: readonly MesureSansContrepart
 			'`comptes.derniere_connexion_le` porte l’INSTANT, et `src/lib/base/schema.ts` dit que « le gel ne donne aucune règle de passage de l’instant vers le libellé ». La date est rendue au format court du dépôt ; le libellé relatif attend un arbitrage.'
 	},
 	{
-		donnee: '(l’archive d’export)',
+		donnee: 'JOURNAL_IMPORTS (le flux d’activité)',
+		vue: 'V-07',
+		affichage: 'les lots d’import dans le flux d’activité de l’accueil',
+		motif:
+			'`RG-M12-09` a DEUX destinataires — « ce journal alimente le flux d’activité de l’accueil ET l’écran d’administration » —, et la moitié « accueil » n’était signalée nulle part. `lireLActivite()` lit les traces des NOTES du périmètre : un lot d’import n’y laisse aucune trace en tant que lot, et il n’y en aurait pas plus si la table du journal existait — il faudrait encore que le flux la lise.'
+	},
+	{
+		donnee: '(l’issue d’un export)',
 		vue: 'V-36',
 		affichage: 'l’issue d’un export — avertissements, volume de l’archive',
 		motif:
-			'l’archive n’est pas produite (`T-045`) et aucune table n’enregistre d’export passé. L’écran présente le périmètre exportable, jamais un export accompli.'
+			'aucune table n’enregistre d’export passé. L’ARCHIVE, ELLE, EST BIEN PRODUITE et servie par sa route depuis `T-045` : cette entrée l’a nié plus longtemps que de raison, et un recensement qui ment dans l’autre sens dispense d’aller voir — c’est ce qui a couvert l’arborescence fausse annoncée par l’écran. Ce qui manque est le passé : l’écran présente le périmètre exportable, jamais un export accompli.'
 	}
 ];
+
+/**
+ * LE JOURNAL DES IMPORTS EST-IL ENREGISTRÉ QUELQUE PART ?
+ *
+ * V-35 affirme que « les rapports restent consultables indéfiniment » et que
+ * « chaque lot conserve son rapport ». Aucune table ne les garde : l'entrée est
+ * composée à chaque lot, écrite au journal d'application, et personne ne la
+ * relit. L'écran servait donc un tableau VIDE sous ces deux phrases — un
+ * lecteur y lisait « aucun import n'a eu lieu » là où la vérité est « rien
+ * n'est conservé ».
+ *
+ * LE DRAPEAU EST DÉRIVÉ DU RECENSEMENT, JAMAIS ÉCRIT À LA MAIN — même geste
+ * qu'`etatDesDonnees()` pour V-34 : le jour où une migration portera la table
+ * des imports, retirer l'entrée `JOURNAL_IMPORTS` fera basculer l'écran, et
+ * `consoles.test.ts` verra la bascule.
+ *
+ * CE QUE CE DRAPEAU NE FAIT PAS : tenir `RG-M12-09`. Ni le stockage de
+ * l'entrée, ni sa reprise par le flux d'activité de l'accueil ne sont livrés —
+ * les deux sont recensés ci-dessus. L'écran cesse de contredire la règle ; il
+ * ne la remplit pas.
+ */
+export function journalDImportsEnregistre(
+	manquantes: readonly MesureSansContrepartie[] = MESURES_DE_CONSOLE_SANS_CONTREPARTIE
+): boolean {
+	return !manquantes.some((m) => m.donnee === 'JOURNAL_IMPORTS');
+}
 
 /* ═══════════════════════════ L'état des données de l'analytique ════════ */
 

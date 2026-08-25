@@ -129,6 +129,7 @@ import {
 	sonderLeServiceDeConversion,
 	type FichierDepose
 } from '$lib/donnees/import';
+import { SCENARIO_LIVRE, scenarioEstLivre } from '$lib/donnees/scenarios-d-import';
 import {
 	droitEffectif,
 	lireNotesLisibles,
@@ -258,6 +259,23 @@ async function preparerLeLot(locals: App.Locals, request: Request, fetch: typeof
 	const { base, acces, compteId } = await importateur(locals);
 
 	const champs = await request.formData();
+
+	/* LE SCÉNARIO EST ÉPROUVÉ AVANT TOUT LE RESTE, ET C'EST UNE ÉCRITURE AU
+	   MAUVAIS ENDROIT QU'IL ARRÊTE. L'étape 1 offrait trois scénarios ; aucun
+	   n'était transmis, et cette action traitait les trois comme `UC-M12-01`,
+	   le seul livré. Un lot choisi « domaine complet » — avec son champ
+	   obligatoire « Nom du domaine à créer » que personne ne lisait — se rangeait
+	   donc dans le domaine proposé PAR DÉFAUT, que l'utilisateur n'avait pas
+	   choisi. L'écran ne l'offre plus ; un envoi qui le nommerait quand même est
+	   REFUSÉ, jamais dérivé en silence.
+
+	   L'ABSENCE VAUT LE SCÉNARIO LIVRÉ : c'est le seul qui existe, et un envoi
+	   qui ne dit rien ne demande rien d'autre. */
+	const scenario = String(champs.get('scenario') ?? SCENARIO_LIVRE);
+	if (!scenarioEstLivre(scenario)) {
+		return { refus: fail(400, { issue: 'scenario-non-livre' }) } as const;
+	}
+
 	const nomDuDomaine = String(champs.get('domaine-cible') ?? '');
 	const simulation = champs.get('simulation') !== null;
 
@@ -360,7 +378,8 @@ export const actions: Actions = {
 	 * les identifiants que porte V-24 (`ARB-054` §3, convention déjà appliquée
 	 * par `/mon-profil`). Le nom de la partie qui porte les fichiers, lui, n'a
 	 * AUCUNE source : le gel n'a pas de champ de fichier. Il est déclaré au
-	 * rapport du lot comme le seul choix non fondé de ce fichier.
+	 * rapport du lot comme le seul choix non fondé de ce fichier. `scenario` est
+	 * l'identifiant des vignettes de l'étape 1, éprouvé par `preparerLeLot()`.
 	 */
 	importer: async ({ locals, request, fetch }) => {
 		const prepare = await preparerLeLot(locals, request, fetch);
