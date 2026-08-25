@@ -1240,6 +1240,23 @@ export async function changerLActivationDUnCompte(
  * (`./lecture.ts`, `lireSeuils()` puis `niveauFraicheur()`). C'est `P-01` qui
  * rend `RG-M14-09` vraie pour TOUS les badges à la fois : ils n'ont qu'une
  * implémentation à suivre.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CHAQUE LIGNE EST POSÉE, PAS SEULEMENT MISE À JOUR — LE CHEMIN À ZÉRO DONNÉE
+ *
+ * Ces sept écritures étaient des `update` nus. Sur une instance NEUVE — base
+ * migrée, jamais semée —, `parametres` est VIDE : `lireConfiguration()` le dit
+ * en propres termes, et c'est pour ce cas qu'elle retombe sur les défauts. Un
+ * `update` sur une table vide touche zéro ligne, ne lève pas, et l'action rend
+ * son verdict « possible ». MESURÉ sur une instance montée par `base:migrer`
+ * puis `base:peupler` : `parametres` compte zéro ligne, l'écran de
+ * configuration accepte les sept champs, rend 200 — et rien n'est écrit. Les
+ * sept réglages de M14.7 étaient inertes sur toute installation réelle, et le
+ * plafond de versions en premier, dont l'écran promet un effet immédiat.
+ *
+ * L'insertion avec reprise sur conflit de clé est la seule forme qui vaut dans
+ * les deux états, et `parametres.cle` est la clé primaire (`002_socle`) : il
+ * n'y a pas de second discriminant à choisir.
  */
 export async function enregistrerLaConfiguration(
 	base: Base,
@@ -1259,9 +1276,12 @@ export async function enregistrerLaConfiguration(
 	await base.transaction(async (tx) => {
 		for (const ligne of lignes) {
 			await tx
-				.update(parametres)
-				.set({ valeur: ligne.valeur, modifieLe: ligne.modifieLe })
-				.where(eq(parametres.cle, ligne.cle));
+				.insert(parametres)
+				.values(ligne)
+				.onConflictDoUpdate({
+					target: parametres.cle,
+					set: { valeur: ligne.valeur, modifieLe: ligne.modifieLe }
+				});
 		}
 	});
 
