@@ -1,51 +1,64 @@
 /**
- * V-13 — LES PROPRIÉTÉS DE CONTEXTE, ET LE DOMAINE (T-042).
+ * V-13 — LE RANGEMENT SERVI, ET RIEN DU JEU DE DÉMONSTRATION.
  *
- * `T-032` avait mesuré le défaut : `const DOMAINE = 'Infrastructure'` en tête
- * du script faisait rendre l'arborescence d'Infrastructure pour l'adresse de
- * n'importe quel domaine. La propriété le referme, DÉFAUT INCHANGÉ.
+ * `T-032` avait mesuré le défaut : `const DOMAINE = 'Infrastructure'` en tête du
+ * script faisait rendre l'arborescence d'Infrastructure pour l'adresse de
+ * n'importe quel domaine. Une propriété l'a refermé — mais SON DÉFAUT ÉTAIT LA
+ * MÊME VALEUR, si bien qu'une route qui l'oubliait retombait exactement sur le
+ * défaut mesuré, sans que rien ne proteste.
  *
- * CE QUE CE FICHIER PROUVE, ET RIEN D'AUTRE : la propriété fournie l'emporte,
- * la propriété absente retombe sur la valeur du gel. La conformité de rendu est
- * mesurée par `pnpm verif:maquette V-13 --contre=app`, et par lui seul.
+ * `domaine`, `universDuDomaine`, `modifications` et `origineDuDroit` SONT
+ * REQUISES. Le compilateur garde la porte (`svelte-check`, dans `pnpm check`),
+ * et ces cas éprouvent les deux moitiés qui restent : la propriété servie décide,
+ * et rien du jeu n'atteint l'écran quand elle ne le porte pas.
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
-import {
-	corpusPourVue,
-	INSTANCE,
-	MOI,
-	UNIVERS,
-	type EtatDInstance,
-	type UtilisateurCourant
-} from '../../seeds/corpus';
+import { corpusPourVue, MODIFICATIONS, MOI, UNIVERS } from '../../seeds/corpus';
+import type { CompteAffiche } from '../lib/coquille/identite';
 import { cheminAffiche, segmentsAffiches, type LigneDeDossier } from '../lib/donnees/rangement';
 
 const NOTES = corpusPourVue('V-13');
 
-const SOPHIE: UtilisateurCourant = {
-	prenom: 'Sophie',
+/**
+ * L'identité dans la forme que la coquille affiche. Elle n'est pas `MOI` : le
+ * défaut mesuré était que `MOI` s'affichait quel que fût l'appelant.
+ */
+const SOPHIE: CompteAffiche = {
 	nom: 'Sophie Nguyen',
 	initiales: 'SN',
 	domaine: 'Applications',
 	role: 'Administrateur'
 };
 
-const AUTRE_INSTANCE: EtatDInstance = { version: '9.9.9-epreuve', synchro: "à l'instant" };
+/**
+ * LE SOCLE DE RENDU — tout ce que la vue exige, et rien de plus. Le vecteur
+ * nomme `Exploitation`, dossier que le corpus range sous Infrastructure : c'est
+ * la valeur que le vecteur posait lui-même en défaut, et elle est désormais
+ * écrite là où elle se lit.
+ */
+const SOCLE = {
+	vecteur: { dos: 'Exploitation' },
+	notes: NOTES,
+	domaine: 'Infrastructure',
+	universDuDomaine: 'Production',
+	modifications: MODIFICATIONS,
+	origineDuDroit: ''
+};
 
 function rendu(proprietes: Record<string, unknown>): Promise<string> {
-	return rendreLaVue('V-13', { vecteur: null, notes: NOTES, ...proprietes });
+	return rendreLaVue('V-13', { ...SOCLE, ...proprietes });
 }
 
 /**
  * Le fil d'Ariane seul, découpé du rendu.
  *
- * Ces cas repéraient un segment du fil par `<a href="#">Nom</a>` : le gel n'y
- * déclarait aucune destination, et le lien mort faisait un marqueur unique. Le
- * fil porte désormais de vraies adresses (plan de remédiation §3.6), et le
- * marqueur ne peut plus être un `href`. Ce qui est éprouvé est INCHANGÉ — quel
- * nom le fil porte —, et le découpage rend au marqueur l'unicité que le lien
- * mort lui donnait : le rail nomme les mêmes domaines, mais hors de ce `<nav>`.
+ * Ces cas repéraient un segment du fil par un lien sans destination : le gel n'y
+ * en déclarait aucune, et le lien mort faisait un marqueur unique. Le fil porte
+ * désormais de vraies adresses, et le marqueur ne peut plus être une
+ * destination. Ce qui est éprouvé est INCHANGÉ — quel nom le fil porte —, et le
+ * découpage rend au marqueur l'unicité que le lien mort lui donnait : le rail
+ * nomme les mêmes domaines, mais hors de ce bloc de navigation.
  */
 function filDe(html: string): string {
 	return /<nav class="fil"[\s\S]*?<\/nav>/.exec(html)?.[0] ?? '';
@@ -53,30 +66,25 @@ function filDe(html: string): string {
 
 afterAll(fermerLeHarnais);
 
-describe('V-13 — la propriété fournie l’emporte', () => {
-	it('sert le compte reçu, et non celui du jeu de semence', async () => {
+describe('V-13 — la propriété servie décide', () => {
+	it('sert le compte reçu, et n’annonce personne sans compte', async () => {
 		const html = await rendu({ compte: SOPHIE });
 		expect(html).toContain('Sophie Nguyen — menu utilisateur');
 		expect(html).not.toContain(`${MOI.nom} — menu utilisateur`);
-	});
-
-	it('sert la version d’instance reçue', async () => {
-		expect(await rendu({ instance: AUTRE_INSTANCE })).toContain('9.9.9-epreuve');
+		expect(await rendu({})).not.toContain(`${MOI.nom} — menu utilisateur`);
 	});
 
 	/**
-	 * LE DÉFAUT DE `T-032`, MESURÉ DANS LES DEUX POLARITÉS. Le dossier demandé —
-	 * `Exploitation`, valeur par défaut du vecteur — n'existe QUE dans
-	 * Infrastructure : sous un autre domaine, la page rend son état sans
-	 * sous-dossier, ce qu'elle ne pouvait pas faire tant que le domaine était
-	 * une constante.
+	 * LE DÉFAUT DE `T-032`, DANS LES DEUX POLARITÉS. Le dossier demandé —
+	 * `Exploitation` — n'existe QUE dans Infrastructure : sous un autre domaine,
+	 * la page rend son état sans sous-dossier.
 	 */
-	it('range la page dans le domaine reçu, jamais dans Infrastructure par défaut', async () => {
+	it('range la page dans le domaine reçu, jamais dans Infrastructure', async () => {
 		/* Le témoin de polarité — sans lui, les assertions négatives qui suivent
 		   passeraient même si la propriété était inerte (P-5). */
-		const defaut = await rendu({});
-		expect(filDe(defaut)).toContain('>Infrastructure</a>');
-		expect(defaut).toContain('<b>2</b> sous-dossiers');
+		const infra = await rendu({});
+		expect(filDe(infra)).toContain('>Infrastructure</a>');
+		expect(infra).toContain('<b>2</b> sous-dossiers');
 
 		const html = await rendu({ domaine: 'Applications' });
 		expect(filDe(html)).toContain('>Applications</a>');
@@ -84,15 +92,14 @@ describe('V-13 — la propriété fournie l’emporte', () => {
 		expect(html).toContain('<b>0</b> sous-dossier');
 	});
 
-	it('lit l’univers du domaine dans la liste de domaines reçue', async () => {
-		/* Le fil d'Ariane, et non le rail : le rail abrégé porte une section
-		   « Projets » écrite au balisage, qu'une assertion large trouverait sans
-		   rien mesurer (P-5). */
-		expect(filDe(await rendu({}))).toContain('>Production</a>');
-		const html = await rendu({
-			domaine: 'Migration 2026',
-			domaines: [{ nom: 'Migration 2026', univers: 'Projets', couleur: '#3e5266' }]
-		});
+	/**
+	 * L'UNIVERS DU FIL VIENT DE L'ADRESSE, ET DE NULLE PART AILLEURS. Il était
+	 * cherché dans `domaines` — que la route ne passe pas —, donc dans la
+	 * constante du jeu, avec « Production » pour dernier repli : sur un domaine
+	 * absent du jeu, tous les liens de la page rendaient 404.
+	 */
+	it('l’univers du fil est celui de l’adresse', async () => {
+		const html = await rendu({ domaine: 'Migration 2026', universDuDomaine: 'Projets' });
 		expect(filDe(html)).toContain('>Projets</a>');
 		expect(filDe(html)).not.toContain('>Production</a>');
 	});
@@ -104,24 +111,68 @@ describe('V-13 — la propriété fournie l’emporte', () => {
 		expect(await rendu({ modifications: {} })).toContain('modification inconnue');
 	});
 
+	/**
+	 * LE LIBELLÉ DE JOUR ZÉRO. `joursEcoules()` rend 0 en deçà de vingt-quatre
+	 * heures, et la vue disait « modifiée hier » d'une note modifiée le jour même.
+	 */
+	it('une modification du jour se dit « aujourd’hui », jamais « hier »', async () => {
+		const dansExploitation = NOTES.filter((n) => n.dossier === 'Exploitation');
+		const premiere = dansExploitation[0];
+		if (premiere === undefined) throw new Error('le corpus de V-13 ne porte pas Exploitation');
+		const html = await rendu({ modifications: { [premiere.id]: 0 } });
+		expect(html).toContain("modifiée aujourd'hui");
+	});
+
+	/**
+	 * L'ORIGINE DU DROIT — celle que la route résout, et rien d'autre. Le gel fige
+	 * « — hérité du domaine Infrastructure », et cette tournure était le REPLI de
+	 * la propriété : un droit accordé ailleurs, sur une instance qui ne porte pas
+	 * ce domaine, affichait quand même cet héritage-là.
+	 */
+	it('l’origine du droit est celle qui est servie, et la chaîne vide se tait', async () => {
+		const muet = await rendu({ vecteur: { dos: 'Exploitation', dr: 'lecteur' } });
+		expect(muet).not.toContain('hérité du domaine Infrastructure');
+
+		const dit = await rendu({
+			vecteur: { dos: 'Exploitation', dr: 'lecteur' },
+			origineDuDroit: '— hérité du dossier Sauvegardes'
+		});
+		expect(dit).toContain('— hérité du dossier Sauvegardes');
+	});
+
 	/** Vue de forme ABRÉGÉE : `univers` ne sert pas au rail (`Coquille.svelte`). */
 	it('accepte la liste d’univers reçue sans rien changer au rail abrégé', async () => {
 		const restreint = await rendu({ univers: UNIVERS.filter((u) => u.nom === 'Projets') });
 		expect(restreint).toEqual(await rendu({}));
 	});
-});
 
-describe('V-13 — la propriété absente retombe sur la valeur du gel', () => {
-	it('rend le compte et la version du jeu de semence', async () => {
-		const html = await rendu({});
-		expect(html).toContain(`${MOI.nom} — menu utilisateur`);
-		expect(html).toContain(INSTANCE.version);
-	});
-
-	it('rend le domaine Infrastructure et son univers Production', async () => {
-		const html = await rendu({});
-		expect(filDe(html)).toContain('>Infrastructure</a>');
-		expect(filDe(html)).toContain(`>${UNIVERS[0]?.nom}</a>`);
+	/**
+	 * LE CONTRÔLE QUI TIENT LE LOT : sur un rangement servi qui ne porte rien du
+	 * jeu, rien du jeu ne doit apparaître. Un défaut de propriété resté quelque
+	 * part se verrait ici, et nulle part ailleurs.
+	 *
+	 * LA MESURE EST DÉCOUPÉE SUR LE CONTENU ET LE FIL, ET C'EST DÉCLARÉ. Le rail
+	 * de forme ABRÉGÉE est une DONNÉE écrite au balisage du gel
+	 * (`arborescence-abregee.ts`) : hors gabarit racine — ce que rend ce
+	 * harnais —, il nomme les dossiers du gel. En application il suit la base
+	 * (`Coquille.svelte`, `sectionsAbregeesDuCorpus`). Mesurer le document
+	 * entier mesurerait ce balisage, pas les propriétés de la vue.
+	 */
+	it('aucune ligne du jeu de démonstration n’atteint le contenu', async () => {
+		const html = await rendu({
+			vecteur: { dos: '' },
+			notes: [],
+			domaine: 'Migration 2026',
+			universDuDomaine: 'Projets',
+			modifications: {}
+		});
+		const contenu = /<main[\s\S]*?<\/main>/.exec(html)?.[0] ?? '';
+		expect(contenu).not.toContain('Infrastructure');
+		expect(contenu).not.toContain('Restaurer une sauvegarde PostgreSQL');
+		expect(filDe(html)).not.toContain('>Production</a>');
+		expect(filDe(html)).not.toContain('>Infrastructure</a>');
+		expect(html).not.toContain('Karim Belhadj — menu utilisateur');
+		expect(html).not.toContain('Codicillus 1.0.0');
 	});
 });
 
@@ -180,6 +231,8 @@ function renduDe(dossierId: string): Promise<string> {
 		notes: NOTES,
 		domaine: 'Infrastructure',
 		universDuDomaine: 'Production',
+		modifications: MODIFICATIONS,
+		origineDuDroit: '',
 		rangement: rangementDe(dossierId)
 	});
 }

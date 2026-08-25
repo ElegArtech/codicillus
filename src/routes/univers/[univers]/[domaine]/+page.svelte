@@ -7,12 +7,19 @@
 	 * les demandes de révision viennent de `+page.server.ts`, qui porte la
 	 * résolution du couple univers × domaine, le périmètre et les droits.
 	 *
-	 * SEPT PROPRIÉTÉS DE PLUS QUE LE PREMIER CÂBLAGE, et six d'entre elles sont
-	 * celles que `T-041` avait rendues passables sans que rien ne les passe. La
-	 * septième — `nombreDeDossiers` — est nouvelle : le compteur du module
-	 * « Dossiers » se déduisait du rangement des notes, et un dossier vide n'y
-	 * comptait pas. Toutes sont OPTIONNELLES sur la vue, dont le défaut reste
-	 * `seeds/corpus.ts` pour le mode démo du banc, qui n'en passe aucune.
+	 * TOUTES LES SOURCES DE L'ÉCRAN SONT PASSÉES, ET LA VUE LES EXIGE. Elles ont
+	 * été optionnelles, de défaut les constantes de `seeds/corpus.ts` : un oubli
+	 * ici servait le jeu de démonstration en silence. Elles sont requises, et
+	 * `svelte-check` refuse désormais de compiler cet appel s'il en manque une.
+	 *
+	 * `nombreDeDossiers` reste optionnelle, et pour une raison distincte : elle
+	 * n'a jamais tenu au jeu. Absente, le compteur du module « Dossiers » se
+	 * déduit du rangement des notes — et un dossier vide n'y compte pas ; c'est
+	 * pourquoi le chargeur la sert.
+	 *
+	 * `modules` EST LE CATALOGUE DE LIBELLÉS DU PRODUIT, pas une donnée d'instance :
+	 * les clés actives d'un domaine viennent de `modules_de_domaine` par
+	 * `detailDomaines` (`RG-STR-06`), leurs noms de `$lib/rangement/modules.ts`.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert.
 	 * Elle est identique à l'octet à sa source gelée (P-6.3).
@@ -21,6 +28,7 @@
 	import Vue from '../../../../vues/V-11.svelte';
 	import '../../../../vues/V-11.css';
 	import { cablerLeDomaine } from './cablage';
+	import { CATALOGUE_DE_MODULES } from '$lib/rangement/modules';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -51,5 +59,6 @@
 		mesures7j={data.mesures7j}
 		modifications={data.modifications}
 		revisions={data.revisions}
+		modules={CATALOGUE_DE_MODULES}
 	/>
 </div>
