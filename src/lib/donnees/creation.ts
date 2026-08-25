@@ -358,6 +358,17 @@ export const CONTRAINTE_D_IDENTIFIANT = 'notes_identifiant_unique';
 const VIOLATION_D_UNICITE = '23505';
 
 /**
+ * JUSQU'OÙ LA CHAÎNE DES CAUSES EST REMONTÉE.
+ *
+ * Rien n'interdit à une erreur de se désigner elle-même comme sa propre cause,
+ * et l'inspection ci-dessous est appelée depuis la reprise d'une transaction :
+ * une boucle infinie y coûterait la requête entière, ce qui est pire que
+ * l'échec qu'elle inspecte. Mesuré sur la base, la chaîne réelle fait DEUX
+ * niveaux ; huit laissent de la marge à une bibliothèque qui en ajouterait.
+ */
+const PROFONDEUR_DES_CAUSES = 8;
+
+/**
  * L'ÉCHEC EST-IL LA COLLISION D'IDENTIFIANT QU'`ARB-062` FAIT RÉESSAYER ?
  *
  * Fonction PURE — elle n'inspecte qu'un objet d'erreur —, donc éprouvable dans
@@ -371,11 +382,31 @@ const VIOLATION_D_UNICITE = '23505';
  * inconnue. Réessayer sur le code seul ferait boucler indéfiniment sur une
  * cause que le changement d'identifiant ne peut pas lever : la boucle
  * repartirait sans fin sur un candidat neuf et un échec identique.
+ *
+ * LA CHAÎNE DES CAUSES EST PARCOURUE, ET C'EST LE CŒUR DE LA FONCTION. Drizzle
+ * n'expose pas l'erreur du pilote : il l'ENVELOPPE dans une erreur à lui et
+ * range l'originale sous sa propriété de cause — l'enveloppement vit dans la
+ * préparation de requête du pilote PostgreSQL et couvre la branche d'insertion.
+ * Lue à plat, l'enveloppe ne porte donc NI code NI nom de contrainte : les deux
+ * comparaisons sont fausses, la boucle de reprise ne repart jamais, et un titre
+ * déjà pris remonte en 500 au lieu d'obtenir un identifiant suffixé. Mesuré sur
+ * la base : deux niveaux, l'enveloppe puis l'erreur du pilote qui porte `23505`
+ * et `notes_identifiant_unique`. Ne PAS resimplifier en lecture d'un seul
+ * niveau : la profondeur appartient à une bibliothèque, elle peut changer, et
+ * le parcours est ce qui rend la fonction indifférente à ce nombre. Le parcours
+ * est borné — voir `PROFONDEUR_DES_CAUSES`.
  */
 export function estUneCollisionDIdentifiant(cause: unknown): boolean {
-	if (typeof cause !== 'object' || cause === null) return false;
-	const erreur = cause as { code?: unknown; constraint?: unknown };
-	return erreur.code === VIOLATION_D_UNICITE && erreur.constraint === CONTRAINTE_D_IDENTIFIANT;
+	let echec: unknown = cause;
+	for (let niveau = 0; niveau < PROFONDEUR_DES_CAUSES; niveau += 1) {
+		if (typeof echec !== 'object' || echec === null) return false;
+		const erreur = echec as { code?: unknown; constraint?: unknown; cause?: unknown };
+		if (erreur.code === VIOLATION_D_UNICITE && erreur.constraint === CONTRAINTE_D_IDENTIFIANT) {
+			return true;
+		}
+		echec = erreur.cause;
+	}
+	return false;
 }
 
 /** Ce qu'une création demande, une fois la cible résolue et le droit acquis. */
