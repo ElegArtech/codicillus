@@ -21,7 +21,7 @@
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
-import { corpusPourVue, noteParIdentifiant, type Note } from '../../seeds/corpus';
+import { corpusPourVue, noteParIdentifiant, VERSIONS, type Note } from '../../seeds/corpus';
 import { documentDuGel, resoudreDansLeCorpus } from '../lib/contenu/documents-du-gel';
 import { rendreDocument } from '../lib/contenu/rendu';
 import { NOTE, type LectureAffichee } from '../lib/lecture/note-de-demonstration';
@@ -109,6 +109,80 @@ describe('V-15 — l’historique sert l’article de la note demandée', () => 
 	it('rend le cumul de consultations servi, et non celui du corpus', async () => {
 		const html = await rendu({ note: AUTRE_NOTE, affichee: AFFICHEE });
 		expect(html).toContain('431 consultations · 7 sur les 30 derniers jours');
+	});
+});
+
+/**
+ * L’ÉTAT CONSULTÉ N’EST PAS TOUJOURS LA NOTE COURANTE — `?version={n}`.
+ *
+ * LE DÉFAUT QUE CES CAS FERMENT. Le bandeau annonçait « Version N … vous
+ * consultez un état antérieur » au-dessus du titre, du corps et du sommaire les
+ * PLUS RÉCENTS : `lireLHistoire()` capturait pourtant le titre et les deux corps
+ * de la version demandée, les servait au navigateur, et aucun nœud ne les
+ * lisait. « Restaurer cette version » écrasait donc la note avec un contenu que
+ * l’écran n’avait jamais montré — ce que `RG-M18-05` refuse.
+ *
+ * CE QUE CES CAS NE PROUVENT PAS. Ils éprouvent le RENDU à partir d’un état
+ * construit ici ; ils ne prouvent rien de ce que le chargeur tire de la table
+ * `versions`, ni de l’appariement d’un numéro d’adresse à une ligne. Cela se
+ * mesure sur une base réelle, dans un navigateur, et le relevé du lot le porte.
+ */
+describe('V-15 — l’article suit l’état consulté, pas la note courante', () => {
+	/** Le titre que la version a CAPTURÉ — la note a été renommée depuis (`RG-M07-02`). */
+	const TITRE_CAPTURE = 'Un titre que la note ne porte plus';
+
+	/** L’historique, dans la forme que le corpus donne — jamais une forme réécrite ici. */
+	const HISTORIQUE = (() => {
+		const lignes = VERSIONS['n-restaurer-pg'];
+		if (lignes === undefined || lignes.length < 2)
+			throw new Error('seeds/corpus.ts : « n-restaurer-pg » n’a plus deux versions');
+		return lignes;
+	})();
+
+	/** La plus ancienne des deux : consultée, elle N’EST PAS la version courante. */
+	const ANTERIEURE = HISTORIQUE[HISTORIQUE.length - 1] as (typeof HISTORIQUE)[number];
+
+	const AFFICHEE_ANTERIEURE: LectureAffichee = {
+		...AFFICHEE,
+		note: { ...AUTRE_NOTE, titre: TITRE_CAPTURE }
+	};
+
+	function renduAnterieur(): Promise<string> {
+		return rendu({
+			note: AUTRE_NOTE,
+			affichee: AFFICHEE_ANTERIEURE,
+			versions: { [AUTRE_NOTE.id]: HISTORIQUE },
+			versionAffichee: ANTERIEURE.n
+		});
+	}
+
+	it('rend le bandeau d’état antérieur au-dessus du titre capturé', async () => {
+		const html = await renduAnterieur();
+		expect(html).toContain(`Version ${ANTERIEURE.n} du ${ANTERIEURE.date}`);
+		expect(html).toContain(`<h1 class="titre-note" id="h-titre">${TITRE_CAPTURE}</h1>`);
+	});
+
+	/** Le fil se ferme sur le titre de l’ARTICLE qu’il coiffe, comme partout ailleurs. */
+	it('ferme le fil d’Ariane sur le titre capturé', async () => {
+		const html = await renduAnterieur();
+		expect(html).toContain(`<span class="fil__courant">${TITRE_CAPTURE}</span>`);
+	});
+
+	/** LE PANNEAU NOMME LA NOTE, ET NON L’ÉTAT : c’est son historique qui est ouvert. */
+	it('garde le titre de la note en tête du panneau d’historique', async () => {
+		const html = await renduAnterieur();
+		expect(html).toContain(`id="tiroir-note">${AUTRE_NOTE.titre}</div>`);
+	});
+
+	/**
+	 * P-5 — LA POLARITÉ. Sans version antérieure consultée, le titre de l’article
+	 * est celui de la note : un rendu qui prendrait toujours le titre capturé
+	 * passerait pour juste.
+	 */
+	it('rend le titre de la note quand aucune version antérieure n’est consultée', async () => {
+		const html = await rendu({ note: AUTRE_NOTE, affichee: AFFICHEE });
+		expect(html).toContain(`<h1 class="titre-note" id="h-titre">${AUTRE_NOTE.titre}</h1>`);
+		expect(html).not.toContain(TITRE_CAPTURE);
 	});
 });
 

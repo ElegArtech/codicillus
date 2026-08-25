@@ -78,15 +78,16 @@ import {
 	typesDeRelation,
 	verifications
 } from '$lib/base/schema';
-import { analyserDocument, titres } from '$lib/contenu/document';
+import { analyserDocument, titres, type Document } from '$lib/contenu/document';
+import { rendreDocument, type ResolveurDeNote } from '$lib/contenu/rendu';
 import { formaterDateFr, formaterDateHeureFr, formaterDateIso } from '$lib/dates';
 import { compteDe, journaliserUneConsultation } from '$lib/donnees/consultation';
-import { lireLHistoire, versionDemandee } from '$lib/donnees/histoire';
+import { lireLHistoire, versionDemandee, type VersionCapturee } from '$lib/donnees/histoire';
 import {
 	joursEcoules,
+	lireLesChampsDUnTypeDeFiche,
 	lireLesProprietesDeFiche,
 	lireSeuils,
-	lireTypesDeFiche,
 	type ContexteDeLecture
 } from '$lib/donnees/lecture';
 import type { Identite } from '$lib/droits/resolution';
@@ -184,8 +185,17 @@ function instantAffiche(valeur: Date): InstantAffiche {
  * (`V-14:1704`), et un titre sans ancre n'est la cible d'aucun lien.
  */
 function sommaireDuDocument(valeur: unknown): readonly EntreeDeSommaire[] {
+	return sommaireDe(analyserDocument(valeur));
+}
+
+/**
+ * LE MÊME SOMMAIRE, SUR UN DOCUMENT DÉJÀ ANALYSÉ — le corps CAPTURÉ d'une
+ * version antérieure, que `$lib/donnees/histoire.ts` rend sous cette forme.
+ * Une seule règle de sélection des titres, jamais deux (`P-01`).
+ */
+function sommaireDe(document: Document): readonly EntreeDeSommaire[] {
 	const retenus: EntreeDeSommaire[] = [];
-	for (const titre of titres(analyserDocument(valeur))) {
+	for (const titre of titres(document)) {
 		const { level, ancre } = titre.attrs;
 		if ((level !== 2 && level !== 3) || ancre === null) continue;
 		retenus.push({
@@ -297,11 +307,19 @@ interface ComplementsDeLecture {
  * fiche », et c'est la même condition qui borne le coût.
  *
  * LES DEUX SOURCES SONT CELLES QUI EXISTENT DÉJÀ, et aucune n'est redite ici :
- * `lireTypesDeFiche()` porte le SCHÉMA — le nom affichable et le rang de chaque
- * champ, que la colonne `proprietes_typees` ne porte pas —, et
+ * `lireLesChampsDUnTypeDeFiche()` porte le SCHÉMA — le nom affichable et le
+ * rang de chaque champ, que la colonne `proprietes_typees` ne porte pas —, et
  * `lireLesProprietesDeFiche()` porte les VALEURS, déjà normalisées : la colonne
  * est un `jsonb` de forme non garantie, et cette fonction est le seul endroit
  * du produit qui décide ce qui, dedans, se rend en texte.
+ *
+ * CE PANNEAU N'APPELLE PAS `lireTypesDeFiche()`, ET C'EST DÉLIBÉRÉ. Celle-là
+ * convertit l'énumération `type_de_champ` en type d'écran et LÈVE sur une
+ * valeur que sa table ne couvre pas — elle en couvre quatre, la base en accepte
+ * six. L'appeler d'ici aurait fait tomber en 500 la lecture de TOUTE fiche le
+ * jour où un champ `date` serait posé n'importe où dans le référentiel : un
+ * panneau qui n'affiche qu'un libellé et une valeur n'a aucune raison
+ * d'élargir la surface de panne de la route de lecture (`RG-NF-06`).
  *
  * L'ORDRE EST CELUI DU SCHÉMA, JAMAIS CELUI DE LA COLONNE : un objet JSON n'a
  * pas d'ordre contractuel, et `champs_de_type_de_fiche.ordre` est ce que la
@@ -315,14 +333,60 @@ async function proprietesDeLaFiche(
 	const typeFiche = lecture.note.typeFiche;
 	if (typeFiche === undefined) return [];
 
-	const [schema, valeursParNote] = await Promise.all([
-		lireTypesDeFiche(base),
+	const [champs, valeursParNote] = await Promise.all([
+		lireLesChampsDUnTypeDeFiche(base, typeFiche),
 		lireLesProprietesDeFiche(base, [lecture.note.id])
 	]);
 
-	const champs = schema[typeFiche] ?? [];
 	const valeurs = valeursParNote[lecture.note.id] ?? {};
 	return champs.map((champ) => ({ nom: champ.nom, valeur: valeurs[champ.cle] ?? null }));
+}
+
+/**
+ * L’ARTICLE D’UNE VERSION ANTÉRIEURE — `?version={n}`, `docs/routes.md:224`.
+ *
+ * LE DÉFAUT QUE CETTE FONCTION FERME. V-15 recevait `affichee`, c’est-à-dire
+ * l’état COURANT de la note, sous un bandeau qui annonce « vous consultez un
+ * état antérieur » : le titre, les deux corps et le sommaire étaient ceux du
+ * texte le plus récent, et le bouton « Restaurer cette version » portait sur un
+ * contenu que l’écran n’avait jamais montré — ce que `RG-M18-05` refuse d’une
+ * action irréversible. `lireLHistoire()` chargeait pourtant les trois champs
+ * capturés, les servait au navigateur, et aucun nœud ne les lisait.
+ *
+ * TROIS CHAMPS CHANGENT, ET TROIS SEULEMENT. Le titre, le corps Référence et le
+ * corps Opérationnel sont ceux que la version a CAPTURÉS — `versions.titre`,
+ * `versions.corps_reference`, `versions.corps_operationnel` —, et le sommaire
+ * suit le corps affiché, faute de quoi ses ancres pointeraient sur des titres
+ * absents de la page.
+ *
+ * CE QUI NE CHANGE PAS N’EST PAS CAPTURÉ. Le dernier contrôle, la fraîcheur, les
+ * dates de modification, la demande de révision et les deux mesures de
+ * consultation sont des faits de LA NOTE, que la table `versions` ne porte pas :
+ * les recomposer pour une version donnée serait les inventer (`P-02`), et le
+ * bandeau dit déjà que la note courante n’est pas modifiée.
+ *
+ * LE CORPS EST RENDU PAR `rendreDocument`, ET PAR RIEN D’AUTRE (`ADR-004`), avec
+ * le résolveur de liens que `lireLaNote()` a construit sur le périmètre de
+ * l’appelant : une version qui citait une note devenue illisible ne fait pas
+ * réapparaître son titre.
+ */
+function articleDeLaVersion(
+	courante: LectureAffichee,
+	version: VersionCapturee,
+	resoudreUneNote: ResolveurDeNote
+): LectureAffichee {
+	const rendre = (document: Document): string =>
+		rendreDocument(document, { resoudre: resoudreUneNote, contexte: 'interne' });
+	return {
+		...courante,
+		/* LE TITRE EST RENOMMABLE (`RG-M07-02`), et c’est pour cela que la version
+		   le capture. Le reste de la note — son rangement, son type, sa visibilité
+		   — est celui d’aujourd’hui : la version ne le porte pas. */
+		note: { ...courante.note, titre: version.titre },
+		reference: rendre(version.reference),
+		operationnel: version.operationnel === null ? null : rendre(version.operationnel),
+		sommaire: sommaireDe(version.reference)
+	};
 }
 
 async function complementsDeLecture(
@@ -688,15 +752,37 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 			retroliens: lecture.retroliens
 		},
 		/**
-		 * L'HISTORIQUE RÉEL DE LA NOTE — T-039. Il est reçu par `src/vues/V-15`,
-		 * que cette page monte dès que l'adresse porte `?version` : V-15 est une
-		 * SUPERPOSITION de V-14, et c'est ce paramètre — le seul état de V-15 que
-		 * `docs/routes.md` §S2 connaisse — qui décide lequel des deux écrans
-		 * s'affiche.
+		 * L’HISTORIQUE RÉEL DE LA NOTE — T-039. `versions` et `retention` sont
+		 * reçus par `src/vues/V-15`, que cette page monte dès que l’adresse porte
+		 * `?version` : V-15 est une SUPERPOSITION de V-14, et c’est ce paramètre
+		 * — le seul état de V-15 que `docs/routes.md` §S2 connaisse — qui décide
+		 * lequel des deux écrans s’affiche.
+		 *
+		 * `affichee` NE VA PAS À LA VUE PAR CE CHEMIN-LÀ. Son `numero` sert à
+		 * marquer la ligne courante du panneau ; ses trois autres champs — le
+		 * titre et les deux corps capturés — sont des DOCUMENTS, que la vue ne
+		 * sait pas rendre. Ils passent par `afficheeDeLaVersion` ci-dessous,
+		 * rendus en HTML par l’implémentation unique (`ADR-004`). Le champ reste
+		 * servi tel quel parce que l’action `restaurer` le relit, elle, sous sa
+		 * forme de document.
 		 *
 		 * `retention` est `versions_max` de `parametres`, lu et jamais redéclaré.
 		 */
 		histoire,
+		/**
+		 * L’ARTICLE DE LA VERSION CONSULTÉE, ou `null` quand l’adresse ne désigne
+		 * aucune version — `?version` nu, ou un numéro qui n’existe pas. Dans ces
+		 * deux cas, la note COURANTE est la bonne réponse, et c’est `affichee`
+		 * qui est servie.
+		 *
+		 * SANS CE CHAMP, V-15 RENDAIT LE CORPS COURANT SOUS UN BANDEAU QUI
+		 * ANNONÇAIT UN ÉTAT ANTÉRIEUR, et « Restaurer cette version » écrasait la
+		 * note avec un texte que l’écran n’avait jamais montré (`RG-M18-05`).
+		 */
+		afficheeDeLaVersion:
+			histoire.affichee === null
+				? null
+				: articleDeLaVersion(complements.affichee, histoire.affichee, lecture.resoudreUneNote),
 		/**
 		 * LA NOTE TELLE QU'ELLE S'AFFICHE — l'identité, le corps rendu, le
 		 * sommaire, le dernier contrôle, les dates, la révision courante et la

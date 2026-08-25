@@ -317,6 +317,24 @@ export interface LectureDeNote {
 	 * de ce module.
 	 */
 	readonly notes: readonly Note[];
+	/**
+	 * LE RÉSOLVEUR DES LIENS INTERNES DU PÉRIMÈTRE, CELUI-LÀ MÊME QUI A RENDU
+	 * `corps` — et non un second, reconstruit par l'appelant.
+	 *
+	 * IL EXISTE PARCE QUE `corps` N'EST PAS LE SEUL DOCUMENT QUE CETTE ADRESSE
+	 * AFFICHE. `/notes/{identifiant}?version={n}` montre le corps CAPTURÉ d'une
+	 * version antérieure, que `$lib/donnees/histoire.ts` rend sous forme de
+	 * `Document` : le rendre en HTML demande le même résolveur, faute de quoi
+	 * l'appelant devrait redériver « quelles notes sont citables et lesquelles
+	 * sont publiques » à partir de `notes` — une seconde définition de la
+	 * visibilité, qui divergerait de celle-ci au premier changement de règle
+	 * (`P-01`).
+	 *
+	 * IL PORTE DÉJÀ LE PÉRIMÈTRE : il a été construit sur les notes que le
+	 * `where` d'accès a rapportées, et une cible hors périmètre y est donc
+	 * inconnue, exactement comme dans le corps courant (`RG-ACC-01`).
+	 */
+	readonly resoudreUneNote: ResolveurDeNote;
 }
 
 /** Ce qu'une lecture demande : l'adresse, le registre, et qui demande. */
@@ -460,7 +478,8 @@ export async function lireLaNote(
 					operationnel: c.corpsOperationnel
 				}))
 			),
-			notes: toutes.filter((n) => lisibles.has(n.id))
+			notes: toutes.filter((n) => lisibles.has(n.id)),
+			resoudreUneNote: resolveur
 		}
 	};
 }
