@@ -32,7 +32,7 @@ import { documentDuGel, resoudreDansLeCorpus } from '../lib/contenu/documents-du
 import { rendreDocument } from '../lib/contenu/rendu';
 import { NOTE, type LectureAffichee } from '../lib/lecture/note-de-demonstration';
 import { adresseDeDomaine } from '../lib/rangement/adresses';
-import { motFiche } from '../lib/vocabulaire';
+import { VOCABULAIRE_PAR_DEFAUT } from '../lib/vocabulaire';
 
 const NOTES = corpusPourVue('V-14');
 
@@ -288,7 +288,13 @@ describe('V-14 — les propriétés typées d’une fiche se relisent', () => {
 
 	it('rend la pastille « Fiche <type> », et non le seul type de note', async () => {
 		const html = await rendu({ affichee: AFFICHEE_FICHE });
-		expect(html).toContain(`<span class="past past--type">${motFiche} ${FICHE.typeFiche}</span>`);
+		/* LE MOT VIENT DE SA SOURCE, PAS D'UN LITTÉRAL. `NoteDeDemonstration` le
+		   lit sur le contexte de coquille ; rendue hors gabarit racine, la vue
+		   retombe sur `VOCABULAIRE_PAR_DEFAUT` — la même valeur que le repli du
+		   gel, et la seule que ce rendu puisse porter. */
+		expect(html).toContain(
+			`<span class="past past--type">${VOCABULAIRE_PAR_DEFAUT.fiche} ${FICHE.typeFiche}</span>`
+		);
 	});
 
 	it('rend les propriétés servies, dans l’ordre reçu', async () => {
