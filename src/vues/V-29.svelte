@@ -78,6 +78,58 @@
 	import { motFicheMinuscule, motFichePlurielMinuscule } from '$lib/vocabulaire';
 	import type { RefusDeSaisie, SaisieDeTypeDeFiche } from '$lib/console/structure';
 
+	/**
+	 * LES CINQ ATTRIBUTS QUE LE JEU DE DÉMONSTRATION NE PORTE PAS — description,
+	 * icône, caractère obligatoire — sont ceux du gel, recopiés depuis lui
+	 * (`V-29:2929`, `V-29:2927`, `V-29:2945`). `seeds/corpus.ts` décrit le SCHÉMA
+	 * d'un type de fiche, pas sa présentation dans la console.
+	 *
+	 * ILS SONT LE DÉFAUT DE LEUR PROPRIÉTÉ, ET RIEN D'AUTRE — jamais un repli
+	 * CLÉ PAR CLÉ sur ce que la page a servi. La nuance décide d'une écriture :
+	 * replié clé par clé, « Modifier » puis « Enregistrer » sur un type nommé
+	 * « Serveur » sans description recopiait cette phrase de démonstration DANS
+	 * LA BASE, sous la signature d'un administrateur qui ne l'a jamais saisie.
+	 * `P-02` l'interdit, et `CLAUDE.md` avec lui : le jeu de démonstration n'est
+	 * jamais la vérité du produit. Dès que la page sert la donnée — et elle la
+	 * sert toujours —, ces tables ne sont plus consultées du tout.
+	 */
+	const PRESENTATIONS_DE_DEMONSTRATION: Record<string, PresentationDeTypeDeFiche> = {
+		Serveur: {
+			description:
+				"Machine physique ou virtuelle exploitée par l'équipe. Devient un nœud de la cartographie.",
+			glyphe: 'serveur'
+		},
+		Application: {
+			description: 'Logiciel en service pour le métier, avec ses contacts et sa criticité.',
+			glyphe: 'appli'
+		},
+		Contact: {
+			description: 'Interlocuteur externe : prestataire, éditeur, opérateur.',
+			glyphe: 'contact'
+		}
+	};
+
+	/**
+	 * LE SCHÉMA DE DÉMONSTRATION, AVEC L'OBLIGATION QUE LE GEL LUI DONNE.
+	 * `TYPES_FICHE` ne porte pas de caractère obligatoire ; le gel en marque deux
+	 * (`V-29:2945`). L'obligation est posée ICI, sur la constante qui sert de
+	 * défaut à la propriété, pour la raison ci-dessus : un type réel dont la base
+	 * dit « non obligatoire » le reste, quelle que soit sa clé.
+	 */
+	const CLES_OBLIGATOIRES_DE_DEMONSTRATION: readonly string[] = ['hote', 'organisme'];
+
+	function marquerLesObligations(champs: readonly ChampDeFiche[]): readonly ChampDeFiche[] {
+		return champs.map((c) =>
+			CLES_OBLIGATOIRES_DE_DEMONSTRATION.includes(c.cle) ? { ...c, obligatoire: true } : c
+		);
+	}
+
+	const TYPES_FICHE_DE_DEMONSTRATION: Record<TypeDeFiche, readonly ChampDeFiche[]> = {
+		Serveur: marquerLesObligations(TYPES_FICHE.Serveur),
+		Application: marquerLesObligations(TYPES_FICHE.Application),
+		Contact: marquerLesObligations(TYPES_FICHE.Contact)
+	};
+
 	interface Proprietes {
 		/** Le vecteur complet de l'état — formulaire × suppression. */
 		vecteur: Record<string, string | boolean> | null;
@@ -95,8 +147,10 @@
 		typesFiche?: Record<TypeDeFiche, readonly ChampDeFiche[]>;
 		/**
 		 * LA DESCRIPTION ET L'ICÔNE DE CHAQUE TYPE, telles que la console les a
-		 * écrites. Absente, les tables du jeu de démonstration s'appliquent — le
-		 * rendu de planche ne bouge donc pas d'un pixel.
+		 * écrites. Absente, la table du jeu de démonstration s'applique EN BLOC —
+		 * le rendu de planche ne bouge donc pas d'un pixel. Présente, elle fait
+		 * seule loi : un type qu'elle décrit sans description en a une vide, et
+		 * l'écran n'en invente pas.
 		 */
 		presentations?: Record<string, PresentationDeTypeDeFiche>;
 		/**
@@ -130,8 +184,8 @@
 		domaines = DOMAINES,
 		compte = MOI,
 		instance = INSTANCE,
-		typesFiche = TYPES_FICHE,
-		presentations,
+		typesFiche = TYPES_FICHE_DE_DEMONSTRATION,
+		presentations = PRESENTATIONS_DE_DEMONSTRATION,
 		onSupprimer,
 		onDelester,
 		onCreer,
@@ -220,30 +274,6 @@
 		return ICONES.find((i) => i.cle === cle)?.traits ?? TRAITS_SERVEUR;
 	}
 
-	/**
-	 * LES TROIS ATTRIBUTS QUE LE JEU DE DÉMONSTRATION NE PORTE PAS — description,
-	 * icône, caractère obligatoire — sont ceux du gel, recopiés depuis lui
-	 * (`V-29:2929`, `V-29:2927`, `V-29:2945`). `seeds/corpus.ts` décrit le
-	 * SCHÉMA d'un type de fiche, pas sa présentation dans la console.
-	 *
-	 * CE SONT DÉSORMAIS DES REPLIS, ET NON PLUS LA SEULE SOURCE. La base les
-	 * porte depuis `008_saisies_de_console`, et `presentations` les apporte quand
-	 * une instance réelle les a écrits ; ces trois tables ne servent plus qu'au
-	 * jeu de démonstration, où rien ne les remplace.
-	 */
-	const ICONE_PAR_TYPE: Record<string, string> = {
-		Serveur: 'serveur',
-		Application: 'appli',
-		Contact: 'contact'
-	};
-	const DESCRIPTIONS: Record<string, string> = {
-		Serveur:
-			"Machine physique ou virtuelle exploitée par l'équipe. Devient un nœud de la cartographie.",
-		Application: 'Logiciel en service pour le métier, avec ses contacts et sa criticité.',
-		Contact: 'Interlocuteur externe : prestataire, éditeur, opérateur.'
-	};
-	const PROPRIETES_OBLIGATOIRES: readonly string[] = ['hote', 'organisme'];
-
 	interface ProprieteDeType {
 		readonly cle: string;
 		readonly libelle: string;
@@ -271,13 +301,13 @@
 	const types: readonly TypeDeFicheRendu[] = $derived(
 		(Object.keys(typesFiche) as readonly TypeDeFiche[]).map((nom) => ({
 			nom,
-			description: presentations?.[nom]?.description || (DESCRIPTIONS[nom] ?? ''),
-			icone: presentations?.[nom]?.glyphe || (ICONE_PAR_TYPE[nom] ?? 'serveur'),
+			description: presentations[nom]?.description ?? '',
+			icone: presentations[nom]?.glyphe ?? '',
 			props: typesFiche[nom].map((p) => ({
 				cle: p.cle,
 				libelle: p.nom,
 				type: typeDeValeur(p),
-				obligatoire: p.obligatoire ?? PROPRIETES_OBLIGATOIRES.includes(p.cle),
+				obligatoire: p.obligatoire ?? false,
 				defaut: p.defaut ?? '',
 				aide: p.aide ?? '',
 				valeurs: [...(p.valeurs ?? [])]
@@ -896,7 +926,10 @@
 													value={p.aide}
 													oninput={(e) => changerLaPropriete(rang, { aide: e.currentTarget.value })}
 												/>
-												<span class="champ__aide">Affichée sous le champ dans l'éditeur.</span>
+												<span class="champ__aide"
+													>Enregistrée dans le schéma. L'éditeur de note ne l'affiche pas encore :
+													il ne rend aucune propriété typée.</span
+												>
 											</div>
 											<label class="case">
 												<input
