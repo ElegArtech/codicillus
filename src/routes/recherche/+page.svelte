@@ -105,11 +105,21 @@
 		table `parametres`. V-08 ne porte aucun appel à l'assistance : elle ne va
 		qu'à la vue publique.
 	-->
+	<!--
+		`pistes` — LES PISTES DE REFORMULATION, ET ELLES N'ONT PAS DE SOURCE ICI.
+		V-02 en portait cinq écrites dans sa maquette — « mot de passe », « accès »,
+		« salle de réunion », « réseau », « support » —, chacune ouvrant
+		`/recherche?q=…` à zéro résultat sur une instance qui ne porte rien de tel.
+		Aucune table ne journalise les recherches : la liste est vide, et le bloc
+		n'est alors pas rendu. Elle est passée explicitement pour que la vue ne
+		puisse pas retomber sur une donnée d'exemple.
+	-->
 	<VuePublique
 		vecteur={data.vecteur}
 		notes={data.notes}
 		recherchees={data.recherchees}
 		retenues={data.retenues}
 		portail={data.portail}
+		pistes={[]}
 	/>
 {/if}
