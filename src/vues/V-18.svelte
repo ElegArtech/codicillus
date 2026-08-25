@@ -87,20 +87,9 @@
 	import BandeauApercu from '$lib/edition/BandeauApercu.svelte';
 	import BarreDEtat from '$lib/edition/BarreDEtat.svelte';
 	import ZoneDeRedaction from '$lib/edition/ZoneDeRedaction.svelte';
-	import CorpsOperationnel from '$lib/lecture/CorpsOperationnel.svelte';
-	import CorpsReference from '$lib/lecture/CorpsReference.svelte';
-	import { NOTE, rangementDe, type NoteAffichee } from '$lib/lecture/note-de-demonstration';
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		UNIVERS,
-		type Domaine,
-		type EtatDInstance,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../seeds/corpus';
+	import { rangementDe, type NoteAffichee } from '$lib/lecture/note-de-demonstration';
+	import type { Domaine, Note, Univers } from '../../seeds/corpus';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — deux contrôles de planche. */
@@ -108,21 +97,17 @@
 		/** Le jeu de semence de la vue — `corpusPourVue('V-18')`, variante « lecture ». */
 		notes: readonly Note[];
 		/**
-		 * LES QUATRE PROPRIÉTÉS DE CONTEXTE — T-042, et elles sont OPTIONNELLES.
+		 * LE CONTEXTE, ET SON DÉFAUT EST L'ENSEMBLE VIDE.
 		 *
-		 * Avant ce lot, cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et
-		 * `INSTANCE` au niveau du module : un chargeur de route ne pouvait rien
-		 * y substituer, et l'écran servait le contexte du jeu de semence quelle
-		 * que fût l'identité de l'appelant.
-		 *
-		 * LE DÉFAUT EST LA CONSTANTE DU JEU, et c'est ce qui garantit que le banc
-		 * ne bouge pas : le mode de conception ne passe que `vecteur` et `notes`,
-		 * la vue reçoit donc exactement ce qu'elle avait.
+		 * Cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et `INSTANCE` du jeu de
+		 * démonstration ; ces constantes en sont ensuite devenues les DÉFAUTS,
+		 * ce qui n'était que le même défaut déplacé. La route ne les passe pas —
+		 * le contexte de coquille les porte —, elles rendent donc vide.
+		 * `instance` a disparu : la version du produit vient du contexte.
 		 */
 		univers?: readonly Univers[];
 		domaines?: readonly Domaine[];
-		compte?: UtilisateurCourant;
-		instance?: EtatDInstance;
+		compte?: CompteAffiche | null;
 		/**
 		 * LA NOTE ÉDITÉE ET SES DEUX CORPS RENDUS — T-042.
 		 *
@@ -137,10 +122,12 @@
 		 * rendu, elle ne le modifie pas : l'édition est un comportement
 		 * (ARB-011) et appartient au lot d'édition.
 		 *
-		 * ABSENTE, LA TRANSCRIPTION FIGÉE, à l'identique — les couples de la vue
-		 * ne bougent pas.
+		 * ELLE EST REQUISE. Absente, la vue rendait la transcription figée de
+		 * `n-restaurer-pg` — son fil d'Ariane, son registre Référence en panneau
+		 * de rappel, son Opérationnel dans la zone de rédaction — pour la note
+		 * qu'on était en train d'écrire, et rien ne le signalait.
 		 */
-		affichee?: NoteAffichee;
+		affichee: NoteAffichee;
 		/**
 		 * CE QUE LE BANDEAU DE DÉSYNCHRONISATION NOMME — `RG-M06-08`.
 		 *
@@ -153,34 +140,39 @@
 		 * d'inventer un nom (`P-02`). C'est la jurisprudence du bandeau de V-14,
 		 * qui n'interpole que la date qu'il a (`NoteDeDemonstration.svelte:322`).
 		 *
-		 * ABSENTE, LA TRANSCRIPTION FIGÉE : le mode de conception ne passe rien,
-		 * la vue rend exactement la phrase du gel, et les six couples ne bougent
-		 * pas.
+		 * ELLE EST REQUISE : son absence faisait écrire « Modifiée le 22 juillet
+		 * 2026 par Sophie Nguyen », la phrase du gel, sur n'importe quelle note.
 		 */
-		desynchronisation?: { quand: string; par: string | null };
+		desynchronisation: { quand: string; par: string | null };
 		/**
-		 * L'ANCIENNETÉ DU DERNIER ENREGISTREMENT, quand la route la connaît.
+		 * L'ANCIENNETÉ DU DERNIER ENREGISTREMENT, EN JOURS — REQUISE.
 		 * Un nombre : la phrase du gel avec la vraie valeur. `null` : la note n'a
 		 * aucune version, et « Aucune modification » — l'autre phrase du gel — le
-		 * dit exactement. Absente : le rendu ne bouge pas d'un octet.
+		 * dit exactement. Absente, la barre écrivait « il y a 3 semaines » sur
+		 * toute note.
 		 */
-		dernierEnregistrement?: number | null;
+		dernierEnregistrement: number | null;
 	}
 
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
+		univers = [],
+		domaines = [],
+		compte = null,
 		affichee,
 		desynchronisation,
-		dernierEnregistrement = undefined
+		dernierEnregistrement
 	}: Proprietes = $props();
 
-	/** La note éditée — celle qu'on modifie, ou celle du gel à défaut. */
-	const note = $derived(affichee?.note ?? NOTE);
+	/**
+	 * LE COMPTE SERVI À LA COQUILLE. En application, le contexte l'emporte
+	 * toujours. Hors gabarit racine, il n'y a PAS de compte connecté.
+	 */
+	const COMPTE_ABSENT: CompteAffiche = { nom: '', initiales: '', role: '', domaine: '' };
+
+	/** La note éditée — celle qu'on modifie, et il n'y a plus d'autre cas. */
+	const note = $derived(affichee.note);
 	const rangement = $derived(rangementDe(note));
 
 	const reglage = $derived(vecteur ?? {});
@@ -206,11 +198,9 @@
 	const SUITE_DESYNC =
 		", après votre dernière rédaction. Vérifiez que le pas-à-pas tient toujours — ou attestez qu'il tient, sans le rééditer.";
 	const phraseDesync = $derived(
-		desynchronisation === undefined
-			? `Modifiée le 22 juillet 2026 par Sophie Nguyen${SUITE_DESYNC}`
-			: `Modifiée le ${desynchronisation.quand}${
-					desynchronisation.par === null ? '' : ` par ${desynchronisation.par}`
-				}${SUITE_DESYNC}`
+		`Modifiée le ${desynchronisation.quand}${
+			desynchronisation.par === null ? '' : ` par ${desynchronisation.par}`
+		}${SUITE_DESYNC}`
 	);
 
 	const etatSauvegarde = $derived(cas === 'vierge' ? 'vierge' : 'enregistre');
@@ -224,9 +214,7 @@
 	const texteSauvegarde = $derived(
 		cas === 'vierge' || dernierEnregistrement === null
 			? 'Aucune modification'
-			: dernierEnregistrement === undefined
-				? 'Enregistré · dernière version il y a 3 semaines'
-				: `Enregistré · dernière version il y a ${dernierEnregistrement} jours`
+			: `Enregistré · dernière version il y a ${dernierEnregistrement} jours`
 	);
 </script>
 
@@ -249,7 +237,7 @@
 -->
 <!-- eslint-disable svelte/no-at-html-tags -- sortie de `rendreDocument`, texte échappé par `echapper()` (ADR-003) -->
 <!-- prettier-ignore -->
-{#snippet corpsOperationnelRedige()}{#if affichee}{@html affichee.operationnel ?? ''}{:else}<CorpsOperationnel />{/if}{/snippet}
+{#snippet corpsOperationnelRedige()}{@html affichee.operationnel ?? ''}{/snippet}
 <!-- eslint-enable svelte/no-at-html-tags -->
 
 <!--
@@ -281,13 +269,8 @@
 	{univers}
 	{domaines}
 	notes={corpus}
-	compte={{
-		nom: compte.nom,
-		initiales: compte.initiales,
-		role: compte.role,
-		domaine: compte.domaine
-	}}
-	version={instance.version}
+	compte={compte ?? COMPTE_ABSENT}
+	version=""
 >
 	{#snippet enfants()}
 		<div class="colonne-redaction">
@@ -592,11 +575,11 @@
 					<!-- ================= CORPS — REGISTRE RÉFÉRENCE ================= -->
 					<!-- eslint-disable svelte/no-at-html-tags -- sortie de `rendreDocument`, texte échappé (ADR-003) -->
 					<!-- prettier-ignore -->
-					<div class="prose" id="corps-reference">{#if affichee}{@html affichee.reference ?? ''}{:else}<CorpsReference />{/if}</div>
+					<div class="prose" id="corps-reference">{@html affichee.reference ?? ''}</div>
 
 					<!-- ================ CORPS — REGISTRE OPÉRATIONNEL ================ -->
 					<!-- prettier-ignore -->
-					<div class="prose" id="corps-operationnel" hidden>{#if affichee}{@html affichee.operationnel ?? ''}{:else}<CorpsOperationnel />{/if}</div>
+					<div class="prose" id="corps-operationnel" hidden>{@html affichee.operationnel ?? ''}</div>
 					<!-- eslint-enable svelte/no-at-html-tags -->
 				</div>
 			</section>

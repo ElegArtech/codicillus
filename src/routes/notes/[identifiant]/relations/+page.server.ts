@@ -62,7 +62,6 @@ import {
 } from '$lib/donnees/relations';
 import { notes as tableDesNotes } from '$lib/base/schema';
 import { eq } from 'drizzle-orm';
-import { INSTANCE } from '../../../../../seeds/corpus';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
@@ -129,15 +128,6 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			role: compte.role,
 			domaine: compte.domaine
 		},
-		/**
-		 * LA VERSION DU PRODUIT N'EST PAS UNE DONNÉE DE BASE, et le fait est déjà
-		 * relevé : `SANS_CONTREPARTIE_EN_BASE` de `$lib/donnees/accueil.ts` la
-		 * porte en première ligne — « aucune colonne, et aucune des sept clés de
-		 * `parametres` ». La constante du jeu de semence est ce que toutes les
-		 * vues emploient, et cette page ne fait pas exception ; la lacune est
-		 * celle du schéma, pas de ce chargeur.
-		 */
-		version: INSTANCE.version,
 		droits: ecriture ? ('ecriture' as const) : ('lecture' as const),
 		/**
 		 * `P-08` — L'ORIGINE EST RENDUE ICI, ET C'EST LE SEUL ÉCRAN DU PRODUIT

@@ -19,13 +19,12 @@ import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
 import {
 	corpusPourVue,
 	DOMAINES,
-	INSTANCE,
 	MOI,
 	noteParIdentifiant,
 	TEMPLATES,
+	TYPES_FICHE,
 	TYPES_NOTE,
 	UNIVERS,
-	type EtatDInstance,
 	type UtilisateurCourant
 } from '../../seeds/corpus';
 
@@ -39,8 +38,6 @@ const SOPHIE: UtilisateurCourant = {
 	role: 'Administrateur'
 };
 
-const AUTRE_INSTANCE: EtatDInstance = { version: '9.9.9-epreuve', synchro: "à l'instant" };
-
 /** Le cas « modification » de la planche — le seul qui montre une note. */
 const MODIF = { cas: 'modif' };
 
@@ -50,8 +47,35 @@ const AUTRE_NOTE = (() => {
 	return note;
 })();
 
+/** La note que le gel nomme en modification — celle qui était le REPLI. */
+const NOTE_DU_GEL = (() => {
+	const note = noteParIdentifiant('n-planifier-sauv');
+	if (!note) throw new Error('seeds/corpus.ts : « n-planifier-sauv » a disparu');
+	return note;
+})();
+
+/**
+ * LE SOCLE DE PROPRIÉTÉS REQUISES, ET IL EST EXPLICITE.
+ *
+ * Le contexte, les trois référentiels et l'arborescence de choix avaient pour
+ * DÉFAUT les constantes du jeu de démonstration : une route qui les oubliait
+ * ouvrait l'éditeur sur le domaine de « Karim Belhadj », avec les types et les
+ * gabarits des maquettes. Les deux routes les passent ; elles sont REQUISES, et
+ * ce socle les nomme au lieu de les laisser tomber d'un défaut.
+ */
 function rendu(proprietes: Record<string, unknown>): Promise<string> {
-	return rendreLaVue('V-17', { vecteur: null, notes: NOTES, ...proprietes });
+	return rendreLaVue('V-17', {
+		vecteur: null,
+		notes: NOTES,
+		domaines: DOMAINES,
+		universDuCompte: 'Production',
+		dossiersParDomaine: null,
+		compte: MOI,
+		typesNote: TYPES_NOTE,
+		typesFiche: TYPES_FICHE,
+		templates: TEMPLATES,
+		...proprietes
+	});
 }
 
 /**
@@ -79,10 +103,6 @@ describe('V-17 — la propriété fournie l’emporte', () => {
 		const html = await rendu({ compte: SOPHIE });
 		expect(filDe(html)).toContain(`>${SOPHIE.domaine}</a>`);
 		expect(filDe(html)).not.toContain(`>${MOI.domaine}</a>`);
-	});
-
-	it('sert la version d’instance reçue', async () => {
-		expect(await rendu({ instance: AUTRE_INSTANCE })).toContain('9.9.9-epreuve');
 	});
 
 	it('peuple le choix de domaine avec la liste reçue', async () => {
@@ -116,17 +136,18 @@ describe('V-17 — la propriété fournie l’emporte', () => {
 	});
 
 	it('rouvre la note reçue, et non celle que le gel nomme', async () => {
-		const gel = await rendu({ vecteur: MODIF });
-		expect(gel).toContain('Planifier une sauvegarde Barman');
-
 		const html = await rendu({ vecteur: MODIF, noteModifiee: AUTRE_NOTE });
 		expect(html).toContain(AUTRE_NOTE.titre);
-		expect(html).not.toContain('Planifier une sauvegarde Barman');
+		expect(html).not.toContain(NOTE_DU_GEL.titre);
 		expect(html).toContain(AUTRE_NOTE.extrait);
 	});
 
-	it('lit l’ancienneté de version dans la table de modifications reçue', async () => {
-		const html = await rendu({ vecteur: MODIF, modifications: { 'n-planifier-sauv': 77 } });
+	it('date le dernier enregistrement servi, et jamais un autre', async () => {
+		const html = await rendu({
+			vecteur: MODIF,
+			noteModifiee: AUTRE_NOTE,
+			dernierEnregistrement: 77
+		});
 		expect(html).toContain('dernière version il y a 77 jours');
 	});
 
@@ -137,25 +158,32 @@ describe('V-17 — la propriété fournie l’emporte', () => {
 	});
 });
 
-describe('V-17 — la propriété absente retombe sur la constante du jeu', () => {
-	it('rend le compte, la version, les domaines et les référentiels du jeu', async () => {
+/**
+ * LE MOTIF EST RETIRÉ, ET C'EST CE QUE CETTE SECTION MESURE.
+ *
+ * Chaque propriété portait pour défaut une constante du jeu de démonstration —
+ * `MOI`, `INSTANCE`, `DOMAINES`, `TYPES_NOTE`, `TEMPLATES`, la note
+ * `n-planifier-sauv` et la table d'ancienneté des trente-deux notes du gel.
+ * Une route qui les oubliait servait donc les maquettes SANS QUE RIEN NE
+ * PROTESTE. Ce qui reste optionnel rend VIDE.
+ */
+describe('V-17 — rien du jeu de démonstration ne subsiste au défaut', () => {
+	it('rend les domaines et les référentiels SERVIS, et rien d’autre', async () => {
 		const html = await rendu({});
-		expect(html).toContain(`${MOI.nom} — menu utilisateur`);
-		expect(html).toContain(INSTANCE.version);
 		for (const d of DOMAINES) expect(html).toContain(`${d.univers} › ${d.nom}`);
 		for (const t of TYPES_NOTE) expect(html).toContain(`<option value="${t}"`);
 	});
 
-	it('rend les gabarits du jeu de semence dans l’état qui les montre', async () => {
+	it('rend les gabarits servis dans l’état qui les montre', async () => {
 		const html = await rendu({ vecteur: { cas: 'template' } });
 		for (const g of TEMPLATES) expect(html).toContain(g.type);
 		expect(html).toContain('Fiche applicative');
 	});
 
-	it('rouvre la note que le gel nomme, avec son ancienneté de version', async () => {
+	it('ne rouvre aucune note tant qu’aucune ne lui est passée', async () => {
 		const html = await rendu({ vecteur: MODIF });
-		expect(html).toContain('Planifier une sauvegarde Barman');
-		expect(html).toContain('dernière version il y a');
+		expect(html).not.toContain(NOTE_DU_GEL.titre);
+		expect(html).toContain('Aucune modification');
 	});
 });
 
@@ -226,13 +254,14 @@ describe('V-17 — le dossier de départ', () => {
 	});
 
 	it('l’emporte sur le dossier de la note reprise en modification', async () => {
-		const gel = await rendu({ vecteur: MODIF, dossiersParDomaine: ARBRE_DE_CHOIX });
-		const html = await rendu({
+		const socle = {
 			vecteur: MODIF,
-			dossiersParDomaine: ARBRE_DE_CHOIX,
-			dossierDeDepart: 'Réseau'
-		});
+			noteModifiee: NOTE_DU_GEL,
+			dossiersParDomaine: ARBRE_DE_CHOIX
+		};
+		const sans = await rendu(socle);
+		const html = await rendu({ ...socle, dossierDeDepart: 'Réseau' });
 		expect(dossiersCoches(html)).toEqual(['Réseau']);
-		expect(dossiersCoches(gel)).not.toEqual(['Réseau']);
+		expect(dossiersCoches(sans)).not.toEqual(['Réseau']);
 	});
 });

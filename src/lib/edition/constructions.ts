@@ -96,7 +96,13 @@ export const GABARITS: readonly GabaritDInsertion[] = [
 		blocs: [
 			{
 				type: 'heading',
-				attrs: { level: 2, ancre: 's-nouveau' },
+				/* L'ANCRE N'EST PLUS POSÉE ICI, ET ELLE ÉTAIT NUISIBLE : le gabarit
+				   écrivait `s-nouveau` EN DUR, donc deux insertions du même bloc
+				   partageaient une ancre, et le sommaire renvoyait deux entrées au
+				   même titre. Elle est dérivée du texte au rendu — `ancresDuDocument()`
+				   de `$lib/contenu/rendu.ts` —, où l'unicité se juge sur le document
+				   entier. Le titre de niveau 3 voisin ne l'a jamais posée. */
+				attrs: { level: 2, ancre: null },
 				content: [{ type: 'text', text: 'Titre de section' }]
 			}
 		]

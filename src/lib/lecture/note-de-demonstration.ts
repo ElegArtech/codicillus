@@ -1,5 +1,5 @@
 /**
- * LA NOTE DE DÉMONSTRATION — les données que V-14 et V-15 partagent.
+ * LE BLOC D'ARTICLE QUE V-14 ET V-15 PARTAGENT — ses FORMES, plus aucune donnée.
  *
  * Les deux maquettes gelées portent EXACTEMENT le même bloc de balisage, et
  * le disent elles-mêmes en tête de ce bloc :
@@ -13,24 +13,19 @@
  * `NoteDeDemonstration.svelte` en est le rendu, ce fichier en est la matière.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * CE QUI VIENT DU CORPUS, ET CE QUI VIENT DU GEL
+ * CE QU'IL NE PORTE PLUS, ET C'ÉTAIT LE MOTIF
  *
- * Le bloc partagé ne dérive RIEN de `window.CORPUS` : il est écrit au balisage
- * de bout en bout. Une seule chose y est calculée par la maquette — le
- * sommaire, construit à partir des titres du corps rédigé — et une seule est
- * réécrite par la planche de revue — le cartouche de fraîcheur.
+ * Ce module servait `NOTE` — `CORPUS.find(n => n.id === 'n-restaurer-pg')`, LEVÉE
+ * COMPRISE si la note disparaissait du jeu —, l'ancienneté comptée depuis la
+ * `DATE_REFERENCE` du jeu, et les consultations de sa table de mesures. Trois
+ * vues et un chargeur de route l'importaient : le jeu de démonstration
+ * descendait dans le produit par ce fichier, sans qu'une seule ligne de
+ * `src/vues/` ne soit fautive.
  *
- * Ce module ne transcrit donc que ces deux-là. Le reste est du balisage, et
- * il est rendu tel quel par le composant, sans intermédiaire : le recopier ici
- * en données ne le rendrait ni plus vrai ni plus vérifiable.
+ * Il ne porte plus que des FORMES — les interfaces que le chargeur remplit —
+ * et deux fonctions pures. Son seul import du jeu est un import de TYPE.
  */
-import {
-	CORPUS,
-	DATE_REFERENCE,
-	MESURES_7J,
-	type Note,
-	type NomDAuteur
-} from '../../../seeds/corpus';
+import type { Note } from '../../../seeds/corpus';
 import { segmentsDeDossier } from '../rangement/adresses';
 
 /* ── Le sommaire ────────────────────────────────────────────────────────────
@@ -87,9 +82,7 @@ export interface LigneDeSommaire extends EntreeDeSommaire {
  * `String(n).padStart(2, "0")` du gel, et le compteur n'avance que sur un
  * niveau 2.
  */
-export function sommaireRendu(
-	entrees: readonly EntreeDeSommaire[] = SOMMAIRE_REFERENCE
-): readonly LigneDeSommaire[] {
+export function sommaireRendu(entrees: readonly EntreeDeSommaire[]): readonly LigneDeSommaire[] {
 	let n = 0;
 	return entrees.map((e) => ({
 		...e,
@@ -97,41 +90,26 @@ export function sommaireRendu(
 	}));
 }
 
-/* ── Le cartouche de contrôle ───────────────────────────────────────────────
-   La planche de V-14 fait varier le niveau de fraîcheur du cartouche, et la
-   maquette y attache, pour chacun des trois niveaux, l'auteur et la date du
-   dernier contrôle : `niveaux` de `V-14:4008-4012`.
+/* ── La prose du cartouche de contrôle ──────────────────────────────────────
+   Le cartouche dit trois choses : QUI a vérifié, QUAND, et — aux deux niveaux
+   qui ne sont plus frais — ce qu'il FAUDRAIT en faire. Les deux premières
+   viennent du journal des vérifications, servi par le chargeur. La troisième ne
+   se déduit d'aucune note : c'est la mise en garde que le gel attache au
+   NIVEAU, et à lui seul (`V-14:4008-4012`).
 
-   CES TROIS ENTRÉES SONT DES DONNÉES DE PLANCHE, PAS DU CORPUS. Elles ne se
-   déduisent d'aucune note : la note de démonstration `n-restaurer-pg` porte le
-   seul niveau `frais`, et la planche montre à quoi ressemblerait SON cartouche
-   si elle vieillissait. Les transcrire est le seul moyen de les rendre ; les
-   inventer serait un comblement.
+   CE QUI A DISPARU D'ICI, ET POURQUOI. La table portait aussi un vérificateur
+   et une date par niveau — « Karim Belhadj », « 1er août 2026 » — que le bloc
+   partagé servait quand aucune note affichée ne lui était passée. Ce repli
+   n'existe plus : `NoteDeDemonstration.svelte` EXIGE désormais la note
+   affichée, et les deux vues qui le montent la passent toutes les deux. Un
+   cartouche ne peut donc plus nommer un vérificateur du jeu de démonstration.
 
-   CE QUI N'EST PAS TRANSCRIT, ET C'EST LE POINT : ni le libellé, ni le nombre
-   de barres. Ils sortent de `$lib/fraicheur.ts`, la fabrique unique (P-01,
-   ADR-005), à partir du niveau et de l'ancienneté de la date de contrôle. Le
-   gel écrit « Vérifié il y a 12 jours », « Vérifié il y a 4 mois » et « Pas
-   revu depuis 8 mois » ; la fabrique les redonne à partir de 12, 121 et 248
-   jours — les anciennetés réelles des trois dates, comptées depuis
-   `DATE_REFERENCE`. Aucun libellé n'est écrit à la main.
+   CE QUI N'EST TOUJOURS PAS TRANSCRIT, ET C'EST LE POINT : ni le libellé, ni le
+   nombre de barres. Ils sortent de `$lib/fraicheur.ts`, la fabrique unique
+   (P-01, ADR-005), à partir du niveau et de l'ancienneté. */
 
-   LA DATE EST TRANSCRITE EN TOUTES LETTRES, et `$lib/dates.ts` n'est PAS
-   employé : le gel écrit « 1er août 2026 », l'ordinal du premier du mois, que
-   `Intl.DateTimeFormat` ne produit pas — il donne « 1 août 2026 ». Ajouter
-   l'ordinal à `dates.ts` serait une décision de format prise en exécution,
-   donc un défaut de contrat ; la divergence est déclarée plutôt que comblée. */
-
-/** L'état de contrôle affiché par le cartouche, pour un niveau de la planche. */
-export interface ControleDeNote {
-	/** Qui a porté la dernière vérification. */
-	readonly par: NomDAuteur;
-	/** La date du dernier contrôle, forme machine — attribut `datetime`. */
-	readonly iso: string;
-	/** La même date en toutes lettres, telle que le gel l'écrit. */
-	readonly jour: string;
-	/** L'heure, affichée dans l'infobulle du `<time>`. */
-	readonly heure: string;
+/** Ce que le cartouche ajoute après la date, au seul titre du NIVEAU. */
+export interface ProseDeControle {
 	/**
 	 * Ce que le gel ajoute après la date, séparateur compris — chaîne vide au
 	 * niveau frais, qui n'ajoute rien.
@@ -144,46 +122,12 @@ export interface ControleDeNote {
 	readonly appui: string | null;
 }
 
-/** Les trois états de contrôle de la planche — `V-14:4008-4012`. */
-export const CONTROLE_PAR_NIVEAU = {
-	frais: {
-		par: 'Karim Belhadj',
-		iso: '2026-08-01',
-		jour: '1er août 2026',
-		heure: '09:14',
-		suffixe: '',
-		appui: null
-	},
-	vieil: {
-		par: 'Sophie Nguyen',
-		iso: '2026-04-14',
-		jour: '14 avril 2026',
-		heure: '11:02',
-		suffixe: ' — une revue serait bienvenue',
-		appui: null
-	},
-	obs: {
-		par: 'Marc Ferreira',
-		iso: '2025-12-08',
-		jour: '8 décembre 2025',
-		heure: '15:30',
-		suffixe: ' — ',
-		appui: 'revue nécessaire'
-	}
-} as const satisfies Record<string, ControleDeNote>;
-
-const JOUR_EN_MS = 86_400_000;
-
-/**
- * L'ancienneté d'une date, en jours pleins avant `DATE_REFERENCE`.
- *
- * C'est ce que le corpus appelle `jours` et ce que la fabrique de fraîcheur
- * attend. Les deux bornes sont des dates ISO sans heure, donc lues à minuit
- * UTC : la soustraction est exacte, sans dérive de fuseau.
- */
-export function anciennete(iso: string): number {
-	return Math.round((Date.parse(DATE_REFERENCE) - Date.parse(iso)) / JOUR_EN_MS);
-}
+/** Les trois mises en garde de niveau — `V-14:4008-4012`. */
+export const PROSE_PAR_NIVEAU = {
+	frais: { suffixe: '', appui: null },
+	vieil: { suffixe: ' — une revue serait bienvenue', appui: null },
+	obs: { suffixe: ' — ', appui: 'revue nécessaire' }
+} as const satisfies Record<string, ProseDeControle>;
 
 /* ── Le rangement de la note ────────────────────────────────────────────────
    La ligne « Rangement » des métadonnées : univers, domaine, puis les
@@ -201,41 +145,10 @@ export function anciennete(iso: string): number {
    est donc fourni par chaque vue, sous forme de fragment ; le CHEMIN, lui,
    reste ici, où il ne peut pas diverger. Écart remonté. */
 
-/**
- * LA NOTE LUE PAR LES DEUX VUES — `n-restaurer-pg`, la note de démonstration
- * de tout le projet. Elle vient du corpus, pas d'une recopie : titre, type,
- * visibilité, auteur, étiquettes et consultations en sortent (P-02).
- */
-export const NOTE: Note = (() => {
-	const note = CORPUS.find((n) => n.id === 'n-restaurer-pg');
-	if (!note) throw new Error('seeds/corpus.ts : la note « n-restaurer-pg » a disparu');
-	return note;
-})();
-
 /** Le chemin de rangement d'une note, du plus haut au plus bas. */
 export function rangementDe(note: Note): readonly string[] {
 	return [note.univers, note.domaine, ...segmentsDeDossier(note.dossier)];
 }
-
-/** Le chemin de rangement de la note de démonstration. */
-export const RANGEMENT: readonly string[] = rangementDe(NOTE);
-
-/**
- * LES CONSULTATIONS RÉCENTES, et une contradiction déclarée.
- *
- * Le gel affiche « 412 consultations · 37 sur les 30 derniers jours ». Le
- * premier nombre est `NOTE.vues`. Le second est `MESURES_7J['n-restaurer-pg']`,
- * qui vaut bien 37 — mais la table de la semence se nomme « 7 j » là où la
- * maquette écrit « 30 derniers jours ». LES DEUX NOMMENT LA MÊME DONNÉE ET LA
- * DÉSIGNENT AUTREMENT ; c'est la semence ou le gel qui se trompe de fenêtre, et
- * ni l'un ni l'autre n'est du ressort de ce lot. Le chiffre est lu, la
- * contradiction est remontée.
- */
-export function consultationsRecentes(note: Note): number {
-	return MESURES_7J[note.id];
-}
-
-export const CONSULTATIONS_RECENTES: number = consultationsRecentes(NOTE);
 
 /* ── La note réellement lue ─────────────────────────────────────────────────
    T-042. Le bloc partagé était, jusqu'à ce lot, la transcription de
@@ -355,11 +268,7 @@ export interface LectureAffichee extends NoteAffichee {
 	/** La demande de révision courante. `null` : aucune n'est ouverte. */
 	readonly revision: RevisionCourante | null;
 	/**
-	 * Les consultations des trente derniers jours, comptées au journal.
-	 *
-	 * `MESURES_7J` de la semence nomme « 7 j » ce que le gel écrit « 30
-	 * derniers jours » (voir `consultationsRecentes` ci-dessus) : cette valeur
-	 * ne vient pas de la table de semence, elle vient du JOURNAL, sur la
+	 * Les consultations des trente derniers jours, comptées au JOURNAL, sur la
 	 * fenêtre que le gel annonce.
 	 */
 	readonly consultations30j: number;
