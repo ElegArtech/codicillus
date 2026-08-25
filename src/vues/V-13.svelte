@@ -497,7 +497,7 @@
 	/* ── Notes groupées par type ─────────────────────────────────────────────
 	   Une fiche est groupée sous son type structuré : « Fiche Serveur ». */
 	function cleDeType(n: Note): string {
-		return n.type === 'Fiche' ? `${motFiche} ${n.typeFiche}` : n.type;
+		return n.typeFiche ? `${motFiche} ${n.typeFiche}` : n.type;
 	}
 
 	function pluriel(t: string): string {

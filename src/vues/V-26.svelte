@@ -288,7 +288,7 @@
 	<!-- prettier-ignore -->
 	<a class="carte" href={adresseDeNote(n.id)} data-index={index}
 		><div class="carte__haut"
-			><h2 class="carte__titre">{@render marque(n.titre, q)}</h2>{#if n.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}<span class="past past--type">{n.type === 'Fiche' ? `${motFiche} ${n.typeFiche}` : n.type}</span
+			><h2 class="carte__titre">{@render marque(n.titre, q)}</h2>{#if n.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}<span class="past past--type">{n.typeFiche ? `${motFiche} ${n.typeFiche}` : n.type}</span
 		></div
 		>{#if n.type === 'Signet'}<div class="marque-signet" style="margin-bottom:var(--e-2)">↗ {n.url}</div>{/if}<p class="carte__extrait">{@render marque(n.extrait, q)}</p
 		><div class="carte__signal"

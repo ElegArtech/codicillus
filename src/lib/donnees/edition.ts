@@ -66,6 +66,7 @@ import { and, count, desc, eq, inArray, max } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import {
+	champsDeTypeDeFiche,
 	comptes,
 	domaines,
 	dossiers,
@@ -74,6 +75,7 @@ import {
 	notes,
 	piecesJointes,
 	statutDeNote as enumDeStatut,
+	typesDeFiche,
 	versions,
 	visibilite as enumDeVisibilite
 } from '../base/schema';
@@ -121,6 +123,7 @@ import {
 	type ContexteDeLecture
 } from './lecture';
 import { resoudreLeChemin, SEPARATEUR_DE_CHEMIN, type LigneDeDossier } from './rangement';
+import { proprietesSoumises, retenirLesProprietes } from './creation';
 import type { ChampDeFiche, Note, Template, TypeDeFiche, TypeDeNote } from '../../../seeds/corpus';
 import type { NoteAffichee } from '../lecture/note-de-demonstration';
 
@@ -475,6 +478,33 @@ export interface ModificationDeNote {
 	readonly etiquettes?: readonly string[];
 	/** Présent : le corps est réécrit, ou retiré. Voir `CorpsSoumis`. */
 	readonly corps?: CorpsSoumis;
+	/** Présent : le type de fiche est posé, changé, ou retiré. Voir `FicheSoumise`. */
+	readonly fiche?: FicheSoumise;
+}
+
+/**
+ * CE QU'UNE MODIFICATION FAIT DU TYPE DE FICHE — trois états, pas deux.
+ *
+ * ABSENT (`modification.fiche === undefined`) : la note garde ce qu'elle porte.
+ * C'est le cas d'une soumission composée sans référentiel de types de fiche —
+ * voir `OptionsDeLEditeur.typesFiche` —, et c'est ce qui empêche un appelant
+ * qui ne sait rien des fiches de dépouiller une note de son type.
+ *
+ * RETRAIT (`type: null`) : le sélecteur est revenu sur « Aucun — note simple ».
+ * `proprietes_typees` DOIT alors passer à `null` DANS LA MÊME MISE À JOUR :
+ * `notes_proprietes_exigent_un_type_de_fiche` (`002_socle.montee.sql:380-381`)
+ * refuse des propriétés sans type, et n'écrire que l'une des deux colonnes fait
+ * échouer l'enregistrement entier sur une contrainte que l'utilisateur n'a
+ * aucun moyen de comprendre.
+ *
+ * POSÉ (`type` non vide) : le nom d'un type de fiche de l'instance, résolu par
+ * `enregistrerLaNote()`. Un nom INCONNU est refusé, jamais ignoré.
+ */
+export interface FicheSoumise {
+	/** Le NOM du type de fiche, ou `null` — le type est RETIRÉ. */
+	readonly type: string | null;
+	/** Ce que la note met dans les champs de ce type. Vide au retrait. */
+	readonly proprietes: Readonly<Record<string, string>>;
 }
 
 /** Un corps réécrit — la valeur n'est pas encore validée. */
@@ -641,7 +671,9 @@ export function lireLaModification(champs: ChampsSoumis): LectureDuFormulaire {
 		dossier: champLu(champs, 'dossier'),
 		visibilite: champLu(champs, 'visibilite'),
 		statut: champLu(champs, 'statut'),
-		etiquettes: champLu(champs, 'etiquettes')
+		etiquettes: champLu(champs, 'etiquettes'),
+		fiche: champLu(champs, 'fiche'),
+		proprietes: champLu(champs, 'proprietes')
 	};
 	for (const [nom, lu] of Object.entries(lus)) {
 		if (lu.etat === 'illisible') return refuser('champ illisible : ' + nom);
@@ -691,6 +723,32 @@ export function lireLaModification(champs: ChampsSoumis): LectureDuFormulaire {
 	const etiquettes =
 		lus.etiquettes.etat === 'texte' ? etiquettesSoumises(lus.etiquettes.valeur) : undefined;
 
+	/* LE TYPE DE FICHE EST LE SECOND CHAMP DONT LE VIDE EST UN CHOIX, et c'est le
+	   seul moyen de RETIRER un type — le sélecteur du gel porte « Aucun — note
+	   simple » comme première option, valeur vide. `texteUtile()` ne peut donc
+	   pas servir ici : il confond le vide et l'absence, et une note ne pourrait
+	   plus jamais redevenir simple.
+
+	   Les propriétés sans type sont refusées AVANT la base (`ADR-003`), même
+	   miroir applicatif qu'à la création. */
+	let fiche: FicheSoumise | undefined;
+	if (lus.fiche.etat === 'texte') {
+		const proprietes = proprietesSoumises(
+			lus.proprietes.etat === 'texte' ? lus.proprietes.valeur.trim() : ''
+		);
+		if (!proprietes.ok) return refuser('propriétés illisibles');
+		const type = lus.fiche.valeur.trim();
+		if (type === '' && Object.keys(proprietes.valeurs).length > 0) {
+			return refuser('propriétés sans type de fiche');
+		}
+		fiche = type === '' ? { type: null, proprietes: {} } : { type, proprietes: proprietes.valeurs };
+	} else if (lus.proprietes.etat === 'texte') {
+		/* Des propriétés sans le champ qui nomme leur type ne désignent rien : le
+		   type resterait celui d'avant, et les clés seraient filtrées sur un
+		   référentiel que l'appelant n'a pas consulté. Le refus nomme la cause. */
+		return refuser('propriétés sans type de fiche');
+	}
+
 	/* LE CORPS EST LE SEUL CHAMP DONT LE VIDE N'EST PAS ARBITRÉ ICI, et il n'avait
 	   pas à l'être : la porte unique du format le refuse d'elle-même — « aucun
 	   contenu vide : l'absence de contenu s'écrit par l'absence de la clé »
@@ -718,6 +776,7 @@ export function lireLaModification(champs: ChampsSoumis): LectureDuFormulaire {
 			...(visibilite === undefined ? {} : { visibilite }),
 			...(statut === undefined ? {} : { statut }),
 			...(etiquettes === undefined ? {} : { etiquettes }),
+			...(fiche === undefined ? {} : { fiche }),
 			...(corps === undefined ? {} : { corps })
 		}
 	};
@@ -764,7 +823,15 @@ export interface EnregistrementFait {
  */
 export type IssueDeModification =
 	| { readonly sort: 'ecrit'; readonly fait: EnregistrementFait }
-	| { readonly sort: 'rangement-introuvable' };
+	| { readonly sort: 'rangement-introuvable' }
+	/**
+	 * Le type de fiche demandé n'existe pas dans cette instance. Comme le
+	 * rangement, ce n'est PAS un 404 : la note existe et s'édite. Et comme lui,
+	 * le nom soumis est refusé plutôt qu'ignoré — l'ignorer enregistrerait une
+	 * note simple là où l'utilisateur a choisi une fiche, sans qu'aucun écran ne
+	 * le dise.
+	 */
+	| { readonly sort: 'fiche-introuvable' };
 
 /**
  * LE DOSSIER QU'UN CHEMIN AFFICHÉ DÉSIGNE — fonction PURE.
@@ -844,6 +911,40 @@ async function destinationDuRangement(
 	if (cible === null) return null;
 	if (!(await peutEcrireSurLeDossier(base, identite, cible.id))) return null;
 	return { domaineId: domaine.id, dossierId: cible.id };
+}
+
+/**
+ * LES DEUX COLONNES DE FICHE QU'UNE MODIFICATION DEMANDE, ou `null` — le nom du
+ * type est inconnu.
+ *
+ * Le filtrage des clés est celui de la création, et c'est la MÊME fonction :
+ * `retenirLesProprietes()` (`./creation.ts`). Un second filtre écrirait deux
+ * définitions de « propriété reconnue », et la divergence ne se verrait qu'au
+ * panneau de propriétés de la cartographie, sur les seules notes modifiées.
+ */
+async function ficheDeLaModification(
+	base: Base,
+	demande: FicheSoumise
+): Promise<{ readonly typeDeFicheId: string | null; readonly proprietes: unknown } | null> {
+	if (demande.type === null) return { typeDeFicheId: null, proprietes: null };
+	const [type] = await base
+		.select({ id: typesDeFiche.id })
+		.from(typesDeFiche)
+		.where(eq(typesDeFiche.nom, demande.type))
+		.limit(1);
+	if (type === undefined) return null;
+	const clesConnues = await base
+		.select({ cle: champsDeTypeDeFiche.cle })
+		.from(champsDeTypeDeFiche)
+		.where(eq(champsDeTypeDeFiche.typeDeFicheId, type.id));
+	const retenues = retenirLesProprietes(
+		demande.proprietes,
+		clesConnues.map((c) => c.cle)
+	);
+	return {
+		typeDeFicheId: type.id,
+		proprietes: Object.keys(retenues).length === 0 ? null : retenues
+	};
 }
 
 /**
@@ -1100,6 +1201,15 @@ export async function enregistrerLaNote(
 		}
 	}
 
+	/* LE TYPE DE FICHE, RÉSOLU AVANT TOUTE ÉCRITURE — même ordre que le
+	   rangement, et pour la même raison : un type inconnu ne doit pas laisser
+	   derrière lui un titre déjà écrit. */
+	let fiche: { readonly typeDeFicheId: string | null; readonly proprietes: unknown } | null = null;
+	if (modification.fiche !== undefined) {
+		fiche = await ficheDeLaModification(base, modification.fiche);
+		if (fiche === null) return { trouve: true, ressource: { sort: 'fiche-introuvable' } };
+	}
+
 	const avant: EtatEnBase = {
 		titre: ligne.titre,
 		reference: ligne.corpsReference,
@@ -1138,6 +1248,14 @@ export async function enregistrerLaNote(
 	if (destination !== null) {
 		colonnes.domaineId = destination.domaineId;
 		colonnes.dossierId = destination.dossierId;
+	}
+	/* LES DEUX COLONNES DE FICHE SONT ÉCRITES ENSEMBLE, TOUJOURS. Poser le type
+	   sans poser les propriétés laisserait celles de l'ancien type sur la note ;
+	   retirer le type sans annuler les propriétés ferait échouer la mise à jour
+	   sur `notes_proprietes_exigent_un_type_de_fiche`. Voir `FicheSoumise`. */
+	if (fiche !== null) {
+		colonnes.typeDeFicheId = fiche.typeDeFicheId;
+		colonnes.proprietesTypees = fiche.proprietes;
 	}
 	/**
 	 * LA DATE DE CORPS NE BOUGE QUE SI LE CORPS A BOUGÉ — `RG-M06-09`.

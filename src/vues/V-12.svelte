@@ -355,7 +355,7 @@
 
 	/** Le libellé de pastille de type : une fiche annonce son type de fiche. */
 	function libelleDeType(n: Note): string {
-		return n.type === 'Fiche' ? `${motFiche} ${n.typeFiche}` : n.type;
+		return n.typeFiche ? `${motFiche} ${n.typeFiche}` : n.type;
 	}
 </script>
 

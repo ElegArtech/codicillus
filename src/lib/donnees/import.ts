@@ -78,12 +78,22 @@
 import { and, eq } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
-import { dossiers, etiquettes, etiquettesDeNote, notes, typesDeNote } from '../base/schema';
+import {
+	champsDeTypeDeFiche,
+	dossiers,
+	etiquettes,
+	etiquettesDeNote,
+	notes,
+	typesDeFiche,
+	typesDeNote
+} from '../base/schema';
 import type { Document } from '../contenu/document';
 import { analyserMarkdown } from '../contenu/markdown';
 import { entretenirLIndex } from '../recherche/entretien';
 import { identifiantLisible } from '../rangement/adresses';
 import { PROFONDEUR_MAX } from './rangement';
+import { proprietesSoumises, retenirLesProprietes } from './creation';
+import { CLE_PROPRIETES_DE_FICHE, CLE_TYPE_DE_FICHE } from '../export/archive';
 import { FORMATS_IMPORT, type FormatDImport, type SortDeFichier } from '../../../seeds/corpus';
 
 /* ═══════════════════════════════════════════ Le catalogue des formats ══ */
@@ -479,17 +489,44 @@ export type MotifDEchec =
 	| 'conversion-absente'
 	| 'contenu-illisible';
 
+/**
+ * LES DEUX AVERTISSEMENTS QUE L'IMPORT LÈVE LUI-MÊME — `RG-M12-04`.
+ *
+ * Ils rejoignent, au même rang, ceux que le service de conversion rend
+ * (`M12.1`) : des codes stables, mis en français par la vue qui en aura la
+ * prise. Ils existent parce qu'un ÉCART SILENCIEUX est un défaut : une note
+ * écrite sans le type de fiche que son en-tête déclarait, ou sans les valeurs
+ * qu'il portait, ne se distinguait en rien d'une note simple, et le rapport le
+ * taisait.
+ *
+ * Ni l'un ni l'autre n'est un échec : une note reste une note sans ses
+ * propriétés, et perdre le lot entier sur un mot de l'en-tête coûterait plus
+ * que de le dire.
+ */
+export const AVERTISSEMENT_PROPRIETES_ILLISIBLES = 'proprietes-de-fiche-illisibles';
+
+/** Le nom de type de fiche déclaré n'est dans aucun type de l'instance. */
+export const AVERTISSEMENT_TYPE_DE_FICHE_INCONNU = 'type-de-fiche-inconnu';
+
 /* ═══════════════════════════════════════════ L'en-tête de métadonnées ══ */
 
 /**
- * LES TROIS SEULES CLÉS LUES, ET LA SOURCE DE CHACUNE.
+ * LES CLÉS LUES, ET LA SOURCE DE CHACUNE.
  *
- * L'illustration du troisième scénario de V-24 les nomme au caractère près
- * (`seeds/corpus.ts`, segments du scénario « corpus préparé », transcrits en
- * `src/vues/V-24.svelte`) : un titre, une liste d'étiquettes, une liste de
- * renvois. `UC-M12-03` en énumère sept autres — identifiant, type, dossier,
- * domaine, visibilité, statut, propriétés typées — dont AUCUNE source du dépôt
- * ne donne le nom de clé. Elles ne sont pas lues.
+ * LES TROIS PREMIÈRES viennent de l'illustration du troisième scénario de V-24,
+ * qui les nomme au caractère près (`seeds/corpus.ts`, segments du scénario
+ * « corpus préparé », transcrits en `src/vues/V-24.svelte`) : un titre, une
+ * liste d'étiquettes, une liste de renvois.
+ *
+ * LES DEUX SUIVANTES SONT CELLES DE L'EXPORT, IMPORTÉES DE LUI
+ * (`../export/archive.ts`) et jamais recopiées. Elles sont lues parce que
+ * l'ALLER-RETOUR les perdait : l'export ÉCRIT le type de fiche et les
+ * propriétés typées à l'en-tête de chaque fichier de note, et l'import les
+ * jetait — une note exportée puis reprise redevenait une note simple, sans que
+ * rien ne le dise. C'est la seule source du dépôt qui donne le nom de clé de
+ * ces deux données ; les six autres qu'`UC-M12-03` énumère — identifiant, type,
+ * dossier, domaine, visibilité, statut — n'en ont aucune, et ne sont toujours
+ * pas lues.
  */
 const CLE_TITRE = 'titre';
 const CLE_ETIQUETTES = 'etiquettes';
@@ -501,6 +538,16 @@ export interface EnTeteDetache {
 	readonly etiquettes: readonly string[];
 	/** Les identifiants de notes que le fichier dit voir — `RG-M12-03`. */
 	readonly renvois: readonly string[];
+	/** Le NOM du type de fiche déclaré, ou `null` — la note est simple. */
+	readonly fiche: string | null;
+	/** Ce que la note met dans les champs de son type. Vide sans type. */
+	readonly proprietes: Readonly<Record<string, string>>;
+	/**
+	 * La ligne de propriétés était là ET NE S'EST PAS LUE. Le fait remonte
+	 * jusqu'au rapport : sans lui, un en-tête abîmé faisait perdre les valeurs
+	 * de la fiche en silence — `RG-M12-04` veut la raison au rapport.
+	 */
+	readonly proprietesIllisibles: boolean;
 	/** Le texte, en-tête retiré. C'est LUI qui part au convertisseur unique. */
 	readonly texte: string;
 }
@@ -531,7 +578,15 @@ function valeursDe(brut: string): string[] {
  */
 export function detacherLEnTete(texte: string): EnTeteDetache {
 	const lignes = texte.split('\n');
-	const intact: EnTeteDetache = { titre: null, etiquettes: [], renvois: [], texte };
+	const intact: EnTeteDetache = {
+		titre: null,
+		etiquettes: [],
+		renvois: [],
+		fiche: null,
+		proprietes: {},
+		proprietesIllisibles: false,
+		texte
+	};
 	if (!DELIMITEUR.test(lignes[0] ?? '')) return intact;
 
 	const fin = lignes.findIndex((l, i) => i > 0 && DELIMITEUR.test(l));
@@ -540,6 +595,9 @@ export function detacherLEnTete(texte: string): EnTeteDetache {
 	let titre: string | null = null;
 	let etiquettesLues: readonly string[] = [];
 	let renvois: readonly string[] = [];
+	let fiche: string | null = null;
+	let proprietes: Readonly<Record<string, string>> = {};
+	let proprietesIllisibles = false;
 
 	for (const ligne of lignes.slice(1, fin)) {
 		const separateur = ligne.indexOf(':');
@@ -553,10 +611,31 @@ export function detacherLEnTete(texte: string): EnTeteDetache {
 			etiquettesLues = valeursDe(valeur);
 		} else if (cle === CLE_RENVOIS) {
 			renvois = valeursDe(valeur);
+		} else if (cle === CLE_TYPE_DE_FICHE) {
+			const nu = valeur.trim().replace(/^["']|["']$/g, '');
+			fiche = nu === '' ? null : nu;
+		} else if (cle === CLE_PROPRIETES_DE_FICHE) {
+			/* L'export écrit cette valeur en JSON sur une ligne — `ecrireEnTete()`,
+			   `../export/archive.ts`. Ce qui ne se lit pas est ÉCARTÉ, jamais
+			   deviné : `RG-M12-04` veut une ligne de rapport, pas un lot perdu, et
+			   une note sans ses propriétés reste une note. LE FAIT REMONTE —
+			   `proprietesIllisibles` devient un avertissement au rapport, faute de
+			   quoi l'écart serait un silence, ce que la règle refuse. */
+			const lu = proprietesSoumises(valeur.trim());
+			proprietes = lu.ok ? lu.valeurs : {};
+			proprietesIllisibles = !lu.ok;
 		}
 	}
 
-	return { titre, etiquettes: etiquettesLues, renvois, texte: lignes.slice(fin + 1).join('\n') };
+	return {
+		titre,
+		etiquettes: etiquettesLues,
+		renvois,
+		fiche,
+		proprietes,
+		proprietesIllisibles,
+		texte: lignes.slice(fin + 1).join('\n')
+	};
 }
 
 /* ═══════════════════════════════════════════════ Le plan d'un lot ══════ */
@@ -600,6 +679,10 @@ export interface LigneDePlan {
 	readonly corps: Document | null;
 	/** `RG-M12-06` — les étiquettes déclarées à l'en-tête. */
 	readonly etiquettes: readonly string[];
+	/** Le NOM du type de fiche déclaré à l'en-tête, ou `null`. */
+	readonly fiche: string | null;
+	/** Les propriétés typées déclarées à l'en-tête. Vides sans type. */
+	readonly proprietes: Readonly<Record<string, string>>;
 	/** Les dossiers à créer, du plus haut au plus bas, déjà plafonnés. */
 	readonly segments: readonly string[];
 	/** `RG-M12-10` — des niveaux ont été aplatis pour tenir sous le plafond. */
@@ -806,6 +889,8 @@ export function classerLeLot(
 			titre: null,
 			corps: null,
 			etiquettes: [] as readonly string[],
+			fiche: null as string | null,
+			proprietes: {} as Readonly<Record<string, string>>,
 			segments: [] as readonly string[],
 			aplatie: false,
 			renvois: [] as readonly string[],
@@ -891,6 +976,13 @@ export function classerLeLot(
 			return;
 		}
 
+		/* L'en-tête a-t-il porté une ligne de propriétés qui ne s'est pas lue ?
+		   Le fait rejoint les avertissements de la conversion — même rang, même
+		   destination : la ligne du rapport. */
+		const avertissementsDeLaNote = entete.proprietesIllisibles
+			? [...avertissements, AVERTISSEMENT_PROPRIETES_ILLISIBLES]
+			: avertissements;
+
 		const titre = entete.titre ?? nomSansExtension(fichier.chemin);
 		/* LA PLACE SE DÉCIDE AVANT L'IDENTIFIANT, parce qu'elle en décide : c'est
 		   elle qui dit si la note existante du même identifiant est celle-ci
@@ -907,10 +999,15 @@ export function classerLeLot(
 			titre,
 			corps,
 			etiquettes: entete.etiquettes,
+			/* Les propriétés ne voyagent qu'AVEC leur type : sans lui, elles ne
+			   désignent aucun champ, et `notes_proprietes_exigent_un_type_de_fiche`
+			   les refuserait de toute façon. */
+			fiche: entete.fiche,
+			proprietes: entete.fiche === null ? {} : entete.proprietes,
 			segments,
 			aplatie,
 			renvois: entete.renvois,
-			avertissements,
+			avertissements: avertissementsDeLaNote,
 			images
 		});
 	});
@@ -1170,6 +1267,26 @@ export async function executerLImport(
 			.limit(1);
 		const typeDeNoteId = (typeNote[0] as { id: string } | undefined)?.id;
 
+		/* LE RÉFÉRENTIEL DES FICHES, LU UNE FOIS — deux requêtes pour tout le lot
+		   plutôt que deux par note. Un nom de type inconnu ne fait pas échouer la
+		   ligne : la note est écrite SIMPLE, comme elle l'était avant que l'import
+		   lise ces deux clés — MAIS LE RAPPORT LE DIT
+		   (`AVERTISSEMENT_TYPE_DE_FICHE_INCONNU`). L'écart sans trace était le
+		   défaut : rien à l'écran ne distinguait une note simple d'une fiche dont
+		   le type avait été jeté. */
+		const ficheParNom = new Map<string, { readonly id: string; readonly cles: Set<string> }>();
+		for (const t of await tx
+			.select({ id: typesDeFiche.id, nom: typesDeFiche.nom })
+			.from(typesDeFiche)) {
+			ficheParNom.set(t.nom, { id: t.id, cles: new Set<string>() });
+		}
+		const parId = new Map([...ficheParNom.values()].map((t) => [t.id, t.cles]));
+		for (const c of await tx
+			.select({ typeId: champsDeTypeDeFiche.typeDeFicheId, cle: champsDeTypeDeFiche.cle })
+			.from(champsDeTypeDeFiche)) {
+			parId.get(c.typeId)?.add(c.cle);
+		}
+
 		/* Les identifiants que le corpus porte déjà, pour dire quels renvois ne
 		   résolvent rien (`RG-M12-03`). Ils sont lus une fois, avant d'écrire :
 		   un renvoi vers une note du lot lui-même se résout donc par le second
@@ -1236,6 +1353,32 @@ export async function executerLImport(
 			const trouvee = existante[0];
 			const maintenant = new Date();
 
+			/* LE TYPE DE FICHE ET SES PROPRIÉTÉS, RETROUVÉS À L'EN-TÊTE. Les deux
+			   colonnes voyagent ENSEMBLE — `notes_proprietes_exigent_un_type_de_fiche`
+			   — et les clés sont filtrées sur le référentiel réel : le `jsonb` n'est
+			   contraint par rien, et un fichier déposé écrirait sinon ce qu'il veut. */
+			const typeDeLaFiche = ligne.fiche === null ? undefined : ficheParNom.get(ligne.fiche);
+			/* L'en-tête nommait un type que l'instance ne porte pas. La note est
+			   écrite simple, et la ligne du rapport porte le pourquoi. */
+			const avertissementsDeLaLigne =
+				ligne.fiche !== null && typeDeLaFiche === undefined
+					? [...ligne.avertissements, AVERTISSEMENT_TYPE_DE_FICHE_INCONNU]
+					: ligne.avertissements;
+			const retenues =
+				typeDeLaFiche === undefined
+					? {}
+					: retenirLesProprietes(ligne.proprietes, [...typeDeLaFiche.cles]);
+			/* ABSENT ⇒ NON ÉCRIT, et c'est le régime de tout ce fichier : un `.md`
+			   sans en-tête de fiche ne DÉPOUILLE pas la note qu'il met à jour
+			   (`RG-M12-01`), il ne dit simplement rien de son type. */
+			const colonnesDeFiche =
+				typeDeLaFiche === undefined
+					? {}
+					: {
+							typeDeFicheId: typeDeLaFiche.id,
+							proprietesTypees: Object.keys(retenues).length === 0 ? null : retenues
+						};
+
 			let noteId: string;
 			if (trouvee === undefined) {
 				const inseres = await tx
@@ -1247,7 +1390,8 @@ export async function executerLImport(
 						typeDeNoteId,
 						domaineId: cible.domaineId,
 						dossierId,
-						auteurId: cible.auteurId
+						auteurId: cible.auteurId,
+						...colonnesDeFiche
 					})
 					.returning({ id: notes.id });
 				noteId = (inseres[0] as { id: string }).id;
@@ -1261,7 +1405,8 @@ export async function executerLImport(
 						corpsReference: ligne.corps,
 						dossierId,
 						modifieLe: maintenant,
-						corpsReferenceModifieLe: maintenant
+						corpsReferenceModifieLe: maintenant,
+						...colonnesDeFiche
 					})
 					.where(eq(notes.id, noteId));
 				await tx.delete(etiquettesDeNote).where(eq(etiquettesDeNote.noteId, noteId));
@@ -1283,7 +1428,7 @@ export async function executerLImport(
 				miseAJour: trouvee !== undefined,
 				aplatie: ligne.aplatie,
 				renvoisNonResolus,
-				avertissements: ligne.avertissements,
+				avertissements: avertissementsDeLaLigne,
 				imagesNonReprises: ligne.images.length
 			});
 		}

@@ -52,14 +52,23 @@
  * `RG-M05-06`. Ne rien conclure d'autre de ce retour.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CE LOT NE PREND PAS, ET QUI EST DÉCLARÉ — `ECART-048`
+ * LE TYPE DE FICHE EST LU, ET IL NE L'ÉTAIT PAS — `ECART-048` É-1 REFERMÉ
  *
- * Le TYPE DE FICHE et les PROPRIÉTÉS TYPÉES ne sont pas lus (`ECART-048` É-1) :
- * le contrat de soumission de `T-079` §3 les exclut, et le schéma les porte
- * sous une contrainte croisée (`notes_proprietes_exigent_un_type_de_fiche`) que
- * seul un contrat de soumission complet peut honorer. Une note créée est donc
- * une note SIMPLE, jamais une fiche — et `V-17` porte le champ « Type de fiche »
- * qui restera sans effet tant que ce vide n'est pas comblé par arbitrage.
+ * Le contrat de soumission de `T-079` §3 excluait le type de fiche et les
+ * propriétés typées. La conséquence n'était pas une nuance : le sélecteur
+ * « Type de fiche » de V-17 affichait les VRAIS types de l'instance, et sa
+ * valeur ne quittait jamais l'écran. `notes.type_de_fiche_id` n'était donc posé
+ * par AUCUNE route — la seule écriture atteignable, `administration.ts:936`,
+ * est une nullification —, `proprietes_typees` restait vide à jamais,
+ * `/console/types-de-fiches` comptait tout type comme inutilisé, le panneau de
+ * propriétés de la cartographie ne s'ouvrait jamais, et la facette `typeFiche`
+ * de la recherche était vide en permanence. Un référentiel entier que le
+ * produit remplissait et auquel aucune note ne se raccrochait.
+ *
+ * Les deux champs sont lus, résolus et écrits ici. La contrainte croisée
+ * (`notes_proprietes_exigent_un_type_de_fiche`) est tenue AVANT la base —
+ * `ADR-003` —, et les clés sont filtrées sur `champs_de_type_de_fiche` : le
+ * `jsonb` n'est contraint par rien d'autre.
  */
 import { eq } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
@@ -67,11 +76,13 @@ import type { Base } from '../base/acces';
 import { corpsVide } from '../base/semence';
 import { documentDepuisNoeud, noeudDepuisDocument } from '../edition/document';
 import {
+	champsDeTypeDeFiche,
 	domaines,
 	dossiers,
 	etiquettes,
 	etiquettesDeNote,
 	notes,
+	typesDeFiche,
 	typesDeNote,
 	versions
 } from '../base/schema';
@@ -120,6 +131,24 @@ export interface SaisieDeNote {
 	 * le même nom.
 	 */
 	readonly corpsDocument: unknown;
+	/**
+	 * LE NOM DU TYPE DE FICHE CHOISI, ou `null` — « Aucun — note simple ».
+	 *
+	 * C'est un NOM, comme le type de note et le domaine : le formulaire gelé
+	 * n'envoie que des noms, et `types_de_fiche.nom` est unique
+	 * (`002_socle.montee.sql:240-247`). La résolution en identifiant se fait
+	 * dans `resoudreLaCible()`, avec les deux autres.
+	 */
+	readonly fiche: string | null;
+	/**
+	 * CE QUE LA NOTE MET DANS LES CHAMPS DE SON TYPE, ou `null`.
+	 *
+	 * Les clés ne sont PAS contrôlées ici : le contrôle demande le référentiel,
+	 * donc la base, et cette fonction est pure. `resoudreLaCible()` filtre sur
+	 * les clés réelles de `champs_de_type_de_fiche` — le `jsonb` n'est pas
+	 * contraint, et rien d'autre ne le ferait.
+	 */
+	readonly proprietes: Readonly<Record<string, string>> | null;
 }
 
 /** Ce que la lecture d'un formulaire rend : une saisie, ou le motif du refus. */
@@ -189,6 +218,40 @@ export function corpsSoumis(formulaire: FormData): { markdown: string; document:
 }
 
 /**
+ * LES PROPRIÉTÉS TYPÉES SOUMISES — une table de chaînes, ou un refus.
+ *
+ * Le champ transporte du JSON parce qu'un formulaire ne sait pas transporter
+ * une table : `poserChamp()` (`../cablage/formulaires.ts`) le sérialise, et le
+ * geste inverse est ici. Ce qui n'est pas une table de valeurs SIMPLES est
+ * refusé plutôt que rogné — `ADR-003`, rien d'invalide n'entre en base — et les
+ * valeurs sont ramenées à leur texte, forme unique de la colonne
+ * (`lireLesProprietesDeFiche()`, `./lecture.ts`).
+ */
+export function proprietesSoumises(
+	brut: string
+): { readonly ok: true; readonly valeurs: Record<string, string> } | { readonly ok: false } {
+	if (brut === '') return { ok: true, valeurs: {} };
+	let lu: unknown;
+	try {
+		lu = JSON.parse(brut);
+	} catch {
+		return { ok: false };
+	}
+	if (typeof lu !== 'object' || lu === null || Array.isArray(lu)) return { ok: false };
+	const valeurs: Record<string, string> = {};
+	for (const [cle, valeur] of Object.entries(lu as Record<string, unknown>)) {
+		if (typeof valeur === 'string') {
+			if (valeur !== '') valeurs[cle] = valeur;
+		} else if (typeof valeur === 'number' || typeof valeur === 'boolean') {
+			valeurs[cle] = String(valeur);
+		} else {
+			return { ok: false };
+		}
+	}
+	return { ok: true, valeurs };
+}
+
+/**
  * LA LECTURE D'UN FORMULAIRE DE CRÉATION — `T-079` §3, le contrat de
  * soumission, à la lettre et sans un champ de plus.
  *
@@ -224,6 +287,20 @@ export function lireLaSaisie(formulaire: FormData): LectureDeSaisie {
 		return { ok: false, motif: 'statut inconnu' };
 	}
 
+	/* LE TYPE DE FICHE EST FACULTATIF — le sélecteur du gel s'ouvre sur « Aucun
+	   — note simple », et une note simple est le cas ordinaire.
+
+	   LA CONTRAINTE CROISÉE EST TENUE ICI, AVANT LA BASE (`ADR-003`) :
+	   `notes_proprietes_exigent_un_type_de_fiche` (`002_socle.montee.sql:380`)
+	   refuse des propriétés sans type. Laisser passer ferait remonter la
+	   violation en 500, sans nommer ce qui manque. */
+	const fiche = texte(formulaire, 'fiche');
+	const proprietes = proprietesSoumises(texte(formulaire, 'proprietes'));
+	if (!proprietes.ok) return { ok: false, motif: 'propriétés illisibles' };
+	if (fiche.length === 0 && Object.keys(proprietes.valeurs).length > 0) {
+		return { ok: false, motif: 'propriétés sans type de fiche' };
+	}
+
 	let soumis: { markdown: string; document: unknown };
 	try {
 		soumis = corpsSoumis(formulaire);
@@ -256,22 +333,54 @@ export function lireLaSaisie(formulaire: FormData): LectureDeSaisie {
 			   corps VIDE sans que rien ne s'en plaigne — le champ était envoyé,
 			   il n'était simplement pas lu. */
 			corps: soumis.markdown,
-			corpsDocument: soumis.document
+			corpsDocument: soumis.document,
+			fiche: fiche.length > 0 ? fiche : null,
+			proprietes: fiche.length > 0 ? proprietes.valeurs : null
 		}
 	};
 }
 
 /* ═══════════════════════════════════════════ La cible en base ══════════ */
 
-/** Les trois références que la saisie désigne par des NOMS. */
+/** Les références que la saisie désigne par des NOMS, résolues en base. */
 export interface CibleDeCreation {
 	readonly typeDeNoteId: string;
 	readonly domaineId: string;
 	readonly dossierId: string;
+	/** Le type de fiche choisi, ou `null` — la note est simple. */
+	readonly typeDeFicheId: string | null;
+	/**
+	 * Les propriétés RETENUES — celles dont la clé existe vraiment dans
+	 * `champs_de_type_de_fiche` pour ce type. `null` quand la note est simple :
+	 * `notes_proprietes_exigent_un_type_de_fiche` l'exige, et un objet vide
+	 * porté par une note simple violerait la contrainte.
+	 */
+	readonly proprietesTypees: Readonly<Record<string, string>> | null;
 }
 
 /**
- * LA CIBLE QU'UNE SAISIE DÉSIGNE, ou `null` — et `null` est le seul refus.
+ * CE QU'UNE RÉSOLUTION DE CIBLE PEUT RENDRE — trois issues, pas deux.
+ *
+ * `introuvable` CONFLE VOLONTAIREMENT trois causes — cible inexistante, cible
+ * ambiguë, cible interdite : `RG-ACC-04` et `ADR-007` veulent qu'elles ne se
+ * distinguent pas à un octet près, et la route les rend toutes en 404.
+ *
+ * `fiche-introuvable` N'EN EST PAS. Un type de fiche n'est pas un rangement :
+ * il n'est protégé par aucun droit, il est ADMINISTRABLE (M14) et peut donc
+ * disparaître entre l'ouverture de l'écran et l'enregistrement. Le confondre
+ * avec l'introuvable rendait au rédacteur une page « note introuvable » qui
+ * nommait la mauvaise chose et lui faisait perdre son brouillon entier. La
+ * modification refuse déjà ce cas à part (`edition.ts`, `sort:
+ * 'fiche-introuvable'`) : la création le refuse pareil, et les deux écrans
+ * rendent le même refus pour le même geste.
+ */
+export type ResolutionDeCible =
+	| { readonly sort: 'cible'; readonly cible: CibleDeCreation }
+	| { readonly sort: 'introuvable' }
+	| { readonly sort: 'fiche-introuvable' };
+
+/**
+ * LA CIBLE QU'UNE SAISIE DÉSIGNE, ou son refus — et il y en a deux, pas un.
  *
  * Le formulaire gelé n'envoie que des NOMS : `#m-type` porte `t` (le nom du
  * type), `#m-domaine` porte `d.nom` — relevé sur pièce,
@@ -295,13 +404,13 @@ export interface CibleDeCreation {
 export async function resoudreLaCible(
 	base: Base,
 	saisie: SaisieDeNote
-): Promise<CibleDeCreation | null> {
+): Promise<ResolutionDeCible> {
 	const [type] = await base
 		.select({ id: typesDeNote.id })
 		.from(typesDeNote)
 		.where(eq(typesDeNote.nom, saisie.type))
 		.limit(1);
-	if (type === undefined) return null;
+	if (type === undefined) return { sort: 'introuvable' };
 
 	/* DEUX lignes sont lues, pas une : c'est la seule manière de DISTINGUER
 	   « aucun domaine de ce nom » de « plusieurs », et donc de refuser le second
@@ -311,7 +420,7 @@ export async function resoudreLaCible(
 		.from(domaines)
 		.where(eq(domaines.nom, saisie.domaine))
 		.limit(2);
-	if (homonymes.length !== 1) return null;
+	if (homonymes.length !== 1) return { sort: 'introuvable' };
 	const domaineId = (homonymes[0] as { id: string }).id;
 
 	const lignes: readonly LigneDeDossier[] = await base
@@ -344,9 +453,83 @@ export async function resoudreLaCible(
 		segments = segments.slice(1);
 	}
 	const dossier = segments.length === 0 ? racine : resoudreLeChemin(lignes, segments);
-	if (dossier === null) return null;
+	if (dossier === null) return { sort: 'introuvable' };
 
-	return { typeDeNoteId: type.id, domaineId, dossierId: dossier.id };
+	const fiche = await resoudreLeTypeDeFiche(base, saisie);
+	if (fiche === null) return { sort: 'fiche-introuvable' };
+
+	return {
+		sort: 'cible',
+		cible: {
+			typeDeNoteId: type.id,
+			domaineId,
+			dossierId: dossier.id,
+			typeDeFicheId: fiche.typeDeFicheId,
+			proprietesTypees: fiche.proprietesTypees
+		}
+	};
+}
+
+/**
+ * LE TYPE DE FICHE QU'UNE SAISIE DÉSIGNE, ET LES PROPRIÉTÉS QU'IL AUTORISE.
+ *
+ * `null` est le refus : un nom de type de fiche INCONNU est refusé, jamais
+ * ignoré. L'ignorer écrirait une note simple là où l'utilisateur a choisi une
+ * fiche, et rien à l'écran ne le dirait — c'est exactement la famille de
+ * défauts que ce lot referme. L'appelant en fait un refus À PART, distinct de
+ * l'introuvable : voir `ResolutionDeCible`.
+ *
+ * LES PROPRIÉTÉS SONT FILTRÉES SUR LES CLÉS RÉELLES du type.
+ * `notes.proprietes_typees` est un `jsonb` : la base n'y contraint aucune clé,
+ * et une soumission composée à la main y écrirait ce qu'elle veut. Ce qui n'est
+ * pas un champ du type est ÉCARTÉ — pas refusé : le référentiel est
+ * administrable (M14), un champ retiré en console entre les deux moments d'une
+ * saisie ferait sinon échouer un enregistrement que rien n'a rendu faux.
+ */
+async function resoudreLeTypeDeFiche(
+	base: Base,
+	saisie: SaisieDeNote
+): Promise<{
+	readonly typeDeFicheId: string | null;
+	readonly proprietesTypees: Readonly<Record<string, string>> | null;
+} | null> {
+	if (saisie.fiche === null) return { typeDeFicheId: null, proprietesTypees: null };
+	const [type] = await base
+		.select({ id: typesDeFiche.id })
+		.from(typesDeFiche)
+		.where(eq(typesDeFiche.nom, saisie.fiche))
+		.limit(1);
+	if (type === undefined) return null;
+
+	const clesConnues = await base
+		.select({ cle: champsDeTypeDeFiche.cle })
+		.from(champsDeTypeDeFiche)
+		.where(eq(champsDeTypeDeFiche.typeDeFicheId, type.id));
+	const retenues = retenirLesProprietes(
+		saisie.proprietes ?? {},
+		clesConnues.map((c) => c.cle)
+	);
+	return {
+		typeDeFicheId: type.id,
+		proprietesTypees: Object.keys(retenues).length === 0 ? null : retenues
+	};
+}
+
+/**
+ * LES PROPRIÉTÉS QUE LE RÉFÉRENTIEL RECONNAÎT — fonction PURE, donc éprouvable
+ * dans les deux polarités sans base (`P-5`). Voir `resoudreLeTypeDeFiche()`
+ * pour la raison de l'écart plutôt que du refus.
+ */
+export function retenirLesProprietes(
+	soumises: Readonly<Record<string, string>>,
+	clesConnues: readonly string[]
+): Record<string, string> {
+	const retenues: Record<string, string> = {};
+	for (const cle of clesConnues) {
+		const valeur = soumises[cle];
+		if (valeur !== undefined && valeur !== '') retenues[cle] = valeur;
+	}
+	return retenues;
 }
 
 /* ═══════════════════════════════════════════ L'écriture ════════════════ */
@@ -557,6 +740,17 @@ export async function creerUneNote(
 							? {}
 							: { visibilite: demande.saisie.visibilite }),
 						...(demande.saisie.statut === null ? {} : { statut: demande.saisie.statut }),
+						/* LE TYPE DE FICHE ET SES PROPRIÉTÉS — même régime que les deux
+						   énumérés : absent ⇒ non écrit, le défaut de colonne s'applique
+						   et il vaut `null`. Les deux voyagent ENSEMBLE, résolus par
+						   `resoudreLeTypeDeFiche()` : des propriétés sans type
+						   violeraient `notes_proprietes_exigent_un_type_de_fiche`. */
+						...(demande.cible.typeDeFicheId === null
+							? {}
+							: { typeDeFicheId: demande.cible.typeDeFicheId }),
+						...(demande.cible.proprietesTypees === null
+							? {}
+							: { proprietesTypees: demande.cible.proprietesTypees }),
 						/* UN SEUL INSTANT pour les trois dates — celui de la requête, pris
 						   une fois par la route. Trois `now()` de base donneraient trois
 						   valeurs voisines et différentes, pour un même geste. */
