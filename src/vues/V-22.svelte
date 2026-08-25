@@ -42,7 +42,7 @@
 	 * Les définitions de facettes diffèrent elles aussi : deux ici, six en V-12.
 	 *
 	 * AUCUN CHIFFRE N'EST SAISI (P-02) : compteur, comptes de facettes et dates
-	 * sortent de `seeds/corpus.ts`.
+	 * sortent des notes servies.
 	 *
 	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011).
 	 *
@@ -54,42 +54,36 @@
 	 * `src/vues/V-22.css`, posé par `node verif/feuilles-de-vue.mjs V-22
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		UNIVERS,
-		type Domaine,
-		type EtatDInstance,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../seeds/corpus';
+	import type { Domaine, Note, Univers } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 
 	/**
-	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
-	 * DÉFAUT EST LA CONSTANTE DU JEU DE SEMENCE.
+	 * LE RANGEMENT ET L'IDENTITÉ — plus aucun défaut tiré du jeu.
 	 *
-	 * La vue devient capable de recevoir ce qu'un chargeur de route lit en base
-	 * — univers, domaines, compte courant, état de l'instance — sans qu'aucun
-	 * rendu ne change tant que rien ne lui est passé : le mode de conception ne
-	 * passe que `vecteur` et `notes`, la vue reçoit donc exactement ce qu'elle
-	 * recevait, et le banc de comparaison ne bouge pas d'un pixel.
+	 * Ces propriétés ont eu pour défaut `UNIVERS`, `DOMAINES`, `MOI` et
+	 * `INSTANCE` de `seeds/corpus.ts` : une route qui oubliait d'en passer une
+	 * servait le rangement du jeu de démonstration, et rien ne protestait —
+	 * l'écran restait plausible, avec des domaines qui n'existent pas.
+	 *
+	 * `domaines` EST REQUISE : la route la passe, et `svelte-check` refuse
+	 * désormais de compiler un appel qui l'oublierait. `univers` peut être vide —
+	 * en forme abrégée le rail est écrit au balisage et ne s'en déduit pas.
+	 * `compte` peut manquer, et son état vide est `null`. `instance` a disparu :
+	 * le contexte de coquille sert la version du paquet.
 	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — domaine × droits × rappel. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-22')`, variante « complète ». */
+		/** Les notes lisibles, servies par le chargeur. */
 		notes: readonly Note[];
-		/** Les univers du produit. Défaut : ceux du jeu de semence. */
+		/** Les univers déclarés — vides tant que l'instance n'en porte aucun. */
 		univers?: readonly Univers[];
-		/** Les domaines du produit. Défaut : ceux du jeu de semence. */
-		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Défaut : celui du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
-		instance?: EtatDInstance;
+		/** Les domaines accessibles — la route les sert. */
+		domaines: readonly Domaine[];
+		/** L'utilisateur connecté. `null` : aucun compte connu. */
+		compte?: CompteAffiche | null;
 		/**
 		 * MODIFIER UN SIGNET. Absente — le rendu d'une planche —, le bouton reste
 		 * inerte comme au gel. Passée par la route, il mène à
@@ -132,10 +126,9 @@
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
+		univers = [],
+		domaines,
+		compte = null,
 		onModifier,
 		retenues = undefined,
 		tri = undefined
@@ -158,24 +151,30 @@
 	/** Le rappel de sortie est une case de planche : cochée par défaut. */
 	const rappelDemande = $derived(reglage['c-rappel'] !== false);
 
+	/**
+	 * AUCUN DOMAINE — l'état vide, écrit plutôt que subi. La liste servie ne peut
+	 * pas être vide sur cette route : le chargeur résout le domaine de l'adresse
+	 * avant d'ouvrir l'écran. Le repli est là pour que la propriété soit honnête
+	 * sur toute sa forme — un tableau vide rendait `domaines[0].nom` et sortait
+	 * en 500.
+	 */
+	const AUCUN_DOMAINE: Domaine = { nom: '', univers: '', couleur: '' };
+
 	const courant = $derived(
-		(domaines.find((d) => d.nom === reglage['dom']) ?? domaines[0]) as Domaine
+		domaines.find((d) => d.nom === reglage['dom']) ?? domaines[0] ?? AUCUN_DOMAINE
 	);
 
 	/**
-	 * LA MISE EN ÉVIDENCE DU RAIL — DEUX DOMAINES, ET C'EST UN FAIT DU GEL.
+	 * LA MISE EN ÉVIDENCE DU RAIL — LE DOMAINE COURANT, ET LUI SEUL.
 	 *
-	 * `coquille()` de la maquette AJOUTE la marque `noeud--courant` et ne la
-	 * retire jamais (`V-22:2493`) : la planche rend d'abord `Infrastructure` —
-	 * `changerDomaine("Infrastructure")` au chargement, `V-22:3232` —, puis le
-	 * changement de position ajoute le second domaine sans effacer le premier.
-	 * Même jurisprudence que V-11 et V-12, même cause, mesurée sur ce lot.
-	 * « Corriger » le gel serait un comblement, et il serait rouge au banc.
+	 * Le gel en marquait DEUX : `coquille()` de la maquette AJOUTE la marque
+	 * `noeud--courant` et ne la retire jamais (`V-22:2493`), si bien que la
+	 * planche rendait d'abord « Infrastructure » — le domaine que son scénario
+	 * charge — puis ajoutait le domaine visité. La vue recopiait ce comportement,
+	 * et donc le NOM D'UN DOMAINE DU JEU DE DÉMONSTRATION, écrit en dur.
+	 * Même jurisprudence que V-11 et V-12, même cause, même reprise.
 	 */
-	const DOMAINE_INITIAL = 'Infrastructure';
-	const railCourant = $derived(
-		courant.nom === DOMAINE_INITIAL ? [courant.nom] : [DOMAINE_INITIAL, courant.nom]
-	);
+	const railCourant = $derived([courant.nom]);
 
 	/**
 	 * LES SIGNETS DU DOMAINE — `window.signetsDe` du gel, à la lettre : les
@@ -393,13 +392,8 @@
 	{univers}
 	{domaines}
 	notes={corpus}
-	compte={{
-		nom: compte.nom,
-		initiales: compte.initiales,
-		role: compte.role,
-		domaine: compte.domaine
-	}}
-	version={instance.version}
+	compte={compte ?? COMPTE_VIDE}
+	version=""
 >
 	{#snippet enfants()}
 		<header class="tete" style="--teinte:{courant.couleur}">
