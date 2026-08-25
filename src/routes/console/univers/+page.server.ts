@@ -41,12 +41,17 @@
  * et la version de l'instance y sont importés au niveau du module (`V-27:71`).
  * Seules les NOTES entrent par propriété. »
  *
- * C'ÉTAIT FAUX, et la ligne citée le dit elle-même : `V-27:71` est un `import`
- * qui sert de VALEUR PAR DÉFAUT, et `V-27:96-101` déclare `univers?`,
- * `domaines?`, `compte?`, `instance?` en propriétés facultatives. Il n'y avait
- * rien à corriger dans la vue : il fallait passer les propriétés. La liste des
- * univers affichée par cet écran vient donc de `univers`, celle des domaines de
- * `domaines`, et l'utilisateur de la coquille du compte connecté.
+ * C'ÉTAIT FAUX : l'import cité servait de VALEUR PAR DÉFAUT à des propriétés
+ * FACULTATIVES. Il n'y avait rien à corriger dans la vue, il fallait passer les
+ * propriétés. La liste des univers affichée par cet écran vient donc de
+ * `univers`, celle des domaines de `domaines`, et l'utilisateur de la coquille
+ * du compte connecté.
+ *
+ * ET LE DÉFAUT A DISPARU AVEC LA CAUSE. `univers`, `domaines` et `compte` sont
+ * REQUISES : `V-27` n'importe plus une seule valeur du jeu de démonstration, et
+ * `svelte-check` refuse la rédaction de cette page qui en oublierait une. La
+ * version de l'instance, elle, n'est plus une propriété de la vue du tout — la
+ * coquille la lit sur le contexte que le gabarit racine pose.
  *
  * `instance` RESTE AU DÉFAUT, et c'est la seule des quatre : la version du
  * produit n'est portée par aucune des vingt et une tables du schéma. La lacune

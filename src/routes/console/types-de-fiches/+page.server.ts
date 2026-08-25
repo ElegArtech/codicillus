@@ -19,9 +19,11 @@
  * LE RÉFÉRENTIEL AFFICHÉ EST CELUI DE LA BASE — l'écart est refermé. Ce
  * commentaire disait : « la vue lit `TYPES_FICHE` du jeu de semence, la donnée
  * existe des deux côtés et n'a AUCUN chemin jusqu'à l'écran ». Le chemin
- * existe : `typesFiche` est une propriété de `V-29`, de défaut la constante du
- * jeu, et ce chargeur la sert par `lireTypesDeFiche()` depuis `types_de_fiche`
- * et `champs_de_type_de_fiche`.
+ * existe : `typesFiche` est une propriété REQUISE de `V-29`, que ce chargeur
+ * sert par `lireTypesDeFiche()` depuis `types_de_fiche` et
+ * `champs_de_type_de_fiche`. Elle n'a plus de valeur par défaut : la vue
+ * dérivait la sienne du jeu de démonstration, et une page qui oubliait de la
+ * passer servait donc trois types qui n'existaient nulle part.
  *
  * `vecteur: null` demande l'état au repos — formulaire fermé, aucun refus de
  * suppression ouvert.
