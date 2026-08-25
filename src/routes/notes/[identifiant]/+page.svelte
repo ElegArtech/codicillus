@@ -255,8 +255,8 @@
 	 * LE PANNEAU « PIÈCES JOINTES », REPÉRÉ PAR SON LIBELLÉ.
 	 *
 	 * Le gel ne donne à ce panneau ni identifiant, ni classe distinctive : les
-	 * sept panneaux latéraux sont sept `section.panneau.repliable` identiques,
-	 * et seul le texte de leur `.etiq` les sépare (`V-14:1829`). C'est donc lui
+	 * panneaux latéraux sont autant de `section.panneau.repliable` identiques, et
+	 * seul le texte de leur `.etiq` les sépare (`V-14:1829`). C'est donc lui
 	 * qu'on lit — la même méthode que `ouvrirLHistorique()`, qui reconnaît son
 	 * bouton au texte faute d'attribut.
 	 */
