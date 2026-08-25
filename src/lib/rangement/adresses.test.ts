@@ -18,8 +18,10 @@ import {
 	adresseDesNotesDuDomaine,
 	adresseDesSignetsDuDomaine,
 	adresseDUnivers,
+	dossierDeLArborescence,
 	identifiantLisible,
-	segmentsDeDossier
+	segmentsDeDossier,
+	type NoeudDeDossier
 } from './adresses';
 
 describe('identifiantLisible', () => {
@@ -204,5 +206,75 @@ describe("les trois prolongements n'échappent pas à la forme canonique — ARB
 			adresseDesSignetsDuDomaine(u, d)
 		];
 		expect(new Set(adresses).size).toBe(3);
+	});
+});
+
+/**
+ * `?dossier=` — LE CHEMIN AFFICHÉ, OPPOSÉ À L'ARBORESCENCE QUI L'ACCUEILLE.
+ *
+ * L'arborescence est celle que `lireLArborescenceDeChoix()` sert : la racine du
+ * domaine offerte À CÔTÉ de ses enfants, jamais au-dessus d'eux, et les chemins
+ * des enfants sans préfixe de racine.
+ */
+const ARBRE: readonly NoeudDeDossier[] = [
+	{ nom: 'Infrastructure', enfants: [] },
+	{ nom: 'Serveurs', enfants: [{ nom: 'Bases', enfants: [{ nom: 'PostgreSQL', enfants: [] }] }] },
+	{ nom: 'Réseau', enfants: [] }
+];
+
+describe('dossierDeLArborescence', () => {
+	it('rend le chemin quand il désigne un dossier, à toute profondeur', () => {
+		expect(dossierDeLArborescence(ARBRE, 'Réseau')).toBe('Réseau');
+		expect(dossierDeLArborescence(ARBRE, 'Serveurs › Bases')).toBe('Serveurs › Bases');
+		expect(dossierDeLArborescence(ARBRE, 'Serveurs › Bases › PostgreSQL')).toBe(
+			'Serveurs › Bases › PostgreSQL'
+		);
+	});
+
+	it('rend la racine du domaine, qui est un chemin et non une absence', () => {
+		expect(dossierDeLArborescence(ARBRE, 'Infrastructure')).toBe('Infrastructure');
+	});
+
+	it('refuse un chemin dont un maillon n’existe pas', () => {
+		expect(dossierDeLArborescence(ARBRE, 'Disparu')).toBeNull();
+		expect(dossierDeLArborescence(ARBRE, 'Serveurs › Disparu')).toBeNull();
+		expect(dossierDeLArborescence(ARBRE, 'Serveurs › Bases › Disparu')).toBeNull();
+	});
+
+	it('refuse un chemin qui prend les maillons dans le désordre', () => {
+		expect(dossierDeLArborescence(ARBRE, 'Bases › Serveurs')).toBeNull();
+		expect(dossierDeLArborescence(ARBRE, 'Bases')).toBeNull();
+	});
+
+	it('rend nul sur une absence, une chaîne vide ou une arborescence vide', () => {
+		expect(dossierDeLArborescence(ARBRE, null)).toBeNull();
+		expect(dossierDeLArborescence(ARBRE, '')).toBeNull();
+		expect(dossierDeLArborescence(ARBRE, ' › ')).toBeNull();
+		expect(dossierDeLArborescence(undefined, 'Réseau')).toBeNull();
+		expect(dossierDeLArborescence([], 'Réseau')).toBeNull();
+	});
+
+	/**
+	 * L'ADRESSE ET L'AFFICHAGE NE SE CONFONDENT JAMAIS — c'est la raison d'être
+	 * de ce fichier. Servir un chemin d'ADRESSE à V-17 ne cocherait aucun bouton
+	 * radio ; le refuser ici évite qu'il y arrive.
+	 */
+	it('refuse la forme d’adresse, qui n’est pas la forme affichée', () => {
+		expect(dossierDeLArborescence(ARBRE, 'serveurs/bases')).toBeNull();
+	});
+
+	/**
+	 * LE DÉCOUPAGE EST TOLÉRANT, CE QUI SORT NE L'EST PAS. `segmentsDeDossier`
+	 * découpe sur le seul chevron et écarte les espaces : un chemin au
+	 * séparateur non canonique est donc reconnu. Rendre ce chemin TEL QUEL
+	 * servirait à V-17 une chaîne qu'elle compare caractère pour caractère et
+	 * qui ne coche RIEN — un verdict « ce dossier existe » pour un effet de lien
+	 * périmé. Ce qui sort est recomposé.
+	 */
+	it('recompose la forme canonique, quel que soit l’espacement reçu', () => {
+		expect(segmentsDeDossier('Serveurs›Bases')).toEqual(['Serveurs', 'Bases']);
+		expect(dossierDeLArborescence(ARBRE, 'Serveurs›Bases')).toBe('Serveurs › Bases');
+		expect(dossierDeLArborescence(ARBRE, '  Serveurs ›Bases  ')).toBe('Serveurs › Bases');
+		expect(dossierDeLArborescence(ARBRE, 'Serveurs › Bases')).toBe('Serveurs › Bases');
 	});
 });
