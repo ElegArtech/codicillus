@@ -174,9 +174,9 @@ export interface DemandeDEnregistrement {
  * Le numéro suit le plus grand écrit, jamais le NOMBRE de lignes : la purge de
  * `RG-M07-03` retire les plus anciennes, et compter les lignes ferait alors
  * réémettre un numéro déjà employé — que la contrainte d'unicité par note
- * refuserait, et au plus mauvais moment. La purge elle-même n'est pas de ce
- * lot : `004_versions.montee.sql` la range en `T-019`, et le plafond vit dans
- * les paramètres (`versions_max`), jamais en dur.
+ * refuserait, et au plus mauvais moment. La purge est plus bas, dans ce même
+ * module (`numerosExcedentaires`), et le plafond vit dans les paramètres
+ * (`versions_max`), jamais en dur.
  */
 export function versionDUnEnregistrement(demande: DemandeDEnregistrement): VersionAEcrire | null {
 	if (!contenuModifie(demande.avant, demande.corps)) return null;
@@ -192,4 +192,51 @@ export function versionDUnEnregistrement(demande: DemandeDEnregistrement): Versi
 		corpsReference: demande.corps.reference,
 		corpsOperationnel: demande.corps.operationnel
 	};
+}
+
+/* ═══════════════════════════════════ La purge du plafond ═══════════════ */
+
+/**
+ * `RG-M07-03` — « Le nombre de versions conservées par note est plafonné,
+ * valeur configurable (défaut : 50). Au-delà, les plus anciennes sont purgées. »
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * ELLE RATTRAPE, ELLE NE FAIT PAS QUE PLAFONNER
+ *
+ * V-33 ne promet pas seulement un plafond glissant : « RÉDUIRE CETTE VALEUR
+ * SUPPRIMERA LES VERSIONS EXCÉDENTAIRES dès le prochain enregistrement d'une
+ * note ». Retirer la seule plus ancienne à chaque enregistrement tiendrait la
+ * première phrase de l'écran et pas la seconde : une note de cinquante versions
+ * mettrait quarante-cinq enregistrements à redescendre à cinq. Cette fonction
+ * rend donc TOUT l'excédent d'un coup.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE QUI EST GARDÉ EST DÉSIGNÉ PAR LE NUMÉRO, JAMAIS PAR UN SEUIL CALCULÉ
+ *
+ * `numero - plafond` serait juste tant que les numéros restent contigus, et
+ * faux le jour où ils ne le sont plus — la purge elle-même creuse la suite par
+ * le bas, et rien n'interdit à une reprise de base d'en creuser le milieu. Les
+ * numéros PRÉSENTS sont donc triés, les `plafond` plus grands sont gardés, le
+ * reste part. La liste rendue est celle des numéros À SUPPRIMER.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * UN PLAFOND QUI N'EN EST PAS UN NE PURGE RIEN — ET C'EST LA DIRECTION SÛRE
+ *
+ * `validerLaConfiguration()` (`administration.ts`) ne contrôle PAS ce champ :
+ * le gel ne lui donne aucun bloc d'erreur, et le refus de combler ce vide est
+ * déclaré au rapport de son lot. Conséquence mesurable : le champ vidé donne
+ * `Number('') === 0`, et un `0` peut donc atteindre `parametres`. Un plafond
+ * nul ou négatif pris à la lettre effacerait TOUT l'historique de la première
+ * note enregistrée après la faute de frappe. Ce n'est pas un plafond : c'est
+ * une valeur hors domaine, et la seule réponse qui ne détruit rien est de ne
+ * rien purger. Le même refus couvre le non-entier et le non-fini.
+ */
+export function numerosExcedentaires(
+	numeros: readonly number[],
+	plafond: number
+): readonly number[] {
+	if (!Number.isSafeInteger(plafond) || plafond < 1) return [];
+	if (numeros.length <= plafond) return [];
+	const parNumeroDecroissant = [...numeros].sort((a, b) => b - a);
+	return parNumeroDecroissant.slice(plafond);
 }
