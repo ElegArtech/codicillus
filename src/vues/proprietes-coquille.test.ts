@@ -4,13 +4,21 @@
  * Ce que ces cas prouvent, et rien d'autre : chacune des vues du lot accepte en
  * PROPRIÉTÉ les sources qu'elle importait en constante, et pour chacune
  *
- *   · ABSENTE, LE DÉFAUT S'APPLIQUE — la rendre en passant explicitement la
- *     constante du jeu de semence donne le MÊME balisage, à l'octet, que de
+ *   · ABSENTE, LE DÉFAUT S'APPLIQUE — la rendre en passant explicitement le
+ *     défaut que la vue déclare donne le MÊME balisage, à l'octet, que de
  *     l'omettre. C'est la propriété qui garantit que le banc ne bouge pas : le
  *     mode démo ne passe que `vecteur`/`etat` et `notes`.
  *   · FOURNIE, ELLE L'EMPORTE — la rendre avec une autre valeur change le
  *     balisage. Sans ce second cas, la propriété serait acceptée sans être lue,
  *     et le contrôle serait celui d'une règle que rien n'exerce (P-5).
+ *
+ * LE PREMIER CAS N'EST PAS ÉCRIT POUR UNE SOURCE QUE L'ÉTAT DU CAS PORTE DÉJÀ
+ * (`socle: true`) — propriété EXIGÉE par la vue, ou servie par le socle pour
+ * ouvrir l'état à éprouver. La repasser par-dessus comparerait deux rendus
+ * strictement identiques : un cas vert qui ne prouve rien, et qui compterait
+ * pour une preuve. Ce que la vue fait sans elle est alors mesuré ailleurs — par
+ * un cas nommé, quand un défaut vide existe, ou par le compilateur, quand la
+ * propriété est exigée.
  *
  * CHAQUE SOURCE EST ÉPROUVÉE DANS UN ÉTAT QUI LA LIT. Onze des dix-neuf ne sont
  * lues que dans un état précis — l'étape 3 de l'import, le dialogue de gabarits,
@@ -40,7 +48,6 @@ import {
 	CONTRIBUTIONS,
 	DISTINCTIONS,
 	DOMAINES,
-	FORMATS_IMPORT,
 	INSTANCE,
 	JOURNAL_IMPORTS,
 	LOT_IMPORT,
@@ -61,6 +68,12 @@ import {
 	type Version
 } from '../../seeds/corpus';
 import { CONFIGURATION_PAR_DEFAUT } from '../lib/base/schema';
+/* LE RÉFÉRENTIEL DES LIBELLÉS DE FORMAT VIENT DU PRODUIT, PAS DU JEU.
+   `seeds/corpus.ts` en porte une copie mot pour mot (`FORMATS_IMPORT`) ; la
+   servir ici aurait éprouvé la copie là où `/importer` sert l'original, et
+   les deux auraient pu diverger sans que rien ne rougisse. Le lien entre les
+   deux tables est éprouvé par `import-promesses.test.ts`. */
+import { LIBELLE_PAR_FORMAT } from '../lib/donnees/import';
 /* LES DEUX POSITIONS DE PLANCHE SERVIES ET LA DÉRIVATION DES TERMES VIENNENT DE
    LEURS SOURCES, celles-là mêmes que `+error.svelte` et les vues emploient. Les
    recopier ici aurait éprouvé la copie, et la copie aurait pu diverger sans que
@@ -72,11 +85,9 @@ type Proprietes = Record<string, unknown>;
 type Rendre = (composant: unknown, options: { props: Proprietes }) => { body: string };
 
 /** Une source portée par une vue, et de quoi l'éprouver dans les deux sens. */
-interface Source {
+interface SourceCommune {
 	/** Le nom contractuel de la propriété — camelCase du nom de la constante. */
 	readonly cle: string;
-	/** La constante du jeu de semence, celle sur laquelle la vue retombe. */
-	readonly defaut: unknown;
 	/** Une autre valeur, du même type, qui doit changer le rendu. */
 	readonly autre: unknown;
 	/** L'état dans lequel la source est lue, quand ce n'est pas celui de base. */
@@ -90,6 +101,28 @@ interface Source {
 	/** Une chaîne que la valeur fournie doit faire apparaître au balisage. */
 	readonly marqueur?: string;
 }
+
+/** Une source que la vue déclare avec un défaut — il se mesure. */
+interface SourceADefaut extends SourceCommune {
+	/** La valeur sur laquelle la vue retombe quand la propriété est absente. */
+	readonly defaut: unknown;
+	readonly socle?: never;
+}
+
+/**
+ * UNE SOURCE QUE L'ÉTAT DU CAS PORTE DÉJÀ — AUCUN DÉFAUT NE S'Y MESURE.
+ *
+ * La propriété est EXIGÉE par la vue, ou bien le socle la sert pour ouvrir
+ * l'état qu'on veut éprouver. Dans les deux cas, la repasser par-dessus le
+ * socle rendrait DEUX FOIS le même balisage : le cas serait vert sans rien
+ * prouver, et il compterait pour une preuve. Il n'est donc pas écrit.
+ */
+interface SourceDuSocle extends SourceCommune {
+	readonly socle: true;
+	readonly defaut?: never;
+}
+
+type Source = SourceADefaut | SourceDuSocle;
 
 /* ── Les valeurs de contre-épreuve ─────────────────────────────────────────
    Toutes restent dans les types de `seeds/corpus.ts` : aucun type n'est
@@ -135,7 +168,7 @@ const TROIS_VERSIONS: readonly Version[] = (
 const SOCLE_V24: Proprietes = {
 	domaines: DOMAINES,
 	lotImport: LOT_IMPORT,
-	formatsImport: FORMATS_IMPORT,
+	formatsImport: LIBELLE_PAR_FORMAT,
 	domaineParDefaut: DOMAINES[0]!.nom
 };
 
@@ -205,18 +238,18 @@ const VUES: Readonly<
 			/* `univers` N'A PLUS LE JEU POUR DÉFAUT — le rail abrégé ne s'en dérive
 			   pas, et son état vide est un tableau vide, jamais les univers du jeu. */
 			{ cle: 'univers', defaut: [], autre: AUTRES_UNIVERS, inerte: true },
-			{ cle: 'domaines', defaut: DOMAINES, autre: AUTRES_DOMAINES },
+			{ cle: 'domaines', socle: true, autre: AUTRES_DOMAINES },
 			{ cle: 'compte', defaut: null, autre: AUTRE_COMPTE, marqueur: 'ZQ' },
 			{
 				cle: 'lotImport',
-				defaut: LOT_IMPORT,
+				socle: true,
 				autre: { ...LOT_IMPORT, fichiers: LOT_IMPORT.fichiers.slice(0, 4) },
 				/* L'étape 3 est celle de l'aperçu : c'est là que le lot est compté. */
 				base: { ...SOCLE_V24, vecteur: { et: '3' } }
 			},
 			{
 				cle: 'formatsImport',
-				defaut: FORMATS_IMPORT,
+				socle: true,
 				autre: {},
 				base: { ...SOCLE_V24, vecteur: { et: '3' } }
 			}
@@ -231,17 +264,19 @@ const VUES: Readonly<
 		base: { ...SOCLE_V25, vecteur: null, comptes: COMPTES },
 		sources: [
 			{ cle: 'univers', defaut: [], autre: AUTRES_UNIVERS, inerte: true },
-			{ cle: 'domaines', defaut: DOMAINES, autre: AUTRES_DOMAINES, inerte: true },
-			{ cle: 'compte', defaut: MOI, autre: AUTRE_COMPTE, marqueur: 'ZQ' },
+			{ cle: 'domaines', socle: true, autre: AUTRES_DOMAINES, inerte: true },
+			{ cle: 'compte', socle: true, autre: AUTRE_COMPTE, marqueur: 'ZQ' },
+			/* `comptes` EST PORTÉE PAR LE SOCLE, et son défaut vide se mesure plus
+			   bas, hors de cet état : ici, la liste ouvre le chemin de la planche. */
 			{
 				cle: 'comptes',
-				defaut: COMPTES,
+				socle: true,
 				autre: COMPTES.map((c) => ({ ...c, courriel: 'zq@exemple.test' })),
 				marqueur: 'zq@exemple.test'
 			},
 			{
 				cle: 'contributions',
-				defaut: CONTRIBUTIONS,
+				socle: true,
 				autre: {
 					...CONTRIBUTIONS,
 					'Karim Belhadj': { ...CONTRIBUTIONS['Karim Belhadj'], verifiees: 999 }
@@ -250,8 +285,8 @@ const VUES: Readonly<
 			/* `distinctions` N'A PLUS LE JEU POUR DÉFAUT : aucune table ne porte le
 			   barème, et des seuils inventés mesureraient le titulaire contre rien. */
 			{ cle: 'distinctions', defaut: [], autre: DISTINCTIONS.slice(0, 1) },
-			{ cle: 'activite', defaut: ACTIVITE, autre: ACTIVITE.slice(0, 1) },
-			{ cle: 'relations', defaut: RELATIONS, autre: [] }
+			{ cle: 'activite', socle: true, autre: ACTIVITE.slice(0, 1) },
+			{ cle: 'relations', socle: true, autre: [] }
 		]
 	},
 	/* V-04 N'A PAS DE COQUILLE (`docs/releve-vues.md` §5.1) : l'adresse du portail
@@ -379,7 +414,7 @@ function corps(vue: string, base: Proprietes, sup: Proprietes = {}): string {
 	return rendre(composants.get(vue), { props: { ...base, notes, ...sup } }).body;
 }
 
-describe.each(NOMS)('%s — les sources en propriétés optionnelles', (vue) => {
+describe.each(NOMS)('%s — les sources passées en propriétés', (vue) => {
 	const { base, sources } = VUES[vue]!;
 
 	it('rend sans qu’aucune source ne lui soit passée', () => {
@@ -389,9 +424,11 @@ describe.each(NOMS)('%s — les sources en propriétés optionnelles', (vue) => 
 	for (const source of sources) {
 		const etat = source.base ?? base;
 
-		it(`absente, \`${source.cle}\` retombe sur le défaut que la vue déclare`, () => {
-			expect(corps(vue, etat, { [source.cle]: source.defaut })).toBe(corps(vue, etat));
-		});
+		if (!source.socle) {
+			it(`absente, \`${source.cle}\` retombe sur le défaut que la vue déclare`, () => {
+				expect(corps(vue, etat, { [source.cle]: source.defaut })).toBe(corps(vue, etat));
+			});
+		}
 
 		if (source.inerte) {
 			it(`fournie, \`${source.cle}\` ne change rien — le rail abrégé ne s’en dérive pas`, () => {

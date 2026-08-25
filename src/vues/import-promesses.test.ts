@@ -16,7 +16,13 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createServer, type ViteDevServer } from 'vite';
-import { DOMAINES, LOT_IMPORT, corpusDeVariante, type Note } from '../../seeds/corpus';
+import {
+	DOMAINES,
+	FORMATS_IMPORT,
+	LOT_IMPORT,
+	corpusDeVariante,
+	type Note
+} from '../../seeds/corpus';
 import { LIBELLE_PAR_FORMAT } from '../lib/donnees/import';
 import {
 	MESURES_DE_CONSOLE_SANS_CONTREPARTIE,
@@ -106,6 +112,23 @@ const SOCLE_V24: Proprietes = {
 
 /** Les quatre étapes du parcours, telles que la clé d'état les nomme. */
 const VECTEURS: readonly (Proprietes | null)[] = [null, { et: '2' }, { et: '3' }, { et: '4' }];
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LA COPIE DU JEU EST LIÉE À SON ORIGINE
+
+   Les libellés de format sont un RÉFÉRENTIEL DU PRODUIT — `LIBELLE_PAR_FORMAT`
+   de `$lib/donnees/import.ts`, la contrepartie française de `VOIE_PAR_FORMAT` —
+   et `/importer` les sert de là. `seeds/corpus.ts` en garde une copie mot pour
+   mot, `FORMATS_IMPORT`, pour le jeu de démonstration. Deux tables identiques
+   qu'aucun contrôle ne lie divergent en silence : aucun compilateur ne voit la
+   copie, et c'est le jeu qui montrerait alors un libellé que le produit n'écrit
+   nulle part. Le lien est ici, et il rougit dans les deux sens.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('les libellés de format — le jeu de démonstration recopie le produit', () => {
+	it('la table du jeu est celle du produit, clé pour clé', () => {
+		expect(FORMATS_IMPORT).toEqual(LIBELLE_PAR_FORMAT);
+	});
+});
 
 describe('V-24 — l’étape 1 n’offre que le scénario que l’import exécute', () => {
 	it('rend la vignette du scénario livré', () => {
