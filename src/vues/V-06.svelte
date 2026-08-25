@@ -35,6 +35,25 @@
 	 * existé et venait de se périmer.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
+	 * CE QUE L'ÉCRAN AFFIRME S'ARRÊTE OÙ LA CERTITUDE S'ARRÊTE
+	 *
+	 * La réinitialisation par un administrateur vaut pour TOUT compte :
+	 * l'action `reinitialiserLeMotDePasse` de `console/comptes` écrit le
+	 * condensat sans consulter le moindre drapeau.
+	 *
+	 * LA SUITE, ELLE, NE VAUT PAS POUR TOUT LE MONDE, et l'écran a cessé de
+	 * l'annoncer. Il disait « vous le remplacerez ensuite depuis votre
+	 * profil » ; un compte dont la colonne `comptes.mot_de_passe_verrouille`
+	 * est posée — un drapeau que la console offre à l'administrateur au
+	 * moment de la création — se voit REFUSER ce remplacement :
+	 * `changerLeMotDePasse` (`$lib/donnees/profil`) rend l'issue
+	 * `verrouille` avant même de lire le condensat, et V-25 n'affiche alors
+	 * aucun formulaire de mot de passe. Or CET ÉCRAN EST ANONYME : il ne sait
+	 * pas à quel compte il parle, aucune propriété ne le lui dirait, et il ne
+	 * peut donc pas trancher. Une phrase que l'écran ne peut pas vérifier est
+	 * une promesse au même titre que le courriel — elle n'est pas émise.
+	 *
+	 * ═══════════════════════════════════════════════════════════════════════
 	 * `RG-ACC-04` — LA NON-DIVULGATION EST TENUE, ET PLUS SOLIDEMENT QU'AVANT
 	 *
 	 * L'écran ne demande plus rien et n'interroge aucun annuaire. Il ne peut
@@ -48,10 +67,17 @@
 	 * d'Ariane. L'enveloppe reste l'élément principal de classe `auth`, dont
 	 * l'identifiant est `app`.
 	 *
-	 * « Ouvrir un ticket d'assistance » garde sa destination : la table
-	 * `parametres` porte l'adresse du portail sous la clé `portail_assistance`,
-	 * et elle arrive par la propriété `portail`. Elle n'est pas fabriquée ici —
-	 * c'est une donnée d'instance, pas une constante.
+	 * « OUVRIR UN TICKET D'ASSISTANCE » N'EST ÉMIS QUE S'IL MÈNE QUELQUE PART.
+	 * L'adresse du portail est une donnée d'INSTANCE — clé `portail_assistance`
+	 * de la table `parametres` —, elle arrive par la propriété `portail`, et
+	 * elle n'est pas fabriquée ici. Mais `CONFIGURATION_PAR_DEFAUT` la laisse
+	 * VIDE, et la table est vide tant que personne ne l'a renseignée en
+	 * console : sur une instance conforme au « produit qui commence vide », le
+	 * lien portait une destination vide et le clic rechargeait le même écran —
+	 * le seul geste actionnable restant de la SEULE porte de secours. Le pied
+	 * entier, la question comme le bouton, n'est donc rendu que si l'adresse
+	 * existe. Même règle que le reste de la vue : ce qui n'a pas de
+	 * contrepartie n'est pas émis.
 	 */
 	import { resolve } from '$app/paths';
 	import Marque from '$lib/auth/Marque.svelte';
@@ -61,12 +87,17 @@
 		/**
 		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — donnée d'INSTANCE, lue dans la table
 		 * `parametres` par le chargeur de la route. Absente, la valeur du jeu de
-		 * semence, qui est celle que la semence écrit en base.
+		 * semence, qui est celle que la semence écrit en base. VIDE — ce que rend
+		 * `CONFIGURATION_PAR_DEFAUT` sur une instance dont personne n'a renseigné
+		 * la clé —, le pied d'assistance n'est pas rendu.
 		 */
 		portail?: string;
 	}
 
 	const { portail = CONFIG.portailAssistance }: Proprietes = $props();
+
+	/** Une adresse absente ou blanche ne mène nulle part : rien ne l'annonce. */
+	const assistanceJoignable = $derived(portail.trim() !== '');
 </script>
 
 <!--
@@ -99,8 +130,7 @@
 
 				<p class="auth__sous">
 					Votre mot de passe se fait réinitialiser <strong>par un administrateur</strong>, depuis la
-					console des comptes. Il vous remet le mot de passe provisoire en main propre&nbsp;; vous
-					le remplacerez ensuite depuis votre profil.
+					console des comptes. Il vous remet en main propre celui qu'il a posé.
 				</p>
 
 				<a
@@ -112,9 +142,11 @@
 			</section>
 		</div>
 
-		<div class="auth__pied">
-			<p>Besoin d'aide pour retrouver votre accès&nbsp;?</p>
-			<a class="btn" href={portail} id="assistance">Ouvrir un ticket d'assistance</a>
-		</div>
+		{#if assistanceJoignable}
+			<div class="auth__pied">
+				<p>Besoin d'aide pour retrouver votre accès&nbsp;?</p>
+				<a class="btn" href={portail} id="assistance">Ouvrir un ticket d'assistance</a>
+			</div>
+		{/if}
 	</div>
 </main>

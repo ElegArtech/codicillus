@@ -44,10 +44,20 @@ export const load: PageServerLoad = async () => ({
 export const actions: Actions = {
 	/**
 	 * L'ÉCRAN NE PORTE PLUS AUCUN FORMULAIRE : cette action n'est atteinte que
-	 * par une requête composée à la main. Elle rend la page telle quelle — la
-	 * même pour tout corps envoyé, sans rien lire. `error(501)` disait « pas
-	 * implémenté » à l'utilisateur enfermé dehors ; ne rien rendre du tout lui
-	 * rend l'écran qui, lui, nomme le chemin réel.
+	 * par une requête composée à la main. Elle ne rend RIEN, et ne lit ni le
+	 * corps ni la base — la réponse est donc la même pour tout envoi.
+	 *
+	 * CE QUE « NE RIEN RENDRE » PRODUIT DÉPEND DU CLIENT, et les deux cas ont
+	 * été mesurés plutôt que supposés. Un envoi de formulaire de navigateur
+	 * (`Accept: text/html`) obtient `200` et LA PAGE ELLE-MÊME, re-rendue par
+	 * le chargeur ci-dessus. Un client qui négocie `application/json` obtient
+	 * l'enveloppe d'action de SvelteKit — `204`, sans donnée —, jamais la
+	 * page : c'est l'enveloppe, pas l'écran, et la confondre avec lui fait
+	 * prendre une mesure pour une autre.
+	 *
+	 * Dans les deux cas, `error(501)` a disparu : il disait « pas implémenté »
+	 * à l'utilisateur enfermé dehors, au lieu de l'écran qui nomme le chemin
+	 * réel.
 	 */
 	default: () => {}
 };
