@@ -117,17 +117,7 @@
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
 	 * `src/vues/V-08.css` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		UNIVERS,
-		type Domaine,
-		type EtatDInstance,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../seeds/corpus';
+	import type { Domaine, Note, Univers, UtilisateurCourant } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
@@ -157,12 +147,18 @@
 	const MODE_PAR_DEFAUT = 'hybride';
 
 	/**
-	 * LES QUATRE SOURCES QUI NE VENAIENT DE NULLE PART — T-041.
+	 * LES QUATRE SOURCES QUI NE VENAIENT DE NULLE PART — ET QUI N'ARRIVENT
+	 * TOUJOURS DE NULLE PART.
 	 *
-	 * `UNIVERS`, `DOMAINES`, `MOI` et `INSTANCE` sont des PROPRIÉTÉS
-	 * OPTIONNELLES, dont le défaut est la constante du jeu de semence. Le rendu
-	 * d'une planche ne passe que `vecteur` et `notes` : la vue reçoit alors
-	 * exactement ce qu'elle recevait.
+	 * `UNIVERS`, `DOMAINES`, `MOI` et `INSTANCE` en étaient le défaut : `/recherche`
+	 * n'en passe aucune, donc l'écran servait le jeu de démonstration à tout
+	 * compte connecté — « Karim Belhadj » dans le menu utilisateur, « Codicillus
+	 * 1.0.0 » au pied du rail. Le canal réel est le contexte de coquille, posé
+	 * par le gabarit racine, et c'est lui qui l'emporte en application.
+	 *
+	 * Le DÉFAUT est donc désormais L'ÉTAT VIDE : aucun univers, aucun domaine,
+	 * une identité sans nom. `instance` a disparu — la version affichée au pied
+	 * du rail vient du contexte, ou de rien.
 	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — droits × état × sens. */
@@ -188,14 +184,12 @@
 		 * reçu, qui est le corpus de la planche.
 		 */
 		perimetre?: number;
-		/** Les univers déclarés. Absents, ceux du jeu de semence. */
+		/** Les univers déclarés. Absents, aucun — le contexte de coquille répond. */
 		univers?: readonly Univers[];
-		/** Les domaines accessibles. Absents, ceux du jeu de semence. */
+		/** Les domaines accessibles. Absents, aucun — le contexte répond. */
 		domaines?: readonly Domaine[];
-		/** L'utilisateur connecté. Absent, celui du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance — version, synchronisation. Absent, celui du jeu. */
-		instance?: EtatDInstance;
+		/** L'utilisateur connecté. Absent, une identité sans nom. */
+		compte?: IdentiteAffichee;
 		/**
 		 * L'ORDRE DEMANDÉ PAR L'ADRESSE — `?tri=`, `docs/routes.md:243`.
 		 *
@@ -218,6 +212,32 @@
 		modeDemande?: string;
 	}
 
+	/**
+	 * L'IDENTITÉ AFFICHÉE — la forme d'`UtilisateurCourant`, dont les valeurs
+	 * figées du jeu de démonstration sont ÉLARGIES.
+	 *
+	 * `UtilisateurCourant.nom` est typé `NomDAuteur`, l'union des trois noms du
+	 * jeu — « Sophie Nguyen », « Marc Ferreira », « Karim Belhadj » — et `role`
+	 * comme `domaine` sont de même farine. Aucune instance réelle ne porte ces
+	 * valeurs, et aucun état vide n'y est représentable. Le JEU DE CLÉS reste lié
+	 * au type d'origine par un type mappé : un champ ajouté là-bas apparaît ici,
+	 * et cette forme ne peut pas diverger en silence.
+	 */
+	type IdentiteAffichee = { readonly [K in keyof UtilisateurCourant]: string };
+
+	/**
+	 * L'IDENTITÉ VIDE — ce que la barre supérieure affiche sans compte servi.
+	 * Elle remplace `MOI` du jeu de démonstration, qui faisait passer « Karim
+	 * Belhadj » pour l'utilisateur connecté sur toute instance.
+	 */
+	const SANS_IDENTITE: IdentiteAffichee = {
+		prenom: '',
+		nom: '',
+		initiales: '',
+		domaine: '',
+		role: ''
+	};
+
 	const {
 		vecteur,
 		notes: corpus,
@@ -225,10 +245,9 @@
 		requete,
 		retenues,
 		perimetre,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte: moi = MOI,
-		instance = INSTANCE,
+		univers = [],
+		domaines = [],
+		compte: moi = SANS_IDENTITE,
 		tri = ORDRE_PAR_DEFAUT,
 		modeDemande = MODE_PAR_DEFAUT
 	}: Proprietes = $props();
@@ -341,6 +360,13 @@
 		readonly repliee?: boolean;
 	}
 
+	/**
+	 * L'EXTRACTEUR D'ÉTIQUETTES, NOMMÉ PARCE QU'IL SERT DEUX FOIS : la facette
+	 * « Étiquette », et les pistes de reformulation de l'état sans résultat. Les
+	 * deux comptent la même chose ; deux écritures divergeraient.
+	 */
+	const ETIQUETTES_DE = (n: Note): readonly string[] => n.etiquettes;
+
 	/** Les sept facettes, dans l'ordre de lecture du brief (`V-08:1938`). */
 	const FACETTES: readonly DefinitionDeFacette[] = [
 		{ id: 'univers', nom: 'Univers', cle: (n) => [n.univers] },
@@ -357,7 +383,7 @@
 			nom: 'Fraîcheur',
 			cle: (n) => [{ frais: 'Frais', vieil: 'Vieillissant', obs: 'Obsolète probable' }[n.fraicheur]]
 		},
-		{ id: 'etiquette', nom: 'Étiquette', cle: (n) => n.etiquettes, prefixe: '#', repliee: true },
+		{ id: 'etiquette', nom: 'Étiquette', cle: ETIQUETTES_DE, prefixe: '#', repliee: true },
 		{ id: 'visibilite', nom: 'Visibilité', cle: (n) => [n.visibilite], repliee: true }
 	];
 
@@ -408,14 +434,33 @@
 		readonly valeurs: readonly ValeurDeFacette[];
 	}
 
-	function facetteRendue(f: DefinitionDeFacette): FacetteRendue {
+	/**
+	 * LA DISTRIBUTION D'UNE CLÉ SUR UN JEU DE NOTES — la mécanique de facette,
+	 * extraite pour être employée deux fois : par les facettes, et par les pistes
+	 * de reformulation, qui comptent les mêmes étiquettes sur un autre jeu.
+	 */
+	function distribution(
+		notes: readonly Note[],
+		cle: (n: Note) => readonly string[]
+	): Record<string, number> {
 		const comptes: Record<string, number> = {};
-		for (const n of base.filter((x) => passe(x, f.id))) {
-			for (const v of f.cle(n)) if (v) comptes[v] = (comptes[v] ?? 0) + 1;
-		}
-		const ordonnees = Object.keys(comptes).sort(
+		for (const n of notes) for (const v of cle(n)) if (v) comptes[v] = (comptes[v] ?? 0) + 1;
+		return comptes;
+	}
+
+	/** Les valeurs d'une distribution, de la plus employée à la moins employée. */
+	function parFrequence(comptes: Record<string, number>): string[] {
+		return Object.keys(comptes).sort(
 			(a, b) => (comptes[b] ?? 0) - (comptes[a] ?? 0) || a.localeCompare(b, 'fr')
 		);
+	}
+
+	function facetteRendue(f: DefinitionDeFacette): FacetteRendue {
+		const comptes = distribution(
+			base.filter((x) => passe(x, f.id)),
+			f.cle
+		);
+		const ordonnees = parFrequence(comptes);
 		for (const v of choisis[f.id] ?? []) if (!ordonnees.includes(v)) ordonnees.push(v);
 		return {
 			id: f.id,
@@ -498,9 +543,25 @@
 	const lisibles = $derived(perimetre ?? corpus.length);
 	const affluence = $derived(affiches.length >= 8 && affiches.length / lisibles > 0.8);
 
-	/** Les quatre pistes de l'état vide, telles que le gel les énumère
-	 *  (`V-08:1986`). */
-	const PISTES = ['restauration', 'sauvegarde', 'barman', 'plan de reprise'];
+	/**
+	 * LES PISTES DE REFORMULATION — DES ÉTIQUETTES RÉELLES, OU RIEN.
+	 *
+	 * Le gel en énumère quatre en dur (`V-08:1986`) : « restauration »,
+	 * « sauvegarde », « barman », « plan de reprise ». Trois d'entre elles ne
+	 * veulent rien dire hors du jeu de démonstration, et la quatrième — « barman »
+	 * — est le nom d'un outil que l'instance n'a probablement jamais installé :
+	 * chacune ouvrait `/recherche?q=…` à zéro résultat. Quatre boutons qui
+	 * promettent une reformulation et n'en tiennent aucune sont pires qu'aucun
+	 * bouton.
+	 *
+	 * LA SOURCE RÉELLE EST DÉJÀ DANS CE FICHIER : la facette « Étiquette » compte
+	 * les étiquettes du jeu servi. Les pistes les comptent sur le CORPUS reçu — et
+	 * non sur `base`, qui est vide précisément dans l'état où les pistes se
+	 * rendent — et gardent les plus employées, au même plafond que la facette.
+	 *
+	 * Un corpus sans étiquette rend une liste vide, et le bloc n'est pas rendu.
+	 */
+	const pistes = $derived(parFrequence(distribution(corpus, ETIQUETTES_DE)).slice(0, MAX_VALEURS));
 
 	/** La condition exacte du gel (`V-08:1969`) : l'état « vide » de la planche,
 	 *  ou aucun résultat pour une requête non vide. */
@@ -763,7 +824,7 @@
 		role: moi.role,
 		domaine: moi.domaine
 	}}
-	version={instance.version}
+	version=""
 >
 	{#snippet enfants()}
 		<!-- ============================ FACETTES ============================ -->
@@ -1001,8 +1062,8 @@
 			<div class="resultats si-nominal" id="resultats">{#if !rendreLesResultats}{:else if sansResultat}<div class="vide"
 					><h2 class="vide__titre">Aucun résultat pour <span class="vide__requete">{`« ${requeteAffichee} »`}</span></h2
 					><p class="vide__txt">Cette connaissance n'est pas encore écrite. Si vous la détenez, c'est le bon moment : une note d'une dizaine de lignes vaut mieux que rien.</p
-					><div class="vide__pistes">{#each PISTES as piste (piste)}<button class="piste" onclick={() => essayer(piste)}>{`Essayer « ${piste} »`}</button>{/each}</div
-					>{#if ecriture}<button class="btn btn--principal si-ecriture" onclick={creerLaNote}>{`Créer la note « ${requeteAffichee} »`}</button
+					>{#if pistes.length}<div class="vide__pistes">{#each pistes as piste (piste)}<button class="piste" onclick={() => essayer(piste)}>{`Essayer « ${piste} »`}</button>{/each}</div
+					>{/if}{#if ecriture}<button class="btn btn--principal si-ecriture" onclick={creerLaNote}>{`Créer la note « ${requeteAffichee} »`}</button
 				>{/if}</div>{:else}{#each affiches as n, index (n.id)}{@render carte(n, q, index)}{/each}{/if}</div>
 
 			<div class="si-chargement" aria-hidden="true">
