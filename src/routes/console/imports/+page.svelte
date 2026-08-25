@@ -82,6 +82,7 @@
 	domaines={data.domaines}
 	compte={data.compte}
 	journalImports={[]}
+	journalEnregistre={data.journalEnregistre}
 	onOuvrirLeDomaine={(domaine) => {
 		/* « OUVRIR LE DOMAINE » DU RAPPORT — la désignation est canonique, comme
 		   partout ailleurs en console : le rapport porte un nom d'affichage,
@@ -125,8 +126,11 @@
 	c'est un journal d'imports qui n'ont jamais eu lieu : la valeur illustrative
 	que `P-02` proscrit, sur un écran de traçabilité.
 
-	LE TABLEAU RESTE DONC VIDE, ET IL N'ANNONCE PAS SON VIDE : le gel de V-35 ne
-	porte aucun état vide pour ce tableau — aucune planche n'en montre —, et en
-	écrire un serait combler. Une table vide n'affirme rien de faux ; un journal
-	fictif, si. Le vide de maquette est remonté au rapport du lot.
+	ET IL ANNONCE DÉSORMAIS SON VIDE — `journalEnregistre`, dérivé du recensement
+	par le chargeur. Le tableau ne se contente plus d'être vide : l'écran DIT que
+	rien n'est conservé. Une table vide n'affirme rien de faux toute seule ; sous
+	« les rapports restent consultables indéfiniment », elle affirmait qu'aucun
+	import n'avait eu lieu. Le nœud ajouté n'est dans aucune planche du gel — le
+	gel de V-35 ne porte aucun état vide pour ce tableau —, et c'est la seule
+	façon de cesser de le contredire sans inventer un journal.
 -->
