@@ -168,21 +168,30 @@ export async function lireRelationsLisibles(
 /* ═══════════════════════════════════════════ Le périmètre d'affichage ══ */
 
 /**
- * LE PÉRIMÈTRE QUE V-19 AFFICHE — « Univers Production ».
+ * LE PÉRIMÈTRE QUE V-19 AFFICHE À L'OUVERTURE — TOUT LE CORPUS.
  *
- * Ce n'est pas une décision de ce lot : c'est la première option du sélecteur de
- * périmètre, celle que le gel a sélectionnée au chargement, et
- * `src/vues/V-19.svelte:102` la rend telle quelle. Elle est recopiée ici parce
- * que le chargeur doit décider l'état de zone SUR LE MÊME sous-graphe que la vue
- * dessine ; décider sur un autre périmètre afficherait « aucune relation »
- * au-dessus d'un graphe peuplé, ou l'inverse.
+ * IL FUT « Univers Production », ET C'ÉTAIT UN DÉFAUT. Ce nom est celui d'un
+ * univers du jeu de démonstration, et rien ne le pose sur une instance réelle :
+ * `sousGraphe()` filtre sur l'égalité de nom, la carte s'ouvrait donc sur zéro
+ * nœud, la légende vide, et le voile annonçait « Aucune relation dans ce
+ * périmètre » — un message FAUX, puisque ce n'est pas le périmètre qui est vide,
+ * c'est qu'il n'existe pas. Le sélecteur, lui, n'a que des univers RÉELS en
+ * options : aucune ne valait `univers|Production`, et il retombait à vide,
+ * désynchronisé de la carte.
  *
- * LA RECOPIE EST UN RISQUE, ET IL EST GARDÉ : `outils.test.ts` relit le fichier
- * de la vue et échoue si le littéral n'y est plus. Le jour où la vue recevra son
- * périmètre en propriété — ce que ce lot n'a pas le droit de faire —, cette
- * constante disparaîtra.
+ * LE PÉRIMÈTRE HONNÊTE EST CELUI DES DEUX AUTRES CARTOGRAPHIES —
+ * `/cartographie/par-type` ouvre sur `PERIMETRE_DE_V20`, `/carte-mentale` sur
+ * `global|` ; `/cartographie` était la seule dissidente. « Le premier univers
+ * lisible » serait le même défaut sous une autre forme : il dépend d'un tri et
+ * exclut silencieusement le reste du corpus.
+ *
+ * ELLE RESTE UNE RECOPIE DU DÉFAUT DE LA VUE, parce que le chargeur doit décider
+ * l'état de zone SUR LE MÊME sous-graphe que la vue dessine ; décider sur un
+ * autre périmètre afficherait « aucune relation » au-dessus d'un graphe peuplé,
+ * ou l'inverse. LE RISQUE EST GARDÉ : `outils.test.ts` relit le fichier de la vue
+ * et échoue si le littéral n'y est plus.
  */
-export const PERIMETRE_DE_V19: PerimetreDAffichage = { type: 'univers', nom: 'Production' };
+export const PERIMETRE_DE_V19: PerimetreDAffichage = { type: 'global' };
 
 /** Le périmètre de V-20 — « Tous les domaines » (`src/vues/V-20.svelte:130`). */
 export const PERIMETRE_DE_V20: PerimetreDAffichage = { type: 'global' };
