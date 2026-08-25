@@ -1091,9 +1091,20 @@ async function dossierDuSegment(
 	const trouve = deja[0];
 	if (trouve !== undefined) return { id: trouve.id, cree: false };
 
+	/* LA POSITION SE CALCULE, ELLE NE SE LAISSE PAS AU DÉFAUT DE LA COLONNE.
+	   `position` vaut zéro par défaut (`schema.ts`) : sans ce compte, TOUTE la
+	   fratrie créée par un import se retrouvait à la même position, et l'ordre
+	   d'affichage des dossiers importés devenait celui du hasard. L'action de
+	   route `creerSousDossier` la calcule déjà de cette façon — le nombre de
+	   frères déjà en place —, et l'import n'a aucune raison de faire autrement. */
+	const freres = await tx
+		.select({ id: dossiers.id })
+		.from(dossiers)
+		.where(and(eq(dossiers.domaineId, cible.domaineId), eq(dossiers.parentId, parentId)));
+
 	const inseres = await tx
 		.insert(dossiers)
-		.values({ domaineId: cible.domaineId, parentId, nom, profondeur })
+		.values({ domaineId: cible.domaineId, parentId, nom, position: freres.length, profondeur })
 		.returning({ id: dossiers.id });
 	return { id: (inseres[0] as { id: string }).id, cree: true };
 }
