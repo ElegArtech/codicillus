@@ -60,6 +60,7 @@ import {
 	type UtilisateurCourant,
 	type Version
 } from '../../seeds/corpus';
+import { CONFIGURATION_PAR_DEFAUT } from '../lib/base/schema';
 
 type Proprietes = Record<string, unknown>;
 type Rendre = (composant: unknown, options: { props: Proprietes }) => { body: string };
@@ -412,6 +413,51 @@ describe('V-06 — l’écran ne promet plus un courriel que rien n’enverrait'
 		expect(rendu()).toContain("Cette instance n'envoie aucun courriel");
 		expect(rendu()).toContain('par un administrateur');
 		expect(rendu()).toContain('console des comptes');
+	});
+
+	/* LA SECONDE MOITIÉ DE LA PHRASE ÉTAIT UNE PROMESSE DE PLUS. L'écran
+	   annonçait « vous le remplacerez ensuite depuis votre profil » ; un compte
+	   dont `mot_de_passe_verrouille` est posé se voit refuser ce remplacement,
+	   et le refus est prouvé à sa source, pas ici : `profil.test.ts` exerce
+	   `changerLeMotDePasse` sur un profil verrouillé et relève l'issue
+	   `verrouille`, décidée avant la moindre requête. V-06 est ANONYME — aucune
+	   propriété ne lui dit à quel compte il parle —, il ne peut donc pas
+	   distinguer les deux cas, et n'annonce plus que celui qui vaut pour tous. */
+	it('n’annonce plus un changement depuis le profil, que le verrou refuse', () => {
+		expect(rendu()).not.toContain('votre profil');
+		expect(rendu()).not.toContain('remplacerez');
+		expect(rendu()).not.toContain('provisoire');
+	});
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   V-06 — LE PIED D'ASSISTANCE N'EST ÉMIS QUE S'IL MÈNE QUELQUE PART
+
+   LA VALEUR ÉPROUVÉE N'EST PAS FABRIQUÉE ICI : c'est
+   `CONFIGURATION_PAR_DEFAUT.portailAssistance`, le défaut même sur lequel
+   `lireConfiguration()` retombe clé par clé quand `parametres` ne porte rien —
+   l'état d'une instance neuve, où seule la console peut renseigner l'adresse.
+   Écrire une chaîne vide à la main aurait éprouvé une hypothèse ; importer la
+   constante éprouve ce que le chargeur passe réellement à la vue.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('V-06 — le ticket d’assistance n’est offert qu’avec une destination', () => {
+	it('n’émet ni la question ni le bouton quand l’instance n’a pas d’adresse', () => {
+		const rendu = corps('V-06', {}, { portail: CONFIGURATION_PAR_DEFAUT.portailAssistance });
+		expect(rendu).not.toContain('id="assistance"');
+		expect(rendu).not.toContain('Ouvrir un ticket d’assistance');
+		expect(rendu).not.toContain("Ouvrir un ticket d'assistance");
+		expect(rendu).not.toContain('retrouver votre accès');
+	});
+
+	it('les émet dès qu’une adresse est renseignée, et c’est celle-là', () => {
+		const adresse = 'https://assistance.exemple.test/nouveau';
+		const rendu = corps('V-06', {}, { portail: adresse });
+		expect(rendu).toContain('id="assistance"');
+		expect(rendu).toContain(adresse);
+	});
+
+	it('une adresse blanche ne mène pas plus loin qu’une adresse absente', () => {
+		expect(corps('V-06', {}, { portail: '   ' })).not.toContain('id="assistance"');
 	});
 });
 
