@@ -39,10 +39,15 @@ import {
 	DATE_REFERENCE,
 	DETAIL_DOMAINES,
 	DOMAINES,
+	MESURES_7J,
+	MESURES_7J_PREC,
+	MODIFICATIONS,
 	MODULES,
 	MOI,
+	RECHERCHES,
 	RELATIONS,
 	RELATIONS_TECHNIQUES,
+	REVISIONS,
 	TEMPLATES,
 	TYPES_FICHE,
 	TYPES_NOTE,
@@ -51,7 +56,6 @@ import {
 	type Compte,
 	type Configuration,
 	type Domaine,
-	type EtatDInstance,
 	type Note,
 	type Univers,
 	type UtilisateurCourant
@@ -112,18 +116,10 @@ const AUTRE_COMPTE: UtilisateurCourant = {
 	domaine: 'Applications',
 	role: 'Administrateur'
 };
-const AUTRE_INSTANCE: EtatDInstance = { version: '9.9.9-epreuve', synchro: 'a l instant' };
 /** Un seul univers, « Projets » : « Production » et sa description disparaissent. */
 const AUTRES_UNIVERS: readonly Univers[] = [UNIVERS[1] as Univers];
 /** Un seul domaine, « Migration 2026 » : les trois autres disparaissent. */
 const AUTRES_DOMAINES: readonly Domaine[] = [DOMAINES[3] as Domaine];
-
-const LES_QUATRE = {
-	univers: AUTRES_UNIVERS,
-	domaines: AUTRES_DOMAINES,
-	compte: AUTRE_COMPTE,
-	instance: AUTRE_INSTANCE
-};
 
 /** Le pied du rail, rendu par les deux formes de coquille. */
 const VERSION_DU_JEU = 'Codicillus 1.0.0';
@@ -132,18 +128,21 @@ const VERSION_FOURNIE = 'Codicillus 9.9.9-epreuve';
 const COMPTE_DU_JEU = 'Karim Belhadj — menu utilisateur';
 const COMPTE_FOURNI = 'Sophie Nguyen — menu utilisateur';
 
-/** Les deux constats communs aux huit vues : la coquille lit bien les sources. */
-function coquilleDuJeu(rendu: string): void {
-	expect(rendu).toContain(VERSION_DU_JEU);
-	expect(rendu).toContain(COMPTE_DU_JEU);
-	expect(rendu).not.toContain(VERSION_FOURNIE);
-	expect(rendu).not.toContain(COMPTE_FOURNI);
-}
-function coquilleFournie(rendu: string): void {
-	expect(rendu).toContain(VERSION_FOURNIE);
-	expect(rendu).toContain(COMPTE_FOURNI);
-	expect(rendu).not.toContain(VERSION_DU_JEU);
+/**
+ * LE CONSTAT DES QUATRE VUES DE CONSOLE SYSTÈME — plus rien du jeu ne descend.
+ *
+ * V-33 à V-36 ne portent plus `univers`, `domaines`, `compte` ni `instance`
+ * pour la coquille : `CoquilleDeConsole` retombait sur les constantes de
+ * `seeds/corpus.ts` dès qu'une route en oubliait une, et l'écran affichait
+ * alors « Karim Belhadj » et « Codicillus 1.0.0 » quel que soit le compte
+ * connecté. L'identité vient du contexte, posé par le gabarit racine ; hors
+ * gabarit — ce rendu-ci —, elle est VIDE, et c'est ce qui se mesure.
+ */
+function coquilleSansJeu(rendu: string): void {
 	expect(rendu).not.toContain(COMPTE_DU_JEU);
+	expect(rendu).not.toContain(VERSION_DU_JEU);
+	expect(rendu).not.toContain(COMPTE_FOURNI);
+	expect(rendu).not.toContain(VERSION_FOURNIE);
 }
 
 /**
@@ -173,10 +172,14 @@ function occurrences(rendu: string, texte: string): number {
    est l'autre moitié, celle qu'aucun type ne peut dire — SERVIS VIDES, les six
    écrans ne montrent RIEN du corpus de démonstration.
 
-   `coquilleDuJeu()` NE S'APPLIQUE PLUS À CES SIX VUES, et pour la même raison :
-   elles passaient `instance.version` au pied du rail, le `1.0.0` d'`INSTANCE`.
-   La version vient du contexte de coquille, que le gabarit racine pose depuis
-   `package.json` ; hors gabarit, le pied ne nomme plus rien.
+   AUCUNE VUE DE CONSOLE NE PREND PLUS SON IDENTITÉ EN PROPRIÉTÉ, et c'est
+   pourquoi les deux constats d'autrefois — « la coquille montre le jeu » et
+   « la coquille montre ce qu'on lui passe » — ont disparu du fichier avec les
+   deux fonctions qui les portaient. Ces vues passaient `instance.version` au
+   pied du rail, le `1.0.0` d'`INSTANCE` ; la version vient désormais du
+   contexte de coquille, que le gabarit racine pose depuis `package.json`.
+   Hors gabarit — tous les rendus de ce fichier —, le pied ne nomme plus rien,
+   et `coquilleSansJeu()` est le seul constat qui reste à faire.
    ══════════════════════════════════════════════════════════════════════════ */
 
 /**
@@ -584,62 +587,90 @@ describe('V-33 — Configuration', () => {
 		versionsMax: 7
 	};
 
-	test('absente, le défaut du jeu de semence s’applique', async () => {
-		const rendu = await rendre('V-33');
-		coquilleDuJeu(rendu);
-		expect(rendu).toContain(CONFIG.portailAssistance);
-		expect(rendu).not.toContain('epreuve.t044.invalid');
+	/* `config` EST DÉSORMAIS EXIGÉE, et il n'y a plus de défaut à éprouver : une
+	   route qui l'oublierait ne compilerait plus. Ce qui reste à établir est que
+	   la valeur REÇUE fait loi, et que rien ne descend plus du jeu par la
+	   coquille. */
+	test('la configuration reçue fait loi', async () => {
+		const duJeu = await rendre('V-33', { config: CONFIG });
+		expect(duJeu).toContain(CONFIG.portailAssistance);
+		expect(duJeu).not.toContain('epreuve.t044.invalid');
+
+		const autre = await rendre('V-33', { config: AUTRE_CONFIG });
+		expect(autre).toContain('epreuve.t044.invalid');
+		expect(autre).not.toContain(CONFIG.portailAssistance);
 	});
 
-	test('fournie, la propriété l’emporte', async () => {
-		const rendu = await rendre('V-33', { ...LES_QUATRE, config: AUTRE_CONFIG });
-		coquilleFournie(rendu);
-		expect(rendu).toContain('epreuve.t044.invalid');
-		expect(rendu).not.toContain(CONFIG.portailAssistance);
+	test('la coquille ne descend plus l’identité du jeu de démonstration', async () => {
+		coquilleSansJeu(await rendre('V-33', { config: CONFIG }));
 	});
 });
 
 describe('V-34 — Analytique', () => {
-	test('absente, le défaut du jeu de semence s’applique', async () => {
-		const rendu = await rendre('V-34');
-		const plancher = await rendre('V-34', { domaines: [] });
-		coquilleDuJeu(rendu);
-		// `domaines` : la santé documentaire est rendue domaine par domaine.
-		expect(occurrences(rendu, 'Poste de travail')).toBeGreaterThan(
+	/** Ce que le chargeur passe VRAIMENT : deux mesures comptées, aucune inventée. */
+	const SERVI = { relations: [], mesures7j: {}, mesures7jPrec: {} };
+
+	test('les domaines reçus font loi — la santé est rendue domaine par domaine', async () => {
+		const plancher = await rendre('V-34', { ...SERVI, domaines: [] });
+		const duJeu = await rendre('V-34', { ...SERVI, domaines: DOMAINES });
+		expect(occurrences(duJeu, 'Poste de travail')).toBeGreaterThan(
 			occurrences(plancher, 'Poste de travail')
 		);
-	});
 
-	test('fournie, la propriété l’emporte', async () => {
-		const rendu = await rendre('V-34', LES_QUATRE);
-		const plancher = await rendre('V-34', { domaines: [] });
-		coquilleFournie(rendu);
-		expect(occurrences(rendu, 'Poste de travail')).toBe(occurrences(plancher, 'Poste de travail'));
-		expect(occurrences(rendu, 'Migration 2026')).toBeGreaterThan(
+		const autres = await rendre('V-34', { ...SERVI, domaines: AUTRES_DOMAINES });
+		expect(occurrences(autres, 'Poste de travail')).toBe(occurrences(plancher, 'Poste de travail'));
+		expect(occurrences(autres, 'Migration 2026')).toBeGreaterThan(
 			occurrences(plancher, 'Migration 2026')
 		);
 	});
 
+	test('la coquille ne descend plus l’identité du jeu de démonstration', async () => {
+		coquilleSansJeu(await rendre('V-34', { ...SERVI, domaines: DOMAINES }));
+	});
+
 	/*
-	 * LES CINQ TABLES DE MESURE. Elles sont typées PARTIELLES, et c'est la seule
-	 * façon qu'un chargeur ait le droit de n'en passer aucune ligne : le rendu
-	 * tombe alors à zéro consultation, ce qui est un état neutre EXPLICITE et non
-	 * une valeur fabriquée (P-02). L'épreuve passe la table vide, parce que c'est
-	 * le cas qu'un chargeur rencontrera d'abord.
+	 * LES MESURES QUE LE PRODUIT PORTE, ET CELLES QU'IL NE PORTE PAS.
+	 *
+	 * `mesures7j` et `mesures7jPrec` se comptent sur la table `consultations` :
+	 * elles sont EXIGÉES, et une note sans consultation compte pour zéro, ce qui
+	 * est un fait mesuré. Les trois autres — modifications par période, demandes
+	 * de révision, journal de recherche — n'ont AUCUNE table : leur défaut est
+	 * vide, et vide, les blocs qui en dérivent ne se rendent pas du tout. « 0 »
+	 * et « indisponible » sont deux informations différentes.
 	 */
-	test('les tables de mesure fournies l’emportent', async () => {
-		const duJeu = await rendre('V-34');
-		const vide = await rendre('V-34', {
-			mesures7j: {},
-			mesures7jPrec: {},
-			modifications: {},
-			revisions: [],
-			recherches: []
+	test('la mesure de consultation reçue fait loi', async () => {
+		const vide = await rendre('V-34', { ...SERVI, domaines: DOMAINES });
+		const comptee = await rendre('V-34', {
+			...SERVI,
+			domaines: DOMAINES,
+			mesures7j: MESURES_7J,
+			mesures7jPrec: MESURES_7J_PREC
 		});
-		expect(vide).not.toBe(duJeu);
-		// `mesures7j` alimente le décompte de consultations sur sept jours.
-		expect(duJeu).toContain('vues / 7 j');
-		expect(occurrences(vide, '0 vues / 7 j')).toBeGreaterThan(occurrences(duJeu, '0 vues / 7 j'));
+		expect(comptee).not.toBe(vide);
+		expect(occurrences(vide, '0 vues / 7 j')).toBeGreaterThan(occurrences(comptee, '0 vues / 7 j'));
+	});
+
+	test('sans journal de recherche, AUCUN bloc ne prétend le mesurer', async () => {
+		const rendu = await rendre('V-34', { ...SERVI, domaines: DOMAINES });
+		expect(rendu).not.toContain('Taux de recherche aboutie');
+		expect(rendu).not.toContain('Trous documentaires');
+		expect(rendu).not.toContain('recherches sur 30 jours');
+		expect(rendu).not.toContain('en attente de révision');
+		expect(rendu).not.toContain('opérationnels désynchronisés');
+	});
+
+	test('le journal servi ramène les deux blocs, sans qu’une ligne bouge', async () => {
+		const rendu = await rendre('V-34', {
+			...SERVI,
+			domaines: DOMAINES,
+			recherches: RECHERCHES,
+			revisions: REVISIONS,
+			modifications: MODIFICATIONS
+		});
+		expect(rendu).toContain('Taux de recherche aboutie');
+		expect(rendu).toContain('Trous documentaires');
+		expect(rendu).toContain('recherches sur 30 jours');
+		expect(rendu).toContain('en attente de révision');
 	});
 });
 
@@ -655,12 +686,16 @@ describe('V-36 — Exports', () => {
 	 * nom de son côté avec la date à laquelle le jeu de semence est figé.
 	 */
 	test('le nom d’archive annoncé est celui que la fabrique produira', async () => {
-		const duJeu = await rendre('V-36');
-		expect(duJeu).toContain('infrastructure-2026-08-13.zip');
-
 		const attendu = nomDArchive('infra-prod', '2027-01-09T10:12:00.000Z');
-		const rendu = await rendre('V-36', { nomsDArchive: { Infrastructure: attendu } });
+		const rendu = await rendre('V-36', {
+			domaines: DOMAINES,
+			nomsDArchive: { Infrastructure: attendu }
+		});
 		expect(rendu).toContain(attendu);
+		/* LE REPLI A DISPARU AVEC LA DATE DU JEU. La vue recomposait
+		   `infrastructure-{DATE_REFERENCE}.zip` quand la table manquait ; la table
+		   est exigée, et un domaine qu'elle ne nomme pas n'a plus de nom annoncé. */
+		expect(rendu).not.toContain(DATE_REFERENCE);
 		expect(rendu).not.toContain('infrastructure-2026-08-13.zip');
 	});
 
@@ -681,21 +716,21 @@ describe('V-36 — Exports', () => {
 	});
 });
 
-/* ══════════════════════════════════════════════════════════════════════════
-   CE QUE L'INERTIE VAUT, ET POURQUOI ELLE EST ÉCRITE ICI
+/* ═══════════════════════════════════════════════════════════════════════════
+   OÙ LE CONSTAT D'INERTIE D'`univers` VIT DÉSORMAIS — ET POURQUOI PLUS ICI
 
-   `univers` ne change RIEN au rendu des sept vues de forme abrégée : le rail
-   abrégé ne se dérive pas du corpus. Le constater est le seul énoncé honnête
-   possible — l'affirmer sans le mesurer serait exactement la faute que P-21
-   décrit. Si un lot ultérieur fait servir `univers` au rail abrégé, ce
-   contrôle rougira, et ce sera la bonne nouvelle.
-   ══════════════════════════════════════════════════════════════════════════ */
-describe('l’inertie constatée de `univers` en forme abrégée', () => {
-	for (const vue of ['V-33', 'V-34']) {
-		test(`${vue} — fournir « univers » ne change pas le rendu`, async () => {
-			const duJeu = await rendre(vue);
-			const fourni = await rendre(vue, { univers: AUTRES_UNIVERS });
-			expect(fourni).toBe(duJeu);
-		});
-	}
-});
+   Le constat n'a pas été abandonné, il n'a plus de sujet à CET endroit, pour
+   deux raisons qui se sont ajoutées :
+
+     · V-29 à V-32 EXIGENT leurs sources et ne se rendent plus sans rien. Le
+       même énoncé est mesuré plus haut, dans « l'inertie constatée de
+       « univers » sur les quatre registres », qui leur passe leurs propres
+       propriétés avant de comparer.
+     · V-33 ET V-34 NE DÉCLARENT PLUS `univers`. La propriété ne faisait que
+       traverser la vue jusqu'à `CoquilleDeConsole`, qui retombait alors sur le
+       jeu de démonstration ; la coquille lit le contexte d'identité, et il n'y
+       a plus rien à fournir dont on puisse constater l'inertie.
+
+   La boucle qui tenait ici n'aurait donc plus énuméré aucune vue — un `describe`
+   vide qui aurait compté pour une preuve.
+   ═══════════════════════════════════════════════════════════════════════════ */

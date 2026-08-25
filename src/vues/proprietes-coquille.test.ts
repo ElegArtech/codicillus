@@ -104,7 +104,12 @@ interface SourceCommune {
 
 /** Une source que la vue déclare avec un défaut — il se mesure. */
 interface SourceADefaut extends SourceCommune {
-	/** La valeur sur laquelle la vue retombe quand la propriété est absente. */
+	/**
+	 * CE SUR QUOI LA VUE RETOMBE quand la source n'est pas passée — la constante
+	 * du jeu de semence là où elle survit, l'ÉTAT VIDE partout où le motif a été
+	 * retiré. Une source dont TOUTES les routes passent la donnée n'en a plus de
+	 * mesurable : elle est exigée, et se déclare alors `socle: true`.
+	 */
 	readonly defaut: unknown;
 	readonly socle?: never;
 }
@@ -307,24 +312,31 @@ const VUES: Readonly<
 		]
 	},
 	'V-26': { base: { vecteur: null }, sources: coquille(['univers', 'domaines']) },
+	/* V-35 — `journalImports` EST DEVENUE EXIGÉE : elle retombait sur
+	   `JOURNAL_IMPORTS` du jeu de démonstration, quatre lots datés servis sur
+	   l'écran de traçabilité même. Il n'y a plus de défaut à éprouver, et une
+	   route qui l'oublierait ne compilerait plus ; elle est donc au réglage de
+	   base. `lotImport` reste une source, et son DÉFAUT est l'état vide : sans
+	   lot déposé, aucun fichier en échec n'est nommé. */
 	'V-35': {
-		base: { etat: 'journal-peuple' },
+		base: { etat: 'journal-peuple', journalImports: JOURNAL_IMPORTS },
 		sources: [
 			{
-				cle: 'journalImports',
-				defaut: JOURNAL_IMPORTS,
-				autre: JOURNAL_IMPORTS.slice(0, 1)
-			},
-			{
 				cle: 'lotImport',
-				defaut: LOT_IMPORT,
-				autre: { ...LOT_IMPORT, fichiers: LOT_IMPORT.fichiers.filter((f) => f.s !== 'echec') },
+				defaut: null,
+				autre: LOT_IMPORT,
 				/* Le rapport de lot est le seul état qui liste les fichiers en échec. */
-				base: { etat: 'rapport-de-lot' }
+				base: { etat: 'rapport-de-lot', journalImports: JOURNAL_IMPORTS }
 			}
 		]
 	},
-	'V-36': { base: {}, sources: [{ cle: 'domaines', defaut: DOMAINES, autre: AUTRES_DOMAINES }] },
+	/* V-36 — `domaines` ET `nomsDArchive` SONT DEVENUES EXIGÉES. Les domaines
+	   retombaient sur `DOMAINES` du jeu, et le nom d'archive se recomposait avec
+	   la date à laquelle le jeu est figé : l'écran offrait un périmètre que
+	   l'instance ne porte pas, et annonçait un fichier daté de 2026. Les deux
+	   sont au réglage de base ; ce qu'elles font du rendu est éprouvé par
+	   `consoles-proprietes.test.ts`. */
+	'V-36': { base: { domaines: DOMAINES, nomsDArchive: {} }, sources: [] },
 	'V-37': { base: { vecteur: null }, sources: coquille() },
 	'V-38': { base: { etat: 'succes' }, sources: coquille() },
 	'V-39': { base: { etat: 'vide' }, sources: coquille() },

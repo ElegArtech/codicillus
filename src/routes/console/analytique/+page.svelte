@@ -50,12 +50,22 @@
 	}
 </script>
 
+<!--
+	NI RAIL, NI IDENTITÉ, NI VERSION : LA COQUILLE LES LIT AU CONTEXTE. `univers`
+	et `compte` ne servaient qu'à traverser la vue jusqu'à `CoquilleDeConsole`,
+	qui retombait sur `seeds/corpus.ts`. `domaines` reste : la santé
+	documentaire est rendue domaine par domaine.
+
+	LES TROIS MESURES QUE LE PRODUIT NE PORTE PAS NE SONT TOUJOURS PAS PASSÉES —
+	journal de recherche, demandes de révision, modifications par période. Leur
+	défaut est désormais VIDE, et les blocs qui en dérivent ne se rendent plus :
+	ils servaient les chiffres du jeu de démonstration, masqués par la feuille
+	mais bien présents dans le HTML servi.
+-->
 <Vue
 	vecteur={data.vecteur}
 	notes={data.notes}
-	univers={data.univers}
 	domaines={data.domaines}
-	compte={data.compte}
 	relations={data.relations}
 	mesures7j={data.mesures7j}
 	mesures7jPrec={data.mesures7jPrec}
