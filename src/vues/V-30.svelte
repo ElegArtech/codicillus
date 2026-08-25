@@ -26,7 +26,7 @@
 	 * banc (ARB-017) — focalise déjà `button.dlg__fermer`, premier focalisable.
 	 *
 	 * AUCUN CHIFFRE N'EST SAISI (P-02) : les compteurs de relations sont
-	 * calculés sur `RELATIONS` de `seeds/corpus.ts`.
+	 * calculés sur les relations servies.
 	 *
 	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011).
 	 *
@@ -41,22 +41,14 @@
 	import NavigationConsole from '$lib/console/NavigationConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { filDeConsole } from '$lib/console/sections';
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		RELATIONS,
-		RELATIONS_TECHNIQUES,
-		TYPES_RELATION,
-		UNIVERS,
-		type CleDeTypeDeRelation,
-		type Domaine,
-		type EtatDInstance,
-		type LibellesDeRelation,
-		type Note,
-		type Relation,
-		type Univers,
-		type UtilisateurCourant
+	import type {
+		CleDeTypeDeRelation,
+		Domaine,
+		LibellesDeRelation,
+		Note,
+		Relation,
+		Univers,
+		UtilisateurCourant
 	} from '../../seeds/corpus';
 	import { vocabulaireRendu } from '$lib/vocabulaire';
 	import type { RefusDeSaisie, SaisieDeTypeDeRelation } from '$lib/console/structure';
@@ -74,23 +66,21 @@
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-30')`. */
 		notes: readonly Note[];
-		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
-		univers?: readonly Univers[];
-		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
-		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
-		instance?: EtatDInstance;
-		/** Le catalogue des types de relation. Absente, la constante du jeu. */
-		typesRelation?: Record<CleDeTypeDeRelation, LibellesDeRelation>;
+		/** Les univers déclarés, servis par la route. Vide : aucun périmètre. */
+		univers: readonly Univers[];
+		/** Les domaines déclarés, servis par la route. Vide : aucun domaine. */
+		domaines: readonly Domaine[];
+		/** L'utilisateur courant, servi par la route. */
+		compte: UtilisateurCourant;
+		/** Le catalogue des types de relation, servi par la route. */
+		typesRelation: Record<CleDeTypeDeRelation, LibellesDeRelation>;
 		/**
-		 * Les types qui portent une dépendance technique — `types_de_relation.technique`.
-		 * Absente, la constante du jeu de semence s'applique.
+		 * Les types qui portent une dépendance technique — `types_de_relation.technique`,
+		 * servis par la route.
 		 */
-		relationsTechniques?: readonly CleDeTypeDeRelation[];
-		/** Les relations déclarées, dont se compte l'usage. Absente, la constante du jeu. */
-		relations?: readonly Relation[];
+		relationsTechniques: readonly CleDeTypeDeRelation[];
+		/** Les relations déclarées, dont se compte l'usage. Servies par la route. */
+		relations: readonly Relation[];
 		/**
 		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE.
 		 *
@@ -124,14 +114,13 @@
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		typesRelation = TYPES_RELATION,
-		relationsTechniques = RELATIONS_TECHNIQUES,
+		univers,
+		domaines,
+		compte,
+		typesRelation,
+		relationsTechniques,
 		onSupprimer,
-		relations = RELATIONS,
+		relations,
 		onCreer,
 		onEnregistrer,
 		refus = null
@@ -164,41 +153,27 @@
 	}
 
 	/**
-	 * LE TYPE `remplace` EST UN AJOUT DU GEL, ET IL EST DÉCLARÉ COMME TEL
-	 * (`V-30:2895`) : « un type inutilisé, pour que le cas de suppression
-	 * simple existe ». Aucune relation ne le porte, et c'est précisément ce
-	 * qu'il sert à montrer. Le déduire du corpus est impossible — les six types
-	 * de `TYPES_RELATION` sont tous employés.
-	 */
-	const TYPE_INUTILISE: TypeDeRelationRendu = {
-		cle: 'remplace',
-		direct: 'remplace',
-		inverse: 'est remplacé par',
-		usage: 'Entre un objet retiré du service et celui qui reprend sa fonction.',
-		technique: false
-	};
-
-	/**
-	 * La liste — plus le type inutilisé, MAIS SEULEMENT SUR LE JEU DE SEMENCE.
+	 * LA LISTE : LE CATALOGUE SERVI, ET RIEN QUE LUI.
 	 *
-	 * `TYPE_INUTILISE` est un littéral de démonstration : il donne à la planche
-	 * son état « type inutilisé », et aucune table ne le porte. Servi à côté des
-	 * types réels d'une instance, c'est une ligne que l'administrateur voit et
-	 * qui ne correspond à rien — la valeur illustrative que `P-02` proscrit.
-	 * La condition est une comparaison d'identité avec le défaut : la maquette
-	 * garde exactement ce qu'elle montrait, et la base ne montre qu'elle-même.
-	 * Même geste, même motif, que `TELEPHONIE` de `V-28`.
+	 * Un type `remplace` y était ajouté — un littéral du gel, recopié pour que
+	 * la planche montre un « type inutilisé », et qu'aucune table ne porte. Il
+	 * n'était retenu que par une COMPARAISON D'IDENTITÉ,
+	 * `typesRelation === TYPES_RELATION` : la propriété était facultative, et
+	 * une route qui l'oubliait servait donc, à côté des types réels de
+	 * l'instance, une ligne qui ne correspondait à rien — la valeur illustrative
+	 * que `P-02` proscrit. La propriété est désormais REQUISE, la sentinelle n'a
+	 * plus d'objet, et elle part avec le littéral qu'elle gardait. Même geste,
+	 * même motif, que « Téléphonie » de `V-28`.
 	 */
-	const types: readonly TypeDeRelationRendu[] = $derived([
-		...(Object.keys(typesRelation) as readonly CleDeTypeDeRelation[]).map((cle) => ({
+	const types: readonly TypeDeRelationRendu[] = $derived(
+		(Object.keys(typesRelation) as readonly CleDeTypeDeRelation[]).map((cle) => ({
 			cle,
 			direct: typesRelation[cle].sortant,
 			inverse: typesRelation[cle].entrant,
 			usage: USAGES[cle] ?? '',
 			technique: relationsTechniques.includes(cle)
-		})),
-		...(typesRelation === TYPES_RELATION ? [TYPE_INUTILISE] : [])
-	]);
+		}))
+	);
 
 	/** Les relations déclarées qui portent ce type — calculé, jamais écrit. */
 	function usage(cle: string): number {
@@ -281,14 +256,16 @@
 	 */
 	const panneauOuvert = $derived(ouverture !== null || form !== 'ferme');
 
-	/** Le type édité par la position « Édition · héberge » (`V-30:3234`). */
+	/* LE TYPE ÉDITÉ EST LE PREMIER DU CATALOGUE SERVI. La position se nomme
+	   « Édition · héberge » (`V-30:3234`), premier type du jeu : le désigner par
+	   son rang dit la même chose sans écrire un type de démonstration. */
 	const edite = $derived(
 		ouverture === 'creation'
 			? null
 			: ouverture === 'edition'
 				? (types.find((t) => t.cle === cible) ?? null)
 				: form === 'edition'
-					? (types.find((t) => t.cle === 'heberge') ?? null)
+					? (types[0] ?? null)
 					: null
 	);
 	const relationsEditees = $derived(edite ? usage(edite.cle) : 0);
@@ -433,6 +410,15 @@
 	}
 </script>
 
+<!--
+	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI.
+	La vue passait `instance.version` — le `1.0.0` d'`INSTANCE` du jeu de
+	démonstration, servi comme un fait sur le pied du rail d'une instance
+	réelle. Aucune route ne passe de version : `Coquille` lit celle du paquet
+	sur le contexte que le gabarit racine pose, et la propriété n'est plus
+	qu'un état vide explicite — hors gabarit racine, le pied ne nomme rien
+	plutôt que de nommer un numéro de démonstration.
+-->
 <Coquille
 	forme="abregee"
 	role="admin"
@@ -450,7 +436,7 @@
 		role: compte.role,
 		domaine: compte.domaine
 	}}
-	version={instance.version}
+	version=""
 >
 	{#snippet avantContenu()}
 		<NavigationConsole courante="relations" />

@@ -40,8 +40,12 @@ import {
 	DETAIL_DOMAINES,
 	DOMAINES,
 	MODULES,
+	MOI,
+	RELATIONS,
+	RELATIONS_TECHNIQUES,
 	TEMPLATES,
 	TYPES_FICHE,
+	TYPES_NOTE,
 	TYPES_RELATION,
 	UNIVERS,
 	type Compte,
@@ -49,7 +53,6 @@ import {
 	type Domaine,
 	type EtatDInstance,
 	type Note,
-	type Relation,
 	type Univers,
 	type UtilisateurCourant
 } from '../../seeds/corpus';
@@ -156,24 +159,83 @@ function occurrences(rendu: string, texte: string): number {
 	return rendu.split(texte).length - 1;
 }
 
-/* ══════════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   LES SIX REGISTRES DE CONSOLE — CE QUI EST SERVI EST TOUT CE QUI EST RENDU
+
+   LE CONTRAT A CHANGÉ, ET CES CONTRÔLES DISENT LE NOUVEAU. Les propriétés de
+   données de V-27 à V-32 étaient FACULTATIVES, et leur défaut était la
+   constante du jeu de démonstration : une route qui en oubliait une servait le
+   jeu, sur l'écran d'administration d'une instance réelle, SANS QUE RIEN NE
+   PROTESTE — aucun compilateur ne le voyait, aucun contrôle ne le voyait.
+
+   Elles sont désormais REQUISES, et c'est `svelte-check` qui tient la porte :
+   la route qui en oublierait une NE COMPILE PLUS. Ce que ces contrôles mesurent
+   est l'autre moitié, celle qu'aucun type ne peut dire — SERVIS VIDES, les six
+   écrans ne montrent RIEN du corpus de démonstration.
+
+   `coquilleDuJeu()` NE S'APPLIQUE PLUS À CES SIX VUES, et pour la même raison :
+   elles passaient `instance.version` au pied du rail, le `1.0.0` d'`INSTANCE`.
+   La version vient du contexte de coquille, que le gabarit racine pose depuis
+   `package.json` ; hors gabarit, le pied ne nomme plus rien.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * LE COMPTE D'UNE INSTANCE NEUVE — personne du jeu de démonstration.
+ *
+ * L'ASSERTION EST NÉCESSAIRE, ET ELLE DIT QUELQUE CHOSE. `UtilisateurCourant`
+ * du jeu déclare `nom: NomDAuteur` et `domaine: NomDeDomaine`, deux UNIONS DE
+ * LITTÉRAUX : les trois auteurs et les quatre domaines de la démonstration.
+ * Aucune instance réelle ne les respecte — les routes servent le compte connecté
+ * —, et un compte neuf ne peut donc pas s'écrire sans sortir de ces unions.
+ */
+const COMPTE_NEUF = {
+	prenom: 'Ada',
+	nom: 'Ada Vasseur',
+	initiales: 'AV',
+	domaine: '',
+	role: 'Administrateur'
+} as unknown as UtilisateurCourant;
+
+/** Ce que les six routes servent toutes — le socle désormais REQUIS. */
+const SOCLE = { univers: UNIVERS, domaines: DOMAINES, compte: MOI };
+/** Le même socle sur une instance neuve : rien n'a encore été créé. */
+const SOCLE_NEUF = { univers: [], domaines: [], compte: COMPTE_NEUF, notes: [] };
+
+/** L'avatar de la barre nomme le compte SERVI, jamais celui du jeu. */
+function compteRendu(rendu: string, nom: string): void {
+	expect(rendu).toContain(`${nom} — menu utilisateur`);
+}
+
+/** Aucun de ces textes ne survit à un registre servi vide. */
+function aucun(rendu: string, textes: readonly string[]): void {
+	for (const t of textes) expect(rendu).not.toContain(t);
+}
 
 describe('V-27 — Univers', () => {
-	test('absente, le défaut du jeu de semence s’applique', async () => {
-		const rendu = await rendre('V-27');
-		coquilleDuJeu(rendu);
+	test('les univers servis sont les seuls rendus', async () => {
+		const rendu = await rendre('V-27', SOCLE);
+		compteRendu(rendu, MOI.nom);
 		// `univers` : la description de « Production », que seule cette table porte.
 		expect(rendu).toContain("Ce qui tourne aujourd'hui");
 		// `domaines` : le rail de la forme complète les nomme.
 		expect(rendu).toContain('Poste de travail');
+
+		const autre = await rendre('V-27', {
+			...SOCLE,
+			univers: AUTRES_UNIVERS,
+			domaines: AUTRES_DOMAINES,
+			compte: AUTRE_COMPTE
+		});
+		compteRendu(autre, AUTRE_COMPTE.nom);
+		expect(autre).not.toContain("Ce qui tourne aujourd'hui");
+		expect(autre).not.toContain('Poste de travail');
+		expect(autre).toContain('Migration 2026');
 	});
 
-	test('fournie, la propriété l’emporte', async () => {
-		const rendu = await rendre('V-27', LES_QUATRE);
-		coquilleFournie(rendu);
-		expect(rendu).not.toContain("Ce qui tourne aujourd'hui");
-		expect(rendu).not.toContain('Poste de travail');
-		expect(rendu).toContain('Migration 2026');
+	test('sur une instance neuve, aucun univers du jeu n’est rendu', async () => {
+		const neuve = await rendre('V-27', SOCLE_NEUF);
+		compteRendu(neuve, COMPTE_NEUF.nom);
+		aucun(neuve, [...UNIVERS.map((u) => u.description), ...DOMAINES.map((d) => d.nom)]);
 	});
 });
 
@@ -186,34 +248,75 @@ describe('V-28 — Domaines', () => {
 			description: 'Description dépose par l’épreuve T-044.'
 		}
 	};
+	/** Ce que `/console/domaines` sert : les quatre sources, plus le catalogue. */
+	const SERVI = { ...SOCLE, detailDomaines: DETAIL_DOMAINES, modules: MODULES };
 
-	test('absente, le défaut du jeu de semence s’applique', async () => {
-		const rendu = await rendre('V-28');
-		coquilleDuJeu(rendu);
+	test('les domaines servis sont les seuls rendus', async () => {
+		const rendu = await rendre('V-28', SERVI);
+		compteRendu(rendu, MOI.nom);
 		expect(rendu).toContain(DETAIL_DOMAINES.Applications?.description ?? '');
 		expect(rendu).toContain(MODULES.notes.nom);
 		expect(rendu).not.toContain('Carnets');
-	});
 
-	test('fournie, la propriété l’emporte', async () => {
-		const rendu = await rendre('V-28', {
-			...LES_QUATRE,
+		const autre = await rendre('V-28', {
+			...SERVI,
+			univers: AUTRES_UNIVERS,
+			domaines: AUTRES_DOMAINES,
+			compte: AUTRE_COMPTE,
 			modules: AUTRES_MODULES,
 			detailDomaines: AUTRES_DETAILS
 		});
-		coquilleFournie(rendu);
-		// `domaines` : le tableau ne porte plus que « Migration 2026 » et le
-		// domaine littéral du gel ; la description d'« Applications » a disparu.
-		expect(rendu).not.toContain(DETAIL_DOMAINES.Applications?.description ?? '');
-		expect(rendu).toContain(DETAIL_DOMAINES['Migration 2026']?.description ?? '');
-		// `modules` : le nom du module vient de la table fournie.
-		expect(rendu).toContain('Carnets');
+		compteRendu(autre, AUTRE_COMPTE.nom);
+		// `domaines` : le tableau ne porte plus que « Migration 2026 ».
+		expect(autre).not.toContain(DETAIL_DOMAINES.Applications?.description ?? '');
+		expect(autre).toContain(DETAIL_DOMAINES['Migration 2026']?.description ?? '');
+		// `modules` : le nom du module vient du catalogue fourni.
+		expect(autre).toContain('Carnets');
+	});
+
+	/**
+	 * LE DOMAINE « TÉLÉPHONIE » N'EXISTE PLUS, MÊME SUR LE REGISTRE DU JEU.
+	 *
+	 * Il était injecté par une comparaison d'identité — `domaines === DOMAINES` —,
+	 * c'est-à-dire précisément quand la route avait oublié de passer les domaines.
+	 * Aucune table ne le porte : servi à côté des domaines réels, c'était une
+	 * ligne que l'administrateur voyait et qui ne correspondait à rien.
+	 */
+	test('aucun domaine littéral ne s’ajoute au registre servi', async () => {
+		const rendu = await rendre('V-28', SERVI);
+		expect(rendu).not.toContain('Téléphonie');
+	});
+
+	/**
+	 * SUR UNE INSTANCE NEUVE, LE REGISTRE EST VIDE — ET LE DÉCOMPTE LE DIT.
+	 *
+	 * Les noms de domaine se mesurent par OCCURRENCES : le gel écrit
+	 * `placeholder="Infrastructure"` sur le champ du panneau, un exemple de
+	 * saisie qui porte le nom d'un domaine du jeu. Ce qui doit tomber à zéro,
+	 * c'est la LIGNE du domaine et sa description.
+	 */
+	test('sur une instance neuve, aucun domaine du jeu n’est rendu', async () => {
+		const servi = await rendre('V-28', SERVI);
+		const neuve = await rendre('V-28', {
+			...SOCLE_NEUF,
+			detailDomaines: {},
+			modules: MODULES
+		});
+		compteRendu(neuve, COMPTE_NEUF.nom);
+		expect(neuve).not.toContain('Téléphonie');
+		aucun(
+			neuve,
+			Object.values(DETAIL_DOMAINES).map((d) => d.description)
+		);
+		for (const d of DOMAINES) {
+			expect(occurrences(neuve, d.nom)).toBeLessThan(occurrences(servi, d.nom));
+		}
 	});
 
 	test('`univers` fournie, la couleur de l’univers suit', async () => {
-		const duJeu = await rendre('V-28');
-		const sansUnivers = await rendre('V-28', { univers: [] });
-		expect(sansUnivers).not.toBe(duJeu);
+		const servi = await rendre('V-28', SERVI);
+		const sansUnivers = await rendre('V-28', { ...SERVI, univers: [] });
+		expect(sansUnivers).not.toBe(servi);
 	});
 });
 
@@ -226,35 +329,74 @@ describe('V-29 — Types de fiche', () => {
 		...TYPES_FICHE,
 		Serveur: [{ cle: 'epreuve', nom: 'Champ de l’épreuve T-044', type: 'texte' as const }]
 	};
+	/** Les descriptions et glyphes que la console a écrits, tels que la route les sert. */
+	const PRESENTATIONS = {
+		Serveur: {
+			description:
+				"Machine physique ou virtuelle exploitée par l'équipe. Devient un nœud de la cartographie.",
+			glyphe: 'serveur'
+		}
+	};
+	const SERVI = { ...SOCLE, typesFiche: TYPES_FICHE, presentations: PRESENTATIONS };
 
-	test('absente, le défaut du jeu de semence s’applique', async () => {
-		const rendu = await rendre('V-29', {}, EDITION);
-		coquilleDuJeu(rendu);
+	test('les types servis sont les seuls rendus', async () => {
+		const rendu = await rendre('V-29', SERVI, EDITION);
+		compteRendu(rendu, MOI.nom);
 		expect(rendu).toContain(TYPES_FICHE.Serveur[0]!.nom);
 		expect(rendu).not.toContain('Champ de l’épreuve T-044');
-	});
 
-	test('fournie, la propriété l’emporte', async () => {
-		const rendu = await rendre('V-29', { ...LES_QUATRE, typesFiche: AUTRES_TYPES }, EDITION);
-		coquilleFournie(rendu);
-		expect(rendu).toContain('Champ de l’épreuve T-044');
-		expect(rendu).not.toContain(TYPES_FICHE.Serveur[0]!.nom);
+		const autre = await rendre(
+			'V-29',
+			{
+				...SERVI,
+				univers: AUTRES_UNIVERS,
+				domaines: AUTRES_DOMAINES,
+				compte: AUTRE_COMPTE,
+				typesFiche: AUTRES_TYPES
+			},
+			EDITION
+		);
+		compteRendu(autre, AUTRE_COMPTE.nom);
+		expect(autre).toContain('Champ de l’épreuve T-044');
+		expect(autre).not.toContain(TYPES_FICHE.Serveur[0]!.nom);
 	});
 
 	/* LA DESCRIPTION ET L'ICÔNE VIENNENT DE LA BASE DEPUIS `008_saisies_de_console`.
 	   La console les demandait déjà et les jetait ; sans cette source, l'écran ne
 	   pouvait montrer que les trois descriptions écrites à la main pour le jeu. */
-	test('`presentations` fournie, la description saisie l’emporte', async () => {
-		const duJeu = await rendre('V-29', {}, EDITION);
-		expect(duJeu).toContain('Machine physique ou virtuelle');
+	test('la description servie est la seule rendue', async () => {
+		const servi = await rendre('V-29', SERVI, EDITION);
+		expect(servi).toContain('Machine physique ou virtuelle');
 
 		const rendu = await rendre(
 			'V-29',
-			{ presentations: { Serveur: { description: 'Décrit par la console.', glyphe: 'contrat' } } },
+			{
+				...SERVI,
+				presentations: { Serveur: { description: 'Décrit par la console.', glyphe: 'contrat' } }
+			},
 			EDITION
 		);
 		expect(rendu).toContain('Décrit par la console.');
 		expect(rendu).not.toContain('Machine physique ou virtuelle');
+	});
+
+	/**
+	 * SUR UNE INSTANCE NEUVE, LES TROIS TYPES DU JEU N'EXISTENT PAS.
+	 *
+	 * Ils étaient la valeur par défaut de `typesFiche`, et leurs descriptions
+	 * celle de `presentations` — deux constantes de module dérivées du jeu, qui
+	 * s'affichaient dès qu'une route les oubliait, avec deux clés marquées
+	 * obligatoires que la base n'avait jamais dites telles.
+	 */
+	test('sur une instance neuve, aucun type du jeu n’est rendu', async () => {
+		const neuve = await rendre('V-29', { ...SOCLE_NEUF, typesFiche: {}, presentations: {} });
+		compteRendu(neuve, COMPTE_NEUF.nom);
+		aucun(neuve, [
+			'Machine physique ou virtuelle',
+			'Logiciel en service pour le métier',
+			'prestataire, éditeur, opérateur',
+			...TYPES_FICHE.Serveur.map((c) => c.nom)
+		]);
 	});
 });
 
@@ -263,67 +405,176 @@ describe('V-30 — Types de relation', () => {
 		...TYPES_RELATION,
 		heberge: { sortant: 'porte l’épreuve', entrant: 'est porté par l’épreuve' }
 	};
-	const AUCUNE_RELATION: readonly Relation[] = [];
+	const SERVI = {
+		...SOCLE,
+		typesRelation: TYPES_RELATION,
+		relationsTechniques: RELATIONS_TECHNIQUES,
+		relations: RELATIONS
+	};
 
-	test('absente, le défaut du jeu de semence s’applique', async () => {
-		const rendu = await rendre('V-30');
-		coquilleDuJeu(rendu);
+	test('les types servis sont les seuls rendus', async () => {
+		const rendu = await rendre('V-30', SERVI);
+		compteRendu(rendu, MOI.nom);
 		expect(rendu).toContain(TYPES_RELATION.heberge.sortant);
 		expect(rendu).not.toContain('porte l’épreuve');
+
+		const autre = await rendre('V-30', {
+			...SERVI,
+			univers: AUTRES_UNIVERS,
+			domaines: AUTRES_DOMAINES,
+			compte: AUTRE_COMPTE,
+			typesRelation: AUTRES_TYPES,
+			relations: []
+		});
+		compteRendu(autre, AUTRE_COMPTE.nom);
+		expect(autre).toContain('porte l’épreuve');
+		// `relations` : l'usage est compté, jamais écrit — sans relation, il tombe.
+		expect(autre).not.toBe(rendu);
 	});
 
-	test('fournie, la propriété l’emporte', async () => {
-		const rendu = await rendre('V-30', {
-			...LES_QUATRE,
-			typesRelation: AUTRES_TYPES,
-			relations: AUCUNE_RELATION
+	/**
+	 * LE TYPE « remplace » N'EXISTE PLUS, MÊME SUR LE CATALOGUE DU JEU.
+	 *
+	 * Il était injecté par une comparaison d'identité — `typesRelation ===
+	 * TYPES_RELATION` —, c'est-à-dire quand la route avait oublié de passer le
+	 * catalogue. Aucune table ne le porte.
+	 */
+	test('aucun type littéral ne s’ajoute au catalogue servi', async () => {
+		const rendu = await rendre('V-30', SERVI);
+		expect(rendu).not.toContain('est remplacé par');
+	});
+
+	/**
+	 * SUR UNE INSTANCE NEUVE, LE CATALOGUE EST VIDE — ET LE DÉCOMPTE LE DIT.
+	 *
+	 * Les libellés se mesurent par OCCURRENCES et non par absence, parce que le
+	 * gel en écrit deux au balisage : `placeholder="héberge"` sur le champ du
+	 * panneau, et la phrase de tête qui illustre la lecture dans les deux sens.
+	 * Ce sont des exemples de formulaire, pas des types servis comme des faits ;
+	 * ce qui doit tomber à zéro, c'est la LIGNE de chaque type.
+	 */
+	test('sur une instance neuve, aucun type du jeu n’est rendu', async () => {
+		const servi = await rendre('V-30', SERVI);
+		const neuve = await rendre('V-30', {
+			...SOCLE_NEUF,
+			typesRelation: {},
+			relationsTechniques: [],
+			relations: []
 		});
-		coquilleFournie(rendu);
-		expect(rendu).toContain('porte l’épreuve');
-		// `relations` : l'usage est compté, jamais écrit — sans relation, il tombe.
-		const duJeu = await rendre('V-30');
-		expect(rendu).not.toBe(duJeu);
+		compteRendu(neuve, COMPTE_NEUF.nom);
+		expect(neuve).not.toContain('est remplacé par');
+		for (const t of Object.values(TYPES_RELATION)) {
+			expect(occurrences(neuve, t.sortant)).toBeLessThan(occurrences(servi, t.sortant));
+		}
 	});
 });
 
 describe('V-31 — Squelettes', () => {
-	test('absente, le défaut du jeu de semence s’applique', async () => {
-		const rendu = await rendre('V-31');
-		coquilleDuJeu(rendu);
+	const SERVI = { ...SOCLE, templates: TEMPLATES, typesNote: TYPES_NOTE };
+
+	test('les squelettes servis sont les seuls rendus', async () => {
+		const rendu = await rendre('V-31', SERVI);
+		compteRendu(rendu, MOI.nom);
 		for (const t of TEMPLATES) expect(rendu).toContain(t.nom);
+
+		const autre = await rendre('V-31', {
+			...SERVI,
+			univers: AUTRES_UNIVERS,
+			domaines: AUTRES_DOMAINES,
+			compte: AUTRE_COMPTE,
+			templates: [TEMPLATES[0]!]
+		});
+		compteRendu(autre, AUTRE_COMPTE.nom);
+		expect(autre).toContain(TEMPLATES[0]!.nom);
+		expect(autre).not.toContain(TEMPLATES[1]!.nom);
 	});
 
-	test('fournie, la propriété l’emporte', async () => {
-		const rendu = await rendre('V-31', { ...LES_QUATRE, templates: [TEMPLATES[0]!] });
-		coquilleFournie(rendu);
-		expect(rendu).toContain(TEMPLATES[0]!.nom);
-		expect(rendu).not.toContain(TEMPLATES[1]!.nom);
+	/**
+	 * SUR UNE INSTANCE NEUVE, LA LISTE EST VIDE — ET LE DÉCOMPTE LE DIT.
+	 *
+	 * Par occurrences, pour la même raison qu'en `V-30` : le gel écrit
+	 * `placeholder="Procédure d'intervention"` sur le champ du panneau, un
+	 * exemple de saisie qui porte le nom d'un squelette du jeu.
+	 */
+	test('sur une instance neuve, aucun squelette du jeu n’est rendu', async () => {
+		const servi = await rendre('V-31', SERVI);
+		const neuve = await rendre('V-31', { ...SOCLE_NEUF, templates: [], typesNote: TYPES_NOTE });
+		compteRendu(neuve, COMPTE_NEUF.nom);
+		for (const t of TEMPLATES) {
+			expect(occurrences(neuve, t.nom)).toBeLessThan(occurrences(servi, t.nom));
+		}
 	});
 });
 
 describe('V-32 — Comptes', () => {
-	test('absente, le défaut du jeu de semence s’applique', async () => {
-		const rendu = await rendre('V-32');
-		coquilleDuJeu(rendu);
+	const SERVI = { ...SOCLE, comptes: COMPTES, verrous: { 'lea.marchand': true } };
+
+	test('les comptes servis sont les seuls rendus', async () => {
+		const rendu = await rendre('V-32', SERVI);
+		compteRendu(rendu, MOI.nom);
 		for (const c of COMPTES) expect(rendu).toContain(c.identifiant);
+
+		const autre = await rendre('V-32', {
+			...SERVI,
+			univers: AUTRES_UNIVERS,
+			domaines: AUTRES_DOMAINES,
+			compte: AUTRE_COMPTE,
+			comptes: [COMPTES[0] as Compte]
+		});
+		compteRendu(autre, AUTRE_COMPTE.nom);
+		expect(autre).toContain(COMPTES[0]!.identifiant);
+		expect(autre).not.toContain(COMPTES[1]!.identifiant);
 	});
 
-	test('fournie, la propriété l’emporte', async () => {
-		const rendu = await rendre('V-32', { ...LES_QUATRE, comptes: [COMPTES[0] as Compte] });
-		coquilleFournie(rendu);
-		expect(rendu).toContain(COMPTES[0]!.identifiant);
-		expect(rendu).not.toContain(COMPTES[1]!.identifiant);
+	test('sur une instance neuve, aucun compte du jeu n’est rendu', async () => {
+		const neuve = await rendre('V-32', { ...SOCLE_NEUF, comptes: [], verrous: {} });
+		compteRendu(neuve, COMPTE_NEUF.nom);
+		aucun(
+			neuve,
+			COMPTES.map((c) => c.identifiant)
+		);
 	});
 
 	test('`domaines` fournie, le sélecteur du panneau la suit', async () => {
 		const ouvert = { form: 'creation', 'c-mdp': false, 'c-des': false };
-		const duJeu = await rendre('V-32', {}, ouvert);
-		const fourni = await rendre('V-32', { domaines: AUTRES_DOMAINES }, ouvert);
-		const sansDomaine = await rendre('V-32', { domaines: [] }, ouvert);
+		const servi = await rendre('V-32', SERVI, ouvert);
+		const fourni = await rendre('V-32', { ...SERVI, domaines: AUTRES_DOMAINES }, ouvert);
+		const sansDomaine = await rendre('V-32', { ...SERVI, domaines: [] }, ouvert);
 		const plancher = occurrences(sansDomaine, 'Poste de travail');
-		expect(occurrences(duJeu, 'Poste de travail')).toBeGreaterThan(plancher);
+		expect(occurrences(servi, 'Poste de travail')).toBeGreaterThan(plancher);
 		expect(occurrences(fourni, 'Poste de travail')).toBe(plancher);
 	});
+});
+
+/**
+ * L'INERTIE D'`univers` SUR LES QUATRE REGISTRES DE FORME ABRÉGÉE.
+ *
+ * Même énoncé que celui de la fin du fichier, mais les quatre vues qui le
+ * portaient exigent désormais leurs sources : elles ne peuvent plus être
+ * rendues sans rien. Le constat, lui, est le même — le rail abrégé ne se dérive
+ * pas du corpus, et fournir d'autres univers ne change pas un octet du rendu.
+ */
+describe('l’inertie constatée de « univers » sur les quatre registres', () => {
+	const REGISTRES: readonly (readonly [string, object])[] = [
+		['V-29', { typesFiche: TYPES_FICHE, presentations: {} }],
+		[
+			'V-30',
+			{
+				typesRelation: TYPES_RELATION,
+				relationsTechniques: RELATIONS_TECHNIQUES,
+				relations: RELATIONS
+			}
+		],
+		['V-31', { templates: TEMPLATES, typesNote: TYPES_NOTE }],
+		['V-32', { comptes: COMPTES, verrous: {} }]
+	];
+	for (const [vue, propres] of REGISTRES) {
+		test(`${vue} — fournir d’autres univers ne change pas le rendu`, async () => {
+			const servi = await rendre(vue, { ...SOCLE, ...propres });
+			const fourni = await rendre(vue, { ...SOCLE, ...propres, univers: AUTRES_UNIVERS });
+			expect(fourni).toBe(servi);
+		});
+	}
 });
 
 describe('V-33 — Configuration', () => {
@@ -440,7 +691,7 @@ describe('V-36 — Exports', () => {
    contrôle rougira, et ce sera la bonne nouvelle.
    ══════════════════════════════════════════════════════════════════════════ */
 describe('l’inertie constatée de `univers` en forme abrégée', () => {
-	for (const vue of ['V-29', 'V-30', 'V-31', 'V-32', 'V-33', 'V-34']) {
+	for (const vue of ['V-33', 'V-34']) {
 		test(`${vue} — fournir « univers » ne change pas le rendu`, async () => {
 			const duJeu = await rendre(vue);
 			const fourni = await rendre(vue, { univers: AUTRES_UNIVERS });
