@@ -409,3 +409,51 @@ describe('la désynchronisation de l’Opérationnel — RG-M06-08', () => {
 		).toBe(false);
 	});
 });
+
+/* ═══════════════════════════════════ Le type de fiche ═══════════════════ */
+
+/**
+ * LE TROISIÈME ÉTAT — absent, posé, RETIRÉ.
+ *
+ * L'éditeur ne pouvait ni poser ni retirer un type de fiche : `soumettre()` ne
+ * transmettait pas `#m-fiche`, et `lireLaModification()` ne lisait aucun champ
+ * de fiche. Une note ouverte en modification affichait « Aucun — note simple »
+ * alors qu'elle portait « Serveur » et cinq propriétés.
+ *
+ * LE VIDE EST UN CHOIX ICI, contrairement à `visibilite` et `statut` : la
+ * première option du sélecteur gelé est « Aucun — note simple », de valeur
+ * vide, et c'est le seul moyen de faire redevenir une fiche une note simple.
+ */
+describe('le type de fiche — absent, posé, retiré', () => {
+	it('sans le champ, la note garde ce qu’elle porte : la clé est ABSENTE', () => {
+		expect('fiche' in modificationDe({ titre: 'Astreinte' })).toBe(false);
+	});
+
+	it('un champ VIDE est un RETRAIT, et il emporte les propriétés', () => {
+		expect(modificationDe({ fiche: '' }).fiche).toEqual({ type: null, proprietes: {} });
+	});
+
+	it('un type posé arrive avec ses propriétés', () => {
+		expect(modificationDe({ fiche: 'Serveur', proprietes: '{"hote":"pg-prod-01"}' }).fiche).toEqual(
+			{ type: 'Serveur', proprietes: { hote: 'pg-prod-01' } }
+		);
+	});
+
+	it('des propriétés sans type sont refusées — le CHECK est tenu avant la base', () => {
+		/* Les deux formes du même refus : le champ de type vide, et le champ de
+		   type absent. La seconde a un second motif — des clés filtrées sur un
+		   référentiel que l'appelant n'a pas consulté. */
+		expect(motifDuRefus({ fiche: '', proprietes: '{"hote":"x"}' })).toBe(
+			'propriétés sans type de fiche'
+		);
+		expect(motifDuRefus({ proprietes: '{"hote":"x"}' })).toBe('propriétés sans type de fiche');
+	});
+
+	it('des propriétés illisibles sont refusées, jamais rognées', () => {
+		expect(motifDuRefus({ fiche: 'Serveur', proprietes: '[1,2]' })).toBe('propriétés illisibles');
+	});
+
+	it('un champ de fiche non textuel est refusé comme les autres', () => {
+		expect(motifDuRefus({ fiche: 42 })).toBe('champ illisible : fiche');
+	});
+});

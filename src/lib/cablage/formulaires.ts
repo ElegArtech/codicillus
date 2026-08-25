@@ -244,6 +244,182 @@ function pastille(document: Document, nom: string): HTMLElement {
 	return span;
 }
 
+/* ═══════════════════════════════ Les propriétés d'une fiche ════════════ */
+
+/**
+ * LES DEUX VALEURS D'UN CHAMP « interrupteur », ET LEUR SOURCE EST UNE SPEC.
+ *
+ * `notes.proprietes_typees` est une table de chaînes — `lireLesProprietesDeFiche()`
+ * (`../donnees/lecture.ts`) rend le texte que la colonne porte, et rien d'autre :
+ * un champ booléen doit donc s'y écrire en toutes lettres, et les deux lettres
+ * ne se choisissent pas au jugé.
+ *
+ * ELLES VIENNENT DE LA CONSOLE, PAS DU JEU DE DÉMONSTRATION. Le type de champ
+ * s'appelle `booleen` au schéma (`002_socle.montee.sql`, l'énumération
+ * `type_de_champ`), et l'écran qui le fait choisir à l'administrateur le nomme
+ * « Oui ou non » — gel de V-29, catalogue des types de propriété, porté tel quel
+ * par le produit. Le mot que la console PROMET à celui qui définit le champ est
+ * donc celui que la note doit porter ; l'écrire autrement ferait mentir l'écran
+ * qui l'a fait choisir. La forme stockée est la forme machine, en minuscules,
+ * comme toutes les valeurs de cette colonne.
+ *
+ * Que le jeu de démonstration écrive déjà ces deux mots ne fonde rien — un jeu
+ * de démonstration n'est jamais la vérité du produit (`P-02`) : il concorde,
+ * c'est tout, et cette concordance est ce qui évite une reprise de données.
+ *
+ * Un troisième vocabulaire — `true`, `1`, ou la clé absente — ferait deux
+ * écritures pour un même fait, et le panneau de propriétés de V-20 rendrait
+ * l'une ou l'autre selon l'origine de la ligne.
+ */
+export const COCHE = 'oui';
+export const DECOCHE = 'non';
+
+/**
+ * LE SCHÉMA D'UN CHAMP DE FICHE, tel que le référentiel de l'instance le sert.
+ *
+ * La forme est celle de `ChampDeFiche` (`seeds/corpus.ts`), que
+ * `lireTypesDeFiche()` remplit depuis `champs_de_type_de_fiche`. Elle est
+ * redéclarée ICI en structure minimale plutôt qu'importée du jeu de semence :
+ * ce module ne connaît ni le corpus de démonstration, ni ses trois noms de type
+ * (`TypeDeFiche` est une union fermée qu'une instance réelle déborde).
+ */
+export interface ChampDeFicheAuFormulaire {
+	readonly cle: string;
+	readonly nom: string;
+	readonly type: string;
+	readonly exemple?: string | undefined;
+	readonly valeurs?: readonly string[] | undefined;
+}
+
+/** Le référentiel entier, indexé par le NOM du type de fiche. */
+export type ReferentielDeFiches = Readonly<Record<string, readonly ChampDeFicheAuFormulaire[]>>;
+
+/** L'état de fiche d'une note qu'on rouvre en modification. */
+export interface FicheDeDepart {
+	/** Le NOM du type de fiche que la note porte. */
+	readonly type: string;
+	/** Ce que CETTE note a mis dans les champs de ce type. */
+	readonly proprietes: Readonly<Record<string, string>>;
+}
+
+/**
+ * LE RENDU DES CHAMPS D'UN TYPE DE FICHE — le calque de `V-17:2878-2920`.
+ *
+ * Le gel construit un contrôle par champ, selon son type : un interrupteur, un
+ * sélecteur de valeurs, un nombre, ou du texte. Rien n'est ajouté ici, sauf
+ * `data-cle` : le gel n'a jamais eu à relire ce qu'il dessinait — il ne
+ * soumettait rien —, et la clé du champ doit voyager du référentiel jusqu'à la
+ * soumission sans qu'un second appariement par le NOM soit écrit. Deux champs
+ * peuvent porter le même nom d'affichage ; `champs_cle_par_type_unique` ne
+ * porte que sur la clé.
+ *
+ * Les valeurs REPRISES sont posées au moment du rendu : c'est le seul moment où
+ * le contrôle et sa valeur sont connus ensemble, et une seconde passe
+ * dupliquerait la connaissance du type de contrôle.
+ */
+export function rendreLesProprietesDeFiche(
+	zone: Element,
+	champs: readonly ChampDeFicheAuFormulaire[],
+	valeurs: Readonly<Record<string, string>>,
+	surSaisie: () => void
+): void {
+	const document = zone.ownerDocument;
+	zone.replaceChildren();
+	for (const champ of champs) {
+		const bloc = document.createElement('div');
+		bloc.className = 'champ';
+		const reprise = valeurs[champ.cle];
+		if (champ.type === 'interrupteur') {
+			const enveloppe = document.createElement('label');
+			enveloppe.className = 'interrupteur';
+			const case_ = document.createElement('input');
+			case_.type = 'checkbox';
+			case_.dataset['cle'] = champ.cle;
+			case_.dataset['genre'] = champ.type;
+			case_.checked = reprise === COCHE;
+			const piste = document.createElement('span');
+			piste.className = 'interrupteur__piste';
+			const intitule = document.createElement('span');
+			intitule.textContent = champ.nom;
+			enveloppe.append(case_, piste, intitule);
+			case_.addEventListener('change', surSaisie);
+			bloc.appendChild(enveloppe);
+			zone.appendChild(bloc);
+			continue;
+		}
+		const intitule = document.createElement('label');
+		intitule.className = 'champ__label';
+		intitule.textContent = champ.nom;
+		bloc.appendChild(intitule);
+		if (champ.type === 'liste') {
+			const selecteur = document.createElement('select');
+			selecteur.className = 'selecteur';
+			selecteur.dataset['cle'] = champ.cle;
+			selecteur.dataset['genre'] = champ.type;
+			const vide = document.createElement('option');
+			vide.value = '';
+			vide.textContent = '—';
+			selecteur.appendChild(vide);
+			for (const valeur of champ.valeurs ?? []) {
+				const option = document.createElement('option');
+				option.value = valeur;
+				option.textContent = valeur;
+				selecteur.appendChild(option);
+			}
+			if (reprise !== undefined) selecteur.value = reprise;
+			selecteur.addEventListener('change', surSaisie);
+			bloc.appendChild(selecteur);
+		} else {
+			const saisie = document.createElement('input');
+			saisie.className = 'saisie';
+			saisie.type = champ.type === 'nombre' ? 'number' : 'text';
+			saisie.placeholder = champ.exemple ?? '';
+			saisie.dataset['cle'] = champ.cle;
+			saisie.dataset['genre'] = champ.type;
+			if (reprise !== undefined) saisie.value = reprise;
+			saisie.addEventListener('input', surSaisie);
+			bloc.appendChild(saisie);
+		}
+		/* L'ÉTIQUETTE DÉSIGNE SON CONTRÔLE, ce que le gel ne fait pas : il rend
+		   un `label` sans `for`, ce qui laisse le contrôle sans nom accessible.
+		   L'identifiant est dérivé de la clé, unique par type (`ARB-062` §2.4
+		   pour la forme du préfixe, `champs_cle_par_type_unique` pour l'unicité). */
+		const controle = bloc.querySelector('select, input');
+		if (controle !== null) {
+			const id = 'fiche-' + champ.cle;
+			controle.id = id;
+			intitule.setAttribute('for', id);
+		}
+		zone.appendChild(bloc);
+	}
+}
+
+/**
+ * CE QUE LES CONTRÔLES DE `#proprietes` PORTENT — une table de chaînes.
+ *
+ * Une valeur VIDE n'est pas soumise : `lireLesProprietesDeFiche()` l'écarte
+ * déjà à la lecture, et l'écrire en base ferait porter à la note une propriété
+ * que personne n'a renseignée. Un interrupteur, lui, porte toujours l'un de ses
+ * deux mots — décoché n'est pas « non renseigné ».
+ */
+export function proprietesDeFicheSaisies(racine: ParentNode): Record<string, string> {
+	const rendu: Record<string, string> = {};
+	const controles = Array.from(
+		racine.querySelectorAll<HTMLInputElement | HTMLSelectElement>('#proprietes [data-cle]')
+	);
+	for (const controle of controles) {
+		const cle = controle.dataset['cle'];
+		if (cle === undefined || cle === '') continue;
+		if (controle.dataset['genre'] === 'interrupteur') {
+			rendu[cle] = (controle as HTMLInputElement).checked ? COCHE : DECOCHE;
+			continue;
+		}
+		const valeur = controle.value.trim();
+		if (valeur !== '') rendu[cle] = valeur;
+	}
+	return rendu;
+}
+
 /* ═══════════════════════════════════ L'éditeur — V-17 ═══════════════════ */
 
 export interface OptionsDeLEditeur {
@@ -272,7 +448,49 @@ export interface OptionsDeLEditeur {
 	 * le déplacement demande un droit sur les DEUX dossiers (`RG-M05-09`).
 	 */
 	rechargerSurDomaine?: (domaine: string) => string;
+	/**
+	 * LE RÉFÉRENTIEL DES TYPES DE FICHE, celui que la route a déjà lu en base
+	 * pour peupler le sélecteur `#m-fiche` — `data.typesFiche`, servi par
+	 * `lireTypesDeFiche()`.
+	 *
+	 * ABSENT, `#m-fiche` reste ce qu'il était : un sélecteur qui ne fait rien et
+	 * dont la valeur n'est PAS soumise. C'est ce qui garde inchangé tout
+	 * formulaire qui n'a pas de fiche à porter — et c'est aussi ce qui empêche
+	 * qu'une soumission dépourvue de référentiel se lise comme un RETRAIT de
+	 * type, la chaîne vide ayant ce sens en modification.
+	 */
+	typesFiche?: ReferentielDeFiches;
+	/**
+	 * L'ÉTAT DE FICHE DE LA NOTE ROUVERTE — le type qu'elle porte et ce qu'elle a
+	 * mis dans ses champs.
+	 *
+	 * Sans lui, l'éditeur ouvrait une fiche « Serveur » sur « Aucun — note
+	 * simple », panneau de propriétés vide : l'écran mentait sur l'état de la
+	 * note, et un enregistrement sans un geste sur ce champ l'aurait DÉPOUILLÉE
+	 * de son type. Absent — la création —, l'écran s'ouvre sur le sélecteur vide
+	 * que le gel presse (`V-17:3543-3544`).
+	 */
+	ficheDeDepart?: FicheDeDepart | null;
+	/**
+	 * `marquerModifie` du gel (`V-17:2872`, `:2894`, `:2911`, `:2917`) — ce qui
+	 * fait passer le témoin de la barre d'état à « Modifications non
+	 * enregistrées ». La route le relie à `signalerUneModification()` de
+	 * `cablerLesGestesDEdition`, seule définition de cet état.
+	 */
+	surSaisie?: () => void;
 }
+
+/**
+ * LE NOM DU TYPE DE NOTE D'UNE FICHE — `007_types_de_note.montee.sql:29`,
+ * `('fiche', 'Fiche', 3)`, et `TYPES_NOTE` (`seeds/corpus.ts`).
+ *
+ * Ce n'est PAS le mot renommable de `../vocabulaire.ts` : celui-là est ce que
+ * les écrans AFFICHENT (`M14.7`), celui-ci est la valeur d'une ligne de
+ * `types_de_note`, que la soumission transporte et que `resoudreLaCible()`
+ * compare à `types_de_note.nom`. Les confondre ferait dépendre l'écriture en
+ * base d'un réglage d'affichage.
+ */
+export const TYPE_DE_NOTE_FICHE = 'Fiche';
 
 /**
  * LE CÂBLAGE DE L'ÉDITEUR — V-17, en création comme en modification.
@@ -359,6 +577,56 @@ export function cablerLEditeur(
 		});
 	}
 
+	/* 6 bis. LE TYPE DE FICHE FAIT APPARAÎTRE SES CHAMPS — `V-17:2878-2925`.
+
+	   Le sélecteur était vivant et seul : ses options venaient de la base, et
+	   rien ne les écoutait. `#proprietes` restait vide à jamais, donc la note
+	   n'avait aucune propriété à soumettre — le trou était de deux étages.
+
+	   `#m-type` PASSE À « Fiche » quand un type est choisi, et c'est le gel qui
+	   l'écrit (`V-17:2921`) : `RG-NOT-01` — une note qui porte un type de fiche
+	   EST une fiche. Le geste est GARDÉ sur la présence de l'option : les types
+	   de note sont administrables (M14), et poser sur un `select` une valeur
+	   qu'aucune option ne porte ne lève pas — elle vide le sélecteur, et la note
+	   partirait sans type du tout. */
+	const selecteurDeFiche = noeud<HTMLSelectElement>(formulaire, '#m-fiche');
+	const zoneDesProprietes = noeud<HTMLElement>(formulaire, '#proprietes');
+	const referentiel = options.typesFiche;
+	const fichesCablees = selecteurDeFiche !== null && referentiel !== undefined;
+	if (fichesCablees && zoneDesProprietes !== null) {
+		const marquerModifie = options.surSaisie ?? ((): void => undefined);
+		const rendre = (type: string, valeurs: Readonly<Record<string, string>>): void => {
+			const champs = referentiel[type];
+			if (champs === undefined) {
+				zoneDesProprietes.replaceChildren();
+				return;
+			}
+			rendreLesProprietesDeFiche(zoneDesProprietes, champs, valeurs, marquerModifie);
+		};
+		ecouter(selecteurDeFiche, 'change', () => {
+			const choisi = selecteurDeFiche.value;
+			rendre(choisi, {});
+			marquerModifie();
+			if (referentiel[choisi] === undefined) return;
+			const selecteurDeType = noeud<HTMLSelectElement>(formulaire, '#m-type');
+			if (selecteurDeType === null) return;
+			/* Les options sont PARCOURUES, jamais interrogées par un sélecteur : un
+			   nom de type de note est une donnée d'instance, et l'échapper pour
+			   entrer dans un sélecteur serait une seconde grammaire à tenir. */
+			const porteLeType = Array.from(selecteurDeType.options).some(
+				(o) => o.value === TYPE_DE_NOTE_FICHE
+			);
+			if (porteLeType) selecteurDeType.value = TYPE_DE_NOTE_FICHE;
+		});
+		/* L'ÉTAT REPRIS — la modification. Le sélecteur est pressé sur le type que
+		   la note porte, et ses champs sont rendus avec les valeurs de la note. */
+		const depart = options.ficheDeDepart ?? null;
+		if (depart !== null && referentiel[depart.type] !== undefined) {
+			selecteurDeFiche.value = depart.type;
+			rendre(depart.type, depart.proprietes);
+		}
+	}
+
 	/* 7. LE SEUL GESTE QUI SOUMET. */
 	const soumettre = (): void => {
 		const titre = noeud<HTMLTextAreaElement>(formulaire, '#titre');
@@ -369,6 +637,18 @@ export function cablerLEditeur(
 		poserChamp(formulaire, 'visibilite', bascule(formulaire, 'm-visibilite', 'interne'));
 		poserChamp(formulaire, 'statut', bascule(formulaire, 'm-statut', 'publiee'));
 		poserChamp(formulaire, 'etiquettes', etiquettes(formulaire).join(','));
+		/* LE TYPE DE FICHE ET SES PROPRIÉTÉS — les deux champs que la soumission
+		   n'a jamais portés, et sans lesquels `notes.type_de_fiche_id` restait
+		   vide à jamais quel que fût le choix de l'utilisateur.
+
+		   RIEN N'EST POSÉ QUAND LE CÂBLAGE N'A PAS DE RÉFÉRENTIEL : en
+		   modification, un champ `fiche` vide vaut RETRAIT du type, et une
+		   soumission composée sans référentiel retirerait le type de toute note
+		   qu'elle enregistre. L'absence du champ, elle, ne modifie rien. */
+		if (fichesCablees && selecteurDeFiche !== null) {
+			poserChamp(formulaire, 'fiche', selecteurDeFiche.value);
+			poserChamp(formulaire, 'proprietes', JSON.stringify(proprietesDeFicheSaisies(formulaire)));
+		}
 		if (options.editeur === undefined) {
 			poserChamp(formulaire, 'corps-markdown', zone === null ? '' : texteDeLaZone(zone));
 		} else {
