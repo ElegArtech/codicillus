@@ -99,6 +99,7 @@
 	}
 
 	interface Reglages {
+		readonly scenario: string;
 		readonly domaine: string;
 		readonly simulation: boolean;
 	}
@@ -147,6 +148,12 @@
 	 * c'est le seul nom de ce câblage qu'aucune source ne fonde, et le chargeur
 	 * le déclare comme tel.
 	 *
+	 * `scenario` VOYAGE DÉSORMAIS, ET IL NE VOYAGEAIT PAS. L'étape 1 offrait
+	 * trois scénarios ; aucun n'était transmis, et l'action traitait les trois
+	 * comme celui qu'elle sait faire. Un lot choisi « domaine complet »
+	 * atterrissait donc dans le domaine proposé par défaut, sans que rien ne le
+	 * dise. Le champ est éprouvé par l'action avant la moindre écriture.
+	 *
 	 * LE CHEMIN DE CHAQUE FICHIER VOYAGE, pas seulement son nom. `File.name` perd
 	 * l'arborescence ; or c'est elle qui deviendra celle des dossiers, « à
 	 * l'identique » comme le scénario le promet. Le troisième argument de
@@ -158,6 +165,7 @@
 		reglages: Reglages
 	): Promise<Issue<Record<string, unknown>>> {
 		const corps = new FormData();
+		corps.append('scenario', reglages.scenario);
 		corps.append('domaine-cible', reglages.domaine);
 		if (reglages.simulation) corps.append('simulation', 'oui');
 		for (const f of fichiers) corps.append('fichiers', f, cheminDuFichier(f));
