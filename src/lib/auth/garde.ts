@@ -197,3 +197,40 @@ export function cibleApresConnexion(suite: string | null | undefined): string {
 
 /** Après déconnexion — RG-ACC-02, UC-M16-02 : l'espace public, jamais une erreur. */
 export const CIBLE_APRES_DECONNEXION = '/';
+
+/* ═══════════════ Le mot de passe posé par l'administration ══════════════ */
+
+/**
+ * OÙ L'ON EST RENVOYÉ TANT QUE LE MOT DE PASSE INITIAL N'A PAS ÉTÉ CHANGÉ.
+ *
+ * L'onglet est celui du formulaire de changement — `docs/routes.md:283` range
+ * `securite` parmi les quatre onglets de `/mon-profil`, et c'est le seul écran
+ * du produit où un compte change son propre mot de passe.
+ */
+export const CIBLE_DE_CHANGEMENT_DE_MOT_DE_PASSE = '/mon-profil?onglet=securite';
+
+/**
+ * FAUT-IL RENVOYER CETTE ADRESSE VERS LE CHANGEMENT DE MOT DE PASSE ?
+ *
+ * `/console/comptes` écrit sous le mot de passe engendré : « il devra être
+ * changé à la première connexion » (`V-32:913`). Rien ne le forçait — le compte
+ * gardait indéfiniment la valeur que l'administrateur lui avait transmise, par
+ * un canal que ni l'un ni l'autre ne maîtrise. C'est ici que la phrase devient
+ * vraie.
+ *
+ * DEUX FAMILLES SONT LAISSÉES PASSER, ET AUCUNE DE PLUS :
+ *
+ *   `/mon-profil` — la destination elle-même, ses actions comprises. La
+ *                   redirection bouclerait sans elle, et le geste exigé s'y
+ *                   accomplit.
+ *   `/deconnexion` — `RG-ACC-02` : l'espace public, jamais une page d'erreur.
+ *                   Un compte doit pouvoir partir sans avoir rien changé.
+ *
+ * LE RESTE EST RENVOYÉ, ESPACE PUBLIC COMPRIS : la règle porte sur le compte,
+ * pas sur la sensibilité de la page. Un compte qui garde un mot de passe posé
+ * par un tiers n'est pas moins exposé sur l'accueil qu'en console.
+ */
+export function versLeChangementDeMotDePasse(chemin: string): boolean {
+	if (chemin === '/mon-profil' || chemin.startsWith('/mon-profil/')) return false;
+	return regimeDe(chemin) !== 'deconnexion';
+}
