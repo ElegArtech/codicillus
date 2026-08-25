@@ -21,7 +21,8 @@
 	 *
 	 * CE QUI VARIE, ET RIEN D'AUTRE — les cinq propriétés ci-dessous. Elles sont
 	 * exactement les cinq leviers que la planche de V-14 actionne sur ce bloc
-	 * (`V-14:4076-4108`) ; V-15 n'en actionne aucun et prend donc les défauts.
+	 * (`V-14:4076-4108`) ; aucune des deux vues ne les actionne EN SERVICE, où
+	 * `affichee` les remplace tous par des faits de la note.
 	 *
 	 * LE TÉMOIN PASSE PAR LA FABRIQUE UNIQUE — `$lib/fraicheur.ts`, P-01 et
 	 * ADR-005. Le nombre de barres pleines et le libellé en clair en sortent ;
@@ -46,6 +47,7 @@
 	 * composant d'être unique. Les styles en ligne sont ceux du gel (P-6.4).
 	 */
 	import { BARRES_DE_JAUGE, temoinFraicheur, type NiveauFraicheur } from '$lib/fraicheur';
+	import { motFiche } from '$lib/vocabulaire';
 	import CorpsOperationnel from './CorpsOperationnel.svelte';
 	import CorpsReference from './CorpsReference.svelte';
 	import {
@@ -125,7 +127,12 @@
 		 *
 		 * ABSENTE, LE BLOC REND LA TRANSCRIPTION FIGÉE DU GEL, à l'identique :
 		 * c'est le défaut, et c'est ce qui garantit que le banc ne bouge pas.
-		 * V-15 ne la passe pas et ne change donc en rien.
+		 *
+		 * LES DEUX VUES LA PASSENT DÉSORMAIS. V-15 ne la passait pas, et
+		 * l'historique d'une note QUELCONQUE servait donc l'article de la note
+		 * de démonstration — son titre, son rangement, son auteur, ses 412
+		 * consultations et ses liens internes — sous un fil d'Ariane qui, lui,
+		 * nommait la vraie note.
 		 *
 		 * FOURNIE, L'IDENTITÉ DE LA NOTE VIENT D'ELLE — pastille de type,
 		 * visibilité, titre, rangement, auteur, étiquettes, consultations — et
@@ -208,6 +215,29 @@
 	const consultations = $derived(
 		affichee ? affichee.consultations30j : consultationsRecentes(note)
 	);
+
+	/**
+	 * LE CUMUL DE CONSULTATIONS — celui que le chargeur a relu APRÈS avoir
+	 * compté l'ouverture courante, et non `Note.vues`, projeté AVANT elle.
+	 *
+	 * Les deux nombres de cette ligne décrivent le même fait sur deux fenêtres :
+	 * le cumul de toute la vie de la note, et les trente derniers jours. Pris à
+	 * deux instants encadrant l'écriture, ils rendaient un total INFÉRIEUR à sa
+	 * propre fenêtre — « 0 consultations · 1 sur les 30 derniers jours ». Sans
+	 * note affichée, le cumul reste celui du jeu, comme tout le reste du bloc.
+	 */
+	const consultationsCumul = $derived(affichee ? affichee.consultationsTotal : note.vues);
+
+	/**
+	 * LA PASTILLE DE TYPE — « Fiche Serveur », et non « Fiche ».
+	 *
+	 * C'est le gabarit que huit autres vues appliquent déjà (V-02, V-04, V-08,
+	 * V-12, V-13, V-26, V-09, V-41) : le nom du TYPE DE FICHE quand la note en
+	 * porte un, le type de note sinon. V-14 était la seule à ne pas l'appliquer,
+	 * alors que `typeFiche` lui était servi — reçu, jamais lu. Le mot « Fiche »
+	 * lui-même vient du vocabulaire configurable, pas d'un littéral.
+	 */
+	const pastilleDeType = $derived(note.typeFiche ? `${motFiche} ${note.typeFiche}` : note.type);
 
 	/** Les trois rangs de la jauge — jamais un de plus, jamais un de moins. */
 	const RANGS = Array.from({ length: BARRES_DE_JAUGE }, (_, rang) => rang);
@@ -370,7 +400,7 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 <!-- En-tête -->
 <header class="entete">
 	<div class="entete__sur">
-		<span class="past past--type">{note.type}</span>
+		<span class="past past--type">{pastilleDeType}</span>
 		<span class="past" id="past-brouillon" hidden={!brouillonAffiche}>Brouillon</span>
 		<span class="past">{note.visibilite}</span>
 	</div>
@@ -471,7 +501,7 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 		<dt>Consultations</dt>
 		<dd>
 			<span class="chiffre"
-				>{note.vues} consultations · {consultations} sur les 30 derniers jours</span
+				>{consultationsCumul} consultations · {consultations} sur les 30 derniers jours</span
 			>
 		</dd>
 	</dl>
