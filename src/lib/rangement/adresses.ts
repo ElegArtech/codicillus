@@ -129,12 +129,84 @@ export function adresseDePieceJointe(identifiant: string, nom: string): string {
 /**
  * Le chemin de dossier d'une note, tel que le corpus le porte
  * (« Exploitation › Sauvegardes »), découpé en segments.
+ *
+ * LE DÉCOUPAGE EST TOLÉRANT, LA RECOMPOSITION NE L'EST PAS : on accepte un
+ * chemin dont le séparateur n'a pas ses deux espaces — une adresse tapée à la
+ * main, un lien recopié —, mais tout ce qui ressort d'ici se rejoint par
+ * `cheminCanonique()`. Sans quoi une forme approchante traverserait la
+ * vérification et n'arriverait à rien cocher.
  */
 export function segmentsDeDossier(chemin: string): readonly string[] {
 	return chemin
 		.split('›')
 		.map((s) => s.trim())
 		.filter(Boolean);
+}
+
+/**
+ * Le séparateur de chemin du corpus — `SEPARATEUR_DE_CHEMIN`,
+ * `$lib/donnees/rangement`. Il est redit ici, et non importé, parce que ce
+ * module est PUR : `$lib/donnees/rangement` parle à la base, et l'importer
+ * ferait descendre le connecteur dans le paquet de navigateur. C'est le même
+ * arrangement qu'en `$lib/cablage/formulaires`, pour la même raison.
+ */
+const SEPARATEUR = ' › ';
+
+/** La forme canonique d'un chemin affiché, recomposée depuis ses segments. */
+export function cheminCanonique(segments: readonly string[]): string {
+	return segments.join(SEPARATEUR);
+}
+
+/**
+ * Un nœud d'arborescence de dossiers, réduit à ce qu'une descente par nom lit.
+ *
+ * La forme complète — avec son décompte de notes — vit en `$lib/donnees/edition`
+ * sous le nom `DossierDeChoix`. Elle n'est pas importée ici : ce module est PUR
+ * et ne connaît rien de la base.
+ */
+export interface NoeudDeDossier {
+	readonly nom: string;
+	readonly enfants: readonly NoeudDeDossier[];
+}
+
+/**
+ * LE CHEMIN AFFICHÉ DÉSIGNE-T-IL UN DOSSIER DE CETTE ARBORESCENCE ?
+ *
+ * Rend le chemin quand il en désigne un, `null` sinon. Écrit pour `?dossier=`
+ * de `/notes/nouvelle`, qui porte la forme AFFICHÉE du chemin — celle que
+ * `Note.dossier` porte, celle que V-17 compare pour cocher son bouton radio,
+ * celle que la soumission renvoie. La forme d'ADRESSE, en segments slugifiés
+ * séparés par des barres obliques, ne descend pas cette arborescence : les deux
+ * représentations ne se confondent jamais, et c'est tout l'objet de ce fichier.
+ *
+ * POURQUOI VÉRIFIER PLUTÔT QUE FAIRE CONFIANCE. Un lien mis en signet survit au
+ * dossier qu'il nomme : renommé, déplacé, supprimé, le chemin ne désigne plus
+ * rien. Un chemin inconnu est alors IGNORÉ EN SILENCE par l'appelant — le
+ * formulaire s'ouvre, rien n'est coché, aucune erreur n'est levée. Un lien
+ * périmé ne doit pas empêcher d'écrire une note.
+ *
+ * CE QUI SORT D'ICI EST RECOMPOSÉ, JAMAIS RENDU TEL QUEL. La descente découpe
+ * sur le seul chevron et écarte les espaces ; rendre le chemin d'entrée
+ * laisserait donc passer une forme approchante — le séparateur sans ses
+ * espaces, par exemple — que le destinataire compare caractère pour caractère
+ * et qui ne coche RIEN. Le verdict serait « ce dossier existe » et l'effet
+ * celui d'un lien périmé : indiscernables, pour deux causes opposées. La forme
+ * canonique lève l'ambiguïté à la source.
+ */
+export function dossierDeLArborescence(
+	arbre: readonly NoeudDeDossier[] | undefined,
+	chemin: string | null
+): string | null {
+	if (arbre === undefined || chemin === null || chemin === '') return null;
+	const segments = segmentsDeDossier(chemin);
+	if (segments.length === 0) return null;
+	let niveau: readonly NoeudDeDossier[] = arbre;
+	for (const segment of segments) {
+		const branche = niveau.find((n) => n.nom === segment);
+		if (branche === undefined) return null;
+		niveau = branche.enfants;
+	}
+	return cheminCanonique(segments);
 }
 
 /* ═════════════════════════════════════════════════════════════════════════
