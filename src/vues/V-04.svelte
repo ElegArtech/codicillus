@@ -68,7 +68,14 @@
 	import { adresseNonResolue } from '$lib/public/adresse-non-resolue';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
-	import { motFiche } from '$lib/vocabulaire';
+	import { vocabulaireRendu } from '$lib/vocabulaire';
+
+	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
+	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
+	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
+	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	const motsDuProduit = vocabulaireRendu();
+	const motFiche = $derived(motsDuProduit.fiche);
 
 	/**
 	 * LE MOTIF DE ROUTE, ÉCRIT EN CONSTANTE — `svelte/no-navigation-without-resolve`

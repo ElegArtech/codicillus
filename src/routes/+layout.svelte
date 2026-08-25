@@ -15,9 +15,29 @@
 	import { onMount, setContext } from 'svelte';
 	import { cablerLaCoquille } from '$lib/cablage/coquille';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
+	import { formesDuMot } from '$lib/vocabulaire';
 	import type { LayoutData } from './$types';
 
 	let { children, data }: { children: import('svelte').Snippet; data: LayoutData } = $props();
+
+	/**
+	 * LE MOT RENOMMABLE, DÉRIVÉ UNE FOIS ET ICI SEULEMENT.
+	 *
+	 * `$lib/vocabulaire.ts` calculait ses quatre formes À L'IMPORT, depuis
+	 * `CONFIG.motFiche` de `seeds/corpus.ts` : une constante de module, figée au
+	 * chargement et partagée par toutes les requêtes du serveur, ne peut pas
+	 * suivre une configuration. Renommer « Fiche » en console ne changeait donc
+	 * rien à l'écran, alors que `RG-M14-09` promet un recalcul immédiat.
+	 *
+	 * Les QUATRE FORMES descendent, pas le mot brut : dix-sept composants
+	 * rappelleraient sinon `pluriel()` et `initialeMinuscule()` chacun de son
+	 * côté. `$derived` plutôt qu'un accesseur qui recalcule à chaque lecture : le
+	 * mot est lu plusieurs fois par page, la dérivation une seule fois par valeur.
+	 *
+	 * La page d'erreur peut être rendue sans données de gabarit — le mot vaut
+	 * alors `Fiche`, exactement ce que `motConfigure('')` rend.
+	 */
+	const vocabulaire = $derived(formesDuMot(data.motFiche ?? ''));
 
 	/**
 	 * L'IDENTITÉ RÉELLE DESCEND PAR CONTEXTE, ET D'ICI SEULEMENT.
@@ -65,6 +85,13 @@
 		   gabarit — la coquille retombe alors sur son rendu par défaut. */
 		get rangement() {
 			return data.rangement;
+		},
+		/* LE MOT DE M14.7, LU SUR LA TABLE `parametres` — pas celui du jeu de
+		   démonstration. Un accesseur, comme les autres membres : la configuration
+		   change, `data` change, et les quinze vues qui affichent le mot suivent
+		   sans que le contexte soit réémis. */
+		get vocabulaire() {
+			return vocabulaire;
 		}
 	});
 

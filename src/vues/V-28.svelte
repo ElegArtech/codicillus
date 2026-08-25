@@ -82,8 +82,17 @@
 	import NavigationConsole from '$lib/console/NavigationConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { filDeConsole } from '$lib/console/sections';
-	import { motFicheMinuscule, motFichePluriel, motFichePlurielMinuscule } from '$lib/vocabulaire';
+	import { vocabulaireRendu } from '$lib/vocabulaire';
 	import type { RefusDeSaisie, SaisieDeDomaine } from '$lib/console/structure';
+
+	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
+	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
+	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
+	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	const motsDuProduit = vocabulaireRendu();
+	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
+	const motFichePluriel = $derived(motsDuProduit.fiches);
+	const motFichePlurielMinuscule = $derived(motsDuProduit.fichesMin);
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
@@ -253,7 +262,7 @@
 	};
 
 	/** Ce que chaque module apporte, et ce qu'il coûte (`AIDES_MODULES`, `V-28:2926`). */
-	const AIDES_MODULES: Record<CleDeModule, string> = {
+	const AIDES_MODULES: Record<CleDeModule, string> = $derived({
 		notes: "Le corps même du domaine. Sans lui, il n'y a rien à ranger.",
 		dossiers:
 			"Rangement arborescent des notes. À désactiver pour un domaine plat de quelques dizaines de notes, où l'arborescence coûte plus qu'elle ne rapporte.",
@@ -264,7 +273,7 @@
 			"Liens web curatés rattachés au domaine : documentation d'éditeur, portails de prestataires.",
 		carteMentale:
 			'Vue arborescente dépliable de tout le domaine, utile pour découvrir son organisation.'
-	};
+	});
 
 	/** Les six modules, dans l'ordre du registre (`Object.keys(window.MODULES)`). */
 	const CLES_DE_MODULE = $derived(Object.keys(modules) as CleDeModule[]);

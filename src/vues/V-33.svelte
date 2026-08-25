@@ -111,12 +111,17 @@
 	import { niveauFraicheur } from '$lib/fraicheur';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
-	import {
-		motFiche,
-		motFicheMinuscule,
-		motFichePluriel,
-		motFichePlurielMinuscule
-	} from '$lib/vocabulaire';
+	import { vocabulaireRendu } from '$lib/vocabulaire';
+
+	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
+	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
+	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
+	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	const motsDuProduit = vocabulaireRendu();
+	const motFiche = $derived(motsDuProduit.fiche);
+	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
+	const motFichePluriel = $derived(motsDuProduit.fiches);
+	const motFichePlurielMinuscule = $derived(motsDuProduit.fichesMin);
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */

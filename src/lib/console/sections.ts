@@ -13,14 +13,32 @@
  * `arborescence-abregee.ts` refuse pour le rail des 26 vues abrégées. Ce qui
  * varie d'une vue à l'autre est la SECTION COURANTE, et elle seule.
  *
- * D'OÙ VIENNENT LES COMPTEURS. Du jeu de semence, jamais d'un littéral —
- * « une entrée visible est une entrée qui fonctionne, et son compteur est
- * calculé, jamais écrit » (commentaire du gel, `V-27:3153`). La maquette
- * appelle `window.UNIVERS.length`, `window.DOMAINES.length`,
- * `Object.keys(window.TYPES_FICHE).length`, `Object.keys(window.TYPES_RELATION).length`,
- * `window.TEMPLATES.length` et `window.COMPTES.filter(c => c.actif).length` ;
- * `seeds/corpus.ts` porte les six. La SEULE exception est relevée et déclarée
- * plus bas : le compteur d'imports.
+ * ═══════════════════════════════════════════════════════════════════════════
+ * CE FICHIER EST UNE FONCTION PURE DE SES ARGUMENTS — LE DÉFAUT RÉPARÉ
+ *
+ * Il portait un CATALOGUE DE MODULE, `GROUPES_DE_CONSOLE`, figé à l'import, et
+ * il lisait `seeds/corpus.ts` pour deux choses à la fois :
+ *
+ *   · SES SEPT COMPTEURS — `UNIVERS.length`, `DOMAINES.length`,
+ *     `Object.keys(TYPES_FICHE).length`… Le gel les calcule de la même façon
+ *     (`window.UNIVERS.length`, `V-27:3153`), et c'est juste pour une maquette
+ *     qui EST son jeu. C'est faux dès qu'une adresse sert la page :
+ *     `$lib/console/effectifs.ts` porte la mesure et le motif.
+ *   · LE LIBELLÉ « Types de fiches » — dérivé des quatre constantes de
+ *     `$lib/vocabulaire.ts`, elles-mêmes tirées de `CONFIG.motFiche`. Renommer
+ *     le mot en console n'avait donc aucun effet sur la pastille.
+ *
+ * Ce module ne peut lire NI la base NI un contexte : il n'est pas un composant,
+ * et son catalogue était évalué au chargement. La sortie est celle que
+ * `effectifs.ts` avait déjà prise pour les compteurs — LA SUBSTITUTION PAR
+ * FONCTION —, appliquée cette fois au catalogue entier : `groupesDeConsole()`
+ * prend le vocabulaire en argument, et il n'y a plus rien à figer.
+ *
+ * LES SEPT COMPTEURS VALENT ZÉRO dans le catalogue nu, et zéro n'est pas un
+ * repli : c'est ce qu'une instance sans univers, sans domaine et sans compte
+ * porte vraiment. `compte === undefined` reste réservé aux TROIS sections que le
+ * gel ne compte pas — Exports, Analytique, Configuration —, et cette distinction
+ * décide de l'émission du `span.nav2__n`.
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * LA FRONTIÈRE — CE QUI EST COMMUN, CE QUI EST PROPRE. MESURÉ, PAS SUPPOSÉ.
@@ -73,15 +91,7 @@
  * Ce fichier ne vit pas sous `src/vues/`, il n'a donc AUCUNE dérogation
  * P-6.4 : il ne porte pas un seul attribut `style`, et n'en portera pas.
  */
-import {
-	COMPTES,
-	DOMAINES,
-	TEMPLATES,
-	TYPES_FICHE,
-	TYPES_RELATION,
-	UNIVERS
-} from '../../../seeds/corpus';
-import { motFichePlurielMinuscule } from '../vocabulaire';
+import type { VocabulaireRendu } from '../vocabulaire';
 
 /**
  * Les dix sections, dans l'ordre du gel. La clé est celle que la maquette
@@ -140,121 +150,135 @@ export interface GroupeDeSections {
 }
 
 /**
- * LE COMPTEUR D'IMPORTS EST UN LITTÉRAL DU GEL, et il est porté comme tel.
+ * LE CATALOGUE, dans l'ordre exact du gel — trois groupes, dix sections.
  *
- * Les neuf autres compteurs se calculent sur `seeds/corpus.ts`. Celui-ci non :
- * la maquette écrit `compte: function () { return 1; }` (`V-27:3196`,
- * `V-28:3151`, et à l'identique dans les huit autres). Aucune table du jeu de
- * semence ne rend 1 sans qu'on la choisisse pour cela — `LOT_IMPORT` est un
- * objet, `JOURNAL_IMPORTS` en compte plusieurs. Fabriquer une dérivation qui
- * retombe sur 1 serait inventer une définition que le gel n'a pas : c'est le
- * comblement que la règle interdit. La valeur est donc recopiée du gel, et le
- * fait est écrit ici plutôt que tu.
+ * UNE FONCTION, PARCE QUE LE LIBELLÉ D'UNE SECTION DÉPEND DE LA CONFIGURATION.
+ * « Types de fiches » porte le terme renommable de `M14.7` ; le figer à l'import
+ * rendait le renommage inopérant sur la seule pastille où il se lit le plus.
+ *
+ * LES SEPT COMPTEURS SORTENT À ZÉRO, et `effectifs.ts` y substitue la mesure de
+ * la base. Zéro est la valeur d'une instance vide, pas un repli : le compteur
+ * d'imports le montre bien — le gel écrit `compte: function () { return 1; }`
+ * (`V-27:3196`), et AUCUNE table ne le nourrit, donc il vaut zéro et rien
+ * d'autre.
  */
-const IMPORTS_AU_GEL = 1;
+export function groupesDeConsole(vocabulaire: VocabulaireRendu): readonly GroupeDeSections[] {
+	return [
+		{
+			nom: 'Contenus',
+			sections: [
+				{
+					cle: 'univers',
+					nom: 'Univers',
+					compte: 0,
+					pictogramme: [
+						{ forme: 'rect', x: '2', y: '2.5', largeur: '12', hauteur: '11', rx: '1.4' },
+						{ forme: 'path', d: 'M2 6h12' }
+					]
+				},
+				{
+					cle: 'domaines',
+					nom: 'Domaines',
+					compte: 0,
+					pictogramme: [
+						{
+							forme: 'path',
+							d: 'M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z'
+						}
+					]
+				},
+				{
+					cle: 'fiches',
+					nom: `Types de ${vocabulaire.fichesMin}`,
+					compte: 0,
+					pictogramme: [
+						{ forme: 'rect', x: '2', y: '3', largeur: '12', hauteur: '10', rx: '1.4' },
+						{ forme: 'path', d: 'M2 6h12M5.5 9h5' }
+					]
+				},
+				{
+					cle: 'relations',
+					nom: 'Types de relations',
+					compte: 0,
+					pictogramme: [
+						{ forme: 'circle', cx: '4', cy: '4', r: '2' },
+						{ forme: 'circle', cx: '12', cy: '12', r: '2' },
+						{ forme: 'path', d: 'M5.6 5.6l4.8 4.8' }
+					]
+				},
+				{
+					cle: 'templates',
+					nom: 'Templates',
+					compte: 0,
+					pictogramme: [
+						{ forme: 'rect', x: '2', y: '2.5', largeur: '12', hauteur: '11', rx: '1.4' },
+						{ forme: 'path', d: 'M2 6h12M6 6v7.5' }
+					]
+				}
+			]
+		},
+		{
+			nom: 'Utilisateurs',
+			sections: [
+				{
+					cle: 'comptes',
+					nom: 'Comptes',
+					compte: 0,
+					pictogramme: [
+						{ forme: 'circle', cx: '8', cy: '5.5', r: '2.6' },
+						{ forme: 'path', d: 'M2.8 13.5a5.2 5.2 0 0 1 10.4 0' }
+					]
+				}
+			]
+		},
+		{
+			nom: 'Système',
+			sections: [
+				{
+					cle: 'imports',
+					nom: 'Imports',
+					compte: 0,
+					pictogramme: [{ forme: 'path', d: 'M8 10.5V2M4.8 6.2L8 2.8l3.2 3.4M2.5 13.5h11' }]
+				},
+				{
+					cle: 'exports',
+					nom: 'Exports',
+					pictogramme: [{ forme: 'path', d: 'M8 2v8.5M4.8 7.3L8 10.7l3.2-3.4M2.5 13.5h11' }]
+				},
+				{
+					cle: 'analytique',
+					nom: 'Analytique',
+					pictogramme: [{ forme: 'path', d: 'M2.5 13.5V9M6.5 13.5V4M10.5 13.5v-6M14 13.5V2.5' }]
+				},
+				{
+					cle: 'configuration',
+					nom: 'Configuration',
+					pictogramme: [
+						{
+							forme: 'path',
+							d: 'M6.5 1.8h3l.3 1.7 1.5.9 1.6-.7 1.5 2.6-1.2 1.2v1.7l1.2 1.2-1.5 2.6-1.6-.7-1.5.9-.3 1.7h-3l-.3-1.7-1.5-.9-1.6.7L.6 12.4l1.2-1.2V9.5L.6 8.3l1.5-2.6 1.6.7 1.5-.9z'
+						},
+						{ forme: 'circle', cx: '8', cy: '8', r: '2' }
+					]
+				}
+			]
+		}
+	];
+}
 
-/** Le catalogue, dans l'ordre exact du gel — trois groupes, dix sections. */
-export const GROUPES_DE_CONSOLE: readonly GroupeDeSections[] = [
-	{
-		nom: 'Contenus',
-		sections: [
-			{
-				cle: 'univers',
-				nom: 'Univers',
-				compte: UNIVERS.length,
-				pictogramme: [
-					{ forme: 'rect', x: '2', y: '2.5', largeur: '12', hauteur: '11', rx: '1.4' },
-					{ forme: 'path', d: 'M2 6h12' }
-				]
-			},
-			{
-				cle: 'domaines',
-				nom: 'Domaines',
-				compte: DOMAINES.length,
-				pictogramme: [
-					{
-						forme: 'path',
-						d: 'M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z'
-					}
-				]
-			},
-			{
-				cle: 'fiches',
-				nom: `Types de ${motFichePlurielMinuscule}`,
-				compte: Object.keys(TYPES_FICHE).length,
-				pictogramme: [
-					{ forme: 'rect', x: '2', y: '3', largeur: '12', hauteur: '10', rx: '1.4' },
-					{ forme: 'path', d: 'M2 6h12M5.5 9h5' }
-				]
-			},
-			{
-				cle: 'relations',
-				nom: 'Types de relations',
-				compte: Object.keys(TYPES_RELATION).length,
-				pictogramme: [
-					{ forme: 'circle', cx: '4', cy: '4', r: '2' },
-					{ forme: 'circle', cx: '12', cy: '12', r: '2' },
-					{ forme: 'path', d: 'M5.6 5.6l4.8 4.8' }
-				]
-			},
-			{
-				cle: 'templates',
-				nom: 'Templates',
-				compte: TEMPLATES.length,
-				pictogramme: [
-					{ forme: 'rect', x: '2', y: '2.5', largeur: '12', hauteur: '11', rx: '1.4' },
-					{ forme: 'path', d: 'M2 6h12M6 6v7.5' }
-				]
-			}
-		]
-	},
-	{
-		nom: 'Utilisateurs',
-		sections: [
-			{
-				cle: 'comptes',
-				nom: 'Comptes',
-				compte: COMPTES.filter((c) => c.actif).length,
-				pictogramme: [
-					{ forme: 'circle', cx: '8', cy: '5.5', r: '2.6' },
-					{ forme: 'path', d: 'M2.8 13.5a5.2 5.2 0 0 1 10.4 0' }
-				]
-			}
-		]
-	},
-	{
-		nom: 'Système',
-		sections: [
-			{
-				cle: 'imports',
-				nom: 'Imports',
-				compte: IMPORTS_AU_GEL,
-				pictogramme: [{ forme: 'path', d: 'M8 10.5V2M4.8 6.2L8 2.8l3.2 3.4M2.5 13.5h11' }]
-			},
-			{
-				cle: 'exports',
-				nom: 'Exports',
-				pictogramme: [{ forme: 'path', d: 'M8 2v8.5M4.8 7.3L8 10.7l3.2-3.4M2.5 13.5h11' }]
-			},
-			{
-				cle: 'analytique',
-				nom: 'Analytique',
-				pictogramme: [{ forme: 'path', d: 'M2.5 13.5V9M6.5 13.5V4M10.5 13.5v-6M14 13.5V2.5' }]
-			},
-			{
-				cle: 'configuration',
-				nom: 'Configuration',
-				pictogramme: [
-					{
-						forme: 'path',
-						d: 'M6.5 1.8h3l.3 1.7 1.5.9 1.6-.7 1.5 2.6-1.2 1.2v1.7l1.2 1.2-1.5 2.6-1.6-.7-1.5.9-.3 1.7h-3l-.3-1.7-1.5-.9-1.6.7L.6 12.4l1.2-1.2V9.5L.6 8.3l1.5-2.6 1.6.7 1.5-.9z'
-					},
-					{ forme: 'circle', cx: '8', cy: '8', r: '2' }
-				]
-			}
-		]
-	}
-];
+/**
+ * LE NOM D'UNE SECTION, POUR QUI N'A BESOIN QUE DE LUI — le fil d'Ariane des
+ * quatre vues que `CoquilleDeConsole.svelte` monte. Il passe par le catalogue
+ * plutôt que par une seconde table : deux listes de dix noms divergeraient au
+ * premier renommage, et c'est exactement le défaut réparé ici.
+ */
+export function nomDeSection(cle: CleDeSection, vocabulaire: VocabulaireRendu): string {
+	return (
+		groupesDeConsole(vocabulaire)
+			.flatMap((g) => g.sections)
+			.find((s) => s.cle === cle)?.nom ?? cle
+	);
+}
 
 /**
  * Le libellé d'une option du sélecteur de petit écran : le nom, suivi du
