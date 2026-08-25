@@ -360,14 +360,16 @@
 	let roleChoisi = $state<RoleDeCompte | null>(null);
 
 	/**
-	 * LE VERROU CHOISI DANS LE PANNEAU — `#f-verrou`, suivi parce que DEUX PHRASES
-	 * en dépendent.
+	 * LE VERROU CHOISI DANS LE PANNEAU — `#f-verrou`, suivi parce que TROIS
+	 * PHRASES en dépendent : le sous-titre du panneau, l'aide du champ de mot de
+	 * passe, ET la phrase de transmission de la boîte « Compte créé ».
 	 *
 	 * « Il devra être changé à la première connexion » est vrai depuis que
 	 * `comptes.mot_de_passe_a_changer` existe — MAIS PAS POUR UN COMPTE À MOT DE
 	 * PASSE VERROUILLÉ : `RG-CPT-01` lui interdit de changer le sien, et le
-	 * produit ne le lui impose donc jamais. Les deux phrases suivent l'état réel
-	 * de la case, plutôt que d'en affirmer un.
+	 * produit ne le lui impose donc jamais. `creerUnCompte()` écrit
+	 * `motDePasseAChanger: !motDePasseVerrouille` ; les trois phrases suivent le
+	 * même état, plutôt que d'en affirmer un.
 	 *
 	 * `null` tant que personne n'a touché la case : l'écran reste celui du rendu.
 	 */
@@ -501,7 +503,17 @@
 	 *
 	 * `null` au rendu serveur : la boîte reste celle que le vecteur décrit.
 	 */
-	let compteCree = $state<{ readonly nom: string; readonly motDePasse: string } | null>(null);
+	let compteCree = $state<{
+		readonly nom: string;
+		readonly motDePasse: string;
+		/**
+		 * L'ÉTAT DE `#f-verrou` TEL QU'IL A ÉTÉ ENVOYÉ, retenu parce que la boîte
+		 * survit à la fermeture du panneau : la phrase de transmission ne peut
+		 * plus le relire sur le document, et l'affirmer serait mentir sur un
+		 * compte créé verrouillé.
+		 */
+		readonly verrouille: boolean;
+	} | null>(null);
 
 	/**
 	 * LES SEPT CHAMPS SONT RELUS SUR LE DOCUMENT AU CLIC, comme le gel les relit
@@ -540,6 +552,7 @@
 		}
 		const nom = valeurDe('f-nom').trim();
 		const motDePasseEnvoye = valeurDe('f-mdp');
+		const verrouEnvoye = estCoche('f-verrou');
 		const issue = await onCreerUnCompte({
 			identifiant: valeurDe('f-ident'),
 			nom,
@@ -547,10 +560,10 @@
 			motDePasse: motDePasseEnvoye,
 			role: roleCourant,
 			domaine: valeurDe('f-domaine'),
-			motDePasseVerrouille: estCoche('f-verrou')
+			motDePasseVerrouille: verrouEnvoye
 		});
 		if (issue.cree) {
-			compteCree = { nom, motDePasse: motDePasseEnvoye };
+			compteCree = { nom, motDePasse: motDePasseEnvoye, verrouille: verrouEnvoye };
 			fermerLeFormulaire();
 			return;
 		}
@@ -611,6 +624,19 @@
 	/** `mdp` réinitialise le premier compte du jeu — `comptes[0]` (`V-32:3345`). */
 	const compteReinitialise = $derived(reinitialise?.compte ?? (casMdp ? comptes[0] : null));
 	const motDePasseAffiche = $derived(reinitialise?.motDePasse ?? (casMdp ? motDePasse() : '—'));
+
+	/**
+	 * LE VERROU DU COMPTE DONT LA BOÎTE MONTRE LE MOT DE PASSE.
+	 *
+	 * Il décide de la phrase de transmission, et il est lu à la SOURCE de chaque
+	 * cas : la case envoyée pour un compte qui vient d'être créé, l'état du
+	 * compte visé pour une réinitialisation. Les deux écritures posent
+	 * `motDePasseAChanger: !motDePasseVerrouille` — la phrase suit donc
+	 * exactement ce que la base a reçu, au lieu de l'affirmer pour tout le monde.
+	 */
+	const verrouDeLaBoite = $derived(
+		compteCree ? compteCree.verrouille : (compteReinitialise?.verrouille ?? false)
+	);
 
 	/**
 	 * LE COMPTE DONT LA DÉSACTIVATION EST EXAMINÉE.
@@ -1135,8 +1161,9 @@
 
 					<p class="transmettre">
 						Transmettez-le par un canal distinct de l'adresse électronique du compte — de vive voix,
-						par téléphone, ou par messagerie interne. Le compte devra le changer à sa première
-						connexion.
+						par téléphone, ou par messagerie interne. {verrouDeLaBoite
+							? "Son mot de passe est verrouillé : seule l'administration pourra le changer."
+							: 'Le compte devra le changer à sa première connexion.'}
 					</p>
 				</div>
 				<div class="dlg__pied">
