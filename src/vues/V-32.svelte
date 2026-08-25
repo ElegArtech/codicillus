@@ -147,11 +147,14 @@
 		 * que le serveur a répondu ; les deux autres gestes rechargent la page et
 		 * n'ont rien à attendre.
 		 *
-		 * SEULS LES DEUX CHAMPS QUE LE GEL SAIT MARQUER PEUVENT PORTER UN MESSAGE.
-		 * Le formulaire n'a que deux blocs `.champ__erreur` (`V-32:1352`,
-		 * `V-32:1362`) : un refus qui viserait un autre champ n'a nulle part où se
-		 * dire, et la vue n'invente pas d'endroit — le panneau reste simplement
-		 * ouvert, sans rien écrire.
+		 * DEUX CHAMPS SAVENT PORTER UN MESSAGE, ET LE RESTE SE DIT AILLEURS. Le
+		 * formulaire n'a que deux blocs `.champ__erreur` du gel (`V-32:1352`,
+		 * `V-32:1362`), pour l'identifiant et le nom. Un refus d'une AUTRE nature —
+		 * mot de passe vide, adresse déjà portée, rôle non reconnu — n'avait nulle
+		 * part où se dire : le panneau restait ouvert, rien n'était écrit, et
+		 * l'utilisateur croyait avoir enregistré. `message` porte ce refus-là, et
+		 * le panneau le rend au-dessus de ses champs. C'est un nœud que le gel ne
+		 * porte pas, et il vaut mieux qu'un échec muet.
 		 *
 		 * ABSENTE, « CRÉER LE COMPTE » FERME LE PANNEAU SANS RIEN ENVOYER : c'est
 		 * l'état d'une planche, qui n'a ni route ni action derrière elle.
@@ -168,6 +171,8 @@
 		}) => Promise<{
 			readonly cree: boolean;
 			readonly erreurs: readonly { readonly champ: 'ident' | 'nom'; readonly message: string }[];
+			/** Le refus qu'aucun des deux blocs du gel ne sait porter. */
+			readonly message?: string | null;
 		}>;
 		/**
 		 * CE QUE LA VUE FAIT QUAND LE MOT DE PASSE A ÉTÉ NOTÉ — `#mdp-fermer`.
@@ -355,6 +360,20 @@
 	let roleChoisi = $state<RoleDeCompte | null>(null);
 
 	/**
+	 * LE VERROU CHOISI DANS LE PANNEAU — `#f-verrou`, suivi parce que DEUX PHRASES
+	 * en dépendent.
+	 *
+	 * « Il devra être changé à la première connexion » est vrai depuis que
+	 * `comptes.mot_de_passe_a_changer` existe — MAIS PAS POUR UN COMPTE À MOT DE
+	 * PASSE VERROUILLÉ : `RG-CPT-01` lui interdit de changer le sien, et le
+	 * produit ne le lui impose donc jamais. Les deux phrases suivent l'état réel
+	 * de la case, plutôt que d'en affirmer un.
+	 *
+	 * `null` tant que personne n'a touché la case : l'écran reste celui du rendu.
+	 */
+	let verrouChoisi = $state<boolean | null>(null);
+
+	/**
 	 * LES DEUX BLOCS D'ERREUR DU FORMULAIRE — `marquer()` du gel (`V-32:3186`).
 	 *
 	 * `erreurIdent` porte le TEXTE parce que le gel en écrit trois différents
@@ -368,11 +387,14 @@
 	 */
 	let erreurIdent = $state<string | null>(null);
 	let erreurNom = $state(false);
+	/** Le refus qui ne vise ni l'identifiant ni le nom — voir `onCreerUnCompte`. */
+	let refusGeneral = $state<string | null>(null);
 
 	function ouvrirLeFormulaire(identifiant: string): void {
 		demandeDEdition = identifiant;
 		demandeDeCreation = false;
 		roleChoisi = null;
+		verrouChoisi = null;
 		effacerLesErreurs();
 	}
 
@@ -381,6 +403,7 @@
 		demandeDEdition = null;
 		demandeDeCreation = true;
 		roleChoisi = null;
+		verrouChoisi = null;
 		motDePasseSaisi = motDePasse();
 		effacerLesErreurs();
 	}
@@ -389,6 +412,7 @@
 	function effacerLesErreurs(): void {
 		erreurIdent = null;
 		erreurNom = false;
+		refusGeneral = null;
 	}
 
 	/** `fermerForm()` du gel (`V-32:3225`) — l'écran revient à sa liste. */
@@ -396,6 +420,7 @@
 		demandeDEdition = null;
 		demandeDeCreation = false;
 		roleChoisi = null;
+		verrouChoisi = null;
 		motDePasseSaisi = null;
 		effacerLesErreurs();
 	}
@@ -447,6 +472,9 @@
 		roleChoisi ?? (edite ? edite.compte.role : 'Contributeur')
 	);
 	const aideDuRole = $derived(ROLES.find((r) => r.cle === roleCourant)?.aide ?? '');
+
+	/** L'état de `#f-verrou` : celui qu'on a choisi, sinon celui du compte rendu. */
+	const verrouCourant = $derived(verrouChoisi ?? (edite ? edite.verrouille : false));
 
 	/**
 	 * LE MOT DE PASSE INITIAL, ET POURQUOI IL EST UN ÉTAT PLUTÔT QU'UN DÉRIVÉ.
@@ -530,6 +558,7 @@
 		   nomme pas est un champ dont la marque est RETIRÉE (`V-32:3186`). */
 		erreurIdent = issue.erreurs.find((e) => e.champ === 'ident')?.message ?? null;
 		erreurNom = issue.erreurs.some((e) => e.champ === 'nom');
+		refusGeneral = issue.message ?? null;
 	}
 
 	/**
@@ -769,8 +798,9 @@
 					</h2>
 					<div class="tiroir-form__sous" id="form-sous">
 						{#if edite}{#if edite.compte.actif}Dernière connexion {edite.compte
-									.derniere}.{:else}Compte désactivé — ses contributions restent à son nom.{/if}{:else}L'utilisateur
-							devra changer son mot de passe à la première connexion.{/if}
+									.derniere}.{:else}Compte désactivé — ses contributions restent à son nom.{/if}{:else}{#if verrouCourant}Son
+								mot de passe est verrouillé : seule l'administration pourra le changer.{:else}L'utilisateur
+								devra changer son mot de passe à la première connexion.{/if}{/if}
 					</div>
 				</div>
 				<button
@@ -800,6 +830,9 @@
 								les comptes, ni rendre ce rôle à quiconque. Nommez d'abord un second administrateur :
 								le sélecteur se déverrouillera aussitôt.
 							</div>
+						</div>{/if}{#if refusGeneral !== null}<div class="refus" id="refus-creation">
+							<div class="refus__titre">Le compte n'a pas été créé</div>
+							<div class="refus__sortie">{refusGeneral}</div>
 						</div>{/if}
 				</div>
 
@@ -910,7 +943,9 @@
 						</button>
 					</div>
 					<span class="champ__aide"
-						>Généré automatiquement. Il devra être changé à la première connexion.</span
+						>Généré automatiquement. {verrouCourant
+							? 'Le compte ne pourra pas le changer lui-même.'
+							: 'Il devra être changé à la première connexion.'}</span
 					>
 				</div>
 
@@ -950,7 +985,14 @@
 
 				<div class="champ" id="champ-verrou">
 					<label class="case" style="align-items:flex-start">
-						<input type="checkbox" id="f-verrou" checked={edite ? edite.verrouille : false} />
+						<input
+							type="checkbox"
+							id="f-verrou"
+							checked={verrouCourant}
+							onchange={(evenement) => {
+								verrouChoisi = evenement.currentTarget.checked;
+							}}
+						/>
 						<span class="case__txt"
 							>Mot de passe verrouillé
 							<span class="case__aide"

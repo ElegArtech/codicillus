@@ -83,12 +83,22 @@ export interface SaisieDePropriete {
 	readonly cle: string;
 	readonly nom: string;
 	readonly type: string;
+	/** « Aide à la saisie » — le texte que l'administrateur écrit sous le champ. */
+	readonly aide: string;
+	/** « Valeur par défaut » — vide quand aucune n'est proposée. */
+	readonly defaut: string;
+	/** « Propriété obligatoire » — la case du constructeur. */
+	readonly obligatoire: boolean;
 	readonly valeurs: readonly string[];
 }
 
 /** Ce que le panneau de `V-29` rend quand on valide. */
 export interface SaisieDeTypeDeFiche {
 	readonly nom: string;
+	/** `#f-desc` — « ce que ce type décrit, et quand l'employer ». */
+	readonly description: string;
+	/** `#f-icones` — la clé de l'icône choisie parmi les six du panneau. */
+	readonly glyphe: string;
 	readonly proprietes: readonly SaisieDePropriete[];
 }
 
@@ -152,10 +162,19 @@ export function champsDeDomaine(saisie: SaisieDeDomaine): Record<string, string>
 	};
 }
 
-/** Les champs d'une création de type de fiche. */
+/**
+ * LES CHAMPS D'UNE CRÉATION DE TYPE DE FICHE.
+ *
+ * `f-desc` ET `f-icones` SONT ÉMIS DEPUIS QUE LA BASE LES PORTE. Le panneau les
+ * demandait déjà — une description, six icônes — et cette fabrique ne les
+ * transmettait pas : l'administrateur les saisissait, l'écran les affichait
+ * comme acquises, et l'enregistrement les perdait sans un mot.
+ */
 export function champsDeTypeDeFiche(saisie: SaisieDeTypeDeFiche): Record<string, string> {
 	return {
 		[CHAMP_NOM]: saisie.nom,
+		[CHAMP_DESCRIPTION]: saisie.description,
+		[CHAMP_GLYPHE]: saisie.glyphe,
 		[CHAMP_PROPRIETES]: JSON.stringify(saisie.proprietes)
 	};
 }
@@ -227,7 +246,19 @@ export function proprietesDuChamp(
 		const valeurs = Array.isArray(p['valeurs'])
 			? p['valeurs'].filter((v): v is string => typeof v === 'string')
 			: [];
-		rendues.push({ cle: p['cle'], nom: p['nom'], type: p['type'], valeurs });
+		/* LES TROIS DERNIERS CHAMPS SONT FACULTATIFS AU TRANSPORT, et absents ils
+		   valent « rien saisi » : une aide vide, aucune valeur par défaut, aucune
+		   obligation. C'est le même régime que `valeurs` — une entrée mal formée
+		   est ramenée au neutre, jamais devinée. */
+		rendues.push({
+			cle: p['cle'],
+			nom: p['nom'],
+			type: p['type'],
+			aide: typeof p['aide'] === 'string' ? p['aide'] : '',
+			defaut: typeof p['defaut'] === 'string' ? p['defaut'] : '',
+			obligatoire: p['obligatoire'] === true,
+			valeurs
+		});
 	}
 	return rendues;
 }

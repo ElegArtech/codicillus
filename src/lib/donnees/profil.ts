@@ -641,10 +641,14 @@ export async function changerLeMotDePasse(
 		return { issue: 'confirmation', sessionsFermees: 0 };
 	}
 
+	/* LE MOT DE PASSE N'EST PLUS CELUI DE L'ADMINISTRATION — c'est ici, et
+	   nulle part ailleurs, que le compte cesse de porter la valeur qui lui a été
+	   transmise. La garde de `src/hooks.server.ts` le laisse alors circuler. */
 	await base
 		.update(comptes)
 		.set({
 			condensatMotDePasse: await hacherMotDePasse(saisies.nouveau),
+			motDePasseAChanger: false,
 			modifieLe: demande.maintenant
 		})
 		.where(eq(comptes.id, profil.compteId));

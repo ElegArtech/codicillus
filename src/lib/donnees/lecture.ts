@@ -76,6 +76,7 @@ import type {
 	IdentifiantNote,
 	LibellesDeRelation,
 	Note,
+	PresentationDeTypeDeFiche,
 	Relation,
 	Template,
 	TypeDeFiche,
@@ -621,6 +622,9 @@ export async function lireTypesDeFiche(
 			nom: champsDeTypeDeFiche.nom,
 			type: champsDeTypeDeFiche.type,
 			exemple: champsDeTypeDeFiche.exemple,
+			aide: champsDeTypeDeFiche.aide,
+			defaut: champsDeTypeDeFiche.defaut,
+			obligatoire: champsDeTypeDeFiche.obligatoire,
 			valeurs: champsDeTypeDeFiche.valeurs
 		})
 		.from(champsDeTypeDeFiche)
@@ -641,10 +645,47 @@ export async function lireTypesDeFiche(
 		if (type === undefined) throw new Error(`type de champ inconnu en base : ${c.type}`);
 		const champ: Record<string, unknown> = { cle: c.cle, nom: c.nom, type };
 		if (c.exemple !== null) champ['exemple'] = c.exemple;
+		/* UNE COLONNE VIDE N'EST PAS UNE CLÉ VIDE : la propriété n'est posée que
+		   si la console a écrit quelque chose, si bien qu'un référentiel monté
+		   avant la migration rend exactement ce qu'il rendait. */
+		if (c.aide !== null) champ['aide'] = c.aide;
+		if (c.defaut !== null) champ['defaut'] = c.defaut;
+		if (c.obligatoire) champ['obligatoire'] = true;
 		if (c.valeurs !== null) champ['valeurs'] = c.valeurs;
 		const liste = rendu[c.typeNom];
 		if (liste === undefined) throw new Error(`type de fiche inconnu : ${c.typeNom}`);
 		liste.push(champ as unknown as ChampDeFiche);
+	}
+	return rendu;
+}
+
+/**
+ * LA PRÉSENTATION DES TYPES DE FICHE — description et icône, par nom de type.
+ *
+ * ELLE EST LUE À PART, ET C'EST DÉLIBÉRÉ. `lireTypesDeFiche()` rend le SCHÉMA —
+ * quels champs un type porte —, et une douzaine d'appelants en dépendent sous
+ * cette forme exacte. La présentation n'intéresse qu'un écran, la console des
+ * types de fiche : elle voyage donc par sa propre porte, plutôt que de changer
+ * la forme que tout le reste du produit consomme.
+ *
+ * UN TYPE SANS DESCRIPTION NI ICÔNE REND DES CHAÎNES VIDES, jamais `null` :
+ * l'écran choisit alors ses replis, ce qu'il fait déjà pour les types du gel.
+ */
+export async function lirePresentationsDeTypeDeFiche(
+	base: Base
+): Promise<Record<string, PresentationDeTypeDeFiche>> {
+	const lignes = await base
+		.select({
+			nom: typesDeFiche.nom,
+			description: typesDeFiche.description,
+			glyphe: typesDeFiche.glyphe
+		})
+		.from(typesDeFiche)
+		.orderBy(typesDeFiche.ordre);
+
+	const rendu: Record<string, PresentationDeTypeDeFiche> = {};
+	for (const t of lignes) {
+		rendu[t.nom] = { description: t.description ?? '', glyphe: t.glyphe ?? '' };
 	}
 	return rendu;
 }
