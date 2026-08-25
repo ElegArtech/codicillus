@@ -270,6 +270,22 @@ export function libelleFraicheur(note: EtatDeFraicheur, forme: FormeDeLibelle = 
 	 * eu lieu.
 	 */
 	if (note.revise === null) return forme === 'longue' ? 'Jamais vérifiée' : 'jamais';
+	/**
+	 * UNE NOTE VÉRIFIÉE AUJOURD'HUI PORTAIT « VÉRIFIÉ IL Y A 0 JOURS ».
+	 *
+	 * `note.jours` est un nombre de jours PLEINS : il vaut 0 pendant les
+	 * vingt-quatre heures qui suivent la vérification, c'est-à-dire à l'instant
+	 * même où l'on clique sur « Vérifier ». La branche voisine ci-dessus a déjà
+	 * réparé le cas frère — « Jamais vérifiée » là où le libellé affirmait un
+	 * geste qui n'avait pas eu lieu ; celle-ci répare le geste qui vient
+	 * d'avoir lieu.
+	 *
+	 * LE MOT EST CELUI DU GEL, POUR CE SCÉNARIO EXACT :
+	 * `mockups/V-14-lecture-note.html:4024`, gestionnaire de `#btn-verifier`,
+	 * écrit « Vérifié à l'instant ». La forme compacte garde le fragment sans
+	 * le verbe, comme les trois autres branches.
+	 */
+	if (note.jours <= 0) return forme === 'longue' ? "Vérifié à l'instant" : "à l'instant";
 	if (note.fraicheur === 'frais') {
 		if (note.jours < 31) {
 			return forme === 'longue' ? `Vérifié il y a ${note.jours} jours` : `il y a ${note.jours} j`;

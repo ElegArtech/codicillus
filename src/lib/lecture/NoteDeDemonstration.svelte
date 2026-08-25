@@ -46,20 +46,11 @@
 	 * feuilles portent les mêmes règles pour ce bloc — c'est ce qui permet au
 	 * composant d'être unique. Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import { BARRES_DE_JAUGE, temoinFraicheur, type NiveauFraicheur } from '$lib/fraicheur';
+	import { BARRES_DE_JAUGE, temoinFraicheur } from '$lib/fraicheur';
 	import { vocabulaireRendu } from '$lib/vocabulaire';
 	import CorpsOperationnel from './CorpsOperationnel.svelte';
 	import CorpsReference from './CorpsReference.svelte';
-	import {
-		anciennete,
-		consultationsRecentes,
-		CONTROLE_PAR_NIVEAU,
-		NOTE,
-		rangementDe,
-		type LectureAffichee,
-		type InstantAffiche,
-		type RevisionCourante
-	} from './note-de-demonstration';
+	import { PROSE_PAR_NIVEAU, rangementDe, type LectureAffichee } from './note-de-demonstration';
 	import {
 		adresseDeDomaine,
 		adresseDeDossier,
@@ -76,24 +67,15 @@
 	const motsDuProduit = vocabulaireRendu();
 	const motFiche = $derived(motsDuProduit.fiche);
 
+	/*
+	   LES CINQ LEVIERS DE PLANCHE ONT DISPARU DES PROPRIÉTÉS — `niveau`,
+	   `revision`, `brouillon`, `resync`, `operationnel`. Ils décidaient de ce
+	   que le bloc montrait TANT QU'AUCUNE NOTE NE LUI ÉTAIT PASSÉE ; la note
+	   affichée est désormais REQUISE, et les cinq états se lisent sur elle.
+	   Un bandeau de révision déployé sur une note sans demande courante était
+	   exactement la valeur illustrative que P-02 proscrit.
+	*/
 	interface Proprietes {
-		/**
-		 * Le niveau porté par le cartouche de contrôle. V-14 le fait varier par
-		 * sa planche ; V-15 n'a pas ce levier et reste au niveau du gel.
-		 */
-		niveau?: NiveauFraicheur;
-		/** Le bandeau « Révision demandée » est déployé. */
-		revision?: boolean;
-		/** Le bandeau « Brouillon » est déployé, et la pastille avec lui. */
-		brouillon?: boolean;
-		/** Le bandeau « Version opérationnelle à resynchroniser » est déployé. */
-		resync?: boolean;
-		/**
-		 * La note porte une version opérationnelle. Faux : le sélecteur de
-		 * registre disparaît et l'invitation à en créer une prend sa place
-		 * (`V-14:4095-4104`).
-		 */
-		operationnel?: boolean;
 		/**
 		 * LES DROITS EFFECTIFS, ET CE QU'ILS COMMANDENT — P-09 / RG-M05-08.
 		 *
@@ -130,12 +112,15 @@
 		 */
 		separateur: Snippet;
 		/**
-		 * LA NOTE RÉELLEMENT LUE, ET SES DEUX CORPS RENDUS — T-042.
+		 * LA NOTE RÉELLEMENT LUE, ET SES DEUX CORPS RENDUS — REQUISE.
 		 *
-		 * ABSENTE, LE BLOC REND LA TRANSCRIPTION FIGÉE DU GEL, à l'identique :
-		 * c'est le défaut, et c'est ce qui garantit que le banc ne bouge pas.
+		 * ABSENTE, LE BLOC RENDAIT LA TRANSCRIPTION FIGÉE DU GEL : titre, auteur,
+		 * rangement, cartouche, dates et consultations de `n-restaurer-pg`, quelle
+		 * que fût la note ouverte, et SANS QUE RIEN NE PROTESTE. C'était le motif ;
+		 * il part avec le défaut de propriété. Les deux vues qui montent ce bloc la
+		 * passent, et une troisième qui l'oublierait ne compilerait plus.
 		 *
-		 * LES DEUX VUES LA PASSENT DÉSORMAIS. V-15 ne la passait pas, et
+		 * V-15 ne la passait pas, et
 		 * l'historique d'une note QUELCONQUE servait donc l'article de la note
 		 * de démonstration — son titre, son rangement, son auteur, ses 412
 		 * consultations et ses liens internes — sous un fil d'Ariane qui, lui,
@@ -169,25 +154,16 @@
 		 * Il sort de la fabrique unique, à qui l'on ne donne que le niveau et
 		 * l'ancienneté (P-01, ADR-005).
 		 */
-		affichee?: LectureAffichee | undefined;
+		affichee: LectureAffichee;
 	}
 
-	const {
-		niveau = 'frais',
-		revision = false,
-		brouillon = false,
-		resync = false,
-		operationnel = true,
-		droits = 'ecriture',
-		separateur,
-		affichee
-	}: Proprietes = $props();
+	const { droits = 'ecriture', separateur, affichee }: Proprietes = $props();
 
 	/** P-09 · ARB-040 — ce qui n'est pas émis n'est pas une porte fermée. */
 	const ecriture = $derived(droits !== 'lecture');
 
-	/** La note affichée — celle qu'on lit, ou celle du gel à défaut. */
-	const note = $derived(affichee?.note ?? NOTE);
+	/** La note affichée — celle qu'on lit, et il n'y a plus d'autre cas. */
+	const note = $derived(affichee.note);
 	const rangement = $derived(rangementDe(note));
 
 	/**
@@ -219,9 +195,7 @@
 		const liste = adresseDesNotesDuDomaine(note.univers, note.domaine);
 		return `${liste}?${facette}=${encodeURIComponent(valeur)}`;
 	}
-	const consultations = $derived(
-		affichee ? affichee.consultations30j : consultationsRecentes(note)
-	);
+	const consultations = $derived(affichee.consultations30j);
 
 	/**
 	 * LE CUMUL DE CONSULTATIONS — celui que le chargeur a relu APRÈS avoir
@@ -230,10 +204,26 @@
 	 * Les deux nombres de cette ligne décrivent le même fait sur deux fenêtres :
 	 * le cumul de toute la vie de la note, et les trente derniers jours. Pris à
 	 * deux instants encadrant l'écriture, ils rendaient un total INFÉRIEUR à sa
-	 * propre fenêtre — « 0 consultations · 1 sur les 30 derniers jours ». Sans
-	 * note affichée, le cumul reste celui du jeu, comme tout le reste du bloc.
+	 * propre fenêtre — « 0 consultations · 1 sur les 30 derniers jours ».
 	 */
-	const consultationsCumul = $derived(affichee ? affichee.consultationsTotal : note.vues);
+	const consultationsCumul = $derived(affichee.consultationsTotal);
+
+	/**
+	 * LA LIGNE « CONSULTATIONS », ACCORDÉE EN NOMBRE.
+	 *
+	 * Le gel écrit le littéral « 412 consultations » : sa donnée est figée et ne
+	 * descend jamais à 1, il n'a donc jamais eu à accorder. Une note ouverte une
+	 * seule fois annonçait « 1 consultations ». La forme est celle que le dépôt
+	 * emploie déjà sept fois.
+	 *
+	 * ELLE EST COMPOSÉE ICI, ET NON DANS LE GABARIT : le texte du `span` est un
+	 * NŒUD UNIQUE au gel, et une interpolation de plus dans le balisage le
+	 * ferait couper en fragments par le formateur.
+	 */
+	const ligneDeConsultations = $derived(
+		`${consultationsCumul} consultation${consultationsCumul > 1 ? 's' : ''} · ` +
+			`${consultations} sur les 30 derniers jours`
+	);
 
 	/**
 	 * LA PASTILLE DE TYPE — « Fiche Serveur », et non « Fiche ».
@@ -250,19 +240,35 @@
 	const RANGS = Array.from({ length: BARRES_DE_JAUGE }, (_, rang) => rang);
 
 	/**
-	 * LES QUATRE LEVIERS DE PLANCHE DEVIENNENT DES FAITS DE LA NOTE — T-042b.
+	 * LES CINQ LEVIERS DE PLANCHE SONT DES FAITS DE LA NOTE, ET RIEN D'AUTRE.
 	 *
-	 * Sans note affichée, ils restent ce qu'ils étaient : cinq contrôles que la
-	 * planche de V-14 actionne, et que V-15 laisse à leur défaut. Avec une note
-	 * affichée, ils décrivent CETTE note-ci, et rien n'est plus piloté de
-	 * l'extérieur : un bandeau de révision déployé sur une note sans demande
-	 * courante serait exactement la valeur illustrative que P-02 proscrit.
+	 * Ils étaient des propriétés, dont le défaut décrivait la planche de V-14 :
+	 * un bandeau de révision déployé sur une note sans demande courante était
+	 * exactement la valeur illustrative que P-02 proscrit. La note affichée
+	 * étant requise, les cinq se lisent sur elle.
 	 */
-	const niveauAffiche = $derived(affichee ? affichee.note.fraicheur : niveau);
-	const revisionAffichee = $derived(affichee ? affichee.revision !== null : revision);
-	const brouillonAffiche = $derived(affichee ? affichee.note.brouillon : brouillon);
-	const resyncAffiche = $derived(affichee ? affichee.resync : resync);
-	const operationnelAffiche = $derived(affichee ? affichee.note.operationnel : operationnel);
+	const niveauAffiche = $derived(affichee.note.fraicheur);
+	const revisionAffichee = $derived(affichee.revision !== null);
+	const brouillonAffiche = $derived(affichee.note.brouillon);
+	const resyncAffiche = $derived(affichee.resync);
+	const operationnelAffiche = $derived(affichee.note.operationnel);
+
+	/**
+	 * LA PROSE DU CARTOUCHE QUI DÉPEND DU NIVEAU, ET D'ELLE SEULE — le suffixe
+	 * « une revue serait bienvenue » et l'appui « revue nécessaire ».
+	 *
+	 * Ce ne sont pas des données de note : ce sont les deux mises en garde que
+	 * le gel attache aux niveaux `vieil` et `obs` (`V-14:4008-4012`). Le couple
+	 * « qui · quand », lui, ne se déduit d'aucun niveau et vient du journal des
+	 * vérifications, servi par le chargeur.
+	 */
+	const prose = $derived(PROSE_PAR_NIVEAU[niveauAffiche]);
+
+	const revisionDite = $derived(affichee.revision);
+	const modifiee = $derived(affichee.modifiee);
+	const referenceModifieeLe = $derived(affichee.referenceModifiee.jour);
+	/** Le dernier contrôle, tel que le journal des vérifications le porte. */
+	const controle = $derived(affichee.controle);
 
 	/**
 	 * LE TÉMOIN PASSE PAR LA FABRIQUE UNIQUE, ET SON ANCIENNETÉ VIENT DE LA MÊME
@@ -271,81 +277,22 @@
 	 * `joursDepuisControle` est l'ancienneté sur laquelle le niveau a été
 	 * résolu — dernière vérification, à défaut dernière modification
 	 * (`RG-M06-01`). La lire ailleurs ferait dire au libellé autre chose que ce
-	 * que la jauge montre. Sans note affichée, l'ancienneté reste celle de la
-	 * date de planche, comptée depuis `DATE_REFERENCE`.
-	 */
-
-	/**
-	 * LA PROSE DU CARTOUCHE QUI DÉPEND DU NIVEAU, ET D'ELLE SEULE — le suffixe
-	 * « une revue serait bienvenue » et l'appui « revue nécessaire ».
+	 * que la jauge montre.
 	 *
-	 * Ce ne sont pas des données de note : ce sont les deux mises en garde que
-	 * le gel attache aux niveaux `vieil` et `obs` (`V-14:4008-4012`). Elles se
-	 * lisent donc sur le niveau AFFICHÉ, qui est celui de la note quand une note
-	 * est affichée. Le couple « qui · quand », lui, ne se déduit d'aucun niveau
-	 * et vient du journal des vérifications.
+	 * UNE NOTE JAMAIS VÉRIFIÉE NE PEUT PAS ÊTRE « VÉRIFIÉE IL Y A N JOURS ». Le
+	 * cartouche écrivait les deux à la fois : « Vérifié il y a 0 jours » sur la
+	 * ligne du haut, « Jamais vérifiée » sur celle du bas. `controle` est ce que
+	 * le journal porte — `null` quand il n'en porte rien —, et c'est la même
+	 * source que la ligne de détail juste en dessous. Le NIVEAU ne bouge pas :
+	 * `RG-M06-01` retombe sur la modification, et c'est juste. Seul le verbe
+	 * cesse de mentir.
 	 */
-	const prose = $derived(CONTROLE_PAR_NIVEAU[niveauAffiche]);
-
-	/**
-	 * LES TROIS PROSES DATÉES DU GEL — la demande de révision, la modification
-	 * de la note, celle du corps Référence.
-	 *
-	 * Elles sont ici pour la même raison que `CONTROLE_PAR_NIVEAU` : sans note
-	 * affichée, le bloc rend la transcription de la planche, et cette
-	 * transcription porte des dates. Avec une note affichée, AUCUNE n'est lue —
-	 * les trois viennent de `notes.revision_le`, `notes.modifie_le` et
-	 * `notes.corps_reference_modifie_le`.
-	 */
-	const REVISION_DU_GEL: RevisionCourante = {
-		par: 'Sophie Nguyen',
-		le: '28 juillet 2026',
-		commentaire:
-			"La commande de restauration partielle a changé avec Barman 3.11. Le paragraphe 3.2 renvoie encore à l'ancienne syntaxe."
-	};
-	const MODIFICATION_DU_GEL: InstantAffiche = {
-		iso: '2026-07-22',
-		jour: 'il y a 3 semaines',
-		heureDite: '22 juillet 2026 à 16:47'
-	};
-
-	const revisionDite = $derived(affichee ? affichee.revision : REVISION_DU_GEL);
-	const modifiee = $derived(affichee ? affichee.modifiee : MODIFICATION_DU_GEL);
-	const referenceModifieeLe = $derived(
-		affichee ? affichee.referenceModifiee.jour : '22 juillet 2026'
-	);
-	/** Le dernier contrôle : celui du journal, ou celui de la planche à défaut. */
-	const controle = $derived(
-		affichee
-			? affichee.controle
-			: {
-					par: CONTROLE_PAR_NIVEAU[niveau].par as string | null,
-					quand: {
-						iso: CONTROLE_PAR_NIVEAU[niveau].iso,
-						jour: CONTROLE_PAR_NIVEAU[niveau].jour,
-						heureDite: `${CONTROLE_PAR_NIVEAU[niveau].jour} à ${CONTROLE_PAR_NIVEAU[niveau].heure}`
-					}
-				}
-	);
-
 	const temoin = $derived(
-		temoinFraicheur(
-			affichee
-				? {
-						fraicheur: niveauAffiche,
-						jours: affichee.joursDepuisControle,
-						/* UNE NOTE JAMAIS VÉRIFIÉE NE PEUT PAS ÊTRE « VÉRIFIÉE IL Y A N
-						   JOURS ». Le cartouche écrivait les deux à la fois : « Vérifié
-						   il y a 0 jours » sur la ligne du haut, « Jamais vérifiée » sur
-						   celle du bas. `controle` est ce que le journal des
-						   vérifications porte — `null` quand il n'en porte rien —, et
-						   c'est la même source que la ligne de détail juste en dessous.
-						   Le NIVEAU ne bouge pas : `RG-M06-01` retombe sur la
-						   modification, et c'est juste. Seul le verbe cesse de mentir. */
-						revise: controle === null ? null : controle.quand.iso
-					}
-				: { fraicheur: niveau, jours: anciennete(CONTROLE_PAR_NIVEAU[niveau].iso) }
-		)
+		temoinFraicheur({
+			fraicheur: niveauAffiche,
+			jours: affichee.joursDepuisControle,
+			revise: controle === null ? null : controle.quand.iso
+		})
 	);
 </script>
 
@@ -507,9 +454,7 @@ vues montrent la même note, jamais deux versions divergentes du markup. -->
 
 		<dt>Consultations</dt>
 		<dd>
-			<span class="chiffre"
-				>{consultationsCumul} consultations · {consultations} sur les 30 derniers jours</span
-			>
+			<span class="chiffre">{ligneDeConsultations}</span>
 		</dd>
 	</dl>
 	<!-- eslint-enable svelte/no-navigation-without-resolve -->
