@@ -59,6 +59,23 @@ export interface DomaineDeRail {
 }
 
 /**
+ * LE RATTACHEMENT DU COMPTE, ET CE QUE CHACUNE DE SES CIBLES OUVRE VRAIMENT.
+ *
+ * `+layout.server.ts` le rend déjà nul quand le domaine de rattachement n'est
+ * pas LISIBLE. Les deux booléens répondent aux deux conditions que les cibles
+ * demandent EN PLUS de cette lisibilité, et qu'un verdict unique laissait
+ * ouvertes : un module éteint (`RG-STR-06`), un droit qui lit sans rédiger.
+ */
+export interface RangementDeCoquille {
+	readonly univers: string;
+	readonly domaine: string;
+	/** Les notes du domaine s'ouvrent — module Notes actif. */
+	readonly notes: boolean;
+	/** Le formulaire de signet s'ouvre — module Signets actif, et rédaction. */
+	readonly signets: boolean;
+}
+
+/**
  * Le contexte lui-même. Tous les membres sont des accesseurs : le gabarit
  * racine les câble sur `data`, et la coquille suit une navigation sans qu'on
  * réémette le contexte.
@@ -96,4 +113,16 @@ export interface IdentiteDeCoquille {
 	 * gabarit racine le sert et le pied se rallume sans rien changer ici.
 	 */
 	readonly synchro: string | null;
+	/**
+	 * LE RATTACHEMENT SERVI PAR LE GABARIT RACINE — il décide des DEUX entrées
+	 * du menu « Créer » qui exigent un domaine.
+	 *
+	 * Elles étaient rendues par le serveur puis retirées par le câblage, après
+	 * hydratation : servies quand même, et gardées par un navigateur sans script.
+	 * `P-09` les veut ABSENTES. La coquille les émet donc, ou ne les émet pas.
+	 *
+	 * `undefined` hors gabarit racine — le rendu par défaut d'une vue, la page
+	 * d'erreur : la coquille les émet alors toutes, et le gel ne bouge pas.
+	 */
+	readonly rangement: RangementDeCoquille | null | undefined;
 }
