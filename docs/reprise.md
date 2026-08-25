@@ -1,46 +1,49 @@
 # Où reprendre
 
-*État au 25 août 2026, après la campagne des valeurs de démonstration servies faute de route. Le
-harnais de vérification a été supprimé : ce document ne cite aucune batterie, il dit **ce qu'un
-utilisateur peut faire**, avec ses codes HTTP relevés.*
+*État au 26 août 2026, après la campagne **« le jeu de démonstration ne descend plus dans le
+produit »**. Le harnais de vérification a été supprimé : ce document ne cite aucune batterie, il dit
+**ce qu'un utilisateur peut faire**, avec ses codes HTTP relevés.*
 
-À la clôture : `pnpm check` **= 0**, `pnpm test:unit` **= 0** — 1 699 contrôles sur 70 fichiers. Les
-copies de travail du pilote, les bases de lot et la base d'intégration ont été retirées ; il ne
-reste que `codicillus` (développement) et `codicillus_demo`.
+À la clôture : `pnpm check` **= 0**, `pnpm test:unit` **= 0** — 1 696 contrôles sur 70 fichiers. Les
+copies de travail du pilote, les dix-huit bases de lot et la base d'intégration ont été retirées ; il
+ne reste que `codicillus` (développement) et `codicillus_demo`.
 
 ---
 
 ## Les lots
 
-**Fusionnés : C, A, D, L.** **En quarantaine : aucun.**
+**Fusionnés : 0, 5, 3, 4, 6, 1, 2, 7.** **En quarantaine : aucun.**
 
-Cette campagne-ci n'a réparé qu'un seul motif : **une valeur du jeu de démonstration servie à
-l'utilisateur, faute de route pour l'alimenter.** Un défaut d'alimentation n'a rien d'un défaut de
-rendu : l'écran est correct, la donnée est en base, et c'est le chemin entre les deux qui manque.
+La campagne a poursuivi **un seul motif**, et cette fois jusqu'à sa cause : une propriété de vue
+**optionnelle dont le défaut était une constante de `seeds/corpus.ts`**. Une route qui oubliait de
+passer la donnée servait alors « Infrastructure », « Production », « Karim Belhadj » ou
+« Restaurer une sauvegarde PostgreSQL » sur l'instance d'un client — et **rien ne protestait** : ni
+le compilateur, ni un test, ni l'écran. Seule l'ouverture d'une page sur une base vide le révélait.
 
-**La leçon de la campagne, et c'est elle qui dit où chercher la suite :**
+**La cause n'était pas dans le code : elle était écrite dans `CLAUDE.md`.** Le paragraphe
+« Brancher une vue » prescrivait le motif, mot pour mot, et le concluait par « le rendu par défaut
+ne bouge pas ». Quatre campagnes ont couru après ses symptômes en laissant la consigne intacte. Le
+lot 7 la remplace et la verrouille ; la consigne dit maintenant **propriété requise, ou état vide
+explicite**, et une règle ESLint interdit l'import.
 
-> Les campagnes précédentes ont refermé les fuites **par le haut** — gabarit racine, contexte de
-> coquille, contexte de console — parce que ce sont les canaux qu'**une route unique alimente** :
-> une seule correction y ferme des dizaines de vues d'un coup. Ce qui restait ouvert est exactement
-> ce qui n'a **aucune route** : une page d'erreur, un composant partagé dont la propriété n'est
-> jamais passée, un module hors de portée de toute propriété.
+**La leçon, et c'est elle qui dit où chercher la suite :**
 
-Les trois formes se sont vérifiées une par une :
-
-- **la page d'erreur** — `+error.svelte` n'est pas une route, elle n'a pas de chargeur, et elle
-  montait deux vues sans jamais leur passer le chemin demandé (lot A) ;
-- **le composant partagé** — V-15 montait le bloc de lecture **sans `affichee`**, et le bloc
-  retombait sur la note de démonstration (lot L) ;
-- **le module hors de portée** — `outils.ts` portait le périmètre d'ouverture de la cartographie en
-  constante, à côté du même littéral écrit deux fois dans la vue (lot C).
+> Un défaut de câblage ne se voit pas, par construction. L'écran est correct, la donnée est en
+> base, et l'écart n'apparaît que **sur une instance dont les noms ne sont pas ceux du jeu**. Tant
+> qu'un défaut de propriété peut être une donnée, aucun outil du dépôt ne peut rendre le manque
+> visible — c'est pourquoi la réparation est en deux temps : rendre la porte gardée par le
+> compilateur, puis interdire le retour en arrière par la règle.
 
 | Lot | Ce qu'il a rendu vrai |
 |---|---|
-| C — périmètre | `/cartographie` ouvrait sur « Univers Production », un nom que **rien ne pose sur une instance réelle** : zéro nœud, légende vide, et un voile qui annonçait « Aucune relation dans ce périmètre » — faux, puisque ce n'est pas le périmètre qui est vide, c'est qu'il n'existe pas. Le périmètre honnête était déjà écrit deux fois dans le dépôt (V-20, V-21) ; V-19 était la seule dissidente. Le littéral avait **trois** sources — le chargeur et deux endroits de la vue — et n'en corriger qu'une laissait la faute en place. Mesuré sur une instance dont l'univers s'appelle « Socle technique » : de 0 nœud, 0 arête, 0 type en légende, à **24 nœuds, 21 arêtes, 8 types**, sans voile |
-| A — 404 | `+error.svelte` montait V-26 et V-04 **sans leur passer le chemin** : aucune des deux vues n'avait de propriété pour le recevoir. Toute adresse cassée annonçait « /notes/bascule-telephonie-voip », et « Créer la note » ouvrait l'éditeur pré-rempli avec ce titre — **le seul endroit du produit où une valeur du jeu pouvait atteindre la base par un geste d'utilisateur**. Seconde fuite, indépendante : V-04 retombait sur `assistance.exemple.fr`, et cette valeur l'emportait **même sur une adresse configurée en console**. La clé descend maintenant par le gabarit racine ; vide, le bouton n'est plus émis |
-| D — obligation | La console écrivait `obligatoire`, `aide` et `defaut` en base, l'écran le confirmait à l'administrateur, et **rien nulle part ne les lisait** : la forme du champ au formulaire avait été recopiée à la main sur l'état d'avant la migration 008, onze minutes après elle. L'éditeur peint la marque, l'aide et le défaut ; le serveur **refuse en 400** en nommant les propriétés manquantes. La forme est désormais **dérivée** de `ChampDeFiche`, non recopiée — un verrou par assertion avait été posé d'abord, et il ne verrouillait rien : un sur-ensemble structurel est assignable au sous-ensemble. Second défaut trouvé en chemin : le défaut du schéma se pré-posait dans l'éditeur d'une **note existante** et entrait en base sans que personne l'ait saisi ; l'origine des valeurs est passée par l'appelant |
-| L — lecture | `/notes/{id}?version` rendait, pour **n'importe quelle** note, le titre, le rangement, l'auteur, les 412 consultations et le corps de la note de démonstration, sous un fil d'Ariane qui nommait la vraie note — et ses deux liens internes menaient à une note qui rend **404** sur une instance réelle. La route servait déjà la donnée ; personne ne la passait à V-15. Trois défauts partent avec : `?version={n}` **servait le corps courant** sous un bandeau annonçant un état antérieur, donc « Restaurer cette version » écrasait la note avec un contenu jamais montré ; le cumul de consultations était **en retard d'une unité sur sa propre fenêtre** ; et les propriétés typées d'une fiche, qui ne se relisaient **nulle part** hors de l'éditeur, sont rendues en lecture. Levée au passage : le panneau appelait une conversion qui **lève** sur deux des six valeurs de l'énumération des types de champ — un seul champ `date` au référentiel aurait mis toute lecture de fiche en **500** |
+| 0 — vocabulaire | `vocabulaire.ts` calculait ses quatre formes **à l'import** depuis `CONFIG.motFiche`. La clé `mot_fiche` existait en base, la console l'écrivait, `lireConfiguration()` la lisait — et **rien ne branchait la lecture sur l'affichage** : renommer « Fiche » n'avait aucun effet sur les quinze vues qui portent le mot. `RG-M14-09` (« recalcul immédiat ») était faux à la lettre. Les quatre formes descendent par le contexte de coquille, déjà dérivées. Relevé : « Fiche » → « Modèle », **16 écrans sur 16** servent le mot configuré dans leur HTML, retour compris |
+| 5 — registres de console | Les propriétés de V-27 à V-32 deviennent **requises** ; aucune des six vues n'importe plus une valeur du jeu. Deux lignes de démonstration partaient avec les sentinelles qui les injectaient — le domaine « Téléphonie » et le type de relation « remplace » n'étaient retenus que par une comparaison d'identité entre la propriété reçue et la constante, c'est-à-dire **exactement quand la donnée n'avait pas été passée**. Trois défauts de saisie tombent avec : renommer une clé technique repliait la ligne en cours de remplissage, retirer une propriété laissait sa clé morte dans l'état de dépli, et la pastille « mot de passe verrouillé » se décidait sur un identifiant du jeu écrit en dur |
+| 3 — rangement | Les six écrans de rangement servaient le jeu dès qu'une route oubliait une donnée. Le catalogue des six modules quitte `seeds/` pour `$lib/rangement/modules.ts` — c'est un référentiel de produit —, et une clé inconnue ne met plus le rendu en erreur. Partent avec : le rail qui marquait « Infrastructure » en dur, V-13 qui retombait sur « Production › Infrastructure › Exploitation » et sur l'héritage de droit du gel, V-23 qui servait la note `n-sig-statut` **dans le formulaire de création**, et « hier » dès zéro jour |
+| 4 — graphes, import, profil | Quinze propriétés de V-19 à V-21, V-24 et V-25. Trois fuites de plus : quatre arguments par défaut de `graphe/cartographie.ts` tirés du jeu ; une **table de seize positions de nœuds indexée sur les identifiants de seize notes du jeu** — le corpus de démonstration recevait la disposition du gel, celui d'un client jamais, `disposer()` place désormais tous les corpus de la même façon ; et le sélecteur de périmètre qui n'avait **pas d'option pour son propre défaut**. À la reprise : l'onglet Distinctions rendait une étiquette au-dessus d'un conteneur vide sur toute instance, et la garde de `/importer` n'éprouvait pas la même question que sa liste de cibles — un compte à qui un sous-dossier seul est ouvert recevait l'écran avec **un sélecteur sans aucune option** sous une étiquette obligatoire (200 avant, 404 après) |
+| 6 — console système | `CoquilleDeConsole` portait `univers`, `domaines`, `compte` et `instance` en propriétés facultatives **et les traversait sans jamais les lire** : une route qui en oubliait une affichait le rail des maquettes, « Karim Belhadj » dans la barre et la version du jeu au pied. Les quatre partent des trois côtés ; le contexte d'identité est la seule source. Ce que le produit ne mesure pas reçoit un état vide et **se tait** : V-34 ne rend plus l'indicateur nord ni les trous documentaires — ils servaient les chiffres du jeu, masqués par la feuille mais **bien présents dans le HTML servi** |
+| 1 — écrans publics | `portail` devient exigée sur V-01 à V-04 et V-06 : vide — l'état d'une instance neuve —, les **six liens d'assistance ne sont plus émis**. `notesPubliques()` quitte `seeds/` et exige son argument. V-26 n'expédie plus sa pierre tombale dans le HTML de chaque 404 : elle était émise masquée, avec « Restaurer une sauvegarde MariaDB » et « Marc Ferreira ». À la reprise : les pistes de reformulation, dérivées du jeu de **résultats**, étaient structurellement vides **dans l'état même où elles servent** (`?q=zzzintrouvable` → 0 piste) ; elles se comptent maintenant dans le chargeur, sur le périmètre lisible |
+| 2 — note | `note-de-demonstration.ts` faisait `CORPUS.find('n-restaurer-pg')` et trois vues plus un chargeur l'importaient : **le jeu descendait dans le produit sans qu'une ligne de `src/vues/` soit fautive**. Le sommaire, vide sur toute note écrite dans le produit, est réparé — l'ancre est dérivée du texte **au rendu**, la persister capturerait une version au premier ré-enregistrement de chaque note. À la reprise : `/notes/nouvelle` repliait `universDuCompte` sur `'Production'` **et le passait à une propriété devenue requise** — le littéral n'était pas retiré, il était déplacé —, et V-40 annonçait six versions détruites quel que soit l'historique réel |
+| 7 — la règle | `eslint.config.js` interdit d'importer une **valeur** de `seeds/` dans `src/vues/`, `src/routes/` et `src/lib/`. Les `import type` restent ouverts : c'est la valeur du jeu qui est de la démonstration, pas sa forme. `src/lib/**` est dans la portée parce que **six modules de bibliothèque** faisaient descendre le jeu jusque dans les vues. Un second motif ferme la même descente **sous un nom qui ne dit pas `seeds`** : `semence.ts` importe `CORPUS` en valeur et six de ses fonctions le prennent en argument par défaut ; deux emprunteurs d'aujourd'hui gardent une exemption **nommée et bornée à ce motif**. Déplacer `corpsVide()` hors de la semence reste à faire |
 
 ---
 
@@ -87,7 +90,7 @@ servir en les nommant**. La connexion fonctionne **sans JavaScript**.
 |---|---|
 | accueil | indicateurs, activité, corbeille de révisions, périmètre du compte — les indicateurs naviguent, filtrés |
 | recherche | résultats réels, facettes, compteurs, pastilles, état vide, périmètre anonyme |
-| lecture d'une note | titre, corps rendu, cartouche, relations, rétroliens, consultations, **et les propriétés typées de la fiche** — *le panneau de sommaire, lui, est vide sur toute note écrite dans le produit : défaut n° 3* |
+| lecture d'une note | titre, corps rendu, cartouche, relations, rétroliens, consultations, les propriétés typées de la fiche, **et le sommaire des titres de la note écrite dans le produit** — *le panneau « Statistiques indisponibles » y est rendu sans condition : défaut n° 6* |
 | historique | les vraies versions **de la vraie note**, ouvert par `?version` sur **le corps de cette version**, restaurer marche et capture sa version |
 | comparaison | modes Texte et Visuel sur les vraies versions, alternative textuelle |
 | éditeur | ProseMirror — gras, titres, listes, tâches, tableaux, alertes — les propriétés du type choisi, leur aide, leur défaut, et le refus des manquantes |
@@ -101,117 +104,150 @@ servir en les nommant**. La connexion fonctionne **sans JavaScript**.
 
 ## Ce qui ne marche pas — trouvé à l'intégration, sur une instance neuve
 
-Huit défauts, dans l'ordre où ils coûtent cher. Le premier est sur le **premier écran d'une
-installation réelle** ; le deuxième tue un contrôle à l'ouverture ; le troisième contredit un écran
-avec lui-même ; les autres font mentir une date, un chiffre, et servent encore du jeu de
-démonstration.
+Quatorze défauts, dans l'ordre où ils coûtent cher. Les trois premiers servent **encore** du jeu de
+démonstration, et deux d'entre eux **sur le produit construit** ; le quatrième fait mentir le
+produit sur la promesse qui le définit ; le dernier bloc ferme la porte à qui vient d'installer.
 
-### 1. L'accueil public émet des boutons d'assistance vers une adresse VIDE
+### 1. `/bibliotheque` sert l'activité du jeu sur une base à ZÉRO note
 
-Sur une instance neuve, `portail_assistance` vaut `''` (`src/lib/base/schema.ts:464`) : le chargeur
-descend bien la clé, et les vues en font `href=""`. Un tel lien **recharge la page** — c'est la
-seule chose qu'il fait, sur l'écran que voit le premier visiteur d'une installation réelle.
-
-```
-GET /            (anon, instance neuve)   200   deux boutons « Ouvrir un ticket d'assistance »
-                                                href="" — V-01:268, :309, :336
-GET /recherche   (anon, sans résultat)    200   idem — V-02:493 et :516
-GET /guides/{id} (anon)                   200   idem — V-03:742
-```
-
-**La garde existe déjà, et elle est écrite en toutes lettres à côté** : `src/vues/V-04.svelte:352`,
-`{#if assistanceJoignable}`, motivée par « un lien d'assistance sans destination n'est pas une
-issue ». V-06 la porte aussi (`:145`) — `/mot-de-passe-oublie`, la porte de secours d'un utilisateur
-enfermé dehors, est donc **saine**. Ce sont **six liens dans trois vues publiques** qui ne l'ont pas
-reçue : V-01 (×3), V-02 (×2), V-03 (×1). Même propriété, même condition, même phrase à recopier.
-
-### 2. Le sélecteur de périmètre de `/cartographie` n'a pas d'option pour son propre défaut
-
-Le lot C a posé le défaut de la carte à `{ type: 'global' }` (`src/lib/donnees/outils.ts:194`,
-valeur `global|`), mais le `select` de `src/vues/V-19.svelte:373-379` n'énumère que **les univers et
-les domaines**.
+`src/routes/bibliotheque/+page.svelte:30` ne passe pas la propriété `activite`, donc
+`src/vues/V-41.svelte:150` (`activite = ACTIVITE`) retombe sur la constante de
+`seeds/corpus.ts:1308`.
 
 ```
-GET /cartographie   200   carte JUSTE, corpus entier
-                          #perimetre : selectedIndex === -1, value === ""
+GET /bibliotheque   200   « Karim Belhadj — verification », « Sophie Nguyen — edition »,
+                          « Karim Belhadj — revision », « Sophie Nguyen — verification »
+                          base à 0 note
 ```
 
-Le contrôle est donc **vide au-dessus d'une carte peuplée**, et une fois un univers ou un domaine
-choisi, **aucune option ne ramène au corpus entier**. Les deux cartographies sœurs la portent —
-V-20 : `global|` → « Tous les domaines » ; V-21 : `tout|` → « Tout le corpus ». V-19 est la seule à
-ne pas avoir reçu l'option avec son nouveau défaut : le lot a réparé la carte et laissé son contrôle
-désaccordé.
+**Reproduit sur le produit construit** (`prod/02_bibliotheque.html`) et **embarqué dans le paquet
+navigateur**, `build/client/_app/immutable/nodes/4.*.js`. C'est le motif exact de la campagne, sur
+la seule vue que la règle ESLint exempte : V-41 est une planche, mais `/bibliotheque` la **monte**.
+L'exemption est donc trop large d'une vue — ou la route ne devrait pas monter une planche.
 
-### 3. Le sommaire est VIDE sur toute note écrite dans le produit
+### 2. `/bibliotheque` — quatre littéraux du jeu de plus dans la même vue
 
-`sommaireDe()` (`src/routes/notes/[identifiant]/+page.server.ts:200`) écarte tout titre dont
-`ancre === null` — et **rien n'attribue jamais d'ancre** :
-`src/lib/edition/schema.ts:229` la déclare `ancre: { default: null }`, les commandes de titre de
-l'éditeur posent `setBlockType(heading, { level })` **sans ancre**
-(`src/lib/edition/editeur-client.ts:298-300`), et le câblage de l'opérationnel construit lui aussi
-`ancre: null` (`src/routes/notes/[identifiant]/operationnel/cablage.ts:97`).
+`src/vues/V-41.svelte:190`, `const DOMAINE_DEMO = 'Infrastructure'`, rendu ligne 390 dans la
+pastille de domaine ; ligne 396, le fil d'Ariane spécimen « Accueil › Production › Infrastructure ›
+Exploitation › Sauvegardes » ; ligne 405, le bloc de code « barman recover pg-prod-01 latest
+/var/lib/postgresql » et le tableau `pg-prod-01` / `pg-prod-02`. **Production**, **Infrastructure**
+et **barman** sont les noms du jeu de démonstration — « barman » est le vocabulaire même que le lot
+2 devait purger. **Reproduit sur le produit construit.**
 
-```
-note portant deux titres de niveau 2 en base
-GET /notes/{id}   200   #article  : « Avant de couper » et « Après le redémarrage » rendus
-                        #sommaire : « Aucun titre dans cette note »
-```
+### 3. `/importer` — l'illustration du scénario nomme un domaine qui n'existe pas
 
-**Les deux se contredisent sur le même écran**, en lecture (V-14) comme en historique (V-15). Seule
-exception, et elle ne sauve rien : le gabarit d'insertion « Titre de niveau 2 »
-(`src/lib/edition/constructions.ts:99`) pose l'ancre **littérale** `s-nouveau` — deux sections
-insérées par ce bouton partagent donc une seule ancre, et les deux entrées du sommaire mènent à la
-première.
+`src/vues/V-24.svelte:399` écrit « → Infrastructure », un domaine que **rien ne pose sur cette
+instance** — le seul domaine y est « Coeur de Réseau ». Le commentaire de
+`src/vues/V-24.svelte:197` montre que le repli sur `MOI.domaine` a **déjà été réparé au-dessus** :
+le littéral de l'illustration est resté. **Reproduit sur le produit construit.**
 
-### 4. Trois versions écrites dans la même minute sont toutes datées « hier »
+### 4. Le produit MENT sur sa fraîcheur — sur son seul écran public
 
-`relatif(jours)` (`src/vues/V-15.svelte:375-380`) rend `'hier'` dès `jours <= 1`, or
-`joursEcoules()` (`src/lib/donnees/lecture.ts:120`) rend **0** en deçà de 24 h.
+C'est la promesse de tête du produit rendue fausse.
 
 ```
-note créée et modifiée trois fois dans la minute
-  panneau d'historique   « hier », « hier », « hier »  — version courante comprise
-  bandeau de la MÊME page « Version 1 du 25/08/2026 »
+GET /guides/n-guide-public-de-raccordement   200   « Vérifié à l'instant »
+                                                   « Ce guide a été contrôlé le — par l'équipe
+                                                     qui l'a écrit »
+GET /notes/n-guide-public-de-raccordement    200   « Jamais vérifiée »     ← MÊME note
+                                                   verifie_le EST NULL en base
 ```
 
-### 5. Une note vérifiée à l'instant affiche « Vérifié il y a 0 jours »
+La chaîne : `src/lib/donnees/lecture.ts:437` replie `verifieLe ?? modifieLe`, d'où `jours = 0`, d'où
+`src/lib/fraicheur.ts:288` — « Vérifié à l'instant ». `src/vues/V-03.svelte:280-282` rend
+`controleLe ?? RIEN` et `:376-378` l'insère dans une **phrase affirmative**. **V-03 n'a aucune
+branche « jamais vérifiée »**, contrairement à V-14 qui la porte.
 
-Même famille, autre écran : `src/lib/fraicheur.ts:275`. Relevé sur
-`/notes/n-redemarrer-un-commutateur` immédiatement après `POST ?/verifier` → **200**.
+### 5. Même cause, accueil public
 
-### 6. Renommer une propriété REPLIE sa ligne en pleine saisie
+`src/vues/V-01.svelte:257` sert « 1 guides publics · **1 vérifiés il y a moins d'un mois** » à
+l'anonyme, alors qu'aucun guide de l'instance n'a **jamais** été vérifié.
 
-Dans `/console/types-de-fiches`, `deplies` est indexé par la clé de la propriété
-(`src/vues/V-29.svelte:786`) et `changerLaPropriete()` (`:425-427`) **ne le remappe pas** quand la
-clé change.
+### 6. Un panneau d'erreur PERMANENT et FAUX sur chaque page de note
 
-```
-propriété dépliée, champ « Nom technique » modifié, sortie du champ
-  data-ouvert : « oui » → « non »
-  disparaissent de l'écran : la valeur par défaut, l'aide, la case « Propriété obligatoire »
-```
+`src/vues/V-14.svelte:685-696` rend, **sans condition et sans attribut `hidden`**, un panneau
+« Consultations détaillées / Statistiques indisponibles / Le service de mesure ne répond pas. Le
+reste de la note reste consultable. » avec un bouton « Réessayer » **inerte**. Le commentaire du
+fichier l'annonce lui-même : « Exemple d'un panneau en erreur ». La même page affiche **au-dessus**
+« 1 consultation · 1 sur les 30 derniers jours » : la mesure fonctionne, l'écran dit le contraire.
 
-`retirerLaPropriete()` (`:462`) laisse en outre des clés mortes dans `deplies`.
+### 7. Une mesure FABRIQUÉE, présentée comme un temps mesuré
 
-### 7. Les pistes de reformulation sont encore des littéraux du jeu de démonstration
-
-`src/vues/V-26.svelte:229` et `src/vues/V-08.svelte:496` : quatre mots en dur chacun, servis sur une
-instance neuve, chacun branché sur une recherche qui **ne rendra jamais rien**.
+`src/vues/V-08.svelte:541` : `const duree = Math.max(0.09, 0 / 1000 + 0.31)`.
 
 ```
-GET /notes/inexistante-xyz   404   « sauvegarde · restauration · astreinte · supervision »
-GET /recherche?q=…           200   « restauration · sauvegarde · barman · plan de reprise »
-       chaque piste → /recherche?q=…   200, aucun résultat
+GET /recherche?q=…   200   « 1 résultat en 0,31 s »
+GET /recherche?q=…   200   « 4 résultats en 0,31 s »   ← la même constante
 ```
 
-C'est le motif « description faite de littéraux » que la campagne précédente a fermé sur l'écran
-d'export, resté ouvert sur deux écrans — et « barman » est le vocabulaire même que le lot L devait
-purger.
+Jumeau anonyme : `src/vues/V-02.svelte:176` (`0.18`), servi comme « 1 résultat en 0,18 s ».
 
-### 8. Mineur — un pluriel en dur
+### 8. Un tiret là où un zéro est dû
 
-`src/lib/lecture/NoteDeDemonstration.svelte:504` : une note ouverte une seule fois affiche
-« **1 consultations** · 1 sur les 30 derniers jours ».
+`src/vues/V-31.svelte:170-174` : sur une instance à zéro gabarit, `templates.every(...)` vaut
+**`true` sur le tableau vide**, `totalUtilisations` vaut `null`, et `/console/templates` rend
+« Les **—** notes déjà créées à partir de ces templates ne bougeront pas. »
+
+### 9. L'organisation est CODÉE EN DUR dans huit vues
+
+« Direction technique » est écrit dans `src/vues/V-01.svelte:199` et `:377`, `V-02.svelte:560`,
+`V-03.svelte:771`, `V-04.svelte:404`, `V-05.svelte:170`, `V-17.svelte:968`, `V-22.svelte:461`.
+**Toutes les vues publiques d'une instance neuve** annoncent donc « Codicillus · Direction
+technique », et `/connexion` demande « les identifiants de votre compte de la direction technique ».
+**Aucun réglage de `/console/configuration` ne nomme l'organisation** : ce n'est pas un câblage
+oublié, c'est une clé qui n'existe pas.
+
+### 10. Accords de pluriel
+
+« 1 consultations » `src/vues/V-08.svelte:786` ; « 1 vues » `src/vues/V-11.svelte:613`,
+`src/vues/V-34.svelte:583` et `:608` ; « 1 contributeurs » `src/vues/V-34.svelte:557` ; « Les 1
+dossiers du domaine » sur `/console/exports` ; « 0 brouillon(s) » sur `/univers/{univers}`. Ce ne
+sont que les occurrences **relevées** : le gisement entier est décrit plus bas — c'est la campagne
+suivante.
+
+### 11. IMPASSE À L'INSTALLATION — deux boutons offerts, deux 404
+
+Sur la base **vraiment vide** (0 univers), `/notes/nouvelle` et `/importer` rendent un **404 nu** :
+`src/routes/notes/nouvelle/+page.server.ts:102` (`if (!acces.trouve) error(404)`) et
+`src/routes/importer/+page.server.ts:186`.
+
+```
+base à 0 univers, administrateur connecté
+GET /notes/nouvelle   404   nu
+GET /importer         404   nu
+              puis un domaine créé
+GET /notes/nouvelle   200
+GET /importer         200
+```
+
+Or le rail et le menu « Créer » posent **« Nouvelle note » et « Importer des fichiers » dès la
+première connexion**. L'administrateur qui vient d'installer clique deux boutons offerts et reçoit
+deux pages introuvables. La garde est juste — on ne crée pas une note sans rangement —, c'est
+l'**absence d'issue** qui est le défaut : ni message, ni chemin vers la création d'un univers.
+
+### 12. Deux actions de console divergent sur la clé d'un univers
+
+`src/lib/donnees/administration.ts:1961` : `creerUnDomaine` cherche l'univers d'accueil par
+`univers.nom`, alors que `creerUnUnivers` rend un **`identifiant` lisible** et que **toutes les
+adresses du produit** désignent un univers par cet identifiant. Passer l'identifiant à `?/creer`
+rend un **404 muet** (mesuré). L'écran s'en tire parce que `src/vues/V-28.svelte:695` pose
+`value={u.nom}` dans le sélecteur — le contrat de l'action reste divergent du reste du produit, et
+le premier appelant qui suivra la convention générale tombera dessus.
+
+### 13. Développement seulement — une trace de mesure servie dans le CSS
+
+`src/vues/V-15.css:741` porte le commentaire « MESURÉ LE 21/08/2026 sur `/notes/n-restaurer-pg` »,
+servi tel quel par Vite dans le CSS de **toute** page de note — la chaîne `n-restaurer-pg` se trouve
+dans le HTML servi de `/notes/n-plan-de-commutation-du-coeur` et de
+`/notes/n-commutateur-coeur-a1`. **Absent du produit construit**, où la minification l'efface.
+
+### 14. Signalé, non retenu comme défaut
+
+`/console/univers` sert `placeholder="Production"` et `/console/domaines`
+`placeholder="Infrastructure"` dans les champs « Nom » de leur panneau de création (`V-27`, `V-28`,
+transcription du gel). Ce sont des **exemples de saisie inertes**, pas de la donnée rendue — ils
+reprennent néanmoins **mot pour mot** deux noms du jeu de démonstration. À trancher quand quelqu'un
+passera par là, pas à ouvrir un lot pour ça.
 
 ---
 
@@ -221,35 +257,37 @@ purger.
 tenu, pas un oubli : le plan les a écartées en connaissance de cause. Reprendre l'une d'elles, c'est
 ouvrir un lot, pas corriger un défaut.
 
-### En tête : `motFiche` — c'est la campagne suivante
+### En tête : les accords de pluriel — c'est la campagne suivante
 
-`M14.7` rend **un seul** des douze termes contractuels renommable, et globalement, par la console de
-configuration. Le champ existe (`/console/configuration`, V-33), l'écriture existe
-(`src/lib/donnees/administration.ts:548`), la lecture existe
-(`src/lib/donnees/lecture.ts:974`), et la dérivation des quatre formes existe
-(`src/lib/vocabulaire.ts` — singulier et pluriel, capitalisé et non). **Et le renommage ne change
-rien à l'écran.**
+Le lot 2 a corrigé « 1 consultations », le lot 3 « hier » dès zéro jour, l'intégration en a relevé
+six autres. **Ce sont des occurrences, pas la dette.** Le dépôt porte une **quarantaine de pluriels
+écrits en dur** dans les vues — un `s` collé à un libellé, sous un compteur qui vaut couramment 1 sur
+une instance neuve — et **la fonction d'accord n'existe pas**.
 
-La cause est exactement le motif de cette campagne, un cran plus haut : `vocabulaire.ts` dérive ses
-quatre formes de `CONFIG.motFiche`, **c'est-à-dire de `seeds/corpus.ts`** — une constante de module,
-figée au chargement, hors de portée de toute propriété et de toute route. La valeur lue en base ne
-sert qu'à **remplir le champ de saisie de l'écran qui la modifie**. Les vingt-cinq modules qui
-rendent le mot importent la constante ; l'administrateur qui renomme « Fiche » en « Objet » voit son
-réglage enregistré, relu, et **contredit par tous les écrans**.
+C'est le motif exact de `motFiche`, que le lot 0 vient de lever : `src/lib/vocabulaire.ts` porte
+`pluriel()`, calque du gel (`mockups/V-33-console-configuration.html:3136`), mais **il ne sert qu'au
+mot renommable**. Rien dans le dépôt ne répond à « un nom, un nombre → la forme accordée », et donc
+quarante sites l'écrivent chacun à sa façon, tous au pluriel, tous faux à 1 — et tous faux à 0 dans
+l'autre sens, où le français veut le singulier.
 
 Ce que lever la dette demande, et pourquoi c'est un lot et pas un correctif :
 
-- faire **descendre** les quatre formes par le contexte de coquille et le contexte de console, comme
-  la campagne précédente l'a fait pour les seuils de fraîcheur — c'est-à-dire donner une route au
-  mot, sur les deux canaux qui atteignent toutes les vues ;
-- traiter les emplois **hors de portée d'un contexte** — un module de calcul, une constante de
-  section, un texte de courriel : ce sont ceux qui resteront après, et ils se comptent un par un ;
-- ne **pas** toucher aux identifiants — noms de classes, clés, types : le gel les fige, et les
-  renommer casse le rendu sans rien rendre renommable ;
-- garder le rendu **identique à l'octet** avec la valeur par défaut, qui vaut `Fiche`.
+- écrire **une** fonction d'accord, à côté de `pluriel()` et dans le même module — c'est déjà la
+  seule source de la dérivation, en ajouter une seconde ailleurs divergerait au premier mot
+  exotique ;
+- la faire prendre le **nombre**, pas seulement le mot : « 0 brouillon », « 1 brouillon »,
+  « 2 brouillons », et le cas `0` n'est pas celui du pluriel ;
+- recenser les quarante sites **un par un** — ils ne se trouvent pas par un motif unique : « 1 vues »
+  est une interpolation, « 0 brouillon(s) » une parenthèse, « Les — dossiers » un état vide non
+  gardé ;
+- ne **pas** toucher aux libellés que le gel fige au pluriel invariant — un titre de section n'a pas
+  de nombre.
 
 | Autre chose laissée | Raison, et ce qu'il faudrait pour le lever |
 |---|---|
+| **Le nom de l'organisation** | Défaut n° 9 ci-dessus, et ce n'est **pas** un câblage oublié : aucune clé de configuration ne nomme l'organisation. Le lever demande une clé en base, un champ dans V-33, une descente par le contexte de coquille, et huit vues à brancher — migration comprise. Lot, pas correctif |
+| **`corpsVide()` dans `semence.ts`** | Le lot 7 l'a nommé et borné, il ne l'a pas déplacé : quatre routes chargent la semence — donc `CORPUS` — par cette seule fonction. La sortir de la semence est une ligne de code et un déplacement de module ; c'est l'**exemption ESLint nommée** qui disparaît avec, et c'est pour ça que ça se fait exprès, pas en passant |
+| **L'exemption de `V-41`** | La règle exempte les quatre planches ; `/bibliotheque` **monte** V-41. Le défaut n° 1 vit dans cet interstice. Trancher demande de choisir : la route cesse de monter une planche, ou V-41 sort de l'exemption et reçoit ses échantillons du chargeur |
 | **Construire un expéditeur de courriel** | C'est une **fonction**, pas un correctif. Le produit n'a aucun expéditeur et aucune table de jeton ; l'écran unique de `/mot-de-passe-oublie` oriente vers le chemin qui existe. Le jour où l'on s'y met : un expéditeur, une table de jeton, et les six écrans de V-06 à remonter — ils ont été **retirés, pas masqués** |
 | **La table du journal d'imports** et `/console/imports/{lot}` | Lot à mandater : migration, écran de lot (`docs/routes.md:183`), plafond d'erreurs **par lot**, la règle interdisant toute purge dans le temps. La seconde moitié de `RG-M12-09` — « ce journal alimente le flux d'activité de l'accueil » — n'est tenue nulle part non plus |
 | **Les deux scénarios d'import non livrés** (`UC-M12-02`, `UC-M12-03`) | L'étape 1 cesse de les offrir et refuse explicitement qui y arriverait par un chemin résiduel. Les construire est un lot en soi |
@@ -312,12 +350,15 @@ Lire `CLAUDE.md` — il tient en une page. En deux mots : **les maquettes sont l
 pas une loi**, et un défaut se répare. La preuve qu'une chose marche est qu'elle marche dans un
 navigateur, avec ses codes HTTP relevés — **sur une base vide**, c'est là que les défauts vivent.
 
-Et la leçon propre à cette campagne, celle qui dit où chercher : **une fuite de démonstration reste
-ouverte exactement là où aucune route ne passe.** Quand une valeur d'instance est juste à un endroit
-et fausse à un autre, ne cherche pas une seconde erreur de rendu — cherche **le canal qui alimente
-le premier endroit, et l'écran que ce canal n'atteint pas**. Une page d'erreur n'a pas de chargeur,
-un composant partagé n'a que les propriétés qu'on lui passe, et une constante de module n'en reçoit
-aucune.
+Et la leçon propre à cette campagne : **la cause d'un motif qui revient quatre fois n'est pas dans
+le code.** Quatre campagnes ont corrigé les symptômes d'une phrase de `CLAUDE.md` sans lire la
+phrase. Quand un défaut se reproduit après avoir été réparé, cherche **ce qui le prescrit** — une
+consigne, un gabarit, un exemple recopié — avant de le réparer une cinquième fois.
+
+Le geste juste est désormais écrit et verrouillé : la donnée d'une vue vient du chargeur ; ce que
+toutes les routes passent est **requis**, le compilateur garde la porte ; ce qui peut manquer reçoit
+un **état vide explicite** ; et `eslint.config.js` refuse tout import de valeur venue de `seeds/`
+dans `src/vues/`, `src/routes/` et `src/lib/`.
 
 ```
 pnpm dev            le serveur
