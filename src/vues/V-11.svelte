@@ -50,8 +50,8 @@
 	 * MESURÉE NULLE, déclarée ici plutôt que réglée en rouvrant un gabarit gelé.
 	 *
 	 * AUCUN CHIFFRE N'EST SAISI (P-02) : santé, compteurs de modules, palmarès,
-	 * répartition par type et contributeurs sont calculés depuis
-	 * `seeds/corpus.ts`.
+	 * répartition par type et contributeurs sont calculés depuis les propriétés
+	 * servies.
 	 *
 	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011).
 	 *
@@ -63,78 +63,67 @@
 	 * `src/vues/V-11.css`, posé par `node verif/feuilles-de-vue.mjs V-11
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import {
-		DETAIL_DOMAINES,
-		DOMAINES,
-		INSTANCE,
-		MESURES_7J,
-		MODIFICATIONS,
-		MODULES,
-		MOI,
-		REVISIONS,
-		UNIVERS,
-		type CleDeModule,
-		type DemandeDeRevision,
-		type DetailDeDomaine,
-		type Domaine,
-		type EtatDInstance,
-		type IdentifiantNote,
-		type Module,
-		type NomDeDomaine,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
+	import type {
+		CleDeModule,
+		DemandeDeRevision,
+		DetailDeDomaine,
+		Domaine,
+		IdentifiantNote,
+		Module,
+		NomDeDomaine,
+		Note,
+		Univers
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
+	import { libelleDeModule } from '$lib/rangement/modules';
 	import { adresseDeNote, segmentsDeDossier } from '$lib/rangement/adresses';
 
 	/**
-	 * LES NEUF SOURCES QUI NE VENAIENT DE NULLE PART — T-041.
+	 * LES SOURCES DE L'ÉCRAN SONT REQUISES — le motif est retiré, pas contourné.
 	 *
-	 * Jusqu'ici les constantes du jeu de semence étaient lues AU NIVEAU DU
-	 * MODULE : un chargeur de route pouvait passer `notes`, et rien d'autre
-	 * n'atteignait l'écran — « En attente de révision » servait le même chiffre à
-	 * qui que ce soit. Elles sont désormais des PROPRIÉTÉS OPTIONNELLES.
+	 * Elles ont été OPTIONNELLES, de défaut la constante de `seeds/corpus.ts`, et
+	 * cette forme garantissait qu'une route qui en oubliait une servait le jeu de
+	 * démonstration SANS QUE RIEN NE PROTESTE : « En attente de révision » servait
+	 * le même chiffre à qui que ce soit, et aucun compilateur, aucun test, aucun
+	 * écran ne le disait.
 	 *
-	 * LE DÉFAUT EST LA CONSTANTE, ET C'EST CE QUI TIENT LE GEL. Le mode démo ne
-	 * passe que `etat`, `vecteur` et `notes` : la vue reçoit exactement ce qu'elle
-	 * recevait, et les 32 couples du banc ne bougent pas. Ce lot rend le passage
-	 * POSSIBLE ; il ne décide pas de ce qui sera passé.
+	 * `exactOptionalPropertyTypes` et `strict` sont actifs, `svelte-check` est
+	 * dans `pnpm check` : une route qui oublierait l'une d'elles NE COMPILE PLUS.
 	 *
-	 * `detailDomaines` ET `modules` SONT CEUX QUI RENDENT `P-04` EFFECTIVE. La
-	 * section « Accès » sortait de la constante et COÏNCIDAIT avec la table
-	 * `modules_de_domaine` sans en être PILOTÉE (mesuré par T-032).
+	 * `detailDomaines` ET `modules` RENDENT `P-04` EFFECTIVE, et leurs deux
+	 * sources sont distinctes : les CLÉS actives d'un domaine viennent de
+	 * `modules_de_domaine` (`RG-STR-06`), les LIBELLÉS du catalogue de produit
+	 * `$lib/rangement/modules.ts`.
 	 *
-	 * LES DEUX TABLES DE MESURE SONT PARTIELLES, ET C'EST DÉLIBÉRÉ. Aucune table
-	 * ne porte `MESURES_7J` ni `MODIFICATIONS`. Exiger la forme complète
-	 * interdirait au chargeur de passer un ensemble vide — c'est-à-dire l'état
-	 * neutre explicite que P-02 réclame quand la mesure est indisponible. Le
-	 * défaut, lui, reste la constante entière.
+	 * LES DEUX TABLES DE MESURE SONT PARTIELLES, ET C'EST DÉLIBÉRÉ. `Partial` et
+	 * non `Record` total : exiger la forme complète interdirait au chargeur de
+	 * passer un ensemble vide — l'état neutre explicite que P-02 réclame quand la
+	 * mesure est indisponible. Ce qui n'y est pas se DIT, jamais ne s'invente.
 	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — domaine × profil × état. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-11')`, variante « lecture ». */
+		/** Les notes lisibles, servies par le chargeur. */
 		notes: readonly Note[];
-		/** Les univers déclarés. Absents, ceux du jeu de semence. */
-		univers?: readonly Univers[];
-		/** Les domaines accessibles. Absents, ceux du jeu de semence. */
-		domaines?: readonly Domaine[];
-		/** L'utilisateur connecté. Absent, celui du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance — version, synchronisation. Absent, celui du jeu. */
-		instance?: EtatDInstance;
+		/** Les univers déclarés — vides tant que l'instance n'en porte aucun. */
+		univers: readonly Univers[];
+		/** Les domaines accessibles — vides tant que l'instance n'en porte aucun. */
+		domaines: readonly Domaine[];
+		/** L'utilisateur connecté. `null` : aucun compte connu. */
+		compte?: CompteAffiche | null;
 		/** Consultations des sept derniers jours, par note. */
-		mesures7j?: Partial<Record<IdentifiantNote, number>>;
+		mesures7j: Partial<Record<IdentifiantNote, number>>;
 		/** Ancienneté de modification, en jours, par note. */
-		modifications?: Partial<Record<IdentifiantNote, number>>;
-		/** Les demandes de révision. Absentes, celles du jeu de semence. */
-		revisions?: readonly DemandeDeRevision[];
-		/** Description et modules activés, par domaine — porté par la base. */
-		detailDomaines?: Record<NomDeDomaine, DetailDeDomaine>;
+		modifications: Partial<Record<IdentifiantNote, number>>;
+		/** Les demandes de révision ouvertes — vides quand rien n'est signalé. */
+		revisions: readonly DemandeDeRevision[];
+		/** Description et modules activés, par domaine — lus en base. */
+		detailDomaines: Record<NomDeDomaine, DetailDeDomaine>;
 		/** Le catalogue des modules — nom et sous-titre de chaque clé. */
-		modules?: Record<CleDeModule, Module>;
+		modules: Record<CleDeModule, Module>;
 		/**
 		 * Le nombre de dossiers du domaine, racine exclue — le compteur porté par
 		 * l'entrée « Dossiers » de la section « Accès ».
@@ -152,15 +141,14 @@
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte: moi = MOI,
-		instance = INSTANCE,
-		mesures7j = MESURES_7J,
-		modifications = MODIFICATIONS,
-		revisions: demandesDeRevision = REVISIONS,
-		detailDomaines = DETAIL_DOMAINES,
-		modules = MODULES,
+		univers,
+		domaines,
+		compte: compteConnecte = null,
+		mesures7j,
+		modifications,
+		revisions: demandesDeRevision,
+		detailDomaines,
+		modules,
 		nombreDeDossiers = undefined
 	}: Proprietes = $props();
 
@@ -182,44 +170,35 @@
 	const admin = $derived(profil === 'admin');
 	const vide = $derived(reglage['etat'] === 'vide');
 
+	/**
+	 * AUCUN DOMAINE — l'état vide, écrit plutôt que subi. La liste servie ne peut
+	 * pas être vide sur cette route : le chargeur résout le domaine de l'adresse
+	 * avant d'ouvrir l'écran. Le repli est là pour que la propriété soit honnête
+	 * sur toute sa forme — un tableau vide rendait `domaines[0].nom` et sortait
+	 * en 500.
+	 */
+	const AUCUN_DOMAINE: Domaine = { nom: '', univers: '', couleur: '' };
+
 	const courant = $derived(
-		(domaines.find((d) => d.nom === reglage['dom']) ?? domaines[0]) as Domaine
+		domaines.find((d) => d.nom === reglage['dom']) ?? domaines[0] ?? AUCUN_DOMAINE
 	);
 
 	/**
-	 * LE DOMAINE QUE LA PLANCHE REND AU CHARGEMENT — `verif/scenarios/V-11.json`,
-	 * `defaut.dom`. Il n'a rien d'un détail : le gel le laisse MIS EN ÉVIDENCE
-	 * dans le rail après un changement de domaine.
+	 * LA MISE EN ÉVIDENCE DU RAIL — LE DOMAINE COURANT, ET LUI SEUL.
+	 *
+	 * Le gel en marquait DEUX : `coquille()` de la maquette AJOUTE la marque et ne
+	 * la retire jamais (`V-11:1819-1832`), si bien que la planche rendait d'abord
+	 * « Infrastructure » — le domaine que son scénario charge — puis ajoutait le
+	 * domaine visité sans effacer le premier. La vue recopiait ce comportement,
+	 * et donc le NOM D'UN DOMAINE DU JEU DE DÉMONSTRATION, écrit en dur : sur une
+	 * instance qui ne porte pas ce nom, le rail marquait un nœud inexistant ; sur
+	 * une qui le porte, il le marquait sans qu'on l'ait visité.
+	 *
+	 * Une page de domaine n'a qu'un domaine courant. C'était déjà écrit ici, sous
+	 * la forme d'une dette assumée au banc ; le banc a été supprimé, la dette se
+	 * paie.
 	 */
-	const DOMAINE_INITIAL = 'Infrastructure';
-
-	/**
-	 * LA MISE EN ÉVIDENCE DU RAIL — DEUX DOMAINES, ET C'EST UN FAIT DU GEL.
-	 *
-	 * MESURÉ, page stabilisée dans les conditions du banc, pas déduit :
-	 *
-	 *   dom-infrastructure    → .noeud--courant : ["Infrastructure"]
-	 *   dom-migration-2026    → ["Infrastructure", "Migration 2026"]
-	 *   dom-poste-de-travail  → ["Infrastructure", "Poste de travail"]
-	 *
-	 * `coquille()` de la maquette AJOUTE la marque et ne la retire jamais
-	 * (`V-11:1819-1832`, la marque est posée à `:1822`) : la planche rend d'abord `Infrastructure`, puis le
-	 * changement de position ajoute le second domaine sans effacer le premier.
-	 * Ne pas le reproduire coûte 6 903 pixels sur deux des huit états — mesuré,
-	 * pas estimé —, et « corriger » le gel est un comblement qui serait rouge au
-	 * banc (`docs/releve-vues.md` §7.7, `data-numerote`).
-	 *
-	 * CE N'EST PAS LE COMPORTEMENT DU PRODUIT, et le rapport de lot le déclare :
-	 * une page de domaine n'a qu'un domaine courant. La reprise appartient au lot
-	 * de logique, avec l'arbitrage qui va avec ; le squelette, lui, rend le gel.
-	 *
-	 * V-10 et V-13 n'ont pas ce cas : V-10 ne met en évidence aucun nœud
-	 * (`courant: []`), et les trois chemins de V-13 sont EMBOÎTÉS — l'union des
-	 * marques accumulées y est exactement le chemin courant.
-	 */
-	const railCourant = $derived(
-		courant.nom === DOMAINE_INITIAL ? [courant.nom] : [DOMAINE_INITIAL, courant.nom]
-	);
+	const railCourant = $derived([courant.nom]);
 	/* `NomDeDomaine` est une chaîne : la table de détail peut ne rien porter
 	   pour un domaine créé dans la console. Le repli vide évite la page en
 	   erreur, et ne change rien au gel — tous ses domaines ont leur détail. */
@@ -330,7 +309,8 @@
 	function ancienneteDeModification(n: Note): string {
 		const j = modifications[n.id];
 		if (typeof j !== 'number') return '—';
-		return j <= 1 ? 'hier' : `il y a ${j} j`;
+		if (j <= 0) return "aujourd'hui";
+		return j === 1 ? 'hier' : `il y a ${j} j`;
 	}
 
 	/* ── Répartition par type ────────────────────────────────────────────────
@@ -424,13 +404,8 @@
 	{univers}
 	{domaines}
 	notes={corpus}
-	compte={{
-		nom: moi.nom,
-		initiales: moi.initiales,
-		role: moi.role,
-		domaine: moi.domaine
-	}}
-	version={instance.version}
+	compte={compteConnecte ?? COMPTE_VIDE}
+	version=""
 >
 	{#snippet enfants()}
 		<header class="couv" id="couv" style="--teinte:{courant.couleur}">
@@ -615,10 +590,10 @@
 							>{/if}</span
 					><span class="module__corps"
 						><span class="module__nom"
-							>{modules[m].nom}{#if typeof comptes[m] === 'number'}<span class="module__n"
-									>{comptes[m]}</span
+							>{libelleDeModule(modules, m).nom}{#if typeof comptes[m] === 'number'}<span
+									class="module__n">{comptes[m]}</span
 								>{/if}</span
-						><span class="module__sous">{modules[m].sous}</span></span
+						><span class="module__sous">{libelleDeModule(modules, m).sous}</span></span
 					></button
 				>
 			{/each}
