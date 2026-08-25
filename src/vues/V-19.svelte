@@ -147,9 +147,12 @@
 		 * `url` — l'extrait, et cette propriété est le chemin par lequel il
 		 * atteint le graphe.
 		 *
-		 * ABSENTE, C'EST LE PÉRIMÈTRE DE LA PLANCHE : « Univers Production », la
-		 * première option du sélecteur, celle que le gel a retenue au chargement.
-		 * Les six états déclarés ne bougent donc pas d'un pixel.
+		 * ABSENTE, C'EST TOUT LE CORPUS. Le gel ouvrait sur « Univers Production »,
+		 * un nom du jeu de démonstration que rien ne pose sur une instance réelle :
+		 * la carte s'ouvrait vide, sous un voile qui accusait le périmètre d'être
+		 * sans relation là où il n'existait pas. Les six états déclarés ne bougent
+		 * pas d'un pixel — sur le jeu de semence, les vingt-deux relations touchent
+		 * toutes l'univers Production, et le sous-graphe global est le même.
 		 */
 		perimetreDemande?: string | undefined;
 	}
@@ -171,10 +174,14 @@
 	const cas = $derived(String(reglage['etat'] ?? 'nominal'));
 
 	/* ── Le graphe ──────────────────────────────────────────────────────────
-	   Le périmètre est la première option du sélecteur, celle que le gel a
-	   sélectionnée au chargement : « Univers Production », l'option globale
-	   n'étant jamais posée (voir l'en-tête). */
-	const PERIMETRE_DE_PLANCHE = 'univers|Production';
+	   Le périmètre d'ouverture est TOUT LE CORPUS, comme en V-20 et en carte
+	   mentale. Le gel ouvrait sur « Univers Production » — un univers du jeu de
+	   démonstration : hors du jeu, la carte s'ouvrait sur zéro nœud. LE SÉLECTEUR
+	   NE POSE PAS D'OPTION GLOBALE — le gel n'en dessine pas, contrairement à
+	   V-20 et V-21 : la carte est juste, et le sélecteur reste sans valeur tant
+	   que l'option manque. Écart à remonter, et il n'a pas empiré : l'ancien
+	   périmètre n'était pas non plus une option, hors du jeu de semence. */
+	const PERIMETRE_DE_PLANCHE = 'global|';
 
 	/**
 	 * LE PÉRIMÈTRE EFFECTIF — la valeur du sélecteur, découpée. Une valeur que
@@ -187,9 +194,8 @@
 		const barre = brut.indexOf('|');
 		const type = barre < 0 ? brut : brut.slice(0, barre);
 		const nom = barre < 0 ? '' : brut.slice(barre + 1);
-		if (type === 'global') return { type: 'global' };
 		if ((type === 'univers' || type === 'domaine') && nom !== '') return { type, nom };
-		return { type: 'univers', nom: 'Production' };
+		return { type: 'global' };
 	});
 
 	const graphe = $derived(sousGraphe(corpus, perimetre, relations));
