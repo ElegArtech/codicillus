@@ -1,12 +1,13 @@
 /**
- * `/mot-de-passe-oublie/{jeton}` — LE CHARGEUR de V-06, étapes 3 et 4.
+ * `/mot-de-passe-oublie/{jeton}` — LE CHARGEUR de V-06 sur une adresse
+ * porteuse d'un jeton.
  *
  * `docs/routes.md:115` : niveau « anonyme (porteur du jeton) ». L'adresse est
  * DÉRIVÉE de l'état « Lien expiré » de la planche — « un lien expirable est un
  * lien porteur d'un jeton » —, elle n'est lue dans aucune maquette.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * TOUT JETON EST INCONNU, PARCE QU'AUCUNE TABLE N'EN PORTE — ÉCART DÉCLARÉ
+ * AUCUN LIEN N'EST JAMAIS ÉMIS : L'ÉCRAN NE DIT PLUS QUE LE VÔTRE A EXPIRÉ
  *
  * Relevé sur `src/lib/base/schema.ts`, table par table : `comptes`, `univers`,
  * `domaines`, `modules_de_domaine`, `dossiers`, `droits_de_dossier`,
@@ -14,40 +15,34 @@
  * `types_de_relation`, `etiquettes`, `parametres`, `notes`,
  * `etiquettes_de_note`, `relations`, `pieces_jointes`, `verifications`,
  * `versions`, `sessions`, `tentatives_de_connexion`. **Aucune ne porte de
- * jeton de réinitialisation**, et `comptes` n'a aucune colonne de ce nom.
- * `ECART-047` É-13 l'avait relevé de son côté : le corpus ne porte aucune
- * valeur de jeton, et la batterie 6 ne mesure que le côté *inexistant*.
+ * jeton de réinitialisation**, et `comptes` n'a aucune colonne de ce nom. Le
+ * produit n'a par ailleurs AUCUN expéditeur de courriel : aucun lien de
+ * réinitialisation n'a donc jamais pu être adressé à qui que ce soit.
  *
- * L'ÉCRAN RENDU EST DONC « LIEN EXPIRÉ », et ce n'est pas un choix : c'est le
- * seul énoncé vrai qu'un état gelé permette d'écrire. Créer la table serait
- * sortir du périmètre du lot (`base/**`) ; rendre l'étape 3 laisserait croire
- * qu'un lien vient d'être honoré, et la saisie n'aboutirait nulle part.
+ * L'écran rendu était « Lien expiré » — « un lien de réinitialisation expire au
+ * bout d'une heure […] celui-ci a dépassé ce délai, ou a déjà été utilisé ».
+ * C'était affirmer qu'un lien avait existé. Cette adresse rend désormais LE
+ * MÊME écran que `/mot-de-passe-oublie` : la réinitialisation par courriel
+ * n'est pas disponible sur cette instance, et le chemin qui existe est nommé.
  *
- * LA RÉPONSE NE DÉPEND PAS DU JETON PRÉSENTÉ — même code, même corps, aucune
+ * LA RÉPONSE NE DÉPEND PAS DU JETON PRÉSENTÉ — même code, même page, aucune
  * lecture en base. Elle ne dit donc rien de l'existence d'un compte
  * (`RG-ACC-04`), et le paramètre n'est même pas regardé.
  */
-import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { lireConfiguration } from '$lib/donnees/lecture';
-import { vecteurDeV06LienInconnu } from '$lib/donnees/profil';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
  * L'ADRESSE DU PORTAIL D'ASSISTANCE VIENT DE LA BASE — clé `portail_assistance`
  * de la table `parametres` (M14.7). Elle ne dépend ni du jeton présenté ni de
- * son sort : la lire ici ne dit rien de plus qu'à l'étape 1.
+ * son sort : la lire ici ne dit rien de plus qu'à l'autre adresse.
  */
 export const load: PageServerLoad = async () => ({
-	vecteur: vecteurDeV06LienInconnu(),
 	portail: (await lireConfiguration(basePartagee())).portailAssistance
 });
 
 export const actions: Actions = {
-	default: () => {
-		/* Un jeton qu'aucune table ne porte ne peut être honoré par aucune
-		   vérification : la pose d'un nouveau mot de passe par cette voie n'a pas
-		   de chemin. 501 le dit sans rien inventer — même choix qu'à l'étape 1. */
-		error(501, "la réinitialisation par jeton n'est pas implémentée");
-	}
+	/** Aucun formulaire ne vise cette adresse. Même réponse qu'à sa voisine. */
+	default: () => {}
 };

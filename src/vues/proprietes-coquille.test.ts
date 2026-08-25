@@ -36,6 +36,7 @@ import { createServer, type ViteDevServer } from 'vite';
 import {
 	ACTIVITE,
 	COMPTES,
+	CONFIG,
 	CONTRIBUTIONS,
 	DISTINCTIONS,
 	DOMAINES,
@@ -146,15 +147,19 @@ function coquille(inertes: readonly string[] = []): readonly Source[] {
 const VUES: Readonly<
 	Record<string, { readonly base: Proprietes; readonly sources: readonly Source[] }>
 > = {
+	/* V-06 N'A PLUS QU'UNE SOURCE, ET C'EST LE CORRECTIF DU LOT G : ses quatre
+	   étapes décrivaient une réinitialisation par courriel dont le produit n'a
+	   aucun morceau. La vue rend un écran unique, sans vecteur et sans compte à
+	   rappeler ; l'adresse du portail d'assistance est la seule donnée
+	   d'instance qui la traverse encore. */
 	'V-06': {
-		base: { vecteur: { et: '2' } },
+		base: {},
 		sources: [
 			{
-				cle: 'comptes',
-				defaut: COMPTES,
-				autre: COMPTES.filter((c) => c.id !== 'c-sophie'),
-				/* L'étape 2 est la seule qui affiche l'identifiant du compte. */
-				base: { vecteur: { et: '2' } }
+				cle: 'portail',
+				defaut: CONFIG.portailAssistance,
+				autre: 'https://assistance.exemple.test/autre',
+				marqueur: 'https://assistance.exemple.test/autre'
 			}
 		]
 	},
@@ -368,5 +373,57 @@ describe('V-25 — l’issue « Voir les notes de … »', () => {
 		});
 		expect(rendu).toContain('Voir les notes de Un domaine que la liste ne porte pas');
 		expect(rendu).not.toContain('disabled="">Voir les notes de');
+	});
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LE COURRIEL N'EST PLUS PROMIS — V-06 ET V-25
+
+   CE QUE CES CAS ÉPROUVENT : le BALISAGE RÉELLEMENT RENDU par les deux vues,
+   compilé et exécuté par le même graphe de modules que le produit. Ils ne
+   relisent pas le fichier source, et ils ne fabriquent pas la chaîne qu'ils
+   cherchent : c'est la vue qui la produit, ou ne la produit pas.
+
+   Le produit n'a AUCUN expéditeur de courriel, et aucune table ne porte de
+   jeton de réinitialisation. Toute phrase qui annonce un message à venir est
+   donc une promesse que rien ne peut tenir. Le jour où un expéditeur arrive,
+   ces cas rougissent — et c'est exactement ce qu'on leur demande.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('V-06 — l’écran ne promet plus un courriel que rien n’enverrait', () => {
+	const rendu = (): string => corps('V-06', {});
+
+	it('ne promet aucun envoi ni aucune adresse de destination', () => {
+		expect(rendu()).not.toContain('vous recevrez un lien');
+		expect(rendu()).not.toContain('adresse professionnelle');
+		expect(rendu()).not.toContain('Vérifiez votre messagerie');
+	});
+
+	it('n’affirme plus qu’un lien a existé et vient d’expirer', () => {
+		expect(rendu()).not.toContain("Ce lien n'est plus valable");
+		expect(rendu()).not.toContain('expire au bout d’une heure');
+	});
+
+	it('ne demande plus d’identifiant : aucun champ, donc rien à divulguer', () => {
+		expect(rendu()).not.toContain('id="identifiant"');
+		expect(rendu()).not.toContain('<form');
+	});
+
+	it('dit l’indisponibilité et nomme le chemin qui existe', () => {
+		expect(rendu()).toContain("Cette instance n'envoie aucun courriel");
+		expect(rendu()).toContain('par un administrateur');
+		expect(rendu()).toContain('console des comptes');
+	});
+});
+
+describe('V-25 — l’interrupteur de notification par courriel n’est plus émis', () => {
+	const rendu = (): string => corps('V-25', { vecteur: null });
+
+	it('ne pose plus le contrôle que le gel laissait coché sans gestionnaire', () => {
+		expect(rendu()).not.toContain('p-courriels');
+		expect(rendu()).not.toContain('Recevoir les demandes de révision par courriel');
+	});
+
+	it('garde l’interrupteur de session, lui, qui a bien sa contrepartie', () => {
+		expect(rendu()).toContain('p-session');
 	});
 });
