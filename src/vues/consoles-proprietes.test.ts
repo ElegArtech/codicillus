@@ -229,6 +229,22 @@ describe('V-29 — Types de fiche', () => {
 		expect(rendu).toContain('Champ de l’épreuve T-044');
 		expect(rendu).not.toContain(TYPES_FICHE.Serveur[0]!.nom);
 	});
+
+	/* LA DESCRIPTION ET L'ICÔNE VIENNENT DE LA BASE DEPUIS `008_saisies_de_console`.
+	   La console les demandait déjà et les jetait ; sans cette source, l'écran ne
+	   pouvait montrer que les trois descriptions écrites à la main pour le jeu. */
+	test('`presentations` fournie, la description saisie l’emporte', async () => {
+		const duJeu = await rendre('V-29', {}, EDITION);
+		expect(duJeu).toContain('Machine physique ou virtuelle');
+
+		const rendu = await rendre(
+			'V-29',
+			{ presentations: { Serveur: { description: 'Décrit par la console.', glyphe: 'contrat' } } },
+			EDITION
+		);
+		expect(rendu).toContain('Décrit par la console.');
+		expect(rendu).not.toContain('Machine physique ou virtuelle');
+	});
 });
 
 describe('V-30 — Types de relation', () => {

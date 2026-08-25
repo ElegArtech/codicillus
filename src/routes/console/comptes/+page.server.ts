@@ -231,15 +231,28 @@ export const actions: Actions = {
 
 		const base = basePartagee();
 		const [ligne] = await base
-			.select({ id: comptes.id, nom: comptes.nom })
+			.select({
+				id: comptes.id,
+				nom: comptes.nom,
+				motDePasseVerrouille: comptes.motDePasseVerrouille
+			})
 			.from(comptes)
 			.where(eq(comptes.identifiant, identifiant))
 			.limit(1);
 		if (ligne === undefined) error(404, MESSAGE_INTROUVABLE);
 
+		/* LE MOT DE PASSE POSÉ PAR L'ADMINISTRATION EST À USAGE UNIQUE — même
+		   raison qu'à la création : la valeur transite par un canal que
+		   l'administrateur choisit, et elle ne doit pas rester celle du compte.
+		   `RG-CPT-01` garde son exception : un compte à mot de passe verrouillé ne
+		   peut pas changer le sien, on ne le lui impose donc jamais. */
 		await base
 			.update(comptes)
-			.set({ condensatMotDePasse: await hacherMotDePasse(clair), modifieLe: new Date() })
+			.set({
+				condensatMotDePasse: await hacherMotDePasse(clair),
+				motDePasseAChanger: !ligne.motDePasseVerrouille,
+				modifieLe: new Date()
+			})
 			.where(eq(comptes.id, ligne.id));
 
 		return { issue: 'possible' as const, compte: ligne.nom };

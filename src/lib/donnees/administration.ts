@@ -1548,6 +1548,15 @@ export async function creerUnCompte(
 		role: demande.role,
 		actif: true,
 		motDePasseVerrouille: demande.motDePasseVerrouille,
+		/* « IL DEVRA ÊTRE CHANGÉ À LA PREMIÈRE CONNEXION » (`V-32:913`) — la
+		   phrase est tenue depuis que la colonne existe : la garde de
+		   `src/hooks.server.ts` renvoie le compte vers son profil tant qu'il ne
+		   l'a pas fait.
+
+		   SAUF SI LE MOT DE PASSE EST VERROUILLÉ, et l'exception n'en est pas une :
+		   `RG-CPT-01` interdit à ce compte-là de changer son propre mot de passe.
+		   Lui imposer le changement l'enfermerait dehors définitivement. */
+		motDePasseAChanger: !demande.motDePasseVerrouille,
 		condensatMotDePasse: await hacherMotDePasse(demande.motDePasse),
 		/* Voir l'en-tête de section : aucun nœud du gel ne porte cette date. */
 		arriveLe: maintenant.toISOString().slice(0, 10),
@@ -2039,13 +2048,36 @@ export interface SaisieDeProprieteDeFiche {
 	readonly cle: string;
 	readonly nom: string;
 	readonly type: string;
+	/** « Aide à la saisie ». Absente, la colonne passe à `null`. */
+	readonly aide?: string;
+	/** « Valeur par défaut ». Absente, la colonne passe à `null`. */
+	readonly defaut?: string;
+	/** « Propriété obligatoire ». Absente, la propriété ne l'est pas. */
+	readonly obligatoire?: boolean;
 	readonly valeurs: readonly string[];
 }
 
 /** Ce que le panneau de `V-29` porte, champ pour champ. */
 export interface SaisieDUnTypeDeFiche {
 	readonly nom: string;
+	/** `#f-desc`. Absente du changement, la colonne n'est pas touchée. */
+	readonly description?: string;
+	/** `#f-icones`. Absente du changement, la colonne n'est pas touchée. */
+	readonly glyphe?: string;
 	readonly proprietes: readonly SaisieDeProprieteDeFiche[];
+}
+
+/**
+ * UN TEXTE DE PANNEAU, TEL QU'IL VA EN COLONNE.
+ *
+ * VIDE VAUT `null`, ET CE N'EST PAS UNE COMMODITÉ : la colonne est nullable pour
+ * distinguer « l'administrateur n'a rien écrit » d'une valeur. Écrire la chaîne
+ * vide ferait une troisième valeur pour la même absence.
+ */
+function texteOuRien(saisi: string | undefined): string | null {
+	if (saisi === undefined) return null;
+	const propre = saisi.trim();
+	return propre === '' ? null : propre;
 }
 
 /**
@@ -2076,6 +2108,9 @@ async function ecrireLesProprietes(
 		nom: string;
 		type: TypeDePropriete;
 		ordre: number;
+		aide: string | null;
+		defaut: string | null;
+		obligatoire: boolean;
 		valeurs: string[] | null;
 	}[] = [];
 	for (const p of proprietes) {
@@ -2089,6 +2124,9 @@ async function ecrireLesProprietes(
 			nom: p.nom.trim() === '' ? cle : p.nom.trim(),
 			type,
 			ordre: lignes.length,
+			aide: texteOuRien(p.aide),
+			defaut: texteOuRien(p.defaut),
+			obligatoire: p.obligatoire === true,
 			valeurs: type === 'liste' ? p.valeurs.map((v) => v.trim()).filter((v) => v !== '') : null
 		});
 	}
@@ -2121,7 +2159,13 @@ export async function creerUnTypeDeFiche(
 	await base.transaction(async (tx) => {
 		const [insere] = await tx
 			.insert(typesDeFiche)
-			.values({ identifiant, nom, ordre: rang })
+			.values({
+				identifiant,
+				nom,
+				ordre: rang,
+				description: texteOuRien(saisie.description),
+				glyphe: texteOuRien(saisie.glyphe)
+			})
 			.returning({ id: typesDeFiche.id });
 		if (insere === undefined) throw new Error("le type créé n'a pas été rendu");
 		await ecrireLesProprietes(tx, insere.id, saisie.proprietes);
@@ -2161,8 +2205,18 @@ export async function modifierUnTypeDeFiche(
 	}
 
 	await base.transaction(async (tx) => {
-		if (nomRetenu !== cible.nom) {
-			await tx.update(typesDeFiche).set({ nom: nomRetenu }).where(eq(typesDeFiche.id, cible.id));
+		/* UN CHAMP ABSENT N'EST PAS UN CHAMP VIDE — `structure.ts` porte la règle :
+		   l'enregistrement est PARTIEL, et ne touche que ce qui est transmis. La
+		   description et l'icône ne sont donc écrites que si le panneau les a
+		   envoyées, et `null` reste possible quand il les a envoyées vides. */
+		const changes: { nom?: string; description?: string | null; glyphe?: string | null } = {};
+		if (nomRetenu !== cible.nom) changes.nom = nomRetenu;
+		if (changements.description !== undefined) {
+			changes.description = texteOuRien(changements.description);
+		}
+		if (changements.glyphe !== undefined) changes.glyphe = texteOuRien(changements.glyphe);
+		if (Object.keys(changes).length > 0) {
+			await tx.update(typesDeFiche).set(changes).where(eq(typesDeFiche.id, cible.id));
 		}
 		if (changements.proprietes !== undefined) {
 			await ecrireLesProprietes(tx, cible.id, changements.proprietes);

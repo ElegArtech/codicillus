@@ -68,6 +68,7 @@
 	domaines={data.domaines}
 	compte={data.compte}
 	typesFiche={data.typesFiche}
+	presentations={data.presentations}
 	onSupprimer={(type) => {
 		const identifiant = data.designations[type];
 		if (identifiant === undefined) return;

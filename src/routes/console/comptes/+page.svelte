@@ -24,6 +24,24 @@
 
 	const { data }: { data: PageData } = $props();
 
+	/**
+	 * CE QUE DIT UN REFUS QUE LE GEL NE SAIT PAS MARQUER.
+	 *
+	 * Les quatre issues sont celles que l'action rend — `VerdictDeCreationDeCompte`
+	 * pour les trois premières, l'action elle-même pour `role-inconnu`. Une issue
+	 * inconnue, ou une réponse qui n'en porte aucune, rend la phrase générale :
+	 * elle ne nomme pas de cause qu'on n'a pas, et elle dit ce qui compte —
+	 * AUCUN COMPTE N'A ÉTÉ CRÉÉ.
+	 */
+	function motifDuRefus(refus: { issue?: string } | undefined): string {
+		if (refus?.issue === 'mot-de-passe-vide') return 'Saisissez un mot de passe initial.';
+		if (refus?.issue === 'courriel-indisponible') {
+			return 'Cette adresse électronique est déjà portée par un autre compte.';
+		}
+		if (refus?.issue === 'role-inconnu') return "Le rôle choisi n'est pas reconnu.";
+		return "La création a été refusée par le serveur, et aucun compte n'a été créé.";
+	}
+
 	/*
 	 * LE PANNEAU DE FORMULAIRE N'EST PLUS DÉPLACÉ AU MONTAGE, ET C'EST UNE
 	 * RÉPARATION, PAS UN RENONCEMENT.
@@ -102,20 +120,24 @@
 			},
 			{ rechargerAuSucces: false }
 		);
-		if (retour.succes) return { cree: true, erreurs: [] };
+		if (retour.succes) return { cree: true, erreurs: [], message: null };
 
 		/* LE REFUS EST RENDU TEL QUE LE VERDICT L'A PRONONCÉ, jamais reformulé :
-		   les messages sont ceux du gel, et `verdictDeCreationDeCompte()` les
-		   transcrit. Un refus d'une autre nature — mot de passe vide, adresse
-		   indisponible — n'a AUCUN bloc au gel pour se dire : il ne rend aucune
-		   erreur de champ, le panneau reste ouvert, et rien n'est écrit. C'est une
-		   lacune déclarée, pas un écran inventé. */
+		   les messages de champ sont ceux du gel, et `verdictDeCreationDeCompte()`
+		   les transcrit.
+
+		   UN REFUS D'UNE AUTRE NATURE SE DIT DÉSORMAIS. Il n'a aucun bloc de champ
+		   au gel — mot de passe vide, adresse déjà portée, rôle non reconnu —, et
+		   il ne rendait donc RIEN : le panneau restait ouvert, aucun compte
+		   n'était écrit, et l'administrateur croyait avoir enregistré. La vue rend
+		   ce refus au-dessus de ses champs ; ce qui suit le nomme, sans jamais
+		   inventer de cause. */
 		const refus = retour.donnees as { issue?: string; erreurs?: unknown } | undefined;
 		const erreurs =
 			refus?.issue === 'saisie-refusee' && Array.isArray(refus.erreurs)
 				? (refus.erreurs as { champ: 'ident' | 'nom'; message: string }[])
 				: [];
-		return { cree: false, erreurs };
+		return { cree: false, erreurs, message: erreurs.length > 0 ? null : motifDuRefus(refus) };
 	}}
 	onReinitialiserLeMotDePasse={async (demande) => {
 		/* PAS DE RECHARGEMENT AU SUCCÈS : la boîte « Mot de passe réinitialisé »
