@@ -103,6 +103,8 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		notes: acces.ressource.notes,
 		/** Les valeurs de facette retenues, lues dans l'adresse. */
 		retenues: retenuesDeLAdresse(url.searchParams),
+		/** L'ordre demandé, lu dans l'adresse — absent, celui du gel. */
+		tri: ordreDeLAdresse(url.searchParams),
 		/**
 		 * DE QUOI RETROUVER UN SIGNET DEPUIS SA CARTE.
 		 *
@@ -135,6 +137,26 @@ function retenuesDeLAdresse(
 		if (valeurs.length > 0) retenues[cle] = valeurs;
 	}
 	return Object.keys(retenues).length === 0 ? undefined : retenues;
+}
+
+/**
+ * LES QUATRE ORDRES, ceux de la liste des notes et pas un de plus — deux
+ * listes du même produit ne nomment pas leur ordre de deux façons.
+ *
+ * Rien n'est DESSINÉ ici : `mockups/V-22-signets.html` n'a `.tri` qu'en règle
+ * de feuille morte, et `docs/routes.md` §4.2 ne déclare pour cette route que
+ * `etiquette` et `auteur`. La clé n'est donc atteignable que par l'adresse, et
+ * aucun balisage n'est ajouté pour la proposer : c'est le point de désaccord
+ * du lot, appliqué et porté au rapport.
+ *
+ * Une valeur inconnue est IGNORÉE, jamais refusée — un paramètre d'adresse ne
+ * se refuse pas —, et l'absence laisse la vue sur l'ordre du gel.
+ */
+const ORDRES = ['modification', 'verification', 'consultations', 'alpha'] as const;
+
+function ordreDeLAdresse(parametres: URLSearchParams): string | undefined {
+	const demande = parametres.get('tri');
+	return ORDRES.find((o) => o === demande);
 }
 
 export const actions: Actions = {

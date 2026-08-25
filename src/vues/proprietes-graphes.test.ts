@@ -407,6 +407,32 @@ describe('V-22 — signets d’un domaine', () => {
 		expect(body).toContain('Réinitialiser les filtres');
 		expect(body).not.toContain('Aucun signet dans ce domaine');
 	});
+
+	/* LE MENU RENDU DIT QUELLE FACETTE IL PORTE.
+
+	   Le câblage retrouvait la facette d'un menu par son RANG. Or la vue
+	   n'émet un menu que si la facette a au moins une valeur, et les
+	   étiquettes d'un signet sont FACULTATIVES : sur un domaine dont aucun
+	   signet n'en porte, le seul menu rendu est « Auteur », au rang 0, et
+	   cocher un auteur écrivait `?etiquette={nom de l'auteur}`. L'autre
+	   moitié du chemin — de l'identifiant à la clé d'adresse — est éprouvée
+	   par `src/lib/cablage/facettes.test.ts`. */
+
+	/** Les mêmes signets, sans aucune étiquette — la saisie les rend vides. */
+	const sansEtiquette = notes.map((n) => ({ ...n, etiquettes: [] }));
+
+	it('chaque menu rendu porte l’identifiant de SA facette', async () => {
+		const body = await v22({ vecteur: null, notes });
+		expect(body).toContain('data-facette="etiquette"');
+		expect(body).toContain('data-facette="auteur"');
+	});
+
+	it('sans aucune étiquette, le seul menu rendu est celui de l’auteur', async () => {
+		const body = await v22({ vecteur: null, notes: sansEtiquette });
+		expect(body).toContain('data-facette="auteur"');
+		expect(body).not.toContain('data-facette="etiquette"');
+		expect(body.match(/class="fac-menu"/g) ?? []).toHaveLength(1);
+	});
 });
 
 describe('V-23 — formulaire de signet', () => {

@@ -39,10 +39,22 @@
  * 5. LES LIGNES DE CONTRIBUTEUR. Chacune ouvre la liste du domaine sur la
  *    facette `auteur`, qui existe et est honorée (`V-12.svelte`, table
  *    `FACETTES` ; `…/notes/+page.server.ts`, `CLES_DE_FACETTE`). Le panneau
- *    comptait les notes de chacun sans qu'aucun clic n'y mène ; le compte de
- *    TÊTE du panneau, lui, reste inerte — il compte des contributeurs, et
- *    `auteur` prend un NOM, pas un nombre. Aucune cible exacte n'existe pour
- *    lui, et la liste qu'il compte est immédiatement dessous.
+ *    comptait les notes de chacun sans qu'aucun clic n'y mène.
+ *
+ *    LE COMPTE DE TÊTE DU PANNEAU N'A PAS D'ADRESSE, et il amène quand même
+ *    quelque part. Il compte des CONTRIBUTEURS quand `auteur` prend un NOM :
+ *    aucune adresse du produit ne dit « les N contributeurs de ce domaine », et
+ *    en fabriquer une qui empile les N noms rendrait la liste entière du
+ *    domaine sous un habillage de filtre — un filtre approchant mentirait. La
+ *    liste qu'il compte est en revanche immédiatement dessous, et il y amène,
+ *    sans quitter la page : c'est le geste que V-07 pose déjà pour « En attente
+ *    de révision », dont la corbeille est sur l'écran même.
+ *
+ *    LE NŒUD EST UN `span` AU GEL, et il le reste (`ARB-063` : le balisage de
+ *    `src/vues/` ne bouge pas). Conséquence à dire : le geste est à la souris,
+ *    il n'est ni tabulable ni déclenchable au clavier — c'est le prix de la
+ *    balise que le gel a choisie pour ce nœud, et le convertir en bouton
+ *    changerait le rendu de la vue.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * TROIS GESTES OUVRENT LA LISTE SANS FILTRE — ET AUCUN NE RESTE INERTE
@@ -92,6 +104,13 @@ const FILTRE_PAR_INDICATEUR: Record<string, readonly [cle: string, valeur: strin
 	'Jamais vérifiées': null,
 	'En attente de révision': null
 };
+
+/**
+ * LE COMPTE DE TÊTE DU PANNEAU DES CONTRIBUTEURS, et la liste qu'il compte.
+ * Les deux identifiants sont ceux du gel (`V-11`).
+ */
+const COMPTE_DES_CONTRIBUTEURS = 'n-contribs';
+const LISTE_DES_CONTRIBUTEURS = 'contribs';
 
 /** Les adresses sans paramètre — des chemins de route, non des formes de rangement. */
 const ADRESSE_DE_LIMPORT = '/importer';
@@ -275,6 +294,21 @@ export function cablerLeDomaine(racine: HTMLElement, options: OptionsDuDomaine):
 			adresse.searchParams.set('auteur', nom);
 			evenement.preventDefault();
 			aller(adresse);
+			return;
+		}
+
+		/* 7. LE COMPTE DE TÊTE DU PANNEAU DES CONTRIBUTEURS — il amène à la liste
+		      qu'il compte, sans quitter la page. Voir l'en-tête : aucune adresse
+		      ne peut le filtrer, et la liste est immédiatement dessous. */
+		if (cible.closest(`#${COMPTE_DES_CONTRIBUTEURS}`) !== null) {
+			/* Le PANNEAU, et non la seule liste : amener la liste en tête de
+			   fenêtre en pousserait le titre hors champ. Même geste qu'en V-07,
+			   qui vise `#p-revisions` et non la corbeille elle-même. */
+			const liste = racine.querySelector(`#${LISTE_DES_CONTRIBUTEURS}`);
+			const panneau = liste?.closest('.panneau') ?? liste;
+			if (panneau === null || panneau === undefined) return;
+			evenement.preventDefault();
+			panneau.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		}
 	};
 
