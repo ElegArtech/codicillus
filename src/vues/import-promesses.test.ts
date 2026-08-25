@@ -16,7 +16,14 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createServer, type ViteDevServer } from 'vite';
-import { corpusDeVariante, type Note } from '../../seeds/corpus';
+import {
+	DOMAINES,
+	FORMATS_IMPORT,
+	LOT_IMPORT,
+	corpusDeVariante,
+	type Note
+} from '../../seeds/corpus';
+import { LIBELLE_PAR_FORMAT } from '../lib/donnees/import';
 import {
 	MESURES_DE_CONSOLE_SANS_CONTREPARTIE,
 	journalDImportsEnregistre
@@ -87,12 +94,45 @@ function positionsDe(rendu: string, fragment: string): readonly number[] {
 	return trouvees;
 }
 
+/**
+ * CE QUE `/importer` SERT TOUJOURS, ET QUE V-24 EXIGE DÉSORMAIS.
+ *
+ * Ces quatre propriétés étaient optionnelles, de défaut la constante de
+ * `seeds/corpus.ts` : un écran d'import sans chargeur montrait trente fichiers
+ * de démonstration comme s'ils venaient d'être déposés. Le socle du cas les
+ * passe comme la route les sert. `formatsImport` vient du référentiel du
+ * produit, `$lib/donnees/import.ts`, et non plus du jeu.
+ */
+const SOCLE_V24: Proprietes = {
+	domaines: DOMAINES,
+	lotImport: LOT_IMPORT,
+	formatsImport: LIBELLE_PAR_FORMAT,
+	domaineParDefaut: DOMAINES[0]!.nom
+};
+
 /** Les quatre étapes du parcours, telles que la clé d'état les nomme. */
 const VECTEURS: readonly (Proprietes | null)[] = [null, { et: '2' }, { et: '3' }, { et: '4' }];
 
+/* ══════════════════════════════════════════════════════════════════════════
+   LA COPIE DU JEU EST LIÉE À SON ORIGINE
+
+   Les libellés de format sont un RÉFÉRENTIEL DU PRODUIT — `LIBELLE_PAR_FORMAT`
+   de `$lib/donnees/import.ts`, la contrepartie française de `VOIE_PAR_FORMAT` —
+   et `/importer` les sert de là. `seeds/corpus.ts` en garde une copie mot pour
+   mot, `FORMATS_IMPORT`, pour le jeu de démonstration. Deux tables identiques
+   qu'aucun contrôle ne lie divergent en silence : aucun compilateur ne voit la
+   copie, et c'est le jeu qui montrerait alors un libellé que le produit n'écrit
+   nulle part. Le lien est ici, et il rougit dans les deux sens.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('les libellés de format — le jeu de démonstration recopie le produit', () => {
+	it('la table du jeu est celle du produit, clé pour clé', () => {
+		expect(FORMATS_IMPORT).toEqual(LIBELLE_PAR_FORMAT);
+	});
+});
+
 describe('V-24 — l’étape 1 n’offre que le scénario que l’import exécute', () => {
 	it('rend la vignette du scénario livré', () => {
-		expect(corps('V-24', { vecteur: null })).toContain(
+		expect(corps('V-24', { ...SOCLE_V24, vecteur: null })).toContain(
 			'Importer des notes dans un domaine existant'
 		);
 	});
@@ -100,7 +140,7 @@ describe('V-24 — l’étape 1 n’offre que le scénario que l’import exécu
 	it('ne nomme AUCUN des scénarios non livrés', () => {
 		/* Les noms sont ceux du gel, et ce sont ceux que l'utilisateur lisait
 		   avant de choisir un scénario dont son lot ne portait aucune trace. */
-		const rendu = corps('V-24', { vecteur: null });
+		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
 		expect(SCENARIOS_NON_LIVRES.map((s) => s.id)).toEqual(['domaine', 'prepare']);
 		expect(rendu).not.toContain('Importer un domaine complet');
 		expect(rendu).not.toContain('Importer un corpus préparé');
@@ -120,7 +160,7 @@ describe('V-24 — l’étape 1 n’offre que le scénario que l’import exécu
 	 */
 	it('ne sert aucune mention VISIBLE d’un scénario que l’import n’exécute pas', () => {
 		for (const vecteur of VECTEURS) {
-			const rendu = corps('V-24', { vecteur });
+			const rendu = corps('V-24', { ...SOCLE_V24, vecteur });
 			const laCase = borneServie(rendu, 'champ-simulation', 'label');
 			expect(laCase.ouvrante).toContain('hidden');
 			const mentions = positionsDe(rendu, 'prépar');
@@ -134,18 +174,18 @@ describe('V-24 — l’étape 1 n’offre que le scénario que l’import exécu
 	it('ne demande plus un nom de domaine que personne ne lisait', () => {
 		/* « Nom du domaine à créer * » était OBLIGATOIRE à l'écran et n'était
 		   envoyé nulle part : ni `+page.svelte`, ni l'action ne le lisaient. */
-		const rendu = corps('V-24', { vecteur: { et: '2' } });
+		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
 		expect(rendu).not.toContain('nom-domaine');
 		expect(rendu).not.toContain('Nom du domaine à créer');
 	});
 
 	it('ne promet plus la résolution automatique des liens', () => {
-		const rendu = corps('V-24', { vecteur: null });
+		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
 		expect(rendu).not.toContain('liens entre documents sont résolus automatiquement');
 	});
 
 	it('n’invite plus à déposer une archive, que le classement écarte', () => {
-		const rendu = corps('V-24', { vecteur: { et: '2' } });
+		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
 		expect(rendu).toContain('Glissez un dossier ici');
 		expect(rendu).not.toContain('Glissez un dossier ou une archive ici');
 	});
