@@ -590,11 +590,26 @@
 	 * une instance mutable de cette classe est refusée dans un composant Svelte
 	 * (`svelte/prefer-svelte-reactivity`), et la réactivité n'a rien à faire ici —
 	 * cette fabrique est pure. Même geste qu'en `V-02`.
+	 *
+	 * ELLE REND `null` QUAND LA FACETTE NE SAIT PAS DIRE L'ENSEMBLE COMPTÉ, et
+	 * c'est le cas du DOSSIER RACINE d'un domaine. Son chemin affiché est la
+	 * chaîne VIDE — la racine n'entre dans aucun chemin de note —, et le chargeur
+	 * de V-12 ÉCARTE toute valeur vide avant de poser la facette (le crible est
+	 * dans `notes/+page.server.ts`, juste après la lecture des valeurs de la clé) :
+	 * l'adresse partirait avec une facette non posée et rendrait TOUT le domaine
+	 * là où le compteur annonce les seules notes de la racine. Le compteur reste
+	 * alors inerte, et il le reste aussi pour le total récursif d'une racine, dont
+	 * la liste de chemins porte cette même chaîne vide. Un lien qui livre plus que
+	 * ce qu'il annonce est pire qu'un lien absent.
 	 */
-	function adresseDesNotesDuDossier(chemins: readonly string[]): string {
+	function adresseDesNotesDuDossier(chemins: readonly string[]): string | null {
+		if (chemins.length === 0 || chemins.some((chemin) => chemin === '')) return null;
 		const couples = chemins.map((chemin) => `dossier=${encodeURIComponent(chemin)}`);
 		return `${adresseDesNotesDuDomaine(UNIVERS_DU_DOMAINE, DOMAINE)}?${couples.join('&')}`;
 	}
+
+	const lienDesNotesDirectes = $derived(adresseDesNotesDuDossier([cheminTexte(chemin)]));
+	const lienDesNotesTotales = $derived(adresseDesNotesDuDossier(cheminsDuSousArbre(chemin)));
 
 	/* ── Le dialogue des droits ───────────────────────────────────────────────
 	   LES LIBELLÉS SONT CEUX DE `.droit__nom`, EN HAUT DE CETTE PAGE MÊME, et
@@ -695,19 +710,27 @@
 					dessous. Le lien n'est posé que lorsqu'il y en a — sans quoi il
 					mènerait à un bloc masqué.
 				-->
+				{#snippet compteurDeNotes(combien: number, libelle: string, adresse: string | null)}
+					{#if adresse === null}<span><b>{nb(combien)}</b> {libelle}</span>{:else}<a href={adresse}
+							><b>{nb(combien)}</b> {libelle}</a
+						>{/if}
+				{/snippet}
 				<div class="compteurs" id="compteurs">
 					{#if sous.length}<a href="#bloc-sous"
 							><b>{nb(sous.length)}</b> {sous.length > 1 ? 'sous-dossiers' : 'sous-dossier'}</a
 						>{:else}<span><b>{nb(sous.length)}</b> sous-dossier</span>{/if}<span
 						style="color:var(--c-trait-fort)">·</span
-					><a href={adresseDesNotesDuDossier([cheminTexte(chemin)])}
-						><b>{nb(notesDuDossier.length)}</b>
-						{notesDuDossier.length > 1 ? 'notes directes' : 'note directe'}</a
-					>{#if toutes.length !== notesDuDossier.length}<span style="color:var(--c-trait-fort)"
+					>{@render compteurDeNotes(
+						notesDuDossier.length,
+						notesDuDossier.length > 1 ? 'notes directes' : 'note directe',
+						lienDesNotesDirectes
+					)}{#if toutes.length !== notesDuDossier.length}<span style="color:var(--c-trait-fort)"
 							>·</span
-						><a href={adresseDesNotesDuDossier(cheminsDuSousArbre(chemin))}
-							><b>{nb(toutes.length)}</b> notes au total, sous-dossiers compris</a
-						>{/if}
+						>{@render compteurDeNotes(
+							toutes.length,
+							'notes au total, sous-dossiers compris',
+							lienDesNotesTotales
+						)}{/if}
 				</div>
 			</div>
 
@@ -1161,22 +1184,36 @@
 					{/each}
 				</div>
 
-				<div class="champ">
-					<span class="champ__label">Ajouter un accès</span>
-					<div class="dr-ajout">
-						<select class="selecteur" id="droit-qui" aria-label="Personne">
-							{#each droits?.candidats ?? [] as candidat (candidat.identifiant)}
-								<option value={candidat.identifiant}>{candidat.nom}</option>
-							{/each}
-						</select>
-						<select class="selecteur" id="droit-role" aria-label="Niveau de droit sur ce dossier">
-							{#each NIVEAUX as niveauOffert (niveauOffert.valeur)}
-								<option value={niveauOffert.valeur}>{niveauOffert.libelle}</option>
-							{/each}
-						</select>
-						<button class="btn btn--principal" id="droit-ajouter">Ajouter</button>
+				<!--
+					« AJOUTER UN ACCÈS » N'EST RENDU QUE S'IL Y A QUELQU'UN À AJOUTER —
+					`P-09`, omis plutôt que grisé.
+
+					La liste des candidats est l'annuaire des comptes moins ceux qui ont
+					déjà un droit ici, et le chargeur ne sert cet annuaire qu'au rôle
+					`administrateur` : un gestionnaire de dossier qui n'est pas
+					administrateur reçoit donc une liste VIDE, et un sélecteur sans
+					option suivi d'un bouton « Ajouter » serait un geste dessiné que rien
+					ne peut accomplir. Elle est vide, aussi, quand tout compte actif de
+					l'instance a déjà un droit sur ce dossier.
+				-->
+				{#if (droits?.candidats ?? []).length > 0}
+					<div class="champ">
+						<span class="champ__label">Ajouter un accès</span>
+						<div class="dr-ajout">
+							<select class="selecteur" id="droit-qui" aria-label="Personne">
+								{#each droits?.candidats ?? [] as candidat (candidat.identifiant)}
+									<option value={candidat.identifiant}>{candidat.nom}</option>
+								{/each}
+							</select>
+							<select class="selecteur" id="droit-role" aria-label="Niveau de droit sur ce dossier">
+								{#each NIVEAUX as niveauOffert (niveauOffert.valeur)}
+									<option value={niveauOffert.valeur}>{niveauOffert.libelle}</option>
+								{/each}
+							</select>
+							<button class="btn btn--principal" id="droit-ajouter">Ajouter</button>
+						</div>
 					</div>
-				</div>
+				{/if}
 
 				<div class="champ__erreur" id="droits-erreur" hidden={erreurDeDroits === null}>
 					{erreurDeDroits ?? ''}
