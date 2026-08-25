@@ -25,9 +25,16 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createServer, type ViteDevServer } from 'vite';
 import {
+	ACTIVITE,
 	DETAIL_DOMAINES,
 	DOMAINES,
+	INSTANCE,
+	MESURES_7J,
+	MESURES_7J_PREC,
+	MODIFICATIONS,
 	MODULES,
+	MOI,
+	REVISIONS,
 	UNIVERS,
 	corpusPourVue,
 	type EtatDInstance,
@@ -64,7 +71,8 @@ const SOPHIE: UtilisateurCourant = {
 	role: 'Administrateur'
 };
 
-/** Une instance qui n'est pas `INSTANCE` — la version se lit au pied du rail. */
+/** Une instance qui n'est pas `INSTANCE` — la version se lit au pied du rail.
+ *  V-10 et V-11 la portent encore en propriété ; V-07 et V-08 ne l'ont plus. */
 const AUTRE_INSTANCE: EtatDInstance = { version: '9.9.9', synchro: "à l'instant" };
 
 const DESCRIPTION_DE_CONTROLE = 'Description de contrôle T-041, absente du jeu de semence.';
@@ -98,44 +106,55 @@ afterAll(async () => {
 });
 
 describe('V-07 — accueil contributeur', () => {
-	it('la propriété absente rend la constante du jeu de semence', async () => {
+	/**
+	 * CE QUE CE CAS PROUVE, ET C'EST L'OBJET DE LA CAMPAGNE : une source qui
+	 * n'arrive pas ne rend PLUS le jeu de démonstration. Elle rendait « Bonjour
+	 * Karim. » et « Codicillus 1.0.0 » sur toute instance, et rien ne protestait.
+	 * Les neuf sources sont maintenant EXIGÉES — une route qui en oublierait une
+	 * ne compile plus —, et leur valeur manquante rend l'ÉTAT VIDE.
+	 *
+	 * LES VALEURS CHERCHÉES VIENNENT DE LEUR SOURCE, jamais d'une chaîne écrite
+	 * ici : `MOI` et `INSTANCE` du jeu.
+	 */
+	it('sans source servie, rien du jeu de démonstration n’atteint l’écran', async () => {
 		const b = await corps('V-07', {});
-		expect(b).toContain('Bonjour Karim.'); // compte
-		expect(b).toContain('Codicillus 1.0.0'); // instance
-		expect(b).toContain('>Projets</a>'); // univers
-		expect(b).toContain('dans 4 domaines'); // domaines
-		expect(b).toContain('Signalées par des collègues'); // revisions
-		expect(b).toContain('evt evt--'); // activite
-		expect(b).toContain('mises à jour cette semaine'); // modifications
-		expect(b).not.toContain('tendance--stable'); // mesures7jPrec
-		expect(b).not.toContain('-100 %'); // mesures7j
+		expect(b).not.toContain('Bonjour ' + MOI.prenom + '.'); // compte
+		expect(b).toContain('Bonjour.');
+		expect(b).not.toContain('Codicillus ' + INSTANCE.version); // instance
+		expect(b).toContain('Rien de signalé'); // revisions
+		expect(b).toContain('Rien de neuf cette semaine'); // activite
+		expect(b).toContain("Aucune n'a bougé cette semaine"); // modifications
 	}, 60_000);
 
 	it('la propriété fournie l’emporte', async () => {
 		expect(await corps('V-07', { compte: SOPHIE })).toContain('Bonjour Sophie.');
-		expect(await corps('V-07', { instance: AUTRE_INSTANCE })).toContain('Codicillus 9.9.9');
-		expect(await corps('V-07', { univers: [UNIVERS[0]] })).not.toContain('>Projets</a>');
-		expect(await corps('V-07', { domaines: [DOMAINES[3]] })).toContain('dans 1 domaine');
-		expect(await corps('V-07', { revisions: [] })).toContain('Rien de signalé');
-		expect(await corps('V-07', { activite: [] })).toContain('Rien de neuf cette semaine');
-		expect(await corps('V-07', { modifications: {} })).toContain("Aucune n'a bougé cette semaine");
+		/* Les deux vont ensemble : les domaines sont groupés par univers, et une
+		   liste d'univers vide n'en laisse passer aucun. */
+		expect(await corps('V-07', { univers: UNIVERS, domaines: [DOMAINES[3]] })).toContain(
+			'dans 1 domaine'
+		);
+		expect(await corps('V-07', { revisions: REVISIONS })).toContain('Signalées par des collègues');
+		expect(await corps('V-07', { activite: ACTIVITE })).toContain('evt evt--');
+		expect(await corps('V-07', { modifications: MODIFICATIONS })).toContain(
+			'mises à jour cette semaine'
+		);
 		// Une table de mesure vide n'est pas un chiffre faux : c'est l'état neutre
 		// que P-02 réclame quand la mesure n'a pas répondu. La tendance le dit.
-		expect(await corps('V-07', { mesures7j: {} })).toContain('-100 %');
-		expect(await corps('V-07', { mesures7jPrec: {} })).toContain('tendance--stable');
+		expect(
+			await corps('V-07', { mesures7j: MESURES_7J, mesures7jPrec: MESURES_7J_PREC })
+		).not.toContain('tendance--stable');
 	}, 60_000);
 });
 
 describe('V-08 — recherche interne', () => {
-	it('la propriété absente rend la constante du jeu de semence', async () => {
+	it('sans compte servi, la barre supérieure ne nomme plus le jeu', async () => {
 		const b = await corps('V-08', {});
-		expect(b).toContain('Karim Belhadj — menu utilisateur');
-		expect(b).toContain('Codicillus 1.0.0');
+		expect(b).not.toContain(MOI.nom + ' — menu utilisateur');
+		expect(b).not.toContain('Codicillus ' + INSTANCE.version);
 	}, 60_000);
 
 	it('la propriété fournie l’emporte', async () => {
 		expect(await corps('V-08', { compte: SOPHIE })).toContain('Sophie Nguyen — menu utilisateur');
-		expect(await corps('V-08', { instance: AUTRE_INSTANCE })).toContain('Codicillus 9.9.9');
 	}, 60_000);
 
 	/**

@@ -36,7 +36,6 @@ import { createServer, type ViteDevServer } from 'vite';
 import {
 	ACTIVITE,
 	COMPTES,
-	CONFIG,
 	CONTRIBUTIONS,
 	DISTINCTIONS,
 	DOMAINES,
@@ -104,6 +103,10 @@ const AUTRE_COMPTE: UtilisateurCourant = {
 	role: 'Administrateur'
 };
 const AUTRE_INSTANCE: EtatDInstance = { version: '9.9.9', synchro: 'à l’instant' };
+/** Une adresse de portail qui n'est celle d'aucun jeu — les vues l'EXIGENT. */
+const PORTAIL_DE_CONTROLE = 'https://assistance.exemple.test/nouveau-ticket';
+/** L'identité vide que V-26 applique quand aucun compte ne lui est servi. */
+const SANS_IDENTITE = { prenom: '', nom: '', initiales: '', domaine: '', role: '' };
 const AUTRES_UNIVERS: readonly Univers[] = UNIVERS.filter((u) => u.nom === 'Production');
 const AUTRES_DOMAINES: readonly Domaine[] = DOMAINES.filter((d) => d.nom === 'Applications');
 
@@ -159,17 +162,12 @@ const VUES: Readonly<
 	   aucun morceau. La vue rend un écran unique, sans vecteur et sans compte à
 	   rappeler ; l'adresse du portail d'assistance est la seule donnée
 	   d'instance qui la traverse encore. */
-	'V-06': {
-		base: {},
-		sources: [
-			{
-				cle: 'portail',
-				defaut: CONFIG.portailAssistance,
-				autre: 'https://assistance.exemple.test/autre',
-				marqueur: 'https://assistance.exemple.test/autre'
-			}
-		]
-	},
+	/* `portail` N'EST PLUS UNE SOURCE OPTIONNELLE : elle est EXIGÉE. Son défaut
+	   était l'adresse du jeu de démonstration, et une route qui l'aurait oubliée
+	   aurait servi `assistance.exemple.fr` comme un fait. Elle passe donc au
+	   réglage de base, et les deux sens — l'adresse renseignée l'emporte, l'adresse
+	   vide n'émet rien — sont éprouvés par les cas dédiés, plus bas. */
+	'V-06': { base: { portail: PORTAIL_DE_CONTROLE }, sources: [] },
 	'V-24': {
 		base: { vecteur: { et: '2' } },
 		sources: [
@@ -218,18 +216,26 @@ const VUES: Readonly<
 	   planche que la vue n'exporte pas, et le recopier ferait de ce cas une
 	   épreuve de la copie. Elle a ses propres cas, plus bas, qui LISENT le défaut
 	   sur le rendu de la vue au lieu de le redéclarer. */
+	/* MÊME MOTIF QU'EN V-06 pour `portail`. `pistes` est exigée pour la même
+	   raison : la vue en portait cinq écrites dans sa maquette, et une page
+	   d'erreur n'a pas de chargeur d'où les dériver. `+error.svelte` passe la
+	   liste vide, et le bloc n'est alors pas rendu. */
 	'V-04': {
-		base: { vecteur: null },
+		base: { vecteur: null, portail: PORTAIL_DE_CONTROLE, pistes: [] },
+		sources: []
+	},
+	/* V-26 — LES SOURCES DE COQUILLE Y RETOMBENT SUR L'ÉTAT VIDE, plus sur le jeu.
+	   `+error.svelte` ne passe ni `univers`, ni — sans donnée de gabarit — `compte`
+	   ou `domaines` ; le défaut décide donc de ce qu'une instance neuve affiche.
+	   `instance` a disparu : la version du pied de rail vient du contexte. */
+	'V-26': {
+		base: { vecteur: null, pistes: [] },
 		sources: [
-			{
-				cle: 'portail',
-				defaut: CONFIG.portailAssistance,
-				autre: 'https://assistance.exemple.test/autre',
-				marqueur: 'https://assistance.exemple.test/autre'
-			}
+			{ cle: 'univers', defaut: [], autre: AUTRES_UNIVERS, inerte: true },
+			{ cle: 'domaines', defaut: [], autre: AUTRES_DOMAINES, inerte: true },
+			{ cle: 'compte', defaut: SANS_IDENTITE, autre: AUTRE_COMPTE, marqueur: 'ZQ' }
 		]
 	},
-	'V-26': { base: { vecteur: null }, sources: coquille(['univers', 'domaines']) },
 	'V-35': {
 		base: { etat: 'journal-peuple' },
 		sources: [
@@ -430,7 +436,7 @@ describe('V-25 — l’issue « Voir les notes de … »', () => {
    ces cas rougissent — et c'est exactement ce qu'on leur demande.
    ══════════════════════════════════════════════════════════════════════════ */
 describe('V-06 — l’écran ne promet plus un courriel que rien n’enverrait', () => {
-	const rendu = (): string => corps('V-06', {});
+	const rendu = (): string => corps('V-06', { portail: PORTAIL_DE_CONTROLE });
 
 	it('ne promet aucun envoi ni aucune adresse de destination', () => {
 		expect(rendu()).not.toContain('vous recevrez un lien');
@@ -551,7 +557,7 @@ describe('V-26 — l’adresse demandée en session', () => {
 	/* La position que le produit sert, nommée par la fonction qui la décide —
 	   jamais par un littéral. La pierre tombale, position PAR DÉFAUT de la vue,
 	   ne passe pas par `adresseNonResolue()` et ne lit donc pas cette source. */
-	const base = { vecteur: { cas: casDeV26(), droits: 'ecriture' } };
+	const base = { vecteur: { cas: casDeV26(), droits: 'ecriture' }, pistes: [] };
 
 	it('affiche le chemin demandé, et l’adresse de la planche a disparu', () => {
 		const planche = contenuDe(corps('V-26', base), 'adresse');
@@ -574,13 +580,17 @@ describe('V-26 — l’adresse demandée en session', () => {
 	});
 
 	it('la pierre tombale, elle, ne lit pas l’adresse demandée — elle n’en a pas', () => {
-		const tombe = { vecteur: { cas: 'supprimee' } };
+		const tombe = { vecteur: { cas: 'supprimee' }, pistes: [] };
 		expect(corps('V-26', tombe, { adresse: CHEMIN_DEMANDE })).toBe(corps('V-26', tombe));
 	});
 });
 
 describe('V-04 — l’adresse demandée en anonyme', () => {
-	const base = { vecteur: { cas: casDeV04(CHEMIN_PUBLIC_DEMANDE) } };
+	const base = {
+		vecteur: { cas: casDeV04(CHEMIN_PUBLIC_DEMANDE) },
+		portail: PORTAIL_DE_CONTROLE,
+		pistes: []
+	};
 
 	it('affiche le chemin demandé, et l’adresse de la planche a disparu', () => {
 		const planche = contenuDe(corps('V-04', base), 'adresse');
@@ -600,8 +610,75 @@ describe('V-04 — l’adresse demandée en anonyme', () => {
 	   c'est le chemin lui-même qui descend. */
 	it('l’adresse racine du corpus public reste la sienne', () => {
 		const nu = new URL('https://codicillus.invalid/guides').pathname;
-		const rendu = corps('V-04', { vecteur: { cas: casDeV04(nu) } }, { adresse: nu });
+		const rendu = corps(
+			'V-04',
+			{ vecteur: { cas: casDeV04(nu) }, portail: PORTAIL_DE_CONTROLE, pistes: [] },
+			{ adresse: nu }
+		);
 		expect(contenuDe(rendu, 'adresse')).toBe(nu);
+	});
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   V-26 ET V-04 — LES SOURCES ABSENTES NE RENDENT PLUS LE JEU DE DÉMONSTRATION
+
+   C'EST LE DÉFAUT QUE CETTE CAMPAGNE RETIRE, et il ne se voyait nulle part :
+   `+error.svelte` ne passe ni `univers`, ni — sans donnée de gabarit — `compte`
+   ou `domaines`, et les défauts des vues étaient les constantes du jeu. Toute
+   adresse cassée d'une instance neuve affichait donc « Karim Belhadj » dans sa
+   barre supérieure et « Codicillus 1.0.0 » au pied de son rail.
+
+   LES VALEURS CHERCHÉES VIENNENT DE LEUR SOURCE, jamais d'une chaîne écrite ici :
+   `MOI`, `INSTANCE` et `UNIVERS` du jeu de démonstration. Le jour où le jeu
+   change de noms, ces cas suivent.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('V-26 — sans source servie, rien du jeu de démonstration n’atteint l’écran', () => {
+	const rendu = (): string => corps('V-26', { vecteur: null, pistes: [] });
+
+	it('n’affiche ni le compte ni le rôle du jeu', () => {
+		expect(rendu()).not.toContain(MOI.nom);
+		expect(rendu()).not.toContain(MOI.initiales);
+	});
+
+	it('n’affiche pas la version d’instance du jeu', () => {
+		expect(rendu()).not.toContain(INSTANCE.version);
+	});
+
+	it('n’affiche aucune reprise de contexte — aucune table n’en porte', () => {
+		expect(rendu()).not.toContain('Reprendre où vous en étiez');
+		expect(rendu()).not.toContain('Dernier dossier consulté');
+	});
+
+	it('n’affiche aucune piste de reformulation écrite dans la maquette', () => {
+		const cherche = corps(
+			'V-26',
+			{ vecteur: { cas: casDeV26(), droits: 'ecriture' }, pistes: [] },
+			{ adresse: CHEMIN_DEMANDE }
+		);
+		expect(cherche).not.toContain('class="reformuler"');
+		expect(cherche).not.toContain('class="piste"');
+	});
+});
+
+describe('V-04 — sans piste servie, aucune reformulation n’est promise', () => {
+	it('ne rend pas le bloc, plutôt que d’ouvrir cinq recherches sans résultat', () => {
+		const rendu = corps(
+			'V-04',
+			{ vecteur: null, portail: PORTAIL_DE_CONTROLE, pistes: [] },
+			{ adresse: CHEMIN_PUBLIC_DEMANDE }
+		);
+		expect(rendu).not.toContain('class="reformuler"');
+		expect(rendu).not.toContain('class="piste"');
+	});
+
+	it('les rend quand on lui en sert', () => {
+		const rendu = corps(
+			'V-04',
+			{ vecteur: null, portail: PORTAIL_DE_CONTROLE, pistes: ['badge'] },
+			{ adresse: CHEMIN_PUBLIC_DEMANDE }
+		);
+		expect(rendu).toContain('class="reformuler"');
+		expect(rendu).toContain('<button class="piste">badge</button>');
 	});
 });
 
@@ -614,7 +691,7 @@ describe('V-04 — l’adresse demandée en anonyme', () => {
    de l'écran, et il portait le domaine d'exemple du jeu de démonstration.
    ══════════════════════════════════════════════════════════════════════════ */
 describe('V-04 — l’issue d’assistance', () => {
-	const base = { vecteur: null };
+	const base = { vecteur: null, pistes: [] };
 
 	it('n’émet pas le bouton quand l’instance n’a pas d’adresse', () => {
 		const rendu = corps('V-04', base, { portail: CONFIGURATION_PAR_DEFAUT.portailAssistance });

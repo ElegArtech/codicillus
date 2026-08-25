@@ -13,9 +13,9 @@
 	 * peut donc atteindre une note interne, pas même par erreur de branchement »
 	 * (`V-01:998`, commentaire du gel). Le port respecte l'ENDROIT autant que la
 	 * règle : `notesPubliques(notes)` est calculé une fois, en tête, et TOUTES
-	 * les expressions de ce fichier en descendent. `seeds/corpus.ts` porte la
-	 * même déclaration au même endroit — `VUES_A_PERIMETRE_PUBLIC` et
-	 * `notesPubliques()`.
+	 * les expressions de ce fichier en descendent. `notesPubliques()` vit dans
+	 * `$lib/public/recherche` : elle filtre le jeu qu'on lui donne, et elle
+	 * l'EXIGE — aucun corpus de démonstration ne peut plus s'y substituer.
 	 *
 	 * CE QUE CE COMPOSANT NE PROUVE PAS. Il rend un ÉTAT DE MAQUETTE nourri du
 	 * jeu de semence. L'étanchéité RÉELLE de l'espace public — matrice toutes
@@ -52,8 +52,8 @@
 	 * (ARB-016).
 	 */
 	import { resolve } from '$app/paths';
-	import { CONFIG, notesPubliques, type Note } from '../../seeds/corpus';
-	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
+	import type { Note } from '../../seeds/corpus';
+	import { chercher, nombreFr, notesPubliques, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 
 	/**
@@ -79,13 +79,28 @@
 		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — « adresse externe configurée en
 		 * console » (`V-04:2205`). Elle est une donnée d'INSTANCE : la table
 		 * `parametres` la porte sous la clé `portail_assistance`, et le chargeur de
-		 * la route l'y lit. Absente, la valeur du jeu de semence, qui est celle que
-		 * la semence écrit en base.
+		 * la route l'y lit.
+		 *
+		 * ELLE EST EXIGÉE, ET C'EST LE CORRECTIF. Son défaut était l'adresse du jeu
+		 * de démonstration : une route qui aurait oublié de la passer aurait servi
+		 * `assistance.exemple.fr` comme un fait, sans que rien ne proteste. Exigée,
+		 * une route qui l'oublie ne compile plus. Vide — ce que rend une instance
+		 * dont personne n'a renseigné la clé —, aucun appel à l'assistance n'est
+		 * ÉMIS : un lien sans destination n'est pas une issue.
 		 */
-		portail?: string;
+		portail: string;
 	}
 
-	const { vecteur, notes, portail = CONFIG.portailAssistance }: Proprietes = $props();
+	const { vecteur, notes, portail }: Proprietes = $props();
+
+	/**
+	 * « OUVRIR UN TICKET D'ASSISTANCE » N'EST ÉMIS QUE S'IL MÈNE QUELQUE PART —
+	 * même règle et même écriture qu'en V-04 et V-06. `CONFIGURATION_PAR_DEFAUT`
+	 * laisse `portail_assistance` VIDE, et la table le reste tant que personne ne
+	 * l'a renseignée en console : les trois boutons de cet écran portaient alors
+	 * une destination vide, et le clic rechargeait la page d'accueil.
+	 */
+	const assistanceJoignable = $derived(portail.trim() !== '');
 
 	const reglage = $derived(vecteur ?? {});
 
@@ -265,7 +280,9 @@
 								Rien de public ne correspond à <em>« {requete} »</em>. L'assistance saura vous
 								répondre, et votre demande signalera le guide manquant.
 							</p>
-							<a class="btn btn--principal" href={portail}>Ouvrir un ticket d'assistance</a>
+							{#if assistanceJoignable}<a class="btn btn--principal" href={portail}
+									>Ouvrir un ticket d'assistance</a
+								>{/if}
 						</div>{:else}
 						<!--
 							AUCUN BLANC ENTRE LES NŒUDS DE LA LISTE, et il doit le rester : le
@@ -306,7 +323,9 @@
 							Les équipes techniques n'ont pas encore ouvert de guide au public. En attendant,
 							l'assistance répond directement à vos questions.
 						</p>
-						<a class="btn btn--principal" href={portail}>Ouvrir un ticket d'assistance</a>
+						{#if assistanceJoignable}<a class="btn btn--principal" href={portail}
+								>Ouvrir un ticket d'assistance</a
+							>{/if}
 					</div>{:else}
 					<!-- Même raison que ci-dessus : aucun blanc entre les nœuds. -->
 					<!-- prettier-ignore -->
@@ -324,27 +343,33 @@
 			</div>
 		</section>
 
-		<!-- ---------- Repli vers l'assistance ---------- -->
-		<aside class="repli">
-			<div>
-				<h2 class="repli__titre">Vous ne trouvez pas ?</h2>
-				<p class="repli__txt">
-					Ouvrez un ticket auprès de l'assistance. Indiquez ce que vous cherchiez : c'est souvent ce
-					qui déclenche l'écriture du guide manquant.
-				</p>
-			</div>
-			<a class="btn btn--principal" href={portail} id="ticket">
-				Ouvrir un ticket d'assistance
-				<svg
-					width="13"
-					height="13"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.6"><path d="M6 3h7v7M13 3L4 12" /></svg
-				>
-			</a>
-		</aside>
+		<!-- ---------- Repli vers l'assistance ----------
+			 L'ASIDE ENTIER EST GARDÉ, pas seulement son lien : sans portail
+			 configuré, garder « Vous ne trouvez pas ? » et son paragraphe
+			 laisserait un titre qui pose une question sans issue. Même geste
+			 qu'en V-06, qui garde tout son `.auth__pied`. -->
+		{#if assistanceJoignable}
+			<aside class="repli">
+				<div>
+					<h2 class="repli__titre">Vous ne trouvez pas ?</h2>
+					<p class="repli__txt">
+						Ouvrez un ticket auprès de l'assistance. Indiquez ce que vous cherchiez : c'est souvent
+						ce qui déclenche l'écriture du guide manquant.
+					</p>
+				</div>
+				<a class="btn btn--principal" href={portail} id="ticket">
+					Ouvrir un ticket d'assistance
+					<svg
+						width="13"
+						height="13"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.6"><path d="M6 3h7v7M13 3L4 12" /></svg
+					>
+				</a>
+			</aside>
+		{/if}
 	</main>
 
 	<footer class="pied-public">

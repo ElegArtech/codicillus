@@ -67,17 +67,7 @@
 	 * `node verif/feuilles-de-vue.mjs V-26 --installer`. Les `style=` reproduits
 	 * figurent tous à l'ensemble clos du gel de V-26 (ARB-016).
 	 */
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		UNIVERS,
-		type Domaine,
-		type EtatDInstance,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../seeds/corpus';
+	import type { Domaine, Note, Univers, UtilisateurCourant } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { adresseNonResolue } from '$lib/public/adresse-non-resolue';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
@@ -98,23 +88,37 @@
 		/** Le jeu de semence de la vue — `corpusPourVue('V-26')`, variante complète. */
 		notes: readonly Note[];
 		/**
-		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
+		 * LES SOURCES DE LA COQUILLE — ET LEUR DÉFAUT EST L'ÉTAT VIDE.
 		 *
-		 * Absentes, les constantes du jeu de semence s'appliquent : c'est ce que le
-		 * mode démo passe, et c'est ce qui garantit que le banc ne bouge pas d'un
-		 * pixel. Fournies — par un chargeur de route —, elles l'emportent, et la vue
-		 * cesse de servir une valeur figée, indépendante de la base et de l'identité.
+		 * Leur défaut était les constantes du jeu de démonstration. `+error.svelte`
+		 * n'a pas de chargeur de page : il ne passe `compte` et `domaines` que
+		 * lorsque le gabarit racine les lui a servis, et ne passe JAMAIS `univers`.
+		 * Une page d'adresse non résolue affichait donc « Karim Belhadj » et
+		 * l'arborescence des maquettes sur une instance qui ne les a jamais portés.
+		 *
+		 * Absentes, elles valent maintenant vide. `instance` a disparu : aucune
+		 * source ne la passait, et la version du pied de rail vient du contexte.
 		 */
-		/** Les univers déclarés. Absente, `UNIVERS` du jeu de semence. */
+		/** Les univers déclarés. Absente, aucun. */
 		univers?: readonly Univers[];
-		/** Les domaines du périmètre du compte. Absente, `DOMAINES` du jeu de semence. */
+		/** Les domaines du périmètre du compte. Absente, aucun. */
 		domaines?: readonly Domaine[];
-		/** Le compte connecté. Absente, `MOI` du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** Les reprises de contexte. Absente, celles du jeu de semence. */
-		reprises?: readonly { nom: string; sous: string; trace: string | null }[] | null;
-		/** L'état de l'instance. Absente, `INSTANCE` du jeu de semence. */
-		instance?: EtatDInstance;
+		/** Le compte connecté. Absente, une identité sans nom. */
+		compte?: IdentiteAffichee;
+		/** Les reprises de contexte. Absente, aucune. */
+		reprises?: readonly { nom: string; sous: string; trace: string | null }[];
+		/**
+		 * LES PISTES DE REFORMULATION — une DONNÉE, et elle n'a pas de source ici.
+		 *
+		 * La vue en portait quatre en dur, tirées du gel : « sauvegarde »,
+		 * « restauration », « astreinte », « supervision ». Chacune ouvrait la
+		 * recherche à zéro résultat sur une instance qui ne porte rien de tel. Une
+		 * page d'erreur n'a pas de chargeur : rien ne peut les dériver ici, et une
+		 * liste vide ne rend pas le bloc.
+		 *
+		 * EXIGÉE — `+error.svelte` la passe, et c'est le seul montage de cette vue.
+		 */
+		pistes: readonly string[];
 		/**
 		 * L'ADRESSE RÉELLEMENT DEMANDÉE — la seule entrée d'`adresseNonResolue()`.
 		 *
@@ -136,14 +140,40 @@
 		adresse?: string;
 	}
 
+	/**
+	 * L'IDENTITÉ AFFICHÉE — la forme d'`UtilisateurCourant`, dont les valeurs
+	 * figées du jeu de démonstration sont ÉLARGIES.
+	 *
+	 * `UtilisateurCourant.nom` est typé `NomDAuteur`, l'union des trois noms du
+	 * jeu — « Sophie Nguyen », « Marc Ferreira », « Karim Belhadj » — et `role`
+	 * comme `domaine` sont de même farine. Aucune instance réelle ne porte ces
+	 * valeurs, et aucun état vide n'y est représentable. Le JEU DE CLÉS reste lié
+	 * au type d'origine par un type mappé : un champ ajouté là-bas apparaît ici,
+	 * et cette forme ne peut pas diverger en silence.
+	 */
+	type IdentiteAffichee = { readonly [K in keyof UtilisateurCourant]: string };
+
+	/**
+	 * L'IDENTITÉ VIDE — ce que la barre supérieure affiche sans compte servi.
+	 * Elle remplace `MOI` du jeu de démonstration, qui faisait passer « Karim
+	 * Belhadj » pour l'utilisateur connecté sur toute instance.
+	 */
+	const SANS_IDENTITE: IdentiteAffichee = {
+		prenom: '',
+		nom: '',
+		initiales: '',
+		domaine: '',
+		role: ''
+	};
+
 	const {
 		vecteur,
 		notes,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		reprises = null,
-		instance = INSTANCE,
+		univers = [],
+		domaines = [],
+		compte = SANS_IDENTITE,
+		reprises = [],
+		pistes,
 		adresse
 	}: Proprietes = $props();
 
@@ -232,9 +262,6 @@
 	/** `rendre()` du gel : rien n'est cherché sous deux caractères. */
 	const resultats = $derived(requete.length < 2 ? [] : chercher(notes, requete));
 
-	/** Les quatre pistes de reformulation, telles que le gel les énumère. */
-	const PISTES = ['sauvegarde', 'restauration', 'astreinte', 'supervision'];
-
 	/**
 	 * LES TROIS REPRISES DE CONTEXTE — `V-26:2731`.
 	 *
@@ -244,25 +271,11 @@
 	 * jamais eu ces dossiers, la page d'adresse non résolue proposait d'y
 	 * retourner. Mesuré le 21/08/2026.
 	 *
-	 * Elles deviennent donc une propriété, avec le gel pour défaut : la vue rendue
-	 * seule ne bouge pas, et une route qui n'a pas d'historique passe une liste
-	 * vide plutôt qu'un souvenir emprunté.
+	 * Elles sont donc une propriété, DONT LE DÉFAUT EST VIDE : aucune table de la
+	 * base ne porte d'historique de consultation, et le gel n'est pas une source.
+	 * Vide, le bloc entier n'est pas rendu — un titre « Reprendre où vous en
+	 * étiez » suivi de rien serait une promesse sans objet.
 	 */
-	const REPRISES_DU_GEL = [
-		{
-			nom: 'Accueil',
-			sous: 'Votre tableau de bord et vos révisions en attente',
-			trace: 'M2 7l6-4.5L14 7v6.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7z'
-		},
-		{
-			nom: 'Sauvegardes',
-			sous: 'Dernier dossier consulté · Infrastructure › Exploitation',
-			trace:
-				'M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z'
-		},
-		{ nom: 'Recherche complète', sous: 'Facettes, tri et modes de recherche', trace: null }
-	] as const;
-	const REPRISES = $derived(reprises ?? REPRISES_DU_GEL);
 </script>
 
 <!--
@@ -342,7 +355,7 @@
 		role: compte.role,
 		domaine: compte.domaine
 	}}
-	version={instance.version}
+	version=""
 	rail="ouvert"
 	{droits}
 	forme="abregee"
@@ -361,41 +374,51 @@
 			<span id="adresse">{adresseAffichee}</span>
 		</div>
 
-		<!-- ---------- Note supprimée ---------- -->
-		<section class="suppression" id="suppression" hidden={!tombe}>
-			<svg
-				width="22"
-				height="22"
-				viewBox="0 0 16 16"
-				fill="none"
-				stroke="var(--c-alerte)"
-				stroke-width="1.5"
-				style="flex:none;margin-top:2px"
-				><path
-					d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"
-				/></svg
-			>
-			<div style="flex:1">
-				<h2>Cette note a été supprimée</h2>
-				<p id="sup-txt">
-					« {SUPPRIMEE.nom} » se trouvait dans {SUPPRIMEE.ou}. Son contenu reste consultable dans
-					l'historique tant que la corbeille n'a pas été vidée.
-				</p>
-				<div class="suppression__qui" id="sup-qui">
-					<span>Supprimée par : {SUPPRIMEE.par}</span><span style="color:var(--c-trait-fort)"
-						>·</span
-					><span>Quand : {SUPPRIMEE.quand}</span><span style="color:var(--c-trait-fort)">·</span
-					><span>Motif indiqué : {SUPPRIMEE.motif}</span>
+		<!-- ---------- Note supprimée ----------
+			 LA SECTION N'EST PLUS SERVIE HORS DE SON CAS. Elle était toujours
+			 émise, masquée par `hidden` : toute adresse cassée d'une instance
+			 réelle expédiait donc dans son HTML « Restaurer une sauvegarde
+			 MariaDB », « Marc Ferreira » et « Infrastructure › Exploitation ›
+			 Sauvegardes » — des noms du jeu de démonstration, présentés comme
+			 les faits d'une suppression qui n'a jamais eu lieu. Rien ne bascule
+			 `tombe` côté navigateur : `cablage-erreur.ts` ne câble ni
+			 `#sup-restaurer` ni `#sup-domaine`, et le dit. -->
+		{#if tombe}
+			<section class="suppression" id="suppression">
+				<svg
+					width="22"
+					height="22"
+					viewBox="0 0 16 16"
+					fill="none"
+					stroke="var(--c-alerte)"
+					stroke-width="1.5"
+					style="flex:none;margin-top:2px"
+					><path
+						d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"
+					/></svg
+				>
+				<div style="flex:1">
+					<h2>Cette note a été supprimée</h2>
+					<p id="sup-txt">
+						« {SUPPRIMEE.nom} » se trouvait dans {SUPPRIMEE.ou}. Son contenu reste consultable dans
+						l'historique tant que la corbeille n'a pas été vidée.
+					</p>
+					<div class="suppression__qui" id="sup-qui">
+						<span>Supprimée par : {SUPPRIMEE.par}</span><span style="color:var(--c-trait-fort)"
+							>·</span
+						><span>Quand : {SUPPRIMEE.quand}</span><span style="color:var(--c-trait-fort)">·</span
+						><span>Motif indiqué : {SUPPRIMEE.motif}</span>
+					</div>
+					<div class="suppression__actions">
+						<!-- P-09 · ARB-040 — omise, jamais masquée. `V-26:1078` -->
+						{#if ecriture}<button class="btn si-ecriture" id="sup-restaurer"
+								>Demander sa restauration</button
+							>{/if}
+						<button class="btn" id="sup-domaine">Voir le dossier qui la contenait</button>
+					</div>
 				</div>
-				<div class="suppression__actions">
-					<!-- P-09 · ARB-040 — omise, jamais masquée. `V-26:1078` -->
-					{#if ecriture}<button class="btn si-ecriture" id="sup-restaurer"
-							>Demander sa restauration</button
-						>{/if}
-					<button class="btn" id="sup-domaine">Voir le dossier qui la contenait</button>
-				</div>
-			</div>
-		</section>
+			</section>
+		{/if}
 
 		<!-- ---------- Recherche ---------- -->
 		<div class="champ-rech" id="champ-rech">
@@ -447,9 +470,9 @@
 								? "Essayez d'autres mots, ou demandez à un contributeur du domaine si cette connaissance est écrite quelque part."
 								: "Essayez d'autres mots — ou écrivez-la : c'est souvent une adresse cassée qui révèle une note manquante."}
 						</p>
-						<div class="reformuler">
-							{#each PISTES as piste (piste)}<button class="piste">{piste}</button>{/each}
-						</div>
+						{#if pistes.length}<div class="reformuler">
+								{#each pistes as piste (piste)}<button class="piste">{piste}</button>{/each}
+							</div>{/if}
 						<!-- P-09 · ARB-040 — omise, jamais masquée. `V-26:2709` -->
 						{#if ecriture}<button
 								class="btn btn--principal si-ecriture"
@@ -466,28 +489,30 @@
 		</div>
 
 		<!-- ---------- Reprises de contexte ---------- -->
-		<span class="etiq" style="display:block;margin-bottom:var(--e-2)"
-			>Reprendre où vous en étiez</span
-		>
-		<div class="reprises" id="reprises">
-			{#each REPRISES as r (r.nom)}<button class="reprise" type="button"
-					><span class="reprise__ic"
-						><svg
-							width="16"
-							height="16"
-							viewBox="0 0 16 16"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.4"
-							>{#if r.trace}<path d={r.trace} />{:else}<circle cx="7" cy="7" r="4.5" /><path
-									d="M10.5 10.5L14 14"
-								/>{/if}</svg
-						></span
-					><span
-						><span class="reprise__nom">{r.nom}</span><span class="reprise__sous">{r.sous}</span
-						></span
-					></button
-				>{/each}
-		</div>
+		{#if reprises.length}
+			<span class="etiq" style="display:block;margin-bottom:var(--e-2)"
+				>Reprendre où vous en étiez</span
+			>
+			<div class="reprises" id="reprises">
+				{#each reprises as r (r.nom)}<button class="reprise" type="button"
+						><span class="reprise__ic"
+							><svg
+								width="16"
+								height="16"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"
+								>{#if r.trace}<path d={r.trace} />{:else}<circle cx="7" cy="7" r="4.5" /><path
+										d="M10.5 10.5L14 14"
+									/>{/if}</svg
+							></span
+						><span
+							><span class="reprise__nom">{r.nom}</span><span class="reprise__sous">{r.sous}</span
+							></span
+						></button
+					>{/each}
+			</div>
+		{/if}
 	{/snippet}
 </Coquille>
