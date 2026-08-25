@@ -9,8 +9,17 @@
 	 * que le mode démo passe en propriété (`corpusPourVue('V-20')`, variante
 	 * « complete », 32 notes dont cinq signets sans relation, donc absents du
 	 * graphe). Les trois tableaux de relations sont désormais REÇUS EN PROPRIÉTÉ,
-	 * de défaut la constante du jeu (T-043) ; `TYPES_FICHE` reste une constante,
-	 * hors de l'énumération du contrat. Ce lot NE DÉCLARE PAS `RG-M09-01` tenue.
+	 * de défaut la constante du jeu (T-043).
+	 *
+	 * `TYPES_FICHE` A CESSÉ D'ÊTRE UNE CONSTANTE NUE, ET C'EST UNE RÉPARATION.
+	 * Elle était importée au niveau du module et employée SANS PROPRIÉTÉ : aucun
+	 * chargeur ne pouvait donc la corriger. Le panneau de détail rendait alors,
+	 * sous l'intitulé « Propriétés », les noms de champ du JEU DE SEMENCE et
+	 * leurs valeurs d'EXEMPLE, présentés comme les propriétés de la note réelle
+	 * choisie — et un type de fiche créé en console, absent de la constante,
+	 * faisait LEVER `.slice()` au clic sur le nœud. Le référentiel et les
+	 * valeurs sont désormais reçus ; la constante n'est plus que le défaut.
+	 * Ce lot NE DÉCLARE PAS `RG-M09-01` tenue.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * CETTE VUE N'EMPRUNTE PAS `$lib/coquille/Coquille.svelte`, ET C'EST UN
@@ -96,6 +105,7 @@
 		RELATIONS_TECHNIQUES,
 		TYPES_FICHE,
 		TYPES_RELATION,
+		type ChampDeFiche,
 		type CleDeTypeDeRelation,
 		type Domaine,
 		type EtatDInstance,
@@ -161,6 +171,29 @@
 		/** Les types de relation qui portent une dépendance technique. Défaut : ceux du jeu de semence. */
 		relationsTechniques?: readonly CleDeTypeDeRelation[];
 		/**
+		 * LE RÉFÉRENTIEL DES TYPES DE FICHE — un schéma de champs par type, tel que
+		 * la table le porte. Défaut : celui du jeu de semence.
+		 *
+		 * L'INDEX EST UNE CHAÎNE, ET C'EST LE FAIT DE LA BASE. Le jeu n'en connaît
+		 * que trois, la table en porte autant que la console en crée, et `typeFiche`
+		 * d'une note lue en base est le nom de la ligne jointe. Un type que le
+		 * référentiel reçu ne porte pas est donc un cas ORDINAIRE, pas une anomalie :
+		 * il se rend en état neutre, il ne lève pas.
+		 */
+		typesFiche?: Record<string, readonly ChampDeFiche[]>;
+		/**
+		 * LES VALEURS DE PROPRIÉTÉ DE CHAQUE FICHE — par identifiant de note, puis
+		 * par clé de champ. La colonne `proprietes_typees` les porte.
+		 *
+		 * ABSENTE, LA VUE N'EST PAS BRANCHÉE SUR UNE BASE, et le panneau reprend
+		 * alors l'illustration du gel : la valeur d'exemple du référentiel. C'est le
+		 * même partage qu'en `V-28`, qui détecte de la même façon qu'elle tourne sur
+		 * le jeu. SERVIE, elle est la seule source de valeur : ce que la note ne
+		 * porte pas se rend en tiret, jamais en exemple — un exemple affiché sous
+		 * l'intitulé « Propriétés » d'une note réelle est une valeur inventée.
+		 */
+		proprietesDeFiche?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+		/**
 		 * ─────────────────────────────────────────────────────────────────────
 		 * LES TROIS AXES QUE L'ADRESSE PORTE — `RG-M09-05`, « état de cartographie
 		 * partageable ».
@@ -193,6 +226,8 @@
 		relations = RELATIONS,
 		typesRelation = TYPES_RELATION,
 		relationsTechniques = RELATIONS_TECHNIQUES,
+		typesFiche = TYPES_FICHE,
+		proprietesDeFiche,
 		perimetreDemande,
 		typeMaitreDemande,
 		centreDemande
@@ -497,17 +532,38 @@
 		return groupes;
 	});
 
-	/** Les trois premières propriétés du schéma de fiche, quand il en existe un. */
+	/** Le tiret cadratin du gel, pour une valeur que la note ne porte pas. */
+	const RIEN_A_AFFICHER = '—';
+
+	/**
+	 * LES TROIS PREMIÈRES PROPRIÉTÉS DE LA FICHE CHOISIE — son schéma, ses
+	 * valeurs.
+	 *
+	 * LE SCHÉMA VIENT DU RÉFÉRENTIEL REÇU, et un type qu'il ne porte pas rend une
+	 * liste vide : c'est le type de fiche créé en console, que la constante du jeu
+	 * ne pouvait pas connaître, et sur lequel la lecture directe LEVAIT au clic.
+	 *
+	 * LA VALEUR VIENT DE LA NOTE, ET D'ELLE SEULE, dès que les propriétés sont
+	 * servies. Le repli sur l'exemple du référentiel n'a lieu que hors produit,
+	 * là où il est l'illustration de la planche et non le fait d'une note.
+	 */
 	const proprietesDuDetail = $derived.by(() => {
 		const note = choisi === null ? undefined : noteDe(choisi);
 		if (!note?.typeFiche) return [];
-		return TYPES_FICHE[note.typeFiche].slice(0, 3).map((c) => ({
+		const champs = typesFiche[note.typeFiche] ?? [];
+		const valeurs = proprietesDeFiche?.[note.id];
+		return champs.slice(0, 3).map((c) => ({
 			nom: c.nom,
-			valeur: c.exemple ?? c.valeurs?.[0] ?? '—'
+			valeur:
+				proprietesDeFiche === undefined
+					? (c.exemple ?? c.valeurs?.[0] ?? RIEN_A_AFFICHER)
+					: (valeurs?.[c.cle] ?? RIEN_A_AFFICHER)
 		}));
 	});
 
 	const noteDuDetail = $derived(choisi === null ? undefined : noteDe(choisi));
+	/** La note choisie est-elle une fiche ? Le panneau rend alors ses propriétés. */
+	const detailEstUneFiche = $derived(noteDuDetail?.typeFiche !== undefined);
 	const noeudDuDetail = $derived(choisi === null ? undefined : graphe.index.get(choisi));
 
 	/* ═════════════════════════════════════════════════════════════════════
@@ -975,12 +1031,20 @@
 									ce qui en dépend.
 								</p>{/if}
 						</div>
-						{#if proprietesDuDetail.length}<div class="detail__section">
-								<span class="etiq">Propriétés</span>{#each proprietesDuDetail as p (p.nom)}<div
-										class="prop"
+						<!-- LE PANNEAU DIT CE QU'IL SAIT, ET SEULEMENT CELA. Une fiche dont le
+						     référentiel reçu ne porte pas le type — créé en console, puis
+						     retiré — rendait ici une exception au clic. Elle rend maintenant
+						     l'état neutre, sur le modèle de « Aucune relation déclarée » de
+						     la section voisine. Une note qui n'est pas une fiche n'a pas de
+						     section : c'est le rendu du gel, et il est juste. -->
+						{#if detailEstUneFiche}<div class="detail__section">
+								<span class="etiq">Propriétés</span>{#if !proprietesDuDetail.length}<p
+										style="font-size:var(--t-petit);color:var(--c-encre-3);margin:0"
 									>
-										<span class="prop__cle">{p.nom}</span><span>{p.valeur}</span>
-									</div>{/each}
+										Aucune propriété au référentiel.
+									</p>{:else}{#each proprietesDuDetail as p (p.nom)}<div class="prop">
+											<span class="prop__cle">{p.nom}</span><span>{p.valeur}</span>
+										</div>{/each}{/if}
 							</div>{/if}
 						<div class="detail__section">
 							<span class="etiq">Relations</span>{#if !groupesDuDetail.length}<p
