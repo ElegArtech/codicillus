@@ -852,6 +852,22 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 		}
 		return valeur;
 	};
+	/* UN PLAFOND DE VERSIONS HORS DOMAINE PREND SON DÉFAUT, IL NE SE PROPAGE PAS.
+	   `RG-M07-03` (`CDC:834`) donne au plafond une valeur configurable ET un
+	   défaut — 50 —, et ce défaut vaut pour la clé absente comme pour la valeur
+	   inutilisable : dans les deux cas le produit n'a pas de plafond réglé.
+	   Le cas n'est plus atteignable depuis la console — `validerLaConfiguration()`
+	   refuse désormais le champ vidé —, mais il reste atteignable par une reprise
+	   de base, et c'est ici qu'il compte : `lireConfiguration()` est la SEULE
+	   source des deux consommateurs du plafond, l'écran d'historique
+	   (`histoire.ts:457` → `V-15:288`) et la purge (`edition.ts`). Les replier ici
+	   est ce qui les empêche de diverger — un écran qui annonce « les 0 dernières
+	   sont gardées » pendant qu'une purge décide autre chose est exactement le
+	   défaut qu'on répare. */
+	const plafond = (cle: string, defaut: number): number => {
+		const valeur = nombre(cle, defaut);
+		return Number.isSafeInteger(valeur) && valeur >= 1 ? valeur : defaut;
+	};
 	const chaine = (cle: string, defaut: string): string => {
 		const valeur = par.get(cle);
 		if (valeur === undefined) return defaut;
@@ -873,7 +889,7 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 			CLES_DE_PARAMETRE.seuilVieillissant,
 			CONFIGURATION_PAR_DEFAUT.seuilVieillissant
 		),
-		versionsMax: nombre(CLES_DE_PARAMETRE.versionsMax, CONFIGURATION_PAR_DEFAUT.versionsMax),
+		versionsMax: plafond(CLES_DE_PARAMETRE.versionsMax, CONFIGURATION_PAR_DEFAUT.versionsMax),
 		portailAssistance: chaine(
 			CLES_DE_PARAMETRE.portailAssistance,
 			CONFIGURATION_PAR_DEFAUT.portailAssistance
