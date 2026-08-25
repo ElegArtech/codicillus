@@ -38,7 +38,8 @@ function ecran(): NoeudFeint {
 			{ cle: 'commentaire', nom: 'Commentaire', type: 'texte' }
 		],
 		{},
-		() => undefined
+		() => undefined,
+		'choix'
 	);
 	return racine;
 }
@@ -59,7 +60,14 @@ describe('BRIEF-VUES.md:973 — le refus désigne SON champ, pas la page', () =>
 		expect(voisin?.hidden).toBe(true);
 	});
 
-	it('marque le champ porteur, ce qui rougit sa bordure — socle.css:438', () => {
+	it('marque le champ porteur, `data-etat="erreur"` comme au gel', () => {
+		/* CE QUE CETTE MARQUE FAIT, ET CE QU'ELLE NE FAIT PAS. `socle.css:438`
+		   rougit `.champ[data-etat="erreur"] .saisie` : une propriété « texte » ou
+		   « nombre » voit donc sa bordure changer. Une propriété « liste » reçoit la
+		   classe `selecteur` (`V-17.css:601`), qu'aucune règle d'erreur ne vise —
+		   sa bordure ne rougira pas. Le refus reste signalé à l'endroit du champ par
+		   son bloc, ce que `BRIEF-VUES.md:973` demande ; la bordure est un renfort
+		   que le socle ne rend pas à ce contrôle-là. */
 		const racine = ecran();
 		peindreLeRefusDEdition(racine as unknown as ParentNode, REFUS);
 		const champ = racine

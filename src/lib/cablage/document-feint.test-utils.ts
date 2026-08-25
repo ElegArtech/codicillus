@@ -11,15 +11,22 @@
  * CE FICHIER N'EST PAS UN CONTRÔLE : son nom ne se termine pas par la marque
  * que `include` retient, et rien de `src/` ne l'importe.
  *
- * CE QU'IL FEINT, ET RIEN DE PLUS : créer un nœud, l'attacher, lui poser un
- * texte, une classe, un identifiant, un attribut, une donnée ; le retrouver par
- * un sélecteur simple ou de descendance ; remonter à son plus proche ancêtre.
- * Les modules éprouvés, eux, sont les vrais.
+ * CE QU'IL FEINT, ET RIEN DE PLUS : créer un nœud — de balisage, de balisage
+ * graphique, ou de texte —, l'attacher, lui poser un texte, une classe, un
+ * identifiant, un attribut, une donnée ; le retrouver par un sélecteur simple ou
+ * de descendance ; remonter à son plus proche ancêtre. Les modules éprouvés,
+ * eux, sont les vrais.
+ *
+ * LE MOT DU DÉPÔT POUR UN NOM DE BALISE EST « BALISE » — `rendu.ts:154`,
+ * `Coquille.svelte:96`. « tag » n'est écrit nulle part sinon dans les phrases
+ * qui l'interdisent (`schema.ts:29`, `:396`, `seeds/corpus.ts:90`) et collé à
+ * l'interface du document (`tagName`). Un identifiant librement choisi n'a
+ * aucune raison de le rouvrir.
  */
 
 /** Ce qu'un pas de sélecteur retient : un nom, un identifiant, des classes, des données. */
 interface PasDeSelecteur {
-	tag?: string;
+	balise?: string;
 	id?: string;
 	readonly classes: readonly string[];
 	readonly donnees: readonly string[];
@@ -28,27 +35,31 @@ interface PasDeSelecteur {
 function pas(fragment: string): PasDeSelecteur {
 	const classes: string[] = [];
 	const donnees: string[] = [];
-	let tag: string | undefined;
+	let balise: string | undefined;
 	let id: string | undefined;
 	const jetons = fragment.match(/#[\w-]+|\.[\w_-]+|\[[\w-]+\]|[a-zA-Z][\w-]*/g) ?? [];
 	for (const jeton of jetons) {
 		if (jeton.startsWith('#')) id = jeton.slice(1);
 		else if (jeton.startsWith('.')) classes.push(jeton.slice(1));
 		else if (jeton.startsWith('[')) donnees.push(jeton.slice(1, -1));
-		else tag = jeton;
+		else balise = jeton;
 	}
 	const rendu: PasDeSelecteur = { classes, donnees };
-	if (tag !== undefined) rendu.tag = tag;
+	if (balise !== undefined) rendu.balise = balise;
 	if (id !== undefined) rendu.id = id;
 	return rendu;
 }
 
 export interface DocumentFeint {
-	createElement(tag: string): NoeudFeint;
+	createElement(balise: string): NoeudFeint;
+	/* Les balises graphiques passent par leur espace de nommage — le feint n'en
+	   retient que la balise, aucun sélecteur du dépôt ne portant sur l'espace. */
+	createElementNS(espace: string, balise: string): NoeudFeint;
+	createTextNode(texte: string): NoeudFeint;
 }
 
 export interface NoeudFeint {
-	readonly tag: string;
+	readonly balise: string;
 	className: string;
 	id: string;
 	hidden: boolean;
@@ -77,17 +88,25 @@ export interface NoeudFeint {
 
 export function documentFeint(): DocumentFeint {
 	const doc: DocumentFeint = {
-		createElement(tag: string): NoeudFeint {
-			return creer(tag, doc);
+		createElement(balise: string): NoeudFeint {
+			return creer(balise, doc);
+		},
+		createElementNS(_espace: string, balise: string): NoeudFeint {
+			return creer(balise, doc);
+		},
+		createTextNode(texte: string): NoeudFeint {
+			const noeud = creer('#texte', doc);
+			noeud.textContent = texte;
+			return noeud;
 		}
 	};
 	return doc;
 }
 
-function creer(tag: string, doc: DocumentFeint): NoeudFeint {
+function creer(balise: string, doc: DocumentFeint): NoeudFeint {
 	let texte = '';
 	const lui: NoeudFeint = {
-		tag,
+		balise,
 		className: '',
 		id: '',
 		hidden: false,
@@ -179,7 +198,7 @@ function correspond(noeud: NoeudFeint, etapes: readonly PasDeSelecteur[]): boole
 }
 
 function porte(noeud: NoeudFeint, etape: PasDeSelecteur): boolean {
-	if (etape.tag !== undefined && etape.tag !== noeud.tag) return false;
+	if (etape.balise !== undefined && etape.balise !== noeud.balise) return false;
 	if (etape.id !== undefined && etape.id !== noeud.id) return false;
 	const classes = noeud.className.split(/\s+/).filter((c) => c !== '');
 	for (const classe of etape.classes) if (!classes.includes(classe)) return false;
