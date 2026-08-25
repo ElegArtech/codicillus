@@ -19,6 +19,7 @@ import { documentDuGel } from '../contenu/documents-du-gel';
 import {
 	contenuModifie,
 	empreinteDuCorps,
+	numerosExcedentaires,
 	quantitesTouchees,
 	RESUME_NON_SAISI,
 	versionDUnEnregistrement,
@@ -213,5 +214,65 @@ describe('les quantités touchées comptent les DEUX registres, et ne sont pas u
 		);
 		expect(q.ajout).toBeGreaterThan(0);
 		expect(q.retrait).toBe(0);
+	});
+});
+
+/* ═══════════════════════════════════ La purge du plafond ═══════════════ */
+
+describe('la purge du plafond retire TOUT l’excédent, jamais la seule plus ancienne', () => {
+	/* CE QUE CES CAS NE PROUVENT PAS. La liste de numéros est construite ici :
+	   ils éprouvent la DÉCISION, pas la forme de ce que la base rend. Le
+	   comptage réel des lignes restantes après des enregistrements en chaîne est
+	   relevé au navigateur, sur la base, et il est au rapport du lot. */
+
+	it('sous le plafond, rien n’est retiré', () => {
+		expect(numerosExcedentaires([1, 2, 3], 5)).toEqual([]);
+		expect(numerosExcedentaires([1, 2, 3, 4, 5], 5)).toEqual([]);
+	});
+
+	it('au-delà, ce sont les PLUS ANCIENNES qui partent, et le compte est exact', () => {
+		expect(numerosExcedentaires([1, 2, 3, 4, 5, 6], 5)).toEqual([1]);
+		expect(numerosExcedentaires([6, 3, 1, 5, 2, 4], 5)).toEqual([1]);
+	});
+
+	it('un plafond ABAISSÉ rattrape l’excédent d’un coup — la phrase de V-33', () => {
+		/* « Réduire cette valeur supprimera les versions excédentaires dès le
+		   prochain enregistrement. » Retirer la seule plus ancienne mettrait
+		   quarante-cinq enregistrements à faire redescendre une note de cinquante
+		   versions à cinq. */
+		const cinquante = Array.from({ length: 50 }, (_, i) => i + 1);
+		const retires = numerosExcedentaires(cinquante, 5);
+		expect(retires).toHaveLength(45);
+		expect(retires).toContain(45);
+		expect(retires).not.toContain(46);
+		expect(Math.max(...retires)).toBe(45);
+	});
+
+	it('les numéros gardés sont les plus GRANDS, même si la suite est trouée', () => {
+		/* Un seuil composé du plus grand numéro moins le plafond serait juste tant
+		   que les numéros restent contigus, et faux dès qu'un trou apparaît. */
+		expect(numerosExcedentaires([2, 9, 40, 41, 42], 3)).toEqual([9, 2]);
+	});
+
+	it('un plafond hors domaine ne purge RIEN — la direction qui ne détruit pas', () => {
+		/* La validation de la configuration ne contrôle pas ce champ : le champ
+		   vidé donne zéro, et ce zéro peut atteindre la table des paramètres. Pris
+		   à la lettre, il effacerait tout l'historique de la première note
+		   enregistrée après la faute de frappe. */
+		expect(numerosExcedentaires([1, 2, 3, 4, 5, 6], 0)).toEqual([]);
+		expect(numerosExcedentaires([1, 2, 3, 4, 5, 6], -3)).toEqual([]);
+		expect(numerosExcedentaires([1, 2, 3, 4, 5, 6], Number.NaN)).toEqual([]);
+		expect(numerosExcedentaires([1, 2, 3, 4, 5, 6], 2.5)).toEqual([]);
+	});
+
+	it('un plafond de 1 garde la version courante, et elle seule', () => {
+		expect(numerosExcedentaires([1, 2, 3], 1)).toEqual([2, 1]);
+	});
+
+	it('la liste rendue ne contient JAMAIS le plus grand numéro', () => {
+		for (const plafond of [1, 2, 3, 5, 10]) {
+			const numeros = Array.from({ length: 12 }, (_, i) => i + 1);
+			expect(numerosExcedentaires(numeros, plafond)).not.toContain(12);
+		}
 	});
 });
