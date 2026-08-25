@@ -73,8 +73,11 @@
 	});
 
 	/**
-	 * LES DEUX FACETTES DU GEL, DANS SON ORDRE — c'est le rang qui les
-	 * identifie, pas leur libellé : le bouton porte le nom suivi de son compteur.
+	 * LES DEUX FACETTES DU GEL, DANS SON ORDRE. Le menu rendu porte lui-même
+	 * l'identifiant de sa facette, et c'est par lui que le câblage la retrouve :
+	 * le libellé ne peut pas servir — le bouton porte le nom SUIVI de son
+	 * compteur —, et le rang mentait dès qu'une facette sans valeur n'était pas
+	 * rendue, ce qui arrive au premier signet sans étiquette.
 	 *
 	 * La liste est déclarée une fois et servie au câblage commun, celui-là même
 	 * qui porte les menus de la liste des notes et de la recherche. Recopier le
@@ -182,6 +185,7 @@
 		notes={data.notes}
 		domaines={data.domaines}
 		{...data.retenues === undefined ? {} : { retenues: data.retenues }}
+		{...data.tri === undefined ? {} : { tri: data.tri }}
 		onModifier={(identifiant) =>
 			goto(
 				resolve('/univers/[univers]/[domaine]/signets/[identifiant]/modifier', {
