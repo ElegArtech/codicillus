@@ -81,14 +81,21 @@
 		);
 		if (retour.succes) return { enregistre: true, message: null };
 
-		/* LE REFUS EST RENDU TEL QUE L'ACTION L'A PRONONCÉ, jamais reformulé. Le
-		   seul bloc de refus du gel est celui du nom : un refus d'une autre nature
-		   n'a nulle part où se dire, et le panneau reste alors ouvert sans rien
-		   écrire — lacune déclarée, pas écran inventé. */
+		/* LE REFUS EST RENDU TEL QUE L'ACTION L'A PRONONCÉ, jamais reformulé.
+
+		   ET UN REFUS D'UNE AUTRE NATURE SE DIT AUSSI. Le seul bloc de refus du gel
+		   est celui du nom, et l'action n'y met que ses trois messages de saisie :
+		   tout le reste — une garde de console qui rend 404, une panne de serveur —
+		   ne rendait RIEN. Le panneau restait ouvert, aucun template n'était écrit,
+		   et l'utilisateur croyait avoir enregistré. La phrase générale ne nomme
+		   aucune cause qu'on n'a pas ; elle dit ce qui compte. */
 		const refus = retour.donnees as { issue?: string; message?: string } | undefined;
+		if (refus?.issue === 'saisie-refusee' && refus.message !== undefined) {
+			return { enregistre: false, message: refus.message };
+		}
 		return {
 			enregistre: false,
-			message: refus?.issue === 'saisie-refusee' ? (refus.message ?? null) : null
+			message: "L'enregistrement a été refusé par le serveur, et rien n'a été écrit."
 		};
 	}}
 />

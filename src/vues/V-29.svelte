@@ -70,6 +70,7 @@
 		type Domaine,
 		type EtatDInstance,
 		type Note,
+		type PresentationDeTypeDeFiche,
 		type TypeDeFiche,
 		type Univers,
 		type UtilisateurCourant
@@ -92,6 +93,12 @@
 		instance?: EtatDInstance;
 		/** Les types de fiche et leurs champs. Absente, la constante du jeu. */
 		typesFiche?: Record<TypeDeFiche, readonly ChampDeFiche[]>;
+		/**
+		 * LA DESCRIPTION ET L'ICÔNE DE CHAQUE TYPE, telles que la console les a
+		 * écrites. Absente, les tables du jeu de démonstration s'appliquent — le
+		 * rendu de planche ne bouge donc pas d'un pixel.
+		 */
+		presentations?: Record<string, PresentationDeTypeDeFiche>;
 		/**
 		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE. Même partage qu'en
 		 * `V-27` et `V-28` : la vue tient l'état de son dialogue, la page tient le
@@ -124,6 +131,7 @@
 		compte = MOI,
 		instance = INSTANCE,
 		typesFiche = TYPES_FICHE,
+		presentations,
 		onSupprimer,
 		onDelester,
 		onCreer,
@@ -213,11 +221,15 @@
 	}
 
 	/**
-	 * LES TROIS ATTRIBUTS QUE LE CORPUS NE PORTE PAS — description, icône,
-	 * caractère obligatoire — sont ceux du gel, recopiés depuis lui
+	 * LES TROIS ATTRIBUTS QUE LE JEU DE DÉMONSTRATION NE PORTE PAS — description,
+	 * icône, caractère obligatoire — sont ceux du gel, recopiés depuis lui
 	 * (`V-29:2929`, `V-29:2927`, `V-29:2945`). `seeds/corpus.ts` décrit le
-	 * SCHÉMA d'un type de fiche, pas sa présentation dans la console : les
-	 * dériver serait inventer une définition que rien ne porte.
+	 * SCHÉMA d'un type de fiche, pas sa présentation dans la console.
+	 *
+	 * CE SONT DÉSORMAIS DES REPLIS, ET NON PLUS LA SEULE SOURCE. La base les
+	 * porte depuis `008_saisies_de_console`, et `presentations` les apporte quand
+	 * une instance réelle les a écrits ; ces trois tables ne servent plus qu'au
+	 * jeu de démonstration, où rien ne les remplace.
 	 */
 	const ICONE_PAR_TYPE: Record<string, string> = {
 		Serveur: 'serveur',
@@ -259,15 +271,15 @@
 	const types: readonly TypeDeFicheRendu[] = $derived(
 		(Object.keys(typesFiche) as readonly TypeDeFiche[]).map((nom) => ({
 			nom,
-			description: DESCRIPTIONS[nom] ?? '',
-			icone: ICONE_PAR_TYPE[nom] ?? 'serveur',
+			description: presentations?.[nom]?.description || (DESCRIPTIONS[nom] ?? ''),
+			icone: presentations?.[nom]?.glyphe || (ICONE_PAR_TYPE[nom] ?? 'serveur'),
 			props: typesFiche[nom].map((p) => ({
 				cle: p.cle,
 				libelle: p.nom,
 				type: typeDeValeur(p),
-				obligatoire: PROPRIETES_OBLIGATOIRES.includes(p.cle),
-				defaut: '',
-				aide: '',
+				obligatoire: p.obligatoire ?? PROPRIETES_OBLIGATOIRES.includes(p.cle),
+				defaut: p.defaut ?? '',
+				aide: p.aide ?? '',
 				valeurs: [...(p.valeurs ?? [])]
 			}))
 		}))
@@ -467,12 +479,20 @@
 			return;
 		}
 		erreurLocale = null;
+		/* LES CINQ ATTRIBUTS QUE LE PANNEAU DEMANDE PARTENT AVEC LA SAISIE. Ils
+		   étaient saisis, affichés comme acquis, et jamais transmis : la fabrique
+		   de champs n'en émettait aucun, et l'écran les perdait à la validation. */
 		const saisie: SaisieDeTypeDeFiche = {
 			nom,
+			description: fDescription,
+			glyphe: fIcone,
 			proprietes: fProps.map((p) => ({
 				cle: p.cle,
 				nom: p.libelle,
 				type: p.type,
+				aide: p.aide,
+				defaut: p.defaut,
+				obligatoire: p.obligatoire,
 				valeurs: p.valeurs
 			}))
 		};
@@ -660,8 +680,9 @@
 						</div>
 						<ul>
 							{#if nouvellesObligations.length}<li>
-									Propriétés rendues obligatoires : les notes existantes qui n'ont pas de valeur ne
-									seront pas bloquées, mais la valeur sera demandée à la prochaine modification.
+									Propriétés rendues obligatoires : le schéma les marque requises, et les notes
+									existantes ne sont pas touchées. L'éditeur de note ne contrôle pas cette
+									obligation.
 								</li>{:else}<li>
 									Les modifications d'ordre, de libellé et d'aide s'appliquent immédiatement, sans
 									effet sur les valeurs saisies.
@@ -886,7 +907,8 @@
 												/>
 												<span class="case__txt"
 													>Propriété obligatoire<span class="case__aide"
-														>La note ne pourra pas être enregistrée sans cette valeur.</span
+														>Le schéma marque cette valeur comme requise. L'éditeur de note ne la
+														contrôle pas encore : il n'écrit aucune propriété typée.</span
 													></span
 												>
 											</label>
