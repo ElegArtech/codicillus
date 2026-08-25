@@ -44,10 +44,7 @@
 import { rendreDocument, type ResolveurDeNote } from '../contenu/rendu';
 import type { Document } from '../contenu/document';
 import { adresseDeNote } from '../rangement/adresses';
-import {
-	PREFIXE_DE_CONTROLE_DE_PROPRIETE,
-	PREFIXE_D_ERREUR_DE_PROPRIETE
-} from '../cablage/formulaires';
+import { PHRASE_D_OBLIGATION, PREFIXE_D_ERREUR_DE_PROPRIETE } from '../cablage/formulaires';
 import type { Note } from '../../../seeds/corpus';
 
 /** Ce qu'un câblage rend : de quoi le défaire. Même contrat que ses voisins. */
@@ -352,8 +349,10 @@ const CHAMP_DU_MOTIF: Readonly<Record<string, string>> = {
 
 /** La phrase montrée, par motif. Celles du gel quand le gel en porte une. */
 const PHRASE_DU_MOTIF: Readonly<Record<string, string>> = {
-	[MOTIF_DE_PROPRIETE_OBLIGATOIRE]:
-		'Le type de fiche exige une valeur pour cette propriété. Renseignez-la, puis enregistrez.',
+	/* LA PHRASE EST CELLE QUE LE BLOC PORTE DÉJÀ, et elle n'est écrite qu'une
+	   fois : le bloc naît garni par `rendreLesProprietesDeFiche()`, cette table
+	   sert au témoin de la barre d'état. Deux littéraux auraient divergé. */
+	[MOTIF_DE_PROPRIETE_OBLIGATOIRE]: PHRASE_D_OBLIGATION,
 	'titre manquant': 'Une note sans titre est introuvable. Donnez-lui-en un, même approximatif.',
 	'dossier manquant': 'Choisissez le dossier qui recevra la note.',
 	'type manquant': 'Le type de la note n’a pas été transmis.',
@@ -410,14 +409,6 @@ export function peindreLeRefusDEdition(
 		const champ = bloc.closest<HTMLElement>('.champ');
 		if (champ !== null) champ.dataset['etat'] = 'erreur';
 	}
-	const premiere = (refus?.proprietesManquantes ?? [])[0];
-	if (premiere !== undefined) {
-		const controle = racine.querySelector<HTMLElement>(
-			`#${PREFIXE_DE_CONTROLE_DE_PROPRIETE}${premiere}`
-		);
-		if (controle !== null) controle.scrollIntoView({ block: 'center' });
-	}
-
 	const phrase = PHRASE_DU_MOTIF[motif] ?? motif;
 	const manquements = refus?.manquements ?? [];
 	const idBloc = CHAMP_DU_MOTIF[motif];
