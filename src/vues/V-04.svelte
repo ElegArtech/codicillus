@@ -378,17 +378,25 @@
 				</a>{/if}
 		</div>
 
-		<!-- Rattrapage : une sortie concrète plutôt qu'une impasse. -->
-		<section class="rattrapage">
-			<span class="etiq">Les guides les plus consultés</span>
-			<ul class="rattrapage__liste" id="populaires">
-				{#each populaires as n (n.id)}<li>
-						<a href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
-							><span class="rattrapage__nom">{n.titre}</span>{@render temoin(n)}</a
-						>
-					</li>{/each}
-			</ul>
-		</section>
+		<!--
+			Rattrapage : une sortie concrète plutôt qu'une impasse — ET LA SECTION
+			ENTIÈRE PART AVEC SA LISTE. Le canal de cette vue est le composant
+			d'erreur de la racine, qui n'a pas de chargeur et lui passe `notes={[]}` :
+			la liste était donc vide sur CHAQUE 404, sous un titre qui annonçait
+			« Les guides les plus consultés ». Un cadre qui promet une sortie et ne
+			contient rien est pire qu'un cadre absent — la même règle que le bloc de
+			reformulation dix lignes plus haut.
+		-->
+		{#if populaires.length}<section class="rattrapage">
+				<span class="etiq">Les guides les plus consultés</span>
+				<ul class="rattrapage__liste" id="populaires">
+					{#each populaires as n (n.id)}<li>
+							<a href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
+								><span class="rattrapage__nom">{n.titre}</span>{@render temoin(n)}</a
+							>
+						</li>{/each}
+				</ul>
+			</section>{/if}
 	</main>
 
 	<footer class="pied-public">

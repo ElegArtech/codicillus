@@ -225,9 +225,12 @@ const VUES: Readonly<
 		sources: []
 	},
 	/* V-26 — LES SOURCES DE COQUILLE Y RETOMBENT SUR L'ÉTAT VIDE, plus sur le jeu.
-	   `+error.svelte` ne passe ni `univers`, ni — sans donnée de gabarit — `compte`
-	   ou `domaines` ; le défaut décide donc de ce qu'une instance neuve affiche.
-	   `instance` a disparu : la version du pied de rail vient du contexte. */
+	   `+error.svelte` n'en passe AUCUNE : l'identité et le rangement réels
+	   descendent par le contexte de coquille, que `Coquille.svelte` lit avant de
+	   regarder ses propriétés. Le défaut décide donc de ce qu'affiche un rendu
+	   SANS contexte — rendu de secours, ou rendu direct de la vue —, et ce défaut
+	   est vide. `instance` a disparu : la version du pied de rail vient du
+	   contexte elle aussi. */
 	'V-26': {
 		base: { vecteur: null, pistes: [] },
 		sources: [
