@@ -7,11 +7,14 @@
 	 * et l'activité viennent de `+page.server.ts`, qui porte la résolution
 	 * d'adresse, le périmètre et les droits.
 	 *
-	 * QUATRE PROPRIÉTÉS DE PLUS QUE LE PREMIER CÂBLAGE, et elles sont exactement
-	 * celles que `T-041` avait rendues passables sans que rien ne les passe :
-	 * `univers`, `domaines`, `detailDomaines`, `activite`. La vue n'a pas changé —
-	 * ce sont ses propriétés optionnelles, dont le défaut reste `seeds/corpus.ts`
-	 * pour le mode démo du banc, qui n'en passe aucune.
+	 * TOUTES LES SOURCES DE L'ÉCRAN SONT PASSÉES, ET LA VUE LES EXIGE. Elles ont
+	 * été optionnelles, de défaut les constantes de `seeds/corpus.ts` : un oubli
+	 * ici servait le jeu de démonstration en silence. Elles sont requises, et
+	 * `svelte-check` refuse désormais de compiler cet appel s'il en manque une.
+	 *
+	 * `modules` EST LE CATALOGUE DE LIBELLÉS DU PRODUIT, pas une donnée d'instance :
+	 * les clés actives d'un domaine viennent de `modules_de_domaine` par
+	 * `detailDomaines` (`RG-STR-06`), leurs noms de `$lib/rangement/modules.ts`.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert :
 	 * `+layout.svelte` ne porte que le socle. Elle est identique à l'octet à sa
@@ -25,6 +28,7 @@
 	import Vue from '../../../vues/V-10.svelte';
 	import '../../../vues/V-10.css';
 	import { cablerLUnivers } from './cablage';
+	import { CATALOGUE_DE_MODULES } from '$lib/rangement/modules';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -51,5 +55,6 @@
 		domaines={data.domaines}
 		detailDomaines={data.detailDomaines}
 		activite={data.activite}
+		modules={CATALOGUE_DE_MODULES}
 	/>
 </div>
