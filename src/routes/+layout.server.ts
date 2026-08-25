@@ -52,22 +52,83 @@ import { eq } from 'drizzle-orm';
 import { comptes, domaines, univers } from '$lib/base/schema';
 import { capaciteDEcriture } from '$lib/donnees/public';
 import type { Base } from '$lib/base/acces';
-import { domaineLisible, ouvrirLAcces } from '$lib/donnees/rangement';
-import type { Identite } from '$lib/droits/resolution';
+import {
+	domaineLisible,
+	dossiersDuDomaine,
+	lireLesDomainesLisibles,
+	lireModulesDuDomaine,
+	moduleActif,
+	ouvrirLAcces,
+	peutEcrireDansLUn,
+	type AccesAuRangement
+} from '$lib/donnees/rangement';
 
-/** Les deux identifiants d'adresse du domaine de rattachement, ou `null`. */
+/**
+ * LE RATTACHEMENT DU COMPTE, ET CE QU'IL OUVRE VRAIMENT — un membre par cible.
+ *
+ * LE RATTACHEMENT N'EST PAS UN TITRE D'ACCÈS. Un compte se crée avec un domaine
+ * principal et AUCUN droit de dossier — `UC-M14-07` n'en énumère pas, et
+ * `RG-M14-04` laisse même le rattachement survivre à la suppression de sa cible.
+ * `RG-DRO-02` répond seule pour ce compte : sans droit explicite, aucun accès.
+ *
+ * UN PRÉDICAT PAR CIBLE, PARCE QUE LES TROIS CIBLES NE DEMANDENT PAS LA MÊME
+ * CHOSE. Les composer toutes sur la lisibilité du domaine referme le cas
+ * « aucun droit » et laisse ouverts les deux autres — droit insuffisant, module
+ * éteint —, et l'entrée mène encore en 404 :
+ *
+ *   la page du domaine       `domaineLisible`
+ *   ses notes                `domaineLisible` + module `notes`      (`RG-STR-06`)
+ *   son formulaire de signet `domaineLisible` + module `signets`
+ *                            + un dossier du domaine où l'appelant rédige
+ *
+ * Chacun est écrit avec les FONCTIONS de la cible, jamais avec une règle
+ * recopiée : `[domaine]/+page.server.ts` compose `domaineLisible` ;
+ * `[domaine]/notes/+page.server.ts` y ajoute `moduleActif(modules, 'notes')` ;
+ * `resoudreLAccesAuxSignets(…, true)` exige le module `signets` puis
+ * `ecritureDansLeDomaine`, dont `peutEcrireDansLUn` est l'écriture sur l'accès
+ * déjà ouvert — même table de capacités, même `capacites()`.
+ *
+ * L'administrateur n'est pas touché : `RG-DRO-03` lui donne un périmètre total.
+ */
+interface RangementDuCompte {
+	/** Les deux identifiants d'adresse du domaine de rattachement. */
+	readonly univers: string;
+	readonly domaine: string;
+	/** `…/notes` s'ouvre — le module Notes est actif sur ce domaine. */
+	readonly notes: boolean;
+	/** `…/signets/nouveau` s'ouvre — module Signets actif, et rédaction possible. */
+	readonly signets: boolean;
+}
+
 async function rangementDuCompte(
 	base: Base,
-	compteId: string
-): Promise<{ univers: string; domaine: string } | null> {
+	compteId: string,
+	acces: AccesAuRangement
+): Promise<RangementDuCompte | null> {
 	const [ligne] = await base
-		.select({ univers: univers.identifiant, domaine: domaines.identifiant })
+		.select({
+			id: domaines.id,
+			univers: univers.identifiant,
+			domaine: domaines.identifiant
+		})
 		.from(comptes)
 		.innerJoin(domaines, eq(domaines.id, comptes.domaineId))
 		.innerJoin(univers, eq(univers.id, domaines.universId))
 		.where(eq(comptes.id, compteId))
 		.limit(1);
-	return ligne ?? null;
+	if (ligne === undefined || !domaineLisible(acces, ligne.id)) return null;
+
+	/* Les modules du SEUL domaine de rattachement — une lecture bornée par
+	   identifiant, et la seule que cette garde ajoute au chargeur racine. Les
+	   dossiers, eux, sont déjà dans l'accès ouvert : la rédaction ne coûte rien. */
+	const modules = await lireModulesDuDomaine(base, ligne.id);
+	const siens = dossiersDuDomaine(acces, ligne.id).map((d) => d.id);
+	return {
+		univers: ligne.univers,
+		domaine: ligne.domaine,
+		notes: moduleActif(modules, 'notes'),
+		signets: moduleActif(modules, 'signets') && peutEcrireDansLUn(acces, siens)
+	};
 }
 /**
  * L'IDENTITÉ AFFICHABLE DU COMPTE CONNECTÉ — nom, initiales, rôle et domaine.
@@ -100,22 +161,37 @@ const LIBELLE_DU_ROLE: Readonly<Record<string, string>> = {
 	administrateur: 'Administrateur'
 };
 
+/**
+ * LE NOM DU DOMAINE DE RATTACHEMENT EST GARDÉ PAR LA MÊME LISIBILITÉ QUE LE RAIL.
+ *
+ * Il descendait au client sans garde, et la MÊME réponse portait alors trois
+ * vérités : un rail vide, un rattachement nommé, et le nom de ce domaine dans le
+ * sous-titre de la barre. `RG-ACC-01` — la structure de l'instance est une
+ * information qu'un compte sans droit n'a pas à lire —, et le nom d'un domaine
+ * en fait partie.
+ *
+ * La chaîne vide est le cas que la barre traite DÉJÀ : `BarreSuperieure.svelte`
+ * n'affiche alors que le rôle. C'est aussi le cas de tout compte d'amorçage, dont
+ * `comptes.domaine_id` est nul.
+ */
 async function identiteAffichable(
 	base: Base,
-	compteId: string
+	compteId: string,
+	acces: AccesAuRangement
 ): Promise<{ nom: string; initiales: string; role: string; domaine: string } | null> {
 	const [ligne] = await base
-		.select({ nom: comptes.nom, role: comptes.role, domaine: domaines.nom })
+		.select({ nom: comptes.nom, role: comptes.role, id: domaines.id, domaine: domaines.nom })
 		.from(comptes)
 		.leftJoin(domaines, eq(domaines.id, comptes.domaineId))
 		.where(eq(comptes.id, compteId))
 		.limit(1);
 	if (ligne === undefined) return null;
+	const lisible = ligne.id !== null && domaineLisible(acces, ligne.id);
 	return {
 		nom: ligne.nom,
 		initiales: initialesDe(ligne.nom),
 		role: LIBELLE_DU_ROLE[ligne.role] ?? ligne.role,
-		domaine: ligne.domaine ?? ''
+		domaine: lisible ? (ligne.domaine ?? '') : ''
 	};
 }
 
@@ -130,7 +206,7 @@ async function identiteAffichable(
  */
 async function arborescenceDeNavigation(
 	base: Base,
-	identite: Identite
+	acces: AccesAuRangement
 ): Promise<{
 	univers: {
 		nom: string;
@@ -152,16 +228,6 @@ async function arborescenceDeNavigation(
 			description: univers.description
 		})
 		.from(univers);
-	const lignesDomaines = await base
-		.select({
-			id: domaines.id,
-			nom: domaines.nom,
-			univers: univers.nom,
-			couleur: domaines.couleur
-		})
-		.from(domaines)
-		.innerJoin(univers, eq(univers.id, domaines.universId));
-
 	/**
 	 * LE RAIL NE MONTRE QUE CE QUE L'APPELANT PEUT OUVRIR.
 	 *
@@ -173,6 +239,11 @@ async function arborescenceDeNavigation(
 	 * qu'un compte sans droit n'a pas à lire. Les noms d'univers et de domaines
 	 * disent l'organisation de la direction.
 	 *
+	 * LE FILTRE N'EST PLUS ÉCRIT ICI : `lireLesDomainesLisibles()` le porte, et
+	 * le tableau de bord de l'accueil appelle la MÊME fonction. Les deux le
+	 * lisaient chacun de son côté, et la même réponse portait un rail vide et des
+	 * cartes de domaines qui menaient en 404.
+	 *
 	 * L'ADMINISTRATEUR VOIT TOUT, et c'est `RG-DRO-03` : `ouvrirLAcces()` lui rend
 	 * un périmètre total, aucun filtre ne le retire donc.
 	 *
@@ -180,8 +251,7 @@ async function arborescenceDeNavigation(
 	 * sur les DOSSIERS, pas sur les notes, et un domaine qu'on vient de créer n'a
 	 * que sa racine.
 	 */
-	const acces = await ouvrirLAcces(base, identite, new Date());
-	const lisibles = lignesDomaines.filter((d) => domaineLisible(acces, d.id));
+	const lisibles = await lireLesDomainesLisibles(base, acces);
 	const universPorteurs = new Set(lisibles.map((d) => d.univers));
 
 	return {
@@ -213,6 +283,12 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		};
 	}
 	const base = basePartagee();
+	/**
+	 * L'ACCÈS EST OUVERT UNE FOIS, ET LES DEUX LECTEURS DE LISIBILITÉ LE PARTAGENT.
+	 * Il l'était déjà pour le rail seul ; il est simplement déplacé d'un cran, ce
+	 * qui ne coûte aucune requête de plus et interdit aux deux de diverger.
+	 */
+	const acces = await ouvrirLAcces(base, locals.identite, new Date());
 	return {
 		session: true,
 		ecriture: await capaciteDEcriture(base, locals.identite),
@@ -230,13 +306,17 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		 * Le menu « Créer » de la barre supérieure offre « Nouveau signet » et
 		 * « Nouveau dossier », et les deux adresses exigent un domaine. Le seul que
 		 * le produit puisse choisir sans décider à la place de l'utilisateur est
-		 * celui auquel son compte est rattaché (migration `005`). Sans
-		 * rattachement, les deux entrées ne sont pas émises — une entrée qui ne
-		 * mène nulle part est un lien mort, et `P-03` n'en admet aucun.
+		 * celui auquel son compte est rattaché (migration `005`).
+		 *
+		 * Il porte UN BOOLÉEN PAR CIBLE, et non un seul verdict pour les trois :
+		 * `Coquille.svelte` ne rend pas l'entrée dont la cible ne s'ouvrirait pas,
+		 * et `/mon-profil` ne rend pas son bouton. L'entrée n'est pas ÉMISE — une
+		 * entrée qui ne mène nulle part est un lien mort, `P-03` n'en admet aucun,
+		 * et `P-09` la veut absente, ni grisée ni masquée.
 		 */
-		rangement: await rangementDuCompte(base, locals.identite.compteId),
-		compte: await identiteAffichable(base, locals.identite.compteId),
+		rangement: await rangementDuCompte(base, locals.identite.compteId, acces),
+		compte: await identiteAffichable(base, locals.identite.compteId, acces),
 		version: VERSION_DU_PRODUIT,
-		...(await arborescenceDeNavigation(base, locals.identite))
+		...(await arborescenceDeNavigation(base, acces))
 	};
 };

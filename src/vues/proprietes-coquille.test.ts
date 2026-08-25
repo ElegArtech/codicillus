@@ -356,10 +356,15 @@ describe('V-25 — l’issue « Voir les notes de … »', () => {
 	};
 	const base = { vecteur: null, profilDuCompte: TITULAIRE };
 
-	it('sans rattachement lu, le bouton reste inerte plutôt que menteur', () => {
-		expect(corps('V-25', base, { rangementDuProfil: null })).toContain(
-			'disabled="">Voir les notes de'
-		);
+	it('sans rattachement lu, le bouton n’est pas ÉMIS', () => {
+		/* `P-09` — « ni grisée, ni masquée ». Le bouton était rendu INERTE, et
+		   `ARB-039` dit quand l'inertie devient un refus : quand l'utilisateur ne
+		   peut pas la lever lui-même. Ici elle tient à un droit et à un module ;
+		   le nœud doit donc être absent, et non désactivé. */
+		const rendu = corps('V-25', base, { rangementDuProfil: null });
+		expect(rendu).not.toContain('Voir les notes de');
+		/* Le bloc d'encouragement qui le porte, lui, reste rendu. */
+		expect(rendu).toContain("Rien à afficher pour l'instant");
 	});
 
 	it('le rattachement lu rend le bouton actif, sans que le nom soit dans la liste', () => {
