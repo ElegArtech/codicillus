@@ -220,22 +220,33 @@ export function versionDUnEnregistrement(demande: DemandeDEnregistrement): Versi
  * reste part. La liste rendue est celle des numéros À SUPPRIMER.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * UN PLAFOND QUI N'EN EST PAS UN NE PURGE RIEN — ET C'EST LA DIRECTION SÛRE
+ * AUCUNE POLITIQUE SUR LE PLAFOND N'EST ÉCRITE ICI — DEUX SOURCES LA TIENNENT
  *
- * `validerLaConfiguration()` (`administration.ts`) ne contrôle PAS ce champ :
- * le gel ne lui donne aucun bloc d'erreur, et le refus de combler ce vide est
- * déclaré au rapport de son lot. Conséquence mesurable : le champ vidé donne
- * `Number('') === 0`, et un `0` peut donc atteindre `parametres`. Un plafond
- * nul ou négatif pris à la lettre effacerait TOUT l'historique de la première
- * note enregistrée après la faute de frappe. Ce n'est pas un plafond : c'est
- * une valeur hors domaine, et la seule réponse qui ne détruit rien est de ne
- * rien purger. Le même refus couvre le non-entier et le non-fini.
+ * Une première rédaction inventait sa propre règle — « un plafond hors domaine
+ * ne purge rien » —, et cette règle n'est écrite nulle part. Ce qu'elle coûtait
+ * était pire que le silence : elle neutralisait la destruction et LAISSAIT
+ * l'écran annoncer « les 0 dernières sont gardées, les plus anciennes sont
+ * supprimées automatiquement » (`V-15:288`) sur un plafond nul atteignable au
+ * clic. Le mensonge restait, seul le dégât partait.
+ *
+ * Deux sources disent quoi faire, et elles ont été suivies l'une et l'autre :
+ *
+ *   `RG-M14-10` (`CDC:1202`) nomme « plafond négatif » parmi ce que la
+ *   validation doit refuser AVEC UN MESSAGE EXPLICITE — c'est
+ *   `validerLaConfiguration()` (`donnees/administration.ts`), et le champ vidé
+ *   n'atteint plus la base ;
+ *
+ *   `RG-M07-03` (`CDC:834`) donne au plafond un défaut, 50 — c'est
+ *   `lireConfiguration()` (`donnees/lecture.ts`), qui replie sur lui toute
+ *   valeur inutilisable venue d'une reprise de base, POUR TOUS SES LECTEURS À
+ *   LA FOIS : l'écran d'historique et cette purge lisent le même nombre.
+ *
+ * Cette fonction reçoit donc un plafond déjà tenu, et ne fait que compter.
  */
 export function numerosExcedentaires(
 	numeros: readonly number[],
 	plafond: number
 ): readonly number[] {
-	if (!Number.isSafeInteger(plafond) || plafond < 1) return [];
 	if (numeros.length <= plafond) return [];
 	const parNumeroDecroissant = [...numeros].sort((a, b) => b - a);
 	return parNumeroDecroissant.slice(plafond);
