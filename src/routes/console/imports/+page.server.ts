@@ -58,9 +58,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		notes: acces.ressource.notes,
-		univers: acces.ressource.univers,
-		domaines: acces.ressource.domaines,
-		compte: acces.ressource.compte,
+		/* NI `univers` NI `compte` : LA COQUILLE LES LIT AU CONTEXTE D'IDENTITÉ.
+		   Ils descendaient jusqu'à `CoquilleDeConsole`, qui retombait sur les
+		   constantes de `seeds/corpus.ts` dès qu'une route en oubliait un. Le
+		   gabarit racine pose le contexte ; les servir ici serait une seconde
+		   source, et une charge utile que personne ne lit. */
 		/* Le journal est-il enregistré ? Le recensement le sait ; l'écran le dit. */
 		journalEnregistre: journalDImportsEnregistre(),
 		/* La correspondance nom d'affichage → forme canonique, pour « Ouvrir le

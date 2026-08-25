@@ -52,8 +52,17 @@ afterAll(async () => {
 	await vite?.close();
 });
 
+/**
+ * CE QUE CHAQUE VUE EXIGE, et qu'elle ne fabrique plus elle-même.
+ *
+ * `journalImports` de V-35 retombait sur `JOURNAL_IMPORTS` du jeu de
+ * démonstration ; la propriété est devenue EXIGÉE, et l'état que le produit
+ * sert est la table vide — aucune table n'enregistre d'import.
+ */
+const EXIGEES: Readonly<Record<string, Proprietes>> = { 'V-35': { journalImports: [] } };
+
 function corps(vue: string, props: Proprietes = {}): string {
-	return rendre(composants.get(vue), { props: { notes, ...props } }).body;
+	return rendre(composants.get(vue), { props: { notes, ...EXIGEES[vue], ...props } }).body;
 }
 
 /**

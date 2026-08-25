@@ -47,7 +47,16 @@ import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
  * 1 720 avec, pour un plafond de 65 536 et treize copies complètes.
  */
 async function rendreV36(proprietes: object): Promise<string> {
-	return rendreLaVue('V-36', { vecteur: null, ...proprietes });
+	/* `domaines` ET `nomsDArchive` SONT EXIGÉES : elles retombaient sur le jeu de
+	   démonstration et sur la date à laquelle il est figé. Les cas qui ne les
+	   nomment pas reçoivent ici le périmètre du jeu et une table de noms vide —
+	   ceux qui les nomment les remplacent. */
+	return rendreLaVue('V-36', {
+		vecteur: null,
+		domaines: DOMAINES,
+		nomsDArchive: {},
+		...proprietes
+	});
 }
 
 afterAll(fermerLeHarnais);
