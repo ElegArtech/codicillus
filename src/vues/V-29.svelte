@@ -38,9 +38,9 @@
 	 * déjà le premier focalisable, qui est `button.dlg__fermer` : rien à
 	 * déclarer non plus.
 	 *
-	 * AUCUN CHIFFRE N'EST SAISI (P-02) : le nombre de propriétés vient de
-	 * `TYPES_FICHE`, le nombre de notes concernées du corpus de la vue, les
-	 * compteurs de la navigation secondaire de `sections.ts`.
+	 * AUCUN CHIFFRE N'EST SAISI (P-02) : le nombre de propriétés vient des types
+	 * servis, le nombre de notes concernées du corpus de la vue, les compteurs
+	 * de la navigation secondaire de `sections.ts`.
 	 *
 	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011) : le squelette rend l'état,
 	 * jamais la transition.
@@ -60,20 +60,14 @@
 	import Pictogramme from '$lib/console/Pictogramme.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { filDeConsole, type TraitDePictogramme } from '$lib/console/sections';
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		TYPES_FICHE,
-		UNIVERS,
-		type ChampDeFiche,
-		type Domaine,
-		type EtatDInstance,
-		type Note,
-		type PresentationDeTypeDeFiche,
-		type TypeDeFiche,
-		type Univers,
-		type UtilisateurCourant
+	import type {
+		ChampDeFiche,
+		Domaine,
+		Note,
+		PresentationDeTypeDeFiche,
+		TypeDeFiche,
+		Univers,
+		UtilisateurCourant
 	} from '../../seeds/corpus';
 	import { vocabulaireRendu } from '$lib/vocabulaire';
 	import type { RefusDeSaisie, SaisieDeTypeDeFiche } from '$lib/console/structure';
@@ -86,81 +80,37 @@
 	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
 	const motFichePlurielMinuscule = $derived(motsDuProduit.fichesMin);
 
-	/**
-	 * LES CINQ ATTRIBUTS QUE LE JEU DE DÉMONSTRATION NE PORTE PAS — description,
-	 * icône, caractère obligatoire — sont ceux du gel, recopiés depuis lui
-	 * (`V-29:2929`, `V-29:2927`, `V-29:2945`). `seeds/corpus.ts` décrit le SCHÉMA
-	 * d'un type de fiche, pas sa présentation dans la console.
+	/*
+	 * CE QUI SE TROUVAIT ICI, ET POURQUOI IL N'Y EST PLUS.
 	 *
-	 * ILS SONT LE DÉFAUT DE LEUR PROPRIÉTÉ, ET RIEN D'AUTRE — jamais un repli
-	 * CLÉ PAR CLÉ sur ce que la page a servi. La nuance décide d'une écriture :
-	 * replié clé par clé, « Modifier » puis « Enregistrer » sur un type nommé
-	 * « Serveur » sans description recopiait cette phrase de démonstration DANS
-	 * LA BASE, sous la signature d'un administrateur qui ne l'a jamais saisie.
-	 * `P-02` l'interdit, et `CLAUDE.md` avec lui : le jeu de démonstration n'est
-	 * jamais la vérité du produit. Dès que la page sert la donnée — et elle la
-	 * sert toujours —, ces tables ne sont plus consultées du tout.
+	 * Deux constantes de module dérivaient du jeu de démonstration la valeur par
+	 * défaut de `typesFiche` et de `presentations` : trois descriptions et trois
+	 * glyphes recopiés du gel, et un schéma où deux clés — `hote`, `organisme` —
+	 * étaient marquées obligatoires. Facultatives, ces deux propriétés faisaient
+	 * qu'une route qui les oubliait servait les trois types du jeu à la place de
+	 * ceux de l'instance, SANS QUE RIEN NE PROTESTE. Elles sont REQUISES : la
+	 * route les sert, et le compilateur refuse celle qui les oublierait.
 	 */
-	const PRESENTATIONS_DE_DEMONSTRATION: Record<string, PresentationDeTypeDeFiche> = {
-		Serveur: {
-			description:
-				"Machine physique ou virtuelle exploitée par l'équipe. Devient un nœud de la cartographie.",
-			glyphe: 'serveur'
-		},
-		Application: {
-			description: 'Logiciel en service pour le métier, avec ses contacts et sa criticité.',
-			glyphe: 'appli'
-		},
-		Contact: {
-			description: 'Interlocuteur externe : prestataire, éditeur, opérateur.',
-			glyphe: 'contact'
-		}
-	};
-
-	/**
-	 * LE SCHÉMA DE DÉMONSTRATION, AVEC L'OBLIGATION QUE LE GEL LUI DONNE.
-	 * `TYPES_FICHE` ne porte pas de caractère obligatoire ; le gel en marque deux
-	 * (`V-29:2945`). L'obligation est posée ICI, sur la constante qui sert de
-	 * défaut à la propriété, pour la raison ci-dessus : un type réel dont la base
-	 * dit « non obligatoire » le reste, quelle que soit sa clé.
-	 */
-	const CLES_OBLIGATOIRES_DE_DEMONSTRATION: readonly string[] = ['hote', 'organisme'];
-
-	function marquerLesObligations(champs: readonly ChampDeFiche[]): readonly ChampDeFiche[] {
-		return champs.map((c) =>
-			CLES_OBLIGATOIRES_DE_DEMONSTRATION.includes(c.cle) ? { ...c, obligatoire: true } : c
-		);
-	}
-
-	const TYPES_FICHE_DE_DEMONSTRATION: Record<TypeDeFiche, readonly ChampDeFiche[]> = {
-		Serveur: marquerLesObligations(TYPES_FICHE.Serveur),
-		Application: marquerLesObligations(TYPES_FICHE.Application),
-		Contact: marquerLesObligations(TYPES_FICHE.Contact)
-	};
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — formulaire × suppression. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-29')`. */
 		notes: readonly Note[];
-		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
-		univers?: readonly Univers[];
-		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
-		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
-		instance?: EtatDInstance;
-		/** Les types de fiche et leurs champs. Absente, la constante du jeu. */
-		typesFiche?: Record<TypeDeFiche, readonly ChampDeFiche[]>;
+		/** Les univers déclarés, servis par la route. Vide : aucun périmètre. */
+		univers: readonly Univers[];
+		/** Les domaines déclarés, servis par la route. Vide : aucun domaine. */
+		domaines: readonly Domaine[];
+		/** L'utilisateur courant, servi par la route. */
+		compte: UtilisateurCourant;
+		/** Les types de fiche et leurs champs, servis par la route. */
+		typesFiche: Record<TypeDeFiche, readonly ChampDeFiche[]>;
 		/**
 		 * LA DESCRIPTION ET L'ICÔNE DE CHAQUE TYPE, telles que la console les a
-		 * écrites. Absente, la table du jeu de démonstration s'applique EN BLOC —
-		 * le rendu de planche ne bouge donc pas d'un pixel. Présente, elle fait
-		 * seule loi : un type qu'elle décrit sans description en a une vide, et
-		 * l'écran n'en invente pas.
+		 * écrites, et servies par la route. Un type qu'elle décrit sans
+		 * description en a une vide, et l'écran n'en invente pas.
 		 */
-		presentations?: Record<string, PresentationDeTypeDeFiche>;
+		presentations: Record<string, PresentationDeTypeDeFiche>;
 		/**
 		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE. Même partage qu'en
 		 * `V-27` et `V-28` : la vue tient l'état de son dialogue, la page tient le
@@ -188,12 +138,11 @@
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		typesFiche = TYPES_FICHE_DE_DEMONSTRATION,
-		presentations = PRESENTATIONS_DE_DEMONSTRATION,
+		univers,
+		domaines,
+		compte,
+		typesFiche,
+		presentations,
 		onSupprimer,
 		onDelester,
 		onCreer,
@@ -385,14 +334,16 @@
 	 */
 	const panneauOuvert = $derived(ouverture !== null || form !== 'ferme');
 
-	/** Le type édité par la position « Édition · Serveur » (`V-29:3502`). */
+	/* LE TYPE ÉDITÉ EST LE PREMIER DU CATALOGUE SERVI. La position se nomme
+	   « Édition · Serveur » (`V-29:3502`), premier type du jeu : le désigner par
+	   son rang dit la même chose sans écrire un type de démonstration. */
 	const edite = $derived(
 		ouverture === 'creation'
 			? null
 			: ouverture === 'edition'
 				? (types.find((t) => t.nom === cible) ?? null)
 				: enEdition
-					? (types.find((t) => t.nom === 'Serveur') ?? null)
+					? (types[0] ?? null)
 					: null
 	);
 	const notesEditees = $derived(edite ? utilisation(edite.nom) : []);
@@ -429,9 +380,26 @@
 		erreurLocale = null;
 	}
 
-	/** Remplacer une propriété en place, par son rang — le geste des six champs. */
+	/**
+	 * Remplacer une propriété en place, par son rang — le geste des six champs.
+	 *
+	 * QUAND LA CLÉ CHANGE, L'ÉTAT DU TIROIR LA SUIT — et sans cela le champ
+	 * « Nom technique » repliait la ligne qu'on était en train de remplir.
+	 * `deplies` est indexé PAR LA CLÉ, et le bloc `{#each}` est lui-même keyé sur
+	 * elle : à la sortie du champ, la ligne était détruite et recréée sous sa
+	 * nouvelle clé, que `deplies` ne portait pas — elle renaissait donc REPLIÉE,
+	 * emportant hors de vue la valeur par défaut, l'aide et la case
+	 * « obligatoire ». Le remappage se fait ici parce que c'est le seul endroit
+	 * qui connaît l'ancienne clé et la nouvelle.
+	 */
 	function changerLaPropriete(rang: number, changements: Partial<ProprieteDeType>): void {
+		const ancienne = fProps[rang];
 		fProps = fProps.map((p, k) => (k === rang ? { ...p, ...changements } : p));
+		const nouvelle = changements.cle;
+		if (ancienne === undefined || nouvelle === undefined || nouvelle === ancienne.cle) return;
+		const ouvert = deplies.includes(ancienne.cle);
+		const reste = deplies.filter((c) => c !== ancienne.cle && c !== nouvelle);
+		deplies = ouvert ? [...reste, nouvelle] : reste;
 	}
 
 	/**
@@ -467,8 +435,20 @@
 		deplies = [...deplies, cle];
 	}
 
+	/**
+	 * Retirer une propriété — ET SON ÉTAT DE TIROIR AVEC ELLE.
+	 *
+	 * La clé retirée restait dans `deplies`, et `cleLibre()` réattribue la
+	 * première place libre : la propriété suivante héritait donc d'un
+	 * `propriete_N` déjà déplié, `ajouterUnePropriete()` y poussait un DOUBLON,
+	 * et `basculerLeDepli()` ne le retirait qu'à moitié — un clic sur
+	 * « replier » ne repliait pas.
+	 */
 	function retirerLaPropriete(rang: number): void {
+		const retiree = fProps[rang];
 		fProps = fProps.filter((_, k) => k !== rang);
+		if (retiree === undefined) return;
+		deplies = deplies.filter((c) => c !== retiree.cle);
 	}
 
 	/** Les flèches du constructeur : un rang, une place. */
@@ -541,9 +521,9 @@
 
 	/**
 	 * Les propriétés rendues obligatoires par rapport au schéma en vigueur
-	 * (`V-29:3280`). `TYPES_FICHE` ne porte pas de caractère obligatoire :
-	 * toute propriété obligatoire du panneau est donc une nouveauté, et le gel
-	 * en tire la seule puce affichée.
+	 * (`V-29:3280`) : toute propriété que le panneau rend obligatoire est une
+	 * nouveauté par rapport au schéma servi, et le gel en tire la seule puce
+	 * affichée.
 	 */
 	const nouvellesObligations = $derived(propsEditees.filter((p) => p.obligatoire));
 	const schemaUtilise = $derived(edite !== null && notesEditees.length > 0);
@@ -584,6 +564,15 @@
 	});
 </script>
 
+<!--
+	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI.
+	La vue passait `instance.version` — le `1.0.0` d'`INSTANCE` du jeu de
+	démonstration, servi comme un fait sur le pied du rail d'une instance
+	réelle. Aucune route ne passe de version : `Coquille` lit celle du paquet
+	sur le contexte que le gabarit racine pose, et la propriété n'est plus
+	qu'un état vide explicite — hors gabarit racine, le pied ne nomme rien
+	plutôt que de nommer un numéro de démonstration.
+-->
 <Coquille
 	forme="abregee"
 	role="admin"
@@ -601,7 +590,7 @@
 		role: compte.role,
 		domaine: compte.domaine
 	}}
-	version={instance.version}
+	version=""
 >
 	{#snippet avantContenu()}
 		<NavigationConsole courante="fiches" />
