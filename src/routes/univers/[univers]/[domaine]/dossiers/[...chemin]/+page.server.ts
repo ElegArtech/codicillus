@@ -85,10 +85,16 @@
  */
 import { error, fail, redirect } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
+import { accesALaConsole } from '$lib/donnees/consoles';
 import { dossiers } from '$lib/base/schema';
 import { moteurPartage } from '$lib/recherche/acces';
 import { adresseDeDomaine, adresseDeDossier, identifiantLisible } from '$lib/rangement/adresses';
-import { capacites, perimetreContient, resoudre } from '$lib/droits/resolution';
+import {
+	capacites,
+	contourneLesDroitsDeDossier,
+	perimetreContient,
+	resoudre
+} from '$lib/droits/resolution';
 import {
 	cheminAffiche,
 	dossiersDuDomaine,
@@ -109,17 +115,27 @@ import {
 } from '$lib/donnees/rangement';
 import type { DroitDeDossier } from '$lib/droits/resolution';
 import {
+	accorderUnDroitDeDossier,
+	changerUnDroitDeDossier,
 	libelleDOrigine,
+	lireLesDroitsDUnDossier,
 	motifDeRefusDeDestination,
+	niveauDeDroitDepuisLaSaisie,
 	nomDejaPris,
 	origineDUnDroit,
 	renommerOuDeplacerUnDossier,
+	retirerUnDroitDeDossier,
 	supprimerUnDossier,
 	tropProfond,
-	NOM_MANQUANT
+	NOM_MANQUANT,
+	type DemandeDeDroit,
+	type DroitEcrit,
+	type RefusDEcriture
 } from '$lib/donnees/dossiers-ecriture';
+import type { Base } from '$lib/base/acces';
+import { NOM_DU_COMPTE_VISE, nomDuNiveau } from './champs-de-droits';
 import type { NomDeDomaine } from '../../../../../../../seeds/corpus';
-import type { Actions, PageServerLoad } from './$types';
+import type { Actions, PageServerLoad, RequestEvent } from './$types';
 
 /* ═══════════════════════════════════ Le contexte, résolu une fois ═══════ */
 
@@ -243,6 +259,39 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			/* Un dossier de page a toujours un parent : la racine n'a pas de page. */
 			parentId: dossier.parentId ?? ''
 		},
+		/**
+		 * LES DROITS DU DOSSIER — servis AU SEUL GESTIONNAIRE, et `null` sinon.
+		 *
+		 * `ADR-006` veut le filtre au plus près de la donnée : lire ces droits pour
+		 * un lecteur, quitte à ce que la vue n'en fasse rien, mettrait les droits
+		 * du dossier dans la charge utile de tout le monde. La capacité qui
+		 * gouverne le GESTE gouverne donc aussi sa LECTURE, et c'est le même
+		 * `capacites().gererLesDroits` que les trois actions consultent.
+		 *
+		 * MAIS CETTE CAPACITÉ EST LOCALE, ET ELLE NE SUFFIT PAS À TOUT SERVIR.
+		 * Elle s'obtient sur UN dossier : le rédacteur d'un autre domaine la tient
+		 * ici dès qu'on la lui accorde ici. Les droits de CE dossier sont
+		 * exactement ce qu'elle gouverne, et ils lui reviennent. L'annuaire des
+		 * comptes de l'instance ne l'est pas : `docs/routes.md:167` le réserve au
+		 * rôle `administrateur`, à qui seul `/console/comptes` répond autrement que
+		 * par `404`. Les deux périmètres voyagent donc séparément jusqu'à la
+		 * requête, qui les rabat elle-même — le champ `annuaireLisible`.
+		 *
+		 * ET LE SECOND PÉRIMÈTRE N'EST PAS ÉCRIT ICI : c'est `accesALaConsole()`,
+		 * le prédicat que les douze écrans de console consultent déjà. Le recopier
+		 * en lisant le rôle sur place aurait fait deux définitions de la même
+		 * porte, et une porte définie deux fois s'ouvre un jour d'un seul côté.
+		 */
+		droits: capacites(droit).gererLesDroits
+			? await lireLesDroitsDUnDossier(base, {
+					dossierId: dossier.id,
+					lignes: acces.dossiers,
+					nomDuDomaine: domaine.nom,
+					appelantId: locals.identite.type === 'authentifie' ? locals.identite.compteId : null,
+					annuaireLisible: accesALaConsole(locals.identite),
+					appelantContourne: contourneLesDroitsDeDossier(locals.identite)
+				})
+			: null,
 		origineDuDroit: libelleDOrigine(
 			locals.identite.type === 'authentifie'
 				? origineDUnDroit(
@@ -257,6 +306,75 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	};
 };
 
+/* ═══════════════════════════════════ Les trois gestes de droits ═════════ */
+
+/** L'écriture que l'une des trois actions confie au module de données. */
+type EcritureDeDroit = (
+	base: Base,
+	demande: DemandeDeDroit
+) => Promise<DroitEcrit | RefusDEcriture>;
+
+/**
+ * LE PRÉAMBULE DES TROIS GESTES DE DROITS — un seul chemin, une seule traduction.
+ *
+ * Il ouvre le dossier par `ouvrirLeDossier()`, comme les trois autres gestes :
+ * même exigence de module (`RG-STR-06`), même lecture, même résolution. Rien ici
+ * ne compare un droit ni ne lit `droits_de_dossier` — `gererLesDroits` est
+ * éprouvé dans le module de données, à l'endroit où l'écriture a lieu, et le
+ * refus muet devient le `404` de partout ailleurs (`RG-ACC-04`).
+ *
+ * LE NIVEAU SE LIT SOUS UN NOM DÉRIVÉ DU COMPTE VISÉ — `champs-de-droits.ts`
+ * dit pourquoi. Absent ou inconnu, il vaut `null`, que le module refuse par
+ * `NIVEAU_INCONNU` : aucun défaut n'est supposé, se tromper de défaut ici serait
+ * accorder un droit.
+ *
+ * ET SON PÉRIMÈTRE D'ANNUAIRE AVEC — `annuaireLisible`, le même champ qu'au
+ * chargeur. Le dialogue n'offre « Ajouter un accès » qu'à qui voit l'annuaire des
+ * comptes ; l'action refuse d'accorder à qui ne le voit pas. Une garde d'écran
+ * que l'action ne tient pas n'est pas une garde : l'adresse se construit à la
+ * main.
+ *
+ * LE COMPTE DE L'APPELANT VOYAGE JUSQU'AU MODULE, parce que c'est lui qui refuse
+ * l'auto-retrait de gestion. `null` en anonyme — cas qui n'arrive pas,
+ * `ouvrirLeDossier()` ayant déjà refusé faute de droit, et le type l'exprime
+ * plutôt que de le supposer. ET SON RÉGIME AVEC LUI : un administrateur tient sa
+ * gestion de `RG-DRO-03`, sans ligne dans la table, donc aucune écriture d'ici
+ * ne la lui retire — lui opposer l'auto-retrait serait refuser par un motif qui
+ * ne s'applique pas.
+ *
+ * LE RETOUR EST UN `303` VERS LA MÊME ADRESSE, non la charge utile de l'action :
+ * la liste des droits est relue par le chargeur, donc elle est juste, et un
+ * rechargement ne rejoue pas l'écriture.
+ */
+async function reponseDeDroit(
+	evenement: RequestEvent,
+	ecrire: EcritureDeDroit
+): Promise<ReturnType<typeof fail>> {
+	const { acces, dossier } = await ouvrirLeDossier(
+		evenement.params,
+		evenement.locals.identite,
+		evenement.url.pathname
+	);
+	const champs = await evenement.request.formData();
+	const identifiantDuCompte = String(champs.get(NOM_DU_COMPTE_VISE) ?? '');
+
+	const fait = await ecrire(basePartagee(), {
+		dossierId: dossier.id,
+		identifiantDuCompte,
+		niveau: niveauDeDroitDepuisLaSaisie(champs.get(nomDuNiveau(identifiantDuCompte))),
+		droit: (id) => droitEffectif(acces, id),
+		appelantId:
+			evenement.locals.identite.type === 'authentifie' ? evenement.locals.identite.compteId : null,
+		appelantContourne: contourneLesDroitsDeDossier(evenement.locals.identite),
+		annuaireLisible: accesALaConsole(evenement.locals.identite)
+	});
+	if (!fait.fait) {
+		if (fait.message === '') error(404, MESSAGE_INTROUVABLE);
+		return fail(422, { droits: fait.message });
+	}
+	redirect(303, evenement.url.pathname);
+}
+
 /* ═══════════════════════════════════ Les quatre gestes du gel ═══════════ */
 
 /**
@@ -265,11 +383,12 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
  *   `#a-note`         navigation vers `/notes/nouvelle` — rédacteur, hors d'ici
  *   `#a-sousdossier`  `creerSousDossier`      — `creerDesSousDossiers`
  *   `#a-renommer`     `renommerOuDeplacer`    — `administrerLeDossier`
- *   `#a-droits`       — le dialogue n'existe pas dans V-13 (voir `V-13.svelte`)
+ *   `#a-droits`       `accorderLeDroit`, `changerLeDroit`, `retirerLeDroit`
+ *                                             — `gererLesDroits`
  *   `#a-supprimer`    `supprimer`             — `administrerLeDossier`
  *
  * AUCUNE ACTION PAR DÉFAUT : SvelteKit refuse qu'une action anonyme cohabite
- * avec des actions nommées, et le refus est un `500`. Les trois sont nommées.
+ * avec des actions nommées, et le refus est un `500`. Les six sont nommées.
  */
 export const actions: Actions = {
 	/**
@@ -380,6 +499,23 @@ export const actions: Actions = {
 
 		redirect(303, adresseDeDossier(domaine.universNom, domaine.nom, fait.segments));
 	},
+
+	/**
+	 * `RG-DRO-01` — ACCORDER UN DROIT, le geste de `.dr-ajout` (`V-40:1203`).
+	 *
+	 * ACCORDER ET CHANGER SONT DEUX GESTES, PAS UN. Le premier vise un compte qui
+	 * n'a rien sur ce dossier, le second une ligne déjà posée — et c'est cette
+	 * distinction qui permet au second d'exiger un droit PROPRE. Les confondre
+	 * ferait d'un clic sur la ligne d'un droit HÉRITÉ une écriture sur ce
+	 * dossier, c'est-à-dire l'inverse de ce que la ligne montrait.
+	 */
+	accorderLeDroit: (evenement) => reponseDeDroit(evenement, accorderUnDroitDeDossier),
+
+	/** `RG-DRO-01` — CHANGER LE NIVEAU d'un droit posé sur CE dossier. */
+	changerLeDroit: (evenement) => reponseDeDroit(evenement, changerUnDroitDeDossier),
+
+	/** `RG-DRO-01` — RETIRER un droit posé sur CE dossier. Le niveau n'est pas lu. */
+	retirerLeDroit: (evenement) => reponseDeDroit(evenement, retirerUnDroitDeDossier),
 
 	/**
 	 * `RG-M03-04` — SUPPRIMER, le geste de `#dlg-supprimer` (`V-13:1262`).

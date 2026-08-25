@@ -62,15 +62,25 @@
 	 * rendent, et aucun n'est de V-13. Et `div.planche`, bloc hors produit
 	 * (§2.G), qui ne se porte jamais.
 	 *
-	 * PAS DE DIALOGUE DE DROITS, ET CE N'EST PAS UN OUBLI. `#a-droits` existe au
-	 * gel (`V-13:1163`) ; le dialogue qu'il ouvrirait N'EXISTE PAS dans V-13 —
-	 * son gestionnaire notifie « Gestion des droits du dossier — boîte de
-	 * dialogue, vue V-40 » (`V-13:2376`-`2378`). V-40 en porte un, `#d-droits`
-	 * (`V-40:1184`), bâti sur `.droits`, `.dr`, `.dr__origine`, `.dr-ajout` et
-	 * `.selecteur` : `docs/DESIGN.md:1336` range les quatre premières parmi les
-	 * classes de **V-40 seulement**, et aucune n'est déclarée par
-	 * `src/vues/V-13.css`. Le transcrire ici sortirait de l'inventaire fermé et
-	 * rendrait sans style. Le geste reste donc à faire, et il est déclaré.
+	 * LE DIALOGUE DES DROITS EST LE QUATRIÈME, ET IL EST TRANSCRIT ICI. `#a-droits`
+	 * existe au gel (`V-13:1163`) ; son gestionnaire se contentait de notifier
+	 * « Gestion des droits du dossier — boîte de dialogue, vue V-40 »
+	 * (`V-13:2376`-`2378`), et le produit n'avait donc AUCUN écran où le clic
+	 * atterrisse : cliquer ne produisait strictement rien.
+	 *
+	 * LA VOIE EST CELLE DES TROIS AUTRES DIALOGUES, et c'est le précédent de cette
+	 * vue même. Monter `V-40.svelte` en mode hôte — ce que fait `notes/{id}` pour
+	 * son dialogue de relation — imposerait d'importer `V-40.css` dans la route de
+	 * V-13 : les deux feuilles ont **96 sélecteurs de premier niveau identiques**
+	 * (mesuré), dernier import gagnant, sur une page qui marche aujourd'hui.
+	 * Transcrire ne coûte que neuf règles de classe, toutes ABSENTES de
+	 * `V-13.css` — donc aucune collision.
+	 *
+	 * `docs/DESIGN.md:1336` (§2.F) range la famille des droits parmi les classes
+	 * propres à V-40, et `P-5.2` interdit de les emprunter. La règle est SCIEMMENT
+	 * écartée : « aucune maquette, aucun document de docs/ n'est une raison de
+	 * laisser un défaut en place » (`CLAUDE.md`). Le motif est reporté dans
+	 * `V-13.css`, au-dessus des neuf règles.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
 	 * `src/vues/V-13.css`, posé par `node verif/feuilles-de-vue.mjs V-13
@@ -92,7 +102,12 @@
 	} from '../../seeds/corpus';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import Coquille from '$lib/coquille/Coquille.svelte';
-	import { adresseDeDossier, adresseDeNote, segmentsDeDossier } from '$lib/rangement/adresses';
+	import {
+		adresseDeDossier,
+		adresseDeNote,
+		adresseDesNotesDuDomaine,
+		segmentsDeDossier
+	} from '$lib/rangement/adresses';
 	import { motFiche, motFichePluriel } from '$lib/vocabulaire';
 
 	interface Proprietes {
@@ -168,6 +183,21 @@
 		/** Le refus affiché par `#dep-erreur` (`V-13:1252`), s'il y en a un. */
 		erreurDeDeplacement?: string | null;
 		/**
+		 * LES DROITS DU DOSSIER — la matière de `#dlg-droits`.
+		 *
+		 * `null` : le dialogue ne montre aucun droit et n'offre aucun compte, ce
+		 * qui est exactement l'état du gel, dont la liste des droits est VIDE
+		 * dans le HTML statique et n'est peuplée qu'à l'ouverture (`V-40:3344`).
+		 * Le banc, qui ne passe que `vecteur` et `notes`, ne bouge donc pas.
+		 *
+		 * LA ROUTE NE LA SERT QU'AU GESTIONNAIRE : cette structure porte la liste
+		 * des comptes de l'instance, et un lecteur n'a pas à la recevoir pour
+		 * n'en rien faire.
+		 */
+		droits?: DroitsDuDossier | null;
+		/** Le refus affiché par `#droits-erreur`, s'il y en a un. */
+		erreurDeDroits?: string | null;
+		/**
 		 * L'univers porteur du domaine, tel que l'adresse le nomme. Absent, on le
 		 * cherche dans `domaines` — c'est le rendu d'une planche.
 		 */
@@ -186,6 +216,36 @@
 		/** Les segments affichés, racine du domaine EXCLUE — vides pour la racine. */
 		readonly segments: readonly string[];
 		readonly refus: string | null;
+	}
+
+	/**
+	 * UN COMPTE, TEL QUE LE DIALOGUE DES DROITS LE NOMME.
+	 *
+	 * LES FORMES SONT DÉCLARÉES ICI, NON IMPORTÉES DE `$lib/donnees`, et ce n'est
+	 * pas une duplication de complaisance : ce module parle au connecteur de base,
+	 * et l'importer depuis une vue le ferait entrer dans le paquet du navigateur.
+	 * Le typage reste STRUCTUREL — la valeur que la route sert satisfait celle-ci
+	 * sans conversion. Même geste que `RangementReel` ci-dessous.
+	 */
+	interface CompteDeDroit {
+		readonly identifiant: string;
+		readonly nom: string;
+		readonly initiales: string;
+	}
+
+	/** Une ligne de la liste : un droit effectif sur ce dossier, et son origine. */
+	interface DroitAffiche extends CompteDeDroit {
+		readonly niveau: NiveauDeDroit;
+		readonly herite: boolean;
+		readonly origine: string;
+		/** La ligne de l'appelant — aucun geste ne lui est offert (`P-09`). */
+		readonly soiMeme: boolean;
+	}
+
+	/** Ce que le dialogue des droits montre. */
+	interface DroitsDuDossier {
+		readonly accordes: readonly DroitAffiche[];
+		readonly candidats: readonly CompteDeDroit[];
 	}
 
 	/** L'arborescence réelle d'un domaine, et la place du dossier consulté. */
@@ -210,6 +270,8 @@
 		origineDuDroit = null,
 		erreurDeCreation = null,
 		erreurDeDeplacement = null,
+		droits = null,
+		erreurDeDroits = null,
 		universDuDomaine
 	}: Proprietes = $props();
 
@@ -504,6 +566,66 @@
 	}
 
 	const choixDeDestination = $derived(rameaux(arbre));
+
+	/* ── Les compteurs mènent à la liste, filtrée sur ce dossier ──────────────
+	   La facette `dossier` de V-12 EXISTE et est honorée par son chargeur ; sa
+	   clé est le chemin AFFICHÉ d'une note, celui-là même que cette vue
+	   compose. Les compteurs de l'en-tête étaient inertes : ils annonçaient un
+	   nombre de notes sans mener nulle part.
+
+	   LE TOTAL RÉCURSIF N'EST PAS UN FILTRE APPROCHANT. La facette compare un
+	   chemin ENTIER, jamais un préfixe ; le total est donc émis comme AUTANT DE
+	   VALEURS `dossier` qu'il y a de dossiers dans le sous-arbre, ce que
+	   l'adresse sait porter et que le chargeur lit par `getAll()`. L'ensemble
+	   d'arrivée est exactement celui qui est compté — un filtre par préfixe,
+	   lui, aurait menti. */
+	function cheminsDuSousArbre(c: readonly string[]): readonly string[] {
+		const dedans: string[] = [cheminTexte(c)];
+		for (const enfant of sousDossiers(c)) dedans.push(...cheminsDuSousArbre([...c, enfant]));
+		return dedans;
+	}
+
+	/**
+	 * L'ADRESSE EST COMPOSÉE COUPLE PAR COUPLE, et non par `URLSearchParams` :
+	 * une instance mutable de cette classe est refusée dans un composant Svelte
+	 * (`svelte/prefer-svelte-reactivity`), et la réactivité n'a rien à faire ici —
+	 * cette fabrique est pure. Même geste qu'en `V-02`.
+	 *
+	 * ELLE REND `null` QUAND LA FACETTE NE SAIT PAS DIRE L'ENSEMBLE COMPTÉ, et
+	 * c'est le cas du DOSSIER RACINE d'un domaine. Son chemin affiché est la
+	 * chaîne VIDE — la racine n'entre dans aucun chemin de note —, et le chargeur
+	 * de V-12 ÉCARTE toute valeur vide avant de poser la facette (le crible est
+	 * dans `notes/+page.server.ts`, juste après la lecture des valeurs de la clé) :
+	 * l'adresse partirait avec une facette non posée et rendrait TOUT le domaine
+	 * là où le compteur annonce les seules notes de la racine. Le compteur reste
+	 * alors inerte, et il le reste aussi pour le total récursif d'une racine, dont
+	 * la liste de chemins porte cette même chaîne vide. Un lien qui livre plus que
+	 * ce qu'il annonce est pire qu'un lien absent.
+	 */
+	function adresseDesNotesDuDossier(chemins: readonly string[]): string | null {
+		if (chemins.length === 0 || chemins.some((chemin) => chemin === '')) return null;
+		const couples = chemins.map((chemin) => `dossier=${encodeURIComponent(chemin)}`);
+		return `${adresseDesNotesDuDomaine(UNIVERS_DU_DOMAINE, DOMAINE)}?${couples.join('&')}`;
+	}
+
+	const lienDesNotesDirectes = $derived(adresseDesNotesDuDossier([cheminTexte(chemin)]));
+	const lienDesNotesTotales = $derived(adresseDesNotesDuDossier(cheminsDuSousArbre(chemin)));
+
+	/* ── Le dialogue des droits ───────────────────────────────────────────────
+	   LES LIBELLÉS SONT CEUX DE `.droit__nom`, EN HAUT DE CETTE PAGE MÊME, et
+	   non ceux du gel de V-40 — qui écrit « Lecture / Écriture / Gestion »
+	   (`V-40:1207`-`1209`). Deux jeux de mots pour trois valeurs sur un même
+	   écran, c'est un synonyme : la pastille de droit effectif dirait
+	   « Rédacteur » là où le dialogue qui vient de l'accorder dirait
+	   « Écriture ». Les valeurs, elles, sont celles de l'énumération de base. */
+	const NIVEAUX: readonly { valeur: NiveauDeDroit; libelle: string }[] = [
+		{ valeur: 'lecteur', libelle: 'Lecteur' },
+		{ valeur: 'redacteur', libelle: 'Rédacteur' },
+		{ valeur: 'gestionnaire', libelle: 'Gestionnaire' }
+	];
+
+	/** Le chemin complet du dossier, domaine compris — sous-titre du dialogue. */
+	const cheminComplet = $derived(cheminTexte([DOMAINE, ...chemin]));
 </script>
 
 <!--
@@ -574,14 +696,41 @@
 					>
 					<span id="titre">{nom}</span>
 				</h1>
+				<!--
+					LES COMPTEURS MÈNENT À CE QU'ILS COMPTENT — ils étaient inertes.
+
+					La balise change, et c'est le seul endroit où cette vue s'écarte du
+					gel : trois `span` deviennent des liens. `V-11:1953` distingue le
+					cliquable de l'inerte PAR LA BALISE, et c'est bien ce qui se passe
+					ici — ce qui mène quelque part le dit. Un lien, non un bouton : la
+					cible est une adresse, elle s'ouvre donc dans un nouvel onglet, se
+					copie, et fonctionne sans script.
+
+					« sous-dossiers » ne quitte pas la page : les tuiles sont juste
+					dessous. Le lien n'est posé que lorsqu'il y en a — sans quoi il
+					mènerait à un bloc masqué.
+				-->
+				{#snippet compteurDeNotes(combien: number, libelle: string, adresse: string | null)}
+					{#if adresse === null}<span><b>{nb(combien)}</b> {libelle}</span>{:else}<a href={adresse}
+							><b>{nb(combien)}</b> {libelle}</a
+						>{/if}
+				{/snippet}
 				<div class="compteurs" id="compteurs">
-					<span><b>{nb(sous.length)}</b> {sous.length > 1 ? 'sous-dossiers' : 'sous-dossier'}</span
-					><span style="color:var(--c-trait-fort)">·</span><span
-						><b>{nb(notesDuDossier.length)}</b>
-						{notesDuDossier.length > 1 ? 'notes directes' : 'note directe'}</span
-					>{#if toutes.length !== notesDuDossier.length}<span style="color:var(--c-trait-fort)"
+					{#if sous.length}<a href="#bloc-sous"
+							><b>{nb(sous.length)}</b> {sous.length > 1 ? 'sous-dossiers' : 'sous-dossier'}</a
+						>{:else}<span><b>{nb(sous.length)}</b> sous-dossier</span>{/if}<span
+						style="color:var(--c-trait-fort)">·</span
+					>{@render compteurDeNotes(
+						notesDuDossier.length,
+						notesDuDossier.length > 1 ? 'notes directes' : 'note directe',
+						lienDesNotesDirectes
+					)}{#if toutes.length !== notesDuDossier.length}<span style="color:var(--c-trait-fort)"
 							>·</span
-						><span><b>{nb(toutes.length)}</b> notes au total, sous-dossiers compris</span>{/if}
+						>{@render compteurDeNotes(
+							toutes.length,
+							'notes au total, sous-dossiers compris',
+							lienDesNotesTotales
+						)}{/if}
 				</div>
 			</div>
 
@@ -918,6 +1067,171 @@
 				>
 					Supprimer définitivement
 				</button>
+			</div>
+		</div>
+	</dialog>
+
+	<!-- ============================ DIALOGUE 4 — Gérer les droits ============================ -->
+	<!--
+		TRANSCRIT DE `mockups/V-40-dialogues.html:1184`-`1224`, et non emprunté à
+		`V-40.svelte` : le motif est à l'en-tête de ce fichier, et les neuf classes
+		manquantes sont désormais dans `V-13.css`.
+
+		TROIS ÉCARTS AU GEL, ET CHACUN RÉPARE UN DÉFAUT DE LA MAQUETTE.
+
+		 · LE NIVEAU D'UN DROIT PROPRE EST UN SÉLECTEUR, non une pastille inerte.
+		   Le gel n'offre qu'ajouter et retirer : changer un niveau y demande de
+		   retirer puis de réaccorder, c'est-à-dire de fermer un accès pour le
+		   rouvrir. La pastille reste, telle quelle, sur les droits HÉRITÉS — qui
+		   ne se changent pas ici.
+		 · LE PIED NE PORTE PLUS « Enregistrer les droits ». Au gel, les deux
+		   boutons ferment (`data-fermer`) : le second promet un enregistrement
+		   qu'il ne fait pas. Chaque geste est immédiat et confirmé par le
+		   serveur ; un bouton qui n'enregistre rien est un geste promis pour rien.
+		 · LA LIGNE DE L'APPELANT N'OFFRE NI RETRAIT NI CHANGEMENT — `P-09`,
+		   « ni grisée, NI MASQUÉE ». Le serveur refuse qu'un gestionnaire se
+		   ferme la porte ; le lui proposer serait dessiner un geste impossible.
+	-->
+	<dialog class="dlg dlg--large" id="dlg-droits" aria-labelledby="dlg-droits-titre">
+		<div class="dlg__boite">
+			<div class="dlg__tete">
+				<span class="dlg__marque" aria-hidden="true">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						><rect x="3" y="7" width="10" height="6.5" rx="1.3" /><path
+							d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7"
+						/></svg
+					>
+				</span>
+				<div style="flex:1;min-width:0">
+					<h2 class="dlg__titre" id="dlg-droits-titre">Droits du dossier {nom}</h2>
+					<div style="font-size:var(--t-mini);color:var(--c-encre-3);margin-top:2px">
+						{cheminComplet}
+					</div>
+				</div>
+				<button class="dlg__fermer" data-fermer aria-label="Fermer">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8" /></svg
+					>
+				</button>
+			</div>
+			<div class="dlg__corps">
+				<span class="etiq">Droits accordés</span>
+				<div class="droits" id="liste-droits">
+					{#each droits?.accordes ?? [] as ligne (ligne.identifiant)}
+						<div class="dr" data-herite={ligne.herite ? 'oui' : 'non'}>
+							<span class="dr__avatar">{ligne.initiales}</span>
+							<div style="min-width:0">
+								<div class="dr__nom">{ligne.nom}</div>
+								{#if ligne.origine !== ''}<div class="dr__origine">
+										<svg
+											width="10"
+											height="10"
+											viewBox="0 0 16 16"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"><path d="M4 2v8a2 2 0 0 0 2 2h6" /></svg
+										>{ligne.origine.replace('— ', '')}
+									</div>{/if}
+							</div>
+							{#if ligne.herite || ligne.soiMeme}
+								<span class="dr__role"
+									>{NIVEAUX.find((n) => n.valeur === ligne.niveau)?.libelle}</span
+								>
+							{:else}
+								<select
+									class="selecteur"
+									data-compte={ligne.identifiant}
+									aria-label="Niveau de droit de {ligne.nom}"
+								>
+									{#each NIVEAUX as niveauOffert (niveauOffert.valeur)}
+										<option
+											value={niveauOffert.valeur}
+											selected={niveauOffert.valeur === ligne.niveau}>{niveauOffert.libelle}</option
+										>
+									{/each}
+								</select>
+							{/if}
+							{#if ligne.herite || ligne.soiMeme}
+								<span style="width:27px"></span>
+							{:else}
+								<button
+									class="dr__retirer"
+									data-compte={ligne.identifiant}
+									aria-label="Retirer l'accès de {ligne.nom}"
+								>
+									<svg
+										width="14"
+										height="14"
+										viewBox="0 0 16 16"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8" /></svg
+									>
+								</button>
+							{/if}
+						</div>
+					{/each}
+				</div>
+
+				<!--
+					« AJOUTER UN ACCÈS » N'EST RENDU QUE S'IL Y A QUELQU'UN À AJOUTER —
+					`P-09`, omis plutôt que grisé.
+
+					La liste des candidats est l'annuaire des comptes moins ceux qui ont
+					déjà un droit ici, et le chargeur ne sert cet annuaire qu'au rôle
+					`administrateur` : un gestionnaire de dossier qui n'est pas
+					administrateur reçoit donc une liste VIDE, et un sélecteur sans
+					option suivi d'un bouton « Ajouter » serait un geste dessiné que rien
+					ne peut accomplir. Elle est vide, aussi, quand tout compte actif de
+					l'instance a déjà un droit sur ce dossier.
+				-->
+				{#if (droits?.candidats ?? []).length > 0}
+					<div class="champ">
+						<span class="champ__label">Ajouter un accès</span>
+						<div class="dr-ajout">
+							<select class="selecteur" id="droit-qui" aria-label="Personne">
+								{#each droits?.candidats ?? [] as candidat (candidat.identifiant)}
+									<option value={candidat.identifiant}>{candidat.nom}</option>
+								{/each}
+							</select>
+							<select class="selecteur" id="droit-role" aria-label="Niveau de droit sur ce dossier">
+								{#each NIVEAUX as niveauOffert (niveauOffert.valeur)}
+									<option value={niveauOffert.valeur}>{niveauOffert.libelle}</option>
+								{/each}
+							</select>
+							<button class="btn btn--principal" id="droit-ajouter">Ajouter</button>
+						</div>
+					</div>
+				{/if}
+
+				<div class="champ__erreur" id="droits-erreur" hidden={erreurDeDroits === null}>
+					{erreurDeDroits ?? ''}
+				</div>
+
+				<div class="decompte">
+					<div class="decompte__titre">Droits explicites et droits hérités</div>
+					<div class="decompte__note">
+						Les droits en pointillé sont hérités d'un dossier parent ou du domaine. <b
+							>Retirer un droit explicite ne retire pas un droit hérité</b
+						> : si un compte a l'écriture sur tout le domaine, la lui retirer ici la lui laisse — il faut
+						la retirer là où elle a été accordée. Le nom du dossier d'origine est indiqué sous chaque
+						droit hérité.
+					</div>
+				</div>
+			</div>
+			<div class="dlg__pied">
+				<button class="btn" data-fermer>Fermer</button>
 			</div>
 		</div>
 	</dialog>

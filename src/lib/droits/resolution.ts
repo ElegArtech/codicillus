@@ -205,6 +205,24 @@ export function chaineDAncetres(index: IndexDesDroits, dossierId: string): reado
 /* ═══════════════════════════════════ La résolution, RG-DRO-01 à 05 ═════ */
 
 /**
+ * L'IDENTITÉ TIENT-ELLE SA GESTION DE SON RÔLE ? — `RG-DRO-03`, et rien d'autre.
+ *
+ * La règle est déjà appliquée par `resoudreDroitDeDossier()` ci-dessous, qui
+ * appelle ce prédicat : il n'y a donc pas deux écritures du contournement, il y
+ * en a une, et ce nom la rend CONSULTABLE ailleurs.
+ *
+ * Elle est consultable parce qu'une écriture de droit a besoin de la distinguer.
+ * Un gestionnaire qui tient sa gestion d'une ligne de `droits_de_dossier` se
+ * ferme la porte en s'abaissant lui-même — `RG-DRO-01`, le plus spécifique
+ * gagne, et l'écran qui lui rendrait le geste ne s'ouvrirait plus. Celui qui la
+ * tient de son RÔLE ne se ferme rien : la table n'est pas lue pour lui. Refuser
+ * les deux au même titre serait refuser par un motif qui ne s'applique pas.
+ */
+export function contourneLesDroitsDeDossier(identite: Identite): boolean {
+	return identite.type === 'authentifie' && identite.role === 'administrateur';
+}
+
+/**
  * LE POINT D'ENTRÉE DE LA RÉSOLUTION — le droit effectif d'une identité sur un
  * dossier, ou `null` si elle n'en a aucun.
  *
@@ -250,7 +268,7 @@ export function resoudreDroitDeDossier(
 	if (identite.type === 'anonyme') return null;
 
 	// RG-DRO-03 — l'administrateur contourne tous les droits de dossier.
-	if (identite.role === 'administrateur') return 'gestionnaire';
+	if (contourneLesDroitsDeDossier(identite)) return 'gestionnaire';
 
 	// RG-DRO-01 et RG-DRO-05 — le plus proche gagne, la racine couvre l'arbre.
 	for (const ancetre of chaineDAncetres(index, dossierId)) {
