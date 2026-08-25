@@ -184,6 +184,24 @@
 		 * reçu, qui est le corpus de la planche.
 		 */
 		perimetre?: number;
+		/**
+		 * LES PISTES DE REFORMULATION — UNE DONNÉE, ET ELLE VIENT DU CHARGEUR.
+		 *
+		 * La vue en portait quatre écrites dans le gel (`V-08:1986`) —
+		 * « restauration », « sauvegarde », « barman », « plan de reprise » —,
+		 * chacune ouvrant `/recherche?q=…` à zéro résultat sur une instance qui ne
+		 * porte rien de tel.
+		 *
+		 * ELLES NE PEUVENT PAS SE DÉRIVER ICI, et c'est le point à ne pas manquer :
+		 * le bloc ne se rend que lorsque la recherche n'a rien rendu, donc le jeu
+		 * reçu par `notes` est vide DANS L'ÉTAT MÊME où les pistes servent. Les y
+		 * compter serait une promesse que le code ne peut pas tenir. Le chargeur
+		 * les compte sur le PÉRIMÈTRE LISIBLE, qu'il lit déjà pour l'affluence.
+		 *
+		 * EXIGÉE — `/recherche` la passe, et c'est le seul montage de cette vue.
+		 * Liste vide, le bloc n'est pas rendu.
+		 */
+		pistes: readonly string[];
 		/** Les univers déclarés. Absents, aucun — le contexte de coquille répond. */
 		univers?: readonly Univers[];
 		/** Les domaines accessibles. Absents, aucun — le contexte répond. */
@@ -245,6 +263,7 @@
 		requete,
 		retenues,
 		perimetre,
+		pistes,
 		univers = [],
 		domaines = [],
 		compte: moi = SANS_IDENTITE,
@@ -360,13 +379,6 @@
 		readonly repliee?: boolean;
 	}
 
-	/**
-	 * L'EXTRACTEUR D'ÉTIQUETTES, NOMMÉ PARCE QU'IL SERT DEUX FOIS : la facette
-	 * « Étiquette », et les pistes de reformulation de l'état sans résultat. Les
-	 * deux comptent la même chose ; deux écritures divergeraient.
-	 */
-	const ETIQUETTES_DE = (n: Note): readonly string[] => n.etiquettes;
-
 	/** Les sept facettes, dans l'ordre de lecture du brief (`V-08:1938`). */
 	const FACETTES: readonly DefinitionDeFacette[] = [
 		{ id: 'univers', nom: 'Univers', cle: (n) => [n.univers] },
@@ -383,7 +395,7 @@
 			nom: 'Fraîcheur',
 			cle: (n) => [{ frais: 'Frais', vieil: 'Vieillissant', obs: 'Obsolète probable' }[n.fraicheur]]
 		},
-		{ id: 'etiquette', nom: 'Étiquette', cle: ETIQUETTES_DE, prefixe: '#', repliee: true },
+		{ id: 'etiquette', nom: 'Étiquette', cle: (n) => n.etiquettes, prefixe: '#', repliee: true },
 		{ id: 'visibilite', nom: 'Visibilité', cle: (n) => [n.visibilite], repliee: true }
 	];
 
@@ -434,11 +446,7 @@
 		readonly valeurs: readonly ValeurDeFacette[];
 	}
 
-	/**
-	 * LA DISTRIBUTION D'UNE CLÉ SUR UN JEU DE NOTES — la mécanique de facette,
-	 * extraite pour être employée deux fois : par les facettes, et par les pistes
-	 * de reformulation, qui comptent les mêmes étiquettes sur un autre jeu.
-	 */
+	/** La distribution d'une clé sur un jeu de notes — la mécanique de facette. */
 	function distribution(
 		notes: readonly Note[],
 		cle: (n: Note) => readonly string[]
@@ -542,26 +550,6 @@
 	 */
 	const lisibles = $derived(perimetre ?? corpus.length);
 	const affluence = $derived(affiches.length >= 8 && affiches.length / lisibles > 0.8);
-
-	/**
-	 * LES PISTES DE REFORMULATION — DES ÉTIQUETTES RÉELLES, OU RIEN.
-	 *
-	 * Le gel en énumère quatre en dur (`V-08:1986`) : « restauration »,
-	 * « sauvegarde », « barman », « plan de reprise ». Trois d'entre elles ne
-	 * veulent rien dire hors du jeu de démonstration, et la quatrième — « barman »
-	 * — est le nom d'un outil que l'instance n'a probablement jamais installé :
-	 * chacune ouvrait `/recherche?q=…` à zéro résultat. Quatre boutons qui
-	 * promettent une reformulation et n'en tiennent aucune sont pires qu'aucun
-	 * bouton.
-	 *
-	 * LA SOURCE RÉELLE EST DÉJÀ DANS CE FICHIER : la facette « Étiquette » compte
-	 * les étiquettes du jeu servi. Les pistes les comptent sur le CORPUS reçu — et
-	 * non sur `base`, qui est vide précisément dans l'état où les pistes se
-	 * rendent — et gardent les plus employées, au même plafond que la facette.
-	 *
-	 * Un corpus sans étiquette rend une liste vide, et le bloc n'est pas rendu.
-	 */
-	const pistes = $derived(parFrequence(distribution(corpus, ETIQUETTES_DE)).slice(0, MAX_VALEURS));
 
 	/** La condition exacte du gel (`V-08:1969`) : l'état « vide » de la planche,
 	 *  ou aucun résultat pour une requête non vide. */
