@@ -37,6 +37,8 @@ import type { ComponentProps } from 'svelte';
 import {
 	DOMAINES,
 	RELATIONS,
+	RELATIONS_TECHNIQUES,
+	TYPES_FICHE,
 	TYPES_RELATION,
 	UNIVERS,
 	corpusPourVue,
@@ -278,37 +280,54 @@ describe('V-16 — comparaison de versions', () => {
 describe('V-19 — cartographie', () => {
 	const notes = corpusPourVue('V-19');
 
-	it("absente, la constante du jeu s'applique", async () => {
-		const body = await v19({ vecteur: null, notes });
+	/* LES CINQ SOURCES DU GRAPHE SONT EXIGÉES — il n'existe plus de « absente,
+	   la constante du jeu s'applique » à éprouver, et c'est le correctif : ce
+	   défaut-là servait le jeu de démonstration à toute route qui l'oubliait.
+	   Le socle du cas les passe donc explicitement, comme la route les sert. */
+	const SOCLE = {
+		vecteur: null,
+		notes,
+		univers: UNIVERS,
+		domaines: DOMAINES,
+		relations: RELATIONS,
+		typesRelation: TYPES_RELATION,
+		relationsTechniques: RELATIONS_TECHNIQUES
+	} as const;
+
+	it('rend ce qui lui est servi, et le sélecteur ouvre sur tout le corpus', async () => {
+		const body = await v19({ ...SOCLE });
 		expect(body).toContain('>Univers Production<');
 		expect(body).toContain('>Domaine Infrastructure<');
-		expect(body).toContain('Codicillus 1.0.0');
-		expect(body).toContain('>KB<');
 		expect(body).toContain('est hébergé par');
 		expect(compter(body, /class="arete"/g)).toBeGreaterThan(1);
+		/* LE DÉFAUT RÉPARÉ : le périmètre valait `global|` et le sélecteur n'en
+		   portait aucune option. Le contrôle s'ouvrait sans valeur au-dessus
+		   d'une carte qui montrait tout, et rien ne ramenait au corpus entier. */
+		expect(body).toContain('<option value="global|">Tous les domaines</option>');
 	});
 
-	it("fournie, la propriété l'emporte — univers, domaines, identité, instance", async () => {
-		const body = await v19({
-			vecteur: null,
-			notes,
-			univers: UN_UNIVERS,
-			domaines: UN_DOMAINE,
-			compte: AUTRE_COMPTE,
-			instance: AUTRE_INSTANCE
-		});
+	it('sans identité servie, aucun compte du jeu n’atteint le balisage', async () => {
+		const body = await v19({ ...SOCLE });
+		expect(body).not.toContain('>KB<');
+		expect(body).not.toContain('Codicillus 1.0.0');
+	});
+
+	it("fournie, l'identité l'emporte", async () => {
+		const body = await v19({ ...SOCLE, compte: AUTRE_COMPTE });
+		expect(body).toContain('>SN<');
+	});
+
+	it('le rangement servi décide seul du sélecteur de périmètre', async () => {
+		const body = await v19({ ...SOCLE, univers: UN_UNIVERS, domaines: UN_DOMAINE });
 		expect(body).toContain('>Univers Projets<');
 		expect(body).not.toContain('>Univers Production<');
 		expect(body).toContain('>Domaine Applications<');
 		expect(body).not.toContain('>Domaine Infrastructure<');
-		expect(body).toContain('>SN<');
-		expect(body).toContain('Codicillus 9.9.9');
 	});
 
-	it("fournie, la propriété l'emporte — relations, libellés, dépendances techniques", async () => {
+	it('les relations servies décident seules — libellés et dépendances techniques', async () => {
 		const body = await v19({
-			vecteur: null,
-			notes,
+			...SOCLE,
 			relations: UNE_RELATION,
 			typesRelation: TYPES_MARQUES,
 			relationsTechniques: []
@@ -318,42 +337,50 @@ describe('V-19 — cartographie', () => {
 		expect(compter(body, /data-technique="oui"/g)).toBe(0);
 		expect(compter(body, /data-technique="non"/g)).toBe(1);
 	});
+
+	it('sans relation servie, la carte est vide — jamais celle du jeu', async () => {
+		const body = await v19({ ...SOCLE, relations: [] });
+		expect(compter(body, /class="arete"/g)).toBe(0);
+		expect(body).not.toContain('Restaurer une sauvegarde PostgreSQL');
+	});
 });
 
 describe('V-20 — cartographie par type maître', () => {
 	const notes = corpusPourVue('V-20');
 
-	it("absente, la constante du jeu s'applique", async () => {
-		const body = await v20({ vecteur: null, notes });
-		expect(body).toContain('>Domaine Infrastructure<');
-		expect(body).toContain('Codicillus 1.0.0');
-		expect(body).toContain('>KB</button>');
-		expect(body).toContain('Karim Belhadj — menu utilisateur');
+	/* LES QUATRE SOURCES DU GRAPHE SONT EXIGÉES — voir V-19. */
+	const SOCLE = {
+		vecteur: null,
+		notes,
+		relations: RELATIONS,
+		typesRelation: TYPES_RELATION,
+		relationsTechniques: RELATIONS_TECHNIQUES,
+		typesFiche: TYPES_FICHE
+	} as const;
+
+	it('sans rangement ni identité servis, rien du jeu n’atteint le balisage', async () => {
+		const body = await v20({ ...SOCLE });
+		expect(body).not.toContain('>Domaine Infrastructure<');
+		expect(body).not.toContain('>KB</button>');
+		expect(body).not.toContain('Karim Belhadj — menu utilisateur');
+		expect(body).not.toContain('Codicillus 1.0.0');
 	});
 
-	it("fournie, la propriété l'emporte", async () => {
-		const body = await v20({
-			vecteur: null,
-			notes,
-			domaines: UN_DOMAINE,
-			compte: AUTRE_COMPTE,
-			instance: AUTRE_INSTANCE
-		});
+	it("fournis, le rangement et l'identité l'emportent", async () => {
+		const body = await v20({ ...SOCLE, domaines: UN_DOMAINE, compte: AUTRE_COMPTE });
 		expect(body).toContain('>Domaine Applications<');
-		expect(body).not.toContain('>Domaine Infrastructure<');
 		expect(body).toContain('>SN</button>');
 		expect(body).toContain('Sophie Nguyen — menu utilisateur');
-		expect(body).toContain('Codicillus 9.9.9');
 	});
 
-	it('les relations fournies sont les seules dessinées', async () => {
+	it('les relations servies sont les seules dessinées', async () => {
 		/* L'anneau n'est peuplé qu'à partir du moment où un type maître est choisi :
 		   c'est `moment=deplie` qui dessine les nœuds ET leurs arêtes titrées. */
 		const etat = { moment: 'deplie' };
-		const temoin = await v20({ vecteur: etat, notes });
+		const temoin = await v20({ ...SOCLE, vecteur: etat });
 		const body = await v20({
+			...SOCLE,
 			vecteur: etat,
-			notes,
 			relations: UNE_RELATION_AU_CENTRE,
 			typesRelation: TYPES_MARQUES
 		});
@@ -367,8 +394,7 @@ describe('V-20 — cartographie par type maître', () => {
 	   Le nœud choisi est `n-pg-prod-01`, une fiche de type « Serveur » du corpus
 	   de la vue ; l'adresse le désigne, comme le chargeur le fait. */
 	const SUR_UNE_FICHE = {
-		vecteur: null,
-		notes,
+		...SOCLE,
 		perimetreDemande: 'global|',
 		typeMaitreDemande: 'Serveur',
 		centreDemande: 'n-pg-prod-01'
@@ -415,30 +441,38 @@ describe('V-20 — cartographie par type maître', () => {
 describe('V-21 — carte mentale', () => {
 	const notes = corpusPourVue('V-21');
 
-	it("absente, la constante du jeu s'applique", async () => {
-		const body = await v21({ vecteur: null, notes });
+	/* LE RANGEMENT EST EXIGÉ : la carte mentale dessinait l'arborescence du jeu
+	   de démonstration à toute route qui l'oubliait, et chacun de ses nœuds
+	   ouvrait une adresse en 404. */
+	const SOCLE = { vecteur: null, notes, univers: UNIVERS, domaines: DOMAINES } as const;
+
+	it('rend le rangement servi, sans identité du jeu', async () => {
+		const body = await v21({ ...SOCLE });
 		expect(body).toContain('>Univers Production<');
 		expect(body).toContain('>Univers Projets<');
 		expect(body).toContain('>Domaine Infrastructure<');
-		expect(body).toContain('Codicillus 1.0.0');
-		expect(body).toContain('>KB<');
+		expect(body).not.toContain('>KB<');
+		expect(body).not.toContain('Codicillus 1.0.0');
 	});
 
-	it("fournie, la propriété l'emporte", async () => {
+	it("fournis, le rangement et l'identité l'emportent", async () => {
 		const body = await v21({
-			vecteur: null,
-			notes,
+			...SOCLE,
 			univers: UN_UNIVERS,
 			domaines: UN_DOMAINE,
-			compte: AUTRE_COMPTE,
-			instance: AUTRE_INSTANCE
+			compte: AUTRE_COMPTE
 		});
 		expect(body).toContain('>Univers Projets<');
 		expect(body).not.toContain('>Univers Production<');
 		expect(body).toContain('>Domaine Applications<');
 		expect(body).not.toContain('>Domaine Infrastructure<');
 		expect(body).toContain('>SN<');
-		expect(body).toContain('Codicillus 9.9.9');
+	});
+
+	it('sur un rangement vide, aucun univers ni domaine du jeu ne subsiste', async () => {
+		const body = await v21({ ...SOCLE, univers: [], domaines: [] });
+		expect(body).not.toContain('>Univers Production<');
+		expect(body).not.toContain('>Domaine Infrastructure<');
 	});
 });
 

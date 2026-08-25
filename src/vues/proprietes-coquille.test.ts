@@ -4,13 +4,21 @@
  * Ce que ces cas prouvent, et rien d'autre : chacune des vues du lot accepte en
  * PROPRIÉTÉ les sources qu'elle importait en constante, et pour chacune
  *
- *   · ABSENTE, LE DÉFAUT S'APPLIQUE — la rendre en passant explicitement la
- *     constante du jeu de semence donne le MÊME balisage, à l'octet, que de
+ *   · ABSENTE, LE DÉFAUT S'APPLIQUE — la rendre en passant explicitement le
+ *     défaut que la vue déclare donne le MÊME balisage, à l'octet, que de
  *     l'omettre. C'est la propriété qui garantit que le banc ne bouge pas : le
  *     mode démo ne passe que `vecteur`/`etat` et `notes`.
  *   · FOURNIE, ELLE L'EMPORTE — la rendre avec une autre valeur change le
  *     balisage. Sans ce second cas, la propriété serait acceptée sans être lue,
  *     et le contrôle serait celui d'une règle que rien n'exerce (P-5).
+ *
+ * LE PREMIER CAS N'EST PAS ÉCRIT POUR UNE SOURCE QUE L'ÉTAT DU CAS PORTE DÉJÀ
+ * (`socle: true`) — propriété EXIGÉE par la vue, ou servie par le socle pour
+ * ouvrir l'état à éprouver. La repasser par-dessus comparerait deux rendus
+ * strictement identiques : un cas vert qui ne prouve rien, et qui compterait
+ * pour une preuve. Ce que la vue fait sans elle est alors mesuré ailleurs — par
+ * un cas nommé, quand un défaut vide existe, ou par le compilateur, quand la
+ * propriété est exigée.
  *
  * CHAQUE SOURCE EST ÉPROUVÉE DANS UN ÉTAT QUI LA LIT. Onze des dix-neuf ne sont
  * lues que dans un état précis — l'étape 3 de l'import, le dialogue de gabarits,
@@ -40,7 +48,6 @@ import {
 	CONTRIBUTIONS,
 	DISTINCTIONS,
 	DOMAINES,
-	FORMATS_IMPORT,
 	INSTANCE,
 	JOURNAL_IMPORTS,
 	LOT_IMPORT,
@@ -61,6 +68,12 @@ import {
 	type Version
 } from '../../seeds/corpus';
 import { CONFIGURATION_PAR_DEFAUT } from '../lib/base/schema';
+/* LE RÉFÉRENTIEL DES LIBELLÉS DE FORMAT VIENT DU PRODUIT, PAS DU JEU.
+   `seeds/corpus.ts` en porte une copie mot pour mot (`FORMATS_IMPORT`) ; la
+   servir ici aurait éprouvé la copie là où `/importer` sert l'original, et
+   les deux auraient pu diverger sans que rien ne rougisse. Le lien entre les
+   deux tables est éprouvé par `import-promesses.test.ts`. */
+import { LIBELLE_PAR_FORMAT } from '../lib/donnees/import';
 /* LES DEUX POSITIONS DE PLANCHE SERVIES ET LA DÉRIVATION DES TERMES VIENNENT DE
    LEURS SOURCES, celles-là mêmes que `+error.svelte` et les vues emploient. Les
    recopier ici aurait éprouvé la copie, et la copie aurait pu diverger sans que
@@ -72,11 +85,9 @@ type Proprietes = Record<string, unknown>;
 type Rendre = (composant: unknown, options: { props: Proprietes }) => { body: string };
 
 /** Une source portée par une vue, et de quoi l'éprouver dans les deux sens. */
-interface Source {
+interface SourceCommune {
 	/** Le nom contractuel de la propriété — camelCase du nom de la constante. */
 	readonly cle: string;
-	/** La constante du jeu de semence, celle sur laquelle la vue retombe. */
-	readonly defaut: unknown;
 	/** Une autre valeur, du même type, qui doit changer le rendu. */
 	readonly autre: unknown;
 	/** L'état dans lequel la source est lue, quand ce n'est pas celui de base. */
@@ -90,6 +101,28 @@ interface Source {
 	/** Une chaîne que la valeur fournie doit faire apparaître au balisage. */
 	readonly marqueur?: string;
 }
+
+/** Une source que la vue déclare avec un défaut — il se mesure. */
+interface SourceADefaut extends SourceCommune {
+	/** La valeur sur laquelle la vue retombe quand la propriété est absente. */
+	readonly defaut: unknown;
+	readonly socle?: never;
+}
+
+/**
+ * UNE SOURCE QUE L'ÉTAT DU CAS PORTE DÉJÀ — AUCUN DÉFAUT NE S'Y MESURE.
+ *
+ * La propriété est EXIGÉE par la vue, ou bien le socle la sert pour ouvrir
+ * l'état qu'on veut éprouver. Dans les deux cas, la repasser par-dessus le
+ * socle rendrait DEUX FOIS le même balisage : le cas serait vert sans rien
+ * prouver, et il compterait pour une preuve. Il n'est donc pas écrit.
+ */
+interface SourceDuSocle extends SourceCommune {
+	readonly socle: true;
+	readonly defaut?: never;
+}
+
+type Source = SourceADefaut | SourceDuSocle;
 
 /* ── Les valeurs de contre-épreuve ─────────────────────────────────────────
    Toutes restent dans les types de `seeds/corpus.ts` : aucun type n'est
@@ -122,6 +155,31 @@ const TROIS_VERSIONS: readonly Version[] = (
 	Object.values(VERSIONS).find((v) => v !== undefined) ?? []
 ).slice(0, 3);
 
+/**
+ * CE QUE `/importer` ET `/mon-profil` SERVENT TOUJOURS — donc ce que les deux
+ * vues EXIGENT désormais.
+ *
+ * Ces propriétés étaient optionnelles, de défaut la constante de
+ * `seeds/corpus.ts` : une route qui en oubliait une servait le lot, les
+ * domaines, l'identité et les contributions du jeu de démonstration sans que
+ * rien ne proteste. Elles n'ont plus de défaut, et le socle du cas les passe
+ * comme la route les sert.
+ */
+const SOCLE_V24: Proprietes = {
+	domaines: DOMAINES,
+	lotImport: LOT_IMPORT,
+	formatsImport: LIBELLE_PAR_FORMAT,
+	domaineParDefaut: DOMAINES[0]!.nom
+};
+
+const SOCLE_V25: Proprietes = {
+	domaines: DOMAINES,
+	compte: MOI,
+	contributions: CONTRIBUTIONS,
+	activite: ACTIVITE,
+	relations: RELATIONS
+};
+
 /** Les quatre sources de la coquille, communes aux vues qui la portent. */
 function coquille(inertes: readonly string[] = []): readonly Source[] {
 	const inerte = (cle: string) => (inertes.includes(cle) ? ({ inerte: true } as const) : {});
@@ -150,6 +208,10 @@ function coquille(inertes: readonly string[] = []): readonly Source[] {
  * balisage et ne se dérive pas du corpus : `univers` et `domaines` y sont
  * acceptées sans qu'aucun nœud n'en dépende. V-24, abrégée elle aussi, lit
  * pourtant `domaines` — son sélecteur de domaine de destination les énumère.
+ *
+ * POUR V-24 ET V-25, `defaut` N'EST PLUS LA CONSTANTE DU JEU : ce qui n'a pas
+ * de source en base porte un ÉTAT VIDE — tableau vide, `null` —, et ce que la
+ * route sert toujours est passé par le socle du cas, la propriété étant exigée.
  */
 const VUES: Readonly<
 	Record<string, { readonly base: Proprietes; readonly sources: readonly Source[] }>
@@ -171,45 +233,60 @@ const VUES: Readonly<
 		]
 	},
 	'V-24': {
-		base: { vecteur: { et: '2' } },
+		base: { ...SOCLE_V24, vecteur: { et: '2' } },
 		sources: [
-			...coquille(['univers']),
+			/* `univers` N'A PLUS LE JEU POUR DÉFAUT — le rail abrégé ne s'en dérive
+			   pas, et son état vide est un tableau vide, jamais les univers du jeu. */
+			{ cle: 'univers', defaut: [], autre: AUTRES_UNIVERS, inerte: true },
+			{ cle: 'domaines', socle: true, autre: AUTRES_DOMAINES },
+			{ cle: 'compte', defaut: null, autre: AUTRE_COMPTE, marqueur: 'ZQ' },
 			{
 				cle: 'lotImport',
-				defaut: LOT_IMPORT,
+				socle: true,
 				autre: { ...LOT_IMPORT, fichiers: LOT_IMPORT.fichiers.slice(0, 4) },
 				/* L'étape 3 est celle de l'aperçu : c'est là que le lot est compté. */
-				base: { vecteur: { et: '3' } }
+				base: { ...SOCLE_V24, vecteur: { et: '3' } }
 			},
 			{
 				cle: 'formatsImport',
-				defaut: FORMATS_IMPORT,
+				socle: true,
 				autre: {},
-				base: { vecteur: { et: '3' } }
+				base: { ...SOCLE_V24, vecteur: { et: '3' } }
 			}
 		]
 	},
+	/* LE SOCLE DE V-25 PORTE `comptes`, ET C'EST LE CHEMIN DE LA PLANCHE : sans
+	   profil lu en base, la vue cherche le titulaire dans la liste servie, et
+	   sans titulaire aucun indicateur, aucune jauge, aucun flux n'est rendu — il
+	   n'y aurait alors rien à mesurer. Que son DÉFAUT soit désormais la liste
+	   VIDE, et non l'annuaire du jeu, est éprouvé par le cas nommé plus bas. */
 	'V-25': {
-		base: { vecteur: null },
+		base: { ...SOCLE_V25, vecteur: null, comptes: COMPTES },
 		sources: [
-			...coquille(['univers', 'domaines']),
+			{ cle: 'univers', defaut: [], autre: AUTRES_UNIVERS, inerte: true },
+			{ cle: 'domaines', socle: true, autre: AUTRES_DOMAINES, inerte: true },
+			{ cle: 'compte', socle: true, autre: AUTRE_COMPTE, marqueur: 'ZQ' },
+			/* `comptes` EST PORTÉE PAR LE SOCLE, et son défaut vide se mesure plus
+			   bas, hors de cet état : ici, la liste ouvre le chemin de la planche. */
 			{
 				cle: 'comptes',
-				defaut: COMPTES,
+				socle: true,
 				autre: COMPTES.map((c) => ({ ...c, courriel: 'zq@exemple.test' })),
 				marqueur: 'zq@exemple.test'
 			},
 			{
 				cle: 'contributions',
-				defaut: CONTRIBUTIONS,
+				socle: true,
 				autre: {
 					...CONTRIBUTIONS,
 					'Karim Belhadj': { ...CONTRIBUTIONS['Karim Belhadj'], verifiees: 999 }
 				}
 			},
-			{ cle: 'distinctions', defaut: DISTINCTIONS, autre: DISTINCTIONS.slice(0, 1) },
-			{ cle: 'activite', defaut: ACTIVITE, autre: ACTIVITE.slice(0, 1) },
-			{ cle: 'relations', defaut: RELATIONS, autre: [] }
+			/* `distinctions` N'A PLUS LE JEU POUR DÉFAUT : aucune table ne porte le
+			   barème, et des seuils inventés mesureraient le titulaire contre rien. */
+			{ cle: 'distinctions', defaut: [], autre: DISTINCTIONS.slice(0, 1) },
+			{ cle: 'activite', socle: true, autre: ACTIVITE.slice(0, 1) },
+			{ cle: 'relations', socle: true, autre: [] }
 		]
 	},
 	/* V-04 N'A PAS DE COQUILLE (`docs/releve-vues.md` §5.1) : l'adresse du portail
@@ -337,7 +414,7 @@ function corps(vue: string, base: Proprietes, sup: Proprietes = {}): string {
 	return rendre(composants.get(vue), { props: { ...base, notes, ...sup } }).body;
 }
 
-describe.each(NOMS)('%s — les sources en propriétés optionnelles', (vue) => {
+describe.each(NOMS)('%s — les sources passées en propriétés', (vue) => {
 	const { base, sources } = VUES[vue]!;
 
 	it('rend sans qu’aucune source ne lui soit passée', () => {
@@ -347,16 +424,18 @@ describe.each(NOMS)('%s — les sources en propriétés optionnelles', (vue) => 
 	for (const source of sources) {
 		const etat = source.base ?? base;
 
-		it(`absente, \`${source.cle}\` retombe sur la constante du jeu de semence`, () => {
-			expect(corps(vue, etat, { [source.cle]: source.defaut })).toBe(corps(vue, etat));
-		});
+		if (!source.socle) {
+			it(`absente, \`${source.cle}\` retombe sur le défaut que la vue déclare`, () => {
+				expect(corps(vue, etat, { [source.cle]: source.defaut })).toBe(corps(vue, etat));
+			});
+		}
 
 		if (source.inerte) {
 			it(`fournie, \`${source.cle}\` ne change rien — le rail abrégé ne s’en dérive pas`, () => {
 				expect(corps(vue, etat, { [source.cle]: source.autre })).toBe(corps(vue, etat));
 			});
 		} else {
-			it(`fournie, \`${source.cle}\` l’emporte sur la constante`, () => {
+			it(`fournie, \`${source.cle}\` l’emporte sur le défaut`, () => {
 				expect(corps(vue, etat, { [source.cle]: source.autre })).not.toBe(corps(vue, etat));
 			});
 
@@ -368,6 +447,31 @@ describe.each(NOMS)('%s — les sources en propriétés optionnelles', (vue) => 
 			}
 		}
 	}
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   V-25 — LES DÉFAUTS QUI SERVAIENT LE JEU DE DÉMONSTRATION SONT DES ÉTATS VIDES
+
+   `comptes` valait `COMPTES` et `distinctions` valait `DISTINCTIONS` : aucun
+   chargeur ne sert l'un ni l'autre, si bien que l'écran affichait l'annuaire et
+   le barème du jeu comme s'ils étaient ceux de l'instance. Les deux valent
+   désormais la liste vide, et l'écran ne montre rien plutôt que d'inventer.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('V-25 — les défauts ne servent plus le jeu de démonstration', () => {
+	const socle = { ...SOCLE_V25, vecteur: null };
+
+	it('sans comptes servis, aucune adresse de l’annuaire du jeu n’est rendue', () => {
+		const rendu = corps('V-25', socle);
+		expect(corps('V-25', { ...socle, comptes: COMPTES })).toContain(COMPTES[0]!.courriel);
+		expect(rendu).not.toContain(COMPTES[0]!.courriel);
+	});
+
+	it('sans distinctions servies, aucun seuil du barème du jeu n’est rendu', () => {
+		const avec = corps('V-25', { ...socle, comptes: COMPTES, distinctions: DISTINCTIONS });
+		const sans = corps('V-25', { ...socle, comptes: COMPTES });
+		expect(avec).toContain(DISTINCTIONS[0]!.nom);
+		expect(sans).not.toContain(DISTINCTIONS[0]!.nom);
+	});
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -394,7 +498,7 @@ describe('V-25 — l’issue « Voir les notes de … »', () => {
 		arrivee: '3 février 2026',
 		derniereConnexion: 'à l’instant'
 	};
-	const base = { vecteur: null, profilDuCompte: TITULAIRE };
+	const base = { ...SOCLE_V25, vecteur: null, profilDuCompte: TITULAIRE };
 
 	it('sans rattachement lu, le bouton n’est pas ÉMIS', () => {
 		/* `P-09` — « ni grisée, ni masquée ». Le bouton était rendu INERTE, et
@@ -501,7 +605,7 @@ describe('V-06 — le ticket d’assistance n’est offert qu’avec une destina
 });
 
 describe('V-25 — l’interrupteur de notification par courriel n’est plus émis', () => {
-	const rendu = (): string => corps('V-25', { vecteur: null });
+	const rendu = (): string => corps('V-25', { ...SOCLE_V25, vecteur: null });
 
 	it('ne pose plus le contrôle que le gel laissait coché sans gestionnaire', () => {
 		expect(rendu()).not.toContain('p-courriels');
