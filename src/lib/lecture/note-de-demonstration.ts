@@ -363,4 +363,27 @@ export interface LectureAffichee extends NoteAffichee {
 	 * fenêtre que le gel annonce.
 	 */
 	readonly consultations30j: number;
+	/**
+	 * LE CUMUL DE TOUTE LA VIE DE LA NOTE — `notes.compteur_de_consultations`,
+	 * ET IL EST LU APRÈS QUE L'OUVERTURE COURANTE A ÉTÉ COMPTÉE.
+	 *
+	 * Il était pris sur `Note.vues`, que la couche de lecture projette AVANT
+	 * l'écriture de `journaliserUneConsultation()` : la page affichait donc un
+	 * total INFÉRIEUR d'une unité à sa propre fenêtre de trente jours — « 0
+	 * consultations · 1 sur les 30 derniers jours », arithmétiquement
+	 * impossible.
+	 *
+	 * LE REMÈDE N'EST PAS DE DÉPLACER L'ÉCRITURE. Elle doit rester APRÈS la
+	 * résolution d'accès : refus et inexistence rendent la même réponse, y
+	 * compris en temps (`RG-ACC-04`), et compter avant la résolution
+	 * compterait les refus et les notes absentes. C'est la LECTURE qui
+	 * descend, dans le complément de lecture, qui s'exécute déjà après
+	 * l'écriture et interroge déjà `notes` sur le même identifiant.
+	 *
+	 * LA COLONNE RESTE LA SEULE MÉMOIRE DU CUMUL : rien n'insère dans
+	 * `consultations` hors de `$lib/donnees/consultation.ts`, un corpus semé
+	 * ou une archive réimportée portent donc un compteur sans aucune ligne de
+	 * journal. Dériver le total du journal les remettrait tous à zéro.
+	 */
+	readonly consultationsTotal: number;
 }
