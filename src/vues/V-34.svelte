@@ -5,7 +5,9 @@
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * RG-M15-03 ET P-02 — CE QUI EST DÉRIVÉ, ET LES DEUX SEULS LITTÉRAUX
 	 *
-	 * Tout chiffre de cet écran est CALCULÉ sur `seeds/corpus.ts`. Les six
+	 * Tout chiffre de cet écran est CALCULÉ sur les données REÇUES — plus aucune
+	 * ne retombe sur `seeds/corpus.ts`, et aucun défaut de propriété ne peut plus
+	 * faire descendre le jeu de démonstration jusqu'ici. Les six
 	 * fabriques du gel sont portées ligne à ligne : `tauxAbouti`
 	 * (`V-34:2718`), `trousDocumentaires` (`V-34:2730`), `orphelines`
 	 * (`V-34:2737`), `desynchronises` (`V-34:2749`), `contributeurs`
@@ -17,12 +19,16 @@
 	 *   1. `ORPH` (`V-34:3172`) — les trois familles d'orphelines : nom,
 	 *      explication, libellé d'action. Ce sont des LIBELLÉS d'interface, pas
 	 *      des données ; le corpus n'en porte aucun.
-	 *   2. Le bloc « Pas encore assez d'usage pour conclure » (`V-34:1293-1294`) est
-	 *      du BALISAGE STATIQUE du gel, et il cite « 34 recherches » et
+	 *   2. Le bloc « Pas encore assez d'usage pour conclure » (`V-34:1293-1294`)
+	 *      est du BALISAGE STATIQUE du gel, et il citait « 34 recherches » et
 	 *      « vers 300 recherches ». Ces deux nombres sont dans la maquette
 	 *      elle-même, pas dans un calcul : ils décrivent une instance
-	 *      hypothétique, celle qui n'a pas encore assez d'usage. Les dériver du
-	 *      corpus les changerait — le corpus, lui, en porte 793.
+	 *      hypothétique. SERVIS PAR LE PRODUIT, ils affirmaient deux faits sur
+	 *      l'instance de l'utilisateur — son âge et son volume de requêtes —, et
+	 *      c'est le SEUL bloc que cet écran montre aujourd'hui, puisque le
+	 *      vecteur demande l'état neutre. La phrase dit désormais la raison,
+	 *      qui est vraie et n'a pas de chiffre : aucune table ne journalise les
+	 *      recherches.
 	 *
 	 * AUCUN CLASSEMENT NOMINATIF N'EST FABRIQUÉ ICI NON PLUS. « Volumes de
 	 * contribution » est rendu SANS RANG — `ligneClassement(null, …)` au gel —
@@ -76,26 +82,13 @@
 	 * `src/vues/V-34.css` (P-6.3). Les `style=` reproduits figurent tous à
 	 * l'ensemble clos du gel de V-34 (ARB-016).
 	 */
-	import {
-		DOMAINES,
-		INSTANCE,
-		MESURES_7J,
-		MESURES_7J_PREC,
-		MOI,
-		MODIFICATIONS,
-		RECHERCHES,
-		RELATIONS,
-		REVISIONS,
-		UNIVERS,
-		type DemandeDeRevision,
-		type Domaine,
-		type EtatDInstance,
-		type IdentifiantNote,
-		type Note,
-		type Relation,
-		type RequeteDeRecherche,
-		type Univers,
-		type UtilisateurCourant
+	import type {
+		DemandeDeRevision,
+		Domaine,
+		IdentifiantNote,
+		Note,
+		Relation,
+		RequeteDeRecherche
 	} from '../../seeds/corpus';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
@@ -104,30 +97,42 @@
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur?: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-34')`. */
+		/** Les notes de l'instance, servies par le chargeur. */
 		notes: readonly Note[];
-		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
-		univers?: readonly Univers[];
-		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
-		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
-		instance?: EtatDInstance;
-		/** Les relations déclarées. Absente, la constante du jeu de semence. */
-		relations?: readonly Relation[];
+		/** Les domaines de l'instance — la santé documentaire est rendue par domaine. */
+		domaines: readonly Domaine[];
+		/** Les relations de l'instance — elles décident des notes sans lien entrant. */
+		relations: readonly Relation[];
 		/**
-		 * LES CINQ TABLES DE MESURE, TOUTES FACULTATIVES ET TOUTES PARTIELLES.
+		 * LES DEUX TABLES DE MESURE QUE LE PRODUIT PORTE, EXIGÉES.
 		 *
-		 * `Partial<Record<…>>` et non `Record<…>` : le type total exigerait les
-		 * trente-deux identifiants du corpus, ce qui empêcherait mécaniquement un
-		 * chargeur de passer un état partiel — ou vide. Or c'est exactement ce que
-		 * `P-02` demande de rendre possible : une donnée indisponible s'affiche
-		 * comme telle, elle ne se fabrique pas. Le défaut reste la table entière du
-		 * jeu de semence, donc le rendu ne bouge pas.
+		 * `Partial<Record<…>>` et non `Record<…>` : le type total exigerait un
+		 * identifiant par note, ce qui empêcherait mécaniquement un chargeur de
+		 * passer un état partiel — ou vide. Une note sans consultation compte pour
+		 * zéro, ce qui est un fait mesuré et non une valeur fabriquée.
+		 *
+		 * Elles retombaient sur `MESURES_7J` et `MESURES_7J_PREC` du jeu de
+		 * démonstration : une route qui les oubliait affichait les chiffres
+		 * d'adoption des maquettes. La table `consultations` existe et le chargeur
+		 * les compte ; exigées, une route qui les oublierait ne compilerait plus.
 		 */
-		mesures7j?: Partial<Record<IdentifiantNote, number>>;
-		mesures7jPrec?: Partial<Record<IdentifiantNote, number>>;
+		mesures7j: Partial<Record<IdentifiantNote, number>>;
+		mesures7jPrec: Partial<Record<IdentifiantNote, number>>;
+		/**
+		 * LES TROIS MESURES QUE LE PRODUIT NE PORTE PAS — ÉTAT VIDE PAR DÉFAUT.
+		 *
+		 * Aucune table ne compte les modifications par période, n'enregistre une
+		 * demande de révision, ni ne journalise une recherche
+		 * (`MESURES_DE_CONSOLE_SANS_CONTREPARTIE`). Le défaut était la table du
+		 * jeu de démonstration, et l'écran servait donc 793 recherches, ses trous
+		 * documentaires et ses demandes de révision comme des mesures de
+		 * l'instance. Le défaut est désormais VIDE, et vide, chaque bloc qui en
+		 * dérive ne se rend pas : « 0 » et « indisponible » sont deux
+		 * informations différentes, et le zéro muet est la plus traître des deux.
+		 *
+		 * Le jour où une table les porte, le chargeur les passe et les blocs
+		 * reviennent d'eux-mêmes.
+		 */
 		modifications?: Partial<Record<IdentifiantNote, number>>;
 		revisions?: readonly DemandeDeRevision[];
 		recherches?: readonly RequeteDeRecherche[];
@@ -162,24 +167,40 @@
 		}) => void;
 	}
 
+	/*
+	 * LE RAIL, LA BARRE ET LA VERSION NE PASSENT PLUS PAR ICI. Cette vue portait
+	 * `univers`, `compte` et `instance` sans jamais les lire : elle ne faisait
+	 * que les remettre à `CoquilleDeConsole`, qui retombait sur le jeu de
+	 * démonstration. La coquille lit désormais le contexte d'identité, seule
+	 * source, et les trois propriétés ont disparu des deux côtés. `domaines`
+	 * reste : la santé documentaire est rendue domaine par domaine.
+	 */
 	const {
 		vecteur,
 		notes,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		relations = RELATIONS,
-		mesures7j = MESURES_7J,
-		mesures7jPrec = MESURES_7J_PREC,
-		modifications = MODIFICATIONS,
-		revisions = REVISIONS,
-		recherches = RECHERCHES,
+		domaines,
+		relations,
+		mesures7j,
+		mesures7jPrec,
+		modifications = {},
+		revisions = [],
+		recherches = [],
 		onVoirLesNotes,
 		onOuvrirLaNote,
 		onTrou,
 		onOrpheline
 	}: Proprietes = $props();
+
+	/*
+	 * CE QUI SE TAIT QUAND LA MESURE N'EXISTE PAS. Trois tables sont vides tant
+	 * qu'aucune migration ne les porte ; les blocs qui en dérivent ne se rendent
+	 * alors pas du tout, plutôt que d'afficher des zéros qu'on lirait comme des
+	 * mesures. Le prédicat porte sur la SOURCE, jamais sur le résultat : zéro
+	 * trou documentaire mesuré sur un vrai journal est un fait, et se rend.
+	 */
+	const rechercheMesuree = $derived(recherches.length > 0);
+	const revisionsMesurees = $derived(revisions.length > 0);
+	const modificationsMesurees = $derived(Object.keys(modifications).length > 0);
 
 	const reglage = $derived(vecteur ?? {});
 	const donnees = $derived(
@@ -337,23 +358,36 @@
 		domaines
 			.map((dom) => {
 				const liste = notesDuDomaine(dom.nom);
+				/* DEUX ALERTES SUR QUATRE SE TAISENT SANS LEUR TABLE. « En attente de
+				   révision » et « opérationnels désynchronisés » se comptent sur des
+				   mesures que le produit ne porte pas ; leur zéro ne dirait pas
+				   « aucun », il dirait « rien ne le sait ». */
+				const alertes: readonly (readonly [number, string])[] = [
+					[liste.filter((n) => !n.revise).length, 'jamais vérifiées'],
+					...(revisionsMesurees
+						? [
+								[
+									revisions.filter((r) => liste.some((n) => n.id === r.id)).length,
+									'en attente de révision'
+								] as const
+							]
+						: []),
+					[liste.filter((n) => n.brouillon).length, 'brouillons'],
+					...(modificationsMesurees
+						? [
+								[
+									desynchronises.filter((x) => x.domaine === dom.nom).length,
+									'opérationnels désynchronisés'
+								] as const
+							]
+						: [])
+				];
 				return {
 					dom,
 					liste,
 					repartition: repartition(liste),
 					contributeurs: contributeurs(liste).length,
-					alertes: [
-						[liste.filter((n) => !n.revise).length, 'jamais vérifiées'],
-						[
-							revisions.filter((r) => liste.some((n) => n.id === r.id)).length,
-							'en attente de révision'
-						],
-						[liste.filter((n) => n.brouillon).length, 'brouillons'],
-						[
-							desynchronises.filter((x) => x.domaine === dom.nom).length,
-							'opérationnels désynchronisés'
-						]
-					] as const
+					alertes
 				};
 			})
 			.filter((s) => s.liste.length)
@@ -364,24 +398,32 @@
 		const a = sommeMesures(mesures7j);
 		const p = sommeMesures(mesures7jPrec);
 		const ecart = p ? Math.round(((a - p) / p) * 100) : 0;
-		return [
+		/* LA MESURE DES RECHERCHES DISPARAÎT DU BLOC TANT QU'AUCUN JOURNAL NE LA
+		   PORTE : « 0 recherches sur 30 jours, 0 par jour en moyenne » se lirait
+		   comme une instance que personne n'interroge. */
+		const lignes: readonly (readonly [string, string, string])[] = [
 			[
 				nb(a),
 				'consultations sur 7 jours',
 				`${ecart > 0 ? '+' : ''}${ecart} % contre la semaine précédente`
 			],
-			[
-				nb(taux.total),
-				'recherches sur 30 jours',
-				`${nb(Math.round(taux.total / 30))} par jour en moyenne`
-			],
+			...(rechercheMesuree
+				? [
+						[
+							nb(taux.total),
+							'recherches sur 30 jours',
+							`${nb(Math.round(taux.total / 30))} par jour en moyenne`
+						] as const
+					]
+				: []),
 			[
 				nb(notes.length),
 				'notes au total',
 				`${notes.filter((n) => n.visibilite === 'Publique').length} ouvertes au public`
 			],
 			[nb(contributeurs(notes).length), 'contributeurs actifs', 'au moins une note à leur nom']
-		] as const;
+		];
+		return lignes;
 	});
 
 	/** Les cinq notes les plus consultées, et l'échelle de leurs barres. */
@@ -427,15 +469,7 @@
 		><span class="cl__n">{valeur}{unite}</span
 	></div>{/if}{/snippet}
 
-<CoquilleDeConsole
-	section="analytique"
-	{notes}
-	{univers}
-	{domaines}
-	{compte}
-	{instance}
-	donnees={{ 'data-donnees': donnees }}
->
+<CoquilleDeConsole section="analytique" {notes} donnees={{ 'data-donnees': donnees }}>
 	{#snippet enfants()}
 		<TeteDeSection
 			titre="Analytique"
@@ -449,14 +483,24 @@
 		<div class="si-vide"
 			><div class="insuffisant"
 				><h2>Pas encore assez d'usage pour conclure</h2
-				><p>L'instance est en service depuis moins de deux semaines et le journal ne compte que 34 recherches. Des chiffres calculés sur si peu induiraient en erreur : un taux de recherche aboutie de 100 % sur trois requêtes ne veut rien dire. Cette section s'activera d'elle-même vers 300 recherches.</p
+				><p>Cette instance ne journalise aucune recherche : aucune table n'enregistre les requêtes posées à la base, et les indicateurs qui s'en déduisent — taux de recherche aboutie, trous documentaires — n'ont rien à compter. Un chiffre servi ici serait fabriqué. Cette section s'activera d'elle-même le jour où le journal existera.</p
 			></div
 		></div>
 
 		<div class="si-donnees">
-			<!-- ---------- Indicateur nord ---------- -->
-			<!-- prettier-ignore -->
-			<section class="nord"
+			<!--
+				L'INDICATEUR NORD ET LES TROUS DOCUMENTAIRES SE TAISENT SANS JOURNAL
+				DE RECHERCHE. Les deux blocs ne comptent QUE des requêtes, et aucune
+				table n'en enregistre : rendus sur une table vide, ils annonçaient un
+				taux de recherche aboutie de 0 % « sur 0 recherches ce mois-ci » et
+				zéro trou documentaire — deux chiffres qu'on lit comme des mesures.
+				Le jour où le journal existe, le chargeur le passe et les deux blocs
+				reviennent sans qu'une ligne bouge ici.
+			-->
+			{#if rechercheMesuree}
+				<!-- ---------- Indicateur nord ---------- -->
+				<!-- prettier-ignore -->
+				<section class="nord"
 				><div
 					><div class="nord__valeur"><span id="taux">{taux.taux}</span><span class="nord__unite">%</span></div
 				></div
@@ -471,9 +515,9 @@
 				></div
 			></section>
 
-			<!-- ---------- Trous documentaires ---------- -->
-			<!-- prettier-ignore -->
-			<section class="bloc-a"
+				<!-- ---------- Trous documentaires ---------- -->
+				<!-- prettier-ignore -->
+				<section class="bloc-a"
 				><div class="bloc-a__tete"
 					><div
 						><h2 class="bloc-a__nom">Trous documentaires</h2
@@ -494,6 +538,7 @@
 						><button class="btn btn--principal" style="white-space:nowrap" onclick={() => onTrou?.({ terme: r.terme, resultats: r.resultats })}>{r.resultats === 0 ? 'Écrire cette note' : 'Examiner les résultats'}</button
 					></div>{/each}</div
 			></section>
+			{/if}
 
 			<!-- ---------- Santé documentaire ---------- -->
 			<!-- prettier-ignore -->

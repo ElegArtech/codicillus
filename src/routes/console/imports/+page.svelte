@@ -76,11 +76,13 @@
 	);
 </script>
 
+<!--
+	NI RAIL, NI IDENTITÉ, NI VERSION : LA COQUILLE LES LIT AU CONTEXTE. Les
+	quatre propriétés ne servaient qu'à traverser la vue jusqu'à
+	`CoquilleDeConsole`, qui retombait sur `seeds/corpus.ts`.
+-->
 <Vue
 	notes={data.notes}
-	univers={data.univers}
-	domaines={data.domaines}
-	compte={data.compte}
 	journalImports={[]}
 	journalEnregistre={data.journalEnregistre}
 	onOuvrirLeDomaine={(domaine) => {
@@ -121,10 +123,13 @@
 
 	Aucune des vingt et une tables du schéma n'enregistre d'import : le service de
 	conversion n'existe pas et rien n'écrit de lot (`MESURES_DE_CONSOLE_SANS_CONTREPARTIE`,
-	entrée `JOURNAL_IMPORTS`). Le défaut de la vue est `JOURNAL_IMPORTS` du jeu de
-	semence — quatre lots datés, avec leurs auteurs et leurs décomptes. Servi ici,
-	c'est un journal d'imports qui n'ont jamais eu lieu : la valeur illustrative
-	que `P-02` proscrit, sur un écran de traçabilité.
+	entrée `JOURNAL_IMPORTS`). La vue retombait sur `JOURNAL_IMPORTS` du jeu de
+	démonstration — quatre lots datés, avec leurs auteurs et leurs décomptes —,
+	c'est-à-dire un journal d'imports qui n'ont jamais eu lieu : la valeur
+	illustrative que `P-02` proscrit, sur un écran de traçabilité. La propriété
+	est désormais EXIGÉE : ce `[]` n'est plus ce qui écarte le jeu, c'est la seule
+	valeur que cette route puisse servir, et une route qui l'oublierait ne
+	compilerait plus.
 
 	ET IL ANNONCE DÉSORMAIS SON VIDE — `journalEnregistre`, dérivé du recensement
 	par le chargeur. Le tableau ne se contente plus d'être vide : l'écran DIT que
