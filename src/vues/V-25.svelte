@@ -532,6 +532,14 @@
 	 * joint. Absente, la vue n'est pas branchée sur une base et retombe sur la
 	 * correspondance par nom du jeu de semence : le banc de comparaison ne bouge
 	 * pas.
+	 *
+	 * SANS ADRESSE, LE BOUTON N'EST PAS RENDU — il était rendu INERTE, et
+	 * `ARB-039` trace la frontière : « le critère est : l'inertie dépend-elle
+	 * d'un droit, ou d'un état que l'utilisateur peut changer lui-même ? ».
+	 * Ici elle dépend d'un droit et d'un module : l'utilisateur ne peut pas la
+	 * lever. C'est donc `P-09`, qui veut l'action absente, ni grisée ni masquée.
+	 * La route est seule à trancher — elle ne passe l'adresse que si la cible
+	 * s'ouvre —, et le rendu par défaut de la vue garde son bouton.
 	 */
 	const adresseDesNotesDuProfil = $derived.by(() => {
 		if (rangementDuProfil !== undefined) {
@@ -925,8 +933,7 @@
 					>{#if evenements.length === 0}<div class="encouragement"
 						><h3>Rien à afficher pour l'instant</h3
 						><p>Vos contributions apparaîtront ici dès la première. Le plus simple pour commencer : vérifier une note de votre domaine que vous connaissez déjà — cela prend une minute et rend service à tout le monde.</p
-						><button class="btn btn--principal" disabled={adresseDesNotesDuProfil === null} onclick={() => voirLesNotesDuDomaine()}>{`Voir les notes de ${profil?.domaine ?? ''}`}</button
-					></div>{:else}<ul class="flux"
+						>{#if adresseDesNotesDuProfil !== null}<button class="btn btn--principal" onclick={() => voirLesNotesDuDomaine()}>{`Voir les notes de ${profil?.domaine ?? ''}`}</button>{/if}</div>{:else}<ul class="flux"
 						>{#each evenements as ev, rang (rang)}<li data-type={ev.type}
 							><div class="flux__txt"
 								>{GESTES[ev.type] + ' '}{#if ev.cible}<a href={resolve('/notes/[identifiant]', { identifiant: ev.cible })}>{titreDe(ev.cible)}</a>{:else if ev.detail}{`— ${ev.detail}`}{/if}<span class="flux__quand">{relatif(ev.heures)}</span
