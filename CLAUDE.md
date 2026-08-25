@@ -69,16 +69,9 @@ corps si le pourquoi n'est pas évident.
 branchement applicatif, et il a été supprimé. La preuve qu'une chose marche est qu'elle marche dans
 un navigateur.
 
-**Brancher une vue**, quand `src/vues/` porte encore le contenu d'exemple en dur : déclare la
-propriété **requise**, remplace le contenu en dur par elle, passe la donnée depuis `+page.svelte`.
-Si la donnée peut légitimement manquer, son défaut est un **état vide explicite** — tableau vide,
-`null`, chaîne vide — et la vue rend son état vide.
-
-**Jamais une constante de `seeds/` comme valeur par défaut.** Une route qui oublie de passer la
-donnée sert alors le jeu de démonstration, et rien ne proteste : ni le compilateur, ni un test, ni
-l'écran. Quatre campagnes ont couru après les symptômes de cette seule phrase, qui disait le
-contraire. `eslint.config.js` interdit désormais d'importer une valeur de `seeds/` dans
-`src/vues/`, `src/routes/` et `src/lib/` ; les `import type` restent ouverts.
+**Brancher une vue**, quand `src/vues/` porte encore le contenu d'exemple en dur : déclare une
+propriété optionnelle dont le défaut est la constante de `seeds/corpus.ts`, remplace le contenu en
+dur par la propriété, passe la donnée depuis `+page.svelte`. Le rendu par défaut ne bouge pas.
 
 ---
 
