@@ -207,6 +207,20 @@
 		 */
 		profilDuCompte?: ProfilAffiche | null;
 		/**
+		 * LE RANGEMENT DU TITULAIRE — les deux IDENTIFIANTS d'adresse de son
+		 * domaine de rattachement, tels que la base les joint.
+		 *
+		 * C'est ce qui donne son adresse à « Voir les notes de … ». Elle ne se
+		 * dérive pas du nom affiché : `RG-M12-11` fige l'identifiant à la création
+		 * et le laisse stable ensuite, si bien qu'un domaine renommé s'adresse
+		 * toujours par son premier identifiant.
+		 *
+		 * Fournie à `null`, le titulaire n'a aucun rattachement et le bouton reste
+		 * inerte. Absente, la vue n'est pas branchée sur une base et cherche la
+		 * correspondance par nom dans `domaines` — le chemin du jeu de semence.
+		 */
+		rangementDuProfil?: { readonly univers: string; readonly domaine: string } | null;
+		/**
 		 * « Rester connecté sur cet appareil » — l'état de `sessions.souvenir` pour
 		 * la session courante. Absente, la case reste dans la position du gel.
 		 */
@@ -247,6 +261,7 @@
 		activite = ACTIVITE,
 		relations = RELATIONS,
 		profilDuCompte = null,
+		rangementDuProfil,
 		preferenceDeSession = false
 	}: Proprietes = $props();
 
@@ -502,25 +517,43 @@
 	}
 
 	/**
-	 * LE DOMAINE DU TITULAIRE, ET SON UNIVERS — l'un ne s'adresse pas sans
-	 * l'autre (`RG-STR-02` : un domaine ne s'identifie que dans son univers).
-	 * C'est ce qui donne son adresse à « Voir les notes de … », l'issue que le
-	 * gel propose au nouvel arrivant dont le flux d'activité est vide
-	 * (`V-25:2884`).
+	 * L'ADRESSE DE « VOIR LES NOTES DE … » — l'issue que le gel propose au nouvel
+	 * arrivant dont le flux d'activité est vide (`V-25:2884`).
+	 *
+	 * ELLE EST LUE, JAMAIS DÉRIVÉE DU NOM. Un domaine ne s'adresse que dans son
+	 * univers (`RG-STR-02`), et par les deux IDENTIFIANTS, qui ne suivent ni le
+	 * nom ni l'univers : `RG-M12-11` les fige à la création, si bien qu'un
+	 * domaine renommé garde le sien. Chercher le domaine du titulaire par son
+	 * nom d'affichage composait donc une adresse qui rend 404 dès le premier
+	 * renommage — et une adresse d'homonyme quand deux univers portaient le même
+	 * nom de domaine.
+	 *
+	 * `rangementDuProfil` porte les deux identifiants tels que la base les
+	 * joint. Absente, la vue n'est pas branchée sur une base et retombe sur la
+	 * correspondance par nom du jeu de semence : le banc de comparaison ne bouge
+	 * pas.
 	 */
-	const domaineDuProfil = $derived(domaines.find((d) => d.nom === profil?.domaine));
+	const adresseDesNotesDuProfil = $derived.by(() => {
+		if (rangementDuProfil !== undefined) {
+			return rangementDuProfil === null
+				? null
+				: adresseDesNotesDuDomaine(rangementDuProfil.univers, rangementDuProfil.domaine);
+		}
+		const duJeu = domaines.find((d) => d.nom === profil?.domaine);
+		return duJeu === undefined ? null : adresseDesNotesDuDomaine(duJeu.univers, duJeu.nom);
+	});
 
 	/**
 	 * L'ADRESSE VIENT DE LA FABRIQUE UNIQUE — `$lib/rangement/adresses`,
 	 * `ARB-001` —, et `svelte/no-navigation-without-resolve` ne sait pas la
 	 * vérifier : elle n'est pas un identifiant de route mais une chaîne dérivée
-	 * de deux noms. La règle est levée sur cette seule ligne, comme `V-24` la
-	 * lève pour les adresses de son rapport d'import.
+	 * de deux identifiants. La règle est levée sur cette seule ligne, comme
+	 * `V-24` la lève pour les adresses de son rapport d'import.
 	 */
 	function voirLesNotesDuDomaine(): void {
-		if (domaineDuProfil === undefined) return;
+		if (adresseDesNotesDuProfil === null) return;
 		/* eslint-disable-next-line svelte/no-navigation-without-resolve */
-		void goto(adresseDesNotesDuDomaine(domaineDuProfil.univers, domaineDuProfil.nom));
+		void goto(adresseDesNotesDuProfil);
 	}
 
 	/**
@@ -892,7 +925,7 @@
 					>{#if evenements.length === 0}<div class="encouragement"
 						><h3>Rien à afficher pour l'instant</h3
 						><p>Vos contributions apparaîtront ici dès la première. Le plus simple pour commencer : vérifier une note de votre domaine que vous connaissez déjà — cela prend une minute et rend service à tout le monde.</p
-						><button class="btn btn--principal" disabled={domaineDuProfil === undefined} onclick={() => voirLesNotesDuDomaine()}>{`Voir les notes de ${profil?.domaine ?? ''}`}</button
+						><button class="btn btn--principal" disabled={adresseDesNotesDuProfil === null} onclick={() => voirLesNotesDuDomaine()}>{`Voir les notes de ${profil?.domaine ?? ''}`}</button
 					></div>{:else}<ul class="flux"
 						>{#each evenements as ev, rang (rang)}<li data-type={ev.type}
 							><div class="flux__txt"

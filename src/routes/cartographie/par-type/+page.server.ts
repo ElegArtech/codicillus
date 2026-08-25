@@ -55,6 +55,7 @@
  * position que la planche ne porte pas.
  */
 import { basePartagee } from '$lib/base/acces';
+import { lireLesProprietesDeFiche, lireTypesDeFiche } from '$lib/donnees/lecture';
 import { PERIMETRE_DE_V20, perimetreDeLAdresse, valeurDeSelecteur } from '$lib/donnees/outils';
 import { ouvrirLAcces } from '$lib/donnees/rangement';
 import { lireLeGraphe } from '../lecture-du-graphe';
@@ -68,6 +69,23 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const perimetre = perimetreDeLAdresse(url.searchParams.get('perimetre'), PERIMETRE_DE_V20);
 
+	/**
+	 * LE PANNEAU DE DÉTAIL EST BRANCHÉ SUR LA BASE, ET IL LEVAIT.
+	 *
+	 * V-20 lisait `TYPES_FICHE` du jeu de semence au niveau de son module —
+	 * aucune propriété, donc aucun chargeur ne pouvait la corriger. Deux
+	 * conséquences, mesurées : les champs annoncés étaient ceux du jeu, avec
+	 * leurs valeurs d'exemple présentées comme celles de la note choisie ; et un
+	 * type de fiche absent de la constante — « Équipement réseau », que
+	 * `base:peupler` pose, comme en pose la console — rendait la lecture
+	 * indéfinie et faisait LEVER `.slice()` au clic sur le nœud.
+	 *
+	 * LES PROPRIÉTÉS NE SONT LUES QUE POUR LES FICHES DU PÉRIMÈTRE. `notes` sort
+	 * déjà de `lireNotesLisibles()` : la restriction de droit est faite, et la
+	 * requête ne demande que les identifiants qui la portent.
+	 */
+	const fiches = notes.filter((n) => n.typeFiche !== undefined).map((n) => n.id);
+
 	return {
 		/* Le défaut de la planche : « Moment — aucun type choisi ». */
 		vecteur: null,
@@ -80,6 +98,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		   `/cartographie` : aucun nœud des deux gels ne sait écrire l'origine. */
 		relations,
 		typesRelation,
-		relationsTechniques
+		relationsTechniques,
+		/* Le référentiel des types de fiche, tel que la table le porte. */
+		typesFiche: await lireTypesDeFiche(base),
+		/* Ce que CHAQUE fiche a mis dans ses champs — `notes.proprietes_typees`. */
+		proprietesDeFiche: await lireLesProprietesDeFiche(base, fiches)
 	};
 };

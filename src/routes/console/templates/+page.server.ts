@@ -9,13 +9,17 @@
  * `src/lib/droits/resolution.ts` et rend `INTROUVABLE` ; le seul `error(404, MESSAGE_INTROUVABLE)`
  * du fichier est SANS MESSAGE (`ADR-007`).
  *
- * CE QUE CE CHARGEUR NE FAIT PAS. Il ne touche pas `src/vues/V-31.svelte`, et
- * ne peut donc pas corriger ce que la vue lit du jeu de semence : `TEMPLATES`
- * et `TYPES_NOTE` y sont importés au niveau du module (`V-31:59`). Et même s'ils
- * entraient par propriété, une colonne manquerait : `pnpm verif:donnees` compte
- * `Template.utilisations` parmi ses LACUNES — « c'est un compteur d'EMPLOI, qui
- * se calcule sur les notes créées depuis un template, et rien n'enregistre cette
- * provenance ». Écart déclaré au rapport du lot.
+ * LES TEMPLATES AFFICHÉS SONT CEUX DE LA BASE — l'écart est refermé pour
+ * l'essentiel. Ce commentaire disait : « la vue lit `TEMPLATES` et `TYPES_NOTE`
+ * du jeu de semence, le chargeur ne peut pas la corriger ». Les deux sont
+ * désormais des propriétés de `V-31`, de défaut les constantes du jeu, et ce
+ * chargeur les sert depuis les tables.
+ *
+ * CE QUI RESTE EN LACUNE, ET CE N'EST PAS UN OUBLI : `Template.utilisations`
+ * n'a aucune colonne — « c'est un compteur d'EMPLOI, qui se calcule sur les
+ * notes créées depuis un template, et rien n'enregistre cette provenance »
+ * (`lecture.ts`, à `lireTemplates()`). Servi depuis la base, le champ est donc
+ * ABSENT, et la vue rend l'état indisponible plutôt qu'un zéro qui mentirait.
  *
  * `vecteur: null` demande l'état au repos.
  */

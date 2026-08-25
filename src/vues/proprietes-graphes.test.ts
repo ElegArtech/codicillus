@@ -41,9 +41,12 @@ import {
 	UNIVERS,
 	corpusPourVue,
 	noteParIdentifiant,
+	type ChampDeFiche,
 	type EtatDInstance,
+	type TypeDeChamp,
 	type UtilisateurCourant
 } from '../../seeds/corpus';
+import { TYPES_DE_FICHE as TYPES_DE_FICHE_PEUPLES } from '../../seeds/demonstration';
 
 /* ── Le harnais ───────────────────────────────────────────────────────────
    Un seul serveur pour tout le fichier : le monter coûte quelques secondes,
@@ -130,6 +133,36 @@ const TYPES_MARQUES = {
 	heberge: { sortant: 'HÉBERGE-MARQUÉ', entrant: 'HÉBERGÉ-MARQUÉ' },
 	depend: { sortant: 'DÉPEND-MARQUÉ', entrant: 'DONT-DÉPENDENT-MARQUÉ' }
 };
+
+/* ── Le référentiel de fiche, TEL QUE LA BASE LE REND ─────────────────────
+   Il n'est pas écrit ici, et c'est tout le contrôle : un cas qui fabriquerait
+   son référentiel ne prouverait rien de celui d'une instance réelle. Il est
+   dérivé de `seeds/demonstration.ts`, les lignes mêmes que `base:peupler`
+   insère et que `lireTypesDeFiche()` relit — quatre types dont « Équipement
+   réseau », que la constante `TYPES_FICHE` du jeu de rendu ne connaît pas, et
+   des champs qui ne portent NI les mêmes clés NI les mêmes noms.
+
+   LA SEULE CONVERSION EST CELLE DU LECTEUR : la colonne énumérée dit `booleen`,
+   `lireTypesDeFiche()` rend `interrupteur`. Clés, noms, exemples et valeurs sont
+   repris tels quels. */
+const TYPE_DE_CHAMP_LU: Record<string, TypeDeChamp> = {
+	texte: 'texte',
+	nombre: 'nombre',
+	liste: 'liste',
+	booleen: 'interrupteur'
+};
+
+const REFERENTIEL_PEUPLE: Record<string, readonly ChampDeFiche[]> = Object.fromEntries(
+	TYPES_DE_FICHE_PEUPLES.map((t) => [
+		t.nom,
+		t.champs.map((c) => ({ ...c, type: TYPE_DE_CHAMP_LU[c.type] ?? 'texte' }))
+	])
+);
+
+/** Le même référentiel, dont le type de la fiche observée a été RETIRÉ. */
+const REFERENTIEL_SANS_SERVEUR: Record<string, readonly ChampDeFiche[]> = Object.fromEntries(
+	Object.entries(REFERENTIEL_PEUPLE).filter(([nom]) => nom !== 'Serveur')
+);
 
 /** Le nombre d'occurrences d'un motif dans le balisage rendu. */
 function compter(html: string, motif: RegExp): number {
@@ -301,6 +334,54 @@ describe('V-20 — cartographie par type maître', () => {
 		expect(compter(body, /data-maitre="/g)).toBe(2);
 		expect(temoin).not.toContain('DONT-DÉPENDENT-MARQUÉ');
 		expect(body).toContain('DONT-DÉPENDENT-MARQUÉ');
+	});
+
+	/* ── LE PANNEAU DE DÉTAIL D'UNE FICHE ─────────────────────────────────
+	   Le nœud choisi est `n-pg-prod-01`, une fiche de type « Serveur » du corpus
+	   de la vue ; l'adresse le désigne, comme le chargeur le fait. */
+	const SUR_UNE_FICHE = {
+		vecteur: null,
+		notes,
+		perimetreDemande: 'global|',
+		typeMaitreDemande: 'Serveur',
+		centreDemande: 'n-pg-prod-01'
+	} as const;
+
+	it('rend les champs du référentiel reçu, et non ceux du jeu de rendu', async () => {
+		const temoin = await v20({ ...SUR_UNE_FICHE });
+		expect(temoin).toContain('Adresse IP');
+
+		const body = await v20({ ...SUR_UNE_FICHE, typesFiche: REFERENTIEL_PEUPLE });
+		expect(body).toContain('Nom DNS');
+		expect(body).not.toContain('Adresse IP');
+	});
+
+	it('un type absent du référentiel reçu rend un état neutre, sans lever', async () => {
+		/* LE DÉFAUT RÉPARÉ : la vue lisait le référentiel du jeu de semence au
+		   niveau de son module et indexait sans garde. Un type de fiche que ce
+		   référentiel-là ne porte pas — créé en console, ou simplement postérieur
+		   au jeu — faisait LEVER l'accès au clic sur le nœud. */
+		const body = await v20({ ...SUR_UNE_FICHE, typesFiche: REFERENTIEL_SANS_SERVEUR });
+		expect(body).toContain('Aucune propriété au référentiel.');
+		expect(body).not.toContain('Nom DNS');
+	});
+
+	it('les valeurs servies décident seules, et l’exemple du référentiel s’efface', async () => {
+		/* SERVIES — fût-ce vides, ce que rend la lecture quand aucune fiche ne
+		   porte de propriété —, elles sont la seule source de valeur. Le champ
+		   reste annoncé, sa valeur devient le tiret : un exemple de référentiel
+		   affiché sous l'intitulé « Propriétés » d'une note réelle est une valeur
+		   inventée. */
+		const temoin = await v20({ ...SUR_UNE_FICHE, typesFiche: REFERENTIEL_PEUPLE });
+		expect(temoin).toContain('pg-prod-01.interne');
+
+		const body = await v20({
+			...SUR_UNE_FICHE,
+			typesFiche: REFERENTIEL_PEUPLE,
+			proprietesDeFiche: {}
+		});
+		expect(body).toContain('Nom DNS');
+		expect(body).not.toContain('pg-prod-01.interne');
 	});
 });
 
