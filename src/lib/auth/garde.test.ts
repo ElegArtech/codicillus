@@ -10,13 +10,15 @@
 import { describe, expect, it } from 'vitest';
 import {
 	CIBLE_APRES_DECONNEXION,
+	CIBLE_DE_CHANGEMENT_DE_MOT_DE_PASSE,
 	MOTIF,
 	REGIMES,
 	adresseDeConnexion,
 	arriveeDepuisMotif,
 	cibleApresConnexion,
 	regimeDe,
-	suiteInterne
+	suiteInterne,
+	versLeChangementDeMotDePasse
 } from './garde';
 
 const CAS_DE_REGIME: readonly { readonly chemin: string; readonly attendu: string }[] = [
@@ -147,5 +149,49 @@ describe('?motif= → les trois positions de la planche V-05 (:286)', () => {
 	it('une valeur inconnue vaut absence — la planche n’a que trois positions', () => {
 		expect(arriveeDepuisMotif('autre-chose')).toBe('directe');
 		expect(arriveeDepuisMotif('')).toBe('directe');
+	});
+});
+
+/**
+ * LA GARDE DU MOT DE PASSE POSÉ PAR L'ADMINISTRATION.
+ *
+ * LES CHEMINS SONT PRODUITS PAR UNE `URL`, JAMAIS ÉCRITS À LA MAIN. C'est ce que
+ * `src/hooks.server.ts` passe à la fonction — la propriété de chemin de
+ * `event.url` —, et un chemin recopié à la main partagerait avec la fonction
+ * l'hypothèse qu'on veut justement éprouver : que la requête arrive sans sa
+ * chaîne de recherche, et déjà normalisée.
+ */
+function cheminServi(adresse: string): string {
+	return new URL(adresse, 'https://interne.test').pathname;
+}
+
+describe('versLeChangementDeMotDePasse — ce qui passe, et ce qui est renvoyé', () => {
+	it('laisse passer le profil, ses actions et ses données', () => {
+		expect(versLeChangementDeMotDePasse(cheminServi('/mon-profil'))).toBe(false);
+		expect(versLeChangementDeMotDePasse(cheminServi('/mon-profil?onglet=securite'))).toBe(false);
+		expect(versLeChangementDeMotDePasse(cheminServi('/mon-profil/donnees.json'))).toBe(false);
+	});
+
+	it('laisse toujours partir — RG-ACC-02', () => {
+		expect(versLeChangementDeMotDePasse(cheminServi('/deconnexion'))).toBe(false);
+	});
+
+	it("renvoie tout le reste, l'espace public compris", () => {
+		for (const adresse of [
+			'/',
+			'/recherche?q=serveur',
+			'/console/comptes',
+			'/notes/restaurer-une-sauvegarde-postgresql',
+			'/univers/production/infrastructure',
+			'/importer'
+		]) {
+			expect(versLeChangementDeMotDePasse(cheminServi(adresse))).toBe(true);
+		}
+	});
+
+	it('mène à un chemin que la garde laisse passer — aucune boucle', () => {
+		expect(versLeChangementDeMotDePasse(cheminServi(CIBLE_DE_CHANGEMENT_DE_MOT_DE_PASSE))).toBe(
+			false
+		);
 	});
 });
