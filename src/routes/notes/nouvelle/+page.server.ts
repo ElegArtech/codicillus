@@ -85,6 +85,7 @@ import {
 } from '$lib/donnees/edition';
 import { lireSeuils } from '$lib/donnees/lecture';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
+import { MOTIF_DE_PROPRIETE_OBLIGATOIRE } from '$lib/edition/gestes';
 import { adresseDeNote } from '$lib/rangement/adresses';
 import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
@@ -167,6 +168,18 @@ export const actions: Actions = {
 		const resolution = await resoudreLaCible(base, lue.saisie);
 		if (resolution.sort === 'fiche-introuvable') {
 			return fail(400, { motif: 'type de fiche introuvable' });
+		}
+		/* UNE PROPRIÉTÉ OBLIGATOIRE SANS VALEUR PASSE PAR LA MÊME PORTE, et pour
+		   les mêmes raisons : la note n'est pas en cause, le brouillon reste, et
+		   le rédacteur peut corriger sur place. Le refus NOMME ce qui manque —
+		   `manquements` pour la phrase, les clés pour le foyer, `BRIEF-VUES.md:973`
+		   demandant le signalement à l'endroit du champ. */
+		if (resolution.sort === 'proprietes-manquantes') {
+			return fail(400, {
+				motif: MOTIF_DE_PROPRIETE_OBLIGATOIRE,
+				manquements: resolution.manquantes.map((p) => p.nom),
+				proprietesManquantes: resolution.manquantes.map((p) => p.cle)
+			});
 		}
 		if (resolution.sort === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		const cible = resolution.cible;

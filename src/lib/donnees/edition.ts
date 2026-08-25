@@ -123,7 +123,12 @@ import {
 	type ContexteDeLecture
 } from './lecture';
 import { resoudreLeChemin, SEPARATEUR_DE_CHEMIN, type LigneDeDossier } from './rangement';
-import { proprietesSoumises, retenirLesProprietes } from './creation';
+import {
+	proprietesObligatoiresManquantes,
+	proprietesSoumises,
+	retenirLesProprietes,
+	type ProprieteManquante
+} from './creation';
 import type { ChampDeFiche, Note, Template, TypeDeFiche, TypeDeNote } from '../../../seeds/corpus';
 import type { NoteAffichee } from '../lecture/note-de-demonstration';
 
@@ -831,7 +836,20 @@ export type IssueDeModification =
 	 * note simple là où l'utilisateur a choisi une fiche, sans qu'aucun écran ne
 	 * le dise.
 	 */
-	| { readonly sort: 'fiche-introuvable' };
+	| { readonly sort: 'fiche-introuvable' }
+	/**
+	 * QUAND L'OBLIGATION MORD, ET LA SOURCE GELÉE LE TRANCHE.
+	 *
+	 * `mockups/V-29:3308` : « Propriétés rendues obligatoires : les notes
+	 * existantes qui n'ont pas de valeur ne seront pas bloquées, mais la valeur
+	 * sera demandée à la PROCHAINE MODIFICATION. » Rien n'invalide donc une note
+	 * au repos — aucune passe, aucun refus en lecture ; l'exigence naît au
+	 * moment où on l'enregistre, et c'est ici.
+	 */
+	| {
+			readonly sort: 'proprietes-manquantes';
+			readonly manquantes: readonly ProprieteManquante[];
+	  };
 
 /**
  * LE DOSSIER QU'UN CHEMIN AFFICHÉ DÉSIGNE — fonction PURE.
@@ -922,26 +940,52 @@ async function destinationDuRangement(
  * définitions de « propriété reconnue », et la divergence ne se verrait qu'au
  * panneau de propriétés de la cartographie, sur les seules notes modifiées.
  */
+type FicheDeLaModification =
+	| {
+			readonly sort: 'fiche';
+			readonly typeDeFicheId: string | null;
+			readonly proprietes: unknown;
+	  }
+	| { readonly sort: 'introuvable' }
+	| { readonly sort: 'manquantes'; readonly manquantes: readonly ProprieteManquante[] };
+
 async function ficheDeLaModification(
 	base: Base,
 	demande: FicheSoumise
-): Promise<{ readonly typeDeFicheId: string | null; readonly proprietes: unknown } | null> {
-	if (demande.type === null) return { typeDeFicheId: null, proprietes: null };
+): Promise<FicheDeLaModification> {
+	if (demande.type === null) return { sort: 'fiche', typeDeFicheId: null, proprietes: null };
 	const [type] = await base
 		.select({ id: typesDeFiche.id })
 		.from(typesDeFiche)
 		.where(eq(typesDeFiche.nom, demande.type))
 		.limit(1);
-	if (type === undefined) return null;
-	const clesConnues = await base
-		.select({ cle: champsDeTypeDeFiche.cle })
+	if (type === undefined) return { sort: 'introuvable' };
+	const champs = await base
+		.select({
+			cle: champsDeTypeDeFiche.cle,
+			nom: champsDeTypeDeFiche.nom,
+			obligatoire: champsDeTypeDeFiche.obligatoire
+		})
 		.from(champsDeTypeDeFiche)
-		.where(eq(champsDeTypeDeFiche.typeDeFicheId, type.id));
+		.where(eq(champsDeTypeDeFiche.typeDeFicheId, type.id))
+		/* LE TRI N'EST PAS UN AGRÉMENT, IL ACCORDE DEUX ÉCRANS. `lireTypesDeFiche()`
+		   (`./lecture.ts`) trie par `typesDeFiche.ordre, champsDeTypeDeFiche.ordre` :
+		   c'est dans CET ordre que l'éditeur peint les champs. Sans le même tri ici,
+		   la liste des manquantes serait rendue dans l'ordre où la base répond, et le
+		   rédacteur lirait ses champs dans un ordre et ses refus dans un autre. */
+		.orderBy(champsDeTypeDeFiche.ordre);
 	const retenues = retenirLesProprietes(
 		demande.proprietes,
-		clesConnues.map((c) => c.cle)
+		champs.map((c) => c.cle)
 	);
+	/* LE CONTRÔLE EST CELUI DE LA CRÉATION, ET C'EST LA MÊME FONCTION — pour la
+	   raison qui vaut déjà pour `retenirLesProprietes()` : deux définitions de
+	   « propriété renseignée » divergeraient, et la divergence ne se verrait que
+	   sur les notes passées par l'un des deux écrans. */
+	const manquantes = proprietesObligatoiresManquantes(champs, retenues);
+	if (manquantes.length > 0) return { sort: 'manquantes', manquantes };
 	return {
+		sort: 'fiche',
 		typeDeFicheId: type.id,
 		proprietes: Object.keys(retenues).length === 0 ? null : retenues
 	};
@@ -1206,8 +1250,17 @@ export async function enregistrerLaNote(
 	   derrière lui un titre déjà écrit. */
 	let fiche: { readonly typeDeFicheId: string | null; readonly proprietes: unknown } | null = null;
 	if (modification.fiche !== undefined) {
-		fiche = await ficheDeLaModification(base, modification.fiche);
-		if (fiche === null) return { trouve: true, ressource: { sort: 'fiche-introuvable' } };
+		const resolue = await ficheDeLaModification(base, modification.fiche);
+		if (resolue.sort === 'introuvable') {
+			return { trouve: true, ressource: { sort: 'fiche-introuvable' } };
+		}
+		if (resolue.sort === 'manquantes') {
+			return {
+				trouve: true,
+				ressource: { sort: 'proprietes-manquantes', manquantes: resolue.manquantes }
+			};
+		}
+		fiche = { typeDeFicheId: resolue.typeDeFicheId, proprietes: resolue.proprietes };
 	}
 
 	const avant: EtatEnBase = {

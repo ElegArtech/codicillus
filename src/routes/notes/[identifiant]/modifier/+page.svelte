@@ -43,6 +43,7 @@
 	import Vue from '../../../../vues/V-17.svelte';
 	import '../../../../vues/V-17.css';
 	import { page } from '$app/state';
+	import { enhance } from '$app/forms';
 	import { cablerLEditeur } from '$lib/cablage/formulaires';
 	import { monterLEditeur } from '$lib/edition/editeur-client';
 	import {
@@ -137,7 +138,15 @@
 	});
 </script>
 
-<form method="POST" bind:this={formulaire} style="display:contents">
+<!-- LE REFUS NE DOIT PAS EMPORTER LE BROUILLON — mesuré le 25/08/2026.
+     Sans amélioration progressive, la soumission fait une navigation complète :
+     la réponse 400 réaffiche l'écran NEUF, et le titre, le corps, les
+     étiquettes, le type de fiche et ses valeurs sont perdus. `peindreLeRefusDEdition()`
+     n'avait alors plus de champ où se poser, et le refus d'une propriété
+     obligatoire ne pouvait pas être « signalé à l'endroit du champ »
+     (`BRIEF-VUES.md:973`) : le champ n'existait plus. Avec elle, la soumission
+     part en arrière-plan, le document reste, et le refus se peint dessus. -->
+<form method="POST" use:enhance bind:this={formulaire} style="display:contents">
 	<Vue
 		domaines={page.data.domaines}
 		universDuCompte={data.noteModifiee.univers}

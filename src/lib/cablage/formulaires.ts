@@ -74,6 +74,11 @@
  * dit ce qu'il faudrait pour le combler.
  */
 
+/* LE SEUL IMPORT DE CE MODULE, ET IL EST DE TYPE PUR — voir
+   `ChampDeFicheAuFormulaire` : il ne fait entrer aucune ligne de code, il POSE
+   LE LIEN qu'aucun compilateur ne pouvait voir sans lui. */
+import type { ChampDeFiche } from '../../../seeds/corpus';
+
 /** Le séparateur de chemin du corpus — `SEPARATEUR_DE_CHEMIN`, `rangement.ts:111`. */
 const SEPARATEUR = ' › ';
 
@@ -277,19 +282,91 @@ export const DECOCHE = 'non';
 /**
  * LE SCHÉMA D'UN CHAMP DE FICHE, tel que le référentiel de l'instance le sert.
  *
+ * IL N'EST PLUS RECOPIÉ, IL EST DÉRIVÉ — et c'est tout le correctif.
+ *
  * La forme est celle de `ChampDeFiche` (`seeds/corpus.ts`), que
- * `lireTypesDeFiche()` remplit depuis `champs_de_type_de_fiche`. Elle est
- * redéclarée ICI en structure minimale plutôt qu'importée du jeu de semence :
- * ce module ne connaît ni le corpus de démonstration, ni ses trois noms de type
- * (`TypeDeFiche` est une union fermée qu'une instance réelle déborde).
+ * `lireTypesDeFiche()` (`../donnees/lecture.ts`) remplit depuis
+ * `champs_de_type_de_fiche`. Ce module a une seule raison de ne pas la
+ * reprendre telle quelle : il ne connaît pas les noms de type du jeu —
+ * `TypeDeChamp` y est une union fermée qu'une instance réelle déborde — et il
+ * lit donc `type` en chaîne. UN SEUL membre est élargi ; tous les autres sont
+ * pris à la source, quels qu'ils soient et quel que soit leur nombre.
+ *
+ * CE QUE LA COPIE MANUELLE A COÛTÉ, ET POURQUOI UNE ASSERTION N'Y SUFFIT PAS.
+ * Le 25/08/2026 à 17:02:22, trois colonnes sont posées sur
+ * `champs_de_type_de_fiche` — `aide`, `defaut`, `obligatoire` ; à 17:13:45,
+ * cette forme est écrite à la main sur l'état d'AVANT. L'objet d'exécution
+ * portait les trois clés, le TYPE les rendait invisibles, et `pnpm check`
+ * restait vert. Une assertion d'assignabilité — `ChampDeFiche extends …` —
+ * n'aurait RIEN VU : un sur-ensemble structurel est assignable au
+ * sous-ensemble, et l'amputation passe donc en silence dans ce sens-là comme
+ * dans l'autre. Mesuré, pas déduit. Seule la dérivation ferme le trou, parce
+ * qu'elle ne laisse plus rien à recopier : une colonne ajoutée à la source
+ * arrive ici sans geste, et une colonne ôtée ou renommée fait rougir les
+ * lignes qui la lisent.
+ *
+ * Les trois membres que la console écrit gardent leur sens à la source :
+ * `aide` est le texte montré SOUS le contrôle (`mockups/V-29:3138`), `defaut`
+ * la valeur pré-posée quand le schéma est fraîchement choisi, `obligatoire` la
+ * case dont `mockups/V-29:3153` dit « La note ne pourra pas être enregistrée
+ * sans cette valeur ».
  */
-export interface ChampDeFicheAuFormulaire {
-	readonly cle: string;
-	readonly nom: string;
-	readonly type: string;
-	readonly exemple?: string | undefined;
-	readonly valeurs?: readonly string[] | undefined;
-}
+export type ChampDeFicheAuFormulaire = {
+	readonly [Membre in keyof ChampDeFiche]: Membre extends 'type' ? string : ChampDeFiche[Membre];
+};
+
+/** La marque d'obligation du gel — `V-17:899`, `<span class="oblig">`. */
+const MARQUE_D_OBLIGATION = '*';
+
+/**
+ * LE PRÉFIXE DES BLOCS DE REFUS D'UNE PROPRIÉTÉ DE FICHE.
+ *
+ * Le gel ne porte que deux blocs `.champ__erreur` — `#erreur-titre` et
+ * `#erreur-dossier` (`V-17:553`, `:934`) — parce qu'il ne connaît que des
+ * champs fixes. Les propriétés d'une fiche, elles, sont administrables : leur
+ * bloc naît avec le contrôle, sous la même clé que lui (`fiche-{cle}` porte le
+ * contrôle, `erreur-fiche-{cle}` porte son refus), et c'est ce qui permet à
+ * `peindreLeRefusDEdition()` de poser le refus À L'ENDROIT DU CHAMP —
+ * `BRIEF-VUES.md:973`, « signalé à l'endroit du champ, pas seulement en haut de
+ * page ».
+ */
+export const PREFIXE_D_ERREUR_DE_PROPRIETE = 'erreur-fiche-';
+
+/** Le préfixe de l'identifiant que porte le CONTRÔLE d'une propriété de fiche. */
+export const PREFIXE_DE_CONTROLE_DE_PROPRIETE = 'fiche-';
+
+/**
+ * CE QUE LE BLOC DE REFUS D'UNE PROPRIÉTÉ OBLIGATOIRE DIT — une seule écriture.
+ *
+ * Le bloc naît ICI, garni de sa phrase et de son pictogramme, comme les blocs
+ * du gel. `peindreLeRefusDEdition()` (`../edition/gestes.ts`) ne réécrit jamais
+ * le texte d'un bloc qui porte déjà un enfant — c'est ainsi qu'il respecte le
+ * pictogramme — et il lit donc CETTE constante pour le témoin de la barre
+ * d'état. Deux littéraux auraient divergé au premier remaniement de phrase.
+ *
+ * La phrase dit ce qui ne va pas ET ce qu'il faut faire — `V-41`, « L'erreur
+ * est toujours accompagnée de son motif, jamais d'un simple contour rouge ».
+ */
+export const PHRASE_D_OBLIGATION =
+	'Le type de fiche exige une valeur pour cette propriété. Renseignez-la, puis enregistrez.';
+
+/**
+ * D'OÙ VIENNENT LES VALEURS QUE LA ZONE DES PROPRIÉTÉS REND.
+ *
+ * `choix` — le rédacteur vient de désigner un type de fiche : aucune valeur
+ * n'existe encore, et la valeur par défaut du référentiel se pose.
+ *
+ * `reprise` — ce sont les propriétés D'UNE NOTE DÉJÀ ÉCRITE. Elles seules
+ * garnissent les contrôles : une propriété que la note ne porte pas reste VIDE,
+ * fût-elle dotée d'un défaut au schéma. `mockups/V-29:3308` — une note
+ * existante n'est pas bloquée, mais « la valeur sera demandée à la prochaine
+ * modification » ; la demander suppose de ne pas y répondre à sa place.
+ *
+ * LA DISTINCTION N'EST PAS « CRÉATION CONTRE MODIFICATION » : changer le type
+ * de fiche d'une note existante est un `choix`, et le schéma qu'on découvre
+ * s'ouvre alors avec ses défauts, comme sur une note neuve.
+ */
+export type OrigineDesProprietes = 'choix' | 'reprise';
 
 /** Le référentiel entier, indexé par le NOM du type de fiche. */
 export type ReferentielDeFiches = Readonly<Record<string, readonly ChampDeFicheAuFormulaire[]>>;
@@ -316,12 +393,51 @@ export interface FicheDeDepart {
  * Les valeurs REPRISES sont posées au moment du rendu : c'est le seul moment où
  * le contrôle et sa valeur sont connus ensemble, et une seconde passe
  * dupliquerait la connaissance du type de contrôle.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE QUE LA CONSOLE ÉCRIT, ET QUE CE RENDU DOIT PORTER
+ *
+ * L'administrateur saisit trois choses de plus sur chaque propriété (V-29) :
+ * une AIDE, une VALEUR PAR DÉFAUT, et le caractère OBLIGATOIRE. Les trois
+ * descendaient jusqu'ici sans être lues, si bien que l'aperçu de la console —
+ * « C'est ce que verra le rédacteur dans l'éditeur de note » — décrivait un
+ * écran qui n'existait pas.
+ *
+ *   la marque `*`      `.champ__label .oblig`, socle.css:420 — V-17:899
+ *   l'aide             `.champ__aide`, socle.css:421 — V-17:926
+ *   le refus du champ  `.champ__erreur`, socle.css:440 — V-17:553, :934
+ *
+ * Aucune classe n'est inventée : les quatre existent au gel et sont stylées.
+ *
+ * LA VALEUR PAR DÉFAUT NE VAUT QUE SUR UN SCHÉMA FRAÎCHEMENT CHOISI, et
+ * `reprise === undefined` NE SUFFIT PAS À LE DIRE. C'est le point qui manquait :
+ * les deux écrans d'écriture appellent le même câblage, et une note rouverte ne
+ * porte en base QUE les clés qu'on lui a écrites. Une propriété ajoutée au type
+ * après elle y est donc `undefined` — indiscernable d'un champ qu'on vient de
+ * choisir. Le défaut du schéma se serait pré-posé dans l'éditeur d'une note
+ * existante, `proprietesDeFicheSaisies()` l'aurait soumis, et une valeur que
+ * personne n'a saisie serait entrée en base sous couvert d'un refus qui ne se
+ * serait jamais déclenché. C'est exactement ce que `mockups/V-29:3308` interdit
+ * — « la valeur sera DEMANDÉE à la prochaine modification ».
+ *
+ * D'où le cinquième argument : l'ORIGINE des valeurs, que seul l'appelant sait.
+ *
+ * ⚠ CE QUE LE DÉFAUT ENTRAÎNE SUR UN CHOIX, ET C'EST VOULU :
+ * `proprietesDeFicheSaisies()` relève les contrôles, pas les frappes — un
+ * défaut pré-posé et non touché est donc SOUMIS comme une valeur. C'est
+ * exactement ce que l'aperçu de la console promet en le montrant pré-rempli.
+ *
+ * L'OBLIGATION NE SE MARQUE PAS SUR UN INTERRUPTEUR, et ce n'est pas un oubli :
+ * une case porte toujours l'un de ses deux mots (`COCHE` / `DECOCHE`), jamais
+ * rien. Une valeur qui ne peut pas manquer ne peut pas être exigée ; peindre
+ * `*` dessus promettrait un refus qui n'arrivera jamais.
  */
 export function rendreLesProprietesDeFiche(
 	zone: Element,
 	champs: readonly ChampDeFicheAuFormulaire[],
 	valeurs: Readonly<Record<string, string>>,
-	surSaisie: () => void
+	surSaisie: () => void,
+	origine: OrigineDesProprietes
 ): void {
 	const document = zone.ownerDocument;
 	zone.replaceChildren();
@@ -329,6 +445,10 @@ export function rendreLesProprietesDeFiche(
 		const bloc = document.createElement('div');
 		bloc.className = 'champ';
 		const reprise = valeurs[champ.cle];
+		/* LE DÉFAUT DU SCHÉMA N'EXISTE QUE SUR UN CHOIX — voir l'en-tête. Sur une
+		   reprise il est mis de côté, et un champ que la note ne porte pas s'ouvre
+		   vide : c'est ce qui fait que la valeur est DEMANDÉE. */
+		const defaut = origine === 'choix' ? champ.defaut : undefined;
 		if (champ.type === 'interrupteur') {
 			const enveloppe = document.createElement('label');
 			enveloppe.className = 'interrupteur';
@@ -336,7 +456,7 @@ export function rendreLesProprietesDeFiche(
 			case_.type = 'checkbox';
 			case_.dataset['cle'] = champ.cle;
 			case_.dataset['genre'] = champ.type;
-			case_.checked = reprise === COCHE;
+			case_.checked = reprise === undefined ? defaut === COCHE : reprise === COCHE;
 			const piste = document.createElement('span');
 			piste.className = 'interrupteur__piste';
 			const intitule = document.createElement('span');
@@ -344,12 +464,19 @@ export function rendreLesProprietesDeFiche(
 			enveloppe.append(case_, piste, intitule);
 			case_.addEventListener('change', surSaisie);
 			bloc.appendChild(enveloppe);
+			poserLAide(bloc, champ);
 			zone.appendChild(bloc);
 			continue;
 		}
 		const intitule = document.createElement('label');
 		intitule.className = 'champ__label';
 		intitule.textContent = champ.nom;
+		if (champ.obligatoire === true) {
+			const marque = document.createElement('span');
+			marque.className = 'oblig';
+			marque.textContent = MARQUE_D_OBLIGATION;
+			intitule.appendChild(marque);
+		}
 		bloc.appendChild(intitule);
 		if (champ.type === 'liste') {
 			const selecteur = document.createElement('select');
@@ -366,7 +493,8 @@ export function rendreLesProprietesDeFiche(
 				option.textContent = valeur;
 				selecteur.appendChild(option);
 			}
-			if (reprise !== undefined) selecteur.value = reprise;
+			const posee = reprise ?? defaut;
+			if (posee !== undefined) selecteur.value = posee;
 			selecteur.addEventListener('change', surSaisie);
 			bloc.appendChild(selecteur);
 		} else {
@@ -376,7 +504,8 @@ export function rendreLesProprietesDeFiche(
 			saisie.placeholder = champ.exemple ?? '';
 			saisie.dataset['cle'] = champ.cle;
 			saisie.dataset['genre'] = champ.type;
-			if (reprise !== undefined) saisie.value = reprise;
+			const posee = reprise ?? defaut;
+			if (posee !== undefined) saisie.value = posee;
 			saisie.addEventListener('input', surSaisie);
 			bloc.appendChild(saisie);
 		}
@@ -386,12 +515,78 @@ export function rendreLesProprietesDeFiche(
 		   pour la forme du préfixe, `champs_cle_par_type_unique` pour l'unicité). */
 		const controle = bloc.querySelector('select, input');
 		if (controle !== null) {
-			const id = 'fiche-' + champ.cle;
+			const id = PREFIXE_DE_CONTROLE_DE_PROPRIETE + champ.cle;
 			controle.id = id;
 			intitule.setAttribute('for', id);
+			/* L'EXIGENCE EST PORTÉE PAR LE CONTRÔLE LUI-MÊME, pas seulement par la
+			   marque : `required` la donne au navigateur, `aria-required` la donne
+			   à la synthèse vocale, et le refus serveur la tient quoi qu'il
+			   arrive — les trois disent la même chose, aucune ne remplace les
+			   autres. */
+			if (champ.obligatoire === true) {
+				controle.setAttribute('required', '');
+				controle.setAttribute('aria-required', 'true');
+			}
+		}
+		poserLAide(bloc, champ);
+		if (champ.obligatoire === true) {
+			const refus = document.createElement('div');
+			refus.className = 'champ__erreur';
+			refus.id = PREFIXE_D_ERREUR_DE_PROPRIETE + champ.cle;
+			refus.hidden = true;
+			refus.appendChild(pictogrammeDErreur(document));
+			refus.appendChild(document.createTextNode(PHRASE_D_OBLIGATION));
+			bloc.appendChild(refus);
 		}
 		zone.appendChild(bloc);
 	}
+}
+
+/** L'espace de nommage des balises graphiques — un `createElement` nu rendrait
+    un nœud de balisage ordinaire, invisible à l'écran. */
+const ESPACE_GRAPHIQUE = 'http://www.w3.org/2000/svg';
+
+/**
+ * LE PICTOGRAMME D'ERREUR DE CHAMP, à l'identique de tous ceux du dépôt.
+ *
+ * `V-41` présente le composant : « L'erreur est TOUJOURS accompagnée de son
+ * motif, jamais d'un simple contour rouge », et tous les `.champ__erreur` du
+ * produit portent ce même cercle barré avant leur phrase — `V-17:553`, `:934`,
+ * `V-23:331`, `V-32:883`, `V-33:383`. Un bloc de refus né à l'exécution n'a
+ * aucune raison d'en être privé : il occuperait la même place en disant moins.
+ *
+ * Les mesures et la garde de disposition sont celles du gel, au chiffre près.
+ */
+function pictogrammeDErreur(document: Document): Element {
+	const dessin = document.createElementNS(ESPACE_GRAPHIQUE, 'svg');
+	for (const [nom, valeur] of [
+		['width', '13'],
+		['height', '13'],
+		['viewBox', '0 0 16 16'],
+		['fill', 'none'],
+		['stroke', 'currentColor'],
+		['stroke-width', '1.8'],
+		['style', 'flex:none;margin-top:1px']
+	]) {
+		if (nom !== undefined && valeur !== undefined) dessin.setAttribute(nom, valeur);
+	}
+	const barre = document.createElementNS(ESPACE_GRAPHIQUE, 'path');
+	barre.setAttribute('d', 'M8 4.5v4M8 11.2v.3');
+	const cercle = document.createElementNS(ESPACE_GRAPHIQUE, 'circle');
+	cercle.setAttribute('cx', '8');
+	cercle.setAttribute('cy', '8');
+	cercle.setAttribute('r', '6.2');
+	dessin.append(barre, cercle);
+	return dessin;
+}
+
+/** L'aide à la saisie sous son contrôle, quand la console en a écrit une. */
+function poserLAide(bloc: Element, champ: ChampDeFicheAuFormulaire): void {
+	if (champ.aide === undefined || champ.aide === '') return;
+	const aide = bloc.ownerDocument.createElement('span');
+	aide.className = 'champ__aide';
+	aide.textContent = champ.aide;
+	bloc.appendChild(aide);
 }
 
 /**
@@ -519,6 +714,27 @@ export function cablerLEditeur(
 		if (!bouton.hasAttribute('type')) bouton.type = 'button';
 	}
 
+	/* 1 bis. LE CONTRÔLE NATIF DU NAVIGATEUR EST ÉTEINT SUR TOUT LE FORMULAIRE.
+	   CE GESTE N'EST DEMANDÉ PAR AUCUNE SOURCE : c'est un vide comblé, et il
+	   faut le dire pour ce qu'il est.
+
+	   Il est la conséquence du `required` posé sur les propriétés obligatoires.
+	   `requestSubmit()` fait passer le formulaire par la validation native —
+	   MESURÉ : une propriété obligatoire vide AVALE la soumission, sans requête,
+	   sans code HTTP, et sans que le refus du produit ait la moindre chance de
+	   se peindre. La bulle native n'est ni dans la langue du produit, ni à la
+	   place que `BRIEF-VUES.md:973` désigne, ne survit pas au premier clic
+	   ailleurs, et ne sait pas nommer PLUSIEURS propriétés manquantes.
+
+	   CE QU'IL COÛTE, ET IL FAUT LE SAVOIR : `required` n'est plus qu'une
+	   déclaration — le navigateur ne l'applique plus, l'assistance technique la
+	   lit encore, et c'est le serveur qui refuse. Et l'extinction porte sur le
+	   formulaire ENTIER : toute contrainte native qu'on y poserait un jour —
+	   `min`, `max`, `pattern`, la saisie fautive d'un `type="number"` — serait
+	   éteinte avec elle. La refermer supposerait un refus du produit pour chaque
+	   contrainte qu'on voudrait rendre. */
+	formulaire.noValidate = true;
+
 	/* 2. Le groupe de dossiers ne peut pas entrer en collision — geste 2. */
 	for (const radio of Array.from(
 		formulaire.querySelectorAll<HTMLInputElement>('#m-dossier input[name="dossier"]')
@@ -595,17 +811,23 @@ export function cablerLEditeur(
 	const fichesCablees = selecteurDeFiche !== null && referentiel !== undefined;
 	if (fichesCablees && zoneDesProprietes !== null) {
 		const marquerModifie = options.surSaisie ?? ((): void => undefined);
-		const rendre = (type: string, valeurs: Readonly<Record<string, string>>): void => {
+		const rendre = (
+			type: string,
+			valeurs: Readonly<Record<string, string>>,
+			origine: OrigineDesProprietes
+		): void => {
 			const champs = referentiel[type];
 			if (champs === undefined) {
 				zoneDesProprietes.replaceChildren();
 				return;
 			}
-			rendreLesProprietesDeFiche(zoneDesProprietes, champs, valeurs, marquerModifie);
+			rendreLesProprietesDeFiche(zoneDesProprietes, champs, valeurs, marquerModifie, origine);
 		};
 		ecouter(selecteurDeFiche, 'change', () => {
 			const choisi = selecteurDeFiche.value;
-			rendre(choisi, {});
+			/* UN TYPE QUE LE RÉDACTEUR VIENT DE DÉSIGNER EST UN CHOIX, même sur une
+			   note existante : le schéma s'ouvre neuf, avec ses défauts. */
+			rendre(choisi, {}, 'choix');
 			marquerModifie();
 			if (referentiel[choisi] === undefined) return;
 			const selecteurDeType = noeud<HTMLSelectElement>(formulaire, '#m-type');
@@ -623,7 +845,12 @@ export function cablerLEditeur(
 		const depart = options.ficheDeDepart ?? null;
 		if (depart !== null && referentiel[depart.type] !== undefined) {
 			selecteurDeFiche.value = depart.type;
-			rendre(depart.type, depart.proprietes);
+			/* UNE REPRISE, ET LE MOT COMPTE : `depart.proprietes` ne porte que les
+			   clés que la note a en base. Une propriété ajoutée au type après elle y
+			   est absente, et doit s'ouvrir VIDE pour que sa valeur soit demandée —
+			   `mockups/V-29:3308`. Un défaut de schéma posé ici répondrait à la place
+			   du rédacteur, et le refus serveur ne se déclencherait jamais. */
+			rendre(depart.type, depart.proprietes, 'reprise');
 		}
 	}
 
