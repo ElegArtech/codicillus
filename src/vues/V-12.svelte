@@ -10,10 +10,11 @@
 	 * (ARB-001) et la clause de désambiguïsation de `RG-M03-02` reste **sans
 	 * objet** (E-09) : elle ne doit jamais être implémentée.
 	 *
-	 * LES LIENS RESTENT CEUX DU GEL — `href="#"`. ARB-013 devait permettre
-	 * l'adresse réelle ; mesuré par P-9, le filtre de le module de capture du banc
-	 * ne retire pas les lignes `/url:` de l'instantané ARIA, et l'instrument est
-	 * en écriture humaine seule. Le constat est reconduit ici, pas rouvert.
+	 * CHAQUE LIGNE DE LA LISTE PORTE L'ADRESSE RÉELLE DE SA NOTE — `ligneCarte`
+	 * la compose par `adresseDeNote()`, la fabrique unique de `docs/routes.md`.
+	 * ARB-013 est donc tenu. Le gel écrivait `href="#"` faute de serveur ; le
+	 * constat de P-9 qui le reconduisait porte sur l'instrument de comparaison,
+	 * pas sur le produit, et il ne vaut plus pour cette vue.
 	 *
 	 * SEPT ÉTATS — `verif/scenarios/V-12.json`. Trois axes, vecteur complet :
 	 * domaine × arrivée × état. Deux doublons déclarés (`arr-tout` et
