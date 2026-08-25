@@ -108,6 +108,11 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { adresseDeDomaine } from '$lib/rangement/adresses';
 	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
+	import {
+		SCENARIO_LIVRE,
+		scenarioEstLivre,
+		type ScenarioDImport
+	} from '$lib/donnees/scenarios-d-import';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — deux contrôles de planche. */
@@ -216,6 +221,14 @@
 
 	/** Ce que le dépôt règle, et que les deux appels transportent. */
 	interface ReglagesDuDepot {
+		/**
+		 * LE SCÉNARIO RETENU — il ne partait NULLE PART, et c'est ce qui rendait
+		 * la promesse dangereuse : un lot choisi « domaine complet » arrivait au
+		 * serveur sans rien qui le distingue, et se rangeait dans le domaine
+		 * proposé par défaut. Il voyage désormais, et l'action le refuse quand il
+		 * n'est pas celui que l'import exécute.
+		 */
+		readonly scenario: string;
 		readonly domaine: string;
 		readonly simulation: boolean;
 	}
@@ -329,23 +342,31 @@
 	 * l'étape 1, aucun scénario n'est retenu et aucune vignette n'est enfoncée.
 	 */
 	const scenarioChoisi = $derived<string | null>(
-		vivant ? scenarioLocal : etape >= 2 ? 'notes' : null
+		vivant ? scenarioLocal : etape >= 2 ? SCENARIO_LIVRE : null
 	);
 	const depose = $derived(vivant ? fichiers.length > 0 : etape >= 3);
 
-	/* ── Les trois scénarios ──────────────────────────────────────────────────
+	/* ── Le scénario offert ───────────────────────────────────────────────────
 	   `SCENARIOS` (`V-24:2871`). Ils appartiennent à la maquette, pas au corpus,
 	   et sont transcrits au caractère près. L'illustration est décomposée en
 	   segments plutôt que gardée en chaîne de balisage : le gel l'injecte par
 	   `innerHTML`, ce qui demanderait ici un `{@html}` que rien n'oblige à
-	   employer. */
+	   employer.
+
+	   LE GEL EN DESSINE TROIS, ET L'IMPORT N'EN EXÉCUTE QU'UN. Les deux autres
+	   n'étaient pas seulement inertes : leur choix ne partait nulle part, et le
+	   lot atterrissait dans le domaine proposé par défaut — un domaine que
+	   l'utilisateur n'avait pas choisi, alors qu'il croyait en créer un. Ce qui
+	   est offert ici est donc ce que `scenarioEstLivre()` reconnaît, et rien de
+	   plus ; ce qui manque aux deux autres est nommé, exigence par exigence,
+	   dans `$lib/donnees/scenarios-d-import.ts`. */
 
 	interface SegmentIllustre {
 		readonly gras: boolean;
 		readonly texte: string;
 	}
 	interface Scenario {
-		readonly id: string;
+		readonly id: ScenarioDImport;
 		readonly nom: string;
 		readonly txt: string;
 		readonly illus: readonly SegmentIllustre[];
@@ -353,7 +374,7 @@
 
 	const SCENARIOS: readonly Scenario[] = [
 		{
-			id: 'notes',
+			id: SCENARIO_LIVRE,
 			nom: 'Importer des notes dans un domaine existant',
 			txt: "Vos fichiers rejoignent un domaine déjà en place. L'arborescence des dossiers de votre disque devient l'arborescence des dossiers du domaine, à l'identique.",
 			illus: [
@@ -366,41 +387,30 @@
 				{ gras: true, texte: 'Sauvegardes' },
 				{ gras: false, texte: '\n         └ Restauration' }
 			]
-		},
-		{
-			id: 'domaine',
-			nom: 'Importer un domaine complet',
-			txt: "Le dossier de premier niveau devient un nouveau domaine, et tout ce qu'il contient s'y range. À choisir quand vous reprenez un périmètre entier d'un coup.",
-			illus: [
-				{ gras: false, texte: 'Exploitation/\n  Sauvegardes/\n    Restauration.docx\n\n→ ' },
-				{ gras: true, texte: 'Exploitation' },
-				{ gras: false, texte: ' (domaine)\n   └ ' },
-				{ gras: true, texte: 'Sauvegardes' },
-				{ gras: false, texte: '\n      └ Restauration' }
-			]
-		},
-		{
-			id: 'prepare',
-			nom: 'Importer un corpus préparé',
-			txt: 'Pour des fichiers déjà munis de leurs métadonnées — titre, étiquettes, relations. Les liens entre documents sont résolus automatiquement, et relancer le même import ne crée pas de doublons.',
-			illus: [
-				{
-					gras: false,
-					texte:
-						'--- \n titre: Restauration\n etiquettes: [barman]\n voir: [pg-prod-01]\n---\n\n→ note + '
-				},
-				{ gras: true, texte: 'liens résolus' }
-			]
 		}
 	];
 
-	const scenarioCourant = $derived(SCENARIOS.find((s) => s.id === scenarioChoisi) ?? null);
+	/**
+	 * CE QUI EST OFFERT — le filtre est ici, et il est PORTÉ PAR LA SOURCE.
+	 *
+	 * Écrire une liste d'une entrée aurait tenu, et se serait périmée en
+	 * silence le jour où un lot livrerait `UC-M12-02` : le filtre lit le module
+	 * qui déclare ce que l'import fait, de sorte qu'y ajouter un scénario livré
+	 * suffit à le rendre offert.
+	 */
+	const SCENARIOS_OFFERTS = $derived(SCENARIOS.filter((s) => scenarioEstLivre(s.id)));
+
+	const scenarioCourant = $derived(SCENARIOS_OFFERTS.find((s) => s.id === scenarioChoisi) ?? null);
 
 	/* ── Étape 2 — le dépôt ───────────────────────────────────────────────────
-	   `rendreDepot()` (`V-24:2918`). Trois réglages, un par scénario, et un seul
-	   visible à la fois. La liste des formats admis et les options de domaine ne
-	   sont peuplées QUE lorsque l'étape 2 a été traversée : aux étapes 1, 3 et 4
-	   elles restent vides, et le gel le montre. */
+	   `rendreDepot()` (`V-24:2918`). Le gel y pose trois réglages, un par
+	   scénario, et n'en montre qu'un à la fois. Il n'en reste que deux ici : le
+	   champ du nom de domaine est parti avec le scénario qui le portait, et la
+	   case de simulation garde la sienne — son scénario n'étant plus offert,
+	   elle ne l'est plus non plus. Un seul réglage est donc visible, celui du
+	   domaine de destination. La liste des formats admis et les options de
+	   domaine ne sont peuplées QUE lorsque l'étape 2 a été traversée : aux
+	   étapes 1, 3 et 4 elles restent vides, et le gel le montre. */
 
 	/** Les cinq familles annoncées comme admises — `V-24:2929`. */
 	const FORMATS_ADMIS: readonly string[] = [
@@ -481,9 +491,10 @@
 	/**
 	 * LES REFUS, MIS EN FRANÇAIS — même régime que les motifs.
 	 *
-	 * TROIS CODES VIENNENT DE LA ROUTE, LE QUATRIÈME NON. Cible inconnue, cible
-	 * interdite, lot vide : ce sont les trois seuls motifs que les actions
-	 * rendent, chacun avant la moindre écriture, et aucun n'était visible — le
+	 * QUATRE CODES VIENNENT DE LA ROUTE, LE CINQUIÈME NON. Cible inconnue, cible
+	 * interdite, lot vide, scénario non livré : ce sont les quatre seuls motifs
+	 * que les actions rendent, chacun avant la moindre écriture. Les trois
+	 * premiers n'étaient pas visibles — le
 	 * parcours restait où il était, sans un mot. `erreur-serveur` est le repli de
 	 * l'écran lui-même, posé quand la réponse ne porte aucun motif lisible : il
 	 * ne sait donc PAS ce que le serveur a fait du lot, et sa phrase se garde de
@@ -496,6 +507,8 @@
 		'sans-droit-sur-la-cible':
 			"Vous n'avez pas le droit d'écrire dans ce domaine. Rien n'a été déposé.",
 		'lot-vide': 'Aucun fichier n’est parti. Reprenez le dépôt et relancez.',
+		'scenario-non-livre':
+			'Ce scénario d’import n’est pas exécuté par cette instance. Rien n’a été déposé : seul l’import de notes dans un domaine existant est disponible.',
 		'erreur-serveur':
 			"Le serveur n'a pas rendu de réponse lisible. Ce qu'il a fait du lot n'est pas connu d'ici : rouvrez le domaine de destination avant de relancer."
 	};
@@ -834,10 +847,17 @@
 	/** Le domaine effectivement visé — celui qu'on a choisi, sinon le proposé. */
 	const domaineCible = $derived(domaineRetenu || (domaineParDefaut ?? compte.domaine));
 
-	const reglages = $derived({ domaine: domaineCible, simulation: simulationRetenue });
+	const reglages = $derived({
+		scenario: scenarioChoisi ?? SCENARIO_LIVRE,
+		domaine: domaineCible,
+		simulation: simulationRetenue
+	});
 
 	function choisirScenario(id: string): void {
 		if (!vivant) return;
+		/* Une vignette non offerte n'est pas rendue ; la garde est ici pour que le
+		   choix ne puisse pas retenir autre chose que ce que l'import exécute. */
+		if (!scenarioEstLivre(id)) return;
 		scenarioLocal = id;
 	}
 
@@ -1032,12 +1052,12 @@
 		<section class="etape" data-etape="1" data-active={etape === 1 ? 'oui' : 'non'}>
 			<h1 class="etape__titre">Que voulez-vous reprendre&nbsp;?</h1>
 			<p class="etape__sous">
-				Trois manières de faire entrer l'existant. Choisissez celle qui décrit votre situation — la
-				structure de vos fichiers sera reprise telle quelle.
+				Une manière de faire entrer l'existant est disponible sur cette instance. Confirmez qu'elle
+				décrit votre situation — la structure de vos fichiers sera reprise telle quelle.
 			</p>
 			<!-- prettier-ignore -->
 			<div class="scenarios" id="scenarios" role="group" aria-label="Scénario d'import"
-				>{#each SCENARIOS as s (s.id)}{@render vignetteDeScenario(s)}{/each}</div
+				>{#each SCENARIOS_OFFERTS as s (s.id)}{@render vignetteDeScenario(s)}{/each}</div
 			>
 		</section>
 
@@ -1060,7 +1080,14 @@
 						/></svg
 					>
 				</div>
-				<h3>Glissez un dossier ou une archive ici</h3>
+				<!--
+					« Glissez un dossier OU UNE ARCHIVE ici » au gel. Une archive
+					déposée est ÉCARTÉE — le classement range le format `zip` en voie
+					`ecarte` —, avec son motif visible à l'aperçu. L'invitation ne la
+					nomme donc plus : les formats admis sont ceux du bandeau
+					ci-dessous, et eux seuls.
+				-->
+				<h3>Glissez un dossier ici</h3>
 				<p>
 					L'arborescence est conservée. Vous pouvez aussi parcourir vos fichiers si vous préférez.
 				</p>
@@ -1089,7 +1116,7 @@
 			</div>
 
 			<div class="reglages-depot">
-				<div class="champ" id="champ-domaine" hidden={scenarioChoisi !== 'notes'}>
+				<div class="champ" id="champ-domaine" hidden={scenarioChoisi !== SCENARIO_LIVRE}>
 					<label class="champ__label" for="domaine-cible"
 						>Domaine de destination <span class="oblig">*</span></label
 					>
@@ -1100,21 +1127,31 @@
 						>{/each}{/if}</select
 					>
 				</div>
-				<div class="champ" id="champ-nom-domaine" hidden={scenarioChoisi !== 'domaine'}>
-					<label class="champ__label" for="nom-domaine"
-						>Nom du domaine à créer <span class="oblig">*</span></label
-					>
-					<input
-						class="saisie"
-						type="text"
-						id="nom-domaine"
-						style="max-width:380px"
-						placeholder="Exploitation"
-					/>
-					<span class="champ__aide"
-						>Le dossier de premier niveau du lot en fournira le nom si vous le laissez vide.</span
-					>
-				</div>
+				<!--
+					`#champ-nom-domaine` DU GEL N'EST PLUS RENDU, et c'est le cœur du
+					défaut : « Nom du domaine à créer * » était un champ OBLIGATOIRE
+					que personne ne lisait — ni l'envoi, ni l'action —, sous un
+					scénario que l'import n'exécute pas. Le laisser demandait une
+					saisie pour rien et laissait croire à la création d'un domaine
+					pendant que le lot se rangeait ailleurs.
+				-->
+				<!--
+					LA CASE « SIMULATION » APPARTIENT À UN SCÉNARIO QUE L'IMPORT
+					N'EXÉCUTE PAS, ET SA GARDE NE BOUGE PAS. Le gel ne l'offre que sous
+					« corpus préparé » — `UC-M12-03`, que `SCENARIOS_NON_LIVRES`
+					déclare non livré —, et l'aide qu'elle porte recommande justement
+					de vérifier un corpus préparé avant de l'engager. La rebrancher sur
+					le scénario livré servirait cette recommandation sous le SEUL
+					scénario offert : l'écran nommerait de nouveau une fonction que le
+					produit ne tient pas, à l'endroit même que ce lot répare. Le
+					scénario n'étant plus offert, la case ne l'est pas davantage, et
+					rien de ce qu'elle porte n'atteint l'écran.
+
+					CE QUE CE LOT NE TRANCHE PAS : ce qu'il reste à offrir dans ces
+					réglages une fois les deux scénarios non livrés retirés. Offrir la
+					simulation au scénario livré serait un geste d'interface qu'aucune
+					exigence ne demande, et le gel ne le dessine pas.
+				-->
 				<label class="case" id="champ-simulation" hidden={scenarioChoisi !== 'prepare'}>
 					<input
 						type="checkbox"
@@ -1300,7 +1337,7 @@
 						>{#each rapport.renvoisNonResolus as r (r.chemin)}<div class="ign"
 							><span class="ign__marque">lien</span
 							><span class="ign__nom">{r.chemin}</span
-							><span class="ign__motif">{`renvoie à « ${r.renvois.join(' », « ')} », absente du lot. Le lien a été conservé en attente : il se résoudra tout seul si la note est créée plus tard.`}</span></div
+							><span class="ign__motif">{`renvoie à « ${r.renvois.join(' », « ')} », absente du lot. Le renvoi est consigné ici et nulle part ailleurs : aucun lien n’est mis en attente, et la relation reste à créer à la main.`}</span></div
 						>{/each}</div
 					></section
 				>{/if}<section class="section-rapport"

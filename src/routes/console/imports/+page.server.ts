@@ -20,12 +20,19 @@
  * lacune est recensée — `JOURNAL_IMPORTS` et `LOT_IMPORT` dans
  * `MESURES_DE_CONSOLE_SANS_CONTREPARTIE` — et rien n'est simulé.
  *
- * ET LA VUE N'A AUCUNE PRISE POUR LE DIRE. `src/vues/V-35.svelte` importe le
- * journal au niveau du module (`V-35:80`) : la seule propriété que ce chargeur
- * pourrait porter est `etat`, qui NOMME la zone que le banc découpe et ne change
- * rien au rendu de trois de ses quatre états. Elle n'est donc pas passée — poser
- * une clé d'état pour un banc qui ne passe pas par ici n'aurait aucun effet, et
- * l'écran reste celui du jeu de semence. Écart déclaré au rapport du lot.
+ * ET LA VUE A DÉSORMAIS UNE PRISE POUR LE DIRE. Elle n'en avait aucune, et
+ * l'écran servait donc un tableau vide sous deux phrases du gel qui affirment le
+ * contraire — « les rapports restent consultables indéfiniment », « chaque lot
+ * conserve son rapport ». Un tableau vide n'affirme rien de faux ; SOUS CES DEUX
+ * PHRASES, il dit « aucun import n'a eu lieu » là où la vérité est « rien n'est
+ * conservé ». Ce chargeur passe `journalEnregistre`, DÉRIVÉ du recensement par
+ * `journalDImportsEnregistre()` — jamais décidé ici —, et l'écran dit ce qui est
+ * vrai. C'est le geste qu'`etatDesDonnees()` fait déjà pour V-34.
+ *
+ * `RG-M12-09` N'EST PAS TENUE POUR AUTANT, et il faut le dire net : ni le
+ * stockage de l'entrée de journal, ni sa reprise par le flux d'activité de
+ * l'accueil. La table reste un lot à mandater, avec son écran de lot et son
+ * plafond d'erreurs PAR LOT — la règle interdisant toute purge dans le temps.
  *
  * `/console/imports/{lot}` N'EST PAS MONTÉE, ET C'EST DÉLIBÉRÉ. Elle est
  * déclarée par `docs/routes.md` §3.6, mais aucun lot n'existe en base : la
@@ -37,6 +44,7 @@ import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import {
 	contexteDeRequete,
+	journalDImportsEnregistre,
 	lireLesDesignationsDeDomaine,
 	resoudreLaConsole
 } from '$lib/donnees/consoles';
@@ -53,6 +61,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		univers: acces.ressource.univers,
 		domaines: acces.ressource.domaines,
 		compte: acces.ressource.compte,
+		/* Le journal est-il enregistré ? Le recensement le sait ; l'écran le dit. */
+		journalEnregistre: journalDImportsEnregistre(),
 		/* La correspondance nom d'affichage → forme canonique, pour « Ouvrir le
 		   domaine » du rapport de lot — la même table qu'à `/console/exports`. */
 		designations: await lireLesDesignationsDeDomaine(base)
