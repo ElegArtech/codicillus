@@ -94,7 +94,7 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import NoteDeDemonstration from '$lib/lecture/NoteDeDemonstration.svelte';
 	import SommaireDeLaNote from '$lib/lecture/SommaireDeLaNote.svelte';
-	import { NOTE } from '$lib/lecture/note-de-demonstration';
+	import { NOTE, type LectureAffichee } from '$lib/lecture/note-de-demonstration';
 
 	/**
 	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
@@ -143,6 +143,34 @@
 		 */
 		note?: Note;
 		/**
+		 * LA NOTE TELLE QU'ELLE S'AFFICHE — l'identité, les deux corps rendus, le
+		 * sommaire, le dernier contrôle, les dates et les mesures de consultation.
+		 *
+		 * SANS ELLE, L'HISTORIQUE SERVAIT L'ARTICLE DE LA NOTE DE DÉMONSTRATION.
+		 * Le bloc partagé retombe, faute de note affichée, sur `n-restaurer-pg` :
+		 * `/notes/{identifiant}?version` rendait donc, POUR N'IMPORTE QUELLE
+		 * NOTE, le titre « Restaurer une sauvegarde PostgreSQL depuis Barman »,
+		 * son rangement, son auteur, ses 412 consultations, le sommaire de son
+		 * corps et un cartouche « Vérifié par Karim Belhadj » — sous un fil
+		 * d'Ariane qui, lui, nommait la vraie note. Ses deux liens internes
+		 * menaient à une note qui rend 404 sur une instance réelle.
+		 *
+		 * `note` NE LA REMPLACE PAS, ET NE FAIT PAS DOUBLE EMPLOI : `note` porte
+		 * le rangement du fil, le titre du panneau et la clé de lecture des
+		 * versions — l'enveloppe de l'écran, qui est celle de LA NOTE ;
+		 * `affichee` porte l'ARTICLE, c'est-à-dire l'ÉTAT CONSULTÉ.
+		 *
+		 * LES DEUX PEUVENT DIVERGER, ET C'EST TOUT L'OBJET DE CET ÉCRAN.
+		 * `?version={n}` désignant une version antérieure, la route sert ici le
+		 * titre et les corps que cette version a CAPTURÉS : sans cela, le bandeau
+		 * annonçait « vous consultez un état antérieur » au-dessus du texte le
+		 * plus récent, et « Restaurer cette version » écrasait la note avec un
+		 * contenu jamais montré (`RG-M18-05`).
+		 *
+		 * ABSENTE, la transcription figée du gel, à l'identique.
+		 */
+		affichee?: LectureAffichee;
+		/**
 		 * COMPARER DEUX VERSIONS. Absente — le rendu d'une planche —, les cases
 		 * restent inertes et « Comparer » désactivé, comme au gel. Passée par la
 		 * route, la sélection s'arme et le bouton navigue.
@@ -173,6 +201,7 @@
 		versions: historique = VERSIONS,
 		retentionVersions = RETENTION_VERSIONS,
 		note = undefined,
+		affichee = undefined,
 		versionAffichee = null,
 		onComparer
 	}: Proprietes = $props();
@@ -238,11 +267,24 @@
 			: []
 	);
 
+	/**
+	 * LE TITRE DE L’ÉTAT AFFICHÉ — celui que l’article porte en `<h1>`, et qui
+	 * n’est pas toujours celui de la note.
+	 *
+	 * `versions.titre` EST CAPTURÉ PARCE QUE LE TITRE EST RENOMMABLE
+	 * (`RG-M07-02`). Consulter la version 3 d’une note renommée depuis, c’est
+	 * consulter un état qui portait un AUTRE titre : le fil d’Ariane se ferme sur
+	 * celui-là, comme il se ferme partout ailleurs sur le titre de l’article
+	 * qu’il coiffe. Le panneau, lui, garde `titre` — il nomme LA NOTE dont
+	 * l’historique est ouvert, pas l’état consulté.
+	 */
+	const titreAffiche = $derived(affichee ? affichee.note.titre : titre);
+
 	/** Le fil d'Ariane — identique à celui de V-14 : l'historique n'a pas de chemin propre. */
 	const fil = $derived(
 		note
-			? ['Accueil', note.univers, note.domaine, ...segments, note.titre]
-			: ['Accueil', 'Production', 'Infrastructure', 'Exploitation', 'Sauvegardes', titre]
+			? ['Accueil', note.univers, note.domaine, ...segments, titreAffiche]
+			: ['Accueil', 'Production', 'Infrastructure', 'Exploitation', 'Sauvegardes', titreAffiche]
 	);
 	const courant = $derived(
 		note ? [note.domaine, ...segments] : ['Infrastructure', 'Exploitation', 'Sauvegardes']
@@ -423,7 +465,7 @@
 	version={instance.version}
 >
 	{#snippet enfants()}
-		<SommaireDeLaNote />
+		<SommaireDeLaNote entrees={affichee?.sommaire} />
 
 		<article class="article" id="article">
 			<!--
@@ -447,7 +489,7 @@
 			</div>
 
 			<!-- P-09 · ARB-040 — le bloc partagé OMET ses actions d'écriture en lecture seule. -->
-			<NoteDeDemonstration {droits} {separateur} />
+			<NoteDeDemonstration {droits} {separateur} {affichee} />
 		</article>
 	{/snippet}
 
