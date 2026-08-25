@@ -156,9 +156,16 @@
 		 * menaient à une note qui rend 404 sur une instance réelle.
 		 *
 		 * `note` NE LA REMPLACE PAS, ET NE FAIT PAS DOUBLE EMPLOI : `note` porte
-		 * le fil d'Ariane, le titre du panneau et la clé de lecture des versions
-		 * — l'enveloppe de l'écran ; `affichee` porte l'ARTICLE. Les deux
-		 * décrivent la même note, et la route les prend à la même source.
+		 * le rangement du fil, le titre du panneau et la clé de lecture des
+		 * versions — l'enveloppe de l'écran, qui est celle de LA NOTE ;
+		 * `affichee` porte l'ARTICLE, c'est-à-dire l'ÉTAT CONSULTÉ.
+		 *
+		 * LES DEUX PEUVENT DIVERGER, ET C'EST TOUT L'OBJET DE CET ÉCRAN.
+		 * `?version={n}` désignant une version antérieure, la route sert ici le
+		 * titre et les corps que cette version a CAPTURÉS : sans cela, le bandeau
+		 * annonçait « vous consultez un état antérieur » au-dessus du texte le
+		 * plus récent, et « Restaurer cette version » écrasait la note avec un
+		 * contenu jamais montré (`RG-M18-05`).
 		 *
 		 * ABSENTE, la transcription figée du gel, à l'identique.
 		 */
@@ -260,11 +267,24 @@
 			: []
 	);
 
+	/**
+	 * LE TITRE DE L’ÉTAT AFFICHÉ — celui que l’article porte en `<h1>`, et qui
+	 * n’est pas toujours celui de la note.
+	 *
+	 * `versions.titre` EST CAPTURÉ PARCE QUE LE TITRE EST RENOMMABLE
+	 * (`RG-M07-02`). Consulter la version 3 d’une note renommée depuis, c’est
+	 * consulter un état qui portait un AUTRE titre : le fil d’Ariane se ferme sur
+	 * celui-là, comme il se ferme partout ailleurs sur le titre de l’article
+	 * qu’il coiffe. Le panneau, lui, garde `titre` — il nomme LA NOTE dont
+	 * l’historique est ouvert, pas l’état consulté.
+	 */
+	const titreAffiche = $derived(affichee ? affichee.note.titre : titre);
+
 	/** Le fil d'Ariane — identique à celui de V-14 : l'historique n'a pas de chemin propre. */
 	const fil = $derived(
 		note
-			? ['Accueil', note.univers, note.domaine, ...segments, note.titre]
-			: ['Accueil', 'Production', 'Infrastructure', 'Exploitation', 'Sauvegardes', titre]
+			? ['Accueil', note.univers, note.domaine, ...segments, titreAffiche]
+			: ['Accueil', 'Production', 'Infrastructure', 'Exploitation', 'Sauvegardes', titreAffiche]
 	);
 	const courant = $derived(
 		note ? [note.domaine, ...segments] : ['Infrastructure', 'Exploitation', 'Sauvegardes']
