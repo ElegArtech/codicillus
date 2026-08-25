@@ -68,28 +68,18 @@
 	 * ci-dessous sont ceux de la maquette gelée — voir l'écart déclaré au rapport
 	 * du lot : P-1.7 les refuse, la conformité pixel les impose.
 	 */
-	import {
-		COMPTES,
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		RELATIONS,
-		TEMPLATES,
-		TYPES_RELATION,
-		UNIVERS,
-		VERSIONS,
-		type Compte,
-		type Domaine,
-		type EtatDInstance,
-		type IdentifiantNote,
-		type LibellesDeRelation,
-		type Note,
-		type Relation,
-		type Template,
-		type Univers,
-		type UtilisateurCourant,
-		type Version
+	import type {
+		Compte,
+		Domaine,
+		IdentifiantNote,
+		LibellesDeRelation,
+		Note,
+		Relation,
+		Template,
+		Univers,
+		Version
 	} from '../../seeds/corpus';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { libelleFraicheur } from '$lib/fraicheur';
 
@@ -122,31 +112,30 @@
 		 * son document les mettrait dans le DOM, ce que `P-09` refuse (`ni grisée,
 		 * ni masquée`).
 		 */
-		catalogue?: boolean;
+		catalogue: boolean;
 		/**
-		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
+		 * LES SOURCES DE LA COQUILLE ET DES DIALOGUES, ET LEUR DÉFAUT EST L'ENSEMBLE
+		 * VIDE.
 		 *
-		 * Absentes, les constantes du jeu de semence s'appliquent : c'est ce que le
-		 * mode démo passe, et c'est ce qui garantit que le banc ne bouge pas d'un
-		 * pixel. Fournies — par un chargeur de route —, elles l'emportent, et la vue
-		 * cesse de servir une valeur figée, indépendante de la base et de l'identité.
+		 * Leur défaut était la constante du jeu de démonstration : les dialogues
+		 * annonçaient donc les comptes, les relations, les gabarits et l'historique
+		 * des maquettes sur toute instance, et rien ne le signalait. Aucune route
+		 * ne les sert ; elles rendent vide.
 		 */
-		/** Les univers déclarés. Absente, `UNIVERS` du jeu de semence. */
+		/** Les univers déclarés — le contexte de coquille les porte. Vide : aucun. */
 		univers?: readonly Univers[];
-		/** Les domaines du périmètre du compte. Absente, `DOMAINES` du jeu de semence. */
+		/** Les domaines du périmètre du compte — même canal. */
 		domaines?: readonly Domaine[];
-		/** Le compte connecté. Absente, `MOI` du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance. Absente, `INSTANCE` du jeu de semence. */
-		instance?: EtatDInstance;
-		/** Les comptes de l'instance. Absente, `COMPTES` du jeu de semence. */
+		/** Le compte connecté — même canal. `null` : personne n'est connecté. */
+		compte?: CompteAffiche | null;
+		/** Les comptes de l'instance. Vide : aucun n'est lu. */
 		comptes?: readonly Compte[];
-		/** Les relations du corpus. Absente, `RELATIONS` du jeu de semence. */
+		/** Les relations du corpus. Vide : aucune n'est lue. */
 		relations?: readonly Relation[];
-		/** Les gabarits de note. Absente, `TEMPLATES` du jeu de semence. */
+		/** Les gabarits de note. Vide : aucun n'est lu. */
 		templates?: readonly Template[];
 		/**
-		 * Les libellés des types de relation. Absente, `TYPES_RELATION` du jeu.
+		 * LES LIBELLÉS DES TYPES DE RELATION — REQUISE : la route les lit en base.
 		 *
 		 * LES CLÉS SONT CELLES DU RÉFÉRENTIEL, ET ELLES NE SONT PAS FERMÉES.
 		 * `CleDeTypeDeRelation` énumère les six types du jeu de semence ; le
@@ -156,11 +145,11 @@
 		 * l'ORDRE de la table est celui d'administration, et le premier type y
 		 * est celui qu'un sélecteur propose d'entrée.
 		 */
-		typesRelation?: Readonly<Record<string, LibellesDeRelation>>;
+		typesRelation: Readonly<Record<string, LibellesDeRelation>>;
 		/**
-		 * L'historique par note. Absente, `VERSIONS` du jeu de semence. La table
-		 * est PARTIELLE : une note sans historique n'a pas d'entrée, et exiger
-		 * les trente-deux clés interdirait à un chargeur l'état neutre (`P-02`).
+		 * L'historique par note. Vide : aucun n'est lu. La table est PARTIELLE —
+		 * une note sans historique n'a pas d'entrée, et exiger les clés du corpus
+		 * interdirait l'état neutre (`P-02`).
 		 */
 		versions?: Partial<Record<IdentifiantNote, readonly Version[]>>;
 		/**
@@ -174,27 +163,32 @@
 		 * d'une AUTRE note que celle qu'on regarde — la valeur illustrative que
 		 * `P-02` proscrit, sur l'écran même où le geste s'engage.
 		 *
-		 * ABSENTE, LA NOTE DU JEU DE SEMENCE, à l'identique : c'est ce que la
-		 * planche montre, et rien n'y bouge.
+		 * ELLE EST REQUISE : son repli était `n-restaurer-pg`, retrouvée dans le
+		 * corpus servi, et tous les dialogues parlaient donc de la même note.
 		 */
-		note?: Note;
+		note: Note;
 	}
 
 	const {
 		etat,
 		notes,
-		catalogue = true,
-		note: noteAffichee,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		comptes = COMPTES,
-		relations = RELATIONS,
-		templates = TEMPLATES,
-		typesRelation = TYPES_RELATION,
-		versions = VERSIONS
+		catalogue,
+		note,
+		univers = [],
+		domaines = [],
+		compte = null,
+		comptes = [],
+		relations = [],
+		templates = [],
+		typesRelation,
+		versions = {}
 	}: Proprietes = $props();
+
+	/**
+	 * LE COMPTE SERVI À LA COQUILLE. En application, le contexte l'emporte
+	 * toujours. Hors gabarit racine, il n'y a PAS de compte connecté.
+	 */
+	const COMPTE_ABSENT: CompteAffiche = { nom: '', initiales: '', role: '', domaine: '' };
 
 	/** Le dialogue dont le CONTENU est préparé. Aucun autre ne l'est. */
 	const ouvert = $derived(etat);
@@ -223,8 +217,8 @@
 	const DOSSIER = 'Exploitation › Sauvegardes';
 	const DOMAINE_DOSSIER = 'Infrastructure';
 
-	/** La note de démonstration — celle de V-14, V-15 et V-37 — ou celle qu'on lit. */
-	const NOTE = $derived(noteAffichee ?? notes.find((n) => n.id === 'n-restaurer-pg'));
+	/** La note dont les dialogues parlent — celle qu'on lit, et aucune autre. */
+	const NOTE = $derived(note);
 
 	/**
 	 * LE TYPE DE RELATION PROPOSÉ D'ENTRÉE — le premier du référentiel.
@@ -239,20 +233,17 @@
 		Object.values(typesRelation)[0] ?? { sortant: '', entrant: '' }
 	);
 	/**
-	 * Pour la suppression, une note effectivement citée : le décompte de
-	 * rétroliens n'a d'intérêt à être maquetté que s'il n'est pas nul.
+	 * LA NOTE QUE LA CONFIRMATION DE SUPPRESSION NOMME. C'était `n-pg-prod-01`,
+	 * une note du jeu retrouvée dans le corpus servi : la boîte annonçait la
+	 * destruction d'une AUTRE note que celle qu'on regarde.
 	 */
-	const NOTE_SUP = $derived(notes.find((n) => n.id === 'n-pg-prod-01'));
+	const NOTE_SUP = $derived(note);
 
 	/** Rétention par défaut quand la note n'a pas d'historique détaillé. */
 	const VERSIONS_PAR_DEFAUT = 6;
 
-	const versionsSup = $derived(
-		NOTE_SUP ? (versions[NOTE_SUP.id]?.length ?? 0) || VERSIONS_PAR_DEFAUT : 0
-	);
-	const retroliensSup = $derived(
-		NOTE_SUP ? relations.filter((r) => r.vers === NOTE_SUP.id).length : 0
-	);
+	const versionsSup = $derived((versions[NOTE_SUP.id]?.length ?? 0) || VERSIONS_PAR_DEFAUT);
+	const retroliensSup = $derived(relations.filter((r) => r.vers === NOTE_SUP.id).length);
 	/** Les notes rangées dans le dossier à supprimer, sous-dossiers compris. */
 	const notesDuDossier = $derived(
 		notes.filter((n) => n.domaine === DOMAINE_DOSSIER && n.dossier.startsWith(DOSSIER)).length
@@ -275,7 +266,13 @@
 			.map((x) => x.note);
 	}
 
-	const doublon = $derived(notesProches('Restaurer une sauvegarde PostgreSQL')[0] ?? NOTE);
+	/**
+	 * LA NOTE PROCHE DE CELLE QU'ON ÉCRIT. Le titre cherché était le littéral
+	 * « Restaurer une sauvegarde PostgreSQL », celui du gel : l'avertissement de
+	 * doublon désignait donc toujours la même note. Il se cherche sur le titre de
+	 * la note dont la boîte parle, ce qui est le seul sens qu'il ait.
+	 */
+	const doublon = $derived(notesProches(NOTE.titre)[0] ?? NOTE);
 
 	interface Droit {
 		readonly qui: string;
@@ -284,13 +281,16 @@
 		readonly origine?: string;
 	}
 
-	/** Les droits posés sur le dossier de démonstration, explicites et hérités. */
-	const DROITS: readonly Droit[] = [
-		{ qui: 'Karim Belhadj', role: 'Gestion', herite: false },
-		{ qui: 'Marc Ferreira', role: 'Écriture', herite: false },
-		{ qui: 'Sophie Nguyen', role: 'Écriture', herite: true, origine: 'domaine Infrastructure' },
-		{ qui: 'Léa Marchand', role: 'Lecture', herite: true, origine: 'dossier Exploitation' }
-	];
+	/**
+	 * LES DROITS POSÉS SUR LE DOSSIER — AUCUN N'EST LU, ET LA TABLE EST DONC VIDE.
+	 *
+	 * Elle nommait quatre comptes du jeu de démonstration — Karim Belhadj, Marc
+	 * Ferreira, Sophie Nguyen, Léa Marchand — avec leurs rôles et l'origine de
+	 * leur héritage, servis comme des faits sur l'instance qu'on regarde. Rien
+	 * ne les sert : `droits_de_dossier` n'est lue par aucun chargeur qui monte
+	 * cette vue. Vide, la boîte n'affirme rien.
+	 */
+	const DROITS: readonly Droit[] = [];
 
 	/** Les comptes actifs à qui aucun accès explicite ni hérité n'est encore posé. */
 	const comptesSansAcces = $derived(
@@ -525,8 +525,8 @@
 		{univers}
 		{domaines}
 		{notes}
-		{compte}
-		version={instance.version}
+		compte={compte ?? COMPTE_ABSENT}
+		version=""
 		classeContenu="doc"
 	>
 		{#snippet enfants()}

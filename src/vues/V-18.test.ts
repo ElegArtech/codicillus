@@ -17,17 +17,21 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
 import {
 	corpusPourVue,
-	INSTANCE,
 	MOI,
 	noteParIdentifiant,
 	UNIVERS,
-	type EtatDInstance,
 	type Note,
 	type UtilisateurCourant
 } from '../../seeds/corpus';
 import { documentDuGel, resoudreDansLeCorpus } from '../lib/contenu/documents-du-gel';
 import { rendreDocument } from '../lib/contenu/rendu';
-import { NOTE } from '../lib/lecture/note-de-demonstration';
+
+/** LA NOTE DU JEU DE DÉMONSTRATION — celle qui ne doit plus jamais paraître. */
+const NOTE_DU_GEL = (() => {
+	const note = noteParIdentifiant('n-restaurer-pg');
+	if (!note) throw new Error('seeds/corpus.ts : « n-restaurer-pg » a disparu');
+	return note;
+})();
 
 const NOTES = corpusPourVue('V-18');
 
@@ -38,8 +42,6 @@ const SOPHIE: UtilisateurCourant = {
 	domaine: 'Applications',
 	role: 'Administrateur'
 };
-
-const AUTRE_INSTANCE: EtatDInstance = { version: '9.9.9-epreuve', synchro: "à l'instant" };
 
 const AUTRE_NOTE = (() => {
 	const note = noteParIdentifiant('n-mot-de-passe');
@@ -60,8 +62,20 @@ const AFFICHEE = {
 	operationnel: corpsRenduDuGel(AUTRE_NOTE, 'operationnel')
 };
 
+/**
+ * LE SOCLE DE PROPRIÉTÉS REQUISES. La vue ne peut plus se rendre sans note
+ * affichée : son absence rendait la transcription figée du gel, et c'était le
+ * défaut. Chaque cas ne passe que ce qu'il éprouve.
+ */
 function rendu(proprietes: Record<string, unknown>): Promise<string> {
-	return rendreLaVue('V-18', { vecteur: null, notes: NOTES, ...proprietes });
+	return rendreLaVue('V-18', {
+		vecteur: null,
+		notes: NOTES,
+		affichee: AFFICHEE,
+		desynchronisation: { quand: '2 mars 2026', par: 'Marc Ferreira' },
+		dernierEnregistrement: null,
+		...proprietes
+	});
 }
 
 /** Le nombre d'occurrences d'un fragment — l'Opérationnel est rendu DEUX fois. */
@@ -78,10 +92,6 @@ describe('V-18 — la propriété fournie l’emporte', () => {
 		expect(html).not.toContain(`${MOI.nom} — menu utilisateur`);
 	});
 
-	it('sert la version d’instance reçue', async () => {
-		expect(await rendu({ instance: AUTRE_INSTANCE })).toContain('9.9.9-epreuve');
-	});
-
 	/** Vue de forme ABRÉGÉE : `univers` ne sert pas au rail (`Coquille.svelte`). */
 	it('accepte la liste d’univers reçue sans rien changer au rail abrégé', async () => {
 		const restreint = await rendu({ univers: UNIVERS.filter((u) => u.nom === 'Projets') });
@@ -91,7 +101,7 @@ describe('V-18 — la propriété fournie l’emporte', () => {
 	it('nomme la note éditée et son rangement, jamais celle du gel', async () => {
 		const html = await rendu({ affichee: AFFICHEE });
 		expect(html).toContain(`id="nom-note">${AUTRE_NOTE.titre}</div>`);
-		expect(html).not.toContain(NOTE.titre);
+		expect(html).not.toContain(NOTE_DU_GEL.titre);
 		expect(html).toContain(
 			[AUTRE_NOTE.univers, AUTRE_NOTE.domaine, AUTRE_NOTE.dossier].join(' › ')
 		);
@@ -108,18 +118,25 @@ describe('V-18 — la propriété fournie l’emporte', () => {
 	});
 });
 
-describe('V-18 — la propriété absente rend la transcription figée du gel', () => {
-	it('rend la note de démonstration et le contexte du jeu de semence', async () => {
+/**
+ * LE MOTIF EST RETIRÉ, ET C'EST CE QUE CETTE SECTION MESURE.
+ *
+ * La vue portait un défaut pour CHAQUE propriété de contexte, et ce défaut
+ * était la constante du jeu de démonstration : sans rien lui passer, elle
+ * rendait la note du gel, le compte du jeu et la version d'`INSTANCE`. La note
+ * affichée est désormais REQUISE — une route qui l'oublierait ne compilerait
+ * plus — et les propriétés de contexte rendent VIDE.
+ */
+describe('V-18 — rien du jeu de démonstration ne subsiste au défaut', () => {
+	it('ne nomme aucun compte du jeu quand aucun ne lui est servi', async () => {
 		const html = await rendu({});
-		expect(html).toContain(`id="nom-note">${NOTE.titre}</div>`);
-		expect(html).toContain(`${MOI.nom} — menu utilisateur`);
-		expect(html).toContain(INSTANCE.version);
+		expect(html).not.toContain(`${MOI.nom} — menu utilisateur`);
 	});
 
-	it('rend les corps transcrits, l’Opérationnel deux fois, et non un document', async () => {
+	it('ne rend ni la note du gel ni ses corps transcrits', async () => {
 		const html = await rendu({});
-		expect(html).toContain('id="s-restaurer"');
-		expect(occurrences(html, 'id="o-preparer"')).toBe(2);
-		expect(html).not.toContain(AFFICHEE.reference);
+		expect(html).not.toContain(`id="nom-note">${NOTE_DU_GEL.titre}</div>`);
+		expect(html).not.toContain('id="s-restaurer"');
+		expect(occurrences(html, 'id="o-preparer"')).toBe(0);
 	});
 });

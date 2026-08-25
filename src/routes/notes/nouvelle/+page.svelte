@@ -70,23 +70,24 @@
 	} from '$lib/edition/gestes';
 	import { adresseDesNotesDuDomaine, dossierDeLArborescence } from '$lib/rangement/adresses';
 	import { cablerLeChoixDeDepart } from './cablage';
-	import { MOI } from '../../../../seeds/corpus';
 	import type { ActionData, PageData } from './$types';
 
 	const { data, form }: { data: PageData; form: ActionData } = $props();
 
 	/** Le domaine demandé par l'adresse, à défaut celui du compte du jeu. */
 	const domaineDemande = $derived(page.url.searchParams.get('domaine'));
-	/* LE COMPTE RÉEL, ET SON UNIVERS. La route passait `MOI` — la constante du
-	   jeu de semence : l'éditeur affichait « Karim Belhadj » et un fil d'Ariane
+	/* LE COMPTE RÉEL, ET SON UNIVERS. Le repli était `MOI` — la constante du jeu
+	   de démonstration : l'éditeur affichait « Karim Belhadj » et un fil d'Ariane
 	   « Accueil › Production › Infrastructure » sur une instance qui n'a jamais
 	   porté ces noms. Mesuré le 21/08/2026 sur une base neuve : le fil offrait
-	   `/univers/production/infrastructure`, qui rend 404. */
-	const compteServi = $derived(page.data.compte ?? MOI);
-	const premierDomaine = $derived(page.data.domaines?.[0]?.nom ?? MOI.domaine);
+	   `/univers/production/infrastructure`, qui rend 404. Sans compte servi, le
+	   compte est VIDE — jamais celui des maquettes. */
+	const compteServi = $derived(
+		page.data.compte ?? { nom: '', initiales: '', role: '', domaine: '' }
+	);
+	const premierDomaine = $derived(page.data.domaines?.[0]?.nom ?? '');
 
 	const compte = $derived({
-		...MOI,
 		nom: compteServi.nom,
 		initiales: compteServi.initiales,
 		role: compteServi.role,

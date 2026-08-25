@@ -78,8 +78,8 @@ import {
 	typesDeRelation,
 	verifications
 } from '$lib/base/schema';
-import { analyserDocument, titres, type Document } from '$lib/contenu/document';
-import { rendreDocument, type ResolveurDeNote } from '$lib/contenu/rendu';
+import { analyserDocument, type Document } from '$lib/contenu/document';
+import { ancresDuDocument, rendreDocument, type ResolveurDeNote } from '$lib/contenu/rendu';
 import { formaterDateFr, formaterDateHeureFr, formaterDateIso } from '$lib/dates';
 import { compteDe, journaliserUneConsultation } from '$lib/donnees/consultation';
 import { lireLHistoire, versionDemandee, type VersionCapturee } from '$lib/donnees/histoire';
@@ -180,9 +180,15 @@ function instantAffiche(valeur: Date): InstantAffiche {
  * LE SOMMAIRE, RELEVÉ SUR LE DOCUMENT CANONIQUE.
  *
  * `construireSommaire()` du gel (`V-14:3901`) relit le DOM rendu ; un composant
- * Svelte ne peut pas se relire. `titres()` donne la même matière depuis
- * l'arbre : « seuls les niveaux 2 et 3 alimentent le sommaire »
- * (`V-14:1704`), et un titre sans ancre n'est la cible d'aucun lien.
+ * Svelte ne peut pas se relire. `ancresDuDocument()` donne la même matière
+ * depuis l'arbre : « seuls les niveaux 2 et 3 alimentent le sommaire »
+ * (`V-14:1704`).
+ *
+ * IL ÉCARTAIT TOUT TITRE SANS ANCRE, et l'éditeur n'en pose jamais : le
+ * sommaire de toute note écrite dans le produit était donc VIDE — « Aucun titre
+ * dans cette note » au-dessus d'un article qui en portait six. L'ancre est
+ * désormais dérivée du texte au rendu, par `$lib/contenu/rendu.ts`, ET LE CORPS
+ * CONSULTE LE MÊME RELEVÉ : sommaire et titres rendus ne peuvent pas diverger.
  */
 function sommaireDuDocument(valeur: unknown): readonly EntreeDeSommaire[] {
 	return sommaireDe(analyserDocument(valeur));
@@ -195,11 +201,9 @@ function sommaireDuDocument(valeur: unknown): readonly EntreeDeSommaire[] {
  */
 function sommaireDe(document: Document): readonly EntreeDeSommaire[] {
 	const retenus: EntreeDeSommaire[] = [];
-	for (const titre of titres(document)) {
-		const { level, ancre } = titre.attrs;
-		if ((level !== 2 && level !== 3) || ancre === null) continue;
+	for (const [titre, ancre] of ancresDuDocument(document)) {
 		retenus.push({
-			niveau: level,
+			niveau: titre.attrs.level === 3 ? 3 : 2,
 			ancre,
 			libelle: (titre.content ?? []).map((t) => t.text).join('')
 		});

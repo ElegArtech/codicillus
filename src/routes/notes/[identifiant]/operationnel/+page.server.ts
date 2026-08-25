@@ -62,6 +62,7 @@ import {
 	supprimerLeRegistreOperationnel
 } from '$lib/donnees/edition';
 import { lireSeuils } from '$lib/donnees/lecture';
+import { lireLHistoire } from '$lib/donnees/histoire';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import { DocumentInvalide } from '$lib/contenu/document';
 import { EditeurIncapable } from '$lib/edition/document';
@@ -109,6 +110,19 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		},
 		notes: edition.lecture.notes,
 		affichee,
+		/**
+		 * L'ANCIENNETÉ DE LA DERNIÈRE VERSION, EN JOURS — `null` quand la note
+		 * n'en a aucune.
+		 *
+		 * La barre d'état écrivait « dernière version il y a 3 semaines » sur
+		 * n'importe quelle note : la chaîne du gel, figée dans la vue, donc une
+		 * valeur illustrative sur une note réelle (`P-02`). Elle est LUE, et par
+		 * la lecture d'historique DÉJÀ PARTAGÉE — jamais par une seconde requête
+		 * écrite ici, qui divergerait de celle de l'éditeur de Référence.
+		 */
+		dernierEnregistrement:
+			(await lireLHistoire(base, edition.lecture, lecture.maintenant, null)).versions[0]?.jours ??
+			null,
 		/** Ce que le bandeau de `RG-M06-08` nomme : la date, et qui l'a écrite. */
 		desynchronisation: {
 			quand: formaterDateFr(synchronisation.referenceModifieLe),

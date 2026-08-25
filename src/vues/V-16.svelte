@@ -34,16 +34,14 @@
 	 * commune et le même départage, appliqués aux documents CANONIQUES des deux
 	 * versions. La vue ne recalcule alors rien — elle compte, replie et peint.
 	 *
-	 * LA MATIÈRE VIENT DU CORPUS, JAMAIS D'UNE SAISIE (P-02) : `CONTENU_VERSIONS`
-	 * — 37 blocs sur trois versions de `n-restaurer-pg` — et `VERSIONS` de
-	 * `seeds/corpus.ts`, exactement ce que le gel lit dans
-	 * `window.CONTENU_VERSIONS` et `window.versionsDe()`. Aucun compte n'est
-	 * écrit : « +11 lignes », « −3 lignes » et « 6 blocs touchés sur 15 » sont
-	 * comptés sur l'alignement. Les deux tableaux sont désormais REÇUS EN
-	 * PROPRIÉTÉ, de défaut la constante du jeu (T-043) : `T-030` a posé la table
-	 * des versions, la semence la laisse vide, et la forme de `CONTENU_VERSIONS`
-	 * n'est transposée par aucun lot à ce jour — ce lot rend la vue CAPABLE sans
-	 * rien transposer.
+	 * LA MATIÈRE EST REÇUE, ET RIEN N'EST PLUS LU DU JEU DE DÉMONSTRATION. Les
+	 * deux tableaux — l'historique et le contenu des versions — étaient des
+	 * propriétés de défaut `VERSIONS` et `CONTENU_VERSIONS`, c'est-à-dire les
+	 * trente-sept blocs de trois versions de `n-restaurer-pg` : la comparaison
+	 * d'une note quelconque les servait. Ils sont REQUIS ; le chargeur passe le
+	 * second VIDE, parce que la comparaison est calculée côté données sur les
+	 * documents canoniques. Aucun compte n'est écrit : « +11 lignes »,
+	 * « −3 lignes » et « 6 blocs touchés sur 15 » sont comptés sur l'alignement.
 	 *
 	 * LES BLOCS COMMUNS SONT ALIGNÉS HORIZONTALEMENT — c'est la rangée à deux
 	 * cellules de `.visuel`, et c'est ce que `C-05` et `M07.3` demandent. LE
@@ -92,67 +90,52 @@
 	 * --installer` (P-6.3). Le seul `style=` reproduit est celui du gel
 	 * (`V-16:1116`), à l'ensemble clos d'ARB-016 (P-6.4).
 	 */
-	import {
-		CONTENU_VERSIONS,
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		UNIVERS,
-		VERSIONS,
-		noteParIdentifiant,
-		type BlocDeContenu,
-		type Domaine,
-		type EtatDInstance,
-		type IdentifiantNote,
-		type Note,
-		type Univers,
-		type UtilisateurCourant,
-		type Version
+	import type {
+		BlocDeContenu,
+		Domaine,
+		IdentifiantNote,
+		Note,
+		Univers,
+		Version
 	} from '../../seeds/corpus';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 
 	/**
-	 * LES PROPRIÉTÉS DE RANGEMENT ET D'IDENTITÉ SONT OPTIONNELLES, ET LEUR
-	 * DÉFAUT EST LA CONSTANTE DU JEU DE SEMENCE.
+	 * CE QUE LA ROUTE PASSE EST REQUIS ; CE QUE LE CONTEXTE PORTE EST VIDE.
 	 *
-	 * La vue devient capable de recevoir ce qu'un chargeur de route lit en base
-	 * — univers, domaines, compte courant, état de l'instance — sans qu'aucun
-	 * rendu ne change tant que rien ne lui est passé : le mode de conception ne
-	 * passe que `vecteur` et `notes`, la vue reçoit donc exactement ce qu'elle
-	 * recevait, et le banc de comparaison ne bouge pas d'un pixel.
+	 * Ces propriétés étaient optionnelles et leur défaut était une constante du
+	 * jeu de démonstration : la comparaison d'une note quelconque nommait
+	 * `n-restaurer-pg` dans son fil d'Ariane et lisait SON historique, sans que
+	 * rien ne proteste.
 	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — deux contrôles de planche. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-16')`, variante « lecture ». */
 		notes: readonly Note[];
-		/** Les univers du produit. Défaut : ceux du jeu de semence. */
+		/** Les univers du produit — le contexte de coquille les porte. Vide : aucun. */
 		univers?: readonly Univers[];
-		/** Les domaines du produit. Défaut : ceux du jeu de semence. */
+		/** Les domaines du produit — même canal. Vide : aucun périmètre. */
 		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Défaut : celui du jeu de semence. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance servie. Défaut : celui du jeu de semence. */
-		instance?: EtatDInstance;
+		/** L'utilisateur courant — même canal. `null` : personne n'est connecté. */
+		compte?: CompteAffiche | null;
+		/** L'historique, par note — servi par le chargeur, jamais par le jeu. */
+		versions: Partial<Record<IdentifiantNote, readonly Version[]>>;
 		/**
-		 * L'historique, par note. Défaut : celui du jeu de semence.
+		 * Le contenu de chaque version, par note puis par numéro.
 		 *
-		 * `T-030` a posé la table des versions ; la semence la laisse VIDE. La vue
-		 * est rendue capable de recevoir un historique réel, elle n'en transpose
-		 * aucun : tant que rien ne lui est passé, elle lit le jeu de semence.
+		 * LE CHARGEUR LE PASSE VIDE, ET C'EST DÉLIBÉRÉ : la comparaison est
+		 * calculée côté données sur les documents canoniques, et cette table
+		 * portait le contenu d'exemple des maquettes.
 		 */
-		versions?: Partial<Record<IdentifiantNote, readonly Version[]>>;
+		contenuVersions: Partial<Record<IdentifiantNote, Record<string, readonly BlocDeContenu[]>>>;
 		/**
-		 * Le contenu de chaque version, par note puis par numéro. Défaut : celui du
-		 * jeu de semence, dont la forme n'est transposée par aucun lot à ce jour.
+		 * LA NOTE COMPARÉE — REQUISE. Elle décide du titre, du fil d'Ariane et de
+		 * la clé sous laquelle l'historique est lu. Son repli était
+		 * `n-restaurer-pg`, la note du gel.
 		 */
-		contenuVersions?: Partial<Record<IdentifiantNote, Record<string, readonly BlocDeContenu[]>>>;
-		/**
-		 * LA NOTE COMPARÉE. Défaut : celle du gel, `n-restaurer-pg`. Passée, elle
-		 * décide du titre, du fil d'Ariane et de la clé sous laquelle l'historique
-		 * est lu — la vue ne nomme alors plus aucune note d'exemple.
-		 */
-		note?: Note;
+		note: Note;
 		/**
 		 * LA COMPARAISON DÉJÀ CALCULÉE — `lireLaComparaison()` de
 		 * `$lib/donnees/histoire.ts`, mise en forme d'affichage par
@@ -163,8 +146,9 @@
 		 * des deux versions — un second alignement divergerait, et la divergence
 		 * ne se verrait qu'à l'écran. Ce que la vue garde est ce qui lui
 		 * appartient : le repli du journal, les quantités, l'alternative
-		 * textuelle, tous comptés sur ce qu'elle reçoit. Absente, le calcul du gel
-		 * sur le jeu de semence reprend et le rendu par défaut ne bouge pas.
+		 * textuelle, tous comptés sur ce qu'elle reçoit. Absente, la transcription
+		 * du gel ci-dessous reprend — sur `contenuVersions`, que le chargeur passe
+		 * VIDE : elle ne peut plus servir le jeu de démonstration.
 		 */
 		comparaison?: {
 			/** Le mode Texte : les lignes alignées des deux versions. */
@@ -177,25 +161,25 @@
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		versions: historique = VERSIONS,
-		contenuVersions = CONTENU_VERSIONS,
-		note = undefined,
+		univers = [],
+		domaines = [],
+		compte = null,
+		versions: historique,
+		contenuVersions,
+		note,
 		comparaison = undefined
 	}: Proprietes = $props();
 
+	/**
+	 * LE COMPTE SERVI À LA COQUILLE. En application, le contexte l'emporte
+	 * toujours. Hors gabarit racine, il n'y a PAS de compte connecté.
+	 */
+	const COMPTE_ABSENT: CompteAffiche = { nom: '', initiales: '', role: '', domaine: '' };
+
 	const reglage = $derived(vecteur ?? {});
 
-	/** La note comparée par le gel — `ID`, `V-16:1991`. */
-	const ID_DU_GEL = 'n-restaurer-pg';
-	const NOTE = $derived(
-		note ?? ((corpus.find((n) => n.id === ID_DU_GEL) ?? noteParIdentifiant(ID_DU_GEL)) as Note)
-	);
 	/** La clé sous laquelle l'historique et les contenus sont lus. */
-	const ID = $derived(NOTE.id);
+	const ID = $derived(note.id);
 
 	/**
 	 * LE RANGEMENT DE LA NOTE, tel que le fil le déroule. Le chemin de dossier est
@@ -203,7 +187,7 @@
 	 * règle. Une note rangée à la racine d'un domaine n'a aucun segment.
 	 */
 	const segments = $derived(
-		NOTE.dossier
+		note.dossier
 			.split('›')
 			.map((s) => s.trim())
 			.filter((s) => s !== '')
@@ -211,13 +195,13 @@
 	/** `S3` : le fil de la note, augmenté du segment propre à la comparaison. */
 	const fil = $derived([
 		'Accueil',
-		NOTE.univers,
-		NOTE.domaine,
+		note.univers,
+		note.domaine,
 		...segments,
-		NOTE.titre,
+		note.titre,
 		'Comparaison'
 	]);
-	const courant = $derived([NOTE.domaine, ...segments]);
+	const courant = $derived([note.domaine, ...segments]);
 
 	/**
 	 * LE COUPLE DE BORNES. Le gel part de `na = 13, nbv = 14` (`V-16:1997`) et
@@ -546,18 +530,13 @@
 	{univers}
 	{domaines}
 	notes={corpus}
-	compte={{
-		nom: compte.nom,
-		initiales: compte.initiales,
-		role: compte.role,
-		domaine: compte.domaine
-	}}
-	version={instance.version}
+	compte={compte ?? COMPTE_ABSENT}
+	version=""
 >
 	{#snippet enfants()}
 		<header class="tete-compare">
 			<div>
-				<span class="tete-compare__note etiq" id="nom-note">{NOTE.titre}</span>
+				<span class="tete-compare__note etiq" id="nom-note">{note.titre}</span>
 				<div class="couple">
 					<div class="borne borne--ancienne">
 						<span class="borne__role etiq">Version d'origine</span>

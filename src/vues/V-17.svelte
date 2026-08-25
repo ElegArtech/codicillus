@@ -99,27 +99,16 @@
 	import BandeauApercu from '$lib/edition/BandeauApercu.svelte';
 	import BarreDEtat from '$lib/edition/BarreDEtat.svelte';
 	import ZoneDeRedaction from '$lib/edition/ZoneDeRedaction.svelte';
-	import {
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		TEMPLATES,
-		TYPES_FICHE,
-		TYPES_NOTE,
-		UNIVERS,
-		modificationsPourVue,
-		noteParIdentifiant,
-		type ChampDeFiche,
-		type Domaine,
-		type EtatDInstance,
-		type IdentifiantNote,
-		type Note,
-		type Template,
-		type TypeDeFiche,
-		type TypeDeNote,
-		type Univers,
-		type UtilisateurCourant
+	import type {
+		ChampDeFiche,
+		Domaine,
+		Note,
+		Template,
+		TypeDeFiche,
+		TypeDeNote,
+		Univers
 	} from '../../seeds/corpus';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { vocabulaireRendu } from '$lib/vocabulaire';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
@@ -136,27 +125,29 @@
 		/** Le jeu de semence de la vue — `corpusPourVue('V-17')`, variante « lecture ». */
 		notes: readonly Note[];
 		/**
-		 * LES QUATRE PROPRIÉTÉS DE CONTEXTE — T-042, et elles sont OPTIONNELLES.
+		 * LE CONTEXTE — CE QUE LES DEUX ROUTES PASSENT EST REQUIS.
 		 *
-		 * Avant ce lot, cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et
-		 * `INSTANCE` au niveau du module : un chargeur de route ne pouvait rien
-		 * y substituer, et l'éditeur ouvrait une note vierge dans le domaine de
-		 * `MOI` — « Bonjour Karim » servi à Sophie Nguyen.
+		 * Cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et `INSTANCE` au niveau
+		 * du module : l'éditeur ouvrait une note vierge dans le domaine de
+		 * `MOI` — « Bonjour Karim » servi à Sophie Nguyen. Les défauts sont
+		 * ensuite devenus ces mêmes constantes, ce qui n'était que le défaut
+		 * déplacé : une route qui les oubliait servait les maquettes.
 		 *
 		 * `compte` COMMANDE ICI DAVANTAGE QUE LA PASTILLE : le domaine
 		 * pré-choisi d'une note vierge est celui de l'utilisateur courant
-		 * (`V-17:3537`), et l'arborescence du choix de dossier s'en déduit.
+		 * (`V-17:3537`), et l'arborescence du choix de dossier s'en déduit. Les
+		 * deux routes le passent, il est donc REQUIS.
 		 *
-		 * LE DÉFAUT EST LA CONSTANTE DU JEU, et c'est ce qui garantit que le banc
-		 * ne bouge pas : le mode de conception ne passe que `vecteur` et `notes`,
-		 * la vue reçoit donc exactement ce qu'elle avait.
+		 * `univers` reste optionnelle et VIDE : ni l'une ni l'autre ne la passe,
+		 * le contexte de coquille porte le rail. `instance` a disparu — la
+		 * version du produit vient du contexte, lue sur `package.json`.
 		 */
 		univers?: readonly Univers[];
-		domaines?: readonly Domaine[];
-		/** L'univers de rattachement du compte. Défaut : celui du jeu de semence. */
-		universDuCompte?: string;
-		/** Les dossiers de chaque domaine, lus en base. Défaut : déduits des notes. */
-		dossiersParDomaine?: Readonly<Record<string, readonly DossierDeChoix[]>> | null;
+		domaines: readonly Domaine[];
+		/** L'univers de rattachement du compte, tel que la base le nomme. */
+		universDuCompte: string;
+		/** Les dossiers de chaque domaine, lus en base. `null` : déduits des notes. */
+		dossiersParDomaine: Readonly<Record<string, readonly DossierDeChoix[]>> | null;
 		/**
 		 * LE DOSSIER SUR LEQUEL L'ÉDITEUR S'OUVRE PRÉ-REMPLI — le point
 		 * d'injection que le gel offrait et que le port avait supprimé.
@@ -173,25 +164,17 @@
 		 * bouge pas d'un octet : la vue reprend l'amorce qu'elle avait.
 		 */
 		dossierDeDepart?: string | null;
-		compte?: UtilisateurCourant;
-		instance?: EtatDInstance;
+		compte: CompteAffiche;
 		/**
 		 * LES TROIS RÉFÉRENTIELS DE SAISIE — les types de note, les types de
 		 * fiche et les gabarits que l'éditeur propose. Ils sont administrables
-		 * (M14), donc propres à l'instance : un chargeur les lira en base.
-		 *
-		 * Le défaut est celui du jeu de semence, et le banc ne bouge pas.
+		 * (M14), donc propres à l'instance : les deux routes les lisent en base
+		 * et les passent, ils sont REQUIS. Leur défaut était le jeu de
+		 * démonstration.
 		 */
-		typesNote?: readonly TypeDeNote[];
-		typesFiche?: Record<TypeDeFiche, readonly ChampDeFiche[]>;
-		templates?: readonly Template[];
-		/**
-		 * L'ANCIENNETÉ DE MODIFICATION DE CHAQUE NOTE — `window.modifJours` du
-		 * gel, table `V-17:2235`. `Partial` et non `Record` total : un type
-		 * total réclamerait les trente-deux clés et interdirait mécaniquement
-		 * un état partiel ou neutre (P-02).
-		 */
-		modifications?: Partial<Record<IdentifiantNote, number>>;
+		typesNote: readonly TypeDeNote[];
+		typesFiche: Record<TypeDeFiche, readonly ChampDeFiche[]>;
+		templates: readonly Template[];
 		/**
 		 * LA NOTE REPRISE EN MODIFICATION — `n-planifier-sauv`, que le gel nomme
 		 * lui-même (`V-17:3549`) et que la vue lisait au corpus AU NIVEAU DU
@@ -202,8 +185,8 @@
 		 * étiquettes, extrait — sort du type `Note` : aucun corps rendu n'est
 		 * nécessaire ici, à la différence de V-14 et de V-18.
 		 *
-		 * Absente, la note du gel : le cas `modif` de la planche rend à
-		 * l'identique.
+		 * ABSENTE, IL N'Y A PAS DE NOTE REPRISE — c'est le cas de la création.
+		 * Son repli était `n-planifier-sauv`, la note que le gel nomme.
 		 */
 		noteModifiee?: Note | undefined;
 		/**
@@ -220,9 +203,7 @@
 		 *   `null`     « Aucune modification » — la note n'a aucune version, et
 		 *              c'est exactement ce que cette phrase dit
 		 *
-		 * ABSENTE, le rendu ne bouge pas d'un octet : la vue garde la dérivation
-		 * qu'elle avait, et le mode de conception, qui ne passe pas cette
-		 * propriété, rend ce qu'il rendait.
+		 * ABSENTE — la création d'une note vierge —, il n'y a rien à dater.
 		 */
 		dernierEnregistrement?: number | null;
 	}
@@ -230,29 +211,25 @@
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		/* L'UNIVERS DU COMPTE, POUR LE FIL D'ARIANE. Il était écrit « Production »
-		   en littéral : sur une instance qui n'a pas d'univers de ce nom, le fil
-		   proposait `/univers/production/…`, qui rend 404. Défaut : la valeur du
-		   gel, pour que le rendu d'une vue sans propriété ne bouge pas. */
-		universDuCompte = 'Production',
+		univers = [],
+		domaines,
+		universDuCompte,
 		/* L'ARBORESCENCE DE CHOIX, SERVIE PAR LA ROUTE DEPUIS LA TABLE `dossiers`.
-		   Absente — le rendu par défaut d'une vue —, elle se déduit des chemins des
-		   notes, comme la maquette le fait : le gel ne bouge pas. Servie, elle
-		   l'emporte, et un domaine sans aucune note offre enfin ses dossiers. */
-		dossiersParDomaine = null,
-		/* LE DOSSIER DE DÉPART, SERVI PAR LA ROUTE DEPUIS `?dossier=`. Absent, la
-		   vue reprend l'amorce qu'elle avait — rien ne bouge au banc. */
+		   `null`, elle se déduit des chemins des notes servies. */
+		dossiersParDomaine,
+		/* LE DOSSIER DE DÉPART, SERVI PAR LA ROUTE DEPUIS `?dossier=`. */
 		dossierDeDepart = null,
-		compte = MOI,
-		instance = INSTANCE,
-		typesNote = TYPES_NOTE,
-		typesFiche = TYPES_FICHE,
-		templates = TEMPLATES,
-		modifications = modificationsPourVue('V-17'),
-		noteModifiee = noteParIdentifiant('n-planifier-sauv'),
-		dernierEnregistrement = undefined
+		compte,
+		typesNote,
+		typesFiche,
+		templates,
+		noteModifiee = undefined,
+		/* L'ANCIENNETÉ DU DERNIER ENREGISTREMENT. `null` par défaut, et la barre
+		   dit alors « Aucune modification ». Elle se lisait à défaut dans une
+		   TABLE du gel — `modificationsPourVue('V-17')`, l'ancienneté des
+		   trente-deux notes de démonstration —, et la propriété a disparu avec
+		   elle : la seule route qui montre une note reprise sert la vraie. */
+		dernierEnregistrement = null
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -261,13 +238,6 @@
 	const cas = $derived<'vierge' | 'template' | 'modif'>(
 		reglage['cas'] === 'modif' ? 'modif' : reglage['cas'] === 'template' ? 'template' : 'vierge'
 	);
-
-	/**
-	 * L'ancienneté de la dernière version, en jours — `window.modifJours`,
-	 * `V-17:2240`, table `MODIFICATIONS` `V-17:2235`. Elle est lue à la table
-	 * REÇUE, pour la note reçue : rien n'est écrit ici.
-	 */
-	const JOURS_DEPUIS_MODIF = $derived(noteModifiee ? modifications[noteModifiee.id] : undefined);
 
 	const titre = $derived(cas === 'modif' ? (noteModifiee?.titre ?? '') : '');
 	const typeChoisi = $derived(cas === 'modif' ? (noteModifiee?.type ?? 'Procédure') : 'Procédure');
@@ -378,11 +348,9 @@
 	/** L'état du témoin de sauvegarde, et son libellé — `charger()`, `V-17:3537`. */
 	const etatSauvegarde = $derived(cas === 'modif' ? 'enregistre' : 'vierge');
 	const texteSauvegarde = $derived(
-		dernierEnregistrement === null
-			? 'Aucune modification'
-			: cas === 'modif'
-				? `Enregistré · dernière version il y a ${dernierEnregistrement ?? JOURS_DEPUIS_MODIF} jours`
-				: 'Aucune modification'
+		cas === 'modif' && dernierEnregistrement !== null
+			? `Enregistré · dernière version il y a ${dernierEnregistrement} jours`
+			: 'Aucune modification'
 	);
 
 	/** Le fil d'Ariane et le chemin courant du rail — `coquille({…})`, `V-17:3568`. */
@@ -525,13 +493,8 @@
 	{univers}
 	{domaines}
 	notes={corpus}
-	compte={{
-		nom: compte.nom,
-		initiales: compte.initiales,
-		role: compte.role,
-		domaine: compte.domaine
-	}}
-	version={instance.version}
+	{compte}
+	version=""
 	{...cas === 'template' ? { superposition: dialogueTemplate } : {}}
 >
 	{#snippet enfants()}
