@@ -56,6 +56,40 @@ function corps(vue: string, props: Proprietes = {}): string {
 	return rendre(composants.get(vue), { props: { notes, ...props } }).body;
 }
 
+/**
+ * LES BORNES D'UN ÉLÉMENT SERVI, RELEVÉES SUR LE BALISAGE RÉEL.
+ *
+ * Ni le fragment ni ses attributs ne sont écrits ici : ils sont cherchés dans
+ * ce que le compilateur Svelte a produit. Un contrôle qui fabriquerait le
+ * balisage qu'il éprouve ne dirait rien de celui que le produit sert.
+ */
+function borneServie(
+	rendu: string,
+	identifiant: string,
+	balise: string
+): { readonly ouvrante: string; readonly debut: number; readonly fin: number } {
+	const ancre = rendu.indexOf('id="' + identifiant + '"');
+	expect(ancre).toBeGreaterThan(-1);
+	const debut = rendu.lastIndexOf('<' + balise, ancre);
+	const finDeLOuvrante = rendu.indexOf('>', ancre);
+	const fin = rendu.indexOf('</' + balise + '>', ancre);
+	expect(debut).toBeGreaterThan(-1);
+	expect(fin).toBeGreaterThan(finDeLOuvrante);
+	return { ouvrante: rendu.slice(debut, finDeLOuvrante + 1), debut, fin };
+}
+
+/** Les positions d'un fragment dans le rendu, toutes. */
+function positionsDe(rendu: string, fragment: string): readonly number[] {
+	const trouvees: number[] = [];
+	for (let i = rendu.indexOf(fragment); i !== -1; i = rendu.indexOf(fragment, i + 1)) {
+		trouvees.push(i);
+	}
+	return trouvees;
+}
+
+/** Les quatre étapes du parcours, telles que la clé d'état les nomme. */
+const VECTEURS: readonly (Proprietes | null)[] = [null, { et: '2' }, { et: '3' }, { et: '4' }];
+
 describe('V-24 — l’étape 1 n’offre que le scénario que l’import exécute', () => {
 	it('rend la vignette du scénario livré', () => {
 		expect(corps('V-24', { vecteur: null })).toContain(
@@ -70,6 +104,31 @@ describe('V-24 — l’étape 1 n’offre que le scénario que l’import exécu
 		expect(SCENARIOS_NON_LIVRES.map((s) => s.id)).toEqual(['domaine', 'prepare']);
 		expect(rendu).not.toContain('Importer un domaine complet');
 		expect(rendu).not.toContain('Importer un corpus préparé');
+	});
+
+	/**
+	 * LE CONTRÔLE QUI MANQUAIT, ET CE QU'IL AURAIT ARRÊTÉ.
+	 *
+	 * Le cas ci-dessus cherche les NOMS du gel. Cherchés ainsi, ils suffisaient
+	 * à laisser passer l'étape 2 : l'aide de la case « Simulation » recommande
+	 * de vérifier un corpus préparé — le scénario `UC-M12-03` — sous une autre
+	 * forme que son nom de vignette, et l'y rebrancher l'aurait rendue visible
+	 * sous le seul scénario offert sans qu'aucun cas ne rougisse. C'est arrivé.
+	 *
+	 * Ce cas cherche donc la RACINE du mot, sur les quatre étapes, et exige de
+	 * chaque occurrence qu'elle soit portée par un élément servi caché.
+	 */
+	it('ne sert aucune mention VISIBLE d’un scénario que l’import n’exécute pas', () => {
+		for (const vecteur of VECTEURS) {
+			const rendu = corps('V-24', { vecteur });
+			const laCase = borneServie(rendu, 'champ-simulation', 'label');
+			expect(laCase.ouvrante).toContain('hidden');
+			const mentions = positionsDe(rendu, 'prépar');
+			expect(mentions.length).toBeGreaterThan(0);
+			for (const position of mentions) {
+				expect(position > laCase.debut && position < laCase.fin).toBe(true);
+			}
+		}
 	});
 
 	it('ne demande plus un nom de domaine que personne ne lisait', () => {
@@ -119,6 +178,20 @@ describe('V-35 — le journal dit ce qu’il conserve', () => {
 		expect(rendu).toContain('Dans un domaine existant');
 		expect(rendu).not.toContain('Un domaine complet');
 		expect(rendu).not.toContain('Un corpus préparé');
+	});
+
+	it('ne mentionne un scénario non livré sous AUCUNE forme, dans ce qu’il sert', () => {
+		/* Même exigence que sur V-24, et le même piège évité : la vignette
+		   retirée, il ne doit rester aucune REFORMULATION du scénario.
+
+		   L'état éprouvé est celui que le produit sert — le drapeau est faux,
+		   `journalDImportsEnregistre()` le dit plus bas. L'autre branche rend le
+		   journal du jeu de DÉMONSTRATION, dont les lignes nomment des imports
+		   passés (`seeds/corpus.ts`) : ce sont des données, pas une offre, et
+		   aucune table ne les produit aujourd'hui. */
+		const rendu = corps('V-35', { journalImports: [], journalEnregistre: false });
+		expect(rendu).not.toContain('prépar');
+		expect(rendu).not.toContain('domaine complet');
 	});
 
 	it('n’invite plus à déposer une archive', () => {
