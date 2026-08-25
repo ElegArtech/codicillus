@@ -53,6 +53,7 @@
 	import Vue from '../../vues/V-24.svelte';
 	import '../../vues/V-24.css';
 	import { reprendreLotEnAttente } from './lot-en-attente';
+	import { cheminDuFichier } from '$lib/cablage/depot-de-fichiers';
 	import type { LotDImport } from '../../../seeds/corpus';
 	import type { PageData } from './$types';
 
@@ -124,10 +125,7 @@
 		const corps = new FormData();
 		corps.append('domaine-cible', reglages.domaine);
 		if (reglages.simulation) corps.append('simulation', 'oui');
-		for (const f of fichiers) {
-			const relatif = (f as File & { webkitRelativePath?: string }).webkitRelativePath;
-			corps.append('fichiers', f, relatif !== undefined && relatif !== '' ? relatif : f.name);
-		}
+		for (const f of fichiers) corps.append('fichiers', f, cheminDuFichier(f));
 		const reponse = await fetch(`?/${action}`, { method: 'POST', body: corps });
 		const resultat = deserialize(await reponse.text());
 		if (resultat.type !== 'success') return null;
