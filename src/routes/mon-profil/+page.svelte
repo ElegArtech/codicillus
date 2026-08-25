@@ -39,6 +39,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import Vue from '../../vues/V-25.svelte';
 	import '../../vues/V-25.css';
 	import type { PageData } from './$types';
@@ -169,7 +170,20 @@
 	});
 </script>
 
+<!--
+	`domaines` VIENT DU GABARIT RACINE, QUI LES LIT EN BASE — même correctif qu'à
+	`/cartographie`, et pour un motif plus dur ici : ce n'est pas un sélecteur,
+	c'est un BOUTON QUI NAVIGUE.
+
+	V-25 cherche le domaine du titulaire dans cette liste pour composer l'adresse
+	de « Voir les notes de … » : un domaine ne s'adresse que par son univers
+	(`RG-STR-02`), et la liste seule le porte. Sur la constante du jeu de semence,
+	le bouton était donc SOIT inerte — aucun homonyme, sa garde le désactive —,
+	SOIT MENTEUR : un domaine du jeu portant le même nom qu'un domaine réel mais
+	rattaché à un autre univers composait une adresse qui rend 404.
+-->
 <Vue
+	domaines={page.data.domaines}
 	vecteur={data.vecteur}
 	notes={data.notes}
 	profilDuCompte={data.profilDuCompte}
