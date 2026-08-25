@@ -32,12 +32,26 @@
  * domaine, et le seul que le produit puisse choisir sans décider à la place de
  * l'utilisateur est celui auquel son compte est rattaché. Sans rattachement,
  * les deux entrées sont retirées plutôt que laissées mortes.
+ *
+ * L'ÉLAGAGE D'ICI EST LE SECOND FILET, PAS LE PREMIER. Il court après
+ * l'hydratation : ce qu'il retire a déjà été SERVI, et un navigateur sans script
+ * le garde. `BarreSuperieure.svelte` ne les ÉMET donc plus — c'est ce que `P-09`
+ * demande, « ni grisée, ni masquée ». Ce module continue de tenir la carte des
+ * destinations, parce que c'est elle qui décide du clic.
  */
 
 /** Ce que la mise en page sait de l'appelant, et qui décide des destinations. */
 export interface ContexteDeCoquille {
-	/** Les identifiants d'adresse du domaine de rattachement, ou `null`. */
-	rangement: { readonly univers: string; readonly domaine: string } | null;
+	/**
+	 * Le domaine de rattachement LISIBLE, ou `null`, et ce que chacune de ses
+	 * deux cibles demande en plus — `+layout.server.ts` les décide, un booléen
+	 * par cible, avec les fonctions de la cible.
+	 */
+	rangement: {
+		readonly univers: string;
+		readonly domaine: string;
+		readonly signets: boolean;
+	} | null;
 	/** `RG-DRO-03` — seul l'administrateur voit l'entrée de console. */
 	administrateur: boolean;
 }
@@ -57,7 +71,11 @@ function destinations(contexte: ContexteDeCoquille): Map<string, string | null> 
 		   un domaine neuf. `V-11.svelte` rend désormais cette pastille quel que
 		   soit l'état, et la page du domaine tient sa promesse. */
 		['Nouveau dossier', domaine],
-		['Nouveau signet', domaine === null ? null : `${domaine}/signets/nouveau`],
+		/* LE FORMULAIRE DE SIGNET DEMANDE DEUX CHOSES DE PLUS QUE LA PAGE DU
+		   DOMAINE — le module Signets actif sur ce domaine, et le droit d'y
+		   rédiger. `resoudreLAccesAuxSignets(…, true)` refuse sur l'une ou
+		   l'autre, et un domaine simplement LISIBLE n'y suffit pas. */
+		['Nouveau signet', domaine === null || !r?.signets ? null : `${domaine}/signets/nouveau`],
 		['Importer des fichiers', '/importer'],
 		['Mon profil', '/mon-profil'],
 		['Console d’administration', contexte.administrateur ? '/console' : null],
