@@ -56,7 +56,7 @@
 	 * distinguer effacerait un des trois cas déclarés par la planche.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * `notes={[]}` — CE QUI MANQUE, ET IL FAUT LE DIRE
+	 * `notes={[]}` ET `pistes={[]}` — CE QUI MANQUE, ET IL FAUT LE DIRE
 	 *
 	 * Les deux vues affichent des guides suggérés, et V-04 les quatre guides les
 	 * plus consultés — « la sortie de secours ». Les leur passer demanderait de
@@ -65,6 +65,14 @@
 	 * (`P-02`), la lacune est comptée à `LACUNES_DU_CHEMIN_PUBLIC` et remontée au
 	 * rapport du lot. La contrepartie est une propriété : la réponse ne dépend
 	 * d'aucune donnée de la ressource demandée.
+	 *
+	 * `pistes` SUIT LA MÊME RÈGLE, et pour la même raison. Les deux vues
+	 * énuméraient des pistes de reformulation écrites dans leurs maquettes —
+	 * « salle de réunion », « astreinte », « supervision » —, chacune ouvrant la
+	 * recherche à zéro résultat sur une instance qui ne porte rien de tel. Une
+	 * page d'erreur n'a pas de chargeur : il n'y a rien d'où les dériver, et une
+	 * liste vide ne rend pas le bloc. `reprises` n'a plus besoin d'être passée :
+	 * son défaut EST désormais la liste vide.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * TOUT AUTRE STATUT QUE 404 — ÉTAT NON MAQUETTÉ, DÉCLARÉ
@@ -155,7 +163,7 @@
 			vecteur={{ cas: casDeV26(), droits: ecriture ? 'ecriture' : 'lecture' }}
 			notes={[]}
 			adresse={page.url.pathname}
-			{...donnees.session === true ? { reprises: [] } : {}}
+			pistes={[]}
 			{...donnees.compte === null || donnees.compte === undefined
 				? {}
 				: { compte: donnees.compte as never }}
@@ -166,6 +174,7 @@
 			vecteur={{ cas: casDeV04(page.url.pathname) }}
 			notes={[]}
 			adresse={page.url.pathname}
+			pistes={[]}
 			{portail}
 		/>
 	{/if}

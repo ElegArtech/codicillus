@@ -83,7 +83,7 @@
 	 * figurent tous à l'ensemble clos du gel (ARB-016).
 	 */
 	import { resolve } from '$app/paths';
-	import { CONFIG, DATE_REFERENCE, type NiveauFraicheur } from '../../seeds/corpus';
+	import type { NiveauFraicheur } from '../../seeds/corpus';
 	import { temoinFraicheur } from '$lib/fraicheur';
 
 	/**
@@ -170,17 +170,24 @@
 		 * ils viennent donc de LUI et non du vecteur : peindre les attributs d'une
 		 * note sur le corps d'une autre est la valeur illustrative que `P-02`
 		 * proscrit.
+		 *
+		 * ELLE EST EXIGÉE, `null` COMPRIS : la seule route qui monte cette vue la
+		 * passe toujours, et une route qui l'oublierait ne compile plus.
 		 */
-		guide?: GuideAffiche | null;
+		guide: GuideAffiche | null;
 		/**
 		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — donnée d'INSTANCE, lue dans la table
-		 * `parametres` par le chargeur de la route. Absente, la valeur du jeu de
-		 * semence, qui est celle que la semence écrit en base.
+		 * `parametres` par le chargeur de la route, qui la passe TOUJOURS : la
+		 * propriété est EXIGÉE, et le jeu de démonstration ne peut plus tenir lieu
+		 * de défaut. Vide, l'appel à l'assistance n'est pas ÉMIS.
 		 */
-		portail?: string;
+		portail: string;
 	}
 
-	const { vecteur, guide = null, portail = CONFIG.portailAssistance }: Proprietes = $props();
+	const { vecteur, guide, portail }: Proprietes = $props();
+
+	/** Une adresse absente ou blanche ne mène nulle part : rien ne l'annonce. */
+	const assistanceJoignable = $derived(portail.trim() !== '');
 
 	const reglage = $derived(vecteur ?? {});
 	/** Un corps « En bref » existe-t-il ? Sinon le sélecteur de registre disparaît. */
@@ -199,10 +206,11 @@
 	 *
 	 * Ce qui est DONNÉE, et que rien ne calcule, c'est la date de contrôle. Le
 	 * gel l'écrit trois fois, dans le `<time>` du détail ci-dessous, et c'est
-	 * elle — elle seule — qui est portée ici. L'ancienneté s'en déduit contre
-	 * `DATE_REFERENCE`, l'horloge gelée du jeu de semence, sans quoi le libellé
-	 * relatif ne serait pas reproductible des deux côtés de la comparaison
-	 * (ADR-005, conséquences).
+	 * elle — elle seule — qui est portée ici. L'ancienneté s'en déduit contre LA
+	 * VRAIE DATE : elle se déduisait contre `DATE_REFERENCE`, l'horloge gelée du
+	 * jeu de démonstration, si bien qu'un écran servi en 2027 aurait annoncé une
+	 * ancienneté calculée depuis le 13 août 2026. Ce calcul ne sert qu'au rendu
+	 * sans guide ; le guide fourni porte son ancienneté lui-même.
 	 *
 	 * Les trois libellés que la fabrique en tire sont, à la lettre, les trois du
 	 * gel — c'est ce qui rend cette réparation possible à pixel constant :
@@ -239,9 +247,9 @@
 		obs: '6 novembre 2025'
 	};
 
-	/** Jours écoulés entre une date de contrôle et l'horloge gelée du corpus. */
+	/** Jours écoulés entre une date de contrôle et maintenant. */
 	function depuis(date: string): number {
-		return Math.round((Date.parse(DATE_REFERENCE) - Date.parse(date)) / 86_400_000);
+		return Math.round((Date.now() - Date.parse(date)) / 86_400_000);
 	}
 
 	/** Fraîcheur affichée par le cartouche de contrôle. */
@@ -736,21 +744,25 @@
 				</div>
 			</section>
 
-			<aside class="repli">
-				<h2 class="repli__titre">Toujours bloqué ?</h2>
-				<p class="repli__txt">L'assistance prend le relais et vous rappelle.</p>
-				<a class="btn btn--principal" href={portail} id="ticket">
-					Ouvrir un ticket
-					<svg
-						width="13"
-						height="13"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.6"><path d="M6 3h7v7M13 3L4 12" /></svg
-					>
-				</a>
-			</aside>
+			<!-- L'ASIDE ENTIER EST GARDÉ : sans portail configuré, « Toujours
+				 bloqué ? » suivi de rien serait une impasse annoncée. -->
+			{#if assistanceJoignable}
+				<aside class="repli">
+					<h2 class="repli__titre">Toujours bloqué ?</h2>
+					<p class="repli__txt">L'assistance prend le relais et vous rappelle.</p>
+					<a class="btn btn--principal" href={portail} id="ticket">
+						Ouvrir un ticket
+						<svg
+							width="13"
+							height="13"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.6"><path d="M6 3h7v7M13 3L4 12" /></svg
+						>
+					</a>
+				</aside>
+			{/if}
 		</aside>
 	</main>
 
