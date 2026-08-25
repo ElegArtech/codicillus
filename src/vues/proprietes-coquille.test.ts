@@ -36,6 +36,7 @@ import { createServer, type ViteDevServer } from 'vite';
 import {
 	ACTIVITE,
 	COMPTES,
+	CONFIG,
 	CONTRIBUTIONS,
 	DISTINCTIONS,
 	DOMAINES,
@@ -59,6 +60,7 @@ import {
 	type UtilisateurCourant,
 	type Version
 } from '../../seeds/corpus';
+import { CONFIGURATION_PAR_DEFAUT } from '../lib/base/schema';
 
 type Proprietes = Record<string, unknown>;
 type Rendre = (composant: unknown, options: { props: Proprietes }) => { body: string };
@@ -146,15 +148,19 @@ function coquille(inertes: readonly string[] = []): readonly Source[] {
 const VUES: Readonly<
 	Record<string, { readonly base: Proprietes; readonly sources: readonly Source[] }>
 > = {
+	/* V-06 N'A PLUS QU'UNE SOURCE, ET C'EST LE CORRECTIF DU LOT G : ses quatre
+	   étapes décrivaient une réinitialisation par courriel dont le produit n'a
+	   aucun morceau. La vue rend un écran unique, sans vecteur et sans compte à
+	   rappeler ; l'adresse du portail d'assistance est la seule donnée
+	   d'instance qui la traverse encore. */
 	'V-06': {
-		base: { vecteur: { et: '2' } },
+		base: {},
 		sources: [
 			{
-				cle: 'comptes',
-				defaut: COMPTES,
-				autre: COMPTES.filter((c) => c.id !== 'c-sophie'),
-				/* L'étape 2 est la seule qui affiche l'identifiant du compte. */
-				base: { vecteur: { et: '2' } }
+				cle: 'portail',
+				defaut: CONFIG.portailAssistance,
+				autre: 'https://assistance.exemple.test/autre',
+				marqueur: 'https://assistance.exemple.test/autre'
 			}
 		]
 	},
@@ -384,5 +390,102 @@ describe('V-25 — l’issue « Voir les notes de … »', () => {
 		});
 		expect(rendu).toContain('Voir les notes de Un domaine que la liste ne porte pas');
 		expect(rendu).not.toContain('disabled="">Voir les notes de');
+	});
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LE COURRIEL N'EST PLUS PROMIS — V-06 ET V-25
+
+   CE QUE CES CAS ÉPROUVENT : le BALISAGE RÉELLEMENT RENDU par les deux vues,
+   compilé et exécuté par le même graphe de modules que le produit. Ils ne
+   relisent pas le fichier source, et ils ne fabriquent pas la chaîne qu'ils
+   cherchent : c'est la vue qui la produit, ou ne la produit pas.
+
+   Le produit n'a AUCUN expéditeur de courriel, et aucune table ne porte de
+   jeton de réinitialisation. Toute phrase qui annonce un message à venir est
+   donc une promesse que rien ne peut tenir. Le jour où un expéditeur arrive,
+   ces cas rougissent — et c'est exactement ce qu'on leur demande.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('V-06 — l’écran ne promet plus un courriel que rien n’enverrait', () => {
+	const rendu = (): string => corps('V-06', {});
+
+	it('ne promet aucun envoi ni aucune adresse de destination', () => {
+		expect(rendu()).not.toContain('vous recevrez un lien');
+		expect(rendu()).not.toContain('adresse professionnelle');
+		expect(rendu()).not.toContain('Vérifiez votre messagerie');
+	});
+
+	it('n’affirme plus qu’un lien a existé et vient d’expirer', () => {
+		expect(rendu()).not.toContain("Ce lien n'est plus valable");
+		expect(rendu()).not.toContain('expire au bout d’une heure');
+	});
+
+	it('ne demande plus d’identifiant : aucun champ, donc rien à divulguer', () => {
+		expect(rendu()).not.toContain('id="identifiant"');
+		expect(rendu()).not.toContain('<form');
+	});
+
+	it('dit l’indisponibilité et nomme le chemin qui existe', () => {
+		expect(rendu()).toContain("Cette instance n'envoie aucun courriel");
+		expect(rendu()).toContain('par un administrateur');
+		expect(rendu()).toContain('console des comptes');
+	});
+
+	/* LA SECONDE MOITIÉ DE LA PHRASE ÉTAIT UNE PROMESSE DE PLUS. L'écran
+	   annonçait « vous le remplacerez ensuite depuis votre profil » ; un compte
+	   dont `mot_de_passe_verrouille` est posé se voit refuser ce remplacement,
+	   et le refus est prouvé à sa source, pas ici : `profil.test.ts` exerce
+	   `changerLeMotDePasse` sur un profil verrouillé et relève l'issue
+	   `verrouille`, décidée avant la moindre requête. V-06 est ANONYME — aucune
+	   propriété ne lui dit à quel compte il parle —, il ne peut donc pas
+	   distinguer les deux cas, et n'annonce plus que celui qui vaut pour tous. */
+	it('n’annonce plus un changement depuis le profil, que le verrou refuse', () => {
+		expect(rendu()).not.toContain('votre profil');
+		expect(rendu()).not.toContain('remplacerez');
+		expect(rendu()).not.toContain('provisoire');
+	});
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   V-06 — LE PIED D'ASSISTANCE N'EST ÉMIS QUE S'IL MÈNE QUELQUE PART
+
+   LA VALEUR ÉPROUVÉE N'EST PAS FABRIQUÉE ICI : c'est
+   `CONFIGURATION_PAR_DEFAUT.portailAssistance`, le défaut même sur lequel
+   `lireConfiguration()` retombe clé par clé quand `parametres` ne porte rien —
+   l'état d'une instance neuve, où seule la console peut renseigner l'adresse.
+   Écrire une chaîne vide à la main aurait éprouvé une hypothèse ; importer la
+   constante éprouve ce que le chargeur passe réellement à la vue.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('V-06 — le ticket d’assistance n’est offert qu’avec une destination', () => {
+	it('n’émet ni la question ni le bouton quand l’instance n’a pas d’adresse', () => {
+		const rendu = corps('V-06', {}, { portail: CONFIGURATION_PAR_DEFAUT.portailAssistance });
+		expect(rendu).not.toContain('id="assistance"');
+		expect(rendu).not.toContain('Ouvrir un ticket d’assistance');
+		expect(rendu).not.toContain("Ouvrir un ticket d'assistance");
+		expect(rendu).not.toContain('retrouver votre accès');
+	});
+
+	it('les émet dès qu’une adresse est renseignée, et c’est celle-là', () => {
+		const adresse = 'https://assistance.exemple.test/nouveau';
+		const rendu = corps('V-06', {}, { portail: adresse });
+		expect(rendu).toContain('id="assistance"');
+		expect(rendu).toContain(adresse);
+	});
+
+	it('une adresse blanche ne mène pas plus loin qu’une adresse absente', () => {
+		expect(corps('V-06', {}, { portail: '   ' })).not.toContain('id="assistance"');
+	});
+});
+
+describe('V-25 — l’interrupteur de notification par courriel n’est plus émis', () => {
+	const rendu = (): string => corps('V-25', { vecteur: null });
+
+	it('ne pose plus le contrôle que le gel laissait coché sans gestionnaire', () => {
+		expect(rendu()).not.toContain('p-courriels');
+		expect(rendu()).not.toContain('Recevoir les demandes de révision par courriel');
+	});
+
+	it('garde l’interrupteur de session, lui, qui a bien sa contrepartie', () => {
+		expect(rendu()).toContain('p-session');
 	});
 });
