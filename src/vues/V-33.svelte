@@ -30,7 +30,7 @@
 	 *
 	 *   `SEUILS_PAR_DEFAUT` (`src/lib/fraicheur.ts`, l'implémentation unique)
 	 *      → la configuration de l'instance, reçue en propriété `config`
-	 *         (défaut : `CONFIG` de `seeds/corpus.ts`)
+	 *         (EXIGÉE — plus aucun repli sur le jeu de démonstration)
 	 *         → `SEUILS_DE_PLANCHE.actuel` (ici, la position « en vigueur »)
 	 *
 	 * Les valeurs rendues sont inchangées : 90 et 180 des deux côtés.
@@ -39,8 +39,9 @@
 	 * réglages, aucun en dur : seuils, versions conservées, portail
 	 * d'assistance, libellé du concept, taille de pièce jointe, durée de
 	 * session. `enregistre` du gel est cette même valeur (`V-33:2962`).
-	 * Absente, la constante `CONFIG` du jeu de semence s'applique : la vue rend
-	 * alors exactement ce qu'elle rendait (T-044).
+	 * La propriété est EXIGÉE : elle retombait sur `CONFIG` du jeu de
+	 * démonstration, et une route qui l'oubliait servait ses réglages comme
+	 * ceux de l'instance.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * L'APERÇU D'IMPACT — UNE SEULE DÉFINITION DE LA FRAÎCHEUR (P-01)
@@ -94,20 +95,7 @@
 	 * l'aperçu d'impact (voir `barreRepartition` plus bas). Le rendu, lui, est
 	 * inchangé. Les `style=` reproduits figurent tous à l'ensemble clos du gel.
 	 */
-	import {
-		CONFIG,
-		DOMAINES,
-		INSTANCE,
-		MOI,
-		UNIVERS,
-		type Configuration,
-		type Domaine,
-		type EtatDInstance,
-		type NiveauFraicheur,
-		type Note,
-		type Univers,
-		type UtilisateurCourant
-	} from '../../seeds/corpus';
+	import type { Configuration, NiveauFraicheur, Note } from '../../seeds/corpus';
 	import { niveauFraicheur } from '$lib/fraicheur';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
@@ -126,29 +114,29 @@
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur?: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-33')`. */
+		/** Les notes de l'instance, servies par le chargeur. */
 		notes: readonly Note[];
-		/** Les univers déclarés. Absente, la constante du jeu de semence s'applique. */
-		univers?: readonly Univers[];
-		/** Les domaines déclarés. Absente, la constante du jeu de semence s'applique. */
-		domaines?: readonly Domaine[];
-		/** L'utilisateur courant. Absente, la constante du jeu de semence s'applique. */
-		compte?: UtilisateurCourant;
-		/** L'état de l'instance. Absente, la constante du jeu de semence s'applique. */
-		instance?: EtatDInstance;
-		/** Les sept réglages de l'instance. Absente, la constante du jeu de semence. */
-		config?: Configuration;
+		/**
+		 * LES SEPT RÉGLAGES DE L'INSTANCE, EXIGÉS.
+		 *
+		 * La propriété était facultative et retombait sur `CONFIG` de
+		 * `seeds/corpus.ts` : une route qui l'oubliait servait les seuils, le
+		 * portail et le plafond de versions du jeu de démonstration comme les
+		 * réglages en vigueur, sans que rien ne proteste. `/console/configuration`
+		 * les passe, et il n'y a pas d'autre chargeur : exigée, une route qui
+		 * l'oublierait ne compilerait plus.
+		 */
+		config: Configuration;
 	}
 
-	const {
-		vecteur,
-		notes,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte = MOI,
-		instance = INSTANCE,
-		config = CONFIG
-	}: Proprietes = $props();
+	/*
+	 * LE RAIL, LA BARRE ET LA VERSION NE PASSENT PLUS PAR ICI. Cette vue portait
+	 * `univers`, `domaines`, `compte` et `instance` sans jamais les lire : elle
+	 * ne faisait que les remettre à `CoquilleDeConsole`, qui retombait sur le jeu
+	 * de démonstration. La coquille lit désormais le contexte d'identité, seule
+	 * source, et les quatre propriétés ont disparu des deux côtés.
+	 */
+	const { vecteur, notes, config }: Proprietes = $props();
 
 	/**
 	 * LES QUATRE POSITIONS DE LA PLANCHE. Les trois dernières sont des réglages
@@ -361,7 +349,7 @@
 		>{#each partsDe(r) as p (p.cle)}<span><i class={p.classe}></i><b>{p.n}</b>{` ${p.n > 1 ? p.pluriel : p.singulier}`}</span>{/each}</div
 	>{/if}{/if}{/snippet}
 
-<CoquilleDeConsole section="configuration" {notes} {univers} {domaines} {compte} {instance}>
+<CoquilleDeConsole section="configuration" {notes}>
 	{#snippet enfants()}
 		<TeteDeSection
 			titre="Configuration"

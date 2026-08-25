@@ -40,9 +40,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		vecteur: null,
 		notes: acces.ressource.notes,
-		univers: acces.ressource.univers,
-		domaines: acces.ressource.domaines,
-		compte: acces.ressource.compte,
+		/* NI `univers`, NI `domaines`, NI `compte` : LA COQUILLE LES LIT AU CONTEXTE D'IDENTITÉ.
+		   Ils descendaient jusqu'à `CoquilleDeConsole`, qui retombait sur les
+		   constantes de `seeds/corpus.ts` dès qu'une route en oubliait un. Le
+		   gabarit racine pose le contexte ; les servir ici serait une seconde
+		   source, et une charge utile que personne ne lit. */
+
 		config: await lireConfiguration(base)
 	};
 };
