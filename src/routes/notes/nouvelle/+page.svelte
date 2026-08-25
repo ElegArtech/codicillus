@@ -178,6 +178,11 @@
 					});
 		const defaire = cablerLEditeur(formulaire, {
 			rechargerSurDomaine: (domaine) => `/notes/nouvelle?domaine=${encodeURIComponent(domaine)}`,
+			/* LE RÉFÉRENTIEL DES TYPES DE FICHE — le même que celui qui peuple
+			   `#m-fiche`. Sans lui, choisir un type ne fait apparaître aucun champ
+			   et la valeur du sélecteur ne quitte jamais l'écran. */
+			typesFiche: data.typesFiche,
+			surSaisie: () => gestes?.signalerUneModification(),
 			...(editeur === null ? {} : { editeur: () => editeur.document() })
 		});
 		gestes = cablerLesGestesDEdition(formulaire, {
