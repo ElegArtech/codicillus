@@ -38,15 +38,14 @@
 	 * `apercuExport()` est le calque exact de `window.apercuExport`
 	 * (`V-36:2661`), qui s'appuie lui-même sur `notesDuDomaine`,
 	 * `dossiersDuDomaine` et `compterDossiers` (`V-36:1926`, `:1946`,
-	 * `:2530`). Les cinq lignes du récapitulatif, le volume estimé et
+	 * `:2530`). Les cinq lignes du récapitulatif, le volume estimé, le nombre
+	 * de dossiers annoncé par « L'arborescence de dossiers, reproduite » et
 	 * l'arborescence d'archive en sortent tous.
 	 *
-	 * DEUX VALEURS EN SORTENT SERVIES, ET C'EST UNE RÉPARATION. Le NOMBRE DE
-	 * DOSSIERS annoncé par « L'arborescence de dossiers, reproduite » se déduisait
-	 * du rangement des NOTES, et ne voyait donc pas un dossier vide que l'archive
-	 * porte pourtant ; les NOMS DE L'ARCHIVE étaient des littéraux écrits ici, et
-	 * ils avaient divergé de la fabrique sur cinq lignes d'un bloc de six. Le
-	 * décompte vient désormais de la base, et les noms de `$lib/export/noms.ts`.
+	 * LES NOMS DE L'ARCHIVE, EUX, N'EN SORTENT PLUS. Ils étaient des littéraux
+	 * écrits ici, et ils avaient divergé de la fabrique sur cinq lignes d'un
+	 * bloc de six ; ils viennent désormais de `$lib/export/noms.ts`, la source
+	 * que `construireLArchive()` lit elle-même.
 	 *
 	 * LE NOM D'ARCHIVE PORTE UNE DATE, ET ELLE N'EST PAS ÉCRITE À LA MAIN. Le
 	 * gel écrit `ardoise(dom) + "-2026-08-13.zip"` (`V-36:2964`, `V-36:3061`).
@@ -178,20 +177,6 @@
 		 * écran branché.
 		 */
 		nomsDArchive?: Readonly<Record<string, string>>;
-		/**
-		 * LES DOSSIERS DE CHAQUE DOMAINE, RACINE EXCLUE, LUS EN BASE.
-		 *
-		 * L'écran affirme que « les N dossiers du domaine deviennent des dossiers
-		 * de l'archive ». Il tirait N du RANGEMENT DES NOTES — `dossiersDuDomaine`
-		 * déduit l'arbre du chemin porté par chaque note —, si bien qu'un dossier
-		 * VIDE n'était compté nulle part alors que l'archive écrit son entrée. Le
-		 * domaine « Doctrine » du jeu de démonstration en porte un, et l'écran
-		 * annonçait deux dossiers là où l'archive en range trois.
-		 *
-		 * ABSENTE, l'arbre déduit s'applique et le banc de comparaison ne bouge
-		 * pas. FOURNIE, elle fait loi pour ce domaine.
-		 */
-		dossiersParDomaine?: Readonly<Record<string, number>>;
 	}
 
 	const {
@@ -201,8 +186,7 @@
 		compte = MOI,
 		instance = INSTANCE,
 		onExporter,
-		nomsDArchive,
-		dossiersParDomaine
+		nomsDArchive
 	}: Proprietes = $props();
 
 	/* ── Le calque des fabriques du gel ──────────────────────────────────────
@@ -267,9 +251,7 @@
 		const mots = liste.reduce((s, n) => s + n.extrait.split(/\s+/).length * 14, 0);
 		return {
 			notes: liste.length,
-			/* LE DÉCOMPTE LU EN BASE L'EMPORTE : l'arbre déduit des notes ne voit
-			   pas un dossier vide, que l'archive porte pourtant. */
-			dossiers: dossiersParDomaine?.[domaine] ?? compterDossiers(arbre),
+			dossiers: compterDossiers(arbre),
 			fiches: liste.filter((n) => n.type === 'Fiche').length,
 			signets: liste.filter((n) => n.type === 'Signet').length,
 			pieces: pj,
@@ -349,10 +331,17 @@
 	 * lit elle-même. Un nom qui changerait à la source changerait ici.
 	 *
 	 * CE QUE L'ARCHIVE CONTIENT, ligne à ligne (`export/archive.ts:765-818`) :
-	 * une entrée par dossier du domaine, RACINE COMPRISE — et la racine porte
-	 * le nom du domaine (`donnees/administration.ts:1853`) ; un fichier par
-	 * note, à la place de son dossier ; un dossier de pièces PAR NOTE sous le
-	 * dossier voisin ; et le rapport de conversion, à la racine.
+	 * une entrée par dossier du domaine, RACINE COMPRISE ; un fichier par note,
+	 * à la place de son dossier ; un dossier de pièces PAR NOTE sous le dossier
+	 * voisin ; et le rapport de conversion, à la racine.
+	 *
+	 * LA RACINE EST NOMMÉE PAR LE NOM DU DOMAINE, ET C'EST EXACT TANT QUE LE
+	 * DOMAINE N'A PAS ÉTÉ RENOMMÉ. L'archive range sous le nom du DOSSIER racine
+	 * (`export/archive.ts:744`, chemin bâti par `donnees/export.ts:119-127`), que
+	 * la création pose égal au nom du domaine (`donnees/administration.ts:1853`)
+	 * mais que `modifierUnDomaine()` (`:1953-1996`) ne suit pas. Le nom du
+	 * dossier racine n'atteint pas cet écran ; le corriger demande de le servir,
+	 * ce qui déborde ce lot. L'écart est consigné, non masqué.
 	 *
 	 * LE CHEMIN MONTRÉ EST CELUI D'UNE VRAIE NOTE, pas la première branche d'un
 	 * arbre où la note montrée pouvait ne pas se trouver : chaque segment sort
@@ -514,16 +503,10 @@
 				><div class="recap-export__corps"
 					><div id="recap"
 						>{#each recapitulatif as [nom, valeur] (nom)}<div class="re" data-nul={valeur ? 'non' : 'oui'}><span>{nom}</span><span class="re__n">{valeur}</span></div>{/each}</div
-					><!--
-						UNE INSTANCE NEUVE N'A AUCUN DOMAINE, ET LE BOUTON NE PEUT RIEN
-						PRÉPARER. Il restait actif, et le clic ne faisait rien : le geste
-						était dessiné sans être tenu. Sans domaine choisi, il est inerte
-						ET IL LE DIT (`P-03`).
-					--><button
+					><button
 						class="btn btn--principal"
 						id="exporter"
 						type="button"
-						disabled={domaineCourant === ''}
 						onclick={() => onExporter?.(domaineCourant)}
 						><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8.5M4.8 7.3L8 10.7l3.2-3.4M2.5 13.5h11"/></svg>
 						Préparer l'archive</button

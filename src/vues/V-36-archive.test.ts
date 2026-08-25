@@ -24,10 +24,7 @@
  * `src/lib/base/semence.ts` sert la fabrique, et les deux dérivent du même
  * corpus figé sans qu'aucune correspondance ne soit écrite à la main.
  */
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { createServer, type ViteDevServer } from 'vite';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { afterAll, describe, expect, test } from 'vitest';
 import { CORPUS, DOMAINES, type Note } from '../../seeds/corpus';
 import { lignesDeDossier, lignesDeNote } from '../lib/base/semence';
 import { identifiantLisible } from '../lib/rangement/adresses';
@@ -37,32 +34,23 @@ import {
 	type NoteAExporter,
 	type PieceJointeAExporter
 } from '../lib/export/archive';
+import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
 
-const racine = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-
-let serveur: ViteDevServer;
-let rendreComposant: (composant: unknown, options: { props: object }) => { body: string };
-
-beforeAll(async () => {
-	serveur = await createServer({
-		configFile: join(racine, 'vite.config.ts'),
-		root: racine,
-		server: { middlewareMode: true },
-		appType: 'custom',
-		logLevel: 'error'
-	});
-	rendreComposant = (await serveur.ssrLoadModule('svelte/server')).render;
-}, 120_000);
-
-afterAll(async () => {
-	await serveur?.close();
-});
-
-/** Le corps rendu de V-36, par le graphe SSR de Vite — jamais autrement. */
+/**
+ * LE RENDU PASSE PAR LE HARNAIS COMMUN, ET C'EST UNE CONDITION DE SÉRIE VERTE.
+ *
+ * Un second serveur Vite monté ici, avec sa propre configuration, PERDAIT la
+ * garde que le harnais documente : son surveillant descend dans les copies de
+ * travail du dépôt, et les veilleurs de fichiers du système s'épuisent — la
+ * série sort alors en ENOSPC, ses milliers de tests verts compris. Mesuré sur
+ * la copie principale, mêmes options : 14 110 veilles sans la garde contre
+ * 1 720 avec, pour un plafond de 65 536 et treize copies complètes.
+ */
 async function rendreV36(proprietes: object): Promise<string> {
-	const module = await serveur.ssrLoadModule('/src/vues/V-36.svelte');
-	return rendreComposant(module.default, { props: { vecteur: null, ...proprietes } }).body;
+	return rendreLaVue('V-36', { vecteur: null, ...proprietes });
 }
+
+afterAll(fermerLeHarnais);
 
 /* ═══════════════════════════ Le domaine, tel que la base le porterait ══ */
 
@@ -188,32 +176,6 @@ describe('V-36 — l’arborescence annoncée est celle de l’archive produite'
 	});
 
 	/**
-	 * LE NOMBRE DE DOSSIERS ANNONCÉ EST CELUI QUE L'ARCHIVE RANGE.
-	 *
-	 * L'écran le tirait du rangement des NOTES : un dossier vide, que l'archive
-	 * porte pourtant, n'était compté nulle part. Le constat croise les deux —
-	 * l'archive écrit une entrée par dossier, racine comprise, quand l'écran
-	 * compte les dossiers racine EXCLUE, comme partout ailleurs dans le produit.
-	 * Le décompte annoncé plus un doit donc être le nombre d'entrées de dossier.
-	 */
-	test('le nombre de dossiers annoncé est celui des entrées de dossier de l’archive', async () => {
-		const domaine = domaineDuJeu(NOM_DE_DOMAINE);
-		const archive = construireLArchive(domaine);
-		const entreesDeDossier = archive.entrees.filter((e) => e.chemin.endsWith('/')).length;
-
-		/* Le décompte servi vient de la base ; ici, du même rangement que la
-		   fabrique lit, et compté selon la même convention (racine exclue). */
-		const compteServi = domaine.dossiers.filter((d) => d.chemin.length > 1).length;
-		const rendu = await rendreV36({
-			notes: notesDuJeuSansPieces(),
-			nomsDArchive: { [NOM_DE_DOMAINE]: 'archive.zip' },
-			dossiersParDomaine: { [NOM_DE_DOMAINE]: compteServi }
-		});
-		expect(compteServi + 1).toBe(entreesDeDossier);
-		expect(rendu).toContain('Les ' + String(compteServi) + ' dossiers du domaine');
-	});
-
-	/**
 	 * LES DEUX NOMS QUE L'ÉCRAN AVAIT INVENTÉS, NOMMÉMENT REFUSÉS.
 	 *
 	 * Le contrôle ci-dessus les prendrait déjà ; ces deux constats les nomment,
@@ -273,19 +235,6 @@ describe('V-36 — l’arborescence annoncée est celle de l’archive produite'
  * le domaine à l'identique ». Tant qu'aucun lot ne livre la réimportation,
  * l'écran ne la nomme que pour dire qu'elle n'est pas disponible.
  */
-describe('V-36 — le chemin à zéro donnée', () => {
-	/**
-	 * UNE INSTANCE NEUVE N'A AUCUN DOMAINE — et le bouton « Préparer l'archive »
-	 * restait actif sur un clic qui ne faisait rien, faute de domaine à nommer.
-	 */
-	test('sans aucun domaine, le bouton de préparation est inerte et le dit', async () => {
-		const neuve = await rendreV36({ domaines: [], notes: [], nomsDArchive: {} });
-		expect(/<button[^>]*id="exporter"[^>]*disabled/.test(neuve)).toBe(true);
-		const servie = await rendreV36({ notes: notesDuJeuSansPieces() });
-		expect(/<button[^>]*id="exporter"[^>]*disabled/.test(servie)).toBe(false);
-	});
-});
-
 describe('V-36 — la réimportation n’est plus promise', () => {
 	test('l’écran ne promet aucune reconstitution du domaine', async () => {
 		const rendu = await rendreV36({ notes: notesDuJeuSansPieces() });

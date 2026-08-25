@@ -59,33 +59,8 @@ import {
 	resoudreLaConsole
 } from '$lib/donnees/consoles';
 import { nomDArchive } from '$lib/export/archive';
-import { and, eq, isNotNull, sql } from 'drizzle-orm';
-import { domaines, dossiers } from '$lib/base/schema';
 import type { PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
-
-/**
- * LES DOSSIERS DE CHAQUE DOMAINE, RACINE EXCLUE.
- *
- * L'écran annonce « les N dossiers du domaine deviennent des dossiers de
- * l'archive ». Il tirait N du RANGEMENT DES NOTES — les segments distincts des
- * chemins portés par les notes servies —, si bien qu'un dossier VIDE, que
- * l'archive porte pourtant, n'était compté nulle part. Le décompte se lit donc
- * là où il vit, sur la table des dossiers.
- *
- * LA RACINE EST EXCLUE, comme partout ailleurs dans le produit : elle est une
- * exigence de schéma, aucune adresse ne la porte, et aucun écran ne l'a jamais
- * comptée (`donnees/administration.ts:111-122`, dans les mêmes termes).
- */
-async function dossiersParDomaine(base: ReturnType<typeof basePartagee>) {
-	const lignes = await base
-		.select({ nom: domaines.nom, combien: sql<number>`count(*)::int` })
-		.from(dossiers)
-		.innerJoin(domaines, eq(dossiers.domaineId, domaines.id))
-		.where(and(isNotNull(dossiers.parentId)))
-		.groupBy(domaines.nom);
-	return Object.fromEntries(lignes.map((l) => [l.nom, l.combien]));
-}
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
@@ -96,7 +71,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const maintenant = new Date().toISOString();
 
 	return {
-		dossiersParDomaine: await dossiersParDomaine(base),
 		notes: acces.ressource.notes,
 		univers: acces.ressource.univers,
 		domaines: acces.ressource.domaines,
