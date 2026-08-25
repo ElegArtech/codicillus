@@ -90,9 +90,26 @@
 		 * tient donc lieu de défaut : c'est celle que la semence écrit en base.
 		 */
 		portail?: string;
+		/**
+		 * L'ADRESSE RÉELLEMENT DEMANDÉE — la seule entrée d'`adresseNonResolue()`.
+		 *
+		 * La vue n'avait aucun moyen de la recevoir : elle retombait sur la table
+		 * `ADRESSES` de la planche, et TOUTE adresse cassée de l'espace public
+		 * annonçait « Adresse demandée /guides/plan-de-reprise-volet-bases », avec
+		 * la requête qui s'en dérive déjà saisie dans le champ de recherche.
+		 *
+		 * Absente, la constante de la planche reste le défaut : le banc ne bouge
+		 * pas d'un pixel. Fournie — par le composant d'erreur de la racine, qui lit
+		 * `page.url.pathname` —, elle l'emporte.
+		 *
+		 * ELLE NE DISTINGUE RIEN, et c'est tout le propos d'`ADR-007` : c'est un
+		 * CHEMIN, pas une raison. Le rendu est le même que l'adresse désigne un
+		 * guide inexistant ou un guide non public.
+		 */
+		adresse?: string;
 	}
 
-	const { vecteur, notes, portail = CONFIG.portailAssistance }: Proprietes = $props();
+	const { vecteur, notes, portail = CONFIG.portailAssistance, adresse }: Proprietes = $props();
 
 	/**
 	 * LES TROIS ADRESSES DE LA PLANCHE DE REVUE, ET RIEN D'AUTRE.
@@ -134,7 +151,19 @@
 	);
 
 	/** L'UNIQUE point d'entrée. Une adresse entre, un état sort — ADR-007. */
-	const resolution = $derived(adresseNonResolue(ADRESSES[cas] ?? ADRESSES_PAR_DEFAUT));
+	const resolution = $derived(adresseNonResolue(adresse ?? ADRESSES[cas] ?? ADRESSES_PAR_DEFAUT));
+
+	/**
+	 * « OUVRIR UN TICKET D'ASSISTANCE » N'EST ÉMIS QUE S'IL MÈNE QUELQUE PART.
+	 *
+	 * Même règle que V-06, et pour la même raison : `CONFIGURATION_PAR_DEFAUT`
+	 * laisse `portail_assistance` VIDE, et la table reste vide tant que personne
+	 * ne l'a renseignée en console. Sur une instance conforme au « produit qui
+	 * commence vide », le bouton portait une destination vide et le clic
+	 * rechargeait la page d'erreur — une des deux seules issues de l'écran.
+	 * Ce qui n'a pas de contrepartie n'est pas émis.
+	 */
+	const assistanceJoignable = $derived(portail.trim() !== '');
 
 	/** RG-M17-01 — la restriction au périmètre public, au point d'entrée. */
 	const publiques = $derived(notesPubliques(notes));
@@ -316,19 +345,21 @@
 				L'adresse du portail d'assistance est une donnée de configuration
 				(« adresse externe configurée en console », `V-04:2205`). Elle est
 				désormais portée par la table `parametres` — clé `portail_assistance` —
-				et arrive par la propriété `portail`, jamais fabriquée ici.
+				et arrive par la propriété `portail`, jamais fabriquée ici. Vide — l'état
+				d'une instance dont personne n'a renseigné la clé —, le bouton n'est pas
+				ÉMIS : un lien d'assistance sans destination n'est pas une issue.
 			-->
-			<a class="btn" href={portail} id="ticket">
-				Ouvrir un ticket d'assistance
-				<svg
-					width="13"
-					height="13"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.6"><path d="M6 3h7v7M13 3L4 12" /></svg
-				>
-			</a>
+			{#if assistanceJoignable}<a class="btn" href={portail} id="ticket">
+					Ouvrir un ticket d'assistance
+					<svg
+						width="13"
+						height="13"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.6"><path d="M6 3h7v7M13 3L4 12" /></svg
+					>
+				</a>{/if}
 		</div>
 
 		<!-- Rattrapage : une sortie concrète plutôt qu'une impasse. -->
