@@ -1,20 +1,31 @@
 # Où reprendre
 
-*État au 25 août 2026. Le harnais de vérification a été supprimé : ce document ne cite aucune
-batterie, il dit **ce qu'un utilisateur peut faire**, avec ses codes HTTP relevés.*
+*État au 25 août 2026, après la campagne des six lots. Le harnais de vérification a été supprimé :
+ce document ne cite aucune batterie, il dit **ce qu'un utilisateur peut faire**, avec ses codes HTTP
+relevés.*
 
 ---
 
 ## Les lots
 
-**Fusionnés : A, C, D, B.** **En quarantaine : aucun.**
+**Fusionnés : E, C, P, R, F, I.** **En quarantaine : aucun.**
+
+Cette campagne-ci n'a pas porté d'écrans : elle a réparé les défauts trouvés **à froid sur une
+instance neuve** — les sept que le document précédent listait — et le balayage des fuites du jeu de
+semence en a ajouté trois que personne n'avait vus.
 
 | Lot | Ce qu'il a rendu atteignable |
 |---|---|
-| A — dossier | « Nouvelle note » emporte le dossier d'origine ; `?dossier=` est émis ET honoré, y compris à la racine d'un domaine |
-| C — import | Un dossier déposé sur `/console/imports` garde son arborescence |
-| D — compteurs | Les facettes des écrans de listage filtrent réellement ; celles des signets ne sont plus décoratives |
-| B — droits | « Gérer les droits » d'un dossier ouvre un écran et écrit |
+| E — cinq cents | Un titre déjà pris propose un suffixe au lieu de rendre **500** : la collision d'identifiant était cherchée à plat, alors que drizzle range l'erreur du pilote sous sa cause, et la boucle de reprise ne repartait jamais. La clé du moteur de recherche absente se dit **au démarrage**, en nommant les variables qui manquent, au lieu de tomber au dix-huitième écran |
+| C — périmètre | `/cartographie` n'offre plus que les univers **qui existent en base**, et « Cartographie de l'univers » compose `?perimetre=univers\|{nom}` au lieu d'ouvrir le corpus entier sous un libellé qui promettait cet univers-là |
+| P — domaine vide | La section « Accès » et ses pastilles se rendent **sur un domaine sans note** : c'était le seul chemin vers la racine du rangement, donc vers le seul geste d'interface qui crée un dossier. La pastille « Dossiers » est en outre **retirée** à qui ne lit pas la racine — elle était rendue à tout lecteur du domaine et menait en 404. L'adresse nue `…/dossiers` redirige en **308** vers la racine nommée, et n'est plus admise par les quatre actions |
+| R — racine | La page de la racine d'un domaine **liste enfin ses sous-dossiers** et porte son nom ; « Renommer ou déplacer » et « Supprimer » sont omis sur la racine, où les deux écritures refusaient muettement. Chaque ligne de note annonce sa vraie ancienneté — `modifications` était servie par le jeu de démonstration, mesuré 74 jours pour une note modifiée le jour même — et une seule date de référence sert la requête |
+| F — fuites | Un type de fiche que la constante de semence ne porte pas ne fait plus **lever** la cartographie au clic (500 relevé) ; le panneau « Propriétés » montre les valeurs réelles de `notes.proprietes_typees` au lieu des exemples du jeu. « Voir les notes de … » **lit** le rattachement du compte au lieu de composer son adresse sur un nom — après un renommage, l'adresse composée rendait 404. `/console/exports` n'annonce plus une archive datée du jour où le jeu est figé |
+| I — import | Le sélecteur de destination — champ obligatoire — offre les domaines **où l'appelant peut écrire** : il proposait ceux du jeu, toute analyse refusait en **400**, et le refus n'était affiché nulle part. Le rapport d'une simulation dit qu'il est une simulation et n'offre plus trois liens qui rendaient **404**. L'aperçu ne compte plus tout comme neuf sur le rejeu d'un lot déjà importé |
+
+Au passage, la série de contrôles des vues sortait rouge **au hasard** — quatre ou cinq fichiers,
+jamais les mêmes — parce que soixante et un serveurs Vite lancés de front dépassaient le budget par
+défaut. Aucune assertion n'a bougé, seul le budget s'est élargi.
 
 ---
 
@@ -24,20 +35,27 @@ batterie, il dit **ce qu'un utilisateur peut faire**, avec ses codes HTTP relev�
 |---|---|
 | Se connecter | `POST /connexion` → **303** → `/` |
 | Créer une note | `POST /notes/nouvelle` → **303** → `/notes/{identifiant}` |
+| Créer une note dont le titre est déjà pris | `POST /notes/nouvelle` → **303**, identifiant suffixé |
 | Modifier une note | `POST /notes/{id}/modifier` → **303**, version capturée |
 | Supprimer une note | `POST /notes/{id}?/supprimer` → **303**, puis **404** sur la note |
 | Créer un signet | `POST .../signets/nouveau` → **303** → `/notes/{identifiant}` |
 | Modifier un signet | `POST .../signets/{id}/modifier?/enregistrer` → **303** |
 | Supprimer un signet | `POST .../signets/{id}/modifier?/supprimer` → **303**, puis **404** |
-| Créer un sous-dossier | `POST .../dossiers/{chemin}?/creerSousDossier` → **303** → **200** sur l'enfant |
+| Créer un sous-dossier | `POST .../dossiers/{chemin}?/creerSousDossier` → **303** → **200** sur l'enfant, **et l'enfant est listé** |
+| Ouvrir le rangement d'un domaine neuf | pastille « Dossiers » → **200** sur la racine nommée |
+| Adresse nue d'un rangement | `GET …/dossiers` → **308** → `…/dossiers/{domaine}` |
+| Importer un lot | `POST /importer?/analyser` → aperçu conforme au rapport qui suit |
+| Simuler un import | rapport annoncé comme simulation, aucun lien, base inchangée |
 
 L'aller-retour du corps est **idempotent** : deux réenregistrements sans frappe rendent un document
 identique, et aucune version n'est écrite pour un enregistrement sans changement. L'écriture d'un
-import l'est aussi : rejouer le même dépôt met à jour, il ne duplique pas.
+import l'est aussi : rejouer le même dépôt met à jour, il ne duplique pas — **et l'aperçu le dit
+maintenant avant de le faire**.
 
 Le **produit construit** démarre et sert : `pnpm build` puis `node build/index.js` avec les cinq
 variables de base (`HOTE_BASE`, `PORT_BASE`, `UTILISATEUR_BASE`, `MDP_BASE`, `NOM_BASE` — jamais une
-URI composée).
+URI composée) et les deux du moteur de recherche. Sans ces dernières, **le démarrage refuse de
+servir en les nommant**, au lieu de laisser dix-huit écrans en 200 et `/recherche` en 500.
 
 ### Écran par écran — mesuré, pas déclaré
 
@@ -51,162 +69,99 @@ URI composée).
 | historique | les vraies versions, ouvert par `?version`, restaurer marche et capture sa version |
 | comparaison | modes Texte et Visuel sur les vraies versions, alternative textuelle |
 | éditeur | ProseMirror — gras, titres, listes, tâches, tableaux, alertes |
-| univers, domaine, notes, dossiers | listes, compteurs, santé, modules désactivés qui disparaissent — **les pastilles de module naviguent**, réduites à leur domaine |
+| univers, domaine, notes, dossiers | listes, compteurs, santé, modules désactivés qui disparaissent — **les pastilles naviguent, y compris sur un domaine sans note**, et aucune n'est rendue à qui ne peut pas la suivre |
 | signets | créer, modifier, supprimer |
-| cartographie, par type, carte mentale | le graphe des vraies relations, alternative textuelle |
-| profil, import, guides | préférences enregistrées, import idempotent, simulation qui n'écrit rien |
+| cartographie, par type, carte mentale | le graphe des vraies relations, périmètres réels, alternative textuelle |
+| profil, import, guides | préférences enregistrées, import idempotent, simulation qui n'écrit rien **et qui le dit** |
 | console (12 écrans) | 200 en administratrice, **404 en rédacteur**, onze actions qui écrivent |
 
-### Le parcours complet, joué dans un navigateur
-
-```
-POST /connexion                                303 → /
-POST /notes/nouvelle                           303 → /notes/n-bascule-du-reseau-de-secours
-POST /notes/{id}/operationnel?/enregistrer     200      le second registre
-POST /notes/{id}/modifier                      303      version capturée
-GET  /notes/{id}?version                       200      Version 2 | Version 1
-POST /notes/{id}?/deposerPiece                 200      TXT · plan · 15 o
-POST /notes/{id}/relations?/ajouter            200      HÉBERGE Coffre hors site
-POST …/dossiers/exploitation?/creerSousDossier 303 → …/dossiers/exploitation/bascule-reseau
-GET  /recherche?q=bascule                      200      la note y est
-POST /notes/{id}?/supprimer                    303 → /univers/production/infrastructure
-GET  /notes/{id}                               404
-```
+Relevé au navigateur sur le rangement, chaque pastille CLIQUÉE et le code de sa destination lu :
+**8 comptes × 8 domaines, 27 pages ouvertes, 0 entrée morte.**
 
 La connexion fonctionne **sans JavaScript**.
 
 ---
 
-## Ce qui ne marche pas — trouvé à froid, sur une base neuve
+## Ce qui ne marche pas — trouvé à l'intégration, sur une instance neuve
 
-Sept défauts, dans l'ordre où ils coûtent cher. Les deux premiers ferment le chemin du produit vide,
-qui est le chemin réel d'une installation.
+Cinq défauts, dans l'ordre où ils coûtent cher. Le premier rend un lien mort, les trois suivants
+ferment le chemin des fiches typées, le dernier fait mentir un écran de console.
 
-### 1. Un domaine neuf n'offre AUCUNE entrée vers ses modules
+### 1. `/mon-profil` offre « Voir les notes de {domaine} » ACTIF vers un 404
 
-`src/vues/V-11.svelte:523`, le bloc « si-peuple », gardes `{#if !vide}` lignes 527 et 532 ; alimenté
-par `src/routes/univers/[univers]/[domaine]/+page.server.ts:353`
-(`etat: aDesNotes ? 'peuple' : 'vide'`).
+`src/routes/+layout.server.ts:59-70` (`rangementDuCompte`) et `:237`.
 
-La section « Accès » et ses six pastilles — Notes, Dossiers, Fiches, Cartographie, Signets, Carte
-mentale — ne sont rendues que si le domaine porte **au moins une note**. Mesuré sur le domaine
-« Bureautique » créé vierge : **0 pastille rendue**, et aucun lien de la page ni du rail ne mène à
-ses dossiers.
+La fonction rend les identifiants du domaine de rattachement du compte **sans vérifier qu'il est
+lisible par lui** ; `domaineLisible` est pourtant déjà importé ligne 55. Le commentaire de `:234-236`
+dit l'intention — « une entrée qui ne mène nulle part est un lien mort, `P-03` » — mais la garde ne
+couvre que « aucun rattachement », pas « rattachement illisible ».
 
-Or l'écran des dossiers est le **seul endroit d'où se crée le premier dossier**. Sur un produit qui
-commence vide, le rangement n'est atteignable qu'en tapant l'adresse à la main.
-
-### 2. La page du dossier racine ne liste jamais ses sous-dossiers, et n'affiche pas son nom
-
-`src/vues/V-13.svelte:412` (`noeudDe`) et `:447` (`sousDossiers`), consommés par `:458`
-(`const sous`) et `:457` (`const nom`).
-
-Les destinations servies par la route portent des segments **affichés**, dans lesquels la racine
-vaut `[]`. `noeudDe([])` sort de sa boucle sans rien trouver et rend `null`, donc `sousDossiers([])`
-rend `[]` au lieu des racines de l'arbre.
-
-Reproduit à froid, sur `/univers/production/bureautique/dossiers/bureautique` :
+Reproduit : m.durand créé depuis `/console/comptes` (Contributeur, domaine principal Réseau). La
+création **n'écrit aucune ligne de droit** (`src/lib/donnees/administration.ts:1527-1556`), le rail
+est vide, et `V-25:928` n'inhibe le bouton que si l'adresse est `null`.
 
 ```
-POST …?/creerSousDossier  « Suite bureautique »   303 → 200 sur l'enfant
-GET  …/dossiers/bureautique                       200   « 0 sous-dossier · 0 note directe »
-                                                        « Aucune note, aucun sous-dossier », h1 vide
+GET  /mon-profil                            200   bouton rendu sans `disabled`
+GET  /univers/production/reseau/notes       404
 ```
 
-Le dossier qu'on vient de créer est **invisible**, et n'a plus d'accès que par son adresse. Même
-symptôme sur Infrastructure, qui annonce « 0 sous-dossier » alors qu'elle porte Serveurs et
-Exploitation (vérifié en base).
+### 2. `/console/exports` annonce une arborescence d'archive que le fichier ne porte pas
 
-### 3. Le sélecteur de domaine de destination de l'import propose le jeu de démonstration
+`src/vues/V-36.svelte:313-314`.
 
-`src/routes/importer/+page.svelte:178-187`.
+L'écran affiche `├── rapport-de-conversion.md` et `└── domaine.json`. L'archive téléchargée contient
+`rapport-de-conversion.txt` (`src/lib/export/archive.ts:273`, `NOM_DU_RAPPORT`) et **aucun**
+`domaine.json`. L'arbre annoncé omet en outre la racine `Réseau/`, sous laquelle l'archive range
+tout.
 
-La vue reçoit `vecteur`, `notes`, `lotImport`, `formatsImport`, `domaineParDefaut` — mais **ni
-`domaines` ni `univers`**. `src/vues/V-24.svelte:231` retombe donc sur la constante `DOMAINES` de
-`seeds/corpus.ts`, et l'option de `:932` les rend. Le chargeur
-(`src/routes/importer/+page.server.ts:160-184`) ne rend pas non plus ces deux clés.
-
-Sur une instance qui ne possède que « Production › Infrastructure », l'étape 2 offrait « Production ›
-Applications », « Production › Poste de travail », « Projets › Migration 2026 ». Ce n'est pas
-cosmétique :
+Relevé sur le zip réel :
 
 ```
-POST /importer?/analyser   domaine-cible=Applications   failure 400  {issue: 'domaine-inconnu'}
+Réseau/ · Réseau/Commutateurs/ · Réseau/Baies/ · Réseau/Baies/baie-a12.md · … · rapport-de-conversion.txt
 ```
 
-### 4. Le sélecteur de périmètre de la cartographie propose un univers qui n'existe pas
+C'est la même famille que le nom d'archive inventé que le lot F a refermé : le **nom** est corrigé,
+le **contenu annoncé** ne l'est pas.
 
-`src/routes/cartographie/+page.svelte:98`.
+### 3. Le sélecteur « Type de fiche » de l'éditeur est INERTE
 
-La route passe `domaines={page.data.domaines}` — le commentaire juste au-dessus documente exactement
-ce défaut pour les domaines — **mais pas `univers`**. `src/vues/V-19.svelte:160` retombe sur `UNIVERS`
-de `seeds/corpus.ts`, et `:208` (`UNIVERS_PROPOSES`) l'offre.
+`src/vues/V-17.svelte:1007`, `src/lib/cablage/formulaires.ts:363-378`,
+`src/lib/donnees/creation.ts:208-262` et `:542-559`.
 
-Sur une base dont la table `univers` ne porte que « Production », `/cartographie` rend
-`<option value="univers|Projets">Univers Projets</option>`. Le choisir mène à
-`GET /cartographie?perimetre=univers%7CProjets` → **200**, graphe vide, sans jamais dire pourquoi.
-`/carte-mentale`, lui, est juste (Tout le corpus, Univers Production, Domaine Infrastructure,
-Domaine Réseau).
+`soumettre()` pose titre, type, domaine, dossier, visibilité, statut, étiquettes et le corps — jamais
+la valeur de `#m-fiche`. `lireLaSaisie()` ne déclare aucun champ de fiche. L'insertion n'écrit jamais
+`typeDeFicheId`. Vérifié par grep : `typeDeFicheId` n'est écrit que par `src/lib/base/demonstration.ts`
+et `src/lib/base/commandes.ts` — la semence et le peuplement —, **par aucune route**.
 
-### 5. Le rapport d'une simulation est indiscernable d'un import réel, et ses liens rendent 404
+Conséquence sur une instance neuve : un type de fiche créé en console **ne peut être porté par aucune
+note créée dans le produit**, `notes.proprietes_typees` reste toujours vide, et les écrans qui en
+vivent — cartographie par type, panneau de propriétés — n'ont jamais de matière. Mesuré : il a fallu
+écrire `type_de_fiche_id` en SQL pour pouvoir exercer `/cartographie/par-type`.
 
-`src/vues/V-24.svelte:201` (`readonly simulation: boolean`, jamais lu ailleurs dans le fichier),
-`:469` (`titreDuBilan`), `:1134` (« dossiers créés dans le domaine »), `:1139`
-(`<a href={n.adresse}>`).
+### 4. Un type de fiche créé en console est étiqueté « Note » dans la cartographie
 
-La route rend bien `simulation: rapport.simulation`
-(`src/routes/importer/+page.server.ts:345`) ; la vue le déclare et ne s'en sert nulle part.
+`src/lib/graphe/cartographie.ts:77-82` (`TYPE_PAR_DEFAUT`), `:85-87` (`encodageDuType`) et `:91-93`
+(`typeCarto`).
 
-Mesuré, simulation d'un lot inédit `Reseau/Coeur/Liens` : écran « Import terminé — 3 notes créées,
-aucun échec / STRUCTURE CRÉÉE : 3 dossiers créés dans le domaine Infrastructure / NOTES CRÉÉES — 3 »,
-trois liens vers `/notes/plan-adressage`, `/notes/commutateurs`, `/notes/fibres`.
+`typeCarto()` rend le **nom** du type de fiche ; `encodageDuType()` ne connaît que les sept clés du
+gel et retombe sur `TYPE_PAR_DEFAUT`, dont `nom` vaut « Note ».
 
-```
-GET /notes/plan-adressage    404      et la base est inchangée
-```
+Relevé sur l'instance neuve, une fiche de type « Commutateur » et une note simple reliées : la barre
+« Type maître » de `/cartographie/par-type` rend **deux pastilles rigoureusement identiques** —
+losange, code `NOT`, libellé « Note », compteur 1 — dont l'une filtre sur Commutateur et l'autre sur
+Note. La vue ne lève plus, le `?? []` du lot F tient ; mais elle ne **nomme** pas le type.
 
-Rien à l'écran ne dit que c'était une simulation.
+### 5. Le journal des imports affirme garder ce qu'il ne garde pas
 
-### 6. L'aperçu de l'étape 3 annonce des créations que l'import ne fera pas
+`src/routes/importer/+page.server.ts:380-385`.
 
-`src/vues/V-24.svelte:556` (`const creations`), `:1018` (« notes seront créées ») et `:818`
-(« dossier créé »).
+`/console/imports` affiche « Journal des imports — Les rapports restent consultables indéfiniment, y
+compris ceux des lots partiellement en échec », et le tableau reste **vide après trois imports réels**
+sur cette instance (relevé : « — »).
 
-L'arborescence et le récapitulatif se dérivent des seuls chemins de fichiers ; `resumeLot()`
-(`src/lib/donnees/import.ts:922`) compte les lignes de sort `'note'` sans consulter
-`notesDeLaCible`, que `preparerLeLot()` a pourtant chargée.
-
-Sur le rejeu du même dépôt, l'aperçu affiche « 4 notes seront créées / STRUCTURE : 3 dossiers
-créés », chaque dossier marqué « dossier créé » — et le rapport qui suit dit « 0 notes créées, 4
-mises à jour, 0 dossiers créés ». L'écriture est idempotente ; **c'est l'écran qui ment sur ce qu'il
-va faire**.
-
-### 7. « Cartographie de l'univers » ouvre la cartographie du corpus entier
-
-`src/routes/univers/[univers]/cablage.ts:84`
-(`ADRESSE_DE_LA_CARTOGRAPHIE = '/cartographie'`) et `:136-139`.
-
-Le bouton de couverture de la page d'un univers navigue vers `/cartographie` **sans**
-`?perimetre=univers|{nom}`, alors que son jumeau de la page d'un domaine
-(`src/routes/univers/[univers]/[domaine]/cablage.ts`, `adresseAuPerimetreDuDomaine`) pose bien
-`?perimetre=domaine|{nom}` — et que le commentaire de ce dernier explique justement que sans
-périmètre « le libellé promet Cartographie — Infrastructure et l'écran rend tout Production ».
-
-Mesuré : clic → `/cartographie`, périmètre au défaut, sans réduction.
-
----
-
-## Un piège de déploiement, pas un défaut d'application
-
-`node build/index.js` démarré avec les cinq seules variables de base sert **dix-huit écrans en 200**
-et rend **500 sur `/recherche`** — `RechercheNonConfigureeErreur`, « ni `CLE_RECHERCHE` ni
-`CLE_MAITRE_RECHERCHE` ».
-
-L'absence de la clé n'est constatée qu'à la première requête de cet écran, alors que le produit sait
-déjà dégrader gracieusement quand le moteur est joignable mais muet (« Recherche par sens
-momentanément indisponible »).
-
-Avec `URL_RECHERCHE` et `CLE_RECHERCHE` : `/recherche` → **200**, `/recherche?q=serveur` → **200**.
+L'entrée exigée par `RG-M12-09` est composée puis envoyée à `console.info('[import]', …)` ; aucune
+table ne la garde. La lacune est déclarée en commentaire à cette ligne — mais l'écran, lui, affirme
+le contraire au lecteur.
 
 ---
 
@@ -222,6 +177,11 @@ dire.
 - **`method="post"` sur le formulaire de connexion.** La maquette ne l'écrit pas, faute de serveur.
   Sans lui, une soumission avant hydratation partait en `GET` **avec le mot de passe dans
   l'adresse** — mesuré sur le HTML servi.
+- **La section « Accès » d'un domaine sort du masquage** (lot P). Le gel masquait le bloc entier sur
+  un domaine vide ; dans une maquette aucune pastille ne navigue, dans le produit elle fermait le
+  seul chemin vers la création d'un dossier.
+- **La racine d'un rangement n'offre ni « Renommer ou déplacer » ni « Supprimer »** (lot R) : les
+  deux écritures refusent tout dossier sans parent, et deux boutons morts contredisent `P-03`.
 - **Deux panneaux rendus atteignables** — l'historique (V-15) et le tiroir de formulaire des comptes
   (V-32) : la règle GELÉE qui les ouvre vise `.app[data-…]` et les panneaux vivent hors de `.app`.
 - **Le dépôt et le retrait d'une pièce jointe** : le gel ne les dessine pas.
