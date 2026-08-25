@@ -128,12 +128,13 @@
 	 * LE REPLI QUAND LA RÉPONSE N'EST PAS LISIBLE — ET AUCUNE ACTION NE L'ÉMET.
 	 *
 	 * `fail()` produit un résultat de type `failure` dont `data` porte l'objet
-	 * passé à l'appel — ici `issue` —, et les trois seuls motifs que les actions
-	 * de ce dossier rendent sont ceux-là. Ce code-ci n'en fait pas partie : il
-	 * est posé PAR CET ÉCRAN, et seulement quand la réponse ne porte pas de
-	 * motif lisible — un `error()` non intercepté, ou un succès dont la charge
-	 * n'a pas la forme attendue. Il ne dit donc rien de ce que le serveur a
-	 * fait, et sa mise en français dans la vue ne doit rien affirmer non plus.
+	 * passé à l'appel — ici `issue` —, et les QUATRE seuls motifs que les actions
+	 * de ce dossier rendent sont ceux-là : cible inconnue, cible interdite, lot
+	 * vide, et depuis ce lot le scénario non livré. Ce code-ci n'en fait pas
+	 * partie : il est posé PAR CET ÉCRAN, et seulement quand la réponse ne porte
+	 * pas de motif lisible — un `error()` non intercepté, ou un succès dont la
+	 * charge n'a pas la forme attendue. Il ne dit donc rien de ce que le serveur
+	 * a fait, et sa mise en français dans la vue ne doit rien affirmer non plus.
 	 *
 	 * UNE REDIRECTION N'EN EST PAS UN CAS : elle se suit, voir `envoyer()`.
 	 */
