@@ -161,7 +161,17 @@ interface ContexteDeDossier {
 async function ouvrirLeDossier(
 	params: { univers: string; domaine: string; chemin: string },
 	identite: AccesAuRangement['identite'],
-	adresse: string
+	adresse: string,
+	/**
+	 * LE CHEMIN VIDE EST-IL ADMIS ? Le chargeur seul l'admet, et seulement pour
+	 * REDIRIGER vers la forme nommée : aucune des quatre actions n'est servie à
+	 * cette adresse, sans quoi elles auraient deux adresses au lieu d'une.
+	 *
+	 * Le paramètre ne peut que RESSERRER : il n'ouvre aucune porte que la lecture
+	 * ferme, il retire au contraire une entrée aux actions. Le contrôle de droit,
+	 * lui, reste rigoureusement le même pour les cinq.
+	 */
+	admetLAdresseNue: boolean = false
 ): Promise<ContexteDeDossier> {
 	const base = basePartagee();
 	const acces = await ouvrirLAcces(base, identite, new Date());
@@ -188,20 +198,23 @@ async function ouvrirLeDossier(
 	 * d'un chemin plus long donnerait deux adresses au même dossier ; ici on
 	 * n'en ajoute qu'une, et elle ne désignait rien auparavant.
 	 *
-	 * ET LE CHEMIN VIDE VISE LA RACINE, LUI AUSSI — l'incohérence tranchée.
-	 * `adresseDeDossier(u, d, [])` compose `…/dossiers` nu et `adresses.test.ts`
-	 * le nomme « la racine des dossiers » ; la route, elle, rendait 404. Ce
-	 * n'était pas une adresse théorique : la page d'une note POSÉE DANS LA
-	 * RACINE la compose — son chemin de dossier est la chaîne vide, donc zéro
-	 * segment (`V-14.svelte`, `NoteDeDemonstration.svelte`, `V-21.svelte`) —, et
-	 * le lien « dossier » de ces écrans tombait en 404. Le chargeur redirige
-	 * ensuite vers la forme canonique, celle qui porte le nom de la racine : une
-	 * seule adresse reste servie, l'autre y mène.
+	 * ET LE CHEMIN VIDE Y MÈNE — l'incohérence tranchée, mais POUR LE CHARGEUR
+	 * SEUL. `adresseDeDossier(u, d, [])` compose `…/dossiers` nu et
+	 * `adresses.test.ts` le nomme « la racine des dossiers » ; la route, elle,
+	 * rendait 404. Ce n'était pas une adresse théorique : la page d'une note
+	 * POSÉE DANS LA RACINE la compose — son chemin de dossier est la chaîne vide,
+	 * donc zéro segment (`V-14.svelte`, `NoteDeDemonstration.svelte`,
+	 * `V-21.svelte`) —, et le lien « dossier » de ces écrans tombait en 404.
+	 *
+	 * Le chargeur l'accepte pour REDIRIGER aussitôt vers la forme nommée ; les
+	 * quatre actions ne l'acceptent pas, et continuent de refuser. Une seule
+	 * adresse est donc servie pour chacune des cinq entrées : l'adresse nue MÈNE
+	 * à la page de la racine, elle ne la sert pas, et elle ne sert aucune action.
 	 */
 	const racine = lignes.find((d) => d.parentId === null) ?? null;
 	const viseLaRacine =
 		racine !== null &&
-		(segments.length === 0 ||
+		((admetLAdresseNue && segments.length === 0) ||
 			(segments.length === 1 && segments[0] === identifiantLisible(racine.nom)));
 	const dossier =
 		domaine === null ? null : viseLaRacine ? racine : resoudreLeChemin(lignes, segments);
@@ -226,7 +239,9 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const { acces, domaine, lignes, dossier, droit } = await ouvrirLeDossier(
 		params,
 		locals.identite,
-		url.pathname
+		url.pathname,
+		/* Le chargeur, et lui seul, admet l'adresse nue — pour la rediriger. */
+		true
 	);
 
 	/* LA FORME CANONIQUE DE LA RACINE PORTE SON NOM. L'adresse nue y mène plutôt
