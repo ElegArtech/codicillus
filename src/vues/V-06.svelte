@@ -81,20 +81,20 @@
 	 */
 	import { resolve } from '$app/paths';
 	import Marque from '$lib/auth/Marque.svelte';
-	import { CONFIG } from '../../seeds/corpus';
 
 	interface Proprietes {
 		/**
 		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — donnée d'INSTANCE, lue dans la table
-		 * `parametres` par le chargeur de la route. Absente, la valeur du jeu de
-		 * semence, qui est celle que la semence écrit en base. VIDE — ce que rend
-		 * `CONFIGURATION_PAR_DEFAUT` sur une instance dont personne n'a renseigné
-		 * la clé —, le pied d'assistance n'est pas rendu.
+		 * `parametres` par le chargeur de la route, qui la passe TOUJOURS : la
+		 * propriété est donc EXIGÉE, et le jeu de démonstration ne peut plus tenir
+		 * lieu de défaut. VIDE — ce que rend `CONFIGURATION_PAR_DEFAUT` sur une
+		 * instance dont personne n'a renseigné la clé —, le pied d'assistance
+		 * n'est pas rendu.
 		 */
-		portail?: string;
+		portail: string;
 	}
 
-	const { portail = CONFIG.portailAssistance }: Proprietes = $props();
+	const { portail }: Proprietes = $props();
 
 	/** Une adresse absente ou blanche ne mène nulle part : rien ne l'annonce. */
 	const assistanceJoignable = $derived(portail.trim() !== '');

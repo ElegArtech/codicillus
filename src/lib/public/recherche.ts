@@ -26,6 +26,28 @@
 import type { Note } from '../../../seeds/corpus';
 
 /**
+ * LE PÉRIMÈTRE PUBLIC, ET IL VIT DÉSORMAIS ICI.
+ *
+ * `notesPubliques()` était importée de `seeds/corpus.ts` par V-01, V-02 et
+ * V-04 : un APPEL DE FONCTION du jeu de démonstration, au point d'entrée de
+ * trois écrans servis à un visiteur sans session. La fonction ne porte aucune
+ * donnée du jeu — elle filtre celle qu'on lui donne —, mais l'importer faisait
+ * du jeu une dépendance du produit, et sa forme là-bas admettait `CORPUS` en
+ * argument par défaut : un appel sans argument rendait le corpus de
+ * démonstration.
+ *
+ * Ici, l'argument est EXIGÉ, et la valeur comparée est typée contre
+ * `Note['visibilite']` : renommer la valeur dans le corpus ne peut pas laisser
+ * ce filtre en silence sur une constante devenue fausse.
+ */
+const VISIBILITE_PUBLIQUE: Note['visibilite'] = 'Publique';
+
+/** Les seules notes atteignables depuis l'espace public — RG-M17-01. */
+export function notesPubliques(notes: readonly Note[]): readonly Note[] {
+	return notes.filter((n) => n.visibilite === VISIBILITE_PUBLIQUE);
+}
+
+/**
  * Correspondance tolérante : la requête est découpée en termes, un résultat
  * sort s'il porte TOUS les termes dans son titre, son extrait, ses étiquettes,
  * son domaine ou son type de fiche. Tolérance de racine à quatre caractères,

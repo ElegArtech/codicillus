@@ -55,8 +55,9 @@
 	 * modification, l'activité et les demandes de révision, toutes bornées au
 	 * périmètre autorisé par `$lib/donnees/accueil`. Le pied lit les deux faits
 	 * d'instance dans le contexte d'identité — version réelle, et pas de ligne de
-	 * synchronisation, faute d'une telle donnée en base ; `instance` n'est plus
-	 * que le défaut de revue.
+	 * synchronisation, faute d'une telle donnée en base. La propriété `instance`
+	 * a disparu : aucune route ne la passait, et son défaut servait le numéro de
+	 * version du jeu de démonstration comme un fait.
 	 *
 	 * `RG-M01-02` : l'indicateur « En attente de révision » et la corbeille de
 	 * révisions lisent LA MÊME SOURCE — `revisionsCourantes`, une seule fois.
@@ -114,26 +115,16 @@
 	 * du chevron de tendance, `--teinte:‹calculé›` d'un bloc de domaine et
 	 * `flex:‹calculé›` d'une part de répartition.
 	 */
-	import {
-		ACTIVITE,
-		DOMAINES,
-		INSTANCE,
-		MESURES_7J,
-		MESURES_7J_PREC,
-		MODIFICATIONS,
-		MOI,
-		REVISIONS,
-		UNIVERS,
-		type DemandeDeRevision,
-		type Domaine,
-		type EtatDInstance,
-		type EvenementDActivite,
-		type IdentifiantNote,
-		type Note,
-		type NiveauFraicheur,
-		type TypeDEvenement,
-		type Univers,
-		type UtilisateurCourant
+	import type {
+		DemandeDeRevision,
+		Domaine,
+		EvenementDActivite,
+		IdentifiantNote,
+		Note,
+		NiveauFraicheur,
+		TypeDEvenement,
+		Univers,
+		UtilisateurCourant
 	} from '../../seeds/corpus';
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -157,67 +148,47 @@
 	const motFichePlurielMinuscule = $derived(motsDuProduit.fichesMin);
 
 	/**
-	 * LES NEUF SOURCES QUI NE VENAIENT DE NULLE PART — T-041.
+	 * LES NEUF SOURCES SONT EXIGÉES — ET C'EST LE CORRECTIF.
 	 *
-	 * Jusqu'ici les constantes du jeu de semence étaient lues AU NIVEAU DU
-	 * MODULE : un chargeur de route pouvait passer `notes`, et rien d'autre
-	 * n'atteignait l'écran. « En attente de révision = 3 » s'affichait pour un
-	 * compte qui ne lit aucune note, et « Bonjour Karim. » était servi à Sophie
-	 * Nguyen. Elles sont désormais des PROPRIÉTÉS OPTIONNELLES.
+	 * Elles étaient OPTIONNELLES, et leur défaut était la constante du jeu de
+	 * démonstration : une route qui en oubliait une servait le jeu SANS QUE RIEN
+	 * NE PROTESTE. « En attente de révision = 3 » s'affichait pour un compte qui
+	 * ne lit aucune note, et « Bonjour Karim. » était servi à Sophie Nguyen.
+	 * Aucun compilateur, aucun test ne le voyait ; seule une ouverture d'écran
+	 * sur base vide le révélait.
 	 *
-	 * LE DÉFAUT EST LA CONSTANTE, ET C'EST CE QUI TIENT LE GEL. Le mode démo ne
-	 * passe que `etat`, `vecteur` et `notes` : la vue reçoit donc exactement ce
-	 * qu'elle recevait, et les 36 couples du banc ne bougent pas. Ce lot rend le
-	 * passage POSSIBLE ; il ne décide pas de ce qui sera passé.
+	 * EXIGÉES, LE COMPILATEUR GARDE LA PORTE. `exactOptionalPropertyTypes` et
+	 * `strict` sont actifs et `svelte-check` fait partie de `pnpm check` : une
+	 * route qui oublierait l'une d'elles ne compile plus.
 	 *
-	 * LES TROIS TABLES DE MESURE SONT PARTIELLES, ET C'EST DÉLIBÉRÉ. `MESURES_7J`,
-	 * `MESURES_7J_PREC` et `MODIFICATIONS` sont des `Record` COMPLETS sur les
-	 * identifiants du jeu ; aucune table ne les porte en base. Exiger la forme
-	 * complète interdirait au chargeur de passer un ensemble vide — c'est-à-dire
-	 * précisément l'état neutre explicite que P-02 réclame quand la mesure est
-	 * indisponible. Le défaut, lui, reste la constante entière.
+	 * `| undefined` EST EXIGÉ PAR `exactOptionalPropertyTypes`, ET IL DIT QUELQUE
+	 * CHOSE. `tsconfig.json:9` distingue « la clé est absente » de « la clé vaut
+	 * `undefined` ». La clé, elle, doit être écrite ; la VALEUR peut manquer —
+	 * c'est le cas que `P-02` décrit, une source indisponible n'étant pas une
+	 * source à zéro. L'ÉTAT VIDE explicite prend alors le relais : liste vide,
+	 * table vide, identité sans nom. Jamais une donnée d'exemple.
 	 */
 	interface Proprietes {
 		/** Le vecteur complet de l'état — profil × état × aide. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-07')`, variante « complète ». */
 		notes: readonly Note[];
-		/**
-		 * ─────────────────────────────────────────────────────────────────────
-		 * `| undefined` EST EXIGÉ PAR `exactOptionalPropertyTypes`, ET IL DIT
-		 * QUELQUE CHOSE
-		 *
-		 * `tsconfig.json:9` distingue « la clé est absente » de « la clé vaut
-		 * `undefined` ». Sans la seconde forme, un chargeur ne peut PAS écrire
-		 * `compte={data.compte}` quand la donnée peut manquer : il lui faudrait
-		 * composer son objet de propriétés par étalement conditionnel, une ligne
-		 * par source, pour dire ce que `undefined` dit déjà.
-		 *
-		 * Or c'est exactement le cas que `P-02` décrit : une source indisponible
-		 * n'est pas une source à zéro. La laisser passer en `undefined` fait
-		 * répondre le défaut de la vue — le jeu de semence en revue, rien de plus
-		 * en production —, et Svelte applique le défaut sur `undefined` comme sur
-		 * l'absence. Les deux formes sont donc admises, et elles ont le même
-		 * effet.
-		 */
-		/** Les univers déclarés. Absents, ceux du jeu de semence. */
-		univers?: readonly Univers[] | undefined;
-		/** Les domaines accessibles. Absents, ceux du jeu de semence. */
-		domaines?: readonly Domaine[] | undefined;
-		/** L'utilisateur connecté. Absent, celui du jeu de semence. */
-		compte?: UtilisateurCourant | undefined;
-		/** L'état de l'instance — version, synchronisation. Absent, celui du jeu. */
-		instance?: EtatDInstance | undefined;
+		/** Les univers déclarés. Valeur manquante : aucun univers. */
+		univers: readonly Univers[] | undefined;
+		/** Les domaines accessibles. Valeur manquante : aucun domaine. */
+		domaines: readonly Domaine[] | undefined;
+		/** L'utilisateur connecté. Valeur manquante : une identité sans nom. */
+		compte: IdentiteAffichee | undefined;
 		/** Consultations des sept derniers jours, par note. */
-		mesures7j?: Partial<Record<IdentifiantNote, number>> | undefined;
+		mesures7j: Partial<Record<IdentifiantNote, number>> | undefined;
 		/** Consultations de la semaine précédente, par note. */
-		mesures7jPrec?: Partial<Record<IdentifiantNote, number>> | undefined;
+		mesures7jPrec: Partial<Record<IdentifiantNote, number>> | undefined;
 		/** Ancienneté de modification, en jours, par note. */
-		modifications?: Partial<Record<IdentifiantNote, number>> | undefined;
-		/** Les évènements du corpus. Absents, ceux du jeu de semence. */
-		activite?: readonly EvenementDActivite[] | undefined;
-		/** Les demandes de révision. Absentes, celles du jeu de semence. */
-		revisions?: readonly DemandeDeRevision[] | undefined;
+		modifications: Partial<Record<IdentifiantNote, number>> | undefined;
+		/** Les évènements du corpus. Valeur manquante : aucun évènement. */
+		activite: readonly EvenementDActivite[] | undefined;
+		/** Les demandes de révision. Valeur manquante : aucune demande. */
+		revisions: readonly DemandeDeRevision[] | undefined;
 		/**
 		 * LA CAPACITÉ D'ÉCRITURE DE L'APPELANT, CALCULÉE EN BASE — P-09.
 		 *
@@ -228,24 +199,52 @@
 		 * réelle (`capaciteDEcriture`, deux projections sur les droits) ; cette
 		 * propriété est le chemin par lequel elle atteint la vue.
 		 *
-		 * ABSENTE, LE PROFIL RÉPOND — le vecteur reste seul juge en revue, et les
-		 * neuf états déclarés ne bougent pas d'un pixel.
+		 * SANS VALEUR, LE PROFIL RÉPOND — le vecteur reste seul juge en rendu
+		 * direct, et les neuf états déclarés ne bougent pas d'un pixel.
 		 */
-		ecriture?: boolean | undefined;
+		ecriture: boolean | undefined;
 	}
+
+	/**
+	 * L'IDENTITÉ AFFICHÉE — la forme d'`UtilisateurCourant`, dont les valeurs
+	 * figées du jeu de démonstration sont ÉLARGIES.
+	 *
+	 * `UtilisateurCourant.nom` est typé `NomDAuteur`, l'union des trois noms du
+	 * jeu — « Sophie Nguyen », « Marc Ferreira », « Karim Belhadj » — et `role`
+	 * comme `domaine` sont de même farine. Aucune instance réelle ne porte ces
+	 * valeurs, et aucun état vide n'y est représentable. Le JEU DE CLÉS reste lié
+	 * au type d'origine par un type mappé : un champ ajouté là-bas apparaît ici,
+	 * et cette forme ne peut pas diverger en silence.
+	 */
+	type IdentiteAffichee = { readonly [K in keyof UtilisateurCourant]: string };
+
+	/**
+	 * L'IDENTITÉ VIDE — ce que la vue affiche quand aucun compte ne lui est servi.
+	 *
+	 * Elle remplace `MOI` du jeu de démonstration, dont le seul effet en produit
+	 * était de saluer « Karim » un visiteur qui ne s'appelle pas ainsi. Un
+	 * domaine vide est déjà une valeur que la vue sait lire : `sansPerimetre` en
+	 * dépend, et la salutation bascule alors sur le corpus entier.
+	 */
+	const SANS_IDENTITE: IdentiteAffichee = {
+		prenom: '',
+		nom: '',
+		initiales: '',
+		domaine: '',
+		role: ''
+	};
 
 	const {
 		vecteur,
 		notes: corpus,
-		univers = UNIVERS,
-		domaines = DOMAINES,
-		compte: moi = MOI,
-		instance = INSTANCE,
-		mesures7j = MESURES_7J,
-		mesures7jPrec = MESURES_7J_PREC,
-		modifications = MODIFICATIONS,
-		activite = ACTIVITE,
-		revisions = REVISIONS,
+		univers = [],
+		domaines = [],
+		compte: moi = SANS_IDENTITE,
+		mesures7j = {},
+		mesures7jPrec = {},
+		modifications = {},
+		activite = [],
+		revisions = [],
 		ecriture: ecritureAutorisee
 	}: Proprietes = $props();
 
@@ -255,18 +254,22 @@
 	/**
 	 * LE PIED DU TABLEAU DE BORD DIT DEUX FAITS SUR L'INSTANCE — il les lit donc
 	 * où le rail les lit : `$lib/coquille/identite.ts`. Sans ce contexte — hors
-	 * application, en revue de vue —, `instance` reprend la main, et le rendu par
-	 * défaut ne bouge pas.
+	 * application, en rendu direct du composant —, ils valent l'état vide : pas
+	 * de version, pas de ligne de synchronisation.
 	 *
 	 * La version venait de `INSTANCE`, un numéro de démonstration, sur la même
 	 * page dont le rail affiche déjà celle de `package.json` : deux chiffres
 	 * pour un seul fait. La synchronisation, elle, n'existe nulle part en base ;
 	 * le contexte rend `null`, et `null` veut dire : ne rends pas la ligne. On
 	 * ne fabrique pas une date à partir de rien (P-02).
+	 *
+	 * HORS GABARIT RACINE — un rendu direct du composant —, le contexte est
+	 * absent : la version est alors la chaîne vide et la ligne de synchronisation
+	 * n'est pas rendue. C'est l'état vide, jamais le numéro du jeu.
 	 */
 	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
-	const versionAffichee = $derived(identite?.version ?? instance.version);
-	const synchroAffichee = $derived(identite === undefined ? instance.synchro : identite.synchro);
+	const versionAffichee = $derived(identite?.version ?? '');
+	const synchroAffichee = $derived(identite?.synchro ?? null);
 	/**
 	 * QUI EST ADMINISTRATEUR — LE CONTEXTE LE SAIT, LE VECTEUR NE FAIT QUE LE
 	 * JOUER. `profil` vient du vecteur de planche, et aucune route ne passe de
@@ -718,7 +721,9 @@
 	{#snippet enfants()}
 		<!-- ---------- Salutation ---------- -->
 		<header class="salut">
-			<h1 class="salut__titre" id="salut-titre">{'Bonjour ' + moi.prenom + '.'}</h1>
+			<h1 class="salut__titre" id="salut-titre">
+				{moi.prenom === '' ? 'Bonjour.' : 'Bonjour ' + moi.prenom + '.'}
+			</h1>
 			{#if etatPage === 'vide'}
 				<p class="salut__sous" id="salut-sous">
 					Votre base ne contient encore aucune note. C'est le bon moment pour reprendre l'existant.
@@ -933,7 +938,7 @@
 										{@const note = noteCible(r.id)}
 										{#if note}
 											<!-- prettier-ignore -->
-											<button class="revision" type="button" onclick={() => ouvrirLaNote(note)}><span class="revision__tete"><span class="revision__titre">{note.titre}</span><span class="revision__dom past">{note.domaine}</span></span><span class="revision__com">{r.commentaire}</span><span class="revision__sous">{'Signalée par ' + r.par + ' · ' + (r.jours <= 1 ? 'hier' : 'il y a ' + r.jours + ' jours') + ' · ' + r.le}{@render temoin(note)}</span></button>
+											<button class="revision" type="button" onclick={() => ouvrirLaNote(note)}><span class="revision__tete"><span class="revision__titre">{note.titre}</span><span class="revision__dom past">{note.domaine}</span></span><span class="revision__com">{r.commentaire}</span><span class="revision__sous">{'Signalée par ' + r.par + ' · ' + (r.jours <= 0 ? "aujourd'hui" : r.jours === 1 ? 'hier' : 'il y a ' + r.jours + ' jours') + ' · ' + r.le}{@render temoin(note)}</span></button>
 										{/if}
 									{/each}
 								{/if}
@@ -1080,7 +1085,7 @@
 				{#if etatPage === 'chargement'}
 					{@render esquisse('esq-l', '38%')}
 				{:else if etatPage !== 'vide'}
-					<span>{'Codicillus ' + versionAffichee}</span>
+					<span>{versionAffichee === '' ? 'Codicillus' : 'Codicillus ' + versionAffichee}</span>
 					<!-- prettier-ignore -->
 					<span><button type="button" onclick={() => allerA(ADRESSE_DE_LA_RECHERCHE)}><b>{nb(toutesLesNotes.length)}</b>{' ' + (toutesLesNotes.length > 1 ? 'notes' : 'note')}</button> · <button type="button" onclick={() => allerA(ADRESSE_DES_SIGNETS)}><b>{nb(signets)}</b>{' ' + (signets > 1 ? 'signets' : 'signet')}</button></span>
 					{#if synchroAffichee !== null}<span>{'Dernière synchronisation ' + synchroAffichee}</span

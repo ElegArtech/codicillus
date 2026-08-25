@@ -85,8 +85,8 @@
 	 * (ARB-016).
 	 */
 	import { resolve } from '$app/paths';
-	import { CONFIG, notesPubliques, type Note } from '../../seeds/corpus';
-	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
+	import type { Note } from '../../seeds/corpus';
+	import { chercher, nombreFr, notesPubliques, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { vocabulaireRendu } from '$lib/vocabulaire';
 
@@ -125,19 +125,34 @@
 		retenues?: Record<string, readonly string[]>;
 		/**
 		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — donnée d'INSTANCE, lue dans la table
-		 * `parametres` par le chargeur de la route. Absente, la valeur du jeu de
-		 * semence, qui est celle que la semence écrit en base.
+		 * `parametres` par le chargeur de la route.
+		 *
+		 * ELLE EST EXIGÉE : son défaut était l'adresse du jeu de démonstration, et
+		 * une route qui l'aurait oubliée aurait servi `assistance.exemple.fr` comme
+		 * un fait. Vide — l'état d'une instance dont personne n'a renseigné la clé
+		 * —, aucun appel à l'assistance n'est ÉMIS.
 		 */
-		portail?: string;
+		portail: string;
+		/**
+		 * LES PISTES DE REFORMULATION — une DONNÉE, et elle n'a plus de source.
+		 *
+		 * La vue en portait cinq en dur, tirées du gel : « mot de passe », « accès »,
+		 * « salle de réunion », « réseau », « support ». Sur une instance qui n'a
+		 * rien de tout cela, chacune ouvrait `/recherche?q=…` à zéro résultat —
+		 * quatre boutons qui promettent une reformulation et n'en tiennent aucune
+		 * sont pires qu'aucun bouton.
+		 *
+		 * Même forme que `reprises` de V-26, et EXIGÉE : la route qui monte cette
+		 * vue doit dire ce qu'elle propose, fût-ce rien. Liste vide, le bloc n'est
+		 * pas rendu du tout.
+		 */
+		pistes: readonly string[];
 	}
 
-	const {
-		vecteur,
-		notes,
-		recherchees = false,
-		retenues,
-		portail = CONFIG.portailAssistance
-	}: Proprietes = $props();
+	const { vecteur, notes, recherchees = false, retenues, portail, pistes }: Proprietes = $props();
+
+	/** Une adresse absente ou blanche ne mène nulle part : rien ne l'annonce. */
+	const assistanceJoignable = $derived(portail.trim() !== '');
 
 	const reglage = $derived(vecteur ?? {});
 	const etat = $derived(typeof reglage['etat'] === 'string' ? reglage['etat'] : 'nominal');
@@ -276,9 +291,6 @@
 	function essayer(piste: string): void {
 		aller(adresse({}, piste));
 	}
-
-	/** Les cinq pistes de reformulation, telles que le gel les énumère. */
-	const PISTES = ['mot de passe', 'accès', 'salle de réunion', 'réseau', 'support'];
 </script>
 
 <!--
@@ -492,12 +504,15 @@
 									? 'Aucun guide public ne correspond avec les filtres appliqués. Retirez-en un, ou reformulez votre question.'
 									: "Aucun guide public ne correspond. Essayez d'autres mots, ou demandez directement à l'assistance — votre question signalera le guide manquant."}
 							</p>
-							<div class="reformuler">
-								{#each PISTES as piste (piste)}<button class="piste" onclick={() => essayer(piste)}
-										>{piste}</button
-									>{/each}
-							</div>
-							<a class="btn btn--principal" href={portail}>Ouvrir un ticket d'assistance</a>
+							{#if pistes.length}<div class="reformuler">
+									{#each pistes as piste (piste)}<button
+											class="piste"
+											onclick={() => essayer(piste)}>{piste}</button
+										>{/each}
+								</div>{/if}
+							{#if assistanceJoignable}<a class="btn btn--principal" href={portail}
+									>Ouvrir un ticket d'assistance</a
+								>{/if}
 						</div>{:else}{#each resultats as n, index (n.id)}{@render carte(
 								n,
 								requete,
@@ -511,27 +526,31 @@
 					<div class="esquisse esq-carte"></div>
 				</div>
 
-				<!-- Repli permanent : présent même quand la recherche aboutit. -->
-				<aside class="repli">
-					<div>
-						<h2 class="repli__titre">Ce que vous cherchez n'est pas là ?</h2>
-						<p class="repli__txt">
-							L'assistance répond directement. Précisez ce que vous cherchiez : c'est souvent ce qui
-							déclenche l'écriture du guide manquant.
-						</p>
-					</div>
-					<a class="btn btn--principal" href={portail} id="ticket">
-						Ouvrir un ticket d'assistance
-						<svg
-							width="13"
-							height="13"
-							viewBox="0 0 16 16"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.6"><path d="M6 3h7v7M13 3L4 12" /></svg
-						>
-					</a>
-				</aside>
+				<!-- Repli permanent : présent même quand la recherche aboutit.
+					 L'ASIDE ENTIER EST GARDÉ quand aucun portail n'est configuré :
+					 garder la question sans le lien laisserait une impasse. -->
+				{#if assistanceJoignable}
+					<aside class="repli">
+						<div>
+							<h2 class="repli__titre">Ce que vous cherchez n'est pas là ?</h2>
+							<p class="repli__txt">
+								L'assistance répond directement. Précisez ce que vous cherchiez : c'est souvent ce
+								qui déclenche l'écriture du guide manquant.
+							</p>
+						</div>
+						<a class="btn btn--principal" href={portail} id="ticket">
+							Ouvrir un ticket d'assistance
+							<svg
+								width="13"
+								height="13"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.6"><path d="M6 3h7v7M13 3L4 12" /></svg
+							>
+						</a>
+					</aside>
+				{/if}
 			</div>
 		</div>
 	</main>
