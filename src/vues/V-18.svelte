@@ -145,13 +145,15 @@
 		 */
 		desynchronisation: { quand: string; par: string | null };
 		/**
-		 * L'ANCIENNETÉ DU DERNIER ENREGISTREMENT, EN JOURS — REQUISE.
+		 * L'ANCIENNETÉ DU DERNIER ENREGISTREMENT, EN JOURS — `null` PAR DÉFAUT.
+		 *
 		 * Un nombre : la phrase du gel avec la vraie valeur. `null` : la note n'a
 		 * aucune version, et « Aucune modification » — l'autre phrase du gel — le
 		 * dit exactement. Absente, la barre écrivait « il y a 3 semaines » sur
-		 * toute note.
+		 * toute note : la chaîne du gel figée dans la vue. Aucune route ne sert
+		 * cette ancienneté ; le défaut est donc l'ÉTAT VIDE, jamais une valeur.
 		 */
-		dernierEnregistrement: number | null;
+		dernierEnregistrement?: number | null;
 	}
 
 	const {
@@ -162,7 +164,7 @@
 		compte = null,
 		affichee,
 		desynchronisation,
-		dernierEnregistrement
+		dernierEnregistrement = null
 	}: Proprietes = $props();
 
 	/**
