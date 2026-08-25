@@ -171,19 +171,25 @@
 </script>
 
 <!--
-	`domaines` VIENT DU GABARIT RACINE, QUI LES LIT EN BASE — même correctif qu'à
-	`/cartographie`, et pour un motif plus dur ici : ce n'est pas un sélecteur,
-	c'est un BOUTON QUI NAVIGUE.
+	`domaines` VIENT DU GABARIT RACINE, QUI LES LIT EN BASE : c'est le rail de la
+	coquille, et il portait sinon les domaines du jeu de semence.
 
-	V-25 cherche le domaine du titulaire dans cette liste pour composer l'adresse
-	de « Voir les notes de … » : un domaine ne s'adresse que par son univers
-	(`RG-STR-02`), et la liste seule le porte. Sur la constante du jeu de semence,
-	le bouton était donc SOIT inerte — aucun homonyme, sa garde le désactive —,
-	SOIT MENTEUR : un domaine du jeu portant le même nom qu'un domaine réel mais
-	rattaché à un autre univers composait une adresse qui rend 404.
+	`rangementDuProfil` EST L'ADRESSE DU BOUTON « VOIR LES NOTES DE … », ET ELLE
+	EST LUE, JAMAIS DÉRIVÉE. `page.data.rangement` vient de `rangementDuCompte()`
+	du gabarit racine, qui joint comptes → domaines → univers et rend les deux
+	IDENTIFIANTS du domaine de rattachement du titulaire — exactement ce que
+	l'adresse demande.
+
+	POURQUOI LA LISTE DE DOMAINES NE SUFFISAIT PAS. Elle ne porte que des NOMS, et
+	V-25 y retrouvait le domaine du titulaire par son nom d'affichage avant de
+	composer l'adresse. Or `RG-M12-11` fige l'identifiant à la création et le
+	laisse stable : après le seul renommage que la console permet, l'adresse
+	composée du nouveau nom rend 404. Deux univers portant un même nom de domaine
+	produisaient, eux, l'adresse de l'homonyme. Le rattachement lu ferme les deux.
 -->
 <Vue
 	domaines={page.data.domaines}
+	rangementDuProfil={page.data.rangement}
 	vecteur={data.vecteur}
 	notes={data.notes}
 	profilDuCompte={data.profilDuCompte}
