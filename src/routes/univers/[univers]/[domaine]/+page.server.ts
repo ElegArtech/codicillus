@@ -186,6 +186,37 @@ async function lireLeRangementLisible(
 	};
 }
 
+/**
+ * L'ENTRÉE « DOSSIERS » N'EST OFFERTE QUE SI SA DESTINATION S'OUVRE.
+ *
+ * Elle mène à la RACINE du rangement, et à elle seule — voir `cablage.ts`, où
+ * elle est la seule des six à composer une adresse de dossier. Or la racine se
+ * lit avec un droit qui lui est propre : un lecteur qui n'en tient un que sur un
+ * SOUS-dossier voit bien la page du domaine — `domaineLisible()` se contente
+ * d'UN dossier lisible, n'importe lequel — mais la racine lui reste fermée, et
+ * la pastille menait alors en 404.
+ *
+ * `P-03`, « une entrée visible est une entrée qui fonctionne », et `P-09`,
+ * l'action interdite n'est ni grisée ni masquée mais ABSENTE du DOM : l'entrée
+ * est retirée du détail servi à la vue, du même mouvement que le compteur de
+ * dossiers exclut plus bas ce que l'appelant ne peut pas atteindre. Les cinq
+ * autres entrées ne dépendent que de la lisibilité du domaine, déjà acquise.
+ *
+ * Le module reste ACTIF en base — rien n'est écrit ici : un droit posé plus tard
+ * sur la racine remet l'entrée à l'écran sans autre geste.
+ */
+function sansLEntreeDesDossiers(
+	detail: Record<NomDeDomaine, DetailDeDomaine>,
+	nom: NomDeDomaine
+): Record<NomDeDomaine, DetailDeDomaine> {
+	const courant = detail[nom];
+	if (courant === undefined) return detail;
+	return {
+		...detail,
+		[nom]: { ...courant, modules: courant.modules.filter((m) => m !== 'dossiers') }
+	};
+}
+
 const MILLISECONDES_PAR_JOUR = 86_400_000;
 /** L'unité que le panneau « Notes les plus consultées » annonce lui-même. */
 const FENETRE_DE_CONSULTATION_JOURS = 7;
@@ -344,6 +375,16 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 
 	const rangement = await lireLeRangementLisible(base, acces);
 
+	/* LA RACINE SE LIT AVEC SON PROPRE DROIT, et c'est la seule destination de
+	   l'entrée « Dossiers ». Sans lecture sur elle, l'entrée est retirée plutôt
+	   que rendue vers un refus. */
+	const racineDuRangement = siens.find((d) => d.parentId === null) ?? null;
+	const racineLisible =
+		racineDuRangement !== null && capacites(droitEffectif(acces, racineDuRangement.id)).lire;
+	const detailDomaines = racineLisible
+		? rangement.detailDomaines
+		: sansLEntreeDesDossiers(rangement.detailDomaines, resolution.ressource.nom);
+
 	return {
 		vecteur: {
 			/* `dom` porte le NOM : c'est ce que l'axe « Domaine » de la planche
@@ -362,7 +403,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		notes,
 		univers: rangement.univers,
 		domaines: rangement.domaines,
-		detailDomaines: rangement.detailDomaines,
+		detailDomaines,
 		nombreDeDossiers,
 		mesures7j: await lireLesConsultations7j(base, acces, maintenant),
 		modifications: await ancienneteDeModification(base, notes, maintenant),
