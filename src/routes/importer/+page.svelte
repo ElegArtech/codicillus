@@ -103,6 +103,36 @@
 		readonly simulation: boolean;
 	}
 
+	/** Ce que l'analyse rend : le lot classé, et ce que la cible porte déjà. */
+	interface AnalyseDuLot {
+		readonly lot: LotDImport;
+		readonly dossiersExistants: readonly string[];
+	}
+
+	/**
+	 * CE QU'UN GESTE SERVEUR REND — le résultat, OU LE MOTIF DE SON REFUS.
+	 *
+	 * `envoyer()` rendait `null` sur tout ce qui n'était pas un succès, et la vue
+	 * retournait alors en silence : « Analyser le lot » ne produisait RIEN, sans
+	 * un mot, alors que l'action avait répondu `fail(400, domaine-inconnu)` ou
+	 * `fail(403, sans-droit-sur-la-cible)`. Trois refus, tous avalés. `P-09` : une
+	 * action offerte aboutit, ou dit pourquoi elle refuse.
+	 *
+	 * LE MOTIF EST UN CODE, jamais une phrase : la mise en français est dans la
+	 * vue, comme celle des motifs de classement.
+	 */
+	type Issue<T> = { readonly valeur: T } | { readonly refus: string };
+
+	/**
+	 * LES DEUX FORMES DE RÉPONSE D'UNE ACTION, TELLES QUE `deserialize` LES REND.
+	 *
+	 * `fail()` produit un résultat de type `failure` dont `data` porte l'objet
+	 * passé à l'appel — ici `issue`. Un `error()` non intercepté produit un
+	 * résultat de type `error`. Ni l'un ni l'autre n'est un succès, et aucun des
+	 * deux ne doit disparaître.
+	 */
+	const REFUS_SANS_MOTIF = 'erreur-serveur';
+
 	/**
 	 * L'ENVOI D'UN LOT À UNE ACTION NOMMÉE.
 	 *
@@ -121,31 +151,46 @@
 		action: string,
 		fichiers: readonly File[],
 		reglages: Reglages
-	): Promise<Record<string, unknown> | null> {
+	): Promise<Issue<Record<string, unknown>>> {
 		const corps = new FormData();
 		corps.append('domaine-cible', reglages.domaine);
 		if (reglages.simulation) corps.append('simulation', 'oui');
 		for (const f of fichiers) corps.append('fichiers', f, cheminDuFichier(f));
 		const reponse = await fetch(`?/${action}`, { method: 'POST', body: corps });
 		const resultat = deserialize(await reponse.text());
-		if (resultat.type !== 'success') return null;
-		return (resultat.data ?? null) as Record<string, unknown> | null;
+		if (resultat.type === 'failure') {
+			const motif = (resultat.data as Record<string, unknown> | undefined)?.['issue'];
+			return { refus: typeof motif === 'string' ? motif : REFUS_SANS_MOTIF };
+		}
+		if (resultat.type !== 'success') return { refus: REFUS_SANS_MOTIF };
+		return { valeur: (resultat.data ?? {}) as Record<string, unknown> };
 	}
 
 	async function analyser(
 		fichiers: readonly File[],
 		reglages: Reglages
-	): Promise<LotDImport | null> {
-		const charge = await envoyer('analyser', fichiers, reglages);
-		return (charge?.['lot'] as LotDImport | undefined) ?? null;
+	): Promise<Issue<AnalyseDuLot>> {
+		const issue = await envoyer('analyser', fichiers, reglages);
+		if ('refus' in issue) return issue;
+		const lot = issue.valeur['lot'] as LotDImport | undefined;
+		if (lot === undefined) return { refus: REFUS_SANS_MOTIF };
+		return {
+			valeur: {
+				lot,
+				dossiersExistants:
+					(issue.valeur['dossiersExistants'] as readonly string[] | undefined) ?? []
+			}
+		};
 	}
 
 	async function importer(
 		fichiers: readonly File[],
 		reglages: Reglages
-	): Promise<RapportDeLot | null> {
-		const charge = await envoyer('importer', fichiers, reglages);
-		return (charge?.['rapport'] as RapportDeLot | undefined) ?? null;
+	): Promise<Issue<RapportDeLot>> {
+		const issue = await envoyer('importer', fichiers, reglages);
+		if ('refus' in issue) return issue;
+		const rapport = issue.valeur['rapport'] as RapportDeLot | undefined;
+		return rapport === undefined ? { refus: REFUS_SANS_MOTIF } : { valeur: rapport };
 	}
 
 	/**
@@ -175,9 +220,16 @@
 	});
 </script>
 
+<!-- `domaines` PEUPLE ICI UN CHAMP DE SAISIE OBLIGATOIRE — le sélecteur « Domaine
+     de destination » de l'étape 2 —, et non le seul rail de la coquille. Sans
+     cette propriété, la vue retombait sur `DOMAINES` du jeu de semence : sur une
+     instance neuve, l'écran n'offrait que des domaines fictifs, et l'action
+     refusait le dépôt en 400. La liste servie est celle des domaines où
+     l'appelant peut ÉCRIRE, pas celle qu'il peut lire — voir `+page.server.ts`. -->
 <Vue
 	vecteur={data.vecteur}
 	notes={data.notes}
+	domaines={data.domainesOuEcrire}
 	lotImport={data.lotImport}
 	formatsImport={data.formatsImport}
 	domaineParDefaut={data.domaineParDefaut}
