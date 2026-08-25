@@ -13,6 +13,10 @@
 	 * domaine : un nom que l'utilisateur n'obtenait jamais. Le chargeur le fait
 	 * désormais produire par la fabrique qui nomme l'archive pour de bon.
 	 *
+	 * ET SUR UNE INSTANCE NEUVE, IL N'EN AFFICHE AUCUN. Une installation réelle
+	 * n'a aucun domaine : la table est alors vide, aucun domaine n'est choisi, et
+	 * la vue ne rend pas l'arborescence d'archive plutôt que d'en nommer une.
+	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
 	 * sert ; elle est identique à l'octet à sa source gelée (P-6.3).
 	 *
