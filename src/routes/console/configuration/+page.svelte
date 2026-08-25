@@ -51,11 +51,11 @@
 	});
 </script>
 
-<Vue
-	vecteur={data.vecteur}
-	notes={data.notes}
-	univers={data.univers}
-	domaines={data.domaines}
-	compte={data.compte}
-	config={data.config}
-/>
+<!--
+	NI RAIL, NI IDENTITÉ, NI VERSION : LA COQUILLE LES LIT AU CONTEXTE. Cette
+	page les passait à la vue, qui les remettait à `CoquilleDeConsole`, qui
+	retombait sur `seeds/corpus.ts` dès qu'une route en oubliait une. Les quatre
+	propriétés ont disparu des trois côtés ; le gabarit racine pose le contexte
+	d'identité, seule source.
+-->
+<Vue vecteur={data.vecteur} notes={data.notes} config={data.config} />
