@@ -179,9 +179,20 @@ export async function creerUnSignet(
 			corps: demande.saisie.description,
 			/* Le formulaire d'un signet n'a pas d'éditeur : sa description est du
 			   texte, jamais un document. */
-			corpsDocument: null
+			corpsDocument: null,
+			/* UN SIGNET N'EST PAS UNE FICHE — `TYPE_SIGNET` est son type de note, et
+			   l'écran de V-13 n'offre aucun type de fiche. Les deux champs sont donc
+			   vides, et la note s'écrit sans propriétés typées. */
+			fiche: null,
+			proprietes: null
 		},
-		cible: { typeDeNoteId, domaineId: demande.domaineId, dossierId },
+		cible: {
+			typeDeNoteId,
+			domaineId: demande.domaineId,
+			dossierId,
+			typeDeFicheId: null,
+			proprietesTypees: null
+		},
 		identite: demande.identite,
 		maintenant: demande.maintenant,
 		signet: { adresse: demande.saisie.adresse, ajouteLe: demande.maintenant }

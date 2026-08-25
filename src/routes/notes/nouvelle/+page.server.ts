@@ -156,9 +156,20 @@ export const actions: Actions = {
 
 		/* PORTE 2 — la cible, puis le droit SUR ELLE. Les deux refus sont un seul
 		   octet : une cible qui n'existe pas et une cible interdite ne se
-		   distinguent pas (`RG-ACC-04`, `ADR-007`). */
-		const cible = await resoudreLaCible(base, lue.saisie);
-		if (cible === null) error(404, MESSAGE_INTROUVABLE);
+		   distinguent pas (`RG-ACC-04`, `ADR-007`).
+
+		   LE TYPE DE FICHE NE PASSE PAS PAR CETTE PORTE, et c'est délibéré : ce
+		   n'est pas un rangement, aucun droit ne le protège, et le référentiel
+		   est administrable. Le rendre en 404 nommait une note introuvable là où
+		   c'est un type qui manque, et faisait perdre le brouillon entier. Le
+		   refus est celui que `/notes/{id}/modifier` rend déjà pour le même
+		   geste — un 400 nommé, l'écran reste. */
+		const resolution = await resoudreLaCible(base, lue.saisie);
+		if (resolution.sort === 'fiche-introuvable') {
+			return fail(400, { motif: 'type de fiche introuvable' });
+		}
+		if (resolution.sort === 'introuvable') error(404, MESSAGE_INTROUVABLE);
+		const cible = resolution.cible;
 		if (!(await peutEcrireSurLeDossier(base, locals.identite, cible.dossierId))) {
 			error(404, MESSAGE_INTROUVABLE);
 		}

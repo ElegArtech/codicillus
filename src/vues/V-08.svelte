@@ -720,7 +720,7 @@
 <!-- prettier-ignore -->
 {#snippet carte(n: Note, q: string, index: number)}<a class="carte" href={resolve('/notes/[identifiant]', { identifiant: n.id })} data-index={index}
 		><div class="carte__haut"
-			><h2 class="carte__titre">{@render marque(n.titre, q)}</h2>{#if n.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}<span class="past past--type">{n.type === 'Fiche' ? `${motFiche} ${n.typeFiche}` : n.type}</span
+			><h2 class="carte__titre">{@render marque(n.titre, q)}</h2>{#if n.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}<span class="past past--type">{n.typeFiche ? `${motFiche} ${n.typeFiche}` : n.type}</span
 		></div
 		>{#if n.type === 'Signet'}<div class="marque-signet">↗ {n.url}</div>{/if}<p class="carte__extrait">{@render marque(n.extrait, q)}</p
 		><div class="carte__signal"
