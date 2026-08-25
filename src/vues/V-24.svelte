@@ -403,10 +403,14 @@
 	const scenarioCourant = $derived(SCENARIOS_OFFERTS.find((s) => s.id === scenarioChoisi) ?? null);
 
 	/* ── Étape 2 — le dépôt ───────────────────────────────────────────────────
-	   `rendreDepot()` (`V-24:2918`). Trois réglages, un par scénario, et un seul
-	   visible à la fois. La liste des formats admis et les options de domaine ne
-	   sont peuplées QUE lorsque l'étape 2 a été traversée : aux étapes 1, 3 et 4
-	   elles restent vides, et le gel le montre. */
+	   `rendreDepot()` (`V-24:2918`). Le gel y pose trois réglages, un par
+	   scénario, et n'en montre qu'un à la fois. Il n'en reste que deux ici : le
+	   champ du nom de domaine est parti avec le scénario qui le portait, et la
+	   case de simulation garde la sienne — son scénario n'étant plus offert,
+	   elle ne l'est plus non plus. Un seul réglage est donc visible, celui du
+	   domaine de destination. La liste des formats admis et les options de
+	   domaine ne sont peuplées QUE lorsque l'étape 2 a été traversée : aux
+	   étapes 1, 3 et 4 elles restent vides, et le gel le montre. */
 
 	/** Les cinq familles annoncées comme admises — `V-24:2929`. */
 	const FORMATS_ADMIS: readonly string[] = [
@@ -1132,14 +1136,23 @@
 					pendant que le lot se rangeait ailleurs.
 				-->
 				<!--
-					LA SIMULATION N'EST PLUS RÉSERVÉE À UN SCÉNARIO QUI N'EXISTE PAS.
-					Le gel n'offre la case que sous « corpus préparé » ; ce scénario
-					n'est pas exécuté, et la case partait avec lui. Or la simulation
-					EST livrée — `executerLImport()` la lit, et `RG-M12-02` en fait le
-					même chemin de code que l'import réel. Elle est donc offerte au
-					scénario qui reste, dès qu'il est choisi.
+					LA CASE « SIMULATION » APPARTIENT À UN SCÉNARIO QUE L'IMPORT
+					N'EXÉCUTE PAS, ET SA GARDE NE BOUGE PAS. Le gel ne l'offre que sous
+					« corpus préparé » — `UC-M12-03`, que `SCENARIOS_NON_LIVRES`
+					déclare non livré —, et l'aide qu'elle porte recommande justement
+					de vérifier un corpus préparé avant de l'engager. La rebrancher sur
+					le scénario livré servirait cette recommandation sous le SEUL
+					scénario offert : l'écran nommerait de nouveau une fonction que le
+					produit ne tient pas, à l'endroit même que ce lot répare. Le
+					scénario n'étant plus offert, la case ne l'est pas davantage, et
+					rien de ce qu'elle porte n'atteint l'écran.
+
+					CE QUE CE LOT NE TRANCHE PAS : ce qu'il reste à offrir dans ces
+					réglages une fois les deux scénarios non livrés retirés. Offrir la
+					simulation au scénario livré serait un geste d'interface qu'aucune
+					exigence ne demande, et le gel ne le dessine pas.
 				-->
-				<label class="case" id="champ-simulation" hidden={scenarioChoisi === null}>
+				<label class="case" id="champ-simulation" hidden={scenarioChoisi !== 'prepare'}>
 					<input
 						type="checkbox"
 						id="simulation"
