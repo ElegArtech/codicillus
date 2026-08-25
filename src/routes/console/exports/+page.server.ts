@@ -34,6 +34,12 @@
  * annoncerait la veille. C'est la seule marge qui reste, et elle est bornée à
  * la journée.
  *
+ * SUR UNE INSTANCE NEUVE, LA TABLE EST VIDE, ET C'EST LE CAS QUI COMPTE. Une
+ * installation réelle n'a aucun domaine ; la vue n'en choisit donc aucun et
+ * n'annonce plus aucun nom, là où elle composait un `-{date de semence}.zip`
+ * sur un nom de domaine vide. C'est le premier écran d'export que voit une
+ * installation, et c'était le seul endroit où la fuite se voyait encore.
+ *
  * `/console/exports/{univers}/{domaine}` EST MONTÉE DEPUIS `T-053`, et le motif
  * qui la retenait est levé : la monter sans l'archive « reviendrait à servir une
  * archive qui n'existe pas », or l'archive existe — `src/lib/export/archive.ts`,

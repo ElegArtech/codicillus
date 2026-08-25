@@ -154,7 +154,10 @@
 		 * l'identique : il est PRODUIT par sa source.
 		 *
 		 * ABSENTE, la vue n'est pas branchée sur une base et reprend la composition
-		 * du gel : le banc de comparaison ne bouge pas.
+		 * du gel : le banc de comparaison ne bouge pas. FOURNIE, elle fait loi —
+		 * un domaine qu'elle ne nomme pas n'a pas de nom d'archive annoncé, et
+		 * retomber sur la composition du gel servirait la date de semence à un
+		 * écran branché.
 		 */
 		nomsDArchive?: Readonly<Record<string, string>>;
 	}
@@ -279,6 +282,21 @@
 		['Pièces jointes', apercu.pieces]
 	] as const);
 
+	/**
+	 * LE NOM DU FICHIER QUE L'EXPORT PRODUIRA, ou `null` quand il n'y en a pas.
+	 *
+	 * UNE INSTANCE NEUVE N'A AUCUN DOMAINE. `domaineCourant` vaut alors la chaîne
+	 * vide, et la composition du gel rendait `-{date de semence}.zip` : un nom de
+	 * fichier inventé, servi par le produit sur le premier écran d'export d'une
+	 * installation réelle. Sans domaine, il n'y a rien à nommer — l'arborescence
+	 * d'archive n'est pas rendue du tout.
+	 */
+	const nomDeLArchive = $derived.by(() => {
+		if (domaineCourant === '') return null;
+		if (nomsDArchive === undefined) return `${ardoise(domaineCourant)}-${DATE_REFERENCE}.zip`;
+		return nomsDArchive[domaineCourant] ?? null;
+	});
+
 	/** L'arborescence d'archive (`V-36:2955-2969`), montrée plutôt que décrite. */
 	const archive = $derived.by(() => {
 		const arbre = dossiersDuDomaine(domaineCourant);
@@ -287,7 +305,7 @@
 		const note = notesDuDomaine(domaineCourant)[0];
 		const feuille = note ? ardoise(note.titre) : 'note';
 		return {
-			nom: nomsDArchive?.[domaineCourant] ?? `${ardoise(domaineCourant)}-${DATE_REFERENCE}.zip`,
+			nom: nomDeLArchive,
 			corps:
 				`\n├── ${premier ?? 'notes'}/\n` +
 				(sous ? `│   └── ${sous}/\n│       └── ${feuille}.md\n` : `│   └── ${feuille}.md\n`) +
@@ -387,8 +405,8 @@
 							><div class="ca__txt">Liste ce qui n'a pas pu être rendu fidèlement en Markdown, avec la raison. À lire avant d'archiver.</div
 						></div
 					></div
-					><div class="arbo-archive"><b>{archive.nom}</b>{archive.corps}</div
-				></div>
+					>{#if archive.nom !== null}<div class="arbo-archive"><b>{archive.nom}</b>{archive.corps}</div>{/if}</div
+				>
 
 				<div id="resultat"></div>
 			</div>
