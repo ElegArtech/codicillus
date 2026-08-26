@@ -95,6 +95,8 @@
 	 * `src/vues/V-17.css`, posé par `node verif/feuilles-de-vue.mjs V-17
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
+	import { getContext } from 'svelte';
+	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import BandeauApercu from '$lib/edition/BandeauApercu.svelte';
 	import BarreDEtat from '$lib/edition/BarreDEtat.svelte';
@@ -110,6 +112,15 @@
 	} from '../../seeds/corpus';
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
+
+	/* LE NOM DE L'ORGANISATION VIENT DU CONTEXTE, JAMAIS DU PRODUIT.
+	   Cette phrase nommait « la direction technique » en dur — le segment de
+	   marché du cadrage soudé dans une phrase d'écran. Le contrôle du paquet ne
+	   la voyait pas : il comparait à la casse, et la signature qu'il cherchait
+	   s'écrit ici en nom commun. Chaîne vide = l'instance ne s'est pas nommée,
+	   et la phrase retombe sur une formulation qui n'affirme rien. */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const nomOrganisation = $derived(identite?.nomOrganisation ?? '');
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
 	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
@@ -1001,7 +1012,9 @@
 							<button type="button" data-val="Publique" aria-pressed="false">Publique</button>
 						</div>
 						<span class="champ__aide" id="aide-visibilite"
-							>Consultable par les comptes de la direction technique.</span
+							>{nomOrganisation === ''
+								? 'Consultable par les comptes de cette instance.'
+								: `Consultable par les comptes de ${nomOrganisation}.`}</span
 						>
 					</div>
 					<div class="champ">
