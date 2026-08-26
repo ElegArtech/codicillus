@@ -68,7 +68,7 @@
 	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import { adresseDeNote } from '$lib/rangement/adresses';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
@@ -342,10 +342,8 @@
 	/** Le compteur de tête : « N notes », ou « N sur M notes » quand un filtre mord. */
 	const compteur = $derived(
 		filtrees.length === base.length
-			? base.length > 1
-				? ' notes'
-				: ' note'
-			: ` sur ${nb(base.length)}${base.length > 1 ? ' notes' : ' note'}`
+			? ` ${accord(base.length, 'note')}`
+			: ` sur ${nb(base.length)} ${accord(base.length, 'note')}`
 	);
 
 	/** L'ancienneté de modification en clair — `window.modifJours` du gel. */
@@ -403,7 +401,7 @@
 	sur chaque ligne.
 -->
 <!-- prettier-ignore -->
-{#snippet ligneCarte(n: Note)}<a class="lc" href={adresseDeNote(n.id)}><div class="lc__haut"><h2 class="lc__titre">{n.titre}</h2><span class="past past--type">{libelleDeType(n)}</span>{#if n.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}</div><p class="lc__extrait">{n.extrait}</p><div class="lc__meta">{#if n.dossier}<span class="lc__dossier">{'▸ ' + n.dossier}</span><span class="sep">·</span>{/if}<span>{n.auteur}</span><span class="sep">·</span><span>{modifiee(n)}</span></div><div class="lc__etiquettes">{#each n.etiquettes.slice(0, 4) as e (e)}<span class="past past--etiquette">{e}</span>{/each}</div><div class="lc__droite">{@render temoin(n)}<span class="lc__vues">{nb(n.vues) + ' consultations'}</span></div></a>{/snippet}
+{#snippet ligneCarte(n: Note)}<a class="lc" href={adresseDeNote(n.id)}><div class="lc__haut"><h2 class="lc__titre">{n.titre}</h2><span class="past past--type">{libelleDeType(n)}</span>{#if n.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}</div><p class="lc__extrait">{n.extrait}</p><div class="lc__meta">{#if n.dossier}<span class="lc__dossier">{'▸ ' + n.dossier}</span><span class="sep">·</span>{/if}<span>{n.auteur}</span><span class="sep">·</span><span>{modifiee(n)}</span></div><div class="lc__etiquettes">{#each n.etiquettes.slice(0, 4) as e (e)}<span class="past past--etiquette">{e}</span>{/each}</div><div class="lc__droite">{@render temoin(n)}<span class="lc__vues">{nb(n.vues) + ' ' + accord(n.vues, 'consultation')}</span></div></a>{/snippet}
 
 <Coquille
 	forme="abregee"

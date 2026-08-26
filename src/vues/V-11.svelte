@@ -79,6 +79,7 @@
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { libelleDeModule } from '$lib/rangement/modules';
+	import { accord } from '$lib/vocabulaire';
 	import { adresseDeNote, segmentsDeDossier } from '$lib/rangement/adresses';
 
 	/**
@@ -211,14 +212,15 @@
 	interface Part {
 		readonly cle: 'frais' | 'vieil' | 'obs';
 		readonly classe: string;
-		readonly pluriel: string;
+		/* Le pluriel n'est plus porté : les trois formes sont en `+s`, et
+		   `accord()` (`$lib/vocabulaire`) est la seule source de cette règle. */
 		readonly singulier: string;
 	}
 
 	const PARTS: readonly Part[] = [
-		{ cle: 'frais', classe: 'p-frais', pluriel: 'fraîches', singulier: 'fraîche' },
-		{ cle: 'vieil', classe: 'p-vieil', pluriel: 'vieillissantes', singulier: 'vieillissante' },
-		{ cle: 'obs', classe: 'p-obs', pluriel: 'obsolètes', singulier: 'obsolète' }
+		{ cle: 'frais', classe: 'p-frais', singulier: 'fraîche' },
+		{ cle: 'vieil', classe: 'p-vieil', singulier: 'vieillissante' },
+		{ cle: 'obs', classe: 'p-obs', singulier: 'obsolète' }
 	];
 
 	function compte(notes: readonly Note[], cle: Part['cle']): number {
@@ -229,21 +231,17 @@
 		return PARTS.filter((p) => compte(notes, p.cle) > 0);
 	}
 
-	function accord(p: Part, n: number): string {
-		return n > 1 ? p.pluriel : p.singulier;
-	}
-
 	function resumeRepartition(notes: readonly Note[]): string {
 		return (
 			partsPresentes(notes)
-				.map((p) => `${compte(notes, p.cle)} ${accord(p, compte(notes, p.cle))}`)
+				.map((p) => `${compte(notes, p.cle)} ${accord(compte(notes, p.cle), p.singulier)}`)
 				.join(', ') + ` sur ${notes.length}`
 		);
 	}
 
 	function libellePart(p: Part, notes: readonly Note[], contexte: string): string {
 		const n = compte(notes, p.cle);
-		return `${n} ${accord(p, n)}${contexte ? ` · ${contexte}` : ''}`;
+		return `${n} ${accord(n, p.singulier)}${contexte ? ` · ${contexte}` : ''}`;
 	}
 
 	/* ── Témoin de fraîcheur ─────────────────────────────────────────────────
@@ -439,7 +437,7 @@
 			<div class="mesure mesure--fraicheur">
 				<span class="mesure__nom etiq">Fraîcheur du domaine</span>
 				<div class="total-notes">
-					<b>{nb(notesDuDomaine.length)}</b>{notesDuDomaine.length > 1 ? 'notes' : 'note'}
+					<b>{nb(notesDuDomaine.length)}</b>{accord(notesDuDomaine.length, 'note')}
 				</div>
 				{#if notesDuDomaine.length === 0}<div class="zone-etat__txt" style="margin:0">
 						Aucune note à mesurer.
@@ -456,7 +454,7 @@
 					<div class="legende">
 						{#each partsPresentes(notesDuDomaine) as p (p.cle)}<span
 								><i class={p.classe}></i><b>{compte(notesDuDomaine, p.cle)}</b>
-								{accord(p, compte(notesDuDomaine, p.cle))}</span
+								{accord(compte(notesDuDomaine, p.cle), p.singulier)}</span
 							>{/each}
 					</div>{/if}
 			</div>
@@ -515,7 +513,7 @@
 			<h2>Accès</h2>
 			<span class="etiq" id="n-modules"
 				>{detail.modules.length}
-				{detail.modules.length > 1 ? 'modules activés' : 'module activé'}</span
+				{accord(detail.modules.length, 'module activé', 'modules activés')}</span
 			>
 		</div>
 		<section class="modules" id="modules">
@@ -610,7 +608,7 @@
 							{#if !vide}{#each populaires as n, rang (n.id)}{@render ligneNote(
 										n,
 										rang + 1,
-										`${mesures7j[n.id] ?? 0} vues`
+										`${mesures7j[n.id] ?? 0} ${accord(mesures7j[n.id] ?? 0, 'vue')}`
 									)}{/each}{/if}
 						</div>
 					</section>
@@ -651,7 +649,7 @@
 						</div>
 						<div class="panneau__corps" id="contribs">
 							<!-- prettier-ignore -->
-							{#if !vide}{#each contribs as c, rang (rang)}<button class="contrib" type="button"><span class="contrib__av">{c.initiales}</span><span class="contrib__nom">{c.nom}</span><span class="contrib__part"><span class="contrib__barre"><i style="width:{Math.round((c.notes / maxiContrib) * 100)}%"></i></span><span class="contrib__n">{c.notes + (c.notes > 1 ? ' notes' : ' note')}</span></span></button>{/each}{/if}
+							{#if !vide}{#each contribs as c, rang (rang)}<button class="contrib" type="button"><span class="contrib__av">{c.initiales}</span><span class="contrib__nom">{c.nom}</span><span class="contrib__part"><span class="contrib__barre"><i style="width:{Math.round((c.notes / maxiContrib) * 100)}%"></i></span><span class="contrib__n">{c.notes + ' ' + accord(c.notes, 'note')}</span></span></button>{/each}{/if}
 						</div>
 					</section>
 				</div>

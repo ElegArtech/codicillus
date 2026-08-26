@@ -132,7 +132,7 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 	import { BARRES_DE_JAUGE, temoinFraicheur } from '$lib/fraicheur';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import {
 		adresseDeCreationDeSignet,
 		adresseDeDomaine,
@@ -405,14 +405,15 @@
 	interface Part {
 		readonly cle: NiveauFraicheur;
 		readonly classe: string;
-		readonly pluriel: string;
+		/* Le pluriel n'est plus porté : les trois formes sont en `+s`, et
+		   `accord()` (`$lib/vocabulaire`) est la seule source de cette règle. */
 		readonly singulier: string;
 	}
 
 	const PARTS: readonly Part[] = [
-		{ cle: 'frais', classe: 'p-frais', pluriel: 'fraîches', singulier: 'fraîche' },
-		{ cle: 'vieil', classe: 'p-vieil', pluriel: 'vieillissantes', singulier: 'vieillissante' },
-		{ cle: 'obs', classe: 'p-obs', pluriel: 'obsolètes', singulier: 'obsolète' }
+		{ cle: 'frais', classe: 'p-frais', singulier: 'fraîche' },
+		{ cle: 'vieil', classe: 'p-vieil', singulier: 'vieillissante' },
+		{ cle: 'obs', classe: 'p-obs', singulier: 'obsolète' }
 	];
 
 	function compte(notes: readonly Note[], cle: NiveauFraicheur): number {
@@ -423,21 +424,17 @@
 		return PARTS.filter((p) => compte(notes, p.cle) > 0);
 	}
 
-	function accord(p: Part, n: number): string {
-		return n > 1 ? p.pluriel : p.singulier;
-	}
-
 	function resumeRepartition(notes: readonly Note[]): string {
 		return (
 			partsPresentes(notes)
-				.map((p) => `${compte(notes, p.cle)} ${accord(p, compte(notes, p.cle))}`)
+				.map((p) => `${compte(notes, p.cle)} ${accord(compte(notes, p.cle), p.singulier)}`)
 				.join(', ') + ` sur ${notes.length}`
 		);
 	}
 
 	function libellePart(p: Part, notes: readonly Note[], contexte: string): string {
 		const n = compte(notes, p.cle);
-		return `${n} ${accord(p, n)} · ${contexte}`;
+		return `${n} ${accord(n, p.singulier)} · ${contexte}`;
 	}
 
 	/** Les trois graduations de la jauge, dont `barres` pleines (P-01). */
@@ -754,7 +751,7 @@
 				</div>
 			{:else}
 				<!-- prettier-ignore -->
-				<p class="salut__sous" id="salut-sous">{sansPerimetre ? 'Votre base compte ' : 'Votre périmètre, ' + moi.domaine + ', compte '}<b>{nb(mien.length)}</b>{#if recentes.length}{(mien.length > 1 ? ' notes' : ' note') + ', dont '}<b>{nb(recentes.length)}</b>{recentes.length > 1 ? ' mises à jour cette semaine.' : ' mise à jour cette semaine.'}{:else}{(mien.length > 1 ? ' notes' : ' note') + ". Aucune n'a bougé cette semaine."}{/if}</p>
+				<p class="salut__sous" id="salut-sous">{sansPerimetre ? 'Votre base compte ' : 'Votre périmètre, ' + moi.domaine + ', compte '}<b>{nb(mien.length)}</b>{#if recentes.length}{' ' + accord(mien.length, 'note') + ', dont '}<b>{nb(recentes.length)}</b>{' ' + accord(recentes.length, 'mise à jour cette semaine.', 'mises à jour cette semaine.')}{:else}{' ' + accord(mien.length, 'note') + ". Aucune n'a bougé cette semaine."}{/if}</p>
 			{/if}
 		</header>
 
@@ -837,7 +834,7 @@
 					nb(toutesLesNotes.length),
 					false,
 					false,
-					`dans ${domainesAccessibles.length}${domainesAccessibles.length > 1 ? ' domaines' : ' domaine'}`,
+					`dans ${domainesAccessibles.length} ${accord(domainesAccessibles.length, 'domaine')}`,
 					false,
 					() => void goto(resolve('/recherche'))
 				)}
@@ -1007,7 +1004,7 @@
 									{@const notesDom = notesDuDomaine(d)}
 									{@const mesurables = publiees(notesDom)}
 									<!-- prettier-ignore -->
-									<div class="dom" style="--teinte:{d.couleur}"><div class="dom__tete"><span class="dom__puce" aria-hidden="true"></span><button class="dom__nom" type="button" onclick={() => allerA(adresseDeDomaine(d.univers, d.nom))}>{d.nom}</button><button class="dom__n" type="button" onclick={() => allerA(adresseDesNotesDuDomaine(d.univers, d.nom))}>{nb(notesDom.length) + (notesDom.length > 1 ? ' notes' : ' note')}</button></div>{#if mesurables.length}<div class="repart" role="img" aria-label={resumeRepartition(mesurables)}>{#each partsPresentes(mesurables) as p (p.cle)}{@const libelle = libellePart(p, mesurables, d.nom)}<button type="button" class={p.classe} style="flex:{compte(mesurables, p.cle)}" title={libelle} aria-label={libelle} onclick={() => ouvrirLaPart(d, p)}></button>{/each}</div>{:else}<div class="dom__vide">{notesDom.length ? 'Aucune note publiée à mesurer.' : "Aucune note pour l'instant."}</div>{/if}</div>
+									<div class="dom" style="--teinte:{d.couleur}"><div class="dom__tete"><span class="dom__puce" aria-hidden="true"></span><button class="dom__nom" type="button" onclick={() => allerA(adresseDeDomaine(d.univers, d.nom))}>{d.nom}</button><button class="dom__n" type="button" onclick={() => allerA(adresseDesNotesDuDomaine(d.univers, d.nom))}>{nb(notesDom.length) + ' ' + accord(notesDom.length, 'note')}</button></div>{#if mesurables.length}<div class="repart" role="img" aria-label={resumeRepartition(mesurables)}>{#each partsPresentes(mesurables) as p (p.cle)}{@const libelle = libellePart(p, mesurables, d.nom)}<button type="button" class={p.classe} style="flex:{compte(mesurables, p.cle)}" title={libelle} aria-label={libelle} onclick={() => ouvrirLaPart(d, p)}></button>{/each}</div>{:else}<div class="dom__vide">{notesDom.length ? 'Aucune note publiée à mesurer.' : "Aucune note pour l'instant."}</div>{/if}</div>
 								{/each}
 							{/if}
 						</div>
@@ -1087,7 +1084,7 @@
 				{:else if etatPage !== 'vide'}
 					<span>{versionAffichee === '' ? 'Codicillus' : 'Codicillus ' + versionAffichee}</span>
 					<!-- prettier-ignore -->
-					<span><button type="button" onclick={() => allerA(ADRESSE_DE_LA_RECHERCHE)}><b>{nb(toutesLesNotes.length)}</b>{' ' + (toutesLesNotes.length > 1 ? 'notes' : 'note')}</button> · <button type="button" onclick={() => allerA(ADRESSE_DES_SIGNETS)}><b>{nb(signets)}</b>{' ' + (signets > 1 ? 'signets' : 'signet')}</button></span>
+					<span><button type="button" onclick={() => allerA(ADRESSE_DE_LA_RECHERCHE)}><b>{nb(toutesLesNotes.length)}</b>{' ' + accord(toutesLesNotes.length, 'note')}</button> · <button type="button" onclick={() => allerA(ADRESSE_DES_SIGNETS)}><b>{nb(signets)}</b>{' ' + accord(signets, 'signet')}</button></span>
 					{#if synchroAffichee !== null}<span>{'Dernière synchronisation ' + synchroAffichee}</span
 						>{/if}
 				{/if}
