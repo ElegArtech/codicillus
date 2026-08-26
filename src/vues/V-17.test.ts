@@ -16,6 +16,8 @@
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
+import { corpsDeLaSaisie } from '../lib/donnees/creation';
+import { corpsRendu } from '../lib/donnees/note';
 import {
 	corpusPourVue,
 	DOMAINES,
@@ -321,8 +323,35 @@ describe('V-17 — le corps rédigé vient de la route, jamais de la vue', () =>
 		}
 	});
 
-	it('laisse la zone VIDE et son invite quand le corps servi est vide', async () => {
-		const zone = redactionDe(await rendu({ vecteur: MODIF, noteModifiee: AUTRE_NOTE }));
+	/**
+	 * LE CORPS D'UNE NOTE CRÉÉE SANS CORPS — PRODUIT PAR SA SOURCE, JAMAIS
+	 * ÉCRIT ICI.
+	 *
+	 * Un corps fabriqué par le test ne prouverait rien de la forme réelle, et
+	 * le défaut tenait précisément à ce que cette forme n'est pas celle qu'on
+	 * croit : `creerUneNote()` n'écrit JAMAIS NULL, elle écrit ce que
+	 * `corpsDeLaSaisie('')` rend. C'est `corpsRendu()` qui en tire les deux
+	 * drapeaux que la route lit.
+	 */
+	const CORPS_SANS_TEXTE = corpsRendu(corpsDeLaSaisie(''), 'reference', () => null);
+
+	it('la note créée sans corps EXISTE sans être RÉDIGÉE — les deux drapeaux diffèrent', () => {
+		expect(CORPS_SANS_TEXTE.existe).toBe(true);
+		expect(CORPS_SANS_TEXTE.redige).toBe(false);
+		/* Son HTML n'est pas vide pour autant : c'est le paragraphe sans texte de
+		   `corpsVide()`. Servi tel quel, il faisait déclarer la zone NON vide et
+		   privait la note neuve de son invite d'amorçage. */
+		expect(CORPS_SANS_TEXTE.html).not.toBe('');
+	});
+
+	it('laisse la zone VIDE et son invite pour une note créée sans corps', async () => {
+		/* CE QUE LA ROUTE SERT — `modifier/+page.server.ts` : le HTML si le corps
+		   est RÉDIGÉ, la chaîne vide sinon. Sur `existe`, cette expression
+		   rendait le paragraphe vide, et l'invite ne paraissait jamais. */
+		const servi = CORPS_SANS_TEXTE.redige ? CORPS_SANS_TEXTE.html : '';
+		const zone = redactionDe(
+			await rendu({ vecteur: MODIF, noteModifiee: AUTRE_NOTE, corps: servi })
+		);
 		expect(zone).toContain('data-vide="oui"');
 		expect(zone).toContain('data-invite="');
 	});
