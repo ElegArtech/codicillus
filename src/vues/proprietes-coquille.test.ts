@@ -718,6 +718,19 @@ function contenuDe(rendu: string, identifiant: string): string {
 /* Une adresse d'instance qui n'existe nulle part, produite comme le produit la
    produit : le chemin d'une URL. L'hôte est indifférent — `pathname` ne le
    porte pas —, et le domaine de premier niveau réservé aux essais le dit. */
+/**
+ * UNE SUPPRESSION DE CONTRÔLE — aucune valeur du jeu de démonstration, parce que
+ * c'est justement le jeu que la propriété a chassé de la vue.
+ */
+const PIERRE_DE_CONTROLE = {
+	nom: 'Note de contrôle T-R',
+	ou: 'Univers de contrôle › Domaine de contrôle',
+	par: 'Compte de contrôle',
+	quand: 'il y a 2 jours',
+	motif: 'Contrôle du lot R',
+	requete: 'note de controle'
+};
+
 const CHEMIN_DEMANDE = new URL('https://codicillus.invalid/notes/inexistante-xyz').pathname;
 const CHEMIN_PUBLIC_DEMANDE = new URL('https://codicillus.invalid/guides/inexistant').pathname;
 
@@ -747,9 +760,27 @@ describe('V-26 — l’adresse demandée en session', () => {
 		expect(rendu).not.toContain(`Créer la note « ${requeteDeLaPlanche} »`);
 	});
 
-	it('la pierre tombale, elle, ne lit pas l’adresse demandée — elle n’en a pas', () => {
+	/**
+	 * LA PIERRE TOMBALE ÉTAIT ÉCRITE DANS LA VUE, et la condition qui la retirait
+	 * de l'écran ne la retirait pas du PAQUET : « Restaurer une sauvegarde
+	 * MariaDB », « Infrastructure › Exploitation › Sauvegardes », « Marc
+	 * Ferreira », « il y a 6 jours » et le motif partaient dans le chunk de la
+	 * page d'erreur, lisibles dans le source servi à n'importe quel visiteur d'une
+	 * adresse cassée. Aucune table du produit ne porte l'auteur, l'instant ni le
+	 * motif d'une suppression : la donnée est une propriété, et son défaut est
+	 * l'absence — la position de planche ne suffit plus à rendre la section.
+	 */
+	it('la pierre tombale ne se rend plus sur la seule position de planche', () => {
 		const tombe = { vecteur: { cas: 'supprimee' }, pistes: [] };
-		expect(corps('V-26', tombe, { adresse: CHEMIN_DEMANDE })).toBe(corps('V-26', tombe));
+		expect(corps('V-26', tombe)).not.toContain('id="suppression"');
+	});
+
+	it('servie, elle se rend, et elle ne nomme que ce qu’elle a reçu', () => {
+		const tombe = { vecteur: { cas: 'supprimee' }, pistes: [] };
+		const rendu = corps('V-26', tombe, { supprimee: PIERRE_DE_CONTROLE });
+		expect(rendu).toContain('id="suppression"');
+		expect(rendu).toContain(PIERRE_DE_CONTROLE.nom);
+		expect(rendu).toContain(PIERRE_DE_CONTROLE.par);
 	});
 });
 

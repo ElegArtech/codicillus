@@ -112,7 +112,8 @@
 	 * `N résultat(s)` puis « en D,DD s » et rien d'autre (`V-08:2011-2015`), et
 	 * la maquette fait la loi sur la forme (ordre de préséance, `CLAUDE.md` §2).
 	 * Ce qui devient vrai est le NOMBRE : il reflète la requête ET les facettes
-	 * retenues. La DURÉE, elle, reste simulée PAR LE GEL — P-02 non tenue.
+	 * retenues. LA DURÉE AUSSI, DÉSORMAIS : le moteur rend `processingTimeMs`, et
+	 * la vue la reçoit en propriété au lieu de la fabriquer.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
 	 * `src/vues/V-08.css` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
@@ -184,6 +185,23 @@
 		 * reçu, qui est le corpus de la planche.
 		 */
 		perimetre?: number;
+		/**
+		 * LA DURÉE DE LA RECHERCHE, EN MILLISECONDES — MESURÉE, jamais fabriquée.
+		 *
+		 * La vue calculait `Math.max(0.09, 0 / 1000 + 0.31)` : la formule du gel,
+		 * dont le terme mesuré est NUL PAR CONSTRUCTION. Elle affichait donc
+		 * toujours « 0,31 s », que la requête rende un résultat ou quarante, et le
+		 * gel l'avouait — « la valeur est SIMULÉE ». La mesure existait pourtant :
+		 * Meilisearch rend `processingTimeMs` à chaque réponse, et
+		 * `ResultatDeRecherche` la porte désormais jusqu'ici.
+		 *
+		 * EXIGÉE — `/recherche` est le seul montage de cette vue, et il la passe.
+		 *
+		 * `null` QUAND AUCUNE RECHERCHE N'A EU LIEU : périmètre fermé, le moteur
+		 * n'est pas interrogé du tout. Le compteur rend alors le compte SANS
+		 * durée — une durée qui n'existe pas ne vaut pas `0,00 s`.
+		 */
+		dureeMs: number | null;
 		/**
 		 * LES PISTES DE REFORMULATION — UNE DONNÉE, ET ELLE VIENT DU CHARGEUR.
 		 *
@@ -263,6 +281,7 @@
 		requete,
 		retenues,
 		perimetre,
+		dureeMs,
 		pistes,
 		univers = [],
 		domaines = [],
@@ -532,15 +551,22 @@
 	const affiches = $derived(trier(base.filter((n) => passe(n))));
 
 	/**
-	 * La durée affichée par le compteur. Formule du gel (`V-08:1961`) à durée
-	 * écoulée nulle : `Math.max(0.09, 0 + 0.31)` = 0,31 s. La vue ne mesure rien,
-	 * elle rend un instant — la valeur est SIMULÉE par le gel, ce que P-02
-	 * proscrit ; la contradiction appartient au gel, et P-02 n'est pas déclarée
-	 * tenue.
+	 * LA DURÉE AFFICHÉE PAR LE COMPTEUR — celle que le moteur a mesurée.
+	 *
+	 * TROIS DÉCIMALES, ET C'EST LA MESURE QUI LES IMPOSE. Le gel en écrivait deux
+	 * parce qu'il additionnait un plancher de 0,31 s à une durée nulle ; une
+	 * recherche réelle sur un index de cette taille se compte en unités de
+	 * milliseconde, et deux décimales de seconde la rendraient invariablement
+	 * « 0,00 s » — c'est-à-dire le zéro muet que le lot vient de retirer, sous une
+	 * autre forme. Le libellé du gel, « en X s », ne bouge pas.
+	 *
+	 * `typeof` PLUTÔT QU'UNE COMPARAISON À `null` : la propriété est exigée, mais
+	 * un rendu hors application — le banc de propriétés — la laisse absente, et un
+	 * compteur ne doit pas annoncer `undefined` seconde.
 	 */
-	const duree = Math.max(0.09, 0 / 1000 + 0.31)
-		.toFixed(2)
-		.replace('.', ',');
+	const duree = $derived(
+		typeof dureeMs === 'number' ? (dureeMs / 1000).toFixed(3).replace('.', ',') : null
+	);
 
 	/**
 	 * `data-trop` — la règle du gel (`V-08:2021-2022`), portée telle quelle : la
@@ -951,12 +977,13 @@
 					`compteur.innerHTML = ""` et sort (`V-08:1971`).
 
 					AUCUNE VALEUR ILLUSTRATIVE (P-02) : le compte est celui des résultats
-					réellement affichés — requête ET facettes retenues, `RG-M02-08`. La
-					DURÉE, elle, est simulée PAR LE GEL — réserve écrite en tête du script,
-					P-02 non déclarée tenue.
+					réellement affichés — requête ET facettes retenues, `RG-M02-08` —, et la
+					durée est celle que le moteur a MESURÉE. Sans mesure — périmètre fermé,
+					aucune requête émise —, le compte se rend SEUL : une durée qui n'existe
+					pas ne s'écrit pas `0,00 s`.
 				-->
 				<!-- prettier-ignore -->
-				<span class="compteur" id="compteur">{#if rendreLesResultats && !sansResultat}<b>{`${affiches.length} résultat${affiches.length > 1 ? 's' : ''}`}</b>{` en ${duree} s`}{/if}</span>
+				<span class="compteur" id="compteur">{#if rendreLesResultats && !sansResultat}<b>{`${affiches.length} résultat${affiches.length > 1 ? 's' : ''}`}</b>{#if duree !== null}{` en ${duree} s`}{/if}{/if}</span>
 				<div style="display:flex;align-items:center;gap:var(--e-3)">
 					<button
 						class="btn bouton-facettes"

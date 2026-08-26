@@ -31,7 +31,10 @@
  * sont pas rendues : « Nouveau signet » et « Nouveau dossier » exigent un
  * domaine, et le seul que le produit puisse choisir sans décider à la place de
  * l'utilisateur est celui auquel son compte est rattaché. Sans rattachement,
- * les deux entrées sont retirées plutôt que laissées mortes.
+ * les deux entrées sont retirées plutôt que laissées mortes. « Nouvelle note »
+ * et « Importer des fichiers » exigent, elles, que l'appelant puisse écrire
+ * QUELQUE PART : sur une instance à zéro univers, personne ne le peut, et les
+ * deux adresses rendent 404.
  *
  * L'ÉLAGAGE D'ICI EST LE SECOND FILET, PAS LE PREMIER. Il court après
  * l'hydratation : ce qu'il retire a déjà été SERVI, et un navigateur sans script
@@ -54,6 +57,20 @@ export interface ContexteDeCoquille {
 	} | null;
 	/** `RG-DRO-03` — seul l'administrateur voit l'entrée de console. */
 	administrateur: boolean;
+	/**
+	 * L'APPELANT PEUT-IL ÉCRIRE QUELQUE PART — `ecriture` du gabarit racine,
+	 * calculé par la MÊME fonction que la garde de `/notes/nouvelle`.
+	 *
+	 * « Nouvelle note » et « Importer des fichiers » portaient leur adresse EN
+	 * DUR, sans garde, à côté de deux voisines gardées. Sur une instance neuve —
+	 * zéro univers, l'état normal au premier démarrage —, les deux mènent en 404,
+	 * et le 404 servi est V-26 : il annonce que l'adresse n'existe pas, ce qui est
+	 * faux, et il offre « Créer la note … » vers `/notes/nouvelle`. Une boucle.
+	 *
+	 * `P-03` n'admet aucune entrée qui ne mène nulle part : sans écriture, les
+	 * deux cibles valent `null`, comme les deux voisines.
+	 */
+	ecriture: boolean;
 }
 
 /** L'adresse de chaque entrée du menu « Créer », par son libellé du gel. */
@@ -61,7 +78,7 @@ function destinations(contexte: ContexteDeCoquille): Map<string, string | null> 
 	const r = contexte.rangement;
 	const domaine = r === null ? null : `/univers/${r.univers}/${r.domaine}`;
 	return new Map<string, string | null>([
-		['Nouvelle note', '/notes/nouvelle'],
+		['Nouvelle note', contexte.ecriture ? '/notes/nouvelle' : null],
 		/* LE GESTE VIT SUR LA PAGE D'UN DOSSIER — `#a-sousdossier` et son dialogue,
 		   `mockups/V-13-page-dossier.html:1161` et `:1209` : on crée un SOUS-dossier,
 		   donc il faut d'abord dire lequel. L'entrée mène à la page du domaine, où
@@ -76,7 +93,7 @@ function destinations(contexte: ContexteDeCoquille): Map<string, string | null> 
 		   rédiger. `resoudreLAccesAuxSignets(…, true)` refuse sur l'une ou
 		   l'autre, et un domaine simplement LISIBLE n'y suffit pas. */
 		['Nouveau signet', domaine === null || !r?.signets ? null : `${domaine}/signets/nouveau`],
-		['Importer des fichiers', '/importer'],
+		['Importer des fichiers', contexte.ecriture ? '/importer' : null],
 		['Mon profil', '/mon-profil'],
 		['Console d’administration', contexte.administrateur ? '/console' : null],
 		["Console d'administration", contexte.administrateur ? '/console' : null],
@@ -205,11 +222,17 @@ export function cablerLaCoquille(document: Document, contexte: ContexteDeCoquill
 			return;
 		}
 
-		/* 3. LA FORME ABRÉGÉE — un seul bouton « Créer », sans menu. */
+		/* 3. LA FORME ABRÉGÉE — un seul bouton « Créer », sans menu.
+
+		      SA DESTINATION EST CELLE DE L'ENTRÉE « Nouvelle note », et non une
+		      seconde écriture de la même adresse : sans écriture ouverte, la table
+		      la pose à `null`, et le bouton — que `BarreSuperieure.svelte` n'émet
+		      alors pas non plus — ne mène nulle part plutôt qu'en 404. */
 		const abrege = cible.closest('button.btn[title="Créer"]');
 		if (abrege !== null && abrege.closest('.menu-barre') === null) {
 			evenement.preventDefault();
-			aller('/notes/nouvelle');
+			const adresse = cibles.get('Nouvelle note');
+			if (adresse !== null && adresse !== undefined) aller(adresse);
 			return;
 		}
 
