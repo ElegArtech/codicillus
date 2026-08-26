@@ -51,6 +51,7 @@ import {
 	contexteDeRequete,
 	lireLeDetailDesDomaines,
 	lireLesDesignationsDeDomaine,
+	lireLesDesignationsDUnivers,
 	resoudreLaConsole
 } from '$lib/donnees/consoles';
 import { moteurPartage } from '$lib/recherche/acces';
@@ -88,7 +89,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 		compte: acces.ressource.compte,
 		detailDomaines: await lireLeDetailDesDomaines(base),
 		modules: CATALOGUE_DE_MODULES,
-		designations: await lireLesDesignationsDeDomaine(base)
+		designations: await lireLesDesignationsDeDomaine(base),
+		/* L'IDENTIFIANT D'UN UNIVERS PAR SON NOM D'AFFICHAGE — la même table que
+		   `/console/univers` emploie déjà, et pour la même raison : le `<select>`
+		   de rattachement porte le nom, les deux gestes exigent l'identifiant, et
+		   la correspondance est LUE, jamais dérivée du nom. */
+		designationsUnivers: await lireLesDesignationsDUnivers(base)
 	};
 };
 
@@ -136,10 +142,13 @@ export const actions: Actions = {
 	 * trois choses que la règle exige — le domaine, son dossier racine
 	 * (`RG-STR-03`) et ses modules (`RG-STR-06`) — dans une seule transaction.
 	 *
-	 * L'UNIVERS EST DÉSIGNÉ PAR SON NOM D'AFFICHAGE ici, et non par son
-	 * identifiant : c'est ce que `#f-univers` porte au gel (`V-28:565`, dont les
-	 * options valent `u.nom`). La traduction en clé de base est faite par
-	 * l'exécutant, une fois.
+	 * L'UNIVERS EST DÉSIGNÉ PAR SON IDENTIFIANT, comme partout ailleurs dans la
+	 * console. `#f-univers` porte le NOM d'affichage au gel (`V-28:565`, dont les
+	 * options valent `u.nom`) ; la traduction est faite par la page, sur la table
+	 * du chargeur. Elle l'était auparavant par l'exécutant, qui résolvait sur
+	 * `univers.nom` — le seul geste de la console à ne pas employer la clé, et
+	 * une requête d'enregistrement portait donc deux champs d'univers de régimes
+	 * différents.
 	 */
 	creer: async ({ locals, request }) => {
 		consoleOuverte(locals);

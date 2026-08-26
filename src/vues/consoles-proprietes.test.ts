@@ -293,10 +293,13 @@ describe('V-28 — Domaines', () => {
 	/**
 	 * SUR UNE INSTANCE NEUVE, LE REGISTRE EST VIDE — ET LE DÉCOMPTE LE DIT.
 	 *
-	 * Les noms de domaine se mesurent par OCCURRENCES : le gel écrit
-	 * `placeholder="Infrastructure"` sur le champ du panneau, un exemple de
-	 * saisie qui porte le nom d'un domaine du jeu. Ce qui doit tomber à zéro,
-	 * c'est la LIGNE du domaine et sa description.
+	 * Les noms de domaine se mesurent par OCCURRENCES, et non par absence. Le
+	 * gel écrivait sur le champ du panneau un exemple de saisie qui portait le
+	 * nom d'un domaine du jeu : l'exemple a été DÉCALÉ, pour qu'une instance
+	 * semée ne montre plus le même mot en exemple et dans la liste au-dessus.
+	 * La mesure par occurrences reste la bonne — elle ne dépend d'aucun choix
+	 * d'exemple —, et ce qui doit tomber à zéro est la LIGNE du domaine et sa
+	 * description.
 	 */
 	test('sur une instance neuve, aucun domaine du jeu n’est rendu', async () => {
 		const servi = await rendre('V-28', SERVI);
@@ -450,11 +453,12 @@ describe('V-30 — Types de relation', () => {
 	/**
 	 * SUR UNE INSTANCE NEUVE, LE CATALOGUE EST VIDE — ET LE DÉCOMPTE LE DIT.
 	 *
-	 * Les libellés se mesurent par OCCURRENCES et non par absence, parce que le
-	 * gel en écrit deux au balisage : `placeholder="héberge"` sur le champ du
-	 * panneau, et la phrase de tête qui illustre la lecture dans les deux sens.
-	 * Ce sont des exemples de formulaire, pas des types servis comme des faits ;
-	 * ce qui doit tomber à zéro, c'est la LIGNE de chaque type.
+	 * Les libellés se mesurent par OCCURRENCES et non par absence : la phrase de
+	 * tête illustre la lecture d'une relation dans les deux sens. Les exemples
+	 * des deux champs du panneau ont été DÉCALÉS hors du catalogue du jeu — un
+	 * exemple de formulaire ne doit pas coïncider mot pour mot avec ce que la
+	 * liste au-dessus affiche. Ce qui doit tomber à zéro est la LIGNE de chaque
+	 * type.
 	 */
 	test('sur une instance neuve, aucun type du jeu n’est rendu', async () => {
 		const servi = await rendre('V-30', SERVI);
@@ -495,9 +499,9 @@ describe('V-31 — Squelettes', () => {
 	/**
 	 * SUR UNE INSTANCE NEUVE, LA LISTE EST VIDE — ET LE DÉCOMPTE LE DIT.
 	 *
-	 * Par occurrences, pour la même raison qu'en `V-30` : le gel écrit
-	 * `placeholder="Procédure d'intervention"` sur le champ du panneau, un
-	 * exemple de saisie qui porte le nom d'un squelette du jeu.
+	 * Par occurrences, pour la même raison qu'en `V-30`. L'exemple de saisie du
+	 * champ du panneau portait le nom d'un squelette du jeu ; il a été décalé,
+	 * et la mesure ne dépend d'aucun choix d'exemple.
 	 */
 	test('sur une instance neuve, aucun squelette du jeu n’est rendu', async () => {
 		const servi = await rendre('V-31', SERVI);

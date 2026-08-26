@@ -646,7 +646,7 @@
 						type="text"
 						id="f-nom"
 						autocomplete="off"
-						placeholder="Infrastructure"
+						placeholder="Réseau"
 						value={nomSaisi}
 						oninput={(e) => (fNom = e.currentTarget.value)}
 					/>

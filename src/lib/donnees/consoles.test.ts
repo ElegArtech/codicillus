@@ -200,20 +200,31 @@ describe('etatDesDonnees — P-02, l’état neutre explicite plutôt qu’un z�
 });
 
 describe('MESURES_DE_CONSOLE_SANS_CONTREPARTIE — la lacune comptée, jamais racontée', () => {
-	it('recense CINQ mesures pour V-34, nommément', () => {
+	it('recense TROIS mesures pour V-34, nommément', () => {
 		/* Le nom de chaque donnée est celui que `seeds/corpus.ts` exporte : une
 		   migration qui en porterait une devrait retirer son entrée, et ce test
 		   la réclamerait. C'est le motif de `DonneeSansContrepartie` d'`accueil.ts`,
 		   repris : « qu'une lacune refermée fasse rougir le test au lieu de laisser
-		   un commentaire périmé derrière elle ». */
+		   un commentaire périmé derrière elle ».
+
+		   ELLES ÉTAIENT CINQ, ET LE TEST N'A PAS ROUGI QUAND IL LE DEVAIT :
+		   `MESURES_7J` et `MESURES_7J_PREC` ont survécu à la migration `006`, qui
+		   a monté la table des consultations horodatées que leur motif déclarait
+		   absente. Le contrôle ne voit une lacune refermée que si quelqu'un vient
+		   retirer l'entrée ; c'est ce qui est fait ici. */
 		const v34 = MESURES_DE_CONSOLE_SANS_CONTREPARTIE.filter((m) => m.vue === 'V-34');
-		expect(v34.map((m) => m.donnee)).toEqual([
-			'RECHERCHES',
-			'MESURES_7J',
-			'MESURES_7J_PREC',
-			'REVISIONS',
-			'MODIFICATIONS'
-		]);
+		expect(v34.map((m) => m.donnee)).toEqual(['RECHERCHES', 'REVISIONS', 'MODIFICATIONS']);
+	});
+
+	it('ne recense plus les consultations, que la migration 006 porte', () => {
+		/* LE CONTRÔLE QUI MANQUAIT. Une entrée dont la table existe est un
+		   recensement FAUX, et un registre de lacunes qui ment dispense d'aller
+		   voir : c'est ce qui a couvert l'arborescence d'export erronée que
+		   l'entrée `V-36` raconte. La table `consultations` est lue par
+		   `console/analytique/+page.server.ts` pour les deux fenêtres. */
+		const noms = MESURES_DE_CONSOLE_SANS_CONTREPARTIE.map((m) => m.donnee);
+		expect(noms).not.toContain('MESURES_7J');
+		expect(noms).not.toContain('MESURES_7J_PREC');
 	});
 
 	it('recense aussi les deux journaux d’imports et l’archive d’export', () => {

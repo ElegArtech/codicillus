@@ -340,6 +340,18 @@
 	/** Le motif du dernier refus serveur, en code. `null` : aucun refus en cours. */
 	let refus = $state<string | null>(null);
 
+	/** Le domaine effectivement visé — celui qu'on a choisi, sinon le proposé. */
+	const domaineCible = $derived(domaineRetenu || domaineParDefaut);
+	/**
+	 * LE DOMAINE TEL QUE L'ILLUSTRATION LE NOMME — jamais une flèche orpheline.
+	 *
+	 * `domaineParDefaut` vaut la chaîne vide quand aucune cible n'est ouverte au
+	 * compte (`importer/+page.server.ts`, `cibles[0]?.nom ?? ''`). L'illustration
+	 * dit alors ce qu'elle montre — le domaine que l'utilisateur choisira — au
+	 * lieu de nommer un domaine du jeu de démonstration.
+	 */
+	const domaineIllustre = $derived(domaineCible === '' ? 'le domaine choisi' : domaineCible);
+
 	const reglage = $derived(vecteur ?? {});
 
 	/** L'étape du parcours — `data-etape` de `div.app`, quatre positions. */
@@ -388,7 +400,17 @@
 		readonly illus: readonly SegmentIllustre[];
 	}
 
-	const SCENARIOS: readonly Scenario[] = [
+	/**
+	 * L'ILLUSTRATION NOMME LA VRAIE DESTINATION, ET NON « Infrastructure ».
+	 *
+	 * Elle écrivait le nom d'un domaine du jeu de démonstration, à douze lignes
+	 * du `$derived` qui porte la destination réelle : sur toute autre instance,
+	 * l'écran annonçait un domaine que rien ne posait. Les deux dossiers de
+	 * gauche restent ce qu'ils sont — un arbre de FICHIERS sur le disque de
+	 * l'utilisateur, l'exemple que l'écran doit donner ; c'est la flèche, qui
+	 * désigne une cible dans le produit, qui devait dire la vérité.
+	 */
+	const SCENARIOS: readonly Scenario[] = $derived([
 		{
 			id: SCENARIO_LIVRE,
 			nom: 'Importer des notes dans un domaine existant',
@@ -396,7 +418,7 @@
 			illus: [
 				{
 					gras: false,
-					texte: 'Exploitation/\n  Sauvegardes/\n    Restauration.docx\n\n→ Infrastructure\n   └ '
+					texte: `Exploitation/\n  Sauvegardes/\n    Restauration.docx\n\n→ ${domaineIllustre}\n   └ `
 				},
 				{ gras: true, texte: 'Exploitation' },
 				{ gras: false, texte: '\n      └ ' },
@@ -404,7 +426,7 @@
 				{ gras: false, texte: '\n         └ Restauration' }
 			]
 		}
-	];
+	]);
 
 	/**
 	 * CE QUI EST OFFERT — le filtre est ici, et il est PORTÉ PAR LA SOURCE.
@@ -859,9 +881,6 @@
 			zone.removeEventListener('drop', deposer as (e: Event) => void);
 		};
 	});
-
-	/** Le domaine effectivement visé — celui qu'on a choisi, sinon le proposé. */
-	const domaineCible = $derived(domaineRetenu || domaineParDefaut);
 
 	const reglages = $derived({
 		scenario: scenarioChoisi ?? SCENARIO_LIVRE,
