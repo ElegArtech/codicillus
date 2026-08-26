@@ -14,19 +14,16 @@
  * principe 3).
  *
  * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LE CHARGEUR REND, ET CE QUE L'ÉCRAN N'EN MONTRE PAS ENCORE
+ * CE QUE LE CHARGEUR REND, ET CE QUE L'ÉCRAN EN MONTRE
  *
  * `src/vues/V-17.svelte` accepte la note reprise en modification — propriété
- * `noteModifiee`, ajoutée par `T-042` — et tout ce qu'elle en montre sort du
- * type `Note` : titre, type, domaine, dossier, étiquettes. La vue le dit
- * elle-même : « aucun corps rendu n'est nécessaire ici, à la différence de V-14
- * et de V-18 ».
+ * `noteModifiee` — et ce qu'elle en montre hors du corps sort du type `Note` :
+ * titre, type, domaine, dossier, étiquettes.
  *
- * Le corps RÉDIGÉ est donc chargé et validé — c'est lui que l'éditeur ouvrira —
- * et AUCUN nœud de V-17 ne peut le recevoir aujourd'hui : la zone de rédaction
- * est rendue vide, ce qui est exactement l'état que le gel montre à cette
- * adresse. Écart déclaré, chiffré au rapport ; `src/vues/` est interdit à ce
- * lot.
+ * Le corps RÉDIGÉ est chargé et validé — c'est lui que l'éditeur ouvrira — et
+ * la vue le REÇOIT désormais, par la propriété requise `corps` : `corpsRendu`
+ * ci-dessous. Elle portait auparavant un corps de démonstration écrit au
+ * balisage, servi sur n'importe quelle note.
  *
  * L'ANCIENNETÉ DE LA DERNIÈRE VERSION — `modifications`, la table que la vue
  * lit pour écrire « dernière version il y a N jours » — n'est PAS passée : la
@@ -176,6 +173,37 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		 * entière ; elle est non vide, nommée et comptée sinon.
 		 */
 		corps: edition.document,
+		/**
+		 * LE CORPS RENDU, POUR QUE L'ÉCRAN OUVRE LA BONNE NOTE — le défaut le
+		 * plus visible de cette adresse, et il était SERVI.
+		 *
+		 * `src/vues/V-17.svelte` portait, en modification, un corps écrit au
+		 * balisage : l'extrait de la note suivi des sections d'une procédure de
+		 * démonstration. Le vecteur `cas: 'modif'` étant posé ci-dessus sur
+		 * TOUTE modification, ouvrir n'importe quelle note affichait ce
+		 * corps-là — remplacé au montage par `monterLEditeur()`, donc un flash
+		 * avec JavaScript et un contenu PERMANENT sans lui.
+		 *
+		 * La vue déclare désormais une propriété `corps`, et c'est ce HTML
+		 * qu'elle reçoit : le même document que l'éditeur ouvrira, rendu par
+		 * `rendreDocument` et par lui seul (`ADR-004`).
+		 *
+		 * LE DRAPEAU LU EST `redige`, ET `existe` SERAIT LE MAUVAIS. `existe`
+		 * ne dit que « la colonne n'est pas NULL » ; `redige` dit « le document
+		 * porte du texte » (`$lib/donnees/note.ts`, `CorpsDeNote`). Or
+		 * `creerUneNote()` n'écrit JAMAIS NULL : `corpsDeLaSaisie('')` rend
+		 * `corpsVide()`, un paragraphe sans texte. Sur `existe`, la chaîne vide
+		 * était donc INATTEIGNABLE pour toute note créée par le produit — une
+		 * note vierge se rouvrait avec `<p></p>` servi, donc `data-vide="non"`
+		 * et AUCUNE invite d'amorçage (`V-17.css:517`, seul rendu visible du
+		 * vide). `editeur-client.ts:508` recalculait l'attribut au montage : le
+		 * défaut était invisible avec JavaScript et permanent sans lui.
+		 *
+		 * CHAÎNE VIDE, DONC, DANS LES DEUX CAS OÙ IL N'Y A RIEN À ÉDITER : la
+		 * note ne porte aucun registre Référence, ou elle en porte un qui est
+		 * vide. La zone de rédaction est alors vide et rend son invite.
+		 */
+		corpsRendu: edition.lecture.corps.redige ? edition.lecture.corps.html : '',
 		horsDePorteeDeLEditeur: edition.horsDePorteeDeLEditeur
 	};
 };
