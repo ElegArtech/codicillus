@@ -63,12 +63,14 @@
 	 * second bloc `<style>` de la maquette gelée. Le seul `style=` du fichier —
 	 * `margin-bottom:var(--e-2)` — figure à l'ensemble clos du gel (ARB-016).
 	 */
+	import { getContext } from 'svelte';
 	import { resolve } from '$app/paths';
 	import type { Note } from '../../seeds/corpus';
 	import { adresseNonResolue } from '$lib/public/adresse-non-resolue';
 	import { chercher, nombreFr, notesPubliques, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
 	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
@@ -183,6 +185,31 @@
 	 * Ce qui n'a pas de contrepartie n'est pas émis.
 	 */
 	const assistanceJoignable = $derived(portail.trim() !== '');
+
+	/**
+	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation`
+	 * de la table `parametres`, descendue par le contexte de coquille.
+	 *
+	 * CET ÉCRAN ÉCRIVAIT « Direction technique » EN DUR. Ce n'était pas une
+	 * donnée du jeu de démonstration : c'était le SEGMENT DE MARCHÉ du cadrage,
+	 * soudé dans une signature de produit, et toute autre organisation le lisait
+	 * comme un fait sur SON instance — sur le premier écran que le produit
+	 * montre à un visiteur sans compte.
+	 *
+	 * « Codicillus » N'EST PAS CONCERNÉ : c'est le nom du LOGICIEL, et il reste
+	 * en dur. C'est la SOUDURE entre le logiciel et l'organisation qu'on défait.
+	 *
+	 * CHAÎNE VIDE = L'INSTANCE NE S'EST PAS NOMMÉE, et c'est l'état normal d'une
+	 * installation neuve, pas une panne : la signature rend « Codicillus » seul.
+	 * C'est aussi ce que rend un composant monté hors gabarit racine, où
+	 * `getContext` ne trouve rien — l'état vide, jamais un nom d'exemple.
+	 */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const nomOrganisation = $derived(identite?.nomOrganisation ?? '');
+	/** « Codicillus · <organisation> », ou « Codicillus » seul. */
+	const signature = $derived(
+		nomOrganisation === '' ? 'Codicillus' : `Codicillus · ${nomOrganisation}`
+	);
 
 	/** RG-M17-01 — la restriction au périmètre public, au point d'entrée. */
 	const publiques = $derived(notesPubliques(notes));
@@ -401,7 +428,7 @@
 
 	<footer class="pied-public">
 		<div class="pied-public__int">
-			<span class="etiq">Codicillus · Direction technique</span>
+			<span class="etiq">{signature}</span>
 			<a href={resolve('/connexion')}>Se connecter</a>
 		</div>
 	</footer>
