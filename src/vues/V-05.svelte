@@ -116,12 +116,29 @@
 	 * produit, sur une instance qui n'est pas celle-là.
 	 *
 	 * CHAÎNE VIDE = L'INSTANCE NE S'EST PAS NOMMÉE, et c'est l'état normal d'une
-	 * installation neuve : la phrase retombe alors sur « votre compte », qui ne
-	 * nomme personne et reste vraie partout. Même rendu hors gabarit racine, où
+	 * installation neuve : le titre retombe alors sur « Connexion » seul, qui ne
+	 * nomme personne et reste vrai partout. Même rendu hors gabarit racine, où
 	 * `getContext` ne trouve rien.
+	 *
+	 * ═════════════════════════════════════════════════════════════════════
+	 * OÙ LE NOM SE POSE, ET POURQUOI PAS DANS LA PHRASE.
+	 *
+	 * La phrase du gel gouverne le nom par une préposition ET un article — « de
+	 * votre compte DE LA direction technique ». Un nom d'organisation n'apporte
+	 * pas son article : « de votre compte de la Mairie de Sainte-Foy » demande
+	 * un article que rien ne nous donne, « de votre compte Mairie de Sainte-Foy »
+	 * le supprime et casse la phrase du gel. Aucune recomposition ne tient pour
+	 * tous les noms.
+	 *
+	 * ON NE MET DONC RIEN DANS LA PHRASE : elle reste celle du gel moins son
+	 * complément, vraie sur toute instance. Le nom se pose en JUXTAPOSITION dans
+	 * le titre — « Connexion · <organisation> » —, la forme que la signature de
+	 * pied emploie déjà partout et qui ne gouverne rien.
 	 */
 	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
 	const nomOrganisation = $derived(identite?.nomOrganisation ?? '');
+	/** « Connexion · <organisation> », ou « Connexion » seul. */
+	const titre = $derived(nomOrganisation === '' ? 'Connexion' : `Connexion · ${nomOrganisation}`);
 
 	/**
 	 * Le message contextuel, tel que `ARRIVEES` du gel le déclare (`V-05:667`).
@@ -186,12 +203,8 @@
 		</div>
 
 		<div class="auth__boite">
-			<h1 class="auth__titre">Connexion</h1>
-			<p class="auth__sous">
-				{nomOrganisation === ''
-					? 'Utilisez les identifiants de votre compte.'
-					: `Utilisez les identifiants de votre compte ${nomOrganisation}.`}
-			</p>
+			<h1 class="auth__titre">{titre}</h1>
+			<p class="auth__sous">Utilisez les identifiants de votre compte.</p>
 
 			<!--
 				`method="post"` EST DANS LE BALISAGE, ET C'EST UNE QUESTION DE SÛRETÉ.
