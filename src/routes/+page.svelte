@@ -114,7 +114,7 @@
 
 {#if data.session}
 	<VueContributeur
-		vecteur={null}
+		vecteur={data.vecteur ?? null}
 		notes={data.notes}
 		compte={data.compte}
 		univers={data.univers}
