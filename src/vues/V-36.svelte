@@ -105,7 +105,7 @@
 		echapperSegment,
 		nomDeFichierDeNote
 	} from '$lib/export/noms';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
 	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
@@ -416,7 +416,7 @@
 						id="domaine"
 						value={domaineCourant}
 						onchange={(e) => (choisi = e.currentTarget.value)}
-						>{#each domaines as d (d.nom)}<option value={d.nom}>{d.univers} › {d.nom} — {notesDuDomaine(d.nom).length} notes</option>{/each}</select
+						>{#each domaines as d (d.nom)}<option value={d.nom}>{d.univers} › {d.nom} — {notesDuDomaine(d.nom).length} {accord(notesDuDomaine(d.nom).length, 'note')}</option>{/each}</select
 					>
 				</div>
 
@@ -437,7 +437,7 @@
 						><span class="ca__ic"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"/></svg></span
 						><div
 							><div class="ca__nom">L'arborescence de dossiers, reproduite</div
-							><div class="ca__txt">Les {apercu.dossiers} dossiers du domaine deviennent des dossiers de l'archive, à la même place.</div
+							><div class="ca__txt">{accord(apercu.dossiers, 'Le dossier du domaine devient un dossier', `Les ${apercu.dossiers} dossiers du domaine deviennent des dossiers`)} de l'archive, à la même place.</div
 						></div
 					></div
 					><div class="ca"
@@ -451,7 +451,7 @@
 						><span class="ca__ic"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3" width="12" height="10" rx="1.4"/><circle cx="5.5" cy="6.5" r="1.2"/><path d="M2.5 11.5l3.5-3 3 2.5 2.5-2 2.5 2"/></svg></span
 						><div
 							><div class="ca__nom">Les images et pièces jointes</div
-							><div class="ca__txt">{#if apercu.pieces}Les {apercu.pieces} fichiers joints sont inclus dans un dossier voisin, et les notes y renvoient par chemin relatif.{:else}Ce domaine n'a aucune pièce jointe : l'archive ne contiendra que du texte.{/if}</div
+							><div class="ca__txt">{#if apercu.pieces}{accord(apercu.pieces, 'Le fichier joint est inclus', `Les ${apercu.pieces} fichiers joints sont inclus`)} dans un dossier voisin, et les notes y renvoient par chemin relatif.{:else}Ce domaine n'a aucune pièce jointe : l'archive ne contiendra que du texte.{/if}</div
 						></div
 					></div
 					><div class="ca"

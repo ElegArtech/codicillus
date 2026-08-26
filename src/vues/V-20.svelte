@@ -110,6 +110,7 @@
 	import Rail from '$lib/coquille/Rail.svelte';
 	import { railAbregeRendu, sectionsAbregeesDuCorpus } from '$lib/coquille/arborescence-abregee';
 	import { sectionsDuRail } from '$lib/coquille/arborescence';
+	import { accord, pluriel } from '$lib/vocabulaire';
 	import {
 		CLE_IDENTITE,
 		type CompteAffiche,
@@ -479,7 +480,7 @@
 		const note = noteDe(id);
 		if (!note) return id;
 		return (
-			`${note.titre}, ${typeDe(note).nom}, ${degreDe(id)} connexions` +
+			`${note.titre}, ${typeDe(note).nom}, ${degreDe(id)} ${accord(degreDe(id), 'connexion')}` +
 			(typeCarto(note) === typeMaitre ? ', nœud maître' : ', voisin') +
 			(ruptures.has(id) ? ', point de rupture' : '')
 		);
@@ -724,13 +725,13 @@
 <!-- prettier-ignore -->
 {#snippet filDeroule()}{#if centre === null}<span
 			class="fil-deroule__courant"
-			>{`${maitres.length} ${(typeMaitreEncode?.nom ?? '').toLowerCase()}${maitres.length > 1 ? 's' : ''} — choisissez-en un pour déplier ses connexions`}</span
+			>{`${maitres.length} ${accord(maitres.length, (typeMaitreEncode?.nom ?? '').toLowerCase())} — choisissez-en un pour déplier ses connexions`}</span
 		>{:else}<button type="button" onclick={revenirALAnneau}
-			>{`Tous les ${(typeMaitreEncode?.nom ?? '').toLowerCase()}s`}</button
+			>{`Tous les ${pluriel((typeMaitreEncode?.nom ?? '').toLowerCase())}`}</button
 		><span class="fil-deroule__sep">›</span><span class="fil-deroule__courant"
 			>{titreDe(graphe, corpus, centre)}</span
 		><span style="font-family:var(--f-donnee);font-size:var(--t-micro);color:var(--c-encre-3)"
-			>{`${voisins.length}${voisins.length > 1 ? ' connexions' : ' connexion'}`}</span
+			>{`${voisins.length} ${accord(voisins.length, 'connexion')}`}</span
 		>{/if}{/snippet}
 
 <a class="saut-contenu" href="#contenu">Aller au contenu</a>

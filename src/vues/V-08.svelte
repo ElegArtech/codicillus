@@ -122,7 +122,7 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import { resolve } from '$app/paths';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
@@ -809,8 +809,8 @@
 			>{@render temoin(n)}<span class="carte__revision" data-jamais={n.revise ? undefined : 'oui'}>{n.revise ? `Révisé le ${n.revise}` : 'Jamais révisé'}</span
 			>{#if n.operationnel}<span class="marque-op">↳ Trouvé dans le registre Opérationnel</span>{/if}</div
 		><div class="carte__pied"
-			><span class="carte__chemin"><span>{n.univers + ' › '}</span><b>{n.domaine}</b>{#if n.dossier}<span>{' › ' + n.dossier}</span>{/if}</span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{nombreFr(n.vues) + ' consultations'}</span
-			>{#if n.pj}<span class="sep">·</span><span>{n.pj + (n.pj > 1 ? ' pièces jointes' : ' pièce jointe')}</span>{/if}{#if n.visibilite === 'Publique'}<span class="sep">·</span><span class="carte__visibilite">Publique</span>{/if}</div
+			><span class="carte__chemin"><span>{n.univers + ' › '}</span><b>{n.domaine}</b>{#if n.dossier}<span>{' › ' + n.dossier}</span>{/if}</span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{nombreFr(n.vues) + ' ' + accord(n.vues, 'consultation')}</span
+			>{#if n.pj}<span class="sep">·</span><span>{n.pj + ' ' + accord(n.pj, 'pièce jointe', 'pièces jointes')}</span>{/if}{#if n.visibilite === 'Publique'}<span class="sep">·</span><span class="carte__visibilite">Publique</span>{/if}</div
 		></a
 	>{/snippet}
 
@@ -983,7 +983,7 @@
 					pas ne s'écrit pas `0,00 s`.
 				-->
 				<!-- prettier-ignore -->
-				<span class="compteur" id="compteur">{#if rendreLesResultats && !sansResultat}<b>{`${affiches.length} résultat${affiches.length > 1 ? 's' : ''}`}</b>{#if duree !== null}{` en ${duree} s`}{/if}{/if}</span>
+				<span class="compteur" id="compteur">{#if rendreLesResultats && !sansResultat}<b>{`${affiches.length} ${accord(affiches.length, 'résultat')}`}</b>{#if duree !== null}{` en ${duree} s`}{/if}{/if}</span>
 				<div style="display:flex;align-items:center;gap:var(--e-3)">
 					<button
 						class="btn bouton-facettes"
