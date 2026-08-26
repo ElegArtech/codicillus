@@ -155,7 +155,7 @@ export const SANS_CONTREPARTIE_EN_BASE: readonly DonneeSansContrepartie[] = [
 		vue: 'V-07',
 		affichage: 'la version, au pied du tableau de bord et au pied du rail — « Codicillus 1.0.0 »',
 		motif:
-			'aucune colonne, et aucune des sept clés de `parametres` (`CLES_DE_PARAMETRE`) : la version du produit n’est pas une donnée d’instance en base.'
+			'aucune colonne, et aucune des huit clés de `parametres` (`CLES_DE_PARAMETRE`) : la version du produit n’est pas une donnée d’instance en base.'
 	},
 	{
 		donnee: 'INSTANCE.synchro',
