@@ -50,8 +50,10 @@ import type { NoeudDeDossier, SectionDUnivers } from './arborescence'; /**
  * `Infrastructure` et `Exploitation` disent « Replier », quel que soit le
  * chemin courant.
  *
- * Extrait mécaniquement de `mockups/V-25-profil.html` (`aside.rail`,
- * lignes 965-1074), lecture du DOM stabilisé — jamais recopié à la main.
+ * L'ARBRE DU GEL, LUI, N'EST PLUS PORTÉ ICI — voir plus bas : une valeur par
+ * défaut est livrée au navigateur, prise ou non. Ce qui reste est la FORME
+ * (`NoeudAbrege`, `SectionAbregee`) et le rendu du chemin courant, que la base
+ * alimente par `sectionsAbregeesDuCorpus()`.
  */
 
 /** Un nœud de l'arborescence écrite au balisage de la forme abrégée. */
@@ -105,63 +107,27 @@ export interface SectionAbregeeRendue {
 	readonly arbre: readonly NoeudAbregeRendu[];
 }
 
-/**
- * Les deux sections et les quinze nœuds de la forme abrégée, dans l'ordre du
- * balisage. AUCUN TRI n'est appliqué : le gel ne trie pas, il énumère —
- * `Sauvegardes, Ordonnancement, Astreinte` n'est pas l'ordre alphabétique.
+/*
+ * ═════════════════════════════════════════════════════════════════════════
+ * `SECTIONS_ABREGEES` A ÉTÉ RETIRÉE, ET CE N'EST PAS UNE SIMPLIFICATION
+ *
+ * Ce module portait les deux sections et les quinze nœuds du gel écrits en
+ * dur — Production, Infrastructure, Exploitation, Sauvegardes, Ordonnancement,
+ * Astreinte, Supervision, Sondes, Réseau, Adressage, Applications, Poste de
+ * travail, Projets, Migration 2026 — comme VALEUR PAR DÉFAUT de
+ * `railAbregeRendu()`. Une valeur par défaut n'est jamais élaguée : l'arbre
+ * partait dans TOUT paquet montant une coquille, et se lisait dans le source
+ * servi au navigateur, sur des instances qui n'ont jamais eu ces domaines.
+ *
+ * Le repli n'était pris que sans contexte d'identité, cas qui n'existe pas en
+ * application — la page d'erreur elle-même est rendue dans le gabarit racine.
+ * Il ne rendait donc service qu'au rendu par défaut d'une vue, et le prix en
+ * était le jeu de démonstration livré à tout le monde.
+ *
+ * LE DÉFAUT EST DÉSORMAIS L'ÉTAT VIDE : sans arborescence servie, le rail
+ * abrégé ne rend aucune section. Une base vide n'est pas une absence de base,
+ * et une vue sans données n'a pas d'arbre à montrer.
  */
-export const SECTIONS_ABREGEES: readonly SectionAbregee[] = [
-	{
-		nom: 'Production',
-		arbre: [
-			{
-				nom: 'Infrastructure',
-				deplie: true,
-				enfants: [
-					{
-						nom: 'Exploitation',
-						deplie: true,
-						enfants: [
-							{ nom: 'Sauvegardes', deplie: false, enfants: [] },
-							{ nom: 'Ordonnancement', deplie: false, enfants: [] },
-							{ nom: 'Astreinte', deplie: false, enfants: [] }
-						]
-					},
-					{
-						nom: 'Supervision',
-						deplie: false,
-						enfants: [{ nom: 'Sondes', deplie: false, enfants: [] }]
-					},
-					{
-						nom: 'Réseau',
-						deplie: false,
-						enfants: [{ nom: 'Adressage', deplie: false, enfants: [] }]
-					}
-				]
-			},
-			{
-				nom: 'Applications',
-				deplie: false,
-				enfants: [{ nom: 'Fiches applicatives', deplie: false, enfants: [] }]
-			},
-			{
-				nom: 'Poste de travail',
-				deplie: false,
-				enfants: [{ nom: 'Déploiement', deplie: false, enfants: [] }]
-			}
-		]
-	},
-	{
-		nom: 'Projets',
-		arbre: [
-			{
-				nom: 'Migration 2026',
-				deplie: false,
-				enfants: [{ nom: 'Lots', deplie: false, enfants: [] }]
-			}
-		]
-	}
-];
 
 /**
  * Applique le chemin de la page courante à l'arborescence abrégée.
@@ -218,7 +184,7 @@ export function rendreNoeudsAbreges(
  * CE QUE CETTE FONCTION RÉPARE, ET POURQUOI L'EN-TÊTE CI-DESSUS ÉTAIT JUSTE
  * SUR LES FAITS ET FAUX SUR LA CONCLUSION
  *
- * `SECTIONS_ABREGEES` porte l'arbre des maquettes ÉCRIT EN DUR — Production,
+ * Ce module portait l'arbre des maquettes ÉCRIT EN DUR — Production,
  * Infrastructure, Exploitation, Sauvegardes, Ordonnancement, Astreinte,
  * Supervision, Sondes, Réseau, Adressage, Applications, Poste de travail,
  * Projets, Migration 2026. Vingt-deux vues sur quarante et une emploient la
@@ -239,9 +205,10 @@ export function rendreNoeudsAbreges(
  * sauvegarde PostgreSQL » à toutes les instances au motif que la maquette la
  * dessine. La forme abrégée est une FAÇON DE RENDRE, pas une donnée.
  *
- * `SECTIONS_ABREGEES` reste, et reste le DÉFAUT : hors application, une vue
- * rendue sans données doit montrer ce que sa maquette montre. C'est ce qui
- * garde le gel intact et les batteries de propriétés vertes.
+ * L'ARBRE DU GEL NE RESTE PAS COMME DÉFAUT, et c'est le second temps du même
+ * raisonnement : ce qu'une valeur par défaut porte est LIVRÉ au navigateur, que
+ * la branche soit prise ou non. Le défaut est donc la liste vide, et une vue
+ * rendue sans données rend un rail vide.
  */
 export function sectionsAbregeesDuCorpus(
 	sections: readonly SectionDUnivers[]
@@ -265,13 +232,14 @@ export function sectionsAbregeesDuCorpus(
 /**
  * L'arborescence abrégée, rendue pour un chemin courant.
  *
- * `sections` vaut `SECTIONS_ABREGEES` par défaut — le gel, pour le rendu d'une
- * vue hors application. En application, la coquille passe l'arbre dérivé de la
- * base par `sectionsAbregeesDuCorpus()`.
+ * `sections` VAUT LA LISTE VIDE PAR DÉFAUT. Elle valait l'arbre du gel, et une
+ * valeur par défaut ne s'élague pas : les quinze nœuds de la maquette partaient
+ * dans tout paquet montant une coquille. En application, la coquille passe
+ * l'arbre dérivé de la base par `sectionsAbregeesDuCorpus()`.
  */
 export function railAbregeRendu(
 	courant: readonly string[],
-	sections: readonly SectionAbregee[] = SECTIONS_ABREGEES
+	sections: readonly SectionAbregee[] = []
 ): readonly SectionAbregeeRendue[] {
 	return sections.map((s) => ({
 		nom: s.nom,

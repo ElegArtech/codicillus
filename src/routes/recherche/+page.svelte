@@ -104,6 +104,7 @@
 		requete={data.requete}
 		retenues={data.retenues}
 		perimetre={data.perimetre}
+		dureeMs={data.dureeMs}
 		pistes={data.pistes}
 		tri={data.tri}
 		modeDemande={data.mode}
@@ -120,6 +121,14 @@
 		« salle de réunion », « réseau », « support ». Le périmètre d'un anonyme
 		étant celui des notes publiques, les étiquettes proposées ici sont celles
 		que le visiteur peut effectivement atteindre.
+	-->
+	<!--
+		`dureeMs` ATTEND V-02, ET LE CHARGEUR LA SERT DÉJÀ. V-02 affiche une durée
+		FABRIQUÉE — `Math.max(0.06, 0 / 1000 + 0.18)`, dont le terme mesuré est nul
+		par construction —, exactement comme V-08 le faisait. La mesure du moteur
+		descend maintenant jusqu'ici par `data.dureeMs` ; il ne manque que la
+		propriété du côté de la vue publique, et la ligne `dureeMs={data.dureeMs}`
+		ci-dessous. La vue n'appartient pas à ce lot ; la donnée, elle, est prête.
 	-->
 	<VuePublique
 		vecteur={data.vecteur}

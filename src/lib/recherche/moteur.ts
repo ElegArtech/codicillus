@@ -674,6 +674,22 @@ export interface ResultatDeRecherche {
 	readonly tronque: boolean;
 	/** Le filtre effectivement envoyé — `null` : aucune requête n'a été émise. */
 	readonly filtre: string | null;
+	/**
+	 * LA DURÉE DE TRAITEMENT DU MOTEUR, EN MILLISECONDES — `processingTimeMs` de
+	 * la réponse Meilisearch, jamais une constante.
+	 *
+	 * Les trois écrans de recherche affichaient une durée FABRIQUÉE — `V-08:541`
+	 * `Math.max(0.09, 0 / 1000 + 0.31)`, `V-02:176` et `V-09:209` de la même
+	 * farine : le terme mesuré était nul par construction, et « 1 résultat » comme
+	 * « 4 résultats » sortaient du même littéral. Le moteur rapportait la vraie
+	 * durée depuis toujours ; personne ne la retenait.
+	 *
+	 * `null` QUAND AUCUNE REQUÊTE N'A ÉTÉ ÉMISE — périmètre fermé (`RG-DRO-02`),
+	 * le moteur n'est pas sollicité du tout. Une durée qui n'existe pas ne se rend
+	 * pas en `0,00 s` : c'est le zéro muet que `P-02` proscrit, et c'est
+	 * exactement le défaut qu'on retire.
+	 */
+	readonly dureeMs: number | null;
 }
 
 /**
@@ -703,7 +719,7 @@ export async function chercherLesNotes(
 	const filtre = filtreComplet(perimetre, facettes);
 
 	if (!filtre.interroger) {
-		return { identifiants: [], total: 0, tronque: false, filtre: null };
+		return { identifiants: [], total: 0, tronque: false, filtre: null, dureeMs: null };
 	}
 
 	/* L'ORDRE EST DEMANDÉ AU MOTEUR, JAMAIS RÉTABLI APRÈS COUP — voir
@@ -722,6 +738,7 @@ export async function chercherLesNotes(
 		identifiants: reponse.hits.map((h) => h.id),
 		total: reponse.totalHits,
 		tronque: reponse.totalHits > reponse.hits.length,
-		filtre: filtre.filtre
+		filtre: filtre.filtre,
+		dureeMs: reponse.processingTimeMs
 	};
 }

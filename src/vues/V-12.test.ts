@@ -109,10 +109,32 @@ describe('V-12 — la propriété servie décide', () => {
 		expect(restreint).toEqual(await rendu({}));
 	});
 
-	it('rend l’arborescence abrégée du gel, que le corpus ne produit pas', async () => {
-		const html = await rendu({});
-		expect(html).toContain('Ordonnancement');
-		expect(html).toContain('Astreinte');
+	/**
+	 * L'ARBRE DU GEL N'EST PLUS LE DÉFAUT DU RAIL ABRÉGÉ, et le cas s'est
+	 * retourné avec lui.
+	 *
+	 * `railAbregeRendu()` prenait les quinze nœuds de la maquette comme VALEUR PAR
+	 * DÉFAUT — Production, Infrastructure, Exploitation, Sauvegardes,
+	 * Ordonnancement, Astreinte… Une valeur par défaut n'est jamais élaguée : elle
+	 * partait dans TOUT paquet montant une coquille, et se lisait dans le source
+	 * servi à des instances qui n'ont jamais eu ces domaines. Le repli n'était
+	 * d'ailleurs pris que hors application.
+	 *
+	 * LES DEUX NOMS RESTENT ÉCRITS ICI, ET IL N'Y A PLUS DE SOURCE D'OÙ LES TIRER
+	 * — c'est la conséquence directe du retrait : ils ne figuraient dans aucune
+	 * donnée du produit, seulement dans la constante supprimée. Ils sont
+	 * exactement ce que le cas doit ne plus trouver.
+	 */
+	it('sans arborescence servie, le rail abrégé ne rend plus l’arbre du gel', async () => {
+		/* LA MESURE EST DÉCOUPÉE SUR LE RAIL, et il le faut : « Astreinte » est
+		   aussi un DOSSIER du jeu reçu en `notes`, qui se lit légitimement dans les
+		   facettes du contenu. Mesurer le document entier confondrait l'arbre écrit
+		   au balisage avec le corpus servi. */
+		const rail = /<aside class="rail"[\s\S]*?<\/aside>/.exec(await rendu({}))?.[0] ?? '';
+		expect(rail).not.toBe('');
+		expect(rail).not.toContain('Ordonnancement');
+		expect(rail).not.toContain('Astreinte');
+		expect(rail).not.toContain('Migration 2026');
 	});
 
 	/**
