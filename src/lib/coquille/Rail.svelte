@@ -20,8 +20,9 @@
 	 * Forme ABRÉGÉE — 26 vues. Le rail est ÉCRIT AU BALISAGE : quinze nœuds que
 	 * le corpus ne produit pas (`arborescence-abregee.ts` dit pourquoi), pas
 	 * d'hôte `#rail-univers`, des entrées d'outils SANS pictogramme et SANS
-	 * `data-vers`, et `Gestion` conditionnée aux DROITS (`si-ecriture`) et non
-	 * au rôle. Le chevron n'y porte pas non plus `type="button"`.
+	 * `data-vers`. Le chevron n'y porte pas non plus `type="button"`. `Gestion`
+	 * y est conditionnée AU RÔLE comme dans la forme complète — le gel l'écrit en
+	 * `si-ecriture`, et `RG-DRO-03` dit le rôle ; voir l'en-tête `P-09` plus bas.
 	 *
 	 * ─────────────────────────────────────────────────────────────────────────
 	 * LE LIBELLÉ DU CHEVRON — CE QUE LA MESURE DIT, ET QUI N'ÉTAIT PAS ÉCRIT
@@ -119,10 +120,17 @@
 	 * en V-13 c'est elle qui donne son `display: inline-flex` au bouton. On
 	 * conditionne le rendu du nœud, jamais ses classes.
 	 *
-	 *   forme ABRÉGÉE   `a.rail__lien.si-ecriture` « Import »
-	 *                   `div.rail__section.si-ecriture` « Gestion › Console »
-	 *   forme COMPLÈTE  `a.rail__lien.si-ecriture` « Import »
-	 *                   `div.rail__section.si-admin` « Gestion › Console »
+	 *   forme ABRÉGÉE   `a.rail__lien.si-ecriture` « Import »        — droits
+	 *                   `div.rail__section.si-admin` « Gestion › Console » — RÔLE
+	 *   forme COMPLÈTE  `a.rail__lien.si-ecriture` « Import »        — droits
+	 *                   `div.rail__section.si-admin` « Gestion › Console » — RÔLE
+	 *
+	 * LA SECTION « GESTION » EST LE SEUL NŒUD OÙ LE PRODUIT S'ÉCARTE DE LA CLASSE
+	 * DU GEL, et `RG-DRO-03` l'exige : la forme abrégée du gel la pose en
+	 * `si-ecriture` parce qu'une maquette statique n'a pas de rôle à lire. Le
+	 * produit en a un, `/console` répond 404 à qui n'est pas administrateur, et
+	 * `cablage/coquille.ts:98` gouverne déjà l'entrée de menu jumelle sur le
+	 * booléen `administrateur`. Garde ET classe suivent le rôle.
 	 *
 	 * Mesuré par `pnpm test:droits` : 23 des 27 actions de gel de la batterie 7
 	 * étaient portées par ces quatre nœuds. Énumération des omissions :
@@ -376,8 +384,20 @@
 			{#if ecriture}<a class="rail__lien si-ecriture" href={resolve('/importer')}>Import</a>{/if}
 		</div>
 
-		{#if ecriture}
-			<div class="rail__section si-ecriture">
+		<!-- RG-DRO-03 — « CONSOLE » SE GARDE SUR LE RÔLE, PAS SUR LES DROITS, ET
+			SA CLASSE DIT LE MÊME VERDICT. Le gel écrit `si-ecriture` sur cette
+			section, faute d'avoir un rôle à lire ; le produit, lui, en a un, et
+			`/console` répond 404 à qui n'est pas administrateur. Gardée sur
+			`ecriture`, la section fuyait l'existence et l'adresse de la console à
+			tout rédacteur — un lien mort ÉMIS, et même pas masqué, `data-droits`
+			valant « ecriture ». Gardée sur `admin` mais laissée en `si-ecriture`,
+			elle disparaissait à l'inverse sous `socle.css:408` pour
+			l'administrateur d'une instance neuve, qui ne peut écrire nulle part et
+			porte donc `data-droits="lecture"` — masquage, que `P-09` refuse
+			autant. Les deux moitiés vont ensemble : `si-admin`, comme la forme
+			complète, `:474`. -->
+		{#if admin}
+			<div class="rail__section si-admin">
 				<div class="rail__titre etiq">Gestion</div>
 				<a class="rail__lien" href={resolve('/console')}>Console</a>
 			</div>
