@@ -71,11 +71,11 @@ const SEPT_JOURS = 7 * 24 * 60 * 60 * 1000;
  * LES CONSULTATIONS D'UNE FENÊTRE, PAR NOTE — et c'est la seule des cinq
  * mesures de V-34 que le produit porte vraiment.
  *
- * `MESURES_DE_CONSOLE_SANS_CONTREPARTIE` compte encore `CONSULTATIONS` parmi
- * ses lacunes, au motif qu'« aucune table ne porte de consultation
- * horodatée » : la migration `006` en a monté une depuis, et elle se remplit.
- * Le recensement vit dans `$lib/donnees/consoles.ts`, hors du périmètre de ce
- * lot ; l'entrée périmée est remontée au rapport plutôt que corrigée ici.
+ * `MESURES_DE_CONSOLE_SANS_CONTREPARTIE` comptait encore `MESURES_7J` et
+ * `MESURES_7J_PREC` parmi ses lacunes, au motif qu'« aucune table ne porte de
+ * consultation horodatée » : la migration `006` en a monté une, elle se
+ * remplit, et ces deux lignes la lisent. Les deux entrées ont été retirées du
+ * recensement — un registre de lacunes qui ment dispense d'aller voir.
  *
  * LES DEUX AUTRES SÉRIES DE L'ÉCRAN N'ONT TOUJOURS AUCUNE TABLE — le journal de
  * recherche et les demandes de révision. La vue garde donc leur défaut, et le
