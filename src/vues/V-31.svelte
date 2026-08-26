@@ -47,6 +47,7 @@
 	import NavigationConsole from '$lib/console/NavigationConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { filDeConsole } from '$lib/console/sections';
+	import { accord } from '$lib/vocabulaire';
 	import type {
 		Domaine,
 		Note,
@@ -177,6 +178,26 @@
 		templates.length > 0 && templates.every((t) => utilisations(t) === null)
 			? null
 			: templates.reduce((s, t) => s + (utilisations(t) ?? 0), 0)
+	);
+
+	/**
+	 * L'ACCORD DE LA PHRASE DE RAPPEL — il court sur le nom, le participe ET le
+	 * verbe : « Les 1 notes déjà créées … ne bougeront pas » aurait été faux
+	 * trois fois pour un seul `+s`. Le total INDISPONIBLE ne porte aucun nombre
+	 * grammatical : la phrase reste alors au pluriel.
+	 *
+	 * L'ARTICLE « Les » A DISPARU, ET C'EST LE NAVIGATEUR QUI L'A DIT : il ne
+	 * s'accorde pas seul devant un chiffre — « La 0 note » sur une instance
+	 * neuve, mesuré à l'écran. Le compte se suffit à lui-même.
+	 */
+	const suiteDuTotal = $derived(
+		totalUtilisations === null
+			? 'notes déjà créées à partir de ces templates ne bougeront pas.'
+			: accord(
+					totalUtilisations,
+					'note déjà créée à partir de ces templates ne bougera pas.',
+					'notes déjà créées à partir de ces templates ne bougeront pas.'
+				)
 	);
 
 	/**
@@ -508,9 +529,9 @@
 			>
 			<div>
 				<b>Modifier ou supprimer un template n'affecte aucune note existante.</b>
-				Un squelette est copié au moment de la création : la note devient aussitôt indépendante. Les
-				<span id="total-utilisations">{totalUtilisations ?? INDISPONIBLE}</span> notes déjà créées à partir
-				de ces templates ne bougeront pas.
+				Un squelette est copié au moment de la création : la note devient aussitôt indépendante.
+				<span id="total-utilisations">{totalUtilisations ?? INDISPONIBLE}</span>
+				{suiteDuTotal}
 			</div>
 		</div>
 
@@ -545,7 +566,7 @@
 							class="tg__n tg--masquable"
 							style={utilisations(t) ? undefined : 'color:var(--c-encre-4)'}
 							>{#if utilisations(t) === null}{INDISPONIBLE}{:else}{utilisations(t)}
-								{(utilisations(t) ?? 0) > 1 ? 'notes' : 'note'}{/if}</span
+								{accord(utilisations(t) ?? 0, 'note')}{/if}</span
 						>
 						<div class="tg__actions">
 							<button class="btn" type="button" onclick={() => ouvrirLeFormulaire(t.id)}
@@ -969,10 +990,11 @@
 						<div>
 							<div class="contexte__titre">Aucune note ne sera touchée</div>
 							<div id="sup-rassure">
-								{#if aSupprimer}{#if utilisations(aSupprimer)}Les {utilisations(aSupprimer)} notes créées
-										à partir de ce squelette gardent leur contenu, leur structure et leur historique.
-										Un template est copié à la création : elles n'y sont plus rattachées depuis longtemps.{:else}Aucune
-										note n'a encore été créée à partir de ce squelette.{/if}{:else}—{/if}
+								{#if aSupprimer}{#if utilisations(aSupprimer)}{accord(
+											utilisations(aSupprimer) ?? 0,
+											"La note créée à partir de ce squelette garde son contenu, sa structure et son historique. Un template est copié à la création : elle n'y est plus rattachée depuis longtemps.",
+											`Les ${utilisations(aSupprimer)} notes créées à partir de ce squelette gardent leur contenu, leur structure et leur historique. Un template est copié à la création : elles n'y sont plus rattachées depuis longtemps.`
+										)}{:else}Aucune note n'a encore été créée à partir de ce squelette.{/if}{:else}—{/if}
 							</div>
 						</div>
 					</div>

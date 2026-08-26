@@ -167,7 +167,7 @@
 	import type { Note } from '../../seeds/corpus';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { chercher, segmenter } from '$lib/public/recherche';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
 	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
@@ -420,7 +420,7 @@
 			lignes,
 			selection: c.selection,
 			bloc: null,
-			compteur: `${lignes.length} résultat${lignes.length > 1 ? 's' : ''}${suffixeDeDuree}`
+			compteur: `${lignes.length} ${accord(lignes.length, 'résultat')}${suffixeDeDuree}`
 		};
 	}
 

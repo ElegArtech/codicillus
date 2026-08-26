@@ -90,6 +90,7 @@
 	import { rangementDe, type NoteAffichee } from '$lib/lecture/note-de-demonstration';
 	import type { Domaine, Note, Univers } from '../../seeds/corpus';
 	import type { CompteAffiche } from '$lib/coquille/identite';
+	import { accord } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — deux contrôles de planche. */
@@ -216,7 +217,7 @@
 	const texteSauvegarde = $derived(
 		cas === 'vierge' || dernierEnregistrement === null
 			? 'Aucune modification'
-			: `Enregistré · dernière version il y a ${dernierEnregistrement} jours`
+			: `Enregistré · dernière version il y a ${dernierEnregistrement} ${accord(dernierEnregistrement, 'jour')}`
 	);
 </script>
 
