@@ -121,7 +121,11 @@
 	onMount(() =>
 		cablerLaCoquille(document, {
 			rangement: data.rangement,
-			administrateur: data.administrateur
+			administrateur: data.administrateur,
+			/* `P-03` — « Nouvelle note » et « Importer des fichiers » ne mènent nulle
+			   part tant que l'appelant ne peut écrire nulle part. Même verdict que la
+			   garde des deux routes, et il vient d'ici. */
+			ecriture: data.ecriture
 		})
 	);
 </script>
