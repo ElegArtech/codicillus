@@ -571,7 +571,7 @@
 						type="text"
 						id="f-direct"
 						autocomplete="off"
-						placeholder="héberge"
+						placeholder="dépend de"
 						value={directSaisi}
 						oninput={(e) => (fDirect = e.currentTarget.value)}
 					/>
@@ -607,7 +607,7 @@
 						type="text"
 						id="f-inverse"
 						autocomplete="off"
-						placeholder="est hébergé par"
+						placeholder="est requis par"
 						value={inverseSaisi}
 						oninput={(e) => (fInverse = e.currentTarget.value)}
 					/>

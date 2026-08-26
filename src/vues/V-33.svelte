@@ -298,6 +298,20 @@
 		['Recherche', `Filtrer par type · ${motFiche}`]
 	]);
 
+	/**
+	 * L'AIDE DU CHAMP « nom de l'organisation » — elle dit ce que le vide produit.
+	 *
+	 * Le nom du LOGICIEL reste « Codicillus » quoi qu'il arrive ; ce qui varie est
+	 * ce qui le suit. Un champ vide n'est pas une panne, c'est l'état d'une
+	 * installation neuve, et l'aide montre les deux rendus plutôt que d'exiger
+	 * une saisie dont le produit n'a pas besoin.
+	 */
+	const aideOrganisation = $derived(
+		config.nomOrganisation === ''
+			? 'Tant qu’il est vide, les pieds de page et l’écran de connexion ne signent que « Codicillus ».'
+			: `Les pieds de page signent « Codicillus · ${config.nomOrganisation} ».`
+	);
+
 	/** `majEtat()` (`V-33:3171`) — l'aide du champ « versions conservées ». */
 	const aideVersions = $derived(
 		config.versionsMax
@@ -355,6 +369,40 @@
 			titre="Configuration"
 			description="Les réglages qui pilotent le comportement du produit. Ils prennent effet immédiatement, pour tout le monde."
 		/>
+
+		<!-- ============ Organisation ============
+			LE HUITIÈME RÉGLAGE, ET LE GEL NE LE DESSINE PAS.
+
+			Huit vues écrivaient « Direction technique » en dur, dont les cinq pieds
+			publics et l'écran de connexion : le segment de marché du cadrage soudé
+			dans une signature de produit, que toute autre organisation lisait comme
+			un fait sur SON instance. La clé `nom_organisation` et son canal existent
+			depuis le lot précédent ; c'est ici que l'administrateur la règle, et
+			sans ce champ le paramètre n'était réglable par aucun écran.
+
+			VIDE EST L'ÉTAT NORMAL D'UNE INSTALLATION NEUVE, pas une panne : les pieds
+			rendent alors « Codicillus » seul. Rien n'est donc à valider — un nom
+			d'organisation n'a pas de forme —, et l'aide dit ce que le vide produit.
+			AUCUN BLOC D'ERREUR N'EST DESSINÉ : les sept autres en portent un parce
+			que l'action sait les refuser, et le peintre les remplit. Un bloc que
+			rien ne peut peindre serait un nœud mort de plus.
+		-->
+		<!-- prettier-ignore -->
+		<section class="groupe"
+			><div class="groupe__tete"
+				><div
+					><h2 class="groupe__nom">Organisation</h2
+					><div class="groupe__sous">Le nom de l'organisation qui héberge cette instance. Il accompagne le nom du produit partout où celui-ci est signé.</div
+				></div
+			></div
+			><div class="groupe__corps"
+				><div class="champ"
+					><label class="champ__label" for="c-organisation">Nom de l'organisation</label
+					><input class="saisie" type="text" id="c-organisation" style="max-width:360px" autocomplete="off" value={config.nomOrganisation}
+					><span class="champ__aide">{aideOrganisation}</span
+				></div
+			></div
+		></section>
 
 		<!-- ============ Fraîcheur ============ -->
 		<!-- prettier-ignore -->

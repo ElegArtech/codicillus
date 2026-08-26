@@ -500,38 +500,34 @@ export function messageSeuilNonCroissant(seuilFrais: number): string {
 }
 
 /**
- * CE QUE `V-33` RÈGLE — SEPT DES HUIT PARAMÈTRES, ET LE TYPE LE DIT.
+ * CE QUE `V-33` RÈGLE — LES HUIT PARAMÈTRES, ET LE TYPE LE DIT.
  *
- * `nomOrganisation` EST LE HUITIÈME, ET IL N'A PAS DE CHAMP. Le nom de
- * l'organisation est un réglage que le cadrage n'avait pas prévu — huit vues
- * l'écrivaient en dur —, et l'écran qui le réglera n'est pas encore dessiné.
- * L'`Exclude` NOMME CETTE ABSENCE AU LIEU DE LA CACHER, et c'est tout ce qui
- * sépare une lacune d'un défaut : tant que le paramètre est exclu, `V-33` ne le
- * lit pas, ne l'envoie pas, et `enregistrerLaConfiguration()` ne l'écrit pas.
+ * `nomOrganisation` EST LE HUITIÈME, ET IL A DÉSORMAIS SON CHAMP. Il était
+ * exclu par un `Exclude`, faute d'écran : le nom de l'organisation est un
+ * réglage que le cadrage n'avait pas prévu — huit vues l'écrivaient en dur — et
+ * `V-33` ne le dessinait pas. Le groupe « Organisation » le rend maintenant, et
+ * l'exclusion tombe : rien n'est plus à nommer comme absent.
  *
- * UNE PREMIÈRE RÉDACTION L'AVAIT INCLUS, avec un `c-organisation` qu'aucun
- * `input` ne porte, pour que la table reste `Record<keyof Configuration,
- * string>`. Le coût est MESURÉ : le formulaire n'envoyait rien pour ce champ,
- * `texte()` rendait la chaîne vide, et `enregistrerLaConfiguration()` — qui
- * boucle sur la table — POSAIT `nom_organisation = ''` à chaque clic sur
- * « Enregistrer les réglages », écrasant le nom que l'administrateur venait de
- * régler. Un champ absent devenu valeur par défaut, écrite en base : le défaut
- * même que le contrôle voisin interdit.
+ * LE DANGER QUE L'`Exclude` PARAIT, LUI, RESTE FERMÉ, ET AUTREMENT. Une
+ * rédaction précédente avait posé un `c-organisation` qu'aucun `input` ne
+ * portait : le formulaire n'envoyait rien, `texte()` rendait la chaîne vide, et
+ * `enregistrerLaConfiguration()` posait `nom_organisation = ''` à chaque clic
+ * sur « Enregistrer les réglages », écrasant le nom réglé. Ce qui l'interdit
+ * n'est pas l'exclusion, c'est que le champ EXISTE dans le document et porte la
+ * valeur enregistrée : le câblage lit `champ.value`, il lit donc ce qui est là.
  *
- * LE GARDE-FOU N'EST PAS PERDU, IL EST DÉPLACÉ D'UN CRAN. `Exclude<keyof
- * Configuration, 'nomOrganisation'>` ne retire QUE ce nom : un neuvième
- * paramètre ajouté à `Configuration` ne se compile toujours pas tant qu'il n'a
- * pas son champ. Et le jour où `V-33` rend le champ, retirer l'`Exclude` fait
- * rougir d'un coup les trois sites qui doivent suivre — cette table, celle du
- * câblage (`routes/console/cablage.ts`), et la lecture ci-dessous.
+ * `Record<keyof Configuration, string>` REDEVIENT LE GARDE-FOU ENTIER : un
+ * neuvième paramètre ajouté à `Configuration` ne compile pas tant qu'il n'a pas
+ * son champ ici, dans la table du câblage (`routes/console/cablage.ts`) et dans
+ * la lecture ci-dessous.
  *
  * `V-33:2965` lit ses champs par `document.getElementById("c-" + id)` : le
- * préfixe fait partie du nom, et les sept identifiants sont ceux des `input` et
- * `select` de `:1247` à `:1360`.
+ * préfixe fait partie du nom, et les huit identifiants sont ceux des `input` et
+ * `select` du formulaire.
  */
-export type ChampReglableEnConsole = Exclude<keyof Configuration, 'nomOrganisation'>;
+export type ChampReglableEnConsole = keyof Configuration;
 
-/** Les sept réglages que `V-33` porte — la configuration moins le huitième. */
+/** Les huit réglages que `V-33` porte — la configuration entière. */
 export type ConfigurationReglableEnConsole = Pick<Configuration, ChampReglableEnConsole>;
 
 export const CHAMPS_DE_CONFIGURATION: Readonly<Record<ChampReglableEnConsole, string>> =
@@ -540,6 +536,7 @@ export const CHAMPS_DE_CONFIGURATION: Readonly<Record<ChampReglableEnConsole, st
 		seuilVieillissant: 'c-vieil',
 		versionsMax: 'c-versions',
 		portailAssistance: 'c-portail',
+		nomOrganisation: 'c-organisation',
 		motFiche: 'c-mot',
 		tailleMaxPieceJointe: 'c-taille',
 		dureeSession: 'c-session'
@@ -572,6 +569,7 @@ export function valeursDeConfigurationSaisies(
 		seuilVieillissant: nombre('seuilVieillissant'),
 		versionsMax: nombre('versionsMax'),
 		portailAssistance: texte('portailAssistance').trim(),
+		nomOrganisation: texte('nomOrganisation').trim(),
 		motFiche: texte('motFiche').trim(),
 		tailleMaxPieceJointe: nombre('tailleMaxPieceJointe'),
 		dureeSession: nombre('dureeSession')
@@ -1353,15 +1351,14 @@ export async function enregistrerLaConfiguration(
 	const verdict = validerLaConfiguration(valeurs);
 	if (verdict.issue !== 'possible') return verdict;
 
-	/* LES CLÉS ÉCRITES SONT CELLES QUE L'ÉCRAN RÈGLE, PAS TOUTES CELLES DE LA
-	   CONFIGURATION. La boucle a longtemps parcouru `CLES_DE_PARAMETRE`, ce qui
-	   revenait au même tant que les deux tables avaient les mêmes noms. Elles ne
-	   les ont plus : `nom_organisation` a sa clé de base — `lireConfiguration()`
-	   et le gabarit racine la lisent — et AUCUN champ dans `V-33`. Parcourir les
-	   clés de base poserait donc `nom_organisation = ''` à chaque
-	   enregistrement, en écrasant un réglage qu'aucun geste de cet écran n'a
-	   touché. On boucle sur ce que le formulaire porte ; `CLES_DE_PARAMETRE`
-	   reste la seule source du NOM de la ligne. */
+	/* LES CLÉS ÉCRITES SONT CELLES QUE L'ÉCRAN RÈGLE, ET C'EST LA SEULE SOURCE
+	   QUI VAILLE. Les deux tables portent aujourd'hui les mêmes huit noms —
+	   `nom_organisation` a reçu son champ —, mais la boucle continue de parcourir
+	   les CHAMPS DU FORMULAIRE et non les clés de base : le jour où un paramètre
+	   de base n'aura pas d'écran, parcourir `CLES_DE_PARAMETRE` le poserait à sa
+	   valeur vide à chaque enregistrement, en écrasant un réglage qu'aucun geste
+	   de cet écran n'a touché. C'est ce qui est arrivé. `CLES_DE_PARAMETRE` reste
+	   la seule source du NOM de la ligne. */
 	const champs = Object.keys(CHAMPS_DE_CONFIGURATION) as readonly ChampReglableEnConsole[];
 	const lignes = champs.map((champ) => ({
 		cle: CLES_DE_PARAMETRE[champ],
@@ -1959,7 +1956,21 @@ function modulesRetenus(demandes: readonly CleDeModule[]): readonly CleDeModule[
 export interface SaisieDUnDomaine {
 	readonly nom: string;
 	readonly description: string;
-	/** Le NOM d'affichage de l'univers de rattachement — `#f-univers`. */
+	/**
+	 * L'IDENTIFIANT de l'univers de rattachement — jamais son nom d'affichage.
+	 *
+	 * Les deux gestes du domaine résolvaient l'univers par `univers.nom`, seuls
+	 * de toute la console : `?/enregistrer` lisait donc DEUX champs d'univers de
+	 * régimes différents dans la même requête — la cible par son identifiant, le
+	 * rattachement par son nom. Rien ne s'en plaignait parce que
+	 * `univers_nom_unique` rend l'homonyme impossible : une chance de schéma,
+	 * pas une garantie de conception. Le nom d'affichage se renomme, l'identifiant
+	 * ne bouge pas (`RG-M12-11`), et c'est lui que tout le reste emploie.
+	 *
+	 * La traduction du nom choisi au `<select>` vers l'identifiant est faite par
+	 * `/console/domaines/+page.svelte`, sur la table du chargeur, exactement comme
+	 * pour le domaine cible.
+	 */
 	readonly univers: string;
 	readonly couleur: string;
 	readonly modules: readonly CleDeModule[];
@@ -1996,7 +2007,7 @@ export async function creerUnDomaine(
 	const [accueil] = await base
 		.select({ id: univers.id })
 		.from(univers)
-		.where(eq(univers.nom, saisie.univers))
+		.where(eq(univers.identifiant, saisie.univers))
 		.limit(1);
 	if (accueil === undefined) return { issue: 'introuvable' };
 
@@ -2095,7 +2106,7 @@ export async function modifierUnDomaine(
 		const [accueil] = await base
 			.select({ id: univers.id })
 			.from(univers)
-			.where(eq(univers.nom, changements.univers))
+			.where(eq(univers.identifiant, changements.univers))
 			.limit(1);
 		if (accueil === undefined) return { issue: 'introuvable' };
 		if (accueil.id !== cible.universId) {
