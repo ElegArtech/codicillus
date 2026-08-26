@@ -83,7 +83,6 @@
 
 <div bind:this={enveloppe} style="display:contents">
 	<Vue
-		vecteur={data.vecteur}
 		notes={data.notes}
 		relations={data.relations}
 		typesRelation={data.typesRelation}

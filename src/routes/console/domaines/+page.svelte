@@ -26,6 +26,7 @@
 	import {
 		CHAMP_DOMAINE_CIBLE,
 		CHAMP_UNIVERS_CIBLE,
+		CHAMP_UNIVERS_DE_RATTACHEMENT,
 		champsDeDomaine,
 		type RefusDeSaisie,
 		type SaisieDeDomaine
@@ -94,7 +95,19 @@
 	}}
 	{refus}
 	onCreer={(saisie: SaisieDeDomaine) => {
-		void envoyer('?/creer', champsDeDomaine(saisie));
+		/* L'UNIVERS PART PAR SON IDENTIFIANT, jamais par son nom d'affichage — même
+		   règle que la cible du domaine, et la table vient du même chargeur. Le
+		   `<select>` du gel porte le nom (`V-28:695`), et `champsDeDomaine()` le
+		   recopie tel quel : le champ de rattachement est donc RÉÉCRIT ici, après
+		   la fabrique, avec la clé que l'exécutant résout désormais. Une
+		   désignation absente n'envoie rien : mieux vaut un geste sans effet qu'un
+		   domaine rattaché à un autre univers. */
+		const universCanonique = data.designationsUnivers[saisie.univers];
+		if (universCanonique === undefined) return;
+		void envoyer('?/creer', {
+			...champsDeDomaine(saisie),
+			[CHAMP_UNIVERS_DE_RATTACHEMENT]: universCanonique
+		});
 	}}
 	onEnregistrer={(nom: string, saisie: SaisieDeDomaine) => {
 		/* LA CIBLE EST DÉSIGNÉE PAR SA FORME CANONIQUE, comme la suppression, et
@@ -102,10 +115,14 @@
 		   unique qu'au sein de son univers. La table vient du chargeur. */
 		const canonique = data.designations[nom];
 		if (canonique === undefined) return;
+		/* Le rattachement part par son identifiant, comme à la création. */
+		const universCanonique = data.designationsUnivers[saisie.univers];
+		if (universCanonique === undefined) return;
 		void envoyer('?/enregistrer', {
 			[CHAMP_UNIVERS_CIBLE]: canonique.univers,
 			[CHAMP_DOMAINE_CIBLE]: canonique.domaine,
-			...champsDeDomaine(saisie)
+			...champsDeDomaine(saisie),
+			[CHAMP_UNIVERS_DE_RATTACHEMENT]: universCanonique
 		});
 	}}
 />
