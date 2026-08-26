@@ -51,10 +51,12 @@
 	 * fichier — `font-family:var(--f-donnee)` — figure à l'ensemble clos du gel
 	 * (ARB-016).
 	 */
+	import { getContext } from 'svelte';
 	import { resolve } from '$app/paths';
 	import type { Note } from '../../seeds/corpus';
 	import { chercher, nombreFr, notesPubliques, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
+	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 
 	/**
 	 * LES MOTIFS DE ROUTE, ÉCRITS EN CONSTANTES — même raison qu'à `V-07:455` et
@@ -121,6 +123,50 @@
 		frappe === 'trouve' ? 'mot de passe' : frappe === 'rien-trouve' ? 'note de frais' : ''
 	);
 
+	/**
+	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation`
+	 * de la table `parametres`, descendue par le contexte de coquille.
+	 *
+	 * CET ÉCRAN ÉCRIVAIT « Direction technique » EN DUR. Ce n'était pas une
+	 * donnée du jeu de démonstration : c'était le SEGMENT DE MARCHÉ du cadrage,
+	 * soudé dans une signature de produit, et toute autre organisation le lisait
+	 * comme un fait sur SON instance — sur le premier écran que le produit
+	 * montre à un visiteur sans compte.
+	 *
+	 * « Codicillus » N'EST PAS CONCERNÉ : c'est le nom du LOGICIEL, et il reste
+	 * en dur. C'est la SOUDURE entre le logiciel et l'organisation qu'on défait.
+	 *
+	 * CHAÎNE VIDE = L'INSTANCE NE S'EST PAS NOMMÉE, et c'est l'état normal d'une
+	 * installation neuve, pas une panne : la signature rend « Codicillus » seul.
+	 * C'est aussi ce que rend un composant monté hors gabarit racine, où
+	 * `getContext` ne trouve rien — l'état vide, jamais un nom d'exemple.
+	 */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const nomOrganisation = $derived(identite?.nomOrganisation ?? '');
+	/** « Codicillus · <organisation> », ou « Codicillus » seul. */
+	const signature = $derived(
+		nomOrganisation === '' ? 'Codicillus' : `Codicillus · ${nomOrganisation}`
+	);
+	/**
+	 * LE SURTITRE DE L'HAMEÇON — ET LA PRÉPOSITION EST LE PIÈGE.
+	 *
+	 * Le gel écrit « Documentation de la direction technique » : un nom commun
+	 * précédé de son article. Un nom d'organisation n'en a pas — « la Mairie de
+	 * Sainte-Foy », « Sainte-Foy Numérique », « ACME » ne prennent pas le même,
+	 * et certains n'en prennent aucun. Recomposer « Documentation de X »
+	 * fabrique donc une faute d'accord sur la moitié des instances, la valeur
+	 * du cadrage comprise : « Documentation de Direction technique ».
+	 *
+	 * L'INSTANCE NE NOUS DIT PAS SON ARTICLE, ET RIEN NE PERMET DE LE DEVINER.
+	 * On ne gouverne donc pas le nom par une préposition : on le JUXTAPOSE,
+	 * exactement comme la signature de pied le fait déjà — « Codicillus · X ».
+	 * Le séparateur porte le rapport que la préposition portait, et il tient
+	 * quel que soit le nom.
+	 */
+	const surtitre = $derived(
+		nomOrganisation === '' ? 'Documentation' : `Documentation · ${nomOrganisation}`
+	);
+
 	/** RG-M17-01 — la restriction au périmètre public, au point d'entrée. */
 	const publiques = $derived(notesPubliques(notes));
 
@@ -129,8 +175,31 @@
 	 * (P-02 : aucune valeur illustrative). Il est établi au chargement, donc
 	 * indépendamment de l'état de la liste — la référence le montre inchangé
 	 * jusque dans l'état « aucun contenu public ».
+	 *
+	 * ═════════════════════════════════════════════════════════════════════
+	 * `revise !== null` — LE COMPTE ANNONÇAIT DES VÉRIFICATIONS QUI N'AVAIENT
+	 * PAS EU LIEU.
+	 *
+	 * `RG-M06-01` fait retomber la fraîcheur d'une note JAMAIS vérifiée sur sa
+	 * date de MODIFICATION, et c'est juste : le niveau reste un fait. Mais le
+	 * niveau `frais` ne vaut alors pas « vérifié » — et cette ligne écrit
+	 * « vérifiés il y a moins d'un mois ». Une instance neuve, dont aucun guide
+	 * n'a jamais été vérifié, servait donc au visiteur anonyme
+	 * « 1 vérifiés il y a moins d'un mois ». Le premier écran du produit, sur
+	 * sa promesse de tête.
+	 *
+	 * ICI, LE CORRECTIF EST UN COMPTE, PAS UN LIBELLÉ : `libelleFraicheur` n'est
+	 * pas appelé sur cette ligne, il n'y a rien à mettre en mots. Un prédicat de
+	 * plus, et il dit exactement ce que la phrase affirme.
+	 *
+	 * CETTE LIGNE EST UNE TRANSCRIPTION LITTÉRALE DU GEL, et LE GEL NE POUVAIT
+	 * PAS VOIR LE CAS : sa seule note jamais vérifiée est INTERNE, donc jamais
+	 * publique. Le produit ne dérive pas ; il rencontre un état que la maquette
+	 * n'a pas de moyen de produire. Le chiffre du gel bouge, et c'est le coût.
 	 */
-	const publiesFrais = $derived(publiques.filter((n) => n.fraicheur === 'frais').length);
+	const publiesFrais = $derived(
+		publiques.filter((n) => n.fraicheur === 'frais' && n.revise !== null).length
+	);
 
 	const requete = $derived(saisie.trim());
 	const enRecherche = $derived(requete.length >= 2);
@@ -196,7 +265,9 @@
 	</header>
 
 	<section class="hamecon">
-		<div class="hamecon__sur etiq">Documentation de la direction technique</div>
+		<div class="hamecon__sur etiq">
+			{surtitre}
+		</div>
 		<h1>Les réponses aux questions qu'on pose au support.</h1>
 		<p class="hamecon__sous">
 			Accès aux applications, mots de passe, salles de réunion, réseau, postes de travail : les
@@ -374,7 +445,7 @@
 
 	<footer class="pied-public">
 		<div class="pied-public__int">
-			<span class="etiq">Codicillus · Direction technique</span>
+			<span class="etiq">{signature}</span>
 			<a href={resolve('/connexion')}>Se connecter</a>
 		</div>
 	</footer>

@@ -88,8 +88,10 @@
 	 * VOCABULAIRE : aucun des douze termes contractuels n'apparaît dans cette
 	 * vue ; rien à y contrôler (P-07).
 	 */
+	import { getContext } from 'svelte';
 	import { resolve } from '$app/paths';
 	import Marque from '$lib/auth/Marque.svelte';
+	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
@@ -102,6 +104,41 @@
 	}
 
 	const { vecteur, refus = null }: Proprietes = $props();
+
+	/**
+	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation`
+	 * de la table `parametres`, descendue par le contexte de coquille.
+	 *
+	 * CET ÉCRAN DEMANDAIT « les identifiants de votre compte DE LA DIRECTION
+	 * TECHNIQUE ». Ce n'était pas une donnée du jeu de démonstration : c'était
+	 * le SEGMENT DE MARCHÉ du cadrage, écrit dans la phrase d'accueil de l'écran
+	 * de connexion — c'est-à-dire adressé à chaque personne qui entre dans le
+	 * produit, sur une instance qui n'est pas celle-là.
+	 *
+	 * CHAÎNE VIDE = L'INSTANCE NE S'EST PAS NOMMÉE, et c'est l'état normal d'une
+	 * installation neuve : le titre retombe alors sur « Connexion » seul, qui ne
+	 * nomme personne et reste vrai partout. Même rendu hors gabarit racine, où
+	 * `getContext` ne trouve rien.
+	 *
+	 * ═════════════════════════════════════════════════════════════════════
+	 * OÙ LE NOM SE POSE, ET POURQUOI PAS DANS LA PHRASE.
+	 *
+	 * La phrase du gel gouverne le nom par une préposition ET un article — « de
+	 * votre compte DE LA direction technique ». Un nom d'organisation n'apporte
+	 * pas son article : « de votre compte de la Mairie de Sainte-Foy » demande
+	 * un article que rien ne nous donne, « de votre compte Mairie de Sainte-Foy »
+	 * le supprime et casse la phrase du gel. Aucune recomposition ne tient pour
+	 * tous les noms.
+	 *
+	 * ON NE MET DONC RIEN DANS LA PHRASE : elle reste celle du gel moins son
+	 * complément, vraie sur toute instance. Le nom se pose en JUXTAPOSITION dans
+	 * le titre — « Connexion · <organisation> » —, la forme que la signature de
+	 * pied emploie déjà partout et qui ne gouverne rien.
+	 */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const nomOrganisation = $derived(identite?.nomOrganisation ?? '');
+	/** « Connexion · <organisation> », ou « Connexion » seul. */
+	const titre = $derived(nomOrganisation === '' ? 'Connexion' : `Connexion · ${nomOrganisation}`);
 
 	/**
 	 * Le message contextuel, tel que `ARRIVEES` du gel le déclare (`V-05:667`).
@@ -166,8 +203,8 @@
 		</div>
 
 		<div class="auth__boite">
-			<h1 class="auth__titre">Connexion</h1>
-			<p class="auth__sous">Utilisez les identifiants de votre compte de la direction technique.</p>
+			<h1 class="auth__titre">{titre}</h1>
+			<p class="auth__sous">Utilisez les identifiants de votre compte.</p>
 
 			<!--
 				`method="post"` EST DANS LE BALISAGE, ET C'EST UNE QUESTION DE SÛRETÉ.

@@ -20,13 +20,13 @@
 	 * `VUES_A_PERIMETRE_PUBLIC` de `seeds/corpus.ts`, au même titre que V-01,
 	 * V-02 et V-04.
 	 *
-	 * Le guide rendu est une PAGE ÉCRITE de la maquette, pas une note du corpus :
-	 * son texte, son schéma et son tableau sont dans le gel et nulle part
-	 * ailleurs. Ils sont donc portés tels quels. Le seul lien vers une ressource
-	 * non publique est rendu NON CLIQUABLE et NE RÉVÈLE PAS le titre de sa cible
-	 * (`span.lien-prive`) — c'est la forme que le gel donne à RG-M17-01 dans le
-	 * corps d'un guide, et le commentaire du gel le dit : « il n'y a donc rien à
-	 * brancher ici ».
+	 * LE GUIDE RENDU EST LA NOTE QUE L'ADRESSE DÉSIGNE, ET RIEN D'AUTRE. Cet
+	 * écran a longtemps porté, en second, la PAGE ÉCRITE de la maquette — son
+	 * texte, son schéma, son tableau, son auteur, son domaine, ses dates — dans
+	 * une branche que la route n'emprunte jamais. Elle ne s'affichait nulle part
+	 * et partait dans le paquet du navigateur de la SEULE ROUTE PUBLIQUE du
+	 * produit. La propriété `guide` ne peut plus être nulle, et la branche a
+	 * disparu avec le `null` : voir sa déclaration.
 	 *
 	 * CE QUE CE COMPOSANT NE PROUVE PAS. Il rend un ÉTAT DE MAQUETTE.
 	 * L'étanchéité réelle est la batterie 6 (`pnpm test:etancheite`, livrée par T-012b).
@@ -82,28 +82,11 @@
 	 * `node verif/feuilles-de-vue.mjs V-03 --installer`. Les `style=` reproduits
 	 * figurent tous à l'ensemble clos du gel (ARB-016).
 	 */
+	import { getContext } from 'svelte';
 	import { resolve } from '$app/paths';
 	import type { NiveauFraicheur } from '../../seeds/corpus';
 	import { temoinFraicheur } from '$lib/fraicheur';
-
-	/**
-	 * LES MOTIFS DE ROUTE, ÉCRITS EN CONSTANTES — `svelte/no-navigation-without-resolve`
-	 * inspecte l'EXPRESSION du `href`. Même écriture qu'à `V-07:455`.
-	 */
-	const ROUTE_DU_GUIDE = '/guides/[identifiant]' as const;
-
-	/**
-	 * LES DEUX GUIDES QUE LE CORPS GELÉ CITE, ET LEUR IDENTIFIANT EN BASE.
-	 *
-	 * Ces deux liens ne vivent que dans l'article ÉCRIT de la maquette — la
-	 * branche `guide === null`, que la route n'emprunte jamais puisqu'elle passe
-	 * toujours la note demandée. Ils restent atteignables en rendu direct du
-	 * composant, et les deux notes existent, publiques et publiées, sous ces
-	 * titres exacts (`seeds/corpus.ts`) : les faire pointer là où elles sont est
-	 * plus juste que de les laisser inertes.
-	 */
-	const GUIDE_DEMANDER_ACCES = 'n-demander-acces';
-	const GUIDE_SIGNALER_INCIDENT = 'n-signaler-incident';
+	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 
 	/**
 	 * UNE ENTRÉE DE SOMMAIRE — les titres de niveau 2 du corps affiché.
@@ -155,26 +138,29 @@
 	}
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
-		vecteur: Record<string, string | boolean> | null;
 		/**
-		 * LE GUIDE RÉELLEMENT DEMANDÉ. Absente, la vue rend le guide écrit dans la
-		 * maquette gelée — son texte, son schéma et son tableau sont dans le gel et
-		 * nulle part ailleurs, et c'est ce que les quatre états de la planche
-		 * montrent. Fournie par le chargeur de `/guides/{identifiant}`, elle
-		 * l'emporte : l'écran cesse alors d'afficher une page écrite et affiche la
-		 * note que l'adresse désigne.
+		 * LE GUIDE RÉELLEMENT DEMANDÉ — EXIGÉ, ET NON NUL.
 		 *
-		 * LES DEUX AXES DE LA PLANCHE DÉCRIVENT LA NOTE AFFICHÉE — fraîcheur du
-		 * cartouche, présence du registre « En bref ». Quand un guide est fourni,
-		 * ils viennent donc de LUI et non du vecteur : peindre les attributs d'une
-		 * note sur le corps d'une autre est la valeur illustrative que `P-02`
-		 * proscrit.
+		 * Il était `GuideAffiche | null`, et le `null` faisait rendre à cet écran
+		 * L'ARTICLE ÉCRIT DE LA MAQUETTE : « Réinitialiser son mot de passe »,
+		 * signé « Sophie Nguyen », dans le domaine « Poste de travail », avec ses
+		 * trois dates de contrôle, son sommaire de cinq entrées, sa pièce jointe
+		 * et ses deux liens vers des notes du jeu de démonstration.
 		 *
-		 * ELLE EST EXIGÉE, `null` COMPRIS : la seule route qui monte cette vue la
-		 * passe toujours, et une route qui l'oublierait ne compile plus.
+		 * LA ROUTE NE PASSE JAMAIS `null` — `guides/[identifiant]/+page.server.ts`
+		 * construit toujours l'objet, et rend 404 quand la note n'existe pas. Ces
+		 * quelque deux cent soixante-dix lignes ne s'affichaient donc NULLE PART.
+		 *
+		 * MAIS ELLES PARTAIENT CHEZ CHAQUE LECTEUR : une branche morte reste dans
+		 * le paquet du navigateur, et celui-ci est celui d'une ROUTE PUBLIQUE. Le
+		 * jeu de démonstration se lisait dans le source de la page, sur le seul
+		 * écran que le produit offre à un visiteur sans compte.
+		 *
+		 * LE `null` RETIRÉ, LA BRANCHE N'EXISTE PLUS, ET LE COMPILATEUR GARDE LA
+		 * PORTE : une route qui oublierait le guide, ou qui en passerait un nul,
+		 * ne compile plus. C'est la seule forme de garde qui ne s'oublie pas.
 		 */
-		guide: GuideAffiche | null;
+		guide: GuideAffiche;
 		/**
 		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — donnée d'INSTANCE, lue dans la table
 		 * `parametres` par le chargeur de la route, qui la passe TOUJOURS : la
@@ -184,82 +170,50 @@
 		portail: string;
 	}
 
-	const { vecteur, guide, portail }: Proprietes = $props();
+	const { guide, portail }: Proprietes = $props();
 
 	/** Une adresse absente ou blanche ne mène nulle part : rien ne l'annonce. */
 	const assistanceJoignable = $derived(portail.trim() !== '');
 
-	const reglage = $derived(vecteur ?? {});
+	/**
+	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation`
+	 * de la table `parametres`, descendue par le contexte de coquille.
+	 *
+	 * CET ÉCRAN ÉCRIVAIT « Direction technique » EN DUR. Ce n'était pas une
+	 * donnée du jeu de démonstration : c'était le SEGMENT DE MARCHÉ du cadrage,
+	 * soudé dans une signature de produit, et toute autre organisation le lisait
+	 * comme un fait sur SON instance — sur le premier écran que le produit
+	 * montre à un visiteur sans compte.
+	 *
+	 * « Codicillus » N'EST PAS CONCERNÉ : c'est le nom du LOGICIEL, et il reste
+	 * en dur. C'est la SOUDURE entre le logiciel et l'organisation qu'on défait.
+	 *
+	 * CHAÎNE VIDE = L'INSTANCE NE S'EST PAS NOMMÉE, et c'est l'état normal d'une
+	 * installation neuve, pas une panne : la signature rend « Codicillus » seul.
+	 * C'est aussi ce que rend un composant monté hors gabarit racine, où
+	 * `getContext` ne trouve rien — l'état vide, jamais un nom d'exemple.
+	 */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const nomOrganisation = $derived(identite?.nomOrganisation ?? '');
+	/** « Codicillus · <organisation> », ou « Codicillus » seul. */
+	const signature = $derived(
+		nomOrganisation === '' ? 'Codicillus' : `Codicillus · ${nomOrganisation}`
+	);
+
 	/** Un corps « En bref » existe-t-il ? Sinon le sélecteur de registre disparaît. */
-	const registreExiste = $derived(
-		guide === null ? reglage['c-op'] !== false : guide.operationnel !== null
-	);
+	const registreExiste = $derived(guide.operationnel !== null);
 
 	/**
-	 * LES TROIS ÉTATS DU CARTOUCHE — leur DATE DE CONTRÔLE, et elle seule.
+	 * LE NIVEAU DE FRAÎCHEUR AFFICHÉ PAR LE CARTOUCHE — celui de la note, et il
+	 * n'y en a pas d'autre.
 	 *
-	 * Le gel commute le cartouche sur une table de trois entrées portant chacune
-	 * un nombre de barres et un texte (`V-03:1665-1681`). Ces deux valeurs sont
-	 * la SORTIE du calcul de fraîcheur : les transcrire ici est une seconde
-	 * définition — ADR-005 interdit nommément « tout libellé de fraîcheur
-	 * construit localement », et c'est ce que cette vue faisait avant T-013c.
-	 *
-	 * Ce qui est DONNÉE, et que rien ne calcule, c'est la date de contrôle. Le
-	 * gel l'écrit trois fois, dans le `<time>` du détail ci-dessous, et c'est
-	 * elle — elle seule — qui est portée ici. L'ancienneté s'en déduit contre LA
-	 * VRAIE DATE : elle se déduisait contre `DATE_REFERENCE`, l'horloge gelée du
-	 * jeu de démonstration, si bien qu'un écran servi en 2027 aurait annoncé une
-	 * ancienneté calculée depuis le 13 août 2026. Ce calcul ne sert qu'au rendu
-	 * sans guide ; le guide fourni porte son ancienneté lui-même.
-	 *
-	 * Les trois libellés que la fabrique en tire sont, à la lettre, les trois du
-	 * gel — c'est ce qui rend cette réparation possible à pixel constant :
-	 *   11 j  → « Vérifié il y a 11 jours »  (frais, moins de 31 jours)
-	 *   155 j → « Vérifié il y a 5 mois »    (arrondi au mois)
-	 *   280 j → « Pas revu depuis 9 mois »   (l'obsolète change de verbe)
-	 *
-	 * Le DÉTAIL du cartouche, lui, reste écrit : c'est de la prose datée, pas un
-	 * libellé de fraîcheur. Le niveau « frais » est celui du balisage statique —
-	 * la planche ne le reconstruit pas, il porte donc ses apostrophes droites ;
-	 * les deux autres viennent du script du gel, qui écrit `&rsquo;`.
+	 * Trois tables du gel vivaient ici et ont disparu avec la branche sans
+	 * guide : les trois dates de contrôle en forme machine, les mêmes en toutes
+	 * lettres, et le sommaire de cinq entrées de l'article écrit. Elles
+	 * n'étaient lues que par un état de planche que la route ne demande jamais,
+	 * et elles voyageaient dans le paquet d'une route publique.
 	 */
-	const CONTROLE: Record<NiveauFraicheur, string> = {
-		frais: '2026-08-02',
-		vieil: '2026-03-11',
-		obs: '2025-11-06'
-	};
-
-	/**
-	 * LE MARQUEUR D'UNE DONNÉE QUI N'EXISTE PAS — `P-02`. Le gel l'emploie
-	 * lui-même pour une valeur qu'il n'a pas encore (`V-24:1287`).
-	 */
-	const RIEN = '—';
-
-	/**
-	 * LES TROIS DATES DE CONTRÔLE EN TOUTES LETTRES, telles que le gel les écrit
-	 * dans le `<time>` de son détail. Elles vont par paire avec `CONTROLE` : la
-	 * forme machine y est, la forme humaine ici, et aucune n'est dérivée de
-	 * l'autre — le gel les écrit toutes les deux.
-	 */
-	const DATES_DE_CONTROLE: Record<NiveauFraicheur, string> = {
-		frais: '2 août 2026',
-		vieil: '11 mars 2026',
-		obs: '6 novembre 2025'
-	};
-
-	/** Jours écoulés entre une date de contrôle et maintenant. */
-	function depuis(date: string): number {
-		return Math.round((Date.now() - Date.parse(date)) / 86_400_000);
-	}
-
-	/** Fraîcheur affichée par le cartouche de contrôle. */
-	const niveau = $derived<NiveauFraicheur>(
-		guide !== null
-			? guide.fraicheur
-			: typeof reglage['fr'] === 'string' && reglage['fr'] in CONTROLE
-				? (reglage['fr'] as NiveauFraicheur)
-				: 'frais'
-	);
+	const niveau = $derived<NiveauFraicheur>(guide.fraicheur);
 
 	/**
 	 * LE TÉMOIN DU CARTOUCHE, de la fabrique unique : la jauge et la valeur en
@@ -268,35 +222,57 @@
 	 * L'ANCIENNETÉ VIENT DE LA NOTE quand une note est affichée, et de l'horloge
 	 * gelée du corpus sinon — sans quoi le libellé relatif ne serait pas
 	 * reproductible des deux côtés de la comparaison.
+	 *
+	 * ═════════════════════════════════════════════════════════════════════
+	 * `revise` — LE MAILLON QUI MANQUAIT, ET LE PRODUIT MENTAIT SUR SA
+	 * PROMESSE DE TÊTE, SUR SON SEUL ÉCRAN PUBLIC.
+	 *
+	 * Un guide dont `verifie_le` est `NULL` affichait ici « Vérifié à
+	 * l'instant », pendant que `/notes/{identifiant}` disait correctement
+	 * « Jamais vérifiée » POUR LA MÊME NOTE. `fraicheur.ts` n'y était pour
+	 * rien : sa toute première branche porte déjà le cas. C'est cet appel qui
+	 * ne lui passait pas la date de contrôle, si bien que la garde ne se
+	 * déclenchait jamais.
+	 *
+	 * ET RIEN NE PROTESTAIT : `EtatDeFraicheur.revise` est OPTIONNELLE et son
+	 * test est STRICT (`=== null`). `undefined` ne déclenche rien, et le type
+	 * ne voit pas l'omission — l'optionalité est délibérée (elle laisse rendre
+	 * les appelants qui ne portent pas l'information), mais elle rend cet
+	 * oubli-ci invisible au compilateur. Le seul filet est le contrôle.
+	 *
+	 * LA DONNÉE ÉTAIT DÉJÀ LÀ : `guides/[identifiant]/+page.server.ts` sert
+	 * `controleIso: null` avec le commentaire qui l'annonce. La vue ne le
+	 * lisait pas.
+	 *
+	 * SANS GUIDE — le rendu par défaut, la planche — la clé reste ABSENTE :
+	 * les trois états du gel portent tous une date de contrôle réelle, et les
+	 * trois libellés gelés ne bougent pas.
+	 *
+	 * LE NIVEAU ET LA JAUGE NE BOUGENT PAS : `RG-M06-01` calcule la fraîcheur
+	 * sur la date de modification à défaut de vérification, et c'est juste.
+	 * Seul le libellé cesse d'affirmer un contrôle qui n'a pas eu lieu.
 	 */
 	const temoin = $derived(
-		temoinFraicheur({
-			fraicheur: niveau,
-			jours: guide !== null ? guide.jours : depuis(CONTROLE[niveau])
-		})
-	);
-
-	/** La date de contrôle affichée par le détail du cartouche. */
-	const controle = $derived(guide === null ? CONTROLE[niveau] : guide.controleIso);
-	const controleEnClair = $derived(
-		guide === null ? DATES_DE_CONTROLE[niveau] : (guide.controleLe ?? RIEN)
+		temoinFraicheur({ fraicheur: niveau, jours: guide.jours, revise: guide.controleIso })
 	);
 
 	/**
-	 * Le sommaire, construit sur les titres de niveau 2 du corps Référence —
-	 * `construireSommaire()` du gel. `body[data-numerote="non"]` retire la
-	 * numérotation : aucun `span.sommaire__num` n'est rendu, ce que la référence
-	 * confirme état par état.
+	 * LA DATE DE CONTRÔLE AFFICHÉE PAR LE DÉTAIL DU CARTOUCHE — `null` quand la
+	 * note n'a JAMAIS été vérifiée. C'est ce `null` que le détail lit pour
+	 * choisir sa quatrième branche.
+	 *
+	 * LA FORME EN CLAIR RETOMBE ALORS SUR LA CHAÎNE VIDE, et non sur un tiret :
+	 * le tiret marque une valeur qui manque LÀ OÙ ON L'ATTEND, et cette date
+	 * n'est plus attendue nulle part quand elle est nulle — la quatrième branche
+	 * dit l'absence en toutes lettres, et une prose affirmative ne se rattrape
+	 * pas par un signe.
 	 */
-	const SOMMAIRE_DU_GEL: readonly EntreeDeSommaire[] = [
-		{ ancre: 's-portail', titre: 'Depuis le portail, sur votre poste' },
-		{ ancre: 's-verrouille', titre: "Depuis l'écran de connexion, poste verrouillé" },
-		{ ancre: 's-deplacement', titre: 'En déplacement, sans accès au réseau interne' },
-		{ ancre: 's-regles', titre: 'Ce que doit contenir le nouveau mot de passe' },
-		{ ancre: 's-particuliers', titre: 'Cas particuliers' }
-	];
+	const controle = $derived(guide.controleIso);
+	const controleEnClair = $derived(guide.controleLe ?? '');
 
-	const SOMMAIRE = $derived(guide === null ? SOMMAIRE_DU_GEL : guide.sommaire);
+	/** Le sommaire de la note affichée — ses titres de niveau 2, tels que le
+	 *  chargeur les a relevés sur le document canonique. */
+	const SOMMAIRE = $derived(guide.sommaire);
 </script>
 
 <!--
@@ -306,7 +282,8 @@
 	écran sont celle du domaine et celles des pièces jointes, bâties par
 	`$lib/rangement/adresses`, le constructeur unique (`ARB-001`, « seule forme
 	publiée »). `resolve()` n'accepte qu'un chemin connu à la compilation : il ne
-	peut pas les prendre. Les adresses littérales du gel, elles, restent `#`.
+	peut pas les prendre. Il n'en reste aucune autre : les adresses inertes du
+	gel vivaient dans la branche sans guide, qui n'existe plus.
 
 	`svelte/no-at-html-tags` — les deux corps rendus viennent de
 	`rendreDocument`, l'implémentation unique, dont le texte est échappé par
@@ -328,37 +305,48 @@
 	</header>
 
 	<nav class="fil-pub" aria-label="Fil d'Ariane">
-		<a href={resolve('/')}>Accueil</a><span>›</span><a
-			href={guide?.adresseDuDomaine ?? resolve('/')}>{guide?.domaine ?? 'Poste de travail'}</a
+		<a href={resolve('/')}>Accueil</a><span>›</span><a href={guide.adresseDuDomaine}
+			>{guide.domaine}</a
 		><span>›</span><a href={resolve('/recherche')}>Guides</a>
 	</nav>
 
 	<main class="lecture-pub">
-		<!-- ---------- Sommaire ---------- -->
-		<nav class="sommaire" aria-label="Sommaire du guide" data-ouvert="non">
-			<div class="etiq">Sommaire</div>
-			<button class="sommaire__bascule" id="bascule-sommaire" aria-expanded="false">
-				Sommaire
-				<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"
-					><path d="M3 1l4 4-4 4z" /></svg
-				>
-			</button>
-			<ul class="sommaire__liste" id="sommaire">
-				{#each SOMMAIRE as s (s.ancre)}<li class="n1">
-						<a href="#{s.ancre}"><span>{s.titre}</span></a>
-					</li>{/each}
-			</ul>
-		</nav>
+		<!-- ---------- Sommaire ----------
+			LE BLOC ENTIER TOMBE QUAND LE GUIDE N'A PAS DE TITRE DE NIVEAU 2, et
+			c'est l'état ordinaire d'une note courte sur une instance neuve.
+
+			Un titre « Sommaire » et un bouton de repli au-dessus d'une `<ul>`
+			vide ne sont pas un état vide : ils annoncent une navigation qui
+			n'existe pas, et le bouton n'a rien à replier. Le gel ne montre ce
+			cadre qu'avec ses cinq entrées ; il n'a jamais dit ce qu'il devient
+			sans elles.
+		-->
+		{#if SOMMAIRE.length > 0}
+			<nav class="sommaire" aria-label="Sommaire du guide" data-ouvert="non">
+				<div class="etiq">Sommaire</div>
+				<button class="sommaire__bascule" id="bascule-sommaire" aria-expanded="false">
+					Sommaire
+					<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"
+						><path d="M3 1l4 4-4 4z" /></svg
+					>
+				</button>
+				<ul class="sommaire__liste" id="sommaire">
+					{#each SOMMAIRE as s (s.ancre)}<li class="n1">
+							<a href="#{s.ancre}"><span>{s.titre}</span></a>
+						</li>{/each}
+				</ul>
+			</nav>
+		{/if}
 
 		<!-- ---------- Article ---------- -->
 		<article class="article" id="article">
 			<header class="entete">
 				<div class="entete__sur">
-					<span class="past past--type">{guide?.type ?? 'Guide'}</span>
-					<span class="past">{guide?.domaine ?? 'Poste de travail'}</span>
+					<span class="past past--type">{guide.type}</span>
+					<span class="past">{guide.domaine}</span>
 				</div>
 
-				<h1 class="titre-note">{guide?.titre ?? 'Réinitialiser son mot de passe'}</h1>
+				<h1 class="titre-note">{guide.titre}</h1>
 
 				<!--
 					Cartouche de contrôle : le signal de fraîcheur est conservé en lecture
@@ -372,16 +360,36 @@
 						>
 						<div>
 							<div class="cartouche__valeur">{temoin.libelle}</div>
+							<!--
+								QUATRE ÉTATS, ET LE QUATRIÈME EST CELUI QUE LE GEL NE DESSINE PAS.
+
+								La planche de V-03 n'en porte que trois — frais, vieil, obsolète —,
+								chacun avec une DATE DE CONTRÔLE RÉELLE : le guide qu'elle illustre
+								est toujours contrôlé. La seule note jamais vérifiée du corpus est
+								INTERNE, elle n'atteint donc jamais cet écran. C'est un manque du
+								gel, pas une dérive du produit.
+
+								Sans cette branche, une prose AFFIRMATIVE — « Ce guide a été
+								contrôlé le … » — était servie avec le marqueur de vide à la place
+								de la date, sous un libellé « Vérifié à l'instant » que le témoin ne
+								dit plus. Le dépôt a déjà comblé exactement ce trou côté libellé
+								(`fraicheur.ts`) et côté note (`NoteDeDemonstration.svelte`) ; c'est
+								le même comblement, sur le troisième et dernier site.
+
+								`controle` est `null` QUAND, ET SEULEMENT QUAND, un guide est
+								affiché et n'a jamais été vérifié : sans guide, il porte la date de
+								l'état de planche.
+							-->
 							<div class="cartouche__detail">
-								{#if niveau === 'frais'}Ce guide a été contrôlé le <time
-										datetime={controle ?? undefined}
-										title={controleEnClair}>{controleEnClair}</time
+								{#if controle === null}Ce guide n'a jamais été vérifié depuis sa publication. Son
+									ancienneté se lit sur sa dernière modification.{:else if niveau === 'frais'}Ce
+									guide a été contrôlé le <time datetime={controle} title={controleEnClair}
+										>{controleEnClair}</time
 									> par l'équipe qui l'a écrit.{:else if niveau === 'vieil'}Ce guide a été contrôlé
 									le
-									<time datetime={controle ?? undefined} title={controleEnClair}
-										>{controleEnClair}</time
-									>. Son contenu peut avoir changé depuis.{:else}Dernier contrôle le <time
-										datetime={controle ?? undefined}
+									<time datetime={controle} title={controleEnClair}>{controleEnClair}</time>. Son
+									contenu peut avoir changé depuis.{:else}Dernier contrôle le <time
+										datetime={controle}
 										title={controleEnClair}>{controleEnClair}</time
 									>. <strong>Vérifiez auprès de l’assistance avant de vous y fier.</strong>{/if}
 							</div>
@@ -392,15 +400,13 @@
 				<dl class="meta">
 					<dt>Rédaction</dt>
 					<dd>
-						{(guide?.auteur ?? 'Sophie Nguyen') + ' · modifié '}<time
-							datetime={guide?.modifieIso ?? '2026-07-29'}
-							title={guide?.modifieLe ?? '29 juillet 2026 à 10:12'}
-							>{guide?.modifieLe ?? 'il y a 2 semaines'}</time
+						{guide.auteur + ' · modifié '}<time datetime={guide.modifieIso} title={guide.modifieLe}
+							>{guide.modifieLe}</time
 						>
 					</dd>
 					<dt>Domaine</dt>
 					<dd>
-						<a href={guide?.adresseDuDomaine ?? '#'}>{guide?.domaine ?? 'Poste de travail'}</a>
+						<a href={guide.adresseDuDomaine}>{guide.domaine}</a>
 					</dd>
 				</dl>
 			</header>
@@ -423,309 +429,49 @@
 
 			<!-- ================= REGISTRE RÉFÉRENCE ================= -->
 			<div class="prose" id="corps-reference">
-				{#if guide !== null}{@html guide.reference}{:else}
-					<p>
-						Votre mot de passe expire tous les six mois, et il peut être réinitialisé à tout moment.
-						Trois chemins existent selon l'endroit où vous êtes et l'état de votre poste. <strong
-							>Aucun d'eux ne nécessite d'appeler le support</strong
-						>, sauf le dernier cas décrit plus bas.
-					</p>
-
-					<div class="alerte alerte--attention">
-						<div>
-							<div class="alerte__tete">
-								<span class="alerte__glyphe">ATTENTION</span> Personne ne vous demandera jamais votre
-								mot de passe
-							</div>
-							<div>
-								Ni par téléphone, ni par courriel, ni par message. Aucun agent du support, aucun
-								responsable. Un message qui vous le demande est une tentative d'hameçonnage :
-								signalez-le sans y répondre.
-							</div>
-						</div>
-					</div>
-
-					<h2 id="s-portail">Depuis le portail, sur votre poste</h2>
-					<p>
-						C'est le cas courant : vous êtes connecté et vous voulez changer votre mot de passe
-						avant qu'il n'expire.
-					</p>
-					<ol>
-						<li>Ouvrez le portail interne et allez dans <strong>Mon compte</strong>.</li>
-						<li>Choisissez <strong>Changer mon mot de passe</strong>.</li>
-						<li>Saisissez l'ancien, puis le nouveau deux fois.</li>
-						<li>
-							Verrouillez puis déverrouillez votre session pour vérifier que le nouveau est bien
-							pris en compte.
-						</li>
-					</ol>
-
-					<figure class="figure">
-						<button class="figure__cadre" aria-label="Agrandir le schéma des trois chemins">
-							<svg
-								viewBox="0 0 640 148"
-								width="100%"
-								height="auto"
-								role="img"
-								aria-labelledby="d-titre d-desc"
-							>
-								<title id="d-titre">Trois chemins de réinitialisation</title>
-								<desc id="d-desc"
-									>Selon la situation : session ouverte sur le poste, chemin par le portail interne.
-									Poste verrouillé, chemin par le lien « Mot de passe oublié » de l'écran de
-									connexion. En déplacement sans accès au réseau, chemin par appel au support avec
-									vérification d'identité.</desc
-								>
-								<g font-family="Archivo, sans-serif" font-size="11">
-									<rect
-										x="2"
-										y="8"
-										width="176"
-										height="40"
-										rx="6"
-										fill="#fcfbf8"
-										stroke="#9aa7a3"
-									/>
-									<text x="16" y="26" fill="#46585f">Votre session est ouverte</text>
-									<text x="16" y="40" font-weight="700" fill="#16222b">→ Portail interne</text>
-
-									<rect
-										x="2"
-										y="56"
-										width="176"
-										height="40"
-										rx="6"
-										fill="#fcfbf8"
-										stroke="#9aa7a3"
-									/>
-									<text x="16" y="74" fill="#46585f">Votre poste est verrouillé</text>
-									<text x="16" y="88" font-weight="700" fill="#16222b">→ Écran de connexion</text>
-
-									<rect
-										x="2"
-										y="104"
-										width="176"
-										height="40"
-										rx="6"
-										fill="#fcfbf8"
-										stroke="#9aa7a3"
-									/>
-									<text x="16" y="122" fill="#46585f">Vous êtes en déplacement</text>
-									<text x="16" y="136" font-weight="700" fill="#16222b">→ Appel au support</text>
-
-									<path d="M178 28h44v48h30" stroke="#9aa7a3" stroke-width="1.4" fill="none" />
-									<path d="M178 76h74" stroke="#9aa7a3" stroke-width="1.4" fill="none" />
-									<path d="M178 124h44V76h30" stroke="#9aa7a3" stroke-width="1.4" fill="none" />
-									<path d="M252 71l9 5-9 5z" fill="#9aa7a3" />
-
-									<rect
-										x="266"
-										y="56"
-										width="164"
-										height="40"
-										rx="6"
-										fill="#edecf8"
-										stroke="#453ba0"
-									/>
-									<text x="280" y="74" font-weight="700" fill="#322b78">Nouveau mot de passe</text>
-									<text x="280" y="88" fill="#453ba0">12 caractères minimum</text>
-
-									<path d="M430 76h30" stroke="#9aa7a3" stroke-width="1.4" /><path
-										d="M460 71l9 5-9 5z"
-										fill="#9aa7a3"
-									/>
-
-									<rect
-										x="474"
-										y="56"
-										width="164"
-										height="40"
-										rx="6"
-										fill="#e4efe8"
-										stroke="#1d6b4a"
-									/>
-									<text x="488" y="74" font-weight="700" fill="#1d6b4a">Actif sous 5 minutes</text>
-									<text x="488" y="88" fill="#1d6b4a">sur tous vos services</text>
-								</g>
-							</svg>
-						</button>
-						<figcaption>
-							<b>Schéma</b><span
-								>Les trois chemins mènent au même résultat. Cliquez pour agrandir.</span
-							>
-						</figcaption>
-					</figure>
-
-					<h2 id="s-verrouille">Depuis l'écran de connexion, poste verrouillé</h2>
-					<p>
-						Si vous avez oublié votre mot de passe et que vous ne pouvez plus ouvrir votre session,
-						utilisez le lien <em>Mot de passe oublié</em> sous les champs de connexion. Un code vous est
-						envoyé sur votre téléphone professionnel.
-					</p>
-
-					<div class="alerte alerte--astuce">
-						<div>
-							<div class="alerte__tete">
-								<span class="alerte__glyphe">ASTUCE</span> Le code arrive rarement en moins de dix secondes
-							</div>
-							<div>
-								Attendez une minute avant de le redemander : chaque nouvelle demande annule la
-								précédente, et beaucoup de blocages viennent de là.
-							</div>
-						</div>
-					</div>
-
-					<h2 id="s-deplacement">En déplacement, sans accès au réseau interne</h2>
-					<p>
-						Appelez le support. Votre identité sera vérifiée par une question convenue à votre
-						arrivée dans l'entreprise. Si vous ne vous en souvenez pas, le support passera par votre
-						responsable hiérarchique — comptez alors une demi-journée.
-					</p>
-
-					<h2 id="s-regles">Ce que doit contenir le nouveau mot de passe</h2>
-					<div class="tableau-boite">
-						<table>
-							<thead><tr><th>Règle</th><th>Détail</th></tr></thead>
-							<tbody>
-								<tr><td>Longueur</td><td>12 caractères au minimum</td></tr>
-								<tr><td>Composition</td><td>Aucune contrainte de caractères spéciaux</td></tr>
-								<tr><td>Réutilisation</td><td>Différent des 5 derniers</td></tr>
-								<tr><td>Validité</td><td>6 mois</td></tr>
-								<tr><td>Prise en compte</td><td>5 minutes sur l'ensemble des services</td></tr>
-							</tbody>
-						</table>
-					</div>
-					<p>
-						Une phrase de passe est plus sûre et plus facile à retenir qu'une suite de symboles. <mark
-							>Quatre mots sans rapport entre eux</mark
-						> valent mieux qu'un mot compliqué.
-					</p>
-
-					<h2 id="s-particuliers">Cas particuliers</h2>
-					<ul>
-						<li>
-							<strong>Compte partagé d'équipe</strong> — la procédure est différente et suivie par
-							l'équipe technique. Elle est décrite dans
-							<span class="lien-prive" title="Cette ressource n'est pas publique"
-								>une ressource réservée aux équipes techniques</span
-							>.
-						</li>
-						<li>
-							<strong>Vous n'arrivez plus à accéder à une application précise</strong> — ce n'est
-							peut-être pas votre mot de passe. Voyez
-							<a
-								class="lien-int"
-								href={resolve(ROUTE_DU_GUIDE, { identifiant: GUIDE_DEMANDER_ACCES })}
-								>Demander un accès à une application</a
-							>.
-						</li>
-						<li>
-							<strong>Téléphone professionnel perdu</strong> — signalez-le d'abord, la
-							réinitialisation viendra ensuite. Voyez
-							<a
-								class="lien-int"
-								href={resolve(ROUTE_DU_GUIDE, { identifiant: GUIDE_SIGNALER_INCIDENT })}
-								>Signaler un incident au support</a
-							>.
-						</li>
-					</ul>
-
-					<p>
-						La politique de mots de passe suit les recommandations publiques de l'<a
-							class="lien-ext"
-							href="https://cyber.gouv.fr"
-							target="_blank"
-							rel="noopener">ANSSI</a
-						>.
-					</p>
-				{/if}
+				{@html guide.reference}
 			</div>
 
 			<!-- ================= REGISTRE OPÉRATIONNEL ================= -->
 			<div class="prose" id="corps-operationnel" hidden>
-				{#if guide !== null}{@html guide.operationnel ?? ''}{:else}
-					<div class="alerte alerte--astuce">
-						<div>
-							<div class="alerte__tete">
-								<span class="alerte__glyphe">EN BREF</span> Version courte
-							</div>
-							<div>
-								Pour le détail, les cas particuliers et les règles, revenez au <strong
-									>guide complet</strong
-								>.
-							</div>
-						</div>
-					</div>
-
-					<h2 id="o-faire">Ce qu'il faut faire</h2>
-					<ol>
-						<li>
-							Session ouverte&nbsp;? Portail interne → <strong>Mon compte</strong> →
-							<strong>Changer mon mot de passe</strong>.
-						</li>
-						<li>
-							Poste verrouillé&nbsp;? <strong>Mot de passe oublié</strong> sur l'écran de connexion, puis
-							le code reçu par téléphone.
-						</li>
-						<li>En déplacement sans réseau&nbsp;? Appelez le support.</li>
-					</ol>
-
-					<h2 id="o-retenir">À retenir</h2>
-					<ul class="taches">
-						<li>
-							<input type="checkbox" disabled /><span
-								>12 caractères minimum, différent des 5 derniers.</span
-							>
-						</li>
-						<li>
-							<input type="checkbox" disabled /><span
-								>Actif sous 5 minutes sur tous les services.</span
-							>
-						</li>
-						<li>
-							<input type="checkbox" disabled /><span
-								>Personne ne vous demandera jamais votre mot de passe.</span
-							>
-						</li>
-					</ul>
-				{/if}
+				{@html guide.operationnel ?? ''}
 			</div>
 		</article>
 
 		<!-- ---------- Colonne droite, réduite ---------- -->
 		<aside class="aparte">
 			<!--
-				Les pièces jointes de la note demandée. Le panneau reste, la liste
-				suit : une note sans pièce jointe rend un corps vide, ce qui est
-				l'état vide de la zone, jamais un exemple laissé là.
+				LES PIÈCES JOINTES DE LA NOTE DEMANDÉE — ET LE PANNEAU TOMBE AVEC
+				ELLES.
+
+				Une note sans pièce jointe est l'état ordinaire d'une instance
+				neuve. Le panneau rendait alors son en-tête « Pièces jointes »
+				au-dessus d'un corps vide : un cadre qui affirme une matière
+				absente, et qui laisse le lecteur chercher ce qu'il ne trouvera
+				pas. L'état vide d'une liste facultative de la colonne d'apartés,
+				c'est l'absence du panneau — la colonne porte déjà « Ce guide »,
+				elle ne se retrouve jamais nue.
 			-->
-			<section class="panneau">
-				<div class="panneau__tete"><span class="etiq">Pièces jointes</span></div>
-				<div class="panneau__corps panneau__corps--serre">
-					{#if guide !== null}{#each guide.piecesJointes as pj, rang (rang)}<a
-								class="pj"
-								href={pj.adresse}
-							>
+			{#if guide.piecesJointes.length > 0}
+				<section class="panneau">
+					<div class="panneau__tete"><span class="etiq">Pièces jointes</span></div>
+					<div class="panneau__corps panneau__corps--serre">
+						{#each guide.piecesJointes as pj, rang (rang)}<a class="pj" href={pj.adresse}>
 								<span class="pj__ext">{pj.marque}</span>
 								<span>
 									<span class="pj__nom">{pj.nom}</span>
 									<span class="pj__sous">{pj.taille}</span>
 								</span>
-							</a>{/each}{:else}<a class="pj" href="#">
-							<span class="pj__ext">PDF</span>
-							<span>
-								<span class="pj__nom">Aide-mémoire — écran de connexion</span>
-								<span class="pj__sous">320 Ko</span>
-							</span>
-						</a>{/if}
-				</div>
-			</section>
+							</a>{/each}
+					</div>
+				</section>
+			{/if}
 
 			<section class="panneau">
 				<div class="panneau__tete"><span class="etiq">Ce guide</span></div>
 				<div class="panneau__corps">
 					<div style="font-size:var(--t-petit);color:var(--c-encre-2);line-height:1.6">
-						{`Écrit et maintenu par l'équipe ${guide?.domaine ?? 'Poste de travail'}. Le signal en tête indique la dernière date à laquelle son contenu a été contrôlé.`}
+						{`Écrit et maintenu par l'équipe ${guide.domaine}. Le signal en tête indique la dernière date à laquelle son contenu a été contrôlé.`}
 					</div>
 					<button class="btn btn--plein" style="margin-top:var(--e-3)">
 						<svg
@@ -768,7 +514,7 @@
 
 	<footer class="pied-public">
 		<div class="pied-public__int">
-			<span class="etiq">Codicillus · Direction technique</span>
+			<span class="etiq">{signature}</span>
 			<a href={resolve('/connexion')}>Se connecter</a>
 		</div>
 	</footer>
