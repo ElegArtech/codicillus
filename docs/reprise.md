@@ -1,49 +1,49 @@
 # Où reprendre
 
-*État au 26 août 2026, après la campagne **« le jeu de démonstration ne descend plus dans le
-produit »**. Le harnais de vérification a été supprimé : ce document ne cite aucune batterie, il dit
-**ce qu'un utilisateur peut faire**, avec ses codes HTTP relevés.*
+*État au 26 août 2026, après la campagne **« le produit ne parle plus au nom d'une autre »**. Le
+harnais de vérification reste supprimé : ce document ne cite aucune batterie, il dit **ce qu'un
+utilisateur peut faire**, avec ses codes HTTP relevés.*
 
-À la clôture : `pnpm check` **= 0**, `pnpm test:unit` **= 0** — 1 696 contrôles sur 70 fichiers. Les
-copies de travail du pilote, les dix-huit bases de lot et la base d'intégration ont été retirées ; il
-ne reste que `codicillus` (développement) et `codicillus_demo`.
+À la clôture : `pnpm check` **= 0**, `pnpm test:unit` **= 0** — 1 743 contrôles sur 72 fichiers. Les
+dix-huit bases de lot et de vérification ont été détruites — il ne reste que `codicillus`
+(développement) et `codicillus_demo` —, et treize des quatorze copies de travail du pilote ont été
+retirées. **La quatorzième est restée : sa branche n'est pas fusionnée**, et ce qu'elle porte est dit
+plus bas.
 
 ---
 
 ## Les lots
 
-**Fusionnés : 0, 5, 3, 4, 6, 1, 2, 7.** **En quarantaine : aucun.**
+**Fusionnés : S, P, R, C, N, A, 7.** **En quarantaine : aucun.**
 
-La campagne a poursuivi **un seul motif**, et cette fois jusqu'à sa cause : une propriété de vue
-**optionnelle dont le défaut était une constante de `seeds/corpus.ts`**. Une route qui oubliait de
-passer la donnée servait alors « Infrastructure », « Production », « Karim Belhadj » ou
-« Restaurer une sauvegarde PostgreSQL » sur l'instance d'un client — et **rien ne protestait** : ni
-le compilateur, ni un test, ni l'écran. Seule l'ouverture d'une page sur une base vide le révélait.
+La campagne précédente avait réécrit la phrase de `CLAUDE.md` qui prescrivait le défaut — propriété
+optionnelle, défaut tiré de `seeds/corpus.ts` — et posé la règle ESLint qui l'interdit. **Celle-ci
+consomme la consigne** et ferme les trois choses que la règle ne peut pas voir :
 
-**La cause n'était pas dans le code : elle était écrite dans `CLAUDE.md`.** Le paragraphe
-« Brancher une vue » prescrivait le motif, mot pour mot, et le concluait par « le rendu par défaut
-ne bouge pas ». Quatre campagnes ont couru après ses symptômes en laissant la consigne intacte. Le
-lot 7 la remplace et la verrouille ; la consigne dit maintenant **propriété requise, ou état vide
-explicite**, et une règle ESLint interdit l'import.
+- un littéral n'est pas un import — « Direction technique » et quarante pluriels en dur ne passaient
+  par aucun spécificateur, `no-restricted-imports` en est **structurellement aveugle** ;
+- une valeur par défaut ne s'élague pas — l'arborescence du gel, la pierre tombale de V-26, les
+  32 notes du corpus partaient **dans le paquet du navigateur** sans qu'aucun écran ne les rende ;
+- ce qu'aucun test de rendu ne peut voir, seuls deux contrôles de bout en bout le voient — et le lot
+  7 les a écrits.
 
-**La leçon, et c'est elle qui dit où chercher la suite :**
+**La leçon de cette campagne :**
 
-> Un défaut de câblage ne se voit pas, par construction. L'écran est correct, la donnée est en
-> base, et l'écart n'apparaît que **sur une instance dont les noms ne sont pas ceux du jeu**. Tant
-> qu'un défaut de propriété peut être une donnée, aucun outil du dépôt ne peut rendre le manque
-> visible — c'est pourquoi la réparation est en deux temps : rendre la porte gardée par le
-> compilateur, puis interdire le retour en arrière par la règle.
+> Une règle interdit une **forme**. Elle ne garde rien contre le même défaut écrit sous une autre
+> forme. La descente du jeu par un `import` est fermée depuis la campagne précédente ; celle par un
+> **littéral recopié**, par une **valeur par défaut** et par une **branche morte embarquée** ne l'était
+> pas, et c'est là qu'elle vivait encore. Les deux contrôles du lot 7 ne vérifient pas la même
+> propriété : l'un regarde **ce qui s'affiche**, l'autre **ce qui se livre**.
 
 | Lot | Ce qu'il a rendu vrai |
 |---|---|
-| 0 — vocabulaire | `vocabulaire.ts` calculait ses quatre formes **à l'import** depuis `CONFIG.motFiche`. La clé `mot_fiche` existait en base, la console l'écrivait, `lireConfiguration()` la lisait — et **rien ne branchait la lecture sur l'affichage** : renommer « Fiche » n'avait aucun effet sur les quinze vues qui portent le mot. `RG-M14-09` (« recalcul immédiat ») était faux à la lettre. Les quatre formes descendent par le contexte de coquille, déjà dérivées. Relevé : « Fiche » → « Modèle », **16 écrans sur 16** servent le mot configuré dans leur HTML, retour compris |
-| 5 — registres de console | Les propriétés de V-27 à V-32 deviennent **requises** ; aucune des six vues n'importe plus une valeur du jeu. Deux lignes de démonstration partaient avec les sentinelles qui les injectaient — le domaine « Téléphonie » et le type de relation « remplace » n'étaient retenus que par une comparaison d'identité entre la propriété reçue et la constante, c'est-à-dire **exactement quand la donnée n'avait pas été passée**. Trois défauts de saisie tombent avec : renommer une clé technique repliait la ligne en cours de remplissage, retirer une propriété laissait sa clé morte dans l'état de dépli, et la pastille « mot de passe verrouillé » se décidait sur un identifiant du jeu écrit en dur |
-| 3 — rangement | Les six écrans de rangement servaient le jeu dès qu'une route oubliait une donnée. Le catalogue des six modules quitte `seeds/` pour `$lib/rangement/modules.ts` — c'est un référentiel de produit —, et une clé inconnue ne met plus le rendu en erreur. Partent avec : le rail qui marquait « Infrastructure » en dur, V-13 qui retombait sur « Production › Infrastructure › Exploitation » et sur l'héritage de droit du gel, V-23 qui servait la note `n-sig-statut` **dans le formulaire de création**, et « hier » dès zéro jour |
-| 4 — graphes, import, profil | Quinze propriétés de V-19 à V-21, V-24 et V-25. Trois fuites de plus : quatre arguments par défaut de `graphe/cartographie.ts` tirés du jeu ; une **table de seize positions de nœuds indexée sur les identifiants de seize notes du jeu** — le corpus de démonstration recevait la disposition du gel, celui d'un client jamais, `disposer()` place désormais tous les corpus de la même façon ; et le sélecteur de périmètre qui n'avait **pas d'option pour son propre défaut**. À la reprise : l'onglet Distinctions rendait une étiquette au-dessus d'un conteneur vide sur toute instance, et la garde de `/importer` n'éprouvait pas la même question que sa liste de cibles — un compte à qui un sous-dossier seul est ouvert recevait l'écran avec **un sélecteur sans aucune option** sous une étiquette obligatoire (200 avant, 404 après) |
-| 6 — console système | `CoquilleDeConsole` portait `univers`, `domaines`, `compte` et `instance` en propriétés facultatives **et les traversait sans jamais les lire** : une route qui en oubliait une affichait le rail des maquettes, « Karim Belhadj » dans la barre et la version du jeu au pied. Les quatre partent des trois côtés ; le contexte d'identité est la seule source. Ce que le produit ne mesure pas reçoit un état vide et **se tait** : V-34 ne rend plus l'indicateur nord ni les trous documentaires — ils servaient les chiffres du jeu, masqués par la feuille mais **bien présents dans le HTML servi** |
-| 1 — écrans publics | `portail` devient exigée sur V-01 à V-04 et V-06 : vide — l'état d'une instance neuve —, les **six liens d'assistance ne sont plus émis**. `notesPubliques()` quitte `seeds/` et exige son argument. V-26 n'expédie plus sa pierre tombale dans le HTML de chaque 404 : elle était émise masquée, avec « Restaurer une sauvegarde MariaDB » et « Marc Ferreira ». À la reprise : les pistes de reformulation, dérivées du jeu de **résultats**, étaient structurellement vides **dans l'état même où elles servent** (`?q=zzzintrouvable` → 0 piste) ; elles se comptent maintenant dans le chargeur, sur le périmètre lisible |
-| 2 — note | `note-de-demonstration.ts` faisait `CORPUS.find('n-restaurer-pg')` et trois vues plus un chargeur l'importaient : **le jeu descendait dans le produit sans qu'une ligne de `src/vues/` soit fautive**. Le sommaire, vide sur toute note écrite dans le produit, est réparé — l'ancre est dérivée du texte **au rendu**, la persister capturerait une version au premier ré-enregistrement de chaque note. À la reprise : `/notes/nouvelle` repliait `universDuCompte` sur `'Production'` **et le passait à une propriété devenue requise** — le littéral n'était pas retiré, il était déplacé —, et V-40 annonçait six versions détruites quel que soit l'historique réel |
-| 7 — la règle | `eslint.config.js` interdit d'importer une **valeur** de `seeds/` dans `src/vues/`, `src/routes/` et `src/lib/`. Les `import type` restent ouverts : c'est la valeur du jeu qui est de la démonstration, pas sa forme. `src/lib/**` est dans la portée parce que **six modules de bibliothèque** faisaient descendre le jeu jusque dans les vues. Un second motif ferme la même descente **sous un nom qui ne dit pas `seeds`** : `semence.ts` importe `CORPUS` en valeur et six de ses fonctions le prennent en argument par défaut ; deux emprunteurs d'aujourd'hui gardent une exemption **nommée et bornée à ce motif**. Déplacer `corpsVide()` hors de la semence reste à faire |
+| S — capacité | **Deux capacités posées, non consommées.** `nom_organisation` rejoint les sept clés de `parametres` — magasin clé/valeur, aucune migration —, défaut **chaîne vide**, descente par le gabarit racine dans la même requête que les deux autres. « Direction technique » n'est pas une donnée du jeu : c'est le **segment de marché du cadrage**, soudé dans une signature que toute autre organisation lit comme un fait sur SON instance. Le nom du logiciel, « Codicillus », reste en dur — c'est la soudure entre les deux qu'on défait. Et `accord(n, singulier, pluriel?)` rejoint `pluriel()` dans `vocabulaire.ts` : elle rend **le nom seul**, le formatage du nombre est un autre métier ; le zéro rend le singulier. À la reprise : le champ `c-organisation` existait dans la table des champs sans qu'aucun `input` le porte — « Enregistrer » **posait `nom_organisation = ''` à chaque clic**, mesuré au navigateur sur les deux versions |
+| P — écrans publics | `/guides/{identifiant}` disait « Vérifié à l'instant » d'une note dont `verifie_le` est NULL, quand `/notes/{identifiant}` disait « Jamais vérifiée » de la **même** note : `fraicheur.ts` portait la branche, la vue ne lui passait pas la date de contrôle, et la propriété étant optionnelle **aucun compilateur ne rougissait**. Le même écran portait, dans une branche que la route n'emprunte jamais, l'article entier de la maquette — **17 755 → 9 091 octets** sur le paquet de la seule route publique. L'accueil public comptait « vérifiés il y a moins d'un mois » sur un niveau qui retombe sur la date de modification. À la reprise : les deux écrans d'entrée **fabriquaient une faute d'accord sur tout nom d'organisation** — « Documentation de Mairie de Sainte-Foy ». Un nom d'organisation n'apporte pas son article et rien ne permet de le deviner : il est juxtaposé, « Documentation · X », comme le pied le fait déjà |
+| R — coquille et rail | `droits` était une propriété de vue et **quatre vues sur trente-quatre la passaient** : sur les trente autres, « Nouvelle note » et « Importer des fichiers » étaient émises à qui ne peut écrire nulle part, et le 404 servi était V-26, qui propose « Créer la note » vers `/notes/nouvelle` — **une boucle**. `Coquille.svelte` lit `page.data.ecriture`, le verdict du gabarit racine : une source, pas trente-quatre transmissions. L'arborescence du gel était la **valeur par défaut** de `railAbregeRendu()` et partait dans tout chunk montant une coquille. La durée de recherche était `Math.max(0.09, 0 / 1000 + 0.31)` : Meilisearch rend `processingTimeMs`, et `null` quand aucune requête n'est partie. À la reprise : la forme abrégée gardait « Gestion › Console » sur `ecriture`, donc **servie à tout rédacteur** — qui reçoit 404 — et **retirée à l'administrateur d'une instance neuve** — qui reçoit 200. La garde passe sur `admin`, et la classe suit la garde |
+| C — console et bibliothèque | `/bibliotheque` montait V-41 avec trois propriétés manquantes dont le défaut était une constante importée **en valeur** : les 32 notes du jeu partaient dans un chunk de **57 Ko servi comme fichier statique**, atteignable par qui reçoit 404 sur la page. Les sept sources sont exigées ; le chunk tombe à 39 Ko, et **l'exemption ESLint de V-41 est retirée**. Avec : V-20 et ses deux identifiants d'axe, « → Infrastructure » de V-24, six exemples de saisie coïncidant mot pour mot avec le jeu, `creerUnDomaine`/`modifierUnDomaine` qui résolvaient l'univers par son **nom**, « Les — notes » sur zéro gabarit, et un registre de lacunes qui **mentait** — la migration 006 porte bien une table de consultations horodatées. À la reprise : cinq griefs, dont « barman » encore servi, et une aide qui **promettait un rendu inexistant**. Les exemples des sept consoles sont désormais confrontés aux noms des **deux** jeux de semence par un contrôle, aucun n'est recopié à la main |
+| N — note et éditeur | `V-17.svelte` écrivait **au balisage** le corps repris en modification : l'extrait d'une procédure de démonstration qui n'était pas la sienne, sur **chaque** note — flash avec JavaScript, contenu **permanent sans lui**. `corps` devient requise, servie par les deux routes. Avec : le panneau « Statistiques indisponibles » de V-14, rendu **sans condition** au-dessus d'un compteur qui fonctionne, et son bouton « Réessayer » inerte — la panne n'étant pas détectable, le correctif est le **retrait**, et `mockups/V-14` a été amendée du même geste ; le panneau « Position » qui omettait `revise` ; et `CorpsReference`/`CorpsOperationnel` qui embarquaient 30 Ko de corps de démonstration **sans être rendus nulle part**. À la reprise : une note créée sans corps se rouvrait sans son invite d'amorçage — le chargeur lisait `corps.existe` (« la colonne n'est pas NULL ») là où il fallait `corps.redige` (« porte du texte »), et `creerUneNote()` n'écrit jamais NULL |
+| A — accords | Le motif retiré est celui d'un accord **écrit à la main, à chaque fois, sur place** : six helpers locaux — dont **deux homonymes de signatures inverses** —, cinq tables de ternaires recopiées, quarante ternaires inline. Les trois tables `PARTS` de V-07, V-10 et V-11 étaient triplées au caractère près ; leur colonne « pluriel » n'était qu'un `+s`, elle disparaît. `V-13:497` **n'était pas un accord** — c'est un pluralisateur de nom de type, et le confondre était le contresens qui guettait. Les accords **en cascade** — article, participe, possessif, pronom, verbe — sont traités en entier : « Les 1 fichiers en échec sont listés […] ils n'ont bloqué » aurait été faux quatre fois pour un `+s`. **Un article ne s'accorde pas seul devant un chiffre**, et c'est le navigateur qui l'a dit : `/console/templates` sur une instance neuve rendait « La 0 note déjà créée ». À la reprise : `fraicheur.ts:306` rendait « Vérifié il y a **1 jours** » — le libellé long, source unique du signal de fraîcheur que quinze vues rendent, traversé par **toute note vérifiée hier** —, et `messageSeuilNonCroissant()` répétait la faute dans le même nœud après « Enregistrer » |
+| 7 — garde-fous | **Deux contrôles, et ils ne vérifient pas la même propriété.** `passage-a-froid.mjs` regarde **ce qui s'affiche** : il détruit sa base, la recrée, migre, **ne sème rien**, crée le premier administrateur, crée à la console un univers, un domaine, deux notes et un signet — tous nommés hors du jeu —, puis ouvre les **trente-neuf routes** dans Chromium, en session **et** en anonyme, et lit **le HTML servi** autant que le rendu hydraté. `aiguilles-dans-le-paquet.mjs` regarde **ce qui se livre** : une branche morte ne s'affiche nulle part et part quand même chez le lecteur, et **aucun test de rendu ne la verra jamais**. La liste des aiguilles **n'est pas recopiée, elle est produite par sa source** — `aiguilles-du-corpus.mjs` lit `seeds/corpus.ts` par `ssrLoadModule` : ajouter une note au jeu ajoute son identifiant et son titre aux aiguilles sans que personne y pense. 111 aiguilles. Les exemptions nomment chacune sa vue, son lot et ce qui la retirerait, et **elles expirent seules** : une exemption qui ne trouve plus rien fait **échouer** le contrôle. Le passage mesure **le produit construit**, pas `vite dev` |
 
 ---
 
@@ -56,9 +56,10 @@ explicite**, et une règle ESLint interdit l'import.
 | Créer une note dont le titre est déjà pris | `POST /notes/nouvelle` → **303**, identifiant suffixé |
 | Créer une note de type fiche | le type choisi fait apparaître ses champs, le type de note bascule sur « Fiche », et `type_de_fiche_id` **et** `proprietes_typees` sont posés en base |
 | **Omettre une propriété obligatoire** | `POST /notes/nouvelle` → **400**, les propriétés manquantes **nommées**, le refus posé à l'endroit du champ, et le brouillon **conservé** |
+| **Rouvrir une note créée sans corps** | la zone rend `data-vide="oui"` et **l'invite d'amorçage**, JavaScript coupé |
 | Rouvrir une fiche en modification | le type et ses valeurs sont restitués ; vider le type met les deux colonnes à `null` dans la même mise à jour |
 | **Relire une fiche** | les propriétés typées s'affichent en lecture, et la pastille dit « Fiche Serveur », plus « Fiche » seul |
-| Modifier une note | `POST /notes/{id}/modifier` → **303**, version capturée |
+| Modifier une note | `POST /notes/{id}/modifier` → **303**, version capturée, **et le corps servi est celui de la note** |
 | **Ouvrir une version antérieure** | `GET /notes/{id}?version={n}` → **200**, et le corps rendu **est celui de la version annoncée** ; « Restaurer » écrit ce que l'écran a montré |
 | Dépasser le plafond de versions | plafond à 3, six enregistrements → il reste exactement les **trois dernières** |
 | Supprimer une note | `POST /notes/{id}?/supprimer` → **303**, puis **404** sur la note |
@@ -68,6 +69,8 @@ explicite**, et une règle ESLint interdit l'import.
 | **Suivre un lien mort** | `GET /notes/inexistante-xyz` → **404** annonçant **l'adresse demandée**, et « Créer la note » propose **ce titre-là** |
 | **Ouvrir la cartographie** | `GET /cartographie` → **200** sur **le corpus entier**, quel que soit le nom des univers de l'instance |
 | Demander un mot de passe oublié | `GET`/`POST /mot-de-passe-oublie` → **200**, écran unique qui nomme le chemin réel, **sans révéler si le compte existe** |
+| **Nommer son organisation** | `POST /console/configuration?/enregistrer` avec `c-organisation` → la valeur est écrite, relue, et les cinq pieds publics et `/connexion` la portent |
+| **Lire un compte juste** | « 1 note », « 2 notes », « dans 1 domaine », « Vérifié il y a 1 jour » — dix-sept écrans parcourus **deux fois**, à un puis à deux |
 | Créer un compte en console | le mot de passe initial **doit** être changé, sauf mot de passe verrouillé |
 | Créer un type de fiche en console | description, icône, aide, valeur par défaut et caractère obligatoire **survivent au rechargement** |
 | Importer un lot | `POST /importer?/analyser` → aperçu conforme au rapport, et le contenu atterrit dans le **domaine choisi** |
@@ -82,15 +85,21 @@ variables de base (`HOTE_BASE`, `PORT_BASE`, `UTILISATEUR_BASE`, `MDP_BASE`, `NO
 URI composée) et les deux du moteur de recherche. Sans ces dernières, **le démarrage refuse de
 servir en les nommant**. La connexion fonctionne **sans JavaScript**.
 
+**Le premier administrateur peut écrire sans `psql`.** `droits_de_dossier` vide, `RG-DRO-03`
+(`src/lib/droits/resolution.ts:271`) lui rend `gestionnaire` sans lire la table : `GET
+/notes/nouvelle` → 200, `POST /notes/nouvelle` → 303, `POST …?/creerSousDossier` → 303. C'est la
+seule question qui compte à l'installation, et la réponse est oui — voir le défaut n° 13, qui retire
+l'affirmation contraire du dépôt.
+
 ### Écran par écran — mesuré, pas déclaré
 
 **Tout est à 200 en rédacteur**, et l'écran montre la donnée réelle :
 
 | | |
 |---|---|
-| accueil | indicateurs, activité, corbeille de révisions, périmètre du compte — les indicateurs naviguent, filtrés |
-| recherche | résultats réels, facettes, compteurs, pastilles, état vide, périmètre anonyme |
-| lecture d'une note | titre, corps rendu, cartouche, relations, rétroliens, consultations, les propriétés typées de la fiche, **et le sommaire des titres de la note écrite dans le produit** — *le panneau « Statistiques indisponibles » y est rendu sans condition : défaut n° 6* |
+| accueil | indicateurs, activité, corbeille de révisions, périmètre du compte — les indicateurs naviguent, filtrés. *L'écran d'amorçage d'une base vide, lui, est inatteignable : défaut n° 4* |
+| recherche | résultats réels, facettes, compteurs, pastilles, état vide, périmètre anonyme, **et une durée mesurée** |
+| lecture d'une note | titre, corps rendu, cartouche, relations, rétroliens, consultations, les propriétés typées de la fiche, et le sommaire des titres de la note écrite dans le produit |
 | historique | les vraies versions **de la vraie note**, ouvert par `?version` sur **le corps de cette version**, restaurer marche et capture sa version |
 | comparaison | modes Texte et Visuel sur les vraies versions, alternative textuelle |
 | éditeur | ProseMirror — gras, titres, listes, tâches, tableaux, alertes — les propriétés du type choisi, leur aide, leur défaut, et le refus des manquantes |
@@ -99,155 +108,197 @@ servir en les nommant**. La connexion fonctionne **sans JavaScript**.
 | cartographie, par type, carte mentale | le graphe des vraies relations **dès l'ouverture**, chaque type nommé, de forme et de code distincts, périmètres réels, alternative textuelle |
 | profil, import, guides | préférences enregistrées, import idempotent dans le domaine choisi, simulation qui n'écrit rien et qui le dit |
 | console (12 écrans) | 200 en administratrice, **404 en rédacteur**, onze actions qui écrivent |
+| bibliothèque | à zéro donnée : aucune des dix-sept aiguilles, aucune chronologie, un sélecteur à cinq types **du produit** |
 
 ---
 
 ## Ce qui ne marche pas — trouvé à l'intégration, sur une instance neuve
 
-Quatorze défauts, dans l'ordre où ils coûtent cher. Les trois premiers servent **encore** du jeu de
-démonstration, et deux d'entre eux **sur le produit construit** ; le quatrième fait mentir le
-produit sur la promesse qui le définit ; le dernier bloc ferme la porte à qui vient d'installer.
+Quatorze constats, dans l'ordre où ils coûtent cher. **Les trois premiers servent encore du jeu de
+démonstration** ; le quatrième et le cinquième ferment la porte à qui vient d'installer ; les trois
+suivants sont des accords que le lot A a manqués ; les trois d'après voyagent dans le paquet du
+navigateur ; le onzième dit pourquoi les contrôles n'ont rien vu.
 
-### 1. `/bibliotheque` sert l'activité du jeu sur une base à ZÉRO note
+### 1. `/importer` sert deux noms de dossier du jeu de démonstration
 
-`src/routes/bibliotheque/+page.svelte:30` ne passe pas la propriété `activite`, donc
-`src/vues/V-41.svelte:150` (`activite = ACTIVITE`) retombe sur la constante de
-`seeds/corpus.ts:1308`.
-
-```
-GET /bibliotheque   200   « Karim Belhadj — verification », « Sophie Nguyen — edition »,
-                          « Karim Belhadj — revision », « Sophie Nguyen — verification »
-                          base à 0 note
-```
-
-**Reproduit sur le produit construit** (`prod/02_bibliotheque.html`) et **embarqué dans le paquet
-navigateur**, `build/client/_app/immutable/nodes/4.*.js`. C'est le motif exact de la campagne, sur
-la seule vue que la règle ESLint exempte : V-41 est une planche, mais `/bibliotheque` la **monte**.
-L'exemption est donc trop large d'une vue — ou la route ne devrait pas monter une planche.
-
-### 2. `/bibliotheque` — quatre littéraux du jeu de plus dans la même vue
-
-`src/vues/V-41.svelte:190`, `const DOMAINE_DEMO = 'Infrastructure'`, rendu ligne 390 dans la
-pastille de domaine ; ligne 396, le fil d'Ariane spécimen « Accueil › Production › Infrastructure ›
-Exploitation › Sauvegardes » ; ligne 405, le bloc de code « barman recover pg-prod-01 latest
-/var/lib/postgresql » et le tableau `pg-prod-01` / `pg-prod-02`. **Production**, **Infrastructure**
-et **barman** sont les noms du jeu de démonstration — « barman » est le vocabulaire même que le lot
-2 devait purger. **Reproduit sur le produit construit.**
-
-### 3. `/importer` — l'illustration du scénario nomme un domaine qui n'existe pas
-
-`src/vues/V-24.svelte:399` écrit « → Infrastructure », un domaine que **rien ne pose sur cette
-instance** — le seul domaine y est « Coeur de Réseau ». Le commentaire de
-`src/vues/V-24.svelte:197` montre que le repli sur `MOI.domaine` a **déjà été réparé au-dessus** :
-le littéral de l'illustration est resté. **Reproduit sur le produit construit.**
-
-### 4. Le produit MENT sur sa fraîcheur — sur son seul écran public
-
-C'est la promesse de tête du produit rendue fausse.
+`src/vues/V-24.svelte:422`, `:424`, `:426`. L'illustration du scénario d'import rend :
 
 ```
-GET /guides/n-guide-public-de-raccordement   200   « Vérifié à l'instant »
-                                                   « Ce guide a été contrôlé le — par l'équipe
-                                                     qui l'a écrit »
-GET /notes/n-guide-public-de-raccordement    200   « Jamais vérifiée »     ← MÊME note
-                                                   verifie_le EST NULL en base
+Exploitation/                       ← chemins de dossier du corpus de démonstration
+  Sauvegardes/                        (seeds/corpus.ts:527, :567, :628…)
+    Restauration.docx
+
+→ Domaine Intégration               ← cible bien câblée
+   └ **Exploitation**               ← EN GRAS, côté PRODUIT de la flèche
+      └ **Sauvegardes**
+         └ Restauration
 ```
 
-La chaîne : `src/lib/donnees/lecture.ts:437` replie `verifieLe ?? modifieLe`, d'où `jours = 0`, d'où
-`src/lib/fraicheur.ts:288` — « Vérifié à l'instant ». `src/vues/V-03.svelte:280-282` rend
-`controleLe ?? RIEN` et `:376-378` l'insère dans une **phrase affirmative**. **V-03 n'a aucune
-branche « jamais vérifiée »**, contrairement à V-14 qui la porte.
+La cible de la flèche est juste. Les deux noms **en gras, du côté produit**, restent ceux du jeu :
+l'écran montre à l'installateur des dossiers que son domaine ne porte pas. Mesuré **×2 chacun** dans
+le HTML servi de `GET /importer` → 200, et embarqué dans
+`build/client/_app/immutable/nodes/21.R7eDF20N.js`. Le commentaire de `V-24:404-412` déclare le cas
+tranché par le lot C — « les deux dossiers de gauche restent ce qu'ils sont » — **mais ils ne sont
+pas seulement à gauche : ils sont rendus deux fois à droite.**
 
-### 5. Même cause, accueil public
+### 2. Le nom de l'organisation reste soudé dans l'éditeur
 
-`src/vues/V-01.svelte:257` sert « 1 guides publics · **1 vérifiés il y a moins d'un mois** » à
-l'anonyme, alors qu'aucun guide de l'instance n'a **jamais** été vérifié.
-
-### 6. Un panneau d'erreur PERMANENT et FAUX sur chaque page de note
-
-`src/vues/V-14.svelte:685-696` rend, **sans condition et sans attribut `hidden`**, un panneau
-« Consultations détaillées / Statistiques indisponibles / Le service de mesure ne répond pas. Le
-reste de la note reste consultable. » avec un bouton « Réessayer » **inerte**. Le commentaire du
-fichier l'annonce lui-même : « Exemple d'un panneau en erreur ». La même page affiche **au-dessus**
-« 1 consultation · 1 sur les 30 derniers jours » : la mesure fonctionne, l'écran dit le contraire.
-
-### 7. Une mesure FABRIQUÉE, présentée comme un temps mesuré
-
-`src/vues/V-08.svelte:541` : `const duree = Math.max(0.09, 0 / 1000 + 0.31)`.
+`src/vues/V-17.svelte:1004` : « Consultable par les comptes de **la direction technique**. », écrit
+en dur sous le sélecteur de visibilité.
 
 ```
-GET /recherche?q=…   200   « 1 résultat en 0,31 s »
-GET /recherche?q=…   200   « 4 résultats en 0,31 s »   ← la même constante
+POST /console/configuration?/enregistrer   c-organisation=Mairie de Trifouilly
+GET  /notes/nouvelle    200   « Mairie de Trifouilly » au pied
+                              « la direction technique » dans cette aide   ← MÊME écran
 ```
 
-Jumeau anonyme : `src/vues/V-02.svelte:176` (`0.18`), servi comme « 1 résultat en 0,18 s ».
+Servi aussi sur `/notes/{id}/modifier`, et livré dans le chunk
+`build/client/_app/immutable/chunks/Dra91zX-.js`. Le lot S a câblé huit vues ; celle-ci porte la
+phrase **sous une autre forme** — nom commun en casse basse — et a échappé au balayage.
 
-### 8. Un tiret là où un zéro est dû
+### 3. Même défaut sur l'écran des signets
 
-`src/vues/V-31.svelte:170-174` : sur une instance à zéro gabarit, `templates.every(...)` vaut
-**`true` sur le tableau vide**, `totalUtilisations` vaut `null`, et `/console/templates` rend
-« Les **—** notes déjà créées à partir de ces templates ne bougeront pas. »
+`src/vues/V-22.svelte:460` : « Les sites externes ne sont pas maintenus par **la direction
+technique** et peuvent avoir changé depuis leur enregistrement. » Mesuré dans le HTML servi de `GET
+/univers/univers-integration/domaine-integration/signets` → 200, et livré dans
+`build/client/_app/immutable/nodes/36.BjSxM6px.js`.
 
-### 9. L'organisation est CODÉE EN DUR dans huit vues
+### 4. L'écran d'amorçage de l'accueil est inatteignable, sur toute instance et pour toujours
 
-« Direction technique » est écrit dans `src/vues/V-01.svelte:199` et `:377`, `V-02.svelte:560`,
-`V-03.svelte:771`, `V-04.svelte:404`, `V-05.svelte:170`, `V-17.svelte:968`, `V-22.svelte:461`.
-**Toutes les vues publiques d'une instance neuve** annoncent donc « Codicillus · Direction
-technique », et `/connexion` demande « les identifiants de votre compte de la direction technique ».
-**Aucun réglage de `/console/configuration` ne nomme l'organisation** : ce n'est pas un câblage
-oublié, c'est une clé qui n'existe pas.
-
-### 10. Accords de pluriel
-
-« 1 consultations » `src/vues/V-08.svelte:786` ; « 1 vues » `src/vues/V-11.svelte:613`,
-`src/vues/V-34.svelte:583` et `:608` ; « 1 contributeurs » `src/vues/V-34.svelte:557` ; « Les 1
-dossiers du domaine » sur `/console/exports` ; « 0 brouillon(s) » sur `/univers/{univers}`. Ce ne
-sont que les occurrences **relevées** : le gisement entier est décrit plus bas — c'est la campagne
-suivante.
-
-### 11. IMPASSE À L'INSTALLATION — deux boutons offerts, deux 404
-
-Sur la base **vraiment vide** (0 univers), `/notes/nouvelle` et `/importer` rendent un **404 nu** :
-`src/routes/notes/nouvelle/+page.server.ts:102` (`if (!acces.trouve) error(404)`) et
-`src/routes/importer/+page.server.ts:186`.
+`src/routes/+page.svelte:23` (`vecteur={null}`) et `src/vues/V-07.svelte:308`
+(`etatPage = String(reglage['etat'] ?? 'nominal')`). La feuille ne connaît que deux règles
+(`src/vues/V-07.css:415-416`) :
 
 ```
-base à 0 univers, administrateur connecté
-GET /notes/nouvelle   404   nu
-GET /importer         404   nu
-              puis un domaine créé
-GET /notes/nouvelle   200
-GET /importer         200
+.app[data-etat="vide"] .si-peuple  { display: none }
+.app:not([data-etat="vide"]) .si-vide { display: none }
 ```
 
-Or le rail et le menu « Créer » posent **« Nouvelle note » et « Importer des fichiers » dès la
-première connexion**. L'administrateur qui vient d'installer clique deux boutons offerts et reçoit
-deux pages introuvables. La garde est juste — on ne crée pas une note sans rangement —, c'est
-l'**absence d'issue** qui est le défaut : ni message, ni chemin vers la création d'un univers.
+`src/routes/+page.server.ts` ne pose **aucun vecteur**, donc `data-etat="nominal"` est servi
+**toujours** — mesuré identique sur la base à 0 note et sur la base à 4 notes. Conséquence : le bloc
+« Votre base est vide / Rien n'a encore été écrit ni repris » et ses deux boutons **« Importer votre
+patrimoine existant »** (`V-07.svelte:895`) et **« Créer votre première note »** (`V-07.svelte:901`)
+ne s'affichent **jamais**, pas même sur l'instance neuve pour laquelle ils sont dessinés. Deux
+gestes promis par la maquette, rendus dans le HTML, masqués par la feuille.
 
-### 12. Deux actions de console divergent sur la clé d'un univers
+Le voisinage prouve que le câblage est faisable : `/univers/{u}` et `/univers/{u}/{d}` servent bien
+`data-etat="peuple"` dérivé de leur donnée. Le refus est écrit en commentaire à
+`src/routes/+page.svelte:23-32` — « un périmètre vide n'est pas une base vide » —, argument juste
+pour un lecteur restreint. Mais **l'administrateur contourne tous les droits** (`RG-DRO-03`,
+`src/lib/droits/resolution.ts:271`) : pour lui, zéro note lue **est** une base vide, et le chargeur
+connaît déjà le compte.
 
-`src/lib/donnees/administration.ts:1961` : `creerUnDomaine` cherche l'univers d'accueil par
-`univers.nom`, alors que `creerUnUnivers` rend un **`identifiant` lisible** et que **toutes les
-adresses du produit** désignent un univers par cet identifiant. Passer l'identifiant à `?/creer`
-rend un **404 muet** (mesuré). L'écran s'en tire parce que `src/vues/V-28.svelte:695` pose
-`value={u.nom}` dans le sélecteur — le contrat de l'action reste divergent du reste du produit, et
-le premier appelant qui suivra la convention générale tombera dessus.
+### 5. Le rail dit à l'administrateur qui vient d'installer d'aller demander à un administrateur
 
-### 13. Développement seulement — une trace de mesure servie dans le CSS
+`src/lib/coquille/Rail.svelte:359-361`. Sur la base neuve (0 univers), `GET /` → 200 sert :
 
-`src/vues/V-15.css:741` porte le commentaire « MESURÉ LE 21/08/2026 sur `/notes/n-restaurer-pg` »,
-servi tel quel par Vite dans le CSS de **toute** page de note — la chaîne `n-restaurer-pg` se trouve
-dans le HTML servi de `/notes/n-plan-de-commutation-du-coeur` et de
-`/notes/n-commutateur-coeur-a1`. **Absent du produit construit**, où la minification l'efface.
+> Aucun domaine ne vous est accessible pour l'instant. Demandez à un administrateur de vous rattacher
+> à un domaine — votre compte existe, il n'a simplement pas encore de périmètre.
 
-### 14. Signalé, non retenu comme défaut
+Le seul compte de l'instance **est** l'administrateur, et le chemin réel est « créez un univers puis
+un domaine dans la console ». Combiné au défaut n° 4, **la première page qu'un installateur voit ne
+lui donne aucune issue** : ni panneau d'amorçage, ni instruction juste.
 
-`/console/univers` sert `placeholder="Production"` et `/console/domaines`
-`placeholder="Infrastructure"` dans les champs « Nom » de leur panneau de création (`V-27`, `V-28`,
-transcription du gel). Ce sont des **exemples de saisie inertes**, pas de la donnée rendue — ils
-reprennent néanmoins **mot pour mot** deux noms du jeu de démonstration. À trancher quand quelqu'un
-passera par là, pas à ouvrir un lot pour ça.
+### 6. `/console/analytique` sert « 1 contributeurs actifs »
+
+`src/vues/V-34.svelte:459`. Mesuré dans le HTML servi : « 4 notes au total · 1 ouverte au public ·
+**1 contributeurs actifs** ». La ligne juste au-dessus (`:454-457`) emploie pourtant `accord()`
+— « 1 ouverte », correct. Les deux voisines portent le même littéral figé : `:435` « consultations
+sur 7 jours » et `:452` « notes au total » — **sur une instance à une note, l'écran dira « 1 notes
+au total »**. Le lot A a posé `accord()` (`src/lib/vocabulaire.ts:145`) et branché les voisins ; ces
+trois sites lui ont échappé.
+
+### 7. `/univers/{univers}` sert « 0 brouillon(s) »
+
+`src/vues/V-10.svelte:424` — `{brouillons} brouillon(s)`. Mesuré dans le HTML servi de `GET
+/univers/univers-integration` → 200. **La parenthèse est le repli qu'`accord()` existe précisément
+pour supprimer** ; c'est l'occurrence nommée au relevé précédent, toujours en place. Le lot A l'a
+tenue comme du gel (`mockups/V-10:1864`), avec son jumeau `V-15:359` « il y a 1 an(s) »
+(`mockups/V-15:2764`) — mais `CLAUDE.md` est sans ambiguïté : les maquettes sont la référence
+visuelle, **pas une loi**, et deux parenthèses recopiées ne valent pas une phrase fausse à 1.
+
+### 8. Le paquet navigateur livre deux adresses de guide du gel que le contrôle ne cherche pas
+
+`src/vues/V-04.svelte:142` (`ADRESSES_PAR_DEFAUT = '/guides/plan-de-reprise-volet-bases'`) et `:144`
+(`inexistant: '/guides/reinitialiser-le-badge-daccess'`). Elles partent dans
+`build/client/_app/immutable/nodes/1.BE8BmTZe.js`, **le chunk d'erreur** — celui que **toute** page
+d'erreur charge, en session comme en anonyme.
+
+Le trou est net : `docs/traces/aiguilles-du-corpus.mjs:86-99` nomme une par une les **trois** adresses
+jumelles de V-26 et les exempte ; **les deux de V-04, dans le même chunk et du même relevé §B, ne
+sont dans la liste d'aiguilles ni comme aiguilles ni comme exemptions.** Le contrôle rend 0 sans les
+avoir vues.
+
+### 9. Le paquet livre trois adresses de note du jeu
+
+`src/vues/V-26.svelte:256`, `:257`, `:261` — `/notes/restaurer-une-sauvegarde-mariadb`,
+`/notes/bascule-telephonie-voip`, `/notes/comptes-a-privileges-production` — dans
+`build/client/_app/immutable/nodes/1.BE8BmTZe.js`. **Branche morte** : `+error.svelte` passe
+`page.url.pathname` et le HTML servi des 404 est propre, mesuré dans les deux polarités. Mais elle
+voyage chez chaque lecteur. Le contrôle l'exempte nommément
+(`aiguilles-du-corpus.mjs:159-186`) ; ce qui la retirerait est écrit : **rendre la propriété `adresse`
+requise**, et reprendre sur une autre source les trois cas de `proprietes-coquille.test.ts:763-790`.
+
+### 10. Le paquet livre un filtre de domaine indexé sur un nom du jeu
+
+`src/vues/V-21.svelte:141` :
+
+```
+restreint ? domaines.filter((d) => d.nom !== 'Applications') : domaines
+```
+
+Livré dans `build/client/_app/immutable/nodes/5.DJanopmw.js` (`/carte-mentale`). Ce n'est pas
+seulement du poids mort : **c'est une règle de droit écrite sur un nom de domaine de démonstration**.
+Le jour où `dv=restreints` sera piloté par la donnée, l'instance qui nomme un domaine
+« Applications » le verra disparaître de sa carte mentale, et aucune autre ne verra quoi que ce soit
+se restreindre. Exempté par le contrôle, à raison **sur le paquet** — le défaut est dans le code, pas
+dans la livraison.
+
+### 11. Les deux contrôles du lot 7 sont aveugles aux trois premiers défauts, par construction — et rendent 0 quand même
+
+- `docs/traces/aiguilles-du-corpus.mjs:251-253` écarte **les chemins de dossier d'un seul mot** :
+  « Exploitation » et « Sauvegardes » ne deviennent donc jamais des aiguilles, et le commentaire cite
+  explicitement `V-24:415-429` comme la raison de l'écart. `passage-a-froid` a ouvert `/importer` et
+  l'a compté **propre**.
+- `aiguillesTrouvees()` (`:281-286`) compare **à la casse**, délibérément, pour ne pas crier sur « la
+  direction technique » en prose — or c'est **exactement sous cette forme** que V-17 et V-22 soudent
+  le nom de l'organisation.
+
+Une aiguille écartée pour une bonne raison reste **une aiguille qui ne garde plus rien** : les deux
+contrôles se déclarent verts sur les trois fuites que cette campagne devait trouver. C'est le motif
+de la campagne précédente d'un cran plus haut — la cause n'est plus dans le code, elle est dans **ce
+qui prétend le surveiller**.
+
+### 12. Mineur — `POST /console/domaines?/creer` accepte des clés de module inconnues sans un mot
+
+Envoyé `f-modules=notes signets cartographie carte-mentale relations recherche`, l'action rend 200
+« possible » et la base ne porte que `notes`, `signets`, `cartographie` : **trois clés silencieusement
+jetées**. L'écran n'expose que des cases, donc rien ne le déclenche aujourd'hui ; mais le refus nommé
+que `?/creer` sait rendre pour un nom vide ou pris n'existe pas pour un module inexistant.
+Conséquence mesurée à l'intégration : le domaine créé n'avait pas le module `dossiers`, et `GET
+…/dossiers/domaine-integration` rendait **404 sans jamais dire pourquoi**.
+
+### 13. Correction d'un fait que le dépôt affirme et qui est faux
+
+`docs/traces/passage-a-froid.mjs:40-46` et `docs/traces/README.md:27-28`, `:75-76` écrivent :
+« `droits_de_dossier` ne porte aucune ligne sur une instance neuve, et `RG-DRO-02` est sans appel […]
+Sans ce geste, le produit est en lecture seule et aucune note ne peut naître. »
+
+**Mesuré faux pour un administrateur.** `droits_de_dossier` vidé de toute ligne : `GET
+/notes/nouvelle` → 200, `POST /notes/nouvelle` → 303, `POST …?/creerSousDossier` → 303, `GET
+…/dossiers/{racine}` → 200. `RG-DRO-03` (`src/lib/droits/resolution.ts:271`) rend `gestionnaire`
+**sans lire la table**. Le décor que le contrôle pose et déclare est donc inutile — et il masque la
+seule question qui compte à l'installation. Ce n'est pas un défaut du produit : **c'est une
+affirmation du dépôt à retirer.**
+
+### 14. Signalé, non retenu comme fuite
+
+`GET /notes/nouvelle` et `GET /importer` rendent un **404 nu** tant qu'aucun univers n'existe
+(`src/routes/notes/nouvelle/+page.server.ts:102`, `src/routes/importer/+page.server.ts:186`).
+L'impasse du relevé précédent est **atténuée** : sur 0 univers, le rail et le menu « Créer »
+n'offrent plus ces deux entrées (`ecriture:false` mesuré dans la charge servie), donc plus aucun
+bouton ne mène au 404. Reste qu'une adresse tapée à la main rend un 404 sans issue, alors que **le
+produit sait exactement ce qui manque**.
 
 ---
 
@@ -257,45 +308,72 @@ passera par là, pas à ouvrir un lot pour ça.
 tenu, pas un oubli : le plan les a écartées en connaissance de cause. Reprendre l'une d'elles, c'est
 ouvrir un lot, pas corriger un défaut.
 
-### En tête : les accords de pluriel — c'est la campagne suivante
+### En tête : les accords de pluriel — le §7 les avait laissés, le lot A les a pris
 
-Le lot 2 a corrigé « 1 consultations », le lot 3 « hier » dès zéro jour, l'intégration en a relevé
-six autres. **Ce sont des occurrences, pas la dette.** Le dépôt porte une **quarantaine de pluriels
-écrits en dur** dans les vues — un `s` collé à un libellé, sous un compteur qui vaut couramment 1 sur
-une instance neuve — et **la fonction d'accord n'existe pas**.
+Le plan de cette campagne les mettait hors périmètre, **campagne suivante** : le dépôt portait alors
+une **quarantaine de pluriels écrits en dur** dans les vues — un `s` collé à un libellé, sous un
+compteur qui vaut couramment 1 sur une instance neuve — et **la fonction d'accord n'existait pas**.
+Le lot S l'a écrite (`accord(n, singulier, pluriel?)`, `src/lib/vocabulaire.ts:145`), le lot A l'a
+consommée sur dix-sept écrans et retiré les six helpers locaux, les cinq tables recopiées et les
+quarante ternaires. **La dette est levée ; les restes sont nommés, et ils sont courts :**
 
-C'est le motif exact de `motFiche`, que le lot 0 vient de lever : `src/lib/vocabulaire.ts` porte
-`pluriel()`, calque du gel (`mockups/V-33-console-configuration.html:3136`), mais **il ne sert qu'au
-mot renommable**. Rien dans le dépôt ne répond à « un nom, un nombre → la forme accordée », et donc
-quarante sites l'écrivent chacun à sa façon, tous au pluriel, tous faux à 1 — et tous faux à 0 dans
-l'autre sens, où le français veut le singulier.
+- `V-34:435`, `:452`, `:459` — trois littéraux figés sur le seul écran d'analytique (défaut n° 6) ;
+- `V-10:424` et `V-15:359` — les deux parenthèses « (s) », tenues comme du gel par le lot A et
+  contestées par l'intégration (défaut n° 7) ;
+- les deux jumeaux du message de seuil diffèrent encore d'**une apostrophe** — `En l'état` dans la
+  vue, `En l’état` au serveur — divergence antérieure au lot, signalée et non corrigée pour ne pas
+  élargir le périmètre ;
+- `V-34:532` porte son accord pour un nœud qui **ne se rend pas aujourd'hui** : `recherches` est vide
+  tant qu'aucun journal de recherche n'existe.
 
-Ce que lever la dette demande, et pourquoi c'est un lot et pas un correctif :
+Ce qui ne bouge **pas**, et c'est tenu : les parenthèses hors écran (journaux de commande, archive,
+document), les cartes de statistique — grand chiffre plus légende, sans nombre grammatical —, et les
+libellés que le gel fige au pluriel invariant : **un titre de section n'a pas de nombre.**
 
-- écrire **une** fonction d'accord, à côté de `pluriel()` et dans le même module — c'est déjà la
-  seule source de la dérivation, en ajouter une seconde ailleurs divergerait au premier mot
-  exotique ;
-- la faire prendre le **nombre**, pas seulement le mot : « 0 brouillon », « 1 brouillon »,
-  « 2 brouillons », et le cas `0` n'est pas celui du pluriel ;
-- recenser les quarante sites **un par un** — ils ne se trouvent pas par un motif unique : « 1 vues »
-  est une interpolation, « 0 brouillon(s) » une parenthèse, « Les — dossiers » un état vide non
-  gardé ;
-- ne **pas** toucher aux libellés que le gel fige au pluriel invariant — un titre de section n'a pas
-  de nombre.
+### Une branche non fusionnée est restée en place, et sa copie de travail avec
+
+Le ménage de fin de campagne a retiré les treize copies de travail dont la branche est dans
+`master`. **Une ne l'est pas et n'a pas été retirée** :
+
+```
+worktree-wf_65fc5159-13d-28   fe9e5fc
+.claude/worktrees/wf_65fc5159-13d-28
+fix(traces): le garde-fou du paquet ne regardait qu'une moitié, et il partait vert sur l'autre
+```
+
+Elle réécrit les mêmes six fichiers que le lot 7 (`docs/traces/`) depuis `631e4f3`, donc **avant**
+la fusion de `b19d141` : la reprendre est une fusion à conflits, pas un `merge` en avance rapide.
+Ce qu'elle porte, et qui n'est mesuré nulle part ailleurs :
+
+- **`aiguilles-dans-le-paquet.mjs` ne balayait que `build/client/`** en annonçant mesurer « ce qui se
+  livre », et cette limite n'était déclarée nulle part. `build/server/` se livre aussi — c'est ce que
+  l'image porte et ce que `node build/index.js` exécute. Mesuré sur la même construction :
+  **404 occurrences sur 53 fichiers**, dont le chunk de `creation.js` — **85 314 octets, `CORPUS`
+  sérialisé en entier, importé par dix nœuds de routes**. La cause est celle de la ligne
+  `corpsVide()` ci-dessus.
+- Sur cette base, le contrôle **rend 1**, délibérément : c'est la vérité du paquet tant que les trois
+  remèdes déjà écrits ne sont pas appliqués.
+- `passage-a-froid.mjs:78` portait un **mot de passe en clair** dans un dépôt public ; elle le tire
+  au hasard à chaque passage.
+
+Trancher demande de décider si un garde-fou a le droit de rendre 1 sur `master`. Ce n'est pas un
+correctif, et personne ne l'a arbitré : la branche est laissée intacte plutôt que perdue au ménage.
 
 | Autre chose laissée | Raison, et ce qu'il faudrait pour le lever |
 |---|---|
-| **Le nom de l'organisation** | Défaut n° 9 ci-dessus, et ce n'est **pas** un câblage oublié : aucune clé de configuration ne nomme l'organisation. Le lever demande une clé en base, un champ dans V-33, une descente par le contexte de coquille, et huit vues à brancher — migration comprise. Lot, pas correctif |
-| **`corpsVide()` dans `semence.ts`** | Le lot 7 l'a nommé et borné, il ne l'a pas déplacé : quatre routes chargent la semence — donc `CORPUS` — par cette seule fonction. La sortir de la semence est une ligne de code et un déplacement de module ; c'est l'**exemption ESLint nommée** qui disparaît avec, et c'est pour ça que ça se fait exprès, pas en passant |
-| **L'exemption de `V-41`** | La règle exempte les quatre planches ; `/bibliotheque` **monte** V-41. Le défaut n° 1 vit dans cet interstice. Trancher demande de choisir : la route cesse de monter une planche, ou V-41 sort de l'exemption et reçoit ses échantillons du chargeur |
+| **Les deux contrôles aveugles** | Défaut n° 11, et c'est la reprise la plus urgente de la liste. Les lever demande de trancher deux écarts *écrits et argumentés* : le chemin de dossier d'un seul mot, et la comparaison à la casse. Les deux écarts sont justes en général et faux ici ; les fermer sans faire crier le contrôle sur de la prose légitime est un travail de conception, pas un `sed` |
+| **`corpsVide()` dans `semence.ts`** | Toujours là (`src/lib/base/semence.ts:240`), toujours nommé et borné par l'exemption ESLint (`eslint.config.js:150-162`) : quatre routes chargent la semence — donc `CORPUS` — par cette seule fonction. La sortir est une ligne de code et un déplacement de module ; c'est l'**exemption nommée** qui disparaît avec, et c'est pour ça que ça se fait exprès, pas en passant |
+| **La propriété `adresse` de V-26** | Défaut n° 9. Ce qui la retire est écrit dans l'exemption elle-même : la rendre **requise**, et reprendre sur une autre source les trois cas de `proprietes-coquille.test.ts:763-790` qui rendent la vue *sans* elle pour relever ce que la planche affiche |
+| **Le filtre `'Applications'` de V-21** | Défaut n° 10. Ce qui le retire : que l'axe restreint filtre sur **une donnée de droits** plutôt que sur un nom de domaine. C'est un lot de câblage de périmètre, pas un correctif |
 | **Construire un expéditeur de courriel** | C'est une **fonction**, pas un correctif. Le produit n'a aucun expéditeur et aucune table de jeton ; l'écran unique de `/mot-de-passe-oublie` oriente vers le chemin qui existe. Le jour où l'on s'y met : un expéditeur, une table de jeton, et les six écrans de V-06 à remonter — ils ont été **retirés, pas masqués** |
 | **La table du journal d'imports** et `/console/imports/{lot}` | Lot à mandater : migration, écran de lot (`docs/routes.md:183`), plafond d'erreurs **par lot**, la règle interdisant toute purge dans le temps. La seconde moitié de `RG-M12-09` — « ce journal alimente le flux d'activité de l'accueil » — n'est tenue nulle part non plus |
 | **Les deux scénarios d'import non livrés** (`UC-M12-02`, `UC-M12-03`) | L'étape 1 cesse de les offrir et refuse explicitement qui y arriverait par un chemin résiduel. Les construire est un lot en soi |
 | **La résolution des renvois en relations** | `src/lib/donnees/import.ts` : la clé de renvoi **ne nomme pas le type de relation**. Sujet de conception, pas de correctif. Le renvoi est consigné au rapport, la relation reste à créer, et l'écran le dit |
 | **`adresseDeDomaine()` qui slugifie le nom** | `src/lib/rangement/adresses.ts:83` compose l'adresse sur le **nom** au lieu de lire `domaines.identifiant` — `RG-M12-11` fige l'identifiant, pas le nom. C'est le **404-après-renommage** déjà corrigé sur `/mon-profil` et qui subsiste ici. Il touche un utilitaire partagé, donc plusieurs lots |
-| **`V-34`, les mesures d'analytique** | Dette **datée**, honnêtement traitée : l'écran déclare l'absence au lieu de l'inventer. Elle redeviendra dangereuse **le jour où les tables arriveront** — un état neutre explicite qui survit à sa cause devient un mensonge d'un autre genre |
+| **Les utilisations d'un gabarit** | `Template.utilisations` n'a **aucune colonne** : le tiret des listes non vides reste, et c'est une fonction à écrire — le lot C n'a corrigé que le cas *zéro gabarit*, où la réponse est zéro et certaine |
+| **`V-34`, les mesures d'analytique** | Dette **datée**, honnêtement traitée : l'écran déclare l'absence au lieu de l'inventer, et le registre de lacunes ne ment plus. Elle redeviendra dangereuse **le jour où les tables arriveront** — un état neutre explicite qui survit à sa cause devient un mensonge d'un autre genre |
 | **Le filtrage de V-12 porté en SQL** | Ouvert depuis la première campagne. Lot de **performance**, pas de correction |
-| **Les 17 avertissements a11y** | Préexistants, hors du périmètre des campagnes |
+| **Les 15 avertissements a11y** | Préexistants, hors du périmètre des campagnes — `pnpm check` = 0, ce sont des avertissements, pas des erreurs |
 
 ---
 
@@ -311,6 +389,18 @@ dire.
 - **`method="post"` sur le formulaire de connexion.** La maquette ne l'écrit pas, faute de serveur.
   Sans lui, une soumission avant hydratation partait en `GET` **avec le mot de passe dans
   l'adresse** — mesuré sur le HTML servi.
+- **Le nom d'organisation est juxtaposé, non gouverné par une préposition** : « Documentation · X »,
+  « Connexion · X ». Le gel écrit « Documentation de la direction technique » ; un nom
+  d'organisation n'apporte pas son article, et rien ne permet de le deviner.
+- **`fraicheur.ts:306` accorde « il y a 1 jour »**, que le gel n'accorde pas (`V-41:2183`) — son jeu
+  ne descend jamais à 1. La forme **compacte** ne bouge pas : « j » est un symbole d'unité, il est
+  invariable.
+- **La section « Gestion › Console » du rail abrégé est gardée sur `admin`, non sur `ecriture`**, et
+  sa classe suit sa garde. C'est le seul nœud où le produit s'écarte de la classe du gel : une
+  maquette statique n'a pas de rôle à lire.
+- **Le panneau « Statistiques indisponibles » de V-14 est retiré**, et `mockups/V-14-lecture-note.html`
+  a été amendée du même geste — faute de quoi le prochain portage l'aurait fait revenir. La panne
+  n'est pas détectable (le chargeur écrit `?? 0`) : le correctif est le retrait, pas la condition.
 - **Le panneau des propriétés typées en lecture** (lot L) : le gel de V-14 dessine sept panneaux, le
   brief en énumère huit, et `RG-NOT-01` interdit de faire de la fiche un objet séparé de la note —
   une fiche dont les propriétés ne se lisent que dans l'éditeur **est** cet objet.
@@ -350,20 +440,24 @@ Lire `CLAUDE.md` — il tient en une page. En deux mots : **les maquettes sont l
 pas une loi**, et un défaut se répare. La preuve qu'une chose marche est qu'elle marche dans un
 navigateur, avec ses codes HTTP relevés — **sur une base vide**, c'est là que les défauts vivent.
 
-Et la leçon propre à cette campagne : **la cause d'un motif qui revient quatre fois n'est pas dans
-le code.** Quatre campagnes ont corrigé les symptômes d'une phrase de `CLAUDE.md` sans lire la
-phrase. Quand un défaut se reproduit après avoir été réparé, cherche **ce qui le prescrit** — une
-consigne, un gabarit, un exemple recopié — avant de le réparer une cinquième fois.
+Le geste juste est écrit et verrouillé : la donnée d'une vue vient du chargeur ; ce que toutes les
+routes passent est **requis**, le compilateur garde la porte ; ce qui peut manquer reçoit un **état
+vide explicite** ; et `eslint.config.js` refuse tout import de valeur venue de `seeds/` dans
+`src/vues/`, `src/routes/` et `src/lib/`.
 
-Le geste juste est désormais écrit et verrouillé : la donnée d'une vue vient du chargeur ; ce que
-toutes les routes passent est **requis**, le compilateur garde la porte ; ce qui peut manquer reçoit
-un **état vide explicite** ; et `eslint.config.js` refuse tout import de valeur venue de `seeds/`
-dans `src/vues/`, `src/routes/` et `src/lib/`.
+**Et la leçon propre à cette campagne : un contrôle qui rend 0 n'est pas une preuve — c'est une
+question posée.** Avant de croire un vert, lis ce que le contrôle écarte : les trois fuites que cette
+campagne devait trouver sont toutes tombées dans un écart *écrit, argumenté et juste en général*. Un
+écart raisonnable reste un trou. Quand un contrôle est vert et qu'un écran ment, **le défaut est dans
+le contrôle.**
 
 ```
 pnpm dev            le serveur
 pnpm check          typage, style, formatage — DOIT rester à 0
 pnpm test:unit      les unitaires — DOIVENT rester verts
+
+pnpm build && node docs/traces/passage-a-froid.mjs        ce qui s'affiche, base neuve, 39 routes
+pnpm build && node docs/traces/aiguilles-dans-le-paquet.mjs   ce qui se livre au navigateur
 ```
 
 Les identifiants de développement vivent dans `.env`, qui est ignoré — jamais dans un fichier
