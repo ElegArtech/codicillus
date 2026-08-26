@@ -28,19 +28,8 @@
  * LE RENDU PAR DÉFAUT DES VUES NE BOUGE PAS. Hors application — un rendu de
  * vue sans gabarit racine —, `getContext` rend `undefined` et la coquille
  * retombe sur sa propriété. C'est ce qui garde le gel intact.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CE MODULE PORTE EN PLUS DU CONTRAT : UN LECTEUR
- *
- * `organisationRendue()` lit le contexte pour les vues qui n'ont besoin QUE du
- * nom de l'organisation — les pieds publics, l'écran de connexion. Sans lui,
- * chacune recopierait le même `getContext(...)?.nomOrganisation ?? ''`, et le
- * repli hors gabarit racine serait écrit huit fois : c'est exactement la
- * divergence que `vocabulaireRendu()` évite déjà pour le mot renommable, dans
- * `$lib/vocabulaire.ts`, et pour la même raison.
  */
 
-import { getContext } from 'svelte';
 import type { VocabulaireRendu } from '../vocabulaire';
 
 /** La clé du contexte. Une constante, jamais une chaîne recopiée. */
@@ -183,32 +172,4 @@ export interface IdentiteDeCoquille {
 	 * les littéraux d'avant.
 	 */
 	readonly vocabulaire: VocabulaireRendu | null;
-}
-
-/**
- * LE NOM DE L'ORGANISATION, TEL QU'UNE VUE LE REND — accesseur, pas chaîne.
- *
- * À appeler à l'INITIALISATION d'un composant, comme tout `getContext`. Le
- * résultat porte un ACCESSEUR et non une chaîne figée : le contexte du gabarit
- * racine est lui-même fait d'accesseurs, et une lecture sous `$derived` suit
- * donc un renommage fait en console sans que le contexte soit réémis. Une
- * chaîne capturée à l'initialisation serait périmée dès la première
- * invalidation — c'est le défaut que `vocabulaireRendu()` a déjà eu à réparer.
- *
- * Hors gabarit racine — le rendu par défaut d'une vue, une planche, une page
- * d'erreur rendue sans données —, `getContext` rend `undefined` et le nom vaut
- * la chaîne vide : le MÊME état que sur une instance qui ne s'est pas nommée.
- */
-export function organisationRendue(): OrganisationRendue {
-	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
-	return {
-		get nom() {
-			return identite?.nomOrganisation ?? '';
-		}
-	};
-}
-
-/** Ce qu'une vue lit de l'organisation : son nom, ou rien. */
-export interface OrganisationRendue {
-	readonly nom: string;
 }
