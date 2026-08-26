@@ -397,7 +397,14 @@
 	const adoption = $derived.by(() => {
 		const a = sommeMesures(mesures7j);
 		const p = sommeMesures(mesures7jPrec);
-		const ecart = p ? Math.round(((a - p) / p) * 100) : 0;
+		/* SANS SEMAINE DE RÉFÉRENCE, LA VARIATION EST INDÉFINIE — PAS NULLE.
+		   Le repli rendait « 0 % contre la semaine précédente » sur une instance
+		   dont la semaine précédente n'a aucune consultation : une comparaison
+		   affirmée là où il n'y a rien à comparer. Le voisin refuse déjà ce
+		   raisonnement pour les recherches, dont la ligne disparaît faute de
+		   journal ; ici la mesure de la semaine EXISTE, seule sa comparaison
+		   manque, et c'est donc la sous-ligne qui le dit. */
+		const ecart = p === 0 ? null : Math.round(((a - p) / p) * 100);
 		/* LA MESURE DES RECHERCHES DISPARAÎT DU BLOC TANT QU'AUCUN JOURNAL NE LA
 		   PORTE : « 0 recherches sur 30 jours, 0 par jour en moyenne » se lirait
 		   comme une instance que personne n'interroge. */
@@ -405,7 +412,9 @@
 			[
 				nb(a),
 				'consultations sur 7 jours',
-				`${ecart > 0 ? '+' : ''}${ecart} % contre la semaine précédente`
+				ecart === null
+					? 'aucune semaine de référence à comparer'
+					: `${ecart > 0 ? '+' : ''}${ecart} % contre la semaine précédente`
 			],
 			...(rechercheMesuree
 				? [

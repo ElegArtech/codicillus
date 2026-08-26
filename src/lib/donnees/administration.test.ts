@@ -583,13 +583,14 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 		expect(CLES_DE_PARAMETRE.seuilVieillissant).toBe('seuil_vieillissant');
 	});
 
-	it('les sept noms de champ sont ceux du gel, préfixe compris', () => {
+	it('les huit noms de champ sont ceux du gel, préfixe compris', () => {
 		expect(CHAMPS_DE_CONFIGURATION.seuilFrais).toBe('c-frais');
 		expect(CHAMPS_DE_CONFIGURATION.seuilVieillissant).toBe('c-vieil');
 		expect(Object.keys(CHAMPS_DE_CONFIGURATION).sort()).toEqual(
 			[
 				'dureeSession',
 				'motFiche',
+				'nomOrganisation',
 				'portailAssistance',
 				'seuilFrais',
 				'seuilVieillissant',
@@ -599,33 +600,34 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 		);
 	});
 
-	it('`nom_organisation` a sa clé de base et AUCUN champ de console', () => {
-		/* LE HUITIÈME PARAMÈTRE N'EST PAS RÉGLÉ PAR `V-33` : le gel n'a jamais
-		   dessiné ce champ. Il a bien sa clé de base — `lireConfiguration()` et
-		   le gabarit racine la lisent —, et c'est tout.
+	it('`nom_organisation` a sa clé de base ET son champ de console', () => {
+		/* LE HUITIÈME PARAMÈTRE EST DÉSORMAIS RÉGLÉ PAR `V-33`. Il ne l'était par
+		   AUCUN écran : la clé existait, le canal la servait, et le seul geste
+		   capable de l'écrire était une requête à la main. Un réglage qu'aucun
+		   écran ne règle est un réglage que le produit n'a pas.
 
-		   UNE PREMIÈRE RÉDACTION LUI AVAIT DONNÉ UN `c-organisation` FICTIF pour
-		   que la table des champs reste `Record<keyof Configuration, string>`.
-		   Le formulaire n'envoyant rien pour ce champ, la lecture rendait la
-		   chaîne vide et `enregistrerLaConfiguration()` — qui bouclait alors sur
-		   les clés de base — POSAIT `nom_organisation = ''` à chaque
-		   enregistrement, écrasant le nom réglé. Ce contrôle épingle les deux
-		   moitiés du remède : la clé existe, le champ n'existe pas. */
+		   LE PIÈGE QUE L'ABSENCE DE CHAMP AVAIT PARÉ RESTE FERMÉ, ET AUTREMENT :
+		   un `c-organisation` FICTIF, qu'aucun `input` ne portait, faisait
+		   rendre la chaîne vide à la lecture et posait `nom_organisation = ''` à
+		   chaque enregistrement. Ce qui l'interdit maintenant est que le champ
+		   EXISTE dans le document et porte la valeur enregistrée — c'est ce que
+		   `V-33.test.ts` éprouve sur le rendu. */
 		expect(CLES_DE_PARAMETRE.nomOrganisation).toBe('nom_organisation');
-		expect(CHAMPS_DE_CONFIGURATION).not.toHaveProperty('nomOrganisation');
+		expect(CHAMPS_DE_CONFIGURATION.nomOrganisation).toBe('c-organisation');
 	});
 
-	it('l’enregistrement n’écrit QUE les paramètres que l’écran règle', () => {
+	it('l’enregistrement écrit les paramètres que l’écran règle, et eux seuls', () => {
 		/* La boucle d'écriture parcourt les champs du formulaire, jamais les
-		   clés de base : une clé sans champ n'est donc pas écrite. Le contrôle
-		   compare les deux tables plutôt que de recopier une liste — c'est la
-		   même source que celle que la boucle emploie. */
+		   clés de base : une clé sans champ ne serait pas écrite. Les deux tables
+		   portent aujourd'hui les mêmes noms, et le contrôle les compare plutôt
+		   que de recopier une liste — c'est la même source que celle que la
+		   boucle emploie. */
 		const ecrites = Object.keys(CHAMPS_DE_CONFIGURATION).map(
 			(champ) => CLES_DE_PARAMETRE[champ as keyof typeof CLES_DE_PARAMETRE]
 		);
-		expect(ecrites).not.toContain(CLES_DE_PARAMETRE.nomOrganisation);
+		expect(ecrites).toContain(CLES_DE_PARAMETRE.nomOrganisation);
 		expect(ecrites).toContain(CLES_DE_PARAMETRE.seuilFrais);
-		expect(ecrites).toHaveLength(Object.keys(CLES_DE_PARAMETRE).length - 1);
+		expect(ecrites).toHaveLength(Object.keys(CLES_DE_PARAMETRE).length);
 	});
 
 	it('la saisie est lue comme le gel la lit — nombres convertis, textes ébarbés', () => {
@@ -634,6 +636,7 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 			'c-vieil': '60',
 			'c-versions': '20',
 			'c-portail': '  https://assistance.exemple.fr  ',
+			'c-organisation': '  Organisation d’épreuve  ',
 			'c-mot': '  Objet  ',
 			'c-taille': '10',
 			'c-session': '480'
@@ -644,6 +647,7 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 			seuilVieillissant: 60,
 			versionsMax: 20,
 			portailAssistance: 'https://assistance.exemple.fr',
+			nomOrganisation: 'Organisation d’épreuve',
 			motFiche: 'Objet',
 			tailleMaxPieceJointe: 10,
 			dureeSession: 480

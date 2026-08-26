@@ -662,7 +662,7 @@
 						type="text"
 						id="f-nom"
 						autocomplete="off"
-						placeholder="Production"
+						placeholder="Exploitation"
 						disabled={nomVerrouille}
 						value={nomSaisi}
 						oninput={(e) => (fNom = e.currentTarget.value)}

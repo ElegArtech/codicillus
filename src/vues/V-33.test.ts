@@ -20,6 +20,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
 import { CONFIGURATION_PAR_DEFAUT } from '../lib/base/schema';
+import { CHAMPS_DE_CONFIGURATION } from '../lib/donnees/administration';
 import { corpusPourVue } from '../../seeds/corpus';
 
 afterAll(fermerLeHarnais);
@@ -41,6 +42,42 @@ describe('V-33 — chaque champ refusable a son bloc d’erreur', () => {
 			expect(html, `erreur du champ ${champ}`).toContain(`id="erreur-${champ}"`);
 			expect(html, `texte d’erreur du champ ${champ}`).toContain(`id="erreur-${champ}-txt"`);
 		}
+	});
+
+	/**
+	 * LE HUITIÈME RÉGLAGE A SON CHAMP, ET IL PORTE LA VALEUR ENREGISTRÉE.
+	 *
+	 * `nom_organisation` avait sa clé de base, son canal jusqu'à la coquille, et
+	 * AUCUN écran : le seul geste capable de l'écrire était une requête à la
+	 * main. Le contrôle éprouve les deux moitiés — le champ existe, et sa valeur
+	 * est celle qui a été servie —, parce que c'est exactement la paire qui
+	 * manquait quand un `c-organisation` fictif faisait écraser le réglage par
+	 * la chaîne vide à chaque enregistrement.
+	 *
+	 * L'IDENTIFIANT N'EST PAS RECOPIÉ : il vient de `CHAMPS_DE_CONFIGURATION`,
+	 * la table même que le câblage interroge. Une divergence entre la table et
+	 * l'écran est précisément ce qu'aucun compilateur ne voit.
+	 */
+	it('rend le champ du nom d’organisation, et la valeur servie s’y trouve', async () => {
+		const id = CHAMPS_DE_CONFIGURATION.nomOrganisation;
+		const html = await rendreLaVue('V-33', {
+			vecteur: null,
+			notes: NOTES,
+			config: { ...CONFIGURATION_PAR_DEFAUT, nomOrganisation: 'Organisation d’épreuve' }
+		});
+		expect(html).toContain(`id="${id}"`);
+		expect(html).toContain('Organisation d’épreuve');
+
+		/* VIDE, LE CHAMP RESTE, ET L'AIDE DIT CE QUE LE VIDE PRODUIT : une
+		   installation neuve ne signe que le nom du logiciel. */
+		const neuve = await rendreLaVue('V-33', {
+			vecteur: null,
+			notes: NOTES,
+			config: CONFIGURATION_PAR_DEFAUT
+		});
+		expect(neuve).toContain(`id="${id}"`);
+		expect(neuve).not.toContain('Organisation d’épreuve');
+		expect(neuve).toContain('ne signent que');
 	});
 
 	it('sert le plafond de versions REÇU, et l’annonce dans l’aide du champ', async () => {
