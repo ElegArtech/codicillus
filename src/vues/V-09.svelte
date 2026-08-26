@@ -190,16 +190,23 @@
 	const { notes: corpus, dureeMs }: Proprietes = $props();
 
 	/**
-	 * L'état au repos n'est jamais une zone vide : notes récemment consultées.
-	 * Les quatre identifiants sont ceux du gel (`V-09:1066`), résolus dans le
-	 * jeu de semence de la vue et non dans un tableau recopié.
+	 * LES NOTES « CONSULTÉES RÉCEMMENT » — LA TÊTE DE L'ENSEMBLE REÇU, ET PLUS
+	 * QUATRE IDENTIFIANTS DU JEU.
+	 *
+	 * Cette liste portait `n-restaurer-pg`, `n-astreinte`, `n-pg-prod-01` et
+	 * `n-diag-barman` — quatre identifiants littéraux de `seeds/corpus.ts`,
+	 * copiés du gel (`V-09:1066`) et résolus dans le corpus reçu. Ils ne se
+	 * voyaient pas parce qu'aucune route ne monte encore cette vue : le jour où
+	 * une route la monte, la palette au repos nomme le jeu de démonstration sur
+	 * l'instance de quelqu'un d'autre, et le paquet de cette route les emporte.
+	 *
+	 * « Consultées récemment » EST UN ÉTAT, PAS UN JEU DE DONNÉES : la vue ne
+	 * connaît aucun historique de consultation, et rien dans ses propriétés ne
+	 * lui en donne un. Elle prend donc la tête de l'ensemble qu'on lui passe —
+	 * quatre lignes au plus, aucune quand l'ensemble est vide.
 	 */
-	const RECENTES: readonly string[] = [
-		'n-restaurer-pg',
-		'n-astreinte',
-		'n-pg-prod-01',
-		'n-diag-barman'
-	];
+	const NB_RECENTES = 4;
+	const RECENTES = $derived(corpus.slice(0, NB_RECENTES));
 
 	/** Le glyphe de type — la table du gel (`V-09:1067`), défaut « NOT ». */
 	const GLYPHES: Record<string, string> = {
@@ -359,13 +366,12 @@
 		const q = c.requete.trim();
 
 		if (!q) {
-			const lignes = RECENTES.map((id) => corpus.find((n) => n.id === id)).filter(
-				(n): n is Note => n !== undefined
-			);
+			/* Pas de lignes, pas de titre de groupe : un intitulé au-dessus du
+			   vide annoncerait une liste qui n'existe pas. */
 			return {
-				groupe: 'Consultées récemment',
-				lignes,
-				selection: c.selection,
+				groupe: RECENTES.length > 0 ? 'Consultées récemment' : null,
+				lignes: RECENTES,
+				selection: RECENTES.length > 0 ? c.selection : -1,
 				bloc: null,
 				compteur: ''
 			};

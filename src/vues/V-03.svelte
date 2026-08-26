@@ -311,21 +311,32 @@
 	</nav>
 
 	<main class="lecture-pub">
-		<!-- ---------- Sommaire ---------- -->
-		<nav class="sommaire" aria-label="Sommaire du guide" data-ouvert="non">
-			<div class="etiq">Sommaire</div>
-			<button class="sommaire__bascule" id="bascule-sommaire" aria-expanded="false">
-				Sommaire
-				<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"
-					><path d="M3 1l4 4-4 4z" /></svg
-				>
-			</button>
-			<ul class="sommaire__liste" id="sommaire">
-				{#each SOMMAIRE as s (s.ancre)}<li class="n1">
-						<a href="#{s.ancre}"><span>{s.titre}</span></a>
-					</li>{/each}
-			</ul>
-		</nav>
+		<!-- ---------- Sommaire ----------
+			LE BLOC ENTIER TOMBE QUAND LE GUIDE N'A PAS DE TITRE DE NIVEAU 2, et
+			c'est l'état ordinaire d'une note courte sur une instance neuve.
+
+			Un titre « Sommaire » et un bouton de repli au-dessus d'une `<ul>`
+			vide ne sont pas un état vide : ils annoncent une navigation qui
+			n'existe pas, et le bouton n'a rien à replier. Le gel ne montre ce
+			cadre qu'avec ses cinq entrées ; il n'a jamais dit ce qu'il devient
+			sans elles.
+		-->
+		{#if SOMMAIRE.length > 0}
+			<nav class="sommaire" aria-label="Sommaire du guide" data-ouvert="non">
+				<div class="etiq">Sommaire</div>
+				<button class="sommaire__bascule" id="bascule-sommaire" aria-expanded="false">
+					Sommaire
+					<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"
+						><path d="M3 1l4 4-4 4z" /></svg
+					>
+				</button>
+				<ul class="sommaire__liste" id="sommaire">
+					{#each SOMMAIRE as s (s.ancre)}<li class="n1">
+							<a href="#{s.ancre}"><span>{s.titre}</span></a>
+						</li>{/each}
+				</ul>
+			</nav>
+		{/if}
 
 		<!-- ---------- Article ---------- -->
 		<article class="article" id="article">
@@ -430,22 +441,31 @@
 		<!-- ---------- Colonne droite, réduite ---------- -->
 		<aside class="aparte">
 			<!--
-				Les pièces jointes de la note demandée. Le panneau reste, la liste
-				suit : une note sans pièce jointe rend un corps vide, ce qui est
-				l'état vide de la zone, jamais un exemple laissé là.
+				LES PIÈCES JOINTES DE LA NOTE DEMANDÉE — ET LE PANNEAU TOMBE AVEC
+				ELLES.
+
+				Une note sans pièce jointe est l'état ordinaire d'une instance
+				neuve. Le panneau rendait alors son en-tête « Pièces jointes »
+				au-dessus d'un corps vide : un cadre qui affirme une matière
+				absente, et qui laisse le lecteur chercher ce qu'il ne trouvera
+				pas. L'état vide d'une liste facultative de la colonne d'apartés,
+				c'est l'absence du panneau — la colonne porte déjà « Ce guide »,
+				elle ne se retrouve jamais nue.
 			-->
-			<section class="panneau">
-				<div class="panneau__tete"><span class="etiq">Pièces jointes</span></div>
-				<div class="panneau__corps panneau__corps--serre">
-					{#each guide.piecesJointes as pj, rang (rang)}<a class="pj" href={pj.adresse}>
-							<span class="pj__ext">{pj.marque}</span>
-							<span>
-								<span class="pj__nom">{pj.nom}</span>
-								<span class="pj__sous">{pj.taille}</span>
-							</span>
-						</a>{/each}
-				</div>
-			</section>
+			{#if guide.piecesJointes.length > 0}
+				<section class="panneau">
+					<div class="panneau__tete"><span class="etiq">Pièces jointes</span></div>
+					<div class="panneau__corps panneau__corps--serre">
+						{#each guide.piecesJointes as pj, rang (rang)}<a class="pj" href={pj.adresse}>
+								<span class="pj__ext">{pj.marque}</span>
+								<span>
+									<span class="pj__nom">{pj.nom}</span>
+									<span class="pj__sous">{pj.taille}</span>
+								</span>
+							</a>{/each}
+					</div>
+				</section>
+			{/if}
 
 			<section class="panneau">
 				<div class="panneau__tete"><span class="etiq">Ce guide</span></div>
