@@ -181,14 +181,46 @@
 		 * MODULE : `/notes/{identifiant}/modifier` rouvrait donc toujours la
 		 * même note, quelle que fût l'adresse.
 		 *
-		 * Tout ce que l'écran en montre — titre, type, domaine, dossier,
-		 * étiquettes, extrait — sort du type `Note` : aucun corps rendu n'est
-		 * nécessaire ici, à la différence de V-14 et de V-18.
+		 * Tout ce que l'écran en montre HORS DU CORPS — titre, type, domaine,
+		 * dossier, étiquettes — sort du type `Note` ; le corps, lui, a désormais
+		 * sa propre propriété, `corps`.
 		 *
 		 * ABSENTE, IL N'Y A PAS DE NOTE REPRISE — c'est le cas de la création.
 		 * Son repli était `n-planifier-sauv`, la note que le gel nomme.
 		 */
 		noteModifiee?: Note | undefined;
+		/**
+		 * LE CORPS RÉDIGÉ, EN HTML — ET C'ÉTAIT LE DÉFAUT LE PLUS VISIBLE DE LA
+		 * VUE.
+		 *
+		 * La zone de rédaction recevait, en modification, un SNIPPET ÉCRIT ICI :
+		 * l'extrait de la note suivi des sections d'une procédure de
+		 * démonstration — « Déclarer le serveur », « Vérifier le premier
+		 * passage » — qui n'avaient rien à voir avec la note ouverte. Le vecteur
+		 * `cas: 'modif'` étant posé par le chargeur sur TOUTE modification,
+		 * ouvrir n'importe quelle note affichait ce corps-là. Le câblage le
+		 * remplaçait au montage, ce qui en faisait un flash à chaque
+		 * chargement — et un contenu PERMANENT sans JavaScript, servi tel quel
+		 * dans le source de la page et dans les deux paquets.
+		 *
+		 * C'est le HTML de `rendreDocument` (`ADR-004`), lu par la route sur le
+		 * corps de la note : `edition.lecture.corps.html`. Le même document que
+		 * l'éditeur ouvrira ensuite, donc le même texte avant et après montage.
+		 *
+		 * CHAÎNE VIDE : IL N'Y A RIEN À ÉDITER — la création d'une note vierge,
+		 * et une note dont le registre Référence ne porte pas de texte. Le
+		 * second cas est le cas ORDINAIRE d'une note créée par le produit :
+		 * `creerUneNote()` n'écrit jamais NULL, mais `corpsVide()`, un
+		 * paragraphe sans texte. La route sert donc la chaîne vide sur
+		 * `redige`, jamais sur `existe` — sur `existe`, elle servait `<p></p>`
+		 * et la zone se déclarait NON vide. La zone se signale alors vide et
+		 * rend son invite, ce qui est exactement l'état que le gel montre à la
+		 * création.
+		 *
+		 * REQUISE : les deux routes qui montent cette vue la passent, et une
+		 * troisième qui l'oublierait ne compilerait plus.
+		 */
+		corps: string;
 		/**
 		 * L'ANCIENNETÉ DU DERNIER ENREGISTREMENT, quand la route la connaît.
 		 *
@@ -224,6 +256,9 @@
 		typesFiche,
 		templates,
 		noteModifiee = undefined,
+		/* LE CORPS RÉDIGÉ, SERVI PAR LA ROUTE. Vide, la zone de rédaction est
+		   vide et se signale telle. */
+		corps,
 		/* L'ANCIENNETÉ DU DERNIER ENREGISTREMENT. `null` par défaut, et la barre
 		   dit alors « Aucune modification ». Elle se lisait à défaut dans une
 		   TABLE du gel — `modificationsPourVue('V-17')`, l'ancienneté des
@@ -407,23 +442,24 @@
 	<kbd class="touche" style="margin-left:4px">Ctrl</kbd><kbd class="touche">S</kbd>{/snippet}
 
 <!--
-	LE CORPS REPRIS EN MODIFICATION — `charger("modif")`, `V-17:3550`. Le premier
-	paragraphe est l'extrait de la note, lu au corpus ; le reste est le balisage
-	que le gel écrit.
+	LE CORPS REPRIS EN MODIFICATION — celui de LA NOTE OUVERTE, et rien d'autre.
+
+	Ce bloc portait le corps de la note de démonstration, écrit au balisage :
+	l'extrait de la note suivi des sections d'une procédure qui n'était pas la
+	sienne. Il vient désormais de la propriété `corps`, rendue par
+	`rendreDocument` (ADR-004) sur le document que la base porte.
+
+	POURQUOI L'INSERTION DE BALISAGE EST ADMISE ICI. La règle vise le contenu
+	NON MAÎTRISÉ ; celui-ci est la sortie de `rendreDocument`, dont chaque nœud
+	de texte est passé par `echapper()` et dont le schéma refuse tout document
+	invalide avant le rendu (ADR-003). Même jurisprudence que
+	`$lib/lecture/NoteDeDemonstration.svelte`.
+
+	AUCUN BLANC ENTRE LE SNIPPET ET SON CONTENU : la zone de rédaction est un
+	nœud modifiable, et un blanc inséré s'y relit comme du texte.
 -->
-{#snippet corpsRepris()}
-	<p>{noteModifiee?.extrait ?? ''}</p>
-	<h2 id="s-decl">Déclarer le serveur</h2>
-	<ol>
-		<li>Ajouter la section dans la configuration de Barman.</li>
-		<li>Recharger la configuration.</li>
-	</ol>
-	<h2 id="s-verif">Vérifier le premier passage</h2>
-	<ul class="taches">
-		<li><input type="checkbox" checked /><span>La sauvegarde apparaît dans la liste.</span></li>
-		<li><input type="checkbox" /><span>La taille est cohérente avec la base.</span></li>
-	</ul>
-{/snippet}
+<!-- eslint-disable-next-line svelte/no-at-html-tags -- sortie de `rendreDocument`, texte échappé par `echapper()` (ADR-003) -->
+{#snippet corpsRedige()}{@html corps}{/snippet}
 
 {#snippet dialogueTemplate()}
 	<!-- ============================ Sélecteur de template ============================
@@ -864,7 +900,7 @@
 			<ZoneDeRedaction
 				libelle="Corps de la note"
 				invite="Écrivez ici. Tapez « / » sur une ligne vide pour insérer un bloc, « [[ » pour lier une autre note."
-				{...cas === 'modif' ? { corps: corpsRepris } : {}}
+				{...corps === '' ? {} : { corps: corpsRedige }}
 			/>
 		</div>
 
