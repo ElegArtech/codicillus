@@ -14,12 +14,18 @@
 	 * LE CORPS RÉDIGÉ ENTRE ENFIN DANS L'ÉCRAN, ET PAR LE CONVERTISSEUR UNIQUE
 	 *
 	 * `data.corps` porte le document canonique du registre Référence, validé par
-	 * la porte unique du format. `src/vues/V-17.svelte` ne déclare aucune
-	 * propriété qui le recevrait — la vue le dit elle-même —, et `ARB-063` §5
-	 * ferme `src/vues/` pour cette campagne. Le corps est donc posé dans la zone
-	 * de rédaction APRÈS le montage, par le câblage, exactement comme les champs
-	 * cachés du formulaire : c'est le même geste, au même endroit, pour la même
-	 * raison.
+	 * la porte unique du format, et `data.corpsRendu` en est le HTML.
+	 *
+	 * L'ÉCRAN OUVRAIT LE CORPS D'UNE AUTRE NOTE, ET C'ÉTAIT SERVI.
+	 * `src/vues/V-17.svelte` ne déclarait aucune propriété qui reçût le corps :
+	 * la vue écrivait donc, en modification, l'extrait de la note suivi des
+	 * sections d'une procédure de démonstration, et le câblage remplaçait le tout
+	 * APRÈS le montage. Flash à chaque chargement, contenu PERMANENT sans
+	 * JavaScript, et c'est ce que montrait le source de la page.
+	 *
+	 * La vue déclare désormais `corps`, et la route le lui passe. Le câblage
+	 * continue de monter l'éditeur sur le MÊME document : ce que le serveur rend
+	 * et ce que l'éditeur ouvre sont la même chose.
 	 *
 	 * La sérialisation passe par `serialiserEnMarkdown()`, le convertisseur
 	 * unique (`verif:convertisseur` en interdit un second). Le texte posé est
@@ -150,6 +156,7 @@
 		vecteur={data.vecteur}
 		notes={data.notes}
 		noteModifiee={data.noteModifiee}
+		corps={data.corpsRendu}
 		typesNote={data.typesNote}
 		typesFiche={data.typesFiche}
 		templates={data.templates}
