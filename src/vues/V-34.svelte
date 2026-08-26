@@ -213,7 +213,19 @@
 	/** `nb()` (`V-34:3025`) — la mise en forme française d'un nombre. */
 	const nb = (x: number): string => x.toLocaleString('fr-FR');
 
-	/** `window.tauxAbouti` (`V-34:2718`) — l'indicateur nord du produit. */
+	/** `window.tauxAbouti` (`V-34:2718`) — l'indicateur nord du produit.
+	 *
+	 *  L'ARTICLE « Les » A DISPARU DE « Les N autres sont des collègues
+	 *  repartis », et c'est la même règle qu'à `V-31:189`, mesurée là-bas à
+	 *  l'écran : un article ne s'accorde pas seul devant un chiffre. Le reste,
+	 *  `total - abouties`, vaut 0 dès que toutes les recherches du mois ont
+	 *  abouti — « Les 0 autres » — et 1 sitôt qu'une seule échoue, où « Le 1
+	 *  autre » n'est pas du français. Le compte se suffit ; la phrase, elle,
+	 *  s'accorde en entier.
+	 *
+	 *  CE BLOC NE SE RENDRA QU'AVEC UN JOURNAL DE RECHERCHE : `recherches` est
+	 *  vide tant qu'aucune table ne l'alimente, et `rechercheMesuree` le tait.
+	 *  Les deux comptes sont donc écrits pour le jour où il existera. */
 	const taux = $derived.by(() => {
 		let total = 0;
 		let abouties = 0;
