@@ -430,12 +430,38 @@ const VUES: Readonly<
 			}
 		]
 	},
+	/*
+	   V-41 N'EMPRUNTE PLUS `coquille()`, ET C'EST LE CORRECTIF DU LOT C.
+
+	   Ses sept sources étaient facultatives, de défaut la constante du jeu de
+	   démonstration — et TROIS n'étaient passées par personne : la chronologie
+	   nommait « Karim Belhadj » et « Sophie Nguyen », le pied de rail annonçait
+	   le numéro de version du jeu, le sélecteur d'exemple listait ses types de
+	   note. Le coût principal n'était pas à l'écran : l'import était fait EN
+	   VALEUR, et les trente-deux notes du corpus partaient dans le chunk de
+	   `/bibliotheque` — 57 Ko servis comme fichier statique, atteignables même
+	   par qui reçoit 404 sur la page.
+
+	   LES SEPT SONT EXIGÉES : il n'y a plus de défaut à mesurer, et le socle du
+	   cas les passe comme le chargeur les sert. Ce que chacune fait du rendu
+	   reste éprouvé — `socle: true` garde le cas « fournie, elle l'emporte ».
+	*/
 	'V-41': {
-		base: {},
+		base: {
+			univers: UNIVERS,
+			domaines: DOMAINES,
+			compte: MOI,
+			instance: INSTANCE,
+			activite: ACTIVITE,
+			typesNote: TYPES_NOTE
+		},
 		sources: [
-			...coquille(),
-			{ cle: 'activite', defaut: ACTIVITE, autre: ACTIVITE.slice(0, 1) },
-			{ cle: 'typesNote', defaut: TYPES_NOTE, autre: TYPES_NOTE.slice(0, 1) }
+			{ cle: 'univers', socle: true, autre: AUTRES_UNIVERS },
+			{ cle: 'domaines', socle: true, autre: AUTRES_DOMAINES },
+			{ cle: 'compte', socle: true, autre: AUTRE_COMPTE, marqueur: 'ZQ' },
+			{ cle: 'instance', socle: true, autre: AUTRE_INSTANCE, marqueur: '9.9.9' },
+			{ cle: 'activite', socle: true, autre: ACTIVITE.slice(0, 1) },
+			{ cle: 'typesNote', socle: true, autre: TYPES_NOTE.slice(0, 1) }
 		]
 	}
 };
@@ -909,5 +935,44 @@ describe('V-04 — l’issue d’assistance', () => {
 
 	it('une adresse blanche ne mène pas plus loin qu’une adresse absente', () => {
 		expect(corps('V-04', base, { portail: '   ' })).not.toContain('id="ticket"');
+	});
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   V-41 — AUCUN COMPOSANT N'EST ANNONCÉ AU-DESSUS DE RIEN
+
+   `activite` et `typesNote` avaient pour défaut les constantes du jeu ; les
+   exiger a retiré le jeu du rendu, mais a laissé LE CADRE : sur une instance
+   qui n'a encore ni trace d'activité ni type de note, la planche annonçait
+   « Chronologie » au-dessus d'une liste sans élément et « Sélecteur » au-dessus
+   d'un menu sans option. Un cadre vide n'est pas un échantillon typographique :
+   il ne montre rien de ce que la planche est censée montrer.
+
+   L'ÉTAT VIDE EST DONC L'ABSENCE DU COMPOSANT, pas sa carcasse. Les deux cas
+   qui suivent mesurent l'absence, le troisième mesure que rien n'a été retiré
+   au produit : servis, les deux composants reparaissent.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('V-41 — les composants sans matière ne sont pas annoncés', () => {
+	const SOCLE_V41 = VUES['V-41']!.base;
+	const SANS = { ...SOCLE_V41, activite: [], typesNote: [] };
+
+	it('sans activité servie, la chronologie n’est pas annoncée', () => {
+		const rendu = corps('V-41', SANS, { notes: [] });
+		expect(rendu).not.toContain('class="chrono"');
+		expect(rendu).not.toContain('>Chronologie<');
+	});
+
+	it('sans type de note servi, le sélecteur d’exemple n’est pas annoncé', () => {
+		const rendu = corps('V-41', SANS, { notes: [] });
+		expect(rendu).not.toContain('<select');
+		expect(rendu).not.toContain('>Sélecteur<');
+	});
+
+	it('servis, les deux composants reparaissent avec leur matière', () => {
+		const rendu = corps('V-41', SOCLE_V41, { notes: [] });
+		expect(rendu).toContain('class="chrono"');
+		expect(rendu).toContain('>Chronologie<');
+		expect(rendu).toContain('<select');
+		expect(rendu).toContain('>Sélecteur<');
 	});
 });

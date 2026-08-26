@@ -39,11 +39,12 @@
  * carte explorée doit s'envoyer à un collègue, et le rechargement doit la
  * rendre telle quelle.
  *
- * LES TROIS SONT PASSÉS À LA VUE, MÊME NULS, et c'est ce qui fait la bascule :
- * `typeMaitreDemande` posé — fût-ce à `null` — dit à V-20 qu'elle est branchée
- * sur une adresse, et ses trois moments de planche cessent alors de décider.
- * Le mode de conception, lui, ne pose rien : les cinq états déclarés ne bougent
- * pas d'un pixel.
+ * LES TROIS SONT PASSÉS À LA VUE, MÊME NULS, ET ELLE LES EXIGE. Ils étaient
+ * facultatifs, et leur absence rendait la main à trois « moments » de planche
+ * qui posaient eux-mêmes le type maître et le nœud au centre — deux
+ * identifiants du jeu de démonstration écrits en dur dans la vue. La bascule a
+ * disparu avec eux : cette route est la seule à monter V-20, elle pose toujours
+ * les trois, et l'état de l'écran est celui de l'adresse.
  *
  * AUCUNE VALEUR N'EST VALIDÉE CONTRE LE GRAPHE, et c'est le régime de §4.2 : un
  * type qui n'existe pas rend un anneau vide, un centre qui ne désigne rien rend
@@ -51,8 +52,8 @@
  *
  * AUCUN ÉTAT DE ZONE N'EST DÉCIDÉ ICI, contrairement à V-19 : les cinq états de
  * `verif/scenarios/V-20.json` sont des moments d'interaction, aucun n'est un
- * état de données. Décider `vide` sur cette vue reviendrait à inventer une
- * position que la planche ne porte pas.
+ * état de données. La vue n'a d'ailleurs plus de vecteur : ses moments se
+ * lisent sur l'adresse.
  */
 import { basePartagee } from '$lib/base/acces';
 import { lireLesProprietesDeFiche, lireTypesDeFiche } from '$lib/donnees/lecture';
@@ -87,8 +88,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const fiches = notes.filter((n) => n.typeFiche !== undefined).map((n) => n.id);
 
 	return {
-		/* Le défaut de la planche : « Moment — aucun type choisi ». */
-		vecteur: null,
 		/** Les trois axes de `RG-M09-05`, tels que l'adresse les porte. */
 		perimetreDemande: valeurDeSelecteur(perimetre),
 		typeMaitreDemande: url.searchParams.get('type'),
