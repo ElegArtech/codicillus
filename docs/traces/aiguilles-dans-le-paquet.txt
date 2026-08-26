@@ -3,35 +3,263 @@
      --tel-quel : le paquet déjà présent est mesuré tel quel.
 
 ── 2. LES AIGUILLES ────────────────────────────────────────────────────
-     111 noms cherchés dans build/client
+     111 noms cherchés dans build/client/ ET build/server/
          7  gel
        102  corpus
          2  jeu
-     4 noms écartés — ils sont AUSSI du vocabulaire du produit :
-       « Non classé » — univers SYSTÈME. Le produit le nomme lui-même dans l'aide de la console des univers — « Non classé convient si aucune destination ne s'impose » —, parce que c'est la destination de repli d'un domaine qui perd son rattachement.
-       « Comptes » — segment du chemin « Déploiement › Comptes », et section de la console (`sections.ts`, groupe « Utilisateurs »). Le chemin ENTIER reste une aiguille.
-       « Accès » — segment du chemin « Fiches applicatives › Accès », et mot de la prose publique (« Accès aux applications, mots de passe, salles de réunion »). Le chemin ENTIER reste une aiguille.
-       « Codicillus 1.0.0 » — le relevé du 26/08 §2 l'a trouvé au pied du rail, servi depuis `INSTANCE.version` du jeu. La version vient désormais du paquet — et `package.json` porte EXACTEMENT le même numéro. Aucune aiguille ne peut distinguer les deux tant que les deux valent « 1.0.0 » : ce serait un cri permanent sur la version réelle du produit. Ce qui garde ce site, c'est que la version ne se passe plus en propriété.
+     1 nom écarté — il est AUSSI du vocabulaire du produit :
+       « Non classé » — univers SYSTÈME, pas un univers du jeu — `schema.ts:193` le pose par défaut au titre de RG-STR-01 et interdit sa suppression. Le produit le nomme lui-même dans l’aide de la console des univers (`administration.ts:156` — « Non classé convient si aucune destination ne s’impose »), parce que c’est la destination de repli d’un domaine qui perd son rattachement. `UNIVERS` de `seeds/corpus.ts` le porte aussi : sans cet écart, le contrôle crierait sur la structure obligatoire de toute instance neuve.
 
 ── 3. LE BALAYAGE ──────────────────────────────────────────────────────
-     374 fichiers lus, 4077 Ko de texte
+     build/client    374 fichiers, 4077 Ko de texte
+     build/server    404 fichiers, 7843 Ko de texte
 
 ── 4. LES EXEMPTIONS ───────────────────────────────────────────────────
-     « bascule-telephonie-voip » ×1  dans build/client/_app/immutable/nodes/1.wx0RDDZE.js
-        vue V-26.svelte · lot R — la recherche et la coquille
-        PROVISOIRE. `V-26:255-261` garde la table d'adresses de sa planche parce que la propriété `adresse` est restée OPTIONNELLE : les cas de `proprietes-coquille.test.ts:763-790` rendent la vue SANS adresse pour relever ce que la planche affiche, puis exigent que ce relevé ait disparu du rendu servi. Le HTML servi est propre — `+error.svelte` passe `page.url.pathname`, et `passage-a-froid` le vérifie sur les deux polarités. Ce qui la retire : rendre `adresse` REQUISE, et reprendre ces trois cas sur une autre source que le repli.
-     « comptes-a-privileges-production » ×1  dans build/client/_app/immutable/nodes/1.wx0RDDZE.js
-        vue V-26.svelte · lot R — la recherche et la coquille
-        PROVISOIRE. Même site, même table d’adresses, même remède.
-     « restaurer-une-sauvegarde-mariadb » ×1  dans build/client/_app/immutable/nodes/1.wx0RDDZE.js
-        vue V-26.svelte · lot R — la recherche et la coquille
-        PROVISOIRE. Même site, même table d’adresses, même remède.
-     « Applications » ×1  dans build/client/_app/immutable/nodes/5.oJYprCwZ.js
-        vue V-21.svelte · lot C — la console, les graphes, l’import
-        PROVISOIRE. `V-21:141` retire le domaine nommé « Applications » quand la planche est en droits restreints : `domaines.filter((d) => d.nom !== 'Applications')`. C'est un nom de domaine du jeu dans un axe de planche — la branche ne se rend sur aucune route (`vecteur` est nul), mais le littéral part dans le chunk. Ce qui la retire : que l'axe restreint filtre sur une donnée de droits plutôt que sur un nom.
+     AUCUNE. Aucun lot n’est en quarantaine ; rien n’est laissé passer.
 
-── 5. LE RELEVÉ ────────────────────────────────────────────────────────
-     RIEN hors des 4 occurrences exemptées ci-dessus, qui sont nommées, situées, et qui expireront d’elles-mêmes.
+── 5. build/client — CE QUI PART CHEZ LE LECTEUR ───────────────────────
+     build/client/_app/immutable/nodes/1.BB_y334J.js  ×1
+        « bascule-telephonie-voip » — gel · relevé du 26/08 §B — adresse par défaut de la planche de V-26. Toute adresse cassée de l'instance l'annonçait, et « Créer la note » ouvrait l'éditeur sur ce titre-là.
+        …lecture`?`lecture`:`ecriture`),se=s(()=>a(ae)!==`lecture`),ce=`/notes/⟦bascule-telephonie-voip⟧`,le={supprimee:`/notes/restaurer-une-sauvegarde-mariadb`,inexistante:…
+     build/client/_app/immutable/nodes/1.BB_y334J.js  ×1
+        « comptes-a-privileges-production » — gel · relevé du 26/08 §B — troisième adresse de la planche de V-26.
+        …es/restaurer-une-sauvegarde-mariadb`,inexistante:ce,interdite:`/notes/⟦comptes-a-privileges-production⟧`},N=s(()=>a(M)===`supprimee`&&O()!==null),fe=s(()=>a(N)?null:de(c.adr…
+     build/client/_app/immutable/nodes/1.BB_y334J.js  ×1
+        « restaurer-une-sauvegarde-mariadb » — gel · relevé du 26/08 §B — seconde adresse de la planche de V-26.
+        …=`lecture`),ce=`/notes/bascule-telephonie-voip`,le={supprimee:`/notes/⟦restaurer-une-sauvegarde-mariadb⟧`,inexistante:ce,interdite:`/notes/comptes-a-privileges-production`},N…
+     build/client/_app/immutable/nodes/5.DcSSymYh.js  ×1
+        « Applications » — corpus · DOMAINES.nom
+        …ers.filter(e=>!e.systeme)),V=s(()=>a(P)?l.domaines.filter(e=>e.nom!==`⟦Applications⟧`):l.domaines),H=s(()=>{let e=l.perimetreDemande??`tout|`,t=e.indexOf(…
+     ── 4 occurrence(s) sur 2 fichier(s).
 
-══ PAQUET PROPRE — 111 aiguilles, 374 fichiers, 4 occurrence(s) exemptée(s) ══
+── 5. build/server — CE QUI TOURNE SUR LE SERVEUR ──────────────────────
+     × 232  build/server/chunks/chunks/creation.js-EkMQzrZ8.js
+            ANSSI — guide d'hygiène informatique · Applications · Applications › Serveurs · barman · Barman · bkp-01.prod · Coffre hors site · Connecter un poste au réseau invité · …
+     × 232  build/server/chunks/chunks/creation.js-EkMQzrZ8.js.map   (carte de source)
+            ANSSI — guide d'hygiène informatique · Applications · Applications › Serveurs · barman · Barman · bkp-01.prod · Coffre hors site · Connecter un poste au réseau invité · …
+     ×  20  build/server/chunks/entries/pages/notes/_identifiant_/_page.svelte.js-COQvX8uq.js
+            Barman · Exploitation › Sauvegardes · Infrastructure · Karim Belhadj · Léa Marchand · n-pg-prod-01 · n-restaurer-pg · pg-prod-01 · …
+     ×  20  build/server/chunks/entries/pages/notes/_identifiant_/_page.svelte.js-COQvX8uq.js.map   (carte de source)
+            Barman · Exploitation › Sauvegardes · Infrastructure · Karim Belhadj · Léa Marchand · n-pg-prod-01 · n-restaurer-pg · pg-prod-01 · …
+     ×  12  build/server/chunks/chunks/Rail.js-BLlbRUrH.js
+            Adressage · Applications · Infrastructure · Migration 2026 · Ordonnancement · Poste de travail · Production · Projets
+     ×  12  build/server/chunks/chunks/Rail.js-BLlbRUrH.js.map   (carte de source)
+            Adressage · Applications · Infrastructure · Migration 2026 · Ordonnancement · Poste de travail · Production · Projets
+     ×  12  build/server/chunks/entries/pages/_error.svelte.js-B1OEXxa-.js
+            bascule-telephonie-voip · comptes-a-privileges-production · Direction technique · Exploitation › Sauvegardes · Infrastructure · Karim Belhadj · Marc Ferreira · restaurer-une-sauvegarde-mariadb · …
+     ×  12  build/server/chunks/entries/pages/_error.svelte.js-B1OEXxa-.js.map   (carte de source)
+            bascule-telephonie-voip · comptes-a-privileges-production · Direction technique · Exploitation › Sauvegardes · Infrastructure · Karim Belhadj · Marc Ferreira · restaurer-une-sauvegarde-mariadb · …
+     ×  11  build/server/chunks/entries/pages/_page.svelte.js-BBH1-KtE.js
+            assistance.exemple.fr · Consignes d'astreinte — nuit et week-end · Direction technique · Karim Belhadj · Marc Ferreira · n-planifier-sauv · Sophie Nguyen
+     ×  11  build/server/chunks/entries/pages/_page.svelte.js-BBH1-KtE.js.map   (carte de source)
+            assistance.exemple.fr · Consignes d'astreinte — nuit et week-end · Direction technique · Karim Belhadj · Marc Ferreira · n-planifier-sauv · Sophie Nguyen
+     ×   7  build/server/chunks/entries/pages/recherche/_page.svelte.js-B6gBWEh1.js
+            assistance.exemple.fr · barman · Direction technique · Karim Belhadj · Marc Ferreira · Sophie Nguyen
+     ×   7  build/server/chunks/entries/pages/recherche/_page.svelte.js-B6gBWEh1.js.map   (carte de source)
+            assistance.exemple.fr · barman · Direction technique · Karim Belhadj · Marc Ferreira · Sophie Nguyen
+     ×   6  build/server/chunks/entries/pages/notes/_identifiant_/modifier/_page.svelte.js-Dr72MXjb.js
+            Applications · Migration 2026 · Poste de travail · Production · Projets
+     ×   6  build/server/chunks/entries/pages/notes/_identifiant_/modifier/_page.svelte.js-Dr72MXjb.js.map   (carte de source)
+            Applications · Migration 2026 · Poste de travail · Production · Projets
+     ×   5  build/server/chunks/chunks/V-17.js-DmGEDHNX.js
+            Applications · n-planifier-sauv · Sophie Nguyen
+     ×   5  build/server/chunks/chunks/V-17.js-DmGEDHNX.js.map   (carte de source)
+            Applications · n-planifier-sauv · Sophie Nguyen
+     ×   5  build/server/chunks/entries/pages/bibliotheque/_page.svelte.js-B0InJEZ_.js
+            Infrastructure · Karim Belhadj · pg-prod-01 · Production · Sophie Nguyen
+     ×   5  build/server/chunks/entries/pages/bibliotheque/_page.svelte.js-B0InJEZ_.js.map   (carte de source)
+            Infrastructure · Karim Belhadj · pg-prod-01 · Production · Sophie Nguyen
+     ×   5  build/server/chunks/entries/pages/cartographie/par-type/_page.svelte.js-mnykD7Ib.js
+            Karim Belhadj · Migration 2026 · n-coffre-hors-site · n-pg-prod-01 · pg-prod-01
+     ×   5  build/server/chunks/entries/pages/cartographie/par-type/_page.svelte.js-mnykD7Ib.js.map   (carte de source)
+            Karim Belhadj · Migration 2026 · n-coffre-hors-site · n-pg-prod-01 · pg-prod-01
+     ×   5  build/server/chunks/entries/pages/console/types-de-relations/_page.svelte.js-CdZRV_FZ.js
+            bkp-01.prod · Facturation · pg-prod-01 · pg-prod-02 · srv-app-01
+     ×   5  build/server/chunks/entries/pages/console/types-de-relations/_page.svelte.js-CdZRV_FZ.js.map   (carte de source)
+            bkp-01.prod · Facturation · pg-prod-01 · pg-prod-02 · srv-app-01
+     ×   5  build/server/chunks/entries/pages/univers/_univers_/_domaine_/dossiers/_...chemin_/_page.server.ts.js-Qy9brm9q.js
+            Applications · Exploitation › Sauvegardes · Infrastructure · Migration 2026
+     ×   5  build/server/chunks/entries/pages/univers/_univers_/_domaine_/dossiers/_...chemin_/_page.server.ts.js-Qy9brm9q.js.map   (carte de source)
+            Applications · Exploitation › Sauvegardes · Infrastructure · Migration 2026
+     ×   5  build/server/chunks/entries/pages/univers/_univers_/_domaine_/dossiers/_...chemin_/_page.svelte.js-DTJPY6Ju.js
+            Infrastructure · Production
+     ×   5  build/server/chunks/entries/pages/univers/_univers_/_domaine_/dossiers/_...chemin_/_page.svelte.js-DTJPY6Ju.js.map   (carte de source)
+            Infrastructure · Production
+     ×   4  build/server/chunks/entries/pages/guides/_identifiant_/_page.svelte.js-CcSt3r9G.js
+            Direction technique · Poste de travail · Réinitialiser son mot de passe · Sophie Nguyen
+     ×   4  build/server/chunks/entries/pages/guides/_identifiant_/_page.svelte.js-CcSt3r9G.js.map   (carte de source)
+            Direction technique · Poste de travail · Réinitialiser son mot de passe · Sophie Nguyen
+     ×   4  build/server/chunks/entries/pages/mon-profil/_page.svelte.js-Cf5Ko1B7.js
+            Karim Belhadj · Léa Marchand
+     ×   4  build/server/chunks/entries/pages/mon-profil/_page.svelte.js-Cf5Ko1B7.js.map   (carte de source)
+            Karim Belhadj · Léa Marchand
+     ×   4  build/server/chunks/entries/pages/notes/_identifiant_/operationnel/_page.svelte.js-BZFovdwz.js
+            n-restaurer-pg · Sophie Nguyen
+     ×   4  build/server/chunks/entries/pages/notes/_identifiant_/operationnel/_page.svelte.js-BZFovdwz.js.map   (carte de source)
+            n-restaurer-pg · Sophie Nguyen
+     ×   3  build/server/chunks/chunks/accueil.js-UEeOHnpL.js
+            Karim Belhadj · Léa Marchand · Sophie Nguyen
+     ×   3  build/server/chunks/chunks/accueil.js-UEeOHnpL.js.map   (carte de source)
+            Karim Belhadj · Léa Marchand · Sophie Nguyen
+     ×   3  build/server/chunks/chunks/adresses.js-BtU_EqFP.js
+            Exploitation › Sauvegardes · Migration 2026 · Poste de travail
+     ×   3  build/server/chunks/chunks/adresses.js-BtU_EqFP.js.map   (carte de source)
+            Exploitation › Sauvegardes · Migration 2026 · Poste de travail
+     ×   3  build/server/chunks/chunks/cablage2.js-Cp032fHc.js
+            Infrastructure · n-sig-statut · Production
+     ×   3  build/server/chunks/chunks/cablage2.js-Cp032fHc.js.map   (carte de source)
+            Infrastructure · n-sig-statut · Production
+     ×   3  build/server/chunks/entries/pages/console/exports/_page.svelte.js-C4q6hthD.js
+            Applications · Infrastructure · Migration 2026
+     ×   3  build/server/chunks/entries/pages/console/exports/_page.svelte.js-C4q6hthD.js.map   (carte de source)
+            Applications · Infrastructure · Migration 2026
+     ×   3  build/server/chunks/entries/pages/console/univers/_page.svelte.js-DtvMeUwZ.js
+            Production · Projets
+     ×   3  build/server/chunks/entries/pages/console/univers/_page.svelte.js-DtvMeUwZ.js.map   (carte de source)
+            Production · Projets
+     ×   3  build/server/chunks/entries/pages/notes/_identifiant_/comparaison/_page.svelte.js-Ch97kY1a.js
+            n-restaurer-pg
+     ×   3  build/server/chunks/entries/pages/notes/_identifiant_/comparaison/_page.svelte.js-Ch97kY1a.js.map   (carte de source)
+            n-restaurer-pg
+     ×   3  build/server/chunks/entries/pages/univers/_univers_/_domaine_/_page.svelte.js-CaD6iCu1.js.map   (carte de source)
+            Infrastructure · Poste de travail
+     ×   2  build/server/chunks/chunks/consoles.js-C_IYJAvQ.js
+            Infrastructure · Karim Belhadj
+     ×   2  build/server/chunks/chunks/consoles.js-C_IYJAvQ.js.map   (carte de source)
+            Infrastructure · Karim Belhadj
+     ×   2  build/server/chunks/chunks/fraicheur.js-ByZqjxoV.js
+            n-planifier-sauv · n-purge-sauv
+     ×   2  build/server/chunks/chunks/fraicheur.js-ByZqjxoV.js.map   (carte de source)
+            n-planifier-sauv · n-purge-sauv
+     ×   2  build/server/chunks/chunks/lecture.js-BWmfLnFj.js
+            karim.belhadj · n-sig-facturation
+     ×   2  build/server/chunks/chunks/lecture.js-BWmfLnFj.js.map   (carte de source)
+            karim.belhadj · n-sig-facturation
+     ×   2  build/server/chunks/chunks/outils.js-DAiyUVA6.js
+            Production
+     ×   2  build/server/chunks/chunks/outils.js-DAiyUVA6.js.map   (carte de source)
+            Production
+     ×   2  build/server/chunks/chunks/rangement.js-HSj8lhJC.js
+            Applications · Exploitation › Sauvegardes
+     ×   2  build/server/chunks/chunks/rangement.js-HSj8lhJC.js.map   (carte de source)
+            Applications · Exploitation › Sauvegardes
+     ×   2  build/server/chunks/entries/pages/_layout.server.ts.js-DouKMsqN.js
+            Infrastructure · Karim Belhadj
+     ×   2  build/server/chunks/entries/pages/_layout.server.ts.js-DouKMsqN.js.map   (carte de source)
+            Infrastructure · Karim Belhadj
+     ×   2  build/server/chunks/entries/pages/carte-mentale/_page.server.ts.js-CSxOmcl2.js
+            Applications
+     ×   2  build/server/chunks/entries/pages/carte-mentale/_page.server.ts.js-CSxOmcl2.js.map   (carte de source)
+            Applications
+     ×   2  build/server/chunks/entries/pages/carte-mentale/_page.svelte.js-DA56YO_M.js
+            Applications
+     ×   2  build/server/chunks/entries/pages/carte-mentale/_page.svelte.js-DA56YO_M.js.map   (carte de source)
+            Applications
+     ×   2  build/server/chunks/entries/pages/cartographie/_page.svelte.js-DEmP1PwT.js
+            Production
+     ×   2  build/server/chunks/entries/pages/cartographie/_page.svelte.js-DEmP1PwT.js.map   (carte de source)
+            Production
+     ×   2  build/server/chunks/entries/pages/console/comptes/_page.server.ts.js-BCSEh-nq.js
+            lea.marchand · Poste de travail
+     ×   2  build/server/chunks/entries/pages/console/comptes/_page.server.ts.js-BCSEh-nq.js.map   (carte de source)
+            lea.marchand · Poste de travail
+     ×   2  build/server/chunks/entries/pages/importer/_page.svelte.js-CIyC0UVK.js
+            Infrastructure
+     ×   2  build/server/chunks/entries/pages/importer/_page.svelte.js-CIyC0UVK.js.map   (carte de source)
+            Infrastructure
+     ×   2  build/server/chunks/entries/pages/univers/_univers_/_domaine_/_page.svelte.js-CaD6iCu1.js
+            Infrastructure
+     ×   2  build/server/chunks/entries/pages/univers/_univers_/_domaine_/notes/_page.server.ts.js-itvnsZSr.js
+            Infrastructure
+     ×   2  build/server/chunks/entries/pages/univers/_univers_/_domaine_/notes/_page.server.ts.js-itvnsZSr.js.map   (carte de source)
+            Infrastructure
+     ×   1  build/server/chunks/chunks/CoquilleDeConsole.js-Bpz3DF__.js
+            Karim Belhadj
+     ×   1  build/server/chunks/chunks/CoquilleDeConsole.js-Bpz3DF__.js.map   (carte de source)
+            Karim Belhadj
+     ×   1  build/server/chunks/chunks/administration.js-C50Bxnw6.js
+            Poste de travail
+     ×   1  build/server/chunks/chunks/administration.js-C50Bxnw6.js.map   (carte de source)
+            Poste de travail
+     ×   1  build/server/chunks/chunks/authentification.js-D-_8bYWv.js
+            Pierre Dubois
+     ×   1  build/server/chunks/chunks/authentification.js-D-_8bYWv.js.map   (carte de source)
+            Pierre Dubois
+     ×   1  build/server/chunks/chunks/resolution.js-CbdWjVip.js
+            Pierre Dubois
+     ×   1  build/server/chunks/chunks/resolution.js-CbdWjVip.js.map   (carte de source)
+            Pierre Dubois
+     ×   1  build/server/chunks/chunks/schema.js-BpEM0JRH.js
+            Direction technique
+     ×   1  build/server/chunks/chunks/schema.js-BpEM0JRH.js.map   (carte de source)
+            Direction technique
+     ×   1  build/server/chunks/entries/pages/_layout.svelte.js-BrUxBKnP.js
+            Karim Belhadj
+     ×   1  build/server/chunks/entries/pages/_layout.svelte.js-BrUxBKnP.js.map   (carte de source)
+            Karim Belhadj
+     ×   1  build/server/chunks/entries/pages/cartographie/par-type/_page.server.ts.js-CHOGRsl1.js
+            Production
+     ×   1  build/server/chunks/entries/pages/cartographie/par-type/_page.server.ts.js-CHOGRsl1.js.map   (carte de source)
+            Production
+     ×   1  build/server/chunks/entries/pages/console/_page.server.ts.js-CRJLcWtK.js
+            sophie.nguyen
+     ×   1  build/server/chunks/entries/pages/console/_page.server.ts.js-CRJLcWtK.js.map   (carte de source)
+            sophie.nguyen
+     ×   1  build/server/chunks/entries/pages/console/analytique/_page.svelte.js-BQQxbFXL.js
+            Applications
+     ×   1  build/server/chunks/entries/pages/console/analytique/_page.svelte.js-BQQxbFXL.js.map   (carte de source)
+            Applications
+     ×   1  build/server/chunks/entries/pages/console/comptes/_page.svelte.js-KnVHKRE-.js
+            Karim Belhadj
+     ×   1  build/server/chunks/entries/pages/console/comptes/_page.svelte.js-KnVHKRE-.js.map   (carte de source)
+            Karim Belhadj
+     ×   1  build/server/chunks/entries/pages/mon-profil/_page.server.ts.js-C6BWbw4m.js
+            Karim Belhadj
+     ×   1  build/server/chunks/entries/pages/mon-profil/_page.server.ts.js-C6BWbw4m.js.map   (carte de source)
+            Karim Belhadj
+     ×   1  build/server/chunks/entries/pages/notes/_identifiant_/relations/_page.svelte.js-D-jASw0V.js
+            n-restaurer-pg
+     ×   1  build/server/chunks/entries/pages/notes/_identifiant_/relations/_page.svelte.js-D-jASw0V.js.map   (carte de source)
+            n-restaurer-pg
+     ×   1  build/server/chunks/entries/pages/recherche/_page.server.ts.js-Tebvbxki.js
+            barman
+     ×   1  build/server/chunks/entries/pages/recherche/_page.server.ts.js-Tebvbxki.js.map   (carte de source)
+            barman
+     ×   1  build/server/chunks/entries/pages/univers/_univers_/_domaine_/_page.server.ts.js-yFqT5gGh.js
+            Infrastructure
+     ×   1  build/server/chunks/entries/pages/univers/_univers_/_domaine_/_page.server.ts.js-yFqT5gGh.js.map   (carte de source)
+            Infrastructure
+     ×   1  build/server/chunks/entries/pages/univers/_univers_/_domaine_/notes/_page.svelte.js-B7O_P0LM.js
+            Infrastructure
+     ×   1  build/server/chunks/entries/pages/univers/_univers_/_domaine_/notes/_page.svelte.js-B7O_P0LM.js.map   (carte de source)
+            Infrastructure
+     ×   1  build/server/chunks/entries/pages/univers/_univers_/_domaine_/signets/_page.server.ts.js-BWtS9q7B.js
+            Infrastructure
+     ×   1  build/server/chunks/entries/pages/univers/_univers_/_domaine_/signets/_page.server.ts.js-BWtS9q7B.js.map   (carte de source)
+            Infrastructure
+     ×   1  build/server/chunks/entries/pages/univers/_univers_/_domaine_/signets/_page.svelte.js-CFv3SbDg.js
+            Infrastructure
+     ×   1  build/server/chunks/entries/pages/univers/_univers_/_domaine_/signets/_page.svelte.js-CFv3SbDg.js.map   (carte de source)
+            Infrastructure
+     ×   1  build/server/chunks/entries/pages/univers/_univers_/_page.svelte.js-DUDo9FZH.js
+            Production
+     ×   1  build/server/chunks/entries/pages/univers/_univers_/_page.svelte.js-DUDo9FZH.js.map   (carte de source)
+            Production
+     ── 809 occurrence(s) sur 106 fichier(s) — dont 405 dans des cartes de source.
+
+── 6. LE VERDICT ───────────────────────────────────────────────────────
+
+!! build/client — CE QUI PART CHEZ LE LECTEUR
+   4 occurrence(s) du jeu de démonstration sur 2 fichier(s).
+   Le remède est le RETRAIT du littéral, ou une propriété REQUISE qui le
+   remplace — jamais une condition de rendu : la condition laisse le littéral
+   dans le chunk, et le chunk est servi avant toute autorisation.
+
+!! build/server — CE QUI TOURNE SUR LE SERVEUR
+   809 occurrence(s) du jeu de démonstration sur 106 fichier(s) — dont 405 dans des cartes de source.
+   Aucun octet n’en part vers un navigateur — mais chaque littéral est à UNE
+   ROUTE de s’y rendre. La cause principale est nommée dans `eslint.config.js` :
+   `src/lib/donnees/creation.ts:76` et `src/lib/donnees/signets-ecriture.ts:41`
+   importent `corpsVide()` de `src/lib/base/semence.ts`, qui importe `CORPUS`
+   EN VALEUR. Le remède y est écrit : déplacer `corpsVide()` hors de la semence.
 

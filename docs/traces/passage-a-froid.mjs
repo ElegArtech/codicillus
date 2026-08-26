@@ -3,7 +3,7 @@
  *
  * Il monte une base vide, applique les migrations, N'EN SÈME AUCUNE DONNÉE,
  * crée à la main le strict nécessaire — un univers, un domaine, deux notes, un
- * signet —, puis ouvre les trente-six routes du produit dans Chromium et LIT LE
+ * signet —, puis ouvre les trente-neuf routes du produit dans Chromium et LIT LE
  * HTML SERVI. Il échoue si un seul nom du jeu de démonstration s'y trouve.
  *
  * C'EST EXACTEMENT LE GESTE QUE DEUX FICHIERS DU DÉPÔT RACONTENT AVOIR FAIT À
@@ -74,7 +74,13 @@ process.env.NOM_BASE = BASE_FROIDE;
 process.env.BASE_POSTGRES = BASE_FROIDE;
 
 const IDENTIFIANT = 'a.froid';
-const MOT_DE_PASSE = 'passage-a-froid-2026';
+/* TIRÉ À CHAQUE PASSAGE, JAMAIS ÉCRIT ICI. Le compte naît dans la base jetable
+   du passage et meurt avec elle : le secret n'a aucune valeur hors du processus
+   qui le tire. Mais ce fichier est VERSIONNÉ dans un dépôt PUBLIC, et le dépôt
+   vient d'expulser un mot de passe de développement de `CLAUDE.md` pour ce motif
+   exact (`chore(sécurité)`). Un littéral qui ressemble à un identifiant n'a rien
+   à faire dans un fichier public, même quand il n'ouvre rien. */
+const MOT_DE_PASSE = (await import('node:crypto')).randomBytes(24).toString('base64url');
 
 /* CE QUE LE PASSAGE CRÉE. Aucun de ces noms n'est dans le jeu, et c'est le
    point : si l'un des écrans affiche autre chose, l'autre chose vient d'ailleurs. */
@@ -322,7 +328,11 @@ try {
 	titre('4. LES AIGUILLES');
 	const aiguilles = await aiguillesDuCorpus();
 	console.log(`     ${aiguilles.length} noms du jeu cherchés dans chaque réponse.`);
-	console.log(`     ${ECARTES.length} noms écartés — ils sont AUSSI du vocabulaire du produit :`);
+	console.log(
+		ECARTES.length === 1
+			? '     1 nom écarté — il est AUSSI du vocabulaire du produit :'
+			: `     ${ECARTES.length} noms écartés — ils sont AUSSI du vocabulaire du produit :`
+	);
 	for (const e of ECARTES) console.log(`       « ${e.mot} » — ${e.motif}`);
 	console.log('     AUCUNE EXEMPTION ICI. Ce qu’un lecteur peut lire à l’écran ne s’exempte pas.');
 

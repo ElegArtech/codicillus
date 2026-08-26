@@ -4,7 +4,7 @@
  * Ce module ne mesure rien. Il répond à une seule question : « quels mots, s'ils
  * sortent du produit, prouvent que le jeu de démonstration a fui ? » Les deux
  * contrôles de `docs/traces/` s'en servent — `passage-a-froid.mjs` sur le HTML
- * SERVI, `aiguilles-dans-le-paquet.mjs` sur `build/client/`.
+ * SERVI, `aiguilles-dans-le-paquet.mjs` sur tout le paquet construit.
  *
  * LA LISTE N'EST PAS RECOPIÉE : ELLE EST PRODUITE PAR SA SOURCE.
  * Une liste écrite à la main aurait été verte le jour où le jeu aurait changé
@@ -22,53 +22,42 @@
 
 /* ═══════════════════════ CE QUI N'EST PAS UNE AIGUILLE ═══════════════════════
 
-   Trois noms du jeu sont AUSSI des mots du produit. Les retenir ferait crier le
-   contrôle sur le vocabulaire de Codicillus lui-même, et un contrôle qui crie à
-   tort finit débranché. Chacun porte ici la preuve qui l'écarte — un site du
-   produit, mesuré, où le mot est légitime.
+   Un nom du jeu qui est AUSSI un mot du produit ne peut pas servir de preuve :
+   le contrôle crierait sur le vocabulaire de Codicillus lui-même, et un contrôle
+   qui crie à tort finit débranché. La règle qui tranche : une aiguille NOMME UNE
+   CHOSE DU JEU et rien d'autre.
 
-   Ce n'est pas une exemption : ces mots ne sont pas des aiguilles. Une exemption
-   laisse passer une fuite reconnue (voir `EXEMPTIONS_DU_PAQUET` plus bas) ; ceci
-   dit qu'il n'y a pas de fuite à voir.
+   Ce n'est pas une exemption. Une exemption laisse passer une fuite reconnue
+   (voir `EXEMPTIONS_DU_PAQUET` plus bas) ; ceci dit qu'il n'y a pas de fuite à
+   voir.
 
-   La règle qui les distingue : une aiguille NOMME UNE CHOSE DU JEU et rien
-   d'autre. « Karim Belhadj » ne peut venir que du jeu. « Comptes » est la
-   section de la console autant que le dossier `Déploiement › Comptes`. */
+   IL N'Y EN A QU'UN, ET C'EST UNE CORRECTION. La première rédaction en portait
+   quatre, et TROIS ÉTAIENT INERTES — leur prose décrivait un filtrage qui ne
+   filtrait rien :
+     · « Comptes » et « Accès » ne sont jamais posés comme aiguilles. Ce qui les
+       écarte n'est pas cette table : c'est la garde de `aiguillesDuCorpus`, qui
+       ne retient un chemin de dossier que s'il porte un espace ou un « › ». Elle
+       est commentée à son site, le seul endroit où elle agit.
+     · « Codicillus 1.0.0 » non plus : `INSTANCE.version` n'est jamais lu par la
+       dérivation, donc ce mot n'entre jamais dans la liste.
+   Les décrire ici donnait à croire qu'un filtre les retenait. Un seul écart
+   agit, et le voici. */
 export const ECARTES = [
 	{
 		mot: 'Non classé',
 		motif:
-			"univers SYSTÈME. Le produit le nomme lui-même dans l'aide de la console " +
-			"des univers — « Non classé convient si aucune destination ne s'impose » —, " +
-			"parce que c'est la destination de repli d'un domaine qui perd son rattachement."
-	},
-	{
-		mot: 'Comptes',
-		motif:
-			'segment du chemin « Déploiement › Comptes », et section de la console ' +
-			'(`sections.ts`, groupe « Utilisateurs »). Le chemin ENTIER reste une aiguille.'
-	},
-	{
-		mot: 'Accès',
-		motif:
-			'segment du chemin « Fiches applicatives › Accès », et mot de la prose ' +
-			'publique (« Accès aux applications, mots de passe, salles de réunion »). ' +
-			'Le chemin ENTIER reste une aiguille.'
-	},
-	{
-		mot: 'Codicillus 1.0.0',
-		motif:
-			"le relevé du 26/08 §2 l'a trouvé au pied du rail, servi depuis " +
-			'`INSTANCE.version` du jeu. La version vient désormais du paquet — et ' +
-			'`package.json` porte EXACTEMENT le même numéro. Aucune aiguille ne peut ' +
-			'distinguer les deux tant que les deux valent « 1.0.0 » : ce serait un cri ' +
-			"permanent sur la version réelle du produit. Ce qui garde ce site, c'est que " +
-			'la version ne se passe plus en propriété.'
+			'univers SYSTÈME, pas un univers du jeu — `schema.ts:193` le pose par défaut ' +
+			'au titre de RG-STR-01 et interdit sa suppression. Le produit le nomme ' +
+			'lui-même dans l’aide de la console des univers (`administration.ts:156` — ' +
+			'« Non classé convient si aucune destination ne s’impose »), parce que c’est ' +
+			'la destination de repli d’un domaine qui perd son rattachement. `UNIVERS` de ' +
+			'`seeds/corpus.ts` le porte aussi : sans cet écart, le contrôle crierait sur ' +
+			'la structure obligatoire de toute instance neuve.'
 	}
 ];
 
-/** Les segments de chemin qu'on ne retient pas seuls, pour la raison ci-dessus. */
-const SEGMENTS_ECARTES = new Set(ECARTES.map((e) => e.mot));
+/** Les mots que la dérivation ne pose jamais, pour la raison ci-dessus. */
+const MOTS_ECARTES = new Set(ECARTES.map((e) => e.mot));
 
 /* ══════════════════════ LES NOMS QUE LE CORPUS NE PORTE PAS ══════════════════
 
@@ -126,66 +115,44 @@ export const AIGUILLES_DU_GEL = [
 
 /* ════════════════════════ LES EXEMPTIONS DU PAQUET ═══════════════════════════
 
-   ELLES NE VALENT QUE POUR `build/client/`, JAMAIS POUR LE HTML SERVI.
-   Ce qu'un lecteur peut LIRE À L'ÉCRAN n'est jamais exempté : `passage-a-froid`
-   ignore cette table entière.
+   ELLE EST VIDE, ET C'EST UNE CORRECTION.
 
-   Chacune nomme UN SITE — une aiguille ET un fichier —, pas une aiguille. Le
-   reste du paquet reste gardé pour le même mot.
+   Le brief du lot ne prévoyait qu'un cas, et un seul : « SI UN LOT EST EN
+   QUARANTAINE, ses noms passeront encore : exempte-les nommément, avec un
+   commentaire qui dit le lot et que l'exemption est provisoire. » La première
+   rédaction en posait quatre HORS DE CE CAS — `master` valait alors
+   `631e4f3 Merge branch 'lot-a-accords'`, les six lots S/P/N/R/C/A y étaient
+   FUSIONNÉS, aucun n'était en quarantaine. Elles couvraient donc des défauts
+   RÉSIDUELS de lots livrés, et le contrôle partait VERT sur un paquet client qui
+   portait encore `bascule-telephonie-voip`, `restaurer-une-sauvegarde-mariadb`,
+   `comptes-a-privileges-production` (V-26, dans le nœud d'erreur — le fichier
+   servi comme source à tout visiteur d'une adresse cassée) et `Applications`
+   (V-21). C'est EXACTEMENT la propriété que ce contrôle existe pour interdire :
+   un garde-fou vert sur la fuite qu'il devait nommer.
+
+   Ces quatre occurrences sont désormais RELEVÉES ET FATALES. Le contrôle rend
+   donc 1 aujourd'hui, et c'est la vérité du paquet : le remède est de rendre
+   `adresse` REQUISE dans V-26 (et de reprendre les trois cas de
+   `proprietes-coquille.test.ts:763-790` sur une autre source que le repli), et
+   de faire filtrer l'axe restreint de `V-21:141` sur une donnée de droits plutôt
+   que sur le nom de domaine « Applications ». Ni l'un ni l'autre n'appartient à
+   ce lot, et aucun des deux ne s'obtient en taisant la mesure.
+
+   QUAND CETTE TABLE PEUT SE REMPLIR, ET SEULEMENT ALORS : un lot en quarantaine.
+   Chaque entrée nomme UN SITE — `{ mot, vue, temoin, lot, motif }` —, jamais une
+   aiguille seule : le reste du paquet reste gardé pour le même mot. `temoin` est
+   ce qui tient l'exemption à son site, un second littéral de la MÊME vue qui
+   doit se trouver dans le MÊME fichier — les fichiers construits portent un
+   condensat dans leur nom, le nommer ferait expirer l'exemption à chaque
+   construction.
+
+   ELLES NE VAUDRAIENT QUE POUR LE PAQUET, JAMAIS POUR LE HTML SERVI : ce qu'un
+   lecteur peut LIRE À L'ÉCRAN ne s'exempte pas, et `passage-a-froid` ignore
+   cette table entière.
 
    ET ELLES EXPIRENT SEULES : une exemption qui ne trouve plus rien FAIT ÉCHOUER
-   le contrôle, avec l'ordre de la retirer. C'est ce qui interdit qu'une table
-   d'exemptions survive aux fuites qu'elle couvrait.
-
-   `temoin` EST CE QUI TIENT L'EXEMPTION À SON SITE. Les fichiers de
-   `build/client/` portent un condensat dans leur nom : le nommer aurait fait
-   expirer l'exemption à chaque construction, et la nommer par sa vue n'aurait
-   rien désigné du tout. Le témoin est un second littéral, de la MÊME vue, qui
-   doit se trouver dans le MÊME fichier. Sans lui, l'exemption ne s'applique pas
-   — et le même mot reste gardé dans tout le reste du paquet. */
-export const EXEMPTIONS_DU_PAQUET = [
-	{
-		mot: 'Applications',
-		vue: 'V-21.svelte',
-		temoin: 'restreints',
-		lot: 'C — la console, les graphes, l’import',
-		motif:
-			'PROVISOIRE. `V-21:141` retire le domaine nommé « Applications » quand la planche ' +
-			"est en droits restreints : `domaines.filter((d) => d.nom !== 'Applications')`. " +
-			"C'est un nom de domaine du jeu dans un axe de planche — la branche ne se rend " +
-			'sur aucune route (`vecteur` est nul), mais le littéral part dans le chunk. ' +
-			"Ce qui la retire : que l'axe restreint filtre sur une donnée de droits plutôt " +
-			'que sur un nom.'
-	},
-	{
-		mot: 'bascule-telephonie-voip',
-		vue: 'V-26.svelte',
-		temoin: "Cette page n'est pas accessible.",
-		lot: 'R — la recherche et la coquille',
-		motif:
-			"PROVISOIRE. `V-26:255-261` garde la table d'adresses de sa planche parce que la " +
-			'propriété `adresse` est restée OPTIONNELLE : les cas de ' +
-			'`proprietes-coquille.test.ts:763-790` rendent la vue SANS adresse pour relever ' +
-			'ce que la planche affiche, puis exigent que ce relevé ait disparu du rendu servi. ' +
-			'Le HTML servi est propre — `+error.svelte` passe `page.url.pathname`, et ' +
-			'`passage-a-froid` le vérifie sur les deux polarités. Ce qui la retire : rendre ' +
-			'`adresse` REQUISE, et reprendre ces trois cas sur une autre source que le repli.'
-	},
-	{
-		mot: 'restaurer-une-sauvegarde-mariadb',
-		vue: 'V-26.svelte',
-		temoin: "Cette page n'est pas accessible.",
-		lot: 'R — la recherche et la coquille',
-		motif: 'PROVISOIRE. Même site, même table d’adresses, même remède.'
-	},
-	{
-		mot: 'comptes-a-privileges-production',
-		vue: 'V-26.svelte',
-		temoin: "Cette page n'est pas accessible.",
-		lot: 'R — la recherche et la coquille',
-		motif: 'PROVISOIRE. Même site, même table d’adresses, même remède.'
-	}
-];
+   le contrôle, avec l'ordre de la retirer. */
+export const EXEMPTIONS_DU_PAQUET = [];
 
 /**
  * Ouvre un serveur Vite en mode intergiciel et lit `seeds/corpus.ts`.
@@ -232,7 +199,7 @@ export async function aiguillesDuCorpus() {
 	const poser = (mot, origine) => {
 		if (typeof mot !== 'string') return;
 		const propre = mot.trim();
-		if (propre === '' || SEGMENTS_ECARTES.has(propre)) return;
+		if (propre === '' || MOTS_ECARTES.has(propre)) return;
 		if (!par.has(propre)) par.set(propre, origine);
 	};
 
@@ -253,7 +220,8 @@ export async function aiguillesDuCorpus() {
 		   tout seul est un mot, qu'une instance réelle peut porter et que l'écran
 		   d'import donne en exemple d'une arborescence DE DISQUE (`V-24:415-429`,
 		   tranché par le lot C : « les deux dossiers de gauche restent ce qu'ils
-		   sont »). Un chemin d'un seul mot n'accuse personne. */
+		   sont »). Un chemin d'un seul mot n'accuse personne. C'EST ICI, ET NULLE
+		   PART AILLEURS, QUE « Comptes » ET « Accès » SONT ÉCARTÉS. */
 		if (typeof n.dossier === 'string' && /[\s›]/u.test(n.dossier)) {
 			poser(n.dossier, 'corpus · CORPUS.dossier (chemin entier)');
 		}
