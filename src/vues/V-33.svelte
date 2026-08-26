@@ -298,6 +298,28 @@
 		['Recherche', `Filtrer par type · ${motFiche}`]
 	]);
 
+	/**
+	 * L'AIDE DU CHAMP « nom de l'organisation » — elle ne nomme AUCUN écran.
+	 *
+	 * ELLE EN NOMMAIT DEUX, ET C'ÉTAIT UNE PROMESSE QUE LE PRODUIT NE TENAIT PAS.
+	 * Elle annonçait que les pieds de page et l'écran de connexion signeraient
+	 * « Codicillus · le nom saisi » ; or aucune vue ne lit encore ce réglage — les
+	 * cinq pieds publics portent leur signature EN DUR, et la remplacer appartient
+	 * au lot des écrans publics, pas à celui de la console. Une aide qui décrit un
+	 * effet inexistant est un mensonge d'interface, et le rendre vrai ailleurs ne
+	 * relève pas de cet écran-ci.
+	 *
+	 * CE QU'ELLE DIT DÉSORMAIS EST VRAI SUR N'IMPORTE QUELLE BRANCHE : le nom du
+	 * LOGICIEL est « Codicillus » et ne bouge jamais ; ce champ porte celui de
+	 * l'ORGANISATION, et le laisser vide n'est pas une panne mais l'état d'une
+	 * installation neuve. Aucun des deux énoncés ne dépend d'un écran.
+	 */
+	const aideOrganisation = $derived(
+		config.nomOrganisation === ''
+			? 'Facultatif. « Codicillus » est le nom du logiciel, et il se suffit à lui-même.'
+			: `« Codicillus » est le nom du logiciel ; « ${config.nomOrganisation} » est celui de votre organisation.`
+	);
+
 	/** `majEtat()` (`V-33:3171`) — l'aide du champ « versions conservées ». */
 	const aideVersions = $derived(
 		config.versionsMax
@@ -355,6 +377,45 @@
 			titre="Configuration"
 			description="Les réglages qui pilotent le comportement du produit. Ils prennent effet immédiatement, pour tout le monde."
 		/>
+
+		<!-- ============ Organisation ============
+			LE HUITIÈME RÉGLAGE, ET LE GEL NE LE DESSINE PAS.
+
+			Huit vues écrivaient « Direction technique » en dur, dont les cinq pieds
+			publics et l'écran de connexion : le segment de marché du cadrage soudé
+			dans une signature de produit, que toute autre organisation lisait comme
+			un fait sur SON instance. La clé `nom_organisation` et son canal existent
+			depuis le lot précédent ; c'est ici que l'administrateur la règle, et
+			sans ce champ le paramètre n'était réglable par aucun écran.
+
+			VIDE EST L'ÉTAT NORMAL D'UNE INSTALLATION NEUVE, pas une panne. Rien n'est
+			donc à valider — un nom d'organisation n'a pas de forme.
+			AUCUN BLOC D'ERREUR N'EST DESSINÉ : les sept autres en portent un parce
+			que l'action sait les refuser, et le peintre les remplit. Un bloc que
+			rien ne peut peindre serait un nœud mort de plus.
+
+			NI CE SOUS-TITRE NI L'AIDE NE NOMMENT D'ÉCRAN, et c'est délibéré : à ce
+			jour AUCUNE vue ne lit ce réglage — les cinq pieds publics portent
+			toujours leur signature en dur. Écrire ici « les pieds signeront … »
+			serait promettre au nom d'un autre écran ; l'écran de réglage dit ce
+			qu'il règle, pas ce que d'autres en feront.
+		-->
+		<!-- prettier-ignore -->
+		<section class="groupe"
+			><div class="groupe__tete"
+				><div
+					><h2 class="groupe__nom">Organisation</h2
+					><div class="groupe__sous">Le nom de l'organisation qui héberge cette instance. « Codicillus » est le nom du logiciel ; celui-ci est le vôtre.</div
+				></div
+			></div
+			><div class="groupe__corps"
+				><div class="champ"
+					><label class="champ__label" for="c-organisation">Nom de l'organisation</label
+					><input class="saisie" type="text" id="c-organisation" style="max-width:360px" autocomplete="off" value={config.nomOrganisation}
+					><span class="champ__aide">{aideOrganisation}</span
+				></div
+			></div
+		></section>
 
 		<!-- ============ Fraîcheur ============ -->
 		<!-- prettier-ignore -->

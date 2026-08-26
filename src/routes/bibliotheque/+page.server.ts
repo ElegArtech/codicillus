@@ -26,23 +26,30 @@
  * chargeur, qui la nourrit des notes de la base comme n'importe quelle page.
  *
  * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CE CHARGEUR NE FAIT PAS, ET IL FAUT LE DIRE PRÉCISÉMENT
+ * LES SEPT SOURCES SONT SERVIES, ET C'EST CE QUI SORT LE CORPUS DU PAQUET
  *
- * Il ne touche pas `src/vues/V-41.svelte`, qui importe `ACTIVITE`, `UNIVERS`,
- * `DOMAINES`, `MOI` et `INSTANCE` au niveau du module (`V-41:93`). Et la vue
- * choisit ses trois notes-échantillons du témoin de fraîcheur par
- * `notes.find(…)` (`V-41:141`) — LA PREMIÈRE note de chaque niveau DANS L'ORDRE
- * REÇU. Or `lireNotes()` de `T-030` ordonne par identifiant, quand le jeu de
- * semence porte l'ordre de la maquette : l'ordre du jeu n'a aucune contrepartie
- * en base — aucune colonne de rang sur `notes` — et les trois échantillons
- * affichés ici ne sont donc pas ceux du gel. Ce n'est PAS une valeur
- * illustrative : ce sont trois vraies notes de la base, à chaque fois la
- * première de son niveau. Le banc n'atteint pas cette route et ne le voit pas ;
- * écart déclaré au rapport du lot.
+ * Il n'en servait que quatre. Les trois autres — l'état de l'instance, le flux
+ * d'activité, les types de note — restaient à leur défaut, et ce défaut était
+ * une constante de `seeds/corpus.ts` IMPORTÉE EN VALEUR : les trente-deux notes
+ * du jeu partaient dans le chunk de cette page, 57 Ko servis comme fichier
+ * statique, atteignables même par qui reçoit 404 sur l'adresse. Les sept
+ * propriétés de `V-41` sont désormais EXIGÉES ; l'import en valeur a disparu, et
+ * le chargeur qui en oublierait une ne compilerait plus.
+ *
+ * CE QUI RESTE UN ÉCART, ET IL FAUT LE DIRE PRÉCISÉMENT. La vue choisit ses
+ * trois notes-échantillons du témoin de fraîcheur par `notes.find(…)` — LA
+ * PREMIÈRE note de chaque niveau DANS L'ORDRE REÇU. Or `lireNotes()` ordonne par
+ * identifiant, quand le jeu de semence portait l'ordre de la maquette : l'ordre
+ * du jeu n'a aucune contrepartie en base — aucune colonne de rang sur `notes` —
+ * et les trois échantillons affichés ici ne sont donc pas ceux du gel. Ce n'est
+ * PAS une valeur illustrative : ce sont trois vraies notes de la base, à chaque
+ * fois la première de son niveau.
  */
 import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
+import { lireLActivite } from '$lib/donnees/accueil';
 import { contexteDeRequete, resoudreLaConsole } from '$lib/donnees/consoles';
+import { lireTypesDeNote } from '$lib/donnees/lecture';
 import type { PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
@@ -55,6 +62,20 @@ export const load: PageServerLoad = async ({ locals }) => {
 		notes: acces.ressource.notes,
 		univers: acces.ressource.univers,
 		domaines: acces.ressource.domaines,
-		compte: acces.ressource.compte
+		compte: acces.ressource.compte,
+		/* LA CHRONOLOGIE MONTRE LE FLUX RÉEL DU PÉRIMÈTRE. Elle affichait
+		   « Karim Belhadj — verification » et « Sophie Nguyen — edition », les
+		   quatre premiers événements du jeu de démonstration, sur toute instance.
+		   Sans trace, elle est vide — et une chronologie vide dit la vérité. */
+		activite: await lireLActivite(
+			base,
+			acces.ressource.notes.map((n) => n.id),
+			new Date()
+		),
+		/* LE SÉLECTEUR D'EXEMPLE LISTE LES TYPES DU RÉFÉRENTIEL, pas les cinq du
+		   jeu : c'est un composant de démonstration typographique, mais ses
+		   options sont de vraies valeurs, et une instance qui a renommé ses types
+		   doit les voir ici. */
+		typesNote: await lireTypesDeNote(base)
 	};
 };

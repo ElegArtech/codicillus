@@ -60,7 +60,9 @@ import {
 	type Univers,
 	type UtilisateurCourant
 } from '../../seeds/corpus';
+import * as PEUPLEMENT from '../../seeds/demonstration';
 import { nomDArchive } from '../lib/export/archive';
+import { readFileSync } from 'node:fs';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -293,10 +295,13 @@ describe('V-28 — Domaines', () => {
 	/**
 	 * SUR UNE INSTANCE NEUVE, LE REGISTRE EST VIDE — ET LE DÉCOMPTE LE DIT.
 	 *
-	 * Les noms de domaine se mesurent par OCCURRENCES : le gel écrit
-	 * `placeholder="Infrastructure"` sur le champ du panneau, un exemple de
-	 * saisie qui porte le nom d'un domaine du jeu. Ce qui doit tomber à zéro,
-	 * c'est la LIGNE du domaine et sa description.
+	 * Les noms de domaine se mesurent par OCCURRENCES, et non par absence. Le
+	 * gel écrivait sur le champ du panneau un exemple de saisie qui portait le
+	 * nom d'un domaine du jeu : l'exemple a été DÉCALÉ, pour qu'une instance
+	 * semée ne montre plus le même mot en exemple et dans la liste au-dessus.
+	 * La mesure par occurrences reste la bonne — elle ne dépend d'aucun choix
+	 * d'exemple —, et ce qui doit tomber à zéro est la LIGNE du domaine et sa
+	 * description.
 	 */
 	test('sur une instance neuve, aucun domaine du jeu n’est rendu', async () => {
 		const servi = await rendre('V-28', SERVI);
@@ -450,11 +455,12 @@ describe('V-30 — Types de relation', () => {
 	/**
 	 * SUR UNE INSTANCE NEUVE, LE CATALOGUE EST VIDE — ET LE DÉCOMPTE LE DIT.
 	 *
-	 * Les libellés se mesurent par OCCURRENCES et non par absence, parce que le
-	 * gel en écrit deux au balisage : `placeholder="héberge"` sur le champ du
-	 * panneau, et la phrase de tête qui illustre la lecture dans les deux sens.
-	 * Ce sont des exemples de formulaire, pas des types servis comme des faits ;
-	 * ce qui doit tomber à zéro, c'est la LIGNE de chaque type.
+	 * Les libellés se mesurent par OCCURRENCES et non par absence : la phrase de
+	 * tête illustre la lecture d'une relation dans les deux sens. Les exemples
+	 * des deux champs du panneau ont été DÉCALÉS hors du catalogue du jeu — un
+	 * exemple de formulaire ne doit pas coïncider mot pour mot avec ce que la
+	 * liste au-dessus affiche. Ce qui doit tomber à zéro est la LIGNE de chaque
+	 * type.
 	 */
 	test('sur une instance neuve, aucun type du jeu n’est rendu', async () => {
 		const servi = await rendre('V-30', SERVI);
@@ -495,9 +501,9 @@ describe('V-31 — Squelettes', () => {
 	/**
 	 * SUR UNE INSTANCE NEUVE, LA LISTE EST VIDE — ET LE DÉCOMPTE LE DIT.
 	 *
-	 * Par occurrences, pour la même raison qu'en `V-30` : le gel écrit
-	 * `placeholder="Procédure d'intervention"` sur le champ du panneau, un
-	 * exemple de saisie qui porte le nom d'un squelette du jeu.
+	 * Par occurrences, pour la même raison qu'en `V-30`. L'exemple de saisie du
+	 * champ du panneau portait le nom d'un squelette du jeu ; il a été décalé,
+	 * et la mesure ne dépend d'aucun choix d'exemple.
 	 */
 	test('sur une instance neuve, aucun squelette du jeu n’est rendu', async () => {
 		const servi = await rendre('V-31', SERVI);
@@ -734,3 +740,71 @@ describe('V-36 — Exports', () => {
    La boucle qui tenait ici n'aurait donc plus énuméré aucune vue — un `describe`
    vide qui aurait compté pour une preuve.
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   AUCUN EXEMPLE DE SAISIE NE REPREND UN NOM DU JEU
+
+   UN PLACEHOLDER EST LÉGITIME — il dit « voici ce que vous pourriez écrire ».
+   Le grief n'a jamais porté sur le procédé, mais sur la COÏNCIDENCE : sur une
+   instance semée, l'écran listait « Infrastructure » au-dessus et l'offrait en
+   exemple au-dessous, si bien que l'exemple se lisait comme un état. Décaler
+   les mots ne suffit pas : la campagne précédente a déplacé « Production » vers
+   « Exploitation », « Serveur » vers « Application » et « héberge » vers
+   « dépend de » — TROIS NOMS QUI SONT ENCORE DANS LE JEU, l'un des trois étant
+   même un type de fiche que la console liste.
+
+   CE CONTRÔLE NE RECOPIE NI LES EXEMPLES NI LES NOMS. Les premiers sont
+   extraits du BALISAGE des vues, les seconds des DEUX jeux — `demonstration.ts`
+   que `base:peupler` écrit, `corpus.ts` que `base:semer` écrit. Une comparaison
+   entre deux listes tenues à la main n'aurait rien prouvé du produit : elle
+   aurait vieilli le jour où l'un des deux jeux bouge.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/** Les sept consoles qui portent un exemple de saisie, telles qu'elles sont écrites. */
+const CONSOLES = ['V-27', 'V-28', 'V-29', 'V-30', 'V-31', 'V-32', 'V-33'] as const;
+
+/** Tout ce qu'une instance semée peut afficher comme NOM, des deux jeux. */
+const NOMS_DU_JEU: readonly string[] = [
+	/* `base:peupler` — `seeds/demonstration.ts`. */
+	...PEUPLEMENT.COMPTES.map((c) => c.nom),
+	...PEUPLEMENT.UNIVERS.map((u) => u.nom),
+	...PEUPLEMENT.DOMAINES.map((d) => d.nom),
+	...Object.values(PEUPLEMENT.DOSSIERS)
+		.flat()
+		.flatMap((chemin) => chemin.split('\u203a').map((s) => s.trim())),
+	...PEUPLEMENT.TYPES_DE_FICHE.flatMap((t) => [t.nom, ...t.champs.map((c) => c.nom)]),
+	...PEUPLEMENT.TYPES_DE_RELATION.flatMap((t) => [t.sortant, t.entrant]),
+	/* `base:semer` — `seeds/corpus.ts`. */
+	...UNIVERS.map((u) => u.nom),
+	...DOMAINES.map((d) => d.nom),
+	...TEMPLATES.map((t) => t.nom),
+	...TYPES_NOTE,
+	...Object.keys(TYPES_FICHE),
+	...Object.values(TYPES_RELATION).flatMap((l) => [l.sortant, l.entrant])
+];
+
+/** Les exemples de saisie d'une vue, pris dans son balisage. */
+function exemplesDeSaisie(vue: string): readonly string[] {
+	const source = readFileSync(join(racine, 'src', 'vues', `${vue}.svelte`), 'utf-8');
+	return [...source.matchAll(/placeholder="([^"{]*)"/g)].map((m) => m[1] as string);
+}
+
+describe('les exemples de saisie des consoles', () => {
+	test('les deux jeux portent bien les noms auxquels on se compare', () => {
+		/* SANS CE CAS, LE CONTRÔLE POURRAIT PASSER SUR UNE LISTE VIDE. Trois noms
+		   que la campagne précédente avait choisis comme exemples, et qui sont
+		   dans le jeu : c'est le défaut lui-même, pris par sa source. */
+		expect(NOMS_DU_JEU).toContain('Exploitation');
+		expect(NOMS_DU_JEU).toContain('Application');
+		expect(NOMS_DU_JEU).toContain('dépend de');
+		expect(NOMS_DU_JEU.length).toBeGreaterThan(50);
+	});
+
+	test.each(CONSOLES)('%s n’offre en exemple aucun nom du jeu', (vue) => {
+		const exemples = exemplesDeSaisie(vue);
+		expect(exemples.length).toBeGreaterThan(0);
+		for (const exemple of exemples) {
+			expect(NOMS_DU_JEU, `${vue} offre « ${exemple} » en exemple`).not.toContain(exemple);
+		}
+	});
+});

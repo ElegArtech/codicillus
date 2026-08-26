@@ -166,9 +166,15 @@
 	 * Le total du bandeau — ou `null` si AUCUN template ne porte le compteur.
 	 * Sommer en traitant l'absence comme un zéro rendrait un total faux ; le
 	 * total n'existe que si la donnée existe.
+	 *
+	 * LE REGISTRE VIDE EST TRAITÉ À PART, ET IL N'EST PAS UNE ABSENCE. `every()`
+	 * rend `true` par vacuité : sur une instance neuve, zéro template donnait
+	 * donc « Les — notes déjà créées », un tiret là où la réponse est ZÉRO et
+	 * qu'elle est CERTAINE. Sans template, aucune note n'a pu être amorcée : le
+	 * total se calcule, il ne se devine pas.
 	 */
 	const totalUtilisations = $derived(
-		templates.every((t) => utilisations(t) === null)
+		templates.length > 0 && templates.every((t) => utilisations(t) === null)
 			? null
 			: templates.reduce((s, t) => s + (utilisations(t) ?? 0), 0)
 	);
@@ -626,7 +632,7 @@
 						type="text"
 						id="f-nom"
 						autocomplete="off"
-						placeholder="Procédure d'intervention"
+						placeholder="Bilan trimestriel"
 						value={edite ? edite.nom : ''}
 					/>
 					<span class="champ__aide">Affiché au moment de choisir un point de départ.</span>
