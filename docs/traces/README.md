@@ -11,6 +11,11 @@ portait, et il a fallu que le commanditaire pose la question pour qu'il remonte.
 > *Une batterie mesure ce qu'on lui a demandé de mesurer. Le produit se juge à ce qu'un utilisateur
 > peut en faire.*
 
+**Aucune des trois n'est branchée à une commande de `package.json`, et c'est délibéré.** Une trace
+qu'on ajoute à `pnpm check` devient une batterie : elle prend un verdict opposable, elle bloque, et
+le harnais recommence à pousser. Elles se lancent à la main, avec les lignes de commande écrites
+ci-dessous — comme `creer-modifier-supprimer-une-note.mjs` depuis le 21/08.
+
 ## `creer-modifier-supprimer-une-note.mjs`
 
 Les trois gestes fondamentaux du produit, joués de bout en bout dans Chromium.
@@ -61,7 +66,7 @@ la dernière exécution sont dans `passage-a-froid.txt` et `aiguilles-dans-le-pa
 `codicillus_passage_a_froid`, qu'il détruit et recrée à chaque passage. Aucune autre base du poste
 n'est touchée.
 
-### `passage-a-froid.mjs` — ce qui s'affiche
+### `passage-a-froid.mjs` — ce qui s'affiche · **rend 0**
 
 Il détruit sa base, la recrée, applique les migrations, **n'en sème aucune donnée**, crée le premier
 administrateur, puis **crée à la main le strict nécessaire par les écrans de la console** — un
@@ -74,17 +79,51 @@ démonstration, **permanent sans JavaScript**.
 
 Il **pose son décor et il le dit** : `droits_de_dossier` ne porte aucune ligne sur une instance
 neuve, et `RG-DRO-02` rend alors le produit en lecture seule pour tout le monde. Sans un droit
-`gestionnaire` posé en base, aucune note ne peut naître.
+`gestionnaire` posé en base, aucune note ne peut naître. Le mot de passe de son compte est **tiré au
+hasard à chaque passage** : le compte meurt avec la base, mais ce dépôt est public et n'y écrit aucun
+littéral qui ressemble à un identifiant.
 
 Il mesure **le produit construit**, jamais `vite dev` : le serveur de développement sert les sources,
 commentaires compris, et l'un d'eux cite légitimement une adresse du jeu.
 
-### `aiguilles-dans-le-paquet.mjs` — ce qui se livre
+### `aiguilles-dans-le-paquet.mjs` — ce qui se livre · **rend 1 aujourd'hui, et il a raison**
 
-Il lit chaque octet de `build/client/`. Une branche morte ne s'affiche nulle part et part quand même
+Il lit chaque octet du paquet construit. Une branche morte ne s'affiche nulle part et part quand même
 chez le lecteur : les 57 Ko de `/bibliotheque` qui importaient le corpus **en valeur**, les 30 Ko du
 corps de démonstration sur le chunk de `/notes/{id}`, l'arborescence entière du gel dans tout chunk
 montant une coquille. **Aucun test de rendu ne verra jamais rien de tout cela.**
+
+**Il lit les DEUX moitiés du paquet.** La première rédaction ne balayait que `build/client/` en
+annonçant mesurer « ce qui se livre » : une zone aveugle sur la moitié du paquet, et elle n'était
+déclarée nulle part. `build/server/` se livre aussi — c'est ce que l'image porte et ce que
+`node build/index.js` exécute.
+
+| Zone | Ce que c'est | Relevé |
+|---|---|---|
+| `build/client/` | **ce qui part chez le lecteur** — servi comme ressource statique, lisible par qui veut, **y compris par qui reçoit 404** | occurrence par occurrence |
+| `build/server/` | **ce qui tourne sur le serveur** — aucun octet n'en part vers un navigateur, mais chaque littéral est **à une route** de s'y rendre | fichier par fichier |
+
+**Les deux font échouer le contrôle.** Une zone qu'on mesure sans en tirer de code est une zone qu'on
+ne mesure pas. Et il échoue aujourd'hui, sur deux choses qu'aucun lot de la campagne ne porte :
+
+- **`build/client/` — quatre occurrences**, dans le nœud d'erreur (`bascule-telephonie-voip`,
+  `restaurer-une-sauvegarde-mariadb`, `comptes-a-privileges-production`, la table d'adresses de la
+  planche de `V-26`) et dans le nœud de la carte mentale (`Applications`, le filtre par nom de
+  domaine de `V-21:141`). Le remède : rendre `adresse` **requise** dans V-26 — et reprendre les trois
+  cas de `proprietes-coquille.test.ts:763-790` sur une autre source que le repli —, et faire filtrer
+  l'axe restreint de V-21 sur une donnée de droits plutôt que sur un nom. Ces quatre-là ne sont pas
+  théoriques : sur le produit construit, `GET /_app/immutable/nodes/1.*.js` rend **200 sans session**
+  et la ressource porte les trois adresses ; `GET /_app/immutable/nodes/5.*.js` rend **200** et porte
+  « Applications ».
+- **`build/server/` — quatre cents occurrences sur cinquante-trois fichiers**, autant dans leurs
+  cartes de source. La principale est le chunk de `creation.js` : 85 314 octets, `CORPUS` sérialisé
+  en entier, importé par **dix** nœuds de routes. **La cause est déjà nommée dans le
+  dépôt**, au bloc d'exemption d'`eslint.config.js` — `src/lib/donnees/creation.ts:76` et
+  `src/lib/donnees/signets-ecriture.ts:41` importent `corpsVide()` de `src/lib/base/semence.ts`, qui
+  importe `CORPUS` **en valeur**. Le remède y est écrit : déplacer `corpsVide()` hors de la semence.
+
+Un garde-fou vert sur la fuite qu'il devait nommer ne serait pas un garde-fou. Le rouge est le
+relevé, il est dans `aiguilles-dans-le-paquet.txt`, et il nomme chaque site.
 
 ### Les aiguilles — `aiguilles-du-corpus.mjs`
 
@@ -94,13 +133,20 @@ jeu ajoute son identifiant et son titre aux aiguilles sans que personne y pense,
 source est vérifiée plutôt que supposée. S'y ajoutent les noms que le corpus ne porte pas et que les
 relevés du 26/08 ont nommés un par un dans les vues, chacun citant son relevé.
 
-Trois choses s'y lisent, et elles ne sont pas la même :
+Deux choses s'y lisent, et elles ne sont pas la même :
 
-- **les écartés** — des noms du jeu qui sont *aussi* du vocabulaire du produit (« Comptes » est la
-  section de la console autant que le dossier `Déploiement › Comptes`). Ce ne sont pas des
-  aiguilles : il n'y a rien à voir. Un chemin de dossier d'un seul mot en est un.
-- **les exemptions** — des fuites reconnues, qui ne valent **que pour le paquet** et **jamais pour le
-  HTML servi**. Chacune nomme un site, son lot et ce qui la retirerait.
-- **et elles expirent seules** : une exemption qui ne trouve plus rien **fait échouer le contrôle**,
-  avec l'ordre de la retirer. C'est ce qui interdit qu'une table d'exemptions survive aux fuites
-  qu'elle couvrait.
+- **l'écarté** — il y en a **un seul**, « Non classé », et c'est un univers *système* : `schema.ts:193`
+  le pose par défaut au titre de `RG-STR-01` et interdit sa suppression, `administration.ts:156` le
+  nomme dans l'aide de la console. Ce n'est pas une aiguille : il n'y a rien à voir. La première
+  rédaction en portait quatre, mais **trois étaient inertes** — « Comptes », « Accès » et
+  « Codicillus 1.0.0 » ne sont jamais posés comme aiguilles, et leur prose décrivait un filtrage qui
+  ne filtrait rien. Ce qui écarte réellement les segments d'un seul mot est la garde de
+  `aiguillesDuCorpus`, commentée à son site : **un chemin de dossier n'est retenu que s'il porte un
+  espace ou un « › »**, parce qu'un chemin d'un seul mot n'accuse personne.
+- **les exemptions** — la table est **vide**, et le mécanisme reste. Le brief ne prévoyait qu'un cas :
+  *un lot en quarantaine*, dont les noms passeraient encore, exempté nommément et provisoirement. La
+  première rédaction en posait quatre **hors de ce cas** — les six lots étaient fusionnés, aucun
+  n'était en quarantaine —, si bien que le contrôle partait vert sur les quatre fuites clientes
+  ci-dessus. Elles sont retirées. Une exemption ne vaudrait de toute façon **que pour le paquet** et
+  **jamais pour le HTML servi**, et **elle expirerait seule** : une exemption qui ne trouve plus rien
+  **fait échouer le contrôle**, avec l'ordre de la retirer.
