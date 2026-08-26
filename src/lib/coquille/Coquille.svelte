@@ -262,9 +262,11 @@
 		 *
 		 * `abregee` — 26 vues : V-08, V-10 à V-13, V-15 à V-26, V-28 à V-36.
 		 * Barre sans les deux menus déroulants, rail sans pictogrammes ni
-		 * `data-vers`, `Gestion` en `si-ecriture`, pas de `#rail-univers`, et une
-		 * arborescence de quinze nœuds ÉCRITE AU BALISAGE que le corpus ne peut
-		 * pas produire — `arborescence-abregee.ts` le démontre.
+		 * `data-vers`, pas de `#rail-univers`, et une arborescence de quinze nœuds
+		 * ÉCRITE AU BALISAGE que le corpus ne peut pas produire —
+		 * `arborescence-abregee.ts` le démontre. `Gestion` y est en `si-admin` :
+		 * le gel l'écrit `si-ecriture`, et `RG-DRO-03` dit le rôle (`Rail.svelte`,
+		 * en-tête `P-09`).
 		 *
 		 * En forme abrégée, `univers`, `domaines`, `notes` et
 		 * `brancheEnChargement` ne servent PAS au rail : il ne se dérive pas du
