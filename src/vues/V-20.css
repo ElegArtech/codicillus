@@ -318,18 +318,29 @@
 .prop__cle { flex: none; width: 92px; font-size: var(--t-mini); color: var(--c-encre-3); }
 
 /* --- Nœuds ----------------------------------------------------------------------------- */
-.noeud { cursor: pointer; }
-.noeud__forme { stroke-width: 1.5; transition: opacity var(--m-doux); }
-.noeud__code {
+/* CANTONNÉES AU SVG, ET CE N'EST PAS UNE PRÉCAUTION.
+   `.noeud`, `.noeud__nom` et `.noeud__code` nomment DEUX choses dans la même
+   page : les nœuds du graphe, ici, et les branches de l'arborescence du rail,
+   qui est rendu sur tout écran de coquille. Sans le `svg`, la déclaration
+   `pointer-events: none` — qui n'a de sens que pour une étiquette de graphe,
+   posée par-dessus sa forme — tombait sur les liens du rail et les rendait
+   INERTES : visibles, soulignés, curseur de lien, et le clic passait au travers.
+   Mesuré au navigateur : sur /cartographie le lien « Doctrine » du rail ne
+   naviguait pas, alors qu'il naviguait depuis /recherche. Les autres propriétés
+   sont des attributs SVG (`text-anchor`, `fill`, `stroke`, `paint-order`) : le
+   `svg` ne restreint donc rien qui servait ailleurs. */
+svg .noeud { cursor: pointer; }
+svg .noeud__forme { stroke-width: 1.5; transition: opacity var(--m-doux); }
+svg .noeud__code {
   font-family: var(--f-donnee); font-size: 8px; font-weight: 700;
   text-anchor: middle; dominant-baseline: central; pointer-events: none; fill: #fff;
 }
-.noeud__nom {
+svg .noeud__nom {
   font-family: var(--f-ui); font-size: 11px; font-weight: 600;
   text-anchor: middle; pointer-events: none; fill: var(--c-encre);
   paint-order: stroke; stroke: var(--c-fond); stroke-width: 3px; stroke-linejoin: round;
 }
-.noeud[data-fantome="oui"] .noeud__forme { stroke-dasharray: 3 2.5; }
+svg .noeud[data-fantome="oui"] .noeud__forme { stroke-dasharray: 3 2.5; }
 .noeud[data-fantome="oui"] { opacity: .5; }
 .arete { stroke: var(--c-trait-fort); stroke-width: 1.4; fill: none; transition: opacity var(--m-doux); }
 .arete[data-technique="non"] { stroke-dasharray: 4 3; stroke: var(--c-encre-4); }
