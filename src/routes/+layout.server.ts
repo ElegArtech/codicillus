@@ -332,9 +332,23 @@ const VERSION_DU_PRODUIT = paquet.version;
  * d'assistance, et c'est ici qu'il se lit : un seul endroit, et le contexte de
  * coquille le fait descendre.
  *
- * LES DEUX CLÉS SONT LUES EN UNE REQUÊTE. Ce chargeur s'exécute à CHAQUE
- * requête du produit ; deux `select` là où un `in` suffit se paieraient sur
- * toutes les pages. Le résultat est indexé par clé plutôt que positionnel : une
+ * LE NOM DE L'ORGANISATION MONTE PAR LE MÊME CHEMIN — clé `nom_organisation`.
+ *
+ * Huit vues l'écrivaient en dur, « Direction technique », et parmi elles LES
+ * CINQ PIEDS PUBLICS ET L'ÉCRAN DE CONNEXION — c'est-à-dire les écrans que le
+ * visiteur sans session voit en premier. Ce n'était pas une donnée du jeu de
+ * démonstration : c'était le segment de marché du cadrage soudé dans une
+ * signature de produit. Le nom du LOGICIEL, « Codicillus », reste en dur, comme
+ * le pied du rail le fait déjà ; c'est la soudure entre les deux qu'on défait.
+ *
+ * Il se lit ICI et pour l'anonyme, exactement comme le portail d'assistance, et
+ * pour la même raison : les vues qui l'affichent n'ont pas de chargeur propre —
+ * V-04 n'a pas de route, et un pied de page est rendu par toutes.
+ *
+ * LES TROIS CLÉS SONT LUES EN UNE REQUÊTE. Ce chargeur s'exécute à CHAQUE
+ * requête du produit ; trois `select` là où un `in` suffit se paieraient sur
+ * toutes les pages. La troisième clé n'en coûte donc AUCUNE de plus : elle
+ * s'ajoute au `in` déjà émis. Le résultat est indexé par clé plutôt que positionnel : une
  * clé absente d'une base neuve ne rend aucune ligne, et son défaut s'applique.
  *
  * LES DÉFAUTS NE SONT PAS RECOPIÉS : ils viennent de `CONFIGURATION_PAR_DEFAUT`,
@@ -344,6 +358,7 @@ const VERSION_DU_PRODUIT = paquet.version;
  */
 interface ParametresDeCoquille {
 	readonly portailAssistance: string;
+	readonly nomOrganisation: string;
 	readonly motFiche: string;
 }
 
@@ -352,7 +367,11 @@ async function parametresDeCoquille(base: Base): Promise<ParametresDeCoquille> {
 		.select({ cle: parametres.cle, valeur: parametres.valeur })
 		.from(parametres)
 		.where(
-			inArray(parametres.cle, [CLES_DE_PARAMETRE.portailAssistance, CLES_DE_PARAMETRE.motFiche])
+			inArray(parametres.cle, [
+				CLES_DE_PARAMETRE.portailAssistance,
+				CLES_DE_PARAMETRE.nomOrganisation,
+				CLES_DE_PARAMETRE.motFiche
+			])
 		);
 	const lues = new Map(lignes.map((l) => [l.cle, l.valeur]));
 	const chaine = (cle: string, defaut: string): string => {
@@ -363,6 +382,10 @@ async function parametresDeCoquille(base: Base): Promise<ParametresDeCoquille> {
 		portailAssistance: chaine(
 			CLES_DE_PARAMETRE.portailAssistance,
 			CONFIGURATION_PAR_DEFAUT.portailAssistance
+		),
+		nomOrganisation: chaine(
+			CLES_DE_PARAMETRE.nomOrganisation,
+			CONFIGURATION_PAR_DEFAUT.nomOrganisation
 		),
 		motFiche: chaine(CLES_DE_PARAMETRE.motFiche, CONFIGURATION_PAR_DEFAUT.motFiche)
 	};
