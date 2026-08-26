@@ -103,6 +103,7 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { adresseDeDomaine } from '$lib/rangement/adresses';
+	import { accord } from '$lib/vocabulaire';
 	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
 	import {
 		SCENARIO_LIVRE,
@@ -515,11 +516,32 @@
 	 * `rendreRapport()` et de `deposer()`, au caractère près.
 	 */
 	const PHRASES = {
-		recusDepuis: ' reçus depuis ',
+		/* Deux de ces fragments s'ACCORDENT avec le compte qui les précède : ils
+		   sont des fonctions, et les blancs de bord restent dans l'expression. */
+		recusDepuis: (n: number): string => ` ${accord(n, 'reçu')} depuis `,
 		bilanAvecErreurs: "L'import est allé jusqu'au bout : ",
 		bilanSansErreur: 'Tous les fichiers retenus ont été convertis. ',
-		ecartesALApercu: ' avaient été écartés à l\u2019aperçu, comme annoncé.'
+		ecartesALApercu: (n: number): string =>
+			` ${accord(n, 'avait été écarté', 'avaient été écartés')} à l\u2019aperçu, comme annoncé.`
 	};
+
+	/**
+	 * LA FIN DU BILAN D'UN IMPORT PARTIELLEMENT EN ÉCHEC — l'accord y court sur
+	 * TOUTE la phrase, pas sur un nom : verbe, article, possessif et pronom
+	 * changent avec le compte. Un `+s` sur « fichiers » aurait laissé « Les 1
+	 * fichiers en échec sont listés […] ils n'ont bloqué aucun des autres ».
+	 * C'est le cas de syntagme que la seconde forme d'`accord()` sert.
+	 */
+	function bilanDesEchecs(devenues: number, echecs: number): string {
+		return (
+			` ${accord(devenues, 'est devenu une note', 'sont devenus des notes')}. ` +
+			accord(
+				echecs,
+				"Le fichier en échec est listé plus bas avec sa cause ; il n'a bloqué aucun des autres et peut être repris séparément.",
+				`Les ${echecs} fichiers en échec sont listés plus bas avec leur cause ; ils n'ont bloqué aucun des autres et peuvent être repris séparément.`
+			)
+		);
+	}
 
 	function motifEnClair(motif: string | undefined): string {
 		if (motif === undefined) return '';
@@ -609,13 +631,24 @@
 	}
 
 	function titreDuBilan(r: RapportAffiche): string {
-		const creees = auFuturSiSimule(r, 'créées', 'seraient créées');
-		const majs = auFuturSiSimule(r, 'mises à jour', 'seraient mises à jour');
+		const creees = auFuturSiSimule(
+			r,
+			accord(r.notesCreees, 'créée'),
+			accord(r.notesCreees, 'serait créée', 'seraient créées')
+		);
+		const majs = auFuturSiSimule(
+			r,
+			accord(r.notesMisesAJour, 'mise à jour', 'mises à jour'),
+			accord(r.notesMisesAJour, 'serait mise à jour', 'seraient mises à jour')
+		);
+		const notes = `${r.notesCreees} ${accord(r.notesCreees, 'note')}`;
 		const debut =
 			r.notesMisesAJour > 0
-				? `${r.notesCreees} notes ${creees}, ${r.notesMisesAJour} ${majs}`
-				: `${r.notesCreees} notes ${creees}`;
-		return r.echecs > 0 ? `${debut}, ${r.echecs} fichiers en échec` : `${debut}, aucun échec`;
+				? `${notes} ${creees}, ${r.notesMisesAJour} ${majs}`
+				: `${notes} ${creees}`;
+		return r.echecs > 0
+			? `${debut}, ${r.echecs} ${accord(r.echecs, 'fichier en échec', 'fichiers en échec')}`
+			: `${debut}, aucun échec`;
 	}
 
 	/**
@@ -1213,7 +1246,7 @@
 						><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--c-frais)"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg
 					></span
 					><span style="flex:1"
-						><b>{`${fichiers.length} fichiers`}</b>{PHRASES.recusDepuis}<b>{sourceDuLot}</b>{` — ${megaOctets} Mo.`}</span
+						><b>{`${fichiers.length} ${accord(fichiers.length, 'fichier')}`}</b>{PHRASES.recusDepuis(fichiers.length)}<b>{sourceDuLot}</b>{` — ${megaOctets} Mo.`}</span
 					><button class="btn" onclick={renoncer}>Remplacer le lot</button>{/if}</div
 				>
 			</div>
@@ -1354,7 +1387,7 @@
 					><div style="flex:1"
 						><h3>{titreDuBilan(rapport)}</h3
 						><p
-							>{#if rapport.echecs}{PHRASES.bilanAvecErreurs}<b>{`${rapport.notesCreees + rapport.notesMisesAJour} fichiers sur ${rapport.total}`}</b>{` sont devenus des notes. Les ${rapport.echecs} fichiers en échec sont listés plus bas avec leur cause ; ils n'ont bloqué aucun des autres et peuvent être repris séparément.`}{:else}{PHRASES.bilanSansErreur}<b>{`${rapport.ignores} fichiers`}</b>{PHRASES.ecartesALApercu}{/if}</p
+							>{#if rapport.echecs}{PHRASES.bilanAvecErreurs}<b>{`${rapport.notesCreees + rapport.notesMisesAJour} ${accord(rapport.notesCreees + rapport.notesMisesAJour, 'fichier')} sur ${rapport.total}`}</b>{bilanDesEchecs(rapport.notesCreees + rapport.notesMisesAJour, rapport.echecs)}{:else}{PHRASES.bilanSansErreur}<b>{`${rapport.ignores} ${accord(rapport.ignores, 'fichier')}`}</b>{PHRASES.ecartesALApercu(rapport.ignores)}{/if}</p
 						></div
 					></div
 				>{#if rapport.echecs}<section class="section-rapport section-rapport--erreurs"
@@ -1378,7 +1411,7 @@
 				>{/if}<section class="section-rapport"
 					><span class="etiq">{rapportSimule ? 'Structure qui serait créée' : 'Structure créée'}</span
 					><div class="section-rapport__cadre" style="padding:var(--e-3) var(--e-4);font-size:var(--t-petit)"
-						>{`${rapport.dossiersCrees} dossiers ${auFuturSiSimule(rapport, 'créés', 'seraient créés')} dans le domaine ${rapport.domaine}.`}</div
+						>{`${rapport.dossiersCrees} ${accord(rapport.dossiersCrees, 'dossier')} ${auFuturSiSimule(rapport, accord(rapport.dossiersCrees, 'créé'), accord(rapport.dossiersCrees, 'serait créé', 'seraient créés'))} dans le domaine ${rapport.domaine}.`}</div
 					></section
 				><section class="section-rapport"
 					><span class="etiq">{intituleDesNotes(rapport)}</span
@@ -1390,7 +1423,7 @@
 							><span class="note-creee__nom">{n.titre}</span
 							><span class="note-creee__ou">{n.ou}</span></a
 						>{/if}{/each}{#if rapport.ecrites.length > 8}<div style="padding:var(--e-2);font-size:var(--t-mini);color:var(--c-encre-3)"
-							>{`et ${rapport.ecrites.length - 8} autres — la liste complète est dans le domaine.`}</div
+							>{`et ${rapport.ecrites.length - 8} ${accord(rapport.ecrites.length - 8, 'autre')} — la liste complète est dans le domaine.`}</div
 						>{/if}</div
 					></section
 				>{/if}</div

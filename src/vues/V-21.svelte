@@ -66,6 +66,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { adresseDeDossier, segmentsDeDossier } from '$lib/rangement/adresses';
+	import { accord } from '$lib/vocabulaire';
 
 	/**
 	 * LE RANGEMENT EST EXIGÉ, L'IDENTITÉ A UN ÉTAT VIDE.
@@ -437,7 +438,7 @@
 	function libelleDuNoeud(n: NoeudMental): string {
 		return (
 			`${n.nom}, ${n.rang}` +
-			(n.rang === 'note' ? '' : `, ${compter(n)} notes`) +
+			(n.rang === 'note' ? '' : `, ${compter(n)} ${accord(compter(n), 'note')}`) +
 			(n.enfants.length ? (estDeplie(n.cle) ? ', déplié' : ', replié') : '')
 		);
 	}
@@ -512,8 +513,8 @@
 				>
 			</div>
 			<span class="compte-global" id="compte-global"
-				><b>{totalNotes}</b>{totalNotes > 1 ? ' notes dans ' : ' note dans '}<b>{totalDomaines}</b
-				>{totalDomaines > 1 ? ' domaines' : ' domaine'}</span
+				><b>{totalNotes}</b>{' ' + accord(totalNotes, 'note') + ' dans '}<b>{totalDomaines}</b
+				>{' ' + accord(totalDomaines, 'domaine')}</span
 			>
 
 			<div
@@ -602,8 +603,7 @@
 										height="14"
 										rx="7"
 									/><text class="n__compte" x={LARGEUR - largeurC / 2 - 8} y={HAUTEUR / 2}
-										>{total}<title
-											>{`${total}${total > 1 ? ' notes' : ' note'} dans cette branche`}</title
+										>{total}<title>{`${total} ${accord(total, 'note')} dans cette branche`}</title
 										></text
 									>{/if}{#if l.noeud.enfants.length}<g
 										class="chevron"
