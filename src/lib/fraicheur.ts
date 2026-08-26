@@ -246,10 +246,25 @@ export type FormeDeLibelle = 'longue' | 'compacte';
  *     Ce que la forme compacte retire, c'est le verbe REDONDANT avec la jauge
  *     — pas le verbe qui la contredit.
  *
- * Ces deux branches ne sont exercées que par `fraicheur.test.ts`, qui les nomme
- * comme telles. LA BORNE D'ARB-029 vaut pour les deux : la forme compacte
+ * Ces deux branches-là ne sont exercées que par `fraicheur.test.ts`, qui les
+ * nomme comme telles. LA BORNE D'ARB-029 vaut pour les deux : la forme compacte
  * s'emploie « là où le gel l'emploie, et nulle part ailleurs ». Un troisième
  * site serait un comblement.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * ET DEUX GARDES PRÉCÈDENT CES QUATRE BRANCHES — elles n'étaient exercées
+ * NULLE PART.
+ *
+ * `revise === null` et `jours <= 0` ouvrent le corps ci-dessous. Elles ont été
+ * ajoutées après le gel, abondamment commentées, et AUCUN contrôle ne les
+ * touchait : `fraicheur.test.ts` ne portait pas une occurrence de `revise`, de
+ * « Jamais vérifiée » ni de « à l'instant ». Seul un rendu de V-14 atteignait
+ * la première, par ricochet.
+ *
+ * C'EST CETTE LACUNE QUI A LAISSÉ PASSER LEURS DEUX DÉFAUTS JUMEAUX — V-03 et
+ * le panneau « Position » de V-14 omettaient tous deux `revise`, et le champ
+ * étant OPTIONNEL avec un test STRICT, la garde tombait en silence. Les deux
+ * gardes ont désormais leurs contrôles, l'omission comprise.
  */
 export function libelleFraicheur(note: EtatDeFraicheur, forme: FormeDeLibelle = 'longue'): string {
 	/**

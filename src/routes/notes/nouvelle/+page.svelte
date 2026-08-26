@@ -226,6 +226,10 @@
 	     la vue retombe sinon sur `DOMAINES` du jeu de semence, et le sélecteur
 	     proposait des domaines inexistants — mesuré sur une instance neuve, il
 	     offrait « Production › Infrastructure » à une base qui n'en a jamais eu. -->
+	<!-- UNE NOTE VIERGE N'A PAS DE CORPS, ET LA ZONE DE RÉDACTION LE DIT : `corps`
+	     est la chaîne vide, et l'invite d'amorçage s'affiche. La propriété est
+	     REQUISE, et c'est ce qui garantit que l'écran de MODIFICATION ne peut
+	     plus oublier de servir le sien. -->
 	<Vue
 		domaines={page.data.domaines}
 		{universDuCompte}
@@ -234,6 +238,7 @@
 		vecteur={data.vecteur}
 		notes={data.notes}
 		{compte}
+		corps=""
 		typesNote={data.typesNote}
 		typesFiche={data.typesFiche}
 		templates={data.templates}

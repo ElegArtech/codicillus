@@ -233,7 +233,10 @@ function voisinesDe(lecture: LectureDeNote): readonly VoisineAffichee[] {
 		sens,
 		titre: n.titre,
 		fraicheur: n.fraicheur,
-		jours: n.jours
+		jours: n.jours,
+		/* SANS ELLE, UNE VOISINE JAMAIS VÉRIFIÉE LISAIT « il y a 3 mois ». Le
+		   champ est celui de la note, jamais recomposé ici. */
+		revise: n.revise
 	});
 	const retenues: VoisineAffichee[] = [];
 	const avant = fratrie[rang - 1];

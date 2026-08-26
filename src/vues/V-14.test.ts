@@ -403,3 +403,59 @@ describe('V-14 — rien du jeu de démonstration ne subsiste au défaut', () => 
 		expect(html).not.toContain('id="o-preparer"');
 	});
 });
+
+/**
+ * LE PANNEAU « POSITION » — LE LIBELLÉ D'UNE NOTE VOISINE, ET LE JUMEAU NON
+ * RAPPORTÉ DE LA FRAÎCHEUR MENSONGÈRE.
+ *
+ * `libelleCompactDe()` construisait un objet littéral SANS `revise`. Le champ
+ * est optionnel dans `EtatDeFraicheur` et sa garde est stricte : `undefined` ne
+ * la déclenchait pas, et une note voisine JAMAIS VÉRIFIÉE lisait « il y a
+ * 3 mois » là où la note principale, sur la même page, dit « Jamais vérifiée ».
+ * Le type ne pouvait pas protester — c'est ce qui a laissé passer le défaut.
+ */
+describe('V-14 — la fraîcheur d’une note voisine ne ment pas', () => {
+	const VOISINE = {
+		identifiant: 'n-voisine',
+		sens: '←' as const,
+		titre: 'La note qui précède',
+		fraicheur: 'vieil' as const,
+		jours: 92,
+		revise: '2026-05-25'
+	};
+
+	it('rend le libellé compact d’une voisine vérifiée', async () => {
+		const html = await rendu({
+			panneaux: { ...PANNEAUX_VIDES, voisines: [VOISINE] }
+		});
+		expect(html).toContain('il y a 3 mois');
+		expect(html).not.toContain('>jamais<');
+	});
+
+	it('dit « jamais » d’une voisine que personne n’a jamais vérifiée', async () => {
+		const html = await rendu({
+			panneaux: { ...PANNEAUX_VIDES, voisines: [{ ...VOISINE, revise: null }] }
+		});
+		expect(html).toContain('>jamais<');
+		expect(html).not.toContain('il y a 3 mois');
+	});
+});
+
+/**
+ * LE PANNEAU D'ERREUR PERMANENT — retiré, avec la maquette qui le portait.
+ *
+ * « Statistiques indisponibles / Le service de mesure ne répond pas » était
+ * rendu SANS CONDITION sur chaque note, avec un bouton « Réessayer » inerte, et
+ * 300 px au-dessus d'un compteur de consultations qui fonctionne.
+ */
+describe('V-14 — aucun panneau n’annonce une panne qui n’a pas eu lieu', () => {
+	it('ne rend plus « Statistiques indisponibles » ni son bouton inerte', async () => {
+		const html = await rendu({ affichee: AFFICHEE });
+		expect(html).not.toContain('Statistiques indisponibles');
+		expect(html).not.toContain('Le service de mesure ne répond pas');
+		expect(html).not.toContain('Réessayer');
+		expect(html).not.toContain('panneau--erreur');
+		/* Le compteur, lui, reste — c'est lui que le panneau contredisait. */
+		expect(html).toContain('431 consultations · 7 sur les 30 derniers jours');
+	});
+});

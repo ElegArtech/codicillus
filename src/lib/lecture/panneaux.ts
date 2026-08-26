@@ -43,6 +43,22 @@ export interface VoisineAffichee {
 	readonly fraicheur: NiveauFraicheur;
 	/** Son ancienneté, entrée de la forme compacte du libellé (ARB-029). */
 	readonly jours: number;
+	/**
+	 * SA DATE DE DERNIÈRE VÉRIFICATION, OU `null` — ELLE N'A JAMAIS ÉTÉ
+	 * VÉRIFIÉE, ET LE LIBELLÉ DOIT LE DIRE.
+	 *
+	 * Le champ manquait, et le panneau « Position » écrivait donc « il y a
+	 * 3 mois » d'une note voisine que personne n'avait jamais vérifiée : la
+	 * fraîcheur retombe sur la date de MODIFICATION (`RG-M06-01`, et c'est
+	 * juste), mais le libellé, lui, affirmait alors un geste qui n'avait pas eu
+	 * lieu. `libelleFraicheur` porte la branche depuis longtemps ; elle est
+	 * gardée par `revise === null`, et `EtatDeFraicheur.revise` étant OPTIONNEL,
+	 * l'omission tombait EN SILENCE, sans que le type proteste.
+	 *
+	 * IL N'EST DONC PAS OPTIONNEL ICI : le chargeur le lit sur la `Note`, qui le
+	 * porte toujours, et un appelant qui l'oublierait ne compilerait plus.
+	 */
+	readonly revise: string | null;
 }
 
 /* ═══════════════════════════════════════ Le panneau « Pièces jointes » ══ */

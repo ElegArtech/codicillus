@@ -788,9 +788,14 @@
 				</button>
 			</div>
 			<div class="dlg__corps">
+				<!-- L'ATTRIBUTION ÉTAIT CELLE DU GEL — « écrite par Sophie Nguyen le
+				     12 mai 2026 » —, et elle voyageait dans le paquet de
+				     `/notes/{identifiant}` sans jamais s'afficher : aucune route ne
+				     monte ce dialogue. Nommer un auteur et une date demanderait que
+				     la version soit SERVIE ; la phrase dit donc ce que le geste fait,
+				     et rien qu'elle ne puisse savoir. -->
 				<p class="dlg__texte">
-					Le contenu de la version 11, écrite par Sophie Nguyen le 12 mai 2026, redeviendra le
-					contenu courant de la note.
+					Le contenu de cette version redeviendra le contenu courant de la note.
 				</p>
 				<!-- L'inquiétude est « vais-je perdre l'état actuel ». La réponse passe
 			     avant tout le reste. -->
@@ -850,7 +855,7 @@
 						autofocus
 						id="reviser-txt"
 						rows="3"
-						placeholder="La commande de l'étape 4 a changé depuis la version 3.11 de Barman."
+						placeholder="La commande de l'étape 4 a changé depuis la dernière mise à jour de l'outil."
 					></textarea>
 					<span class="champ__aide"
 						>Décrivez ce qui vous semble faux ou périmé. Une demande précise est traitée en quelques
@@ -963,9 +968,9 @@
 					<div class="decompte__note">
 						Les droits en pointillé sont hérités d'un dossier parent ou du domaine. <b
 							>Retirer un droit explicite ne retire pas un droit hérité</b
-						> : si Sophie Nguyen a l'écriture sur tout le domaine, lui retirer l'écriture ici la lui laisse
-						— il faut la retirer là où elle a été accordée. Le nom du dossier d'origine est indiqué sous
-						chaque droit hérité.
+						> : si un compte a l'écriture sur tout le domaine, la lui retirer ici la lui laisse — il faut
+						la retirer là où elle a été accordée. Le nom du dossier d'origine est indiqué sous chaque
+						droit hérité.
 					</div>
 				</div>
 			</div>
