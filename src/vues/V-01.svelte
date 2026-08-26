@@ -147,6 +147,25 @@
 	const signature = $derived(
 		nomOrganisation === '' ? 'Codicillus' : `Codicillus · ${nomOrganisation}`
 	);
+	/**
+	 * LE SURTITRE DE L'HAMEÇON — ET LA PRÉPOSITION EST LE PIÈGE.
+	 *
+	 * Le gel écrit « Documentation de la direction technique » : un nom commun
+	 * précédé de son article. Un nom d'organisation n'en a pas — « la Mairie de
+	 * Sainte-Foy », « Sainte-Foy Numérique », « ACME » ne prennent pas le même,
+	 * et certains n'en prennent aucun. Recomposer « Documentation de X »
+	 * fabrique donc une faute d'accord sur la moitié des instances, la valeur
+	 * du cadrage comprise : « Documentation de Direction technique ».
+	 *
+	 * L'INSTANCE NE NOUS DIT PAS SON ARTICLE, ET RIEN NE PERMET DE LE DEVINER.
+	 * On ne gouverne donc pas le nom par une préposition : on le JUXTAPOSE,
+	 * exactement comme la signature de pied le fait déjà — « Codicillus · X ».
+	 * Le séparateur porte le rapport que la préposition portait, et il tient
+	 * quel que soit le nom.
+	 */
+	const surtitre = $derived(
+		nomOrganisation === '' ? 'Documentation' : `Documentation · ${nomOrganisation}`
+	);
 
 	/** RG-M17-01 — la restriction au périmètre public, au point d'entrée. */
 	const publiques = $derived(notesPubliques(notes));
@@ -247,7 +266,7 @@
 
 	<section class="hamecon">
 		<div class="hamecon__sur etiq">
-			{nomOrganisation === '' ? 'Documentation' : `Documentation de ${nomOrganisation}`}
+			{surtitre}
 		</div>
 		<h1>Les réponses aux questions qu'on pose au support.</h1>
 		<p class="hamecon__sous">
