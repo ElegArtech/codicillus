@@ -88,8 +88,10 @@
 	 * VOCABULAIRE : aucun des douze termes contractuels n'apparaît dans cette
 	 * vue ; rien à y contrôler (P-07).
 	 */
+	import { getContext } from 'svelte';
 	import { resolve } from '$app/paths';
 	import Marque from '$lib/auth/Marque.svelte';
+	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
@@ -102,6 +104,24 @@
 	}
 
 	const { vecteur, refus = null }: Proprietes = $props();
+
+	/**
+	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation`
+	 * de la table `parametres`, descendue par le contexte de coquille.
+	 *
+	 * CET ÉCRAN DEMANDAIT « les identifiants de votre compte DE LA DIRECTION
+	 * TECHNIQUE ». Ce n'était pas une donnée du jeu de démonstration : c'était
+	 * le SEGMENT DE MARCHÉ du cadrage, écrit dans la phrase d'accueil de l'écran
+	 * de connexion — c'est-à-dire adressé à chaque personne qui entre dans le
+	 * produit, sur une instance qui n'est pas celle-là.
+	 *
+	 * CHAÎNE VIDE = L'INSTANCE NE S'EST PAS NOMMÉE, et c'est l'état normal d'une
+	 * installation neuve : la phrase retombe alors sur « votre compte », qui ne
+	 * nomme personne et reste vraie partout. Même rendu hors gabarit racine, où
+	 * `getContext` ne trouve rien.
+	 */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const nomOrganisation = $derived(identite?.nomOrganisation ?? '');
 
 	/**
 	 * Le message contextuel, tel que `ARRIVEES` du gel le déclare (`V-05:667`).
@@ -167,7 +187,11 @@
 
 		<div class="auth__boite">
 			<h1 class="auth__titre">Connexion</h1>
-			<p class="auth__sous">Utilisez les identifiants de votre compte de la direction technique.</p>
+			<p class="auth__sous">
+				{nomOrganisation === ''
+					? 'Utilisez les identifiants de votre compte.'
+					: `Utilisez les identifiants de votre compte ${nomOrganisation}.`}
+			</p>
 
 			<!--
 				`method="post"` EST DANS LE BALISAGE, ET C'EST UNE QUESTION DE SÛRETÉ.

@@ -90,22 +90,30 @@
 	 * `focalisations` ne nomme que V-23 et V-06. Rien à demander.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * LA DURÉE AFFICHÉE — POURQUOI ELLE EST UNE CONSTANTE, ET LAQUELLE
+	 * LA DURÉE N'EST PLUS UNE CONSTANTE, ET L'ARGUMENT QUI LA JUSTIFIAIT EST
+	 * CADUC
 	 *
-	 * Le gel écrit `Math.max(0.04, (performance.now() - t0) / 1000 + 0.06)`
-	 * (`V-09:1219`), puis `duree.toFixed(2).replace(".", ",")`. La recherche
-	 * porte sur quatorze notes : le terme mesuré est de l'ordre de la
-	 * microseconde, et l'arrondi à deux décimales rend « 0,06 » — il faudrait
-	 * 5 ms de calcul pour atteindre « 0,07 ». VÉRIFIÉ au relevé de DOM, six
-	 * cas sur six, et confirmé par l'étalonnage à blanc du banc, qui exige zéro
-	 * écart entre deux captures indépendantes du même état.
+	 * Cet en-tête portait `const DUREE = '0,06'` et le défendait ainsi : « le
+	 * terme mesuré est de l'ordre de la microseconde », « mesurer une durée dans
+	 * un rendu serveur n'aurait aucun sens et ne serait pas déterministe ». Les
+	 * deux propositions décrivent une recherche faite DANS LA VUE, sur quatorze
+	 * notes du jeu de démonstration.
 	 *
-	 * `0.06` est donc le TERME CONSTANT DU GEL, recopié comme tel, et non une
-	 * valeur illustrative au sens de P-02 : ce qui est calculé — le nombre de
-	 * résultats, le compte, la fraîcheur — l'est réellement, à partir de
-	 * `seeds/corpus.ts`. Mesurer une durée dans un rendu serveur n'aurait aucun
-	 * sens et ne serait pas déterministe ; la mesurer VRAIMENT est le travail du
-	 * lot de logique, avec la batterie 13 pour juge.
+	 * LA RECHERCHE DU PRODUIT EST FAITE PAR MEILISEARCH, ET ELLE REND SA DURÉE —
+	 * `processingTimeMs`, une mesure serveur, déterministe au sens où elle dit ce
+	 * qui s'est vraiment passé. La justification tombe donc : ce qui restait
+	 * était un littéral affiché sous une unité de temps, c'est-à-dire une mesure
+	 * fabriquée, exactement ce que P-02 proscrit.
+	 *
+	 * LA DURÉE EST DONC UNE DONNÉE REÇUE, en millisecondes, ou `null`. `null`
+	 * VEUT DIRE : AUCUNE MESURE N'EXISTE — et le compteur n'écrit alors pas de
+	 * durée du tout, ni constante plausible, ni `0,00 s`. Le nombre de résultats,
+	 * lui, reste rendu : il est réellement calculé.
+	 *
+	 * ELLE EST EXIGÉE, `null` COMPRIS : aucune route ne monte cette vue
+	 * aujourd'hui, et celle qui le fera devra DIRE si elle a mesuré quelque
+	 * chose. Un défaut aurait remis un littéral en place sans que rien ne
+	 * proteste — c'est le motif même que cette campagne retire.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * AUCUN CHIFFRE N'EST SAISI (P-02) : les résultats, leur nombre et leur
@@ -171,9 +179,15 @@
 	interface Proprietes {
 		/** Le jeu de semence de la vue — `corpusPourVue('V-09')`, variante « palette ». */
 		notes: readonly Note[];
+		/**
+		 * LA DURÉE DE LA RECHERCHE, EN MILLISECONDES — une MESURE, ou `null` quand
+		 * aucune mesure n'existe. Voir l'en-tête : elle remplace `DUREE = '0,06'`,
+		 * un littéral rendu sous une unité de temps. EXIGÉE, `null` compris.
+		 */
+		dureeMs: number | null;
 	}
 
-	const { notes: corpus }: Proprietes = $props();
+	const { notes: corpus, dureeMs }: Proprietes = $props();
 
 	/**
 	 * L'état au repos n'est jamais une zone vide : notes récemment consultées.
@@ -205,8 +219,13 @@
 		return '· ' + n.domaine + ' · ' + (n.typeFiche ? n.type + ' ' + n.typeFiche : n.type);
 	}
 
-	/** Le terme constant de la durée du gel — voir l'en-tête. */
-	const DUREE = '0,06';
+	/**
+	 * LE FRAGMENT « en N s » DU COMPTEUR — VIDE quand aucune durée n'a été
+	 * mesurée. Deux décimales et virgule décimale, comme le gel l'écrit.
+	 */
+	const suffixeDeDuree = $derived(
+		dureeMs === null ? '' : ` en ${(dureeMs / 1000).toFixed(2).replace('.', ',')} s`
+	);
 
 	/** Sept résultats au plus, dans l'ordre du corpus (`V-09:1231`). */
 	const MAX_RESULTATS = 7;
@@ -385,7 +404,7 @@
 				lignes: [],
 				selection: -1,
 				bloc: { texte: 'Aucun résultat pour', requete: q, action: 'Créer cette note' },
-				compteur: `0 résultat en ${DUREE} s`
+				compteur: `0 résultat${suffixeDeDuree}`
 			};
 		}
 
@@ -395,7 +414,7 @@
 			lignes,
 			selection: c.selection,
 			bloc: null,
-			compteur: `${lignes.length} résultat${lignes.length > 1 ? 's' : ''} en ${DUREE} s`
+			compteur: `${lignes.length} résultat${lignes.length > 1 ? 's' : ''}${suffixeDeDuree}`
 		};
 	}
 
