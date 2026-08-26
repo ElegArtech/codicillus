@@ -57,6 +57,7 @@
 	import { chercher, nombreFr, notesPubliques, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
+	import { accord } from '$lib/vocabulaire';
 
 	/**
 	 * LES MOTIFS DE ROUTE, ÉCRITS EN CONSTANTES — même raison qu'à `V-07:455` et
@@ -325,7 +326,9 @@
 				Pas besoin de compte pour consulter
 			</span>
 			<span class="releve" id="releve">
-				<b>{publiques.length} guides publics</b> · <b>{publiesFrais}</b> vérifiés il y a moins d'un mois
+				<b>{publiques.length} {accord(publiques.length, 'guide public', 'guides publics')}</b> ·
+				<b>{publiesFrais}</b>
+				{accord(publiesFrais, 'vérifié')} il y a moins d'un mois
 			</span>
 		</div>
 	</section>
@@ -338,9 +341,9 @@
 					{enRecherche ? 'Résultats' : 'Les guides les plus consultés'}
 				</h2>
 				<span class="etiq" id="sous-liste"
-					>{#if enRecherche}{resultats.length} résultat{resultats.length > 1 ? 's' : ''} dans les guides
-						publics{:else if !listeEnErreur && !listeVide}{populaires.length}
-						guides ouverts à tous{/if}</span
+					>{#if enRecherche}{resultats.length}
+						{accord(resultats.length, 'résultat')} dans les guides publics{:else if !listeEnErreur && !listeVide}{populaires.length}
+						{accord(populaires.length, 'guide ouvert à tous', 'guides ouverts à tous')}{/if}</span
 				>
 			</div>
 
@@ -365,7 +368,7 @@
 						<!-- prettier-ignore -->
 						<div class="res-public">{#each resultats as n (n.id)}<a class="res" href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
 							><h3 class="res__titre">{@render marque(n.titre, requete)}</h3><p class="res__extrait">{@render marque(n.extrait, requete)}</p><div class="res__pied"
-								>{@render temoin(n)}<span>{n.domaine}</span><span style="font-family:var(--f-donnee)">{nombreFr(n.vues)} consultations</span
+								>{@render temoin(n)}<span>{n.domaine}</span><span style="font-family:var(--f-donnee)">{nombreFr(n.vues)} {accord(n.vues, 'consultation')}</span
 							></div
 						></a>{/each}</div>
 						<!--
@@ -402,7 +405,7 @@
 					<!-- prettier-ignore -->
 					<div class="guides">{#each populaires as n, rang (n.id)}<a class="guide" href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
 						><span class="guide__rang">{String(rang + 1).padStart(2, '0')}</span><h3 class="guide__titre">{n.titre}</h3><p class="guide__extrait">{n.extrait}</p><div class="guide__pied"
-							>{@render temoin(n)}<span>{n.domaine}</span><span class="guide__vues">{nombreFr(n.vues)} consultations</span
+							>{@render temoin(n)}<span>{n.domaine}</span><span class="guide__vues">{nombreFr(n.vues)} {accord(n.vues, 'consultation')}</span
 						></div
 					></a>{/each}</div>{/if}
 			</div>
