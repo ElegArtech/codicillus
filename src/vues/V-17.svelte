@@ -109,7 +109,7 @@
 		Univers
 	} from '../../seeds/corpus';
 	import type { CompteAffiche } from '$lib/coquille/identite';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
 	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
@@ -384,7 +384,7 @@
 	const etatSauvegarde = $derived(cas === 'modif' ? 'enregistre' : 'vierge');
 	const texteSauvegarde = $derived(
 		cas === 'modif' && dernierEnregistrement !== null
-			? `Enregistré · dernière version il y a ${dernierEnregistrement} jours`
+			? `Enregistré · dernière version il y a ${dernierEnregistrement} ${accord(dernierEnregistrement, 'jour')}`
 			: 'Aucune modification'
 	);
 

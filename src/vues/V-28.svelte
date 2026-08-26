@@ -75,7 +75,7 @@
 	import NavigationConsole from '$lib/console/NavigationConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { filDeConsole } from '$lib/console/sections';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import type { RefusDeSaisie, SaisieDeDomaine } from '$lib/console/structure';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
@@ -490,10 +490,16 @@
 	const decompte = $derived(
 		mesuresSup
 			? ([
-					[mesuresSup.notes, mesuresSup.notes > 1 ? 'notes' : 'note'],
-					[mesuresSup.fiches, mesuresSup.fiches > 1 ? motFichePlurielMinuscule : motFicheMinuscule],
-					[mesuresSup.signets, mesuresSup.signets > 1 ? 'signets' : 'signet'],
-					[mesuresSup.dossiers, mesuresSup.dossiers > 1 ? 'dossiers' : 'dossier']
+					[mesuresSup.notes, accord(mesuresSup.notes, 'note')],
+					/* LE MOT RENOMMABLE NE SE REPLURALISE PAS : ses deux formes ont déjà
+					   traversé `pluriel()` dans `formesDuMot()`, et sont passées
+					   explicitement — c'est à cela que sert le troisième argument. */
+					[
+						mesuresSup.fiches,
+						accord(mesuresSup.fiches, motFicheMinuscule, motFichePlurielMinuscule)
+					],
+					[mesuresSup.signets, accord(mesuresSup.signets, 'signet')],
+					[mesuresSup.dossiers, accord(mesuresSup.dossiers, 'dossier')]
 				] as [number, string][])
 			: []
 	);
@@ -792,7 +798,7 @@
 						<div class="decompte__note" id="sup-note">
 							{#if mesuresSup}{videSup
 									? "Aucun contenu ne sera perdu. La confirmation par le nom reste demandée : la suppression d'un domaine est irréversible même quand il est vide."
-									: `Ces notes totalisent ${nb(mesuresSup.vues)} consultations. Tous les liens internes qui pointent vers elles deviendront cassés dans les autres domaines.`}{/if}
+									: `Ces notes totalisent ${nb(mesuresSup.vues)} ${accord(mesuresSup.vues, 'consultation')}. Tous les liens internes qui pointent vers elles deviendront cassés dans les autres domaines.`}{/if}
 						</div>
 					</div>
 
@@ -829,11 +835,12 @@
 							><circle cx="8" cy="5.5" r="2.6" /><path d="M2.8 13.5a5.2 5.2 0 0 1 10.4 0" /></svg
 						>
 						<span id="sup-comptes"
-							>{#if !mesuresSup}—{:else if mesuresSup.contributeurs}Les {mesuresSup.contributeurs}
-								comptes rattachés à ce domaine sont conservés : ils perdent seulement ce rattachement
-								et devront s'en voir attribuer un autre. Supprimer un domaine ne supprime jamais de compte.{:else}Aucun
-								compte n'est rattaché à ce domaine. Supprimer un domaine ne supprime jamais de
-								compte.{/if}</span
+							>{#if !mesuresSup}—{:else if mesuresSup.contributeurs}{accord(
+									mesuresSup.contributeurs,
+									"Le compte rattaché à ce domaine est conservé : il perd seulement ce rattachement et devra s'en voir attribuer un autre.",
+									`Les ${mesuresSup.contributeurs} comptes rattachés à ce domaine sont conservés : ils perdent seulement ce rattachement et devront s'en voir attribuer un autre.`
+								)} Supprimer un domaine ne supprime jamais de compte.{:else}Aucun compte n'est
+								rattaché à ce domaine. Supprimer un domaine ne supprime jamais de compte.{/if}</span
 						>
 					</div>
 

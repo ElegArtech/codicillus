@@ -63,6 +63,7 @@
 	import NavigationConsole from '$lib/console/NavigationConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { filDeConsole } from '$lib/console/sections';
+	import { accord } from '$lib/vocabulaire';
 	import type {
 		Compte,
 		Domaine,
@@ -1251,9 +1252,12 @@
 								<div>
 									<div class="contexte__titre">Ses contributions sont conservées</div>
 									<div>
-										{#if n}Les {n} notes écrites par {compteDesactive.compte.nom} restent à son nom, et
-											l'historique des vérifications n'est pas réécrit. Désactiver n'efface rien : c'est
-											ce qui permet de savoir, dans deux ans, qui avait rédigé quoi.{:else}Aucune
+										{#if n}{accord(
+												n,
+												`La note écrite par ${compteDesactive.compte.nom} reste à son nom`,
+												`Les ${n} notes écrites par ${compteDesactive.compte.nom} restent à son nom`
+											)}, et l'historique des vérifications n'est pas réécrit. Désactiver n'efface
+											rien : c'est ce qui permet de savoir, dans deux ans, qui avait rédigé quoi.{:else}Aucune
 											note n'est attribuée à ce compte. Rien ne sera réécrit.{/if}
 									</div>
 								</div>

@@ -62,6 +62,7 @@
 import { soumettreVers } from '$lib/cablage/formulaires';
 import { adresseDeModificationDeNote } from '$lib/edition/gestes';
 import type { Bloc, Document, Titre } from '$lib/contenu/document';
+import { accord } from '$lib/vocabulaire';
 
 /** Ce qu'un câblage rend : de quoi le défaire. Même contrat que le voisin. */
 export type Debranchement = () => void;
@@ -120,19 +121,26 @@ function boutonDuBandeau(formulaire: ParentNode, libelle: string): HTMLButtonEle
  * Les deux quantités et leurs accords sont ceux du gel (`V-18:3189-3196`) ; les
  * deux phrases sont celles de son dialogue (`V-18:2007-2013`), reprises mot pour
  * mot plutôt que reformulées.
+ *
+ * L'ACCORD VENAIT D'UN HOMONYME LOCAL — `accord(n, un, plusieurs)`, écrit ici,
+ * quand `V-41` en portait un autre du même nom AUX PARAMÈTRES INVERSÉS
+ * (`accord(compteur, pluriel, singulier)`). Deux fonctions de même nom et de
+ * signatures incompatibles dans un même dépôt : la première recopie faite d'un
+ * fichier à l'autre inversait silencieusement les deux formes. Celui-ci a cédé
+ * la place à `accord()` de `$lib/vocabulaire`, qui rend LE NOM SEUL — le nombre
+ * reste écrit ici, comme partout ailleurs. Celui de `V-41` reste dans sa
+ * planche, qui ne prend aucune donnée du produit.
  */
 export function rappelDeSuppression(zone: Element | null): string {
 	const texte = (zone?.textContent ?? '').trim();
 	const mots = texte === '' ? 0 : texte.split(/\s+/).filter(Boolean).length;
 	const blocs = zone?.children.length ?? 0;
-	const accord = (n: number, un: string, plusieurs: string): string =>
-		`${String(n)} ${n > 1 ? plusieurs : un}`;
 	return [
 		'Supprimer la version opérationnelle ?',
 		'',
 		'Seul le registre Opérationnel est supprimé :',
-		`— ${accord(blocs, 'bloc de contenu opérationnel', 'blocs de contenu opérationnel')}`,
-		`— ${accord(mots, 'mot rédigé', 'mots rédigés')}`,
+		`— ${String(blocs)} ${accord(blocs, 'bloc de contenu opérationnel', 'blocs de contenu opérationnel')}`,
+		`— ${String(mots)} ${accord(mots, 'mot rédigé', 'mots rédigés')}`,
 		'',
 		"La Référence, les métadonnées, l'historique et les liens de la note sont intacts.",
 		"Cette suppression est définitive : le contenu opérationnel n'est pas conservé dans l'historique de la Référence."
