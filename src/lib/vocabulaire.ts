@@ -1,5 +1,21 @@
 /**
- * Le mot du concept renommable, et ses quatre formes rendues.
+ * LES FORMES DU FRANÇAIS QUE LE PRODUIT REND — le mot du concept renommable et
+ * ses quatre formes, et L'ACCORD EN NOMBRE des noms qui suivent un compte.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * POURQUOI L'ACCORD EST ICI, ET PAS AILLEURS
+ *
+ * Le titre de ce module a longtemps dit « le mot du concept renommable, et ses
+ * quatre formes » — et pendant ce temps, SIX helpers d'accord vivaient dans
+ * six vues, dont DEUX HOMONYMES DE SIGNATURES INVERSES (`V-41` prend le
+ * pluriel avant le singulier, `notes/[identifiant]/operationnel/cablage.ts`
+ * l'inverse), plus huit ternaires écrits à la main. Un module qui ne s'annonce
+ * pas comme la source de l'accord la fait chercher ailleurs, et écrire une
+ * septième fois.
+ *
+ * `accord()` APPELLE `pluriel()` : les mettre dans deux modules aurait fait
+ * dépendre l'un de l'autre sans que rien ne le dise. Le titre est donc élargi,
+ * plutôt que la fonction exilée.
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * POURQUOI CE FICHIER EXISTE
@@ -56,8 +72,10 @@
  * `mot = champ("mot").value.trim() || "Fiche"` et
  * `min = mot.charAt(0).toLowerCase() + mot.slice(1)`.
  *
- * Les trois fonctions ci-dessous en sont le calque, au caractère près. Le
- * repli sur `Fiche` quand le champ est vide est du gel lui aussi : la
+ * `pluriel()`, `motConfigure()` et `initialeMinuscule()` en sont le calque, au
+ * caractère près — `accord()`, qui s'intercale entre elles, ne vient pas du
+ * gel : elle vient du dépôt, dont les quarante ternaires disaient déjà la même
+ * règle. Le repli sur `Fiche` quand le champ est vide est du gel lui aussi : la
  * configuration ne peut pas effacer le concept.
  *
  * CE QUE LA DÉRIVATION COUVRE, ET CE QU'ELLE NE COUVRE PAS. `pluriel()` traite
@@ -76,6 +94,56 @@ export function pluriel(mot: string): string {
 	if (/(au|eu)$/i.test(mot)) return `${mot}x`;
 	if (/al$/i.test(mot)) return `${mot.slice(0, -2)}aux`;
 	return `${mot}s`;
+}
+
+/**
+ * L'ACCORD EN NOMBRE D'UN NOM QUI SUIT UN COMPTE — « 1 note », « 12 notes ».
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ELLE REND LE NOM SEUL, PAS `n nom` — ET C'EST LE POINT QUI DÉCIDE DE TOUT
+ *
+ * Le formatage du NOMBRE est un autre métier, et il est déjà fait : neuf sites
+ * portent un `nb()`/`nombreFr()` en `fr-FR`, espace insécable comprise. Une
+ * fonction qui rendrait « 1 234 notes » devrait choisir un formatage, donc
+ * trancher une SECONDE dette — la duplication de ce formateur — que rien n'a
+ * mandatée ici. L'appelant écrit la composition qu'il veut, et la ponctuation
+ * du nombre reste où elle est.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * LE ZÉRO REND LE SINGULIER, ET CE N'EST PAS UNE INVENTION
+ *
+ * Le dépôt a déjà tranché, deux fois, par écrit : TOUS ses ternaires d'accord
+ * emploient `> 1` — aucun `!== 1`, aucun `>= 2` —, et `V-13.test.ts` GÈLE
+ * DÉJÀ « 0 sous-dossier » et « 1 sous-dossier ». Il ne s'agit donc pas
+ * d'introduire une convention, mais de faire tenir partout celle qu'une vue
+ * tient déjà. `fraicheur.ts` raisonne de même quand il refuse « Vérifié il y a
+ * 0 jours ».
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * LE PLURIEL EXPLICITE — UN MÉCANISME, PAS UN CONFORT
+ *
+ * Omis, il vaut `pluriel(singulier)` : le vocabulaire du produit ne contient
+ * AUCUN irrégulier — relevé exhaustif, ni `-al`, ni `-au/-eu`, ni invariable —
+ * et la règle du gel suffit intégralement. Aucune table d'exceptions n'est à
+ * ajouter ; ce serait combler un vide qui n'existe pas.
+ *
+ * Il existe pour deux cas que la dérivation ne peut PAS servir :
+ *
+ *   1. LES SYNTAGMES. L'accord ne porte pas toujours sur un nom seul :
+ *      « note qu'ils contiennent » pluralisé par `+s` donnerait
+ *      « contiennents ». Les deux formes sont alors écrites en entier.
+ *   2. LE MOT RENOMMABLE DE `M14.7`. Il a DÉJÀ traversé `pluriel()` dans
+ *      `formesDuMot()` ; le repluraliser ici en serait une seconde dérivation,
+ *      celle que ce module interdit. Les deux formes sont donc prises du
+ *      contexte — `fiche.ficheMin` et `fiche.fichesMin` — et passées
+ *      explicitement. L'ARGUMENT OPTIONNEL EST CE QUI REND CETTE DISCIPLINE
+ *      EXPRIMABLE DANS LA SIGNATURE, et non seulement dans un commentaire.
+ *
+ * Le paramètre ne s'appelle pas `pluriel` : il masquerait la fonction du même
+ * nom, que le corps appelle.
+ */
+export function accord(n: number, singulier: string, plurielExplicite?: string): string {
+	return n > 1 ? (plurielExplicite ?? pluriel(singulier)) : singulier;
 }
 
 /** Le repli du gel sur un champ vide (`V-33:3144`). */
