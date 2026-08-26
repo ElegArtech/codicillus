@@ -82,6 +82,7 @@
 	import NoteDeDemonstration from '$lib/lecture/NoteDeDemonstration.svelte';
 	import SommaireDeLaNote from '$lib/lecture/SommaireDeLaNote.svelte';
 	import type { LectureAffichee } from '$lib/lecture/note-de-demonstration';
+	import { accord } from '$lib/vocabulaire';
 
 	/**
 	 * CE QUE LA ROUTE PASSE EST REQUIS ; CE QU'ELLE NE PASSE PAS EST VIDE.
@@ -293,7 +294,7 @@
 	const retention = $derived(
 		versions.length === 0
 			? ''
-			: `${versions.length}${versions.length > 1 ? ' versions conservées' : ' version conservée'}` +
+			: `${versions.length} ${accord(versions.length, 'version conservée', 'versions conservées')}` +
 					` · les ${retentionVersions} dernières sont gardées, les plus anciennes sont supprimées automatiquement`
 	);
 
@@ -394,7 +395,12 @@
 			><div class="ver__resume">{v.resume}</div
 			><div class="ver__bas"
 				><span class="ver__qui">{v.auteur}</span
-				><span class="ampleur" title="{v.ajout} lignes ajoutées, {v.retrait} retirées"
+				><span
+					class="ampleur"
+					title="{v.ajout} {accord(v.ajout, 'ligne ajoutée', 'lignes ajoutées')}, {v.retrait} {accord(
+						v.retrait,
+						'retirée'
+					)}"
 					><span class="ampleur__plus">+{v.ajout}</span
 					><span class="ampleur__moins">−{v.retrait}</span
 					><span class="ampleur__barre" aria-hidden="true"
