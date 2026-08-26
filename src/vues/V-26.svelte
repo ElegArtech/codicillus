@@ -138,6 +138,48 @@
 		 * inexistante ou une note hors du périmètre de l'appelant.
 		 */
 		adresse?: string;
+		/**
+		 * CE QUE LE PRODUIT SAIT D'UNE NOTE SUPPRIMÉE — une DONNÉE, et aucune table
+		 * ne la porte.
+		 *
+		 * La vue l'écrivait en dur, tirée du gel : « Restaurer une sauvegarde
+		 * MariaDB », « Infrastructure › Exploitation › Sauvegardes », « Marc
+		 * Ferreira », « il y a 6 jours », « Contenu fusionné dans une autre
+		 * procédure ». Aucun écran ne l'affiche — `casDeV26()` rend TOUJOURS
+		 * `inexistante`, et le dépôt le gèle par un cas nommé —, mais un littéral
+		 * n'a pas besoin d'être rendu pour être LIVRÉ : les cinq chaînes partaient
+		 * dans le paquet de la page d'erreur, lisibles dans le source servi à
+		 * n'importe quel visiteur d'une adresse cassée.
+		 *
+		 * `null` EST L'ÉTAT NORMAL, et il le restera tant qu'aucune table ne portera
+		 * l'auteur, l'instant et le motif d'une suppression. La vue rend alors la
+		 * réponse unique d'adresse non résolue — celle que `ADR-007` prescrit, et
+		 * la seule que le produit sache tenir.
+		 */
+		supprimee?: NoteSupprimee | null;
+	}
+
+	/**
+	 * LA PIERRE TOMBALE — ce qu'un écran peut dire d'une note qui n'est plus là.
+	 *
+	 * Régime distinct de l'adresse non résolue, et l'ADR le nomme : l'existence de
+	 * la ressource est déjà connue de l'utilisateur, qui a des droits sur son
+	 * domaine. La forme reste écrite pour le jour où une table la portera ; d'ici
+	 * là, aucun montage ne la sert.
+	 */
+	interface NoteSupprimee {
+		/** Le titre de la note supprimée. */
+		readonly nom: string;
+		/** Son rangement lisible — « Univers › Domaine › Dossier ». */
+		readonly ou: string;
+		/** Qui l'a supprimée. */
+		readonly par: string;
+		/** Quand, en clair. */
+		readonly quand: string;
+		/** Le motif indiqué à la suppression. */
+		readonly motif: string;
+		/** Les termes dont la recherche de repli s'amorce. */
+		readonly requete: string;
 	}
 
 	/**
@@ -174,7 +216,8 @@
 		compte = SANS_IDENTITE,
 		reprises = [],
 		pistes,
-		adresse
+		adresse,
+		supprimee = null
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -229,35 +272,35 @@
 		'avez le droit de consulter.';
 
 	/**
-	 * LA PIERRE TOMBALE. Régime distinct, et l'ADR le nomme : l'existence de la
-	 * ressource est déjà connue de l'utilisateur, qui a des droits sur son
-	 * domaine. Les valeurs sont celles du gel (`V-26:2585-2594`).
+	 * LA RÉPONSE DE LA PIERRE TOMBALE — le seul texte qui reste écrit ici, parce
+	 * qu'il ne décrit AUCUNE note : c'est la formulation du produit, comme
+	 * `TITRE_NON_RESOLUE` et `TEXTE_NON_RESOLUE` au-dessus. Ce qui décrivait une
+	 * note du jeu de démonstration est parti dans la propriété `supprimee`.
 	 */
-	const SUPPRIMEE = {
-		adresse: ADRESSE_SUPPRIMEE,
-		titre: 'Cette note a été supprimée.',
-		texte:
-			"Le lien que vous avez suivi menait à une note qui n'existe plus. Elle se trouvait dans un " +
-			'domaine où vous avez des droits : voici ce que nous savons de sa disparition.',
-		nom: 'Restaurer une sauvegarde MariaDB',
-		ou: 'Infrastructure › Exploitation › Sauvegardes',
-		par: 'Marc Ferreira',
-		quand: 'il y a 6 jours',
-		motif: 'Contenu fusionné dans une autre procédure',
-		requete: 'restaurer sauvegarde mariadb'
-	} as const;
+	const TITRE_SUPPRIMEE = 'Cette note a été supprimée.';
+	const TEXTE_SUPPRIMEE =
+		"Le lien que vous avez suivi menait à une note qui n'existe plus. Elle se trouvait dans un " +
+		'domaine où vous avez des droits : voici ce que nous savons de sa disparition.';
 
-	const tombe = $derived(cas === 'supprimee');
+	/**
+	 * LA POSITION DE PLANCHE NE SUFFIT PLUS À RENDRE LA PIERRE TOMBALE : IL FAUT
+	 * LA DONNÉE. Sans elle, l'écran n'a rien à dire de la disparition, et un
+	 * cartouche « voici ce que nous savons » suivi de blancs serait une promesse
+	 * sans objet — la même jurisprudence que les reprises de contexte.
+	 */
+	const tombe = $derived(cas === 'supprimee' && supprimee !== null);
 	/** Le point d'entrée partagé avec V-04, pour les seuls cas non résolus. */
 	const resolution = $derived(
 		tombe ? null : adresseNonResolue(adresse ?? ADRESSES[cas] ?? ADRESSE_PAR_DEFAUT)
 	);
 
 	/** Ce que la ligne « Adresse demandée » porte à l'écran. */
-	const adresseAffichee = $derived(tombe ? SUPPRIMEE.adresse : (resolution?.adresse ?? ''));
-	const titre = $derived(tombe ? SUPPRIMEE.titre : TITRE_NON_RESOLUE);
-	const texte = $derived(tombe ? SUPPRIMEE.texte : TEXTE_NON_RESOLUE);
-	const requete = $derived((tombe ? SUPPRIMEE.requete : (resolution?.requete ?? '')).trim());
+	const adresseAffichee = $derived(tombe ? (adresse ?? '') : (resolution?.adresse ?? ''));
+	const titre = $derived(tombe ? TITRE_SUPPRIMEE : TITRE_NON_RESOLUE);
+	const texte = $derived(tombe ? TEXTE_SUPPRIMEE : TEXTE_NON_RESOLUE);
+	const requete = $derived(
+		(tombe ? (supprimee?.requete ?? '') : (resolution?.requete ?? '')).trim()
+	);
 
 	/** `rendre()` du gel : rien n'est cherché sous deux caractères. */
 	const resultats = $derived(requete.length < 2 ? [] : chercher(notes, requete));
@@ -380,10 +423,17 @@
 			 réelle expédiait donc dans son HTML « Restaurer une sauvegarde
 			 MariaDB », « Marc Ferreira » et « Infrastructure › Exploitation ›
 			 Sauvegardes » — des noms du jeu de démonstration, présentés comme
-			 les faits d'une suppression qui n'a jamais eu lieu. Rien ne bascule
-			 `tombe` côté navigateur : `cablage-erreur.ts` ne câble ni
-			 `#sup-restaurer` ni `#sup-domaine`, et le dit. -->
-		{#if tombe}
+			 les faits d'une suppression qui n'a jamais eu lieu.
+
+			 CE N'ÉTAIT QUE LA MOITIÉ DU DÉFAUT. Les cinq chaînes restaient ÉCRITES
+			 DANS LA VUE : la condition les retirait de l'écran, pas du paquet, et
+			 le chunk de la page d'erreur les portait toujours. Elles sont
+			 désormais une DONNÉE que personne ne sert — aucune table ne porte
+			 l'auteur, l'instant ni le motif d'une suppression.
+
+			 Rien ne bascule `tombe` côté navigateur : `cablage-erreur.ts` ne câble
+			 ni `#sup-restaurer` ni `#sup-domaine`, et le dit. -->
+		{#if tombe && supprimee !== null}
 			<section class="suppression" id="suppression">
 				<svg
 					width="22"
@@ -400,14 +450,14 @@
 				<div style="flex:1">
 					<h2>Cette note a été supprimée</h2>
 					<p id="sup-txt">
-						« {SUPPRIMEE.nom} » se trouvait dans {SUPPRIMEE.ou}. Son contenu reste consultable dans
+						« {supprimee.nom} » se trouvait dans {supprimee.ou}. Son contenu reste consultable dans
 						l'historique tant que la corbeille n'a pas été vidée.
 					</p>
 					<div class="suppression__qui" id="sup-qui">
-						<span>Supprimée par : {SUPPRIMEE.par}</span><span style="color:var(--c-trait-fort)"
+						<span>Supprimée par : {supprimee.par}</span><span style="color:var(--c-trait-fort)"
 							>·</span
-						><span>Quand : {SUPPRIMEE.quand}</span><span style="color:var(--c-trait-fort)">·</span
-						><span>Motif indiqué : {SUPPRIMEE.motif}</span>
+						><span>Quand : {supprimee.quand}</span><span style="color:var(--c-trait-fort)">·</span
+						><span>Motif indiqué : {supprimee.motif}</span>
 					</div>
 					<div class="suppression__actions">
 						<!-- P-09 · ARB-040 — omise, jamais masquée. `V-26:1078` -->
