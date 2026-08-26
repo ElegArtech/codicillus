@@ -60,6 +60,7 @@
  * ce module reproduit la répartition du gel, il ne l'arbitre pas.
  */
 import type { NiveauFraicheur } from '../../seeds/corpus';
+import { accord } from './vocabulaire';
 
 export type { NiveauFraicheur };
 
@@ -198,6 +199,11 @@ export type FormeDeLibelle = 'longue' | 'compacte';
  * ADR-005 interdit « tout libellé de fraîcheur construit localement » : c'est
  * cette fonction, et elle seule.
  *
+ * UN ÉCART ASSUMÉ SUR LE COMPTE EN JOURS. Le gel concatène « jours » sans
+ * l'accorder ; son jeu n'y descend jamais à 1, le défaut ne s'y voyait donc
+ * pas. Ici il se voit — une note vérifiée la veille. Le nom s'accorde
+ * (`$lib/vocabulaire`), le reste de la ligne est celui du gel.
+ *
  * ═════════════════════════════════════════════════════════════════════════
  * LES DEUX FORMES, ET LE SEUL SITE DE LA COMPACTE — ARB-029
  *
@@ -303,7 +309,21 @@ export function libelleFraicheur(note: EtatDeFraicheur, forme: FormeDeLibelle = 
 	if (note.jours <= 0) return forme === 'longue' ? "Vérifié à l'instant" : "à l'instant";
 	if (note.fraicheur === 'frais') {
 		if (note.jours < 31) {
-			return forme === 'longue' ? `Vérifié il y a ${note.jours} jours` : `il y a ${note.jours} j`;
+			/**
+			 * « VÉRIFIÉ IL Y A 1 JOURS » — LA VEILLE D'UNE VÉRIFICATION.
+			 *
+			 * La garde du dessus n'attrape que `jours <= 0` : `jours === 1`
+			 * tombait ici, et le libellé LONG — la source unique du signal de
+			 * fraîcheur (P-01), que quinze vues rendent — mettait le nom au
+			 * pluriel derrière le compte 1. Le cas n'est pas de coin : toute note
+			 * vérifiée hier le traverse.
+			 *
+			 * La forme COMPACTE ne bouge pas : `j` est un symbole d'unité, il est
+			 * invariable.
+			 */
+			return forme === 'longue'
+				? `Vérifié il y a ${note.jours} ${accord(note.jours, 'jour')}`
+				: `il y a ${note.jours} j`;
 		}
 		return forme === 'longue' ? 'Vérifié il y a 1 mois' : 'il y a 1 mois';
 	}

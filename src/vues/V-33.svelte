@@ -236,7 +236,13 @@
 
 	/** `valider()` (`V-33:3003`) — seul le second seuil peut être en faute ici :
 	 *  les quatre positions donnent toujours un premier seuil ≥ 1, un portail
-	 *  valide et un libellé non vide. Le message est celui du gel, au mot près. */
+	 *  valide et un libellé non vide. Le message est celui du gel, au mot près.
+	 *
+	 *  IL A UN JUMEAU SERVEUR, ET LES DEUX ÉCRIVENT DANS LE MÊME NŒUD :
+	 *  `donnees/administration.ts` (`messageSeuilNonCroissant`) compose la même
+	 *  phrase, et `routes/console/configuration/cablage.ts` la repeint dans
+	 *  `#erreur-vieil-txt` au retour d'« Enregistrer ». Les deux s'accordent, et
+	 *  toute retouche de l'un se fait sur l'autre. */
 	const erreurVieil = $derived(
 		seuilVieillissant <= seuilFrais
 			? `Doit dépasser le seuil frais (${seuilFrais} ${accord(seuilFrais, 'jour')}). En l'état, aucune note ne serait ` +
@@ -251,7 +257,14 @@
 	);
 
 	/** `rendreImpact()` (`V-33:3032`). L'aperçu ne s'affiche que si les deux
-	 *  seuils forment une progression valable. */
+	 *  seuils forment une progression valable.
+	 *
+	 *  L'ARTICLE « les » A DISPARU DE « Effet sur les N notes de la base », et
+	 *  c'est la même mesure qu'à `V-31:189` : un article ne s'accorde pas seul
+	 *  devant un chiffre. `avant.total` compte les notes de la base entière —
+	 *  il vaut 0 sur une instance neuve, où l'écran rendait « Effet sur les 0
+	 *  notes », et 1 dès la première note, où « la 1 note » n'est pas du
+	 *  français. Le compte se suffit. */
 	const avant = $derived(repartitionPour(config.seuilFrais, config.seuilVieillissant));
 	const apres = $derived(repartitionPour(seuilFrais, seuilVieillissant));
 	const mouvements = $derived(impactSeuils(seuilFrais, seuilVieillissant));
