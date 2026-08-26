@@ -59,8 +59,33 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
 	const config = await lireConfiguration(base);
 	const seuils = { frais: config.seuilFrais, vieillissant: config.seuilVieillissant };
+	const accueil = await lireAccueil(base, locals.identite, { maintenant: new Date(), seuils });
+
+	/* L'ÉTAT « BASE VIDE » — POUR L'ADMINISTRATEUR SEUL, ET C'EST CE QUI LE REND VRAI.
+	 *
+	 * `+page.svelte` refusait de piloter cet état par la donnée, avec un argument
+	 * juste : « un périmètre vide n'est pas une base vide », un lecteur au
+	 * périmètre étroit lisant zéro note sur une base qui en porte trente-deux.
+	 * L'argument ne couvre pas l'administrateur : `RG-DRO-03` lui rend le
+	 * périmètre TOTAL (`resolution.ts:438`), donc zéro note lue EST une base vide,
+	 * et l'affirmation gelée « Votre base ne contient encore aucune note » devient
+	 * exacte pour lui.
+	 *
+	 * Ce que le refus coûtait : le bloc d'amorçage et ses deux boutons — « Importer
+	 * votre patrimoine existant », « Créer votre première note » — ne s'affichaient
+	 * JAMAIS, pas même sur l'instance neuve pour laquelle ils sont dessinés. Deux
+	 * gestes rendus dans le HTML et masqués par la feuille, sur toute instance et
+	 * pour toujours.
+	 *
+	 * Pour tout autre compte, l'état reste nominal : les comptes affichés sont
+	 * justes, et le vide de son périmètre se dit ailleurs. */
+	const administrateur =
+		locals.identite.type === 'authentifie' && locals.identite.role === 'administrateur';
+	const baseVide = administrateur && accueil.session && accueil.notes.length === 0;
+
 	return {
-		...(await lireAccueil(base, locals.identite, { maintenant: new Date(), seuils })),
+		...accueil,
+		...(baseVide ? { vecteur: { etat: 'vide' } } : {}),
 		portail: config.portailAssistance
 	};
 };

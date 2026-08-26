@@ -354,11 +354,17 @@
 					{#each section.arbre as noeud (noeud.nom)}{@render brancheAbregee(noeud)}{/each}
 				</ul>
 			</div>{/each}
+		<!-- LE VIDE NE SE DIT PAS PAREIL SELON QUI LE LIT. Cette phrase envoyait
+	     l'administrateur qui vient d'installer « demander à un administrateur » :
+	     il est le seul compte de l'instance, et le chemin réel est la console.
+	     Mesuré sur une base à zéro univers, où c'est la première page qu'il voit. -->
 	{:else}
 		<div id="rail-univers">
 			{#if sections.length === 0}<div class="rail__vide">
-					Aucun domaine ne vous est accessible pour l'instant. Demandez à un administrateur de vous
-					rattacher à un domaine — votre compte existe, il n'a simplement pas encore de périmètre.
+					{#if role === 'admin'}Aucun univers n'existe encore sur cette instance. Créez-en un dans
+						la console, puis un domaine : le rangement s'ouvrira ici.{:else}Aucun domaine ne vous
+						est accessible pour l'instant. Demandez à un administrateur de vous rattacher à un
+						domaine — votre compte existe, il n'a simplement pas encore de périmètre.{/if}
 				</div>{:else}{#each sections as section (section.nom)}<div class="rail__section">
 						{#if section.cible === null}<div class="rail__titre etiq">{section.nom}</div>{:else}<a
 								class="rail__titre rail__titre--lien etiq"
