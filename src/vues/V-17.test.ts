@@ -71,6 +71,7 @@ function rendu(proprietes: Record<string, unknown>): Promise<string> {
 		universDuCompte: 'Production',
 		dossiersParDomaine: null,
 		compte: MOI,
+		corps: '',
 		typesNote: TYPES_NOTE,
 		typesFiche: TYPES_FICHE,
 		templates: TEMPLATES,
@@ -136,7 +137,15 @@ describe('V-17 — la propriété fournie l’emporte', () => {
 	});
 
 	it('rouvre la note reçue, et non celle que le gel nomme', async () => {
-		const html = await rendu({ vecteur: MODIF, noteModifiee: AUTRE_NOTE });
+		/* LE CORPS EST CELUI QUE LA ROUTE SERT, et il ne se déduit plus de
+		   l'extrait : la vue écrivait l'extrait en tête d'un corps de
+		   démonstration, ce qui donnait au fait éprouvé un marqueur qui n'était
+		   pas le sien. */
+		const html = await rendu({
+			vecteur: MODIF,
+			noteModifiee: AUTRE_NOTE,
+			corps: `<p>${AUTRE_NOTE.extrait}</p>`
+		});
 		expect(html).toContain(AUTRE_NOTE.titre);
 		expect(html).not.toContain(NOTE_DU_GEL.titre);
 		expect(html).toContain(AUTRE_NOTE.extrait);
@@ -263,5 +272,58 @@ describe('V-17 — le dossier de départ', () => {
 		const html = await rendu({ ...socle, dossierDeDepart: 'Réseau' });
 		expect(dossiersCoches(html)).toEqual(['Réseau']);
 		expect(dossiersCoches(sans)).not.toEqual(['Réseau']);
+	});
+});
+
+/**
+ * LE CORPS RÉDIGÉ — LE DÉFAUT LE PLUS VISIBLE DE CETTE VUE, ET IL ÉTAIT SERVI.
+ *
+ * La zone de rédaction recevait, sous `cas: 'modif'`, un corps ÉCRIT DANS LA
+ * VUE : l'extrait de la note suivi des sections d'une procédure de
+ * démonstration — « Déclarer le serveur », « Vérifier le premier passage », la
+ * configuration de Barman. Le chargeur de `/notes/{identifiant}/modifier` pose
+ * ce vecteur sur TOUTE modification : ouvrir n'importe quelle note affichait
+ * donc ce corps-là. Le câblage le remplaçait au montage, ce qui en faisait un
+ * flash avec JavaScript et un contenu PERMANENT sans lui.
+ *
+ * Ce qui est éprouvé ici : le corps servi est celui qui est rendu, et RIEN
+ * n'est rendu quand rien n'est servi.
+ */
+describe('V-17 — le corps rédigé vient de la route, jamais de la vue', () => {
+	/** La zone de rédaction seule — le reste de l'écran ne porte pas de corps. */
+	function redactionDe(html: string): string {
+		return (
+			/<div class="prose redaction si-redaction"[\s\S]*?<div class="prose si-apercu"/.exec(
+				html
+			)?.[0] ?? ''
+		);
+	}
+
+	it('rend le corps servi, et le signale non vide', async () => {
+		const zone = redactionDe(
+			await rendu({
+				vecteur: MODIF,
+				noteModifiee: AUTRE_NOTE,
+				corps: '<h2>Le titre de la note ouverte</h2>'
+			})
+		);
+		expect(zone).toContain('<h2>Le titre de la note ouverte</h2>');
+		expect(zone).toContain('data-vide="non"');
+	});
+
+	it('ne rend RIEN de la procédure de démonstration, en modification comme à la création', async () => {
+		for (const vecteur of [null, MODIF]) {
+			const html = await rendu({ vecteur, noteModifiee: AUTRE_NOTE });
+			expect(html).not.toContain('Déclarer le serveur');
+			expect(html).not.toContain('Vérifier le premier passage');
+			expect(html).not.toContain('configuration de Barman');
+			expect(html).not.toContain('La sauvegarde apparaît dans la liste');
+		}
+	});
+
+	it('laisse la zone VIDE et son invite quand le corps servi est vide', async () => {
+		const zone = redactionDe(await rendu({ vecteur: MODIF, noteModifiee: AUTRE_NOTE }));
+		expect(zone).toContain('data-vide="oui"');
+		expect(zone).toContain('data-invite="');
 	});
 });

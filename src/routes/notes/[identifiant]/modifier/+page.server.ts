@@ -176,6 +176,24 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		 * entière ; elle est non vide, nommée et comptée sinon.
 		 */
 		corps: edition.document,
+		/**
+		 * LE CORPS RENDU, POUR QUE L'ÉCRAN OUVRE LA BONNE NOTE — le défaut le
+		 * plus visible de cette adresse, et il était SERVI.
+		 *
+		 * `src/vues/V-17.svelte` portait, en modification, un corps écrit au
+		 * balisage : l'extrait de la note suivi des sections d'une procédure de
+		 * démonstration. Le vecteur `cas: 'modif'` étant posé ci-dessus sur
+		 * TOUTE modification, ouvrir n'importe quelle note affichait ce
+		 * corps-là — remplacé au montage par `monterLEditeur()`, donc un flash
+		 * avec JavaScript et un contenu PERMANENT sans lui.
+		 *
+		 * La vue déclare désormais une propriété `corps`, et c'est ce HTML
+		 * qu'elle reçoit : le même document que l'éditeur ouvrira, rendu par
+		 * `rendreDocument` et par lui seul (`ADR-004`). Chaîne vide quand la
+		 * note ne porte aucun registre Référence — la zone de rédaction est
+		 * alors vide et rend son invite.
+		 */
+		corpsRendu: edition.lecture.corps.existe ? edition.lecture.corps.html : '',
 		horsDePorteeDeLEditeur: edition.horsDePorteeDeLEditeur
 	};
 };

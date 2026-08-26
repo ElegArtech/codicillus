@@ -1904,17 +1904,15 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
           </div>
         </section>
 
-        <!-- Exemple d'un panneau en erreur : il ne casse pas la lecture -->
-        <section class="panneau panneau--erreur">
-          <div class="panneau__tete"><span class="etiq">Consultations détaillées</span></div>
-          <div class="panneau__corps">
-            <div class="zone-etat">
-              <div class="zone-etat__titre">Statistiques indisponibles</div>
-              <div class="zone-etat__txt">Le service de mesure ne répond pas. Le reste de la note reste consultable.</div>
-              <button class="btn">Réessayer</button>
-            </div>
-          </div>
-        </section>
+        <!-- LE PANNEAU « CONSULTATIONS DÉTAILLÉES » EN ERREUR A ÉTÉ RETIRÉ — 26/08/2026.
+             Il était rendu SANS CONDITION, sur chaque note, avec un bouton
+             « Réessayer » inerte, et au-dessus d'un compteur de consultations qui
+             fonctionne et s'affiche 300 px plus haut. Aucun axe de la planche
+             ci-dessous ne le commandait : « État » ne connaît que « nominal » et
+             « chargement ». Le porter ici le faisait revenir dans le produit à
+             chaque portage. La panne n'est d'ailleurs pas détectable — le chargeur
+             écrit `mesure?.nombre ?? 0` —, et un panneau d'erreur qui ne peut pas
+             savoir qu'il y a une erreur n'est pas un état, c'est un décor. -->
 
       </aside>
 
