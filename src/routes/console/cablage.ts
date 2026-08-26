@@ -49,6 +49,7 @@
 
 import { deserialize } from '$app/forms';
 import { fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
+import type { ChampReglableEnConsole } from '$lib/donnees/administration';
 
 /** Ce qu'un câblage rend : de quoi le défaire. */
 export type Debranchement = () => void;
@@ -148,16 +149,34 @@ export async function envoyerAUneAction(
 
 /* ═══════════════════════════════ La configuration — V-33 ════════════════ */
 
-/** Les sept champs de `V-33`, par leur identifiant de gel (`V-33:1247-1360`). */
-const CHAMPS_DE_CONFIGURATION = [
-	'c-frais',
-	'c-vieil',
-	'c-versions',
-	'c-portail',
-	'c-mot',
-	'c-taille',
-	'c-session'
-] as const;
+/**
+ * LES SEPT CHAMPS DE `V-33`, PAR LEUR IDENTIFIANT DE GEL (`V-33:1247-1360`) —
+ * ET LA LISTE EST LIÉE AU TYPE QUI LA COMMANDE.
+ *
+ * C'est ce tableau, et lui seul, qui décide de ce que le navigateur ENVOIE :
+ * `cablerLaConfiguration()` cherche un nœud par identifiant, compose la charge
+ * depuis ceux qu'il trouve, et un identifiant manquant est silencieusement
+ * ignoré (`.filter(n !== null)`). Il était un littéral nu, sans aucun lien avec
+ * `Configuration` : les deux tables d'`administration.ts` rougissaient à
+ * l'ajout d'un paramètre, celle-ci ne pouvait pas rougir. Le jour où un
+ * paramètre gagnerait son champ dans `V-33` sans être ajouté ICI, l'écran
+ * l'afficherait, l'utilisateur le saisirait, et rien ne partirait.
+ *
+ * Le `satisfies` referme cette porte : les clés sont celles de
+ * `ChampReglableEnConsole`, ni plus ni moins, et l'import de type est ERASÉ à
+ * l'exécution — ce module reste sans dépendance vers le graphe du serveur.
+ * L'objet remplace le tableau parce qu'un tableau ne peut pas porter cette
+ * contrainte : c'est la clé, pas la position, qui nomme le paramètre.
+ */
+const CHAMPS_DE_CONFIGURATION = {
+	seuilFrais: 'c-frais',
+	seuilVieillissant: 'c-vieil',
+	versionsMax: 'c-versions',
+	portailAssistance: 'c-portail',
+	motFiche: 'c-mot',
+	tailleMaxPieceJointe: 'c-taille',
+	dureeSession: 'c-session'
+} as const satisfies Readonly<Record<ChampReglableEnConsole, string>>;
 
 /**
  * LE CÂBLAGE DE LA CONFIGURATION — `RG-M14-09`, `RG-M14-10`.
@@ -213,9 +232,9 @@ export function cablerLaConfiguration(
 	options: OptionsDeConfiguration = {}
 ): Debranchement {
 	const attaches = new Attaches();
-	const champs = CHAMPS_DE_CONFIGURATION.map((id) =>
-		noeud<HTMLInputElement | HTMLSelectElement>(racine, `#${id}`)
-	).filter((n): n is HTMLInputElement | HTMLSelectElement => n !== null);
+	const champs = Object.values(CHAMPS_DE_CONFIGURATION)
+		.map((id) => noeud<HTMLInputElement | HTMLSelectElement>(racine, `#${id}`))
+		.filter((n): n is HTMLInputElement | HTMLSelectElement => n !== null);
 	if (champs.length === 0) return attaches.debranchement();
 
 	const enregistrer = noeud<HTMLButtonElement>(racine, '#enregistrer');

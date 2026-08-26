@@ -432,6 +432,7 @@ const CONFIGURATION_VALABLE: Configuration = {
 	seuilVieillissant: 120,
 	versionsMax: 50,
 	portailAssistance: 'https://assistance.exemple.fr',
+	nomOrganisation: 'Organisation d’épreuve',
 	motFiche: 'Fiche',
 	tailleMaxPieceJointe: 25,
 	dureeSession: 120
@@ -569,7 +570,7 @@ describe('RG-M14-10 — la validation refuse les combinaisons incohérentes', ()
 });
 
 describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () => {
-	it('les sept clés d’écriture SONT les sept champs de la configuration', () => {
+	it('les huit clés d’écriture SONT les huit paramètres de la configuration', () => {
 		/* C'est la garantie structurelle de la règle : une clé écrite hors de
 		   cette table serait un seuil enregistré que `lireConfiguration()`
 		   n'irait jamais chercher — donc un badge qui ne bouge pas. Le type
@@ -586,8 +587,45 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 		expect(CHAMPS_DE_CONFIGURATION.seuilFrais).toBe('c-frais');
 		expect(CHAMPS_DE_CONFIGURATION.seuilVieillissant).toBe('c-vieil');
 		expect(Object.keys(CHAMPS_DE_CONFIGURATION).sort()).toEqual(
-			Object.keys(CONFIGURATION_VALABLE).sort()
+			[
+				'dureeSession',
+				'motFiche',
+				'portailAssistance',
+				'seuilFrais',
+				'seuilVieillissant',
+				'tailleMaxPieceJointe',
+				'versionsMax'
+			].sort()
 		);
+	});
+
+	it('`nom_organisation` a sa clé de base et AUCUN champ de console', () => {
+		/* LE HUITIÈME PARAMÈTRE N'EST PAS RÉGLÉ PAR `V-33` : le gel n'a jamais
+		   dessiné ce champ. Il a bien sa clé de base — `lireConfiguration()` et
+		   le gabarit racine la lisent —, et c'est tout.
+
+		   UNE PREMIÈRE RÉDACTION LUI AVAIT DONNÉ UN `c-organisation` FICTIF pour
+		   que la table des champs reste `Record<keyof Configuration, string>`.
+		   Le formulaire n'envoyant rien pour ce champ, la lecture rendait la
+		   chaîne vide et `enregistrerLaConfiguration()` — qui bouclait alors sur
+		   les clés de base — POSAIT `nom_organisation = ''` à chaque
+		   enregistrement, écrasant le nom réglé. Ce contrôle épingle les deux
+		   moitiés du remède : la clé existe, le champ n'existe pas. */
+		expect(CLES_DE_PARAMETRE.nomOrganisation).toBe('nom_organisation');
+		expect(CHAMPS_DE_CONFIGURATION).not.toHaveProperty('nomOrganisation');
+	});
+
+	it('l’enregistrement n’écrit QUE les paramètres que l’écran règle', () => {
+		/* La boucle d'écriture parcourt les champs du formulaire, jamais les
+		   clés de base : une clé sans champ n'est donc pas écrite. Le contrôle
+		   compare les deux tables plutôt que de recopier une liste — c'est la
+		   même source que celle que la boucle emploie. */
+		const ecrites = Object.keys(CHAMPS_DE_CONFIGURATION).map(
+			(champ) => CLES_DE_PARAMETRE[champ as keyof typeof CLES_DE_PARAMETRE]
+		);
+		expect(ecrites).not.toContain(CLES_DE_PARAMETRE.nomOrganisation);
+		expect(ecrites).toContain(CLES_DE_PARAMETRE.seuilFrais);
+		expect(ecrites).toHaveLength(Object.keys(CLES_DE_PARAMETRE).length - 1);
 	});
 
 	it('la saisie est lue comme le gel la lit — nombres convertis, textes ébarbés', () => {

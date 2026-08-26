@@ -412,7 +412,7 @@ export const parametres = pgTable('parametres', {
 });
 
 /**
- * LES SEPT CLÉS DE `parametres`, ÉCRITES UNE FOIS — M14.7 (`CDC:1189-1197`).
+ * LES HUIT CLÉS DE `parametres`, ÉCRITES UNE FOIS — M14.7 (`CDC:1189-1197`).
  *
  * Elles vivaient en littéraux dans `lireConfiguration()` seule, ce qui suffisait
  * tant que RIEN N'ÉCRIVAIT dans cette table. `T-077` y écrit (`RG-M14-09`), et
@@ -422,8 +422,9 @@ export const parametres = pgTable('parametres', {
  *
  * LE TYPE EST LA GARANTIE, PAS LA DISCIPLINE. `Record<keyof Configuration,
  * string>` refuse à la compilation qu'un champ de la configuration n'ait pas sa
- * clé — un huitième paramètre ajouté à `Configuration` ne se compile plus tant
- * qu'il n'a pas la sienne.
+ * clé — un neuvième paramètre ajouté à `Configuration` ne se compile plus tant
+ * qu'il n'a pas la sienne. C'est ce garde-fou, et lui seul, qui a fait ajouter
+ * les deux lignes de `nomOrganisation` : il a rougi avant qu'on y pense.
  *
  * L'import du type est ERASÉ à l'exécution : ce module reste sans dépendance,
  * et le jeu de semence n'entre pas dans le graphe du serveur par cette ligne.
@@ -433,6 +434,7 @@ export const CLES_DE_PARAMETRE: Readonly<Record<keyof Configuration, string>> = 
 	seuilVieillissant: 'seuil_vieillissant',
 	versionsMax: 'versions_max',
 	portailAssistance: 'portail_assistance',
+	nomOrganisation: 'nom_organisation',
 	motFiche: 'mot_fiche',
 	tailleMaxPieceJointe: 'taille_max_piece_jointe',
 	dureeSession: 'duree_session'
@@ -456,12 +458,18 @@ export const CLES_DE_PARAMETRE: Readonly<Record<keyof Configuration, string>> = 
  * fabrique unique de `P-01` : les redéclarer ici les ferait diverger.
  * `portailAssistance` est VIDE par défaut — inventer une adresse d'assistance
  * serait poser un lien mort dans le produit de quelqu'un d'autre.
+ *
+ * `nomOrganisation` est vide POUR LA MÊME RAISON, et le défaut se lit à
+ * l'écran : les vues rendent alors « Codicillus » seul — le nom du LOGICIEL,
+ * qui reste en dur — au lieu de la « Direction technique » qu'elles écrivaient.
+ * Nommer d'office l'organisation d'autrui serait signer son produit à sa place.
  */
 export const CONFIGURATION_PAR_DEFAUT: Readonly<Configuration> = Object.freeze({
 	seuilFrais: 90,
 	seuilVieillissant: 180,
 	versionsMax: 50,
 	portailAssistance: '',
+	nomOrganisation: '',
 	motFiche: 'Fiche',
 	tailleMaxPieceJointe: 25,
 	dureeSession: 120

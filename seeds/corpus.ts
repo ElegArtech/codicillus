@@ -479,6 +479,21 @@ export interface Configuration {
 	readonly seuilVieillissant: number;
 	readonly versionsMax: number;
 	readonly portailAssistance: string;
+	/**
+	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — VIDE TANT QU'ELLE NE
+	 * S'EST PAS NOMMÉE.
+	 *
+	 * Huit vues écrivaient « Direction technique » en dur, dont les cinq pieds
+	 * publics et l'écran de connexion. Ce n'est ni une donnée du jeu, ni le nom
+	 * du logiciel : c'est le segment de marché du cadrage soudé dans une
+	 * signature de produit. « Codicillus » reste en dur — c'est le nom du
+	 * LOGICIEL ; l'organisation, elle, se nomme.
+	 *
+	 * Vide par défaut, même jurisprudence que `portailAssistance` : inventer un
+	 * nom d'organisation serait signer le produit de quelqu'un d'autre. Les vues
+	 * rendent alors « Codicillus » seul.
+	 */
+	readonly nomOrganisation: string;
 	readonly motFiche: string;
 	/** Taille maximale d'une pièce jointe, en mégaoctets. */
 	readonly tailleMaxPieceJointe: number;
@@ -2185,6 +2200,12 @@ export const CONFIG: Configuration = {
 	seuilVieillissant: SEUILS_PAR_DEFAUT.vieillissant,
 	versionsMax: 50,
 	portailAssistance: 'https://assistance.exemple.fr/nouveau-ticket',
+	/* L'INSTANCE DE DÉMONSTRATION NE SE NOMME PAS, ET C'EST DÉLIBÉRÉ. Le nom de
+	   l'organisation n'est pas une donnée du jeu : c'est un réglage d'instance,
+	   dont le défaut du produit est la chaîne vide (`schema.ts`). Y écrire
+	   « Direction technique » remettrait dans le jeu la chaîne même que ce lot
+	   sort des vues, et `semence.ts` n'a donc aucune ligne à poser pour elle. */
+	nomOrganisation: '',
 	motFiche: 'Fiche',
 	tailleMaxPieceJointe: 25,
 	dureeSession: 120
