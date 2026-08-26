@@ -124,13 +124,21 @@ export default ts.config(
 			// de forme réelle. C'est son emploi légitime.
 			'src/**/*.test.ts',
 			'src/**/*.test-utils.ts',
-			// LES PLANCHES. V-41 est montée par `/bibliotheque`, dont les échantillons
-			// SONT l'objet de la page ; V-37, V-38 et V-39 ne sont montées par aucune
-			// route. Aucune des quatre n'est atteinte par un autre chemin de produit.
+			// LES PLANCHES QUE NULLE ROUTE NE MONTE. V-37, V-38 et V-39 ne sont
+			// atteintes par aucun chemin de produit : leur contenu ne part dans
+			// aucun paquet servi.
+			//
+			// V-41 N'EST PLUS DE CELLES-LÀ, et son exemption est retirée. Elle est
+			// montée par `/bibliotheque` — une page RÉELLE, et c'est délibéré
+			// (`STACK-TECHNIQUE.md` §4.1, risque `R-06`) —, si bien que son import
+			// du corpus EN VALEUR faisait partir les trente-deux notes du jeu dans
+			// un chunk de 57 Ko servi comme fichier statique. L'exemption couvrait
+			// le seul fichier où le motif coûtait vraiment quelque chose. Ses sept
+			// sources sont désormais exigées et servies par le chargeur ; il ne
+			// reste que des imports de type, que la règle autorise partout.
 			'src/vues/V-37.svelte',
 			'src/vues/V-38.svelte',
 			'src/vues/V-39.svelte',
-			'src/vues/V-41.svelte',
 			// LA SEMENCE ET SES OUTILS — charger le jeu en base est leur travail.
 			//
 			// `commandes.ts` et `demonstration.ts` ne sont chargés que par les
