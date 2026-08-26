@@ -632,7 +632,7 @@
 						type="text"
 						id="f-nom"
 						autocomplete="off"
-						placeholder="Compte rendu"
+						placeholder="Bilan trimestriel"
 						value={edite ? edite.nom : ''}
 					/>
 					<span class="champ__aide">Affiché au moment de choisir un point de départ.</span>

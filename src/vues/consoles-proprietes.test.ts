@@ -60,7 +60,9 @@ import {
 	type Univers,
 	type UtilisateurCourant
 } from '../../seeds/corpus';
+import * as PEUPLEMENT from '../../seeds/demonstration';
 import { nomDArchive } from '../lib/export/archive';
+import { readFileSync } from 'node:fs';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -738,3 +740,71 @@ describe('V-36 — Exports', () => {
    La boucle qui tenait ici n'aurait donc plus énuméré aucune vue — un `describe`
    vide qui aurait compté pour une preuve.
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   AUCUN EXEMPLE DE SAISIE NE REPREND UN NOM DU JEU
+
+   UN PLACEHOLDER EST LÉGITIME — il dit « voici ce que vous pourriez écrire ».
+   Le grief n'a jamais porté sur le procédé, mais sur la COÏNCIDENCE : sur une
+   instance semée, l'écran listait « Infrastructure » au-dessus et l'offrait en
+   exemple au-dessous, si bien que l'exemple se lisait comme un état. Décaler
+   les mots ne suffit pas : la campagne précédente a déplacé « Production » vers
+   « Exploitation », « Serveur » vers « Application » et « héberge » vers
+   « dépend de » — TROIS NOMS QUI SONT ENCORE DANS LE JEU, l'un des trois étant
+   même un type de fiche que la console liste.
+
+   CE CONTRÔLE NE RECOPIE NI LES EXEMPLES NI LES NOMS. Les premiers sont
+   extraits du BALISAGE des vues, les seconds des DEUX jeux — `demonstration.ts`
+   que `base:peupler` écrit, `corpus.ts` que `base:semer` écrit. Une comparaison
+   entre deux listes tenues à la main n'aurait rien prouvé du produit : elle
+   aurait vieilli le jour où l'un des deux jeux bouge.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/** Les sept consoles qui portent un exemple de saisie, telles qu'elles sont écrites. */
+const CONSOLES = ['V-27', 'V-28', 'V-29', 'V-30', 'V-31', 'V-32', 'V-33'] as const;
+
+/** Tout ce qu'une instance semée peut afficher comme NOM, des deux jeux. */
+const NOMS_DU_JEU: readonly string[] = [
+	/* `base:peupler` — `seeds/demonstration.ts`. */
+	...PEUPLEMENT.COMPTES.map((c) => c.nom),
+	...PEUPLEMENT.UNIVERS.map((u) => u.nom),
+	...PEUPLEMENT.DOMAINES.map((d) => d.nom),
+	...Object.values(PEUPLEMENT.DOSSIERS)
+		.flat()
+		.flatMap((chemin) => chemin.split('\u203a').map((s) => s.trim())),
+	...PEUPLEMENT.TYPES_DE_FICHE.flatMap((t) => [t.nom, ...t.champs.map((c) => c.nom)]),
+	...PEUPLEMENT.TYPES_DE_RELATION.flatMap((t) => [t.sortant, t.entrant]),
+	/* `base:semer` — `seeds/corpus.ts`. */
+	...UNIVERS.map((u) => u.nom),
+	...DOMAINES.map((d) => d.nom),
+	...TEMPLATES.map((t) => t.nom),
+	...TYPES_NOTE,
+	...Object.keys(TYPES_FICHE),
+	...Object.values(TYPES_RELATION).flatMap((l) => [l.sortant, l.entrant])
+];
+
+/** Les exemples de saisie d'une vue, pris dans son balisage. */
+function exemplesDeSaisie(vue: string): readonly string[] {
+	const source = readFileSync(join(racine, 'src', 'vues', `${vue}.svelte`), 'utf-8');
+	return [...source.matchAll(/placeholder="([^"{]*)"/g)].map((m) => m[1] as string);
+}
+
+describe('les exemples de saisie des consoles', () => {
+	test('les deux jeux portent bien les noms auxquels on se compare', () => {
+		/* SANS CE CAS, LE CONTRÔLE POURRAIT PASSER SUR UNE LISTE VIDE. Trois noms
+		   que la campagne précédente avait choisis comme exemples, et qui sont
+		   dans le jeu : c'est le défaut lui-même, pris par sa source. */
+		expect(NOMS_DU_JEU).toContain('Exploitation');
+		expect(NOMS_DU_JEU).toContain('Application');
+		expect(NOMS_DU_JEU).toContain('dépend de');
+		expect(NOMS_DU_JEU.length).toBeGreaterThan(50);
+	});
+
+	test.each(CONSOLES)('%s n’offre en exemple aucun nom du jeu', (vue) => {
+		const exemples = exemplesDeSaisie(vue);
+		expect(exemples.length).toBeGreaterThan(0);
+		for (const exemple of exemples) {
+			expect(NOMS_DU_JEU, `${vue} offre « ${exemple} » en exemple`).not.toContain(exemple);
+		}
+	});
+});
