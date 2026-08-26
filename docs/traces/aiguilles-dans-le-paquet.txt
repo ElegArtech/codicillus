@@ -1,0 +1,37 @@
+
+── 1. LA CONSTRUCTION ──────────────────────────────────────────────────
+     --tel-quel : le paquet déjà présent est mesuré tel quel.
+
+── 2. LES AIGUILLES ────────────────────────────────────────────────────
+     111 noms cherchés dans build/client
+         7  gel
+       102  corpus
+         2  jeu
+     4 noms écartés — ils sont AUSSI du vocabulaire du produit :
+       « Non classé » — univers SYSTÈME. Le produit le nomme lui-même dans l'aide de la console des univers — « Non classé convient si aucune destination ne s'impose » —, parce que c'est la destination de repli d'un domaine qui perd son rattachement.
+       « Comptes » — segment du chemin « Déploiement › Comptes », et section de la console (`sections.ts`, groupe « Utilisateurs »). Le chemin ENTIER reste une aiguille.
+       « Accès » — segment du chemin « Fiches applicatives › Accès », et mot de la prose publique (« Accès aux applications, mots de passe, salles de réunion »). Le chemin ENTIER reste une aiguille.
+       « Codicillus 1.0.0 » — le relevé du 26/08 §2 l'a trouvé au pied du rail, servi depuis `INSTANCE.version` du jeu. La version vient désormais du paquet — et `package.json` porte EXACTEMENT le même numéro. Aucune aiguille ne peut distinguer les deux tant que les deux valent « 1.0.0 » : ce serait un cri permanent sur la version réelle du produit. Ce qui garde ce site, c'est que la version ne se passe plus en propriété.
+
+── 3. LE BALAYAGE ──────────────────────────────────────────────────────
+     374 fichiers lus, 4077 Ko de texte
+
+── 4. LES EXEMPTIONS ───────────────────────────────────────────────────
+     « bascule-telephonie-voip » ×1  dans build/client/_app/immutable/nodes/1.wx0RDDZE.js
+        vue V-26.svelte · lot R — la recherche et la coquille
+        PROVISOIRE. `V-26:255-261` garde la table d'adresses de sa planche parce que la propriété `adresse` est restée OPTIONNELLE : les cas de `proprietes-coquille.test.ts:763-790` rendent la vue SANS adresse pour relever ce que la planche affiche, puis exigent que ce relevé ait disparu du rendu servi. Le HTML servi est propre — `+error.svelte` passe `page.url.pathname`, et `passage-a-froid` le vérifie sur les deux polarités. Ce qui la retire : rendre `adresse` REQUISE, et reprendre ces trois cas sur une autre source que le repli.
+     « comptes-a-privileges-production » ×1  dans build/client/_app/immutable/nodes/1.wx0RDDZE.js
+        vue V-26.svelte · lot R — la recherche et la coquille
+        PROVISOIRE. Même site, même table d’adresses, même remède.
+     « restaurer-une-sauvegarde-mariadb » ×1  dans build/client/_app/immutable/nodes/1.wx0RDDZE.js
+        vue V-26.svelte · lot R — la recherche et la coquille
+        PROVISOIRE. Même site, même table d’adresses, même remède.
+     « Applications » ×1  dans build/client/_app/immutable/nodes/5.oJYprCwZ.js
+        vue V-21.svelte · lot C — la console, les graphes, l’import
+        PROVISOIRE. `V-21:141` retire le domaine nommé « Applications » quand la planche est en droits restreints : `domaines.filter((d) => d.nom !== 'Applications')`. C'est un nom de domaine du jeu dans un axe de planche — la branche ne se rend sur aucune route (`vecteur` est nul), mais le littéral part dans le chunk. Ce qui la retire : que l'axe restreint filtre sur une donnée de droits plutôt que sur un nom.
+
+── 5. LE RELEVÉ ────────────────────────────────────────────────────────
+     RIEN hors des 4 occurrences exemptées ci-dessus, qui sont nommées, situées, et qui expireront d’elles-mêmes.
+
+══ PAQUET PROPRE — 111 aiguilles, 374 fichiers, 4 occurrence(s) exemptée(s) ══
+
