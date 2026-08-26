@@ -95,7 +95,6 @@
 	 * `src/vues/V-17.css`, posé par `node verif/feuilles-de-vue.mjs V-17
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
-	import { getContext } from 'svelte';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import BandeauApercu from '$lib/edition/BandeauApercu.svelte';
 	import BarreDEtat from '$lib/edition/BarreDEtat.svelte';
@@ -109,11 +108,7 @@
 		TypeDeNote,
 		Univers
 	} from '../../seeds/corpus';
-	import {
-		CLE_IDENTITE,
-		type CompteAffiche,
-		type IdentiteDeCoquille
-	} from '$lib/coquille/identite';
+	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { vocabulaireRendu } from '$lib/vocabulaire';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
@@ -123,26 +118,6 @@
 	const motsDuProduit = vocabulaireRendu();
 	const motFiche = $derived(motsDuProduit.fiche);
 	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
-
-	/**
-	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE, LU SUR LE MÊME CONTEXTE.
-	 *
-	 * L'aide du champ « Visibilité » écrivait « Consultable par les comptes de
-	 * la direction technique. » — le segment de marché du cadrage, servi comme
-	 * un fait sur l'instance de n'importe qui. Le nom est un réglage
-	 * (`nom_organisation`), et le gabarit racine le porte déjà.
-	 *
-	 * VIDE — l'état normal d'une installation neuve —, la phrase ne nomme
-	 * personne : elle dit ce que la visibilité Interne fait, et rien de plus.
-	 * Sa jumelle « Publique » ne nomme déjà personne (`V-17:2869`).
-	 */
-	const identiteDeCoquille = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
-	const nomOrganisation = $derived(identiteDeCoquille?.nomOrganisation ?? '');
-	const aideDeVisibiliteInterne = $derived(
-		nomOrganisation === ''
-			? 'Consultable par les comptes de cette instance.'
-			: `Consultable par les comptes de ${nomOrganisation}.`
-	);
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — trois contrôles de planche. */
@@ -232,10 +207,15 @@
 		 * corps de la note : `edition.lecture.corps.html`. Le même document que
 		 * l'éditeur ouvrira ensuite, donc le même texte avant et après montage.
 		 *
-		 * CHAÎNE VIDE : IL N'Y A PAS DE CORPS — la création d'une note vierge,
-		 * et une note dont le registre Référence est vide. La zone se signale
-		 * alors vide et rend son invite, ce qui est exactement l'état que le gel
-		 * montre à la création.
+		 * CHAÎNE VIDE : IL N'Y A RIEN À ÉDITER — la création d'une note vierge,
+		 * et une note dont le registre Référence ne porte pas de texte. Le
+		 * second cas est le cas ORDINAIRE d'une note créée par le produit :
+		 * `creerUneNote()` n'écrit jamais NULL, mais `corpsVide()`, un
+		 * paragraphe sans texte. La route sert donc la chaîne vide sur
+		 * `redige`, jamais sur `existe` — sur `existe`, elle servait `<p></p>`
+		 * et la zone se déclarait NON vide. La zone se signale alors vide et
+		 * rend son invite, ce qui est exactement l'état que le gel montre à la
+		 * création.
 		 *
 		 * REQUISE : les deux routes qui montent cette vue la passent, et une
 		 * troisième qui l'oublierait ne compilerait plus.
@@ -1020,7 +1000,9 @@
 							<button type="button" data-val="Interne" aria-pressed="true">Interne</button>
 							<button type="button" data-val="Publique" aria-pressed="false">Publique</button>
 						</div>
-						<span class="champ__aide" id="aide-visibilite">{aideDeVisibiliteInterne}</span>
+						<span class="champ__aide" id="aide-visibilite"
+							>Consultable par les comptes de la direction technique.</span
+						>
 					</div>
 					<div class="champ">
 						<span class="champ__label">Statut</span>
