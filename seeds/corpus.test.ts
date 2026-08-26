@@ -345,8 +345,7 @@ describe('les globales de données des quarante et une vues sont incluses dans l
 /* ── 4. corpus.ts est fidèle à la maquette de référence ───────────────────── */
 
 /**
- * CE QUE `corpus.ts` PORTE ET QUE LE GEL N'A JAMAIS EU — par globale, et
- * champ par champ.
+ * LE SEUL CHAMP QUE `corpus.ts` PORTE ET QUE LE GEL N'A JAMAIS EU.
  *
  * `CONFIG` transcrit le `window.CONFIG` du gel ; `Configuration` type le
  * RÉGLAGE D'INSTANCE du produit. Les deux ont partagé une forme tant que le
@@ -354,14 +353,16 @@ describe('les globales de données des quarante et une vues sont incluses dans l
  * huitième, et il n'est pas dessiné : huit vues écrivaient le nom de
  * l'organisation en dur, et aucune maquette n'offre le champ qui le règle.
  *
- * L'EXEMPTION NE REND PAS LE CONTRÔLE INOPÉRANT : chaque champ déclaré ici est
- * vérifié ABSENT du gel et PRÉSENT dans `corpus.ts` avant d'être écarté. Un
- * champ que le gel porterait, ou que `corpus.ts` aurait perdu, fait tomber le
- * contrôle au lieu de passer dans l'exemption.
+ * CE N'EST PAS UN MÉCANISME D'EXEMPTION, ET C'EST DÉLIBÉRÉ : une constante,
+ * un champ, une globale nommée en clair dans le seul cas qui la lit. Une table
+ * d'exemptions par globale se remplirait toute seule au lot suivant, et le
+ * contrôle de fidélité au gel n'aurait plus rien à tenir.
+ *
+ * L'ÉCART NE REND PAS LE CONTRÔLE INOPÉRANT : le champ est vérifié ABSENT du
+ * gel et PRÉSENT dans `corpus.ts` avant d'être écarté. Un champ que le gel
+ * porterait, ou que `corpus.ts` aurait perdu, fait tomber le contrôle.
  */
-const ENRICHISSEMENTS_DE_GLOBALE: Readonly<Record<string, readonly string[]>> = {
-	CONFIG: ['nomOrganisation']
-};
+const CHAMP_DE_CONFIG_HORS_GEL = 'nomOrganisation';
 
 describe('corpus.ts reproduit la maquette de référence', () => {
 	const reference = MAQUETTES.get(VUE_DE_REFERENCE)!;
@@ -434,10 +435,10 @@ describe('corpus.ts reproduit la maquette de référence', () => {
 	})) {
 		it(`${nom} est identique, valeur par valeur`, () => {
 			const obtenu: unknown = JSON.parse(JSON.stringify(semence[nom]));
-			for (const champ of ENRICHISSEMENTS_DE_GLOBALE[nom] ?? []) {
-				expect(reference[nom]).not.toHaveProperty(champ);
-				expect(obtenu).toHaveProperty(champ);
-				delete (obtenu as Record<string, unknown>)[champ];
+			if (nom === 'CONFIG') {
+				expect(reference[nom]).not.toHaveProperty(CHAMP_DE_CONFIG_HORS_GEL);
+				expect(obtenu).toHaveProperty(CHAMP_DE_CONFIG_HORS_GEL);
+				delete (obtenu as Record<string, unknown>)[CHAMP_DE_CONFIG_HORS_GEL];
 			}
 			expect(obtenu).toEqual(reference[nom]);
 		});
