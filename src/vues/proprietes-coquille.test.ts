@@ -430,12 +430,38 @@ const VUES: Readonly<
 			}
 		]
 	},
+	/*
+	   V-41 N'EMPRUNTE PLUS `coquille()`, ET C'EST LE CORRECTIF DU LOT C.
+
+	   Ses sept sources étaient facultatives, de défaut la constante du jeu de
+	   démonstration — et TROIS n'étaient passées par personne : la chronologie
+	   nommait « Karim Belhadj » et « Sophie Nguyen », le pied de rail annonçait
+	   le numéro de version du jeu, le sélecteur d'exemple listait ses types de
+	   note. Le coût principal n'était pas à l'écran : l'import était fait EN
+	   VALEUR, et les trente-deux notes du corpus partaient dans le chunk de
+	   `/bibliotheque` — 57 Ko servis comme fichier statique, atteignables même
+	   par qui reçoit 404 sur la page.
+
+	   LES SEPT SONT EXIGÉES : il n'y a plus de défaut à mesurer, et le socle du
+	   cas les passe comme le chargeur les sert. Ce que chacune fait du rendu
+	   reste éprouvé — `socle: true` garde le cas « fournie, elle l'emporte ».
+	*/
 	'V-41': {
-		base: {},
+		base: {
+			univers: UNIVERS,
+			domaines: DOMAINES,
+			compte: MOI,
+			instance: INSTANCE,
+			activite: ACTIVITE,
+			typesNote: TYPES_NOTE
+		},
 		sources: [
-			...coquille(),
-			{ cle: 'activite', defaut: ACTIVITE, autre: ACTIVITE.slice(0, 1) },
-			{ cle: 'typesNote', defaut: TYPES_NOTE, autre: TYPES_NOTE.slice(0, 1) }
+			{ cle: 'univers', socle: true, autre: AUTRES_UNIVERS },
+			{ cle: 'domaines', socle: true, autre: AUTRES_DOMAINES },
+			{ cle: 'compte', socle: true, autre: AUTRE_COMPTE, marqueur: 'ZQ' },
+			{ cle: 'instance', socle: true, autre: AUTRE_INSTANCE, marqueur: '9.9.9' },
+			{ cle: 'activite', socle: true, autre: ACTIVITE.slice(0, 1) },
+			{ cle: 'typesNote', socle: true, autre: TYPES_NOTE.slice(0, 1) }
 		]
 	}
 };

@@ -54,18 +54,15 @@
 	 * et elle est visible : elle ne se paiera pas en silence.
 	 * ═══════════════════════════════════════════════════════════════════════
 	 *
-	 * CINQ ÉTATS — `verif/scenarios/V-20.json`, QUATRE RENDUS DISTINCTS. Le
-	 * relevé du gel donne `disparu` STRICTEMENT IDENTIQUE à `moment-aucun` :
-	 * la case « Nœud disparu » n'a aucun gestionnaire de `change`, elle n'est
-	 * lue qu'au clic sur un nœud (`V-20:2879`), c'est-à-dire jamais dans un
-	 * squelette qui rend l'état et non la transition (ARB-011). Ce n'est pas un
-	 * oubli à combler : c'est ce que la maquette montre.
-	 *
-	 * `isole` LAISSE `data-detail="ferme"` TOUT EN REMPLISSANT LE PANNEAU. Le
-	 * gestionnaire de la case « Maître sans relation » (`V-20:3121`) appelle
-	 * `rendreDetail(choisi)` sans toucher à `data-detail`, là où celui des
-	 * moments le règle. La colonne de détail est donc peuplée et masquée à la
-	 * fois. Mesuré, reproduit tel quel.
+	 * LA VUE N'A PLUS DE VECTEUR DE PLANCHE, ET C'EST LE CORRECTIF DU LOT C. Les
+	 * cinq états de `verif/scenarios/V-20.json` étaient rendus par un vecteur
+	 * dont les « moments » posaient eux-mêmes le type maître et le nœud au
+	 * centre — deux identifiants du jeu de démonstration écrits en dur. Ils ne
+	 * s'affichaient sur aucune route, la seule qui monte cette vue posant
+	 * toujours les trois axes d'adresse ; ils partaient dans le paquet servi au
+	 * navigateur. Les trois axes sont désormais EXIGÉS : l'état de l'écran est
+	 * celui de l'adresse, et il n'y a plus de seconde source à laquelle il
+	 * puisse retomber.
 	 *
 	 * AUCUNE DISPOSITION SIMULÉE (ARB-011). Le gel le dit de lui-même :
 	 * « Disposition — déterministe, jamais simulée. L'anneau et l'étoile sont
@@ -152,8 +149,6 @@
 	 * donner sa version au pied du rail, que le contexte sert déjà.
 	 */
 	interface Proprietes {
-		/** Le vecteur complet de l'état — moment × cas limites. */
-		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-20')`. */
 		notes: readonly Note[];
 		/** Les domaines du produit. Absente, aucun domaine — jamais ceux du jeu. */
@@ -197,7 +192,7 @@
 		/**
 		 * ─────────────────────────────────────────────────────────────────────
 		 * LES TROIS AXES QUE L'ADRESSE PORTE — `RG-M09-05`, « état de cartographie
-		 * partageable ».
+		 * partageable » — ET ILS SONT EXIGÉS.
 		 *
 		 * Le gel garde ses trois choix dans une clôture : le périmètre, la famille
 		 * d'objets et le nœud déplié. Une carte explorée ne s'envoie donc à
@@ -205,21 +200,24 @@
 		 * `?perimetre=`, `?type=` et `?centre=` les portent, et le chargeur — seul
 		 * lecteur de `url` — les extrait.
 		 *
-		 * ABSENTS, LES TROIS MOMENTS DE LA PLANCHE RÉPONDENT SEULS, et les cinq
-		 * états déclarés ne bougent pas d'un pixel : c'est `typeMaitreDemande` qui
-		 * fait la bascule, parce que le chargeur le pose TOUJOURS — fût-ce à
-		 * `null` — et que le mode de conception ne le pose jamais.
+		 * ILS ÉTAIENT FACULTATIFS, ET LA PLANCHE RÉPONDAIT À LEUR PLACE : absents,
+		 * trois « moments » de vecteur posaient eux-mêmes le type maître et le
+		 * nœud au centre — `'n-pg-prod-01'` et `'n-coffre-hors-site'`, DEUX
+		 * IDENTIFIANTS DU JEU DE DÉMONSTRATION écrits en dur. Ils ne s'affichaient
+		 * jamais sur la route, qui pose toujours les trois axes ; ils partaient
+		 * dans le paquet servi au navigateur, et s'y lisaient. La seule route qui
+		 * monte cette vue les passe : ils sont exigés, la bascule n'a plus lieu
+		 * d'être, et les deux identifiants sont partis avec elle.
 		 */
 		/** Le périmètre demandé — `type|nom`, la valeur même du sélecteur du gel. */
-		perimetreDemande?: string | undefined;
+		perimetreDemande: string;
 		/** La famille d'objets choisie, ou `null` si aucune. */
-		typeMaitreDemande?: string | null | undefined;
+		typeMaitreDemande: string | null;
 		/** Le nœud déplié, ou `null` si l'on en est à l'anneau. */
-		centreDemande?: string | null | undefined;
+		centreDemande: string | null;
 	}
 
 	const {
-		vecteur,
 		notes: corpus,
 		domaines = [],
 		compte = null,
@@ -286,26 +284,14 @@
 				)
 	);
 
-	/**
-	 * L'ÉCRAN EST-IL BRANCHÉ SUR UNE ADRESSE ? C'est le point unique où la
-	 * planche et le produit se séparent — même partage qu'en V-08 avec
-	 * `recherchees`. Le chargeur pose toujours `typeMaitreDemande`, fût-ce à
-	 * `null` ; le rendu d'une planche ne le pose jamais.
-	 */
-	const branche = $derived(typeMaitreDemande !== undefined);
-
-	const reglage = $derived(vecteur ?? {});
-	const moment = $derived(String(reglage['moment'] ?? 'aucun'));
-	const casIsole = $derived(reglage['c-isole'] === true);
-
 	/* ── Le graphe ──────────────────────────────────────────────────────────
 	   Le périmètre est la première option du sélecteur, « Tous les domaines ». */
 	/**
-	 * LE PÉRIMÈTRE EFFECTIF — celui de l'adresse, à défaut « Tous les domaines »,
-	 * la première option du sélecteur du gel et le défaut de la planche.
+	 * LE PÉRIMÈTRE EFFECTIF — celui de l'adresse. Une valeur que le sélecteur ne
+	 * reconnaît pas retombe sur « Tous les domaines », sa première option.
 	 */
 	const perimetre = $derived.by(() => {
-		const brut = perimetreDemande ?? 'global|';
+		const brut = perimetreDemande;
 		const barre = brut.indexOf('|');
 		const type = barre < 0 ? brut : brut.slice(0, barre);
 		const nom = barre < 0 ? '' : brut.slice(barre + 1);
@@ -319,32 +305,22 @@
 	const types = $derived(typesPresents(graphe));
 
 	/**
-	 * LES TROIS MOMENTS ET LE CAS LIMITE, tels que les gestionnaires du gel les
-	 * établissent (`V-20:3110` et `:3121`) — et rien de plus.
+	 * LA FAMILLE ET LE NŒUD VIENNENT DE L'ADRESSE, ET DE NULLE PART AILLEURS.
 	 *
-	 * `c-isole` n'agit QUE si aucun centre n'est déjà choisi : son vecteur
-	 * laisse le moment à « aucun », donc le gestionnaire des moments ne s'est
-	 * pas exécuté, et la case pose elle-même le type maître et son centre.
+	 * Deux dérivations les posaient à la place du chargeur quand les propriétés
+	 * manquaient — les « moments » de la planche —, et elles nommaient deux notes
+	 * du jeu de démonstration en dur. Les propriétés sont exigées ; il n'y a plus
+	 * de seconde source, ni les deux identifiants qui allaient avec.
 	 */
-	const typeMaitreDePlanche = $derived(moment === 'aucun' && !casIsole ? null : 'Serveur');
-	const centreDePlanche = $derived(
-		moment === 'deplie'
-			? 'n-pg-prod-01'
-			: casIsole && moment === 'aucun'
-				? 'n-coffre-hors-site'
-				: null
-	);
-
-	const typeMaitre = $derived(branche ? (typeMaitreDemande ?? null) : typeMaitreDePlanche);
-	const centre = $derived(branche ? (centreDemande ?? null) : centreDePlanche);
+	const typeMaitre = $derived(typeMaitreDemande);
+	const centre = $derived(centreDemande);
 	const choisi = $derived(centre);
 
 	/**
-	 * `data-detail` n'est réglé que par le gestionnaire des moments — en planche.
-	 * Branché, il suit le nœud choisi : le panneau de détail EXISTE au balisage de
-	 * cette vue, il a donc quelque chose à montrer dès qu'un nœud est déplié.
+	 * `data-detail` suit le nœud choisi : le panneau de détail EXISTE au balisage
+	 * de cette vue, il a donc quelque chose à montrer dès qu'un nœud est déplié.
 	 */
-	const detailOuvert = $derived(branche ? choisi !== null : moment === 'deplie');
+	const detailOuvert = $derived(choisi !== null);
 
 	/* ── Les nœuds maîtres ──────────────────────────────────────────────────
 	   Classés par titre, comparaison française — l'ordre décide de l'anneau. */
@@ -436,7 +412,7 @@
 		readonly titre: string;
 	}
 
-	const voisins = $derived(centre === null || casIsole ? [] : voisinsDe(centre));
+	const voisins = $derived(centre === null ? [] : voisinsDe(centre));
 
 	const scene = $derived.by<{
 		aretes: AretePlacee[];
@@ -598,16 +574,14 @@
 	}
 
 	/**
-	 * LA NAVIGATION N'A LIEU QUE BRANCHÉE — même règle qu'en V-08. Sans adresse,
-	 * la vue rend un état de maquette hors de toute route, et y naviguer
-	 * emmènerait la page de démonstration ailleurs.
+	 * LA GARDE DE PLANCHE A DISPARU AVEC LA PLANCHE : les trois axes venant
+	 * toujours de l'adresse, la vue n'est plus rendue hors de sa route.
 	 *
 	 * `svelte/no-navigation-without-resolve` inspecte l'expression passée à
 	 * `goto()` : une adresse composée lui est opaque. La règle est levée sur
 	 * cette seule ligne, comme `V-24` la lève pour les adresses de son rapport.
 	 */
 	function allerA(cible: string): void {
-		if (!branche) return;
 		/* eslint-disable-next-line svelte/no-navigation-without-resolve */
 		void goto(cible);
 	}
@@ -637,7 +611,7 @@
 	 * l'identifiant de route, ce que la règle de navigation sait vérifier.
 	 */
 	function ouvrirLaNote(): void {
-		if (!branche || choisi === null) return;
+		if (choisi === null) return;
 		void goto(resolve('/notes/[identifiant]', { identifiant: choisi }));
 	}
 
@@ -647,15 +621,15 @@
 	 * `resolve()` compose et que la règle de navigation sait vérifier.
 	 */
 	function allerALaRecherche(): void {
-		if (branche) void goto(resolve('/recherche'));
+		void goto(resolve('/recherche'));
 	}
 
 	function allerALaCreation(): void {
-		if (branche) void goto(resolve('/notes/nouvelle'));
+		void goto(resolve('/notes/nouvelle'));
 	}
 
 	function allerAuProfil(): void {
-		if (branche) void goto(resolve('/mon-profil'));
+		void goto(resolve('/mon-profil'));
 	}
 
 	/*

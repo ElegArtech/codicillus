@@ -383,14 +383,28 @@ describe('V-19 — cartographie', () => {
 describe('V-20 — cartographie par type maître', () => {
 	const notes = corpusPourVue('V-20');
 
-	/* LES QUATRE SOURCES DU GRAPHE SONT EXIGÉES — voir V-19. */
+	/*
+	   LES QUATRE SOURCES DU GRAPHE SONT EXIGÉES — voir V-19 —, ET LES TROIS AXES
+	   D'ADRESSE LE SONT DEVENUS.
+
+	   V-20 N'A PLUS DE VECTEUR. Ses trois axes — périmètre, famille d'objets,
+	   nœud déplié — étaient facultatifs, et leur absence rendait la main à des
+	   « moments » de planche qui posaient eux-mêmes le type maître et le centre :
+	   `'Serveur'`, `'n-pg-prod-01'` et `'n-coffre-hors-site'`, écrits en dur dans
+	   la vue. Aucun ne s'affichait sur la route, qui pose toujours les trois ;
+	   les deux identifiants du jeu partaient dans le paquet servi au navigateur.
+	   Les cas qui exerçaient un moment nomment donc maintenant l'état qu'ils
+	   veulent, par l'adresse, comme le chargeur le fait.
+	*/
 	const SOCLE = {
-		vecteur: null,
 		notes,
 		relations: RELATIONS,
 		typesRelation: TYPES_RELATION,
 		relationsTechniques: RELATIONS_TECHNIQUES,
-		typesFiche: TYPES_FICHE
+		typesFiche: TYPES_FICHE,
+		perimetreDemande: 'global|',
+		typeMaitreDemande: null,
+		centreDemande: null
 	} as const;
 
 	it('sans rangement ni identité servis, rien du jeu n’atteint le balisage', async () => {
@@ -409,13 +423,16 @@ describe('V-20 — cartographie par type maître', () => {
 	});
 
 	it('les relations servies sont les seules dessinées', async () => {
-		/* L'anneau n'est peuplé qu'à partir du moment où un type maître est choisi :
-		   c'est `moment=deplie` qui dessine les nœuds ET leurs arêtes titrées. */
-		const etat = { moment: 'deplie' };
-		const temoin = await v20({ ...SOCLE, vecteur: etat });
+		/* L'anneau n'est peuplé qu'à partir du moment où un type maître est choisi,
+		   et les arêtes ne sont titrées qu'autour d'un nœud déplié. L'état est
+		   nommé par l'adresse — `?type=Serveur&centre=n-pg-prod-01` —, comme le
+		   chargeur le pose : c'est le même état que l'ancien `moment=deplie`, mais
+		   il vient d'où il vient dans le produit. */
+		const etat = { typeMaitreDemande: 'Serveur', centreDemande: 'n-pg-prod-01' };
+		const temoin = await v20({ ...SOCLE, ...etat });
 		const body = await v20({
 			...SOCLE,
-			vecteur: etat,
+			...etat,
 			relations: UNE_RELATION_AU_CENTRE,
 			typesRelation: TYPES_MARQUES
 		});

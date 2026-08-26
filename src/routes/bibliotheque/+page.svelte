@@ -27,4 +27,21 @@
 	const { data }: { data: PageData } = $props();
 </script>
 
-<Vue notes={data.notes} univers={data.univers} domaines={data.domaines} compte={data.compte} />
+<!--
+	LES SEPT SOURCES SONT PASSÉES, ET AUCUNE N'EST FACULTATIVE.
+
+	`instance` NE VIENT PAS DU CHARGEUR DE CETTE PAGE : la version du produit est
+	celle du paquet, servie une fois par le gabarit racine — c'est la même que le
+	pied du rail affiche partout ailleurs, et en servir une seconde depuis ici
+	serait une seconde source pour une seule vérité. La synchronisation est VIDE :
+	aucune table ne porte cet instant, et la vue ne lit que la version.
+-->
+<Vue
+	notes={data.notes}
+	univers={data.univers}
+	domaines={data.domaines}
+	compte={data.compte}
+	instance={{ version: data.version, synchro: '' }}
+	activite={data.activite}
+	typesNote={data.typesNote}
+/>
