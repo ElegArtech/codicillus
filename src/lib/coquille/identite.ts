@@ -101,6 +101,28 @@ export interface IdentiteDeCoquille {
 	 */
 	readonly version: string | null;
 	/**
+	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation`
+	 * de `parametres`, servie par le gabarit racine.
+	 *
+	 * Huit vues écrivaient « Direction technique » en dur, dont LES CINQ PIEDS
+	 * PUBLICS ET L'ÉCRAN DE CONNEXION. Ce n'était pas une donnée du jeu de
+	 * démonstration : c'était le segment de marché du cadrage, soudé dans une
+	 * signature de produit — « Codicillus · Direction technique » — que toute
+	 * autre organisation lisait comme un fait sur SON instance.
+	 *
+	 * « Codicillus » n'est pas concerné : c'est le nom du LOGICIEL, et il reste
+	 * en dur, comme `Rail.svelte` le fait déjà pour `Codicillus {version}`.
+	 * C'est la SOUDURE entre le logiciel et l'organisation qu'on défait.
+	 *
+	 * LA CHAÎNE VIDE EST L'ÉTAT NORMAL D'UNE INSTALLATION NEUVE, pas une panne :
+	 * `CONFIGURATION_PAR_DEFAUT.nomOrganisation` vaut `''` tant que
+	 * l'administrateur n'a pas nommé son organisation, et les vues rendent alors
+	 * « Codicillus » seul. Elle vaut `''` hors gabarit racine aussi — le rendu
+	 * par défaut d'une vue, une planche, une page d'erreur —, et c'est le même
+	 * rendu : il n'y a rien à distinguer, donc pas de `null` à porter.
+	 */
+	readonly nomOrganisation: string;
+	/**
 	 * L'INSTANT DE LA DERNIÈRE SYNCHRONISATION — IL N'EN EXISTE AUCUN.
 	 *
 	 * Aucune table de la base ne le porte (vérifié le 22/08/2026 sur les 23

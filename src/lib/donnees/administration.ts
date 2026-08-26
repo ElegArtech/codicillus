@@ -437,7 +437,7 @@ export function verdictDuChangementDeRole(
    implémentation (`P-01`).
 
    ET `CLES_DE_PARAMETRE` EST CE QUI EMPÊCHE L'ÉCRITURE DE MANQUER LA LECTURE.
-   La table des sept clés vit avec la table `parametres` elle-même
+   La table des huit clés vit avec la table `parametres` elle-même
    (`../base/schema.ts`), typée `Record<keyof Configuration, string>` : le
    compilateur refuse qu'un champ de la configuration n'ait pas de clé.
    `lireConfiguration()` la lit, cet écrivain aussi — il n'y a qu'une définition,
@@ -455,7 +455,7 @@ export interface ErreurDeConfiguration {
 /** Le verdict d'une validation de configuration — `RG-M14-10`. */
 export type VerdictDeConfiguration =
 	| { readonly issue: 'valeurs-refusees'; readonly erreurs: readonly ErreurDeConfiguration[] }
-	| { readonly issue: 'possible'; readonly valeurs: Configuration };
+	| { readonly issue: 'possible'; readonly valeurs: ConfigurationReglableEnConsole };
 
 /** `V-33:3008` et `:3014` — un seuil est un nombre de jours, au moins un. */
 export const MESSAGE_SEUIL_MINIMAL = 'Le seuil doit être d’au moins 1 jour.';
@@ -500,16 +500,42 @@ export function messageSeuilNonCroissant(seuilFrais: number): string {
 }
 
 /**
- * LES SEPT CHAMPS DE `V-33`, PAR LEUR NOM DE GEL.
+ * CE QUE `V-33` RÈGLE — SEPT DES HUIT PARAMÈTRES, ET LE TYPE LE DIT.
+ *
+ * `nomOrganisation` EST LE HUITIÈME, ET IL N'A PAS DE CHAMP. Le nom de
+ * l'organisation est un réglage que le cadrage n'avait pas prévu — huit vues
+ * l'écrivaient en dur —, et l'écran qui le réglera n'est pas encore dessiné.
+ * L'`Exclude` NOMME CETTE ABSENCE AU LIEU DE LA CACHER, et c'est tout ce qui
+ * sépare une lacune d'un défaut : tant que le paramètre est exclu, `V-33` ne le
+ * lit pas, ne l'envoie pas, et `enregistrerLaConfiguration()` ne l'écrit pas.
+ *
+ * UNE PREMIÈRE RÉDACTION L'AVAIT INCLUS, avec un `c-organisation` qu'aucun
+ * `input` ne porte, pour que la table reste `Record<keyof Configuration,
+ * string>`. Le coût est MESURÉ : le formulaire n'envoyait rien pour ce champ,
+ * `texte()` rendait la chaîne vide, et `enregistrerLaConfiguration()` — qui
+ * boucle sur la table — POSAIT `nom_organisation = ''` à chaque clic sur
+ * « Enregistrer les réglages », écrasant le nom que l'administrateur venait de
+ * régler. Un champ absent devenu valeur par défaut, écrite en base : le défaut
+ * même que le contrôle voisin interdit.
+ *
+ * LE GARDE-FOU N'EST PAS PERDU, IL EST DÉPLACÉ D'UN CRAN. `Exclude<keyof
+ * Configuration, 'nomOrganisation'>` ne retire QUE ce nom : un neuvième
+ * paramètre ajouté à `Configuration` ne se compile toujours pas tant qu'il n'a
+ * pas son champ. Et le jour où `V-33` rend le champ, retirer l'`Exclude` fait
+ * rougir d'un coup les trois sites qui doivent suivre — cette table, celle du
+ * câblage (`routes/console/cablage.ts`), et la lecture ci-dessous.
  *
  * `V-33:2965` lit ses champs par `document.getElementById("c-" + id)` : le
  * préfixe fait partie du nom, et les sept identifiants sont ceux des `input` et
- * `select` de `:1247` à `:1360`. Typée `Record<keyof Configuration, string>`,
- * comme la table des clés de base : un huitième paramètre ne se compile pas tant
- * qu'il n'a pas son champ.
+ * `select` de `:1247` à `:1360`.
  */
-export const CHAMPS_DE_CONFIGURATION: Readonly<Record<keyof Configuration, string>> = Object.freeze(
-	{
+export type ChampReglableEnConsole = Exclude<keyof Configuration, 'nomOrganisation'>;
+
+/** Les sept réglages que `V-33` porte — la configuration moins le huitième. */
+export type ConfigurationReglableEnConsole = Pick<Configuration, ChampReglableEnConsole>;
+
+export const CHAMPS_DE_CONFIGURATION: Readonly<Record<ChampReglableEnConsole, string>> =
+	Object.freeze({
 		seuilFrais: 'c-frais',
 		seuilVieillissant: 'c-vieil',
 		versionsMax: 'c-versions',
@@ -517,8 +543,7 @@ export const CHAMPS_DE_CONFIGURATION: Readonly<Record<keyof Configuration, strin
 		motFiche: 'c-mot',
 		tailleMaxPieceJointe: 'c-taille',
 		dureeSession: 'c-session'
-	}
-);
+	});
 
 /**
  * CE QUE LE FORMULAIRE PORTE, LU COMME `V-33:2968-2976` LE LIT.
@@ -533,12 +558,14 @@ export const CHAMPS_DE_CONFIGURATION: Readonly<Record<keyof Configuration, strin
  * la rend éprouvable sans requête, et ce qui l'empêche de dépendre de la forme
  * du transport.
  */
-export function valeursDeConfigurationSaisies(lire: (champ: string) => unknown): Configuration {
-	const texte = (champ: keyof Configuration): string => {
+export function valeursDeConfigurationSaisies(
+	lire: (champ: string) => unknown
+): ConfigurationReglableEnConsole {
+	const texte = (champ: ChampReglableEnConsole): string => {
 		const brut = lire(CHAMPS_DE_CONFIGURATION[champ]);
 		return typeof brut === 'string' ? brut : '';
 	};
-	const nombre = (champ: keyof Configuration): number => Number(texte(champ));
+	const nombre = (champ: ChampReglableEnConsole): number => Number(texte(champ));
 
 	return {
 		seuilFrais: nombre('seuilFrais'),
@@ -591,7 +618,9 @@ const ADRESSE_DE_PORTAIL = /^https?:\/\/[\w-]+(\.[\w-]+)+/;
  * formulaire qui ne signalerait qu'une erreur à la fois obligerait à autant
  * d'aller-retours qu'il y a de fautes.
  */
-export function validerLaConfiguration(valeurs: Configuration): VerdictDeConfiguration {
+export function validerLaConfiguration(
+	valeurs: ConfigurationReglableEnConsole
+): VerdictDeConfiguration {
 	const erreurs: ErreurDeConfiguration[] = [];
 
 	if (!Number.isFinite(valeurs.seuilFrais) || valeurs.seuilFrais < 1) {
@@ -1318,13 +1347,22 @@ export async function changerLActivationDUnCompte(
  */
 export async function enregistrerLaConfiguration(
 	base: Base,
-	valeurs: Configuration,
+	valeurs: ConfigurationReglableEnConsole,
 	maintenant: Date
 ): Promise<VerdictDeConfiguration> {
 	const verdict = validerLaConfiguration(valeurs);
 	if (verdict.issue !== 'possible') return verdict;
 
-	const champs = Object.keys(CLES_DE_PARAMETRE) as readonly (keyof Configuration)[];
+	/* LES CLÉS ÉCRITES SONT CELLES QUE L'ÉCRAN RÈGLE, PAS TOUTES CELLES DE LA
+	   CONFIGURATION. La boucle a longtemps parcouru `CLES_DE_PARAMETRE`, ce qui
+	   revenait au même tant que les deux tables avaient les mêmes noms. Elles ne
+	   les ont plus : `nom_organisation` a sa clé de base — `lireConfiguration()`
+	   et le gabarit racine la lisent — et AUCUN champ dans `V-33`. Parcourir les
+	   clés de base poserait donc `nom_organisation = ''` à chaque
+	   enregistrement, en écrasant un réglage qu'aucun geste de cet écran n'a
+	   touché. On boucle sur ce que le formulaire porte ; `CLES_DE_PARAMETRE`
+	   reste la seule source du NOM de la ligne. */
+	const champs = Object.keys(CHAMPS_DE_CONFIGURATION) as readonly ChampReglableEnConsole[];
 	const lignes = champs.map((champ) => ({
 		cle: CLES_DE_PARAMETRE[champ],
 		valeur: valeurs[champ],

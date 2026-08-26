@@ -72,6 +72,17 @@
 		get version() {
 			return data.version ?? null;
 		},
+		/* LE NOM DE L'ORGANISATION, LU SUR LA TABLE `parametres` — pas la
+		   « Direction technique » que huit vues écrivaient en dur, et que toute
+		   autre organisation lisait comme un fait sur SON instance. Un accesseur,
+		   comme les autres membres : le renommage fait en console descend sans
+		   que le contexte soit réémis. Chaîne vide sur une instance qui ne s'est
+		   pas nommée, et sur la page d'erreur, qui peut être rendue sans données
+		   de gabarit — les vues rendent alors « Codicillus » seul, le nom du
+		   LOGICIEL, qui n'est pas concerné. */
+		get nomOrganisation() {
+			return data.nomOrganisation ?? '';
+		},
 		/* AUCUNE SOURCE N'EXISTE — aucune table ne porte l'instant de la dernière
 		   synchronisation. Constante, et non un accesseur sur `data` : il n'y a
 		   rien à suivre. `V-07.svelte` lit ce `null` et n'émet pas la ligne
