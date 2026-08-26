@@ -61,13 +61,26 @@
 	 * restent, et ce sont leurs gestionnaires — non leur nature — qui changent.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * LE COMPTEUR DE DURÉE EST UNE VALEUR DU GEL, ET IL CONTREDIT P-02. La
-	 * maquette écrit `Math.max(0.06, (performance.now() - t0) / 1000 + 0.18)` :
-	 * une durée SIMULÉE, que P-02 proscrit — « aucun compteur ne peut être figé
-	 * ou simulé ». La vue ne mesure rien, elle rend un instant : la valeur portée
-	 * est celle de la formule à durée écoulée nulle, soit 0,18 s, et c'est
-	 * exactement ce que la référence affiche. La contradiction appartient au gel,
-	 * pas au port ; P-02 n'est pas déclarée tenue.
+	 * LE COMPTEUR DE DURÉE ÉTAIT UNE CONSTANTE PRÉSENTÉE COMME UNE MESURE.
+	 *
+	 * La vue écrivait `Math.max(0.06, 0 / 1000 + 0.18)` — la formule du gel dont
+	 * le terme mesuré est NUL PAR CONSTRUCTION, `performance.now()` n'étant
+	 * jamais appelé. Elle servait donc « 1 résultat en 0,18 s » et
+	 * « 4 résultats en 0,18 s » : le même littéral, sous une unité de temps.
+	 * P-02 le proscrit — « aucun compteur ne peut être figé ou simulé » —, et
+	 * l'en-tête l'avouait en renvoyant la contradiction au gel.
+	 *
+	 * LA DURÉE EST DÉSORMAIS UNE DONNÉE REÇUE, en millisecondes, ou `null`.
+	 * `null` VEUT DIRE : AUCUNE MESURE N'EXISTE, et l'écran n'écrit alors pas de
+	 * durée du tout — il ne la remplace ni par une constante plausible, ni par
+	 * `0,00 s`, qui affirmerait une mesure instantanée. Le compte, lui, continue
+	 * d'être rendu — voir le paragraphe suivant.
+	 *
+	 * `null` EST LE DÉFAUT, et c'est l'état vide, jamais une valeur d'exemple.
+	 * La source réelle est `processingTimeMs`, que Meilisearch rend et que le
+	 * moteur ne retenait pas ; le lot qui possède `src/lib/recherche/moteur.ts`
+	 * l'ajoute au résultat et le chargeur de `/recherche` le fera descendre ici.
+	 * La propriété deviendra alors EXIGÉE.
 	 *
 	 * LE COMPTE, LUI, EST RÉEL — `RG-M02-08`, « compteur global reflétant le
 	 * filtrage ». Le cahier l'illustre par « 4 résultats sur 37 » ; le gel écrit
@@ -84,11 +97,13 @@
 	 * `padding:4px 8px` et `padding-top:0` — figurent à l'ensemble clos du gel
 	 * (ARB-016).
 	 */
+	import { getContext } from 'svelte';
 	import { resolve } from '$app/paths';
 	import type { Note } from '../../seeds/corpus';
 	import { chercher, nombreFr, notesPubliques, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
 	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
@@ -147,9 +162,32 @@
 		 * pas rendu du tout.
 		 */
 		pistes: readonly string[];
+		/**
+		 * LA DURÉE DE LA RECHERCHE, EN MILLISECONDES — une MESURE, ou `null`
+		 * quand aucune mesure n'existe.
+		 *
+		 * `null` par défaut : l'état vide, et l'écran n'écrit alors aucune durée.
+		 * Ce que cette propriété remplace était pire qu'une absence — une
+		 * constante du gel rendue comme un temps mesuré, identique pour un
+		 * résultat et pour quatre.
+		 *
+		 * ELLE N'EST PAS ENCORE EXIGÉE parce que sa source ne descend pas encore :
+		 * le moteur de recherche ne retient pas le `processingTimeMs` que
+		 * Meilisearch lui rend. Le lot qui le possède l'ajoute, le chargeur de
+		 * `/recherche` le passe, et la propriété devient exigée à ce moment-là.
+		 */
+		dureeMs?: number | null;
 	}
 
-	const { vecteur, notes, recherchees = false, retenues, portail, pistes }: Proprietes = $props();
+	const {
+		vecteur,
+		notes,
+		recherchees = false,
+		retenues,
+		portail,
+		pistes,
+		dureeMs = null
+	}: Proprietes = $props();
 
 	/** Une adresse absente ou blanche ne mène nulle part : rien ne l'annonce. */
 	const assistanceJoignable = $derived(portail.trim() !== '');
@@ -157,6 +195,31 @@
 	const reglage = $derived(vecteur ?? {});
 	const etat = $derived(typeof reglage['etat'] === 'string' ? reglage['etat'] : 'nominal');
 	const saisie = $derived(typeof reglage['req'] === 'string' ? reglage['req'] : 'mot de passe');
+
+	/**
+	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation`
+	 * de la table `parametres`, descendue par le contexte de coquille.
+	 *
+	 * CET ÉCRAN ÉCRIVAIT « Direction technique » EN DUR. Ce n'était pas une
+	 * donnée du jeu de démonstration : c'était le SEGMENT DE MARCHÉ du cadrage,
+	 * soudé dans une signature de produit, et toute autre organisation le lisait
+	 * comme un fait sur SON instance — sur le premier écran que le produit
+	 * montre à un visiteur sans compte.
+	 *
+	 * « Codicillus » N'EST PAS CONCERNÉ : c'est le nom du LOGICIEL, et il reste
+	 * en dur. C'est la SOUDURE entre le logiciel et l'organisation qu'on défait.
+	 *
+	 * CHAÎNE VIDE = L'INSTANCE NE S'EST PAS NOMMÉE, et c'est l'état normal d'une
+	 * installation neuve, pas une panne : la signature rend « Codicillus » seul.
+	 * C'est aussi ce que rend un composant monté hors gabarit racine, où
+	 * `getContext` ne trouve rien — l'état vide, jamais un nom d'exemple.
+	 */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const nomOrganisation = $derived(identite?.nomOrganisation ?? '');
+	/** « Codicillus · <organisation> », ou « Codicillus » seul. */
+	const signature = $derived(
+		nomOrganisation === '' ? 'Codicillus' : `Codicillus · ${nomOrganisation}`
+	);
 
 	/** RG-M17-01 — la restriction au périmètre public, au point d'entrée. */
 	const publiques = $derived(notesPubliques(notes));
@@ -170,12 +233,13 @@
 	const base = $derived(recherchees ? publiques : chercher(publiques, requete));
 
 	/**
-	 * La durée affichée. Formule du gel à durée écoulée nulle — voir l'en-tête :
-	 * la vue ne mesure pas, elle rend l'instant que la référence montre.
+	 * LA DURÉE EN CLAIR — deux décimales, virgule décimale, comme le gel l'écrit.
+	 * `null` quand aucune mesure n'a été faite : voir l'en-tête, rien n'est alors
+	 * écrit. Une mesure absente ne devient ni une constante, ni un zéro.
 	 */
-	const duree = Math.max(0.06, 0 / 1000 + 0.18)
-		.toFixed(2)
-		.replace('.', ',');
+	const dureeEnClair = $derived(
+		dureeMs === null ? null : (dureeMs / 1000).toFixed(2).replace('.', ',')
+	);
 
 	/** Facettes réduites : ni statut, ni visibilité, ni étiquette interne. */
 	const FACETTES = [
@@ -457,7 +521,7 @@
 					<span class="compteur" id="compteur"
 						>{#if resultats.length}<b
 								>{resultats.length} résultat{resultats.length > 1 ? 's' : ''}</b
-							>{` en ${duree} s`}{/if}</span
+							>{#if dureeEnClair !== null}{` en ${dureeEnClair} s`}{/if}{/if}</span
 					>
 					<button class="btn bouton-facettes" id="ouvrir-facettes">
 						Affiner <span class="compte-filtres" id="compte-filtres" hidden={!nbFiltres}
@@ -557,7 +621,7 @@
 
 	<footer class="pied-public">
 		<div class="pied-public__int">
-			<span class="etiq">Codicillus · Direction technique</span>
+			<span class="etiq">{signature}</span>
 			<a href={resolve('/connexion')}>Se connecter</a>
 		</div>
 	</footer>
