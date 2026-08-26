@@ -552,6 +552,15 @@
 	const notesASupprimer = $derived(aSupprimer ? utilisation(aSupprimer.nom) : []);
 	const dialogueOuvert = $derived(aSupprimer !== null);
 
+	/**
+	 * LE POSSESSIF « ses » A DISPARU DE « retire le schéma et ses N propriétés »,
+	 * et c'est la même mesure qu'à `V-31:189` : un déterminant ne s'accorde pas
+	 * seul devant un chiffre. `props.length` vaut 0 pour un type de fiche sans
+	 * propriété — le constructeur en accepte —, et l'écran rendait « et ses 0
+	 * propriétés » ; à 1, « ses 1 propriété » n'est pas du français. Le compte se
+	 * suffit ; le NOM, lui, s'accorde.
+	 */
+
 	/** `showModal()` — voir `V-28.svelte` : l'attribut `open` n'obtient pas la modalité. */
 	$effect(() => {
 		const boite = document.getElementById('dlg-supprimer');
