@@ -172,6 +172,7 @@
 	import PileDeNotifications from './PileDeNotifications.svelte';
 	import type { Notification } from './notifications';
 	import { getContext } from 'svelte';
+	import { page } from '$app/state';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from './identite';
 
 	interface Compte {
@@ -424,6 +425,41 @@
 	);
 
 	/**
+	 * LES DROITS EFFECTIFS — UNE SOURCE, ET NON TRENTE-QUATRE TRANSMISSIONS.
+	 *
+	 * `droits` est une propriété de vue, et QUATRE VUES SUR TRENTE-QUATRE la
+	 * passaient : V-07, V-11, V-12 et V-13. Les trente autres la laissaient
+	 * absente, `droits !== 'lecture'` valait donc VRAI, et le menu « Créer » était
+	 * émis en entier — avec « Nouvelle note » et « Importer des fichiers » — sur
+	 * `/recherche`, `/mon-profil` et toute la console. Sur une instance neuve, à
+	 * zéro univers, les deux entrées mènent à un 404 : `peutEcrireQuelquePart()`
+	 * boucle sur un index de dossiers vide et refuse, y compris à
+	 * l'administrateur (`RG-DRO-03` passe par `capacites()`, jamais par un
+	 * court-circuit). Le 404 servi est V-26, qui dit que l'adresse n'existe pas —
+	 * elle existe — et qui offre « Créer la note … » vers `/notes/nouvelle` : UNE
+	 * BOUCLE.
+	 *
+	 * Le verdict serveur était juste depuis le début et il n'atteignait pas les
+	 * écrans : `+layout.server.ts` sert `ecriture`, calculé par la MÊME fonction
+	 * que la garde de la route. Il est lu ici, une fois, plutôt que recopié dans
+	 * trente-quatre montages dont un divergerait au premier oubli (`P-35`).
+	 *
+	 * LA PROPRIÉTÉ GARDE LE DERNIER MOT quand une vue la passe — les quatre qui
+	 * la passent déjà ne bougent pas d'un pixel. Et hors application — le rendu
+	 * par défaut d'une vue, une planche —, `identite` est absent : `page.data`
+	 * n'est PAS lu (il lèverait, n'étant lié qu'à une requête en cours), et le
+	 * gel ne bouge pas non plus.
+	 */
+	const droitsEffectifs = $derived(
+		droits ?? (identite === undefined || ecritureServie() ? undefined : ('lecture' as const))
+	);
+
+	/** `ecriture` du gabarit racine — le seul verdict d'écriture du produit. */
+	function ecritureServie(): boolean {
+		return page.data['ecriture'] === true;
+	}
+
+	/**
 	 * CE QUE LE MENU « CRÉER » ÉMET — `P-03` et `P-09` ensemble.
 	 *
 	 * Les deux entrées qui exigent un domaine étaient TOUJOURS émises, puis
@@ -463,8 +499,9 @@
 	/* LA FORME ABRÉGÉE SUIT LA BASE DÈS QU'ELLE EN A UNE. Elle portait l'arbre
 	   du gel écrit en dur, sur vingt-deux vues : le rail y ignorait la base et
 	   proposait des adresses qui rendent 404. Sans contexte — le rendu par défaut
-	   d'une vue —, `railAbregeRendu()` retombe sur `SECTIONS_ABREGEES`, et le gel
-	   ne bouge pas. */
+	   d'une vue —, `railAbregeRendu()` rend désormais un rail VIDE : l'arbre du
+	   gel était une valeur par défaut, et une valeur par défaut part dans le
+	   paquet servi au navigateur, prise ou non (`arborescence-abregee.ts`). */
 	const sectionsAbregees = $derived(
 		forme !== 'abregee'
 			? []
@@ -588,7 +625,7 @@
 	{...donnees}
 	data-rail={rail}
 	data-role={roleEffectif}
-	data-droits={droits}
+	data-droits={droitsEffectifs}
 	data-contenu={contenu}
 >
 	<!--
@@ -604,7 +641,7 @@
 		{sectionsAbregees}
 		version={versionEffective}
 		{accueilCourant}
-		{droits}
+		droits={droitsEffectifs}
 		role={roleEffectif}
 	/>
 
@@ -615,7 +652,7 @@
 			{rail}
 			compte={compteEffectif}
 			{forme}
-			{droits}
+			droits={droitsEffectifs}
 			{creations}
 		/>
 
