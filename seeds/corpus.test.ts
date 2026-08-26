@@ -344,6 +344,25 @@ describe('les globales de données des quarante et une vues sont incluses dans l
 
 /* ── 4. corpus.ts est fidèle à la maquette de référence ───────────────────── */
 
+/**
+ * CE QUE `corpus.ts` PORTE ET QUE LE GEL N'A JAMAIS EU — par globale, et
+ * champ par champ.
+ *
+ * `CONFIG` transcrit le `window.CONFIG` du gel ; `Configuration` type le
+ * RÉGLAGE D'INSTANCE du produit. Les deux ont partagé une forme tant que le
+ * produit n'a eu que les sept réglages dessinés. `nomOrganisation` est le
+ * huitième, et il n'est pas dessiné : huit vues écrivaient le nom de
+ * l'organisation en dur, et aucune maquette n'offre le champ qui le règle.
+ *
+ * L'EXEMPTION NE REND PAS LE CONTRÔLE INOPÉRANT : chaque champ déclaré ici est
+ * vérifié ABSENT du gel et PRÉSENT dans `corpus.ts` avant d'être écarté. Un
+ * champ que le gel porterait, ou que `corpus.ts` aurait perdu, fait tomber le
+ * contrôle au lieu de passer dans l'exemption.
+ */
+const ENRICHISSEMENTS_DE_GLOBALE: Readonly<Record<string, readonly string[]>> = {
+	CONFIG: ['nomOrganisation']
+};
+
 describe('corpus.ts reproduit la maquette de référence', () => {
 	const reference = MAQUETTES.get(VUE_DE_REFERENCE)!;
 	const semence: Record<string, unknown> = {
@@ -414,7 +433,13 @@ describe('corpus.ts reproduit la maquette de référence', () => {
 		VERSIONS
 	})) {
 		it(`${nom} est identique, valeur par valeur`, () => {
-			expect(JSON.parse(JSON.stringify(semence[nom]))).toEqual(reference[nom]);
+			const obtenu: unknown = JSON.parse(JSON.stringify(semence[nom]));
+			for (const champ of ENRICHISSEMENTS_DE_GLOBALE[nom] ?? []) {
+				expect(reference[nom]).not.toHaveProperty(champ);
+				expect(obtenu).toHaveProperty(champ);
+				delete (obtenu as Record<string, unknown>)[champ];
+			}
+			expect(obtenu).toEqual(reference[nom]);
 		});
 	}
 

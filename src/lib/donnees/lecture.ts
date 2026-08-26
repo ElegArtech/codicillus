@@ -954,7 +954,7 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 		return valeur;
 	};
 
-	/* LES SEPT CLÉS VIENNENT DU SCHÉMA, ET DE NULLE PART AILLEURS. Elles étaient
+	/* LES HUIT CLÉS VIENNENT DU SCHÉMA, ET DE NULLE PART AILLEURS. Elles étaient
 	   ici en littéraux, ce qui suffisait tant que rien n'écrivait dans
 	   `parametres` ; `T-077` y écrit, et `RG-M14-09` — « toute modification de
 	   seuil provoque un recalcul immédiat » — serait fausse à la lettre si
@@ -970,6 +970,10 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 		portailAssistance: chaine(
 			CLES_DE_PARAMETRE.portailAssistance,
 			CONFIGURATION_PAR_DEFAUT.portailAssistance
+		),
+		nomOrganisation: chaine(
+			CLES_DE_PARAMETRE.nomOrganisation,
+			CONFIGURATION_PAR_DEFAUT.nomOrganisation
 		),
 		motFiche: chaine(CLES_DE_PARAMETRE.motFiche, CONFIGURATION_PAR_DEFAUT.motFiche),
 		tailleMaxPieceJointe: nombre(
