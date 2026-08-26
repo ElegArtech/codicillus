@@ -28,8 +28,19 @@
  * LE RENDU PAR DÉFAUT DES VUES NE BOUGE PAS. Hors application — un rendu de
  * vue sans gabarit racine —, `getContext` rend `undefined` et la coquille
  * retombe sur sa propriété. C'est ce qui garde le gel intact.
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ * CE QUE CE MODULE PORTE EN PLUS DU CONTRAT : UN LECTEUR
+ *
+ * `organisationRendue()` lit le contexte pour les vues qui n'ont besoin QUE du
+ * nom de l'organisation — les pieds publics, l'écran de connexion. Sans lui,
+ * chacune recopierait le même `getContext(...)?.nomOrganisation ?? ''`, et le
+ * repli hors gabarit racine serait écrit huit fois : c'est exactement la
+ * divergence que `vocabulaireRendu()` évite déjà pour le mot renommable, dans
+ * `$lib/vocabulaire.ts`, et pour la même raison.
  */
 
+import { getContext } from 'svelte';
 import type { VocabulaireRendu } from '../vocabulaire';
 
 /** La clé du contexte. Une constante, jamais une chaîne recopiée. */
@@ -101,6 +112,28 @@ export interface IdentiteDeCoquille {
 	 */
 	readonly version: string | null;
 	/**
+	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation`
+	 * de `parametres`, servie par le gabarit racine.
+	 *
+	 * Huit vues écrivaient « Direction technique » en dur, dont LES CINQ PIEDS
+	 * PUBLICS ET L'ÉCRAN DE CONNEXION. Ce n'était pas une donnée du jeu de
+	 * démonstration : c'était le segment de marché du cadrage, soudé dans une
+	 * signature de produit — « Codicillus · Direction technique » — que toute
+	 * autre organisation lisait comme un fait sur SON instance.
+	 *
+	 * « Codicillus » n'est pas concerné : c'est le nom du LOGICIEL, et il reste
+	 * en dur, comme `Rail.svelte` le fait déjà pour `Codicillus {version}`.
+	 * C'est la SOUDURE entre le logiciel et l'organisation qu'on défait.
+	 *
+	 * LA CHAÎNE VIDE EST L'ÉTAT NORMAL D'UNE INSTALLATION NEUVE, pas une panne :
+	 * `CONFIGURATION_PAR_DEFAUT.nomOrganisation` vaut `''` tant que
+	 * l'administrateur n'a pas nommé son organisation, et les vues rendent alors
+	 * « Codicillus » seul. Elle vaut `''` hors gabarit racine aussi — le rendu
+	 * par défaut d'une vue, une planche, une page d'erreur —, et c'est le même
+	 * rendu : il n'y a rien à distinguer, donc pas de `null` à porter.
+	 */
+	readonly nomOrganisation: string;
+	/**
 	 * L'INSTANT DE LA DERNIÈRE SYNCHRONISATION — IL N'EN EXISTE AUCUN.
 	 *
 	 * Aucune table de la base ne le porte (vérifié le 22/08/2026 sur les 23
@@ -150,4 +183,32 @@ export interface IdentiteDeCoquille {
 	 * les littéraux d'avant.
 	 */
 	readonly vocabulaire: VocabulaireRendu | null;
+}
+
+/**
+ * LE NOM DE L'ORGANISATION, TEL QU'UNE VUE LE REND — accesseur, pas chaîne.
+ *
+ * À appeler à l'INITIALISATION d'un composant, comme tout `getContext`. Le
+ * résultat porte un ACCESSEUR et non une chaîne figée : le contexte du gabarit
+ * racine est lui-même fait d'accesseurs, et une lecture sous `$derived` suit
+ * donc un renommage fait en console sans que le contexte soit réémis. Une
+ * chaîne capturée à l'initialisation serait périmée dès la première
+ * invalidation — c'est le défaut que `vocabulaireRendu()` a déjà eu à réparer.
+ *
+ * Hors gabarit racine — le rendu par défaut d'une vue, une planche, une page
+ * d'erreur rendue sans données —, `getContext` rend `undefined` et le nom vaut
+ * la chaîne vide : le MÊME état que sur une instance qui ne s'est pas nommée.
+ */
+export function organisationRendue(): OrganisationRendue {
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	return {
+		get nom() {
+			return identite?.nomOrganisation ?? '';
+		}
+	};
+}
+
+/** Ce qu'une vue lit de l'organisation : son nom, ou rien. */
+export interface OrganisationRendue {
+	readonly nom: string;
 }

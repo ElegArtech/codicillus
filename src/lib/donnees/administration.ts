@@ -500,13 +500,21 @@ export function messageSeuilNonCroissant(seuilFrais: number): string {
 }
 
 /**
- * LES SEPT CHAMPS DE `V-33`, PAR LEUR NOM DE GEL.
+ * LES HUIT CHAMPS DE `V-33`, PAR LEUR NOM DE GEL.
  *
  * `V-33:2965` lit ses champs par `document.getElementById("c-" + id)` : le
- * préfixe fait partie du nom, et les sept identifiants sont ceux des `input` et
- * `select` de `:1247` à `:1360`. Typée `Record<keyof Configuration, string>`,
- * comme la table des clés de base : un huitième paramètre ne se compile pas tant
- * qu'il n'a pas son champ.
+ * préfixe fait partie du nom, et sept des huit identifiants sont ceux des
+ * `input` et `select` de `:1247` à `:1360`. Typée
+ * `Record<keyof Configuration, string>`, comme la table des clés de base : un
+ * neuvième paramètre ne se compile pas tant qu'il n'a pas son champ.
+ *
+ * `c-organisation` EST LE HUITIÈME, ET LE GEL NE LE PORTE PAS. Le nom de
+ * l'organisation est un réglage que le cadrage n'avait pas prévu — huit vues
+ * l'écrivaient en dur. Le préfixe et la forme du nom sont ceux des sept autres :
+ * l'entrée est ici pour que la lecture du formulaire et l'écriture en base
+ * existent le jour où `V-33` rend le champ, et non pour qu'un champ absent soit
+ * lu — `texte()` rend alors la chaîne vide, qui est précisément le défaut du
+ * réglage.
  */
 export const CHAMPS_DE_CONFIGURATION: Readonly<Record<keyof Configuration, string>> = Object.freeze(
 	{
@@ -514,6 +522,7 @@ export const CHAMPS_DE_CONFIGURATION: Readonly<Record<keyof Configuration, strin
 		seuilVieillissant: 'c-vieil',
 		versionsMax: 'c-versions',
 		portailAssistance: 'c-portail',
+		nomOrganisation: 'c-organisation',
 		motFiche: 'c-mot',
 		tailleMaxPieceJointe: 'c-taille',
 		dureeSession: 'c-session'
@@ -545,6 +554,7 @@ export function valeursDeConfigurationSaisies(lire: (champ: string) => unknown):
 		seuilVieillissant: nombre('seuilVieillissant'),
 		versionsMax: nombre('versionsMax'),
 		portailAssistance: texte('portailAssistance').trim(),
+		nomOrganisation: texte('nomOrganisation').trim(),
 		motFiche: texte('motFiche').trim(),
 		tailleMaxPieceJointe: nombre('tailleMaxPieceJointe'),
 		dureeSession: nombre('dureeSession')
