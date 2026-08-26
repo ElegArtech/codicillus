@@ -173,6 +173,7 @@ const CHAMPS_DE_CONFIGURATION = {
 	seuilVieillissant: 'c-vieil',
 	versionsMax: 'c-versions',
 	portailAssistance: 'c-portail',
+	nomOrganisation: 'c-organisation',
 	motFiche: 'c-mot',
 	tailleMaxPieceJointe: 'c-taille',
 	dureeSession: 'c-session'
@@ -194,7 +195,7 @@ const CHAMPS_DE_CONFIGURATION = {
  *    pas la page — le gel le nomme « rétablir », pas « annuler l'écran » — et il
  *    repasse par la même comparaison, qui redésactive le bouton.
  *
- * 3. « ENREGISTRER LES RÉGLAGES » APPELLE L'ACTION. Les sept noms envoyés sont
+ * 3. « ENREGISTRER LES RÉGLAGES » APPELLE L'ACTION. Les huit noms envoyés sont
  *    les identifiants du gel, parce que c'est ce que l'action attend :
  *    `CHAMPS_DE_CONFIGURATION` d'`administration.ts` les tient, et `V-33:2965`
  *    les lit par `document.getElementById("c-" + id)`. Rien n'est traduit.

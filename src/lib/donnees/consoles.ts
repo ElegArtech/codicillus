@@ -188,6 +188,19 @@ export interface MesureSansContrepartie {
  * `consoles.test.ts` en fait une assertion, de sorte qu'une lacune refermée par
  * une migration future fasse rougir le test au lieu de laisser un commentaire
  * périmé derrière elle.
+ *
+ * DEUX ENTRÉES SONT PARTIES, ET C'EST LE CAS QUE CE RECENSEMENT ANNONÇAIT.
+ * `MESURES_7J` et `MESURES_7J_PREC` affirmaient qu'« aucune table ne porte de
+ * consultation horodatée » : la migration `006` en a monté une, elle se remplit,
+ * et `console/analytique/+page.server.ts` la lit pour les deux fenêtres. Le
+ * recensement était donc FAUX — et un registre de lacunes qui ment dispense
+ * d'aller voir, ce que l'entrée `V-36` reconnaît plus bas à ses dépens.
+ *
+ * L'ÉCRAN NE BOUGE PAS POUR AUTANT : `etatDesDonnees()` compte les entrées de
+ * `V-34`, et il en reste trois — le journal de recherche, les demandes de
+ * révision, le volume de modifications. Un seul indicateur réel ne fait pas un
+ * tableau de bord, et la vue garde son état « Pas encore assez d'usage pour
+ * conclure ».
  */
 export const MESURES_DE_CONSOLE_SANS_CONTREPARTIE: readonly MesureSansContrepartie[] = [
 	{
@@ -196,19 +209,6 @@ export const MESURES_DE_CONSOLE_SANS_CONTREPARTIE: readonly MesureSansContrepart
 		affichage: 'l’indicateur nord « taux de recherche aboutie » et les trous documentaires',
 		motif:
 			'aucune table de journal de recherche. Le taux se calcule sur des requêtes horodatées avec leur nombre de résultats et d’ouvertures ; rien n’enregistre une recherche.'
-	},
-	{
-		donnee: 'MESURES_7J',
-		vue: 'V-34',
-		affichage: 'les volumes de consultation de la période',
-		motif:
-			'`notes.compteur_de_consultations` est un cumul de toute la vie de la note, pas une série datée : aucune table ne porte de consultation horodatée.'
-	},
-	{
-		donnee: 'MESURES_7J_PREC',
-		vue: 'V-34',
-		affichage: 'la comparaison à la période précédente',
-		motif: 'même absence, décalée d’une semaine : il n’y a pas de série à comparer.'
 	},
 	{
 		donnee: 'REVISIONS',
