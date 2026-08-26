@@ -723,7 +723,7 @@
 						type="text"
 						id="f-nom"
 						autocomplete="off"
-						placeholder="Application"
+						placeholder="Licence logicielle"
 						value={nomSaisi}
 						oninput={(e) => (fNom = e.currentTarget.value)}
 					/>

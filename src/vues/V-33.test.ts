@@ -68,8 +68,7 @@ describe('V-33 — chaque champ refusable a son bloc d’erreur', () => {
 		expect(html).toContain(`id="${id}"`);
 		expect(html).toContain('Organisation d’épreuve');
 
-		/* VIDE, LE CHAMP RESTE, ET L'AIDE DIT CE QUE LE VIDE PRODUIT : une
-		   installation neuve ne signe que le nom du logiciel. */
+		/* VIDE, LE CHAMP RESTE, ET L'AIDE LE DIT FACULTATIF. */
 		const neuve = await rendreLaVue('V-33', {
 			vecteur: null,
 			notes: NOTES,
@@ -77,7 +76,34 @@ describe('V-33 — chaque champ refusable a son bloc d’erreur', () => {
 		});
 		expect(neuve).toContain(`id="${id}"`);
 		expect(neuve).not.toContain('Organisation d’épreuve');
-		expect(neuve).toContain('ne signent que');
+		expect(neuve).toContain('Facultatif.');
+	});
+
+	/**
+	 * L'ÉCRAN NE PROMET AUCUN RENDU QU'IL NE PEUT PAS TENIR.
+	 *
+	 * L'aide annonçait que les pieds de page et l'écran de connexion signeraient
+	 * « Codicillus · le nom saisi ». AUCUNE VUE NE LIT ENCORE CE RÉGLAGE : les
+	 * pieds publics portent leur signature en dur, et le contrôle précédent
+	 * n'éprouvait que la PRÉSENCE du texte, jamais sa véracité — une aide fausse
+	 * passait donc au vert.
+	 *
+	 * CE CAS MESURE L'AUTRE MOITIÉ : les trois tournures interdites sont celles
+	 * que l'aide employait, et il les refuse dans LES DEUX ÉTATS du champ — vide
+	 * et rempli —, là où l'ancienne aide en portait une par état. Le jour où une
+	 * vue lira vraiment le réglage, c'est ici qu'il faudra venir lever la
+	 * contrainte : la promesse et sa preuve se relisent alors ensemble.
+	 */
+	it('n’annonce aucun écran qui rendrait le nom saisi', async () => {
+		for (const config of [
+			CONFIGURATION_PAR_DEFAUT,
+			{ ...CONFIGURATION_PAR_DEFAUT, nomOrganisation: 'Organisation d’épreuve' }
+		]) {
+			const html = await rendreLaVue('V-33', { vecteur: null, notes: NOTES, config });
+			for (const promesse of ['pied de page', 'pieds de page', 'écran de connexion']) {
+				expect(html, `l’aide promet « ${promesse} »`).not.toContain(promesse);
+			}
+		}
 	});
 
 	it('sert le plafond de versions REÇU, et l’annonce dans l’aide du champ', async () => {

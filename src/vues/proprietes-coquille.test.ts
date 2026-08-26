@@ -906,3 +906,42 @@ describe('V-04 — l’issue d’assistance', () => {
 		expect(corps('V-04', base, { portail: '   ' })).not.toContain('id="ticket"');
 	});
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   V-41 — AUCUN COMPOSANT N'EST ANNONCÉ AU-DESSUS DE RIEN
+
+   `activite` et `typesNote` avaient pour défaut les constantes du jeu ; les
+   exiger a retiré le jeu du rendu, mais a laissé LE CADRE : sur une instance
+   qui n'a encore ni trace d'activité ni type de note, la planche annonçait
+   « Chronologie » au-dessus d'une liste sans élément et « Sélecteur » au-dessus
+   d'un menu sans option. Un cadre vide n'est pas un échantillon typographique :
+   il ne montre rien de ce que la planche est censée montrer.
+
+   L'ÉTAT VIDE EST DONC L'ABSENCE DU COMPOSANT, pas sa carcasse. Les deux cas
+   qui suivent mesurent l'absence, le troisième mesure que rien n'a été retiré
+   au produit : servis, les deux composants reparaissent.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('V-41 — les composants sans matière ne sont pas annoncés', () => {
+	const SOCLE_V41 = VUES['V-41']!.base;
+	const SANS = { ...SOCLE_V41, activite: [], typesNote: [] };
+
+	it('sans activité servie, la chronologie n’est pas annoncée', () => {
+		const rendu = corps('V-41', SANS, { notes: [] });
+		expect(rendu).not.toContain('class="chrono"');
+		expect(rendu).not.toContain('>Chronologie<');
+	});
+
+	it('sans type de note servi, le sélecteur d’exemple n’est pas annoncé', () => {
+		const rendu = corps('V-41', SANS, { notes: [] });
+		expect(rendu).not.toContain('<select');
+		expect(rendu).not.toContain('>Sélecteur<');
+	});
+
+	it('servis, les deux composants reparaissent avec leur matière', () => {
+		const rendu = corps('V-41', SOCLE_V41, { notes: [] });
+		expect(rendu).toContain('class="chrono"');
+		expect(rendu).toContain('>Chronologie<');
+		expect(rendu).toContain('<select');
+		expect(rendu).toContain('>Sélecteur<');
+	});
+});

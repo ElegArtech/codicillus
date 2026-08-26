@@ -571,7 +571,7 @@
 						type="text"
 						id="f-direct"
 						autocomplete="off"
-						placeholder="dépend de"
+						placeholder="succède à"
 						value={directSaisi}
 						oninput={(e) => (fDirect = e.currentTarget.value)}
 					/>
@@ -607,7 +607,7 @@
 						type="text"
 						id="f-inverse"
 						autocomplete="off"
-						placeholder="est requis par"
+						placeholder="est suivi de"
 						value={inverseSaisi}
 						oninput={(e) => (fInverse = e.currentTarget.value)}
 					/>
