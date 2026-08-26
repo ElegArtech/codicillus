@@ -99,7 +99,7 @@
 	import { niveauFraicheur } from '$lib/fraicheur';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
 	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
@@ -212,9 +212,9 @@
 
 	/** Les trois parts de `barreRepartition` (`V-33:2911`), dans l'ordre du gel. */
 	const PARTS = [
-		{ cle: 'frais', classe: 'p-frais', pluriel: 'fraîches', singulier: 'fraîche' },
-		{ cle: 'vieil', classe: 'p-vieil', pluriel: 'vieillissantes', singulier: 'vieillissante' },
-		{ cle: 'obs', classe: 'p-obs', pluriel: 'obsolètes', singulier: 'obsolète' }
+		{ cle: 'frais', classe: 'p-frais', singulier: 'fraîche' },
+		{ cle: 'vieil', classe: 'p-vieil', singulier: 'vieillissante' },
+		{ cle: 'obs', classe: 'p-obs', singulier: 'obsolète' }
 	] as const;
 
 	/** `n fraîches` / `1 fraîche` — la forme du gel, employée au titre, au nom
@@ -223,7 +223,7 @@
 		PARTS.filter((p) => r[p.cle]).map((p) => ({
 			...p,
 			n: r[p.cle],
-			libelle: `${r[p.cle]} ${r[p.cle] > 1 ? p.pluriel : p.singulier}`
+			libelle: `${r[p.cle]} ${accord(r[p.cle], p.singulier)}`
 		}));
 
 	/** L'étiquette de la barre entière (`V-33:2920`). */
@@ -239,7 +239,7 @@
 	 *  valide et un libellé non vide. Le message est celui du gel, au mot près. */
 	const erreurVieil = $derived(
 		seuilVieillissant <= seuilFrais
-			? `Doit dépasser le seuil frais (${seuilFrais} jours). En l'état, aucune note ne serait ` +
+			? `Doit dépasser le seuil frais (${seuilFrais} ${accord(seuilFrais, 'jour')}). En l'état, aucune note ne serait ` +
 					'jamais vieillissante : le témoin passerait directement du vert au rouge.'
 			: null
 	);
@@ -263,12 +263,12 @@
 	const blocsDeMouvement = $derived(
 		(
 			[
-				['versObs', 'passent en obsolète', 'aggrave'],
-				['versVieil', 'passent en vieillissant', null],
-				['versFrais', 'repassent en frais', 'ameliore']
+				['versObs', 'passe en obsolète', 'passent en obsolète', 'aggrave'],
+				['versVieil', 'passe en vieillissant', 'passent en vieillissant', null],
+				['versFrais', 'repasse en frais', 'repassent en frais', 'ameliore']
 			] as const
 		)
-			.map(([cle, quoi, sensImpose]) => {
+			.map(([cle, quoiAuSingulier, quoiAuPluriel, sensImpose]) => {
 				const m = mouvements[cle];
 				const sens = sensImpose ?? (m[0]?.aggrave ? 'aggrave' : 'ameliore');
 				return {
@@ -276,12 +276,13 @@
 					m,
 					sens,
 					n: `${sens === 'aggrave' ? '+' : '−'}${m.length}`,
-					quoi: `${m.length}${m.length > 1 ? ' notes ' : ' note '}${quoi}`,
+					quoi: `${m.length} ${accord(m.length, 'note')} ${accord(m.length, quoiAuSingulier, quoiAuPluriel)}`,
 					liste:
 						m
 							.slice(0, 4)
 							.map((x) => x.note.titre)
-							.join(' · ') + (m.length > 4 ? ` · et ${m.length - 4} autres` : '')
+							.join(' · ') +
+						(m.length > 4 ? ` · et ${m.length - 4} ${accord(m.length - 4, 'autre')}` : '')
 				};
 			})
 			.filter((b) => b.m.length)
@@ -368,7 +369,7 @@
 {#snippet barreRepartition(r: Repartition, sansLegende: boolean)}{#if !r.total}<div class="zone-etat__txt" style="margin:0">Aucune note à mesurer.</div>{:else}<div class="repart" role="img" aria-label={libelleDeBarre(r)}
 		>{#each partsDe(r) as p (p.cle)}<span class={p.classe} style="flex:{p.n}" title={p.libelle}></span>{/each}</div
 	>{#if !sansLegende}<div class="legende"
-		>{#each partsDe(r) as p (p.cle)}<span><i class={p.classe}></i><b>{p.n}</b>{` ${p.n > 1 ? p.pluriel : p.singulier}`}</span>{/each}</div
+		>{#each partsDe(r) as p (p.cle)}<span><i class={p.classe}></i><b>{p.n}</b>{` ${accord(p.n, p.singulier)}`}</span>{/each}</div
 	>{/if}{/if}{/snippet}
 
 <CoquilleDeConsole section="configuration" {notes}>
@@ -452,8 +453,8 @@
 				><div class="impact" id="impact"
 					>{#if erreurVieil}<div class="impact__rien">L'aperçu s'affichera dès que les deux seuils formeront une progression valable.</div
 					>{:else}<div class="impact__tete"
-						><span class="etiq">Effet sur les {avant.total} notes de la base</span
-						><span class="impact__bilan">{#if bascules}<b>{bascules}{bascules > 1 ? ' notes changent' : ' note change'} de signal</b>{:else}aucun changement{/if}</span
+						><span class="etiq">Effet sur {avant.total} {accord(avant.total, 'note')} de la base</span
+						><span class="impact__bilan">{#if bascules}<b>{bascules}{' ' + accord(bascules, 'note change', 'notes changent')} de signal</b>{:else}aucun changement{/if}</span
 					></div
 					><div class="comparaison"
 						><div class="comparaison__ligne" data-etat="avant"

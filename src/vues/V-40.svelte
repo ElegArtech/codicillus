@@ -84,6 +84,7 @@
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { libelleFraicheur } from '$lib/fraicheur';
+	import { accord } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** La clé de l'état demandé : le dialogue rendu ouvert. */
@@ -662,17 +663,23 @@
 									: 'version de son historique'}
 							</li>
 							<li>
-								<b>{retroliensSup}</b>{retroliensSup > 1
-									? 'notes qui pointent vers elle'
-									: 'note qui pointe vers elle'}
+								<b>{retroliensSup}</b>{accord(
+									retroliensSup,
+									'note qui pointe vers elle',
+									'notes qui pointent vers elle'
+								)}
 							</li>
 							<li>
-								<b>{NOTE_SUP.pj}</b>{NOTE_SUP.pj > 1 ? 'pièces jointes' : 'pièce jointe'}
+								<b>{NOTE_SUP.pj}</b>{accord(NOTE_SUP.pj, 'pièce jointe', 'pièces jointes')}
 							</li>{/if}
 					</ul>
 					<div class="decompte__note" id="note-liens">
 						{#if ouvert === 'd-note'}{retroliensSup
-								? `Les ${retroliensSup} liens qui mènent à cette note deviendront cassés dans les notes d'origine. Elles resteront lisibles, mais le lien ne mènera plus nulle part.`
+								? accord(
+										retroliensSup,
+										"Le lien qui mène à cette note deviendra cassé dans la note d'origine. Elle restera lisible, mais le lien ne mènera plus nulle part.",
+										`Les ${retroliensSup} liens qui mènent à cette note deviendront cassés dans les notes d'origine. Elles resteront lisibles, mais le lien ne mènera plus nulle part.`
+									)
 								: 'Aucune note ne pointe vers celle-ci : sa suppression ne cassera aucun lien.'}{:else}—{/if}
 					</div>
 				</div>

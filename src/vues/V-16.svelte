@@ -100,6 +100,7 @@
 	} from '../../seeds/corpus';
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import { accord } from '$lib/vocabulaire';
 
 	/**
 	 * CE QUE LA ROUTE PASSE EST REQUIS ; CE QUE LE CONTEXTE PORTE EST VIDE.
@@ -599,10 +600,10 @@
 			</div>
 			<!-- prettier-ignore -->
 			<div class="bilan" id="bilan"
-				>{#if !memeVersion}<span class="bilan__plus">{'+' + ajouts + ' lignes'}</span
-				><span class="bilan__moins">{'−' + retraits + ' lignes'}</span
+				>{#if !memeVersion}<span class="bilan__plus">{'+' + ajouts + ' ' + accord(ajouts, 'ligne')}</span
+				><span class="bilan__moins">{'−' + retraits + ' ' + accord(retraits, 'ligne')}</span
 				><span class="bilan__egal"
-					>{'· ' + touches + ' blocs touchés sur ' + rangees.length}</span
+					>{'· ' + touches + ' ' + accord(touches, 'bloc touché', 'blocs touchés') + ' sur ' + rangees.length}</span
 				>{/if}</div
 			>
 		</div>
@@ -627,7 +628,7 @@
 							fill="none"
 							stroke="currentColor"
 							stroke-width="1.6"><path d="M5 6l3 3 3-3M5 10.5l3 3 3-3" /></svg
-						><span>{e.compte + (e.compte > 1 ? ' lignes inchangées' : ' ligne inchangée')}</span
+						><span>{e.compte + ' ' + accord(e.compte, 'ligne inchangée', 'lignes inchangées')}</span
 						></button
 					>{:else}<div class="jl" data-etat={e.etat}
 						><span class="jl__no">{e.no}</span

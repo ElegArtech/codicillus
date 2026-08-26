@@ -70,6 +70,7 @@
 	 */
 	import { resolve } from '$app/paths';
 	import { identifiantLisible } from '$lib/rangement/adresses';
+	import { accord } from '$lib/vocabulaire';
 	import type { Domaine, Note, Univers, UtilisateurCourant } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { domainesDe, universOrdonnes } from '$lib/coquille/arborescence';
@@ -502,9 +503,12 @@
 	const refusPeuple = $derived([
 		[
 			domainesDeLUnivers.length,
-			domainesDeLUnivers.length > 1 ? 'domaines rattachés' : 'domaine rattaché'
+			accord(domainesDeLUnivers.length, 'domaine rattaché', 'domaines rattachés')
 		],
-		[notesDeLUnivers, notesDeLUnivers > 1 ? "notes qu'ils contiennent" : "note qu'ils contiennent"]
+		[
+			notesDeLUnivers,
+			accord(notesDeLUnivers, "note qu'ils contiennent", "notes qu'ils contiennent")
+		]
 	] as [number, string][]);
 
 	/** Le nombre de notes d'un domaine — `window.notesDuDomaine(d.nom).length`. */
@@ -834,7 +838,7 @@
 						><div class="refus__sortie">Un univers ne se supprime que vide, pour qu'aucun contenu ne disparaisse par ricochet. Rattachez d'abord ses domaines ailleurs — « Non classé » convient si aucune destination ne s'impose.</div
 					></div
 					><div style="display:flex;flex-direction:column;gap:var(--e-1)"
-						>{#each domainesDeLUnivers as d (d.nom)}<div style="display:flex;align-items:center;gap:var(--e-2);padding:var(--e-2);border:1px solid var(--c-trait);border-radius:var(--r-2);font-size:var(--t-petit)"><span class="tg__puce" style="background:{d.couleur}"></span><span style="flex:1">{d.nom}</span><span class="tg__n">{notesDuDomaine(d.nom)} notes</span></div>{/each}</div
+						>{#each domainesDeLUnivers as d (d.nom)}<div style="display:flex;align-items:center;gap:var(--e-2);padding:var(--e-2);border:1px solid var(--c-trait);border-radius:var(--r-2);font-size:var(--t-petit)"><span class="tg__puce" style="background:{d.couleur}"></span><span style="flex:1">{d.nom}</span><span class="tg__n">{notesDuDomaine(d.nom)} {accord(notesDuDomaine(d.nom), 'note')}</span></div>{/each}</div
 					><button class="btn btn--principal" style="width:100%" type="button" onclick={() => aSupprimer && onRattacher?.(aSupprimer.nom)}>Rattacher ces domaines à un autre univers</button
 					>{:else if aSupprimer}<p class="dlg__texte">« {aSupprimer.nom} » ne contient aucun domaine : sa suppression ne détruit aucun contenu. Il disparaîtra de la navigation latérale de tous les utilisateurs.</p>{/if}</div
 				>
