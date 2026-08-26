@@ -72,7 +72,7 @@
 	import { adresseNonResolue } from '$lib/public/adresse-non-resolue';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import { adresseDeNote } from '$lib/rangement/adresses';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
@@ -380,8 +380,8 @@
 			>{#if n.operationnel}<span class="marque-op">↳ Trouvé dans le registre Opérationnel</span>{/if}</div
 		><div class="carte__pied"
 			><span class="carte__chemin"><span>{`${n.univers} › `}</span><b>{n.domaine}</b><span>{` › ${n.dossier}`}</span></span
-			><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{nombreFr(n.vues)} consultations</span
-			>{#if n.pj}<span class="sep">·</span><span>{n.pj} {n.pj > 1 ? 'pièces jointes' : 'pièce jointe'}</span>{/if}{#if n.visibilite === 'Publique'}<span class="sep">·</span><span class="carte__visibilite">Publique</span>{/if}</div
+			><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{nombreFr(n.vues)} {accord(n.vues, 'consultation')}</span
+			>{#if n.pj}<span class="sep">·</span><span>{n.pj} {accord(n.pj, 'pièce jointe', 'pièces jointes')}</span>{/if}{#if n.visibilite === 'Publique'}<span class="sep">·</span><span class="carte__visibilite">Publique</span>{/if}</div
 		></a
 	>
 {/snippet}
@@ -529,7 +529,8 @@
 								style="margin-top:var(--e-3)">Créer la note « {requete} »</button
 							>{/if}
 					</div>{:else}<div class="etiq">
-						{resultats.length}{resultats.length > 1 ? ' notes correspondent' : ' note correspond'}
+						{resultats.length}{' ' +
+							accord(resultats.length, 'note correspond', 'notes correspondent')}
 					</div>
 					{#each resultats.slice(0, 3) as n, index (n.id)}{@render carte(
 							n,

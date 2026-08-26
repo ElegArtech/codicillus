@@ -653,7 +653,7 @@ describe('V-34 — Analytique', () => {
 			mesures7jPrec: MESURES_7J_PREC
 		});
 		expect(comptee).not.toBe(vide);
-		expect(occurrences(vide, '0 vues / 7 j')).toBeGreaterThan(occurrences(comptee, '0 vues / 7 j'));
+		expect(occurrences(vide, '0 vue / 7 j')).toBeGreaterThan(occurrences(comptee, '0 vue / 7 j'));
 	});
 
 	test('sans journal de recherche, AUCUN bloc ne prétend le mesurer', async () => {

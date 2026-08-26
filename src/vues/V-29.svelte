@@ -69,7 +69,7 @@
 		Univers,
 		UtilisateurCourant
 	} from '../../seeds/corpus';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import type { RefusDeSaisie, SaisieDeTypeDeFiche } from '$lib/console/structure';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
@@ -552,6 +552,15 @@
 	const notesASupprimer = $derived(aSupprimer ? utilisation(aSupprimer.nom) : []);
 	const dialogueOuvert = $derived(aSupprimer !== null);
 
+	/**
+	 * LE POSSESSIF « ses » A DISPARU DE « retire le schéma et ses N propriétés »,
+	 * et c'est la même mesure qu'à `V-31:189` : un déterminant ne s'accorde pas
+	 * seul devant un chiffre. `props.length` vaut 0 pour un type de fiche sans
+	 * propriété — le constructeur en accepte —, et l'écran rendait « et ses 0
+	 * propriétés » ; à 1, « ses 1 propriété » n'est pas du français. Le compte se
+	 * suffit ; le NOM, lui, s'accorde.
+	 */
+
 	/** `showModal()` — voir `V-28.svelte` : l'attribut `open` n'obtient pas la modalité. */
 	$effect(() => {
 		const boite = document.getElementById('dlg-supprimer');
@@ -633,12 +642,12 @@
 						</div>
 						<span class="tg__n tg--masquable"
 							>{t.props.length}
-							{t.props.length > 1 ? 'propriétés' : 'propriété'}</span
+							{accord(t.props.length, 'propriété')}</span
 						>
 						<span
 							class="tg__n tg--masquable"
 							style={notes.length ? undefined : 'color:var(--c-encre-4)'}
-							>{notes.length} {notes.length > 1 ? 'notes' : 'note'}</span
+							>{notes.length} {accord(notes.length, 'note')}</span
 						>
 						<div class="tg__actions">
 							<button class="btn" type="button" onclick={() => ouvrirForm(t)}>Modifier</button>
@@ -674,8 +683,12 @@
 						{edite ? edite.nom : `Nouveau type de ${motFicheMinuscule}`}
 					</h2>
 					<div class="tiroir-form__sous" id="form-sous">
-						{#if edite}{notesEditees.length} notes utilisent déjà ce schéma.{:else}Définissez les
-							propriétés que porteront les notes de ce type.{/if}
+						{#if edite}{notesEditees.length}
+							{accord(
+								notesEditees.length,
+								'note utilise déjà ce schéma.',
+								'notes utilisent déjà ce schéma.'
+							)}{:else}Définissez les propriétés que porteront les notes de ce type.{/if}
 					</div>
 				</div>
 				<button
@@ -703,7 +716,7 @@
 				>
 					{#if schemaUtilise}<div style="font-weight:var(--g-fort)">
 							Ce schéma est utilisé par {notesEditees.length}
-							{notesEditees.length > 1 ? 'notes' : 'note'}
+							{accord(notesEditees.length, 'note')}
 						</div>
 						<ul>
 							{#if nouvellesObligations.length}<li>
@@ -1083,12 +1096,18 @@
 								<div class="refus__titre">Suppression refusée : ce type est utilisé</div>
 								<ul>
 									<li>
-										<b>{notesASupprimer.length}</b>{notesASupprimer.length > 1
-											? `notes portent ce type de ${motFicheMinuscule}`
-											: `note porte ce type de ${motFicheMinuscule}`}
+										<b>{notesASupprimer.length}</b>{accord(
+											notesASupprimer.length,
+											`note porte ce type de ${motFicheMinuscule}`,
+											`notes portent ce type de ${motFicheMinuscule}`
+										)}
 									</li>
 									<li>
-										<b>{aSupprimer.props.length}</b>propriétés dont les valeurs seraient perdues
+										<b>{aSupprimer.props.length}</b>{accord(
+											aSupprimer.props.length,
+											'propriété dont les valeurs seraient perdues',
+											'propriétés dont les valeurs seraient perdues'
+										)}
 									</li>
 								</ul>
 								<div class="refus__sortie">
@@ -1111,10 +1130,15 @@
 								style="width:100%"
 								type="button"
 								onclick={() => aSupprimer && onDelester?.(aSupprimer.nom)}
-								>Délester ces {notesASupprimer.length} notes du type « {aSupprimer.nom} »</button
+								>Délester {accord(
+									notesASupprimer.length,
+									'cette note',
+									`ces ${notesASupprimer.length} notes`
+								)} du type « {aSupprimer.nom} »</button
 							>{:else}<p class="dlg__texte">
 								« {aSupprimer.nom} » n'est utilisé par aucune note. Sa suppression retire le schéma et
-								ses {aSupprimer.props.length} propriétés, sans affecter aucun contenu.
+								{aSupprimer.props.length}
+								{accord(aSupprimer.props.length, 'propriété')}, sans affecter aucun contenu.
 							</p>{/if}{/if}
 				</div>
 				<div class="dlg__pied">

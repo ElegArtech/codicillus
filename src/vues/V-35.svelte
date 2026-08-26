@@ -84,6 +84,7 @@
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { SCENARIO_LIVRE, scenarioEstLivre } from '$lib/donnees/scenarios-d-import';
+	import { accord } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** La clé de l'état demandé — elle nomme la zone que le banc découpera. */
@@ -278,8 +279,8 @@
 				>{#if lot}<div class="rl-entete" data-erreurs={lot.echecs ? 'oui' : 'non'}
 					><div style="flex:none">{#if lot.echecs}<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--c-alerte)" stroke-width="1.6"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v5.5M12 16.3v.3"/></svg>{:else}<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--c-frais)" stroke-width="1.8"><circle cx="12" cy="12" r="9.5"/><path d="M7.8 12.4l3 3 5.4-6"/></svg>{/if}</div
 					><div style="flex:1"
-						><h3>{lot.echecs ? `${lot.notes} notes créées, ${lot.echecs}${lot.echecs > 1 ? ' fichiers en échec' : ' fichier en échec'}` : `${lot.notes} notes créées, aucun échec`}</h3
-						><p>{lot.echecs ? `Le lot est allé jusqu'au bout : ${lot.notes} fichiers sur ${lot.fichiers} sont devenus des notes du domaine ${lot.domaine}. Les fichiers en échec n'ont bloqué aucun des autres.` : `Les ${lot.fichiers} fichiers du lot ont été traités sans incident dans le domaine ${lot.domaine}.`}</p
+						><h3>{`${lot.notes} ${accord(lot.notes, 'note créée', 'notes créées')}, ${lot.echecs ? `${lot.echecs} ${accord(lot.echecs, 'fichier en échec', 'fichiers en échec')}` : 'aucun échec'}`}</h3
+						><p>{lot.echecs ? `Le lot est allé jusqu'au bout : ${lot.notes} ${accord(lot.notes, 'fichier')} sur ${lot.fichiers} ${accord(lot.notes, 'est devenu une note', 'sont devenus des notes')} du domaine ${lot.domaine}. ${accord(lot.echecs, "Le fichier en échec n'a bloqué", "Les fichiers en échec n'ont bloqué")} aucun des autres.` : accord(lot.fichiers, 'Le fichier du lot a été traité', `Les ${lot.fichiers} fichiers du lot ont été traités`) + ` sans incident dans le domaine ${lot.domaine}.`}</p
 					></div
 				></div
 				><div class="rl-faits"

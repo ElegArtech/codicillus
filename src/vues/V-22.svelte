@@ -58,6 +58,7 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
 	import type { CompteAffiche } from '$lib/coquille/identite';
+	import { accord } from '$lib/vocabulaire';
 
 	/**
 	 * LE RANGEMENT ET L'IDENTITÉ — plus aucun défaut tiré du jeu.
@@ -344,10 +345,8 @@
 	 *  filtre mord — la forme du gel, `V-22:2897-2900`. */
 	const compteur = $derived(
 		filtrees.length === base.length
-			? base.length > 1
-				? ' signets'
-				: ' signet'
-			: ` sur ${base.length} signets`
+			? ` ${accord(base.length, 'signet')}`
+			: ` sur ${base.length} ${accord(base.length, 'signet')}`
 	);
 
 	/**
