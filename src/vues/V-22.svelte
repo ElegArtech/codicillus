@@ -55,10 +55,21 @@
 	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
 	 */
 	import type { Domaine, Note, Univers } from '../../seeds/corpus';
+	import { getContext } from 'svelte';
+	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { accord } from '$lib/vocabulaire';
+
+	/* LE NOM DE L'ORGANISATION VIENT DU CONTEXTE, JAMAIS DU PRODUIT.
+	   Cette phrase nommait « la direction technique » en dur — le segment de
+	   marché du cadrage soudé dans une phrase d'écran. Le contrôle du paquet ne
+	   la voyait pas : il comparait à la casse, et la signature qu'il cherchait
+	   s'écrit ici en nom commun. Chaîne vide = l'instance ne s'est pas nommée,
+	   et la phrase retombe sur une formulation qui n'affirme rien. */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const nomOrganisation = $derived(identite?.nomOrganisation ?? '');
 
 	/**
 	 * LE RANGEMENT ET L'IDENTITÉ — plus aucun défaut tiré du jeu.
@@ -456,9 +467,10 @@
 				style="flex:none;margin-top:1px"><path d="M6 3h7v7M13 3L4 12" /></svg
 			>
 			<div style="flex:1">
-				<b>Ces liens mènent hors de Codicillus.</b> Ils s'ouvrent dans un nouvel onglet : votre lecture
-				en cours n'est pas perdue. Les sites externes ne sont pas maintenus par la direction technique
-				et peuvent avoir changé depuis leur enregistrement.
+				<b>Ces liens mènent hors de Codicillus.</b> Ils s'ouvrent dans un nouvel onglet : votre
+				lecture en cours n'est pas perdue. Les sites externes ne sont pas maintenus
+				{nomOrganisation === '' ? 'par cette instance' : `par ${nomOrganisation}`} et peuvent avoir changé
+				depuis leur enregistrement.
 			</div>
 			<button
 				class="sortie-rappel__fermer"
