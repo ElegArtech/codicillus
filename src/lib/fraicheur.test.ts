@@ -223,3 +223,71 @@ const CAS_DES_QUATRE_BRANCHES = [
 	{ fraicheur: 'vieil', jours: 126 },
 	{ fraicheur: 'obs', jours: 240 }
 ] as const satisfies readonly { fraicheur: NiveauFraicheur; jours: number }[];
+
+/**
+ * LES DEUX GARDES DU LIBELLÉ — ET ELLES N'ÉTAIENT EXERCÉES NULLE PART.
+ *
+ * `libelleFraicheur` ouvre sur deux branches qui précèdent les quatre du gel :
+ * `revise === null` (« Jamais vérifiée ») et `jours <= 0` (« Vérifié à
+ * l'instant »). Les campagnes qui les ont écrites les ont commentées
+ * longuement, et le module affirmait qu'elles étaient couvertes ici — ce
+ * fichier ne contenait pas une seule occurrence de `revise`, de « Jamais
+ * vérifiée » ni de « à l'instant ». Seul un rendu de V-14 touchait la
+ * première, par ricochet.
+ *
+ * C'EST CETTE LACUNE QUI A LAISSÉ PASSER LES DEUX DÉFAUTS JUMEAUX : `revise`
+ * est OPTIONNEL dans `EtatDeFraicheur` et sa garde est STRICTE, donc un
+ * appelant qui l'omet ne déclenche rien et le compilateur ne dit rien. Les deux
+ * seuls sites du dépôt qui construisaient un objet littéral l'omettaient tous
+ * les deux.
+ */
+describe('libelleFraicheur — les deux gardes, avant les quatre branches du gel', () => {
+	it('une note JAMAIS vérifiée ne peut pas être « vérifiée il y a N jours »', () => {
+		/* Le niveau, lui, ne change pas : `RG-M06-01` fait retomber la fraîcheur
+		   sur la date de modification, et c'est juste. Seul le libellé cesse
+		   d'affirmer un geste qui n'a pas eu lieu. */
+		expect(libelleFraicheur({ fraicheur: 'vieil', jours: 92, revise: null })).toBe(
+			'Jamais vérifiée'
+		);
+		expect(libelleFraicheur({ fraicheur: 'vieil', jours: 92, revise: null }, 'compacte')).toBe(
+			'jamais'
+		);
+		/* Elle passe AVANT toutes les autres, y compris avant « à l'instant » :
+		   une note créée à l'instant portait « Vérifié il y a 0 jours » à côté de
+		   « Jamais vérifiée », sur le même écran. */
+		expect(libelleFraicheur({ fraicheur: 'frais', jours: 0, revise: null })).toBe(
+			'Jamais vérifiée'
+		);
+	});
+
+	it('OMISE, la garde ne se déclenche pas — et c’est ce qui rendait les défauts muets', () => {
+		/* `revise` est optionnel et le test est strict. Le fait est ÉPINGLÉ ici
+		   plutôt que découvert à l'écran : un appelant qui ne porte pas
+		   l'information rend exactement ce qu'il rendait, et un appelant qui la
+		   porte mais l'oublie ment sans que rien ne proteste. */
+		expect(libelleFraicheur({ fraicheur: 'vieil', jours: 92 })).toBe('Vérifié il y a 3 mois');
+		/* `exactOptionalPropertyTypes` interdit d'écrire la clé à `undefined` : la
+		   seule forme de l'omission est l'ABSENCE de la clé, et c'est
+		   exactement celle que les deux sites fautifs avaient. */
+	});
+
+	it('une note vérifiée AUJOURD’HUI ne dit pas « il y a 0 jours »', () => {
+		const cas = { fraicheur: 'frais' as const, jours: 0, revise: '2026-08-26' };
+		expect(libelleFraicheur(cas)).toBe("Vérifié à l'instant");
+		expect(libelleFraicheur(cas, 'compacte')).toBe("à l'instant");
+		expect(libelleFraicheur(cas)).not.toContain('0 jours');
+	});
+
+	it('la fabrique unique porte les deux gardes, comme les quatre branches', () => {
+		expect(temoinFraicheur({ fraicheur: 'vieil', jours: 92, revise: null }).libelle).toBe(
+			'Jamais vérifiée'
+		);
+		expect(temoinFraicheur({ fraicheur: 'frais', jours: 0, revise: '2026-08-26' }).libelle).toBe(
+			"Vérifié à l'instant"
+		);
+		/* Le NIVEAU et la JAUGE ne bougent pas : seul le libellé change. */
+		const jamais = temoinFraicheur({ fraicheur: 'vieil', jours: 92, revise: null });
+		expect(jamais.niveau).toBe('vieil');
+		expect(jamais.barres).toBe(barresFraicheur('vieil'));
+	});
+});
