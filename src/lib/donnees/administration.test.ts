@@ -432,6 +432,7 @@ const CONFIGURATION_VALABLE: Configuration = {
 	seuilVieillissant: 120,
 	versionsMax: 50,
 	portailAssistance: 'https://assistance.exemple.fr',
+	nomOrganisation: 'Organisation d’épreuve',
 	motFiche: 'Fiche',
 	tailleMaxPieceJointe: 25,
 	dureeSession: 120
@@ -596,6 +597,7 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 			'c-vieil': '60',
 			'c-versions': '20',
 			'c-portail': '  https://assistance.exemple.fr  ',
+			'c-organisation': '  Service des systèmes  ',
 			'c-mot': '  Objet  ',
 			'c-taille': '10',
 			'c-session': '480'
@@ -606,6 +608,7 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 			seuilVieillissant: 60,
 			versionsMax: 20,
 			portailAssistance: 'https://assistance.exemple.fr',
+			nomOrganisation: 'Service des systèmes',
 			motFiche: 'Objet',
 			tailleMaxPieceJointe: 10,
 			dureeSession: 480
