@@ -97,7 +97,7 @@
 		adresseDesNotesDuDomaine,
 		segmentsDeDossier
 	} from '$lib/rangement/adresses';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, pluriel, vocabulaireRendu } from '$lib/vocabulaire';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
 	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
@@ -494,13 +494,22 @@
 		return n.typeFiche ? `${motFiche} ${n.typeFiche}` : n.type;
 	}
 
-	function pluriel(t: string): string {
-		if (t === 'Procédure') return 'Procédures';
-		if (t === 'Guide') return 'Guides';
-		if (t === 'Note') return 'Notes';
-		if (t === 'Signet') return 'Signets';
+	/**
+	 * LE PLURIEL D'UN NOM DE TYPE — ET CE N'EST PAS UN ACCORD EN NOMBRE.
+	 *
+	 * Il ne reçoit aucun compte : l'appelant le garde par `liste.length > 1` et
+	 * il rend un TITRE de groupe. Il ne se confond donc pas avec `accord()`.
+	 *
+	 * Sa table énumérait quatre types — Procédure, Guide, Note, Signet — dont le
+	 * pluriel est très exactement celui de `pluriel()` ; elle divergeait de la
+	 * seule source des formes rendues au premier type créé en console, qu'elle
+	 * laissait au singulier. Seule la COMPOSITION avec le mot renommable lui
+	 * appartient : le pluriel porte sur le mot de `M14.7`, jamais sur le type
+	 * qui le suit — « Fiche Serveur » donne « Fiches Serveur ».
+	 */
+	function plurielDeType(t: string): string {
 		if (t.startsWith(`${motFiche} `)) return `${motFichePluriel} ${t.slice(motFiche.length + 1)}`;
-		return t;
+		return pluriel(t);
 	}
 
 	const groupes = $derived.by<readonly [string, readonly Note[]][]>(() => {
@@ -569,10 +578,13 @@
 	const noteDuDecompte = $derived(
 		toutes.length === 0
 			? 'Ce dossier ne contient aucune note.'
-			: `Ces notes totalisent ${nb(consultationsDetruites)} consultations${
+			: `Ces notes totalisent ${nb(consultationsDetruites)} ${accord(
+					consultationsDetruites,
+					'consultation'
+				)}${
 					brouillonsDetruits === 0
 						? ''
-						: `, dont ${String(brouillonsDetruits)} brouillon${brouillonsDetruits > 1 ? 's' : ''}`
+						: `, dont ${String(brouillonsDetruits)} ${accord(brouillonsDetruits, 'brouillon')}`
 				}. Les liens qui pointent vers elles deviendront cassés.`
 	);
 
@@ -742,18 +754,22 @@
 				{/snippet}
 				<div class="compteurs" id="compteurs">
 					{#if sous.length}<a href="#bloc-sous"
-							><b>{nb(sous.length)}</b> {sous.length > 1 ? 'sous-dossiers' : 'sous-dossier'}</a
+							><b>{nb(sous.length)}</b> {accord(sous.length, 'sous-dossier')}</a
 						>{:else}<span><b>{nb(sous.length)}</b> sous-dossier</span>{/if}<span
 						style="color:var(--c-trait-fort)">·</span
 					>{@render compteurDeNotes(
 						notesDuDossier.length,
-						notesDuDossier.length > 1 ? 'notes directes' : 'note directe',
+						accord(notesDuDossier.length, 'note directe', 'notes directes'),
 						lienDesNotesDirectes
 					)}{#if toutes.length !== notesDuDossier.length}<span style="color:var(--c-trait-fort)"
 							>·</span
 						>{@render compteurDeNotes(
 							toutes.length,
-							'notes au total, sous-dossiers compris',
+							accord(
+								toutes.length,
+								'note au total, sous-dossiers compris',
+								'notes au total, sous-dossiers compris'
+							),
 							lienDesNotesTotales
 						)}{/if}
 				</div>
@@ -804,7 +820,7 @@
 				<h2>Sous-dossiers</h2>
 				<span class="etiq" id="n-sous"
 					>{#if sous.length}{sous.length}
-						{sous.length > 1 ? 'sous-dossiers' : 'sous-dossier'}{/if}</span
+						{accord(sous.length, 'sous-dossier')}{/if}</span
 				>
 			</div>
 			<div class="tuiles" id="tuiles">
@@ -828,8 +844,8 @@
 						><span
 							><span class="tuile__nom">{s}</span><span class="tuile__n"
 								>{nbNotes}
-								{nbNotes > 1 ? 'notes' : 'note'}{nbSous
-									? ` · ${nbSous} ${nbSous > 1 ? 'sous-dossiers' : 'sous-dossier'}`
+								{accord(nbNotes, 'note')}{nbSous
+									? ` · ${nbSous} ${accord(nbSous, 'sous-dossier')}`
 									: ''}</span
 							></span
 						></a
@@ -843,14 +859,14 @@
 				<h2>Notes de ce dossier</h2>
 				<span class="etiq" id="n-notes"
 					>{#if notesDuDossier.length}{notesDuDossier.length}
-						{notesDuDossier.length > 1 ? 'notes' : 'note'}{/if}</span
+						{accord(notesDuDossier.length, 'note')}{/if}</span
 				>
 			</div>
 			<div id="groupes">
 				{#each groupes as [type, liste] (type)}
 					<section class="groupe">
 						<div class="groupe__tete">
-							<h3 class="groupe__nom">{liste.length > 1 ? pluriel(type) : type}</h3>
+							<h3 class="groupe__nom">{liste.length > 1 ? plurielDeType(type) : type}</h3>
 							<span class="groupe__n">{liste.length}</span>
 						</div>
 						{#each liste as n (n.id)}<a class="note-ligne" href={adresseDeNote(n.id)}
@@ -1081,12 +1097,14 @@
 						<ul id="decompte-liste">
 							<li><b>1</b>dossier — {cheminTexte(chemin)}</li>
 							{#if sousArbreDetruit > 0}<li>
-									<b>{sousArbreDetruit}</b>{sousArbreDetruit > 1 ? 'sous-dossiers' : 'sous-dossier'}
+									<b>{sousArbreDetruit}</b>{accord(sousArbreDetruit, 'sous-dossier')}
 								</li>{/if}
 							{#if toutes.length > 0}<li>
-									<b>{toutes.length}</b>{toutes.length > 1
-										? 'notes, tous sous-dossiers compris'
-										: 'note'}
+									<b>{toutes.length}</b>{accord(
+										toutes.length,
+										'note',
+										'notes, tous sous-dossiers compris'
+									)}
 								</li>{/if}
 						</ul>
 						<div class="decompte__note" id="decompte-note">{noteDuDecompte}</div>

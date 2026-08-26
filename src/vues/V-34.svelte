@@ -93,6 +93,7 @@
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
+	import { accord } from '$lib/vocabulaire';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
@@ -212,7 +213,19 @@
 	/** `nb()` (`V-34:3025`) — la mise en forme française d'un nombre. */
 	const nb = (x: number): string => x.toLocaleString('fr-FR');
 
-	/** `window.tauxAbouti` (`V-34:2718`) — l'indicateur nord du produit. */
+	/** `window.tauxAbouti` (`V-34:2718`) — l'indicateur nord du produit.
+	 *
+	 *  L'ARTICLE « Les » A DISPARU DE « Les N autres sont des collègues
+	 *  repartis », et c'est la même règle qu'à `V-31:189`, mesurée là-bas à
+	 *  l'écran : un article ne s'accorde pas seul devant un chiffre. Le reste,
+	 *  `total - abouties`, vaut 0 dès que toutes les recherches du mois ont
+	 *  abouti — « Les 0 autres » — et 1 sitôt qu'une seule échoue, où « Le 1
+	 *  autre » n'est pas du français. Le compte se suffit ; la phrase, elle,
+	 *  s'accorde en entier.
+	 *
+	 *  CE BLOC NE SE RENDRA QU'AVEC UN JOURNAL DE RECHERCHE : `recherches` est
+	 *  vide tant qu'aucune table ne l'alimente, et `rechercheMesuree` le tait.
+	 *  Les deux comptes sont donc écrits pour le jour où il existera. */
 	const taux = $derived.by(() => {
 		let total = 0;
 		let abouties = 0;
@@ -335,17 +348,17 @@
 	});
 
 	const PARTS = [
-		{ cle: 'frais', classe: 'p-frais', pluriel: 'fraîches', singulier: 'fraîche' },
-		{ cle: 'vieil', classe: 'p-vieil', pluriel: 'vieillissantes', singulier: 'vieillissante' },
-		{ cle: 'obs', classe: 'p-obs', pluriel: 'obsolètes', singulier: 'obsolète' }
+		{ cle: 'frais', classe: 'p-frais', singulier: 'fraîche' },
+		{ cle: 'vieil', classe: 'p-vieil', singulier: 'vieillissante' },
+		{ cle: 'obs', classe: 'p-obs', singulier: 'obsolète' }
 	] as const;
 
 	const partsDe = (r: Repartition, contexte?: string) =>
 		PARTS.filter((p) => r[p.cle]).map((p) => ({
 			...p,
 			n: r[p.cle],
-			court: `${r[p.cle]} ${r[p.cle] > 1 ? p.pluriel : p.singulier}`,
-			libelle: `${r[p.cle]} ${r[p.cle] > 1 ? p.pluriel : p.singulier}${contexte ? ` · ${contexte}` : ''}`
+			court: `${r[p.cle]} ${accord(r[p.cle], p.singulier)}`,
+			libelle: `${r[p.cle]} ${accord(r[p.cle], p.singulier)}${contexte ? ` · ${contexte}` : ''}`
 		}));
 
 	const libelleDeBarre = (r: Repartition) =>
@@ -363,7 +376,10 @@
 				   mesures que le produit ne porte pas ; leur zéro ne dirait pas
 				   « aucun », il dirait « rien ne le sait ». */
 				const alertes: readonly (readonly [number, string])[] = [
-					[liste.filter((n) => !n.revise).length, 'jamais vérifiées'],
+					[
+						liste.filter((n) => !n.revise).length,
+						accord(liste.filter((n) => !n.revise).length, 'jamais vérifiée', 'jamais vérifiées')
+					],
 					...(revisionsMesurees
 						? [
 								[
@@ -372,12 +388,19 @@
 								] as const
 							]
 						: []),
-					[liste.filter((n) => n.brouillon).length, 'brouillons'],
+					[
+						liste.filter((n) => n.brouillon).length,
+						accord(liste.filter((n) => n.brouillon).length, 'brouillon')
+					],
 					...(modificationsMesurees
 						? [
 								[
 									desynchronises.filter((x) => x.domaine === dom.nom).length,
-									'opérationnels désynchronisés'
+									accord(
+										desynchronises.filter((x) => x.domaine === dom.nom).length,
+										'opérationnel désynchronisé',
+										'opérationnels désynchronisés'
+									)
 								] as const
 							]
 						: [])
@@ -428,7 +451,10 @@
 			[
 				nb(notes.length),
 				'notes au total',
-				`${notes.filter((n) => n.visibilite === 'Publique').length} ouvertes au public`
+				`${notes.filter((n) => n.visibilite === 'Publique').length} ${accord(
+					notes.filter((n) => n.visibilite === 'Publique').length,
+					'ouverte'
+				)} au public`
 			],
 			[nb(contributeurs(notes).length), 'contributeurs actifs', 'au moins une note à leur nom']
 		];
@@ -462,7 +488,7 @@
 {#snippet barreRepartition(r: Repartition, dom: Domaine)}<div class="repart" role="img" aria-label={libelleDeBarre(r)}
 		>{#each partsDe(r, dom.nom) as p (p.cle)}<button type="button" class={p.classe} style="flex:{p.n}" title={p.libelle} aria-label={p.libelle} onclick={() => onVoirLesNotes?.({ domaine: dom.nom, fraicheur: LIBELLE_DE_FRAICHEUR[p.cle] ?? p.cle })}></button>{/each}</div
 	><div class="legende"
-		>{#each partsDe(r) as p (p.cle)}<span><i class={p.classe}></i><b>{p.n}</b>{` ${p.n > 1 ? p.pluriel : p.singulier}`}</span>{/each}</div
+		>{#each partsDe(r) as p (p.cle)}<span><i class={p.classe}></i><b>{p.n}</b>{` ${accord(p.n, p.singulier)}`}</span>{/each}</div
 	>{/snippet}
 
 <!-- Une ligne de classement (`V-34:3318`) — avec rang et cliquable, ou sans. -->
@@ -515,10 +541,10 @@
 				></div
 				><div
 					><span class="nord__nom etiq">Taux de recherche aboutie</span
-					><p class="nord__txt" id="nord-txt">Sur <b>{nb(taux.total)} recherches</b> ce mois-ci, <b>{nb(taux.abouties)}</b> ont abouti à l'ouverture d'une note. Les <b>{nb(taux.total - taux.abouties)} autres</b> sont des collègues repartis sans réponse — c'est le seul chiffre qui dise si la base rend le service qu'on en attend.</p
+					><p class="nord__txt" id="nord-txt">Sur <b>{nb(taux.total)} {accord(taux.total, 'recherche')}</b> ce mois-ci, <b>{nb(taux.abouties)}</b> {accord(taux.abouties, 'a abouti', 'ont abouti')} à l'ouverture d'une note. <b>{nb(taux.total - taux.abouties)} {accord(taux.total - taux.abouties, 'autre')}</b> {accord(taux.total - taux.abouties, 'est un collègue reparti', 'sont des collègues repartis')} sans réponse — c'est le seul chiffre qui dise si la base rend le service qu'on en attend.</p
 					><div class="nord__jauge"><i id="nord-jauge" style="width:{taux.taux}%"></i></div
 					><div class="nord__legende"
-						><span id="nord-abouties">{nb(taux.abouties)} abouties</span
+						><span id="nord-abouties">{nb(taux.abouties)} {accord(taux.abouties, 'aboutie')}</span
 						><span id="nord-perdues">{nb(taux.total - taux.abouties)} sans suite</span
 					></div
 				></div
@@ -540,7 +566,7 @@
 						><div style="min-width:0"
 							><div class="trou__terme">{`« ${r.terme} »`}</div
 							><div class="trou__meta"
-								><span class="trou__cause" data-type={r.resultats === 0 ? 'vide' : 'ignore'}>{r.resultats === 0 ? 'aucun résultat' : `${r.resultats} résultats, aucun ouvert`}</span
+								><span class="trou__cause" data-type={r.resultats === 0 ? 'vide' : 'ignore'}>{r.resultats === 0 ? 'aucun résultat' : `${r.resultats} ${accord(r.resultats, 'résultat')}, aucun ouvert`}</span
 								><span class="tendance" data-sens={r.evolution > 0 ? 'hausse' : 'baisse'}>{`${r.evolution > 0 ? '▲ +' : '▼ '}${r.evolution} % sur un mois`}</span
 							></div
 						></div
@@ -563,7 +589,7 @@
 						><div class="sante-dom__tete"
 							><span class="sante-dom__puce" style="background:{s.dom.couleur}"></span
 							><span class="sante-dom__nom">{s.dom.nom}</span
-							><span class="sante-dom__n">{`${s.liste.length} notes · ${s.contributeurs} contributeurs`}</span
+							><span class="sante-dom__n">{`${s.liste.length} ${accord(s.liste.length, 'note')} · ${s.contributeurs} ${accord(s.contributeurs, 'contributeur')}`}</span
 						></div
 						>{@render barreRepartition(s.repartition, s.dom)}<div class="alertes-dom"
 							>{#each s.alertes as [n, quoi] (quoi)}<span class="alerte-dom" data-appel={n ? 'oui' : 'non'} data-nul={n ? 'non' : 'oui'}><b>{n}</b>{quoi}</span>{/each}</div
@@ -589,14 +615,14 @@
 							><div class="orph__corps"
 								><div class="orph__titre">{n.titre}</div
 								><div class="orph__meta"
-									>{@render temoin(n)}<span>{n.domaine}</span><span>{n.auteur}</span><span style="font-family:var(--f-donnee)">{`${mesures7j[n.id] ?? 0} vues / 7 j`}</span
+									>{@render temoin(n)}<span>{n.domaine}</span><span>{n.auteur}</span><span style="font-family:var(--f-donnee)">{`${mesures7j[n.id] ?? 0} ${accord(mesures7j[n.id] ?? 0, 'vue')} / 7 j`}</span
 								></div
 							></div
 							><div class="orph__actions"
 								><button class="btn" onclick={() => onOrpheline?.({ famille: orphCourant, identifiant: n.id })}>{familleCourante.action}</button
 								><button class="btn" onclick={() => onOuvrirLaNote?.(n.id)}>Ouvrir</button
 							></div
-						></div>{/each}{#if listeCourante.length > 8}<div style="padding:var(--e-2) 0;font-size:var(--t-mini);color:var(--c-encre-3)">{`et ${listeCourante.length - 8} autres.`}</div>{/if}{/if}</div
+						></div>{/each}{#if listeCourante.length > 8}<div style="padding:var(--e-2) 0;font-size:var(--t-mini);color:var(--c-encre-3)">{`et ${listeCourante.length - 8} ${accord(listeCourante.length - 8, 'autre')}.`}</div>{/if}{/if}</div
 				></div
 			></section>
 
@@ -614,10 +640,10 @@
 						>{#each adoption as [valeur, nom, sous] (nom)}<div class="mesure-a"><div class="mesure-a__val">{valeur}</div><span class="mesure-a__nom">{nom}</span><span class="mesure-a__nom" style="color:var(--c-encre-4)">{sous}</span></div>{/each}</div
 					><span class="etiq" style="display:block;margin-bottom:var(--e-2)">Notes les plus consultées</span
 					><div class="classement" id="top-notes"
-						>{#each plusConsultees as n, rang (n.id)}{@render ligneDeClassement(rang + 1, n.titre, mesures7j[n.id] ?? 0, maxiConsultations, ' vues', () => onOuvrirLaNote?.(n.id))}{/each}</div
+						>{#each plusConsultees as n, rang (n.id)}{@render ligneDeClassement(rang + 1, n.titre, mesures7j[n.id] ?? 0, maxiConsultations, ' ' + accord(mesures7j[n.id] ?? 0, 'vue'), () => onOuvrirLaNote?.(n.id))}{/each}</div
 					><span class="etiq" style="display:block;margin:var(--e-5) 0 var(--e-2)">Volumes de contribution</span
 					><div class="classement" id="top-contrib"
-						>{#each volumesDeContribution as c (c.nom)}{@render ligneDeClassement(null, c.nom, c.notes, maxiContributions, c.notes > 1 ? ' notes' : ' note')}{/each}</div
+						>{#each volumesDeContribution as c (c.nom)}{@render ligneDeClassement(null, c.nom, c.notes, maxiContributions, ' ' + accord(c.notes, 'note'))}{/each}</div
 					><p class="mention-contrib">
 						Ces volumes mesurent une activité, pas une performance. Ils ne sont pas comparables entre eux : un référent qui vérifie beaucoup et écrit peu rend le même service qu'un rédacteur prolifique. Aucun classement individuel n'est diffusé ailleurs que sur cet écran d'administration.
 					</p

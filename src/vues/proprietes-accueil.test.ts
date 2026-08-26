@@ -341,7 +341,7 @@ describe('V-11 — page d’un domaine', () => {
 	it('une table de mesure vide se dit, elle ne se comble pas', async () => {
 		const notes = corpusPourVue('V-11').filter((n) => n.domaine === 'Migration 2026');
 		const b = await corps('V-11', { ...SOCLE_VIDE, notes });
-		expect(b).toContain('ligne-note__n">0 vues<');
+		expect(b).toContain('ligne-note__n">0 vue<');
 		expect(b).toContain('ligne-note__n">—<');
 	});
 

@@ -74,6 +74,7 @@
 	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { libelleDeModule } from '$lib/rangement/modules';
+	import { accord } from '$lib/vocabulaire';
 	import { adresseDeDomaine, adresseDeNote } from '$lib/rangement/adresses';
 
 	/**
@@ -210,14 +211,15 @@
 	interface Part {
 		readonly cle: 'frais' | 'vieil' | 'obs';
 		readonly classe: string;
-		readonly pluriel: string;
+		/* Le pluriel n'est plus porté : les trois formes sont en `+s`, et
+		   `accord()` (`$lib/vocabulaire`) est la seule source de cette règle. */
 		readonly singulier: string;
 	}
 
 	const PARTS: readonly Part[] = [
-		{ cle: 'frais', classe: 'p-frais', pluriel: 'fraîches', singulier: 'fraîche' },
-		{ cle: 'vieil', classe: 'p-vieil', pluriel: 'vieillissantes', singulier: 'vieillissante' },
-		{ cle: 'obs', classe: 'p-obs', pluriel: 'obsolètes', singulier: 'obsolète' }
+		{ cle: 'frais', classe: 'p-frais', singulier: 'fraîche' },
+		{ cle: 'vieil', classe: 'p-vieil', singulier: 'vieillissante' },
+		{ cle: 'obs', classe: 'p-obs', singulier: 'obsolète' }
 	];
 
 	function compte(notes: readonly Note[], cle: Part['cle']): number {
@@ -228,21 +230,17 @@
 		return PARTS.filter((p) => compte(notes, p.cle) > 0);
 	}
 
-	function accord(p: Part, n: number): string {
-		return n > 1 ? p.pluriel : p.singulier;
-	}
-
 	function resumeRepartition(notes: readonly Note[]): string {
 		return (
 			partsPresentes(notes)
-				.map((p) => `${compte(notes, p.cle)} ${accord(p, compte(notes, p.cle))}`)
+				.map((p) => `${compte(notes, p.cle)} ${accord(compte(notes, p.cle), p.singulier)}`)
 				.join(', ') + ` sur ${notes.length}`
 		);
 	}
 
 	function libellePart(p: Part, notes: readonly Note[], contexte: string): string {
 		const n = compte(notes, p.cle);
-		return `${n} ${accord(p, n)}${contexte ? ` · ${contexte}` : ''}`;
+		return `${n} ${accord(n, p.singulier)}${contexte ? ` · ${contexte}` : ''}`;
 	}
 
 	/* ── Les deux glyphes d'univers ─────────────────────────────────────────
@@ -295,7 +293,7 @@
 	);
 
 	const nombreDeDomaines = $derived(
-		domaines.length ? `${domaines.length} ${domaines.length > 1 ? 'domaines' : 'domaine'}` : ''
+		domaines.length ? `${domaines.length} ${accord(domaines.length, 'domaine')}` : ''
 	);
 </script>
 
@@ -334,7 +332,7 @@
 		<div class="legende">
 			{#each partsPresentes(notes) as p (p.cle)}<span
 					><i class={p.classe}></i><b>{compte(notes, p.cle)}</b>
-					{accord(p, compte(notes, p.cle))}</span
+					{accord(compte(notes, p.cle), p.singulier)}</span
 				>{/each}
 		</div>{/if}
 {/snippet}
@@ -441,7 +439,7 @@
 					{#if contribs.length}<div class="avatars">
 							{#each contribs.slice(0, 5) as c (c.nom)}<span
 									class="avatar-pile"
-									title="{c.nom} — {c.notes} note{c.notes > 1 ? 's' : ''}">{c.initiales}</span
+									title="{c.nom} — {c.notes} {accord(c.notes, 'note')}">{c.initiales}</span
 								>{/each}
 						</div>{/if}
 				</div>
@@ -479,8 +477,7 @@
 						<article class="carte-dom" style="--teinte:{d.couleur}">
 							<div class="carte-dom__tete">
 								<a class="carte-dom__nom" href={adresseDeDomaine(d.univers, d.nom)}>{d.nom}</a>
-								<span class="carte-dom__n"
-									>{notesDom.length} {notesDom.length > 1 ? 'notes' : 'note'}</span
+								<span class="carte-dom__n">{notesDom.length} {accord(notesDom.length, 'note')}</span
 								>
 							</div>
 							<p class="carte-dom__desc">{detail.description}</p>

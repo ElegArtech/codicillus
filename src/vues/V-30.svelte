@@ -50,7 +50,7 @@
 		Univers,
 		UtilisateurCourant
 	} from '../../seeds/corpus';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import type { RefusDeSaisie, SaisieDeTypeDeRelation } from '$lib/console/structure';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
@@ -493,7 +493,7 @@
 						>
 						<span class="tg__desc tg--masquable" style="margin-top:0">{t.usage}</span>
 						<span class="tg__n tg--masquable" style={n ? undefined : 'color:var(--c-encre-4)'}
-							>{n} {n > 1 ? 'relations' : 'relation'}</span
+							>{n} {accord(n, 'relation')}</span
 						>
 						<div class="tg__actions">
 							<button class="btn" type="button" onclick={() => ouvrirForm(t)}>Modifier</button>
@@ -760,9 +760,11 @@
 								<div class="refus__titre">Suppression refusée en l'état : ce type est employé</div>
 								<ul>
 									<li>
-										<b>{relationsASupprimer}</b>{relationsASupprimer > 1
-											? `relations déclarées entre des ${motFichePlurielMinuscule}`
-											: `relation déclarée entre des ${motFichePlurielMinuscule}`}
+										<b>{relationsASupprimer}</b>{accord(
+											relationsASupprimer,
+											`relation déclarée entre des ${motFichePlurielMinuscule}`,
+											`relations déclarées entre des ${motFichePlurielMinuscule}`
+										)}
 									</li>
 									{#if aSupprimer.technique}<li>
 											Type technique : sa disparition modifiera le calcul des points de rupture de
@@ -792,8 +794,11 @@
 													>{t.direct} / {t.inverse}</option
 												>{/each}</select
 										><span class="aide"
-											>Les {relationsASupprimer} relations sont conservées et changent d'étiquette. Le
-											graphe garde sa structure.</span
+											>{accord(
+												relationsASupprimer,
+												'La relation est conservée et change',
+												`Les ${relationsASupprimer} relations sont conservées et changent`
+											)} d'étiquette. Le graphe garde sa structure.</span
 										></span
 									></label
 								><label
@@ -804,7 +809,11 @@
 										checked={sortie === 'supprimer'}
 										onchange={() => (sortie = 'supprimer')}
 									/><span style="flex:1"
-										>Supprimer aussi ces {relationsASupprimer} relations<span class="aide"
+										>Supprimer aussi {accord(
+											relationsASupprimer,
+											'cette relation',
+											`ces ${relationsASupprimer} relations`
+										)}<span class="aide"
 											>Les liens disparaissent du graphe et des panneaux Relations. Les {motFichePlurielMinuscule}
 											restent intactes. Cette perte est définitive.</span
 										></span

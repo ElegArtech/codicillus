@@ -96,7 +96,7 @@
 		type Contour,
 		type EncodageDeType
 	} from '$lib/graphe/cartographie';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
 	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
@@ -262,12 +262,12 @@
 
 	/** Le nom accessible d'un nœud : titre, type, connexions, rupture. */
 	const libelleDuNoeud = (id: string, note: Note): string =>
-		`${note.titre}, ${typeDe(note).nom}, ${degreDe(id)} connexions` +
+		`${note.titre}, ${typeDe(note).nom}, ${degreDe(id)} ${accord(degreDe(id), 'connexion')}` +
 		(ruptures.has(id) ? ', point de rupture' : '');
 
 	/** La ligne d'alternative textuelle d'un nœud, sans ses relations. */
 	const ligneAlternative = (id: string, note: Note): string =>
-		` — ${typeDe(note).nom}, ${note.domaine}, ${degreDe(id)} connexions` +
+		` — ${typeDe(note).nom}, ${note.domaine}, ${degreDe(id)} ${accord(degreDe(id), 'connexion')}` +
 		(ruptures.has(id) ? ', point de rupture' : '') +
 		'.';
 

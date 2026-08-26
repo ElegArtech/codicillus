@@ -96,6 +96,28 @@ describe('libelleFraicheur — la forme longue, les quatre branches du gel', () 
 		expect(libelleFraicheur({ fraicheur: 'frais', jours: 30 })).toContain('30 jours');
 	});
 
+	it('frais à UN jour : le nom s’accorde — « il y a 1 jour », pas « 1 jours »', () => {
+		/* La garde qui précède les quatre branches n'attrape que `jours <= 0` :
+		   toute note vérifiée LA VEILLE passe par ici. Le gel écrit « jours »
+		   sans l'accorder — son jeu ne descend jamais à 1 —, et ce libellé long
+		   est la source unique du signal de fraîcheur. */
+		expect(libelleFraicheur({ fraicheur: 'frais', jours: 1, revise: '2026-08-25' })).toBe(
+			'Vérifié il y a 1 jour'
+		);
+		expect(libelleFraicheur({ fraicheur: 'frais', jours: 1, revise: '2026-08-25' })).not.toContain(
+			'1 jours'
+		);
+		/* Deux jours reprennent le pluriel : l'accord porte sur le compte, pas
+		   sur une borne. */
+		expect(libelleFraicheur({ fraicheur: 'frais', jours: 2, revise: '2026-08-24' })).toBe(
+			'Vérifié il y a 2 jours'
+		);
+		/* La forme COMPACTE ne bouge pas : « j » est un symbole d'unité. */
+		expect(
+			libelleFraicheur({ fraicheur: 'frais', jours: 1, revise: '2026-08-25' }, 'compacte')
+		).toBe('il y a 1 j');
+	});
+
 	it('frais à 31 jours ou plus : « 1 mois », sans arrondi et sans compte de jours', () => {
 		expect(libelleFraicheur({ fraicheur: 'frais', jours: 31 })).toContain('1 mois');
 		expect(libelleFraicheur({ fraicheur: 'frais', jours: 89 })).toContain('1 mois');

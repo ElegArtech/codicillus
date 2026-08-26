@@ -69,7 +69,7 @@
 	import { adresseNonResolue } from '$lib/public/adresse-non-resolue';
 	import { chercher, nombreFr, notesPubliques, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
-	import { vocabulaireRendu } from '$lib/vocabulaire';
+	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
@@ -275,8 +275,8 @@
 			>{@render temoin(n)}<span class="carte__revision" data-jamais={n.revise ? undefined : 'oui'}>{n.revise ? `Révisé le ${n.revise}` : 'Jamais révisé'}</span
 		></div
 		><div class="carte__pied"
-			><span class="carte__chemin"><b>{n.domaine}</b></span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{nombreFr(n.vues)} consultations</span
-			>{#if n.pj}<span class="sep">·</span><span>{n.pj} {n.pj > 1 ? 'pièces jointes' : 'pièce jointe'}</span>{/if}</div
+			><span class="carte__chemin"><b>{n.domaine}</b></span><span class="sep">·</span><span>{n.auteur}</span><span class="sep">·</span><span>{nombreFr(n.vues)} {accord(n.vues, 'consultation')}</span
+			>{#if n.pj}<span class="sep">·</span><span>{n.pj} {accord(n.pj, 'pièce jointe', 'pièces jointes')}</span>{/if}</div
 		></a
 	>
 {/snippet}

@@ -75,6 +75,7 @@ import { entretenirLIndex } from '../recherche/entretien';
 import { ROLE_DEPUIS_ENUM } from './lecture';
 import type { CleDeModule, Configuration } from '../../../seeds/corpus';
 import { identifiantLisible } from '../rangement/adresses';
+import { accord } from '../vocabulaire';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    1. LES DÉCOMPTES — ce que la base mesure, jamais ce qu'on suppose
@@ -494,9 +495,19 @@ export const MESSAGE_SESSION_HORS_DOMAINE =
  *
  * Le message porte le seuil frais saisi ; il est donc composé, comme le gel le
  * compose.
+ *
+ * IL A UN JUMEAU, ET LES DEUX ÉCRIVENT DANS LE MÊME NŒUD. `V-33:242` compose
+ * la même phrase pour l'aperçu immédiat ; `V-33:449` la rend dans
+ * `#erreur-vieil-txt`, et `routes/console/configuration/cablage.ts:156` y
+ * repeint CELLE-CI au retour du serveur. Une divergence entre les deux se lit
+ * donc au même endroit, avant et après « Enregistrer ».
+ *
+ * D'où l'accord ici aussi. `validerLaConfiguration` n'exige du seuil frais
+ * qu'`>= 1` : la valeur 1 est acceptée, et l'écran rendait « (1 jour) » puis
+ * « (1 jours) » au clic.
  */
 export function messageSeuilNonCroissant(seuilFrais: number): string {
-	return `Doit dépasser le seuil frais (${seuilFrais} jours). En l’état, aucune note ne serait jamais vieillissante : le témoin passerait directement du vert au rouge.`;
+	return `Doit dépasser le seuil frais (${seuilFrais} ${accord(seuilFrais, 'jour')}). En l’état, aucune note ne serait jamais vieillissante : le témoin passerait directement du vert au rouge.`;
 }
 
 /**
