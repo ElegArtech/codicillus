@@ -229,11 +229,20 @@ export async function aiguillesDuCorpus() {
 	};
 
 	const par = new Map();
-	const poser = (mot, origine) => {
+	/* `casse` dit si la comparaison doit respecter la casse pour CETTE aiguille.
+	   Le choix ne peut pas être global, et la mesure l'a montré des deux côtés :
+	   en la respectant partout, le contrôle regardait « la direction technique »
+	   soudée dans `V-17` et `V-22` sans la voir ; en l'ignorant partout, il criait
+	   sur « vos applications » et « au référentiel » — de la prose.
+	   La règle qui tient : une aiguille TIRÉE DU CORPUS (un nom de domaine, un
+	   titre) peut être un mot français ordinaire, donc la casse la distingue ; une
+	   SIGNATURE DU GEL est une expression que la prose du produit n'emploie pas
+	   par hasard, donc la casse ne doit pas la protéger. */
+	const poser = (mot, origine, casse = true) => {
 		if (typeof mot !== 'string') return;
 		const propre = mot.trim();
 		if (propre === '' || SEGMENTS_ECARTES.has(propre)) return;
-		if (!par.has(propre)) par.set(propre, origine);
+		if (!par.has(propre)) par.set(propre, { origine, casse });
 	};
 
 	for (const c of attendu('COMPTES', C.COMPTES, 5)) {
@@ -248,12 +257,17 @@ export async function aiguillesDuCorpus() {
 		poser(n.titre, 'corpus · CORPUS.titre');
 		poser(n.auteur, 'corpus · CORPUS.auteur');
 		poser(n.url, 'corpus · CORPUS.url');
-		/* LE CHEMIN ENTIER, JAMAIS SES SEGMENTS — et pas les chemins d'UN SEUL MOT.
-		   « Exploitation › Sauvegardes » ne peut venir que du jeu ; « Exploitation »
-		   tout seul est un mot, qu'une instance réelle peut porter et que l'écran
-		   d'import donne en exemple d'une arborescence DE DISQUE (`V-24:415-429`,
-		   tranché par le lot C : « les deux dossiers de gauche restent ce qu'ils
-		   sont »). Un chemin d'un seul mot n'accuse personne. */
+		/* LE CHEMIN ENTIER, JAMAIS SES SEGMENTS — et ce n'est pas une facilité.
+		   J'ai essayé de poser les segments, pour attraper les « Exploitation » et
+		   « Sauvegardes » que `/importer` servait du côté produit de sa flèche.
+		   MESURÉ : le contrôle a crié sur « vos serveurs, vos applications, vos
+		   contacts » (`V-20`), sur « Aucune propriété au référentiel », et sur le
+		   nom de fente `Lots` de la coquille — de la prose française ordinaire et
+		   un identifiant interne. Un segment d'un seul mot ne distingue pas une
+		   valeur du corpus d'un nom commun, et un contrôle qui crie sur la prose
+		   sera désarmé au premier passage.
+		   Ce que la fuite de `/importer` demande n'est pas une aiguille plus large :
+		   c'est que la vue cesse de nommer ces dossiers. Réparé à la source. */
 		if (typeof n.dossier === 'string' && /[\s›]/u.test(n.dossier)) {
 			poser(n.dossier, 'corpus · CORPUS.dossier (chemin entier)');
 		}
@@ -270,31 +284,40 @@ export async function aiguillesDuCorpus() {
 		}
 	}
 
-	for (const a of AIGUILLES_DU_GEL) poser(a.mot, a.origine);
+	/* Les signatures du gel : la casse ne les protège pas — voir `poser()`. */
+	for (const a of AIGUILLES_DU_GEL) poser(a.mot, a.origine, false);
 
-	const liste = [...par].map(([mot, origine]) => ({ mot, origine }));
+	const liste = [...par].map(([mot, { origine, casse }]) => ({ mot, origine, casse }));
 	liste.sort((a, b) => a.mot.localeCompare(b.mot, 'fr'));
 	return liste;
 }
 
 /**
- * Les aiguilles trouvées dans un texte. La comparaison est À LA CASSE, et c'est
- * un choix : « Direction technique » est une signature d'organisation, « la
- * direction technique » un nom commun de la prose du produit. Confondre les deux
- * ferait crier le contrôle sur une phrase que personne ne veut changer.
+ * Les aiguilles trouvées dans un texte. La comparaison IGNORE LA CASSE.
+ *
+ * Elle l'a d'abord respectée, au motif que « Direction technique » est une
+ * signature d'organisation et « la direction technique » un nom commun de la
+ * prose. L'argument se retourne : c'est EXACTEMENT sous cette seconde forme que
+ * `V-17` et `V-22` soudaient encore le nom de l'organisation dans le produit,
+ * et le contrôle rendait 0 en les regardant. Une phrase du produit qui nomme
+ * l'organisation de quelqu'un d'autre est une fuite, quelle que soit sa casse.
  */
 export function aiguillesTrouvees(texte, aiguilles) {
 	const vues = [];
+	const enBas = texte.toLowerCase();
 	for (const a of aiguilles) {
+		const stricte = a.casse !== false;
+		const ou_chercher = stricte ? texte : enBas;
+		const cherche = stricte ? a.mot : a.mot.toLowerCase();
 		let depuis = 0;
 		let combien = 0;
 		let premier = -1;
 		for (;;) {
-			const ou = texte.indexOf(a.mot, depuis);
+			const ou = ou_chercher.indexOf(cherche, depuis);
 			if (ou < 0) break;
 			if (premier < 0) premier = ou;
 			combien += 1;
-			depuis = ou + a.mot.length;
+			depuis = ou + cherche.length;
 		}
 		if (combien > 0) vues.push({ ...a, combien, extrait: extraitAutour(texte, premier, a.mot) });
 	}
