@@ -305,6 +305,23 @@ interface DonneesDeRecherche {
 	/** Le nombre de notes que l'identité peut lire, toutes requêtes confondues. */
 	readonly perimetre: number;
 	/**
+	 * LA DURÉE DE LA RECHERCHE, MESURÉE — `processingTimeMs` du moteur, porté par
+	 * `ResultatDeRecherche`.
+	 *
+	 * Les deux vues affichaient une CONSTANTE — `V-08:541` et `V-02:176` — dont le
+	 * terme mesuré était nul par construction : « 1 résultat en 0,31 s » et
+	 * « 4 résultats en 0,31 s » sortaient du même littéral. La mesure existait
+	 * dans la réponse du moteur ; rien ne la retenait.
+	 *
+	 * C'EST LA DURÉE DE LA PREMIÈRE REQUÊTE, celle de `q`, et d'elle seule. La
+	 * seconde ne sert qu'à compter le périmètre : additionner les deux
+	 * annoncerait à l'utilisateur un temps que sa recherche n'a pas pris.
+	 *
+	 * `null` quand aucune requête n'est partie — périmètre fermé. La vue rend
+	 * alors le compte SANS durée : une durée qui n'existe pas ne vaut pas zéro.
+	 */
+	readonly dureeMs: number | null;
+	/**
 	 * LES PISTES DE REFORMULATION — les étiquettes les plus employées du
 	 * PÉRIMÈTRE LISIBLE, jamais celles du jeu de résultats.
 	 *
@@ -400,6 +417,7 @@ async function lireLaRecherche(
 		requete,
 		retenues,
 		perimetre: toutLeLisible.total,
+		dureeMs: trouvees.dureeMs,
 		pistes,
 		recherchees: true as const,
 		tri,
