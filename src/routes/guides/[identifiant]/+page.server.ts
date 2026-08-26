@@ -53,7 +53,9 @@
  * LES DEUX AXES DE LA PLANCHE VIENNENT DÉSORMAIS DE LA NOTE. `fr` était le
  * niveau de fraîcheur du guide gelé, `c-op` la présence de son registre « En
  * bref » : les deux décrivent LA NOTE AFFICHÉE, et c'est elle qui les porte.
- * `vecteur` reste `null` — il n'a plus rien à piloter.
+ * `vecteur` n'avait donc plus rien à piloter, et il n'est plus servi : la vue
+ * ne le déclare plus, en même temps qu'elle a cessé de pouvoir rendre le guide
+ * ÉCRIT de la maquette.
  *
  * ═════════════════════════════════════════════════════════════════════════
  * LES TROIS SORTS D'UN LIEN INTERNE — ET LE RÉSOLVEUR DOIT LES DISTINGUER
@@ -244,8 +246,6 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		.orderBy(piecesJointes.nom);
 
 	return {
-		/* Les deux axes de la planche décrivent la note ; la note les porte. */
-		vecteur: null,
 		/* L'ADRESSE DU PORTAIL D'ASSISTANCE — clé `portail_assistance` de la table
 		   `parametres` (M14.7), « adresse externe configurée en console »
 		   (`V-04:2205`). Elle sort de la MÊME lecture que les seuils : une requête,

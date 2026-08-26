@@ -6,9 +6,10 @@
 	 * note réellement demandée — est dans `+page.server.ts`, qui porte le
 	 * périmètre public et le point de sortie unique du refus.
 	 *
-	 * `vecteur={null}` : les deux axes de la planche décrivent LA NOTE AFFICHÉE
-	 * — fraîcheur du cartouche, présence du registre « En bref » —, et la note
-	 * les porte désormais elle-même. Il ne reste rien à piloter par vecteur.
+	 * LA VUE N'A PLUS DE `vecteur`. Les deux axes de la planche décrivaient LA
+	 * NOTE AFFICHÉE — fraîcheur du cartouche, présence du registre « En bref » —,
+	 * et la note les porte elle-même : il ne restait rien à piloter. La propriété
+	 * est retirée avec la branche sans guide qu'elle seule servait.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert.
 	 * Elle est identique à l'octet à sa source gelée (P-6.3). Cette route ne rend
@@ -39,4 +40,4 @@
 	});
 </script>
 
-<Vue vecteur={data.vecteur} guide={data.guide} portail={data.portail} />
+<Vue guide={data.guide} portail={data.portail} />
