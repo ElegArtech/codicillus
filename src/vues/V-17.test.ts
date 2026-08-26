@@ -16,6 +16,8 @@
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
+import { corpsDeLaSaisie } from '../lib/donnees/creation';
+import { corpsRendu } from '../lib/donnees/note';
 import {
 	corpusPourVue,
 	DOMAINES,
@@ -71,6 +73,7 @@ function rendu(proprietes: Record<string, unknown>): Promise<string> {
 		universDuCompte: 'Production',
 		dossiersParDomaine: null,
 		compte: MOI,
+		corps: '',
 		typesNote: TYPES_NOTE,
 		typesFiche: TYPES_FICHE,
 		templates: TEMPLATES,
@@ -136,7 +139,15 @@ describe('V-17 — la propriété fournie l’emporte', () => {
 	});
 
 	it('rouvre la note reçue, et non celle que le gel nomme', async () => {
-		const html = await rendu({ vecteur: MODIF, noteModifiee: AUTRE_NOTE });
+		/* LE CORPS EST CELUI QUE LA ROUTE SERT, et il ne se déduit plus de
+		   l'extrait : la vue écrivait l'extrait en tête d'un corps de
+		   démonstration, ce qui donnait au fait éprouvé un marqueur qui n'était
+		   pas le sien. */
+		const html = await rendu({
+			vecteur: MODIF,
+			noteModifiee: AUTRE_NOTE,
+			corps: `<p>${AUTRE_NOTE.extrait}</p>`
+		});
 		expect(html).toContain(AUTRE_NOTE.titre);
 		expect(html).not.toContain(NOTE_DU_GEL.titre);
 		expect(html).toContain(AUTRE_NOTE.extrait);
@@ -263,5 +274,85 @@ describe('V-17 — le dossier de départ', () => {
 		const html = await rendu({ ...socle, dossierDeDepart: 'Réseau' });
 		expect(dossiersCoches(html)).toEqual(['Réseau']);
 		expect(dossiersCoches(sans)).not.toEqual(['Réseau']);
+	});
+});
+
+/**
+ * LE CORPS RÉDIGÉ — LE DÉFAUT LE PLUS VISIBLE DE CETTE VUE, ET IL ÉTAIT SERVI.
+ *
+ * La zone de rédaction recevait, sous `cas: 'modif'`, un corps ÉCRIT DANS LA
+ * VUE : l'extrait de la note suivi des sections d'une procédure de
+ * démonstration — « Déclarer le serveur », « Vérifier le premier passage », la
+ * configuration de Barman. Le chargeur de `/notes/{identifiant}/modifier` pose
+ * ce vecteur sur TOUTE modification : ouvrir n'importe quelle note affichait
+ * donc ce corps-là. Le câblage le remplaçait au montage, ce qui en faisait un
+ * flash avec JavaScript et un contenu PERMANENT sans lui.
+ *
+ * Ce qui est éprouvé ici : le corps servi est celui qui est rendu, et RIEN
+ * n'est rendu quand rien n'est servi.
+ */
+describe('V-17 — le corps rédigé vient de la route, jamais de la vue', () => {
+	/** La zone de rédaction seule — le reste de l'écran ne porte pas de corps. */
+	function redactionDe(html: string): string {
+		return (
+			/<div class="prose redaction si-redaction"[\s\S]*?<div class="prose si-apercu"/.exec(
+				html
+			)?.[0] ?? ''
+		);
+	}
+
+	it('rend le corps servi, et le signale non vide', async () => {
+		const zone = redactionDe(
+			await rendu({
+				vecteur: MODIF,
+				noteModifiee: AUTRE_NOTE,
+				corps: '<h2>Le titre de la note ouverte</h2>'
+			})
+		);
+		expect(zone).toContain('<h2>Le titre de la note ouverte</h2>');
+		expect(zone).toContain('data-vide="non"');
+	});
+
+	it('ne rend RIEN de la procédure de démonstration, en modification comme à la création', async () => {
+		for (const vecteur of [null, MODIF]) {
+			const html = await rendu({ vecteur, noteModifiee: AUTRE_NOTE });
+			expect(html).not.toContain('Déclarer le serveur');
+			expect(html).not.toContain('Vérifier le premier passage');
+			expect(html).not.toContain('configuration de Barman');
+			expect(html).not.toContain('La sauvegarde apparaît dans la liste');
+		}
+	});
+
+	/**
+	 * LE CORPS D'UNE NOTE CRÉÉE SANS CORPS — PRODUIT PAR SA SOURCE, JAMAIS
+	 * ÉCRIT ICI.
+	 *
+	 * Un corps fabriqué par le test ne prouverait rien de la forme réelle, et
+	 * le défaut tenait précisément à ce que cette forme n'est pas celle qu'on
+	 * croit : `creerUneNote()` n'écrit JAMAIS NULL, elle écrit ce que
+	 * `corpsDeLaSaisie('')` rend. C'est `corpsRendu()` qui en tire les deux
+	 * drapeaux que la route lit.
+	 */
+	const CORPS_SANS_TEXTE = corpsRendu(corpsDeLaSaisie(''), 'reference', () => null);
+
+	it('la note créée sans corps EXISTE sans être RÉDIGÉE — les deux drapeaux diffèrent', () => {
+		expect(CORPS_SANS_TEXTE.existe).toBe(true);
+		expect(CORPS_SANS_TEXTE.redige).toBe(false);
+		/* Son HTML n'est pas vide pour autant : c'est le paragraphe sans texte de
+		   `corpsVide()`. Servi tel quel, il faisait déclarer la zone NON vide et
+		   privait la note neuve de son invite d'amorçage. */
+		expect(CORPS_SANS_TEXTE.html).not.toBe('');
+	});
+
+	it('laisse la zone VIDE et son invite pour une note créée sans corps', async () => {
+		/* CE QUE LA ROUTE SERT — `modifier/+page.server.ts` : le HTML si le corps
+		   est RÉDIGÉ, la chaîne vide sinon. Sur `existe`, cette expression
+		   rendait le paragraphe vide, et l'invite ne paraissait jamais. */
+		const servi = CORPS_SANS_TEXTE.redige ? CORPS_SANS_TEXTE.html : '';
+		const zone = redactionDe(
+			await rendu({ vecteur: MODIF, noteModifiee: AUTRE_NOTE, corps: servi })
+		);
+		expect(zone).toContain('data-vide="oui"');
+		expect(zone).toContain('data-invite="');
 	});
 });
