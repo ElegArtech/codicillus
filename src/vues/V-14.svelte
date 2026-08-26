@@ -69,13 +69,7 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import NoteDeDemonstration from '$lib/lecture/NoteDeDemonstration.svelte';
 	import SommaireDeLaNote from '$lib/lecture/SommaireDeLaNote.svelte';
-	import {
-		BARRES_DE_JAUGE,
-		barresFraicheur,
-		classeTemoin,
-		libelleFraicheur,
-		type NiveauFraicheur
-	} from '$lib/fraicheur';
+	import { BARRES_DE_JAUGE, barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { rangementDe, type LectureAffichee } from '$lib/lecture/note-de-demonstration';
 	/**
 	 * LA FABRIQUE D'ADRESSES — jamais un gabarit d'URL écrit à la main.
@@ -98,7 +92,7 @@
 		adresseDeNote,
 		segmentsDeDossier
 	} from '$lib/rangement/adresses';
-	import type { PanneauxDeLaNote } from '$lib/lecture/panneaux';
+	import type { PanneauxDeLaNote, VoisineAffichee } from '$lib/lecture/panneaux';
 
 	interface Proprietes {
 		/** Le vecteur complet de l'état — cinq contrôles de planche. */
@@ -284,8 +278,22 @@
 	 * C'est ici, et NULLE PART AILLEURS, que la forme compacte s'emploie : la
 	 * borne d'ARB-029 est explicite, un troisième site serait un comblement.
 	 */
-	function libelleCompactDe(voisine: { fraicheur: NiveauFraicheur; jours: number }): string {
-		return libelleFraicheur({ fraicheur: voisine.fraicheur, jours: voisine.jours }, 'compacte');
+	function libelleCompactDe(voisine: VoisineAffichee): string {
+		return libelleFraicheur(
+			{
+				fraicheur: voisine.fraicheur,
+				jours: voisine.jours,
+				/* LE MAILLON QUI MANQUAIT. `EtatDeFraicheur.revise` est OPTIONNEL et
+				   sa garde est STRICTE : omis, `undefined` ne la déclenche pas et
+				   une voisine JAMAIS VÉRIFIÉE lisait « il y a 3 mois » au lieu de
+				   « jamais ». C'est l'un des deux seuls sites du dépôt qui
+				   construisent un objet littéral plutôt que de passer une `Note`
+				   entière — les quatorze autres appelants étaient corrects par
+				   construction. */
+				revise: voisine.revise
+			},
+			'compacte'
+		);
 	}
 
 	/** Les rangs de la jauge — trois, toujours (`docs/DESIGN.md` §3.7, 2). */
@@ -682,19 +690,26 @@
 				</div>
 			</section>
 
-			<!-- Exemple d'un panneau en erreur : il ne casse pas la lecture -->
-			<section class="panneau panneau--erreur">
-				<div class="panneau__tete"><span class="etiq">Consultations détaillées</span></div>
-				<div class="panneau__corps">
-					<div class="zone-etat">
-						<div class="zone-etat__titre">Statistiques indisponibles</div>
-						<div class="zone-etat__txt">
-							Le service de mesure ne répond pas. Le reste de la note reste consultable.
-						</div>
-						<button class="btn">Réessayer</button>
-					</div>
-				</div>
-			</section>
+			<!-- LE PANNEAU D'ERREUR PERMANENT A ÉTÉ RETIRÉ, ET LA MAQUETTE AVEC.
+
+			     Il annonçait « Statistiques indisponibles / Le service de mesure ne
+			     répond pas » SANS CONDITION, sur CHAQUE note, avec un bouton
+			     « Réessayer » qui ne portait ni gestionnaire, ni type, ni
+			     formulaire — un geste dessiné et inerte. Et il le disait au-dessus
+			     d'un compteur de consultations qui fonctionne, affiché 300 px plus
+			     haut sur la même page : l'écran se contredisait lui-même.
+
+			     LE RETRAIT, ET NON UNE CONDITION. La panne n'est pas détectable
+			     aujourd'hui : le chargeur écrit `mesure?.nombre ?? 0`, ce qui efface
+			     l'absence en zéro. Rendre le panneau conditionnel exigerait une
+			     mesure qui sache dire « je n'ai pas pu compter » — une lecture de
+			     plus, et un état que rien ne demande. L'état viendra avec le besoin.
+
+			     LA MAQUETTE PORTAIT LE MÊME PANNEAU, dans son `aside` permanent et
+			     HORS de tout axe de sa planche — son contrôle « État » ne connaît
+			     que « nominal » et « chargement ». Elle a été amendée du même geste
+			     (`mockups/V-14-lecture-note.html`), faute de quoi le prochain
+			     portage l'aurait fait revenir. -->
 		</aside>
 
 		<!-- Esquisse de chargement des panneaux -->
