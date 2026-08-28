@@ -461,10 +461,26 @@
 		/* LA MESURE DES RECHERCHES DISPARAÎT DU BLOC TANT QU'AUCUN JOURNAL NE LA
 		   PORTE : « 0 recherches sur 30 jours, 0 par jour en moyenne » se lirait
 		   comme une instance que personne n'interroge. */
+		/* LES TROIS LIGNES SE LISENT D'UN TRAIT, DONC ELLES S'ACCORDENT. Le grand
+		   chiffre et sa légende sont trois nœuds voisins d'une même phrase — le
+		   HTML servi donne « 4 notes au total · 1 ouverte au public · 1
+		   contributeur actif » —, et une phrase porte un nombre grammatical. La
+		   règle « une carte de statistique ne s'accorde pas » vaut pour un chiffre
+		   et une légende posés dans deux registres visuels séparés ; elle ne
+		   protège pas une phrase. Mesuré : l'écran servait « 1 contributeurs
+		   actifs » sur l'instance qui n'a qu'un compte, et « 1 notes au total »
+		   sur celle qui n'a qu'une note.
+
+		   L'ACCORD EST EN CASCADE, et il ne s'arrête pas au nom : « contributeur »
+		   entraîne l'adjectif « actif », et la sous-ligne entraîne le possessif —
+		   « à son nom » pour un seul contributeur, « à leur nom » pour plusieurs.
+		   Un `+s` posé sur le seul nom aurait laissé la phrase fausse deux fois. */
+		const publiques = notes.filter((n) => n.visibilite === 'Publique').length;
+		const contributifs = contributeurs(notes).length;
 		const lignes: readonly (readonly [string, string, string])[] = [
 			[
 				nb(a),
-				'consultations sur 7 jours',
+				`${accord(a, 'consultation')} sur 7 jours`,
 				ecart === null
 					? 'aucune semaine de référence à comparer'
 					: `${ecart > 0 ? '+' : ''}${ecart} % contre la semaine précédente`
@@ -473,20 +489,21 @@
 				? [
 						[
 							nb(taux.total),
-							'recherches sur 30 jours',
+							`${accord(taux.total, 'recherche')} sur 30 jours`,
 							`${nb(Math.round(taux.total / 30))} par jour en moyenne`
 						] as const
 					]
 				: []),
 			[
 				nb(notes.length),
-				'notes au total',
-				`${notes.filter((n) => n.visibilite === 'Publique').length} ${accord(
-					notes.filter((n) => n.visibilite === 'Publique').length,
-					'ouverte'
-				)} au public`
+				`${accord(notes.length, 'note')} au total`,
+				`${publiques} ${accord(publiques, 'ouverte')} au public`
 			],
-			[nb(contributeurs(notes).length), 'contributeurs actifs', 'au moins une note à leur nom']
+			[
+				nb(contributifs),
+				`${accord(contributifs, 'contributeur')} ${accord(contributifs, 'actif')}`,
+				`au moins une note à ${accord(contributifs, 'son', 'leur')} nom`
+			]
 		];
 		return lignes;
 	});
