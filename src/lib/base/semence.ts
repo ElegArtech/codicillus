@@ -42,6 +42,7 @@
  *     fichier. Aucune ligne n'est écrite — un nom de fichier inventé serait une
  *     valeur illustrative, ce que P-02 proscrit.
  */
+import { corpsVide } from '../contenu/corps-vide';
 import { analyserDocument, type Document } from '../contenu/document';
 import { SEUILS_PAR_DEFAUT, niveauFraicheur } from '../fraicheur';
 import { identifiantLisible, segmentsDeDossier } from '../rangement/adresses';
@@ -236,10 +237,11 @@ export function corpsDepuisTexte(texte: string): DocumentDeNote {
 	});
 }
 
-/** Le corps Opérationnel des notes qui le déclarent sans le porter : vide. */
-export function corpsVide(): DocumentDeNote {
-	return analyserDocument({ type: 'doc', content: [{ type: 'paragraph' }] });
-}
+/* LE CORPS VIDE N'EST PLUS DÉFINI ICI. `corpsVide()` est la définition du
+   PRODUIT, et ce module tire `seeds/corpus.ts` EN VALEUR : tout appelant qui la
+   touchait embarquait les 32 notes du jeu de démonstration derrière elle,
+   jusque dans le paquet serveur. Elle vit dans `../contenu/corps-vide.ts` ; la
+   semence n'en est plus qu'un appelant parmi les autres. */
 
 /* ═══════════════════════════════════════════════ Les traductions ════════ */
 
