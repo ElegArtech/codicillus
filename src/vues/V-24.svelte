@@ -402,14 +402,28 @@
 	}
 
 	/**
-	 * L'ILLUSTRATION NOMME LA VRAIE DESTINATION, ET NON « Infrastructure ».
+	 * L'ILLUSTRATION NE NOMME PLUS RIEN DU JEU DE DÉMONSTRATION.
 	 *
-	 * Elle écrivait le nom d'un domaine du jeu de démonstration, à douze lignes
-	 * du `$derived` qui porte la destination réelle : sur toute autre instance,
-	 * l'écran annonçait un domaine que rien ne posait. Les deux dossiers de
-	 * gauche restent ce qu'ils sont — un arbre de FICHIERS sur le disque de
-	 * l'utilisateur, l'exemple que l'écran doit donner ; c'est la flèche, qui
-	 * désigne une cible dans le produit, qui devait dire la vérité.
+	 * Deux corrections, et la seconde défait un arbitrage qui ne tenait pas.
+	 *
+	 * LA CIBLE, d'abord : l'illustration écrivait le nom d'un domaine du jeu, à
+	 * douze lignes du `$derived` qui porte la destination réelle ; sur toute
+	 * autre instance, l'écran annonçait un domaine que rien ne posait.
+	 *
+	 * LES DEUX DOSSIERS, ensuite. Il avait été tranché qu'ils restaient ce
+	 * qu'ils sont — un arbre de FICHIERS sur le disque de l'utilisateur, du
+	 * côté GAUCHE de la flèche. C'était faux de moitié : les mêmes deux noms
+	 * étaient répétés EN GRAS À DROITE, là où la flèche désigne des dossiers DU
+	 * PRODUIT, et c'étaient deux valeurs de `CORPUS[].dossier`. L'écran
+	 * promettait donc à l'installateur deux dossiers que son domaine ne porte
+	 * pas.
+	 *
+	 * L'exemple reste un exemple, il cesse d'être celui du jeu : deux noms
+	 * quelconques d'arborescence de bureau, absents du jeu comme du reste de
+	 * `src/vues/`. Aucune aiguille du contrôle de paquet ne pouvait l'attraper —
+	 * elle ne pose que les chemins entiers, jamais leurs segments — et c'est
+	 * `import-promesses.test.ts` qui tient désormais la porte, sur une liste
+	 * LUE de `seeds/corpus.ts`.
 	 */
 	const SCENARIOS: readonly Scenario[] = $derived([
 		{
@@ -419,12 +433,12 @@
 			illus: [
 				{
 					gras: false,
-					texte: `Exploitation/\n  Sauvegardes/\n    Restauration.docx\n\n→ ${domaineIllustre}\n   └ `
+					texte: `Contrats/\n  Prestataires/\n    Infogérance.docx\n\n→ ${domaineIllustre}\n   └ `
 				},
-				{ gras: true, texte: 'Exploitation' },
+				{ gras: true, texte: 'Contrats' },
 				{ gras: false, texte: '\n      └ ' },
-				{ gras: true, texte: 'Sauvegardes' },
-				{ gras: false, texte: '\n         └ Restauration' }
+				{ gras: true, texte: 'Prestataires' },
+				{ gras: false, texte: '\n         └ Infogérance' }
 			]
 		}
 	]);
