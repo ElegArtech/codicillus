@@ -242,10 +242,16 @@
 	 *  `donnees/administration.ts` (`messageSeuilNonCroissant`) compose la même
 	 *  phrase, et `routes/console/configuration/cablage.ts` la repeint dans
 	 *  `#erreur-vieil-txt` au retour d'« Enregistrer ». Les deux s'accordent, et
-	 *  toute retouche de l'un se fait sur l'autre. */
+	 *  toute retouche de l'un se fait sur l'autre.
+	 *
+	 *  ILS DOIVENT ÊTRE IDENTIQUES À L'OCTET, ET ILS NE L'ÉTAIENT PAS : celui-ci
+	 *  portait l'apostrophe droite, le jumeau serveur l'apostrophe
+	 *  typographique. Le même nœud changeait donc de caractère entre l'aperçu
+	 *  immédiat et le retour d'« Enregistrer ». C'est l'apostrophe typographique
+	 *  qui l'emporte — celle que tout le reste du produit écrit. */
 	const erreurVieil = $derived(
 		seuilVieillissant <= seuilFrais
-			? `Doit dépasser le seuil frais (${seuilFrais} ${accord(seuilFrais, 'jour')}). En l'état, aucune note ne serait ` +
+			? `Doit dépasser le seuil frais (${seuilFrais} ${accord(seuilFrais, 'jour')}). En l’état, aucune note ne serait ` +
 					'jamais vieillissante : le témoin passerait directement du vert au rouge.'
 			: null
 	);
