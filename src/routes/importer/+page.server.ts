@@ -154,6 +154,7 @@ import { adresseDeNote } from '$lib/rangement/adresses';
 import { estUneMiseAJour } from './reprise';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
+import { messageDeRefusDEcriture } from '$lib/donnees/amorcage';
 
 /**
  * L'appelant et son droit d'importer — le seul point d'entrée du fichier.
@@ -183,7 +184,13 @@ async function importateur(locals: App.Locals): Promise<{
 			acces.dossiers.filter((d) => d.parentId === null).map((d) => d.id)
 		)
 	) {
-		error(404, MESSAGE_INTROUVABLE);
+		/* LE CODE RESTE 404 — SEULE LA PHRASE CHANGE, ET POUR UN SEUL CAS. Une
+		   instance à zéro univers n'a aucune racine de domaine : l'administrateur
+		   qui vient d'installer tombait donc ici, sur un 404 nu, sans savoir que
+		   ce qui manque est un univers. Le message le lui dit et nomme la console.
+		   Tout autre compte, toute autre cause : `MESSAGE_INTROUVABLE`, au même
+		   octet (`$lib/donnees/amorcage`). */
+		error(404, await messageDeRefusDEcriture(base, identite));
 	}
 
 	return { base, acces, compteId: identite.compteId };
