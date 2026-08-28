@@ -77,6 +77,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { DocumentInvalide } from '$lib/contenu/document';
 import { MarkdownInvalide } from '$lib/contenu/markdown';
+import { messageDeRefusDEcriture } from '$lib/donnees/amorcage';
 import { creerUneNote, lireLaSaisie, resoudreLaCible } from '$lib/donnees/creation';
 import {
 	lireLArborescenceDeChoix,
@@ -99,7 +100,12 @@ async function contexte() {
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const { base, contexte: lecture } = await contexte();
 	const acces = await resoudreLaCreationDeNote(base, locals.identite, lecture);
-	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
+	/* LE CODE RESTE 404 — SEULE LA PHRASE CHANGE, ET POUR UN SEUL CAS. Sur une
+	   instance à zéro univers, l'administrateur recevait ici un 404 nu : rien à
+	   ranger, aucune issue nommée, alors que le produit sait ce qui manque. Le
+	   message le lui dit et nomme la console. Tout autre compte, toute autre
+	   cause : `MESSAGE_INTROUVABLE`, au même octet (`$lib/donnees/amorcage`). */
+	if (!acces.trouve) error(404, await messageDeRefusDEcriture(base, locals.identite));
 	const creation = acces.ressource;
 
 	/**
@@ -150,7 +156,7 @@ export const actions: Actions = {
 		   appel : il n'existe pas une règle de droit pour lire et une autre pour
 		   écrire. Rien du corps soumis n'a encore été lu. */
 		const acces = await resoudreLaCreationDeNote(base, locals.identite, lecture);
-		if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
+		if (!acces.trouve) error(404, await messageDeRefusDEcriture(base, locals.identite));
 
 		const lue = lireLaSaisie(await request.formData());
 		if (!lue.ok) return fail(400, { motif: lue.motif });
