@@ -90,13 +90,41 @@ const telQuel = process.argv.includes('--tel-quel');
 /* LES DEUX MOITIÉS DU PAQUET. `detail` dit comment la zone se raconte : la
    moitié cliente occurrence par occurrence, parce qu'elle est petite et grave ;
    la moitié serveur fichier par fichier, parce qu'elle est vaste et qu'un relevé
-   de huit cents lignes ne se lit pas. Le code de sortie ne fait, lui, aucune
-   différence entre les deux. */
+   de huit cents lignes ne se lit pas.
+
+   `faute` DIT CE QUI FAIT ÉCHOUER LA ZONE, ET LES DEUX NE RÉPONDENT PAS PAREIL.
+   La première rédaction comptait tout, des deux côtés. Mesuré à l'intégration du
+   28/08 : `build/client` à ZÉRO, `build/server` à 355 occurrences dont ZÉRO dans
+   du code — 178 cartes de source et 177 commentaires, c'est-à-dire LA PROSE DE
+   CE DÉPÔT, que le paquet serveur garde parce qu'il n'est pas minifié. L'en-tête
+   de `Rail.js` énumère à lui seul les quatorze dossiers du gel pour raconter ce
+   qu'il a réparé, et le fichier que vous lisez cite les cinq adresses qu'il
+   cherche. Le contrôle ne pouvait donc PLUS JAMAIS rendre 0, quel que soit l'état
+   du produit — et un garde-fou qui ne peut pas être vert est un garde-fou qu'on
+   débranche au troisième passage. C'est le motif même que cette trace existe pour
+   empêcher, d'un cran plus haut : l'instrument devenu inutilisable.
+
+   La distinction n'affaiblit rien, parce qu'elle n'est pas un seuil mais une
+   PROPRIÉTÉ :
+     · `build/client` — TOUT compte, code, prose et cartes. Ces fichiers sont
+       servis comme ressources statiques à qui les demande, avant toute
+       autorisation ; un commentaire y est aussi lisible qu'un littéral. La zone
+       n'a d'ailleurs aucune carte de source. Le critère ne bouge pas d'un pouce.
+     · `build/server` — SEUL LE CODE compte. Un littéral en commentaire ne
+       s'évalue pas, ne se sérialise pas, n'entre dans aucune réponse : il n'est
+       pas « à une route de se rendre », il n'a aucun chemin vers un lecteur. Le
+       relevé continue d'AFFICHER les 355 en entier, fichier par fichier — rien
+       n'est tu, rien n'est exempté, et la table d'exemptions reste vide. C'est le
+       code de sortie qui vise la seule colonne qui dise ce qui peut se rendre.
+
+   Ce qui reste vrai des deux côtés : aucune exemption ne s'obtient en changeant
+   ce critère, et une exemption périmée fait toujours échouer le contrôle. */
 const ZONES = [
 	{
 		rep: join(racine, 'build', 'client'),
 		nom: 'CE QUI PART CHEZ LE LECTEUR',
 		detail: 'occurrence',
+		faute: (z) => z.total > 0,
 		remede:
 			'Le remède est le RETRAIT du littéral, ou une propriété REQUISE qui le\n' +
 			'   remplace — jamais une condition de rendu : la condition laisse le littéral\n' +
@@ -106,6 +134,7 @@ const ZONES = [
 		rep: join(racine, 'build', 'server'),
 		nom: 'CE QUI TOURNE SUR LE SERVEUR',
 		detail: 'fichier',
+		faute: (z) => z.enCode > 0,
 		remede:
 			'Aucun octet n’en part vers un navigateur — mais chaque littéral est à UNE\n' +
 			'   ROUTE de s’y rendre. LIS LA COLONNE « DANS DU CODE » : elle seule dit ce\n' +
@@ -366,14 +395,25 @@ for (const zone of ZONES) {
 
 /* ── 6. LE VERDICT ───────────────────────────────────────────────────────────*/
 titre('6. LE VERDICT');
-const fuites = ZONES.reduce((s, z) => s + z.servies.length, 0);
-if (fuites === 0 && perimees.length === 0) {
+const enFaute = ZONES.filter((z) => z.faute(z));
+if (enFaute.length === 0 && perimees.length === 0) {
+	/* CE QUI RESTE SE DIT, MÊME QUAND LE CONTRÔLE PASSE. Une zone peut être hors
+	   faute sans être muette : la moitié serveur porte la prose du dépôt, et la
+	   taire ferait croire à un paquet dont on n'a rien mesuré. */
+	const bavardes = ZONES.filter((z) => z.total > 0);
 	console.log(
 		exemptees.length === 0
-			? '     RIEN. Aucun nom du jeu de démonstration ne part dans le paquet.'
+			? '     RIEN QUI PUISSE SE RENDRE. Aucun nom du jeu de démonstration ne part chez' +
+					' un lecteur,\n     et aucun n’est en position de code dans le paquet serveur.'
 			: `     RIEN hors des ${exemptees.length} occurrences exemptées ci-dessus, qui sont` +
 					' nommées, situées, et qui expireront d’elles-mêmes.'
 	);
+	for (const z of bavardes) {
+		console.log(
+			`     Pour mémoire — ${relative(racine, z.rep)} : ${z.total} occurrence(s) sur ` +
+				`${z.fichiersTouches} fichier(s)${z.suffixe}.`
+		);
+	}
 	const lus = ZONES.reduce((s, z) => s + z.lus, 0);
 	console.log(
 		`\n══ PAQUET PROPRE — ${aiguilles.length} aiguilles, ${lus} fichiers sur deux zones, ` +
@@ -382,8 +422,7 @@ if (fuites === 0 && perimees.length === 0) {
 	process.exit(0);
 }
 
-for (const zone of ZONES) {
-	if (zone.servies.length === 0) continue;
+for (const zone of enFaute) {
 	console.log(`\n!! ${relative(racine, zone.rep)} — ${zone.nom}`);
 	console.log(
 		`   ${zone.total} occurrence(s) du jeu de démonstration sur ${zone.fichiersTouches} ` +
