@@ -86,8 +86,6 @@
 	const ROUTE_DU_GUIDE = '/guides/[identifiant]' as const;
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
-		vecteur: Record<string, string | boolean> | null;
 		/** Le jeu de semence de la vue — `corpusPourVue('V-04')`, variante complète. */
 		notes: readonly Note[];
 		/**
@@ -112,67 +110,31 @@
 		 */
 		pistes: readonly string[];
 		/**
-		 * L'ADRESSE RÉELLEMENT DEMANDÉE — la seule entrée d'`adresseNonResolue()`.
+		 * L'ADRESSE RÉELLEMENT DEMANDÉE — la seule entrée d'`adresseNonResolue()`,
+		 * et elle est EXIGÉE.
 		 *
-		 * La vue n'avait aucun moyen de la recevoir : elle retombait sur la table
-		 * `ADRESSES` de la planche, et TOUTE adresse cassée de l'espace public
-		 * annonçait « Adresse demandée /guides/plan-de-reprise-volet-bases », avec
-		 * la requête qui s'en dérive déjà saisie dans le champ de recherche.
+		 * Elle a été optionnelle, et son défaut était la table d'adresses de la
+		 * planche : TOUTE adresse cassée de l'espace public annonçait « Adresse
+		 * demandée /guides/… » sur un guide du jeu de démonstration, avec la
+		 * requête qui s'en dérive déjà saisie dans le champ de recherche. Les
+		 * littéraux partaient de surcroît dans le chunk d'erreur, celui que toute
+		 * page d'erreur charge, en session comme en anonyme.
 		 *
-		 * Absente, la constante de la planche reste le défaut : le banc ne bouge
-		 * pas d'un pixel. Fournie — par le composant d'erreur de la racine, qui lit
-		 * `page.url.pathname` —, elle l'emporte.
+		 * Le composant d'erreur de la racine est le SEUL site de montage, et il lit
+		 * `page.url.pathname` : la propriété est donc exigée, et le compilateur
+		 * garde la porte à la place d'un repli sur le jeu.
 		 *
 		 * ELLE NE DISTINGUE RIEN, et c'est tout le propos d'`ADR-007` : c'est un
 		 * CHEMIN, pas une raison. Le rendu est le même que l'adresse désigne un
 		 * guide inexistant ou un guide non public.
 		 */
-		adresse?: string;
+		adresse: string;
 	}
 
-	const { vecteur, notes, portail, pistes, adresse }: Proprietes = $props();
-
-	/**
-	 * LES TROIS ADRESSES DE LA PLANCHE DE REVUE, ET RIEN D'AUTRE.
-	 *
-	 * Ce sont des données de MAQUETTE (`V-04:2223-2227`) : la planche ne choisit
-	 * pas un comportement, elle choisit QUELLE ADRESSE a été demandée. Le rendu,
-	 * lui, ne dépend que de cette chaîne — c'est tout le propos d'ADR-007.
-	 */
-	const ADRESSES_PAR_DEFAUT = '/guides/plan-de-reprise-volet-bases';
-	const ADRESSES: Record<string, string> = {
-		inexistant: '/guides/reinitialiser-le-badge-daccess',
-		prive: ADRESSES_PAR_DEFAUT,
-		nu: '/guides/'
-	};
-
-	/**
-	 * LA POSITION QUE LA PLANCHE ATTEINT RÉELLEMENT, ET ELLE N'EST PAS CELLE
-	 * QU'ON CROIT — relevé au navigateur, dans les conditions du banc.
-	 *
-	 * La maquette s'initialise sur `appliquerCas("prive")` (`V-04:2242`) alors
-	 * que le bouton coché au balisage est `inexistant` (`V-04:762`). Le banc
-	 * applique le vecteur complet mais ne déclenche `change` que sur un bouton
-	 * QUI N'EST PAS DÉJÀ COCHÉ (le module de capture du banc, `reglerPlanche`) :
-	 * l'état `cas-inexistant` laisse donc la page sur le réglage initial, et la
-	 * référence y affiche l'adresse du cas `prive`.
-	 *
-	 * Ce n'est pas un défaut : les deux cas DOIVENT rendre le même écran, et le
-	 * gel le vérifie ainsi. Mais le rendu de `cas-inexistant` est bien celui de
-	 * `prive`, et le porter autrement ferait diverger l'unique ligne d'adresse.
-	 * Le fait est remonté au rapport du lot.
-	 */
-	const CAS_INITIAL = 'prive';
-	const CAS_COCHE_AU_BALISAGE = 'inexistant';
-
-	const cas = $derived(
-		typeof vecteur?.cas === 'string' && vecteur.cas !== CAS_COCHE_AU_BALISAGE
-			? vecteur.cas
-			: CAS_INITIAL
-	);
+	const { notes, portail, pistes, adresse }: Proprietes = $props();
 
 	/** L'UNIQUE point d'entrée. Une adresse entre, un état sort — ADR-007. */
-	const resolution = $derived(adresseNonResolue(adresse ?? ADRESSES[cas] ?? ADRESSES_PAR_DEFAUT));
+	const resolution = $derived(adresseNonResolue(adresse));
 
 	/**
 	 * « OUVRIR UN TICKET D'ASSISTANCE » N'EST ÉMIS QUE S'IL MÈNE QUELQUE PART.
