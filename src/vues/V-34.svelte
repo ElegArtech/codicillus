@@ -20,15 +20,45 @@
 	 *      explication, libellé d'action. Ce sont des LIBELLÉS d'interface, pas
 	 *      des données ; le corpus n'en porte aucun.
 	 *   2. Le bloc « Pas encore assez d'usage pour conclure » (`V-34:1293-1294`)
-	 *      est du BALISAGE STATIQUE du gel, et il citait « 34 recherches » et
-	 *      « vers 300 recherches ». Ces deux nombres sont dans la maquette
-	 *      elle-même, pas dans un calcul : ils décrivent une instance
-	 *      hypothétique. SERVIS PAR LE PRODUIT, ils affirmaient deux faits sur
-	 *      l'instance de l'utilisateur — son âge et son volume de requêtes —, et
-	 *      c'est le SEUL bloc que cet écran montre aujourd'hui, puisque le
-	 *      vecteur demande l'état neutre. La phrase dit désormais la raison,
-	 *      qui est vraie et n'a pas de chiffre : aucune table ne journalise les
-	 *      recherches.
+	 *      est du BALISAGE STATIQUE du gel. Son titre est celui de la maquette,
+	 *      au mot près. SA PHRASE, ELLE, A CHANGÉ, ET C'EST UN RENVERSEMENT
+	 *      D'ARBITRAGE QUI SE DÉCLARE ICI — voir ci-dessous.
+	 *
+	 * ═══════════════════════════════════════════════════════════════════════
+	 * RENVERSEMENT DÉCLARÉ — « 34 RECHERCHES » ET « VERS 300 RECHERCHES »
+	 *
+	 * L'EN-TÊTE PRÉCÉDENT DE CE FICHIER classait ces deux nombres parmi les
+	 * littéraux du gel à recopier : « ils décrivent une instance hypothétique,
+	 * celle qui n'a pas encore assez d'usage ». Ce classement valait tant que la
+	 * vue n'était qu'une planche. Il ne vaut plus depuis qu'une route la sert.
+	 *
+	 * LA SOURCE DU RENVERSEMENT : `RG-M01-01`, que `docs/routes.md:181` porte au
+	 * nombre des règles de `/console/analytique`, et que `P-02` reprend en
+	 * principe non négociable — « aucun indicateur, aucune tendance, aucun
+	 * compteur ne peut être figé ou simulé ». Le vecteur du chargeur demande
+	 * l'état neutre, donc ce bloc est LE SEUL que l'écran montre : servis par le
+	 * produit, ces deux nombres n'illustraient plus rien, ils AFFIRMAIENT deux
+	 * faits sur l'instance du lecteur — son âge et son volume de requêtes. Un
+	 * compteur figé servi comme une mesure est exactement ce que la règle
+	 * proscrit. Le titre reste, les deux nombres partent.
+	 *
+	 * CE QUE LA PHRASE DIT MAINTENANT, ET CE QU'ELLE SE GARDE DE DIRE. Elle
+	 * énonce deux absences vérifiables dans `src/lib/base/schema.ts` — aucune
+	 * table de journal de recherche, aucune table de demande de révision — et
+	 * elle n'annonce PAS de retour. Le retour ne dépend pas d'elles : la bascule
+	 * est `etatDesDonnees()` (`src/lib/donnees/consoles.ts`), qui ne rend
+	 * `completes` que si AUCUNE entrée de `MESURES_DE_CONSOLE_SANS_CONTREPARTIE`
+	 * ne porte `vue === 'V-34'` — il y en a cinq. Promettre l'activation « le
+	 * jour où le journal existera » serait promettre sur une condition plus
+	 * faible que celle que le produit implémente, et la promesse serait fausse.
+	 *
+	 * ELLE NE DIT PAS DAVANTAGE QU'UN CHIFFRE SERAIT FABRIQUÉ ICI — ce serait
+	 * faux. La santé documentaire par domaine, les notes orphelines, l'adoption,
+	 * le total de notes et les contributeurs sont dérivés de la base réelle, et
+	 * les consultations de sept jours sont comptées par le chargeur sur la table
+	 * `consultations`. Ces blocs sont bien dans le document, masqués par la
+	 * feuille avec tout `.si-donnees`. La phrase dit donc la seule chose exacte :
+	 * l'écran se tait plutôt que de conclure sur une partie de ses mesures.
 	 *
 	 * AUCUN CLASSEMENT NOMINATIF N'EST FABRIQUÉ ICI NON PLUS. « Volumes de
 	 * contribution » est rendu SANS RANG — `ligneClassement(null, …)` au gel —
@@ -518,7 +548,7 @@
 		<div class="si-vide"
 			><div class="insuffisant"
 				><h2>Pas encore assez d'usage pour conclure</h2
-				><p>Cette instance ne journalise aucune recherche : aucune table n'enregistre les requêtes posées à la base, et les indicateurs qui s'en déduisent — taux de recherche aboutie, trous documentaires — n'ont rien à compter. Un chiffre servi ici serait fabriqué. Cette section s'activera d'elle-même le jour où le journal existera.</p
+				><p>Cet écran conclut sur des mesures que l'instance ne tient pas toutes. Aucune table ne journalise les recherches posées à la base, aucune n'enregistre une demande de révision : le taux de recherche aboutie, les trous documentaires et les notes à réviser n'ont rien à interroger. Tant qu'une seule de ces mesures manque, l'écran se tait plutôt que de conclure sur celles qui restent.</p
 			></div
 		></div>
 
