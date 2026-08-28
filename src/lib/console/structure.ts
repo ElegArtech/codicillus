@@ -39,6 +39,7 @@
  * commodité.
  */
 import type { CleDeModule } from '../../../seeds/corpus';
+import { CATALOGUE_DE_MODULES } from '../rangement/modules';
 
 /* ═══════════════════════════ Ce qu'un refus dit ═════════════════════════ */
 
@@ -204,14 +205,82 @@ export function rangDuChamp(champs: FormData, nom: string): number | undefined {
 	return Number.isNaN(rang) ? undefined : rang;
 }
 
-/** La liste de modules d'un champ — `undefined` s'il n'a pas été transmis. */
-export function modulesDuChamp(champs: FormData, nom: string): readonly CleDeModule[] | undefined {
+/**
+ * CE QUE LA RELECTURE DE `f-modules` REND — trois issues, jamais deux.
+ *
+ * `absent` est le champ NON TRANSMIS, que les actions partielles traitent comme
+ * « rien à changer ». `lue` porte la liste, toutes clés au catalogue.
+ * `cle-inconnue` NOMME LA CLÉ FAUTIVE, et c'est le point de ce type : une liste
+ * dont un membre est hors catalogue ne se ramène pas à une liste plus courte.
+ */
+export type LectureDeModules =
+	| { readonly etat: 'absent' }
+	| { readonly etat: 'lue'; readonly modules: readonly CleDeModule[] }
+	| { readonly etat: 'cle-inconnue'; readonly cle: string };
+
+/**
+ * LA CLÉ DU BLOC `.champ__erreur` D'UNE LISTE DE MODULES REFUSÉE.
+ *
+ * Même régime que `nom` pour V-27, V-28 et V-29 : le nom du champ du gel
+ * (`f-modules`) débarrassé de son préfixe, jamais un nom choisi.
+ */
+export const CHAMP_ERREUR_MODULES = 'modules';
+
+/** Le message d'une clé hors catalogue — il la NOMME, sans exception. */
+export function messageDeModuleInconnu(cle: string): string {
+	return `« ${cle} » n'est pas un module.`;
+}
+
+/**
+ * LA FORME QU'UNE ACTION DE STRUCTURE REND QUAND ELLE REFUSE UNE SAISIE.
+ *
+ * C'est celle que `administration.ts` rend déjà pour un nom vide ou déjà pris
+ * (`VerdictDeStructure`, issue `saisie-refusee`) ; elle est redite ici pour la
+ * même raison que `RefusDeSaisie` l'est — ce module ne peut pas tirer le
+ * schéma, le connecteur et le moteur de recherche avec lui.
+ */
+export type SaisieRefusee = {
+	readonly issue: 'saisie-refusee';
+	readonly erreurs: readonly RefusDeSaisie[];
+};
+
+/** Le refus que l'action rend sur une clé de module hors catalogue. */
+export function refusDeModuleInconnu(cle: string): SaisieRefusee {
+	return {
+		issue: 'saisie-refusee',
+		erreurs: [{ champ: CHAMP_ERREUR_MODULES, message: messageDeModuleInconnu(cle) }]
+	};
+}
+
+/**
+ * LA LISTE DE MODULES D'UN CHAMP, CONFRONTÉE AU CATALOGUE.
+ *
+ * ÉCARTER EST JUSTE POUR UN CHAMP ILLISIBLE ; C'EST FAUX POUR UNE LISTE CONNUE
+ * DONT UN MEMBRE EST INCONNU. Cette fonction transtypait chaque segment non vide
+ * en `CleDeModule` sans jamais consulter le catalogue, et `modulesRetenus()`
+ * jetait ensuite en silence ce que l'énumération ne portait pas :
+ * `f-modules=notes signets cartographie carte-mentale relations recherche`
+ * rendait 200 « possible » avec TROIS CLÉS PERDUES. L'écran confirmait alors une
+ * écriture qu'il n'avait pas faite — et le domaine né sans `dossiers` faisait
+ * rendre 404 à `…/dossiers/{domaine}`, sans jamais dire pourquoi.
+ *
+ * Une clé hors catalogue rend donc un REFUS NOMMÉ, et la première rencontrée
+ * arrête la lecture : c'est elle que le message porte.
+ *
+ * `Object.hasOwn` PLUTÔT QUE `in` — `in` remonte la chaîne de prototypes, et
+ * `constructor` ou `toString` passeraient pour des modules.
+ */
+export function modulesDuChamp(champs: FormData, nom: string): LectureDeModules {
 	const texte = texteDuChamp(champs, nom);
-	if (texte === undefined) return undefined;
-	return texte
-		.split(SEPARATEUR_DE_MODULES)
-		.filter((m) => m !== '')
-		.map((m) => m as CleDeModule);
+	if (texte === undefined) return { etat: 'absent' };
+
+	const modules: CleDeModule[] = [];
+	for (const cle of texte.split(SEPARATEUR_DE_MODULES)) {
+		if (cle === '') continue;
+		if (!Object.hasOwn(CATALOGUE_DE_MODULES, cle)) return { etat: 'cle-inconnue', cle };
+		modules.push(cle as CleDeModule);
+	}
+	return { etat: 'lue', modules };
 }
 
 /**

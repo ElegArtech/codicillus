@@ -44,6 +44,7 @@ import {
 	CHAMP_UNIVERS_CIBLE,
 	CHAMP_UNIVERS_DE_RATTACHEMENT,
 	modulesDuChamp,
+	refusDeModuleInconnu,
 	texteDuChamp
 } from '$lib/console/structure';
 import {
@@ -57,24 +58,18 @@ import {
 import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
-import type { CleDeModule, Module } from '../../../../seeds/corpus';
+import { CATALOGUE_DE_MODULES } from '$lib/rangement/modules';
 
 /**
- * LE CATALOGUE DES SIX MODULES ACTIVABLES SUR UN DOMAINE.
+ * LE CATALOGUE DES SIX MODULES ACTIVABLES SUR UN DOMAINE — LU, JAMAIS RECOPIÉ.
  *
- * Le type `Record<CleDeModule, Module>` LE LIE AU PRODUIT : les six clés sont
- * celles de `CleDeModule`, et il en manquerait une que le compilateur le dirait.
- * Les libellés, eux, sont ceux de l'interface — `RG-STR-06` gouverne quelles
- * clés sont actives sur un domaine, jamais comment elles se nomment.
+ * Il était déclaré ici, mot pour mot identique à celui de
+ * `$lib/rangement/modules.ts`. C'est le motif de `P-35` : deux copies d'un même
+ * référentiel divergent en silence. Et la divergence coûterait vraiment quelque
+ * chose depuis que la relecture de `f-modules` CONFRONTE chaque clé au catalogue
+ * — une clé présente dans la copie qui alimente les cases et absente de celle
+ * que la relecture consulte ferait refuser un module que l'écran propose.
  */
-const CATALOGUE_DE_MODULES: Record<CleDeModule, Module> = {
-	notes: { nom: 'Notes', sous: 'Toutes les notes du domaine' },
-	dossiers: { nom: 'Dossiers', sous: 'Rangement arborescent' },
-	fiches: { nom: 'Fiches', sous: 'Objets typés et leurs relations' },
-	cartographie: { nom: 'Cartographie', sous: 'Graphe des dépendances' },
-	signets: { nom: 'Signets', sous: 'Liens web curatés' },
-	carteMentale: { nom: 'Carte mentale', sous: 'Arbre dépliable du domaine' }
-};
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
@@ -149,16 +144,27 @@ export const actions: Actions = {
 	 * `univers.nom` — le seul geste de la console à ne pas employer la clé, et
 	 * une requête d'enregistrement portait donc deux champs d'univers de régimes
 	 * différents.
+	 *
+	 * UNE CLÉ DE MODULE HORS CATALOGUE FAIT REFUSER LE GESTE, ET LE REFUS LA NOMME.
+	 * `modulesRetenus()` filtrait l'inconnue en silence : la création rendait 200
+	 * « possible » et l'écran confirmait une écriture qu'il n'avait pas faite —
+	 * un domaine né sans `dossiers` faisait ensuite rendre 404 à
+	 * `…/dossiers/{domaine}` sans dire pourquoi. Le refus emprunte la forme que ce
+	 * geste rend déjà pour un nom vide ou déjà pris : `fail(400)` sur un verdict
+	 * `saisie-refusee`, une erreur rattachée à son champ.
 	 */
 	creer: async ({ locals, request }) => {
 		consoleOuverte(locals);
 		const champs = await request.formData();
+		const modules = modulesDuChamp(champs, CHAMP_MODULES);
+		if (modules.etat === 'cle-inconnue') return fail(400, refusDeModuleInconnu(modules.cle));
+
 		const resultat = await creerUnDomaine(basePartagee(), {
 			nom: texteDuChamp(champs, CHAMP_NOM) ?? '',
 			description: texteDuChamp(champs, CHAMP_DESCRIPTION) ?? '',
 			univers: texteDuChamp(champs, CHAMP_UNIVERS_DE_RATTACHEMENT) ?? '',
 			couleur: texteDuChamp(champs, CHAMP_COULEUR) ?? '',
-			modules: modulesDuChamp(champs, CHAMP_MODULES) ?? []
+			modules: modules.etat === 'lue' ? modules.modules : []
 		});
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		if (resultat.issue !== 'possible') return fail(400, resultat);
@@ -171,6 +177,10 @@ export const actions: Actions = {
 	 * LA CIBLE EST DÉSIGNÉE PAR SA FORME CANONIQUE — les deux mêmes segments que
 	 * `?/supprimer`, pour la raison que ce voisin écrit : `RG-STR-02` ne rend
 	 * l'identifiant unique qu'au sein de son univers.
+	 *
+	 * LA LISTE DE MODULES EST ÉPROUVÉE ICI AUSSI. Les deux gestes lisent le même
+	 * champ ; une clé inconnue refusée à la création et acceptée à
+	 * l'enregistrement serait la même perte silencieuse, un geste plus loin.
 	 */
 	enregistrer: async ({ locals, request }) => {
 		consoleOuverte(locals);
@@ -180,6 +190,7 @@ export const actions: Actions = {
 		const rattachement = texteDuChamp(champs, CHAMP_UNIVERS_DE_RATTACHEMENT);
 		const couleur = texteDuChamp(champs, CHAMP_COULEUR);
 		const modules = modulesDuChamp(champs, CHAMP_MODULES);
+		if (modules.etat === 'cle-inconnue') return fail(400, refusDeModuleInconnu(modules.cle));
 
 		const resultat = await modifierUnDomaine(
 			basePartagee(),
@@ -192,7 +203,7 @@ export const actions: Actions = {
 				...(description === undefined ? {} : { description }),
 				...(rattachement === undefined ? {} : { univers: rattachement }),
 				...(couleur === undefined ? {} : { couleur }),
-				...(modules === undefined ? {} : { modules })
+				...(modules.etat === 'lue' ? { modules: modules.modules } : {})
 			}
 		);
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
