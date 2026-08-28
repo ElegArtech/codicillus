@@ -349,13 +349,21 @@
 	 * donnée du jour — `V-14:4026`, `<time datetime="2026-08-13">aujourd'hui</time>`.
 	 * « À l'instant » exigerait une entrée en HEURES que `Version.jours` ne
 	 * porte pas.
+	 *
+	 * LA PARENTHÈSE DE « an(s) » TOMBE, ET C'EST UN ÉCART DE MAQUETTE ASSUMÉ.
+	 * `mockups/V-15:2764` fige « an(s) » ; la ligne rend une phrase, et une
+	 * version d'un an y lisait « il y a 1 an(s) ». La parenthèse est exactement
+	 * le repli qu'`accord()` existe pour supprimer, et une maquette est la
+	 * référence visuelle, pas une loi. « mois » ne bouge pas : il est invariable.
 	 */
 	function relatif(jours: number): string {
 		if (jours <= 0) return "aujourd'hui";
 		if (jours === 1) return 'hier';
 		if (jours < 31) return `il y a ${jours} jours`;
 		const mois = Math.round(jours / 30);
-		return mois < 12 ? `il y a ${mois} mois` : `il y a ${Math.round(jours / 365)} an(s)`;
+		if (mois < 12) return `il y a ${mois} mois`;
+		const ans = Math.round(jours / 365);
+		return `il y a ${ans} ${accord(ans, 'an')}`;
 	}
 
 	/** Les cinq segments de la barre d'ampleur — cinq toujours, jamais moins. */
