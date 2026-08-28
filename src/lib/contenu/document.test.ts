@@ -14,7 +14,8 @@
  * (P-5), et deux resserrements posés sans cas seraient espérés, non posés.
  */
 import { describe, expect, it } from 'vitest';
-import { corpsDepuisTexte, corpsVide } from '../base/semence';
+import { corpsDepuisTexte } from '../base/semence';
+import { corpsVide } from './corps-vide';
 import { CAS_INVALIDES } from './commandes';
 import {
 	analyserDocument,

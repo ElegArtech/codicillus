@@ -20,7 +20,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import { describe, expect, it } from 'vitest';
-import { corpsVide } from '../base/semence';
+import { corpsVide } from '../contenu/corps-vide';
 import { notes } from '../base/schema';
 import {
 	CONTRAINTE_D_IDENTIFIANT,
@@ -199,7 +199,7 @@ describe('T-079 §3 — le corps soumis', () => {
 		/* Mesuré : `analyserMarkdown('')` LÈVE — « aucun contenu vide : l'absence de
 		   contenu s'écrit par l'absence de la clé » — et un document sans `content`
 		   est refusé lui aussi. Le corps vide du produit est `corpsVide()`
-		   (`../base/semence.ts:239`), et `./histoire.test.ts:158` le nomme ainsi ; il
+		   (`../contenu/corps-vide.ts`), et `./histoire.test.ts:158` le nomme ainsi ; il
 		   est REPRIS, jamais réécrit. */
 		expect(corpsDeLaSaisie('')).toEqual(corpsVide());
 		expect(corpsDeLaSaisie('   \n  ')).toEqual(corpsVide());
