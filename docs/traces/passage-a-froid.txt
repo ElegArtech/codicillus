@@ -14,7 +14,7 @@
 
 ── 2. LE DÉCOR — posé, et nommé ────────────────────────────────────────
      compte    a.froid — « Compte du passage à froid », administrateur
-     serveur   build/index.js sur http://127.0.0.1:5267 (pid 2307475)
+     serveur   build/index.js sur http://127.0.0.1:5267 (pid 140846)
      GET  /connexion                                                 200
      POST /connexion                                                 303
      GET  /                                                          200
@@ -46,19 +46,16 @@
 ── 4. LES AIGUILLES ────────────────────────────────────────────────────
 WebSocket server error: Port 24678 is already in use
      111 noms du jeu cherchés dans chaque réponse.
-     4 noms écartés — ils sont AUSSI du vocabulaire du produit :
-       « Non classé » — univers SYSTÈME. Le produit le nomme lui-même dans l'aide de la console des univers — « Non classé convient si aucune destination ne s'impose » —, parce que c'est la destination de repli d'un domaine qui perd son rattachement.
-       « Comptes » — segment du chemin « Déploiement › Comptes », et section de la console (`sections.ts`, groupe « Utilisateurs »). Le chemin ENTIER reste une aiguille.
-       « Accès » — segment du chemin « Fiches applicatives › Accès », et mot de la prose publique (« Accès aux applications, mots de passe, salles de réunion »). Le chemin ENTIER reste une aiguille.
-       « Codicillus 1.0.0 » — le relevé du 26/08 §2 l'a trouvé au pied du rail, servi depuis `INSTANCE.version` du jeu. La version vient désormais du paquet — et `package.json` porte EXACTEMENT le même numéro. Aucune aiguille ne peut distinguer les deux tant que les deux valent « 1.0.0 » : ce serait un cri permanent sur la version réelle du produit. Ce qui garde ce site, c'est que la version ne se passe plus en propriété.
+     1 nom écarté — il est AUSSI du vocabulaire du produit :
+       « Non classé » — univers SYSTÈME, pas un univers du jeu — `schema.ts:193` le pose par défaut au titre de RG-STR-01 et interdit sa suppression. Le produit le nomme lui-même dans l’aide de la console des univers (`administration.ts:156` — « Non classé convient si aucune destination ne s’impose »), parce que c’est la destination de repli d’un domaine qui perd son rattachement. `UNIVERS` de `seeds/corpus.ts` le porte aussi : sans cet écart, le contrôle crierait sur la structure obligatoire de toute instance neuve.
      AUCUNE EXEMPTION ICI. Ce qu’un lecteur peut lire à l’écran ne s’exempte pas.
 
 ── 5. LES ROUTES — en session (33) ─────────────────────────────────────
      200  /                                                      21658 o  propre
      200  /recherche                                             16735 o  propre
-     200  /notes/nouvelle                                        19421 o  propre
+     200  /notes/nouvelle                                        19413 o  propre
      200  /notes/n-note-interne-du-passage-a-froid               26569 o  propre
-     200  /notes/n-note-interne-du-passage-a-froid/modifier      20219 o  propre
+     200  /notes/n-note-interne-du-passage-a-froid/modifier      20211 o  propre
      200  /notes/n-note-interne-du-passage-a-froid/operationnel   17127 o  propre
      200  /notes/n-note-interne-du-passage-a-froid/relations     12081 o  propre
      200  /notes/n-note-interne-du-passage-a-froid/comparaison   13191 o  propre
@@ -66,7 +63,7 @@ WebSocket server error: Port 24678 is already in use
      200  /univers/univers-du-passage/domaine-du-passage         18033 o  propre
      200  /univers/univers-du-passage/domaine-du-passage/notes   13869 o  propre
      200  /univers/univers-du-passage/domaine-du-passage/dossiers/   16023 o  propre
-     200  /univers/univers-du-passage/domaine-du-passage/signets   10894 o  propre
+     200  /univers/univers-du-passage/domaine-du-passage/signets   10890 o  propre
      200  /univers/univers-du-passage/domaine-du-passage/signets/nouveau   12991 o  propre
      200  /univers/univers-du-passage/domaine-du-passage/signets/n-signet-du-passage-a-froid/modifier   13119 o  propre
      200  /cartographie                                          12692 o  propre
