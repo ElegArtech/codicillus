@@ -142,50 +142,20 @@ export const AIGUILLES_DU_GEL = [
    expirer l'exemption à chaque construction, et la nommer par sa vue n'aurait
    rien désigné du tout. Le témoin est un second littéral, de la MÊME vue, qui
    doit se trouver dans le MÊME fichier. Sans lui, l'exemption ne s'applique pas
-   — et le même mot reste gardé dans tout le reste du paquet. */
-export const EXEMPTIONS_DU_PAQUET = [
-	{
-		mot: 'Applications',
-		vue: 'V-21.svelte',
-		temoin: 'restreints',
-		lot: 'C — la console, les graphes, l’import',
-		motif:
-			'PROVISOIRE. `V-21:141` retire le domaine nommé « Applications » quand la planche ' +
-			"est en droits restreints : `domaines.filter((d) => d.nom !== 'Applications')`. " +
-			"C'est un nom de domaine du jeu dans un axe de planche — la branche ne se rend " +
-			'sur aucune route (`vecteur` est nul), mais le littéral part dans le chunk. ' +
-			"Ce qui la retire : que l'axe restreint filtre sur une donnée de droits plutôt " +
-			'que sur un nom.'
-	},
-	{
-		mot: 'bascule-telephonie-voip',
-		vue: 'V-26.svelte',
-		temoin: "Cette page n'est pas accessible.",
-		lot: 'R — la recherche et la coquille',
-		motif:
-			"PROVISOIRE. `V-26:255-261` garde la table d'adresses de sa planche parce que la " +
-			'propriété `adresse` est restée OPTIONNELLE : les cas de ' +
-			'`proprietes-coquille.test.ts:763-790` rendent la vue SANS adresse pour relever ' +
-			'ce que la planche affiche, puis exigent que ce relevé ait disparu du rendu servi. ' +
-			'Le HTML servi est propre — `+error.svelte` passe `page.url.pathname`, et ' +
-			'`passage-a-froid` le vérifie sur les deux polarités. Ce qui la retire : rendre ' +
-			'`adresse` REQUISE, et reprendre ces trois cas sur une autre source que le repli.'
-	},
-	{
-		mot: 'restaurer-une-sauvegarde-mariadb',
-		vue: 'V-26.svelte',
-		temoin: "Cette page n'est pas accessible.",
-		lot: 'R — la recherche et la coquille',
-		motif: 'PROVISOIRE. Même site, même table d’adresses, même remède.'
-	},
-	{
-		mot: 'comptes-a-privileges-production',
-		vue: 'V-26.svelte',
-		temoin: "Cette page n'est pas accessible.",
-		lot: 'R — la recherche et la coquille',
-		motif: 'PROVISOIRE. Même site, même table d’adresses, même remède.'
-	}
-];
+   — et le même mot reste gardé dans tout le reste du paquet.
+
+   LA TABLE EST VIDE, ET C'EST L'ÉTAT ATTENDU. Elle en portait quatre, toutes
+   PROVISOIRES, toutes sur des branches mortes du paquet client :
+     · « Applications » (`V-21.svelte`) — un filtre écrit sur le NOM d'un domaine
+       du jeu, dans un axe de planche qu'aucune route ne pose. Le filtre a été
+       SUPPRIMÉ : la route ne sert déjà que les domaines visibles du compte.
+     · les trois adresses de note de `V-26.svelte` — la table d'adresses de sa
+       planche, gardée parce que `adresse` était OPTIONNELLE. La propriété est
+       désormais EXIGÉE, la table a disparu, et les cas de
+       `proprietes-coquille.test.ts` déclarent eux-mêmes leur adresse de planche.
+   Les deux vues de la page d'erreur portaient ces littéraux dans le chunk que
+   TOUTE page d'erreur charge, en session comme en anonyme. */
+export const EXEMPTIONS_DU_PAQUET = [];
 
 /**
  * Ouvre un serveur Vite en mode intergiciel et lit `seeds/corpus.ts`.

@@ -28,10 +28,11 @@
 	 * rien. C'est la distinction qu'ADR-007 pose explicitement entre la
 	 * résolution d'une ressource entière (régime indiscernable) et l'état d'une
 	 * zone d'une page qu'on a le droit d'ouvrir. Ce cas ne passe donc PAS par
-	 * `adresseNonResolue()` — et le gel le confirme sans le dire : sa requête,
-	 * « restaurer sauvegarde mariadb », n'est pas dérivable de son adresse
-	 * `/notes/restaurer-une-sauvegarde-mariadb`, qui donnerait « restaurer une
-	 * sauvegarde mariadb ». Les deux autres, elles, le sont — au caractère près.
+	 * `adresseNonResolue()` — et le gel le confirmait sans le dire : la requête
+	 * qu'il affichait sur ce cas n'était pas dérivable de l'adresse de sa
+	 * planche, à un article près, là où les deux autres l'étaient au caractère
+	 * près. Ce que la pierre tombale affiche vient désormais de la propriété
+	 * `supprimee`, et d'elle seule.
 	 *
 	 * CE QUE CE COMPOSANT NE PROUVE PAS. Il rend un ÉTAT DE MAQUETTE. Il ne
 	 * résout aucun droit, n'interroge aucune base, ne mesure aucun temps de
@@ -120,24 +121,26 @@
 		 */
 		pistes: readonly string[];
 		/**
-		 * L'ADRESSE RÉELLEMENT DEMANDÉE — la seule entrée d'`adresseNonResolue()`.
+		 * L'ADRESSE RÉELLEMENT DEMANDÉE — la seule entrée d'`adresseNonResolue()`,
+		 * et elle est EXIGÉE.
 		 *
-		 * La vue n'a jamais eu de moyen de la recevoir : elle retombait sur la
-		 * table `ADRESSES` de la planche, et TOUTE adresse cassée de l'instance
-		 * annonçait « Adresse demandée /notes/bascule-telephonie-voip ». La
-		 * conséquence n'était pas seulement un mensonge d'affichage : la requête
-		 * s'en dérive, et le bouton « Créer la note » ouvrait l'éditeur avec le
-		 * titre d'une note de démonstration, prêt à être enregistré en base.
+		 * Elle a été optionnelle, et son défaut était la table d'adresses de la
+		 * planche : TOUTE adresse cassée de l'instance annonçait « Adresse demandée
+		 * /notes/… » sur une note du jeu de démonstration. La conséquence n'était
+		 * pas seulement un mensonge d'affichage : la requête s'en dérive, et le
+		 * bouton « Créer la note » ouvrait l'éditeur avec le titre d'une note de
+		 * démonstration, prêt à être enregistré en base. Les littéraux partaient de
+		 * surcroît dans le chunk d'erreur, celui que toute page d'erreur charge.
 		 *
-		 * Absente, la constante de la planche reste le défaut : le banc ne bouge
-		 * pas d'un pixel. Fournie — par le composant d'erreur de la racine, qui
-		 * lit `page.url.pathname` —, elle l'emporte.
+		 * Le composant d'erreur de la racine est le SEUL site de montage, et il lit
+		 * `page.url.pathname` : la propriété est donc exigée, et le compilateur
+		 * garde la porte à la place d'un repli sur le jeu.
 		 *
 		 * ELLE NE DISTINGUE RIEN, et c'est `ADR-007` : c'est un CHEMIN, pas une
 		 * raison. Le rendu reste le même que l'adresse désigne une note
 		 * inexistante ou une note hors du périmètre de l'appelant.
 		 */
-		adresse?: string;
+		adresse: string;
 		/**
 		 * CE QUE LE PRODUIT SAIT D'UNE NOTE SUPPRIMÉE — une DONNÉE, et aucune table
 		 * ne la porte.
@@ -249,19 +252,6 @@
 	const ecriture = $derived(droits !== 'lecture');
 
 	/**
-	 * LES TROIS ADRESSES DE LA PLANCHE DE REVUE. Données de MAQUETTE
-	 * (`V-26:2583-2606`) : la planche ne choisit pas un comportement, elle
-	 * choisit QUELLE ADRESSE a été demandée.
-	 */
-	const ADRESSE_SUPPRIMEE = '/notes/restaurer-une-sauvegarde-mariadb';
-	const ADRESSE_PAR_DEFAUT = '/notes/bascule-telephonie-voip';
-	const ADRESSES: Record<string, string> = {
-		supprimee: ADRESSE_SUPPRIMEE,
-		inexistante: ADRESSE_PAR_DEFAUT,
-		interdite: '/notes/comptes-a-privileges-production'
-	};
-
-	/**
 	 * LA RÉPONSE UNIQUE. Une adresse entre, un état sort — et rien, ici, ne peut
 	 * savoir POURQUOI l'adresse n'a rien rapporté (ADR-007).
 	 */
@@ -290,12 +280,10 @@
 	 */
 	const tombe = $derived(cas === 'supprimee' && supprimee !== null);
 	/** Le point d'entrée partagé avec V-04, pour les seuls cas non résolus. */
-	const resolution = $derived(
-		tombe ? null : adresseNonResolue(adresse ?? ADRESSES[cas] ?? ADRESSE_PAR_DEFAUT)
-	);
+	const resolution = $derived(tombe ? null : adresseNonResolue(adresse));
 
 	/** Ce que la ligne « Adresse demandée » porte à l'écran. */
-	const adresseAffichee = $derived(tombe ? (adresse ?? '') : (resolution?.adresse ?? ''));
+	const adresseAffichee = $derived(tombe ? adresse : (resolution?.adresse ?? ''));
 	const titre = $derived(tombe ? TITRE_SUPPRIMEE : TITRE_NON_RESOLUE);
 	const texte = $derived(tombe ? TEXTE_SUPPRIMEE : TEXTE_NON_RESOLUE);
 	const requete = $derived(
