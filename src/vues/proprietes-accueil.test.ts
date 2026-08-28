@@ -139,6 +139,65 @@ describe('V-07 — accueil contributeur', () => {
 			await corps('V-07', { mesures7j: MESURES_7J, mesures7jPrec: MESURES_7J_PREC })
 		).not.toContain('tendance--stable');
 	}, 60_000);
+
+	/* ═══════════════════════════════════════════════════════════════════════
+	   L'ÉCRAN D'AMORÇAGE OFFRE LE GESTE QU'IL CONSEILLE
+
+	   Mesuré sur le produit construit, instance à zéro univers, session
+	   administrateur : le bloc d'actions sortait VIDE sous un texte qui
+	   conseille de rapatrier. Ses deux gestes sont gardés par la capacité
+	   d'écriture — fausse sur une instance neuve — et leurs adresses rendent
+	   404 tant qu'aucun univers n'existe : la garde est juste, elle reste. Ce
+	   qui manquait est la troisième action, la seule suite vraie.
+	   ═══════════════════════════════════════════════════════════════════════ */
+
+	/**
+	 * LE CONTENU DU BLOC D'ACTIONS, commentaires de rendu retirés — les marqueurs
+	 * d'hydratation d'un bloc conditionnel non pris sont émis même vide, et un
+	 * document qui les porte n'offre pourtant aucun geste.
+	 */
+	function actionsDAmorce(rendu: string): string {
+		const bloc = /<div class="amorce__actions">([\s\S]*?)<\/div>/.exec(rendu)?.[1] ?? '';
+		return bloc.replace(/<!--[\s\S]*?-->/g, '').trim();
+	}
+
+	it('à zéro univers, l’administrateur reçoit le geste que l’écran conseille', async () => {
+		const actions = actionsDAmorce(
+			await corps('V-07', {
+				vecteur: { etat: 'vide', administrateur: true },
+				univers: [],
+				ecriture: false
+			})
+		);
+		expect(actions).not.toBe('');
+		expect(actions).toContain('/console/univers');
+		expect(actions).toContain('Créer votre premier univers');
+		// Les deux gestes d'origine restent gardés : leurs adresses rendent 404.
+		expect(actions).not.toContain('v-importer');
+		expect(actions).not.toContain('v-creer');
+	}, 60_000);
+
+	it('à zéro univers, un compte qui n’est pas administrateur ne reçoit rien', async () => {
+		const actions = actionsDAmorce(
+			await corps('V-07', { vecteur: { etat: 'vide' }, univers: [], ecriture: false })
+		);
+		expect(actions).toBe('');
+	}, 60_000);
+
+	it('des univers et l’écriture ouverte : les deux gestes d’origine, inchangés', async () => {
+		const actions = actionsDAmorce(
+			await corps('V-07', {
+				vecteur: { etat: 'vide', administrateur: true },
+				univers: UNIVERS,
+				ecriture: true
+			})
+		);
+		expect(actions).toContain('v-importer');
+		expect(actions).toContain('Importer votre patrimoine existant');
+		expect(actions).toContain('v-creer');
+		expect(actions).toContain('Créer votre première note');
+		expect(actions).not.toContain('/console/univers');
+	}, 60_000);
 });
 
 describe('V-08 — recherche interne', () => {
