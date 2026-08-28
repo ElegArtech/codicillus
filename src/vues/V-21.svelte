@@ -11,10 +11,12 @@
 	 * des notes, qu'aucune table ne double (`seeds/corpus.ts:84`).
 	 *
 	 * UN DOMAINE INTERDIT N'APPARAÎT PAS — il n'est pas grisé, il n'existe pas
-	 * pour cette vue (P-09, `RG-M05-08`). L'état `dv-restreints` retire
-	 * « Applications » de l'arbre ET du sélecteur de périmètre : vingt notes dans
-	 * trois domaines au lieu de vingt-sept dans quatre. Ce lot NE DÉCLARE PAS
-	 * `P-09` tenue : la batterie qui l'éprouve est `pnpm test:droits`.
+	 * pour cette vue (P-09, `RG-M05-08`). LA VUE NE FILTRE RIEN ELLE-MÊME : la
+	 * route ne lui sert que les domaines que le compte a le droit de voir, et
+	 * c'est là que le périmètre se décide. La planche portait ici un filtre écrit
+	 * sur le NOM d'un domaine du jeu de démonstration ; il aurait fait disparaître
+	 * de sa carte mentale toute instance nommant un domaine de la même façon, et
+	 * il partait dans le paquet servi. Ce lot NE DÉCLARE PAS `P-09` tenue.
 	 *
 	 * LE RENDU EST DU SVG DANS LE DOM (ADR-008, `STACK §4.4`). L'alternative
 	 * exploitable est `div.liste-arbre#liste`, une liste imbriquée `treeitem`
@@ -136,10 +138,12 @@
 	/**
 	 * Les domaines que l'utilisateur a le droit de voir. « Un domaine interdit
 	 * n'apparaît pas — il n'est pas grisé, il n'existe pas pour cette vue. »
+	 *
+	 * LE TRI EST DÉJÀ FAIT QUAND LA DONNÉE ARRIVE : la route ne sert que les
+	 * domaines du périmètre du compte. La vue n'a rien à retirer, et le filtre
+	 * qu'elle portait — sur le nom d'un domaine du jeu — était une règle fausse.
 	 */
-	const domainesVisibles = $derived(
-		restreint ? domaines.filter((d) => d.nom !== 'Applications') : domaines
-	);
+	const domainesVisibles = $derived(domaines);
 
 	/**
 	 * LE PÉRIMÈTRE EFFECTIF. Une valeur illisible vaut « tout le corpus » : un
