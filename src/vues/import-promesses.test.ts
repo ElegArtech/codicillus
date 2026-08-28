@@ -17,10 +17,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createServer, type ViteDevServer } from 'vite';
 import {
+	CORPUS,
 	DOMAINES,
 	FORMATS_IMPORT,
 	LOT_IMPORT,
+	UNIVERS,
 	corpusDeVariante,
+	type LotDImport,
 	type Note
 } from '../../seeds/corpus';
 import { LIBELLE_PAR_FORMAT } from '../lib/donnees/import';
@@ -201,6 +204,124 @@ describe('V-24 — l’étape 1 n’offre que le scénario que l’import exécu
 
 	it('le scénario livré reste celui de l’étape 2 de la planche', () => {
 		expect(SCENARIO_LIVRE).toBe('notes');
+	});
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   V-24 NE NOMME AUCUN NŒUD DU JEU DE DÉMONSTRATION
+
+   L’illustration du scénario d’import écrivait deux chemins de
+   `CORPUS[].dossier` — et pas seulement dans l’arbre de FICHIERS, à gauche de
+   la flèche : elle les répétait EN GRAS à droite, là où la flèche désigne des
+   dossiers DU PRODUIT. L’installateur lisait donc, comme destination, deux
+   dossiers que son domaine ne porte pas.
+
+   LE CONTRÔLE DU PAQUET NE PEUT PAS ATTRAPER ÇA, ET IL LE DIT LUI-MÊME
+   (`docs/traces/aiguilles-du-corpus.mjs`) : il ne pose que les chemins
+   ENTIERS, jamais leurs segments, parce qu’un segment d’un seul mot ne
+   distingue pas une valeur du corpus d’un nom commun — posés, ses aiguilles
+   criaient sur de la prose française ordinaire, dans tout le produit bâti.
+
+   Ici le rendu est CONNU : une seule vue, quatre étapes, des propriétés nues.
+   Les segments peuvent donc être posés un par un, et les rares homonymes
+   écartés NOMMÉMENT, avec leur raison — comme la trace écarte les siens.
+
+   LA LISTE SE LIT DU JEU, ELLE NE SE RECOPIE PAS : un dossier ajouté à
+   `seeds/corpus.ts` entre dans ce cas sans que personne y pense.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * LES HOMONYMES ÉCARTÉS, ET LA RAISON DE CHACUN — AUCUN, AUJOURD’HUI.
+ *
+ * C’est le risque annoncé par la trace du paquet : un segment d’un seul mot
+ * commun n’est pas une aiguille, et « Applications », « Comptes », « Support »
+ * ou « Accès » sont aussi du vocabulaire du produit et de la prose française.
+ * MESURÉ sur les quatre étapes de V-24, propriétés nues : pas un seul des
+ * segments du jeu n’y apparaît autrement que par la fuite corrigée. La table
+ * reste donc VIDE, et c’est un résultat, pas un oubli.
+ *
+ * Le jour où un mot du jeu se retrouve dans de la prose légitime de cet écran,
+ * il s’écarte ICI, avec son motif écrit — jamais par un filtre muet, et jamais
+ * en renonçant au cas.
+ */
+const HOMONYMES_ECARTES: ReadonlyMap<string, string> = new Map<string, string>();
+
+/** Les nœuds du jeu que V-24 ne doit nommer sous aucune étape. */
+const NOEUDS_DU_JEU: readonly { readonly mot: string; readonly origine: string }[] = (() => {
+	const par = new Map<string, string>();
+	const poser = (mot: string, origine: string): void => {
+		const propre = mot.trim();
+		if (propre === '' || HOMONYMES_ECARTES.has(propre)) return;
+		if (!par.has(propre)) par.set(propre, origine);
+	};
+	for (const u of UNIVERS) poser(u.nom, 'UNIVERS.nom');
+	for (const d of DOMAINES) poser(d.nom, 'DOMAINES.nom');
+	for (const n of CORPUS) {
+		for (const segment of n.dossier.split('›')) poser(segment, 'CORPUS.dossier, segment');
+	}
+	return [...par].map(([mot, origine]) => ({ mot, origine }));
+})();
+
+/**
+ * UN LOT QUI NE DOIT RIEN AU JEU — et qui a la taille que l’étape 4 demande.
+ *
+ * L’instant figé de l’étape 4 lit le septième fichier du lot : un lot vide y
+ * fait sortir la vue. Huit fichiers, donc, dont un écarté pour que l’étape 3
+ * rende aussi sa liste — et pas un chemin qui figure au jeu.
+ */
+const LOT_NU: LotDImport = {
+	source: 'Un partage quelconque',
+	fichiers: [
+		{ c: 'Recrutement/Entretiens/Grille.docx', f: 'docx', o: 14, s: 'note' },
+		{ c: 'Recrutement/Entretiens/Trame.docx', f: 'docx', o: 9, s: 'note' },
+		{ c: 'Recrutement/Offres/Poste ouvert.docx', f: 'docx', o: 21, s: 'note' },
+		{ c: 'Recrutement/Offres/Diffusion.md', f: 'md', o: 4, s: 'note' },
+		{
+			c: 'Recrutement/Barème.xlsx',
+			f: 'xlsx',
+			o: 33,
+			s: 'ignore',
+			m: 'Un tableur reste un tableur.'
+		},
+		{ c: 'Formation/Catalogue.pdf', f: 'pdf', o: 240, s: 'note' },
+		{ c: 'Formation/Sessions/Planning.txt', f: 'txt', o: 6, s: 'note' },
+		{ c: 'Formation/Sessions/Bilan.docx', f: 'docx', o: 18, s: 'note' }
+	]
+};
+
+/**
+ * DES PROPRIÉTÉS NUES — ce qu’une instance neuve sert, et rien du jeu.
+ *
+ * `SOCLE_V24` passe `DOMAINES` et `LOT_IMPORT` : sous ce socle-là, tout mot du
+ * jeu trouvé dans le rendu viendrait des PROPRIÉTÉS, et le cas ne dirait rien
+ * de la vue. Ici aucune source du jeu n’entre : ce qui sort du rendu a été
+ * écrit dans V-24.
+ */
+const SOCLE_NU: Proprietes = {
+	notes: [],
+	domaines: [],
+	lotImport: LOT_NU,
+	formatsImport: LIBELLE_PAR_FORMAT,
+	domaineParDefaut: ''
+};
+
+describe('V-24 — l’écran d’import ne nomme aucun nœud du jeu de démonstration', () => {
+	it('la liste des nœuds est LUE du jeu, et elle n’est pas vide', () => {
+		expect(NOEUDS_DU_JEU.length).toBeGreaterThan(10);
+		expect(NOEUDS_DU_JEU.map((n) => n.mot)).toContain('Exploitation');
+		expect(NOEUDS_DU_JEU.map((n) => n.mot)).toContain('Sauvegardes');
+		expect(NOEUDS_DU_JEU.map((n) => n.mot)).toContain('Infrastructure');
+	});
+
+	it('n’en écrit aucun, sur aucune des quatre étapes', () => {
+		const fuites: string[] = [];
+		for (const [rang, vecteur] of VECTEURS.entries()) {
+			const rendu = corps('V-24', { ...SOCLE_NU, vecteur });
+			for (const { mot, origine } of NOEUDS_DU_JEU) {
+				if (rendu.includes(mot)) fuites.push('étape ' + (rang + 1) + ' — ' + mot + ' — ' + origine);
+			}
+		}
+		expect(fuites).toEqual([]);
 	});
 });
 
