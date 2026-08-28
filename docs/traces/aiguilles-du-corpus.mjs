@@ -151,7 +151,21 @@ export const AIGUILLES_DU_GEL = [
    cette table entière.
 
    ET ELLES EXPIRENT SEULES : une exemption qui ne trouve plus rien FAIT ÉCHOUER
-   le contrôle, avec l'ordre de la retirer. */
+   le contrôle, avec l'ordre de la retirer. C'est ce qui interdit qu'une table
+   d'exemptions survive aux fuites qu'elle couvrait.
+
+   LA TABLE EST VIDE, ET C'EST L'ÉTAT ATTENDU. Elle en portait quatre, toutes
+   PROVISOIRES, toutes sur des branches mortes du paquet client, et le lot L7 les
+   a fait expirer en retirant leur cause :
+     · « Applications » (`V-21.svelte`) — un filtre écrit sur le NOM d'un domaine
+       du jeu, dans un axe de planche qu'aucune route ne pose. Le filtre a été
+       SUPPRIMÉ : la route ne sert déjà que les domaines visibles du compte.
+     · les trois adresses de note de `V-26.svelte` — la table d'adresses de sa
+       planche, gardée parce que `adresse` était OPTIONNELLE. La propriété est
+       désormais EXIGÉE, la table a disparu, et les cas de
+       `proprietes-coquille.test.ts` déclarent eux-mêmes leur adresse de planche.
+   Les deux vues de la page d'erreur portaient ces littéraux dans le chunk que
+   TOUTE page d'erreur charge, en session comme en anonyme. */
 export const EXEMPTIONS_DU_PAQUET = [];
 
 /**
