@@ -109,7 +109,7 @@
 	import VueConnectee from '../vues/V-26.svelte';
 	import feuillePublique from '../vues/V-04.css?url';
 	import feuilleConnectee from '../vues/V-26.css?url';
-	import { casDeV04, casDeV26, vueDeLAdresseNonResolue } from '$lib/donnees/public';
+	import { casDeV26, vueDeLAdresseNonResolue } from '$lib/donnees/public';
 	import { onMount } from 'svelte';
 	import { cablerLaPageDErreur } from './cablage-erreur';
 
@@ -184,13 +184,13 @@
 			pistes={[]}
 		/>
 	{:else}
-		<VuePublique
-			vecteur={{ cas: casDeV04(page.url.pathname) }}
-			notes={[]}
-			adresse={page.url.pathname}
-			pistes={[]}
-			{portail}
-		/>
+		<!--
+			V-04 N'A PLUS DE VECTEUR DE PLANCHE : son unique lecteur était la table
+			d'adresses de la maquette, qui a disparu avec elle. `adresse` est
+			désormais EXIGÉE par les deux vues, et le chemin demandé est la seule
+			chose qui descend.
+		-->
+		<VuePublique notes={[]} adresse={page.url.pathname} pistes={[]} {portail} />
 	{/if}
 {:else}
 	<h1>{page.status}</h1>
