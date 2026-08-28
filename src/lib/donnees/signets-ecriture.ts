@@ -38,7 +38,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
-import { corpsVide } from '../base/semence';
+import { corpsVide } from '../contenu/corps-vide';
 import { dossiers, etiquettesDeNote, notes, typesDeNote } from '../base/schema';
 import { analyserMarkdown, markdownDeFormulaire } from '../contenu/markdown';
 import { entretenirLIndex } from '../recherche/entretien';

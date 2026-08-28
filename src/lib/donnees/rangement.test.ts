@@ -25,12 +25,12 @@ import { describe, expect, it } from 'vitest';
 import { CORPUS, DETAIL_DOMAINES, DOMAINES, type Note } from '../../../seeds/corpus';
 import {
 	corpsDepuisTexte,
-	corpsVide,
 	dateCourteEnIso,
 	instantAvantReference,
 	instantDeDateCourte,
 	instantDeReference
 } from '../base/semence';
+import { corpsVide } from '../contenu/corps-vide';
 import { SEUILS_PAR_DEFAUT } from '../fraicheur';
 import { identifiantLisible, segmentsDeDossier } from '../rangement/adresses';
 import type { ContexteDeLecture } from './lecture';
