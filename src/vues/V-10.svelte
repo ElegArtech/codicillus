@@ -420,8 +420,12 @@
 						<span class="mesure__nom etiq">Notes</span>
 						<div class="mesure__val">{nb(notesDeLUnivers.length)}</div>
 					</button>
+					<!-- LA PARENTHÈSE TOMBE, ET C'EST UN ÉCART DE MAQUETTE ASSUMÉ.
+						     `mockups/V-10:1864` fige « brouillon(s) » ; la parenthèse est
+						     exactement le repli qu'`accord()` existe pour supprimer, et une
+						     maquette est la référence visuelle, pas une loi. -->
 					<button class="mesure__lien" type="button" id="m-brouillons">
-						<span class="mesure__sous">{brouillons} brouillon(s)</span>
+						<span class="mesure__sous">{`${brouillons} ${accord(brouillons, 'brouillon')}`}</span>
 					</button>
 				</div>
 				<div class="mesure">
