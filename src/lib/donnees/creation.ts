@@ -9,7 +9,7 @@
  *                                   arbitrée ICI, et par la BASE.
  *   `../contenu/markdown.ts`        `analyserMarkdown()`, la porte UNIQUE du
  *                                   texte rédigé vers le format canonique.
- *   `../base/semence.ts`            `corpsVide()`, la seule définition du corps
+ *   `../contenu/corps-vide.ts`      `corpsVide()`, la seule définition du corps
  *                                   vide du produit (`./histoire.test.ts:158`).
  *   `./rangement.ts`                `resoudreLeChemin()`, la descente d'une
  *                                   arborescence de dossiers, déjà écrite et
@@ -73,7 +73,7 @@
 import { eq } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
-import { corpsVide } from '../base/semence';
+import { corpsVide } from '../contenu/corps-vide';
 import { documentDepuisNoeud, noeudDepuisDocument } from '../edition/document';
 import {
 	champsDeTypeDeFiche,
@@ -720,7 +720,7 @@ export interface CreationFaite {
  * contenu vide : l'absence de contenu s'écrit par l'absence de la clé » — et un
  * document sans `content` est refusé lui aussi. Il n'existe donc pas de
  * « document vide » que le Markdown sache produire. Celui du produit est
- * `corpsVide()` (`../base/semence.ts:239`), un paragraphe sans texte, et
+ * `corpsVide()` (`../contenu/corps-vide.ts`), un paragraphe sans texte, et
  * `./histoire.test.ts:158` le désigne en propres termes : « le corps vide du
  * produit est celui de `corpsVide()` — un paragraphe sans texte ». Il est
  * REPRIS, jamais réécrit ici.

@@ -31,7 +31,8 @@
  *     que `corpsDepuisTexte(n.extrait)` écrit (`semence.ts:426`). Aucune note
  *     ne porte le corps RÉDIGÉ que les maquettes montrent.
  *   · `corps_operationnel` — 5 notes sur 32 en portent un, et les cinq sont
- *     VIDES : `corpsVide()`, un paragraphe sans texte (`semence.ts:427`). Les
+ *     VIDES : `corpsVide()`, un paragraphe sans texte
+ *     (`src/lib/contenu/corps-vide.ts`). Les
  *     27 autres n'en portent aucun.
  *   · aucun lien interne — 0 note sur 32 porte une marque `lienInterne`, donc
  *     0 rétrolien pour les 32 (RG-M05-02 est calculée, et rend l'ensemble
