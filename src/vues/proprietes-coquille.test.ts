@@ -74,11 +74,12 @@ import { CONFIGURATION_PAR_DEFAUT } from '../lib/base/schema';
    les deux auraient pu diverger sans que rien ne rougisse. Le lien entre les
    deux tables est éprouvé par `import-promesses.test.ts`. */
 import { LIBELLE_PAR_FORMAT } from '../lib/donnees/import';
-/* LES DEUX POSITIONS DE PLANCHE SERVIES ET LA DÉRIVATION DES TERMES VIENNENT DE
-   LEURS SOURCES, celles-là mêmes que `+error.svelte` et les vues emploient. Les
+/* LA POSITION DE PLANCHE SERVIE ET LA DÉRIVATION DES TERMES VIENNENT DE LEURS
+   SOURCES, celles-là mêmes que `+error.svelte` et les vues emploient. Les
    recopier ici aurait éprouvé la copie, et la copie aurait pu diverger sans que
-   rien ne rougisse. */
-import { casDeV04, casDeV26 } from '../lib/donnees/public';
+   rien ne rougisse. V-04 n'a plus de vecteur : son unique lecteur était la table
+   d'adresses de sa planche, partie avec elle. */
+import { casDeV26 } from '../lib/donnees/public';
 import { requeteDepuisAdresse } from '../lib/public/adresse-non-resolue';
 
 type Proprietes = Record<string, unknown>;
@@ -144,6 +145,25 @@ const AUTRE_COMPTE: UtilisateurCourant = {
 const AUTRE_INSTANCE: EtatDInstance = { version: '9.9.9', synchro: 'à l’instant' };
 /** Une adresse de portail qui n'est celle d'aucun jeu — les vues l'EXIGENT. */
 const PORTAIL_DE_CONTROLE = 'https://assistance.exemple.test/nouveau-ticket';
+
+/* ─── LES ADRESSES DE CONTRÔLE ──────────────────────────────────────────────
+   `adresse` est EXIGÉE par V-04 et V-26 : leurs tables d'adresses de planche ont
+   disparu, et le compilateur garde la porte à leur place. Les cas déclarent donc
+   ICI ce que la planche portait, au lieu de le lire sur un repli de la vue.
+
+   LE CHEMIN VIENT DE SON PRODUCTEUR. `+error.svelte` passe `page.url.pathname` —
+   le composant `pathname` d'une URL. Ces constantes le produisent de la même
+   façon, par `new URL(...)`, et non par une chaîne écrite à la main qui aurait pu
+   ne pas être un chemin. L'hôte est indifférent — `pathname` ne le porte pas —,
+   et le domaine de premier niveau réservé aux essais le dit. */
+const CHEMIN_DEMANDE = new URL('https://codicillus.invalid/notes/inexistante-xyz').pathname;
+const CHEMIN_PUBLIC_DEMANDE = new URL('https://codicillus.invalid/guides/inexistant').pathname;
+/* CE QUE LA PLANCHE PORTAIT — une SECONDE adresse, qui n'est pas celle qu'on
+   sert. Les cas rendent la vue sur celle-ci, relèvent ce qu'elle affiche, puis
+   exigent que ce relevé ait DISPARU du rendu servi sur l'autre. */
+const CHEMIN_DE_PLANCHE = new URL('https://codicillus.invalid/notes/adresse-de-planche').pathname;
+const CHEMIN_PUBLIC_DE_PLANCHE = new URL('https://codicillus.invalid/guides/adresse-de-planche')
+	.pathname;
 /** L'identité vide que V-26 applique quand aucun compte ne lui est servi. */
 const SANS_IDENTITE = { prenom: '', nom: '', initiales: '', domaine: '', role: '' };
 const AUTRES_UNIVERS: readonly Univers[] = UNIVERS.filter((u) => u.nom === 'Production');
@@ -329,7 +349,7 @@ const VUES: Readonly<
 	   d'erreur n'a pas de chargeur d'où les dériver. `+error.svelte` passe la
 	   liste vide, et le bloc n'est alors pas rendu. */
 	'V-04': {
-		base: { vecteur: null, portail: PORTAIL_DE_CONTROLE, pistes: [] },
+		base: { portail: PORTAIL_DE_CONTROLE, pistes: [], adresse: CHEMIN_PUBLIC_DEMANDE },
 		sources: []
 	},
 	/* V-26 — LES SOURCES DE COQUILLE Y RETOMBENT SUR L'ÉTAT VIDE, plus sur le jeu.
@@ -340,7 +360,7 @@ const VUES: Readonly<
 	   est vide. `instance` a disparu : la version du pied de rail vient du
 	   contexte elle aussi. */
 	'V-26': {
-		base: { vecteur: null, pistes: [] },
+		base: { vecteur: null, pistes: [], adresse: CHEMIN_DEMANDE },
 		sources: [
 			{ cle: 'univers', defaut: [], autre: AUTRES_UNIVERS, inerte: true },
 			{ cle: 'domaines', defaut: [], autre: AUTRES_DOMAINES, inerte: true },
@@ -716,23 +736,20 @@ describe('V-25 — l’interrupteur de notification par courriel n’est plus é
 /* ══════════════════════════════════════════════════════════════════════════
    V-04 ET V-26 — LA PAGE D'ADRESSE NON RÉSOLUE DIT L'ADRESSE DEMANDÉE
 
-   LE DÉFAUT N'EST PAS RECOPIÉ, IL EST LU SUR LE RENDU DE LA VUE. Les adresses
-   de planche sont des littéraux internes aux deux vues, qui ne les exportent
-   pas : les redéclarer ici aurait fait de ces cas l'épreuve d'une copie, verte
-   le jour où la vue et la copie changeraient ensemble et fausses toutes les
-   deux. Chaque cas rend donc d'abord la vue SANS adresse, relève ce que la
-   ligne « Adresse demandée » porte alors, et exige que ce relevé ait DISPARU du
-   rendu servi.
+   IL N'Y A PLUS DE DÉFAUT À LIRE SUR LA VUE. Ces cas rendaient d'abord la vue
+   SANS adresse pour relever ce que sa table de planche affichait alors ; cette
+   table n'existe plus — `adresse` est EXIGÉE, et le compilateur garde la porte
+   là où le relevé gardait le rendu. Ce que les cas comparent est donc DEUX
+   ADRESSES SERVIES : celle de la planche, déclarée ici (`CHEMIN_DE_PLANCHE`), et
+   celle qu'on sert (`CHEMIN_DEMANDE`). L'intention n'a pas bougé — « l'adresse
+   de la planche a disparu du rendu » —, seule sa source a changé.
 
-   LE CHEMIN VIENT DE SON PRODUCTEUR. `+error.svelte` passe `page.url.pathname`
-   — le composant `pathname` d'une URL. Les cas le produisent de la même façon,
-   par `new URL(...)`, et non par une chaîne écrite à la main qui aurait pu ne
-   pas être un chemin. Les termes de recherche, eux, viennent de la fonction que
-   la vue emploie : `requeteDepuisAdresse()`, importée de sa source.
+   LES CHEMINS VIENNENT DE LEUR PRODUCTEUR, et le motif est écrit à leur
+   déclaration. Les termes de recherche, eux, viennent de la fonction que la vue
+   emploie : `requeteDepuisAdresse()`, importée de sa source.
 
-   CE QUE CES CAS NE PROUVENT PAS : que la route passe bien la propriété. Cela
-   se voit dans un navigateur, sur une adresse cassée d'une instance réelle, et
-   c'est là que la preuve du lot a été faite.
+   CE QUE CES CAS NE PROUVENT PAS : que la route passe bien la propriété. Le
+   compilateur s'en charge désormais — aucune route ne monte ces vues sans elle.
    ══════════════════════════════════════════════════════════════════════════ */
 
 /** Le contenu textuel du nœud d'identifiant donné, tel que le rendu le porte. */
@@ -741,9 +758,6 @@ function contenuDe(rendu: string, identifiant: string): string {
 	return motif.exec(rendu)?.[1] ?? '';
 }
 
-/* Une adresse d'instance qui n'existe nulle part, produite comme le produit la
-   produit : le chemin d'une URL. L'hôte est indifférent — `pathname` ne le
-   porte pas —, et le domaine de premier niveau réservé aux essais le dit. */
 /**
  * UNE SUPPRESSION DE CONTRÔLE — aucune valeur du jeu de démonstration, parce que
  * c'est justement le jeu que la propriété a chassé de la vue.
@@ -757,9 +771,6 @@ const PIERRE_DE_CONTROLE = {
 	requete: 'note de controle'
 };
 
-const CHEMIN_DEMANDE = new URL('https://codicillus.invalid/notes/inexistante-xyz').pathname;
-const CHEMIN_PUBLIC_DEMANDE = new URL('https://codicillus.invalid/guides/inexistant').pathname;
-
 describe('V-26 — l’adresse demandée en session', () => {
 	/* La position que le produit sert, nommée par la fonction qui la décide —
 	   jamais par un littéral. La pierre tombale, position PAR DÉFAUT de la vue,
@@ -767,8 +778,8 @@ describe('V-26 — l’adresse demandée en session', () => {
 	const base = { vecteur: { cas: casDeV26(), droits: 'ecriture' }, pistes: [] };
 
 	it('affiche le chemin demandé, et l’adresse de la planche a disparu', () => {
-		const planche = contenuDe(corps('V-26', base), 'adresse');
-		expect(planche).not.toBe('');
+		const planche = contenuDe(corps('V-26', base, { adresse: CHEMIN_DE_PLANCHE }), 'adresse');
+		expect(planche).toBe(CHEMIN_DE_PLANCHE);
 		const rendu = corps('V-26', base, { adresse: CHEMIN_DEMANDE });
 		expect(contenuDe(rendu, 'adresse')).toBe(CHEMIN_DEMANDE);
 		expect(rendu).not.toContain(planche);
@@ -780,7 +791,7 @@ describe('V-26 — l’adresse demandée en session', () => {
 	});
 
 	it('« Créer la note » ne propose plus le titre d’une note de démonstration', () => {
-		const requeteDeLaPlanche = requeteDepuisAdresse(contenuDe(corps('V-26', base), 'adresse'));
+		const requeteDeLaPlanche = requeteDepuisAdresse(CHEMIN_DE_PLANCHE);
 		const rendu = corps('V-26', base, { adresse: CHEMIN_DEMANDE });
 		expect(rendu).toContain(`Créer la note « ${requeteDepuisAdresse(CHEMIN_DEMANDE)} »`);
 		expect(rendu).not.toContain(`Créer la note « ${requeteDeLaPlanche} »`);
@@ -797,12 +808,12 @@ describe('V-26 — l’adresse demandée en session', () => {
 	 * l'absence — la position de planche ne suffit plus à rendre la section.
 	 */
 	it('la pierre tombale ne se rend plus sur la seule position de planche', () => {
-		const tombe = { vecteur: { cas: 'supprimee' }, pistes: [] };
+		const tombe = { vecteur: { cas: 'supprimee' }, pistes: [], adresse: CHEMIN_DEMANDE };
 		expect(corps('V-26', tombe)).not.toContain('id="suppression"');
 	});
 
 	it('servie, elle se rend, et elle ne nomme que ce qu’elle a reçu', () => {
-		const tombe = { vecteur: { cas: 'supprimee' }, pistes: [] };
+		const tombe = { vecteur: { cas: 'supprimee' }, pistes: [], adresse: CHEMIN_DEMANDE };
 		const rendu = corps('V-26', tombe, { supprimee: PIERRE_DE_CONTROLE });
 		expect(rendu).toContain('id="suppression"');
 		expect(rendu).toContain(PIERRE_DE_CONTROLE.nom);
@@ -811,15 +822,14 @@ describe('V-26 — l’adresse demandée en session', () => {
 });
 
 describe('V-04 — l’adresse demandée en anonyme', () => {
-	const base = {
-		vecteur: { cas: casDeV04(CHEMIN_PUBLIC_DEMANDE) },
-		portail: PORTAIL_DE_CONTROLE,
-		pistes: []
-	};
+	const base = { portail: PORTAIL_DE_CONTROLE, pistes: [] };
 
 	it('affiche le chemin demandé, et l’adresse de la planche a disparu', () => {
-		const planche = contenuDe(corps('V-04', base), 'adresse');
-		expect(planche).not.toBe('');
+		const planche = contenuDe(
+			corps('V-04', base, { adresse: CHEMIN_PUBLIC_DE_PLANCHE }),
+			'adresse'
+		);
+		expect(planche).toBe(CHEMIN_PUBLIC_DE_PLANCHE);
 		const rendu = corps('V-04', base, { adresse: CHEMIN_PUBLIC_DEMANDE });
 		expect(contenuDe(rendu, 'adresse')).toBe(CHEMIN_PUBLIC_DEMANDE);
 		expect(rendu).not.toContain(planche);
@@ -835,11 +845,7 @@ describe('V-04 — l’adresse demandée en anonyme', () => {
 	   c'est le chemin lui-même qui descend. */
 	it('l’adresse racine du corpus public reste la sienne', () => {
 		const nu = new URL('https://codicillus.invalid/guides').pathname;
-		const rendu = corps(
-			'V-04',
-			{ vecteur: { cas: casDeV04(nu) }, portail: PORTAIL_DE_CONTROLE, pistes: [] },
-			{ adresse: nu }
-		);
+		const rendu = corps('V-04', { portail: PORTAIL_DE_CONTROLE, pistes: [] }, { adresse: nu });
 		expect(contenuDe(rendu, 'adresse')).toBe(nu);
 	});
 });
@@ -858,7 +864,7 @@ describe('V-04 — l’adresse demandée en anonyme', () => {
    change de noms, ces cas suivent.
    ══════════════════════════════════════════════════════════════════════════ */
 describe('V-26 — sans source servie, rien du jeu de démonstration n’atteint l’écran', () => {
-	const rendu = (): string => corps('V-26', { vecteur: null, pistes: [] });
+	const rendu = (): string => corps('V-26', { vecteur: null, pistes: [], adresse: CHEMIN_DEMANDE });
 
 	it('n’affiche ni le compte ni le rôle du jeu', () => {
 		expect(rendu()).not.toContain(MOI.nom);
@@ -889,7 +895,7 @@ describe('V-04 — sans piste servie, aucune reformulation n’est promise', () 
 	it('ne rend pas le bloc, plutôt que d’ouvrir cinq recherches sans résultat', () => {
 		const rendu = corps(
 			'V-04',
-			{ vecteur: null, portail: PORTAIL_DE_CONTROLE, pistes: [] },
+			{ portail: PORTAIL_DE_CONTROLE, pistes: [] },
 			{ adresse: CHEMIN_PUBLIC_DEMANDE }
 		);
 		expect(rendu).not.toContain('class="reformuler"');
@@ -899,7 +905,7 @@ describe('V-04 — sans piste servie, aucune reformulation n’est promise', () 
 	it('les rend quand on lui en sert', () => {
 		const rendu = corps(
 			'V-04',
-			{ vecteur: null, portail: PORTAIL_DE_CONTROLE, pistes: ['badge'] },
+			{ portail: PORTAIL_DE_CONTROLE, pistes: ['badge'] },
 			{ adresse: CHEMIN_PUBLIC_DEMANDE }
 		);
 		expect(rendu).toContain('class="reformuler"');
@@ -916,7 +922,7 @@ describe('V-04 — sans piste servie, aucune reformulation n’est promise', () 
    de l'écran, et il portait le domaine d'exemple du jeu de démonstration.
    ══════════════════════════════════════════════════════════════════════════ */
 describe('V-04 — l’issue d’assistance', () => {
-	const base = { vecteur: null, pistes: [] };
+	const base = { pistes: [], adresse: CHEMIN_PUBLIC_DEMANDE };
 
 	it('n’émet pas le bouton quand l’instance n’a pas d’adresse', () => {
 		const rendu = corps('V-04', base, { portail: CONFIGURATION_PAR_DEFAUT.portailAssistance });

@@ -80,7 +80,9 @@ const NOM = 'Mairie de Sainte-Foy';
 const BASES: Record<string, Proprietes> = {
 	'V-01': { vecteur: null, portail: '' },
 	'V-02': { vecteur: null, portail: '', pistes: [] },
-	'V-04': { vecteur: null, portail: '', pistes: [] },
+	/* V-04 EXIGE `adresse` et n'a plus de vecteur : sa table d'adresses de planche
+	   est partie dans le paquet servi, et la propriété a pris sa place. */
+	'V-04': { portail: '', pistes: [], adresse: '/guides/inexistant' },
 	'V-05': { vecteur: null }
 };
 
