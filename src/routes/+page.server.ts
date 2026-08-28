@@ -83,9 +83,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 		locals.identite.type === 'authentifie' && locals.identite.role === 'administrateur';
 	const baseVide = administrateur && accueil.session && accueil.notes.length === 0;
 
+	/* ET LE PANNEAU REÇOIT AUSSI LE FAIT, PAS SEULEMENT L'ÉTAT. Rendre l'écran
+	 * d'amorçage ATTEIGNABLE ne l'a pas rendu UTILE : ses deux gestes sont gardés
+	 * par la capacité d'écriture, qui vaut faux sur une instance neuve, et le bloc
+	 * d'actions sortait vide sous un texte qui conseille de rapatrier. La suite
+	 * vraie, à zéro univers, est la console — le rail la dit déjà en prose. V-07
+	 * ne peut la proposer qu'à l'administrateur : ce booléen est le chemin par
+	 * lequel le fait l'atteint, et il ne dépend d'aucun contexte de gabarit. */
 	return {
 		...accueil,
-		...(baseVide ? { vecteur: { etat: 'vide' } } : {}),
+		...(baseVide ? { vecteur: { etat: 'vide', administrateur } } : {}),
 		portail: config.portailAssistance
 	};
 };

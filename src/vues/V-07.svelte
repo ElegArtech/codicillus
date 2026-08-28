@@ -276,8 +276,15 @@
 	 * vecteur : il valait donc toujours « referent » dans le produit, et la
 	 * tuile « Consultations » sortait désactivée même pour un administrateur.
 	 * Hors application, le contexte est absent et le profil reprend la main.
+	 *
+	 * ET LE CHARGEUR PEUT LE DIRE LUI-MÊME, ce qui le rend vrai hors gabarit
+	 * racine : la charge de `/` pose le fait dans le vecteur qu'elle sert déjà
+	 * pour l'état « base vide ». C'est la source la plus proche de la base des
+	 * trois, donc celle qui tranche en premier.
 	 */
-	const administrateur = $derived(identite?.administrateur ?? profil === 'admin');
+	const administrateur = $derived(
+		reglage['administrateur'] === true || (identite?.administrateur ?? profil === 'admin')
+	);
 	/**
 	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
 	 *
@@ -901,6 +908,22 @@
 							id="v-creer"
 							onclick={() => void goto(resolve('/notes/nouvelle'))}
 							>Créer votre première note</button
+						>{/if}
+					<!-- LA SEULE SUITE VRAIE À ZÉRO UNIVERS, ET ELLE N'EST OUVERTE QU'À
+					     L'ADMINISTRATEUR. Les deux gestes ci-dessus visent des adresses qui
+					     rendent 404 tant qu'aucun univers n'existe : leur garde est juste et
+					     elle reste. Le texte au-dessus conseille pourtant de rapatrier, et le
+					     bloc sortait VIDE sur l'instance neuve pour laquelle il est dessiné.
+					     Le rail dit déjà la suite en prose — un univers dans la console, puis
+					     un domaine ; ce geste la rend faisable.
+					     PAS DE CLASSE D'ÉCRITURE ICI, et c'est délibéré : la capacité
+					     d'écriture vaut faux sur une instance neuve, et la feuille masque
+					     cette classe dès que les droits sont en lecture. Un lien plutôt qu'un
+					     bouton — l'adresse est alors portée par le document, comme au rail. -->
+					{#if administrateur && univers.length === 0}<a
+							class="btn btn--principal"
+							id="v-univers"
+							href={resolve('/console/univers')}>Créer votre premier univers</a
 						>{/if}
 				</div>
 			</div>
