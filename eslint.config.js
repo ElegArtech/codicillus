@@ -147,17 +147,9 @@ export default ts.config(
 			// atteint. `semence-organisation.ts` n'importe rien de `seeds/` — son
 			// exemption est inerte, elle est gardée telle que l'inventaire la pose.
 			//
-			// `semence.ts` EST DIFFÉRENT, ET IL FAUT LE DIRE : quatre routes
-			// l'atteignent. `corpsVide()` (`semence.ts:240`) y est la seule définition
-			// du corps vide du produit, et `src/lib/donnees/creation.ts:76` comme
-			// `src/lib/donnees/signets-ecriture.ts:41` l'importent — donc
-			// `notes/nouvelle/+page.server.ts:80` et les trois serveurs de signets
-			// (`nouveau:47`, `[identifiant]/modifier:54`, `signets/+page.server.ts:84`)
-			// chargent la semence, et CORPUS avec elle. L'inventaire de campagne
-			// classait `src/lib/base/**` « hors produit, atteint par aucune route » ;
-			// c'est faux pour ce fichier-là. Déplacer `corpsVide()` hors de la semence
-			// n'appartient à aucun lot et reste à faire ; en attendant,
-			// `IMPORT_DE_LA_SEMENCE` ferme la porte à tout NOUVEL emprunt.
+			// `semence.ts` n'est plus atteinte par aucune route : `corpsVide()` en est
+			// sortie pour `src/lib/contenu/corps-vide.ts`, et avec elle les 85 Ko du
+			// jeu que dix nœuds du paquet serveur portaient.
 			'src/lib/base/semence.ts',
 			'src/lib/base/semence-organisation.ts',
 			'src/lib/base/commandes.ts',
@@ -172,18 +164,6 @@ export default ts.config(
 		],
 		rules: {
 			'no-restricted-imports': ['error', { patterns: [IMPORT_DU_JEU, IMPORT_DE_LA_SEMENCE] }]
-		}
-	},
-	// L'EXEMPTION PROVISOIRE, NOMMÉE ET BORNÉE. Ces deux modules importaient déjà
-	// `corpsVide()` de la semence avant cette règle ; les en sevrer demande de
-	// déplacer la fonction, ce qu'aucun lot de la campagne ne porte. Ils gardent
-	// donc `IMPORT_DE_LA_SEMENCE` levé — et LUI SEUL : `IMPORT_DU_JEU` continue de
-	// s'appliquer, et tout autre fichier du produit qui emprunterait à la semence
-	// rougit. La règle n'est pas rendue inopérante : le cas est nommé.
-	{
-		files: ['src/lib/donnees/creation.ts', 'src/lib/donnees/signets-ecriture.ts'],
-		rules: {
-			'no-restricted-imports': ['error', { patterns: [IMPORT_DU_JEU] }]
 		}
 	}
 );

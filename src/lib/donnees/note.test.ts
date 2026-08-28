@@ -14,7 +14,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { CORPUS } from '../../../seeds/corpus';
-import { corpsDepuisTexte, corpsVide, lignesDeNote } from '../base/semence';
+import { corpsDepuisTexte, lignesDeNote } from '../base/semence';
+import { corpsVide } from '../contenu/corps-vide';
 import { documentDuGel } from '../contenu/documents-du-gel';
 import { liensInternes } from '../contenu/document';
 import { identiteAuthentifiee, indexerLesDroits, ANONYME } from '../droits/resolution';
