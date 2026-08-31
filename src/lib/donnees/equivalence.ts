@@ -322,21 +322,23 @@ export const CANDIDATS_DE_LACUNE: readonly CandidatDeLacune[] = [
 		forme: 'Template',
 		champ: 'utilisations',
 		pourquoi:
-			'AUCUNE COLONNE, ET AUCUNE COLONNE NE SUFFIRAIT. C’est un compteur d’EMPLOI : ' +
-			'il se calcule sur la provenance des notes créées depuis un template, et rien ' +
-			'ne l’enregistre. Mais le manque de schéma n’est pas le défaut — le défaut est ' +
+			'LA COLONNE EXISTE DÉSORMAIS — `notes.template_id`, posée par la migration `011`, ' +
+			'écrite par `creerUneNote()` et comptée par `lireTemplates()` : le produit rend ' +
+			'un nombre réel. CE QUI RESTE IRRESTITUABLE EST LE JEU, et le défaut est ' +
 			'ARITHMÉTIQUE et il est DANS LE GEL : V-31 déclare 34+12+7+19 utilisations ' +
 			'(:2705, :2711, :2717, :2723), son `total()` les somme (:3289-3291) et les ' +
 			'imprime au :1655, alors que le corpus embarqué par cette même maquette compte ' +
 			'32 notes (:1876-2200). Aucune colonne de provenance ne peut porter 72 ' +
 			'provenances sur 32 lignes.',
 		ceQuiLaFermerait:
-			'un regel de V-31 — voir `docs/dossier-regel.md`. Poser la colonne ne fermerait ' +
-			'rien : rien ne l’écrirait, rien ne la lirait (P-5)',
+			'un regel de V-31 — voir `docs/dossier-regel.md`. La colonne, elle, est posée : ' +
+			'ce qui manque est un jeu de démonstration dont les provenances se comptent',
 		mesurer: async ({ base }) => {
 			/* La question mesurée est « `notes` référence-t-elle `templates` ? », posée au
 			   catalogue plutôt qu'à un nom de colonne deviné : le jour où une migration
-			   pose la provenance, ce compte bouge tout seul. */
+			   pose la provenance, ce compte bouge tout seul. `011` est ce jour-là — la
+			   mesure rend désormais les quatre templates restituables, sans qu'une ligne
+			   de cette entrée ait eu à le déclarer. */
 			const lignes = rangs<{ n: number }>(
 				await base.execute(
 					`select count(*)::int as n

@@ -10,10 +10,14 @@
  * depuis les tables : une rédaction de cette page qui en oublierait une ne
  * compilerait plus.
  *
- * CE QUI RESTE EN LACUNE : `Template.utilisations` n'a aucune colonne — c'est un
- * compteur d'EMPLOI, qui se calcule sur les notes créées depuis un template, et
- * rien n'enregistre cette provenance. Le champ est ABSENT, et la vue rend l'état
- * indisponible plutôt qu'un zéro qui mentirait.
+ * `Template.utilisations` EST COMPTÉ, et l'était naguère en lacune : la migration
+ * `011` a posé `notes.template_id`, la provenance que `creerUneNote()` écrit et que
+ * `lireTemplates()` compte par jointure. Le compteur des quatre endroits de l'écran —
+ * total, ligne, tiroir, dialogue de suppression — dit un nombre réel, zéro compris.
+ *
+ * LA PROSE DE L'ÉCRAN RESTE VRAIE : « un squelette est copié au moment de la
+ * création ». La colonne est une TRACE, pas un rattachement ; `ON DELETE SET NULL`
+ * fait que supprimer un template efface la trace sans toucher une seule note.
  */
 import { error, fail } from '@sveltejs/kit';
 import { and, eq, ne, sql } from 'drizzle-orm';

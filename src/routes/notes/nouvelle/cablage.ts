@@ -8,6 +8,12 @@
  * NI aux étiquettes — le référentiel n'en dit rien, et les remplir serait décider à la
  * place de qui rédige (`RG-REF-01`).
  *
+ * ET IL LAISSE UNE TRACE DANS LA SOUMISSION — `input[name=template]`, posé ici et nulle
+ * part ailleurs. Le choix de départ ne quittait jamais l'écran : la note s'écrivait sans
+ * qu'aucune colonne ne sache d'où elle partait, et « Utilisations » de V-31 n'avait
+ * aucune source. Le champ est CACHÉ et COMPOSÉ PAR LA ROUTE (`ARB-063`) : V-17 ne porte
+ * aucun attribut de nom, et lui en ajouter un ferait porter la soumission par le gel.
+ *
  * LE DIALOGUE EST REMONTÉ EN MODALE, ET C'EST LE GEL QUI LE DEMANDE : `<dialog open>` non
  * modal reste SOUS la barre d'outils — mesuré au navigateur, le premier bouton du
  * dialogue était physiquement inatteignable au pointeur. `showModal()` et `close()` sont
@@ -36,6 +42,18 @@ export function cablerLeChoixDeDepart(
 	const dialogue = formulaire.querySelector<HTMLDialogElement>('#dlg-template');
 	if (dialogue === null) return () => undefined;
 
+	/**
+	 * LE CHAMP CACHÉ DE PROVENANCE — créé une fois, réemployé ensuite. Il vit DANS le
+	 * formulaire pour que la soumission le porte, et il est vide tant qu'aucun gabarit
+	 * n'est pris : `lireLaSaisie()` lit alors « pas de provenance ».
+	 */
+	const NOM_DU_CHAMP = 'template';
+	const provenance =
+		formulaire.querySelector<HTMLInputElement>(`input[name="${NOM_DU_CHAMP}"]`) ??
+		formulaire.appendChild(formulaire.ownerDocument.createElement('input'));
+	provenance.type = 'hidden';
+	provenance.name = NOM_DU_CHAMP;
+
 	const jetables: Debranchement[] = [];
 	const ecouter = (cible: EventTarget, type: string, reaction: (e: Event) => void): void => {
 		cible.addEventListener(type, reaction);
@@ -54,6 +72,11 @@ export function cablerLeChoixDeDepart(
 
 	const prendre = (gabarit: Template): void => {
 		options.inserer(documentDepuisHtml(gabarit.contenu, formulaire.ownerDocument));
+		/* LA TRACE D'ORIGINE — l'identifiant du gabarit, celui que `lireTemplates()`
+		   rend et que la base résout. Le contenu, lui, est déjà copié dans la zone de
+		   rédaction : la note ne dépend plus du gabarit, elle se souvient d'en être
+		   partie. */
+		provenance.value = gabarit.id;
 		const type = formulaire.querySelector<HTMLSelectElement>('#m-type');
 		if (type !== null && Array.from(type.options).some((o) => o.value === gabarit.type)) {
 			type.value = gabarit.type;
@@ -66,7 +89,12 @@ export function cablerLeChoixDeDepart(
 	const vierge = formulaire.querySelector<HTMLButtonElement>('#tpl-vierge');
 	if (vierge !== null) {
 		vierge.type = 'button';
-		ecouter(vierge, 'click', fermer);
+		ecouter(vierge, 'click', () => {
+			/* Partir d'une page vierge, c'est n'avoir aucune provenance — y compris
+			   après avoir pris un gabarit puis rouvert le choix. */
+			provenance.value = '';
+			fermer();
+		});
 	}
 
 	/* 2. LES GABARITS — repérés par leur RANG dans `#templates`, qui est celui de
