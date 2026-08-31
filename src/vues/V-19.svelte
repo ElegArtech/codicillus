@@ -1,76 +1,41 @@
 <script lang="ts">
 	/**
-	 * V-19 — Cartographie. Route `/cartographie` (`docs/routes.md` §3),
-	 * atteinte par l'entrée de rail « Outils › Cartographie ».
+	 * V-19 — Cartographie. Route `/cartographie` (`docs/routes.md` §3), atteinte
+	 * par l'entrée de rail « Outils › Cartographie ».
 	 *
-	 * LA CARTOGRAPHIE N'A AUCUNE DONNÉE PROPRE (`RG-M09-01`), ET PLUS AUCUN
-	 * DÉFAUT TIRÉ DU JEU. Les trois tableaux du graphe — relations, types de
-	 * relation, types techniques — étaient des propriétés OPTIONNELLES dont le
-	 * défaut était la constante de `seeds/corpus.ts` : une route qui les oubliait
-	 * dessinait le graphe du jeu de démonstration sans que rien ne proteste. Ils
-	 * sont désormais EXIGÉS, comme les univers et les domaines ; la route les sert
-	 * tous les cinq depuis la base, et une route qui en oublierait un NE
-	 * COMPILERAIT PLUS. Aucun identifiant, aucun libellé, aucun compteur n'est
-	 * écrit ici. Ce lot NE DÉCLARE PAS `RG-M09-01` tenue : la règle porte sur le
-	 * module entier, pas sur une vue.
+	 * AUCUNE DONNÉE PROPRE (`RG-M09-01`), ET PLUS AUCUN DÉFAUT TIRÉ DU JEU : les
+	 * trois tableaux du graphe étaient optionnels, de défaut la constante de
+	 * `seeds/corpus.ts`, et une route qui les oubliait dessinait le graphe du jeu
+	 * de démonstration. Aucun identifiant, aucun libellé, aucun compteur n'est
+	 * écrit ici.
 	 *
-	 * LE RENDU EST DU SVG DANS LE DOM, jamais un canevas ni WebGL (ADR-008,
-	 * `STACK §4.4`). Chaque nœud est un `<g role="button" tabindex="0">` porteur
-	 * de son nom accessible, et `details#liste-noeuds` restitue le même contenu
-	 * en texte — la matière de `RG-M18-11`, que ce lot NE DÉCLARE PAS TENUE : la
-	 * batterie qui l'éprouve est `pnpm test:a11y`, hors périmètre.
+	 * LE RENDU EST DU SVG DANS LE DOM, jamais un canevas ni WebGL (`ADR-008`).
+	 * Chaque nœud est un `<g role="button" tabindex="0">` porteur de son nom
+	 * accessible, et `details#liste-noeuds` restitue le même contenu en texte.
 	 *
 	 * AUCUNE DISPOSITION N'EST ÉCRITE ICI. La vue portait une table de seize
-	 * positions relevées sur la maquette gelée, INDEXÉE PAR SEIZE IDENTIFIANTS DE
-	 * NOTES DU JEU DE DÉMONSTRATION : une instance qui charge ce jeu — et elle
-	 * seule — recevait une disposition privilégiée que le corpus d'un client
-	 * n'obtenait jamais. La table est partie ; `disposer()` de
-	 * `$lib/graphe/cartographie` place TOUS les corpus de la même façon, et elle
-	 * est déterministe — « deux chargements du même périmètre donnent exactement
-	 * la même carte ». Le sous-graphe, les degrés et les points de rupture en
-	 * viennent aussi.
+	 * positions relevées sur le gel, INDEXÉE PAR SEIZE IDENTIFIANTS DE NOTES DU JEU
+	 * DE DÉMONSTRATION : le jeu descendait dans le produit par la géométrie.
+	 * `disposer()` de `$lib/graphe/cartographie` place tous les corpus de la même
+	 * façon, et elle est déterministe.
 	 *
-	 * SIX ÉTATS — `verif/scenarios/V-19.json`. Deux axes, vecteur complet :
-	 * profil × état. `etat-nominal` est déclaré `identiqueA` `role-admin`, et le
-	 * relevé du gel en montre un TROISIÈME identique : `role-referent`.
+	 * LE SÉLECTEUR DE PÉRIMÈTRE OFFRE « TOUS LES DOMAINES », ET IL LE DOIT : le gel
+	 * l'écrit (`V-19:3072`) mais le conditionne à `data-role="admin"`, si bien que
+	 * l'option manquait alors que le défaut du périmètre EST `global|` — le contrôle
+	 * s'ouvrait sans valeur au-dessus d'une carte qui montrait tout. Elle est rendue
+	 * SANS GARDE DE RÔLE : `RG-M09-02` veut le périmètre RABATTU, jamais un refus, et
+	 * la carte globale d'un référent est déjà celle de ce qu'il a le droit de voir.
 	 *
-	 * LE SÉLECTEUR DE PÉRIMÈTRE OFFRE « TOUS LES DOMAINES », ET IL LE DOIT.
-	 * Le gel l'écrit — `o.value = "global|"` et `o.textContent = "Tous les
-	 * domaines"` (`V-19:3072`) —, mais conditionnée à `data-role="admin"`, que les
-	 * six états du banc ne rendaient jamais. L'option manquait donc, alors que le
-	 * défaut du périmètre EST `global|` : le contrôle s'ouvrait sans valeur
-	 * au-dessus d'une carte qui montrait tout, et rien ne ramenait au corpus
-	 * entier une fois un domaine choisi. Elle est rendue SANS GARDE DE RÔLE, et
-	 * c'est délibéré : le gel refusait le global au non-administrateur par un
-	 * voile, le produit applique `RG-M09-02` — périmètre RABATTU, jamais refus.
-	 * `ouvrirLAcces()` ne sert que les notes lisibles, et la carte globale d'un
-	 * référent est déjà la carte de ce qu'il a le droit de voir.
+	 * `.noeud` EST ICI UN NŒUD DE GRAPHE (`docs/DESIGN.md` §2.H) : le même nom de
+	 * classe désigne un nœud d'ARBORESCENCE dans 33 autres vues, dont le rail de
+	 * cette page même. Les deux règles sont inconciliables et AUCUNE FACTORISATION
+	 * N'EST PERMISE — `.noeud__nom` compris. Le panneau de détail n'est pas
+	 * factorisé avec V-20 pour la même raison de styles en ligne.
 	 *
-	 * `.noeud` EST ICI UN NŒUD DE GRAPHE, ET NULLE PART AILLEURS DANS CETTE
-	 * PAGE — `docs/DESIGN.md` §2.H. Le même nom de classe désigne un nœud
-	 * d'ARBORESCENCE dans 33 autres vues, dont le rail de cette page même, que
-	 * `$lib/coquille/Rail.svelte` rend avec sa définition à lui. Les deux règles
-	 * sont inconciliables, chacune vit dans la feuille de sa vue (P-6.3), et
-	 * AUCUNE FACTORISATION N'EST PERMISE. Il en va de même de `.noeud__nom`.
+	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (`ARB-011`) : la jauge de « Calcul en
+	 * cours » est un INSTANT, jamais un film.
 	 *
-	 * LE PANNEAU DE DÉTAIL N'EST PAS FACTORISÉ AVEC V-20 bien que les deux gels
-	 * l'écrivent mot pour mot : il porte des styles en ligne que P-6.4 n'admet
-	 * que dans un fichier rattaché à une maquette, et le rattachement d'une
-	 * ressource partagée s'écrit à `verif/references/preuve-par-le-gel.json`, en
-	 * écriture humaine seule. Voir l'en-tête de `$lib/graphe/cartographie.ts`.
-	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011) : ni la force dirigée, ni
-	 * le zoom, ni la sélection persistante, ni la recherche dans le graphe. La
-	 * jauge de l'état « Calcul en cours » est un INSTANT — celui que le budget
-	 * d'horloge du banc atteint —, jamais un film.
-	 *
-	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette` et `dialog#palette`
-	 * (divergence mesurée nulle, `docs/releve-vues.md` §4.1) et `div.planche`,
-	 * bloc hors produit (§2.G).
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-19.css`, posé par `node verif/feuilles-de-vue.mjs V-19
-	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 * Le style est dans `src/socle.css` et `src/vues/V-19.css`.
 	 */
 	import type {
 		CleDeTypeDeRelation,
@@ -104,70 +69,40 @@
 	} from '$lib/graphe/cartographie';
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 
-	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
-	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
-	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
-	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	/* Le mot renommable de `M14.7`, lu sur le contexte de coquille : en constante,
+	   le renommer en console ne changeait rien a l'ecran. Repli : « Fiche ». */
 	const motsDuProduit = vocabulaireRendu();
 	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
 
 	/**
-	 * LES CINQ SOURCES DU GRAPHE SONT EXIGÉES, ET C'EST LE LEVIER.
+	 * LES CINQ SOURCES DU GRAPHE SONT EXIGÉES, ET C'EST LE LEVIER : optionnelles,
+	 * leur défaut était la constante de `seeds/corpus.ts`, et seule l'ouverture de
+	 * l'écran sur une base vide le révélait.
 	 *
-	 * Elles étaient optionnelles, de défaut la constante de `seeds/corpus.ts` :
-	 * une route qui en oubliait une servait le jeu de démonstration sans que
-	 * rien ne proteste, et seule l'ouverture de l'écran sur une base vide le
-	 * révélait. Exigées, elles sont gardées par le compilateur —
-	 * `exactOptionalPropertyTypes` et `strict` sont actifs, `svelte-check` est
-	 * dans `pnpm check` : la route qui en oublierait une ne bâtirait plus.
-	 *
-	 * `compte` reste OPTIONNELLE, avec un ÉTAT VIDE pour défaut : aucune route
-	 * ne la passe, le contexte de coquille porte l'identité réelle, et un compte
-	 * de démonstration en défaut serait une identité inventée. `instance` a
-	 * disparu : elle ne servait qu'à donner sa version au pied du rail, que le
-	 * contexte sert déjà depuis `package.json`.
+	 * `compte` reste OPTIONNELLE, avec un ÉTAT VIDE pour défaut : aucune route ne la
+	 * passe, et le contexte de coquille porte l'identité réelle.
 	 */
 	interface Proprietes {
-		/** Le vecteur complet de l'état — profil × état. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Les notes du périmètre, telles que le chargeur les lit. */
 		notes: readonly Note[];
-		/** Les univers du produit, tels que la base les porte. */
 		univers: readonly Univers[];
-		/** Les domaines du produit, tels que la base les porte. */
 		domaines: readonly Domaine[];
-		/**
-		 * L'utilisateur courant. Absente, un compte VIDE — le contexte de coquille
-		 * porte l'identité réelle en application, et rien n'est inventé sans lui.
-		 */
+		/** L'utilisateur courant. Absente, un compte VIDE — rien n'est inventé. */
 		compte?: CompteAffiche | null;
-		/**
-		 * Les relations du corpus, telles que la base les porte.
-		 *
-		 * La vue n'en fabrique aucune : elle les descend au socle commun des
-		 * cartographies, qui en dérive le sous-graphe.
-		 */
+		/** Les relations du corpus. La vue n'en fabrique aucune : elle les descend au
+		    socle commun des cartographies, qui en dérive le sous-graphe. */
 		relations: readonly Relation[];
-		/** Les types de relation et leurs deux libellés, tels que la base les porte. */
 		typesRelation: Record<CleDeTypeDeRelation, LibellesDeRelation>;
-		/** Les types de relation qui portent une dépendance technique. */
 		relationsTechniques: readonly CleDeTypeDeRelation[];
 		/**
 		 * LE PÉRIMÈTRE DEMANDÉ PAR L'ADRESSE — `?perimetre=`, sous la forme même du
-		 * sélecteur du gel : `type|nom`, où le type vaut `univers` ou `domaine`.
+		 * sélecteur du gel : `type|nom`. `RG-M09-05` veut l'état de cartographie
+		 * partageable, quand le gel garde son périmètre dans une clôture
+		 * (`V-19:3089`).
 		 *
-		 * `RG-M09-05` veut l'état de cartographie partageable ; le gel, lui, garde
-		 * son périmètre dans une clôture (`charger()`, `V-19:3089`) et une carte
-		 * réduite ne s'envoie donc pas à un collègue. Le chargeur — seul lecteur de
-		 * `url` — l'extrait, et cette propriété est le chemin par lequel il
-		 * atteint le graphe.
-		 *
-		 * ABSENTE, C'EST TOUT LE CORPUS. Le gel ouvrait sur « Univers Production »,
-		 * un nom du jeu de démonstration que rien ne pose sur une instance réelle :
-		 * la carte s'ouvrait vide, sous un voile qui accusait le périmètre d'être
-		 * sans relation là où il n'existait pas. Les six états déclarés ne bougent
-		 * pas d'un pixel — sur le jeu de semence, les vingt-deux relations touchent
-		 * toutes l'univers Production, et le sous-graphe global est le même.
+		 * ABSENTE, C'EST TOUT LE CORPUS. Le gel ouvrait sur un univers du jeu de
+		 * démonstration : la carte s'ouvrait vide, sous un voile qui accusait le
+		 * périmètre d'être sans relation là où il n'existait pas.
 		 */
 		perimetreDemande?: string | undefined;
 	}
@@ -184,32 +119,23 @@
 		perimetreDemande
 	}: Proprietes = $props();
 
-	/**
-	 * LE COMPTE RENDU QUAND AUCUNE IDENTITÉ N'EST SERVIE — un état VIDE, jamais
-	 * un compte du jeu de démonstration. En application, le contexte de coquille
-	 * l'emporte et cette valeur n'atteint aucun écran.
-	 */
+	/** Aucune identité servie : un compte VIDE, jamais celui du jeu de démonstration. */
 	const COMPTE_VIDE = { nom: '', initiales: '', role: '', domaine: '' } satisfies CompteAffiche;
 	const compteRendu = $derived(compte ?? COMPTE_VIDE);
 
 	const reglage = $derived(vecteur ?? {});
 	const cas = $derived(String(reglage['etat'] ?? 'nominal'));
 
-	/* ── Le graphe ──────────────────────────────────────────────────────────
-	   Le périmètre d'ouverture est TOUT LE CORPUS, comme en V-20 et en carte
-	   mentale. Le gel ouvrait sur « Univers Production » — un univers du jeu de
-	   démonstration : hors du jeu, la carte s'ouvrait sur zéro nœud. LE SÉLECTEUR
-	   POSE L'OPTION GLOBALE, et le gel la dessine : `V-19:3072` écrit la valeur
-	   `global|` et le libellé « Tous les domaines », les mêmes qu'en V-20. Sans
-	   elle, `selectedIndex` valait -1 au-dessus d'une carte qui montrait tout,
-	   et aucun choix ne ramenait au corpus entier. */
+	/* Le périmètre d'ouverture est TOUT LE CORPUS, comme en V-20. Le gel ouvrait sur
+	   un univers du jeu de démonstration : hors du jeu, la carte s'ouvrait sur zéro
+	   nœud. Le sélecteur pose l'option globale, que le gel dessine (`V-19:3072`) ;
+	   sans elle, `selectedIndex` valait -1 au-dessus d'une carte qui montrait tout. */
 	const PERIMETRE_DE_PLANCHE = 'global|';
 
 	/**
-	 * LE PÉRIMÈTRE EFFECTIF — la valeur du sélecteur, découpée. Une valeur que
-	 * l'adresse porterait sans barre verticale, ou avec un type inconnu, retombe
-	 * sur celui de la planche : un périmètre inventé montrerait un graphe vide
-	 * sans jamais dire pourquoi.
+	 * LE PÉRIMÈTRE EFFECTIF — la valeur du sélecteur, découpée. Une valeur sans
+	 * barre verticale, ou d'un type inconnu, retombe sur celle de la planche : un
+	 * périmètre inventé montrerait un graphe vide sans jamais dire pourquoi.
 	 */
 	const perimetre = $derived.by(() => {
 		const brut = perimetreDemande ?? PERIMETRE_DE_PLANCHE;
@@ -226,32 +152,21 @@
 	const types = $derived(typesPresents(graphe));
 
 	/**
-	 * LES UNIVERS DU SÉLECTEUR DE PÉRIMÈTRE — les deux univers déclarés, sans
-	 * l'univers SYSTÈME. `seeds/corpus.ts` en porte trois : « Non classé »,
-	 * marqué `systeme: true`, est la destination de repli d'un domaine qui perd
-	 * son rattachement. Le gel, lui, n'en connaît que deux (`V-19:1710`), et
-	 * aucun domaine n'y est rattaché : l'offrir en périmètre proposerait un
-	 * choix qui ne rend rien. Le filtre est celui du gel, pas une décision.
+	 * LES UNIVERS DU SÉLECTEUR DE PÉRIMÈTRE — sans l'univers SYSTÈME, destination
+	 * de repli d'un domaine qui perd son rattachement : aucun domaine n'y est
+	 * rattaché, et l'offrir proposerait un choix qui ne rend rien. Le filtre est
+	 * celui du gel (`V-19:1710`), pas une décision.
 	 */
 	const UNIVERS_PROPOSES = $derived(univers.filter((u) => !u.systeme));
 
 	/**
 	 * LES PLACES DES NŒUDS — CALCULÉES POUR TOUT CORPUS, ET POUR AUCUN EN
-	 * PARTICULIER.
+	 * PARTICULIER. La vue portait une table de seize positions du gel, indexée par
+	 * les identifiants de seize notes du JEU DE DÉMONSTRATION.
 	 *
-	 * La vue portait ici une table de seize positions relevées sur la maquette
-	 * gelée, indexée par les identifiants de seize notes du JEU DE
-	 * DÉMONSTRATION. Une instance qui charge ce jeu recevait donc la disposition
-	 * du gel, et le corpus d'un client n'y avait jamais droit : le jeu
-	 * descendait dans le produit par la géométrie. `placesDuGraphe()`, qui
-	 * arbitrait entre la table et le calcul, n'a plus rien à arbitrer et a
-	 * disparu avec elle.
-	 *
-	 * `disposer()` est le calque de la fabrique du gel, transcrite constante par
-	 * constante, et elle est DÉTERMINISTE : « deux chargements du même périmètre
-	 * donnent exactement la même carte, ce qui est indispensable pour s'y
-	 * repérer d'une session à l'autre » (`V-19:2561`). Aucun tirage, aucune
-	 * horloge — ce n'est donc pas un comportement au sens d'ARB-011.
+	 * `disposer()` est le calque de la fabrique du gel et elle est DÉTERMINISTE :
+	 * « deux chargements du même périmètre donnent exactement la même carte »
+	 * (`V-19:2561`). Aucun tirage, aucune horloge — ce n'est pas un comportement.
 	 */
 	const places = $derived(disposer(graphe));
 
@@ -259,29 +174,23 @@
 	const positionDe = (id: string): { x: number; y: number } => places.get(id) ?? ORIGINE;
 	const degreDe = (id: string): number => deg.get(id) ?? 0;
 
-	/** Le rayon d'un nœud : proportionnel à ses connexions, plafonné à huit. */
 	const rayon = (id: string): number => 15 + Math.min(degreDe(id), 8) * 2.6;
 
-	/** Le nom porté sous le nœud, tronqué au-delà de 26 caractères. */
 	const nomCourt = (titre: string): string =>
 		titre.length > 26 ? `${titre.slice(0, 25)}…` : titre;
 
-	/** Le nom accessible d'un nœud : titre, type, connexions, rupture. */
 	const libelleDuNoeud = (id: string, note: Note): string =>
 		`${note.titre}, ${typeDe(note).nom}, ${degreDe(id)} ${accord(degreDe(id), 'connexion')}` +
 		(ruptures.has(id) ? ', point de rupture' : '');
 
-	/** La ligne d'alternative textuelle d'un nœud, sans ses relations. */
 	const ligneAlternative = (id: string, note: Note): string =>
 		` — ${typeDe(note).nom}, ${note.domaine}, ${degreDe(id)} ${accord(degreDe(id), 'connexion')}` +
 		(ruptures.has(id) ? ', point de rupture' : '') +
 		'.';
 
-	/* ── L'avancement du calcul de disposition ──────────────────────────────
-	   Le gel remplit la jauge par pas de 7 % toutes les 90 ms (`V-19:3008`). Le
-	   banc règle la planche à t = AVANCE_CHARGEMENT_MS, puis avance de
-	   AVANCE_ETAT_MS : onze pas sont dus, la jauge est à 77 %. C'est un état
-	   figé, jamais une animation — ARB-011. */
+	/* L'avancement du calcul de disposition : le gel remplit la jauge par pas de
+	   7 % toutes les 90 ms (`V-19:3008`), et onze pas sont dus au moment mesuré.
+	   C'est un état figé, jamais une animation. */
 	const AVANCEMENT = 77;
 
 	/** Les cinq clés de lecture du graphe, dans l'ordre du gel. */
@@ -293,18 +202,16 @@
 		['Trait pointillé', 'lien documentaire']
 	];
 
-	/* ── CE QUI MANQUE, ET LE GESTE QUI DÉBLOQUE ────────────────────────────
-	   Le voile n'avait qu'une phrase pour un graphe vide — « Ouvrez une fiche et
-	   ajoutez-y une relation » —, et elle était FAUSSE sur l'instance neuve : il
-	   n'y a ni fiche à ouvrir, ni domaine où la ranger, et le seul bouton offert
-	   sortait désactivé, sans motif. Quatre manques, quatre phrases, et chacune
-	   nomme l'adresse qui l'ouvre. */
+	/* CE QUI MANQUE, ET LE GESTE QUI DÉBLOQUE. Le voile n'avait qu'une phrase pour
+	   un graphe vide — « Ouvrez une fiche et ajoutez-y une relation » —, FAUSSE sur
+	   l'instance neuve : il n'y a ni fiche à ouvrir, ni domaine où la ranger, et le
+	   seul bouton offert sortait désactivé, sans motif. */
 	type Manque = 'univers' | 'domaine' | 'note' | 'relation' | 'perimetre';
 
 	/**
-	 * L'IDENTITÉ RÉELLE, POUR SAVOIR À QUI ON PARLE — le motif de `V-07`. La
-	 * console n'est ouverte qu'à l'administrateur : ne lui promettre l'adresse
-	 * qu'à lui est ce qui distingue une issue d'une impasse.
+	 * L'IDENTITÉ RÉELLE, POUR SAVOIR À QUI ON PARLE : la console n'est ouverte qu'à
+	 * l'administrateur, et ne lui promettre l'adresse qu'à lui est ce qui distingue
+	 * une issue d'une impasse.
 	 */
 	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
 	const administrateur = $derived(identite?.administrateur ?? false);
@@ -327,8 +234,8 @@
 </script>
 
 <!--
-	Le contour d'un nœud — le calque de `forme()` du gel. La couleur est un
-	attribut de présentation SVG du gel, jamais une déclaration de style.
+	Le contour d'un nœud — le calque de `forme()` du gel. La couleur est un attribut
+	de présentation SVG du gel, jamais une déclaration de style.
 -->
 {#snippet contour(f: Contour, couleur: string)}{#if f.balise === 'circle'}<circle
 			r={f.r}

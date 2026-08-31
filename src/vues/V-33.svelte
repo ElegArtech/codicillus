@@ -2,98 +2,35 @@
 	/**
 	 * V-33 — Console · Configuration. Route `/console/configuration`.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * CE QUE LA PLANCHE CHOISIT, ET CE QU'ELLE NE CHOISIT PAS
+	 * Les quatre positions de planche ne changent QUE LES DEUX SEUILS DE FRAÎCHEUR
+	 * (`V-33:3226-3231`) ; tout le reste de l'écran — validation, aperçu d'impact,
+	 * aperçu de vocabulaire, pied de page — en DÉCOULE.
 	 *
-	 * Les quatre états ne changent QUE LES DEUX SEUILS DE FRAÎCHEUR. Le gel
-	 * l'écrit en une ligne (`V-33:3226-3231`) : le gestionnaire de la planche pose
-	 * `#c-frais` et `#c-vieil`, puis rappelle `surSaisie()`. Tout le reste de
-	 * l'écran — validation, aperçu d'impact, aperçu de vocabulaire, état du
-	 * pied de page — en DÉCOULE. Aucun état n'est un écran séparé : ce sont
-	 * quatre entrées d'une même fonction, et cette vue la reproduit.
+	 * `actuel` N'EST PAS UN RÉGLAGE D'ESSAI : le gel l'étiquette « 90 / 180 · en
+	 * vigueur » (`V-33:1427`), c'est LA CONFIGURATION DE L'INSTANCE. L'écrire en
+	 * littéral en ferait un second jeu de seuils — `ADR-005` interdit « toute
+	 * duplication des seuils sous forme de constante littérale ailleurs que dans la
+	 * configuration lue par l'implémentation unique ». Il en DÉRIVE :
+	 * `SEUILS_PAR_DEFAUT` (`src/lib/fraicheur.ts`) → propriété `config` →
+	 * `SEUILS_DE_PLANCHE.actuel`.
 	 *
-	 * LES QUATRE COUPLES DE SEUILS SONT DES DONNÉES DE MAQUETTE, pas de
-	 * corpus : `{ actuel: [90, 180], severe: [30, 60], large: [120, 240],
-	 * invalide: [120, 90] }` (`V-33:3228`) — trois d'entre eux, du moins. Les
-	 * couples `severe`, `large` et `invalide` sont des réglages HYPOTHÉTIQUES,
-	 * choisis pour la revue : littéraux du gel, recopiés tels quels, la même
-	 * situation que les trois adresses de planche de V-26.
-	 *
-	 * `actuel` N'EN EST PAS UN. Le gel l'étiquette « 90 / 180 · en vigueur »
-	 * (`V-33:1427`) : ce n'est pas un quatrième réglage d'essai qui vaudrait
-	 * 90 / 180 par coïncidence, c'est LA CONFIGURATION DE L'INSTANCE, celle que
-	 * `CONFIG` porte. L'écrire en littéral en faisait un second jeu de seuils
-	 * que rien ne liait au premier — ADR-005 interdit « toute duplication des
-	 * seuils sous forme de constante littérale ailleurs que dans la
-	 * configuration lue par l'implémentation unique ». Il en DÉRIVE désormais,
-	 * et la chaîne de dérivation est écrite en un seul sens :
-	 *
-	 *   `SEUILS_PAR_DEFAUT` (`src/lib/fraicheur.ts`, l'implémentation unique)
-	 *      → la configuration de l'instance, reçue en propriété `config`
-	 *         (EXIGÉE — plus aucun repli sur le jeu de démonstration)
-	 *         → `SEUILS_DE_PLANCHE.actuel` (ici, la position « en vigueur »)
-	 *
-	 * Les valeurs rendues sont inchangées : 90 et 180 des deux côtés.
-	 *
-	 * LE FORMULAIRE EST NOURRI PAR LA PROPRIÉTÉ `config` — les sept
-	 * réglages, aucun en dur : seuils, versions conservées, portail
-	 * d'assistance, libellé du concept, taille de pièce jointe, durée de
-	 * session. `enregistre` du gel est cette même valeur (`V-33:2962`).
-	 * La propriété est EXIGÉE : elle retombait sur `CONFIG` du jeu de
-	 * démonstration, et une route qui l'oubliait servait ses réglages comme
-	 * ceux de l'instance.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * L'APERÇU D'IMPACT — UNE SEULE DÉFINITION DE LA FRAÎCHEUR (P-01)
-	 *
-	 * `niveauFraicheur()` de `$lib/fraicheur` EST `window.niveauPour`
-	 * (`V-33:2667`), au caractère près, et prend ses seuils en paramètre. Rien
-	 * n'est recalculé ici : `repartitionPour()` et `impactSeuils()` sont les
-	 * calques de `V-33:2687` et `V-33:2674`, et ils l'appellent. ADR-005
-	 * interdit une seconde définition ; `docs/releve-vues.md` §9 R-9 rappelle
-	 * qu'aucun lot ne doit en écrire une troisième.
-	 *
-	 * `barreRepartition()` est le calque de `V-33:2897` — la barre de
-	 * répartition de tout le produit. Les deux barres de la comparaison sont
-	 * construites sur des notes FACTICES, et c'est le gel qui le fait
+	 * UNE SEULE DÉFINITION DE LA FRAÎCHEUR : `niveauFraicheur()` de `$lib/fraicheur`
+	 * EST `window.niveauPour` (`V-33:2667`) au caractère près, et prend ses seuils
+	 * en paramètre. `repartitionPour()` et `impactSeuils()` sont les calques de
+	 * `V-33:2687` et `V-33:2674`, et ils l'appellent. Les deux barres de la
+	 * comparaison sont construites sur des notes FACTICES, comme au gel
 	 * (`V-33:3085-3089`) : il ne compte que le niveau, jamais la note.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * AUCUN COMPORTEMENT (ARB-011)
+	 * `autofocus` n'est posé nulle part : le gel ne focalise rien au chargement.
 	 *
-	 * Le gel attache `input`, `change` et `click` à sept champs et trois
-	 * boutons ; tous appellent `surSaisie()`, `ecrire()` ou `notifier()`. Le
-	 * squelette rend l'ÉTAT — les valeurs, les messages d'erreur, l'aperçu, le
-	 * pied — et jamais la transition. Aucune minuterie n'est écrite.
+	 * Coquille de forme abrégée, enveloppe `div.console`. V-33 n'a NI panneau
+	 * `tiroir-form`, NI `data-form`, NI dialogue de suppression, NI tableau de
+	 * gestion, NI action en tête de section. `div.app` ne porte au gel que
+	 * `data-rail` et `data-role` : aucun attribut de données n'est transmis.
 	 *
-	 * `autofocus` N'EST POSÉ NULLE PART : le gel ne focalise rien au
-	 * chargement de V-33, et le banc floute de toute façon l'élément actif hors
-	 * dialogue (CLAUDE.md §6, P-4).
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LA COQUILLE ET LE MOTIF COMMUN
-	 *
-	 * Forme ABRÉGÉE (ARB-021), enveloppe `div.console` (ARB-023), treize
-	 * classes du motif commun portées par `$lib/console/` — écrites par P-2,
-	 * consommées ici (R-2). V-33 n'a NI panneau `tiroir-form`, NI `data-form`,
-	 * NI dialogue de suppression, NI tableau de gestion, NI action en tête de
-	 * section : `TeteDeSection` est appelée sans fragment d'action.
-	 *
-	 * `div.app` ne porte au gel que `data-rail` et `data-role` (`V-33:1075`) :
-	 * aucun attribut de données n'est transmis.
-	 *
-	 * L'hôte de palette de V-09 n'est pas rendu — mesuré sans incidence sur
-	 * trente maquettes (`docs/releve-vues.md` §4.1). `div.notifs` est vide.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * CE QUE CE COMPOSANT NE PROUVE PAS. Il rend un ÉTAT DE MAQUETTE. Ni
-	 * `P-09`, ni `P-02`, ni `RG-M15-03` ne sont déclarées tenues par ce lot.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
-	 * et de `src/vues/V-33.css`, extraite du gel. Cette feuille n'en est plus la
-	 * copie à l'octet : les règles de `.repart` y suivent les `span` de
-	 * l'aperçu d'impact (voir `barreRepartition` plus bas). Le rendu, lui, est
-	 * inchangé. Les `style=` reproduits figurent tous à l'ensemble clos du gel.
+	 * Le style est dans `src/socle.css` et `src/vues/V-33.css`. Cette feuille n'est
+	 * plus la copie à l'octet du gel : les règles de `.repart` y suivent les `span`
+	 * de l'aperçu d'impact (voir `barreRepartition`). Le rendu est inchangé.
 	 */
 	import type { Configuration, NiveauFraicheur, Note } from '../../seeds/corpus';
 	import { niveauFraicheur } from '$lib/fraicheur';
@@ -101,10 +38,8 @@
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 
-	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
-	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
-	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
-	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	/* Le mot renommable de `M14.7`, lu sur le contexte de coquille : en constante,
+	   le renommer en console ne changeait rien a l'ecran. Repli : « Fiche ». */
 	const motsDuProduit = vocabulaireRendu();
 	const motFiche = $derived(motsDuProduit.fiche);
 	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
@@ -112,38 +47,29 @@
 	const motFichePlurielMinuscule = $derived(motsDuProduit.fichesMin);
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur?: Record<string, string | boolean> | null;
-		/** Les notes de l'instance, servies par le chargeur. */
 		notes: readonly Note[];
 		/**
-		 * LES SEPT RÉGLAGES DE L'INSTANCE, EXIGÉS.
-		 *
-		 * La propriété était facultative et retombait sur `CONFIG` de
-		 * `seeds/corpus.ts` : une route qui l'oubliait servait les seuils, le
-		 * portail et le plafond de versions du jeu de démonstration comme les
-		 * réglages en vigueur, sans que rien ne proteste. `/console/configuration`
-		 * les passe, et il n'y a pas d'autre chargeur : exigée, une route qui
-		 * l'oublierait ne compilerait plus.
+		 * LES SEPT RÉGLAGES DE L'INSTANCE, EXIGÉS. La propriété retombait sur `CONFIG`
+		 * de `seeds/corpus.ts` : une route qui l'oubliait servait les seuils, le
+		 * portail et le plafond de versions du jeu de démonstration comme les réglages
+		 * en vigueur.
 		 */
 		config: Configuration;
 	}
 
 	/*
 	 * LE RAIL, LA BARRE ET LA VERSION NE PASSENT PLUS PAR ICI. Cette vue portait
-	 * `univers`, `domaines`, `compte` et `instance` sans jamais les lire : elle
-	 * ne faisait que les remettre à `CoquilleDeConsole`, qui retombait sur le jeu
-	 * de démonstration. La coquille lit désormais le contexte d'identité, seule
-	 * source, et les quatre propriétés ont disparu des deux côtés.
+	 * `univers`, `domaines`, `compte` et `instance` sans jamais les lire : elle ne
+	 * faisait que les remettre à `CoquilleDeConsole`, qui retombait sur le jeu de
+	 * démonstration.
 	 */
 	const { vecteur, notes, config }: Proprietes = $props();
 
 	/**
 	 * LES QUATRE POSITIONS DE LA PLANCHE. Les trois dernières sont des réglages
-	 * hypothétiques, littéral du gel (`V-33:3228`), recopié et non fabriqué :
-	 * aucune table du corpus ne les porte. La première, `actuel`, est au
-	 * contraire la position « en vigueur » — elle DÉRIVE de `config`, et
-	 * n'est pas un second jeu de seuils (P-01, ADR-005 ; voir l'en-tête).
+	 * hypothétiques, littéral du gel (`V-33:3228`) : aucune table ne les porte. La
+	 * première, `actuel`, DÉRIVE de `config` — voir l'en-tête.
 	 */
 	const SEUILS_DE_PLANCHE: Record<string, readonly [number, number]> = $derived({
 		actuel: [config.seuilFrais, config.seuilVieillissant],
@@ -153,10 +79,8 @@
 	});
 
 	/**
-	 * LES DURÉES DE SESSION PROPOSÉES — littéral du gel (`var DUREES`,
-	 * `V-33:2963`). `config.dureeSession` donne la valeur retenue, jamais la
-	 * liste des choix : le corpus ne la porte pas, et la fabriquer serait
-	 * inventer une définition que le gel n'a pas.
+	 * LES DURÉES DE SESSION PROPOSÉES — littéral du gel (`V-33:2963`).
+	 * `config.dureeSession` donne la valeur retenue, jamais la liste des choix.
 	 */
 	const DUREES = [30, 60, 120, 240, 480] as const;
 
@@ -166,9 +90,8 @@
 	const seuilFrais = $derived(seuils[0]);
 	const seuilVieillissant = $derived(seuils[1]);
 
-	/* ── Les fabriques du gel, portées ligne à ligne ─────────────────────────
-	   `ECART-020` É-3 : porter le calque exact de la fabrique du gel, et
-	   l'appeler avec les mêmes valeurs. */
+	/* Les fabriques du gel, portées ligne à ligne, et appelées avec les mêmes
+	   valeurs (`ECART-020` É-3). */
 
 	interface Repartition {
 		frais: number;
@@ -234,21 +157,15 @@
 
 	/* ── L'état rendu ────────────────────────────────────────────────────── */
 
-	/** `valider()` (`V-33:3003`) — seul le second seuil peut être en faute ici :
-	 *  les quatre positions donnent toujours un premier seuil ≥ 1, un portail
-	 *  valide et un libellé non vide. Le message est celui du gel, au mot près.
+	/** `valider()` (`V-33:3003`) — seul le second seuil peut être en faute ici. Le
+	 *  message est celui du gel, au mot près.
 	 *
 	 *  IL A UN JUMEAU SERVEUR, ET LES DEUX ÉCRIVENT DANS LE MÊME NŒUD :
-	 *  `donnees/administration.ts` (`messageSeuilNonCroissant`) compose la même
+	 *  `messageSeuilNonCroissant` de `donnees/administration.ts` compose la même
 	 *  phrase, et `routes/console/configuration/cablage.ts` la repeint dans
-	 *  `#erreur-vieil-txt` au retour d'« Enregistrer ». Les deux s'accordent, et
-	 *  toute retouche de l'un se fait sur l'autre.
-	 *
-	 *  ILS DOIVENT ÊTRE IDENTIQUES À L'OCTET, ET ILS NE L'ÉTAIENT PAS : celui-ci
-	 *  portait l'apostrophe droite, le jumeau serveur l'apostrophe
-	 *  typographique. Le même nœud changeait donc de caractère entre l'aperçu
-	 *  immédiat et le retour d'« Enregistrer ». C'est l'apostrophe typographique
-	 *  qui l'emporte — celle que tout le reste du produit écrit. */
+	 *  `#erreur-vieil-txt` au retour d'« Enregistrer ». Ils doivent être IDENTIQUES
+	 *  À L'OCTET — apostrophe typographique comprise, celle que tout le reste du
+	 *  produit écrit. */
 	const erreurVieil = $derived(
 		seuilVieillissant <= seuilFrais
 			? `Doit dépasser le seuil frais (${seuilFrais} ${accord(seuilFrais, 'jour')}). En l’état, aucune note ne serait ` +
@@ -262,15 +179,10 @@
 		seuilFrais !== config.seuilFrais || seuilVieillissant !== config.seuilVieillissant
 	);
 
-	/** `rendreImpact()` (`V-33:3032`). L'aperçu ne s'affiche que si les deux
-	 *  seuils forment une progression valable.
-	 *
-	 *  L'ARTICLE « les » A DISPARU DE « Effet sur les N notes de la base », et
-	 *  c'est la même mesure qu'à `V-31:189` : un article ne s'accorde pas seul
-	 *  devant un chiffre. `avant.total` compte les notes de la base entière —
-	 *  il vaut 0 sur une instance neuve, où l'écran rendait « Effet sur les 0
-	 *  notes », et 1 dès la première note, où « la 1 note » n'est pas du
-	 *  français. Le compte se suffit. */
+	/** `rendreImpact()` (`V-33:3032`). L'aperçu ne s'affiche que si les deux seuils
+	 *  forment une progression valable. L'ARTICLE « les » A DISPARU de « Effet sur
+	 *  les N notes de la base » : un article ne s'accorde pas seul devant un
+	 *  chiffre, et `avant.total` vaut 0 sur une instance neuve. */
 	const avant = $derived(repartitionPour(config.seuilFrais, config.seuilVieillissant));
 	const apres = $derived(repartitionPour(seuilFrais, seuilVieillissant));
 	const mouvements = $derived(impactSeuils(seuilFrais, seuilVieillissant));
@@ -307,10 +219,9 @@
 			.filter((b) => b.m.length)
 	);
 
-	/* `pluriel()` (`V-33:3136`) et `rendreVocabulaire()` (`V-33:3143`) ne sont
-	   plus portés ici : ils sont dans `$lib/vocabulaire`, avec les quatre formes
-	   du mot, parce que TOUT le produit en dépend et non cette seule vue
-	   (`ARB-043` §4). Le calque du gel est inchangé, il a seulement déménagé. */
+	/* `pluriel()` (`V-33:3136`) et `rendreVocabulaire()` (`V-33:3143`) sont dans
+	   `$lib/vocabulaire`, avec les quatre formes du mot, parce que TOUT le produit
+	   en dépend et non cette seule vue (`ARB-043` §4). */
 	const vocabulaire = $derived([
 		['Console', `Types de ${motFichePlurielMinuscule}`],
 		['Éditeur', `Type de ${motFicheMinuscule} — ajoute des propriétés structurées`],
@@ -319,20 +230,10 @@
 	]);
 
 	/**
-	 * L'AIDE DU CHAMP « nom de l'organisation » — elle ne nomme AUCUN écran.
-	 *
-	 * ELLE EN NOMMAIT DEUX, ET C'ÉTAIT UNE PROMESSE QUE LE PRODUIT NE TENAIT PAS.
-	 * Elle annonçait que les pieds de page et l'écran de connexion signeraient
-	 * « Codicillus · le nom saisi » ; or aucune vue ne lit encore ce réglage — les
-	 * cinq pieds publics portent leur signature EN DUR, et la remplacer appartient
-	 * au lot des écrans publics, pas à celui de la console. Une aide qui décrit un
-	 * effet inexistant est un mensonge d'interface, et le rendre vrai ailleurs ne
-	 * relève pas de cet écran-ci.
-	 *
-	 * CE QU'ELLE DIT DÉSORMAIS EST VRAI SUR N'IMPORTE QUELLE BRANCHE : le nom du
-	 * LOGICIEL est « Codicillus » et ne bouge jamais ; ce champ porte celui de
-	 * l'ORGANISATION, et le laisser vide n'est pas une panne mais l'état d'une
-	 * installation neuve. Aucun des deux énoncés ne dépend d'un écran.
+	 * L'AIDE DU CHAMP « nom de l'organisation » — elle ne nomme AUCUN écran. Elle en
+	 * nommait deux, et c'était une promesse que le produit ne tenait pas : aucune
+	 * vue ne lit encore ce réglage, les cinq pieds publics portent leur signature EN
+	 * DUR. Ce qu'elle dit désormais est vrai sur n'importe quelle branche.
 	 */
 	const aideOrganisation = $derived(
 		config.nomOrganisation === ''
@@ -355,34 +256,26 @@
 </script>
 
 <!--
-	Le pictogramme d'erreur de champ, identique aux trois `.champ__erreur` du
-	gel. `flex:none;margin-top:1px` figure à l'ensemble clos (ARB-016).
+	Le pictogramme d'erreur de champ, identique aux trois `.champ__erreur` du gel.
+	`flex:none;margin-top:1px` figure à l'ensemble clos (ARB-016).
 -->
 <!-- prettier-ignore -->
 {#snippet marqueurDErreur()}<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" style="flex:none;margin-top:1px"><path d="M8 4.5v4M8 11.2v.3"/><circle cx="8" cy="8" r="6.2"/></svg>{/snippet}
 
 <!--
-	La barre de répartition du produit, et sa légende chiffrée. Les gardes de
-	formatage encadrent tout ce dont le texte porte un nom accessible.
+	La barre de répartition du produit, et sa légende chiffrée.
 
-	LA BRANCHE VIDE EST CELLE DU GEL, ET ELLE EST LA PREMIÈRE CHOSE RENDUE.
-	`mockups/V-33-console-configuration.html:2902-2908` : quand l'ensemble
-	mesuré est vide — `!r.total` —, la fabrique du gel ne rend NI barre NI
-	légende, mais un seul nœud, `div.zone-etat__txt` de marge nulle, portant
-	« Aucune note à mesurer. ». Le corpus natif de V-33 ne l'exerce jamais :
-	`verif:maquette` était vert sans que ce chemin soit parcouru une seule fois
-	(CLAUDE.md §6, P-5). C'est `pnpm test:vide` — corpus vierge — qui l'a levé.
+	LA BRANCHE VIDE EST CELLE DU GEL, ET ELLE EST LA PREMIÈRE CHOSE RENDUE :
+	`mockups/V-33-console-configuration.html:2902-2908` — quand l'ensemble mesuré
+	est vide, la fabrique ne rend NI barre NI légende, mais un seul
+	`div.zone-etat__txt` portant « Aucune note à mesurer. ». Le corpus natif de V-33
+	ne l'exerce jamais ; c'est le corpus vierge qui l'a levé.
 
 	ICI LES SEGMENTS SONT DES `span`, ET NON DES BOUTONS. Ailleurs (V-07, V-10,
 	V-11) une part de barre ouvre la liste filtrée sur son niveau ; ces deux
-	barres-là ne le peuvent pas. « Avec ces seuils » compte selon des seuils
-	SAISIS, pas encore enregistrés : aucune liste ne sait reproduire ce filtre,
-	le serveur ne connaît que la configuration en vigueur. Et rendre sa jumelle
-	« Actuellement » cliquable seule ferait d'une comparaison deux objets de
-	nature différente. Un bouton dessiné est un geste promis : on ne dessine donc
-	pas de bouton. Le gel fait le même choix — il appelle sa fabrique sans
-	`surPart` (`V-33:3084`), les segments y étaient inertes. La barre reste ce
-	qu'annonce son rôle d'image, une illustration, avec son nom accessible.
+	barres-là ne le peuvent pas — « Avec ces seuils » compte selon des seuils
+	SAISIS, que le serveur ne connaît pas. Le gel fait le même choix : il appelle sa
+	fabrique sans `surPart` (`V-33:3084`).
 -->
 <!-- prettier-ignore -->
 {#snippet barreRepartition(r: Repartition, sansLegende: boolean)}{#if !r.total}<div class="zone-etat__txt" style="margin:0">Aucune note à mesurer.</div>{:else}<div class="repart" role="img" aria-label={libelleDeBarre(r)}
@@ -398,28 +291,16 @@
 			description="Les réglages qui pilotent le comportement du produit. Ils prennent effet immédiatement, pour tout le monde."
 		/>
 
-		<!-- ============ Organisation ============
-			LE HUITIÈME RÉGLAGE, ET LE GEL NE LE DESSINE PAS.
-
+		<!-- Organisation — LE HUITIÈME RÉGLAGE, ET LE GEL NE LE DESSINE PAS.
 			Huit vues écrivaient « Direction technique » en dur, dont les cinq pieds
-			publics et l'écran de connexion : le segment de marché du cadrage soudé
-			dans une signature de produit, que toute autre organisation lisait comme
-			un fait sur SON instance. La clé `nom_organisation` et son canal existent
-			depuis le lot précédent ; c'est ici que l'administrateur la règle, et
-			sans ce champ le paramètre n'était réglable par aucun écran.
-
-			VIDE EST L'ÉTAT NORMAL D'UNE INSTALLATION NEUVE, pas une panne. Rien n'est
-			donc à valider — un nom d'organisation n'a pas de forme.
-			AUCUN BLOC D'ERREUR N'EST DESSINÉ : les sept autres en portent un parce
-			que l'action sait les refuser, et le peintre les remplit. Un bloc que
-			rien ne peut peindre serait un nœud mort de plus.
-
-			NI CE SOUS-TITRE NI L'AIDE NE NOMMENT D'ÉCRAN, et c'est délibéré : à ce
-			jour AUCUNE vue ne lit ce réglage — les cinq pieds publics portent
-			toujours leur signature en dur. Écrire ici « les pieds signeront … »
-			serait promettre au nom d'un autre écran ; l'écran de réglage dit ce
-			qu'il règle, pas ce que d'autres en feront.
-		-->
+			publics : le segment de marché du cadrage soudé dans une signature de
+			produit. Sans ce champ, le paramètre n'était réglable par aucun écran.
+			VIDE EST L'ÉTAT NORMAL D'UNE INSTALLATION NEUVE : rien n'est à valider, un nom
+			d'organisation n'a pas de forme, et AUCUN BLOC D'ERREUR N'EST DESSINÉ — les
+			sept autres en portent un parce que l'action sait les refuser.
+			NI CE SOUS-TITRE NI L'AIDE NE NOMMENT D'ÉCRAN : à ce jour aucune vue ne lit ce
+			réglage, et l'écran de réglage dit ce qu'il règle, pas ce que d'autres en
+			feront. -->
 		<!-- prettier-ignore -->
 		<section class="groupe"
 			><div class="groupe__tete"
