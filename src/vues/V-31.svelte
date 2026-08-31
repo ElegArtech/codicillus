@@ -100,12 +100,17 @@
 	}
 
 	/**
-	 * Le nombre de notes créées à partir d'un squelette — OU SON ABSENCE.
-	 * `Template.utilisations` est facultatif et LA BASE NE LE PORTE PAS : aucune
-	 * colonne de `notes` ne rattache une note au template qui l'a amorcée. Un repli à
-	 * zéro afficherait « 0 note » partout, et « 0 » n'est pas « indisponible » : c'est
-	 * le zéro muet que `RG-M01-01` vise. `null` DIT L'ABSENCE, que le rendu montre par
-	 * « — » ; la lacune est recensée dans `MESURES_DE_CONSOLE_SANS_CONTREPARTIE`.
+	 * Le nombre de notes parties d'un squelette — OU SON ABSENCE.
+	 *
+	 * LA BASE LE PORTE DÉSORMAIS : la migration `011` a posé `notes.template_id`, une
+	 * trace d'origine que `lireTemplates()` compte par jointure. Zéro est donc un
+	 * RÉSULTAT — un squelette dont personne n'est encore parti —, et l'entrée du
+	 * recensement `MESURES_DE_CONSOLE_SANS_CONTREPARTIE` est retirée.
+	 *
+	 * `null` RESTE LA RÉPONSE À L'ABSENCE, et le repli n'est pas mort : `Template` est
+	 * un type partagé dont les variantes réduites du jeu ne portent pas le champ. Un
+	 * repli à zéro afficherait « 0 note » là où l'on ne sait rien, et « 0 » n'est pas
+	 * « indisponible » — c'est le zéro muet que `RG-M01-01` vise.
 	 */
 	function utilisations(t: Template): number | null {
 		return t.utilisations ?? null;
