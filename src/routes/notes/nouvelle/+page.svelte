@@ -1,58 +1,21 @@
 <script lang="ts">
 	/**
-	 * `/notes/nouvelle` — V-17 Éditeur d'une note, création.
+	 * `/notes/nouvelle` — V-17 Éditeur d'une note, création. Cinq propriétés viennent
+	 * de la BASE — corpus lisible, types de note, types de fiche et gabarits, tous
+	 * administrables (M14) donc propres à l'instance.
 	 *
-	 * La vue ne change pas : elle reçoit ses propriétés, et cinq d'entre elles
-	 * viennent de la BASE — le corpus lisible par l'appelant, les types de note,
-	 * les types de fiche et les gabarits, tous administrables (M14) donc propres
-	 * à l'instance.
+	 * L'ENVELOPPE DE FORMULAIRE NE PÈSE AUCUN PIXEL : `display: contents` retire
+	 * l'élément de la génération de boîtes, et ses enfants se disposent comme s'il
+	 * n'était pas là.
 	 *
-	 * LE BANC NE PASSE JAMAIS PAR ICI : il rend les composants par le mode de
-	 * conception. Rien de ce fichier n'entre dans son verdict, et les 409 couples
-	 * ne peuvent pas bouger de son fait. C'est le fondement d'`ARB-063`, et c'est
-	 * pourquoi le câblage du formulaire est écrit ici plutôt qu'en `src/vues/`.
+	 * LE DOMAINE ET LE DOSSIER VIENNENT DE L'ADRESSE, ET SONT LUS PAR LA VUE :
+	 * `compte.domaine` commande le domaine pré-choisi ET l'arborescence du choix de
+	 * dossier, et `dossierDeDepart` décide quel bouton radio est coché — c'est la vue
+	 * qui rend l'arborescence, et la valeur porte la forme AFFICHÉE du chemin, la
+	 * seule que ce cochage sache comparer.
 	 *
-	 * ═════════════════════════════════════════════════════════════════════════
-	 * L'ENVELOPPE DE FORMULAIRE NE PÈSE AUCUN PIXEL
-	 *
-	 * `display: contents` retire l'élément de la génération de boîtes : il ne
-	 * porte ni marge, ni remplissage, ni contexte de formatage, et ses enfants
-	 * se disposent comme s'il n'était pas là. Le rendu est celui d'avant, à
-	 * l'octet — et le banc, qui ne traverse pas ce fichier, n'a de toute façon
-	 * pas à en juger.
-	 *
-	 * ═════════════════════════════════════════════════════════════════════════
-	 * LE DOMAINE VIENT DE L'ADRESSE, ET IL COMMANDE L'ARBORESCENCE
-	 *
-	 * `docs/routes.md:287` prévoit un paramètre `domaine` sur cette adresse. Il
-	 * est désormais honoré, et il l'est PAR LA VUE plutôt qu'à côté d'elle :
-	 * `compte.domaine` commande le domaine pré-choisi d'une note vierge
-	 * (`V-17:3537`) ET l'arborescence du choix de dossier qui s'en déduit. Le
-	 * porter par cette propriété est donc le seul moyen que la vue offre — et
-	 * elle l'offre : `compte` est optionnelle depuis `T-042`, son défaut est la
-	 * constante du jeu, et le mode de conception ne la passe pas.
-	 *
-	 * ═════════════════════════════════════════════════════════════════════════
-	 * LE DOSSIER VIENT DE L'ADRESSE, ET IL COCHE SON BOUTON RADIO
-	 *
-	 * `docs/routes.md:288` prévoit `?dossier=`, et le brief de V-13 promet une
-	 * « nouvelle note DANS CE DOSSIER ». Le paramètre était émis par personne et
-	 * lu par personne : les deux gestes de la page d'un dossier ouvraient
-	 * l'éditeur sur le bon DOMAINE et rien de plus, à charge pour l'utilisateur
-	 * de retrouver dans l'arborescence le dossier d'où il venait de cliquer.
-	 *
-	 * Il est désormais lu, et il l'est PAR LA VUE — `dossierDeDepart` —, parce
-	 * que c'est elle qui rend l'arborescence et décide quel bouton radio est
-	 * coché. La valeur porte la forme AFFICHÉE du chemin, la seule que ce
-	 * cochage sache comparer.
-	 *
-	 * ELLE EST VÉRIFIÉE AVANT D'ÊTRE SERVIE. Un chemin qui ne désigne aucun
-	 * dossier du domaine — lien périmé, dossier renommé — est ignoré en silence :
-	 * le formulaire s'ouvre, rien n'est coché, aucune erreur. Voir
-	 * `dossierDeLArborescence()`.
-	 *
-	 * Les deux autres paramètres de `docs/routes.md:287-288` — titre et
-	 * template — sont lus plus bas et par le câblage du choix de départ.
+	 * `?dossier=` EST VÉRIFIÉ AVANT D'ÊTRE SERVI : un chemin qui ne désigne aucun
+	 * dossier du domaine — lien périmé, dossier renommé — est ignoré en silence.
 	 */
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
@@ -138,10 +101,10 @@
 	let formulaire: HTMLFormElement;
 
 	/**
-	 * LE REFUS D'ENREGISTREMENT SE VOIT — mesuré muet le 21/08/2026.
-	 * Créer sans choisir de dossier renvoyait `400 { motif: 'dossier manquant' }`
-	 * et l'écran ne disait rien : ni message, ni témoin, ni foyer. Les deux blocs
-	 * du gel — `#erreur-titre`, `#erreur-dossier` — existaient depuis le début.
+	 * LE REFUS D'ENREGISTREMENT SE VOIT — il était muet. Créer sans choisir de
+	 * dossier renvoyait `400 { motif: 'dossier manquant' }` et l'écran ne disait
+	 * rien : ni message, ni témoin, ni foyer. Les deux blocs du gel —
+	 * `#erreur-titre`, `#erreur-dossier` — existaient depuis le début.
 	 */
 	$effect(() => {
 		if (formulaire === undefined) return;
@@ -149,13 +112,10 @@
 	});
 
 	/**
-	 * L'ÉDITEUR SE MONTE SUR LA ZONE DU GEL, ET C'EST LUI QUI DONNE LE CORPS.
-	 *
-	 * Il rend la barre d'outils vivante — gras, titres, listes, tableaux,
-	 * alertes, tâches — et la soumission porte alors le document canonique dans
-	 * `corps`, jamais du Markdown. Sans lui, la zone resterait une saisie nue et
-	 * le champ serait `corps-markdown` : les deux chemins existent, ils ne se
-	 * mélangent pas (`P-35`).
+	 * L'ÉDITEUR SE MONTE SUR LA ZONE DU GEL, ET C'EST LUI QUI DONNE LE CORPS. La
+	 * soumission porte alors le document canonique dans `corps`, jamais du Markdown.
+	 * Sans lui, la zone resterait une saisie nue et le champ serait
+	 * `corps-markdown` : les deux chemins existent, ils ne se mélangent pas (`P-35`).
 	 */
 	onMount(() => {
 		/* `?titre=` — LE QUATRIÈME PARAMÈTRE DE `docs/routes.md:287`, LU ICI.

@@ -1,28 +1,16 @@
 <script lang="ts">
 	/**
-	 * `/univers/{univers}` — V-10 Page d'un univers.
+	 * `/univers/{univers}` — V-10 Page d'un univers. Le vecteur, les notes, le
+	 * rangement lisible et l'activité viennent de `+page.server.ts`, qui porte la
+	 * résolution d'adresse, le périmètre et les droits.
 	 *
-	 * Ce fichier ne fait que rendre la vue avec ce que son chargeur a lu en base.
-	 * Aucune décision n'y est prise : le vecteur, les notes, le rangement lisible
-	 * et l'activité viennent de `+page.server.ts`, qui porte la résolution
-	 * d'adresse, le périmètre et les droits.
-	 *
-	 * TOUTES LES SOURCES DE L'ÉCRAN SONT PASSÉES, ET LA VUE LES EXIGE. Elles ont
-	 * été optionnelles, de défaut les constantes de `seeds/corpus.ts` : un oubli
-	 * ici servait le jeu de démonstration en silence. Elles sont requises, et
-	 * `svelte-check` refuse désormais de compiler cet appel s'il en manque une.
+	 * TOUTES LES SOURCES DE L'ÉCRAN SONT PASSÉES, ET LA VUE LES EXIGE : optionnelles,
+	 * de défaut les constantes de `seeds/corpus.ts`, un oubli ici servait le jeu de
+	 * démonstration en silence.
 	 *
 	 * `modules` EST LE CATALOGUE DE LIBELLÉS DU PRODUIT, pas une donnée d'instance :
 	 * les clés actives d'un domaine viennent de `modules_de_domaine` par
-	 * `detailDomaines` (`RG-STR-06`), leurs noms de `$lib/rangement/modules.ts`.
-	 *
-	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert :
-	 * `+layout.svelte` ne porte que le socle. Elle est identique à l'octet à sa
-	 * source gelée (P-6.3) et n'est pas modifiée par cet import.
-	 *
-	 * AUCUN `<svelte:head>` : rien ne déclare de titre de page pour le PRODUIT.
-	 * Les titres des maquettes sont ceux des planches de revue, et en inventer un
-	 * serait un comblement.
+	 * `detailDomaines` (`RG-STR-06`).
 	 */
 	import { onMount } from 'svelte';
 	import Vue from '../../../vues/V-10.svelte';
@@ -42,8 +30,7 @@
 	 * Le vecteur porte le NOM de l'univers sous `uni` ; c'est lui que la fabrique
 	 * d'adresses redérive en identifiant lisible. Le lire ici plutôt que dans
 	 * l'adresse évite de reconstruire un nom depuis un segment, ce qui n'est pas
-	 * réversible — « Poste de travail » et « poste-de-travail » ne se retrouvent
-	 * pas l'un l'autre.
+	 * réversible.
 	 */
 	/* LES IDENTIFIANTS D'ADRESSE, LUS EN BASE PAR LE GABARIT RACINE. Le câblage ne
 	   voit que des NOMS — il les lit sur les cartes rendues — et les slugifiait :

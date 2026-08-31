@@ -2,21 +2,16 @@
 	/**
 	 * `/univers/{univers}/{domaine}/signets/nouveau` — V-23, mode création.
 	 *
-	 * DEUX ROUTES, UN SEUL ÉCRAN (`docs/routes.md` §3.3) : celle-ci et
-	 * `…/signets/{identifiant}/modifier` rendent la même vue, à un réglage de
-	 * mode près. Le vecteur est composé par `vecteurDeV23()`, à un seul endroit.
+	 * DEUX ROUTES, UN SEUL ÉCRAN : celle-ci et `…/signets/{identifiant}/modifier`
+	 * rendent la même vue, à un réglage de mode près. Le vecteur est composé par
+	 * `vecteurDeV23()`, à un seul endroit.
 	 *
-	 * L'ENVELOPPE RENDUE EST « PAGE DÉDIÉE », ET C'EST UNE LECTURE DÉCLARÉE :
-	 * la planche en offre deux, la maquette dit que « l'enveloppe n'est pas dans
-	 * l'adresse », et aucune source ne dit laquelle une requête directe rend. Le
-	 * raisonnement est écrit dans `vecteurDeV23()` et remonté au rapport du lot.
+	 * L'ENVELOPPE RENDUE EST « PAGE DÉDIÉE », ET C'EST UNE LECTURE DÉCLARÉE : la
+	 * planche en offre deux, la maquette dit que « l'enveloppe n'est pas dans
+	 * l'adresse », et aucune source ne dit laquelle une requête directe rend.
 	 *
-	 * La garde de droit est dans `+page.server.ts` : `docs/routes.md:129` exige
-	 * « connecté + rédacteur », et le refus emprunte le chemin unique
-	 * d'`ADR-007`. Rien n'est décidé ici.
-	 *
-	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
-	 * sert ; elle est identique à l'octet à sa source gelée (P-6.3).
+	 * La garde de droit — « connecté + rédacteur » — est dans `+page.server.ts`, et
+	 * le refus emprunte le chemin unique d'`ADR-007`. Rien n'est décidé ici.
 	 */
 	import { onMount } from 'svelte';
 	import Vue from '../../../../../../vues/V-23.svelte';
@@ -55,12 +50,10 @@
 
 <div bind:this={enveloppe} style="display:contents">
 	<!-- LE DOMAINE PRÉ-CHOISI EST CELUI DE L'ADRESSE, jamais celui d'un compte :
-	     c'est le seul que l'action accepte, et un administrateur n'a pas de
-	     domaine de rattachement. Il descendait par `compte.domaine`, dont le
-	     dernier repli était `MOI` de `seeds/corpus.ts` — le sélecteur proposait
-	     alors quatre domaines dont trois absents de la base.
-	     `signet` EST EXPLICITEMENT NUL : rien n'est édité ici. Sans cela la vue
-	     retombait sur `n-sig-statut` du jeu de démonstration. -->
+	     c'est le seul que l'action accepte, et un administrateur n'a pas de domaine
+	     de rattachement. Il descendait par `compte.domaine`, dont le dernier repli
+	     était `MOI` de `seeds/corpus.ts`. `signet` EST EXPLICITEMENT NUL : rien
+	     n'est édité ici, et sans cela la vue retombait sur le jeu. -->
 	<Vue
 		vecteur={data.vecteur}
 		notes={data.notes}

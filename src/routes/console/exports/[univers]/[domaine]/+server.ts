@@ -1,48 +1,20 @@
 /**
- * `/console/exports/{univers}/{domaine}` — LE TÉLÉCHARGEMENT DE L'ARCHIVE.
+ * `/console/exports/{univers}/{domaine}` — LE TÉLÉCHARGEMENT DE L'ARCHIVE. « Aucune
+ * vue » ; un domaine se désigne par sa forme canonique (§2.2).
  *
- * `docs/routes.md:185` l'inventorie ainsi : « *(aucune vue — téléchargement de
- * l'archive)* », exigences `UC-M13-01`, `RG-M13-01`, `RG-M13-03`, et sa source
- * d'adresse est dérivée : « le périmètre d'export est un domaine (BRIEF V-36),
- * et un domaine se désigne par sa forme canonique (§2.2) ». Elle est l'une des
- * 39 routes du §3 : la monter ne fait bouger aucun décompte.
+ * RG-M13-03 — « L'EXPORT EST RÉSERVÉ AUX ADMINISTRATEURS », VÉRIFIÉ ICI, et la garde
+ * n'est pas réécrite : `accesALaConsole()` emprunte son verdict à `perimetreDeLecture()`,
+ * l'unique écriture de `RG-DRO-03`. L'ANONYME NE PARVIENT PAS JUSQU'ICI, `garde.ts`
+ * redirigeant sur le préfixe de console avant toute résolution (`ARB-052`).
  *
- * Elle n'était pas montée, et le chargeur de `/console/exports` disait pourquoi :
- * « la monter sans l'archive reviendrait à servir une archive qui n'existe pas ».
- * L'archive existe désormais.
+ * LE CONNECTÉ SANS LE DROIT REÇOIT 404 SANS MESSAGE, exactement comme si le domaine
+ * n'existait pas, et L'ORDRE DES CONTRÔLES NE LES DISTINGUE PAS : le droit est examiné
+ * AVANT la base, de sorte qu'un non-administrateur n'apprenne pas même par la latence si
+ * le domaine existe.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * RG-M13-03 — « L'EXPORT EST RÉSERVÉ AUX ADMINISTRATEURS », VÉRIFIÉ ICI
- *
- * La garde est celle des onze adresses de console, et elle n'est pas réécrite :
- * `accesALaConsole()` de `src/lib/donnees/consoles.ts` emprunte son verdict à
- * `perimetreDeLecture()`, l'unique écriture de `RG-DRO-03`. Une seconde
- * comparaison de rôle ici serait la définition concurrente que `P-01` proscrit
- * pour la fraîcheur, transposée aux droits.
- *
- * L'ANONYME NE PARVIENT PAS JUSQU'ICI : `src/lib/auth/garde.ts` redirige sur le
- * préfixe de console, avant toute résolution (`ARB-052`), et la batterie 6 le
- * mesure sur cette adresse même.
- *
- * LE CONNECTÉ SANS LE DROIT REÇOIT 404 SANS MESSAGE, exactement comme si le
- * domaine n'existait pas — `docs/routes.md:167`, `RG-ACC-04`, `ADR-007`. Les
- * deux refus sortent par le MÊME `error(404, MESSAGE_INTROUVABLE)`, et l'ordre
- * des contrôles ne les distingue pas : le droit est examiné AVANT la base, de
- * sorte qu'un non-administrateur n'apprenne pas même par la latence si le
- * domaine existe.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LA RÉPONSE PORTE, ET CE QU'ELLE NE PORTE PAS
- *
- * L'archive, en pièce à télécharger, sous le nom que le gel écrit
- * (`V-36:3061` : l'identifiant du domaine, la date, le suffixe d'archive). La
- * date est celle de la requête — c'est la seule lecture d'horloge de ce chemin,
- * et elle ne décide de rien d'autre que d'un nom de fichier.
- *
- * Le rapport de conversion est DANS l'archive (`V-36:2937`), et son décompte est
- * annoncé en tête de réponse : un client qui veut savoir avant de dézipper le
- * lit là. Aucune valeur n'est simulée — `P-02` — : le décompte vient du rapport
- * réel de l'export qui vient d'être produit.
+ * La réponse porte l'archive sous le nom que le gel écrit ; le rapport de conversion est
+ * DANS l'archive, son décompte annoncé en tête de réponse, et aucune valeur n'est
+ * simulée (`P-02`).
  */
 import { error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';

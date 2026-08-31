@@ -1,43 +1,20 @@
 /**
  * `/console/configuration` — LE COMPLÉMENT AU CÂBLAGE COMMUN, ET RIEN D'AUTRE.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI UN SECOND MODULE PLUTÔT QU'UNE LIGNE DANS LE PREMIER
+ * `cablerLaConfiguration()` fait déjà l'essentiel ; il lui manque UN nœud, et c'est
+ * le seul que l'utilisateur LIT : `#etat-config`. Ce module-là est PARTAGÉ, et « un
+ * lot qui a besoin d'une fonction nouvelle l'écrit dans son propre `cablage.ts` ».
  *
- * `cablerLaConfiguration()` de `src/routes/console/cablage.ts` fait déjà
- * l'essentiel : il relève les sept valeurs au montage, active `#enregistrer` dès
- * qu'une seule dévie, révèle `#annuler`, repose les valeurs initiales et appelle
- * l'action. Il lui manque UN nœud, et c'est le seul que l'utilisateur LIT :
- * `#etat-config`.
+ * CE QU'IL BASCULE : `#etat-config` porte `data-modifie`, dont la feuille GELÉE tire
+ * deux textes. La vue calcule `modifie` depuis le VECTEUR de planche, qui ne bouge
+ * jamais dans le produit — le témoin restait bloqué sur « Aucune modification en
+ * attente » alors que le bouton d'enregistrement venait de s'activer.
  *
- * Ce module-là est partagé — L6 l'emploie pour `envoyerAUneAction()` et pour le
- * tiroir des consoles de structure. Le plan de remédiation §4 tranche ce cas
- * sans ambiguïté : « Un lot qui a besoin d'une fonction nouvelle l'écrit dans
- * son propre `cablage.ts` ». Le complément vit donc ici, à côté de la route qui
- * l'emploie, et deux lots ne se disputent pas un fichier.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QU'IL BASCULE, ET POURQUOI CE N'EST PAS UN ORNEMENT
- *
- * `#etat-config` porte `data-modifie`, et la feuille GELÉE en tire deux textes
- * que la vue rend l'un ou l'autre : « Aucune modification en attente. » et
- * « Modifications non enregistrées — elles ne s'appliquent pas encore. »
- * (`V-33:508`). La vue calcule `modifie` depuis le VECTEUR de planche, qui ne
- * bouge jamais dans le produit : le témoin restait donc bloqué sur « Aucune
- * modification en attente » alors que le bouton d'enregistrement venait de
- * s'activer. L'écran se contredisait lui-même, sur la seule phrase qui dit à
- * l'administrateur que son travail n'est pas encore pris en compte.
- *
- * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI, aucun nœud n'est créé ni retiré :
- * l'attribut est celui du gel, et la feuille le lit déjà. On rend seulement vrai
- * ce qu'elle affirme.
- *
- * LE TEXTE EST CELUI DE LA VUE, AU MOT PRÈS, et il n'est pas reformulé : les
- * deux littéraux sont recopiés de `V-33:508`, qui les tient du gel. Une
- * troisième rédaction du même message finirait par diverger des deux autres.
+ * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI, aucun nœud n'est créé ni retiré. LE TEXTE
+ * EST CELUI DE LA VUE, AU MOT PRÈS : une troisième rédaction du même message
+ * finirait par diverger des deux autres.
  */
 
-/** Ce qu'un câblage rend pour être défait au démontage. */
 export type Debranchement = () => void;
 
 /** Les sept champs de `V-33`, par leur identifiant de gel (`V-33:1247-1360`). */
@@ -51,16 +28,12 @@ const MODIFIE = "Modifications non enregistrées — elles ne s'appliquent pas e
  * LE TÉMOIN D'ÉTAT SUIT LA SAISIE — le geste que le câblage commun ne fait pas.
  *
  * Les valeurs initiales sont relevées AU MONTAGE, donc celles que le chargeur a
- * servies : c'est la même lecture que `cablerLaConfiguration()`, et elle donne
- * forcément le même verdict. Revenir à la valeur de départ repose le témoin,
- * dans les deux sens.
+ * servies : la même lecture que `cablerLaConfiguration()`, et le même verdict.
  *
  * IL NE POSE AUCUN ÉCOUTEUR SUR `#enregistrer` NI SUR `#annuler` : l'envoi et le
  * rétablissement appartiennent au câblage commun, et les doubler enverrait deux
- * fois la même requête. Le rétablissement passe par `#annuler`, dont le clic
- * repose les valeurs — l'écouteur `input` posé ici ne les voit pas, puisqu'une
- * valeur reposée par script n'émet pas d'événement. Le témoin est donc relu
- * aussi au clic sur `#annuler`, en observateur, sans rien y faire d'autre.
+ * fois la même requête. Une valeur reposée par script n'émettant pas d'événement,
+ * le témoin est relu au clic sur `#annuler`, en observateur.
  */
 export function cablerLeTemoinDeConfiguration(racine: ParentNode): Debranchement {
 	const champs = CHAMPS.map((id) =>
@@ -100,31 +73,20 @@ export function cablerLeTemoinDeConfiguration(racine: ParentNode): Debranchement
 }
 
 /**
- * L'AFFICHAGE DES REFUS DE SEUIL — le dernier maillon, et il manquait.
+ * L'AFFICHAGE DES REFUS DE SEUIL — le dernier maillon, et il manquait : un seuil
+ * refusé répondait `400` avec ses messages rattachés à leur champ, et l'écran ne
+ * bougeait pas d'un pixel.
  *
- * MESURÉ LE 21/08/2026 : un seuil « frais » à 999 jours, un clic sur
- * « Enregistrer », l'action répond `400` avec ses messages rattachés à leur
- * champ — et l'écran ne bouge pas d'un pixel. Le témoin restait sur
- * « Modifications non enregistrées », le bouton restait actif, rien n'expliquait
- * rien. C'est « je clique et rien ne se passe », reparu au dernier maillon de la
- * chaîne que cette campagne venait de raccorder partout ailleurs.
+ * LES BLOCS EXISTAIENT DÉJÀ, TOUS LES QUATRE — `#erreur-frais`, `#erreur-vieil`,
+ * `#erreur-portail`, `#erreur-mot`, chacun avec son `-txt` et son
+ * `data-etat="erreur"`. TROIS SE SONT AJOUTÉS SUR LE MÊME PATRON : plafond de
+ * versions, taille de pièce jointe et durée de session sont désormais validés
+ * (`RG-M14-10` nomme « plafond négatif »), et sans bloc pour se dire leur refus
+ * serait un enregistrement qui n'aboutit pas et ne l'annonce pas.
  *
- * LES BLOCS EXISTAIENT DÉJÀ, TOUS LES QUATRE. `V-33` transcrit `#erreur-frais`,
- * `#erreur-vieil`, `#erreur-portail` et `#erreur-mot`, chacun avec son `-txt` et
- * son `data-etat="erreur"` sur le bloc de champ. Le gel avait prévu l'état
- * « Valeurs refusées » — c'est l'une de ses quatre positions. Personne ne le
- * remplissait.
- *
- * TROIS BLOCS SE SONT AJOUTÉS AUX QUATRE, ET SUR LE MÊME PATRON. Le plafond de
- * versions, la taille de pièce jointe et la durée de session sont désormais
- * validés (`RG-M14-10` nomme « plafond négatif ») : sans bloc pour se dire,
- * leur refus serait un enregistrement qui n'aboutit pas et qui ne l'annonce
- * pas — le défaut de l'échec muet, réintroduit par le correctif qui rend ces
- * trois écritures vivantes.
- *
- * POURQUOI ICI ET NON DANS LE MODULE PARTAGÉ. `cablerLaConfiguration()` sert
- * aussi V-27 à V-32, qui n'ont aucun de ces quatre blocs. Le module partagé
- * rend le refus, cette fonction le peint.
+ * POURQUOI ICI ET NON DANS LE MODULE PARTAGÉ : `cablerLaConfiguration()` sert aussi
+ * V-27 à V-32, qui n'ont aucun de ces blocs. Le module partagé rend le refus, cette
+ * fonction le peint.
  */
 export function peindreLesRefusDeConfiguration(
 	racine: ParentNode
