@@ -9,7 +9,13 @@
 	// mécaniquement du premier bloc `<style>` de la maquette V-07 par
 	// `pnpm socle:extraire` ; il ne s'édite pas (ADR-002).
 	import '../socle.css';
+	/* LA FEUILLE DE LA PALETTE — montée ici parce que la palette l'est : une
+	   superposition invoquée depuis n'importe quelle route ne peut pas dépendre de la
+	   feuille de la vue courante. C'est le bloc « palette » de `src/vues/V-09.css`,
+	   recopié à la déclaration près (ADR-002). */
+	import '../palette.css';
 	import { onMount, setContext } from 'svelte';
+	import PaletteDeRecherche from '$lib/coquille/PaletteDeRecherche.svelte';
 	import { cablerLaCoquille } from '$lib/cablage/coquille';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 	import { formesDuMot } from '$lib/vocabulaire';
@@ -111,6 +117,25 @@
 	});
 
 	/**
+	 * LA PALETTE DE RECHERCHE RAPIDE — V-09, montée ici et ici seulement.
+	 *
+	 * `docs/routes.md:206` : « aucune adresse », « montée sur toutes les routes portant
+	 * la coquille ». La mise en page racine est le seul endroit qui les voit toutes, et
+	 * le seul qui sache s'il y a une session : sans session il n'y a pas de coquille,
+	 * donc pas de palette, et le champ de recherche public a son propre câblage.
+	 *
+	 * `Ctrl` `K` ET LE CLIC SUR LE CHAMP DE LA BARRE MÈNENT AU MÊME GESTE, et c'est ici
+	 * qu'ils se rejoignent : la palette écoute le raccourci elle-même — elle seule sait
+	 * qu'elle est déjà ouverte, cas où `UC-M02-01` veut un focus replacé et non une
+	 * fermeture — et le câblage de la coquille lui passe le clic. Les deux
+	 * NAVIGUAIENT vers `/recherche` : le contexte était perdu à chaque recherche.
+	 *
+	 * `onMount` de l'enfant court AVANT celui du parent : la référence est posée quand
+	 * le câblage la lit.
+	 */
+	let palette: ReturnType<typeof PaletteDeRecherche> | undefined = $state();
+
+	/**
 	 * LA COQUILLE EST CÂBLÉE ICI, ET UNE SEULE FOIS.
 	 *
 	 * Sa barre supérieure est rendue par trente-quatre vues, et ses boutons portent
@@ -128,9 +153,12 @@
 			/* `P-03` — « Nouvelle note » et « Importer des fichiers » ne mènent nulle
 			   part tant que l'appelant ne peut écrire nulle part. Même verdict que la
 			   garde des deux routes, et il vient d'ici. */
-			ecriture: data.ecriture
+			ecriture: data.ecriture,
+			ouvrirLaPalette: data.session ? () => palette?.ouvrir() : undefined
 		})
 	);
 </script>
 
 {@render children()}
+
+{#if data.session}<PaletteDeRecherche bind:this={palette} ecriture={data.ecriture} />{/if}
