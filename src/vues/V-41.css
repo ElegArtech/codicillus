@@ -79,6 +79,10 @@
 .fil { display: flex; align-items: center; gap: var(--e-1); min-width: 0; flex: 1; font-size: var(--t-petit); }
 .fil a { color: var(--c-encre-3); text-decoration: none; white-space: nowrap; }
 .fil a:hover { color: var(--c-accent); text-decoration: underline; }
+/* LE FIL DE LA PLANCHE EST UN SPÉCIMEN, PAS UNE NAVIGATION. Ses quatre segments
+   portaient `href="#"` : quatre liens morts servis en production, et quatre
+   avertissements d'accessibilité. Ils gardent la teinte du lien sans en être. */
+.fil .fil__specimen { color: var(--c-encre-3); white-space: nowrap; }
 .fil span { color: var(--c-encre-4); }
 .fil .fil__courant {
   color: var(--c-encre); font-weight: var(--g-fort);
@@ -558,9 +562,19 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
    ========================================================================== */
 
 .repart { display: flex; height: 14px; border-radius: var(--r-1); overflow: hidden; border: 1px solid var(--c-trait); }
-.repart button { border: 0; padding: 0; cursor: pointer; transition: filter var(--m-vif); }
-.repart button:hover { filter: brightness(.9); }
-.repart button + button { border-left: 1px solid var(--c-papier); }
+/* LES PARTS SONT DES SPÉCIMENS, PAS DES BOUTONS. La bibliothèque montre la
+   barre ; elle ne mène nulle part, et un bouton sans geste est une promesse
+   morte. Le sélecteur suit l'élément rendu, les teintes ne bougent pas. */
+.repart > span { border: 0; padding: 0; }
+.repart > span + span { border-left: 1px solid var(--c-papier); }
+
+/* UN SPÉCIMEN DE BOUTON N'EST PAS UN BOUTON — même classe, même pixel, mais
+   ni curseur de pointeur, ni survol, ni geste promis. `pointer-events` porte
+   les trois d'un coup : le spécimen n'est plus touché par le pointeur, donc
+   `.btn:hover` ne s'applique plus et le clic traverse. L'infobulle, elle, est
+   révélée par le survol de son ENVELOPPE `.infobulle-h`, qui occupe la même
+   boîte : elle continue de s'ouvrir. */
+span.btn { cursor: default; pointer-events: none; }
 .repart .p-frais { background: var(--c-frais); }
 .repart .p-vieil {
   background: repeating-linear-gradient(90deg, var(--c-vieil) 0 2px, #c99a3d 2px 5px);

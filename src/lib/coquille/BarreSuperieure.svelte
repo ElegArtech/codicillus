@@ -95,8 +95,12 @@
 		 * `Coquille.svelte` les compose, parce qu'elle est la seule à connaître le
 		 * chemin de rangement courant qui donne son sens à chaque segment.
 		 *
-		 * Une case absente laisse le segment à `href="#"` : mieux vaut un lien
-		 * sans destination qu'une destination inventée.
+		 * Une case absente ne rend PAS un lien. Le segment est alors du texte —
+		 * le même rendu que le segment courant, sans sa classe —, parce qu'un
+		 * lien qui ne mène nulle part est un geste promis et mort : cliquer le
+		 * titre d'une note dans le fil de V-18 ne faisait qu'ajouter un `#` à
+		 * l'adresse. Mieux vaut un segment inerte qu'une destination inventée,
+		 * et mieux vaut du texte qu'un lien inerte.
 		 */
 		cibles?: readonly (string | undefined)[];
 		/** L'état du rail : le bouton de bascule annonce l'action opposée. */
@@ -172,8 +176,9 @@
 		et V-24. -->
 	<nav class="fil" id="fil" aria-label="Fil d'Ariane">
 		{#each fil as segment, rang (rang)}{#if rang}<span>›</span
-				>{/if}{#if rang === fil.length - 1}<span class="fil__courant">{segment}</span>{:else}<a
-					href={cibles[rang] ?? '#'}>{segment}</a
+				>{/if}{#if rang === fil.length - 1}<span class="fil__courant">{segment}</span
+				>{:else if cibles[rang] === undefined}<span>{segment}</span>{:else}<a href={cibles[rang]}
+					>{segment}</a
 				>{/if}{/each}
 	</nav>
 	<div
