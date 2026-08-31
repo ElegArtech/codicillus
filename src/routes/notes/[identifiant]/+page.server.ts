@@ -1,67 +1,20 @@
 /**
  * `/notes/{identifiant}` — LE CHARGEUR DE LA LECTURE D'UNE NOTE (V-14).
+ * `?registre=operationnel` désigne le second registre ;
+ * `/notes/{identifiant}/operationnel` est l'ÉDITEUR (V-18).
  *
- * `?registre=operationnel` désigne le second registre, et rien d'autre :
- * `docs/routes.md:223` — « le paramètre `?registre=` reste réservé à la
- * lecture » —, `V-14:3958` l'écrit dans l'adresse, « le lien est partageable
- * tel quel ». `/notes/{identifiant}/operationnel` est l'ÉDITEUR (V-18,
- * `docs/routes.md:145`) et n'appartient pas à ce lot.
+ * UN SEUL POINT DE SORTIE POUR LE REFUS — ADR-007, RG-ACC-04. `lireLaNote()` rend une
+ * ressource ou `INTROUVABLE`, sans troisième forme : rien ici ne sait si la note est
+ * inexistante ou interdite. LES DROITS SONT RÉSOLUS, JAMAIS RECOPIÉS —
+ * `src/lib/droits/resolution.ts` est l'implémentation unique.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * UN SEUL POINT DE SORTIE POUR LE REFUS — ADR-007, RG-ACC-04
+ * L'INSTANT DE RÉFÉRENCE EST PRIS ICI, UNE FOIS : une couche de lecture qui prendrait
+ * l'heure elle-même rendrait ses résultats non reproductibles.
  *
- * `lireLaNote()` rend une ressource ou `INTROUVABLE`, sans troisième forme, et
- * ce fichier n'a donc qu'UN `error(404, MESSAGE_INTROUVABLE)` : « une note inexistante » et « une
- * note interdite » ne sont pas deux branches qui se ressemblent, c'est le même
- * appel, à la même ligne. Rien ici ne sait laquelle des deux causes s'est
- * réalisée — la garantie est portée par le type, pas par la discipline.
- *
- * CE QUE CE 404 NE REND PAS ENCORE. `docs/routes.md` §5.5 veut **V-04** pour
- * l'anonyme et **V-26** pour le connecté sans droit. Ces deux écrans sont
- * l'objet de `T-035` (`docs/plan-cablage.md`, vague 2 : « adresse non résolue |
- * V-02, V-03, V-04, V-26 ») : les peindre ici demanderait une page d'erreur, et
- * ce lot ne la pose pas. Le code de statut, lui, est celui que §5.5 exige, et
- * les deux côtés du couple sont indiscernables — c'est ce que mesure
- * `pnpm test:etancheite`.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES DROITS SONT RÉSOLUS, JAMAIS RECOPIÉS
- *
- * `src/lib/droits/resolution.ts` est l'implémentation unique (T-011), et
- * jusqu'au 20 août aucune route ne l'appelait — la cause de la fuite mesurée à
- * `ECART-047` É-1. L'identité vient de `event.locals.identite`, posée par
- * `src/hooks.server.ts` pour chaque requête ; elle vaut `ANONYME` ou une
- * identité authentifiée, jamais rien.
- *
- * L'INSTANT DE RÉFÉRENCE EST PRIS ICI, UNE FOIS. `lireNotes()` l'exige en
- * paramètre : une couche de lecture qui prendrait l'heure elle-même rendrait
- * ses résultats non reproductibles. En service, la fraîcheur est vraie
- * MAINTENANT.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES TROIS ACTIONS DE M06 SONT ICI, ET NULLE PART AILLEURS
- *
- * `docs/routes.md:140` rattache à cette adresse `UC-M06-02`, `UC-M06-03` et
- * `RG-M06-05…11` : c'est la route de la lecture d'une note, et c'est d'elle que
- * partent les trois gestes du cartouche et du bandeau de révision. Elles sont
- * NOMMÉES — `verifier`, `signaler`, `lever` —, parce que la page en porte trois
- * et qu'une action par défaut ne saurait pas laquelle a été demandée.
- *
- * `T-024` LIVRE LE MÉCANISME, PAS SON DÉCLENCHEUR. Le gel rend les trois
- * boutons (`V-14:1471`, `:1482`, `:1427`), et AUCUN n'est dans un formulaire :
- * `ARB-054` §3 recense les cinq formulaires du gel, et V-14 n'en porte aucun.
- * Ce qui atteint ces actions depuis l'écran — un formulaire posé par le lot de
- * comportement, ou une soumission par `fetch` — appartient au lot qui touchera
- * `src/vues/`. La règle d'`ARB-054` §3 vaut ici sans réserve : sans `method`,
- * une soumission native partirait en GET, et `§4` du même arbitrage ferme la
- * question — « aucune autre action d'écriture ne passe en GET ». Écart déclaré
- * au rapport, non contourné.
- *
- * ET LE REFUS N'ATTEND PAS LE BOUTON. `P-09` dit que l'action interdite n'est
- * pas RENDUE ; l'absence de bouton n'est pas un contrôle d'accès. Les trois
- * actions résolvent le droit AVANT d'écrire, et leur refus est le MÊME `404`
- * que celui du chargeur — `RG-ACC-04`, rien ne distingue « la note n'existe
- * pas » de « vous n'y avez pas droit ».
+ * LES TROIS ACTIONS DE M06 SONT ICI, ET NULLE PART AILLEURS. Elles sont NOMMÉES, la page
+ * en portant trois ; chacune résout le droit AVANT d'écrire, et son refus est le MÊME
+ * `404` que celui du chargeur — `P-09` veut l'action interdite NON RENDUE, mais l'absence
+ * de bouton n'est pas un contrôle d'accès.
  */
 import { error, fail, redirect } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
@@ -136,38 +89,20 @@ import type { Note } from '../../../../seeds/corpus';
  */
 const TYPE_DES_OCTETS_NON_TYPES = 'application/octet-stream';
 
-/* ════════════════════════════════════════════════════════════════════════════
-   CE QUE L'ÉCRAN MONTRE, ET QUE PERSONNE NE LISAIT
-
-   `lireLaNote()` rendait déjà la note réelle, son corps rendu et ses
-   rétroliens ; `V-14` n'avait aucune propriété pour les recevoir et affichait
-   la transcription du gel — le titre de `n-restaurer-pg` POUR LES 32 NOTES, et
-   pour toute note créée depuis. L'écart était déclaré au rapport de `T-033`.
-
-   CE BLOC EST LA MOITIÉ MANQUANTE. Il complète la lecture par ce que le gel
-   écrivait à la main et que la base porte pourtant : le journal des
-   vérifications, la demande de révision courante, les dates de modification,
-   les pièces jointes, les relations dans les deux sens et la mesure de
-   consultation.
-
-   POURQUOI LES REQUÊTES SONT ICI, ET NON DANS `$lib/donnees/`. Le contrat de
-   ce lot ouvre le chargeur de la route, pas les modules partagés de la couche
-   de données — d'autres lots y travaillent en parallèle. Le regroupement dans
-   un module de lecture reste à faire, et c'est une dette dite, pas un choix
-   d'architecture.
+/* POURQUOI LES REQUÊTES QUI SUIVENT SONT ICI, ET NON DANS `$lib/donnees/` : le
+   regroupement dans un module de lecture reste à faire. C'est une dette dite,
+   pas un choix d'architecture.
 
    AUCUNE DÉCISION D'ACCÈS N'EST PRISE ICI, et c'est la propriété qui compte
-   (ADR-006). Toutes les requêtes ci-dessous s'exécutent APRÈS la résolution :
-   la note a déjà été jugée lisible. Les seules qui traversent le corpus —
-   celles des relations — sont bornées aux identifiants que `lireLaNote()` a
-   retenus, c'est-à-dire au périmètre qu'elle a calculé. Aucun second filtre,
-   aucune seconde règle. */
+   (ADR-006). Toutes s'exécutent APRÈS la résolution : la note a déjà été jugée
+   lisible. Les seules qui traversent le corpus — celles des relations — sont
+   bornées aux identifiants que `lireLaNote()` a retenus, c'est-à-dire au
+   périmètre qu'elle a calculé. Aucun second filtre, aucune seconde règle. */
 
 /** La fenêtre de mesure que le gel annonce : « sur les 30 derniers jours ». */
 const JOURS_DE_MESURE = 30;
 const MILLISECONDES_PAR_JOUR = 86_400_000;
 
-/** Un instant, dans les trois formes que le gel emploie côte à côte. */
 function instantAffiche(valeur: Date): InstantAffiche {
 	return {
 		iso: formaterDateIso(valeur),
@@ -177,18 +112,13 @@ function instantAffiche(valeur: Date): InstantAffiche {
 }
 
 /**
- * LE SOMMAIRE, RELEVÉ SUR LE DOCUMENT CANONIQUE.
+ * LE SOMMAIRE, RELEVÉ SUR LE DOCUMENT CANONIQUE : `construireSommaire()` du gel
+ * relit le DOM rendu, ce qu'un composant Svelte ne peut pas faire. Seuls les
+ * niveaux 2 et 3 l'alimentent.
  *
- * `construireSommaire()` du gel (`V-14:3901`) relit le DOM rendu ; un composant
- * Svelte ne peut pas se relire. `ancresDuDocument()` donne la même matière
- * depuis l'arbre : « seuls les niveaux 2 et 3 alimentent le sommaire »
- * (`V-14:1704`).
- *
- * IL ÉCARTAIT TOUT TITRE SANS ANCRE, et l'éditeur n'en pose jamais : le
- * sommaire de toute note écrite dans le produit était donc VIDE — « Aucun titre
- * dans cette note » au-dessus d'un article qui en portait six. L'ancre est
- * désormais dérivée du texte au rendu, par `$lib/contenu/rendu.ts`, ET LE CORPS
- * CONSULTE LE MÊME RELEVÉ : sommaire et titres rendus ne peuvent pas diverger.
+ * Écarter les titres SANS ANCRE vidait le sommaire de toute note écrite dans le
+ * produit, l'éditeur n'en posant jamais. L'ancre est dérivée du texte au rendu,
+ * ET LE CORPS CONSULTE LE MÊME RELEVÉ : les deux ne peuvent pas diverger.
  */
 function sommaireDuDocument(valeur: unknown): readonly EntreeDeSommaire[] {
 	return sommaireDe(analyserDocument(valeur));
@@ -196,8 +126,7 @@ function sommaireDuDocument(valeur: unknown): readonly EntreeDeSommaire[] {
 
 /**
  * LE MÊME SOMMAIRE, SUR UN DOCUMENT DÉJÀ ANALYSÉ — le corps CAPTURÉ d'une
- * version antérieure, que `$lib/donnees/histoire.ts` rend sous cette forme.
- * Une seule règle de sélection des titres, jamais deux (`P-01`).
+ * version antérieure. Une seule règle de sélection des titres, jamais deux.
  */
 function sommaireDe(document: Document): readonly EntreeDeSommaire[] {
 	const retenus: EntreeDeSommaire[] = [];
@@ -212,14 +141,10 @@ function sommaireDe(document: Document): readonly EntreeDeSommaire[] {
 }
 
 /**
- * LES DEUX NOTES VOISINES DU PANNEAU « POSITION » — celle qui précède et celle
- * qui suit, DANS LE CORPUS QUE L'APPELANT A LE DROIT DE LIRE.
- *
- * La fratrie est lue sur `lecture.notes`, déjà filtré par le périmètre : une
- * note voisine qu'on n'a pas le droit de lire n'est pas une voisine, et son
- * titre ne s'affiche pas (`RG-ACC-01`).
- *
- * L'ORDRE EST CELUI DU CORPUS SERVI — voir `$lib/lecture/panneaux.ts`.
+ * LES DEUX NOTES VOISINES DU PANNEAU « POSITION », DANS LE CORPUS QUE L'APPELANT
+ * A LE DROIT DE LIRE : la fratrie est lue sur `lecture.notes`, déjà filtré par
+ * le périmètre. Une voisine qu'on n'a pas le droit de lire n'est pas une
+ * voisine, et son titre ne s'affiche pas (`RG-ACC-01`).
  */
 function voisinesDe(lecture: LectureDeNote): readonly VoisineAffichee[] {
 	const note = lecture.note;
@@ -246,19 +171,14 @@ function voisinesDe(lecture: LectureDeNote): readonly VoisineAffichee[] {
 	return retenues;
 }
 
-/** Une relation lue, dans le sens où elle se lit depuis la note ouverte. */
 interface RelationLue extends NoteLiee {
 	readonly libelle: string;
 }
 
 /**
- * LES RELATIONS, GROUPÉES PAR LIBELLÉ — le gel les rend ainsi, sortantes
- * d'abord, entrantes ensuite (« S'applique à », « Dépend de », puis « Est
- * référencée par »).
- *
+ * LES RELATIONS, GROUPÉES PAR LIBELLÉ — sortantes d'abord, entrantes ensuite.
  * L'ORDRE DES GROUPES EST CELUI DU RÉFÉRENTIEL (`types_de_relation.ordre`),
- * puis celui du sens : ce sont les deux seuls ordres que la base porte, et
- * aucun classement n'est inventé.
+ * puis celui du sens : les deux seuls ordres que la base porte.
  */
 function grouperLesRelations(lues: readonly RelationLue[]): readonly GroupeDeRelations[] {
 	const groupes = new Map<string, NoteLiee[]>();
@@ -278,17 +198,12 @@ function grouperLesRelations(lues: readonly RelationLue[]): readonly GroupeDeRel
 
 /**
  * UNE PIÈCE JOINTE TELLE QUE LE CÂBLAGE EN A BESOIN — et non telle que l'écran
- * l'affiche.
+ * l'affiche : `PieceAffichee` porte un nom AMPUTÉ de son suffixe, dont aucune
+ * adresse ne se reforme.
  *
- * `PieceAffichee` porte ce que le GEL rend : un nom AMPUTÉ de son suffixe, une
- * extension en cartouche, une taille en clair (`$lib/lecture/panneaux.ts`,
- * `V-14:1830-1834`). Aucun de ces quatre champs ne permet de reformer l'adresse
- * de la pièce : `adresseDePieceJointe()` prend le nom de FICHIER, celui que
- * `pieces_jointes.nom` porte, suffixe compris.
- *
- * Les deux formes coexistent donc, dans le MÊME ORDRE, et c'est cet ordre qui
- * les apparie : la vue affiche `panneaux.pieces[i]`, le câblage adresse
- * `piecesJointes[i]`. Rien n'est recalculé à l'écran — ni le nom, ni l'adresse.
+ * Les deux formes coexistent dans le MÊME ORDRE, et c'est cet ordre qui les
+ * apparie : la vue affiche `panneaux.pieces[i]`, le câblage adresse
+ * `piecesJointes[i]`. Rien n'est recalculé à l'écran.
  */
 export interface PieceJointeCablee {
 	/** Le nom de FICHIER, tel que la base le porte. C'est la clé du retrait. */
@@ -297,7 +212,6 @@ export interface PieceJointeCablee {
 	readonly adresse: string;
 }
 
-/** Ce que le chargeur ajoute à la lecture : la note telle qu'elle s'affiche. */
 interface ComplementsDeLecture {
 	readonly affichee: LectureAffichee;
 	readonly panneaux: PanneauxDeLaNote;
@@ -306,32 +220,17 @@ interface ComplementsDeLecture {
 }
 
 /**
- * LES PROPRIÉTÉS TYPÉES DE LA NOTE, DANS L'ORDRE DU RÉFÉRENTIEL — `CDC:886`,
- * `BRIEF-VUES.md:797`.
+ * LES PROPRIÉTÉS TYPÉES DE LA NOTE, DANS L'ORDRE DU RÉFÉRENTIEL. Une note qui
+ * n'est pas une fiche ne paie rien : liste vide, aucune requête.
  *
- * UNE NOTE QUI N'EST PAS UNE FICHE NE PAIE RIEN : la liste est vide et aucune
- * requête n'est faite. Le brief conditionne le panneau à « si la note est une
- * fiche », et c'est la même condition qui borne le coût.
+ * N'APPELLE PAS `lireTypesDeFiche()`, ET C'EST DÉLIBÉRÉ : celle-là LÈVE sur une
+ * valeur de `type_de_champ` que sa table ne couvre pas — quatre sur six —, et un
+ * champ `date` posé n'importe où ferait tomber en 500 la lecture de TOUTE fiche
+ * (`RG-NF-06`).
  *
- * LES DEUX SOURCES SONT CELLES QUI EXISTENT DÉJÀ, et aucune n'est redite ici :
- * `lireLesChampsDUnTypeDeFiche()` porte le SCHÉMA — le nom affichable et le
- * rang de chaque champ, que la colonne `proprietes_typees` ne porte pas —, et
- * `lireLesProprietesDeFiche()` porte les VALEURS, déjà normalisées : la colonne
- * est un `jsonb` de forme non garantie, et cette fonction est le seul endroit
- * du produit qui décide ce qui, dedans, se rend en texte.
- *
- * CE PANNEAU N'APPELLE PAS `lireTypesDeFiche()`, ET C'EST DÉLIBÉRÉ. Celle-là
- * convertit l'énumération `type_de_champ` en type d'écran et LÈVE sur une
- * valeur que sa table ne couvre pas — elle en couvre quatre, la base en accepte
- * six. L'appeler d'ici aurait fait tomber en 500 la lecture de TOUTE fiche le
- * jour où un champ `date` serait posé n'importe où dans le référentiel : un
- * panneau qui n'affiche qu'un libellé et une valeur n'a aucune raison
- * d'élargir la surface de panne de la route de lecture (`RG-NF-06`).
- *
- * L'ORDRE EST CELUI DU SCHÉMA, JAMAIS CELUI DE LA COLONNE : un objet JSON n'a
- * pas d'ordre contractuel, et `champs_de_type_de_fiche.ordre` est ce que la
- * console règle. Un champ que le référentiel ne porte plus n'est pas rendu ; un
- * champ que la note ne renseigne pas est rendu VIDE, et le dit.
+ * L'ORDRE EST CELUI DU SCHÉMA, JAMAIS CELUI DE LA COLONNE : un objet JSON n'a pas
+ * d'ordre contractuel. Un champ que le référentiel ne porte plus n'est pas rendu ;
+ * un champ que la note ne renseigne pas est rendu VIDE, et le dit.
  */
 async function proprietesDeLaFiche(
 	base: Base,
@@ -350,32 +249,16 @@ async function proprietesDeLaFiche(
 }
 
 /**
- * L’ARTICLE D’UNE VERSION ANTÉRIEURE — `?version={n}`, `docs/routes.md:224`.
+ * L’ARTICLE D’UNE VERSION ANTÉRIEURE — `?version={n}`.
  *
- * LE DÉFAUT QUE CETTE FONCTION FERME. V-15 recevait `affichee`, c’est-à-dire
- * l’état COURANT de la note, sous un bandeau qui annonce « vous consultez un
- * état antérieur » : le titre, les deux corps et le sommaire étaient ceux du
- * texte le plus récent, et le bouton « Restaurer cette version » portait sur un
- * contenu que l’écran n’avait jamais montré — ce que `RG-M18-05` refuse d’une
- * action irréversible. `lireLHistoire()` chargeait pourtant les trois champs
- * capturés, les servait au navigateur, et aucun nœud ne les lisait.
- *
- * TROIS CHAMPS CHANGENT, ET TROIS SEULEMENT. Le titre, le corps Référence et le
- * corps Opérationnel sont ceux que la version a CAPTURÉS — `versions.titre`,
- * `versions.corps_reference`, `versions.corps_operationnel` —, et le sommaire
- * suit le corps affiché, faute de quoi ses ancres pointeraient sur des titres
- * absents de la page.
- *
- * CE QUI NE CHANGE PAS N’EST PAS CAPTURÉ. Le dernier contrôle, la fraîcheur, les
- * dates de modification, la demande de révision et les deux mesures de
- * consultation sont des faits de LA NOTE, que la table `versions` ne porte pas :
- * les recomposer pour une version donnée serait les inventer (`P-02`), et le
- * bandeau dit déjà que la note courante n’est pas modifiée.
+ * TROIS CHAMPS CHANGENT, ET TROIS SEULEMENT : le titre et les deux corps que la
+ * version a CAPTURÉS. Le sommaire suit le corps affiché, faute de quoi ses ancres
+ * pointeraient sur des titres absents de la page. Le reste — contrôle, fraîcheur,
+ * dates, révision, consultations — sont des faits de LA NOTE que `versions` ne
+ * porte pas : les recomposer serait les inventer.
  *
  * LE CORPS EST RENDU PAR `rendreDocument`, ET PAR RIEN D’AUTRE (`ADR-004`), avec
- * le résolveur de liens que `lireLaNote()` a construit sur le périmètre de
- * l’appelant : une version qui citait une note devenue illisible ne fait pas
- * réapparaître son titre.
+ * le résolveur que `lireLaNote()` a construit sur le périmètre de l’appelant.
  */
 function articleDeLaVersion(
 	courante: LectureAffichee,
@@ -387,8 +270,8 @@ function articleDeLaVersion(
 	return {
 		...courante,
 		/* LE TITRE EST RENOMMABLE (`RG-M07-02`), et c’est pour cela que la version
-		   le capture. Le reste de la note — son rangement, son type, sa visibilité
-		   — est celui d’aujourd’hui : la version ne le porte pas. */
+		   le capture. Le reste de la note — rangement, type, visibilité — est celui
+		   d’aujourd’hui : la version ne le porte pas. */
 		note: { ...courante.note, titre: version.titre },
 		reference: rendre(version.reference),
 		operationnel: version.operationnel === null ? null : rendre(version.operationnel),
@@ -409,12 +292,9 @@ async function complementsDeLecture(
 	/* La ligne brute de la note : les colonnes que la couche de lecture ne
 	   projette pas, et le compte qui a demandé la révision.
 
-	   LE COMPTEUR DE CONSULTATIONS EN FAIT PARTIE, ET C'EST LE POINT. La couche
-	   de lecture le projette elle aussi — `Note.vues` —, mais elle a été
-	   appelée AVANT que l'ouverture courante ne soit comptée. Cette requête-ci
-	   s'exécute APRÈS, sur la même note, et le total qu'elle rend inclut donc
-	   l'ouverture qui l'affiche. Sans elle, la page annonçait un cumul
-	   inférieur d'une unité à sa propre fenêtre de trente jours. */
+	   LE COMPTEUR DE CONSULTATIONS EN FAIT PARTIE, ET C'EST LE POINT. `Note.vues`
+	   a été projeté AVANT que l'ouverture courante ne soit comptée ; cette
+	   requête-ci s'exécute APRÈS, et son total inclut l'ouverture qui l'affiche. */
 	const [ligne] = await base
 		.select({
 			cle: notes.id,
@@ -435,13 +315,12 @@ async function complementsDeLecture(
 		.limit(1);
 
 	/* La note a disparu entre sa résolution et cette lecture. Le refus est le
-	   MÊME que partout dans cette famille — rien ne distingue deux causes
-	   (`RG-ACC-04`). */
+	   MÊME que partout dans cette famille (`RG-ACC-04`). */
 	if (ligne === undefined) error(404, MESSAGE_INTROUVABLE);
 
-	/* Le journal des vérifications — `M06.2`, « l'historique complet est
-	   conservé ». Une entrée sans compte reste une attestation : la colonne est
-	   effaçable, et `RG-M15-02` fait de l'anonymat un état normal du journal. */
+	/* Le journal des vérifications — `M06.2`. Une entrée sans compte reste une
+	   attestation : la colonne est effaçable, et `RG-M15-02` fait de l'anonymat un
+	   état normal du journal. */
 	const attestations = await base
 		.select({ par: comptes.nom, le: verifications.le })
 		.from(verifications)
@@ -502,11 +381,9 @@ async function complementsDeLecture(
 				.where(and(eq(relations.cibleId, ligne.cle), inArray(notes.identifiant, lisibles)))
 				.orderBy(typesDeRelation.ordre, notes.titre);
 
-	/* LA MESURE DE CONSULTATION VIENT DU JOURNAL, sur la fenêtre que le gel
-	   annonce — « 37 sur les 30 derniers jours ». `MESURES_7J` de la semence
-	   nomme « 7 j » la même donnée : la contradiction est ancienne et déclarée
-	   (`$lib/lecture/note-de-demonstration.ts`), et elle se tranche ici en
-	   lisant la table plutôt qu'une constante. */
+	/* LA MESURE DE CONSULTATION VIENT DU JOURNAL, sur la fenêtre de trente jours
+	   que le gel annonce. `MESURES_7J` de la semence nomme « 7 j » la même
+	   donnée : la contradiction se tranche ici en lisant la table. */
 	const depuis = new Date(maintenant.getTime() - JOURS_DE_MESURE * MILLISECONDES_PAR_JOUR);
 	const [mesure] = await base
 		.select({ nombre: sql<number>`count(*)::int` })
@@ -517,10 +394,10 @@ async function complementsDeLecture(
 
 	const domaineParNote = new Map<string, string>(lecture.notes.map((n) => [n.id, n.domaine]));
 
-	/* `RG-M06-01` — la fraîcheur se lit sur la dernière vérification, et à
-	   défaut sur la dernière modification. L'ANCIENNETÉ SERVIE AU LIBELLÉ EST
-	   CELLE-LÀ, la même que celle sur laquelle le niveau a été résolu : deux
-	   sources donneraient deux âges pour un seul signal (P-01). */
+	/* `RG-M06-01` — la fraîcheur se lit sur la dernière vérification, et à défaut
+	   sur la dernière modification. L'ANCIENNETÉ SERVIE AU LIBELLÉ EST CELLE-LÀ,
+	   la même que celle sur laquelle le niveau a été résolu : deux sources
+	   donneraient deux âges pour un seul signal (P-01). */
 	const referenceDeFraicheur = ligne.verifieLe ?? ligne.modifieLe;
 
 	return {
@@ -539,14 +416,11 @@ async function complementsDeLecture(
 			joursDepuisControle: joursEcoules(referenceDeFraicheur, maintenant),
 			modifiee: instantAffiche(ligne.modifieLe),
 			referenceModifiee: instantAffiche(ligne.corpsReferenceModifieLe),
-			/* `RG-NOT-02` — il n'y a rien à resynchroniser sans version
-			   opérationnelle. La comparaison porte sur les deux dates de CORPS, et
-			   non sur `modifieLe`, qu'un simple renommage fait bouger. */
-			/* `RG-M06-08` A UNE SEULE DÉFINITION, et ce n'est pas ici. Le prédicat
-			   était recopié en ligne, et le même signal se calculait à deux endroits
-			   — c'est `P-01` en petit : deux définitions concurrentes d'un même
-			   signal finissent par diverger, et celle qui diverge n'est jamais celle
-			   qu'on relit. `operationnelDesynchronise()` est l'unique. */
+			/* `RG-NOT-02` — rien à resynchroniser sans version opérationnelle. La
+			   comparaison porte sur les deux dates de CORPS, et non sur `modifieLe`,
+			   qu'un simple renommage fait bouger. `RG-M06-08` a une seule définition,
+			   et c'est `operationnelDesynchronise()` : le prédicat recopié en ligne
+			   faisait calculer le même signal à deux endroits (`P-01`). */
 			resync: operationnelDesynchronise({
 				referenceModifieLe: ligne.corpsReferenceModifieLe,
 				operationnelModifieLe: ligne.corpsOperationnelModifieLe
@@ -560,10 +434,9 @@ async function complementsDeLecture(
 						}
 					: null,
 			consultations30j: mesure?.nombre ?? 0,
-			/* LU APRÈS `journaliserUneConsultation()`, et c'est toute la
-			   correction : `lecture.note.vues` a été projeté avant l'écriture,
-			   la fenêtre de trente jours est comptée après, et les afficher
-			   côte à côte donnait un total inférieur à sa propre fenêtre. */
+			/* LU APRÈS `journaliserUneConsultation()` : `lecture.note.vues` a été
+			   projeté avant l'écriture, la fenêtre de trente jours est comptée après,
+			   et les afficher côte à côte donnait un total inférieur à sa fenêtre. */
 			consultationsTotal: ligne.consultations
 		},
 		panneaux: {
@@ -577,8 +450,8 @@ async function complementsDeLecture(
 					taille: tailleEnClair(pj.tailleOctets),
 					depose: `déposé le ${formaterDateFr(pj.deposeeLe)}`,
 					/* L'ADRESSE PREND LE NOM DE FICHIER, JAMAIS LE NOM AFFICHÉ :
-					   celui-ci est amputé de son suffixe juste au-dessus. Le lien du
-					   panneau est ainsi juste AU RENDU, sans attendre l'hydratation. */
+					   celui-ci est amputé de son suffixe juste au-dessus. Le lien est
+					   ainsi juste AU RENDU, sans attendre l'hydratation. */
 					adresse: adresseDePieceJointe(lecture.note.id, pj.nom)
 				};
 			}),
@@ -596,7 +469,7 @@ async function complementsDeLecture(
 		},
 		/* LA MÊME LISTE, DANS LE MÊME ORDRE — `lignesDePiece` est parcourue deux
 		   fois de suite, jamais retriée entre les deux. L'appariement par indice
-		   n'est donc pas une convention d'écran : c'est le même tableau. */
+		   n'est pas une convention d'écran : c'est le même tableau. */
 		piecesJointes: lignesDePiece.map((pj) => ({
 			nom: pj.nom,
 			adresse: adresseDePieceJointe(lecture.note.id, pj.nom)
@@ -620,46 +493,32 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 	if (!resolution.trouve) error(404, MESSAGE_INTROUVABLE);
 	const lecture = resolution.ressource;
 
-	/* ═══════════════════════════════════════════════════════════════════════
-	   LA CONSULTATION SE COMPTE ET SE JOURNALISE — `RG-M04-09`, T-078.
+	/* LA CONSULTATION SE COMPTE ET SE JOURNALISE — `RG-M04-09`.
 
-	   APRÈS LA RÉSOLUTION, ET JAMAIS AVANT. Deux propriétés en dépendent, et
-	   aucune des deux n'est une précaution :
-
-	     · `RG-ACC-04` — le refus et l'inexistence doivent rendre la même
-	       réponse. Les deux passent par le `error()` ci-dessus et n'atteignent
-	       donc jamais cette écriture : une note interdite coûte exactement ce
-	       que coûte une note absente, y compris en temps. Écrire avant la
-	       résolution ferait payer au refus un aller-retour que l'inexistence ne
-	       paie pas — la fuite de latence qu'`ARB-005` nomme et que la batterie 6
-	       mesure ;
-	     · une lecture REFUSÉE n'est pas une ouverture, et RG-M04-09 compte les
-	       ouvertures.
+	   APRÈS LA RÉSOLUTION, ET JAMAIS AVANT. `RG-ACC-04` veut que refus et
+	   inexistence rendent la même réponse : les deux sortent par le `error()`
+	   ci-dessus et n'atteignent jamais cette écriture, donc une note interdite
+	   coûte exactement ce que coûte une note absente, y compris en temps. Écrire
+	   avant la résolution ferait payer au refus un aller-retour que l'inexistence
+	   ne paie pas (`ARB-005`). Et une lecture REFUSÉE n'est pas une ouverture.
 
 	   L'INSTANT EST CELUI DE LA REQUÊTE, pris plus haut et pris une fois : la
-	   fraîcheur a été résolue dessus, et une seconde lecture d'horloge donnerait
-	   à l'entrée un horodatage postérieur d'une milliseconde à l'état qu'elle
-	   date.
+	   fraîcheur a été résolue dessus.
 
-	   ET C'EST UNE ÉCRITURE SUR UNE REQUÊTE DE LECTURE — écart déclaré au
-	   rapport de `T-078` au regard d'`ARB-054` §4, qui réserve l'écriture en GET
-	   à `/deconnexion`. Elle n'est pas contournable : « toute OUVERTURE d'une
-	   note » désigne cette requête-ci, et le cahier prime sur la commodité. */
+	   ET C'EST UNE ÉCRITURE SUR UNE REQUÊTE DE LECTURE, au regard d'`ARB-054` §4
+	   qui réserve l'écriture en GET à `/deconnexion`. Non contournable : « toute
+	   OUVERTURE d'une note » désigne cette requête-ci. */
 	await journaliserUneConsultation(base, {
 		identifiant: params.identifiant,
 		compte: compteDe(locals.identite),
 		maintenant
 	});
 
-	/* ═══════════════════════════════════════════════════════════════════════
-	   L'HISTORIQUE — T-039, ajouté à ce chargeur et non à un autre.
-
-	   V-15 N'A PAS DE CHEMIN PROPRE : `docs/routes.md:141` et `:207` la classent
-	   « superposée » à cette adresse, et son fil est celui de V-14. Son état
-	   adressable est `?version={n}` (`docs/routes.md:224`), lu ici.
+	/* L'HISTORIQUE. V-15 N'A PAS DE CHEMIN PROPRE : elle est « superposée » à
+	   cette adresse, et son état adressable est `?version={n}`, lu ici.
 
 	   L'ACCÈS EST DÉJÀ DÉCIDÉ : `lireLHistoire()` prend la lecture RÉSOLUE
-	   ci-dessus, jamais un identifiant nu — il n'existe donc pas deux décisions
+	   ci-dessus, jamais un identifiant nu — il n'existe pas deux décisions
 	   d'accès à cette adresse. */
 	const histoire = await lireLHistoire(
 		base,
@@ -668,23 +527,17 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		versionDemandee(url.searchParams.get('version'))
 	);
 
-	/* ═══════════════════════════════════════════════════════════════════════
-	   LE CORPS QUE L'ÉCRAN AFFICHE EST CELUI DU REGISTRE RÉFÉRENCE.
+	/* LE CORPS QUE L'ÉCRAN AFFICHE EST CELUI DU REGISTRE RÉFÉRENCE : le gel rend
+	   les deux enveloppes et cache la seconde, et la bascule est un COMPORTEMENT
+	   non livré. Le volet visible est donc toujours `corps-reference`, quel que
+	   soit `?registre=`.
 
-	   Le gel rend les DEUX enveloppes en permanence et cache la seconde
-	   (`div#corps-operationnel[hidden]`) ; la bascule qui les échange est un
-	   COMPORTEMENT, absent du gel par `ARB-011` et non livré à ce jour. Le volet
-	   visible est donc toujours `corps-reference`, quel que soit `?registre=`.
-
-	   D'OÙ CETTE SECONDE RÉSOLUTION, ET SEULEMENT DANS CE SENS-LÀ : quand
-	   l'adresse demande l'Opérationnel, la Référence est chargée en plus, pour
-	   que le volet visible ne soit pas vide. Elle passe par `lireLaNote()`, donc
-	   par la MÊME décision d'accès — jamais par une requête écrite ici. Le
-	   chemin ordinaire (`?registre=reference`, le défaut) n'en paie pas le coût.
+	   D'OÙ CETTE SECONDE RÉSOLUTION, ET SEULEMENT DANS CE SENS-LÀ. Elle passe par
+	   `lireLaNote()`, donc par la MÊME décision d'accès — jamais par une requête
+	   écrite ici. Le chemin ordinaire n'en paie pas le coût.
 
 	   UN CORPS EXISTANT MAIS VIDE REND `null`, et la vue le DIT : `corpsRendu()`
-	   sépare `existe` de `redige`, et « la note n'a pas encore de texte » n'est
-	   pas la même chose que « le texte n'a pas été chargé » (`RG-M18-03`). */
+	   sépare `existe` de `redige` (`RG-M18-03`). */
 	const corpsDeReference =
 		registre === 'reference'
 			? lecture.corps.redige
@@ -692,24 +545,16 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 				: null
 			: await corpsCharge(base, params.identifiant, 'reference', locals.identite, contexte);
 
-	/* ═══════════════════════════════════════════════════════════════════════
-	   LES DEUX CORPS SONT SERVIS ENSEMBLE, PARCE QUE LA BASCULE NE RECHARGE PAS.
+	/* LES DEUX CORPS SONT SERVIS ENSEMBLE, PARCE QUE LA BASCULE NE RECHARGE PAS :
+	   le script du gel échange l'attribut « sans rechargement ». Sans le second
+	   corps, l'onglet « Opérationnel » ouvrait un volet vide.
 
-	   Le gel rend les deux enveloppes en permanence et n'en montre qu'une
-	   (`div#corps-operationnel[hidden]`) ; son propre script échange l'attribut
-	   « sans rechargement » (`V-14:3945`). Le câblage de cette route fait de
-	   même — c'est le geste du gel, transcrit. Il fallait donc que le SECOND
-	   corps soit là : sans lui, l'onglet « Opérationnel » ouvrait un volet vide,
-	   ce qui est pire qu'un onglet inerte.
+	   LE COÛT EST BORNÉ AU CAS QUI L'EXERCE : la seconde lecture n'a lieu que si
+	   la note PORTE un registre Opérationnel — la condition même sous laquelle
+	   les deux onglets sont rendus.
 
-	   LE COÛT EST BORNÉ AU CAS QUI L'EXERCE. La seconde lecture n'a lieu que si
-	   la note PORTE un registre Opérationnel — ce qui est aussi la condition
-	   sous laquelle les deux onglets sont rendus (`V-14:1513`, `hidden` sinon).
-	   Une note sans second registre ne paie rien.
-
-	   ELLE PASSE PAR `lireLaNote()`, comme sa jumelle ci-dessus, et donc par la
-	   MÊME décision d'accès : il n'existe pas deux résolutions de droit à cette
-	   adresse. Un refus rend un volet vide, jamais un aveu. */
+	   ELLE PASSE PAR `lireLaNote()`, donc par la MÊME décision d'accès. Un refus
+	   rend un volet vide, jamais un aveu. */
 	const corpsOperationnel =
 		registre === 'reference' && lecture.note.operationnel
 			? await corpsCharge(base, params.identifiant, 'operationnel', locals.identite, contexte)
@@ -726,31 +571,18 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 
 	return {
 		/**
-		 * LE VECTEUR D'ÉTAT DE V-14, et il ne porte que ce qui est VRAI de cet
-		 * appelant-ci : ses droits.
-		 *
-		 * Les six autres leviers de la planche — `fr`, `c-revision`,
-		 * `c-brouillon`, `c-resync`, `c-op`, `etat` — décrivent LA NOTE AFFICHÉE,
-		 * et ils ne passent plus par ici : `affichee` les porte, et la vue les
-		 * lit sur la note plutôt que sur un réglage de planche. Les piloter
-		 * depuis ce vecteur peindrait les attributs d'une note sur le corps
-		 * d'une autre — la « valeur illustrative » que P-02 proscrit.
-		 *
-		 * `droits`, lui, est une propriété de l'APPELANT, vraie quelle que soit
-		 * la note : la capacité d'écrire vient de `capacites()` (CDC §2.3), et
-		 * c'est elle qui décide de l'ÉMISSION des actions d'écriture (P-09,
-		 * ARB-040 : omises, jamais masquées).
+		 * LE VECTEUR D'ÉTAT DE V-14 ne porte que ce qui est VRAI de cet appelant-ci :
+		 * ses droits. Les six autres leviers décrivent LA NOTE AFFICHÉE et passent par
+		 * `affichee` — les piloter d'ici peindrait les attributs d'une note sur le
+		 * corps d'une autre (`P-02`). `droits` vient de `capacites()` et décide de
+		 * l'ÉMISSION des actions d'écriture (P-09, ARB-040).
 		 */
 		vecteur: { droits: lecture.capacites.ecrireDesNotes ? 'ecriture' : 'lecture' },
 		notes: lecture.notes,
 		/**
-		 * LA NOTE RÉELLE, SON CORPS ET SES RÉTROLIENS — ce dont le CÂBLAGE de la
-		 * page a besoin, et qui n'est pas de l'affichage : l'identifiant que les
-		 * adresses composent, le registre demandé, le compte des rétroliens que
-		 * la confirmation de suppression rappelle (`RG-M04-10`).
-		 *
-		 * CE QUE L'ÉCRAN MONTRE PASSE PAR `affichee` ET `panneaux`, plus bas :
-		 * il n'existe pas deux chemins par lesquels la note atteint la vue.
+		 * LA NOTE RÉELLE, SON CORPS ET SES RÉTROLIENS — ce dont le CÂBLAGE a besoin, et
+		 * qui n'est pas de l'affichage. CE QUE L'ÉCRAN MONTRE PASSE PAR `affichee` ET
+		 * `panneaux` : il n'existe pas deux chemins par lesquels la note atteint la vue.
 		 */
 		lecture: {
 			note: lecture.note,
@@ -759,84 +591,53 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 			retroliens: lecture.retroliens
 		},
 		/**
-		 * L’HISTORIQUE RÉEL DE LA NOTE — T-039. `versions` et `retention` sont
-		 * reçus par `src/vues/V-15`, que cette page monte dès que l’adresse porte
-		 * `?version` : V-15 est une SUPERPOSITION de V-14, et c’est ce paramètre
-		 * — le seul état de V-15 que `docs/routes.md` §S2 connaisse — qui décide
-		 * lequel des deux écrans s’affiche.
+		 * L’HISTORIQUE RÉEL DE LA NOTE, reçu par `src/vues/V-15`, montée dès que
+		 * l’adresse porte `?version`.
 		 *
-		 * DE `affichee`, LA VUE NE LIT QUE `numero` — il marque la ligne consultée
-		 * du panneau. Les trois autres champs — le titre capturé et les deux corps
-		 * — sont des DOCUMENTS, que la vue ne sait pas rendre : ils atteignent
-		 * l’écran par `afficheeDeLaVersion` ci-dessous, rendus en HTML par
-		 * l’implémentation unique (`ADR-004`). Ils restent servis ici parce que
-		 * `Historique` est un objet et que rien ne gagnerait à le découper.
-		 *
-		 * `retention` est `versions_max` de `parametres`, lu et jamais redéclaré.
+		 * DE `affichee`, LA VUE NE LIT QUE `numero` : les trois autres champs sont des
+		 * DOCUMENTS qu'elle ne sait pas rendre, et ils atteignent l’écran par
+		 * `afficheeDeLaVersion` (`ADR-004`).
 		 */
 		histoire,
 		/**
 		 * L’ARTICLE DE LA VERSION CONSULTÉE, ou `null` quand l’adresse ne désigne
-		 * aucune version — `?version` nu, ou un numéro qui n’existe pas. Dans ces
-		 * deux cas, la note COURANTE est la bonne réponse, et c’est `affichee`
-		 * qui est servie.
+		 * aucune version : la note COURANTE est alors la bonne réponse.
 		 *
-		 * SANS CE CHAMP, V-15 RENDAIT LE CORPS COURANT SOUS UN BANDEAU QUI
-		 * ANNONÇAIT UN ÉTAT ANTÉRIEUR, et « Restaurer cette version » écrasait la
-		 * note avec un texte que l’écran n’avait jamais montré (`RG-M18-05`).
+		 * SANS CE CHAMP, V-15 RENDAIT LE CORPS COURANT SOUS UN BANDEAU ANNONÇANT UN
+		 * ÉTAT ANTÉRIEUR, et « Restaurer cette version » écrasait la note avec un texte
+		 * que l’écran n’avait jamais montré (`RG-M18-05`).
 		 */
 		afficheeDeLaVersion:
 			histoire.affichee === null
 				? null
 				: articleDeLaVersion(complements.affichee, histoire.affichee, lecture.resoudreUneNote),
 		/**
-		 * LA NOTE TELLE QU'ELLE S'AFFICHE — l'identité, le corps rendu, le
-		 * sommaire, le dernier contrôle, les dates, la révision courante et la
-		 * mesure de consultation.
-		 *
-		 * C'est la propriété qui manquait à `src/vues/V-14.svelte` et dont
-		 * l'absence faisait afficher la note du gel pour toutes les autres.
+		 * LA NOTE TELLE QU'ELLE S'AFFICHE — l'identité, le corps rendu, le sommaire,
+		 * le dernier contrôle, les dates, la révision courante et la mesure de
+		 * consultation.
 		 */
 		affichee: complements.affichee,
-		/** Les panneaux latéraux, tous lus en base, aucun transcrit. */
 		panneaux: complements.panneaux,
 		/**
-		 * LES PIÈCES, SOUS LA FORME QUE LE CÂBLAGE ADRESSE — nom de fichier et
-		 * adresse de téléchargement. Le gel de V-14 pose les pièces en `a.pj`
-		 * avec un `href="#"` (`V-14:1830`, `:1835`) : sans cette liste, aucun de
-		 * ces liens ne mène nulle part, et le panneau reste une vitrine.
+		 * LES PIÈCES, SOUS LA FORME QUE LE CÂBLAGE ADRESSE. Le gel les pose en `a.pj`
+		 * avec un `href="#"` : sans cette liste, aucun lien ne mène nulle part.
 		 */
 		piecesJointes: complements.piecesJointes,
 		/**
 		 * DE QUOI DÉCLARER UNE RELATION SANS QUITTER LA NOTE — le dialogue
-		 * `d-relation` du gel, monté ici parce que c'est ici que le gel le place.
-		 *
-		 * `mockups/V-14-lecture-note.html:1848` dessine le bouton « + Ajouter »
-		 * dans le panneau « Relations » ; `mockups/V-40-dialogues.html:3252` dit
-		 * de `d-relation` : `ou: "V-14"`. Le geste existait, mais sur
-		 * `/notes/{identifiant}/relations`, une adresse qu'aucune source ne
-		 * prévoit. Il est désormais atteignable d'où le gel le montre.
+		 * `d-relation`, que le gel place dans le panneau « Relations » de V-14.
 		 *
 		 * `P-09` — LES MOYENS D'ÉCRIRE NE SONT PRÉPARÉS QUE POUR QUI PEUT ÉCRIRE.
-		 * `null` sinon, et la page ne monte alors aucun dialogue : ni le bouton,
-		 * ni la boîte, ni le sélecteur de cibles n'entrent dans le DOM. C'est le
-		 * même partage qu'à `/notes/{identifiant}/relations`, et les deux appels
-		 * sont les mêmes — il n'existe pas deux lectures des types offerts, ni
-		 * deux résolutions des cibles possibles.
+		 * `null` sinon : ni bouton, ni boîte, ni sélecteur n'entrent dans le DOM.
 		 *
-		 * LES CIBLES SONT CELLES SUR LESQUELLES L'APPELANT PEUT ÉCRIRE
-		 * (`RG-M08-04`, les deux extrémités) : une note qu'il ne pourrait pas
-		 * relier n'est pas proposée, plutôt que refusée après le clic.
+		 * LES CIBLES SONT CELLES SUR LESQUELLES L'APPELANT PEUT ÉCRIRE (`RG-M08-04`,
+		 * les deux extrémités) : une note qu'il ne pourrait pas relier n'est pas
+		 * proposée, plutôt que refusée après le clic.
 		 *
-		 * DEUX LISTES VIDES NE RENDENT PAS CETTE PROPRIÉTÉ NULLE, ET C'EST VOULU.
-		 * Sur une instance neuve, le référentiel de types est vide et la note lue
-		 * est souvent la seule du périmètre d'écriture. La tentation est de servir
-		 * `null` — le dialogue ne serait alors pas monté, et le bouton
-		 * « + Ajouter » que V-14 dessine n'ouvrirait plus rien : un geste promis
-		 * par l'écran et sans effet, ce qui est un défaut. La boîte est donc montée
-		 * et reçoit les deux listes TELLES QU'ELLES SONT ; c'est elle qui nomme ce
-		 * qui manque et l'adresse où le créer. `null` reste réservé au seul cas où
-		 * le geste n'a pas à être offert du tout : l'absence de droit d'écriture.
+		 * DEUX LISTES VIDES NE RENDENT PAS CETTE PROPRIÉTÉ NULLE, ET C'EST VOULU :
+		 * servir `null` sur une instance neuve laisserait « + Ajouter » n'ouvrir plus
+		 * rien. La boîte est montée et nomme elle-même ce qui manque. `null` reste
+		 * réservé à l'absence de droit.
 		 */
 		relation: lecture.capacites.ecrireDesNotes
 			? {
@@ -853,16 +654,11 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 };
 
 /**
- * L'AUTRE CORPS DE LA NOTE, RÉSOLU UNE SECONDE FOIS — et par le même chemin.
+ * L'AUTRE CORPS DE LA NOTE, RÉSOLU UNE SECONDE FOIS — et par le même chemin :
+ * l'adresse nomme un registre, l'écran a besoin des DEUX.
  *
- * Elle sert les deux sens, et c'est la même fonction parce que c'est le même
- * geste : l'adresse nomme un registre, l'écran a besoin des DEUX, et le second
- * se relit. Quand l'adresse demande l'Opérationnel, elle rend la Référence ;
- * quand elle demande la Référence, elle rend l'Opérationnel — et seulement si
- * la note en porte un.
- *
- * Passer par `lireLaNote()` plutôt que par une requête écrite ici garantit
- * qu'il n'existe pas deux décisions d'accès à cette adresse : un refus rend
+ * Passer par `lireLaNote()` plutôt que par une requête écrite ici garantit qu'il
+ * n'existe pas deux décisions d'accès à cette adresse : un refus rend
  * `INTROUVABLE`, et le volet reste vide plutôt que de trahir quoi que ce soit.
  */
 async function corpsCharge(
@@ -879,11 +675,8 @@ async function corpsCharge(
 
 /**
  * LE CONTEXTE D'UN GESTE — l'instant est pris UNE FOIS par requête, et il sert
- * à la fois de seuil de lecture et de date d'attestation.
- *
- * Deux appels d'horloge donneraient à la note une date de vérification
- * légèrement postérieure à celle sur laquelle la fraîcheur a été résolue : la
- * réponse serait exacte, et la trace incohérente d'une milliseconde.
+ * à la fois de seuil de lecture et de date d'attestation. Deux appels d'horloge
+ * dateraient la vérification après l'état sur lequel la fraîcheur a été résolue.
  */
 async function contexteDUnGeste() {
 	const base = basePartagee();
@@ -892,17 +685,12 @@ async function contexteDUnGeste() {
 }
 
 export const actions: Actions = {
-	/**
-	 * VÉRIFIER — `UC-M06-02`. Un clic, aucun champ : la requête n'a pas de corps
-	 * utile, et il n'y a rien à valider avant d'écrire. C'est littéralement ce
-	 * que `CLAUDE.md` §1 décrit — « en un clic, sans formulaire ».
-	 */
+	/** VÉRIFIER — `UC-M06-02`. Un clic, aucun champ : rien à valider avant d'écrire. */
 	verifier: async ({ params, locals }) => {
 		const { base, maintenant, contexte } = await contexteDUnGeste();
-		/* SEUL CE GESTE ENTRETIENT L'INDEX DES TROIS — il écrit `verifieLe`, qui
-		   est un champ projeté et l'un des quatre champs triables. Signaler et
-		   lever n'écrivent que les colonnes de révision, qu'aucune entrée d'index
-		   ne porte. */
+		/* SEUL CE GESTE ENTRETIENT L'INDEX DES TROIS — il écrit `verifieLe`, champ
+		   projeté et triable. Signaler et lever n'écrivent que les colonnes de
+		   révision, qu'aucune entrée d'index ne porte. */
 		const fait = await verifierLaNote(base, moteurPartage(), {
 			identifiant: params.identifiant,
 			identite: locals.identite,
@@ -912,15 +700,15 @@ export const actions: Actions = {
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
 		return {
 			verifieLe: fait.ressource.verifieLe.toISOString(),
-			/* `RG-M06-07` — ce que le geste a EFFACÉ au passage. L'écran a besoin de
-			   le savoir : le bandeau de révision doit disparaître. */
+			/* `RG-M06-07` — ce que le geste a EFFACÉ au passage : le bandeau de
+			   révision doit disparaître. */
 			demandeEffacee: fait.ressource.demandeEffacee
 		};
 	},
 
 	/**
-	 * SIGNALER À RÉVISER — `UC-M06-03`, « en expliquant pourquoi ». Le
-	 * commentaire est la seule donnée du geste, et son absence le refuse.
+	 * SIGNALER À RÉVISER — `UC-M06-03`, « en expliquant pourquoi ». Le commentaire
+	 * est la seule donnée du geste, et son absence le refuse.
 	 */
 	signaler: async ({ params, locals, request }) => {
 		const { base, maintenant, contexte } = await contexteDUnGeste();
@@ -928,12 +716,10 @@ export const actions: Actions = {
 		const commentaire = commentaireDeRevision(formulaire.get('commentaire'));
 
 		if (commentaire === null) {
-			/* LE DROIT EST RÉSOLU AVANT QU'ON SE PLAIGNE DE LA FORME. Une réponse qui
-			   distinguerait « explication manquante » de « adresse inconnue »
-			   révélerait l'existence de la note à qui n'y a pas droit — le même
-			   raisonnement que l'action de `/notes/{identifiant}/modifier`. La levée
-			   sert de sonde d'accès : elle est le geste du même régime dont l'effet
-			   est neutre quand aucune demande n'est courante. */
+			/* LE DROIT EST RÉSOLU AVANT QU'ON SE PLAIGNE DE LA FORME : distinguer
+			   « explication manquante » de « adresse inconnue » révélerait l'existence
+			   de la note à qui n'y a pas droit. La levée sert de sonde d'accès — même
+			   régime, effet neutre quand aucune demande n'est courante. */
 			const acces = await leverLaDemandeDeRevision(base, {
 				identifiant: params.identifiant,
 				identite: locals.identite,
@@ -960,24 +746,11 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * LEVER LA DEMANDE — `M06.3`, dernière puce, rendue par `V-14:1427`.
+	 * RESTAURER UNE VERSION — `UC-M07-04`. Son déclencheur vit dans V-15, qui est une
+	 * SUPERPOSITION de cette adresse.
 	 *
-	 * Elle n'atteste rien : la note ne repasse pas au vert. Confondre les deux
-	 * serait confondre « cette demande n'a plus lieu d'être » et « ce contenu est
-	 * d'actualité », et le vocabulaire du produit sépare les deux (`CLAUDE.md`
-	 * §3, « Vérifier »).
-	 */
-	/**
-	 * RESTAURER UNE VERSION — `UC-M07-04`. Le geste est dessiné dans
-	 * `mockups/V-40-dialogues.html` (« restaurer la version 11 ») et son
-	 * déclencheur vit dans V-15, le panneau d'historique, qui est une
-	 * SUPERPOSITION de cette adresse (`docs/routes.md` §3.4). L'action est donc
-	 * ici, à côté des trois autres gestes de la lecture, et non sur une route de
-	 * comparaison qu'aucun bouton ne vise depuis le panneau.
-	 *
-	 * Restaurer n'efface rien : c'est un ENREGISTREMENT du corps ancien, qui
-	 * capture donc sa propre version (`RG-M07-02`). L'historique s'allonge, il ne
-	 * recule pas.
+	 * Restaurer n'efface rien : c'est un ENREGISTREMENT du corps ancien, qui capture
+	 * donc sa propre version (`RG-M07-02`).
 	 */
 	restaurer: async ({ params, locals, request }) => {
 		const { base, maintenant, contexte } = await contexteDUnGeste();
@@ -1007,6 +780,11 @@ export const actions: Actions = {
 		redirect(303, `/notes/${params.identifiant}`);
 	},
 
+	/**
+	 * LEVER LA DEMANDE — `M06.3`. Elle n'atteste rien : la note ne repasse pas au
+	 * vert. Confondre les deux serait confondre « cette demande n'a plus lieu
+	 * d'être » et « ce contenu est d'actualité ».
+	 */
 	lever: async ({ params, locals }) => {
 		const { base, maintenant, contexte } = await contexteDUnGeste();
 		const fait = await leverLaDemandeDeRevision(base, {
@@ -1020,40 +798,19 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * SUPPRIMER — `RG-M04-10`, `RG-M07-04`, `RG-M14-03`, `RG-M14-05`. T-080.
+	 * SUPPRIMER — `RG-M04-10`, `RG-M07-04`, `RG-M14-03`, `RG-M14-05`.
 	 *
-	 * ELLE N'APPARTIENT PAS À M06, et c'est pourquoi elle est nommée à part des
-	 * trois précédentes : celles-ci sont les gestes de la FRAÎCHEUR, celle-ci
-	 * détruit. Elle est ici parce que `docs/routes.md:140` rattache la famille
-	 * `/notes/{identifiant}` à cette adresse, et que la note à détruire est
-	 * précisément celle qu'on lit.
+	 * AUCUN CHAMP N'EST LU : `RG-M04-10` demande une CONFIRMATION — un fait d'écran
+	 * —, pas une saisie du nom exact, réservée aux dossiers et aux domaines.
 	 *
-	 * AUCUN CHAMP N'EST LU. `RG-M04-10` demande une CONFIRMATION — un fait
-	 * d'écran, le dialogue « Supprimer cette note » de V-40 —, pas une saisie du
-	 * nom exact : celle-ci est réservée aux dossiers (`RG-M03-04`) et aux
-	 * domaines (`RG-M14-02`). Lire un champ ici serait inventer une porte que le
-	 * cahier ne pose pas.
+	 * LE REFUS EST LE MÊME `404` QUE PARTOUT DANS CETTE FAMILLE : le droit est résolu
+	 * AVANT toute destruction, par `resoudreLEditionDUneNote()` — la même décision
+	 * que l'éditeur, jamais recopiée (`RG-ACC-04`).
 	 *
-	 * LE REFUS EST LE MÊME `404` QUE PARTOUT DANS CETTE FAMILLE. Le droit est
-	 * résolu AVANT toute destruction, par `resoudreLEditionDUneNote()` — la même
-	 * décision que l'éditeur, jamais recopiée —, et rien ne distingue « la note
-	 * n'existe pas » de « vous n'y avez pas droit » (`RG-ACC-04`).
-	 *
-	 * ET LA RÉPONSE EST UN `303` VERS LE DOMAINE, jamais vers la note. La note
-	 * n'existe plus : rediriger vers `/notes/{identifiant}` rendrait un 404, ce
-	 * qui serait une confirmation par l'absurde. L'adresse est celle
-	 * qu'`adresseDeDomaine()` compose (`ARB-001`, seule forme publiée) et elle
+	 * ET LA RÉPONSE EST UN `303` VERS LE DOMAINE, jamais vers la note : celle-ci
+	 * n'existe plus, et un 404 serait une confirmation par l'absurde. L'adresse
 	 * remonte du module de suppression, qui l'a calculée AVANT de détruire.
-	 *
-	 * `redirect()` LÈVE, et l'appel est donc la dernière ligne : tout ce qui la
-	 * suivrait serait mort.
-	 *
-	 * CE QUI N'ATTEINT PAS ENCORE CETTE ACTION. Aucun formulaire de l'écran ne
-	 * la vise : V-14 rend le bouton de suppression sous `{#if ecriture}`
-	 * (`src/vues/V-14.svelte`) et le gel ne porte pour cette vue aucun `form`
-	 * (`ARB-054` §3). `ARB-063` place ce câblage dans `+page.svelte`, que le
-	 * contrat de ce lot n'ouvre pas. Écart déclaré — `ECART-048` É-4 —, non
-	 * comblé ici.
+	 * `redirect()` LÈVE : tout ce qui suivrait l'appel serait mort.
 	 */
 	supprimer: async ({ params, locals }) => {
 		const { base, contexte } = await contexteDUnGeste();
@@ -1067,29 +824,17 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * DÉPOSER UNE PIÈCE JOINTE — `M04.7` (`CDC:611`), le panneau « liste des
-	 * fichiers, taille, type, téléchargement » de la note qu'on lit.
+	 * DÉPOSER UNE PIÈCE JOINTE — `M04.7`. L'action est ici parce que la note qui
+	 * reçoit la pièce est celle qu'on lit et que `docs/routes.md` est un inventaire
+	 * FERMÉ.
 	 *
-	 * LE MÉCANISME EXISTAIT DEPUIS `T-026` ET N'AVAIT AUCUNE PORTE.
-	 * `deposerUnePieceJointe()` écrivait les octets puis la ligne, l'entrepôt
-	 * était monté, la route de téléchargement servait — et `pieces_jointes`
-	 * portait ZÉRO ligne, faute d'une seule adresse qui accepte un fichier.
-	 * C'est cette porte, et elle n'est pas une route de plus : `docs/routes.md`
-	 * est un inventaire FERMÉ, et la note qui reçoit la pièce est précisément
-	 * celle qu'on lit. L'action est donc ici, à côté de `supprimer`.
+	 * TROIS REFUS SONT RENDUS `400`, ET UN SEUL `404` : les trois premiers — plafond
+	 * dépassé, homonyme, nom vide — sont ADRESSÉS à quelqu'un dont le droit d'écrire
+	 * a DÉJÀ été résolu, et les nommer ne révèle rien. Le `404` est le refus
+	 * indiscernable d'`ADR-007`.
 	 *
-	 * TROIS REFUS SONT RENDUS `400`, ET UN SEUL `404`. Les trois premiers —
-	 * plafond dépassé, homonyme, nom vide — sont ADRESSÉS à quelqu'un dont le
-	 * droit d'écrire a DÉJÀ été résolu : `deposerUnePieceJointe()` tranche le
-	 * droit AVANT de lire le plafond, et ces trois-là ne peuvent donc être
-	 * atteints que par un contributeur habilité. Les nommer ne révèle rien.
-	 * Le `404`, lui, est le refus indiscernable d'`ADR-007` : note inexistante
-	 * et note non accessible en écriture sortent par le même chemin.
-	 *
-	 * AUCUNE TAILLE N'EST CONTRÔLÉE ICI. Le plafond est celui de la console
-	 * (`M14.7`), lu en base à chaque dépôt par le module ; le redire ici en
-	 * ferait une seconde définition, et `P-01` dit ce que valent deux
-	 * définitions concurrentes d'un même seuil.
+	 * AUCUNE TAILLE N'EST CONTRÔLÉE ICI : le plafond est celui de la console, lu en
+	 * base à chaque dépôt ; le redire ici en ferait une seconde définition (`P-01`).
 	 */
 	deposerPiece: async ({ params, locals, request }) => {
 		const depose = (await request.formData()).get('fichier');
@@ -1103,10 +848,8 @@ export const actions: Actions = {
 				nom: depose.name,
 				/* LE TYPE VIENT DU DÉPÔT, ET SON ABSENCE A UNE VALEUR NORMALISÉE. Un
 				   navigateur qui ne reconnaît pas un fichier rend une chaîne vide ;
-				   `application/octet-stream` est le type que la norme HTTP donne à
-				   des octets non typés, pas une devinette de ce module. Rien n'est
-				   inféré du suffixe : `entrepot.ts` refuse par principe qu'une chaîne
-				   d'utilisateur décide de quoi que ce soit. */
+				   `application/octet-stream` est le type que la norme HTTP donne à des
+				   octets non typés, pas une devinette. Rien n'est inféré du suffixe. */
 				typeMedia: depose.type === '' ? TYPE_DES_OCTETS_NON_TYPES : depose.type,
 				octets,
 				identite: locals.identite
@@ -1126,18 +869,17 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * RETIRER UNE PIÈCE JOINTE — le pendant du dépôt, désigné par le NOM du
-	 * fichier, qui est la seule clé qu'une adresse porte (`docs/routes.md:146`).
+	 * RETIRER UNE PIÈCE JOINTE — désigné par le NOM du fichier, la seule clé
+	 * qu'une adresse porte.
 	 *
 	 * LE REFUS EST UNIQUE ET IL EST `404`, pour les trois causes que
 	 * `retirerUnePieceJointeParNom()` confond : note inexistante, note sur
-	 * laquelle l'appelant n'écrit pas, pièce inexistante. Aucune branche ne les
-	 * distingue ici, et il n'y en a pas ailleurs.
+	 * laquelle l'appelant n'écrit pas, pièce inexistante.
 	 */
 	retirerPiece: async ({ params, locals, request }) => {
-		/* LE CHAMP NE S'APPELLE PAS `fichier` : le champ de DÉPÔT porte déjà ce
-		   nom, dans le même formulaire, et deux champs homonymes rendent le
-		   premier dans l'ordre du document. Voir `+page.svelte`. */
+		/* LE CHAMP NE S'APPELLE PAS `fichier` : le champ de DÉPÔT porte déjà ce nom,
+		   dans le même formulaire, et deux champs homonymes rendent le premier dans
+		   l'ordre du document. Voir `+page.svelte`. */
 		const soumis = (await request.formData()).get('piece');
 		if (typeof soumis !== 'string' || soumis.trim() === '') {
 			return fail(400, { motif: 'aucune pièce jointe désignée' });

@@ -1,106 +1,24 @@
 /**
- * LE CHARGEUR DE `/recherche` — une adresse, deux écrans, UN SEUL MOTEUR.
+ * LE CHARGEUR DE `/recherche` — une adresse, deux écrans, UN SEUL MOTEUR : V-02 sans
+ * session, V-08 avec.
  *
- * `docs/routes.md` §3.1 et §5.5 : **V-02 Recherche publique** sans session,
- * **V-08 Recherche** avec session, et la même colonne pour tous les rôles
- * connectés. La route est une, donc le chargeur est un.
+ * CE FICHIER NE DÉCIDE AUCUN DROIT : il appelle `chercherLesNotes()` — le seul chemin de
+ * recherche du dépôt, qui CALCULE son filtre depuis `resolution.ts` — puis lit en base
+ * les seules notes que le moteur a consenti à rendre. L'INSTANT DE RÉFÉRENCE EST PRIS
+ * ICI, et LES SEUILS VIENNENT DE LA BASE (`P-01`).
  *
- * CE FICHIER NE DÉCIDE AUCUN DROIT. Il lit l'identité que `src/hooks.server.ts`
- * a posée, appelle `chercherLesNotes()` — le seul chemin de recherche du dépôt,
- * qui CALCULE son filtre depuis `src/lib/droits/resolution.ts` — puis lit en
- * base les seules notes que le moteur a consenti à rendre. Aucune comparaison de
- * visibilité, de statut, de rôle ou de droit ne s'écrit ici.
+ * LES FACETTES NE SONT PAS DANS LA REQUÊTE AU MOTEUR, ET C'EST LE GEL QUI LE VEUT : « le
+ * nombre affiché en regard d'une valeur indique le nombre de résultats obtenus SI CETTE
+ * VALEUR ÉTAIT RETENUE ». Deux conséquences, et aucune n'est un relâchement : le
+ * PÉRIMÈTRE reste dans la requête au moteur (`ADR-006` — une facette n'est pas une
+ * garantie d'accès), et la facette « fraîcheur », sans champ dans l'index, se lit sur la
+ * note lue en base.
  *
- * L'INSTANT DE RÉFÉRENCE EST PRIS ICI, ET NULLE PART AILLEURS, comme au
- * chargeur de `/` : la couche de lecture le reçoit en paramètre pour rester
- * reproductible, donc mesurable. LES SEUILS VIENNENT DE LA BASE — `P-01` veut
- * une seule définition de la fraîcheur, donc un seul jeu de seuils.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUI CHANGE — LES DEUX ÉCRANS CESSENT DE CHERCHER EUX-MÊMES
- *
- * Jusqu'ici les deux vues portaient leur propre correspondance : V-02 rejouait
- * `chercher()` — le port de la fabrique de maquette — sur les notes reçues, et
- * V-08 cherchait « restauration base », valeur écrite au gel, quelle que soit
- * l'adresse demandée. Une note créée à l'instant et cherchée par son titre exact
- * ne sortait donc nulle part en session, et ne sortait en anonyme que si une
- * SECONDE implémentation de la recherche — celle de la maquette, qui n'inspecte
- * ni le corps ni le rangement — voulait bien la reconnaître.
- *
- * Désormais : **le moteur cherche, les vues rendent.** Les notes passées aux
- * deux écrans SONT le résultat de l'index, dans l'ordre du moteur, et les vues
- * le savent — c'est ce que dit la propriété `recherchees`. `RG-M02-01` mots-clés
- * a donc une seule implémentation, et c'est `chercherLesNotes()`.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES FACETTES NE SONT PAS DANS LA REQUÊTE AU MOTEUR, ET C'EST LE GEL QUI LE
- * VEUT
- *
- * `docs/routes.md` §4.2 renvoie à `creerFacettes.passe()` (`V-08:1813-1821`)
- * pour la sémantique de combinaison, et la règle de comptage de `V-08:1782` est
- * inséparable de la façon dont le gel calcule : *« le nombre affiché en regard
- * d'une valeur indique le nombre de résultats obtenus SI CETTE VALEUR ÉTAIT
- * RETENUE, les autres facettes restant appliquées »*. Le gel obtient ce compte
- * en cherchant SANS facette — `fac.rendre(base)` où `base = chercher(q)`,
- * `V-08:1959-1963` — puis en éprouvant chaque facette sur cette base.
- *
- * Ce chargeur fait donc exactement cela : une requête au moteur pour `q` seul,
- * PÉRIMÈTRE COMPRIS, et les valeurs de facette retenues sont passées à la vue,
- * qui rejoue l'arithmétique du gel. Deux conséquences, et aucune n'est un
- * relâchement :
- *
- *   · le PÉRIMÈTRE reste dans la requête au moteur (`ADR-006` : « la requête
- *     envoyée au moteur NE PEUT PAS rapporter un document interdit »). Une
- *     facette n'est pas une garantie d'accès : c'est un affinage, et elle ne
- *     peut que restreindre ce que le périmètre a déjà consenti ;
- *   · la facette « fraîcheur » de §4.2, qui n'a **aucun champ dans l'index**
- *     (`notes-indexees.ts` : `P-01` interdit un second calcul), redevient
- *     honorable comme les six autres, puisqu'elle se lit sur la note lue en
- *     base — là où la fraîcheur est calculée une fois pour toutes.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * `/recherche` NE REFUSE JAMAIS — ET C'EST UNE EXIGENCE, PAS UNE COMMODITÉ
- *
- * `docs/routes.md:248` : « Un paramètre `statut=` ou `visibilite=` présenté par
- * un anonyme est IGNORÉ, jamais refusé — un refus révélerait l'existence du
- * filtre. » Ce chargeur ne porte donc AUCUN `error()`, aucune redirection et
- * aucune validation de paramètre. Le crible vient en premier et
- * `url.searchParams` n'est plus lu ensuite : ce qui n'est pas honoré n'a aucun
- * chemin jusqu'à la réponse — ni pour la changer, ni pour être renvoyé au
- * client, ni pour être refusé.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE MODE « SENS » SE DÉCLARE INDISPONIBLE
- *
- * L'index sert les mots-clés. Le mode « Sens » a besoin de VECTEURS, et aucun
- * n'existe : le service d'embeddings est optionnel et le modèle n'est pas fixé.
- * `SENS_DISPONIBLE` porte le constat — dérivé des réglages de l'index —, et
- * V-08 porte la phrase du gel : « Recherche par sens momentanément
- * indisponible ». `P-10` — dégradation, jamais panne ; `P-02` — jamais de
- * simulation.
- *
- * `?mode=` EST DÉSORMAIS HONORÉ, ET LE DEMEURE MÊME DÉGRADÉ. Il est lu, porté
- * par l'adresse et rendu par les trois boutons de la bascule ; tant que
- * `SENS_DISPONIBLE` est faux, le mode EFFECTIF reste « mots-clés », l'écran se
- * déclare dégradé et affiche la phrase du gel. C'est la règle du gel lui-même,
- * qui bascule en mots-clés et désactive « Sens » quand la brique tombe
- * (`V-08:2098-2106`) : la bascule est ANNONCÉE, jamais silencieuse
- * (`RG-M02-01`).
- *
- * ═════════════════════════════════════════════════════════════════════════
- * `?tri=` EST HONORÉ, ET LES QUATRE ORDRES NE SONT PAS INVENTÉS
- *
- * La rédaction précédente de ce fichier disait : « les quatre ordres de tri
- * autres que “pertinence” ne sont écrits dans AUCUNE source gelée ». C'était
- * vrai de V-08, dont `trier()` n'existe pas — et faux du gel pris dans son
- * ensemble : `mockups/V-12-liste-notes.html:2117-2124` définit ces quatre
- * ordres, avec les MÊMES valeurs d'option et les mêmes libellés que le
- * sélecteur de V-08. La sémantique est donc GELÉE, dans une autre planche, et
- * `ORDRES_DE_TRI` de `$lib/recherche/moteur` la porte avec la citation.
- *
- * L'ordre est appliqué PAR LE MOTEUR, sur les champs que `CHAMPS_TRIABLES`
- * déclarait déjà, et le résultat traverse `dansLOrdreDuMoteur()` comme avant :
- * la vue continue de rendre l'ordre qu'elle reçoit.
+ * `/recherche` NE REFUSE JAMAIS : un paramètre non honoré est IGNORÉ — « un refus
+ * révélerait l'existence du filtre ». LE MODE « SENS » SE DÉCLARE INDISPONIBLE : `?mode=`
+ * reste HONORÉ, mais tant que `SENS_DISPONIBLE` est faux le mode EFFECTIF reste
+ * « mots-clés » et l'écran se déclare dégradé. `?tri=` EST HONORÉ, et l'ordre est
+ * appliqué PAR LE MOTEUR.
  */
 import { basePartagee } from '$lib/base/acces';
 import {
@@ -131,17 +49,14 @@ import type { Note } from '../../../seeds/corpus';
 import type { PageServerLoad } from './$types';
 
 /**
- * LES SEPT FACETTES DE `docs/routes.md` §4.2, DANS SON ORDRE — et ce sont les
- * identifiants de `V-08:1938-1946`, jamais des noms inventés.
- *
- * La liste est CLOSE, et sa clôture est le propos : un paramètre hors liste n'a
- * aucun chemin jusqu'à la réponse.
+ * LES SEPT FACETTES DE `docs/routes.md` §4.2, DANS SON ORDRE — les identifiants
+ * du gel. La liste est CLOSE, et sa clôture est le propos : un paramètre hors
+ * liste n'a aucun chemin jusqu'à la réponse.
  *
  * ELLE N'EST PAS EXPORTÉE, et ce n'est pas un choix de style : SvelteKit REFUSE
- * tout export d'un `+page.server.ts` qui ne soit pas `load`, `actions`,
- * `prerender`, `csr`, `ssr`, `trailingSlash`, `config`, `entries` ou préfixé
- * d'un souligné — la route entière rend alors 500, et `pnpm check` ne le voit
- * pas. Mesuré sur cette copie avant correction.
+ * tout export d'un `+page.server.ts` hors `load`, `actions`, `prerender`, `csr`,
+ * `ssr`, `trailingSlash`, `config`, `entries` ou préfixé d'un souligné — la route
+ * entière rend alors 500, et `pnpm check` ne le voit pas.
  */
 const FACETTES_DE_LA_RECHERCHE: readonly string[] = [
 	'univers',
@@ -154,15 +69,10 @@ const FACETTES_DE_LA_RECHERCHE: readonly string[] = [
 ];
 
 /**
- * LES FACETTES QUE L'ANONYME VOIT HONORER — `docs/routes.md:248`, recopiée :
- * « seuls `q`, `domaine` et `type` sont honorés ». Le brief V-02 réduit ses
- * facettes à « domaine, type de note. **Pas de statut, pas de visibilité, pas
- * d'étiquette interne** », et V-02 n'en affiche pas d'autres.
- *
- * ELLE EST DÉRIVÉE DU CRIBLE, JAMAIS RECOPIÉE. `parametresHonores()` de
- * `$lib/donnees/public` reste l'unique juge de ce qu'un anonyme voit honorer :
- * cette constante lui pose la question facette par facette. Une liste recopiée
- * aurait pu diverger de lui sans que rien ne le dise.
+ * LES FACETTES QUE L'ANONYME VOIT HONORER, DÉRIVÉES DU CRIBLE ET JAMAIS
+ * RECOPIÉES : `parametresHonores()` reste l'unique juge, et cette constante lui
+ * pose la question facette par facette. Une liste recopiée aurait pu diverger de
+ * lui sans que rien ne le dise.
  */
 const FACETTES_HONOREES_EN_ANONYME: readonly string[] = FACETTES_DE_LA_RECHERCHE.filter((f) =>
 	parametresHonores(new URLSearchParams([[f, 'x']]), false).has(f)
@@ -170,11 +80,8 @@ const FACETTES_HONOREES_EN_ANONYME: readonly string[] = FACETTES_DE_LA_RECHERCHE
 
 /**
  * LE CRIBLE — les paramètres réellement lus, en amont de toute lecture.
- *
  * IGNORER N'EST PAS « NE PAS SE SERVIR DE » : c'est ne pas pouvoir s'en servir.
- * En anonyme, le crible est celui de `$lib/donnees/public`, mot pour mot. En
- * session, les sept facettes de §4.2 s'ajoutent à `q` — V-08 les affiche toutes
- * les sept, et c'est ce que l'écran sait recevoir qui décide.
+ * En anonyme, le crible est celui de `$lib/donnees/public`, mot pour mot.
  */
 function honores(parametres: URLSearchParams, session: boolean): URLSearchParams {
 	if (!session) return parametresHonores(parametres, false);
@@ -186,12 +93,9 @@ function honores(parametres: URLSearchParams, session: boolean): URLSearchParams
 }
 
 /**
- * LES TROIS MODES DE `docs/routes.md:242` — les valeurs de `data-mode` du gel
- * (`V-08:1165-1171`), et rien d'autre.
- *
- * `hybride` EST LE DÉFAUT, et c'est le gel qui le dit deux fois : `V-08:1004`
- * pose `data-mode="hybride"` sur `div.app`, et le bouton « Hybride » est le seul
- * à naître `aria-pressed="true"` — son infobulle écrit « Mode par défaut ».
+ * LES TROIS MODES DE `docs/routes.md:242` — les valeurs de `data-mode` du gel,
+ * et rien d'autre. `hybride` EST LE DÉFAUT : `V-08:1004` le pose sur `div.app`,
+ * et le bouton « Hybride » est le seul à naître `aria-pressed="true"`.
  */
 const MODES = ['motscles', 'sens', 'hybride'] as const;
 type ModeDeRecherche = (typeof MODES)[number];
@@ -203,12 +107,9 @@ function modeDemande(demande: URLSearchParams): ModeDeRecherche {
 }
 
 /**
- * LES VALEURS DE FACETTE RETENUES — `{facette: [valeur, …]}`.
- *
- * `docs/routes.md` §4.2 : à l'intérieur d'une facette les valeurs sont en OU
- * (paramètre RÉPÉTÉ), entre facettes en ET. Un paramètre répété rend donc
- * plusieurs valeurs pour la même facette, et c'est la vue — qui porte
- * l'arithmétique du gel — qui les combine.
+ * LES VALEURS DE FACETTE RETENUES — `{facette: [valeur, …]}`. À l'intérieur
+ * d'une facette les valeurs sont en OU (paramètre RÉPÉTÉ), entre facettes en ET ;
+ * c'est la vue, qui porte l'arithmétique du gel, qui les combine.
  *
  * Une facette sans valeur retenue est ABSENTE de l'objet, jamais présente et
  * vide : `nbFiltres()` du gel compte les valeurs des clés, et une clé vide y
@@ -227,12 +128,9 @@ function facettesRetenues(
 }
 
 /**
- * LES NOTES DANS L'ORDRE DU MOTEUR — la pertinence, qui est l'ordre de tri par
- * défaut de V-08 (`V-08:1191-1195`, aucune `<option>` marquée `selected`).
- *
- * `lireNotes()` classe par identifiant, parce qu'une lecture en base n'a pas de
- * raison de connaître la pertinence. Le classement est donc RESTITUÉ ici, depuis
- * la liste que le moteur a rendue : une note absente de la lecture — retirée
+ * LES NOTES DANS L'ORDRE DU MOTEUR — la pertinence, ordre de tri par défaut de
+ * V-08. `lireNotes()` classe par identifiant, une lecture en base n'ayant pas de
+ * raison de connaître la pertinence. Une note absente de la lecture — retirée
  * entre la requête à l'index et la requête en base — disparaît simplement, sans
  * trou ni exception.
  */
@@ -247,32 +145,19 @@ function dansLOrdreDuMoteur(lues: readonly Note[], ordre: readonly string[]): re
 }
 
 /**
- * LE PLAFOND DES PISTES — celui des valeurs de facette de V-08 (`max: 8`,
- * `V-08:1952`). Les pistes comptent les mêmes étiquettes que la facette
- * « Étiquette » ; elles s'arrêtent au même nombre.
+ * LE PLAFOND DES PISTES — celui des valeurs de facette de V-08 (`max: 8`). Les
+ * pistes comptent les mêmes étiquettes que la facette « Étiquette ».
  */
 const MAX_PISTES = 8;
 
 /**
  * LES PISTES DE REFORMULATION — LES ÉTIQUETTES RÉELLES DU PÉRIMÈTRE, OU RIEN.
  *
- * Les deux vues énuméraient des pistes ÉCRITES DANS LEUR MAQUETTE — V-08 :
- * « restauration », « sauvegarde », « barman », « plan de reprise » ; V-02 :
- * « mot de passe », « accès », « salle de réunion » —, chacune ouvrant
- * `/recherche?q=…` à zéro résultat sur une instance qui ne porte rien de tel.
- *
- * LA SOURCE EST LE PÉRIMÈTRE LISIBLE, ET NON LE JEU DE RÉSULTATS. La nuance
- * décide de tout : le bloc ne se rend QUE lorsque la recherche n'a rien rendu,
- * donc compter sur les résultats ne pourrait jamais rendre qu'une liste vide.
- * Les identifiants reçus ici sont ceux de la requête VIDE — le périmètre entier
- * que `chercherLesNotes()` a consenti à l'appelant, que ce chargeur demande
- * déjà pour la règle d'affluence.
- *
- * LA REQUÊTE COURANTE EST ÉCARTÉE : proposer à l'utilisateur le mot qu'il vient
- * de taper n'est pas une reformulation.
- *
- * Ordre : la plus employée d'abord, puis l'ordre alphabétique français — celui
- * que `parFrequence()` de V-08 applique à ses valeurs de facette.
+ * LA SOURCE EST LE PÉRIMÈTRE LISIBLE, ET NON LE JEU DE RÉSULTATS : le bloc ne se
+ * rend QUE lorsque la recherche n'a rien rendu, donc compter sur les résultats ne
+ * pourrait rendre qu'une liste vide. LA REQUÊTE COURANTE EST ÉCARTÉE — proposer le
+ * mot qu'on vient de taper n'est pas une reformulation. Ordre : la plus employée
+ * d'abord, puis l'alphabet français.
  */
 function pistesDeReformulation(
 	identifiants: readonly string[],
@@ -292,7 +177,6 @@ function pistesDeReformulation(
 		.slice(0, MAX_PISTES);
 }
 
-/** Ce que le chargeur de `/recherche` rend à la page. */
 interface DonneesDeRecherche {
 	/** `false` en anonyme — V-02 ; `true` avec une session — V-08. */
 	readonly session: boolean;
@@ -302,9 +186,8 @@ interface DonneesDeRecherche {
 	readonly notes: readonly Note[];
 	/**
 	 * POURQUOI IL N'Y A RIEN À CHERCHER — `null` dès que le périmètre porte une
-	 * note. V-08 en tire un écran qui NOMME ce qui manque et le geste qui
-	 * débloque, au lieu de composer « Aucun résultat pour “” » sur une requête
-	 * que personne n'a formulée.
+	 * note. V-08 en tire un écran qui NOMME ce qui manque et le geste qui débloque,
+	 * au lieu de composer « Aucun résultat pour “” ».
 	 */
 	readonly motif: MotifDuVide | null;
 	/** La requête demandée, telle quelle — `RG-M02-06`. */
@@ -314,38 +197,24 @@ interface DonneesDeRecherche {
 	/** Le nombre de notes que l'identité peut lire, toutes requêtes confondues. */
 	readonly perimetre: number;
 	/**
-	 * LA DURÉE DE LA RECHERCHE, MESURÉE — `processingTimeMs` du moteur, porté par
-	 * `ResultatDeRecherche`.
+	 * LA DURÉE DE LA RECHERCHE, MESURÉE — `processingTimeMs` du moteur, ET CELLE DE
+	 * LA PREMIÈRE REQUÊTE SEULE : la seconde ne sert qu'à compter le périmètre, et
+	 * additionner les deux annoncerait un temps que la recherche n'a pas pris.
 	 *
-	 * Les deux vues affichaient une CONSTANTE — `V-08:541` et `V-02:176` — dont le
-	 * terme mesuré était nul par construction : « 1 résultat en 0,31 s » et
-	 * « 4 résultats en 0,31 s » sortaient du même littéral. La mesure existait
-	 * dans la réponse du moteur ; rien ne la retenait.
-	 *
-	 * C'EST LA DURÉE DE LA PREMIÈRE REQUÊTE, celle de `q`, et d'elle seule. La
-	 * seconde ne sert qu'à compter le périmètre : additionner les deux
-	 * annoncerait à l'utilisateur un temps que sa recherche n'a pas pris.
-	 *
-	 * `null` quand aucune requête n'est partie — périmètre fermé. La vue rend
-	 * alors le compte SANS durée : une durée qui n'existe pas ne vaut pas zéro.
+	 * `null` quand aucune requête n'est partie — périmètre fermé. La vue rend alors
+	 * le compte SANS durée : une durée qui n'existe pas ne vaut pas zéro.
 	 */
 	readonly dureeMs: number | null;
 	/**
-	 * LES PISTES DE REFORMULATION — les étiquettes les plus employées du
-	 * PÉRIMÈTRE LISIBLE, jamais celles du jeu de résultats.
-	 *
-	 * V-02 et V-08 les offrent quand la recherche ne rend rien. Les dériver du
-	 * jeu SERVI aux vues serait une promesse impossible : dans l'état où le bloc
-	 * se rend, ce jeu est vide par définition. Elles se comptent donc ici, sur
-	 * les notes que le moteur a consenti à rendre pour une requête VIDE — la
-	 * seconde requête que ce chargeur émet déjà.
+	 * LES PISTES DE REFORMULATION — les étiquettes les plus employées du PÉRIMÈTRE
+	 * LISIBLE, jamais celles du jeu de résultats : dans l'état où le bloc se rend,
+	 * ce jeu est vide par définition.
 	 */
 	readonly pistes: readonly string[];
 	/**
-	 * L'ADRESSE DU PORTAIL D'ASSISTANCE — clé `portail_assistance` de la table
-	 * `parametres` (M14.7), « adresse externe configurée en console »
-	 * (`V-04:2205`). V-02 l'emploie pour ses deux appels à l'assistance ; V-08 ne
-	 * les a pas, et ne la reçoit donc pas.
+	 * L'ADRESSE DU PORTAIL D'ASSISTANCE — clé `portail_assistance` de `parametres`.
+	 * V-02 l'emploie pour ses deux appels à l'assistance ; V-08 ne les a pas, et ne
+	 * la reçoit donc pas.
 	 */
 	readonly portail: string;
 	/** Les notes reçues SONT le résultat du moteur : la vue ne cherche plus. */
@@ -353,29 +222,21 @@ interface DonneesDeRecherche {
 	/** L'ordre demandé par l'adresse — celui dans lequel les notes arrivent. */
 	readonly tri: OrdreDeTri;
 	/**
-	 * LE MODE DEMANDÉ, jamais le mode effectif. La bascule en mots-clés quand la
-	 * brique manque est un ÉTAT DE L'ÉCRAN, que la vue dérive de `c-degrade` —
-	 * comme le gel, qui bascule dans l'écouteur et laisse le bouton parler.
-	 * Envoyer ici le mode déjà rabattu ferait perdre ce que l'utilisateur a
-	 * demandé, donc l'aveu que sa demande n'a pas été servie.
+	 * LE MODE DEMANDÉ, jamais le mode effectif. La bascule en mots-clés est un ÉTAT
+	 * DE L'ÉCRAN, que la vue dérive de `c-degrade` ; envoyer ici le mode déjà rabattu
+	 * ferait perdre ce que l'utilisateur a demandé, donc l'aveu que sa demande n'a
+	 * pas été servie.
 	 */
 	readonly mode: ModeDeRecherche;
 }
 
 /**
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI LE PÉRIMÈTRE EST VIDE — ET LA RECHERCHE NE LE DEVINE PAS
- *
- * `etat: 'vide'` disait « rien à chercher » et l'écran composait « Aucun
- * résultat pour “” » : un texte écrit sur une valeur ABSENTE, sur l'écran même
- * où l'utilisateur n'a rien demandé. Une recherche sans requête n'est pas une
- * recherche sans résultat. Le motif est décidé ICI, où la base et le moteur sont
- * lisibles, et il nomme le geste que la vue peut proposer.
- *
- * QUATRE MOTIFS, ET AUCUN N'EST DEVINÉ : l'index qui n'a jamais été construit,
- * l'instance sans univers, le périmètre fermé à l'appelant, le corpus vide. Le
- * dernier n'est pas le troisième : un rédacteur qui a des dossiers ouverts et
- * une instance sans note ne doit pas lire « demandez l'accès ».
+ * POURQUOI LE PÉRIMÈTRE EST VIDE — ET LA RECHERCHE NE LE DEVINE PAS. Une
+ * recherche sans requête n'est pas une recherche sans résultat : le motif est
+ * décidé ICI, où la base et le moteur sont lisibles, et il nomme le geste que la
+ * vue peut proposer. QUATRE MOTIFS, ET AUCUN N'EST DEVINÉ — le dernier n'est pas
+ * le troisième : un rédacteur qui a des dossiers ouverts sur une instance sans
+ * note ne doit pas lire « demandez l'accès ».
  */
 type MotifDuVide = 'sans-index' | 'sans-univers' | 'perimetre-ferme' | 'corpus-vide';
 
@@ -389,14 +250,10 @@ const AUCUN_RESULTAT = {
 } as const;
 
 /**
- * L'INDEX N'EXISTE PAS ENCORE — ET CE N'EST PAS UNE PANNE, C'EST UNE
- * INSTALLATION NEUVE.
- *
- * `base:migrer` monte le schéma ; l'index, lui, n'est posé que par la première
- * réindexation. Entre les deux, le moteur répond `index_not_found` et
- * `/recherche` sortait en 500 — le seul écran que l'administrateur ouvre après
- * l'installation, et il ne rendait rien. Le code est celui du corps de réponse
- * du moteur, jamais un texte comparé.
+ * L'INDEX N'EXISTE PAS ENCORE — ET CE N'EST PAS UNE PANNE, C'EST UNE INSTALLATION
+ * NEUVE : `base:migrer` monte le schéma, l'index n'est posé que par la première
+ * réindexation, et entre les deux `/recherche` sortait en 500. Le code est celui
+ * du corps de réponse du moteur, jamais un texte comparé.
  */
 function indexAbsent(erreur: unknown): boolean {
 	const cause: unknown = (erreur as { cause?: unknown } | null)?.cause;
@@ -422,14 +279,11 @@ async function motifDuPerimetreVide(base: Base, identite: Identite): Promise<Mot
 }
 
 /**
- * LA LECTURE — deux requêtes au moteur, et la seconde n'est pas un luxe.
- *
- * La première rapporte le résultat de `q`. La seconde, requête VIDE, rapporte la
- * taille du périmètre lisible : c'est le dénominateur de la règle d'affluence du
- * gel (`V-08:2021` — « le seuil porte sur la part du corpus atteinte, pas sur un
- * nombre absolu »), et il ne se déduit pas du premier compte. Elle ne lit AUCUNE
- * note : seul son total est employé, et le moteur n'est même pas interrogé quand
- * le périmètre est fermé (`RG-DRO-02`).
+ * LA LECTURE — deux requêtes au moteur, et la seconde n'est pas un luxe : la
+ * requête VIDE rapporte la taille du périmètre lisible, dénominateur de la règle
+ * d'affluence du gel, qui ne se déduit pas du premier compte. Elle ne lit AUCUNE
+ * note, et le moteur n'est pas interrogé quand le périmètre est fermé
+ * (`RG-DRO-02`).
  */
 async function lireLaRecherche(
 	base: Base,

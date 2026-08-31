@@ -2,64 +2,20 @@
 	/**
 	 * `/notes/{identifiant}/relations` — le panneau de gestion des relations.
 	 *
-	 * ═════════════════════════════════════════════════════════════════════════
-	 * CET ÉCRAN N'A PAS DE MAQUETTE GELÉE, ET IL FAUT LE DIRE EN PREMIER
+	 * CET ÉCRAN N'A PAS DE MAQUETTE GELÉE, ET IL FAUT LE DIRE EN PREMIER : le gel place
+	 * ce geste dans V-14 et lui donne la forme du dialogue `d-relation` de V-40, dont
+	 * `src/vues/V-40.svelte` fixe la note de démonstration en dur — ce qui en ferait un
+	 * écran qui parle d'une autre note que celle qu'on regarde (`P-02`).
 	 *
-	 * Le gel place ce geste dans V-14 — bouton « + Ajouter » du panneau
-	 * « Relations » (`mockups/V-14-lecture-note.html:1848`) — et lui donne la
-	 * forme du dialogue `d-relation` de V-40 (`mockups/V-40-dialogues.html:1227`).
-	 * Ni l'un ni l'autre n'est monté ici : `src/vues/V-14.svelte` est hors du
-	 * périmètre de ce lot, et `src/vues/V-40.svelte` fixe sa note de
-	 * démonstration en dur (`n-restaurer-pg`, `V-40:160`), ce qui en ferait un
-	 * écran qui parle d'une autre note que celle qu'on regarde — la valeur
-	 * illustrative que `P-02` proscrit.
+	 * L'APERÇU ET LA RECHERCHE NE SONT PAS PORTÉS : ils se recomposent à chaque frappe,
+	 * donc en JavaScript, et cette page est rendue au serveur sans hydratation
+	 * (`ADR-001`). Les deux libellés du type sont ÉCRITS DANS L'OPTION, ce qui tient
+	 * `RG-M08-06` au moment où le choix se fait.
 	 *
-	 * CE QUI EST PORTÉ DU GEL, MALGRÉ TOUT :
-	 *   • le titre du dialogue — « Ajouter une relation » ;
-	 *   • ses deux champs, dans l'ordre : « Type de relation », « Note visée » ;
-	 *   • le libellé de son bouton — « Déclarer la relation » ;
-	 *   • le groupement des relations par libellé de type, et la forme
-	 *     `rel-groupe` / `rel-groupe__titre etiq` que V-14, V-19 et V-20
-	 *     partagent ;
-	 *   • l'état vide de V-14 — « Aucune relation », « Cette note n'est reliée à
-	 *     aucune autre par une relation qualifiée ».
-	 *
-	 * CE QUI NE L'EST PAS, ET POURQUOI :
-	 *   • l'APERÇU « Ce que cela produira », les deux phrases `phrase-rel` du
-	 *     dialogue. Elles se recomposent à chaque frappe, donc en JavaScript ;
-	 *     cette page est rendue au serveur, sans hydratation (`ADR-001`). Les
-	 *     deux libellés du type sont portés autrement : ils sont ÉCRITS DANS
-	 *     L'OPTION, ce qui tient `RG-M08-06` — « l'interface affiche toujours le
-	 *     libellé adapté au sens de lecture » — au moment où le choix se fait ;
-	 *   • la RECHERCHE de la note visée, `input[type=search]` et sa liste
-	 *     déroulante. Même raison. Le choix se fait dans un `select`, dont la
-	 *     planche dit l'usage : « le sélecteur quand les valeurs possibles sont
-	 *     connues, fermées et peu nombreuses » (`docs/DESIGN.md` D-3).
-	 *
-	 * AUCUNE CLASSE INVENTÉE. Toutes celles employées ici sont soit déclarées par
-	 * le socle (`etiq`, `btn*`, `past*`, `panneau*`, `zone-etat*`, `champ*`),
-	 * soit transverses au sens de `docs/DESIGN.md` §2 : `rel-groupe` et
-	 * `rel-groupe__titre` (V-14, V-19, V-20), `rel-item`, `rel-item__t`,
-	 * `rel-item__s` (V-19, V-20, V-40), `selecteur` (12 vues), `doc` et
-	 * `doc__tete` (V-38, V-40, V-41). Aucune règle de style n'est écrite, aucune
-	 * feuille n'est modifiée.
-	 *
-	 * LA FEUILLE PORTÉE EST CELLE DE V-40, et le choix se justifie : c'est la
-	 * maquette qui porte le dialogue de ce geste, et sa feuille déclare les trois
-	 * familles dont cet écran a besoin et que le socle n'a pas — `doc`,
-	 * `selecteur`, `rel-item*`. Elle est importée, jamais modifiée.
-	 *
-	 * ═════════════════════════════════════════════════════════════════════════
-	 * TROIS PIÈGES, ET AUCUN N'EST OUVERT ICI
-	 *
-	 *   1. SvelteKit rend 500 si une action par défaut cohabite avec une action
-	 *      nommée : les deux actions de cette page sont NOMMÉES, il n'y a pas
-	 *      d'action par défaut ;
-	 *   2. `formulaire.action` n'est jamais réécrit avant `requestSubmit()` :
-	 *      aucun formulaire n'est soumis par JavaScript, chacun porte son propre
-	 *      attribut `action` au balisage ;
-	 *   3. un `button` sans attribut `type` SOUMET : tous ceux de cette page
-	 *      portent `type="submit"`, et il n'y en a pas d'autre.
+	 * TROIS PIÈGES, ET AUCUN N'EST OUVERT ICI : les deux actions sont NOMMÉES (une action
+	 * par défaut qui cohabiterait rendrait 500) ; `formulaire.action` n'est jamais réécrit
+	 * avant `requestSubmit()`, aucun formulaire n'étant soumis par JavaScript ; et un
+	 * `button` sans attribut `type` SOUMET — tous portent `type="submit"`.
 	 */
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { resolve } from '$app/paths';
@@ -67,9 +23,9 @@
 	import type { ActionData, PageData } from './$types';
 
 	/**
-	 * LE MOTIF DE ROUTE, ÉCRIT EN CONSTANTE — même raison qu'à `V-07:455` :
-	 * `svelte/no-navigation-without-resolve` inspecte l'EXPRESSION du `href`, et
-	 * une adresse composée à la main lui est opaque.
+	 * LE MOTIF DE ROUTE, ÉCRIT EN CONSTANTE :
+	 * `svelte/no-navigation-without-resolve` inspecte l'EXPRESSION du `href`, et une
+	 * adresse composée à la main lui est opaque.
 	 */
 	const ROUTE_DE_NOTE = '/notes/[identifiant]' as const;
 	/** Les deux adresses qui débloquent, écrites en constantes pour la même raison. */
@@ -79,9 +35,8 @@
 	const { data, form }: { data: PageData; form: ActionData } = $props();
 
 	/**
-	 * Le rangement de la note, composé PAR LE CHARGEUR : le séparateur de chemin
-	 * est une constante du corpus (`SEPARATEUR_DE_CHEMIN`), et le réécrire ici en
-	 * ferait une seconde définition.
+	 * Le rangement de la note, composé PAR LE CHARGEUR : le séparateur de chemin est
+	 * une constante du corpus, et le réécrire ici en ferait une seconde définition.
 	 */
 	const rangement = $derived(data.rangement);
 
@@ -92,18 +47,15 @@
 	 * DEUX MANQUES DISTINCTS, ET ILS NE SE SOIGNENT PAS AU MÊME ENDROIT.
 	 *
 	 * Le formulaire exigeait trois conditions et n'en annonçait aucune : sur une
-	 * instance neuve — aucun type de relation, une seule note — le panneau
-	 * « Ajouter une relation » n'était pas ÉMIS DU TOUT, et l'écran se refermait
-	 * sur « Aucune relation » sans jamais dire pourquoi aucune n'était
-	 * déclarable. `P-09` demande de ne pas offrir un geste impossible ; elle ne
-	 * demande pas de taire ce qui le rend impossible.
+	 * instance neuve, le panneau « Ajouter une relation » n'était pas ÉMIS DU TOUT
+	 * et l'écran se refermait sur « Aucune relation » sans dire pourquoi aucune
+	 * n'était déclarable. `P-09` demande de ne pas offrir un geste impossible ; elle
+	 * ne demande pas de taire ce qui le rend impossible.
 	 *
-	 * Les deux manques sont portés SÉPARÉMENT, parce qu'ils se comblent
-	 * séparément : un type de relation se crée dans la console
-	 * (`/console/types-de-relations`, réservée à l'administrateur), une seconde
-	 * note se crée depuis `/notes/nouvelle` — ou le droit d'écriture se demande
-	 * sur la note visée. Les confondre en une phrase enverrait la moitié des
-	 * lecteurs au mauvais endroit.
+	 * Les deux manques sont portés SÉPARÉMENT parce qu'ils se comblent séparément :
+	 * un type de relation se crée en console, une seconde note depuis
+	 * `/notes/nouvelle`. Les confondre enverrait la moitié des lecteurs au mauvais
+	 * endroit.
 	 */
 	const sansType = $derived(data.typesOfferts.length === 0);
 	const sansCible = $derived(data.cibles.length === 0);

@@ -1,140 +1,28 @@
 <script lang="ts">
 	/**
-	 * Coquille applicative (V-37) — la navigation latérale.
+	 * Coquille applicative (V-37) — la navigation latérale. AUCUNE RÈGLE DE STYLE N'EST
+	 * ÉCRITE ICI (P-1, ADR-002). Le chevron déplie, le nom navigue.
 	 *
-	 * Portée par les 35 vues de l'espace de travail et de la console. Le balisage
-	 * reproduit `mockups/V-37-coquille.html` pour la forme COMPLÈTE et
-	 * `mockups/V-25-profil.html` pour la forme ABRÉGÉE ; la mise en forme vient de
-	 * `src/socle.css` et de `src/vues/V-37.css`, tous deux identiques à l'octet à
-	 * leur source gelée. AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI (P-1, ADR-002).
+	 * DEUX FORMES, ET ELLES NE SE DÉDUISENT PAS L'UNE DE L'AUTRE (ARB-021). COMPLÈTE : le
+	 * rail est construit à partir du corpus, `#rail-univers` en est l'hôte, les entrées
+	 * d'outils portent un pictogramme et un `data-vers`. ABRÉGÉE : le rail est ÉCRIT AU
+	 * BALISAGE (voir `arborescence-abregee.ts`), sans hôte, sans pictogramme, sans
+	 * `data-vers`, et le chevron n'y porte pas `type="button"`.
 	 *
-	 * ─────────────────────────────────────────────────────────────────────────
-	 * DEUX FORMES, ET ELLES NE SE DÉDUISENT PAS L'UNE DE L'AUTRE — ARB-021, A-1
+	 * LE LIBELLÉ DU CHEVRON : aucune des deux formes ne fait dire « Replier » à un nœud
+	 * que la page courante déplie — le gel construit son libellé sur l'état PERSISTÉ du
+	 * rail, vide à tout chargement, puis déplie les ancêtres sans toucher à `aria-label`.
+	 * D'où `deplie` (le balisage, qui pilote `aria-label`) distinct de `ouvert` (le rendu,
+	 * qui pilote `data-ouvert` et `aria-expanded`). Le rail est `display: none` sous
+	 * 1240 px, sans contre-règle : ARB-010 l'assume, et RG-M18-12 / RG-M18-13 restent NON
+	 * TENUES. SIGNETS EST UNE ADRESSE GLOBALE — un signet est une NOTE (`RG-NOT-01`).
 	 *
-	 * Forme COMPLÈTE — 8 vues (V-07, V-14, V-27, V-37 à V-41). Le rail est
-	 * construit à partir du corpus : réordonner les univers dans la console
-	 * réordonne cette navigation. `#rail-univers` en est l'hôte, les entrées
-	 * d'outils portent un pictogramme et un `data-vers`, `Gestion` est
-	 * conditionnée au rôle (`si-admin`).
-	 *
-	 * Forme ABRÉGÉE — 26 vues. Le rail est ÉCRIT AU BALISAGE : quinze nœuds que
-	 * le corpus ne produit pas (`arborescence-abregee.ts` dit pourquoi), pas
-	 * d'hôte `#rail-univers`, des entrées d'outils SANS pictogramme et SANS
-	 * `data-vers`. Le chevron n'y porte pas non plus `type="button"`. `Gestion`
-	 * y est conditionnée AU RÔLE comme dans la forme complète — le gel l'écrit en
-	 * `si-ecriture`, et `RG-DRO-03` dit le rôle ; voir l'en-tête `P-09` plus bas.
-	 *
-	 * ─────────────────────────────────────────────────────────────────────────
-	 * LE LIBELLÉ DU CHEVRON — CE QUE LA MESURE DIT, ET QUI N'ÉTAIT PAS ÉCRIT
-	 *
-	 * Aucune des deux formes ne fait dire « Replier » à un nœud que la page
-	 * courante déplie. Mesuré dans les conditions du banc, page stabilisée :
-	 *
-	 *   • forme COMPLÈTE — `element()` construit le libellé sur `deplies`, l'état
-	 *     persisté du rail (`V-37:3203`), VIDE à tout chargement propre du banc ;
-	 *     puis `coquille({ courant })` déplie les ancêtres en posant
-	 *     `data-ouvert="oui"` et `aria-expanded="true"` SANS toucher à
-	 *     `aria-label` (`V-14:3849-3862`). V-14 rend donc trois nœuds ouverts et
-	 *     trois libellés « Déplier ». Le gabarit écrit « Déplier » sans
-	 *     condition : c'est JUSTE, et le corriger serait une régression.
-	 *   • forme ABRÉGÉE — le libellé est celui du balisage. Seuls
-	 *     `Infrastructure` et `Exploitation` disent « Replier », quel que soit le
-	 *     chemin courant (vérifié sur V-11, V-12, V-13, V-17, V-22, V-25).
-	 *
-	 * D'où `deplie` (le balisage, qui pilote `aria-label`) distinct de `ouvert`
-	 * (le rendu, qui pilote `data-ouvert` et `aria-expanded`).
-	 *
-	 * ─────────────────────────────────────────────────────────────────────────
-	 * Le rail est `display: none` sous 1240 px, sans contre-règle : sur petit
-	 * écran l'arborescence est inatteignable. C'est la maquette gelée qui en
-	 * décide, et ARB-010 qui l'assume — RG-M18-12 et RG-M18-13 restent, sur cet
-	 * axe, NON TENUES. Aucun tiroir n'est ajouté ici : ce serait un comblement.
-	 *
-	 * Le chevron déplie, le nom navigue : deux cibles distinctes.
-	 *
-	 * ─────────────────────────────────────────────────────────────────────────
-	 * LES ADRESSES — lot T-070, ET SEULEMENT CELLES QUE LE GEL DÉCLARE
-	 *
-	 * `ARB-013` retire les lignes `/url:` de l'instantané de structure : le
-	 * produit peut donc porter ses adresses sans échouer au banc. Ce qu'il porte
-	 * n'est pas déduit d'un libellé — c'est la destination que la MAQUETTE
-	 * déclare elle-même en `data-vers`, résolue par `docs/routes.md`, qui fait
-	 * foi sur les chemins :
-	 *
-	 *   Accueil        « Accueil contributeur — vue V-07 »  →  `/`
-	 *   Cartographie   « Cartographie — vue V-19 »          →  `/cartographie`
-	 *   Carte mentale  « Carte mentale — vue V-21 »         →  `/carte-mentale`
-	 *   Import         « Import — vue V-24 »                →  `/importer`
-	 *   Console        « Console — vue V-27 »               →  `/console/univers`
-	 *
-	 * UNE SEULE ENTRÉE RESTE À `href="#"`, ET C'EST LE BON CLASSEMENT :
-	 *
-	 *   · la FORME ABRÉGÉE tout entière — CLASSEMENT RÉVOQUÉ. Il tenait à ceci :
-	 *     son gel ne porte AUCUN `data-vers` (V-11:1056-1064, V-22:1209-1217),
-	 *     donc deviner sa destination serait un comblement. Or il n'y avait rien à
-	 *     deviner : les deux formes rendent LE MÊME RAIL, entrée pour entrée et
-	 *     libellé pour libellé — seuls les pictogrammes et le `data-vers` les
-	 *     séparent. « Accueil » mène à l'accueil dans les deux, et vingt-six vues
-	 *     portaient un rail dont la PREMIÈRE entrée ne menait nulle part. Les
-	 *     quatre entrées d'outils ont été résolues avant celle-ci, pour la même
-	 *     raison ; `P-03` n'admet aucun lien mort, et le plan de remédiation §3.6
-	 *     tranche — un lien mort devient une vraie adresse ;
-	 *   · l'Accueil de V-07, dont le gel déclare « Vous êtes déjà sur l'accueil »
-	 *     (`V-07:1150`) — une non-destination, qu'aucune règle de
-	 *     `REGLES_DE_DESTINATION` ne résout, et qui ne doit pas l'être ;
-	 *   · SIGNETS — RÉSOLUE LE 20 AOÛT 2026, PAR UNE DÉCISION DE PÉRIMÈTRE DU
-	 *     COMMANDITAIRE, et il faut lire pourquoi avant de toucher à cette ligne.
-	 *
-	 *     Le blocage tenait tout entier à une prémisse : que « Signets » soit une
-	 *     CHOSE À PART, donc une destination qui a besoin d'un domaine. `ARB-047`
-	 *     s'est appuyé dessus pour laisser l'entrée inerte, et trois lectures du
-	 *     gel l'ont confirmé — le titre de V-22 nomme un domaine, son fil aussi,
-	 *     et trois de ses six états sont un choix de domaine.
-	 *
-	 *     LA PRÉMISSE ÉTAIT FAUSSE. Le commanditaire l'a tranché : « c'est de
-	 *     l'abus sémantique, ce sont des documents. » Et le dépôt le disait déjà
-	 *     sans qu'on l'entende — `RG-NOT-01` : « une note est unique ; la fiche
-	 *     n'est pas un objet séparé, et le signet non plus », et le cahier des
-	 *     charges range « Signet » parmi les CINQ TYPES DE NOTE.
-	 *
-	 *     Un signet étant une note, l'entrée n'a jamais eu besoin d'un domaine :
-	 *     elle vise les notes de ce type, et cette adresse est GLOBALE. Elle
-	 *     existe, elle est montée, et le §4.2 de `docs/routes.md` déclare `type`
-	 *     parmi ses facettes.
-	 *
-	 *     Ce qui a coûté trois jours n'était pas un conflit entre le rail et
-	 *     V-22 : c'était une catégorie de trop.
-	 *
-	 * ───────────────────────────────────────────────────────────────────────────
-	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040) — lot T-072
-	 *
-	 * Le gel POSE les entrées gouvernées par un droit, puis les cache en CSS :
-	 *   `.app[data-droits="lecture"] .si-ecriture { display: none }` (socle.css:396)
-	 *   `.app:not([data-role="admin"]) .si-admin  { display: none }` (socle.css:397)
-	 * Une maquette statique n'a pas de serveur : le masquage y est sa SEULE
-	 * possibilité. Le produit, lui, peut ne pas les émettre — et P-09 l'exige,
-	 * « ni grisée, NI MASQUÉE ».
-	 *
-	 * QUATRE NŒUDS SONT CONDITIONNÉS ICI, ET SEUL LEUR RENDU L'EST. La classe
-	 * `si-*` reste intacte sur le nœud émis : elle porte AUSSI la mise en forme —
-	 * en V-13 c'est elle qui donne son `display: inline-flex` au bouton. On
-	 * conditionne le rendu du nœud, jamais ses classes.
-	 *
-	 *   forme ABRÉGÉE   `a.rail__lien.si-ecriture` « Import »        — droits
-	 *                   `div.rail__section.si-admin` « Gestion › Console » — RÔLE
-	 *   forme COMPLÈTE  `a.rail__lien.si-ecriture` « Import »        — droits
-	 *                   `div.rail__section.si-admin` « Gestion › Console » — RÔLE
-	 *
-	 * LA SECTION « GESTION » EST LE SEUL NŒUD OÙ LE PRODUIT S'ÉCARTE DE LA CLASSE
-	 * DU GEL, et `RG-DRO-03` l'exige : la forme abrégée du gel la pose en
-	 * `si-ecriture` parce qu'une maquette statique n'a pas de rôle à lire. Le
-	 * produit en a un, `/console` répond 404 à qui n'est pas administrateur, et
-	 * `cablage/coquille.ts:98` gouverne déjà l'entrée de menu jumelle sur le
-	 * booléen `administrateur`. Garde ET classe suivent le rôle.
-	 *
-	 * Mesuré par `pnpm test:droits` : 23 des 27 actions de gel de la batterie 7
-	 * étaient portées par ces quatre nœuds. Énumération des omissions :
-	 * `docs/omissions-p09.md` — et son entête dit pourquoi cette adresse-là.
+	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040) : QUATRE NŒUDS SONT
+	 * CONDITIONNÉS ICI, ET SEUL LEUR RENDU L'EST — la classe `si-*` reste intacte sur le
+	 * nœud émis, car elle porte AUSSI la mise en forme. LA SECTION « GESTION » EST LE SEUL
+	 * NŒUD OÙ LE PRODUIT S'ÉCARTE DE LA CLASSE DU GEL, et `RG-DRO-03` l'exige : la forme
+	 * abrégée la pose en `si-ecriture` faute de rôle à lire, quand `/console` répond 404 à
+	 * qui n'est pas administrateur.
 	 */
 	import { resolve } from '$app/paths';
 	import type { NoeudRendu, SectionRendue } from './arborescence';
@@ -148,28 +36,23 @@
 		/** Forme abrégée : les deux sections écrites au balisage du gel. */
 		sectionsAbregees?: readonly SectionAbregeeRendue[];
 		/**
-		 * La version affichée au pied du rail. La coquille passe celle du paquet
-		 * dès qu'un gabarit racine la lui donne ; hors application, celle que la
-		 * vue porte. Rien n'est calculé ici.
+		 * La version affichée au pied du rail — celle du paquet dès qu'un gabarit
+		 * racine la donne, celle de la vue hors application. Rien n'est calculé ici.
 		 */
 		version: string;
-		/**
-		 * L'entrée « Accueil » est la page courante (ARB-021, A-5). V-07 seule :
-		 * `aria-current="page"` et son `data-vers` propre (`V-07:1150`).
-		 */
+		/** L'entrée « Accueil » est la page courante (ARB-021). V-07 seule. */
 		accueilCourant?: boolean;
 		/**
-		 * DROITS EFFECTIFS — P-09. En lecture seule, les entrées `si-ecriture` ne
-		 * sont pas ÉMISES. Absente, la propriété vaut « aucune restriction » :
-		 * c'est exactement ce que fait le socle, dont la règle ne se déclenche que
-		 * sur `data-droits="lecture"`.
+		 * DROITS EFFECTIFS — P-09. En lecture seule, les entrées `si-ecriture` ne sont
+		 * pas ÉMISES. Absente, la propriété vaut « aucune restriction » : exactement
+		 * ce que fait le socle, dont la règle ne se déclenche que sur
+		 * `data-droits="lecture"`.
 		 */
 		droits?: 'ecriture' | 'lecture' | undefined;
 		/**
-		 * PROFIL — P-09. La section `si-admin` n'est ÉMISE que pour
-		 * l'administrateur. Le socle masque `.si-admin` dès que `data-role` vaut
-		 * autre chose qu'`admin` ; le défaut `referent` du gabarit est donc
-		 * restrictif, et la condition ci-dessous le reproduit à l'identique.
+		 * PROFIL — P-09. La section `si-admin` n'est ÉMISE que pour l'administrateur.
+		 * Le socle masque `.si-admin` dès que `data-role` vaut autre chose qu'`admin` ;
+		 * le défaut `referent` du gabarit est donc restrictif.
 		 */
 		role?: 'referent' | 'admin';
 	}
@@ -184,45 +67,17 @@
 		role = 'referent'
 	}: Proprietes = $props();
 
-	/* Les deux conditions sont la TRANSCRIPTION des deux règles du socle, pas
-	   une interprétation : `.si-ecriture` disparaît quand `data-droits` vaut
+	/* Les deux conditions sont la TRANSCRIPTION des deux règles du socle, pas une
+	   interprétation : `.si-ecriture` disparaît quand `data-droits` vaut
 	   « lecture », `.si-admin` quand `data-role` ne vaut pas « admin ». */
 	const ecriture = $derived(droits !== 'lecture');
 	const admin = $derived(role === 'admin');
 
 	/**
-	 * L'ADRESSE DE L'ENTRÉE « SIGNETS » DU RAIL.
-	 *
-	 * Un signet est une NOTE portant une adresse web (`RG-NOT-01`, et « Signet »
-	 * est l'un des cinq types de note du cahier des charges). L'entrée vise donc
-	 * les notes de ce type — une adresse GLOBALE, comme le rail lui-même, et non
-	 * une page de domaine qui aurait demandé de choisir un domaine que rien ne
-	 * désigne.
-	 *
-	 * `resolve()` n'accepte pas de chaîne de requête : elle est concaténée après,
-	 * et le contrôle de navigation d'eslint s'en satisfait parce que le chemin,
-	 * lui, passe bien par la résolution du cadre.
-	 */
-
-	/**
-	 * L'ADRESSE D'UN NŒUD DU RAIL, passée par `resolve()`.
-	 *
-	 * `svelte/no-navigation-without-resolve` l'exige, et il a raison : une
-	 * adresse composée à la main casserait sous un `base` de déploiement. Les
-	 * adresses viennent de `$lib/rangement/adresses.ts`, qui les compose déjà
-	 * dans la forme canonique ; `resolve()` n'y ajoute que la racine de
-	 * déploiement.
-	 *
-	 * Le cast est nécessaire parce que ces adresses sont calculées, donc
-	 * inconnues du type littéral que SvelteKit dérive de l'arbre des routes.
-	 */
-	/**
-	 * LES TROIS MOTIFS DE ROUTE DU RAIL, écrits en constantes.
-	 *
-	 * `svelte/no-navigation-without-resolve` inspecte l'EXPRESSION du `href` : il
-	 * veut voir `resolve()` appelée sur un motif connu, et il a raison — une
-	 * adresse concaténée à la main casse sous une racine de déploiement. Même
-	 * écriture qu'en `V-07:455` et sur la route des relations.
+	 * LES TROIS MOTIFS DE ROUTE DU RAIL, ÉCRITS EN CONSTANTES pour que
+	 * `svelte/no-navigation-without-resolve` voie `resolve()` appelée sur un motif
+	 * connu. `resolve()` n'accepte pas de chaîne de requête : celle de « Signets »
+	 * est concaténée après, le chemin passant par la résolution du cadre.
 	 */
 	const ROUTE_UNIVERS = '/univers/[univers]' as const;
 	const ROUTE_DOMAINE = '/univers/[univers]/[domaine]' as const;
@@ -230,12 +85,9 @@
 
 	/**
 	 * L'ADRESSE D'UN NŒUD DU RAIL EST COMPOSÉE DANS LE BALISAGE, pas dans une
-	 * fonction d'aide.
-	 *
-	 * `svelte/no-navigation-without-resolve` inspecte l'expression du `href` et
-	 * veut y voir `resolve()` : une fonction d'aide la lui cache, et il a raison
-	 * de refuser — c'est ainsi qu'une adresse concaténée passe inaperçue. Les
-	 * trois cas sont donc composés à l'endroit où ils sont lus.
+	 * fonction d'aide : `svelte/no-navigation-without-resolve` inspecte l'EXPRESSION
+	 * du `href` et veut y voir `resolve()`, qu'une fonction d'aide lui cache — une
+	 * adresse concaténée casse sous une racine de déploiement.
 	 */
 </script>
 
@@ -275,11 +127,10 @@
 {/snippet}
 
 <!--
-	La branche de la FORME ABRÉGÉE. Elle diffère de la précédente sur cinq
-	points, tous relevés au balisage du gel (`V-25:978-1053`) : pas de
-	`data-cle`, pas de `data-ouvert="non"` sur un nœud fermé, pas de
-	`type="button"` sur le chevron, un libellé de chevron pris au balisage, et
-	un espaceur de feuille sans `flex`.
+	La branche de la FORME ABRÉGÉE. Elle diffère de la précédente sur cinq points,
+	tous relevés au balisage du gel (`V-25:978-1053`) : pas de `data-cle`, pas de
+	`data-ouvert="non"` sur un nœud fermé, pas de `type="button"` sur le chevron, un
+	libellé de chevron pris au balisage, et un espaceur de feuille sans `flex`.
 -->
 {#snippet brancheAbregee(n: NoeudAbregeRendu)}
 	<li data-ouvert={n.ouvert ? 'oui' : undefined}>
@@ -354,10 +205,9 @@
 					{#each section.arbre as noeud (noeud.nom)}{@render brancheAbregee(noeud)}{/each}
 				</ul>
 			</div>{/each}
-		<!-- LE VIDE NE SE DIT PAS PAREIL SELON QUI LE LIT. Cette phrase envoyait
-	     l'administrateur qui vient d'installer « demander à un administrateur » :
-	     il est le seul compte de l'instance, et le chemin réel est la console.
-	     Mesuré sur une base à zéro univers, où c'est la première page qu'il voit. -->
+		<!-- LE VIDE NE SE DIT PAS PAREIL SELON QUI LE LIT : cette phrase envoyait
+		     l'administrateur qui vient d'installer « demander à un administrateur »,
+		     alors qu'il est le seul compte de l'instance. -->
 	{:else}
 		<div id="rail-univers">
 			{#if sections.length === 0}<div class="rail__vide">
@@ -381,27 +231,18 @@
 		<div class="rail__section">
 			<div class="rail__titre etiq">Outils</div>
 			<!-- LA FORME ABRÉGÉE PORTE LES MÊMES ADRESSES QUE LA COMPLÈTE. Elle les
-				laissait à `href="#"` : quatre liens morts, et `P-03` n'en admet aucun.
-				« Signets » vise les notes de type Signet, adresse globale, comme dans
-				la forme complète. -->
+				laissait à `href="#"` : quatre liens morts, et `P-03` n'en admet aucun. -->
 			<a class="rail__lien" href={resolve('/cartographie')}>Cartographie</a>
 			<a class="rail__lien" href={resolve('/carte-mentale')}>Carte mentale</a>
 			<a class="rail__lien" href="{resolve('/recherche')}?type=Signet">Signets</a>
 			{#if ecriture}<a class="rail__lien si-ecriture" href={resolve('/importer')}>Import</a>{/if}
 		</div>
 
-		<!-- RG-DRO-03 — « CONSOLE » SE GARDE SUR LE RÔLE, PAS SUR LES DROITS, ET
-			SA CLASSE DIT LE MÊME VERDICT. Le gel écrit `si-ecriture` sur cette
-			section, faute d'avoir un rôle à lire ; le produit, lui, en a un, et
-			`/console` répond 404 à qui n'est pas administrateur. Gardée sur
-			`ecriture`, la section fuyait l'existence et l'adresse de la console à
-			tout rédacteur — un lien mort ÉMIS, et même pas masqué, `data-droits`
-			valant « ecriture ». Gardée sur `admin` mais laissée en `si-ecriture`,
-			elle disparaissait à l'inverse sous `socle.css:408` pour
-			l'administrateur d'une instance neuve, qui ne peut écrire nulle part et
-			porte donc `data-droits="lecture"` — masquage, que `P-09` refuse
-			autant. Les deux moitiés vont ensemble : `si-admin`, comme la forme
-			complète, `:474`. -->
+		<!-- RG-DRO-03 — « CONSOLE » SE GARDE SUR LE RÔLE, PAS SUR LES DROITS, ET SA
+			CLASSE DIT LE MÊME VERDICT. Gardée sur `ecriture`, la section fuyait
+			l'existence et l'adresse de la console à tout rédacteur. Gardée sur `admin`
+			mais laissée en `si-ecriture`, elle disparaissait sous le socle pour
+			l'administrateur d'une instance neuve, qui porte `data-droits="lecture"`. -->
 		{#if admin}
 			<div class="rail__section si-admin">
 				<div class="rail__titre etiq">Gestion</div>

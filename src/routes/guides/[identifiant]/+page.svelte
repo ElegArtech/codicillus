@@ -1,20 +1,12 @@
 <script lang="ts">
 	/**
-	 * `/guides/{identifiant}` — V-03 Lecture publique d'un guide.
+	 * `/guides/{identifiant}` — V-03 Lecture publique d'un guide. La résolution —
+	 * 200 ou 404, sur la note réellement demandée — est dans `+page.server.ts`, qui
+	 * porte le périmètre public et le point de sortie unique du refus.
 	 *
-	 * Ce fichier ne fait que rendre la vue. La résolution — 200 ou 404, sur la
-	 * note réellement demandée — est dans `+page.server.ts`, qui porte le
-	 * périmètre public et le point de sortie unique du refus.
-	 *
-	 * LA VUE N'A PLUS DE `vecteur`. Les deux axes de la planche décrivaient LA
-	 * NOTE AFFICHÉE — fraîcheur du cartouche, présence du registre « En bref » —,
-	 * et la note les porte elle-même : il ne restait rien à piloter. La propriété
-	 * est retirée avec la branche sans guide qu'elle seule servait.
-	 *
-	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert.
-	 * Elle est identique à l'octet à sa source gelée (P-6.3). Cette route ne rend
-	 * qu'une vue : l'import direct suffit, et aucun croisement de feuille n'est à
-	 * mesurer.
+	 * LA VUE N'A PLUS DE `vecteur` : ses deux axes décrivaient LA NOTE AFFICHÉE —
+	 * fraîcheur du cartouche, présence du registre « En bref » —, et la note les
+	 * porte elle-même.
 	 */
 	import { onMount } from 'svelte';
 	import Vue from '../../../vues/V-03.svelte';
@@ -25,14 +17,13 @@
 	const { data }: { data: PageData } = $props();
 
 	/**
-	 * LE CÂBLAGE S'ACCROCHE DEPUIS LA ROUTE — `ARB-063`. La vue reste une
-	 * transcription du gel ; les quatre gestes de la lecture publique — sommaire
-	 * replié, bascule de registre, agrandissement du schéma, impression — sont
-	 * posés par `./cablage.ts` au montage, et retirés au démontage.
+	 * LE CÂBLAGE S'ACCROCHE DEPUIS LA ROUTE — `ARB-063`. Les quatre gestes de la
+	 * lecture publique sont posés par `./cablage.ts` au montage, et retirés au
+	 * démontage.
 	 *
-	 * LA RACINE EST CHERCHÉE DANS LE DOCUMENT, et non liée par `bind:this` : la
-	 * lier demanderait un nœud d'enveloppe autour de la vue, donc une boîte de
-	 * rendu de plus, ce que le gel ne porte pas.
+	 * LA RACINE EST CHERCHÉE DANS LE DOCUMENT, et non liée par `bind:this` : la lier
+	 * demanderait un nœud d'enveloppe autour de la vue, donc une boîte de rendu de
+	 * plus, ce que le gel ne porte pas.
 	 */
 	onMount(() => {
 		const racine = document.getElementById('app');
