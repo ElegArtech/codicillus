@@ -1,40 +1,24 @@
 <script lang="ts">
 	/**
-	 * V-30 — Console · Types de relations.
-	 * Route `/console/types-de-relations` (`docs/routes.md` §3.6).
+	 * V-30 — Console · Types de relations. Route `/console/types-de-relations`
+	 * (`docs/routes.md` §3.6).
 	 *
-	 * COQUILLE DE FORME ABRÉGÉE, ENVELOPPE `console` — vérifié sur le gel par
-	 * `node verif/releve-vues.mjs --formes` (ARB-021, A-1 ; ARB-023).
+	 * Coquille de forme abrégée, enveloppe `console` (`ARB-021`, `ARB-023`).
+	 * `src/lib/console/` porte les classes communes aux dix vues de console.
+	 * Propres à V-30, et à elle seule : `sens`, `sens--inverse`, `sens__fleche`,
+	 * `sens__libelle`, `apercu-phrases`, `phrase`, `phrase--inverse`,
+	 * `phrase__sens`, `phrase__manque`, `exemples`, `choix-reaffectation`, `aide`
+	 * et `tg--relations`. AUCUNE FACTORISATION AU-DELÀ (`docs/DESIGN.md` §2.H).
 	 *
-	 * CE QUI EST COMMUN, ET CE QUI NE L'EST PAS. `src/lib/console/` porte les
-	 * treize classes des dix vues de console et le panneau des six registres
-	 * (`sections.ts`, en-tête). Propres à V-30, et à elle seule : `sens`,
-	 * `sens--inverse`, `sens__fleche`, `sens__libelle`, `apercu-phrases`,
-	 * `phrase`, `phrase--inverse`, `phrase__sens`, `phrase__manque`, `exemples`,
-	 * `choix-reaffectation`, `aide`, et le modificateur de grille
-	 * `tg--relations`. AUCUNE FACTORISATION AU-DELÀ (`docs/DESIGN.md` §2.H).
+	 * LE PANNEAU `tiroir-form` NE PÈSE AUCUN PIXEL : hors de `div.app`, il n'est pas
+	 * atteint par `.app[data-form="ouvert"] .tiroir-form` (`V-30.css:401`).
 	 *
-	 * LE PANNEAU `tiroir-form` NE PÈSE AUCUN PIXEL, ET C'EST LE GEL. Hors de
-	 * `div.app`, il n'est pas atteint par `.app[data-form="ouvert"]
-	 * .tiroir-form` (`V-30.css:401`) et reste hors fenêtre. Le NIVEAU 1 en est
-	 * le seul juge — `position: fixed` le laisse dans l'ordre de tabulation et
-	 * dans l'instantané ARIA (`CLAUDE.md` §6, P-3).
+	 * Aucun `autofocus` : la maquette focalise `#f-direct` à l'ouverture
+	 * (`V-30:3054`), et dans le dialogue `showModal()` focalise déjà
+	 * `button.dlg__fermer`, premier focalisable.
 	 *
-	 * AUCUN `autofocus` : la maquette focalise `#f-direct` à l'ouverture
-	 * (`V-30:3054`), mais hors dialogue le focus ne survit pas à `stabiliser()`
-	 * (`CLAUDE.md` §6, P-4). Dans le dialogue, `showModal()` — établi par le
-	 * banc (ARB-017) — focalise déjà `button.dlg__fermer`, premier focalisable.
-	 *
-	 * AUCUN CHIFFRE N'EST SAISI (P-02) : les compteurs de relations sont
-	 * calculés sur les relations servies.
-	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011).
-	 *
-	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette`, `dialog#palette` fermé,
-	 * et `div.planche`, bloc hors produit (§2.G).
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-30.css` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 * Aucun chiffre n'est saisi : les compteurs de relations sont calculés sur les
+	 * relations servies. Le style est dans `src/socle.css` et `src/vues/V-30.css`.
 	 */
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import BoutonDeCreation from '$lib/console/BoutonDeCreation.svelte';
@@ -53,41 +37,27 @@
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import type { RefusDeSaisie, SaisieDeTypeDeRelation } from '$lib/console/structure';
 
-	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
-	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
-	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
-	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	/* Le mot renommable de `M14.7`, lu sur le contexte de coquille : en constante,
+	   le renommer en console ne changeait rien a l'ecran. Repli : « Fiche ». */
 	const motsDuProduit = vocabulaireRendu();
 	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
 	const motFichePlurielMinuscule = $derived(motsDuProduit.fichesMin);
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état — formulaire × suppression. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-30')`. */
 		notes: readonly Note[];
-		/** Les univers déclarés, servis par la route. Vide : aucun périmètre. */
 		univers: readonly Univers[];
-		/** Les domaines déclarés, servis par la route. Vide : aucun domaine. */
 		domaines: readonly Domaine[];
-		/** L'utilisateur courant, servi par la route. */
 		compte: UtilisateurCourant;
-		/** Le catalogue des types de relation, servi par la route. */
 		typesRelation: Record<CleDeTypeDeRelation, LibellesDeRelation>;
-		/**
-		 * Les types qui portent une dépendance technique — `types_de_relation.technique`,
-		 * servis par la route.
-		 */
+		/** Les types qui portent une dépendance technique — `types_de_relation.technique`. */
 		relationsTechniques: readonly CleDeTypeDeRelation[];
-		/** Les relations déclarées, dont se compte l'usage. Servies par la route. */
 		relations: readonly Relation[];
 		/**
-		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE.
-		 *
-		 * Même partage qu'en `V-27`, `V-28`, `V-29` et `V-32` : la vue tient l'état
-		 * de son dialogue — quel type est visé, combien de relations le portent,
-		 * quelle sortie est cochée — et la page tient le réseau. `sortie` et `vers`
-		 * portent les valeurs du gel (`V-30:536`, `:549`), jamais des noms choisis.
+		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE. Même partage qu'en
+		 * `V-27`, `V-28`, `V-29` et `V-32` : la vue tient l'état de son dialogue, la
+		 * page tient le réseau. `sortie` et `vers` portent les valeurs du gel
+		 * (`V-30:536`, `:549`), jamais des noms choisis.
 		 */
 		onSupprimer?: (demande: {
 			readonly type: string;
@@ -95,15 +65,10 @@
 			readonly vers: string;
 		}) => void;
 		/**
-		 * CE QUE LA VUE FAIT QUAND LE PANNEAU EST VALIDÉ — création puis
-		 * enregistrement. La vue tient l'état du panneau — les deux libellés, le
-		 * caractère technique, le couple d'épreuve retenu — parce que c'est ce que
-		 * `ouvrirForm(t)` tenait au gel (`V-30:3035`), et elle ne connaît ni route,
-		 * ni action, ni réseau.
-		 *
-		 * `onEnregistrer` reçoit d'abord la CLÉ du type — son identifiant lisible —
-		 * parce que c'est elle qui le désigne en base, et que l'enregistrement peut
-		 * justement changer les deux libellés.
+		 * CE QUE LA VUE FAIT QUAND LE PANNEAU EST VALIDÉ. La vue tient l'état du
+		 * panneau, comme `ouvrirForm(t)` au gel (`V-30:3035`). `onEnregistrer` reçoit
+		 * d'abord la CLÉ du type : c'est elle qui le désigne en base, et
+		 * l'enregistrement peut justement changer les deux libellés.
 		 */
 		onCreer?: (saisie: SaisieDeTypeDeRelation) => void;
 		onEnregistrer?: (cle: string, saisie: SaisieDeTypeDeRelation) => void;
@@ -127,9 +92,9 @@
 	}: Proprietes = $props();
 
 	/**
-	 * L'USAGE ATTENDU EST UN TEXTE DU GEL (`V-30:2875`), recopié depuis lui.
-	 * `seeds/corpus.ts` porte les deux libellés de chaque type de relation,
-	 * jamais la phrase qui dit quand l'employer : la dériver serait inventer.
+	 * L'USAGE ATTENDU EST UN TEXTE DU GEL (`V-30:2875`), recopié depuis lui : la
+	 * donnée porte les deux libellés de chaque type de relation, jamais la phrase
+	 * qui dit quand l'employer — la dériver serait inventer.
 	 */
 	const USAGES: Record<string, string> = {
 		heberge: "Entre un serveur et ce qui tourne dessus. La rupture du serveur emporte l'hébergé.",
@@ -153,17 +118,11 @@
 	}
 
 	/**
-	 * LA LISTE : LE CATALOGUE SERVI, ET RIEN QUE LUI.
-	 *
-	 * Un type `remplace` y était ajouté — un littéral du gel, recopié pour que
-	 * la planche montre un « type inutilisé », et qu'aucune table ne porte. Il
-	 * n'était retenu que par une COMPARAISON D'IDENTITÉ,
-	 * `typesRelation === TYPES_RELATION` : la propriété était facultative, et
-	 * une route qui l'oubliait servait donc, à côté des types réels de
-	 * l'instance, une ligne qui ne correspondait à rien — la valeur illustrative
-	 * que `P-02` proscrit. La propriété est désormais REQUISE, la sentinelle n'a
-	 * plus d'objet, et elle part avec le littéral qu'elle gardait. Même geste,
-	 * même motif, que « Téléphonie » de `V-28`.
+	 * LA LISTE : LE CATALOGUE SERVI, ET RIEN QUE LUI. Un type `remplace` y était
+	 * ajouté — un littéral du gel qu'aucune table ne porte, retenu par une
+	 * comparaison d'identité au jeu de démonstration : une route qui oubliait la
+	 * propriété servait donc, à côté des types réels, une ligne qui ne
+	 * correspondait à rien. Même geste que « Téléphonie » de `V-28`.
 	 */
 	const types: readonly TypeDeRelationRendu[] = $derived(
 		(Object.keys(typesRelation) as readonly CleDeTypeDeRelation[]).map((cle) => ({
@@ -181,14 +140,11 @@
 	}
 
 	/**
-	 * LES COUPLES D'ÉPREUVE DE L'APERÇU VIENNENT DU CORPUS, ET DE LUI SEUL.
-	 *
-	 * Le gel en écrivait trois en dur — « srv-app-01 / Facturation », « bkp-01.prod
-	 * / pg-prod-01 », « Restaurer une sauvegarde PostgreSQL / pg-prod-02 » : sur une
-	 * instance réelle, ce sont des serveurs qui n'existent nulle part. On prend donc
-	 * un couple par type de relation déclaré, dans l'ordre du graphe — c'est ce que
-	 * le gel montrait, trois types différents — puis on complète avec les notes
-	 * prises deux à deux. Moins de deux notes : aucun couple, et l'aperçu le dit.
+	 * LES COUPLES D'ÉPREUVE DE L'APERÇU VIENNENT DU CORPUS, ET DE LUI SEUL. Le gel
+	 * en écrivait trois en dur — des serveurs qui n'existent nulle part sur une
+	 * instance réelle. On prend un couple par type de relation déclaré, dans l'ordre
+	 * du graphe, puis on complète avec les notes prises deux à deux. Moins de deux
+	 * notes : aucun couple, et l'aperçu le dit.
 	 */
 	const titresDuCorpus = $derived(new Map<string, string>(corpus.map((n) => [n.id, n.titre])));
 	const COUPLES: readonly (readonly [string, string])[] = $derived.by(() => {
@@ -210,32 +166,30 @@
 		return couples;
 	});
 
-	/* ── L'état, tel que le vecteur de planche le décrit ───────────────────
-	   Le panneau et le dialogue ne s'ouvrent que si la position DÉVIE du
-	   réglage par défaut : la maquette ne les ouvre que sur l'événement
-	   `change` que le banc répartit, jamais au chargement (`V-30:3230`). */
+	/* L'état, tel que le vecteur de planche le décrit. Le panneau et le dialogue ne
+	   s'ouvrent que si la position DÉVIE du réglage par défaut : la maquette ne les
+	   ouvre que sur l'événement `change`, jamais au chargement (`V-30:3230`). */
 	const reglage = $derived(vecteur ?? {});
 	const form = $derived(String(reglage['form'] ?? 'ferme'));
 	const sup = $derived(String(reglage['sup'] ?? 'utilise'));
 
 	/**
-	 * LE PANNEAU S'OUVRE, ET C'EST LA VUE QUI LE TIENT — même arbitrage que pour
-	 * le dialogue de suppression : `ouverture` vaut `null` tant que personne n'a
-	 * cliqué, si bien que l'écran rendu est celui que le vecteur décrit.
+	 * LE PANNEAU S'OUVRE, ET C'EST LA VUE QUI LE TIENT : `ouverture` vaut `null`
+	 * tant que personne n'a cliqué, si bien que l'écran rendu est celui que le
+	 * vecteur décrit.
 	 */
 	let ouverture = $state<'creation' | 'edition' | null>(null);
 	let cible = $state<string | null>(null);
 
-	/** Les quatre champs du panneau — `edite` du gel (`V-30:3035`), un par un. */
 	let fDirect = $state('');
 	let fInverse = $state('');
 	let fUsage = $state('');
 	let fTechnique = $state(false);
 	/**
-	 * LE COUPLE D'ÉPREUVE RETENU — « Changez les sujets pour éprouver la
-	 * formulation sur un autre couple » (`V-30:507`). C'est un réglage de
-	 * l'aperçu, pas une donnée : il ne sort jamais de la vue. On en tient le RANG,
-	 * pas la valeur : `COUPLES` est dérivé du corpus et se recalcule.
+	 * LE COUPLE D'ÉPREUVE RETENU — « Changez les sujets pour éprouver la formulation
+	 * sur un autre couple » (`V-30:507`). C'est un réglage de l'aperçu, pas une
+	 * donnée. On en tient le RANG, pas la valeur : `COUPLES` est dérivé du corpus et
+	 * se recalcule.
 	 */
 	let rangDuCouple = $state(0);
 	const coupleRetenu = $derived(COUPLES[rangDuCouple] ?? COUPLES[0] ?? null);
@@ -243,22 +197,19 @@
 	let erreursLocales = $state<readonly RefusDeSaisie[]>([]);
 	/**
 	 * LE PANNEAU EST OUVERT SI UN GESTE L'A OUVERT, OU SI LE VECTEUR LE DEMANDE.
-	 *
 	 * C'est cette valeur qui pose `data-form` sur `div.app`, et c'est elle que la
-	 * règle gelée `.app[data-form="ouvert"] ~ .tiroir-form` attend pour lever
-	 * `translateX(100%)`. La rédaction précédente ne lisait que le vecteur : le
-	 * bouton « + » pouvait bien changer d'état, le panneau restait hors fenêtre.
+	 * règle gelée attend pour lever `translateX(100%)`.
 	 *
-	 * ELLE EST DÉCLARÉE APRÈS `ouverture`, ET CE N'EST PAS UN DÉTAIL DE STYLE.
-	 * Au rendu SERVEUR, `$derived` est évalué à la ligne où il est écrit : placée
-	 * plus haut, cette dérivation lisait une variable encore en zone morte et les
-	 * quatre écrans sortaient en 500.
+	 * ELLE EST DÉCLARÉE APRÈS `ouverture`, ET CE N'EST PAS UN DÉTAIL DE STYLE : au
+	 * rendu SERVEUR, `$derived` est évalué à la ligne où il est écrit, et placée plus
+	 * haut cette dérivation lisait une variable encore en zone morte — les quatre
+	 * écrans sortaient en 500.
 	 */
 	const panneauOuvert = $derived(ouverture !== null || form !== 'ferme');
 
 	/* LE TYPE ÉDITÉ EST LE PREMIER DU CATALOGUE SERVI. La position se nomme
-	   « Édition · héberge » (`V-30:3234`), premier type du jeu : le désigner par
-	   son rang dit la même chose sans écrire un type de démonstration. */
+	   « Édition · héberge » (`V-30:3234`), premier type du jeu : le désigner par son
+	   rang dit la même chose sans écrire un type de démonstration. */
 	const edite = $derived(
 		ouverture === 'creation'
 			? null
@@ -277,7 +228,6 @@
 		ouverture !== null ? fTechnique : edite ? edite.technique : false
 	);
 
-	/** Le message d'un champ : celui de l'écran, ou celui de l'action. */
 	function messageDuChamp(champ: string): string | null {
 		const locale = erreursLocales.find((e) => e.champ === champ);
 		if (locale !== undefined) return locale.message;
@@ -290,7 +240,6 @@
 	const ORIGINE = $derived(`la ${motFicheMinuscule} d'origine`);
 	const CIBLE = $derived(`la ${motFicheMinuscule} cible`);
 
-	/** Les deux phrases de l'aperçu, dans l'ordre du gel. */
 	const phrases = $derived([
 		{
 			sujet: coupleRetenu?.[0] ?? null,
@@ -312,7 +261,6 @@
 		}
 	]);
 
-	/** `ouvrirForm(t)` — `null` pour une création (`V-30:3035`). */
 	function ouvrirForm(t: TypeDeRelationRendu | null): void {
 		ouverture = t === null ? 'creation' : 'edition';
 		cible = t === null ? null : t.cle;
@@ -324,7 +272,6 @@
 		erreursLocales = [];
 	}
 
-	/** `fermerForm()` — le panneau se referme, la saisie ne survit pas. */
 	function fermerForm(): void {
 		ouverture = null;
 		cible = null;
@@ -334,9 +281,9 @@
 	/**
 	 * `form-valider` — LA VALIDATION DE L'ÉCRAN, celle du gel (`V-30:3086-3098`),
 	 * dans son ordre : libellé direct manquant, libellé inverse manquant ou
-	 * identique au direct, puis doublon — ce dernier seulement si les deux
-	 * premiers passent. `creerUnTypeDeRelation()` refuse de la même façon, avec
-	 * les mêmes messages ; ceci n'en est que le reflet.
+	 * identique au direct, puis doublon — ce dernier seulement si les deux premiers
+	 * passent. `creerUnTypeDeRelation()` refuse de la même façon ; ceci n'en est que
+	 * le reflet.
 	 */
 	function validerLeForm(): void {
 		const direct = fDirect.trim();
@@ -368,16 +315,11 @@
 	}
 
 	/**
-	 * LE TYPE PROPOSÉ À LA SUPPRESSION (`V-30:3237`) : le premier type sans
-	 * relation pour « Type inutilisé », `heberge` pour « Type utilisé ». La
-	 * position par défaut n'ouvre rien.
-	 */
-	/**
-	 * LE TYPE DONT LA SUPPRESSION EST EXAMINÉE. `null` au rendu serveur : l'écran
-	 * reste celui que le vecteur décrit tant que personne n'a cliqué.
+	 * LE TYPE DONT LA SUPPRESSION EST EXAMINÉE — le premier type sans relation pour
+	 * « Type inutilisé », le premier du catalogue pour « Type utilisé »
+	 * (`V-30:3237`). `null` au rendu serveur.
 	 */
 	let demande = $state<string | null>(null);
-	/** La sortie cochée, et le type d'accueil — les deux réglages du gel. */
 	let sortie = $state<'reaffecter' | 'supprimer'>('reaffecter');
 	let versLeType = $state('');
 
@@ -393,25 +335,16 @@
 
 	/**
 	 * LA RÉAFFECTATION N'EST OFFERTE QUE S'IL EXISTE UN TYPE POUR L'ACCUEILLIR.
-	 *
-	 * SUPPRIMER LE DERNIER TYPE EMPLOYÉ ÉTAIT UNE IMPASSE MUETTE. `autresTypes`
-	 * est vide quand le catalogue n'en porte qu'un : le sélecteur « Réaffecter à
-	 * un autre type » sortait SANS AUCUNE OPTION, la sortie restait cochée par
-	 * défaut, et « Appliquer » envoyait une cible vide. Le geste refuse cette
-	 * cible — `supprimerUnTypeDeRelation()` rend `cible-invalide` plutôt que de se
-	 * rabattre sur un type quelconque —, mais l'écran n'en disait rien : on
-	 * cliquait, et rien ne se passait.
-	 *
-	 * LA SORTIE RENDUE EST DONC CELLE QUI PEUT ABOUTIR, et le dialogue montre
-	 * laquelle : la case « Réaffecter » est désactivée, le sélecteur porte le
-	 * motif à la place d'une liste vide, et la seconde sortie est cochée. Ce que
-	 * « Appliquer » envoie est exactement ce que l'écran affiche.
+	 * Supprimer le dernier type employé était une IMPASSE MUETTE : `autresTypes` est
+	 * vide quand le catalogue n'en porte qu'un, le sélecteur sortait sans aucune
+	 * option, et « Appliquer » envoyait une cible vide que le geste refuse — on
+	 * cliquait, et rien ne se passait. LA SORTIE RENDUE EST DONC CELLE QUI PEUT
+	 * ABOUTIR, et ce qu'« Appliquer » envoie est ce que l'écran affiche.
 	 */
 	const reaffectationPossible = $derived(autresTypes.length > 0);
 	const sortieEffective = $derived<'reaffecter' | 'supprimer'>(
 		reaffectationPossible ? sortie : 'supprimer'
 	);
-	/** La cible d'accueil retenue, ou la chaîne vide quand il n'y en a aucune. */
 	const cibleDAccueil = $derived(versLeType || (autresTypes[0]?.cle ?? ''));
 
 	/** `showModal()` — voir `V-28.svelte` : l'attribut `open` n'obtient pas la modalité. */
@@ -425,7 +358,6 @@
 		if (!boite.open) boite.showModal();
 	});
 
-	/** Refermer : le dialogue disparaît, et les réglages retrouvent leur défaut. */
 	function refermer(): void {
 		demande = null;
 		sortie = 'reaffecter';
@@ -433,15 +365,8 @@
 	}
 </script>
 
-<!--
-	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI.
-	La vue passait `instance.version` — le `1.0.0` d'`INSTANCE` du jeu de
-	démonstration, servi comme un fait sur le pied du rail d'une instance
-	réelle. Aucune route ne passe de version : `Coquille` lit celle du paquet
-	sur le contexte que le gabarit racine pose, et la propriété n'est plus
-	qu'un état vide explicite — hors gabarit racine, le pied ne nomme rien
-	plutôt que de nommer un numéro de démonstration.
--->
+<!-- LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI : la
+	vue passait le numéro du jeu de démonstration comme un fait. -->
 <Coquille
 	forme="abregee"
 	role="admin"
@@ -545,8 +470,8 @@
 					</div>
 					<!--
 						L'ÉTAT VIDE, PARCE QUE LE PRODUIT COMMENCE VIDE. Une instance neuve ne
-						porte aucun type de relation : la boucle ne rendait rien, et l'écran se
-						réduisait à une ligne d'en-têtes suivie de blanc.
+						porte aucun type de relation : l'écran se réduisait à une ligne d'en-têtes
+						suivie de blanc.
 					-->
 				{:else}
 					<div class="zone-etat" id="liste-vide">

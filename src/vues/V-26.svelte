@@ -3,70 +3,21 @@
 	 * V-26 — Page non trouvée, utilisateur connecté. Servie à TOUTE adresse non
 	 * résolue en session (`docs/routes.md` §3.1 et §5.5).
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LE CHEMIN DE CODE UNIQUE — ADR-007
+	 * LE CHEMIN DE CODE UNIQUE — `ADR-007`. V-26 partage avec V-04 le point
+	 * d'entrée `adresseNonResolue()` (`$lib/public/adresse-non-resolue`), dont la
+	 * SEULE entrée est le chemin demandé. « Inexistante » et « interdite » ne
+	 * diffèrent que par la chaîne demandée — le gel l'écrit en toutes lettres
+	 * (`V-26:2600`) — et ne sont même pas deux branches ici.
 	 *
-	 * V-26 partage avec V-04 le point d'entrée `adresseNonResolue()`
-	 * (`$lib/public/adresse-non-resolue`), dont la SEULE entrée est le chemin
-	 * demandé. Les deux vues sont dans le même lot par obligation
-	 * (`docs/releve-vues.md` §9, R-7) : « Deux lots parallèles y écrivant chacun
-	 * leur branche est la manière la plus sûre de faire apparaître la branche
-	 * “interdit” que l'ADR interdit. »
+	 * LE CAS « SUPPRIMÉE » N'EST PAS DU MÊME RÉGIME, ET C'EST L'ADR QUI LE DIT :
+	 * une note supprimée dans un domaine où l'utilisateur a des droits est une
+	 * ressource dont l'existence lui est déjà connue, et la signaler ne révèle
+	 * rien. Ce cas ne passe donc PAS par `adresseNonResolue()` ; ce que la pierre
+	 * tombale affiche vient de la propriété `supprimee`, et d'elle seule.
 	 *
-	 * LES DEUX CAS INDISCERNABLES, ET LA PREUVE PAR LA DONNÉE. Les positions
-	 * `inexistante` et `interdite` de la planche ne diffèrent que par LA CHAÎNE
-	 * DEMANDÉE — le gel l'écrit en toutes lettres : « Rigoureusement identique au
-	 * cas précédent, à la chaîne demandée près » (`V-26:2600`). Ici, elles
-	 * n'existent même pas comme deux branches : les deux traversent
-	 * `adresseNonResolue()`, et le titre, le texte et la requête en découlent.
-	 * La requête le montre mécaniquement — `requeteDepuisAdresse()` rend
-	 * exactement les deux chaînes que le gel porte.
-	 *
-	 * LE CAS « SUPPRIMÉE » N'EST PAS DU MÊME RÉGIME, ET C'EST L'ADR QUI LE DIT.
-	 * Une note supprimée dans un domaine où l'utilisateur A DES DROITS est une
-	 * ressource dont l'existence lui est déjà connue : la signaler ne révèle
-	 * rien. C'est la distinction qu'ADR-007 pose explicitement entre la
-	 * résolution d'une ressource entière (régime indiscernable) et l'état d'une
-	 * zone d'une page qu'on a le droit d'ouvrir. Ce cas ne passe donc PAS par
-	 * `adresseNonResolue()` — et le gel le confirmait sans le dire : la requête
-	 * qu'il affichait sur ce cas n'était pas dérivable de l'adresse de sa
-	 * planche, à un article près, là où les deux autres l'étaient au caractère
-	 * près. Ce que la pierre tombale affiche vient désormais de la propriété
-	 * `supprimee`, et d'elle seule.
-	 *
-	 * CE QUE CE COMPOSANT NE PROUVE PAS. Il rend un ÉTAT DE MAQUETTE. Il ne
-	 * résout aucun droit, n'interroge aucune base, ne mesure aucun temps de
-	 * réponse. `RG-ACC-04` relève de la batterie 6 (`pnpm test:etancheite`, lot
-	 * T-011) ; l'indiscernabilité TEMPORELLE n'est mesurée par aucun instrument
-	 * (`docs/releve-vues.md` §10, M-5). Ni elle ni `P-09` ne sont déclarées
-	 * tenues par ce lot. L'attribut `si-ecriture` reproduit le gel, qui retire
-	 * l'élément EN CSS : ce n'est pas P-09, qui exige l'absence du DOM.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LA COQUILLE, FORME ABRÉGÉE — ARB-021
-	 *
-	 * V-26 est l'une des 26 vues de forme abrégée : barre sans les deux menus
-	 * déroulants, rail sans pictogrammes ni `data-vers`, `Gestion` en
-	 * `si-ecriture`, arborescence écrite au balisage. Le gabarit amendé par P-0
-	 * la rend sur `forme="abregee"`. `data-cas` est transmis à `div.app` par
-	 * `donnees` (A-2) : le gel le pose, et la feuille de la vue le lit.
-	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT — ARB-011. `div.notifs` est rendu
-	 * vide : les notifications de la maquette sont du comportement (T-017).
-	 * L'hôte de palette de V-09 — `template#tpl-palette` et `dialog#palette`
-	 * fermé — n'est pas rendu : mesuré SANS AUCUNE INCIDENCE sur trente
-	 * maquettes, instantané ARIA identique et capture identique à l'octet
-	 * (`docs/releve-vues.md` §4.1). Son montage réel appartient au lot qui
-	 * portera V-09 (DAG K-10).
-	 *
-	 * LES ADRESSES RESTENT CELLES DU GEL. Voir l'en-tête de `V-04.svelte` : le
-	 * filtre d'ARB-013 ne reconnaît pas la forme que Playwright produit, et toute
-	 * adresse réelle fait échouer le niveau 1. Constat remonté au rapport.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
-	 * (P-6.1) et de `src/vues/V-26.css` (P-6.3), posé par
-	 * `node verif/feuilles-de-vue.mjs V-26 --installer`. Les `style=` reproduits
-	 * figurent tous à l'ensemble clos du gel de V-26 (ARB-016).
+	 * Coquille de forme abrégée. `data-cas` est transmis à `div.app` par `donnees` :
+	 * le gel le pose, et la feuille de la vue le lit. Le style est dans
+	 * `src/socle.css` et `src/vues/V-26.css`.
 	 */
 	import type { Domaine, Note, Univers, UtilisateurCourant } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
@@ -76,29 +27,20 @@
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import { adresseDeNote } from '$lib/rangement/adresses';
 
-	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
-	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
-	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
-	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	/* Le mot renommable de `M14.7`, lu sur le contexte de coquille : en constante,
+	   le renommer en console ne changeait rien a l'ecran. Repli : « Fiche ». */
 	const motsDuProduit = vocabulaireRendu();
 	const motFiche = $derived(motsDuProduit.fiche);
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-26')`, variante complète. */
 		notes: readonly Note[];
 		/**
-		 * LES SOURCES DE LA COQUILLE — ET LEUR DÉFAUT EST L'ÉTAT VIDE.
-		 *
-		 * Leur défaut était les constantes du jeu de démonstration. `+error.svelte`
-		 * n'a pas de chargeur de page : il ne passe `compte` et `domaines` que
-		 * lorsque le gabarit racine les lui a servis, et ne passe JAMAIS `univers`.
-		 * Une page d'adresse non résolue affichait donc « Karim Belhadj » et
-		 * l'arborescence des maquettes sur une instance qui ne les a jamais portés.
-		 *
-		 * Absentes, elles valent maintenant vide. `instance` a disparu : aucune
-		 * source ne la passait, et la version du pied de rail vient du contexte.
+		 * LES SOURCES DE LA COQUILLE — ET LEUR DÉFAUT EST L'ÉTAT VIDE. C'étaient les
+		 * constantes du jeu de démonstration : `+error.svelte` n'a pas de chargeur de
+		 * page, il ne passe `compte` et `domaines` que lorsque le gabarit racine les
+		 * lui a servis et ne passe JAMAIS `univers`. Une page d'adresse non résolue
+		 * affichait donc un nom et une arborescence de maquette.
 		 */
 		/** Les univers déclarés. Absente, aucun. */
 		univers?: readonly Univers[];
@@ -109,114 +51,66 @@
 		/** Les reprises de contexte. Absente, aucune. */
 		reprises?: readonly { nom: string; sous: string; trace: string | null }[];
 		/**
-		 * LES PISTES DE REFORMULATION — une DONNÉE, et elle n'a pas de source ici.
-		 *
-		 * La vue en portait quatre en dur, tirées du gel : « sauvegarde »,
-		 * « restauration », « astreinte », « supervision ». Chacune ouvrait la
-		 * recherche à zéro résultat sur une instance qui ne porte rien de tel. Une
-		 * page d'erreur n'a pas de chargeur : rien ne peut les dériver ici, et une
-		 * liste vide ne rend pas le bloc.
-		 *
-		 * EXIGÉE — `+error.svelte` la passe, et c'est le seul montage de cette vue.
+		 * LES PISTES DE REFORMULATION — une DONNÉE. La vue en portait quatre en dur,
+		 * tirées du gel, chacune ouvrant la recherche à zéro résultat. Une page
+		 * d'erreur n'a pas de chargeur : rien ne peut les dériver ici, et une liste
+		 * vide ne rend pas le bloc. EXIGÉE — `+error.svelte` est le seul montage.
 		 */
 		pistes: readonly string[];
 		/**
 		 * LE MESSAGE D'AMORÇAGE — celui d'une instance qui n'a pas encore de quoi
-		 * ranger une note, et qui nomme l'écran de console qui débloque.
-		 *
-		 * Il est servi par le serveur depuis qu'il existe, et il n'a jamais été
-		 * peint : `+error.svelte` rend cette vue pour tout 404 et n'affichait le
-		 * message du refus que dans sa branche NON-404. L'administrateur d'une
-		 * instance neuve lisait le texte générique de l'adresse non résolue, qui
-		 * lui disait exactement le contraire de ce qu'il fallait faire.
-		 *
-		 * Absent, la vue rend sa réponse habituelle : ce message ne voyage qu'avec
-		 * un refus d'amorçage, donc au seul administrateur (`ADR-007` intact).
+		 * ranger une note, et qui nomme l'écran de console qui débloque. Servi depuis
+		 * qu'il existe, il n'était jamais peint : `+error.svelte` rend cette vue pour
+		 * tout 404 et n'affichait ce message que dans sa branche non-404. Absent, la
+		 * vue rend sa réponse habituelle — il ne voyage qu'avec un refus d'amorçage,
+		 * donc au seul administrateur (`ADR-007` intact).
 		 */
 		amorcage?: string;
 		/**
-		 * L'ADRESSE RÉELLEMENT DEMANDÉE — la seule entrée d'`adresseNonResolue()`,
-		 * et elle est EXIGÉE.
+		 * L'ADRESSE RÉELLEMENT DEMANDÉE — la seule entrée d'`adresseNonResolue()`, et
+		 * elle est EXIGÉE. Optionnelle, son défaut était la table d'adresses de la
+		 * planche : toute adresse cassée annonçait une note du jeu de démonstration,
+		 * la requête s'en dérivait, et « Créer la note » ouvrait l'éditeur sur ce
+		 * titre. Les littéraux partaient de surcroît dans le chunk d'erreur, celui que
+		 * toute page d'erreur charge.
 		 *
-		 * Elle a été optionnelle, et son défaut était la table d'adresses de la
-		 * planche : TOUTE adresse cassée de l'instance annonçait « Adresse demandée
-		 * /notes/… » sur une note du jeu de démonstration. La conséquence n'était
-		 * pas seulement un mensonge d'affichage : la requête s'en dérive, et le
-		 * bouton « Créer la note » ouvrait l'éditeur avec le titre d'une note de
-		 * démonstration, prêt à être enregistré en base. Les littéraux partaient de
-		 * surcroît dans le chunk d'erreur, celui que toute page d'erreur charge.
-		 *
-		 * Le composant d'erreur de la racine est le SEUL site de montage, et il lit
-		 * `page.url.pathname` : la propriété est donc exigée, et le compilateur
-		 * garde la porte à la place d'un repli sur le jeu.
-		 *
-		 * ELLE NE DISTINGUE RIEN, et c'est `ADR-007` : c'est un CHEMIN, pas une
-		 * raison. Le rendu reste le même que l'adresse désigne une note
-		 * inexistante ou une note hors du périmètre de l'appelant.
+		 * ELLE NE DISTINGUE RIEN, et c'est `ADR-007` : c'est un CHEMIN, pas une raison.
 		 */
 		adresse: string;
 		/**
-		 * CE QUE LE PRODUIT SAIT D'UNE NOTE SUPPRIMÉE — une DONNÉE, et aucune table
-		 * ne la porte.
-		 *
-		 * La vue l'écrivait en dur, tirée du gel : « Restaurer une sauvegarde
-		 * MariaDB », « Infrastructure › Exploitation › Sauvegardes », « Marc
-		 * Ferreira », « il y a 6 jours », « Contenu fusionné dans une autre
-		 * procédure ». Aucun écran ne l'affiche — `casDeV26()` rend TOUJOURS
-		 * `inexistante`, et le dépôt le gèle par un cas nommé —, mais un littéral
-		 * n'a pas besoin d'être rendu pour être LIVRÉ : les cinq chaînes partaient
-		 * dans le paquet de la page d'erreur, lisibles dans le source servi à
-		 * n'importe quel visiteur d'une adresse cassée.
-		 *
-		 * `null` EST L'ÉTAT NORMAL, et il le restera tant qu'aucune table ne portera
-		 * l'auteur, l'instant et le motif d'une suppression. La vue rend alors la
-		 * réponse unique d'adresse non résolue — celle que `ADR-007` prescrit, et
-		 * la seule que le produit sache tenir.
+		 * CE QUE LE PRODUIT SAIT D'UNE NOTE SUPPRIMÉE — une DONNÉE, et aucune table ne
+		 * la porte. La vue écrivait cinq chaînes du gel ; aucun écran ne les affichait,
+		 * mais un littéral n'a pas besoin d'être rendu pour être LIVRÉ : elles
+		 * partaient dans le paquet de la page d'erreur, lisibles par n'importe quel
+		 * visiteur d'une adresse cassée. `null` est l'état normal, et il le restera
+		 * tant qu'aucune table ne portera l'auteur, l'instant et le motif.
 		 */
 		supprimee?: NoteSupprimee | null;
 	}
 
 	/**
 	 * LA PIERRE TOMBALE — ce qu'un écran peut dire d'une note qui n'est plus là.
-	 *
-	 * Régime distinct de l'adresse non résolue, et l'ADR le nomme : l'existence de
-	 * la ressource est déjà connue de l'utilisateur, qui a des droits sur son
-	 * domaine. La forme reste écrite pour le jour où une table la portera ; d'ici
-	 * là, aucun montage ne la sert.
+	 * Régime distinct de l'adresse non résolue (`ADR-007`). La forme reste écrite
+	 * pour le jour où une table la portera ; d'ici là, aucun montage ne la sert.
 	 */
 	interface NoteSupprimee {
-		/** Le titre de la note supprimée. */
 		readonly nom: string;
-		/** Son rangement lisible — « Univers › Domaine › Dossier ». */
 		readonly ou: string;
-		/** Qui l'a supprimée. */
 		readonly par: string;
-		/** Quand, en clair. */
 		readonly quand: string;
-		/** Le motif indiqué à la suppression. */
 		readonly motif: string;
-		/** Les termes dont la recherche de repli s'amorce. */
 		readonly requete: string;
 	}
 
 	/**
-	 * L'IDENTITÉ AFFICHÉE — la forme d'`UtilisateurCourant`, dont les valeurs
-	 * figées du jeu de démonstration sont ÉLARGIES.
-	 *
-	 * `UtilisateurCourant.nom` est typé `NomDAuteur`, l'union des trois noms du
-	 * jeu — « Sophie Nguyen », « Marc Ferreira », « Karim Belhadj » — et `role`
-	 * comme `domaine` sont de même farine. Aucune instance réelle ne porte ces
-	 * valeurs, et aucun état vide n'y est représentable. Le JEU DE CLÉS reste lié
-	 * au type d'origine par un type mappé : un champ ajouté là-bas apparaît ici,
-	 * et cette forme ne peut pas diverger en silence.
+	 * L'identité affichée — la forme d'`UtilisateurCourant`, dont les valeurs du jeu
+	 * de démonstration sont ÉLARGIES : `nom` y est l'union des trois noms du jeu, où
+	 * aucun état vide n'est représentable. Le jeu de CLÉS reste lié au type
+	 * d'origine par un type mappé, pour qu'il ne diverge pas en silence.
 	 */
 	type IdentiteAffichee = { readonly [K in keyof UtilisateurCourant]: string };
 
-	/**
-	 * L'IDENTITÉ VIDE — ce que la barre supérieure affiche sans compte servi.
-	 * Elle remplace `MOI` du jeu de démonstration, qui faisait passer « Karim
-	 * Belhadj » pour l'utilisateur connecté sur toute instance.
-	 */
+	/** L'identité vide — ce que la barre supérieure affiche sans compte servi. */
 	const SANS_IDENTITE: IdentiteAffichee = {
 		prenom: '',
 		nom: '',
@@ -242,33 +136,21 @@
 	const cas = $derived(typeof reglage['cas'] === 'string' ? reglage['cas'] : 'supprimee');
 	/**
 	 * Les droits effectifs, transmis au gabarit. Le gel ne pose `data-droits` que
-	 * lorsque la position de planche change (`V-26:2775`) : à l'écriture,
-	 * l'attribut est ABSENT du gel, tandis que la coquille écrit
-	 * `data-droits="ecriture"`. La divergence est de balisage et NULLE au rendu —
-	 * la seule règle qui lit l'attribut est
-	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
-	 * (`src/socle.css:396`), et l'instantané ARIA ne porte pas les attributs de
-	 * données. Vérifié : les cinq états restent à zéro pixel.
+	 * lorsque la position de planche change (`V-26:2775`) ; la divergence est de
+	 * balisage et NULLE au rendu, la seule règle qui lit l'attribut étant
+	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`.
 	 */
 	const droits = $derived(
 		reglage['droits'] === 'lecture' ? ('lecture' as const) : ('ecriture' as const)
 	);
-	/**
-	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
-	 *
-	 * Le gel POSE les actions d'écriture puis les cache par
-	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
-	 * (`mockups/V-26-non-trouvee-connecte.html:339`) : faute de serveur, une
-	 * maquette statique n'a pas d'autre moyen de dire « cette action n'existe pas
-	 * pour ce rôle ». Le produit peut ne pas l'émettre, et P-09 l'exige — « ni
-	 * grisée, NI MASQUÉE ». La classe reste posée sur les nœuds rendus.
-	 * Énumération : `docs/omissions-p09.md`.
-	 */
+	/** L'ABSENCE, ET NON LE MASQUAGE — `P-09`, `RG-M05-08`, `ARB-040` : le gel cache
+	    ses actions d'écriture en feuille, le produit ne les émet pas. La classe reste
+	    posée sur les nœuds rendus. */
 	const ecriture = $derived(droits !== 'lecture');
 
 	/**
 	 * LA RÉPONSE UNIQUE. Une adresse entre, un état sort — et rien, ici, ne peut
-	 * savoir POURQUOI l'adresse n'a rien rapporté (ADR-007).
+	 * savoir POURQUOI l'adresse n'a rien rapporté (`ADR-007`).
 	 */
 	const TITRE_NON_RESOLUE = "Cette page n'est pas accessible.";
 	const TEXTE_NON_RESOLUE =
@@ -277,10 +159,8 @@
 		'avez le droit de consulter.';
 
 	/**
-	 * LA RÉPONSE DE LA PIERRE TOMBALE — le seul texte qui reste écrit ici, parce
-	 * qu'il ne décrit AUCUNE note : c'est la formulation du produit, comme
-	 * `TITRE_NON_RESOLUE` et `TEXTE_NON_RESOLUE` au-dessus. Ce qui décrivait une
-	 * note du jeu de démonstration est parti dans la propriété `supprimee`.
+	 * La réponse de la pierre tombale — le seul texte qui reste écrit ici parce
+	 * qu'il ne décrit AUCUNE note : c'est la formulation du produit.
 	 */
 	const TITRE_SUPPRIMEE = 'Cette note a été supprimée.';
 	const TEXTE_SUPPRIMEE =
@@ -288,22 +168,19 @@
 		'domaine où vous avez des droits : voici ce que nous savons de sa disparition.';
 
 	/**
-	 * LA POSITION DE PLANCHE NE SUFFIT PLUS À RENDRE LA PIERRE TOMBALE : IL FAUT
-	 * LA DONNÉE. Sans elle, l'écran n'a rien à dire de la disparition, et un
-	 * cartouche « voici ce que nous savons » suivi de blancs serait une promesse
-	 * sans objet — la même jurisprudence que les reprises de contexte.
+	 * LA POSITION DE PLANCHE NE SUFFIT PAS À RENDRE LA PIERRE TOMBALE : IL FAUT LA
+	 * DONNÉE. Sans elle, un cartouche « voici ce que nous savons » suivi de blancs
+	 * serait une promesse sans objet.
 	 */
 	const tombe = $derived(cas === 'supprimee' && supprimee !== null);
 	/** Le point d'entrée partagé avec V-04, pour les seuls cas non résolus. */
 	const resolution = $derived(tombe ? null : adresseNonResolue(adresse));
 
-	/** Ce que la ligne « Adresse demandée » porte à l'écran. */
 	const adresseAffichee = $derived(tombe ? adresse : (resolution?.adresse ?? ''));
 	/**
-	 * L'AMORÇAGE PASSE DEVANT, et il ne dit pas la même chose que le refus.
-	 * « L'adresse demandée ne correspond à aucune note » est faux ici : l'adresse
-	 * est bonne, c'est l'instance qui n'a nulle part où ranger. Le titre le dit,
-	 * et l'adresse de console se détache du message pour devenir un vrai geste.
+	 * L'AMORÇAGE PASSE DEVANT, et il ne dit pas la même chose que le refus :
+	 * « L'adresse demandée ne correspond à aucune note » est faux ici — l'adresse
+	 * est bonne, c'est l'instance qui n'a nulle part où ranger.
 	 */
 	const TITRE_AMORCAGE = "Il n'y a nulle part où ranger une note.";
 	const adresseDeConsole = $derived(/\/console\/[a-z-]+/u.exec(amorcage)?.[0] ?? '');
@@ -319,36 +196,17 @@
 	const resultats = $derived(requete.length < 2 ? [] : chercher(notes, requete));
 
 	/**
-	 * LES TROIS REPRISES DE CONTEXTE — `V-26:2731`.
-	 *
-	 * La DEUXIÈME nomme un dossier réel : « Sauvegardes · Dernier dossier consulté
-	 * · Infrastructure › Exploitation ». C'est le jeu de démonstration, et aucune
-	 * table ne porte d'historique de consultation : sur une instance qui n'a
-	 * jamais eu ces dossiers, la page d'adresse non résolue proposait d'y
-	 * retourner. Mesuré le 21/08/2026.
-	 *
-	 * Elles sont donc une propriété, DONT LE DÉFAUT EST VIDE : aucune table de la
-	 * base ne porte d'historique de consultation, et le gel n'est pas une source.
-	 * Vide, le bloc entier n'est pas rendu — un titre « Reprendre où vous en
-	 * étiez » suivi de rien serait une promesse sans objet.
+	 * LES TROIS REPRISES DE CONTEXTE — `V-26:2731`. La deuxième nommait un dossier
+	 * du jeu de démonstration, et aucune table ne porte d'historique de
+	 * consultation : la page proposait d'y retourner sur une instance qui ne l'a
+	 * jamais eu. Elles sont donc une propriété au défaut VIDE ; vide, le bloc entier
+	 * n'est pas rendu.
 	 */
 </script>
 
-<!--
-	`svelte/no-navigation-without-resolve` EST DÉSACTIVÉE POUR LE BALISAGE DE
-	CETTE VUE, ET LA RAISON EST LA MÊME QUE POUR LE FIL D'ARIANE DE LA COQUILLE.
-
-	La règle veille à ce qu'une adresse interne passe par `resolve()` de
-	SvelteKit. Les adresses de cette vue sont COMPOSÉES par
-	`$lib/rangement/adresses.ts`, la fabrique unique du rangement : la règle
-	inspecte l'EXPRESSION du `href`, elle ne peut pas la suivre jusque là, et
-	elle ne peut pas non plus la vérifier ici. Faire passer une adresse déjà
-	composée par `resolve()` ne prouverait rien de plus et ajouterait une
-	seconde source de vérité pour une forme qui n'en a qu'une.
-
-	Même geste, même justification qu'en V-03, V-22, V-24 et
-	`src/lib/coquille/BarreSuperieure.svelte`.
--->
+<!-- `svelte/no-navigation-without-resolve` EST DÉSACTIVÉE POUR LE BALISAGE DE
+	CETTE VUE : ses adresses sont COMPOSÉES par `$lib/rangement/adresses.ts`, la
+	fabrique unique du rangement, que la règle ne sait pas suivre. -->
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
 <!--
 	Le témoin de fraîcheur — `temoinFraicheur()` du gel. Le libellé accompagne
@@ -371,17 +229,13 @@
 			>{:else}{s.texte}{/if}{/each}{/snippet}
 
 <!--
-	La carte de résultat, variante INTERNE : elle porte le brouillon, le
-	rangement complet, le marquage de registre et la visibilité — ce que la
-	variante publique de V-02 et V-04 ampute.
+	La carte de résultat, variante INTERNE : elle porte le brouillon, le rangement
+	complet, le marquage de registre et la visibilité — ce que la variante publique
+	de V-02 et V-04 ampute.
 -->
 {#snippet carte(n: Note, q: string, index: number)}
-	<!--
-		AUCUN BLANC ENTRE LES NŒUDS DE LA CARTE, et il doit le rester : le relevé
-		d'ordre de tabulation du niveau 1 construit le nom accessible sur
-		`textContent`, où un blanc inséré par le formateur se voit. Mesuré : trois
-		états de V-26 en échec de structure pour cette seule cause.
-	-->
+	<!-- AUCUN BLANC ENTRE LES NŒUDS DE LA CARTE, et il doit le rester : le nom
+		accessible se construit sur `textContent`. -->
 	<!-- prettier-ignore -->
 	<a class="carte" href={adresseDeNote(n.id)} data-index={index}
 		><div class="carte__haut"
@@ -443,22 +297,13 @@
 		</div>
 
 		<!-- ---------- Note supprimée ----------
-			 LA SECTION N'EST PLUS SERVIE HORS DE SON CAS. Elle était toujours
-			 émise, masquée par `hidden` : toute adresse cassée d'une instance
-			 réelle expédiait donc dans son HTML « Restaurer une sauvegarde
-			 MariaDB », « Marc Ferreira » et « Infrastructure › Exploitation ›
-			 Sauvegardes » — des noms du jeu de démonstration, présentés comme
-			 les faits d'une suppression qui n'a jamais eu lieu.
-
-			 CE N'ÉTAIT QUE LA MOITIÉ DU DÉFAUT. Les cinq chaînes restaient ÉCRITES
-			 DANS LA VUE : la condition les retirait de l'écran, pas du paquet, et
-			 le chunk de la page d'erreur les portait toujours. Elles sont
-			 désormais une DONNÉE que personne ne sert — aucune table ne porte
-			 l'auteur, l'instant ni le motif d'une suppression.
-
-			 Rien ne bascule `tombe` côté navigateur, et la section n'offre plus
-			 aucun geste : ses deux boutons promettaient une corbeille que le
-			 produit n'a pas. -->
+			 LA SECTION N'EST PLUS SERVIE HORS DE SON CAS. Elle était toujours émise,
+			 masquée par `hidden` : toute adresse cassée expédiait dans son HTML cinq
+			 noms du jeu de démonstration, présentés comme les faits d'une suppression
+			 qui n'a jamais eu lieu — et la condition les retirait de l'écran, pas du
+			 paquet. Elles sont désormais une DONNÉE que personne ne sert.
+			 Rien ne bascule `tombe` côté navigateur, et la section n'offre plus aucun
+			 geste : ses deux boutons promettaient une corbeille que le produit n'a pas. -->
 		{#if tombe && supprimee !== null}
 			<section class="suppression" id="suppression">
 				<svg
@@ -487,12 +332,9 @@
 					</div>
 					<!--
 						LES DEUX BOUTONS DU GEL SONT RETIRÉS — « Demander sa restauration »
-						et « Voir le dossier qui la contenait ». Le premier promettait une
-						corbeille que `RG-M14-03` refuse au produit : « la suppression est
-						atomique et définitive ». Le second promettait un dossier dont
-						aucune donnée ne remonte ici. Aucun câblage ne les touchait, et
-						`cablage-erreur.ts` disait pourquoi : deux branches mortes que le
-						prochain portage aurait ranimées en gestes inertes.
+						promettait une corbeille que `RG-M14-03` refuse au produit (« la
+						suppression est atomique et définitive ») ; « Voir le dossier qui la
+						contenait » un dossier dont aucune donnée ne remonte ici.
 					-->
 				</div>
 			</section>

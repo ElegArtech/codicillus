@@ -1,94 +1,43 @@
 <script lang="ts">
 	/**
-	 * V-41 — Bibliothèque de composants. La planche de référence du système
-	 * visuel, et la seule vue qui montre l'inventaire fermé de `docs/DESIGN.md`
-	 * §2 sur une page réelle (`docs/releve-vues.md` §11, M-4).
+	 * V-41 — Bibliothèque de composants. La planche de référence du système visuel,
+	 * et la seule vue qui montre l'inventaire fermé de `docs/DESIGN.md` §2 sur une
+	 * page réelle.
 	 *
-	 * ONZE ÉTATS, TOUS DE ZONE — `verif/scenarios/V-41.json` : `section.famille`,
-	 * rangs 0 à 10. Le protocole est « page-entiere-zone-isolee »
-	 * (`verif/references/protocole-app.json`) : la page est servie ENTIÈRE aux
-	 * onze adresses, et le banc y découpe la famille du rang demandé, comme il la
-	 * découpe dans la maquette. La clé d'état ne pilote donc rien ici — les onze
-	 * familles sont montrées côte à côte, c'est la forme même de la vue.
+	 * L'ENVELOPPE VIENT DU GABARIT (`ARB-023`) : `div.biblio` est une grille
+	 * `208px minmax(0,1fr)` (`V-41:1460`) dont la première cellule est le sommaire
+	 * et la seconde `<main class="corps-b" id="corps">`. Sans elle, `main` passe de
+	 * 456 / 984 à 248 / 1060. `cibleEvitement` n'est PAS passée : `#corps` est
+	 * l'identifiant du `<main>` de cette vue, seul le libellé lui est propre.
 	 *
-	 * L'ENVELOPPE VIENT DU GABARIT — ARB-023, lot P-0b. `div.biblio` est une
-	 * grille `208px minmax(0,1fr)` (`V-41:1460`) dont la première cellule est le
-	 * sommaire et la seconde `<main class="corps-b" id="corps">`. Sans elle,
-	 * `main` passe de 456 / 984 à 248 / 1060 (boîte de bordure, 1440 × 900) et
-	 * les onze couples divergent avant toute comparaison de pixels
-	 * (`docs/ecarts/ECART-024.md`). `cibleEvitement` n'est PAS passée : `#corps`
-	 * est l'identifiant du `<main>` de cette vue, seul le libellé lui est propre.
+	 * LA FRAÎCHEUR VIENT DE L'IMPLÉMENTATION UNIQUE — `$lib/fraicheur.ts`
+	 * (`ADR-005`) : aucune comparaison de seuil, aucun libellé, aucun décompte de
+	 * barres n'est écrit ici.
 	 *
-	 * LA FRAÎCHEUR VIENT DE L'IMPLÉMENTATION UNIQUE — `$lib/fraicheur.ts`, la
-	 * transcription du gel extraite par P-0b. P-01 et ADR-005 n'admettent qu'un
-	 * calcul : aucune comparaison de seuil, aucun libellé, aucun décompte de
-	 * barres n'est écrit ici. Le témoin est rendu par `temoinFraicheur(note)`, la
-	 * jauge compte `BARRES_DE_JAUGE` barres, et la teinte vient de la classe que
-	 * la fabrique donne. C'est la règle que le gel énonce lui-même à l'endroit de
-	 * sa fabrique : « il n'existe qu'une seule fabrique, pour qu'il ne puisse pas
-	 * diverger d'un écran à l'autre » (`V-41:2196`).
+	 * LES ÉCHANTILLONS TYPOGRAPHIQUES NE COÏNCIDENT PLUS AVEC LE CORPUS : quatre
+	 * fragments illustrent un rendu et non une donnée, et portaient les noms du jeu
+	 * de démonstration. Ce sont des exemples, comme « lorem ipsum » — ils disent
+	 * désormais ce qu'ils sont (`Domaine`, `Sous-dossier`, `srv-exemple-01`).
 	 *
-	 * LES ÉCHANTILLONS TYPOGRAPHIQUES NE COÏNCIDENT PLUS AVEC LE CORPUS. Quatre
-	 * fragments illustrent un rendu et non une donnée — la pastille de domaine, le
-	 * fil d'Ariane spécimen, le bloc de code et la table à deux lignes. Ils
-	 * portaient les noms du jeu de démonstration (« Infrastructure »,
-	 * « Production », « pg-prod-01 »), si bien que la page servie sur une
-	 * instance vide montrait encore le vocabulaire du jeu. Ce sont des exemples,
-	 * comme « lorem ipsum » : ils disent désormais ce qu'ils sont — `Domaine`,
-	 * `Sous-dossier`, `srv-exemple-01` — et rien qui ressemble à un fait.
+	 * TOUTES LES DONNÉES VIENNENT DU CHARGEUR : les trois notes d'exemple sont les
+	 * PREMIÈRES de chaque niveau dans l'ordre reçu, la barre de répartition compte
+	 * les notes du premier domaine servi, l'arborescence se déduit de leur
+	 * rangement, la chronologie lit le flux d'activité servi. Exception faite des
+	 * trois indicateurs chiffrés, littéraux dans la maquette gelée.
 	 *
-	 * TOUTES LES DONNÉES VIENNENT DU CHARGEUR, et plus une seule de
-	 * `seeds/corpus.ts` : les trois notes d'exemple sont les PREMIÈRES de chaque
-	 * niveau dans l'ordre reçu, la barre de répartition compte les notes du
-	 * premier domaine servi, l'arborescence du sélecteur se déduit du rangement
-	 * de ces mêmes notes, le tableau les trie par consultations, la chronologie
-	 * lit le flux d'activité servi et la pile d'avatars compte les auteurs. Rien
-	 * n'est saisi à la main — exception faite des trois indicateurs chiffrés,
-	 * littéraux dans la maquette gelée, et déclarés au rapport du lot.
+	 * LA PAGE RESTE SERVIE EN PRODUCTION, et c'est le point (`STACK-TECHNIQUE.md`
+	 * §4.1, risque `R-06`) : une planche sortie du produit construit cesse d'être
+	 * une référence.
 	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
-	 * (P-6.1) et de `src/vues/V-41.css` (P-6.3), posée par
-	 * `node verif/feuilles-de-vue.mjs V-41 --installer`. Les quatre-vingt-neuf
-	 * valeurs de `style` reproduites ci-dessous appartiennent à l'ensemble clos du
-	 * gel de cette vue (ARB-016, `pnpm vues:styles V-41`) : P-1.7 les refuserait,
-	 * la conformité de pixel les impose, et l'ensemble clos les prouve.
+	 * Le style est dans `src/socle.css` et `src/vues/V-41.css` ; les quatre-vingt-neuf
+	 * valeurs de `style` reproduites appartiennent à l'ensemble clos du gel.
 	 *
-	 * DEUX ÉCARTS SONT DÉCLARÉS AU RAPPORT DU LOT, ET AUCUN N'EST RÉPARABLE ICI.
-	 *
-	 *  É-1  `pnpm verif:jetons` rend DEUX constats P-1.7 sur l'unique
-	 *       `style="outline:2px solid var(--c-accent);outline-offset:2px"` du
-	 *       spécimen « focus » des boutons. La valeur EST au gel, mot pour mot
-	 *       (`V-41:4130`), mais la maquette l'y pose par
-	 *       `b.setAttribute(k, attrs[k])` — nom d'attribut VARIABLE (`V-41:4107`).
-	 *       L'ensemble clos d'ARB-016 lit quatre formes, dont
-	 *       `setAttribute("style", …)` avec un nom LITTÉRAL : c'est une cinquième
-	 *       forme, et l'instrument ne la voit pas. Retirer le style effacerait un
-	 *       anneau de focalisation que la référence montre — la conformité de
-	 *       pixel l'impose, P-1.7 le refuse, et l'instrument est hors périmètre.
-	 *
-	 *  É-2  `pnpm verif:maquette` à blanc sort en 1 sur 316 DÉRIVES DE BANC des
-	 *       409 couples, dont 3 pour V-41. Elles ne portent QUE l'empreinte
-	 *       ARIA — tabulation, focalisables et dimensions sont intacts — et la
-	 *       comparaison elle-même est à 409 conformes, 0 écart. Cause :
-	 *       `verif/references/empreintes.json` date du 18/08 20:14, et le lot P-9
-	 *       a RÉPARÉ le 19/08 le filtre d'adresses d'ARB-013, jusque-là inerte
-	 *       (`ECART-025` É-1). Toute zone portant un lien a donc changé de
-	 *       signature. Un ré-étalonnage est un geste d'orchestrateur, tracé,
-	 *       jamais la sortie silencieuse d'un contrôle de dérive.
-	 *
-	 * DEUX NŒUDS INERTES DU GEL NE SONT PAS PORTÉS, par application d'ARB-021 :
-	 * `<template id="tpl-palette">` et `<dialog class="palette" id="palette">`,
-	 * vide et fermé. Ils ne déplacent aucun pixel, n'entrent pas dans l'instantané
-	 * ARIA, et la palette relève de T-106 / P-8. `<dialog class="dlg" id="d-demo">`
-	 * l'est, lui, à sa place exacte du gel : c'est une boîte du produit.
-	 *
-	 * LES RÉGIONS SONT SOUSTRAITES AU FORMATEUR — piège P-6 de `CLAUDE.md` §6.
-	 * La maquette construit tout le corps en script : le DOM de référence ne
-	 * porte AUCUN nœud d'espacement entre éléments. Un blanc réintroduit par
-	 * `prettier --write` se lit dans le `textContent` sur lequel le niveau 1
-	 * construit ses noms accessibles, et se voit au pixel entre deux éléments en
-	 * ligne. Chaque `section.famille` est donc précédée de `<!-- prettier-ignore -->`,
-	 * dans la forme exacte que le formateur reconnaît.
+	 * LES RÉGIONS SONT SOUSTRAITES AU FORMATEUR : la maquette construit tout le
+	 * corps en script, et le DOM de référence ne porte AUCUN nœud d'espacement
+	 * entre éléments. Un blanc réintroduit se lit dans le `textContent` sur lequel
+	 * le nom accessible se construit, et se voit au pixel entre deux éléments en
+	 * ligne. Chaque `section.famille` est donc précédée de la directive du
+	 * formateur, dans la forme exacte qu'il reconnaît.
 	 */
 	import type {
 		Domaine,
@@ -106,57 +55,32 @@
 	import { BARRES_DE_JAUGE, temoinFraicheur, type Temoin } from '$lib/fraicheur';
 	import { vocabulaireRendu } from '$lib/vocabulaire';
 
-	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
-	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
-	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
-	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	/* Le mot renommable de `M14.7`, lu sur le contexte de coquille : en constante,
+	   le renommer en console ne changeait rien a l'ecran. Repli : « Fiche ». */
 	const motsDuProduit = vocabulaireRendu();
 	const motFiche = $derived(motsDuProduit.fiche);
 	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
 
 	/**
-	 * LA CLÉ D'ÉTAT N'EST PAS DÉCLARÉE, ET C'EST LA LECTURE JUSTE DU SCÉNARIO.
-	 * Le mode démo la passe à toutes les vues ; ici les onze états rendent LA
-	 * MÊME PAGE — onze zones montrées côte à côte, que le banc découpe par leur
-	 * rang (`page-entiere-zone-isolee`). Une propriété `etat` déclarée et jamais
-	 * lue ferait croire à un pilotage qui n'existe pas.
+	 * LA CLÉ D'ÉTAT N'EST PAS DÉCLARÉE : les onze états rendent LA MÊME PAGE, onze
+	 * zones montrées côte à côte. Une propriété `etat` déclarée et jamais lue ferait
+	 * croire à un pilotage qui n'existe pas.
 	 */
 	/**
 	 * LES SEPT SOURCES, TOUTES EXIGÉES — ET C'EST CE QUI SORT LE CORPUS DU PAQUET.
-	 *
-	 * Elles étaient facultatives et retombaient sur les constantes de
-	 * `seeds/corpus.ts`. Trois n'étaient passées par personne : la chronologie
-	 * nommait « Karim Belhadj » et « Sophie Nguyen », le pied de rail annonçait
-	 * le numéro de version du jeu, et le sélecteur d'exemple listait ses types de
-	 * note. Mais le coût principal n'était pas à l'écran : l'import était fait EN
-	 * VALEUR, et les trente-deux notes du corpus — noms, hôtes, dates, compteurs
-	 * — partaient dans un chunk de 57 Ko servi comme fichier statique, atteignable
-	 * même par qui reçoit 404 sur la page, l'adresse se devinant depuis le
-	 * manifeste public.
-	 *
-	 * EXIGÉES, LES SEPT NE LAISSENT PLUS QUE DES IMPORTS DE TYPE — effacés à la
-	 * compilation. Le corpus ne descend plus dans le paquet, et la route qui en
-	 * oublierait une ne compilerait plus.
-	 *
-	 * LA PAGE RESTE SERVIE EN PRODUCTION, et c'est le point : `STACK-TECHNIQUE.md`
-	 * §4.1 en fait une page réelle pour parer le risque `R-06` — une planche
-	 * sortie du produit construit cesse d'être une référence. Ce qui est corrigé
-	 * est sa MATIÈRE, jamais son existence.
+	 * Elles retombaient sur les constantes de `seeds/corpus.ts`, et le coût
+	 * principal n'était pas à l'écran : l'import était fait EN VALEUR, si bien que
+	 * les trente-deux notes du corpus partaient dans un chunk de 57 Ko servi comme
+	 * fichier statique, atteignable même par qui reçoit 404 sur la page. Exigées,
+	 * il ne reste que des imports de TYPE, effacés à la compilation.
 	 */
 	interface Proprietes {
-		/** Les notes servies par le chargeur — les échantillons du témoin en sortent. */
 		notes: readonly Note[];
-		/** Les univers déclarés, servis par la route. Vide : aucun périmètre. */
 		univers: readonly Univers[];
-		/** Les domaines du périmètre du compte, servis par la route. */
 		domaines: readonly Domaine[];
-		/** Le compte connecté, servi par la route. */
 		compte: UtilisateurCourant;
-		/** L'état de l'instance — la version du paquet, servie par la route. */
 		instance: EtatDInstance;
-		/** Le flux d'activité du périmètre, servi par la route. Vide : aucune trace. */
 		activite: readonly EvenementDActivite[];
-		/** Les types de note du référentiel, servis par la route. */
 		typesNote: readonly TypeDeNote[];
 	}
 
@@ -177,10 +101,8 @@
 		{ id: 'identite', nom: 'Identité' }
 	];
 
-	/* ── Le témoin de fraîcheur ────────────────────────────────────────────────
-	   Les trois exemples sont les PREMIÈRES notes de chaque niveau dans l'ordre
-	   du corpus — `window.CORPUS.filter(…)[0]` du gel (`V-41:4064`). Aucun
-	   identifiant n'est écrit : le jeu de semence décide. */
+	/* Le témoin de fraîcheur — les trois exemples sont les PREMIÈRES notes de chaque
+	   niveau dans l'ordre du corpus (`V-41:4064`). Aucun identifiant n'est écrit. */
 	const NIVEAUX: readonly NiveauFraicheur[] = ['frais', 'vieil', 'obs'];
 
 	const exemples = $derived(
@@ -194,17 +116,11 @@
 		return Array.from({ length: BARRES_DE_JAUGE }, (_, k) => k < t.barres);
 	}
 
-	/* ── La barre de répartition ───────────────────────────────────────────────
-	   `barreRepartition(notesDuDomaine("Infrastructure"), { contexte })` du gel
-	   (`V-41:3696`). Les parts nulles sont omises, de la barre comme de la
-	   légende, et l'ordre est celui des trois niveaux.
-
-	   LE DOMAINE ÉCHANTILLON EST LE PREMIER SERVI, jamais « Infrastructure ». Le
-	   nom du gel était écrit en dur et servait à FILTRER de vraies notes : sur
-	   une instance qui n'a pas ce domaine, la barre se vidait sans rien dire ; sur
-	   une instance semée, elle affichait le nom d'un domaine de démonstration en
-	   étiquette de chaque part. Le premier domaine du périmètre est un échantillon
-	   qui existe. Aucun domaine : la barre n'a rien à mesurer et ne rend rien. */
+	/* La barre de répartition — `barreRepartition(…)` du gel (`V-41:3696`). Les
+	   parts nulles sont omises, de la barre comme de la légende.
+	   LE DOMAINE ÉCHANTILLON EST LE PREMIER SERVI : le nom du gel était écrit en dur
+	   et servait à FILTRER de vraies notes — sur une instance qui n'a pas ce
+	   domaine, la barre se vidait sans rien dire. Aucun domaine : rien à mesurer. */
 	const domaineEchantillon = $derived(domaines[0]?.nom ?? '');
 
 	const PARTS: readonly {
@@ -238,11 +154,10 @@
 			notesDuDomaine.length
 	);
 
-	/* ── L'arborescence des dossiers ───────────────────────────────────────────
-	   `window.dossiersDuDomaine` (`V-41:2455`) : aucune structure séparée, le
-	   rangement affiché est celui que portent les chemins des notes. Une note
-	   compte pour le dossier TERMINAL de son chemin, et l'ordre est celui de la
-	   première rencontre — le sélecteur du gel ne trie pas. */
+	/* L'arborescence des dossiers — `window.dossiersDuDomaine` (`V-41:2455`) :
+	   aucune structure séparée, le rangement affiché est celui que portent les
+	   chemins des notes. Une note compte pour le dossier TERMINAL de son chemin, et
+	   l'ordre est celui de la première rencontre — le sélecteur du gel ne trie pas. */
 	interface NoeudDeDossier {
 		readonly nom: string;
 		notes: number;
@@ -315,7 +230,6 @@
 		return morceaux;
 	}
 
-	/** `nombre()` du gel : la locale française, qui ne sépare pas sous 10 000. */
 	const nombre = (x: number) => x.toLocaleString('fr-FR');
 
 	/* ── Le tableau triable, la chronologie, la pile d'avatars ─────────────── */
@@ -344,11 +258,9 @@
 			.map((m) => m[0])
 			.join('');
 
-	/* ── Les trois indicateurs chiffrés ────────────────────────────────────────
-	   LITTÉRAUX DANS LE GEL (`V-41:4413`), et déclarés comme tels au rapport du
-	   lot : ce sont des SPÉCIMENS de composant, pas les indicateurs d'un tableau
-	   de bord. Les dériver du corpus déplacerait les pixels d'une planche de
-	   référence, ce que l'ordre de préséance interdit. */
+	/* Les trois indicateurs chiffrés — LITTÉRAUX DANS LE GEL (`V-41:4413`) : ce sont
+	   des SPÉCIMENS de composant, pas les indicateurs d'un tableau de bord. Les
+	   dériver du corpus déplacerait les pixels d'une planche de référence. */
 	const INDICATEURS: readonly (readonly [string, string, string, string])[] = [
 		['1 240', 'consultations sur 7 jours', 'hausse', '▲ +12 %'],
 		['59 %', 'recherches abouties', 'baisse', '▼ −4 %'],
@@ -358,34 +270,18 @@
 	/** Les étiquettes de la démonstration de saisie — `creerEtiquettes` du gel. */
 	const ETIQUETTES_DEMO: readonly string[] = ['postgresql', 'sauvegarde'];
 
-	/* ═══════════════════════════════════════════════════════════════════════
-	   CE QUE LES CONTRÔLES DE CETTE PAGE FONT — ET POURQUOI ILS FONT QUELQUE CHOSE
-
-	   La bibliothèque est une PAGE RÉELLE, servie en production sous
-	   `/bibliotheque` derrière la garde administrateur. Elle portait trente-cinq
-	   boutons et six liens qui n'avaient AUCUN écouteur : ni `onclick`, ni
-	   `$effect`, ni `onMount`. « Ouvrir une boîte » n'ouvrait rien, « Réessayer »
-	   ne réessayait rien, les en-têtes de tableau ne triaient rien, et six
-	   `href="#"` rechargeaient la page en y ajoutant un croisillon — six des
-	   avertissements d'accessibilité de `pnpm check` avec.
+	/* CE QUE LES CONTRÔLES DE CETTE PAGE FONT — ET POURQUOI ILS FONT QUELQUE CHOSE.
+	   La bibliothèque est une PAGE RÉELLE, servie sous `/bibliotheque` derrière la
+	   garde administrateur. Elle portait trente-cinq boutons et six liens sans aucun
+	   écouteur : « Ouvrir une boîte » n'ouvrait rien, les en-têtes ne triaient rien,
+	   et six `href="#"` rechargeaient la page.
 
 	   LA RÈGLE POSÉE ICI, ET TENUE PARTOUT DANS CETTE VUE :
-
-	     · un contrôle qui peut agir sur SA PROPRE démonstration AGIT — la boîte
-	       s'ouvre et se ferme, les onglets basculent, le tableau trie pour de
-	       bon, la pagination change de page, les notifications s'empilent
-	       vraiment, une étiquette s'ajoute et se retire ;
-	     · un contrôle qui ne le peut pas N'EST PAS OFFERT AU CLIC — le spécimen
-	       de style devient un `<span>` portant la même classe, donc le même
-	       pixel, mais plus la promesse d'un geste (`span.btn` perd le curseur de
-	       pointeur, `V-41.css`) ;
-	     · ce qu'aucun spécimen ne peut montrer est DIT en toutes lettres, à la
-	       place du bouton mort, et nomme l'écran où le composant est en service.
-
-	   Aucune donnée n'est inventée pour cela : le tri, la carte et le tableau
-	   portent les notes du chargeur, et sur une instance vide ils ne rendent
-	   rien plutôt que d'inventer.
-	   ═══════════════════════════════════════════════════════════════════════ */
+	     · un contrôle qui peut agir sur SA PROPRE démonstration AGIT ;
+	     · un contrôle qui ne le peut pas N'EST PAS OFFERT AU CLIC — le spécimen de
+	       style devient un `<span>` portant la même classe, donc le même pixel ;
+	     · ce qu'aucun spécimen ne peut montrer est DIT en toutes lettres, à la place
+	       du bouton mort, et nomme l'écran où le composant est en service. */
 
 	/* ── La boîte de dialogue ─────────────────────────────────────────────── */
 	let boiteDeDemonstration: HTMLDialogElement | null = $state(null);
@@ -413,10 +309,9 @@
 		['encours', 'En cours']
 	];
 
-	/* LA PILE NE FAIT QUE CROÎTRE, et c'est délibéré : la fermeture d'une bulle
-	   est tenue par le câblage de la coquille, qui RETIRE le nœud du document.
-	   Réutiliser le même rang rendrait la bulle suivante dans un nœud détaché —
-	   invisible. Chaque geste ajoute donc un rang neuf. */
+	/* LA PILE NE FAIT QUE CROÎTRE, et c'est délibéré : la fermeture d'une bulle est
+	   tenue par le câblage de la coquille, qui RETIRE le nœud du document. Réutiliser
+	   le même rang rendrait la bulle suivante dans un nœud détaché — invisible. */
 	let notifications: Notification[] = $state([]);
 
 	function poserUneNotification(type: TypeNotification): void {
@@ -444,7 +339,6 @@
 		});
 	});
 
-	/** Un nouvel axe part du sens qui a du sens : le plus consulté d'abord. */
 	function trierLeTableau(colonne: ColonneDeTri): void {
 		if (colonne === colonneDeTri) {
 			sensDeTri = sensDeTri === 'ascending' ? 'descending' : 'ascending';
@@ -455,9 +349,8 @@
 	}
 
 	/* ── La pagination ────────────────────────────────────────────────────── */
-	/* NEUF PAGES : le pied du spécimen annonce « 180 notes · 20 par page », et
-	   c'est le compte du gel. La fenêtre glissante rend exactement 1, 2, 3, …, 9
-	   à l'état de départ, comme la maquette. `null` est un saut. */
+	/* NEUF PAGES : le pied du spécimen annonce « 180 notes · 20 par page », et c'est
+	   le compte du gel. `null` est un saut. */
 	const PAGES_DEMO = 9;
 	let pageDemo = $state(2);
 
@@ -489,9 +382,8 @@
 	let choixDuMenu: string | null = $state(null);
 
 	/* ── La carte de résultat ─────────────────────────────────────────────── */
-	/* LA CARTE MÈNE À LA NOTE QU'ELLE MONTRE. Elle portait `href="#"` alors
-	   qu'elle affiche une note RÉELLE du chargeur, titre, chemin et témoin
-	   compris : la destination n'est pas devinée, elle est celle de la note. */
+	/* LA CARTE MÈNE À LA NOTE QU'ELLE MONTRE : elle portait `href="#"` alors qu'elle
+	   affiche une note RÉELLE du chargeur, titre, chemin et témoin compris. */
 	const adresseDeLaCarte = $derived(
 		noteDeCarte === undefined ? undefined : adresseDeNote(noteDeCarte.id)
 	);
@@ -551,12 +443,9 @@
 		<!-- prettier-ignore -->
 		<section class="famille" id="pastilles"><h2 class="famille__nom">Pastilles et marqueurs</h2><p class="famille__sous">Des étiquettes courtes qui qualifient sans commenter. Elles ne portent jamais d'action, sauf le filtre actif, dont la croix est explicite.</p><section class="compo"><div class="compo__tete"><div class="compo__nom">Familles de pastilles</div><div class="compo__quand">Le <b>domaine</b> porte sa teinte d'identification, le <b>type</b> reste neutre, l'<b>étiquette</b> est en monospace avec son croisillon. Le brouillon est hachuré comme l'obsolète : ce n'est pas encore publiable.</div></div><div class="compo__demo"><div class="echantillon"><span class="past"><i style="width:8px;height:8px;border-radius:2px;background:#453ba0;display:inline-block;margin-right:6px"></i>Domaine</span><span class="echantillon__nom">past--domaine</span></div><div class="echantillon"><span class="past past--type">Procédure</span><span class="echantillon__nom">past--type</span></div><div class="echantillon"><span class="past past--type">Serveur</span><span class="echantillon__nom">type de {motFicheMinuscule}</span></div><div class="echantillon"><span class="past past--etiquette">postgresql</span><span class="echantillon__nom">past--etiquette</span></div><div class="echantillon"><span class="past" style="border-color:#dcc59a;color:var(--c-alerte);background-image:repeating-linear-gradient(135deg,transparent,transparent 3px,rgba(143,92,0,.12) 3px,rgba(143,92,0,.12) 6px)">brouillon</span><span class="echantillon__nom">brouillon</span></div><div class="echantillon"><span class="past" style="border-color:var(--c-accent-trait);background:var(--c-accent-voile);color:var(--c-accent-fonce);gap:5px">Type : Procédure<span style="line-height:0;color:inherit">{@render croix(11, '2.4')}</span></span><span class="echantillon__nom">filtre actif</span></div></div></section></section>
 
-		<!-- eslint-disable svelte/no-navigation-without-resolve -- LA CARTE MÈNE À LA
-			NOTE QU'ELLE MONTRE. Son adresse sort de la fabrique unique,
-			`$lib/rangement/adresses.ts`, qui la compose dans la forme canonique
-			d'ARB-001 et nulle part ailleurs. La règle inspecte l'EXPRESSION du `href`
-			et ne peut pas la suivre jusqu'à la fabrique. Même geste qu'en V-03, V-22,
-			V-24 et dans la barre supérieure. -->
+		<!-- eslint-disable svelte/no-navigation-without-resolve -- l'adresse de la carte
+			sort de la fabrique unique, `$lib/rangement/adresses.ts` (`ARB-001`), et la
+			règle ne peut pas suivre l'expression du `href` jusque là. -->
 		<!-- prettier-ignore -->
 		<section class="famille" id="conteneurs"><h2 class="famille__nom">Conteneurs</h2><p class="famille__sous">Quatre niveaux de mise en boîte, du plus au moins engageant. Ne jamais en imbriquer deux du même type : deux cadres emboîtés ne hiérarchisent rien.</p><section class="compo"><div class="compo__tete"><div class="compo__nom">Carte de résultat</div><div class="compo__quand">Un objet cliquable dans une liste de résultats. Elle porte toujours le témoin de fraîcheur et le chemin de rangement.</div></div><div class="compo__demo compo__demo--pile">{#if noteDeCarte}<a class="carte" href={adresseDeLaCarte} data-index="0"><div class="carte__haut"><h2 class="carte__titre">{@render surligne(surligner(noteDeCarte.titre, REQUETE_DEMO))}</h2>{#if noteDeCarte.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}<span class="past past--type">{noteDeCarte.typeFiche ? motFiche + ' ' + noteDeCarte.typeFiche : noteDeCarte.type}</span></div><p class="carte__extrait">{@render surligne(surligner(noteDeCarte.extrait, REQUETE_DEMO))}</p><div class="carte__signal">{@render temoin(temoinFraicheur(noteDeCarte))}{#if noteDeCarte.revise}<span class="carte__revision">Révisé le {noteDeCarte.revise}</span>{:else}<span class="carte__revision" data-jamais="oui">Jamais révisé</span>{/if}{#if noteDeCarte.operationnel}<span class="marque-op">↳ Trouvé dans le registre Opérationnel</span>{/if}</div><div class="carte__pied"><span class="carte__chemin"><span>{noteDeCarte.univers + ' › '}</span><b>{noteDeCarte.domaine}</b><span>{' › ' + noteDeCarte.dossier}</span></span><span class="sep">·</span><span>{noteDeCarte.auteur}</span><span class="sep">·</span><span>{nombre(noteDeCarte.vues)} consultations</span>{#if noteDeCarte.pj}<span class="sep">·</span><span>{noteDeCarte.pj}{noteDeCarte.pj > 1 ? ' pièces jointes' : ' pièce jointe'}</span>{/if}{#if noteDeCarte.visibilite === 'Publique'}<span class="sep">·</span><span class="carte__visibilite">Publique</span>{/if}</div></a>{/if}</div></section><section class="compo"><div class="compo__tete"><div class="compo__nom">Panneau</div><div class="compo__quand">Un regroupement thématique dans une page. En-tête étiqueté, corps aéré.</div></div><div class="compo__demo compo__demo--pile"><section class="panneau"><div class="panneau__tete"><span class="etiq">Relations</span><span class="chiffre">4</span></div><div class="panneau__corps"><div class="zone-etat__txt">Contenu du panneau.</div></div></section></div></section><section class="compo"><div class="compo__tete"><div class="compo__nom">Encart</div><div class="compo__quand">Une remarque de second plan à l'intérieur d'un corps de texte. Filet latéral, jamais de fond coloré vif — un encart n'est pas une alerte.</div></div><div class="compo__demo compo__demo--pile"><div class="encart-b">Cette procédure suppose que la sauvegarde du jour soit terminée. Vérifiez-le avant de commencer.</div></div></section><section class="compo"><div class="compo__tete"><div class="compo__nom">Panneau latéral</div><div class="compo__quand">Un formulaire secondaire qui garde le contexte visible derrière lui — édition d'un objet de la console, historique d'une note. Préféré à la boîte de dialogue quand la saisie est longue.</div></div><div class="compo__demo"><div class="zone-etat__txt">Aucun spécimen : un panneau latéral s'ouvre sur le contexte qu'il garde visible, et cette page n'en a pas. Il est en service dans l'historique d'une note, où il se déploie sur la lecture.</div></div></section></section>
 		<!-- eslint-enable svelte/no-navigation-without-resolve -->
@@ -581,10 +470,9 @@
 	{/snippet}
 
 	<!--
-		La boîte de démonstration, rendue HORS de `div.app` (ARB-021, A-4), à la
-		place exacte du gel : après `div.app`, avant `div.notifs`. Elle est FERMÉE —
-		le gel ne l'ouvre qu'au clic —, donc sans pixel, hors de l'ordre de
-		tabulation et hors de l'instantané ARIA.
+		La boîte de démonstration, rendue HORS de `div.app`, à la place exacte du gel :
+		après `div.app`, avant `div.notifs`. Elle est FERMÉE — le gel ne l'ouvre qu'au
+		clic —, donc sans pixel et hors de l'instantané ARIA.
 	-->
 	{#snippet superposition()}
 		<dialog class="dlg" id="d-demo" aria-labelledby="t-demo" bind:this={boiteDeDemonstration}>

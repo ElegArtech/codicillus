@@ -1,74 +1,27 @@
 <script lang="ts">
 	/**
-	 * V-40 — Boîtes de dialogue. Catalogue transverse, pas une route.
+	 * V-40 — Boîtes de dialogue. Catalogue transverse, pas une route : V-40 est une
+	 * SECTION de V-41, sans adresse propre (`ARB-002`), et chaque dialogue s'exécute
+	 * dans la vue qui le déclenche (`docs/routes.md` §3.7 et §3.8).
 	 *
-	 * `docs/routes.md` §3.7 et §3.8 : V-40 est une SECTION de V-41, sans adresse
-	 * propre (ARB-002) ; chaque dialogue s'exécute dans la vue qui le déclenche
-	 * (C-06). Ce fichier n'existe que pour le mode démo —
-	 * la route de conception du banc (le module de service du banc, ÉCART-011 É-1).
+	 * DEUX RÉGIMES. `catalogue` vraie — le défaut — rend LE CATALOGUE ET LES DIX
+	 * `dialog.dlg` dans l'ordre de la maquette, celui de `etat` étant seul ouvert.
+	 * `catalogue` fausse rend LE SEUL dialogue nommé par `etat`, sans cadre et sans
+	 * `open`, pour que la vue qui le déclenche le monte chez elle — `d-relation`
+	 * porte `ou: "V-14"` en toutes lettres (`V-40:3252`).
 	 *
-	 * DIX ÉTATS, TOUS DE ZONE — `verif/scenarios/V-40.json` : `dialog.dlg`, rangs
-	 * 0 à 9. Le protocole est « page-entiere-zone-isolee »
-	 * (`verif/references/protocole-app.json`) : la page rend LE CATALOGUE ET LES
-	 * DIX `dialog.dlg` dans l'ordre de la maquette, celui de la clé demandée étant
-	 * SEUL OUVERT. Rendre un dialogue unique ferait échouer la résolution du rang
-	 * — le rang ne veut rien dire hors de l'ordre du document complet.
+	 * `showModal()` n'est pas appelé ici : l'attribut `open` place le dialogue dans
+	 * le flux plutôt que dans la couche supérieure, et le voile `::backdrop` n'existe
+	 * qu'en modal.
 	 *
-	 * DEUX RÉGIMES DEPUIS CE LOT, ET LE SECOND EST CELUI DU PRODUIT.
+	 * TOUTES LES DONNÉES VIENNENT DE L'HÔTE, ET AUCUNE DU JEU DE DÉMONSTRATION : les
+	 * décomptes de suppression sont calculés sur ce qui est servi, et une
+	 * confirmation destructive annonce le volume réel de ce qu'elle détruit — zéro
+	 * quand rien ne lui est servi.
 	 *
-	 * `catalogue` vraie — le défaut — laisse tout ce qui précède exact au mot
-	 * près : le cadre, les dix boîtes, l'ordre, l'état par l'adresse. `catalogue`
-	 * fausse rend LE SEUL dialogue nommé par `etat`, sans cadre et sans `open`,
-	 * pour que la vue qui le déclenche puisse le monter chez elle — ce que
-	 * `docs/routes.md:211` décrit depuis toujours, et que rien n'implémentait :
-	 * « chaque dialogue s'exécute dans la vue qui le déclenche ». `d-relation`
-	 * porte `ou: "V-14"` en toutes lettres (`V-40:3252`), et c'est V-14 qui le
-	 * monte désormais, par sa route.
-	 *
-	 * LA NOTE N'EST PLUS FIXÉE ICI. `d-relation` composait son aperçu autour de
-	 * `n-restaurer-pg` quelle que fût la note regardée ; la propriété `note` la
-	 * reçoit, et elle est REQUISE — il n'y a plus de repli sur le jeu.
-	 *
-	 * AUCUN PILOTAGE, AUCUNE OUVERTURE AU CLIC — ARB-011. La maquette ouvre le
-	 * dialogue en cliquant son entrée de catalogue et prépare son contenu à ce
-	 * moment-là ; le squelette reçoit l'état par l'adresse et rend cet état. Les
-	 * neuf autres dialogues restent donc dans leur forme initiale, non préparée,
-	 * exactement comme la référence les laisse : ils sont fermés, donc absents du
-	 * rendu comme de l'arbre d'accessibilité.
-	 *
-	 * `showModal()` N'EST PAS APPELÉ, et ne peut pas l'être : le rendu est un rendu
-	 * serveur sans hydratation (ADR-001, ARB-011). L'attribut `open` place le
-	 * dialogue dans le flux plutôt que dans la couche supérieure ; `.dlg__boite`
-	 * étant en `position: fixed`, la boîte se pose au même endroit de la fenêtre.
-	 * Le voile `::backdrop`, lui, n'existe qu'en modal — écart déclaré au rapport.
-	 *
-	 * TOUTES LES DONNÉES VIENNENT DE L'HÔTE, ET AUCUNE DU JEU DE DÉMONSTRATION.
-	 * Les décomptes de suppression sont calculés sur ce qui est servi, jamais
-	 * saisis et jamais repliés sur une valeur de maquette : une confirmation
-	 * destructive annonce le volume réel de ce qu'elle détruit (brief §3.6,
-	 * point dur n° 8), et zéro quand rien ne lui est servi.
-	 *
-	 * LE CADRE VIENT DU GABARIT — `$lib/coquille/Coquille.svelte`, amendé par
-	 * T-101b (ARB-015). La classe `doc` de `<main>` lui est passée en propriété :
-	 * le cadre local que ce fichier composait faute d'elle (`ECART-015` É-1) est
-	 * retiré, et la duplication avec lui. Les dix `<dialog>` restent au premier
-	 * niveau du document, hors de la coquille, comme dans la maquette — ils y
-	 * suivent la zone de notifications au lieu de la précéder, celle-ci étant en
-	 * `position: fixed` et donc hors du flux : écart d'ORDRE de document déclaré
-	 * au rapport, sans effet de mise en page.
-	 *
-	 * LA FRAÎCHEUR VIENT DE L'IMPLÉMENTATION UNIQUE — `$lib/fraicheur.ts`,
-	 * extraite du gel par le lot P-0b. La restitution locale de `libelleFraicheur`
-	 * que ce fichier portait, déclarée à `ECART-015` É-6, est RETIRÉE : elle était
-	 * le second calcul dérivé de la fraîcheur du dépôt, et P-01 n'en admet qu'un.
-	 * Le texte rendu est identique — la fabrique unique est la transcription
-	 * littérale de `window.libelleFraicheur` du gel, dont la restitution locale
-	 * était déjà la copie.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
-	 * (P-6.1) et de `src/vues/V-40.css` (P-6.3). Les styles en ligne reproduits
-	 * ci-dessous sont ceux de la maquette gelée — voir l'écart déclaré au rapport
-	 * du lot : P-1.7 les refuse, la conformité pixel les impose.
+	 * Le cadre vient du gabarit ; les dix `<dialog>` restent au premier niveau du
+	 * document, hors de la coquille, comme dans la maquette. Le style est dans
+	 * `src/socle.css` et `src/vues/V-40.css`.
 	 */
 	import type {
 		Compte,
@@ -87,81 +40,42 @@
 	import { accord } from '$lib/vocabulaire';
 
 	interface Proprietes {
-		/** La clé de l'état demandé : le dialogue rendu ouvert. */
 		etat: string;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-40')`, variante complète. */
 		notes: readonly Note[];
 		/**
-		 * LE CATALOGUE, OU UN SEUL DIALOGUE — et le second régime est celui que
-		 * les sources décrivent pour le PRODUIT.
+		 * LE CATALOGUE, OU UN SEUL DIALOGUE. `docs/routes.md:211` : V-40 n'a aucune
+		 * adresse propre, « chaque dialogue s'exécute dans la vue qui le déclenche ».
 		 *
-		 * `docs/routes.md:211` : V-40 n'a aucune adresse propre, « chaque dialogue
-		 * s'exécute dans la vue qui le déclenche ». Le catalogue, lui, est une
-		 * planche de revue : il existe pour montrer les dix boîtes côte à côte.
-		 *
-		 * VRAIE — LE DÉFAUT —, la page rend le catalogue et les dix `dialog.dlg`
-		 * dans l'ordre de la maquette, celui de `etat` étant seul ouvert. C'est
-		 * le protocole « page-entiere-zone-isolee », et rien n'y bouge.
-		 *
-		 * FAUSSE, la vue rend LE SEUL dialogue nommé par `etat`, sans cadre et
-		 * SANS l'attribut `open` : c'est l'hôte qui pilote la modalité, par
-		 * `showModal()`, parce que la modalité est un COMPORTEMENT — le voile,
-		 * le piège de focus et Échap n'existent qu'en modal, et l'attribut `open`
-		 * seul ne les donne pas.
-		 *
-		 * LES NEUF AUTRES NE SONT PAS RENDUS, ET CE N'EST PAS UNE COMMODITÉ : ils
-		 * portent des actions — « Supprimer définitivement », « Enregistrer les
-		 * droits » — que l'hôte n'a aucune raison d'offrir. Les poser fermés dans
-		 * son document les mettrait dans le DOM, ce que `P-09` refuse (`ni grisée,
-		 * ni masquée`).
+		 * FAUSSE, la vue rend le seul dialogue nommé par `etat`, SANS `open` : c'est
+		 * l'hôte qui pilote la modalité par `showModal()`, parce que le voile, le piège
+		 * de focus et Échap n'existent qu'en modal. LES NEUF AUTRES NE SONT PAS RENDUS :
+		 * ils portent des actions que l'hôte n'a aucune raison d'offrir, et les poser
+		 * fermés les mettrait dans le DOM, ce que `P-09` refuse.
 		 */
 		catalogue: boolean;
-		/**
-		 * LES SOURCES DE LA COQUILLE ET DES DIALOGUES, ET LEUR DÉFAUT EST L'ENSEMBLE
-		 * VIDE.
-		 *
-		 * Leur défaut était la constante du jeu de démonstration : les dialogues
-		 * annonçaient donc les comptes, les relations, les gabarits et l'historique
-		 * des maquettes sur toute instance, et rien ne le signalait. Aucune route
-		 * ne les sert ; elles rendent vide.
-		 */
+		/** LES SOURCES DE LA COQUILLE ET DES DIALOGUES : leur défaut est l'ENSEMBLE
+		    VIDE. C'était la constante du jeu de démonstration, et les dialogues
+		    annonçaient les comptes, les relations et l'historique des maquettes. */
 		/** Les univers déclarés — le contexte de coquille les porte. Vide : aucun. */
 		univers?: readonly Univers[];
-		/** Les domaines du périmètre du compte — même canal. */
 		domaines?: readonly Domaine[];
 		/** Le compte connecté — même canal. `null` : personne n'est connecté. */
 		compte?: CompteAffiche | null;
-		/** Les comptes de l'instance. Vide : aucun n'est lu. */
 		comptes?: readonly Compte[];
-		/** Les relations du corpus. Vide : aucune n'est lue. */
 		relations?: readonly Relation[];
-		/** Les gabarits de note. Vide : aucun n'est lu. */
 		templates?: readonly Template[];
 		/**
-		 * LES LIBELLÉS DES TYPES DE RELATION — REQUISE : la route les lit en base.
-		 *
-		 * LES CLÉS SONT CELLES DU RÉFÉRENTIEL, ET ELLES NE SONT PAS FERMÉES.
-		 * `CleDeTypeDeRelation` énumère les six types du jeu de semence ; le
-		 * produit, lui, les fait ADMINISTRER (`/console/types-de-relations`,
-		 * `M14`), et un chargeur qui sert la table réelle ne peut donc promettre
-		 * aucune de ces six clés. Le type est celui d'un référentiel ouvert ;
-		 * l'ORDRE de la table est celui d'administration, et le premier type y
-		 * est celui qu'un sélecteur propose d'entrée.
+		 * LES LIBELLÉS DES TYPES DE RELATION — REQUISE. LES CLÉS NE SONT PAS FERMÉES :
+		 * `CleDeTypeDeRelation` énumère les six types du jeu de semence, mais le produit
+		 * les fait ADMINISTRER (`M14`), et un chargeur qui sert la table réelle ne peut
+		 * promettre aucune de ces clés. L'ORDRE est celui d'administration.
 		 */
 		typesRelation: Readonly<Record<string, LibellesDeRelation>>;
 		/**
-		 * LES NOTES QUE `d-relation` PEUT VISER — vide : AUCUNE, ET LA BOÎTE LE DIT.
-		 *
-		 * Le dialogue cherche sa note visée dans une liste que l'hôte peuple à la
-		 * frappe ; la boîte n'avait donc AUCUN moyen de savoir qu'il n'y avait rien
-		 * à chercher. Sur une instance à une seule note, le champ de recherche
-		 * restait ouvert, la liste vide, et le bouton « Déclarer la relation »
-		 * grisé sans un mot. Ce n'est pas le même manque qu'un référentiel de types
-		 * vide, et il ne se comble pas au même endroit : d'où deux faits, et deux
-		 * phrases.
-		 *
-		 * SEULE LA VACUITÉ EST LUE ICI — le contenu de la liste reste à l'hôte, qui
-		 * la peuple. Le défaut est l'ensemble vide, jamais le jeu de démonstration.
+		 * LES NOTES QUE `d-relation` PEUT VISER — vide : AUCUNE, ET LA BOÎTE LE DIT. Le
+		 * dialogue cherche sa cible dans une liste que l'hôte peuple à la frappe : sur
+		 * une instance à une seule note, le champ restait ouvert, la liste vide et le
+		 * bouton grisé sans un mot. SEULE LA VACUITÉ EST LUE ICI.
 		 */
 		ciblesDeRelation?: readonly { readonly identifiant: string; readonly titre: string }[];
 		/**
@@ -171,30 +85,15 @@
 		 */
 		versions?: Partial<Record<IdentifiantNote, readonly Version[]>>;
 		/**
-		 * LA NOTE DONT LES DIALOGUES PARLENT — et sans elle, ils parlaient tous de
-		 * la même.
-		 *
-		 * `d-relation` compose l'aperçu « Ce que cela produira » autour du TITRE de
-		 * la note d'où part la relation (`V-40:3450`, `NOTE.titre`). Ce fichier la
-		 * fixait à `n-restaurer-pg`, la note de démonstration du gel : monté dans
-		 * la vue qui le déclenche, le dialogue aurait annoncé une relation partant
-		 * d'une AUTRE note que celle qu'on regarde — la valeur illustrative que
-		 * `P-02` proscrit, sur l'écran même où le geste s'engage.
-		 *
-		 * ELLE EST REQUISE : son repli était `n-restaurer-pg`, retrouvée dans le
-		 * corpus servi, et tous les dialogues parlaient donc de la même note.
+		 * LA NOTE DONT LES DIALOGUES PARLENT — REQUISE. `d-relation` compose l'aperçu
+		 * « Ce que cela produira » autour du TITRE de la note d'où part la relation
+		 * (`V-40:3450`) ; fixée à une note de démonstration, le dialogue monté chez son
+		 * hôte annonçait une relation partant d'une AUTRE note que celle qu'on regarde.
 		 */
 		note: Note;
-		/**
-		 * LE DOSSIER DONT `d-dossier` ET `d-droits` PARLENT — `null` : AUCUN.
-		 *
-		 * C'étaient deux littéraux du jeu de démonstration posés au niveau du
-		 * module — « Infrastructure » et « Exploitation › Sauvegardes » — lus par
-		 * le décompte de suppression et écrits en toutes lettres par le titre et
-		 * le sous-titre des droits. Les boîtes annonçaient donc la destruction
-		 * d'un dossier des maquettes sur toute instance. Aucune route ne les
-		 * monte : sans dossier servi, elles ne nomment rien et ne comptent rien.
-		 */
+		/** LE DOSSIER DONT `d-dossier` ET `d-droits` PARLENT — `null` : AUCUN. C'étaient
+		    deux littéraux du jeu de démonstration posés au niveau du module, et les
+		    boîtes annonçaient la destruction d'un dossier des maquettes. */
 		dossier?: { readonly domaine: string; readonly chemin: string } | null;
 	}
 
@@ -215,38 +114,27 @@
 		dossier = null
 	}: Proprietes = $props();
 
-	/**
-	 * LE COMPTE SERVI À LA COQUILLE. En application, le contexte l'emporte
-	 * toujours. Hors gabarit racine, il n'y a PAS de compte connecté.
-	 */
+	/** Le compte servi à la coquille. Hors gabarit racine, il n'y a PAS de compte connecté. */
 	const COMPTE_ABSENT: CompteAffiche = { nom: '', initiales: '', role: '', domaine: '' };
 
 	/** Le dialogue dont le CONTENU est préparé. Aucun autre ne l'est. */
 	const ouvert = $derived(etat);
 
-	/**
-	 * Le dialogue RENDU. Au catalogue, les dix ; hors catalogue, celui-là seul.
-	 */
+	/** Le dialogue RENDU. Au catalogue, les dix ; hors catalogue, celui-là seul. */
 	function rendu(cle: string): boolean {
 		return catalogue || etat === cle;
 	}
 
 	/**
-	 * Le dialogue qui porte l'attribut `open`.
-	 *
-	 * HORS CATALOGUE, AUCUN — et c'est la différence entre une planche et un
-	 * produit. La planche reçoit son état par l'adresse et le rend ; le produit
-	 * ouvre sa boîte au clic, par `showModal()`, seul appel qui donne le voile,
-	 * le piège de focus et la fermeture par Échap (`RG-M18-08`). Poser `open`
-	 * ici mettrait la boîte dans le flux avant que l'hôte n'ait rien demandé.
+	 * Le dialogue qui porte l'attribut `open`. HORS CATALOGUE, AUCUN : le produit
+	 * ouvre sa boîte au clic par `showModal()`, seul appel qui donne le voile, le
+	 * piège de focus et la fermeture par Échap (`RG-M18-08`).
 	 */
 	function revele(cle: string): boolean {
 		return catalogue && ouvert === cle;
 	}
 
-	/** Le dernier segment du chemin — le nom propre du dossier. Aucun : vide. */
 	const nomDuDossier = $derived(dossier === null ? '' : (dossier.chemin.split(' › ').pop() ?? ''));
-	/** Le chemin complet, domaine compris, tel que le sous-titre des droits l'écrit. */
 	const cheminDuDossier = $derived(
 		dossier === null ? '' : `${dossier.domaine} › ${dossier.chemin}`
 	);
@@ -254,57 +142,37 @@
 	/** La note dont les dialogues parlent — celle qu'on lit, et aucune autre. */
 	const NOTE = $derived(note);
 
-	/* OÙ LA NOTE EST RANGÉE MAINTENANT — ce que `d-deplacer` annonce, et le seul
-	   emplacement qu'il interdit de choisir. Les deux sites lisaient les deux
-	   littéraux du jeu : la boîte disait « Infrastructure › Exploitation ›
-	   Sauvegardes » pour n'importe quelle note. Un dossier vide désigne la racine
-	   du domaine, qui n'a pas de segment propre à écrire. */
+	/* Où la note est rangée maintenant — ce que `d-deplacer` annonce, et le seul
+	   emplacement qu'il interdit de choisir. Les deux sites lisaient deux littéraux
+	   du jeu. Un dossier vide désigne la racine du domaine. */
 	const emplacementDeLaNote = $derived(
 		NOTE.dossier ? `${NOTE.domaine} › ${NOTE.dossier}` : NOTE.domaine
 	);
 
-	/**
-	 * LE TYPE DE RELATION PROPOSÉ D'ENTRÉE — le premier du référentiel.
-	 *
-	 * `prepRelation()` du gel remplit le sélecteur dans l'ordre des clés puis
-	 * appelle `majUsage()` et `majApercuRel()`, qui lisent `select.value` : à
-	 * l'ouverture, c'est la PREMIÈRE option. Le gel écrivait donc `heberge`
-	 * parce que `heberge` est la première clé de `TYPES_RELATION`, non parce que
-	 * ce type-là aurait un statut. Sur le jeu de semence, le rendu est identique.
-	 */
+	/** LE TYPE DE RELATION PROPOSÉ D'ENTRÉE — le premier du référentiel :
+	    `prepRelation()` remplit le sélecteur dans l'ordre des clés puis lit
+	    `select.value`. Le gel écrivait `heberge` parce qu'il est la première clé, non
+	    parce que ce type aurait un statut. */
 	const premierType = $derived<LibellesDeRelation>(
 		Object.values(typesRelation)[0] ?? { sortant: '', entrant: '' }
 	);
 
-	/**
-	 * CE QUI EMPÊCHE `d-relation` D'ABOUTIR, ET IL Y EN A DEUX.
-	 *
-	 * Le repli ci-dessus rend `{ sortant: '', entrant: '' }` quand le référentiel
-	 * est vide, et l'aide du champ composait dessus : la boîte affichait
-	 * « Se lira «  » depuis cette note, et «  » depuis l'autre. » — une phrase
-	 * FAUSSE sur une instance neuve, sous un sélecteur sans une seule option. Les
-	 * deux faits sont donc lus, et chacun tait la composition qui mentirait.
-	 */
+	/** CE QUI EMPÊCHE `d-relation` D'ABOUTIR, ET IL Y EN A DEUX. Le repli ci-dessus
+	    rend deux libellés vides quand le référentiel l'est, et l'aide composait
+	    dessus : « Se lira «  » depuis cette note » sous un sélecteur sans option. */
 	const sansTypeDeRelation = $derived(Object.keys(typesRelation).length === 0);
 	const sansCibleDeRelation = $derived(ciblesDeRelation.length === 0);
-	/** Le geste ne peut pas aboutir : il manque un type, une note visée, ou les deux. */
 	const relationImpossible = $derived(sansTypeDeRelation || sansCibleDeRelation);
-	/**
-	 * LA NOTE QUE LA CONFIRMATION DE SUPPRESSION NOMME. C'était `n-pg-prod-01`,
-	 * une note du jeu retrouvée dans le corpus servi : la boîte annonçait la
-	 * destruction d'une AUTRE note que celle qu'on regarde.
-	 */
+	/** La note que la confirmation de suppression nomme. C'était une note du jeu
+	    retrouvée dans le corpus servi : la boîte annonçait la destruction d'une
+	    AUTRE note que celle qu'on regarde. */
 	const NOTE_SUP = $derived(note);
 
-	/* CE QUI DISPARAÎT AVEC LA NOTE, COMPTÉ SUR CE QUI EST SERVI — ET RIEN DE PLUS.
-	   Le décompte se repliait sur `|| VERSIONS_PAR_DEFAUT`, six versions tirées
-	   de la maquette : depuis que l'historique n'a plus le jeu pour défaut, ce
-	   repli valait TOUJOURS, et la boîte annonçait six versions détruites quel
-	   que soit l'historique réel. Un décompte non servi est nul, ce que la
-	   dernière ligne du bloc dit déjà pour les rétroliens. */
+	/* Ce qui disparaît avec la note, compté sur ce qui est servi — et rien de plus.
+	   Le décompte se repliait sur six versions tirées de la maquette, et ce repli
+	   valait TOUJOURS depuis que l'historique n'a plus le jeu pour défaut. */
 	const versionsSup = $derived(versions[NOTE_SUP.id]?.length ?? 0);
 	const retroliensSup = $derived(relations.filter((r) => r.vers === NOTE_SUP.id).length);
-	/** Les notes rangées dans le dossier à supprimer, sous-dossiers compris. */
 	const notesDuDossier = $derived(
 		dossier === null
 			? 0
@@ -330,10 +198,8 @@
 	}
 
 	/**
-	 * LA NOTE PROCHE DE CELLE QU'ON ÉCRIT. Le titre cherché était le littéral
-	 * « Restaurer une sauvegarde PostgreSQL », celui du gel : l'avertissement de
-	 * doublon désignait donc toujours la même note. Il se cherche sur le titre de
-	 * la note dont la boîte parle, ce qui est le seul sens qu'il ait.
+	 * LA NOTE PROCHE DE CELLE QU'ON ÉCRIT. Le titre cherché était le littéral du
+	 * gel, et l'avertissement de doublon désignait donc toujours la même note.
 	 */
 	const doublon = $derived(notesProches(NOTE.titre)[0] ?? NOTE);
 
@@ -344,18 +210,11 @@
 		readonly origine?: string;
 	}
 
-	/**
-	 * LES DROITS POSÉS SUR LE DOSSIER — AUCUN N'EST LU, ET LA TABLE EST DONC VIDE.
-	 *
-	 * Elle nommait quatre comptes du jeu de démonstration — Karim Belhadj, Marc
-	 * Ferreira, Sophie Nguyen, Léa Marchand — avec leurs rôles et l'origine de
-	 * leur héritage, servis comme des faits sur l'instance qu'on regarde. Rien
-	 * ne les sert : `droits_de_dossier` n'est lue par aucun chargeur qui monte
-	 * cette vue. Vide, la boîte n'affirme rien.
-	 */
+	/** LES DROITS POSÉS SUR LE DOSSIER — AUCUN N'EST LU, ET LA TABLE EST DONC VIDE.
+	    Elle nommait quatre comptes du jeu de démonstration servis comme des faits ;
+	    `droits_de_dossier` n'est lue par aucun chargeur qui monte cette vue. */
 	const DROITS: readonly Droit[] = [];
 
-	/** Les comptes actifs à qui aucun accès explicite ni hérité n'est encore posé. */
 	const comptesSansAcces = $derived(
 		comptes.filter((c) => c.actif && !DROITS.some((d) => d.qui === c.nom))
 	);
@@ -366,7 +225,6 @@
 			.map((m) => m[0])
 			.join('');
 
-	/** Un dossier de destination : son nom, son décompte de notes, ses enfants. */
 	interface Destination {
 		readonly nom: string;
 		readonly chemin: string;
@@ -376,9 +234,8 @@
 
 	/**
 	 * L'arborescence de destination d'un domaine, DANS L'ORDRE DE RANGEMENT du
-	 * corpus — et non par ordre alphabétique comme le rail. C'est l'ordre que la
-	 * maquette produit, et la sélection d'une destination se lit dans cet ordre.
-	 * Une note compte pour le dossier terminal de son chemin.
+	 * corpus — et non par ordre alphabétique comme le rail : c'est l'ordre que la
+	 * maquette produit. Une note compte pour le dossier terminal de son chemin.
 	 */
 	function destinations(domaine: string): readonly Destination[] {
 		interface Brouillon {
@@ -430,7 +287,6 @@
 		readonly quoi: string;
 	}
 
-	/** Le catalogue, dans l'ordre où la maquette présente les dix boîtes. */
 	const CATALOGUE: readonly EntreeDeCatalogue[] = [
 		{
 			id: 'd-simple',
@@ -500,7 +356,6 @@
 		}
 	];
 
-	/** Les six règles communes à toutes les boîtes. */
 	const REGLES: readonly (readonly [string, string])[] = [
 		[
 			'Le focus est piégé',
@@ -535,27 +390,14 @@
 </script>
 
 <!--
-	L'ÉLÉMENT FOCAL DE CHAQUE BOÎTE, DÉCLARÉ — et non piloté.
-
-	La maquette gelée le pose en script, à l'ouverture :
-	`d.querySelector(".saisie, .selecteur, .btn--principal").focus()`
-	(`mockups/V-40-dialogues.html:3189`). Le squelette n'a pas de script
-	(ADR-001, ARB-011) ; il pose donc la même propriété en DÉCLARATION, par
-	`autofocus`, que l'algorithme du délégué de focalisation de `showModal()`
-	honore. Résultat identique des deux côtés, y compris pour `d-droits` et
-	`d-deplacer` où la cible est désactivée : elle n'est pas une aire
-	focalisable, la focalisation retombe donc sur le bouton de fermeture — ce
-	que la maquette obtient parce que `focus()` y est sans effet.
-
-	Sans cette déclaration, la référence portait l'anneau de `.saisie:focus`
-	(`box-shadow: 0 0 0 3px var(--c-accent-voile)`) et le candidat non :
-	4 380 px sur `d-dossier`, 4 746 sur `d-reviser`, 2 884 sur `d-relation`.
-	C'est la cause réelle du jeton faux relevé par `ECART-017` É-2 — le voile
-	n'est pas posé sur un bloc `.contexte`, il est celui de la focalisation.
-
-	`a11y_autofocus` met en garde contre la focalisation automatique AU
-	CHARGEMENT D'UNE PAGE. Ici la focalisation est celle d'un dialogue modal,
-	que `RG-M18-08` et P-06 exigent : ne pas la poser serait la régression.
+	L'ÉLÉMENT FOCAL DE CHAQUE BOÎTE, DÉCLARÉ — et non piloté. La maquette le pose en
+	script à l'ouverture (`mockups/V-40-dialogues.html:3189`) ; ici `autofocus`
+	déclare la même propriété, que le délégué de focalisation de `showModal()`
+	honore. Pour `d-droits` et `d-deplacer` la cible est désactivée, donc non
+	focalisable, et la focalisation retombe sur le bouton de fermeture — ce que la
+	maquette obtient parce que `focus()` y est sans effet. `a11y_autofocus` vise la
+	focalisation au CHARGEMENT D'UNE PAGE ; ici c'est celle d'un dialogue modal, que
+	`RG-M18-08` exige.
 -->
 
 {#snippet croix()}
@@ -826,11 +668,9 @@
 			</div>
 			<div class="dlg__corps">
 				<!-- L'ATTRIBUTION ÉTAIT CELLE DU GEL — « écrite par Sophie Nguyen le
-				     12 mai 2026 » —, et elle voyageait dans le paquet de
-				     `/notes/{identifiant}` sans jamais s'afficher : aucune route ne
-				     monte ce dialogue. Nommer un auteur et une date demanderait que
-				     la version soit SERVIE ; la phrase dit donc ce que le geste fait,
-				     et rien qu'elle ne puisse savoir. -->
+				     12 mai 2026 » — et ne s'affichait jamais : aucune route ne monte ce
+				     dialogue. Nommer un auteur et une date demanderait que la version soit
+				     SERVIE ; la phrase dit donc ce que le geste fait, et rien de plus. -->
 				<p class="dlg__texte">
 					Le contenu de cette version redeviendra le contenu courant de la note.
 				</p>
@@ -1046,12 +886,10 @@
 				<div class="champ">
 					<label class="champ__label" for="rel-type">Type de relation</label>
 					<!--
-						UN SÉLECTEUR QUI NE PEUT RIEN OFFRIR LE DIT ET SE FERME — le motif est
-						celui de `#droit-qui` un peu plus haut dans ce fichier : une option de
-						repli qui NOMME le vide, et `disabled`. Sans elle, la boîte présentait
-						une liste déroulante vide, sans une ligne, sur toute instance dont le
-						référentiel de types n'a pas encore été rempli.
-					-->
+							UN SÉLECTEUR QUI NE PEUT RIEN OFFRIR LE DIT ET SE FERME — même motif que
+							`#droit-qui` plus haut : une option de repli qui NOMME le vide, et
+							`disabled`. Sans elle, la boîte présentait une liste déroulante vide.
+						-->
 					<!-- svelte-ignore a11y_autofocus -->
 					<select
 						class="selecteur"
@@ -1063,11 +901,10 @@
 								>{:else}<option>Aucun type de relation n'existe encore</option>{/each}{/if}</select
 					>
 					<!--
-						L'AIDE NE COMPOSE PLUS SUR UN LIBELLÉ ABSENT. Elle écrivait
-						« Se lira «  » depuis cette note, et «  » depuis l'autre. » dès que le
-						référentiel était vide. Elle nomme désormais le geste ET son adresse,
-						comme `MESSAGE_AMORCAGE` le fait pour le premier univers.
-					-->
+							L'AIDE NE COMPOSE PLUS SUR UN LIBELLÉ ABSENT : elle écrivait « Se lira
+							«  » depuis cette note » dès que le référentiel était vide. Elle nomme
+							désormais le geste ET son adresse.
+						-->
 					<span class="champ__aide" id="rel-usage"
 						>{#if ouvert === 'd-relation'}{#if sansTypeDeRelation}Aucun type de relation n'existe
 								encore sur cette instance : une relation ne peut pas être qualifiée. Créez-en un
@@ -1088,10 +925,8 @@
 						placeholder="Chercher une note…"
 					/>
 					<div class="rel-liste" id="rel-liste" role="listbox"></div>
-					<!--
-						L'AUTRE MANQUE, ET IL NE SE SOIGNE PAS AU MÊME ENDROIT : chercher une
-						note visée n'a aucun sens quand il n'y en a aucune à trouver.
-					-->
+					<!-- L'AUTRE MANQUE, ET IL NE SE SOIGNE PAS AU MÊME ENDROIT : chercher une
+							note visée n'a aucun sens quand il n'y en a aucune à trouver. -->
 					{#if ouvert === 'd-relation' && sansCibleDeRelation}<span class="champ__aide"
 							>Aucune autre note n'est offerte : déclarer une relation exige le droit d'écriture sur
 							les deux extrémités. Créez-en une seconde à l'adresse /notes/nouvelle, ou faites-vous
@@ -1100,11 +935,9 @@
 				</div>
 				<div class="champ">
 					<!--
-						L'APERÇU NE S'ANNONCE QUE S'IL PEUT MONTRER QUELQUE CHOSE. Le libellé
-						reste au gel dès qu'un type existe et qu'une note peut être visée ; sinon
-						il ne promet rien, et la zone reste vide. Elle n'est JAMAIS retirée du
-						document : l'hôte la cherche par son identifiant pour y composer les deux
-						phrases, et son absence désarmerait tout le câblage de la boîte.
+						L'APERÇU NE S'ANNONCE QUE S'IL PEUT MONTRER QUELQUE CHOSE. La zone n'est
+						JAMAIS retirée du document : l'hôte la cherche par son identifiant pour y
+						composer les deux phrases, et son absence désarmerait tout le câblage.
 					-->
 					{#if !relationImpossible}<span class="champ__label">Ce que cela produira</span>{/if}
 					<div id="rel-apercu">

@@ -1,80 +1,33 @@
 <script lang="ts">
 	/**
-	 * V-15 — Historique des versions d'une note.
-	 * Route `/notes/{identifiant}` (`verif/scenarios/V-15.json`).
+	 * V-15 — Historique des versions d'une note. Route `/notes/{identifiant}`.
 	 *
-	 * V-15 N'EST PAS UNE ROUTE PROPRE : elle SE SUPERPOSE à l'adresse de V-14.
-	 * Le gel le dit par sa structure — même route, même note, même article — et
-	 * `docs/releve-vues.md` §5 le confirme : les deux vues déclarent
-	 * `/notes/{identifiant}`. Ce qui les distingue est le panneau latéral et
+	 * V-15 N'EST PAS UNE ROUTE PROPRE : elle SE SUPERPOSE à l'adresse de V-14 — même
+	 * route, même note, même article. Ce qui les distingue est le panneau latéral et
 	 * l'état `data-historique` qu'il pose sur `div.app`.
 	 *
-	 * L'ARTICLE EST CELUI DE V-14, À L'OCTET. `V-14:1415-1755` et
-	 * `V-15:1507-1847` sont identiques — 341 lignes, vérifiées par `diff` —, et
-	 * la maquette l'annonce elle-même : « partagé par la lecture interne (V-14)
-	 * et l'historique (V-15) : les deux vues montrent la même note, jamais deux
-	 * versions divergentes du markup ». D'où `$lib/lecture/`, et d'où le fait
-	 * que ce module partagé n'existe QUE parce que les deux vues le partagent
-	 * réellement.
+	 * L'ARTICLE EST CELUI DE V-14, À L'OCTET : `V-14:1415-1755` et `V-15:1507-1847`
+	 * sont identiques, et la maquette l'annonce — « les deux vues montrent la même
+	 * note, jamais deux versions divergentes du markup ». D'où `$lib/lecture/`.
 	 *
-	 * SEPT ÉTATS SUR UNE SEULE FENÊTRE — 7 couples. Trois axes :
-	 * panneau × richesse de l'historique × droit. Deux états sont marqués
-	 * `identiqueA` `pan-ouvert` : ils ne dévient d'aucun contrôle.
+	 * Coquille de forme abrégée. Trois attributs de données hors gabarit —
+	 * `data-registre`, `data-historique`, `data-version` —, dont le deuxième commande
+	 * l'escamotage du panneau : `.app[data-historique="ferme"] .tiroir` (`V-15.css`).
 	 *
-	 * COQUILLE DE FORME ABRÉGÉE — ARB-021, A-1 : rail écrit au balisage du gel,
-	 * barre sans les deux menus déroulants. `<main class="lecture" id="contenu">`
-	 * (ARB-015), lien d'évitement vers `#article` avec le libellé par défaut
-	 * (ARB-019). Trois attributs de données hors gabarit — `data-registre`,
-	 * `data-historique`, `data-version` (ARB-021, A-2) —, dont le deuxième
-	 * commande l'escamotage du panneau : `.app[data-historique="ferme"] .tiroir`
-	 * (`V-15.css`).
+	 * LE PANNEAU EST UNE SUPERPOSITION : `aside.tiroir#tiroir` vit HORS de `div.app`
+	 * (`V-15:1853`) et il est l'un des neuf seuls nœuds hors `div.app` du gel à
+	 * porter une boîte de rendu. Il est rendu par la propriété `superposition` du
+	 * gabarit, à sa place exacte : après `div.app`, avant `div.notifs`.
 	 *
-	 * LE PANNEAU EST UNE SUPERPOSITION — ARB-021, A-4. `aside.tiroir#tiroir`
-	 * vit HORS de `div.app` (`V-15:1853`) et il est l'un des NEUF SEULS nœuds
-	 * hors `div.app` du gel à porter une boîte de rendu. Il est donc rendu par
-	 * la propriété `superposition` du gabarit, à sa place exacte : après
-	 * `div.app`, avant `div.notifs`.
+	 * AUCUN CHIFFRE N'EST SAISI : une note sans version antérieure rend l'état vide
+	 * du gel, jamais une liste d'exemple.
 	 *
-	 * L'HISTORIQUE VIENT DU CORPUS — `VERSIONS` et `RETENTION_VERSIONS` de
-	 * `seeds/corpus.ts`, exactement comme `window.versionsDe()` du gel lit
-	 * `window.VERSIONS`. Aucun chiffre n'est saisi (P-02) : le nombre de
-	 * versions conservées, l'ancienneté relative, l'ampleur des modifications et
-	 * la répartition des cinq segments sont tous calculés à partir des données.
-	 * Les trois cas de la planche nomment deux notes et le vide — `charger()`,
-	 * `V-15:2990-2994`. Les deux tableaux sont REÇUS EN PROPRIÉTÉ, de défaut la
-	 * constante du jeu (T-043).
+	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (`ARB-011`) : ce qui est rendu est l'ÉTAT
+	 * DE DÉPART du gel — aucune version cochée, « Comparer » désactivé. UNE SEULE
+	 * EXCEPTION, ET ELLE EST ADRESSABLE : la version consultée, que `?version={n}`
+	 * porte (`docs/routes.md:224`).
 	 *
-	 * ET LA NOTE AUSSI EST REÇUE. Passée en propriété, elle prend la place du cas
-	 * de planche : la liste rendue est celle des versions que la BASE porte pour
-	 * cette note-là, le titre et le rangement sont les siens, et les trois cas du
-	 * gel — dix versions, une seule, aucune — ne sont plus des positions de
-	 * planche mais ce que l'historique se trouve être. Une note sans version
-	 * antérieure rend l'état vide du gel, jamais une liste d'exemple (P-02).
-	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011). La sélection de deux
-	 * versions, la restauration et sa boîte de confirmation, la fermeture du
-	 * panneau : tout cela est du comportement. Ce qui est rendu est l'ÉTAT DE
-	 * DÉPART du gel — aucune version cochée, « Comparer » désactivé.
-	 *
-	 * UNE SEULE EXCEPTION, ET ELLE EST ADRESSABLE : la version consultée. Elle
-	 * n'est pas du comportement, elle est l'état que `?version={n}` porte
-	 * (`docs/routes.md:224`) — reçue en propriété, elle déplie le bandeau
-	 * d'identification, marque sa ligne `data-affichee` et pose
-	 * `data-version="antérieure"`, exactement comme `afficher()` du gel.
-	 *
-	 * **CE LOT NE DÉCLARE PAS `P-09` TENUE** : la disparition des actions
-	 * d'écriture en lecture seule est un rendu de deux états — `si-ecriture` et
-	 * `socle.css:396` —, pas une preuve d'étanchéité (`pnpm test:droits`).
-	 *
-	 * NON RENDUS, ET DÉCLARÉS : `dialog.dlg#dlg-restaurer` et
-	 * `dialog.palette#palette`, tous deux FERMÉS, et `template#tpl-palette`.
-	 * `docs/releve-vues.md` §4.1 les mesure : aucune boîte de rendu, aucun
-	 * pixel, aucune entrée dans l'instantané ARIA. Et `div.planche`, bloc hors
-	 * produit (`docs/DESIGN.md` §2.G).
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-15.css`, posé par `node verif/feuilles-de-vue.mjs V-15
-	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 * Le style est dans `src/socle.css` et `src/vues/V-15.css`.
 	 */
 	import type { Domaine, IdentifiantNote, Note, Univers, Version } from '../../seeds/corpus';
 	import type { CompteAffiche } from '$lib/coquille/identite';
@@ -85,23 +38,15 @@
 	import { accord } from '$lib/vocabulaire';
 
 	/**
-	 * CE QUE LA ROUTE PASSE EST REQUIS ; CE QU'ELLE NE PASSE PAS EST VIDE.
-	 *
-	 * Toutes ces propriétés étaient optionnelles, et leur défaut était une
-	 * constante du jeu de démonstration : l'historique d'une note quelconque
-	 * servait les dix versions de `n-restaurer-pg` et l'identité des maquettes,
-	 * sans que rien ne proteste. Les six que le chargeur sert sont REQUISES —
-	 * une route qui les oublierait ne compilerait plus ; les trois que le
-	 * contexte de coquille porte déjà rendent leur ensemble VIDE.
-	 *
-	 * `compte` est reçu SOUS LE NOM LOCAL `moi` : la vue porte déjà un `compte`,
-	 * qui est le libellé du pied du panneau d'historique. Le nom de la propriété
-	 * reste `compte` — il est contractuel, huit lots l'emploient.
+	 * CE QUE LA ROUTE PASSE EST REQUIS ; CE QU'ELLE NE PASSE PAS EST VIDE. Toutes ces
+	 * propriétés étaient optionnelles, de défaut une constante du jeu de
+	 * démonstration : l'historique d'une note quelconque servait les dix versions de
+	 * `n-restaurer-pg`. `compte` est reçu SOUS LE NOM LOCAL `moi` — la vue porte déjà
+	 * un `compte`, le libellé du pied du panneau —, mais le nom de la propriété reste
+	 * `compte` : il est contractuel.
 	 */
 	interface Proprietes {
-		/** Le vecteur complet de l'état — trois contrôles de planche. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-15')`, variante « lecture ». */
 		notes: readonly Note[];
 		/** Les univers du produit — le contexte de coquille les porte. Vide : aucun. */
 		univers?: readonly Univers[];
@@ -114,58 +59,37 @@
 		/** Le nombre de versions conservées par note, lu en configuration. */
 		retentionVersions: number;
 		/**
-		 * LA NOTE DONT L'HISTORIQUE EST MONTRÉ — REQUISE.
-		 *
-		 * Elle décide de TOUT ce qui nomme la note : les versions lues dans
-		 * `versions`, le titre du fil et du panneau, le rangement du fil. Son
-		 * défaut était l'un des trois cas de la planche, c'est-à-dire une note
-		 * du jeu choisie par le vecteur.
+		 * LA NOTE DONT L'HISTORIQUE EST MONTRÉ — REQUISE. Elle décide de tout ce qui
+		 * nomme la note : les versions lues, le titre du fil et du panneau, le
+		 * rangement. Son défaut était une note du jeu choisie par le vecteur.
 		 */
 		note: Note;
 		/**
 		 * LA NOTE TELLE QU'ELLE S'AFFICHE — l'identité, les deux corps rendus, le
-		 * sommaire, le dernier contrôle, les dates et les mesures de consultation.
+		 * sommaire, le dernier contrôle, les dates et les mesures. REQUISE : sans elle, le
+		 * bloc partagé retombait sur la note de démonstration, et
+		 * `/notes/{identifiant}?version` rendait POUR N'IMPORTE QUELLE NOTE le titre, le
+		 * rangement et l'auteur de `n-restaurer-pg`, sous un fil d'Ariane qui nommait la
+		 * vraie note.
 		 *
-		 * SANS ELLE, L'HISTORIQUE SERVAIT L'ARTICLE DE LA NOTE DE DÉMONSTRATION.
-		 * Le bloc partagé retombe, faute de note affichée, sur `n-restaurer-pg` :
-		 * `/notes/{identifiant}?version` rendait donc, POUR N'IMPORTE QUELLE
-		 * NOTE, le titre « Restaurer une sauvegarde PostgreSQL depuis Barman »,
-		 * son rangement, son auteur, ses 412 consultations, le sommaire de son
-		 * corps et un cartouche « Vérifié par Karim Belhadj » — sous un fil
-		 * d'Ariane qui, lui, nommait la vraie note. Ses deux liens internes
-		 * menaient à une note qui rend 404 sur une instance réelle.
-		 *
-		 * `note` NE LA REMPLACE PAS, ET NE FAIT PAS DOUBLE EMPLOI : `note` porte
-		 * le rangement du fil, le titre du panneau et la clé de lecture des
-		 * versions — l'enveloppe de l'écran, qui est celle de LA NOTE ;
-		 * `affichee` porte l'ARTICLE, c'est-à-dire l'ÉTAT CONSULTÉ.
-		 *
-		 * LES DEUX PEUVENT DIVERGER, ET C'EST TOUT L'OBJET DE CET ÉCRAN.
-		 * `?version={n}` désignant une version antérieure, la route sert ici le
-		 * titre et les corps que cette version a CAPTURÉS : sans cela, le bandeau
-		 * annonçait « vous consultez un état antérieur » au-dessus du texte le
-		 * plus récent, et « Restaurer cette version » écrasait la note avec un
-		 * contenu jamais montré (`RG-M18-05`).
-		 *
-		 * ELLE EST REQUISE : absente, la transcription figée du gel prenait sa
-		 * place, et rien ne le signalait.
+		 * `note` NE FAIT PAS DOUBLE EMPLOI : elle porte l'ENVELOPPE de l'écran — rangement
+		 * du fil, titre du panneau, clé de lecture des versions — quand `affichee` porte
+		 * l'ARTICLE, c'est-à-dire l'ÉTAT CONSULTÉ. LES DEUX PEUVENT DIVERGER, ET C'EST
+		 * TOUT L'OBJET DE CET ÉCRAN : sur `?version={n}`, « Restaurer cette version »
+		 * écrasait la note avec un contenu jamais montré (`RG-M18-05`).
 		 */
 		affichee: LectureAffichee;
 		/**
-		 * COMPARER DEUX VERSIONS — REQUISE.
-		 *
-		 * Le gel écrit `disabled` en dur sur `#comparer` et n'attache rien aux
-		 * cases : `/notes/{id}/comparaison` existait donc sans qu'aucun clic n'y
-		 * mène. Mesuré le 22/08/2026.
+		 * COMPARER DEUX VERSIONS — REQUISE. Le gel écrit `disabled` en dur sur
+		 * `#comparer` et n'attache rien aux cases : `/notes/{id}/comparaison` existait
+		 * sans qu'aucun clic n'y mène.
 		 */
 		onComparer: (a: number, b: number) => void;
 		/**
-		 * LE NUMÉRO DE LA VERSION CONSULTÉE — `?version={n}`, `docs/routes.md:224`.
-		 *
-		 * `null`, ou désignant la version courante : le bandeau reste replié,
-		 * `data-version` vaut « courante ». Un numéro qui ne désigne aucune
-		 * version vaut la version courante — une adresse forgée ne fabrique pas
-		 * un troisième état.
+		 * LE NUMÉRO DE LA VERSION CONSULTÉE — `?version={n}`. `null`, ou désignant la
+		 * version courante : le bandeau reste replié. Un numéro qui ne désigne aucune
+		 * version vaut la version courante — une adresse forgée ne fabrique pas un
+		 * troisième état.
 		 */
 		versionAffichee: number | null;
 	}
@@ -185,55 +109,34 @@
 	}: Proprietes = $props();
 
 	/**
-	 * LE COMPTE SERVI À LA COQUILLE. En application, le contexte l'emporte
-	 * toujours. Hors gabarit racine, il n'y a PAS de compte connecté : la barre
-	 * le rend vide plutôt que de nommer un utilisateur du jeu de démonstration.
+	 * Le compte servi à la coquille. Hors gabarit racine, il n'y a PAS de compte
+	 * connecté : la barre le rend vide plutôt que de nommer un utilisateur du jeu.
 	 */
 	const COMPTE_ABSENT: CompteAffiche = { nom: '', initiales: '', role: '', domaine: '' };
 
 	const reglage = $derived(vecteur ?? {});
 
-	/** Le panneau latéral est déployé, ou escamoté hors fenêtre. */
 	const panneau = $derived<'ouvert' | 'ferme'>(reglage['pan'] === 'ferme' ? 'ferme' : 'ouvert');
 	const droits = $derived<'ecriture' | 'lecture'>(
 		reglage['droits'] === 'lecture' ? 'lecture' : 'ecriture'
 	);
-	/**
-	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
-	 *
-	 * Le gel POSE les actions d'écriture puis les cache par
-	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
-	 * (`mockups/V-15-historique.html:339`) : faute de serveur, une maquette
-	 * statique n'a pas d'autre moyen de dire « cette action n'existe pas pour ce
-	 * rôle ». Le produit peut ne pas l'émettre, et P-09 l'exige — « ni grisée,
-	 * NI MASQUÉE ». La classe reste posée sur les nœuds rendus.
-	 * Énumération : `docs/omissions-p09.md`.
-	 */
+	/** L'ABSENCE, ET NON LE MASQUAGE — `P-09`, `RG-M05-08`, `ARB-040` : le gel cache
+	    ses actions d'écriture en feuille, le produit ne les émet pas. La classe reste
+	    posée sur les nœuds rendus. */
 	const ecriture = $derived(droits !== 'lecture');
 
 	/**
-	 * LES VERSIONS DE LA NOTE OUVERTE, ET D'AUCUNE AUTRE.
-	 *
-	 * Le levier `hist` de la planche choisissait entre trois cas — deux notes du
-	 * jeu de démonstration et le vide — quand aucune note n'était passée. La
-	 * note est requise : l'historique se lit sur ELLE, et le vide, quand il y a
-	 * lieu, est celui de la note ouverte.
+	 * LES VERSIONS DE LA NOTE OUVERTE, ET D'AUCUNE AUTRE. Le levier `hist` de la
+	 * planche choisissait entre deux notes du jeu et le vide quand aucune note
+	 * n'était passée.
 	 */
 	const versions = $derived<readonly Version[]>(historique[note.id] ?? []);
 
-	/**
-	 * LE TITRE DE LA NOTE ferme le fil d'Ariane et coiffe le panneau
-	 * (`V-15:3271`, `V-15:2859`).
-	 */
 	const titre = $derived(note.titre);
 
-	/**
-	 * LE RANGEMENT DE LA NOTE, tel que le fil le déroule. Le chemin de dossier
-	 * est une chaîne de segments séparés par le chevron du corpus (`Note.dossier`,
-	 * `seeds/corpus.ts:203`) ; il est découpé comme `src/vues/V-17.svelte:247` le
-	 * découpe, et non par une seconde règle. Une note rangée à la racine d'un
-	 * domaine n'a aucun segment.
-	 */
+	/** LE RANGEMENT DE LA NOTE, tel que le fil le déroule : le chemin de dossier est
+	    découpé comme `src/vues/V-17.svelte:247` le découpe, et non par une seconde
+	    règle. Une note rangée à la racine d'un domaine n'a aucun segment. */
 	const segments = $derived(
 		note.dossier
 			.split('›')
@@ -241,17 +144,10 @@
 			.filter((s) => s !== '')
 	);
 
-	/**
-	 * LE TITRE DE L’ÉTAT AFFICHÉ — celui que l’article porte en `<h1>`, et qui
-	 * n’est pas toujours celui de la note.
-	 *
-	 * `versions.titre` EST CAPTURÉ PARCE QUE LE TITRE EST RENOMMABLE
-	 * (`RG-M07-02`). Consulter la version 3 d’une note renommée depuis, c’est
-	 * consulter un état qui portait un AUTRE titre : le fil d’Ariane se ferme sur
-	 * celui-là, comme il se ferme partout ailleurs sur le titre de l’article
-	 * qu’il coiffe. Le panneau, lui, garde `titre` — il nomme LA NOTE dont
-	 * l’historique est ouvert, pas l’état consulté.
-	 */
+	/** LE TITRE DE L'ÉTAT AFFICHÉ — celui que l'article porte en `<h1>`, et qui n'est
+	    pas toujours celui de la note : `versions.titre` est CAPTURÉ parce que le titre
+	    est renommable (`RG-M07-02`). Le panneau garde `titre` — il nomme LA NOTE dont
+	    l'historique est ouvert, pas l'état consulté. */
 	const titreAffiche = $derived(affichee.note.titre);
 
 	/** Le fil d'Ariane — identique à celui de V-14 : l'historique n'a pas de chemin propre. */
@@ -259,11 +155,9 @@
 	const courant = $derived([note.domaine, ...segments]);
 
 	/**
-	 * LA VERSION ANTÉRIEURE CONSULTÉE — `afficher()`, `V-15:2905`.
-	 *
-	 * La plus récente est la version COURANTE : la consulter n'est pas consulter
-	 * un état antérieur, et le gel replie alors le bandeau plutôt que d'annoncer
-	 * un état qui est celui de la note.
+	 * LA VERSION ANTÉRIEURE CONSULTÉE — `afficher()`, `V-15:2905`. La plus récente
+	 * est la version COURANTE : la consulter n'est pas consulter un état antérieur,
+	 * et le gel replie alors le bandeau.
 	 */
 	const anterieure = $derived(
 		versionAffichee === null || versionAffichee === versions[0]?.n
@@ -271,7 +165,6 @@
 			: (versions.find((v) => v.n === versionAffichee) ?? null)
 	);
 
-	/** Le bandeau d'identification, quand une version antérieure est consultée. */
 	const bandeau = $derived(
 		anterieure === null
 			? null
@@ -281,16 +174,12 @@
 				}
 	);
 
-	/* ── Le panneau ───────────────────────────────────────────────────────────
-	   Transcription de `rendreListe()` (`V-15:2857`), `ligneVersion()`
+	/* Le panneau — transcription de `rendreListe()` (`V-15:2857`), `ligneVersion()`
 	   (`V-15:2795`), `ampleur()` (`V-15:2767`), `relatif()` (`V-15:2761`) et
-	   `majPied()` (`V-15:2884`). Aucune de ces fonctions ne dépend d'un
-	   comportement : elles décrivent l'état de la liste au chargement. */
+	   `majPied()` (`V-15:2884`). */
 
-	/**
-	 * La rétention annoncée sous le titre du panneau. Vide quand il n'y a rien
-	 * à conserver — le gel efface alors le texte plutôt que d'annoncer zéro.
-	 */
+	/** La rétention annoncée sous le titre du panneau. Vide quand il n'y a rien à
+	    conserver — le gel efface alors le texte plutôt que d'annoncer zéro. */
 	const retention = $derived(
 		versions.length === 0
 			? ''
@@ -298,10 +187,8 @@
 					` · les ${retentionVersions} dernières sont gardées, les plus anciennes sont supprimées automatiquement`
 	);
 
-	/**
-	 * Le bloc d'état du panneau, quand la liste ne suffit pas à se comprendre
-	 * seule. Deux cas, et aucun troisième : aucune version, ou une seule.
-	 */
+	/** Le bloc d'état du panneau. Deux cas, et aucun troisième : aucune version, ou
+	    une seule. */
 	const etatDuPanneau = $derived(
 		versions.length === 0
 			? {
@@ -318,7 +205,6 @@
 				: null
 	);
 
-	/** Les numéros de version cochés, au plus deux. */
 	let choisies = $state<number[]>([]);
 	function basculerChoix(n: number): void {
 		choisies = choisies.includes(n) ? choisies.filter((x) => x !== n) : [...choisies, n].slice(-2);
@@ -326,8 +212,7 @@
 
 	/**
 	 * Le pied du panneau. Aucune version n'est sélectionnée à l'état de départ :
-	 * « Comparer » est donc toujours désactivé ici, et le compte annonce ce
-	 * qu'il reste à faire — ou l'impossibilité de comparer.
+	 * « Comparer » est donc toujours désactivé ici.
 	 */
 	const compte = $derived(
 		versions.length < 2
@@ -340,21 +225,14 @@
 	);
 
 	/**
-	 * L'ancienneté d'une version, en clair — `relatif()`, `V-15:2761`.
+	 * L'ancienneté d'une version, en clair — `relatif()`, `V-15:2761`. LE GEL DIT
+	 * « HIER » DÈS ZÉRO JOUR, ET C'EST FAUX : `joursEcoules()` compte des jours
+	 * PLEINS, donc une version capturée il y a dix minutes vaut 0. « À l'instant »
+	 * exigerait des HEURES que `Version.jours` ne porte pas.
 	 *
-	 * LE GEL DIT « HIER » DÈS ZÉRO JOUR, ET C'EST FAUX. `joursEcoules()`
-	 * (`$lib/donnees/lecture.ts`) compte des jours PLEINS : une version capturée
-	 * il y a dix minutes vaut 0, et la ligne annonçait qu'elle datait de la
-	 * veille. Le mot juste est celui que le gel écrit lui-même quand il a la
-	 * donnée du jour — `V-14:4026`, `<time datetime="2026-08-13">aujourd'hui</time>`.
-	 * « À l'instant » exigerait une entrée en HEURES que `Version.jours` ne
-	 * porte pas.
-	 *
-	 * LA PARENTHÈSE DE « an(s) » TOMBE, ET C'EST UN ÉCART DE MAQUETTE ASSUMÉ.
-	 * `mockups/V-15:2764` fige « an(s) » ; la ligne rend une phrase, et une
-	 * version d'un an y lisait « il y a 1 an(s) ». La parenthèse est exactement
-	 * le repli qu'`accord()` existe pour supprimer, et une maquette est la
-	 * référence visuelle, pas une loi. « mois » ne bouge pas : il est invariable.
+	 * LA PARENTHÈSE DE « an(s) » TOMBE, ÉCART DE MAQUETTE ASSUMÉ : une version d'un an
+	 * y lisait « il y a 1 an(s) », exactement le repli qu'`accord()` existe pour
+	 * supprimer. « mois » ne bouge pas, il est invariable.
 	 */
 	function relatif(jours: number): string {
 		if (jours <= 0) return "aujourd'hui";
@@ -370,9 +248,9 @@
 	const SEGMENTS = [0, 1, 2, 3, 4];
 
 	/**
-	 * La classe d'un segment : `a` pour la part ajoutée, `r` pour la part
-	 * retirée, aucune quand la version n'a rien touché. La répartition est au
-	 * prorata, avec un minimum d'un segment ajouté dès qu'il y a du mouvement.
+	 * La classe d'un segment : `a` pour la part ajoutée, `r` pour la part retirée,
+	 * aucune quand la version n'a rien touché. Répartition au prorata, avec un
+	 * minimum d'un segment ajouté dès qu'il y a du mouvement.
 	 */
 	function segment(v: Version, rang: number): string | undefined {
 		const total = v.ajout + v.retrait;
@@ -420,17 +298,10 @@
 	>
 {/snippet}
 
-<!--
-	LE SÉPARATEUR `›` DE LA LIGNE « RANGEMENT ».
-
-	Il vit ici, et non dans `$lib/lecture/`, parce qu'il porte un style en ligne
-	du gel — `color:var(--c-encre-4)` — et qu'un style en ligne n'est prouvé que
-	par la maquette RATTACHÉE au fichier : par le nommage pour
-	`src/vues/V-xx.svelte` (ARB-016, P-6.4), par déclaration humaine dans
-	`verif/references/preuve-par-le-gel.json` pour une ressource partagée
-	(ARB-022). `src/lib/lecture/` n'a aucune des deux, et un agent d'exécution
-	n'écrit jamais dans ce fichier de rattachement (PLAN §12). Écart remonté.
--->
+<!-- LE SÉPARATEUR `›` DE LA LIGNE « RANGEMENT » vit ici, et non dans
+	`$lib/lecture/`, parce qu'il porte un style en ligne du gel : un style en ligne
+	n'est prouvé que par la maquette RATTACHÉE au fichier (`ARB-016`), et
+	`src/lib/lecture/` n'a pas ce rattachement. Écart remonté. -->
 {#snippet separateur()}<span style="color:var(--c-encre-4)">›</span>{/snippet}
 
 <Coquille
@@ -456,10 +327,9 @@
 
 		<article class="article" id="article">
 			<!--
-				Bandeau d'identification, affiché quand une version antérieure est
-				consultée — `?version={n}` désignant autre chose que la plus récente.
-				Il précède tout le reste, y compris l'en-tête. Aucun des sept états de
-				la planche ne consulte de version antérieure : il y reste masqué.
+				Bandeau d'identification, affiché quand une version antérieure est consultée
+				— `?version={n}` désignant autre chose que la plus récente. Il précède tout
+				le reste, y compris l'en-tête.
 			-->
 			<div class="bandeau-version" id="bandeau-version" hidden={bandeau === null}>
 				<div class="bandeau-version__corps">

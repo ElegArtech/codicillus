@@ -1,62 +1,23 @@
 <script lang="ts">
 	/**
-	 * V-32 — Console · Comptes.
-	 * Route `/console/comptes` (`docs/routes.md` §3.6).
+	 * V-32 — Console · Comptes. Route `/console/comptes` (`docs/routes.md` §3.6).
 	 *
-	 * COQUILLE DE FORME ABRÉGÉE, ENVELOPPE `console` — vérifié sur le gel par
-	 * `node verif/releve-vues.mjs --formes` (ARB-021, A-1 ; ARB-023).
+	 * Coquille de forme abrégée, enveloppe `console`. `src/lib/console/` porte les
+	 * classes communes aux dix vues de console ; celles de V-32 lui sont propres, et
+	 * AUCUNE FACTORISATION AU-DELÀ n'est permise.
 	 *
-	 * CE QUI EST COMMUN, ET CE QUI NE L'EST PAS. `src/lib/console/` porte les
-	 * treize classes des dix vues de console et le panneau des six registres
-	 * (`sections.ts`, en-tête). Propres à V-32 : `avatar-c`, `tg__ident`,
-	 * `tg__marques`, `past--desactive`, `past--verrou`, `past--systeme`,
-	 * `past--admin`, `champ__boite`, `champ__action`, `avert-unique`,
-	 * `mdp-unique`, `mdp-unique__valeur`, `transmettre`, `tg--reduit`, et le
-	 * modificateur de grille `tg--comptes`. AUCUNE FACTORISATION AU-DELÀ.
+	 * Seule vue à DEUX BOÎTES DISTINCTES — `#dlg-mdp` et `#dlg-desactiver`. Aucun
+	 * `autofocus` : `showModal()` focalise déjà le premier focalisable de chacune.
 	 *
-	 * SEULE VUE DU DÉPÔT À DEUX BOÎTES DISTINCTES ouvertes par deux états
-	 * distincts — `#dlg-mdp` pour `mdp`, `#dlg-desactiver` pour `des`. La
-	 * révélation `modalite-dialogue` porte sur « tout `dialog[open]` du
-	 * document » et couvre donc les deux sans les nommer
-	 * (`verif/references/protocole-app.json`, ARB-017).
+	 * LE PANNEAU `tiroir-form` NE PÈSE AUCUN PIXEL HORS DE `div.app` : le déplacement
+	 * qui rend la règle gelée applicable est fait par la ROUTE, au montage
+	 * (`cablerLeTiroirDeFormulaire()` de `src/routes/console/cablage.ts`).
 	 *
-	 * LE PANNEAU `tiroir-form` NE PÈSE AUCUN PIXEL, ET C'EST LE GEL. Hors de
-	 * `div.app`, `.app[data-form="ouvert"] .tiroir-form` ne l'atteint pas ; le
-	 * NIVEAU 1 en est le seul juge (`CLAUDE.md` §6, P-3). RIEN DE CE FICHIER NE
-	 * CHANGE CELA : le déplacement qui rend la règle gelée applicable est fait par
-	 * la ROUTE, au montage (`cablerLeTiroirDeFormulaire()` de
-	 * `src/routes/console/cablage.ts`), sur le document vivant que le banc
-	 * n'atteint jamais. La vue, elle, se borne à dire `data-form="ouvert"`.
+	 * LES ÉTATS DE RÔLE ET DE DROIT SONT DES ÉTATS DE PLANCHE, PAS UNE FRONTIÈRE DE
+	 * SÉCURITÉ. Aucun chiffre n'est saisi, et aucun geste du script du gel n'a lieu
+	 * au rendu serveur : les états qui les portent partent de `null`.
 	 *
-	 * AUCUN `autofocus` : hors dialogue, le focus ne survit pas à `stabiliser()`
-	 * (`CLAUDE.md` §6, P-4). Dans `#dlg-desactiver`, `showModal()` focalise
-	 * `button.dlg__fermer`, premier focalisable ; dans `#dlg-mdp`, qui n'a pas
-	 * de bouton de fermeture en tête, c'est `button#mdp-copier`, également le
-	 * premier — rien à déclarer dans un cas comme dans l'autre.
-	 *
-	 * LES ÉTATS DE RÔLE ET DE DROIT SONT DES ÉTATS DE PLANCHE, PAS UNE
-	 * FRONTIÈRE DE SÉCURITÉ. Le sélecteur de rôle verrouillé et le refus de
-	 * désactivation du dernier administrateur reproduisent la maquette. **CE LOT
-	 * NE DÉCLARE PAS `P-09` TENUE** : qu'une action interdite ne soit dans aucun
-	 * DOM relève de la batterie 7 (`pnpm test:droits`) et des lots T-011, T-016.
-	 *
-	 * AUCUN CHIFFRE N'EST SAISI (P-02) : les comptes, leurs rôles et leurs
-	 * dernières connexions viennent de `COMPTES` ; le nombre de contributions
-	 * est compté sur le corpus de la vue.
-	 *
-	 * AUCUNE MINUTERIE (ARB-011). LE COMPORTEMENT, LUI, EXISTE DÉSORMAIS, et il
-	 * est celui du script du gel : « Modifier » ouvre le panneau sur un compte
-	 * (`V-32:3107`), le sélecteur de rôle met son aide à jour (`V-32:3136`),
-	 * « Annuler » et la croix le referment (`V-32:3225`), « Enregistrer » rend le
-	 * rôle choisi à la page. Aucun de ces gestes n'a lieu au rendu serveur : les
-	 * deux états qui les portent partent de `null`, et les sept positions de
-	 * planche rendent exactement ce qu'elles rendaient.
-	 *
-	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette`, `dialog#palette` fermé,
-	 * et `div.planche`, bloc hors produit (§2.G).
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-32.css` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 * Le style est dans `src/socle.css` et `src/vues/V-32.css`.
 	 */
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import BoutonDeCreation from '$lib/console/BoutonDeCreation.svelte';
@@ -74,93 +35,55 @@
 	} from '../../seeds/corpus';
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état — formulaire × cas. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-32')`. */
 		notes: readonly Note[];
-		/** Les univers déclarés, servis par la route. Vide : aucun périmètre. */
 		univers: readonly Univers[];
-		/** Les domaines déclarés, servis par la route. Vide : aucun domaine. */
 		domaines: readonly Domaine[];
-		/** L'utilisateur courant, servi par la route. */
 		compte: UtilisateurCourant;
-		/** Le registre des comptes, servi par la route. */
 		comptes: readonly Compte[];
 		/**
-		 * `comptes.mot_de_passe_verrouille`, PAR IDENTIFIANT DE CONNEXION.
-		 *
-		 * `interface Compte` n'en porte pas de champ : la vue lisait donc le verrou
-		 * sur un identifiant du jeu de démonstration écrit en dur, si bien que la
-		 * pastille ne s'allumait pour personne sur une instance réelle. La table
-		 * porte la colonne depuis la création du compte ; la route la sert.
-		 * Identifiant absent de la table : non verrouillé.
+		 * `comptes.mot_de_passe_verrouille`, PAR IDENTIFIANT DE CONNEXION. `interface
+		 * Compte` n'en porte pas de champ : la vue lisait le verrou sur un identifiant
+		 * du jeu de démonstration écrit en dur, et la pastille ne s'allumait pour
+		 * personne. Identifiant absent de la table : non verrouillé.
 		 */
 		verrous: Readonly<Record<string, boolean>>;
 		/**
-		 * CE QUE LA VUE FAIT QUAND LA DÉSACTIVATION EST CONFIRMÉE, ou quand un
-		 * compte est réactivé.
-		 *
-		 * Même partage qu'en `V-27`, `V-28` et `V-29` : la vue tient l'état de son
-		 * dialogue — quel compte est visé, s'il est le dernier administrateur, ce
-		 * que ses contributions comptent — et la page tient le réseau. Le décompte
-		 * des contributions se fait sur les notes qu'elle a reçues ; personne
-		 * d'autre ne peut le composer.
-		 *
-		 * `actif` PORTE L'ÉTAT VOULU, pas une bascule : deux administrateurs qui
-		 * cliquent en même temps ne doivent pas s'annuler l'un l'autre.
+		 * CE QUE LA VUE FAIT QUAND LA DÉSACTIVATION EST CONFIRMÉE, ou quand un compte
+		 * est réactivé. Même partage qu'en `V-27`, `V-28` et `V-29` : la vue tient
+		 * l'état de son dialogue, la page tient le réseau. `actif` PORTE L'ÉTAT VOULU,
+		 * pas une bascule : deux administrateurs qui cliquent en même temps ne doivent
+		 * pas s'annuler l'un l'autre.
 		 */
 		onChangerLActivation?: (compte: {
 			readonly identifiant: string;
 			readonly actif: boolean;
 		}) => void;
 		/**
-		 * CE QUE LA VUE FAIT QUAND « ENREGISTRER » EST CLIQUÉ — `RG-M14-07`.
+		 * CE QUE LA VUE FAIT QUAND « ENREGISTRER » EST CLIQUÉ — `RG-M14-07`. La vue
+		 * tient l'état de son panneau, la page tient le réseau et l'action, comme
+		 * `V-32:3199` le fait au clic. Absente, le panneau se ferme sans rien envoyer.
 		 *
-		 * MÊME PARTAGE QUE CI-DESSUS : la vue tient l'état de son panneau — quel
-		 * compte est édité, quel rôle est choisi dans le sélecteur —, la page tient
-		 * le réseau et l'action. Le gel fait exactement ce partage-là : `V-32:3199`
-		 * relit `document.getElementById("f-role").value` au clic, puis écrit.
-		 *
-		 * ABSENTE, LE PANNEAU S'OUVRE ET SE FERME SANS RIEN ENVOYER : c'est l'état
-		 * d'une planche, qui n'a ni route ni action derrière elle.
-		 *
-		 * SEUL LE RÔLE VOYAGE. Le gel enregistre aussi le nom affiché, le courriel,
-		 * le domaine principal et le verrouillage du mot de passe (`V-32:3214-3218`)
-		 * ; côté produit, `RG-M14-07` est la seule de ces écritures dont l'action de
-		 * route existe (`changerLeRole`). Les quatre autres sont REMONTÉES, pas
-		 * comblées : leur envoyer un champ qu'aucune action ne lit ferait croire à
-		 * un enregistrement qui n'a pas lieu.
+		 * SEUL LE RÔLE VOYAGE. Le gel enregistre aussi le nom, le courriel, le domaine
+		 * et le verrouillage (`V-32:3214-3218`) ; `RG-M14-07` est la seule de ces
+		 * écritures dont l'action de route existe. Les quatre autres sont REMONTÉES,
+		 * pas comblées : envoyer un champ qu'aucune action ne lit ferait croire à un
+		 * enregistrement qui n'a pas lieu.
 		 */
 		onEnregistrerLeRole?: (demande: {
 			readonly identifiant: string;
 			readonly role: RoleDeCompte;
 		}) => void;
 		/**
-		 * CE QUE LA VUE FAIT QUAND « CRÉER LE COMPTE » EST CLIQUÉ — `UC-M14-07`.
+		 * CE QUE LA VUE FAIT QUAND « CRÉER LE COMPTE » EST CLIQUÉ — `UC-M14-07`. La vue
+		 * relève les sept nœuds de son panneau et rend la demande ; la page tient le
+		 * réseau. ELLE REND UNE PROMESSE, ET C'EST LA SEULE DES TROIS : un refus
+		 * s'affiche DANS le formulaire — `#erreur-ident` et `#erreur-nom`, révélés par
+		 * `marquer()` (`V-32:3186`) — et un succès ouvre `#dlg-mdp`.
 		 *
-		 * MÊME PARTAGE QUE LES DEUX PRÉCÉDENTES : la vue relève les sept nœuds de
-		 * son panneau et rend la demande ; la page tient le réseau et l'action. Le
-		 * gel fait exactement ce partage — `V-32:3175-3206` relit les champs par
-		 * `getElementById` au clic, puis écrit.
-		 *
-		 * ELLE REND UNE PROMESSE, ET C'EST LA SEULE DES TROIS. Un refus de création
-		 * s'affiche DANS le formulaire — `#erreur-ident` et `#erreur-nom` sont des
-		 * nœuds du gel, révélés par `marquer()` (`V-32:3186`) — et un succès ouvre
-		 * `#dlg-mdp` sur le mot de passe initial. La vue a donc besoin de savoir ce
-		 * que le serveur a répondu ; les deux autres gestes rechargent la page et
-		 * n'ont rien à attendre.
-		 *
-		 * DEUX CHAMPS SAVENT PORTER UN MESSAGE, ET LE RESTE SE DIT AILLEURS. Le
-		 * formulaire n'a que deux blocs `.champ__erreur` du gel (`V-32:1352`,
-		 * `V-32:1362`), pour l'identifiant et le nom. Un refus d'une AUTRE nature —
-		 * mot de passe vide, adresse déjà portée, rôle non reconnu — n'avait nulle
-		 * part où se dire : le panneau restait ouvert, rien n'était écrit, et
-		 * l'utilisateur croyait avoir enregistré. `message` porte ce refus-là, et
-		 * le panneau le rend au-dessus de ses champs. C'est un nœud que le gel ne
-		 * porte pas, et il vaut mieux qu'un échec muet.
-		 *
-		 * ABSENTE, « CRÉER LE COMPTE » FERME LE PANNEAU SANS RIEN ENVOYER : c'est
-		 * l'état d'une planche, qui n'a ni route ni action derrière elle.
+		 * DEUX CHAMPS SEULEMENT SAVENT PORTER UN MESSAGE : un refus d'une autre nature
+		 * n'avait nulle part où se dire, le panneau restait ouvert et l'utilisateur
+		 * croyait avoir enregistré. `message` porte ce refus-là.
 		 */
 		onCreerUnCompte?: (demande: {
 			readonly identifiant: string;
@@ -178,26 +101,17 @@
 			readonly message?: string | null;
 		}>;
 		/**
-		 * CE QUE LA VUE FAIT QUAND LE MOT DE PASSE A ÉTÉ NOTÉ — `#mdp-fermer`.
-		 *
-		 * Le gel efface la valeur du document en même temps qu'elle disparaît de
-		 * l'écran (`V-32:3255`) : « elle ne doit pas rester récupérable dans la
-		 * page ». Côté produit, la liste rendue vient du serveur et le compte
-		 * nouvellement créé n'y est pas encore : c'est ce rappel qui fait relire la
-		 * page, et il efface la valeur par la même occasion.
+		 * CE QUE LA VUE FAIT QUAND LE MOT DE PASSE A ÉTÉ NOTÉ — `#mdp-fermer`. Le gel
+		 * efface la valeur du document en même temps qu'elle quitte l'écran
+		 * (`V-32:3255`) : « elle ne doit pas rester récupérable dans la page ». Ce
+		 * rappel fait relire la page et efface la valeur par la même occasion.
 		 */
 		onMotDePasseTransmis?: () => void;
 		/**
-		 * RÉINITIALISER LE MOT DE PASSE D'UN COMPTE — `RG-CPT-01`, dernière phrase :
-		 * « La réinitialisation par un administrateur reste possible », y compris
-		 * sur un compte dont le mot de passe est verrouillé.
-		 *
-		 * `reinitialiser(c)` du gel (`V-32:3228`) engendre la valeur AU NAVIGATEUR
-		 * et ouvre `#dlg-mdp` dessus. Le partage est celui de la création : la vue
-		 * engendre et affiche, la page envoie ; la base n'en garde que le condensat,
-		 * et aucune réponse ne reporte la valeur claire.
-		 *
-		 * ABSENTE, LA BOÎTE S'OUVRE SANS RIEN ENVOYER : c'est l'état d'une planche.
+		 * RÉINITIALISER LE MOT DE PASSE — `RG-CPT-01` : « la réinitialisation par un
+		 * administrateur reste possible », y compris sur un compte verrouillé.
+		 * `reinitialiser(c)` du gel (`V-32:3228`) engendre la valeur AU NAVIGATEUR : la
+		 * vue engendre et affiche, la page envoie, la base n'en garde que le condensat.
 		 */
 		onReinitialiserLeMotDePasse?: (demande: {
 			readonly identifiant: string;
@@ -220,11 +134,8 @@
 		onReinitialiserLeMotDePasse
 	}: Proprietes = $props();
 
-	/**
-	 * LES QUATRE RÔLES ET LEUR AIDE sont ceux du gel (`V-32:2947`).
-	 * `seeds/corpus.ts` porte le TYPE `RoleDeCompte` — les quatre noms — mais
-	 * pas la phrase qui dit ce que chacun permet : elle est recopiée du gel.
-	 */
+	/** LES QUATRE RÔLES ET LEUR AIDE sont ceux du gel (`V-32:2947`) : la donnée porte
+	    le type `RoleDeCompte`, pas la phrase qui dit ce que chacun permet. */
 	const ROLES: readonly { cle: RoleDeCompte; aide: string }[] = [
 		{ cle: 'Lecteur', aide: 'Consulte, ne modifie rien.' },
 		{ cle: 'Contributeur', aide: 'Écrit et modifie les notes de son domaine.' },
@@ -234,14 +145,6 @@
 		},
 		{ cle: 'Administrateur', aide: 'Accès complet, y compris la console et tous les domaines.' }
 	];
-
-	/*
-	 * LE VERROUILLAGE DE MOT DE PASSE VIENT DE LA TABLE, ET IL N'EN VENAIT PAS.
-	 * Il était décidé par `identifiant === 'lea.marchand'` — un compte du jeu de
-	 * démonstration, écrit en dur —, au motif que `Compte` n'en porte pas de
-	 * champ. `comptes.mot_de_passe_verrouille` existe pourtant, et la création
-	 * l'écrit depuis `#f-verrou` : la route la lit désormais et la sert.
-	 */
 
 	/** Le domaine proposé à la création : le premier de la liste (`V-32:3149`). */
 	const PREMIER_DOMAINE = $derived(domaines[0]?.nom ?? '');
@@ -290,18 +193,10 @@
 	}
 
 	/**
-	 * LE MOT DE PASSE TEMPORAIRE — LA MÊME COMPOSITION QUE LE GEL
-	 * (`V-32:2975`) : trois mots tirés d'une liste de seize, prononçables et
-	 * sans caractère ambigu, puis un nombre à deux chiffres.
-	 *
-	 * SA VALEUR NE PEUT PAS COÏNCIDER AVEC CELLE DE LA MAQUETTE, et
-	 * `verif/masques.json` le dit déjà en toutes lettres : « aucune
-	 * implémentation ne peut reproduire la valeur de la maquette : la comparer
-	 * mesurerait le générateur, pas la vue ». Le masque couvre les PIXELS ;
-	 * l'instantané ARIA du niveau 1, lui, porte encore la valeur des deux
-	 * côtés. C'est un manque d'instrument, déclaré au rapport de lot — jamais
-	 * une raison de figer la valeur ici, ce qui ferait de ce générateur une
-	 * suite prévisible.
+	 * LE MOT DE PASSE TEMPORAIRE — la composition du gel (`V-32:2975`) : trois mots
+	 * tirés d'une liste de seize, prononçables et sans caractère ambigu, puis un
+	 * nombre à deux chiffres. NE FIGE JAMAIS CETTE VALEUR pour la faire coïncider
+	 * avec celle de la maquette : ce générateur deviendrait une suite prévisible.
 	 */
 	const MOTS_DE_PASSE: readonly string[] = [
 		'ancre',
@@ -328,9 +223,8 @@
 		return `${t.join('-')}-${Math.floor(Math.random() * 90) + 10}`;
 	}
 
-	/* ── L'état, tel que le vecteur de planche le décrit ───────────────────
-	   Le panneau et les boîtes ne s'ouvrent que si la position DÉVIE du
-	   réglage par défaut (`V-32:3337`). */
+	/* L'état, tel que le vecteur de planche le décrit. Le panneau et les boîtes ne
+	   s'ouvrent que si la position DÉVIE du réglage par défaut (`V-32:3337`). */
 	const reglage = $derived(vecteur ?? {});
 	const form = $derived(String(reglage['form'] ?? 'ferme'));
 	const casMdp = $derived(reglage['c-mdp'] === true);
@@ -338,58 +232,34 @@
 
 	/**
 	 * LE COMPTE DONT « MODIFIER » A OUVERT LE PANNEAU — `ouvrirForm(c)` du gel
-	 * (`V-32:3107`).
-	 *
-	 * `null` AU RENDU SERVEUR, exactement comme `demandeDeDesactivation` plus
-	 * bas : l'écran reste celui que le vecteur décrit tant que personne n'a
-	 * cliqué, et les sept positions de planche ne bougent pas d'un pixel.
-	 *
-	 * La vue tient cet état parce que le gel le tenait — `edite` est une variable
-	 * de son script, pas un paramètre d'adresse : `docs/routes.md` §3.6 ne déclare
-	 * aucun état adressable pour le panneau de formulaire, et lui en inventer un
-	 * serait combler.
+	 * (`V-32:3107`). `null` au rendu serveur. La vue tient cet état parce que le gel
+	 * le tenait : `docs/routes.md` §3.6 ne déclare aucun état adressable pour le
+	 * panneau, et lui en inventer un serait combler.
 	 */
 	let demandeDEdition = $state<string | null>(null);
 
 	/**
-	 * `ouvrirForm(null)` DU GEL (`V-32:3216`) — « Nouveau compte » a été cliqué.
-	 *
-	 * `false` AU RENDU SERVEUR, comme `demandeDEdition` : les sept positions de
-	 * planche rendent exactement ce qu'elles rendaient, et la position `creation`
-	 * du vecteur continue d'ouvrir le panneau par `form`.
+	 * `ouvrirForm(null)` du gel (`V-32:3216`) — « Nouveau compte » a été cliqué.
+	 * `false` au rendu serveur, comme `demandeDEdition`.
 	 */
 	let demandeDeCreation = $state(false);
 
-	/** Le rôle retenu dans le sélecteur, tant que le panneau est ouvert. */
 	let roleChoisi = $state<RoleDeCompte | null>(null);
 
 	/**
-	 * LE VERROU CHOISI DANS LE PANNEAU — `#f-verrou`, suivi parce que TROIS
-	 * PHRASES en dépendent : le sous-titre du panneau, l'aide du champ de mot de
-	 * passe, ET la phrase de transmission de la boîte « Compte créé ».
-	 *
-	 * « Il devra être changé à la première connexion » est vrai depuis que
-	 * `comptes.mot_de_passe_a_changer` existe — MAIS PAS POUR UN COMPTE À MOT DE
-	 * PASSE VERROUILLÉ : `RG-CPT-01` lui interdit de changer le sien, et le
-	 * produit ne le lui impose donc jamais. `creerUnCompte()` écrit
-	 * `motDePasseAChanger: !motDePasseVerrouille` ; les trois phrases suivent le
-	 * même état, plutôt que d'en affirmer un.
-	 *
-	 * `null` tant que personne n'a touché la case : l'écran reste celui du rendu.
+	 * LE VERROU CHOISI DANS LE PANNEAU — `#f-verrou`, suivi parce que TROIS PHRASES
+	 * en dépendent : le sous-titre du panneau, l'aide du champ de mot de passe et la
+	 * phrase de transmission de la boîte « Compte créé ». « Il devra être changé à la
+	 * première connexion » n'est PAS vrai d'un compte verrouillé (`RG-CPT-01`), et
+	 * `creerUnCompte()` écrit `motDePasseAChanger: !motDePasseVerrouille`.
 	 */
 	let verrouChoisi = $state<boolean | null>(null);
 
 	/**
 	 * LES DEUX BLOCS D'ERREUR DU FORMULAIRE — `marquer()` du gel (`V-32:3186`).
-	 *
-	 * `erreurIdent` porte le TEXTE parce que le gel en écrit trois différents
-	 * dans `#erreur-ident-txt` ; `erreurNom` n'est qu'un drapeau parce que le
-	 * message de `#erreur-nom` est ÉCRIT EN DUR dans le balisage gelé
-	 * (`V-32:1364`) — le reproduire depuis le serveur en ferait une seconde
-	 * source pour la même phrase.
-	 *
-	 * Les deux valent leur état de repos au rendu serveur : les blocs restent
-	 * `hidden` et `#champ-ident` ne porte aucun `data-etat`, ce qui est le gel.
+	 * `erreurIdent` porte le TEXTE parce que le gel en écrit trois différents ;
+	 * `erreurNom` n'est qu'un drapeau parce que le message de `#erreur-nom` est écrit
+	 * en dur dans le balisage gelé (`V-32:1364`).
 	 */
 	let erreurIdent = $state<string | null>(null);
 	let erreurNom = $state(false);
@@ -421,7 +291,6 @@
 		refusGeneral = null;
 	}
 
-	/** `fermerForm()` du gel (`V-32:3225`) — l'écran revient à sa liste. */
 	function fermerLeFormulaire(): void {
 		demandeDEdition = null;
 		demandeDeCreation = false;
@@ -432,18 +301,10 @@
 	}
 
 	/**
-	 * « NOUVEAU COMPTE » OUVRE LE PANNEAU — `V-32:3217` :
-	 * `document.getElementById("creer").addEventListener("click", …)`.
-	 *
-	 * L'ÉCOUTEUR EST POSÉ SUR LE NŒUD, PAS ÉCRIT DANS LE BALISAGE, et ce n'est pas
-	 * un contournement : `#creer` est rendu par `BoutonDeCreation.svelte`, commun
-	 * aux six vues à panneau de formulaire, et qui ne prend aucun comportement en
-	 * propriété. Lui en ajouter une changerait les cinq autres vues ; le geste du
-	 * gel, lui, ne touche que celle-ci.
-	 *
-	 * `$effect` NE COURT QU'AU NAVIGATEUR : le rendu serveur — donc le banc — ne
-	 * le traverse jamais, et pas un pixel ne bouge de son fait. C'est la même
-	 * construction que l'effet de `#dlg-desactiver`, plus bas.
+	 * « NOUVEAU COMPTE » OUVRE LE PANNEAU — `V-32:3217`. L'écouteur est posé sur le
+	 * nœud, pas écrit dans le balisage : `#creer` est rendu par
+	 * `BoutonDeCreation.svelte`, commun aux six vues à panneau, et lui ajouter une
+	 * propriété de comportement changerait les cinq autres.
 	 */
 	$effect(() => {
 		const bouton = document.getElementById('creer');
@@ -455,11 +316,9 @@
 	const panneauOuvert = $derived(form !== 'ferme' || demandeDEdition !== null || demandeDeCreation);
 
 	/**
-	 * Le compte édité : celui que « Modifier » désigne, sinon LE PREMIER DU
-	 * REGISTRE SERVI pour la position `edition` — le gel y nomme « Karim Belhadj »
-	 * (`V-32:3342`), qui est le premier compte de son jeu : le désigner par son
-	 * rang dit la même chose sans écrire un compte de démonstration — et le
-	 * premier administrateur actif pour `admin`.
+	 * Le compte édité : celui que « Modifier » désigne, sinon LE PREMIER DU REGISTRE
+	 * SERVI — le gel y nomme un compte de son jeu (`V-32:3342`), et le désigner par
+	 * son rang dit la même chose sans écrire un compte de démonstration.
 	 */
 	const edite = $derived<CompteRendu | null>(
 		demandeDeCreation
@@ -481,53 +340,31 @@
 	);
 	const aideDuRole = $derived(ROLES.find((r) => r.cle === roleCourant)?.aide ?? '');
 
-	/** L'état de `#f-verrou` : celui qu'on a choisi, sinon celui du compte rendu. */
 	const verrouCourant = $derived(verrouChoisi ?? (edite ? edite.verrouille : false));
 
-	/**
-	 * LE MOT DE PASSE INITIAL, ET POURQUOI IL EST UN ÉTAT PLUTÔT QU'UN DÉRIVÉ.
-	 *
-	 * `#regenerer` du gel (`V-32:3213`) en tire un autre sans que rien d'autre ne
-	 * change à l'écran : un dérivé ne se recalculerait pas, faute de dépendance
-	 * modifiée. L'état porte donc la valeur DEMANDÉE, et le dérivé ci-dessous
-	 * garde le comportement d'origine tant que personne n'a rien demandé — au
-	 * rendu serveur, `motDePasseSaisi` vaut `null` et la position `creation` de la
-	 * planche rend exactement ce qu'elle rendait.
-	 */
+	/** LE MOT DE PASSE INITIAL EST UN ÉTAT PLUTÔT QU'UN DÉRIVÉ : `#regenerer`
+	    (`V-32:3213`) en tire un autre sans que rien d'autre ne change à l'écran, et un
+	    dérivé ne se recalculerait pas faute de dépendance modifiée. */
 	let motDePasseSaisi = $state<string | null>(null);
 	const motDePasseInitial = $derived(motDePasseSaisi ?? (nouveau ? motDePasse() : ''));
 
 	/**
-	 * LE COMPTE QUI VIENT D'ÊTRE CRÉÉ — `afficherMotDePasse(nom, mdp, true)` du
-	 * gel (`V-32:3196`), qui ouvre `#dlg-mdp` sur son mot de passe initial.
-	 *
-	 * LA VALEUR VIENT DU NAVIGATEUR, JAMAIS DU SERVEUR. C'est cette page qui l'a
-	 * engendrée et envoyée ; la base n'en garde que le condensat Argon2id, et
-	 * aucune réponse d'action ne la reporte. L'avertissement du gel dit
-	 * exactement cela : « il n'est pas conservé en clair et ne pourra plus être
-	 * consulté, ni par vous, ni par personne » (`V-32:1428`).
-	 *
-	 * `null` au rendu serveur : la boîte reste celle que le vecteur décrit.
+	 * LE COMPTE QUI VIENT D'ÊTRE CRÉÉ — `afficherMotDePasse(nom, mdp, true)` du gel
+	 * (`V-32:3196`). LA VALEUR VIENT DU NAVIGATEUR, JAMAIS DU SERVEUR : la base n'en
+	 * garde que le condensat Argon2id, et l'avertissement du gel le dit (`V-32:1428`).
 	 */
 	let compteCree = $state<{
 		readonly nom: string;
 		readonly motDePasse: string;
-		/**
-		 * L'ÉTAT DE `#f-verrou` TEL QU'IL A ÉTÉ ENVOYÉ, retenu parce que la boîte
-		 * survit à la fermeture du panneau : la phrase de transmission ne peut
-		 * plus le relire sur le document, et l'affirmer serait mentir sur un
-		 * compte créé verrouillé.
-		 */
+		/** L'état de `#f-verrou` tel qu'il a été ENVOYÉ, retenu parce que la boîte
+		    survit à la fermeture du panneau : la phrase de transmission ne peut plus le
+		    relire sur le document. */
 		readonly verrouille: boolean;
 	} | null>(null);
 
-	/**
-	 * LES SEPT CHAMPS SONT RELUS SUR LE DOCUMENT AU CLIC, comme le gel les relit
-	 * (`V-32:3175-3201`, `getElementById(...).value`), et pour la même raison :
-	 * aucun de ces nœuds n'est lié à un état — ils portent la valeur INITIALE que
-	 * le rendu leur a donnée, et la frappe de l'utilisateur ne vit que dans le
-	 * document. Y ajouter des liaisons ferait un second état pour la même donnée.
-	 */
+	/** LES SEPT CHAMPS SONT RELUS SUR LE DOCUMENT AU CLIC, comme le gel les relit
+	    (`V-32:3175-3201`) : aucun de ces nœuds n'est lié à un état — y ajouter des
+	    liaisons ferait un second état pour la même donnée. */
 	function valeurDe(id: string): string {
 		const noeud = document.getElementById(id);
 		return noeud instanceof HTMLInputElement || noeud instanceof HTMLSelectElement
@@ -541,15 +378,10 @@
 	}
 
 	/**
-	 * « CRÉER LE COMPTE » — le geste de `V-32:3174-3197`, moins la validation.
-	 *
-	 * LA VALIDATION N'EST PAS REFAITE ICI, ET C'EST DÉLIBÉRÉ. Le gel valide au
-	 * navigateur parce qu'il n'a pas de serveur ; le produit en a un, et c'est lui
-	 * qui décide — il est le seul à savoir si un identifiant est déjà pris. Écrire
-	 * les mêmes trois conditions des deux côtés ferait deux définitions d'une même
-	 * règle, dont l'une finirait par diverger : c'est la faute que `P-01` nomme
-	 * pour la fraîcheur. Les MESSAGES, eux, restent ceux du gel — ils viennent du
-	 * verdict, qui les transcrit.
+	 * « CRÉER LE COMPTE » — le geste de `V-32:3174-3197`, moins la validation : le
+	 * gel valide au navigateur faute de serveur, le produit en a un, et lui seul sait
+	 * si un identifiant est déjà pris. Écrire les mêmes conditions des deux côtés
+	 * ferait deux définitions d'une même règle. Les MESSAGES restent ceux du gel.
 	 */
 	async function creerLeCompte(): Promise<void> {
 		if (onCreerUnCompte === undefined) {
@@ -581,19 +413,16 @@
 	}
 
 	/**
-	 * LE COMPTE DONT LE MOT DE PASSE VIENT D'ÊTRE REMPLACÉ, et la valeur qui l'a
-	 * remplacé. `null` au rendu serveur : l'écran reste celui que le vecteur
-	 * décrit tant que personne n'a cliqué.
+	 * Le compte dont le mot de passe vient d'être remplacé, et la valeur qui l'a
+	 * remplacé. `null` au rendu serveur.
 	 */
 	let reinitialise = $state<{ readonly compte: CompteRendu; readonly motDePasse: string } | null>(
 		null
 	);
 
-	/**
-	 * `reinitialiser(c)` du gel (`V-32:3228`) — la valeur est engendrée ICI, puis
-	 * envoyée. La boîte ne s'ouvre qu'une fois l'écriture faite : ouvrir d'abord
-	 * annoncerait un mot de passe que la base n'a peut-être pas accepté.
-	 */
+	/** `reinitialiser(c)` du gel (`V-32:3228`) — la valeur est engendrée ICI puis
+	    envoyée. La boîte ne s'ouvre qu'une fois l'écriture faite : ouvrir d'abord
+	    annoncerait un mot de passe que la base n'a peut-être pas accepté. */
 	async function reinitialiserLeMotDePasse(c: CompteRendu): Promise<void> {
 		const clair = motDePasse();
 		if (onReinitialiserLeMotDePasse === undefined) {
@@ -607,14 +436,9 @@
 		if (fait) reinitialise = { compte: c, motDePasse: clair };
 	}
 
-	/**
-	 * « COPIER LE MOT DE PASSE » — `V-32:3243`, et le libellé qui accuse réception.
-	 *
-	 * LE PRESSE-PAPIERS PEUT MANQUER, et le gel le prévoit : sans lui, le libellé
-	 * change quand même. C'est délibéré de sa part — l'utilisateur voit la valeur,
-	 * il peut la recopier à la main, et un bouton qui ne réagit pas laisserait
-	 * croire à une panne. Les deux issues de la promesse mènent au même libellé.
-	 */
+	/** « Copier le mot de passe » — `V-32:3243`. LE PRESSE-PAPIERS PEUT MANQUER, et le
+	    libellé change quand même : un bouton sans réaction laisserait croire à une
+	    panne, alors que la valeur est à l'écran et se recopie. */
 	const LIBELLE_DE_COPIE = 'Copier le mot de passe';
 	let libelleDeCopie = $state(LIBELLE_DE_COPIE);
 
@@ -631,29 +455,18 @@
 	const compteReinitialise = $derived(reinitialise?.compte ?? (casMdp ? comptes[0] : null));
 	const motDePasseAffiche = $derived(reinitialise?.motDePasse ?? (casMdp ? motDePasse() : '—'));
 
-	/**
-	 * LE VERROU DU COMPTE DONT LA BOÎTE MONTRE LE MOT DE PASSE.
-	 *
-	 * Il décide de la phrase de transmission, et il est lu à la SOURCE de chaque
-	 * cas : la case envoyée pour un compte qui vient d'être créé, l'état du
-	 * compte visé pour une réinitialisation. Les deux écritures posent
-	 * `motDePasseAChanger: !motDePasseVerrouille` — la phrase suit donc
-	 * exactement ce que la base a reçu, au lieu de l'affirmer pour tout le monde.
-	 */
+	/** LE VERROU DU COMPTE DONT LA BOÎTE MONTRE LE MOT DE PASSE — il décide de la
+	    phrase de transmission, et il est lu à la SOURCE de chaque cas : la case
+	    envoyée pour une création, l'état du compte pour une réinitialisation. */
 	const verrouDeLaBoite = $derived(
 		compteCree ? compteCree.verrouille : (compteReinitialise?.verrouille ?? false)
 	);
 
 	/**
-	 * LE COMPTE DONT LA DÉSACTIVATION EST EXAMINÉE.
-	 *
-	 * `null` au rendu serveur : l'écran reste celui que le vecteur décrit tant que
-	 * personne n'a cliqué. C'est `demanderDesactivation(c)` du gel
-	 * (`V-32:3264`), rendu à la vue qui le transcrit.
-	 *
-	 * LA RÉACTIVATION N'OUVRE PAS DE DIALOGUE, et c'est le gel qui en décide :
-	 * `V-32:3067` réactive directement — elle ne retire aucun accès, il n'y a rien
-	 * à confirmer.
+	 * LE COMPTE DONT LA DÉSACTIVATION EST EXAMINÉE — `demanderDesactivation(c)` du
+	 * gel (`V-32:3264`). `null` au rendu serveur. LA RÉACTIVATION N'OUVRE PAS DE
+	 * DIALOGUE, et c'est le gel qui en décide (`V-32:3067`) : elle ne retire aucun
+	 * accès, il n'y a rien à confirmer.
 	 */
 	let demandeDeDesactivation = $state<string | null>(null);
 
@@ -668,11 +481,9 @@
 
 	/**
 	 * `showModal()` — ET `boite.open` NE SUFFIT PAS À LE DÉCIDER. La vue rend
-	 * `<dialog open={…}>` : Svelte pose l'attribut avant que cet effet ne coure,
-	 * la garde sur `open` renonce, et la boîte reste ouverte SANS être modale —
-	 * dans le flux, sans couche supérieure, donc recouvrable par le tiroir de
-	 * formulaire. `:modal` pose la seule question qui vaille. Le raisonnement
-	 * complet est à l'effet homologue de `V-31`.
+	 * `<dialog open={…}>` : Svelte pose l'attribut avant que cet effet ne coure, une
+	 * garde sur `open` renonce, et la boîte reste ouverte SANS être modale — dans le
+	 * flux, donc recouvrable par le tiroir. `:modal` pose la seule question qui vaille.
 	 */
 	$effect(() => {
 		const boite = document.getElementById('dlg-desactiver');
@@ -691,13 +502,10 @@
 </script>
 
 <!--
-	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI.
-	La vue passait `instance.version` — le `1.0.0` d'`INSTANCE` du jeu de
-	démonstration, servi comme un fait sur le pied du rail d'une instance
-	réelle. Aucune route ne passe de version : `Coquille` lit celle du paquet
-	sur le contexte que le gabarit racine pose, et la propriété n'est plus
-	qu'un état vide explicite — hors gabarit racine, le pied ne nomme rien
-	plutôt que de nommer un numéro de démonstration.
+	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI. La vue
+	passait le numéro du jeu de démonstration, servi comme un fait sur une instance
+	réelle ; aucune route ne passe de version, et la propriété n'est plus qu'un
+	état vide explicite.
 -->
 <Coquille
 	forme="abregee"
@@ -743,21 +551,11 @@
 			</div>
 			<div id="liste">
 				<!--
-					LA CLÉ EST L'IDENTIFIANT DE CONNEXION, ET NON `id` — UN DÉFAUT MESURÉ.
-
-					`c.compte.id` était la clé. Elle vaut `undefined` pour tout compte venu
-					de la base : `lireComptes()` omet `id` PAR DÉCISION, et le dit —
-					« `comptes.identifiant` porte déjà l'identifiant de connexion que
-					CDC:1178 énumère […] la table a bien un `id`, mais c'est un UUID tiré au
-					hasard ».
-
-					Cinq clés `undefined` font `each_key_duplicate`, et Svelte ABANDONNE
-					L'HYDRATATION DE LA PAGE ENTIÈRE : plus un seul écouteur n'était posé,
-					sur aucun écran de cette route. Le rendu serveur restait juste, ce qui
-					rendait le défaut invisible à l'œil — c'est la sonde qui l'a nommé.
-
-					`identifiant` est unique par contrainte (`comptes_identifiant_unique`),
-					présent au jeu de semence comme en base, et stable : c'est la clé.
+					LA CLÉ EST L'IDENTIFIANT DE CONNEXION, ET NON `id`, qui vaut `undefined`
+					pour tout compte venu de la base. Cinq clés `undefined` font
+					`each_key_duplicate`, et Svelte ABANDONNE L'HYDRATATION DE LA PAGE ENTIÈRE :
+					plus un écouteur n'était posé sur aucun écran de cette route, le rendu
+					serveur restant juste.
 				-->
 				{#each listeTriee as c (c.compte.identifiant)}
 					{@const marques = !c.compte.actif || c.verrouille || estDernierAdmin(c)}
@@ -1013,13 +811,10 @@
 				<div class="champ">
 					<label class="champ__label" for="f-domaine">Domaine principal</label>
 					<!--
-						LE SÉLECTEUR SANS RIEN À OFFRIR LE DIT, ET IL NE BLOQUE RIEN. Sur une
-						instance neuve, la liste des domaines est vide : le sélecteur sortait sans
-						une option et sans un mot, sous une étiquette qui promettait un choix. Le
-						rattachement reste FACULTATIF — la colonne est nullable par exigence, et le
-						geste crée alors le compte sans périmètre —, donc l'option de repli porte la
-						chaîne vide : c'est exactement ce que la page traduit en « aucun
-						rattachement ».
+						LE SÉLECTEUR SANS RIEN À OFFRIR LE DIT, ET IL NE BLOQUE RIEN : sur une
+						instance neuve il sortait sans une option, sous une étiquette qui promettait
+						un choix. Le rattachement reste FACULTATIF — la colonne est nullable par
+						exigence —, donc l'option de repli porte la chaîne vide.
 					-->
 					<select class="selecteur" id="f-domaine" disabled={panneauOuvert && domaines.length === 0}
 						>{#if panneauOuvert}{#each domaines as d (d.nom)}<option
@@ -1058,21 +853,11 @@
 			</div>
 
 			<!--
-				LE PIED DU PANNEAU — les trois boutons du gel, câblés comme
-				`V-32:3232-3235` et `V-32:3238` les câblent.
-
-				AUCUN N'EST DANS UN FORMULAIRE, et aucun ne porte donc `type` : le gel
-				n'en pose pas, et le danger d'un bouton sans type — soumettre — n'existe
-				qu'à l'intérieur d'un `<form>`, qui n'existe pas ici.
-
-				« CRÉER LE COMPTE » PORTE DÉSORMAIS `UC-M14-07`, et le bouton fait donc
-				DEUX choses selon l'état du panneau : sur un compte existant il rend le
-				rôle choisi (`RG-M14-07`), sur un panneau vide il rend la demande de
-				création. C'est le partage du gel lui-même, dont le seul écouteur
-				branche sur `edite.nouveau` (`V-32:3184`).
-
-				SANS RAPPEL DE CRÉATION — le cas des planches, qui n'ont ni route ni
-				action derrière elles —, il ferme le panneau sans rien envoyer.
+				LE PIED DU PANNEAU — les trois boutons du gel (`V-32:3232-3238`). AUCUN N'EST
+				DANS UN FORMULAIRE, et aucun ne porte donc `type` : le danger d'un bouton sans
+				type n'existe qu'à l'intérieur d'un `<form>`.
+				« Créer le compte » fait DEUX choses selon l'état du panneau — c'est le partage
+				du gel, dont le seul écouteur branche sur `edite.nouveau` (`V-32:3184`).
 			-->
 			<div class="tiroir-form__pied">
 				<button
@@ -1099,12 +884,9 @@
 			</div>
 		</aside>
 
-		<!--
-			LA MÊME BOÎTE SERT LES DEUX GESTES, ET C'EST LE GEL QUI LE DÉCIDE :
-			`afficherMotDePasse(nom, mdp, creation)` (`V-32:3235`) n'ouvre qu'un
-			dialogue, et son troisième paramètre change le titre et la phrase — rien
-			d'autre. Les deux textes ci-dessous en sont la transcription.
-		-->
+		<!-- LA MÊME BOÎTE SERT LES DEUX GESTES, ET C'EST LE GEL QUI LE DÉCIDE :
+			`afficherMotDePasse(nom, mdp, creation)` (`V-32:3235`) n'ouvre qu'un dialogue,
+			et son troisième paramètre change le titre et la phrase, rien d'autre. -->
 		<dialog
 			class="dlg"
 			id="dlg-mdp"
@@ -1131,24 +913,17 @@
 					</h2>
 				</div>
 				<div class="dlg__corps">
-					<!--
-						LA RÉGION EST SOUSTRAITE AU FORMATEUR, ET LA RAISON EST MESURÉE
-						(`P-6`). Le reflux du formateur déplace les blancs À L'INTÉRIEUR du
-						texte : la branche de RÉINITIALISATION — celle que la position de
-						planche `c-mdp` rend — ne sortait plus les mêmes octets qu'avant ce
-						lot, sur une phrase pourtant inchangée. La branche est donc écrite
-						exactement comme elle l'était, retours de ligne compris.
-					-->
+					<!-- LA RÉGION EST SOUSTRAITE AU FORMATEUR : son reflux déplace les blancs À
+						L'INTÉRIEUR du texte, et la branche de réinitialisation ne sortait plus les
+						mêmes octets sur une phrase pourtant inchangée. -->
 					<!-- prettier-ignore -->
 					<p class="dlg__texte" id="mdp-qui">
 						{#if compteCree}Le compte de {compteCree.nom} est créé. Voici son mot de passe initial.{:else if compteReinitialise}Le mot de passe de {compteReinitialise.compte.nom} a été remplacé.
 							L'ancien ne fonctionne plus.{:else}—{/if}
 					</p>
 
-					<!--
-						L'avertissement précède la valeur : il faut savoir qu'on ne la
-						reverra pas avant de fermer la boîte, pas après.
-					-->
+					<!-- L'avertissement précède la valeur : il faut savoir qu'on ne la reverra
+						pas avant de fermer la boîte, pas après. -->
 					<div class="avert-unique">
 						<svg
 							width="18"
@@ -1194,13 +969,9 @@
 					</p>
 				</div>
 				<div class="dlg__pied">
-					<!--
-						« J'AI NOTÉ LE MOT DE PASSE » — le gel ferme la boîte ET EFFACE LA
-						VALEUR du document (`V-32:3255`) : « elle ne doit pas rester
-						récupérable dans la page ». Ici, `compteCree` remis à `null` fait
-						les deux d'un coup, et le rappel demande à la page de se relire —
-						c'est ainsi que le compte créé rejoint la liste.
-					-->
+					<!-- « J'ai noté le mot de passe » — le gel ferme la boîte ET EFFACE LA VALEUR
+						du document (`V-32:3255`). Ici, `compteCree` remis à `null` fait les deux, et
+						le rappel demande à la page de se relire. -->
 					<button
 						class="btn btn--principal"
 						id="mdp-fermer"

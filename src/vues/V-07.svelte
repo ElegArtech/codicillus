@@ -2,118 +2,30 @@
 	/**
 	 * V-07 — Accueil contributeur. Route `/` (`docs/routes.md`).
 	 *
-	 * LA MAQUETTE DE RÉFÉRENCE DU SOCLE. C'est SON socle en ligne — 466 lignes,
-	 * lignes 8 à 472 du gel — qui a été retenu comme source unique du système
-	 * visuel (`ECART-007`, `docs/errata-cadrage.md` E-01, ADR-002 amendé) : il
-	 * est le sur-ensemble strict des cinq états successifs du socle, et le plus
-	 * récent. `src/socle.css` en est la copie à l'octet (P-6.1), et
-	 * `docs/DESIGN.md` §0.2 explique pourquoi V-07 plutôt que V-41 — les deux
-	 * blocs sont identiques au saut de ligne final près, et P-6.1 compare à
-	 * l'octet.
+	 * LA MAQUETTE DE RÉFÉRENCE DU SOCLE : c'est son socle en ligne — lignes 8 à 472
+	 * du gel — qui est la source unique du système visuel (`ADR-002` amendé), et
+	 * `src/socle.css` en est la copie à l'octet.
 	 *
-	 * NEUF ÉTATS — `verif/scenarios/V-07.json`, extraits de la planche de revue.
-	 * Chacun arrive par son VECTEUR COMPLET : profil × état × aide, jamais un
-	 * delta. `etat-nominal` est déclaré identique à `role-referent`.
+	 * Coquille de forme COMPLÈTE. L'entrée d'accueil du rail est marquée courante —
+	 * V-07 est la seule des 41 maquettes dans ce cas, et c'est le gabarit qui le
+	 * porte. `data-etat` passe au gabarit par `donnees` ; deux règles de la feuille
+	 * le lisent, les autres valeurs sont inertes et posées quand même.
 	 *
-	 * COQUILLE DE FORME COMPLÈTE — ARB-021, A-1. Le rail se dérive du corpus,
-	 * la barre porte ses deux menus, `Gestion` est conditionnée au RÔLE
-	 * (`si-admin`). `<main>` porte `class="tdb" id="contenu"` (ARB-015), et le
-	 * lien d'évitement vise `#contenu` avec le libellé par défaut (ARB-019).
+	 * AUCUN CHIFFRE N'EST SAISI (`RG-M01-01`) : tout est calculé depuis les sources
+	 * reçues, bornées au périmètre autorisé par `$lib/donnees/accueil`. `RG-M01-02` :
+	 * l'indicateur « En attente de révision » et la corbeille lisent LA MÊME SOURCE
+	 * — deux comptages concurrents finiraient par se contredire à l'écran.
+	 * `RG-M01-03`, la déduplication de l'activité, n'est PAS tenue.
 	 *
-	 * L'ENTRÉE D'ACCUEIL DU RAIL EST MARQUÉE COURANTE — ARB-021, A-5,
-	 * `accueilCourant`. V-07 est la SEULE des 41 maquettes dans ce cas :
-	 * `aria-current="page"` et le `data-vers` propre du gel — « Vous êtes déjà
-	 * sur l'accueil » (`V-07:1150`) ; la règle qui le rend visible est
-	 * `V-07:512`. C'est le gabarit qui le porte, pas cette vue.
+	 * Une seule définition de la fraîcheur (`ADR-005`) : tout sort de
+	 * `$lib/fraicheur`, rien n'est recalculé ici.
 	 *
-	 * `data-etat` est l'attribut de données de la vue (ARB-021, A-2), passé au
-	 * gabarit par `donnees`, tel quel et sous son nom complet. Deux règles de la
-	 * feuille le lisent — `.app[data-etat="vide"] .si-peuple` et
-	 * `.app:not([data-etat="vide"]) .si-vide` —, les autres valeurs sont inertes
-	 * au rendu et posées quand même : le gel les pose.
+	 * LES GESTES DE CET ÉCRAN MÈNENT QUELQUE PART : deux vrais liens — la cible d'un
+	 * évènement, l'ouverture d'une note de la corbeille —, et des boutons qui
+	 * naviguent. Le nom d'un domaine mène à sa page, son COMPTE DE NOTES à la liste
+	 * des notes du domaine, qui n'est pas le même écran.
 	 *
-	 * LE PROFIL « LECTEUR » N'EST PAS UN RÔLE DU GABARIT. La planche pose
-	 * `data-role="lecteur"` ; la seule règle du socle sur `data-role` est
-	 * `.app:not([data-role="admin"]) .si-admin`, et l'effet visible du profil
-	 * passe par `data-droits="lecture"`. Le gabarit ne connaît que `referent` et
-	 * `admin` ; « lecteur » y est un non-administrateur. Divergence de balisage
-	 * MESURÉE NULLE, déclarée ici plutôt que réglée en rouvrant un gabarit gelé
-	 * — même constat qu'en V-11.
-	 *
-	 * ═════════════════════════════════════════════════════════════════════════
-	 * P-02 — AUCUN CHIFFRE N'EST SAISI, ET C'EST ICI QUE ÇA SE JOUE
-	 *
-	 * `RG-M01-01` : aucun indicateur n'affiche de valeur inventée. Les quatre
-	 * indicateurs, la salutation, les domaines et le pied sont CALCULÉS depuis
-	 * les sources reçues en propriété, exactement comme la maquette les calcule
-	 * depuis `window.CORPUS` et ses tables de mesures. Rien n'est figé.
-	 *
-	 * ET DEPUIS LE LOT DE CÂBLAGE DE `/`, CES SOURCES VIENNENT DE LA BASE. Le
-	 * jeu de semence n'est plus que le DÉFAUT, celui de la revue : `+page.svelte`
-	 * passe le compte connecté, les univers, les domaines, les consultations des
-	 * sept derniers jours et de la semaine précédente, les anciennetés de
-	 * modification, l'activité et les demandes de révision, toutes bornées au
-	 * périmètre autorisé par `$lib/donnees/accueil`. Le pied lit les deux faits
-	 * d'instance dans le contexte d'identité — version réelle, et pas de ligne de
-	 * synchronisation, faute d'une telle donnée en base. La propriété `instance`
-	 * a disparu : aucune route ne la passait, et son défaut servait le numéro de
-	 * version du jeu de démonstration comme un fait.
-	 *
-	 * `RG-M01-02` : l'indicateur « En attente de révision » et la corbeille de
-	 * révisions lisent LA MÊME SOURCE — `revisionsCourantes`, une seule fois.
-	 * Deux comptages concurrents finiraient par se contredire à l'écran ; le gel
-	 * l'écrit en toutes lettres (`V-07:3479`).
-	 *
-	 * `RG-M01-03` — l'activité récente déduplique « un même objet publié puis
-	 * édité dans une fenêtre courte ». LE GEL NE LE FAIT PAS : `rendreActivite`
-	 * rend `window.ACTIVITE` tel quel, et le jeu de semence n'exerce pas la
-	 * règle — `n-planifier-sauv` y figure deux fois, mais en `publication` (78 h)
-	 * et en `verification` (151 h), donc hors du cas visé. Dédoublonner ici
-	 * serait diverger du gel sans qu'aucun cas ne le sollicite (P-5). Le constat
-	 * est déclaré au rapport ; ce lot NE DÉCLARE PAS `RG-M01-03` tenue.
-	 *
-	 * P-01 — UNE SEULE DÉFINITION DE LA FRAÎCHEUR. Le témoin passe par la
-	 * fabrique unique, `$lib/fraicheur` : niveau, classe, barres et libellé en
-	 * sortent, et rien n'est recalculé ici. La répartition des domaines COMPTE
-	 * les niveaux que le corpus porte, elle ne les dérive pas.
-	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011) : l'état est rendu, jamais
-	 * la transition. Les gestes de la maquette — notifications au clic, mémoire
-	 * locale de l'aide de première visite (`codicillus.aide.recherche`), passage
-	 * de relais du champ de recherche à la palette V-09 — relèvent des lots de
-	 * logique. L'aide est ici un ÉTAT, piloté par le vecteur.
-	 *
-	 * LES GESTES DE CET ÉCRAN MÈNENT QUELQUE PART. Deux sont de vrais liens — la
-	 * cible d'un évènement d'activité et l'ouverture d'une note de la corbeille,
-	 * que `docs/routes.md` adresse en `/notes/{id}`. Les autres sont des boutons,
-	 * comme le gel les dessine, et ils naviguent : les quatre indicateurs (voir
-	 * `voirLesRevisions` et la doctrine des destinations, plus bas), les segments
-	 * de répartition, les raccourcis de création, le nom d'un domaine — vers sa
-	 * page — et son COMPTE DE NOTES — vers la liste des notes du domaine, qui
-	 * n'est pas le même écran. Le pied compte le corpus entier : ses deux nombres
-	 * ouvrent la recherche, sans filtre pour les notes, sur `?type=Signet` pour
-	 * les signets.
-	 *
-	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette` et `dialog#palette`
-	 * (divergence mesurée nulle, `docs/releve-vues.md` §4.1) et `div.planche`,
-	 * bloc hors produit (§2.G).
-	 *
-	 * ÉCART DÉCLARÉ — É-1, UN NŒUD QUE HTML NE SAIT PAS ÉCRIRE. À l'état de
-	 * chargement, le gel greffe une esquisse de niveau BLOC dans `p#salut-sous`
-	 * (`V-07:3387`). L'analyseur HTML défait cette imbrication, sort l'esquisse
-	 * du paragraphe et fabrique un second `p` vide : mesuré, un `paragraph` de
-	 * trop au niveau 1 et 198,7 px de largeur d'écart au niveau 2. Le conteneur
-	 * est donc sérialisé, POUR CE SEUL ÉTAT, en `div[role="paragraph"]` —
-	 * isomorphe au DOM du gel pour tout ce que le banc juge. Le commentaire posé
-	 * sur le nœud porte la mesure. Les huit autres états gardent le `<p>`.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-07.css`, posé par `node verif/feuilles-de-vue.mjs V-07
-	 * --installer` (P-6.3). Les styles en ligne reproduits sont ceux du gel, et
-	 * eux seuls (P-6.4, ARB-016) : `width:‹calculé›` des esquisses,
-	 * `padding:var(--e-4)` du corps d'indicateur en chargement, `line-height:0`
-	 * du chevron de tendance, `--teinte:‹calculé›` d'un bloc de domaine et
-	 * `flex:‹calculé›` d'une part de répartition.
+	 * Le style est dans `src/socle.css` et `src/vues/V-07.css`.
 	 */
 	import type {
 		DemandeDeRevision,
@@ -139,49 +51,30 @@
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import { adressesParLesNoms } from '$lib/rangement/adresses';
 	/**
-	 * LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM.
-	 *
-	 * La vue ne reçoit que des NOMS d'affichage, et les slugifiait. Les
-	 * identifiants d'adresse d'un univers et d'un domaine sont persistés et ne
-	 * suivent PAS les renommages (`RG-M12-11`) : renommer l'un ou l'autre en
-	 * console rendait 404 chacun des liens d'ici. La table vient du gabarit
-	 * racine ; hors application elle est vide et la dérivation du nom s'applique.
+	 * LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM : la vue
+	 * ne reçoit que des noms d'affichage et les slugifiait, or l'identifiant ne suit
+	 * PAS les renommages (`RG-M12-11`) — renommer un univers en console rendait 404
+	 * chacun des liens d'ici.
 	 */
 	const adresses = adressesParLesNoms(designationsDeCoquille());
 
-	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
-	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
-	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
-	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	/* Le mot renommable de `M14.7`, lu sur le contexte de coquille : en constante,
+	   le renommer en console ne changeait rien a l'ecran. Repli : « Fiche ». */
 	const motsDuProduit = vocabulaireRendu();
 	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
 	const motFichePlurielMinuscule = $derived(motsDuProduit.fichesMin);
 
 	/**
-	 * LES NEUF SOURCES SONT EXIGÉES — ET C'EST LE CORRECTIF.
+	 * LES NEUF SOURCES SONT EXIGÉES. Optionnelles, leur défaut était la constante du
+	 * jeu de démonstration, et une route qui en oubliait une le servait SANS QUE
+	 * RIEN NE PROTESTE.
 	 *
-	 * Elles étaient OPTIONNELLES, et leur défaut était la constante du jeu de
-	 * démonstration : une route qui en oubliait une servait le jeu SANS QUE RIEN
-	 * NE PROTESTE. « En attente de révision = 3 » s'affichait pour un compte qui
-	 * ne lit aucune note, et « Bonjour Karim. » était servi à Sophie Nguyen.
-	 * Aucun compilateur, aucun test ne le voyait ; seule une ouverture d'écran
-	 * sur base vide le révélait.
-	 *
-	 * EXIGÉES, LE COMPILATEUR GARDE LA PORTE. `exactOptionalPropertyTypes` et
-	 * `strict` sont actifs et `svelte-check` fait partie de `pnpm check` : une
-	 * route qui oublierait l'une d'elles ne compile plus.
-	 *
-	 * `| undefined` EST EXIGÉ PAR `exactOptionalPropertyTypes`, ET IL DIT QUELQUE
-	 * CHOSE. `tsconfig.json:9` distingue « la clé est absente » de « la clé vaut
-	 * `undefined` ». La clé, elle, doit être écrite ; la VALEUR peut manquer —
-	 * c'est le cas que `P-02` décrit, une source indisponible n'étant pas une
-	 * source à zéro. L'ÉTAT VIDE explicite prend alors le relais : liste vide,
-	 * table vide, identité sans nom. Jamais une donnée d'exemple.
+	 * `| undefined` est imposé par `exactOptionalPropertyTypes`, et il dit quelque
+	 * chose : la CLÉ doit être écrite, la VALEUR peut manquer — une source
+	 * indisponible n'est pas une source à zéro, et l'ÉTAT VIDE prend le relais.
 	 */
 	interface Proprietes {
-		/** Le vecteur complet de l'état — profil × état × aide. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-07')`, variante « complète ». */
 		notes: readonly Note[];
 		/** Les univers déclarés. Valeur manquante : aucun univers. */
 		univers: readonly Univers[] | undefined;
@@ -189,52 +82,33 @@
 		domaines: readonly Domaine[] | undefined;
 		/** L'utilisateur connecté. Valeur manquante : une identité sans nom. */
 		compte: IdentiteAffichee | undefined;
-		/** Consultations des sept derniers jours, par note. */
 		mesures7j: Partial<Record<IdentifiantNote, number>> | undefined;
-		/** Consultations de la semaine précédente, par note. */
 		mesures7jPrec: Partial<Record<IdentifiantNote, number>> | undefined;
-		/** Ancienneté de modification, en jours, par note. */
 		modifications: Partial<Record<IdentifiantNote, number>> | undefined;
 		/** Les évènements du corpus. Valeur manquante : aucun évènement. */
 		activite: readonly EvenementDActivite[] | undefined;
 		/** Les demandes de révision. Valeur manquante : aucune demande. */
 		revisions: readonly DemandeDeRevision[] | undefined;
 		/**
-		 * LA CAPACITÉ D'ÉCRITURE DE L'APPELANT, CALCULÉE EN BASE — P-09.
-		 *
-		 * Le profil du VECTEUR est un état de planche : il fait la revue, pas le
-		 * produit. Un chargeur qui n'a pas de vecteur à passer laisserait donc
-		 * `profil` valoir « referent », et toutes les actions d'écriture seraient
-		 * émises quel que soit le compte. `+layout.server.ts` calcule la capacité
-		 * réelle (`capaciteDEcriture`, deux projections sur les droits) ; cette
-		 * propriété est le chemin par lequel elle atteint la vue.
-		 *
-		 * SANS VALEUR, LE PROFIL RÉPOND — le vecteur reste seul juge en rendu
-		 * direct, et les neuf états déclarés ne bougent pas d'un pixel.
+		 * LA CAPACITÉ D'ÉCRITURE DE L'APPELANT, CALCULÉE EN BASE — `P-09`. Le profil du
+		 * VECTEUR est un état de planche : un chargeur sans vecteur laisserait `profil`
+		 * valoir « referent », et toutes les actions d'écriture seraient émises quel que
+		 * soit le compte. Sans valeur, le profil répond.
 		 */
 		ecriture: boolean | undefined;
 	}
 
 	/**
-	 * L'IDENTITÉ AFFICHÉE — la forme d'`UtilisateurCourant`, dont les valeurs
-	 * figées du jeu de démonstration sont ÉLARGIES.
-	 *
-	 * `UtilisateurCourant.nom` est typé `NomDAuteur`, l'union des trois noms du
-	 * jeu — « Sophie Nguyen », « Marc Ferreira », « Karim Belhadj » — et `role`
-	 * comme `domaine` sont de même farine. Aucune instance réelle ne porte ces
-	 * valeurs, et aucun état vide n'y est représentable. Le JEU DE CLÉS reste lié
-	 * au type d'origine par un type mappé : un champ ajouté là-bas apparaît ici,
-	 * et cette forme ne peut pas diverger en silence.
+	 * L'identité affichée — la forme d'`UtilisateurCourant`, dont les valeurs du jeu
+	 * de démonstration sont ÉLARGIES : `nom` y est l'union des trois noms du jeu, où
+	 * aucun état vide n'est représentable. Le jeu de CLÉS reste lié au type d'origine
+	 * par un type mappé, pour que cette forme ne diverge pas en silence.
 	 */
 	type IdentiteAffichee = { readonly [K in keyof UtilisateurCourant]: string };
 
 	/**
-	 * L'IDENTITÉ VIDE — ce que la vue affiche quand aucun compte ne lui est servi.
-	 *
-	 * Elle remplace `MOI` du jeu de démonstration, dont le seul effet en produit
-	 * était de saluer « Karim » un visiteur qui ne s'appelle pas ainsi. Un
-	 * domaine vide est déjà une valeur que la vue sait lire : `sansPerimetre` en
-	 * dépend, et la salutation bascule alors sur le corpus entier.
+	 * L'identité vide. Un domaine vide est déjà une valeur que la vue sait lire :
+	 * `sansPerimetre` en dépend, et la salutation bascule sur le corpus entier.
 	 */
 	const SANS_IDENTITE: IdentiteAffichee = {
 		prenom: '',
@@ -262,92 +136,50 @@
 	const profil = $derived(String(reglage['role'] ?? 'referent'));
 
 	/**
-	 * LE PIED DU TABLEAU DE BORD DIT DEUX FAITS SUR L'INSTANCE — il les lit donc
-	 * où le rail les lit : `$lib/coquille/identite.ts`. Sans ce contexte — hors
-	 * application, en rendu direct du composant —, ils valent l'état vide : pas
-	 * de version, pas de ligne de synchronisation.
-	 *
-	 * La version venait de `INSTANCE`, un numéro de démonstration, sur la même
-	 * page dont le rail affiche déjà celle de `package.json` : deux chiffres
-	 * pour un seul fait. La synchronisation, elle, n'existe nulle part en base ;
-	 * le contexte rend `null`, et `null` veut dire : ne rends pas la ligne. On
-	 * ne fabrique pas une date à partir de rien (P-02).
-	 *
-	 * HORS GABARIT RACINE — un rendu direct du composant —, le contexte est
-	 * absent : la version est alors la chaîne vide et la ligne de synchronisation
-	 * n'est pas rendue. C'est l'état vide, jamais le numéro du jeu.
+	 * LE PIED DIT DEUX FAITS SUR L'INSTANCE — il les lit où le rail les lit,
+	 * `$lib/coquille/identite.ts`. Hors application ils valent l'état vide. La
+	 * synchronisation n'existe nulle part en base ; `null` veut dire « ne rends pas
+	 * la ligne » — on ne fabrique pas une date à partir de rien.
 	 */
 	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
 	const versionAffichee = $derived(identite?.version ?? '');
 	const synchroAffichee = $derived(identite?.synchro ?? null);
 	/**
-	 * QUI EST ADMINISTRATEUR — LE CONTEXTE LE SAIT, LE VECTEUR NE FAIT QUE LE
-	 * JOUER. `profil` vient du vecteur de planche, et aucune route ne passe de
-	 * vecteur : il valait donc toujours « referent » dans le produit, et la
-	 * tuile « Consultations » sortait désactivée même pour un administrateur.
-	 * Hors application, le contexte est absent et le profil reprend la main.
-	 *
-	 * ET LE CHARGEUR PEUT LE DIRE LUI-MÊME, ce qui le rend vrai hors gabarit
-	 * racine : la charge de `/` pose le fait dans le vecteur qu'elle sert déjà
-	 * pour l'état « base vide ». C'est la source la plus proche de la base des
-	 * trois, donc celle qui tranche en premier.
+	 * QUI EST ADMINISTRATEUR — LE CONTEXTE LE SAIT, LE VECTEUR NE FAIT QUE LE JOUER.
+	 * Aucune route ne passe de vecteur : `profil` valait donc toujours « referent »
+	 * en produit, et la tuile « Consultations » sortait désactivée même pour un
+	 * administrateur. Le chargeur, plus proche de la base, tranche en premier.
 	 */
 	const administrateur = $derived(
 		reglage['administrateur'] === true || (identite?.administrateur ?? profil === 'admin')
 	);
 	/**
-	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
+	 * L'ABSENCE, ET NON LE MASQUAGE — `P-09`, `RG-M05-08`, `ARB-040`. Le gel pose les
+	 * actions d'écriture puis les cache en feuille, seule possibilité d'une maquette
+	 * statique ; le produit ne les émet pas, « ni grisée, NI MASQUÉE ». Les nœuds
+	 * rendus gardent leur classe `si-ecriture` : elle porte aussi le rendu.
 	 *
-	 * Le gel POSE les actions d'écriture puis les cache par
-	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
-	 * (`mockups/V-07-accueil-contributeur.html:403`) : une maquette statique n'a
-	 * pas de serveur, le masquage y est sa SEULE possibilité. Le produit, lui,
-	 * peut ne pas les émettre — et P-09 l'exige, « ni grisée, NI MASQUÉE ».
-	 * Les nœuds concernés gardent leur classe `si-ecriture` intacte quand ils
-	 * sont rendus : la classe porte aussi le rendu, elle ne se retire pas.
-	 * Énumération : `docs/omissions-p09.md`.
-	 *
-	 * LA CAPACITÉ FOURNIE L'EMPORTE SUR LE PROFIL, et c'est l'ordre juste : le
-	 * profil est un état de planche, la capacité est une lecture des droits en
-	 * base. Absente — en revue, où aucun chargeur ne parle —, le profil répond
-	 * seul, et les neuf états déclarés restent ce qu'ils étaient.
-	 *
-	 * ET C'EST CETTE MÊME VALEUR QUI GOUVERNE `droits` DE LA COQUILLE. Le
-	 * `data-droits` de la racine décidait jusqu'ici du seul profil, si bien
-	 * qu'un compte sans capacité d'écriture gardait le menu « Créer » de la
-	 * barre supérieure pendant que les raccourcis de la page disparaissaient —
-	 * deux réponses pour une seule question. Mesuré : sans capacité fournie, la
-	 * valeur est identique à l'octet à ce qu'elle était (`ecriture` vaut alors
-	 * `profil !== 'lecteur'`, mot pour mot l'ancienne expression), donc les neuf
-	 * états de revue ne bougent pas.
+	 * LA CAPACITÉ FOURNIE L'EMPORTE SUR LE PROFIL, et gouverne aussi `droits` de la
+	 * coquille : sans quoi un compte sans capacité d'écriture gardait le menu
+	 * « Créer » pendant que les raccourcis de la page disparaissaient.
 	 */
 	const ecriture = $derived(ecritureAutorisee ?? profil !== 'lecteur');
 	const etatPage = $derived(String(reglage['etat'] ?? 'nominal'));
 	/**
 	 * L'aide de première visite. La case de planche est cochée par défaut et
 	 * `majAide(true)` DÉMASQUE l'aide : c'est la case DÉCOCHÉE qui la cache
-	 * (`V-07:3899`). Le stockage local ne joue pas ici — un état, pas une
-	 * mémoire.
-	 */
-	/**
-	 * L'AIDE DE PREMIÈRE VISITE SE REFERME — `V-07:3895`. Le gel pose l'état sur
-	 * la case de sa planche ; ici, la fermeture est un état LOCAL qui l'emporte
-	 * sur le vecteur, et qui ne survit pas au rechargement : le gel ne mémorise
-	 * rien non plus (`aideVue()` lit sa case, pas un stockage).
+	 * (`V-07:3899`). La fermeture est un état LOCAL qui l'emporte sur le vecteur.
 	 */
 	let aideRefermee = $state(false);
 
 	const aideVisible = $derived(!aideRefermee && reglage['c-aide'] !== false);
 
-	/** Nombre en français — `x.toLocaleString("fr-FR")` du gel (`V-07:3328`). */
 	function nb(x: number): string {
 		return x.toLocaleString('fr-FR');
 	}
 
-	/* ── Ce qui est une note, et ce qui ne l'est pas ─────────────────────────
-	   « Un signet n'est pas une note : le vocabulaire est contractuel, et les
-	   compteurs le suivent. Une fiche, en revanche, en est une — elle porte
-	   simplement un type structuré en plus. » (`V-07:3332`) */
+	/* « Un signet n'est pas une note : le vocabulaire est contractuel, et les
+	   compteurs le suivent. Une fiche, en revanche, en est une. » (`V-07:3332`) */
 	function estNote(n: Note): boolean {
 		return n.type !== 'Signet';
 	}
@@ -359,16 +191,11 @@
 		return liste.filter((n) => !n.brouillon);
 	}
 
-	/* ── Salutation ─────────────────────────────────────────────────────────
-	   Le chiffre marquant porte sur le périmètre de la personne, pas sur le
-	   corpus entier : c'est ce qui fait la différence entre une salutation et
-	   une statistique.
-
-	   SANS RATTACHEMENT, LE PÉRIMÈTRE EST LA BASE ENTIÈRE. `comptes.domaine_id`
-	   est nullable, et c'est le cas de TOUT compte d'amorçage : le domaine rendu
-	   est alors la chaîne vide. Le filtrer dessus donnerait 0 note, démenti par
-	   la tuile « Notes au total » trois lignes plus bas. La salutation compte
-	   donc tout le corpus, et sa phrase le dit (« Votre base compte … »). */
+	/* Salutation. Le chiffre marquant porte sur le périmètre de la personne, pas sur
+	   le corpus entier. SANS RATTACHEMENT, LE PÉRIMÈTRE EST LA BASE ENTIÈRE :
+	   `comptes.domaine_id` est nullable — le cas de tout compte d'amorçage —, et
+	   filtrer sur un domaine vide donnerait 0 note, démenti par la tuile « Notes au
+	   total » trois lignes plus bas. */
 	const sansPerimetre = $derived(moi.domaine.trim() === '');
 	const mien = $derived(
 		sansPerimetre ? toutesLesNotes : corpus.filter((n) => n.domaine === moi.domaine && estNote(n))
@@ -380,18 +207,16 @@
 		})
 	);
 
-	/* ── Domaines accessibles ───────────────────────────────────────────────
-	   Même source que la navigation latérale : les deux ne peuvent pas diverger.
-	   L'ordre est celui des univers, `ordre` croissant (`V-07:2619`). */
+	/* Domaines accessibles — même source que la navigation latérale, les deux ne
+	   peuvent pas diverger. Ordre des univers, `ordre` croissant (`V-07:2619`). */
 	const domainesAccessibles = $derived(
 		[...univers]
 			.sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))
 			.flatMap((u) => domaines.filter((d) => d.univers === u.nom))
 	);
 
-	/* ── Consultations ──────────────────────────────────────────────────────
-	   `window.sommeMesures` : la somme est RESTREINTE aux notes réellement
-	   présentes dans le corpus (`V-07:1904`). */
+	/* Consultations — la somme est RESTREINTE aux notes réellement présentes dans
+	   le corpus (`V-07:1904`). */
 	function sommeMesures(table: Partial<Record<string, number>>): number {
 		return corpus.reduce((s, n) => s + (table[n.id] ?? 0), 0);
 	}
@@ -493,11 +318,8 @@
 
 	/**
 	 * L'état d'erreur, isolé en liaison plutôt que comparé DANS l'attribut de
-	 * classe. Le relevé de `pnpm verif:inventaire` lit les littéraux de chaîne
-	 * d'une expression de classe : la comparaison au nom de l'état y ferait
-	 * entrer une classe que les 41 maquettes ne portent pas (P-5.1). La
-	 * condition sort donc de l'attribut — et ce commentaire ne cite aucun
-	 * attribut de classe, pour la même raison.
+	 * classe : le relevé d'inventaire lit les littéraux de chaîne d'une expression de
+	 * classe. Pour la même raison, ne cite aucun attribut de classe ici.
 	 */
 	const activiteEnErreur = $derived(etatPage === 'erreur');
 
@@ -509,57 +331,30 @@
 	}
 
 	/**
-	 * L'ADRESSE D'UNE NOTE EST PLATE — `/notes/{identifiant}`.
+	 * L'ADRESSE D'UNE NOTE EST PLATE — `/notes/{identifiant}` : aucun segment de
+	 * rangement, et déplacer la note ne change pas son adresse (`RG-M03-03`).
 	 *
-	 * `docs/routes.md` §2.1 : « Aucun segment de rangement (univers, domaine,
-	 * dossier) n'y figure. Déplacer la note dans un autre dossier, un autre
-	 * domaine ou un autre univers ne change pas son adresse. » C'est `RG-M03-03`
-	 * satisfaite par construction, et il n'y a rien à composer.
-	 *
-	 * L'ADRESSE EST RÉSOLUE, JAMAIS CONCATÉNÉE. `resolve()` de `$app/paths` prend
-	 * l'IDENTIFIANT DE ROUTE et ses paramètres : le cadre vérifie à la
-	 * compilation que la route existe, encode le segment, et
-	 * `svelte/no-navigation-without-resolve` refuse toute autre forme. Une
-	 * adresse fabriquée à la main est un lien mort en puissance — `P-03`.
-	 *
-	 * L'APPEL EST INLINE AUX DEUX POINTS D'USAGE, ET CE N'EST PAS UNE PRÉFÉRENCE
-	 * DE STYLE : `svelte/no-navigation-without-resolve` inspecte l'EXPRESSION
-	 * passée à `goto()` et celle d'un `href`. Une fabrique d'adresse, si juste
-	 * soit-elle, lui est opaque — la règle rougit, et elle a raison de rougir :
-	 * ce qu'elle sait vérifier, c'est ce qu'elle voit.
+	 * ELLE EST RÉSOLUE, JAMAIS CONCATÉNÉE, et l'appel est INLINE aux deux points
+	 * d'usage : `svelte/no-navigation-without-resolve` inspecte l'EXPRESSION passée à
+	 * `goto()` ou à un `href`, et une fabrique d'adresse lui est opaque.
 	 */
 	const ROUTE_DE_NOTE = '/notes/[identifiant]' as const;
 
 	/**
-	 * LA CORBEILLE S'OUVRE EN UN CLIC — CDC M07, `BRIEF-VUES.md` §V-07, « Accès
-	 * direct à la note ».
-	 *
-	 * LE GEL NAVIGUE DÉJÀ, ET PAR LE MÊME MOYEN : `V-07:3588-3592` construit un
-	 * `button.revision` et lui pose un écouteur de clic qui annonce « Ouverture
-	 * de "…" — vue V-14 ». Une maquette statique n'a pas de route à atteindre ;
-	 * le produit en a une. Le nœud reste celui du gel — même balise, mêmes
-	 * classes, même ordre —, et `onclick` n'écrit aucun attribut au rendu
-	 * serveur : le document servi est identique à l'octet à ce qu'il était.
+	 * LA CORBEILLE S'OUVRE EN UN CLIC — CDC M07. Le gel navigue déjà par le même
+	 * moyen (`V-07:3588-3592`) : le nœud reste le sien, et `onclick` n'écrit aucun
+	 * attribut au rendu serveur.
 	 */
 	function ouvrirLaNote(n: Note): void {
 		void goto(resolve(ROUTE_DE_NOTE, { identifiant: n.id }));
 	}
 
 	/**
-	 * LES ADRESSES QUE `resolve()` NE SAIT PAS COMPOSER — et pourquoi elles
-	 * passent par le dépôt d'adresses plutôt que par lui.
-	 *
-	 * `resolve()` prend un IDENTIFIANT DE ROUTE et ses paramètres ; il ne connaît
-	 * ni la dérivation d'un identifiant lisible à partir d'un nom d'univers ou de
-	 * domaine, ni la forme canonique qu'`ARB-001` impose. `$lib/rangement/adresses`
-	 * est la fabrique UNIQUE de ces adresses-là — six écrans les émettent déjà par
-	 * elle —, et la recopier ici en ferait une seconde.
-	 *
-	 * `svelte/no-navigation-without-resolve` inspecte l'expression passée à
-	 * `goto()` : une chaîne qu'une fabrique a produite lui est opaque, et elle
-	 * rougit à bon droit puisqu'elle ne peut rien vérifier. La règle est donc
-	 * levée SUR CETTE SEULE LIGNE, comme `V-24` la lève pour les adresses que son
-	 * rapport d'import compose — même raison, même portée.
+	 * LES ADRESSES QUE `resolve()` NE SAIT PAS COMPOSER : il prend un identifiant de
+	 * route, non la dérivation d'un identifiant lisible depuis un nom d'univers ou de
+	 * domaine. `$lib/rangement/adresses` est la fabrique UNIQUE de celles-là. La
+	 * règle de navigation est levée SUR CETTE SEULE LIGNE, une chaîne fabriquée lui
+	 * étant opaque.
 	 */
 	function allerA(adresse: string): void {
 		/* eslint-disable-next-line svelte/no-navigation-without-resolve */
@@ -567,24 +362,13 @@
 	}
 
 	/**
-	 * LES CINQ DESTINATIONS QUE LA MAQUETTE NOMME PAR LEUR NUMÉRO DE VUE —
-	 * `V-07:3908-3912`. Le gel n'a pas de route à atteindre et se contente de les
-	 * annoncer ; le produit en a une pour chacune.
-	 *
-	 *   `r-note`, `v-creer`   → V-17, l'éditeur de note      → `/notes/nouvelle`
-	 *   `r-import`, `v-importer` → V-24, l'import            → `/importer`
-	 *   `r-signet`            → V-23, la création de signet  → un domaine
-	 *
-	 * LE SIGNET SE CRÉE DANS UN DOMAINE, et le gel n'en nomme aucun : l'adresse de
-	 * V-23 en exige un (`RG-STR-02` — un domaine ne s'identifie que dans son
-	 * univers). Le domaine de rattachement du compte est le premier choix.
-	 *
-	 * `comptes.domaine_id` EST NULLABLE, et il est vide sur tout compte d'amorçage :
-	 * s'y arrêter rendait le raccourci mort-né sur une installation neuve. À défaut
-	 * de rattachement, on ouvre V-23 sur le premier domaine accessible — le formulaire
-	 * y nomme son domaine, la personne voit où elle range. Le geste ne s'éteint que
-	 * si AUCUN domaine n'existe : il n'y a alors nulle part où poser un signet, et le
-	 * bouton le dit.
+	 * LES DESTINATIONS QUE LA MAQUETTE NOMME PAR LEUR NUMÉRO DE VUE —
+	 * `V-07:3908-3912` : V-17 → `/notes/nouvelle`, V-24 → `/importer`, V-23 → un
+	 * domaine. LE SIGNET SE CRÉE DANS UN DOMAINE, et le gel n'en nomme aucun ;
+	 * l'adresse de V-23 en exige un (`RG-STR-02`). `comptes.domaine_id` étant
+	 * nullable sur tout compte d'amorçage, on retombe sur le premier domaine
+	 * accessible plutôt que de rendre le raccourci mort-né. Le geste ne s'éteint que
+	 * si AUCUN domaine n'existe.
 	 */
 	const domaineDuSignet = $derived(
 		domainesAccessibles.find((d) => d.nom === moi.domaine) ?? domainesAccessibles[0]
@@ -596,41 +380,25 @@
 	}
 
 	/**
-	 * LES QUATRE INDICATEURS MÈNENT QUELQUE PART — « un indicateur qui ne mène
-	 * nulle part n'est qu'une décoration », dit le commentaire du gabarit, et le
-	 * gel nomme les quatre destinations (`V-07:3512`, `:3523`, `:3542`, `:3551`).
+	 * LES QUATRE INDICATEURS MÈNENT QUELQUE PART — « un indicateur qui ne mène nulle
+	 * part n'est qu'une décoration ». Le produit n'a pas de V-12 globale — V-12 est
+	 * la liste des notes D'UN DOMAINE : « Notes au total » et « Brouillons » vont
+	 * donc à `/recherche` sans requête, dont les facettes portent les mêmes libellés.
 	 *
-	 * TROIS SONT DES LISTES PRÉ-FILTRÉES, ET LE PRODUIT N'A PAS DE V-12 GLOBALE :
-	 * V-12 est la liste des notes D'UN DOMAINE. La liste de tout le corpus, elle,
-	 * existe — c'est `/recherche` sans requête, dont les sept facettes portent
-	 * `statut` et `fraicheur` sous les mêmes libellés que V-12. C'est donc elle
-	 * qui reçoit « Notes au total » et « Brouillons ».
-	 *
-	 * « CONSULTATIONS · 7 JOURS » MÈNE À LA CONSOLE ANALYTIQUE (V-34), et elle
-	 * n'est ouverte qu'à l'administrateur. Le geste n'est POSÉ que pour lui : un
-	 * bouton qui mènerait un référent à un refus serait pire qu'un bouton inerte.
-	 * C'est `administrateur` — le contexte d'identité — qui tranche, jamais le
-	 * profil du vecteur, qu'aucune route ne passe.
-	 *
-	 * « EN ATTENTE DE RÉVISION » NE NAVIGUE PAS : la corbeille de révisions est
-	 * SUR CET ÉCRAN, panneau `#p-revisions`. L'indicateur y amène — c'est ce que
-	 * son filet d'appel promet — sans quitter la page.
+	 * « Consultations · 7 jours » mène à la console analytique, ouverte au SEUL
+	 * administrateur : un bouton qui mènerait un référent à un refus serait pire
+	 * qu'un bouton inerte. « En attente de révision » ne navigue pas — la corbeille
+	 * est sur cet écran.
 	 */
 	function voirLesRevisions(): void {
 		document.querySelector('#p-revisions')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	}
 
 	/**
-	 * LA BARRE DE RÉPARTITION OUVRE LA LISTE DU DOMAINE, PRÉ-FILTRÉE — le gel
-	 * l'annonce « N notes obsolètes de D — liste pré-filtrée, vue V-12 »
-	 * (`V-07:3685`).
-	 *
-	 * `?fraicheur=Obsolète probable` EST LE SEUL COUPLE QUE V-12 HONORE de cette
-	 * famille : son chargeur ne lit qu'un axe d'arrivée à trois positions, dont
-	 * deux sont nommées par `docs/routes.md` §4.2 — l'obsolescence et le
-	 * brouillon. Les deux autres parts mènent donc à la liste ENTIÈRE du domaine
-	 * plutôt qu'à un filtre que rien n'appliquerait : un paramètre non honoré est
-	 * ignoré, jamais refusé, et surtout jamais promis.
+	 * LA BARRE DE RÉPARTITION OUVRE LA LISTE DU DOMAINE, PRÉ-FILTRÉE (`V-07:3685`).
+	 * `?fraicheur=Obsolète probable` est le SEUL couple que V-12 honore de cette
+	 * famille : les deux autres parts mènent à la liste ENTIÈRE plutôt qu'à un filtre
+	 * que rien n'appliquerait — un paramètre non honoré est ignoré, jamais promis.
 	 */
 	const FRAICHEUR_OBSOLETE = 'Obsolète probable';
 
@@ -642,21 +410,16 @@
 	}
 
 	/**
-	 * LA RECHERCHE DE L'ACCUEIL — priorité 1 de la maquette, et le chemin le plus
-	 * court vers une note. Le gel la relie à sa palette (`Ctrl` `K`) ; le produit
-	 * a une route de recherche, et `RG-M02-06` veut la requête dans l'adresse.
-	 * `Échap` vide le champ, comme dans la barre de V-08.
+	 * La recherche de l'accueil — le chemin le plus court vers une note.
+	 * `RG-M02-06` veut la requête dans l'adresse ; `Échap` vide le champ.
 	 */
 	function chercherDepuisLAccueil(saisie: string): void {
 		const q = saisie.trim();
 		allerA(q === '' ? '/recherche' : `/recherche?q=${encodeURIComponent(q)}`);
 	}
 
-	/**
-	 * « RÉESSAYER » d'une zone en erreur — `V-07:3752`. Le gel remet sa planche à
-	 * « nominal » et rejoue son rendu ; le produit n'a pas de planche, il a un
-	 * chargeur : relire la page EST le nouvel essai.
-	 */
+	/** « Réessayer » — le produit n'a pas de planche à rejouer : relire la page EST
+	    le nouvel essai (`V-07:3752`). */
 	function reessayer(): void {
 		location.reload();
 	}
@@ -665,10 +428,9 @@
 	const signets = $derived(corpus.length - toutesLesNotes.length);
 
 	/**
-	 * LES DEUX NOMBRES DU PIED COMPTENT LE CORPUS ENTIER, et le produit n'a pas
-	 * de V-12 globale : la liste de tout le corpus, c'est `/recherche` sans
-	 * requête. `type` est l'une de ses sept facettes, sous le libellé même que
-	 * V-12 emploie — un seul vocabulaire de facette pour les deux écrans.
+	 * Les deux nombres du pied comptent le corpus entier, et la liste de tout le
+	 * corpus, c'est `/recherche` sans requête — `type` y est une facette, sous le
+	 * libellé même que V-12 emploie.
 	 */
 	const ADRESSE_DE_LA_RECHERCHE = '/recherche';
 	const ADRESSE_DES_SIGNETS = '/recherche?type=Signet';
@@ -676,7 +438,7 @@
 
 <!-- Une esquisse de chargement : la structure à venir, jamais un sablier. La
      largeur passe par le paramètre du gabarit, comme `esquisse(classe, largeur)`
-     du gel la pose par `d.style.width` (P-6.4, ARB-016). -->
+     du gel la pose par `d.style.width`. -->
 {#snippet esquisse(classe: string, largeur: string)}
 	<div class="esquisse {classe}" style="width:{largeur}"></div>
 {/snippet}
@@ -688,18 +450,18 @@
 	<div class="zone-etat"><p class="zone-etat__titre">{titre}</p><p class="zone-etat__txt">{texte}</p>{#if action}<button class="btn" type="button" onclick={reessayer}>{action}</button>{/if}</div>
 {/snippet}
 
-<!-- Le témoin de fraîcheur — une seule fabrique, pour qu'il ne diverge pas
-     d'un écran à l'autre. Niveau, classe, barres et libellé viennent de
-     `$lib/fraicheur` ; rien n'est recalculé ici (P-01, ADR-005). -->
+<!-- Le témoin de fraîcheur — une seule fabrique, pour qu'il ne diverge pas d'un
+     écran à l'autre : niveau, classe, barres et libellé viennent de
+     `$lib/fraicheur` (ADR-005). -->
 {#snippet temoin(n: Note)}
 	{@const t = temoinFraicheur(n)}
 	<!-- prettier-ignore -->
 	<span class="temoin {t.classe}"><span class="temoin__jauge" aria-hidden="true">{#each RANGS as rang (rang)}<i class={rang < t.barres ? 'plein' : undefined}></i>{/each}</span><span class="temoin__txt">{t.libelle}</span></span>
 {/snippet}
 
-<!-- Un indicateur. Quatre valeurs, toutes cliquables : un indicateur qui ne
-     mène nulle part n'est qu'une décoration. Celui qui appelle une action porte
-     un filet, celui qui vaut zéro est atténué — jamais masqué. -->
+<!-- Un indicateur. Quatre valeurs, toutes cliquables : un indicateur qui ne mène
+     nulle part n'est qu'une décoration. Celui qui appelle une action porte un
+     filet, celui qui vaut zéro est atténué — jamais masqué. -->
 {#snippet indicateur(
 	nom: string,
 	valeur: string,
@@ -745,23 +507,11 @@
 			{:else if etatPage === 'chargement'}
 				<!--
 					ÉCART É-1 — LE SEUL NŒUD DE CETTE VUE QU'UN DOCUMENT HTML NE SAIT PAS
-					ÉCRIRE. Au chargement, le gel vide `p#salut-sous` puis lui GREFFE une
-					esquisse par `sous.appendChild(esquisse("esq-l", "46%"))`
-					(`V-07:3387`) : le DOM d'exécution porte donc un `div` de niveau bloc
-					DANS un `p`. Aucune sérialisation HTML ne l'exprime — l'analyseur ferme
-					le `p` devant le `div`, sort l'esquisse du paragraphe ET fabrique un
-					second `p` vide sur la balise fermante orpheline.
-
-					MESURÉ, pas déduit : avec `<p>`, le niveau 1 rend un `paragraph` de trop
-					(ligne 55 de l'instantané) et l'esquisse prend 46 % de `.salut`
-					(1 112 px → 511,5 px) au lieu de 46 % du paragraphe (680 px → 312,8 px,
-					`max-width: 68ch`) — 198,7 px de large sur 13 px de haut.
-
-					La sérialisation retenue est ISOMORPHE au DOM du gel pour tout ce que le
-					banc juge : même rôle (`paragraph`), mêmes classe et identifiant, même
-					boîte, même imbrication. Seul le nom de balise diffère, et il n'est
-					mesuré par aucun des deux niveaux. Confiné au SEUL état de chargement :
-					les huit autres gardent le `<p>` du gel.
+					ÉCRIRE. Au chargement, le gel GREFFE une esquisse de niveau bloc DANS
+					`p#salut-sous` (`V-07:3387`) : l'analyseur ferme le `p` devant le `div` et
+					fabrique un second `p` vide. Le conteneur est donc sérialisé, POUR CE SEUL
+					ÉTAT, en `div[role="paragraph"]` — même rôle, mêmes classe et identifiant,
+					même boîte.
 				-->
 				<div class="salut__sous" id="salut-sous" role="paragraph">
 					{@render esquisse('esq-l', '46%')}
@@ -920,16 +670,12 @@
 							>Créer votre première note</button
 						>{/if}
 					<!-- LA SEULE SUITE VRAIE À ZÉRO UNIVERS, ET ELLE N'EST OUVERTE QU'À
-					     L'ADMINISTRATEUR. Les deux gestes ci-dessus visent des adresses qui
-					     rendent 404 tant qu'aucun univers n'existe : leur garde est juste et
-					     elle reste. Le texte au-dessus conseille pourtant de rapatrier, et le
-					     bloc sortait VIDE sur l'instance neuve pour laquelle il est dessiné.
-					     Le rail dit déjà la suite en prose — un univers dans la console, puis
-					     un domaine ; ce geste la rend faisable.
-					     PAS DE CLASSE D'ÉCRITURE ICI, et c'est délibéré : la capacité
-					     d'écriture vaut faux sur une instance neuve, et la feuille masque
-					     cette classe dès que les droits sont en lecture. Un lien plutôt qu'un
-					     bouton — l'adresse est alors portée par le document, comme au rail. -->
+					     L'ADMINISTRATEUR : les deux gestes ci-dessus visent des adresses qui
+					     rendent 404 tant qu'aucun univers n'existe, et le bloc sortait VIDE sur
+					     l'instance neuve pour laquelle il est dessiné.
+					     PAS DE CLASSE D'ÉCRITURE ICI : la capacité d'écriture vaut faux sur une
+					     instance neuve, et la feuille masque cette classe en lecture seule. Un
+					     lien plutôt qu'un bouton — l'adresse est portée par le document. -->
 					{#if administrateur && univers.length === 0}<a
 							class="btn btn--principal"
 							id="v-univers"
