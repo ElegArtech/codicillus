@@ -309,8 +309,17 @@ async function arborescenceDeNavigation(
 		)
 	};
 
+	/* LE RAIL PORTE LES MÊMES UNIVERS QUE LES DÉSIGNATIONS, et c'est la seule
+	   valeur juste : `sectionsDuRail()` (`$lib/coquille/arborescence.ts:149`)
+	   dit qu'un univers sans domaine y figure avec une liste vide, parce que
+	   l'écarter « rendait le premier geste du produit invisible — on crée un
+	   univers à la console, et rien dans la navigation ne le montrait ». Ce
+	   filtre-ci l'écartait quand même, et annulait l'intention à l'étage du
+	   dessus. Le périmètre ne bouge pas : `universDesignes` rend tout à
+	   l'administrateur (`RG-DRO-03`) et, aux autres, les seuls univers qui
+	   portent un domaine lisible (`RG-ACC-01`). */
 	return {
-		univers: lignesUnivers.filter((u) => universPorteurs.has(u.nom)),
+		univers: universDesignes,
 		domaines: lisibles.map((d) => ({ nom: d.nom, univers: d.univers, couleur: d.couleur })),
 		designations
 	};
