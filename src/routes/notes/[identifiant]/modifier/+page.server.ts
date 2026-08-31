@@ -20,6 +20,7 @@
  * DEMANDÉE — jamais un identifiant recalculé sur le nouveau titre (`RG-M03-03`).
  */
 import { error, fail, redirect } from '@sveltejs/kit';
+import { adresseApresEnregistrement } from '$lib/donnees/traitement-differe';
 import { desc, eq } from 'drizzle-orm';
 import { basePartagee, type Base } from '$lib/base/acces';
 import { notes as notesDuSchema, versions } from '$lib/base/schema';
@@ -250,7 +251,11 @@ export const actions: Actions = {
 
 		/* L'ADRESSE DE DESTINATION EST CELLE DE L'ADRESSE DEMANDÉE. Un identifiant
 		   recalculé sur le nouveau titre romprait `RG-M03-03` — « l'adresse d'une note
-		   reste stable dans le temps ». */
-		redirect(303, '/notes/' + params.identifiant);
+		   reste stable dans le temps ».
+
+		   LE DRAPEAU D'ENREGISTREMENT VOYAGE AVEC ELLE — `RG-NF-03` : l'indexation de
+		   recherche est SOUMISE et non attendue (`ARB-060`), et la note n'est donc pas
+		   trouvable à la seconde où cette page s'affiche. La lecture, elle, l'est. */
+		redirect(303, adresseApresEnregistrement('/notes/' + params.identifiant));
 	}
 };

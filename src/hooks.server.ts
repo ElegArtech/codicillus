@@ -1,17 +1,20 @@
 /**
- * LE POINT D'ENTRÉE DE TOUTE REQUÊTE — l'identité, puis les redirections de
- * session de `docs/routes.md` §5.2.
+ * LE POINT D'ENTRÉE DE TOUTE REQUÊTE — l'identité, l'indisponibilité programmée,
+ * puis les redirections de session de `docs/routes.md` §5.2.
  *
- * Deux choses s'y font, dans cet ordre, et une seule fois par requête :
+ * Trois choses s'y font, dans cet ordre, et une seule fois par requête :
  *
  *   1. L'IDENTITÉ EST ÉTABLIE. Le cookie est lu, la session reprise, le compte
  *      relu. `event.locals.identite` vaut ensuite `ANONYME` ou une identité
  *      authentifiée — jamais rien. C'est le point que `T-011` attendait : sa
  *      résolution des droits « ne établit aucune identité, elle en REÇOIT une ».
- *   2. LES REDIRECTIONS DE §5.2 SONT APPLIQUÉES, selon le régime de l'adresse
+ *   2. L'INDISPONIBILITÉ PROGRAMMÉE EST CONSTATÉE (`RG-NF-10`) : active, tout
+ *      appelant qui n'est pas administrateur est renvoyé sur la page, quel que
+ *      soit le régime de l'adresse.
+ *   3. LES REDIRECTIONS DE §5.2 SONT APPLIQUÉES, selon le régime de l'adresse
  *      (`src/lib/auth/garde.ts`, qui porte la table et sa justification).
  *
- * Une troisième, AVANT toute requête et une seule fois : la configuration du
+ * Une quatrième, AVANT toute requête et une seule fois : la configuration du
  * déploiement est constatée, et le démarrage est interrompu si elle est
  * incomplète — voir `init` plus bas.
  *
@@ -70,6 +73,12 @@ import {
 	sessionExpiree
 } from '$lib/auth/sessions';
 import { basePartagee } from '$lib/base/acces';
+import { lireConfiguration } from '$lib/donnees/lecture';
+import { accesALaConsole } from '$lib/donnees/consoles';
+import {
+	ADRESSE_DINDISPONIBILITE,
+	serviePendantLIndisponibilite
+} from '$lib/donnees/indisponibilite';
 
 /**
  * L'état de la session de l'appelant.
@@ -144,7 +153,32 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const regime = regimeDe(event.url.pathname);
 
-	/* LE MOT DE PASSE INITIAL SE CHANGE AVANT TOUT LE RESTE — c'est ce que
+	/* `RG-NF-10` — L'INDISPONIBILITÉ PROGRAMMÉE, ET ELLE PASSE AVANT TOUT LE RESTE :
+	   elle ferme l'espace public autant que le reste, l'anonyme comme le contributeur,
+	   et un compte dont le mot de passe initial attend d'être changé n'a rien à changer
+	   sur une instance fermée — il verrait sinon `/mon-profil` avant la page. TROIS ADRESSES RESTENT SERVIES — la page elle-même, la connexion
+	   et la déconnexion (`indisponibilite.ts` porte le pourquoi de chacune).
+
+	   L'ADMINISTRATEUR PASSE TOUJOURS, et c'est la moitié qui compte : renvoyé lui
+	   aussi, il ne pourrait plus désactiver ce qu'il vient d'activer. Le prédicat est
+	   celui de la console, jamais le rôle porté par l'identité.
+
+	   LA LECTURE N'A LIEU QUE SI L'ADRESSE PEUT ÊTRE FERMÉE : une requête vers la page
+	   d'indisponibilité ou vers la connexion ne coûte pas un aller-retour en base. */
+	if (
+		!serviePendantLIndisponibilite(event.url.pathname) &&
+		!accesALaConsole(event.locals.identite)
+	) {
+		const config = await lireConfiguration(basePartagee());
+		if (config.indisponibiliteActive) {
+			return new Response(null, {
+				status: 302,
+				headers: new Headers({ location: ADRESSE_DINDISPONIBILITE })
+			});
+		}
+	}
+
+	/* LE MOT DE PASSE INITIAL SE CHANGE AVANT LE RESTE — c'est ce que
 	   `/console/comptes` promet en toutes lettres à l'administrateur : « il devra
 	   être changé à la première connexion ». Rien ne le forçait.
 
