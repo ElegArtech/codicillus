@@ -52,7 +52,8 @@
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { libelleDeModule } from '$lib/rangement/modules';
 	import { accord } from '$lib/vocabulaire';
-	import { adresseDeNote, segmentsDeDossier } from '$lib/rangement/adresses';
+	import { adresseDeNote, adressesParLesNoms, segmentsDeDossier } from '$lib/rangement/adresses';
+	import { designationsDeCoquille } from '$lib/coquille/identite';
 
 	/**
 	 * LES SOURCES DE L'ÉCRAN SONT REQUISES — le motif est retiré, pas contourné.
@@ -280,6 +281,53 @@
 	function nb(x: number): string {
 		return x.toLocaleString('fr-FR');
 	}
+
+	const adresses = adressesParLesNoms(designationsDeCoquille());
+
+	/**
+	 * OÙ MÈNE UNE TUILE DE MODULE — et il fallait qu'elle mène quelque part.
+	 *
+	 * Les six tuiles de la section « Accès » étaient des boutons INERTES : un geste
+	 * dessiné qui ne faisait rien. La conséquence dépassait l'ornement — la tuile
+	 * « Dossiers » est le seul chemin depuis un domaine vers la page de son dossier
+	 * racine, d'où « Gérer les droits » accorde un accès. Sans elle, aucune adresse
+	 * ouvrable ne menait au geste, et le produit restait mono-utilisateur.
+	 *
+	 * LA RACINE S'ADRESSE PAR LE CHEMIN NU, que le chargeur de V-13 redirige vers sa
+	 * forme nommée : c'est la seule adresse composable sans connaître le nom de la
+	 * racine.
+	 *
+	 * CARTOGRAPHIE ET CARTE MENTALE SONT DES ÉCRANS GLOBAUX : leur périmètre voyage
+	 * en paramètre, sous la forme `type|nom` que leurs chargeurs relisent.
+	 */
+	function perimetreDuDomaine(nom: string): string {
+		return `?perimetre=${encodeURIComponent('domaine|' + nom)}`;
+	}
+
+	function adresseDeModule(cle: CleDeModule): string {
+		const u = courant.univers;
+		const d = courant.nom;
+		switch (cle) {
+			case 'notes':
+				return adresses.notes(u, d);
+			case 'dossiers':
+				return adresses.dossier(u, d, []);
+			/* Les fiches sont les notes de type « Fiche » : le compteur de la tuile les
+			   compte ainsi, et la liste de V-12 sait retenir cette facette. */
+			case 'fiches':
+				return `${adresses.notes(u, d)}?type=Fiche`;
+			case 'signets':
+				return adresses.signets(u, d);
+			case 'cartographie':
+				return `/cartographie${perimetreDuDomaine(d)}`;
+			case 'carteMentale':
+				return `/carte-mentale${perimetreDuDomaine(d)}`;
+			default:
+				/* Une clé stockée que le catalogue ne porte pas — même repli que
+				   `libelleDeModule()` : la page du domaine, jamais un lien mort. */
+				return adresses.domaine(u, d);
+		}
+	}
 </script>
 
 <!-- `svelte/no-navigation-without-resolve` EST DÉSACTIVÉE POUR LE BALISAGE DE
@@ -432,7 +480,7 @@
 		</div>
 		<section class="modules" id="modules">
 			{#each detail.modules as m (m)}
-				<button class="module" type="button"
+				<a class="module" href={adresseDeModule(m)}
 					><span class="module__ic"
 						>{#if m === 'notes'}<svg
 								width="16"
@@ -506,7 +554,7 @@
 									class="module__n">{comptes[m]}</span
 								>{/if}</span
 						><span class="module__sous">{libelleDeModule(modules, m).sous}</span></span
-					></button
+					></a
 				>
 			{/each}
 		</section>
