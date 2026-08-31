@@ -183,7 +183,28 @@
 						}
 					});
 		const defaire = cablerLEditeur(formulaire, {
-			rechargerSurDomaine: (domaine) => `/notes/nouvelle?domaine=${encodeURIComponent(domaine)}`,
+			/**
+			 * CHANGER DE DOMAINE RECHARGE — les dossiers, les types de fiche et les
+			 * gabarits offerts en dépendent, et ils viennent du chargeur. CE QUI ÉTAIT
+			 * ÉCRIT NE DOIT PAS PARTIR AVEC : le brouillon local est écrit SANS ATTENDRE
+			 * le repos de frappe, juste avant de quitter la page, et l'écran rechargé le
+			 * reprend — titre, corps et gabarit de départ. Dix minutes de rédaction se
+			 * perdaient à corriger un domaine choisi de travers.
+			 *
+			 * LES AUTRES PARAMÈTRES DE L'ADRESSE SURVIVENT AU RECHARGEMENT : les écraser
+			 * refermait le choix de départ demandé par `?template=` et jetait le titre
+			 * d'amorce de `?titre=`.
+			 */
+			rechargerSurDomaine: (domaine) => {
+				brouillon?.ecrireMaintenant();
+				/* Les paramètres sont RECOMPOSÉS, jamais mutés : `svelte/prefer-svelte-reactivity`
+				   refuse une instance modifiable d'`URLSearchParams` dans un composant. */
+				const parametres = new URLSearchParams({
+					...Object.fromEntries(page.url.searchParams),
+					domaine
+				});
+				return `/notes/nouvelle?${parametres.toString()}`;
+			},
 			/* LE RÉFÉRENTIEL DES TYPES DE FICHE — le même que celui qui peuple
 			   `#m-fiche`. Sans lui, choisir un type ne fait apparaître aucun champ
 			   et la valeur du sélecteur ne quitte jamais l'écran. */
@@ -196,6 +217,15 @@
 			resoudre: resolveurDuCorpusServi(data.notes),
 			retour: retourDAnnulation
 		});
+		/* LE CHOIX DE DÉPART EST CÂBLÉ AVANT LE BROUILLON, ET IL NE S'OUVRE PLUS SEUL :
+		   c'est lui qui pose le champ de provenance où le brouillon repose le gabarit,
+		   et l'ordre inverse laissait la reprise sans champ où écrire. */
+		const choix = cablerLeChoixDeDepart(formulaire, {
+			templates: data.templates,
+			inserer: (document) => editeur?.inserer(document),
+			demande: data.templateDemande
+		});
+
 		/* LE BROUILLON LOCAL, CÂBLÉ APRÈS L'ÉDITEUR : il restaure dedans. En création,
 		   `enregistreeLe` est nul — il n'y a aucune version en base à écraser, et le
 		   brouillon est repris d'emblée. */
@@ -206,8 +236,18 @@
 						cle: cleDeBrouillon(data.empreinteDuCompte, CIBLE_DE_CREATION),
 						document: () => editeur.document(),
 						remplacer: (document) => editeur.remplacer(document),
+						/* LE GABARIT FAIT PARTIE DU BROUILLON : le squelette est dans le
+						   corps, mais la PROVENANCE ne se retrouve nulle part ailleurs. */
+						gabarit: () => choix.gabarit(),
+						poserLeGabarit: (gabarit) => choix.poser(gabarit),
 						enregistreeLe: null
 					});
+
+		/* « PAR QUOI COMMENCER ? » NE SE POSE QU'À QUI N'A PAS DÉJÀ SON TEXTE. Un
+		   brouillon repris — le retour d'un changement de domaine — a répondu à la
+		   question ; la modale posée par-dessus le texte restauré n'était qu'un
+		   obstacle à écarter. */
+		if (brouillon === null || !brouillon.repris) choix.ouvrir();
 
 		/* L'AVERTISSEMENT DE DOUBLON — `RG-M05-03`. Il compare aux titres du corpus
 		   DÉJÀ SERVI, celui que le chargeur a filtré au périmètre de l'appelant. */
@@ -216,16 +256,8 @@
 			adresse: (id) => adresseDeNote(id)
 		});
 
-		const defaireLeChoix =
-			editeur === null
-				? () => undefined
-				: cablerLeChoixDeDepart(formulaire, {
-						templates: data.templates,
-						inserer: (document) => editeur.inserer(document),
-						demande: data.templateDemande
-					});
 		return () => {
-			defaireLeChoix();
+			choix.defaire();
 			defaireLesDoublons();
 			brouillon?.defaire();
 			gestes?.defaire();
