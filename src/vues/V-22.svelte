@@ -3,56 +3,29 @@
 	 * V-22 — Signets d'un domaine. Route `/univers/{univers}/{domaine}/signets`
 	 * (`docs/routes.md` §3.3), atteinte par l'entrée de rail « Outils › Signets ».
 	 *
-	 * L'ADRESSE EST CELLE DU GABARIT, PROLONGÉE — `$lib/rangement/adresses`,
-	 * `adresseDesSignetsDuDomaine()`. `signets` est un identifiant réservé sous
-	 * `/univers/{u}/{d}/` (§5.4). La forme raccourcie `/domaines/…` n'existe pas
-	 * (ARB-001), et la clause de désambiguïsation de `RG-M03-02` reste **sans
-	 * objet** (E-09) : à ne jamais implémenter.
+	 * L'adresse est celle du gabarit, prolongée — `$lib/rangement/adresses`. La
+	 * forme raccourcie `/domaines/…` n'existe pas (`ARB-001`), et la clause de
+	 * désambiguïsation de `RG-M03-02` reste SANS OBJET : à ne jamais implémenter.
 	 *
-	 * UN SIGNET EST UNE NOTE DE TYPE « Signet », pas un objet séparé — c'est le
-	 * vocabulaire contractuel (`CLAUDE.md` §3), et c'est ce que porte
-	 * `seeds/corpus.ts` : `type === 'Signet'`, plus `url` et `ajoute`. Le mot
-	 * « lien » ne désigne ici que la cible externe, jamais l'objet du produit.
+	 * UN SIGNET EST UNE NOTE DE TYPE « Signet », pas un objet séparé : c'est le
+	 * vocabulaire contractuel, et c'est ce que porte `seeds/corpus.ts` — `type ===
+	 * 'Signet'`, plus `url` et `ajoute`. Le mot « lien » ne désigne ici que la cible
+	 * externe, jamais l'objet du produit.
 	 *
-	 * LES LIENS DE SIGNET PORTENT LEUR ADRESSE RÉELLE, et c'est le gel : ce sont
-	 * des adresses EXTERNES, écrites au corpus, pas des `href="#"` de maquette.
-	 * Les liens INTERNES, eux, restent ceux du gel — voir l'en-tête de
-	 * `V-12.svelte` et le constat reconduit de P-9 sur ARB-013.
+	 * LES LIENS DE SIGNET PORTENT LEUR ADRESSE RÉELLE, et c'est le gel : ce sont des
+	 * adresses EXTERNES, écrites au corpus.
 	 *
-	 * SIX ÉTATS — `verif/scenarios/V-22.json`. Trois axes, vecteur complet :
-	 * domaine × droits × rappel de sortie. Un doublon déclaré
-	 * (`droits-ecriture` est `identiqueA` `dom-infrastructure`).
+	 * Coquille de forme abrégée ; lien d'évitement `#liste` « Aller à la liste » ;
+	 * chemin courant du rail `[nom du domaine]`.
 	 *
-	 * COQUILLE DE FORME ABRÉGÉE — ARB-021, A-1. `<main class="signets-vue"
-	 * id="contenu">` (ARB-015) ; lien d'évitement `#liste` « Aller à la liste »
-	 * (ARB-019) ; chemin courant du rail `[nom du domaine]`.
+	 * LE MOTEUR DE FACETTES N'EST PAS FACTORISÉ AVEC V-12, ET C'EST DÉLIBÉRÉ
+	 * (`docs/DESIGN.md` §2.H) : les deux vues partagent dix-neuf classes, mais cinq
+	 * d'entre elles — `.facettes`, `.reglages`, `.val`, `.tri`, `.actifs` — ont des
+	 * définitions DIVERGENTES, chacune portée par sa propre feuille. Les
+	 * définitions de facettes diffèrent aussi : deux ici, six en V-12.
 	 *
-	 * `dialog#dlg-supprimer` N'EST PAS RENDU, et c'est déclaré. Il est FERMÉ à
-	 * l'état par défaut, et aucun des six états ne l'ouvre : un `<dialog>` fermé
-	 * ne porte aucune boîte de rendu et n'entre pas dans l'instantané ARIA
-	 * (`docs/releve-vues.md` §4.1, colonne « rendu », qui est physique et
-	 * déterministe). La divergence de balisage est MESURÉE NULLE. La
-	 * confirmation de suppression relève du lot de logique.
-	 *
-	 * LE MOTEUR DE FACETTES N'EST PAS FACTORISÉ AVEC V-12, ET C'EST DÉLIBÉRÉ —
-	 * `docs/DESIGN.md` §2.H, R-11 du relevé. Voir l'en-tête de `V-12.svelte` :
-	 * les deux vues partagent dix-neuf classes, mais cinq d'entre elles
-	 * (`.facettes`, `.reglages`, `.val`, `.tri`, `.actifs`) ont des définitions
-	 * DIVERGENTES selon la vue, chacune portée par sa propre feuille (P-6.3).
-	 * Les définitions de facettes diffèrent elles aussi : deux ici, six en V-12.
-	 *
-	 * AUCUN CHIFFRE N'EST SAISI (P-02) : compteur, comptes de facettes et dates
-	 * sortent des notes servies.
-	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011).
-	 *
-	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette` et `dialog#palette`
-	 * (divergence mesurée nulle, `docs/releve-vues.md` §4.1) et `div.planche`,
-	 * bloc hors produit (§2.G).
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-22.css`, posé par `node verif/feuilles-de-vue.mjs V-22
-	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 * Aucun chiffre n'est saisi : compteur, comptes de facettes et dates sortent des
+	 * notes servies. Le style est dans `src/socle.css` et `src/vues/V-22.css`.
 	 */
 	import type { Domaine, Note, Univers } from '../../seeds/corpus';
 	import { getContext } from 'svelte';
@@ -62,75 +35,51 @@
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { accord } from '$lib/vocabulaire';
 
-	/* LE NOM DE L'ORGANISATION VIENT DU CONTEXTE, JAMAIS DU PRODUIT.
-	   Cette phrase nommait « la direction technique » en dur — le segment de
-	   marché du cadrage soudé dans une phrase d'écran. Le contrôle du paquet ne
-	   la voyait pas : il comparait à la casse, et la signature qu'il cherchait
-	   s'écrit ici en nom commun. Chaîne vide = l'instance ne s'est pas nommée,
+	/* LE NOM DE L'ORGANISATION VIENT DU CONTEXTE, JAMAIS DU PRODUIT. Cette phrase
+	   nommait « la direction technique » en dur — le segment de marché du cadrage
+	   soudé dans une phrase d'écran. Chaîne vide : l'instance ne s'est pas nommée,
 	   et la phrase retombe sur une formulation qui n'affirme rien. */
 	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
 	const nomOrganisation = $derived(identite?.nomOrganisation ?? '');
 
 	/**
-	 * LE RANGEMENT ET L'IDENTITÉ — plus aucun défaut tiré du jeu.
-	 *
-	 * Ces propriétés ont eu pour défaut `UNIVERS`, `DOMAINES`, `MOI` et
-	 * `INSTANCE` de `seeds/corpus.ts` : une route qui oubliait d'en passer une
-	 * servait le rangement du jeu de démonstration, et rien ne protestait —
-	 * l'écran restait plausible, avec des domaines qui n'existent pas.
-	 *
-	 * `domaines` EST REQUISE : la route la passe, et `svelte-check` refuse
-	 * désormais de compiler un appel qui l'oublierait. `univers` peut être vide —
-	 * en forme abrégée le rail est écrit au balisage et ne s'en déduit pas.
-	 * `compte` peut manquer, et son état vide est `null`. `instance` a disparu :
-	 * le contexte de coquille sert la version du paquet.
+	 * LE RANGEMENT ET L'IDENTITÉ — plus aucun défaut tiré du jeu. Ces propriétés ont
+	 * eu pour défaut `UNIVERS`, `DOMAINES` et `MOI` de `seeds/corpus.ts` : une route
+	 * qui en oubliait une servait le rangement du jeu de démonstration, et l'écran
+	 * restait plausible avec des domaines qui n'existent pas. `domaines` est
+	 * REQUISE ; `univers` peut être vide, le rail abrégé étant écrit au balisage.
 	 */
 	interface Proprietes {
-		/** Le vecteur complet de l'état — domaine × droits × rappel. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Les notes lisibles, servies par le chargeur. */
 		notes: readonly Note[];
-		/** Les univers déclarés — vides tant que l'instance n'en porte aucun. */
 		univers?: readonly Univers[];
-		/** Les domaines accessibles — la route les sert. */
 		domaines: readonly Domaine[];
 		/** L'utilisateur connecté. `null` : aucun compte connu. */
 		compte?: CompteAffiche | null;
 		/**
-		 * MODIFIER UN SIGNET. Absente — le rendu d'une planche —, le bouton reste
-		 * inerte comme au gel. Passée par la route, il mène à
-		 * `/univers/{u}/{d}/signets/{identifiant}/modifier`, un écran qui
-		 * existait sans qu'aucun clic n'y mène. Mesuré le 22/08/2026.
+		 * MODIFIER UN SIGNET. Absente, le bouton reste inerte comme au gel. Passée par
+		 * la route, il mène à `/univers/{u}/{d}/signets/{identifiant}/modifier`, un
+		 * écran qui existait sans qu'aucun clic n'y mène.
 		 */
 		onModifier?: (identifiant: string) => void;
 		/**
-		 * LES VALEURS DE FACETTE RETENUES, telles que L'ADRESSE les porte.
-		 *
-		 * Les deux facettes du gel — Étiquette, Auteur — étaient DÉCORATIVES :
-		 * cocher une valeur ne filtrait rien, et cet écran était le dernier
-		 * écran de liste que son adresse ne gouvernait pas. `docs/routes.md`
-		 * §4.2 les déclare pourtant depuis toujours pour cette route.
-		 *
-		 * ABSENTE, aucune valeur n'est retenue et le rendu ne bouge pas d'un
-		 * octet — c'est l'état que la planche rend, et le seul qu'elle rendait.
+		 * LES VALEURS DE FACETTE RETENUES, telles que L'ADRESSE les porte. Les deux
+		 * facettes du gel — Étiquette, Auteur — étaient DÉCORATIVES : cocher une valeur
+		 * ne filtrait rien, et cet écran était le dernier écran de liste que son adresse
+		 * ne gouvernait pas, alors que `docs/routes.md` §4.2 les déclare.
 		 */
 		retenues?: Record<string, readonly string[]>;
 		/**
-		 * L'ORDRE DEMANDÉ — le vocabulaire de la liste des notes, et pas un mot
-		 * de plus : `modification`, `verification`, `consultations`, `alpha`
-		 * (`V-12.svelte`, propriété jumelle). Deux listes du même produit ne
-		 * nomment pas leur ordre de deux façons.
+		 * L'ORDRE DEMANDÉ — le vocabulaire de la liste des notes, et pas un mot de
+		 * plus : `modification`, `verification`, `consultations`, `alpha`. Deux listes
+		 * du même produit ne nomment pas leur ordre de deux façons.
 		 *
-		 * ABSENTE — et c'est le seul état que la planche rend —, l'ordre est
-		 * celui du gel : ancienneté de VÉRIFICATION croissante. Aucun sélecteur
-		 * d'ordre n'est dessiné sur cet écran (`mockups/V-22-signets.html` n'a
-		 * `.tri` qu'en règle de feuille morte) : l'ordre ne s'atteint que par
-		 * l'adresse, et rien n'est ajouté au balisage pour le proposer.
-		 *
-		 * `modification` retombe sur l'ordre du gel : cet écran n'a pas la table
-		 * des anciennetés de modification que la liste des notes reçoit, et
-		 * l'inventer serait un chiffre saisi (`P-02`). Une valeur inconnue
-		 * retombe de même — un paramètre d'adresse ne se refuse pas, il s'ignore.
+		 * ABSENTE, l'ordre est celui du gel : ancienneté de VÉRIFICATION croissante.
+		 * Aucun sélecteur d'ordre n'est dessiné sur cet écran, l'ordre ne s'atteint que
+		 * par l'adresse. `modification` retombe sur l'ordre du gel — cet écran n'a pas
+		 * la table des anciennetés de modification, et l'inventer serait un chiffre
+		 * saisi. Une valeur inconnue retombe de même : un paramètre d'adresse ne se
+		 * refuse pas, il s'ignore.
 		 */
 		tri?: string;
 	}
@@ -148,28 +97,15 @@
 
 	const reglage = $derived(vecteur ?? {});
 	const droits = $derived(reglage['droits'] === 'lecture' ? 'lecture' : 'ecriture');
-	/**
-	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
-	 *
-	 * Le gel POSE les actions d'écriture puis les cache par
-	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
-	 * (`mockups/V-22-signets.html:339`) : faute de serveur, une maquette statique
-	 * n'a pas d'autre moyen de dire « cette action n'existe pas pour ce rôle ».
-	 * Le produit peut ne pas l'émettre, et P-09 l'exige — « ni grisée, NI
-	 * MASQUÉE ». La classe reste posée sur les nœuds rendus.
-	 * Énumération : `docs/omissions-p09.md`.
-	 */
+	/** L'ABSENCE, ET NON LE MASQUAGE — `P-09`, `RG-M05-08`, `ARB-040` : le gel cache
+	    ses actions d'écriture en feuille, le produit ne les émet pas. La classe reste
+	    posée sur les nœuds rendus. */
 	const ecriture = $derived(droits !== 'lecture');
 	/** Le rappel de sortie est une case de planche : cochée par défaut. */
 	const rappelDemande = $derived(reglage['c-rappel'] !== false);
 
-	/**
-	 * AUCUN DOMAINE — l'état vide, écrit plutôt que subi. La liste servie ne peut
-	 * pas être vide sur cette route : le chargeur résout le domaine de l'adresse
-	 * avant d'ouvrir l'écran. Le repli est là pour que la propriété soit honnête
-	 * sur toute sa forme — un tableau vide rendait `domaines[0].nom` et sortait
-	 * en 500.
-	 */
+	/** AUCUN DOMAINE — l'état vide, écrit plutôt que subi : un tableau vide rendait
+	    `domaines[0].nom` et sortait en 500. */
 	const AUCUN_DOMAINE: Domaine = { nom: '', univers: '', couleur: '' };
 
 	const courant = $derived(
@@ -177,22 +113,18 @@
 	);
 
 	/**
-	 * LA MISE EN ÉVIDENCE DU RAIL — LE DOMAINE COURANT, ET LUI SEUL.
-	 *
-	 * Le gel en marquait DEUX : `coquille()` de la maquette AJOUTE la marque
-	 * `noeud--courant` et ne la retire jamais (`V-22:2493`), si bien que la
-	 * planche rendait d'abord « Infrastructure » — le domaine que son scénario
-	 * charge — puis ajoutait le domaine visité. La vue recopiait ce comportement,
-	 * et donc le NOM D'UN DOMAINE DU JEU DE DÉMONSTRATION, écrit en dur.
-	 * Même jurisprudence que V-11 et V-12, même cause, même reprise.
+	 * LA MISE EN ÉVIDENCE DU RAIL — LE DOMAINE COURANT, ET LUI SEUL. Le gel en
+	 * marquait DEUX : `coquille()` AJOUTE `noeud--courant` et ne la retire jamais
+	 * (`V-22:2493`), si bien que la planche marquait d'abord le domaine de son
+	 * scénario. La vue recopiait ce comportement, donc le NOM D'UN DOMAINE DU JEU DE
+	 * DÉMONSTRATION, écrit en dur. Même jurisprudence qu'en V-11 et V-12.
 	 */
 	const railCourant = $derived([courant.nom]);
 
 	/**
-	 * LES SIGNETS DU DOMAINE — `window.signetsDe` du gel, à la lettre : les
-	 * notes de type « Signet » du domaine, triées par ancienneté de vérification
-	 * CROISSANTE. C'est l'ordre du gel, et c'est celui que la vue rend tant
-	 * qu'aucun ordre n'est demandé par l'adresse — voir la propriété `tri`.
+	 * LES SIGNETS DU DOMAINE — `window.signetsDe` du gel, à la lettre : les notes de
+	 * type « Signet » du domaine, triées par ancienneté de vérification CROISSANTE.
+	 * C'est l'ordre rendu tant qu'aucun ordre n'est demandé par l'adresse.
 	 */
 	function comparer(a: Note, b: Note): number {
 		if (tri === 'alpha') return a.titre.localeCompare(b.titre, 'fr');
@@ -207,19 +139,12 @@
 			.sort(comparer)
 	);
 
-	/* ═════════════════════════════════════════════════════════════════════
-	   LES FACETTES — deux ici, et le même calque de moteur qu'en V-12 : le
-	   compte affiché en regard d'une valeur est le nombre de résultats obtenus
-	   si cette valeur était retenue, les autres facettes restant appliquées ;
-	   les valeurs sont triées par compte décroissant puis alphabétiquement.
-
-	   LES VALEURS RETENUES VIENNENT DE L'ADRESSE, et de nulle part ailleurs.
-	   La planche n'a pas d'axe « arrivée », contrairement à V-12 : aucun de
-	   ses six états ne retient de valeur, et sans `retenues` le rendu est
-	   celui qu'elle mesure — `.actifs` vide, que `.actifs:empty` efface.
-	   Le moteur, lui, est celui du gel à la lettre (`V-22:2540-2600`) :
-	   `passe`, `comptesDe`, les jetons de `rendreActifs`, « Tout effacer ».
-	   ═════════════════════════════════════════════════════════════════════ */
+	/* LES FACETTES — deux ici, et le même calque de moteur qu'en V-12 : le compte
+	   affiché en regard d'une valeur est le nombre de résultats obtenus si cette
+	   valeur était retenue, les autres facettes restant appliquées ; les valeurs sont
+	   triées par compte décroissant puis alphabétiquement. LES VALEURS RETENUES
+	   VIENNENT DE L'ADRESSE, et de nulle part ailleurs. Le moteur est celui du gel à
+	   la lettre (`V-22:2540-2600`). */
 
 	interface DefinitionDeFacette {
 		readonly id: string;
@@ -271,8 +196,8 @@
 		const ordonnees = Object.keys(comptes).sort(
 			(a, b) => (comptes[b] ?? 0) - (comptes[a] ?? 0) || a.localeCompare(b, 'fr')
 		);
-		/* Une valeur retenue mais absente du compte est ajoutée en queue et
-		   s'affiche en retrait : la faire disparaître ferait croire à un défaut. */
+		/* Une valeur retenue mais absente du compte est ajoutée en queue et s'affiche
+		   en retrait : la faire disparaître ferait croire à un défaut. */
 		const gardees = choisis[f.id] ?? [];
 		for (const v of gardees) if (!ordonnees.includes(v)) ordonnees.push(v);
 		return {
@@ -290,7 +215,6 @@
 
 	const facettes = $derived(FACETTES.map(facetteRendue).filter((f) => f.valeurs.length > 0));
 
-	/** Les jetons de filtre actif, dans l'ordre de déclaration des facettes. */
 	const filtresActifs = $derived(
 		FACETTES.flatMap((f) =>
 			(choisis[f.id] ?? []).map((valeur) => ({
@@ -301,25 +225,16 @@
 		)
 	);
 
-	/** Les signets que les valeurs retenues laissent passer. */
 	const filtrees = $derived(base.filter((n) => passe(n)));
 
-	/* ═════════════════════════════════════════════════════════════════════
-	   L'ADRESSE EXTERNE, LUE COMME LE GEL LA LIT
-
-	   `window.hoteDe` et `window.cheminDe` : c'est le NOM D'HÔTE qu'on montre,
-	   pas l'adresse complète — « un lecteur reconnaît un site à son nom de
-	   domaine ». Les deux fonctions sont recopiées à la lettre, protocole et
-	   `www.` retirés.
-
+	/* L'ADRESSE EXTERNE, LUE COMME LE GEL LA LIT — `window.hoteDe` et
+	   `window.cheminDe` : c'est le NOM D'HÔTE qu'on montre, pas l'adresse complète.
 	   Elles ne vont PAS dans `$lib/rangement/adresses` : ce module compose les
-	   adresses INTERNES du produit, celles de `docs/routes.md`. Une adresse de
-	   signet est une donnée du corpus, saisie par un contributeur, et lui
-	   appliquer le gabarit de rangement mélangerait deux espaces de noms.
-	   ═════════════════════════════════════════════════════════════════════ */
+	   adresses INTERNES du produit, et une adresse de signet est une donnée du
+	   corpus, saisie par un contributeur. */
 	function hoteDe(url: string): string {
-		// `split` rend toujours au moins un morceau ; le repli est là pour le
-		// typage strict, jamais pour un cas réel.
+		// `split` rend toujours au moins un morceau ; le repli est là pour le typage
+		// strict, jamais pour un cas réel.
 		return (
 			String(url || '')
 				.replace(/^https?:\/\//, '')
@@ -346,7 +261,6 @@
 		return (mot || '?').slice(0, 2);
 	}
 
-	/** Le chemin affiché, tronqué au-delà de 42 caractères. */
 	function cheminAffiche(url: string): string {
 		const chemin = cheminDe(url);
 		return chemin.length > 42 ? chemin.slice(0, 41) + '…' : chemin;
@@ -361,30 +275,25 @@
 	);
 
 	/**
-	 * LE RAPPEL DE SORTIE — RG-M11-02. Il ne s'affiche que si le domaine porte
-	 * au moins un signet : un rappel sur une liste vide n'avertit de rien.
+	 * LE RAPPEL DE SORTIE — `RG-M11-02`. Il ne s'affiche que si le domaine porte au
+	 * moins un signet : un rappel sur une liste vide n'avertit de rien.
 	 */
 	const rappelVisible = $derived(base.length > 0 && rappelDemande);
 </script>
 
 <!--
-	AUCUN BLANC ENTRE LES NŒUDS DE LA CARTE DE SIGNET, et il doit le rester : le
-	relevé d'ordre de tabulation du niveau 1 construit le nom accessible sur
-	`textContent`, où un blanc inséré par le formateur se voit (CLAUDE.md §6,
-	P-6). Le bloc est protégé du formateur ; ne jamais citer la forme exacte de
-	la directive à l'intérieur d'un commentaire (P-9).
+	AUCUN BLANC ENTRE LES NŒUDS DE LA CARTE DE SIGNET, et il doit le rester : le nom
+	accessible se construit sur `textContent`, où un blanc inséré par le formateur
+	se voit. Ne jamais citer la forme exacte de la directive à l'intérieur d'un
+	commentaire.
 
 	`target="_blank"` et `rel="noopener noreferrer"` sont ceux du gel : un signet
 	s'ouvre dans un nouvel onglet, « votre lecture en cours n'est pas perdue ».
-	L'intitulé accessible dit explicitement qu'on quitte le produit.
 -->
 <!--
-	`svelte/no-navigation-without-resolve` EST DÉSACTIVÉE ICI, ET SEULEMENT ICI.
-	La règle veille à ce qu'une adresse INTERNE passe par `resolve()` de
-	SvelteKit ; `n.url` est une adresse EXTERNE, écrite au corpus, hors de tout
-	espace de routes du produit. La résoudre serait une faute, pas une
-	précaution. Les adresses internes du produit, elles, passent par
-	`$lib/rangement/adresses`.
+	`svelte/no-navigation-without-resolve` EST DÉSACTIVÉE ICI, ET SEULEMENT ICI :
+	`n.url` est une adresse EXTERNE, écrite au corpus, hors de tout espace de routes
+	du produit. La résoudre serait une faute, pas une précaution.
 -->
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
 <!-- prettier-ignore -->
@@ -435,10 +344,9 @@
 		<div class="barre-outils">
 			<div class="filtres-barre" id="facettes">
 				{#each facettes as f (f.id)}
-					<!-- LE MENU DIT QUELLE FACETTE IL PORTE. Le câblage l'identifiait par
-					     son RANG, et une facette sans aucune valeur n'est pas rendue :
-					     le rang se décalait alors et cocher une valeur écrivait la clé
-					     d'adresse de la facette voisine. -->
+					<!-- LE MENU DIT QUELLE FACETTE IL PORTE : le câblage l'identifiait par son
+					     RANG, or une facette sans valeur n'est pas rendue — le rang se décalait
+					     et cocher une valeur écrivait la clé de la facette voisine. -->
 					<div class="fac-menu" data-facette={f.id}>
 						<!-- prettier-ignore -->
 						<button type="button" class="fac-menu__bouton" aria-expanded="false" data-actif={f.retenues ? 'oui' : undefined}>{f.nom}{#if f.retenues}<span class="fac-menu__n">{f.retenues}</span>{/if}<span><svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4z"/></svg></span></button>

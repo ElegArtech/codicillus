@@ -1,87 +1,44 @@
 <script lang="ts">
 	/**
-	 * V-18 — Éditeur du registre Opérationnel.
-	 * Route `/notes/{identifiant}/operationnel` (`docs/routes.md`,
-	 * `verif/scenarios/V-18.json`).
+	 * V-18 — Éditeur du registre Opérationnel. Route
+	 * `/notes/{identifiant}/operationnel` (`docs/routes.md`).
 	 *
-	 * LE SECOND CORPS. La deuxième singularité du produit — « une même note peut
-	 * porter deux registres de lecture » — a ici son écran d'écriture. La note est
-	 * `n-restaurer-pg`, celle de V-14, et le corps rédigé est LE MÊME OBJET, porté
-	 * par `$lib/lecture/CorpsReference.svelte` et
-	 * `$lib/lecture/CorpsOperationnel.svelte` : `diff` entre `V-14:1523-1753` et
-	 * `V-18:1709-1939` ne rend aucune ligne, et la maquette le dit d'elle-même —
-	 * « la source de l'Opérationnel est le corps partagé de la note : l'éditeur et
-	 * la lecture montrent le même contenu, jamais deux versions du markup »
-	 * (`V-18:2930-2931`).
+	 * LE SECOND CORPS. Le corps rédigé est LE MÊME OBJET qu'en V-14, porté par
+	 * `$lib/lecture/CorpsReference.svelte` et `CorpsOperationnel.svelte` : `diff`
+	 * entre `V-14:1523-1753` et `V-18:1709-1939` ne rend aucune ligne, et la
+	 * maquette le dit — « l'éditeur et la lecture montrent le même contenu, jamais
+	 * deux versions du markup » (`V-18:2930`).
 	 *
 	 * LE CORPS OPÉRATIONNEL EST RENDU DEUX FOIS, et c'est le gel : une fois comme
-	 * SOURCE masquée dans le panneau de référence (`#corps-operationnel[hidden]`,
-	 * `V-18:2932-2934`),
-	 * une fois dans la zone de rédaction, où le script le recopie tel quel
-	 * (`redaction.innerHTML = OPERATIONNEL`, `V-18:3281`). Les identifiants de
-	 * titre y sont donc en double — `o-preparer`, `o-executer`, `o-controler`,
-	 * `o-bloque`. C'est mesuré sur la maquette stabilisée, pas déduit.
+	 * SOURCE masquée dans le panneau de référence (`V-18:2932`), une fois dans la
+	 * zone de rédaction, où le script le recopie tel quel (`V-18:3281`). Les
+	 * identifiants de titre y sont donc en double.
 	 *
-	 * SIX ÉTATS, UNE FENÊTRE — 6 couples. `ref-ouvert` est marqué `identiqueA`
-	 * `cas-existant` par l'extraction : il ne dévie d'aucun contrôle.
+	 * DEUX LEVIERS ORTHOGONAUX : `cas` décide du contenu rédigé, de l'état de
+	 * sauvegarde, du libellé du bouton principal, de l'avis affiché et des deux
+	 * actions de registre (`V-18:3261`) ; `ref` décide de la place du panneau de
+	 * Référence (`V-18:3160`) — `ouvert`, `cote` ou `ferme`.
 	 *
-	 * DEUX LEVIERS, ET ILS SONT ORTHOGONAUX. `cas` décide du contenu rédigé, de
-	 * l'état de sauvegarde, du libellé du bouton principal, de l'avis affiché et
-	 * de la présence des deux actions de registre (`charger()`, `V-18:3261`).
-	 * `ref` décide de la place du panneau de Référence (`reglerReference()`,
-	 * `V-18:3160`) : `ouvert`, `cote` ou `ferme`. Aucun état n'en combine deux
-	 * déviations, la planche ne dévie qu'un contrôle à la fois.
+	 * Coquille de forme abrégée ; lien d'évitement vers `#redaction`, libellé
+	 * « Aller à la rédaction ».
 	 *
-	 * `RG-M06-08` À `RG-M06-10` — LA DÉSYNCHRONISATION SE SIGNALE, et ce lot NE
-	 * LES DÉCLARE PAS TENUES. L'état `cas-desync` RÉGIT le signalement : bandeau
-	 * `avis--resync` nommant la date et l'auteur de la modification de la
-	 * Référence, et l'action « Marquer comme resynchronisé » révélée dans le
-	 * panneau. C'est le RENDU d'un état, pas la règle : ni la détection de la
-	 * désynchronisation, ni l'attestation, ni leur propagation à la lecture
-	 * n'appartiennent à un squelette sans logique (ARB-011). De même, ce lot ne
-	 * déclare tenue ni `P-09` ni aucune exigence d'édition.
-	 *
-	 * COQUILLE DE FORME ABRÉGÉE — ARB-021, A-1. `<main class="editeur"
-	 * id="contenu">` (ARB-015) ; lien d'évitement vers `#redaction`, libellé
-	 * « Aller à la rédaction » (ARB-019).
-	 *
-	 * LA BARRE D'ÉTAT PASSE PAR `apresContenu` — `ECART-027` É-2, cinquième
-	 * passage du gabarit. Avec V-17, V-18 est la seule maquette du dépôt à porter
-	 * un nœud après `<main>` : `div.barre-etat`, classe seule, boîte
-	 * `248, 837, 1192, 63` aux douze états des deux vues et aux quatre fenêtres du banc.
+	 * LA BARRE D'ÉTAT PASSE PAR `apresContenu` : avec V-17, V-18 est la seule
+	 * maquette du dépôt à porter un nœud après `<main>` — `div.barre-etat`.
 	 *
 	 * CINQ ATTRIBUTS DE DONNÉES HORS GABARIT — `data-vue`, `data-meta`,
-	 * `data-numerote`, `data-reference` et `data-cas`, portés par `donnees`
-	 * (ARB-021, A-2). `data-reference` commande à lui seul les trois positions du
-	 * panneau (`V-18.css:961-962, 977-979`) ; `data-cas` est lu par le script de
-	 * planche du gel, jamais par la feuille — `docs/releve-vues.md` §4 le range
-	 * parmi les onze attributs de ce genre. Il est posé parce que le gel le pose.
-	 * `data-numerote` ne produit RIEN : le gel le pose sur `div.app#app`
-	 * (`V-18:1468`) et la règle qui l'exploite vise `body` (`V-18:836`) —
-	 * `docs/releve-vues.md` §7.7. Le « corriger » changerait le rendu.
+	 * `data-numerote`, `data-reference` et `data-cas`, portés par `donnees`.
+	 * `data-reference` commande à lui seul les trois positions du panneau
+	 * (`V-18.css:961-979`). `data-numerote` NE PRODUIT RIEN : le gel le pose sur
+	 * `div.app#app` et la règle qui l'exploite vise `body` — le « corriger »
+	 * changerait le rendu.
 	 *
-	 * UNE PARTICULARITÉ DU GEL, RELEVÉE ET NON CORRIGÉE. En position `cote`, la
+	 * UNE PARTICULARITÉ DU GEL, RELEVÉE ET NON CORRIGÉE : en position `cote`, la
 	 * feuille écrit `.app[data-reference="cote"] .meta-panneau { display: none }`
 	 * (`V-18.css:978`) alors que le panneau de Référence VIT DANS ce
-	 * `.meta-panneau` (`V-18:1698-1707`) : la colonne de droite disparaît donc
-	 * entièrement, là où le nom de la position en promet le contraire. C'est le
-	 * rendu de la maquette gelée, et il est reproduit tel quel — la règle de
-	 * non-comblement interdit de le « réparer », et P-3 rappelle qu'un
-	 * implémenteur qui répare le gel fait rougir des vues. Constat remonté.
+	 * `.meta-panneau` — la colonne de droite disparaît donc entièrement, là où le
+	 * nom de la position promet le contraire. Ne le « répare » pas.
 	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011) : ni Markdown à la frappe,
-	 * ni reprise du plan de la Référence, ni bascule du panneau, ni
-	 * enregistrement, ni suppression. Le squelette rend l'état de départ.
-	 *
-	 * NON RENDUS, ET DÉCLARÉS : `div.commandes#commandes`, `dialog#dlg-supprimer`
-	 * et `dialog#dlg-quitter`, tous deux FERMÉS aux six états.
-	 * `docs/releve-vues.md` §4.1 les mesure : un `<dialog>` fermé ne porte aucune
-	 * boîte de rendu, ne déplace aucun pixel et n'entre pas dans l'instantané
-	 * ARIA. Et `div.planche`, bloc hors produit (`docs/DESIGN.md` §2.G).
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-18.css`, posé par `node verif/feuilles-de-vue.mjs V-18
-	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 * Le style est dans `src/socle.css` et `src/vues/V-18.css`.
 	 */
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import BandeauApercu from '$lib/edition/BandeauApercu.svelte';
@@ -93,66 +50,39 @@
 	import { accord } from '$lib/vocabulaire';
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état — deux contrôles de planche. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-18')`, variante « lecture ». */
 		notes: readonly Note[];
 		/**
-		 * LE CONTEXTE, ET SON DÉFAUT EST L'ENSEMBLE VIDE.
-		 *
-		 * Cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et `INSTANCE` du jeu de
-		 * démonstration ; ces constantes en sont ensuite devenues les DÉFAUTS,
-		 * ce qui n'était que le même défaut déplacé. La route ne les passe pas —
-		 * le contexte de coquille les porte —, elles rendent donc vide.
-		 * `instance` a disparu : la version du produit vient du contexte.
+		 * LE CONTEXTE, ET SON DÉFAUT EST L'ENSEMBLE VIDE. Cette vue lisait `UNIVERS`,
+		 * `DOMAINES` et `MOI` du jeu de démonstration, puis en a fait ses DÉFAUTS, ce
+		 * qui n'était que le même défaut déplacé. La route ne les passe pas — le
+		 * contexte de coquille les porte.
 		 */
 		univers?: readonly Univers[];
 		domaines?: readonly Domaine[];
 		compte?: CompteAffiche | null;
 		/**
-		 * LA NOTE ÉDITÉE ET SES DEUX CORPS RENDUS — T-042.
-		 *
-		 * L'éditeur de l'Opérationnel montre TROIS choses de la note : son
-		 * identité (fil d'Ariane, nom du registre édité, métadonnées figées), le
-		 * registre Référence en panneau de rappel, et le registre Opérationnel
-		 * dans la zone de rédaction. Les trois venaient de la transcription
-		 * gelée de `n-restaurer-pg` ; elles viennent d'elle quand elle est
-		 * fournie.
-		 *
-		 * **CE LOT N'ÉCRIT AUCUNE SAISIE.** La zone de rédaction reçoit le corps
-		 * rendu, elle ne le modifie pas : l'édition est un comportement
-		 * (ARB-011) et appartient au lot d'édition.
-		 *
-		 * ELLE EST REQUISE. Absente, la vue rendait la transcription figée de
-		 * `n-restaurer-pg` — son fil d'Ariane, son registre Référence en panneau
-		 * de rappel, son Opérationnel dans la zone de rédaction — pour la note
-		 * qu'on était en train d'écrire, et rien ne le signalait.
+		 * LA NOTE ÉDITÉE ET SES DEUX CORPS RENDUS — REQUISE. L'écran montre trois
+		 * choses de la note : son identité, le registre Référence en panneau de rappel
+		 * et le registre Opérationnel dans la zone de rédaction. Absente, les trois
+		 * venaient de la transcription gelée de la note de démonstration, POUR LA NOTE
+		 * QU'ON ÉTAIT EN TRAIN D'ÉCRIRE, et rien ne le signalait.
 		 */
 		affichee: NoteAffichee;
 		/**
-		 * CE QUE LE BANDEAU DE DÉSYNCHRONISATION NOMME — `RG-M06-08`.
+		 * CE QUE LE BANDEAU DE DÉSYNCHRONISATION NOMME — `RG-M06-08`, REQUISE. Le gel
+		 * écrit la date et l'auteur en dur (`V-18:3287`) ; le produit les LIT — la date
+		 * de `corps_reference_modifie_le`, l'auteur de la version écrite.
 		 *
-		 * Le gel écrit la date et l'auteur en dur dans son script de planche
-		 * (`V-18:3287`). Le produit les LIT : la date est celle de
-		 * `corps_reference_modifie_le`, l'auteur celui de la version que cet
-		 * enregistrement a écrite.
-		 *
-		 * L'AUTEUR PEUT MANQUER, et son absence retire la mention plutôt que
-		 * d'inventer un nom (`P-02`). C'est la jurisprudence du bandeau de V-14,
-		 * qui n'interpole que la date qu'il a (`NoteDeDemonstration.svelte:322`).
-		 *
-		 * ELLE EST REQUISE : son absence faisait écrire « Modifiée le 22 juillet
-		 * 2026 par Sophie Nguyen », la phrase du gel, sur n'importe quelle note.
+		 * L'AUTEUR PEUT MANQUER, et son absence retire la mention plutôt que d'inventer
+		 * un nom : c'est la jurisprudence du bandeau de V-14.
 		 */
 		desynchronisation: { quand: string; par: string | null };
 		/**
-		 * L'ANCIENNETÉ DU DERNIER ENREGISTREMENT, EN JOURS — `null` PAR DÉFAUT.
-		 *
-		 * Un nombre : la phrase du gel avec la vraie valeur. `null` : la note n'a
-		 * aucune version, et « Aucune modification » — l'autre phrase du gel — le
-		 * dit exactement. Absente, la barre écrivait « il y a 3 semaines » sur
-		 * toute note : la chaîne du gel figée dans la vue. Aucune route ne sert
-		 * cette ancienneté ; le défaut est donc l'ÉTAT VIDE, jamais une valeur.
+		 * L'ANCIENNETÉ DU DERNIER ENREGISTREMENT, EN JOURS — `null` PAR DÉFAUT : la
+		 * note n'a aucune version, et « Aucune modification » — l'autre phrase du gel —
+		 * le dit exactement. Absente, la barre écrivait « il y a 3 semaines » sur toute
+		 * note. Aucune route ne sert cette ancienneté.
 		 */
 		dernierEnregistrement?: number | null;
 	}
@@ -168,13 +98,10 @@
 		dernierEnregistrement = null
 	}: Proprietes = $props();
 
-	/**
-	 * LE COMPTE SERVI À LA COQUILLE. En application, le contexte l'emporte
-	 * toujours. Hors gabarit racine, il n'y a PAS de compte connecté.
-	 */
+	/** Le compte servi à la coquille. Hors gabarit racine, il n'y a PAS de compte
+	    connecté ; en application, le contexte l'emporte. */
 	const COMPTE_ABSENT: CompteAffiche = { nom: '', initiales: '', role: '', domaine: '' };
 
-	/** La note éditée — celle qu'on modifie, et il n'y a plus d'autre cas. */
 	const note = $derived(affichee.note);
 	const rangement = $derived(rangementDe(note));
 
@@ -191,12 +118,10 @@
 	);
 
 	/**
-	 * LA PHRASE DU BANDEAU DE DÉSYNCHRONISATION — celle du gel, mot pour mot,
-	 * quand rien n'est passé ; la même, nourrie, quand la note est réelle.
-	 *
-	 * La mention de l'auteur tombe avec l'auteur. Elle ne se remplace pas : une
-	 * phrase qui nommerait « un contributeur » là où la base ne sait pas qui a
-	 * écrit serait une valeur illustrative, ce que `P-02` refuse.
+	 * LA PHRASE DU BANDEAU DE DÉSYNCHRONISATION — celle du gel, mot pour mot. La
+	 * mention de l'auteur tombe avec l'auteur, et ne se remplace pas : nommer « un
+	 * contributeur » là où la base ne sait pas qui a écrit serait une valeur
+	 * illustrative.
 	 */
 	const SUITE_DESYNC =
 		", après votre dernière rédaction. Vérifiez que le pas-à-pas tient toujours — ou attestez qu'il tient, sans le rééditer.";
@@ -209,10 +134,8 @@
 	const etatSauvegarde = $derived(cas === 'vierge' ? 'vierge' : 'enregistre');
 	/**
 	 * LA BARRE D'ÉTAT NE PEUT PLUS DIRE « il y a 3 semaines » SUR N'IMPORTE QUELLE
-	 * NOTE. La chaîne était figée dans la vue : une valeur illustrative sur une
-	 * note réelle, ce que `P-02` proscrit. Les deux phrases restent celles du gel,
-	 * et `dernierEnregistrement` décide laquelle — absente, le rendu est celui
-	 * d'avant, à l'octet.
+	 * NOTE : la chaîne était figée dans la vue. Les deux phrases restent celles du
+	 * gel, et `dernierEnregistrement` décide laquelle.
 	 */
 	const texteSauvegarde = $derived(
 		cas === 'vierge' || dernierEnregistrement === null
@@ -223,20 +146,17 @@
 
 <!--
 	LE CORPS OPÉRATIONNEL DANS LA ZONE DE RÉDACTION — la seconde des deux copies
-	que le gel rend (`redaction.innerHTML = OPERATIONNEL`, `V-18:3281`). Le même
-	composant que la source masquée du panneau : un seul markup, deux places.
+	que le gel rend (`V-18:3281`). Le même composant que la source masquée du
+	panneau : un seul markup, deux places.
 
-	T-042 — SANS NOTE ÉDITÉE, LA TRANSCRIPTION FIGÉE ; avec, le corps
-	Opérationnel rendu par l'implémentation unique de `rendreDocument`
-	(ADR-004). Le bloc est protégé du formateur : un blanc inséré entre
-	l'enveloppe et son contenu se relit dans le nom accessible du niveau 1
-	(CLAUDE.md §6, P-6), et la forme exacte de la directive ne se cite jamais
-	dans un commentaire (P-9).
+	Le bloc est protégé du formateur : un blanc inséré entre l'enveloppe et son
+	contenu se relit dans le nom accessible, et la forme exacte de la directive ne
+	se cite jamais dans un commentaire.
 
-	L'INSERTION DE BALISAGE EST ADMISE PARCE QUE LE CONTENU EST MAÎTRISÉ : c'est
-	la sortie de `rendreDocument`, dont l'en-tête énonce la contrepartie du refus
-	d'ADR-003 de stocker du HTML libre — « le texte d'un document est du TEXTE :
-	il ne devient jamais du balisage ». Même jurisprudence que `V-31.svelte`.
+	L'INSERTION DE BALISAGE EST ADMISE PARCE QUE LE CONTENU EST MAÎTRISÉ : c'est la
+	sortie de `rendreDocument`, dont l'en-tête énonce la contrepartie du refus
+	d'`ADR-003` de stocker du HTML libre — « le texte d'un document est du TEXTE : il
+	ne devient jamais du balisage ».
 -->
 <!-- eslint-disable svelte/no-at-html-tags -- sortie de `rendreDocument`, texte échappé par `echapper()` (ADR-003) -->
 <!-- prettier-ignore -->
@@ -244,11 +164,10 @@
 <!-- eslint-enable svelte/no-at-html-tags -->
 
 <!--
-	Le contenu du bouton principal de la barre d'état. Il vit ICI parce qu'il
-	porte `margin-left:4px`, propriété contrainte par P-1.2 : un style en ligne
-	n'est prouvé que par la maquette rattachée au fichier (ARB-016, P-6.4), et
-	`src/lib/edition/` n'a aucun rattachement. Même jurisprudence que le
-	séparateur `›` de V-14.
+	Le contenu du bouton principal de la barre d'état. Il vit ICI parce qu'il porte
+	`margin-left:4px` : un style en ligne n'est prouvé que par la maquette rattachée
+	au fichier (`ARB-016`), et `src/lib/edition/` n'a aucun rattachement. Même
+	jurisprudence que le séparateur `›` de V-14.
 -->
 {#snippet boutonEnregistrer()}<span id="enregistrer-txt"
 		>{cas === 'vierge' ? "Créer l'Opérationnel" : "Enregistrer l'Opérationnel"}</span
@@ -300,10 +219,9 @@
 				</button>
 			</div>
 
-			<!-- ---------- Avertissements ----------
-				Un avis par état, et deux états seulement en portent un : l'aide au
-				démarrage de la première rédaction, et le signalement de
-				désynchronisation. `cas-existant` n'en porte aucun. -->
+			<!-- Avertissements — un avis par état, et deux états seulement en portent
+				un : l'aide au démarrage de la première rédaction, et le signalement de
+				désynchronisation. -->
 			<div id="avis">
 				{#if cas === 'vierge'}
 					<div class="avis avis--info" data-avis="depart">
