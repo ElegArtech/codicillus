@@ -827,6 +827,16 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		 * LES CIBLES SONT CELLES SUR LESQUELLES L'APPELANT PEUT ÉCRIRE
 		 * (`RG-M08-04`, les deux extrémités) : une note qu'il ne pourrait pas
 		 * relier n'est pas proposée, plutôt que refusée après le clic.
+		 *
+		 * DEUX LISTES VIDES NE RENDENT PAS CETTE PROPRIÉTÉ NULLE, ET C'EST VOULU.
+		 * Sur une instance neuve, le référentiel de types est vide et la note lue
+		 * est souvent la seule du périmètre d'écriture. La tentation est de servir
+		 * `null` — le dialogue ne serait alors pas monté, et le bouton
+		 * « + Ajouter » que V-14 dessine n'ouvrirait plus rien : un geste promis
+		 * par l'écran et sans effet, ce qui est un défaut. La boîte est donc montée
+		 * et reçoit les deux listes TELLES QU'ELLES SONT ; c'est elle qui nomme ce
+		 * qui manque et l'adresse où le créer. `null` reste réservé au seul cas où
+		 * le geste n'a pas à être offert du tout : l'absence de droit d'écriture.
 		 */
 		relation: lecture.capacites.ecrireDesNotes
 			? {
