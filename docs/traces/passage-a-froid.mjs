@@ -6,6 +6,12 @@
  * signet —, puis ouvre les trente-neuf routes du produit dans Chromium et LIT LE
  * HTML SERVI. Il échoue si un seul nom du jeu de démonstration s'y trouve.
  *
+ * IL PÈSE AUSSI LE CODE HTTP DE CHAQUE ROUTE, et c'est la moitié du contrôle :
+ * chaque route porte, écrit à côté d'elle, le code qu'on attend d'elle. Le
+ * passage a longtemps IMPRIMÉ ce code sans jamais le juger — trente-neuf pages
+ * en 500 se seraient relevées en 500 sous un verdict « PASSAGE À FROID COMPLET »
+ * et un code de sortie 0. Le dépôt porte cet incident-là au passé.
+ *
  * C'EST EXACTEMENT LE GESTE QUE DEUX FICHIERS DU DÉPÔT RACONTENT AVOIR FAIT À
  * LA MAIN LE 21/08/2026 (`schema.ts:444`, `identite.ts:12`). Automatisé, il
  * aurait attrapé le seul défaut vraiment SERVI du balayage du 26/08 : ouvrir
@@ -46,7 +52,8 @@
  * IL ÉCRIT EN BASE, mais dans une base à lui, qu'il détruit et recrée à chaque
  * passage. Aucune autre base du poste n'est touchée.
  *
- * Code de retour : 0 si aucun nom du jeu n'a été servi, 1 sinon.
+ * Code de retour : 0 si chaque route a rendu le code attendu d'elle et qu'aucun
+ * nom du jeu n'a été servi, 1 sinon.
  */
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -245,9 +252,19 @@ try {
 	await page.fill('#f-nom', DOMAINE);
 	await page.selectOption('#f-univers', { index: 0 });
 	/* TOUS LES MODULES : les routes de signets, de cartographie et de carte
-	   mentale n'existent pas sans eux, et ce sont des routes à ouvrir. */
+	   mentale n'existent pas sans eux, et ce sont des routes à ouvrir.
+
+	   ON AMÈNE CHAQUE CASE SOUS LES YEUX AVANT DE LA COCHER. Le tiroir de
+	   formulaire est plus long que la fenêtre, et `force: true` saute les
+	   contrôles d'actionnabilité SANS jamais lever la contrainte de fenêtre :
+	   selon la hauteur rendue, la dernière case tombait dehors et le passage
+	   s'arrêtait sur « Element is outside of the viewport », une fois sur
+	   quatre. Un garde-fou intermittent est un garde-fou qu'on débranche.
+	   Le geste reste celui d'un utilisateur — on déroule, puis on coche. */
 	for (const b of await page.$$('#f-modules input[type="checkbox"]:not([disabled])')) {
-		if (!(await b.isChecked())) await b.check({ force: true });
+		if (await b.isChecked()) continue;
+		await b.scrollIntoViewIfNeeded();
+		await b.check({ force: true });
 	}
 	await page.click('#form-valider');
 	await page.waitForFunction((nom) => document.body.textContent?.includes(nom) === true, DOMAINE, {
@@ -287,7 +304,9 @@ try {
 	const ecrireUneNote = async (titreDeNote, publique) => {
 		await page.goto(`${BASE_URL}/notes/nouvelle`, { waitUntil: 'networkidle' });
 		await page.fill('#titre', titreDeNote);
-		await page.locator('#m-dossier input').first().check({ force: true });
+		const dossier = page.locator('#m-dossier input').first();
+		await dossier.scrollIntoViewIfNeeded();
+		await dossier.check({ force: true });
 		if (publique) await page.click('#m-visibilite button[data-val="Publique"]');
 		await page.locator('#redaction').click();
 		await page.keyboard.type(`Corps écrit par le passage à froid, pour « ${titreDeNote} ».`);
@@ -345,59 +364,69 @@ try {
 			.replaceAll('{guide}', publique)
 			.replaceAll('{signet}', signet.identifiant);
 
+	/* CHAQUE ROUTE PORTE LE CODE QU'ON ATTEND D'ELLE, ÉCRIT À CÔTÉ D'ELLE ET
+	   JAMAIS DEVINÉ. Sur le décor que le passage se pose — un univers, un
+	   domaine, deux notes, un signet —, tout s'ouvre ; seule l'adresse qui
+	   n'existe pas est introuvable, et elle l'est dans les deux polarités. Un
+	   écart au code attendu est une fuite au même titre qu'une aiguille du
+	   jeu : il s'affiche au relevé, et il fait rendre 1. */
 	const EN_SESSION = [
-		'/',
-		'/recherche',
-		'/notes/nouvelle',
-		'/notes/{note}',
-		'/notes/{note}/modifier',
-		'/notes/{note}/operationnel',
-		'/notes/{note}/relations',
-		'/notes/{note}/comparaison',
-		'/univers/{univers}',
-		'/univers/{univers}/{domaine}',
-		'/univers/{univers}/{domaine}/notes',
-		'/univers/{univers}/{domaine}/dossiers/',
-		'/univers/{univers}/{domaine}/signets',
-		'/univers/{univers}/{domaine}/signets/nouveau',
-		'/univers/{univers}/{domaine}/signets/{signet}/modifier',
-		'/cartographie',
-		'/cartographie/par-type',
-		'/carte-mentale',
-		'/importer',
-		'/mon-profil',
-		'/bibliotheque',
-		'/console',
-		'/console/univers',
-		'/console/domaines',
-		'/console/types-de-fiches',
-		'/console/types-de-relations',
-		'/console/templates',
-		'/console/comptes',
-		'/console/imports',
-		'/console/exports',
-		'/console/analytique',
-		'/console/configuration',
+		['/', 200],
+		['/recherche', 200],
+		['/notes/nouvelle', 200],
+		['/notes/{note}', 200],
+		['/notes/{note}/modifier', 200],
+		['/notes/{note}/operationnel', 200],
+		['/notes/{note}/relations', 200],
+		['/notes/{note}/comparaison', 200],
+		['/univers/{univers}', 200],
+		['/univers/{univers}/{domaine}', 200],
+		['/univers/{univers}/{domaine}/notes', 200],
+		['/univers/{univers}/{domaine}/dossiers/', 200],
+		['/univers/{univers}/{domaine}/signets', 200],
+		['/univers/{univers}/{domaine}/signets/nouveau', 200],
+		['/univers/{univers}/{domaine}/signets/{signet}/modifier', 200],
+		['/cartographie', 200],
+		['/cartographie/par-type', 200],
+		['/carte-mentale', 200],
+		['/importer', 200],
+		['/mon-profil', 200],
+		['/bibliotheque', 200],
+		['/console', 200],
+		['/console/univers', 200],
+		['/console/domaines', 200],
+		['/console/types-de-fiches', 200],
+		['/console/types-de-relations', 200],
+		['/console/templates', 200],
+		['/console/comptes', 200],
+		['/console/imports', 200],
+		['/console/exports', 200],
+		['/console/analytique', 200],
+		['/console/configuration', 200],
 		/* L'ADRESSE QUI N'EXISTE PAS — c'est V-26, et c'est là que la table
 		   d'adresses de sa planche s'afficherait si la route ne passait pas la
-		   sienne. Elle est ouverte dans les deux polarités. */
-		'/notes/n-adresse-qui-n-existe-pas'
+		   sienne. Elle est ouverte dans les deux polarités, et elle est la seule
+		   du relevé dont on attend autre chose qu'un 200. */
+		['/notes/n-adresse-qui-n-existe-pas', 404]
 	];
 	const ANONYME = [
-		'/',
-		'/connexion',
-		'/guides/{guide}',
-		'/mot-de-passe-oublie',
-		'/mot-de-passe-oublie/jeton-qui-n-existe-pas',
-		'/notes/n-adresse-qui-n-existe-pas'
+		['/', 200],
+		['/connexion', 200],
+		['/guides/{guide}', 200],
+		['/mot-de-passe-oublie', 200],
+		['/mot-de-passe-oublie/jeton-qui-n-existe-pas', 200],
+		['/notes/n-adresse-qui-n-existe-pas', 404]
 	];
 
 	const fuites = [];
-	const ouvrir = async (p, chemins, polarite) => {
-		titre(`5. LES ROUTES — ${polarite} (${chemins.length})`);
-		for (const brut of chemins) {
+	const ecarts = [];
+	const ouvrir = async (p, routes, polarite) => {
+		titre(`5. LES ROUTES — ${polarite} (${routes.length})`);
+		for (const [brut, attendu] of routes) {
 			const c = chemin(brut);
 			const reponse = await p.goto(BASE_URL + c, { waitUntil: 'networkidle' });
+			const obtenu = reponse.status();
+			if (obtenu !== attendu) ecarts.push({ chemin: c, polarite, attendu, obtenu });
 			const servi = await reponse.text();
 			const rendu = await p.content();
 			const surServi = aiguillesTrouvees(servi, aiguilles);
@@ -409,9 +438,12 @@ try {
 					.map((v) => ({ ...v, lecture: 'rendu hydraté' }))
 			];
 			for (const m of marques) fuites.push({ ...m, chemin: c, polarite });
-			const verdict = marques.length === 0 ? 'propre' : `${marques.length} AIGUILLE(S)`;
+			const griefs = [];
+			if (obtenu !== attendu) griefs.push(`${attendu} ATTENDU`);
+			if (marques.length > 0) griefs.push(`${marques.length} AIGUILLE(S)`);
+			const verdict = griefs.length === 0 ? 'propre' : griefs.join(', ');
 			console.log(
-				`     ${String(reponse.status()).padEnd(4)} ${c.padEnd(52)} ` +
+				`     ${String(obtenu).padEnd(4)} ${c.padEnd(52)} ` +
 					`${String(servi.length).padStart(7)} o  ${verdict}`
 			);
 		}
@@ -426,12 +458,27 @@ try {
 
 	/* ── 6. LE RELEVÉ ────────────────────────────────────────────────────────── */
 	titre('6. LE RELEVÉ');
-	if (fuites.length === 0) {
-		console.log('     RIEN. Aucun nom du jeu de démonstration n’a été servi.');
+	const nombreDeRoutes = EN_SESSION.length + ANONYME.length;
+
+	if (ecarts.length === 0) {
+		console.log(`     CODES.     Les ${nombreDeRoutes} routes ont rendu le code attendu d’elles.`);
+	} else {
+		for (const e of ecarts) {
+			console.log(
+				`     ${e.chemin.padEnd(56)} (${e.polarite})  a rendu ${e.obtenu}, ` +
+					`${e.attendu} attendu`
+			);
+		}
 		console.log(
-			`\n══ PASSAGE À FROID COMPLET — ${EN_SESSION.length + ANONYME.length} routes, ` +
-				`${aiguilles.length} aiguilles, base sans une ligne du jeu ══\n`
+			`\n!! ${ecarts.length} route(s) hors du code attendu : le produit ne s’ouvre pas comme il`
 		);
+		console.log('   le promet. Le remède est dans la ROUTE — son chargeur, son gabarit, son');
+		console.log('   droit — jamais dans le code attendu écrit à côté d’elle.');
+		code = 1;
+	}
+
+	if (fuites.length === 0) {
+		console.log('     AIGUILLES. Aucun nom du jeu de démonstration n’a été servi.');
 	} else {
 		for (const f of fuites) {
 			console.log(`     ${f.chemin}  (${f.polarite}, ${f.lecture})  ×${f.combien}`);
@@ -444,6 +491,13 @@ try {
 		console.log('   Le remède est la DONNÉE, pas la condition : une propriété requise que la');
 		console.log('   route passe, ou un état vide explicite — jamais une constante du jeu.');
 		code = 1;
+	}
+
+	if (code === 0) {
+		console.log(
+			`\n══ PASSAGE À FROID COMPLET — ${nombreDeRoutes} routes toutes au code attendu, ` +
+				`${aiguilles.length} aiguilles, base sans une ligne du jeu ══\n`
+		);
 	}
 } catch (cause) {
 	console.error('\n!! LE PASSAGE S’EST ARRÊTÉ :', cause.message);
