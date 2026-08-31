@@ -898,19 +898,24 @@
 							>Bloc d'alerte — danger</button
 						>
 						<button type="button" data-bloc="diagramme" role="menuitem">Diagramme</button>
-						<button type="button" data-bloc="lien-interne" role="menuitem"
-							>Lien interne <span class="raccourci">[[</span></button
-						>
-						<button type="button" id="menu-commandes-aide" role="menuitem"
-							>Menu de commandes <span class="raccourci">/</span></button
-						>
+						<!--
+							LES DEUX RACCOURCIS DE FRAPPE NE SONT PAS ANNONCÉS, PARCE QU'ILS
+							N'EXISTENT PAS. Le gel affichait « [[ » sur le lien interne et une
+							entrée « Menu de commandes / » ; aucune règle de frappe n'est
+							posée dans `$lib/edition` — ni « / » sur une ligne vide, ni « [[ »
+							—, et l'entrée « / » était la seule du menu sans commande : la
+							délégation ne branche que `data-cmd`, `data-bloc` et `data-mark`,
+							et le clic ne faisait que refermer le menu. Une promesse morte
+							vaut moins que rien : c'est le menu qui insère ces blocs.
+						-->
+						<button type="button" data-bloc="lien-interne" role="menuitem">Lien interne</button>
 					</div>
 				</div>
 			</div>
 
 			<ZoneDeRedaction
 				libelle="Corps de la note"
-				invite="Écrivez ici. Tapez « / » sur une ligne vide pour insérer un bloc, « [[ » pour lier une autre note."
+				invite="Écrivez ici. Le menu « Plus » de la barre insère un bloc d'alerte, un diagramme ou un lien interne."
 				{...corps === '' ? {} : { corps: corpsRedige }}
 			/>
 		</div>
