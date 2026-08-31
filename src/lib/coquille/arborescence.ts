@@ -1,16 +1,12 @@
 /**
  * Coquille applicative (V-37) — dérivation de l'arborescence du rail.
  *
- * Le rail n'est jamais écrit en dur : il se déduit du corpus, exactement comme
- * la maquette gelée le fait (`mockups/V-37-coquille.html`, `construireRail()`
- * et `dossiersDuDomaine()`). Trois niveaux, et un seul ordre pour chacun :
+ * Le rail n'est jamais écrit en dur : il se déduit du corpus, exactement comme la
+ * maquette gelée le fait. Trois niveaux, et un seul ordre pour chacun :
  *
  *   • les univers, dans l'ordre défini par l'administrateur (`ordre`) ;
  *   • les domaines, dans l'ordre du registre des domaines ;
  *   • les dossiers, par ordre alphabétique français, à chaque niveau.
- *
- * Un univers sans domaine accessible n'apparaît pas — c'est le filtre que pose
- * la maquette, et il vaut règle : la navigation ne montre pas de rangement vide.
  *
  * Le dossier n'est pas une table : il est porté par le chemin de chaque note
  * (« Exploitation › Sauvegardes »), et l'arborescence s'en déduit. Une note
@@ -25,10 +21,8 @@ import {
 	type DesignationsDeRangement
 } from '../rangement/adresses';
 
-/** Le séparateur de chemin de dossier employé par le corpus. */
 const SEPARATEUR = '›';
 
-/** Un dossier de l'arborescence d'un domaine. */
 export interface NoeudDeDossier {
 	readonly nom: string;
 	/** Identité de branche, telle que la maquette la nomme : `f:<domaine>:<segment>…`. */
@@ -36,7 +30,6 @@ export interface NoeudDeDossier {
 	readonly enfants: readonly NoeudDeDossier[];
 }
 
-/** Un domaine et l'arborescence de ses dossiers. */
 export interface NoeudDeDomaine {
 	readonly nom: string;
 	/** Identité de branche : `d:<domaine>`. */
@@ -44,7 +37,6 @@ export interface NoeudDeDomaine {
 	readonly enfants: readonly NoeudDeDossier[];
 }
 
-/** Un univers et les domaines qui lui sont rattachés. */
 export interface SectionDUnivers {
 	readonly nom: string;
 	readonly domaines: readonly NoeudDeDomaine[];
@@ -58,16 +50,13 @@ export interface NoeudRendu {
 	readonly nom: string;
 	readonly cle: string;
 	/**
-	 * L'ADRESSE DU NŒUD — et c'est elle qui manquait.
+	 * L'ADRESSE DU NŒUD — et c'est elle qui manquait. Le gel écrit `href="#"` sur
+	 * toutes les entrées du rail, et `ARB-013` retire les lignes d'adresse de la
+	 * comparaison de structure « précisément pour que le produit porte SES adresses
+	 * et non les `href="#"` du gel ».
 	 *
-	 * Le gel écrit `href="#"` sur toutes les entrées du rail : une maquette
-	 * statique n'a pas d'adresses, et `ARB-013` retire d'ailleurs les lignes
-	 * d'adresse de la comparaison de structure « précisément pour que le produit
-	 * porte SES adresses et non les `href="#"` du gel ». Personne ne les avait
-	 * portées : cliquer un univers, un domaine ou un dossier ne faisait rien.
-	 *
-	 * Elle est calculée ICI, à la construction, parce que c'est le seul endroit
-	 * qui connaisse à la fois l'univers, le domaine et le chemin — la clé
+	 * Elle est calculée ICI, à la construction, parce que c'est le seul endroit qui
+	 * connaisse à la fois l'univers, le domaine et le chemin — la clé
 	 * `f:<domaine>:<segment>…` ne porte pas l'univers.
 	 */
 	readonly cible: {
@@ -86,7 +75,6 @@ export interface NoeudRendu {
 	readonly chargement: boolean;
 }
 
-/** Une section d'univers prête à rendre. */
 export interface SectionRendue {
 	readonly nom: string;
 	/** `/univers/{univers}` — la page de l'univers lui-même. */
@@ -98,12 +86,10 @@ export interface SectionRendue {
 	readonly domaines: readonly NoeudRendu[];
 }
 
-/** Les univers dans l'ordre défini par l'administrateur. */
 export function universOrdonnes(univers: readonly Univers[]): readonly Univers[] {
 	return [...univers].sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0));
 }
 
-/** Les domaines rattachés à un univers, dans l'ordre du registre. */
 export function domainesDe(domaines: readonly Domaine[], univers: string): readonly Domaine[] {
 	return domaines.filter((d) => d.univers === univers);
 }
@@ -144,13 +130,10 @@ export function dossiersDuDomaine(
 }
 
 /**
- * Le rail : TOUS les univers, et leurs arborescences.
- *
- * Un univers sans domaine y figure, avec une liste vide. Il en était écarté —
- * c'est ce que fait le script du gel (`V-07:construireRail`) —, et sur une
- * instance neuve cela rendait le premier geste du produit invisible : on crée un
- * univers à la console, et rien dans la navigation ne le montrait ni ne menait
- * à sa page.
+ * Le rail : TOUS les univers, et leurs arborescences. Un univers sans domaine y
+ * figure, avec une liste vide — il en était écarté, et sur une instance neuve cela
+ * rendait le premier geste du produit invisible : on crée un univers à la console,
+ * et rien dans la navigation ne le montrait ni ne menait à sa page.
  */
 export function sectionsDuRail(
 	univers: readonly Univers[],
@@ -168,34 +151,28 @@ export function sectionsDuRail(
 }
 
 /**
- * Applique à l'arborescence l'état de la page courante et celui d'une branche
- * en chargement.
- *
- * `courant` est le chemin de la page, du domaine au dernier rangement. Un nœud
- * dont le nom y figure est mis en évidence ; le dernier segment porte en plus
- * `aria-current="page"`. Les ancêtres d'un nœud courant se déplient — et le
- * nœud courant lui-même, ce que fait aussi la maquette.
+ * Applique à l'arborescence l'état de la page courante et celui d'une branche en
+ * chargement. `courant` est le chemin de la page, du domaine au dernier rangement :
+ * un nœud dont le nom y figure est mis en évidence, le dernier segment porte en
+ * plus `aria-current="page"`, et les ancêtres se déplient.
  */
 export function rendreNoeuds(
 	noeuds: readonly (NoeudDeDomaine | NoeudDeDossier)[],
 	courant: readonly string[],
 	brancheEnChargement: string | null,
 	/**
-	 * L'UNIVERS ET LE DOMAINE PORTEURS, pour composer l'adresse. Ils descendent
-	 * avec la récursion parce que la clé d'un dossier — `f:<domaine>:<segment>…`
-	 * — ne porte pas l'univers, et qu'une adresse de dossier en a besoin.
-	 * Absents, l'adresse est vide et le rendu est celui d'avant : c'est ce qui
-	 * laisse les appelants qui ne les connaissent pas rendre ce qu'ils rendaient.
+	 * L'UNIVERS ET LE DOMAINE PORTEURS, pour composer l'adresse. Ils descendent avec
+	 * la récursion parce que la clé d'un dossier ne porte pas l'univers. Absents,
+	 * l'adresse est vide et le rendu est celui d'avant.
 	 */
 	univers = '',
 	domaine: string | null = null,
 	chemin: readonly string[] = [],
 	/**
 	 * LA TABLE QUI TRADUIT UN NOM EN IDENTIFIANT D'ADRESSE. Les nœuds portent des
-	 * NOMS — le rail affiche des noms —, et l'identifiant d'un univers ou d'un
-	 * domaine est persisté, stable sous les renommages (`RG-M12-11`) : le
-	 * slugifier rendait 404 toute la branche d'un domaine renommé. Vide, la
-	 * dérivation d'avant s'applique.
+	 * NOMS, et l'identifiant d'un univers ou d'un domaine est persisté, stable sous
+	 * les renommages (`RG-M12-11`) : le slugifier rendait 404 toute la branche d'un
+	 * domaine renommé. Vide, la dérivation d'avant s'applique.
 	 */
 	designations: DesignationsDeRangement = SANS_DESIGNATION
 ): readonly NoeudRendu[] {
@@ -240,7 +217,6 @@ export function rendreNoeuds(
 	});
 }
 
-/** Le rail, arborescence et état réunis. */
 export function railRendu(
 	sections: readonly SectionDUnivers[],
 	courant: readonly string[],

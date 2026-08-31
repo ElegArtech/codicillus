@@ -1,83 +1,18 @@
 /**
- * LE CHARGEUR DE `/univers/{univers}` — V-10, page d'un univers.
+ * LE CHARGEUR DE `/univers/{univers}` — V-10. « Connecté (AU MOINS UN DOMAINE LISIBLE) » :
+ * la session vient de `src/hooks.server.ts`, « lisible » de `resolution.ts`, et les deux
+ * refus passent par le même point de sortie (`ADR-007`). `univers` et `domaines` sont
+ * réduits à ce qui porte au moins un domaine lisible : une carte de domaine mène à une
+ * page atteignable (`P-03`). `modules`, `compte` et `instance` ne sont pas passés.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CETTE ROUTE DÉCIDE, ET AVEC QUOI
+ * L'ACTIVITÉ NE S'INVENTE PAS (`P-02`) : la base porte trois des cinq types de
+ * `TypeDEvenement`, chacun par une trace horodatée et signée — `verification`, `edition`
+ * et `revision`. LES DEUX AUTRES, `publication` et `import`, N'ONT AUCUNE TRACE et ne
+ * sont JAMAIS ÉMIS. LA FENÊTRE EST DE SEPT JOURS, ET ELLE EST LUE DANS LE GEL : la zone
+ * annonce elle-même son absence par « Rien de neuf CETTE SEMAINE ».
  *
- * `docs/routes.md:124` fixe son niveau d'accès : « connecté (AU MOINS UN
- * DOMAINE LISIBLE) ». Les deux moitiés sont appliquées, et aucune n'est écrite
- * ici : la session vient de `src/hooks.server.ts` (`locals.identite`), et
- * « lisible » vient de `src/lib/droits/resolution.ts` par `capacites()`.
- * Ce chargeur ne compare aucun rôle et ne remonte aucune arborescence.
- *
- * `docs/routes.md:365`, matrice §5.5, ligne `/univers/…` : **404 V-04** en
- * anonyme, **404 V-26** en connecté sans droit, la page pour les deux autres
- * colonnes. Les deux refus passent par le même point de sortie, `ADR-007`.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LA VUE REÇOIT DÉSORMAIS — LA PAGE EST BRANCHÉE SUR LA BASE
- *
- * `T-041` avait rendu les sept sources de V-10 PASSABLES sans rien passer : la
- * vue lisait toujours `UNIVERS`, `DOMAINES`, `DETAIL_DOMAINES` et `ACTIVITE`
- * dans `seeds/corpus.ts`, et une note créée à l'instant ne changeait donc ni la
- * description d'un domaine, ni ses pastilles de module, ni le flux d'activité.
- * Les quatre viennent maintenant de la base :
- *
- *   `univers`         `univers`, ordre compris, réduit à ceux qui portent au
- *                     moins un domaine lisible par l'appelant ;
- *   `domaines`        `domaines`, réduits de la même façon — une carte de
- *                     domaine mène à une page, donc à une page atteignable
- *                     (`P-03`) ;
- *   `detailDomaines`  la description de `domaines` et les modules de
- *                     `modules_de_domaine`. C'est ce qui rend `P-04` EFFECTIVE
- *                     sur les pastilles des cartes : elles coïncidaient avec la
- *                     table sans en être pilotées (mesuré par `T-032`) ;
- *   `activite`        les traces que la base porte RÉELLEMENT — voir plus bas.
- *
- * NE SONT TOUJOURS PAS PASSÉS, et c'est déclaré plutôt que comblé :
- * `modules` — le catalogue des six libellés de module, qui n'est pas une donnée
- * d'instance mais une nomenclature, et qu'aucune table ne porte —, `compte` et
- * `instance`, qui appartiennent à la COQUILLE et sont servis de la même façon
- * aux 41 vues : les câbler ici seulement fabriquerait deux régimes.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * L'ACTIVITÉ NE S'INVENTE PAS — CE QUE LA BASE ENREGISTRE, ET RIEN D'AUTRE
- *
- * `P-02` : « aucun indicateur, aucune tendance, aucun compteur ne peut être
- * figé ou simulé ». Le flux d'activité de V-10 servait jusqu'ici les huit
- * événements de `ACTIVITE`, écrits à la main pour la maquette.
- *
- * La base porte trois des cinq types de `TypeDEvenement`, et chacun par une
- * trace horodatée et signée :
- *
- *   `verification` — une ligne de `verifications` (M06.2, écrite par
- *                    `src/lib/donnees/verification.ts`) ;
- *   `edition`      — une ligne de `versions` (RG-M07-02, écrite par
- *                    `src/lib/donnees/edition.ts`) ;
- *   `revision`     — le signalement porté par la note elle-même
- *                    (`revision_demandee`, RG-M06-05).
- *
- * LES DEUX AUTRES — `publication` et `import` — N'ONT AUCUNE TRACE, et ils ne
- * sont donc JAMAIS ÉMIS. Ce n'est pas une lacune de ce chargeur : rien en base
- * ne date une publication ni un import, et en déduire un événement serait
- * exactement la valeur illustrative que `P-02` proscrit. La lacune est celle
- * que `SANS_CONTREPARTIE_EN_BASE` de `src/lib/donnees/accueil.ts` décrit pour
- * V-07 ; ce chargeur en tire la seule conclusion possible — il rend ce qui est
- * enregistré, jamais ce qui manque.
- *
- * LA FENÊTRE EST DE SEPT JOURS, ET ELLE EST LUE DANS LE GEL, non décidée ici :
- * la zone annonce elle-même son absence par « Rien de neuf CETTE SEMAINE »
- * (`mockups/V-10-page-univers.html:1983`), et les huit événements de la maquette
- * s'étalent sur 151 heures au plus — six jours et demi. Les deux se recoupent
- * sur la semaine.
- *
- * UN ÉVÉNEMENT SANS AUTEUR CONNU N'EST PAS RENDU. Les trois jointures sur
- * `comptes` sont INTERNES : `verifications.compte_id` et `notes.revision_par_id`
- * s'annulent quand le compte disparaît, et une ligne de flux s'écrit « QUI a
- * fait QUOI ». Sans le qui, il n'y a pas de ligne à écrire, et lui en inventer
- * un serait la même faute. Le jeu de semence est dans ce cas — ses trente
- * vérifications ne portent aucun compte —, ce qui rend le cas réel et non
- * théorique.
+ * UN ÉVÉNEMENT SANS AUTEUR CONNU N'EST PAS RENDU : les trois jointures sur `comptes` sont
+ * INTERNES, une ligne de flux s'écrivant « QUI a fait QUOI ».
  */
 import { basePartagee } from '$lib/base/acces';
 import type { Base } from '$lib/base/acces';
@@ -113,7 +48,6 @@ import type {
 } from '../../../../seeds/corpus';
 import type { PageServerLoad } from './$types';
 
-/** Le rangement que l'appelant peut atteindre — univers, domaines, détail. */
 interface RangementLisible {
 	readonly univers: readonly Univers[];
 	readonly domaines: readonly Domaine[];
@@ -125,18 +59,15 @@ interface RangementLisible {
  * porte fermée, pas une précaution.
  *
  * `P-03` : « une entrée visible est une entrée qui fonctionne ». La carte d'un
- * domaine sur lequel l'appelant n'a aucun droit mènerait à une adresse que
- * cette même route refuse — un lien mort, et un nom de domaine divulgué que
- * `RG-ACC-01` n'autorise pas davantage.
+ * domaine sur lequel l'appelant n'a aucun droit mènerait à une adresse que cette
+ * même route refuse — un lien mort, et un nom de domaine divulgué que `RG-ACC-01`
+ * n'autorise pas davantage.
  *
  * AUCUNE RÈGLE DE DROIT N'EST ÉCRITE ICI : `domaineLisible()` interroge
  * `capacites()`, l'implémentation unique.
  *
- * CE CODE EST LE MÊME DANS LE CHARGEUR VOISIN, `[domaine]/+page.server.ts`, et
- * la duplication est SUBIE : `+page.server.ts` n'admet que les exports que
- * SvelteKit valide, un module partagé demanderait un fichier hors du périmètre
- * de ce lot. Les deux copies appellent les mêmes fonctions de lecture — la
- * divergence possible est dans l'assemblage, pas dans les conversions.
+ * CE CODE EST LE MÊME DANS LE CHARGEUR VOISIN, et la duplication est SUBIE :
+ * `+page.server.ts` n'admet que les exports que SvelteKit valide.
  */
 async function lireLeRangementLisible(
 	base: Base,
@@ -187,11 +118,9 @@ const FENETRE_DACTIVITE_JOURS = 7;
 /**
  * L'ACTIVITÉ DE LA SEMAINE, LUE DANS LES TROIS TRACES QUI EXISTENT.
  *
- * Le filtre de périmètre est DANS la requête, jamais après elle (`ADR-006`) :
- * les trois lectures portent l'ensemble des dossiers lisibles dans leur
- * condition, exactement comme `lireNotesLisibles()`. Un périmètre vide
- * n'interroge pas la base — même raison que là-bas, un ensemble vide passé à une
- * clause d'appartenance ne se rend pas de la même façon selon le dialecte.
+ * Le filtre de périmètre est DANS la requête, jamais après elle (`ADR-006`). Un
+ * périmètre vide n'interroge pas la base : un ensemble vide passé à une clause
+ * d'appartenance ne se rend pas de la même façon selon le dialecte.
  */
 async function lireLActiviteRecente(
 	base: Base,
@@ -262,14 +191,13 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const lisibles = domainesDeLUnivers.filter((d) => domaineLisible(acces, d.id));
 
 	/**
-	 * UN UNIVERS SANS AUCUN DOMAINE S'OUVRE, et rend l'état vide du gel
-	 * (`.vide-univers`, `V-10.svelte:449`). Il rendait 404 : on crée un univers
-	 * en premier sur une instance neuve, et aucun chemin ne l'ouvrait ensuite.
+	 * UN UNIVERS SANS AUCUN DOMAINE S'OUVRE, et rend l'état vide du gel. Il rendait
+	 * 404 : on crée un univers en premier sur une instance neuve, et aucun chemin
+	 * ne l'ouvrait ensuite.
 	 *
-	 * Les deux refus ne bougent pas — univers absent, ou univers dont aucun
-	 * domaine n'est lisible : 404 par le même point de sortie (`ADR-007`), et
-	 * l'anonyme reste dehors. Seul s'ouvre celui qui ne porte rien, où il n'y a
-	 * aucun contenu à protéger.
+	 * Les deux refus ne bougent pas — univers absent, ou univers dont aucun domaine
+	 * n'est lisible : 404 par le même point de sortie (`ADR-007`). Seul s'ouvre
+	 * celui qui ne porte rien, où il n'y a aucun contenu à protéger.
 	 */
 	const vide = univers !== null && domainesDeLUnivers.length === 0;
 	const ouvrable = locals.identite.type === 'authentifie' && vide;

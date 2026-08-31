@@ -1,23 +1,17 @@
 /**
  * LE CÂBLAGE DE LA PAGE D'ADRESSE NON RÉSOLUE — V-04 en anonyme, V-26 en session.
- *
  * `ARB-063` : le comportement s'accroche depuis la route, jamais dans la vue.
  *
- * POURQUOI CE FICHIER EXISTE À PART. `+error.svelte` monte DEUX vues selon la
- * session, et n'appartenait donc à aucun lot de la campagne — L2 possédait V-04,
- * L5 possédait V-26, et les deux ont buté sur le même point de montage. Les deux
- * vues portent les mêmes trois gestes, aux mêmes identifiants à une exception
+ * IL EST À PART parce que `+error.svelte` monte DEUX vues selon la session. Les
+ * deux portent les mêmes trois gestes, aux mêmes identifiants à une exception
  * près : le champ est `#saisie` dans V-04 et `#rech` dans V-26. Un seul câblage
  * les sert donc, et cherche les deux identifiants.
  *
- * CE QUE CE FICHIER NE CÂBLE PAS, ET POURQUOI. `#sup-restaurer` et
- * `#sup-domaine` de V-26 vivent dans la branche « note supprimée ». Or
- * `casDeV26()` (`src/lib/donnees/public.ts:534`) ne rend QUE `'inexistante'` :
- * cette branche n'est rendue dans aucun document servi. Leur donner un
- * comportement serait câbler un bouton qui n'existe pas.
+ * CE QUE CE FICHIER NE CÂBLE PAS : `#sup-restaurer` et `#sup-domaine` de V-26
+ * vivent dans la branche « note supprimée », et `casDeV26()` ne rend QUE
+ * `'inexistante'` — cette branche n'est rendue dans aucun document servi.
  */
 
-/** Défait ce que `cablerLaPageDErreur` a posé. */
 export type Debranchement = () => void;
 
 /** L'adresse de recherche pour une requête — un seul endroit la compose. */

@@ -1,47 +1,18 @@
 /**
- * `/notes/{identifiant}/relations` — DÉCLARER ET RETIRER LES RELATIONS D'UNE
- * NOTE.
+ * `/notes/{identifiant}/relations` — DÉCLARER ET RETIRER LES RELATIONS D'UNE NOTE.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI CETTE ADRESSE EXISTE, ALORS QUE LE GEL PLACE LE GESTE AILLEURS
+ * CETTE ADRESSE N'EST PAS LE LIEU QUE LE GEL PRÉVOIT : il place le geste dans V-14, dont
+ * le panneau « Relations » ouvre le dialogue `d-relation` de V-40 — « chaque dialogue
+ * s'exécute dans la vue qui le déclenche ». Elle existe parce que le geste n'avait aucun
+ * lieu du tout : aucune route n'écrivait une ligne dans `relations`.
  *
- * Le gel dessine ce geste, et il le dessine dans V-14 : le panneau
- * « Relations » y porte un bouton « + Ajouter »
- * (`mockups/V-14-lecture-note.html:1848`), et ce bouton ouvre le dialogue
- * `d-relation` du catalogue V-40 — « Ajouter une relation », type, note visée,
- * aperçu de la phrase produite dans les deux sens
- * (`mockups/V-40-dialogues.html:1227-1260`). `docs/routes.md:211` le dit sans
- * ambiguïté : V-40 n'a aucune adresse propre, « chaque dialogue s'exécute dans
- * la vue qui le déclenche », et cette vue est V-14 — `V-40:3252` porte
- * `ou: "V-14"` en toutes lettres.
+ * DEUX ACTIONS NOMMÉES, AUCUNE ACTION PAR DÉFAUT : SvelteKit REFUSE qu'une action par
+ * défaut cohabite avec une action nommée et rend 500. Chacune a son propre `<form>`, et
+ * la page fonctionne sans hydratation.
  *
- * CETTE ADRESSE N'EST DONC PAS LE LIEU QUE LE GEL PRÉVOIT. Elle existe parce
- * que le geste n'avait aucun lieu du tout : aucune route du produit n'écrivait
- * une ligne dans `relations`, et le graphe ne pouvait porter que les
- * vingt-deux arêtes de la semence. Entre un geste absent et un geste posé sur
- * une adresse annexe, le second se déclare et se corrige ; le premier ne se
- * voit pas.
- *
- * CE QUI MANQUE, ET QUI EST LA VRAIE RÉPARATION : monter `d-relation` dans
- * V-14, à l'ouverture du bouton « + Ajouter », et faire pointer ce bouton
- * ici — ou vers le dialogue. Les deux demandent de toucher `src/vues/V-14.svelte`.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * DEUX ACTIONS NOMMÉES, AUCUNE ACTION PAR DÉFAUT
- *
- * SvelteKit REFUSE qu'une action par défaut cohabite avec une action nommée sur
- * la même page — il rend 500. Les deux gestes de cet écran sont donc nommés,
- * `ajouter` et `retirer`, et chacun a son propre `<form>` : rien n'est soumis
- * par JavaScript, aucun attribut d'action n'est réécrit, et la page fonctionne
- * sans hydratation.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE REFUS EST CELUI DE LA LECTURE, ET IL VIENT DU MÊME APPEL
- *
- * `lireLaNote()` décide de l'accès pour le chargeur ET pour les deux actions :
- * il n'existe pas une règle de droit pour lire et une autre pour écrire. Le
- * droit d'ÉCRIRE une relation, lui, est celui de `RG-M08-04` — les deux
- * extrémités —, et il est porté par `$lib/donnees/relations.ts`, pas ici.
+ * LE REFUS EST CELUI DE LA LECTURE, ET IL VIENT DU MÊME APPEL : `lireLaNote()` décide de
+ * l'accès pour le chargeur ET pour les deux actions. Le droit d'ÉCRIRE une relation est
+ * celui de `RG-M08-04` (les deux extrémités), porté par `$lib/donnees/relations.ts`.
  */
 import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
@@ -65,11 +36,9 @@ import { eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
- * LA NOTE, RÉSOLUE PAR L'AUTORITÉ DE LECTURE, PUIS SA CLÉ.
- *
- * `lireLaNote()` rend l'identifiant lisible et les capacités ; la clé technique
- * — celle que les jointures de relation emploient — se relit ensuite, sur une
- * note dont l'accès est DÉJÀ tranché. L'ordre n'est pas indifférent : lire la
+ * LA NOTE, RÉSOLUE PAR L'AUTORITÉ DE LECTURE, PUIS SA CLÉ. `lireLaNote()` rend
+ * l'identifiant lisible et les capacités ; la clé technique se relit ensuite, sur
+ * une note dont l'accès est DÉJÀ tranché. L'ordre n'est pas indifférent : lire la
  * clé d'abord ferait payer au refus une requête que l'inexistence ne paie pas.
  */
 async function resoudre(identifiant: string, identite: App.Locals['identite']) {
@@ -113,10 +82,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	return {
 		note: lecture.note,
 		/**
-		 * LE CHEMIN DE RANGEMENT — le fil d'Ariane et la branche dépliée du rail
-		 * en dérivent, exactement comme V-14 le fait (`rangementDe`). Il est
-		 * composé ICI parce que `SEPARATEUR_DE_CHEMIN` est une constante du
-		 * corpus : la vue qui la réécrirait en ferait une seconde définition.
+		 * LE CHEMIN DE RANGEMENT — le fil d'Ariane et la branche dépliée du rail en
+		 * dérivent. Il est composé ICI parce que `SEPARATEUR_DE_CHEMIN` est une
+		 * constante du corpus : la vue qui la réécrirait en ferait une seconde
+		 * définition.
 		 */
 		rangement: rangementDe(lecture.note),
 		notes: lecture.notes,
@@ -130,12 +99,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		},
 		droits: ecriture ? ('ecriture' as const) : ('lecture' as const),
 		/**
-		 * `P-08` — L'ORIGINE EST RENDUE ICI, ET C'EST LE SEUL ÉCRAN DU PRODUIT
-		 * QUI LA RENDE. Le mot est celui du cahier, traduit par
-		 * `libelleDOrigine()`, implémentation unique. La colonne voyage jusqu'aux
-		 * cartographies depuis `T-037` ; aucune maquette ne porte de nœud pour
-		 * l'écrire, et le fait est remonté au rapport plutôt que comblé dans un
-		 * gel.
+		 * `P-08` — L'ORIGINE EST RENDUE ICI, ET C'EST LE SEUL ÉCRAN DU PRODUIT QUI LA
+		 * RENDE. Le mot est celui du cahier, traduit par `libelleDOrigine()`,
+		 * implémentation unique. Aucune maquette ne porte de nœud pour l'écrire.
 		 */
 		groupes: grouperLesRelations(lues).map((g) => ({
 			libelle: g.libelle,

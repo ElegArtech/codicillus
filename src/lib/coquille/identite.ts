@@ -1,33 +1,14 @@
 /**
  * L'IDENTITÉ QUE LA COQUILLE AFFICHE — le contrat, écrit à UN SEUL endroit.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CE MODULE RÉPARE
+ * POURQUOI UN CONTEXTE, ET NON UNE PROPRIÉTÉ DE PLUS : trente `+page.svelte`
+ * devraient recopier le même passage, et un contrat recopié trente fois diverge
+ * au premier oubli (`P-35`). Sans lui, les vues remplissaient `compte` depuis
+ * `MOI` de `seeds/corpus.ts`, et `socle.css` cachant `.si-admin` hors de
+ * `data-role="admin"`, la console était invisible à l'administrateur lui-même.
  *
- * `Coquille.svelte` exige une propriété `compte` : nom, initiales, rôle,
- * domaine. Les vues de `src/vues/` la remplissent depuis `MOI` de
- * `seeds/corpus.ts` — c'est le contenu d'exemple du gel, et c'est correct pour
- * le rendu par défaut d'une vue. Mais AUCUNE route ne passait la vraie.
- * Conséquence mesurée le 21/08/2026, sur les huit pages qui montent une
- * coquille : la barre supérieure affiche « Karim Belhadj — Référent —
- * Infrastructure » quel que soit le compte connecté.
- *
- * Le même oubli cachait la console : `socle.css:397` pose
- * `.app:not([data-role="admin"]) .si-admin { display: none !important; }`, et
- * `Coquille.svelte` retombait sur `role = 'referent'`. L'entrée « Console
- * d'administration » était donc invisible à l'administrateur lui-même.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI UN CONTEXTE, ET NON UNE PROPRIÉTÉ DE PLUS
- *
- * Trente `+page.svelte` devraient recopier le même passage. Recopié trente
- * fois, un contrat diverge au premier oubli — `P-35`, et le défaut se lirait
- * comme une identité juste sur une page et fausse sur la voisine. Le gabarit
- * racine le pose une fois, la coquille le lit.
- *
- * LE RENDU PAR DÉFAUT DES VUES NE BOUGE PAS. Hors application — un rendu de
- * vue sans gabarit racine —, `getContext` rend `undefined` et la coquille
- * retombe sur sa propriété. C'est ce qui garde le gel intact.
+ * LE RENDU PAR DÉFAUT DES VUES NE BOUGE PAS : hors application, `getContext` rend
+ * `undefined` et la coquille retombe sur sa propriété.
  */
 
 import { getContext } from 'svelte';
@@ -37,7 +18,6 @@ import { SANS_DESIGNATION, type DesignationsDeRangement } from '../rangement/adr
 /** La clé du contexte. Une constante, jamais une chaîne recopiée. */
 export const CLE_IDENTITE = Symbol.for('codicillus.identite-de-coquille');
 
-/** Ce que la barre supérieure affiche du compte connecté. */
 export interface CompteAffiche {
 	readonly nom: string;
 	readonly initiales: string;
@@ -45,7 +25,6 @@ export interface CompteAffiche {
 	readonly domaine: string;
 }
 
-/** Un univers, tel que le rail de navigation le nomme. */
 export interface UniversDeRail {
 	readonly nom: string;
 	readonly couleur: string;
@@ -55,7 +34,6 @@ export interface UniversDeRail {
 	readonly description: string;
 }
 
-/** Un domaine, rattaché à son univers par le nom. */
 export interface DomaineDeRail {
 	readonly nom: string;
 	readonly univers: string;
@@ -64,11 +42,10 @@ export interface DomaineDeRail {
 
 /**
  * LE RATTACHEMENT DU COMPTE, ET CE QUE CHACUNE DE SES CIBLES OUVRE VRAIMENT.
- *
- * `+layout.server.ts` le rend déjà nul quand le domaine de rattachement n'est
- * pas LISIBLE. Les deux booléens répondent aux deux conditions que les cibles
- * demandent EN PLUS de cette lisibilité, et qu'un verdict unique laissait
- * ouvertes : un module éteint (`RG-STR-06`), un droit qui lit sans rédiger.
+ * `+layout.server.ts` le rend déjà nul quand le domaine n'est pas LISIBLE ; les
+ * deux booléens répondent aux conditions que les cibles demandent EN PLUS, et
+ * qu'un verdict unique laissait ouvertes : un module éteint (`RG-STR-06`), un
+ * droit qui lit sans rédiger.
  */
 export interface RangementDeCoquille {
 	readonly univers: string;
@@ -80,15 +57,10 @@ export interface RangementDeCoquille {
 }
 
 /**
- * Le contexte lui-même. Tous les membres sont des accesseurs : le gabarit
- * racine les câble sur `data`, et la coquille suit une navigation sans qu'on
- * réémette le contexte.
- *
- * `univers` et `domaines` réparent le MÊME défaut que `compte` : le rail de
- * navigation était bâti sur les constantes de `seeds/corpus.ts`, et aucune route
- * ne passait les vraies. Un univers créé dans la console n'apparaissait donc
- * JAMAIS dans le rail — mesuré le 21/08/2026, l'univers « Organisation » était
- * absent des quatre sections rendues alors qu'il portait quatorze notes.
+ * Le contexte lui-même. Tous les membres sont des ACCESSEURS : le gabarit racine
+ * les câble sur `data`, et la coquille suit une navigation sans qu'on réémette le
+ * contexte. `univers` et `domaines` réparent le MÊME défaut que `compte` — le rail
+ * était bâti sur les constantes de `seeds/corpus.ts`.
  */
 export interface IdentiteDeCoquille {
 	readonly compte: CompteAffiche | null;
@@ -96,120 +68,75 @@ export interface IdentiteDeCoquille {
 	readonly univers: readonly UniversDeRail[];
 	readonly domaines: readonly DomaineDeRail[];
 	/**
-	 * LA VERSION DU PRODUIT, LUE SUR `package.json` — la vraie, pas celle du gel.
-	 * Le pied du rail affichait `1.0.0`, qui vient de `INSTANCE` de
-	 * `seeds/corpus.ts` : un numéro de démonstration, servi comme un fait.
-	 * `null` hors gabarit racine (page d'erreur) : la propriété reprend la main.
+	 * LA VERSION DU PRODUIT, LUE SUR `package.json` — la vraie, pas le `1.0.0` de
+	 * `INSTANCE`. `null` hors gabarit racine (page d'erreur) : la propriété reprend
+	 * la main.
 	 */
 	readonly version: string | null;
 	/**
-	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation`
-	 * de `parametres`, servie par le gabarit racine.
+	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation`. Huit
+	 * vues l'écrivaient en dur, dont les cinq pieds publics et l'écran de connexion.
+	 * « Codicillus » n'est pas concerné : c'est le nom du LOGICIEL.
 	 *
-	 * Huit vues écrivaient « Direction technique » en dur, dont LES CINQ PIEDS
-	 * PUBLICS ET L'ÉCRAN DE CONNEXION. Ce n'était pas une donnée du jeu de
-	 * démonstration : c'était le segment de marché du cadrage, soudé dans une
-	 * signature de produit — « Codicillus · Direction technique » — que toute
-	 * autre organisation lisait comme un fait sur SON instance.
-	 *
-	 * « Codicillus » n'est pas concerné : c'est le nom du LOGICIEL, et il reste
-	 * en dur, comme `Rail.svelte` le fait déjà pour `Codicillus {version}`.
-	 * C'est la SOUDURE entre le logiciel et l'organisation qu'on défait.
-	 *
-	 * LA CHAÎNE VIDE EST L'ÉTAT NORMAL D'UNE INSTALLATION NEUVE, pas une panne :
-	 * `CONFIGURATION_PAR_DEFAUT.nomOrganisation` vaut `''` tant que
-	 * l'administrateur n'a pas nommé son organisation, et les vues rendent alors
-	 * « Codicillus » seul. Elle vaut `''` hors gabarit racine aussi — le rendu
-	 * par défaut d'une vue, une planche, une page d'erreur —, et c'est le même
-	 * rendu : il n'y a rien à distinguer, donc pas de `null` à porter.
+	 * LA CHAÎNE VIDE EST L'ÉTAT NORMAL D'UNE INSTALLATION NEUVE, pas une panne : les
+	 * vues rendent alors « Codicillus » seul. Elle vaut `''` hors gabarit racine
+	 * aussi — même rendu, donc pas de `null` à porter.
 	 */
 	readonly nomOrganisation: string;
 	/**
-	 * L'INSTANT DE LA DERNIÈRE SYNCHRONISATION — IL N'EN EXISTE AUCUN.
+	 * L'INSTANT DE LA DERNIÈRE SYNCHRONISATION — IL N'EN EXISTE AUCUN : aucune table
+	 * ne le porte, et le « il y a 6 minutes » du gel est un contenu d'exemple qu'un
+	 * utilisateur lit comme un fait sur SON instance. Le champ vaut TOUJOURS `null`
+	 * en application, et le pied du tableau de bord n'émet alors pas la ligne.
 	 *
-	 * Aucune table de la base ne le porte (vérifié le 22/08/2026 sur les 23
-	 * tables du schéma public). Le gel écrit « il y a 6 minutes » ; c'est du
-	 * contenu d'exemple, et un utilisateur le lit comme un fait sur SON
-	 * instance. Le champ vaut donc TOUJOURS `null` en application, et `null` est
-	 * lu par son unique consommateur — le pied du tableau de bord,
-	 * `src/vues/V-07.svelte` —, qui n'émet alors pas la ligne. On ne fabrique
-	 * pas une date à partir de rien.
-	 *
-	 * Le type reste `string | null` : le jour où une table porte cet instant, le
-	 * gabarit racine le sert et le pied se rallume sans rien changer ici.
+	 * Le type reste `string | null` : le jour où une table le porte, le pied se
+	 * rallume sans rien changer ici.
 	 */
 	readonly synchro: string | null;
 	/**
-	 * LE RATTACHEMENT SERVI PAR LE GABARIT RACINE — il décide des DEUX entrées
-	 * du menu « Créer » qui exigent un domaine.
-	 *
-	 * Elles étaient rendues par le serveur puis retirées par le câblage, après
-	 * hydratation : servies quand même, et gardées par un navigateur sans script.
-	 * `P-09` les veut ABSENTES. La coquille les émet donc, ou ne les émet pas.
-	 *
-	 * `undefined` hors gabarit racine — le rendu par défaut d'une vue, la page
-	 * d'erreur : la coquille les émet alors toutes, et le gel ne bouge pas.
+	 * LE RATTACHEMENT SERVI PAR LE GABARIT RACINE — il décide des DEUX entrées du
+	 * menu « Créer » qui exigent un domaine. Elles étaient rendues par le serveur puis
+	 * retirées par le câblage après hydratation : servies quand même, et gardées par
+	 * un navigateur sans script. `P-09` les veut ABSENTES. `undefined` hors gabarit
+	 * racine : la coquille les émet alors toutes.
 	 */
 	readonly rangement: RangementDeCoquille | null | undefined;
 	/**
 	 * LE MOT RENOMMABLE DE `M14.7`, DÉJÀ DÉRIVÉ EN SES QUATRE FORMES.
 	 *
-	 * `$lib/vocabulaire.ts` en calculait quatre CONSTANTES à l'import, depuis
-	 * `CONFIG.motFiche` de `seeds/corpus.ts`. La clé `mot_fiche` existe en base,
-	 * la console l'écrit, `lireConfiguration()` la lit — et rien ne branchait la
-	 * lecture sur l'affichage : renommer « Fiche » en console ne changeait rien
-	 * aux quinze vues qui affichent le mot, ni à la pastille « Types de fiches »
-	 * de la console. `RG-M14-09` (« recalcul immédiat ») était faux à la lettre.
+	 * `$lib/vocabulaire.ts` en calculait quatre CONSTANTES à l'import : une constante
+	 * de module est figée au chargement et partagée par toutes les requêtes, elle ne
+	 * peut pas suivre une configuration, et `RG-M14-09` (« recalcul immédiat ») était
+	 * faux à la lettre. Le contexte est fait d'accesseurs sur `data`.
 	 *
-	 * Une constante de module est figée au chargement et partagée par toutes les
-	 * requêtes : elle ne peut pas suivre une configuration. Le contexte, lui, est
-	 * fait d'accesseurs sur `data`, et il la suit.
-	 *
-	 * LES QUATRE FORMES DESCENDENT DÉRIVÉES, pas le mot brut : dix-sept
-	 * composants rappelleraient sinon `pluriel()` et `initialeMinuscule()` chacun
-	 * de son côté, et la dérivation aurait dix-sept sources au lieu d'une.
-	 *
-	 * `null` hors gabarit racine — le rendu par défaut d'une vue, une planche, la
-	 * page d'erreur : `vocabulaireRendu()` retombe alors sur `Fiche`, exactement
-	 * les littéraux d'avant.
+	 * LES QUATRE FORMES DESCENDENT DÉRIVÉES, pas le mot brut : dix-sept composants
+	 * rappelleraient sinon `pluriel()` chacun de son côté. `null` hors gabarit
+	 * racine, où `vocabulaireRendu()` retombe sur `Fiche`.
 	 */
 	readonly vocabulaire: VocabulaireRendu | null;
 	/**
 	 * LES IDENTIFIANTS D'ADRESSE DES UNIVERS ET DES DOMAINES, PAR LEUR NOM.
 	 *
-	 * `univers.identifiant` et `domaines.identifiant` sont PERSISTÉS et STABLES :
-	 * dérivés à la création, ils ne suivent pas les renommages (`RG-M12-11`). Les
-	 * chargeurs, eux, passent aux vues le NOM D'AFFICHAGE, et les vues
-	 * slugifiaient ce nom pour composer l'adresse. Renommer un univers ou un
-	 * domaine en console rendait donc 404 toutes ses adresses — mesuré sur les
-	 * deux, y compris depuis l'accueil et depuis la page de l'univers.
+	 * `univers.identifiant` et `domaines.identifiant` sont PERSISTÉS et STABLES sous
+	 * les renommages (`RG-M12-11`) ; les chargeurs passent aux vues le NOM
+	 * D'AFFICHAGE, que les vues slugifiaient — renommer en console rendait 404 toutes
+	 * les adresses. La correspondance est LUE par le gabarit racine, dans les
+	 * requêtes qu'il émettait déjà pour le rail (`P-35`).
 	 *
-	 * La correspondance est LUE en base par le gabarit racine, dans les requêtes
-	 * qu'il émettait déjà pour le rail, et descend par ce contexte : trente routes
-	 * qui la recopieraient divergeraient au premier oubli (`P-35`).
-	 *
-	 * ELLE NE PORTE QUE CE QUE L'APPELANT VOIT DÉJÀ — les domaines lisibles et
-	 * leurs univers, plus, pour l'administrateur seul, les univers sans domaine
-	 * qu'il gère en console. `RG-ACC-01` : le nom d'un univers dit l'organisation
-	 * de la direction, et un compte sans droit n'a pas à le lire.
-	 *
-	 * `undefined` hors gabarit racine — le rendu par défaut d'une vue, une
-	 * planche, la page d'erreur : la composition retombe alors sur
-	 * `identifiantLisible()`, exactement le rendu d'avant.
+	 * ELLE NE PORTE QUE CE QUE L'APPELANT VOIT DÉJÀ — les domaines lisibles et leurs
+	 * univers, plus, pour l'administrateur seul, les univers sans domaine
+	 * (`RG-ACC-01`). `undefined` hors gabarit racine : la composition retombe sur
+	 * `identifiantLisible()`.
 	 */
 	readonly designations?: DesignationsDeRangement | undefined;
 }
 
 /**
- * LES DÉSIGNATIONS TELLES QU'UN COMPOSANT LES LIT — à appeler à
- * l'INITIALISATION, comme tout `getContext`.
- *
- * Le résultat porte des ACCESSEURS et non deux tables figées : le contexte du
- * gabarit racine est lui-même fait d'accesseurs, et une lecture sous `$derived`
- * suit donc une navigation sans que le contexte soit réémis.
- *
- * Hors gabarit racine, les deux tables sont vides et `identifiantDUnivers()` /
- * `identifiantDeDomaine()` retombent sur la dérivation du nom.
+ * LES DÉSIGNATIONS TELLES QU'UN COMPOSANT LES LIT — à appeler à l'INITIALISATION,
+ * comme tout `getContext`. Le résultat porte des ACCESSEURS et non deux tables
+ * figées : une lecture sous `$derived` suit donc une navigation sans que le
+ * contexte soit réémis. Hors gabarit racine, les deux tables sont vides et la
+ * composition retombe sur la dérivation du nom.
  */
 export function designationsDeCoquille(): DesignationsDeRangement {
 	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);

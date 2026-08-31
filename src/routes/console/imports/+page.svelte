@@ -1,24 +1,15 @@
 <script lang="ts">
 	/**
-	 * `/console/imports` — V-35 Console · Imports.
+	 * `/console/imports` — V-35 Console · Imports. Le rôle administrateur est éprouvé
+	 * côté serveur par `+page.server.ts`, à côté de ce fichier.
 	 *
-	 * Cette route n'existait pas : `docs/routes.md` §3.6 la déclare, aucun
-	 * fichier ne la montait, et la batterie 6 comptait ses cases VACANTES.
-	 * `T-036` la monte avec sa garde : le rôle administrateur est éprouvé côté
-	 * serveur par `+page.server.ts`, à côté de ce fichier.
+	 * `etat` N'EST PAS PASSÉ : la propriété nomme la zone que le banc découpe et ne
+	 * change rien au rendu de trois des quatre états ; le banc n'atteint jamais cette
+	 * route. Ne rien passer rend la page entière au repos, ce qui est l'état du
+	 * produit.
 	 *
-	 * `etat` N'EST PAS PASSÉ. La propriété nomme la zone que le banc découpe
-	 * (protocole des états de zone) et ne change rien au rendu de trois des
-	 * quatre états ; le banc n'atteint jamais cette route. Ne rien passer rend la
-	 * page entière au repos, ce qui est l'état du produit.
-	 *
-	 * Les notes viennent de la base ; le journal des imports, non — aucune table
-	 * ne le porte, voir le chargeur.
-	 *
-	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
-	 * sert ; elle est identique à l'octet à sa source gelée (P-6.3).
-	 *
-	 * AUCUN `<svelte:head>` : rien ne déclare de titre de page pour le PRODUIT.
+	 * Les notes viennent de la base ; le journal des imports, non — aucune table ne
+	 * le porte, voir le chargeur.
 	 */
 	import { onMount } from 'svelte';
 	import Vue from '../../../vues/V-35.svelte';
@@ -33,38 +24,19 @@
 	const { data }: { data: PageData } = $props();
 
 	/**
-	 * LA ZONE DE DÉPÔT ET « PARCOURIR » — ET LES OCTETS TRAVERSENT.
+	 * LA ZONE DE DÉPÔT ET « PARCOURIR » — ET LES OCTETS TRAVERSENT. Les quatre écouteurs du
+	 * gel sont posés, et le parcours d'import s'ouvre AVEC un lot RÉEL — des `File`, pas un
+	 * décompte : « Lot reçu — parcours d'import à l'étape du choix de scénario, vue V-24 ».
 	 *
-	 * Les quatre écouteurs du gel sont posés (`cablerLeDepot()`), `data-survol`
-	 * répond au survol, le dépôt et le sélecteur de fichiers rendent un lot
-	 * RÉEL — des `File`, pas un décompte —, et le parcours d'import s'ouvre AVEC
-	 * ce lot. C'est mot pour mot ce que le gel annonce :
-	 * « Lot reçu — parcours d'import à l'étape du choix de scénario, vue V-24 »
-	 * (`mockups/V-35-console-imports.html:3000`). La destination est nommée par la
-	 * maquette, donc l'adresse l'est aussi : `/importer`.
+	 * LA RÉPARATION N'ÉTAIT PAS ICI : le parcours de V-24 ne retenait des fichiers qu'à son
+	 * étape 2, une fois un scénario choisi, alors que le gel de V-35 fait atterrir le lot à
+	 * l'étape du CHOIX DE SCÉNARIO. C'est donc le PARCOURS qui a reçu de quoi tenir un lot
+	 * avant ce choix — le scénario reste choisi par l'utilisateur.
 	 *
-	 * CE QUI MANQUAIT N'ÉTAIT PAS ICI, ET LA RÉPARATION NON PLUS. Le parcours de
-	 * V-24 ne retenait des fichiers qu'à son étape 2, une fois un scénario
-	 * choisi ; le gel de V-35, lui, fait atterrir le lot à l'étape du CHOIX DE
-	 * SCÉNARIO. C'est donc le PARCOURS qui a reçu de quoi tenir un lot avant ce
-	 * choix — propriété `lotRecu` de `src/vues/V-24.svelte` —, et cet écran ne
-	 * fait que le lui remettre. Le scénario reste choisi par l'utilisateur : le
-	 * décider à sa place pour pouvoir lui rendre ses fichiers aurait été un
-	 * comblement, pas un service.
-	 *
-	 * LE LOT NE PASSE PAS PAR LE RÉSEAU EN CHEMIN. `deposerLotEnAttente()` le
-	 * confie à une variable de module que la navigation client traverse ; il
-	 * n'est envoyé au serveur qu'à l'étape 2 du parcours, par l'action
-	 * `analyser`, comme n'importe quel dépôt. Une analyse lancée d'ici aurait
-	 * demandé un `domaine-cible` que cet écran ne propose nulle part.
-	 *
-	 * L'ARBORESCENCE D'UN DOSSIER DÉPOSÉ EST DESCENDUE, et c'est la MÊME descente
-	 * qu'en V-24 : `cablerLeDepot()` passe par `$lib/cablage/depot-de-fichiers.ts`,
-	 * que les deux écrans importent. Elle ne l'était pas ici, et le dépôt d'un
-	 * dossier arrivait plat — toutes ses notes à la racine du domaine, et
-	 * l'idempotence de l'import cassée avec, puisque son discriminant compte le
-	 * chemin de dossier. Des fichiers déposés un à un arrivent, comme avant,
-	 * entiers et à la racine du lot, ce qui est leur place.
+	 * LE LOT NE PASSE PAS PAR LE RÉSEAU EN CHEMIN : `deposerLotEnAttente()` le confie à une
+	 * variable de module que la navigation client traverse. L'ARBORESCENCE D'UN DOSSIER
+	 * DÉPOSÉ EST DESCENDUE, MÊME DESCENTE QU'EN V-24 : sans elle le dépôt arrivait plat, et
+	 * l'idempotence de l'import cassait avec — son discriminant compte le chemin de dossier.
 	 */
 	onMount(() =>
 		cablerLeDepot(document, {

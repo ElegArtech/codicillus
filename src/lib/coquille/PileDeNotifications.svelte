@@ -2,69 +2,22 @@
 	/**
 	 * PileDeNotifications — la famille A-8, UN SEUL composant, DEUX ÉTATS GELÉS.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * POURQUOI CE COMPOSANT EXISTE — ARB-028, RÉVISION D'ARB-024
+	 * POURQUOI CE COMPOSANT EXISTE — ARB-028. Un seul des 409 états des 41 maquettes rend
+	 * une bulle hors de V-38 : `V-06 · cpt-inconnu`, gelée AVANT la refonte `flex` →
+	 * `grid`. L'ordre de préséance — Maquettes > CDC > Brief > Pile > Plan — tranche : V-06
+	 * RÉGIT V-06. Ce que la décision N'AUTORISE PAS, et c'est la moitié qui compte : DEUX
+	 * composants — `docs/DESIGN.md` §3.7 point 7 reste entier.
 	 *
-	 * Les 41 maquettes portent le conteneur `div.notifs`, et UN SEUL de leurs
-	 * 409 états rend une bulle hors de V-38 : `V-06 · cpt-inconnu`. Or V-06 a
-	 * été gelée AVANT la refonte `flex` → `grid` du composant, et les deux
-	 * maquettes ne montrent donc pas la même bulle. Mesuré : 13 276 px, 1,02 %
-	 * — le dernier écart visuel du projet.
+	 * CE QUI DIVERGE : les deux socles en ligne ne diffèrent QUE par leur section 9. V-06
+	 * ne connaît que `.notifs`, `.notif` et `.notif--succes` — ni `max-width`, ni
+	 * `pointer-events`, ni grille, ni aucun `.notif__*`. LES RÈGLES SONT REMPLACÉES, PAS
+	 * ÉTENDUES, alors que `docs/DESIGN.md` §0.2 dit le socle « strictement plus riche » et
+	 * « emboîté » : c'est faux pour CETTE famille. Le balisage diverge autant — le
+	 * `notifier()` de V-06 fait `n.textContent = txt` et s'arrête là.
 	 *
-	 * ARB-024 avait conclu « la famille suit V-38, et V-06 demande un regel ».
-	 * ARB-028 renverse la résolution, parce que l'ordre de préséance dit
-	 * l'inverse — `Maquettes > Cahier des charges > Brief > Pile > Plan` :
-	 *
-	 *     V-06 RÉGIT V-06. LA MAQUETTE FAIT LOI DANS TOUS SES ASPECTS.
-	 *
-	 * Ce que la décision N'AUTORISE PAS, et c'est la moitié qui compte : elle
-	 * n'autorise pas DEUX composants. `docs/DESIGN.md` §3.7 point 7 — « recopier
-	 * le balisage au lieu d'appeler le composant unique » — reste entier. D'où
-	 * ce fichier : le balisage de la famille est écrit UNE fois, et la variante
-	 * est DÉCLARÉE, rattachée à la maquette qui la gèle.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * CE QUI DIVERGE, RELEVÉ ET NON RECOPIÉ D'UN RÉSUMÉ
-	 *
-	 * Les deux socles en ligne — `mockups/V-06:308-331` et `mockups/V-38:317-397`
-	 * — ne diffèrent QUE par la section 9, et par le commentaire qui la titre.
-	 * Diff intégral des 400 lignes restantes : identiques à l'octet. La section 9
-	 * de V-38 est celle que `src/socle.css` porte (extraite de V-07, E-01).
-	 *
-	 *   déclaration         V-06 (gel)                V-38 / socle applicatif
-	 *   ─────────────────── ───────────────────────── ──────────────────────────
-	 *   .notifs max-width   — (non bornée)            min(400px, 100vw - 2×e-5)
-	 *   .notifs pointer-ev. — (auto)                  none, + `> * { auto }`
-	 *   .notif  display     flex                      grid
-	 *   .notif  colonnes    —                         auto minmax(0,1fr) auto
-	 *   .notif  align-items center                    start
-	 *   .notif  gap         e-3                       e-1 e-3
-	 *   .notif  width       — (auto)                  100%
-	 *   .notif  padding     e-3 e-4                   e-3 e-3 e-3 e-4
-	 *   .notif  line-height — (hérité, --i-ui = 1.45) 1.45
-	 *   .notif  [data-sortie], @media reduce, tout `.notif__*`, `.notif--erreur`,
-	 *           `--info`, `--encours`, `@media (max-width: 640px)` : ABSENTS de
-	 *           V-06, qui ne connaît que `.notifs`, `.notif`, `.notif--succes`.
-	 *
-	 * LES RÈGLES SONT REMPLACÉES, PAS ÉTENDUES. C'est le constat exact d'ARB-024,
-	 * et il reste vrai : `docs/DESIGN.md` §0.2 écrit que le socle retenu est
-	 * « strictement plus riche » et « emboîté » — pour CETTE famille, c'est faux.
-	 *
-	 * Le balisage diverge autant que le style : le `notifier()` de V-06
-	 * (`V-06:830`) fait `n.textContent = txt` et s'arrête là. Pas de glyphe, pas
-	 * de titre, pas de bouton de fermeture — une bulle de texte, sur une ligne.
-	 * Celui de V-38 (`V-38:2263`) construit les six enfants du catalogue.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * CE QUE LA VARIANTE NE FAIT PAS
-	 *
-	 * Elle ne surcharge pas le socle : `src/socle.css` est intouché, et P-6.2
-	 * interdirait de redéclarer `.notif`. Le style de la variante est porté ICI,
-	 * sous le sélecteur de la variante, en jetons seulement — la seule chose
-	 * qu'il fait est de RENDRE à `texte` les déclarations que V-07 a remplacées.
-	 *
-	 * Elle ne s'ouvre pas non plus : une troisième valeur exigerait une
-	 * troisième maquette qui la montre. En son absence, ce serait un comblement.
+	 * CE QUE LA VARIANTE NE FAIT PAS : elle ne surcharge pas le socle (P-6.2 interdirait de
+	 * redéclarer `.notif`), et elle ne s'ouvre pas — une troisième valeur exigerait une
+	 * troisième maquette.
 	 */
 	import type { Notification, TypeNotification, VarianteDeNotification } from './notifications';
 
@@ -83,9 +36,8 @@
 
 	/*
 	 * Chaque variante ne lit QUE sa propre source. Les deux listes sont donc
-	 * mutuellement exclusives PAR CONSTRUCTION, et non par convention d'appel :
-	 * un appelant qui passerait les deux n'en rendrait qu'une, celle de la
-	 * variante qu'il a déclarée.
+	 * mutuellement exclusives PAR CONSTRUCTION, et non par convention d'appel : un
+	 * appelant qui passerait les deux n'en rendrait qu'une.
 	 */
 	const bullesTypees = $derived<readonly Notification[]>(
 		variante === 'catalogue' ? notifications : []
@@ -118,39 +70,28 @@
 <!--
 	LA VARIANTE `texte` — L'ÉTAT GELÉ DE V-06, ARB-028.
 
-	Ce bloc ne fait qu'UNE chose : rendre à la variante `texte` les déclarations
-	que le socle de V-07 a REMPLACÉES dans celui de V-06. Il n'ajoute rien, ne
-	compense rien, n'invente aucune valeur — chaque ligne annule une ligne de
-	`src/socle.css` §9, et chaque longueur est un jeton du socle.
+	Ce bloc ne fait qu'UNE chose : rendre à la variante `texte` les déclarations que le
+	socle de V-07 a REMPLACÉES dans celui de V-06. Il n'ajoute rien, ne compense rien,
+	n'invente aucune valeur — chaque ligne annule une ligne de `src/socle.css` §9, et
+	chaque longueur est un jeton du socle.
 
-	LE SOCLE N'EST PAS SURCHARGÉ : `.notifs` et `.notif` ne sont PAS redéclarés
-	(P-6.2 l'interdit, et il a raison). Le sélecteur porte la variante déclarée,
-	et lui seul. Les quarante autres vues, qui n'en déclarent aucune, ne voient
-	rien de ce bloc — et il n'est même pas émis pour elles.
+	LE SOCLE N'EST PAS SURCHARGÉ : `.notifs` et `.notif` ne sont PAS redéclarés (P-6.2
+	l'interdit). Le sélecteur porte la variante déclarée, et lui seul ; les quarante
+	autres vues ne voient rien de ce bloc, qui n'est même pas émis pour elles.
 
-	POURQUOI DANS `<svelte:head>` ET NON DANS LE BLOC `<style>` DU COMPOSANT.
-	Parce qu'un bloc `<style>` de composant N'EST JAMAIS SERVI AU BANC. Le mode
-	démo compose le document lui-même et n'y met que trois feuilles : les polices,
-	`src/socle.css` et `src/vues/V-xx.css` (le module de service du banc, et
-	`verif/references/protocole-app.json` le dit noir sur blanc). Svelte pose bien
-	la classe de portée sur les nœuds — relevé au document servi : le conteneur
-	sort avec sa classe `notifs` suivie de la classe de portée `svelte-xxxxxxx` —
-	mais la feuille qui la définit n'est liée nulle part : elle ne peint RIEN.
-	Aucun composant de `src/` ne portait de bloc `<style>` ; la propriété n'avait
-	donc jamais été exercée. C'est P-5 encore une fois.
+	POURQUOI DANS `<svelte:head>` ET NON DANS LE BLOC `<style>` DU COMPOSANT : Svelte pose
+	bien la classe de portée sur les nœuds, mais la feuille qui la définit n'est liée
+	nulle part dans le document composé pour un rendu de vue isolé — elle ne peint RIEN.
 
-	Les deux autres canaux étaient fermés, et pour de bonnes raisons : les deux
-	feuilles servies sont gelées à l'octet (P-6.1, P-6.3), et l'ensemble clos des
-	styles en ligne de V-06 (P-6.4, ARB-016) ne contient aucune des déclarations
-	nécessaires — il porte `display:flex`, mais ni `align-items:center`, ni
-	`gap`, ni le rembourrage, ni `max-width`. `<svelte:head>` est le seul canal
-	qui atteigne le document, et il ne se soustrait à AUCUN contrôle : `verif:jetons`
-	relève tout bloc `<style>` d'un fichier `.svelte`, où qu'il soit — P-1 sur le
-	contenu, P-4.2 sur la nomenclature, P-6.2 sur les sélecteurs.
+	Les deux autres canaux étaient fermés, et pour de bonnes raisons : les deux feuilles
+	servies sont gelées à l'octet (P-6.1, P-6.3), et l'ensemble clos des styles en ligne
+	de V-06 (P-6.4, ARB-016) ne contient aucune des déclarations nécessaires — il porte
+	`display:flex`, mais ni `align-items:center`, ni `gap`, ni le rembourrage, ni
+	`max-width`. `<svelte:head>` est le seul canal qui atteigne le document.
 
-	`line-height: inherit` n'est pas un raccourci : le socle de V-06 ne déclare
-	PAS de `line-height` sur `.notif`, la bulle hérite donc celui de `body`,
-	`var(--i-ui)`. Écrire la valeur ici la figerait ; hériter transcrit le gel.
+	`line-height: inherit` n'est pas un raccourci : le socle de V-06 ne déclare PAS de
+	`line-height` sur `.notif`, la bulle hérite donc celui de `body`. Écrire la valeur ici
+	la figerait ; hériter transcrit le gel.
 -->
 <svelte:head>
 	{#if variante === 'texte'}
@@ -171,11 +112,9 @@
 			}
 
 			/*
-				Le socle applicatif étale la pile sur toute la largeur sous 640 px ; le
-				socle de V-06 n'a pas cette règle du tout. Aucun des 409 couples ne
-				l'exerce — V-06 n'est mesurée qu'à 1440×900 —, mais la vue est une route
-				réelle et sa maquette fait loi à toutes les largeurs. Transcrire « pas de
-				règle » se dit en rendant les valeurs de base.
+				Le socle applicatif étale la pile sur toute la largeur sous 640 px ; le socle
+				de V-06 n'a pas cette règle du tout, et sa maquette fait loi à toutes les
+				largeurs. Transcrire « pas de règle » se dit en rendant les valeurs de base.
 			*/
 			@media (max-width: 640px) {
 				.notifs[data-variante='texte'] {

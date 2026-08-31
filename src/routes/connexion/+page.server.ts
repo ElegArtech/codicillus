@@ -1,37 +1,17 @@
 /**
  * `/connexion` — le CHARGEUR et l'ACTION de V-05.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * LE FORMULAIRE GELÉ NE POSTE PAS, ET CE LOT NE LE MODIFIE PAS
+ * LE FORMULAIRE GELÉ NE POSTE PAS. La maquette porte `<form class="auth__form"
+ * id="form" novalidate>` : NI `method`, NI `action`, la soumission du gel étant
+ * entièrement en JavaScript (`ARB-011`). Or un formulaire sans `method` soumet en
+ * GET vers l'adresse courante : le mot de passe partirait dans la barre d'adresse.
  *
- * `mockups/V-05-connexion.html:551` porte `<form class="auth__form" id="form"
- * novalidate>` : NI `method`, NI `action`. La soumission du gel est
- * entièrement en JavaScript (`:752`, `e.preventDefault()`), et le port
- * `src/vues/V-05.svelte` la rend telle quelle — ARB-011 : « le squelette rend
- * l'état, jamais la transition ».
+ * L'ACTION ATTEND `identifiant`, `motdepasse` et `souvenir` — exactement les noms
+ * du gel. Rien n'est à renommer le jour où le lien se fait.
  *
- * Un formulaire sans `method` soumet en GET vers l'adresse courante : le mot de
- * passe partirait dans la barre d'adresse. Poser `method="post"` demanderait de
- * toucher `src/vues/V-05.svelte`, ce que le contrat de ce lot interdit — le banc
- * est à 409 couples sur 409 et le prouver inchangé est un critère.
- *
- * L'ACTION EXISTE DONC, ET C'EST ELLE QUE LA SOUMISSION ATTEINDRA une fois le
- * formulaire relié (T-017, le comportement de V-05) : `POST /connexion` avec les
- * champs `identifiant`, `motdepasse` et `souvenir`, exactement les noms du gel
- * (`:556`, `:564`, `:582`). Rien n'est à renommer le jour où le lien se fera.
- * Écart déclaré au rapport du lot.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE L'ACTION REND, ET CE QU'ELLE NE PEINT PAS
- *
- * `src/vues/V-05.svelte` le dit, mesuré : « LE RENDU NE DÉPEND QUE DE
- * `arrivee` ». Les deux issues d'échec du gel — `echec()` et
- * `verrouiller(secondes)` — sont peintes par le JavaScript de la maquette, donc
- * par T-017. L'action livre la DÉCISION et la TRANSMET (`echec`, `trop`, et les
- * secondes restantes) ; elle ne peut pas peindre le bandeau sans modifier la vue.
- *
- * Le décompte lui-même est un comportement temporisé, et `CLAUDE.md` §4 le range
- * parmi les interdictions de conclure : aucune batterie ne le juge.
+ * L'ACTION LIVRE LA DÉCISION ET LA TRANSMET (`echec`, `trop`, et les secondes
+ * restantes) ; elle ne peint pas le bandeau, ce qui demanderait de modifier la
+ * vue. Le décompte lui-même est un comportement temporisé.
  */
 import { fail, redirect } from '@sveltejs/kit';
 import { authentifier } from '$lib/auth/authentification';
@@ -53,9 +33,8 @@ import { basePartagee } from '$lib/base/acces';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
- * `?motif=` → la position de l'axe « Arrivée » de la planche
- * (`docs/routes.md:286`), et `?suite=` → le chemin à restaurer (`:329`, une
- * valeur externe est remplacée par `/`).
+ * `?motif=` → la position de l'axe « Arrivée » de la planche, et `?suite=` → le
+ * chemin à restaurer (une valeur externe est remplacée par `/`).
  */
 export const load: PageServerLoad = ({ url }) => ({
 	arrivee: arriveeDepuisMotif(url.searchParams.get('motif')),

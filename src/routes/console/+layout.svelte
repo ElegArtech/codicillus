@@ -2,16 +2,12 @@
 	/**
 	 * `/console` — LE GABARIT NE REND RIEN, IL POSE UN CONTEXTE.
 	 *
-	 * Les dix écrans de console montent chacun leur vue en pleine page ; ce
-	 * gabarit n'ajoute donc aucun nœud, et le balisage servi est à l'octet celui
-	 * que les maquettes posent. Sa seule raison d'être est de faire descendre les
-	 * sept compteurs de `aside.nav2` jusqu'à `NavigationConsole.svelte`, que six
-	 * vues montent directement et que `CoquilleDeConsole.svelte` monte pour les
-	 * autres — `$lib/console/effectifs.ts` porte le motif.
+	 * Les dix écrans montent chacun leur vue en pleine page ; ce gabarit n'ajoute
+	 * aucun nœud. Sa seule raison d'être est de faire descendre les sept compteurs de
+	 * `aside.nav2` jusqu'à `NavigationConsole.svelte`.
 	 *
-	 * LES MEMBRES SONT DES ACCESSEURS, comme au gabarit racine : le contexte est
-	 * posé une fois, et il suit une navigation d'une section à l'autre sans être
-	 * réémis.
+	 * LES MEMBRES SONT DES ACCESSEURS, comme au gabarit racine : le contexte est posé
+	 * une fois, et il suit une navigation d'une section à l'autre sans être réémis.
 	 */
 	import { setContext } from 'svelte';
 	import { CLE_EFFECTIFS, type EffectifsDeConsole } from '$lib/console/effectifs';

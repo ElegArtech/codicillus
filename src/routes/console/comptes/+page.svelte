@@ -1,21 +1,11 @@
 <script lang="ts">
 	/**
-	 * `/console/comptes` — V-32 Console · Comptes.
+	 * `/console/comptes` — V-32 Console · Comptes. Le rôle administrateur est éprouvé
+	 * côté serveur par `+page.server.ts`, à côté de ce fichier.
 	 *
-	 * Cette route n'existait pas : `docs/routes.md` §3.6 la déclare, aucun
-	 * fichier ne la montait, et la batterie 6 comptait ses cases VACANTES.
-	 * `T-036` la monte avec sa garde : le rôle administrateur est éprouvé côté
-	 * serveur par `+page.server.ts`, à côté de ce fichier.
-	 *
-	 * CE FICHIER NE FAIT QUE RENDRE CE QUE LE CHARGEUR A RÉSOLU. Les notes, les
-	 * univers, les domaines, l'utilisateur courant, la liste des comptes et
-	 * l'état de leur verrou de mot de passe viennent tous de la base, et les six
-	 * sont des propriétés REQUISES : en oublier une ne compile plus.
-	 *
-	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
-	 * sert ; elle est identique à l'octet à sa source gelée (P-6.3).
-	 *
-	 * AUCUN `<svelte:head>` : rien ne déclare de titre de page pour le PRODUIT.
+	 * CE FICHIER NE FAIT QUE RENDRE CE QUE LE CHARGEUR A RÉSOLU. Les six propriétés
+	 * — notes, univers, domaines, utilisateur courant, liste des comptes et état de
+	 * leur verrou — sont REQUISES : en oublier une ne compile plus.
 	 */
 	import Vue from '../../../vues/V-32.svelte';
 	import '../../../vues/V-32.css';
@@ -25,13 +15,10 @@
 	const { data }: { data: PageData } = $props();
 
 	/**
-	 * CE QUE DIT UN REFUS QUE LE GEL NE SAIT PAS MARQUER.
-	 *
-	 * Les quatre issues sont celles que l'action rend — `VerdictDeCreationDeCompte`
-	 * pour les trois premières, l'action elle-même pour `role-inconnu`. Une issue
-	 * inconnue, ou une réponse qui n'en porte aucune, rend la phrase générale :
-	 * elle ne nomme pas de cause qu'on n'a pas, et elle dit ce qui compte —
-	 * AUCUN COMPTE N'A ÉTÉ CRÉÉ.
+	 * CE QUE DIT UN REFUS QUE LE GEL NE SAIT PAS MARQUER. Les quatre issues sont
+	 * celles que l'action rend ; une issue inconnue, ou une réponse qui n'en porte
+	 * aucune, rend la phrase générale — elle ne nomme pas de cause qu'on n'a pas, et
+	 * elle dit ce qui compte : AUCUN COMPTE N'A ÉTÉ CRÉÉ.
 	 */
 	function motifDuRefus(refus: { issue?: string } | undefined): string {
 		if (refus?.issue === 'mot-de-passe-vide') return 'Saisissez un mot de passe initial.';
@@ -43,15 +30,12 @@
 	}
 
 	/*
-	 * LE PANNEAU DE FORMULAIRE N'EST PLUS DÉPLACÉ AU MONTAGE, ET C'EST UNE
-	 * RÉPARATION, PAS UN RENONCEMENT.
-	 *
-	 * `cablerLeTiroirDeFormulaire()` rendait le panneau DESCENDANT de `.app` pour
-	 * que la règle `.app[data-form="ouvert"] .tiroir-form` puisse enfin
-	 * l'atteindre — le panneau vit hors de `div.app` (`ARB-021`, A-4), et la règle
-	 * ne pouvait donc jamais s'appliquer (`P-3`). La feuille porte désormais la
-	 * règle de FRÈRE à côté de celle de descendant : le panneau s'ouvre à sa place
-	 * d'origine, et le document servi redevient celui de la maquette, au nœud près.
+	 * LE PANNEAU DE FORMULAIRE N'EST PLUS DÉPLACÉ AU MONTAGE.
+	 * `cablerLeTiroirDeFormulaire()` le rendait DESCENDANT de `.app` pour que la
+	 * règle `.app[data-form="ouvert"] .tiroir-form` puisse l'atteindre, le panneau
+	 * vivant hors de `div.app` (`ARB-021`). La feuille porte désormais la règle de
+	 * FRÈRE à côté de celle de descendant : le panneau s'ouvre à sa place d'origine,
+	 * et le document servi redevient celui de la maquette, au nœud près.
 	 */
 </script>
 
