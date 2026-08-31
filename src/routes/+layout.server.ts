@@ -71,6 +71,7 @@ import {
 	univers
 } from '$lib/base/schema';
 import { capaciteDEcriture } from '$lib/donnees/public';
+import { cleDeDomaine, type DesignationsDeRangement } from '$lib/rangement/adresses';
 import type { Base } from '$lib/base/acces';
 import {
 	domaineLisible,
@@ -226,7 +227,8 @@ async function identiteAffichable(
  */
 async function arborescenceDeNavigation(
 	base: Base,
-	acces: AccesAuRangement
+	acces: AccesAuRangement,
+	administrateur: boolean
 ): Promise<{
 	univers: {
 		nom: string;
@@ -237,6 +239,7 @@ async function arborescenceDeNavigation(
 		description: string;
 	}[];
 	domaines: { nom: string; univers: string; couleur: string }[];
+	designations: DesignationsDeRangement;
 }> {
 	const lignesUnivers = await base
 		.select({
@@ -245,7 +248,8 @@ async function arborescenceDeNavigation(
 			glyphe: univers.glyphe,
 			ordre: univers.ordre,
 			systeme: univers.systeme,
-			description: univers.description
+			description: univers.description,
+			identifiant: univers.identifiant
 		})
 		.from(univers);
 	/**
@@ -274,9 +278,41 @@ async function arborescenceDeNavigation(
 	const lisibles = await lireLesDomainesLisibles(base, acces);
 	const universPorteurs = new Set(lisibles.map((d) => d.univers));
 
+	/**
+	 * LES DÉSIGNATIONS — LE NOM D'AFFICHAGE VERS L'IDENTIFIANT D'ADRESSE.
+	 *
+	 * Les vues reçoivent des NOMS et composaient l'adresse en les slugifiant,
+	 * alors que `univers.identifiant` et `domaines.identifiant` sont persistés et
+	 * ne suivent PAS les renommages (`RG-M12-11`). Renommer un univers ou un
+	 * domaine en console rendait donc 404 toutes ses adresses — l'accueil, le
+	 * rail, le fil d'Ariane, la page de l'univers. La correspondance est LUE, et
+	 * dans les DEUX requêtes que ce chargeur émettait déjà : elle n'en coûte
+	 * aucune.
+	 *
+	 * ELLE NE DIT QUE CE QUE L'APPELANT VOIT DÉJÀ. Les domaines sont ceux que
+	 * `lireLesDomainesLisibles()` a laissés passer ; les univers, ceux qui en
+	 * portent un. `RG-ACC-01` : le nom d'un univers dit l'organisation de la
+	 * direction, et un compte sans droit n'a pas à le lire.
+	 *
+	 * L'ADMINISTRATEUR LES REÇOIT TOUS, y compris les univers SANS domaine.
+	 * `RG-DRO-03` lui donne un périmètre total, et c'est le cas exact du premier
+	 * geste d'une instance neuve : on crée un univers en console, on le renomme,
+	 * et `/console/univers` doit encore mener à sa page.
+	 */
+	const universDesignes = administrateur
+		? lignesUnivers
+		: lignesUnivers.filter((u) => universPorteurs.has(u.nom));
+	const designations: DesignationsDeRangement = {
+		univers: Object.fromEntries(universDesignes.map((u) => [u.nom, u.identifiant])),
+		domaines: Object.fromEntries(
+			lisibles.map((d) => [cleDeDomaine(d.univers, d.nom), d.identifiant])
+		)
+	};
+
 	return {
 		univers: lignesUnivers.filter((u) => universPorteurs.has(u.nom)),
-		domaines: lisibles.map((d) => ({ nom: d.nom, univers: d.univers, couleur: d.couleur }))
+		domaines: lisibles.map((d) => ({ nom: d.nom, univers: d.univers, couleur: d.couleur })),
+		designations
 	};
 }
 
@@ -439,6 +475,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		compte: await identiteAffichable(base, locals.identite.compteId, acces),
 		version: VERSION_DU_PRODUIT,
 		...(await parametresDeCoquille(base)),
-		...(await arborescenceDeNavigation(base, acces))
+		...(await arborescenceDeNavigation(base, acces, locals.identite.role === 'administrateur'))
 	};
 };

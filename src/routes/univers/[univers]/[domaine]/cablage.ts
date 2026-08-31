@@ -124,6 +124,21 @@ export interface OptionsDuDomaine {
 	readonly univers: string;
 	/** Le NOM du domaine rendu — celui que le vecteur porte sous `dom`. */
 	readonly domaine: string;
+	/**
+	 * LES DEUX IDENTIFIANTS D'ADRESSE, ET C'EST PAR EUX QUE TOUT LIEN SE COMPOSE.
+	 *
+	 * Ils étaient dérivés des noms par slugification. `univers.identifiant` et
+	 * `domaines.identifiant` sont fixés à la création et ne suivent PAS les
+	 * renommages (`RG-M12-11`) : chacune des six sorties d'ici rendait donc 404
+	 * dès qu'on avait renommé le domaine — depuis la page même de ce domaine, que
+	 * l'adresse demandée venait de résoudre sur ces colonnes.
+	 *
+	 * Les NOMS restent, et ne sont pas remplaçables : `?domaine=` de l'éditeur et
+	 * `?perimetre=domaine|…` des écrans de module portent bien le nom, c'est ce
+	 * que leurs destinataires comparent.
+	 */
+	readonly universIdentifiant: string;
+	readonly domaineIdentifiant: string;
 }
 
 /** Le libellé d'un nœud, blancs réduits. */
@@ -160,7 +175,10 @@ export function cablerLeDomaine(racine: HTMLElement, options: OptionsDuDomaine):
 
 	const origine = document.location.origin;
 	const listeDuDomaine = (): URL =>
-		new URL(adresseDesNotesDuDomaine(options.univers, options.domaine), origine);
+		new URL(
+			adresseDesNotesDuDomaine(options.universIdentifiant, options.domaineIdentifiant),
+			origine
+		);
 	const aller = (adresse: string | URL): void => {
 		document.location.assign(adresse.toString());
 	};
@@ -191,7 +209,10 @@ export function cablerLeDomaine(racine: HTMLElement, options: OptionsDuDomaine):
 	function adresseDuModule(nom: string): string | URL | null {
 		if (nom === 'Notes') return listeDuDomaine();
 		if (nom === 'Signets') {
-			return new URL(adresseDesSignetsDuDomaine(options.univers, options.domaine), origine);
+			return new URL(
+				adresseDesSignetsDuDomaine(options.universIdentifiant, options.domaineIdentifiant),
+				origine
+			);
 		}
 		if (nom === 'Cartographie') return adresseAuPerimetreDuDomaine(ADRESSE_DE_LA_CARTOGRAPHIE);
 		if (nom === 'Carte mentale') return adresseAuPerimetreDuDomaine(ADRESSE_DE_LA_CARTE_MENTALE);
@@ -207,7 +228,7 @@ export function cablerLeDomaine(racine: HTMLElement, options: OptionsDuDomaine):
 		   rangement. Sans elle, le module n'en avait aucun. */
 		if (nom === 'Dossiers') {
 			return new URL(
-				adresseDeDossier(options.univers, options.domaine, [options.domaine]),
+				adresseDeDossier(options.universIdentifiant, options.domaineIdentifiant, [options.domaine]),
 				origine
 			);
 		}

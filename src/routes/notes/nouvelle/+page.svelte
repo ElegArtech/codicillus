@@ -68,7 +68,13 @@
 		type GestesCables,
 		peindreLeRefusDEdition
 	} from '$lib/edition/gestes';
-	import { adresseDesNotesDuDomaine, dossierDeLArborescence } from '$lib/rangement/adresses';
+	import { adressesParLesNoms, dossierDeLArborescence } from '$lib/rangement/adresses';
+	import { designationsDeCoquille } from '$lib/coquille/identite';
+
+	/* LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM : il
+	   ne suit pas les renommages (`RG-M12-11`), et « Annuler » ramenait en 404 dès
+	   qu'on avait renommé le domaine de rattachement. */
+	const adresses = adressesParLesNoms(designationsDeCoquille());
 	import { cablerLeChoixDeDepart } from './cablage';
 	import type { ActionData, PageData } from './$types';
 
@@ -125,7 +131,7 @@
 	   qui va la recevoir en a une. */
 	const retourDAnnulation = $derived(
 		page.data.domaines?.some((d: { nom: string }) => d.nom === compte.domaine) === true
-			? adresseDesNotesDuDomaine(universDuCompte, compte.domaine)
+			? adresses.notes(universDuCompte, compte.domaine)
 			: '/'
 	);
 
