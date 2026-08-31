@@ -166,6 +166,7 @@
 	 */
 	import type { Note } from '../../seeds/corpus';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
+	import { adresseDeNote } from '$lib/rangement/adresses';
 	import { chercher, segmenter } from '$lib/public/recherche';
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 
@@ -447,8 +448,17 @@
 	injecté, exactement comme `window.surligner()` l'obtient en construisant
 	des nœuds de texte.
 -->
+<!--
+	`svelte/no-navigation-without-resolve` est levée sur la ligne de résultat, et
+	pour la raison de V-26 : l'adresse vient de `adresseDeNote()`, la fabrique
+	unique du rangement. La règle inspecte l'expression du `href` et ne peut pas
+	la suivre jusque-là ; la faire repasser par `resolve()` ajouterait une
+	seconde source de vérité à une forme qui n'en a qu'une.
+-->
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
 <!-- prettier-ignore -->
-{#snippet ligne(n: Note, requete: string, rang: number, selection: number)}<a class="pres" href="#" role="option" data-index={rang} aria-selected={rang === selection} data-sel={rang === selection ? 'oui' : 'non'}><span class="pres__glyphe">{glyphe(n)}</span><span class="pres__corps"><span class="pres__titre">{#each segmenter(n.titre, requete) as s, k (k)}{#if s.marque}<mark>{s.texte}</mark>{:else}{s.texte}{/if}{/each}</span><span class="pres__sous">{@render temoin(n)}<span>{meta(n)}</span>{#if n.operationnel}<span class="past" style="padding: 1px 5px;">Opérationnel</span>{/if}</span></span><span class="pres__entree">↵</span></a>{/snippet}
+{#snippet ligne(n: Note, requete: string, rang: number, selection: number)}<a class="pres" href={adresseDeNote(n.id)} role="option" data-index={rang} aria-selected={rang === selection} data-sel={rang === selection ? 'oui' : 'non'}><span class="pres__glyphe">{glyphe(n)}</span><span class="pres__corps"><span class="pres__titre">{#each segmenter(n.titre, requete) as s, k (k)}{#if s.marque}<mark>{s.texte}</mark>{:else}{s.texte}{/if}{/each}</span><span class="pres__sous">{@render temoin(n)}<span>{meta(n)}</span>{#if n.operationnel}<span class="past" style="padding: 1px 5px;">Opérationnel</span>{/if}</span></span><span class="pres__entree">↵</span></a>{/snippet}
+<!-- eslint-enable svelte/no-navigation-without-resolve -->
 
 <a class="saut-contenu" href="#etats">Aller aux états</a>
 
@@ -501,6 +511,7 @@
 								value={cas.requete}
 								placeholder="Chercher une note, une {motFicheMinuscule}, un signet…"
 								role="combobox"
+								aria-controls="palette-liste-{cas.cle}"
 								aria-expanded="true"
 								aria-label="Recherche rapide"
 								tabindex="-1"
@@ -538,7 +549,7 @@
 						</div>
 
 						<!-- prettier-ignore -->
-						<div class="palette__liste" role="listbox" aria-label="Résultats" style="max-height: {cas.hauteur};">{#if liste.groupe}<div class="palette__groupe etiq">{liste.groupe}</div>{/if}{#each liste.lignes as n, rang (n.id)}{@render ligne(n, cas.requete, rang, liste.selection)}{/each}{#if liste.bloc}<div class="palette__etat"><p>{liste.bloc.texte}{#if liste.bloc.requete}<span class="palette__requete">{' « ' + liste.bloc.requete + ' »'}</span>{/if}</p>{#if liste.bloc.action}<button class="btn btn--principal">{liste.bloc.action}</button>{/if}</div>{/if}</div>
+						<div class="palette__liste" id="palette-liste-{cas.cle}" role="listbox" aria-label="Résultats" style="max-height: {cas.hauteur};">{#if liste.groupe}<div class="palette__groupe etiq">{liste.groupe}</div>{/if}{#each liste.lignes as n, rang (n.id)}{@render ligne(n, cas.requete, rang, liste.selection)}{/each}{#if liste.bloc}<div class="palette__etat"><p>{liste.bloc.texte}{#if liste.bloc.requete}<span class="palette__requete">{' « ' + liste.bloc.requete + ' »'}</span>{/if}</p>{#if liste.bloc.action}<button class="btn btn--principal">{liste.bloc.action}</button>{/if}</div>{/if}</div>
 
 						<div class="palette__pied">
 							<!-- prettier-ignore -->

@@ -329,6 +329,15 @@
 	/** La branche est-elle dépliée ? */
 	const estDeplie = (cle: string): boolean => deplies.includes(cle);
 
+	/**
+	 * LE NŒUD COURANT — celui que le périmètre demandé désigne, et lui seul.
+	 * Sans périmètre, aucun nœud n'est courant : l'arbre montre tout le corpus
+	 * et rien n'y est choisi. C'est ce que rendent `aria-selected` et le
+	 * marquage visuel de la carte, qui disent donc la même chose.
+	 */
+	const estCourant = (n: NoeudMental): boolean =>
+		perimetre.type === n.rang && perimetre.nom === n.nom;
+
 	/** Le chevron d'une branche — `basculer()` du gel, `V-21:2421`. */
 	function basculer(n: NoeudMental): void {
 		const courantes = deplies;
@@ -517,6 +526,7 @@
 					type="button"
 					role="treeitem"
 					data-rang={n.rang}
+					aria-selected={estCourant(n)}
 					aria-expanded={n.enfants.length ? estDeplie(n.cle) : undefined}
 					onclick={() => (n.enfants.length ? basculer(n) : ouvrir(n))}
 					><span class="la-noeud__chev"
@@ -610,11 +620,12 @@
 								class="n"
 								data-rang={l.noeud.rang}
 								data-cle={l.noeud.cle}
-								data-courant="non"
+								data-courant={estCourant(l.noeud) ? 'oui' : 'non'}
 								transform="translate({l.x},{l.y})"
 								tabindex="0"
 								role="treeitem"
 								aria-label={libelleDuNoeud(l.noeud)}
+								aria-selected={estCourant(l.noeud)}
 								aria-expanded={l.noeud.enfants.length ? estDeplie(l.noeud.cle) : undefined}
 								onclick={() => ouvrir(l.noeud)}
 								onkeydown={(e) => {
