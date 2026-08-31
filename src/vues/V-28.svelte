@@ -57,7 +57,8 @@
 	 * l'ensemble clos du gel de V-28 (ARB-016, P-6.4).
 	 */
 	import { resolve } from '$app/paths';
-	import { identifiantLisible } from '$lib/rangement/adresses';
+	import { identifiantDUnivers, identifiantDeDomaine } from '$lib/rangement/adresses';
+	import { designationsDeCoquille } from '$lib/coquille/identite';
 	import type {
 		CleDeModule,
 		DetailDeDomaine,
@@ -83,6 +84,17 @@
 	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
 	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
 	const motsDuProduit = vocabulaireRendu();
+
+	/**
+	 * LES IDENTIFIANTS D'ADRESSE, LUS EN BASE — PAS DÉRIVÉS DES NOMS.
+	 *
+	 * La vue ne reçoit que des NOMS, et les slugifiait pour composer le lien
+	 * « ouvrir » de chaque ligne. Les identifiants d'un univers et d'un domaine
+	 * sont fixés à la création et ne suivent PAS les renommages (`RG-M12-11`) :
+	 * renommer un domaine depuis cet écran même rendait donc 404 le lien de la
+	 * ligne qu'on venait de modifier. La table vient du gabarit racine.
+	 */
+	const designations = designationsDeCoquille();
 	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
 	const motFichePluriel = $derived(motsDuProduit.fiches);
 	const motFichePlurielMinuscule = $derived(motsDuProduit.fichesMin);
@@ -527,8 +539,8 @@
 	><span class="tg__puce" style="background:{d.couleur}"></span
 	><div style="min-width:0"
 		><div class="tg__nom"><a class="tg__ouvrir" href={resolve('/univers/[univers]/[domaine]', {
-			univers: identifiantLisible(d.univers),
-			domaine: identifiantLisible(d.nom)
+			univers: identifiantDUnivers(designations, d.univers),
+			domaine: identifiantDeDomaine(designations, d.univers, d.nom)
 		})}>{d.nom}</a></div
 		><div class="tg__desc">{d.description}</div
 	></div

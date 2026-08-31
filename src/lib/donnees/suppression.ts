@@ -90,9 +90,9 @@
 import { eq, sql } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
-import { notes, versions } from '../base/schema';
+import { domaines, notes, univers, versions } from '../base/schema';
 import { INTROUVABLE, type Identite, type Resolution } from '../droits/resolution';
-import { adresseDeDomaine } from '../rangement/adresses';
+import { adresseDeDomaine, identifiantLisible } from '../rangement/adresses';
 import { entretenirLIndex } from '../recherche/entretien';
 import { resoudreLEditionDUneNote } from './edition';
 import type { ContexteDeLecture } from './lecture';
@@ -288,7 +288,31 @@ export async function supprimerUneNote(
 	   lire une ressource sans avoir lu son verdict. */
 	if (!resume.trouve) return INTROUVABLE;
 
-	const adresseDeRetour = adresseDeDomaine(lecture.note.univers, lecture.note.domaine);
+	/**
+	 * L'ADRESSE DE RETOUR SE COMPOSE SUR LES IDENTIFIANTS PERSISTÉS.
+	 *
+	 * Elle se composait sur les NOMS d'affichage que la note porte, slugifiés.
+	 * `univers.identifiant` et `domaines.identifiant` sont fixés à la création et
+	 * ne suivent PAS les renommages (`RG-M12-11`) : détruire une note d'un domaine
+	 * renommé renvoyait donc en 404, juste après une destruction réussie. Les deux
+	 * identifiants sont LUS, dans la même requête, et avant la destruction — après,
+	 * la note n'est plus là pour les donner.
+	 *
+	 * Une note sans ligne de rangement lisible ne peut pas exister — la colonne est
+	 * requise et référencée —, mais le type l'admet : le repli est la dérivation du
+	 * nom, celle d'avant.
+	 */
+	const [rangement] = await base
+		.select({ univers: univers.identifiant, domaine: domaines.identifiant })
+		.from(notes)
+		.innerJoin(domaines, eq(domaines.id, notes.domaineId))
+		.innerJoin(univers, eq(univers.id, domaines.universId))
+		.where(eq(notes.identifiant, demande.identifiant))
+		.limit(1);
+	const adresseDeRetour = adresseDeDomaine(
+		rangement?.univers ?? identifiantLisible(lecture.note.univers),
+		rangement?.domaine ?? identifiantLisible(lecture.note.domaine)
+	);
 
 	await base.transaction(async (tx) => {
 		await tx.delete(notes).where(eq(notes.identifiant, demande.identifiant));

@@ -251,8 +251,13 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	   nommée, et deux adresses servies pour un même dossier les feraient
 	   diverger. La redirection est permanente — l'adresse nue ne changera plus
 	   de sens. */
+	/* LES DEUX PREMIERS SEGMENTS SONT LES IDENTIFIANTS PERSISTÉS, jamais les noms
+	   slugifiés : ce sont ceux sur lesquels l'adresse demandée vient d'être
+	   résolue, et ils ne suivent pas les renommages (`RG-M12-11`). Composée sur
+	   les noms, chacune des quatre redirections de ce fichier menait en 404 dès
+	   qu'un univers ou un domaine avait été renommé. */
 	if (dossier.parentId === null && params.chemin.split('/').every((s) => s === '')) {
-		redirect(308, adresseDeDossier(domaine.universNom, domaine.nom, [dossier.nom]));
+		redirect(308, adresseDeDossier(domaine.universIdentifiant, domaine.identifiant, [dossier.nom]));
 	}
 
 	/**
@@ -515,7 +520,7 @@ export const actions: Actions = {
 		const segmentsDuParent = segmentsAffiches(lignes, dossier.id).map(identifiantLisible);
 		redirect(
 			303,
-			adresseDeDossier(domaine.universNom, domaine.nom, [
+			adresseDeDossier(domaine.universIdentifiant, domaine.identifiant, [
 				...segmentsDuParent,
 				identifiantLisible(nom)
 			])
@@ -558,7 +563,7 @@ export const actions: Actions = {
 			return fail(422, { deplacement: fait.message });
 		}
 
-		redirect(303, adresseDeDossier(domaine.universNom, domaine.nom, fait.segments));
+		redirect(303, adresseDeDossier(domaine.universIdentifiant, domaine.identifiant, fait.segments));
 	},
 
 	/**
@@ -615,8 +620,8 @@ export const actions: Actions = {
 		redirect(
 			303,
 			fait.segmentsDuParent.length === 0
-				? adresseDeDomaine(domaine.universNom, domaine.nom)
-				: adresseDeDossier(domaine.universNom, domaine.nom, fait.segmentsDuParent)
+				? adresseDeDomaine(domaine.universIdentifiant, domaine.identifiant)
+				: adresseDeDossier(domaine.universIdentifiant, domaine.identifiant, fait.segmentsDuParent)
 		);
 	}
 };

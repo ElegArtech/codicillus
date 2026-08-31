@@ -17,7 +17,13 @@
  * rangée dans un chemin crée tous les dossiers de ce chemin.
  */
 import type { Domaine, Note, Univers } from '../../../seeds/corpus';
-import { identifiantLisible } from '../rangement/adresses';
+import {
+	SANS_DESIGNATION,
+	identifiantDUnivers,
+	identifiantDeDomaine,
+	identifiantLisible,
+	type DesignationsDeRangement
+} from '../rangement/adresses';
 
 /** Le séparateur de chemin de dossier employé par le corpus. */
 const SEPARATEUR = '›';
@@ -183,7 +189,15 @@ export function rendreNoeuds(
 	 */
 	univers = '',
 	domaine: string | null = null,
-	chemin: readonly string[] = []
+	chemin: readonly string[] = [],
+	/**
+	 * LA TABLE QUI TRADUIT UN NOM EN IDENTIFIANT D'ADRESSE. Les nœuds portent des
+	 * NOMS — le rail affiche des noms —, et l'identifiant d'un univers ou d'un
+	 * domaine est persisté, stable sous les renommages (`RG-M12-11`) : le
+	 * slugifier rendait 404 toute la branche d'un domaine renommé. Vide, la
+	 * dérivation d'avant s'applique.
+	 */
+	designations: DesignationsDeRangement = SANS_DESIGNATION
 ): readonly NoeudRendu[] {
 	const dernier = courant.length ? courant[courant.length - 1] : null;
 	return noeuds.map((n) => {
@@ -197,7 +211,8 @@ export function rendreNoeuds(
 			brancheEnChargement,
 			univers,
 			domaineDuNoeud,
-			cheminDuNoeud
+			cheminDuNoeud,
+			designations
 		);
 		const estCourant = courant.includes(n.nom);
 		return {
@@ -212,8 +227,8 @@ export function rendreNoeuds(
 				univers === ''
 					? null
 					: {
-							univers: identifiantLisible(univers),
-							domaine: identifiantLisible(domaineDuNoeud),
+							univers: identifiantDUnivers(designations, univers),
+							domaine: identifiantDeDomaine(designations, univers, domaineDuNoeud),
 							chemin: cheminDuNoeud.map(identifiantLisible)
 						},
 			enfants,
@@ -229,11 +244,12 @@ export function rendreNoeuds(
 export function railRendu(
 	sections: readonly SectionDUnivers[],
 	courant: readonly string[],
-	brancheEnChargement: string | null
+	brancheEnChargement: string | null,
+	designations: DesignationsDeRangement = SANS_DESIGNATION
 ): readonly SectionRendue[] {
 	return sections.map((s) => ({
 		nom: s.nom,
-		cible: { univers: identifiantLisible(s.nom), domaine: '', chemin: [] },
-		domaines: rendreNoeuds(s.domaines, courant, brancheEnChargement, s.nom, null)
+		cible: { univers: identifiantDUnivers(designations, s.nom), domaine: '', chemin: [] },
+		domaines: rendreNoeuds(s.domaines, courant, brancheEnChargement, s.nom, null, [], designations)
 	}));
 }

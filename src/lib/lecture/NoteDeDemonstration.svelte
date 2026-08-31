@@ -51,13 +51,8 @@
 	import CorpsOperationnel from './CorpsOperationnel.svelte';
 	import CorpsReference from './CorpsReference.svelte';
 	import { PROSE_PAR_NIVEAU, rangementDe, type LectureAffichee } from './note-de-demonstration';
-	import {
-		adresseDeDomaine,
-		adresseDeDossier,
-		adresseDesNotesDuDomaine,
-		adresseDUnivers,
-		segmentsDeDossier
-	} from '$lib/rangement/adresses';
+	import { adressesParLesNoms, segmentsDeDossier } from '$lib/rangement/adresses';
+	import { designationsDeCoquille } from '$lib/coquille/identite';
 	import type { Snippet } from 'svelte';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
@@ -66,6 +61,18 @@
 	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
 	const motsDuProduit = vocabulaireRendu();
 	const motFiche = $derived(motsDuProduit.fiche);
+
+	/**
+	 * LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM.
+	 *
+	 * La note ne porte que les NOMS de son univers et de son domaine, et le
+	 * composant les slugifiait. Les identifiants d'adresse sont fixés à la
+	 * création et ne suivent PAS les renommages (`RG-M12-11`) : renommer le
+	 * domaine d'une note rendait 404 tout son fil de rangement. La table vient du
+	 * gabarit racine ; hors application elle est vide et la dérivation du nom
+	 * s'applique, comme avant.
+	 */
+	const adresses = adressesParLesNoms(designationsDeCoquille());
 
 	/*
 	   LES CINQ LEVIERS DE PLANCHE ONT DISPARU DES PROPRIÉTÉS — `niveau`,
@@ -181,9 +188,9 @@
 	 * il n'entre donc pas dans le chemin.
 	 */
 	function adresseDuSegment(rang: number): string {
-		if (rang === 0) return adresseDUnivers(note.univers);
-		if (rang === 1) return adresseDeDomaine(note.univers, note.domaine);
-		return adresseDeDossier(
+		if (rang === 0) return adresses.univers(note.univers);
+		if (rang === 1) return adresses.domaine(note.univers, note.domaine);
+		return adresses.dossier(
 			note.univers,
 			note.domaine,
 			segmentsDeDossier(note.dossier).slice(0, rang - 1)
@@ -192,7 +199,7 @@
 
 	/** La liste des notes du domaine, restreinte à une facette et une valeur. */
 	function adresseFiltree(facette: string, valeur: string): string {
-		const liste = adresseDesNotesDuDomaine(note.univers, note.domaine);
+		const liste = adresses.notes(note.univers, note.domaine);
 		return `${liste}?${facette}=${encodeURIComponent(valeur)}`;
 	}
 	const consultations = $derived(affichee.consultations30j);

@@ -90,13 +90,20 @@
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
-	import type { CompteAffiche } from '$lib/coquille/identite';
-	import {
-		adresseDeDossier,
-		adresseDeNote,
-		adresseDesNotesDuDomaine,
-		segmentsDeDossier
-	} from '$lib/rangement/adresses';
+	import { designationsDeCoquille, type CompteAffiche } from '$lib/coquille/identite';
+	import { adresseDeNote, adressesParLesNoms, segmentsDeDossier } from '$lib/rangement/adresses';
+
+	/**
+	 * LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM.
+	 *
+	 * La vue ne reçoit que des NOMS d'affichage — celui de son univers, celui de
+	 * son domaine — et les slugifiait. Les identifiants d'adresse sont persistés
+	 * et ne suivent PAS les renommages (`RG-M12-11`) : renommer le domaine rendait
+	 * 404 chaque sous-dossier et chaque lien de liste d'ici. La table vient du
+	 * gabarit racine ; hors application elle est vide et la dérivation du nom
+	 * s'applique.
+	 */
+	const adresses = adressesParLesNoms(designationsDeCoquille());
 	import { accord, pluriel, vocabulaireRendu } from '$lib/vocabulaire';
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
@@ -647,7 +654,7 @@
 	function adresseDesNotesDuDossier(chemins: readonly string[]): string | null {
 		if (chemins.length === 0 || chemins.some((chemin) => chemin === '')) return null;
 		const couples = chemins.map((chemin) => `dossier=${encodeURIComponent(chemin)}`);
-		return `${adresseDesNotesDuDomaine(UNIVERS_DU_DOMAINE, DOMAINE)}?${couples.join('&')}`;
+		return `${adresses.notes(UNIVERS_DU_DOMAINE, DOMAINE)}?${couples.join('&')}`;
 	}
 
 	const lienDesNotesDirectes = $derived(adresseDesNotesDuDossier([cheminTexte(chemin)]));
@@ -828,7 +835,7 @@
 					{@const sousChemin = [...chemin, s]}
 					{@const nbNotes = notesRecursives(sousChemin).length}
 					{@const nbSous = compterSousArbre(sousChemin)}
-					<a class="tuile" href={adresseDeDossier(UNIVERS_DU_DOMAINE, DOMAINE, sousChemin)}
+					<a class="tuile" href={adresses.dossier(UNIVERS_DU_DOMAINE, DOMAINE, sousChemin)}
 						><span class="tuile__ic"
 							><svg
 								width="18"
