@@ -71,6 +71,8 @@
 		type Contour,
 		type EncodageDeType
 	} from '$lib/graphe/cartographie';
+	import { formaterDateHeureFr, formaterDateIso } from '$lib/dates';
+	import type { FamillesSemantiques } from '$lib/graphe/familles';
 
 	/**
 	 * LES QUATRE SOURCES DU GRAPHE SONT EXIGÉES, ET C'EST LE LEVIER : optionnelles,
@@ -116,6 +118,14 @@
 		perimetreDemande: string;
 		typeMaitreDemande: string | null;
 		centreDemande: string | null;
+		/**
+		 * LES FAMILLES SÉMANTIQUES DU PÉRIMÈTRE ET LA DATE DE LEUR CALCUL —
+		 * `RG-M09-06`. EXIGÉE, comme en V-19 et par le MÊME chargeur : « un nœud doit
+		 * se reconnaître à l'identique d'un mode à l'autre », et sa famille en fait
+		 * partie. Le panneau de détail en rend celle du nœud choisi, avec la date —
+		 * un regroupement sans sa date serait un chiffre qu'on ne peut pas dater.
+		 */
+		familles: FamillesSemantiques;
 	}
 
 	const {
@@ -129,7 +139,8 @@
 		proprietesDeFiche,
 		perimetreDemande,
 		typeMaitreDemande,
-		centreDemande
+		centreDemande,
+		familles
 	}: Proprietes = $props();
 
 	/** Aucune identité servie : un compte VIDE, jamais celui du jeu de démonstration. */
@@ -427,6 +438,27 @@
 
 	const noteDuDetail = $derived(choisi === null ? undefined : noteDe(choisi));
 	const detailEstUneFiche = $derived(noteDuDetail?.typeFiche !== undefined);
+
+	/* ── LA FAMILLE SÉMANTIQUE DU NŒUD CHOISI — `RG-M09-06` ─────────────────
+	   Le regroupement arrive tout fait, calculé sur les notes LISIBLES du même
+	   périmètre que le dessin : la vue ne fait que chercher dans quelle famille son
+	   nœud tombe. La date est celle du calcul, pas celle de l'affichage — la formater
+	   ici ne la fabrique pas, elle la rend lisible. */
+	const familleDuDetail = $derived(
+		choisi === null ? undefined : familles.familles.find((f) => f.membres.includes(choisi))
+	);
+	const dateDeCalcul = $derived(
+		familles.calculeLe === '' ? null : formaterDateHeureFr(familles.calculeLe)
+	);
+	const dateDeCalculMachine = $derived(
+		familles.calculeLe === '' ? null : formaterDateIso(familles.calculeLe)
+	);
+
+	/* L'ESPACE FINAL EST DANS L'EXPRESSION : Svelte élague les blancs en bord
+	   d'élément, et la mention de date se collerait au point qui la précède. */
+	const MENTION_DU_REGROUPEMENT =
+		'Regroupement par proximité de sens, indépendant des relations déclarées. ';
+
 	const noeudDuDetail = $derived(choisi === null ? undefined : graphe.index.get(choisi));
 
 	/* L'ADRESSE PORTE L'ÉTAT — `RG-M09-05`. Une seule fabrique, et tous les gestes
@@ -906,6 +938,23 @@
 											<span class="prop__cle">{p.nom}</span><span>{p.valeur}</span>
 										</div>{/each}{/if}
 							</div>{/if}
+						<div class="detail__section">
+							<span class="etiq">Famille sémantique</span>
+							{#if familleDuDetail === undefined}<p
+									style="font-size:var(--t-petit);color:var(--c-encre-3);margin:0"
+								>
+									Cette note ne rejoint aucune famille : rien ne la rapproche d'une autre note du
+									périmètre — ni étiquette, ni dossier, ni mot de titre.
+								</p>{:else}<p style="font-size:var(--t-petit);color:var(--c-encre-2);margin:0">
+									<b>{familleDuDetail.nom}</b
+									>{` — ${familleDuDetail.membres.length} ${accord(familleDuDetail.membres.length, 'note')}, ${familleDuDetail.origine}.`}
+								</p>{/if}
+							<p style="font-size:var(--t-mini);color:var(--c-encre-3);margin:var(--e-2) 0 0">
+								{MENTION_DU_REGROUPEMENT}{#if dateDeCalcul !== null && dateDeCalculMachine !== null}<time
+										datetime={dateDeCalculMachine}>{'Calculé le ' + dateDeCalcul + '.'}</time
+									>{/if}
+							</p>
+						</div>
 						<div class="detail__section">
 							<span class="etiq">Relations</span>{#if !groupesDuDetail.length}<p
 									style="font-size:var(--t-petit);color:var(--c-encre-3);margin:0"

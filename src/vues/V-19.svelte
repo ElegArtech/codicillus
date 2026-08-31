@@ -68,6 +68,8 @@
 		type EncodageDeType
 	} from '$lib/graphe/cartographie';
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
+	import { formaterDateHeureFr, formaterDateIso } from '$lib/dates';
+	import type { FamillesSemantiques } from '$lib/graphe/familles';
 
 	/* Le mot renommable de `M14.7`, lu sur le contexte de coquille : en constante,
 	   le renommer en console ne changeait rien a l'ecran. Repli : « Fiche ». */
@@ -105,6 +107,14 @@
 		 * périmètre d'être sans relation là où il n'existait pas.
 		 */
 		perimetreDemande?: string | undefined;
+		/**
+		 * LES FAMILLES SÉMANTIQUES DU PÉRIMÈTRE ET LA DATE DE LEUR CALCUL —
+		 * `RG-M09-06`. EXIGÉE : les deux routes de cartographie la passent, et le
+		 * compilateur garde la porte. Le calcul se fait au chargeur, sur les notes
+		 * lisibles ; la vue n'en refait aucun bout — elle ne saurait pas dire de
+		 * quand date ce qu'elle recalculerait.
+		 */
+		familles: FamillesSemantiques;
 	}
 
 	const {
@@ -116,7 +126,8 @@
 		relations,
 		typesRelation,
 		relationsTechniques,
-		perimetreDemande
+		perimetreDemande,
+		familles
 	}: Proprietes = $props();
 
 	/** Aucune identité servie : un compte VIDE, jamais celui du jeu de démonstration. */
@@ -183,15 +194,66 @@
 		`${note.titre}, ${typeDe(note).nom}, ${degreDe(id)} ${accord(degreDe(id), 'connexion')}` +
 		(ruptures.has(id) ? ', point de rupture' : '');
 
-	const ligneAlternative = (id: string, note: Note): string =>
-		` — ${typeDe(note).nom}, ${note.domaine}, ${degreDe(id)} ${accord(degreDe(id), 'connexion')}` +
-		(ruptures.has(id) ? ', point de rupture' : '') +
-		'.';
+	const ligneAlternative = (id: string, note: Note): string => {
+		const famille = familleParNote.get(id);
+		return (
+			` — ${typeDe(note).nom}, ${note.domaine}, ${degreDe(id)} ${accord(degreDe(id), 'connexion')}` +
+			(ruptures.has(id) ? ', point de rupture' : '') +
+			(famille === undefined ? ', aucune famille sémantique' : `, famille sémantique ${famille}`) +
+			'.'
+		);
+	};
 
 	/* L'avancement du calcul de disposition : le gel remplit la jauge par pas de
 	   7 % toutes les 90 ms (`V-19:3008`), et onze pas sont dus au moment mesuré.
 	   C'est un état figé, jamais une animation. */
 	const AVANCEMENT = 77;
+
+	/* ── LES FAMILLES SÉMANTIQUES — `RG-M09-06` ────────────────────────────────
+	   « Regroupement des notes par proximité de sens, INDÉPENDAMMENT des relations
+	   déclarées » (M09.6). Elles ne se lisent donc pas sur `graphe` : une famille
+	   réunit des notes que le dessin ne relie pas, et peut nommer une note qu'aucune
+	   arête ne touche — donc absente du dessin. C'est tout l'intérêt du regroupement,
+	   et la légende le dit en toutes lettres.
+
+	   LA DATE VIENT DU CHARGEUR, JAMAIS D'ICI. Une horloge lue dans la vue daterait
+	   l'affichage, pas le calcul : `RG-M09-06` demande la seconde. */
+
+	/**
+	 * LA FAMILLE DE CHAQUE NOTE. La légende donne les familles ; la liste des nœuds
+	 * dit, note par note, laquelle. LA LÉGENDE NE CITE AUCUN TITRE : la colonne est
+	 * étroite, et les titres sont déjà écrits une fois, dans la liste équivalente.
+	 */
+	const familleParNote = $derived(
+		new Map<string, string>(
+			familles.familles.flatMap((f) => f.membres.map((membre) => [membre, f.nom] as const))
+		)
+	);
+
+	/**
+	 * LA DATE DU CALCUL, EN TOUTES LETTRES. Une chaîne vide vaut « pas de calcul » —
+	 * il n'y a alors rien à dater, et la formater lèverait.
+	 */
+	const dateDeCalcul = $derived(
+		familles.calculeLe === '' ? null : formaterDateHeureFr(familles.calculeLe)
+	);
+	const dateDeCalculMachine = $derived(
+		familles.calculeLe === '' ? null : formaterDateIso(familles.calculeLe)
+	);
+
+	/**
+	 * CE QUE LA LÉGENDE DIT DU REGROUPEMENT, ESPACE FINAL COMPRIS. La phrase est
+	 * portée par une EXPRESSION et non par du texte de balisage : Svelte élague les
+	 * blancs en bord d'élément, et la mention de date qui la suit se collerait au
+	 * point de la phrase précédente.
+	 */
+	const mentionDesFamilles = $derived(
+		(familles.familles.length > 0 && familles.sansFamille > 0
+			? `${familles.sansFamille} ${accord(familles.sansFamille, 'note')} hors famille. `
+			: '') +
+			'Regroupement par proximité de sens — étiquettes, dossier, mots des titres —, ' +
+			"indépendant des relations déclarées : une famille peut réunir des notes qu'aucune arête ne relie. "
+	);
 
 	/** Les cinq clés de lecture du graphe, dans l'ordre du gel. */
 	const CLES_DE_LECTURE: readonly (readonly [string, string])[] = [
@@ -353,6 +415,30 @@
 					<p class="legende__note">
 						Cliquer un type isole ses nœuds. La forme et le code portent le type ; la couleur ne
 						fait que les répéter.
+					</p>
+				</div>
+
+				<div class="legende__bloc">
+					<span class="etiq">Familles sémantiques</span>
+					<div id="legende-familles" style="margin-top:var(--e-2)">
+						{#each familles.familles as f (f.cle)}<div
+								style="font-size:var(--t-mini);line-height:1.45;margin-bottom:var(--e-2)"
+							>
+								<b style="display:block;color:var(--c-encre);font-weight:var(--g-fort)"
+									>{f.nom + ' · ' + f.membres.length + ' ' + accord(f.membres.length, 'note')}</b
+								><span style="color:var(--c-encre-3)">{f.origine}</span>
+							</div>{:else}<p
+								style="font-size:var(--t-mini);line-height:1.45;color:var(--c-encre-3)"
+							>
+								{familles.notesExaminees === 0
+									? 'Aucune note dans ce périmètre : il n’y a rien à regrouper.'
+									: `Aucune famille : ces ${familles.notesExaminees} ${accord(familles.notesExaminees, 'note')} ne partagent ni étiquette, ni dossier, ni mot de titre. Posez une même étiquette sur deux notes pour en former une.`}
+							</p>{/each}
+					</div>
+					<p class="legende__note">
+						{mentionDesFamilles}{#if dateDeCalcul !== null && dateDeCalculMachine !== null}<time
+								datetime={dateDeCalculMachine}>{'Calculé le ' + dateDeCalcul + '.'}</time
+							>{/if}
 					</p>
 				</div>
 
