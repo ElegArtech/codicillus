@@ -78,6 +78,35 @@ describe('l’aller-retour', () => {
 		expect(lireLeBrouillon(stockage, cle)).toEqual(brouillon);
 	});
 
+	/**
+	 * LE GABARIT DE DÉPART FAIT LE VOYAGE — c'est ce qui manquait quand un changement
+	 * de domaine rechargeait l'écran de création : le texte revenait, la PROVENANCE
+	 * non, et la note s'enregistrait comme née de rien.
+	 */
+	it('rend le gabarit de départ quand il y en a un', () => {
+		const stockage = stockageFeint();
+		const cle = cleDeBrouillon(empreinteDeCompte(COMPTE_A), CIBLE_DE_CREATION);
+		const brouillon: Brouillon = {
+			titre: 'Bascule du frontal',
+			corps: CORPS,
+			le: '2026-08-31T12:00:00.000Z',
+			gabarit: 'procedure-d-exploitation'
+		};
+		ecrireLeBrouillon(stockage, cle, brouillon);
+		expect(lireLeBrouillon(stockage, cle)?.gabarit).toBe('procedure-d-exploitation');
+	});
+
+	/** Une page vierge n'a pas de provenance, et un brouillon ancien n'en portait pas. */
+	it('n’invente pas de gabarit quand il n’y en a pas', () => {
+		const stockage = stockageFeint();
+		const cle = cleDeBrouillon(empreinteDeCompte(COMPTE_A), CIBLE_DE_CREATION);
+		stockage.setItem(
+			cle,
+			JSON.stringify({ titre: 't', corps: CORPS, le: '2026-08-31T12:00:00.000Z', gabarit: '' })
+		);
+		expect(lireLeBrouillon(stockage, cle)?.gabarit).toBeUndefined();
+	});
+
 	it('rend null quand rien n’a été écrit', () => {
 		const stockage = stockageFeint();
 		expect(lireLeBrouillon(stockage, 'codicillus:brouillon:x:y')).toBeNull();
