@@ -391,6 +391,29 @@
 	const relationsASupprimer = $derived(aSupprimer ? usage(aSupprimer.cle) : 0);
 	const autresTypes = $derived(aSupprimer ? types.filter((t) => t !== aSupprimer) : []);
 
+	/**
+	 * LA RÉAFFECTATION N'EST OFFERTE QUE S'IL EXISTE UN TYPE POUR L'ACCUEILLIR.
+	 *
+	 * SUPPRIMER LE DERNIER TYPE EMPLOYÉ ÉTAIT UNE IMPASSE MUETTE. `autresTypes`
+	 * est vide quand le catalogue n'en porte qu'un : le sélecteur « Réaffecter à
+	 * un autre type » sortait SANS AUCUNE OPTION, la sortie restait cochée par
+	 * défaut, et « Appliquer » envoyait une cible vide. Le geste refuse cette
+	 * cible — `supprimerUnTypeDeRelation()` rend `cible-invalide` plutôt que de se
+	 * rabattre sur un type quelconque —, mais l'écran n'en disait rien : on
+	 * cliquait, et rien ne se passait.
+	 *
+	 * LA SORTIE RENDUE EST DONC CELLE QUI PEUT ABOUTIR, et le dialogue montre
+	 * laquelle : la case « Réaffecter » est désactivée, le sélecteur porte le
+	 * motif à la place d'une liste vide, et la seconde sortie est cochée. Ce que
+	 * « Appliquer » envoie est exactement ce que l'écran affiche.
+	 */
+	const reaffectationPossible = $derived(autresTypes.length > 0);
+	const sortieEffective = $derived<'reaffecter' | 'supprimer'>(
+		reaffectationPossible ? sortie : 'supprimer'
+	);
+	/** La cible d'accueil retenue, ou la chaîne vide quand il n'y en a aucune. */
+	const cibleDAccueil = $derived(versLeType || (autresTypes[0]?.cle ?? ''));
+
 	/** `showModal()` — voir `V-28.svelte` : l'attribut `open` n'obtient pas la modalité. */
 	$effect(() => {
 		const boite = document.getElementById('dlg-supprimer');
@@ -518,6 +541,18 @@
 									/></svg
 								></button
 							>
+						</div>
+					</div>
+					<!--
+						L'ÉTAT VIDE, PARCE QUE LE PRODUIT COMMENCE VIDE. Une instance neuve ne
+						porte aucun type de relation : la boucle ne rendait rien, et l'écran se
+						réduisait à une ligne d'en-têtes suivie de blanc.
+					-->
+				{:else}
+					<div class="zone-etat" id="liste-vide">
+						<div class="zone-etat__titre">Aucun type de relation</div>
+						<div class="zone-etat__txt">
+							{`Sans vocabulaire de liaison, aucune ${motFicheMinuscule} ne peut être reliée à une autre et le graphe reste sans arête. Le bouton « Nouveau type », en haut à droite, crée le premier couple de libellés.`}
 						</div>
 					</div>
 				{/each}
@@ -782,23 +817,28 @@
 										type="radio"
 										name="sortie"
 										value="reaffecter"
-										checked={sortie === 'reaffecter'}
+										disabled={!reaffectationPossible}
+										checked={sortieEffective === 'reaffecter'}
 										onchange={() => (sortie = 'reaffecter')}
 									/><span style="flex:1"
 										>Réaffecter à un autre type<select
 											class="selecteur"
 											style="margin-top:var(--e-2);width:100%;padding:6px var(--e-2);border:1px solid var(--c-trait-fort);border-radius:var(--r-2);background:var(--c-papier);font-family:var(--f-ui);font-size:var(--t-petit)"
-											value={versLeType || (autresTypes[0]?.cle ?? '')}
+											disabled={!reaffectationPossible}
+											value={cibleDAccueil}
 											onchange={(e) => (versLeType = e.currentTarget.value)}
 											>{#each autresTypes as t (t.cle)}<option value={t.cle}
 													>{t.direct} / {t.inverse}</option
+												>{:else}<option value="">Aucun autre type de relation n'existe</option
 												>{/each}</select
 										><span class="aide"
-											>{accord(
-												relationsASupprimer,
-												'La relation est conservée et change',
-												`Les ${relationsASupprimer} relations sont conservées et changent`
-											)} d'étiquette. Le graphe garde sa structure.</span
+											>{reaffectationPossible
+												? accord(
+														relationsASupprimer,
+														'La relation est conservée et change',
+														`Les ${relationsASupprimer} relations sont conservées et changent`
+													) + " d'étiquette. Le graphe garde sa structure."
+												: 'C’est le seul type de relation du catalogue : il n’y a nulle part où déplacer ces liens. Fermez cette boîte, créez un autre type avec « Nouveau type », et la réaffectation sera possible.'}</span
 										></span
 									></label
 								><label
@@ -806,7 +846,7 @@
 										type="radio"
 										name="sortie"
 										value="supprimer"
-										checked={sortie === 'supprimer'}
+										checked={sortieEffective === 'supprimer'}
 										onchange={() => (sortie = 'supprimer')}
 									/><span style="flex:1"
 										>Supprimer aussi {accord(
@@ -831,8 +871,8 @@
 							if (aSupprimer === null) return;
 							onSupprimer?.({
 								type: aSupprimer.cle,
-								sortie: relationsASupprimer === 0 ? 'supprimer' : sortie,
-								vers: versLeType || (autresTypes[0]?.cle ?? '')
+								sortie: relationsASupprimer === 0 ? 'supprimer' : sortieEffective,
+								vers: cibleDAccueil
 							});
 						}}>{aSupprimer && relationsASupprimer === 0 ? 'Supprimer' : 'Appliquer'}</button
 					>

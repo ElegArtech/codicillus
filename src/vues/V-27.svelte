@@ -69,8 +69,21 @@
 	 * que l'instrument lit aussi (`verif/styles-en-ligne.mjs`).
 	 */
 	import { resolve } from '$app/paths';
-	import { identifiantLisible } from '$lib/rangement/adresses';
+	import { identifiantDUnivers } from '$lib/rangement/adresses';
+	import { designationsDeCoquille } from '$lib/coquille/identite';
 	import { accord } from '$lib/vocabulaire';
+
+	/**
+	 * L'IDENTIFIANT D'ADRESSE D'UN UNIVERS EST PERSISTÉ, PAS DÉRIVÉ DU NOM.
+	 *
+	 * La vue ne reçoit que le NOM, et le slugifiait pour composer le lien
+	 * « ouvrir ». `univers.identifiant` est fixé à la création et ne suit PAS les
+	 * renommages (`RG-M12-11`) : renommer un univers depuis cet écran même rendait
+	 * donc 404 le lien de la ligne qu'on venait de modifier. La table vient du
+	 * gabarit racine, qui sert à l'administrateur TOUS les univers, y compris ceux
+	 * qui n'ont encore aucun domaine.
+	 */
+	const designations = designationsDeCoquille();
 	import type { Domaine, Note, Univers, UtilisateurCourant } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { domainesDe, universOrdonnes } from '$lib/coquille/arborescence';
@@ -554,7 +567,7 @@
 	></div
 	><span class="apercu-nav__sceau" style="background:{u.couleur};width:28px;height:28px">{@render glyphe(u.glyphe, '16', '1.6')}</span
 	><div style="min-width:0"
-		><div class="tg__nom"><a class="tg__ouvrir" href={resolve('/univers/[univers]', { univers: identifiantLisible(u.nom) })}>{u.nom}</a>{#if u.systeme}<span class="past past--systeme" style="margin-left:var(--e-2)">système</span>{/if}</div
+		><div class="tg__nom"><a class="tg__ouvrir" href={resolve('/univers/[univers]', { univers: identifiantDUnivers(designations, u.nom) })}>{u.nom}</a>{#if u.systeme}<span class="past past--systeme" style="margin-left:var(--e-2)">système</span>{/if}</div
 		><div class="tg__desc">{u.description}</div
 	></div
 	><span class="tg__n tg--masquable">{domaines(u.nom).length}</span
@@ -618,7 +631,29 @@
 				<span></span>
 			</div>
 			<div id="liste">
-				{#each liste as u, rang (u.nom)}{@render ligne(u, rang)}{/each}
+				<!--
+					L'ÉTAT VIDE, PARCE QUE LE PRODUIT COMMENCE VIDE.
+
+					Une instance neuve ne porte AUCUN univers : la boucle ne rendait rien,
+					et l'écran se réduisait à une ligne d'en-têtes suivie de blanc. Rien
+					n'y disait ce qui manquait, ni par quel geste on le crée — alors que
+					c'est le tout premier écran d'une installation, et que `/` comme le
+					rail nomment déjà ce même manque à l'administrateur.
+
+					IL NOMME LE GESTE PAR SON LIBELLÉ À L'ÉCRAN, jamais par une adresse :
+					le bouton est là, en haut à droite de la section.
+				-->
+				{#each liste as u, rang (u.nom)}{@render ligne(u, rang)}{:else}<div
+						class="zone-etat"
+						id="liste-vide"
+					>
+						<div class="zone-etat__titre">Aucun univers</div>
+						<div class="zone-etat__txt">
+							L'univers est la racine du rangement : sans lui, aucun domaine, aucun dossier et
+							aucune note n'a de place. Le bouton « Nouvel univers », en haut à droite, crée le
+							premier.
+						</div>
+					</div>{/each}
 			</div>
 		</div>
 
