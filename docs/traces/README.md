@@ -77,6 +77,12 @@ fait à la main le 21/08/2026 ; automatisé, il aurait attrapé le seul défaut 
 balayage — ouvrir n'importe quelle note en modification affichait le corps de la note de
 démonstration, **permanent sans JavaScript**.
 
+**Chaque route porte le code HTTP qu'on attend d'elle, écrit à côté d'elle**, et le verdict le pèse.
+Le passage a longtemps imprimé ce code sans jamais le juger : trente-neuf pages en 500 se seraient
+relevées en 500 sous un « PASSAGE À FROID COMPLET » et un code de sortie `0` — et le dépôt porte
+précisément cet incident-là au passé. Un écart au code attendu est désormais une fuite au même titre
+qu'une aiguille du jeu : il s'affiche au relevé, il nomme la route, et il fait rendre `1`.
+
 Il **pose son décor et il le dit** : `droits_de_dossier` ne porte aucune ligne sur une instance
 neuve, et `RG-DRO-02` rend alors le produit en lecture seule pour tout le monde. Sans un droit
 `gestionnaire` posé en base, aucune note ne peut naître. Le mot de passe de son compte est **tiré au
