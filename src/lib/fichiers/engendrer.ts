@@ -1,40 +1,20 @@
 /**
  * ENGENDRER DES OCTETS RÉELS — pour les épreuves, et pour elles seules.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI CE MODULE EXISTE, ET POURQUOI IL N'EST PAS UNE VALEUR ILLUSTRATIVE
+ * Le gel écrit « 1,2 Mo » et « 18 Ko » (`V-14:1836`, `:1840`), or `taille_octets`
+ * veut un NOMBRE : « 1,2 Mo » en désigne un intervalle, et recopier 1 258 291 depuis
+ * ce libellé serait la valeur illustrative que `P-02` proscrit. Ce module fait
+ * l'inverse : il ENGENDRE un contenu, et la taille est le nombre d'octets réellement
+ * produits.
  *
- * `T-049` a mesuré le vrai blocage des pièces jointes du gel, et il est plus
- * étroit qu'un manque de noms : le gel écrit « 1,2 Mo » et « 18 Ko »
- * (`V-14:1836`, `:1840`), or `taille_octets` veut un NOMBRE. « 1,2 Mo » n'en
- * désigne pas un, il en désigne un intervalle. Recopier 1 258 291 depuis ce
- * libellé serait la valeur illustrative que `P-02` proscrit — et c'est le geste
- * que `T-030b` puis `T-049` ont refusé, à raison.
+ * IL SERT LES ÉPREUVES : les unitaires de l'entrepôt, et la commande de base qui
+ * dépose une pièce puis la ressert par le chemin de `RG-M04-08`. La branche « pièce
+ * servie » n'est exercée par AUCUN état du dépôt — la table compte zéro ligne.
  *
- * Ce module fait l'inverse exact. Il ENGENDRE un contenu, et la taille n'est
- * plus une valeur écrite : c'est le nombre d'octets réellement produits, mesuré
- * sur le tableau rendu. Aucun chiffre du gel n'y entre, aucun chiffre n'en sort
- * qu'on n'ait pas compté.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QU'IL SERT, ET CE QU'IL NE SERT PAS
- *
- * Il sert les ÉPREUVES : les unitaires de l'entrepôt, et la commande de base qui
- * dépose une pièce puis la ressert par le chemin de `RG-M04-08`. Une règle
- * qu'aucun cas n'exerce est une règle qu'on espère (`P-5`), et la branche
- * « pièce servie » n'est exercée par AUCUN état du dépôt : la table compte zéro
- * ligne, et elle en comptera zéro tant que le gel ne donnera pas ses treize
- * pièces en données.
- *
- * Il ne sert PAS la semence, et il ne doit pas. Semer une pièce engendrée
- * porterait en base une taille qui contredit celle que la maquette affiche à
- * côté : le corpus cesserait d'être le corpus du gel. Ce module produit des
- * octets pour un ESSAI qui se retire après lui, jamais pour le jeu de
- * démonstration.
+ * IL NE SERT PAS LA SEMENCE, et il ne doit pas : semer une pièce engendrée porterait
+ * en base une taille qui contredit celle que la maquette affiche à côté.
  */
 import { crc32, deflateSync } from 'node:zlib';
-
-/* ═══════════════════════════════════ Des octets quelconques ═════════════ */
 
 /**
  * Une suite d'octets déterministe de longueur exacte. Le générateur est un
@@ -57,8 +37,6 @@ export function engendrerDesOctets(combien: number, graine = 1): Uint8Array {
 	}
 	return octets;
 }
-
-/* ═══════════════════════════════════ Une image réelle ═══════════════════ */
 
 /** La signature de tête d'un fichier PNG — huit octets, invariables. */
 const SIGNATURE_PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -97,13 +75,10 @@ function fragment(type: string, donnees: Uint8Array): Uint8Array {
 }
 
 /**
- * Une image PNG VALIDE, en niveaux de gris, engendrée pixel par pixel.
- *
- * Le contenu est un dégradé calculé sur les coordonnées : il n'illustre rien, il
- * remplit. Ce qui compte est que le fichier soit une image réelle — signature,
- * en-tête, données compressées, fin de fichier, sommes de contrôle justes —,
- * pour que la construction n° 10 de `M04.6` soit productible de bout en bout sur
- * une source qui existe vraiment.
+ * Une image PNG VALIDE, en niveaux de gris, engendrée pixel par pixel. Le contenu est
+ * un dégradé calculé sur les coordonnées : il n'illustre rien, il remplit. Ce qui
+ * compte est que le fichier soit une image réelle — signature, en-tête, données
+ * compressées, fin de fichier, sommes justes.
  *
  * @param largeur en pixels
  * @param hauteur en pixels

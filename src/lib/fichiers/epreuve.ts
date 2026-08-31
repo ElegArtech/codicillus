@@ -1,33 +1,19 @@
 /**
- * L'ESSAI DES PIÈCES JOINTES — la chaîne entière, sur la base réelle.
+ * L'ESSAI DES PIÈCES JOINTES — la chaîne entière, sur la base réelle. `pnpm
+ * test:unit` éprouve les décisions ; ce module éprouve la CHAÎNE : une pièce déposée,
+ * ses octets sur le disque, sa métadonnée en base, les mêmes octets ressortis par le
+ * chemin de `RG-M04-08`, et le refus indiscernable pour qui n'y a pas droit.
  *
- * `pnpm test:unit` éprouve les décisions ; ce module éprouve la CHAÎNE : une
- * pièce déposée, ses octets sur le disque, sa métadonnée en base, puis les mêmes
- * octets ressortis par le chemin de `RG-M04-08`, et le refus indiscernable pour
- * qui n'y a pas droit. Aucun de ces pas n'est mesurable sans base.
+ * UN ESSAI, ET NON UNE SEMENCE : la table des pièces jointes compte ZÉRO ligne, et
+ * elle en comptera zéro tant que le gel ne donnera pas ses treize pièces en données.
+ * La branche « pièce servie » n'est donc exercée par AUCUN état du dépôt (`P-5`,
+ * `P-26`). L'essai DÉPOSE ce qu'il lui faut, MESURE, puis RETIRE tout — et il le
+ * vérifie plutôt que de le promettre.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI UN ESSAI, ET NON UNE SEMENCE
- *
- * La table des pièces jointes compte ZÉRO ligne, et elle en comptera zéro tant
- * que le gel ne donnera pas ses treize pièces en données (`verif:donnees`,
- * lacune `Note.pj`). La branche « pièce servie » n'est donc exercée par AUCUN
- * état du dépôt : c'est exactement le cas que `P-5` et `P-26` décrivent, et la
- * parade est un cas d'épreuve qui ne dépend pas de l'état du dépôt.
- *
- * L'essai DÉPOSE ce qu'il lui faut, MESURE, puis RETIRE tout. À sa sortie, la
- * base compte le même nombre de pièces qu'à son entrée et l'entrepôt ne porte
- * aucun octet de plus — il le vérifie, plutôt que de le promettre. Le corpus de
- * démonstration n'est donc pas touché, et `verif:donnees` mesure après lui
- * exactement la même lacune qu'avant.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES DEUX POLARITÉS SONT JOUÉES, ET PAR CONSTRUCTION
- *
- * La même pièce est demandée par l'administrateur — qui reçoit ses octets, et
- * les MÊMES, comparés un par un — et par l'anonyme, qui reçoit le refus. Et le
- * refus est comparé PAR IDENTITÉ à celui d'une pièce inexistante : `ADR-007`
- * n'exige pas deux refus égaux, il exige le même objet par le même chemin.
+ * LES DEUX POLARITÉS SONT JOUÉES : la même pièce est demandée par l'administrateur,
+ * qui reçoit ses octets comparés un par un, et par l'anonyme, qui reçoit le refus. Ce
+ * refus est comparé PAR IDENTITÉ à celui d'une pièce inexistante : `ADR-007` n'exige
+ * pas deux refus égaux, il exige le même objet par le même chemin.
  */
 import { eq } from 'drizzle-orm';
 import type { Base } from '../base/acces';
@@ -54,7 +40,6 @@ import {
 	tailleSurDisque
 } from './entrepot';
 
-/** Un pas de l'essai : ce qu'il attendait, ce qu'il a obtenu. */
 export interface PasDEpreuve {
 	readonly nom: string;
 	readonly regle: string;

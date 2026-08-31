@@ -1,49 +1,18 @@
 /**
- * LES PIÈCES JOINTES — la ligne en base et les octets sur le disque, ensemble.
+ * Les pièces jointes — la ligne en base et les octets sur le disque, ensemble. Ce module est
+ * le SEUL endroit du produit où les deux écritures se rencontrent.
  *
- * Ce module est le SEUL endroit du produit où les deux écritures se rencontrent.
- * `src/lib/fichiers/entrepot.ts` ne connaît que des octets ; `edition.ts` ne
- * connaît que des lignes ; personne d'autre ne compose les deux.
+ * L'ORDRE DES DEUX ÉCRITURES N'EST PAS ARBITRAIRE : les octets D'ABORD, la ligne ENSUITE.
+ * Une ligne SANS octets est une pièce que le produit annonce et ne peut pas servir ; des
+ * octets SANS ligne sont inertes, le chemin d'une pièce étant dérivé de son identité en base.
+ * Si l'insertion échoue, les octets sont retirés dans le même geste.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * L'ORDRE DES DEUX ÉCRITURES, ET IL N'EST PAS ARBITRAIRE
+ * LE PLAFOND EST LU EN BASE, ET RIEN NE LE REDIT : il est lu à chaque dépôt, seule façon pour
+ * qu'un réglage de console soit réellement effectif.
  *
- * Les octets D'ABORD, la ligne ENSUITE. Les deux pannes possibles ne sont pas de
- * même gravité :
- *
- *   · une ligne SANS octets est une pièce que le produit annonce et ne peut pas
- *     servir. Elle est visible partout — le panneau de V-14 la compte, l'export
- *     la réclame, le téléchargement rend une réponse que rien n'explique ;
- *   · des octets SANS ligne sont inertes. Le chemin d'une pièce étant dérivé de
- *     son identité en base, aucun octet orphelin n'est adressable : il n'est ni
- *     compté, ni servi, ni exporté. C'est du volume perdu, pas un mensonge.
- *
- * L'ordre choisi est donc celui qui rend la seconde panne possible et la
- * première improbable. Et si l'insertion échoue, les octets sont retirés dans le
- * même geste : la panne inerte elle-même n'est laissée que si le processus meurt
- * entre les deux, cas que `verifierLesPiecesJointes()` relève.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE PLAFOND EST LU EN BASE, ET RIEN NE LE REDIT
- *
- * `M14.7` (CDC:1197) range « taille maximale d'un fichier joint » parmi les
- * réglages de la console ; `V-33:1351-1354` le rend, en Mo, borné à 500 par la
- * maquette elle-même. La clé `taille_max_piece_jointe` EXISTAIT DÉJÀ en base —
- * `lireConfiguration()` la lit depuis `T-030`, la semence l'écrit
- * (`semence.ts:614`) —, et aucune clé n'a donc été ajoutée. Le plafond n'est
- * écrit nulle part dans le code : il est lu à chaque dépôt, ce qui est la seule
- * façon pour qu'un réglage de console soit « réellement effectif ».
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUI N'EST PAS DÉCIDÉ ICI, ET QUI MANQUE — DÉCLARÉ, NON COMBLÉ
- *
- * AUCUNE SOURCE NE MAQUETTE LE DÉPÔT. `M04.8` porte un seul cas d'usage,
- * `UC-M04-04`, et c'est le TÉLÉCHARGEMENT ; `docs/routes.md` — inventaire
- * fermé de 39 routes — n'en compte aucune qui dépose ; la seule affordance du
- * gel est la zone de dépôt d'image de l'éditeur (`V-17:3076`, `V-17:3186`), qui
- * ne montre ni progression, ni refus, ni liste. `deposerUnePieceJointe()` est
- * donc la MÉCANIQUE du dépôt, sans écran : inventer la route et l'écran serait
- * un comblement (`CLAUDE.md` §2). Le manque est compté au rapport de `T-026`.
+ * AUCUNE SOURCE NE MAQUETTE LE DÉPÔT : `M04.8` ne porte que le TÉLÉCHARGEMENT, et la seule
+ * affordance du gel est la zone de dépôt d'image de l'éditeur. `deposerUnePieceJointe()` est
+ * donc la MÉCANIQUE du dépôt, sans écran : inventer la route et l'écran serait un comblement.
  */
 import { and, eq } from 'drizzle-orm';
 import type { Base } from '../base/acces';
@@ -60,12 +29,10 @@ import { adresseDePieceJointe } from '../rangement/adresses';
 import { peutEcrireSurLeDossier } from './edition';
 import { lireConfiguration } from './lecture';
 
-/* ═══════════════════════════════════ Les refus ══════════════════════════ */
-
 /**
- * Le dépôt dépasse le plafond de la console. C'est un refus ADRESSÉ à quelqu'un
- * qui a le droit d'écrire : il nomme la limite, contrairement au refus
- * indiscernable d'`ADR-007` qui ne nomme jamais rien.
+ * Le dépôt dépasse le plafond de la console. C'est un refus ADRESSÉ à quelqu'un qui a
+ * le droit d'écrire : il nomme la limite, contrairement au refus indiscernable
+ * d'`ADR-007`.
  */
 export class PieceTropVolumineuse extends Error {
 	constructor(
@@ -83,20 +50,11 @@ export class PieceTropVolumineuse extends Error {
 /**
  * Deux pièces de même nom sur une même note.
  *
- * CE REFUS EST DÉRIVÉ, ET DE DEUX SOURCES ÉCRITES DU DÉPÔT. `docs/routes.md:146`
- * fait du NOM l'adresse de la pièce : deux homonymes ne sont pas distinguables
- * par l'adresse, et la résolution en servirait un des deux sans que l'appelant
- * sache lequel. `src/lib/export/archive.ts:562-572` en tire déjà la conséquence
- * et REFUSE la note à l'export — « deux homonymes ne feraient qu'UNE entrée
- * d'archive, et la relecture rendrait les mêmes octets aux deux : une perte
- * silencieuse ».
- *
- * Le produit ne crée donc pas une ambiguïté que son propre export refuse. LA
- * BASE, ELLE, N'EN PORTE AUCUNE CONTRAINTE, et c'est délibéré : `archive.ts`
- * constate en propres termes qu'elle n'impose pas cette unicité, et poser un
- * index unique reviendrait à trancher, sans source, une règle fonctionnelle que
- * ni la CDC ni le gel n'énoncent. Le refus est donc au chemin d'ÉCRITURE, là où
- * l'ambiguïté naîtrait — pas dans le schéma. Compté au rapport de `T-026`.
+ * CE REFUS EST DÉRIVÉ DE DEUX SOURCES ÉCRITES : `docs/routes.md:146` fait du NOM l'adresse de
+ * la pièce, donc deux homonymes ne sont pas distinguables ; et `../export/archive.ts` REFUSE
+ * déjà la note à l'export pour cette raison. LA BASE N'EN PORTE AUCUNE CONTRAINTE, et c'est
+ * délibéré : poser un index unique trancherait, sans source, une règle fonctionnelle que ni le
+ * cahier ni le gel n'énoncent.
  */
 export class NomDePieceDejaPris extends Error {
 	constructor(readonly nom: string) {
@@ -113,11 +71,7 @@ export class NomDePieceVide extends Error {
 	}
 }
 
-/* ═══════════════════════════════════ Le dépôt ═══════════════════════════ */
-
-/** Ce qu'un dépôt porte. Les octets sont fournis entiers : rien n'est diffusé. */
 export interface DepotDePieceJointe {
-	/** L'identifiant LISIBLE de la note porteuse — celui de l'adresse. */
 	readonly note: string;
 	readonly nom: string;
 	readonly typeMedia: string;
@@ -125,25 +79,20 @@ export interface DepotDePieceJointe {
 	readonly identite: Identite;
 }
 
-/** Une pièce déposée, telle que le produit la porte désormais. */
 export interface PieceDeposee {
 	readonly id: string;
 	readonly noteId: string;
 	readonly nom: string;
 	readonly tailleOctets: number;
 	readonly typeMedia: string;
-	/** L'adresse par laquelle elle sera servie, et la seule. */
 	readonly adresse: string;
 }
 
 /**
  * Dépose une pièce jointe : ses octets dans l'entrepôt, sa métadonnée en base.
  *
- * LA SORTIE EST CELLE D'`ADR-007` QUAND LE DROIT MANQUE. Une note inexistante et
- * une note sur laquelle l'appelant ne peut pas écrire rendent le MÊME
- * `INTROUVABLE`, par le même chemin : un dépôt qui répondrait « cette note
- * existe mais vous n'y écrivez pas » énumérerait le corpus aussi bien qu'une
- * lecture.
+ * LA SORTIE EST CELLE D'`ADR-007` QUAND LE DROIT MANQUE : une note inexistante et une note sur
+ * laquelle l'appelant ne peut pas écrire rendent le MÊME `INTROUVABLE`.
  *
  * @param base la base
  * @param racine la racine de l'entrepôt
@@ -214,9 +163,8 @@ export async function deposerUnePieceJointe(
 }
 
 /**
- * Retire une pièce jointe : sa ligne, puis ses octets. L'ordre est l'inverse du
- * dépôt, et pour la même raison — après la ligne, les octets ne sont plus
- * adressables, et leur retrait ne peut plus mentir à personne.
+ * Retire une pièce jointe : sa ligne, puis ses octets. L'ordre est l'inverse du dépôt, et pour
+ * la même raison — après la ligne, les octets ne sont plus adressables.
  *
  * @param base la base
  * @param racine la racine de l'entrepôt
@@ -238,9 +186,7 @@ export async function retirerUnePieceJointe(
 	return true;
 }
 
-/** Ce qu'un retrait désigne : la note, la pièce par son NOM, et par qui. */
 export interface RetraitDePieceJointe {
-	/** L'identifiant LISIBLE de la note porteuse — celui de l'adresse. */
 	readonly note: string;
 	/** Le nom de la pièce, qui EST son adresse (`docs/routes.md:146`). */
 	readonly nom: string;
@@ -248,25 +194,17 @@ export interface RetraitDePieceJointe {
 }
 
 /**
- * RETIRE UNE PIÈCE DÉSIGNÉE PAR SON NOM — le geste tel qu'un écran peut le
- * former, le nom étant la seule clé qu'une adresse porte.
+ * RETIRE UNE PIÈCE DÉSIGNÉE PAR SON NOM — le geste tel qu'un écran peut le former, le nom
+ * étant la seule clé qu'une adresse porte.
  *
- * ELLE EST LE PENDANT EXACT DE `deposerUnePieceJointe()`, ET DÉLIBÉRÉMENT : même
- * ordre — le droit d'abord, la ressource ensuite —, même résolution par
- * `peutEcrireSurLeDossier()`, et même sortie unique `INTROUVABLE` quand la note
- * n'existe pas, quand l'appelant n'y écrit pas, ou quand aucune pièce ne porte ce
- * nom. Les trois cas sont indiscernables (`ADR-007`, `RG-ACC-04`) : distinguer
- * « cette note existe mais vous n'y écrivez pas » de « cette pièce n'existe pas »
- * énumérerait le corpus par la porte des pièces jointes.
+ * ELLE EST LE PENDANT EXACT DE `deposerUnePieceJointe()` : même ordre — le droit d'abord, la
+ * ressource ensuite —, même résolution par `peutEcrireSurLeDossier()`, et même sortie unique
+ * `INTROUVABLE` quand la note n'existe pas, quand l'appelant n'y écrit pas, ou quand aucune
+ * pièce ne porte ce nom (`ADR-007`, `RG-ACC-04`).
  *
- * LE DROIT EXIGÉ EST CELUI D'ÉCRIRE, PAS CELUI DE LIRE, et c'est ce qui interdit
- * d'emprunter `resoudreUnePieceJointe()` : celle-ci résout la LISIBILITÉ, ce que
- * la route de téléchargement demande. Un retrait détruit. Aucune règle n'est
- * recopiée pour autant — la capacité est celle que `peutEcrireSurLeDossier()`
- * rend, la même que le dépôt interroge deux fonctions plus haut.
- *
- * L'ORDRE DES DEUX EFFACEMENTS est celui de `retirerUnePieceJointe()`, qu'elle
- * appelle sans le redire — la ligne, puis les octets.
+ * LE DROIT EXIGÉ EST CELUI D'ÉCRIRE, PAS CELUI DE LIRE, et c'est ce qui interdit d'emprunter
+ * `resoudreUnePieceJointe()`, qui résout la LISIBILITÉ. L'ORDRE DES DEUX EFFACEMENTS est celui
+ * de `retirerUnePieceJointe()`, qu'elle appelle sans le redire.
  *
  * @param base la base
  * @param racine la racine de l'entrepôt
@@ -299,9 +237,6 @@ export async function retirerUnePieceJointeParNom(
 	return { trouve: true, ressource: { nom } };
 }
 
-/* ═══════════════════════════════════ L'export ═══════════════════════════ */
-
-/** Une pièce jointe et ses octets, telle que l'archive d'export les attend. */
 export interface PieceAvecOctets {
 	readonly noteId: string;
 	readonly nom: string;
@@ -313,18 +248,14 @@ export interface PieceAvecOctets {
 }
 
 /**
- * Les pièces d'un ensemble de notes, octets compris. Une pièce dont l'entrepôt
- * ne porte pas les octets est rendue avec `null` : c'est à l'appelant de dire ce
- * qu'il en fait — l'export la consigne au rapport, il ne l'invente pas.
+ * Les pièces d'un ensemble de notes, octets compris. Une pièce dont l'entrepôt ne porte pas
+ * les octets est rendue avec `null` : c'est à l'appelant de dire ce qu'il en fait — l'export
+ * la consigne au rapport, il ne l'invente pas.
  *
- * LA RACINE EST DEMANDÉE TARD, ET C'EST DÉLIBÉRÉ. `racineDesFichiers()` LÈVE
- * quand la variable manque, et c'est le bon comportement : une configuration
- * absente ne se devine pas. Mais un domaine SANS AUCUNE PIÈCE n'a pas besoin
- * d'entrepôt, et le faire échouer là où il n'a rien à lire ferait dépendre
- * l'export de la configuration d'une chose qu'il n'utilise pas — un piège qui ne
- * se déclencherait que dans les environnements où la variable manque, c'est-à-dire
- * là où personne ne le chercherait. La fonction reçoit donc de quoi OBTENIR la
- * racine, et ne l'obtient que s'il y a des octets à lire.
+ * LA RACINE EST DEMANDÉE TARD, ET C'EST DÉLIBÉRÉ. `racineDesFichiers()` LÈVE quand la variable
+ * manque, et c'est le bon comportement. Mais un domaine SANS AUCUNE PIÈCE n'a pas besoin
+ * d'entrepôt, et le faire échouer là ferait dépendre l'export de la configuration d'une chose
+ * qu'il n'utilise pas — un piège qui ne se déclencherait que là où personne ne le chercherait.
  *
  * @param base la base
  * @param racine de quoi obtenir la racine de l'entrepôt, appelé au plus tard
@@ -366,9 +297,6 @@ export async function lireLesPiecesAvecLeursOctets(
 	return avec;
 }
 
-/* ═══════════════════════════════════ L'intégrité ════════════════════════ */
-
-/** Ce qu'une pièce peut avoir de travers entre la base et l'entrepôt. */
 export interface DefautDePiece {
 	readonly note: string;
 	readonly nom: string;
@@ -377,7 +305,6 @@ export interface DefautDePiece {
 	readonly surDisqueOctets: number | null;
 }
 
-/** Le rapport d'intégrité — combien de pièces, combien de défauts. */
 export interface IntegriteDesPieces {
 	readonly pieces: number;
 	readonly octetsEnBase: number;
@@ -386,20 +313,15 @@ export interface IntegriteDesPieces {
 }
 
 /**
- * L'INTÉGRITÉ DE L'ENTREPÔT CONTRE LA BASE — ce que `RG-NF-09` a besoin de
- * savoir après une restauration.
+ * L'INTÉGRITÉ DE L'ENTREPÔT CONTRE LA BASE — ce que `RG-NF-09` a besoin de savoir après une
+ * restauration.
  *
- * `STACK-TECHNIQUE.md` §8 fait de la sauvegarde deux éléments : le cliché de
- * PostgreSQL, et le volume des fichiers. Les deux sont pris séparément, donc
- * peuvent être rendus désaccordés — c'est même le seul défaut de restauration
- * que la procédure puisse produire silencieusement. Ce contrôle le mesure : pour
- * chaque ligne, l'entrepôt porte-t-il un fichier, et fait-il exactement le
- * nombre d'octets que la colonne annonce.
- *
- * IL EST CONCLUANT DANS LES DEUX SENS, et c'est ce qui le distingue d'un simple
- * « le fichier est là » : la taille en base est MESURÉE au dépôt, jamais
- * déclarée par l'appelant, donc une divergence de taille n'est pas une erreur de
- * saisie — c'est un fichier tronqué, ou le volume d'une autre sauvegarde.
+ * `STACK-TECHNIQUE.md` §8 fait de la sauvegarde deux éléments : le cliché de PostgreSQL, et le
+ * volume des fichiers. Les deux sont pris séparément, donc peuvent être rendus désaccordés —
+ * c'est le seul défaut de restauration que la procédure puisse produire silencieusement. Ce
+ * contrôle le mesure, et IL EST CONCLUANT DANS LES DEUX SENS : la taille en base est MESURÉE
+ * au dépôt, jamais déclarée par l'appelant, donc une divergence de taille est un fichier
+ * tronqué, ou le volume d'une autre sauvegarde.
  *
  * @param base la base
  * @param racine la racine de l'entrepôt
