@@ -115,11 +115,13 @@ import {
 	parametresHonores,
 	requeteDemandee
 } from '$lib/donnees/public';
+import { instanceSansUnivers } from '$lib/donnees/amorcage';
 import { moteurPartage } from '$lib/recherche/acces';
 import {
 	ORDRE_PAR_DEFAUT,
 	chercherLesNotes,
 	ordreDeTriDemande,
+	perimetreDeLIdentite,
 	type OrdreDeTri
 } from '$lib/recherche/moteur';
 import type { Base } from '$lib/base/acces';
@@ -298,6 +300,13 @@ interface DonneesDeRecherche {
 	readonly vecteur: Record<string, string | boolean>;
 	/** Le résultat du moteur pour `q` seul, périmètre compris, dans son ordre. */
 	readonly notes: readonly Note[];
+	/**
+	 * POURQUOI IL N'Y A RIEN À CHERCHER — `null` dès que le périmètre porte une
+	 * note. V-08 en tire un écran qui NOMME ce qui manque et le geste qui
+	 * débloque, au lieu de composer « Aucun résultat pour “” » sur une requête
+	 * que personne n'a formulée.
+	 */
+	readonly motif: MotifDuVide | null;
 	/** La requête demandée, telle quelle — `RG-M02-06`. */
 	readonly requete: string;
 	/** Les valeurs de facette retenues par l'adresse — `RG-M02-06`, `RG-M02-07`. */
@@ -354,6 +363,65 @@ interface DonneesDeRecherche {
 }
 
 /**
+ * ═════════════════════════════════════════════════════════════════════════
+ * POURQUOI LE PÉRIMÈTRE EST VIDE — ET LA RECHERCHE NE LE DEVINE PAS
+ *
+ * `etat: 'vide'` disait « rien à chercher » et l'écran composait « Aucun
+ * résultat pour “” » : un texte écrit sur une valeur ABSENTE, sur l'écran même
+ * où l'utilisateur n'a rien demandé. Une recherche sans requête n'est pas une
+ * recherche sans résultat. Le motif est décidé ICI, où la base et le moteur sont
+ * lisibles, et il nomme le geste que la vue peut proposer.
+ *
+ * QUATRE MOTIFS, ET AUCUN N'EST DEVINÉ : l'index qui n'a jamais été construit,
+ * l'instance sans univers, le périmètre fermé à l'appelant, le corpus vide. Le
+ * dernier n'est pas le troisième : un rédacteur qui a des dossiers ouverts et
+ * une instance sans note ne doit pas lire « demandez l'accès ».
+ */
+type MotifDuVide = 'sans-index' | 'sans-univers' | 'perimetre-ferme' | 'corpus-vide';
+
+/** Le résultat que le moteur ne peut pas rendre : aucun index, aucune mesure. */
+const AUCUN_RESULTAT = {
+	identifiants: [] as readonly string[],
+	total: 0,
+	tronque: false,
+	filtre: null,
+	dureeMs: null
+} as const;
+
+/**
+ * L'INDEX N'EXISTE PAS ENCORE — ET CE N'EST PAS UNE PANNE, C'EST UNE
+ * INSTALLATION NEUVE.
+ *
+ * `base:migrer` monte le schéma ; l'index, lui, n'est posé que par la première
+ * réindexation. Entre les deux, le moteur répond `index_not_found` et
+ * `/recherche` sortait en 500 — le seul écran que l'administrateur ouvre après
+ * l'installation, et il ne rendait rien. Le code est celui du corps de réponse
+ * du moteur, jamais un texte comparé.
+ */
+function indexAbsent(erreur: unknown): boolean {
+	const cause: unknown = (erreur as { cause?: unknown } | null)?.cause;
+	return (
+		typeof cause === 'object' &&
+		cause !== null &&
+		(cause as { code?: unknown }).code === 'index_not_found'
+	);
+}
+
+/**
+ * LE MOTIF D'UN PÉRIMÈTRE VIDE. Il n'est demandé QUE lorsque le périmètre est
+ * effectivement vide : une recherche ordinaire ne touche pas ces tables.
+ */
+async function motifDuPerimetreVide(base: Base, identite: Identite): Promise<MotifDuVide> {
+	if (identite.type !== 'authentifie') return 'corpus-vide';
+	if (identite.role === 'administrateur') {
+		return (await instanceSansUnivers(base)) ? 'sans-univers' : 'corpus-vide';
+	}
+	const perimetre = await perimetreDeLIdentite(base, identite);
+	if (perimetre.tout) return 'corpus-vide';
+	return perimetre.dossiers.size > 0 ? 'corpus-vide' : 'perimetre-ferme';
+}
+
+/**
  * LA LECTURE — deux requêtes au moteur, et la seconde n'est pas un luxe.
  *
  * La première rapporte le résultat de `q`. La seconde, requête VIDE, rapporte la
@@ -380,13 +448,21 @@ async function lireLaRecherche(
 	const tri = ordreDeTriDemande(demande.get('tri')) ?? ORDRE_PAR_DEFAUT;
 	const mode = modeDemande(demande);
 
-	const [trouvees, toutLeLisible] = await Promise.all([
+	/* L'INDEX PEUT NE PAS EXISTER — voir `indexAbsent()`. Les deux requêtes
+	   partent ensemble et se rattrapent ensemble : la page se rend alors sans
+	   résultat ET en disant pourquoi, plutôt qu'en 500. Toute autre panne du
+	   moteur remonte telle quelle : elle n'est pas un état de l'installation. */
+	const interrogation = await Promise.all([
 		chercherLesNotes(base, client, identite, { requete, tri }),
 		/* AUCUN TRI SUR LA SECONDE : elle ne lit aucune note et seul son TOTAL est
 		   employé — le dénominateur de la règle d'affluence. Trier un compte n'a
 		   pas de sens, et le demander au moteur coûterait sans rien rendre. */
 		chercherLesNotes(base, client, identite, { requete: '' })
-	]);
+	]).catch((erreur: unknown) => {
+		if (indexAbsent(erreur)) return null;
+		throw erreur;
+	});
+	const [trouvees, toutLeLisible] = interrogation ?? [AUCUN_RESULTAT, AUCUN_RESULTAT];
 	const notes = dansLOrdreDuMoteur(
 		await lireNotes(base, contexte, trouvees.identifiants),
 		trouvees.identifiants
@@ -411,8 +487,18 @@ async function lireLaRecherche(
 				)
 			: [];
 
+	/* LE MOTIF N'EST DEMANDÉ QUE LORSQUE LE PÉRIMÈTRE EST VIDE : une recherche
+	   ordinaire ne touche ni la table des univers ni celle des droits. */
+	const motif =
+		toutLeLisible.total > 0
+			? null
+			: interrogation === null
+				? ('sans-index' as const)
+				: await motifDuPerimetreVide(base, identite);
+
 	const commun = {
 		notes,
+		motif,
 		portail,
 		requete,
 		retenues,

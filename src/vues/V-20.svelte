@@ -317,6 +317,24 @@
 	const centre = $derived(centreDemande);
 	const choisi = $derived(centre);
 
+	/* ── CE QUI MANQUE, ET LE GESTE QUI DÉBLOQUE ────────────────────────────
+	   Le voile n'avait qu'une phrase — « Sélectionnez un type dans la barre
+	   ci-dessus » —, et sur l'instance neuve la barre en question est VIDE :
+	   l'écran envoyait l'utilisateur choisir dans un contrôle sans option.
+	   Chaque manque a désormais sa phrase, et chacune nomme son adresse. La
+	   dernière branche est celle du gel, et elle ne se rend plus que lorsque la
+	   barre porte effectivement des types. */
+	type Manque = 'domaine' | 'note' | 'relation' | 'perimetre' | 'famille';
+
+	const administrateur = $derived(identite?.administrateur ?? false);
+
+	const manque = $derived.by<Manque | null>(() => {
+		if (domainesEffectifs.length === 0) return 'domaine';
+		if (corpus.length === 0) return 'note';
+		if (graphe.noeuds.length === 0) return relations.length === 0 ? 'relation' : 'perimetre';
+		return typeMaitre === null ? 'famille' : null;
+	});
+
 	/**
 	 * `data-detail` suit le nœud choisi : le panneau de détail EXISTE au balisage
 	 * de cette vue, il a donc quelque chose à montrer dès qu'un nœud est déplié.
@@ -964,16 +982,63 @@
 						« Choisissez une famille d'objets », posé au premier rendu, reste donc
 						dans le DOM des cinq états, visible ou non.
 					-->
-					<div class="voile" id="voile" data-actif={typeMaitre === null ? 'oui' : 'non'}>
+					<div class="voile" id="voile" data-actif={manque === null ? 'non' : 'oui'}>
 						<div class="voile__boite" id="voile-boite">
-							<div>
-								<h2>Choisissez une famille d'objets</h2>
-								<p>
-									Cette vue part d'un type — vos serveurs, vos applications, vos contacts — et
-									déplie leurs connexions un par un. Sélectionnez un type dans la barre ci-dessus
-									pour commencer.
-								</p>
-							</div>
+							{#if manque === 'domaine'}<div>
+									<h2>Aucun domaine lisible</h2>
+									<p>
+										Cette vue part des notes du corpus, et le corpus n'a encore nulle part où être
+										rangé.{administrateur
+											? ' Créez un univers, puis un domaine, dans la console — /console/univers.'
+											: " Demandez à un administrateur l'accès à un domaine."}
+									</p>
+									<div class="voile__actions">
+										{#if administrateur}<a
+												class="btn btn--principal"
+												href={resolve('/console/univers')}>Créer un univers</a
+											>{/if}
+									</div>
+								</div>{:else if manque === 'note'}<div>
+									<h2>Aucune note à cartographier</h2>
+									<p>
+										Cette vue groupe les notes par type — vos serveurs, vos applications, vos
+										contacts — et le corpus est vide. Déclarez vos types de fiches —
+										/console/types-de-fiches —, créez des notes, puis reliez-les entre elles.
+									</p>
+									<div class="voile__actions">
+										{#if administrateur}<a class="btn" href={resolve('/console/types-de-fiches')}
+												>Déclarer un type de fiche</a
+											>{/if}<a class="btn btn--principal" href={resolve('/notes/nouvelle')}
+											>Créer une note</a
+										>
+									</div>
+								</div>{:else if manque === 'relation'}<div>
+									<h2>Aucune relation dans le corpus</h2>
+									<p>
+										La barre des types se remplit des notes RELIÉES, et aucune relation n'est encore
+										déclarée : il n'y a donc aucune famille à proposer. Ouvrez une note, ajoutez-y
+										une relation — « héberge », « dépend de », « sauvegarde » —, et son type
+										paraîtra ici.
+									</p>
+								</div>{:else if manque === 'perimetre'}<div>
+									<h2>Aucune relation dans ce périmètre</h2>
+									<p>
+										Le corpus porte des relations, mais aucune ne touche le domaine choisi. Revenez
+										à tous les domaines, ou choisissez-en un autre dans le sélecteur ci-dessus.
+									</p>
+									<div class="voile__actions">
+										<a class="btn btn--principal" href={resolve('/cartographie/par-type')}
+											>Voir tous les domaines</a
+										>
+									</div>
+								</div>{:else}<div>
+									<h2>Choisissez une famille d'objets</h2>
+									<p>
+										Cette vue part d'un type — vos serveurs, vos applications, vos contacts — et
+										déplie leurs connexions un par un. Sélectionnez un type dans la barre ci-dessus
+										pour commencer.
+									</p>
+								</div>{/if}
 						</div>
 					</div>
 				</div>

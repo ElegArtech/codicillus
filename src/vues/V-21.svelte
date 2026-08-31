@@ -472,6 +472,32 @@
 	   l'arbre effectivement rendu. */
 	const totalNotes = $derived(racine.reduce((s, u) => s + compter(u), 0));
 	const totalDomaines = $derived(racine.reduce((s, u) => s + u.enfants.length, 0));
+
+	/* ── CE QUI MANQUE, ET LE GESTE QUI DÉBLOQUE ────────────────────────────
+	   Le voile était écrit en dur — `data-actif="non"`, boîte VIDE — et une
+	   instance neuve n'affichait donc RIEN : un cadre blanc, « 0 note dans 0
+	   domaine », et pas un mot sur la suite. Chacun des quatre manques a sa
+	   phrase, et chaque phrase nomme l'adresse qui l'ouvre. */
+	type Manque = 'univers' | 'domaine' | 'note' | 'perimetre';
+
+	/**
+	 * L'IDENTITÉ RÉELLE, POUR SAVOIR À QUI ON PARLE — le motif de `V-07`. Seul
+	 * un administrateur atteint la console : lui promettre l'adresse à lui seul
+	 * est ce qui distingue une issue d'une impasse. Hors application, le contexte
+	 * est absent et le compte vaut non-administrateur, jamais l'inverse.
+	 */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const administrateur = $derived(identite?.administrateur ?? false);
+
+	const manque = $derived.by<Manque | null>(() => {
+		if (UNIVERS_PROPOSES.length === 0) return 'univers';
+		if (domainesVisibles.length === 0) return 'domaine';
+		if (corpus.length === 0) return 'note';
+		/* Le rangement existe, et pourtant l'arbre est vide : c'est le périmètre
+		   demandé par l'adresse qui ne désigne rien de lisible. */
+		if (racine.length === 0) return 'perimetre';
+		return null;
+	});
 </script>
 
 <!-- Le chevron d'une liste imbriquée — le glyphe du gel, à l'identique. -->
@@ -690,11 +716,57 @@
 			</div>
 
 			<!--
-				Le voile ne s'ouvre qu'à périmètre vide (`V-21:2276`). Aucun des trois
-				états n'y est : sa boîte reste vide et `data-actif` vaut « non ».
+				Le voile s'ouvre à périmètre vide (`V-21:2276`), et il dit LEQUEL des
+				quatre manques il constate. Il était écrit en dur — boîte vide,
+				`data-actif="non"` — donc muet sur l'instance neuve pour laquelle il
+				est dessiné.
 			-->
-			<div class="voile" id="voile" data-actif="non">
-				<div class="voile__boite" id="voile-boite"></div>
+			<div class="voile" id="voile" data-actif={manque === null ? 'non' : 'oui'}>
+				<div class="voile__boite" id="voile-boite">
+					{#if manque === 'univers'}<div>
+							<h2>Aucun univers sur cette instance</h2>
+							<p>
+								La carte mentale dessine l'arborescence du corpus — un univers, ses domaines, leurs
+								dossiers, les notes — et cette instance n'en porte encore aucun.{administrateur
+									? ' Créez un univers, puis un domaine, dans la console — /console/univers — et' +
+										" l'arbre s'ouvrira ici."
+									: " Demandez à un administrateur d'en créer un : votre rangement apparaîtra ici."}
+							</p>
+							{#if administrateur}<a class="btn btn--principal" href={resolve('/console/univers')}
+									>Créer un univers</a
+								>{/if}
+						</div>{:else if manque === 'domaine'}<div>
+							<h2>Aucun domaine lisible</h2>
+							<p>
+								L'univers existe, mais il ne porte aucun domaine que vous ayez le droit de lire — et
+								un univers sans domaine n'a pas de branche à déplier.{administrateur
+									? ' Créez un domaine dans la console — /console/domaines — puis rangez-y vos' +
+										' notes.'
+									: " Demandez à un administrateur l'accès à un domaine."}
+							</p>
+							{#if administrateur}<a class="btn btn--principal" href={resolve('/console/domaines')}
+									>Créer un domaine</a
+								>{/if}
+						</div>{:else if manque === 'note'}<div>
+							<h2>Aucune note dans ce rangement</h2>
+							<p>
+								Les domaines sont là, aucune note n'y est encore rangée : la carte mentale n'a que
+								des branches vides à montrer. Créez la première note — /notes/nouvelle — et elle
+								apparaîtra sous son domaine.
+							</p>
+							<a class="btn btn--principal si-ecriture" href={resolve('/notes/nouvelle')}
+								>Créer une note</a
+							>
+						</div>{:else if manque === 'perimetre'}<div>
+							<h2>Ce périmètre ne contient aucun domaine lisible</h2>
+							<p>
+								Le corpus n'est pas vide : c'est le périmètre demandé par l'adresse qui ne désigne
+								rien que vous puissiez lire. Revenez à tout le corpus, ou choisissez-en un autre
+								dans le sélecteur ci-dessus.
+							</p>
+							<a class="btn btn--principal" href={resolve('/carte-mentale')}>Voir tout le corpus</a>
+						</div>{/if}
+				</div>
 			</div>
 		</div>
 	{/snippet}
