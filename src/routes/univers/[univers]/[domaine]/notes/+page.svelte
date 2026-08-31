@@ -2,12 +2,14 @@
 	/**
 	 * `/univers/{univers}/{domaine}/notes` — V-12 Liste des notes. Le chargeur porte
 	 * la résolution d'adresse, l'exigence du module `notes` (RG-STR-06), le
-	 * périmètre et les droits.
+	 * périmètre et les droits — et, depuis `lireLaListeDeNotes()`, la restriction au
+	 * domaine, les six facettes, l'ordre et la page.
 	 */
 	import Vue from '../../../../../vues/V-12.svelte';
 	import '../../../../../vues/V-12.css';
 	import { onMount } from 'svelte';
 	import { cablerLesFacettes } from '$lib/cablage/facettes';
+	import { FACETTES_DE_NOTE } from '$lib/liste/facettes';
 	import { cablerLaListeDeNotes } from './cablage';
 	import type { PageData } from './$types';
 
@@ -16,21 +18,12 @@
 	let enveloppe: HTMLDivElement;
 
 	/**
-	 * LES SIX FACETTES DU GEL, DANS SON ORDRE — c'est le rang qui les identifie, pas
-	 * leur libellé : le bouton porte le nom suivi de son compteur.
-	 *
-	 * LA LISTE EST DÉCLARÉE UNE FOIS ET SERVIE AUX DEUX CÂBLAGES (`P-35`) :
-	 * `cablerLesFacettes()` les pose et les retire, `cablerLaListeDeNotes()` les
-	 * retire toutes d'un coup pour « Réinitialiser les filtres ».
+	 * LES SIX FACETTES, DÉCLARÉES UNE SEULE FOIS DANS LE PRODUIT. Elles l'étaient à
+	 * trois endroits — ici, dans la vue et dans le chargeur — et la liste recopiée
+	 * décide de la CLÉ D'ADRESSE qu'un clic écrit : un contrat de données recopié
+	 * dans deux modules diverge en silence (`P-35`).
 	 */
-	const FACETTES = [
-		{ id: 'type', nom: 'Type' },
-		{ id: 'fraicheur', nom: 'Fraîcheur' },
-		{ id: 'statut', nom: 'Statut' },
-		{ id: 'dossier', nom: 'Dossier' },
-		{ id: 'auteur', nom: 'Auteur' },
-		{ id: 'etiquette', nom: 'Étiquette', prefixe: '#' }
-	] as const;
+	const FACETTES = FACETTES_DE_NOTE;
 
 	onMount(() => {
 		const defaireLesFacettes = cablerLesFacettes(enveloppe, { facettes: FACETTES });
@@ -54,7 +47,11 @@
 		vecteur={data.vecteur}
 		notes={data.notes}
 		domaines={data.domaines}
-		{...data.retenues === undefined ? {} : { retenues: data.retenues }}
+		total={data.total}
+		nombre={data.nombre}
+		facettes={data.facettes}
+		retenues={data.retenues}
+		pagination={data.pagination}
 		{...data.tri === undefined ? {} : { tri: data.tri }}
 		modifications={data.modifications}
 	/>

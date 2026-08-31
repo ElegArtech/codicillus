@@ -64,7 +64,17 @@ export function cablerLesFacettes(
 
 	const parNom = new Map(options.facettes.map((f) => [f.nom, f]));
 
-	const aller = (adresse: URL): void => document.location.assign(adresse.toString());
+	/**
+	 * TOUTE NAVIGATION DE CE MODULE REPART DE LA PREMIÈRE PAGE. Une liste paginée
+	 * dont on change le filtre ou l'ordre n'a plus les mêmes pages : garder
+	 * `?page=7` faisait atterrir sur la dernière page du nouveau résultat, ou sur
+	 * une page vide. Une vue sans pagination ne pose pas la clé, et la retirer n'y
+	 * fait rien.
+	 */
+	const aller = (adresse: URL): void => {
+		adresse.searchParams.delete('page');
+		document.location.assign(adresse.toString());
+	};
 	const adresseCourante = (): URL => new URL(document.location.href);
 
 	/** La valeur nue d'une étiquette affichée — le préfixe du gel retiré. */
