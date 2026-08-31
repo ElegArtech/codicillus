@@ -8,7 +8,7 @@
  * « Types de fiches » — renommer le mot en console n'avait donc aucun effet. Ce module ne peut
  * lire ni la base ni un contexte : la sortie est la SUBSTITUTION PAR FONCTION.
  *
- * LES SEPT COMPTEURS VALENT ZÉRO dans le catalogue nu, et zéro n'est pas un repli : c'est ce
+ * LES HUIT COMPTEURS VALENT ZÉRO dans le catalogue nu, et zéro n'est pas un repli : c'est ce
  * qu'une instance sans univers porte vraiment. `compte === undefined` reste réservé aux TROIS
  * sections que le gel ne compte pas, et cette distinction décide de l'émission du
  * `span.nav2__n`.
@@ -16,12 +16,16 @@
 import type { VocabulaireRendu } from '../vocabulaire';
 
 /**
- * Les dix sections, dans l'ordre du gel. La clé est celle que la maquette
- * donne à `rendreConsole(sectionCourante)` et à `<option value>`.
+ * Les onze sections. Les dix premières sont celles du gel, dans son ordre ; la
+ * onzième — `notes` — n'y est pas dessinée, et c'est le défaut que `RG-REF-03`
+ * paie. La clé est celle que la maquette donne à `rendreConsole(sectionCourante)`
+ * et à `<option value>`.
  */
 export type CleDeSection =
 	| 'univers'
 	| 'domaines'
+	/** `types_de_note` — la nomenclature des notes, à ne pas confondre avec `fiches`. */
+	| 'notes'
 	| 'fiches'
 	| 'relations'
 	| 'templates'
@@ -66,12 +70,14 @@ export interface GroupeDeSections {
 }
 
 /**
- * Le catalogue, dans l'ordre exact du gel — trois groupes, dix sections.
+ * Le catalogue — trois groupes, onze sections. Les dix du gel sont dans son ordre ;
+ * « Types de note » s'insère entre « Domaines » et « Types de fiches », parce que la
+ * nomenclature des notes précède celle de leurs formes structurées.
  *
  * UNE FONCTION, PARCE QUE LE LIBELLÉ D'UNE SECTION DÉPEND DE LA CONFIGURATION : « Types de
  * fiches » porte le terme renommable de `M14.7`, et le figer à l'import rendait le renommage
- * inopérant. Les sept compteurs sortent à zéro, et `effectifs.ts` y substitue la mesure de la
- * base — les sept, imports compris depuis que `lots_d_import` existe (migration `009`). Le
+ * inopérant. Les huit compteurs sortent à zéro, et `effectifs.ts` y substitue la mesure de la
+ * base — les huit, imports compris depuis que `lots_d_import` existe (migration `009`). Le
  * gel écrit `compte: () => 1` ; c'est un nombre de maquette, jamais une valeur du produit.
  */
 export function groupesDeConsole(vocabulaire: VocabulaireRendu): readonly GroupeDeSections[] {
@@ -97,6 +103,22 @@ export function groupesDeConsole(vocabulaire: VocabulaireRendu): readonly Groupe
 							forme: 'path',
 							d: 'M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z'
 						}
+					]
+				},
+				{
+					/* LES TYPES DE NOTE — `RG-REF-03`. Ils venaient d'un `INSERT` de migration
+					   et AUCUNE adresse ne les gérait : la règle « un type de note ne peut
+					   être supprimé s'il est utilisé ; une réaffectation est proposée » ne
+					   pouvait être tenue faute d'écran où la tenir. Le libellé n'est PAS
+					   renommable — « Note » est un mot du produit, `M14.7` ne renomme que
+					   le concept de fiche. */
+					cle: 'notes',
+					nom: 'Types de note',
+					compte: 0,
+					pictogramme: [
+						{ forme: 'path', d: 'M3.5 2.2h5.2L12.5 6v7.8H3.5z' },
+						{ forme: 'path', d: 'M8.7 2.2V6h3.8' },
+						{ forme: 'path', d: 'M5.8 8.8h4.4M5.8 11.2h3' }
 					]
 				},
 				{
@@ -199,7 +221,7 @@ export function libelleDOption(section: SectionDeConsole): string {
 	return section.compte === undefined ? section.nom : `${section.nom} (${section.compte})`;
 }
 
-/** Le fil d'Ariane des dix vues de console — `["Accueil", "Console", <section>]`. */
+/** Le fil d'Ariane des vues de console — `["Accueil", "Console", <section>]`. */
 export function filDeConsole(titre: string): readonly string[] {
 	return ['Accueil', 'Console', titre];
 }

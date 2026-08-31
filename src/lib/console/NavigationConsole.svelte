@@ -16,7 +16,7 @@
 	 * la même navigation (`.nav2__selecteur { display: none }` au-dessus de
 	 * 1040 px, `.nav2__groupe { display: none }` en dessous).
 	 *
-	 * LES DIX ENTRÉES MÈNENT ENFIN QUELQUE PART. La rédaction précédente disait
+	 * LES ONZE ENTRÉES MÈNENT ENFIN QUELQUE PART. La rédaction précédente disait
 	 * « AUCUN COMPORTEMENT (ARB-011) […] rien n'est écrit ici » : le gel
 	 * n'attachait au clic et au `change` qu'un `window.notifier(...)`, parce
 	 * qu'il tient ses dix écrans dans une seule page. `ARB-011` ne s'applique
@@ -53,9 +53,9 @@
 	const { courante }: Proprietes = $props();
 
 	/**
-	 * LES SEPT COMPTEURS VIENNENT DE LA BASE, ET LE LIBELLÉ DE LA CONFIGURATION.
+	 * LES HUIT COMPTEURS VIENNENT DE LA BASE, ET LE LIBELLÉ DE LA CONFIGURATION.
 	 *
-	 * Le catalogue de `sections.ts` dérivait les deux de `seeds/corpus.ts` : sept
+	 * Le catalogue de `sections.ts` dérivait les deux de `seeds/corpus.ts` : des
 	 * nombres qui décrivaient le corpus de démonstration à qui regardait SON
 	 * instance, et une pastille « Types de fiches » que le renommage de `M14.7`
 	 * ne touchait pas. `$lib/console/effectifs.ts` porte le motif des compteurs,
@@ -64,7 +64,7 @@
 	 * LA PRÉSENCE DU CONTEXTE DÉCIDE, PAS SON CONTENU — même leçon que le rail de
 	 * `Coquille.svelte` : une base à zéro univers n'est pas une base absente, et
 	 * elle annonce zéro. Hors application — le rendu par défaut d'une vue —,
-	 * `getContext` rend `undefined`, le catalogue nu s'applique, et ses sept
+	 * `getContext` rend `undefined`, le catalogue nu s'applique, et ses huit
 	 * compteurs valent zéro.
 	 */
 	const mots = vocabulaireRendu();
@@ -78,15 +78,15 @@
 	 * gel la marque `aria-current="page"`, et y renvoyer serait un rechargement
 	 * sans effet.
 	 *
-	 * LES DIX CHEMINS SONT ÉCRITS EN TOUTES LETTRES, ET C'EST LE COMPILATEUR QUI
+	 * LES ONZE CHEMINS SONT ÉCRITS EN TOUTES LETTRES, ET C'EST LE COMPILATEUR QUI
 	 * L'EXIGE. Une table `Record<CleDeSection, Pathname>` serait plus courte,
 	 * mais `resolve()` est SURCHARGÉ route par route — il prend un chemin
-	 * LITTÉRAL, jamais une union de dix, et refuse de compiler autrement. La
+	 * LITTÉRAL, jamais une union de onze, et refuse de compiler autrement. La
 	 * seule autre sortie était un `goto()` sans `resolve()`, que
 	 * `svelte/no-navigation-without-resolve` interdit à juste titre.
 	 *
 	 * L'EXHAUSTIVITÉ N'EST PAS UNE PROMESSE, ELLE EST TENUE : `CleDeSection` est
-	 * une union fermée de dix clés, et un `case` manquant laisse un chemin sans
+	 * une union fermée de onze clés, et un `case` manquant laisse un chemin sans
 	 * `return` que `tsc` voit. `docs/routes.md` §3.6 est la source des adresses.
 	 */
 	function allerA(cle: CleDeSection): void {
@@ -97,6 +97,9 @@
 				return;
 			case 'domaines':
 				void goto(resolve('/console/domaines'));
+				return;
+			case 'notes':
+				void goto(resolve('/console/types-de-note'));
 				return;
 			case 'fiches':
 				void goto(resolve('/console/types-de-fiches'));

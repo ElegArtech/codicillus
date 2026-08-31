@@ -17,8 +17,24 @@
 
 export type Debranchement = () => void;
 
-/** Les sept champs de `V-33`, par leur identifiant de gel (`V-33:1247-1360`). */
-const CHAMPS = ['c-frais', 'c-vieil', 'c-versions', 'c-portail', 'c-mot', 'c-taille', 'c-session'];
+/**
+ * Les champs de `V-33`, par leur identifiant de gel (`V-33:1247-1360`), suivis des deux
+ * que le gel ne dessine pas — le nom de l'organisation et la page d'indisponibilité de
+ * `RG-NF-10`. Un champ absent d'ici ne fait pas bouger le témoin : on le modifierait sans
+ * que l'écran dise qu'il y a quelque chose à enregistrer.
+ */
+const CHAMPS = [
+	'c-frais',
+	'c-vieil',
+	'c-versions',
+	'c-portail',
+	'c-organisation',
+	'c-mot',
+	'c-taille',
+	'c-session',
+	'c-indisponibilite',
+	'c-message-indisponibilite'
+];
 
 /** Les deux phrases de `#etat-config`, littéral de `V-33:508`. */
 const AU_REPOS = 'Aucune modification en attente.';
@@ -37,8 +53,8 @@ const MODIFIE = "Modifications non enregistrées — elles ne s'appliquent pas e
  */
 export function cablerLeTemoinDeConfiguration(racine: ParentNode): Debranchement {
 	const champs = CHAMPS.map((id) =>
-		racine.querySelector<HTMLInputElement | HTMLSelectElement>(`#${id}`)
-	).filter((n): n is HTMLInputElement | HTMLSelectElement => n !== null);
+		racine.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`#${id}`)
+	).filter((n): n is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement => n !== null);
 	const temoin = racine.querySelector<HTMLElement>('#etat-config');
 	if (champs.length === 0 || temoin === null) return () => {};
 
@@ -91,7 +107,9 @@ export function cablerLeTemoinDeConfiguration(racine: ParentNode): Debranchement
 export function peindreLesRefusDeConfiguration(
 	racine: ParentNode
 ): (erreurs: readonly { readonly champ: string; readonly message: string }[]) => void {
-	/* Les sept champs que l'action sait refuser — `ErreurDeConfiguration`. */
+	/* Les huit champs que l'action sait refuser — `ErreurDeConfiguration`. Le
+	   dernier est celui de `RG-NF-10` : activer la page d'indisponibilité sans
+	   message est refusé, et le refus se peint sous la zone de texte. */
 	const CHAMPS_REFUSABLES = [
 		'frais',
 		'vieil',
@@ -99,7 +117,8 @@ export function peindreLesRefusDeConfiguration(
 		'mot',
 		'versions',
 		'taille',
-		'session'
+		'session',
+		'message-indisponibilite'
 	] as const;
 
 	return (erreurs) => {
@@ -122,7 +141,9 @@ export function peindreLesRefusDeConfiguration(
 		   naître hors de la fenêtre, et le refus reste aussi muet qu'avant. */
 		const premier = CHAMPS_REFUSABLES.find((c) => parChamp.has(c));
 		if (premier !== undefined) {
-			const champ = racine.querySelector<HTMLInputElement>(`#c-${premier}`);
+			/* `HTMLElement` ET NON `HTMLInputElement` : le champ du message est une
+			   zone de texte, et `focus()` comme `scrollIntoView()` sont à l'élément. */
+			const champ = racine.querySelector<HTMLElement>(`#c-${premier}`);
 			champ?.focus();
 			champ?.scrollIntoView({ block: 'center' });
 		}

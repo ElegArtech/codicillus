@@ -23,6 +23,7 @@
 	 */
 	import type { Domaine, Note, Univers } from '../../seeds/corpus';
 	import type { CompteAffiche } from '$lib/coquille/identite';
+	import type { Notification } from '$lib/coquille/notifications';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import NoteDeDemonstration from '$lib/lecture/NoteDeDemonstration.svelte';
 	import SommaireDeLaNote from '$lib/lecture/SommaireDeLaNote.svelte';
@@ -78,6 +79,13 @@
 		 * neutre explicite (`RG-M18-03`).
 		 */
 		panneaux: PanneauxDeLaNote;
+		/**
+		 * LES BULLES DE LA PILE — `RG-NF-03`. Vide par défaut, et c'est un ÉTAT VIDE
+		 * EXPLICITE : une note ouverte ordinairement n'annonce rien. La seule bulle que
+		 * cette vue reçoive aujourd'hui vient de la redirection d'enregistrement, qui
+		 * dit ce qui reste à faire — l'indexation de recherche, soumise et non attendue.
+		 */
+		notifications?: readonly Notification[];
 	}
 
 	const {
@@ -88,7 +96,8 @@
 		compte = null,
 		affichee,
 		panneaux,
-		adresseDesRelations
+		adresseDesRelations,
+		notifications = []
 	}: Proprietes = $props();
 
 	/**
@@ -203,6 +212,7 @@
 	notes={corpus}
 	compte={compte ?? COMPTE_ABSENT}
 	version=""
+	{notifications}
 >
 	{#snippet enfants()}
 		<!-- ---------- Sommaire ---------- -->

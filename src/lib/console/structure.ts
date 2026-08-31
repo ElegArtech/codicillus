@@ -1,6 +1,6 @@
 /**
- * Le contrat de saisie des quatre consoles de structure — univers, domaines, types de fiche,
- * types de relation.
+ * Le contrat de saisie des consoles de structure — univers, domaines, types de note,
+ * types de fiche, types de relation.
  *
  * Trois couches se parlent ici : la VUE émet une saisie, la PAGE la transforme en champs,
  * l'ACTION la relit. Les noms de champ sont donc déclarés UNE FOIS (`P-35`). LES NOMS SONT
@@ -78,6 +78,14 @@ export interface SaisieDeTypeDeRelation {
 export const CHAMP_UNIVERS_CIBLE = 'univers';
 export const CHAMP_DOMAINE_CIBLE = 'domaine';
 export const CHAMP_TYPE_DE_FICHE_CIBLE = 'type-de-fiche';
+/**
+ * `types_de_note`, ET SUREMENT PAS `types_de_fiche` : deux nomenclatures distinctes,
+ * deux consoles. Le champ porte l'IDENTIFIANT LISIBLE du type de note, stable là où
+ * son nom se renomme.
+ */
+export const CHAMP_TYPE_DE_NOTE_CIBLE = 'type-de-note';
+/** Le type de note qui accueille les notes d'un type retiré — `RG-REF-03`. */
+export const CHAMP_TYPE_DE_NOTE_DACCUEIL = 'vers';
 export const CHAMP_TYPE_DE_RELATION_CIBLE = 'type-de-relation';
 
 export const CHAMP_NOM = 'f-nom';

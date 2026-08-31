@@ -34,6 +34,7 @@ import {
 import { analyserDocument, type Document } from '$lib/contenu/document';
 import { ancresDuDocument, rendreDocument, type ResolveurDeNote } from '$lib/contenu/rendu';
 import { formaterDateFr, formaterDateHeureFr, formaterDateIso } from '$lib/dates';
+import { notificationsDeLAdresse } from '$lib/donnees/traitement-differe';
 import { compteDe, journaliserUneConsultation } from '$lib/donnees/consultation';
 import { attacherLOuverture, termeDeProvenance } from '$lib/donnees/recherches';
 import { lireLHistoire, versionDemandee, type VersionCapturee } from '$lib/donnees/histoire';
@@ -586,6 +587,14 @@ export const load: PageServerLoad = async ({ params, url, locals, request }) => 
 	);
 
 	return {
+		/**
+		 * `RG-NF-03` — CE QUI N'EST PAS ENCORE FAIT AU MOMENT OÙ CETTE PAGE S'AFFICHE.
+		 * L'enregistrement d'une note SOUMET son indexation au moteur sans l'attendre
+		 * (`ARB-060`) : la note est lisible, elle n'est pas encore trouvable. La liste
+		 * est VIDE sur une ouverture ordinaire — seule la redirection qui suit un
+		 * enregistrement porte le drapeau.
+		 */
+		notifications: notificationsDeLAdresse(url.searchParams),
 		/**
 		 * LE VECTEUR D'ÉTAT DE V-14 ne porte que ce qui est VRAI de cet appelant-ci :
 		 * ses droits. Les six autres leviers décrivent LA NOTE AFFICHÉE et passent par

@@ -28,6 +28,10 @@ const CAS_DE_REGIME: readonly { readonly chemin: string; readonly attendu: strin
 	{ chemin: '/connexion', attendu: 'publique' },
 	{ chemin: '/mot-de-passe-oublie', attendu: 'publique' },
 	{ chemin: '/mot-de-passe-oublie/un-jeton', attendu: 'publique' },
+	/* `RG-NF-10` — la page d'indisponibilité programmée est servie à tout le monde,
+	   sans quoi la redirection qui y renvoie boucherait sur une redirection vers la
+	   connexion. */
+	{ chemin: '/indisponibilite', attendu: 'publique' },
 	{ chemin: '/deconnexion', attendu: 'deconnexion' },
 	{ chemin: '/guides/plan-de-reprise-volet-bases', attendu: 'resolution' },
 	{ chemin: '/importer', attendu: 'redirection' },
