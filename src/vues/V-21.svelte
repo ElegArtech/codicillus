@@ -64,10 +64,27 @@
 	 */
 	import type { Domaine, Note, Univers } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
-	import type { CompteAffiche } from '$lib/coquille/identite';
+	import {
+		CLE_IDENTITE,
+		designationsDeCoquille,
+		type CompteAffiche,
+		type IdentiteDeCoquille
+	} from '$lib/coquille/identite';
+	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { adresseDeDossier, segmentsDeDossier } from '$lib/rangement/adresses';
+	import { adressesParLesNoms, segmentsDeDossier } from '$lib/rangement/adresses';
+
+	/**
+	 * LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM.
+	 *
+	 * Les nœuds de l'arborescence portent des NOMS, et la vue les slugifiait. Les
+	 * identifiants d'adresse sont persistés et ne suivent PAS les renommages
+	 * (`RG-M12-11`) : ouvrir un dossier d'un domaine renommé rendait 404. La table
+	 * vient du gabarit racine ; hors application elle est vide et la dérivation du
+	 * nom s'applique.
+	 */
+	const adresses = adressesParLesNoms(designationsDeCoquille());
 	import { accord } from '$lib/vocabulaire';
 
 	/**
@@ -343,7 +360,7 @@
 			const univers = domaines.find((d) => d.nom === domaine)?.univers;
 			if (univers !== undefined) {
 				/* eslint-disable-next-line svelte/no-navigation-without-resolve */
-				void goto(adresseDeDossier(univers, domaine, segmentsDeDossier(chemin)));
+				void goto(adresses.dossier(univers, domaine, segmentsDeDossier(chemin)));
 				return;
 			}
 		}

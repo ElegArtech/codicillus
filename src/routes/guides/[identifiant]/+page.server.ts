@@ -80,7 +80,7 @@
  */
 import { eq } from 'drizzle-orm';
 import { basePartagee, type Base } from '$lib/base/acces';
-import { notes, piecesJointes } from '$lib/base/schema';
+import { domaines, notes, piecesJointes, univers } from '$lib/base/schema';
 import { analyserDocument, titres, type Titre } from '$lib/contenu/document';
 import { rendreDocument } from '$lib/contenu/rendu';
 import { formaterDateFr, formaterDateIso } from '$lib/dates';
@@ -204,9 +204,17 @@ export const load: PageServerLoad = async ({ params, url }) => {
 			corpsReference: notes.corpsReference,
 			corpsOperationnel: notes.corpsOperationnel,
 			modifieLe: notes.modifieLe,
-			verifieLe: notes.verifieLe
+			verifieLe: notes.verifieLe,
+			/* LES DEUX IDENTIFIANTS D'ADRESSE DU RANGEMENT, lus plutôt que dérivés du
+			   nom : ils sont fixés à la création et ne suivent PAS les renommages
+			   (`RG-M12-11`). Le lien « voir le domaine » se composait sur le nom
+			   slugifié et rendait 404 dès qu'un domaine avait été renommé. */
+			universIdentifiant: univers.identifiant,
+			domaineIdentifiant: domaines.identifiant
 		})
 		.from(notes)
+		.innerJoin(domaines, eq(domaines.id, notes.domaineId))
+		.innerJoin(univers, eq(univers.id, domaines.universId))
 		.where(eq(notes.identifiant, params.identifiant))
 		.limit(1);
 	/* La projection a résolu et la note a disparu entre les deux requêtes : le
@@ -255,7 +263,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 			titre: note.titre,
 			type: note.type,
 			domaine: note.domaine,
-			adresseDuDomaine: adresseDeDomaine(note.univers, note.domaine),
+			adresseDuDomaine: adresseDeDomaine(ligne.universIdentifiant, ligne.domaineIdentifiant),
 			auteur: note.auteur,
 			modifieLe: formaterDateFr(ligne.modifieLe),
 			modifieIso: formaterDateIso(ligne.modifieLe),

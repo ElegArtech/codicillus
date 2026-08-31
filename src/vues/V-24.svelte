@@ -101,9 +101,16 @@
 	} from '../../seeds/corpus';
 	import { onMount } from 'svelte';
 	import Coquille from '$lib/coquille/Coquille.svelte';
-	import type { CompteAffiche } from '$lib/coquille/identite';
-	import { adresseDeDomaine } from '$lib/rangement/adresses';
+	import { designationsDeCoquille, type CompteAffiche } from '$lib/coquille/identite';
+	import { adressesParLesNoms } from '$lib/rangement/adresses';
 	import { accord } from '$lib/vocabulaire';
+
+	/**
+	 * LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM. La
+	 * table vient du gabarit racine, par le contexte de coquille ; hors
+	 * application elle est vide et la dérivation du nom s'applique, comme avant.
+	 */
+	const adresses = adressesParLesNoms(designationsDeCoquille());
 	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
 	import {
 		SCENARIO_LIVRE,
@@ -1052,7 +1059,10 @@
 	 */
 	const adresseDuDomaine = $derived.by(() => {
 		const cible = domaines.find((d) => d.nom === domaineCible);
-		return cible === undefined ? '/' : adresseDeDomaine(cible.univers, cible.nom);
+		/* L'IDENTIFIANT PERSISTÉ, PAS LE NOM SLUGIFIÉ. Il ne suit pas les
+		   renommages (`RG-M12-11`) : la sortie de l'étape 4 rendait 404 dès qu'on
+		   avait renommé le domaine visé. */
+		return cible === undefined ? '/' : adresses.domaine(cible.univers, cible.nom);
 	});
 </script>
 

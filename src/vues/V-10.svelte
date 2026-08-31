@@ -72,10 +72,22 @@
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
-	import type { CompteAffiche } from '$lib/coquille/identite';
+	import { designationsDeCoquille, type CompteAffiche } from '$lib/coquille/identite';
 	import { libelleDeModule } from '$lib/rangement/modules';
 	import { accord } from '$lib/vocabulaire';
-	import { adresseDeDomaine, adresseDeNote } from '$lib/rangement/adresses';
+	import { adresseDeNote, adressesParLesNoms } from '$lib/rangement/adresses';
+
+	/**
+	 * LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM.
+	 *
+	 * La vue ne reçoit que des NOMS d'affichage, et les slugifiait pour composer
+	 * ses adresses. `univers.identifiant` et `domaines.identifiant` sont persistés
+	 * et ne suivent PAS les renommages (`RG-M12-11`) : renommer un univers ou un
+	 * domaine en console rendait donc 404 chacun des liens d'ici. La table vient
+	 * du gabarit racine, par le contexte de coquille ; hors application elle est
+	 * vide et la dérivation du nom s'applique, comme avant.
+	 */
+	const adresses = adressesParLesNoms(designationsDeCoquille());
 
 	/**
 	 * LES SOURCES DE L'ÉCRAN SONT REQUISES — le motif est retiré, pas contourné.
@@ -480,7 +492,7 @@
 						{@const notesDom = corpus.filter((n) => n.domaine === d.nom)}
 						<article class="carte-dom" style="--teinte:{d.couleur}">
 							<div class="carte-dom__tete">
-								<a class="carte-dom__nom" href={adresseDeDomaine(d.univers, d.nom)}>{d.nom}</a>
+								<a class="carte-dom__nom" href={adresses.domaine(d.univers, d.nom)}>{d.nom}</a>
 								<span class="carte-dom__n">{notesDom.length} {accord(notesDom.length, 'note')}</span
 								>
 							</div>

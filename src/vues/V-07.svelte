@@ -130,14 +130,24 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Coquille from '$lib/coquille/Coquille.svelte';
-	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
+	import {
+		CLE_IDENTITE,
+		designationsDeCoquille,
+		type IdentiteDeCoquille
+	} from '$lib/coquille/identite';
 	import { BARRES_DE_JAUGE, temoinFraicheur } from '$lib/fraicheur';
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
-	import {
-		adresseDeCreationDeSignet,
-		adresseDeDomaine,
-		adresseDesNotesDuDomaine
-	} from '$lib/rangement/adresses';
+	import { adressesParLesNoms } from '$lib/rangement/adresses';
+	/**
+	 * LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM.
+	 *
+	 * La vue ne reçoit que des NOMS d'affichage, et les slugifiait. Les
+	 * identifiants d'adresse d'un univers et d'un domaine sont persistés et ne
+	 * suivent PAS les renommages (`RG-M12-11`) : renommer l'un ou l'autre en
+	 * console rendait 404 chacun des liens d'ici. La table vient du gabarit
+	 * racine ; hors application elle est vide et la dérivation du nom s'applique.
+	 */
+	const adresses = adressesParLesNoms(designationsDeCoquille());
 
 	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
 	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
@@ -582,7 +592,7 @@
 
 	function creerUnSignet(): void {
 		if (domaineDuSignet === undefined) return;
-		allerA(adresseDeCreationDeSignet(domaineDuSignet.univers, domaineDuSignet.nom));
+		allerA(adresses.creationDeSignet(domaineDuSignet.univers, domaineDuSignet.nom));
 	}
 
 	/**
@@ -625,7 +635,7 @@
 	const FRAICHEUR_OBSOLETE = 'Obsolète probable';
 
 	function ouvrirLaPart(d: Domaine, part: Part): void {
-		const liste = adresseDesNotesDuDomaine(d.univers, d.nom);
+		const liste = adresses.notes(d.univers, d.nom);
 		allerA(
 			part.cle === 'obs' ? `${liste}?fraicheur=${encodeURIComponent(FRAICHEUR_OBSOLETE)}` : liste
 		);
@@ -1027,7 +1037,7 @@
 									{@const notesDom = notesDuDomaine(d)}
 									{@const mesurables = publiees(notesDom)}
 									<!-- prettier-ignore -->
-									<div class="dom" style="--teinte:{d.couleur}"><div class="dom__tete"><span class="dom__puce" aria-hidden="true"></span><button class="dom__nom" type="button" onclick={() => allerA(adresseDeDomaine(d.univers, d.nom))}>{d.nom}</button><button class="dom__n" type="button" onclick={() => allerA(adresseDesNotesDuDomaine(d.univers, d.nom))}>{nb(notesDom.length) + ' ' + accord(notesDom.length, 'note')}</button></div>{#if mesurables.length}<div class="repart" role="img" aria-label={resumeRepartition(mesurables)}>{#each partsPresentes(mesurables) as p (p.cle)}{@const libelle = libellePart(p, mesurables, d.nom)}<button type="button" class={p.classe} style="flex:{compte(mesurables, p.cle)}" title={libelle} aria-label={libelle} onclick={() => ouvrirLaPart(d, p)}></button>{/each}</div>{:else}<div class="dom__vide">{notesDom.length ? 'Aucune note publiée à mesurer.' : "Aucune note pour l'instant."}</div>{/if}</div>
+									<div class="dom" style="--teinte:{d.couleur}"><div class="dom__tete"><span class="dom__puce" aria-hidden="true"></span><button class="dom__nom" type="button" onclick={() => allerA(adresses.domaine(d.univers, d.nom))}>{d.nom}</button><button class="dom__n" type="button" onclick={() => allerA(adresses.notes(d.univers, d.nom))}>{nb(notesDom.length) + ' ' + accord(notesDom.length, 'note')}</button></div>{#if mesurables.length}<div class="repart" role="img" aria-label={resumeRepartition(mesurables)}>{#each partsPresentes(mesurables) as p (p.cle)}{@const libelle = libellePart(p, mesurables, d.nom)}<button type="button" class={p.classe} style="flex:{compte(mesurables, p.cle)}" title={libelle} aria-label={libelle} onclick={() => ouvrirLaPart(d, p)}></button>{/each}</div>{:else}<div class="dom__vide">{notesDom.length ? 'Aucune note publiée à mesurer.' : "Aucune note pour l'instant."}</div>{/if}</div>
 								{/each}
 							{/if}
 						</div>

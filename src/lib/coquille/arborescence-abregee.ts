@@ -1,4 +1,10 @@
-import { identifiantLisible } from '../rangement/adresses';
+import {
+	SANS_DESIGNATION,
+	identifiantDUnivers,
+	identifiantDeDomaine,
+	identifiantLisible,
+	type DesignationsDeRangement
+} from '../rangement/adresses';
 import type { NoeudDeDossier, SectionDUnivers } from './arborescence'; /**
  * Coquille applicative — l'arborescence de rail de la FORME ABRÉGÉE.
  *
@@ -143,13 +149,22 @@ export function rendreNoeudsAbreges(
 	courant: readonly string[],
 	univers = '',
 	domaine: string | null = null,
-	chemin: readonly string[] = []
+	chemin: readonly string[] = [],
+	/** La table qui traduit un nom en identifiant d'adresse — voir `./arborescence.ts`. */
+	designations: DesignationsDeRangement = SANS_DESIGNATION
 ): readonly NoeudAbregeRendu[] {
 	const dernier = courant.length ? courant[courant.length - 1] : null;
 	return noeuds.map((n) => {
 		const domaineDuNoeud = domaine ?? n.nom;
 		const cheminDuNoeud = domaine === null ? [] : [...chemin, n.nom];
-		const enfants = rendreNoeudsAbreges(n.enfants, courant, univers, domaineDuNoeud, cheminDuNoeud);
+		const enfants = rendreNoeudsAbreges(
+			n.enfants,
+			courant,
+			univers,
+			domaineDuNoeud,
+			cheminDuNoeud,
+			designations
+		);
 		const estCourant = courant.includes(n.nom);
 		return {
 			nom: n.nom,
@@ -162,8 +177,8 @@ export function rendreNoeudsAbreges(
 				univers === ''
 					? null
 					: {
-							univers: identifiantLisible(univers),
-							domaine: identifiantLisible(domaineDuNoeud),
+							univers: identifiantDUnivers(designations, univers),
+							domaine: identifiantDeDomaine(designations, univers, domaineDuNoeud),
 							chemin: cheminDuNoeud.map(identifiantLisible)
 						},
 			enfants,
@@ -211,7 +226,8 @@ export function rendreNoeudsAbreges(
  * rendue sans données rend un rail vide.
  */
 export function sectionsAbregeesDuCorpus(
-	sections: readonly SectionDUnivers[]
+	sections: readonly SectionDUnivers[],
+	designations: DesignationsDeRangement = SANS_DESIGNATION
 ): readonly SectionAbregee[] {
 	const enNoeud = (n: NoeudDeDossier): NoeudAbrege => ({
 		nom: n.nom,
@@ -224,7 +240,7 @@ export function sectionsAbregeesDuCorpus(
 	});
 	return sections.map((s) => ({
 		nom: s.nom,
-		cible: identifiantLisible(s.nom),
+		cible: identifiantDUnivers(designations, s.nom),
 		arbre: s.domaines.map((d) => ({ nom: d.nom, deplie: false, enfants: d.enfants.map(enNoeud) }))
 	}));
 }
@@ -239,11 +255,12 @@ export function sectionsAbregeesDuCorpus(
  */
 export function railAbregeRendu(
 	courant: readonly string[],
-	sections: readonly SectionAbregee[] = []
+	sections: readonly SectionAbregee[] = [],
+	designations: DesignationsDeRangement = SANS_DESIGNATION
 ): readonly SectionAbregeeRendue[] {
 	return sections.map((s) => ({
 		nom: s.nom,
 		...(s.cible === undefined ? {} : { cible: s.cible }),
-		arbre: rendreNoeudsAbreges(s.arbre, courant, s.nom, null)
+		arbre: rendreNoeudsAbreges(s.arbre, courant, s.nom, null, [], designations)
 	}));
 }

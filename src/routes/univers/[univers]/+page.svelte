@@ -28,6 +28,7 @@
 	import Vue from '../../../vues/V-10.svelte';
 	import '../../../vues/V-10.css';
 	import { cablerLUnivers } from './cablage';
+	import { designationsDeCoquille } from '$lib/coquille/identite';
 	import { CATALOGUE_DE_MODULES } from '$lib/rangement/modules';
 	import type { PageData } from './$types';
 
@@ -44,7 +45,12 @@
 	 * réversible — « Poste de travail » et « poste-de-travail » ne se retrouvent
 	 * pas l'un l'autre.
 	 */
-	onMount(() => cablerLUnivers(enveloppe, { univers: String(data.vecteur.uni) }));
+	/* LES IDENTIFIANTS D'ADRESSE, LUS EN BASE PAR LE GABARIT RACINE. Le câblage ne
+	   voit que des NOMS — il les lit sur les cartes rendues — et les slugifiait :
+	   un domaine renommé rendait alors 404 (`RG-M12-11`). */
+	const designations = designationsDeCoquille();
+
+	onMount(() => cablerLUnivers(enveloppe, { univers: String(data.vecteur.uni), designations }));
 </script>
 
 <div bind:this={enveloppe} style="display:contents">

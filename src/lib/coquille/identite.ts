@@ -30,7 +30,9 @@
  * retombe sur sa propriété. C'est ce qui garde le gel intact.
  */
 
+import { getContext } from 'svelte';
 import type { VocabulaireRendu } from '../vocabulaire';
+import { SANS_DESIGNATION, type DesignationsDeRangement } from '../rangement/adresses';
 
 /** La clé du contexte. Une constante, jamais une chaîne recopiée. */
 export const CLE_IDENTITE = Symbol.for('codicillus.identite-de-coquille');
@@ -172,4 +174,51 @@ export interface IdentiteDeCoquille {
 	 * les littéraux d'avant.
 	 */
 	readonly vocabulaire: VocabulaireRendu | null;
+	/**
+	 * LES IDENTIFIANTS D'ADRESSE DES UNIVERS ET DES DOMAINES, PAR LEUR NOM.
+	 *
+	 * `univers.identifiant` et `domaines.identifiant` sont PERSISTÉS et STABLES :
+	 * dérivés à la création, ils ne suivent pas les renommages (`RG-M12-11`). Les
+	 * chargeurs, eux, passent aux vues le NOM D'AFFICHAGE, et les vues
+	 * slugifiaient ce nom pour composer l'adresse. Renommer un univers ou un
+	 * domaine en console rendait donc 404 toutes ses adresses — mesuré sur les
+	 * deux, y compris depuis l'accueil et depuis la page de l'univers.
+	 *
+	 * La correspondance est LUE en base par le gabarit racine, dans les requêtes
+	 * qu'il émettait déjà pour le rail, et descend par ce contexte : trente routes
+	 * qui la recopieraient divergeraient au premier oubli (`P-35`).
+	 *
+	 * ELLE NE PORTE QUE CE QUE L'APPELANT VOIT DÉJÀ — les domaines lisibles et
+	 * leurs univers, plus, pour l'administrateur seul, les univers sans domaine
+	 * qu'il gère en console. `RG-ACC-01` : le nom d'un univers dit l'organisation
+	 * de la direction, et un compte sans droit n'a pas à le lire.
+	 *
+	 * `undefined` hors gabarit racine — le rendu par défaut d'une vue, une
+	 * planche, la page d'erreur : la composition retombe alors sur
+	 * `identifiantLisible()`, exactement le rendu d'avant.
+	 */
+	readonly designations?: DesignationsDeRangement | undefined;
+}
+
+/**
+ * LES DÉSIGNATIONS TELLES QU'UN COMPOSANT LES LIT — à appeler à
+ * l'INITIALISATION, comme tout `getContext`.
+ *
+ * Le résultat porte des ACCESSEURS et non deux tables figées : le contexte du
+ * gabarit racine est lui-même fait d'accesseurs, et une lecture sous `$derived`
+ * suit donc une navigation sans que le contexte soit réémis.
+ *
+ * Hors gabarit racine, les deux tables sont vides et `identifiantDUnivers()` /
+ * `identifiantDeDomaine()` retombent sur la dérivation du nom.
+ */
+export function designationsDeCoquille(): DesignationsDeRangement {
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	return {
+		get univers() {
+			return identite?.designations?.univers ?? SANS_DESIGNATION.univers;
+		},
+		get domaines() {
+			return identite?.designations?.domaines ?? SANS_DESIGNATION.domaines;
+		}
+	};
 }

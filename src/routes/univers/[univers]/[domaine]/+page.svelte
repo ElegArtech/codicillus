@@ -28,6 +28,7 @@
 	import Vue from '../../../../vues/V-11.svelte';
 	import '../../../../vues/V-11.css';
 	import { cablerLeDomaine } from './cablage';
+	import { page } from '$app/state';
 	import { CATALOGUE_DE_MODULES } from '$lib/rangement/modules';
 	import type { PageData } from './$types';
 
@@ -45,7 +46,21 @@
 	const domaine = $derived(String(data.vecteur.dom));
 	const univers = $derived(data.domaines.find((d) => d.nom === domaine)?.univers ?? '');
 
-	onMount(() => cablerLeDomaine(enveloppe, { univers, domaine }));
+	/**
+	 * LES DEUX IDENTIFIANTS D'ADRESSE VIENNENT DES SEGMENTS DEMANDÉS, pas d'une
+	 * slugification des noms : ce sont ceux-là mêmes sur lesquels le chargeur
+	 * vient de résoudre le domaine, et ils ne suivent pas les renommages
+	 * (`RG-M12-11`). Les noms, eux, restent pour les paramètres de requête qui en
+	 * attendent un.
+	 */
+	onMount(() =>
+		cablerLeDomaine(enveloppe, {
+			univers,
+			domaine,
+			universIdentifiant: page.params.univers ?? '',
+			domaineIdentifiant: page.params.domaine ?? ''
+		})
+	);
 </script>
 
 <div bind:this={enveloppe} style="display:contents">
