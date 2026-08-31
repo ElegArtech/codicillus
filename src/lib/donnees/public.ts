@@ -494,24 +494,6 @@ export function vueDeLAdresseNonResolue(chemin: string, session: boolean): VueNo
 }
 
 /**
- * LA POSITION DE PLANCHE DE V-04, ET IL N'Y EN A QUE DEUX D'ATTEIGNABLES.
- *
- * La planche déclare trois cas — `inexistant`, `prive`, `nu`. Les deux premiers
- * DOIVENT rendre le même écran (`V-04:2219`), et le gel les fait effectivement
- * coïncider : le port relève que la référence sert le réglage `prive` dans les
- * deux positions. Le produit ne peut donc pas les distinguer, et n'a pas à le
- * vouloir — c'est la propriété recherchée.
- *
- * `nu` est autre chose : « adresse racine erronée », `docs/routes.md:103` —
- * « `/guides/` nu en fait partie : il n'existe pas d'index public des guides ».
- * C'est une adresse qui ne porte AUCUN identifiant de corpus : la distinguer ne
- * révèle rien, et ne pas la distinguer effacerait un des trois cas déclarés.
- */
-export function casDeV04(chemin: string): 'nu' | 'prive' {
-	return chemin === '/guides' || chemin === '/guides/' ? 'nu' : 'prive';
-}
-
-/**
  * LA POSITION DE PLANCHE DE V-26, ET IL N'Y EN A QU'UNE.
  *
  * La planche en déclare trois — `supprimee`, `inexistante`, `interdite`.
