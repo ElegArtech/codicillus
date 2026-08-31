@@ -255,12 +255,36 @@
 	 * porte une adresse valable ; en création, le champ est vide, donc
 	 * `data-actif="non"`. La troncature est à 44 caractères, coupée à 43.
 	 */
-	const apercuActif = $derived(adresse.trim() !== '');
-	const apercuSceau = $derived(apercuActif ? monogramme(adresse) : '??');
-	const apercuHote = $derived(apercuActif ? hoteDe(adresse) : '');
+	/**
+	 * L'ADRESSE SAISIE EST UN ÉTAT LIÉ, PAS UN ATTRIBUT — et l'aperçu la suit.
+	 *
+	 * `adresse` est ce que le signet PORTE ; le champ, lui, est modifiable. Tant
+	 * que l'aperçu ne lisait que la propriété, il restait sur l'adresse
+	 * d'origine : frapper une autre adresse — ou en coller une par `#coller` —
+	 * laissait le sceau, l'hôte et le chemin annoncer la précédente. C'est
+	 * `majApercu()` du gel, qui se rejoue à chaque frappe.
+	 *
+	 * LA LIAISON EST LA SEULE FORME QUI TIENNE, ET C'EST MESURÉ. Un `value=`
+	 * réactif à côté d'un écouteur de frappe EFFACE LA SAISIE : au premier
+	 * re-rendu suivant l'hydratation, la valeur de l'attribut — celle du signet,
+	 * donc vide en création — est réappliquée au nœud parce que la table
+	 * d'attributs de Svelte est vide après hydratation. Mesuré au navigateur :
+	 * le champ se vidait à la première frappe et l'enregistrement rendait 400,
+	 * adresse manquante. La liaison tient les deux sens et ne peut pas diverger.
+	 *
+	 * `state_referenced_locally` EST TU À DESSEIN : l'état de départ est celui
+	 * du signet SERVI, lu une fois. La propriété ne change jamais sous la vue —
+	 * une autre adresse est une autre page.
+	 */
+	/* svelte-ignore state_referenced_locally */
+	let adresseSaisie = $state(adresse);
+
+	const apercuActif = $derived(adresseSaisie.trim() !== '');
+	const apercuSceau = $derived(apercuActif ? monogramme(adresseSaisie) : '??');
+	const apercuHote = $derived(apercuActif ? hoteDe(adresseSaisie) : '');
 	const apercuChemin = $derived.by(() => {
 		if (!apercuActif) return '';
-		const chemin = cheminDe(adresse);
+		const chemin = cheminDe(adresseSaisie);
 		return chemin.length > 44 ? chemin.slice(0, 43) + '…' : chemin;
 	});
 
@@ -301,7 +325,7 @@
 					autocomplete="off"
 					spellcheck="false"
 					placeholder="https://…"
-					value={adresse}
+					bind:value={adresseSaisie}
 					autofocus
 				/>
 				<button
