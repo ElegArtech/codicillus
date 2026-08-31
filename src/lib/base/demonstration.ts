@@ -1,26 +1,13 @@
 /**
- * LE CHARGEUR DU JEU DE DÉMONSTRATION — `pnpm base:peupler`.
+ * LE CHARGEUR DU JEU DE DÉMONSTRATION — `pnpm base:peupler`. Il écrit une instance complète et
+ * cohérente ; `seeds/demonstration.ts` porte la structure et `seeds/demonstration/*.md` le
+ * contenu, qui est dans des FICHIERS et non dans le module : un corps de note contient des
+ * blocs de code, et les écrire dans un modèle littéral demanderait d'échapper les accents
+ * graves — un accent grave mal échappé casse le fichier à cent lignes de la cause (`P-17`).
  *
- * Il écrit une instance complète et cohérente : une DSI de 120 personnes qui
- * documente sa gouvernance, sa comitologie, ses notes de service et sa
- * technique. `seeds/demonstration.ts` porte la structure, et
- * `seeds/demonstration/*.md` le contenu — du Markdown, lisible et modifiable
- * sans toucher au code.
- *
- * POURQUOI LE CONTENU EST DANS DES FICHIERS ET NON DANS LE MODULE : un corps de
- * note contient des blocs de code et des tableaux. Les écrire dans un modèle
- * littéral de TypeScript demanderait d'échapper les accents graves, et un accent
- * grave mal échappé casse le fichier à cent lignes de la cause (`P-17`). Le
- * Markdown vit donc dans des fichiers Markdown.
- *
- * IL REMPLACE LE CONTENU, IL NE S'Y AJOUTE PAS. Relancer la commande rend la
- * même instance : c'est ce qui en fait une démonstration reproductible.
- *
- * LES COMPTES QUI NE SONT PAS DU JEU NE SONT PAS TOUCHÉS. Une première
- * rédaction employait `truncate … cascade`, et a détruit un compte
- * d'administration réel : `comptes` référence `domaines`, le CASCADE l'a donc
- * emporté. Les suppressions sont désormais explicites, des filles vers les
- * mères, et aucune ne vise `comptes` au-delà des huit identifiants du jeu.
+ * IL REMPLACE LE CONTENU, IL NE S'Y AJOUTE PAS. LES COMPTES QUI NE SONT PAS DU JEU NE SONT PAS
+ * TOUCHÉS : `truncate … cascade` a détruit un compte d'administration réel, `comptes`
+ * référençant `domaines`. Les suppressions sont explicites, des filles vers les mères.
  */
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -62,7 +49,6 @@ export const MOT_DE_PASSE_DE_DEMONSTRATION = 'demonstration-2026';
 const SEPARATEUR_DE_REGISTRE = '--- OPERATIONNEL ---';
 const JOUR = 86_400_000;
 
-/** Ce qu'un fichier Markdown du jeu déclare en tête. */
 interface EnTete {
 	readonly [cle: string]: string;
 }
@@ -165,18 +151,11 @@ export async function peupler(
 
 	return session.db.transaction(async (tx) => {
 		/**
-		 * ON EFFACE LE CONTENU, ET SURTOUT PAS LES COMPTES.
-		 *
-		 * La rédaction précédente employait `truncate … cascade` sur `domaines`.
-		 * C'était une faute, et elle a détruit un compte réel : `comptes` porte
-		 * une clé étrangère vers `domaines` (`comptes_domaine_fk`), donc le
-		 * CASCADE emportait la table des comptes ENTIÈRE — avant même que la
-		 * ligne suivante, censée en préserver un, ne s'exécute. Un `cascade` ne
-		 * se raisonne pas sur les tables qu'on nomme, mais sur toutes celles qui
-		 * les référencent, et cette liste ne se devine pas.
-		 *
-		 * On supprime donc explicitement, des filles vers les mères. C'est plus
-		 * long à écrire et cela ne peut pas emporter ce qu'on n'a pas nommé.
+		 * ON EFFACE LE CONTENU, ET SURTOUT PAS LES COMPTES. `truncate … cascade` sur `domaines` a
+		 * détruit un compte réel : `comptes` porte une clé étrangère vers `domaines`, donc le
+		 * CASCADE emportait la table ENTIÈRE avant même que la ligne suivante, censée en préserver
+		 * un, ne s'exécute. Un `cascade` ne se raisonne pas sur les tables qu'on nomme mais sur
+		 * toutes celles qui les référencent.
 		 */
 		await tx.execute(sql`delete from ${etiquettesDeNote}`);
 		await tx.execute(sql`delete from ${relations}`);

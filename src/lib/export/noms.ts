@@ -1,16 +1,9 @@
 /**
- * LES NOMS DE L'ARCHIVE D'EXPORT — LA SOURCE UNIQUE.
- *
- * Ces noms étaient définis au milieu de `archive.ts`, qui dépend de `node:zlib`
- * par `./zip`. Un écran ne pouvait donc pas les IMPORTER : `V-36` les
- * réécrivait en littéraux, et les littéraux ont divergé — l'écran annonçait un
- * rapport en Markdown quand l'archive en écrit un en texte, et un fichier
- * d'index que l'archive n'a jamais porté.
- *
- * Ce module ne dépend de rien. Il porte les noms ET les fabriques qui les
- * composent, de sorte que l'écran qui DÉCRIT l'archive et la fabrique qui la
- * PRODUIT lisent la même définition. `archive.ts` les réexporte : ses appelants
- * ne changent pas d'adresse.
+ * LES NOMS DE L'ARCHIVE D'EXPORT — LA SOURCE UNIQUE. Ils étaient définis au milieu
+ * d'`archive.ts`, qui dépend de `node:zlib` : un écran ne pouvait donc pas les
+ * IMPORTER, `V-36` les réécrivait en littéraux, et les littéraux ont divergé. Ce
+ * module ne dépend de rien, de sorte que l'écran qui DÉCRIT l'archive et la fabrique
+ * qui la PRODUIT lisent la même définition.
  */
 
 /** Le dossier voisin des pièces jointes — `V-36:2932`. */
@@ -66,19 +59,16 @@ function eviterLeNomReserve(segmentEchappe: string): string {
 	return ALLONGEMENT + hexa + segmentEchappe.slice(String.fromCodePoint(premier).length);
 }
 
-/** Le chemin d'archive d'un dossier, dossier racine compris. */
 export function cheminDArchive(chemin: readonly string[]): string {
 	return chemin
 		.map((s, rang) => (rang === 0 ? eviterLeNomReserve(echapperSegment(s)) : echapperSegment(s)))
 		.join('/');
 }
 
-/** L'inverse : les segments vrais d'un chemin d'archive. */
 export function segmentsDepuisLArchive(chemin: string): readonly string[] {
 	return chemin.split('/').map(desechapperSegment);
 }
 
-/** Le dossier des pièces d'une note — un par note, pour que deux noms égaux tiennent. */
 export function dossierDesPiecesDe(identifiant: string): string {
 	return DOSSIER_DES_PIECES + '/' + echapperSegment(identifiant);
 }

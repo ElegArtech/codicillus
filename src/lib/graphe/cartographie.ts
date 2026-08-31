@@ -1,43 +1,16 @@
 /**
- * Le socle commun des deux cartographies — V-19 « Cartographie » et V-20
- * « Cartographie par type maître ».
+ * Le socle commun des deux cartographies — V-19 et V-20. Les deux maquettes portent mot pour
+ * mot le même bloc : « un nœud doit se reconnaître à l'identique d'un mode à l'autre, sinon la
+ * bascule fait perdre le fil ». Le partage est MESURÉ sur le gel, pas supposé.
  *
- * CE MODULE EXISTE PARCE QUE LE GEL LE DIT, ET IL S'ARRÊTE OÙ LE GEL S'ARRÊTE.
- * Les deux maquettes portent, mot pour mot, le même bloc introduit par le
- * commentaire « CARTOGRAPHIE — socle commun […] Partagés par V-19 et V-20 : un
- * nœud doit se reconnaître à l'identique d'un mode à l'autre, sinon la bascule
- * fait perdre le fil » (`V-19:2327`, `V-20:2437`). Le partage est donc MESURÉ
- * sur le gel, pas supposé : `diff` des deux fenêtres donne zéro ligne de
- * divergence sur l'encodage des types et la géométrie des formes.
+ * CE QUI N'Y EST PAS : le panneau de détail, porteur de styles en ligne que `P-6.4` n'admet
+ * que dans un fichier rattaché à une maquette ; V-21, dont la carte mentale dessine
+ * l'arborescence et non le graphe des relations ; et la disposition de V-20, qui reste écrite
+ * dans sa vue.
  *
- * CE QUI N'Y EST PAS, ET POURQUOI.
- *
- *   • LE PANNEAU DE DÉTAIL. Il est lui aussi identique dans les deux gels,
- *     mais il porte des styles en ligne — `font-size:var(--t-mini);
- *     color:var(--c-danger);…` — que P-6.4 n'admet QUE dans un fichier
- *     rattaché à une maquette. Le rattachement se fait par le nommage
- *     (`src/vues/V-xx.svelte`, ARB-016) ou par déclaration humaine
- *     (`verif/references/preuve-par-le-gel.json`, ARB-022) — qu'un lot
- *     d'exécution n'écrit pas. Une ressource partagée portant ces styles
- *     serait donc rouge en P-1.7 sans qu'aucun geste licite ne la débloque.
- *     Le panneau reste écrit dans chaque vue, avec sa preuve par le gel.
- *   • V-21. La carte mentale ne partage RIEN d'ici : ni type cartographique,
- *     ni forme, ni sous-graphe. Elle dessine l'arborescence du corpus, pas le
- *     graphe des relations. La factoriser avec les deux autres aurait été un
- *     regroupement par nom de lot, jamais par contenu.
- *   • LA DISPOSITION DE V-20 — une géométrie d'anneau et d'étoile que sa
- *     propre maquette qualifie de « déterministe, jamais simulée », et qui
- *     reste écrite dans la vue. Celle de V-19, elle, EST ici : `disposer()`,
- *     déterministe elle aussi, depuis que la table de positions indexée sur
- *     les identifiants du jeu de démonstration a quitté la vue.
- *
- * AUCUNE DONNÉE PROPRE (RG-M09-01), ET PLUS AUCUN DÉFAUT TIRÉ DU JEU. Les
- * relations et les types techniques sont des PARAMÈTRES EXIGÉS : ils valaient
- * les constantes de `seeds/corpus.ts` quand on ne les passait pas, si bien
- * qu'un appelant qui les oubliait dessinait le graphe du jeu de démonstration
- * sans que rien ne proteste. Le compilateur garde désormais la porte — un
- * appel sans relations ne compile plus. Seul le type des deux tableaux vient
- * encore de `seeds/corpus.ts`, et un type ne descend dans aucun rendu.
+ * AUCUNE DONNÉE PROPRE (`RG-M09-01`) : les relations et les types techniques sont des
+ * PARAMÈTRES EXIGÉS. Ils valaient les constantes de `seeds/corpus.ts` quand on ne les passait
+ * pas, si bien qu'un appelant qui les oubliait dessinait le graphe du jeu de démonstration.
  */
 import type { Note, Relation } from '../../../seeds/corpus';
 
@@ -46,10 +19,8 @@ import type { Note, Relation } from '../../../seeds/corpus';
    porte jamais seule le type » (V-19:2334). C'est RG-M18-09 rendu au balisage :
    forme et code sont redondants avec la teinte, jamais remplacés par elle. */
 
-/** Les cinq géométries de nœud du gel. */
 export type FormeDeNoeud = 'carre' | 'cercle' | 'hexagone' | 'feuille' | 'losange';
 
-/** Ce qu'un type cartographique porte : sa forme, son code, sa teinte, son nom. */
 export interface EncodageDeType {
 	readonly forme: FormeDeNoeud;
 	readonly code: string;
@@ -58,10 +29,9 @@ export interface EncodageDeType {
 }
 
 /**
- * La table des types cartographiques, recopiée du gel sans un caractère de
- * plus. Les teintes sont des attributs de présentation SVG portés par le
- * balisage du gel (`fill`), pas des déclarations de style : elles ne relèvent
- * donc pas de P-1.1, qui vise les valeurs de feuille et les attributs `style`.
+ * La table des types cartographiques, recopiée du gel sans un caractère de plus. Les
+ * teintes sont des attributs de présentation SVG portés par le balisage du gel, pas
+ * des déclarations de style.
  */
 export const TYPES: ReadonlyMap<string, EncodageDeType> = new Map([
 	['Serveur', { forme: 'carre', code: 'SRV', couleur: '#1b6b7a', nom: 'Serveur' }],
@@ -74,10 +44,8 @@ export const TYPES: ReadonlyMap<string, EncodageDeType> = new Map([
 ] as const);
 
 /**
- * Le repli du gel, réduit à sa seule justification : un nom de type VIDE.
- *
- * Ce n'était pas son emploi. Il servait à TOUT nom absent de la table, et
- * c'était le défaut : voir la dérivation ci-dessous.
+ * Le repli du gel, réduit à sa seule justification : un nom de type VIDE. Ce n'était
+ * pas son emploi — il servait à TOUT nom absent de la table, et c'était le défaut.
  */
 const TYPE_PAR_DEFAUT: EncodageDeType = {
 	forme: 'losange',
@@ -86,33 +54,22 @@ const TYPE_PAR_DEFAUT: EncodageDeType = {
 	nom: 'Note'
 };
 
-/* ── Les types que la console crée ─────────────────────────────────────────
-   LA TABLE CI-DESSUS EST CLOSE ; LE RÉFÉRENTIEL, LUI, EST OUVERT. Un
-   administrateur crée un type de fiche depuis la console (`types_de_fiche` :
-   identifiant, nom, ordre — aucune colonne de présentation), et son nom
-   arrivait ici comme une clé inconnue. Le repli rendait alors l'objet du gel TEL
-   QUEL : deux types créés en console produisaient DEUX PASTILLES RIGOUREUSEMENT
-   IDENTIQUES — losange, code NOT, libellé « Note » — dont les deux filtres
-   portaient pourtant deux types différents. Le libellé mentait, la forme et le
-   code confondaient, et `RG-M18-09` — « la forme et le code portent le type ; la
-   couleur ne fait que les répéter » (`V-19:1145`) — tombait.
+/* LES TYPES QUE LA CONSOLE CRÉE. La table ci-dessus est CLOSE ; le référentiel est
+   OUVERT. Un type de fiche créé en console arrivait ici comme une clé inconnue, et
+   le repli rendait l'objet du gel TEL QUEL : deux types créés en console produisaient
+   deux pastilles rigoureusement identiques — losange, code NOT, libellé « Note » —
+   dont les filtres portaient deux types différents.
 
-   LE NOM N'A JAMAIS QUITTÉ LE CIRCUIT : la clé EST le nom. Il suffit de le
-   rendre. Pour la forme, le code et la teinte, le cahier tranche le point de
-   conception : « chaque type de fiche a une couleur et une icône propres,
-   ASSIGNÉES DE FAÇON DÉTERMINISTE » (`CAHIER:951`). *Assignées*, non *stockées*
-   — une dérivation, pas une colonne. Le calcul ci-dessous est donc PUR : même
-   nom, même encodage, sur toute machine et à toute exécution.
+   LE NOM N'A JAMAIS QUITTÉ LE CIRCUIT : la clé EST le nom. Pour la forme, le code et
+   la teinte, le cahier tranche — « chaque type de fiche a une couleur et une icône
+   propres, ASSIGNÉES DE FAÇON DÉTERMINISTE » : une dérivation, pas une colonne. Le
+   calcul ci-dessous est PUR — même nom, même encodage, partout et toujours.
 
-   CE QU'IL PROMET, ET CE QU'IL NE PROMET PAS. Un type dérivé ne prend jamais un
-   code du gel, ni un couple forme-teinte du gel : il ne peut donc pas se faire
-   passer pour un type de la table. En revanche deux noms dérivés peuvent
-   partager un code de trois caractères — « Routeur » et « Routeurs » donnent
-   tous deux ROU : aucune fonction d'un seul nom ne peut garantir l'unicité dans
-   un ensemble qu'elle ne voit pas. La forme et la teinte étant tirées d'un
-   hachage du nom ENTIER, deux types ne se confondent tout à fait que si le code,
-   la forme et la teinte coïncident tous les trois. Le gel, lui, les confondait
-   toujours. */
+   CE QU'IL PROMET, ET CE QU'IL NE PROMET PAS : un type dérivé ne prend jamais un
+   code ni un couple forme-teinte du gel, donc ne peut pas se faire passer pour un
+   type de la table. En revanche deux noms dérivés peuvent partager un code de trois
+   caractères — aucune fonction d'un seul nom ne garantit l'unicité dans un ensemble
+   qu'elle ne voit pas. */
 
 /** Les géométries offertes au choix : celles du gel, tirées de la table. */
 const FORMES: readonly FormeDeNoeud[] = [...new Set([...TYPES.values()].map((t) => t.forme))];
@@ -123,19 +80,14 @@ const TEINTES: readonly string[] = [...new Set([...TYPES.values()].map((t) => t.
 /** Les codes que le gel a déjà pris : un type créé en console n'en prend aucun. */
 const CODES_DU_GEL: ReadonlySet<string> = new Set([...TYPES.values()].map((t) => t.code));
 
-/** Ce qui identifie un couple de présentation, pour comparer sans objet. */
 function empreinteDePresentation(forme: FormeDeNoeud, couleur: string): string {
 	return forme + '|' + couleur;
 }
 
 /**
- * LES COUPLES FORME-TEINTE ENCORE LIBRES — cinq géométries par cinq teintes,
- * MOINS les sept que la table du gel occupe déjà.
- *
- * Retirer les couples pris est ce qui empêche « Fiche » de se présenter en
- * carré teal comme « Serveur » : un type créé en console ne peut alors ressembler
- * en tout point à aucun type du gel, et il reste dix-huit couples pour le
- * distinguer de ses semblables.
+ * Les couples forme-teinte encore libres — cinq géométries par cinq teintes, MOINS
+ * les sept que la table du gel occupe déjà. Retirer les couples pris est ce qui
+ * empêche un type de console de ressembler en tout point à un type du gel.
  */
 const PRESENTATIONS_LIBRES: readonly { readonly forme: FormeDeNoeud; readonly couleur: string }[] =
 	(() => {
@@ -153,9 +105,8 @@ const PRESENTATIONS_LIBRES: readonly { readonly forme: FormeDeNoeud; readonly co
 
 /**
  * L'alphabet de désambiguïsation, parcouru en boucle depuis un rang haché. Les
- * chiffres en sont exclus À DESSEIN : dans un code de trois capitales, le zéro
- * se lit comme un O et le un comme un I — la désambiguïsation retomberait dans
- * la confusion qu'elle vient lever.
+ * chiffres en sont exclus À DESSEIN : dans un code de trois capitales, le zéro se lit
+ * comme un O et le un comme un I.
  */
 const ALPHABET_DE_CODE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -163,12 +114,10 @@ const ALPHABET_DE_CODE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const REMPLISSAGE_DE_CODE = 'X';
 
 /**
- * UN HACHAGE STABLE — FNV-1a sur 32 bits, en arithmétique entière.
- *
- * Il ne sert qu'à choisir dans deux listes closes : il n'a besoin d'aucune
- * qualité cryptographique, seulement d'être LE MÊME PARTOUT ET TOUJOURS. Il
- * l'est : il ne dépend ni de la locale, ni du fuseau, ni d'un ordre de
- * propriétés, ni d'une valeur de session.
+ * Un hachage stable — FNV-1a sur 32 bits. Il ne sert qu'à choisir dans deux listes
+ * closes : il n'a besoin d'aucune qualité cryptographique, seulement d'être LE MÊME
+ * PARTOUT ET TOUJOURS — il ne dépend ni de la locale, ni du fuseau, ni d'un ordre de
+ * propriétés.
  */
 function hachageStable(texte: string): number {
 	let h = 2166136261;
@@ -180,10 +129,9 @@ function hachageStable(texte: string): number {
 }
 
 /**
- * Les mots d'un nom, réduits aux capitales sans accent et aux chiffres.
- *
- * La décomposition retire les signes diacritiques AVANT la coupe : « Équipement
- * réseau » donne EQUIPEMENT et RESEAU, jamais un premier mot amputé.
+ * Les mots d'un nom, réduits aux capitales sans accent et aux chiffres. La
+ * décomposition retire les diacritiques AVANT la coupe : « Équipement réseau » donne
+ * EQUIPEMENT et RESEAU, jamais un premier mot amputé.
  */
 function motsDuNom(nom: string): string[] {
 	return nom
@@ -195,12 +143,9 @@ function motsDuNom(nom: string): string[] {
 }
 
 /**
- * Le code de trois caractères d'un nom, avant désambiguïsation.
- *
- * La règle suit la lecture : un seul mot donne ses trois premières lettres
- * (« Commutateur » donne COM) ; deux mots donnent deux lettres puis une
- * (« Équipement réseau » donne EQR) ; trois mots ou plus donnent leurs
- * initiales. Un nom trop court est complété, jamais rendu plus court.
+ * Le code de trois caractères d'un nom, avant désambiguïsation. Un seul mot donne ses
+ * trois premières lettres, deux mots donnent deux lettres puis une, trois mots ou
+ * plus donnent leurs initiales. Un nom trop court est complété, jamais raccourci.
  */
 function codeDeTroisCaracteres(nom: string): string {
 	const mots = motsDuNom(nom);
@@ -218,12 +163,9 @@ function codeDeTroisCaracteres(nom: string): string {
 }
 
 /**
- * Le code d'un type créé en console, jamais l'un des sept du gel.
- *
- * Le cas est réel, non théorique : le jeu de peuplement pose un type
- * « Processus », dont les trois premières lettres sont celles de « Procédure ».
- * Sans cette reprise, les deux porteraient PRO et le code cesserait de
- * distinguer. Le troisième caractère est alors repris dans l'alphabet à partir
+ * Le code d'un type créé en console, jamais l'un des sept du gel. Le cas est réel :
+ * le jeu de peuplement pose « Processus », dont les trois premières lettres sont
+ * celles de « Procédure ». Le troisième caractère est repris dans l'alphabet à partir
  * d'un rang haché sur le nom — donc stable, et différent d'un nom à l'autre.
  */
 function codeDerive(nom: string): string {
@@ -238,7 +180,6 @@ function codeDerive(nom: string): string {
 	return brut;
 }
 
-/** La forme et la teinte d'un type créé en console, par hachage stable du nom. */
 function presentationDerivee(nom: string): { forme: FormeDeNoeud; couleur: string } {
 	const rang = hachageStable(nom) % PRESENTATIONS_LIBRES.length;
 	return (
@@ -250,12 +191,8 @@ function presentationDerivee(nom: string): { forme: FormeDeNoeud; couleur: strin
 }
 
 /**
- * L'encodage d'un type cartographique.
- *
- * Les sept clés du gel rendent l'objet du gel, à l'octet : le banc et le corpus
- * de démonstration ne bougent pas d'un pixel. Tout autre nom — un type de fiche
- * créé en console, un type de note que la table n'énumère pas — est NOMMÉ, et sa
- * présentation est dérivée de son nom.
+ * L'encodage d'un type cartographique. Les sept clés du gel rendent l'objet du gel,
+ * à l'octet ; tout autre nom est NOMMÉ, et sa présentation dérivée de son nom.
  */
 export function encodageDuType(cle: string): EncodageDeType {
 	const duGel = TYPES.get(cle);
@@ -271,19 +208,15 @@ export function typeCarto(n: Note): string {
 	return n.typeFiche ?? n.type;
 }
 
-/** L'encodage d'une note, son type fût-il créé en console. */
 export function typeDe(n: Note): EncodageDeType {
 	return encodageDuType(typeCarto(n));
 }
 
-/* ── La géométrie d'un contour ─────────────────────────────────────────────
-   Le gel fabrique l'élément SVG ; ici la fabrique rend sa DESCRIPTION, que la
-   vue pose en balisage. Les nombres sont ceux du gel, aux mêmes opérations
-   près : `r * 0.28`, `r * 1.2`, `Math.PI / 6 + i * Math.PI / 3`. Les écrire
-   autrement — arrondis, valeurs recopiées — ferait diverger le rendu au
-   sous-pixel. */
+/* LA GÉOMÉTRIE D'UN CONTOUR. Le gel fabrique l'élément SVG ; ici la fabrique rend
+   sa DESCRIPTION, que la vue pose en balisage. Les nombres sont ceux du gel, aux
+   mêmes opérations près : les écrire autrement — arrondis, valeurs recopiées —
+   ferait diverger le rendu au sous-pixel. */
 
-/** La description d'un contour de nœud, telle que la vue la pose. */
 export type Contour =
 	| { readonly balise: 'circle'; readonly r: number }
 	| {
@@ -332,26 +265,22 @@ export function contourDeForme(t: EncodageDeType, r: number): Contour {
 	};
 }
 
-/* ── Le sous-graphe d'un périmètre ─────────────────────────────────────────
-   « Les notes hors périmètre mais reliées à lui sont conservées et marquées
-   fantôme : les masquer donnerait une fausse image des dépendances »
-   (V-19:2181). L'ordre des nœuds est celui du corpus, puis celui des arêtes
-   pour les fantômes — il décide de l'ordre du balisage rendu, donc du rendu. */
+/* LE SOUS-GRAPHE D'UN PÉRIMÈTRE. « Les notes hors périmètre mais reliées à lui sont
+   conservées et marquées fantôme : les masquer donnerait une fausse image des
+   dépendances » (`V-19:2181`). L'ordre des nœuds est celui du corpus, puis celui des
+   arêtes pour les fantômes — il décide de l'ordre du balisage rendu. */
 
-/** Le périmètre choisi dans le sélecteur : tout, un univers, ou un domaine. */
 export interface Perimetre {
 	readonly type: string;
 	readonly nom?: string;
 }
 
-/** Un nœud du graphe : la note, et son appartenance au périmètre. */
 export interface NoeudDeGraphe {
 	readonly id: string;
 	readonly note: Note;
 	readonly fantome: boolean;
 }
 
-/** Le sous-graphe : les nœuds dans l'ordre du rendu, et les arêtes retenues. */
 export interface Graphe {
 	readonly noeuds: readonly NoeudDeGraphe[];
 	readonly index: ReadonlyMap<string, NoeudDeGraphe>;
@@ -399,7 +328,6 @@ export function sousGraphe(
 	return { noeuds: [...noeuds.values()], index: noeuds, aretes };
 }
 
-/** Le nombre de relations touchant chaque nœud du graphe. */
 export function degres(g: Graphe): ReadonlyMap<string, number> {
 	const d = new Map<string, number>();
 	for (const n of g.noeuds) d.set(n.id, 0);
@@ -413,14 +341,11 @@ export function degres(g: Graphe): ReadonlyMap<string, number> {
 }
 
 /**
- * Les points d'articulation du graphe des dépendances TECHNIQUES : les nœuds
- * dont le retrait couperait le graphe en morceaux, c'est-à-dire les points de
- * défaillance unique du périmètre. Parcours en profondeur, algorithme de
- * Hopcroft et Tarjan — le calque de `window.pointsArticulation()`.
- *
- * « Une note qui en documente une autre n'en dépend pas » : les relations
- * documentaires sont écartées, sans quoi toute fiche simplement documentée
- * passerait pour un point de rupture.
+ * Les points d'articulation du graphe des dépendances TECHNIQUES : les nœuds dont le retrait
+ * couperait le graphe, c'est-à-dire les points de défaillance unique. Algorithme de Hopcroft
+ * et Tarjan, calque de `window.pointsArticulation()`. « Une note qui en documente une autre
+ * n'en dépend pas » : les relations documentaires sont écartées, sans quoi toute fiche
+ * documentée passerait pour un point de rupture.
  */
 export function pointsArticulation(
 	g: Graphe,
@@ -468,14 +393,12 @@ export function pointsArticulation(
 	return articulation;
 }
 
-/** Une relation vue depuis un nœud : l'autre bout, et le sens de lecture. */
 export interface RelationOrientee {
 	readonly autre: string;
 	readonly sortant: boolean;
 	readonly type: Relation['type'];
 }
 
-/** Les relations touchant un nœud, dans l'ordre où elles sont données. */
 export function relationsDe(id: string, relations: readonly Relation[]): RelationOrientee[] {
 	return relations
 		.filter((r) => r.de === id || r.vers === id)
@@ -486,7 +409,6 @@ export function relationsDe(id: string, relations: readonly Relation[]): Relatio
 		}));
 }
 
-/** Une relation porte-t-elle une dépendance technique ? */
 export function estTechnique(
 	type: Relation['type'],
 	techniques: readonly Relation['type'][]
@@ -494,7 +416,6 @@ export function estTechnique(
 	return (techniques as readonly string[]).includes(type);
 }
 
-/** Le titre d'un nœud, le graphe d'abord, le corpus ensuite — comme au gel. */
 export function titreDe(g: Graphe, notes: readonly Note[], id: string): string {
 	const d = g.index.get(id);
 	if (d) return d.note.titre;
@@ -502,9 +423,8 @@ export function titreDe(g: Graphe, notes: readonly Note[], id: string): string {
 }
 
 /**
- * Les types présents dans le graphe, classés par effectif décroissant — le
- * classement du gel, `Object.keys(comptes).sort((a, b) => comptes[b] -
- * comptes[a])`, dont la stabilité tient l'ordre d'apparition à effectif égal.
+ * Les types présents dans le graphe, classés par effectif décroissant — le classement
+ * du gel, dont la stabilité tient l'ordre d'apparition à effectif égal.
  */
 export function typesPresents(g: Graphe): { cle: string; type: EncodageDeType; n: number }[] {
 	const comptes = new Map<string, number>();
@@ -517,9 +437,6 @@ export function typesPresents(g: Graphe): { cle: string; type: EncodageDeType; n
 		.map(([cle, n]) => ({ cle, type: encodageDuType(cle), n }));
 }
 
-/* ═══════════════════════════ La disposition ═════════════════════════════ */
-
-/** La place d'un nœud dans le repère du dessin. */
 export interface Place {
 	readonly x: number;
 	readonly y: number;
@@ -545,29 +462,15 @@ const ZOOM_MAX_DE_CADRAGE = 1.3;
 export const ITERATIONS_DE_DISPOSITION = 320;
 
 /**
- * LA DISPOSITION DU GRAPHE — le calque de `disposer()` du gel
- * (`V-19:2566-2626`), transcrit ligne pour ligne, constantes comprises.
+ * La disposition du graphe — le calque de `disposer()` du gel, transcrit ligne pour ligne,
+ * constantes comprises.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * ELLE EST DÉTERMINISTE, ET C'EST LA PROPRIÉTÉ QUI COMPTE
+ * ELLE EST DÉTERMINISTE, ET C'EST LA PROPRIÉTÉ QUI COMPTE : « deux chargements du même
+ * périmètre donnent exactement la même carte ». Aucun tirage, aucune horloge, aucune mesure du
+ * document — la place d'un nœud ne dépend que de l'ENSEMBLE des nœuds et de leur ORDRE.
  *
- * Le gel l'écrit en toutes lettres : « les positions initiales sont
- * déterministes : deux chargements du même périmètre donnent exactement la même
- * carte, ce qui est indispensable pour s'y repérer d'une session à l'autre »
- * (`V-19:2561`). Aucun tirage, aucune horloge, aucune mesure du document : la
- * place d'un nœud ne dépend que de l'ENSEMBLE des nœuds et de leur ORDRE.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI ELLE DÉCIDE SEULE, ALORS QUE LA VUE PORTAIT DES POSITIONS FIGÉES
- *
- * `src/vues/V-19.svelte` portait une table de seize positions relevées sur la
- * maquette servie, INDEXÉE PAR LES IDENTIFIANTS DE SEIZE NOTES DU JEU DE
- * DÉMONSTRATION. Une instance qui charge ce jeu — et elle seule — recevait donc
- * une disposition privilégiée que le corpus d'un client n'obtenait jamais : le
- * jeu descendait dans le produit par la géométrie. La table est retirée, et
- * cette fabrique dispose TOUS les corpus de la même façon. Elle est
- * déterministe : « deux chargements du même périmètre donnent exactement la
- * même carte » reste vrai, sans table.
+ * `V-19.svelte` portait une table de seize positions INDEXÉE PAR LES IDENTIFIANTS DE SEIZE
+ * NOTES DU JEU DE DÉMONSTRATION : le jeu descendait dans le produit par la géométrie.
  */
 export function disposer(g: Graphe, iterations = ITERATIONS_DE_DISPOSITION): Map<string, Place> {
 	interface Corps {

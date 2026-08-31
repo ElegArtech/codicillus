@@ -1,104 +1,45 @@
 /**
- * LE CÂBLAGE DES FORMULAIRES — ce qui relie les nœuds du gel aux actions des
- * routes, et pourquoi il vit ICI plutôt que dans `src/vues/`.
+ * Le câblage des formulaires — ce qui relie les nœuds du gel aux actions des routes, et
+ * qui vit ICI plutôt que dans `src/vues/` (`ARB-063`) : aucune vue ne porte `method`,
+ * `action` ni un attribut de nom utile, parce que le gel n'en porte pas. Ce module est
+ * appelé depuis `onMount`, jamais rendu au serveur, jamais importé par une vue.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * LA RAISON N'EST PAS LA COMMODITÉ, ELLE EST MESURABLE — `ARB-063`
+ * CE QU'IL FAIT SUR LE DOCUMENT VIVANT :
  *
- * Aucune vue de `src/vues/` ne porte `method`, ni `action`, ni un seul attribut
- * de nom utile. Ce n'est pas un oubli d'implémenteur : c'est le gel, et les
- * vues en sont la transcription fidèle. Six lots successifs ont donc écrit des
- * actions justes que rien ne pouvait atteindre.
+ * 1. IL NEUTRALISE LES BOUTONS DU GEL. Un `button` sans attribut de type est un bouton
+ *    de SOUMISSION dès qu'il entre dans un formulaire, et la barre d'état en porte
+ *    quatre sans type — « Annuler » enverrait la note.
+ * 2. IL RENOMME LE GROUPE DE BOUTONS RADIO DU CHOIX DE DOSSIER. Le gel les nomme
+ *    `dossier` sans valeur : soumis tels quels, ils poseraient `dossier=on` AVANT le
+ *    champ caché du même nom, et la lecture serveur prend la première occurrence.
+ * 3. IL DONNE LEUR COMPORTEMENT AUX DEUX PAIRES DE BASCULES `#m-visibilite` et
+ *    `#m-statut` : sans ce geste, une note ne peut pas être publiée.
+ * 4. IL POSE LES CHAMPS CACHÉS À LA SOUMISSION, jamais avant.
  *
- * `src/routes/notes/nouvelle/+page.svelte` le dit de lui-même depuis `T-042` :
- * « le banc ne passe jamais par ici — il rend les composants par le mode de
- * conception ; rien de ce fichier n'entre dans son verdict, et les 409 couples
- * ne peuvent pas bouger de son fait ». Ce module est appelé par ces fichiers-là
- * et par eux seuls, depuis `onMount` — il n'est donc jamais rendu au serveur,
- * jamais importé par une vue, jamais traversé par `verif:maquette:app`.
- *
- *   La conformité au gel n'est pas défendue ici par une relecture : elle l'est
- *   par le fait que le chemin mesuré ne traverse pas ce code.
- *
- * C'est le régime *bloquant > vérifiable > déclaratif* appliqué au gel.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CE MODULE FAIT SUR LE DOCUMENT VIVANT, ET POURQUOI CHAQUE GESTE
- *
- * 1. IL NEUTRALISE LES BOUTONS DU GEL. Un `button` sans attribut de type est un
- *    bouton de SOUMISSION dès qu'il entre dans un formulaire. La barre d'état
- *    en porte quatre sans type — `#ouvrir-meta`, `#annuler`, `#previsualiser`,
- *    `#enregistrer` —, et « Annuler » enverrait donc la note. Tous passent en
- *    type `button` à l'installation ; un seul geste soumet, et il est explicite.
- *
- * 2. IL RENOMME LE GROUPE DE BOUTONS RADIO DU CHOIX DE DOSSIER. Le gel les
- *    nomme `dossier` et ne leur donne AUCUNE valeur : soumis tels quels, ils
- *    poseraient `dossier=on` AVANT le champ caché du même nom, et la lecture
- *    serveur — qui prend la première occurrence — recevrait `on` pour chemin.
- *    Le groupe est renommé ; le regroupement, qui ne tient qu'à l'égalité des
- *    noms, est préservé.
- *
- * 3. IL DONNE LEUR COMPORTEMENT AUX DEUX PAIRES DE BASCULES. `#m-visibilite` et
- *    `#m-statut` sont deux `div[role=group]` de boutons `aria-pressed` que le
- *    script du gel commandait. Les vues étant des transcriptions statiques,
- *    elles sont inertes : sans ce geste, une note ne peut pas être publiée.
- *
- * 4. IL POSE LES CHAMPS CACHÉS À LA SOUMISSION, jamais avant. Les valeurs sont
- *    relevées sur les nœuds du gel, par leur identifiant — tous existent déjà,
- *    aucun n'est ajouté.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE CORPS — UNE LIGNE DU GEL EST UNE LIGNE DE MARKDOWN
- *
- * `#redaction` est un `contenteditable`. Le corps en est relevé LIGNE À LIGNE
- * plutôt que par `innerText`, et la raison est une propriété de la plateforme :
- * `innerText` insère DEUX sauts de ligne autour d'un paragraphe et un seul
- * autour d'un `div`, si bien qu'un aller-retour par `innerText` multiplie les
- * lignes vides à chaque enregistrement. Le relevé ci-dessous parcourt les nœuds
- * et joint par un saut simple ; la pose fait l'exact inverse. Deux
- * enregistrements successifs sans frappe rendent donc le même texte, ce qui est
- * la règle 1 du format (`ADR-003`) portée jusqu'à l'écran.
- *
- * Le texte ainsi relevé est du MARKDOWN, et il est converti côté serveur par
- * `analyserMarkdown()` — la porte unique du format (`verif:convertisseur`).
- * Aucune conversion n'a lieu ici : ce module ne connaît pas le format.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CE MODULE NE FAIT PAS
- *
- * Il n'écrit AUCUNE règle de style, ne pose aucune classe qui n'existe pas déjà
- * au gel, et ne crée aucun nœud visible hors des champs cachés et des pastilles
- * d'étiquette — dont la forme est copiée sur celle du gel (`V-17:833-861`).
- *
- * Sans JavaScript, ces écrans ne soumettent pas : `ARB-063` §4 le déclare, et
- * dit ce qu'il faudrait pour le combler.
+ * LE CORPS. `#redaction` est un `contenteditable` relevé LIGNE À LIGNE plutôt que par
+ * `innerText` : celui-ci insère DEUX sauts de ligne autour d'un paragraphe et un seul
+ * autour d'un `div`, si bien qu'un aller-retour multiplie les lignes vides à chaque
+ * enregistrement. Le texte relevé est du MARKDOWN, converti côté serveur par la porte
+ * unique du format. Sans JavaScript, ces écrans ne soumettent pas (`ARB-063` §4).
  */
 
-/* LE SEUL IMPORT DE CE MODULE, ET IL EST DE TYPE PUR — voir
-   `ChampDeFicheAuFormulaire` : il ne fait entrer aucune ligne de code, il POSE
-   LE LIEN qu'aucun compilateur ne pouvait voir sans lui. */
+/* Import de TYPE pur — voir `ChampDeFicheAuFormulaire` : il ne fait entrer aucune
+   ligne de code, il POSE LE LIEN qu'aucun compilateur ne voyait sans lui. */
 import type { ChampDeFiche } from '../../../seeds/corpus';
 
 /** Le séparateur de chemin du corpus — `SEPARATEUR_DE_CHEMIN`, `rangement.ts:111`. */
 const SEPARATEUR = ' › ';
 
-/** Ce qu'un câblage rend : de quoi le défaire. */
 export type Debranchement = () => void;
-
-/* ═══════════════════════════════════ Les relevés élémentaires ═══════════ */
 
 function noeud<T extends Element>(racine: ParentNode, selecteur: string): T | null {
 	return racine.querySelector<T>(selecteur);
 }
 
 /**
- * LE CHEMIN DU DOSSIER COCHÉ — reconstruit par REMONTÉE de l'arborescence.
- *
- * Le gel n'écrit le chemin nulle part : il rend un arbre de `ul`/`li` dont
- * chaque étiquette porte le seul nom du segment (`V-17:290-300`). Le chemin
- * complet est donc la suite des noms des `li` ancêtres, du plus haut au plus
- * bas, jointe par le séparateur du corpus — celui-là même dont la vue se sert
- * pour décider quel bouton est coché.
+ * Le chemin du dossier coché — reconstruit par REMONTÉE de l'arborescence : le gel
+ * n'écrit le chemin nulle part, il rend un arbre de `ul`/`li` dont chaque étiquette
+ * porte le seul nom du segment.
  */
 export function cheminDuDossierCoche(racine: ParentNode): string {
 	const coche = noeud<HTMLInputElement>(racine, '#m-dossier input:checked');
@@ -114,9 +55,8 @@ export function cheminDuDossierCoche(racine: ParentNode): string {
 }
 
 /**
- * LE TEXTE DE LA ZONE DE RÉDACTION — un saut de ligne par ligne, pas deux.
- * Voir l'en-tête : `innerText` n'a pas cette propriété, et l'aller-retour la
- * demande.
+ * Le texte de la zone de rédaction — un saut de ligne par ligne, pas deux. Voir
+ * l'en-tête : `innerText` n'a pas cette propriété, et l'aller-retour la demande.
  */
 export function texteDeLaZone(zone: Element): string {
 	const lignes: string[] = [];
@@ -140,7 +80,6 @@ export function texteDeLaZone(zone: Element): string {
 		.trimEnd();
 }
 
-/** La pose du corps repris — l'exact inverse du relevé ci-dessus. */
 export function poserLeTexte(zone: Element, texte: string): void {
 	zone.replaceChildren();
 	const lignes = texte.length === 0 ? [] : texte.split('\n');
@@ -150,14 +89,11 @@ export function poserLeTexte(zone: Element, texte: string): void {
 		else paragraphe.textContent = ligne;
 		zone.appendChild(paragraphe);
 	}
-	/* `data-vide` commande le seul rendu visible du vide — l'invite d'amorçage
-	   de `.redaction[data-vide="oui"]::before`. Il est DÉDUIT, jamais déclaré :
-	   c'est ce que dit `ZoneDeRedaction.svelte`, et ce geste ne fait que le
-	   recalculer après une pose que la vue n'a pas faite. */
+	/* `data-vide` commande le seul rendu visible du vide — l'invite d'amorçage de
+	   `.redaction[data-vide="oui"]::before`. Il est DÉDUIT, jamais déclaré. */
 	zone.setAttribute('data-vide', texte.trim() === '' ? 'oui' : 'non');
 }
 
-/** La valeur pressée d'une paire de bascules, en minuscules sans diacritique. */
 function bascule(racine: ParentNode, id: string, defaut: string): string {
 	const presse = noeud<HTMLElement>(racine, `#${id} button[aria-pressed="true"]`);
 	const brut = presse?.dataset['val'] ?? '';
@@ -168,7 +104,6 @@ function bascule(racine: ParentNode, id: string, defaut: string): string {
 		.toLowerCase();
 }
 
-/** Les étiquettes posées — le texte de chaque pastille, sans celui de son bouton. */
 function etiquettes(racine: ParentNode): string[] {
 	const pastilles = Array.from(racine.querySelectorAll('#etq-boite > span'));
 	return pastilles
@@ -180,9 +115,6 @@ function etiquettes(racine: ParentNode): string[] {
 		.filter((n) => n !== '');
 }
 
-/* ═══════════════════════════════════ Les gestes rendus au gel ═══════════ */
-
-/** Un champ caché du formulaire, créé s'il manque, mis à jour sinon. */
 function poserChamp(formulaire: HTMLFormElement, nom: string, valeur: string): void {
 	const existant = formulaire.querySelector<HTMLInputElement>(
 		`input[type="hidden"][data-cable="${nom}"]`
@@ -196,26 +128,15 @@ function poserChamp(formulaire: HTMLFormElement, nom: string, valeur: string): v
 }
 
 /**
- * SOUMETTRE VERS UNE ACTION NOMMÉE — par le SUBMITTER, jamais en réécrivant
- * l'attribut du formulaire.
- *
- * Le geste naïf — poser `formulaire.action`, soumettre, puis remettre l'ancienne
- * valeur — est une COURSE, et elle a mordu : le panneau d'historique a fait
- * partir une restauration vers l'action de SUPPRESSION, parce que le navigateur
- * lit l'attribut après le retour de `requestSubmit()`. Une note détruite au lieu
- * d'être restaurée : la pire issue possible pour cette famille de gestes.
- *
- * `formaction` sur le bouton soumetteur l'emporte sur l'action du formulaire, et
- * `requestSubmit(soumetteur)` le désigne explicitement. Rien n'est réécrit, rien
- * n'est à remettre, il n'y a plus de fenêtre pendant laquelle le formulaire vise
- * autre chose que ce qu'il vise d'ordinaire.
+ * Soumettre vers une action nommée — par le SUBMITTER, jamais en réécrivant l'attribut
+ * du formulaire. Le geste naïf — poser `formulaire.action`, soumettre, remettre
+ * l'ancienne valeur — est une COURSE, et elle a mordu : le navigateur lit l'attribut
+ * après le retour de `requestSubmit()`, et une restauration est partie vers l'action de
+ * SUPPRESSION. `formaction` sur le bouton soumetteur l'emporte.
  *
  * LE SOUMETTEUR PEUT PORTER UN COUPLE, ET C'EST LE SEUL CHAMP QUI NE VOYAGE PAS
- * TOUJOURS. Un formulaire n'envoie QUE le soumetteur qui l'a déclenché : là où
- * tous les autres champs partent à chaque soumission — les trois dialogues de
- * V-13 vivent dans le même formulaire —, celui-ci désigne l'objet du geste sans
- * qu'aucun nom puisse entrer en collision avec un homonyme resté ouvert
- * ailleurs. Sans couple, le soumetteur reste anonyme et n'envoie rien.
+ * TOUJOURS : un formulaire n'envoie QUE le soumetteur qui l'a déclenché, ce qui désigne
+ * l'objet du geste sans collision avec un homonyme resté ouvert ailleurs.
  */
 export function soumettreVers(
 	formulaire: HTMLFormElement,
@@ -249,67 +170,27 @@ function pastille(document: Document, nom: string): HTMLElement {
 	return span;
 }
 
-/* ═══════════════════════════════ Les propriétés d'une fiche ════════════ */
-
 /**
- * LES DEUX VALEURS D'UN CHAMP « interrupteur », ET LEUR SOURCE EST UNE SPEC.
+ * Les deux valeurs d'un champ « interrupteur ». `notes.proprietes_typees` est une table
+ * de CHAÎNES : un champ booléen doit s'y écrire en toutes lettres.
  *
- * `notes.proprietes_typees` est une table de chaînes — `lireLesProprietesDeFiche()`
- * (`../donnees/lecture.ts`) rend le texte que la colonne porte, et rien d'autre :
- * un champ booléen doit donc s'y écrire en toutes lettres, et les deux lettres
- * ne se choisissent pas au jugé.
- *
- * ELLES VIENNENT DE LA CONSOLE, PAS DU JEU DE DÉMONSTRATION. Le type de champ
- * s'appelle `booleen` au schéma (`002_socle.montee.sql`, l'énumération
- * `type_de_champ`), et l'écran qui le fait choisir à l'administrateur le nomme
- * « Oui ou non » — gel de V-29, catalogue des types de propriété, porté tel quel
- * par le produit. Le mot que la console PROMET à celui qui définit le champ est
- * donc celui que la note doit porter ; l'écrire autrement ferait mentir l'écran
- * qui l'a fait choisir. La forme stockée est la forme machine, en minuscules,
- * comme toutes les valeurs de cette colonne.
- *
- * Que le jeu de démonstration écrive déjà ces deux mots ne fonde rien — un jeu
- * de démonstration n'est jamais la vérité du produit (`P-02`) : il concorde,
- * c'est tout, et cette concordance est ce qui évite une reprise de données.
- *
- * Un troisième vocabulaire — `true`, `1`, ou la clé absente — ferait deux
- * écritures pour un même fait, et le panneau de propriétés de V-20 rendrait
- * l'une ou l'autre selon l'origine de la ligne.
+ * ILS VIENNENT DE LA CONSOLE : l'écran qui fait choisir le type à l'administrateur le
+ * nomme « Oui ou non » (V-29), et le mot que la console PROMET est celui que la note
+ * doit porter. Un troisième vocabulaire — `true`, `1`, ou la clé absente — ferait deux
+ * écritures pour un même fait.
  */
 export const COCHE = 'oui';
 export const DECOCHE = 'non';
 
 /**
- * LE SCHÉMA D'UN CHAMP DE FICHE, tel que le référentiel de l'instance le sert.
+ * Le schéma d'un champ de fiche, tel que le référentiel de l'instance le sert — DÉRIVÉ
+ * de `ChampDeFiche`, jamais recopié. Un seul membre est élargi : ce module ne connaît
+ * pas les noms de type du jeu et lit donc `type` en chaîne.
  *
- * IL N'EST PLUS RECOPIÉ, IL EST DÉRIVÉ — et c'est tout le correctif.
- *
- * La forme est celle de `ChampDeFiche` (`seeds/corpus.ts`), que
- * `lireTypesDeFiche()` (`../donnees/lecture.ts`) remplit depuis
- * `champs_de_type_de_fiche`. Ce module a une seule raison de ne pas la
- * reprendre telle quelle : il ne connaît pas les noms de type du jeu —
- * `TypeDeChamp` y est une union fermée qu'une instance réelle déborde — et il
- * lit donc `type` en chaîne. UN SEUL membre est élargi ; tous les autres sont
- * pris à la source, quels qu'ils soient et quel que soit leur nombre.
- *
- * CE QUE LA COPIE MANUELLE A COÛTÉ, ET POURQUOI UNE ASSERTION N'Y SUFFIT PAS.
- * Le 25/08/2026 à 17:02:22, trois colonnes sont posées sur
- * `champs_de_type_de_fiche` — `aide`, `defaut`, `obligatoire` ; à 17:13:45,
- * cette forme est écrite à la main sur l'état d'AVANT. L'objet d'exécution
- * portait les trois clés, le TYPE les rendait invisibles, et `pnpm check`
- * restait vert. Une assertion d'assignabilité — `ChampDeFiche extends …` —
- * n'aurait RIEN VU : un sur-ensemble structurel est assignable au
- * sous-ensemble, et l'amputation passe donc en silence dans ce sens-là comme
- * dans l'autre. Mesuré, pas déduit. Seule la dérivation ferme le trou, parce
- * qu'elle ne laisse plus rien à recopier : une colonne ajoutée à la source
- * arrive ici sans geste, et une colonne ôtée ou renommée fait rougir les
- * lignes qui la lisent.
- *
- * Les trois membres que la console écrit gardent leur sens à la source :
- * `aide` est le texte montré SOUS le contrôle (`mockups/V-29:3138`), `defaut`
- * la valeur pré-posée quand le schéma est fraîchement choisi, `obligatoire` la
- * case dont `mockups/V-29:3153` dit « La note ne pourra pas être enregistrée
- * sans cette valeur ».
+ * LA COPIE MANUELLE A COÛTÉ TROIS COLONNES INVISIBLES, et une assertion
+ * d'assignabilité n'y suffit pas : un sur-ensemble structurel est assignable au
+ * sous-ensemble, et l'amputation passe en silence dans les deux sens. Seule la
+ * dérivation ferme le trou.
  */
 export type ChampDeFicheAuFormulaire = {
 	readonly [Membre in keyof ChampDeFiche]: Membre extends 'type' ? string : ChampDeFiche[Membre];
@@ -319,16 +200,10 @@ export type ChampDeFicheAuFormulaire = {
 const MARQUE_D_OBLIGATION = '*';
 
 /**
- * LE PRÉFIXE DES BLOCS DE REFUS D'UNE PROPRIÉTÉ DE FICHE.
- *
- * Le gel ne porte que deux blocs `.champ__erreur` — `#erreur-titre` et
- * `#erreur-dossier` (`V-17:553`, `:934`) — parce qu'il ne connaît que des
- * champs fixes. Les propriétés d'une fiche, elles, sont administrables : leur
- * bloc naît avec le contrôle, sous la même clé que lui (`fiche-{cle}` porte le
- * contrôle, `erreur-fiche-{cle}` porte son refus), et c'est ce qui permet à
- * `peindreLeRefusDEdition()` de poser le refus À L'ENDROIT DU CHAMP —
- * `BRIEF-VUES.md:973`, « signalé à l'endroit du champ, pas seulement en haut de
- * page ».
+ * Le préfixe des blocs de refus d'une propriété de fiche. Le gel ne porte que deux
+ * blocs `.champ__erreur`, ne connaissant que des champs fixes ; les propriétés d'une
+ * fiche sont administrables, et leur bloc naît avec le contrôle sous la même clé — ce
+ * qui permet de poser le refus À L'ENDROIT DU CHAMP.
  */
 export const PREFIXE_D_ERREUR_DE_PROPRIETE = 'erreur-fiche-';
 
@@ -336,101 +211,54 @@ export const PREFIXE_D_ERREUR_DE_PROPRIETE = 'erreur-fiche-';
 export const PREFIXE_DE_CONTROLE_DE_PROPRIETE = 'fiche-';
 
 /**
- * CE QUE LE BLOC DE REFUS D'UNE PROPRIÉTÉ OBLIGATOIRE DIT — une seule écriture.
- *
- * Le bloc naît ICI, garni de sa phrase et de son pictogramme, comme les blocs
- * du gel. `peindreLeRefusDEdition()` (`../edition/gestes.ts`) ne réécrit jamais
- * le texte d'un bloc qui porte déjà un enfant — c'est ainsi qu'il respecte le
- * pictogramme — et il lit donc CETTE constante pour le témoin de la barre
- * d'état. Deux littéraux auraient divergé au premier remaniement de phrase.
- *
- * La phrase dit ce qui ne va pas ET ce qu'il faut faire — `V-41`, « L'erreur
- * est toujours accompagnée de son motif, jamais d'un simple contour rouge ».
+ * Ce que le bloc de refus d'une propriété obligatoire dit — une seule écriture. Le bloc
+ * naît ICI avec sa phrase ; `peindreLeRefusDEdition()` ne réécrit jamais le texte d'un
+ * bloc qui porte déjà un enfant, et lit donc CETTE constante.
  */
 export const PHRASE_D_OBLIGATION =
 	'Le type de fiche exige une valeur pour cette propriété. Renseignez-la, puis enregistrez.';
 
 /**
- * D'OÙ VIENNENT LES VALEURS QUE LA ZONE DES PROPRIÉTÉS REND.
+ * D'où viennent les valeurs que la zone des propriétés rend.
  *
- * `choix` — le rédacteur vient de désigner un type de fiche : aucune valeur
- * n'existe encore, et la valeur par défaut du référentiel se pose.
+ * `choix` — un type de fiche vient d'être désigné : aucune valeur n'existe, et la valeur
+ * par défaut du référentiel se pose.
  *
- * `reprise` — ce sont les propriétés D'UNE NOTE DÉJÀ ÉCRITE. Elles seules
- * garnissent les contrôles : une propriété que la note ne porte pas reste VIDE,
- * fût-elle dotée d'un défaut au schéma. `mockups/V-29:3308` — une note
- * existante n'est pas bloquée, mais « la valeur sera demandée à la prochaine
- * modification » ; la demander suppose de ne pas y répondre à sa place.
+ * `reprise` — ce sont les propriétés d'une note DÉJÀ ÉCRITE, et elles seules garnissent
+ * les contrôles : une propriété que la note ne porte pas reste VIDE, fût-elle dotée d'un
+ * défaut au schéma (`V-29:3308`).
  *
- * LA DISTINCTION N'EST PAS « CRÉATION CONTRE MODIFICATION » : changer le type
- * de fiche d'une note existante est un `choix`, et le schéma qu'on découvre
- * s'ouvre alors avec ses défauts, comme sur une note neuve.
+ * Ce n'est PAS « création contre modification » : changer le type de fiche d'une note
+ * existante est un `choix`.
  */
 export type OrigineDesProprietes = 'choix' | 'reprise';
 
-/** Le référentiel entier, indexé par le NOM du type de fiche. */
 export type ReferentielDeFiches = Readonly<Record<string, readonly ChampDeFicheAuFormulaire[]>>;
 
-/** L'état de fiche d'une note qu'on rouvre en modification. */
 export interface FicheDeDepart {
-	/** Le NOM du type de fiche que la note porte. */
 	readonly type: string;
-	/** Ce que CETTE note a mis dans les champs de ce type. */
 	readonly proprietes: Readonly<Record<string, string>>;
 }
 
 /**
- * LE RENDU DES CHAMPS D'UN TYPE DE FICHE — le calque de `V-17:2878-2920`.
+ * Le rendu des champs d'un type de fiche — le calque de `V-17:2878-2920`.
  *
- * Le gel construit un contrôle par champ, selon son type : un interrupteur, un
- * sélecteur de valeurs, un nombre, ou du texte. Rien n'est ajouté ici, sauf
- * `data-cle` : le gel n'a jamais eu à relire ce qu'il dessinait — il ne
- * soumettait rien —, et la clé du champ doit voyager du référentiel jusqu'à la
- * soumission sans qu'un second appariement par le NOM soit écrit. Deux champs
- * peuvent porter le même nom d'affichage ; `champs_cle_par_type_unique` ne
- * porte que sur la clé.
- *
- * Les valeurs REPRISES sont posées au moment du rendu : c'est le seul moment où
- * le contrôle et sa valeur sont connus ensemble, et une seconde passe
- * dupliquerait la connaissance du type de contrôle.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LA CONSOLE ÉCRIT, ET QUE CE RENDU DOIT PORTER
- *
- * L'administrateur saisit trois choses de plus sur chaque propriété (V-29) :
- * une AIDE, une VALEUR PAR DÉFAUT, et le caractère OBLIGATOIRE. Les trois
- * descendaient jusqu'ici sans être lues, si bien que l'aperçu de la console —
- * « C'est ce que verra le rédacteur dans l'éditeur de note » — décrivait un
- * écran qui n'existait pas.
- *
- *   la marque `*`      `.champ__label .oblig`, socle.css:420 — V-17:899
- *   l'aide             `.champ__aide`, socle.css:421 — V-17:926
- *   le refus du champ  `.champ__erreur`, socle.css:440 — V-17:553, :934
- *
- * Aucune classe n'est inventée : les quatre existent au gel et sont stylées.
+ * Rien n'est ajouté au gel sauf `data-cle` : il ne soumettait rien, et la clé doit
+ * voyager du référentiel jusqu'à la soumission sans qu'un second appariement par le NOM
+ * soit écrit — deux champs peuvent porter le même nom d'affichage. La console écrit
+ * trois choses de plus sur chaque propriété (V-29) : une AIDE, une VALEUR PAR DÉFAUT et
+ * le caractère OBLIGATOIRE. Aucune classe n'est inventée.
  *
  * LA VALEUR PAR DÉFAUT NE VAUT QUE SUR UN SCHÉMA FRAÎCHEMENT CHOISI, et
- * `reprise === undefined` NE SUFFIT PAS À LE DIRE. C'est le point qui manquait :
- * les deux écrans d'écriture appellent le même câblage, et une note rouverte ne
- * porte en base QUE les clés qu'on lui a écrites. Une propriété ajoutée au type
- * après elle y est donc `undefined` — indiscernable d'un champ qu'on vient de
- * choisir. Le défaut du schéma se serait pré-posé dans l'éditeur d'une note
- * existante, `proprietesDeFicheSaisies()` l'aurait soumis, et une valeur que
- * personne n'a saisie serait entrée en base sous couvert d'un refus qui ne se
- * serait jamais déclenché. C'est exactement ce que `mockups/V-29:3308` interdit
- * — « la valeur sera DEMANDÉE à la prochaine modification ».
+ * `reprise === undefined` NE SUFFIT PAS À LE DIRE : une note rouverte ne porte en base
+ * que les clés qu'on lui a écrites, de sorte qu'une propriété ajoutée au type après elle
+ * y est `undefined` — indiscernable d'un champ qu'on vient de choisir, et une valeur que
+ * personne n'a saisie serait entrée en base. D'où le cinquième argument : l'ORIGINE, que
+ * seul l'appelant sait. Sur un CHOIX, un défaut pré-posé et non touché EST soumis :
+ * `proprietesDeFicheSaisies()` relève les contrôles, pas les frappes.
  *
- * D'où le cinquième argument : l'ORIGINE des valeurs, que seul l'appelant sait.
- *
- * ⚠ CE QUE LE DÉFAUT ENTRAÎNE SUR UN CHOIX, ET C'EST VOULU :
- * `proprietesDeFicheSaisies()` relève les contrôles, pas les frappes — un
- * défaut pré-posé et non touché est donc SOUMIS comme une valeur. C'est
- * exactement ce que l'aperçu de la console promet en le montrant pré-rempli.
- *
- * L'OBLIGATION NE SE MARQUE PAS SUR UN INTERRUPTEUR, et ce n'est pas un oubli :
- * une case porte toujours l'un de ses deux mots (`COCHE` / `DECOCHE`), jamais
- * rien. Une valeur qui ne peut pas manquer ne peut pas être exigée ; peindre
- * `*` dessus promettrait un refus qui n'arrivera jamais.
+ * L'OBLIGATION NE SE MARQUE PAS SUR UN INTERRUPTEUR : une case porte toujours l'un de
+ * ses deux mots, jamais rien.
  */
 export function rendreLesProprietesDeFiche(
 	zone: Element,
@@ -509,20 +337,17 @@ export function rendreLesProprietesDeFiche(
 			saisie.addEventListener('input', surSaisie);
 			bloc.appendChild(saisie);
 		}
-		/* L'ÉTIQUETTE DÉSIGNE SON CONTRÔLE, ce que le gel ne fait pas : il rend
-		   un `label` sans `for`, ce qui laisse le contrôle sans nom accessible.
-		   L'identifiant est dérivé de la clé, unique par type (`ARB-062` §2.4
-		   pour la forme du préfixe, `champs_cle_par_type_unique` pour l'unicité). */
+		/* L'ÉTIQUETTE DÉSIGNE SON CONTRÔLE, ce que le gel ne fait pas : il rend un
+		   `label` sans `for`, ce qui laisse le contrôle sans nom accessible.
+		   L'identifiant est dérivé de la clé, unique par type. */
 		const controle = bloc.querySelector('select, input');
 		if (controle !== null) {
 			const id = PREFIXE_DE_CONTROLE_DE_PROPRIETE + champ.cle;
 			controle.id = id;
 			intitule.setAttribute('for', id);
-			/* L'EXIGENCE EST PORTÉE PAR LE CONTRÔLE LUI-MÊME, pas seulement par la
-			   marque : `required` la donne au navigateur, `aria-required` la donne
-			   à la synthèse vocale, et le refus serveur la tient quoi qu'il
-			   arrive — les trois disent la même chose, aucune ne remplace les
-			   autres. */
+			/* L'EXIGENCE EST PORTÉE PAR LE CONTRÔLE LUI-MÊME : `required` la donne au
+			   navigateur, `aria-required` à la synthèse vocale, et le refus serveur la
+			   tient quoi qu'il arrive — aucune ne remplace les autres. */
 			if (champ.obligatoire === true) {
 				controle.setAttribute('required', '');
 				controle.setAttribute('aria-required', 'true');
@@ -547,15 +372,9 @@ export function rendreLesProprietesDeFiche(
 const ESPACE_GRAPHIQUE = 'http://www.w3.org/2000/svg';
 
 /**
- * LE PICTOGRAMME D'ERREUR DE CHAMP, à l'identique de tous ceux du dépôt.
- *
- * `V-41` présente le composant : « L'erreur est TOUJOURS accompagnée de son
- * motif, jamais d'un simple contour rouge », et tous les `.champ__erreur` du
- * produit portent ce même cercle barré avant leur phrase — `V-17:553`, `:934`,
- * `V-23:331`, `V-32:883`, `V-33:383`. Un bloc de refus né à l'exécution n'a
- * aucune raison d'en être privé : il occuperait la même place en disant moins.
- *
- * Les mesures et la garde de disposition sont celles du gel, au chiffre près.
+ * Le pictogramme d'erreur de champ, à l'identique de tous ceux du dépôt : « l'erreur est
+ * TOUJOURS accompagnée de son motif, jamais d'un simple contour rouge » (`V-41`).
+ * Mesures et garde de disposition sont celles du gel, au chiffre près.
  */
 function pictogrammeDErreur(document: Document): Element {
 	const dessin = document.createElementNS(ESPACE_GRAPHIQUE, 'svg');
@@ -580,7 +399,6 @@ function pictogrammeDErreur(document: Document): Element {
 	return dessin;
 }
 
-/** L'aide à la saisie sous son contrôle, quand la console en a écrit une. */
 function poserLAide(bloc: Element, champ: ChampDeFicheAuFormulaire): void {
 	if (champ.aide === undefined || champ.aide === '') return;
 	const aide = bloc.ownerDocument.createElement('span');
@@ -590,12 +408,9 @@ function poserLAide(bloc: Element, champ: ChampDeFicheAuFormulaire): void {
 }
 
 /**
- * CE QUE LES CONTRÔLES DE `#proprietes` PORTENT — une table de chaînes.
- *
- * Une valeur VIDE n'est pas soumise : `lireLesProprietesDeFiche()` l'écarte
- * déjà à la lecture, et l'écrire en base ferait porter à la note une propriété
- * que personne n'a renseignée. Un interrupteur, lui, porte toujours l'un de ses
- * deux mots — décoché n'est pas « non renseigné ».
+ * Ce que les contrôles de `#proprietes` portent — une table de chaînes. Une valeur VIDE
+ * n'est pas soumise : l'écrire ferait porter à la note une propriété que personne n'a
+ * renseignée. Un interrupteur porte toujours l'un de ses deux mots.
  */
 export function proprietesDeFicheSaisies(racine: ParentNode): Record<string, string> {
 	const rendu: Record<string, string> = {};
@@ -615,83 +430,57 @@ export function proprietesDeFicheSaisies(racine: ParentNode): Record<string, str
 	return rendu;
 }
 
-/* ═══════════════════════════════════ L'éditeur — V-17 ═══════════════════ */
-
 export interface OptionsDeLEditeur {
 	/**
-	 * L'ÉDITEUR RÉEL, quand la route en a monté un.
-	 *
-	 * Présent, c'est LUI qui donne le corps, et le champ soumis est `corps` — le
-	 * document canonique sérialisé, celui que la base porte. Absent, la zone de
-	 * rédaction est un `contenteditable` nu et le champ soumis est
-	 * `corps-markdown`. Les deux chemins existent, ils ne se mélangent jamais, et
-	 * `P-35` est la raison pour laquelle ils ne portent pas le même nom.
+	 * L'éditeur réel, quand la route en a monté un. Présent, c'est LUI qui donne le corps
+	 * et le champ soumis est `corps` — le document canonique sérialisé. Absent, la zone est
+	 * un `contenteditable` nu et le champ est `corps-markdown` : deux noms distincts pour
+	 * deux chemins qui ne se mélangent jamais.
 	 */
 	editeur?: () => unknown;
 	/**
-	 * Le corps repris, en Markdown. Absent en création. Présent en
-	 * modification : c'est le document que la base porte, sérialisé par le
-	 * convertisseur unique, côté serveur.
+	 * Le corps repris, en Markdown. Absent en création ; présent en modification,
+	 * sérialisé côté serveur par le convertisseur unique.
 	 */
 	corps?: string | null;
 	/**
-	 * L'adresse à recharger quand le domaine change. Le choix de dossier est
-	 * rendu par la VUE, à partir du domaine reçu en propriété : le changer sans
-	 * recharger laisserait l'arborescence d'un autre domaine à l'écran, et la
-	 * note serait rangée là où l'utilisateur croit ne pas la ranger. Absent, le
-	 * sélecteur de domaine reste inerte — c'est le cas de la modification, où
-	 * le déplacement demande un droit sur les DEUX dossiers (`RG-M05-09`).
+	 * L'adresse à recharger quand le domaine change. Le choix de dossier est rendu par la
+	 * VUE à partir du domaine reçu : le changer sans recharger laisserait l'arborescence
+	 * d'un autre domaine à l'écran. Absent, le sélecteur reste inerte — le cas de la
+	 * modification, où le déplacement demande un droit sur les DEUX dossiers (`RG-M05-09`).
 	 */
 	rechargerSurDomaine?: (domaine: string) => string;
 	/**
-	 * LE RÉFÉRENTIEL DES TYPES DE FICHE, celui que la route a déjà lu en base
-	 * pour peupler le sélecteur `#m-fiche` — `data.typesFiche`, servi par
-	 * `lireTypesDeFiche()`.
-	 *
-	 * ABSENT, `#m-fiche` reste ce qu'il était : un sélecteur qui ne fait rien et
-	 * dont la valeur n'est PAS soumise. C'est ce qui garde inchangé tout
-	 * formulaire qui n'a pas de fiche à porter — et c'est aussi ce qui empêche
-	 * qu'une soumission dépourvue de référentiel se lise comme un RETRAIT de
-	 * type, la chaîne vide ayant ce sens en modification.
+	 * Le référentiel des types de fiche, celui que la route a déjà lu en base. ABSENT,
+	 * `#m-fiche` reste un sélecteur inerte dont la valeur n'est PAS soumise : c'est ce qui
+	 * garde inchangé tout formulaire sans fiche, et ce qui empêche qu'une soumission
+	 * dépourvue de référentiel se lise comme un RETRAIT de type.
 	 */
 	typesFiche?: ReferentielDeFiches;
 	/**
-	 * L'ÉTAT DE FICHE DE LA NOTE ROUVERTE — le type qu'elle porte et ce qu'elle a
-	 * mis dans ses champs.
-	 *
-	 * Sans lui, l'éditeur ouvrait une fiche « Serveur » sur « Aucun — note
-	 * simple », panneau de propriétés vide : l'écran mentait sur l'état de la
-	 * note, et un enregistrement sans un geste sur ce champ l'aurait DÉPOUILLÉE
-	 * de son type. Absent — la création —, l'écran s'ouvre sur le sélecteur vide
-	 * que le gel presse (`V-17:3543-3544`).
+	 * L'état de fiche de la note rouverte. Sans lui, l'éditeur ouvrait une fiche
+	 * « Serveur » sur « Aucun — note simple », panneau vide, et un enregistrement sans
+	 * geste sur ce champ l'aurait DÉPOUILLÉE de son type.
 	 */
 	ficheDeDepart?: FicheDeDepart | null;
 	/**
-	 * `marquerModifie` du gel (`V-17:2872`, `:2894`, `:2911`, `:2917`) — ce qui
-	 * fait passer le témoin de la barre d'état à « Modifications non
-	 * enregistrées ». La route le relie à `signalerUneModification()` de
-	 * `cablerLesGestesDEdition`, seule définition de cet état.
+	 * `marquerModifie` du gel — ce qui fait passer le témoin de la barre d'état à
+	 * « Modifications non enregistrées ». La route le relie à `signalerUneModification()`.
 	 */
 	surSaisie?: () => void;
 }
 
 /**
- * LE NOM DU TYPE DE NOTE D'UNE FICHE — `007_types_de_note.montee.sql:29`,
- * `('fiche', 'Fiche', 3)`, et `TYPES_NOTE` (`seeds/corpus.ts`).
- *
- * Ce n'est PAS le mot renommable de `../vocabulaire.ts` : celui-là est ce que
- * les écrans AFFICHENT (`M14.7`), celui-ci est la valeur d'une ligne de
- * `types_de_note`, que la soumission transporte et que `resoudreLaCible()`
- * compare à `types_de_note.nom`. Les confondre ferait dépendre l'écriture en
+ * Le nom du type de note d'une fiche — la valeur d'une ligne de `types_de_note`, que la
+ * soumission transporte. Ce n'est PAS le mot renommable de `../vocabulaire.ts`, qui est
+ * ce que les écrans AFFICHENT (`M14.7`) : les confondre ferait dépendre l'écriture en
  * base d'un réglage d'affichage.
  */
 export const TYPE_DE_NOTE_FICHE = 'Fiche';
 
 /**
- * LE CÂBLAGE DE L'ÉDITEUR — V-17, en création comme en modification.
- *
- * Appelé depuis `onMount` d'une route, jamais ailleurs. Rend de quoi se défaire,
- * pour que la route puisse le rendre à son tour à Svelte.
+ * LE CÂBLAGE DE L'ÉDITEUR — V-17, en création comme en modification. Appelé depuis
+ * `onMount` d'une route. Rend de quoi se défaire.
  */
 export function cablerLEditeur(
 	formulaire: HTMLFormElement,
@@ -715,24 +504,17 @@ export function cablerLEditeur(
 	}
 
 	/* 1 bis. LE CONTRÔLE NATIF DU NAVIGATEUR EST ÉTEINT SUR TOUT LE FORMULAIRE.
-	   CE GESTE N'EST DEMANDÉ PAR AUCUNE SOURCE : c'est un vide comblé, et il
-	   faut le dire pour ce qu'il est.
+	   Aucune source ne le demande : c'est un vide comblé, conséquence du
+	   `required` posé sur les propriétés obligatoires. `requestSubmit()` passe par
+	   la validation native, et une propriété obligatoire vide AVALE la
+	   soumission — sans requête, sans code HTTP, sans que le refus du produit
+	   puisse se peindre. La bulle native n'est ni dans la langue du produit, ni à
+	   la place attendue, et ne sait pas nommer PLUSIEURS propriétés manquantes.
 
-	   Il est la conséquence du `required` posé sur les propriétés obligatoires.
-	   `requestSubmit()` fait passer le formulaire par la validation native —
-	   MESURÉ : une propriété obligatoire vide AVALE la soumission, sans requête,
-	   sans code HTTP, et sans que le refus du produit ait la moindre chance de
-	   se peindre. La bulle native n'est ni dans la langue du produit, ni à la
-	   place que `BRIEF-VUES.md:973` désigne, ne survit pas au premier clic
-	   ailleurs, et ne sait pas nommer PLUSIEURS propriétés manquantes.
-
-	   CE QU'IL COÛTE, ET IL FAUT LE SAVOIR : `required` n'est plus qu'une
-	   déclaration — le navigateur ne l'applique plus, l'assistance technique la
-	   lit encore, et c'est le serveur qui refuse. Et l'extinction porte sur le
-	   formulaire ENTIER : toute contrainte native qu'on y poserait un jour —
-	   `min`, `max`, `pattern`, la saisie fautive d'un `type="number"` — serait
-	   éteinte avec elle. La refermer supposerait un refus du produit pour chaque
-	   contrainte qu'on voudrait rendre. */
+	   CE QU'IL COÛTE : `required` n'est plus qu'une déclaration lue par
+	   l'assistance technique, et c'est le serveur qui refuse. L'extinction porte
+	   sur le formulaire ENTIER — toute contrainte native qu'on y poserait un jour
+	   (`min`, `max`, `pattern`) serait éteinte avec elle. */
 	formulaire.noValidate = true;
 
 	/* 2. Le groupe de dossiers ne peut pas entrer en collision — geste 2. */
@@ -795,16 +577,11 @@ export function cablerLEditeur(
 
 	/* 6 bis. LE TYPE DE FICHE FAIT APPARAÎTRE SES CHAMPS — `V-17:2878-2925`.
 
-	   Le sélecteur était vivant et seul : ses options venaient de la base, et
-	   rien ne les écoutait. `#proprietes` restait vide à jamais, donc la note
-	   n'avait aucune propriété à soumettre — le trou était de deux étages.
-
 	   `#m-type` PASSE À « Fiche » quand un type est choisi, et c'est le gel qui
-	   l'écrit (`V-17:2921`) : `RG-NOT-01` — une note qui porte un type de fiche
-	   EST une fiche. Le geste est GARDÉ sur la présence de l'option : les types
-	   de note sont administrables (M14), et poser sur un `select` une valeur
-	   qu'aucune option ne porte ne lève pas — elle vide le sélecteur, et la note
-	   partirait sans type du tout. */
+	   l'écrit : `RG-NOT-01`, une note qui porte un type de fiche EST une fiche. Le
+	   geste est GARDÉ sur la présence de l'option — les types de note sont
+	   administrables (M14), et poser sur un `select` une valeur qu'aucune option ne
+	   porte ne lève pas : elle vide le sélecteur, et la note partirait sans type. */
 	const selecteurDeFiche = noeud<HTMLSelectElement>(formulaire, '#m-fiche');
 	const zoneDesProprietes = noeud<HTMLElement>(formulaire, '#proprietes');
 	const referentiel = options.typesFiche;
@@ -832,9 +609,9 @@ export function cablerLEditeur(
 			if (referentiel[choisi] === undefined) return;
 			const selecteurDeType = noeud<HTMLSelectElement>(formulaire, '#m-type');
 			if (selecteurDeType === null) return;
-			/* Les options sont PARCOURUES, jamais interrogées par un sélecteur : un
-			   nom de type de note est une donnée d'instance, et l'échapper pour
-			   entrer dans un sélecteur serait une seconde grammaire à tenir. */
+			/* Les options sont PARCOURUES, jamais interrogées par un sélecteur : un nom
+			   de type de note est une donnée d'instance, et l'échapper serait une
+			   seconde grammaire à tenir. */
 			const porteLeType = Array.from(selecteurDeType.options).some(
 				(o) => o.value === TYPE_DE_NOTE_FICHE
 			);
@@ -845,11 +622,10 @@ export function cablerLEditeur(
 		const depart = options.ficheDeDepart ?? null;
 		if (depart !== null && referentiel[depart.type] !== undefined) {
 			selecteurDeFiche.value = depart.type;
-			/* UNE REPRISE, ET LE MOT COMPTE : `depart.proprietes` ne porte que les
-			   clés que la note a en base. Une propriété ajoutée au type après elle y
-			   est absente, et doit s'ouvrir VIDE pour que sa valeur soit demandée —
-			   `mockups/V-29:3308`. Un défaut de schéma posé ici répondrait à la place
-			   du rédacteur, et le refus serveur ne se déclencherait jamais. */
+			/* UNE REPRISE, ET LE MOT COMPTE : `depart.proprietes` ne porte que les clés
+			   que la note a en base. Une propriété ajoutée au type après elle doit
+			   s'ouvrir VIDE pour que sa valeur soit demandée (`V-29:3308`) ; un défaut
+			   de schéma posé ici répondrait à la place du rédacteur. */
 			rendre(depart.type, depart.proprietes, 'reprise');
 		}
 	}
@@ -864,14 +640,10 @@ export function cablerLEditeur(
 		poserChamp(formulaire, 'visibilite', bascule(formulaire, 'm-visibilite', 'interne'));
 		poserChamp(formulaire, 'statut', bascule(formulaire, 'm-statut', 'publiee'));
 		poserChamp(formulaire, 'etiquettes', etiquettes(formulaire).join(','));
-		/* LE TYPE DE FICHE ET SES PROPRIÉTÉS — les deux champs que la soumission
-		   n'a jamais portés, et sans lesquels `notes.type_de_fiche_id` restait
-		   vide à jamais quel que fût le choix de l'utilisateur.
-
-		   RIEN N'EST POSÉ QUAND LE CÂBLAGE N'A PAS DE RÉFÉRENTIEL : en
-		   modification, un champ `fiche` vide vaut RETRAIT du type, et une
-		   soumission composée sans référentiel retirerait le type de toute note
-		   qu'elle enregistre. L'absence du champ, elle, ne modifie rien. */
+		/* LE TYPE DE FICHE ET SES PROPRIÉTÉS. RIEN N'EST POSÉ QUAND LE CÂBLAGE N'A
+		   PAS DE RÉFÉRENTIEL : en modification, un champ `fiche` vide vaut RETRAIT
+		   du type, et une soumission composée sans référentiel retirerait le type de
+		   toute note qu'elle enregistre. L'absence du champ, elle, ne modifie rien. */
 		if (fichesCablees && selecteurDeFiche !== null) {
 			poserChamp(formulaire, 'fiche', selecteurDeFiche.value);
 			poserChamp(formulaire, 'proprietes', JSON.stringify(proprietesDeFicheSaisies(formulaire)));
@@ -899,42 +671,28 @@ export function cablerLEditeur(
 	};
 }
 
-/* ═══════════════════════════════════ La suppression — V-14 ══════════════ */
-
 export interface OptionsDeSuppression {
 	/** Ce que la confirmation rappelle — `RG-M04-10`, titre et volumes. */
 	rappel: string;
 }
 
 /**
- * LE CÂBLAGE DE LA SUPPRESSION — le bouton destructif du menu de V-14.
+ * Le câblage de la suppression — le bouton destructif du menu de V-14. `RG-M04-10` exige
+ * une confirmation qui RAPPELLE ce qui sera détruit : le rappel est composé par le
+ * serveur — c'est lui qui compte — et rendu ici par la confirmation NATIVE.
  *
- * `RG-M04-10` exige une confirmation qui RAPPELLE ce qui sera détruit : le
- * titre, les rétroliens qui casseront, les versions perdues. Le rappel est
- * composé par le serveur — c'est lui qui compte — et rendu ici par la
- * confirmation NATIVE du navigateur.
- *
- * ÉCART DÉCLARÉ, ET IL EST NOMMÉ. Le gel porte une boîte de dialogue pour ce
- * geste — `dlg` « Supprimer cette note », `V-40:510-549` —, et cette vue-là
- * n'est pas montée par `/notes/{identifiant}` : V-40 est un catalogue transverse
- * dont « chaque dialogue s'exécute dans la vue qui le déclenche »
- * (`docs/routes.md:211`), et V-14 ne le transcrit pas. Le monter demanderait de
- * toucher `src/vues/`, que `ARB-063` §5 ferme pour cette campagne. La règle est
- * donc tenue quant au FOND — rien n'est détruit sans un rappel chiffré — et non
- * quant à la FORME. Le comblement serait pire : il inventerait un écran.
+ * ÉCART DÉCLARÉ : le gel porte une boîte de dialogue pour ce geste (`V-40:510-549`), mais
+ * V-40 est un catalogue transverse que V-14 ne transcrit pas. La règle est tenue quant au
+ * FOND, non quant à la FORME.
  */
 export function cablerLaSuppression(
 	formulaire: HTMLFormElement,
 	options: OptionsDeSuppression
 ): Debranchement {
 	/* AUCUN BOUTON DU GEL NE SOUMET — geste 1 de `cablerLEditeur`, et il manquait
-	   ICI. Le défaut a été mesuré, pas imaginé : un `button` sans attribut de
-	   type est un bouton de SOUMISSION dès qu'il entre dans un formulaire, et ce
-	   formulaire-ci vise `?/supprimer`. Cliquer « Imprimer », « Modifier la
-	   référence », « Historique des versions » ou « Exporter » DÉTRUISAIT donc la
-	   note — 303 vers le domaine, puis 404 sur la note. Une action irréversible
-	   déclenchée par un bouton d'impression : c'est le pire défaut de cette
-	   campagne, et il tenait à une ligne absente. */
+	   ICI. Un `button` sans attribut de type est un bouton de SOUMISSION dès qu'il
+	   entre dans un formulaire, et ce formulaire-ci vise `?/supprimer` : cliquer
+	   « Imprimer » ou « Exporter » DÉTRUISAIT la note. */
 	for (const b of Array.from(formulaire.querySelectorAll('button'))) {
 		if (!b.hasAttribute('type')) b.type = 'button';
 	}
@@ -951,53 +709,26 @@ export function cablerLaSuppression(
 	return () => bouton.removeEventListener('click', reaction);
 }
 
-/* ═══════════════════════════════════ La connexion — V-05 ════════════════ */
-
 /**
- * IL N'Y A PLUS RIEN À CÂBLER SUR LA CONNEXION, ET C'EST LA BONNE NOUVELLE.
- *
- * Ce module posait ici la méthode et les trois noms de champ depuis `onMount`.
- * La parade n'existait donc pas AVANT le montage — et c'est exactement la
- * fenêtre du défaut qu'elle prétendait fermer : une soumission avant
- * hydratation partait en `GET`, avec le mot de passe dans l'adresse. Mesuré sur
- * le HTML servi, `name="motdepasse"` présent et `method` absent.
- *
- * `P-5` mot pour mot : une règle qu'aucun cas n'exerçait. Les quatre attributs
- * sont désormais dans le balisage de `src/vues/V-05.svelte`, où aucune fenêtre
- * ne subsiste, et la connexion fonctionne **sans JavaScript** — vérifié,
- * navigateur script désactivé, `POST /connexion` puis `303`.
- *
- * La fonction est retirée plutôt que laissée vide : un câblage sans objet est
- * un contrôle inerte, et ce dépôt en a assez payé (`P-26`).
+ * Il n'y a plus rien à câbler sur la connexion. Ce module y posait la méthode et les noms
+ * de champ depuis `onMount` : la parade n'existait donc pas AVANT le montage, ce qui
+ * était exactement la fenêtre du défaut qu'elle prétendait fermer — une soumission avant
+ * hydratation partait en `GET`, mot de passe dans l'adresse.
  */
 
-/* ═══════════════════════════════════ Le signet — V-23 ═══════════════════ */
-
 /**
- * LE CÂBLAGE DU FORMULAIRE DE SIGNET.
- *
- * Comme V-05, et à la différence de V-17, le gel écrit ici un vrai
- * `form.formulaire` avec un `button[type=submit]#valider-page`. Il ne lui
- * manque que la méthode et les noms. Aucune enveloppe n'est posée.
- *
- * Trois champs portent déjà le nom attendu dans leur identifiant — `adresse`,
- * `description`, `domaine` — et deux ne le portent pas : le titre s'appelle
- * `titre-signet` au gel, et les étiquettes sont des pastilles, pas un champ. Le
- * relevé des pastilles et la touche Entrée sont les mêmes gestes que ceux de
- * l'éditeur, et ils sont écrits une seule fois.
- *
- * `#supprimer-page` soumet vers une action nommée, sur confirmation chiffrée.
+ * Le câblage du formulaire de signet. Comme V-05 et à la différence de V-17, le gel écrit
+ * ici un vrai `form.formulaire` avec un `button[type=submit]` : il ne lui manque que la
+ * méthode et les noms.
  */
 export interface OptionsDuSignet {
-	/** Ce que la confirmation de suppression rappelle. Absent : pas de suppression. */
 	rappelDeSuppression?: string;
 }
 
 /**
- * CE QUE LE CHAMP D'ADRESSE DIT QUAND LE PRESSE-PAPIERS RESTE FERMÉ. Un refus
- * de permission, un navigateur sans presse-papiers programmable, une page hors
- * contexte sûr : trois causes, un seul remède pour qui est devant l'écran, et
- * la phrase le nomme.
+ * Ce que le champ d'adresse dit quand le presse-papiers reste fermé — refus de
+ * permission, navigateur sans presse-papiers programmable, page hors contexte sûr : trois
+ * causes, un seul remède pour qui est devant l'écran.
  */
 export const PHRASE_DE_PRESSE_PAPIERS_HORS_ATTEINTE =
 	"Le presse-papiers n'est pas accessible depuis cette page. Collez l'adresse dans le champ avec Ctrl+V.";
@@ -1007,11 +738,8 @@ export const PHRASE_DE_PRESSE_PAPIERS_VIDE =
 	"Le presse-papiers ne contient aucun texte : copiez l'adresse, puis recommencez.";
 
 /**
- * LE BLOC DE REFUS DU CHAMP D'ADRESSE — montré avec son motif, ou refermé.
- *
- * Le gel pose `#erreur-adresse` masqué, avec son pictogramme et un
- * `span#erreur-adresse-txt` vide, et `.champ[data-etat="erreur"]` porte le
- * contour rouge du socle. Rien n'est créé ici : les deux nœuds existent.
+ * Le bloc de refus du champ d'adresse — montré avec son motif, ou refermé. Le gel pose
+ * `#erreur-adresse` masqué avec son pictogramme : rien n'est créé ici.
  */
 function direLAdresse(formulaire: ParentNode, motif: string | null): void {
 	const bloc = noeud<HTMLElement>(formulaire, '#erreur-adresse');
@@ -1025,12 +753,9 @@ function direLAdresse(formulaire: ParentNode, motif: string | null): void {
 }
 
 /**
- * POSE UNE ADRESSE COLLÉE DANS LE CHAMP, ou dit pourquoi elle ne l'est pas.
- *
- * L'événement `input` est ÉMIS, et ce n'est pas une politesse : la vue lie la
- * saisie à son aperçu d'adresse — sceau, hôte, chemin. Une valeur posée sans
- * lui laisserait l'aperçu sur l'adresse précédente, c'est-à-dire un écran qui
- * ment sur ce que le champ porte.
+ * Pose une adresse collée dans le champ, ou dit pourquoi elle ne l'est pas. L'événement
+ * `input` est ÉMIS parce que la vue lie la saisie à son aperçu d'adresse : une valeur
+ * posée sans lui laisserait l'aperçu sur l'adresse précédente.
  *
  * Rend `true` si quelque chose a été collé.
  */
@@ -1061,10 +786,9 @@ export function cablerLeSignet(racine: ParentNode, options: OptionsDuSignet = {}
 	const jetables: Debranchement[] = [];
 
 	formulaire.method = 'post';
-	/* EN MODIFICATION, LES DEUX ACTIONS SONT NOMMÉES. SvelteKit refuse qu'une
-	   action par défaut cohabite avec une action nommée sur la même page — il
-	   rend 500 —, et l'écran d'édition en porte deux : enregistrer et supprimer.
-	   La création, elle, n'en a qu'une, et garde donc l'action par défaut. */
+	/* EN MODIFICATION, LES DEUX ACTIONS SONT NOMMÉES : SvelteKit rend 500 si une
+	   action par défaut cohabite avec une action nommée sur la même page, et
+	   l'écran d'édition en porte deux. La création n'en a qu'une. */
 	if (options.rappelDeSuppression !== undefined) formulaire.action = '?/enregistrer';
 	for (const id of ['adresse', 'description', 'domaine']) {
 		const champ = noeud<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
@@ -1103,16 +827,12 @@ export function cablerLeSignet(racine: ParentNode, options: OptionsDuSignet = {}
 		}
 	}
 
-	/* ─────────────────────────── COLLER DEPUIS LE PRESSE-PAPIERS ──────────
-	   `#coller` était dessiné, stylé, survolé — et inerte : aucun écouteur, ni
-	   ici ni ailleurs. Le geste est une lecture du presse-papiers, donc un
-	   comportement de navigateur, donc sa place est ici et pas dans la vue.
+	/* COLLER DEPUIS LE PRESSE-PAPIERS. Le geste est une lecture du presse-papiers,
+	   donc un comportement de navigateur, donc sa place est ici et pas dans la vue.
 
-	   LE REFUS EST UN ÉTAT AFFICHÉ, JAMAIS UN SILENCE. La lecture du
-	   presse-papiers demande une permission que le navigateur peut refuser, et
-	   qui n'existe pas hors contexte sûr. Le bloc de refus du champ d'adresse
-	   — `#erreur-adresse`, déjà au gel, masqué — porte alors la phrase qui
-	   nomme le geste de secours : la frappe de collage dans le champ. */
+	   LE REFUS EST UN ÉTAT AFFICHÉ, JAMAIS UN SILENCE : la permission peut être
+	   refusée, et n'existe pas hors contexte sûr. `#erreur-adresse`, déjà au gel,
+	   porte alors la phrase qui nomme le geste de secours. */
 	const collage = noeud<HTMLButtonElement>(formulaire, '#coller');
 	const champAdresse = noeud<HTMLInputElement>(formulaire, '#adresse');
 	if (collage !== null && champAdresse !== null) {
@@ -1166,16 +886,11 @@ export function cablerLeSignet(racine: ParentNode, options: OptionsDuSignet = {}
 	};
 }
 
-/* ═══════════════════════════════════ L'historique — V-15 ════════════════ */
-
 export interface OptionsDeLHistorique {
-	/** L'adresse de la note — celle sur laquelle le panneau est superposé. */
 	adresse: string;
-	/** Ce que la confirmation de restauration rappelle. */
 	rappel: (numero: number) => string;
 }
 
-/** Le numéro qu'une ligne de version porte, lu dans son libellé. */
 function numeroDeLigne(ligne: Element): number | null {
 	const texte = ligne.querySelector('.ver__n')?.textContent ?? '';
 	const trouve = /(\d+)/.exec(texte);
@@ -1183,15 +898,10 @@ function numeroDeLigne(ligne: Element): number | null {
 }
 
 /**
- * LE CÂBLAGE DU PANNEAU D'HISTORIQUE.
- *
- * V-15 n'a **pas de chemin propre** : `docs/routes.md` §3.4 la classe
- * superposition de `/notes/{identifiant}`, et son seul état adressable est
- * `?version={n}` — `?` nu désignant la version courante. Tout ce que ce câblage
- * fait est donc de la NAVIGATION vers cet état, plus le geste de restauration.
- *
- * Le numéro d'une version se lit dans le libellé de sa ligne, faute d'attribut :
- * le gel n'en pose aucun, et lui en ajouter un serait toucher `src/vues/`.
+ * Le câblage du panneau d'historique. V-15 n'a pas de chemin propre : c'est une
+ * superposition de `/notes/{identifiant}` dont le seul état adressable est `?version={n}`.
+ * Tout ce câblage est donc de la NAVIGATION vers cet état, plus la restauration. Le numéro
+ * d'une version se lit dans le libellé de sa ligne : le gel ne pose aucun attribut.
  */
 export function cablerLHistorique(
 	racine: ParentNode,
@@ -1203,24 +913,14 @@ export function cablerLHistorique(
 	const aller = (cible: string): void => document.location.assign(cible);
 
 	/**
-	 * LE PANNEAU EST HORS FENÊTRE, ET C'EST LE GEL — cousin exact de `P-3`.
+	 * LE PANNEAU EST HORS FENÊTRE, ET C'EST LE GEL. `V-15.css:761` ouvre le panneau par
+	 * `.app[data-historique="ouvert"] .tiroir`, et `V-15-historique.html:1853` place
+	 * l'`aside.tiroir` HORS de `div.app` : le sélecteur ne peut pas s'appliquer et le
+	 * panneau reste inatteignable.
 	 *
-	 * `V-15.css:761` ouvre le panneau par `.app[data-historique="ouvert"]
-	 * .tiroir { transform: none; }`, et `mockups/V-15-historique.html:1853` place
-	 * l'`aside.tiroir` **hors** de `div.app` : le sélecteur ne peut pas
-	 * s'appliquer, le panneau reste à `translateX(100%)`, et il est
-	 * inatteignable. Mesuré : Playwright refuse le clic — « element is outside of
-	 * the viewport ».
-	 *
-	 * DEUX GESTES, ET AUCUN N'INVENTE UN STYLE. On pose l'attribut que la règle
-	 * attend, et on rend le panneau DESCENDANT de `.app` pour que la règle du gel
-	 * puisse enfin le trouver. Aucune déclaration n'est écrite, aucune feuille
-	 * n'est touchée : c'est la règle GELÉE qui ouvre le panneau, elle en devient
-	 * seulement applicable.
-	 *
-	 * C'est une divergence de structure avec la maquette, et elle est assumée :
-	 * un panneau que l'utilisateur ne peut pas atteindre n'est pas un panneau.
-	 * Elle appelle un regel de V-15, pas une seconde rustine.
+	 * DEUX GESTES, ET AUCUN N'INVENTE UN STYLE : on pose l'attribut que la règle attend, et
+	 * on rend le panneau DESCENDANT de `.app`. Divergence de structure assumée avec la
+	 * maquette : un panneau que l'utilisateur ne peut pas atteindre n'est pas un panneau.
 	 */
 	const app = noeud<HTMLElement>(racine, '.app');
 	const tiroir = noeud<HTMLElement>(racine, '#tiroir');

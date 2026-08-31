@@ -1,78 +1,30 @@
 /**
- * LA BATTERIE 4 — « pour tout document du corpus, sérialiser puis désérialiser
- * redonne le document d'origine ».
+ * LA BATTERIE 4 — « pour tout document du corpus, sérialiser puis désérialiser redonne le
+ * document d'origine ». `RG-M13-01` en fait « le critère de réussite principal » du produit.
+ * Elle est ici, en TypeScript contrôlé par `pnpm check` ; `verif/aller-retour.mjs` ne fait que
+ * la lancer et imprimer.
  *
- * `RG-M13-01` (`CAHIER-DES-CHARGES-FONCTIONNEL.md` l. 1113) désigne cette
- * propriété comme « le critère de réussite principal » du produit, et
- * `ADR-004` nomme cette batterie « la batterie nominale de cet ADR ». Elle est
- * ici, en TypeScript contrôlé par `pnpm check` ; `verif/aller-retour.mjs` ne
- * fait que la lancer et imprimer — le partage qu'emploient déjà
- * `verif/contenu.mjs` (T-014) et `base/base.mjs` (T-003), et qui évite un
- * SECOND chemin de résolution de modules.
+ * LE CORPUS EST PETIT : `DOCUMENTS_DU_GEL` porte QUATRE corps, qui n'exercent que TREIZE des
+ * quinze constructions de M04.6 — ni l'image, ni le diagramme. Ce que le corpus n'exerce pas
+ * est donc éprouvé par des CAS NOMMÉS, déclarés comme tels et comptés à part, jamais glissés
+ * dans un document de démonstration (`P-02`). LES TROIS VERSIONS DE `CONTENU_VERSIONS` SONT
+ * ÉCARTÉES : elles sont en `BlocDeContenu` et non en `Document`, et cinq informations que le
+ * format EXIGE leur manquent.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * LE CORPUS EST PETIT, ET C'EST LE POINT DUR DE CE LOT
- *
- * `DOCUMENTS_DU_GEL` porte QUATRE corps, tous transcrits de deux maquettes
- * gelées (`documents-du-gel.ts` l. 721-746, recompté). Ces quatre corps
- * n'exercent que TREIZE des quinze constructions de M04.6 : ni l'image, ni le
- * diagramme — relevé mécanique reproduit par `pnpm contenu:constructions`, et
- * recompté ici par `releveDesConstructions()`.
- *
- * « Une règle qu'aucun cas n'exerce est une règle dont on ignore si elle
- * marche » (`CLAUDE.md` §6, `P-5`). Un aller-retour vert sur quatre documents
- * RESSEMBLERAIT à un résultat sans en être un. Les constructions, les valeurs
- * d'attributs et les formes que le corpus n'exerce pas sont donc éprouvées par
- * des CAS NOMMÉS, déclarés comme tels et comptés à part — jamais glissés dans
- * un document de démonstration, ce qui serait la valeur illustrative que
- * `P-02` interdit et que T-014 avait déjà refusée.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LES TROIS VERSIONS DE `CONTENU_VERSIONS` N'APPORTENT PAS
- *
- * `seeds/corpus.ts` l. 1503-1705 porte trois versions anciennes de
- * `n-restaurer-pg`, en `BlocDeContenu` (l. 309-331) et non en `Document`.
- * Elles ont été considérées, et elles sont écartées pour la raison exacte que
- * T-014 avait donnée, vérifiée type en main : cinq informations que le format
- * EXIGE leur manquent — l'ancre d'un titre (`type: 'h2' | 'h3'` ne porte que
- * `texte`), l'état coché d'une tâche (`items: readonly string[]`), le glyphe
- * d'une alerte (`niveau`, `titre`, `texte`, et rien d'autre), la nature
- * numérique d'une cellule (`entetes` et `lignes` de chaînes), et la source
- * d'une figure (`type: 'figure'` ne porte qu'une `legende`). Les combler
- * serait DÉCIDER. Elles ne sont donc pas transposées, et l'écart reste ouvert.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * AUCUNE NORMALISATION AVANT COMPARAISON
- *
- * L'identité est mesurée sur la sérialisation JSON STRICTE, ordre des clés
- * compris (`identique`). Une seconde mesure, insensible à l'ordre des clés
- * (`identiqueACleTriee`), est calculée pour la seule raison de POUVOIR LE
- * DIRE : si les deux verdicts diffèrent quelque part, c'est que le
- * convertisseur ne rend pas l'ordre des clés et que la première mesure est
- * plus exigeante que l'identité du document en base. À ce jour les deux
- * verdicts concordent sur tous les cas, donc aucune tolérance n'est employée.
- *
- * ET L'EXIGENCE STRICTE EST TENABLE PARCE QUE LE SCHÉMA NORMALISE — mesuré,
- * pas supposé : `analyserDocument` rend les clés dans l'ordre du schéma, quel
- * que soit celui de l'entrée. Un document écrit
- * `{content, attrs, type}` en ressort `{type, attrs, content}`. Les deux côtés
- * de la comparaison passant par cette même entrée, l'ordre des clés n'est
- * jamais une différence — et il ne l'est pas davantage en base, `jsonb` ne
- * conservant pas l'ordre d'écriture.
+ * AUCUNE NORMALISATION AVANT COMPARAISON : l'identité est mesurée sur la sérialisation JSON
+ * STRICTE, ordre des clés compris. Une seconde mesure insensible à l'ordre
+ * (`identiqueACleTriee`) est calculée pour POUVOIR LE DIRE si les deux verdicts divergeaient.
+ * L'exigence stricte est tenable parce qu'`analyserDocument` rend les clés dans l'ordre du
+ * schéma quelle que soit l'entrée, et que `jsonb` ne conserve pas l'ordre d'écriture.
  */
 import { compterLesLiensDUnDocument, compterPorteur } from './commandes';
 import { CONSTRUCTIONS, analyserDocument, type Document } from './document';
 import { DOCUMENTS_DU_GEL, resoudreDansLeCorpus } from './documents-du-gel';
 import { analyserMarkdown, serialiserEnMarkdown } from './markdown';
 
-/* ═══════════════════════════════════════════════ Les cas de la batterie ═ */
-
-/** Un document soumis à l'aller-retour, et d'où il vient. */
 export interface CasDAllerRetour {
 	readonly nom: string;
-	/** La provenance, à la ligne près quand elle existe. */
 	readonly provenance: string;
-	/** Ce que ce cas exerce et que le corpus n'exerce pas. Vide pour le corpus. */
 	readonly exerce: string;
 	readonly document: Document;
 }
@@ -86,12 +38,9 @@ export const CAS_DU_CORPUS: readonly CasDAllerRetour[] = DOCUMENTS_DU_GEL.map((d
 }));
 
 /**
- * LES CAS NOMMÉS, et pourquoi chacun existe.
- *
- * Chacun est là parce qu'une propriété du format n'est PAS exercée par les
- * quatre corps du gel. Les deux premiers reprennent, valeur pour valeur, les
- * nœuds que `rendu.test.ts` emploie déjà : même provenance, même contenu, et
- * donc aucune invention nouvelle dans ce lot.
+ * LES CAS NOMMÉS : chacun est là parce qu'une propriété du format n'est PAS exercée
+ * par les quatre corps du gel. Les deux premiers reprennent, valeur pour valeur, les
+ * nœuds de `rendu.test.ts`.
  */
 const NOMMES: readonly {
 	readonly nom: string;
@@ -514,27 +463,20 @@ export const CAS_NOMMES: readonly CasDAllerRetour[] = NOMMES.map((n) => ({
 	document: analyserDocument(n.valeur)
 }));
 
-/* ═══════════════════════════════════════════════════════ Les sondes ═════ */
-
-/** Une mutation du convertisseur, pour prouver que la batterie sait dire non. */
 export interface Sonde {
 	readonly genre: string;
-	/** Le côté perturbé — le candidat, jamais la mesure. */
 	readonly cote: string;
 	readonly description: string;
-	/** La perte simulée à la sérialisation. */
 	readonly muterMarkdown?: (markdown: string) => {
 		readonly texte: string;
 		readonly touches: number;
 	};
-	/** La perte simulée à la désérialisation. */
 	readonly muterDocument?: (relu: Document) => {
 		readonly valeur: unknown;
 		readonly touches: number;
 	};
 }
 
-/** Le nombre de nœuds dont un attribut a été remplacé, et la valeur mutée. */
 function sansAncre(valeur: unknown): { readonly valeur: unknown; readonly touches: number } {
 	let touches = 0;
 	const muter = (v: unknown): unknown => {
@@ -598,9 +540,6 @@ export const SONDES: readonly Sonde[] = [
 	}
 ];
 
-/* ═══════════════════════════════════════════════════════ Le verdict ═════ */
-
-/** Le JSON à clés triées — la seule mesure insensible à l'ordre d'écriture. */
 function jsonACleTriee(valeur: unknown): string {
 	if (Array.isArray(valeur)) return '[' + valeur.map(jsonACleTriee).join(',') + ']';
 	if (valeur === null || typeof valeur !== 'object') return JSON.stringify(valeur) ?? 'null';
@@ -640,19 +579,14 @@ function premiereDifference(a: unknown, b: unknown, chemin: string): string | nu
 
 export interface VerdictDAllerRetour {
 	readonly cas: CasDAllerRetour;
-	/** Le Markdown produit, tel quel. */
 	readonly markdown: string;
 	readonly lignes: number;
 	readonly identique: boolean;
-	/** L'identité mesurée sans tenir compte de l'ordre des clés du JSON. */
 	readonly identiqueACleTriee: boolean;
-	/** Le premier écart, s'il y en a un. */
 	readonly ecart: string | null;
-	/** Ce que la sonde a touché, quand une sonde est posée. */
 	readonly touches: number;
 }
 
-/** L'aller-retour d'un cas, éventuellement sous une sonde. */
 export function jouerAllerRetour(cas: CasDAllerRetour, sonde?: Sonde): VerdictDAllerRetour {
 	const markdown = serialiserEnMarkdown(cas.document);
 	let touches = 0;
@@ -692,16 +626,11 @@ export function jouerAllerRetour(cas: CasDAllerRetour, sonde?: Sonde): VerdictDA
 	};
 }
 
-/* ═══════════════════════════════════ Le relevé des quinze constructions ═ */
-
-/** Ce que chaque construction doit à un document, et à quel titre. */
 export interface ExerciceDeConstruction {
 	readonly numero: number;
 	readonly libelle: string;
-	/** Les documents du CORPUS qui l'exercent, avec le nombre d'occurrences. */
 	readonly parDocumentDuCorpus: readonly (readonly [string, number])[];
 	readonly occurrencesAuCorpus: number;
-	/** Les cas nommés qui l'exercent, faute de corpus. */
 	readonly parCasNomme: readonly (readonly [string, number])[];
 	readonly occurrencesAuxCasNommes: number;
 }
@@ -716,7 +645,6 @@ function compterConstruction(
 	return porteurs.reduce((n, p) => n + compterPorteur(document, p), 0);
 }
 
-/** Le relevé, construction par construction, document par document. */
 export function releveDesConstructions(): readonly ExerciceDeConstruction[] {
 	return CONSTRUCTIONS.map((c) => {
 		const corpus = CAS_DU_CORPUS.map(
@@ -736,9 +664,6 @@ export function releveDesConstructions(): readonly ExerciceDeConstruction[] {
 	});
 }
 
-/* ═══════════════════════════════════════ Le relevé des vingt attributs ═ */
-
-/** Un attribut du format, et l'endroit du Markdown qui le porte. */
 interface AttributDuFormat {
 	readonly noeud: string;
 	readonly attribut: string;
@@ -746,10 +671,9 @@ interface AttributDuFormat {
 }
 
 /**
- * LES VINGT ATTRIBUTS du format canonique — relevés sur `document.ts`, nœud
- * par nœud, et chacun avec l'endroit du Markdown qui le porte. `ARB-049`
- * décision 4 exige qu'ils survivent tous : la colonne « place » dit comment,
- * et le relevé dit qui l'exerce.
+ * LES VINGT ATTRIBUTS du format canonique — relevés sur `document.ts`, chacun avec
+ * l'endroit du Markdown qui le porte. `ARB-049` décision 4 exige qu'ils survivent
+ * tous : la colonne « place » dit comment, et le relevé dit qui l'exerce.
  */
 const ATTRIBUTS: readonly AttributDuFormat[] = [
 	{ noeud: 'heading', attribut: 'level', place: 'le nombre de dièses' },
@@ -782,7 +706,6 @@ const ATTRIBUTS: readonly AttributDuFormat[] = [
 	{ noeud: 'lienInterne', attribut: 'cible', place: 'avant la barre, dans les doubles crochets' }
 ];
 
-/** Tous les nœuds et toutes les marques d'un document, dans l'ordre. */
 function* tousLesNoeuds(valeur: unknown): Generator<Record<string, unknown>> {
 	if (Array.isArray(valeur)) {
 		for (const v of valeur) yield* tousLesNoeuds(v);
@@ -795,7 +718,6 @@ function* tousLesNoeuds(valeur: unknown): Generator<Record<string, unknown>> {
 	yield* tousLesNoeuds(objet['marks']);
 }
 
-/** Les valeurs observées pour un attribut, sur un jeu de documents. */
 export interface ValeursObservees {
 	readonly occurrences: number;
 	readonly nulles: number;
@@ -838,8 +760,6 @@ export function releveDesAttributs(): readonly ReleveDAttribut[] {
 	}));
 }
 
-/* ═══════════════════════════════════════════════════════ Le rapport ═════ */
-
 function colonne(valeur: string, largeur: number): string {
 	return valeur.length >= largeur ? valeur : valeur + ' '.repeat(largeur - valeur.length);
 }
@@ -866,10 +786,9 @@ function lignesDUnVerdict(v: VerdictDAllerRetour, sonde: Sonde | undefined): str
 }
 
 /**
- * Le verdict de la batterie. TROIS codes, et le troisième est celui qui évite
- * un faux vert : sous sonde, le lanceur inverse `1` en `0`, mais il n'inverse
- * PAS `2` — un instrument qui refuse de conclure ne doit jamais se lire comme
- * une preuve (RA-01).
+ * Le verdict de la batterie. TROIS codes, et le troisième évite un faux vert : sous
+ * sonde, le lanceur inverse `1` en `0`, mais il n'inverse PAS `2` — un instrument
+ * qui refuse de conclure ne doit jamais se lire comme une preuve (RA-01).
  */
 export interface RapportDAllerRetour {
 	readonly texte: string;
@@ -877,12 +796,9 @@ export interface RapportDAllerRetour {
 }
 
 /**
- * `pnpm test:aller-retour`, et `pnpm test:aller-retour:sonde` pour la preuve
- * que la batterie sait dire non.
- *
- * Sous sonde, le verdict est INVERSÉ par le lanceur : c'est le rouge qui est
- * attendu. Et une sonde qui n'a rien touché ne prouve rien : l'instrument
- * refuse alors de conclure, code 2.
+ * `pnpm test:aller-retour`, et `pnpm test:aller-retour:sonde` pour la preuve que la
+ * batterie sait dire non : le verdict y est INVERSÉ par le lanceur, et une sonde qui
+ * n'a rien touché fait refuser de conclure, code 2.
  */
 export function rapportDAllerRetour(genreDeSonde?: string): RapportDAllerRetour {
 	const sonde =
@@ -1037,7 +953,6 @@ export function rapportDAllerRetour(genreDeSonde?: string): RapportDAllerRetour 
 	return { texte: lignes.join('\n'), code };
 }
 
-/** Le Markdown de tous les cas, pour la lecture humaine du rapport. */
 export function markdownDesCas(): string {
 	return [...CAS_DU_CORPUS, ...CAS_NOMMES]
 		.map((c) => '════ ' + c.nom + ' ════\n' + serialiserEnMarkdown(c.document))

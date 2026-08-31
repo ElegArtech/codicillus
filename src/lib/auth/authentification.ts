@@ -1,54 +1,29 @@
 /**
- * L'AUTHENTIFICATION — la décision, et elle n'a qu'une sortie d'échec.
+ * L'AUTHENTIFICATION — la décision, et elle n'a qu'une sortie d'échec. `UC-M16-01` :
+ * « Message d'erreur GÉNÉRIQUE en cas d'échec : ni le fait que l'identifiant existe,
+ * ni celui que le mot de passe est faux ne sont révélés. » Le gel est plus strict
+ * encore (`V-05:691-696`) : « aucun marquage sur l'un des deux champs plutôt que sur
+ * l'autre ».
  *
- * `UC-M16-01` (`cadrage/CAHIER-DES-CHARGES-FONCTIONNEL.md:1272-1277`) :
- * « L'utilisateur se connecte avec un compte local. Identifiant et mot de
- * passe. […] Message d'erreur GÉNÉRIQUE en cas d'échec : ni le fait que
- * l'identifiant existe, ni celui que le mot de passe est faux ne sont
- * révélés. »
+ * UNE SEULE VALEUR D'ÉCHEC, ET SON UNICITÉ EST LA PREUVE : `ECHEC` est un objet GELÉ
+ * ET UNIQUE, comme `INTROUVABLE` de `droits/resolution.ts`. Identifiant inconnu,
+ * compte désactivé, mot de passe faux et condensat absent rendent LE MÊME OBJET — il
+ * n'y a rien à quoi un appelant puisse se raccrocher pour distinguer les cas.
  *
- * Le gel est plus strict encore (`mockups/V-05-connexion.html:691-696`) :
- * « Un seul et même message quel que soit ce qui a échoué, et AUCUN MARQUAGE
- * SUR L'UN DES DEUX CHAMPS PLUTÔT QUE SUR L'AUTRE. »
+ * ET LE COÛT EST LE MÊME : `motDePasseCorrespond()` accepte `null` et vérifie alors
+ * un condensat leurre. Un identifiant inconnu paie la même vérification Argon2id
+ * qu'un mot de passe faux — `ARB-005` compte l'écart de latence comme une fuite.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * UNE SEULE VALEUR D'ÉCHEC, ET SON UNICITÉ EST LA PREUVE
- *
- * `ECHEC` est un objet GELÉ ET UNIQUE, exactement comme `INTROUVABLE` de
- * `src/lib/droits/resolution.ts` : identifiant inconnu, compte désactivé, mot de
- * passe faux et condensat absent ne rendent pas quatre objets égaux, ils
- * rendent LE MÊME OBJET. Un test peut l'affirmer par identité de référence, et
- * une divergence future — un champ `raison`, un code — casserait immédiatement.
- * Il n'y a rien à quoi un appelant puisse se raccrocher pour distinguer les cas.
- *
- * ET LE COÛT EST LE MÊME : `motDePasseCorrespond()` accepte `null` et vérifie
- * alors un condensat leurre (`mots-de-passe.ts`). Un identifiant inconnu paie
- * donc la même vérification Argon2id qu'un mot de passe faux — `ARB-005` compte
- * l'écart de latence comme une fuite, et « en cas de doute, l'indiscernable
- * l'emporte ».
- *
- * ═════════════════════════════════════════════════════════════════════════
- * RG-M14-08 A ENFIN UN POINT D'APPLICATION
- *
- * `RG-M14-08` (`:1186`) : « un compte désactivé perd IMMÉDIATEMENT l'accès mais
- * reste attaché à ses contributions passées. » `T-011` avait déclaré la règle
- * sans point d'application — `Identite` ne porte pas `actif`, donc la résolution
- * des droits ne pouvait ni la contredire ni la faire respecter — et avait nommé
- * l'endroit : « l'établissement de session, seul endroit où IMMÉDIATEMENT a un
- * sens ».
- *
- * C'est `identitePourCompte()`, ci-dessous, et elle est appelée DEUX FOIS : à la
- * connexion et à la reprise de chaque requête. La seconde est ce qui donne son
- * sens à « immédiatement » : une session ouverte avant la désactivation cesse de
- * porter une identité au prochain accès, sans qu'aucune purge n'ait à courir.
- *
- * Le corpus porte le cas : `c-ancien` (Pierre Dubois, rôle Lecteur) est
- * `actif: false` (`seeds/corpus.ts`).
+ * `RG-M14-08` A SON POINT D'APPLICATION ICI : « un compte désactivé perd
+ * IMMÉDIATEMENT l'accès mais reste attaché à ses contributions passées. » C'est
+ * `identitePourCompte()`, appelée DEUX FOIS — à la connexion et à la reprise de
+ * chaque requête. La seconde est ce qui donne son sens à « immédiatement » : une
+ * session ouverte avant la désactivation cesse de porter une identité au prochain
+ * accès, sans qu'aucune purge n'ait à courir.
  */
 import { type Identite, type RoleDeCompte, identiteAuthentifiee } from '../droits/resolution';
 import { motDePasseCorrespond } from './mots-de-passe';
 
-/** Ce que l'authentification a besoin de savoir d'un compte, et rien de plus. */
 export interface CompteAAuthentifier {
 	readonly id: string;
 	readonly role: RoleDeCompte;
@@ -75,12 +50,10 @@ export type Authentification =
 export const ECHEC: Authentification = Object.freeze({ reussie: false });
 
 /**
- * L'identité d'un compte, ou `null` s'il n'en porte pas.
- *
- * RG-M14-08 est ici, et ici seulement : un compte désactivé ne produit aucune
- * identité. C'est aussi le SEUL appelant de `identiteAuthentifiee()` du produit
- * — construire une identité est une affirmation, et elle se fait à un seul
- * endroit.
+ * L'identité d'un compte, ou `null` s'il n'en porte pas. `RG-M14-08` est ici, et ici
+ * seulement : un compte désactivé ne produit aucune identité. C'est aussi le SEUL
+ * appelant d'`identiteAuthentifiee()` du produit — construire une identité est une
+ * affirmation, et elle se fait à un seul endroit.
  */
 export function identitePourCompte(compte: CompteAAuthentifier): IdentiteAuthentifiee | null {
 	if (!compte.actif) return null;

@@ -1,39 +1,25 @@
 /**
- * LA CONNEXION AU MOTEUR DE RECHERCHE — un seul endroit où les paramètres sont
- * lus, et la clé n'entre JAMAIS dans une adresse.
+ * LA CONNEXION AU MOTEUR DE RECHERCHE — un seul endroit où les paramètres sont lus,
+ * et la clé n'entre JAMAIS dans une adresse.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI CE MODULE NE COMPOSE AUCUNE ADRESSE PORTANT UN SECRET
+ * `P-13` a été mesuré sur PostgreSQL : un `/`, un `#` ou un `?` dans un secret fait
+ * sortir l'application au démarrage sans nommer la cause. La parade d'`ARB-038` est
+ * de FORME — variables séparées, rien de concaténé, donc rien à échapper —, et le
+ * client de recherche s'y prête : il prend une adresse ET une clé en DEUX champs
+ * distincts. Ce que ce module compose, hors conteneur seulement, est une adresse de
+ * boucle locale et un PORT dont il vérifie qu'il est une suite de chiffres.
  *
- * `P-13` a été mesuré sur PostgreSQL : un `/`, un `#` ou un `?` dans un mot de
- * passe fait sortir l'application au démarrage, et le message ne nomme pas la
- * cause. `ARB-038` en a tiré la parade de FORME — variables séparées, objet
- * passé au connecteur, rien de concaténé, donc rien à échapper.
- *
- * La même parade s'applique ici, et le client de recherche s'y prête : il prend
- * une adresse ET une clé en DEUX champs distincts. La clé n'est donc jamais
- * dans l'adresse, jamais échappée, jamais imprimée. Ce que ce module compose
- * — hors conteneur seulement — est une adresse de boucle locale et un PORT,
- * dont il vérifie qu'il est une suite de chiffres : un port qui n'en est pas un
- * est refusé plutôt qu'inséré.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES DEUX JEUX DE VARIABLES, ET ILS NE SE CONFONDENT PAS — MÊME PARTAGE QUE
- * `src/lib/base/connexion.ts`
+ * DEUX JEUX DE VARIABLES QUI NE SE CONFONDENT PAS :
  *
  *   `URL_RECHERCHE` `CLE_RECHERCHE`
- *        le CLIENT — ce que `compose.yaml` passe au service applicatif. En
- *        conteneur, seules celles-là existent.
- *
+ *        le CLIENT — ce que `compose.yaml` passe au service applicatif.
  *   `PORT_RECHERCHE` `CLE_MAITRE_RECHERCHE`
- *        le SERVEUR — ce que le conteneur du moteur attend, et ce que les
- *        commandes hors conteneur emploient (le fichier d'environnement du
- *        dépôt ne porte que ce jeu). `compose.yaml` publie le moteur sur la
- *        boucle locale, et nulle part ailleurs : l'hôte n'est donc pas une
- *        variable hors conteneur, c'est une propriété de la composition.
+ *        le SERVEUR — ce que le conteneur du moteur attend, et ce que les commandes
+ *        hors conteneur emploient. `compose.yaml` publie le moteur sur la boucle
+ *        locale et nulle part ailleurs : l'hôte n'est donc pas une variable.
  *
- * L'ORDRE EST DONC : les variables du client d'abord, celles du serveur à
- * défaut. Il n'est pas une préférence, il est le contrat de déploiement.
+ * L'ORDRE EST DONC : le client d'abord, le serveur à défaut. Ce n'est pas une
+ * préférence, c'est le contrat de déploiement.
  */
 
 /** L'hôte employé hors conteneur : `compose.yaml` publie le moteur là. */
@@ -51,11 +37,9 @@ export class RechercheNonConfigureeErreur extends Error {
 }
 
 /**
- * Ce que ce module lit de l'environnement, et rien d'autre.
- *
- * Aucun champ ne porte une adresse contenant un secret, et le type est la
- * garantie : un appelant qui voudrait en composer une n'a pas de champ où
- * l'écrire.
+ * Ce que ce module lit de l'environnement, et rien d'autre. Aucun champ ne porte une
+ * adresse contenant un secret, et le type est la garantie : un appelant qui voudrait
+ * en composer une n'a pas de champ où l'écrire.
  */
 export interface EnvironnementDeRecherche {
 	/* Le CLIENT — `compose.yaml`, service applicatif. */
@@ -66,7 +50,6 @@ export interface EnvironnementDeRecherche {
 	readonly CLE_MAITRE_RECHERCHE?: string | undefined;
 }
 
-/** Ce que le client de recherche reçoit : deux champs, jamais une chaîne. */
 export interface ConfigurationDeRecherche {
 	readonly host: string;
 	readonly apiKey: string;
@@ -78,13 +61,10 @@ function nonVide(valeur: string | undefined): string | undefined {
 }
 
 /**
- * La configuration du moteur, dérivée de l'environnement.
- *
- * La CLÉ décide lequel des deux jeux est présent — comme le mot de passe le
- * décide pour la base —, et son absence est la seule panne de configuration que
- * ce module puisse constater. Le moteur est une brique CRITIQUE de
- * `compose.yaml` : son absence de configuration n'est pas un état dégradé, c'est
- * une erreur de déploiement, et elle se dit.
+ * La configuration du moteur, dérivée de l'environnement. La CLÉ décide lequel des
+ * deux jeux est présent, et son absence est la seule panne de configuration que ce
+ * module puisse constater. Le moteur est une brique CRITIQUE : son absence de
+ * configuration n'est pas un état dégradé, c'est une erreur de déploiement.
  */
 export function configurationDeRecherche(env: EnvironnementDeRecherche): ConfigurationDeRecherche {
 	const cle = nonVide(env.CLE_RECHERCHE) ?? nonVide(env.CLE_MAITRE_RECHERCHE);
