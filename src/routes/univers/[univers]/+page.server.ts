@@ -5,11 +5,14 @@
  * réduits à ce qui porte au moins un domaine lisible : une carte de domaine mène à une
  * page atteignable (`P-03`). `modules`, `compte` et `instance` ne sont pas passés.
  *
- * L'ACTIVITÉ NE S'INVENTE PAS (`P-02`) : la base porte trois des cinq types de
- * `TypeDEvenement`, chacun par une trace horodatée et signée — `verification`, `edition`
- * et `revision`. LES DEUX AUTRES, `publication` et `import`, N'ONT AUCUNE TRACE et ne
- * sont JAMAIS ÉMIS. LA FENÊTRE EST DE SEPT JOURS, ET ELLE EST LUE DANS LE GEL : la zone
- * annonce elle-même son absence par « Rien de neuf CETTE SEMAINE ».
+ * L'ACTIVITÉ NE S'INVENTE PAS (`P-02`) : la base porte quatre des cinq types de
+ * `TypeDEvenement`, chacun par une trace horodatée et signée — `verification`, `edition`,
+ * `revision` et, depuis la migration `009`, `import`. LE CINQUIÈME, `publication`, N'A
+ * AUCUNE TRACE et n'est JAMAIS ÉMIS. LA FENÊTRE EST DE SEPT JOURS, ET ELLE EST LUE DANS
+ * LE GEL : la zone annonce elle-même son absence par « Rien de neuf CETTE SEMAINE ».
+ *
+ * `RG-M12-09` A DEUX DESTINATAIRES — « ce journal alimente LE FLUX D'ACTIVITÉ DE
+ * L'ACCUEIL et l'écran d'administration » : la moitié « accueil » est ici.
  *
  * UN ÉVÉNEMENT SANS AUTEUR CONNU N'EST PAS RENDU : les trois jointures sur `comptes` sont
  * INTERNES, une ligne de flux s'écrivant « QUI a fait QUOI ».
@@ -19,6 +22,7 @@ import type { Base } from '$lib/base/acces';
 import {
 	comptes,
 	domaines as tableDesDomaines,
+	lotsDImport,
 	notes as tableDesNotes,
 	univers as tableDesUnivers,
 	verifications,
@@ -38,6 +42,7 @@ import {
 } from '$lib/donnees/rangement';
 import { lireModulesParDomaine, lireUnivers } from '$lib/donnees/lecture';
 import { accesALaConsole } from '$lib/donnees/consoles';
+import { accord } from '$lib/vocabulaire';
 import { and, eq, gte, inArray } from 'drizzle-orm';
 import type {
 	DetailDeDomaine,
@@ -125,7 +130,14 @@ const FENETRE_DACTIVITE_JOURS = 7;
 async function lireLActiviteRecente(
 	base: Base,
 	acces: AccesAuRangement,
-	maintenant: Date
+	maintenant: Date,
+	/**
+	 * LES DOMAINES DE L'UNIVERS OUVERT, ET LISIBLES. Ils ne servent qu'aux lots
+	 * d'import : un lot ne vise aucune note, il vise un DOMAINE, et c'est la seule
+	 * chose qui le rattache à l'univers de cette page. Les trois autres traces
+	 * portent une note en cible, et la vue les rattache par elle.
+	 */
+	domainesDeLUnivers: readonly string[]
 ): Promise<readonly EvenementDActivite[]> {
 	const autorises = acces.perimetre.tout ? null : [...acces.perimetre.dossiers];
 	if (autorises !== null && autorises.length === 0) return [];
@@ -145,6 +157,41 @@ async function lireLActiviteRecente(
 		.innerJoin(tableDesNotes, eq(versions.noteId, tableDesNotes.id))
 		.innerJoin(comptes, eq(versions.auteurId, comptes.id))
 		.where(and(gte(versions.le, depuis), filtre));
+
+	/* LES LOTS D'IMPORT — `RG-M12-09`. Un lot n'a PAS de note cible : il n'en a pas
+	   une, il en a douze, et `EvenementDActivite.cible` vaut `null` pour lui — le jeu
+	   de démonstration le montrait déjà ainsi.
+
+	   DEUX FILTRES QUI DISENT LA MÊME CHOSE — « quelque chose a été écrit » : une
+	   SIMULATION n'écrit rien (`RG-M12-02`), un lot refusé en bloc non plus
+	   (`RG-M12-03`, mode strict) et son journal compte alors zéro note. Les annoncer
+	   au flux ferait chercher des notes qui n'existent pas.
+
+	   LE PÉRIMÈTRE EST CELUI DU DOMAINE VISÉ, éprouvé par `domaineLisible()` comme le
+	   rangement de cette même page : un lot entré dans un domaine qu'on ne peut pas
+	   lire n'est pas une activité qui nous regarde. */
+	const lots =
+		domainesDeLUnivers.length === 0
+			? []
+			: await base
+					.select({
+						qui: comptes.nom,
+						le: lotsDImport.le,
+						source: lotsDImport.source,
+						notesCreees: lotsDImport.notesCreees,
+						notesMisesAJour: lotsDImport.notesMisesAJour
+					})
+					.from(lotsDImport)
+					.innerJoin(comptes, eq(lotsDImport.auteurId, comptes.id))
+					.where(
+						and(
+							gte(lotsDImport.le, depuis),
+							eq(lotsDImport.simulation, false),
+							inArray(lotsDImport.domaineId, [...domainesDeLUnivers])
+						)
+					);
+
+	const importes = lots.filter((l) => l.notesCreees + l.notesMisesAJour > 0);
 
 	const signalees = await base
 		.select({ cible: tableDesNotes.identifiant, qui: comptes.nom, le: tableDesNotes.revisionLe })
@@ -170,7 +217,19 @@ async function lireLActiviteRecente(
 	const evenements = [
 		...verifiees.map((l) => evenement('verification', l)),
 		...modifiees.map((l) => evenement('edition', l)),
-		...signalees.map((l) => evenement('revision', l))
+		...signalees.map((l) => evenement('revision', l)),
+		...importes.map((l) => {
+			const ecrites = l.notesCreees + l.notesMisesAJour;
+			return {
+				type: 'import' as const,
+				qui: l.qui,
+				cible: null,
+				heures: Math.floor((maintenant.getTime() - l.le.getTime()) / MILLISECONDES_PAR_HEURE),
+				/* LE DÉTAIL EST MESURÉ, PAS ILLUSTRÉ : le nombre vient du journal du
+				   lot, la source du dossier déposé. */
+				detail: `${String(ecrites)} ${accord(ecrites, 'note reprise', 'notes reprises')} depuis ${l.source}`
+			} as EvenementDActivite;
+		})
 	].filter((e): e is EvenementDActivite => e !== null);
 
 	/* Du plus récent au plus ancien — l'ordre du gel, où `heures` croît le long
@@ -247,6 +306,14 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		univers: universOuvert,
 		domaines: rangement.domaines,
 		detailDomaines: rangement.detailDomaines,
-		activite: await lireLActiviteRecente(base, acces, maintenant)
+		/* LES DOMAINES LISIBLES DE CET UNIVERS, pour les lots d'import : ils sont
+		   déjà calculés au-dessus, et un lot entré ailleurs n'est pas l'activité de
+		   cet univers. */
+		activite: await lireLActiviteRecente(
+			base,
+			acces,
+			maintenant,
+			lisibles.map((d) => d.id)
+		)
 	};
 };

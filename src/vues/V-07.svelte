@@ -755,7 +755,7 @@
 									{#each activiteCourante as e, rang (rang)}
 										{@const cible = noteCible(e.cible)}
 										<!-- prettier-ignore -->
-										<div class="evt evt--{e.type}"><span class="evt__marque" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">{#each GLYPHES[e.type] as trace (trace)}<path d={trace}/>{/each}</svg></span><div class="evt__corps"><span class="evt__qui">{e.qui}</span>{' ' + VERBES[e.type] + ' '}<a class="evt__cible" href={cible ? resolve(ROUTE_DE_NOTE, { identifiant: cible.id }) : '#'}>{cible ? cible.titre : 'voir le rapport'}</a>{#if e.detail}<span class="evt__detail">{e.detail}</span>{/if}</div><span class="evt__quand">{relatif(e.heures)}</span></div>
+										<div class="evt evt--{e.type}"><span class="evt__marque" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">{#each GLYPHES[e.type] as trace (trace)}<path d={trace}/>{/each}</svg></span><div class="evt__corps"><span class="evt__qui">{e.qui}</span>{' ' + VERBES[e.type] + ' '}{#if cible}<a class="evt__cible" href={resolve(ROUTE_DE_NOTE, { identifiant: cible.id })}>{cible.titre}</a>{:else if administrateur}<a class="evt__cible" href={resolve('/console/imports')}>voir le rapport</a>{/if}{#if e.detail}<span class="evt__detail">{e.detail}</span>{/if}</div><span class="evt__quand">{relatif(e.heures)}</span></div>
 									{/each}
 								{/if}
 							{/if}

@@ -9,7 +9,7 @@
  *
  * CE CHARGEUR NE GARDE RIEN, et il n'a pas à le faire : `garde.ts` redirige
  * l'anonyme sur le préfixe `/console`, et les dix pages résolvent chacune leur
- * droit par `resoudreLaConsole()`. Ce qu'il lit, c'est SIX `count(*)`, qui ne
+ * droit par `resoudreLaConsole()`. Ce qu'il lit, c'est SEPT `count(*)`, qui ne
  * nomment aucune ressource.
  */
 import { basePartagee } from '$lib/base/acces';

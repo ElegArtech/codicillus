@@ -4,21 +4,21 @@
  * reçoit 404 V-26 — pas un refus (`P-09`, `RG-ACC-04`). Le seul `error(404, …)` est SANS
  * MESSAGE (`ADR-007`).
  *
- * LE JOURNAL EST STRUCTURELLEMENT VIDE : aucune table d'imports n'existe, et la lacune est
- * recensée dans `MESURES_DE_CONSOLE_SANS_CONTREPARTIE`. ET LA VUE A UNE PRISE POUR LE
- * DIRE : un tableau vide n'affirme rien de faux, mais SOUS les deux phrases du gel — « les
- * rapports restent consultables indéfiniment » — il dit « aucun import n'a eu lieu » là où
- * la vérité est « rien n'est conservé ». `journalEnregistre` est DÉRIVÉ du recensement.
+ * LE JOURNAL EST CELUI DE LA BASE — `lots_d_import`, migration `009`. Il a été vide
+ * structurellement, faute de table, et la vue garde la prise qui le disait : un tableau
+ * vide n'affirme rien de faux, mais SOUS les deux phrases du gel — « les rapports restent
+ * consultables indéfiniment » — il disait « aucun import n'a eu lieu » là où la vérité
+ * était « rien n'est conservé ». `journalEnregistre` reste DÉRIVÉ du recensement, et il
+ * rebasculerait tout seul si la lacune revenait.
  *
- * `/console/imports/{lot}` n'est pas montée : aucun lot n'existe en base, et la monter
- * n'aurait qu'un comportement possible — 404 pour tout le monde —, là où la source lui
- * fait servir le rapport.
+ * `/console/imports/{lot}` est montée à côté, et sert le rapport détaillé d'un lot.
  */
 import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import {
 	contexteDeRequete,
 	journalDImportsEnregistre,
+	lireLeJournalDImports,
 	lireLesDesignationsDeDomaine,
 	resoudreLaConsole
 } from '$lib/donnees/consoles';
@@ -39,6 +39,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		   source, et une charge utile que personne ne lit. */
 		/* Le journal est-il enregistré ? Le recensement le sait ; l'écran le dit. */
 		journalEnregistre: journalDImportsEnregistre(),
+		/* LE JOURNAL LUI-MÊME — `RG-M12-09`, tous les lots, du plus récent au plus
+		   ancien. Sans plafond : « les rapports restent consultables indéfiniment ». */
+		journalImports: await lireLeJournalDImports(base),
 		/* La correspondance nom d'affichage → forme canonique, pour « Ouvrir le
 		   domaine » du rapport de lot — la même table qu'à `/console/exports`. */
 		designations: await lireLesDesignationsDeDomaine(base)

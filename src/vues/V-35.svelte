@@ -15,14 +15,15 @@
 	 *
 	 * LES DONNÉES VIENNENT DU CHARGEUR, JAMAIS DU JEU. Le journal retombait sur
 	 * `JOURNAL_IMPORTS` de `seeds/corpus.ts` — quatre entrées datées, avec leurs
-	 * auteurs et leurs décomptes — servies comme des imports passés de l'instance.
-	 * Les fichiers en échec nommés au rapport sont ceux de `lotImport`, dont le
-	 * défaut est `null`. La mécanique du gel reste la même (`V-35:3127`).
+	 * auteurs et leurs décomptes — servies comme des imports passés de l'instance ; il
+	 * vient de `lots_d_import`, et les fichiers en échec nommés au rapport de
+	 * `lignes_de_lot`. La mécanique du gel reste la même (`V-35:3127`).
 	 *
 	 * LES SCÉNARIOS SONT UN LITTÉRAL DU GEL (`V-35:2966`) : nom et sous-titre
-	 * d'accès direct, que la donnée ne porte pas. Le gel en porte trois ; SEUL CELUI
-	 * QUE L'IMPORT EXÉCUTE EST OFFERT, et le filtre lit
-	 * `$lib/donnees/scenarios-d-import.ts`.
+	 * d'accès direct, que la donnée ne porte pas. Le gel en porte trois, l'import les
+	 * exécute tous les trois, et le filtre lit malgré tout
+	 * `$lib/donnees/scenarios-d-import.ts` : l'écran n'offre jamais que ce que
+	 * l'action accepte, et il n'y a pas de seconde liste à tenir à jour.
 	 *
 	 * Coquille de forme abrégée, enveloppe `div.console`. `div.app` ne porte au gel
 	 * que `data-rail` et `data-role` (`V-35:1145`). `dialog#dlg-rapport` vit HORS de
@@ -31,11 +32,14 @@
 	 *
 	 * Le style est dans `src/socle.css` et `src/vues/V-35.css`.
 	 */
-	import type { EntreeDeJournalDImport, LotDImport, Note } from '../../seeds/corpus';
+	import type { EntreeDeJournalDImport, Note } from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { SCENARIO_LIVRE, scenarioEstLivre } from '$lib/donnees/scenarios-d-import';
 	import { accord } from '$lib/vocabulaire';
+	/* LE MOTIF D'UN FICHIER EN ÉCHEC EST UN CODE en base ; sa phrase est celle de
+	   V-24, partagée plutôt que recopiée. L'écran rendait le code nu. */
+	import { motifEnClair } from '$lib/import/motifs';
 
 	interface Proprietes {
 		etat?: string;
@@ -53,25 +57,48 @@
 		 */
 		onOuvrirLeDomaine?: (domaine: string) => void;
 		/**
-		 * LE DERNIER LOT DÉPOSÉ, OU AUCUN — ÉTAT VIDE EXPLICITE. La propriété
-		 * retombait sur `LOT_IMPORT` du jeu de démonstration : ses fichiers en échec,
-		 * avec leurs noms et leurs causes, étaient nommés au rapport d'un lot qui
-		 * n'avait jamais eu lieu. Aucune table ne porte de lot.
+		 * LES FICHIERS DU LOT DONT LE RAPPORT EST OUVERT — ÉTAT VIDE EXPLICITE. La
+		 * propriété retombait sur `LOT_IMPORT` du jeu de démonstration : ses fichiers
+		 * en échec, avec leurs noms et leurs causes, étaient nommés au rapport d'un lot
+		 * qui n'avait jamais eu lieu. Ils viennent désormais de `lignes_de_lot`, et
+		 * `/console/imports/{lot}` est la seule route qui les sert.
+		 *
+		 * LA FORME EST CELLE DES TROIS COLONNES QUE LE RAPPORT LIT — chemin, sort,
+		 * motif —, et non `FichierDuLot` du jeu : celui-ci EXIGE un format, qu'un
+		 * fichier écarté pour format inconnu n'a précisément pas.
 		 */
-		lotImport?: LotDImport | null;
+		fichiersDuLot?: readonly {
+			readonly c: string;
+			readonly s: string;
+			readonly m: string;
+		}[];
+		/**
+		 * L'IDENTIFIANT DU LOT DEMANDÉ PAR L'ADRESSE — `/console/imports/{lot}`. Le
+		 * rapport s'ouvre au rendu SERVEUR, pas après un clic : une adresse qui
+		 * n'ouvrirait le rapport qu'une fois le script chargé ne serait pas une adresse.
+		 */
+		lotOuvert?: string | null;
+		/**
+		 * CE QUE FAIT « RAPPORT » DANS LE JOURNAL. Le geste MÈNE À UNE ADRESSE
+		 * (`/console/imports/{lot}`) plutôt que d'ouvrir le dialogue sur place : le
+		 * détail d'un lot vit dans `lignes_de_lot` et n'est pas dans la charge de la
+		 * liste. Sans rappel, le dialogue s'ouvre localement — l'état de la planche.
+		 */
+		onOuvrirLeRapport?: (lot: string) => void;
+		/** La fermeture du rapport. La route du lot y ramène à la liste. */
+		onFermerLeRapport?: () => void;
 		/**
 		 * LE JOURNAL DES IMPORTS, EXIGÉ. Il retombait sur `JOURNAL_IMPORTS` du jeu de
 		 * démonstration — quatre lots datés, leurs auteurs, leurs décomptes — sur
-		 * l'écran de traçabilité même. `/console/imports` le passe, vide faute de table.
+		 * l'écran de traçabilité même. `/console/imports` sert celui de la base.
 		 */
 		journalImports: readonly EntreeDeJournalDImport[];
 		/**
 		 * LE JOURNAL EST-IL ENREGISTRÉ QUELQUE PART ? Le gel affirme que « les rapports
-		 * restent consultables indéfiniment » ; aucune table du schéma ne garde
-		 * d'import, l'entrée est composée à chaque lot puis écrite au journal
-		 * d'application, et personne ne la relit. Servie vide sous cette phrase, la
-		 * table laissait croire qu'aucun import n'avait eu lieu — là où la vérité est
-		 * que rien n'est conservé.
+		 * restent consultables indéfiniment ». Tant qu'aucune table ne les gardait, la
+		 * table vide servie sous cette phrase laissait croire qu'aucun import n'avait
+		 * eu lieu — là où la vérité était que rien n'était conservé. Depuis la
+		 * migration `009`, ils le sont, et le drapeau bascule de lui-même.
 		 *
 		 * Le drapeau est DÉRIVÉ du recensement des mesures sans contrepartie —
 		 * `journalDImportsEnregistre()` de `$lib/donnees/consoles.ts` —, jamais décidé
@@ -89,11 +116,14 @@
 	const {
 		etat,
 		notes,
-		lotImport = null,
+		fichiersDuLot = [],
+		lotOuvert = null,
 		journalImports,
 		journalEnregistre = true,
 		onScenario,
-		onOuvrirLeDomaine
+		onOuvrirLeDomaine,
+		onOuvrirLeRapport,
+		onFermerLeRapport
 	}: Proprietes = $props();
 
 	/**
@@ -127,7 +157,8 @@
 	 * LE LOT DEMANDÉ DEPUIS LE JOURNAL — `ouvrirRapport(i)` du gel (`V-35:3067`).
 	 * `null` au rendu serveur : l'écran reste celui que la clé d'état décrit.
 	 */
-	let lotDemande = $state<string | null>(null);
+	// svelte-ignore state_referenced_locally
+	let lotDemande = $state<string | null>(lotOuvert);
 
 	const rapportOuvert = $derived(lotDemande !== null || etat === 'rapport-de-lot');
 	const lot = $derived(
@@ -138,17 +169,21 @@
 				: undefined
 	);
 
+	/** La fermeture du rapport — le dialogue, puis l'adresse s'il y en a une. */
+	function fermerLeRapport(): void {
+		lotDemande = null;
+		onFermerLeRapport?.();
+	}
+
 	/** `ouvrirRapport()` (`V-35:3067`) — les fichiers nommés au rapport. */
-	const echoues = $derived(
-		lot && lotImport ? lotImport.fichiers.filter((f) => f.s === 'echec').slice(0, lot.echecs) : []
-	);
+	const echoues = $derived(lot ? fichiersDuLot.filter((f) => f.s === 'echec') : []);
 
 	/** Les quatre chiffres du bilan, dans l'ordre du gel (`V-35:3101`). */
 	const faits = $derived(
 		lot
 			? ([
 					[lot.fichiers, 'fichiers reçus'],
-					[lot.notes, 'notes créées'],
+					[lot.notes, 'notes écrites'],
 					[lot.ignores, "écartés à l'aperçu"],
 					[lot.echecs, 'en échec']
 				] as const)
@@ -194,7 +229,7 @@
 					><h2 class="dlg__titre" id="dlg-rap-titre">Rapport d'import</h2
 					><div style="font-size:var(--t-mini);color:var(--c-encre-3);margin-top:2px" id="rap-sous">{lot ? `${lot.date} à ${lot.heure} · ${lot.auteur} · ${lot.source}` : '—'}</div
 				></div
-				><button class="dlg__fermer" data-fermer aria-label="Fermer" onclick={() => (lotDemande = null)}
+				><button class="dlg__fermer" data-fermer aria-label="Fermer" onclick={fermerLeRapport}
 					><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8"/></svg
 				></button
 			></div
@@ -202,7 +237,7 @@
 				>{#if lot}<div class="rl-entete" data-erreurs={lot.echecs ? 'oui' : 'non'}
 					><div style="flex:none">{#if lot.echecs}<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--c-alerte)" stroke-width="1.6"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v5.5M12 16.3v.3"/></svg>{:else}<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--c-frais)" stroke-width="1.8"><circle cx="12" cy="12" r="9.5"/><path d="M7.8 12.4l3 3 5.4-6"/></svg>{/if}</div
 					><div style="flex:1"
-						><h3>{`${lot.notes} ${accord(lot.notes, 'note créée', 'notes créées')}, ${lot.echecs ? `${lot.echecs} ${accord(lot.echecs, 'fichier en échec', 'fichiers en échec')}` : 'aucun échec'}`}</h3
+						><h3>{`${lot.notes} ${accord(lot.notes, 'note écrite', 'notes écrites')}, ${lot.echecs ? `${lot.echecs} ${accord(lot.echecs, 'fichier en échec', 'fichiers en échec')}` : 'aucun échec'}`}</h3
 						><p>{lot.echecs ? `Le lot est allé jusqu'au bout : ${lot.notes} ${accord(lot.notes, 'fichier')} sur ${lot.fichiers} ${accord(lot.notes, 'est devenu une note', 'sont devenus des notes')} du domaine ${lot.domaine}. ${accord(lot.echecs, "Le fichier en échec n'a bloqué", "Les fichiers en échec n'ont bloqué")} aucun des autres.` : accord(lot.fichiers, 'Le fichier du lot a été traité', `Les ${lot.fichiers} fichiers du lot ont été traités`) + ` sans incident dans le domaine ${lot.domaine}.`}</p
 					></div
 				></div
@@ -211,12 +246,12 @@
 				>{#if lot.echecs}<div
 					><span class="etiq" style="display:block;margin-bottom:var(--e-2)">Fichiers en échec</span
 					><div style="border:1px solid #e2b8b0;border-radius:var(--r-3);padding:var(--e-2) var(--e-4) var(--e-3)"
-						>{#each echoues as f (f.c)}<div style="padding:var(--e-2) 0;border-top:1px solid var(--c-trait-fin)"><div style="font-family:var(--f-donnee);font-size:var(--t-mini);word-break:break-all">{f.c}</div><div style="font-size:var(--t-mini);color:var(--c-encre-2);line-height:1.5;margin-top:2px">{f.m}</div></div>{/each}</div
+						>{#each echoues as f (f.c)}<div style="padding:var(--e-2) 0;border-top:1px solid var(--c-trait-fin)"><div style="font-family:var(--f-donnee);font-size:var(--t-mini);word-break:break-all">{f.c}</div><div style="font-size:var(--t-mini);color:var(--c-encre-2);line-height:1.5;margin-top:2px">{motifEnClair(f.m)}</div></div>{/each}</div
 				></div
 				>{/if}<div class="rl-conserve">Rejouer le même import ne crée pas de doublons : un fichier qui retrouve son nom et sa place met à jour la note qui s'y trouve, au lieu d'en écrire une seconde. Un fichier renommé ou déplacé entre deux imports, lui, donne une note de plus.</div
 				>{/if}</div
 			><div class="dlg__pied"
-				><button class="btn" data-fermer onclick={() => (lotDemande = null)}>Fermer</button
+				><button class="btn" data-fermer onclick={fermerLeRapport}>Fermer</button
 				><button class="btn btn--principal" id="rap-domaine" onclick={() => { if (lot) onOuvrirLeDomaine?.(lot.domaine); }}>Ouvrir le domaine</button
 			></div
 		></div
@@ -291,6 +326,29 @@
 					ce qui compte avant de quitter l'écran d'import.
 				</p>
 			</div>
+		{:else if journalImports.length === 0}
+			<!--
+				AUCUN LOT — ET C'EST UN AUTRE ÉTAT QUE « RIEN N'EST CONSERVÉ ». Le
+				journal est tenu ; il n'a simplement rien à montrer. Le geste qui
+				débloque est nommé : déposer un dossier, juste au-dessus.
+			-->
+			<div
+				id="journal-vide"
+				style="background:var(--c-papier);border:1px dashed var(--c-trait-fort);border-radius:var(--r-3);padding:var(--e-6) var(--e-5);text-align:center"
+			>
+				<h3
+					style="font-family:var(--f-ui);font-size:var(--t-t2);font-weight:var(--g-lourd);letter-spacing:-.018em;margin:0 0 var(--e-2)"
+				>
+					Aucun import n'a encore eu lieu
+				</h3>
+				<p
+					style="font-family:var(--f-lecture);font-size:var(--t-base);line-height:1.6;color:var(--c-encre-2);margin:0 auto;max-width:52ch"
+				>
+					Déposez un dossier ci-dessus, ou choisissez directement votre scénario. Chaque lot
+					laissera ici sa date, son auteur, son volume et son rapport détaillé — y compris les lots
+					partiellement en échec.
+				</p>
+			</div>
 		{:else}
 			<!-- prettier-ignore -->
 			<div class="tableau-gestion"
@@ -311,7 +369,7 @@
 					><span class="tg__n">{i.notes}</span
 					><span class="tg__n tg--masquable{i.ignores ? '' : ' n-nul'}">{i.ignores}</span
 					><span class="tg__n {i.echecs ? 'n-echec' : 'n-nul'}">{i.echecs}</span
-					><div class="tg__actions"><button class="btn" type="button" onclick={() => (lotDemande = i.id)}>Rapport</button></div
+					><div class="tg__actions"><button class="btn" type="button" onclick={() => { if (onOuvrirLeRapport) onOuvrirLeRapport(i.id); else lotDemande = i.id; }}>Rapport</button></div
 				></div>{/each}</div
 		></div>
 		{/if}

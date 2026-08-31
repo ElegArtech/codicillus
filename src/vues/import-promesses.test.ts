@@ -20,6 +20,7 @@ import {
 	CORPUS,
 	DOMAINES,
 	FORMATS_IMPORT,
+	JOURNAL_IMPORTS,
 	LOT_IMPORT,
 	UNIVERS,
 	corpusDeVariante,
@@ -27,6 +28,7 @@ import {
 	type Note
 } from '../../seeds/corpus';
 import { LIBELLE_PAR_FORMAT } from '../lib/donnees/import';
+import { LIBELLE_DU_MOTIF } from '../lib/import/motifs';
 import {
 	MESURES_DE_CONSOLE_SANS_CONTREPARTIE,
 	journalDImportsEnregistre
@@ -97,15 +99,6 @@ function borneServie(
 	return { ouvrante: rendu.slice(debut, finDeLOuvrante + 1), debut, fin };
 }
 
-/** Les positions d'un fragment dans le rendu, toutes. */
-function positionsDe(rendu: string, fragment: string): readonly number[] {
-	const trouvees: number[] = [];
-	for (let i = rendu.indexOf(fragment); i !== -1; i = rendu.indexOf(fragment, i + 1)) {
-		trouvees.push(i);
-	}
-	return trouvees;
-}
-
 /**
  * CE QUE `/importer` SERT TOUJOURS, ET QUE V-24 EXIGE DÉSORMAIS.
  *
@@ -117,6 +110,12 @@ function positionsDe(rendu: string, fragment: string): readonly number[] {
  */
 const SOCLE_V24: Proprietes = {
 	domaines: DOMAINES,
+	/* `UC-M12-02` — deux univers d'accueil, donc le scénario « domaine complet » est
+	   OFFERT sous ce socle. Le cas de la liste vide est joué à part. */
+	universOuCreerUnDomaine: [
+		{ identifiant: 'production', nom: 'Zone Q' },
+		{ identifiant: 'gouvernance', nom: 'Zone R' }
+	],
 	lotImport: LOT_IMPORT,
 	formatsImport: LIBELLE_PAR_FORMAT,
 	domaineParDefaut: DOMAINES[0]!.nom
@@ -142,58 +141,72 @@ describe('les libellés de format — le jeu de démonstration recopie le produi
 	});
 });
 
-describe('V-24 — l’étape 1 n’offre que le scénario que l’import exécute', () => {
-	it('rend la vignette du scénario livré', () => {
-		expect(corps('V-24', { ...SOCLE_V24, vecteur: null })).toContain(
-			'Importer des notes dans un domaine existant'
-		);
+describe('V-24 — l’étape 1 offre les trois scénarios, et les trois sont exécutés', () => {
+	it('rend les trois vignettes du gel', () => {
+		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
+		expect(rendu).toContain('Importer des notes dans un domaine existant');
+		expect(rendu).toContain('Importer un domaine complet');
+		expect(rendu).toContain('Importer un corpus préparé');
 	});
 
-	it('ne nomme AUCUN des scénarios non livrés', () => {
-		/* Les noms sont ceux du gel, et ce sont ceux que l'utilisateur lisait
-		   avant de choisir un scénario dont son lot ne portait aucune trace. */
-		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
-		expect(SCENARIOS_NON_LIVRES.map((s) => s.id)).toEqual(['domaine', 'prepare']);
+	it('n’a plus aucun scénario en retrait', () => {
+		/* LE MÉCANISME RESTE, ET IL EST VIDE. Ce n'est pas un vestige : c'est par lui
+		   que l'écran n'offre jamais ce que l'action refuse. Le jour où un scénario
+		   reculerait, il suffirait d'y entrer pour que la vignette disparaisse. */
+		expect(SCENARIOS_NON_LIVRES).toEqual([]);
+		expect(SCENARIO_LIVRE).toBe('notes');
+	});
+
+	it('RETIRE « domaine complet » à qui ne peut pas créer de domaine — P-09', () => {
+		/* Le droit s'éprouve sur l'UNIVERS, la cible n'existant pas encore. Sans
+		   univers d'accueil servi, l'offre n'est pas rendue : une action interdite
+		   n'est pas dessinée, et l'action la refuse par ailleurs. */
+		const rendu = corps('V-24', { ...SOCLE_V24, universOuCreerUnDomaine: [], vecteur: null });
+		expect(rendu).toContain('Importer des notes dans un domaine existant');
+		expect(rendu).toContain('Importer un corpus préparé');
 		expect(rendu).not.toContain('Importer un domaine complet');
-		expect(rendu).not.toContain('Importer un corpus préparé');
 	});
 
-	/**
-	 * LE CONTRÔLE QUI MANQUAIT, ET CE QU'IL AURAIT ARRÊTÉ.
-	 *
-	 * Le cas ci-dessus cherche les NOMS du gel. Cherchés ainsi, ils suffisaient
-	 * à laisser passer l'étape 2 : l'aide de la case « Simulation » recommande
-	 * de vérifier un corpus préparé — le scénario `UC-M12-03` — sous une autre
-	 * forme que son nom de vignette, et l'y rebrancher l'aurait rendue visible
-	 * sous le seul scénario offert sans qu'aucun cas ne rougisse. C'est arrivé.
-	 *
-	 * Ce cas cherche donc la RACINE du mot, sur les quatre étapes, et exige de
-	 * chaque occurrence qu'elle soit portée par un élément servi caché.
-	 */
-	it('ne sert aucune mention VISIBLE d’un scénario que l’import n’exécute pas', () => {
-		for (const vecteur of VECTEURS) {
-			const rendu = corps('V-24', { ...SOCLE_V24, vecteur });
-			const laCase = borneServie(rendu, 'champ-simulation', 'label');
-			expect(laCase.ouvrante).toContain('hidden');
-			const mentions = positionsDe(rendu, 'prépar');
-			expect(mentions.length).toBeGreaterThan(0);
-			for (const position of mentions) {
-				expect(position > laCase.debut && position < laCase.fin).toBe(true);
-			}
-		}
-	});
-
-	it('ne demande plus un nom de domaine que personne ne lisait', () => {
-		/* « Nom du domaine à créer * » était OBLIGATOIRE à l'écran et n'était
-		   envoyé nulle part : ni `+page.svelte`, ni l'action ne le lisaient. */
-		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
-		expect(rendu).not.toContain('nom-domaine');
-		expect(rendu).not.toContain('Nom du domaine à créer');
-	});
-
-	it('ne promet plus la résolution automatique des liens', () => {
+	it('porte la case du mode strict, que RG-M12-03 exige et qu’aucune maquette n’offre', () => {
+		/* « … sauf si l'utilisateur a explicitement demandé un mode strict » : sans
+		   déclencheur, la règle n'est pas tenue. La case est à l'étape 1, le mode
+		   gouvernant le lot entier et non son dépôt. */
 		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
-		expect(rendu).not.toContain('liens entre documents sont résolus automatiquement');
+		expect(rendu).toContain('Refuser le lot entier si une ligne échoue');
+		expect(borneServie(rendu, 'champ-strict', 'label').ouvrante).not.toContain('hidden');
+	});
+
+	it('n’offre chaque champ de cible que sous son scénario', () => {
+		/* Les trois champs de l'étape 2 sont ceux du gel, et leur condition
+		   d'affichage est celle de `rendreDepot()` (`V-24:2923`) — à ceci près que le
+		   domaine de destination sert DEUX scénarios : `UC-M12-01` et `UC-M12-03` y
+		   rangent tous deux leurs notes. La planche rend le scénario de base. */
+		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
+		expect(borneServie(rendu, 'champ-domaine', 'div').ouvrante).not.toContain('hidden');
+		expect(borneServie(rendu, 'champ-nom-domaine', 'div').ouvrante).toContain('hidden');
+		expect(borneServie(rendu, 'champ-simulation', 'label').ouvrante).toContain('hidden');
+	});
+
+	it('redemande le nom du domaine à créer, et son univers d’accueil', () => {
+		/* « Nom du domaine à créer * » était OBLIGATOIRE à l'écran et n'était lu
+		   nulle part : le champ avait été retiré. Il est remis, et il est LU —
+		   `destinationDuLot()` en fait le nom du domaine qu'elle crée. L'univers,
+		   lui, n'est dans aucune maquette : un domaine appartient à un univers
+		   (`RG-STR-02`), et rien d'autre à l'écran ne dit lequel. */
+		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
+		expect(rendu).toContain('Nom du domaine à créer');
+		expect(rendu).toContain('nom-domaine');
+		expect(rendu).toContain('univers-cible');
+		expect(rendu).toContain('Zone Q');
+	});
+
+	it('promet de nouveau la résolution automatique des liens, et la tient', () => {
+		/* La promesse avait été RETIRÉE parce que rien ne la tenait : un renvoi était
+		   relevé, consigné, jamais résolu — la clé ne nommait pas le type de relation.
+		   `relations:` le nomme, la seconde passe crée la relation, et le rapport la
+		   compte. La phrase du gel peut revenir. */
+		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
+		expect(rendu).toContain('liens entre documents sont résolus automatiquement');
 	});
 
 	it('n’invite plus à déposer une archive, que le classement écarte', () => {
@@ -300,6 +313,7 @@ const LOT_NU: LotDImport = {
 const SOCLE_NU: Proprietes = {
 	notes: [],
 	domaines: [],
+	universOuCreerUnDomaine: [],
 	lotImport: LOT_NU,
 	formatsImport: LIBELLE_PAR_FORMAT,
 	domaineParDefaut: ''
@@ -343,25 +357,37 @@ describe('V-35 — le journal dit ce qu’il conserve', () => {
 		expect(corps('V-35', { journalEnregistre: true })).toBe(corps('V-35'));
 	});
 
-	it('n’offre plus les scénarios que l’import n’exécute pas', () => {
+	it('offre les trois accès directs, puisque l’import exécute les trois', () => {
 		const rendu = corps('V-35');
 		expect(rendu).toContain('Dans un domaine existant');
-		expect(rendu).not.toContain('Un domaine complet');
-		expect(rendu).not.toContain('Un corpus préparé');
+		expect(rendu).toContain('Un domaine complet');
+		expect(rendu).toContain('Un corpus préparé');
 	});
 
-	it('ne mentionne un scénario non livré sous AUCUNE forme, dans ce qu’il sert', () => {
-		/* Même exigence que sur V-24, et le même piège évité : la vignette
-		   retirée, il ne doit rester aucune REFORMULATION du scénario.
+	it('annonce son vide quand aucun lot n’a eu lieu, et nomme le geste', () => {
+		/* DEUX VIDES QUI NE DISENT PAS LA MÊME CHOSE. « Rien n'est conservé » est
+		   l'état d'une instance sans table de journal ; « aucun import n'a eu lieu »
+		   est celui d'une instance neuve, dont le journal est tenu et vide. Le second
+		   nomme le geste qui débloque. */
+		const rendu = corps('V-35', { journalImports: [], journalEnregistre: true });
+		expect(rendu).toContain("Aucun import n'a encore eu lieu");
+		expect(rendu).toContain('Déposez un dossier ci-dessus');
+		expect(rendu).not.toContain("Aucun lot n'est conservé");
+	});
 
-		   L'état éprouvé est celui que le produit sert — le drapeau est faux,
-		   `journalDImportsEnregistre()` le dit plus bas. L'autre branche rend le
-		   journal du jeu de DÉMONSTRATION, dont les lignes nomment des imports
-		   passés (`seeds/corpus.ts`) : ce sont des données, pas une offre, et
-		   aucune table ne les produit aujourd'hui. */
-		const rendu = corps('V-35', { journalImports: [], journalEnregistre: false });
-		expect(rendu).not.toContain('prépar');
-		expect(rendu).not.toContain('domaine complet');
+	it('met en français le motif d’un fichier en échec, au lieu de son code', () => {
+		/* LE MOTIF EST UN CODE EN BASE — `$lib/donnees/import.ts` n'écrit que des
+		   codes, et il dit pourquoi. La phrase est celle de V-24, PARTAGÉE plutôt que
+		   recopiée : l'écran rendait « service-de-conversion-injoignable » sous le nom
+		   du fichier. */
+		const rendu = corps('V-35', {
+			etat: 'rapport-de-lot',
+			journalImports: JOURNAL_IMPORTS,
+			fichiersDuLot: [{ c: 'Strict/Bureau.docx', s: 'echec', m: 'fichier-vide' }]
+		});
+		expect(rendu).toContain('Strict/Bureau.docx');
+		expect(rendu).toContain(LIBELLE_DU_MOTIF['fichier-vide']);
+		expect(rendu).not.toContain('>fichier-vide<');
 	});
 
 	it('n’invite plus à déposer une archive', () => {
@@ -372,25 +398,35 @@ describe('V-35 — le journal dit ce qu’il conserve', () => {
 });
 
 describe('journalDImportsEnregistre — le drapeau est LU sur le recensement réel', () => {
-	it('rend faux sur le recensement du dépôt, qui porte encore JOURNAL_IMPORTS', () => {
-		/* Le défaut par défaut, pas un recensement fabriqué : le jour où une
-		   migration portera la table, l'entrée partira et ce cas rougira. */
-		expect(journalDImportsEnregistre()).toBe(false);
+	it('rend vrai sur le recensement du dépôt, d’où les deux entrées ont disparu', () => {
+		/* Le recensement par défaut, pas un recensement fabriqué : la migration `009`
+		   porte les deux tables, les entrées sont parties, et l'écran a basculé PAR
+		   CONSTRUCTION — aucune ligne de la vue n'a eu à changer d'avis. */
+		expect(journalDImportsEnregistre()).toBe(true);
 		expect(MESURES_DE_CONSOLE_SANS_CONTREPARTIE.some((m) => m.donnee === 'JOURNAL_IMPORTS')).toBe(
-			true
+			false
 		);
 	});
 
-	it('rend vrai dès que l’entrée disparaît du recensement', () => {
-		const sansEntree = MESURES_DE_CONSOLE_SANS_CONTREPARTIE.filter(
-			(m) => m.donnee !== 'JOURNAL_IMPORTS'
-		);
-		expect(journalDImportsEnregistre(sansEntree)).toBe(true);
+	it('rend faux dès que l’entrée revient au recensement', () => {
+		/* SANS CE CAS, LE PRÉCÉDENT SERAIT SATISFAIT PAR UNE FONCTION QUI REND
+		   TOUJOURS VRAI (`P-26`) : le drapeau doit rester DÉRIVÉ. */
+		const avecEntree = [
+			...MESURES_DE_CONSOLE_SANS_CONTREPARTIE,
+			{
+				donnee: 'JOURNAL_IMPORTS',
+				vue: 'V-35',
+				affichage: 'le journal transverse des imports',
+				motif: 'cas d’épreuve — le recensement décide, jamais la vue'
+			}
+		];
+		expect(journalDImportsEnregistre(avecEntree)).toBe(false);
 	});
 
-	it('recense la moitié « accueil » de RG-M12-09, que rien ne signalait', () => {
-		const accueil = MESURES_DE_CONSOLE_SANS_CONTREPARTIE.filter((m) => m.vue === 'V-07');
-		expect(accueil).toHaveLength(1);
-		expect(accueil[0]?.motif).toContain('flux d’activité');
+	it('ne recense plus la moitié « accueil » de RG-M12-09, que le flux lit', () => {
+		/* « Ce journal alimente le flux d'activité de l'accueil ET l'écran
+		   d'administration » : `lireLActiviteRecente()` lit `lots_d_import` et rend le
+		   genre `import`, que `V-07` dessine depuis toujours. */
+		expect(MESURES_DE_CONSOLE_SANS_CONTREPARTIE.filter((m) => m.vue === 'V-07')).toHaveLength(0);
 	});
 });
