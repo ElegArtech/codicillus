@@ -17,7 +17,8 @@
  * LE DIALOGUE EST REMONTÉ EN MODALE, ET C'EST LE GEL QUI LE DEMANDE : `<dialog open>` non
  * modal reste SOUS la barre d'outils — mesuré au navigateur, le premier bouton du
  * dialogue était physiquement inatteignable au pointeur. `showModal()` et `close()` sont
- * ce que le gel appelle lui-même.
+ * ce que le gel appelle lui-même. C'est la ROUTE qui décide du moment : elle seule sait
+ * si la question a déjà une réponse — un brouillon repris en porte une.
  */
 import { documentDepuisHtml } from '$lib/edition/html';
 import type { Document } from '$lib/contenu/document';
@@ -32,20 +33,41 @@ export interface OptionsDuChoixDeDepart {
 }
 
 /**
+ * CE QUE LA ROUTE TIENT DU CHOIX DE DÉPART. Le dialogue ne s'ouvre plus de lui-même :
+ * la route seule sait s'il y a lieu de demander par quoi commencer — un brouillon
+ * repris répond déjà à la question, et la modale posée par-dessus le texte restauré
+ * était un obstacle, pas un choix.
+ */
+export interface ChoixDeDepart {
+	/** Demande par quoi commencer. Sans dialogue à l'écran, ne fait rien. */
+	ouvrir(): void;
+	/** Le gabarit courant — son identifiant, chaîne vide quand il n'y en a pas. */
+	gabarit(): string;
+	/**
+	 * Repose un gabarit sans toucher au corps — la reprise d'un brouillon, dont le
+	 * squelette est déjà dans le texte restauré.
+	 */
+	poser(gabarit: string): void;
+	defaire(): void;
+}
+
+/**
  * LE CÂBLAGE — appelé depuis `onMount` de la route, après le montage de
  * l'éditeur, et jamais ailleurs.
  */
 export function cablerLeChoixDeDepart(
 	formulaire: HTMLFormElement,
 	options: OptionsDuChoixDeDepart
-): Debranchement {
-	const dialogue = formulaire.querySelector<HTMLDialogElement>('#dlg-template');
-	if (dialogue === null) return () => undefined;
-
+): ChoixDeDepart {
 	/**
 	 * LE CHAMP CACHÉ DE PROVENANCE — créé une fois, réemployé ensuite. Il vit DANS le
 	 * formulaire pour que la soumission le porte, et il est vide tant qu'aucun gabarit
 	 * n'est pris : `lireLaSaisie()` lit alors « pas de provenance ».
+	 *
+	 * IL EST POSÉ AVANT TOUTE AUTRE CHOSE, DIALOGUE OU PAS. Le dialogue n'est rendu
+	 * que par `?template=` ; après un changement de domaine, l'adresse rechargée n'a
+	 * plus ce paramètre, et le champ n'existait alors nulle part où reposer la
+	 * provenance du brouillon repris : la note s'enregistrait comme née de rien.
 	 */
 	const NOM_DU_CHAMP = 'template';
 	const provenance =
@@ -55,16 +77,28 @@ export function cablerLeChoixDeDepart(
 	provenance.name = NOM_DU_CHAMP;
 
 	const jetables: Debranchement[] = [];
+	const inerte: ChoixDeDepart = {
+		ouvrir: () => undefined,
+		gabarit: () => provenance.value,
+		poser: (gabarit) => {
+			provenance.value = gabarit;
+		},
+		defaire: () => undefined
+	};
+
+	const dialogue = formulaire.querySelector<HTMLDialogElement>('#dlg-template');
+	if (dialogue === null) return inerte;
+
 	const ecouter = (cible: EventTarget, type: string, reaction: (e: Event) => void): void => {
 		cible.addEventListener(type, reaction);
 		jetables.push(() => cible.removeEventListener(type, reaction));
 	};
 
-	/* La remontée en modale — `V-17:3576`. `showModal()` REFUSE un dialogue déjà
-	   ouvert : il faut donc le refermer d'abord, et l'ordre n'est pas
-	   interchangeable. */
+	/* LE GEL REND LE DIALOGUE OUVERT, ET IL EST REFERMÉ D'EMBLÉE : c'est `ouvrir()`
+	   qui le remonte, en MODALE — `V-17:3576`, un `<dialog open>` non modal reste SOUS
+	   la barre d'outils. `showModal()` REFUSE un dialogue déjà ouvert : la fermeture
+	   d'abord, et l'ordre n'est pas interchangeable. */
 	if (dialogue.hasAttribute('open')) dialogue.close();
-	dialogue.showModal();
 
 	const fermer = (): void => {
 		dialogue.close();
@@ -121,7 +155,20 @@ export function cablerLeChoixDeDepart(
 		if (gabarit !== undefined) prendre(gabarit);
 	}
 
-	return () => {
-		for (const defaire of jetables) defaire();
+	return {
+		ouvrir: () => {
+			/* UN GABARIT DÉJÀ PRIS RÉPOND À LA QUESTION : `?template=<id>` la tranche
+			   avant qu'elle ne soit posée, et rouvrir le choix par-dessus le squelette
+			   inséré ferait reculer l'utilisateur d'un pas. */
+			if (dialogue.open || provenance.value !== '') return;
+			dialogue.showModal();
+		},
+		gabarit: () => provenance.value,
+		poser: (gabarit) => {
+			provenance.value = gabarit;
+		},
+		defaire: () => {
+			for (const defaire of jetables) defaire();
+		}
 	};
 }

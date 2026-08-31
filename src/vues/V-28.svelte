@@ -328,6 +328,39 @@
 		fModules = actif ? [...fModules, cle] : fModules.filter((m) => m !== cle);
 	}
 
+	/**
+	 * CE QUE COÛTE LA DÉSACTIVATION DE `dossiers`, ET CE N'EST PAS UN CONTENU CACHÉ.
+	 *
+	 * La page d'un dossier est le SEUL endroit d'où « Gérer les droits » ouvre un
+	 * domaine à un compte ; sans le module, cette page n'existe plus pour ce domaine.
+	 * L'administrateur qui décochait perdait donc la capacité d'y donner accès à qui
+	 * que ce soit, et rien ne le lui disait. Le geste reste possible — c'est son
+	 * instance —, il n'est plus muet.
+	 */
+	const CONSEQUENCE_DES_DOSSIERS =
+		'En désactivant : ce domaine n’a plus de page de dossier, et c’est le seul endroit d’où ' +
+		'« Gérer les droits » ouvre le domaine à un compte. Tant que le module est décoché, vous ne ' +
+		'pouvez plus y accorder d’accès à personne. Les dossiers existants ne sont pas supprimés : ils ' +
+		'redeviennent visibles à la réactivation.';
+
+	/** Ce que coûte la désactivation d'un module ordinaire (`majConsequence`, `V-28:3094`). */
+	const CONSEQUENCE_ORDINAIRE =
+		'En désactivant : le contenu déjà saisi n’est pas supprimé, il devient seulement invisible. ' +
+		'Réactiver le module le fait réapparaître à l’identique.';
+
+	/**
+	 * LA CONSÉQUENCE D'UN DÉCOCHAGE, ou `null` quand il n'y a rien à dire — module
+	 * encore actif, domaine à naître, ou module qui n'était pas actif de toute façon.
+	 * Elle ne s'affiche donc qu'APRÈS un geste, sur un domaine EXISTANT : à
+	 * l'ouverture du panneau, `fModules` est la copie exacte de ce que le domaine
+	 * porte.
+	 */
+	function consequenceDeDesactiver(cle: CleDeModule): string | null {
+		if (ouverture !== 'edition' || edite === null) return null;
+		if (fModules.includes(cle) || !edite.modules.includes(cle)) return null;
+		return cle === 'dossiers' ? CONSEQUENCE_DES_DOSSIERS : CONSEQUENCE_ORDINAIRE;
+	}
+
 	/** `form-valider` — LA VALIDATION DE L'ÉCRAN, celle du gel (`V-28:3157`) : nom
 	    vide ou doublon insensible à la casse, un seul message pour les deux cas. Ce
 	    n'est pas LA règle — `creerUnDomaine()` refuse quoi qu'il arrive — c'est son
@@ -462,15 +495,17 @@
 ></div>{/snippet}
 
 <!-- UNE LIGNE DE MODULE. Même régime : `rendreModules()` (`V-28:3048`) assemble
-	l'étiquette sans un blanc, et `data-consequence="non"` est posé à l'initialisation
-	sur les six — la conséquence d'une désactivation ne s'affiche qu'après un geste. -->
+	l'étiquette sans un blanc, et `data-consequence` reste à « non » tant qu'il n'y a
+	rien à dire — la conséquence d'une désactivation ne s'affiche qu'après un geste,
+	et seulement sur un domaine qui existe déjà. Le bloc était rendu VIDE et
+	l'attribut figé : `majConsequence()` du gel n'avait jamais été porté. -->
 <!-- prettier-ignore -->
-{#snippet moduleDuForm(cle: CleDeModule)}{@const verrou = cle === 'notes'}<label class="mod" data-verrou={verrou ? 'oui' : undefined} data-consequence="non"
+{#snippet moduleDuForm(cle: CleDeModule)}{@const verrou = cle === 'notes'}{@const consequence = consequenceDeDesactiver(cle)}<label class="mod" data-verrou={verrou ? 'oui' : undefined} data-consequence={consequence === null ? 'non' : 'oui'}
 	><input type="checkbox" checked={modulesActifs.includes(cle) || verrou} disabled={verrou} onchange={(e) => basculerLeModule(cle, e.currentTarget.checked)}
 	/><span class="mod__corps"
 		><span class="mod__nom">{modules[cle].nom}{#if verrou}<span class="mod__oblig">toujours actif</span>{/if}</span
 		><span class="mod__aide">{AIDES_MODULES[cle]}</span
-		><span class="mod__consequence"></span
+		><span class="mod__consequence">{consequence ?? ''}</span
 	></span
 ></label>{/snippet}
 
