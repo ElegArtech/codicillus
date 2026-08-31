@@ -8,8 +8,9 @@
 	 * route. Ne rien passer rend la page entière au repos, ce qui est l'état du
 	 * produit.
 	 *
-	 * Les notes viennent de la base ; le journal des imports, non — aucune table ne
-	 * le porte, voir le chargeur.
+	 * Les notes ET le journal des imports viennent de la base — `lots_d_import`,
+	 * migration `009`. Le rapport détaillé d'un lot est une ADRESSE, pas un état
+	 * local : `/console/imports/{lot}`.
 	 */
 	import { onMount } from 'svelte';
 	import Vue from '../../../vues/V-35.svelte';
@@ -55,16 +56,23 @@
 -->
 <Vue
 	notes={data.notes}
-	journalImports={[]}
+	journalImports={data.journalImports}
 	journalEnregistre={data.journalEnregistre}
+	onOuvrirLeRapport={(lot) => {
+		/* LE RAPPORT D'UN LOT EST UNE ADRESSE — `/console/imports/{lot}`
+		   (`docs/routes.md`) : « un objet identifié et consultable indéfiniment est
+		   un objet adressable ». Le détail vit dans `lignes_de_lot`, et il n'est pas
+		   dans la charge utile de cette page. */
+		void goto(resolve('/console/imports/[lot]', { lot }));
+	}}
 	onOuvrirLeDomaine={(domaine) => {
 		/* « OUVRIR LE DOMAINE » DU RAPPORT — la désignation est canonique, comme
 		   partout ailleurs en console : le rapport porte un nom d'affichage,
 		   l'adresse attend deux identifiants lisibles. La table vient du chargeur.
 
-		   CE GESTE N'EST ATTEIGNABLE PAR PERSONNE AUJOURD'HUI : le journal est
-		   vide — aucune table n'enregistre d'import —, donc aucun rapport ne
-		   s'ouvre. Il est câblé pour le jour où un lot y entrera, pas maquillé. */
+		   CE GESTE S'ATTEINT DEPUIS LE RAPPORT D'UN LOT, à
+		   `/console/imports/{lot}` : le journal de cette page mène au rapport, et
+		   c'est le rapport qui ouvre le domaine. */
 		const canonique = data.designations[domaine];
 		if (canonique === undefined) return;
 		/* LA RÈGLE EST DÉSARMÉE, ET LE PRÉCÉDENT EST CELUI DU DÉPÔT.
@@ -91,23 +99,18 @@
 />
 
 <!--
-	`journalImports={[]}` — ET C'EST UNE DÉCISION, PAS UN OUBLI.
+	`journalImports` VIENT DE LA BASE, ET C'EST LA SECONDE MOITIÉ DE `RG-M12-09`.
 
-	Aucune des vingt et une tables du schéma n'enregistre d'import : le service de
-	conversion n'existe pas et rien n'écrit de lot (`MESURES_DE_CONSOLE_SANS_CONTREPARTIE`,
-	entrée `JOURNAL_IMPORTS`). La vue retombait sur `JOURNAL_IMPORTS` du jeu de
-	démonstration — quatre lots datés, avec leurs auteurs et leurs décomptes —,
-	c'est-à-dire un journal d'imports qui n'ont jamais eu lieu : la valeur
-	illustrative que `P-02` proscrit, sur un écran de traçabilité. La propriété
-	est désormais EXIGÉE : ce `[]` n'est plus ce qui écarte le jeu, c'est la seule
-	valeur que cette route puisse servir, et une route qui l'oublierait ne
-	compilerait plus.
+	La vue retombait sur `JOURNAL_IMPORTS` du jeu de démonstration — quatre lots
+	datés, avec leurs auteurs et leurs décomptes —, c'est-à-dire un journal
+	d'imports qui n'ont jamais eu lieu : la valeur illustrative que `P-02`
+	proscrit, sur un écran de traçabilité. La propriété est devenue EXIGÉE, servie
+	VIDE faute de table, et l'écran DISAIT son vide plutôt que de le laisser passer
+	pour « aucun import n'a eu lieu ».
 
-	ET IL ANNONCE DÉSORMAIS SON VIDE — `journalEnregistre`, dérivé du recensement
-	par le chargeur. Le tableau ne se contente plus d'être vide : l'écran DIT que
-	rien n'est conservé. Une table vide n'affirme rien de faux toute seule ; sous
-	« les rapports restent consultables indéfiniment », elle affirmait qu'aucun
-	import n'avait eu lieu. Le nœud ajouté n'est dans aucune planche du gel — le
-	gel de V-35 ne porte aucun état vide pour ce tableau —, et c'est la seule
-	façon de cesser de le contredire sans inventer un journal.
+	La table existe depuis la migration `009`, et le drapeau `journalEnregistre` a
+	basculé tout seul : il est dérivé du recensement des mesures sans contrepartie,
+	d'où les entrées `JOURNAL_IMPORTS` et `LOT_IMPORT` ont disparu. L'état vide
+	explicite reste en place, et c'est voulu — une instance neuve n'a aucun lot, et
+	il n'a plus alors à parler de conservation, seulement de l'absence de lots.
 -->

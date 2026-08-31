@@ -208,6 +208,10 @@ const TROIS_VERSIONS: readonly Version[] = (
  */
 const SOCLE_V24: Proprietes = {
 	domaines: DOMAINES,
+	/* `UC-M12-02` — les univers où un domaine peut naître. La route la sert toujours,
+	   la propriété est donc EXIGÉE ; vide, le scénario « domaine complet » n'est pas
+	   offert, ce qui est l'état d'un compte sans droit de créer un domaine. */
+	universOuCreerUnDomaine: [],
 	lotImport: LOT_IMPORT,
 	formatsImport: LIBELLE_PAR_FORMAT,
 	domaineParDefaut: DOMAINES[0]!.nom
@@ -377,9 +381,13 @@ const VUES: Readonly<
 		base: { etat: 'journal-peuple', journalImports: JOURNAL_IMPORTS },
 		sources: [
 			{
-				cle: 'lotImport',
-				defaut: null,
-				autre: LOT_IMPORT,
+				/* `lotImport` A CÉDÉ LA PLACE À `fichiersDuLot` : le rapport ne lit que
+				   trois colonnes — chemin, sort, motif —, et `FichierDuLot` du jeu en
+				   EXIGE une quatrième, le format, qu'un fichier écarté pour format
+				   inconnu n'a précisément pas. */
+				cle: 'fichiersDuLot',
+				defaut: [],
+				autre: LOT_IMPORT.fichiers.map((f) => ({ c: f.c, s: f.s, m: f.m ?? '' })),
 				/* Le rapport de lot est le seul état qui liste les fichiers en échec. */
 				base: { etat: 'rapport-de-lot', journalImports: JOURNAL_IMPORTS }
 			}

@@ -25,15 +25,27 @@
 	import { designationsDeCoquille, type CompteAffiche } from '$lib/coquille/identite';
 	import { adressesParLesNoms } from '$lib/rangement/adresses';
 	import { accord } from '$lib/vocabulaire';
+	/* LES PHRASES DES MOTIFS SONT PARTAGÉES AVEC V-35 : le rapport d'un lot passé les
+	   affiche aussi, et il rendait le code nu. Une seule table (`$lib/import/motifs.ts`). */
+	import { motifEnClair } from '$lib/import/motifs';
 
 	/** Les adresses se composent sur l'identifiant persisté, jamais sur le nom. */
 	const adresses = adressesParLesNoms(designationsDeCoquille());
 	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
 	import {
+		SCENARIO_DE_DOMAINE,
 		SCENARIO_LIVRE,
+		SCENARIO_PREPARE,
 		scenarioEstLivre,
 		type ScenarioDImport
 	} from '$lib/donnees/scenarios-d-import';
+
+	/**
+	 * Le séparateur d'un renvoi typé, tel que l'illustration du troisième scénario
+	 * l'écrit. Il est porté DANS l'expression : Svelte élague les blancs en bord
+	 * d'élément, et un chevron posé au balisage y perdrait ses espaces.
+	 */
+	const SEPARATEUR_DE_RENVOI = '\u203a';
 
 	interface Proprietes {
 		vecteur: Record<string, string | boolean> | null;
@@ -47,6 +59,12 @@
 		univers?: readonly Univers[];
 		/** Les domaines où l'utilisateur a le droit d'écrire. */
 		domaines: readonly Domaine[];
+		/**
+		 * `UC-M12-02` — LES UNIVERS OÙ UN DOMAINE PEUT NAÎTRE. Vide, le scénario
+		 * « domaine complet » n'est pas offert : créer un domaine est un geste
+		 * d'administration, et une action interdite n'est pas rendue (`P-09`).
+		 */
+		universOuCreerUnDomaine: readonly { readonly identifiant: string; readonly nom: string }[];
 		/** Le compte connecté. Absente, un compte VIDE — jamais celui du jeu. */
 		compte?: CompteAffiche | null;
 		lotImport: LotDImport;
@@ -98,6 +116,11 @@
 		 * eux, le rejeu d'un lot annonçait des créations qui n'auraient pas lieu.
 		 */
 		readonly dossiersExistants: readonly string[];
+		/**
+		 * `UC-M12-02` — le nom du domaine que l'import CRÉERA, vide s'il en existe
+		 * déjà un de ce nom. L'aperçu l'annonce ; rien n'a encore été écrit.
+		 */
+		readonly domaineACreer: string;
 	}
 
 	/** Ce que le dépôt règle, et que les deux appels transportent. */
@@ -108,7 +131,12 @@
 		 */
 		readonly scenario: string;
 		readonly domaine: string;
+		/** `UC-M12-02` — le nom du domaine à créer, et l'univers qui l'accueille. */
+		readonly nomDuDomaine: string;
+		readonly universDAccueil: string;
 		readonly simulation: boolean;
+		/** `RG-M12-03` — refuser le lot entier si une ligne échoue. */
+		readonly strict: boolean;
 	}
 
 	/** Le rapport d'un lot tel que l'écran le rend — `RG-M12-04` et `RG-M12-09`.
@@ -116,13 +144,20 @@
 	    `RapportDImport`. */
 	interface RapportAffiche {
 		readonly simulation: boolean;
+		/** `RG-M12-03`, mode strict — le lot est allé au bout puis a été annulé. */
+		readonly refuseEnBloc: boolean;
 		readonly total: number;
 		readonly notesCreees: number;
 		readonly notesMisesAJour: number;
 		readonly ignores: number;
 		readonly echecs: number;
 		readonly dossiersCrees: number;
+		/** `RG-M12-03` — les relations créées par les renvois déclarés. */
+		readonly relationsCreees: number;
 		readonly domaine: string;
+		/** L'adresse du domaine visé, composée par le serveur : lui seul connaît
+		    l'identifiant persisté d'un domaine que l'import vient de créer. */
+		readonly adresseDuDomaine: string;
 		/** `RG-M12-04` — chaque fichier en échec, avec sa cause en clair. */
 		readonly enEchec: readonly { readonly chemin: string; readonly motif: string }[];
 		/** `RG-M12-03` — les renvois qu'aucune note ne résout. */
@@ -144,6 +179,7 @@
 		notes: corpus,
 		univers = [],
 		domaines,
+		universOuCreerUnDomaine,
 		compte = null,
 		lotImport,
 		formatsImport,
@@ -180,7 +216,14 @@
 	let rapport = $state<RapportAffiche | null>(null);
 	let enCours = $state(false);
 	let simulationRetenue = $state(false);
+	/** `RG-M12-03` — la case du mode strict, à l'étape 1. */
+	let strictRetenu = $state(false);
 	let domaineRetenu = $state('');
+	/** `UC-M12-02` — le nom saisi, et l'univers d'accueil retenu. */
+	let nomDuDomaine = $state('');
+	let universRetenu = $state('');
+	/** Le domaine que l'aperçu annonce comme à créer, ou la chaîne vide. */
+	let domaineACreer = $state('');
 	/** Le motif du dernier refus serveur, en code. `null` : aucun refus en cours. */
 	let refus = $state<string | null>(null);
 
@@ -246,14 +289,49 @@
 				{ gras: true, texte: 'Prestataires' },
 				{ gras: false, texte: '\n         └ Infogérance' }
 			]
+		},
+		{
+			id: SCENARIO_DE_DOMAINE,
+			nom: 'Importer un domaine complet',
+			txt: "Le dossier de premier niveau devient un nouveau domaine, et tout ce qu'il contient s'y range. À choisir quand vous reprenez un périmètre entier d'un coup.",
+			illus: [
+				{ gras: false, texte: 'Contrats/\n  Prestataires/\n    Infogérance.docx\n\n→ ' },
+				{ gras: true, texte: 'Contrats' },
+				{ gras: false, texte: ' (domaine)\n   └ ' },
+				{ gras: true, texte: 'Prestataires' },
+				{ gras: false, texte: '\n      └ Infogérance' }
+			]
+		},
+		{
+			id: SCENARIO_PREPARE,
+			nom: 'Importer un corpus préparé',
+			txt: 'Pour des fichiers déjà munis de leurs métadonnées — titre, étiquettes, relations. Les liens entre documents sont résolus automatiquement, et relancer le même import ne crée pas de doublons.',
+			illus: [
+				{
+					gras: false,
+					texte:
+						'---\n titre: Infogérance\n etiquettes: [contrat]\n relations: [Documente ' +
+						SEPARATEUR_DE_RENVOI +
+						' pg-prod-01]\n---\n\n→ note + '
+				},
+				{ gras: true, texte: 'liens résolus' }
+			]
 		}
 	]);
 
 	/**
 	 * Le filtre lit le module qui déclare ce que l'import exécute : y ajouter un
-	 * scénario livré suffit à le rendre offert.
+	 * scénario livré suffit à le rendre offert. `UC-M12-02` s'y ajoute une seconde
+	 * condition, qui n'est pas une livraison mais un DROIT : sans univers d'accueil,
+	 * l'appelant ne peut pas créer de domaine, et l'offre lui est retirée (`P-09`).
 	 */
-	const SCENARIOS_OFFERTS = $derived(SCENARIOS.filter((s) => scenarioEstLivre(s.id)));
+	const SCENARIOS_OFFERTS = $derived(
+		SCENARIOS.filter(
+			(s) =>
+				scenarioEstLivre(s.id) &&
+				(s.id !== SCENARIO_DE_DOMAINE || universOuCreerUnDomaine.length > 0)
+		)
+	);
 
 	const scenarioCourant = $derived(SCENARIOS_OFFERTS.find((s) => s.id === scenarioChoisi) ?? null);
 
@@ -283,29 +361,6 @@
 	const LOT = $derived(lotAnalyse ?? lotImport);
 
 	/**
-	 * Les codes de motif du classement, mis en français ici — les formulations du
-	 * gel, au caractère près. Une valeur inconnue passe telle quelle : le lot
-	 * d'exemple porte déjà des phrases dans ce champ, à ne pas traduire deux fois.
-	 */
-	const LIBELLE_DU_MOTIF: Readonly<Record<string, string>> = {
-		'format-non-converti':
-			"Ce format n'est pas converti en note. Déposez-le en pièce jointe d'une note existante.",
-		'format-inconnu': "Le dépôt ne reconnaît pas ce format : le fichier n'a pas été ouvert.",
-		'fichier-vide': 'Fichier vide, sans contenu à reprendre.',
-		'doublon-dans-le-lot': 'Fichier identique à un autre du lot, conservé une seule fois.',
-		'service-de-conversion-injoignable':
-			"Le service de conversion n'a pas répondu. Le reste du lot a été traité ; ce fichier est à reprendre.",
-		'outil-de-conversion-absent':
-			"L'outil qui lit ce format manque au service de conversion. Le reste du lot a été traité.",
-		'fichier-protege':
-			"Le fichier est protégé par un mot de passe : son contenu n'a pas pu être lu.",
-		'fichier-endommage': "La structure interne du fichier ne s'ouvre pas : il est endommagé.",
-		'delai-de-conversion-depasse': 'La conversion a dépassé le délai accordé et a été interrompue.',
-		'conversion-absente': "Ce fichier n'a pas été soumis à la conversion.",
-		'contenu-illisible': "Le contenu n'a pas pu être lu comme un document."
-	};
-
-	/**
 	 * Les fragments de phrase du gel qui entourent un segment gras, nommés plutôt
 	 * qu'écrits au balisage pour une raison de rendu : Svelte élague les blancs en
 	 * bord d'élément, et « reçus depuis » perdrait ses espaces encadrants — « 30
@@ -333,11 +388,6 @@
 				`Les ${echecs} fichiers en échec sont listés plus bas avec leur cause ; ils n'ont bloqué aucun des autres et peuvent être repris séparément.`
 			)
 		);
-	}
-
-	function motifEnClair(motif: string | undefined): string {
-		if (motif === undefined) return '';
-		return LIBELLE_DU_MOTIF[motif] ?? motif;
 	}
 
 	/**
@@ -376,7 +426,7 @@
 	 * n'est pas vrai : un réimport ne crée aucune note et en met à jour trois.
 	 */
 	function intituleDesNotes(r: RapportAffiche): string {
-		if (r.simulation) return `Notes qui seraient écrites — ${r.ecrites.length}`;
+		if (rienNAEteEcrit(r)) return `Notes qui seraient écrites — ${r.ecrites.length}`;
 		if (r.notesMisesAJour === 0) return `Notes créées — ${r.notesCreees}`;
 		return `Notes écrites — ${r.ecrites.length}`;
 	}
@@ -386,9 +436,16 @@
 	 * contraire. `simulation` est le SEUL champ par lequel les deux rapports diffèrent
 	 * (`RG-M12-02`) ; l'écran ne le lisait nulle part et offrait des liens qui
 	 * rendaient 404.
+	 *
+	 * LE MODE STRICT A EXACTEMENT LE MÊME EFFET (`RG-M12-03`) : le lot est allé au
+	 * bout, son rapport dit ce qui serait arrivé, et la base est intacte.
 	 */
+	function rienNAEteEcrit(r: RapportAffiche): boolean {
+		return r.simulation || r.refuseEnBloc;
+	}
+
 	function auFuturSiSimule(r: RapportAffiche, passe: string, futur: string): string {
-		return r.simulation ? futur : passe;
+		return rienNAEteEcrit(r) ? futur : passe;
 	}
 
 	/* `RG-M12-01` — les notes MISES À JOUR font un troisième nombre, que le gel ne
@@ -506,8 +563,16 @@
 			.map(([f, n]) => [n, formatsImport[f] ?? f] as const)
 	);
 
-	/** La structure annoncée. Le scénario « notes » ne crée aucun domaine. */
-	const creations = $derived([[nombreDeDossiers, 'dossiers créés'] as const]);
+	/** La structure annoncée. Seul `UC-M12-02` crée un domaine, et seulement quand
+	    il n'en existe pas déjà un de ce nom — un réimport le réécrit. */
+	const creations = $derived(
+		domaineACreer === ''
+			? [[nombreDeDossiers, 'dossiers créés'] as const]
+			: [
+					[1, `domaine créé — ${domaineACreer}`] as const,
+					[nombreDeDossiers, 'dossiers créés'] as const
+				]
+	);
 
 	const ecartes = $derived(LOT.fichiers.filter((f) => f.s === 'ignore'));
 
@@ -558,7 +623,7 @@
 	const renoncerMasque = $derived(etape !== 3);
 	/** `termine` de `majPied()` — l'étape 4 avec son rapport à l'écran. */
 	const termine = $derived(etape === 4 && rapport !== null);
-	const rapportSimule = $derived(rapport !== null && rapport.simulation);
+	const rapportSimule = $derived(rapport !== null && rienNAEteEcrit(rapport));
 	const simulationTerminee = $derived(termine && rapportSimule);
 	const precedentMasque = $derived(etape === 1 || etape === 4);
 	/**
@@ -625,10 +690,16 @@
 		};
 	});
 
+	/** L'univers d'accueil retenu, ou le premier offert — jamais rien. */
+	const universCible = $derived(universRetenu || (universOuCreerUnDomaine[0]?.identifiant ?? ''));
+
 	const reglages = $derived({
 		scenario: scenarioChoisi ?? SCENARIO_LIVRE,
 		domaine: domaineCible,
-		simulation: simulationRetenue
+		nomDuDomaine,
+		universDAccueil: universCible,
+		simulation: simulationRetenue,
+		strict: strictRetenu
 	});
 
 	function choisirScenario(id: string): void {
@@ -654,6 +725,7 @@
 		sourceDuLot = sourceDe(retenus);
 		lotAnalyse = null;
 		dossiersExistants = [];
+		domaineACreer = '';
 		rapport = null;
 		refus = null;
 	}
@@ -692,6 +764,7 @@
 				}
 				lotAnalyse = issue.valeur.lot;
 				dossiersExistants = issue.valeur.dossiersExistants;
+				domaineACreer = issue.valeur.domaineACreer;
 				etapeLocale = 3;
 			} finally {
 				enCours = false;
@@ -731,6 +804,7 @@
 		fichiers = [];
 		lotAnalyse = null;
 		dossiersExistants = [];
+		domaineACreer = '';
 		rapport = null;
 		refus = null;
 		sourceDuLot = '';
@@ -739,6 +813,10 @@
 
 	/** L'adresse du domaine visé — bâtie par le constructeur unique (`ARB-001`). */
 	const adresseDuDomaine = $derived.by(() => {
+		/* LE SERVEUR L'A COMPOSÉE, ET LUI SEUL LE POUVAIT : un domaine que l'import
+		   vient de créer (`UC-M12-02`) n'est dans aucune liste servie à l'ouverture
+		   de l'écran, et son identifiant persisté n'est connu que de lui. */
+		if (rapport !== null && rapport.adresseDuDomaine !== '') return rapport.adresseDuDomaine;
 		const cible = domaines.find((d) => d.nom === domaineCible);
 		/* L'IDENTIFIANT PERSISTÉ, PAS LE NOM SLUGIFIÉ : il ne suit pas les
 		   renommages (`RG-M12-11`), et la sortie de l'étape 4 rendait 404. */
@@ -828,6 +906,30 @@
 			<div class="scenarios" id="scenarios" role="group" aria-label="Scénario d'import"
 				>{#each SCENARIOS_OFFERTS as s (s.id)}{@render vignetteDeScenario(s)}{/each}</div
 			>
+
+			<!--
+				LE MODE STRICT — `RG-M12-03` : « les références non résolues sont signalées
+				dans le rapport sans faire échouer l'import, SAUF SI l'utilisateur a
+				explicitement demandé un mode strict ». Aucune maquette ne l'offre ; la
+				règle l'exige, et une règle sans déclencheur n'est pas tenue. Il est posé
+				au choix du scénario parce qu'il gouverne le lot entier, pas son dépôt.
+			-->
+			<label class="case" id="champ-strict" style="margin-top:var(--e-5)">
+				<input
+					type="checkbox"
+					id="strict"
+					checked={strictRetenu}
+					onchange={(e) => (strictRetenu = (e.currentTarget as HTMLInputElement).checked)}
+				/>
+				<span class="case__txt"
+					>Refuser le lot entier si une ligne échoue
+					<span class="case__aide"
+						>Le lot est traité jusqu'au bout et son rapport est produit, puis tout est annulé si un
+						fichier a échoué ou si un renvoi ne désigne rien. Sans cette case, les fichiers en échec
+						sont simplement consignés et le reste entre.</span
+					>
+				</span>
+			</label>
 		</section>
 
 		<!-- ============ ÉTAPE 2 — Dépôt ============ -->
@@ -877,7 +979,10 @@
 			</div>
 
 			<div class="reglages-depot">
-				<div class="champ" id="champ-domaine" hidden={scenarioChoisi !== SCENARIO_LIVRE}>
+				<!-- LE DOMAINE DE DESTINATION EXISTE DÉJÀ POUR DEUX SCÉNARIOS SUR TROIS :
+					`UC-M12-01` le choisit, `UC-M12-03` y range un corpus préparé. Seul
+					`UC-M12-02` n'en a pas, puisqu'il le crée. -->
+				<div class="champ" id="champ-domaine" hidden={scenarioChoisi === SCENARIO_DE_DOMAINE}>
 					<label class="champ__label" for="domaine-cible"
 						>Domaine de destination <span class="oblig">*</span></label
 					>
@@ -889,14 +994,46 @@
 					>
 				</div>
 				<!--
-					`#champ-nom-domaine` du gel n'est plus rendu : un champ obligatoire que
-					personne ne lisait, sous un scénario que l'import n'exécute pas.
+					`#champ-nom-domaine` DU GEL, REMIS : le champ était obligatoire à l'écran
+					et n'était lu nulle part, sous un scénario que l'import n'exécutait pas.
+					Les deux manques sont refermés — l'action le lit, et crée le domaine.
+
+					L'UNIVERS D'ACCUEIL N'EST PAS AU GEL, ET IL EST INDISPENSABLE : un domaine
+					appartient à un univers (`RG-STR-02`), et rien d'autre à l'écran ne dit
+					lequel. Le choisir à la place de l'utilisateur, ce serait ranger son
+					périmètre où il n'a pas demandé.
 				-->
-				<!-- La case « Simulation » n'est offerte que sous « corpus préparé », scénario
-					non livré : rien de ce qu'elle porte n'atteint l'écran. Ne la rebranche pas
-					sur le scénario livré — elle nommerait de nouveau une fonction que le produit
-					ne tient pas. -->
-				<label class="case" id="champ-simulation" hidden={scenarioChoisi !== 'prepare'}>
+				<div class="champ" id="champ-nom-domaine" hidden={scenarioChoisi !== SCENARIO_DE_DOMAINE}>
+					<label class="champ__label" for="nom-domaine"
+						>Nom du domaine à créer <span class="oblig">*</span></label
+					>
+					<input
+						class="saisie"
+						type="text"
+						id="nom-domaine"
+						style="max-width:380px"
+						value={nomDuDomaine}
+						oninput={(e) => (nomDuDomaine = (e.currentTarget as HTMLInputElement).value)}
+					/>
+					<span class="champ__aide"
+						>Le dossier de premier niveau du lot en fournira le nom si vous le laissez vide. Un
+						domaine de ce nom qui existe déjà est réutilisé, jamais dupliqué.</span
+					>
+					<label class="champ__label" for="univers-cible" style="margin-top:var(--e-3)"
+						>Univers d'accueil <span class="oblig">*</span></label
+					>
+					<!-- prettier-ignore -->
+					<select class="selecteur" id="univers-cible" onchange={(e) => (universRetenu = (e.currentTarget as HTMLSelectElement).value)}
+						>{#each universOuCreerUnDomaine as u (u.identifiant)}<option
+							value={u.identifiant} selected={u.identifiant === universCible}>{u.nom}</option
+						>{/each}</select
+					>
+				</div>
+				<!-- La case « Simulation » est celle du gel, offerte sous « corpus préparé » :
+					c'est là qu'elle sert, un corpus préparé se vérifiant avant d'être engagé.
+					`RG-M12-02` la tient de bout en bout — le lot est traité, compté, puis
+					annulé. -->
+				<label class="case" id="champ-simulation" hidden={scenarioChoisi !== SCENARIO_PREPARE}>
 					<input
 						type="checkbox"
 						id="simulation"
@@ -990,14 +1127,19 @@
 			<h1 class="etape__titre" id="titre-4">
 				{rapport === null
 					? 'Import en cours'
-					: rapport.simulation
-						? 'Simulation terminée — rien n’a été écrit'
-						: 'Import terminé'}
+					: rapport.refuseEnBloc
+						? 'Lot refusé en bloc — rien n’a été écrit'
+						: rapport.simulation
+							? 'Simulation terminée — rien n’a été écrit'
+							: 'Import terminé'}
 			</h1>
 			<p class="etape__sous" id="sous-4">
 				{#if rapport === null}Un fichier en erreur n'interrompt pas le lot : le traitement va
-					jusqu'au bout et le rapport détaillera chaque cas.{:else if rapport.simulation}Le lot a
-					été traité de bout en bout, puis annulé : la base est exactement dans l'état où elle
+					jusqu'au bout et le rapport détaillera chaque cas.{:else if rapport.refuseEnBloc}Vous avez
+					demandé le mode strict. Le lot a été traité de bout en bout — le rapport ci-dessous dit ce
+					qui serait entré —, puis tout a été annulé parce qu'une ligne au moins n'est pas passée.
+					Corrigez ce qui est signalé, ou relancez sans le mode strict.{:else if rapport.simulation}Le
+					lot a été traité de bout en bout, puis annulé : la base est exactement dans l'état où elle
 					était. Revenez à l'aperçu pour lancer l'import réel.{/if}
 			</p>
 
@@ -1066,7 +1208,7 @@
 				>{/if}<section class="section-rapport"
 					><span class="etiq">{rapportSimule ? 'Structure qui serait créée' : 'Structure créée'}</span
 					><div class="section-rapport__cadre" style="padding:var(--e-3) var(--e-4);font-size:var(--t-petit)"
-						>{`${rapport.dossiersCrees} ${accord(rapport.dossiersCrees, 'dossier')} ${auFuturSiSimule(rapport, accord(rapport.dossiersCrees, 'créé'), accord(rapport.dossiersCrees, 'serait créé', 'seraient créés'))} dans le domaine ${rapport.domaine}.`}</div
+						>{`${rapport.dossiersCrees} ${accord(rapport.dossiersCrees, 'dossier')} ${auFuturSiSimule(rapport, accord(rapport.dossiersCrees, 'créé'), accord(rapport.dossiersCrees, 'serait créé', 'seraient créés'))} dans le domaine ${rapport.domaine}.`}{#if rapport.relationsCreees}{` ${rapport.relationsCreees} ${accord(rapport.relationsCreees, 'relation')} ${auFuturSiSimule(rapport, accord(rapport.relationsCreees, 'créée', 'créées'), accord(rapport.relationsCreees, 'serait créée', 'seraient créées'))} par les renvois déclarés.`}{/if}</div
 					></section
 				><section class="section-rapport"
 					><span class="etiq">{intituleDesNotes(rapport)}</span
