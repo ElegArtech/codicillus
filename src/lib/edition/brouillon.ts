@@ -33,6 +33,17 @@ export interface Brouillon {
 	readonly corps: Document;
 	/** L'instant de la dernière écriture locale, en ISO 8601. */
 	readonly le: string;
+	/**
+	 * LE GABARIT DONT LA RÉDACTION EST PARTIE — l'identifiant que le choix de départ
+	 * dépose dans la soumission, et rien de plus : le squelette, lui, est déjà DANS le
+	 * corps. Absent quand la note part d'une page vierge, ce qui est le cas ordinaire ;
+	 * il n'est donc écrit que lorsqu'il vaut quelque chose.
+	 *
+	 * Sans lui, changer de domaine en cours de rédaction rendait le texte intact et la
+	 * PROVENANCE perdue : la note s'enregistrait comme née de rien, et « Utilisations »
+	 * du gabarit n'en savait rien.
+	 */
+	readonly gabarit?: string;
 }
 
 /**
@@ -108,7 +119,13 @@ export function lireLeBrouillon(stockage: StockageLocal, cle: string): Brouillon
 		const le = champs['le'];
 		if (typeof titre !== 'string' || typeof le !== 'string') return null;
 		if (Number.isNaN(Date.parse(le))) return null;
-		return { titre, corps: analyserDocument(champs['corps']), le };
+		const corps = analyserDocument(champs['corps']);
+		/* LE GABARIT EST FACULTATIF, ET UN BROUILLON SANS LUI RESTE VALIDE : les
+		   brouillons écrits avant qu'il n'existe se relisent, et une page vierge n'en
+		   porte aucun. Tout ce qui n'est pas une chaîne non vide est simplement absent. */
+		const gabarit = champs['gabarit'];
+		if (typeof gabarit !== 'string' || gabarit === '') return { titre, corps, le };
+		return { titre, corps, le, gabarit };
 	} catch {
 		return null;
 	}
@@ -174,6 +191,14 @@ export interface OptionsDuBrouillonLocal {
 	/** Remplace le corps de l'éditeur. C'est la restauration, et rien d'autre. */
 	readonly remplacer: (document: Document) => void;
 	/**
+	 * LE GABARIT COURANT — l'identifiant que la soumission porte, chaîne vide quand la
+	 * note ne part d'aucun gabarit. Absent, le brouillon n'en garde pas : l'écran de
+	 * MODIFICATION n'a pas de choix de départ.
+	 */
+	readonly gabarit?: () => string;
+	/** Repose le gabarit du brouillon repris — chaîne vide pour « aucun ». */
+	readonly poserLeGabarit?: (gabarit: string) => void;
+	/**
 	 * L'instant du dernier enregistrement de la note, en ISO — `null` en CRÉATION.
 	 * C'est ce qui sépare les deux régimes : en création il n'y a rien à écraser et le
 	 * brouillon est repris d'emblée ; en modification il est PROPOSÉ, jamais imposé.
@@ -187,6 +212,12 @@ export interface OptionsDuBrouillonLocal {
 }
 
 export interface BrouillonCable {
+	/**
+	 * UN BROUILLON A-T-IL ÉTÉ REPRIS À L'OUVERTURE ? Vrai seulement quand la reprise a
+	 * eu lieu d'emblée — le régime de la CRÉATION. L'écran s'en sert pour ne pas
+	 * redemander par quoi commencer à quelqu'un qui a déjà son texte sous les yeux.
+	 */
+	readonly repris: boolean;
 	/** Une frappe a eu lieu : l'écriture est différée du délai de repos. */
 	signaler(): void;
 	/** Écrit sans attendre — la fermeture de l'onglet ne laisse pas passer le délai. */
@@ -219,6 +250,7 @@ export function cablerLeBrouillonLocal(
 	const stockage = options.stockage ?? stockageDeLaFenetre(fenetre);
 	const maintenant = options.maintenant ?? (() => new Date());
 	const inerte: BrouillonCable = {
+		repris: false,
 		signaler: () => undefined,
 		ecrireMaintenant: () => undefined,
 		effacer: () => undefined,
@@ -235,10 +267,14 @@ export function cablerLeBrouillonLocal(
 			minuterie = null;
 		}
 		const le = maintenant();
+		/* LE GABARIT EST DEMANDÉ À L'ÉCRITURE, JAMAIS RETENU AU CÂBLAGE : le champ qui
+		   le porte est posé par le choix de départ, qui peut être câblé après nous. */
+		const gabarit = options.gabarit?.() ?? '';
 		const ecrit = ecrireLeBrouillon(stockage, options.cle, {
 			titre: champTitre?.value ?? '',
 			corps: options.document(),
-			le: le.toISOString()
+			le: le.toISOString(),
+			...(gabarit === '' ? {} : { gabarit })
 		});
 		/* LE TÉMOIN NE PARLE QUE SI L'ÉCRITURE A EU LIEU : un stockage plein annoncerait
 		   sinon un brouillon qui n'existe pas. */
@@ -262,6 +298,7 @@ export function cablerLeBrouillonLocal(
 	const restaurer = (brouillon: Brouillon): void => {
 		if (champTitre !== null && brouillon.titre !== '') champTitre.value = brouillon.titre;
 		options.remplacer(brouillon.corps);
+		options.poserLeGabarit?.(brouillon.gabarit ?? '');
 		retirerUnAvis(formulaire, CLE_D_AVIS);
 	};
 
@@ -273,9 +310,10 @@ export function cablerLeBrouillonLocal(
 		effacer();
 		if (champTitre !== null) champTitre.value = '';
 		options.remplacer(DOCUMENT_VIDE);
+		options.poserLeGabarit?.('');
 	};
 
-	proposerLaReprise(formulaire, {
+	const repris = proposerLaReprise(formulaire, {
 		brouillon: lireLeBrouillon(stockage, options.cle),
 		enregistreeLe: options.enregistreeLe ?? null,
 		restaurer,
@@ -302,6 +340,7 @@ export function cablerLeBrouillonLocal(
 	document.addEventListener('visibilitychange', auMasquage);
 
 	return {
+		repris,
 		signaler: differer,
 		ecrireMaintenant: ecrire,
 		effacer,
@@ -346,9 +385,9 @@ interface Reprise {
  * quelqu'un d'autre, et un brouillon plus ancien qu'elle l'écraserait sans que personne
  * ne l'ait demandé : l'avis le dit, en toutes lettres, et attend.
  */
-function proposerLaReprise(formulaire: HTMLFormElement, reprise: Reprise): void {
+function proposerLaReprise(formulaire: HTMLFormElement, reprise: Reprise): boolean {
 	const brouillon = reprise.brouillon;
-	if (brouillon === null) return;
+	if (brouillon === null) return false;
 	/* LA DATE ENTIÈRE, PAS L'HEURE SEULE : un brouillon peut dormir des jours, et
 	   « écrit à 18:53 » laisserait croire qu'il date de l'heure précédente. */
 	const quand = formaterDateHeureFr(brouillon.le);
@@ -362,7 +401,7 @@ function proposerLaReprise(formulaire: HTMLFormElement, reprise: Reprise): void 
 			texte: `Cette note n’a jamais été enregistrée. Le texte ci-dessous vient de votre navigateur, où il a été écrit le ${quand}.`,
 			actions: [{ libelle: 'Repartir d’une page vierge', faire: reprise.vider }]
 		});
-		return;
+		return true;
 	}
 
 	const double = brouillonDoubleParLaBase(brouillon, reprise.enregistreeLe);
@@ -378,4 +417,7 @@ function proposerLaReprise(formulaire: HTMLFormElement, reprise: Reprise): void 
 			{ libelle: 'Écarter le brouillon', faire: reprise.ecarter }
 		]
 	});
+	/* PROPOSÉ N'EST PAS REPRIS : rien n'a été posé dans l'éditeur tant que
+	   l'utilisateur n'a pas cliqué. */
+	return false;
 }

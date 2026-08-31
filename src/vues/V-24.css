@@ -450,6 +450,17 @@
 /* --- Étape 1 : scénarios ---------------------------------------------------------
    Décrits en langage métier. Chacun montre ce qu'il produit : c'est
    l'illustration qui fait choisir, pas le titre. */
+
+/* L'INSTANCE N'A NULLE PART OÙ DÉPOSER — le bloc nomme le geste qui débloque.
+   Il porte la teinte d'alerte parce qu'il annonce un manque, pas une panne :
+   le parcours reste ouvert, un scénario au moins y mène. */
+.etape__vide {
+  font-family: var(--f-lecture); font-size: var(--t-petit); line-height: 1.6;
+  color: var(--c-alerte); background: var(--c-alerte-voile);
+  border: 1px solid #dcc59a; border-left: 3px solid var(--c-alerte);
+  border-radius: var(--r-2); padding: var(--e-3) var(--e-4);
+  margin: 0 0 var(--e-4); max-width: 66ch;
+}
 .scenarios { display: flex; flex-direction: column; gap: var(--e-3); }
 .scen {
   display: grid; grid-template-columns: auto minmax(0, 1fr) 200px; gap: var(--e-4);
