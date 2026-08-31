@@ -68,15 +68,22 @@
 			actif: demande.actif ? 'oui' : 'non'
 		});
 	}}
-	onEnregistrerLeRole={(demande) => {
+	onEnregistrerLeCompte={(demande) => {
 		/* LES DEUX NOMS SONT CEUX DU GEL, ET L'ACTION LES ATTEND TELS QUELS :
 		   `f-ident` désigne le compte — identifiant de connexion, définitif après
 		   création (`V-32:3109`) —, `f-role` porte le LIBELLÉ du sélecteur, que
 		   `roleDepuisLeLibelle()` convertit côté serveur. Rien n'est traduit ici :
-		   une seconde table de conversion finirait par diverger de la première. */
+		   une seconde table de conversion finirait par diverger de la première.
+
+		   LE DOMAINE SUIT LA MÊME TRADUCTION QU'À LA CRÉATION : la vue le désigne par
+		   son NOM, le geste par sa forme canonique, et la table vient du chargeur.
+		   Une désignation absente vide le rattachement plutôt que d'en deviner un. */
+		const canonique = data.designations[demande.domaine];
 		void envoyerAUneAction(document, '?/changerLeRole', {
 			'f-ident': demande.identifiant,
-			'f-role': demande.role
+			'f-role': demande.role,
+			univers: canonique?.univers ?? '',
+			domaine: canonique?.domaine ?? ''
 		});
 	}}
 	onCreerUnCompte={async (demande) => {
