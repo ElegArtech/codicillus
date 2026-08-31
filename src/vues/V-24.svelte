@@ -336,8 +336,42 @@
 		SCENARIOS.filter(
 			(s) =>
 				scenarioEstLivre(s.id) &&
-				(s.id !== SCENARIO_DE_DOMAINE || universOuCreerUnDomaine.length > 0)
+				(s.id !== SCENARIO_DE_DOMAINE || universOuCreerUnDomaine.length > 0) &&
+				(s.id === SCENARIO_DE_DOMAINE || domaines.length > 0)
 		)
+	);
+
+	/**
+	 * IL N'Y A AUCUN DOMAINE OÙ DÉPOSER — le cas d'une instance qu'on vient
+	 * d'installer, et l'écran le nomme au lieu de le laisser découvrir.
+	 *
+	 * Les deux scénarios qui visent un domaine DÉJÀ EN PLACE ne sont pas offerts :
+	 * mesuré au navigateur, les choisir menait à l'étape du dépôt avec un « Domaine de
+	 * destination * » sans une seule option, c'est-à-dire à une impasse qu'aucune
+	 * phrase n'annonçait (`P-09`, `P-03`).
+	 */
+	const sansDomaineOuDeposer = $derived(domaines.length === 0);
+
+	/** Le geste qui débloque, nommé — même forme que les messages d'amorçage. */
+	const AMORCAGE_SANS_DOMAINE =
+		'Aucun domaine n’existe encore sur cette instance : il n’y a nulle part où déposer des notes. ' +
+		'Créez un domaine dans la console — /console/domaines — ou reprenez-en un d’un coup ci-dessous, ' +
+		'avec « Importer un domaine complet ».';
+
+	/**
+	 * LE MÊME FAIT, QUAND MÊME « Importer un domaine complet » N'EST PAS OFFERT : sans
+	 * univers d'accueil, aucun scénario ne reste, et l'écran n'a plus qu'un geste à
+	 * nommer.
+	 */
+	const AMORCAGE_SANS_RIEN =
+		'Aucun domaine n’existe encore sur cette instance, et il n’y a nulle part où déposer des notes. ' +
+		'Créez un univers, puis un domaine, dans la console — /console/univers — et cet écran s’ouvrira.';
+
+	/** La phrase d'introduction s'accorde au nombre de scénarios réellement offerts. */
+	const INTRODUCTION_DES_SCENARIOS = $derived(
+		SCENARIOS_OFFERTS.length === 1
+			? 'Une manière de faire entrer l’existant est disponible sur cette instance. Confirmez qu’elle décrit votre situation — la structure de vos fichiers sera reprise telle quelle.'
+			: `${SCENARIOS_OFFERTS.length} manières de faire entrer l’existant sont disponibles sur cette instance. Choisissez celle qui décrit votre situation — la structure de vos fichiers sera reprise telle quelle.`
 	);
 
 	const scenarioCourant = $derived(SCENARIOS_OFFERTS.find((s) => s.id === scenarioChoisi) ?? null);
@@ -905,10 +939,13 @@
 		<!-- ============ ÉTAPE 1 — Scénario ============ -->
 		<section class="etape" data-etape="1" data-active={etape === 1 ? 'oui' : 'non'}>
 			<h1 class="etape__titre">Que voulez-vous reprendre&nbsp;?</h1>
-			<p class="etape__sous">
-				Une manière de faire entrer l'existant est disponible sur cette instance. Confirmez qu'elle
-				décrit votre situation — la structure de vos fichiers sera reprise telle quelle.
-			</p>
+			<p class="etape__sous">{INTRODUCTION_DES_SCENARIOS}</p>
+			<!-- L'ÉTAT VIDE NOMME LE GESTE QUI DÉBLOQUE, et il est rendu AVANT les
+				vignettes : c'est la première chose à lire quand il n'y a nulle part où
+				déposer. -->
+			{#if sansDomaineOuDeposer}<p class="etape__vide" id="sans-domaine">
+					{SCENARIOS_OFFERTS.length === 0 ? AMORCAGE_SANS_RIEN : AMORCAGE_SANS_DOMAINE}
+				</p>{/if}
 			<!-- prettier-ignore -->
 			<div class="scenarios" id="scenarios" role="group" aria-label="Scénario d'import"
 				>{#each SCENARIOS_OFFERTS as s (s.id)}{@render vignetteDeScenario(s)}{/each}</div
