@@ -37,6 +37,11 @@
 	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
+	import {
+		FACETTES_DE_NOTE,
+		type FacetteRendue,
+		type RetenuesDeFacette
+	} from '$lib/liste/facettes';
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import { adresseDeNote } from '$lib/rangement/adresses';
 
@@ -45,8 +50,24 @@
 	const motsDuProduit = vocabulaireRendu();
 	const motFiche = $derived(motsDuProduit.fiche);
 
+	/** Ce que le chargeur dit de la page servie et de celles qui l'encadrent. */
+	interface PaginationDeListe {
+		readonly page: number;
+		readonly pages: number;
+		/** L'adresse de la page voisine, ou `null` — il n'y en a pas. */
+		readonly precedente: string | null;
+		readonly suivante: string | null;
+	}
+
 	interface Proprietes {
 		vecteur: Record<string, string | boolean> | null;
+		/**
+		 * LA PAGE DE NOTES, DÉJÀ BORNÉE AU DOMAINE, FILTRÉE ET ORDONNÉE. Cette vue
+		 * recevait le corpus de l'INSTANCE ENTIÈRE et en tirait tout : le domaine, les
+		 * six facettes, leurs compteurs, le tri et le nombre de résultats. Le coût était
+		 * linéaire dans le nombre de notes lisibles de l'instance ; il est désormais
+		 * porté par des clauses SQL, et la vue ne calcule plus rien de tout cela.
+		 */
 		notes: readonly Note[];
 		/**
 		 * LE RANGEMENT ET L'IDENTITÉ — plus aucun défaut tiré du jeu. Ces propriétés
@@ -60,13 +81,21 @@
 		univers?: readonly Univers[];
 		domaines: readonly Domaine[];
 		compte?: CompteAffiche | null;
+		/** Les notes du domaine, TOUTES FACETTES RETIRÉES — le second chiffre du compteur. */
+		total: number;
+		/** Celles qui passent les filtres retenus — le premier chiffre du compteur. */
+		nombre: number;
 		/**
-		 * LES VALEURS DE FACETTE RETENUES, telles que L'ADRESSE les porte. Les six
-		 * facettes du gel étaient inertes : cliquer « Type » n'ouvrait rien, cocher une
-		 * valeur ne filtrait rien. Absente, la vue garde la dérivation du gel — les
-		 * valeurs que l'arrivée pose elle-même.
+		 * LES SIX FACETTES, COMPTÉES PAR LE CHARGEUR. Le compte d'une valeur est celui
+		 * qu'on obtiendrait SI elle était retenue, les autres facettes restant
+		 * appliquées : c'est un agrégat par facette, et il se fait en SQL.
 		 */
-		retenues?: Record<string, readonly string[]>;
+		facettes: readonly FacetteRendue[];
+		/**
+		 * LES VALEURS DE FACETTE RETENUES, telles que L'ADRESSE les porte — les pastilles
+		 * de filtre actif s'en déduisent, dans l'ordre des menus puis celui de l'adresse.
+		 */
+		retenues: RetenuesDeFacette;
 		/**
 		 * L'ORDRE DEMANDÉ. Les quatre valeurs sont celles des `option` du gel :
 		 * `modification`, `verification`, `consultations`, `alpha`. Absente,
@@ -81,22 +110,26 @@
 		 * inventée.
 		 */
 		modifications: Partial<Record<IdentifiantNote, number>>;
+		pagination: PaginationDeListe;
 	}
 
 	const {
 		vecteur,
-		notes: corpus,
+		notes,
 		univers = [],
 		domaines,
 		compte = null,
-		retenues = undefined,
+		total,
+		nombre,
+		facettes,
+		retenues,
 		tri = undefined,
-		modifications
+		modifications,
+		pagination
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const vide = $derived(reglage['etat'] === 'vide');
-	const arrivee = $derived(String(reglage['arr'] ?? 'tout'));
 
 	/** AUCUN DOMAINE — l'état vide, écrit plutôt que subi : un tableau vide rendait
 	    `domaines[0].nom` et sortait en 500. */
@@ -115,141 +148,20 @@
 	 */
 	const railCourant = $derived([courant.nom]);
 
-	const base = $derived(vide ? [] : corpus.filter((n) => n.domaine === courant.nom));
-
-	/* LES FACETTES — le calque du moteur du gel, réduit à ce qu'un rendu d'état
-	   demande. Les trois règles qui décident du rendu sont reprises à la lettre :
-	     1. le compte affiché en regard d'une valeur est le nombre de résultats
-	        obtenus SI cette valeur était retenue, les autres facettes restant
-	        appliquées ;
-	     2. tri par compte décroissant, puis alphabétique français ;
-	     3. une valeur retenue mais absente du compte est ajoutée en queue et
-	        s'affiche en retrait (`data-vide="oui"`) plutôt que de disparaître — sa
-	        disparition ferait croire à un défaut d'affichage. */
-
-	interface DefinitionDeFacette {
-		readonly id: string;
-		readonly nom: string;
-		readonly cle: (n: Note) => readonly string[];
-		readonly prefixe?: string;
-	}
-
-	/** Les six facettes du brief. Ni univers ni domaine : on est déjà dans un domaine. */
-	const FACETTES: readonly DefinitionDeFacette[] = [
-		{ id: 'type', nom: 'Type', cle: (n) => [n.type] },
-		{
-			id: 'fraicheur',
-			nom: 'Fraîcheur',
-			cle: (n) => [{ frais: 'Frais', vieil: 'Vieillissant', obs: 'Obsolète probable' }[n.fraicheur]]
-		},
-		{ id: 'statut', nom: 'Statut', cle: (n) => [n.brouillon ? 'Brouillon' : 'Publiée'] },
-		{ id: 'dossier', nom: 'Dossier', cle: (n) => [n.dossier] },
-		{ id: 'auteur', nom: 'Auteur', cle: (n) => [n.auteur] },
-		{ id: 'etiquette', nom: 'Étiquette', cle: (n) => n.etiquettes, prefixe: '#' }
-	];
-
 	/**
-	 * LES VALEURS RETENUES À L'ARRIVÉE — le gel les pose lui-même : « arrivée depuis
-	 * un segment de barre de fraîcheur ou un indicateur de l'accueil : la liste
-	 * s'ouvre déjà filtrée, et le filtre est visible et retirable comme n'importe
-	 * quel autre » (`V-12:2303`). Ce n'est pas un pré-réglage de maquette.
+	 * LES PASTILLES DE FILTRE ACTIF — l'ordre des menus, puis celui de l'adresse.
+	 * Elles se lisent sur les valeurs RETENUES et non sur les facettes rendues : une
+	 * valeur retenue dont le compte est nul reste retirable, et l'ordre des menus n'est
+	 * pas celui des comptes.
 	 */
-	const choisis = $derived<Record<string, readonly string[]>>(
-		retenues ??
-			(arrivee === 'obsolete'
-				? { fraicheur: ['Obsolète probable'] }
-				: arrivee === 'brouillon'
-					? { statut: ['Brouillon'] }
-					: {})
-	);
-
-	/** Un résultat passe chaque facette ayant au moins une valeur retenue ; à
-	 *  l'intérieur d'une facette, les valeurs sont en « ou ». */
-	function passe(n: Note, saufFacette?: string): boolean {
-		return FACETTES.every((f) => {
-			if (f.id === saufFacette) return true;
-			const c = choisis[f.id];
-			if (!c || !c.length) return true;
-			const valeurs = f.cle(n);
-			return c.some((v) => valeurs.includes(v));
-		});
-	}
-
-	interface ValeurDeFacette {
-		readonly valeur: string;
-		readonly compte: number;
-		readonly retenue: boolean;
-	}
-
-	interface FacetteRendue {
-		readonly id: string;
-		readonly nom: string;
-		readonly prefixe: string;
-		readonly retenues: number;
-		readonly valeurs: readonly ValeurDeFacette[];
-	}
-
-	function facetteRendue(f: DefinitionDeFacette): FacetteRendue {
-		const sansCelleCi = base.filter((n) => passe(n, f.id));
-		const comptes: Record<string, number> = {};
-		for (const n of sansCelleCi) {
-			for (const v of f.cle(n)) if (v) comptes[v] = (comptes[v] ?? 0) + 1;
-		}
-		const ordonnees = Object.keys(comptes).sort(
-			(a, b) => (comptes[b] ?? 0) - (comptes[a] ?? 0) || a.localeCompare(b, 'fr')
-		);
-		const retenues = choisis[f.id] ?? [];
-		for (const v of retenues) if (!ordonnees.includes(v)) ordonnees.push(v);
-		return {
-			id: f.id,
-			nom: f.nom,
-			prefixe: f.prefixe ?? '',
-			retenues: retenues.length,
-			valeurs: ordonnees.map((valeur) => ({
-				valeur,
-				compte: comptes[valeur] ?? 0,
-				retenue: retenues.includes(valeur)
-			}))
-		};
-	}
-
-	const facettes = $derived(FACETTES.map(facetteRendue).filter((f) => f.valeurs.length > 0));
-
 	const filtresActifs = $derived(
-		FACETTES.flatMap((f) =>
-			(choisis[f.id] ?? []).map((valeur) => ({
+		FACETTES_DE_NOTE.flatMap((f) =>
+			(retenues[f.id] ?? []).map((valeur) => ({
 				nom: f.nom,
 				valeur,
-				etiquette: (f.prefixe ?? '') + valeur
+				etiquette: f.prefixe + valeur
 			}))
 		)
-	);
-
-	/* TRI — le réglage par défaut du gel, et lui seul : `<select id="tri">` n'a pas
-	   d'option `selected`, donc sa valeur au chargement est la première. */
-	function ancienneteDeModification(n: Note): number {
-		return modifications[n.id] ?? 999;
-	}
-
-	/**
-	 * L'ORDRE DEMANDÉ — les quatre que le gel offre, et pas un de plus. Les
-	 * comparaisons sont celles de `mockups/V-12-liste-notes.html:2117-2124` : trier
-	 * par ancienneté croissante, c'est trier par date décroissante. Une valeur
-	 * inconnue retombe sur l'ordre du gel — un paramètre d'adresse ne se refuse pas,
-	 * il s'ignore.
-	 */
-	function comparer(a: Note, b: Note): number {
-		if (tri === 'alpha') return a.titre.localeCompare(b.titre, 'fr');
-		if (tri === 'consultations') return b.vues - a.vues;
-		if (tri === 'verification') return a.jours - b.jours;
-		return ancienneteDeModification(a) - ancienneteDeModification(b);
-	}
-
-	const filtrees = $derived(
-		base
-			.filter((n) => passe(n))
-			.slice()
-			.sort(comparer)
 	);
 
 	function nb(x: number): string {
@@ -257,9 +169,7 @@
 	}
 
 	const compteur = $derived(
-		filtrees.length === base.length
-			? ` ${accord(base.length, 'note')}`
-			: ` sur ${nb(base.length)} ${accord(base.length, 'note')}`
+		nombre === total ? ` ${accord(total, 'note')}` : ` sur ${nb(total)} ${accord(total, 'note')}`
 	);
 
 	/** L'ancienneté de modification en clair — `window.modifJours` du gel. */
@@ -315,7 +225,7 @@
 	donnees={{ 'data-filtres': 'ferme', 'data-etat': vide ? 'vide' : undefined }}
 	{univers}
 	{domaines}
-	notes={corpus}
+	{notes}
 	compte={compte ?? COMPTE_VIDE}
 	version=""
 >
@@ -330,7 +240,7 @@
 			</div>
 			<div style="display:flex;align-items:center;gap:var(--e-3);flex-wrap:wrap">
 				<!-- prettier-ignore -->
-				<span class="tete__compteur" id="compteur">{#if base.length}<b>{nb(filtrees.length)}</b>{compteur}{/if}</span>
+				<span class="tete__compteur" id="compteur">{#if total}<b>{nb(nombre)}</b>{compteur}{/if}</span>
 				<button class="btn btn--principal si-ecriture" id="creer">
 					<svg
 						width="14"
@@ -428,7 +338,7 @@
 		</div>
 
 		<div class="liste" id="liste" data-densite="confort">
-			{#if !base.length}
+			{#if !total}
 				<div class="vide-liste">
 					<h2>Ce domaine ne contient aucune note</h2>
 					<p>
@@ -440,12 +350,12 @@
 						<button class="btn si-ecriture">Créer la première note</button>
 					</div>
 				</div>
-			{:else if !filtrees.length}
+			{:else if !nombre}
 				<div class="vide-liste">
 					<h2>Aucune note ne correspond à ces filtres</h2>
 					<p>
 						{'Le domaine contient ' +
-							nb(base.length) +
+							nb(total) +
 							' notes, mais aucune ne réunit toutes les conditions retenues. Retirez un filtre pour élargir.'}
 					</p>
 					<div class="vide-liste__actions">
@@ -453,8 +363,29 @@
 					</div>
 				</div>
 			{:else}
-				{#each filtrees as n (n.id)}{@render ligneCarte(n)}{/each}
+				{#each notes as n (n.id)}{@render ligneCarte(n)}{/each}
 			{/if}
 		</div>
+
+		<!--
+			LA PAGINATION — la liste rendait TOUTES les notes du domaine, et le
+			chargeur les lisait toutes pour cela. Elle ne se rend que lorsqu'il y a
+			plus d'une page : un domaine qui tient sur une page est exactement l'écran
+			d'avant. LES DEUX ADRESSES VIENNENT DU CHARGEUR, seul à connaître l'adresse
+			demandée — facettes et ordre compris.
+		-->
+		{#if pagination.pages > 1}
+			<nav class="pagination" aria-label="Pages de la liste">
+				{#if pagination.precedente}
+					<a class="btn" href={pagination.precedente} rel="prev">Page précédente</a>
+				{/if}
+				<span class="pagination__etat"
+					>{'Page ' + nb(pagination.page) + ' sur ' + nb(pagination.pages)}</span
+				>
+				{#if pagination.suivante}
+					<a class="btn" href={pagination.suivante} rel="next">Page suivante</a>
+				{/if}
+			</nav>
+		{/if}
 	{/snippet}
 </Coquille>

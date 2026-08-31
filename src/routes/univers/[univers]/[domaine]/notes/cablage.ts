@@ -76,10 +76,12 @@ export function cablerLaListeDeNotes(
 		}
 
 		/* 3. RÉINITIALISER LES FILTRES — la même adresse, ses facettes retirées.
-		   `tri` survit : ce n'est pas un filtre, et le gel ne le remet pas. */
+		   `tri` survit : ce n'est pas un filtre, et le gel ne le remet pas. La PAGE,
+		   elle, ne survit pas : le résultat élargi n'a plus les mêmes pages. */
 		if (libelle(vide) === 'Réinitialiser les filtres') {
 			const adresse = new URL(document.location.href);
 			for (const cle of options.facettes) adresse.searchParams.delete(cle);
+			adresse.searchParams.delete('page');
 			evenement.preventDefault();
 			aller(adresse);
 			return;
