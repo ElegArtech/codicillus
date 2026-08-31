@@ -1,42 +1,19 @@
 /**
- * LES COMMANDES DES TROIS GRAPHES — zoom, recentrage, isolement, sélection.
+ * LES COMMANDES DES TROIS GRAPHES — zoom, recentrage, isolement, sélection. V-19,
+ * V-20 et V-21 partagent les mêmes outils, et le gel les écrit trois fois.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI CE MODULE EXISTE, ET POURQUOI ICI
+ * Il écrit `transform` sur `g#racine` et bascule les attributs de données que les
+ * feuilles GELÉES lisent (`data-focus`, `data-actif`, `data-choisi`, `data-isole`,
+ * `data-type-visible`, `data-criticite`, `data-ouvert`). IL N'ÉCRIT AUCUNE RÈGLE DE
+ * STYLE, ne pose aucune classe absente du gel, et ne crée de nœud qu'à un seul
+ * endroit — `#rech-liste`, que le gel laisse VIDE au balisage et remplit lui-même
+ * (`V-19:2945-2963`).
  *
- * V-19, V-20 et V-21 dessinent trois graphes différents et partagent EXACTEMENT
- * les mêmes outils : le trio `#zoom-plus` / `#zoom-moins` / `#ajuster` posé dans
- * `div.outils-graphe`, et la même transformation sur `g#racine`. Le gel les
- * écrit trois fois — `V-19:2860`, et son calque dans les deux autres —, et les
- * recopier dans trois câblages de route ferait diverger trois copies d'une
- * arithmétique de quatre lignes.
- *
- * Il vit sous `$lib/graphe/` parce que c'est là que vit déjà `cartographie.ts`,
- * le socle commun des trois vues. Ce module en est le pendant côté DOM : l'un
- * calcule le graphe, l'autre commande sa vue.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QU'IL FAIT SUR LE DOCUMENT VIVANT, ET CE QU'IL NE FAIT PAS
- *
- * Il écrit `transform` sur `g#racine` — l'attribut que le gel y pose déjà,
- * `transform="translate(0,0) scale(1)"` — et bascule des attributs de données
- * que les feuilles GELÉES lisent : `data-focus`, `data-actif`, `data-choisi`,
- * `data-isole`, `data-type-visible`, `data-criticite`, `data-ouvert`.
- *
- * IL N'ÉCRIT AUCUNE RÈGLE DE STYLE, ne pose aucune classe absente du gel, et ne
- * crée de nœud qu'à un seul endroit — la liste de suggestions de la recherche
- * dans le graphe, `#rech-liste`, que le gel laisse VIDE au balisage et remplit
- * lui-même en script (`V-19:2945-2963`). Les nœuds créés y sont ceux du gel,
- * classe pour classe.
- *
- * LES POSITIONS SONT RELUES SUR LE DOM, jamais recalculées. La disposition est
- * décidée par la vue — parcours déterministe, `disposer()` du socle commun — et
- * chaque `g.noeud` porte déjà sa place dans son `transform`. La recalculer ici
- * ferait une seconde disposition, qui finirait par diverger de celle qui est
- * dessinée (`P-35`).
+ * LES POSITIONS SONT RELUES SUR LE DOM, jamais recalculées : chaque `g.noeud` porte
+ * déjà sa place dans son `transform`, et la recalculer ferait une seconde
+ * disposition, qui divergerait de celle qui est dessinée (`P-35`).
  */
 
-/** Ce qu'un câblage rend : de quoi le défaire. */
 export type Debranchement = () => void;
 
 /** Les bornes de zoom du gel — `V-19:2921-2924`. */
@@ -72,7 +49,6 @@ export class Attaches {
 	}
 }
 
-/** La vue courante du graphe — translation et grossissement. */
 interface Vue {
 	x: number;
 	y: number;
@@ -85,17 +61,12 @@ export interface CommandeDeVue {
 	readonly reduire: () => void;
 	/** `ajuster()` du gel : la vue revient à l'origine, sans grossissement. */
 	readonly ajuster: () => void;
-	/** Centre la vue sur un point du repère du dessin. */
 	readonly centrerSur: (x: number, y: number) => void;
 }
 
 /**
- * LE ZOOM ET LE RECENTRAGE — `V-19:2860-2864` et `:2920-2927`, transcrits.
- *
- * Les trois boutons du gel portent les mêmes identifiants dans les trois vues,
- * et `#recentrer` de V-19 est le DOUBLON déclaré d'`#ajuster` : le gel accroche
- * la même fonction aux deux (`V-19:2926-2927`). Le produit fait de même — un
- * seul chemin, deux déclencheurs.
+ * LE ZOOM ET LE RECENTRAGE — `V-19:2860-2864` et `:2920-2927`. `#recentrer` de V-19
+ * est le DOUBLON déclaré d'`#ajuster` : le gel accroche la même fonction aux deux.
  */
 export function cablerLaVue(racine: ParentNode, attaches: Attaches): CommandeDeVue {
 	const cible = racine.querySelector<SVGGElement>('#racine');

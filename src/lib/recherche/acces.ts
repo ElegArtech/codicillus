@@ -28,13 +28,11 @@ import { moteurDeRecherche } from './moteur';
 
 let client: Meilisearch | null = null;
 
-/** Le client du moteur, ouvert au premier besoin. */
 export function moteurPartage(): Meilisearch {
 	if (client === null) client = moteurDeRecherche(env);
 	return client;
 }
 
-/** Oublie le client. Employé par les épreuves ; le serveur garde le sien. */
 export function fermerLeMoteurPartage(): void {
 	client = null;
 }

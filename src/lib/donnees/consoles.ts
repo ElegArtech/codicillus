@@ -1,71 +1,16 @@
 /**
- * LA CONSOLE — LA RÉSOLUTION D'UNE ADRESSE D'ADMINISTRATION, DROITS COMPRIS.
+ * La console — la résolution d'une adresse d'administration, droits compris. C'est le seul
+ * point où les onze adresses de `/console/…` et `/bibliotheque` deviennent une ressource,
+ * ou rien. `docs/routes.md:167` : « toutes ces routes exigent le rôle administrateur. Un
+ * utilisateur non administrateur reçoit 404 V-26, pas un refus. »
  *
- * Ce module est le seul point où les onze adresses réservées à
- * l'administrateur deviennent une ressource, ou rien :
+ * AUCUNE SECONDE RÈGLE DE DROIT N'EST ÉCRITE ICI, ET SURTOUT PAS `RG-DRO-03` :
+ * `accesALaConsole()` appelle `perimetreDeLecture()` et lit son verdict, `tout` étant
+ * réservé à l'administrateur. Le prédicat est EMPRUNTÉ, jamais redit.
  *
- *   /console/univers              V-27      /console/configuration   V-33
- *   /console/domaines             V-28      /console/analytique      V-34
- *   /console/types-de-fiches      V-29      /console/imports         V-35
- *   /console/types-de-relations   V-30      /console/exports         V-36
- *   /console/templates            V-31      /bibliotheque            V-41
- *   /console/comptes              V-32
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE LOT FERME LA SECONDE FUITE MESURÉE, ET IL FAUT DIRE LAQUELLE
- *
- * `ECART-047` É-1, reproduit par l'orchestrateur sur le produit construit le
- * 20 août : `/console/univers` servait **30 315 octets à n'importe quel
- * connecté** — contributeur sans droit, lecteur, rédacteur, gestionnaire. La
- * route avait été montée par un lot de LIAISON, dont le périmètre excluait
- * explicitement le chargeur et la garde (`T-070` : « pas de chargeur, pas de
- * garde de droit, pas d'authentification »). Personne n'héritait de la garde.
- *
- * `docs/routes.md:167` en donne le motif, et il est double : « Toutes ces
- * routes exigent le rôle administrateur. Un utilisateur non administrateur
- * reçoit 404 V-26, pas un refus : le motif commun du brief impose que la
- * console n'apparaisse pas dans la navigation des autres profils, et RG-ACC-04
- * impose que l'accès direct ne l'apprenne pas davantage. » L'entrée n'est pas
- * rendue (`P-09`) ET l'adresse construite ne l'apprend pas (`RG-ACC-04`).
- *
- * ═════════════════════════════════════════════════════════════════════════
- * AUCUNE SECONDE RÈGLE DE DROIT N'EST ÉCRITE ICI — ET SURTOUT PAS RG-DRO-03
- *
- * La tentation était d'écrire, sur chacune des onze routes, une comparaison du
- * rôle porté par `Identite`. Elle est refusée : `RG-DRO-03` — « l'administrateur
- * contourne tous les droits » — est déjà écrite, une fois, dans
- * `src/lib/droits/resolution.ts`, et une seconde écriture aurait toutes les
- * propriétés d'une définition concurrente. C'est la faute que `P-01` nomme pour
- * la fraîcheur, transposée aux droits.
- *
- * `accesALaConsole()` appelle donc `perimetreDeLecture()` et lit son verdict :
- * `resolution.ts` déclare en propres termes que « `tout` est réservé à
- * l'administrateur (`RG-DRO-03`) », et `PERIMETRE_TOTAL` en est la valeur
- * unique. Le prédicat « cet appelant est-il administrateur ? » est donc
- * EMPRUNTÉ, jamais redit — si `RG-DRO-03` changeait, il changerait ici sans
- * qu'on y touche.
- *
- * L'index passé est VIDE, et c'est exact : la question ne porte sur aucun
- * dossier. Un index vide rend un périmètre vide pour tout le monde SAUF pour
- * l'administrateur, dont le périmètre est total sans lire la table — c'est la
- * première branche de `perimetreDeLecture()`. `consoles.test.ts` éprouve les
- * quatre rôles ET l'anonyme sur ce point, dans les deux polarités (`P-5`).
- *
- * ═════════════════════════════════════════════════════════════════════════
- * REFUS ET INEXISTENCE SORTENT PAR LE MÊME `return` — ADR-007
- *
- * L'unique issue d'échec de ce module rend `INTROUVABLE`, LE MÊME OBJET gelé de
- * `resolution.ts`. Il n'existe ici ni variante « interdit », ni champ
- * « raison », ni code d'erreur : l'appelant n'a RIEN à quoi se raccrocher pour
- * distinguer un refus d'une inexistence, et le chargeur qui l'appelle n'a qu'un
- * `error(404, MESSAGE_INTROUVABLE)` sans message.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * ET LA FRAÎCHEUR NON PLUS (P-01)
- *
- * Les seuils entrent par `contexteDeRequete()` — `lireSeuils()` de `T-030` —,
- * et le niveau est calculé par `lireNotes()`, qui appelle `niveauFraicheur()`.
- * Aucun seuil, aucun barème, aucun libellé n'est écrit ici.
+ * L'unique issue d'échec rend `INTROUVABLE`, LE MÊME OBJET gelé de `resolution.ts`
+ * (`ADR-007`). Les seuils entrent par `contexteDeRequete()` et le niveau est calculé par
+ * `lireNotes()` : aucun barème, aucun libellé n'est écrit ici (`P-01`).
  */
 import type { Base } from '../base/acces';
 import {
@@ -108,99 +53,47 @@ import type {
 } from '../../../seeds/corpus';
 
 /**
- * L'INSTANT ET LES SEUILS D'UNE REQUÊTE, réémis tels quels.
- *
- * `contexteDeRequete()` est écrit une fois, dans `src/lib/donnees/signets.ts`,
- * et rien n'y est propre aux signets : il lit l'horloge UNE FOIS par requête —
- * pour que deux notes de la même page ne soient pas datées de deux instants —
- * et les seuils de fraîcheur par `lireSeuils()` de `T-030` (`P-01`). Le
- * réémettre évite aux onze chargeurs de console d'importer un module dont le
- * nom ne dit rien de ce qu'ils lui demandent ; en écrire un second serait une
- * seconde lecture de l'horloge et une seconde source de seuils.
+ * L'instant et les seuils d'une requête, réémis tels quels. `contexteDeRequete()` lit
+ * l'horloge UNE FOIS par requête — pour que deux notes de la même page ne soient pas
+ * datées de deux instants — et les seuils par `lireSeuils()`.
  */
 export { contexteDeRequete };
 
-/* ═══════════════════════════════════════════════════ L'accès ═══════════ */
-
 /**
- * L'index vide — aucun dossier, aucun droit explicite.
- *
- * Il est construit une fois : `indexerLesDroits([], [])` rend deux tables vides
- * et n'a aucun état. La question posée à `perimetreDeLecture()` ne porte sur
- * aucun dossier, et un index peuplé changerait le périmètre d'un NON-
- * administrateur sans jamais changer celui d'un administrateur — donc sans
- * jamais changer la réponse. Le lire vide est le moyen le plus court de ne pas
- * dépendre de l'arborescence pour une décision qui n'en dépend pas.
+ * L'index vide — aucun dossier, aucun droit explicite. La question posée à
+ * `perimetreDeLecture()` ne porte sur aucun dossier, et un index peuplé
+ * changerait le périmètre d'un NON-administrateur sans jamais changer la réponse.
  */
 const SANS_DOSSIER: IndexDesDroits = indexerLesDroits([], []);
 
 /**
- * L'appelant a-t-il accès à la console ?
- *
- * `docs/routes.md:167` : « Toutes ces routes exigent le rôle administrateur. »
- * Le prédicat est emprunté à `resolution.ts` — voir l'en-tête : `tout` est
- * réservé à l'administrateur par `RG-DRO-03`, et c'est cette propriété qu'on
- * lit, non le rôle porté par l'identité.
- *
- * L'anonyme rend `false` lui aussi, et ce n'est pas redondant avec la
- * redirection de `src/lib/auth/garde.ts` : cette fonction ne sait pas d'où
- * l'appel vient, et une garde qui ne tiendrait que par une autre garde n'est
- * pas une garde. `ARB-052` fait rediriger l'anonyme AVANT d'arriver ici ; si un
- * jour cette redirection tombait, la console resterait fermée.
+ * L'appelant a-t-il accès à la console ? Le prédicat est emprunté à `resolution.ts` :
+ * `tout` est réservé à l'administrateur par `RG-DRO-03`, et c'est cette propriété qu'on
+ * lit, non le rôle porté par l'identité. L'anonyme rend `false` lui aussi, et ce n'est pas
+ * redondant avec la redirection de `../auth/garde.ts` : une garde qui ne tiendrait que par
+ * une autre garde n'en est pas une.
  */
 export function accesALaConsole(identite: Identite): boolean {
 	return perimetreDeLecture(identite, SANS_DOSSIER).tout;
 }
 
-/* ═══════════════════════════════ Ce que la base ne porte pas — P-02 ════ */
-
 /**
- * Une donnée qu'un écran de console affiche et que la base ne porte pas.
- *
- * Le type est celui de `DonneeSansContrepartie` d'`accueil.ts`, et c'est
- * délibéré : `T-030` a posé le motif — la lacune est **comptée et éprouvable**,
- * jamais seulement racontée. Il n'est pas réutilisé par import parce que
- * `accueil.ts` appartient à `T-030` et que sa liste est celle de l'accueil ;
- * deux listes distinctes valent mieux qu'une liste qu'on élargit et dont plus
- * personne ne sait ce qu'elle recense.
+ * Une donnée qu'un écran de console affiche et que la base ne porte pas. Même forme que
+ * `DonneeSansContrepartie` d'`accueil.ts`, sans être importée : deux listes distinctes
+ * valent mieux qu'une liste qu'on élargit et dont plus personne ne sait ce qu'elle recense.
  */
 export interface MesureSansContrepartie {
-	/** Le nom de la donnée, tel que le jeu de semence l'expose. */
 	readonly donnee: string;
-	/** L'écran qui la montre. */
 	readonly vue: string;
-	/** Ce qu'on y lit à l'écran. */
 	readonly affichage: string;
-	/** Pourquoi la base ne peut pas la rendre. */
 	readonly motif: string;
 }
 
 /**
- * LES DONNÉES DE CONSOLE QUE LA BASE NE PORTE PAS — relevées sur les vingt et
- * une tables de `src/lib/base/schema.ts`, jamais supposées.
- *
- * Elles ne recoupent pas les lacunes de `pnpm verif:donnees` : celles-là
- * portent sur les treize formes que la couche de lecture rend, celles-ci sur
- * des tables de MESURE et de JOURNAL du jeu de semence qui n'ont aucune table
- * en face. Aucune n'est comblable par une ligne de code — seule une migration
- * les refermerait, et elle appartient aux lots qui portent ces modules.
- *
- * `consoles.test.ts` en fait une assertion, de sorte qu'une lacune refermée par
- * une migration future fasse rougir le test au lieu de laisser un commentaire
- * périmé derrière elle.
- *
- * DEUX ENTRÉES SONT PARTIES, ET C'EST LE CAS QUE CE RECENSEMENT ANNONÇAIT.
- * `MESURES_7J` et `MESURES_7J_PREC` affirmaient qu'« aucune table ne porte de
- * consultation horodatée » : la migration `006` en a monté une, elle se remplit,
- * et `console/analytique/+page.server.ts` la lit pour les deux fenêtres. Le
- * recensement était donc FAUX — et un registre de lacunes qui ment dispense
- * d'aller voir, ce que l'entrée `V-36` reconnaît plus bas à ses dépens.
- *
- * L'ÉCRAN NE BOUGE PAS POUR AUTANT : `etatDesDonnees()` compte les entrées de
- * `V-34`, et il en reste trois — le journal de recherche, les demandes de
- * révision, le volume de modifications. Un seul indicateur réel ne fait pas un
- * tableau de bord, et la vue garde son état « Pas encore assez d'usage pour
- * conclure ».
+ * Les données de console que la base ne porte pas — relevées table par table, jamais
+ * supposées. Aucune n'est comblable par une ligne de code : seule une migration les
+ * refermerait. `consoles.test.ts` en fait une assertion, de sorte qu'une lacune refermée
+ * par une migration future fasse rougir le test au lieu de laisser un commentaire périmé.
  */
 export const MESURES_DE_CONSOLE_SANS_CONTREPARTIE: readonly MesureSansContrepartie[] = [
 	{
@@ -269,24 +162,12 @@ export const MESURES_DE_CONSOLE_SANS_CONTREPARTIE: readonly MesureSansContrepart
 ];
 
 /**
- * LE JOURNAL DES IMPORTS EST-IL ENREGISTRÉ QUELQUE PART ?
- *
- * V-35 affirme que « les rapports restent consultables indéfiniment » et que
- * « chaque lot conserve son rapport ». Aucune table ne les garde : l'entrée est
- * composée à chaque lot, écrite au journal d'application, et personne ne la
- * relit. L'écran servait donc un tableau VIDE sous ces deux phrases — un
- * lecteur y lisait « aucun import n'a eu lieu » là où la vérité est « rien
- * n'est conservé ».
- *
- * LE DRAPEAU EST DÉRIVÉ DU RECENSEMENT, JAMAIS ÉCRIT À LA MAIN — même geste
- * qu'`etatDesDonnees()` pour V-34 : le jour où une migration portera la table
- * des imports, retirer l'entrée `JOURNAL_IMPORTS` fera basculer l'écran, et
- * `consoles.test.ts` verra la bascule.
- *
- * CE QUE CE DRAPEAU NE FAIT PAS : tenir `RG-M12-09`. Ni le stockage de
- * l'entrée, ni sa reprise par le flux d'activité de l'accueil ne sont livrés —
- * les deux sont recensés ci-dessus. L'écran cesse de contredire la règle ; il
- * ne la remplit pas.
+ * Le journal des imports est-il enregistré quelque part ? V-35 affirme que « les rapports
+ * restent consultables indéfiniment », et aucune table ne les garde : l'écran servait un
+ * tableau VIDE sous cette phrase, où un lecteur lisait « aucun import n'a eu lieu » là où
+ * la vérité est « rien n'est conservé ». LE DRAPEAU EST DÉRIVÉ DU RECENSEMENT, JAMAIS
+ * ÉCRIT À LA MAIN. Il ne tient pas `RG-M12-09` pour autant : l'écran cesse de contredire
+ * la règle, il ne la remplit pas.
  */
 export function journalDImportsEnregistre(
 	manquantes: readonly MesureSansContrepartie[] = MESURES_DE_CONSOLE_SANS_CONTREPARTIE
@@ -294,39 +175,19 @@ export function journalDImportsEnregistre(
 	return !manquantes.some((m) => m.donnee === 'JOURNAL_IMPORTS');
 }
 
-/* ═══════════════════════════ L'état des données de l'analytique ════════ */
-
 /** Les deux positions de l'axe « Données » de la planche V-34. */
 export type EtatDesDonnees = 'completes' | 'insuffisantes';
 
 /**
- * L'ÉTAT DES DONNÉES DE V-34 — et c'est ici que `P-02` se joue.
+ * L'état des données de V-34 — et c'est ici que `P-02` se joue.
  *
- * V-34 porte DEUX états, et le gel les nomme : « Suffisantes » et
- * « Insuffisantes » (`verif/scenarios/V-34.json`). Le second n'est pas une page
- * d'erreur, c'est l'ÉTAT NEUTRE EXPLICITE que `RG-M01-01` exige : « Pas encore
- * assez d'usage pour conclure », suivi de la raison. Les deux blocs sont
- * toujours dans le document et la feuille en masque un (`V-34:1092-1093`) :
- * choisir la position, c'est choisir lequel s'affiche.
+ * V-34 porte DEUX états que le gel nomme, « Suffisantes » et « Insuffisantes ». Le second
+ * n'est pas une page d'erreur, c'est l'ÉTAT NEUTRE EXPLICITE que `RG-M01-01` exige. Les
+ * deux blocs sont toujours dans le document et la feuille en masque un.
  *
- * Le produit n'a AUCUNE des cinq mesures que la section « Suffisantes »
- * calcule — le recensement ci-dessus le dit, table par table. Servir cette
- * section reviendrait à afficher des chiffres tirés du jeu de semence : la
- * valeur illustrative que `P-02` proscrit sans exception. Servir des zéros
- * serait pire — « 0 » et « indisponible » sont deux informations différentes,
- * et c'est le zéro muet que `RG-M01-01` vise.
- *
- * LA DÉCISION N'EST DONC PAS UNE INVENTION, C'EST UNE LECTURE : des deux
- * positions que le gel offre, le produit est dans celle qui ne dit rien de
- * faux. La même règle a servi à choisir un libellé de session dans
- * `src/hooks.server.ts`.
- *
- * LE PARAMÈTRE EXISTE POUR QUE LE CONTRÔLE AIT UN CAS D'ÉPREUVE — `P-26`.
- * Un prédicat qui rendrait toujours la même valeur serait inerte, et rien ne le
- * dirait : la fonction lit un recensement qu'on lui passe, et `consoles.test.ts`
- * l'exerce dans les DEUX polarités — recensement vide contre recensement réel.
- * Le jour où une migration porterait les cinq mesures, retirer leurs entrées du
- * recensement suffirait à faire basculer l'écran, et le test le verrait.
+ * Le produit n'a aucune des mesures que la section « Suffisantes » calcule. Servir cette
+ * section afficherait des chiffres tirés du jeu de semence ; servir des zéros serait pire.
+ * LE PARAMÈTRE EXISTE POUR QUE LE CONTRÔLE AIT UN CAS D'ÉPREUVE (`P-26`).
  */
 export function etatDesDonnees(
 	manquantes: readonly MesureSansContrepartie[] = MESURES_DE_CONSOLE_SANS_CONTREPARTIE,
@@ -336,11 +197,8 @@ export function etatDesDonnees(
 }
 
 /**
- * LE VECTEUR DE V-34 — un seul réglage, `don`, et c'est celui de sa planche.
- *
- * Le nom est celui de `verif/scenarios/V-34.json`. Aucun autre réglage n'est
- * posé : la planche n'en a pas d'autre, et en inventer un serait un
- * comblement.
+ * Le vecteur de V-34 — un seul réglage, `don`, celui de sa planche. En inventer
+ * un second serait un comblement.
  */
 export function vecteurDeV34(
 	manquantes: readonly MesureSansContrepartie[] = MESURES_DE_CONSOLE_SANS_CONTREPARTIE
@@ -348,41 +206,16 @@ export function vecteurDeV34(
 	return { don: etatDesDonnees(manquantes) };
 }
 
-/* ══════════════════════════════════════ Le catalogue de la console ═════ */
-
 /**
- * L'UTILISATEUR COURANT, LU EN BASE — et ce qu'il remplace.
+ * L'utilisateur courant, lu en base. Les onze vues passaient `MOI` du jeu de semence à
+ * leur coquille : une console qui affiche le nom de quelqu'un d'autre est une valeur
+ * illustrative au sens de `P-02`, sur la donnée la plus visible.
  *
- * Les onze vues passaient `MOI` du jeu de semence à leur coquille : Karim
- * Belhadj, Référent, Infrastructure, quel que soit le compte connecté. Une
- * console d'administration qui affiche le nom de quelqu'un d'autre est une
- * valeur illustrative au sens de `P-02`, et sur la donnée la plus visible de la
- * page.
- *
- * TROIS CHAMPS SONT LUS, DEUX SONT DÉRIVÉS, ET LA DISTINCTION IMPORTE :
- *
- *   `nom` `role` `domaine`  LUS. `comptes.nom`, `comptes.role` traduit par
- *                           `ROLE_DEPUIS_ENUM` — la table de `lecture.ts`,
- *                           empruntée et jamais redite —, et le nom du domaine
- *                           joint par `comptes.domaine_id`.
- *   `prenom` `initiales`    DÉRIVÉS du nom, et il n'y a pas de colonne pour eux.
- *                           La dérivation est MÉCANIQUE — premier mot, puis
- *                           première lettre de chaque mot — et c'est exactement
- *                           ce que le jeu de semence porte pour Karim Belhadj :
- *                           `prenom: 'Karim'`, `initiales: 'KB'`. On retrouve la
- *                           valeur du gel en l'appliquant à sa donnée ; ce n'est
- *                           donc pas une règle inventée, c'est la règle que la
- *                           semence applique déjà, écrite là où elle manquait.
- *
- * LE RATTACHEMENT VIDE — `RG-M14-04`, `ON DELETE SET NULL` : un compte dont le
- * domaine a été supprimé n'en a plus. `UtilisateurCourant.domaine` est déclaré
- * requis par `seeds/corpus.ts` ; la chaîne vide est ici le seul rendu possible,
- * et la coquille n'affiche alors aucun rattachement. Fabriquer un nom de
- * domaine serait pire.
- *
- * `null` QUAND L'IDENTITÉ EST ANONYME OU QUE LE COMPTE A DISPARU. L'appelant
- * retombe alors sur le défaut de la vue ; mais aucun appelant de ce module n'est
- * dans ce cas — `resoudreLaConsole()` a déjà refusé l'anonyme.
+ * TROIS CHAMPS SONT LUS — `nom`, `role` (traduit par `ROLE_DEPUIS_ENUM`, empruntée et
+ * jamais redite) et `domaine`. DEUX SONT DÉRIVÉS du nom, faute de colonne : premier mot,
+ * puis première lettre de chaque mot. LE RATTACHEMENT VIDE — `RG-M14-04`, `ON DELETE SET
+ * NULL` : la chaîne vide est le seul rendu possible, fabriquer un nom serait pire. `null`
+ * quand l'identité est anonyme ou que le compte a disparu.
  */
 export async function lireLUtilisateurCourant(
 	base: Base,
@@ -403,10 +236,9 @@ export async function lireLUtilisateurCourant(
 	if (role === undefined) throw new Error(`rôle inconnu en base : ${ligne.role}`);
 
 	const mots = ligne.nom.split(/\s+/).filter((m) => m !== '');
-	/* Les quatre types du jeu — `NomDAuteur`, `NomDeDomaine`, `RoleDeCompte` —
-	   sont des unions de littéraux tirées des maquettes. Une valeur venue de la
-	   base ne s'y range pas par inférence : c'est la même conversion que
-	   `lireDomaines()` et `lireComptes()` pratiquent, pour la même raison. */
+	/* Les types du jeu sont des unions de littéraux tirées des maquettes : une
+	   valeur venue de la base ne s'y range pas par inférence. Même conversion que
+	   `lireDomaines()` et `lireComptes()`. */
 	return {
 		prenom: mots[0] ?? ligne.nom,
 		nom: ligne.nom,
@@ -417,18 +249,10 @@ export async function lireLUtilisateurCourant(
 }
 
 /**
- * LE DÉTAIL DE CHAQUE DOMAINE — description et modules activés, par nom.
- *
- * C'est la forme que `V-28` attend (`DETAIL_DOMAINES` du jeu), et elle est
- * COMPOSÉE de deux lectures que `lecture.ts` porte déjà, jamais réécrite :
- * `lireDescriptionsDeDomaine()` et `lireModulesParDomaine()`.
- *
- * `P-04` SE JOUE ICI, ET IL EST DÉJÀ ÉPROUVÉ PAR LA DONNÉE. « Un module
- * désactivé disparaît de la navigation et des tableaux de bord du domaine » :
- * la liste rendue est celle des lignes de `modules_de_domaine`, donc des modules
- * RÉELLEMENT activés. Un domaine sans aucune ligne rend une liste vide, ce que
- * la vue sait montrer — c'est la polarité que `V-28` et `V-11` portent au gel
- * sur sept ensembles distincts.
+ * Le détail de chaque domaine — description et modules activés, par nom. Forme attendue
+ * par `V-28`, COMPOSÉE de deux lectures de `lecture.ts` et jamais réécrite. `P-04` se joue
+ * ici : la liste rendue est celle des lignes de `modules_de_domaine`, donc des modules
+ * RÉELLEMENT activés, et un domaine sans ligne rend une liste vide.
  */
 export async function lireLeDetailDesDomaines(
 	base: Base
@@ -446,24 +270,11 @@ export async function lireLeDetailDesDomaines(
 }
 
 /**
- * LES COMPTES DE `V-32`, complétés de leur dernière connexion.
- *
- * `lireComptes()` de `lecture.ts` rend huit champs sur dix et dit pourquoi il
- * en omet deux. `id` reste omis — la vue ne s'en sert pas, et `identifiant` est
- * la clé par laquelle les actions désignent un compte.
- *
- * `derniere` EST COMPLÉTÉ ICI, ET SOUS UNE FORME QUI N'INVENTE AUCUN SEUIL.
- * `src/lib/base/schema.ts` est explicite : la colonne porte l'INSTANT, « le gel
- * ne donne donc aucune règle de passage de l'instant vers le libellé », et
- * « l'inventer serait un comblement ». Le libellé relatif du gel — « aujourd'hui
- * à 08:41 » — n'est donc PAS reproduit.
- *
- * Restaient deux issues, et la case vide n'en est pas une : `P-02` exige qu'une
- * donnée indisponible s'affiche « comme telle », pas qu'elle s'efface. La date
- * est donc rendue au format court du dépôt — `dateCourteDInstant()`, celui-là
- * même qui rend `arrivee` —, et l'absence de connexion se dit par un mot.
- * Écart de FORME au gel, déclaré au rapport du lot : le fond est exact, la
- * forme relative attend l'arbitrage que le schéma appelle.
+ * Les comptes de `V-32`, complétés de leur dernière connexion. `derniere` est complété ici
+ * sous une forme qui n'invente aucun seuil : la colonne porte l'INSTANT, et « le gel ne
+ * donne aucune règle de passage de l'instant vers le libellé ». La case vide n'est pas une
+ * issue : `P-02` exige qu'une donnée indisponible s'affiche comme telle. La date est rendue
+ * au format court du dépôt. Écart de FORME au gel.
  */
 export const JAMAIS_CONNECTE = 'Jamais';
 
@@ -487,33 +298,19 @@ export async function lireLesComptesDeConsole(base: Base): Promise<readonly Comp
 }
 
 /**
- * LA DÉSIGNATION CANONIQUE D'UN DOMAINE, par son NOM D'AFFICHAGE.
+ * La désignation canonique d'un domaine, par son NOM D'AFFICHAGE.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI CETTE TABLE EXISTE, ET CE QU'ELLE A COÛTÉ DE NE PAS EXISTER
+ * Les gestes d'administration désignent un domaine par sa forme CANONIQUE — identifiant
+ * d'univers, puis identifiant de domaine — parce que `RG-STR-02` ne rend l'identifiant
+ * unique qu'au sein de son univers. Les VUES ne connaissent que des noms d'affichage :
+ * envoyer « Projets » là où le geste attend « projets » fait rendre `introuvable`.
  *
- * Les gestes d'administration désignent un domaine par sa forme CANONIQUE —
- * identifiant lisible d'univers, puis identifiant lisible de domaine
- * (`docs/routes.md` §2.2) — parce que `RG-STR-02` ne rend son identifiant unique
- * qu'au sein de son univers. `mesurerUnDomaine()` interroge donc
- * `univers.identifiant` et `domaines.identifiant`.
- *
- * Les VUES, elles, ne connaissent que des noms d'affichage : `interface Domaine`
- * du jeu de semence porte `{ nom, univers, couleur }` et pas un identifiant.
- * Envoyer « Projets » là où le geste attend « projets » fait rendre `introuvable`
- * à la mesure, donc `404` à l'action — mesuré sur la première tentative, et le
- * 404 ne dit rien de sa cause puisqu'il est le refus indiscernable d'`ADR-007`.
- *
- * LA TRADUCTION VIT ICI, ET NON DANS LA VUE. Une vue qui porterait les
- * identifiants de base cesserait d'être la transcription du gel ; une page qui
- * les devinerait par abaissement de casse inventerait une règle que rien ne
- * garantit — « Poste de travail » ne donne pas « poste-de-travail » par
- * mécanique évidente, et c'est la base qui sait.
+ * LA TRADUCTION VIT ICI, ET NON DANS LA VUE : une vue qui porterait les identifiants de
+ * base cesserait d'être la transcription du gel, et les deviner par abaissement de casse
+ * inventerait une règle que rien ne garantit.
  */
 export interface DesignationDeDomaine {
-	/** L'identifiant lisible de l'univers — premier segment de la forme canonique. */
 	readonly univers: string;
-	/** L'identifiant lisible du domaine — second segment. */
 	readonly domaine: string;
 }
 
@@ -537,13 +334,9 @@ export async function lireLesDesignationsDeDomaine(
 }
 
 /**
- * L'IDENTIFIANT LISIBLE D'UN UNIVERS, par son NOM D'AFFICHAGE.
- *
- * Même besoin que pour les domaines, et même cause : `supprimerUnUnivers()`
- * désigne par `univers.identifiant` — c'est la clé du segment d'adresse
- * `/univers/{univers}` (`docs/routes.md` §2.2) —, tandis que `interface Univers`
- * du jeu de semence ne porte que le nom. La correspondance est LUE, jamais
- * dérivée du nom.
+ * L'identifiant lisible d'un univers, par son NOM D'AFFICHAGE. Même besoin et
+ * même cause que pour les domaines ; la correspondance est LUE, jamais dérivée du
+ * nom.
  */
 export async function lireLesDesignationsDUnivers(base: Base): Promise<Record<string, string>> {
 	const lignes = await base
@@ -555,12 +348,9 @@ export async function lireLesDesignationsDUnivers(base: Base): Promise<Record<st
 }
 
 /**
- * L'IDENTIFIANT LISIBLE D'UN TYPE DE FICHE, par son NOM D'AFFICHAGE.
- *
- * `supprimerUnTypeDeFiche()` et `delesterUnTypeDeFiche()` désignent par
- * `types_de_fiche.identifiant` — « un libellé se renomme, un identifiant lisible
- * est stable », dit le chargeur de la route —, tandis que `V-29` ne connaît que
- * les clés de `TYPES_FICHE`, c'est-à-dire des noms. La correspondance est lue.
+ * L'identifiant lisible d'un type de fiche, par son NOM D'AFFICHAGE — « un
+ * libellé se renomme, un identifiant lisible est stable ». La correspondance est
+ * lue.
  */
 export async function lireLesDesignationsDeTypeDeFiche(
 	base: Base
@@ -573,20 +363,14 @@ export async function lireLesDesignationsDeTypeDeFiche(
 	return rendu;
 }
 
-/** Les univers et les domaines, dans la forme que la coquille attend. */
 export interface RangementDeConsole {
 	readonly univers: readonly Univers[];
 	readonly domaines: readonly Domaine[];
 }
 
 /**
- * LE RANGEMENT, lu une fois par requête.
- *
- * Les onze écrans le passent à leur coquille — c'est le rail de gauche —, et
- * trois d'entre eux s'en servent aussi pour leur contenu : `V-27` liste les
- * univers, `V-28` les domaines, `V-36` les domaines exportables. Une seule
- * lecture les sert tous, et les deux fonctions appelées sont celles de
- * `lecture.ts`.
+ * Le rangement, lu une fois par requête : c'est le rail de gauche des onze
+ * écrans, et trois d'entre eux s'en servent aussi pour leur contenu.
  */
 export async function lireLeRangement(base: Base): Promise<RangementDeConsole> {
 	const [tousLesUnivers, tousLesDomaines] = await Promise.all([
@@ -596,88 +380,40 @@ export async function lireLeRangement(base: Base): Promise<RangementDeConsole> {
 	return { univers: tousLesUnivers, domaines: tousLesDomaines };
 }
 
-/* ═══════════════════════════════════════════════════ La résolution ═════ */
-
-/** Ce qu'une adresse de console rapporte quand elle rapporte quelque chose. */
 export interface AccesALaConsole {
 	/**
-	 * LES NOTES, dans la forme que les onze vues déclarent en propriété.
-	 *
-	 * Le périmètre est TOTAL : l'appelant est administrateur, sans quoi il n'y a
-	 * pas de ressource. `lireNotes()` de `T-030` lit donc la table entière, et
-	 * c'est le seul cas du dépôt où cela n'entre pas en conflit avec `ADR-006` —
-	 * le filtre de périmètre d'un administrateur ne retire rien.
+	 * Les notes, dans la forme que les onze vues déclarent. Le périmètre est TOTAL —
+	 * l'appelant est administrateur, sans quoi il n'y a pas de ressource — et c'est le seul
+	 * cas du dépôt où lire la table entière n'entre pas en conflit avec `ADR-006`.
 	 */
 	readonly notes: readonly Note[];
 	/**
-	 * LE RANGEMENT ET L'UTILISATEUR — ce que les onze écrans passent tous à leur
-	 * coquille, et que trois d'entre eux affichent aussi dans leur contenu.
-	 *
-	 * LA RÉDACTION PRÉCÉDENTE DE CE COMMENTAIRE DISAIT L'INVERSE, ET ELLE ÉTAIT
-	 * FAUSSE. Elle affirmait que « les onze vues lisent leur catalogue au niveau
-	 * du MODULE `seeds/corpus.ts` » et qu'« aucun chargeur ne peut donc y
-	 * substituer la base sans toucher `src/vues/` ». Vérifié ligne à ligne :
-	 * `V-27:96-101`, `V-28`, `V-29`, `V-30`, `V-31`, `V-32`, `V-33`, `V-34` et
-	 * `CoquilleDeConsole.svelte:70-75` déclarent TOUS `univers?`, `domaines?`,
-	 * `compte?` et `instance?` en propriétés FACULTATIVES, dont le défaut — et le
-	 * défaut seulement — est la constante du jeu. L'import de module sert de
-	 * valeur par défaut, pas de source. Il n'y avait donc rien à toucher dans les
-	 * vues pour que la base entre : il fallait passer les propriétés.
-	 *
-	 * C'est `P-21` : la propriété du gel était affirmée, pas lue.
+	 * Le rangement, que les onze écrans passent à leur coquille. Les vues le déclarent en
+	 * propriété FACULTATIVE dont le défaut est la constante du jeu : l'import de module sert
+	 * de valeur par défaut, pas de source.
 	 */
 	readonly univers: readonly Univers[];
 	readonly domaines: readonly Domaine[];
 	/**
-	 * L'utilisateur connecté. JAMAIS `null` ici, et c'est la résolution qui
-	 * l'établit : une identité authentifiée dont la ligne de compte a disparu
-	 * n'est pas un administrateur sans nom, c'est une session caduque — elle
-	 * ressort par le même `INTROUVABLE` que le refus de droit, sans que rien ne
-	 * distingue les deux (`ADR-007`).
-	 *
-	 * Le type non nul n'est pas une commodité : il évite aux onze pages une
-	 * branche de rendu que rien n'exercerait, donc onze branches dont personne ne
-	 * saurait si elles marchent (`P-5`).
+	 * L'utilisateur connecté. JAMAIS `null` ici : une identité authentifiée dont la ligne de
+	 * compte a disparu est une session caduque, qui ressort par le même `INTROUVABLE` que le
+	 * refus de droit (`ADR-007`). Le type non nul évite aux onze pages une branche de rendu
+	 * que rien n'exercerait.
 	 */
 	readonly compte: UtilisateurCourant;
 	/**
-	 * LES SEPT COMPTEURS DE `aside.nav2`, LUS EN BASE.
-	 *
-	 * Ils venaient de `seeds/corpus.ts` par le catalogue de `sections.ts`, et
-	 * annonçaient donc « Univers (3) · Domaines (4) … » à une instance vide.
-	 * `$lib/console/effectifs.ts` porte le motif complet.
+	 * Les sept compteurs de `aside.nav2`, lus en base : ils venaient du jeu de
+	 * semence et annonçaient « Univers (3) · Domaines (4) » à une instance vide.
 	 */
 	readonly effectifs: EffectifsDeConsole;
 }
 
 /**
- * LE CHEMIN UNIQUE — `ADR-007`. Une raison de ne rien rapporter, un seul
- * `INTROUVABLE`, aucune trace de la raison dans la valeur rendue : l'appelant
- * n'est pas administrateur.
- *
- * Il n'y en a pas d'autre, et c'est une propriété des onze adresses : ce sont
- * des chemins FIXES, sans paramètre, qui ne désignent aucune ressource du
- * corpus. Rien n'y est à résoudre au-delà du droit — d'où la redirection de
- * l'anonyme décidée sur le préfixe par `garde.ts` (`ARB-052`), et d'où l'absence
- * ici de toute lecture d'identifiant.
- */
-/**
- * LES SEPT COMPTEURS DE LA NAVIGATION SECONDAIRE.
- *
- * SIX REQUÊTES, PAS SEPT. `imports` n'a AUCUNE TABLE — le journal d'imports du
- * gel n'a pas de nœud en base, et `sections.ts` le dit déjà de son côté :
- * « la maquette écrit `compte: function () { return 1; }` […] la valeur est
- * recopiée du gel ». Recopier 1 ici serait annoncer un import à une instance
- * qui n'en a jamais reçu ; la section est donc laissée hors de la table, et
- * `groupesAvecEffectifs()` la rend à zéro. C'est la seule valeur vraie.
- *
- * LES COMPTES SONT COMPTÉS ACTIFS, comme au gel — `COMPTES.filter((c) =>
- * c.actif).length` (`sections.ts`). Un compte désactivé reste une ligne ; il
- * n'est pas un utilisateur de l'instance.
- *
- * Les six lectures sont indépendantes et partent ensemble : ce sont six
- * `count(*)` sur des tables indexées, elles ne pèsent rien, et les mettre en
- * file coûterait six allers-retours pour rien.
+ * Les sept compteurs de la navigation secondaire — SIX REQUÊTES, PAS SEPT. `imports` n'a
+ * aucune table, et recopier le `1` du gel annoncerait un import à une instance qui n'en a
+ * jamais reçu : la section est laissée hors de la table, et `groupesAvecEffectifs()` la
+ * rend à zéro. LES COMPTES SONT COMPTÉS ACTIFS, comme au gel. Les six lectures partent
+ * ensemble : six `count(*)` sur des tables indexées.
  */
 export async function lireLesEffectifsDeConsole(base: Base): Promise<EffectifsDeConsole> {
 	const [u, d, f, r, t, c] = await Promise.all([
@@ -706,9 +442,8 @@ export async function resoudreLaConsole(
 ): Promise<Resolution<AccesALaConsole>> {
 	if (!accesALaConsole(identite)) return INTROUVABLE;
 
-	/* Les quatre lectures sont indépendantes : elles partent ensemble plutôt
-	   qu'en file, et l'instant de `contexte` est commun aux quatre — c'est ce
-	   que `contexteDeRequete()` garantit, une horloge lue une seule fois. */
+	/* Les quatre lectures sont indépendantes et partent ensemble ; l'instant de
+	   `contexte` leur est commun — une horloge lue une seule fois. */
 	const [notes, rangement, compte, effectifs] = await Promise.all([
 		lireNotes(base, contexte),
 		lireLeRangement(base),

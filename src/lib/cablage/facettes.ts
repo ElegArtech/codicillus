@@ -1,41 +1,26 @@
 /**
- * LE CÂBLAGE DES FACETTES — les menus de filtre que le gel dessine et qui
- * n'étaient reliés à rien.
+ * LE CÂBLAGE DES FACETTES — les menus de filtre que le gel dessine et qui n'étaient
+ * reliés à rien.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * L'ÉTAT DE FILTRAGE EST DANS L'ADRESSE, ET NULLE PART AILLEURS
+ * L'ÉTAT DE FILTRAGE EST DANS L'ADRESSE, ET NULLE PART AILLEURS. `RG-M02-06` l'exige
+ * pour la recherche, et il n'y a aucune raison que la liste des notes d'un domaine
+ * obéisse à une autre règle. Chaque valeur cochée ajoute un couple
+ * `{facette}={valeur}` ; à l'intérieur d'une facette les valeurs sont en OU (paramètre
+ * répété), entre facettes en ET.
  *
- * `RG-M02-06` l'exige pour la recherche — « état de recherche partageable par
- * l'adresse » — et il n'y a aucune raison que la liste des notes d'un domaine
- * obéisse à une autre règle : une liste filtrée qu'on ne peut pas envoyer à un
- * collègue n'est pas une liste filtrée, c'est un écran.
- *
- * Chaque valeur cochée ajoute un couple `{facette}={valeur}` à l'adresse ; à
- * l'intérieur d'une facette les valeurs sont en OU (paramètre répété), entre
- * facettes en ET — la sémantique que `docs/routes.md` §4.2 relève dans le gel.
- * Retirer une pastille retire un couple, « Tout effacer » les retire tous.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * AUCUN STYLE N'EST ÉCRIT
- *
- * Le gel ouvre un menu de facette par un attribut : `.fac-menu[data-ouvert="oui"]
- * .fac-menu__panneau { display: block }` (`V-12.css:387`). Ce module pose
- * l'attribut, et rien d'autre.
+ * AUCUN STYLE N'EST ÉCRIT : le gel ouvre un menu par un attribut
+ * (`.fac-menu[data-ouvert="oui"] …`, `V-12.css:387`). Ce module pose l'attribut, et
+ * rien d'autre.
  */
 
-/** Les six facettes du gel, dans l'ordre où il les déclare. */
 export interface DeclarationDeFacette {
-	/** La clé du paramètre d'adresse. */
 	readonly id: string;
-	/** Le libellé que le bouton du gel porte — c'est par lui qu'on le retrouve. */
 	readonly nom: string;
-	/** Le préfixe que le gel ajoute à la valeur affichée, s'il en ajoute un. */
 	readonly prefixe?: string;
 }
 
 export interface OptionsDesFacettes {
 	readonly facettes: readonly DeclarationDeFacette[];
-	/** Les paramètres d'adresse qui ne sont PAS des facettes et qu'on préserve. */
 	readonly preserves?: readonly string[];
 }
 
@@ -43,21 +28,14 @@ export interface OptionsDesFacettes {
 export const ATTRIBUT_DE_FACETTE = 'data-facette';
 
 /**
- * LA FACETTE QU'UN MENU RENDU DÉSIGNE — par son identifiant, et par son rang
- * seulement à défaut.
+ * LA FACETTE QU'UN MENU RENDU DÉSIGNE — par son identifiant, et par son rang seulement
+ * à défaut.
  *
- * Le rang seul MENTAIT. Une vue ne rend un menu que si la facette a au moins
- * une valeur — V-22 écarte les facettes vides, et les étiquettes d'un signet
- * sont facultatives : sur un domaine dont aucun signet n'en porte, le seul
- * menu rendu est « Auteur », au rang 0, et cocher un auteur écrivait
- * `?etiquette={nom de l'auteur}`. L'écran d'arrivée affichait alors la
- * pastille « Étiquette : #{nom} » et « 0 sur N signets ». Le défaut se
- * déclenche au premier signet sans étiquette, et V-12 porte le même risque dès
- * que toutes ses notes sont à la racine.
- *
- * Le libellé ne peut pas servir d'identifiant : le bouton du gel porte le nom
- * SUIVI de son compteur — « Type3 » —, et le découper serait une devinette. Le
- * rang reste le repli pour un balisage qui ne porte pas encore l'attribut.
+ * Le rang seul MENTAIT : une vue ne rend un menu que si la facette a au moins une
+ * valeur, donc sur un domaine dont aucun signet ne porte d'étiquette le seul menu
+ * rendu est « Auteur », au rang 0, et cocher un auteur écrivait `?etiquette={nom}`. Le
+ * libellé ne peut pas servir d'identifiant : le bouton du gel porte le nom SUIVI de
+ * son compteur. Le rang reste le repli pour un balisage sans l'attribut.
  */
 export function facetteDuMenu(
 	facettes: readonly DeclarationDeFacette[],
@@ -68,7 +46,6 @@ export function facetteDuMenu(
 	return rang < 0 ? undefined : facettes[rang];
 }
 
-/** Le libellé d'un nœud, blancs réduits. */
 function libelle(noeud: Element | null | undefined): string {
 	return (noeud?.textContent ?? '').replace(/\s+/g, ' ').trim();
 }

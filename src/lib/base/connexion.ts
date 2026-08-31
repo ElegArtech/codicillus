@@ -1,53 +1,25 @@
 /**
  * LA CONNEXION À POSTGRESQL — un seul endroit où les paramètres sont lus.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * P-13, ARB-038, ARB-050 — POURQUOI CE MODULE NE COMPOSE, NI N'ACCEPTE, AUCUNE
- * ADRESSE
+ * `P-13`, `ARB-038` : LA BASE SE CONFIGURE PAR VARIABLES SÉPARÉES, JAMAIS PAR UNE
+ * URI. Le connecteur reçoit un OBJET, jamais une chaîne — rien n'est concaténé, donc
+ * rien n'est à échapper. Un `/`, `#` ou `?` dans un mot de passe tue le service.
+ * `URL_BASE` n'existe plus, sans période de tolérance ; deux unitaires échouent si
+ * l'URI redevient acceptée ou si `connectionString` reparaît.
  *
- * `ARB-038` (19/08/2026) : « LA BASE SE CONFIGURE PAR VARIABLES SÉPARÉES,
- * JAMAIS PAR UNE URI. […] Le connecteur reçoit un OBJET, jamais une chaîne —
- * rien n'est concaténé, donc rien n'est à échapper. […] `URL_BASE` disparaît du
- * contrat de déploiement. »
- *
- * `ARB-050` (T-012) a constaté que ce module ne l'appliquait pas : son
- * interface ne déclarait AUCUNE des cinq variables `*_BASE` que `compose.yaml`
- * passe au service `app`, et son premier chemin rendait `{ connectionString }`
- * — une chaîne, donc la porte de derrière de `P-13`, mesuré par T-010 sur six
- * mots de passe : `mot/de+passe`, `mot#passe` et `mot?passe` tuent le service.
- *
- * DEUX CONSÉQUENCES, DONT UNE PANNE FRANCHE : l'application en conteneur
- * recevait cinq variables qu'elle ne lisait pas, et aucune de celles qu'elle
- * lisait — donc `ConnexionNonConfigureeErreur` au démarrage.
- *
- * Le chemin `URL_BASE` est RETIRÉ, sans période de tolérance. Deux unitaires
- * l'exercent (`connexion.test.ts`) : l'un échoue si l'URI redevient acceptée,
- * l'autre exige que les cinq `*_BASE` produisent un objet dont
- * `connectionString` est absent. Sans le second, la correction serait espérée
- * et non posée — c'est `P-5`, et c'est précisément pourquoi le défaut a survécu
- * à une batterie verte : rien n'exerçait le chemin de l'application
- * conteneurisée.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES DEUX JEUX DE VARIABLES, ET ILS NE SE CONFONDENT PAS
- *
- * `ARB-038` : « `.env.example` garde ses noms `*_POSTGRES` — ils nomment la
- * configuration du CONTENEUR PostgreSQL, qui les attend sous cette forme ; les
- * `*_BASE` nomment la configuration du CLIENT. Les deux jeux ne se confondent
- * pas, et c'est voulu. »
+ * DEUX JEUX DE VARIABLES QUI NE SE CONFONDENT PAS (`ARB-038`) :
  *
  *   `HOTE_BASE` `PORT_BASE` `UTILISATEUR_BASE` `MDP_BASE` `NOM_BASE`
  *        le CLIENT — ce que `compose.yaml` passe au service `app`
  *
- *   `UTILISATEUR_POSTGRES` `MDP_POSTGRES` `BASE_POSTGRES` `HOTE_POSTGRES`
- *   `PORT_DB`
- *        le SERVEUR — ce que le conteneur PostgreSQL attend, et ce que les
- *        commandes de base emploient hors conteneur (`base/base.mjs` charge
- *        `.env`, qui ne porte que ce jeu)
+ *   `UTILISATEUR_POSTGRES` `MDP_POSTGRES` `BASE_POSTGRES` `HOTE_POSTGRES` `PORT_DB`
+ *        le SERVEUR — ce que le conteneur PostgreSQL attend, et ce que les commandes
+ *        de base emploient hors conteneur (`base/base.mjs` charge `.env`, qui ne
+ *        porte que ce jeu)
  *
- * L'ORDRE EST DONC : les `*_BASE` d'abord, les `*_POSTGRES` à défaut. Il n'est
- * pas une préférence, il est le contrat de déploiement — en conteneur, seules
- * les premières existent ; hors conteneur, seules les secondes.
+ * L'ORDRE EST DONC : les `*_BASE` d'abord, les `*_POSTGRES` à défaut. Ce n'est pas
+ * une préférence, c'est le contrat de déploiement — en conteneur, seules les
+ * premières existent ; hors conteneur, seules les secondes.
  */
 import type { PoolConfig } from 'pg';
 
@@ -70,11 +42,8 @@ export class ConnexionNonConfigureeErreur extends Error {
 }
 
 /**
- * Ce que ce module lit de l'environnement, et rien d'autre.
- *
- * `URL_BASE` N'Y FIGURE PLUS — ARB-050. Le type est la garantie : un appelant
- * qui voudrait la repasser n'a plus de champ où l'écrire, et le retrait ne
- * dépend donc pas d'une discipline de relecture.
+ * Ce que ce module lit de l'environnement, et rien d'autre. `URL_BASE` n'y figure
+ * pas : un appelant qui voudrait la repasser n'a plus de champ où l'écrire.
  */
 export interface EnvironnementDeConnexion {
 	/* Le CLIENT — `compose.yaml`, service `app` (ARB-038). */
@@ -97,11 +66,8 @@ function nonVide(valeur: string | undefined): string | undefined {
 }
 
 /**
- * La configuration de connexion, dérivée de l'environnement.
- *
- * Elle rend TOUJOURS un objet de paramètres séparés. Aucun chemin de cette
- * fonction ne produit `connectionString` : c'est ce que le second unitaire
- * d'ARB-050 vérifie, et c'est ce qui rend `P-13` inaccessible par la forme.
+ * La configuration de connexion, dérivée de l'environnement. Elle rend TOUJOURS un
+ * objet de paramètres séparés : aucun chemin ne produit `connectionString`.
  *
  * @param env l'environnement à lire
  */
@@ -136,11 +102,8 @@ export function configurationDeConnexion(env: EnvironnementDeConnexion): PoolCon
 }
 
 /**
- * La même configuration, mais sans le mot de passe — ce qu'un journal a le
- * droit d'imprimer. Aucune commande de ce dépôt n'imprime autre chose.
- *
- * La branche `connectionString` a disparu avec le chemin qu'elle servait
- * (ARB-050) : il n'existe plus de configuration de ce dépôt qui en porte une.
+ * La même configuration, sans le mot de passe — ce qu'un journal a le droit
+ * d'imprimer. Aucune commande de ce dépôt n'imprime autre chose.
  */
 export function connexionLisible(config: PoolConfig): string {
 	return `postgres://${String(config.user)}@${String(config.host)}:${String(config.port)}/${String(config.database)}`;

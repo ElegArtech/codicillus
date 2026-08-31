@@ -1,66 +1,20 @@
 /**
- * LA LECTURE D'UNE NOTE, DEPUIS LA BASE — ce que `/notes/{identifiant}` charge.
+ * La lecture d'une note, depuis la base — ce que `/notes/{identifiant}` charge.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE MODULE COMPOSE, IL NE REDÉFINIT RIEN
+ * Quatre implémentations uniques sont appelées ici, aucune n'est recopiée : `./lecture.ts`
+ * pour les formes du jeu, `../droits/resolution.ts` pour les droits, `../contenu/rendu.ts`
+ * pour `rendreDocument` (`ADR-004`), et `../fraicheur.ts` par `lireNotes`.
  *
- * Quatre implémentations uniques sont appelées ici, et aucune n'est recopiée :
+ * CE QUE LA BASE NE PORTE PAS N'EST PAS INVENTÉ ICI : les corps semés sont d'un seul bloc,
+ * les corps Opérationnels des cinq notes qui en déclarent un sont VIDES, et aucune note ne
+ * porte de lien interne. Les quatre corps de `../contenu/documents-du-gel.ts` ne sont PAS
+ * substitués — les servir en lecture d'une note réelle serait la valeur illustrative que
+ * `P-02` proscrit.
  *
- *   `src/lib/donnees/lecture.ts`    les formes de `seeds/corpus.ts` rendues
- *                                   depuis la base (T-030). `Note` vient de
- *                                   là, avec sa fraîcheur déjà calculée.
- *   `src/lib/droits/resolution.ts`  la résolution des droits. AUCUNE règle de
- *                                   droit n'est écrite ici : ni remontée
- *                                   d'arbre, ni table de capacités, ni
- *                                   fermeture par défaut.
- *   `src/lib/contenu/rendu.ts`      `rendreDocument`, et rien d'autre —
- *                                   ADR-004 interdit nommément tout second
- *                                   rendu, et `pnpm verif:convertisseur`
- *                                   compte les implémentations.
- *   `src/lib/fraicheur.ts`          par `lireNotes`, jamais directement : ce
- *                                   module n'écrit AUCUN libellé de fraîcheur
- *                                   et aucun seuil (P-01, ADR-005, A3 de la
- *                                   batterie 5).
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LA BASE NE PORTE PAS, ET QUI N'EST DONC PAS INVENTÉ ICI
- *
- * Mesuré le 20 août 2026 sur la base semée (32 notes) :
- *
- *   · `corps_reference` — 32 notes sur 32 portent UN SEUL BLOC, le paragraphe
- *     que `corpsDepuisTexte(n.extrait)` écrit (`semence.ts:426`). Aucune note
- *     ne porte le corps RÉDIGÉ que les maquettes montrent.
- *   · `corps_operationnel` — 5 notes sur 32 en portent un, et les cinq sont
- *     VIDES : `corpsVide()`, un paragraphe sans texte
- *     (`src/lib/contenu/corps-vide.ts`). Les
- *     27 autres n'en portent aucun.
- *   · aucun lien interne — 0 note sur 32 porte une marque `lienInterne`, donc
- *     0 rétrolien pour les 32 (RG-M05-02 est calculée, et rend l'ensemble
- *     vide qu'elle doit rendre).
- *
- * `src/lib/contenu/documents-du-gel.ts` porte QUATRE corps transcrits des
- * maquettes — deux notes, deux registres. **Ils ne sont pas substitués ici**,
- * et c'est le point : ce sont des transcriptions de planche, et les servir en
- * lecture d'une note réelle serait exactement la « valeur illustrative » que
- * P-02 proscrit. Ce module rend le document que la base porte, fût-il vide, et
- * DIT qu'il est vide (`CorpsDeNote.redige`).
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE FILTRE EST DANS LA REQUÊTE — ADR-006
- *
- * « Le serveur calcule l'ensemble des dossiers effectivement lisibles par
- * l'appelant et l'injecte comme filtre. La requête envoyée au moteur NE PEUT
- * PAS rapporter un document interdit. » La condition de périmètre est donc
- * portée par le `where` de la requête de note, jamais par un tri de son
- * résultat. `resoudre()` reste appelé par-dessus — son propre en-tête le dit :
- * il est le garde-fou, pas le filtre.
- *
- * LE CORPUS DE LA COQUILLE, LUI, EST FILTRÉ APRÈS COUP, et c'est un écart
- * déclaré au rapport du lot : `lireNotes()` de `T-030` n'accepte aucun
- * périmètre, et ce module n'écrit pas dans son fichier. Le périmètre décide
- * bien quels identifiants sont retenus — la décision d'accès est prise sur la
- * base —, mais l'intersection se fait en mémoire. Une signature de `lireNotes`
- * portant le périmètre refermerait l'écart en une ligne.
+ * LE FILTRE EST DANS LA REQUÊTE (`ADR-006`) : la condition de périmètre est portée par le
+ * `where`, jamais par un tri de son résultat. `resoudre()` reste appelé par-dessus — il est
+ * le garde-fou, pas le filtre. LE CORPUS DE LA COQUILLE, LUI, EST FILTRÉ APRÈS COUP, et
+ * c'est un écart déclaré : `lireNotes()` n'accepte aucun périmètre.
  */
 import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import type { Base } from '../base/acces';
@@ -84,31 +38,17 @@ import { adresseDeNote } from '../rangement/adresses';
 import { lireNotes, type ContexteDeLecture } from './lecture';
 import type { Note } from '../../../seeds/corpus';
 
-/* ═══════════════════════════════════════════════════ Le registre ════════ */
-
-/** L'un des deux registres de lecture d'une note (vocabulaire contractuel §3). */
 export type Registre = 'reference' | 'operationnel';
 
 /**
- * LE REGISTRE DEMANDÉ PAR L'ADRESSE — `?registre=`, `docs/routes.md` §4.1 :
- * « `reference` (défaut) · `operationnel` ».
- *
- * Le gel ÉCRIT ce paramètre et ne le LIT jamais : `majAdresse("?registre=" +
- * reg)` (`mockups/V-14-lecture-note.html:3958`) est la seule occurrence, dans
- * l'écouteur de la bascule, et aucune ligne de la maquette ne relit
- * `location.search` au chargement. L'état initial n'est donc pas porté par le
- * gel : il est porté par §4.1, qui nomme `reference` comme DÉFAUT, et par
- * `RG-M02-02`, qui fait ouvrir `?registre=operationnel` depuis un résultat de
- * recherche trouvé dans le corps Opérationnel.
- *
- * Toute autre valeur retombe donc sur le défaut — c'est ce que « défaut »
- * veut dire, et non une décision prise ici.
+ * Le registre demandé par l'adresse — `?registre=`, « `reference` (défaut) ·
+ * `operationnel` ». Le gel ÉCRIT ce paramètre et ne le LIT jamais : aucune ligne de la
+ * maquette ne relit `location.search` au chargement. L'état initial vient donc de
+ * `docs/routes.md` §4.1, qui nomme `reference` comme défaut.
  */
 export function registreDemande(parametre: string | null): Registre {
 	return parametre === 'operationnel' ? 'operationnel' : 'reference';
 }
-
-/* ═══════════════════════════════════════════════════ Le corps ═══════════ */
 
 /**
  * Le corps d'un registre, tel que la base le porte — et ce qu'il faut en dire
@@ -116,7 +56,6 @@ export function registreDemande(parametre: string | null): Registre {
  */
 export interface CorpsDeNote {
 	readonly registre: Registre;
-	/** La colonne porte un document. Faux : la note n'a pas ce registre. */
 	readonly existe: boolean;
 	/**
 	 * Le document porte du texte. Faux : il existe et il est VIDE — l'état que
@@ -125,7 +64,6 @@ export interface CorpsDeNote {
 	readonly redige: boolean;
 	/** Le HTML rendu par `rendreDocument`, et par rien d'autre (ADR-004). */
 	readonly html: string;
-	/** Les notes citées par le corps — matière des rétroliens de la cible. */
 	readonly cites: readonly string[];
 }
 
@@ -151,9 +89,6 @@ export function corpsRendu(
 	};
 }
 
-/* ═══════════════════════════════════════════════════ Les liens ══════════ */
-
-/** Ce qu'une note offre à un lien qui la cite, ou à un rétrolien qui la nomme. */
 export interface NoteCitable {
 	readonly identifiant: string;
 	readonly titre: string;
@@ -161,21 +96,14 @@ export interface NoteCitable {
 }
 
 /**
- * LE RÉSOLVEUR DES LIENS INTERNES, ADOSSÉ À LA BASE.
+ * Le résolveur des liens internes, adossé à la base.
  *
- * L'ADRESSE EST BÂTIE SUR `notes.identifiant`, et non sur un identifiant
- * dérivé du titre. C'est celui que la colonne porte, celui que
- * `docs/routes.md` §3 substitue dans `/notes/{identifiant}`, et celui que
- * cette route résout — un lien qui porterait autre chose serait un lien mort
- * (P-03). `resoudreDansLeCorpus` de `documents-du-gel.ts` construit, lui,
- * `adresseDeNote(identifiantLisible(note.titre))` : les deux formes divergent
- * sur les 32 notes du corpus. Écart déclaré au rapport ; aucune des deux n'est
- * modifiée ici.
+ * L'ADRESSE EST BÂTIE SUR `notes.identifiant`, et non sur un identifiant dérivé du titre :
+ * c'est celui que la colonne porte et que cette route résout. `resoudreDansLeCorpus` de
+ * `documents-du-gel.ts` construit, lui, une adresse dérivée du titre ; les deux formes
+ * divergent sur les 32 notes du corpus, et l'écart est déclaré.
  *
- * UNE CIBLE INCONNUE REND `null`, ce qui fait rendre `a.lien-casse` sans
- * `href` par `rendu.ts` (CONSTRUCTIONS n° 14). Aucun corps de la base ne porte
- * de lien interne : le cas est donc éprouvé par un document ÉCRIT POUR LE
- * TEST, jamais par l'état du dépôt (P-5, P-26).
+ * Une cible inconnue rend `null`, ce qui fait rendre `a.lien-casse` sans `href`.
  */
 export function resolveurDeNotes(citables: readonly NoteCitable[]): ResolveurDeNote {
 	const parIdentifiant = new Map<string, NoteCitable>(citables.map((c) => [c.identifiant, c]));
@@ -191,14 +119,12 @@ export function resolveurDeNotes(citables: readonly NoteCitable[]): ResolveurDeN
 	};
 }
 
-/** Un rétrolien : la note qui cite celle qu'on lit. */
 export interface Retrolien {
 	readonly identifiant: string;
 	readonly titre: string;
 	readonly adresse: string;
 }
 
-/** Le corps d'un registre d'une note, tel que la base le rend. */
 export interface CorpsEnBase {
 	readonly identifiant: string;
 	readonly titre: string;
@@ -207,12 +133,10 @@ export interface CorpsEnBase {
 }
 
 /**
- * LES RÉTROLIENS SONT DÉDUITS, JAMAIS SAISIS — `RG-M05-02` : « recalculés par
- * parcours de l'arbre du document ». Les deux registres comptent : une note
- * citée depuis un corps Opérationnel est citée.
- *
- * L'ordre est celui des identifiants des notes citantes, qui est celui de la
- * requête : déterministe, et sans invention d'un ordre de pertinence.
+ * Les rétroliens sont déduits, jamais saisis — `RG-M05-02` : « recalculés par
+ * parcours de l'arbre du document ». Les deux registres comptent : une note citée
+ * depuis un corps Opérationnel est citée. L'ordre est celui de la requête :
+ * déterministe, et sans invention d'un ordre de pertinence.
  */
 export function retroliensVers(
 	identifiant: string,
@@ -237,23 +161,11 @@ export function retroliensVers(
 	return vers;
 }
 
-/* ═══════════════════════════════════════════════════ Le périmètre ═══════ */
-
 /**
- * LE PÉRIMÈTRE DE LA FAMILLE `/notes/…` — `docs/routes.md` §5.5, ligne
- * « `/notes/{id}` et sous-routes » : la colonne « Anonyme » y rend **404
- * V-04**, sans condition sur la note. Une note publique et publiée se lit à
- * `/guides/{identifiant}` — « une seule adresse, un seul rendu » (ARB-007,
- * A-05) —, et cette route-là appartient à `T-035`.
- *
- * L'anonyme reçoit donc un périmètre VIDE, et non le périmètre public que
- * `perimetreDeLecture()` rend pour lui : le premier est le périmètre de CETTE
- * famille d'adresses, le second celui de l'espace public. L'en-tête de
- * `perimetreDeLecture` le dit en propres termes — « il existe deux périmètres,
- * et la route choisit lequel ».
- *
- * Aucune règle de droit n'est écrite ici : le choix du périmètre est celui
- * qu'une ligne de §5.5 dicte.
+ * Le périmètre de la famille `/notes/…` — `docs/routes.md` §5.5 rend **404 V-04** à
+ * l'anonyme, sans condition sur la note. Une note publique et publiée se lit à
+ * `/guides/{identifiant}` : « une seule adresse, un seul rendu » (`ARB-007` A-05).
+ * L'anonyme reçoit donc un périmètre VIDE, et non le périmètre public.
  */
 const AUCUN_DOSSIER: Perimetre = { tout: false, dossiers: new Set<string>() };
 
@@ -282,11 +194,9 @@ export async function lireIndexDesDroits(base: Base, identite: Identite): Promis
 }
 
 /**
- * La condition de périmètre, telle qu'elle entre dans le `where` de la
- * requête. Un périmètre vide devient `false` : la requête ne rapporte rien, et
- * elle ne rapporte rien PAR LE MÊME CHEMIN qu'une note inexistante — ce que
- * `RG-ACC-04` demande, et qu'un court-circuit avant la requête n'aurait pas
- * donné.
+ * La condition de périmètre, telle qu'elle entre dans le `where`. Un périmètre vide
+ * devient `false` : la requête ne rapporte rien, PAR LE MÊME CHEMIN qu'une note
+ * inexistante — ce qu'un court-circuit avant la requête n'aurait pas donné.
  */
 function conditionDePerimetre(perimetre: Perimetre): SQL | undefined {
 	if (perimetre.tout) return undefined;
@@ -295,50 +205,29 @@ function conditionDePerimetre(perimetre: Perimetre): SQL | undefined {
 	return inArray(notes.dossierId, ids);
 }
 
-/* ═══════════════════════════════════════════════════ La lecture ═════════ */
-
-/** Ce qu'une lecture de note met à disposition de la route. */
 export interface LectureDeNote {
-	/** La note, dans la forme du jeu de semence — fraîcheur comprise. */
 	readonly note: Note;
 	readonly corps: CorpsDeNote;
 	/** Ce que l'appelant peut faire sur le dossier porteur (CDC §2.3). */
 	readonly capacites: Capacites;
 	readonly retroliens: readonly Retrolien[];
 	/**
-	 * LE CORPUS LISIBLE PAR L'APPELANT, dans la forme que les vues attendent en
-	 * propriété — `src/vues/V-14.svelte:92` déclare `notes: readonly Note[]`, et
-	 * la coquille en dérive son rail (`src/lib/coquille/arborescence.ts`).
-	 *
-	 * Lui passer les 32 notes montrerait à un lecteur les dossiers qu'il n'a pas
-	 * le droit de lire, ce que `RG-ACC-01` refuse — « le filtrage est appliqué au
-	 * plus près de la donnée, pas seulement dans l'affichage ». Les identifiants
-	 * retenus sont ceux que le `where` de périmètre rapporte ; l'intersection
-	 * avec `lireNotes()` est faite en mémoire, et c'est l'écart déclaré en tête
-	 * de ce module.
+	 * Le corpus lisible par l'appelant, dans la forme que les vues attendent en propriété — la
+	 * coquille en dérive son rail. Lui passer les 32 notes montrerait à un lecteur les dossiers
+	 * qu'il n'a pas le droit de lire (`RG-ACC-01`). L'intersection avec `lireNotes()` est faite
+	 * en mémoire, et c'est l'écart déclaré en tête de ce module.
 	 */
 	readonly notes: readonly Note[];
 	/**
-	 * LE RÉSOLVEUR DES LIENS INTERNES DU PÉRIMÈTRE, CELUI-LÀ MÊME QUI A RENDU
-	 * `corps` — et non un second, reconstruit par l'appelant.
-	 *
-	 * IL EXISTE PARCE QUE `corps` N'EST PAS LE SEUL DOCUMENT QUE CETTE ADRESSE
-	 * AFFICHE. `/notes/{identifiant}?version={n}` montre le corps CAPTURÉ d'une
-	 * version antérieure, que `$lib/donnees/histoire.ts` rend sous forme de
-	 * `Document` : le rendre en HTML demande le même résolveur, faute de quoi
-	 * l'appelant devrait redériver « quelles notes sont citables et lesquelles
-	 * sont publiques » à partir de `notes` — une seconde définition de la
-	 * visibilité, qui divergerait de celle-ci au premier changement de règle
-	 * (`P-01`).
-	 *
-	 * IL PORTE DÉJÀ LE PÉRIMÈTRE : il a été construit sur les notes que le
-	 * `where` d'accès a rapportées, et une cible hors périmètre y est donc
-	 * inconnue, exactement comme dans le corps courant (`RG-ACC-01`).
+	 * Le résolveur des liens internes du périmètre, celui-là même qui a rendu `corps` — et non
+	 * un second, reconstruit par l'appelant. `/notes/{identifiant}?version={n}` montre le corps
+	 * CAPTURÉ d'une version antérieure : le rendre en HTML demande le même résolveur, faute de
+	 * quoi l'appelant redériverait « quelles notes sont citables » — une seconde définition de
+	 * la visibilité. IL PORTE DÉJÀ LE PÉRIMÈTRE : une cible hors périmètre y est inconnue.
 	 */
 	readonly resoudreUneNote: ResolveurDeNote;
 }
 
-/** Ce qu'une lecture demande : l'adresse, le registre, et qui demande. */
 export interface DemandeDeLecture {
 	readonly identifiant: string;
 	readonly registre: Registre;
@@ -347,20 +236,12 @@ export interface DemandeDeLecture {
 }
 
 /**
- * LE CORPUS LISIBLE PAR L'APPELANT, SANS NOTE DÉSIGNÉE — ajouté par `T-050`.
+ * Le corpus lisible par l'appelant, sans note désignée. `/notes/nouvelle` n'a aucune note à
+ * résoudre et a pourtant besoin du corpus, dont la coquille dérive le rail. Sans cette
+ * fonction, la route aurait dû écrire une SECONDE règle d'accès.
  *
- * `/notes/nouvelle` n'a aucune note à résoudre et a pourtant besoin du corpus :
- * `src/lib/coquille/arborescence.ts` en dérive le rail, et la vue le déclare en
- * propriété. Sans cette fonction, la route aurait dû reconstruire un périmètre —
- * c'est-à-dire écrire une SECONDE règle d'accès, ce qu'`ADR-006` interdit
- * nommément (« toute route qui reçoit une liste puis la filtre »).
- *
- * LE FILTRE EST LE MÊME, ET C'EST LE POINT : `conditionDePerimetre()` est
- * l'unique traduction d'un périmètre en `where`, et `lireLaNote()` l'emploie
- * pour la même chose quelques lignes plus bas. Un périmètre vide devient
- * `false` — la requête ne rapporte rien, par le même chemin qu'une base sans
- * note (`RG-ACC-04`), et l'appelant reçoit l'ensemble VIDE, qui est l'état
- * vide de `RG-M18-03` et non un corpus commode.
+ * LE FILTRE EST LE MÊME : `conditionDePerimetre()` est l'unique traduction d'un périmètre en
+ * `where`. Un périmètre vide devient `false`, et l'appelant reçoit l'ensemble VIDE.
  */
 export async function lireLeCorpusLisible(
 	base: Base,
@@ -382,12 +263,9 @@ export async function lireLeCorpusLisible(
 }
 
 /**
- * LA LECTURE D'UNE NOTE — une ressource, ou rien.
- *
- * Le type de retour est celui de `RG-ACC-04` : `Resolution<T>` n'a pas de
- * troisième forme, et cette fonction n'a donc rien à rendre qui distingue « la
- * note n'existe pas » de « la note existe et vous n'y avez pas droit ». Les
- * deux sortent par le même `return`, avec le même objet gelé.
+ * La lecture d'une note — une ressource, ou rien. Le type de retour est celui de
+ * `RG-ACC-04` : `Resolution<T>` n'a pas de troisième forme, et les deux causes
+ * sortent par le même `return`, avec le même objet gelé.
  */
 export async function lireLaNote(
 	base: Base,
@@ -410,13 +288,10 @@ export async function lireLaNote(
 		.where(and(eq(notes.identifiant, demande.identifiant), conditionDePerimetre(perimetre)))
 		.limit(1);
 
-	/* LE GARDE-FOU PASSE PAR `noteLisible`, LA COMPOSITION DES DEUX FILTRES, et
-	   non par `perimetreContient` seul : son en-tête le dit — « les employer
-	   séparément est le moyen le plus simple de publier le corpus interne ». Le
-	   filtre de NOTE (visibilité, statut) et le filtre de DOSSIER n'ont ainsi
-	   qu'une seule écriture, celle de `resolution.ts`. Et ce qu'elle ne tranche
-	   pas — la visibilité des brouillons pour un authentifié — n'est pas tranché
-	   ici non plus : le lot qui la spécifiera ajoutera son filtre là-bas. */
+	/* LE GARDE-FOU PASSE PAR `noteLisible`, LA COMPOSITION DES DEUX FILTRES, et non
+	   par `perimetreContient` seul : « les employer séparément est le moyen le plus
+	   simple de publier le corpus interne ». Le filtre de NOTE et celui de DOSSIER
+	   n'ont ainsi qu'une seule écriture. */
 	const resolution = resoudre(ligne, (l) =>
 		noteLisible(
 			demande.identite,
@@ -432,13 +307,12 @@ export async function lireLaNote(
 	const toutes = await lireNotes(base, demande.contexte);
 	const note = toutes.find((n) => n.id === trouvee.identifiant);
 	/* La couche de lecture n'a pas rendu une note que la table porte : c'est un
-	   défaut de cette couche, pas un refus. Il sort quand même par `INTROUVABLE`
-	   — rien de ce chemin ne doit pouvoir distinguer deux causes (RG-ACC-04). */
+	   défaut de cette couche, pas un refus. Il sort quand même par `INTROUVABLE` —
+	   rien de ce chemin ne doit pouvoir distinguer deux causes. */
 	if (note === undefined) return resoudre<LectureDeNote>(null, () => false);
 
-	/* Le corpus DU PÉRIMÈTRE, en une seule requête : il sert trois fois — les
-	   cibles des liens internes, la matière des rétroliens, et les identifiants
-	   que la coquille a le droit de montrer. */
+	/* Le corpus DU PÉRIMÈTRE, en une seule requête : il sert trois fois — cibles des
+	   liens internes, matière des rétroliens, identifiants que la coquille montre. */
 	const citables = await base
 		.select({
 			identifiant: notes.identifiant,

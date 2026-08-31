@@ -1,19 +1,13 @@
 /**
- * Formatage des dates en français.
- *
- * Le produit est entièrement en français (BRIEF-VUES.md §2.3) et affiche des
- * dates dans presque toutes ses vues : fraîcheur, versions, journaux, activité.
- * Une implémentation unique évite que chaque vue reformate à sa façon.
- *
- * Le fuseau est explicite et non implicite : sans cela, la même date rendue par
- * le serveur et par le navigateur peut différer d'un jour, et la comparaison
- * visuelle (PLAN-DE-REALISATION.md §4.2) devient instable.
+ * Formatage des dates en français. Le produit est entièrement en français et affiche des dates
+ * dans presque toutes ses vues : une implémentation unique évite que chaque vue reformate à sa
+ * façon. Le fuseau est explicite et non implicite : sans cela, la même date rendue par le
+ * serveur et par le navigateur peut différer d'un jour.
  */
 
 /** Fuseau de référence du produit tant qu'aucun réglage ne le contredit. */
 export const FUSEAU_PAR_DEFAUT = 'Europe/Paris';
 
-/** Ce qu'on accepte en entrée : un objet Date, un texte ISO, ou un horodatage. */
 export type EntreeDate = Date | string | number;
 
 /** Levée lorsqu'une entrée ne désigne aucun instant valide. */
