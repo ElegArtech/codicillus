@@ -885,10 +885,13 @@
 										<div class="prop-corps">
 											<div class="prop-duo">
 												<div class="champ">
-													<label class="champ__label">Libellé affiché</label>
+													<label class="champ__label" for="f-prop-{rang}-libelle"
+														>Libellé affiché</label
+													>
 													<input
 														class="saisie"
 														type="text"
+														id="f-prop-{rang}-libelle"
 														style="padding:6px var(--e-2);font-size:var(--t-petit)"
 														value={p.libelle}
 														oninput={(e) =>
@@ -896,7 +899,7 @@
 													/>
 												</div>
 												<div class="champ">
-													<label class="champ__label">Nom technique</label>
+													<label class="champ__label" for="f-prop-{rang}-cle">Nom technique</label>
 													<!--
 	LA CLÉ EST RELUE À LA SORTIE DU CHAMP, PAS À CHAQUE FRAPPE. Le bloc
 	`{#each}` est indexé PAR ELLE : la changer à chaque touche recréerait
@@ -906,6 +909,7 @@
 													<input
 														class="saisie"
 														type="text"
+														id="f-prop-{rang}-cle"
 														style="padding:6px var(--e-2);font-size:var(--t-petit)"
 														value={p.cle}
 														onchange={(e) =>
@@ -918,9 +922,11 @@
 											</div>
 											<div class="prop-duo">
 												<div class="champ">
-													<label class="champ__label">Type de valeur</label>
+													<label class="champ__label" for="f-prop-{rang}-type">Type de valeur</label
+													>
 													<select
 														class="selecteur"
+														id="f-prop-{rang}-type"
 														onchange={(e) =>
 															changerLaPropriete(rang, {
 																type: e.currentTarget.value as CleDeTypeDeValeur
@@ -932,10 +938,13 @@
 													>
 												</div>
 												<div class="champ">
-													<label class="champ__label">Valeur par défaut</label>
+													<label class="champ__label" for="f-prop-{rang}-defaut"
+														>Valeur par défaut</label
+													>
 													<input
 														class="saisie"
 														type="text"
+														id="f-prop-{rang}-defaut"
 														style="padding:6px var(--e-2);font-size:var(--t-petit)"
 														value={p.defaut}
 														oninput={(e) =>
@@ -944,10 +953,12 @@
 												</div>
 											</div>
 											<div class="champ">
-												<label class="champ__label">Aide à la saisie</label>
+												<label class="champ__label" for="f-prop-{rang}-aide">Aide à la saisie</label
+												>
 												<input
 													class="saisie"
 													type="text"
+													id="f-prop-{rang}-aide"
 													style="padding:6px var(--e-2);font-size:var(--t-petit)"
 													value={p.aide}
 													oninput={(e) => changerLaPropriete(rang, { aide: e.currentTarget.value })}
