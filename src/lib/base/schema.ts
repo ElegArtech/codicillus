@@ -373,7 +373,7 @@ export const parametres = pgTable('parametres', {
 });
 
 /**
- * Les huit clés de `parametres`, écrites une fois — M14.7. Elles vivaient en littéraux dans
+ * Les dix clés de `parametres`, écrites une fois — M14.7 et `RG-NF-10`. Elles vivaient en littéraux dans
  * `lireConfiguration()` seule, ce qui suffisait tant que RIEN N'ÉCRIVAIT dans cette table.
  * Deux jeux de littéraux rendraient possible ce que `RG-M14-09` interdit : un seuil
  * enregistré sous un nom que la lecture ignore, donc un badge qui ne bouge pas.
@@ -390,7 +390,9 @@ export const CLES_DE_PARAMETRE: Readonly<Record<keyof Configuration, string>> = 
 	nomOrganisation: 'nom_organisation',
 	motFiche: 'mot_fiche',
 	tailleMaxPieceJointe: 'taille_max_piece_jointe',
-	dureeSession: 'duree_session'
+	dureeSession: 'duree_session',
+	indisponibiliteActive: 'indisponibilite_active',
+	messageDIndisponibilite: 'message_indisponibilite'
 });
 
 /**
@@ -415,7 +417,11 @@ export const CONFIGURATION_PAR_DEFAUT: Readonly<Configuration> = Object.freeze({
 	nomOrganisation: '',
 	motFiche: 'Fiche',
 	tailleMaxPieceJointe: 25,
-	dureeSession: 120
+	dureeSession: 120,
+	/* `RG-NF-10` — UNE INSTANCE NEUVE EST DISPONIBLE, et son message est vide :
+	   activer sans message est refusé, ce qui ne peut donc pas arriver par défaut. */
+	indisponibiliteActive: false,
+	messageDIndisponibilite: ''
 });
 
 /**

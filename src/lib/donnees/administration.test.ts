@@ -435,7 +435,9 @@ const CONFIGURATION_VALABLE: Configuration = {
 	nomOrganisation: 'Organisation d’épreuve',
 	motFiche: 'Fiche',
 	tailleMaxPieceJointe: 25,
-	dureeSession: 120
+	dureeSession: 120,
+	indisponibiliteActive: false,
+	messageDIndisponibilite: ''
 };
 
 describe('RG-M14-10 — la validation refuse les combinaisons incohérentes', () => {
@@ -583,7 +585,7 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 		expect(CLES_DE_PARAMETRE.seuilVieillissant).toBe('seuil_vieillissant');
 	});
 
-	it('les huit noms de champ sont ceux du gel, préfixe compris', () => {
+	it('les dix noms de champ sont ceux du gel, préfixe compris', () => {
 		expect(CHAMPS_DE_CONFIGURATION.seuilFrais).toBe('c-frais');
 		expect(CHAMPS_DE_CONFIGURATION.seuilVieillissant).toBe('c-vieil');
 		expect(Object.keys(CHAMPS_DE_CONFIGURATION).sort()).toEqual(
@@ -595,7 +597,11 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 				'seuilFrais',
 				'seuilVieillissant',
 				'tailleMaxPieceJointe',
-				'versionsMax'
+				'versionsMax',
+				/* `RG-NF-10` — les deux réglages de la page d'indisponibilité. Ils
+				   n'ont aucune planche au gel, et le préfixe `c-` reste la règle. */
+				'indisponibiliteActive',
+				'messageDIndisponibilite'
 			].sort()
 		);
 	});
@@ -639,7 +645,9 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 			'c-organisation': '  Organisation d’épreuve  ',
 			'c-mot': '  Objet  ',
 			'c-taille': '10',
-			'c-session': '480'
+			'c-session': '480',
+			'c-indisponibilite': 'oui',
+			'c-message-indisponibilite': '  Migration de la base  '
 		};
 		const valeurs = valeursDeConfigurationSaisies((champ) => porte[champ]);
 		expect(valeurs).toEqual({
@@ -650,7 +658,9 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 			nomOrganisation: 'Organisation d’épreuve',
 			motFiche: 'Objet',
 			tailleMaxPieceJointe: 10,
-			dureeSession: 480
+			dureeSession: 480,
+			indisponibiliteActive: true,
+			messageDIndisponibilite: 'Migration de la base'
 		});
 	});
 
