@@ -34,6 +34,8 @@ import {
 	requeteDemandee
 } from '$lib/donnees/public';
 import { instanceSansUnivers } from '$lib/donnees/amorcage';
+import { compteDe } from '$lib/donnees/consultation';
+import { journaliserUneRecherche } from '$lib/donnees/recherches';
 import { moteurPartage } from '$lib/recherche/acces';
 import {
 	ORDRE_PAR_DEFAUT,
@@ -398,7 +400,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		maintenant: new Date(),
 		seuils: { frais: config.seuilFrais, vieillissant: config.seuilVieillissant }
 	};
-	return await lireLaRecherche(
+	const recherche = await lireLaRecherche(
 		base,
 		moteurPartage(),
 		locals.identite,
@@ -406,4 +408,26 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		contexte,
 		config.portailAssistance
 	);
+
+	/* LA RECHERCHE SE JOURNALISE — `RG-M02-03`, « toute recherche est journalisée :
+	   requête, horodatage, nombre de résultats, ouverture éventuelle ». C'est le
+	   signal de trou documentaire que `/console/analytique` exploite, et il n'existe
+	   qu'ici : aucun autre chemin du dépôt n'interroge le moteur pour un lecteur.
+
+	   APRÈS LA LECTURE, jamais avant : le nombre inscrit est celui des notes
+	   SERVIES, donc ce que l'appelant a vu — le total de l'index compterait des
+	   notes hors périmètre. Une requête vide n'écrit rien (voir le module).
+
+	   EN ANONYME, `compteDe()` rend `null` : l'entrée existe, sans identifiant
+	   d'utilisateur (`RG-M15-02`). Et c'est une écriture sur une requête de
+	   lecture, comme la consultation d'une note — la règle désigne cette
+	   requête-ci. */
+	await journaliserUneRecherche(base, {
+		terme: recherche.requete,
+		compte: compteDe(locals.identite),
+		resultats: recherche.notes.length,
+		maintenant: contexte.maintenant
+	});
+
+	return recherche;
 };

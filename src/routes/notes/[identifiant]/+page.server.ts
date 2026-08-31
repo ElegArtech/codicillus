@@ -35,6 +35,7 @@ import { analyserDocument, type Document } from '$lib/contenu/document';
 import { ancresDuDocument, rendreDocument, type ResolveurDeNote } from '$lib/contenu/rendu';
 import { formaterDateFr, formaterDateHeureFr, formaterDateIso } from '$lib/dates';
 import { compteDe, journaliserUneConsultation } from '$lib/donnees/consultation';
+import { attacherLOuverture, termeDeProvenance } from '$lib/donnees/recherches';
 import { lireLHistoire, versionDemandee, type VersionCapturee } from '$lib/donnees/histoire';
 import {
 	joursEcoules,
@@ -477,7 +478,7 @@ async function complementsDeLecture(
 	};
 }
 
-export const load: PageServerLoad = async ({ params, url, locals }) => {
+export const load: PageServerLoad = async ({ params, url, locals, request }) => {
 	const base = basePartagee();
 	const maintenant = new Date();
 	const contexte = { maintenant, seuils: await lireSeuils(base) };
@@ -513,6 +514,21 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		compte: compteDe(locals.identite),
 		maintenant
 	});
+
+	/* L'OUVERTURE ÉVENTUELLE D'UN RÉSULTAT DE RECHERCHE — le quatrième membre de
+	   `RG-M02-03`, et le seul qui ne se constate pas au moment de la recherche.
+	   La provenance est l'adresse d'où vient la requête ; hors `/recherche` de
+	   cette instance, rien n'est attaché. C'est ce qui donne son numérateur au
+	   « taux de recherche aboutie » de V-34. */
+	const terme = termeDeProvenance(request.headers.get('referer'), url);
+	if (terme !== null) {
+		await attacherLOuverture(base, {
+			terme,
+			compte: compteDe(locals.identite),
+			identifiant: params.identifiant,
+			maintenant
+		});
+	}
 
 	/* L'HISTORIQUE. V-15 N'A PAS DE CHEMIN PROPRE : elle est « superposée » à
 	   cette adresse, et son état adressable est `?version={n}`, lu ici.

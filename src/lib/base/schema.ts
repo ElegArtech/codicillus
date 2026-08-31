@@ -66,6 +66,13 @@ export const moduleDeDomaine = pgEnum('module_de_domaine', [
 	'carte_mentale'
 ]);
 
+/**
+ * `RG-M12-04` — le sort d'un fichier d'un lot d'import : devenu note, écarté à l'aperçu,
+ * ou en échec. Même ensemble que `SortDeFichier` de `seeds/corpus.ts`, que les trois
+ * écrans d'import lisent.
+ */
+export const sortDeFichier = pgEnum('sort_de_fichier', ['note', 'ignore', 'echec']);
+
 /** P-08 et M08.3 — l'origine d'une relation est toujours visible. */
 export const origineDeRelation = pgEnum('origine_de_relation', ['declaree', 'deduite', 'ambigue']);
 
@@ -459,6 +466,17 @@ export const notes = pgTable(
 			onDelete: 'restrict'
 		}),
 		proprietesTypees: jsonb('proprietes_typees'),
+		/**
+		 * LE TEMPLATE QUI A AMORCÉ LA RÉDACTION — une TRACE D'ORIGINE, jamais un
+		 * rattachement : le squelette est COPIÉ à la création, la note en est aussitôt
+		 * indépendante, et V-31 le dit à trois endroits. La colonne existe pour que
+		 * « Utilisations » se compte ; elle ne fait rien d'autre.
+		 *
+		 * `ON DELETE SET NULL`, ET SURTOUT PAS `RESTRICT` : V-31 promet que supprimer un
+		 * template n'affecte aucune note. `RESTRICT` ferait mentir l'écran à la première
+		 * suppression. La trace s'efface, la note reste entière.
+		 */
+		templateId: uuid('template_id').references(() => templates.id, { onDelete: 'set null' }),
 		signetAdresse: text('signet_adresse'),
 		signetAjouteLe: date('signet_ajoute_le')
 	},
@@ -489,6 +507,7 @@ export const notes = pgTable(
 		index('notes_domaine_idx').on(t.domaineId),
 		index('notes_dossier_idx').on(t.dossierId),
 		index('notes_auteur_idx').on(t.auteurId),
+		index('notes_template_idx').on(t.templateId),
 		index('notes_perimetre_public_idx')
 			.on(t.domaineId)
 			.where(sql`${t.visibilite} = 'publique' AND ${t.statut} = 'publiee'`)
@@ -565,6 +584,86 @@ export const piecesJointes = pgTable(
 	]
 );
 
+/**
+ * `RG-M12-09` — l'entrée de journal que produit CHAQUE lot d'import : source, volume,
+ * erreurs, auteur, date. Elle était composée à chaque lot puis jetée au journal
+ * d'application ; aucune table ne la recevait, et les deux destinataires que la règle
+ * nomme — le flux d'activité de l'accueil et l'écran d'administration — n'avaient rien à
+ * lire.
+ *
+ * AUCUNE PURGE : « les rapports restent consultables indéfiniment » (BRIEF V-35), donc
+ * aucune colonne d'expiration.
+ *
+ * `domaineId` EST NULLABLE ET `domaine` NE L'EST PAS : la clé dit si la cible existe
+ * encore, le nom dit où le lot a atterri. `supprimerUnDomaine()` efface les notes puis le
+ * domaine sans rien attraper — un `restrict` y ferait remonter une violation de clé
+ * jusqu'à l'écran, un `cascade` purgerait le journal.
+ */
+export const lotsDImport = pgTable(
+	'lots_d_import',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		source: text('source').notNull(),
+		domaineId: uuid('domaine_id').references(() => domaines.id, { onDelete: 'set null' }),
+		domaine: text('domaine').notNull(),
+		auteurId: uuid('auteur_id')
+			.notNull()
+			.references(() => comptes.id, { onDelete: 'restrict' }),
+		le: timestamp('le', { withTimezone: true }).notNull().defaultNow(),
+		scenario: text('scenario').notNull(),
+		simulation: boolean('simulation').notNull().default(false),
+		/** Mesurée, jamais estimée — `V-35:2736` porte une durée par ligne. */
+		dureeMs: integer('duree_ms').notNull().default(0),
+		total: integer('total').notNull().default(0),
+		notesCreees: integer('notes_creees').notNull().default(0),
+		notesMisesAJour: integer('notes_mises_a_jour').notNull().default(0),
+		ignores: integer('ignores').notNull().default(0),
+		echecs: integer('echecs').notNull().default(0),
+		dossiersCrees: integer('dossiers_crees').notNull().default(0)
+	},
+	(t) => [
+		check(
+			'lots_d_import_volume_positif',
+			sql`${t.dureeMs} >= 0 AND ${t.total} >= 0 AND ${t.notesCreees} >= 0 AND ${t.notesMisesAJour} >= 0 AND ${t.ignores} >= 0 AND ${t.echecs} >= 0 AND ${t.dossiersCrees} >= 0`
+		),
+		index('lots_d_import_le_idx').on(t.le.desc()),
+		index('lots_d_import_domaine_idx').on(t.domaineId)
+	]
+);
+
+/**
+ * Le détail d'un lot — une ligne par fichier reçu, ce que `RG-M12-04` fait consigner et ce
+ * que le « rapport détaillé de chaque lot » (BRIEF V-35) détaille. `rang` est l'ordre de
+ * RÉCEPTION : deux lignes peuvent porter le même chemin, un doublon dans le lot étant
+ * précisément une ligne de plus sur le même chemin.
+ */
+export const lignesDeLot = pgTable(
+	'lignes_de_lot',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		lotId: uuid('lot_id')
+			.notNull()
+			.references(() => lotsDImport.id, { onDelete: 'cascade' }),
+		rang: integer('rang').notNull(),
+		chemin: text('chemin').notNull(),
+		sort: sortDeFichier('sort').notNull(),
+		motif: text('motif'),
+		identifiant: text('identifiant'),
+		aplatie: boolean('aplatie').notNull().default(false),
+		avertissements: text('avertissements')
+			.array()
+			.notNull()
+			.default(sql`'{}'`),
+		imagesNonReprises: integer('images_non_reprises').notNull().default(0)
+	},
+	(t) => [
+		check('lignes_de_lot_rang_positif', sql`${t.rang} >= 0`),
+		check('lignes_de_lot_images_positives', sql`${t.imagesNonReprises} >= 0`),
+		unique('lignes_de_lot_rang_unique').on(t.lotId, t.rang),
+		index('lignes_de_lot_lot_idx').on(t.lotId, t.rang)
+	]
+);
+
 /** M06.2 — l'historique complet des vérifications est conservé. */
 export const verifications = pgTable(
 	'verifications',
@@ -599,6 +698,37 @@ export const consultations = pgTable(
 		le: timestamp('le', { withTimezone: true }).notNull().defaultNow()
 	},
 	(t) => [index('consultations_note_idx').on(t.noteId, t.le.desc())]
+);
+
+/**
+ * `RG-M02-03` — le journal que produit toute recherche : requête, horodatage, nombre de
+ * résultats, ouverture éventuelle d'un résultat. Troisième des quatre journaux de M15.2.
+ *
+ * `compteId` NULL EST L'ANONYMISATION (`RG-M15-02`), comme pour `consultations` : la ligne
+ * existe toujours. `ouvertureNoteId` NULL est la recherche restée sans suite — c'est
+ * exactement ce que l'indicateur nord de V-34 mesure ; elle est attachée APRÈS coup, à
+ * l'ouverture, et `set null` sur la note : supprimer la note ne rend pas la recherche non
+ * advenue.
+ */
+export const recherches = pgTable(
+	'recherches',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		terme: text('terme').notNull(),
+		/** NULL : entrée anonymisée (RG-M15-02). */
+		compteId: uuid('compte_id').references(() => comptes.id, { onDelete: 'set null' }),
+		le: timestamp('le', { withTimezone: true }).notNull().defaultNow(),
+		resultats: integer('resultats').notNull().default(0),
+		/** NULL : aucune ouverture n'a suivi. */
+		ouvertureNoteId: uuid('ouverture_note_id').references(() => notes.id, {
+			onDelete: 'set null'
+		})
+	},
+	(t) => [
+		check('recherches_resultats_positifs', sql`${t.resultats} >= 0`),
+		index('recherches_le_idx').on(t.le.desc()),
+		index('recherches_terme_idx').on(t.terme, t.le.desc())
+	]
 );
 
 /**
@@ -645,6 +775,32 @@ export const versions = pgTable(
  * l'appelant ; la base n'en garde que le condensat. `souvenir` EXEMPTE du délai
  * d'inactivité, il ne prolonge aucune durée, et le délai est lu dans `parametres`.
  */
+/**
+ * `RG-M16-03` — LES DISTINCTIONS OBTENUES, ET RIEN QUE L'INSTANT DE LEUR OBTENTION.
+ *
+ * AUCUN BARÈME N'EST STOCKÉ : les six paliers sont une définition du produit
+ * (`src/lib/donnees/distinctions.ts`), comme les seuils de fraîcheur. AUCUNE MESURE NON
+ * PLUS : elles se dérivent des contributions que la base porte déjà — `notes.auteur_id`,
+ * `versions`, `verifications`, `relations`. Ce que le calcul ne peut PAS retrouver est
+ * l'instant : une mesure dit qu'un seuil EST franchi, jamais QUAND il l'a été.
+ *
+ * INDIVIDUELLES ET PRIVÉES : la clé primaire `(compte_id, cle)` est aussi la seule
+ * lecture, et elle part toujours du compte de la SESSION. Aucun classement n'existe.
+ *
+ * `cle` EST DU TEXTE : il n'y a pas de table de barème à référencer.
+ */
+export const distinctionsObtenues = pgTable(
+	'distinctions_obtenues',
+	{
+		compteId: uuid('compte_id')
+			.notNull()
+			.references(() => comptes.id, { onDelete: 'cascade' }),
+		cle: text('cle').notNull(),
+		obtenueLe: timestamp('obtenue_le', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [primaryKey({ name: 'distinctions_obtenues_pkey', columns: [t.compteId, t.cle] })]
+);
+
 export const sessions = pgTable(
 	'sessions',
 	{
@@ -711,9 +867,13 @@ export const schema = {
 	etiquettesDeNote,
 	relations,
 	piecesJointes,
+	lotsDImport,
+	lignesDeLot,
 	verifications,
 	consultations,
+	recherches,
 	versions,
+	distinctionsObtenues,
 	sessions,
 	tentativesDeConnexion
 };
