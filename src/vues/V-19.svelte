@@ -81,7 +81,13 @@
 		Univers
 	} from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
-	import type { CompteAffiche } from '$lib/coquille/identite';
+	import {
+		CLE_IDENTITE,
+		type CompteAffiche,
+		type IdentiteDeCoquille
+	} from '$lib/coquille/identite';
+	import { getContext } from 'svelte';
+	import { resolve } from '$app/paths';
 	import {
 		contourDeForme,
 		degres,
@@ -287,9 +293,36 @@
 		['Trait pointillé', 'lien documentaire']
 	];
 
+	/* ── CE QUI MANQUE, ET LE GESTE QUI DÉBLOQUE ────────────────────────────
+	   Le voile n'avait qu'une phrase pour un graphe vide — « Ouvrez une fiche et
+	   ajoutez-y une relation » —, et elle était FAUSSE sur l'instance neuve : il
+	   n'y a ni fiche à ouvrir, ni domaine où la ranger, et le seul bouton offert
+	   sortait désactivé, sans motif. Quatre manques, quatre phrases, et chacune
+	   nomme l'adresse qui l'ouvre. */
+	type Manque = 'univers' | 'domaine' | 'note' | 'relation' | 'perimetre';
+
+	/**
+	 * L'IDENTITÉ RÉELLE, POUR SAVOIR À QUI ON PARLE — le motif de `V-07`. La
+	 * console n'est ouverte qu'à l'administrateur : ne lui promettre l'adresse
+	 * qu'à lui est ce qui distingue une issue d'une impasse.
+	 */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const administrateur = $derived(identite?.administrateur ?? false);
+
+	const manque = $derived.by<Manque | null>(() => {
+		if (UNIVERS_PROPOSES.length === 0) return 'univers';
+		if (domaines.length === 0) return 'domaine';
+		if (corpus.length === 0) return 'note';
+		if (graphe.noeuds.length > 0) return null;
+		/* Le graphe est vide. Des relations existent-elles ailleurs dans le
+		   corpus lisible ? Si oui, c'est le PÉRIMÈTRE qui n'en porte pas ; sinon,
+		   c'est le corpus entier qui n'a encore aucune relation. */
+		return relations.length === 0 ? 'relation' : 'perimetre';
+	});
+
 	/** Le voile ne porte `data-actif` que si le gel l'a écrit sur cet état. */
 	const voileActif = $derived(
-		cas === 'chargement' || cas === 'vide' ? 'oui' : cas === 'dense' ? 'non' : undefined
+		cas === 'chargement' || manque !== null ? 'oui' : cas === 'dense' ? 'non' : undefined
 	);
 </script>
 
@@ -567,8 +600,47 @@
 									stable, et identique à chaque ouverture du même périmètre.
 								</p>
 								<div class="progression"><i style="width:{AVANCEMENT}%"></i></div>
-							</div>{:else if cas === 'vide'}<div>
-								<h2>Aucune relation dans ce périmètre</h2>
+							</div>{:else if manque === 'univers'}<div>
+								<h2>Aucun univers sur cette instance</h2>
+								<p>
+									La cartographie n'a pas de données propres : elle se nourrit des notes et des
+									relations du corpus, et cette instance n'a encore nulle part où les ranger.{administrateur
+										? ' Créez un univers, puis un domaine, dans la console — /console/univers.'
+										: " Demandez à un administrateur d'en créer un."}
+								</p>
+								<div class="voile__actions">
+									{#if administrateur}<a
+											class="btn btn--principal"
+											href={resolve('/console/univers')}>Créer un univers</a
+										>{/if}
+								</div>
+							</div>{:else if manque === 'domaine'}<div>
+								<h2>Aucun domaine lisible</h2>
+								<p>
+									Une note se range dans un dossier, et un dossier dans un domaine : sans domaine,
+									le corpus ne peut rien porter.{administrateur
+										? ' Créez un domaine dans la console — /console/domaines.'
+										: " Demandez à un administrateur l'accès à un domaine."}
+								</p>
+								<div class="voile__actions">
+									{#if administrateur}<a
+											class="btn btn--principal"
+											href={resolve('/console/domaines')}>Créer un domaine</a
+										>{/if}
+								</div>
+							</div>{:else if manque === 'note'}<div>
+								<h2>Aucune note à cartographier</h2>
+								<p>
+									Le rangement est en place, le corpus est vide : il n'y a aucun nœud à dessiner.
+									Créez une première note — /notes/nouvelle —, puis une seconde, et reliez-les.
+								</p>
+								<div class="voile__actions">
+									<a class="btn btn--principal si-ecriture" href={resolve('/notes/nouvelle')}
+										>Créer une note</a
+									>
+								</div>
+							</div>{:else if manque === 'relation'}<div>
+								<h2>Aucune relation dans le corpus</h2>
 								<p>
 									La cartographie n'a pas de données propres : elle se nourrit des relations
 									déclarées sur les notes. Ouvrez une {motFicheMinuscule} et ajoutez-y une relation —
@@ -576,6 +648,17 @@
 								</p>
 								<div class="voile__actions">
 									<button class="btn btn--principal">Comment déclarer une relation</button>
+								</div>
+							</div>{:else if manque === 'perimetre'}<div>
+								<h2>Aucune relation dans ce périmètre</h2>
+								<p>
+									Le corpus porte des relations, mais aucune ne touche le périmètre choisi. Revenez
+									à tous les domaines, ou choisissez-en un autre dans le sélecteur ci-dessus.
+								</p>
+								<div class="voile__actions">
+									<a class="btn btn--principal" href={resolve('/cartographie')}
+										>Voir tous les domaines</a
+									>
 								</div>
 							</div>{/if}
 					</div>

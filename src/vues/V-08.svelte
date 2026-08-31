@@ -246,6 +246,16 @@
 		 * bascule en mots-clés et le dit. Voir `mode` dans le corps du script.
 		 */
 		modeDemande?: string;
+		/**
+		 * POURQUOI LE PÉRIMÈTRE EST VIDE — `null` dès qu'une note s'y trouve.
+		 *
+		 * EXIGÉE : `/recherche` est le seul montage de cette vue, et son chargeur
+		 * la passe. La vue ne peut pas la déduire — elle ne reçoit que le résultat
+		 * du moteur, et « zéro note lisible » a quatre causes qui n'appellent pas
+		 * le même geste. Sans elle, l'écran composait « Aucun résultat pour “” »
+		 * sur une requête que personne n'avait formulée.
+		 */
+		motif: 'sans-index' | 'sans-univers' | 'perimetre-ferme' | 'corpus-vide' | null;
 	}
 
 	/**
@@ -283,6 +293,7 @@
 		perimetre,
 		dureeMs,
 		pistes,
+		motif,
 		univers = [],
 		domaines = [],
 		compte: moi = SANS_IDENTITE,
@@ -728,6 +739,37 @@
 	 */
 	let facettesOuvertes = $state(false);
 
+	/* ── LE PÉRIMÈTRE VIDE, ET CE QUI LE DÉBLOQUE ───────────────────────────
+	   Quatre causes, quatre phrases, et chacune nomme l'adresse — ou la
+	   commande — qui l'ouvre. L'écran composait auparavant « Aucun résultat pour
+	   “” » : un texte écrit sur une requête ABSENTE, à l'ouverture d'une page où
+	   personne n'avait encore rien demandé. Une recherche sans requête n'est pas
+	   une recherche sans résultat. */
+	const TITRE_DU_VIDE: Record<NonNullable<Proprietes['motif']>, string> = {
+		'sans-index': "La recherche n'a pas encore d'index",
+		'sans-univers': 'Votre base est vide',
+		'perimetre-ferme': 'Aucun dossier ne vous est ouvert',
+		'corpus-vide': "Aucune note n'est encore écrite"
+	};
+
+	const TEXTE_DU_VIDE: Record<NonNullable<Proprietes['motif']>, string> = {
+		'sans-index':
+			'Le moteur interroge un index, et celui de cette instance n’a jamais été construit : ' +
+			'aucune note ne peut être rapportée, même si le corpus en porte. Un administrateur le ' +
+			'construit par la commande base:reindexer ; les notes restent lisibles depuis le rail.',
+		'sans-univers':
+			'Aucun univers n’existe encore sur cette instance : il n’y a nulle part où ranger une ' +
+			'note, donc rien à chercher. Créez un univers, puis un domaine, dans la console — ' +
+			'/console/univers.',
+		'perimetre-ferme':
+			'La recherche ne rapporte que ce que vous avez le droit de lire, et aucun dossier ne ' +
+			'vous est encore ouvert. Demandez l’accès à un administrateur : la recherche s’ouvrira ' +
+			'alors sur votre périmètre.',
+		'corpus-vide':
+			'La recherche ne rapporte que des notes, et le corpus n’en porte encore aucune. ' +
+			'Écrivez la première — /notes/nouvelle — et elle sera cherchable aussitôt.'
+	};
+
 	/**
 	 * « CRÉER LA NOTE « … » » — l'issue de l'état sans résultat, et la seule
 	 * action d'écriture de cet écran.
@@ -1074,7 +1116,12 @@
 				  • avec résultats — une carte par note, `V-08:2024-2030`.
 			-->
 			<!-- prettier-ignore -->
-			<div class="resultats si-nominal" id="resultats">{#if !rendreLesResultats}{:else if sansResultat}<div class="vide"
+			<div class="resultats si-nominal" id="resultats">{#if !rendreLesResultats}{:else if motif !== null}<div class="vide"
+					><h2 class="vide__titre">{TITRE_DU_VIDE[motif]}</h2
+					><p class="vide__txt">{TEXTE_DU_VIDE[motif]}</p
+					>{#if motif === 'sans-univers'}<a class="btn btn--principal" href={resolve('/console/univers')}>Créer un univers</a
+					>{:else if motif === 'corpus-vide' && ecriture}<a class="btn btn--principal si-ecriture" href={resolve('/notes/nouvelle')}>Créer une note</a
+				>{/if}</div>{:else if sansResultat}<div class="vide"
 					><h2 class="vide__titre">Aucun résultat pour <span class="vide__requete">{`« ${requeteAffichee} »`}</span></h2
 					><p class="vide__txt">Cette connaissance n'est pas encore écrite. Si vous la détenez, c'est le bon moment : une note d'une dizaine de lignes vaut mieux que rien.</p
 					>{#if pistes.length}<div class="vide__pistes">{#each pistes as piste (piste)}<button class="piste" onclick={() => essayer(piste)}>{`Essayer « ${piste} »`}</button>{/each}</div

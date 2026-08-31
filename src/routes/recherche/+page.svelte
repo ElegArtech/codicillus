@@ -97,6 +97,13 @@
 		le bloc se rend. Aucune étiquette dans le périmètre : liste vide, et le
 		bloc n'est pas rendu.
 	-->
+	<!--
+		`motif` — POURQUOI LE PÉRIMÈTRE EST VIDE. La vue ne peut pas le déduire :
+		elle ne reçoit que le résultat du moteur, et « zéro note lisible » a quatre
+		causes qui n'appellent pas le même geste — un index jamais construit, une
+		instance sans univers, un compte sans dossier ouvert, un corpus vide. Sans
+		lui, l'écran composait « Aucun résultat pour “” ».
+	-->
 	<VueConnectee
 		vecteur={data.vecteur}
 		notes={data.notes}
@@ -106,6 +113,7 @@
 		perimetre={data.perimetre}
 		dureeMs={data.dureeMs}
 		pistes={data.pistes}
+		motif={data.motif}
 		tri={data.tri}
 		modeDemande={data.mode}
 	/>
