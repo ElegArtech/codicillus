@@ -157,14 +157,7 @@
 	 */
 	import type { Snippet } from 'svelte';
 	import type { Domaine, Note, Univers } from '../../../seeds/corpus';
-	import {
-		adresseDUnivers,
-		adresseDeDomaine,
-		adresseDeDossier,
-		adresseDeNote,
-		adresseDesNotesDuDomaine,
-		adresseDesSignetsDuDomaine
-	} from '$lib/rangement/adresses';
+	import { adresseDeNote, adressesParLesNoms } from '$lib/rangement/adresses';
 	import { railRendu, sectionsDuRail } from './arborescence';
 	import { railAbregeRendu, sectionsAbregeesDuCorpus } from './arborescence-abregee';
 	import BarreSuperieure from './BarreSuperieure.svelte';
@@ -173,7 +166,7 @@
 	import type { Notification } from './notifications';
 	import { getContext } from 'svelte';
 	import { page } from '$app/state';
-	import { CLE_IDENTITE, type IdentiteDeCoquille } from './identite';
+	import { CLE_IDENTITE, designationsDeCoquille, type IdentiteDeCoquille } from './identite';
 
 	interface Compte {
 		readonly nom: string;
@@ -405,6 +398,18 @@
 	 * par défaut `'referent'` la rendait invisible à l'administrateur lui-même.
 	 */
 	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	/**
+	 * LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM.
+	 *
+	 * Le rail et le fil d'Ariane ne portent que des NOMS d'affichage, et les
+	 * slugifiaient pour composer leurs adresses. `univers.identifiant` et
+	 * `domaines.identifiant` sont persistés et ne suivent pas les renommages
+	 * (`RG-M12-11`) : renommer un univers ou un domaine en console rendait donc
+	 * 404 toute sa branche du rail et tout son fil. La table vient du gabarit
+	 * racine ; hors application elle est vide et la dérivation d'avant s'applique.
+	 */
+	const designations = designationsDeCoquille();
+	const adresses = adressesParLesNoms(designations);
 	/* L'ARBORESCENCE RÉELLE L'EMPORTE, MÊME MOTIF QUE L'IDENTITÉ. Hors
 	   application — le rendu par défaut d'une vue —, le contexte est absent et
 	   les propriétés du jeu de semence s'appliquent : le gel ne bouge pas. */
@@ -495,7 +500,8 @@
 			: railRendu(
 					sectionsDuRail(universEffectif, domainesEffectifs, notes),
 					courant,
-					brancheEnChargement
+					brancheEnChargement,
+					designations
 				)
 	);
 	/* LA FORME ABRÉGÉE SUIT LA BASE DÈS QU'ELLE EN A UNE. Elle portait l'arbre
@@ -511,7 +517,11 @@
 				? railAbregeRendu(courant)
 				: railAbregeRendu(
 						courant,
-						sectionsAbregeesDuCorpus(sectionsDuRail(universEffectif, domainesEffectifs, notes))
+						sectionsAbregeesDuCorpus(
+							sectionsDuRail(universEffectif, domainesEffectifs, notes),
+							designations
+						),
+						designations
 					)
 	);
 
@@ -548,39 +558,42 @@
 	 *
 	 * CE QUI RESTE SANS ADRESSE RESTE SANS ADRESSE. Un segment que ces règles ne
 	 * résolvent pas — le titre d'une note dans le fil de V-18, par exemple, dont
-	 * l'identifiant ne remonte pas jusqu'ici — garde le `href="#"` du gel. Une
-	 * destination devinée serait pire qu'un lien qui ne mène nulle part.
+	 * l'identifiant ne remonte pas jusqu'ici — n'est alors PAS UN LIEN :
+	 * `BarreSuperieure.svelte` le rend en `<span>`, comme le segment courant.
+	 * Il portait le `href="#"` du gel, et c'était un lien mort servi en
+	 * production : le clic rechargeait l'écran avec un croisillon en plus. Une
+	 * destination devinée serait pire encore.
 	 */
 	function adressesDuFil(
 		segments: readonly string[],
 		chemin: readonly string[],
 		corpus: readonly Note[]
 	): readonly (string | undefined)[] {
-		const adresses: (string | undefined)[] = segments.map(() => undefined);
+		const cibles: (string | undefined)[] = segments.map(() => undefined);
 		/* Le dernier segment est la page courante : le gel le rend en `span`. */
 		const dernier = segments.length - 1;
-		if (segments[0] === 'Accueil' && dernier > 0) adresses[0] = '/';
+		if (segments[0] === 'Accueil' && dernier > 0) cibles[0] = '/';
 		if (segments[1] === 'Console') {
-			if (dernier > 1) adresses[1] = '/console';
-			return adresses;
+			if (dernier > 1) cibles[1] = '/console';
+			return cibles;
 		}
 		const universDuFil = segments[1];
 		const domaineDuFil = segments[2];
-		if (universDuFil === undefined || domaineDuFil === undefined) return adresses;
-		if (chemin[0] !== domaineDuFil) return adresses;
-		if (dernier > 1) adresses[1] = adresseDUnivers(universDuFil);
-		if (dernier > 2) adresses[2] = adresseDeDomaine(universDuFil, domaineDuFil);
+		if (universDuFil === undefined || domaineDuFil === undefined) return cibles;
+		if (chemin[0] !== domaineDuFil) return cibles;
+		if (dernier > 1) cibles[1] = adresses.univers(universDuFil);
+		if (dernier > 2) cibles[2] = adresses.domaine(universDuFil, domaineDuFil);
 		/* `courant` va du domaine au dernier dossier : la profondeur de dossiers
 		   est donc sa longueur moins un. Au-delà, le fil parle d'autre chose. */
 		const profondeur = chemin.length - 1;
 		for (let rang = 3; rang < dernier; rang += 1) {
 			const segment = segments[rang];
 			if (segment === 'Notes') {
-				adresses[rang] = adresseDesNotesDuDomaine(universDuFil, domaineDuFil);
+				cibles[rang] = adresses.notes(universDuFil, domaineDuFil);
 			} else if (segment === 'Signets') {
-				adresses[rang] = adresseDesSignetsDuDomaine(universDuFil, domaineDuFil);
+				cibles[rang] = adresses.signets(universDuFil, domaineDuFil);
 			} else if (rang - 3 < profondeur) {
-				adresses[rang] = adresseDeDossier(universDuFil, domaineDuFil, segments.slice(3, rang + 1));
+				cibles[rang] = adresses.dossier(universDuFil, domaineDuFil, segments.slice(3, rang + 1));
 			} else if (rang - 3 === profondeur) {
 				/*
 				 * LE SEGMENT QUI SUIT LE DERNIER DOSSIER EST UN TITRE DE NOTE — c'est
@@ -600,10 +613,10 @@
 						candidate.univers === universDuFil &&
 						candidate.domaine === domaineDuFil
 				);
-				if (note !== undefined) adresses[rang] = adresseDeNote(note.id);
+				if (note !== undefined) cibles[rang] = adresseDeNote(note.id);
 			}
 		}
-		return adresses;
+		return cibles;
 	}
 
 	const ciblesDuFil = $derived(adressesDuFil(fil, courant, notes));

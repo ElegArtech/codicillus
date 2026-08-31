@@ -298,3 +298,105 @@ export function adresseDeModificationDeSignet(
 ): string {
 	return `${adresseDesSignetsDuDomaine(univers, domaine)}/${identifiant}/modifier`;
 }
+
+/* =========================================================================
+   LES DÉSIGNATIONS — LE NOM D'AFFICHAGE N'EST PAS L'IDENTIFIANT D'ADRESSE
+
+   Tout ce qui précède compose sur des IDENTIFIANTS, et `identifiantLisible()`
+   est idempotente sur eux : passer un identifiant déjà persisté ne le change
+   pas. Le défaut n'a jamais été là — il était chez les APPELANTS, qui
+   passaient le nom d'affichage.
+
+   `univers.identifiant` et `domaines.identifiant` sont PERSISTÉS et STABLES :
+   dérivés à la création, ils ne suivent pas les renommages ultérieurs
+   (`RG-M12-11`). Slugifier le nom donnait donc l'adresse juste tant que rien
+   n'avait été renommé, et un 404 sur TOUTES les adresses d'un univers ou d'un
+   domaine dès le premier renommage — mesuré sur les deux.
+
+   LA CORRESPONDANCE EST LUE EN BASE, JAMAIS DEVINÉE. Elle est servie une fois
+   par le gabarit racine et descend par le contexte de coquille, comme
+   l'identité et l'arborescence du rail : trente routes qui la recopieraient
+   divergeraient au premier oubli.
+
+   LE REPLI EST LA DÉRIVATION D'AVANT, et c'est un choix. Un nom absent de la
+   table — le rendu par défaut d'une vue, une planche, un objet hors du
+   périmètre lisible — rend l'adresse que le produit servait déjà : juste tant
+   que l'objet n'a pas été renommé, et jamais pire qu'un lien mort.
+   ========================================================================= */
+
+/**
+ * Les identifiants d'adresse des univers et des domaines, indexés par leur nom
+ * d'affichage. Les domaines sont indexés par le COUPLE, parce que `RG-STR-02`
+ * ne rend un nom de domaine unique qu'au sein de son univers.
+ */
+export interface DesignationsDeRangement {
+	readonly univers: Readonly<Record<string, string>>;
+	readonly domaines: Readonly<Record<string, string>>;
+}
+
+/** Aucune correspondance connue — tout se replie sur `identifiantLisible()`. */
+export const SANS_DESIGNATION: DesignationsDeRangement = { univers: {}, domaines: {} };
+
+/**
+ * Le séparateur des deux noms dans une clé de domaine : le caractère de
+ * contrôle de rang 31, impossible dans un nom saisi. Aucun couple de noms ne
+ * peut donc produire la clé d'un autre couple.
+ */
+const SEPARATEUR_DE_CLE = String.fromCharCode(31);
+
+/** La clé d'un domaine dans la table des désignations — son univers, puis lui. */
+export function cleDeDomaine(univers: string, domaine: string): string {
+	return univers + SEPARATEUR_DE_CLE + domaine;
+}
+
+/** L'identifiant d'adresse d'un univers nommé, ou la dérivation de son nom. */
+export function identifiantDUnivers(designations: DesignationsDeRangement, nom: string): string {
+	return designations.univers[nom] ?? identifiantLisible(nom);
+}
+
+/** L'identifiant d'adresse d'un domaine nommé, ou la dérivation de son nom. */
+export function identifiantDeDomaine(
+	designations: DesignationsDeRangement,
+	universNom: string,
+	domaineNom: string
+): string {
+	return (
+		designations.domaines[cleDeDomaine(universNom, domaineNom)] ?? identifiantLisible(domaineNom)
+	);
+}
+
+/**
+ * LA FAMILLE D'ADRESSES QUI PART DES NOMS D'AFFICHAGE.
+ *
+ * Les vues ne connaissent que des noms — c'est ce que les chargeurs leur
+ * passent, et c'est ce que le gel affiche. Elles composent donc par ici, et le
+ * seul endroit qui traduise reste `identifiantDUnivers()` et
+ * `identifiantDeDomaine()`.
+ */
+export function adressesParLesNoms(designations: DesignationsDeRangement): {
+	univers: (universNom: string) => string;
+	domaine: (universNom: string, domaineNom: string) => string;
+	dossier: (universNom: string, domaineNom: string, chemin: readonly string[]) => string;
+	notes: (universNom: string, domaineNom: string) => string;
+	signets: (universNom: string, domaineNom: string) => string;
+	creationDeSignet: (universNom: string, domaineNom: string) => string;
+	modificationDeSignet: (universNom: string, domaineNom: string, identifiant: string) => string;
+} {
+	const u = (nom: string): string => identifiantDUnivers(designations, nom);
+	const d = (universNom: string, domaineNom: string): string =>
+		identifiantDeDomaine(designations, universNom, domaineNom);
+	return {
+		univers: (universNom) => adresseDUnivers(u(universNom)),
+		domaine: (universNom, domaineNom) => adresseDeDomaine(u(universNom), d(universNom, domaineNom)),
+		dossier: (universNom, domaineNom, chemin) =>
+			adresseDeDossier(u(universNom), d(universNom, domaineNom), chemin),
+		notes: (universNom, domaineNom) =>
+			adresseDesNotesDuDomaine(u(universNom), d(universNom, domaineNom)),
+		signets: (universNom, domaineNom) =>
+			adresseDesSignetsDuDomaine(u(universNom), d(universNom, domaineNom)),
+		creationDeSignet: (universNom, domaineNom) =>
+			adresseDeCreationDeSignet(u(universNom), d(universNom, domaineNom)),
+		modificationDeSignet: (universNom, domaineNom, identifiant) =>
+			adresseDeModificationDeSignet(u(universNom), d(universNom, domaineNom), identifiant)
+	};
+}

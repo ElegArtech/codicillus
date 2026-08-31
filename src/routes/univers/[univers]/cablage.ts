@@ -85,7 +85,7 @@
  *   immédiatement dessous, sur le même écran. Une ancre vers un contenu déjà
  *   visible ne déplace rien et ferait promettre un geste sans effet.
  */
-import { adresseDesNotesDuDomaine } from '$lib/rangement/adresses';
+import { adressesParLesNoms, type DesignationsDeRangement } from '$lib/rangement/adresses';
 
 /** Ce qu'un câblage rend : de quoi le défaire. Même contrat que ses voisins. */
 export type Debranchement = () => void;
@@ -115,6 +115,16 @@ const ADRESSE_DE_LA_CONSOLE_DES_DOMAINES = '/console/domaines';
 export interface OptionsDeLUnivers {
 	/** Le NOM de l'univers rendu — celui que le vecteur porte sous `uni`. */
 	readonly univers: string;
+	/**
+	 * LA TABLE QUI TRADUIT UN NOM EN IDENTIFIANT D'ADRESSE.
+	 *
+	 * Le seul lien composé ici part du NOM lu sur une carte de domaine, et il
+	 * était slugifié. `domaines.identifiant` est fixé à la création et ne suit PAS
+	 * les renommages (`RG-M12-11`) : un segment de barre de fraîcheur menait donc
+	 * en 404 dès qu'on avait renommé le domaine. La table vient du gabarit racine,
+	 * par le contexte de coquille.
+	 */
+	readonly designations: DesignationsDeRangement;
 }
 
 /** Le libellé d'un nœud, blancs réduits. */
@@ -201,7 +211,7 @@ export function cablerLUnivers(racine: HTMLElement, options: OptionsDeLUnivers):
 				carte === null
 					? rechercheDeLUnivers()
 					: new URL(
-							adresseDesNotesDuDomaine(
+							adressesParLesNoms(options.designations).notes(
 								options.univers,
 								libelle(carte.querySelector('.carte-dom__nom'))
 							),

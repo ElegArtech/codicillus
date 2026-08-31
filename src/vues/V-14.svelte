@@ -86,12 +86,19 @@
 	 * Le gel les écrit tous en ancre vide, faute de serveur ; le produit en a
 	 * un, et un lien qui ne mène nulle part est un défaut, pas une fidélité.
 	 */
-	import {
-		adresseDeDomaine,
-		adresseDeDossier,
-		adresseDeNote,
-		segmentsDeDossier
-	} from '$lib/rangement/adresses';
+	import { adresseDeNote, adressesParLesNoms, segmentsDeDossier } from '$lib/rangement/adresses';
+	import { designationsDeCoquille } from '$lib/coquille/identite';
+
+	/**
+	 * LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM.
+	 *
+	 * La note ne porte que les NOMS de son univers et de son domaine, et la vue
+	 * les slugifiait. Les identifiants d'adresse sont persistés et ne suivent PAS
+	 * les renommages (`RG-M12-11`) : renommer le domaine d'une note rendait 404
+	 * les deux liens de son fil de rangement. La table vient du gabarit racine ;
+	 * hors application elle est vide et la dérivation du nom s'applique.
+	 */
+	const adresses = adressesParLesNoms(designationsDeCoquille());
 	import type { PanneauxDeLaNote, VoisineAffichee } from '$lib/lecture/panneaux';
 
 	interface Proprietes {
@@ -261,9 +268,9 @@
 	 * du dossier racine au dossier courant, ce que `segmentsDeDossier` découpe
 	 * du chemin que le corpus porte.
 	 */
-	const adresseDuDomaine = $derived(adresseDeDomaine(note.univers, note.domaine));
+	const adresseDuDomaine = $derived(adresses.domaine(note.univers, note.domaine));
 	const adresseDuDossier = $derived(
-		adresseDeDossier(note.univers, note.domaine, segmentsDeDossier(note.dossier))
+		adresses.dossier(note.univers, note.domaine, segmentsDeDossier(note.dossier))
 	);
 
 	/**

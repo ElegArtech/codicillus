@@ -103,6 +103,19 @@
 		   sans que le contexte soit réémis. */
 		get vocabulaire() {
 			return vocabulaire;
+		},
+		/* LES IDENTIFIANTS D'ADRESSE DES UNIVERS ET DES DOMAINES, PAR LEUR NOM —
+		   lus en base par le chargeur racine, dans les requêtes qu'il émettait
+		   déjà pour le rail. Les vues ne reçoivent que des noms d'affichage et
+		   composaient l'adresse en les slugifiant ; l'identifiant, lui, est
+		   persisté et ne suit pas les renommages (`RG-M12-11`), et renommer un
+		   univers ou un domaine rendait donc 404 toutes ses adresses. Un
+		   accesseur, comme les autres membres : la table suit une navigation sans
+		   que le contexte soit réémis. Absente sur la page d'erreur et pour
+		   l'anonyme, qui n'ont pas de données de gabarit — la composition retombe
+		   alors sur la dérivation du nom. */
+		get designations() {
+			return data.designations;
 		}
 	});
 
