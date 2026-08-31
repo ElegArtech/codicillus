@@ -6,8 +6,10 @@
  *
  * `cablerLeSignet()` de `$lib/cablage/formulaires.ts` porte la méthode du
  * formulaire, le nom des cinq champs, les pastilles d'étiquette, la touche
- * Entrée, la soumission de `#valider-page` et celle de `#supprimer-page` sous
- * confirmation chiffrée. Ce module n'y touche pas.
+ * Entrée, la soumission de `#valider-page`, celle de `#supprimer-page` sous
+ * confirmation chiffrée, et le collage de `#coller` — lecture du presse-papiers
+ * dans `#adresse`, refus affiché à l'endroit du champ. Ce module n'y touche
+ * pas.
  *
  * IL RESTE UN GESTE, ET UN SEUL : « ANNULER ».
  *

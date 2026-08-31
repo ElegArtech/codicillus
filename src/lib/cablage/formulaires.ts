@@ -993,6 +993,67 @@ export interface OptionsDuSignet {
 	rappelDeSuppression?: string;
 }
 
+/**
+ * CE QUE LE CHAMP D'ADRESSE DIT QUAND LE PRESSE-PAPIERS RESTE FERMÉ. Un refus
+ * de permission, un navigateur sans presse-papiers programmable, une page hors
+ * contexte sûr : trois causes, un seul remède pour qui est devant l'écran, et
+ * la phrase le nomme.
+ */
+export const PHRASE_DE_PRESSE_PAPIERS_HORS_ATTEINTE =
+	"Le presse-papiers n'est pas accessible depuis cette page. Collez l'adresse dans le champ avec Ctrl+V.";
+
+/** Ce qu'il dit quand la lecture aboutit, mais ne rapporte aucun texte. */
+export const PHRASE_DE_PRESSE_PAPIERS_VIDE =
+	"Le presse-papiers ne contient aucun texte : copiez l'adresse, puis recommencez.";
+
+/**
+ * LE BLOC DE REFUS DU CHAMP D'ADRESSE — montré avec son motif, ou refermé.
+ *
+ * Le gel pose `#erreur-adresse` masqué, avec son pictogramme et un
+ * `span#erreur-adresse-txt` vide, et `.champ[data-etat="erreur"]` porte le
+ * contour rouge du socle. Rien n'est créé ici : les deux nœuds existent.
+ */
+function direLAdresse(formulaire: ParentNode, motif: string | null): void {
+	const bloc = noeud<HTMLElement>(formulaire, '#erreur-adresse');
+	const texte = noeud<HTMLElement>(formulaire, '#erreur-adresse-txt');
+	const champ = noeud<HTMLElement>(formulaire, '#champ-adresse');
+	if (texte !== null) texte.textContent = motif ?? '';
+	if (bloc !== null) bloc.hidden = motif === null;
+	if (champ === null) return;
+	if (motif === null) delete champ.dataset['etat'];
+	else champ.dataset['etat'] = 'erreur';
+}
+
+/**
+ * POSE UNE ADRESSE COLLÉE DANS LE CHAMP, ou dit pourquoi elle ne l'est pas.
+ *
+ * L'événement `input` est ÉMIS, et ce n'est pas une politesse : la vue lie la
+ * saisie à son aperçu d'adresse — sceau, hôte, chemin. Une valeur posée sans
+ * lui laisserait l'aperçu sur l'adresse précédente, c'est-à-dire un écran qui
+ * ment sur ce que le champ porte.
+ *
+ * Rend `true` si quelque chose a été collé.
+ */
+export function poserLAdresseCollee(formulaire: ParentNode, texte: string): boolean {
+	const champ = noeud<HTMLInputElement>(formulaire, '#adresse');
+	if (champ === null) return false;
+	const adresse = texte.trim();
+	if (adresse === '') {
+		direLAdresse(formulaire, PHRASE_DE_PRESSE_PAPIERS_VIDE);
+		champ.focus?.();
+		return false;
+	}
+	champ.value = adresse;
+	direLAdresse(formulaire, null);
+	const fenetre = champ.ownerDocument.defaultView;
+	if (fenetre?.Event !== undefined) {
+		champ.dispatchEvent(new fenetre.Event('input', { bubbles: true }));
+	}
+	champ.focus?.();
+	champ.setSelectionRange?.(adresse.length, adresse.length);
+	return true;
+}
+
 export function cablerLeSignet(racine: ParentNode, options: OptionsDuSignet = {}): Debranchement {
 	const formulaire = noeud<HTMLFormElement>(racine, 'form.formulaire');
 	if (formulaire === null) return () => {};
@@ -1040,6 +1101,42 @@ export function cablerLeSignet(racine: ParentNode, options: OptionsDuSignet = {}
 			retrait.addEventListener('click', oter);
 			jetables.push(() => retrait.removeEventListener('click', oter));
 		}
+	}
+
+	/* ─────────────────────────── COLLER DEPUIS LE PRESSE-PAPIERS ──────────
+	   `#coller` était dessiné, stylé, survolé — et inerte : aucun écouteur, ni
+	   ici ni ailleurs. Le geste est une lecture du presse-papiers, donc un
+	   comportement de navigateur, donc sa place est ici et pas dans la vue.
+
+	   LE REFUS EST UN ÉTAT AFFICHÉ, JAMAIS UN SILENCE. La lecture du
+	   presse-papiers demande une permission que le navigateur peut refuser, et
+	   qui n'existe pas hors contexte sûr. Le bloc de refus du champ d'adresse
+	   — `#erreur-adresse`, déjà au gel, masqué — porte alors la phrase qui
+	   nomme le geste de secours : la frappe de collage dans le champ. */
+	const collage = noeud<HTMLButtonElement>(formulaire, '#coller');
+	const champAdresse = noeud<HTMLInputElement>(formulaire, '#adresse');
+	if (collage !== null && champAdresse !== null) {
+		collage.type = 'button';
+		const auCollage = (): void => {
+			const fenetre = document.defaultView;
+			const pressePapiers = fenetre?.navigator.clipboard;
+			if (pressePapiers === undefined || pressePapiers === null) {
+				direLAdresse(formulaire, PHRASE_DE_PRESSE_PAPIERS_HORS_ATTEINTE);
+				champAdresse.focus();
+				return;
+			}
+			void pressePapiers.readText().then(
+				(texte) => {
+					poserLAdresseCollee(formulaire, texte);
+				},
+				() => {
+					direLAdresse(formulaire, PHRASE_DE_PRESSE_PAPIERS_HORS_ATTEINTE);
+					champAdresse.focus();
+				}
+			);
+		};
+		collage.addEventListener('click', auCollage);
+		jetables.push(() => collage.removeEventListener('click', auCollage));
 	}
 
 	/* Les étiquettes voyagent dans un champ caché, posé à la soumission. */

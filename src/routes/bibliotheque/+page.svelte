@@ -16,7 +16,11 @@
 	 * trois notes-échantillons du témoin de fraîcheur.
 	 *
 	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
-	 * sert ; elle est identique à l'octet à sa source gelée (P-6.3).
+	 * sert. Elle a été identique à l'octet à sa source gelée (P-6.3) ; elle ne
+	 * l'est plus de trois règles, et elles sont écrites à l'endroit exact où le
+	 * gel offrait au clic ce qui ne pouvait pas agir : les parts de la barre de
+	 * répartition, les segments du fil spécimen et les boutons de spécimen, tous
+	 * rendus en éléments non interactifs.
 	 *
 	 * AUCUN `<svelte:head>` : rien ne déclare de titre de page pour le PRODUIT.
 	 */
