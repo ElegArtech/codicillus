@@ -309,10 +309,17 @@
 			illus: [
 				{
 					gras: false,
+					/* L'IDENTIFIANT DE CETTE ILLUSTRATION NE VIENT PAS DU CORPUS. Elle
+					   citait `pg-prod-01`, un serveur du jeu de démonstration : l'écran
+					   d'import montrait donc à l'installateur d'une instance vide le nom
+					   d'une machine qu'il ne possède pas. Le contrôle du paquet ne peut
+					   rien ici — un identifiant est du texte libre —, et c'est le passage
+					   à froid qui l'a vu. Il reste dans le champ lexical du reste de
+					   l'illustration : un contrat, un prestataire. */
 					texte:
 						'---\n titre: Infogérance\n etiquettes: [contrat]\n relations: [Documente ' +
 						SEPARATEUR_DE_RENVOI +
-						' pg-prod-01]\n---\n\n→ note + '
+						' contrat-cadre]\n---\n\n→ note + '
 				},
 				{ gras: true, texte: 'liens résolus' }
 			]
