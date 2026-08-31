@@ -1,8 +1,9 @@
 <script lang="ts">
 	/**
-	 * V-06 — Mot de passe oublié. DEUX ROUTES pour une seule vue
-	 * (`docs/routes.md` §3.2) : `/mot-de-passe-oublie` et
-	 * `/mot-de-passe-oublie/{jeton}`, qui rendent le même écran.
+	 * V-06 — Mot de passe oublié. UNE SEULE ROUTE, `/mot-de-passe-oublie`.
+	 * `docs/routes.md` §3.2 en déclarait une seconde, `…/{jeton}`, qui rendait le
+	 * même écran sans lire son paramètre ; aucun lien n'étant jamais émis, elle a
+	 * été retirée.
 	 *
 	 * POURQUOI LE PARCOURS EN QUATRE ÉTAPES N'EST PLUS RENDU. Le gel dessine un
 	 * parcours guidé — identifiant, envoi d'un lien, nouveau mot de passe,

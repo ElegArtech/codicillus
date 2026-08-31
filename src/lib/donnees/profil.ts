@@ -28,20 +28,6 @@ import type { Note } from '../../../seeds/corpus';
  */
 export const SANS_CONTREPARTIE_EN_BASE: readonly DonneeSansContrepartie[] = [
 	{
-		donnee: 'CONTRIBUTIONS.liens',
-		vue: 'V-25',
-		affichage: 'indicateur « liens internes créés » et les distinctions qui le mesurent',
-		motif:
-			'`relations` ne porte PAS l’auteur du lien — ni colonne de compte, ni horodatage attribuable (`schema.ts`, table `relations` : `source_id`, `cible_id`, `type_de_relation_id`, `origine`, `cree_le`). Le nombre est donc INDISPONIBLE, et il s’affiche comme tel plutôt qu’en zéro muet (`P-02`). Son voisin « notes vérifiées » n’est plus de cette liste : `verifications.compte_id` existe, et `compterLesVerifications()` le compte pour de bon.'
-	},
-	{
-		donnee: 'DISTINCTIONS',
-		vue: 'V-25',
-		affichage: 'les six jauges de l’onglet « Distinctions »',
-		motif:
-			'aucune table de distinction. Les seuils et les libellés sont un catalogue du jeu de semence ; la MESURE, elle, est calculée sur les statistiques par `progression()`, donc jamais figée — c’est le catalogue qui manque en base, pas la valeur.'
-	},
-	{
 		donnee: 'ACTIVITE',
 		vue: 'V-25',
 		affichage: 'le flux de l’onglet « Activité »',
@@ -94,6 +80,12 @@ export interface ProfilDuCompte {
 	readonly derniereConnexionLe: Date | null;
 	/** `RG-M16-02` et `RG-CPT-01` — le mot de passe est géré par l'administration. */
 	readonly motDePasseVerrouille: boolean;
+	/**
+	 * `M14.6` — le mot de passe a été posé par un administrateur et n'a pas encore
+	 * été remplacé. Tant qu'elle est vraie, `src/hooks.server.ts` renvoie CHAQUE
+	 * adresse vers cet écran : le titulaire doit savoir pourquoi.
+	 */
+	readonly motDePasseAChanger: boolean;
 }
 
 /** Le profil d'un compte, ou `null` si le compte n'existe pas. */
@@ -108,7 +100,8 @@ export async function lireLeProfil(base: Base, compteId: string): Promise<Profil
 			domaine: domaines.nom,
 			arriveLe: comptes.arriveLe,
 			derniereConnexionLe: comptes.derniereConnexionLe,
-			motDePasseVerrouille: comptes.motDePasseVerrouille
+			motDePasseVerrouille: comptes.motDePasseVerrouille,
+			motDePasseAChanger: comptes.motDePasseAChanger
 		})
 		.from(comptes)
 		.leftJoin(domaines, eq(domaines.id, comptes.domaineId))

@@ -178,7 +178,10 @@
 	profilDuCompte={data.profilDuCompte}
 	preferenceDeSession={data.preferenceDeSession}
 	contributions={data.contributions}
+	distinctions={data.distinctions}
+	obtentions={data.obtentions}
 	relations={data.relations}
 	activite={data.activite}
 	compte={data.compte}
+	changementImpose={data.changementImpose}
 />

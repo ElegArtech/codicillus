@@ -6,11 +6,18 @@
  * `redirection`, appliqué AVANT toute route. `notes` est le périmètre de LECTURE, jamais
  * le corpus (`RG-ACC-01`).
  *
- * `contributions` — CE QUI SE COMPTE EST COMPTÉ, LE RESTE EST DÉCLARÉ INDISPONIBLE :
- * `relations` ne porte pas l'auteur du lien, « liens internes créés » vaut donc `null`, et
- * l'écran affiche un état neutre plutôt qu'un zéro (`P-02`). `activite` est VIDE, aucune
- * table d'événements n'existant, et `distinctions` n'est pas passée — le barème est un
- * CATALOGUE de critères, pas une mesure.
+ * `contributions` — CE QUI SE COMPTE EST COMPTÉ. Les quatre mesures sortent des tables
+ * que la base porte déjà (`mesurerLesContributions()`) ; « liens internes créés » n'est
+ * plus indisponible : `relations` ne nomme pas l'auteur d'un lien, mais elle nomme sa note
+ * SOURCE, et son auteur est connu. `activite` est VIDE, aucune table d'événements
+ * n'existant.
+ *
+ * `distinctions` — LE BARÈME DU PRODUIT, servi tel quel, et les DATES D'OBTENTION lues et
+ * consignées par `obtentionsDuCompte()`. L'onglet était vide pour toujours. Ce qui est
+ * stocké est l'INSTANT et rien d'autre : le barème est une constante du produit, les
+ * mesures se recalculent. TOUT PART DU COMPTE DE LA SESSION — `RG-M16-03` veut les
+ * distinctions « individuelles et privées », et aucun paramètre d'adresse n'en désigne
+ * un autre.
  *
  * LES QUATRE ACTIONS SONT TOUTES NOMMÉES : SvelteKit rend 500 si une action par défaut
  * cohabite avec une action nommée.
@@ -20,7 +27,6 @@ import { basePartagee } from '$lib/base/acces';
 import { lireSeuils } from '$lib/donnees/lecture';
 import {
 	changerLeMotDePasse,
-	compterLesVerifications,
 	ecrirePreferenceDeSession,
 	initialesDuNom,
 	enregistrerLIdentite,
@@ -32,6 +38,11 @@ import {
 	profilAffiche,
 	vecteurDeV25
 } from '$lib/donnees/profil';
+import {
+	BAREME_DES_DISTINCTIONS,
+	mesurerLesContributions,
+	obtentionsDuCompte
+} from '$lib/donnees/distinctions';
 import { lireRelationsLisibles } from '$lib/donnees/outils';
 import { ouvrirLAcces } from '$lib/donnees/rangement';
 import type { Actions, PageServerLoad } from './$types';
@@ -73,6 +84,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	   vers les droits résolus, et le rouvrir en dupliquerait la décision. */
 	const acces = await ouvrirLAcces(base, identite, contexte.maintenant);
 
+	/* LES QUATRE MESURES SONT LUES UNE FOIS, et elles servent DEUX fois : les
+	   indicateurs « Vos contributions » et les jauges de distinction. Deux calculs
+	   donneraient deux vérités sur le même écran. L'instant est celui de la requête,
+	   celui-là même que la première distinction obtenue portera. */
+	const mesures = await mesurerLesContributions(base, identite.compteId);
+
 	return {
 		vecteur: vecteurDeV25(
 			ongletDemande(url.searchParams.get('onglet')),
@@ -80,16 +97,32 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		),
 		notes: await lireLesNotesDuPerimetre(base, identite, contexte),
 		profilDuCompte: affiche,
+		/**
+		 * LE CHANGEMENT EST-IL IMPOSÉ — `M14.6`. Le compte porte encore le mot de
+		 * passe qu'un administrateur lui a posé, et `src/hooks.server.ts` renvoie
+		 * ALORS TOUTE ADRESSE ici. Le titulaire cliquait « Accueil » et revenait sur
+		 * son profil sans qu'un mot le lui explique : l'écran le dit désormais, et
+		 * nomme le geste qui débloque.
+		 *
+		 * LE VERROU L'EMPORTE, ET C'EST LA MÊME DÉDUCTION QUE `depot.ts` : un compte
+		 * à mot de passe verrouillé ne peut pas changer le sien (`RG-CPT-01`), donc
+		 * rien ne lui est imposé — et rien ne le retient nulle part.
+		 */
+		changementImpose: profil.motDePasseAChanger && !profil.motDePasseVerrouille,
 		preferenceDeSession: await lirePreferenceDeSession(base, sessionId),
-		/* `verifiees` est COMPTÉ ; `liens` est déclaré indisponible, parce que la
-		   table des relations ne porte pas l'auteur du lien. Deux informations
-		   différentes, deux rendus différents (`P-02`). */
+		/* LES DEUX SONT COMPTÉS. `liens` valait `null` — « la table des relations ne
+		   porte pas l'auteur du lien » — et l'indicateur restait en état neutre pour
+		   toujours, la distinction « Tisseur » avec lui. La table nomme la note SOURCE
+		   de chaque relation déclarée, et `notes.auteur_id` nomme son auteur : c'est la
+		   seule attribution que la base permette, et elle est réelle. */
 		contributions: {
-			[affiche.nom]: {
-				verifiees: await compterLesVerifications(base, identite.compteId),
-				liens: null
-			}
+			[affiche.nom]: { verifiees: mesures.verifiees, liens: mesures.liens }
 		},
+		/* LE BARÈME EST UNE CONSTANTE DU PRODUIT, LES DATES SONT EN BASE. Le premier
+		   ne se stocke pas — deux définitions divergent ; les secondes ne se calculent
+		   pas — une mesure ne dit jamais QUAND un seuil a été franchi. */
+		distinctions: BAREME_DES_DISTINCTIONS,
+		obtentions: await obtentionsDuCompte(base, identite.compteId, mesures, contexte.maintenant),
 		relations: await lireRelationsLisibles(base, acces.perimetre),
 		/* Aucune table d'événements : le flux est vide, et l'écran le dit. */
 		activite: [],
