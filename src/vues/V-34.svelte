@@ -12,11 +12,12 @@
 	 * LE BLOC « Pas encore assez d'usage pour conclure » garde son titre du gel, mais
 	 * NON ses deux nombres — « 34 recherches », « vers 300 recherches » : servis par
 	 * une route, ils AFFIRMAIENT deux faits sur l'instance du lecteur, ce que
-	 * `RG-M01-01` proscrit. La phrase énonce deux absences vérifiables dans
-	 * `src/lib/base/schema.ts` et n'annonce PAS de retour : la bascule est
-	 * `etatDesDonnees()` (`src/lib/donnees/consoles.ts`), qui ne rend `completes` que
-	 * si aucune entrée de `MESURES_DE_CONSOLE_SANS_CONTREPARTIE` ne porte
-	 * `vue === 'V-34'`.
+	 * `RG-M01-01` proscrit. IL NE NOMME AUCUNE TABLE ABSENTE : les cinq mesures sont
+	 * portées par la base depuis la migration `010`, et une phrase qui les dirait
+	 * manquantes serait fausse. La bascule reste `etatDesDonnees()`
+	 * (`src/lib/donnees/consoles.ts`), qui ne rend `completes` que si aucune entrée de
+	 * `MESURES_DE_CONSOLE_SANS_CONTREPARTIE` ne porte `vue === 'V-34'` — le bloc
+	 * revient donc de lui-même le jour où une mesure disparaîtrait.
 	 *
 	 * AUCUN CLASSEMENT NOMINATIF N'EST FABRIQUÉ : « Volumes de contribution » est
 	 * rendu SANS RANG, et la mention qui le suit est celle de la maquette.
@@ -58,12 +59,12 @@
 		mesures7j: Partial<Record<IdentifiantNote, number>>;
 		mesures7jPrec: Partial<Record<IdentifiantNote, number>>;
 		/**
-		 * LES TROIS MESURES QUE LE PRODUIT NE PORTE PAS — ÉTAT VIDE PAR DÉFAUT. Aucune
-		 * table ne compte les modifications par période, n'enregistre une demande de
-		 * révision, ni ne journalise une recherche
-		 * (`MESURES_DE_CONSOLE_SANS_CONTREPARTIE`). Le défaut était la table du jeu, et
-		 * l'écran servait ses 793 recherches comme des mesures de l'instance. Vide, chaque
-		 * bloc qui en dérive ne se rend pas : le zéro muet est plus traître que l'absence.
+		 * LES TROIS MESURES SERVIES PAR LE CHARGEUR — ÉTAT VIDE PAR DÉFAUT. L'ancienneté
+		 * de modification vient de `notes.modifie_le`, les demandes de révision de
+		 * `notes.revision_*`, le journal de recherche de la table `recherches` (`010`).
+		 * Le défaut était la table du jeu, et l'écran servait ses 793 recherches comme
+		 * des mesures de l'instance. Vide, chaque bloc qui en dérive ne se rend pas : le
+		 * zéro muet est plus traître que l'absence.
 		 */
 		modifications?: Partial<Record<IdentifiantNote, number>>;
 		revisions?: readonly DemandeDeRevision[];
@@ -132,6 +133,11 @@
 	/* ── Les fabriques du gel, portées ligne à ligne ───────────────────────── */
 
 	const nb = (x: number): string => x.toLocaleString('fr-FR');
+
+	/** UNE MOYENNE PAR JOUR, ARRONDIE AU DIXIÈME et non à l'unité. Le gel arrondit à
+	 *  l'entier (`V-34:3277`), ce qui rendait « 10 recherches sur 30 jours » suivi de
+	 *  « 0 par jour en moyenne » : deux lignes voisines qui se contredisent. */
+	const moyenne = (x: number): string => x.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
 
 	/** `window.tauxAbouti` (`V-34:2718`) — l'indicateur nord du produit. L'ARTICLE
 	 *  « Les » A DISPARU DE « Les N autres sont des collègues repartis » : un article
@@ -356,7 +362,7 @@
 						[
 							nb(taux.total),
 							`${accord(taux.total, 'recherche')} sur 30 jours`,
-							`${nb(Math.round(taux.total / 30))} par jour en moyenne`
+							`${moyenne(taux.total / 30)} par jour en moyenne`
 						] as const
 					]
 				: []),
@@ -430,7 +436,7 @@
 		<div class="si-vide"
 			><div class="insuffisant"
 				><h2>Pas encore assez d'usage pour conclure</h2
-				><p>Cet écran conclut sur des mesures que l'instance ne tient pas toutes. Aucune table ne journalise les recherches posées à la base, aucune n'enregistre une demande de révision : le taux de recherche aboutie, les trous documentaires et les notes à réviser n'ont rien à interroger. Tant qu'une seule de ces mesures manque, l'écran se tait plutôt que de conclure sur celles qui restent.</p
+				><p>Cet écran conclut sur des mesures que l'instance ne tient pas toutes : il en manque au moins une, recensée avec la table qui lui fait défaut. Tant qu'elle manque, l'écran se tait plutôt que de conclure sur celles qui restent — un chiffre partiel se lit comme un chiffre complet.</p
 			></div
 		></div>
 
@@ -475,7 +481,7 @@
 							><div class="trou__terme">{`« ${r.terme} »`}</div
 							><div class="trou__meta"
 								><span class="trou__cause" data-type={r.resultats === 0 ? 'vide' : 'ignore'}>{r.resultats === 0 ? 'aucun résultat' : `${r.resultats} ${accord(r.resultats, 'résultat')}, aucun ouvert`}</span
-								><span class="tendance" data-sens={r.evolution > 0 ? 'hausse' : 'baisse'}>{`${r.evolution > 0 ? '▲ +' : '▼ '}${r.evolution} % sur un mois`}</span
+								>{#if r.evolution !== null}<span class="tendance" data-sens={r.evolution > 0 ? 'hausse' : 'baisse'}>{`${r.evolution > 0 ? '▲ +' : '▼ '}${r.evolution} % sur un mois`}</span>{/if}
 							></div
 						></div
 						><button class="btn btn--principal" style="white-space:nowrap" onclick={() => onTrou?.({ terme: r.terme, resultats: r.resultats })}>{r.resultats === 0 ? 'Écrire cette note' : 'Examiner les résultats'}</button
@@ -493,7 +499,10 @@
 					></div
 				></div
 				><div class="bloc-a__corps" id="sante"
-					>{#each sante as s (s.dom.nom)}<div class="sante-dom"
+					>{#if !sante.length}<div class="zone-etat"
+						><div class="zone-etat__titre">Aucune note à mesurer</div
+						><p class="zone-etat__txt">La santé documentaire se calcule domaine par domaine, sur les notes qui s'y trouvent. Écrivez une première note — /notes/nouvelle — et ce bloc se remplit.</p
+					></div>{/if}{#each sante as s (s.dom.nom)}<div class="sante-dom"
 						><div class="sante-dom__tete"
 							><span class="sante-dom__puce" style="background:{s.dom.couleur}"></span
 							><span class="sante-dom__nom">{s.dom.nom}</span
@@ -548,10 +557,10 @@
 						>{#each adoption as [valeur, nom, sous] (nom)}<div class="mesure-a"><div class="mesure-a__val">{valeur}</div><span class="mesure-a__nom">{nom}</span><span class="mesure-a__nom" style="color:var(--c-encre-4)">{sous}</span></div>{/each}</div
 					><span class="etiq" style="display:block;margin-bottom:var(--e-2)">Notes les plus consultées</span
 					><div class="classement" id="top-notes"
-						>{#each plusConsultees as n, rang (n.id)}{@render ligneDeClassement(rang + 1, n.titre, mesures7j[n.id] ?? 0, maxiConsultations, ' ' + accord(mesures7j[n.id] ?? 0, 'vue'), () => onOuvrirLaNote?.(n.id))}{/each}</div
+						>{#if !plusConsultees.length}<div class="zone-etat"><p class="zone-etat__txt">Aucune note consultée sur la période.</p></div>{/if}{#each plusConsultees as n, rang (n.id)}{@render ligneDeClassement(rang + 1, n.titre, mesures7j[n.id] ?? 0, maxiConsultations, ' ' + accord(mesures7j[n.id] ?? 0, 'vue'), () => onOuvrirLaNote?.(n.id))}{/each}</div
 					><span class="etiq" style="display:block;margin:var(--e-5) 0 var(--e-2)">Volumes de contribution</span
 					><div class="classement" id="top-contrib"
-						>{#each volumesDeContribution as c (c.nom)}{@render ligneDeClassement(null, c.nom, c.notes, maxiContributions, ' ' + accord(c.notes, 'note'))}{/each}</div
+						>{#if !volumesDeContribution.length}<div class="zone-etat"><p class="zone-etat__txt">Aucune note écrite : aucun volume à mesurer.</p></div>{/if}{#each volumesDeContribution as c (c.nom)}{@render ligneDeClassement(null, c.nom, c.notes, maxiContributions, ' ' + accord(c.notes, 'note'))}{/each}</div
 					><p class="mention-contrib">
 						Ces volumes mesurent une activité, pas une performance. Ils ne sont pas comparables entre eux : un référent qui vérifie beaucoup et écrit peu rend le même service qu'un rédacteur prolifique. Aucun classement individuel n'est diffusé ailleurs que sur cet écran d'administration.
 					</p
