@@ -93,6 +93,19 @@ export function poserLeTemoin(racine: ParentNode, etat: EtatDuTemoin): void {
 	if (libelle !== undefined && texte !== null) texte.textContent = libelle;
 }
 
+/**
+ * LE TÉMOIN DIT LE BROUILLON LOCAL — `RG-NF-02`. La position reste `modifie` : le
+ * brouillon n'est PAS un enregistrement, et poser `enregistre` ferait dire à la barre
+ * d'état que la note est sauvée alors que rien n'est parti au serveur. Le libellé,
+ * lui, nomme ce qui a bien eu lieu, et à quelle heure.
+ */
+export function poserLeTemoinDeBrouillon(racine: ParentNode, heure: string): void {
+	poserLeTemoin(racine, 'modifie');
+	const texte = racine.querySelector<HTMLElement>('#sauvegarde-txt');
+	if (texte === null) return;
+	texte.textContent = `Brouillon local enregistré à ${heure} — pas encore enregistré`;
+}
+
 export interface OptionsDesGestes {
 	document: () => Document;
 	resoudre: ResolveurDeNote;

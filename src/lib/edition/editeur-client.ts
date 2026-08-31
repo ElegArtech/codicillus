@@ -70,6 +70,13 @@ export interface EditeurMonte {
 	 * porte unique (`noeudDepuisDocument`) : rien n'est inséré qui ne soit valide.
 	 */
 	inserer(document: Document): void;
+	/**
+	 * REMPLACE tout le contenu par ce document. C'est la restauration d'un brouillon
+	 * local, et elle ne peut pas passer par `inserer()` : celle-ci pose au point
+	 * d'insertion, et restaurer un brouillon sur une note ouverte doublerait le texte
+	 * au lieu de le remplacer.
+	 */
+	remplacer(document: Document): void;
 	/** La zone est-elle vide de tout texte ? — ce que le témoin de sauvegarde lit. */
 	vide(): boolean;
 	/** Démonte la vue et rend le nœud du gel à son état inerte. */
@@ -467,6 +474,18 @@ export function monterLEditeur(
 			const tranche = new Slice(noeud.content, 0, 0);
 			vue.dispatch(vue.state.tr.replaceSelection(tranche).scrollIntoView());
 			vue.focus();
+		},
+		/**
+		 * Le document ENTIER est remplacé — de la première position à la dernière, donc
+		 * l'intérieur du nœud racine. La transaction passe par `dispatch`, donc par
+		 * `dispatchTransaction` : l'invite d'amorçage et le témoin de sauvegarde suivent
+		 * comme après une frappe.
+		 */
+		remplacer: (document: Document) => {
+			const noeud = noeudDepuisDocument(document);
+			vue.dispatch(
+				vue.state.tr.replaceWith(0, vue.state.doc.content.size, noeud.content).scrollIntoView()
+			);
 		},
 		vide: () => vue.state.doc.textContent.trim() === '',
 		detruire: () => {

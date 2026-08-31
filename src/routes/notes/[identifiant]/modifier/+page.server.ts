@@ -34,6 +34,7 @@ import { joursEcoules, lireLesProprietesDeFiche, lireSeuils } from '$lib/donnees
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import { DocumentInvalide } from '$lib/contenu/document';
 import { MarkdownInvalide } from '$lib/contenu/markdown';
+import { empreinteDeCompte } from '$lib/edition/brouillon';
 import { EditeurIncapable } from '$lib/edition/document';
 import { MOTIF_DE_PROPRIETE_OBLIGATOIRE } from '$lib/edition/gestes';
 import { moteurPartage } from '$lib/recherche/acces';
@@ -65,6 +66,23 @@ async function ancienneteDeLaDerniereVersion(
 	return ligne === undefined ? null : joursEcoules(ligne.le, maintenant);
 }
 
+/**
+ * L'INSTANT DU DERNIER ENREGISTREMENT DE LA NOTE — celui que le brouillon local doit
+ * pouvoir comparer au sien (`RG-NF-02`). `dernierEnregistrement` ne suffit pas : il
+ * porte une ANCIENNETÉ EN JOURS, et deux enregistrements du même jour y sont
+ * indiscernables — le brouillon d'il y a dix minutes passerait pour le plus récent.
+ *
+ * L'appel est sous le refus de `resoudreLEditionDUneNote()`, comme ses voisins.
+ */
+async function enregistreeLe(base: Base, identifiant: string): Promise<string | null> {
+	const [ligne] = await base
+		.select({ le: notesDuSchema.modifieLe })
+		.from(notesDuSchema)
+		.where(eq(notesDuSchema.identifiant, identifiant))
+		.limit(1);
+	return ligne === undefined ? null : ligne.le.toISOString();
+}
+
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const { base, lecture } = await contexteDe();
 	const acces = await resoudreLEditionDUneNote(base, {
@@ -78,6 +96,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	return {
 		vecteur: { cas: 'modif' },
+		/* LA MARQUE DU COMPTE ET L'INSTANT DE LA BASE — les deux que le brouillon
+		   local demande : l'un pour que sa clé ne mélange pas deux personnes, l'autre
+		   pour qu'un brouillon plus ancien que la note ne s'impose pas. */
+		empreinteDuCompte:
+			locals.identite.type === 'authentifie' ? empreinteDeCompte(locals.identite.compteId) : '',
+		enregistreeLe: await enregistreeLe(base, params.identifiant),
 		dernierEnregistrement: await ancienneteDeLaDerniereVersion(
 			base,
 			params.identifiant,

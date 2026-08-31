@@ -20,6 +20,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import Vue from '../../../vues/V-17.svelte';
 	import '../../../vues/V-17.css';
 	import { cablerLEditeur } from '$lib/cablage/formulaires';
@@ -31,7 +32,18 @@
 		type GestesCables,
 		peindreLeRefusDEdition
 	} from '$lib/edition/gestes';
-	import { adressesParLesNoms, dossierDeLArborescence } from '$lib/rangement/adresses';
+	import {
+		cablerLeBrouillonLocal,
+		cleDeBrouillon,
+		CIBLE_DE_CREATION,
+		type BrouillonCable
+	} from '$lib/edition/brouillon';
+	import { cablerLAvertissementDeDoublon } from '$lib/edition/doublons';
+	import {
+		adresseDeNote,
+		adressesParLesNoms,
+		dossierDeLArborescence
+	} from '$lib/rangement/adresses';
 	import { designationsDeCoquille } from '$lib/coquille/identite';
 
 	/* LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM : il
@@ -99,6 +111,25 @@
 	);
 
 	let formulaire: HTMLFormElement;
+	/**
+	 * LE BROUILLON LOCAL — `RG-NF-02`. Il est déclaré ICI, hors de `onMount`, parce que
+	 * DEUX moments le touchent : le montage le câble, et la soumission l'efface quand
+	 * elle a abouti.
+	 */
+	let brouillon: BrouillonCable | null = null;
+
+	/**
+	 * L'ENREGISTREMENT ABOUTI EFFACE LE BROUILLON, ET RIEN D'AUTRE NE L'EFFACE. La
+	 * création répond par une redirection : c'est à ce type de réponse, et à lui seul,
+	 * que le brouillon a cessé d'avoir un objet. Un refus le garde — c'est précisément
+	 * le moment où il sert.
+	 */
+	const surEnvoi: SubmitFunction = () => {
+		return async ({ result, update }) => {
+			if (result.type === 'redirect' || result.type === 'success') brouillon?.effacer();
+			await update();
+		};
+	};
 
 	/**
 	 * LE REFUS D'ENREGISTREMENT SE VOIT — il était muet. Créer sans choisir de
@@ -146,7 +177,10 @@
 			zone === null
 				? null
 				: monterLEditeur(zone, null, formulaire, {
-						surChangement: () => gestes?.signalerUneModification()
+						surChangement: () => {
+							gestes?.signalerUneModification();
+							brouillon?.signaler();
+						}
 					});
 		const defaire = cablerLEditeur(formulaire, {
 			rechargerSurDomaine: (domaine) => `/notes/nouvelle?domaine=${encodeURIComponent(domaine)}`,
@@ -162,6 +196,26 @@
 			resoudre: resolveurDuCorpusServi(data.notes),
 			retour: retourDAnnulation
 		});
+		/* LE BROUILLON LOCAL, CÂBLÉ APRÈS L'ÉDITEUR : il restaure dedans. En création,
+		   `enregistreeLe` est nul — il n'y a aucune version en base à écraser, et le
+		   brouillon est repris d'emblée. */
+		brouillon =
+			editeur === null
+				? null
+				: cablerLeBrouillonLocal(formulaire, {
+						cle: cleDeBrouillon(data.empreinteDuCompte, CIBLE_DE_CREATION),
+						document: () => editeur.document(),
+						remplacer: (document) => editeur.remplacer(document),
+						enregistreeLe: null
+					});
+
+		/* L'AVERTISSEMENT DE DOUBLON — `RG-M05-03`. Il compare aux titres du corpus
+		   DÉJÀ SERVI, celui que le chargeur a filtré au périmètre de l'appelant. */
+		const defaireLesDoublons = cablerLAvertissementDeDoublon(formulaire, {
+			notes: data.notes,
+			adresse: (id) => adresseDeNote(id)
+		});
+
 		const defaireLeChoix =
 			editeur === null
 				? () => undefined
@@ -172,6 +226,8 @@
 					});
 		return () => {
 			defaireLeChoix();
+			defaireLesDoublons();
+			brouillon?.defaire();
 			gestes?.defaire();
 			defaire();
 			editeur?.detruire();
@@ -187,7 +243,7 @@
      obligatoire ne pouvait pas être « signalé à l'endroit du champ »
      (`BRIEF-VUES.md:973`) : le champ n'existait plus. Avec elle, la soumission
      part en arrière-plan, le document reste, et le refus se peint dessus. -->
-<form method="POST" use:enhance bind:this={formulaire} style="display:contents">
+<form method="POST" use:enhance={surEnvoi} bind:this={formulaire} style="display:contents">
 	<!-- `domaines` vient du GABARIT RACINE, qui les lit en base : la propriété de
 	     la vue retombe sinon sur `DOMAINES` du jeu de semence, et le sélecteur
 	     proposait des domaines inexistants — mesuré sur une instance neuve, il
