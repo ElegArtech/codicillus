@@ -670,6 +670,23 @@
 							>
 						</div>
 					</div>
+					<!--
+						L'ÉTAT VIDE, PARCE QUE LE PRODUIT COMMENCE VIDE. Une instance neuve ne
+						porte aucun type : la boucle ne rendait rien, et l'écran se réduisait à
+						une ligne d'en-têtes suivie de blanc. Le geste est nommé par le libellé
+						du bouton de la tête de section, pas par une adresse.
+					-->
+				{:else}
+					<div class="zone-etat" id="liste-vide">
+						<div class="zone-etat__titre">
+							{`Aucun type de ${motFicheMinuscule}`}
+						</div>
+						<div class="zone-etat__txt">
+							Une note reste du texte tant qu'aucun type ne lui donne de propriétés structurées :
+							c'est ce qui la fait entrer dans la cartographie. Le bouton « Nouveau type », en haut
+							à droite, crée le premier schéma.
+						</div>
+					</div>
 				{/each}
 			</div>
 		</div>
