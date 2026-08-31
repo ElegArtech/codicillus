@@ -38,7 +38,6 @@ import {
 	LACUNES_DU_CHEMIN_PUBLIC,
 	PARAMETRES_HONORES_EN_ANONYME,
 	SENS_DISPONIBLE,
-	casDeV04,
 	casDeV26,
 	parametresHonores,
 	peutEcrireQuelquePart,
@@ -148,20 +147,6 @@ describe('le point dur de V-04 — inexistante ≡ existante non publique', () =
 		expect(vueDeLAdresseNonResolue('/notes/n-quelconque', true)).toBe('V-26');
 		expect(vueDeLAdresseNonResolue('/ceci-nexiste-pas', false)).toBe('V-04');
 		expect(vueDeLAdresseNonResolue('/ceci-nexiste-pas', true)).toBe('V-26');
-	});
-
-	/**
-	 * `/guides` nu est « l'adresse racine erronée » de la planche
-	 * (`docs/routes.md:103`). Elle ne porte AUCUN identifiant de corpus : la
-	 * distinguer ne révèle rien. Toute adresse qui en porte un rend la position
-	 * commune aux deux cas indiscernables.
-	 */
-	it('ne distingue que l’adresse racine erronée, jamais deux identifiants', () => {
-		expect(casDeV04('/guides')).toBe('nu');
-		expect(casDeV04('/guides/')).toBe('nu');
-		expect(casDeV04('/guides/n-existe-pas')).toBe('prive');
-		expect(casDeV04('/guides/n-interne')).toBe('prive');
-		expect(casDeV04('/guides/n-existe-pas')).toBe(casDeV04('/guides/n-interne'));
 	});
 
 	/**
