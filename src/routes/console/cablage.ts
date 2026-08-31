@@ -86,7 +86,7 @@ export async function envoyerAUneAction(
 /* ═══════════════════════════════ La configuration — V-33 ════════════════ */
 
 /**
- * LES SEPT CHAMPS DE `V-33`, PAR LEUR IDENTIFIANT DE GEL — ET LA LISTE EST LIÉE AU TYPE
+ * LES CHAMPS DE `V-33`, PAR LEUR IDENTIFIANT DE GEL — ET LA LISTE EST LIÉE AU TYPE
  * QUI LA COMMANDE. C'est elle qui décide de ce que le navigateur ENVOIE, un identifiant
  * manquant étant silencieusement ignoré. Le `satisfies` referme la porte — les clés sont
  * celles de `ChampReglableEnConsole` —, et l'import de type est ERASÉ à l'exécution : ce
@@ -100,7 +100,9 @@ const CHAMPS_DE_CONFIGURATION = {
 	nomOrganisation: 'c-organisation',
 	motFiche: 'c-mot',
 	tailleMaxPieceJointe: 'c-taille',
-	dureeSession: 'c-session'
+	dureeSession: 'c-session',
+	indisponibiliteActive: 'c-indisponibilite',
+	messageDIndisponibilite: 'c-message-indisponibilite'
 } as const satisfies Readonly<Record<ChampReglableEnConsole, string>>;
 
 /**
@@ -113,6 +115,9 @@ export interface RefusDeConfiguration {
 	readonly champ: string;
 	readonly message: string;
 }
+
+/** Les trois formes de nœud que les réglages de `V-33` emploient. */
+type ChampDeConfiguration = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
 export interface OptionsDeConfiguration {
 	/**
@@ -130,9 +135,12 @@ export function cablerLaConfiguration(
 	options: OptionsDeConfiguration = {}
 ): Debranchement {
 	const attaches = new Attaches();
+	/* `HTMLTextAreaElement` DEPUIS QUE `RG-NF-10` A SON MESSAGE : le champ de la page
+	   d'indisponibilité est une zone de texte, et le type d'origine l'aurait laissée
+	   hors de la charge envoyée — le message aurait été effacé à chaque enregistrement. */
 	const champs = Object.values(CHAMPS_DE_CONFIGURATION)
-		.map((id) => noeud<HTMLInputElement | HTMLSelectElement>(racine, `#${id}`))
-		.filter((n): n is HTMLInputElement | HTMLSelectElement => n !== null);
+		.map((id) => noeud<ChampDeConfiguration>(racine, `#${id}`))
+		.filter((n): n is ChampDeConfiguration => n !== null);
 	if (champs.length === 0) return attaches.debranchement();
 
 	const enregistrer = noeud<HTMLButtonElement>(racine, '#enregistrer');

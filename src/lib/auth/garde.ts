@@ -20,6 +20,8 @@
  * PRÉFIXE, AVANT toute résolution : la réponse est la même que le lot existe ou non.
  */
 
+import { ADRESSE_DINDISPONIBILITE } from '../donnees/indisponibilite';
+
 /** Les valeurs de `?motif=` (`docs/routes.md:286`, `:324-325`). */
 export const MOTIF = {
 	protegee: 'page-protegee',
@@ -50,6 +52,10 @@ export const REGIMES: readonly { readonly prefixe: string; readonly regime: Regi
 	/* L'espace public et les quatre adresses anonymes de §3.1 et §3.2. */
 	{ prefixe: '/connexion', regime: 'publique' },
 	{ prefixe: '/mot-de-passe-oublie', regime: 'publique' },
+	/* `RG-NF-10` — la page d'indisponibilité programmée. PUBLIQUE, et il n'y a pas
+	   d'autre choix : c'est là que sont renvoyés tous les comptes pendant une
+	   intervention, l'anonyme comme le contributeur. */
+	{ prefixe: '/indisponibilite', regime: 'publique' },
 	{ prefixe: '/deconnexion', regime: 'deconnexion' },
 	{ prefixe: '/recherche', regime: 'publique' },
 	/* ARB-007 A-05 — servie telle quelle, anonyme comme connecté. La note non
@@ -152,11 +158,20 @@ export const CIBLE_DE_CHANGEMENT_DE_MOT_DE_PASSE = '/mon-profil?onglet=securite'
  * première connexion ». Rien ne le forçait — le compte gardait indéfiniment la valeur
  * transmise par un canal que ni l'un ni l'autre ne maîtrise.
  *
- * DEUX FAMILLES SONT LAISSÉES PASSER, ET AUCUNE DE PLUS : `/mon-profil`, sans quoi la
- * redirection bouclerait, et `/deconnexion`, parce que `RG-ACC-02` veut qu'un compte puisse
- * partir. LE RESTE EST RENVOYÉ, ESPACE PUBLIC COMPRIS : la règle porte sur le compte.
+ * TROIS FAMILLES SONT LAISSÉES PASSER, ET AUCUNE DE PLUS : `/mon-profil`, sans quoi la
+ * redirection bouclerait ; `/deconnexion`, parce que `RG-ACC-02` veut qu'un compte puisse
+ * partir ; et `/indisponibilite`, sans quoi les deux gardes bouclent l'une sur l'autre. LE
+ * RESTE EST RENVOYÉ, ESPACE PUBLIC COMPRIS : la règle porte sur le compte.
  */
 export function versLeChangementDeMotDePasse(chemin: string): boolean {
 	if (chemin === '/mon-profil' || chemin.startsWith('/mon-profil/')) return false;
+	/* `RG-NF-10` — LA PAGE D'INDISPONIBILITÉ EST LA TROISIÈME FAMILLE LAISSÉE PASSER,
+	   et sans elle les deux gardes se renvoyaient la balle : l'indisponibilité renvoie
+	   un compte non administrateur sur cette page, celle-ci le renvoyait au changement
+	   de mot de passe, `/mon-profil` le renvoyait à l'indisponibilité — `ERR_TOO_MANY_
+	   REDIRECTS`, mesuré au navigateur. Rien n'est perdu : le mot de passe se changera
+	   à la réouverture de l'instance, et il n'y a rien à protéger sur une page qui ne
+	   montre qu'un message. */
+	if (chemin === ADRESSE_DINDISPONIBILITE) return false;
 	return regimeDe(chemin) !== 'deconnexion';
 }

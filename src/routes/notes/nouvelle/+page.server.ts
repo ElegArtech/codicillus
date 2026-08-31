@@ -20,6 +20,7 @@
  * soumission est composée par la ROUTE (`ARB-063`).
  */
 import { error, fail, redirect } from '@sveltejs/kit';
+import { adresseApresEnregistrement } from '$lib/donnees/traitement-differe';
 import { basePartagee } from '$lib/base/acces';
 import { DocumentInvalide } from '$lib/contenu/document';
 import { MarkdownInvalide } from '$lib/contenu/markdown';
@@ -171,7 +172,11 @@ export const actions: Actions = {
 
 		/* La redirection est HORS du `try` : `redirect()` lève, et une redirection
 		   avalée par le filet à erreurs ci-dessus rendrait un 422 sur une note
-		   pourtant écrite. */
-		redirect(303, adresseDeNote(identifiant));
+		   pourtant écrite.
+
+		   ELLE PORTE LE DRAPEAU D'ENREGISTREMENT — `RG-NF-03` : l'indexation de
+		   recherche est SOUMISE et non attendue (`ARB-060`), et la note n'est donc pas
+		   trouvable à la seconde où cette page s'affiche. La lecture, elle, l'est. */
+		redirect(303, adresseApresEnregistrement(adresseDeNote(identifiant)));
 	}
 };

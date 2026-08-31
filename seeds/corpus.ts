@@ -499,6 +499,20 @@ export interface Configuration {
 	readonly tailleMaxPieceJointe: number;
 	/** Durée de session, en minutes. */
 	readonly dureeSession: number;
+	/**
+	 * `RG-NF-10` — LA PAGE D'INDISPONIBILITÉ PROGRAMMÉE EST-ELLE ACTIVE ?
+	 *
+	 * Active, tout compte SAUF un administrateur reçoit la page au lieu de
+	 * l'application. L'administrateur continue de travailler : sans cela, il ne
+	 * pourrait plus la désactiver.
+	 */
+	readonly indisponibiliteActive: boolean;
+	/**
+	 * Ce que la page d'indisponibilité dit. VIDE PAR DÉFAUT, et l'activation le
+	 * refuse : une page d'indisponibilité qui n'annonce rien ne vaut pas mieux
+	 * qu'une erreur de connexion.
+	 */
+	readonly messageDIndisponibilite: string;
 }
 
 export interface RequeteDeRecherche {
@@ -2209,7 +2223,12 @@ export const CONFIG: Configuration = {
 	nomOrganisation: '',
 	motFiche: 'Fiche',
 	tailleMaxPieceJointe: 25,
-	dureeSession: 120
+	dureeSession: 120,
+	/* L'INSTANCE DE DÉMONSTRATION EST DISPONIBLE. `RG-NF-10` est un geste
+	   d'exploitation, jamais un état du jeu : une semence qui l'activerait
+	   fermerait l'instance à tout le monde sauf à l'administrateur. */
+	indisponibiliteActive: false,
+	messageDIndisponibilite: ''
 };
 
 /** Requêtes des trente derniers jours. « ouvertures » compte les recherches

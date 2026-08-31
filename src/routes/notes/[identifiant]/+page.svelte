@@ -620,6 +620,7 @@
 			notes={data.notes}
 			affichee={data.affichee}
 			panneaux={data.panneaux}
+			notifications={data.notifications}
 		/>
 	{/if}
 </form>

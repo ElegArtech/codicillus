@@ -290,7 +290,17 @@ export function verdictDuChangementDeRole(
 /** Une erreur de validation, rattachée AU CHAMP concerné — `V-33:2992-3001`. */
 export interface ErreurDeConfiguration {
 	/** Le champ du gel, par son identifiant de bloc (`champ-frais`, `V-33:2993`). */
-	readonly champ: 'frais' | 'vieil' | 'portail' | 'mot' | 'versions' | 'taille' | 'session';
+	readonly champ:
+		| 'frais'
+		| 'vieil'
+		| 'portail'
+		| 'mot'
+		| 'versions'
+		| 'taille'
+		| 'session'
+		/* `RG-NF-10` — le message de la page d'indisponibilité. Le champ nommé est
+		   celui du TEXTE et non du drapeau : c'est là que le refus se lit. */
+		| 'message-indisponibilite';
 	readonly message: string;
 }
 
@@ -324,6 +334,10 @@ export const MESSAGE_TAILLE_HORS_DOMAINE =
  * `sessions.ts` refuse déjà une durée nulle ou négative, et il la refuse en
  * LEVANT depuis `hooks.server.ts` : toute requête authentifiée sortirait en 500.
  */
+/** `RG-NF-10` — activer sans message. Le champ nommé est celui du texte, pas du drapeau. */
+export const MESSAGE_INDISPONIBILITE_VIDE =
+	'Écrivez ce que la page annoncera : sans message, les comptes renvoyés n’apprendraient rien.';
+
 export const MESSAGE_SESSION_HORS_DOMAINE =
 	'La durée de session doit être un nombre de minutes strictement positif.';
 
@@ -338,8 +352,8 @@ export function messageSeuilNonCroissant(seuilFrais: number): string {
 }
 
 /**
- * Les huit paramètres que `V-33` règle. `Record<keyof Configuration, string>` est le
- * garde-fou : un neuvième paramètre ne compile pas tant qu'il n'a pas son champ ici, dans la
+ * Les dix paramètres que `V-33` règle. `Record<keyof Configuration, string>` est le
+ * garde-fou : un onzième paramètre ne compile pas tant qu'il n'a pas son champ ici, dans la
  * table du câblage et dans la lecture.
  *
  * Un champ déclaré ici sans `input` correspondant est un piège : le formulaire n'envoie rien,
@@ -348,7 +362,7 @@ export function messageSeuilNonCroissant(seuilFrais: number): string {
  */
 export type ChampReglableEnConsole = keyof Configuration;
 
-/** Les huit réglages que `V-33` porte — la configuration entière. */
+/** Les dix réglages que `V-33` porte — la configuration entière. */
 export type ConfigurationReglableEnConsole = Pick<Configuration, ChampReglableEnConsole>;
 
 export const CHAMPS_DE_CONFIGURATION: Readonly<Record<ChampReglableEnConsole, string>> =
@@ -360,7 +374,9 @@ export const CHAMPS_DE_CONFIGURATION: Readonly<Record<ChampReglableEnConsole, st
 		nomOrganisation: 'c-organisation',
 		motFiche: 'c-mot',
 		tailleMaxPieceJointe: 'c-taille',
-		dureeSession: 'c-session'
+		dureeSession: 'c-session',
+		indisponibiliteActive: 'c-indisponibilite',
+		messageDIndisponibilite: 'c-message-indisponibilite'
 	});
 
 /**
@@ -377,6 +393,10 @@ export function valeursDeConfigurationSaisies(
 		return typeof brut === 'string' ? brut : '';
 	};
 	const nombre = (champ: ChampReglableEnConsole): number => Number(texte(champ));
+	/* `oui` ET RIEN D'AUTRE ACTIVE — le sélecteur de `V-33` n'écrit que `oui` ou
+	   `non`, et toute autre valeur est une soumission qui n'en vient pas : elle
+	   laisse l'instance DISPONIBLE. Un drapeau se ferme par défaut. */
+	const drapeau = (champ: ChampReglableEnConsole): boolean => texte(champ) === 'oui';
 
 	return {
 		seuilFrais: nombre('seuilFrais'),
@@ -386,7 +406,9 @@ export function valeursDeConfigurationSaisies(
 		nomOrganisation: texte('nomOrganisation').trim(),
 		motFiche: texte('motFiche').trim(),
 		tailleMaxPieceJointe: nombre('tailleMaxPieceJointe'),
-		dureeSession: nombre('dureeSession')
+		dureeSession: nombre('dureeSession'),
+		indisponibiliteActive: drapeau('indisponibiliteActive'),
+		messageDIndisponibilite: texte('messageDIndisponibilite').trim()
 	};
 }
 
@@ -442,6 +464,12 @@ export function validerLaConfiguration(
 	}
 	if (!Number.isFinite(valeurs.dureeSession) || valeurs.dureeSession < 1) {
 		erreurs.push({ champ: 'session', message: MESSAGE_SESSION_HORS_DOMAINE });
+	}
+	/* `RG-NF-10` — UNE PAGE D'INDISPONIBILITÉ QUI N'ANNONCE RIEN NE VAUT PAS MIEUX
+	   QU'UNE PANNE : l'activation exige son message. La désactivation ne l'exige pas,
+	   et le message conservé reste disponible pour la fois suivante. */
+	if (valeurs.indisponibiliteActive && valeurs.messageDIndisponibilite === '') {
+		erreurs.push({ champ: 'message-indisponibilite', message: MESSAGE_INDISPONIBILITE_VIDE });
 	}
 
 	if (erreurs.length > 0) return { issue: 'valeurs-refusees', erreurs };
@@ -1909,4 +1937,202 @@ export async function modifierUnTypeDeRelation(
 		.where(eq(typesDeRelation.id, cible.id));
 
 	return { issue: 'possible', identifiant, nom: direct };
+}
+
+/* ═══════════════════════ Les types de note — `RG-REF-03` ═════════════════
+ *
+ * « Un type de note ne peut être supprimé s'il est utilisé ; une réaffectation est
+ * proposée. » La règle n'était tenue NULLE PART : les cinq types venaient d'un
+ * `INSERT` de migration et aucune adresse ne les gérait — un administrateur ne
+ * pouvait ni en ajouter, ni en renommer, ni en retirer un.
+ *
+ * UN TYPE DE NOTE N'EST PAS UN TYPE DE FICHE. Deux nomenclatures, deux tables
+ * (`types_de_note`, `types_de_fiche`), deux consoles. Rien n'est partagé entre elles
+ * ici, et le vocabulaire ne se croise à aucune ligne.
+ *
+ * L'INDEX SUIT, PARCE QU'IL PORTE LE NOM DU TYPE : `projeterLeCorpus()` joint
+ * `types_de_note.nom` dans chaque document. Renommer un type ou réaffecter ses notes
+ * sans entretenir l'index laisserait `/recherche` filtrer sur un nom que la base
+ * n'écrit plus.
+ */
+
+/** Ce que le panneau de `/console/types-de-note` porte — un nom, et rien d'autre :
+ *  `types_de_note` n'a que l'identifiant, le nom et le rang. */
+export interface SaisieDUnTypeDeNote {
+	readonly nom: string;
+}
+
+/** Le nom manquant — même forme que les trois autres nomenclatures. */
+export const MESSAGE_NOM_DE_TYPE_DE_NOTE_VIDE = 'Donnez un nom au type de note.';
+
+/** Les identifiants lisibles des notes qui portent ce type — pour l'index. */
+async function notesDUnTypeDeNote(base: Base, typeId: string): Promise<readonly string[]> {
+	const lignes = await base
+		.select({ identifiant: notes.identifiant })
+		.from(notes)
+		.where(eq(notes.typeDeNoteId, typeId));
+	return lignes.map((n) => n.identifiant);
+}
+
+/** CRÉER UN TYPE DE NOTE. Le rang suit la nomenclature : le nouveau vient en queue. */
+export async function creerUnTypeDeNote(
+	base: Base,
+	saisie: SaisieDUnTypeDeNote
+): Promise<VerdictDeStructure> {
+	const nom = saisie.nom.trim();
+	if (nom === '') return refuser('nom', MESSAGE_NOM_DE_TYPE_DE_NOTE_VIDE);
+
+	const existants = await base
+		.select({
+			identifiant: typesDeNote.identifiant,
+			nom: typesDeNote.nom,
+			ordre: typesDeNote.ordre
+		})
+		.from(typesDeNote);
+	if (existants.some((t) => memeNom(t.nom, nom))) return refuser('nom', messageDejaPris(nom));
+
+	const identifiant = identifiantLibre(
+		nom,
+		existants.map((t) => t.identifiant)
+	);
+	const rang = existants.reduce((haut, t) => Math.max(haut, t.ordre + 1), 0);
+
+	await base.insert(typesDeNote).values({ identifiant, nom, ordre: rang });
+
+	return { issue: 'possible', identifiant, nom };
+}
+
+/**
+ * RENOMMER UN TYPE DE NOTE. L'IDENTIFIANT NE SUIT PAS LE NOM (`RG-M12-11` transposé) :
+ * les notes le portent par sa clé, et le reforger n'aurait aucun effet sur elles tout
+ * en changeant l'adresse par laquelle la console le désigne.
+ */
+export async function modifierUnTypeDeNote(
+	base: Base,
+	client: Meilisearch,
+	identifiant: string,
+	changements: SaisieDUnTypeDeNote
+): Promise<IssueDUnGeste<VerdictDeStructure>> {
+	const existants = await base
+		.select({ id: typesDeNote.id, identifiant: typesDeNote.identifiant, nom: typesDeNote.nom })
+		.from(typesDeNote);
+	const cible = existants.find((t) => t.identifiant === identifiant);
+	if (cible === undefined) return { issue: 'introuvable' };
+
+	const nom = changements.nom.trim();
+	if (nom === '') return refuser('nom', MESSAGE_NOM_DE_TYPE_DE_NOTE_VIDE);
+	if (existants.some((t) => t.id !== cible.id && memeNom(t.nom, nom))) {
+		return refuser('nom', messageDejaPris(nom));
+	}
+
+	const touchees = await notesDUnTypeDeNote(base, cible.id);
+	await base.update(typesDeNote).set({ nom }).where(eq(typesDeNote.id, cible.id));
+	/* L'ÉCRITURE EST VALIDÉE — l'index peut suivre, jamais avant. */
+	await entretenirLIndex(base, client, touchees);
+
+	return { issue: 'possible', identifiant, nom };
+}
+
+/**
+ * Le verdict d'une suppression de type de note — les trois issues de `RG-REF-03`.
+ *
+ * `refus-employe` PORTE LES DEUX NOMBRES, parce que le refus doit dire ce qui retient :
+ * les notes rédigées sous ce type, et les templates qui le déclarent. LA SORTIE EST LA
+ * RÉAFFECTATION, ET C'EST LA SEULE — la règle ne propose pas de supprimer les notes,
+ * et rien ici ne le fera jamais.
+ */
+export type VerdictDUnTypeDeNote =
+	| {
+			readonly issue: 'refus-employe';
+			readonly notes: number;
+			readonly templates: number;
+			readonly motif: string;
+	  }
+	| { readonly issue: 'cible-invalide' }
+	| {
+			readonly issue: 'possible';
+			readonly notes: number;
+			readonly templates: number;
+			readonly reaffectees: boolean;
+	  };
+
+/** `RG-REF-03` — la sortie proposée, seconde moitié de la règle. */
+export const SORTIE_REAFFECTER_LES_NOTES =
+	'Choisissez le type qui les accueille : les notes et les templates concernés changeront de type, leur contenu rédigé restant intact. Aucune note n’est supprimée.';
+
+/**
+ * SUPPRIMER UN TYPE DE NOTE — `RG-REF-03`.
+ *
+ * UNE TRANSACTION, PARCE QUE LES DEUX CLÉS ÉTRANGÈRES SONT EN `ON DELETE RESTRICT` :
+ * les notes et les templates changent de type, puis le type disparaît — les trois
+ * écritures sont indissociables.
+ *
+ * SANS CIBLE D'ACCUEIL, UN TYPE EMPLOYÉ N'EST PAS SUPPRIMÉ : le geste rend
+ * `refus-employe` avec ses deux nombres, jamais un `delete` que la base refuserait
+ * ensuite sans nommer la cause. Une cible inconnue, ou le type qu'on retire, est
+ * `cible-invalide` — se rabattre sur un type quelconque réécrirait le corpus.
+ */
+export async function supprimerUnTypeDeNote(
+	base: Base,
+	client: Meilisearch,
+	demande: { readonly type: string; readonly vers?: string }
+): Promise<IssueDUnGeste<VerdictDUnTypeDeNote>> {
+	const [type] = await base
+		.select({ id: typesDeNote.id })
+		.from(typesDeNote)
+		.where(eq(typesDeNote.identifiant, demande.type))
+		.limit(1);
+	if (type === undefined) return { issue: 'introuvable' };
+
+	const portees = await notesDUnTypeDeNote(base, type.id);
+	const gabarits = await base
+		.select({ id: templates.id })
+		.from(templates)
+		.where(eq(templates.typeDeNoteId, type.id));
+	const employe = portees.length > 0 || gabarits.length > 0;
+
+	const vers = (demande.vers ?? '').trim();
+	if (employe && vers === '') {
+		return {
+			issue: 'refus-employe',
+			notes: portees.length,
+			templates: gabarits.length,
+			motif: SORTIE_REAFFECTER_LES_NOTES
+		};
+	}
+
+	let accueil: { readonly id: string } | undefined;
+	if (employe) {
+		[accueil] = await base
+			.select({ id: typesDeNote.id })
+			.from(typesDeNote)
+			.where(eq(typesDeNote.identifiant, vers))
+			.limit(1);
+		if (accueil === undefined || accueil.id === type.id) return { issue: 'cible-invalide' };
+	}
+
+	const destination = accueil;
+	await base.transaction(async (tx) => {
+		if (destination !== undefined) {
+			await tx
+				.update(notes)
+				.set({ typeDeNoteId: destination.id })
+				.where(eq(notes.typeDeNoteId, type.id));
+			await tx
+				.update(templates)
+				.set({ typeDeNoteId: destination.id })
+				.where(eq(templates.typeDeNoteId, type.id));
+		}
+		await tx.delete(typesDeNote).where(eq(typesDeNote.id, type.id));
+	});
+
+	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre, jamais avant. */
+	await entretenirLIndex(base, client, portees);
+
+	return {
+		issue: 'possible',
+		notes: portees.length,
+		templates: gabarits.length,
+		reaffectees: destination !== undefined
+	};
 }

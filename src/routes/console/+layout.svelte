@@ -2,8 +2,8 @@
 	/**
 	 * `/console` — LE GABARIT NE REND RIEN, IL POSE UN CONTEXTE.
 	 *
-	 * Les dix écrans montent chacun leur vue en pleine page ; ce gabarit n'ajoute
-	 * aucun nœud. Sa seule raison d'être est de faire descendre les sept compteurs de
+	 * Les écrans de console montent chacun leur vue en pleine page ; ce gabarit n'ajoute
+	 * aucun nœud. Sa seule raison d'être est de faire descendre les huit compteurs de
 	 * `aside.nav2` jusqu'à `NavigationConsole.svelte`.
 	 *
 	 * LES MEMBRES SONT DES ACCESSEURS, comme au gabarit racine : le contexte est posé
@@ -21,6 +21,9 @@
 		},
 		get domaines() {
 			return data.effectifs.domaines;
+		},
+		get notes() {
+			return data.effectifs.notes;
 		},
 		get fiches() {
 			return data.effectifs.fiches;

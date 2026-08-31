@@ -4,7 +4,7 @@
 	 * administrateur est éprouvé côté serveur par `+page.server.ts`.
 	 *
 	 * CE FICHIER REND CE QUE LE CHARGEUR A RÉSOLU, ET CÂBLE CE QUE LE GEL LAISSE
-	 * INERTE : les notes, le rangement, l'utilisateur ET LES SEPT RÉGLAGES viennent
+	 * INERTE : les notes, le rangement, l'utilisateur ET LES RÉGLAGES viennent
 	 * de la base, `config` étant lu par `lireConfiguration()`.
 	 *
 	 * LE CÂBLAGE EST APPELÉ DEPUIS `onMount`, jamais ailleurs : le chemin mesuré ne
@@ -21,7 +21,7 @@
 	const { data }: { data: PageData } = $props();
 
 	/**
-	 * DEUX CÂBLAGES, ET LA FRONTIÈRE EST NETTE : le commun tient les sept champs,
+	 * DEUX CÂBLAGES, ET LA FRONTIÈRE EST NETTE : le commun tient les champs,
 	 * les deux boutons et l'envoi ; celui d'à côté tient le seul nœud qu'il laissait
 	 * derrière — `#etat-config`, la phrase qui dit que les modifications ne
 	 * s'appliquent pas encore.

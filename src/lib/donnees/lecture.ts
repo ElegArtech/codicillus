@@ -13,7 +13,7 @@
  * UN PARAMÈTRE : une couche de lecture qui prendrait l'heure elle-même rendrait ses
  * résultats non reproductibles.
  */
-import { count, desc, eq, inArray } from 'drizzle-orm';
+import { count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Base } from '../base/acces';
 import {
@@ -493,6 +493,47 @@ export async function lireTypesDeNote(base: Base): Promise<readonly TypeDeNote[]
 	return lignes.map((t) => t.nom as TypeDeNote);
 }
 
+/**
+ * Un type de note tel que `/console/types-de-note` le montre — le nom, et CE QUI LE
+ * RETIENT. `RG-REF-03` refuse la suppression d'un type EMPLOYÉ : le refus doit dire
+ * combien, et les deux tables qui pointent `types_de_note` comptent toutes les deux —
+ * `notes.type_de_note_id` et `templates.type_de_note_id`, l'une comme l'autre en
+ * `ON DELETE RESTRICT`. Compter les notes seules laisserait la base refuser un geste
+ * que l'écran vient d'annoncer comme possible.
+ */
+export interface TypeDeNoteAdministrable {
+	readonly identifiant: string;
+	readonly nom: string;
+	readonly ordre: number;
+	readonly notes: number;
+	readonly templates: number;
+}
+
+/**
+ * Les types de note ET leur emploi, dans l'ordre de la nomenclature.
+ *
+ * `count(distinct …)` PARCE QUE LES DEUX JOINTURES SE MULTIPLIENT : un type porté par
+ * trois notes et deux templates rendrait six d'un côté comme de l'autre sans le
+ * `distinct`, et le refus annoncerait un nombre que personne ne retrouve à l'écran.
+ */
+export async function lireLesTypesDeNoteAdministrables(
+	base: Base
+): Promise<readonly TypeDeNoteAdministrable[]> {
+	return base
+		.select({
+			identifiant: typesDeNote.identifiant,
+			nom: typesDeNote.nom,
+			ordre: typesDeNote.ordre,
+			notes: sql<number>`count(distinct ${notes.id})::int`,
+			templates: sql<number>`count(distinct ${templates.id})::int`
+		})
+		.from(typesDeNote)
+		.leftJoin(notes, eq(notes.typeDeNoteId, typesDeNote.id))
+		.leftJoin(templates, eq(templates.typeDeNoteId, typesDeNote.id))
+		.groupBy(typesDeNote.id)
+		.orderBy(typesDeNote.ordre);
+}
+
 /** Les types de fiche et leur schéma de propriétés (CDC §3.5). */
 export async function lireTypesDeFiche(
 	base: Base
@@ -782,6 +823,17 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 		const valeur = nombre(cle, defaut);
 		return Number.isSafeInteger(valeur) && valeur >= 1 ? valeur : defaut;
 	};
+	/* UN DRAPEAU ABSENT VAUT SON DÉFAUT, comme les autres — et son défaut est
+	   `false` : une instance neuve n'est pas indisponible. Une valeur présente
+	   mais non booléenne lève, comme partout ici : base corrompue, pas base neuve. */
+	const booleen = (cle: string, defaut: boolean): boolean => {
+		const valeur = par.get(cle);
+		if (valeur === undefined) return defaut;
+		if (typeof valeur !== 'boolean') {
+			throw new Error(`paramètre ${cle} attendu booléen, obtenu ${typeof valeur}`);
+		}
+		return valeur;
+	};
 	const chaine = (cle: string, defaut: string): string => {
 		const valeur = par.get(cle);
 		if (valeur === undefined) return defaut;
@@ -791,7 +843,7 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 		return valeur;
 	};
 
-	/* LES HUIT CLÉS VIENNENT DU SCHÉMA, ET DE NULLE PART AILLEURS : `RG-M14-09`
+	/* LES DIX CLÉS VIENNENT DU SCHÉMA, ET DE NULLE PART AILLEURS : `RG-M14-09`
 	   serait fausse à la lettre si l'écriture posait une clé que cette lecture
 	   n'interroge pas. Une seule table de clés rend ce cas INÉCRIVABLE. */
 	return {
@@ -814,7 +866,15 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 			CLES_DE_PARAMETRE.tailleMaxPieceJointe,
 			CONFIGURATION_PAR_DEFAUT.tailleMaxPieceJointe
 		),
-		dureeSession: nombre(CLES_DE_PARAMETRE.dureeSession, CONFIGURATION_PAR_DEFAUT.dureeSession)
+		dureeSession: nombre(CLES_DE_PARAMETRE.dureeSession, CONFIGURATION_PAR_DEFAUT.dureeSession),
+		indisponibiliteActive: booleen(
+			CLES_DE_PARAMETRE.indisponibiliteActive,
+			CONFIGURATION_PAR_DEFAUT.indisponibiliteActive
+		),
+		messageDIndisponibilite: chaine(
+			CLES_DE_PARAMETRE.messageDIndisponibilite,
+			CONFIGURATION_PAR_DEFAUT.messageDIndisponibilite
+		)
 	};
 }
 
