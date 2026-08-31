@@ -419,8 +419,9 @@
 			 désormais une DONNÉE que personne ne sert — aucune table ne porte
 			 l'auteur, l'instant ni le motif d'une suppression.
 
-			 Rien ne bascule `tombe` côté navigateur : `cablage-erreur.ts` ne câble
-			 ni `#sup-restaurer` ni `#sup-domaine`, et le dit. -->
+			 Rien ne bascule `tombe` côté navigateur, et la section n'offre plus
+			 aucun geste : ses deux boutons promettaient une corbeille que le
+			 produit n'a pas. -->
 		{#if tombe && supprimee !== null}
 			<section class="suppression" id="suppression">
 				<svg
@@ -438,8 +439,8 @@
 				<div style="flex:1">
 					<h2>Cette note a été supprimée</h2>
 					<p id="sup-txt">
-						« {supprimee.nom} » se trouvait dans {supprimee.ou}. Son contenu reste consultable dans
-						l'historique tant que la corbeille n'a pas été vidée.
+						« {supprimee.nom} » se trouvait dans {supprimee.ou}. La suppression est définitive : il
+						n'y a pas de corbeille.
 					</p>
 					<div class="suppression__qui" id="sup-qui">
 						<span>Supprimée par : {supprimee.par}</span><span style="color:var(--c-trait-fort)"
@@ -447,13 +448,15 @@
 						><span>Quand : {supprimee.quand}</span><span style="color:var(--c-trait-fort)">·</span
 						><span>Motif indiqué : {supprimee.motif}</span>
 					</div>
-					<div class="suppression__actions">
-						<!-- P-09 · ARB-040 — omise, jamais masquée. `V-26:1078` -->
-						{#if ecriture}<button class="btn si-ecriture" id="sup-restaurer"
-								>Demander sa restauration</button
-							>{/if}
-						<button class="btn" id="sup-domaine">Voir le dossier qui la contenait</button>
-					</div>
+					<!--
+						LES DEUX BOUTONS DU GEL SONT RETIRÉS — « Demander sa restauration »
+						et « Voir le dossier qui la contenait ». Le premier promettait une
+						corbeille que `RG-M14-03` refuse au produit : « la suppression est
+						atomique et définitive ». Le second promettait un dossier dont
+						aucune donnée ne remonte ici. Aucun câblage ne les touchait, et
+						`cablage-erreur.ts` disait pourquoi : deux branches mortes que le
+						prochain portage aurait ranimées en gestes inertes.
+					-->
 				</div>
 			</section>
 		{/if}
