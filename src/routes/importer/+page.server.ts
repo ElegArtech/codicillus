@@ -154,7 +154,7 @@ import { adresseDeNote } from '$lib/rangement/adresses';
 import { estUneMiseAJour } from './reprise';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
-import { messageDeRefusDEcriture } from '$lib/donnees/amorcage';
+import { refusDEcriture } from '$lib/donnees/amorcage';
 
 /**
  * L'appelant et son droit d'importer — le seul point d'entrée du fichier.
@@ -190,7 +190,7 @@ async function importateur(locals: App.Locals): Promise<{
 		   ce qui manque est un univers. Le message le lui dit et nomme la console.
 		   Tout autre compte, toute autre cause : `MESSAGE_INTROUVABLE`, au même
 		   octet (`$lib/donnees/amorcage`). */
-		error(404, await messageDeRefusDEcriture(base, identite));
+		error(404, await refusDEcriture(base, identite));
 	}
 
 	return { base, acces, compteId: identite.compteId };
