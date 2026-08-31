@@ -1,29 +1,16 @@
 /**
- * `/console/comptes` — LE CHARGEUR de V-32.
+ * `/console/comptes` — LE CHARGEUR de V-32. LA GARDE EST CELLE DES ONZE ADRESSES DE
+ * CONSOLE : `resoudreLaConsole()` la prend, une fois pour toutes, et un non-administrateur
+ * reçoit 404 V-26 — pas un refus (`P-09`, `RG-ACC-04`). Le seul `error(404, …)` est SANS
+ * MESSAGE (`ADR-007`).
  *
- * LA GARDE EST CELLE DES ONZE ADRESSES, ET ELLE EST ÉCRITE UNE FOIS.
- * `docs/routes.md:167` : « Toutes ces routes exigent le rôle administrateur. Un
- * utilisateur non administrateur reçoit 404 V-26, pas un refus » — `P-09` pour
- * l'entrée non rendue, `RG-ACC-04` pour l'adresse construite. La décision est
- * prise par `resoudreLaConsole()` de `src/lib/donnees/consoles.ts`, qui appelle
- * `src/lib/droits/resolution.ts` et rend `INTROUVABLE` ; le seul `error(404, MESSAGE_INTROUVABLE)`
- * du fichier est SANS MESSAGE (`ADR-007`).
+ * LA LISTE DES COMPTES VIENT DE LA TABLE, en propriété REQUISE : une rédaction qui
+ * oublierait de la passer ne compilerait plus. LE VERROU DE MOT DE PASSE EST SERVI À
+ * PART — `interface Compte` du jeu de démonstration n'en porte pas de champ, et la vue le
+ * décidait en comparant l'identifiant à un compte du jeu écrit en dur.
  *
- * CE QUE CE CHARGEUR SERT. La liste des comptes vient de la TABLE —
- * `lireLesComptesDeConsole()` —, et la vue la reçoit en propriété REQUISE : un
- * compte créé apparaît donc à la relecture de la page, et une rédaction qui
- * oublierait de la passer ne compilerait plus.
- *
- * LE VERROU DE MOT DE PASSE EST SERVI, LUI AUSSI, ET IL NE L'ÉTAIT PAS.
- * `interface Compte` du jeu de démonstration n'en porte pas de champ ; la vue
- * décidait donc du verrou en comparant l'identifiant à `'lea.marchand'` — un
- * compte du jeu, écrit en dur. Sur une instance réelle, la pastille « mot de
- * passe verrouillé » ne s'allumait pour personne, alors que `f-verrou` est
- * coché à la création et que `comptes.mot_de_passe_verrouille` l'a enregistré
- * depuis. La colonne est donc lue, et servie à part.
- *
- * `vecteur: null` demande l'état au repos : les quatre positions de l'axe
- * « Formulaire » et les deux de l'axe « Cas » sont des états d'INTERACTION.
+ * `vecteur: null` demande l'état au repos : les positions des axes « Formulaire » et
+ * « Cas » sont des états d'INTERACTION.
  */
 import { error, fail } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
@@ -48,12 +35,9 @@ import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 /**
- * `comptes.mot_de_passe_verrouille`, par identifiant de connexion.
- *
- * SERVI À PART DE LA LISTE, et c'est la forme la plus honnête : `interface
- * Compte` décrit ce que le jeu de démonstration porte, pas ce que la table
- * porte — lui ajouter un champ ferait diverger la description du jeu de la
- * donnée du produit. Un identifiant absent de la table vaut « non verrouillé ».
+ * `comptes.mot_de_passe_verrouille`, par identifiant de connexion. SERVI À PART
+ * DE LA LISTE : `interface Compte` décrit ce que le jeu de démonstration porte,
+ * pas ce que la table porte. Un identifiant absent vaut « non verrouillé ».
  */
 async function lireLesVerrousDeMotDePasse(
 	base: ReturnType<typeof basePartagee>
@@ -79,10 +63,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		verrous: await lireLesVerrousDeMotDePasse(base),
 		/**
 		 * LA TABLE DES DÉSIGNATIONS — le nom d'affichage d'un domaine vers sa forme
-		 * canonique. Même motif qu'à `/console/domaines`, et pour le même motif :
-		 * `#f-domaine` porte le NOM (`V-32:3144`), le geste attend l'identifiant
-		 * lisible d'univers puis celui du domaine, et « Poste de travail » ne donne
-		 * pas son identifiant par abaissement de casse — c'est la base qui sait.
+		 * canonique : `#f-domaine` porte le NOM, le geste attend les identifiants
+		 * lisibles, et « Poste de travail » ne donne pas le sien par abaissement de
+		 * casse.
 		 */
 		designations: await lireLesDesignationsDeDomaine(base)
 	};
@@ -95,35 +78,22 @@ function consoleOuverte(locals: App.Locals): void {
 
 export const actions: Actions = {
 	/**
-	 * CRÉER UN COMPTE — `UC-M14-07` (`CDC:1178`), `RG-CPT-01`, `RG-CPT-02`.
+	 * CRÉER UN COMPTE — `UC-M14-07`, `RG-CPT-01`, `RG-CPT-02`.
 	 *
-	 * LES NOMS DE CHAMP SONT CEUX DU GEL, SAUF DEUX, ET LES DEUX EXCEPTIONS SE
-	 * JUSTIFIENT. Les six premiers sont les identifiants du formulaire de
-	 * `V-32:1344-1401` — `f-ident`, `f-nom`, `f-courriel`, `f-mdp`, `f-role`,
-	 * `f-verrou` —, comme `changerLeRole` le fait déjà pour `f-ident` et
-	 * `f-role` : rien n'est traduit, et deux noms pour une même clé finiraient
-	 * par diverger.
+	 * LES NOMS DE CHAMP SONT CEUX DU GEL, SAUF UN : `#f-domaine` ne voyage pas sous
+	 * son nom parce qu'il ne voyage pas sous sa valeur — le sélecteur porte le NOM
+	 * d'affichage, le geste attend la forme CANONIQUE, et la page traduit par la
+	 * table que le chargeur lui a servie.
 	 *
-	 * Le septième, `#f-domaine`, ne voyage PAS sous son nom, parce qu'il ne
-	 * voyage pas sous sa valeur : le sélecteur porte le NOM d'affichage du
-	 * domaine, le geste attend sa forme CANONIQUE. La page traduit par la table
-	 * que le chargeur lui a servie, et envoie `univers` puis `domaine` — les
-	 * deux noms que `/console/domaines` emploie déjà pour la même désignation.
+	 * `P-09` ET `RG-ACC-04` PASSENT PAR `consoleOuverte()`, comme les deux autres
+	 * actions : un compte sans le rôle administrateur reçoit `404` sur l'ACTION comme
+	 * sur l'écran.
 	 *
-	 * `P-09` ET `RG-ACC-04` PASSENT PAR `consoleOuverte()`, comme les deux
-	 * autres actions : un compte sans le rôle administrateur reçoit `404` sur
-	 * l'ACTION comme sur l'écran, et ce 404 est celui d'`ADR-007` — sans message,
-	 * indiscernable d'une adresse qui n'existe pas.
+	 * `RG-CPT-02` N'EST PAS RÉÉCRITE ICI : elle est portée par cette garde et par
+	 * l'impossibilité de se créer soi-même.
 	 *
-	 * `RG-CPT-02` N'EST PAS RÉÉCRITE ICI, et c'est délibéré : elle est portée par
-	 * cette garde — sur une instance sans administrateur, personne n'atteint
-	 * cette action — et par l'impossibilité de se créer soi-même. Le
-	 * raisonnement complet est à l'en-tête de section 11 d'`administration.ts`.
-	 *
-	 * LE MOT DE PASSE EN CLAIR ENTRE ICI ET N'EN RESSORT PAS. `creerUnCompte()`
-	 * le condense ; aucune valeur rendue à l'écran ne le porte. La boîte
-	 * « Compte créé » affiche la valeur que le NAVIGATEUR a engendrée, celle-là
-	 * même qui a été envoyée.
+	 * LE MOT DE PASSE EN CLAIR ENTRE ICI ET N'EN RESSORT PAS : `creerUnCompte()` le
+	 * condense, et aucune valeur rendue à l'écran ne le porte.
 	 */
 	creer: async ({ locals, request }) => {
 		consoleOuverte(locals);
@@ -164,23 +134,15 @@ export const actions: Actions = {
 		return resultat;
 	},
 	/**
-	 * CHANGER LE RÔLE D'UN COMPTE — `RG-M14-07`.
+	 * CHANGER LE RÔLE D'UN COMPTE — `RG-M14-07`. Le compte se désigne par son
+	 * identifiant de connexion, définitif après création.
 	 *
-	 * `f-ident` ET `f-role` SONT LES NOMS DU GEL : `V-32:1384` porte
-	 * `select#f-role`, et le champ d'identifiant de connexion est `f-ident`
-	 * (`V-32:3109`), définitif après création — « le modifier casserait
-	 * l'attribution de ses contributions passées ». Le compte se désigne donc par
-	 * lui.
+	 * LE SÉLECTEUR REND UN LIBELLÉ, PAS UN ÉNUMÉRÉ : `roleDepuisLeLibelle()` rend
+	 * `null` sur tout le reste — un rôle non reconnu est un refus, jamais un rôle par
+	 * défaut : se tromper de défaut ici, ce serait accorder un droit.
 	 *
-	 * LE SÉLECTEUR REND UN LIBELLÉ, PAS UN ÉNUMÉRÉ. `roleDepuisLeLibelle()` fait
-	 * la conversion, et rend `null` sur tout le reste : un rôle non reconnu est
-	 * un refus, jamais un rôle par défaut — se tromper de défaut ici, ce serait
-	 * accorder un droit.
-	 *
-	 * LE REFUS DU DERNIER ADMINISTRATEUR SORT EN `fail` AVEC SON MOTIF. `P-09`
-	 * veut que le geste ne soit pas offert — le gel verrouille le sélecteur et
-	 * écrit le motif au-dessus (`V-32:3081-3099`) —, ce qui ne dispense pas de le
-	 * refuser ici : un client compose la requête qu'il veut.
+	 * LE REFUS DU DERNIER ADMINISTRATEUR SORT EN `fail` AVEC SON MOTIF : `P-09` veut
+	 * que le geste ne soit pas offert, ce qui ne dispense pas de le refuser ici.
 	 */
 	changerLeRole: async ({ locals, request }) => {
 		consoleOuverte(locals);
@@ -201,19 +163,11 @@ export const actions: Actions = {
 	/**
 	 * ACTIVER OU DÉSACTIVER UN COMPTE — `RG-M14-08`.
 	 *
-	 * `f-ident` DÉSIGNE LE COMPTE, comme pour le changement de rôle : c'est
-	 * l'identifiant de connexion, « définitif après création » (`V-32:3109`), et
-	 * deux noms de champ pour une même clé finiraient par diverger.
+	 * `actif` PORTE LA CIBLE, PAS LA BASCULE : un booléen « inverser » se tromperait
+	 * de sens si deux administrateurs cliquaient en même temps, et le second
+	 * annulerait le premier sans le savoir.
 	 *
-	 * `actif` PORTE LA CIBLE, PAS LA BASCULE. Un booléen « inverser » se
-	 * tromperait de sens si deux administrateurs cliquaient en même temps, et le
-	 * second annulerait le premier sans le savoir. La requête dit l'état voulu ;
-	 * la base l'écrit.
-	 *
-	 * LE REFUS DU DERNIER ADMINISTRATEUR SORT EN `fail` AVEC SON MOTIF. Le gel le
-	 * rend dans le dialogue (`V-32:3270-3284`), bouton de validation caché ;
-	 * `P-09` veut que le geste ne soit pas offert, ce qui ne dispense jamais de le
-	 * refuser ici — un client compose la requête qu'il veut.
+	 * LE REFUS DU DERNIER ADMINISTRATEUR SORT EN `fail` AVEC SON MOTIF.
 	 */
 	changerLActivation: async ({ locals, request }) => {
 		consoleOuverte(locals);
@@ -232,20 +186,14 @@ export const actions: Actions = {
 	/**
 	 * RÉINITIALISER LE MOT DE PASSE D'UN COMPTE — `RG-CPT-01`.
 	 *
-	 * « Un compte peut être marqué mot de passe verrouillé : il conserve tous ses
-	 * droits de contenu mais ne peut pas changer son propre mot de passe. […] La
-	 * réinitialisation par un administrateur reste possible » (`CDC:137`). Le
-	 * verrou N'EST DONC PAS ÉPROUVÉ ICI : il vise le compte lui-même, jamais
-	 * l'administrateur, et le refuser ici retirerait au compte de démonstration
-	 * partagé la seule porte de sortie que la règle lui laisse.
+	 * LE VERROU N'EST PAS ÉPROUVÉ ICI : « un compte marqué mot de passe verrouillé
+	 * […] ne peut pas changer son propre mot de passe. La réinitialisation par un
+	 * administrateur reste possible » (`CDC:137`).
 	 *
-	 * LA VALEUR CLAIRE ENTRE ET N'EN RESSORT PAS — même motif qu'à la création :
-	 * elle est engendrée par le NAVIGATEUR, condensée ici, et la base n'en garde
-	 * que l'Argon2id. Aucune valeur rendue ne la reporte.
+	 * LA VALEUR CLAIRE ENTRE ET N'EN RESSORT PAS : la base n'en garde que l'Argon2id.
 	 *
-	 * LES SESSIONS EN COURS NE SONT PAS FERMÉES, et c'est une lacune déclarée
-	 * plutôt qu'un oubli : ni le gel ni le cahier des charges ne le demandent, et
-	 * décider seul de déconnecter quelqu'un dépasse ce que le geste annonce.
+	 * LES SESSIONS EN COURS NE SONT PAS FERMÉES — lacune déclarée : ni le gel ni le
+	 * cahier ne le demandent.
 	 */
 	reinitialiserLeMotDePasse: async ({ locals, request }) => {
 		consoleOuverte(locals);

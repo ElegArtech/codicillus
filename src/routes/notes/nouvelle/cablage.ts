@@ -1,60 +1,27 @@
 /**
- * LE CÂBLAGE DU CHOIX DE DÉPART — `dialog#dlg-template` de V-17, « Par quoi
- * commencer ? ».
+ * LE CÂBLAGE DU CHOIX DE DÉPART — `dialog#dlg-template` de V-17. DEUX GESTES, ET ILS
+ * ÉTAIENT INATTEIGNABLES PLUTÔT QU'INERTES : le dialogue n'est rendu que par l'état
+ * `cas-template` de la vue, et aucune adresse ne le demandait.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * DEUX GESTES, ET ILS ÉTAIENT INATTEIGNABLES PLUTÔT QU'INERTES
+ * CE QU'UN GABARIT FAIT : il insère son SQUELETTE dans la zone de rédaction et
+ * présélectionne le TYPE de note qu'il déclare. Il ne touche NI au titre, NI au dossier,
+ * NI aux étiquettes — le référentiel n'en dit rien, et les remplir serait décider à la
+ * place de qui rédige (`RG-REF-01`).
  *
- * Le dialogue n'est rendu que par l'état `cas-template` de la vue, et aucune
- * adresse ne le demandait : ses deux gestes — « Partir d'une page vierge » et le
- * choix d'un gabarit — ne pouvaient pas même être cliqués. `?template=` les
- * ouvre désormais (`docs/routes.md:287`, `+page.server.ts`), et ce module leur
- * donne leur effet.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QU'UN GABARIT FAIT, ET CE QU'IL NE FAIT PAS
- *
- * Il insère son SQUELETTE dans la zone de rédaction — le champ `contenu` du
- * référentiel, converti par `documentDepuisHtml()` — et il présélectionne le
- * TYPE de note qu'il déclare, parce que le gabarit le porte
- * (`Template.type`) et que le sélecteur du gel l'accepte.
- *
- * Il ne touche NI au titre, NI au dossier, NI aux étiquettes : le référentiel
- * n'en dit rien, et les remplir serait décider à la place de qui rédige.
- * `RG-REF-01` — « le template est subsidiaire, jamais imposé » — est la même
- * phrase que celle que le dialogue affiche au-dessus de la page vierge.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE DIALOGUE EST REMONTÉ EN MODALE, ET C'EST LE GEL QUI LE DEMANDE
- *
- * `src/vues/V-17.svelte` rend `<dialog open>` et rien d'autre — délibérément :
- * `ARB-017` confie la modalité au banc, et l'en-tête de la vue le dit, « `open`
- * n'est pas `showModal()` ; la couche supérieure ne s'atteint pas
- * déclarativement ». Le PRODUIT, lui, en a besoin, et ce n'est pas une opinion :
- * mesuré au navigateur, un `<dialog open>` non modal reste SOUS la barre
- * d'outils, et `elementFromPoint` au centre de « Partir d'une page vierge »
- * rend le bouton « Code en ligne ». Le premier bouton du dialogue était donc
- * physiquement inatteignable au pointeur.
- *
- * `showModal()` est ce que le gel appelle lui-même — `V-17:3576` — et
- * `close()` ce qu'il appelle pour les deux sorties — `V-17:3521` et `:3530`.
- * Ce module fait les deux mêmes appels, aux deux mêmes moments. Rien n'est
- * inventé, et rien n'est écrit dans `src/vues/`.
+ * LE DIALOGUE EST REMONTÉ EN MODALE, ET C'EST LE GEL QUI LE DEMANDE : `<dialog open>` non
+ * modal reste SOUS la barre d'outils — mesuré au navigateur, le premier bouton du
+ * dialogue était physiquement inatteignable au pointeur. `showModal()` et `close()` sont
+ * ce que le gel appelle lui-même.
  */
 import { documentDepuisHtml } from '$lib/edition/html';
 import type { Document } from '$lib/contenu/document';
 import type { Template } from '../../../../seeds/corpus';
 
-/** Ce qu'un câblage rend : de quoi le défaire. */
 export type Debranchement = () => void;
 
-/** Ce que le câblage du choix de départ a besoin de savoir de sa route. */
 export interface OptionsDuChoixDeDepart {
-	/** Les gabarits servis par le chargeur, dans l'ordre où la vue les rend. */
 	templates: readonly Template[];
-	/** Ce que le gabarit choisi insère dans la zone de rédaction. */
 	inserer: (document: Document) => void;
-	/** Le gabarit nommé par `?template=`, quand l'adresse en nomme un. */
 	demande?: string | null;
 }
 
@@ -85,7 +52,6 @@ export function cablerLeChoixDeDepart(
 		dialogue.close();
 	};
 
-	/** Le geste d'un gabarit : son squelette, son type, puis on referme. */
 	const prendre = (gabarit: Template): void => {
 		options.inserer(documentDepuisHtml(gabarit.contenu, formulaire.ownerDocument));
 		const type = formulaire.querySelector<HTMLSelectElement>('#m-type');

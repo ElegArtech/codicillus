@@ -1,28 +1,19 @@
 /**
  * `/console/templates` — LE CHARGEUR de V-31.
  *
- * LA GARDE EST CELLE DES ONZE ADRESSES, ET ELLE EST ÉCRITE UNE FOIS.
- * `docs/routes.md:167` : « Toutes ces routes exigent le rôle administrateur. Un
- * utilisateur non administrateur reçoit 404 V-26, pas un refus » — `P-09` pour
- * l'entrée non rendue, `RG-ACC-04` pour l'adresse construite. La décision est
- * prise par `resoudreLaConsole()` de `src/lib/donnees/consoles.ts`, qui appelle
- * `src/lib/droits/resolution.ts` et rend `INTROUVABLE` ; le seul `error(404, MESSAGE_INTROUVABLE)`
- * du fichier est SANS MESSAGE (`ADR-007`).
+ * LA GARDE EST CELLE DES ONZE ADRESSES DE CONSOLE : `resoudreLaConsole()` la
+ * prend, une fois pour toutes, et un non-administrateur reçoit 404 V-26 — pas un
+ * refus (`P-09`, `RG-ACC-04`). Le seul `error(404, …)` du fichier est SANS
+ * MESSAGE (`ADR-007`).
  *
- * LES TEMPLATES AFFICHÉS SONT CEUX DE LA BASE — l'écart est refermé pour
- * l'essentiel. Ce commentaire disait : « la vue lit `TEMPLATES` et `TYPES_NOTE`
- * du jeu de semence, le chargeur ne peut pas la corriger ». Les deux sont
- * désormais des propriétés REQUISES de `V-31`, que ce chargeur sert depuis les
- * tables : elles n'ont plus de valeur par défaut, et une rédaction de cette page
- * qui en oublierait une ne compilerait plus.
+ * `templates` et `typesNote` sont des propriétés REQUISES de V-31, servies
+ * depuis les tables : une rédaction de cette page qui en oublierait une ne
+ * compilerait plus.
  *
- * CE QUI RESTE EN LACUNE, ET CE N'EST PAS UN OUBLI : `Template.utilisations`
- * n'a aucune colonne — « c'est un compteur d'EMPLOI, qui se calcule sur les
- * notes créées depuis un template, et rien n'enregistre cette provenance »
- * (`lecture.ts`, à `lireTemplates()`). Servi depuis la base, le champ est donc
- * ABSENT, et la vue rend l'état indisponible plutôt qu'un zéro qui mentirait.
- *
- * `vecteur: null` demande l'état au repos.
+ * CE QUI RESTE EN LACUNE : `Template.utilisations` n'a aucune colonne — c'est un
+ * compteur d'EMPLOI, qui se calcule sur les notes créées depuis un template, et
+ * rien n'enregistre cette provenance. Le champ est ABSENT, et la vue rend l'état
+ * indisponible plutôt qu'un zéro qui mentirait.
  */
 import { error, fail } from '@sveltejs/kit';
 import { and, eq, ne, sql } from 'drizzle-orm';
@@ -59,11 +50,10 @@ function consoleOuverte(locals: App.Locals): void {
 }
 
 /**
- * LES SECTIONS ANNONCÉES SONT EXTRAITES DU CONTENU, jamais saisies à part.
- * C'est la règle du gel (`V-31:3295`) et celle de la vue : les titres de
- * section du squelette SONT sa structure. La colonne `structure` de la table
- * n'est donc pas une seconde source — elle est le résultat de cette lecture,
- * enregistré pour que les lecteurs n'aient pas à la refaire.
+ * LES SECTIONS ANNONCÉES SONT EXTRAITES DU CONTENU, jamais saisies à part : les
+ * titres de section du squelette SONT sa structure. La colonne `structure` n'est
+ * donc pas une seconde source — elle est le résultat de cette lecture, enregistré
+ * pour que les lecteurs n'aient pas à la refaire.
  */
 function sectionsDuSquelette(contenu: string): readonly string[] {
 	return [...contenu.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map((m) =>
@@ -73,11 +63,9 @@ function sectionsDuSquelette(contenu: string): readonly string[] {
 
 /**
  * L'IDENTIFIANT LISIBLE D'UN TEMPLATE NEUF, et sa mise à l'écart des collisions.
- *
  * `templates_identifiant_unique` refuse un doublon ; deux templates de noms
  * différents peuvent pourtant réduire au même identifiant — « Procédure ! » et
- * « Procédure ? ». Le suffixe numéroté est la même parade que partout ailleurs
- * dans le produit, et il s'arrête au premier libre.
+ * « Procédure ? ». Le suffixe numéroté s'arrête au premier libre.
  */
 async function identifiantLibre(base: Base, nom: string): Promise<string> {
 	const racine = identifiantLisible(nom) || 'template';
@@ -98,10 +86,9 @@ async function identifiantLibre(base: Base, nom: string): Promise<string> {
  * la lecture des champs et la validation. `vise` vaut `null` pour une création,
  * l'identifiant lisible de la ligne pour un enregistrement.
  *
- * LES DEUX REFUS SONT CEUX DU GEL, AU MOT PRÈS (`V-31:3510-3515`) : un nom vide,
- * un nom déjà porté par un AUTRE template. Ils sortent en `fail` avec leur
- * message, que la vue pose dans son bloc `champ__erreur` — le seul endroit que
- * le gel offre à un refus sur cet écran.
+ * LES DEUX REFUS SONT CEUX DU GEL, AU MOT PRÈS : un nom vide, un nom déjà porté
+ * par un AUTRE template. Ils sortent en `fail` avec leur message, que la vue pose
+ * dans son bloc `champ__erreur` — le seul endroit que le gel offre à un refus.
  *
  * LE CARACTÈRE « PAR DÉFAUT » RESTE UNIQUE, et c'est la même transaction que
  * `marquerLeTemplateParDefaut()` : démarquer tous, puis marquer celui-ci. La
@@ -180,13 +167,12 @@ export const actions: Actions = {
 	/**
 	 * SUPPRIMER UN TEMPLATE — `RG-REF-01`.
 	 *
-	 * `template` porte l'IDENTIFIANT LISIBLE, celui de `templates.identifiant` que
-	 * `lireTemplates()` rend en `id` : la vue le porte déjà, aucune table de
-	 * traduction n'est nécessaire.
+	 * `template` porte l'IDENTIFIANT LISIBLE, celui que `lireTemplates()` rend en
+	 * `id` : la vue le porte déjà, aucune table de traduction n'est nécessaire.
 	 *
-	 * AUCUNE ISSUE DE REFUS : la suppression d'un template n'affecte aucune note,
-	 * et le dialogue du gel n'avertit que d'une chose — la création s'ouvrira sur
-	 * la page vierge si c'était le template par défaut.
+	 * AUCUNE ISSUE DE REFUS : la suppression d'un template n'affecte aucune note, et
+	 * le dialogue du gel n'avertit que d'une chose — la création s'ouvrira sur la
+	 * page vierge si c'était le template par défaut.
 	 */
 	supprimer: async ({ locals, request }) => {
 		consoleOuverte(locals);
@@ -200,12 +186,9 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * MARQUER UN TEMPLATE PAR DÉFAUT — `RG-REF-02`.
-	 *
-	 * Le geste est UNIQUE et laisse exactement un template par défaut : c'est ce
-	 * que le gel écrit depuis l'écran — « Cocher décochera "X", qui l'est
-	 * actuellement » (`V-31:380`). Voir `marquerLeTemplateParDefaut()` pour le
-	 * motif de la transaction.
+	 * MARQUER UN TEMPLATE PAR DÉFAUT — `RG-REF-02`. Le geste est UNIQUE et laisse
+	 * exactement un template par défaut, ce que le gel écrit depuis l'écran :
+	 * « Cocher décochera "X", qui l'est actuellement ».
 	 */
 	marquerParDefaut: async ({ locals, request }) => {
 		consoleOuverte(locals);
@@ -220,12 +203,9 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * CRÉER UN TEMPLATE — le geste que le panneau de V-31 promet depuis le gel.
-	 *
-	 * LES NOMS DE CHAMP SONT CEUX DU GEL, comme partout ailleurs en console :
-	 * `f-nom`, `f-desc`, `f-type`, `f-defaut`, `f-contenu` sont les identifiants
-	 * du formulaire (`V-31:363-560`). Rien n'est traduit ; deux noms pour une
-	 * même clé finiraient par diverger (`P-35`).
+	 * CRÉER UN TEMPLATE. LES NOMS DE CHAMP SONT CEUX DU GEL, comme partout ailleurs
+	 * en console : `f-nom`, `f-desc`, `f-type`, `f-defaut`, `f-contenu`. Rien n'est
+	 * traduit ; deux noms pour une même clé finiraient par diverger (`P-35`).
 	 */
 	creer: async ({ locals, request }) => {
 		consoleOuverte(locals);
@@ -234,11 +214,8 @@ export const actions: Actions = {
 
 	/**
 	 * ENREGISTRER UN TEMPLATE EXISTANT — même formulaire, même validation.
-	 *
-	 * `template` porte l'identifiant lisible, celui que `supprimer` et
-	 * `marquerParDefaut` attendent déjà. L'IDENTIFIANT NE BOUGE PAS quand le nom
-	 * change : il désigne la ligne, et le renommer casserait les trois autres
-	 * gestes de l'écran en cours de route.
+	 * L'IDENTIFIANT NE BOUGE PAS quand le nom change : il désigne la ligne, et le
+	 * renommer casserait les trois autres gestes de l'écran en cours de route.
 	 */
 	enregistrer: async ({ locals, request }) => {
 		consoleOuverte(locals);

@@ -1,49 +1,20 @@
 /**
- * LE CÂBLAGE DE V-03 — les quatre gestes de la lecture publique d'un guide.
+ * LE CÂBLAGE DE V-03 — les quatre gestes de la lecture publique d'un guide. `ARB-063` :
+ * le comportement vit dans la route, par identifiant et par sélecteur.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI ICI, ET NON DANS LA VUE
- *
- * `ARB-063` : les vues de `src/vues/` sont des transcriptions du gel, sans
- * gestionnaire posé dans le balisage ; le comportement vit dans la route et
- * s'accroche par identifiant et par sélecteur. Le précédent copié est
- * `src/routes/notes/[identifiant]/operationnel/cablage.ts`, et le contrat de
- * retour est le même : un câblage rend de quoi le défaire.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES QUATRE GESTES, ET LEUR SOURCE
- *
- * 1. LE SOMMAIRE REPLIÉ SUR PETIT ÉCRAN — `mockups/V-03-lecture-publique.html`,
- *    « Sommaire replié sur petit écran » : la bascule retourne `data-ouvert` du
- *    `nav.sommaire` porteur et recopie l'état dans `aria-expanded`. Le port est
- *    littéral, attribut pour attribut.
- *
- * 2. LA BASCULE DE REGISTRE — même source, « Bascule de registre ». Le gel pose
- *    `data-registre` sur la racine, met à jour `aria-selected` des deux onglets,
- *    masque l'un des deux corps, REFLÈTE LE REGISTRE DANS L'ADRESSE — « le lien
- *    est partageable tel quel » — et remonte en tête.
- *
- *    L'ADRESSE EST AUSSI LUE AU MONTAGE, et c'est ce qui rend l'affirmation du
- *    gel vraie : un lien portant `?registre=operationnel` ouvre le registre
- *    Opérationnel. Le gel, qui n'a pas de serveur, écrivait l'adresse sans
- *    jamais la relire ; la partageabilité y était annoncée et non tenue.
- *
- *    LE REGISTRE VOYAGE EN PARAMÈTRE DE REQUÊTE, JAMAIS EN SEGMENT DE CHEMIN :
- *    `/guides/{identifiant}` est l'adresse canonique du guide, et un registre
- *    n'est pas un niveau de rangement.
- *
- * 3. L'AGRANDISSEMENT DU SCHÉMA — `.figure__cadre`. Le gel ouvre
- *    `dialog.loupe` ; `src/vues/V-03.svelte` ne transcrit pas ce dialogue, et
- *    son en-tête le déclare. Le geste est donc porté PAR LE NAVIGATEUR : la
- *    figure est ouverte dans un nouvel onglet quand elle porte une image, et
- *    reste sans effet sinon. Voir `agrandirLaFigure()`.
- *
- * 4. L'IMPRESSION — `window.print()`, que le gel écrit en attribut de balisage
- *    (`onclick="window.print()"`). Svelte ne sait pas émettre cet attribut
- *    littéral, et la vue le perd : il est rendu ici.
+ * 1. LE SOMMAIRE REPLIÉ SUR PETIT ÉCRAN : la bascule retourne `data-ouvert` du
+ *    `nav.sommaire` et recopie l'état dans `aria-expanded`.
+ * 2. LA BASCULE DE REGISTRE : le gel pose `data-registre` sur la racine, met à jour
+ *    `aria-selected`, masque l'un des deux corps et REFLÈTE LE REGISTRE DANS L'ADRESSE.
+ *    L'ADRESSE EST AUSSI LUE AU MONTAGE, et c'est ce qui rend « le lien est partageable
+ *    tel quel » vrai. LE REGISTRE VOYAGE EN PARAMÈTRE DE REQUÊTE, JAMAIS EN SEGMENT DE
+ *    CHEMIN.
+ * 3. L'AGRANDISSEMENT DU SCHÉMA : le gel ouvre `dialog.loupe`, que `src/vues/V-03.svelte`
+ *    ne transcrit pas — le geste est porté PAR LE NAVIGATEUR.
+ * 4. L'IMPRESSION — `window.print()`, que le gel écrit en attribut de balisage et que
+ *    Svelte ne sait pas émettre littéralement.
  */
 
-/** Ce qu'un câblage rend : de quoi le défaire. Même contrat que le voisin. */
 export type Debranchement = () => void;
 
 /** Les deux registres de lecture, et rien d'autre — le vocabulaire est clos. */
@@ -58,10 +29,8 @@ export function registreDemande(recherche: string): Registre {
 
 /**
  * L'ÉTAT D'UN REGISTRE AFFICHÉ — les quatre gestes du gel, mis bout à bout.
- *
- * La fonction est SÉPARÉE du câblage pour que le montage et le clic empruntent
- * exactement le même chemin : deux écritures auraient divergé au premier
- * changement.
+ * SÉPARÉE du câblage pour que le montage et le clic empruntent exactement le même
+ * chemin : deux écritures auraient divergé au premier changement.
  */
 function afficherLeRegistre(racine: Element, registre: Registre): void {
 	racine.setAttribute('data-registre', registre);
@@ -78,12 +47,11 @@ function afficherLeRegistre(racine: Element, registre: Registre): void {
  * L'AGRANDISSEMENT D'UNE FIGURE, SANS LE DIALOGUE DU GEL.
  *
  * Le schéma est un dessin vectoriel écrit dans le document. Le sérialiser en
- * source de données et l'ouvrir dans un onglet le rend à sa taille propre,
- * ce qui est l'effet demandé par le libellé du bouton — « Agrandir le schéma ».
- * Rien n'est dessiné ni redessiné : c'est le même nœud, servi tel quel.
+ * source de données et l'ouvrir dans un onglet le rend à sa taille propre, l'effet
+ * que le libellé du bouton demande. Rien n'est dessiné ni redessiné.
  *
- * L'ouverture peut être refusée par le navigateur ; le geste est alors sans
- * effet, comme il l'était avant ce câblage. Il n'y a rien à rattraper.
+ * L'ouverture peut être refusée par le navigateur ; le geste est alors sans effet,
+ * comme il l'était avant ce câblage.
  */
 function agrandirLaFigure(cadre: Element): void {
 	const dessin = cadre.querySelector('svg');

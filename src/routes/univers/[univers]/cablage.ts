@@ -1,93 +1,21 @@
 /**
- * LE CÂBLAGE DE V-10 — la page d'un univers.
+ * LE CÂBLAGE DE V-10 — la page d'un univers. `ARB-063` : le comportement s'accroche
+ * depuis la route, et les quatre gestes sont des NAVIGATIONS. AUCUNE ADRESSE N'EST ÉCRITE
+ * À LA MAIN : les formes de RANGEMENT sortent de `$lib/rangement/adresses`.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI ICI, ET NON DANS LA VUE
+ * LA CARTOGRAPHIE EST RÉDUITE À CET UNIVERS : `/cartographie` nu faisait retomber le
+ * périmètre sur celui de la planche de V-19. `?perimetre=` est un paramètre de REQUÊTE,
+ * honoré par le chargeur (§4.3) — ce que §3.4 ne dit pas, ne portant que le CHEMIN.
  *
- * `ARB-063`, repris par le motif unique de câblage : le balisage de
- * `src/vues/` ne bouge pas, le comportement s'accroche depuis la route, par
- * identifiant et par sélecteur. Ce module est le voisin de
- * `src/routes/notes/{identifiant}/operationnel/cablage.ts` et en copie la
- * forme, à ceci près qu'il n'y a RIEN À ÉCRIRE sur cette page : les quatre
- * gestes de V-10 sont des NAVIGATIONS. Aucun formulaire n'est donc posé, et
- * aucune action serveur n'est appelée.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * AUCUNE ADRESSE N'EST ÉCRITE À LA MAIN
- *
- * Les trois formes employées sortent de `$lib/rangement/adresses` —
- * `adresseDesNotesDuDomaine()` pour la liste d'un domaine, et rien d'autre.
- * Les deux adresses fixes — `/cartographie` et `/console/domaines` — sont des
- * CHEMINS de route sans segment dynamique, que la fabrique d'adresses ne porte
- * pas et n'a pas à porter : elle porte les formes du RANGEMENT. La première
- * reçoit néanmoins un paramètre de REQUÊTE, posé par `searchParams` — voir
- * ci-dessous.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LA CARTOGRAPHIE EST RÉDUITE À CET UNIVERS
- *
- * Le bouton de la couverture est libellé « Cartographie de l'univers »
- * (`#carto`, dans `V-10`) et menait à `/cartographie` nu : le périmètre y retombait sur
- * celui de la planche de V-19, si bien que depuis la page de l'univers
- * « Projets » l'écran montrait « Production ». C'est le défaut que le jumeau de
- * la page d'un domaine avait déjà réparé — `adresseAuPerimetreDuDomaine()`,
- * `[domaine]/cablage.ts` —, et le raisonnement y est écrit : « le libellé promet
- * Cartographie — Infrastructure, l'écran rendait tout Production ».
- *
- * LE COMMENTAIRE QUI PORTAIT L'ERREUR DISAIT « §3.4, SANS PARAMÈTRE ». §3.4
- * déclare que le CHEMIN de la cartographie n'a pas de segment dynamique ; il ne
- * dit rien de `?perimetre=`, qui est un paramètre de REQUÊTE, honoré par le
- * chargeur et documenté à §4.3. Les deux phrases avaient été confondues.
- *
- * LA FORME `univers|{nom}` EST HONORÉE DE BOUT EN BOUT : `perimetreDeLAdresse()`
- * l'accepte au même titre que `domaine|{nom}`, le filtre du sous-graphe la
- * distingue, et le sélecteur de V-19 émet lui-même cette valeur — depuis que la
- * route de la cartographie lui passe les univers réels, il la propose donc aussi
- * pour celui-ci, et le libellé du menu s'accorde au graphe.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES SEGMENTS DE FRAÎCHEUR — DEUX DESTINATIONS, PARCE QU'IL Y A DEUX BARRES
- *
- * Le même composant est rendu deux fois (`V-10:296`) : la barre CONSOLIDÉE de
- * l'univers, et la barre de chaque carte de domaine. Cliquer un segment veut
- * dire « montre-moi ces notes-là », et les deux périmètres n'ont pas la même
- * liste :
- *
- *   · dans une carte de domaine → `/univers/{u}/{d}/notes?fraicheur=…`, la
- *     liste des notes du domaine, dont `+page.server.ts` honore la facette ;
- *   · dans la barre consolidée → `/recherche?univers={u}&fraicheur=…`. Il
- *     N'EXISTE PAS de liste de notes à l'échelle d'un univers — `docs/routes.md`
- *     §3.3 n'en déclare aucune —, et `/recherche` honore les deux facettes
- *     `univers` et `fraicheur` (`recherche/+page.server.ts:139`). C'est la même
- *     demande, servie par l'écran qui sait la recevoir.
- *
- * LA VALEUR DE FACETTE SE LIT DANS LA CLASSE DU SEGMENT, pas dans son libellé :
- * le gel écrit « 12 fraîches · Infrastructure », un texte accordé et contextué
- * que découper serait une devinette. La classe, elle, est la clé du gel
- * (`PARTS` de `V-10:212`), et les trois valeurs de facette sont celles que
- * V-12 et V-08 déclarent — un seul vocabulaire pour les trois écrans.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES INDICATEURS CONSOLIDÉS — UN SEUL MÈNE QUELQUE PART, ET C'EST MESURÉ
- *
- * · « NOTES » ET SON SOUS-COMPTE DE BROUILLONS ouvrent `/recherche` réduite à
- *   cet univers, avec `&statut=Brouillon` pour le second. C'est exactement
- *   l'adresse que la barre consolidée compose déjà ci-dessus, et elle est
- *   composée par la même fonction : deux copies auraient divergé.
- *
- * · « CONTRIBUTEURS ACTIFS » RESTE INERTE, et ce n'est pas un oubli.
- *   `/recherche` honore sept facettes — `univers`, `domaine`, `type`,
- *   `statut`, `fraicheur`, `etiquette`, `visibilite` (`recherche/
- *   +page.server.ts`) — et `auteur` n'en fait pas partie. Aucune cible exacte
- *   n'existe : un filtre approchant mentirait sur ce qu'on montre.
- *
- * · « DOMAINES » RESTE INERTE lui aussi : la liste qu'il compte est
- *   immédiatement dessous, sur le même écran. Une ancre vers un contenu déjà
- *   visible ne déplace rien et ferait promettre un geste sans effet.
+ * LES SEGMENTS DE FRAÎCHEUR ONT DEUX DESTINATIONS, PARCE QU'IL Y A DEUX BARRES : la liste
+ * des notes du domaine dans une carte, `/recherche?univers={u}&fraicheur=…` dans la barre
+ * consolidée — il N'EXISTE PAS de liste de notes à l'échelle d'un univers. LA VALEUR DE
+ * FACETTE SE LIT DANS LA CLASSE DU SEGMENT, pas dans son libellé, que découper serait une
+ * devinette. DEUX INDICATEURS RESTENT INERTES : `auteur` n'est pas une facette de
+ * `/recherche`, et « Domaines » compte une liste immédiatement dessous.
  */
 import { adressesParLesNoms, type DesignationsDeRangement } from '$lib/rangement/adresses';
 
-/** Ce qu'un câblage rend : de quoi le défaire. Même contrat que ses voisins. */
 export type Debranchement = () => void;
 
 /**
@@ -113,21 +41,18 @@ const ADRESSE_DE_LA_CARTOGRAPHIE = '/cartographie';
 const ADRESSE_DE_LA_CONSOLE_DES_DOMAINES = '/console/domaines';
 
 export interface OptionsDeLUnivers {
-	/** Le NOM de l'univers rendu — celui que le vecteur porte sous `uni`. */
 	readonly univers: string;
 	/**
 	 * LA TABLE QUI TRADUIT UN NOM EN IDENTIFIANT D'ADRESSE.
 	 *
-	 * Le seul lien composé ici part du NOM lu sur une carte de domaine, et il
-	 * était slugifié. `domaines.identifiant` est fixé à la création et ne suit PAS
-	 * les renommages (`RG-M12-11`) : un segment de barre de fraîcheur menait donc
-	 * en 404 dès qu'on avait renommé le domaine. La table vient du gabarit racine,
-	 * par le contexte de coquille.
+	 * Le seul lien composé ici part du NOM lu sur une carte de domaine, et il était
+	 * slugifié. `domaines.identifiant` est fixé à la création et ne suit PAS les
+	 * renommages (`RG-M12-11`) : un segment de barre de fraîcheur menait en 404 dès
+	 * qu'on avait renommé le domaine. La table vient du gabarit racine.
 	 */
 	readonly designations: DesignationsDeRangement;
 }
 
-/** Le libellé d'un nœud, blancs réduits. */
 function libelle(noeud: Element | null | undefined): string {
 	return (noeud?.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
@@ -155,10 +80,8 @@ export function cablerLUnivers(racine: HTMLElement, options: OptionsDeLUnivers):
 
 	/**
 	 * LA RECHERCHE RÉDUITE À CET UNIVERS. Il n'existe pas de liste de notes à
-	 * l'échelle d'un univers (`docs/routes.md` §3.3 n'en déclare aucune) ;
-	 * `/recherche` porte la facette `univers`, et c'est l'écran qui sait recevoir
-	 * la demande. Une seule fonction la compose, pour les segments de la barre
-	 * consolidée comme pour les indicateurs.
+	 * l'échelle d'un univers ; `/recherche` porte la facette `univers`. Une seule
+	 * fonction la compose, pour les segments comme pour les indicateurs.
 	 */
 	const rechercheDeLUnivers = (): URL => {
 		const adresse = new URL(ADRESSE_DE_LA_RECHERCHE, document.location.origin);
@@ -167,10 +90,8 @@ export function cablerLUnivers(racine: HTMLElement, options: OptionsDeLUnivers):
 	};
 
 	/**
-	 * LA CARTOGRAPHIE RÉDUITE À CET UNIVERS. `?perimetre=` porte la valeur même
-	 * du sélecteur de V-19 — `type|nom` —, posée par `searchParams`, qui
-	 * l'encode : rien n'est concaténé, donc rien n'est à échapper. La forme du
-	 * jumeau de la page d'un domaine, appliquée au niveau au-dessus.
+	 * LA CARTOGRAPHIE RÉDUITE À CET UNIVERS. `?perimetre=` porte la valeur même du
+	 * sélecteur de V-19 — `type|nom` —, posée par `searchParams`, qui l'encode.
 	 */
 	const cartographieDeLUnivers = (): URL => {
 		const adresse = new URL(ADRESSE_DE_LA_CARTOGRAPHIE, document.location.origin);

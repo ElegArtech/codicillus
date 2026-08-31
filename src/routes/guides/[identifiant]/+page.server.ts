@@ -1,82 +1,22 @@
 /**
- * `/guides/{identifiant}` — LA LECTURE PUBLIQUE D'UN GUIDE (V-03).
+ * `/guides/{identifiant}` — LA LECTURE PUBLIQUE D'UN GUIDE (V-03). Une note publique ET
+ * publiée rend V-03 dans les QUATRE colonnes ; une note interne ou brouillon rend 404
+ * V-04, dans les quatre aussi. `ARB-007` A-05 : « la session ne change ni la route, ni
+ * la vue, ni les états » — ce chargeur ne lit donc PAS `locals.identite`.
  *
- * `docs/routes.md` §5.5, deux lignes et elles suffisent :
+ * LE POINT DUR — `V-04:2219` : « une adresse inexistante et une note existante non
+ * publique doivent produire un rendu strictement identique ». Trois propriétés la
+ * tiennent : UNE SEULE REQUÊTE, la même dans les deux cas, par identifiant et SANS
+ * CONTENU ; UN SEUL POINT DE SORTIE, `refuserLAdresse()`, dont le type de retour `never`
+ * interdit qu'on reprenne la main ; UN SEUL ÉCRAN D'ÉCHEC, qui ne reçoit ni la
+ * ressource, ni la raison, ni l'identifiant demandé. L'ORDRE EST LA PROPRIÉTÉ : le
+ * contenu n'est lu qu'APRÈS le refus (`ADR-006`, `ARB-005`).
  *
- *   note publique ET publiée      → **V-03**, dans les QUATRE colonnes
- *   note interne ou brouillon     → **404 V-04**, dans les QUATRE colonnes
- *
- * `ARB-007` A-05 en donne le motif : « une seule adresse, un seul rendu : la
- * session ne change ni la route, ni la vue, ni les états ». Ce chargeur ne lit
- * donc PAS `locals.identite`, et ce n'est pas un oubli : la réponse ne doit
- * dépendre d'aucun cookie. Une branche par persona ne peut pas s'y glisser,
- * puisqu'il n'y a rien à quoi la raccrocher.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE POINT DUR — `V-04:2219`, ET C'EST CETTE ROUTE QUI LE REND MESURABLE
- *
- * « Une adresse inexistante et une note existante non publique doivent produire
- * un rendu strictement identique : c'est la vérification la plus importante de
- * cette vue. »
- *
- * Trois propriétés la tiennent, et aucune n'est déclarative :
- *
- *   1. **une seule requête, la même dans les deux cas** — une projection par
- *      identifiant, SANS CONTENU (`resoudreLeGuide()`). Une note interne coûte
- *      exactement ce que coûte une note absente ;
- *   2. **un seul point de sortie** — `refuserLAdresse()`, dont le type de
- *      retour `never` interdit qu'on reprenne la main pour nuancer ;
- *   3. **un seul écran d'échec** — le composant d'erreur de la racine, qui ne
- *      reçoit ni la ressource, ni la raison, ni l'identifiant demandé.
- *
- * L'ORDRE EST LA PROPRIÉTÉ. Le contenu du guide n'est lu qu'APRÈS le refus, et
- * jamais avant : `ADR-006` interdit « de charger une ressource pour la refuser
- * ensuite », et c'est aussi ce qui empêche la fuite de latence d'`ARB-005`.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LA PAGE REÇOIT — LE GUIDE DEMANDÉ, ET PLUS LE GUIDE ÉCRIT
- *
- * `T-032` notait ici que V-03 « ne déclare qu'une propriété, `vecteur` », et
- * que son article était la transcription gelée d'une page écrite. La propriété
- * `guide` existe désormais, et ce chargeur la remplit :
- *
- *   · le titre, le type, le domaine, l'auteur — de la couche de lecture, qui
- *     rend les formes de `seeds/corpus.ts` depuis la base ;
- *   · les DEUX CORPS, rendus par `rendreDocument` en contexte **public** —
- *     l'implémentation unique (`ADR-004`), jamais un second convertisseur. Le
- *     contexte décide du sort d'un lien vers une note interne :
- *     `span.lien-prive`, qui ne révèle pas le titre de sa cible (`RG-M17-01`) ;
- *   · le sommaire, DÉDUIT des titres de niveau 2 du corps Référence par
- *     `titres()` de `../contenu/document.ts` — jamais relu sur du HTML ;
- *   · les pièces jointes de la note, et leurs adresses réelles.
- *
- * LES DEUX AXES DE LA PLANCHE VIENNENT DÉSORMAIS DE LA NOTE. `fr` était le
- * niveau de fraîcheur du guide gelé, `c-op` la présence de son registre « En
- * bref » : les deux décrivent LA NOTE AFFICHÉE, et c'est elle qui les porte.
- * `vecteur` n'avait donc plus rien à piloter, et il n'est plus servi : la vue
- * ne le déclare plus, en même temps qu'elle a cessé de pouvoir rendre le guide
- * ÉCRIT de la maquette.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES TROIS SORTS D'UN LIEN INTERNE — ET LE RÉSOLVEUR DOIT LES DISTINGUER
- *
- * `rendu.ts` les nomme : cible résolue → `a.lien-int` ; cible INEXISTANTE →
- * `a.lien-casse`, sans adresse ; cible existante mais NON PUBLIQUE, en lecture
- * publique → `span.lien-prive`. Le troisième est celui que `V-03:1072` écrit et
- * que `RG-M17-01` exige.
- *
- * LE RÉSOLVEUR CONNAÎT DONC TOUTES LES NOTES, avec leur drapeau de publicité.
- * Une première écriture ne lui donnait que les notes publiques : une cible
- * interne n'y était pas trouvée, et le rendu la traitait en LIEN CASSÉ. Mesuré
- * au navigateur — zéro `span.lien-prive` sur un corps qui en attendait un.
- * C'est l'écran qui aurait menti : « cette ressource n'existe pas » là où elle
- * existe et n'est pas publique.
- *
- * ET RIEN NE FUIT, parce que `span.lien-prive` ne porte RIEN de la cible : ni
- * son adresse, ni son titre. Le texte affiché est celui que le document
- * lui-même écrit, déjà lisible par l'anonyme puisqu'il est dans le corps du
- * guide. Le drapeau de publicité, lui, ne sort jamais du serveur — il décide
- * d'une forme, il n'est pas rendu.
+ * LES TROIS SORTS D'UN LIEN INTERNE : cible résolue → `a.lien-int` ; INEXISTANTE →
+ * `a.lien-casse`, sans adresse ; existante mais NON PUBLIQUE → `span.lien-prive`, celui
+ * que `RG-M17-01` exige. LE RÉSOLVEUR CONNAÎT DONC TOUTES LES NOTES, avec leur drapeau
+ * de publicité — ne lui donner que les publiques faisait traiter une cible interne en
+ * LIEN CASSÉ. Rien ne fuit : `span.lien-prive` ne porte NI adresse NI titre.
  */
 import { eq } from 'drizzle-orm';
 import { basePartagee, type Base } from '$lib/base/acces';
@@ -99,14 +39,11 @@ function adresseDeGuide(identifiant: string): string {
 }
 
 /**
- * LA TAILLE D'UNE PIÈCE JOINTE, TELLE QUE LE GEL L'ÉCRIT — « 320 Ko »,
- * « 18 Ko », « 1,2 Mo » (`V-03:1132`, `V-14:1836`, `V-14:1840`).
- *
- * Trois échantillons, une seule règle qui les rende tous les trois : sous le
- * mégaoctet, des kilooctets entiers ; au-delà, un mégaoctet à une décimale, la
- * virgule française. La colonne porte des OCTETS (`taille_octets`) : la mise en
- * mots n'existait nulle part au dépôt, et elle est ici plutôt que dans une vue,
- * pour qu'il n'y en ait qu'une.
+ * LA TAILLE D'UNE PIÈCE JOINTE, TELLE QUE LE GEL L'ÉCRIT — « 320 Ko », « 18 Ko »,
+ * « 1,2 Mo ». Une seule règle rend les trois : sous le mégaoctet, des kilooctets
+ * entiers ; au-delà, un mégaoctet à une décimale, virgule française. La colonne
+ * porte des OCTETS ; la mise en mots est ici plutôt que dans une vue, pour qu'il
+ * n'y en ait qu'une.
  */
 function tailleEnClair(octets: number): string {
 	if (octets < 1024 * 1024) return `${Math.round(octets / 1024)} Ko`;
@@ -123,14 +60,12 @@ function marqueDuFichier(nom: string): string {
  * LES CIBLES DE LIEN INTERNE — toutes les notes, chacune avec sa publicité.
  *
  * `publique` est décidé par `noteVisibleEnAnonyme()`, la règle de
- * `resolution.ts`, et non par une comparaison recopiée : c'est la même fonction
- * que `resoudreLeGuide()` applique à la note demandée, et il ne peut donc pas y
- * avoir deux définitions de « publique » sur cet écran.
+ * `resolution.ts`, et non par une comparaison recopiée : la même fonction que
+ * `resoudreLeGuide()` applique à la note demandée.
  *
  * L'ADRESSE EST CELLE DU GUIDE, pas celle de la note. Un lecteur anonyme n'a
  * aucun droit sur `/notes/{identifiant}` : y renvoyer produirait un lien mort
- * pour lui, ce que `P-03` refuse. Elle n'est d'ailleurs employée que pour les
- * cibles publiques — le rendu ne pose aucune adresse sur les autres.
+ * (`P-03`). Elle n'est employée que pour les cibles publiques.
  */
 async function ciblesDeLien(base: Base): Promise<Map<string, CibleDeNote>> {
 	const lignes = await base
@@ -159,36 +94,21 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	const resolution = await resoudreLeGuide(base, params.identifiant);
 	if (!resolution.trouve) refuserLAdresse(url.pathname);
 
-	/* ═══════════════════════════════════════════════════════════════════════
-	   LA CONSULTATION SE COMPTE ET SE JOURNALISE — `RG-M04-09`, T-078.
+	/* LA CONSULTATION SE COMPTE ET SE JOURNALISE — `RG-M04-09` : « TOUTE ouverture
+	   d'une note », et la lecture publique en est une. Un compteur qui ignorerait
+	   l'espace public sous-compterait les notes publiques, qui sont précisément
+	   celles que le public lit.
 
-	   « TOUTE ouverture d'une note » : la lecture publique en est une. Le
-	   compteur monte donc ici aussi, et non sur la seule lecture interne — un
-	   compteur qui ignorerait l'espace public sous-compterait les notes
-	   publiques, qui sont précisément celles que le public lit.
+	   L'ENTRÉE EST ANONYMISÉE, ET SANS LIRE LA SESSION. `RG-M15-02` ne parle pas du
+	   lecteur mais du JOURNAL : « les journaux de l'espace public sont anonymisés ;
+	   aucun identifiant d'utilisateur n'y est associé ». C'est aussi la seule forme
+	   compatible avec `ARB-007` A-05 — un journal qui distinguerait le connecté de
+	   l'anonyme rétablirait la dépendance au cookie. La fonction appelée ne prend
+	   aucune identité : la garantie est portée par la signature.
 
-	   CE CHARGEUR N'AFFICHE PAS CE COMPTEUR, et il ne prétend donc rien de la
-	   règle de M15.1 qui veut le nombre de consultations visible partout où une
-	   note apparaît : elle reste sans porteur, et son numéro n'est pas cité ici
-	   — le nommer ferait descendre le compte de `pnpm verif:couverture` sans que
-	   le produit ait changé.
-
-	   L'ENTRÉE EST ANONYMISÉE, ET SANS LIRE LA SESSION. `RG-M15-02` (CDC:1227)
-	   ne parle pas du lecteur mais du JOURNAL : « les journaux de l'espace
-	   public sont anonymisés : aucun identifiant d'utilisateur n'y est
-	   associé ». C'est aussi la seule forme compatible avec `ARB-007` A-05, que
-	   l'en-tête de ce fichier cite — « la session ne change ni la route, ni la
-	   vue, ni les états » : un journal qui distinguerait le connecté de
-	   l'anonyme rétablirait ici la dépendance au cookie que l'arbitrage a
-	   fermée. La fonction appelée ne prend aucune identité ; la garantie est
-	   portée par la signature, pas par la discipline.
-
-	   APRÈS LA RÉSOLUTION, ET JAMAIS AVANT — même raison qu'à
-	   `/notes/{identifiant}` : une note interne et une adresse absente sortent
-	   toutes deux par le refus ci-dessus, sans atteindre cette écriture. Le
-	   point dur de `V-04:2219` reste tenu, coût compris.
-
-	   L'INSTANT EST PRIS ICI, une fois : ce chargeur n'en avait aucun. */
+	   APRÈS LA RÉSOLUTION, ET JAMAIS AVANT : une note interne et une adresse absente
+	   sortent toutes deux par le refus ci-dessus, sans atteindre cette écriture. Le
+	   point dur de `V-04:2219` reste tenu, coût compris. L'INSTANT EST PRIS ICI. */
 	const maintenant = new Date();
 	await journaliserUneConsultation(base, {
 		identifiant: params.identifiant,
@@ -293,12 +213,9 @@ export const load: PageServerLoad = async ({ params, url }) => {
 };
 
 /**
- * LE LIBELLÉ D'UN TITRE — le texte de ses enfants, mis bout à bout.
- *
- * Un titre du document canonique est un bloc à enfants de texte : son libellé
- * n'est pas une propriété, il se lit. Le sommaire porte du TEXTE, jamais du
- * balisage — c'est ce qui interdit qu'une marque d'emphase remonte dans le
- * lien.
+ * LE LIBELLÉ D'UN TITRE — le texte de ses enfants, mis bout à bout. Le sommaire
+ * porte du TEXTE, jamais du balisage : c'est ce qui interdit qu'une marque
+ * d'emphase remonte dans le lien.
  */
 function texteDuTitre(titre: Titre): string {
 	return (titre.content ?? []).map((n) => n.text).join('');

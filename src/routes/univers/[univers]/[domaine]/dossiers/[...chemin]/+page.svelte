@@ -1,61 +1,20 @@
 <script lang="ts">
 	/**
-	 * `/univers/{univers}/{domaine}/dossiers/{chemin…}` — V-13 Page d'un dossier.
+	 * `/univers/{univers}/{domaine}/dossiers/{chemin…}` — V-13 Page d'un dossier. Ce fichier
+	 * rend la vue et CÂBLE les gestes du gel : `ARB-063` autorise à nommer ici les champs du
+	 * gel, qu'aucune vue ne porte. `#a-sousdossier` → `?/creerSousDossier`, `#a-renommer` →
+	 * `?/renommerOuDeplacer`, `#a-supprimer` → `?/supprimer`, `#a-droits` → les trois
+	 * actions de droits ; `#a-note` est une navigation. DEUX DE CES GESTES N'EXISTENT PAS
+	 * SUR LA RACINE D'UN DOMAINE : la vue les omet quand le chemin est vide, le module de
+	 * données refusant muettement tout dossier sans parent.
 	 *
-	 * Ce fichier rend la vue avec ce que son chargeur a lu en base, et il CÂBLE
-	 * les gestes du gel. Le vecteur, les notes, l'arborescence, l'origine du droit
-	 * et les refus viennent de `+page.server.ts`, qui porte la traduction du
-	 * chemin, l'exigence du module `dossiers` (RG-STR-06), le périmètre et le
-	 * droit effectif.
-	 *
-	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert.
-	 * Elle est identique à l'octet à sa source gelée (P-6.3).
-	 *
-	 * ═════════════════════════════════════════════════════════════════════════
-	 * LE BANC NE PASSE JAMAIS PAR ICI — `ARB-063`
-	 *
-	 * Il rend les composants par le mode de conception, qui ne passe que `vecteur`
-	 * et `notes`. Rien de ce fichier n'entre dans son verdict : c'est ce qui
-	 * autorise à nommer ici les champs du gel, que `src/vues/V-13.svelte` ne porte
-	 * pas — aucune vue ne porte `method`, `action` ni `name`.
-	 *
-	 * ═════════════════════════════════════════════════════════════════════════
-	 * QUATRE GESTES, ET UN CINQUIÈME QUI N'A PAS D'ÉCRAN
-	 *
-	 *   `#a-note`, `#v-note`            → `/notes/nouvelle`, navigation
-	 *   `#a-sousdossier`, `#v-sousdossier` → `#dlg-creer`   → `?/creerSousDossier`
-	 *   `#a-renommer`                   → `#dlg-deplacer`   → `?/renommerOuDeplacer`
-	 *   `#a-supprimer`                  → `#dlg-supprimer`  → `?/supprimer`
-	 *   `#a-droits`                     → `#dlg-droits`, et TROIS actions :
-	 *                                     `?/accorderLeDroit` depuis la ligne
-	 *                                     d'ajout, `?/changerLeDroit` au
-	 *                                     changement d'un sélecteur de niveau,
-	 *                                     `?/retirerLeDroit` sur la croix d'une
-	 *                                     ligne. Le bouton existait au gel et ne
-	 *                                     produisait rien : ni écouteur, ni
-	 *                                     dialogue, ni action.
-	 *
-	 * DEUX DE CES GESTES N'EXISTENT PAS SUR LA RACINE D'UN DOMAINE, et le câblage
-	 * n'a rien à en faire : la vue omet `#a-renommer`, `#a-supprimer` et leurs deux
-	 * dialogues quand le chemin est vide, parce que le module de données refuse
-	 * muettement tout dossier sans parent. Les recherches de ce fichier rendent
-	 * alors `null`, et `surClic()` s'en va — c'est déjà le régime des gestes qu'un
-	 * droit insuffisant fait disparaître.
-	 *
-	 * TROIS PIÈGES SONT ÉVITÉS ICI, ET CHACUN A COÛTÉ :
-	 *
-	 *  · un `button` sans attribut `type` dans un formulaire SOUMET. Le gel en
-	 *    porte huit dans ces trois dialogues, dont « Annuler » et « Fermer » :
-	 *    tous passent en `type="button"` à l'installation, et un seul geste
-	 *    soumet — celui qu'on appelle explicitement ;
-	 *  · `formulaire.action` ne se réécrit JAMAIS avant `requestSubmit()` :
-	 *    `soumettreVers()` pose un soumetteur caché portant `formAction`, ce qui
-	 *    laisse le formulaire intact ;
-	 *  · `svelte/no-dom-manipulating` refuse qu'on insère un nœud sous un arbre que
-	 *    le compilateur croit connaître : aucun champ n'est créé à la volée ici —
-	 *    les trois sont ceux du gel, transcrits par la vue. Poser un `name` sur un
-	 *    nœud existant, en revanche, n'insère rien, et c'est ce que
-	 *    `cablerLEditeur()` fait depuis `T-042`.
+	 * TROIS PIÈGES SONT ÉVITÉS ICI, ET CHACUN A COÛTÉ : un `button` sans attribut `type`
+	 * dans un formulaire SOUMET — le gel en porte huit dans ces dialogues, tous passés en
+	 * `type="button"` à l'installation ; `formulaire.action` ne se réécrit JAMAIS avant
+	 * `requestSubmit()`, `soumettreVers()` posant un soumetteur caché ;
+	 * `svelte/no-dom-manipulating` refuse qu'on insère un nœud sous un arbre que le
+	 * compilateur croit connaître, et aucun champ n'est créé à la volée — poser un `name`
+	 * sur un nœud existant, en revanche, n'insère rien.
 	 */
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -70,8 +29,8 @@
 
 	/**
 	 * LES TROIS REFUS, LUS SANS DÉTOUR. `fail()` rend un objet par action ; les
-	 * trois formes sont disjointes, et une lecture par champ optionnel les
-	 * distingue sans avoir à deviner laquelle est arrivée.
+	 * trois formes sont disjointes, et une lecture par champ optionnel les distingue
+	 * sans avoir à deviner laquelle est arrivée.
 	 */
 	interface Refus {
 		readonly creation?: string;
@@ -84,13 +43,11 @@
 	let formulaire: HTMLFormElement;
 
 	/**
-	 * LES NOMS DES CHAMPS DU GEL — posés ici, jamais dans la vue (`ARB-063`).
-	 *
-	 * Le gel ne nomme aucun de ses champs : soumis tels quels, ils n'enverraient
-	 * rien. Chaque nom est distinct des autres parce que TOUS les champs du
-	 * formulaire voyagent à CHAQUE soumission — les dialogues vivent dans le même
-	 * formulaire, fermés. Deux champs de même nom, et l'action lirait celui de
-	 * l'autre dialogue.
+	 * LES NOMS DES CHAMPS DU GEL — posés ici, jamais dans la vue (`ARB-063`). Le gel
+	 * ne nomme aucun de ses champs : soumis tels quels, ils n'enverraient rien.
+	 * Chaque nom est distinct des autres parce que TOUS les champs du formulaire
+	 * voyagent à CHAQUE soumission — les dialogues vivent dans le même formulaire,
+	 * fermés. Deux champs de même nom, et l'action lirait celui de l'autre dialogue.
 	 */
 	const NOMS: Record<string, string> = {
 		'creer-nom': 'nom',

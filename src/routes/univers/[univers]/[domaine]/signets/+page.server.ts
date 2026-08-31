@@ -1,76 +1,18 @@
 /**
  * `/univers/{univers}/{domaine}/signets` — LE CHARGEUR de V-22.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE FICHIER FERME UNE FUITE MESURÉE, ET IL FAUT DIRE LAQUELLE
+ * UN SEUL CHEMIN DE SORTIE — ADR-007, RG-ACC-04. Il n'y a qu'un `error(404,
+ * MESSAGE_INTROUVABLE)` dans ce fichier, SANS message : quatre raisons de refuser —
+ * segments inconnus, module Signets éteint, domaine hors périmètre, absence de droit de
+ * rédaction — passent toutes par `resoudreLAccesAuxSignets()`. AUCUNE RÈGLE DE DROIT
+ * N'EST ÉCRITE ICI, et ce chargeur ne touche ni le rail, ni les univers et domaines, ni
+ * le compte : `src/vues/V-22.svelte` les importe au niveau du module.
  *
- * `ECART-047` É-1, reproduit à la main sur le produit construit le 20 août :
- * cette adresse rendait **200 et 18 528 octets à un anonyme, sans aucun
- * cookie** — signets curatés, noms d'auteurs, arborescence complète des univers
- * et domaines, et les actions d'écriture. Et le symptôme qui nommait la cause :
- * la même adresse avec un identifiant inexistant rendait exactement les mêmes
- * octets. La route N'AVAIT PAS DE CHARGEUR, donc ne lisait pas ses paramètres,
- * donc rendait un état de maquette quoi qu'on lui demande.
- *
- * `RG-ACC-01` était en défaut — « l'anonyme ne voit jamais un contenu non
- * public : ni en navigation, ni en recherche, ni via un lien direct » — et
- * `P-09` par-dessus.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * UN SEUL CHEMIN DE SORTIE — ADR-007, RG-ACC-04
- *
- * Il n'y a qu'un `error(404, MESSAGE_INTROUVABLE)` dans ce fichier, sans message, et c'est délibéré.
- * Quatre raisons de refuser — segments inconnus, module Signets éteint, domaine
- * hors périmètre, et pour les deux autres adresses l'absence de droit de
- * rédaction — passent toutes par `resoudreLAccesAuxSignets()`, qui rend
- * `INTROUVABLE`, l'objet unique de `resolution.ts`. Le chargeur n'a RIEN à quoi
- * se raccrocher pour distinguer un refus d'une inexistence : la réponse est
- * identique au code, aux en-têtes et à l'octet.
- *
- * Un message passé à `error()` suffirait à casser cette propriété, puisqu'il
- * entrerait dans le corps rendu. Il n'y en a pas.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * AUCUNE RÈGLE DE DROIT N'EST ÉCRITE ICI
- *
- * `event.locals.identite` est posée par `src/hooks.server.ts` — jamais absente,
- * `ANONYME` à défaut. La résolution appartient à `src/lib/droits/resolution.ts`
- * (`T-011`), appelée par `src/lib/donnees/signets.ts`. Jusqu'au 20 août, AUCUNE
- * route de page ne l'appelait : c'est ce que ce lot corrige.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CE CHARGEUR NE FAIT PAS
- *
- * Il ne touche pas le rail, la liste des univers et des domaines, le compte de
- * l'utilisateur ni la version de l'instance : `src/vues/V-22.svelte` les importe
- * au niveau du module. Les NOTES entrent par propriété, et c'est par là que la
- * base entre. Écart déclaré au rapport du lot.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES DEUX FACETTES DE L'ADRESSE, ET ELLES SONT DÉSORMAIS LUES
- *
- * `docs/routes.md` §4.2 déclare `etiquette` et `auteur` pour cette route, et
- * ce chargeur ne lisait AUCUN paramètre : les deux menus de la vue étaient
- * décoratifs, et cet écran était le dernier écran de liste que son adresse ne
- * gouvernait pas. Le régime est celui de la liste des notes, à la lettre : à
- * l'intérieur d'une facette les valeurs sont en OU (paramètre répété), entre
- * facettes en ET, une valeur vide s'écarte, et une clé ABSENTE n'est pas posée
- * — `exactOptionalPropertyTypes` distingue l'absence de `undefined`, et c'est
- * elle qui laisse la vue rendre exactement ce qu'elle rendait.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE DOMAINE SERVI EST LE DOMAINE RÉSOLU, ET IL FAUT DIRE CE QUE ÇA RÉPARE
- *
- * `src/vues/V-22.svelte` retrouve son domaine courant par son NOM, dans la
- * liste `domaines` qu'on lui passe — à défaut, celle du jeu de semence, qui
- * n'en porte que quatre. Ce chargeur ne la passait pas : sur un domaine que le
- * jeu ne nomme pas, la vue retombait sur le PREMIER de la liste de semence,
- * l'écran titrait « Signets de Infrastructure » et sa liste était VIDE — aucun
- * signet servi ne portait ce domaine-là. Mesuré le 25/08/2026 sur
- * `/univers/gouvernance/doctrine/signets`, qui porte pourtant deux signets.
- *
- * La liste passée n'a qu'un élément, et c'est exact : cet écran est la liste
- * d'UN domaine, il n'en montre jamais un autre.
+ * LES DEUX FACETTES DE L'ADRESSE — `etiquette` et `auteur` — SONT LUES, au régime de la
+ * liste des notes : valeurs en OU dans une facette, en ET entre facettes, valeur vide
+ * écartée, et une clé ABSENTE n'est pas posée — `exactOptionalPropertyTypes` distingue
+ * l'absence de `undefined`. LE DOMAINE SERVI EST LE DOMAINE RÉSOLU, et la liste passée
+ * n'a qu'un élément.
  */
 import { error, redirect } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
@@ -98,21 +40,16 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 
 	return {
 		vecteur: vecteurDeV22(acces.ressource.domaine, acces.ressource.ecriture),
-		/** Le domaine résolu, et lui seul — voir l'en-tête. */
 		domaines: [acces.ressource.domaine],
 		notes: acces.ressource.notes,
-		/** Les valeurs de facette retenues, lues dans l'adresse. */
 		retenues: retenuesDeLAdresse(url.searchParams),
-		/** L'ordre demandé, lu dans l'adresse — absent, celui du gel. */
 		tri: ordreDeLAdresse(url.searchParams),
 		/**
-		 * DE QUOI RETROUVER UN SIGNET DEPUIS SA CARTE.
-		 *
-		 * Les deux boutons de chaque carte — « Modifier », « Supprimer » — ne
-		 * faisaient rien : le gel ne pose sur la carte ni identifiant ni adresse
-		 * d'action, et lui en ajouter un serait toucher `src/vues/`. La carte
-		 * porte en revanche le TITRE et l'ADRESSE curatée, et le couple des deux
-		 * désigne le signet sans ambiguïté dans un domaine.
+		 * DE QUOI RETROUVER UN SIGNET DEPUIS SA CARTE. Les deux boutons — « Modifier »,
+		 * « Supprimer » — ne faisaient rien : le gel ne pose sur la carte ni
+		 * identifiant ni adresse d'action, et lui en ajouter un serait toucher
+		 * `src/vues/`. La carte porte en revanche le TITRE et l'ADRESSE curatée, et le
+		 * couple des deux désigne le signet sans ambiguïté dans un domaine.
 		 */
 		signets: acces.ressource.notes
 			.filter((n) => n.type === 'Signet')
@@ -121,10 +58,9 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 };
 
 /**
- * Les deux clés de facette que V-22 déclare, dans son ordre — `V-22.svelte`,
- * table `FACETTES`. La liste est courte et le gel n'en promet pas d'autre :
- * inventer une troisième serait promettre un filtre que la vue ne sait pas
- * appliquer.
+ * Les deux clés de facette que V-22 déclare, dans son ordre. La liste est courte
+ * et le gel n'en promet pas d'autre : inventer une troisième serait promettre un
+ * filtre que la vue ne sait pas appliquer.
  */
 const CLES_DE_FACETTE = ['etiquette', 'auteur'] as const;
 
@@ -140,17 +76,15 @@ function retenuesDeLAdresse(
 }
 
 /**
- * LES QUATRE ORDRES, ceux de la liste des notes et pas un de plus — deux
- * listes du même produit ne nomment pas leur ordre de deux façons.
+ * LES QUATRE ORDRES, ceux de la liste des notes et pas un de plus — deux listes
+ * du même produit ne nomment pas leur ordre de deux façons.
  *
- * Rien n'est DESSINÉ ici : `mockups/V-22-signets.html` n'a `.tri` qu'en règle
- * de feuille morte, et `docs/routes.md` §4.2 ne déclare pour cette route que
- * `etiquette` et `auteur`. La clé n'est donc atteignable que par l'adresse, et
- * aucun balisage n'est ajouté pour la proposer : c'est le point de désaccord
- * du lot, appliqué et porté au rapport.
+ * Rien n'est DESSINÉ ici : la maquette n'a `.tri` qu'en règle de feuille morte,
+ * et §4.2 ne déclare pour cette route que `etiquette` et `auteur`. La clé n'est
+ * atteignable que par l'adresse, et aucun balisage n'est ajouté pour la proposer.
  *
- * Une valeur inconnue est IGNORÉE, jamais refusée — un paramètre d'adresse ne
- * se refuse pas —, et l'absence laisse la vue sur l'ordre du gel.
+ * Une valeur inconnue est IGNORÉE, jamais refusée, et l'absence laisse la vue sur
+ * l'ordre du gel.
  */
 const ORDRES = ['modification', 'verification', 'consultations', 'alpha'] as const;
 
@@ -162,8 +96,8 @@ function ordreDeLAdresse(parametres: URLSearchParams): string | undefined {
 export const actions: Actions = {
 	/**
 	 * SUPPRIMER UN SIGNET depuis sa carte. Le droit est celui de la lecture
-	 * prolongée — `resoudreUnSignet()` exige déjà l'écriture —, et le refus est
-	 * le même `404` que partout dans cette famille.
+	 * prolongée — `resoudreUnSignet()` exige déjà l'écriture —, et le refus est le
+	 * même `404` que partout dans cette famille.
 	 */
 	supprimer: async ({ params, locals, request }) => {
 		const base = basePartagee();

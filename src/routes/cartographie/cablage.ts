@@ -1,55 +1,17 @@
 /**
- * LE CÂBLAGE DE V-19 — la cartographie complète, et ses onze gestes.
+ * LE CÂBLAGE DE V-19 — la cartographie complète, et ses onze gestes. `ARB-063` : le
+ * comportement s'accroche depuis la ROUTE, depuis `onMount` du `+page.svelte` voisin.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * LE MOTIF EST CELUI DE `src/routes/console/cablage.ts`, ET LA RAISON AUSSI
+ * IL N'ÉCRIT AUCUNE RÈGLE DE STYLE : tout passe par des attributs de données que
+ * `V-19.css` lit déjà — `#graphe[data-focus|data-isole|data-criticite]`,
+ * `.noeud[data-actif|data-choisi|data-type-visible]`, `.arete[data-actif]`,
+ * `.rech-graphe[data-ouvert]`.
  *
- * `ARB-063` : les vues de `src/vues/` sont des transcriptions du gel, sans
- * gestionnaire ; le comportement s'accroche depuis la ROUTE, par identifiant et
- * par sélecteur. Ce module est appelé depuis `onMount` du `+page.svelte` voisin,
- * et de nulle part ailleurs.
- *
- * IL N'ÉCRIT AUCUNE RÈGLE DE STYLE. Tout ce qu'il fait passe par des attributs
- * de données que `V-19.css` lit déjà :
- *
- *   `#graphe[data-focus="oui"]`      met en retrait ce qui n'est pas voisin
- *   `.noeud[data-actif]`             le voisinage du nœud choisi
- *   `.noeud[data-choisi]`            le nœud choisi lui-même
- *   `.arete[data-actif]`             les arêtes qui le touchent
- *   `#graphe[data-isole]`            un type de nœud isolé
- *   `.noeud[data-type-visible]`      les nœuds de ce type
- *   `#graphe[data-criticite]`        les anneaux de rupture
- *   `.rech-graphe[data-ouvert]`      la liste de suggestions
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE PÉRIMÈTRE EST DANS L'ADRESSE — `RG-M09-05`
- *
- * « État de cartographie partageable » : le mode d'affichage est porté par le
- * CHEMIN (`/cartographie` contre `/cartographie/par-type`, `docs/routes.md:267`),
- * et le périmètre par `?perimetre=`. Le sélecteur du gel ne garde donc rien en
- * mémoire : il navigue, et le chargeur relit. C'est ce qui rend une carte
- * envoyable à un collègue.
- *
- * LA VALEUR DU SÉLECTEUR EST POSÉE ICI, ET NON AU BALISAGE. Le gel n'écrit aucun
- * `selected` sur ses `<option>` ; l'écrire depuis la vue ferait diverger le
- * document servi de la référence pour un effet que cette ligne obtient sans y
- * toucher.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE PANNEAU DE DÉTAIL N'EST PAS REMPLI, ET C'EST DÉCLARÉ
- *
- * Le gel construit le contenu de `aside#detail` en script (`V-19:2408-2520`) :
- * titre, type, criticité, propriétés, relations. `src/vues/V-19.svelte` n'en
- * transcrit que l'état VIDE — « Aucun nœud sélectionné » —, et le remplir
- * demanderait soit d'ajouter du balisage à la vue, soit de construire ici une
- * cinquantaine de nœuds dont la vue est déjà l'autorité (`P-35`). V-20, elle,
- * rend ce panneau au balisage : c'est là que le geste est complet.
- *
- * Ce que la sélection FAIT ici est donc ce que le gel promet en toutes lettres
- * dans le panneau vide — « Cliquez un nœud pour isoler son voisinage. La mise en
- * avant reste en place jusqu'au prochain clic » — et rien de plus. `data-detail`
- * n'est PAS basculé : sur petit écran, il ouvrirait une colonne qui n'a rien à
- * montrer.
+ * LE PÉRIMÈTRE EST DANS L'ADRESSE — `RG-M09-05` : le mode d'affichage est porté par le
+ * CHEMIN, le périmètre par `?perimetre=`, et le sélecteur navigue plutôt que de garder un
+ * état. LA VALEUR DU SÉLECTEUR EST POSÉE ICI, ET NON AU BALISAGE. LE PANNEAU DE DÉTAIL
+ * N'EST PAS REMPLI, ET C'EST DÉCLARÉ : la vue n'en transcrit que l'état VIDE, et
+ * `data-detail` n'est PAS basculé — sur petit écran il ouvrirait une colonne vide.
  */
 import {
 	Attaches,
@@ -62,12 +24,10 @@ import {
 /** Le nombre de suggestions de la recherche dans le graphe — `V-19:2942`. */
 const MAX_SUGGESTIONS = 8;
 
-/** Le code de type porté par un nœud ou par un bouton de légende. */
 function codeDeType(noeud: Element): string {
 	return (noeud.querySelector('.noeud__code')?.textContent ?? '').trim();
 }
 
-/** Les identifiants voisins d'un nœud, relus sur les arêtes dessinées. */
 function voisinsDe(racine: ParentNode, identifiant: string): Set<string> {
 	const voisins = new Set<string>([identifiant]);
 	for (const arete of Array.from(racine.querySelectorAll('.arete'))) {
@@ -79,11 +39,9 @@ function voisinsDe(racine: ParentNode, identifiant: string): Set<string> {
 	return voisins;
 }
 
-/** Ce dont le câblage a besoin de la route. */
 export interface OptionsDeLaCartographie {
 	/** Ce que le sélecteur de périmètre montre au montage — `type|nom`. */
 	readonly perimetreCourant: string;
-	/** Où mène « Passer en vue par type maître ». */
 	readonly adresseParType: string;
 	/** Où mène « Comment déclarer une relation », ou `null` s'il n'y a pas de note. */
 	readonly adresseDesRelations: string | null;
@@ -246,13 +204,12 @@ export function cablerLaCartographie(
 
 /**
  * LA RECHERCHE DANS LE GRAPHE — transcrite de `rendreRecherche()` et
- * `sauterVers()` (`V-19:2934-2985`).
+ * `sauterVers()`.
  *
  * C'EST LE SEUL ENDROIT DE CE MODULE QUI CRÉE DES NŒUDS, et le gel le fait au
  * même endroit, pour la même raison : `#rech-liste` est VIDE au balisage, et
  * c'est un `role="listbox"` qui n'a de sens qu'une fois peuplé. Les classes
- * employées — `.rg`, `.rg__t`, `.rg__s`, `data-sel` — sont celles du gel, et
- * `V-19.css` les porte déjà.
+ * employées sont celles du gel, et `V-19.css` les porte déjà.
  */
 function cablerLaRechercheDeNoeud(
 	racine: ParentNode,

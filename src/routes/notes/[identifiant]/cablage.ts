@@ -1,69 +1,38 @@
 /**
  * LE CÂBLAGE DE LA LECTURE — V-14, et le panneau d'historique V-15 qui s'y
- * superpose.
+ * superpose. `ARB-063` : le comportement s'accroche depuis la route, par
+ * identifiant et par sélecteur.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI ICI, ET NON DANS LES VUES
- *
- * `ARB-063`, et le motif unique du plan de remédiation §3 : les vues de
- * `src/vues/` et de `$lib/lecture/` sont des transcriptions du gel — aucun
- * `method`, aucun `action`, aucun attribut de nom — et le comportement
- * s'accroche depuis la route, par identifiant et par sélecteur. Le voisin à
- * copier est `operationnel/cablage.ts`, et c'est lui qu'on copie.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE GESTE PHARE DU PRODUIT ÉTAIT COUPÉ AU MILIEU
- *
- * `#btn-verifier` — « Marquer comme vérifié », `CLAUDE.md` §2 première puce —
- * n'avait ni `onclick`, ni formulaire, ni `formaction`, alors que l'action
- * serveur `?/verifier` écrivait `notes.verifie_le` sans défaut depuis des
- * semaines. Le fil était branché des deux côtés. Six autres actions de cette
- * route étaient dans le même cas : `signaler`, `lever`, et — déjà rejointes
- * depuis `+page.svelte` — `restaurer`, `supprimer`, `deposerPiece`,
- * `retirerPiece`.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LA NEUTRALISATION DES BOUTONS N'EST PAS UNE GÊNE, C'EST LA PARADE
- *
- * Un `button` sans attribut de type est un bouton de SOUMISSION dès qu'il
- * entre dans un formulaire, et l'enveloppe de cette route vise `?/supprimer` :
- * « Imprimer » a réellement détruit des notes. `+page.svelte` pose donc
- * `type="button"` sur chaque bouton du gel au montage. Ce module ne défait
- * jamais cette pose : il ATTACHE des gestes explicites, et chacun désigne son
- * action par `soumettreVers()`, qui passe par un soumetteur caché portant
- * `formaction`. Rien n'est réécrit sur le formulaire, il n'y a donc aucune
+ * LA NEUTRALISATION DES BOUTONS N'EST PAS UNE GÊNE, C'EST LA PARADE. Un `button`
+ * sans attribut de type est un bouton de SOUMISSION dès qu'il entre dans un
+ * formulaire, et l'enveloppe de cette route vise `?/supprimer` : « Imprimer » a
+ * réellement détruit des notes. `+page.svelte` pose `type="button"` au montage ;
+ * ce module ne défait jamais cette pose, et chaque geste désigne son action par
+ * `soumettreVers()` — rien n'est réécrit sur le formulaire, il n'y a donc aucune
  * fenêtre pendant laquelle il vise autre chose que la suppression.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LE GEL FAIT LUI-MÊME, ET QU'ON TRANSCRIT SANS L'INVENTER
- *
- * Le script de `mockups/V-14-lecture-note.html` porte quatre des gestes
- * ci-dessous, et ils sont repris à la ligne près plutôt que réinventés :
- * la bascule de registre (`V-14:3948`), le dépliage du panneau de
- * signalement (`V-14:4039-4056`), la copie d'un bloc de code (`V-14:3967`) et
- * l'agrandissement d'une figure (`V-14:3982`).
+ * QUATRE GESTES SONT REPRIS DU SCRIPT DU GEL à la ligne près : la bascule de
+ * registre, le dépliage du panneau de signalement, la copie d'un bloc de code et
+ * l'agrandissement d'une figure.
  */
 import { soumettreVers } from '$lib/cablage/formulaires';
 import { adresseDeNote } from '$lib/rangement/adresses';
 
-/** Ce qu'un câblage rend : de quoi le défaire. Même contrat que les voisins. */
 export type Debranchement = () => void;
 
-/** Ce dont le câblage de la lecture a besoin, et rien de plus. */
 export interface OptionsDeLaLecture {
 	/** L'identifiant lisible de la note lue — la racine de toutes ses adresses. */
 	readonly identifiant: string;
 	/** `RG-M05-08` / `P-09` — sans le droit d'écrire, aucun geste n'est posé. */
 	readonly ecriture: boolean;
 	/**
-	 * Où mène « Exporter », ou `null` quand l'appelant ne peut pas exporter.
-	 * `RG-M13-03` réserve l'export à l'administrateur ; sans ce droit l'entrée
-	 * n'a aucune destination, et une entrée sans destination se RETIRE.
+	 * Où mène « Exporter », ou `null` quand l'appelant ne peut pas exporter :
+	 * `RG-M13-03` le réserve à l'administrateur, et une entrée sans destination se
+	 * RETIRE.
 	 */
 	readonly exports: string | null;
 }
 
-/** Le libellé d'un nœud, débarrassé de ses blancs. */
 function libelle(noeud: Element): string {
 	return (noeud.textContent ?? '').trim();
 }
@@ -75,11 +44,10 @@ function boutonNomme(racine: ParentNode | null, texte: string): HTMLButtonElemen
 }
 
 /**
- * Un champ caché du formulaire, créé s'il manque, mis à jour sinon.
- *
- * C'est `poserChamp()` de `$lib/cablage/formulaires.ts`, qui ne l'exporte pas.
- * La marque de données diffère — `cableLecture` — pour que deux câblages posés
- * sur le même formulaire ne se disputent jamais le même nœud.
+ * Un champ caché du formulaire, créé s'il manque. C'est `poserChamp()` de
+ * `$lib/cablage/formulaires.ts`, qui ne l'exporte pas ; la marque de données
+ * diffère — `cableLecture` — pour que deux câblages posés sur le même formulaire
+ * ne se disputent jamais le même nœud.
  */
 function poserChamp(formulaire: HTMLFormElement, nom: string, valeur: string): void {
 	const existant = formulaire.querySelector<HTMLInputElement>(
@@ -145,13 +113,10 @@ export function cablerLaLecture(
 	}
 
 	/**
-	 * « Signaler à réviser » — `UC-M06-03`, « en expliquant pourquoi ».
-	 *
-	 * LE COMMENTAIRE VOYAGE EN CHAMP CACHÉ, et non par un attribut de nom posé
-	 * sur la zone de saisie du gel : celle-ci vit dans l'enveloppe qui vise
-	 * `?/supprimer`, et un champ nommé y partirait avec CHAQUE soumission de la
-	 * page — un dépôt de pièce jointe emporterait le brouillon d'une demande de
-	 * révision. Le champ est rempli au moment du clic, et à ce moment seul.
+	 * « Signaler à réviser » — `UC-M06-03`. LE COMMENTAIRE VOYAGE EN CHAMP CACHÉ, et
+	 * non par un attribut de nom posé sur la zone de saisie du gel : celle-ci vit
+	 * dans l'enveloppe qui vise `?/supprimer`, et un champ nommé y partirait avec
+	 * CHAQUE soumission — un dépôt de pièce jointe emporterait le brouillon.
 	 */
 	agir(document.getElementById('btn-reviser-envoi'), () => {
 		poserChamp(formulaire, 'commentaire', zoneReviser?.value ?? '');
@@ -167,18 +132,10 @@ export function cablerLaLecture(
 	/* ═══════════════════ 2. LES DEUX AUTRES BANDEAUX ══════════════════════ */
 
 	/**
-	 * « Publier » — le bandeau « Brouillon », `V-14:1436`.
-	 *
-	 * LE GEL NE DONNE AUCUN GESTE À CE BOUTON, et cette route n'a pas d'action
-	 * de publication : le statut d'une note est une MODIFICATION de la note, et
-	 * `/notes/{identifiant}/modifier` la porte déjà — champ `statut`, valeurs
-	 * `brouillon` et `publiee`, `src/lib/donnees/edition.ts`. En écrire une
-	 * seconde ici ferait deux chemins pour un même geste, dont l'un finirait
-	 * par diverger (`P-35`). Le formulaire vise donc l'action par défaut de
-	 * cette adresse-là, par le soumetteur, comme partout ailleurs.
-	 *
-	 * Un champ absent n'est pas modifié : la soumission ne porte que `statut`,
-	 * et ne touche donc ni au corps, ni au titre, ni au rangement.
+	 * « Publier » — LE GEL NE DONNE AUCUN GESTE À CE BOUTON, et cette route n'a pas
+	 * d'action de publication : le statut d'une note est une MODIFICATION, et
+	 * `/notes/{identifiant}/modifier` la porte déjà (`P-35`). Un champ absent n'est
+	 * pas modifié : la soumission ne porte que `statut`.
 	 */
 	agir(boutonNomme(document.getElementById('bandeau-brouillon'), 'Publier'), () => {
 		poserChamp(formulaire, 'statut', 'publiee');
@@ -186,15 +143,10 @@ export function cablerLaLecture(
 	});
 
 	/**
-	 * « Comparer les deux registres » — le bandeau de resynchronisation,
-	 * `V-14:1445`.
-	 *
-	 * ÉCART DÉCLARÉ, ET IL EST NOMMÉ. Aucun écran du gel ne met les DEUX
-	 * REGISTRES côte à côte : V-16 compare deux VERSIONS d'un même registre, et
-	 * le libellé promet autre chose. L'écran le plus proche que le produit
-	 * possède est l'éditeur du registre Opérationnel, qui porte le même bandeau
-	 * de désynchronisation et l'attestation qui le lève. Le geste y mène plutôt
-	 * que de ne rien faire ; le vrai écran, lui, reste à dessiner.
+	 * « Comparer les deux registres » — ÉCART DÉCLARÉ : aucun écran du gel ne met les
+	 * DEUX REGISTRES côte à côte, V-16 comparant deux VERSIONS d'un même registre.
+	 * Le geste mène à l'éditeur de l'Opérationnel, qui porte le même bandeau, plutôt
+	 * que de ne rien faire.
 	 */
 	agir(boutonNomme(document.getElementById('bandeau-resync'), 'Comparer les deux registres'), () =>
 		aller(`${adresse}/operationnel`)
@@ -203,16 +155,11 @@ export function cablerLaLecture(
 	/* ═══════════════════ 3. LA BASCULE DE REGISTRE — `V-14:3948` ══════════ */
 
 	/**
-	 * LES DEUX CORPS SONT RENDUS EN PERMANENCE, et la bascule ne fait que
-	 * déplacer l'attribut `hidden` de l'un à l'autre — c'est le geste du gel, à
-	 * la ligne près. `data-registre` suit sur l'enveloppe de l'application,
-	 * parce que la feuille gelée le lit ; `aria-selected` suit sur les deux
-	 * onglets, parce que le rôle `tab` l'exige.
-	 *
-	 * L'ADRESSE SUIT AUSSI — `majAdresse("?registre=" + reg)` au gel, et le
-	 * chargeur lit déjà ce paramètre. Elle est REMPLACÉE et non empilée : la
-	 * bascule n'est pas une navigation, et la touche de retour ne doit pas
-	 * défaire un choix de volet.
+	 * LES DEUX CORPS SONT RENDUS EN PERMANENCE, et la bascule ne fait que déplacer
+	 * l'attribut `hidden` — le geste du gel. `data-registre` suit sur l'enveloppe
+	 * parce que la feuille gelée le lit ; `aria-selected` sur les onglets parce que
+	 * le rôle `tab` l'exige. L'ADRESSE EST REMPLACÉE et non empilée : la bascule
+	 * n'est pas une navigation.
 	 */
 	const app = document.getElementById('app');
 	const onglets = Array.from(
@@ -244,14 +191,11 @@ export function cablerLaLecture(
 	/* ═══════════════════ 4. LE PANNEAU « ACTIONS » ════════════════════════ */
 
 	/**
-	 * LES CINQ ENTRÉES DU MENU SONT RECONNUES À LEUR LIBELLÉ : le gel ne leur
-	 * donne ni identifiant ni classe distinctive — cinq `btn btn--menu`
-	 * identiques dans une même liste. C'est la méthode qu'emploient déjà
-	 * `cablerLaSuppression()` et l'ouverture de l'historique.
-	 *
-	 * « Historique des versions » et « Supprimer » ne sont PAS ici : la première
-	 * est câblée par `ouvrirLHistorique()` dans `+page.svelte`, la seconde par
-	 * `cablerLaSuppression()` avec son rappel chiffré (`RG-M04-10`).
+	 * LES CINQ ENTRÉES DU MENU SONT RECONNUES À LEUR LIBELLÉ : le gel ne leur donne
+	 * ni identifiant ni classe distinctive. « Historique des versions » et
+	 * « Supprimer » ne sont PAS ici — la première est câblée par
+	 * `ouvrirLHistorique()`, la seconde par `cablerLaSuppression()` avec son rappel
+	 * chiffré (`RG-M04-10`).
 	 */
 	const menu = document.querySelector('.actions-liste');
 	agir(boutonNomme(menu, 'Modifier la référence'), () => aller(`${adresse}/modifier`));
@@ -261,19 +205,11 @@ export function cablerLaLecture(
 	agir(boutonNomme(menu, 'Imprimer'), () => fenetre?.print());
 
 	/**
-	 * « EXPORTER » — LE PÉRIMÈTRE DE L'EXPORT EST LE DOMAINE, PAS LA NOTE.
-	 *
-	 * Le produit n'a aucune adresse qui rende une note seule : `RG-M13-01` fait
-	 * du domaine l'unité exportable, et `/console/exports` est l'écran qui le
-	 * dit et qui offre l'archive. L'entrée y mène — c'est déjà la destination
-	 * que le même mot reçoit sur la page d'un domaine
-	 * (`univers/{u}/{d}/cablage.ts`, `#a-exporter`), et deux destinations pour
-	 * un mot finiraient par diverger.
-	 *
-	 * SANS LE DROIT DE CONSOLE, L'ENTRÉE EST RETIRÉE et non laissée morte : la
-	 * route rend 404 à qui n'est pas administrateur (`RG-M13-03`), et `P-03`
-	 * n'admet pas un geste visible qui ne mène nulle part. C'est le geste de
-	 * `cablerLaCoquille()`, qui élague ses entrées sans adresse.
+	 * « EXPORTER » — LE PÉRIMÈTRE DE L'EXPORT EST LE DOMAINE, PAS LA NOTE : aucune
+	 * adresse ne rend une note seule (`RG-M13-01`), et `/console/exports` est l'écran
+	 * qui l'offre. SANS LE DROIT DE CONSOLE, L'ENTRÉE EST RETIRÉE et non laissée
+	 * morte : la route rend 404 à qui n'est pas administrateur, et `P-03` n'admet pas
+	 * un geste visible qui ne mène nulle part.
 	 */
 	const exporter = boutonNomme(menu, 'Exporter');
 	const ouExporter = options.exports;
@@ -291,14 +227,10 @@ export function cablerLaLecture(
 	/* ═══════════════════ 5. LE CORPS RÉDIGÉ — copie et loupe ══════════════ */
 
 	/**
-	 * LES DEUX GESTES DU CORPS SONT DÉLÉGUÉS, ET C'EST UNE NÉCESSITÉ.
-	 *
-	 * Les boutons de copie et les cadres de figure ne sont écrits nulle part
-	 * dans une vue : ils sortent de `rendreDocument()`
-	 * (`src/lib/contenu/rendu.ts`), qui les compose pour CHAQUE bloc de code et
-	 * CHAQUE figure de la note lue. Les recenser au montage manquerait ceux
-	 * qu'un changement de registre fait apparaître. L'écoute est donc posée sur
-	 * le formulaire, une fois, et le nœud visé est retrouvé à chaque clic.
+	 * LES DEUX GESTES DU CORPS SONT DÉLÉGUÉS, ET C'EST UNE NÉCESSITÉ : les boutons de
+	 * copie et les cadres de figure ne sont écrits dans aucune vue — ils sortent de
+	 * `rendreDocument()`, et les recenser au montage manquerait ceux qu'un changement
+	 * de registre fait apparaître.
 	 */
 	ecouter(formulaire, 'click', (evenement) => {
 		const cible = evenement.target;
@@ -310,10 +242,9 @@ export function cablerLaLecture(
 		if (copier !== null) {
 			const code = copier.closest('.bloc-code')?.querySelector('code');
 			const brut = code === null || code === undefined ? '' : (code.textContent ?? '');
-			/* LE LIBELLÉ D'ORIGINE EST GARDÉ EN NŒUDS, PAS EN CHAÎNE DE BALISAGE :
-			   le bouton du gel porte un dessin en plus de son mot, et le rendre
-			   par une propriété de balisage réinjecterait du HTML là où un clone
-			   suffit. */
+			/* LE LIBELLÉ D'ORIGINE EST GARDÉ EN NŒUDS, PAS EN CHAÎNE DE BALISAGE : le
+			   bouton du gel porte un dessin en plus de son mot, et le rendre par une
+			   propriété de balisage réinjecterait du HTML là où un clone suffit. */
 			const avant = Array.from(copier.childNodes).map((n) => n.cloneNode(true));
 			const fini = (): void => {
 				copier.replaceChildren('Copié');
@@ -346,11 +277,9 @@ const DUREE_DE_L_ACCUSE = 1400;
 const INVITE_DE_LEGENDE = /\s*Cliquez pour agrandir\.?\s*$/;
 
 /**
- * L'AGRANDISSEMENT D'UNE FIGURE — `V-14:3982`, transcrit.
- *
- * Le contenu de la boîte est le dessin LUI-MÊME, cloné : ni une seconde
- * source, ni une image reconstruite. La légende est celle de la figure, privée
- * de l'invite qui n'a plus lieu d'être une fois la figure agrandie.
+ * L'AGRANDISSEMENT D'UNE FIGURE — `V-14:3982`, transcrit. Le contenu de la boîte
+ * est le dessin LUI-MÊME, cloné : ni une seconde source, ni une image
+ * reconstruite. La légende est celle de la figure, privée de l'invite.
  */
 function ouvrirLaLoupe(document: Document, cadre: Element): void {
 	const loupe = document.querySelector<HTMLDialogElement>('dialog#loupe');
@@ -369,7 +298,6 @@ function ouvrirLaLoupe(document: Document, cadre: Element): void {
 
 /**
  * LA FERMETURE DE LA BOÎTE D'AGRANDISSEMENT — la croix, et le clic hors boîte.
- *
  * `RG-M18-08` veut la fermeture par Échap : `showModal()` la donne seule, et
  * c'est pourquoi la boîte est ouverte ainsi plutôt que par l'attribut.
  */
@@ -390,15 +318,9 @@ export function cablerLaLoupe(document: Document): Debranchement {
 }
 
 /**
- * LA FERMETURE DU PANNEAU D'HISTORIQUE — `#fermer-tiroir`, V-15.
- *
- * Le panneau n'est pas un état local : il EST l'état `?version` de cette
- * adresse (`docs/routes.md` §3.4). Le fermer, c'est donc quitter cet état,
- * c'est-à-dire revenir à l'adresse nue — et non escamoter un tiroir que le
- * rechargement rouvrirait.
- *
- * `cablerLHistorique()` ne le porte pas, et ce module ne le modifie pas :
- * `$lib/cablage/formulaires.ts` est en lecture seule pour tous les lots.
+ * LA FERMETURE DU PANNEAU D'HISTORIQUE — `#fermer-tiroir`, V-15. Le panneau n'est
+ * pas un état local : il EST l'état `?version` de cette adresse, et le fermer
+ * c'est quitter cet état — non escamoter un tiroir que le rechargement rouvrirait.
  */
 export function cablerLaFermetureDeLHistorique(racine: ParentNode, adresse: string): Debranchement {
 	const fermer = racine.querySelector<HTMLButtonElement>('#fermer-tiroir');

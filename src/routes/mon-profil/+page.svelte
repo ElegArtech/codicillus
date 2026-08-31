@@ -1,45 +1,19 @@
 <script lang="ts">
 	/**
 	 * `/mon-profil` — V-25, les quatre onglets, et les quatre gestes qui écrivent.
+	 * L'onglet est dans l'adresse et le vecteur est composé par `vecteurDeV25()`, à un seul
+	 * endroit. Aucune décision n'est prise ici : la garde de session est aux hooks, le
+	 * verrou de `RG-M16-02` vient de la base, le périmètre de `resolution.ts`.
 	 *
-	 * L'onglet est dans l'adresse (`?onglet=`, `docs/routes.md:283`) et le
-	 * vecteur est composé par `vecteurDeV25()`, à un seul endroit. Aucune
-	 * décision n'est prise ici : la garde de session est aux hooks, le verrou de
-	 * `RG-M16-02` vient de la base, et le périmètre de lecture de
-	 * `resolution.ts`.
+	 * POURQUOI LE CÂBLAGE EST ICI ET NON DANS LA VUE — `ARB-063` : le gel de V-25 ne porte
+	 * NI `method`, NI `action`, NI un seul attribut de nom. AUCUN NŒUD N'EST AJOUTÉ NI
+	 * DÉPLACÉ : les valeurs sont RELEVÉES sur les nœuds du gel, par leur identifiant, et
+	 * envoyées dans un corps composé à la volée — envelopper les champs dans un formulaire
+	 * soumissible après coup les déplacerait.
 	 *
-	 * ═════════════════════════════════════════════════════════════════════════
-	 * POURQUOI LE CÂBLAGE EST ICI ET NON DANS LA VUE — `ARB-063`
-	 *
-	 * Le gel de V-25 ne porte NI `method`, NI `action`, NI un seul attribut de
-	 * nom : ses cinq formulaires n'ont que des identifiants. La vue en est la
-	 * transcription fidèle et le reste ; c'est la ROUTE qui pose ce qui manque,
-	 * après le montage, exactement comme `$lib/cablage/formulaires.ts` le fait
-	 * pour l'éditeur, la connexion et le signet.
-	 *
-	 * AUCUN NŒUD N'EST AJOUTÉ NI DÉPLACÉ. Les valeurs sont RELEVÉES sur les nœuds
-	 * du gel, par leur identifiant, et envoyées dans un corps composé à la volée.
-	 * Envelopper les champs dans un formulaire soumissible après coup les
-	 * déplacerait ; le rendu ne le tolère pas, et rien ne l'exige.
-	 *
-	 * QUATRE ACTIONS, TOUTES NOMMÉES. SvelteKit rend 500 si une action par défaut
-	 * cohabite avec une action nommée : une page qui en porte plusieurs les nomme
-	 * toutes. Chaque geste vise donc `?/…` explicitement.
-	 *
-	 * LES NOMS DE CHAMP SONT LES IDENTIFIANTS DU GEL — `p-affiche`,
-	 * `p-session`, `actuel`, `nouveau`, `confirmation`. Rien n'est traduit : le
-	 * nom est repris de l'identifiant, convention posée par `cablerLaConnexion()`
-	 * et `cablerLeSignet()`.
-	 *
-	 * L'interrupteur de notification par courriel du gel n'est PLUS ÉMIS par
-	 * V-25 : aucune colonne ne le porterait, et le produit n'a aucun expéditeur
-	 * de courriel. Aucun geste ne le vise donc ici.
-	 *
-	 * SANS JAVASCRIPT, CET ÉCRAN NE SOUMET PAS. `ARB-063` §4 le déclare pour les
-	 * sept formulaires du produit, et dit ce qu'il faudrait pour le combler.
-	 *
-	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
-	 * sert ; elle est identique à l'octet à sa source gelée (P-6.3).
+	 * QUATRE ACTIONS, TOUTES NOMMÉES : SvelteKit rend 500 si une action par défaut cohabite
+	 * avec une action nommée. L'interrupteur de notification par courriel n'est PLUS ÉMIS
+	 * par V-25 — aucune colonne ne le porterait. SANS JAVASCRIPT, CET ÉCRAN NE SOUMET PAS.
 	 */
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -51,11 +25,9 @@
 	const { data }: { data: PageData } = $props();
 
 	/**
-	 * UN GESTE QUI ÉCRIT — soumis, puis relu depuis la base.
-	 *
-	 * `invalidateAll()` rejoue le chargeur : ce qui s'affiche après le geste vient
-	 * de la base, jamais de ce qu'on croit avoir écrit. C'est ce qui rend la
-	 * préférence visible à la relecture sans qu'aucun état ne soit tenu ici.
+	 * UN GESTE QUI ÉCRIT — soumis, puis relu depuis la base. `invalidateAll()` rejoue
+	 * le chargeur : ce qui s'affiche après le geste vient de la base, jamais de ce
+	 * qu'on croit avoir écrit.
 	 */
 	async function soumettre(action: string, champs: Record<string, string>): Promise<boolean> {
 		const corps = new FormData();
@@ -66,7 +38,6 @@
 		return charge.type === 'success';
 	}
 
-	/** La valeur d'un champ du gel, par son identifiant. */
 	function valeur(id: string): string {
 		return document.querySelector<HTMLInputElement>(`#${id}`)?.value ?? '';
 	}
