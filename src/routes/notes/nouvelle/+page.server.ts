@@ -32,6 +32,7 @@ import {
 } from '$lib/donnees/edition';
 import { lireSeuils } from '$lib/donnees/lecture';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
+import { empreinteDeCompte } from '$lib/edition/brouillon';
 import { MOTIF_DE_PROPRIETE_OBLIGATOIRE } from '$lib/edition/gestes';
 import { adresseDeNote } from '$lib/rangement/adresses';
 import { moteurPartage } from '$lib/recherche/acces';
@@ -79,6 +80,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		 */
 		vecteur: { cas: templateDemande === null ? 'vierge' : 'template' },
 		templateDemande,
+		/**
+		 * LA MARQUE DU COMPTE, POUR LA CLÉ DU BROUILLON LOCAL (`RG-NF-02`). Ce n'est
+		 * PAS l'identifiant du compte : `ADR-006` interdit d'exposer au navigateur de
+		 * quoi composer l'interface sur les droits, et le stockage local est lisible par
+		 * la personne suivante qui s'assoit au même poste. L'empreinte suffit à ce que
+		 * deux comptes n'héritent pas du brouillon l'un de l'autre, et ne dit rien
+		 * d'autre.
+		 */
+		empreinteDuCompte:
+			locals.identite.type === 'authentifie' ? empreinteDeCompte(locals.identite.compteId) : '',
 		notes: creation.notes,
 		typesNote: creation.referentiels.typesNote,
 		typesFiche: creation.referentiels.typesFiche,
