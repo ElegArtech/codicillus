@@ -3,14 +3,11 @@
 	// La coquille applicative réelle (navigation, en-tête, panneaux) est le lot
 	// T-016, adossée à la maquette V-37. Rien n'est anticipé ici.
 
-	// Le socle — lot T-004. Importé ici, et ici seulement : la mise en page
-	// racine est le point d'entrée global de SvelteKit, et un import de feuille
-	// depuis un `<script>` n'est pas encapsulé par le compilateur Svelte. La
-	// feuille s'applique donc à toutes les routes, sans être portée par un
-	// composant. `src/socle.css` est extrait mécaniquement du premier bloc
-	// `<style>` de `mockups/V-07-accueil-contributeur.html` par
-	// `pnpm socle:extraire` ; sa non-divergence est prouvée par
-	// `pnpm verif:jetons` (batterie 2, ADR-002, ÉCART-007). Il ne s'édite pas.
+	// Le socle. Importé ici, et ici seulement : la mise en page racine est le point
+	// d'entrée global de SvelteKit, et un import de feuille depuis un `<script>`
+	// n'est pas encapsulé par le compilateur Svelte. `src/socle.css` est extrait
+	// mécaniquement du premier bloc `<style>` de la maquette V-07 par
+	// `pnpm socle:extraire` ; il ne s'édite pas (ADR-002).
 	import '../socle.css';
 	import { onMount, setContext } from 'svelte';
 	import { cablerLaCoquille } from '$lib/cablage/coquille';
@@ -23,35 +20,29 @@
 	/**
 	 * LE MOT RENOMMABLE, DÉRIVÉ UNE FOIS ET ICI SEULEMENT.
 	 *
-	 * `$lib/vocabulaire.ts` calculait ses quatre formes À L'IMPORT, depuis
-	 * `CONFIG.motFiche` de `seeds/corpus.ts` : une constante de module, figée au
-	 * chargement et partagée par toutes les requêtes du serveur, ne peut pas
-	 * suivre une configuration. Renommer « Fiche » en console ne changeait donc
-	 * rien à l'écran, alors que `RG-M14-09` promet un recalcul immédiat.
+	 * `$lib/vocabulaire.ts` calculait ses quatre formes À L'IMPORT : une constante de
+	 * module, figée au chargement et partagée par toutes les requêtes du serveur, ne
+	 * peut pas suivre une configuration — et `RG-M14-09` promet un recalcul immédiat.
 	 *
 	 * Les QUATRE FORMES descendent, pas le mot brut : dix-sept composants
-	 * rappelleraient sinon `pluriel()` et `initialeMinuscule()` chacun de son
-	 * côté. `$derived` plutôt qu'un accesseur qui recalcule à chaque lecture : le
-	 * mot est lu plusieurs fois par page, la dérivation une seule fois par valeur.
+	 * rappelleraient sinon `pluriel()` et `initialeMinuscule()` chacun de son côté.
+	 * `$derived` plutôt qu'un accesseur qui recalcule à chaque lecture.
 	 *
-	 * La page d'erreur peut être rendue sans données de gabarit — le mot vaut
-	 * alors `Fiche`, exactement ce que `motConfigure('')` rend.
+	 * La page d'erreur peut être rendue sans données de gabarit — le mot vaut alors
+	 * `Fiche`.
 	 */
 	const vocabulaire = $derived(formesDuMot(data.motFiche ?? ''));
 
 	/**
 	 * L'IDENTITÉ RÉELLE DESCEND PAR CONTEXTE, ET D'ICI SEULEMENT.
 	 *
-	 * `Coquille.svelte` exige une propriété `compte` ; les vues la remplissent
-	 * depuis `MOI` de `seeds/corpus.ts` et aucune route ne la passait — la barre
-	 * supérieure affichait donc « Karim Belhadj — Référent » pour tout le monde,
-	 * sur les huit pages qui montent une coquille. Mesuré le 21/08/2026.
+	 * `Coquille.svelte` exige une propriété `compte` ; les vues la remplissent depuis
+	 * `MOI` de `seeds/corpus.ts` et aucune route ne la passait — la barre supérieure
+	 * affichait le même compte pour tout le monde.
 	 *
 	 * Le contexte plutôt que la propriété : trente `+page.svelte` qui recopieraient
-	 * chacun le même passage divergeraient au premier oubli (`P-35`), et le défaut
-	 * se lirait comme une identité fausse sur une page et juste sur la voisine.
-	 * La coquille lit le contexte quand il existe, et retombe sur sa propriété
-	 * sinon — le rendu par défaut des vues ne bouge donc pas d'un pixel.
+	 * chacun le même passage divergeraient au premier oubli (`P-35`). La coquille lit
+	 * le contexte quand il existe, et retombe sur sa propriété sinon.
 	 */
 	setContext<IdentiteDeCoquille>(CLE_IDENTITE, {
 		get compte() {
@@ -122,14 +113,13 @@
 	/**
 	 * LA COQUILLE EST CÂBLÉE ICI, ET UNE SEULE FOIS.
 	 *
-	 * Sa barre supérieure est rendue par trente-quatre vues, et ses boutons —
-	 * menu « Créer », menu de l'utilisateur, boîte de recherche — portent des
-	 * comportements que `ARB-011` retire des transcriptions. Aucun n'était
+	 * Sa barre supérieure est rendue par trente-quatre vues, et ses boutons portent
+	 * des comportements que `ARB-011` retire des transcriptions. Aucun n'était
 	 * câblé : la façon la plus évidente de créer une note ne créait rien, et se
 	 * déconnecter demandait de taper l'adresse à la main.
 	 *
-	 * La mise en page racine est le seul endroit qui les voit tous. Le câblage y
-	 * est délégué sur le document, donc insensible au changement de page.
+	 * La mise en page racine est le seul endroit qui les voit tous. Le câblage y est
+	 * délégué sur le document, donc insensible au changement de page.
 	 */
 	onMount(() =>
 		cablerLaCoquille(document, {

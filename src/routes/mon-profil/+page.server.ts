@@ -1,60 +1,19 @@
 /**
- * `/mon-profil` — LE CHARGEUR et LES TROIS ACTIONS de V-25.
+ * `/mon-profil` — LE CHARGEUR et LES TROIS ACTIONS de V-25, pour tout connecté et sans
+ * condition de droit ni de rôle : la seule ligne de la matrice dont les trois colonnes
+ * connectées sont identiques — un profil n'a pas de périmètre, il a un titulaire. LA
+ * REDIRECTION ANONYME N'EST PAS ÉCRITE ICI : `garde.ts` range `/mon-profil` au régime
+ * `redirection`, appliqué AVANT toute route. `notes` est le périmètre de LECTURE, jamais
+ * le corpus (`RG-ACC-01`).
  *
- * `docs/routes.md:158` et §5.5 (`:371`) : **302 vers `/connexion?motif=page-protegee`**
- * en anonyme, **V-25** pour tout connecté, sans condition de droit ni de rôle.
- * C'est la seule ligne de la matrice dont les trois colonnes connectées sont
- * identiques : un profil n'a pas de périmètre, il a un titulaire.
+ * `contributions` — CE QUI SE COMPTE EST COMPTÉ, LE RESTE EST DÉCLARÉ INDISPONIBLE :
+ * `relations` ne porte pas l'auteur du lien, « liens internes créés » vaut donc `null`, et
+ * l'écran affiche un état neutre plutôt qu'un zéro (`P-02`). `activite` est VIDE, aucune
+ * table d'événements n'existant, et `distinctions` n'est pas passée — le barème est un
+ * CATALOGUE de critères, pas une mesure.
  *
- * LA REDIRECTION ANONYME N'EST PAS ÉCRITE ICI, ET C'EST VOULU.
- * `src/lib/auth/garde.ts` range `/mon-profil` au régime `redirection`, et
- * `src/hooks.server.ts` l'applique AVANT toute route — pour le GET comme pour
- * le POST. La réécrire ici ferait deux définitions d'une même règle, dont
- * l'une finirait par mentir. Ce fichier traite donc l'anonyme comme un cas
- * INATTEIGNABLE, et le ferme par défaut plutôt que de le supposer impossible.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LE CHARGEUR PASSE — L'ÉCRAN EST BRANCHÉ SUR LA BASE
- *
- *   `notes`             — le périmètre de lecture de l'appelant, jamais le
- *                         corpus. La coquille en déduit l'arborescence du rail :
- *                         le corpus entier publierait la structure interne à qui
- *                         n'y a aucun droit (`RG-ACC-01`).
- *   `vecteur`           — l'onglet, de l'adresse ; le verrou, de la base.
- *   `profilDuCompte`    — le titulaire de la session, `profilAffiche()`. C'est
- *                         lui que l'entête, l'onglet Identité et le panneau
- *                         Session rendent désormais, et non plus `MOI`.
- *   `preferenceDeSession` — `sessions.souvenir` de la session COURANTE.
- *   `contributions`     — CE QUI SE COMPTE EST COMPTÉ, LE RESTE EST DÉCLARÉ
- *                         INDISPONIBLE. `verifications.compte_id` existe : les
- *                         vérifications sont comptées en base. `relations` ne
- *                         porte pas l'auteur du lien : « liens internes créés »
- *                         vaut `null`, et l'écran affiche un état neutre plutôt
- *                         qu'un zéro qui mentirait (`P-02`).
- *   `relations`         — celles du PÉRIMÈTRE, d'où sortent les citations et la
- *                         note phare. Sans elles, l'écran comptait sur le jeu de
- *                         semence.
- *   `activite`          — VIDE. Aucune table d'événements n'existe (§1 de
- *                         `profil.ts`) ; l'onglet rend alors l'encouragement,
- *                         qui est une position du gel et non un écran inventé.
- *   `compte`            — le titulaire, pour la coquille. Les trois champs sont
- *                         des unions du jeu de semence : la conversion est faite
- *                         au bord, comme `src/lib/auth/depot.ts` la fait déjà.
- *
- * `distinctions` N'EST PAS PASSÉE : le barème est un CATALOGUE de critères, pas
- * une mesure. Ses six seuils sont ceux du jeu de semence, la MESURE vient des
- * statistiques ci-dessus, et aucune table ne porte de barème. Le passer vide
- * effacerait l'écran ; le passer tel quel n'affirme rien de faux.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES QUATRE ACTIONS SONT TOUTES NOMMÉES, ET C'EST OBLIGATOIRE
- *
- * SvelteKit rend **500** si une action par défaut cohabite avec une action
- * nommée sur la même page. Cette page en porte quatre : aucune ne peut donc
- * être l'action par défaut. `+page.svelte` les vise par `?/nom`.
- *
- * `ARB-054` §4 borne le reste : `/deconnexion` est la SEULE action d'écriture
- * en GET du produit. Les quatre d'ici sont des POST.
+ * LES QUATRE ACTIONS SONT TOUTES NOMMÉES : SvelteKit rend 500 si une action par défaut
+ * cohabite avec une action nommée.
  */
 import { fail, error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
@@ -82,10 +41,9 @@ import type { NomDAuteur, NomDeDomaine, RoleDeCompte } from '../../../seeds/corp
 /**
  * Le titulaire de la requête — son compte, sa session, son profil en base.
  *
- * Un seul chemin pour les quatre entrées du fichier : le chargeur et les trois
- * actions le franchissent tous, et aucun ne peut donc l'oublier. Le refus est
- * un 404, la réponse que rend une adresse qui ne désigne rien (`ADR-007`) —
- * jamais un message qui expliquerait ce qui manque.
+ * Un seul chemin pour les quatre entrées du fichier : aucune ne peut donc
+ * l'oublier. Le refus est un 404, la réponse que rend une adresse qui ne désigne
+ * rien (`ADR-007`) — jamais un message qui expliquerait ce qui manque.
  */
 async function titulaire(locals: App.Locals) {
 	const identite = locals.identite;
@@ -147,14 +105,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 export const actions: Actions = {
 	/**
-	 * LE NOM AFFICHÉ ET L'ADRESSE ÉLECTRONIQUE — `#p-affiche`, `#p-courriel`,
-	 * `#enregistrer-identite` (`V-25:1060-1093`).
-	 *
-	 * Le gel intitule le panneau « Ce que vous pouvez modifier » et lui oppose
-	 * « Attribué par l'administration » : la frontière est lue, pas choisie. Le
-	 * refus d'un compte verrouillé est pris dans `enregistrerLIdentite()`, avant
-	 * toute validation de saisie, pour la même raison que le changement de mot de
-	 * passe — `RG-CPT-01`, un compte partagé ne se réattribue pas d'ici.
+	 * LE NOM AFFICHÉ ET L'ADRESSE ÉLECTRONIQUE. Le gel intitule le panneau « Ce que
+	 * vous pouvez modifier » et lui oppose « Attribué par l'administration » : la
+	 * frontière est lue, pas choisie. Le refus d'un compte verrouillé est pris dans
+	 * `enregistrerLIdentite()`, avant toute validation de saisie (`RG-CPT-01`).
 	 */
 	enregistrerLIdentite: async ({ locals, request }) => {
 		const { base, profil } = await titulaire(locals);
@@ -173,13 +127,10 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * « Rester connecté sur cet appareil » — `input#p-session` de `V-25:1225`.
-	 *
-	 * LE MÊME MÉCANISME QUE V-05, ET PAS UN SECOND (`ARB-054` §2) : la colonne
-	 * écrite est `sessions.souvenir`, celle que `T-012` pose à la connexion et
-	 * que `sessionExpiree()` lit. La case du gel n'a pas d'attribut `name` : sa
-	 * PRÉSENCE vaut vrai, quelle que soit la valeur qu'un client lui donnera —
-	 * même lecture qu'à `POST /connexion`.
+	 * « Rester connecté sur cet appareil » — LE MÊME MÉCANISME QUE V-05, ET PAS UN
+	 * SECOND (`ARB-054` §2) : la colonne écrite est `sessions.souvenir`, celle que la
+	 * connexion pose et que `sessionExpiree()` lit. La case du gel n'a pas d'attribut
+	 * `name` : sa PRÉSENCE vaut vrai, quelle que soit la valeur qu'un client donnera.
 	 */
 	preferenceDeSession: async ({ locals, request }) => {
 		const { base, sessionId } = await titulaire(locals);
@@ -190,9 +141,8 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * « Fermer toutes les autres sessions » — `button#fermer-sessions`,
-	 * `V-25:1236`. Le geste opère en base ; le nombre rendu est celui qui a été
-	 * fermé, jamais un nombre annoncé (`P-02`).
+	 * « Fermer toutes les autres sessions » — le geste opère en base, et le nombre
+	 * rendu est celui qui a été fermé, jamais un nombre annoncé (`P-02`).
 	 */
 	fermerLesAutresSessions: async ({ locals }) => {
 		const { base, identite, sessionId } = await titulaire(locals);
@@ -206,14 +156,12 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * Le changement de mot de passe — `form#form-securite`, et la fermeture des
-	 * autres sessions qui en fait partie (`V-25:2917`, `ARB-054` §2).
-	 *
-	 * `RG-M16-02` EST REFUSÉ ICI AUSSI, et pas seulement masqué à l'écran :
-	 * `P-09` dit que l'action interdite n'est pas rendue, ce qui ne dispense pas
-	 * de la refuser — un client peut composer la requête lui-même. Le refus est
-	 * un 403 et non un 404 : le compte de démonstration ne cache pas son état,
-	 * l'écran l'explique en toutes lettres.
+	 * Le changement de mot de passe, et la fermeture des autres sessions qui en fait
+	 * partie (`ARB-054` §2). `RG-M16-02` EST REFUSÉ ICI AUSSI, et pas seulement masqué
+	 * à l'écran : `P-09` dit que l'action interdite n'est pas rendue, ce qui ne
+	 * dispense pas de la refuser — un client peut composer la requête lui-même. Le
+	 * refus est un 403 et non un 404 : le compte de démonstration ne cache pas son
+	 * état.
 	 */
 	changerLeMotDePasse: async ({ locals, request }) => {
 		const { base, sessionId, profil } = await titulaire(locals);

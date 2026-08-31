@@ -1,50 +1,25 @@
 /**
- * LE CÂBLAGE DE V-01 — le champ de recherche de l'accueil public, et le
- * rattrapage de la liste en erreur.
+ * LE CÂBLAGE DE V-01 — le champ de recherche de l'accueil public, et le rattrapage
+ * de la liste en erreur. `ARB-063` : le comportement s'accroche depuis la route.
+ * CE CÂBLAGE NE VAUT QUE POUR LA BRANCHE ANONYME, V-07 ayant son propre champ.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI ICI, ET NON DANS LA VUE
+ * LA RECHERCHE DE L'ACCUEIL MÈNE À `/recherche?q=…`. Le gel filtre au fil de la
+ * frappe dans un corpus qu'il tient en mémoire ; le produit a un moteur, et rejouer
+ * une seconde correspondance ici en serait une deuxième, alors que le chargeur de
+ * `/recherche` a précisément retiré celle des vues.
  *
- * `ARB-063` : les vues de `src/vues/` sont des transcriptions du gel ; le
- * comportement s'accroche depuis la route, par identifiant et par sélecteur.
- * Précédent copié : `src/routes/notes/[identifiant]/operationnel/cablage.ts`.
- *
- * CE CÂBLAGE NE VAUT QUE POUR LA BRANCHE ANONYME. `/` sert V-07 en session, et
- * V-07 a son propre champ ; la route ne l'appelle donc que sans session.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LA RECHERCHE DE L'ACCUEIL MÈNE À LA RECHERCHE PUBLIQUE — V-02
- *
- * Le gel filtre au fil de la frappe dans un corpus qu'il tient en mémoire ; le
- * produit a un moteur, et c'est `/recherche` qui l'interroge — l'implémentation
- * unique de la recherche (`chercherLesNotes()`). Rejouer une seconde
- * correspondance ici en serait une deuxième, et le chargeur de `/recherche` a
- * précisément retiré celle des vues.
- *
- * Le champ mène donc à `/recherche?q=…`, ce que l'écran annonce lui-même par
- * son lien « Ouvrir la recherche complète ». `q` est le paramètre honoré en
- * anonyme (`docs/routes.md:248`).
- *
- * SANS CE CÂBLAGE, LE CHAMP EST INERTE : c'est le premier élément de la page,
- * il porte l'`autofocus`, et rien n'y répondait — ni la touche d'entrée, ni le
- * bouton d'effacement, que la vue rend d'ailleurs masqué tant que la saisie est
- * vide. Le bouton est dessiné, donc promis.
- *
- * ÉCHAP EFFACE, comme au gel et comme en V-02 (`onkeydown` de son champ) : le
- * même geste dans les deux écrans publics.
+ * SANS CE CÂBLAGE, LE CHAMP EST INERTE : c'est le premier élément de la page, il
+ * porte l'`autofocus`, et rien n'y répondait — ni la touche d'entrée, ni le bouton
+ * d'effacement, dessiné donc promis. ÉCHAP EFFACE, comme au gel et comme en V-02.
  */
 import { resolve } from '$app/paths';
 
-/** Ce qu'un câblage rend : de quoi le défaire. Même contrat que le voisin. */
 export type Debranchement = () => void;
 
 /**
- * L'ADRESSE DE LA RECHERCHE PUBLIQUE POUR UNE REQUÊTE.
- *
- * `resolve()` n'accepte pas de chaîne de requête : elle est concaténée après,
- * comme `src/lib/coquille/Rail.svelte` le fait pour ses nœuds. Une requête vide
- * ne pose aucun paramètre — `/recherche` sans paramètre réinitialise tout
- * (`docs/routes.md` §4.2).
+ * L'ADRESSE DE LA RECHERCHE PUBLIQUE POUR UNE REQUÊTE. `resolve()` n'accepte pas
+ * de chaîne de requête : elle est concaténée après. Une requête vide ne pose aucun
+ * paramètre — `/recherche` sans paramètre réinitialise tout.
  */
 export function adresseDeLaRecherche(requete: string): string {
 	const terme = requete.trim();

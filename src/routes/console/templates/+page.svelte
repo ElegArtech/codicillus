@@ -1,20 +1,10 @@
 <script lang="ts">
 	/**
-	 * `/console/templates` — V-31 Console · Templates.
+	 * `/console/templates` — V-31 Console · Templates. Le rôle administrateur est
+	 * éprouvé côté serveur par `+page.server.ts`.
 	 *
-	 * Cette route n'existait pas : `docs/routes.md` §3.6 la déclare, aucun
-	 * fichier ne la montait, et la batterie 6 comptait ses cases VACANTES.
-	 * `T-036` la monte avec sa garde : le rôle administrateur est éprouvé côté
-	 * serveur par `+page.server.ts`, à côté de ce fichier.
-	 *
-	 * CE FICHIER NE FAIT QUE RENDRE CE QUE LE CHARGEUR A RÉSOLU. Les notes
-	 * viennent de la base. LE BANC NE PASSE JAMAIS PAR ICI : il atteint la vue
-	 * par le mode de conception, qui rend le composant directement.
-	 *
-	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
-	 * sert ; elle est identique à l'octet à sa source gelée (P-6.3).
-	 *
-	 * AUCUN `<svelte:head>` : rien ne déclare de titre de page pour le PRODUIT.
+	 * CE FICHIER NE FAIT QUE RENDRE CE QUE LE CHARGEUR A RÉSOLU. LE BANC NE PASSE
+	 * JAMAIS PAR ICI : il atteint la vue par le mode de conception.
 	 */
 	import Vue from '../../../vues/V-31.svelte';
 	import '../../../vues/V-31.css';
@@ -83,12 +73,10 @@
 
 		/* LE REFUS EST RENDU TEL QUE L'ACTION L'A PRONONCÉ, jamais reformulé.
 
-		   ET UN REFUS D'UNE AUTRE NATURE SE DIT AUSSI. Le seul bloc de refus du gel
-		   est celui du nom, et l'action n'y met que ses trois messages de saisie :
-		   tout le reste — une garde de console qui rend 404, une panne de serveur —
-		   ne rendait RIEN. Le panneau restait ouvert, aucun template n'était écrit,
-		   et l'utilisateur croyait avoir enregistré. La phrase générale ne nomme
-		   aucune cause qu'on n'a pas ; elle dit ce qui compte. */
+		   ET UN REFUS D'UNE AUTRE NATURE SE DIT AUSSI : le seul bloc de refus du gel
+		   est celui du nom, et tout le reste — une garde de console qui rend 404, une
+		   panne de serveur — ne rendait RIEN. Le panneau restait ouvert, aucun template
+		   n'était écrit, et l'utilisateur croyait avoir enregistré. */
 		const refus = retour.donnees as { issue?: string; message?: string } | undefined;
 		if (refus?.issue === 'saisie-refusee' && refus.message !== undefined) {
 			return { enregistre: false, message: refus.message };

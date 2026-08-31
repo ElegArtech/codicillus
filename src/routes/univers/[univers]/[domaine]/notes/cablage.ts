@@ -1,49 +1,36 @@
 /**
  * LE CÂBLAGE DE V-12 — ce que `cablerLesFacettes()` ne couvre pas.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUI EST DÉJÀ CÂBLÉ AILLEURS, ET QUI N'EST PAS REPRIS ICI
+ * `$lib/cablage/facettes.ts` porte les menus de facette, les pastilles de filtre
+ * actif, « Tout effacer » et le sélecteur d'ordre. La seule chose partagée avec
+ * lui est la LISTE DES CLÉS de facette, dont « Réinitialiser les filtres » a
+ * besoin : elle est passée en option plutôt que recopiée — un contrat de données
+ * recopié dans deux modules diverge en silence (`P-35`).
  *
- * `$lib/cablage/facettes.ts` porte les menus de facette, les pastilles de
- * filtre actif, « Tout effacer » et le sélecteur d'ordre. Ce module ne les
- * touche pas : la seule chose qu'il partage avec lui est la LISTE DES CLÉS de
- * facette, dont « Réinitialiser les filtres » a besoin pour les retirer toutes.
- * Elle est passée en option plutôt que recopiée — `P-35` : un contrat de
- * données recopié dans deux modules diverge en silence.
+ * SIX GESTES, DEUX NATURES. QUATRE NAVIGATIONS — l'éditeur pré-réglé sur ce
+ * domaine, l'import, et la même adresse sans ses facettes.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * SIX GESTES, DEUX NATURES
- *
- * QUATRE NAVIGATIONS — `#creer` et « Créer la première note » vers l'éditeur
- * pré-réglé sur ce domaine, « Importer dans ce domaine » vers l'import,
- * « Réinitialiser les filtres » vers la même adresse sans ses facettes.
- *
- * DEUX ÉTATS D'INTERFACE, et ils sont posés par ATTRIBUT, jamais par style :
- * `.app[data-filtres="ouvert"] .filtres-barre { display: flex }`
- * (`V-12.css:545`) ouvre le panneau escamotable des petits écrans, et
- * `.liste[data-densite="compact"]` resserre les lignes (`V-12.css:494`). Le gel
- * porte les deux règles ; ce module pose l'attribut, et rien d'autre.
+ * DEUX ÉTATS D'INTERFACE, POSÉS PAR ATTRIBUT ET JAMAIS PAR STYLE :
+ * `.app[data-filtres="ouvert"] .filtres-barre { display: flex }` ouvre le panneau
+ * escamotable des petits écrans, `.liste[data-densite="compact"]` resserre les
+ * lignes. Le gel porte les deux règles ; ce module pose l'attribut.
  */
 
-/** Ce qu'un câblage rend : de quoi le défaire. Même contrat que ses voisins. */
 export type Debranchement = () => void;
 
 const ADRESSE_DE_LIMPORT = '/importer';
 const ADRESSE_DE_LA_NOUVELLE_NOTE = '/notes/nouvelle';
 
 export interface OptionsDeLaListe {
-	/** Le NOM du domaine rendu — le pré-réglage de l'éditeur. */
 	readonly domaine: string;
 	/** Les clés de facette de l'adresse — celles que « Réinitialiser » retire. */
 	readonly facettes: readonly string[];
 }
 
-/** Le libellé d'un nœud, blancs réduits. */
 function libelle(noeud: Element | null | undefined): string {
 	return (noeud?.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
 
-/** Câble les six gestes que les facettes ne couvrent pas. */
 export function cablerLaListeDeNotes(
 	racine: HTMLElement,
 	options: OptionsDeLaListe

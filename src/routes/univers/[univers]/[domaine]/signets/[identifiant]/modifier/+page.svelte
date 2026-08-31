@@ -1,21 +1,13 @@
 <script lang="ts">
 	/**
 	 * `/univers/{univers}/{domaine}/signets/{identifiant}/modifier` — V-23, mode
-	 * édition.
+	 * édition. MÊME ÉCRAN QUE `…/signets/nouveau`, à un réglage de mode près :
+	 * `mode: 'edition'` peuple les champs, ajoute la suppression et change les deux
+	 * libellés.
 	 *
-	 * MÊME ÉCRAN QUE `…/signets/nouveau` (`docs/routes.md` §3.3), à un réglage
-	 * de mode près : `mode: 'edition'` peuple les champs, ajoute la suppression,
-	 * et change les deux libellés. Le vecteur est composé par `vecteurDeV23()`,
-	 * à un seul endroit.
-	 *
-	 * LE SIGNET ÉDITÉ EST CELUI QUE L'ADRESSE DÉSIGNE : le chargeur le résout et
-	 * la vue le lit par sa propriété `signet`. Les domaines du sélecteur viennent
-	 * du gabarit racine, qui les lit en base ; la vue les EXIGE désormais — elle
-	 * retombait sur `DOMAINES` du jeu de démonstration et proposait des domaines
-	 * qui n'existent pas.
-	 *
-	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
-	 * sert ; elle est identique à l'octet à sa source gelée (P-6.3).
+	 * LE SIGNET ÉDITÉ EST CELUI QUE L'ADRESSE DÉSIGNE. Les domaines du sélecteur
+	 * viennent du gabarit racine, qui les lit en base ; la vue les EXIGE désormais —
+	 * elle retombait sur `DOMAINES` du jeu de démonstration.
 	 */
 	import { onMount } from 'svelte';
 	import Vue from '../../../../../../../vues/V-23.svelte';

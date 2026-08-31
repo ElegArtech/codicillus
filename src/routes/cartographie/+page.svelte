@@ -2,31 +2,17 @@
 	/**
 	 * `/cartographie` — V-19 Cartographie.
 	 *
-	 * Ce fichier rend la vue avec ce que son chargeur a lu en base, et lui donne
-	 * ses gestes. Le vecteur, les notes, les relations et le périmètre viennent
-	 * de `+page.server.ts`, qui porte le périmètre de droits et l'état de zone.
-	 * `T-070` l'avait posé sans chargeur — « pas de garde de droit, pas de
-	 * chargeur » —, et il servait le jeu de semence à tout connecté ; `T-037` le
-	 * branche sur la base.
+	 * Ce fichier rend la vue avec ce que son chargeur a lu en base, et lui donne ses
+	 * gestes. Le périmètre de droits et l'état de zone viennent de `+page.server.ts`.
 	 *
-	 * LES ARÊTES VIENNENT DE LA TABLE `relations`, PLUS DU JEU DE SEMENCE. Les
-	 * trois propriétés de relation de `src/vues/V-19.svelte` étaient
-	 * OPTIONNELLES et retombaient sur les constantes du jeu quand rien ne leur
-	 * était passé : cette page-ci les nourrissait, mais rien n'obligeait la
-	 * suivante à le faire. Elles sont EXIGÉES, avec les univers et les domaines,
-	 * et c'est le compilateur qui garde la porte — omettre l'une d'elles ici ne
-	 * bâtirait plus.
+	 * LES ARÊTES VIENNENT DE LA TABLE `relations`, PLUS DU JEU DE SEMENCE. Les trois
+	 * propriétés de relation étaient OPTIONNELLES et retombaient sur les constantes
+	 * du jeu quand rien ne leur était passé : cette page-ci les nourrissait, mais
+	 * rien n'obligeait la suivante à le faire. Elles sont EXIGÉES, avec les univers
+	 * et les domaines, et c'est le compilateur qui garde la porte.
 	 *
-	 * LE COMPORTEMENT VIT DANS `cablage.ts`, VOISIN DE CE FICHIER — `ARB-063`,
-	 * et le motif de `src/routes/console/cablage.ts`. La vue ne porte aucun
-	 * gestionnaire ; la route les accroche par identifiant et par sélecteur,
-	 * après le montage.
-	 *
-	 * La feuille portée est importée ici parce qu'aucune autre couche ne la sert.
-	 * Elle est identique à l'octet à sa source gelée (P-6.3).
-	 *
-	 * AUCUN titre de page n'est déclaré : les titres des maquettes sont ceux des
-	 * planches de revue, et en inventer un serait un comblement.
+	 * LE COMPORTEMENT VIT DANS `cablage.ts`, VOISIN DE CE FICHIER (`ARB-063`) : la
+	 * vue ne porte aucun gestionnaire, la route les accroche après le montage.
 	 */
 	import Vue from '../../vues/V-19.svelte';
 	import '../../vues/V-19.css';
@@ -43,13 +29,11 @@
 	let enveloppe: HTMLDivElement;
 
 	/**
-	 * LE PÉRIMÈTRE QUE « RÉDUIRE LE PÉRIMÈTRE » PROPOSE — `V-19:3131`.
-	 *
-	 * Le gel pose `domaine|Applications`, un nom de son jeu de semence. Le
-	 * produit n'a pas de domaine garanti : le premier domaine effectivement
-	 * présent dans le périmètre lisible est pris, et le bouton reste inopérant
-	 * s'il n'y en a aucun. C'est l'intention du gel — retomber sur UN domaine,
-	 * le plus petit périmètre proposé — sans en recopier le nom.
+	 * LE PÉRIMÈTRE QUE « RÉDUIRE LE PÉRIMÈTRE » PROPOSE. Le gel pose
+	 * `domaine|Applications`, un nom de son jeu de semence ; le produit n'a pas de
+	 * domaine garanti. Le premier domaine effectivement présent dans le périmètre
+	 * lisible est pris, et le bouton reste inopérant s'il n'y en a aucun — l'intention
+	 * du gel sans en recopier le nom.
 	 */
 	const perimetreReduit = $derived.by(() => {
 		const domaine = data.notes[0]?.domaine;
@@ -57,11 +41,9 @@
 	});
 
 	/**
-	 * LES DEUX ONGLETS DE LA CARTOGRAPHIE — « Vue complète » et « Par type
-	 * maître » — ne faisaient rien, alors que le produit porte DEUX routes pour
-	 * eux : `/cartographie` et `/cartographie/par-type`. Le gel les pose en
-	 * `role="tab"` avec `data-vue`, sans comportement (`ARB-011`) ; la route le
-	 * leur donne, et la navigation est une vraie navigation, donc partageable.
+	 * LES DEUX ONGLETS DE LA CARTOGRAPHIE ne faisaient rien, alors que le produit
+	 * porte DEUX routes pour eux. Le gel les pose en `role="tab"` avec `data-vue`,
+	 * sans comportement (`ARB-011`).
 	 */
 	onMount(() => {
 		const aller = (evenement: Event): void => {

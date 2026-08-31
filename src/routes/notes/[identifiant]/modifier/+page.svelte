@@ -1,49 +1,19 @@
 <script lang="ts">
 	/**
-	 * `/notes/{identifiant}/modifier` — V-17 Éditeur d'une note, modification.
+	 * `/notes/{identifiant}/modifier` — V-17 Éditeur d'une note, modification. Six
+	 * propriétés viennent de la base, dont la NOTE REPRISE — celle que l'adresse désigne.
 	 *
-	 * La vue ne change pas. Six de ses propriétés viennent de la base : le corpus
-	 * lisible par l'appelant, la NOTE REPRISE — celle que l'adresse désigne, et
-	 * non plus celle du gel —, et les trois référentiels de saisie.
+	 * LE CORPS RÉDIGÉ ENTRE DANS L'ÉCRAN PAR LE CONVERTISSEUR UNIQUE : `data.corps` porte
+	 * le document canonique du registre Référence, `data.corpsRendu` en est le HTML. Sans
+	 * propriété pour le recevoir, la vue écrivait l'extrait d'une procédure de
+	 * démonstration, que le câblage remplaçait APRÈS le montage — flash avec JavaScript,
+	 * contenu PERMANENT sans lui. Le câblage monte l'éditeur sur le MÊME document, et la
+	 * sérialisation passe par `serialiserEnMarkdown()`, le convertisseur unique : le texte
+	 * posé est celui que la soumission renverra si rien n'est frappé.
 	 *
-	 * LE BANC NE PASSE JAMAIS PAR ICI : il rend les composants par le mode de
-	 * conception. Rien de ce fichier n'entre dans son verdict. C'est le fondement
-	 * d'`ARB-063`.
-	 *
-	 * ═════════════════════════════════════════════════════════════════════════
-	 * LE CORPS RÉDIGÉ ENTRE ENFIN DANS L'ÉCRAN, ET PAR LE CONVERTISSEUR UNIQUE
-	 *
-	 * `data.corps` porte le document canonique du registre Référence, validé par
-	 * la porte unique du format, et `data.corpsRendu` en est le HTML.
-	 *
-	 * L'ÉCRAN OUVRAIT LE CORPS D'UNE AUTRE NOTE, ET C'ÉTAIT SERVI.
-	 * `src/vues/V-17.svelte` ne déclarait aucune propriété qui reçût le corps :
-	 * la vue écrivait donc, en modification, l'extrait de la note suivi des
-	 * sections d'une procédure de démonstration, et le câblage remplaçait le tout
-	 * APRÈS le montage. Flash à chaque chargement, contenu PERMANENT sans
-	 * JavaScript, et c'est ce que montrait le source de la page.
-	 *
-	 * La vue déclare désormais `corps`, et la route le lui passe. Le câblage
-	 * continue de monter l'éditeur sur le MÊME document : ce que le serveur rend
-	 * et ce que l'éditeur ouvre sont la même chose.
-	 *
-	 * La sérialisation passe par `serialiserEnMarkdown()`, le convertisseur
-	 * unique (`verif:convertisseur` en interdit un second). Le texte posé est
-	 * celui-là même que la soumission renverra si rien n'est frappé, et
-	 * `pnpm test:aller-retour` est ce qui rend cette phrase vraie.
-	 *
-	 * ═════════════════════════════════════════════════════════════════════════
-	 * LE RANGEMENT SERVI EST CELUI DE LA BASE
-	 *
-	 * Le sélecteur de domaine et l'arborescence de dossiers viennent du chargeur
-	 * et du gabarit racine, comme à la création. Sans eux, V-17 retombait sur les
-	 * constantes du jeu de semence : mesuré le 22/08/2026, l'écran offrait
-	 * « Production › Applications », « Production › Poste de travail » et
-	 * « Projets › Migration 2026 » — trois domaines qui n'existent nulle part en
-	 * base — et sa liste de dossiers sortait vide.
-	 *
-	 * `horsDePorteeDeLEditeur` reste non montré : la liste est vide quand la note
-	 * s'ouvre entière, et aucun nœud du gel ne l'accueillerait autrement.
+	 * LE RANGEMENT SERVI EST CELUI DE LA BASE : sans lui, la vue retombait sur les
+	 * constantes du jeu de semence. `horsDePorteeDeLEditeur` reste non montré — la liste
+	 * est vide quand la note s'ouvre entière, et aucun nœud du gel ne l'accueillerait.
 	 */
 	import { onMount } from 'svelte';
 	import Vue from '../../../../vues/V-17.svelte';
@@ -76,10 +46,9 @@
 	let formulaire: HTMLFormElement;
 
 	/**
-	 * LE REFUS D'ENREGISTREMENT SE VOIT — mesuré muet le 21/08/2026.
-	 * Créer sans choisir de dossier renvoyait `400 { motif: 'dossier manquant' }`
-	 * et l'écran ne disait rien : ni message, ni témoin, ni foyer. Les deux blocs
-	 * du gel — `#erreur-titre`, `#erreur-dossier` — existaient depuis le début.
+	 * LE REFUS D'ENREGISTREMENT SE VOIT — il était muet : `400 { motif: … }` et
+	 * l'écran ne disait rien, ni message, ni témoin, ni foyer. Les deux blocs du gel
+	 * — `#erreur-titre`, `#erreur-dossier` — existaient depuis le début.
 	 */
 	$effect(() => {
 		if (formulaire === undefined) return;
@@ -87,12 +56,9 @@
 	});
 
 	/**
-	 * L'ÉDITEUR REÇOIT LE DOCUMENT CANONIQUE, pas une transposition.
-	 *
-	 * `data.corps` est ce que la base porte, validé par la porte unique du
-	 * format. Il entre dans l'éditeur par `noeudDepuisDocument()` et en ressort
-	 * par `documentDepuisNoeud()` : ce qui est réenregistré sans une frappe est
-	 * identique à ce qui a été ouvert.
+	 * L'ÉDITEUR REÇOIT LE DOCUMENT CANONIQUE, pas une transposition : il entre par
+	 * `noeudDepuisDocument()` et en ressort par `documentDepuisNoeud()`, de sorte que
+	 * ce qui est réenregistré sans une frappe est identique à ce qui a été ouvert.
 	 */
 	onMount(() => {
 		const zone = formulaire.querySelector<HTMLElement>('#redaction');

@@ -2,30 +2,17 @@
 	/**
 	 * `/univers/{univers}/{domaine}/signets` — V-22 Signets.
 	 *
-	 * Montée par `T-070` (« la liaison »), qui s'interdisait explicitement le
-	 * chargeur et la garde de droit : « pas de chargeur, pas de garde de droit,
-	 * pas d'authentification, aucune lecture des paramètres d'adresse ». C'était
-	 * son périmètre, et c'était écrit. `ECART-047` É-1 en a mesuré la
-	 * conséquence — l'adresse servait 18 528 octets à un anonyme —, et `T-034`
-	 * pose le chargeur : `+page.server.ts`, à côté de ce fichier.
-	 *
-	 * CE FICHIER NE FAIT PLUS QUE RENDRE CE QUE LE CHARGEUR A RÉSOLU. Les notes
-	 * viennent de la base, filtrées par le périmètre de l'appelant dans la
-	 * requête elle-même (`ADR-006`) ; le vecteur porte le domaine réel et le
-	 * droit effectif — `droits: 'lecture'` efface les actions d'écriture, ce que
-	 * `P-09` exige et que le serveur seul peut décider.
+	 * CE FICHIER NE FAIT QUE RENDRE CE QUE LE CHARGEUR A RÉSOLU. Les notes viennent
+	 * de la base, filtrées par le périmètre de l'appelant dans la requête elle-même
+	 * (`ADR-006`) ; le vecteur porte le domaine réel et le droit effectif —
+	 * `droits: 'lecture'` efface les actions d'écriture, ce que `P-09` exige et que
+	 * le serveur seul peut décider.
 	 *
 	 * `seeds/corpus.ts` n'est plus lu ici. Il reste la référence du mode de
-	 * conception, qui atteint la vue par son propre chemin et ne passe pas par
-	 * cette route : rien de ce fichier n'entre dans le verdict du banc.
+	 * conception, qui atteint la vue par son propre chemin.
 	 *
-	 * La feuille portée est importée ici parce qu'aucune autre couche ne la
-	 * sert : `+layout.svelte` ne porte que le socle. Elle est identique à
-	 * l'octet à sa source gelée (P-6.3) et n'est pas modifiée par cet import.
-	 *
-	 * AUCUN `<svelte:head>` : rien ne déclare de titre de page pour le PRODUIT.
-	 * Les `<title>` des maquettes sont ceux des planches de revue, et en
-	 * inventer un serait un comblement.
+	 * AUCUN `<svelte:head>` : les `<title>` des maquettes sont ceux des planches de
+	 * revue, et en inventer un serait un comblement.
 	 */
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
@@ -47,25 +34,19 @@
 	let champSignet: HTMLInputElement;
 
 	/**
-	 * LES DEUX BOUTONS DE CHAQUE CARTE — « Modifier » et « Supprimer » — ne
-	 * faisaient rien.
+	 * LES DEUX BOUTONS DE CHAQUE CARTE — « Modifier » et « Supprimer » — ne faisaient
+	 * rien. Le gel ne pose sur la carte ni identifiant ni adresse d'action, et lui en
+	 * ajouter un serait toucher `src/vues/`. La carte porte en revanche le TITRE et
+	 * l'ADRESSE curatée : le couple des deux désigne le signet sans ambiguïté dans un
+	 * domaine, et le chargeur sert la table de correspondance.
 	 *
-	 * Le gel ne pose sur la carte ni identifiant ni adresse d'action, et lui en
-	 * ajouter un serait toucher `src/vues/`. La carte porte en revanche le TITRE
-	 * et l'ADRESSE curatée : le couple des deux désigne le signet sans ambiguïté
-	 * dans un domaine, et le chargeur sert la table de correspondance.
-	 *
-	 * `P-09` est servie par la vue : les deux boutons ne sont rendus qu'en
-	 * écriture.
+	 * `P-09` est servie par la vue : les deux boutons ne sont rendus qu'en écriture.
 	 */
 	/**
-	 * LES DEUX SEGMENTS DE L'ADRESSE, TELS QUE LA ROUTE LES A REÇUS.
-	 *
-	 * Ce sont déjà des identifiants lisibles ; `identifiantLisible()` est
-	 * idempotente sur eux, et les passer à la fabrique d'adresses coûte donc
-	 * exactement rien — tandis qu'écrire le gabarit à la main, ce que ce fichier
-	 * faisait, crée une seconde source de vérité pour une forme qui n'en a
-	 * qu'une (`$lib/rangement/adresses`, en-tête).
+	 * LES DEUX SEGMENTS DE L'ADRESSE, TELS QUE LA ROUTE LES A REÇUS. Ce sont déjà des
+	 * identifiants lisibles ; les passer à la fabrique d'adresses ne coûte rien,
+	 * tandis qu'écrire le gabarit à la main crée une seconde source de vérité pour
+	 * une forme qui n'en a qu'une.
 	 */
 	const segments = $derived({
 		univers: String(page.params['univers'] ?? ''),
@@ -74,14 +55,13 @@
 
 	/**
 	 * LES DEUX FACETTES DU GEL, DANS SON ORDRE. Le menu rendu porte lui-même
-	 * l'identifiant de sa facette, et c'est par lui que le câblage la retrouve :
-	 * le libellé ne peut pas servir — le bouton porte le nom SUIVI de son
-	 * compteur —, et le rang mentait dès qu'une facette sans valeur n'était pas
-	 * rendue, ce qui arrive au premier signet sans étiquette.
+	 * l'identifiant de sa facette, et c'est par lui que le câblage la retrouve : le
+	 * libellé ne peut pas servir — le bouton porte le nom SUIVI de son compteur —, et
+	 * le rang mentait dès qu'une facette sans valeur n'était pas rendue, ce qui
+	 * arrive au premier signet sans étiquette.
 	 *
-	 * La liste est déclarée une fois et servie au câblage commun, celui-là même
-	 * qui porte les menus de la liste des notes et de la recherche. Recopier le
-	 * moteur ici l'aurait fait diverger au premier oubli.
+	 * La liste est déclarée une fois et servie au câblage commun, celui-là même qui
+	 * porte les menus de la liste des notes et de la recherche.
 	 */
 	const FACETTES = [
 		{ id: 'etiquette', nom: 'Étiquette', prefixe: '#' },

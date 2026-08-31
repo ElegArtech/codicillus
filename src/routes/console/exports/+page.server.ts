@@ -1,55 +1,21 @@
 /**
- * `/console/exports` — LE CHARGEUR de V-36.
+ * `/console/exports` — LE CHARGEUR de V-36. LA GARDE EST CELLE DES ONZE ADRESSES DE
+ * CONSOLE : `resoudreLaConsole()` la prend, une fois pour toutes, et un
+ * non-administrateur reçoit 404 V-26 — pas un refus (`P-09`, `RG-ACC-04`). Le seul
+ * `error(404, …)` est SANS MESSAGE (`ADR-007`).
  *
- * LA GARDE EST CELLE DES ONZE ADRESSES, ET ELLE EST ÉCRITE UNE FOIS.
- * `docs/routes.md:167` : « Toutes ces routes exigent le rôle administrateur. Un
- * utilisateur non administrateur reçoit 404 V-26, pas un refus » — `P-09` pour
- * l'entrée non rendue, `RG-ACC-04` pour l'adresse construite. La décision est
- * prise par `resoudreLaConsole()` de `src/lib/donnees/consoles.ts` ; le seul
- * `error(404, MESSAGE_INTROUVABLE)` du fichier est SANS MESSAGE (`ADR-007`).
+ * L'ÉCRAN, PAS LE TRAITEMENT : aucune table n'enregistre d'export passé. L'écran
+ * présente le PÉRIMÈTRE exportable, jamais un export accompli, et rien n'est simulé.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * L'ÉCRAN, PAS LE TRAITEMENT — L'ARCHIVE N'EST PAS PRODUITE
+ * LE NOM ANNONCÉ EST PRODUIT PAR SA SOURCE — `nomDArchive()`, la fabrique que le point
+ * de téléchargement appelle lui-même : le recomposer ici laisserait les deux
+ * définitions diverger. LA DATE EST CELLE DE LA REQUÊTE DE PAGE, celle du fichier sera
+ * celle de la requête de téléchargement — la seule marge, bornée à la journée. SUR UNE
+ * INSTANCE NEUVE la table est vide, aucun domaine n'est choisi, aucun nom n'est annoncé.
  *
- * `T-045` porte la production de l'archive, et il n'est pas livré. Aucune table
- * n'enregistre d'export passé. L'écran présente le PÉRIMÈTRE exportable — les
- * domaines et ce qu'ils contiennent —, jamais un export accompli, et rien n'est
- * simulé : la lacune est recensée dans `MESURES_DE_CONSOLE_SANS_CONTREPARTIE`.
- *
- * CE QUE LA VUE REÇOIT, ET POURQUOI LE NOM D'ARCHIVE EN FAIT PARTIE.
- * `notes`, `univers`, `domaines` et `compte` viennent de la base depuis la
- * réparation de la coquille de console. Restait `DATE_REFERENCE`, importée au
- * niveau du module de `V-36` : l'écran annonçait le nom de l'archive comme
- * `{ardoise du nom}-2026-08-13.zip`, quand le fichier obtenu porte
- * l'IDENTIFIANT du domaine et la date du jour. Un nom de fichier annoncé que
- * l'utilisateur n'obtenait jamais.
- *
- * LE NOM ANNONCÉ EST DÉSORMAIS PRODUIT PAR SA SOURCE — `nomDArchive()` de
- * `$lib/export/archive.ts`, la fabrique que le point de téléchargement appelle
- * lui-même. Le recomposer ici, fût-ce à l'identique, laisserait les deux
- * définitions diverger sans que rien ne le dise.
- *
- * LA DATE EST CELLE DE LA REQUÊTE DE PAGE, celle du fichier sera celle de la
- * requête de téléchargement : une page laissée ouverte d'un jour sur l'autre
- * annoncerait la veille. C'est la seule marge qui reste, et elle est bornée à
- * la journée.
- *
- * SUR UNE INSTANCE NEUVE, LA TABLE EST VIDE, ET C'EST LE CAS QUI COMPTE. Une
- * installation réelle n'a aucun domaine ; la vue n'en choisit donc aucun et
- * n'annonce plus aucun nom, là où elle composait un `-{date de semence}.zip`
- * sur un nom de domaine vide. C'est le premier écran d'export que voit une
- * installation, et c'était le seul endroit où la fuite se voyait encore.
- *
- * `/console/exports/{univers}/{domaine}` EST MONTÉE DEPUIS `T-053`, et le motif
- * qui la retenait est levé : la monter sans l'archive « reviendrait à servir une
- * archive qui n'existe pas », or l'archive existe — `src/lib/export/archive.ts`,
- * et son aller-retour est éprouvé sur le domaine entier. `docs/routes.md` §3.6 la
- * déclare comme « aucune vue — téléchargement de l'archive » : c'est un
- * `+server.ts`, et cette vue-ci n'y renvoie toujours pas — le bouton du gel est
- * une minuterie, et `ARB-011` interdit de rendre une transition. La redirection de l'anonyme sur
- * cette adresse est, elle, déjà décidée sur le préfixe par `src/lib/auth/garde.ts`
- * (`ARB-052`, `ARB-057`), et la batterie 6 la mesure comme un couple indiscernable
- * prouvé — l'un des deux seuls du dépôt.
+ * `/console/exports/{univers}/{domaine}` est un `+server.ts`, et cette vue-ci n'y
+ * renvoie pas : le bouton du gel est une minuterie, et `ARB-011` interdit de rendre une
+ * transition.
  */
 import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';

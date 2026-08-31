@@ -1,40 +1,18 @@
 /**
- * LE CHARGEUR DE `/` — une adresse, deux branches.
+ * LE CHARGEUR DE `/` — une adresse, deux branches : V-01 Accueil public sans
+ * session, V-07 Accueil contributeur avec. La route est une, donc le chargeur est un.
  *
- * `docs/routes.md:98-99` : `/` rend **V-01 Accueil public** sans session et
- * **V-07 Accueil contributeur** avec session. La route est une, donc le
- * chargeur est un — c'est la raison pour laquelle les deux écrans sont câblés
- * dans le même lot.
+ * CE FICHIER NE DÉCIDE RIEN : il lit l'identité que `src/hooks.server.ts` a posée,
+ * appelle `$lib/donnees/accueil`, et rend ce qu'il en reçoit. Aucune comparaison de
+ * visibilité, de statut, de rôle ou de droit ne s'écrit ici.
  *
- * CE FICHIER NE DÉCIDE RIEN. Il lit l'identité que `src/hooks.server.ts` a
- * posée, appelle `$lib/donnees/accueil`, et rend ce qu'il en reçoit. Aucune
- * comparaison de visibilité, de statut, de rôle ou de droit ne s'écrit ici :
- * `src/lib/droits/resolution.ts` est l'implémentation unique, et le premier
- * défaut de la batterie 6 vient précisément de ce qu'aucune route ne l'appelait
- * (`ECART-047` É-1).
- *
- * L'INSTANT DE RÉFÉRENCE EST PRIS ICI, ET NULLE PART AILLEURS. La couche de
- * lecture le reçoit en paramètre pour rester reproductible — donc mesurable —
- * et c'est au chargeur, seul point où « maintenant » a un sens, de le fournir.
- * En service, la fraîcheur d'une note est vraie maintenant ; dans le jeu de
- * semence, elle est vraie à `DATE_REFERENCE`. Les deux affirmations sont justes
- * et ne se recouvrent pas.
- *
- * LES SEUILS VIENNENT DE LA BASE, jamais d'une constante : `seuil_frais` et
- * `seuil_vieillissant` sont des paramètres d'instance (M14), et `P-01` veut une
- * seule définition de la fraîcheur — donc aussi un seul jeu de seuils.
+ * L'INSTANT DE RÉFÉRENCE EST PRIS ICI, ET NULLE PART AILLEURS : la couche de lecture
+ * le reçoit en paramètre pour rester reproductible. LES SEUILS VIENNENT DE LA BASE,
+ * jamais d'une constante — `P-01` veut une seule définition de la fraîcheur.
  *
  * AUCUN `<svelte:head>`, aucun titre, aucune redirection : `/` est une adresse
  * publique au sens de `src/lib/auth/garde.ts` ; sans session elle sert l'espace
  * public, ce qui est exactement `RG-ACC-02`.
- *
- * CE QUE CE CHARGEUR REND A CHANGÉ DE VOLUME, PAS DE NATURE. Il rendait
- * `session` et `notes` ; il rend en outre, pour la branche connectée, le compte,
- * les univers, les domaines, les consultations des sept derniers jours et de la
- * semaine précédente, les anciennetés de modification, l'activité et les
- * demandes de révision — tout ce que V-07 attendait en propriété depuis `T-041`
- * sans que rien ne le lui passe. Ce fichier n'en calcule aucune : `lireAccueil`
- * les lit, bornées au périmètre autorisé, et ce chargeur les transmet.
  */
 import { basePartagee } from '$lib/base/acces';
 import { lireAccueil } from '$lib/donnees/accueil';
@@ -42,18 +20,13 @@ import { lireConfiguration } from '$lib/donnees/lecture';
 import type { PageServerLoad } from './$types';
 
 /**
- * L'ADRESSE DU PORTAIL D'ASSISTANCE VIENT DE LA BASE, PAS D'UNE CONSTANTE.
+ * L'ADRESSE DU PORTAIL D'ASSISTANCE VIENT DE LA BASE, PAS D'UNE CONSTANTE : c'est
+ * la clé `portail_assistance` de la table `parametres` (M14.7), « adresse externe
+ * configurée en console », lue par `lireConfiguration()`.
  *
- * V-01 pose trois fois « Ouvrir un ticket d'assistance », et le gel dit d'où
- * l'adresse sort : « adresse externe configurée en console » (`V-04:2205`).
- * C'est la clé `portail_assistance` de la table `parametres` (M14.7), lue par
- * `lireConfiguration()` — l'unique lecture de cette table.
- *
- * ELLE NE COÛTE AUCUNE REQUÊTE DE PLUS. `lireSeuils()` appelait déjà
- * `lireConfiguration()` et n'en gardait que deux nombres ; la configuration
- * entière est désormais lue une fois, et les seuils en sont dérivés ici. Une
- * requête au lieu de deux, et `P-01` reste tenue — les seuils sortent toujours
- * du même endroit.
+ * ELLE NE COÛTE AUCUNE REQUÊTE DE PLUS : `lireSeuils()` appelait déjà
+ * `lireConfiguration()` et n'en gardait que deux nombres. Une requête au lieu de
+ * deux, et `P-01` reste tenue — les seuils sortent toujours du même endroit.
  */
 export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
@@ -61,35 +34,24 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const seuils = { frais: config.seuilFrais, vieillissant: config.seuilVieillissant };
 	const accueil = await lireAccueil(base, locals.identite, { maintenant: new Date(), seuils });
 
-	/* L'ÉTAT « BASE VIDE » — POUR L'ADMINISTRATEUR SEUL, ET C'EST CE QUI LE REND VRAI.
+	/* L'ÉTAT « BASE VIDE » — POUR L'ADMINISTRATEUR SEUL, ET C'EST CE QUI LE REND
+	 * VRAI. Un périmètre vide n'est pas une base vide : un lecteur au périmètre
+	 * étroit lit zéro note sur une base qui en porte trente-deux. L'argument ne
+	 * couvre pas l'administrateur — `RG-DRO-03` lui rend le périmètre TOTAL, donc
+	 * zéro note lue EST une base vide, et l'affirmation gelée « Votre base ne
+	 * contient encore aucune note » devient exacte pour lui.
 	 *
-	 * `+page.svelte` refusait de piloter cet état par la donnée, avec un argument
-	 * juste : « un périmètre vide n'est pas une base vide », un lecteur au
-	 * périmètre étroit lisant zéro note sur une base qui en porte trente-deux.
-	 * L'argument ne couvre pas l'administrateur : `RG-DRO-03` lui rend le
-	 * périmètre TOTAL (`resolution.ts:438`), donc zéro note lue EST une base vide,
-	 * et l'affirmation gelée « Votre base ne contient encore aucune note » devient
-	 * exacte pour lui.
-	 *
-	 * Ce que le refus coûtait : le bloc d'amorçage et ses deux boutons — « Importer
-	 * votre patrimoine existant », « Créer votre première note » — ne s'affichaient
-	 * JAMAIS, pas même sur l'instance neuve pour laquelle ils sont dessinés. Deux
-	 * gestes rendus dans le HTML et masqués par la feuille, sur toute instance et
-	 * pour toujours.
-	 *
-	 * Pour tout autre compte, l'état reste nominal : les comptes affichés sont
-	 * justes, et le vide de son périmètre se dit ailleurs. */
+	 * Sans ce partage, le bloc d'amorçage et ses deux boutons ne s'affichaient
+	 * JAMAIS, pas même sur l'instance neuve pour laquelle ils sont dessinés. */
 	const administrateur =
 		locals.identite.type === 'authentifie' && locals.identite.role === 'administrateur';
 	const baseVide = administrateur && accueil.session && accueil.notes.length === 0;
 
-	/* ET LE PANNEAU REÇOIT AUSSI LE FAIT, PAS SEULEMENT L'ÉTAT. Rendre l'écran
-	 * d'amorçage ATTEIGNABLE ne l'a pas rendu UTILE : ses deux gestes sont gardés
-	 * par la capacité d'écriture, qui vaut faux sur une instance neuve, et le bloc
-	 * d'actions sortait vide sous un texte qui conseille de rapatrier. La suite
-	 * vraie, à zéro univers, est la console — le rail la dit déjà en prose. V-07
-	 * ne peut la proposer qu'à l'administrateur : ce booléen est le chemin par
-	 * lequel le fait l'atteint, et il ne dépend d'aucun contexte de gabarit. */
+	/* ET LE PANNEAU REÇOIT AUSSI LE FAIT, PAS SEULEMENT L'ÉTAT. Les deux gestes de
+	 * l'écran d'amorçage sont gardés par la capacité d'écriture, qui vaut faux sur
+	 * une instance neuve : le bloc d'actions sortait vide sous un texte qui conseille
+	 * de rapatrier. La suite vraie, à zéro univers, est la console, et V-07 ne peut
+	 * la proposer qu'à l'administrateur. */
 	return {
 		...accueil,
 		...(baseVide ? { vecteur: { etat: 'vide', administrateur } } : {}),

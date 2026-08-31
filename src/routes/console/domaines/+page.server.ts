@@ -1,36 +1,17 @@
 /**
- * `/console/domaines` — LE CHARGEUR de V-28.
+ * `/console/domaines` — LE CHARGEUR de V-28. LA GARDE EST CELLE DES ONZE ADRESSES DE
+ * CONSOLE : `resoudreLaConsole()` la prend, une fois pour toutes, et un non-administrateur
+ * reçoit 404 V-26 — pas un refus (`P-09`, `RG-ACC-04`). Le seul `error(404, …)` est SANS
+ * MESSAGE (`ADR-007`).
  *
- * LA GARDE EST CELLE DES ONZE ADRESSES, ET ELLE EST ÉCRITE UNE FOIS.
- * `docs/routes.md:167` : « Toutes ces routes exigent le rôle administrateur. Un
- * utilisateur non administrateur reçoit 404 V-26, pas un refus » — `P-09` pour
- * l'entrée non rendue, `RG-ACC-04` pour l'adresse construite. La décision est
- * prise par `resoudreLaConsole()` de `src/lib/donnees/consoles.ts`, qui appelle
- * `src/lib/droits/resolution.ts` et rend `INTROUVABLE` ; aucune règle de droit
- * n'est écrite ici, et le seul `error(404, MESSAGE_INTROUVABLE)` du fichier est SANS MESSAGE — un
- * message entrerait dans le corps et rendrait le refus discernable (`ADR-007`).
+ * `univers`, `domaines`, `detailDomaines` et `compte` SONT PASSÉES : la vue les déclare
+ * facultatives, l'import du jeu de démonstration n'en étant que le DÉFAUT. `modules` EST
+ * SERVI, ET CE N'EST PAS LA MÊME CHOSE : c'est le catalogue des LIBELLÉS des six modules,
+ * qu'aucune table ne porte, quand ce qui varie par domaine entre par `detailDomaines`, lu
+ * dans `modules_de_domaine` (`P-04`).
  *
- * CE QUE CE CHARGEUR NE FAISAIT PAS. La rédaction précédente affirmait qu'il ne
- * pouvait « pas corriger ce que la vue lit du jeu de semence : les univers, les
- * domaines et leur détail y sont importés au niveau du module (`V-28:68`) ».
- * `V-28:98` et `:107-110` déclarent `univers?`, `domaines?`, `detailDomaines?`,
- * `compte?` en propriétés facultatives dont l'import n'est que le DÉFAUT :
- * l'affirmation était fausse, et elle coûtait un écran entier de données
- * illustratives. Les quatre sont passées.
- *
- * `modules` EST SERVI, LUI AUSSI, ET CE N'EST PAS LA MÊME CHOSE QUE LES QUATRE
- * AUTRES. C'est le catalogue des LIBELLÉS des six modules — « Notes »,
- * « Dossiers »… —, pas la liste des modules d'un domaine : aucune table ne le
- * porte, et il n'en existe qu'un. C'est un référentiel d'interface du produit,
- * pas une donnée de démonstration. Il était lu sur `seeds/corpus.ts` PAR LA VUE
- * ELLE-MÊME, en valeur par défaut d'une propriété facultative ; il est déclaré
- * ici et passé, pour que plus rien du jeu de démonstration ne descende dans
- * l'écran. Ce qui varie par domaine — quels modules sont ACTIVÉS — entre par
- * `detailDomaines`, lu dans `modules_de_domaine` (`P-04`).
- *
- * `vecteur: null` demande l'état au repos : les trois positions de l'axe
- * « Formulaire » et les deux de l'axe « Suppression » sont des états
- * d'INTERACTION, qu'aucune donnée ne détermine.
+ * `vecteur: null` demande l'état au repos : les positions des axes « Formulaire » et
+ * « Suppression » sont des états d'INTERACTION.
  */
 import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
@@ -64,11 +45,11 @@ import { CATALOGUE_DE_MODULES } from '$lib/rangement/modules';
  * LE CATALOGUE DES SIX MODULES ACTIVABLES SUR UN DOMAINE — LU, JAMAIS RECOPIÉ.
  *
  * Il était déclaré ici, mot pour mot identique à celui de
- * `$lib/rangement/modules.ts`. C'est le motif de `P-35` : deux copies d'un même
- * référentiel divergent en silence. Et la divergence coûterait vraiment quelque
- * chose depuis que la relecture de `f-modules` CONFRONTE chaque clé au catalogue
- * — une clé présente dans la copie qui alimente les cases et absente de celle
- * que la relecture consulte ferait refuser un module que l'écran propose.
+ * `$lib/rangement/modules.ts` : deux copies d'un même référentiel divergent en
+ * silence (`P-35`). Et la divergence coûterait, depuis que la relecture de
+ * `f-modules` CONFRONTE chaque clé au catalogue — une clé présente dans la copie
+ * qui alimente les cases et absente de celle que la relecture consulte ferait
+ * refuser un module que l'écran propose.
  */
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -100,21 +81,18 @@ function consoleOuverte(locals: App.Locals): void {
 
 export const actions: Actions = {
 	/**
-	 * SUPPRIMER UN DOMAINE ET TOUT SON CONTENU — `RG-M14-02`, `03`, `04`, `05`.
+	 * SUPPRIMER UN DOMAINE ET TOUT SON CONTENU — `RG-M14-02` à `05`.
 	 *
 	 * `sup-saisie` EST LE NOM DU GEL, pas un nom choisi : `V-28:1421` porte
-	 * `input#sup-saisie`, le champ où le nom du domaine se retape. Rien ne sera à
-	 * renommer le jour où le dialogue soumettra.
+	 * `input#sup-saisie`, le champ où le nom du domaine se retape.
 	 *
-	 * Les deux segments désignent le domaine par sa forme CANONIQUE — univers
-	 * puis domaine (`docs/routes.md` §2.2) —, parce que `RG-STR-02` rend son
-	 * identifiant unique au sein de son univers seulement : un domaine ne se
-	 * désigne pas par son seul nom, et deux univers peuvent en porter un
-	 * homonyme.
+	 * Les deux segments désignent le domaine par sa forme CANONIQUE — univers puis
+	 * domaine — parce que `RG-STR-02` rend son identifiant unique au sein de son
+	 * univers seulement : deux univers peuvent en porter un homonyme.
 	 *
 	 * LE REFUS PORTE LE DÉCOMPTE. C'est ce qui distingue `RG-M14-02` d'une simple
-	 * confirmation : l'écran doit dire ce qui sera détruit AVANT que le nom ne
-	 * soit retapé, et le décompte accompagne donc les deux issues.
+	 * confirmation : l'écran doit dire ce qui sera détruit AVANT que le nom ne soit
+	 * retapé, et le décompte accompagne donc les deux issues.
 	 */
 	supprimer: async ({ locals, request }) => {
 		consoleOuverte(locals);
@@ -132,26 +110,20 @@ export const actions: Actions = {
 	/**
 	 * CRÉER UN DOMAINE — `RG-STR-02`, `RG-STR-03`, `RG-STR-06`.
 	 *
-	 * C'EST LE GESTE QUI MANQUAIT AU PRODUIT : aucun domaine ne pouvait naître,
-	 * et sans domaine il n'y a ni dossier, ni note. `creerUnDomaine()` écrit les
-	 * trois choses que la règle exige — le domaine, son dossier racine
-	 * (`RG-STR-03`) et ses modules (`RG-STR-06`) — dans une seule transaction.
+	 * C'EST LE GESTE QUI MANQUAIT AU PRODUIT : aucun domaine ne pouvait naître, et
+	 * sans domaine il n'y a ni dossier, ni note. `creerUnDomaine()` écrit les trois
+	 * choses que la règle exige — le domaine, son dossier racine et ses modules —
+	 * dans une seule transaction.
 	 *
 	 * L'UNIVERS EST DÉSIGNÉ PAR SON IDENTIFIANT, comme partout ailleurs dans la
-	 * console. `#f-univers` porte le NOM d'affichage au gel (`V-28:565`, dont les
-	 * options valent `u.nom`) ; la traduction est faite par la page, sur la table
-	 * du chargeur. Elle l'était auparavant par l'exécutant, qui résolvait sur
-	 * `univers.nom` — le seul geste de la console à ne pas employer la clé, et
-	 * une requête d'enregistrement portait donc deux champs d'univers de régimes
-	 * différents.
+	 * console. `#f-univers` porte le NOM d'affichage au gel ; la traduction est
+	 * faite par la page, sur la table du chargeur.
 	 *
 	 * UNE CLÉ DE MODULE HORS CATALOGUE FAIT REFUSER LE GESTE, ET LE REFUS LA NOMME.
-	 * `modulesRetenus()` filtrait l'inconnue en silence : la création rendait 200
-	 * « possible » et l'écran confirmait une écriture qu'il n'avait pas faite —
-	 * un domaine né sans `dossiers` faisait ensuite rendre 404 à
-	 * `…/dossiers/{domaine}` sans dire pourquoi. Le refus emprunte la forme que ce
-	 * geste rend déjà pour un nom vide ou déjà pris : `fail(400)` sur un verdict
-	 * `saisie-refusee`, une erreur rattachée à son champ.
+	 * `modulesRetenus()` filtrait l'inconnue en silence : la création rendait 200,
+	 * l'écran confirmait une écriture qu'il n'avait pas faite, et un domaine né sans
+	 * `dossiers` faisait ensuite rendre 404 à `…/dossiers/{domaine}` sans dire
+	 * pourquoi.
 	 */
 	creer: async ({ locals, request }) => {
 		consoleOuverte(locals);
@@ -175,12 +147,12 @@ export const actions: Actions = {
 	 * ENREGISTRER UN DOMAINE — `RG-STR-02`, `RG-STR-06`.
 	 *
 	 * LA CIBLE EST DÉSIGNÉE PAR SA FORME CANONIQUE — les deux mêmes segments que
-	 * `?/supprimer`, pour la raison que ce voisin écrit : `RG-STR-02` ne rend
-	 * l'identifiant unique qu'au sein de son univers.
+	 * `?/supprimer` : `RG-STR-02` ne rend l'identifiant unique qu'au sein de son
+	 * univers.
 	 *
-	 * LA LISTE DE MODULES EST ÉPROUVÉE ICI AUSSI. Les deux gestes lisent le même
-	 * champ ; une clé inconnue refusée à la création et acceptée à
-	 * l'enregistrement serait la même perte silencieuse, un geste plus loin.
+	 * LA LISTE DE MODULES EST ÉPROUVÉE ICI AUSSI : une clé inconnue refusée à la
+	 * création et acceptée à l'enregistrement serait la même perte silencieuse, un
+	 * geste plus loin.
 	 */
 	enregistrer: async ({ locals, request }) => {
 		consoleOuverte(locals);
