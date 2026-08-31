@@ -396,6 +396,14 @@ export interface DomaineLisible {
 	readonly nom: string;
 	readonly univers: string;
 	readonly couleur: string;
+	/**
+	 * L'IDENTIFIANT D'ADRESSE DU DOMAINE, ET CELUI DE SON UNIVERS — persistés,
+	 * stables sous les renommages (`RG-M12-11`), et donc les SEULS qui composent
+	 * une adresse qui s'ouvre. Le nom ne le fait pas : slugifié, il rendait 404
+	 * dès le premier renommage.
+	 */
+	readonly identifiant: string;
+	readonly universIdentifiant: string;
 }
 
 /**
@@ -420,7 +428,9 @@ export async function lireLesDomainesLisibles(
 			id: domaines.id,
 			nom: domaines.nom,
 			univers: univers.nom,
-			couleur: domaines.couleur
+			couleur: domaines.couleur,
+			identifiant: domaines.identifiant,
+			universIdentifiant: univers.identifiant
 		})
 		.from(domaines)
 		.innerJoin(univers, eq(univers.id, domaines.universId))
@@ -472,6 +482,8 @@ export function refuserLAdresse(chemin: string): never {
 export interface UniversResolu {
 	readonly id: string;
 	readonly nom: string;
+	/** L'identifiant d'adresse, persisté et stable sous les renommages. */
+	readonly identifiant: string;
 }
 
 /** Un domaine, tel que l'adresse le désigne. */
@@ -482,6 +494,17 @@ export interface DomaineResolu {
 	readonly universNom: string;
 	/** La teinte du domaine — les vues la portent en variable de style. */
 	readonly couleur: string;
+	/**
+	 * LES DEUX IDENTIFIANTS D'ADRESSE, tels que la base les porte.
+	 *
+	 * Ils manquaient, et c'est ce qui faisait recomposer les redirections sur le
+	 * NOM : `identifiant` est persisté et stable sous les renommages
+	 * (`RG-M12-11`), le nom ne l'est pas. Une redirection dérivée du nom rendait
+	 * 404 dès le premier renommage, alors que le domaine venait d'être résolu sur
+	 * ces colonnes-là.
+	 */
+	readonly identifiant: string;
+	readonly universIdentifiant: string;
 }
 
 /** L'univers d'un identifiant d'adresse, ou `null`. */
@@ -490,7 +513,7 @@ export async function lireUniversParIdentifiant(
 	identifiant: string
 ): Promise<UniversResolu | null> {
 	const [ligne] = await base
-		.select({ id: univers.id, nom: univers.nom })
+		.select({ id: univers.id, nom: univers.nom, identifiant: univers.identifiant })
 		.from(univers)
 		.where(eq(univers.identifiant, identifiant));
 	return ligne ?? null;
@@ -515,7 +538,9 @@ export async function lireDomaineParIdentifiants(
 			nom: domaines.nom,
 			couleur: domaines.couleur,
 			universId: univers.id,
-			universNom: univers.nom
+			universNom: univers.nom,
+			identifiant: domaines.identifiant,
+			universIdentifiant: univers.identifiant
 		})
 		.from(domaines)
 		.innerJoin(univers, eq(domaines.universId, univers.id))
