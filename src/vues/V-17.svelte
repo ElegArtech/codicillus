@@ -1,99 +1,33 @@
 <script lang="ts">
 	/**
 	 * V-17 — Éditeur d'une note (registre Référence).
-	 * Routes `/notes/nouvelle` et `/notes/{identifiant}/modifier`
-	 * (`docs/routes.md`, `verif/scenarios/V-17.json`).
+	 * Routes `/notes/nouvelle` et `/notes/{identifiant}/modifier` (`docs/routes.md`).
 	 *
-	 * SIX ÉTATS, UNE FENÊTRE — 6 couples. Les clés sont celles de
-	 * `verif/scenarios/V-17.json`, réextraites de la planche gelée.
+	 * Coquille de forme abrégée ; le lien d'évitement vise `#redaction` avec le
+	 * libellé « Aller à la rédaction » (`ARB-019`).
 	 *
-	 * QUATRE DES SIX ÉTATS RENDENT LE MÊME ÉCRAN, ET C'EST MESURÉ. Le DOM
-	 * stabilisé de `cas-vierge`, `sv-normal`, `sv-erreur` et `doublon` est
-	 * IDENTIQUE À L'OCTET — relevé dans les conditions du banc, planche retirée.
-	 * Les deux leviers qui les distinguent n'ont aucun effet sur l'état de
-	 * départ :
-	 *
-	 *   • `sv` n'est lu qu'à l'INTÉRIEUR de `enregistrer()` (`V-17:2700`), donc
-	 *     jamais tant que rien n'est enregistré ; son écouteur de planche ne fait
-	 *     que retirer un avis d'erreur qui n'existe pas (`V-17:3584-3586`) ;
-	 *   • `c-doublon` déclenche `verifierDoublon()` (`V-17:3583`), qui sort
-	 *     immédiatement quand le titre est vide (`V-17:2763-2765`) — et il l'est, la
-	 *     création étant vierge.
-	 *
-	 * Ils ne sont donc pas lus ici. Ce n'est pas un oubli : les lire pour rendre
-	 * quelque chose serait inventer un écran que la maquette ne montre pas.
-	 * `verif/scenarios/V-17.json` marque déjà `sv-normal` `identiqueA`
-	 * `cas-vierge` ; les deux autres ne le sont pas parce que leur VECTEUR dévie,
-	 * non parce que leur RENDU diverge.
-	 *
-	 * COQUILLE DE FORME ABRÉGÉE — ARB-021, A-1 : barre sans les deux menus
-	 * déroulants, rail écrit au balisage. `<main class="editeur" id="contenu">`
-	 * (ARB-015) ; le lien d'évitement vise `#redaction` avec le libellé « Aller à
-	 * la rédaction » (ARB-019).
-	 *
-	 * LA BARRE D'ÉTAT PASSE PAR `apresContenu` — `ECART-027` É-2, cinquième
-	 * passage du gabarit. V-17 et V-18 sont les deux SEULES maquettes du dépôt à
-	 * porter un nœud après `<main>` : `div.barre-etat`, classe seule, boîte
-	 * `248, 837, 1192, 63` aux douze états des deux vues et aux quatre fenêtres du
-	 * banc, collante (`position: sticky; bottom: 0`, `V-17:1099`). Son absence
-	 * n'est pas sans incidence : elle occupe une place réelle.
+	 * LA BARRE D'ÉTAT PASSE PAR `apresContenu` : V-17 et V-18 sont les deux SEULES
+	 * maquettes du dépôt à porter un nœud après `<main>` — `div.barre-etat`,
+	 * collante (`position: sticky; bottom: 0`, `V-17:1099`). Son absence n'est pas
+	 * sans incidence : elle occupe une place réelle.
 	 *
 	 * TROIS ATTRIBUTS DE DONNÉES HORS GABARIT — `data-vue`, `data-meta` et
-	 * `data-numerote`, portés par `donnees` (ARB-021, A-2). Le premier commande
-	 * `.si-redaction` / `.si-apercu` (`V-17.css:711-712`), le deuxième le
-	 * dépliage des métadonnées sous 980 px (`V-17.css:745`).
+	 * `data-numerote`, portés par `donnees`. Le premier commande `.si-redaction` /
+	 * `.si-apercu` (`V-17.css:711-712`), le deuxième le dépliage des métadonnées
+	 * sous 980 px. LE TROISIÈME NE PRODUIT RIEN, ET LE GEL LE VEUT AINSI : le gel
+	 * le pose sur `div.app#app` (`V-17:1347`) tandis que la règle qui l'exploite
+	 * vise `body` (`V-17:836`). Le poser sur `<body>` CHANGERAIT le rendu.
 	 *
-	 * LE TROISIÈME NE PRODUIT RIEN, ET LE GEL LE VEUT AINSI. Le gel pose
-	 * `data-numerote` sur `div.app#app` (`V-17:1347`) tandis que la règle qui
-	 * l'exploite vise `body` (`V-17:836`) : le sélecteur ne peut pas
-	 * s'appliquer. C'est le constat §7.7 de `docs/releve-vues.md`, et il vaut
-	 * pour cinq maquettes. Le poser sur `<body>` — ce que seule V-03 fait, par
-	 * `attributs_de_corps` — CHANGERAIT le rendu : c'est un comblement, et il
-	 * serait rouge au banc. L'attribut est porté là où le gel le pose, et nulle
-	 * part ailleurs. Même famille que P-3.
+	 * LA HAUTEUR DU CHAMP DE TITRE EST UNE MESURE DU GEL, PAS UN CHOIX : le script
+	 * écrit `titre.style.height = titre.scrollHeight + "px"` (`V-17:3473`), ce qui
+	 * donne 49 px — un `textarea[rows="1"]` en mesure 50,8.
 	 *
-	 * L'ÉTAT `cas-template` OUVRE UN DIALOGUE MODAL, et c'est le BANC qui établit
-	 * la modalité, des deux côtés (ARB-017, `verif/references/protocole-app.json`
-	 * → `revelations` → V-17). L'obligation de la vue est écrite là-bas et se
-	 * borne à ceci : rendre `#dlg-template` avec l'attribut `open`, et rien
-	 * d'autre. `open` n'est pas `showModal()` ; la couche supérieure ne s'atteint
-	 * pas déclarativement, et l'hydratation est du temps 3 (ARB-011).
+	 * L'état `cas-template` rend `#dlg-template` avec l'attribut `open`, et rien
+	 * d'autre : `open` n'est pas `showModal()`, la couche supérieure ne s'atteint
+	 * pas déclarativement.
 	 *
-	 * LA FOCALISATION DE `cas-template` NE PRODUIT AUCUN PIXEL, et c'est mesuré.
-	 * Le gel focalise `button#tpl-vierge.btn--principal` à l'ouverture
-	 * (`docs/releve-vues.md` §6.1). Un bouton focalisé en modalité POINTEUR ne
-	 * déclenche pas `:focus-visible` — seules les cibles `.saisie` et
-	 * `.selecteur` en produisent (§6.2) — et la révélation retire de toute façon
-	 * le focus qu'elle vient de poser. Aucune déclaration `focalisations` n'est
-	 * donc demandée pour V-17.
-	 *
-	 * LA HAUTEUR DU CHAMP DE TITRE EST UNE MESURE DU GEL, PAS UN CHOIX. Le script
-	 * écrit `titre.style.height = titre.scrollHeight + "px"` (`V-17:3473` et `:3574`), ce
-	 * qui donne 49 px aux six états — une ligne, titre vide comme titre rempli.
-	 * Sans cet attribut, un `textarea[rows="1"]` mesure 50,8 px : deux pixels de
-	 * divergence, et le seuil est zéro (ARB-018). `height` n'est pas une
-	 * propriété contrainte par P-1 ; la valeur est relevée au navigateur, dans
-	 * les conditions du banc, jamais estimée.
-	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011). Ni conversion Markdown à la
-	 * frappe, ni menu de commandes, ni auto-complétion de lien interne, ni
-	 * sauvegarde automatique, ni prévisualisation, ni enregistrement. Le
-	 * squelette rend l'état de départ du gel. **CE LOT NE DÉCLARE TENUE AUCUNE
-	 * EXIGENCE D'ÉDITION**, ni `P-09` : les actions d'écriture disparaissent en
-	 * lecture seule par `si-ecriture`, ce qui est le rendu d'un état et non une
-	 * preuve d'étanchéité (`pnpm test:droits`).
-	 *
-	 * NON RENDUS, ET DÉCLARÉS : `div.commandes#commandes`, `div.liens-auto`,
-	 * `dialog#dlg-quitter` fermé, et `dialog#dlg-template` fermé dans les cinq
-	 * états qui ne l'ouvrent pas. `docs/releve-vues.md` §4.1 les mesure un par
-	 * un : un `<dialog>` fermé et un bloc masqué ne portent aucune boîte de
-	 * rendu, ne déplacent aucun pixel et n'entrent pas dans l'instantané ARIA.
-	 * Et `div.planche`, bloc hors produit (`docs/DESIGN.md` §2.G), qui ne se
-	 * porte jamais.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-17.css`, posé par `node verif/feuilles-de-vue.mjs V-17
-	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 * Le style est dans `src/socle.css` et `src/vues/V-17.css` ; les styles en ligne
+	 * sont ceux du gel.
 	 */
 	import { getContext } from 'svelte';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
@@ -113,140 +47,84 @@
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 
-	/* LE NOM DE L'ORGANISATION VIENT DU CONTEXTE, JAMAIS DU PRODUIT.
-	   Cette phrase nommait « la direction technique » en dur — le segment de
-	   marché du cadrage soudé dans une phrase d'écran. Le contrôle du paquet ne
-	   la voyait pas : il comparait à la casse, et la signature qu'il cherchait
-	   s'écrit ici en nom commun. Chaîne vide = l'instance ne s'est pas nommée,
+	/* LE NOM DE L'ORGANISATION VIENT DU CONTEXTE, JAMAIS DU PRODUIT. Cette phrase
+	   nommait « la direction technique » en dur — le segment de marché du cadrage
+	   soudé dans une phrase d'écran. Chaîne vide : l'instance ne s'est pas nommée,
 	   et la phrase retombe sur une formulation qui n'affirme rien. */
 	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
 	const nomOrganisation = $derived(identite?.nomOrganisation ?? '');
 
-	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
-	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
-	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
-	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	/* Le mot renommable de `M14.7`, lu sur le contexte de coquille : en constante,
+	   le renommer en console ne changeait rien a l'ecran. Repli : « Fiche ». */
 	const motsDuProduit = vocabulaireRendu();
 	const motFiche = $derived(motsDuProduit.fiche);
 	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état — trois contrôles de planche. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-17')`, variante « lecture ». */
 		notes: readonly Note[];
 		/**
-		 * LE CONTEXTE — CE QUE LES DEUX ROUTES PASSENT EST REQUIS.
+		 * LE CONTEXTE — CE QUE LES DEUX ROUTES PASSENT EST REQUIS. Cette vue lisait
+		 * `UNIVERS`, `DOMAINES`, `MOI` et `INSTANCE` au niveau du module : l'éditeur
+		 * ouvrait une note vierge dans le domaine d'un compte du jeu.
 		 *
-		 * Cette vue lisait `UNIVERS`, `DOMAINES`, `MOI` et `INSTANCE` au niveau
-		 * du module : l'éditeur ouvrait une note vierge dans le domaine de
-		 * `MOI` — « Bonjour Karim » servi à Sophie Nguyen. Les défauts sont
-		 * ensuite devenus ces mêmes constantes, ce qui n'était que le défaut
-		 * déplacé : une route qui les oubliait servait les maquettes.
+		 * `compte` COMMANDE ICI DAVANTAGE QUE LA PASTILLE : le domaine pré-choisi
+		 * d'une note vierge est celui de l'utilisateur courant (`V-17:3537`), et
+		 * l'arborescence du choix de dossier s'en déduit.
 		 *
-		 * `compte` COMMANDE ICI DAVANTAGE QUE LA PASTILLE : le domaine
-		 * pré-choisi d'une note vierge est celui de l'utilisateur courant
-		 * (`V-17:3537`), et l'arborescence du choix de dossier s'en déduit. Les
-		 * deux routes le passent, il est donc REQUIS.
-		 *
-		 * `univers` reste optionnelle et VIDE : ni l'une ni l'autre ne la passe,
-		 * le contexte de coquille porte le rail. `instance` a disparu — la
-		 * version du produit vient du contexte, lue sur `package.json`.
+		 * `univers` reste optionnelle et VIDE : le contexte de coquille porte le rail.
 		 */
 		univers?: readonly Univers[];
 		domaines: readonly Domaine[];
-		/** L'univers de rattachement du compte, tel que la base le nomme. */
 		universDuCompte: string;
 		/** Les dossiers de chaque domaine, lus en base. `null` : déduits des notes. */
 		dossiersParDomaine: Readonly<Record<string, readonly DossierDeChoix[]>> | null;
 		/**
-		 * LE DOSSIER SUR LEQUEL L'ÉDITEUR S'OUVRE PRÉ-REMPLI — le point
-		 * d'injection que le gel offrait et que le port avait supprimé.
-		 *
-		 * Le gel tient `dossierChoisi` en variable de module assignable
-		 * (`V-17:2638`) et redessine l'arborescence par `rendreDossiers(domaine,
-		 * garderChoix)` (`V-17:2804`) : une entrée extérieure pouvait donc cocher
-		 * un dossier. Le port l'avait durcie en valeur dérivée, nulle hors du cas
-		 * `modif` : en création, AUCUN dossier ne pouvait être coché, et la
-		 * promesse de V-13 — « nouvelle note DANS CE DOSSIER » — était intenable.
-		 *
-		 * La valeur est le chemin AFFICHÉ, celui que `Note.dossier` porte et que
-		 * le rendu compare pour cocher son bouton radio. Absente, le rendu ne
-		 * bouge pas d'un octet : la vue reprend l'amorce qu'elle avait.
+		 * LE DOSSIER SUR LEQUEL L'ÉDITEUR S'OUVRE PRÉ-REMPLI — le point d'injection que
+		 * le gel offre (`dossierChoisi` assignable, `V-17:2638`) et que le port avait
+		 * supprimé en le durcissant en valeur dérivée : en création, AUCUN dossier ne
+		 * pouvait être coché, et la promesse de V-13 — « nouvelle note DANS CE
+		 * DOSSIER » — était intenable. La valeur est le chemin AFFICHÉ, celui que
+		 * `Note.dossier` porte et que le rendu compare pour cocher son bouton radio.
 		 */
 		dossierDeDepart?: string | null;
 		compte: CompteAffiche;
 		/**
-		 * LES TROIS RÉFÉRENTIELS DE SAISIE — les types de note, les types de
-		 * fiche et les gabarits que l'éditeur propose. Ils sont administrables
-		 * (M14), donc propres à l'instance : les deux routes les lisent en base
-		 * et les passent, ils sont REQUIS. Leur défaut était le jeu de
-		 * démonstration.
+		 * LES TROIS RÉFÉRENTIELS DE SAISIE — types de note, types de fiche et gabarits.
+		 * Ils sont administrables (`M14`), donc propres à l'instance : les deux routes
+		 * les lisent en base et les passent. Leur défaut était le jeu de démonstration.
 		 */
 		typesNote: readonly TypeDeNote[];
 		typesFiche: Record<TypeDeFiche, readonly ChampDeFiche[]>;
 		templates: readonly Template[];
 		/**
-		 * LA NOTE REPRISE EN MODIFICATION — `n-planifier-sauv`, que le gel nomme
-		 * lui-même (`V-17:3549`) et que la vue lisait au corpus AU NIVEAU DU
-		 * MODULE : `/notes/{identifiant}/modifier` rouvrait donc toujours la
-		 * même note, quelle que fût l'adresse.
-		 *
-		 * Tout ce que l'écran en montre HORS DU CORPS — titre, type, domaine,
-		 * dossier, étiquettes — sort du type `Note` ; le corps, lui, a désormais
-		 * sa propre propriété, `corps`.
-		 *
-		 * ABSENTE, IL N'Y A PAS DE NOTE REPRISE — c'est le cas de la création.
-		 * Son repli était `n-planifier-sauv`, la note que le gel nomme.
+		 * LA NOTE REPRISE EN MODIFICATION. La vue la lisait au corpus AU NIVEAU DU
+		 * MODULE : `/notes/{identifiant}/modifier` rouvrait donc toujours la même note,
+		 * quelle que fût l'adresse. Tout ce que l'écran en montre HORS DU CORPS sort du
+		 * type `Note` ; le corps a sa propre propriété. Absente, il n'y a pas de note
+		 * reprise — c'est le cas de la création.
 		 */
 		noteModifiee?: Note | undefined;
 		/**
-		 * LE CORPS RÉDIGÉ, EN HTML — ET C'ÉTAIT LE DÉFAUT LE PLUS VISIBLE DE LA
-		 * VUE.
+		 * LE CORPS RÉDIGÉ, EN HTML. La zone de rédaction recevait, en modification, un
+		 * SNIPPET ÉCRIT ICI : les sections d'une procédure de démonstration, servies
+		 * pour n'importe quelle note ouverte. Le câblage le remplaçait au montage, d'où
+		 * un flash à chaque chargement — et un contenu PERMANENT sans JavaScript.
 		 *
-		 * La zone de rédaction recevait, en modification, un SNIPPET ÉCRIT ICI :
-		 * l'extrait de la note suivi des sections d'une procédure de
-		 * démonstration — « Déclarer le serveur », « Vérifier le premier
-		 * passage » — qui n'avaient rien à voir avec la note ouverte. Le vecteur
-		 * `cas: 'modif'` étant posé par le chargeur sur TOUTE modification,
-		 * ouvrir n'importe quelle note affichait ce corps-là. Le câblage le
-		 * remplaçait au montage, ce qui en faisait un flash à chaque
-		 * chargement — et un contenu PERMANENT sans JavaScript, servi tel quel
-		 * dans le source de la page et dans les deux paquets.
+		 * C'est le HTML de `rendreDocument` (`ADR-004`), lu par la route sur le corps
+		 * de la note : le même document que l'éditeur ouvrira ensuite.
 		 *
-		 * C'est le HTML de `rendreDocument` (`ADR-004`), lu par la route sur le
-		 * corps de la note : `edition.lecture.corps.html`. Le même document que
-		 * l'éditeur ouvrira ensuite, donc le même texte avant et après montage.
-		 *
-		 * CHAÎNE VIDE : IL N'Y A RIEN À ÉDITER — la création d'une note vierge,
-		 * et une note dont le registre Référence ne porte pas de texte. Le
-		 * second cas est le cas ORDINAIRE d'une note créée par le produit :
-		 * `creerUneNote()` n'écrit jamais NULL, mais `corpsVide()`, un
-		 * paragraphe sans texte. La route sert donc la chaîne vide sur
-		 * `redige`, jamais sur `existe` — sur `existe`, elle servait `<p></p>`
-		 * et la zone se déclarait NON vide. La zone se signale alors vide et
-		 * rend son invite, ce qui est exactement l'état que le gel montre à la
-		 * création.
-		 *
-		 * REQUISE : les deux routes qui montent cette vue la passent, et une
-		 * troisième qui l'oublierait ne compilerait plus.
+		 * CHAÎNE VIDE : IL N'Y A RIEN À ÉDITER. C'est le cas ORDINAIRE d'une note créée
+		 * par le produit — `creerUneNote()` n'écrit jamais NULL mais `corpsVide()`, un
+		 * paragraphe sans texte : servi tel quel, la zone se déclarait NON vide. REQUISE.
 		 */
 		corps: string;
 		/**
-		 * L'ANCIENNETÉ DU DERNIER ENREGISTREMENT, quand la route la connaît.
-		 *
-		 * La barre d'état écrivait « dernière version il y a 3 semaines » sur
-		 * n'importe quelle note : la chaîne du gel, figée, donc une valeur
-		 * illustrative sur une note réelle — ce que `P-02` proscrit.
-		 *
-		 * Les deux phrases restent celles du gel, et il n'en existe pas de
-		 * troisième :
-		 *
-		 *   un nombre  « Enregistré · dernière version il y a N jours »
-		 *   `null`     « Aucune modification » — la note n'a aucune version, et
-		 *              c'est exactement ce que cette phrase dit
-		 *
-		 * ABSENTE — la création d'une note vierge —, il n'y a rien à dater.
+		 * L'ANCIENNETÉ DU DERNIER ENREGISTREMENT, quand la route la connaît. La barre
+		 * d'état écrivait « dernière version il y a 3 semaines » sur n'importe quelle
+		 * note — la chaîne du gel, figée. Les deux phrases restent celles du gel : un
+		 * nombre donne « Enregistré · dernière version il y a N jours », `null` donne
+		 * « Aucune modification ». Absente, il n'y a rien à dater.
 		 */
 		dernierEnregistrement?: number | null;
 	}
@@ -257,7 +135,7 @@
 		univers = [],
 		domaines,
 		universDuCompte,
-		/* L'ARBORESCENCE DE CHOIX, SERVIE PAR LA ROUTE DEPUIS LA TABLE `dossiers`.
+		/* L'arborescence de choix, servie par la route depuis la table `dossiers`.
 		   `null`, elle se déduit des chemins des notes servies. */
 		dossiersParDomaine,
 		/* LE DOSSIER DE DÉPART, SERVI PAR LA ROUTE DEPUIS `?dossier=`. */
@@ -267,14 +145,11 @@
 		typesFiche,
 		templates,
 		noteModifiee = undefined,
-		/* LE CORPS RÉDIGÉ, SERVI PAR LA ROUTE. Vide, la zone de rédaction est
-		   vide et se signale telle. */
+		/* Le corps rédigé, servi par la route. Vide, la zone est vide et se signale telle. */
 		corps,
-		/* L'ANCIENNETÉ DU DERNIER ENREGISTREMENT. `null` par défaut, et la barre
-		   dit alors « Aucune modification ». Elle se lisait à défaut dans une
-		   TABLE du gel — `modificationsPourVue('V-17')`, l'ancienneté des
-		   trente-deux notes de démonstration —, et la propriété a disparu avec
-		   elle : la seule route qui montre une note reprise sert la vraie. */
+		/* L'ancienneté du dernier enregistrement. `null` par défaut, et la barre dit
+		   alors « Aucune modification ». Elle se lisait à défaut dans une TABLE du gel,
+		   l'ancienneté des trente-deux notes de démonstration. */
 		dernierEnregistrement = null
 	}: Proprietes = $props();
 
@@ -287,36 +162,25 @@
 
 	const titre = $derived(cas === 'modif' ? (noteModifiee?.titre ?? '') : '');
 	const typeChoisi = $derived(cas === 'modif' ? (noteModifiee?.type ?? 'Procédure') : 'Procédure');
-	/* LE DOMAINE VIF — celui que le sélecteur porte MAINTENANT, et non plus le
-	   seul domaine de la note reprise. Sans lui, changer de domaine ne changeait
-	   pas l'arbre des dossiers : le seul dossier cochable restait celui du
-	   domaine qu'on quitte, et l'enregistrement sortait en 400 « Choisissez un
-	   dossier de rangement. » — déplacer une note était impossible depuis
-	   l'écran. L'aide du champ promet l'inverse : « Changer de domaine
-	   réinitialise le dossier. » */
+	/* LE DOMAINE VIF — celui que le sélecteur porte MAINTENANT. Sans lui, changer de
+	   domaine ne changeait pas l'arbre des dossiers : le seul dossier cochable
+	   restait celui du domaine qu'on quitte, et l'enregistrement sortait en 400
+	   « Choisissez un dossier de rangement. » L'aide du champ promet l'inverse :
+	   « Changer de domaine réinitialise le dossier. » */
 	let domaineVif = $state<string | null>(null);
 	const domaineDeDepart = $derived(
 		cas === 'modif' ? (noteModifiee?.domaine ?? '') : compte.domaine
 	);
 	const domaineChoisi = $derived(domaineVif ?? domaineDeDepart);
-	/** L'univers du domaine choisi, tel que la liste servie le nomme. */
 	const universDuDomaineChoisi = $derived(
 		domaines.find((d) => d.nom === domaineChoisi)?.univers ?? universDuCompte
 	);
 	/* Le dossier repris ne vaut que dans SON domaine : on en sort, il tombe.
-
 	   UN DOSSIER VIDE DÉSIGNE LA RACINE, et c'est un chemin, pas une absence.
-	   `Note.dossier` ne porte que les segments SOUS la racine ; une note rangée
-	   dans la racine du domaine en a donc zéro. L'arborescence, elle, offre cette
-	   racine sous le nom du domaine — c'est ce que la soumission doit envoyer, et
-	   ce que la résolution d'écriture retire en tête. Sans cette équivalence,
-	   AUCUN dossier n'était coché à l'ouverture, la soumission partait sans
-	   dossier et l'enregistrement rendait `400 rangement incomplet` : modifier
-	   une note était impossible sur toute base où les notes sont à la racine.
-
-	   L'AMORCE DU CHOIX est donc le dossier de départ que la route sert, à défaut
-	   celui de la note reprise. `garderChoix` du gel ne vaut vrai qu'au cas
-	   `modif` (`V-17:3554`), d'où la condition sur `cas`. */
+	   `Note.dossier` ne porte que les segments SOUS la racine ; l'arborescence, elle,
+	   offre cette racine sous le nom du domaine. Sans cette équivalence, aucun
+	   dossier n'était coché à l'ouverture et l'enregistrement rendait `400 rangement
+	   incomplet`. `garderChoix` du gel ne vaut vrai qu'au cas `modif` (`V-17:3554`). */
 	const dossierAmorce = $derived(
 		dossierDeDepart ??
 			(cas === 'modif' && domaineChoisi === domaineDeDepart
@@ -325,15 +189,9 @@
 					: noteModifiee.dossier || domaineDeDepart
 				: null)
 	);
-	/* LE CHOIX VIF — assignable, comme au gel, et c'est tout le défaut réparé.
-
-	   `dossierChoisi` était une valeur DÉRIVÉE, nulle hors du cas `modif` : en
-	   création aucun bouton radio n'était jamais coché, et RIEN NE POUVAIT LE
-	   CHANGER — ni une propriété, ni un geste. Le gel, lui, tient la même
-	   variable assignable (`V-17:2638`) et redessine l'arborescence en gardant ou
-	   non le choix (`rendreDossiers(domaine, garderChoix)`, `V-17:2804`) : c'est
-	   ce point d'injection que le port avait supprimé.
-
+	/* LE CHOIX VIF — assignable, comme au gel. `dossierChoisi` était une valeur
+	   DÉRIVÉE, nulle hors du cas `modif` : en création aucun bouton radio n'était
+	   jamais coché, et RIEN NE POUVAIT LE CHANGER.
 	   `undefined` dit « rien d'écarté ni de choisi depuis l'ouverture » et laisse
 	   l'amorce parler ; changer de domaine y pose `null`, ce qui décoche tout. */
 	let choixVifDeDossier = $state<string | null | undefined>(undefined);
@@ -344,14 +202,10 @@
 
 	/**
 	 * L'ARBORESCENCE DU CHOIX DE DOSSIER — `window.dossiersDuDomaine`,
-	 * `V-17:2247`. Elle se déduit du rangement des notes, et elle N'EST PAS celle
-	 * du rail : le gel la construit dans l'ORDRE DE RENCONTRE des notes du corpus
-	 * et compte, pour chaque dossier, les notes de son chemin terminal. La
-	 * dérivation du rail (`$lib/coquille/arborescence.ts`) trie par ordre
-	 * alphabétique français et ne compte rien — la reprendre ici rendrait
-	 * « Applications, Exploitation, Supervision » là où le gel rend
-	 * « Exploitation, Applications, Supervision ». Deux dérivations, deux objets :
-	 * ce n'est pas un doublon, et le vérifier était la question à trancher.
+	 * `V-17:2247`. Elle N'EST PAS celle du rail : le gel la construit dans l'ORDRE
+	 * DE RENCONTRE des notes et compte, pour chaque dossier, les notes de son chemin
+	 * terminal, là où la dérivation du rail trie alphabétiquement et ne compte rien.
+	 * Deux dérivations, deux objets — ce n'est pas un doublon.
 	 */
 	interface DossierDeChoix {
 		readonly nom: string;
@@ -359,7 +213,6 @@
 		readonly enfants: readonly DossierDeChoix[];
 	}
 
-	/** Le même nœud, le temps de la construction — le décompte s'y incrémente. */
 	interface DossierEnConstruction {
 		readonly nom: string;
 		notes: number;
@@ -399,14 +252,11 @@
 			: 'Aucune modification'
 	);
 
-	/* LE FIL D'ARIANE ET LE CHEMIN COURANT DU RAIL — `coquille({…})`, `V-17:3568`.
-
-	   UN SEGMENT VIDE N'EST PAS UN RANGEMENT. Sur une instance à zéro domaine,
-	   `universDuDomaineChoisi` et `domaineChoisi` valent tous deux la chaîne
-	   vide, et `adressesDuFil()` de la coquille lisait quand même les rangs 1 et
-	   2 comme un univers et un domaine : le fil offrait deux liens vers des
-	   adresses de rangement qui n'existent pas. Sans rangement connu, le fil ne
-	   porte que l'accueil et la page courante. */
+	/* Le fil d'Ariane et le chemin courant du rail — `coquille({…})`, `V-17:3568`.
+	   UN SEGMENT VIDE N'EST PAS UN RANGEMENT : sur une instance à zéro domaine, les
+	   deux valent la chaîne vide et `adressesDuFil()` lisait quand même les rangs 1
+	   et 2 comme un univers et un domaine — deux liens vers des adresses qui
+	   n'existent pas. */
 	const rangementConnu = $derived(universDuDomaineChoisi !== '' && domaineChoisi !== '');
 	const fil = $derived([
 		'Accueil',
@@ -417,11 +267,9 @@
 
 <!--
 	L'ARBORESCENCE DU CHOIX DE DOSSIER, rendue par un snippet récursif : le gel
-	l'écrit par une fonction récursive (`parcourir`, `V-17:2810`), et la
-	profondeur du rangement va jusqu'à dix niveaux.
-
-	Le chemin porte le séparateur ` › ` du corpus, parce que c'est LUI qui décide
-	quel bouton radio est coché : `r.checked = dossierChoisi === chemin`
+	l'écrit par une fonction récursive (`parcourir`, `V-17:2810`), et la profondeur
+	du rangement va jusqu'à dix niveaux. Le chemin porte le séparateur ` › ` du
+	corpus, parce que c'est LUI qui décide quel bouton radio est coché
 	(`V-17:2819`).
 -->
 {#snippet niveauDeDossiers(noeuds: readonly DossierDeChoix[], prefixe: string)}
@@ -442,10 +290,9 @@
 
 <!--
 	Le contenu du bouton principal de la barre d'état. Il vit ICI, et non dans
-	`$lib/edition/`, parce qu'il porte un style en ligne — `margin-left:4px`, une
-	propriété contrainte par P-1.2 — et qu'un style en ligne n'est prouvé que par
-	la maquette rattachée au fichier (ARB-016, P-6.4). Même jurisprudence que le
-	séparateur `›` de V-14.
+	`$lib/edition/`, parce qu'il porte un style en ligne — `margin-left:4px` — et
+	qu'un style en ligne n'est prouvé que par la maquette rattachée au fichier
+	(`ARB-016`). Même jurisprudence que le séparateur `›` de V-14.
 -->
 {#snippet boutonEnregistrer()}<span id="enregistrer-txt"
 		>{cas === 'modif' ? 'Enregistrer les modifications' : 'Enregistrer'}</span
@@ -453,29 +300,24 @@
 	<kbd class="touche" style="margin-left:4px">Ctrl</kbd><kbd class="touche">S</kbd>{/snippet}
 
 <!--
-	LE CORPS REPRIS EN MODIFICATION — celui de LA NOTE OUVERTE, et rien d'autre.
+	LE CORPS REPRIS EN MODIFICATION — celui de LA NOTE OUVERTE, et rien d'autre. Ce
+	bloc portait le corps de la note de démonstration, écrit au balisage ; il vient
+	de la propriété `corps`, rendue par `rendreDocument` (`ADR-004`).
 
-	Ce bloc portait le corps de la note de démonstration, écrit au balisage :
-	l'extrait de la note suivi des sections d'une procédure qui n'était pas la
-	sienne. Il vient désormais de la propriété `corps`, rendue par
-	`rendreDocument` (ADR-004) sur le document que la base porte.
+	POURQUOI L'INSERTION DE BALISAGE EST ADMISE ICI : la règle vise le contenu NON
+	MAÎTRISÉ, et celui-ci est la sortie de `rendreDocument`, dont chaque nœud de
+	texte est passé par `echapper()` et dont le schéma refuse tout document invalide
+	avant le rendu (`ADR-003`).
 
-	POURQUOI L'INSERTION DE BALISAGE EST ADMISE ICI. La règle vise le contenu
-	NON MAÎTRISÉ ; celui-ci est la sortie de `rendreDocument`, dont chaque nœud
-	de texte est passé par `echapper()` et dont le schéma refuse tout document
-	invalide avant le rendu (ADR-003). Même jurisprudence que
-	`$lib/lecture/NoteDeDemonstration.svelte`.
-
-	AUCUN BLANC ENTRE LE SNIPPET ET SON CONTENU : la zone de rédaction est un
-	nœud modifiable, et un blanc inséré s'y relit comme du texte.
+	AUCUN BLANC ENTRE LE SNIPPET ET SON CONTENU : la zone de rédaction est un nœud
+	modifiable, et un blanc inséré s'y relit comme du texte.
 -->
 <!-- eslint-disable-next-line svelte/no-at-html-tags -- sortie de `rendreDocument`, texte échappé par `echapper()` (ADR-003) -->
 {#snippet corpsRedige()}{@html corps}{/snippet}
 
 {#snippet dialogueTemplate()}
-	<!-- ============================ Sélecteur de template ============================
-			Rendu OUVERT par l'attribut `open`, et rien d'autre : c'est le banc qui
-			établit la modalité, des deux côtés (ARB-017). -->
+	<!-- Sélecteur de template — rendu OUVERT par l'attribut `open`, et rien
+			d'autre. -->
 	<dialog class="dlg dlg--large" id="dlg-template" aria-labelledby="dlg-tpl-titre" open>
 		<div class="dlg__boite">
 			<div class="dlg__tete">
@@ -493,8 +335,8 @@
 				<h2 class="dlg__titre" id="dlg-tpl-titre">Par quoi commencer&nbsp;?</h2>
 			</div>
 			<div class="dlg__corps">
-				<!-- La page vierge est proposée en premier et avec le même poids visuel
-						que les templates : le template est subsidiaire, jamais imposé. -->
+				<!-- La page vierge est proposée en premier et avec le même poids visuel que
+						les templates : le template est subsidiaire, jamais imposé. -->
 				<button
 					class="btn btn--principal"
 					id="tpl-vierge"
@@ -554,9 +396,8 @@
 >
 	{#snippet enfants()}
 		<div class="colonne-redaction">
-			<!-- ---------- Avertissements ----------
-				Vide aux six états : les deux avis de V-17 — échec d'enregistrement et
-				doublon détecté — ne se posent qu'après un geste (`V-17:2755` et `:2763`). -->
+			<!-- Avertissements — vides à l'ouverture : les deux avis de V-17, échec
+				d'enregistrement et doublon détecté, ne se posent qu'après un geste. -->
 			<div id="avis"></div>
 
 			<BandeauApercu
@@ -900,13 +741,10 @@
 						<button type="button" data-bloc="diagramme" role="menuitem">Diagramme</button>
 						<!--
 							LES DEUX RACCOURCIS DE FRAPPE NE SONT PAS ANNONCÉS, PARCE QU'ILS
-							N'EXISTENT PAS. Le gel affichait « [[ » sur le lien interne et une
-							entrée « Menu de commandes / » ; aucune règle de frappe n'est
-							posée dans `$lib/edition` — ni « / » sur une ligne vide, ni « [[ »
-							—, et l'entrée « / » était la seule du menu sans commande : la
-							délégation ne branche que `data-cmd`, `data-bloc` et `data-mark`,
-							et le clic ne faisait que refermer le menu. Une promesse morte
-							vaut moins que rien : c'est le menu qui insère ces blocs.
+							N'EXISTENT PAS : aucune règle de frappe n'est posée dans `$lib/edition`
+							— ni « / » sur une ligne vide, ni « [[ » —, et la délégation ne branche
+							que `data-cmd`, `data-bloc` et `data-mark`. C'est le menu qui insère ces
+							blocs.
 						-->
 						<button type="button" data-bloc="lien-interne" role="menuitem">Lien interne</button>
 					</div>

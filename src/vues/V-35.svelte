@@ -3,82 +3,33 @@
 	 * V-35 — Console · Imports. Routes `/console/imports` et
 	 * `/console/imports/{lot}` (`docs/routes.md`).
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * V-35 N'A PAS DE PLANCHE DE REVUE — SES QUATRE ÉTATS SONT DES ZONES
+	 * `#dlg-rapport` s'obtient PAR L'ADRESSE, et le dialogue porte `open` — `open`
+	 * n'est pas `showModal()`, et la couche supérieure ne s'atteint pas
+	 * déclarativement.
 	 *
-	 * `verif/scenarios/V-35.json` porte `"planche": false` et quatre états de
-	 * ZONE : `#depot`, `#scenarios`, `.tableau-gestion`, `#dlg-rapport`. Le
-	 * protocole est `page-entiere-zone-isolee` (ARB-014,
-	 * `verif/references/protocole-app.json` → `etats_de_zone`) : l'application
-	 * rend LA PAGE ENTIÈRE à la route de conception du banc, et le banc y découpe la
-	 * même zone que du côté maquette, par le même sélecteur et le même rang.
-	 * La clé d'état ne change donc rien à trois des quatre écrans — elle nomme
-	 * ce qui sera mesuré.
-	 *
-	 * LE QUATRIÈME EST UN ÉTAT À DÉCLENCHEUR, ET C'EST LE SEUL DU PÉRIMÈTRE.
-	 * Côté maquette, `#dlg-rapport` ne s'ouvre qu'après le clic que le banc
-	 * livre sur `#journal .tg__actions button` — le PREMIER, donc la première
-	 * entrée de `JOURNAL_IMPORTS`. Côté application, l'état s'obtient PAR
-	 * L'ADRESSE : c'est la substitution même du régime « app ». Le rapport est
-	 * donc rendu, et le dialogue porte `open`.
-	 *
-	 * `open` N'EST PAS `showModal()`, ET CE N'EST PAS À LA VUE DE LE COMBLER.
-	 * V-35 est déclarée révélable — `modalite-dialogue`, ARB-017 — et le banc
-	 * établit la modalité DES DEUX CÔTÉS, par un code unique
-	 * (le module de révélation du banc). Écrire un script qui appellerait
-	 * `showModal()` contredirait ARB-011 et serait un comblement : la couche
-	 * supérieure ne s'atteint pas déclarativement, et l'instrument s'adapte au
-	 * régime de la phase. La vue rend l'attribut, rien de plus.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LE TABLEAU DE GESTION — LA SEULE EXCEPTION DE CE LOT
-	 *
-	 * Des trois cercles plus étroits que le relevé mesure autour du motif
-	 * commun des dix (`docs/releve-vues.md` §8.2, `ECART-024`), V-35 n'hérite
-	 * QUE du tableau de gestion : `tableau-gestion`, `tg`, `tg--entetes`,
-	 * `tg--ligne`, `tg--masquable`, `tg__actions`, `tg__n` — sept classes sur
-	 * sept vues. Le MODIFICATEUR de grille, lui, est propre à la vue :
+	 * LE TABLEAU DE GESTION EST LA SEULE PART DU MOTIF COMMUN dont V-35 hérite :
+	 * `tableau-gestion`, `tg`, `tg--entetes`, `tg--ligne`, `tg--masquable`,
+	 * `tg__actions`, `tg__n`. Le MODIFICATEUR de grille est propre à la vue —
 	 * `tg--imports`. Ni panneau `tiroir-form`, ni `data-form`, ni refus de
-	 * suppression : V-35 n'en a aucun, et il n'en est écrit aucun.
+	 * suppression : V-35 n'en a aucun.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LES DONNÉES VIENNENT DU CHARGEUR, JAMAIS DU JEU
-	 *
-	 * Le journal est la propriété `journalImports`, EXIGÉE : elle retombait sur
+	 * LES DONNÉES VIENNENT DU CHARGEUR, JAMAIS DU JEU. Le journal retombait sur
 	 * `JOURNAL_IMPORTS` de `seeds/corpus.ts` — quatre entrées datées, avec leurs
-	 * auteurs et leurs décomptes —, servies comme des imports passés de
-	 * l'instance. Les fichiers en échec nommés au rapport sont ceux de
-	 * `lotImport`, dont le défaut est `null` : sans lot, aucun fichier n'est
-	 * nommé. La mécanique du gel reste la même (`V-35:3127`) :
-	 * `fichiers.filter(f => f.s === "echec").slice(0, i.echecs)`.
+	 * auteurs et leurs décomptes — servies comme des imports passés de l'instance.
+	 * Les fichiers en échec nommés au rapport sont ceux de `lotImport`, dont le
+	 * défaut est `null`. La mécanique du gel reste la même (`V-35:3127`).
 	 *
 	 * LES SCÉNARIOS SONT UN LITTÉRAL DU GEL (`V-35:2966`) : nom et sous-titre
-	 * d'accès direct, que `seeds/corpus.ts` ne porte pas. Ils sont recopiés tels
-	 * quels et déclarés, jamais fabriqués — la même situation que le compteur
-	 * d'imports de `sections.ts`. Le gel en porte trois ; SEUL CELUI QUE L'IMPORT
-	 * EXÉCUTE EST OFFERT, et le filtre lit `$lib/donnees/scenarios-d-import.ts`.
+	 * d'accès direct, que la donnée ne porte pas. Le gel en porte trois ; SEUL CELUI
+	 * QUE L'IMPORT EXÉCUTE EST OFFERT, et le filtre lit
+	 * `$lib/donnees/scenarios-d-import.ts`.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * AUCUN COMPORTEMENT (ARB-011). Le dépôt de fichiers pose `data-survol` au
-	 * survol d'un glisser-déposer et rien au repos ; `#parcourir`, les
-	 * scénarios et les boutons « Rapport » n'appellent que `notifier()`. Rien
-	 * n'est écrit ici. `div.notifs` est rendu vide.
+	 * Coquille de forme abrégée, enveloppe `div.console`. `div.app` ne porte au gel
+	 * que `data-rail` et `data-role` (`V-35:1145`). `dialog#dlg-rapport` vit HORS de
+	 * `div.app`, entre elle et `div.notifs` — la propriété `superposition` du
+	 * gabarit, et l'emplacement exact du gel.
 	 *
-	 * LA COQUILLE : forme ABRÉGÉE (ARB-021), enveloppe `div.console` (ARB-023),
-	 * treize classes du motif commun portées par `$lib/console/` (R-2).
-	 * `div.app` ne porte au gel que `data-rail` et `data-role` (`V-35:1145`).
-	 * `dialog#dlg-rapport` vit HORS de `div.app`, entre elle et `div.notifs` —
-	 * c'est la propriété `superposition` du gabarit (ARB-021, A-4), et c'est
-	 * l'emplacement exact du gel. L'hôte de palette de V-09 n'est pas rendu
-	 * (`docs/releve-vues.md` §4.1).
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * CE QUE CE COMPOSANT NE PROUVE PAS. Il rend un ÉTAT DE MAQUETTE. Ni
-	 * `P-09`, ni `P-02`, ni `RG-M15-03` ne sont déclarées tenues par ce lot.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-35.css` (P-6.3). Les `style=` reproduits figurent tous à
-	 * l'ensemble clos du gel de V-35 (ARB-016).
+	 * Le style est dans `src/socle.css` et `src/vues/V-35.css`.
 	 */
 	import type { EntreeDeJournalDImport, LotDImport, Note } from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
@@ -87,16 +38,12 @@
 	import { accord } from '$lib/vocabulaire';
 
 	interface Proprietes {
-		/** La clé de l'état demandé — elle nomme la zone que le banc découpera. */
 		etat?: string;
-		/** Les notes de l'instance, servies par le chargeur. */
 		notes: readonly Note[];
 		/**
-		 * CE QUE LA VUE FAIT QUAND UN SCÉNARIO EST CHOISI.
-		 *
-		 * Le gel l'annonce lui-même : le clic mène au « Parcours d'import, scénario
-		 * "X" — vue V-24 » (`mockups/V-35-console-imports.html:2984`). La vue ne
-		 * décide pas où cela mène ; la page le sait.
+		 * CE QUE LA VUE FAIT QUAND UN SCÉNARIO EST CHOISI. Le gel l'annonce lui-même :
+		 * le clic mène au « Parcours d'import, scénario "X" — vue V-24 »
+		 * (`mockups/V-35-console-imports.html:2984`). La page sait où cela mène.
 		 */
 		onScenario?: (scenario: string) => void;
 		/**
@@ -106,50 +53,38 @@
 		 */
 		onOuvrirLeDomaine?: (domaine: string) => void;
 		/**
-		 * LE DERNIER LOT DÉPOSÉ, OU AUCUN — ÉTAT VIDE EXPLICITE.
-		 *
-		 * La propriété retombait sur `LOT_IMPORT` du jeu de démonstration : ses
-		 * fichiers en échec, avec leurs noms et leurs causes, étaient nommés au
-		 * rapport d'un lot qui n'avait jamais eu lieu. Aucune table ne porte de
-		 * lot (`MESURES_DE_CONSOLE_SANS_CONTREPARTIE`), et `/console/imports` ne
-		 * la passe pas : le défaut est `null`, et sans lot il n'y a aucun fichier
-		 * à nommer.
+		 * LE DERNIER LOT DÉPOSÉ, OU AUCUN — ÉTAT VIDE EXPLICITE. La propriété
+		 * retombait sur `LOT_IMPORT` du jeu de démonstration : ses fichiers en échec,
+		 * avec leurs noms et leurs causes, étaient nommés au rapport d'un lot qui
+		 * n'avait jamais eu lieu. Aucune table ne porte de lot.
 		 */
 		lotImport?: LotDImport | null;
 		/**
-		 * LE JOURNAL DES IMPORTS, EXIGÉ.
-		 *
-		 * Il retombait sur `JOURNAL_IMPORTS` du jeu de démonstration — quatre lots
-		 * datés, leurs auteurs, leurs décomptes — sur l'écran de traçabilité même.
-		 * `/console/imports` le passe (vide, faute de table) : exigé, une route
-		 * qui l'oublierait ne compilerait plus.
+		 * LE JOURNAL DES IMPORTS, EXIGÉ. Il retombait sur `JOURNAL_IMPORTS` du jeu de
+		 * démonstration — quatre lots datés, leurs auteurs, leurs décomptes — sur
+		 * l'écran de traçabilité même. `/console/imports` le passe, vide faute de table.
 		 */
 		journalImports: readonly EntreeDeJournalDImport[];
 		/**
-		 * LE JOURNAL EST-IL ENREGISTRÉ QUELQUE PART ?
+		 * LE JOURNAL EST-IL ENREGISTRÉ QUELQUE PART ? Le gel affirme que « les rapports
+		 * restent consultables indéfiniment » ; aucune table du schéma ne garde
+		 * d'import, l'entrée est composée à chaque lot puis écrite au journal
+		 * d'application, et personne ne la relit. Servie vide sous cette phrase, la
+		 * table laissait croire qu'aucun import n'avait eu lieu — là où la vérité est
+		 * que rien n'est conservé.
 		 *
-		 * Le gel affirme que « les rapports restent consultables indéfiniment » et
-		 * que « chaque lot conserve son rapport ». Aucune table du schéma ne garde
-		 * d'import : l'entrée est composée à chaque lot puis écrite au journal
-		 * d'application, et personne ne la relit. Servie vide sous ces deux
-		 * phrases, la table laissait croire qu'aucun import n'avait eu lieu — là
-		 * où la vérité est que rien n'est conservé.
-		 *
-		 * `true` PAR DÉFAUT : le rendu du jeu de semence ne bouge pas, et le jour
-		 * où une table portera les lots, le chargeur cessera de passer `false`.
 		 * Le drapeau est DÉRIVÉ du recensement des mesures sans contrepartie —
-		 * `journalDImportsEnregistre()` de `$lib/donnees/consoles.ts` —, jamais
-		 * décidé ici : c'est le geste que `etatDesDonnees()` fait pour V-34.
+		 * `journalDImportsEnregistre()` de `$lib/donnees/consoles.ts` —, jamais décidé
+		 * ici : c'est le geste qu'`etatDesDonnees()` fait pour V-34.
 		 */
 		journalEnregistre?: boolean;
 	}
 
 	/*
 	 * LE RAIL, LA BARRE ET LA VERSION NE PASSENT PLUS PAR ICI. Cette vue portait
-	 * `univers`, `domaines`, `compte` et `instance` sans jamais les lire : elle
-	 * ne faisait que les remettre à `CoquilleDeConsole`, qui retombait sur le jeu
-	 * de démonstration. La coquille lit désormais le contexte d'identité, seule
-	 * source, et les quatre propriétés ont disparu des deux côtés.
+	 * `univers`, `domaines`, `compte` et `instance` sans jamais les lire : elle ne
+	 * faisait que les remettre à `CoquilleDeConsole`, qui retombait sur le jeu de
+	 * démonstration.
 	 */
 	const {
 		etat,
@@ -162,16 +97,11 @@
 	}: Proprietes = $props();
 
 	/**
-	 * LES SCÉNARIOS D'ACCÈS DIRECT — littéral du gel (`V-35:2966`). Le corpus ne
-	 * porte pas ces libellés : `JOURNAL_IMPORTS[].scenario` en nomme trois
-	 * autres, qui sont les scénarios JOUÉS par les lots passés.
-	 */
-	/**
-	 * LE GEL EN OFFRE TROIS ; L'IMPORT N'EN EXÉCUTE QU'UN, et ces boutons mènent
-	 * au parcours d'import. Les deux autres y menaient aussi, sans que rien ne
-	 * transmette le choix : le lot se rangeait alors dans le domaine proposé par
-	 * défaut. Ce qui reste ici est ce que `scenarioEstLivre()` reconnaît — même
-	 * source que l'étape 1 de V-24, pour que les deux écrans ne divergent pas.
+	 * LES SCÉNARIOS D'ACCÈS DIRECT — littéral du gel (`V-35:2966`) : la donnée ne
+	 * porte pas ces libellés. LE GEL EN OFFRE TROIS ; L'IMPORT N'EN EXÉCUTE QU'UN,
+	 * et les deux autres menaient au parcours sans que rien ne transmette le choix —
+	 * le lot se rangeait alors dans le domaine proposé par défaut. Ce qui reste est
+	 * ce que `scenarioEstLivre()` reconnaît, même source que l'étape 1 de V-24.
 	 */
 	const SCENARIOS = [
 		{
@@ -193,12 +123,6 @@
 
 	const SCENARIOS_OFFERTS = SCENARIOS.filter((s) => scenarioEstLivre(s.id));
 
-	/**
-	 * LE LOT DONT LE RAPPORT EST OUVERT. Le déclencheur du scénario est
-	 * `#journal .tg__actions button` — sans rang, donc le PREMIER bouton du
-	 * journal, donc la première entrée. La correspondance est mécanique, elle
-	 * n'est pas choisie ici.
-	 */
 	/**
 	 * LE LOT DEMANDÉ DEPUIS LE JOURNAL — `ouvrirRapport(i)` du gel (`V-35:3067`).
 	 * `null` au rendu serveur : l'écran reste celui que la clé d'état décrit.
@@ -234,8 +158,7 @@
 	/**
 	 * `showModal()` — voir `V-31` et `V-28` : l'attribut `open` seul n'obtient pas
 	 * la modalité, et un rapport rendu en flux au haut de la page n'est pas ce que
-	 * le gel dessine. L'effet ne court qu'au navigateur ; le rendu serveur, donc
-	 * le banc, ne le traverse jamais.
+	 * le gel dessine. L'effet ne court qu'au navigateur.
 	 */
 	$effect(() => {
 		const boite = document.getElementById('dlg-rapport');
@@ -249,16 +172,16 @@
 		boite.showModal();
 	});
 
-	/** La couleur d'un chiffre de bilan (`V-35:3108-3109`) : l'absence se
-	 *  décolore, l'échec s'alarme. Les deux valeurs sont à l'ensemble clos. */
+	/** La couleur d'un chiffre de bilan (`V-35:3108`) : l'absence se décolore,
+	    l'échec s'alarme. Les deux valeurs sont à l'ensemble clos. */
 	const couleurDeFait = (valeur: number, nom: string): string | undefined =>
 		!valeur ? 'color:var(--c-encre-4)' : nom === 'en échec' ? 'color:var(--c-danger)' : undefined;
 </script>
 
 <!--
 	Le rapport d'un lot passé, rendu HORS de `div.app` — la place du gel, entre
-	`div.app` et `div.notifs`. `open` seul : la modalité est établie par le banc
-	des deux côtés (ARB-017), jamais par un script de la vue (ARB-011).
+	`div.app` et `div.notifs`. `open` seul : la modalité n'est jamais établie par un
+	script de la vue.
 -->
 <!-- prettier-ignore -->
 {#snippet rapportDeLot()}<dialog class="dlg dlg--large" id="dlg-rapport" aria-labelledby="dlg-rap-titre" open={rapportOuvert}
@@ -301,11 +224,9 @@
 
 <CoquilleDeConsole section="imports" {notes} superposition={rapportDeLot}>
 	{#snippet enfants()}
-		<!--
-			« CHAQUE LOT CONSERVE SON RAPPORT » N'EST VRAI QUE SI QUELQUE CHOSE LE
-			CONSERVE. Rien ne le conserve aujourd'hui : la phrase du gel n'est
-			servie que lorsque le journal est enregistré.
-		-->
+		<!-- « CHAQUE LOT CONSERVE SON RAPPORT » N'EST VRAI QUE SI QUELQUE CHOSE LE
+			CONSERVE. Rien ne le conserve aujourd'hui : la phrase du gel n'est servie
+			que lorsque le journal est enregistré. -->
 		<TeteDeSection
 			titre="Imports"
 			description={journalEnregistre
@@ -340,25 +261,16 @@
 
 		<!--
 			L'ÉTAT VIDE EXPLICITE, PLUTÔT QU'UN TABLEAU VIDE SOUS UNE PROMESSE
-			D'ÉTERNITÉ.
-
-			Le tableau était vide, et il l'était PAR REFUS DE MENTIR : servir
-			`JOURNAL_IMPORTS` du jeu de semence aurait été quatre lots datés qui
-			n'ont jamais eu lieu (`P-02`). Ce qu'il ne disait pas, c'est POURQUOI :
-			un lecteur y voyait « aucun import n'a eu lieu » là où la vérité est
-			« rien n'est conservé ». Le bloc ci-dessous le dit, et il ne dit que
-			ça — il ne promet ni table à venir, ni rapport à retrouver.
-
-			`RG-M12-09` N'EST PAS TENUE POUR AUTANT : ni le stockage de l'entrée,
-			ni sa reprise par le flux d'activité de l'accueil. L'écran cesse de la
-			contredire ; il ne la remplit pas.
+			D'ÉTERNITÉ. Le tableau était vide PAR REFUS DE MENTIR — servir le journal du
+			jeu de semence aurait été quatre lots datés qui n'ont jamais eu lieu —, mais
+			il ne disait pas POURQUOI : un lecteur y voyait « aucun import n'a eu lieu »
+			là où la vérité est « rien n'est conservé ». `RG-M12-09` n'est pas tenue pour
+			autant : l'écran cesse de la contredire, il ne la remplit pas.
 		-->
 		<!--
-			LES RÈGLES DE STYLE SONT PORTÉES EN ATTRIBUT, et c'est le seul endroit
-			du fichier où elles ne sont pas reprises du gel : le nœud lui-même est
-			un ajout, et `src/vues/V-35.css` est identique à l'octet à sa source
-			gelée. Les valeurs employées sont celles du socle, les mêmes que le
-			bloc « Pas encore assez d'usage pour conclure » de V-34.
+			LES RÈGLES DE STYLE SONT PORTÉES EN ATTRIBUT, et c'est le seul endroit du
+			fichier où elles ne sont pas reprises du gel : le nœud lui-même est un ajout,
+			et `src/vues/V-35.css` est identique à l'octet à sa source gelée.
 		-->
 		{#if !journalEnregistre}
 			<div

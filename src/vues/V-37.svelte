@@ -1,26 +1,13 @@
 <script lang="ts">
 	/**
-	 * V-37 — Coquille applicative. Le catalogue de la coquille, pas une route.
+	 * V-37 — Coquille applicative. Le catalogue de la coquille, pas une route
+	 * (`docs/routes.md` §3.8) : c'est un catalogue du gabarit, comme V-41 l'est des
+	 * composants. Le gabarit lui-même vit dans `src/lib/coquille/`.
 	 *
-	 * `docs/routes.md` §3.8 classe V-37 parmi les six vues sans adresse propre :
-	 * c'est un catalogue du gabarit, comme V-41 l'est des composants. Ce fichier
-	 * n'existe donc que pour le mode démo — la route de conception du banc — qui est le
-	 * seul chemin par lequel le banc atteint un état côté application
-	 * (le module de service du banc, ÉCART-011 É-1). Le gabarit lui-même vit dans
-	 * `src/lib/coquille/`, où les trente-cinq vues qui le portent le prendront.
-	 *
-	 * ZONES COMPARÉES — ARB-012, `verif/references/zones.json` : `aside.rail` et
-	 * `header.barre`, la coquille proprement dite. Le tableau de bord que la
-	 * maquette embarque est le contenu de V-07, la note de démonstration celui de
-	 * V-14 ; chacun est couvert par son propre lot, sur sa propre maquette. Ils ne
-	 * sont donc PAS rendus ici : les porter serait sortir du périmètre du lot, et
-	 * l'état « vide » de la maquette les rendrait de toute façon incohérents
-	 * (ARB-012). La zone de contenu reste vide, et c'est un fait déclaré, pas un
-	 * oubli.
-	 *
-	 * Les huit états sont ceux de `verif/scenarios/V-37.json`, extraits
-	 * mécaniquement de la planche de revue de la maquette gelée. Chacun arrive par
-	 * son VECTEUR COMPLET — un état est un réglage entier, jamais un delta.
+	 * ZONES COMPARÉES — `aside.rail` et `header.barre`, la coquille proprement dite.
+	 * Le tableau de bord que la maquette embarque est le contenu de V-07, la note de
+	 * démonstration celui de V-14 : ils ne sont PAS rendus ici, et la zone de contenu
+	 * reste vide — fait déclaré, pas un oubli.
 	 */
 	import {
 		DOMAINES,
@@ -39,18 +26,10 @@
 	import type { Notification } from '$lib/coquille/notifications';
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-37')`, la variante complète. */
 		notes: readonly Note[];
-		/**
-		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
-		 *
-		 * Absentes, les constantes du jeu de semence s'appliquent : c'est ce que le
-		 * mode démo passe, et c'est ce qui garantit que le banc ne bouge pas d'un
-		 * pixel. Fournies — par un chargeur de route —, elles l'emportent, et la vue
-		 * cesse de servir une valeur figée, indépendante de la base et de l'identité.
-		 */
+		/** LES QUATRE SOURCES DE LA COQUILLE. Absentes, les constantes du jeu de
+		    semence s'appliquent ; fournies par une route, elles l'emportent. */
 		/** Les univers déclarés. Absente, `UNIVERS` du jeu de semence. */
 		univers?: readonly Univers[];
 		/** Les domaines du périmètre du compte. Absente, `DOMAINES` du jeu de semence. */
@@ -75,22 +54,16 @@
 
 	/**
 	 * La branche dont la maquette démontre le chargement (`V-37:3620`). C'est une
-	 * mise en scène du catalogue, pas une donnée du corpus : le produit signale le
-	 * chargement de la branche qu'il charge.
+	 * mise en scène du catalogue, pas une donnée : le produit signale le chargement
+	 * de la branche qu'il charge.
 	 */
 	const BRANCHE_EN_CHARGEMENT = 'd:Applications';
 	/**
-	 * La notification que la maquette montre à cet instant, émise par le rail
-	 * via `railNaviguer()` → `window.notifier(texte)` (`V-37:3124`).
-	 *
-	 * DIVERGENCE DÉCLARÉE, hors des zones comparées (ARB-012). V-37 embarque un
-	 * notificateur RÉDUIT — `<div class="notif">texte</div>`, sans marque, sans
-	 * fermeture (`V-37:3080`) —, sous un commentaire qui renvoie lui-même à
-	 * V-38 : « Notifications (V-38) ». Le composant de référence est celui de
-	 * V-38 (`V-38:2263`), où la forme courte `notifier(texte)` vaut le type
-	 * « info ». C'est cette forme que la coquille amendée rend (ARB-015), donc
-	 * celle que V-37 lui passe. Le type n'est pas une décision de ce lot : il
-	 * est celui que la référence attribue à la forme courte.
+	 * La notification que la maquette montre à cet instant (`V-37:3124`).
+	 * DIVERGENCE DÉCLARÉE : V-37 embarque un notificateur RÉDUIT — sans marque, sans
+	 * fermeture (`V-37:3080`) —, sous un commentaire qui renvoie lui-même à V-38. Le
+	 * composant de référence est celui de V-38 (`V-38:2263`), où la forme courte
+	 * `notifier(texte)` vaut le type « info » : c'est ce que la coquille rend.
 	 */
 	const NOTIFICATION_CHARGEMENT: Notification = {
 		type: 'info',
@@ -98,14 +71,10 @@
 	};
 
 	/**
-	 * L'attribut de données que la maquette pose sur `div.app` (`V-37:1195`), et
-	 * que le gabarit n'émettait pas — la conformité par zone d'ARB-012 le
-	 * masquait. Il est INERTE ici, et le gel le veut ainsi : la règle qui
-	 * l'exploite vise `body` (`V-37.css:638`), et seule V-03 le pose au bon
-	 * endroit. Le porter sur `<body>` « corrigerait » le gel et changerait le
-	 * rendu : c'est un comblement, et il serait rouge au banc
-	 * (`docs/releve-vues.md` §7.7). On le pose là où le gel le pose, et nulle
-	 * part ailleurs — ARB-021, A-2.
+	 * L'attribut de données que la maquette pose sur `div.app` (`V-37:1195`). Il est
+	 * INERTE, et le gel le veut ainsi : la règle qui l'exploite vise `body`
+	 * (`V-37.css:638`), et seule V-03 le pose au bon endroit. Le porter sur `<body>`
+	 * « corrigerait » le gel et CHANGERAIT le rendu.
 	 */
 	const ATTRIBUTS_DE_VUE = { 'data-numerote': 'non' };
 
@@ -118,7 +87,6 @@
 	const sansPerimetre = $derived(reglage['c-vide'] === true);
 
 	const note = noteParIdentifiant(NOTE_DEMONSTRATION);
-	/** Le rangement de la note, du dossier racine au dossier terminal. */
 	const rangement = note
 		? note.dossier
 				.split('›')

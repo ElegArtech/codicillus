@@ -1,55 +1,20 @@
 <script lang="ts">
 	/**
 	 * V-01 — Accueil public, sans session. Route `/` en anonyme
-	 * (`docs/routes.md` §3.1). La même adresse sert V-07 en session : les deux
-	 * branches sont SÉQUENCÉES, jamais parallèles (DAG K-1, `docs/releve-vues.md`
-	 * §9 R-5). Ce lot écrit la branche anonyme ; P-15 ajoutera l'autre.
+	 * (`docs/routes.md` §3.1) ; la même adresse sert V-07 en session.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * PÉRIMÈTRE PUBLIC — RG-M17-01, ET IL EST APPLIQUÉ AU POINT D'ENTRÉE
+	 * PÉRIMÈTRE PUBLIC — `RG-M17-01`, APPLIQUÉ AU POINT D'ENTRÉE : « le corpus est
+	 * réduit aux notes publiques ici, au point d'entrée unique de la vue, et non au
+	 * moment de l'affichage. Aucune fonction de cette page ne peut donc atteindre
+	 * une note interne, pas même par erreur de branchement » (`V-01:998`). Le port
+	 * respecte l'ENDROIT autant que la règle : `notesPubliques(notes)` est calculé
+	 * une fois, en tête, et toutes les expressions en descendent.
 	 *
-	 * « Le corpus est réduit aux notes publiques ici, au point d'entrée unique de
-	 * la vue, et non au moment de l'affichage. Aucune fonction de cette page ne
-	 * peut donc atteindre une note interne, pas même par erreur de branchement »
-	 * (`V-01:998`, commentaire du gel). Le port respecte l'ENDROIT autant que la
-	 * règle : `notesPubliques(notes)` est calculé une fois, en tête, et TOUTES
-	 * les expressions de ce fichier en descendent. `notesPubliques()` vit dans
-	 * `$lib/public/recherche` : elle filtre le jeu qu'on lui donne, et elle
-	 * l'EXIGE — aucun corpus de démonstration ne peut plus s'y substituer.
+	 * PAS DE COQUILLE : `docs/releve-vues.md` §5.1 — V-01 à V-06 et V-09 n'en
+	 * portent pas, et `$lib/coquille` n'est pas employé.
 	 *
-	 * CE QUE CE COMPOSANT NE PROUVE PAS. Il rend un ÉTAT DE MAQUETTE nourri du
-	 * jeu de semence. L'étanchéité RÉELLE de l'espace public — matrice toutes
-	 * routes × tous personas, y compris par adresse construite — est la
-	 * batterie 6 (`pnpm test:etancheite`), livrée par T-012b le 20/08/2026 en criticité
-	 * haute. Ce lot ne déclare tenues ni `RG-ACC-01`, ni `RG-ACC-04`, ni `P-09`.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * PAS DE COQUILLE, ET QUATRE FENÊTRES
-	 *
-	 * `docs/releve-vues.md` §5.1 : V-01 à V-06 et V-09 ne portent pas la coquille.
-	 * La page est autonome, et `$lib/coquille` n'est pas employé.
-	 *
-	 * V-01 est contrôlée sur QUATRE fenêtres — 1440×900, 1024×768, 768×1024,
-	 * 360×780 — par ARB-009, qui l'ajoute aux cinq vues dérivées de RG-M18-13
-	 * parce qu'elle porte un champ de recherche, donc le cas d'usage « chercher ».
-	 * Sept états × quatre fenêtres = 28 couples.
-	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT — ARB-011. La frappe au fil de l'eau,
-	 * la bascule vers V-02, l'ouverture d'un guide et le bouton « Réessayer »
-	 * sont du comportement : ils relèvent de T-017. Le squelette rend l'état que
-	 * la référence montre à l'instant capturé, et `div.notifs` reste vide.
-	 *
-	 * LES ADRESSES DU GEL SONT DÉSORMAIS DE VRAIES ADRESSES. `ARB-013` retire les
-	 * lignes `/url:` de la comparaison de structure précisément pour que le
-	 * produit porte SES adresses ; la campagne de câblage du 21/08/2026 lève la
-	 * réserve qui les avait laissées à `#`, et c'est la seule modification
-	 * qu'elle autorise dans une vue. Elles passent toutes par `resolve()`.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
-	 * (P-6.1) et de `src/vues/V-01.css` (P-6.3), posé par
-	 * `node verif/feuilles-de-vue.mjs V-01 --installer`. Le seul `style=` du
-	 * fichier — `font-family:var(--f-donnee)` — figure à l'ensemble clos du gel
-	 * (ARB-016).
+	 * Le style est dans `src/socle.css` et `src/vues/V-01.css` ; le seul `style=` du
+	 * fichier figure à l'ensemble clos du gel.
 	 */
 	import { getContext } from 'svelte';
 	import { resolve } from '$app/paths';
@@ -60,36 +25,26 @@
 	import { accord } from '$lib/vocabulaire';
 
 	/**
-	 * LES MOTIFS DE ROUTE, ÉCRITS EN CONSTANTES — même raison qu'à `V-07:455` et
-	 * sur `src/lib/coquille/Rail.svelte` : `svelte/no-navigation-without-resolve`
-	 * inspecte l'EXPRESSION du `href`, et une adresse composée à la main lui est
-	 * opaque. `resolve()` est aussi ce qui rend l'adresse juste sous une racine de
-	 * déploiement.
+	 * LES MOTIFS DE ROUTE, ÉCRITS EN CONSTANTES :
+	 * `svelte/no-navigation-without-resolve` inspecte l'EXPRESSION du `href`, et une
+	 * adresse composée à la main lui est opaque. `resolve()` est aussi ce qui rend
+	 * l'adresse juste sous une racine de déploiement.
 	 *
 	 * UN GUIDE S'OUVRE EN `/guides/{identifiant}`, JAMAIS EN `/notes/{…}` : cet
-	 * écran est servi à un visiteur SANS SESSION, qui n'a aucun droit sur
-	 * l'adresse interne. C'est déjà le choix du chargeur de `/guides/{id}` pour
-	 * les liens internes d'un corps public.
+	 * écran est servi à un visiteur SANS SESSION, qui n'a aucun droit sur l'adresse
+	 * interne.
 	 */
 	const ROUTE_DU_GUIDE = '/guides/[identifiant]' as const;
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-01')`, variante « lecture ». */
 		notes: readonly Note[];
 		/**
-		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — « adresse externe configurée en
-		 * console » (`V-04:2205`). Elle est une donnée d'INSTANCE : la table
-		 * `parametres` la porte sous la clé `portail_assistance`, et le chargeur de
-		 * la route l'y lit.
-		 *
-		 * ELLE EST EXIGÉE, ET C'EST LE CORRECTIF. Son défaut était l'adresse du jeu
-		 * de démonstration : une route qui aurait oublié de la passer aurait servi
-		 * `assistance.exemple.fr` comme un fait, sans que rien ne proteste. Exigée,
-		 * une route qui l'oublie ne compile plus. Vide — ce que rend une instance
-		 * dont personne n'a renseigné la clé —, aucun appel à l'assistance n'est
-		 * ÉMIS : un lien sans destination n'est pas une issue.
+		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — donnée d'INSTANCE, portée par la table
+		 * `parametres` sous la clé `portail_assistance`. EXIGÉE : son défaut était
+		 * l'adresse du jeu de démonstration, servie comme un fait. Vide — ce que rend
+		 * une instance dont personne n'a renseigné la clé —, aucun appel à
+		 * l'assistance n'est ÉMIS : un lien sans destination n'est pas une issue.
 		 */
 		portail: string;
 	}
@@ -98,19 +53,18 @@
 
 	/**
 	 * « OUVRIR UN TICKET D'ASSISTANCE » N'EST ÉMIS QUE S'IL MÈNE QUELQUE PART —
-	 * même règle et même écriture qu'en V-04 et V-06. `CONFIGURATION_PAR_DEFAUT`
-	 * laisse `portail_assistance` VIDE, et la table le reste tant que personne ne
-	 * l'a renseignée en console : les trois boutons de cet écran portaient alors
-	 * une destination vide, et le clic rechargeait la page d'accueil.
+	 * même règle qu'en V-04 et V-06. `CONFIGURATION_PAR_DEFAUT` laisse
+	 * `portail_assistance` VIDE : les trois boutons de cet écran portaient alors une
+	 * destination vide, et le clic rechargeait la page d'accueil.
 	 */
 	const assistanceJoignable = $derived(portail.trim() !== '');
 
 	const reglage = $derived(vecteur ?? {});
 
 	/**
-	 * Le port des deux commutateurs de la planche (`V-01:1240-1254`). Ils ne
-	 * portent AUCUN comportement : ils règlent deux attributs de données et le
-	 * contenu du champ. La feuille de la vue fait le reste.
+	 * Le port des deux commutateurs de la planche (`V-01:1240-1254`). Ils ne portent
+	 * aucun comportement : ils règlent deux attributs de données et le contenu du
+	 * champ. La feuille de la vue fait le reste.
 	 */
 	const etat = $derived(typeof reglage['etat'] === 'string' ? reglage['etat'] : 'nominal');
 	const frappe = $derived(typeof reglage['frappe'] === 'string' ? reglage['frappe'] : 'rien');
@@ -125,44 +79,27 @@
 	);
 
 	/**
-	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation`
-	 * de la table `parametres`, descendue par le contexte de coquille.
+	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation` de la
+	 * table `parametres`. Cet écran écrivait « Direction technique » EN DUR : le
+	 * SEGMENT DE MARCHÉ du cadrage soudé dans une signature de produit.
+	 * « Codicillus » n'est pas concerné, c'est le nom du LOGICIEL.
 	 *
-	 * CET ÉCRAN ÉCRIVAIT « Direction technique » EN DUR. Ce n'était pas une
-	 * donnée du jeu de démonstration : c'était le SEGMENT DE MARCHÉ du cadrage,
-	 * soudé dans une signature de produit, et toute autre organisation le lisait
-	 * comme un fait sur SON instance — sur le premier écran que le produit
-	 * montre à un visiteur sans compte.
-	 *
-	 * « Codicillus » N'EST PAS CONCERNÉ : c'est le nom du LOGICIEL, et il reste
-	 * en dur. C'est la SOUDURE entre le logiciel et l'organisation qu'on défait.
-	 *
-	 * CHAÎNE VIDE = L'INSTANCE NE S'EST PAS NOMMÉE, et c'est l'état normal d'une
-	 * installation neuve, pas une panne : la signature rend « Codicillus » seul.
-	 * C'est aussi ce que rend un composant monté hors gabarit racine, où
-	 * `getContext` ne trouve rien — l'état vide, jamais un nom d'exemple.
+	 * CHAÎNE VIDE = L'INSTANCE NE S'EST PAS NOMMÉE, l'état normal d'une installation
+	 * neuve : la signature rend « Codicillus » seul.
 	 */
 	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
 	const nomOrganisation = $derived(identite?.nomOrganisation ?? '');
-	/** « Codicillus · <organisation> », ou « Codicillus » seul. */
 	const signature = $derived(
 		nomOrganisation === '' ? 'Codicillus' : `Codicillus · ${nomOrganisation}`
 	);
 	/**
-	 * LE SURTITRE DE L'HAMEÇON — ET LA PRÉPOSITION EST LE PIÈGE.
-	 *
-	 * Le gel écrit « Documentation de la direction technique » : un nom commun
-	 * précédé de son article. Un nom d'organisation n'en a pas — « la Mairie de
-	 * Sainte-Foy », « Sainte-Foy Numérique », « ACME » ne prennent pas le même,
-	 * et certains n'en prennent aucun. Recomposer « Documentation de X »
-	 * fabrique donc une faute d'accord sur la moitié des instances, la valeur
-	 * du cadrage comprise : « Documentation de Direction technique ».
-	 *
-	 * L'INSTANCE NE NOUS DIT PAS SON ARTICLE, ET RIEN NE PERMET DE LE DEVINER.
-	 * On ne gouverne donc pas le nom par une préposition : on le JUXTAPOSE,
-	 * exactement comme la signature de pied le fait déjà — « Codicillus · X ».
-	 * Le séparateur porte le rapport que la préposition portait, et il tient
-	 * quel que soit le nom.
+	 * LE SURTITRE DE L'HAMEÇON — ET LA PRÉPOSITION EST LE PIÈGE. Le gel écrit
+	 * « Documentation de la direction technique » : un nom commun précédé de son
+	 * article. Un nom d'organisation n'en a pas — « la Mairie de Sainte-Foy »,
+	 * « ACME » ne prennent pas le même, et certains n'en prennent aucun. Recomposer
+	 * « Documentation de X » fabrique une faute d'accord sur la moitié des
+	 * instances. On JUXTAPOSE, comme la signature de pied le fait déjà : le
+	 * séparateur porte le rapport que la préposition portait.
 	 */
 	const surtitre = $derived(
 		nomOrganisation === '' ? 'Documentation' : `Documentation · ${nomOrganisation}`
@@ -172,31 +109,17 @@
 	const publiques = $derived(notesPubliques(notes));
 
 	/**
-	 * Le relevé de confiance, CALCULÉ sur le corpus public et jamais saisi
-	 * (P-02 : aucune valeur illustrative). Il est établi au chargement, donc
-	 * indépendamment de l'état de la liste — la référence le montre inchangé
-	 * jusque dans l'état « aucun contenu public ».
+	 * Le relevé de confiance, CALCULÉ sur le corpus public et jamais saisi. Il est
+	 * établi au chargement, donc indépendamment de l'état de la liste — la référence
+	 * le montre inchangé jusque dans l'état « aucun contenu public ».
 	 *
-	 * ═════════════════════════════════════════════════════════════════════
-	 * `revise !== null` — LE COMPTE ANNONÇAIT DES VÉRIFICATIONS QUI N'AVAIENT
-	 * PAS EU LIEU.
-	 *
-	 * `RG-M06-01` fait retomber la fraîcheur d'une note JAMAIS vérifiée sur sa
-	 * date de MODIFICATION, et c'est juste : le niveau reste un fait. Mais le
-	 * niveau `frais` ne vaut alors pas « vérifié » — et cette ligne écrit
-	 * « vérifiés il y a moins d'un mois ». Une instance neuve, dont aucun guide
-	 * n'a jamais été vérifié, servait donc au visiteur anonyme
-	 * « 1 vérifiés il y a moins d'un mois ». Le premier écran du produit, sur
-	 * sa promesse de tête.
-	 *
-	 * ICI, LE CORRECTIF EST UN COMPTE, PAS UN LIBELLÉ : `libelleFraicheur` n'est
-	 * pas appelé sur cette ligne, il n'y a rien à mettre en mots. Un prédicat de
-	 * plus, et il dit exactement ce que la phrase affirme.
-	 *
-	 * CETTE LIGNE EST UNE TRANSCRIPTION LITTÉRALE DU GEL, et LE GEL NE POUVAIT
-	 * PAS VOIR LE CAS : sa seule note jamais vérifiée est INTERNE, donc jamais
-	 * publique. Le produit ne dérive pas ; il rencontre un état que la maquette
-	 * n'a pas de moyen de produire. Le chiffre du gel bouge, et c'est le coût.
+	 * `revise !== null` — LE COMPTE ANNONÇAIT DES VÉRIFICATIONS QUI N'AVAIENT PAS EU
+	 * LIEU. `RG-M06-01` fait retomber la fraîcheur d'une note JAMAIS vérifiée sur sa
+	 * date de MODIFICATION, et c'est juste ; mais le niveau `frais` ne vaut alors
+	 * pas « vérifié », et cette ligne écrit « vérifiés il y a moins d'un mois ». Une
+	 * instance neuve servait donc « 1 vérifiés il y a moins d'un mois » au visiteur
+	 * anonyme, sur la promesse de tête du produit. LE GEL NE POUVAIT PAS VOIR LE
+	 * CAS : sa seule note jamais vérifiée est INTERNE, donc jamais publique.
 	 */
 	const publiesFrais = $derived(
 		publiques.filter((n) => n.fraicheur === 'frais' && n.revise !== null).length
@@ -205,9 +128,7 @@
 	const requete = $derived(saisie.trim());
 	const enRecherche = $derived(requete.length >= 2);
 
-	/** Guides populaires — notes publiques classées par consultations. */
 	const populaires = $derived(publiques.slice().sort((a, b) => b.vues - a.vues));
-	/** Résultats au fil de la frappe. Le filtre public est déjà appliqué en amont. */
 	const resultats = $derived(enRecherche ? chercher(publiques, requete) : []);
 
 	const listeEnErreur = $derived(donneeGuides === 'erreur');
@@ -215,20 +136,15 @@
 
 	/**
 	 * LA BASCULE VERS LA RECHERCHE PUBLIQUE COMPLÈTE — V-02, `/recherche`.
-	 *
 	 * `resolve()` n'accepte pas de chaîne de requête : elle est concaténée après,
-	 * exactement comme `src/lib/coquille/Rail.svelte` le fait pour ses nœuds. `q`
-	 * est le paramètre honoré en anonyme (`docs/routes.md:248`), et la requête
-	 * traverse donc l'écran d'accueil jusqu'à la recherche complète.
+	 * comme `src/lib/coquille/Rail.svelte` le fait pour ses nœuds. `q` est le
+	 * paramètre honoré en anonyme (`docs/routes.md:248`).
 	 */
 	const suffixeDeRequete = $derived(requete ? `?q=${encodeURIComponent(requete)}` : '');
 </script>
 
-<!--
-	Le témoin de fraîcheur, fabrique unique de la vue. Le libellé accompagne
-	TOUJOURS la jauge : l'information ne passe jamais par la couleur seule
-	(RG-M18-09).
--->
+<!-- Le témoin de fraîcheur, fabrique unique. Le libellé accompagne TOUJOURS la
+	jauge : l'information ne passe jamais par la couleur seule (RG-M18-09). -->
 {#snippet temoin(n: Note)}<span class="temoin {classeTemoin(n.fraicheur)}"
 		><span class="temoin__jauge" aria-hidden="true"
 			>{#each [0, 1, 2] as rang (rang)}<i
@@ -244,14 +160,9 @@
 )}{#each segmenter(texte, q) as s, rang (rang)}{#if s.marque}<mark>{s.texte}</mark
 			>{:else}{s.texte}{/if}{/each}{/snippet}
 
-<!--
-	L'ADRESSE DU PORTAIL D'ASSISTANCE EST EXTERNE, et `resolve()` ne s'y applique
-	pas : elle compose une adresse INTERNE sous la racine de déploiement, quand
-	celle-ci est une adresse absolue lue dans la table `parametres`. La règle est
-	donc levée pour ce fichier, et pour elle seule — même levée que `V-03.svelte`,
-	et pour la même raison. Tous les autres liens de la vue passent par
-	`resolve()`.
--->
+<!-- L'ADRESSE DU PORTAIL D'ASSISTANCE EST EXTERNE, et `resolve()` ne s'y applique
+	pas : elle composerait une adresse INTERNE sous la racine de déploiement. Tous
+	les autres liens de la vue y passent. -->
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
 <a class="saut-contenu" href="#recherche">Aller à la recherche</a>
 
@@ -359,11 +270,9 @@
 								>{/if}
 						</div>{:else}
 						<!--
-							AUCUN BLANC ENTRE LES NŒUDS DE LA LISTE, et il doit le rester : le
-							relevé d'ordre de tabulation du niveau 1 construit le nom accessible
-							sur `textContent`, où un blanc inséré par le formateur se voit.
-							Mesuré : douze couples de V-01 en échec de structure pour cette seule
-							cause.
+							AUCUN BLANC ENTRE LES NŒUDS DE LA LISTE, et il doit le rester : le nom
+							accessible se construit sur `textContent`, où un blanc inséré par le
+							formateur se voit.
 						-->
 						<!-- prettier-ignore -->
 						<div class="res-public">{#each resultats as n (n.id)}<a class="res" href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
@@ -371,10 +280,7 @@
 								>{@render temoin(n)}<span>{n.domaine}</span><span style="font-family:var(--f-donnee)">{nombreFr(n.vues)} {accord(n.vues, 'consultation')}</span
 							></div
 						></a>{/each}</div>
-						<!--
-							Bascule vers la recherche publique complète (V-02). Le lien est rendu ;
-							son effet est du comportement, donc du temps 3.
-						-->
+						<!-- Bascule vers la recherche publique complète (V-02). -->
 						<div class="passe-v02">
 							Affiner par domaine, par type de guide ou par fraîcheur<a
 								class="btn"
@@ -417,11 +323,9 @@
 			</div>
 		</section>
 
-		<!-- ---------- Repli vers l'assistance ----------
-			 L'ASIDE ENTIER EST GARDÉ, pas seulement son lien : sans portail
-			 configuré, garder « Vous ne trouvez pas ? » et son paragraphe
-			 laisserait un titre qui pose une question sans issue. Même geste
-			 qu'en V-06, qui garde tout son `.auth__pied`. -->
+		<!-- Repli vers l'assistance — L'ASIDE ENTIER EST GARDÉ, pas seulement son
+			 lien : sans portail configuré, garder « Vous ne trouvez pas ? » et son
+			 paragraphe laisserait un titre qui pose une question sans issue. -->
 		{#if assistanceJoignable}
 			<aside class="repli">
 				<div>

@@ -1,72 +1,28 @@
 <script lang="ts">
 	/**
-	 * V-27 — Console · Univers. Première des dix sections de la console, et
-	 * celle qui pose le motif commun que les neuf autres reprennent tel quel.
+	 * V-27 — Console · Univers. Première des dix sections de la console, et celle qui
+	 * pose le motif commun que les neuf autres reprennent tel quel.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LA FORME DE COQUILLE, ET L'ENVELOPPE DE CONTENU
+	 * V-27 est de forme COMPLÈTE — barre avec ses deux menus, rail dérivé du corpus.
+	 * V-28, sa jumelle de balisage, est ABRÉGÉE : les deux vues ne portent pas la
+	 * même coquille, et c'est le gel qui en décide.
 	 *
-	 * V-27 est l'une des HUIT vues de forme COMPLÈTE (ARB-021, A-1) — barre
-	 * avec ses deux menus déroulants, rail dérivé du corpus, `data-vers` sur
-	 * les entrées. V-28, sa jumelle de balisage, est abrégée : les deux vues du
-	 * lot ne portent donc PAS la même coquille, et c'est le gel qui en décide.
+	 * L'ENVELOPPE `div.console` est une GRILLE `244px minmax(0,1fr)`
+	 * (`V-27.css:325`) qui intercale `aside.nav2` et `main.travail#travail`. Sans
+	 * elle, `main.travail` passe de 492 / 948 à 248 / 1180 (`ECART-024`).
 	 *
-	 * L'ENVELOPPE `div.console` est le quatrième amendement du gabarit
-	 * (ARB-023, lot P-0b) : une GRILLE `244px minmax(0,1fr)` (`V-27.css:325`)
-	 * qui intercale `aside.nav2` et `main.travail#travail`. Sans elle,
-	 * `main.travail` passe de 492 / 948 à 248 / 1180 et les six états divergent
-	 * avant même la comparaison de pixels (`ECART-024`). Elle arrive par
-	 * `classeEnveloppe` + `avantContenu`.
+	 * LE PANNEAU `tiroir-form` NE PÈSE AUCUN PIXEL, ET C'EST LE GEL : la seule règle
+	 * qui l'ouvre est `.app[data-form="ouvert"] .tiroir-form` (`V-27.css:443`), or
+	 * `aside.tiroir-form#tiroir` vit HORS de `div.app`. Ce n'est PAS un défaut à
+	 * corriger. `data-form` est néanmoins posé avec la valeur du gel.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LE PANNEAU `tiroir-form` NE PÈSE AUCUN PIXEL, ET C'EST LE GEL
+	 * `sup-systeme` et `sup-ok` ouvrent `dialog#dlg-supprimer` : la vue rend
+	 * l'attribut `open`, et rien de plus. AUCUN `autofocus` ICI, et c'est mesuré :
+	 * dans les deux dialogues de V-27, le premier focalisable EST `.dlg__fermer`, et
+	 * le gel n'y focalise rien. V-28 est l'autre cas — son `input#sup-saisie` en a
+	 * besoin, et lui seul.
 	 *
-	 * La seule règle qui l'ouvre est `.app[data-form="ouvert"] .tiroir-form`
-	 * (`V-27.css:443`), or `aside.tiroir-form#tiroir` vit HORS de `div.app` :
-	 * le sélecteur ne peut pas s'appliquer, `transform: translateX(100%)` n'est
-	 * jamais levé, le panneau reste hors fenêtre. Ce n'est PAS un défaut à
-	 * corriger — « un implémenteur qui réparerait cela rendrait six vues
-	 * rouges » (`CLAUDE.md` §6, P-3 ; `ECART-024`).
-	 *
-	 * Il est donc rendu EXACTEMENT — contenu, noms accessibles, ordre de
-	 * tabulation —, et le NIVEAU 1 EN EST LE SEUL JUGE : `position: fixed` le
-	 * garde dans le relevé de tabulation (`capture.mjs`, filtre
-	 * `offsetParent !== null || position === 'fixed'`) et dans l'instantané
-	 * ARIA, où il paraît en repère « Formulaire d'univers ». Les trois états de
-	 * formulaire ne diffèrent QUE là, et ne diffèrent donc d'aucun pixel.
-	 *
-	 * `data-form` est néanmoins posé sur `div.app` avec la valeur du gel : la
-	 * maquette l'écrit, et le rendre inexact serait diverger sans motif.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LES TROIS ÉTATS MODAUX — ARB-017, RÉVÉLATION `modalite-dialogue`
-	 *
-	 * `sup-systeme` et `sup-ok` ouvrent `dialog#dlg-supprimer`. La vue le rend
-	 * avec l'attribut `open`, ET RIEN DE PLUS : c'est le BANC qui établit la
-	 * modalité, des deux côtés, par un code unique
-	 * (`verif/references/protocole-app.json`, bloc `revelations`). `open` n'est
-	 * pas `showModal()` ; exiger la couche supérieure d'un squelette sans
-	 * hydratation serait exiger du JavaScript pour satisfaire une mesure.
-	 *
-	 * AUCUN `autofocus` ICI, et c'est mesuré. P-4 (`CLAUDE.md` §6) ne le rend
-	 * utile que dans un dialogue révélé ; encore faut-il que la cible ne soit
-	 * pas déjà le premier focalisable. Dans les deux dialogues de V-27, le
-	 * premier focalisable EST `.dlg__fermer` — le gel n'y focalise rien.
-	 * V-28 est l'autre cas : son `input#sup-saisie` en a besoin, et lui seul.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * AUCUN COMPORTEMENT — ARB-011
-	 *
-	 * Réordonnancement, ouverture du panneau, validation, suppression : le gel
-	 * y attache des écouteurs, tous du temps 3. Le squelette rend l'ÉTAT,
-	 * jamais la transition. `div.notifs` est rendu vide.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
-	 * (P-6.1) et de `src/vues/V-27.css` (P-6.3), posé par
-	 * `node verif/feuilles-de-vue.mjs V-27 --installer`. Les `style=` reproduits
-	 * figurent tous à l'ensemble clos du gel de V-27 (ARB-016, P-6.4) — y
-	 * compris ceux que le script de la maquette pose par `.style.propriété`,
-	 * que l'instrument lit aussi (`verif/styles-en-ligne.mjs`).
+	 * Le style est dans `src/socle.css` et `src/vues/V-27.css`.
 	 */
 	import { resolve } from '$app/paths';
 	import { identifiantDUnivers } from '$lib/rangement/adresses';
@@ -74,14 +30,10 @@
 	import { accord } from '$lib/vocabulaire';
 
 	/**
-	 * L'IDENTIFIANT D'ADRESSE D'UN UNIVERS EST PERSISTÉ, PAS DÉRIVÉ DU NOM.
-	 *
-	 * La vue ne reçoit que le NOM, et le slugifiait pour composer le lien
-	 * « ouvrir ». `univers.identifiant` est fixé à la création et ne suit PAS les
-	 * renommages (`RG-M12-11`) : renommer un univers depuis cet écran même rendait
-	 * donc 404 le lien de la ligne qu'on venait de modifier. La table vient du
-	 * gabarit racine, qui sert à l'administrateur TOUS les univers, y compris ceux
-	 * qui n'ont encore aucun domaine.
+	 * L'IDENTIFIANT D'ADRESSE D'UN UNIVERS EST PERSISTÉ, PAS DÉRIVÉ DU NOM. La vue ne
+	 * reçoit que le NOM et le slugifiait ; `univers.identifiant` est fixé à la
+	 * création et ne suit PAS les renommages (`RG-M12-11`), si bien que renommer un
+	 * univers depuis cet écran même rendait 404 le lien de la ligne modifiée.
 	 */
 	const designations = designationsDeCoquille();
 	import type { Domaine, Note, Univers, UtilisateurCourant } from '../../seeds/corpus';
@@ -95,25 +47,16 @@
 	import type { RefusDeSaisie, SaisieDUnivers } from '$lib/console/structure';
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-27')`, variante complète. */
 		notes: readonly Note[];
-		/** Les univers déclarés, servis par la route. Vide : aucun périmètre. */
 		univers: readonly Univers[];
-		/** Les domaines déclarés, servis par la route. Vide : aucun périmètre. */
 		domaines: readonly Domaine[];
-		/** L'utilisateur courant, servi par la route. */
 		compte: UtilisateurCourant;
 		/**
-		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE — et rien d'autre.
-		 *
-		 * Même partage qu'en `V-28` : la vue tient l'état de son dialogue — quel
-		 * univers est visé, laquelle des trois branches s'applique — parce que
-		 * c'est ce que `demanderSuppression(u)` tenait au gel (`V-27:3524`) et
-		 * parce que le décompte des domaines et des notes se fait sur ce qu'elle a
-		 * reçu. Elle ne connaît ni route, ni action, ni réseau : `+page.svelte`
-		 * passe le rappel.
+		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE — et rien d'autre. Même
+		 * partage qu'en `V-28` : la vue tient l'état de son dialogue parce que le gel le
+		 * tenait (`V-27:3524`) et parce que le décompte se fait sur ce qu'elle a reçu.
+		 * Elle ne connaît ni route, ni action, ni réseau.
 		 */
 		onSupprimer?: (univers: string) => void;
 		/**
@@ -123,17 +66,10 @@
 		 */
 		onRattacher?: (univers: string) => void;
 		/**
-		 * CE QUE LA VUE FAIT QUAND LE PANNEAU EST VALIDÉ — création puis
-		 * enregistrement, dans cet ordre.
-		 *
-		 * Même partage que pour la suppression : la vue tient l'état du panneau —
-		 * quel univers est édité, quel glyphe est retenu, quel rang est visé —
-		 * parce que c'est ce que `ouvrirForm(u)` tenait au gel (`V-27:3436`), et
-		 * elle ne connaît ni route, ni action, ni réseau.
-		 *
-		 * `onEnregistrer` reçoit d'abord le nom ACTUEL de l'univers : c'est la clé
-		 * par laquelle la page retrouve son identifiant lisible, et un
-		 * enregistrement peut justement changer le nom.
+		 * CE QUE LA VUE FAIT QUAND LE PANNEAU EST VALIDÉ. Même partage : la vue tient
+		 * l'état du panneau, comme `ouvrirForm(u)` au gel (`V-27:3436`). `onEnregistrer`
+		 * reçoit d'abord le nom ACTUEL de l'univers : c'est la clé par laquelle la page
+		 * retrouve son identifiant, et un enregistrement peut changer le nom.
 		 */
 		onCreer?: (saisie: SaisieDUnivers) => void;
 		onEnregistrer?: (nom: string, saisie: SaisieDUnivers) => void;
@@ -176,10 +112,9 @@
 	);
 
 	/**
-	 * LES SIX GLYPHES D'UNIVERS, décomposés en primitives typées plutôt que
-	 * gardés en chaîne de balisage — le gel les injecte par `innerHTML`
-	 * (`GLYPHES`, `V-27:3242`), ce qui demanderait ici `{@html}` que rien
-	 * n'oblige à employer. Les valeurs sont celles du gel, au caractère près.
+	 * LES SIX GLYPHES D'UNIVERS, décomposés en primitives typées plutôt que gardés
+	 * en chaîne de balisage — le gel les injecte par `innerHTML` (`V-27:3242`), ce
+	 * qui demanderait ici un `{@html}` que rien n'oblige à employer.
 	 */
 	const GLYPHES: Record<string, readonly TraitDePictogramme[]> = {
 		pile: [
@@ -214,9 +149,8 @@
 	};
 
 	/**
-	 * Palette d'univers : teintes profondes, tenues à l'écart du vert, de
-	 * l'ambre et du rouge, qui appartiennent au signal de fraîcheur
-	 * (`COULEURS`, `V-27:3253`).
+	 * Palette d'univers : teintes profondes, tenues à l'écart du vert, de l'ambre et
+	 * du rouge, qui appartiennent au signal de fraîcheur (`V-27:3253`).
 	 */
 	const COULEURS = [
 		'#24485c',
@@ -263,28 +197,20 @@
 		);
 	}
 
-	/* ── Le panneau de formulaire ───────────────────────────────────────────
-	   Trois états, et le gel les distingue par `ouvrirForm(u)` : à défaut
-	   d'appel — état « fermé » —, le panneau garde le BALISAGE INITIAL, avec
-	   ses zones d'icônes, de couleurs, de positions et d'aperçu VIDES. Ce n'est
-	   pas un oubli : la maquette ne les peuple qu'à l'ouverture. */
+	/* Le panneau de formulaire — trois états, que le gel distingue par
+	   `ouvrirForm(u)` : à défaut d'appel, le panneau garde le BALISAGE INITIAL, avec
+	   ses zones d'icônes, de couleurs, de positions et d'aperçu VIDES. La maquette
+	   ne les peuple qu'à l'ouverture. */
 
 	/**
-	 * LE PANNEAU S'OUVRE, ET C'EST LA VUE QUI LE TIENT.
-	 *
-	 * `ouverture` vaut `null` tant que personne n'a cliqué : l'écran rendu est
-	 * alors exactement celui que le vecteur décrit, et le mode de conception ne
-	 * bouge pas d'un pixel. Dès qu'un geste l'ouvre, c'est cet état-là qui
-	 * commande — le même arbitrage que `demande` pour le dialogue de suppression.
-	 *
-	 * `cible` PORTE LE NOM, PAS L'OBJET. La liste est reconstruite à chaque
-	 * lecture de `univers` ; garder une référence ferait tenir un univers périmé
-	 * après un enregistrement.
+	 * LE PANNEAU S'OUVRE, ET C'EST LA VUE QUI LE TIENT : `ouverture` vaut `null` tant
+	 * que personne n'a cliqué. `cible` PORTE LE NOM, PAS L'OBJET — la liste est
+	 * reconstruite à chaque lecture de `univers`, et garder une référence ferait tenir
+	 * un univers périmé après un enregistrement.
 	 */
 	let ouverture = $state<'creation' | 'edition' | null>(null);
 	let cible = $state<string | null>(null);
 
-	/** Les cinq champs du panneau — `edite` du gel (`V-27:3436`), un par un. */
 	let fNom = $state('');
 	let fDescription = $state('');
 	let fGlyphe = $state('boussole');
@@ -293,7 +219,6 @@
 	/** Le message de `#erreur-nom`, quand la validation de l'écran refuse. */
 	let erreurLocale = $state<string | null>(null);
 
-	/** L'univers édité : celui qu'on a désigné, ou celui que le vecteur nomme. */
 	const edite = $derived(
 		ouverture === 'creation'
 			? null
@@ -305,11 +230,9 @@
 	);
 	/**
 	 * LE PANNEAU EST OUVERT SI UN GESTE L'A OUVERT, OU SI LE VECTEUR LE DEMANDE.
-	 *
 	 * C'est cette valeur qui pose `data-form` sur `div.app`, et c'est elle que la
-	 * règle gelée `.app[data-form="ouvert"] ~ .tiroir-form` attend pour lever
-	 * `translateX(100%)`. La rédaction précédente ne lisait que le vecteur : le
-	 * bouton « + » pouvait bien changer d'état, le panneau restait hors fenêtre.
+	 * règle gelée attend pour lever `translateX(100%)`. La rédaction précédente ne
+	 * lisait que le vecteur : le panneau restait hors fenêtre.
 	 */
 	const ouvert = $derived(ouverture !== null || form !== 'ferme');
 
@@ -321,11 +244,8 @@
 				: 'Les modifications prennent effet immédiatement pour tout le monde.'
 			: 'Il apparaîtra dans la navigation latérale de tous les utilisateurs.'
 	);
-	/*
-	   LES QUATRE VALEURS RETENUES : celles du panneau OUVERT quand il l'est, et
-	   celles que le vecteur décrit sinon. Le rendu par défaut ne bouge donc pas,
-	   et l'aperçu de navigation suit le choix en cours dès le premier clic.
-	*/
+	/* Les quatre valeurs retenues : celles du panneau OUVERT quand il l'est, et
+	   celles que le vecteur décrit sinon. */
 	const glypheChoisi = $derived(ouverture !== null ? fGlyphe : edite ? edite.glyphe : 'boussole');
 	const couleurChoisie = $derived(
 		ouverture !== null ? fCouleur : edite ? edite.couleur : (COULEURS[0] as string)
@@ -339,17 +259,15 @@
 		ouverture !== null ? fDescription : edite ? edite.description : ''
 	);
 	/**
-	 * `RG-STR-01` — « son nom et sa suppression sont verrouillés. Sa couleur et
-	 * son rang restent modifiables » (`V-27:3443`). Le gel désactive les deux
-	 * champs de texte, et rien d'autre.
+	 * `RG-STR-01` — « son nom et sa suppression sont verrouillés. Sa couleur et son
+	 * rang restent modifiables » (`V-27:3443`). Le gel désactive les deux champs de
+	 * texte, et rien d'autre.
 	 */
 	const nomVerrouille = $derived(ouverture === 'edition' && edite !== null && edite.systeme);
-	/** Le message de `#erreur-nom` : celui de l'écran, ou celui de l'action. */
 	const erreurNom = $derived(
 		erreurLocale ?? (refus !== null && refus.champ === 'nom' ? refus.message : null)
 	);
 
-	/** `ouvrirForm(u)` — `null` pour une création (`V-27:3436`). */
 	function ouvrirForm(u: UniversDeTravail | null): void {
 		ouverture = u === null ? 'creation' : 'edition';
 		cible = u === null ? null : u.nom;
@@ -361,20 +279,16 @@
 		erreurLocale = null;
 	}
 
-	/** `fermerForm()` — le panneau se referme, la saisie ne survit pas. */
 	function fermerForm(): void {
 		ouverture = null;
 		cible = null;
 		erreurLocale = null;
 	}
 
-	/**
-	 * `form-valider` — LA VALIDATION DE L'ÉCRAN, celle du gel (`V-27:3478`) :
-	 * nom vide, puis doublon insensible à la casse. Ce n'est pas LA règle —
-	 * `creerUnUnivers()` et `modifierUnUnivers()` refusent quoi qu'il arrive, et
-	 * rendent les mêmes messages — c'est son reflet, qui évite de proposer un
-	 * geste voué au refus.
-	 */
+	/** `form-valider` — LA VALIDATION DE L'ÉCRAN, celle du gel (`V-27:3478`) : nom
+	    vide, puis doublon insensible à la casse. Ce n'est pas LA règle —
+	    `creerUnUnivers()` refuse quoi qu'il arrive — c'est son reflet, qui évite de
+	    proposer un geste voué au refus. */
 	function validerLeForm(): void {
 		const nom = fNom.trim();
 		if (!nomVerrouille) {
@@ -399,7 +313,6 @@
 		else onCreer?.(saisie);
 		fermerForm();
 	}
-	/** `rendrePositions()` : autant de positions que d'univers, plus une en création. */
 	const positions = $derived(
 		Array.from({ length: edite ? liste.length : liste.length + 1 }, (_, k) => k + 1)
 	);
@@ -413,9 +326,9 @@
 		readonly courant: boolean;
 	}
 	/**
-	 * L'aperçu : la navigation telle qu'elle sera. L'univers en cours d'édition
-	 * est retiré de la liste puis réinséré à `ordre - 0.5`, ce qui le place
-	 * JUSTE AVANT celui qui occupe sa position visée.
+	 * L'aperçu : la navigation telle qu'elle sera. L'univers en cours d'édition est
+	 * retiré puis réinséré à `ordre - 0.5`, ce qui le place JUSTE AVANT celui qui
+	 * occupe sa position visée.
 	 */
 	const apercu: readonly LigneDApercu[] = $derived(
 		[
@@ -438,20 +351,13 @@
 		].sort((a, b) => a.ordre - b.ordre)
 	);
 
-	/* ── La suppression ─────────────────────────────────────────────────────
-	   `demanderSuppression(u)` : trois branches, deux atteignables par la
-	   planche. `sup-refus` est le réglage PAR DÉFAUT du contrôle, donc aucun
-	   `change` n'est émis et le dialogue reste FERMÉ — le scénario le déclare
-	   lui-même identique à `form-ferme`. */
+	/* La suppression — `demanderSuppression(u)` : trois branches, deux atteignables
+	   par la planche. */
 
-	/**
-	 * L'UNIVERS D'ARCHIVES EST UN LITTÉRAL DU GEL, et il est porté comme tel.
-	 * `V-27:3636` : la position « Possible · univers vide » cherche un univers
-	 * non système et sans domaine ; le corpus n'en a aucun — Production et
-	 * Projets en portent, « Non classé » est système —, et la maquette retombe
-	 * sur cet objet écrit à la main. Fabriquer une dérivation qui rende cet
-	 * univers-là serait inventer une donnée que le gel n'a pas.
-	 */
+	/** L'UNIVERS D'ARCHIVES EST UN LITTÉRAL DU GEL : `V-27:3636` cherche un univers
+	    non système et sans domaine, le corpus n'en a aucun, et la maquette retombe sur
+	    cet objet écrit à la main. Fabriquer une dérivation qui rende cet univers-là
+	    serait inventer une donnée. */
 	const ARCHIVES: UniversDeTravail = {
 		nom: 'Archives',
 		description: '',
@@ -462,11 +368,8 @@
 	};
 
 	/**
-	 * L'UNIVERS DONT LA SUPPRESSION EST EXAMINÉE.
-	 *
-	 * `null` au rendu serveur : l'écran reste exactement celui que le vecteur
-	 * décrit tant que personne n'a cliqué. C'est le comportement que le script du
-	 * gel portait, rendu à la vue qui le transcrit.
+	 * L'univers dont la suppression est examinée. `null` au rendu serveur : l'écran
+	 * reste celui que le vecteur décrit tant que personne n'a cliqué.
 	 */
 	let demande = $state<string | null>(null);
 
@@ -481,17 +384,10 @@
 	);
 	const dialogueOuvert = $derived(aSupprimer !== null);
 
-	/**
-	 * LES TROIS BRANCHES DE `demanderSuppression(u)` — `V-27:3524-3606`, LUES.
-	 *
-	 * La transcription précédente n'en portait que DEUX : « univers système » et
-	 * « univers vide ». La troisième — l'univers qui porte des domaines — existe
-	 * au gel avec son titre, son décompte, la liste de ses domaines et sa sortie ;
-	 * elle n'était pas atteignable par la planche, aucun état ne la montrait, et
-	 * elle avait été laissée de côté. Servi sur des données réelles, l'écran
-	 * disait donc « Production ne contient aucun domaine » à un univers qui en
-	 * porte trois. La branche est ici transcrite, texte pour texte.
-	 */
+	/** LES TROIS BRANCHES DE `demanderSuppression(u)` — `V-27:3524-3606`. La
+	    transcription précédente n'en portait que deux ; la troisième — l'univers qui
+	    porte des domaines — n'était pas atteignable par la planche, et l'écran disait
+	    « Production ne contient aucun domaine » à un univers qui en porte trois. */
 	const domainesDeLUnivers = $derived(aSupprimer === null ? [] : domaines(aSupprimer.nom));
 	const notesDeLUnivers = $derived(aSupprimer === null ? 0 : compteDeNotes(aSupprimer.nom));
 	/** `u.systeme` d'abord, `doms.length` ensuite, le reste sinon — l'ordre du gel. */
@@ -509,9 +405,8 @@
 	const suppressionOfferte = $derived(branche === 'possible');
 
 	/**
-	 * LES DEUX LIGNES DU REFUS, accordées comme le gel les accorde
-	 * (`V-27:3552-3554`) : « domaines rattachés » / « domaine rattaché »,
-	 * « notes qu'ils contiennent » / « note qu'ils contiennent ».
+	 * Les deux lignes du refus, accordées comme le gel les accorde
+	 * (`V-27:3552-3554`).
 	 */
 	const refusPeuple = $derived([
 		[
@@ -524,7 +419,6 @@
 		]
 	] as [number, string][]);
 
-	/** Le nombre de notes d'un domaine — `window.notesDuDomaine(d.nom).length`. */
 	function notesDuDomaine(nom: string): number {
 		return notes.filter((n) => n.domaine === nom).length;
 	}
@@ -549,16 +443,10 @@
 		{epaisseur}
 	/>{/snippet}
 
-<!--
-	UNE LIGNE DU TABLEAU DE GESTION, ET AUCUN BLANC ENTRE SES NŒUDS.
-
-	Le gel la construit par script (`rendreListe()`, `V-27:3263`) : aucun nœud
-	de texte ne sépare les cellules, et le relevé d'ordre de tabulation du
-	niveau 1 construit son nom accessible sur `textContent`, où un blanc inséré
-	se verrait (`CLAUDE.md` §6, P-6 — 27 couples en échec pour cette seule
-	cause). `<!-- prettier-ignore -- >` protège la région : le formateur
-	réintroduirait les blancs, et `pnpm check` l'exige par ailleurs.
--->
+<!-- UNE LIGNE DU TABLEAU DE GESTION, ET AUCUN BLANC ENTRE SES NŒUDS : le gel la
+	construit par script (`rendreListe()`, `V-27:3263`), sans nœud de texte entre les
+	cellules, et le nom accessible se construit sur `textContent`. La directive du
+	formateur protège la région — ne jamais citer sa forme exacte en commentaire. -->
 <!-- prettier-ignore -->
 {#snippet ligne(u: UniversDeTravail, rang: number)}<div class="tg tg--univers tg--ligne" role="row"
 	><div class="rang"
@@ -579,13 +467,10 @@
 ></div>{/snippet}
 
 <!--
-	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI.
-	La vue passait `instance.version` — le `1.0.0` d'`INSTANCE` du jeu de
-	démonstration, servi comme un fait sur le pied du rail d'une instance
-	réelle. Aucune route ne passe de version : `Coquille` lit celle du paquet
-	sur le contexte que le gabarit racine pose, et la propriété n'est plus
-	qu'un état vide explicite — hors gabarit racine, le pied ne nomme rien
-	plutôt que de nommer un numéro de démonstration.
+	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI. La vue
+	passait le numéro du jeu de démonstration, servi comme un fait sur une instance
+	réelle ; aucune route ne passe de version, et la propriété n'est plus qu'un
+	état vide explicite.
 -->
 <Coquille
 	fil={filDeConsole('Univers')}
@@ -632,16 +517,10 @@
 			</div>
 			<div id="liste">
 				<!--
-					L'ÉTAT VIDE, PARCE QUE LE PRODUIT COMMENCE VIDE.
-
-					Une instance neuve ne porte AUCUN univers : la boucle ne rendait rien,
-					et l'écran se réduisait à une ligne d'en-têtes suivie de blanc. Rien
-					n'y disait ce qui manquait, ni par quel geste on le crée — alors que
-					c'est le tout premier écran d'une installation, et que `/` comme le
-					rail nomment déjà ce même manque à l'administrateur.
-
-					IL NOMME LE GESTE PAR SON LIBELLÉ À L'ÉCRAN, jamais par une adresse :
-					le bouton est là, en haut à droite de la section.
+					L'ÉTAT VIDE, PARCE QUE LE PRODUIT COMMENCE VIDE. Une instance neuve ne porte
+					aucun univers : l'écran se réduisait à une ligne d'en-têtes suivie de blanc,
+					sur le tout premier écran d'une installation. IL NOMME LE GESTE PAR SON
+					LIBELLÉ À L'ÉCRAN, jamais par une adresse.
 				-->
 				{#each liste as u, rang (u.nom)}{@render ligne(u, rang)}{:else}<div
 						class="zone-etat"
@@ -665,10 +544,8 @@
 		</p>
 	{/snippet}
 
-	<!--
-		LES DEUX NŒUDS RENDUS HORS DE `div.app` (ARB-021, A-4), dans l'ordre du
-		gel : le panneau de formulaire, puis la boîte de suppression.
-	-->
+	<!-- Les deux nœuds rendus hors de `div.app`, dans l'ordre du gel : le panneau
+		de formulaire, puis la boîte de suppression. -->
 	{#snippet superposition()}
 		<aside class="tiroir-form" id="tiroir" aria-label="Formulaire d'univers">
 			<div class="tiroir-form__tete">
@@ -724,29 +601,14 @@
 				<div class="champ">
 					<label class="champ__label" for="f-desc">Description</label>
 					<!--
-						ÉCART DÉCLARÉ — LA VALEUR DE `#f-desc` N'EST PAS ATTEIGNABLE DES DEUX
-						RELEVÉS À LA FOIS, ET LE `<textarea>` EST LE SEUL NŒUD DANS CE CAS.
-
-						Le gel la pose par `f-desc.value = u.description`, une PROPRIÉTÉ :
-						l'arbre d'accessibilité la porte
-						(`textbox "Description": - text: …`) et `textContent` reste VIDE. Un
-						squelette sans hydratation n'a que le CONTENU du nœud pour l'établir,
-						or le contenu d'un `<textarea>` EST sa valeur initiale.
-
-						Les deux écritures, mesurées au banc :
-						  · avec le contenu — instantané ARIA identique, et l'ordre de
-						    tabulation diverge : le relevé construit le nom sur `textContent`
-						    (`capture.mjs`, `nom()`), donc « Ce qui tourne… » contre «  » ;
-						  · sans le contenu — ordre de tabulation identique, et l'instantané
-						    ARIA perd sa ligne de valeur.
-
-						C'est le CONTENU qui est retenu : l'arbre d'accessibilité est ce qu'un
-						utilisateur perçoit, et un formulaire d'édition servi sans sa valeur
-						serait un défaut de produit, non un artefact de mesure. `#f-nom` ne
-						pose pas la question — l'attribut `value` d'un `<input>` alimente la
-						propriété SANS toucher `textContent` —, et c'est ce qui borne l'écart
-						au seul `<textarea>`. Remonté au rapport, jamais comblé ici : ni le
-						relevé ni la maquette ne sont touchés.
+						ÉCART DÉCLARÉ — LA VALEUR DE `#f-desc` N'EST PAS ATTEIGNABLE DES DEUX RELEVÉS
+						À LA FOIS, ET LE `<textarea>` EST LE SEUL NŒUD DANS CE CAS. Le gel la pose par
+						`f-desc.value = u.description`, une PROPRIÉTÉ : l'arbre d'accessibilité la
+						porte et `textContent` reste VIDE, or un rendu sans hydratation n'a que le
+						CONTENU du nœud pour l'établir. C'est le CONTENU qui est retenu : un formulaire
+						d'édition servi sans sa valeur serait un défaut de produit. `#f-nom` ne pose pas
+						la question — l'attribut `value` d'un `<input>` alimente la propriété sans
+						toucher `textContent`.
 					-->
 					<textarea
 						class="saisie"
