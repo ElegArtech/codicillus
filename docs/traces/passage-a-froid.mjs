@@ -414,7 +414,12 @@ try {
 		['/connexion', 200],
 		['/guides/{guide}', 200],
 		['/mot-de-passe-oublie', 200],
-		['/mot-de-passe-oublie/jeton-qui-n-existe-pas', 200],
+		/* 404, ET C'EST LE CHANGEMENT VOULU. La route `[jeton]` rendait le même
+		   écran que sa parente sans jamais lire son paramètre, et aucun lien du
+		   produit ne l'émettait : le parcours de réinitialisation passe par un mot
+		   de passe temporaire que l'administrateur régénère, il n'y a pas de jeton.
+		   Une adresse qui ne mène nulle part doit le dire. */
+		['/mot-de-passe-oublie/jeton-qui-n-existe-pas', 404],
 		['/notes/n-adresse-qui-n-existe-pas', 404]
 	];
 
