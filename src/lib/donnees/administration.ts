@@ -739,12 +739,23 @@ export async function delesterUnTypeDeFiche(
  * Changer le rôle d'un compte — `RG-M14-07`. Le refus est prononcé AVANT
  * l'écriture, sur une mesure prise dans la même requête : aucune contrainte de base
  * ne porte cette règle, `comptes.role` étant un énuméré ordinaire.
+ *
+ * LE RATTACHEMENT PART DANS LA MÊME ÉCRITURE, ET C'ÉTAIT LE DÉFAUT : `#f-domaine` est
+ * rendu, modifiable, et « Enregistrer » ne l'envoyait pas — changer le domaine d'un
+ * compte existant ne faisait rien du tout. Les deux colonnes sont réglées par le même
+ * panneau, elles partent par le même geste.
+ *
+ * TROIS ÉTATS, ET PAS DEUX : `undefined` ne touche pas la colonne — l'appelant qui ne
+ * parle pas du rattachement ne le défait pas —, `null` la vide, un couple la pose. Un
+ * couple qui ne désigne aucun domaine rend `introuvable` : le rattachement est résolu,
+ * jamais deviné.
  */
 export async function changerLeRoleDUnCompte(
 	base: Base,
 	identifiant: string,
 	nouveauRole: RoleDeCompte,
-	maintenant: Date
+	maintenant: Date,
+	rattachement?: { readonly univers: string; readonly domaine: string } | null
 ): Promise<IssueDUnGeste<VerdictDUnChangementDeRole>> {
 	const etat = await mesurerUnCompte(base, identifiant);
 	if (etat === null) return { issue: 'introuvable' };
@@ -752,9 +763,30 @@ export async function changerLeRoleDUnCompte(
 	const verdict = verdictDuChangementDeRole(etat, nouveauRole);
 	if (verdict.issue !== 'possible') return verdict;
 
+	let domaineId: string | null = null;
+	if (rattachement !== undefined && rattachement !== null) {
+		const [ligne] = await base
+			.select({ id: domaines.id })
+			.from(domaines)
+			.innerJoin(univers, eq(domaines.universId, univers.id))
+			.where(
+				and(
+					eq(univers.identifiant, rattachement.univers),
+					eq(domaines.identifiant, rattachement.domaine)
+				)
+			)
+			.limit(1);
+		if (ligne === undefined) return { issue: 'introuvable' };
+		domaineId = ligne.id;
+	}
+
 	await base
 		.update(comptes)
-		.set({ role: verdict.role, modifieLe: maintenant })
+		.set({
+			role: verdict.role,
+			modifieLe: maintenant,
+			...(rattachement === undefined ? {} : { domaineId })
+		})
 		.where(eq(comptes.id, etat.id));
 	return verdict;
 }
