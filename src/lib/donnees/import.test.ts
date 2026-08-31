@@ -34,7 +34,15 @@
 import { describe, expect, it } from 'vitest';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
-import { dossiers, etiquettes, etiquettesDeNote, notes, typesDeNote } from '../base/schema';
+import {
+	dossiers,
+	etiquettes,
+	etiquettesDeNote,
+	notes,
+	relations,
+	typesDeNote,
+	typesDeRelation
+} from '../base/schema';
 import type { NoteIndexee } from '../recherche/notes-indexees';
 import {
 	MANQUES_DE_L_IMPORT,
@@ -386,16 +394,54 @@ describe('l’en-tête de métadonnées — RG-M12-05, RG-M12-06, RG-M12-03', ()
 		);
 		expect(lu.titre).toBe('Restauration');
 		expect(lu.etiquettes).toEqual(['barman', 'postgresql']);
-		expect(lu.renvois).toEqual(['pg-prod-01']);
+		/* `voir:` NE NOMME AUCUN TYPE DE RELATION, et c'est pourquoi le libellé du
+		   renvoi est la clé elle-même : il se résout au type dont le libellé direct
+		   est « voir », et se consigne au rapport s'il n'y en a pas (`RG-M12-03`). */
+		expect(lu.renvois).toEqual([
+			{ libelle: 'voir', cible: 'pg-prod-01', brut: 'voir \u203a pg-prod-01' }
+		]);
 		expect(lu.texte).toBe('Le corps.');
 	});
 
-	it('ignore les clés dont aucune source ne donne le nom', () => {
-		const lu = detacherLEnTete('---\ntitre: T\nidentifiant: n-quelque-chose\ntype: Fiche\n---\nx');
+	it('lit les clés d’`UC-M12-03`, celles-là mêmes que l’export écrit', () => {
+		/* LA CONVENTION « DOCUMENTÉE » QUE `UC-M12-03` INVOQUE EST CELLE DE L'EXPORT :
+		   les noms sont ceux de `../export/archive.ts`, définis une fois pour les deux
+		   sens. `identifiant` porte l'identité d'une note à travers un renommage
+		   (`RG-M12-01`) ; ce qui reste ouvert est le fichier qui ne la déclare pas. */
+		const lu = detacherLEnTete(
+			'---\ntitre: T\nidentifiant: n-quelque-chose\ntype: Fiche\ndossier: ["Contrats","Prestataires"]\n' +
+				'domaine: Applications\nvisibilite: publique\nstatut: brouillon\n' +
+				'relations: [Documente \u203a n-autre]\n---\nx'
+		);
 		expect(lu.titre).toBe('T');
-		/* `identifiant` n’est PAS lu : le deviner serait un comblement, et sans
-		   lui `RG-M12-01` reste non tenue — c’est écrit au recensement. */
+		expect(lu.identifiant).toBe('n-quelque-chose');
+		expect(lu.typeDeNote).toBe('Fiche');
+		expect(lu.dossier).toEqual(['Contrats', 'Prestataires']);
+		expect(lu.domaine).toBe('Applications');
+		expect(lu.visibilite).toBe('publique');
+		expect(lu.statut).toBe('brouillon');
+		expect(lu.renvois).toEqual([
+			{ libelle: 'Documente', cible: 'n-autre', brut: 'Documente \u203a n-autre' }
+		]);
 		expect(MANQUES_DE_L_IMPORT.some((m) => m.exigence === 'RG-M12-01')).toBe(true);
+	});
+
+	it('écarte une visibilité ou un statut hors de l’ensemble clos', () => {
+		/* Rien n'est deviné : la colonne garde son défaut, et la note reste écrite. */
+		const lu = detacherLEnTete('---\nvisibilite: secrete\nstatut: archivee\n---\nx');
+		expect(lu.visibilite).toBeNull();
+		expect(lu.statut).toBeNull();
+	});
+
+	it('relit la clé `relations` que l’export écrit en JSON, avec ses liens', () => {
+		/* `UC-M13-01` promet un format « réimportable ». Une archive du produit se
+		   réimporterait sans un seul de ses liens si cette forme n'était pas reconnue. */
+		const lu = detacherLEnTete(
+			'---\nrelations: [{"cible":"n-cible","type":"documente","origine":"declaree"}]\n---\nx'
+		);
+		expect(lu.renvois).toEqual([
+			{ libelle: 'documente', cible: 'n-cible', brut: 'documente \u203a n-cible' }
+		]);
 	});
 
 	it('accepte une valeur seule là où une liste est attendue', () => {
@@ -927,7 +973,21 @@ function baseDEpreuve(): {
 	let notesEnBase: Record<string, unknown>[] = [];
 
 	const lire = (table: unknown, colonnes: Record<string, unknown>): unknown[] => {
-		if (table === typesDeNote) return [{ id: 'type-note' }];
+		/* LE RÉFÉRENTIEL DES TYPES DE NOTE, tel que `007_types_de_note` le pose : il
+		   est lu par identifiant ET par nom, un corpus préparé pouvant écrire l'un ou
+		   l'autre (`UC-M12-03`). */
+		if (table === typesDeNote) {
+			return [
+				{ id: 'type-note', identifiant: 'note', nom: 'Note' },
+				{ id: 'type-procedure', identifiant: 'procedure', nom: 'Procédure' }
+			];
+		}
+		/* UN SEUL TYPE DE RELATION, ET SON LIBELLÉ DIRECT N'EST PAS « voir » : c'est
+		   ce qui rend mesurable la seconde moitié de `RG-M12-03` — un renvoi que rien
+		   ne résout est consigné, et le lot continue. */
+		if (table === typesDeRelation) {
+			return [{ id: 'type-rel-1', identifiant: 'documente', libelleSortant: 'Documente' }];
+		}
 		if (table === dossiers) {
 			/* La PROJECTION lit l'arbre — `{ id, parentId }` ; `dossierDuSegment()`
 			   lit un dossier précis et ne demande que `id`. Les deux requêtes se
@@ -936,8 +996,13 @@ function baseDEpreuve(): {
 		}
 		if (table === notes) {
 			/* Le socle de `projeterLeCorpus()` demande le corps ; `identifiantsPris()`
-			   ne demande que l'identifiant. */
+			   ne demande que l'identifiant ; la SECONDE PASSE des renvois demande les
+			   deux colonnes — elle cherche la NOTE que l'identifiant désigne. Les trois
+			   requêtes se distinguent par leurs colonnes, jamais par un ordre d'appel. */
 			if ('corpsReference' in colonnes) return notesEnBase;
+			if ('id' in colonnes && 'identifiant' in colonnes) {
+				return [{ id: 'note-deja-pris', identifiant: 'deja-pris' }];
+			}
 			return 'identifiant' in colonnes ? [{ identifiant: 'deja-pris' }] : [];
 		}
 		return [];
@@ -970,10 +1035,16 @@ function baseDEpreuve(): {
 					? 'etiquette'
 					: table === etiquettesDeNote
 						? 'liaison'
-						: 'inconnue';
+						: table === relations
+							? 'relation'
+							: 'inconnue';
 
 	const insertion = (table: unknown) => ({
-		values(v: Record<string, unknown>) {
+		values(valeurs: Record<string, unknown> | Record<string, unknown>[]) {
+			/* `values()` reçoit UNE ligne ou UNE LISTE — l'écriture des lignes d'un lot
+			   au journal passe la seconde forme. La base d'épreuve journalise la
+			   première de la liste, comme le connecteur les écrit d'un coup. */
+			const v = Array.isArray(valeurs) ? (valeurs[0] ?? {}) : valeurs;
 			rang += 1;
 			const identite = String(v['identifiant'] ?? v['libelle'] ?? v['nom'] ?? v['ordre'] ?? '');
 			journal.push(`insert ${nomDe(table)} ${identite}`);
@@ -1005,10 +1076,15 @@ function baseDEpreuve(): {
 					}
 				];
 			}
-			return {
+			/* `onConflictDoNothing()` est celui de la SECONDE PASSE : `RG-M08-03` veut
+			   qu'une même relation n'existe qu'une fois, et un réimport ne doit pas
+			   échouer sur elle. La base d'épreuve le rend, comme le connecteur. */
+			const issue: Record<string, unknown> = {
 				returning: () => Promise.resolve(rendu),
 				then: (suite: (v: unknown) => unknown) => Promise.resolve(rendu).then(suite)
 			};
+			issue['onConflictDoNothing'] = () => issue;
+			return issue;
 		}
 	});
 
@@ -1198,8 +1274,78 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 			profondeurDeDepart: 1
 		});
 		const ligne = rapport.lignes.find((l) => l.chemin.endsWith('Restauration.md'));
-		/* `deja-pris` est en base d’épreuve, `inconnue` ne l’est nulle part. */
-		expect(ligne?.renvoisNonResolus).toEqual(['inconnue']);
+		/* LES DEUX RENVOIS SONT CONSIGNÉS, ET LE MOTIF N'EST PAS LE MÊME. La note
+		   `deja-pris` EXISTE en base d'épreuve, `inconnue` n'existe nulle part — mais
+		   la clé qui les porte est `voir:`, et aucun type de relation de l'instance
+		   d'épreuve ne porte « voir » en libellé direct : AUCUN des deux ne désigne un
+		   type, donc aucune relation ne peut naître. `RG-M12-03` veut que ce soit
+		   consigné SANS FAIRE ÉCHOUER LE LOT — les deux notes sont bien écrites. */
+		expect(ligne?.renvoisNonResolus).toEqual(['voir \u203a deja-pris', 'voir \u203a inconnue']);
+		expect(rapport.relationsCreees).toBe(0);
+		expect(rapport.notesCreees).toBe(2);
+	});
+
+	it('crée la relation d’un renvoi TYPÉ, et la compte au rapport — RG-M12-03', async () => {
+		/* LE RENVOI TYPÉ EST CE QUE `voir:` NE POUVAIT PAS ÊTRE : la clé `relations`
+		   porte le LIBELLÉ DIRECT du type, confronté à `types_de_relation`. Ici
+		   « Documente » existe, `deja-pris` existe : la relation naît. */
+		const planType = classerLeLot(
+			'épreuve',
+			[
+				{
+					chemin: 'Reseau/Adressage.md',
+					octets: 42,
+					texte:
+						'---\ntitre: Adressage\nrelations: [Documente \u203a deja-pris, Ignore \u203a deja-pris]\n---\nx',
+					binaire: null
+				}
+			],
+			SANS_SERVICE
+		);
+		const essai = baseDEpreuve();
+		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, planType, {
+			simulation: false,
+			profondeurDeDepart: 1
+		});
+		expect(rapport.relationsCreees).toBe(1);
+		/* Le second renvoi nomme un type que l'instance ne porte pas : consigné, et
+		   le lot n'en souffre pas. */
+		expect(rapport.lignes[0]?.renvoisNonResolus).toEqual(['Ignore \u203a deja-pris']);
+		expect(rapport.notesCreees).toBe(1);
+		expect(essai.journal.some((l) => l.startsWith('insert relation'))).toBe(true);
+	});
+
+	it('refuse le lot EN BLOC en mode strict, et le rapport dit ce qui serait entré', async () => {
+		/* `RG-M12-03` — « sauf si l'utilisateur a explicitement demandé un mode
+		   strict ». Le lot va jusqu'au bout (`RG-M12-04`), puis la transaction est
+		   annulée : le rapport garde ses comptes, la base est intacte. */
+		const essai = baseDEpreuve();
+		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
+			simulation: false,
+			profondeurDeDepart: 1,
+			strict: true
+		});
+		expect(rapport.refuseEnBloc).toBe(true);
+		expect(rapport.notesCreees).toBe(2);
+		expect(essai.annulations()).toBe(1);
+	});
+
+	it('n’annule rien en mode strict quand tout passe', async () => {
+		/* SANS CE CAS, LE PRÉCÉDENT SERAIT SATISFAIT PAR UNE FONCTION QUI ANNULE
+		   TOUJOURS (`P-26`). Le lot ne porte ici ni échec ni renvoi. */
+		const planPropre = classerLeLot(
+			'épreuve',
+			[{ chemin: 'Reseau/Adressage.md', octets: 42, texte: 'x', binaire: null }],
+			SANS_SERVICE
+		);
+		const essai = baseDEpreuve();
+		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, planPropre, {
+			simulation: false,
+			profondeurDeDepart: 1,
+			strict: true
+		});
+		expect(rapport.refuseEnBloc).toBe(false);
+		expect(essai.annulations()).toBe(0);
 	});
 
 	it('reporte au rapport les fichiers écartés, avec leur motif', async () => {
@@ -1222,8 +1368,10 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 			simulation: false,
 			profondeurDeDepart: 1
 		});
-		/* `RG-M12-09` — aucune table d’imports n’existe, et le rapport le dit. */
-		expect(rapport.journalEnregistre).toBe(false);
+		/* `RG-M12-09` — `lots_d_import` reçoit l'entrée (migration `009`), et le
+		   rapport le dit. La ligne a longtemps rendu `false` : c'est ce drapeau qui
+		   empêchait V-35 de promettre des rapports qu'aucune table ne gardait. */
+		expect(rapport.journalEnregistre).toBe(true);
 	});
 
 	/* ── `RG-M12-08` — l’index suit le lot, et il le suit VRAIMENT (`T-075`) ── */

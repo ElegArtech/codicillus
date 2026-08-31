@@ -216,14 +216,16 @@
 	 * L'activité de l'univers. Elle est indépendante de l'état « sans domaine » : la
 	 * maquette la filtre sur le corpus entier (`V-10:1974`).
 	 *
-	 * UN ÉVÉNEMENT SANS CIBLE N'APPARTIENT À AUCUN UNIVERS. Il était rattaché à
+	 * UN ÉVÉNEMENT SANS CIBLE EST RATTACHÉ PAR LE CHARGEUR, JAMAIS ICI. Il l'était à
 	 * « Production » — un nom d'univers du jeu de démonstration écrit en dur dans une
-	 * règle. Les traces que le chargeur lit portent TOUTES une note en cible ; ce qui
-	 * n'en porte pas n'est rattachable à rien.
+	 * règle —, puis il a été écarté purement et simplement. Ni l'un ni l'autre : un
+	 * LOT D'IMPORT (`RG-M12-09`) ne vise aucune note et vise un DOMAINE, ce que la vue
+	 * ne peut pas savoir et ce que le chargeur sait — il ne sert que les lots des
+	 * domaines de cet univers. Le rattachement se fait donc là où la donnée est.
 	 */
 	const evenements = $derived(
 		activite.filter((e) => {
-			if (!e.cible) return false;
+			if (!e.cible) return true;
 			const n = noteParId(e.cible);
 			return n !== undefined && n.univers === courant.nom;
 		})

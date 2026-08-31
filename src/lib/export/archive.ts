@@ -184,30 +184,46 @@ export function nomDArchive(identifiantDeDomaine: string, dateISO: string): stri
 }
 
 /**
- * Les deux clés de fiche, nommées parce qu'un autre module les relit :
- * `../donnees/import.ts` reprend un fichier écrit ici et doit en retrouver le type
- * de fiche et ses propriétés. Un littéral de chaque côté ferait deux définitions du
- * format, et la divergence ne se verrait qu'à l'aller-retour.
+ * LES CLÉS DE L'EN-TÊTE QU'UN AUTRE MODULE RELIT, nommées ici et nulle part ailleurs :
+ * `../donnees/import.ts` reprend un fichier écrit par ce module et doit y retrouver ce
+ * qu'`UC-M12-03` énumère — « identifiant, type, titre, étiquettes, dossier, domaine,
+ * visibilité, statut, propriétés typées, liens vers d'autres fiches ». Un littéral de
+ * chaque côté ferait deux définitions du format, et la divergence ne se verrait qu'à
+ * l'aller-retour.
+ *
+ * `UC-M12-03` PARLE D'UNE CONVENTION « DOCUMENTÉE » : la voici, et elle n'est écrite
+ * qu'une fois — l'export l'écrit, l'import la lit.
  */
+export const CLE_TITRE = 'titre';
+export const CLE_IDENTIFIANT = 'identifiant';
+/** Le TYPE DE NOTE — Procédure, Guide, Note, Fiche, Signet. */
+export const CLE_TYPE_DE_NOTE = 'type';
 export const CLE_TYPE_DE_FICHE = 'type_de_fiche';
 export const CLE_PROPRIETES_DE_FICHE = 'proprietes_de_fiche';
+export const CLE_DOMAINE = 'domaine';
+export const CLE_DOSSIER = 'dossier';
+export const CLE_ETIQUETTES = 'etiquettes';
+export const CLE_VISIBILITE = 'visibilite';
+export const CLE_STATUT = 'statut';
+/** Les LIENS vers d'autres fiches — `RG-M12-03`. */
+export const CLE_RELATIONS = 'relations';
 
 /** Les clés de l'en-tête, dans l'ordre où elles sont écrites. */
 const CLES = [
-	'titre',
-	'identifiant',
-	'type',
+	CLE_TITRE,
+	CLE_IDENTIFIANT,
+	CLE_TYPE_DE_NOTE,
 	CLE_TYPE_DE_FICHE,
 	CLE_PROPRIETES_DE_FICHE,
 	'univers',
 	'univers_identifiant',
-	'domaine',
+	CLE_DOMAINE,
 	'domaine_identifiant',
-	'dossier',
+	CLE_DOSSIER,
 	'auteur',
-	'etiquettes',
-	'visibilite',
-	'statut',
+	CLE_ETIQUETTES,
+	CLE_VISIBILITE,
+	CLE_STATUT,
 	'cree_le',
 	'modifie_le',
 	'corps_reference_modifie_le',
@@ -220,7 +236,7 @@ const CLES = [
 	'revision_commentaire',
 	'revision_par',
 	'revision_le',
-	'relations',
+	CLE_RELATIONS,
 	'pieces_jointes',
 	'images',
 	'separateur_de_registre'

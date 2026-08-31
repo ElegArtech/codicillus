@@ -26,14 +26,15 @@ export const CLE_EFFECTIFS = Symbol.for('codicillus.effectifs-de-console');
 /**
  * Ce que la base porte, section par section.
  *
- * SIX MEMBRES, ET TOUS OBLIGATOIRES. Les quatre sections absentes le sont pour deux
- * raisons distinctes, et il faut les tenir distinctes : Exports, Analytique et
- * Configuration NE PORTENT PAS DE PASTILLE au gel, et leur en donner une ajouterait
- * un nœud que la maquette ne dessine pas ; Imports en porte une, mais AUCUNE TABLE ne
- * la nourrit — elle se rend donc à zéro.
+ * SEPT MEMBRES, ET TOUS OBLIGATOIRES. Les trois sections absentes le sont pour une
+ * seule raison : Exports, Analytique et Configuration NE PORTENT PAS DE PASTILLE au
+ * gel, et leur en donner une ajouterait un nœud que la maquette ne dessine pas.
+ * `imports` en portait une qu'aucune table ne nourrissait, et qui se rendait donc à
+ * zéro sur une instance qui avait reçu des lots ; `lots_d_import` la nourrit depuis la
+ * migration `009`.
  *
- * Les six sont obligatoires parce qu'un compteur manquant serait un compteur
- * silencieusement à zéro : un septième ajouté demain ne compilera pas sans sa lecture.
+ * Les sept sont obligatoires parce qu'un compteur manquant serait un compteur
+ * silencieusement à zéro : un huitième ajouté demain ne compilera pas sans sa lecture.
  */
 export interface EffectifsDeConsole {
 	readonly univers: number;
@@ -42,6 +43,8 @@ export interface EffectifsDeConsole {
 	readonly relations: number;
 	readonly templates: number;
 	readonly comptes: number;
+	/** `RG-M12-09` — les lots d'import du journal, tous conservés. */
+	readonly imports: number;
 }
 
 /**

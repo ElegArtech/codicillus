@@ -189,8 +189,14 @@ describe('le périmètre autorisé — fermeture par défaut, puis héritage', (
 /* ═══════════════════════════════════════ P-02, les lacunes ═════════════ */
 
 describe('ce que la base ne porte pas — nommé, compté, jamais comblé', () => {
-	it('déclare cinq données d’accueil sans contrepartie, toutes sur V-07', () => {
-		expect(SANS_CONTREPARTIE_EN_BASE).toHaveLength(5);
+	it('déclare quatre données d’accueil sans contrepartie, toutes sur V-07', () => {
+		/* LA CINQUIÈME EST PARTIE, ET C'EST UNE MIGRATION QUI L'A EMPORTÉE :
+		   `ACTIVITE (import)` disait « aucune table d'imports terminés ».
+		   `lots_d_import` (migration `009`) en est une, `lireLesTraces()` la lit, et
+		   `RG-M12-09` tient enfin ses DEUX destinataires — le flux d'activité de
+		   l'accueil et l'écran d'administration. */
+		expect(SANS_CONTREPARTIE_EN_BASE.map((l) => l.donnee)).not.toContain('ACTIVITE (import)');
+		expect(SANS_CONTREPARTIE_EN_BASE).toHaveLength(4);
 		for (const lacune of SANS_CONTREPARTIE_EN_BASE) {
 			expect(lacune.vue).toBe('V-07');
 			expect(lacune.affichage.length).toBeGreaterThan(0);

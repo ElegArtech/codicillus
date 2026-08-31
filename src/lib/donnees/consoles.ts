@@ -502,20 +502,22 @@ export interface AccesALaConsole {
 }
 
 /**
- * Les sept compteurs de la navigation secondaire — SIX REQUÊTES, PAS SEPT. `imports` n'a
- * aucune table, et recopier le `1` du gel annoncerait un import à une instance qui n'en a
- * jamais reçu : la section est laissée hors de la table, et `groupesAvecEffectifs()` la
- * rend à zéro. LES COMPTES SONT COMPTÉS ACTIFS, comme au gel. Les six lectures partent
- * ensemble : six `count(*)` sur des tables indexées.
+ * Les sept compteurs de la navigation secondaire — SEPT REQUÊTES, une par pastille.
+ * `imports` n'en avait pas : aucune table ne la nourrissait, et recopier le `1` du gel
+ * aurait annoncé un import à une instance qui n'en a jamais reçu. `lots_d_import` la
+ * nourrit depuis la migration `009`, et le compte est celui du journal — TOUS les lots,
+ * puisque rien ne les purge. LES COMPTES SONT COMPTÉS ACTIFS, comme au gel. Les sept
+ * lectures partent ensemble : sept `count(*)` sur des tables indexées.
  */
 export async function lireLesEffectifsDeConsole(base: Base): Promise<EffectifsDeConsole> {
-	const [u, d, f, r, t, c] = await Promise.all([
+	const [u, d, f, r, t, c, i] = await Promise.all([
 		base.select({ combien: count() }).from(univers),
 		base.select({ combien: count() }).from(domaines),
 		base.select({ combien: count() }).from(typesDeFiche),
 		base.select({ combien: count() }).from(typesDeRelation),
 		base.select({ combien: count() }).from(templates),
-		base.select({ combien: count() }).from(comptes).where(eq(comptes.actif, true))
+		base.select({ combien: count() }).from(comptes).where(eq(comptes.actif, true)),
+		base.select({ combien: count() }).from(lotsDImport)
 	]);
 
 	return {
@@ -524,7 +526,8 @@ export async function lireLesEffectifsDeConsole(base: Base): Promise<EffectifsDe
 		fiches: f[0]?.combien ?? 0,
 		relations: r[0]?.combien ?? 0,
 		templates: t[0]?.combien ?? 0,
-		comptes: c[0]?.combien ?? 0
+		comptes: c[0]?.combien ?? 0,
+		imports: i[0]?.combien ?? 0
 	};
 }
 
