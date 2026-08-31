@@ -102,5 +102,6 @@
 		typesRelation={data.typesRelation}
 		relationsTechniques={data.relationsTechniques}
 		perimetreDemande={data.perimetreDemande}
+		familles={data.familles}
 	/>
 </div>

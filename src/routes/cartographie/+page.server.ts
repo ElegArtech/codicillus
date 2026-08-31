@@ -26,13 +26,15 @@ import {
 	perimetreDeLAdresse,
 	valeurDeSelecteur
 } from '$lib/donnees/outils';
+import { famillesDuPerimetre } from '$lib/graphe/familles';
 import { ouvrirLAcces } from '$lib/donnees/rangement';
 import { lireLeGraphe } from './lecture-du-graphe';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const base = basePartagee();
-	const acces = await ouvrirLAcces(base, locals.identite, new Date());
+	const maintenant = new Date();
+	const acces = await ouvrirLAcces(base, locals.identite, maintenant);
 
 	const { notes, relations, typesRelation, relationsTechniques } = await lireLeGraphe(base, acces);
 
@@ -73,6 +75,19 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		/** Les six types de relation et leurs deux libellés — RG-M08-06. */
 		typesRelation,
 		/** Ceux d'entre eux qui portent une dépendance technique. */
-		relationsTechniques
+		relationsTechniques,
+		/**
+		 * LES FAMILLES SÉMANTIQUES DU PÉRIMÈTRE, AVEC LA DATE DE LEUR CALCUL —
+		 * `RG-M09-06`. Elles se calculent sur les NOTES LISIBLES, jamais sur les
+		 * arêtes : « regroupement par proximité de sens, indépendamment des
+		 * relations déclarées » (M09.6). Une note qu'aucune relation ne touche —
+		 * donc absente du dessin — a sa place dans une famille, et c'est le seul
+		 * endroit de l'écran où elle apparaît.
+		 *
+		 * LE PÉRIMÈTRE DE DROIT EST DÉJÀ FAIT : `notes` sort de
+		 * `lireNotesLisibles()`, et rien d'autre n'entre dans le calcul — ni un
+		 * compteur, ni un nom de famille ne peut donc naître d'une note interdite.
+		 */
+		familles: famillesDuPerimetre(notes, perimetre, maintenant)
 	};
 };

@@ -16,13 +16,15 @@
 import { basePartagee } from '$lib/base/acces';
 import { lireLesProprietesDeFiche, lireTypesDeFiche } from '$lib/donnees/lecture';
 import { PERIMETRE_DE_V20, perimetreDeLAdresse, valeurDeSelecteur } from '$lib/donnees/outils';
+import { famillesDuPerimetre } from '$lib/graphe/familles';
 import { ouvrirLAcces } from '$lib/donnees/rangement';
 import { lireLeGraphe } from '../lecture-du-graphe';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const base = basePartagee();
-	const acces = await ouvrirLAcces(base, locals.identite, new Date());
+	const maintenant = new Date();
+	const acces = await ouvrirLAcces(base, locals.identite, maintenant);
 
 	const { notes, relations, typesRelation, relationsTechniques } = await lireLeGraphe(base, acces);
 
@@ -57,6 +59,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		/* Le référentiel des types de fiche, tel que la table le porte. */
 		typesFiche: await lireTypesDeFiche(base),
 		/* Ce que CHAQUE fiche a mis dans ses champs — `notes.proprietes_typees`. */
-		proprietesDeFiche: await lireLesProprietesDeFiche(base, fiches)
+		proprietesDeFiche: await lireLesProprietesDeFiche(base, fiches),
+		/* LES FAMILLES SÉMANTIQUES ET LEUR DATE DE CALCUL — `RG-M09-06`, par le
+		   MÊME chemin qu'à `/cartographie` et sur le même périmètre : un nœud doit
+		   se reconnaître à l'identique d'un mode à l'autre, sa famille comprise. */
+		familles: famillesDuPerimetre(notes, perimetre, maintenant)
 	};
 };

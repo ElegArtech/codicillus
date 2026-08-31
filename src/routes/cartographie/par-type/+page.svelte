@@ -75,5 +75,6 @@
 		perimetreDemande={data.perimetreDemande}
 		typeMaitreDemande={data.typeMaitreDemande}
 		centreDemande={data.centreDemande}
+		familles={data.familles}
 	/>
 </div>
