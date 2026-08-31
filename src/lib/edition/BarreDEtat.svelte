@@ -37,10 +37,12 @@
 	 * l'arbre : la citation devient un constat P-1.7, dans un fichier qui n'a
 	 * aucune maquette pour en répondre. Même famille que P-9.
 	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011). L'état de sauvegarde est
-	 * RENDU, jamais atteint : ni enregistrement, ni sauvegarde automatique, ni
-	 * bascule de prévisualisation. Ce lot ne déclare tenue aucune exigence
-	 * d'édition.
+	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT ICI (ARB-011). Le composant REND l'état
+	 * de sauvegarde, il ne l'atteint pas : ce sont les câblages de `src/lib/edition/`
+	 * qui le déplacent, sur le nœud `#sauvegarde` et son texte `#sauvegarde-txt` —
+	 * `poserLeTemoin()` pour l'enregistrement et le refus, `poserLeTemoinDeBrouillon()`
+	 * pour la sauvegarde automatique locale de `RG-NF-02`. Les propriétés donnent
+	 * l'état de DÉPART, celui du rendu au serveur, et rien d'autre.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
 	 * `src/vues/V-17.css` / `src/vues/V-18.css`, posées par

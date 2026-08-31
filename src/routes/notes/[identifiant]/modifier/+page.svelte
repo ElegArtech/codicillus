@@ -20,6 +20,7 @@
 	import '../../../../vues/V-17.css';
 	import { page } from '$app/state';
 	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import { cablerLEditeur } from '$lib/cablage/formulaires';
 	import { monterLEditeur } from '$lib/edition/editeur-client';
 	import {
@@ -29,6 +30,12 @@
 		type GestesCables,
 		peindreLeRefusDEdition
 	} from '$lib/edition/gestes';
+	import {
+		cablerLeBrouillonLocal,
+		cleDeBrouillon,
+		type BrouillonCable
+	} from '$lib/edition/brouillon';
+	import { cablerLAvertissementDeDoublon } from '$lib/edition/doublons';
 	import { adresseDeNote } from '$lib/rangement/adresses';
 	import type { ActionData, PageData } from './$types';
 
@@ -44,6 +51,20 @@
 	const compte = $derived(page.data.compte ?? { nom: '', initiales: '', role: '', domaine: '' });
 
 	let formulaire: HTMLFormElement;
+	/** LE BROUILLON LOCAL — `RG-NF-02`. Câblé au montage, effacé par la soumission qui aboutit. */
+	let brouillon: BrouillonCable | null = null;
+
+	/**
+	 * L'ENREGISTREMENT ABOUTI EFFACE LE BROUILLON. Un refus le GARDE : c'est le moment
+	 * où il sert, et l'effacer là ferait perdre le travail que le refus vient de
+	 * refuser d'écrire.
+	 */
+	const surEnvoi: SubmitFunction = () => {
+		return async ({ result, update }) => {
+			if (result.type === 'redirect' || result.type === 'success') brouillon?.effacer();
+			await update();
+		};
+	};
 
 	/**
 	 * LE REFUS D'ENREGISTREMENT SE VOIT — il était muet : `400 { motif: … }` et
@@ -69,7 +90,10 @@
 			zone === null
 				? null
 				: monterLEditeur(zone, data.corps, formulaire, {
-						surChangement: () => gestes?.signalerUneModification()
+						surChangement: () => {
+							gestes?.signalerUneModification();
+							brouillon?.signaler();
+						}
 					});
 		/* PAS DE `rechargerSurDomaine` ICI, ET C'EST VOULU. Changer de domaine doit
 		   refaire l'arbre des dossiers — sans quoi déplacer une note est impossible
@@ -97,7 +121,30 @@
 			   qu'un enregistrement réussi emprunte déjà. */
 			retour: adresseDeNote(page.params['identifiant'] ?? '')
 		});
+		/* LE BROUILLON LOCAL — et ici il est PROPOSÉ, jamais imposé : la note en base
+		   porte peut-être le travail d'un autre, et `enregistreeLe` dit à l'avis si le
+		   brouillon lui est antérieur. */
+		brouillon =
+			editeur === null
+				? null
+				: cablerLeBrouillonLocal(formulaire, {
+						cle: cleDeBrouillon(data.empreinteDuCompte, page.params['identifiant'] ?? ''),
+						document: () => editeur.document(),
+						remplacer: (document) => editeur.remplacer(document),
+						enregistreeLe: data.enregistreeLe
+					});
+
+		/* L'AVERTISSEMENT DE DOUBLON — la note qu'on modifie est exclue de la
+		   comparaison : elle ressemble à elle-même par construction. */
+		const defaireLesDoublons = cablerLAvertissementDeDoublon(formulaire, {
+			notes: data.notes,
+			adresse: (id) => adresseDeNote(id),
+			exclure: String(data.noteModifiee.id)
+		});
+
 		return () => {
+			defaireLesDoublons();
+			brouillon?.defaire();
 			gestes?.defaire();
 			defaire();
 			editeur?.detruire();
@@ -113,7 +160,7 @@
      obligatoire ne pouvait pas être « signalé à l'endroit du champ »
      (`BRIEF-VUES.md:973`) : le champ n'existait plus. Avec elle, la soumission
      part en arrière-plan, le document reste, et le refus se peint dessus. -->
-<form method="POST" use:enhance bind:this={formulaire} style="display:contents">
+<form method="POST" use:enhance={surEnvoi} bind:this={formulaire} style="display:contents">
 	<Vue
 		domaines={page.data.domaines}
 		universDuCompte={data.noteModifiee.univers}
