@@ -60,19 +60,21 @@
 			readonly actif: boolean;
 		}) => void;
 		/**
-		 * CE QUE LA VUE FAIT QUAND « ENREGISTRER » EST CLIQUÉ — `RG-M14-07`. La vue
-		 * tient l'état de son panneau, la page tient le réseau et l'action, comme
+		 * CE QUE LA VUE FAIT QUAND « ENREGISTRER » EST CLIQUÉ — `RG-M14-07`, `RG-M14-04`.
+		 * La vue tient l'état de son panneau, la page tient le réseau et l'action, comme
 		 * `V-32:3199` le fait au clic. Absente, le panneau se ferme sans rien envoyer.
 		 *
-		 * SEUL LE RÔLE VOYAGE. Le gel enregistre aussi le nom, le courriel, le domaine
-		 * et le verrouillage (`V-32:3214-3218`) ; `RG-M14-07` est la seule de ces
-		 * écritures dont l'action de route existe. Les quatre autres sont REMONTÉES,
-		 * pas comblées : envoyer un champ qu'aucune action ne lit ferait croire à un
-		 * enregistrement qui n'a pas lieu.
+		 * LE DOMAINE VOYAGE AVEC LE RÔLE. Il ne le faisait pas, et `#f-domaine` était
+		 * pourtant rendu et modifiable : changer le rattachement d'un compte existant
+		 * ne faisait rien du tout — un champ qui accepte une saisie sans l'écrire. Le
+		 * nom, le courriel et le verrouillage restent REMONTÉS, pas comblés : aucune
+		 * action de route ne les écrit.
 		 */
-		onEnregistrerLeRole?: (demande: {
+		onEnregistrerLeCompte?: (demande: {
 			readonly identifiant: string;
 			readonly role: RoleDeCompte;
+			/** Le NOM d'affichage du domaine choisi. Vide : aucun rattachement. */
+			readonly domaine: string;
 		}) => void;
 		/**
 		 * CE QUE LA VUE FAIT QUAND « CRÉER LE COMPTE » EST CLIQUÉ — `UC-M14-07`. La vue
@@ -132,7 +134,7 @@
 		comptes: registreDeComptes,
 		verrous,
 		onChangerLActivation,
-		onEnregistrerLeRole,
+		onEnregistrerLeCompte,
 		onCreerUnCompte,
 		onMotDePasseTransmis,
 		onReinitialiserLeMotDePasse
@@ -350,6 +352,14 @@
 		roleChoisi ?? (edite ? edite.compte.role : 'Contributeur')
 	);
 	const aideDuRole = $derived(ROLES.find((r) => r.cle === roleCourant)?.aide ?? '');
+
+	/**
+	 * LE DOMAINE PORTÉ PAR `#f-domaine` À L'OUVERTURE — celui du compte édité, sinon
+	 * le premier de la liste. La chaîne vide est un ÉTAT, pas une absence de valeur :
+	 * un compte peut n'être rattaché à rien (`RG-M14-04`, colonne nullable), et
+	 * l'option de repli qui la porte est ce qui permet de le détacher.
+	 */
+	const domaineDuPanneau = $derived(edite ? edite.compte.domaine : PREMIER_DOMAINE);
 
 	const verrouCourant = $derived(verrouChoisi ?? (edite ? edite.verrouille : false));
 
@@ -820,15 +830,22 @@
 						LE SÉLECTEUR SANS RIEN À OFFRIR LE DIT, ET IL NE BLOQUE RIEN : sur une
 						instance neuve il sortait sans une option, sous une étiquette qui promettait
 						un choix. Le rattachement reste FACULTATIF — la colonne est nullable par
-						exigence —, donc l'option de repli porte la chaîne vide.
+						exigence —, donc l'option de repli porte la chaîne vide, et la CHOISIR
+						détache le compte.
+
+						LA SÉLECTION PASSE PAR `value`, PAS PAR `selected` : les options
+						n'existent qu'une fois le panneau ouvert, et un attribut `selected` posé
+						après coup n'est plus honoré par le navigateur — le sélecteur retombait
+						sur sa première option, soit « Aucun domaine », et « Enregistrer »
+						détachait un compte qu'on venait seulement de rouvrir.
 					-->
-					<select class="selecteur" id="f-domaine" disabled={panneauOuvert && domaines.length === 0}
-						>{#if panneauOuvert}{#each domaines as d (d.nom)}<option
-									value={d.nom}
-									selected={d.nom === (edite ? edite.compte.domaine : PREMIER_DOMAINE)}
-									>{d.univers} › {d.nom}</option
-								>{:else}<option value="">Aucun domaine sur cette instance</option
-								>{/each}{/if}</select
+					<!-- prettier-ignore -->
+					<select
+						class="selecteur"
+						id="f-domaine"
+						value={domaineDuPanneau}
+						disabled={panneauOuvert && domaines.length === 0}
+						>{#if panneauOuvert}{#if domaines.length === 0}<option value="">Aucun domaine sur cette instance</option>{:else}<option value="">Aucun domaine</option>{#each domaines as d (d.nom)}<option value={d.nom}>{d.univers + ' › ' + d.nom}</option>{/each}{/if}{/if}</select
 					>
 					<span class="champ__aide"
 						>{domaines.length === 0
@@ -883,7 +900,11 @@
 							void creerLeCompte();
 							return;
 						}
-						onEnregistrerLeRole?.({ identifiant: edite.compte.identifiant, role: roleCourant });
+						onEnregistrerLeCompte?.({
+							identifiant: edite.compte.identifiant,
+							role: roleCourant,
+							domaine: valeurDe('f-domaine')
+						});
 						fermerLeFormulaire();
 					}}><span id="form-valider-txt">{edite ? 'Enregistrer' : 'Créer le compte'}</span></button
 				>

@@ -100,7 +100,15 @@ export const actions: Actions = {
 		}
 
 		const jeton = tirerUnJeton();
-		await ouvrirUneSession(base, decision.identite.compteId, condensatDeJeton(jeton), souvenir);
+		/* `maintenant` est celui de la requête : la dernière connexion et la tentative
+		   enregistrée portent le même instant. */
+		await ouvrirUneSession(
+			base,
+			decision.identite.compteId,
+			condensatDeJeton(jeton),
+			souvenir,
+			maintenant
+		);
 		cookies.set(NOM_DU_COOKIE, jeton, ATTRIBUTS_DU_COOKIE);
 
 		/* §5.2 — « après connexion : {suite} si présent, sinon / ». 303 et non

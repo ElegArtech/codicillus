@@ -146,6 +146,10 @@
 	interface DroitsDuDossier {
 		readonly accordes: readonly DroitAffiche[];
 		readonly candidats: readonly CompteDeDroit[];
+		/** L'appelant voit-il l'annuaire des comptes ? Le rôle `administrateur`, et lui
+		    seul. Absent, il vaut `false` : le panneau se dit alors fermé plutôt que
+		    d'annoncer un geste que le serveur refusera. */
+		readonly annuaire?: boolean;
 	}
 
 	interface RangementReel {
@@ -476,6 +480,35 @@
 	];
 
 	const cheminComplet = $derived(cheminTexte([DOMAINE, ...chemin]));
+
+	/* ── « Ajouter un accès », et ce qui l'empêche ───────────────────────────── */
+
+	const candidatsDeDroit = $derived(droits?.candidats ?? []);
+
+	/**
+	 * L'ANNUAIRE EST LA PREMIÈRE PORTE, LA LISTE LA SECONDE. Sans annuaire, le
+	 * serveur refuse d'accorder quoi que ce soit (`accorderUnDroitDeDossier()` sort en
+	 * refus MUET) : offrir le geste serait promettre un `404`.
+	 */
+	const annuaireOuvert = $derived(droits?.annuaire === true);
+	const peutAjouterUnAcces = $derived(annuaireOuvert && candidatsDeDroit.length > 0);
+
+	/** Ce que porte l'option de repli, quand il n'y a personne à nommer. */
+	const motifDeLAjoutImpossible = $derived(
+		annuaireOuvert ? 'Tous les comptes ont déjà un accès' : 'Aucun compte à proposer'
+	);
+
+	/**
+	 * L'AIDE NOMME LE GESTE QUI DÉBLOQUE — un état vide qui ne dit pas quoi faire
+	 * laisse l'écran sans issue.
+	 */
+	const aideDeLAjout = $derived(
+		annuaireOuvert
+			? candidatsDeDroit.length > 0
+				? 'Le droit posé ici gouverne ce dossier et tout son sous-arbre.'
+				: 'Créez un compte dans Console › Comptes pour en rattacher un de plus.'
+			: "Seul un administrateur peut nommer un compte qui n'a encore aucun droit ici. Les niveaux déjà accordés restent modifiables ci-dessus."
+	);
 </script>
 
 <!-- `svelte/no-navigation-without-resolve` EST DÉSACTIVÉE POUR LE BALISAGE DE
@@ -1008,33 +1041,53 @@
 								</button>
 							{/if}
 						</div>
+					{:else}
+						<!-- L'ÉTAT VIDE SE DIT. Un domaine neuf n'a AUCUN droit explicite —
+							l'administrateur tient le sien de `RG-DRO-03`, sans ligne dans la
+							table —, et la liste sortait vide sous son étiquette, sans un mot. -->
+						<p class="dr__vide">
+							Aucun droit explicite sur ce dossier. Tant que personne n'y est nommé, seuls les
+							administrateurs le voient.
+						</p>
 					{/each}
 				</div>
 
 				<!--
-						« AJOUTER UN ACCÈS » N'EST RENDU QUE S'IL Y A QUELQU'UN À AJOUTER — `P-09`,
-						omis plutôt que grisé. Le chargeur ne sert l'annuaire qu'au rôle
-						`administrateur` : un gestionnaire qui ne l'est pas reçoit une liste VIDE, et
-						un sélecteur sans option suivi d'« Ajouter » serait un geste impossible.
+						« AJOUTER UN ACCÈS » EST TOUJOURS RENDU, et le vide se DIT — le modèle est
+						celui de `V-40.svelte` : une option de repli qui NOMME le vide, et
+						`disabled`. Le panneau était escamoté quand la liste était vide, et le
+						vide a DEUX causes qu'un panneau absent confondait : plus aucun compte à
+						nommer, ou pas d'annuaire à consulter. Le chargeur ne sert l'annuaire
+						qu'au rôle `administrateur` (`ADR-006`) ; un gestionnaire qui ne l'est pas
+						ne pouvait rien accorder, et l'écran ne le disait nulle part.
 					-->
-				{#if (droits?.candidats ?? []).length > 0}
-					<div class="champ">
-						<span class="champ__label">Ajouter un accès</span>
-						<div class="dr-ajout">
-							<select class="selecteur" id="droit-qui" aria-label="Personne">
-								{#each droits?.candidats ?? [] as candidat (candidat.identifiant)}
-									<option value={candidat.identifiant}>{candidat.nom}</option>
-								{/each}
-							</select>
-							<select class="selecteur" id="droit-role" aria-label="Niveau de droit sur ce dossier">
-								{#each NIVEAUX as niveauOffert (niveauOffert.valeur)}
-									<option value={niveauOffert.valeur}>{niveauOffert.libelle}</option>
-								{/each}
-							</select>
-							<button class="btn btn--principal" id="droit-ajouter">Ajouter</button>
-						</div>
+				<div class="champ">
+					<span class="champ__label">Ajouter un accès</span>
+					<div class="dr-ajout">
+						<select
+							class="selecteur"
+							id="droit-qui"
+							aria-label="Personne"
+							disabled={!peutAjouterUnAcces}
+							>{#if peutAjouterUnAcces}{#each candidatsDeDroit as candidat (candidat.identifiant)}<option
+										value={candidat.identifiant}>{candidat.nom}</option
+									>{/each}{:else}<option value="">{motifDeLAjoutImpossible}</option>{/if}</select
+						>
+						<select
+							class="selecteur"
+							id="droit-role"
+							aria-label="Niveau de droit sur ce dossier"
+							disabled={!peutAjouterUnAcces}
+							>{#each NIVEAUX as niveauOffert (niveauOffert.valeur)}<option
+									value={niveauOffert.valeur}>{niveauOffert.libelle}</option
+								>{/each}</select
+						>
+						<button class="btn btn--principal" id="droit-ajouter" disabled={!peutAjouterUnAcces}
+							>Ajouter</button
+						>
 					</div>
-				{/if}
+					<span class="champ__aide">{aideDeLAjout}</span>
+				</div>
 
 				<div class="champ__erreur" id="droits-erreur" hidden={erreurDeDroits === null}>
 					{erreurDeDroits ?? ''}

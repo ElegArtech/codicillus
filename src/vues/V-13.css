@@ -579,6 +579,10 @@
   color: var(--c-encre-3); border-radius: var(--r-1);
 }
 .dr__retirer:hover { background: var(--c-danger-voile); color: var(--c-danger); }
+/* Un geste indisponible SE VOIT : le socle ne donne aucune apparence à
+   `:disabled`, et « Ajouter » restait plein alors qu'il ne partait plus. */
+.dr-ajout .selecteur:disabled, .dr-ajout .btn:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
+.dr__vide { margin: 0; font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.45; }
 .dr-ajout { display: grid; grid-template-columns: minmax(0, 1fr) 130px auto; gap: var(--e-2); align-items: end; }
 .selecteur {
   width: 100%; padding: 8px var(--e-3);
