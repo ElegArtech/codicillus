@@ -414,10 +414,21 @@
 					<select
 						class="selecteur"
 						id="domaine"
+						disabled={domaines.length === 0}
 						value={domaineCourant}
 						onchange={(e) => (choisi = e.currentTarget.value)}
-						>{#each domaines as d (d.nom)}<option value={d.nom}>{d.univers} › {d.nom} — {notesDuDomaine(d.nom).length} {accord(notesDuDomaine(d.nom).length, 'note')}</option>{/each}</select
+						>{#each domaines as d (d.nom)}<option value={d.nom}>{d.univers} › {d.nom} — {notesDuDomaine(d.nom).length} {accord(notesDuDomaine(d.nom).length, 'note')}</option>{:else}<option value="">Aucun domaine sur cette instance</option>{/each}</select
 					>
+					<!--
+						CE QUI MANQUE, ET LE GESTE QUI DÉBLOQUE — sur l'instance neuve, et là
+						seulement. Le sélecteur sortait VIDE, sans un mot, au-dessus d'un
+						récapitulatif de zéros et d'un bouton qui ne pouvait rien préparer.
+					-->
+					{#if domaines.length === 0}<span class="champ__aide" id="aide-domaine"
+							>Un export porte sur un domaine, et cette instance n'en porte aucun. Créez un univers,
+							puis un domaine, dans la console — Console › Domaines — et ce sélecteur s'ouvrira sur
+							lui.</span
+						>{/if}
 				</div>
 
 				<span class="etiq" style="display:block;margin-bottom:var(--e-2)"
@@ -480,6 +491,7 @@
 						class="btn btn--principal"
 						id="exporter"
 						type="button"
+						disabled={domaineCourant === ''}
 						onclick={() => onExporter?.(domaineCourant)}
 						><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8.5M4.8 7.3L8 10.7l3.2-3.4M2.5 13.5h11"/></svg>
 						Préparer l'archive</button
