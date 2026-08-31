@@ -72,6 +72,20 @@ export function formaterDateHeureFr(
 }
 
 /**
+ * Heure seule : « 14:03 ». La barre d'état des deux éditeurs y dit à quelle heure le
+ * brouillon local a été écrit : la date y serait du bruit, l'écriture datant de la
+ * minute précédente.
+ */
+export function formaterHeureFr(valeur: EntreeDate, fuseau: string = FUSEAU_PAR_DEFAUT): string {
+	return new Intl.DateTimeFormat('fr-FR', {
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: false,
+		timeZone: fuseau
+	}).format(versDate(valeur));
+}
+
+/**
  * Forme lisible par une machine, pour les attributs `datetime` de `<time>` :
  * « 2026-08-18 ». C'est l'alternative exigée à côté de tout affichage humain.
  */
