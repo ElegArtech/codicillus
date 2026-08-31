@@ -151,11 +151,23 @@ export const actions: Actions = {
 		const role = roleDepuisLeLibelle(champs.get('f-role'));
 		if (role === null) return fail(400, { issue: 'role-inconnu' });
 
+		/* LE RATTACHEMENT VOYAGE AVEC LE RÔLE, sous les mêmes noms qu'à la création —
+		   la forme CANONIQUE, jamais le nom d'affichage. Une désignation incomplète
+		   vaut « aucun rattachement » et VIDE la colonne : le panneau propose une
+		   option de repli vide, la choisir doit détacher le compte. */
+		const universDemande = String(champs.get('univers') ?? '');
+		const domaineDemande = String(champs.get('domaine') ?? '');
+		const rattachement =
+			universDemande === '' || domaineDemande === ''
+				? null
+				: { univers: universDemande, domaine: domaineDemande };
+
 		const resultat = await changerLeRoleDUnCompte(
 			basePartagee(),
 			String(champs.get('f-ident') ?? ''),
 			role,
-			new Date()
+			new Date(),
+			rattachement
 		);
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		if (resultat.issue !== 'possible') return fail(400, resultat);

@@ -223,6 +223,14 @@ export interface DroitsDUnDossier {
 	readonly accordes: readonly DroitAffiche[];
 	/** Les comptes actifs qui n'en ont aucun — la liste d'« Ajouter un accès ». */
 	readonly candidats: readonly CompteDeDroit[];
+	/**
+	 * L'APPELANT VOIT-IL L'ANNUAIRE DES COMPTES ? — le rôle `administrateur`, et lui
+	 * seul (`ADR-006`). C'est un fait sur L'APPELANT, jamais sur les autres comptes :
+	 * le servir ne révèle l'existence de personne, et il permet à l'écran de dire
+	 * POURQUOI la liste est vide plutôt que d'escamoter le panneau. « Aucun candidat »
+	 * et « pas d'annuaire » ne se disent pas de la même façon.
+	 */
+	readonly annuaire: boolean;
 }
 
 interface LigneDeCompte {
@@ -360,7 +368,7 @@ export async function lireLesDroitsDUnDossier(
 				.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
 		: [];
 
-	return { accordes, candidats };
+	return { accordes, candidats, annuaire: demande.annuaireLisible };
 }
 
 export interface RefusDEcriture {

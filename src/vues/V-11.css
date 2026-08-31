@@ -377,7 +377,7 @@
   display: flex; align-items: flex-start; gap: var(--e-3);
   background: var(--c-papier); border: 1px solid var(--c-trait); border-radius: var(--r-3);
   padding: var(--e-3) var(--e-4);
-  text-align: left; cursor: pointer; color: inherit; font: inherit;
+  text-align: left; cursor: pointer; color: inherit; font: inherit; text-decoration: none;
   box-shadow: var(--o-pose);
   transition: border-color var(--m-vif), transform var(--m-vif);
 }

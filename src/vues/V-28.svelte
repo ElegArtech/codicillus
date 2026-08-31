@@ -238,7 +238,21 @@
 	let fDescription = $state('');
 	let fUnivers = $state('');
 	let fCouleur = $state(COULEURS[0] as string);
-	let fModules = $state<readonly CleDeModule[]>(['notes']);
+	/**
+	 * LES MODULES PROPOSÉS À LA CRÉATION — `notes` ET `dossiers`.
+	 *
+	 * `notes` seul était le défaut, et c'était un piège : `RG-STR-03` crée un dossier
+	 * racine avec le domaine, mais sa page — la SEULE d'où un droit s'accorde — est
+	 * gardée par le module `dossiers`. Un domaine neuf naissait donc sans aucune
+	 * adresse ouvrable vers « Gérer les droits », et personne d'autre que
+	 * l'administrateur ne pouvait se voir accorder quoi que ce soit.
+	 *
+	 * CE N'EST QU'UNE PROPOSITION : les deux cases restent celles du gel, et seule
+	 * `notes` porte le verrou de `RG-STR-06`.
+	 */
+	const MODULES_A_LA_CREATION: readonly CleDeModule[] = ['notes', 'dossiers'];
+
+	let fModules = $state<readonly CleDeModule[]>([...MODULES_A_LA_CREATION]);
 	/** Le message de `#erreur-nom`, quand la validation de l'écran refuse. */
 	let erreurLocale = $state<string | null>(null);
 
@@ -275,9 +289,9 @@
 	const universChoisi = $derived(
 		ouverture !== null ? fUnivers : edite ? edite.univers : (univers[0] as Univers).nom
 	);
-	/** `edite.modules` : ceux du domaine, ou le seul module obligatoire. */
+	/** `edite.modules` : ceux du domaine, ou ceux qu'un domaine neuf propose. */
 	const modulesActifs: readonly CleDeModule[] = $derived(
-		ouverture !== null ? fModules : edite ? edite.modules : ['notes']
+		ouverture !== null ? fModules : edite ? edite.modules : MODULES_A_LA_CREATION
 	);
 	const nomSaisi = $derived(ouverture !== null ? fNom : edite ? edite.nom : '');
 	const descriptionSaisie = $derived(
@@ -294,7 +308,7 @@
 		fDescription = d === null ? '' : d.description;
 		fUnivers = d === null ? ((univers[0] as Univers)?.nom ?? '') : d.univers;
 		fCouleur = d === null ? (COULEURS[0] as string) : d.couleur;
-		fModules = d === null ? ['notes'] : [...d.modules];
+		fModules = d === null ? [...MODULES_A_LA_CREATION] : [...d.modules];
 		erreurLocale = null;
 	}
 

@@ -102,13 +102,26 @@ export async function ouvrirUneSession(
 	base: Base,
 	compteId: string,
 	condensatJeton: string,
-	souvenir: boolean
+	souvenir: boolean,
+	maintenant: Date = new Date()
 ): Promise<string> {
 	const [ligne] = await base
 		.insert(sessions)
 		.values({ compteId, condensatJeton, souvenir })
 		.returning({ id: sessions.id });
 	if (ligne === undefined) throw new Error('session : insertion sans ligne rendue');
+
+	/* LA DERNIÈRE CONNEXION S'ÉCRIT ICI, ET NULLE PART AILLEURS. La colonne existe
+	   depuis `005_rattachement`, la console et `/mon-profil` la lisent — rien ne
+	   l'écrivait, et les deux écrans annonçaient « Jamais » et « — » à un compte qui
+	   venait de saisir son mot de passe. L'OUVERTURE DE SESSION EST LE SEUL INSTANT
+	   OÙ « se connecter » a lieu : `toucherLaSession()` marque l'activité, ce qui
+	   n'est pas la même donnée. */
+	await base
+		.update(comptes)
+		.set({ derniereConnexionLe: maintenant })
+		.where(eq(comptes.id, compteId));
+
 	return ligne.id;
 }
 

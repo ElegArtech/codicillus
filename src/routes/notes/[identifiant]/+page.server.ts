@@ -700,6 +700,19 @@ async function contexteDUnGeste() {
 	return { base, maintenant, contexte: { maintenant, seuils: await lireSeuils(base) } };
 }
 
+/**
+ * L'ADRESSE OÙ LES QUATRE ÉCRITURES RAMÈNENT — la note elle-même, sans le `?/action`.
+ *
+ * `verifier`, `signaler`, `lever` et `restaurer` sont soumises NATIVEMENT
+ * (`+page.svelte` pose un bouton et appelle `requestSubmit()`) : une action qui rend
+ * une valeur laisse l'adresse à `/notes/{id}?/signaler`, et un rafraîchissement
+ * REJOUE l'écriture. Le `303` referme cela — et les valeurs rendues n'étaient lues
+ * par personne, aucune propriété `form` n'existant sur cette page.
+ */
+function adresseDeLaNote(identifiant: string): string {
+	return `/notes/${identifiant}`;
+}
+
 export const actions: Actions = {
 	/** VÉRIFIER — `UC-M06-02`. Un clic, aucun champ : rien à valider avant d'écrire. */
 	verifier: async ({ params, locals }) => {
@@ -714,12 +727,7 @@ export const actions: Actions = {
 			maintenant
 		});
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
-		return {
-			verifieLe: fait.ressource.verifieLe.toISOString(),
-			/* `RG-M06-07` — ce que le geste a EFFACÉ au passage : le bandeau de
-			   révision doit disparaître. */
-			demandeEffacee: fait.ressource.demandeEffacee
-		};
+		redirect(303, adresseDeLaNote(params.identifiant));
 	},
 
 	/**
@@ -754,11 +762,7 @@ export const actions: Actions = {
 			commentaire
 		});
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
-		return {
-			le: fait.ressource.le.toISOString(),
-			/* `RG-M06-06` — la demande a-t-elle REMPLACÉ une demande courante. */
-			aRemplace: fait.ressource.aRemplace
-		};
+		redirect(303, adresseDeLaNote(params.identifiant));
 	},
 
 	/**
@@ -793,7 +797,7 @@ export const actions: Actions = {
 			modification: { corps: { saisi: histoire.affichee.reference } }
 		});
 		if (!issue.trouve) error(404, MESSAGE_INTROUVABLE);
-		redirect(303, `/notes/${params.identifiant}`);
+		redirect(303, adresseDeLaNote(params.identifiant));
 	},
 
 	/**
@@ -810,7 +814,7 @@ export const actions: Actions = {
 			maintenant
 		});
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
-		return { avaitUneDemande: fait.ressource.avaitUneDemande };
+		redirect(303, adresseDeLaNote(params.identifiant));
 	},
 
 	/**
