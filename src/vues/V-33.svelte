@@ -50,7 +50,7 @@
 		vecteur?: Record<string, string | boolean> | null;
 		notes: readonly Note[];
 		/**
-		 * LES SEPT RÉGLAGES DE L'INSTANCE, EXIGÉS. La propriété retombait sur `CONFIG`
+		 * LES RÉGLAGES DE L'INSTANCE, EXIGÉS. La propriété retombait sur `CONFIG`
 		 * de `seeds/corpus.ts` : une route qui l'oubliait servait les seuils, le
 		 * portail et le plafond de versions du jeu de démonstration comme les réglages
 		 * en vigueur.
@@ -173,8 +173,9 @@
 			: null
 	);
 
-	/** `modifie()` (`V-33:3166`) — la comparaison porte sur les sept réglages ;
-	 *  seuls les deux seuils peuvent différer de l'enregistré. */
+	/** `modifie()` (`V-33:3166`) — la comparaison porte sur les réglages ;
+	 *  seuls les deux seuils peuvent différer de l'enregistré au rendu serveur, le
+	 *  câblage tenant le témoin sur la saisie réelle. */
 	const modifie = $derived(
 		seuilFrais !== config.seuilFrais || seuilVieillissant !== config.seuilVieillissant
 	);
@@ -248,6 +249,17 @@
 					'nouvel enregistrement. Réduire cette valeur supprimera les versions excédentaires ' +
 					"dès le prochain enregistrement d'une note."
 			: ''
+	);
+
+	/**
+	 * L'AIDE DU GROUPE « Indisponibilité programmée » — `RG-NF-10`. Elle dit l'état en
+	 * vigueur, jamais l'état saisi : c'est ce que les autres comptes reçoivent EN CE
+	 * MOMENT, et l'écran ne l'a pas encore enregistré.
+	 */
+	const aideIndisponibilite = $derived(
+		config.indisponibiliteActive
+			? 'Active en ce moment : tout compte non administrateur est renvoyé sur la page d’indisponibilité. Vous continuez de travailler normalement — sans cela, vous ne pourriez plus la désactiver.'
+			: 'Inactive : l’instance répond normalement à tout le monde. Une activation prend effet à la requête suivante, y compris pour les sessions déjà ouvertes.'
 	);
 
 	/** Le libellé d'une durée de session (`V-33:3502`). */
@@ -474,6 +486,41 @@
 						><div class="champ__erreur" id="erreur-session" hidden
 							>{@render marqueurDErreur()}<span id="erreur-session-txt"></span
 						></div
+					></div
+				></div
+			></div
+		></section>
+
+		<!-- ============ Indisponibilité programmée ============ -->
+		<!-- `RG-NF-10` (`CDC:1572`) — « une page d'indisponibilité programmée est
+			activable ». RIEN N'EXISTAIT : ni drapeau, ni message, ni page. Le gel ne
+			dessine pas ce groupe, pas plus qu'il ne dessine « Organisation » ; il est
+			bâti sur le même patron que les six autres, aux mêmes classes.
+			L'ADMINISTRATEUR N'EST JAMAIS RENVOYÉ SUR LA PAGE, et l'aide le dit : sans
+			cela, il ne pourrait plus la désactiver. -->
+		<!-- prettier-ignore -->
+		<section class="groupe"
+			><div class="groupe__tete"
+				><div
+					><h2 class="groupe__nom">Indisponibilité programmée</h2
+					><div class="groupe__sous">Ferme l'instance à tout le monde sauf aux administrateurs, le temps d'une intervention. Les autres comptes reçoivent une page qui dit ce qui se passe, à la place de l'application.</div
+				></div
+			></div
+			><div class="groupe__corps"
+				><div class="champ" id="champ-indisponibilite"
+					><label class="champ__label" for="c-indisponibilite">État de l'instance</label
+					><select class="selecteur" id="c-indisponibilite"
+						><option value="non" selected={!config.indisponibiliteActive}>Ouverte — tout le monde travaille</option
+						><option value="oui" selected={config.indisponibiliteActive}>Indisponibilité activée</option
+					></select
+					><span class="champ__aide">{aideIndisponibilite}</span
+				></div
+				><div class="champ" id="champ-message-indisponibilite"
+					><label class="champ__label" for="c-message-indisponibilite">Message affiché</label
+					><textarea class="saisie" id="c-message-indisponibilite" rows="3" placeholder="Migration du serveur de base de données. Retour prévu à 14 h.">{config.messageDIndisponibilite}</textarea
+					><span class="champ__aide">Dites ce qui se passe et quand ça revient. C'est le seul texte que les comptes renvoyés liront.</span
+					><div class="champ__erreur" id="erreur-message-indisponibilite" hidden
+						>{@render marqueurDErreur()}<span id="erreur-message-indisponibilite-txt"></span
 					></div
 				></div
 			></div

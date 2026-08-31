@@ -42,6 +42,7 @@ import {
 	lotsDImport,
 	templates,
 	typesDeFiche,
+	typesDeNote,
 	typesDeRelation,
 	univers
 } from '../base/schema';
@@ -495,24 +496,25 @@ export interface AccesALaConsole {
 	 */
 	readonly compte: UtilisateurCourant;
 	/**
-	 * Les sept compteurs de `aside.nav2`, lus en base : ils venaient du jeu de
+	 * Les huit compteurs de `aside.nav2`, lus en base : ils venaient du jeu de
 	 * semence et annonçaient « Univers (3) · Domaines (4) » à une instance vide.
 	 */
 	readonly effectifs: EffectifsDeConsole;
 }
 
 /**
- * Les sept compteurs de la navigation secondaire — SEPT REQUÊTES, une par pastille.
+ * Les huit compteurs de la navigation secondaire — HUIT REQUÊTES, une par pastille.
  * `imports` n'en avait pas : aucune table ne la nourrissait, et recopier le `1` du gel
  * aurait annoncé un import à une instance qui n'en a jamais reçu. `lots_d_import` la
  * nourrit depuis la migration `009`, et le compte est celui du journal — TOUS les lots,
- * puisque rien ne les purge. LES COMPTES SONT COMPTÉS ACTIFS, comme au gel. Les sept
- * lectures partent ensemble : sept `count(*)` sur des tables indexées.
+ * puisque rien ne les purge. LES COMPTES SONT COMPTÉS ACTIFS, comme au gel. Les huit
+ * lectures partent ensemble : huit `count(*)` sur des tables indexées.
  */
 export async function lireLesEffectifsDeConsole(base: Base): Promise<EffectifsDeConsole> {
-	const [u, d, f, r, t, c, i] = await Promise.all([
+	const [u, d, n, f, r, t, c, i] = await Promise.all([
 		base.select({ combien: count() }).from(univers),
 		base.select({ combien: count() }).from(domaines),
+		base.select({ combien: count() }).from(typesDeNote),
 		base.select({ combien: count() }).from(typesDeFiche),
 		base.select({ combien: count() }).from(typesDeRelation),
 		base.select({ combien: count() }).from(templates),
@@ -523,6 +525,7 @@ export async function lireLesEffectifsDeConsole(base: Base): Promise<EffectifsDe
 	return {
 		univers: u[0]?.combien ?? 0,
 		domaines: d[0]?.combien ?? 0,
+		notes: n[0]?.combien ?? 0,
 		fiches: f[0]?.combien ?? 0,
 		relations: r[0]?.combien ?? 0,
 		templates: t[0]?.combien ?? 0,
