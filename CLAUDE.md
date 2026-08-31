@@ -61,13 +61,15 @@ promis, le rendre inerte est un défaut. `seeds/corpus.ts` est un jeu de DÉMONS
 vérité du produit.
 
 **Pas de cérémonie.** Pas de contrat de tâche, pas de dossier d'écart, pas de nouvel arbitrage
-`ARB-xxx`, pas de journal, pas de batterie. Les fichiers de `docs/` sont un historique : lis-les si
-tu cherches un pourquoi, n'y ajoute rien. Commits courts — une ligne de sujet, quelques lignes de
+`ARB-xxx`, pas de journal, pas de rapport. Les dossiers d'écart, les contrats de tâche, le journal
+de vague, les ADR et les plans de remédiation ont été supprimés — 14 434 lignes qui n'ont jamais
+fait marcher un écran. Ne les recrée pas. Commits courts — une ligne de sujet, quelques lignes de
 corps si le pourquoi n'est pas évident.
 
-**Ne reconstruis pas le harnais de vérification.** Il pesait 52 000 lignes contre 5 000 lignes de
-branchement applicatif, et il a été supprimé. La preuve qu'une chose marche est qu'elle marche dans
-un navigateur.
+**N'ajoute aucun contrôle, aucun protocole, aucun garde-fou, aucun agent qui juge.** L'appareil de
+vérification pesait 52 000 lignes contre 5 000 lignes de branchement applicatif ; pendant qu'il
+grossissait, personne ne pouvait créer une note. Il a été supprimé, et les cinq agents qui jugeaient
+avec lui. La preuve qu'une chose marche est qu'elle marche dans un navigateur.
 
 **Brancher une vue**, quand `src/vues/` porte encore le contenu d'exemple en dur : la donnée vient
 du chargeur. Si toutes les routes la passent, la propriété est **requise** — le compilateur garde la
