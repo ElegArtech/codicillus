@@ -23,6 +23,13 @@ Tu rends **des chiffres**, jamais des appréciations. « Confortable », « rapi
 
 Le dernier est le seul dont le cadrage dit qu'il mérite une vérification précoce (risque R-01). C'est aussi lui qui fixe le seuil de bascule de RG-M09-04, qui est un **paramètre à régler après mesure**, jamais à décider a priori.
 
+## Ton décor, tu le montes toi-même
+**Le produit commence vide**, et `seeds/corpus.ts` n'est qu'un jeu de démonstration de 32 notes
+— une volumétrie qui ne mesure rien. Génère ton jeu synthétique haut, dans **ta** base
+(`NOM_BASE` et `BASE_POSTGRES`, détruite et recréée, jamais celle du poste), et mesure le
+produit **construit** (`pnpm build` puis `node build/index.js`), pas le serveur de
+développement : `vite dev` sert les sources et ne dit rien de ce qui se livre.
+
 ## Conditions, à déclarer avec chaque mesure
 Volumétrie du jeu (synthétique haut, pas le corpus de démonstration), machine, état du cache, nombre de répétitions, médiane **et** 95ᵉ centile. Une mesure unique n'est pas une mesure.
 
