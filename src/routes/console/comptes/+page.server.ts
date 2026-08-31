@@ -17,6 +17,7 @@ import { eq } from 'drizzle-orm';
 import { basePartagee } from '$lib/base/acces';
 import { comptes } from '$lib/base/schema';
 import { hacherMotDePasse } from '$lib/auth/mots-de-passe';
+import { motDePasseTemporaire } from '$lib/auth/mot-de-passe-temporaire';
 import {
 	changerLActivationDUnCompte,
 	changerLeRoleDUnCompte,
@@ -184,13 +185,22 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * RÉINITIALISER LE MOT DE PASSE D'UN COMPTE — `RG-CPT-01`.
+	 * RÉINITIALISER LE MOT DE PASSE D'UN COMPTE — `M14.6`, `RG-CPT-01`.
 	 *
 	 * LE VERROU N'EST PAS ÉPROUVÉ ICI : « un compte marqué mot de passe verrouillé
 	 * […] ne peut pas changer son propre mot de passe. La réinitialisation par un
 	 * administrateur reste possible » (`CDC:137`).
 	 *
-	 * LA VALEUR CLAIRE ENTRE ET N'EN RESSORT PAS : la base n'en garde que l'Argon2id.
+	 * LA VALEUR EST TIRÉE ICI, ET LE CORPS DE LA REQUÊTE N'EN PORTE PLUS. Elle
+	 * venait du navigateur — `#f-mdp`, engendré par `Math.random()` sur une liste de
+	 * seize mots, soit environ dix-huit bits d'une suite qui se rejoue. Sur la SEULE
+	 * porte de secours d'un compte, c'était la faiblesse à ne pas laisser :
+	 * `motDePasseTemporaire()` tire au hasard cryptographique, et l'administrateur
+	 * lit ce que la base vient réellement de condenser.
+	 *
+	 * LA VALEUR CLAIRE SORT UNE FOIS, ET UNE SEULE : elle est rendue à l'appelant de
+	 * l'action, qui l'affiche, et la base n'en garde que l'Argon2id — aucune
+	 * relecture ne la retrouvera.
 	 *
 	 * LES SESSIONS EN COURS NE SONT PAS FERMÉES — lacune déclarée : ni le gel ni le
 	 * cahier ne le demandent.
@@ -199,8 +209,6 @@ export const actions: Actions = {
 		consoleOuverte(locals);
 		const champs = await request.formData();
 		const identifiant = identifiantNormalise(champs.get('f-ident'));
-		const clair = String(champs.get('f-mdp') ?? '');
-		if (clair === '') return fail(422, { issue: 'mot-de-passe-vide' });
 
 		const base = basePartagee();
 		const [ligne] = await base
@@ -213,6 +221,8 @@ export const actions: Actions = {
 			.where(eq(comptes.identifiant, identifiant))
 			.limit(1);
 		if (ligne === undefined) error(404, MESSAGE_INTROUVABLE);
+
+		const clair = motDePasseTemporaire(identifiant);
 
 		/* LE MOT DE PASSE POSÉ PAR L'ADMINISTRATION EST À USAGE UNIQUE — même
 		   raison qu'à la création : la valeur transite par un canal que
@@ -228,6 +238,6 @@ export const actions: Actions = {
 			})
 			.where(eq(comptes.id, ligne.id));
 
-		return { issue: 'possible' as const, compte: ligne.nom };
+		return { issue: 'possible' as const, compte: ligne.nom, motDePasse: clair };
 	}
 };
