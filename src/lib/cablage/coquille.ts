@@ -1,54 +1,25 @@
 /**
- * LE CÂBLAGE DE LA COQUILLE — la barre supérieure, ses deux menus, sa recherche,
- * le mode concentration, le dépliage du rail et la pile de notifications.
+ * Le câblage de la coquille — la barre supérieure, ses deux menus, sa recherche, le mode
+ * concentration, le dépliage du rail et la pile de notifications.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI ICI, ET POURQUOI UNE SEULE FOIS
+ * `BarreSuperieure.svelte` est rendue par trente-quatre vues, et ses boutons portent des
+ * comportements que `ARB-011` retire des transcriptions : aucun n'était câblé — la façon la
+ * plus évidente de créer une note ne créait rien. Le câblage est posé UNE fois, par délégation
+ * sur le document. AUCUN STYLE N'EST ÉCRIT : le gel ouvre ses menus par un attribut, ce module
+ * pose l'attribut et rien d'autre.
  *
- * `src/lib/coquille/BarreSuperieure.svelte` est rendue par **trente-quatre
- * vues**. Ses boutons portent des comportements que le gel décrit et que
- * `ARB-011` retire des transcriptions : le menu « Créer », le menu de
- * l'utilisateur, la boîte de recherche. Aucun n'était câblé — la façon la plus
- * évidente de créer une note ne créait rien, et se déconnecter était impossible
- * autrement qu'en tapant l'adresse.
+ * `P-03` — chaque entrée de menu a une destination réelle, et celles qui n'en ont pas ne sont
+ * pas rendues : « Nouveau signet » et « Nouveau dossier » exigent un domaine de rattachement,
+ * « Nouvelle note » et « Importer » exigent que l'appelant puisse écrire QUELQUE PART.
  *
- * Le câblage est posé UNE fois, dans la mise en page racine, par délégation sur
- * le document. Le poser vue par vue en ferait trente-quatre copies, dont trente-
- * trois divergeraient un jour.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * AUCUN STYLE N'EST ÉCRIT, ET C'EST VÉRIFIABLE
- *
- * Le gel ouvre ses menus par un attribut : `.menu-barre[data-ouvert="oui"]
- * .menu-barre__liste { display: block }` (`V-14.css:119`). Ce module pose donc
- * l'attribut, et rien d'autre. Il ne crée aucun nœud, n'ajoute aucune classe,
- * ne touche à aucune feuille.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * `P-03` — UNE ENTRÉE VISIBLE EST UNE ENTRÉE QUI FONCTIONNE
- *
- * Chaque entrée de menu a une destination réelle, et celles qui n'en ont pas ne
- * sont pas rendues : « Nouveau signet » et « Nouveau dossier » exigent un
- * domaine, et le seul que le produit puisse choisir sans décider à la place de
- * l'utilisateur est celui auquel son compte est rattaché. Sans rattachement,
- * les deux entrées sont retirées plutôt que laissées mortes. « Nouvelle note »
- * et « Importer des fichiers » exigent, elles, que l'appelant puisse écrire
- * QUELQUE PART : sur une instance à zéro univers, personne ne le peut, et les
- * deux adresses rendent 404.
- *
- * L'ÉLAGAGE D'ICI EST LE SECOND FILET, PAS LE PREMIER. Il court après
- * l'hydratation : ce qu'il retire a déjà été SERVI, et un navigateur sans script
- * le garde. `BarreSuperieure.svelte` ne les ÉMET donc plus — c'est ce que `P-09`
- * demande, « ni grisée, ni masquée ». Ce module continue de tenir la carte des
- * destinations, parce que c'est elle qui décide du clic.
+ * L'ÉLAGAGE D'ICI EST LE SECOND FILET, PAS LE PREMIER : il court après l'hydratation, donc ce
+ * qu'il retire a déjà été SERVI. `BarreSuperieure.svelte` ne les émet plus (`P-09`).
  */
 
-/** Ce que la mise en page sait de l'appelant, et qui décide des destinations. */
 export interface ContexteDeCoquille {
 	/**
-	 * Le domaine de rattachement LISIBLE, ou `null`, et ce que chacune de ses
-	 * deux cibles demande en plus — `+layout.server.ts` les décide, un booléen
-	 * par cible, avec les fonctions de la cible.
+	 * Le domaine de rattachement LISIBLE, ou `null`, et ce que chacune de ses deux
+	 * cibles demande en plus — un booléen par cible, décidé par le gabarit racine.
 	 */
 	rangement: {
 		readonly univers: string;
@@ -58,17 +29,10 @@ export interface ContexteDeCoquille {
 	/** `RG-DRO-03` — seul l'administrateur voit l'entrée de console. */
 	administrateur: boolean;
 	/**
-	 * L'APPELANT PEUT-IL ÉCRIRE QUELQUE PART — `ecriture` du gabarit racine,
-	 * calculé par la MÊME fonction que la garde de `/notes/nouvelle`.
-	 *
-	 * « Nouvelle note » et « Importer des fichiers » portaient leur adresse EN
-	 * DUR, sans garde, à côté de deux voisines gardées. Sur une instance neuve —
-	 * zéro univers, l'état normal au premier démarrage —, les deux mènent en 404,
-	 * et le 404 servi est V-26 : il annonce que l'adresse n'existe pas, ce qui est
-	 * faux, et il offre « Créer la note … » vers `/notes/nouvelle`. Une boucle.
-	 *
-	 * `P-03` n'admet aucune entrée qui ne mène nulle part : sans écriture, les
-	 * deux cibles valent `null`, comme les deux voisines.
+	 * L'appelant peut-il écrire quelque part — calculé par la MÊME fonction que la garde de
+	 * `/notes/nouvelle`. « Nouvelle note » et « Importer des fichiers » portaient leur adresse EN
+	 * DUR, sans garde : sur une instance neuve les deux mènent en 404, et le 404 servi offre
+	 * « Créer la note … » vers `/notes/nouvelle`. Une boucle.
 	 */
 	ecriture: boolean;
 }
@@ -79,19 +43,14 @@ function destinations(contexte: ContexteDeCoquille): Map<string, string | null> 
 	const domaine = r === null ? null : `/univers/${r.univers}/${r.domaine}`;
 	return new Map<string, string | null>([
 		['Nouvelle note', contexte.ecriture ? '/notes/nouvelle' : null],
-		/* LE GESTE VIT SUR LA PAGE D'UN DOSSIER — `#a-sousdossier` et son dialogue,
-		   `mockups/V-13-page-dossier.html:1161` et `:1209` : on crée un SOUS-dossier,
-		   donc il faut d'abord dire lequel. L'entrée mène à la page du domaine, où
-		   l'arborescence est offerte au choix — ce qui n'était vrai qu'à moitié :
-		   la pastille « Dossiers » n'y était pas rendue tant que le domaine ne
-		   portait aucune note lisible, et l'entrée était donc un cul-de-sac sur
-		   un domaine neuf. `V-11.svelte` rend désormais cette pastille quel que
-		   soit l'état, et la page du domaine tient sa promesse. */
+		/* LE GESTE VIT SUR LA PAGE D'UN DOSSIER : on crée un SOUS-dossier, donc il faut
+		   d'abord dire lequel. L'entrée mène à la page du domaine, où l'arborescence est
+		   offerte au choix — ce qui n'était vrai qu'à moitié tant que la pastille
+		   « Dossiers » n'y était pas rendue sur un domaine sans note lisible. */
 		['Nouveau dossier', domaine],
-		/* LE FORMULAIRE DE SIGNET DEMANDE DEUX CHOSES DE PLUS QUE LA PAGE DU
-		   DOMAINE — le module Signets actif sur ce domaine, et le droit d'y
-		   rédiger. `resoudreLAccesAuxSignets(…, true)` refuse sur l'une ou
-		   l'autre, et un domaine simplement LISIBLE n'y suffit pas. */
+		/* LE FORMULAIRE DE SIGNET DEMANDE DEUX CHOSES DE PLUS QUE LA PAGE DU DOMAINE : le
+		   module Signets actif, et le droit d'y rédiger. Un domaine simplement LISIBLE
+		   n'y suffit pas. */
 		['Nouveau signet', domaine === null || !r?.signets ? null : `${domaine}/signets/nouveau`],
 		['Importer des fichiers', contexte.ecriture ? '/importer' : null],
 		['Mon profil', '/mon-profil'],
@@ -101,18 +60,14 @@ function destinations(contexte: ContexteDeCoquille): Map<string, string | null> 
 	]);
 }
 
-/** Le libellé d'un nœud, blancs réduits — c'est la clé du gel. */
 function libelle(noeud: Element): string {
 	return (noeud.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
 
 /**
- * LE MODE CONCENTRATION — `#bascule-rail`, transcrit de `V-37:3270-3275`.
- *
- * Le gel bascule `data-rail` sur `div.app` et réécrit les deux textes du
- * bouton. La feuille de V-37 fait le reste, et elle seule :
- * `.app[data-rail="ferme"] .rail { display: none }` (`V-37.css:9`). Aucune
- * règle n'est écrite ici, aucun nœud n'est créé.
+ * Le mode concentration — `#bascule-rail`, transcrit de `V-37:3270-3275`. Le gel
+ * bascule `data-rail` sur `div.app` et réécrit les deux textes du bouton ; la feuille
+ * de V-37 fait le reste, et elle seule.
  */
 function basculerLeRail(document: Document, bouton: Element): void {
 	const app = document.getElementById('app');
@@ -124,19 +79,13 @@ function basculerLeRail(document: Document, bouton: Element): void {
 }
 
 /**
- * LE DÉPLIAGE D'UNE BRANCHE DU RAIL — transcrit de `basculer()`, `V-37:3231`.
+ * Le dépliage d'une branche du rail — transcrit de `basculer()`. Le gel pose `data-ouvert` sur
+ * le `li` ET sur son `div.noeud` — le premier commande l'affichage des enfants, le second
+ * l'orientation du chevron — puis accorde `aria-expanded` et `aria-label`.
  *
- * Le gel pose `data-ouvert` sur le `li` ET sur son `div.noeud` — le premier
- * commande l'affichage des enfants (`V-37:471`), le second l'orientation du
- * chevron (`V-37:463`) — puis accorde `aria-expanded` et `aria-label`. Les deux
- * formes du rail sont servies par le même geste : elles ne diffèrent que par
- * `data-cle` et `type="button"`, dont rien ici ne dépend.
- *
- * LA PERSISTANCE DU GEL N'EST PAS REPRISE. `V-37:3167` garde les branches
- * dépliées dans `localStorage`, parce que sa navigation est entièrement de son
- * côté. Ici, le rail est rendu par le serveur à partir du chemin courant : une
- * mémoire de navigateur qui le contredirait rouvrirait des branches que la page
- * suivante a déjà décidé de fermer.
+ * LA PERSISTANCE DU GEL N'EST PAS REPRISE : ici le rail est rendu par le serveur à partir du
+ * chemin courant, et une mémoire de navigateur rouvrirait des branches que la page suivante a
+ * décidé de fermer.
  */
 function basculerLaBranche(chevron: Element): void {
 	const ligne = chevron.closest('li');
@@ -160,12 +109,9 @@ function basculerLaBranche(chevron: Element): void {
 const SORTIE_DE_NOTIFICATION = 260;
 
 /**
- * LE RETRAIT D'UNE BULLE — transcrit de `retirer()`, `V-38:2344-2348`.
- *
- * L'attribut `data-sortie` est celui du gel, et le socle porte déjà son
- * animation — `.notif[data-sortie="oui"] { animation: descend … }`
- * (`src/socle.css:334`), neutralisée sous `prefers-reduced-motion` par la règle
- * voisine. La bulle quitte le document à la fin de l'animation, comme au gel.
+ * Le retrait d'une bulle — transcrit de `retirer()`. L'attribut `data-sortie` est
+ * celui du gel, et le socle porte déjà son animation, neutralisée sous
+ * `prefers-reduced-motion` par la règle voisine.
  */
 function retirerLaNotification(bulle: Element): void {
 	bulle.setAttribute('data-sortie', 'oui');
@@ -222,12 +168,9 @@ export function cablerLaCoquille(document: Document, contexte: ContexteDeCoquill
 			return;
 		}
 
-		/* 3. LA FORME ABRÉGÉE — un seul bouton « Créer », sans menu.
-
-		      SA DESTINATION EST CELLE DE L'ENTRÉE « Nouvelle note », et non une
-		      seconde écriture de la même adresse : sans écriture ouverte, la table
-		      la pose à `null`, et le bouton — que `BarreSuperieure.svelte` n'émet
-		      alors pas non plus — ne mène nulle part plutôt qu'en 404. */
+		/* 3. LA FORME ABRÉGÉE — un seul bouton « Créer », sans menu. Sa destination est
+		      celle de l'entrée « Nouvelle note », et non une seconde écriture de la même
+		      adresse : sans écriture ouverte, la table la pose à `null`. */
 		const abrege = cible.closest('button.btn[title="Créer"]');
 		if (abrege !== null && abrege.closest('.menu-barre') === null) {
 			evenement.preventDefault();
@@ -236,16 +179,10 @@ export function cablerLaCoquille(document: Document, contexte: ContexteDeCoquill
 			return;
 		}
 
-		/*
-		 * 3 bis. L'AVATAR DE LA FORME ABRÉGÉE — vingt-six vues, et aucun menu.
-		 *
-		 * Les six classes `.menu-barre*` ne sont déclarées par AUCUNE des deux
-		 * feuilles des vues abrégées (`BarreSuperieure.svelte` le mesure) : y
-		 * ouvrir une liste la rendrait DÉPLIÉE dans la barre. Le bouton mène donc
-		 * là où mène la première entrée du menu de la forme complète, « Mon
-		 * profil ». C'est la seule destination que le gel nomme et que la forme
-		 * abrégée peut atteindre sans qu'on lui dessine un menu qu'elle n'a pas.
-		 */
+		/* 3 bis. L'AVATAR DE LA FORME ABRÉGÉE — vingt-six vues, et aucun menu. Les six
+		   classes `.menu-barre*` ne sont déclarées par aucune des deux feuilles des vues
+		   abrégées : y ouvrir une liste la rendrait DÉPLIÉE dans la barre. Le bouton mène
+		   donc là où mène la première entrée du menu complet, « Mon profil ». */
 		const avatar = cible.closest('button.avatar');
 		if (avatar !== null && avatar.closest('.menu-barre') === null) {
 			evenement.preventDefault();
@@ -269,17 +206,10 @@ export function cablerLaCoquille(document: Document, contexte: ContexteDeCoquill
 			return;
 		}
 
-		/*
-		 * 3 quinquies. LA PILE DE NOTIFICATIONS — la croix, et les actions.
-		 *
-		 * LE GEL DONNE AUX DEUX LE MÊME EFFET, ET C'EST TOUT CE QU'IL LEUR DONNE.
-		 * `V-38:2299` accroche `retirer` à la croix ; `V-38:2321-2325` accroche
-		 * aux boutons d'action `a.action()` PUIS `retirer()`, « sauf si
-		 * `ferme === false` ». Or une action de notification est ici un LIBELLÉ et
-		 * rien d'autre — `Notification.actions` est un `readonly string[]`, et
-		 * aucun appelant ne porte de fonction à exécuter. Il reste le retrait,
-		 * qui est le comportement PAR DÉFAUT du gel, et qui est réel.
-		 */
+		/* 3 quinquies. LA PILE DE NOTIFICATIONS — la croix, et les actions. Le gel donne
+		   aux deux le même effet, et c'est tout ce qu'il leur donne : une action de
+		   notification est ici un LIBELLÉ et rien d'autre — aucun appelant ne porte de
+		   fonction à exécuter. Il reste le retrait, comportement PAR DÉFAUT du gel. */
 		const fermeture = cible.closest('.notif__fermer, .notif__actions button');
 		if (fermeture !== null) {
 			const bulle = fermeture.closest('.notif');

@@ -1,39 +1,18 @@
 /**
  * L'ÉCRITURE D'UN SIGNET — créer, modifier, supprimer.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * UN SIGNET EST UNE NOTE, ET C'EST LE SCHÉMA QUI LE DIT
+ * UN SIGNET EST UNE NOTE, ET C'EST LE SCHÉMA QUI LE DIT : `notes.signet_adresse` et
+ * `notes.signet_ajoute_le` sont deux COLONNES de `notes`, pas une table, et « Signet — lien
+ * web curaté » est un TYPE de note. Ce module appelle `creerUneNote()`, avec deux colonnes de
+ * plus.
  *
- * `notes.signet_adresse` et `notes.signet_ajoute_le` sont deux COLONNES de
- * `notes`, pas une table. Le vocabulaire du produit ne connaît d'ailleurs que
- * la Note : « Signet — lien web curaté » est un TYPE de note, comme
- * « Procédure » ou « Fiche ». Ce module ne crée donc rien de nouveau : il
- * appelle `creerUneNote()`, avec deux colonnes de plus.
+ * LES TROIS VALEURS QUE LE FORMULAIRE GELÉ NE DONNE PAS — `ARB-064` : LE DOSSIER D'ACCUEIL,
+ * `RG-STR-03` voulant que toute note appartienne à un dossier, d'où la RACINE du domaine ; LE
+ * CORPS, `notes.corps_reference` étant non nul et canonique, d'où la description saisie ; et
+ * L'IDENTIFIANT, `ARB-062` sans exception.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * LES TROIS VALEURS QUE LE FORMULAIRE GELÉ NE DONNE PAS — `ARB-064`
- *
- * Le lot P-10 avait refusé d'écrire, et il avait raison de refuser : trois
- * valeurs manquaient, et les inventer en cours d'exécution aurait été décider
- * à la place du commanditaire. Elles sont désormais arbitrées :
- *
- *   1. LE DOSSIER D'ACCUEIL — le formulaire de `mockups/V-23-*.html` n'offre
- *      qu'un choix de DOMAINE, et `RG-STR-03` veut que toute note appartienne à
- *      un dossier. Le signet est donc rangé à la RACINE de son domaine.
- *   2. LE CORPS — `notes.corps_reference` est non nul et canonique (`ADR-003`).
- *      La description saisie devient le corps Référence ; vide, le corps l'est
- *      aussi, au sens que `corpsVide()` donne à ce mot.
- *   3. L'IDENTIFIANT — `ARB-062`, sans exception : un signet est une note, son
- *      identifiant se dérive de son titre comme celui de n'importe quelle note.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE DROIT EST RÉSOLU AILLEURS, ET AVANT
- *
- * Aucune fonction d'ici ne décide d'un accès : `resoudreLAccesAuxSignets()` et
- * `resoudreUnSignet()` (`./signets.ts`) le font, par le même chemin que la
- * lecture, avec la même sortie unique. Les routes les appellent AVANT d'appeler
- * ce module. L'absence de bouton n'est pas un contrôle d'accès ; la résolution
- * en est un.
+ * LE DROIT EST RÉSOLU AILLEURS, ET AVANT : `resoudreLAccesAuxSignets()` et
+ * `resoudreUnSignet()` le font, par le même chemin que la lecture.
  */
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
@@ -50,8 +29,6 @@ import { creerUneNote, etiquetteDuLibelle } from './creation';
 /** Le type de note que porte tout signet — `seeds/corpus.ts`, `TypeDeNote`. */
 const TYPE_SIGNET = 'Signet';
 
-/* ═══════════════════════════════════ La saisie ══════════════════════════ */
-
 /** Ce que le formulaire de V-23 porte, une fois lu. */
 export interface SaisieDeSignet {
 	readonly adresse: string;
@@ -61,7 +38,6 @@ export interface SaisieDeSignet {
 	readonly etiquettes: readonly string[];
 }
 
-/** Un refus de forme, ou la saisie. Jamais une valeur réparée. */
 export type LectureDeSignet =
 	| { readonly ok: true; readonly saisie: SaisieDeSignet }
 	| { readonly ok: false; readonly motif: string };
@@ -72,11 +48,10 @@ function texte(champs: FormData, nom: string): string {
 }
 
 /**
- * L'ADRESSE EST LE SEUL CHAMP DONT LA FORME SE CONTRÔLE, et elle se contrôle
- * par l'analyseur d'adresses de la plateforme, jamais par une expression
- * régulière écrite ici. Seuls `http` et `https` sont admis : un signet est un
- * « lien web curaté », et un `javascript:` collé dans ce champ serait servi
- * ensuite à tous les lecteurs du domaine.
+ * L'ADRESSE EST LE SEUL CHAMP DONT LA FORME SE CONTRÔLE, et elle se contrôle par
+ * l'analyseur d'adresses de la plateforme, jamais par une expression régulière écrite
+ * ici. Seuls `http` et `https` sont admis : un `javascript:` collé dans ce champ
+ * serait servi ensuite à tous les lecteurs du domaine.
  */
 export function adresseDeSignet(brut: string): string | null {
 	let analysee: URL;
@@ -88,7 +63,6 @@ export function adresseDeSignet(brut: string): string | null {
 	return analysee.protocol === 'http:' || analysee.protocol === 'https:' ? analysee.href : null;
 }
 
-/** Les étiquettes soumises — mêmes règles que celles d'une note. */
 export function etiquettesDeSaisie(brut: string): readonly string[] {
 	const vues = new Set<string>();
 	for (const morceau of brut.split(',')) {
@@ -120,8 +94,6 @@ export function lireLaSaisieDeSignet(champs: FormData): LectureDeSignet {
 	};
 }
 
-/* ═══════════════════════════════════ La cible ═══════════════════════════ */
-
 /** Le dossier RACINE d'un domaine — le point d'accueil d'`ARB-064` §1. */
 export async function racineDuDomaine(base: Base, domaineId: string): Promise<string | null> {
 	const [ligne] = await base
@@ -142,9 +114,6 @@ export async function typeSignet(base: Base): Promise<string | null> {
 	return ligne?.id ?? null;
 }
 
-/* ═══════════════════════════════════ La création ════════════════════════ */
-
-/** Ce qu'une création de signet demande. */
 export interface DemandeDeSignet {
 	readonly saisie: SaisieDeSignet;
 	readonly domaineId: string;
@@ -201,14 +170,10 @@ export async function creerUnSignet(
 	return { trouve: true, ressource: { identifiant: fait.ressource.identifiant } };
 }
 
-/* ═══════════════════════════════════ La modification ════════════════════ */
-
 /**
- * L'IDENTIFIANT NE BOUGE JAMAIS, quoi qu'il advienne du titre — `RG-M03-03` et
- * `ARB-062` §2.6. Renommer un signet ne change pas son adresse dans le produit.
- *
- * Le DOMAINE non plus : le déplacer supposerait le droit de rédaction sur les
- * deux domaines (`RG-M05-09`), et l'écran ne l'offre pas. Le champ est lu,
+ * L'IDENTIFIANT NE BOUGE JAMAIS, quoi qu'il advienne du titre — `RG-M03-03`,
+ * `ARB-062` §2.6. Le DOMAINE non plus : le déplacer supposerait le droit de rédaction
+ * sur les deux domaines (`RG-M05-09`), et l'écran ne l'offre pas. Le champ est lu,
  * comparé, et un domaine différent est refusé plutôt que subi.
  */
 export async function enregistrerUnSignet(
@@ -255,8 +220,6 @@ export async function enregistrerUnSignet(
 	await entretenirLIndex(base, client, [demande.identifiant]);
 	return { trouve: true, ressource: { identifiant: demande.identifiant } };
 }
-
-/* ═══════════════════════════════════ La suppression ═════════════════════ */
 
 /**
  * La destruction est atomique et définitive : il n'y a pas de corbeille

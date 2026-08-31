@@ -1,83 +1,30 @@
 /**
- * LA BATTERIE D'ÉQUIVALENCE — ce que la base rend est-il ce que le jeu exporte ?
+ * La batterie d'équivalence — ce que la base rend est-il ce que le jeu exporte ?
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QU'ELLE PROUVE, ET POURQUOI HUIT LOTS EN DÉPENDENT
+ * La base a été semée DEPUIS `seeds/corpus.ts` : les deux côtés portent les mêmes données, et
+ * une couche de lecture fidèle doit rendre EXACTEMENT les formes du jeu — mêmes valeurs, mêmes
+ * clés, même ordre. Elle ne prouve RIEN sur le rendu : c'est une prémisse, pas un verdict.
  *
- * La base a été semée DEPUIS `seeds/corpus.ts` (`commandes.ts` `semer()`). Les
- * deux côtés portent donc les mêmes données, et une couche de lecture fidèle
- * doit rendre EXACTEMENT les formes du jeu — mêmes valeurs, mêmes clés, même
- * ordre. Si c'est vrai, un chargeur de route qui remplace `corpusPourVue()` par
- * `lireNotes()` ne peut pas déplacer un pixel, et les huit lots de câblage n'ont
- * plus à le prouver écran par écran.
+ * DEUX GENRES DE CONSTAT, ET LES DEUX FONT ROUGIR. Une DIVERGENCE est un défaut de la couche,
+ * qui se corrige dans `lecture.ts` ; une LACUNE est une donnée que la base NE PORTE PAS.
  *
- * Elle ne prouve RIEN sur le rendu : la conformité aux maquettes reste l'affaire
- * de `pnpm verif:maquette`. Elle prouve que les DONNÉES qu'on lui donnera sont
- * les mêmes. C'est une prémisse, pas un verdict d'écran.
-
- * CE QUI RESTE ICI, ET CE QUI N'Y EST PLUS. Le RAPPORT — la fonction qui
- * imprimait le verdict et rendait un code de sortie — est parti avec le lanceur
- * qui l'appelait : plus rien ne l'importait, pas même son fichier de test. Ce
- * module garde ce qui SERT : la comparaison profonde, les sondes et la mesure
- * des lacunes, toutes trois éprouvées par `equivalence.test.ts`. Ce que les
- * sections ci-dessous disent d'un code de retour ou d'un rapport imprimé décrit
- * donc l'instrument tel qu'il a été, pas une fonction de ce fichier.
+ * LES LACUNES SONT MESURÉES, PLUS DÉCLARÉES : une liste de littéraux avait survécu à la
+ * migration qui en refermait trois, et le rapport imprimait « la colonne n'existe pas » alors
+ * qu'elle existait. Un instrument qui affirme au lieu de mesurer gouverne la couche qu'il juge.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * DEUX GENRES DE CONSTAT, ET LES DEUX FONT ROUGIR
- *
- *   DIVERGENCE  la base porte la donnée, la couche la rend mal. C'est un défaut
- *               de ce lot, et il se corrige dans `lecture.ts`.
- *   LACUNE      la base NE PORTE PAS la donnée : aucune colonne ne l'accueille,
- *               la semence ne l'écrit pas, ou le gel ne la donne qu'en RENDU.
- *               Aucune ligne de `lecture.ts` ne peut la refermer — il y faut une
- *               migration, une semence, un arbitrage ou un regel.
- *
- * Les deux comptent dans le rouge, et c'est délibéré. Une lacune tolérée
- * silencieusement est exactement ce qui ferait échouer un lot de câblage six
- * semaines plus tard, sur un écran, sans que personne sache pourquoi. Le
- * distinguo est dans le RAPPORT, pas dans le code de retour.
- *
- * ET LES LACUNES SONT MESURÉES, PLUS DÉCLARÉES (`T-049`). Elles ont été une
- * liste de six littéraux, et la liste a survécu à la migration qui en refermait
- * trois : le rapport imprimait « `comptes` n'a pas la colonne » alors que la
- * colonne existait et que la semence l'écrivait. Un instrument qui affirme au
- * lieu de mesurer gouverne la couche qu'il est censé juger — `lecture.ts` a
- * renoncé à rendre une donnée juste pour ne pas rougir. `chiffrerLesLacunes()`
- * interroge désormais la base, candidat par candidat.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES SONDES, ET POURQUOI LEUR CODE EST INVERSÉ
- *
- * Un banc toujours vert ne prouve rien (RA-01). `--sonde=<genre>` perturbe le
- * CANDIDAT — ce que la couche de lecture rend —, jamais la référence, et exige
- * que la batterie rougisse DAVANTAGE : le code de retour est alors inversé.
- *
- * L'inversion s'arrête au refus de conclure : quand la mutation n'a RIEN
- * TOUCHÉ, elle ne teste rien, et l'instrument refuse. Inverser ce cas
- * fabriquerait un vert à partir d'une sonde inerte — le défaut qu'ARB-013 a
- * laissé courir huit lots (P-5).
- *
- * ET LA MESURE NE PEUT PAS ÊTRE « LE ROUGE EXISTE » : la batterie est DÉJÀ
- * rouge, de ses lacunes. Une sonde qui se contenterait de constater du rouge
- * serait inerte sans qu'on le voie — le piège même que P-26 décrit. Elle
- * compare donc le NOMBRE de divergences avec et sans mutation, et n'accepte que
- * s'il a AUGMENTÉ.
+ * LES SONDES ONT LE CODE INVERSÉ : `--sonde=<genre>` perturbe le CANDIDAT, jamais la
+ * référence, et exige que la batterie rougisse DAVANTAGE. L'inversion s'arrête au refus de
+ * conclure — une mutation qui n'a RIEN touché ne teste rien. La mesure ne peut pas être « le
+ * rouge existe » : la batterie est déjà rouge de ses lacunes, et la sonde compare donc le
+ * NOMBRE de divergences avec et sans mutation.
  */
 import { COMPTES, CORPUS, TEMPLATES, type Compte, type Note } from '../../../seeds/corpus';
 import type { Base } from '../base/acces';
 
-/* ═══════════════════════════════════════════ La comparaison profonde ═══ */
-
 /**
- * Le premier chemin où deux valeurs diffèrent, ou `null` si elles sont égales.
- *
- * ELLE COMPARE LES ENSEMBLES DE CLÉS, et pas seulement les valeurs. Une clé
- * présente et valant `undefined` n'est PAS une clé absente : `interface Note`
- * déclare `typeFiche`, `url` et `ajoute` optionnels, et une couche qui les
- * poserait à `undefined` au lieu de les omettre rendrait un objet de forme
- * différente. `JSON.stringify` efface cette différence — c'est pourquoi elle
- * n'est pas mesurée par sérialisation.
+ * Le premier chemin où deux valeurs diffèrent, ou `null` si elles sont égales. ELLE COMPARE
+ * LES ENSEMBLES DE CLÉS, et pas seulement les valeurs : une clé présente valant `undefined`
+ * n'est PAS une clé absente, et `JSON.stringify` efface cette différence.
  */
 export function premiereDifference(a: unknown, b: unknown, chemin = ''): string | null {
 	if (a === b) return null;
@@ -124,9 +71,6 @@ function apercu(valeur: unknown): string {
 	return rendu.length > 60 ? `${rendu.slice(0, 57)}…` : rendu;
 }
 
-/* ═══════════════════════════════════════════════════ Les sondes ═════════ */
-
-/** Ce qu'une sonde fait aux notes que la couche a rendues, et combien elle touche. */
 export interface Sonde {
 	readonly genre: string;
 	readonly cote: string;
@@ -227,9 +171,6 @@ export const SONDES: readonly Sonde[] = [
 	}
 ];
 
-/* ═══════════════════════════════════════════════════ Les constats ═══════ */
-
-/** Une donnée que la base ne peut pas rendre : aucune colonne, ou rien d'écrit. */
 export interface Lacune {
 	readonly forme: string;
 	readonly champ: string;
@@ -239,34 +180,27 @@ export interface Lacune {
 }
 
 /**
- * CE QU'UNE MESURE DE LACUNE CONSTATE.
- *
- * `attendu` est le nombre de valeurs que le JEU demande de restituer pour cette
- * forme ; `restituables` est le nombre que la base permet RÉELLEMENT de rendre,
- * et il est MESURÉ, jamais déclaré. La lacune est ouverte tant que
- * `restituables < attendu`, et elle disparaît du rapport à l'égalité.
+ * Ce qu'une mesure de lacune constate. `attendu` est le nombre de valeurs que le JEU
+ * demande de restituer ; `restituables` est le nombre que la base permet RÉELLEMENT
+ * de rendre, et il est MESURÉ, jamais déclaré. La lacune disparaît à l'égalité.
  */
 export interface MesureDeLacune {
 	readonly attendu: number;
 	readonly restituables: number;
-	/** Le libellé chiffré du rapport — il porte les deux nombres et leur unité. */
 	readonly combien: string;
 }
 
-/** Ce que la mesure d'une lacune a le droit de regarder. */
 export interface ContexteDeMesure {
 	readonly base: Base;
 	/**
-	 * CE QUE LA COUCHE REND DES COMPTES, et il n'est là que pour les champs dont
-	 * la restitution est un RENDU et non une colonne — `Compte.derniere` est le
-	 * seul. Pour tous les autres, la mesure interroge la BASE : mesurer sur le
-	 * candidat ce que le candidat doit produire refermerait une lacune dès que la
-	 * couche fabriquerait la valeur, ce qui est exactement ce que P-02 interdit.
+	 * Ce que la couche rend des comptes, là seulement pour les champs dont la
+	 * restitution est un RENDU et non une colonne. Pour tous les autres, la mesure
+	 * interroge la BASE : mesurer sur le candidat ce que le candidat doit produire
+	 * refermerait une lacune dès que la couche fabriquerait la valeur.
 	 */
 	readonly comptesRendus: readonly Partial<Compte>[];
 }
 
-/** Une lacune candidate : son motif est écrit, son chiffre est mesuré. */
 export interface CandidatDeLacune {
 	readonly forme: string;
 	readonly champ: string;
@@ -285,59 +219,28 @@ function rangs<T>(resultat: unknown): readonly T[] {
 const SEPARATEUR = '\u001f';
 
 /**
- * CE QUE LE GEL DONNE DES PIÈCES JOINTES, COMPTÉ SUR LE FICHIER OUVERT.
- *
- * Deux constantes, et c'est la seconde qui décide. `mockups/V-14-lecture-note.html`
- * :1831-1840 nomme deux pièces, avec leur taille et leur date de dépôt. Aucune
- * autre maquette n'en nomme une seule : les onze autres pièces que le jeu
- * décompte n'ont ni nom, ni taille, ni type de média.
- *
- * Mais les tailles de ces deux-là y sont écrites « 1,2 Mo » et « 18 Ko »,
- * c'est-à-dire RENDUES. `taille_octets` veut un nombre d'octets, et « 1,2 Mo »
- * n'en désigne aucun — il en désigne un intervalle. Le nombre de pièces dont le
- * gel donne une taille exploitable comme DONNÉE est donc zéro, et c'est ce zéro
- * qui interdit la semence, pas les onze noms manquants.
- *
- * Elles sont deux plutôt qu'une parce qu'elles ne disent pas la même chose : la
- * première dit ce qu'un regel devrait compléter, la seconde dit pourquoi un
- * regel des seuls NOMS ne suffirait pas — il faut changer la nature de ce que la
- * maquette porte, du rendu vers la donnée.
+ * Ce que le gel donne des pièces jointes, compté sur le fichier ouvert. Deux constantes, et
+ * c'est la seconde qui décide : `V-14:1831-1840` nomme deux pièces, mais leurs tailles y sont
+ * RENDUES — « 1,2 Mo » désigne un intervalle. Le nombre de pièces dont le gel donne une taille
+ * exploitable comme DONNÉE est donc zéro, et c'est ce zéro qui interdit la semence. La première
+ * dit ce qu'un regel devrait compléter, la seconde pourquoi un regel des seuls NOMS ne
+ * suffirait pas.
  */
 const PIECES_NOMMEES_AU_GEL = 2;
 const PIECES_CHIFFRABLES_AU_GEL = 0;
 
 /**
- * LES LACUNES CANDIDATES — leur motif est écrit à la main, leur chiffre est
- * mesuré à chaque exécution.
+ * Les lacunes candidates — leur motif est écrit à la main, leur chiffre est mesuré à chaque
+ * exécution.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI CE TABLEAU N'EST PLUS LA LISTE DES LACUNES
+ * Ce tableau n'est PAS la liste des lacunes. Il l'a été, et c'était un défaut d'instrument :
+ * six littéraux comptés tels quels, si bien que `total = divergences + 6` était un plancher.
+ * La conséquence était pire — la migration a refermé trois lacunes, le rapport a continué de
+ * les imprimer, et rendre la donnée juste aurait fait rougir la batterie POUR AVOIR EU RAISON.
  *
- * Il l'a été, et c'était un défaut d'instrument : six littéraux, comptés tels
- * quels. `T-030b` l'a relevé, et l'entête de `lacunes()` promettait déjà le
- * contraire — « une lacune qu'une migration referme disparaît d'elle-même du
- * rapport » — sans qu'aucune ligne ne le fasse. La `chiffrerLesLacunes()` que ce
- * commentaire nommait n'existait pas ; `total = divergences + 6` était donc un
- * plancher, et la batterie ne pouvait PAS atteindre zéro.
- *
- * La conséquence était pire que le plancher, et elle a coûté deux lots : la
- * migration `005` a posé `comptes.domaine_id`, `comptes.derniere_connexion_le` et
- * `etiquettes_de_note.ordre`, la semence les écrit — et le rapport a continué
- * d'imprimer « `comptes` n'a pas la colonne ». Un instrument qui affirme au lieu
- * de mesurer finit par mentir sur le sens inverse : rendre la donnée que la base
- * porte désormais aurait fait rougir la batterie POUR AVOIR EU RAISON, et
- * `lecture.ts` a préféré ne pas la rendre. L'instrument a gouverné la couche.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CHAQUE MESURE INTERROGE LA BASE, ET UNE SEULE FAIT EXCEPTION
- *
- * La définition d'une lacune est « la base NE PORTE PAS la donnée » : la mesure
- * est donc une requête, indépendante de la couche de lecture. Une seule
- * exception, et elle est motivée à son entrée : `Compte.derniere` est un LIBELLÉ
- * RELATIF, c'est-à-dire un rendu. La base porte l'instant depuis `005` ; ce qui
- * manque est la RÈGLE de passage, et aucune requête ne mesure une règle absente.
- * Sa restitution est donc mesurée là où elle se produirait — sur ce que la couche
- * rend —, et le jour où un arbitrage donne le seuil, la lacune se referme seule.
+ * CHAQUE MESURE INTERROGE LA BASE, ET UNE SEULE FAIT EXCEPTION : `Compte.derniere` est un
+ * LIBELLÉ RELATIF. Ce qui manque est la RÈGLE de passage, et aucune requête ne mesure une
+ * règle absente.
  */
 export const CANDIDATS_DE_LACUNE: readonly CandidatDeLacune[] = [
 	{
@@ -431,9 +334,9 @@ export const CANDIDATS_DE_LACUNE: readonly CandidatDeLacune[] = [
 			'un regel de V-31 — voir `docs/dossier-regel.md`. Poser la colonne ne fermerait ' +
 			'rien : rien ne l’écrirait, rien ne la lirait (P-5)',
 		mesurer: async ({ base }) => {
-			/* La question mesurée est « `notes` référence-t-elle `templates` ? », et
-			   elle est posée au catalogue plutôt qu'à un nom de colonne devinné : le
-			   jour où une migration pose la provenance, ce compte bouge tout seul. */
+			/* La question mesurée est « `notes` référence-t-elle `templates` ? », posée au
+			   catalogue plutôt qu'à un nom de colonne deviné : le jour où une migration
+			   pose la provenance, ce compte bouge tout seul. */
 			const lignes = rangs<{ n: number }>(
 				await base.execute(
 					`select count(*)::int as n
@@ -531,10 +434,9 @@ export const CANDIDATS_DE_LACUNE: readonly CandidatDeLacune[] = [
 			'un arbitrage donnant la règle de passage de l’instant au libellé, puis la ' +
 			'fabrique qui l’applique — la donnée, elle, est en base',
 		mesurer: async ({ base, comptesRendus }) => {
-			/* LA SEULE MESURE QUI REGARDE LE CANDIDAT, et son entête dit pourquoi : ce
-			   qui manque est une règle de rendu, et une requête ne mesure pas une règle
-			   absente. Le nombre d'instants portés est relevé quand même — il dit que la
-			   donnée est là et que seul le rendu manque. */
+			/* LA SEULE MESURE QUI REGARDE LE CANDIDAT : ce qui manque est une règle de
+			   rendu, et une requête ne mesure pas une règle absente. Le nombre d'instants
+			   portés est relevé quand même — il dit que la donnée est là. */
 			const lignes = rangs<{ n: number }>(
 				await base.execute(
 					`select count(*)::int as n from comptes where derniere_connexion_le is not null`
@@ -558,19 +460,11 @@ export const CANDIDATS_DE_LACUNE: readonly CandidatDeLacune[] = [
 ];
 
 /**
- * LES LACUNES, MESURÉES — celles qui restent ouvertes, et elles seules.
- *
- * C'est la fonction que l'entête de l'ancien `lacunes()` promettait sans
- * l'écrire. Une lacune dont la base porte désormais toutes les valeurs
- * DISPARAÎT du rapport, et la normalisation qu'elle justifiait disparaît avec
- * elle — `normalisationDesNotes()` et `champsDeCompteEnLacune()` se déduisent de
- * ce qu'elle rend, jamais d'une liste écrite ailleurs.
- *
- * ELLE NE SAIT PAS FERMER UNE LACUNE PAR COMPLAISANCE : la seule façon de faire
- * disparaître une entrée est que sa mesure rende `restituables >= attendu`, et
- * chaque mesure interroge la base. Une lacune inventée — un candidat dont la
- * base ne porte rien — apparaît donc et compte, sans qu'aucune ligne d'ici n'ait
- * à la connaître ; c'est l'épreuve que `equivalence.test.ts` lui fait passer.
+ * Les lacunes, MESURÉES — celles qui restent ouvertes, et elles seules. Une lacune dont la
+ * base porte désormais toutes les valeurs DISPARAÎT du rapport, et la normalisation qu'elle
+ * justifiait disparaît avec elle. ELLE NE SAIT PAS FERMER UNE LACUNE PAR COMPLAISANCE : la
+ * seule façon de faire disparaître une entrée est que sa mesure rende `restituables >=
+ * attendu`.
  */
 export async function chiffrerLesLacunes(
 	contexte: ContexteDeMesure,
@@ -591,28 +485,21 @@ export async function chiffrerLesLacunes(
 	return ouvertes;
 }
 
-/** Une lacune est-elle ouverte, par sa forme et son champ ? */
 function estOuverte(lesLacunes: readonly Lacune[], forme: string, prefixeDeChamp: string): boolean {
 	return lesLacunes.some((l) => l.forme === forme && l.champ.startsWith(prefixeDeChamp));
 }
 
 /**
- * LA RÉFÉRENCE DES NOTES, NORMALISÉE PAR CE QUE LES LACUNES OUVERTES PERMETTENT.
+ * La référence des notes, normalisée par ce que les lacunes OUVERTES permettent.
  *
- * CE N'EST PAS UN AFFAIBLISSEMENT, et le motif n'a pas changé : on ne retire
- * rien de la mesure, on remplace la valeur de référence par ce que la lacune
- * permet AU MIEUX, et tout écart au-delà reste rouge. Ce qui a changé, c'est que
- * la normalisation est désormais CONDITIONNÉE par la mesure : lacune refermée,
- * référence intacte, champ mesuré pour de bon.
+ * Ce n'est pas un affaiblissement : on remplace la valeur de référence par ce que la lacune
+ * permet AU MIEUX, et tout écart au-delà reste rouge. La normalisation est CONDITIONNÉE par la
+ * mesure — lacune refermée, référence intacte.
  *
- *   `etiquettes`  lacune ouverte → la référence est TRIÉE : l'ordre cesse d'être
- *                 mesuré, l'ENSEMBLE l'est toujours, et une étiquette manquante
- *                 ou en trop rougit encore.
- *   `pj`          lacune ouverte → la référence prend le décompte RÉEL de la
- *                 table, mesuré par une requête INDÉPENDANTE de la couche. Le
- *                 décompte du jeu cesse d'être exigé — c'est ce que la lacune
- *                 dit —, mais la couche doit rendre le compte vrai : une couche
- *                 qui fabriquerait un chiffre diverge, y compris à zéro.
+ *   `etiquettes`  lacune ouverte → référence TRIÉE : l'ordre cesse d'être mesuré, l'ENSEMBLE
+ *                 l'est toujours.
+ *   `pj`          lacune ouverte → référence au décompte RÉEL de la table, mesuré
+ *                 indépendamment de la couche.
  */
 export function normalisationDesNotes(
 	lesLacunes: readonly Lacune[],
@@ -624,9 +511,9 @@ export function normalisationDesNotes(
 	return CORPUS.map((n) => ({
 		...n,
 		pj: pjEnLacune ? (piecesReelles.get(n.id) ?? 0) : n.pj,
-		/* `ARB-061` : la valeur du jeu PLUS les entrées du journal. Le compteur et
-		   le journal sont deux écritures distinctes ; les croiser est plus fort
-		   que comparer le compteur à une constante que la première lecture périme. */
+		/* `ARB-061` : la valeur du jeu PLUS les entrées du journal. Les croiser est
+		   plus fort que comparer le compteur à une constante que la première lecture
+		   périme. */
 		vues: n.vues + (consultationsReelles.get(n.id) ?? 0),
 		etiquettes: ordreEnLacune
 			? [...n.etiquettes].sort((a, b) => a.localeCompare(b, 'fr'))
@@ -634,7 +521,6 @@ export function normalisationDesNotes(
 	}));
 }
 
-/** Les champs de compte qu'une lacune ouverte retire de la comparaison. */
 export function champsDeCompteEnLacune(lesLacunes: readonly Lacune[]): ReadonlySet<string> {
 	return new Set(lesLacunes.filter((l) => l.forme === 'Compte').map((l) => l.champ));
 }

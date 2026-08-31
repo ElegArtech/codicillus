@@ -1,64 +1,19 @@
 /**
- * LES SIGNETS — LA RÉSOLUTION D'UNE ADRESSE DE SIGNETS, DROITS COMPRIS.
+ * Les signets — la résolution d'une adresse de signets, droits compris. C'est le seul point
+ * où les trois adresses de `docs/routes.md` §3.3 deviennent une ressource, ou rien.
  *
- * Ce module est le seul point où les trois adresses de signets
- * (`docs/routes.md` §3.3, `:128-130`) deviennent une ressource, ou rien :
+ * UN SIGNET EST UNE NOTE QUI PORTE UNE ADRESSE WEB — IL N'Y A PAS DE TABLE. `RG-NOT-01` :
+ * « ce n'est pas un objet séparé ». Le prédicat est `note.type === 'Signet'` ; en base, la
+ * jointure sur `types_de_note.identifiant = 'signet'` et les deux colonnes
+ * `signet_adresse` et `signet_ajoute_le` de `notes`.
  *
- *   /univers/{univers}/{domaine}/signets                      V-22
- *   /univers/{univers}/{domaine}/signets/nouveau              V-23 création
- *   /univers/{univers}/{domaine}/signets/{identifiant}/modifier  V-23 édition
+ * POURQUOI CE MODULE NE RÉUTILISE PAS `lireNotes()` : `ADR-006` interdit « toute route qui
+ * reçoit une liste puis la filtre », or `lireNotes(base, contexte)` lit la table entière.
+ * Le périmètre est donc INJECTÉ dans la requête ci-dessous, et `./lecture.ts` est réemployé
+ * pour tout ce qui n'est pas le filtre. La FORME rendue reste `interface Note`.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * UN SIGNET EST UNE NOTE QUI PORTE UNE ADRESSE WEB — IL N'Y A PAS DE TABLE
- *
- * `RG-NOT-01`, et le vocabulaire contractuel de `CLAUDE.md` §3 : « Fiche — une
- * note à laquelle un type structuré a été attribué. Ce n'est pas un objet
- * séparé », et le signet non plus. `estSignet()` de `seeds/corpus.ts` en est le
- * prédicat — `note.type === 'Signet'` — ; son équivalent en base est la
- * jointure sur `types_de_note.identifiant = 'signet'`, et les deux colonnes que
- * la migration 002 porte sur `notes` : `signet_adresse` et `signet_ajoute_le`
- * (`src/lib/base/schema.ts:410-411`). Aucune table `signets` n'est lue, aucune
- * n'est nécessaire.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI CE MODULE NE RÉUTILISE PAS `lireNotes()` DE `T-030`
- *
- * `ADR-006` interdit en propres termes « toute route qui reçoit une liste puis
- * la filtre. Le filtre est dans la requête, pas après elle. » Or
- * `lireNotes(base, contexte)` lit la table ENTIÈRE et n'accepte aucun
- * périmètre : l'appeler puis écarter les notes interdites serait exactement la
- * faute que l'ADR nomme. Le périmètre est donc INJECTÉ dans la requête
- * ci-dessous, et `src/lib/donnees/lecture.ts` — qui appartient à `T-030` et
- * n'est pas modifié — est réemployé pour tout ce qui n'est pas le filtre :
- * `extraitDuCorps`, `joursEcoules`, les deux conversions de date, les chemins
- * de dossier, les étiquettes et les pièces jointes.
- *
- * La FORME rendue reste `interface Note` de `seeds/corpus.ts`, parce que c'est
- * elle que les vues gelées déclarent en propriété (`V-22.svelte:64`,
- * `V-23.svelte:128`). Aucun type n'est créé ici.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * AUCUNE RÈGLE DE DROIT N'EST ÉCRITE ICI
- *
- * `src/lib/droits/resolution.ts` est l'implémentation unique (`T-011`). Ce
- * module l'APPELLE — `indexerLesDroits`, `perimetreDeLecture`,
- * `resoudreDroitDeDossier`, `capacites`, `resoudre` — et ne recopie aucune de
- * ses règles. `RG-DRO-01` (le plus proche l'emporte), `RG-DRO-02` (fermeture
- * par défaut), `RG-DRO-03` (l'administrateur), `RG-DRO-04` (le périmètre
- * anonyme) et `RG-DRO-05` (la racine couvre l'arbre) restent là-bas.
- *
- * ET LA FRAÎCHEUR NON PLUS (P-01) : `niveauFraicheur()` de
- * `src/lib/fraicheur.ts` est appelée, jamais réécrite.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * REFUS ET INEXISTENCE SORTENT PAR LE MÊME `return` — ADR-007
- *
- * Toutes les issues d'échec de ce module rendent `INTROUVABLE`, LE MÊME OBJET
- * gelé de `resolution.ts`. Il n'existe ici ni variante « interdit », ni champ
- * « raison », ni code d'erreur : un univers qui n'existe pas, un domaine dont
- * le module Signets est éteint, un domaine hors périmètre et un signet interdit
- * empruntent le même chemin, et l'appelant n'a rien à quoi se raccrocher pour
- * les distinguer. C'est `RG-ACC-04`, et c'est le type qui le garantit.
+ * Aucune règle de droit n'est écrite ici, et la fraîcheur non plus. Toutes les issues
+ * d'échec rendent `INTROUVABLE`, LE MÊME OBJET gelé (`ADR-007`, `RG-ACC-04`).
  */
 import { and, eq, inArray } from 'drizzle-orm';
 import type { Base } from '../base/acces';
@@ -103,37 +58,27 @@ import {
 } from './lecture';
 import type { Domaine, Note, TypeDeFiche, TypeDeNote } from '../../../seeds/corpus';
 
-/* ═══════════════════════════════════════════════════ Les segments ═══════ */
-
 /**
- * Les deux segments d'adresse qui désignent le rangement — tels que
- * `src/lib/rangement/adresses.ts` les compose, et tels que `univers.identifiant`
- * et `domaines.identifiant` les portent en base (migration 002, `:140` et
- * `:170`). Ils sont comparés à la colonne, jamais recalculés depuis le nom :
- * l'identifiant lisible est PERSISTÉ, et `RG-M12-11` le veut stable même après
- * un renommage.
+ * Les deux segments d'adresse qui désignent le rangement, tels que
+ * `univers.identifiant` et `domaines.identifiant` les portent en base. Ils sont
+ * comparés à la colonne, jamais recalculés depuis le nom : l'identifiant lisible
+ * est PERSISTÉ, et `RG-M12-11` le veut stable même après un renommage.
  */
 export interface SegmentsDeRangement {
 	readonly univers: string;
 	readonly domaine: string;
 }
 
-/** Le rangement qu'une adresse de signets désigne, quand elle en désigne un. */
 export interface RangementDeSignets {
 	readonly domaineId: string;
 	readonly domaine: Domaine;
 }
 
-/* ═══════════════════════════════════════════════════ Le rangement ══════ */
-
 /**
- * Le domaine que les deux segments désignent, ou `null`.
- *
- * `RG-STR-02` — l'identifiant d'un domaine est unique AU SEIN DE SON UNIVERS :
- * la clause porte donc sur les DEUX segments, et la contrainte
- * `domaines_identifiant_par_univers_unique` garantit qu'il n'y a qu'une ligne.
- * C'est aussi ce qui rend la clause de désambiguïsation de `RG-M03-02` sans
- * objet (E-09, `docs/routes.md` §5.3) : la forme canonique n'est jamais ambiguë.
+ * Le domaine que les deux segments désignent, ou `null`. `RG-STR-02` —
+ * l'identifiant d'un domaine est unique AU SEIN DE SON UNIVERS : la clause porte
+ * donc sur les DEUX segments, et `domaines_identifiant_par_univers_unique` garantit
+ * qu'il n'y a qu'une ligne. La forme canonique n'est jamais ambiguë.
  */
 export async function lireLeRangement(
 	base: Base,
@@ -162,13 +107,9 @@ export async function lireLeRangement(
 }
 
 /**
- * Le module Signets est-il activé sur ce domaine ?
- *
- * `RG-STR-06`, `P-04`, et `docs/routes.md:134` qui en tire la conséquence pour
- * l'adresse : « une route de module désactivé (`…/signets` sur un domaine sans
- * module Signets) rend 404 V-26, pas une page vide — cohérent avec RG-ACC-04 et
- * avec le point dur n° 7 ». L'activation n'est pas décorative : elle décide de
- * l'existence de l'adresse.
+ * Le module Signets est-il activé sur ce domaine ? `RG-STR-06`, `P-04`, et
+ * `docs/routes.md:134` : « une route de module désactivé rend 404 V-26, pas une
+ * page vide ». L'activation décide de l'existence de l'adresse.
  */
 export async function moduleSignetsActive(base: Base, domaineId: string): Promise<boolean> {
 	const lignes = await base
@@ -179,22 +120,13 @@ export async function moduleSignetsActive(base: Base, domaineId: string): Promis
 	return lignes.length > 0;
 }
 
-/* ═══════════════════════════════════════════════════ Les droits ════════ */
-
 /**
- * L'arborescence du domaine et les droits explicites qui la couvrent, indexés
- * pour `resolution.ts`.
- *
- * L'INDEX SE BORNE AU DOMAINE, ET LE SCHÉMA LE PERMET : la contrainte
- * `dossiers_parent_meme_domaine` (`schema.ts:216`) interdit qu'un dossier ait
- * un parent d'un autre domaine. La chaîne d'ancêtres d'un dossier du domaine
- * est donc entièrement dans le domaine, et `RG-DRO-01` comme `RG-DRO-05`
- * s'appliquent à l'identique sur cet index restreint. En lire davantage
- * n'ajouterait aucun droit et coûterait la table entière.
- *
- * Les droits ne sont lus QUE pour le compte appelant : un anonyme n'en a pas
- * (`RG-DRO-04`), et charger ceux des autres comptes exposerait la table des
- * droits à une requête qui n'en a pas besoin.
+ * L'arborescence du domaine et les droits explicites qui la couvrent, indexés pour
+ * `resolution.ts`. L'INDEX SE BORNE AU DOMAINE, ET LE SCHÉMA LE PERMET :
+ * `dossiers_parent_meme_domaine` interdit qu'un dossier ait un parent d'un autre domaine,
+ * de sorte que la chaîne d'ancêtres est entièrement dans le domaine. Les droits ne sont lus
+ * QUE pour le compte appelant : un anonyme n'en a pas, et charger ceux des autres exposerait
+ * la table à une requête qui n'en a pas besoin.
  */
 export async function indexerLeDomaine(
 	base: Base,
@@ -236,10 +168,10 @@ export async function indexerLeDomaine(
 }
 
 /**
- * Les notes du domaine, réduites à ce que le périmètre anonyme a besoin de
- * savoir (`RG-DRO-04`, `interface NotePourPerimetre`). Trois colonnes, pas une
- * de plus : `RG-ACC-01` veut le filtrage « au plus près de la donnée », et
- * charger un titre pour décider d'un dossier serait déjà trop.
+ * Les notes du domaine, réduites à ce que le périmètre anonyme a besoin de savoir
+ * (`RG-DRO-04`). Trois colonnes, pas une de plus : `RG-ACC-01` veut le filtrage
+ * « au plus près de la donnée », et charger un titre pour décider d'un dossier
+ * serait déjà trop.
  */
 export async function lireLesNotesPourPerimetre(
 	base: Base,
@@ -261,20 +193,11 @@ export async function lireLesNotesPourPerimetre(
 }
 
 /**
- * LE DOMAINE EST-IL LISIBLE ? — au moins un de ses dossiers dans le périmètre.
- *
- * Ce n'est pas une règle de droit nouvelle, c'est la lecture de `RG-DRO-02`
- * appliquée à une page de domaine : « en l'absence de tout droit explicite sur
- * le dossier ou l'un de ses ancêtres, aucun accès ». Un appelant dont AUCUN
- * dossier du domaine n'est lisible n'a rien à y voir, et `docs/routes.md` §5.5
- * lui rend 404 pour la famille `/univers/…`. À l'inverse, un droit posé sur un
- * seul sous-dossier ouvre bien le domaine : `RG-DRO-05` ne réserve pas l'accès
- * aux porteurs d'un droit sur la racine, et exiger la racine ici FERMERAIT une
- * porte que les droits ouvrent.
- *
- * Un domaine SANS dossier ne peut satisfaire personne, et c'est cohérent :
- * `RG-STR-03` fait de tout dossier le porteur de ses notes, donc un domaine
- * sans dossier n'a pas de note, donc pas de signet.
+ * Le domaine est-il lisible ? — au moins un de ses dossiers dans le périmètre. Ce n'est pas
+ * une règle nouvelle, c'est `RG-DRO-02` appliquée à une page de domaine. À l'inverse, un
+ * droit posé sur un seul sous-dossier ouvre bien le domaine : `RG-DRO-05` ne réserve pas
+ * l'accès aux porteurs d'un droit sur la racine. Un domaine SANS dossier ne peut satisfaire
+ * personne : sans dossier, pas de note, donc pas de signet.
  */
 export function domaineLisible(
 	perimetre: Perimetre,
@@ -285,18 +208,11 @@ export function domaineLisible(
 }
 
 /**
- * LE DROIT DE RÉDACTION DANS LE DOMAINE — `capacites().ecrireDesNotes`, sur au
- * moins un dossier.
- *
- * La granularité est celle du GEL, et il faut le dire : `V-22` n'a qu'un
- * réglage `droits` pour la page entière (`verif/scenarios/V-22.json`,
- * contrôle « Droits »), et `V-23` n'en a aucun. Le droit, lui, est par dossier
- * (CDC §2.3). La page répond donc à la question que la page pose : « cet
- * appelant peut-il écrire un signet dans ce domaine ? ».
- *
- * `P-09` — l'action interdite n'est pas rendue — se joue ici : c'est ce booléen
- * que le chargeur traduit en `droits: 'lecture'`, et la vue n'émet alors aucune
- * action d'écriture (`V-22.svelte:71-82`, ARB-040).
+ * Le droit de rédaction dans le domaine — `capacites().ecrireDesNotes`, sur au moins un
+ * dossier. La granularité est celle du GEL : `V-22` n'a qu'un réglage `droits` pour la page
+ * entière et `V-23` n'en a aucun, quand le droit est par dossier. La page répond donc à la
+ * question que la page pose. `P-09` se joue ici : c'est ce booléen que le chargeur traduit
+ * en `droits: 'lecture'`, et la vue n'émet alors aucune action d'écriture.
  */
 export function ecritureDansLeDomaine(
 	identite: Identite,
@@ -308,9 +224,6 @@ export function ecritureDansLeDomaine(
 	);
 }
 
-/* ═══════════════════════════════════════════════════ Les notes ═════════ */
-
-/** La forme brute d'une ligne de note, telle que la requête ci-dessous la rend. */
 interface LigneDeNote {
 	readonly identifiant: string;
 	readonly titre: string;
@@ -332,19 +245,11 @@ interface LigneDeNote {
 }
 
 /**
- * Une ligne de `notes` rendue dans la forme de `interface Note`.
- *
- * C'est la même transcription que `lireNotes()` de `T-030`, aux mêmes règles :
- * la fraîcheur se lit sur la dernière vérification et à défaut sur la dernière
- * modification (`RG-M06-01`) ; `pj` est le compte RÉEL de la table, jamais le
- * chiffre du jeu de semence (`P-02`) ; les étiquettes sont triées par libellé,
- * faute de colonne de rang ; et les trois clés optionnelles sont OMISES quand
- * la colonne est nulle, non posées à `undefined`.
- *
- * Elle est écrite ici et non appelée là-bas parce que `lireNotes()` n'accepte
- * aucun périmètre et que `src/lib/donnees/lecture.ts` n'est pas modifiable par
- * ce lot. La duplication est bornée à cette fonction, et tout ce qui pouvait
- * être réemployé l'est.
+ * Une ligne de `notes` rendue dans la forme de `interface Note` — la même transcription que
+ * `lireNotes()`, aux mêmes règles : fraîcheur sur la dernière vérification et à défaut sur
+ * la modification (`RG-M06-01`), `pj` au compte RÉEL de la table, et les clés optionnelles
+ * OMISES quand la colonne est nulle. Elle est écrite ici parce que `lireNotes()` n'accepte
+ * aucun périmètre ; la duplication est bornée à cette fonction.
  */
 export function noteDepuisLaLigne(
 	ligne: LigneDeNote,
@@ -380,23 +285,14 @@ export function noteDepuisLaLigne(
 }
 
 /**
- * Les notes du domaine que l'appelant peut lire — LE PÉRIMÈTRE EST DANS LA
- * CLAUSE `where`, pas dans un filtre d'après-coup (`ADR-006`).
+ * Les notes du domaine que l'appelant peut lire — LE PÉRIMÈTRE EST DANS LA CLAUSE `where`,
+ * pas dans un filtre d'après-coup (`ADR-006`).
  *
- * Deux filtres se composent, et les employer séparément est le moyen le plus
- * simple de publier le corpus interne (`noteLisible()` de `resolution.ts` le
- * dit dans les mêmes termes) :
- *
- *   1. LE DOSSIER — `dossier_id` dans le périmètre. `perimetre.tout` est
- *      réservé à l'administrateur (`RG-DRO-03`) et ne pose aucune clause.
- *   2. LA NOTE, en anonyme seulement — `visibilite = publique AND statut =
- *      publiee`, « sans exception ni chemin dérogatoire » (`ADR-006`). Un
- *      dossier du périmètre anonyme contient presque toujours des notes
- *      internes : omettre ce second filtre les publierait toutes.
- *
- * Un périmètre VIDE ne produit aucune requête : `inArray` sur une liste vide
- * est une clause dégénérée selon les dialectes, et une liste vide a une réponse
- * connue — aucune note.
+ * Deux filtres se composent, et les employer séparément est le moyen le plus simple de
+ * publier le corpus interne : le DOSSIER dans le périmètre (`perimetre.tout` étant réservé
+ * à l'administrateur, il ne pose aucune clause) ; puis, en anonyme seulement, la NOTE —
+ * publique ET publiée. Un périmètre VIDE ne produit aucune requête : `inArray` sur une liste
+ * vide est une clause dégénérée selon les dialectes.
  */
 export async function lireLesNotesDuDomaine(
 	base: Base,
@@ -452,31 +348,19 @@ export async function lireLesNotesDuDomaine(
 	return lignes.map((l) => noteDepuisLaLigne(l, contexte, chemins, etiquettes, pieces));
 }
 
-/* ═══════════════════════════════════════════════ La résolution ═════════ */
-
-/** Ce qu'une adresse de signets rapporte quand elle rapporte quelque chose. */
 export interface AccesAuxSignets {
-	/** Le domaine, dans la forme que la coquille et le fil attendent. */
 	readonly domaine: Domaine;
-	/** Les notes LISIBLES du domaine, dont ses signets. */
 	readonly notes: readonly Note[];
 	/** L'appelant peut-il écrire un signet dans ce domaine ? (`P-09`) */
 	readonly ecriture: boolean;
 }
 
 /**
- * LE CHEMIN UNIQUE — `ADR-007`. Quatre raisons de ne rien rapporter, un seul
- * `INTROUVABLE`, et aucune trace de la raison dans la valeur rendue :
- *
- *   · les segments ne désignent aucun domaine ;
- *   · le module Signets est éteint sur ce domaine (`RG-STR-06`, `routes.md:134`) ;
- *   · aucun dossier du domaine n'est dans le périmètre de l'appelant ;
- *   · `exigeEcriture` et l'appelant n'a pas le droit de rédaction
- *     (`docs/routes.md:129-130`, « connecté + rédacteur »).
- *
- * `exigeEcriture` n'est pas un régime de refus séparé : c'est le niveau d'accès
- * que §3 déclare pour les deux adresses du formulaire, et le refus sort par le
- * même `return` que l'inexistence.
+ * Le chemin unique — `ADR-007`. Quatre raisons de ne rien rapporter, un seul `INTROUVABLE`,
+ * et aucune trace de la raison : les segments ne désignent aucun domaine ; le module Signets
+ * est éteint ; aucun dossier n'est dans le périmètre ; `exigeEcriture` et l'appelant n'a pas
+ * le droit de rédaction. `exigeEcriture` n'est pas un régime de refus séparé : le refus sort
+ * par le même `return` que l'inexistence.
  */
 export async function resoudreLAccesAuxSignets(
 	base: Base,
@@ -511,24 +395,15 @@ export async function resoudreLAccesAuxSignets(
 	return { trouve: true, ressource: { domaine: rangement.domaine, notes: lisibles, ecriture } };
 }
 
-/** Ce qu'une adresse de modification de signet rapporte. */
 export interface AccesAUnSignet extends AccesAuxSignets {
-	/** Le signet désigné par le dernier segment, lisible et de ce domaine. */
 	readonly signet: Note;
 }
 
 /**
- * LA RÉSOLUTION D'UN SIGNET — même chemin, un cran plus loin.
- *
- * Le signet est cherché DANS l'ensemble déjà filtré par le périmètre : une note
- * hors périmètre n'y est pas, donc elle est introuvable, sans qu'aucune branche
- * ne la distingue d'une note absente. `resoudre()` de `resolution.ts` est le
- * garde-fou de sortie — il ne remplace pas le filtre de la requête, il le
- * double, et c'est ce que son propre en-tête demande.
- *
- * Le prédicat est `estSignet()` de `seeds/corpus.ts` : une note qui n'est pas
- * de type « Signet » n'est pas un signet, et `/…/signets/{id}/modifier` sur une
- * note ordinaire rapporte donc `INTROUVABLE` — pas l'éditeur de notes.
+ * La résolution d'un signet — même chemin, un cran plus loin. Le signet est cherché DANS
+ * l'ensemble déjà filtré par le périmètre : une note hors périmètre n'y est pas, donc elle
+ * est introuvable. Le prédicat est `estSignet()` : `/…/signets/{id}/modifier` sur une note
+ * ordinaire rend `INTROUVABLE`.
  */
 export async function resoudreUnSignet(
 	base: Base,
@@ -547,19 +422,11 @@ export async function resoudreUnSignet(
 	return { trouve: true, ressource: { ...acces.ressource, signet: resolution.ressource } };
 }
 
-/* ═══════════════════════════════════════════════ Les vecteurs de vue ═══ */
-
 /**
- * LE VECTEUR DE V-22 — les trois réglages de sa planche, et rien d'autre.
- *
- * Les noms sont ceux de `verif/scenarios/V-22.json` : `dom`, `droits`,
- * `c-rappel`. `droits` porte `P-09` : « lecture » efface les actions
- * d'écriture, et c'est le SERVEUR qui en décide ici, jamais le navigateur.
- *
- * `c-rappel` est laissé à `true`, sa position par défaut dans la planche. Le
- * rappel de sortie est un état de la vue que rien, dans le cahier des charges
- * comme dans `docs/routes.md`, ne fait dépendre d'une donnée : lui inventer une
- * condition serait un comblement.
+ * Le vecteur de V-22 — les trois réglages de sa planche, et rien d'autre. `droits` porte
+ * `P-09` : « lecture » efface les actions d'écriture, et c'est le SERVEUR qui en décide.
+ * `c-rappel` est laissé à sa position par défaut : rien ne fait dépendre le rappel de sortie
+ * d'une donnée, et lui inventer une condition serait un comblement.
  */
 export function vecteurDeV22(
 	domaine: Domaine,
@@ -569,40 +436,24 @@ export function vecteurDeV22(
 }
 
 /**
- * LE VECTEUR DE V-23 — enveloppe « page dédiée », mode selon l'adresse.
+ * Le vecteur de V-23 — enveloppe « page dédiée », mode selon l'adresse.
  *
- * `env: 'page'` EST UNE LECTURE DÉCLARÉE, ET ELLE EST REMONTÉE AU RAPPORT DU
- * LOT. La planche a deux enveloppes — « boîte de dialogue » (défaut) et « page
- * dédiée » — et `V-23.svelte` le dit : « l'enveloppe n'est PAS dans l'adresse ».
- * Aucune source ne dit donc laquelle une requête directe rend. Ce qui est lu :
- * l'enveloppe « boîte de dialogue » superpose le formulaire à une page qui
- * existe déjà, et une requête directe sur l'adresse dédiée n'a rien dessous ;
- * l'autre position s'appelle « page dédiée », ce qu'est exactement une adresse
- * dédiée. Le choix est celui-là, il est déclaré, et il attend l'arbitrage.
- *
- * `recup` n'est pas posé : les trois positions de l'axe « Récupération du
- * titre » ne rendent RIEN — `V-23.svelte` le mesure sur le gel — et sont un
- * comportement temporisé, hors de tout verdict (`CLAUDE.md` §4).
+ * `env: 'page'` EST UNE LECTURE DÉCLARÉE : la planche a deux enveloppes et « l'enveloppe
+ * n'est PAS dans l'adresse ». L'enveloppe « boîte de dialogue » superpose le formulaire à
+ * une page qui existe déjà, et une requête directe sur l'adresse dédiée n'a rien dessous.
+ * `recup` n'est pas posé : les trois positions de cet axe ne rendent RIEN.
  */
 export function vecteurDeV23(mode: 'creation' | 'edition'): Record<string, string | boolean> {
 	return { env: 'page', mode };
 }
 
-/* ═══════════════════════════════════════════════ Le contexte de requête ═ */
-
 /**
- * LE CONTEXTE D'UNE LECTURE DE REQUÊTE — l'instant, et les seuils en vigueur.
+ * Le contexte d'une lecture de requête — l'instant, et les seuils en vigueur.
  *
- * L'instant est un PARAMÈTRE, avec `new Date()` pour seul défaut, et c'est
- * `lecture.ts` qui l'exige : « une couche de lecture qui prendrait l'heure
- * elle-même rendrait ses résultats non reproductibles, donc non mesurables ».
- * La requête est le dernier endroit où l'horloge peut être lue sans détruire
- * cette propriété, et c'est ici qu'elle l'est — une seule fois par requête,
- * pour que deux notes de la même page ne soient pas datées de deux instants.
- *
- * Les seuils viennent de la table `parametres` par `lireSeuils()` de `T-030` :
- * `P-01` veut une seule définition de la fraîcheur, et les seuils en font
- * partie. Aucune valeur n'est écrite ici.
+ * L'instant est un PARAMÈTRE, avec `new Date()` pour seul défaut : la requête est le dernier
+ * endroit où l'horloge peut être lue sans rendre les résultats non reproductibles, et elle
+ * l'est UNE SEULE FOIS. Les seuils viennent de `parametres` par `lireSeuils()` : `P-01` veut
+ * une seule définition de la fraîcheur, et les seuils en font partie.
  */
 export async function contexteDeRequete(
 	base: Base,

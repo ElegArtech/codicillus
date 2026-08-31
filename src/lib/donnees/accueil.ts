@@ -1,77 +1,19 @@
 /**
- * LES DEUX BRANCHES DE `/` — la donnée que l'accueil affiche, lue depuis la base
- * et bornée par la résolution des droits.
+ * Les deux branches de `/` — la donnée que l'accueil affiche, lue depuis la base et bornée
+ * par la résolution des droits. `/` rend V-01 sans session (périmètre public) et V-07 avec
+ * session (périmètre autorisé) ; ce module est ce périmètre, et rien d'autre.
  *
- * `docs/routes.md:98-99` donne une adresse et deux écrans : `/` rend **V-01
- * Accueil public** sans session et **V-07 Accueil contributeur** avec session.
- * La matrice du §5.5 précise le périmètre de chacun — *« V-01 / V-02 (périmètre
- * public) »* en anonyme, *« V-07 / V-08 (périmètre autorisé) »* en connecté, et
- * la même colonne pour tous les rôles connectés. Ce module est ce périmètre, et
- * rien d'autre : il ne rend aucune vue et ne choisit aucun code HTTP.
+ * IL N'ÉCRIT AUCUNE RÈGLE DE DROIT : `noteVisibleEnAnonyme()` décide de la note en régime
+ * anonyme, `perimetreDeLecture()` des dossiers, et `noteLisible()` compose les deux — la
+ * composition est nécessaire, un dossier du périmètre anonyme contenant presque toujours
+ * des notes internes. `notesPubliques()` du jeu de semence n'est JAMAIS employée : elle ne
+ * filtre que la visibilité, quand `ADR-006` exige « publique ET publiée ».
  *
- * ═════════════════════════════════════════════════════════════════════════
- * IL N'ÉCRIT AUCUNE RÈGLE DE DROIT — `src/lib/droits/resolution.ts` LES PORTE
- *
- * `T-011` a livré la résolution des droits le 19 août 2026 ; **aucune route ne
- * l'appelait le 20 août au matin**, et c'est la cause nommée des trois fuites
- * mesurées par la batterie 6 (`ECART-047` É-1). Ce module l'appelle, et il
- * n'écrit aucune comparaison de visibilité, de statut ou de droit :
- *
- *   · `noteVisibleEnAnonyme()` décide de la note en régime anonyme ;
- *   · `perimetreDeLecture()` décide des dossiers, par rôle et par droit
- *     explicite, avec la fermeture par défaut de `RG-DRO-02` ;
- *   · `noteLisible()` compose les deux — et il faut la composition, parce qu'un
- *     dossier du périmètre anonyme contient presque toujours des notes internes.
- *
- * LA DEMI-RÈGLE QUE CE MODULE FERME. `seeds/corpus.ts:2452-2454` définit
- * `notesPubliques()` par la seule visibilité ; `resolution.ts:328-330` exige
- * **publique ET publiée**, et `ADR-006` en fait « le filtre entier du régime
- * anonyme, sans exception ni chemin dérogatoire ». Ce module n'emploie donc
- * jamais `notesPubliques()`. La moitié manquante — le statut — n'est exercée
- * par aucune donnée du corpus livré, et une règle qu'aucun cas n'exerce est une
- * règle qu'on espère (`P-5`) : `accueil.test.ts` porte le cas synthétique qui
- * l'exerce, indépendamment de l'état du dépôt (`P-26`).
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE PÉRIMÈTRE EST DANS LA REQUÊTE — `ADR-006`, FORME FORTE, DEPUIS CE LOT
- *
- * `ADR-006` veut le filtre **dans la requête** et interdit « toute route qui
- * reçoit une liste puis la filtre ». La première rédaction de ce module tenait
- * la première moitié et pas la seconde : l'autorisation était calculée sur une
- * projection sans contenu, mais `lireNotes()` rapportait ensuite le corpus
- * ENTIER, et la restriction s'appliquait après elle. `T-030` a depuis donné à
- * `lireNotes()` son troisième paramètre — `identifiants`, posé en `inArray`
- * DANS la clause `where`. Ce module le passe : aucune ligne hors périmètre ne
- * quitte la base.
- *
- * ET TOUTES LES AUTRES LECTURES DE CE MODULE SONT BORNÉES DE LA MÊME FAÇON.
- * Les consultations, les anciennetés de modification, les demandes de révision
- * et les quatre familles d'évènements d'activité portent la même clause : un
- * compteur, un commentaire de révision ou un titre de note lu dans un flux
- * d'activité renseignent sur une note tout autant qu'elle-même. Ce qui sort
- * d'ici est ce que l'identité a le droit de lire, et rien de plus.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * P-01 — LA FRAÎCHEUR N'EST PAS RECALCULÉE ICI, NI NULLE PART AILLEURS
- *
- * `src/lib/fraicheur.ts` est l'implémentation unique. Le niveau de chaque note
- * arrive par `lireNotes()`, qui appelle `niveauFraicheur()` avec les seuils lus
- * en base ; la répartition par domaine de V-07 COMPTE ces niveaux, elle ne les
- * dérive pas ; le témoin d'une note passe par `temoinFraicheur()`. Ce module
- * n'écrit aucune comparaison de date à un seuil, et n'a aucune raison d'en
- * écrire une.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * P-02 — CE QUE LA BASE PORTE, ET CE QU'ELLE NE PORTE PAS
- *
- * V-07 attend ses sources en PROPRIÉTÉS OPTIONNELLES depuis `T-041`, et le
- * défaut de chacune est la constante du jeu de semence. Tant qu'aucun chargeur
- * ne les passait, l'écran affichait donc le jeu : « En attente de révision = 3 »
- * pour un compte qui n'a rien à réviser, « Bonjour Karim. » pour Sophie Nguyen,
- * et une activité récente entièrement figée. Ce module les passe toutes, sauf
- * celles que la base ne porte pas — `SANS_CONTREPARTIE_EN_BASE` les nomme, les
- * compte et dit pourquoi. Rien n'est comblé : ni valeur inventée, ni zéro posé
- * à la place d'une donnée absente.
+ * LE PÉRIMÈTRE EST DANS LA REQUÊTE : `lireNotes()` reçoit les identifiants en `inArray`
+ * DANS la clause `where`, et toutes les autres lectures portent la même clause — un
+ * compteur ou un titre lu dans un flux d'activité renseignent sur une note tout autant
+ * qu'elle-même. Rien n'est comblé : les sources que la base ne porte pas sont nommées par
+ * `SANS_CONTREPARTIE_EN_BASE`.
  */
 import { and, count, desc, eq, gte, inArray, lt } from 'drizzle-orm';
 import type { Base } from '../base/acces';
@@ -114,40 +56,21 @@ import type {
 	UtilisateurCourant
 } from '../../../seeds/corpus';
 
-/* ═══════════════════════════════════════ Les lacunes déclarées ═════════ */
-
 /**
- * Une donnée qu'un écran de l'accueil affiche et que la base ne porte pas.
- *
- * Le type existe pour que la lacune soit **comptée et éprouvable**, jamais
- * seulement racontée : `accueil.test.ts` en fait une assertion, de sorte qu'une
- * lacune refermée par une migration future fasse rougir le test au lieu de
- * laisser un commentaire périmé derrière elle.
+ * Une donnée qu'un écran de l'accueil affiche et que la base ne porte pas. Le type existe
+ * pour que la lacune soit COMPTÉE et ÉPROUVABLE : `accueil.test.ts` en fait une assertion,
+ * de sorte qu'une lacune refermée fasse rougir le test.
  */
 export interface DonneeSansContrepartie {
-	/** Le nom de la donnée, tel que le jeu de semence l'expose. */
 	readonly donnee: string;
-	/** L'écran qui la montre. */
 	readonly vue: string;
-	/** Ce qu'on y lit à l'écran. */
 	readonly affichage: string;
-	/** Pourquoi la base ne peut pas la rendre. */
 	readonly motif: string;
 }
 
 /**
- * LES CINQ DONNÉES DE L'ACCUEIL QUE LA BASE NE PORTE PAS — relevées sur le
- * schéma de `src/lib/base/schema.ts`, jamais supposées.
- *
- * LA LISTE A ENTIÈREMENT CHANGÉ D'IDENTITÉ À CE LOT, et il faut le dire plutôt
- * que de laisser croire à une stagnation. Les cinq entrées précédentes —
- * `MESURES_7J`, `MESURES_7J_PREC`, `ACTIVITE`, `REVISIONS`, `MODIFICATIONS` —
- * sont **refermées** : `consultations` (migration `006`) porte le journal daté
- * que les deux premières réclamaient, `notes.revision_*` porte la demande de
- * révision et son commentaire, `notes.modifie_le` porte l'ancienneté, et trois
- * des cinq types d'évènement ont désormais une trace réelle. Ce qui reste est
- * ce qui n'en a toujours aucune. Le compte est resté à cinq par coïncidence, et
- * non par ajustement : chaque entrée ci-dessous a été relevée sur le schéma.
+ * Les données de l'accueil que la base ne porte pas — relevées sur le schéma,
+ * jamais supposées. Chaque entrée a été vérifiée table par table.
  */
 export const SANS_CONTREPARTIE_EN_BASE: readonly DonneeSansContrepartie[] = [
 	{
@@ -187,8 +110,6 @@ export const SANS_CONTREPARTIE_EN_BASE: readonly DonneeSansContrepartie[] = [
 	}
 ];
 
-/* ═══════════════════════════════════════ La lecture du périmètre ═══════ */
-
 /** L'arborescence, réduite à ce que `RG-DRO-01` a besoin de remonter. */
 async function lireArbreDesDossiers(base: Base): Promise<readonly DossierDeLArbre[]> {
 	const lignes = await base.select({ id: dossiers.id, parentId: dossiers.parentId }).from(dossiers);
@@ -211,10 +132,9 @@ async function lireDroitsExplicites(base: Base): Promise<readonly DroitExplicite
 }
 
 /**
- * La projection de note dont la décision d'accès a besoin — et rien de plus.
- * Le titre, le corps et l'auteur n'y sont pas : une décision d'accès n'a pas
- * besoin du contenu, et le charger pour le refuser ensuite est le motif qu'
- * `ADR-006` interdit.
+ * La projection de note dont la décision d'accès a besoin — et rien de plus. Le
+ * titre, le corps et l'auteur n'y sont pas : charger le contenu pour le refuser
+ * ensuite est le motif qu'`ADR-006` interdit.
  */
 export interface NoteDuPerimetre extends NotePourPerimetre {
 	readonly identifiant: string;
@@ -233,19 +153,11 @@ async function lireNotesDuPerimetre(base: Base): Promise<readonly NoteDuPerimetr
 }
 
 /**
- * LES IDENTIFIANTS DES NOTES QUE CETTE IDENTITÉ PEUT LIRE — LA DÉCISION, SANS
- * BASE.
- *
- * Un index, un périmètre, puis `noteLisible()` note par note. Aucune décision
- * n'est prise ici : les trois appels sont ceux de `resolution.ts`, dans l'ordre
- * que son propre commentaire impose — les dossiers d'abord, la note ensuite, et
- * jamais l'un sans l'autre.
- *
- * LA FONCTION EST PURE, ET C'EST CE QUI LA REND ÉPROUVABLE. `pnpm test:unit` ne
- * dispose d'aucun conteneur ; une décision d'accès qui n'aurait de forme
- * qu'imbriquée dans trois requêtes ne serait mesurée par aucune batterie
- * unitaire, et le cas qui manque au corpus — une note publique en brouillon —
- * n'aurait aucun moyen d'être joué (`P-5`, `P-26`).
+ * Les identifiants des notes que cette identité peut lire — la décision, SANS BASE. Un
+ * index, un périmètre, puis `noteLisible()` note par note : les trois appels sont ceux de
+ * `resolution.ts`, dans l'ordre que son commentaire impose. LA FONCTION EST PURE, ET C'EST
+ * CE QUI LA REND ÉPROUVABLE : `pnpm test:unit` ne dispose d'aucun conteneur, et le cas qui
+ * manque au corpus — une note publique en brouillon — n'aurait aucun moyen d'être joué.
  */
 export function identifiantsRetenus(
 	identite: Identite,
@@ -263,7 +175,6 @@ export function identifiantsRetenus(
 	return retenus;
 }
 
-/** Les trois projections lues, puis la décision. */
 export async function identifiantsLisibles(
 	base: Base,
 	identite: Identite
@@ -276,19 +187,10 @@ export async function identifiantsLisibles(
 	return identifiantsRetenus(identite, arbre, droits, projection);
 }
 
-/* ═══════════════════════════════════════ Le compte connecté ════════════ */
-
 /**
- * LE PRÉNOM EST DÉRIVÉ DU NOM, ET LA BASE N'EN PORTE AUCUN.
- *
- * `comptes` porte `nom` — « Karim Belhadj » — et rien d'autre : ni prénom, ni
- * initiales. `UtilisateurCourant` réclame les trois, parce que la salutation dit
- * « Bonjour Karim. » et que l'avatar de la barre porte « KB ».
- *
- * La dérivation n'est PAS un comblement : elle ne fabrique aucune information,
- * elle découpe celle qui existe. Éprouvée sur les cinq comptes semés — Karim
- * Belhadj → `Karim` / `KB`, Léa Marchand → `Léa` / `LM` — et sur `MOI` du jeu
- * de semence, qu'elle reproduit à l'octet.
+ * Le prénom est dérivé du nom, et la base n'en porte aucun : `comptes` porte `nom` et rien
+ * d'autre, quand `UtilisateurCourant` réclame prénom et initiales. La dérivation ne
+ * fabrique aucune information, elle découpe celle qui existe.
  */
 export function prenomDuNom(nom: string): string {
 	return nom.trim().split(/\s+/)[0] ?? nom;
@@ -306,16 +208,10 @@ export function initialesDuNom(nom: string): string {
 }
 
 /**
- * L'utilisateur connecté, tel que la salutation et la barre supérieure le
- * nomment.
- *
- * LE RATTACHEMENT VIDE EST RENDU VIDE, ET LA VUE SAIT LE DIRE.
- * `comptes.domaine_id` est nullable PAR EXIGENCE — `RG-M14-04` (CDC:1149) veut
- * qu'un compte survive à la suppression de son domaine, rattachement vidé ; et
- * le compte d'amorçage d'une instance neuve n'en a jamais eu. Le nom rendu est
- * alors la chaîne vide, ce qui est exact. V-07 ne la coule PAS dans « Votre
- * périmètre, …, compte » : sans rattachement, sa salutation porte sur le corpus
- * entier (« Votre base compte … »).
+ * L'utilisateur connecté, tel que la salutation et la barre supérieure le nomment. LE
+ * RATTACHEMENT VIDE EST RENDU VIDE, ET LA VUE SAIT LE DIRE : `comptes.domaine_id` est
+ * nullable PAR EXIGENCE (`RG-M14-04`), et le compte d'amorçage d'une instance neuve n'en a
+ * jamais eu. V-07 bascule alors sur « Votre base compte … ».
  */
 export async function lireCompteCourant(
 	base: Base,
@@ -333,10 +229,9 @@ export async function lireCompteCourant(
 	const role = ROLE_DEPUIS_ENUM[ligne.role];
 	if (role === undefined) throw new Error(`rôle inconnu en base : ${ligne.role}`);
 
-	/* `NomDAuteur`, `NomDeDomaine` et `RoleDeCompte` sont des unions FERMÉES au
-	   jeu de semence — trois noms d'auteur, quatre noms de domaine. Le produit,
-	   lui, admet n'importe quel compte et n'importe quel domaine : la conversion
-	   est la même que celle de `lireNotes()`, et pour la même raison. */
+	/* Les unions du jeu de semence sont FERMÉES — trois noms d'auteur, quatre noms
+	   de domaine — quand le produit admet n'importe quel compte : la conversion est
+	   la même que celle de `lireNotes()`. */
 	return {
 		prenom: prenomDuNom(ligne.nom),
 		nom: ligne.nom,
@@ -346,19 +241,13 @@ export async function lireCompteCourant(
 	} as unknown as UtilisateurCourant;
 }
 
-/* ═══════════════════════════════════════ Les mesures datées ════════════ */
-
 const MILLISECONDES_PAR_HEURE = 3_600_000;
 const MILLISECONDES_PAR_JOUR = 86_400_000;
 
 /**
- * LA FENÊTRE DE L'ACCUEIL EST DE SEPT JOURS, ET C'EST LE GEL QUI LE DIT.
- *
- * L'indicateur s'intitule « Consultations · 7 jours » et sa tendance se compare
- * à « la semaine précédente » (`BRIEF-VUES.md` §V-07, tableau des indicateurs) ;
- * le panneau d'activité porte en propre l'étiquette « 7 derniers jours »
- * (`mockups/V-07-accueil-contributeur.html:1289`). Aucune de ces trois durées
- * n'est choisie ici : elles sont lues.
+ * La fenêtre de l'accueil est de sept jours, et c'est le gel qui le dit : « Consultations ·
+ * 7 jours », comparées à « la semaine précédente », et le panneau d'activité porte « 7
+ * derniers jours ». Aucune de ces durées n'est choisie ici.
  */
 const JOURS_DE_LA_FENETRE = 7;
 
@@ -368,13 +257,10 @@ function debutDeFenetre(maintenant: Date, jours: number): Date {
 }
 
 /**
- * Les consultations d'une fenêtre, par note — `RG-M04-09`, journal de la
- * migration `006`.
- *
- * CE N'EST PAS `notes.compteur_de_consultations`, et la différence est le tout
- * de l'indicateur : le compteur est un cumul de toute la vie de la note, la
- * table est une SÉRIE DATÉE. Un cumul ne se compare pas à une semaine
- * précédente ; la tendance de V-07 n'existe que grâce à la seconde.
+ * Les consultations d'une fenêtre, par note — `RG-M04-09`. CE N'EST PAS
+ * `notes.compteur_de_consultations`, et la différence est le tout de l'indicateur : le
+ * compteur est un cumul de toute la vie de la note, la table est une SÉRIE DATÉE. Un cumul
+ * ne se compare pas à une semaine précédente.
  */
 async function compterLesConsultations(
 	base: Base,
@@ -402,12 +288,9 @@ async function compterLesConsultations(
 }
 
 /**
- * L'ancienneté de modification de chaque note, en jours — `notes.modifie_le`.
- *
- * La salutation en tire son chiffre marquant : « dont N mises à jour cette
- * semaine ». Le comptage des jours passe par `joursEcoules()` de la couche de
- * lecture, la même fonction qui donne son ancienneté à chaque note ; il n'y a
- * pas deux façons de compter un jour dans ce produit.
+ * L'ancienneté de modification de chaque note, en jours — `notes.modifie_le`. Le
+ * comptage passe par `joursEcoules()` : il n'y a pas deux façons de compter un
+ * jour dans ce produit.
  */
 async function lireLesAnciennetesDeModification(
 	base: Base,
@@ -425,22 +308,14 @@ async function lireLesAnciennetesDeModification(
 	) as Partial<Record<IdentifiantNote, number>>;
 }
 
-/* ═══════════════════════════════════════ La corbeille de révisions ═════ */
-
 /**
- * LES DEMANDES DE RÉVISION OUVERTES — `RG-M01-02`, source unique.
+ * Les demandes de révision ouvertes — `RG-M01-02`, source unique. L'indicateur « En attente
+ * de révision » et la corbeille lisent LA MÊME LISTE : deux comptages concurrents finiraient
+ * par se contredire à l'écran.
  *
- * L'indicateur « En attente de révision » et la corbeille lisent LA MÊME LISTE :
- * V-07 la reçoit une fois, sous `revisions`, et son `revisionsCourantes` est le
- * seul endroit où elle est consommée. Deux comptages concurrents finiraient par
- * se contredire à l'écran, et le gel l'écrit en toutes lettres (`V-07:3479`).
- *
- * LA JOINTURE INTERNE SUR `comptes` PORTE UNE RÈGLE, pas une commodité :
- * `revision_par_id` est `SET NULL` à la suppression du demandeur, et la
- * corbeille affiche « Signalée par X ». Une demande dont le demandeur a disparu
- * n'a pas de forme d'affichage définie ; elle est écartée plutôt que dotée d'un
- * nom inventé. La contrainte `notes_revision_coherente` garantit par ailleurs
- * que `revision_le` accompagne toujours `revision_demandee`.
+ * LA JOINTURE INTERNE SUR `comptes` PORTE UNE RÈGLE : `revision_par_id` est `SET NULL` à la
+ * suppression du demandeur, et la corbeille affiche « Signalée par X ». Une demande dont le
+ * demandeur a disparu est écartée plutôt que dotée d'un nom inventé.
  */
 async function lireLesDemandesDeRevision(
 	base: Base,
@@ -478,9 +353,6 @@ async function lireLesDemandesDeRevision(
 	);
 }
 
-/* ═══════════════════════════════════════ L'activité récente ════════════ */
-
-/** Un évènement avant mise en forme : l'instant y est encore un instant. */
 interface Trace {
 	readonly type: TypeDEvenement;
 	readonly qui: string;
@@ -489,32 +361,17 @@ interface Trace {
 }
 
 /**
- * LE FLUX D'ACTIVITÉ — QUATRE TRACES RÉELLES, ET AUCUNE DÉDUCTION.
- *
- * `BRIEF-VUES.md` §V-07 attend « vérifications, publications, éditions, imports
- * terminés ». Chacun de ces types n'est rapporté ici que s'il existe une LIGNE
- * DATÉE qui l'atteste, et la liste ci-dessous dit laquelle :
+ * Le flux d'activité — quatre traces réelles, et aucune déduction. Chaque type n'est
+ * rapporté que s'il existe une LIGNE DATÉE qui l'atteste :
  *
  *   `verification`  `verifications` — la note, le compte, l'instant (M06.2).
- *   `edition`       `versions` — « une version capture titre et les deux corps »
- *                   (`RG-M07-02`), avec son auteur et son instant.
- *   `publication`   `notes.cree_le` d'une note dont `statut = 'publiee'` : la
- *                   création d'une note déjà publiée EST sa publication, et
- *                   c'est la seule publication qui laisse une trace datée.
- *   `revision`      `notes.revision_le` — le signalement, son auteur, son
- *                   instant. La même source que la corbeille, jamais une autre.
- *   `import`        AUCUNE. Le type n'est pas produit — voir
- *                   `SANS_CONTREPARTIE_EN_BASE`.
+ *   `edition`       `versions`, avec son auteur et son instant (`RG-M07-02`).
+ *   `publication`   `notes.cree_le` d'une note dont `statut = 'publiee'`.
+ *   `revision`      `notes.revision_le` — la même source que la corbeille.
+ *   `import`        AUCUNE. Voir `SANS_CONTREPARTIE_EN_BASE`.
  *
- * CE QUI N'EST PAS FAIT, ET QUI EST DÉCLARÉ. `RG-M01-03` demande de dédoublonner
- * « un même objet publié puis édité dans une fenêtre courte ». Le gel ne le fait
- * pas — `rendreActivite` rend `window.ACTIVITE` tel quel — et aucune règle ne
- * dit ce qu'est une « fenêtre courte ». La déduplication n'est donc pas écrite,
- * et ce lot NE DÉCLARE PAS `RG-M01-03` tenue.
- *
- * `versions` NE PORTE AUCUNE LIGNE À CE JOUR — mesuré : zéro. La branche
- * `edition` est donc écrite et non exercée (`P-5`) : elle prendra effet au
- * premier lot qui écrira une version, sans qu'on ait à revenir ici.
+ * `RG-M01-03` demande de dédoublonner « un même objet publié puis édité dans une fenêtre
+ * courte » : aucune règle ne dit ce qu'est une fenêtre courte, et elle N'EST PAS tenue.
  */
 async function lireLesTraces(
 	base: Base,
@@ -560,13 +417,9 @@ async function lireLesTraces(
 }
 
 /**
- * Le flux, chronologique et décroissant — le plus récent d'abord, comme le gel
- * l'ordonne (`ACTIVITE` du jeu va de 3 h à 151 h).
- *
- * L'ANCIENNETÉ EST EN HEURES ENTIÈRES, parce que `EvenementDActivite.heures`
- * l'est, et que `relatif()` de la vue en tire « à l'instant », « il y a N h »
- * puis « hier » / « il y a N j ». Le plancher est le bon arrondi : une note
- * créée il y a quarante minutes vaut zéro heure, donc « à l'instant ».
+ * Le flux, chronologique et décroissant. L'ancienneté est en HEURES ENTIÈRES,
+ * parce que `EvenementDActivite.heures` l'est et que la vue en tire « à
+ * l'instant », « il y a N h » puis « hier ». Le plancher est le bon arrondi.
  */
 export async function lireLActivite(
 	base: Base,
@@ -595,24 +448,13 @@ export async function lireLActivite(
 		);
 }
 
-/* ═══════════════════════════════════════ Les données de l'accueil ══════ */
-
 /**
- * Ce que le chargeur de `/` rend à la page. `session` dit quel écran rendre —
- * c'est la seule information que `+page.svelte` a besoin de dériver, et elle ne
- * porte aucun détail de l'identité : ni rôle de décision, ni identifiant de
- * compte (`ADR-006` interdit « toute exposition des droits au navigateur »).
- *
- * LES NEUF SOURCES DE V-07 SONT OPTIONNELLES ICI PARCE QU'ELLES LE SONT LÀ-BAS,
- * et parce qu'elles n'ont aucun sens en anonyme : V-01 ne les lit pas, et les
- * calculer pour un visiteur qui ne les verra jamais serait payer le tableau de
- * bord interne à chaque requête publique.
- *
- * `role` DE `compte` N'EST PAS UNE EXPOSITION DE DROIT au sens d'`ADR-006` :
- * c'est le libellé que la barre supérieure AFFICHE sous le nom de l'utilisateur
- * (« Référent · Infrastructure »), déjà écrit à l'écran. Aucune décision
- * d'interface n'en est tirée côté navigateur ; la capacité d'écriture, elle,
- * arrive par le booléen `ecriture` du chargeur de gabarit, calculé en base.
+ * Ce que le chargeur de `/` rend à la page. `session` dit quel écran rendre, et ne porte
+ * aucun détail de l'identité — ni rôle de décision, ni identifiant de compte (`ADR-006`
+ * interdit « toute exposition des droits au navigateur »). Les neuf sources de V-07 sont
+ * OPTIONNELLES parce qu'elles le sont là-bas. `role` n'est pas une exposition de droit :
+ * c'est le libellé que la barre supérieure AFFICHE, et aucune décision d'interface n'en est
+ * tirée côté navigateur.
  */
 export interface DonneesDAccueil {
 	/** `false` en anonyme — V-01 ; `true` avec une session — V-07. */
@@ -622,38 +464,26 @@ export interface DonneesDAccueil {
 	 * déclarent en propriété (`readonly Note[]`, `seeds/corpus.ts`).
 	 */
 	readonly notes: readonly Note[];
-	/** Le compte connecté. Absent en anonyme. */
 	readonly compte?: UtilisateurCourant;
-	/** Les univers, dans l'ordre que l'administrateur leur a donné (RG-STR-01). */
 	readonly univers?: readonly Univers[];
-	/** Les domaines, groupés par univers. */
 	readonly domaines?: readonly Domaine[];
-	/** Consultations des sept derniers jours, par note. */
 	readonly mesures7j?: Partial<Record<IdentifiantNote, number>>;
-	/** Consultations de la semaine précédente, par note. */
 	readonly mesures7jPrec?: Partial<Record<IdentifiantNote, number>>;
-	/** Ancienneté de modification, en jours, par note. */
 	readonly modifications?: Partial<Record<IdentifiantNote, number>>;
-	/** L'activité des sept derniers jours, du plus récent au plus ancien. */
 	readonly activite?: readonly EvenementDActivite[];
 	/** Les demandes de révision ouvertes du périmètre (RG-M01-02). */
 	readonly revisions?: readonly DemandeDeRevision[];
 }
 
 /**
- * LE CHARGEUR DE `/`, côté donnée.
+ * Le chargeur de `/`, côté donnée.
  *
- * En anonyme, `notes` ne contient que des notes publiques ET publiées : c'est
- * `noteVisibleEnAnonyme()` qui l'a décidé, à travers `noteLisible()`. V-01
- * réapplique son propre `notesPubliques()` au point d'entrée de la vue
- * (`RG-M17-01`) ; sur une liste déjà bornée, ce second filtre ne retire rien —
- * il reste la garde de la vue, et ce module reste la garde du produit.
+ * En anonyme, `notes` ne contient que des notes publiques ET publiées. V-01 réapplique son
+ * propre `notesPubliques()` (`RG-M17-01`) ; sur une liste déjà bornée, ce second filtre ne
+ * retire rien — il reste la garde de la vue, et ce module la garde du produit.
  *
- * En session, `notes` est le périmètre autorisé de l'identité, fermé par défaut
- * (`RG-DRO-02`), et les huit autres sources sont bornées au MÊME ensemble
- * d'identifiants. Un compte sans droit explicite et sans rôle d'administrateur
- * lit zéro note : ce zéro n'est pas inventé, c'est le nombre exact de ce qu'il
- * peut lire, et tout le tableau de bord vaut alors zéro par la même vérité.
+ * En session, `notes` est le périmètre autorisé, fermé par défaut (`RG-DRO-02`), et les
+ * huit autres sources sont bornées au MÊME ensemble d'identifiants.
  */
 export async function lireAccueil(
 	base: Base,
@@ -663,9 +493,9 @@ export async function lireAccueil(
 	const retenus = await identifiantsLisibles(base, identite);
 	const identifiants = [...retenus];
 
-	/* L'ANONYME S'ARRÊTE ICI. V-01 ne lit que `notes` ; les huit autres sources
-	   sont celles du tableau de bord interne, et les calculer pour un visiteur
-	   qui ne les verra jamais serait payer huit requêtes par requête publique. */
+	/* L'ANONYME S'ARRÊTE ICI : V-01 ne lit que `notes`, et calculer les huit autres
+	   sources pour un visiteur qui ne les verra jamais serait payer huit requêtes
+	   par requête publique. */
 	if (identite.type !== 'authentifie') {
 		return { session: false, notes: await lireNotes(base, contexte, identifiants) };
 	}
@@ -688,19 +518,11 @@ export async function lireAccueil(
 		lireNotes(base, contexte, identifiants),
 		lireCompteCourant(base, identite.compteId),
 		lireUnivers(base),
-		/*
-		 * LE TABLEAU DE BORD NE NOMME QUE LES DOMAINES QUE L'APPELANT PEUT OUVRIR.
-		 *
-		 * Il lisait la table ENTIÈRE, sans aucun accès ni filtre, pendant que le
-		 * gabarit racine servait le rail filtré : la MÊME réponse portait donc un
-		 * rail vide et des cartes « Infrastructure », « Projets » — cliquables, et
-		 * chacune vers un 404. `RG-ACC-01`, `P-03`, et c'est le défaut que le rail
-		 * a refermé de son côté sans que l'accueil en reçoive la nouvelle.
-		 *
-		 * LA MÊME FONCTION QUE LE RAIL, pas une seconde écriture du même filtre :
-		 * `lireLesDomainesLisibles()` est appelée par les deux, et deux écrans de
-		 * la même réponse ne peuvent plus diverger.
-		 */
+		/* LE TABLEAU DE BORD NE NOMME QUE LES DOMAINES QUE L'APPELANT PEUT OUVRIR. Il
+		   lisait la table entière pendant que le gabarit racine servait le rail
+		   filtré : la MÊME réponse portait un rail vide et des cartes cliquables
+		   menant chacune vers un 404. C'est LA MÊME FONCTION que le rail, et non une
+		   seconde écriture du même filtre. */
 		ouvrirLAcces(base, identite, maintenant).then((acces) => lireLesDomainesLisibles(base, acces)),
 		compterLesConsultations(base, identifiants, semaine, maintenant),
 		compterLesConsultations(base, identifiants, semainePrecedente, semaine),
@@ -731,16 +553,10 @@ export async function lireAccueil(
 	   survit à la suppression de son compte. */
 	if (compte === undefined) return rendu;
 
-	/*
-	 * LA SALUTATION NE NOMME PAS NON PLUS UN DOMAINE QUE L'APPELANT NE PEUT PAS
-	 * LIRE. Elle dit « Votre périmètre, {domaine}, compte N notes » sur le seul
-	 * RATTACHEMENT du compte — qui n'est pas un titre d'accès (`RG-DRO-02`) —, et
-	 * elle le nommait donc dans la même réponse qui ne portait aucun domaine.
-	 *
-	 * LA CHAÎNE VIDE EST UN CAS QUE `V-07` TRAITE DÉJÀ, et qu'elle documente :
-	 * c'est celui de tout compte d'amorçage, dont le rattachement est nul. La
-	 * salutation bascule alors sur « Votre base compte … », sans nommer personne.
-	 */
+	/* LA SALUTATION NE NOMME PAS UN DOMAINE QUE L'APPELANT NE PEUT PAS LIRE : elle
+	   porte sur le seul RATTACHEMENT du compte, qui n'est pas un titre d'accès
+	   (`RG-DRO-02`). La chaîne vide est un cas que V-07 traite déjà — celui d'un
+	   compte d'amorçage —, et la salutation bascule sur « Votre base compte … ». */
 	const lisible = domainesLisibles.some((d) => d.nom === compte.domaine);
 	const ajuste = lisible ? compte : { ...compte, domaine: '' as typeof compte.domaine };
 	return { ...rendu, compte: ajuste };

@@ -24,7 +24,6 @@
  * aucune raison de le rouvrir.
  */
 
-/** Ce qu'un pas de sélecteur retient : un nom, un identifiant, des classes, des données. */
 interface PasDeSelecteur {
 	balise?: string;
 	id?: string;
@@ -182,7 +181,6 @@ function descendants(racine: NoeudFeint): NoeudFeint[] {
 	return rendu;
 }
 
-/** Le dernier pas porte sur le nœud ; les précédents, sur ses ancêtres, dans l'ordre. */
 function correspond(noeud: NoeudFeint, etapes: readonly PasDeSelecteur[]): boolean {
 	const dernier = etapes[etapes.length - 1];
 	if (dernier === undefined || !porte(noeud, dernier)) return false;
