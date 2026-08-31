@@ -325,7 +325,14 @@ try {
 	await page.keyboard.press('Control+End');
 	await page.keyboard.press('Enter');
 	await page.keyboard.type('Seconde version, écrite par le passage à froid.');
-	await Promise.all([page.waitForURL(`${BASE_URL}/notes/${interne}`), page.click('#enregistrer')]);
+	/* ON ATTEND LE CHEMIN, PAS L'ADRESSE ENTIÈRE. L'enregistrement rend la main
+	   avec `?enregistree=1`, que la note porte pour annoncer son indexation
+	   différée (`RG-NF-03`) : une égalité stricte faisait échouer le passage sur
+	   un paramètre que le produit a le droit d'ajouter. */
+	await Promise.all([
+		page.waitForURL((u) => u.pathname === `/notes/${interne}`),
+		page.click('#enregistrer')
+	]);
 
 	const adresseDomaine = `/univers/${univers.identifiant}/${domaine.identifiant}`;
 	await page.goto(`${BASE_URL}${adresseDomaine}/signets/nouveau`, { waitUntil: 'networkidle' });
