@@ -1,20 +1,24 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
-    "deny": [
-      "Edit(cadrage/**)",  "Write(cadrage/**)",
-      "Edit(règles/**)",   "Write(règles/**)",
-      "Edit(mockups/**)",  "Write(mockups/**)",
-      "Edit(verif/references/**)", "Write(verif/references/**)",
-      "Bash(rm -rf mockups*)", "Bash(rm -rf cadrage*)", "Bash(rm -rf règles*)"
-    ],
+    "deny": [],
     "allow": [
-      "Bash(pnpm *)", "Bash(pnpx *)",
-      "Bash(git status*)", "Bash(git diff*)", "Bash(git log*)", "Bash(git add*)",
-      "Bash(git commit*)", "Bash(git checkout*)", "Bash(git branch*)",
-      "Bash(docker compose *)", "Bash(docker ps*)",
-      "Bash(npx playwright *)", "Bash(sha256sum *)"
+      "Bash(pnpm *)",
+      "Bash(pnpx *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git checkout*)",
+      "Bash(git branch*)",
+      "Bash(docker compose *)",
+      "Bash(docker ps*)",
+      "Bash(npx playwright *)",
+      "Bash(sha256sum *)"
     ]
   },
-  "worktree": { "baseRef": "head" }
+  "worktree": {
+    "baseRef": "head"
+  }
 }
