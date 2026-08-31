@@ -3,9 +3,10 @@
 	 * `/console/analytique` — V-34 Console · Analytique. Le rôle administrateur est
 	 * éprouvé côté serveur par `+page.server.ts`.
 	 *
-	 * LE VECTEUR VIENT DU SERVEUR, ET IL PORTE `P-02` : le produit n'a presque aucune
-	 * des mesures que cet écran calcule, et le chargeur demande donc l'état neutre
-	 * explicite que le gel porte lui-même.
+	 * LE VECTEUR VIENT DU SERVEUR, ET IL PORTE `P-02` : il est DÉRIVÉ du recensement des
+	 * mesures sans contrepartie, jamais écrit à la main. Les cinq blocs sont désormais
+	 * servis depuis la base — consultations, journal de recherche, demandes de révision,
+	 * ancienneté de modification.
 	 */
 	import Vue from '../../../vues/V-34.svelte';
 	import '../../../vues/V-34.css';
@@ -39,11 +40,11 @@
 	qui retombait sur `seeds/corpus.ts`. `domaines` reste : la santé
 	documentaire est rendue domaine par domaine.
 
-	LES TROIS MESURES QUE LE PRODUIT NE PORTE PAS NE SONT TOUJOURS PAS PASSÉES —
-	journal de recherche, demandes de révision, modifications par période. Leur
-	défaut est désormais VIDE, et les blocs qui en dérivent ne se rendent plus :
-	ils servaient les chiffres du jeu de démonstration, masqués par la feuille
-	mais bien présents dans le HTML servi.
+	LES TROIS MESURES QUI MANQUAIENT VIENNENT DU CHARGEUR — journal de recherche
+	(`010`), demandes de révision (`notes.revision_*`) et ancienneté de
+	modification (`notes.modifie_le`). Leur défaut reste l'état vide : une route
+	qui les oublierait ferait taire les blocs qui en dérivent, jamais servir les
+	chiffres du jeu de démonstration.
 -->
 <Vue
 	vecteur={data.vecteur}
@@ -52,6 +53,9 @@
 	relations={data.relations}
 	mesures7j={data.mesures7j}
 	mesures7jPrec={data.mesures7jPrec}
+	recherches={data.recherches}
+	revisions={data.revisions}
+	modifications={data.modifications}
 	onVoirLesNotes={(demande) => {
 		const adresse = adresseDeListe(demande.domaine, demande.fraicheur);
 		/* LA RÈGLE EST DÉSARMÉE, ET LE PRÉCÉDENT EST CELUI DU DÉPÔT.
@@ -97,12 +101,11 @@
 		   « Réaffecter » mène à la liste du domaine (vue V-12), « Lier depuis une
 		   note » à l'éditeur de la note (vue V-17).
 
-		   LA TROISIÈME EST UN ARBITRAGE DÉCLARÉ. « Signaler à réviser » notifie au
-		   gel « Demande de révision envoyée », et AUCUNE TABLE n'enregistre une
-		   demande de révision — le recensement des lacunes le dit en propres
-		   termes. Plutôt qu'un bouton sans réponse ou qu'une écriture inventée, le
-		   geste ouvre la note : c'est là que vit « Marquer comme vérifié », le seul
-		   geste de contrôle que le produit porte réellement. */
+		   LA TROISIÈME OUVRE LA NOTE, où le geste vit réellement : « Signaler à
+		   réviser » est l'action `signaler` de `/notes/{identifiant}`, qui écrit
+		   `notes.revision_*` (`RG-M06-05`). Le rejouer ici serait une seconde
+		   écriture du même signalement, et l'écran ne porte pas le commentaire que
+		   la demande exige. */
 		const domaine = domaineDe(demande.identifiant);
 		const adresse =
 			demande.famille === 'peuConsultees'

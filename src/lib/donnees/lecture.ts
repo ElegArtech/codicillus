@@ -13,7 +13,7 @@
  * UN PARAMÈTRE : une couche de lecture qui prendrait l'heure elle-même rendrait ses
  * résultats non reproductibles.
  */
-import { eq, inArray } from 'drizzle-orm';
+import { count, desc, eq, inArray } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Base } from '../base/acces';
 import {
@@ -38,6 +38,7 @@ import {
 import { niveauFraicheur, type SeuilsDeFraicheur } from '../fraicheur';
 import type {
 	ChampDeFiche,
+	DemandeDeRevision,
 	CleDeModule,
 	CleDeTypeDeRelation,
 	Compte,
@@ -102,6 +103,50 @@ export async function ancienneteDeModification(
 	const table: Record<string, number> = {};
 	for (const ligne of lignes) table[ligne.identifiant] = joursEcoules(ligne.modifieLe, maintenant);
 	return table as Partial<Record<IdentifiantNote, number>>;
+}
+
+/**
+ * LES DEMANDES DE RÉVISION OUVERTES, SANS FILTRE DE PÉRIMÈTRE — `notes.revision_*`
+ * (`RG-M06-05` : le signalement est porté par la NOTE, non par une table à part).
+ *
+ * SANS FILTRE, DONC RÉSERVÉE À LA CONSOLE, où l'appelant est administrateur : les vues de
+ * périmètre restreint ont leur propre lecture, filtrée sur leurs dossiers (`ADR-006`).
+ *
+ * LA JOINTURE INTERNE SUR `comptes` PORTE UNE RÈGLE : `revision_par_id` est `SET NULL` à la
+ * suppression du demandeur, et l'écran affiche « signalée par X ». Une demande dont le
+ * demandeur a disparu est écartée plutôt que dotée d'un nom inventé.
+ */
+export async function lireToutesLesDemandesDeRevision(
+	base: Base,
+	maintenant: Date
+): Promise<readonly DemandeDeRevision[]> {
+	const lignes = await base
+		.select({
+			identifiant: notes.identifiant,
+			par: comptes.nom,
+			le: notes.revisionLe,
+			commentaire: notes.revisionCommentaire
+		})
+		.from(notes)
+		.innerJoin(comptes, eq(notes.revisionParId, comptes.id))
+		.where(eq(notes.revisionDemandee, true))
+		.orderBy(desc(notes.revisionLe));
+
+	return lignes.flatMap((l) =>
+		l.le === null
+			? []
+			: [
+					{
+						id: l.identifiant,
+						par: l.par,
+						le: dateCourteDInstant(l.le),
+						jours: joursEcoules(l.le, maintenant),
+						/* La contrainte de base autorise une demande SANS commentaire : la chaîne
+						   vide dit l'absence sans rien fabriquer. */
+						commentaire: l.commentaire ?? ''
+					} as unknown as DemandeDeRevision
+				]
+	);
 }
 
 /**
@@ -589,7 +634,18 @@ export async function lireLesProprietesDeFiche(
 	return rendu;
 }
 
-/** Les templates fournis (RG-REF-01). */
+/**
+ * Les templates fournis (RG-REF-01), et LE NOMBRE DE NOTES QUI EN SONT PARTIES.
+ *
+ * `utilisations` EST COMPTÉ, JAMAIS DÉCLARÉ. La migration `011` a posé
+ * `notes.template_id`, une TRACE D'ORIGINE : `creerUneNote()` l'écrit, cette jointure la
+ * compte. Le compteur des quatre endroits de V-31 — total, ligne, tiroir, dialogue de
+ * suppression — rendait « — » faute de toute colonne ; zéro y est désormais un
+ * RÉSULTAT, celui d'un squelette dont personne n'est encore parti.
+ *
+ * LA JOINTURE EST EXTERNE À GAUCHE, et `count()` porte sur `notes.id` et non sur `*` :
+ * `count(*)` d'un template sans note rendrait UN, la ligne de gauche étant comptée.
+ */
 export async function lireTemplates(base: Base): Promise<readonly Template[]> {
 	const lignes = await base
 		.select({
@@ -599,17 +655,28 @@ export async function lireTemplates(base: Base): Promise<readonly Template[]> {
 			typeNom: typesDeNote.nom,
 			defaut: templates.defaut,
 			structure: templates.structure,
-			contenu: templates.contenu
+			contenu: templates.contenu,
+			utilisations: count(notes.id)
 		})
 		.from(templates)
 		.innerJoin(typesDeNote, eq(templates.typeDeNoteId, typesDeNote.id))
+		.leftJoin(notes, eq(notes.templateId, templates.id))
+		.groupBy(
+			templates.id,
+			templates.identifiant,
+			templates.nom,
+			templates.description,
+			typesDeNote.nom,
+			templates.defaut,
+			templates.structure,
+			templates.contenu
+		)
 		.orderBy(templates.identifiant);
 
 	/* `defaut` est déclaré OPTIONNEL dans `interface Template` parce qu'il est
 	   absent des variantes réduites du jeu ; dans le jeu complet il est toujours
 	   présent, `false` compris. L'optionnel d'un type n'est pas l'optionnel d'un jeu
-	   de données. `utilisations` n'a AUCUNE colonne : la batterie d'équivalence le
-	   porte en lacune plutôt que ce module en zéro. */
+	   de données. */
 	return lignes.map(
 		(t) =>
 			({
@@ -619,7 +686,8 @@ export async function lireTemplates(base: Base): Promise<readonly Template[]> {
 				type: t.typeNom,
 				description: t.description,
 				structure: t.structure,
-				contenu: t.contenu
+				contenu: t.contenu,
+				utilisations: t.utilisations
 			}) as unknown as Template
 	);
 }
