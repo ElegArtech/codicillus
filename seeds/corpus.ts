@@ -508,8 +508,9 @@ export interface RequeteDeRecherche {
 	readonly resultats: number;
 	/** Recherches suivies de l'ouverture d'un résultat. */
 	readonly ouvertures: number;
-	/** Évolution en points par rapport à la période précédente. */
-	readonly evolution: number;
+	/** Évolution en points par rapport à la période précédente ; `null` quand la période
+	 *  précédente ne porte aucune recherche de ce terme — il n'y a alors rien à comparer. */
+	readonly evolution: number | null;
 }
 
 /* ── Les notes ─────────────────────────────────────────────────────────────

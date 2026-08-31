@@ -175,18 +175,31 @@ describe('resoudreLaConsole — un seul objet d’échec, et la base n’est pas
 /* ═══════════════════════════ L'état neutre de l'analytique — P-02 ══════ */
 
 describe('etatDesDonnees — P-02, l’état neutre explicite plutôt qu’un zéro muet', () => {
-	it('rend « insuffisantes » sur le recensement RÉEL du dépôt', () => {
-		expect(etatDesDonnees()).toBe('insuffisantes');
-		expect(vecteurDeV34()).toEqual({ don: 'insuffisantes' });
+	it('rend « completes » sur le recensement RÉEL du dépôt', () => {
+		/* LES CINQ MESURES DE L'ÉCRAN SONT PORTÉES : consultations (`006`), journal de
+		   recherche (`010`), demandes de révision (`notes.revision_*`) et ancienneté de
+		   modification (`notes.modifie_le`). Plus aucune entrée V-34, donc plus de
+		   raison de se taire. */
+		expect(etatDesDonnees()).toBe('completes');
+		expect(vecteurDeV34()).toEqual({ don: 'completes' });
 	});
 
-	it('rend « completes » sur un recensement VIDE — le cas d’épreuve synthétique', () => {
-		/* `P-26` : un prédicat sans cas contraire est une règle qu'on espère. Le
-		   jour où une migration porterait les cinq mesures, retirer leurs entrées
-		   du recensement suffirait à faire basculer l'écran — et c'est ce
-		   basculement qui est mesuré ici, indépendamment de l'état du dépôt. */
+	it('rend « insuffisantes » dès qu’une mesure V-34 manque — le cas d’épreuve', () => {
+		/* `P-26` : un prédicat sans cas contraire est une règle qu'on espère. Le jour où
+		   une mesure de l'écran disparaîtrait, son entrée reviendrait au recensement et
+		   l'écran se tairait — c'est ce basculement qui est mesuré ici, indépendamment de
+		   l'état du dépôt. */
+		const manquante: readonly MesureSansContrepartie[] = [
+			{
+				donnee: 'RECHERCHES',
+				vue: 'V-34',
+				affichage: 'l’indicateur nord',
+				motif: 'la table du journal de recherche a disparu'
+			}
+		];
+		expect(etatDesDonnees(manquante)).toBe('insuffisantes');
+		expect(vecteurDeV34(manquante)).toEqual({ don: 'insuffisantes' });
 		expect(etatDesDonnees([])).toBe('completes');
-		expect(vecteurDeV34([])).toEqual({ don: 'completes' });
 	});
 
 	it('ne bascule PAS sur une lacune qui concerne un autre écran', () => {
@@ -200,20 +213,20 @@ describe('etatDesDonnees — P-02, l’état neutre explicite plutôt qu’un z�
 });
 
 describe('MESURES_DE_CONSOLE_SANS_CONTREPARTIE — la lacune comptée, jamais racontée', () => {
-	it('recense TROIS mesures pour V-34, nommément', () => {
+	it('ne recense PLUS AUCUNE mesure pour V-34', () => {
 		/* Le nom de chaque donnée est celui que `seeds/corpus.ts` exporte : une
 		   migration qui en porterait une devrait retirer son entrée, et ce test
 		   la réclamerait. C'est le motif de `DonneeSansContrepartie` d'`accueil.ts`,
 		   repris : « qu'une lacune refermée fasse rougir le test au lieu de laisser
 		   un commentaire périmé derrière elle ».
 
-		   ELLES ÉTAIENT CINQ, ET LE TEST N'A PAS ROUGI QUAND IL LE DEVAIT :
-		   `MESURES_7J` et `MESURES_7J_PREC` ont survécu à la migration `006`, qui
-		   a monté la table des consultations horodatées que leur motif déclarait
-		   absente. Le contrôle ne voit une lacune refermée que si quelqu'un vient
-		   retirer l'entrée ; c'est ce qui est fait ici. */
+		   ELLES ÉTAIENT CINQ, PUIS TROIS, ET DEUX DES TROIS ÉTAIENT FAUSSES :
+		   `REVISIONS` niait `notes.revision_*`, posée par `002` et lue en quatre
+		   endroits ; `MODIFICATIONS` réclamait un compte par période là où la maquette
+		   demande une ancienneté en jours. La troisième, `RECHERCHES`, était vraie
+		   jusqu'à `010_recherches`. */
 		const v34 = MESURES_DE_CONSOLE_SANS_CONTREPARTIE.filter((m) => m.vue === 'V-34');
-		expect(v34.map((m) => m.donnee)).toEqual(['RECHERCHES', 'REVISIONS', 'MODIFICATIONS']);
+		expect(v34).toEqual([]);
 	});
 
 	it('ne recense plus les consultations, que la migration 006 porte', () => {
@@ -225,12 +238,39 @@ describe('MESURES_DE_CONSOLE_SANS_CONTREPARTIE — la lacune comptée, jamais ra
 		const noms = MESURES_DE_CONSOLE_SANS_CONTREPARTIE.map((m) => m.donnee);
 		expect(noms).not.toContain('MESURES_7J');
 		expect(noms).not.toContain('MESURES_7J_PREC');
+		expect(noms).not.toContain('RECHERCHES');
+		expect(noms).not.toContain('REVISIONS');
+		expect(noms).not.toContain('MODIFICATIONS');
 	});
 
-	it('recense aussi les deux journaux d’imports et l’archive d’export', () => {
+	it('ne recense plus les utilisations de template, que la migration 011 porte', () => {
+		/* MÊME CONTRÔLE QUE POUR LES CONSULTATIONS, et pour la même raison : une
+		   entrée dont la colonne existe est un recensement FAUX. `notes.template_id`
+		   est posée par `011`, `creerUneNote()` l'écrit et `lireTemplates()` la
+		   compte — V-31 rend un nombre réel à ses quatre endroits, zéro compris. */
+		const noms = MESURES_DE_CONSOLE_SANS_CONTREPARTIE.map((m) => m.donnee);
+		expect(noms).not.toContain('Template.utilisations');
+		expect(MESURES_DE_CONSOLE_SANS_CONTREPARTIE.filter((m) => m.vue === 'V-31')).toHaveLength(0);
+	});
+
+	it('ne recense plus les journaux d’imports, que la migration 009 porte', () => {
+		/* MÊME CONTRÔLE QUE POUR LES CONSULTATIONS ET LES TEMPLATES. `lots_d_import`
+		   et `lignes_de_lot` reçoivent chaque lot, `/console/imports` les relit, et
+		   `/console/imports/{lot}` sert le rapport détaillé. Les deux entrées ont
+		   donc disparu, ET C'EST CE QUI FAIT BASCULER L'ÉCRAN — le drapeau est dérivé
+		   du recensement, jamais écrit à la main. */
+		const noms = MESURES_DE_CONSOLE_SANS_CONTREPARTIE.map((m) => m.donnee);
+		expect(noms).not.toContain('JOURNAL_IMPORTS');
+		expect(noms).not.toContain('LOT_IMPORT');
+		expect(MESURES_DE_CONSOLE_SANS_CONTREPARTIE.filter((m) => m.vue === 'V-35')).toHaveLength(0);
+		/* La moitié « accueil » de `RG-M12-09` est tenue par le même journal :
+		   `lireLActiviteRecente()` lit `lots_d_import` et rend le genre `import`. */
+		expect(MESURES_DE_CONSOLE_SANS_CONTREPARTIE.filter((m) => m.vue === 'V-07')).toHaveLength(0);
+	});
+
+	it('recense encore l’archive d’export, qu’aucune table ne garde', () => {
 		const parVue = (vue: string) =>
 			MESURES_DE_CONSOLE_SANS_CONTREPARTIE.filter((m) => m.vue === vue).length;
-		expect(parVue('V-35')).toBe(2);
 		expect(parVue('V-36')).toBe(1);
 	});
 

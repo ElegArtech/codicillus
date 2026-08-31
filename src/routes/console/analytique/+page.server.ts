@@ -4,13 +4,16 @@
  * pour toutes, et un non-administrateur reçoit 404 V-26 (`P-09`, `RG-ACC-04`). Le seul
  * `error(404, …)` est SANS MESSAGE (`ADR-007`).
  *
- * `P-02` MORD ICI, ET C'EST LE VECTEUR QUI LUI RÉPOND : le produit ne porte presque aucune
- * des mesures de cet écran, et les lacunes sont recensées une par une, avec la table qui
- * manque, dans `MESURES_DE_CONSOLE_SANS_CONTREPARTIE`. Servir des zéros serait pire que la
- * section « Suffisantes » — « 0 » et « indisponible » sont deux informations différentes.
- * LE GEL PORTE DÉJÀ L'ÉTAT NEUTRE EXPLICITE, et `vecteurDeV34()` le DÉRIVE du recensement
- * plutôt que de l'écrire, pour que le contrôle garde un cas d'épreuve après une migration
- * future (`P-26`).
+ * LES CINQ BLOCS SONT SERVIS DEPUIS LA BASE : les consultations (`006`), le journal de
+ * recherche (`010`), les demandes de révision portées par `notes.revision_*`, et
+ * l'ancienneté de modification lue sur `notes.modifie_le`. LES TROIS ENTRÉES V-34 DU
+ * RECENSEMENT ONT ÉTÉ RETIRÉES en conséquence : deux d'entre elles étaient FAUSSES — les
+ * colonnes de révision existent depuis `002` et sont lues en quatre endroits, et la
+ * maquette ne demande pas un compte de modifications mais une ancienneté en jours.
+ *
+ * `P-02` GARDE SON POINT D'APPUI : `vecteurDeV34()` DÉRIVE l'état du recensement plutôt que
+ * de l'écrire. Le jour où une mesure disparaîtrait, son entrée y reviendrait et l'écran se
+ * tairait de nouveau, sans qu'une ligne de cette route change (`P-26`).
  */
 import { error } from '@sveltejs/kit';
 import { and, count, eq, gte, lt } from 'drizzle-orm';
@@ -22,23 +25,21 @@ import {
 	resoudreLaConsole,
 	vecteurDeV34
 } from '$lib/donnees/consoles';
-import { lireRelations } from '$lib/donnees/lecture';
+import {
+	ancienneteDeModification,
+	lireRelations,
+	lireToutesLesDemandesDeRevision
+} from '$lib/donnees/lecture';
+import { lireLesRecherches } from '$lib/donnees/recherches';
 import type { PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 const SEPT_JOURS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * LES CONSULTATIONS D'UNE FENÊTRE, PAR NOTE — la seule des cinq mesures de V-34
- * que le produit porte vraiment, depuis que la migration `006` a monté la table
- * des consultations horodatées. Les deux entrées correspondantes ont été retirées
- * du recensement des lacunes : un registre de lacunes qui ment dispense d'aller
- * voir.
- *
- * LES DEUX AUTRES SÉRIES DE L'ÉCRAN N'ONT TOUJOURS AUCUNE TABLE — le journal de
- * recherche et les demandes de révision. La vue garde leur défaut, et le vecteur
- * continue de demander l'état « Pas encore assez d'usage pour conclure » : un
- * seul indicateur réel ne fait pas un tableau de bord.
+ * LES CONSULTATIONS D'UNE FENÊTRE, PAR NOTE — la table montée par `006`. Les deux entrées
+ * correspondantes ont été retirées du recensement des lacunes : un registre qui ment
+ * dispense d'aller voir.
  */
 async function consultationsParNote(
 	base: Base,
@@ -58,7 +59,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
-	const maintenant = Date.now();
+	/* UN SEUL INSTANT POUR TOUT L'ÉCRAN : deux fenêtres lues sur deux horloges ne se
+	   compareraient pas. */
+	const instant = new Date();
+	const maintenant = instant.getTime();
 
 	return {
 		vecteur: vecteurDeV34(),
@@ -80,6 +84,19 @@ export const load: PageServerLoad = async ({ locals }) => {
 			base,
 			new Date(maintenant - 2 * SEPT_JOURS),
 			new Date(maintenant - SEPT_JOURS)
-		)
+		),
+		/* LE JOURNAL DE RECHERCHE — `RG-M02-03`, agrégé par terme sur les 30 jours de
+		   l'étiquette de l'en-tête, avec l'évolution contre les 30 précédents. C'est la
+		   source de l'indicateur nord et des trous documentaires. */
+		recherches: await lireLesRecherches(base, instant),
+		/* LES DEMANDES DE RÉVISION — `notes.revision_*`, sans filtre de périmètre : la
+		   console est administrateur. Le recensement les disait sans table ; elles en ont
+		   une depuis `002`. */
+		revisions: await lireToutesLesDemandesDeRevision(base, instant),
+		/* L'ANCIENNETÉ DE LA DERNIÈRE MODIFICATION, EN JOURS — ce que la maquette demande
+		   (« Ancienneté de la dernière modification, en jours »), et non un compte par
+		   période. Le calcul est celui de `lecture.ts`, employé par trois autres écrans :
+		   une seconde définition en ferait diverger les alertes. */
+		modifications: await ancienneteDeModification(base, acces.ressource.notes, instant)
 	};
 };
