@@ -35,6 +35,14 @@ export interface ContexteDeCoquille {
 	 * « Créer la note … » vers `/notes/nouvelle`. Une boucle.
 	 */
 	ecriture: boolean;
+	/**
+	 * OUVRIR LA PALETTE DE RECHERCHE RAPIDE — `UC-M02-01`. Absente, `Ctrl` `K` et le
+	 * clic sur le champ de la barre NAVIGUENT vers `/recherche` : c'est ce que faisait
+	 * la coquille partout, et « sans quitter son contexte » n'était alors tenu nulle
+	 * part. Le repli reste, parce qu'une page servie sans session n'a pas de palette à
+	 * ouvrir et que son champ doit tout de même mener quelque part.
+	 */
+	ouvrirLaPalette?: (() => void) | undefined;
 }
 
 /** L'adresse de chaque entrée du menu « Créer », par son libellé du gel. */
@@ -218,10 +226,13 @@ export function cablerLaCoquille(document: Document, contexte: ContexteDeCoquill
 			return;
 		}
 
-		/* 4. LA BOÎTE DE RECHERCHE — le gel annonce `Ctrl` `K` sur elle-même. */
+		/* 4. LA BOÎTE DE RECHERCHE — le gel annonce `Ctrl` `K` sur elle-même, et
+		      `UC-M02-01` veut qu'un clic dessus ouvre la MÊME palette que le
+		      raccourci. Sans palette montée, elle mène à l'écran de recherche. */
 		if (cible.closest('.recherche') !== null) {
 			evenement.preventDefault();
-			aller('/recherche');
+			if (contexte.ouvrirLaPalette !== undefined) contexte.ouvrirLaPalette();
+			else aller('/recherche');
 			return;
 		}
 
@@ -240,7 +251,12 @@ export function cablerLaCoquille(document: Document, contexte: ContexteDeCoquill
 			}
 			return;
 		}
-		/* `Ctrl` `K` — le raccourci que la boîte de recherche affiche elle-même. */
+		/* `Ctrl` `K` — le raccourci que la boîte de recherche affiche elle-même. LA
+		   PALETTE L'ÉCOUTE ELLE-MÊME quand elle est montée : elle doit répondre au
+		   SECOND appui, alors qu'elle est ouverte, en replaçant le focus dans son
+		   champ — ce que ce câblage-ci, qui ne connaît pas son état, ne peut pas
+		   faire. Il ne reste ici que le repli, pour les pages sans palette. */
+		if (contexte.ouvrirLaPalette !== undefined) return;
 		if (evenement.key.toLowerCase() !== 'k' || !(evenement.ctrlKey || evenement.metaKey)) return;
 		evenement.preventDefault();
 		aller('/recherche');
