@@ -575,3 +575,10 @@
 .fil { overflow: hidden; }
 .fil > * { min-width: 0; flex: 0 1 auto; }
 .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- Pagination de la liste ------------------------------------------------
+   La liste rendait toutes les notes du domaine : à deux mille notes, deux mille
+   lignes-cartes dans un seul document. Le bloc ne se rend qu'au-delà d'une page,
+   et reprend le bouton du socle plutôt qu'un habillage à lui. */
+.pagination { display: flex; align-items: center; justify-content: center; gap: var(--e-3); margin-top: var(--e-4); }
+.pagination__etat { color: var(--c-encre-3); font-size: var(--t-petit); }

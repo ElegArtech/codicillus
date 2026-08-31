@@ -9,33 +9,40 @@
  * réponse que l'inexistence — aucun domaine du jeu de démonstration n'exerçant ce refus,
  * la fonction qui décide est pure et éprouvée dans ses deux polarités.
  *
- * LES SEPT PARAMÈTRES DE CETTE ROUTE SONT TOUS HONORÉS : les six facettes RÉPÉTABLES,
- * plus l'ordre `tri` — valeurs en OU dans une facette, en ET entre facettes. L'AXE
- * « ARRIVÉE » SUBSISTE À CÔTÉ : la vue s'en sert pour DÉRIVER le filtre quand aucune
- * valeur retenue ne lui est passée, `retenues` ayant la priorité. LE DOMAINE SERVI EST
- * LE DOMAINE RÉSOLU, et la liste passée n'a qu'un élément.
+ * LES SEPT PARAMÈTRES DE CETTE ROUTE SONT TOUS HONORÉS, ET ILS LE SONT EN SQL : les six
+ * facettes RÉPÉTABLES — valeurs en OU dans une facette, en ET entre facettes —, plus
+ * l'ordre `tri`. `?page=` s'y ajoute. L'AXE « ARRIVÉE » SUBSISTE À CÔTÉ : il DÉRIVE les
+ * valeurs retenues quand l'adresse n'en porte aucune, `retenues` ayant la priorité.
+ *
+ * CE CHARGEUR NE SERT PLUS UN CORPUS À FILTRER. Il appelait `lireNotesLisibles()`, qui
+ * ne prend aucun identifiant de domaine : la vue recevait toutes les notes lisibles de
+ * L'INSTANCE, corps `jsonb` compris, et faisait le domaine, les facettes, le tri et le
+ * compteur dans le navigateur. Tout cela est descendu dans `lireLaListeDeNotes()`.
  */
 import { basePartagee } from '$lib/base/acces';
-import type { Base } from '$lib/base/acces';
-import { notes as tableDesNotes } from '$lib/base/schema';
-import { joursEcoules } from '$lib/donnees/lecture';
+import { lireLaListeDeNotes } from '$lib/donnees/liste-de-notes';
+import {
+	CLES_DE_FACETTE,
+	LIBELLE_DE_FRAICHEUR,
+	LIBELLE_DE_STATUT,
+	NOTES_PAR_PAGE,
+	ordreDeListe,
+	pageDemandee,
+	type CleDeFacette,
+	type RetenuesDeFacette
+} from '$lib/liste/facettes';
 import { resoudre } from '$lib/droits/resolution';
 import {
 	domaineLisible,
+	dossiersDuDomaine,
 	lireDomaineParIdentifiants,
 	lireModulesDuDomaine,
-	lireNotesLisibles,
 	moduleActif,
 	ouvrirLAcces,
 	refuserLAdresse
 } from '$lib/donnees/rangement';
-import { inArray } from 'drizzle-orm';
-import type { Domaine, IdentifiantNote, Note } from '../../../../../../seeds/corpus';
+import type { Domaine } from '../../../../../../seeds/corpus';
 import type { PageServerLoad } from './$types';
-
-/** Les deux valeurs de facette que §4.2 nomme, recopiées telles quelles. */
-const FRAICHEUR_OBSOLETE = 'Obsolète probable';
-const STATUT_BROUILLON = 'Brouillon';
 
 /**
  * La position de l'axe « Arrivée » que l'adresse demande. Une valeur inconnue
@@ -43,8 +50,8 @@ const STATUT_BROUILLON = 'Brouillon';
  * serait un comblement.
  */
 function arriveeDepuisLAdresse(parametres: URLSearchParams): 'tout' | 'obsolete' | 'brouillon' {
-	if (parametres.get('fraicheur') === FRAICHEUR_OBSOLETE) return 'obsolete';
-	if (parametres.get('statut') === STATUT_BROUILLON) return 'brouillon';
+	if (parametres.get('fraicheur') === LIBELLE_DE_FRAICHEUR.obs) return 'obsolete';
+	if (parametres.get('statut') === LIBELLE_DE_STATUT.brouillon) return 'brouillon';
 	return 'tout';
 }
 
@@ -63,8 +70,26 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	);
 	if (!resolution.trouve) refuserLAdresse(url.pathname);
 
-	const notes = await lireNotesLisibles(base, acces.perimetre, acces.contexte);
-	const aDesNotes = notes.some((n) => n.domaine === resolution.ressource.nom);
+	const arrivee = arriveeDepuisLAdresse(url.searchParams);
+	/**
+	 * LES VALEURS DE FACETTE EFFECTIVES — celles de l'adresse, et à défaut celles que
+	 * l'ARRIVÉE pose elle-même : « arrivée depuis un segment de barre de fraîcheur ou
+	 * un indicateur de l'accueil : la liste s'ouvre déjà filtrée, et le filtre est
+	 * visible et retirable comme n'importe quel autre » (`V-12:2303`). La dérivation
+	 * était dans la vue ; elle est ici, parce que c'est ici qu'on filtre désormais.
+	 */
+	const retenues = retenuesDeLAdresse(url.searchParams) ?? retenuesDeLArrivee(arrivee);
+
+	const liste = await lireLaListeDeNotes(base, {
+		domaineId: resolution.ressource.id,
+		perimetre: acces.perimetre,
+		dossiersDuDomaine: dossiersDuDomaine(acces, resolution.ressource.id),
+		contexte: acces.contexte,
+		retenues,
+		ordre: ordreDeListe(url.searchParams.get('tri')),
+		page: pageDemandee(url.searchParams.get('page')),
+		parPage: NOTES_PAR_PAGE
+	});
 
 	return {
 		/**
@@ -80,68 +105,58 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		],
 		vecteur: {
 			dom: resolution.ressource.nom,
-			arr: arriveeDepuisLAdresse(url.searchParams),
+			arr: arrivee,
 			/* Les deux positions de l'axe « État » de la planche. `vide` est l'état
 			   vide de `RG-M18-03`, décidé sur les notes réellement lisibles. */
-			etat: aDesNotes ? 'nominal' : 'vide'
+			etat: liste.total > 0 ? 'nominal' : 'vide'
 		},
-		notes,
-		/**
-		 * LES VALEURS DE FACETTE RETENUES, LUES DANS L'ADRESSE — les six clés du gel,
-		 * chacune répétable. Les menus de filtre de V-12 étaient inertes : cliquer
-		 * « Type » n'ouvrait rien et cocher une valeur ne filtrait rien.
-		 *
-		 * Une clé absente de l'adresse n'est PAS posée : la vue retombe alors sur la
-		 * dérivation du gel, qui pose elle-même un filtre quand on arrive depuis un
-		 * indicateur.
-		 */
-		retenues: retenuesDeLAdresse(url.searchParams),
+		notes: liste.notes,
+		total: liste.total,
+		nombre: liste.nombre,
+		facettes: liste.facettes,
+		retenues,
 		/** Les quatre ordres du gel ; une valeur inconnue s'ignore, jamais ne refuse. */
 		tri: url.searchParams.get('tri') ?? undefined,
 		/**
-		 * L'ANCIENNETÉ DE MODIFICATION DE CHAQUE NOTE, lue sur `notes.modifie_le`.
-		 * Sans elle, la vue retombait sur la table du jeu de semence, dont les clés
-		 * sont des identifiants de semence : les lignes annonçaient « date de
-		 * modification inconnue » alors que la colonne est renseignée. C'est aussi elle
-		 * qui ordonne la liste, dont le tri par défaut est l'ancienneté.
+		 * L'ANCIENNETÉ DE MODIFICATION DE CHAQUE NOTE SERVIE, lue sur `notes.modifie_le`.
+		 * Elle sortait d'un SECOND aller-retour, portant tous les identifiants lisibles
+		 * de l'instance ; la colonne était déjà rapportée par la requête de la liste.
 		 */
-		modifications: await ancienneteDeModification(base, notes, maintenant)
+		modifications: liste.modifications,
+		/**
+		 * LA PAGINATION, ADRESSES COMPRISES. La vue ne connaît pas l'adresse courante,
+		 * et la deviner à partir du domaine perdrait les facettes et l'ordre : les deux
+		 * adresses sont composées ici, sur l'adresse réellement demandée.
+		 */
+		pagination: {
+			page: liste.page,
+			pages: liste.pages,
+			precedente: liste.page > 1 ? adresseDePage(url, liste.page - 1) : null,
+			suivante: liste.page < liste.pages ? adresseDePage(url, liste.page + 1) : null
+		}
 	};
 };
 
-/**
- * L'ancienneté de la dernière modification, en jours — `notes.modifie_le`.
- *
- * CE N'EST PAS `Note.jours`, qui porte l'âge de la VÉRIFICATION : une note
- * vérifiée hier n'a pas été modifiée hier. Le comptage passe par
- * `joursEcoules()`, la seule façon de compter un jour dans ce produit.
- */
-async function ancienneteDeModification(
-	base: Base,
-	lisibles: readonly Note[],
-	maintenant: Date
-): Promise<Partial<Record<IdentifiantNote, number>>> {
-	const identifiants = lisibles.map((n) => n.id as string);
-	if (identifiants.length === 0) return {};
-	const lignes = await base
-		.select({ identifiant: tableDesNotes.identifiant, modifieLe: tableDesNotes.modifieLe })
-		.from(tableDesNotes)
-		.where(inArray(tableDesNotes.identifiant, identifiants));
-	const table: Record<string, number> = {};
-	for (const ligne of lignes) table[ligne.identifiant] = joursEcoules(ligne.modifieLe, maintenant);
-	return table as Partial<Record<IdentifiantNote, number>>;
+/** L'adresse courante, sa page changée — tout le reste est conservé tel quel. */
+function adresseDePage(url: URL, page: number): string {
+	const adresse = new URL(url);
+	if (page <= 1) adresse.searchParams.delete('page');
+	else adresse.searchParams.set('page', String(page));
+	return adresse.pathname + adresse.search;
 }
 
-/** Les six clés de facette que V-12 déclare, dans son ordre. */
-const CLES_DE_FACETTE = ['type', 'fraicheur', 'statut', 'dossier', 'auteur', 'etiquette'] as const;
-
-function retenuesDeLAdresse(
-	parametres: URLSearchParams
-): Record<string, readonly string[]> | undefined {
-	const retenues: Record<string, readonly string[]> = {};
+function retenuesDeLAdresse(parametres: URLSearchParams): RetenuesDeFacette | undefined {
+	const retenues: Partial<Record<CleDeFacette, readonly string[]>> = {};
 	for (const cle of CLES_DE_FACETTE) {
 		const valeurs = parametres.getAll(cle).filter((v) => v !== '');
 		if (valeurs.length > 0) retenues[cle] = valeurs;
 	}
 	return Object.keys(retenues).length === 0 ? undefined : retenues;
+}
+
+/** Le filtre que l'arrivée pose d'elle-même, quand l'adresse n'en porte aucun. */
+function retenuesDeLArrivee(arrivee: 'tout' | 'obsolete' | 'brouillon'): RetenuesDeFacette {
+	if (arrivee === 'obsolete') return { fraicheur: [LIBELLE_DE_FRAICHEUR.obs] };
+	if (arrivee === 'brouillon') return { statut: [LIBELLE_DE_STATUT.brouillon] };
+	return {};
 }

@@ -31,8 +31,28 @@ const SOPHIE: CompteAffiche = {
 	role: 'Administrateur'
 };
 
-/** Le socle de rendu — tout ce que la vue exige, et rien de plus. */
-const SOCLE = { vecteur: null, notes: NOTES, domaines: DOMAINES, modifications: MODIFICATIONS };
+/** Une page qui tient tout entière — la pagination ne se rend alors pas. */
+const PAGE_UNIQUE = { page: 1, pages: 1, precedente: null, suivante: null };
+
+/**
+ * Le socle de rendu — tout ce que la vue exige, et rien de plus.
+ *
+ * `total`, `nombre` et `facettes` SONT REQUISES DEPUIS QUE LE COMPTE SE FAIT EN SQL :
+ * la vue recevait le corpus de l'instance entière et en tirait le domaine, les six
+ * facettes, leurs compteurs et le tri. Elle ne calcule plus rien de tout cela — ce
+ * qu'on lui donne est ce qu'elle rend, et c'est précisément ce que ce fichier mesure.
+ */
+const SOCLE = {
+	vecteur: null,
+	notes: NOTES,
+	domaines: DOMAINES,
+	total: NOTES.length,
+	nombre: NOTES.length,
+	facettes: [],
+	retenues: {},
+	pagination: PAGE_UNIQUE,
+	modifications: MODIFICATIONS
+};
 
 function rendu(proprietes: Record<string, unknown>): Promise<string> {
 	return rendreLaVue('V-12', { ...SOCLE, ...proprietes });
@@ -146,6 +166,8 @@ describe('V-12 — la propriété servie décide', () => {
 	it('aucune note du jeu de démonstration n’atteint la liste', async () => {
 		const html = await rendu({
 			notes: [],
+			total: 0,
+			nombre: 0,
 			domaines: DOMAINES.filter((d) => d.nom === 'Migration 2026'),
 			modifications: {}
 		});
@@ -182,16 +204,76 @@ describe('V-12 — la pastille de type ne rend jamais « undefined »', () => {
 	it('une note de type « Fiche » SANS type de fiche rend son type de note, et rien de plus', async () => {
 		const sansTypeDeFiche = { ...PREMIERE, type: 'Fiche' as const };
 		delete (sansTypeDeFiche as { typeFiche?: unknown }).typeFiche;
-		const html = await rendu({ notes: [sansTypeDeFiche] });
+		const html = await rendu({ notes: [sansTypeDeFiche], total: 1, nombre: 1 });
 		expect(html).not.toContain('undefined');
 		expect(html).toContain('>Fiche<');
 	});
 
 	it('une note qui PORTE un type de fiche le nomme', async () => {
 		const html = await rendu({
-			notes: [{ ...PREMIERE, type: 'Fiche' as const, typeFiche: 'Serveur' as const }]
+			notes: [{ ...PREMIERE, type: 'Fiche' as const, typeFiche: 'Serveur' as const }],
+			total: 1,
+			nombre: 1
 		});
 		expect(html).toContain('Fiche Serveur');
 		expect(html).not.toContain('undefined');
+	});
+});
+
+/**
+ * LES FACETTES, LE COMPTEUR ET LA PAGINATION VIENNENT DU CHARGEUR.
+ *
+ * La vue tenait le moteur de facettes : elle recevait TOUTES les notes lisibles de
+ * l'instance, les rabattait sur le domaine courant, puis comptait six fois. Le compte
+ * était donc celui du corpus servi, quoi que la base contînt — et la lecture coûtait
+ * autant que l'instance entière. Ces trois contrôles épinglent le sens inverse :
+ * aucune des trois valeurs ne se déduit plus des notes reçues.
+ */
+describe('V-12 — ce qui se comptait dans la vue est désormais servi', () => {
+	it('rend les facettes reçues, et n’en dérive aucune des notes', async () => {
+		const html = await rendu({
+			facettes: [
+				{
+					id: 'auteur',
+					nom: 'Auteur',
+					prefixe: '',
+					retenues: 1,
+					valeurs: [
+						{ valeur: 'Sophie Nguyen', compte: 7, retenue: true },
+						{ valeur: 'Personne du tout', compte: 0, retenue: true }
+					]
+				}
+			],
+			retenues: { auteur: ['Sophie Nguyen', 'Personne du tout'] }
+		});
+		expect(html).toContain('data-facette="auteur"');
+		expect(html).toContain('>Sophie Nguyen</span><span class="val__n">7<');
+		/* Une valeur retenue dont le compte est nul reste rendue, en retrait : sa
+		   disparition ferait croire à un défaut d'affichage. */
+		expect(html).toContain('data-vide="oui"');
+		expect(html).toContain('Retirer le filtre Auteur Personne du tout');
+		/* Aucune facette n'est fabriquée à partir du corpus reçu. */
+		expect(html).not.toContain('data-facette="type"');
+		expect(html).not.toContain('data-facette="etiquette"');
+	});
+
+	it('affiche le compteur servi, et non la longueur de la liste', async () => {
+		const html = await rendu({ notes: NOTES.slice(0, 2), total: 4096, nombre: 128 });
+		expect(html).toContain('<b>128</b> sur 4\u202f096 notes');
+	});
+
+	it('ne rend la pagination qu’au-delà d’une page, et suit les adresses reçues', async () => {
+		expect(await rendu({})).not.toContain('class="pagination"');
+		const html = await rendu({
+			pagination: {
+				page: 2,
+				pages: 9,
+				precedente: '/univers/u/d/notes?type=Guide',
+				suivante: '/univers/u/d/notes?type=Guide&page=3'
+			}
+		});
+		expect(html).toContain('Page 2 sur 9');
+		expect(html).toContain('href="/univers/u/d/notes?type=Guide"');
+		expect(html).toContain('page=3');
 	});
 });
