@@ -32,6 +32,11 @@
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import { resolve } from '$app/paths';
+	/* LES QUATRE MOTIFS DU VIDE, LEUR TITRE ET LEUR TEXTE — écrits une seule fois
+	   (`$lib/recherche/motifs`) parce que la palette de recherche rapide les rend
+	   aussi. Ils étaient déclarés ici ; une copie aurait vieilli, et l'écran resté
+	   sur l'ancienne aurait nommé un geste que l'autre ne nomme plus. */
+	import { TEXTE_DU_VIDE, TITRE_DU_VIDE, type MotifDuVide } from '$lib/recherche/motifs';
 
 	/* Le mot renommable de `M14.7`, lu sur le contexte de coquille : en constante,
 	   le renommer en console ne changeait rien a l'ecran. Repli : « Fiche ». */
@@ -107,7 +112,7 @@
 		 * n'appellent pas le même geste. Sans elle, l'écran composait « Aucun résultat
 		 * pour “” » sur une requête que personne n'avait formulée.
 		 */
-		motif: 'sans-index' | 'sans-univers' | 'perimetre-ferme' | 'corpus-vide' | null;
+		motif: MotifDuVide | null;
 	}
 
 	/**
@@ -444,34 +449,6 @@
 	 * résultats (`RG-M02-06`). On pose la valeur que la règle gelée attend.
 	 */
 	let facettesOuvertes = $state(false);
-
-	/* LE PÉRIMÈTRE VIDE, ET CE QUI LE DÉBLOQUE : quatre causes, quatre phrases, et
-	   chacune nomme l'adresse ou la commande qui l'ouvre. Une recherche sans
-	   requête n'est pas une recherche sans résultat. */
-	const TITRE_DU_VIDE: Record<NonNullable<Proprietes['motif']>, string> = {
-		'sans-index': "La recherche n'a pas encore d'index",
-		'sans-univers': 'Votre base est vide',
-		'perimetre-ferme': 'Aucun dossier ne vous est ouvert',
-		'corpus-vide': "Aucune note n'est encore écrite"
-	};
-
-	const TEXTE_DU_VIDE: Record<NonNullable<Proprietes['motif']>, string> = {
-		'sans-index':
-			'Le moteur interroge un index, et celui de cette instance n’a jamais été construit : ' +
-			'aucune note ne peut être rapportée, même si le corpus en porte. Un administrateur le ' +
-			'construit par la commande base:reindexer ; les notes restent lisibles depuis le rail.',
-		'sans-univers':
-			'Aucun univers n’existe encore sur cette instance : il n’y a nulle part où ranger une ' +
-			'note, donc rien à chercher. Créez un univers, puis un domaine, dans la console — ' +
-			'/console/univers.',
-		'perimetre-ferme':
-			'La recherche ne rapporte que ce que vous avez le droit de lire, et aucun dossier ne ' +
-			'vous est encore ouvert. Demandez l’accès à un administrateur : la recherche s’ouvrira ' +
-			'alors sur votre périmètre.',
-		'corpus-vide':
-			'La recherche ne rapporte que des notes, et le corpus n’en porte encore aucune. ' +
-			'Écrivez la première — /notes/nouvelle — et elle sera cherchable aussitôt.'
-	};
 
 	/**
 	 * « Créer la note « … » » — la seule action d'écriture de cet écran. `titre` est
