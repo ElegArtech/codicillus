@@ -52,6 +52,7 @@ import {
 import type { LectureAffichee } from '../lib/lecture/note-de-demonstration';
 import { TYPES_DE_FICHE as TYPES_DE_FICHE_PEUPLES } from '../../seeds/demonstration';
 import type { CompteAffiche } from '../lib/coquille/identite';
+import { calculerLesFamilles } from '../lib/graphe/familles';
 
 /* ── Le harnais ───────────────────────────────────────────────────────────
    Un seul serveur pour tout le fichier : le monter coûte quelques secondes,
@@ -95,6 +96,13 @@ beforeAll(async () => {
 afterAll(async () => {
 	await serveur?.close();
 });
+
+/**
+ * L'INSTANT DE CALCUL DES FAMILLES SÉMANTIQUES. Fixe, parce qu'une date de calcul
+ * est AFFICHÉE (`RG-M09-06`) : la prendre à l'horloge ferait dépendre le balisage
+ * rendu de la minute où la série tourne.
+ */
+const INSTANT_DU_CALCUL = new Date('2026-08-18T14:03:00Z');
 
 /** Le balisage rendu par une vue, chargée par le graphe SSR de Vite. */
 async function rendre(vue: string, props: object): Promise<string> {
@@ -326,7 +334,12 @@ describe('V-19 — cartographie', () => {
 		domaines: DOMAINES,
 		relations: RELATIONS,
 		typesRelation: TYPES_RELATION,
-		relationsTechniques: RELATIONS_TECHNIQUES
+		relationsTechniques: RELATIONS_TECHNIQUES,
+		/* LES FAMILLES SÉMANTIQUES SONT EXIGÉES à leur tour — `RG-M09-06`. Elles
+		   sont CALCULÉES sur le corpus de la vue, jamais écrites à la main : c'est
+		   ce que le chargeur fait, et un cas qui les inventerait n'éprouverait
+		   qu'une forme. L'instant est fixe pour que la date rendue le soit. */
+		familles: calculerLesFamilles(notes, INSTANT_DU_CALCUL)
 	} as const;
 
 	it('rend ce qui lui est servi, et le sélecteur ouvre sur tout le corpus', async () => {
@@ -404,7 +417,9 @@ describe('V-20 — cartographie par type maître', () => {
 		typesFiche: TYPES_FICHE,
 		perimetreDemande: 'global|',
 		typeMaitreDemande: null,
-		centreDemande: null
+		centreDemande: null,
+		/* Les familles sémantiques, calculées comme le chargeur les calcule. */
+		familles: calculerLesFamilles(notes, INSTANT_DU_CALCUL)
 	} as const;
 
 	it('sans rangement ni identité servis, rien du jeu n’atteint le balisage', async () => {

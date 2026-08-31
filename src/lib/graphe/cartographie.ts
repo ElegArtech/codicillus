@@ -288,6 +288,22 @@ export interface Graphe {
 }
 
 /**
+ * UNE NOTE EST-ELLE DANS LE PÉRIMÈTRE D'AFFICHAGE ? Le prédicat est SORTI de
+ * `sousGraphe()` parce qu'un second écran en dépend : les familles sémantiques se
+ * calculent sur les notes du périmètre CHOISI, relations comprises ou non, et deux
+ * prédicats concurrents feraient un jour dire « douze notes » à la légende au-dessus
+ * d'un dessin qui n'en porte pas les mêmes.
+ *
+ * IL NE PORTE AUCUN DROIT : le périmètre de DROIT est déjà appliqué dans la requête
+ * (`ADR-006`), et ce filtre-ci ne trie que ce que l'appelant a déjà le droit de voir.
+ */
+export function dansLePerimetre(n: Note, perimetre: Perimetre): boolean {
+	if (perimetre.type === 'global') return true;
+	if (perimetre.type === 'univers') return n.univers === perimetre.nom;
+	return n.domaine === perimetre.nom;
+}
+
+/**
  * Le sous-graphe d'un périmètre — le calque de `window.sousGraphe()`.
  *
  * @param notes le jeu de semence de la vue, `corpusPourVue()`
@@ -299,14 +315,10 @@ export function sousGraphe(
 	perimetre: Perimetre,
 	relations: readonly Relation[]
 ): Graphe {
-	const dedans = (n: Note): boolean => {
-		if (perimetre.type === 'global') return true;
-		if (perimetre.type === 'univers') return n.univers === perimetre.nom;
-		return n.domaine === perimetre.nom;
-	};
-
 	const noeuds = new Map<string, NoeudDeGraphe>();
-	for (const n of notes) if (dedans(n)) noeuds.set(n.id, { id: n.id, note: n, fantome: false });
+	for (const n of notes) {
+		if (dansLePerimetre(n, perimetre)) noeuds.set(n.id, { id: n.id, note: n, fantome: false });
+	}
 
 	const aretes = relations.filter((r) => noeuds.has(r.de) || noeuds.has(r.vers));
 	for (const r of aretes) {
