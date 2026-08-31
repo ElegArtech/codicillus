@@ -150,6 +150,21 @@
 		 */
 		typesRelation: Readonly<Record<string, LibellesDeRelation>>;
 		/**
+		 * LES NOTES QUE `d-relation` PEUT VISER — vide : AUCUNE, ET LA BOÎTE LE DIT.
+		 *
+		 * Le dialogue cherche sa note visée dans une liste que l'hôte peuple à la
+		 * frappe ; la boîte n'avait donc AUCUN moyen de savoir qu'il n'y avait rien
+		 * à chercher. Sur une instance à une seule note, le champ de recherche
+		 * restait ouvert, la liste vide, et le bouton « Déclarer la relation »
+		 * grisé sans un mot. Ce n'est pas le même manque qu'un référentiel de types
+		 * vide, et il ne se comble pas au même endroit : d'où deux faits, et deux
+		 * phrases.
+		 *
+		 * SEULE LA VACUITÉ EST LUE ICI — le contenu de la liste reste à l'hôte, qui
+		 * la peuple. Le défaut est l'ensemble vide, jamais le jeu de démonstration.
+		 */
+		ciblesDeRelation?: readonly { readonly identifiant: string; readonly titre: string }[];
+		/**
 		 * L'historique par note. Vide : aucun n'est lu. La table est PARTIELLE —
 		 * une note sans historique n'a pas d'entrée, et exiger les clés du corpus
 		 * interdirait l'état neutre (`P-02`).
@@ -195,6 +210,7 @@
 		relations = [],
 		templates = [],
 		typesRelation,
+		ciblesDeRelation = [],
 		versions = {},
 		dossier = null
 	}: Proprietes = $props();
@@ -259,6 +275,20 @@
 	const premierType = $derived<LibellesDeRelation>(
 		Object.values(typesRelation)[0] ?? { sortant: '', entrant: '' }
 	);
+
+	/**
+	 * CE QUI EMPÊCHE `d-relation` D'ABOUTIR, ET IL Y EN A DEUX.
+	 *
+	 * Le repli ci-dessus rend `{ sortant: '', entrant: '' }` quand le référentiel
+	 * est vide, et l'aide du champ composait dessus : la boîte affichait
+	 * « Se lira «  » depuis cette note, et «  » depuis l'autre. » — une phrase
+	 * FAUSSE sur une instance neuve, sous un sélecteur sans une seule option. Les
+	 * deux faits sont donc lus, et chacun tait la composition qui mentirait.
+	 */
+	const sansTypeDeRelation = $derived(Object.keys(typesRelation).length === 0);
+	const sansCibleDeRelation = $derived(ciblesDeRelation.length === 0);
+	/** Le geste ne peut pas aboutir : il manque un type, une note visée, ou les deux. */
+	const relationImpossible = $derived(sansTypeDeRelation || sansCibleDeRelation);
 	/**
 	 * LA NOTE QUE LA CONFIRMATION DE SUPPRESSION NOMME. C'était `n-pg-prod-01`,
 	 * une note du jeu retrouvée dans le corpus servi : la boîte annonçait la
@@ -1015,15 +1045,36 @@
 			<div class="dlg__corps">
 				<div class="champ">
 					<label class="champ__label" for="rel-type">Type de relation</label>
+					<!--
+						UN SÉLECTEUR QUI NE PEUT RIEN OFFRIR LE DIT ET SE FERME — le motif est
+						celui de `#droit-qui` un peu plus haut dans ce fichier : une option de
+						repli qui NOMME le vide, et `disabled`. Sans elle, la boîte présentait
+						une liste déroulante vide, sans une ligne, sur toute instance dont le
+						référentiel de types n'a pas encore été rempli.
+					-->
 					<!-- svelte-ignore a11y_autofocus -->
-					<select class="selecteur" id="rel-type" autofocus
+					<select
+						class="selecteur"
+						id="rel-type"
+						autofocus
+						disabled={ouvert === 'd-relation' && sansTypeDeRelation}
 						>{#if ouvert === 'd-relation'}{#each Object.entries(typesRelation) as [cle, libelles] (cle)}<option
 									value={cle}>{libelles.sortant}</option
-								>{/each}{/if}</select
+								>{:else}<option>Aucun type de relation n'existe encore</option>{/each}{/if}</select
 					>
+					<!--
+						L'AIDE NE COMPOSE PLUS SUR UN LIBELLÉ ABSENT. Elle écrivait
+						« Se lira «  » depuis cette note, et «  » depuis l'autre. » dès que le
+						référentiel était vide. Elle nomme désormais le geste ET son adresse,
+						comme `MESSAGE_AMORCAGE` le fait pour le premier univers.
+					-->
 					<span class="champ__aide" id="rel-usage"
-						>{#if ouvert === 'd-relation'}Se lira « {premierType.sortant} » depuis cette note, et « {premierType.entrant}
-							» depuis l'autre.{/if}</span
+						>{#if ouvert === 'd-relation'}{#if sansTypeDeRelation}Aucun type de relation n'existe
+								encore sur cette instance : une relation ne peut pas être qualifiée. Créez-en un
+								dans la console, à l'adresse /console/types-de-relations — réservée à
+								l'administrateur —, puis revenez.{:else}Se lira « {premierType.sortant} » depuis cette
+								note, et « {premierType.entrant}
+								» depuis l'autre.{/if}{/if}</span
 					>
 				</div>
 				<div class="champ rel-cible">
@@ -1033,14 +1084,31 @@
 						type="search"
 						id="rel-cherche"
 						autocomplete="off"
+						disabled={ouvert === 'd-relation' && relationImpossible}
 						placeholder="Chercher une note…"
 					/>
 					<div class="rel-liste" id="rel-liste" role="listbox"></div>
+					<!--
+						L'AUTRE MANQUE, ET IL NE SE SOIGNE PAS AU MÊME ENDROIT : chercher une
+						note visée n'a aucun sens quand il n'y en a aucune à trouver.
+					-->
+					{#if ouvert === 'd-relation' && sansCibleDeRelation}<span class="champ__aide"
+							>Aucune autre note n'est offerte : déclarer une relation exige le droit d'écriture sur
+							les deux extrémités. Créez-en une seconde à l'adresse /notes/nouvelle, ou faites-vous
+							accorder l'écriture sur la note que vous visez.</span
+						>{/if}
 				</div>
 				<div class="champ">
-					<span class="champ__label">Ce que cela produira</span>
+					<!--
+						L'APERÇU NE S'ANNONCE QUE S'IL PEUT MONTRER QUELQUE CHOSE. Le libellé
+						reste au gel dès qu'un type existe et qu'une note peut être visée ; sinon
+						il ne promet rien, et la zone reste vide. Elle n'est JAMAIS retirée du
+						document : l'hôte la cherche par son identifiant pour y composer les deux
+						phrases, et son absence désarmerait tout le câblage de la boîte.
+					-->
+					{#if !relationImpossible}<span class="champ__label">Ce que cela produira</span>{/if}
 					<div id="rel-apercu">
-						{#if ouvert === 'd-relation' && NOTE}<div class="phrase-rel">
+						{#if ouvert === 'd-relation' && !relationImpossible}<div class="phrase-rel">
 								<span class="phrase-rel__sens">sens direct</span><span
 									><i>{NOTE.titre}</i> <b>{premierType.sortant}</b>
 									<span class="phrase-rel__vide">…note à choisir…</span>.</span

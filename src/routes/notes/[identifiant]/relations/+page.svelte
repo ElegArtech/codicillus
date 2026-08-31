@@ -72,6 +72,9 @@
 	 * une adresse composée à la main lui est opaque.
 	 */
 	const ROUTE_DE_NOTE = '/notes/[identifiant]' as const;
+	/** Les deux adresses qui débloquent, écrites en constantes pour la même raison. */
+	const ROUTE_DES_TYPES_DE_RELATIONS = '/console/types-de-relations' as const;
+	const ROUTE_DE_NOTE_NOUVELLE = '/notes/nouvelle' as const;
 
 	const { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -85,10 +88,28 @@
 	/** Le compte des relations, tel que le panneau l'annonce. */
 	const combien = $derived(data.groupes.reduce((n, g) => n + g.relations.length, 0));
 
+	/**
+	 * DEUX MANQUES DISTINCTS, ET ILS NE SE SOIGNENT PAS AU MÊME ENDROIT.
+	 *
+	 * Le formulaire exigeait trois conditions et n'en annonçait aucune : sur une
+	 * instance neuve — aucun type de relation, une seule note — le panneau
+	 * « Ajouter une relation » n'était pas ÉMIS DU TOUT, et l'écran se refermait
+	 * sur « Aucune relation » sans jamais dire pourquoi aucune n'était
+	 * déclarable. `P-09` demande de ne pas offrir un geste impossible ; elle ne
+	 * demande pas de taire ce qui le rend impossible.
+	 *
+	 * Les deux manques sont portés SÉPARÉMENT, parce qu'ils se comblent
+	 * séparément : un type de relation se crée dans la console
+	 * (`/console/types-de-relations`, réservée à l'administrateur), une seconde
+	 * note se crée depuis `/notes/nouvelle` — ou le droit d'écriture se demande
+	 * sur la note visée. Les confondre en une phrase enverrait la moitié des
+	 * lecteurs au mauvais endroit.
+	 */
+	const sansType = $derived(data.typesOfferts.length === 0);
+	const sansCible = $derived(data.cibles.length === 0);
+
 	/** `P-09` — le formulaire n'est ÉMIS que si le geste est possible. */
-	const peutEcrire = $derived(
-		data.droits === 'ecriture' && data.typesOfferts.length > 0 && data.cibles.length > 0
-	);
+	const peutEcrire = $derived(data.droits === 'ecriture' && !sansType && !sansCible);
 </script>
 
 <!--
@@ -184,43 +205,90 @@
 			</div>
 		</section>
 
-		<!-- ---------- Déclarer une relation ---------- -->
-		{#if peutEcrire}
+		<!--
+			---------- Déclarer une relation ----------
+
+			LE PANNEAU EST ÉMIS DÈS QUE L'APPELANT PEUT ÉCRIRE, et son corps dit alors
+			l'une de deux choses : le formulaire, ou ce qui manque pour l'ouvrir. Sans
+			droit d'écriture, rien n'est émis — c'est `P-09`, et l'absence n'est alors
+			pas un manque à combler.
+		-->
+		{#if data.droits === 'ecriture'}
 			<section class="panneau">
 				<div class="panneau__tete">
 					<span class="etiq">Ajouter une relation</span>
 				</div>
 				<div class="panneau__corps">
-					<form method="POST" action="?/ajouter">
-						<div class="champ">
-							<label class="champ__label" for="rel-type">Type de relation</label>
-							<select class="selecteur" id="rel-type" name="type">
-								{#each data.typesOfferts as type (type.identifiant)}
-									<option value={type.identifiant}
-										>{type.sortant} — depuis l'autre note : {type.entrant}</option
+					{#if !peutEcrire}
+						<!--
+							CE QUI MANQUE, NOMMÉ AVEC SON ADRESSE — le modèle est celui de
+							`MESSAGE_AMORCAGE` ($lib/donnees/amorcage.ts) et du premier univers de
+							V-07 : on nomme le geste ET l'endroit où il se fait. Les deux manques
+							valent ensemble sur une instance neuve, et les deux sont alors écrits
+							— l'un ne masque pas l'autre.
+						-->
+						{#if sansType}
+							<div class="zone-etat">
+								<div class="zone-etat__titre">Aucun type de relation n'existe encore</div>
+								<div class="zone-etat__txt">
+									Une relation est qualifiée par un type, qui porte son libellé dans chaque sens de
+									lecture. Tant qu'aucun type n'est déclaré, aucune relation ne peut l'être. Les
+									types se créent dans la console, à l'adresse /console/types-de-relations —
+									réservée à l'administrateur.
+								</div>
+								{#if data.administrateur}
+									<a class="btn btn--principal" href={resolve(ROUTE_DES_TYPES_DE_RELATIONS)}
+										>Créer un type de relation</a
 									>
-								{/each}
-							</select>
-							<span class="champ__aide"
-								>Le premier libellé se lit depuis cette note, le second depuis la note visée.</span
-							>
-						</div>
-						<div class="champ">
-							<label class="champ__label" for="rel-cible">Note visée</label>
-							<select class="selecteur" id="rel-cible" name="cible">
-								{#each data.cibles as cible (cible.identifiant)}
-									<option value={cible.identifiant}
-										>{cible.titre} — {cible.type}, {cible.domaine}</option
-									>
-								{/each}
-							</select>
-							<span class="champ__aide"
-								>Seules les notes sur lesquelles vous pouvez écrire sont proposées : déclarer une
-								relation exige le droit d'écriture sur les deux extrémités.</span
-							>
-						</div>
-						<button class="btn btn--principal" type="submit">Déclarer la relation</button>
-					</form>
+								{/if}
+							</div>
+						{/if}
+						{#if sansCible}
+							<div class="zone-etat">
+								<div class="zone-etat__titre">Aucune autre note à relier</div>
+								<div class="zone-etat__txt">
+									Une relation relie deux notes, et la déclarer exige le droit d'écriture sur les
+									deux extrémités : aucune autre note de votre périmètre d'écriture n'est
+									disponible. Créez-en une seconde à l'adresse /notes/nouvelle, ou faites-vous
+									accorder l'écriture sur la note que vous visez.
+								</div>
+								<a class="btn btn--principal" href={resolve(ROUTE_DE_NOTE_NOUVELLE)}
+									>Créer une note</a
+								>
+							</div>
+						{/if}
+					{:else}
+						<form method="POST" action="?/ajouter">
+							<div class="champ">
+								<label class="champ__label" for="rel-type">Type de relation</label>
+								<select class="selecteur" id="rel-type" name="type">
+									{#each data.typesOfferts as type (type.identifiant)}
+										<option value={type.identifiant}
+											>{type.sortant} — depuis l'autre note : {type.entrant}</option
+										>
+									{/each}
+								</select>
+								<span class="champ__aide"
+									>Le premier libellé se lit depuis cette note, le second depuis la note visée.</span
+								>
+							</div>
+							<div class="champ">
+								<label class="champ__label" for="rel-cible">Note visée</label>
+								<select class="selecteur" id="rel-cible" name="cible">
+									{#each data.cibles as cible (cible.identifiant)}
+										<option value={cible.identifiant}
+											>{cible.titre} — {cible.type}, {cible.domaine}</option
+										>
+									{/each}
+								</select>
+								<span class="champ__aide"
+									>Seules les notes sur lesquelles vous pouvez écrire sont proposées : déclarer une
+									relation exige le droit d'écriture sur les deux extrémités.</span
+								>
+							</div>
+							<button class="btn btn--principal" type="submit">Déclarer la relation</button>
+						</form>
+					{/if}
 				</div>
 			</section>
 		{/if}
