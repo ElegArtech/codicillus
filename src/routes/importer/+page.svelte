@@ -39,13 +39,19 @@
 
 	interface RapportDeLot {
 		readonly simulation: boolean;
+		/** `RG-M12-03`, mode strict — le lot est allé au bout puis a été annulé. */
+		readonly refuseEnBloc: boolean;
 		readonly total: number;
 		readonly notesCreees: number;
 		readonly notesMisesAJour: number;
 		readonly ignores: number;
 		readonly echecs: number;
 		readonly dossiersCrees: number;
+		/** `RG-M12-03` — les relations créées par les renvois déclarés. */
+		readonly relationsCreees: number;
 		readonly domaine: string;
+		/** L'adresse du domaine visé, composée par le serveur. */
+		readonly adresseDuDomaine: string;
 		readonly enEchec: readonly { readonly chemin: string; readonly motif: string }[];
 		readonly renvoisNonResolus: readonly {
 			readonly chemin: string;
@@ -63,12 +69,19 @@
 	interface Reglages {
 		readonly scenario: string;
 		readonly domaine: string;
+		/** `UC-M12-02` — le nom du domaine à créer, et l'univers qui l'accueille. */
+		readonly nomDuDomaine: string;
+		readonly universDAccueil: string;
 		readonly simulation: boolean;
+		/** `RG-M12-03` — refuser le lot entier si une ligne échoue. */
+		readonly strict: boolean;
 	}
 
 	interface AnalyseDuLot {
 		readonly lot: LotDImport;
 		readonly dossiersExistants: readonly string[];
+		/** `UC-M12-02` — le domaine que l'import CRÉERA, et qui n'existe pas encore. */
+		readonly domaineACreer: string;
 	}
 
 	/**
@@ -110,7 +123,10 @@
 		const corps = new FormData();
 		corps.append('scenario', reglages.scenario);
 		corps.append('domaine-cible', reglages.domaine);
+		corps.append('nom-domaine', reglages.nomDuDomaine);
+		corps.append('univers-cible', reglages.universDAccueil);
 		if (reglages.simulation) corps.append('simulation', 'oui');
+		if (reglages.strict) corps.append('strict', 'oui');
 		for (const f of fichiers) corps.append('fichiers', f, cheminDuFichier(f));
 		const reponse = await fetch(`?/${action}`, { method: 'POST', body: corps });
 
@@ -154,7 +170,8 @@
 			valeur: {
 				lot,
 				dossiersExistants:
-					(issue.valeur['dossiersExistants'] as readonly string[] | undefined) ?? []
+					(issue.valeur['dossiersExistants'] as readonly string[] | undefined) ?? [],
+				domaineACreer: (issue.valeur['domaineACreer'] as string | undefined) ?? ''
 			}
 		};
 	}
@@ -204,6 +221,7 @@
 	vecteur={data.vecteur}
 	notes={data.notes}
 	domaines={data.domainesOuEcrire}
+	universOuCreerUnDomaine={data.universOuCreerUnDomaine}
 	lotImport={data.lotImport}
 	formatsImport={data.formatsImport}
 	domaineParDefaut={data.domaineParDefaut}

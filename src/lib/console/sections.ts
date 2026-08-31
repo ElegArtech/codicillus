@@ -71,8 +71,8 @@ export interface GroupeDeSections {
  * UNE FONCTION, PARCE QUE LE LIBELLÉ D'UNE SECTION DÉPEND DE LA CONFIGURATION : « Types de
  * fiches » porte le terme renommable de `M14.7`, et le figer à l'import rendait le renommage
  * inopérant. Les sept compteurs sortent à zéro, et `effectifs.ts` y substitue la mesure de la
- * base ; le compteur d'imports le montre — le gel écrit `compte: () => 1`, et aucune table ne
- * le nourrit.
+ * base — les sept, imports compris depuis que `lots_d_import` existe (migration `009`). Le
+ * gel écrit `compte: () => 1` ; c'est un nombre de maquette, jamais une valeur du produit.
  */
 export function groupesDeConsole(vocabulaire: VocabulaireRendu): readonly GroupeDeSections[] {
 	return [

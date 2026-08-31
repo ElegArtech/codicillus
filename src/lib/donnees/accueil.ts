@@ -23,6 +23,7 @@ import {
 	domaines,
 	dossiers,
 	droitsDeDossier,
+	lotsDImport,
 	notes,
 	verifications,
 	versions
@@ -45,6 +46,7 @@ import {
 	lireUnivers
 } from './lecture';
 import { lireLesDomainesLisibles, ouvrirLAcces } from './rangement';
+import { accord } from '../vocabulaire';
 import type {
 	DemandeDeRevision,
 	Domaine,
@@ -86,13 +88,6 @@ export const SANS_CONTREPARTIE_EN_BASE: readonly DonneeSansContrepartie[] = [
 		affichage: 'le pied — « Dernière synchronisation il y a 6 minutes »',
 		motif:
 			'aucune table ne porte l’instant de la dernière synchronisation de l’index, et le gel écrit un libellé RELATIF sans donner la règle qui le fabrique.'
-	},
-	{
-		donnee: 'ACTIVITE (import)',
-		vue: 'V-07',
-		affichage: 'l’évènement « a terminé un import » et son détail, dans l’activité récente',
-		motif:
-			'aucune table d’imports terminés. Le type existe au jeu de semence, aucune ligne ne peut le produire — l’évènement est donc absent, jamais simulé.'
 	},
 	{
 		donnee: 'ACTIVITE (publication différée)',
@@ -356,8 +351,11 @@ async function lireLesDemandesDeRevision(
 interface Trace {
 	readonly type: TypeDEvenement;
 	readonly qui: string;
-	readonly cible: string;
+	/** `null` pour un lot d'import : il ne vise pas une note, il en écrit douze. */
+	readonly cible: string | null;
 	readonly instant: Date;
+	/** Ce que le gel affiche à droite de la ligne — un lot en a un, une note non. */
+	readonly detail?: string;
 }
 
 /**
@@ -368,7 +366,9 @@ interface Trace {
  *   `edition`       `versions`, avec son auteur et son instant (`RG-M07-02`).
  *   `publication`   `notes.cree_le` d'une note dont `statut = 'publiee'`.
  *   `revision`      `notes.revision_le` — la même source que la corbeille.
- *   `import`        AUCUNE. Voir `SANS_CONTREPARTIE_EN_BASE`.
+ *   `import`        `lots_d_import` — la seconde moitié de `RG-M12-09`, « ce journal
+ *                   alimente LE FLUX D'ACTIVITÉ DE L'ACCUEIL et l'écran
+ *                   d'administration ».
  *
  * `RG-M01-03` demande de dédoublonner « un même objet publié puis édité dans une fenêtre
  * courte » : aucune règle ne dit ce qu'est une fenêtre courte, et elle N'EST PAS tenue.
@@ -406,13 +406,67 @@ async function lireLesTraces(
 			.where(and(perimetre, eq(notes.revisionDemandee, true), gte(notes.revisionLe, depuis)))
 	]);
 
+	/* ══ LES LOTS D'IMPORT — `RG-M12-09` ══
+	   LE PÉRIMÈTRE D'UN LOT EST CELUI DE SON DOMAINE, et le périmètre lisible est ici
+	   une liste de NOTES : un domaine dont l'appelant ne lit aucune note ne le
+	   regarde pas. La liste des domaines se déduit donc des notes retenues, en une
+	   requête, plutôt que de rouvrir l'arbre des droits une seconde fois.
+
+	   DEUX FILTRES QUI DISENT LA MÊME CHOSE — « quelque chose a été écrit » : une
+	   simulation n'écrit rien (`RG-M12-02`), un lot refusé en bloc non plus
+	   (`RG-M12-03`), et son journal compte alors zéro note. */
+	const domainesLisibles = await base
+		.selectDistinct({ id: notes.domaineId })
+		.from(notes)
+		.where(perimetre);
+
+	const lots =
+		domainesLisibles.length === 0
+			? []
+			: await base
+					.select({
+						qui: comptes.nom,
+						instant: lotsDImport.le,
+						source: lotsDImport.source,
+						notesCreees: lotsDImport.notesCreees,
+						notesMisesAJour: lotsDImport.notesMisesAJour
+					})
+					.from(lotsDImport)
+					.innerJoin(comptes, eq(lotsDImport.auteurId, comptes.id))
+					.where(
+						and(
+							gte(lotsDImport.le, depuis),
+							eq(lotsDImport.simulation, false),
+							inArray(
+								lotsDImport.domaineId,
+								domainesLisibles.map((d) => d.id)
+							)
+						)
+					);
+
 	return [
 		...verifiees.map((l) => ({ type: 'verification' as const, ...l })),
 		...editees.map((l) => ({ type: 'edition' as const, ...l })),
 		...publiees.map((l) => ({ type: 'publication' as const, ...l })),
 		...signalees.flatMap((l) =>
 			l.instant === null ? [] : [{ type: 'revision' as const, ...l, instant: l.instant }]
-		)
+		),
+		...lots.flatMap((l) => {
+			const ecrites = l.notesCreees + l.notesMisesAJour;
+			return ecrites === 0
+				? []
+				: [
+						{
+							type: 'import' as const,
+							qui: l.qui,
+							cible: null,
+							instant: l.instant,
+							/* LE DÉTAIL EST MESURÉ, PAS ILLUSTRÉ : le nombre vient du
+							   journal du lot, la source du dossier déposé. */
+							detail: `${String(ecrites)} ${accord(ecrites, 'note reprise', 'notes reprises')} depuis ${l.source}`
+						}
+					];
+		})
 	];
 }
 
@@ -443,7 +497,11 @@ export async function lireLActivite(
 					heures: Math.max(
 						0,
 						Math.floor((maintenant.getTime() - t.instant.getTime()) / MILLISECONDES_PAR_HEURE)
-					)
+					),
+					/* ABSENT ⇒ NON POSÉ : `EvenementDActivite.detail` est optionnel, et
+					   une clé posée à `undefined` se verrait dans toute comparaison
+					   profonde — c'est le régime de `lireUnivers()` pour `systeme`. */
+					...(t.detail === undefined ? {} : { detail: t.detail })
 				}) as unknown as EvenementDActivite
 		);
 }

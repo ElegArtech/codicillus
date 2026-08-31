@@ -33,6 +33,9 @@
 		},
 		get comptes() {
 			return data.effectifs.comptes;
+		},
+		get imports() {
+			return data.effectifs.imports;
 		}
 	});
 </script>
