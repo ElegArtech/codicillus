@@ -1,101 +1,37 @@
 <script lang="ts">
 	/**
 	 * V-02 — Recherche publique, sans session. Route `/recherche` en anonyme
-	 * (`docs/routes.md` §3.1). La même adresse sert V-08 en session : les deux
-	 * branches sont SÉQUENCÉES, jamais parallèles (DAG K-2, `docs/releve-vues.md`
-	 * §9 R-6).
+	 * (`docs/routes.md` §3.1) ; la même adresse sert V-08 en session.
 	 *
 	 * V-02 EST V-08 AMPUTÉE, JAMAIS RÉÉCRITE — c'est le commentaire du gel
-	 * (`V-02:1125`) : la carte de résultat publique retire le brouillon, la
-	 * visibilité, le marquage de registre et le rangement interne ; tout le reste
-	 * — signal de fraîcheur, date de dernière révision en clair, consultations —
-	 * est identique. Les facettes se réduisent de même à deux : Domaine et Type
-	 * de guide. Ni statut, ni visibilité, ni étiquette interne.
+	 * (`V-02:1125`) : la carte publique retire le brouillon, la visibilité, le
+	 * marquage de registre et le rangement interne, et les facettes se réduisent à
+	 * deux — Domaine et Type de guide.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * CE QUI CHERCHE, ET CE QUI REND — `recherchees`
+	 * `recherchees` TRANCHE CE QUI CHERCHE. La vue portait sa propre correspondance,
+	 * une SECONDE implémentation de la recherche à côté du moteur — elle n'inspecte
+	 * ni le corps, ni le rangement, ni l'auteur —, et une note trouvée par l'index
+	 * pouvait disparaître à l'affichage. Son défaut est `false` : sans elle, la vue
+	 * cherche elle-même, comme le gel. Le chargeur de `/recherche` la pose.
 	 *
-	 * Cette vue portait sa propre correspondance : `chercher()`, le port fidèle
-	 * de la fabrique de maquette, rejoué sur les notes reçues. C'était une
-	 * SECONDE implémentation de la recherche à côté du moteur — elle n'inspecte
-	 * ni le corps, ni le rangement, ni l'auteur —, et une note trouvée par
-	 * l'index pouvait disparaître à l'affichage sans que rien ne le dise.
+	 * PÉRIMÈTRE PUBLIC — `RG-M17-01`, AU POINT D'ENTRÉE : « aucune fonction de cette
+	 * page ne peut atteindre une note interne, même par erreur de branchement : elles
+	 * n'existent plus pour elle » (`V-02:1120`). IL EST CONSERVÉ MÊME QUAND LE MOTEUR
+	 * A DÉJÀ CHERCHÉ : le filtre du régime anonyme est porté par `resolution.ts` et
+	 * injecté dans la requête à l'index (`ADR-006`) ; cette réduction-ci le double.
 	 *
-	 * `recherchees` tranche l'ambiguïté au point d'entrée, et son défaut est
-	 * `false` : sans elle, la vue cherche elle-même dans le jeu qu'on lui donne,
-	 * exactement comme le gel — c'est ce que fait le rendu d'un état de maquette,
-	 * qui ne passe par aucune route. Le chargeur de `/recherche`, lui, la pose :
-	 * les notes qu'il transmet SONT le résultat de l'index, dans l'ordre du
-	 * moteur, et la vue n'a plus qu'à les rendre.
+	 * L'ÉTAT DE LA RECHERCHE EST PORTÉ PAR L'ADRESSE — `RG-M02-06` : le gel garde ses
+	 * filtres dans une variable de page, et une recherche affinée n'est donc pas
+	 * partageable. `docs/routes.md` §4.2 : dans une facette les valeurs sont en OU
+	 * (paramètre répété), entre facettes en ET.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * PÉRIMÈTRE PUBLIC — RG-M17-01, AU POINT D'ENTRÉE
+	 * LE COMPTEUR DE DURÉE ÉTAIT UNE CONSTANTE PRÉSENTÉE COMME UNE MESURE : la
+	 * formule du gel a un terme mesuré NUL PAR CONSTRUCTION. La durée est désormais
+	 * une donnée reçue, ou `null` — et `null` veut dire QU'AUCUNE MESURE N'EXISTE :
+	 * l'écran n'écrit alors pas de durée, ni constante plausible, ni `0,00 s`.
 	 *
-	 * « Réduction du corpus au point d'entrée de la vue, comme en V-01. Aucune
-	 * fonction de cette page ne peut atteindre une note interne, même par erreur
-	 * de branchement : elles n'existent plus pour elle » (`V-02:1120`).
-	 * `notesPubliques(notes)` est calculé une fois, en tête ; toutes les
-	 * expressions du fichier en descendent. IL EST CONSERVÉ MÊME QUAND LE MOTEUR
-	 * A DÉJÀ CHERCHÉ : le filtre du régime anonyme est porté par
-	 * `resolution.ts` et injecté dans la requête à l'index (`ADR-006`), et cette
-	 * réduction-ci ne le remplace pas — elle le double, au point exact où le gel
-	 * la met.
-	 *
-	 * CE QUE CE COMPOSANT NE PROUVE PAS. L'étanchéité réelle est la batterie 6
-	 * (`pnpm test:etancheite`), matrice routes × personas. Ni `RG-ACC-01`, ni
-	 * `RG-ACC-04`, ni `P-09` ne sont déclarées tenues.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * L'ÉTAT DE LA RECHERCHE EST PORTÉ PAR L'ADRESSE — RG-M02-06
-	 *
-	 * Le gel garde ses filtres dans une variable de page (`choisis`) : rien n'en
-	 * sort, et une recherche affinée n'est pas partageable. Ici, `retenues` vient
-	 * de l'adresse et RIEN d'autre ne la porte : chaque bascule de valeur, chaque
-	 * pastille retirée, chaque « Tout effacer » recompose l'adresse et y navigue.
-	 * `docs/routes.md` §4.2 : « à l'intérieur d'une facette les valeurs sont en
-	 * OU (paramètre répété), entre facettes en ET » ; « `/recherche` sans
-	 * paramètre autre que `q` réinitialise tout ».
-	 *
-	 * AUCUN NŒUD N'EST AJOUTÉ NI DÉPLACÉ POUR CELA. Le gel fait de ses valeurs
-	 * de facette des cases à cocher et de ses pastilles des boutons ; ils le
-	 * restent, et ce sont leurs gestionnaires — non leur nature — qui changent.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LE COMPTEUR DE DURÉE ÉTAIT UNE CONSTANTE PRÉSENTÉE COMME UNE MESURE.
-	 *
-	 * La vue écrivait `Math.max(0.06, 0 / 1000 + 0.18)` — la formule du gel dont
-	 * le terme mesuré est NUL PAR CONSTRUCTION, `performance.now()` n'étant
-	 * jamais appelé. Elle servait donc « 1 résultat en 0,18 s » et
-	 * « 4 résultats en 0,18 s » : le même littéral, sous une unité de temps.
-	 * P-02 le proscrit — « aucun compteur ne peut être figé ou simulé » —, et
-	 * l'en-tête l'avouait en renvoyant la contradiction au gel.
-	 *
-	 * LA DURÉE EST DÉSORMAIS UNE DONNÉE REÇUE, en millisecondes, ou `null`.
-	 * `null` VEUT DIRE : AUCUNE MESURE N'EXISTE, et l'écran n'écrit alors pas de
-	 * durée du tout — il ne la remplace ni par une constante plausible, ni par
-	 * `0,00 s`, qui affirmerait une mesure instantanée. Le compte, lui, continue
-	 * d'être rendu — voir le paragraphe suivant.
-	 *
-	 * `null` EST LE DÉFAUT, et c'est l'état vide, jamais une valeur d'exemple.
-	 * La source réelle est `processingTimeMs`, que Meilisearch rend et que le
-	 * moteur ne retenait pas ; le lot qui possède `src/lib/recherche/moteur.ts`
-	 * l'ajoute au résultat et le chargeur de `/recherche` le fera descendre ici.
-	 * La propriété deviendra alors EXIGÉE.
-	 *
-	 * LE COMPTE, LUI, EST RÉEL — `RG-M02-08`, « compteur global reflétant le
-	 * filtrage ». Le cahier l'illustre par « 4 résultats sur 37 » ; le gel écrit
-	 * `N résultat(s)` et rien d'autre (`V-02:1447-1452`), et la maquette fait la
-	 * loi sur la forme (ordre de préséance, `CLAUDE.md` §2). Ce qui devient vrai
-	 * ici est le nombre : il reflète la requête ET les facettes retenues.
-	 *
-	 * UN RÉSULTAT OUVRE SON GUIDE — `/guides/{identifiant}`, par `resolve()`. Les
-	 * adresses du gel étaient inertes ; elles ne le sont plus, et c'est la seule
-	 * modification que la campagne de câblage autorise dans une vue.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
-	 * (P-6.1) et de `src/vues/V-02.css` (P-6.3). Les deux `style=` du fichier —
-	 * `padding:4px 8px` et `padding-top:0` — figurent à l'ensemble clos du gel
-	 * (ARB-016).
+	 * UN RÉSULTAT OUVRE SON GUIDE — `/guides/{identifiant}`, par `resolve()`. Le style
+	 * est dans `src/socle.css` et `src/vues/V-02.css`.
 	 */
 	import { getContext } from 'svelte';
 	import { resolve } from '$app/paths';
@@ -105,26 +41,21 @@
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 
-	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
-	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
-	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
-	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	/* Le mot renommable de `M14.7`, lu sur le contexte de coquille : en constante,
+	   le renommer en console ne changeait rien a l'ecran. Repli : « Fiche ». */
 	const motsDuProduit = vocabulaireRendu();
 	const motFiche = $derived(motsDuProduit.fiche);
 
 	/**
-	 * LES MOTIFS DE ROUTE, ÉCRITS EN CONSTANTES — `svelte/no-navigation-without-resolve`
-	 * inspecte l'EXPRESSION du `href`, et une adresse composée à la main lui est
-	 * opaque. Même écriture qu'à `V-07:455` et sur `src/lib/coquille/Rail.svelte`.
-	 *
-	 * UN RÉSULTAT S'OUVRE EN `/guides/{identifiant}`, JAMAIS EN `/notes/{…}` :
-	 * cet écran est celui du visiteur SANS SESSION, qui n'a aucun droit sur
-	 * l'adresse interne.
+	 * LES MOTIFS DE ROUTE, ÉCRITS EN CONSTANTES —
+	 * `svelte/no-navigation-without-resolve` inspecte l'EXPRESSION du `href`, et une
+	 * adresse composée à la main lui est opaque. UN RÉSULTAT S'OUVRE EN
+	 * `/guides/{identifiant}`, JAMAIS EN `/notes/{…}` : cet écran est celui du
+	 * visiteur SANS SESSION, qui n'a aucun droit sur l'adresse interne.
 	 */
 	const ROUTE_DU_GUIDE = '/guides/[identifiant]' as const;
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
 		/** Les notes à rendre — jeu de semence, ou résultat du moteur. */
 		notes: readonly Note[];
@@ -140,41 +71,23 @@
 		retenues?: Record<string, readonly string[]>;
 		/**
 		 * L'ADRESSE DU PORTAIL D'ASSISTANCE — donnée d'INSTANCE, lue dans la table
-		 * `parametres` par le chargeur de la route.
-		 *
-		 * ELLE EST EXIGÉE : son défaut était l'adresse du jeu de démonstration, et
-		 * une route qui l'aurait oubliée aurait servi `assistance.exemple.fr` comme
-		 * un fait. Vide — l'état d'une instance dont personne n'a renseigné la clé
-		 * —, aucun appel à l'assistance n'est ÉMIS.
+		 * `parametres`. EXIGÉE : son défaut était l'adresse du jeu de démonstration, et
+		 * une route qui l'aurait oubliée aurait servi `assistance.exemple.fr` comme un
+		 * fait. Vide, aucun appel à l'assistance n'est ÉMIS.
 		 */
 		portail: string;
 		/**
-		 * LES PISTES DE REFORMULATION — une DONNÉE, et elle n'a plus de source.
-		 *
-		 * La vue en portait cinq en dur, tirées du gel : « mot de passe », « accès »,
-		 * « salle de réunion », « réseau », « support ». Sur une instance qui n'a
-		 * rien de tout cela, chacune ouvrait `/recherche?q=…` à zéro résultat —
-		 * quatre boutons qui promettent une reformulation et n'en tiennent aucune
-		 * sont pires qu'aucun bouton.
-		 *
-		 * Même forme que `reprises` de V-26, et EXIGÉE : la route qui monte cette
-		 * vue doit dire ce qu'elle propose, fût-ce rien. Liste vide, le bloc n'est
+		 * LES PISTES DE REFORMULATION — une DONNÉE. La vue en portait cinq en dur,
+		 * tirées du gel, dont chacune ouvrait `/recherche?q=…` à zéro résultat. EXIGÉE :
+		 * la route doit dire ce qu'elle propose, fût-ce rien. Liste vide, le bloc n'est
 		 * pas rendu du tout.
 		 */
 		pistes: readonly string[];
 		/**
-		 * LA DURÉE DE LA RECHERCHE, EN MILLISECONDES — une MESURE, ou `null`
-		 * quand aucune mesure n'existe.
-		 *
-		 * `null` par défaut : l'état vide, et l'écran n'écrit alors aucune durée.
-		 * Ce que cette propriété remplace était pire qu'une absence — une
-		 * constante du gel rendue comme un temps mesuré, identique pour un
-		 * résultat et pour quatre.
-		 *
-		 * ELLE N'EST PAS ENCORE EXIGÉE parce que sa source ne descend pas encore :
-		 * le moteur de recherche ne retient pas le `processingTimeMs` que
-		 * Meilisearch lui rend. Le lot qui le possède l'ajoute, le chargeur de
-		 * `/recherche` le passe, et la propriété devient exigée à ce moment-là.
+		 * LA DURÉE DE LA RECHERCHE, EN MILLISECONDES — une MESURE, ou `null` quand
+		 * aucune mesure n'existe : l'écran n'écrit alors aucune durée. Pas encore
+		 * EXIGÉE parce que sa source ne descend pas encore — le moteur ne retient pas
+		 * le `processingTimeMs` que Meilisearch lui rend.
 		 */
 		dureeMs?: number | null;
 	}
@@ -197,26 +110,16 @@
 	const saisie = $derived(typeof reglage['req'] === 'string' ? reglage['req'] : 'mot de passe');
 
 	/**
-	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation`
-	 * de la table `parametres`, descendue par le contexte de coquille.
+	 * LE NOM DE L'ORGANISATION QUI HÉBERGE L'INSTANCE — clé `nom_organisation` de la
+	 * table `parametres`. Cet écran écrivait « Direction technique » EN DUR : le
+	 * SEGMENT DE MARCHÉ du cadrage soudé dans une signature de produit.
+	 * « Codicillus » n'est pas concerné, c'est le nom du LOGICIEL.
 	 *
-	 * CET ÉCRAN ÉCRIVAIT « Direction technique » EN DUR. Ce n'était pas une
-	 * donnée du jeu de démonstration : c'était le SEGMENT DE MARCHÉ du cadrage,
-	 * soudé dans une signature de produit, et toute autre organisation le lisait
-	 * comme un fait sur SON instance — sur le premier écran que le produit
-	 * montre à un visiteur sans compte.
-	 *
-	 * « Codicillus » N'EST PAS CONCERNÉ : c'est le nom du LOGICIEL, et il reste
-	 * en dur. C'est la SOUDURE entre le logiciel et l'organisation qu'on défait.
-	 *
-	 * CHAÎNE VIDE = L'INSTANCE NE S'EST PAS NOMMÉE, et c'est l'état normal d'une
-	 * installation neuve, pas une panne : la signature rend « Codicillus » seul.
-	 * C'est aussi ce que rend un composant monté hors gabarit racine, où
-	 * `getContext` ne trouve rien — l'état vide, jamais un nom d'exemple.
+	 * CHAÎNE VIDE = L'INSTANCE NE S'EST PAS NOMMÉE, l'état normal d'une installation
+	 * neuve : la signature rend « Codicillus » seul.
 	 */
 	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
 	const nomOrganisation = $derived(identite?.nomOrganisation ?? '');
-	/** « Codicillus · <organisation> », ou « Codicillus » seul. */
 	const signature = $derived(
 		nomOrganisation === '' ? 'Codicillus' : `Codicillus · ${nomOrganisation}`
 	);
@@ -226,16 +129,14 @@
 
 	const requete = $derived(saisie.trim());
 	/**
-	 * `base` est le résultat AVANT filtrage par facettes ; `resultats` l'ensemble
-	 * après. La distinction est celle du gel (`V-02:1394-1395`), et les comptes
-	 * de facette se calculent sur `base`, jamais sur `resultats`.
+	 * `base` est le résultat AVANT filtrage par facettes, `resultats` l'ensemble
+	 * après (`V-02:1394-1395`) : les comptes de facette se calculent sur `base`.
 	 */
 	const base = $derived(recherchees ? publiques : chercher(publiques, requete));
 
 	/**
 	 * LA DURÉE EN CLAIR — deux décimales, virgule décimale, comme le gel l'écrit.
-	 * `null` quand aucune mesure n'a été faite : voir l'en-tête, rien n'est alors
-	 * écrit. Une mesure absente ne devient ni une constante, ni un zéro.
+	 * Une mesure absente ne devient ni une constante, ni un zéro.
 	 */
 	const dureeEnClair = $derived(
 		dureeMs === null ? null : (dureeMs / 1000).toFixed(2).replace('.', ',')
@@ -250,14 +151,12 @@
 	/** Les valeurs retenues, facette par facette — l'adresse en est la source. */
 	const choisis = $derived<Record<string, readonly string[]>>(retenues ?? {});
 
-	/** Le nombre total de valeurs retenues — `nbFiltres()` du gel. */
 	const nbFiltres = $derived(Object.values(choisis).reduce((s, v) => s + v.length, 0));
 
 	/**
 	 * Un résultat passe s'il satisfait chaque facette ayant au moins une valeur
 	 * retenue ; à l'intérieur d'une facette, les valeurs sont en « ou »
-	 * (`V-02:1272-1280`). `saufFacette` sert au comptage : la facette qu'on
-	 * compte est écartée, les autres restent appliquées.
+	 * (`V-02:1272-1280`). `saufFacette` sert au comptage.
 	 */
 	function passe(n: Note, saufFacette?: string): boolean {
 		return FACETTES.every((f) => {
@@ -273,9 +172,9 @@
 
 	/**
 	 * Les valeurs d'une facette et leur compte, dans l'ordre du gel : compte
-	 * décroissant, puis ordre alphabétique français à égalité. Une valeur retenue
-	 * qui ne mènerait à rien est CONSERVÉE en fin de liste et marquée
-	 * `data-vide` — « sa disparition ferait croire à un défaut d'affichage ».
+	 * décroissant, puis alphabétique français. Une valeur retenue qui ne mènerait à
+	 * rien est CONSERVÉE en fin de liste, marquée `data-vide` — « sa disparition
+	 * ferait croire à un défaut d'affichage ».
 	 */
 	function valeursDe(facette: (typeof FACETTES)[number]): readonly (readonly [string, number])[] {
 		const comptes: Record<string, number> = {};
@@ -297,21 +196,15 @@
 		return ouverts[id] !== false;
 	}
 
-	/* ═════════════════════════════════════════════════════════════════════
-	   L'ADRESSE PORTE L'ÉTAT — RG-M02-06, RG-M02-07
-
-	   Une seule fabrique d'adresse, et toutes les commandes de la page y
-	   passent : c'est ce qui garantit qu'une adresse partagée rend exactement le
-	   même écran que celui d'où elle vient. `docs/routes.md` §4.2.
-	   ═════════════════════════════════════════════════════════════════════ */
+	/* L'ADRESSE PORTE L'ÉTAT — `RG-M02-06`, `RG-M02-07`. Une seule fabrique, et
+	   toutes les commandes de la page y passent : c'est ce qui garantit qu'une
+	   adresse partagée rend le même écran. `docs/routes.md` §4.2. */
 
 	/**
-	 * L'adresse est composée COUPLE PAR COUPLE, et non par `URLSearchParams` :
-	 * une instance mutable de cette classe est refusée dans un composant Svelte
-	 * (`svelte/prefer-svelte-reactivity`), et la réactivité n'a rien à faire ici
-	 * — cette fabrique est pure. `q` vient en premier, puis les facettes dans
-	 * l'ordre de lecture : deux états identiques rendent la même adresse, donc
-	 * comparable.
+	 * L'adresse est composée COUPLE PAR COUPLE, et non par `URLSearchParams` : une
+	 * instance mutable de cette classe est refusée dans un composant
+	 * (`svelte/prefer-svelte-reactivity`). L'ordre est fixe, pour que deux états
+	 * identiques rendent la même adresse.
 	 */
 	function adresse(prochaines: Record<string, readonly string[]>, q: string): string {
 		const couples: string[] = [];
@@ -322,12 +215,8 @@
 		return couples.length ? `/recherche?${couples.join('&')}` : '/recherche';
 	}
 
-	/**
-	 * LA NAVIGATION N'A LIEU QUE BRANCHÉE. Sans `recherchees`, la vue rend un
-	 * état de maquette hors de toute route : y naviguer emmènerait la page de
-	 * démonstration ailleurs. Le gel, dans cette situation, ne navigue pas non
-	 * plus — il rejoue son rendu en mémoire.
-	 */
+	/** La navigation n'a lieu que BRANCHÉE : sans `recherchees`, la vue rend un état
+	    de maquette hors de toute route, et y naviguer l'emmènerait ailleurs. */
 	function aller(cible: string): void {
 		if (recherchees) window.location.assign(cible);
 	}
@@ -358,9 +247,9 @@
 </script>
 
 <!--
-	Le témoin de fraîcheur — fabrique unique : « il n'existe qu'une seule
-	fabrique, pour qu'il ne puisse pas diverger d'un écran à l'autre »
-	(`V-02:1017`). Le libellé accompagne toujours la jauge (RG-M18-09).
+	Le témoin de fraîcheur — fabrique unique : « il n'existe qu'une seule fabrique,
+	pour qu'il ne puisse pas diverger d'un écran à l'autre » (`V-02:1017`). Le
+	libellé accompagne toujours la jauge (RG-M18-09).
 -->
 {#snippet temoin(n: Note)}<span class="temoin {classeTemoin(n.fraicheur)}"
 		><span class="temoin__jauge" aria-hidden="true"
@@ -382,12 +271,8 @@
 	exposé, seul le domaine l'est.
 -->
 {#snippet carte(n: Note, q: string, index: number)}
-	<!--
-		AUCUN BLANC ENTRE LES NŒUDS DE LA CARTE, et il doit le rester : le relevé
-		d'ordre de tabulation du niveau 1 construit le nom accessible sur
-		`textContent`, où un blanc inséré par le formateur se voit. Mesuré : trois
-		états en échec de structure pour cette seule cause.
-	-->
+	<!-- AUCUN BLANC ENTRE LES NŒUDS DE LA CARTE, et il doit le rester : le nom
+		accessible se construit sur `textContent`. -->
 	<!-- prettier-ignore -->
 	<a class="carte carte--publique" href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })} data-index={index}
 		><div class="carte__haut"
@@ -404,14 +289,9 @@
 	>
 {/snippet}
 
-<!--
-	L'ADRESSE DU PORTAIL D'ASSISTANCE EST EXTERNE, et `resolve()` ne s'y applique
-	pas : elle compose une adresse INTERNE sous la racine de déploiement, quand
-	celle-ci est une adresse absolue lue dans la table `parametres`. La règle est
-	donc levée pour ce fichier, et pour elle seule — même levée que `V-03.svelte`,
-	et pour la même raison. Tous les autres liens de la vue passent par
-	`resolve()`.
--->
+<!-- L'ADRESSE DU PORTAIL D'ASSISTANCE EST EXTERNE, et `resolve()` ne s'y applique
+	pas : elle composerait une adresse INTERNE sous la racine de déploiement. Tous
+	les autres liens de la vue y passent. -->
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
 <a class="saut-contenu" href="#resultats">Aller aux résultats</a>
 
@@ -530,9 +410,8 @@
 				</div>
 
 				<!--
-					LES PASTILLES DE FILTRE — RG-M02-07, port de `rendreActifs()`
-					(`V-02:1351-1385`). Chaque pastille retire son couple
-					`{facette}={valeur}` de l'adresse ; « Tout effacer » ne garde que `q`.
+					LES PASTILLES DE FILTRE — `RG-M02-07`, port de `rendreActifs()`. Chaque
+					pastille retire son couple de l'adresse ; « Tout effacer » ne garde que `q`.
 				-->
 				<div class="actifs" id="actifs">
 					{#if nbFiltres}{#each FACETTES as f (f.id)}{#each choisis[f.id] ?? [] as valeur (valeur)}<span
@@ -562,10 +441,9 @@
 						-->
 						<div class="zone-vide">
 							<!--
-								TROIS ÉTATS, ET NON UN SEUL. Le titre citait la requête SANS
-								CONDITION : ouverte sans `?q=`, la page annonçait « Aucun guide ne
-								répond à “ ” » — un texte composé sur une valeur absente. Une
-								recherche sans requête n'est pas une recherche sans résultat.
+								TROIS ÉTATS, ET NON UN SEUL. Le titre citait la requête SANS CONDITION :
+								ouverte sans `?q=`, la page annonçait « Aucun guide ne répond à “ ” ».
+								Une recherche sans requête n'est pas une recherche sans résultat.
 							-->
 							<div class="zone-vide__titre">
 								{#if requete !== ''}Aucun guide ne répond à <em>« {requete} »</em

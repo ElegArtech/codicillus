@@ -1,94 +1,43 @@
 <script lang="ts">
 	/**
 	 * V-16 — Comparaison de deux versions d'une note.
-	 * Route `/notes/{identifiant}/comparaison` (`verif/scenarios/V-16.json`).
+	 * Route `/notes/{identifiant}/comparaison`.
 	 *
-	 * CINQ ÉTATS, UNE SEULE FENÊTRE — 5 couples. Deux contrôles de planche :
-	 * le couple de versions comparées (`cmp`, quatre positions) et le repli du
-	 * journal (`c-tout`, une case).
+	 * Coquille de forme abrégée ; lien d'évitement vers `#zone` avec le libellé
+	 * propre « Aller à la comparaison ». Un attribut de données hors gabarit —
+	 * `data-mode` —, que la feuille de la vue lit pour montrer le journal ou les
+	 * deux colonnes (`V-16.css`). Le gel le pose à « texte », et la bascule
+	 * Texte/Visuel est du comportement.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * COQUILLE DE FORME ABRÉGÉE — ARB-021, A-1 : rail écrit au balisage du gel,
-	 * barre sans les deux menus déroulants. `<main class="compare" id="contenu">`
-	 * (ARB-015), lien d'évitement vers `#zone` avec le libellé propre « Aller à
-	 * la comparaison » (ARB-019). Un attribut de données hors gabarit —
-	 * `data-mode` (ARB-021, A-2) —, que la feuille de la vue lit pour montrer le
-	 * journal ou les deux colonnes : `.app[data-mode="texte"] .si-visuel` et
-	 * `.app[data-mode="visuel"] .si-texte` (`V-16.css`). Le gel le pose à
-	 * « texte » et AUCUN des cinq états ne le déplace : la bascule Texte/Visuel
-	 * est du comportement (ARB-011).
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * L'ALIGNEMENT EST RENDU, IL N'EST PAS INVENTÉ
-	 *
-	 * Ce que la vue rend est l'alignement DU GEL, à sa granularité et avec ses
-	 * appariements. `blocEnLignes()` (`V-16:1864`) et `alignement()`
-	 * (`V-16:1882`) sont transcrits ici SANS un choix de plus : même plus longue
-	 * sous-séquence commune, même départage d'égalité `t[i+1][j] >= t[i][j+1]`,
-	 * même clé d'appariement — `b.cle` pour les blocs, l'identité pour les
-	 * lignes. Un autre algorithme, même « meilleur », donnerait un autre écran :
-	 * ce serait dessiner, pas porter.
+	 * L'ALIGNEMENT EST RENDU, IL N'EST PAS INVENTÉ. `blocEnLignes()` (`V-16:1864`)
+	 * et `alignement()` (`V-16:1882`) sont transcrits ici SANS un choix de plus :
+	 * même plus longue sous-séquence commune, même départage d'égalité
+	 * `t[i+1][j] >= t[i][j+1]`, même clé d'appariement. Un autre algorithme, même
+	 * « meilleur », donnerait un autre écran.
 	 *
 	 * ET QUAND LA COMPARAISON EST REÇUE, C'EST LE MÊME ALGORITHME QUI L'A FAITE :
-	 * `src/lib/donnees/histoire.ts` porte la même plus longue sous-séquence
-	 * commune et le même départage, appliqués aux documents CANONIQUES des deux
-	 * versions. La vue ne recalcule alors rien — elle compte, replie et peint.
+	 * `src/lib/donnees/histoire.ts` porte la même sous-séquence commune et le même
+	 * départage, appliqués aux documents CANONIQUES. La vue ne recalcule alors
+	 * rien — elle compte, replie et peint.
 	 *
-	 * LA MATIÈRE EST REÇUE, ET RIEN N'EST PLUS LU DU JEU DE DÉMONSTRATION. Les
-	 * deux tableaux — l'historique et le contenu des versions — étaient des
-	 * propriétés de défaut `VERSIONS` et `CONTENU_VERSIONS`, c'est-à-dire les
-	 * trente-sept blocs de trois versions de `n-restaurer-pg` : la comparaison
-	 * d'une note quelconque les servait. Ils sont REQUIS ; le chargeur passe le
-	 * second VIDE, parce que la comparaison est calculée côté données sur les
-	 * documents canoniques. Aucun compte n'est écrit : « +11 lignes »,
-	 * « −3 lignes » et « 6 blocs touchés sur 15 » sont comptés sur l'alignement.
+	 * LA MATIÈRE EST REÇUE : l'historique et le contenu des versions étaient de
+	 * défaut `VERSIONS` et `CONTENU_VERSIONS`, les trente-sept blocs de trois
+	 * versions d'une note du jeu, que la comparaison d'une note quelconque servait.
+	 * Aucun compte n'est écrit — « +11 lignes », « 6 blocs touchés sur 15 » sont
+	 * comptés sur l'alignement.
 	 *
-	 * LES BLOCS COMMUNS SONT ALIGNÉS HORIZONTALEMENT — c'est la rangée à deux
-	 * cellules de `.visuel`, et c'est ce que `C-05` et `M07.3` demandent. LE
-	 * MARQUEUR EST EN PLUS DE LA COULEUR, jamais à sa place : `.jl__marque`
-	 * porte « + », « − » ou l'espace avec son `aria-label`, `.cellule__marque`
-	 * porte « + Ajouté », « − Supprimé », « ± Réécrit », et `details.alternative`
-	 * restitue la comparaison en liste. **CE LOT NE DÉCLARE POURTANT NI `C-05`
-	 * NI `RG-M18-11` TENUES** : ce sont des rendus, pas la preuve d'une exigence
-	 * (`pnpm test:a11y`, P-06).
+	 * LES BLOCS COMMUNS SONT ALIGNÉS HORIZONTALEMENT — la rangée à deux cellules de
+	 * `.visuel`, ce que `C-05` et `M07.3` demandent. LE MARQUEUR EST EN PLUS DE LA
+	 * COULEUR, jamais à sa place : `.jl__marque` porte « + », « − » ou l'espace
+	 * avec son `aria-label`, et `details.alternative` restitue la comparaison en
+	 * liste.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * CINQ ÉTATS, ET CE QUE LE GEL EN MONTRE — MESURÉ, PAS DÉDUIT
+	 * LA BRANCHE « CONTENU IDENTIQUE » DU GEL (`V-16:2277`) N'EST PAS ÉCRITE : elle
+	 * exige `na !== nbv` et zéro ligne ajoutée comme retirée, et aucun cas ne
+	 * l'atteint. L'écrire serait poser une règle qu'aucun cas n'exerce.
 	 *
-	 *   `cmp-13-14`  13 → 14 — journal replié, deux colonnes, alternative
-	 *   `cmp-11-14`  11 → 14 — le même écran sur un écart plus large
-	 *   `cmp-14-14`  « Même version » — `na === nbv`, donc `.etat-compare`
-	 *   `cmp-13-13`  « Sans différence » — MÊME BRANCHE : les deux bornes
-	 *                désignent la version 13, `na === nbv` est vrai, et le gel
-	 *                rend « Il n'y a rien à comparer », pas « contenu
-	 *                identique ». Le libellé de la planche annonce autre chose
-	 *                que ce que la maquette rend ; la maquette fait loi (plan
-	 *                §11, D-08). Écart remonté au rapport de lot.
-	 *   `tout`       « Tout afficher » — le journal cesse de replier les
-	 *                lignes inchangées ; le reste est celui de `cmp-13-14`.
-	 *
-	 * LA BRANCHE « CONTENU IDENTIQUE » DU GEL (`V-16:2277`) N'EST PAS ÉCRITE.
-	 * Elle exige `na !== nbv` et zéro ligne ajoutée comme retirée ; les quatre
-	 * positions de la planche ne l'atteignent jamais — les deux couples de
-	 * versions distinctes diffèrent, les deux couples identiques sont pris par
-	 * la branche précédente. L'écrire serait poser une règle qu'aucun cas
-	 * n'exerce (`CLAUDE.md` §6, P-5) : elle ne serait pas posée, elle serait
-	 * espérée. Remontée au rapport de lot.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * AUCUN COMPORTEMENT — ARB-011. La bascule Texte/Visuel, le dépliage d'un
-	 * repli de journal, les deux retours et les notifications qu'ils lèvent sont
-	 * du temps 3. `div.notifs` est rendu vide.
-	 *
-	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette` et `dialog.palette#palette`
-	 * FERMÉ — `docs/releve-vues.md` §4.1 les mesure : aucune boîte de rendu,
-	 * aucun pixel, aucune entrée dans l'instantané ARIA. Et `div.planche`, bloc
-	 * hors produit (`docs/DESIGN.md` §2.G), que le banc retire lui-même.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-16.css`, posé par `node verif/feuilles-de-vue.mjs V-16
-	 * --installer` (P-6.3). Le seul `style=` reproduit est celui du gel
-	 * (`V-16:1116`), à l'ensemble clos d'ARB-016 (P-6.4).
+	 * Le style est dans `src/socle.css` et `src/vues/V-16.css` ; le seul `style=`
+	 * reproduit est celui du gel (`V-16:1116`).
 	 */
 	import type {
 		BlocDeContenu,
@@ -103,17 +52,13 @@
 	import { accord } from '$lib/vocabulaire';
 
 	/**
-	 * CE QUE LA ROUTE PASSE EST REQUIS ; CE QUE LE CONTEXTE PORTE EST VIDE.
-	 *
-	 * Ces propriétés étaient optionnelles et leur défaut était une constante du
-	 * jeu de démonstration : la comparaison d'une note quelconque nommait
-	 * `n-restaurer-pg` dans son fil d'Ariane et lisait SON historique, sans que
-	 * rien ne proteste.
+	 * CE QUE LA ROUTE PASSE EST REQUIS ; CE QUE LE CONTEXTE PORTE EST VIDE. Ces
+	 * propriétés étaient optionnelles, de défaut une constante du jeu de
+	 * démonstration : la comparaison d'une note quelconque nommait `n-restaurer-pg`
+	 * dans son fil d'Ariane et lisait SON historique.
 	 */
 	interface Proprietes {
-		/** Le vecteur complet de l'état — deux contrôles de planche. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-16')`, variante « lecture ». */
 		notes: readonly Note[];
 		/** Les univers du produit — le contexte de coquille les porte. Vide : aucun. */
 		univers?: readonly Univers[];
@@ -124,37 +69,26 @@
 		/** L'historique, par note — servi par le chargeur, jamais par le jeu. */
 		versions: Partial<Record<IdentifiantNote, readonly Version[]>>;
 		/**
-		 * Le contenu de chaque version, par note puis par numéro.
-		 *
-		 * LE CHARGEUR LE PASSE VIDE, ET C'EST DÉLIBÉRÉ : la comparaison est
-		 * calculée côté données sur les documents canoniques, et cette table
-		 * portait le contenu d'exemple des maquettes.
+		 * Le contenu de chaque version, par note puis par numéro. LE CHARGEUR LE PASSE
+		 * VIDE, ET C'EST DÉLIBÉRÉ : la comparaison est calculée côté données sur les
+		 * documents canoniques, et cette table portait le contenu d'exemple du gel.
 		 */
 		contenuVersions: Partial<Record<IdentifiantNote, Record<string, readonly BlocDeContenu[]>>>;
 		/**
-		 * LA NOTE COMPARÉE — REQUISE. Elle décide du titre, du fil d'Ariane et de
-		 * la clé sous laquelle l'historique est lu. Son repli était
-		 * `n-restaurer-pg`, la note du gel.
+		 * LA NOTE COMPARÉE — REQUISE. Elle décide du titre, du fil d'Ariane et de la
+		 * clé sous laquelle l'historique est lu.
 		 */
 		note: Note;
 		/**
 		 * LA COMPARAISON DÉJÀ CALCULÉE — `lireLaComparaison()` de
-		 * `$lib/donnees/histoire.ts`, mise en forme d'affichage par
-		 * `rangeesDAffichage()`.
-		 *
-		 * ELLE REMPLACE LE CALCUL LOCAL, elle ne s'y ajoute pas : l'alignement
-		 * d'ADR-003 est fait UNE fois, côté données, sur les documents canoniques
-		 * des deux versions — un second alignement divergerait, et la divergence
-		 * ne se verrait qu'à l'écran. Ce que la vue garde est ce qui lui
-		 * appartient : le repli du journal, les quantités, l'alternative
-		 * textuelle, tous comptés sur ce qu'elle reçoit. Absente, la transcription
-		 * du gel ci-dessous reprend — sur `contenuVersions`, que le chargeur passe
-		 * VIDE : elle ne peut plus servir le jeu de démonstration.
+		 * `$lib/donnees/histoire.ts`. ELLE REMPLACE LE CALCUL LOCAL, elle ne s'y ajoute
+		 * pas : l'alignement est fait UNE fois, côté données, sur les documents
+		 * canoniques — un second alignement divergerait, et la divergence ne se verrait
+		 * qu'à l'écran. Absente, la transcription du gel reprend, sur `contenuVersions`
+		 * que le chargeur passe VIDE.
 		 */
 		comparaison?: {
-			/** Le mode Texte : les lignes alignées des deux versions. */
 			readonly lignes: readonly Paire<string>[];
-			/** Le mode Visuel : les rangées de nœuds alignés. */
 			readonly rangees: readonly Paire<BlocDeContenu>[];
 		};
 	}
@@ -171,21 +105,18 @@
 		comparaison = undefined
 	}: Proprietes = $props();
 
-	/**
-	 * LE COMPTE SERVI À LA COQUILLE. En application, le contexte l'emporte
-	 * toujours. Hors gabarit racine, il n'y a PAS de compte connecté.
-	 */
+	/** Le compte servi à la coquille. Hors gabarit racine, il n'y a PAS de compte
+	    connecté ; en application, le contexte l'emporte. */
 	const COMPTE_ABSENT: CompteAffiche = { nom: '', initiales: '', role: '', domaine: '' };
 
 	const reglage = $derived(vecteur ?? {});
 
-	/** La clé sous laquelle l'historique et les contenus sont lus. */
 	const ID = $derived(note.id);
 
 	/**
 	 * LE RANGEMENT DE LA NOTE, tel que le fil le déroule. Le chemin de dossier est
 	 * découpé comme `src/vues/V-17.svelte:247` le découpe, et non par une seconde
-	 * règle. Une note rangée à la racine d'un domaine n'a aucun segment.
+	 * règle. Une note à la racine d'un domaine n'a aucun segment.
 	 */
 	const segments = $derived(
 		note.dossier
@@ -205,14 +136,13 @@
 	const courant = $derived([note.domaine, ...segments]);
 
 	/**
-	 * LE COUPLE DE BORNES. Le gel part de `na = 13, nbv = 14` (`V-16:1997`) et
-	 * la planche le déplace en découpant `value` sur le tiret (`V-16:2332`).
+	 * LE COUPLE DE BORNES. Le gel part de `na = 13, nbv = 14` (`V-16:1997`) et la
+	 * planche le déplace en découpant `value` sur le tiret (`V-16:2332`).
 	 */
 	const COUPLE_PAR_DEFAUT = '13-14';
 	const couple = $derived(typeof reglage['cmp'] === 'string' ? reglage['cmp'] : COUPLE_PAR_DEFAUT);
 	const na = $derived(Number(couple.split('-')[0]));
 	const nbv = $derived(Number(couple.split('-')[1]));
-	/** « Tout afficher » : le journal cesse de replier les lignes inchangées. */
 	const tout = $derived(reglage['c-tout'] === true);
 
 	/** Les métadonnées d'une version — `META`, `V-16:1994`. */
@@ -232,12 +162,10 @@
 		return CONTENUS[String(n)] ?? [];
 	}
 
-	/* ── L'alignement du gel ──────────────────────────────────────────────────
-	   Transcription de `window.blocEnLignes()` (`V-16:1864`) et de
-	   `window.alignement()` (`V-16:1882`). Deux granularités, un seul
-	   algorithme, et pas un choix de plus que le gel n'en fait. */
+	/* L'alignement du gel — transcription de `blocEnLignes()` (`V-16:1864`) et
+	   `alignement()` (`V-16:1882`). Deux granularités, un seul algorithme, et pas
+	   un choix de plus que le gel n'en fait. */
 
-	/** Représentation linéaire d'un bloc, façon texte source. */
 	function blocEnLignes(b: BlocDeContenu): string[] {
 		switch (b.type) {
 			case 'h2':
@@ -273,8 +201,8 @@
 
 	/**
 	 * Plus longue sous-séquence commune. Le départage d'égalité —
-	 * `t[i+1][j] >= t[i][j+1]`, donc le retrait avant l'ajout — décide de
-	 * l'ordre des lignes affichées : il est repris tel quel.
+	 * `t[i+1][j] >= t[i][j+1]`, donc le retrait avant l'ajout — décide de l'ordre
+	 * des lignes affichées : il est repris tel quel.
 	 */
 	function alignement<T>(
 		a: readonly T[],
@@ -320,7 +248,6 @@
 		return res;
 	}
 
-	/** Les deux bornes désignent la même version : il n'y a rien à comparer. */
 	const memeVersion = $derived(na === nbv);
 
 	function lignesDe(v: number): string[] {
@@ -329,8 +256,8 @@
 
 	/**
 	 * LES DEUX ALIGNEMENTS. Reçus quand la route les a calculés sur les documents
-	 * canoniques des deux versions ; calculés sur le jeu de semence sinon, par la
-	 * transcription du gel ci-dessus. Jamais les deux.
+	 * canoniques ; calculés sur le jeu de semence sinon, par la transcription du gel
+	 * ci-dessus. Jamais les deux.
 	 */
 	const diffLignes = $derived<readonly Paire<string>[]>(
 		comparaison ? comparaison.lignes : memeVersion ? [] : alignement(lignesDe(na), lignesDe(nbv))
@@ -355,10 +282,9 @@
 		rangees.filter((r) => r.etat !== 'commun' || !memeBloc(r.a, r.b)).length
 	);
 
-	/* ── Le journal, mode Texte ───────────────────────────────────────────────
-	   Transcription de `rendreTexte()` (`V-16:2022`). Les lignes conservées sont
-	   les changements et leur contexte ; les intervalles sautés deviennent un
-	   bouton de repli qui annonce combien de lignes il cache. */
+	/* Le journal, mode Texte — transcription de `rendreTexte()` (`V-16:2022`). Les
+	   lignes conservées sont les changements et leur contexte ; les intervalles
+	   sautés deviennent un bouton de repli qui annonce combien de lignes il cache. */
 
 	/** Lignes inchangées conservées autour d'un changement — `CONTEXTE`, `V-16:1998`. */
 	const CONTEXTE = 2;
@@ -425,10 +351,9 @@
 		return entrees;
 	});
 
-	/* ── Le mode Visuel ───────────────────────────────────────────────────────
-	   Transcription de `cellule()` (`V-16:2154`) et `rendreVisuel()`
-	   (`V-16:2176`). Les blocs communs occupent la MÊME RANGÉE des deux côtés :
-	   c'est l'alignement horizontal que C-05 et M07.3 demandent. */
+	/* Le mode Visuel — transcription de `cellule()` (`V-16:2154`) et
+	   `rendreVisuel()` (`V-16:2176`). Les blocs communs occupent la MÊME RANGÉE des
+	   deux côtés : c'est l'alignement horizontal que C-05 et M07.3 demandent. */
 
 	type EtatDeCellule = 'commun' | 'modifie' | 'retire' | 'ajoute';
 
@@ -443,9 +368,8 @@
 		return (etat === 'retire' ? '− ' : etat === 'ajoute' ? '+ ' : '± ') + LIBELLES[etat];
 	}
 
-	/* ── L'alternative textuelle ──────────────────────────────────────────────
-	   Transcription de `alternative()` (`V-16:2207`) — la restitution linéaire
-	   du mode visuel, exploitable en lecture d'écran. */
+	/* L'alternative textuelle — transcription d'`alternative()` (`V-16:2207`), la
+	   restitution linéaire du mode visuel, exploitable en lecture d'écran. */
 
 	function etiquetteDeBloc(b: BlocDeContenu): string {
 		return b.type === 'h2' || b.type === 'h3'
@@ -479,12 +403,10 @@
 </script>
 
 <!--
-	LE RENDU D'UN BLOC — `rendreBloc()` (`V-16:2096`). Neuf types, et rien
-	d'autre : le corpus les ferme (`BlocDeContenu`, `seeds/corpus.ts:299`).
-
-	La région est écrite serrée et soustraite au formateur : `prettier --write`
-	réintroduit des blancs entre nœuds, que le relevé d'ordre de tabulation du
-	niveau 1 lit dans le nom accessible (`CLAUDE.md` §6, P-6).
+	LE RENDU D'UN BLOC — `rendreBloc()` (`V-16:2096`). Neuf types, et rien d'autre :
+	le corpus les ferme (`BlocDeContenu`). La région est écrite serrée et soustraite
+	au formateur, qui réintroduirait des blancs entre nœuds — ils se liraient dans
+	le nom accessible.
 -->
 <!-- prettier-ignore -->
 {#snippet rendu(b: BlocDeContenu)}<div class="rendu"

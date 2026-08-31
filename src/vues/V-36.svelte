@@ -2,102 +2,42 @@
 	/**
 	 * V-36 — Console · Exports. Route `/console/exports` (`docs/routes.md`).
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LES QUATRE ÉTATS RENDENT LE MÊME ÉCRAN, ET C'EST UN FAIT DU GEL
+	 * L'ÉCRAN EST RENDU AU REPOS, `data-etat="repos"`, sans résultat ni
+	 * progression : la préparation de l'archive est une MINUTERIE (`V-36:2992`)
+	 * qui fait avancer `#barre` et bascule `data-etat`, et le squelette rend
+	 * l'état, jamais la transition (`ARB-011`). `#etat` est donc `hidden`, comme au
+	 * gel, et `#resultat` vide.
 	 *
-	 * `verif/scenarios/V-36.json` déclare quatre états — `issue-propre`,
-	 * `issue-avert`, `vol-normal`, `vol-lent` —, dont un seul est marqué
-	 * `identiqueA`. Les trois autres ne le sont pas parce que l'extraction
-	 * compare des VECTEURS, pas des rendus. Or, au gel, les deux contrôles de
-	 * planche ne touchent RIEN au chargement :
+	 * TOUT CHIFFRE VIENT DU CORPUS. `apercuExport()` est le calque exact de
+	 * `window.apercuExport` (`V-36:2661`), qui s'appuie sur `notesDuDomaine`,
+	 * `dossiersDuDomaine` et `compterDossiers` (`V-36:2530`, `:1926`, `:1946`).
 	 *
-	 *   • `input[name="issue"]` et `input[name="vol"]` n'ont qu'un seul
-	 *     gestionnaire de `change` : `document.getElementById("resultat")
-	 *     .innerHTML = ""` (`V-36:3088-3092`) — or `#resultat` est DÉJÀ vide,
-	 *     `rendreRecap()` venant de le vider ;
-	 *   • leur valeur n'est lue qu'à l'intérieur du gestionnaire de clic de
-	 *     `#exporter` (`V-36:2979`, `V-36:3012`), c'est-à-dire jamais tant que
-	 *     l'archive n'est pas demandée.
+	 * LES NOMS DE L'ARCHIVE N'EN SORTENT PLUS : ils étaient des littéraux écrits
+	 * ici, et ils avaient divergé de la fabrique sur cinq lignes d'un bloc de six.
+	 * Ils viennent de `$lib/export/noms.ts`, la source que `construireLArchive()`
+	 * lit elle-même. Le nom d'archive portait de surcroît `DATE_REFERENCE`, la date
+	 * à laquelle le corpus de démonstration est figé : un écran branché sur une
+	 * base annonçait toujours le même jour de 2026.
 	 *
-	 * Les quatre états sont donc l'écran AU REPOS, `data-etat="repos"`, sans
-	 * résultat ni progression. Ce n'est pas une simplification : c'est ce que
-	 * la maquette montre, et le banc en est le juge sur les quatre couples.
+	 * LE DOMAINE COURANT EST LE PREMIER DE LA LISTE : le gel ne pose aucun
+	 * `selected`, et `rendreRecap()` lit `select.value` (`V-36:3357-3364`).
 	 *
-	 * CE QUE CETTE VUE NE REND PAS, ET POURQUOI. La préparation de l'archive
-	 * est une MINUTERIE (`setInterval` à 90 ou 130 ms, `V-36:2992`) qui fait
-	 * avancer `#barre` et bascule `data-etat` de `repos` à `encours` puis
-	 * `fini`. ARB-011 : le squelette rend l'état, jamais la transition. Aucun
-	 * état déclaré ne montre `encours` ni `fini` — les positions `avert` et
-	 * `lent` de la planche décrivent ce que l'export PRODUIRAIT, et il faut un
-	 * clic pour l'obtenir. `#etat` est donc rendu `hidden`, comme au gel, et
-	 * `#resultat` vide.
+	 * Coquille de forme abrégée, enveloppe `div.console`. V-36 n'a NI panneau
+	 * `tiroir-form`, NI `data-form`, NI dialogue de suppression, NI tableau de
+	 * gestion : c'est ce qui sépare les quatre pages des six registres.
+	 * `data-etat="repos"` est transmis à `div.app` par `donnees` — le gel le pose
+	 * (`V-36:1054`) et la feuille de la vue le lit.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * TOUT CHIFFRE VIENT DU CORPUS — AUCUN LITTÉRAL DE DONNÉE
-	 *
-	 * `apercuExport()` est le calque exact de `window.apercuExport`
-	 * (`V-36:2661`), qui s'appuie lui-même sur `notesDuDomaine`,
-	 * `dossiersDuDomaine` et `compterDossiers` (`V-36:1926`, `:1946`,
-	 * `:2530`). Les cinq lignes du récapitulatif, le volume estimé, le nombre
-	 * de dossiers annoncé par « L'arborescence de dossiers, reproduite » et
-	 * l'arborescence d'archive en sortent tous.
-	 *
-	 * LES NOMS DE L'ARCHIVE, EUX, N'EN SORTENT PLUS. Ils étaient des littéraux
-	 * écrits ici, et ils avaient divergé de la fabrique sur cinq lignes d'un
-	 * bloc de six ; ils viennent désormais de `$lib/export/noms.ts`, la source
-	 * que `construireLArchive()` lit elle-même.
-	 *
-	 * LE NOM D'ARCHIVE PORTE UNE DATE, ET ELLE N'EST PLUS CELLE DU JEU. Le gel
-	 * écrit `ardoise(dom) + "-2026-08-13.zip"` (`V-36:2964`, `V-36:3061`), où
-	 * `2026-08-13` est `DATE_REFERENCE` de `seeds/corpus.ts` — « la date à
-	 * laquelle le corpus est figé ». La vue la recomposait en repli, si bien
-	 * qu'un écran branché sur une base annonçait toujours le même jour de 2026,
-	 * et l'ardoise du nom d'affichage là où le fichier porte l'identifiant du
-	 * domaine : un fichier que l'utilisateur n'obtenait jamais.
-	 *
-	 * LE REPLI A DISPARU AVEC LA DATE. Le nom annoncé est celui que la fabrique
-	 * de l'archive produira — propriété `nomsDArchive`, EXIGÉE, plus bas.
-	 *
-	 * LE DOMAINE COURANT EST LE PREMIER DE `DOMAINES`. Le gel ne pose aucun
-	 * `selected` : `rendreRecap()` lit `select.value`, qui est celui de la
-	 * première option (`V-36:3357-3363`, puis `:3364`).
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LA COQUILLE ET LE MOTIF COMMUN
-	 *
-	 * Forme ABRÉGÉE (ARB-021), enveloppe `div.console` (ARB-023), et les treize
-	 * classes du motif commun des dix vues de console, portées par
-	 * `$lib/console/` — écrites par P-2, consommées ici (`docs/releve-vues.md`
-	 * §9, R-2). V-36 n'a NI panneau `tiroir-form`, NI `data-form`, NI dialogue
-	 * de suppression, NI tableau de gestion : c'est mesuré, et c'est ce qui
-	 * sépare les quatre pages des six registres.
-	 *
-	 * `data-etat="repos"` est transmis à `div.app` par `donnees` (ARB-021,
-	 * A-2) : le gel le pose (`V-36:1054`) et la feuille de la vue le lit.
-	 *
-	 * L'hôte de palette de V-09 — `template#tpl-palette` et `dialog#palette`
-	 * fermé — n'est pas rendu : mesuré SANS AUCUNE INCIDENCE sur trente
-	 * maquettes (`docs/releve-vues.md` §4.1). `div.notifs` est rendu vide :
-	 * les notifications sont du comportement (ARB-011, T-017).
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * CE QUE CE COMPOSANT NE PROUVE PAS. Il rend un ÉTAT DE MAQUETTE. Ni
-	 * `P-09`, ni `P-02`, ni `RG-M15-03` ne sont déclarées tenues par ce lot.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
-	 * (P-6.1) et de `src/vues/V-36.css` (P-6.3), posé par
-	 * `node verif/feuilles-de-vue.mjs V-36 --installer`. Les six `style=`
-	 * reproduits figurent tous à l'ensemble clos du gel de V-36 (ARB-016,
-	 * `node verif/styles-en-ligne.mjs V-36`).
+	 * Le style est dans `src/socle.css` et `src/vues/V-36.css` ; les six `style=`
+	 * reproduits figurent tous à l'ensemble clos du gel.
 	 */
 	import type { Domaine, Note } from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	/* LES NOMS DE L'ARCHIVE VIENNENT DE LA FABRIQUE QUI LA PRODUIT, jamais de
-	   littéraux écrits ici. `$lib/export/archive.ts` dépend de `node:zlib` par
-	   son écriture de zip et ne peut pas entrer dans un paquet de navigateur ;
-	   `./noms` porte les noms seuls, sans aucune dépendance, et `archive.ts`
-	   les réexporte. Une seule définition, deux lecteurs. */
+	   littéraux écrits ici. `$lib/export/archive.ts` dépend de `node:zlib` et ne
+	   peut pas entrer dans un paquet de navigateur ; `./noms` porte les noms seuls,
+	   sans dépendance, et `archive.ts` les réexporte. Une définition, deux lecteurs. */
 	import {
 		DOSSIER_DES_PIECES,
 		NOM_DU_RAPPORT,
@@ -107,88 +47,61 @@
 	} from '$lib/export/noms';
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 
-	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
-	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
-	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
-	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	/* Le mot renommable de `M14.7`, lu sur le contexte de coquille : en constante,
+	   le renommer en console ne changeait rien a l'ecran. Repli : « Fiche ». */
 	const motsDuProduit = vocabulaireRendu();
 	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
 	const motFichePlurielMinuscule = $derived(motsDuProduit.fichesMin);
 
 	interface Proprietes {
 		/**
-		 * Le jeu de semence de la vue — `corpusPourVue('V-36')`. C'est la SEULE
-		 * propriété que cette vue lit : ses quatre états rendent le même écran,
-		 * et `etat` comme `vecteur` ne lui apprendraient rien.
+		 * Le corpus de la vue. C'est la SEULE propriété d'état qu'elle lit : ses
+		 * quatre états rendent le même écran.
 		 */
 		notes: readonly Note[];
 		/**
-		 * LES DOMAINES DE L'INSTANCE, EXIGÉS — c'est le périmètre exportable.
-		 *
-		 * La propriété retombait sur `DOMAINES` du jeu de démonstration : le
-		 * sélecteur d'export offrait « Infrastructure », « Applications » et
-		 * « Migration 2026 » sur une instance qui n'en porte aucun, et le bouton
-		 * menait à une archive qu'aucune adresse ne servait. `/console/exports`
-		 * les passe : exigés, une route qui les oublierait ne compilerait plus.
+		 * LES DOMAINES DE L'INSTANCE, EXIGÉS — c'est le périmètre exportable. La
+		 * propriété retombait sur le jeu de démonstration : le sélecteur d'export
+		 * offrait trois domaines sur une instance qui n'en porte aucun, et le bouton
+		 * menait à une archive qu'aucune adresse ne servait.
 		 */
 		domaines: readonly Domaine[];
 		/**
-		 * CE QUE LA VUE FAIT QUAND L'ARCHIVE EST DEMANDÉE.
-		 *
-		 * `P-03` — « une entrée visible est une entrée qui fonctionne » : le bouton
-		 * « Préparer l'archive » est au gel, et la route qui produit l'archive
-		 * existe (`/console/exports/{univers}/{domaine}`). Il ne manquait que le
-		 * fil entre les deux. La vue rend le NOM du domaine choisi ; la page sait à
-		 * quelle adresse il correspond.
+		 * CE QUE LA VUE FAIT QUAND L'ARCHIVE EST DEMANDÉE. `P-03` — « une entrée
+		 * visible est une entrée qui fonctionne » : le bouton est au gel et la route
+		 * existe (`/console/exports/{univers}/{domaine}`), il ne manquait que le fil.
+		 * La vue rend le NOM du domaine choisi ; la page sait à quelle adresse il
+		 * correspond.
 		 */
 		onExporter?: (domaine: string) => void;
 		/**
-		 * LE NOM DE FICHIER QUE L'EXPORT PRODUIRA, PAR NOM DE DOMAINE.
-		 *
-		 * L'écran ANNONCE un nom d'archive, en tête de l'arborescence qu'il montre.
-		 * Il le composait de deux valeurs à lui — l'ardoise du nom d'affichage et
-		 * `DATE_REFERENCE`, la date à laquelle le jeu de semence est figé — si bien
-		 * qu'il annonçait toujours le même jour de 2026, et une ardoise là où le
-		 * fichier porte l'IDENTIFIANT du domaine. Deux écarts sur un nom que
-		 * l'utilisateur va lire dans son gestionnaire de fichiers.
-		 *
-		 * SERVIE, LA TABLE VIENT DE LA FABRIQUE QUI NOMME L'ARCHIVE POUR DE BON —
-		 * `nomDArchive()` de `$lib/export/archive.ts`, celle-là même que le point
-		 * de téléchargement appelle. Le nom annoncé n'est pas RECONSTITUÉ à
-		 * l'identique : il est PRODUIT par sa source.
-		 *
-		 * ELLE EST EXIGÉE. Absente, la vue recomposait le nom avec `DATE_REFERENCE`
-		 * — la date à laquelle le jeu de démonstration est figé —, si bien qu'un
-		 * écran branché sur une base annonçait toujours le même jour de 2026. Un
-		 * domaine que la table ne nomme pas n'a pas de nom d'archive annoncé, et
-		 * l'arborescence n'est pas rendue pour lui.
+		 * LE NOM DE FICHIER QUE L'EXPORT PRODUIRA, PAR NOM DE DOMAINE — EXIGÉE.
+		 * L'écran ANNONCE un nom d'archive et le composait de deux valeurs à lui :
+		 * l'ardoise du nom d'affichage là où le fichier porte l'IDENTIFIANT du
+		 * domaine, et `DATE_REFERENCE`. Servie, la table vient de `nomDArchive()` de
+		 * `$lib/export/archive.ts`, celle-là même que le point de téléchargement
+		 * appelle : le nom annoncé n'est pas RECONSTITUÉ, il est PRODUIT par sa
+		 * source. Un domaine que la table ne nomme pas n'a pas d'arborescence rendue.
 		 */
 		nomsDArchive: Readonly<Record<string, string>>;
 	}
 
 	/*
 	 * LE RAIL, LA BARRE ET LA VERSION NE PASSENT PLUS PAR ICI. Cette vue portait
-	 * `univers`, `compte` et `instance` sans jamais les lire : elle ne faisait
-	 * que les remettre à `CoquilleDeConsole`, qui retombait sur le jeu de
-	 * démonstration. La coquille lit désormais le contexte d'identité, seule
-	 * source, et les trois propriétés ont disparu des deux côtés.
+	 * `univers`, `compte` et `instance` sans jamais les lire : elle ne faisait que
+	 * les remettre à `CoquilleDeConsole`, qui retombait sur le jeu de démonstration.
 	 */
 	const { notes, domaines, onExporter, nomsDArchive }: Proprietes = $props();
 
-	/* ── Le calque des fabriques du gel ──────────────────────────────────────
-	   `ECART-020` É-3 : un gel qui produit une valeur par une fabrique n'admet
-	   pas qu'on la réécrive autrement. Ces quatre fonctions sont recopiées de
-	   la maquette, ligne à ligne, et appelées avec les mêmes arguments. */
+	/* Le calque des fabriques du gel : un gel qui produit une valeur par une
+	   fabrique n'admet pas qu'on la réécrive autrement (`ECART-020` É-3). Ces
+	   quatre fonctions sont recopiées ligne à ligne, mêmes arguments. */
 
 	/**
-	 * `window.notesDuDomaine` (`V-36:2530`).
-	 *
-	 * LE CORPUS LU EST CELUI DE LA PROPRIÉTÉ, PLUS CELUI DU MODULE. La fabrique
-	 * du gel ferme sur `CORPUS`, parce qu'une maquette n'a qu'une source ; ici la
-	 * vue reçoit ses notes en propriété — `notes` —, et lire `CORPUS` revenait à
-	 * décompter le jeu de semence quelle que soit la base servie. Tout ce que cet
-	 * écran chiffre en découle : notes, fiches, signets, dossiers, pièces jointes,
-	 * et jusqu'au nom de l'archive. L'argument change, la fabrique non.
+	 * `window.notesDuDomaine` (`V-36:2530`). LE CORPUS LU EST CELUI DE LA
+	 * PROPRIÉTÉ : la fabrique du gel ferme sur `CORPUS`, et lire `CORPUS` ici
+	 * revenait à décompter le jeu de semence quelle que soit la base servie.
+	 * L'argument change, la fabrique non.
 	 */
 	const notesDuDomaine = (nom: string): readonly Note[] => notes.filter((n) => n.domaine === nom);
 
@@ -249,26 +162,22 @@
 	const volume = (ko: number): string =>
 		ko < 1024 ? `${ko} Ko` : `${Math.round((ko / 1024) * 10) / 10} Mo`;
 
-	/* `ardoise()` DU GEL (`V-36:2880`) A DISPARU AVEC SON DERNIER LECTEUR. Elle
-	   ne servait qu'à recomposer le nom d'archive de repli, avec la date à
-	   laquelle le jeu de démonstration est figé. Le nom vient de `nomsDArchive`,
-	   produit par la fabrique qui écrit l'archive pour de bon. */
+	/* `ardoise()` du gel (`V-36:2880`) a disparu avec son dernier lecteur : elle ne
+	   servait qu'à recomposer le nom d'archive de repli, avec la date à laquelle le
+	   jeu de démonstration est figé. */
 
-	/* ── L'état rendu ────────────────────────────────────────────────────────
-	   Le domaine courant est celui de la première option, faute de `selected`
-	   au gel. `notes` reste la propriété du contrat de rendu ; les agrégats
-	   d'export portent, eux, sur le corpus entier, comme au gel — la vue de
-	   console administre l'instance, pas une variante. */
+	/* L'état rendu. Les agrégats d'export portent sur le corpus entier, comme au
+	   gel — la vue de console administre l'instance, pas une variante. */
 	/**
 	 * LE DOMAINE CHOISI — `select#domaine` du gel, dont la valeur initiale est le
 	 * premier de la liste. Au rendu serveur, `choisi` est vide et le premier
-	 * s'applique : l'écran reste celui que la maquette montre.
+	 * s'applique.
 	 */
 	let choisi = $state('');
 	const domaineCourant = $derived(
-		/* `domaines[0]!` faisait tomber la page quand la liste est VIDE — une
-		   instance neuve n'a aucun domaine, et l'export sortait en 500. La chaîne
-		   vide traverse le reste sans rien affirmer : l'écran rend son état vide. */
+		/* `domaines[0]!` faisait tomber la page quand la liste est VIDE — une instance
+		   neuve n'a aucun domaine, et l'export sortait en 500. La chaîne vide traverse
+		   le reste sans rien affirmer. */
 		choisi !== '' && domaines.some((d) => d.nom === choisi) ? choisi : (domaines[0]?.nom ?? '')
 	);
 	const apercu = $derived(apercuExport(domaineCourant));
@@ -283,57 +192,42 @@
 	] as const);
 
 	/**
-	 * LE NOM DU FICHIER QUE L'EXPORT PRODUIRA, ou `null` quand il n'y en a pas.
-	 *
-	 * UNE INSTANCE NEUVE N'A AUCUN DOMAINE. `domaineCourant` vaut alors la chaîne
-	 * vide, et la composition du gel rendait `-{date de semence}.zip` : un nom de
-	 * fichier inventé, servi par le produit sur le premier écran d'export d'une
-	 * installation réelle. Sans domaine, il n'y a rien à nommer — l'arborescence
-	 * d'archive n'est pas rendue du tout.
+	 * LE NOM DU FICHIER QUE L'EXPORT PRODUIRA, ou `null` quand il n'y en a pas. UNE
+	 * INSTANCE NEUVE N'A AUCUN DOMAINE : la composition du gel rendait alors
+	 * `-{date de semence}.zip`, un nom de fichier inventé. Sans domaine, il n'y a
+	 * rien à nommer — l'arborescence d'archive n'est pas rendue du tout.
 	 */
 	const nomDeLArchive = $derived(
 		domaineCourant === '' ? null : (nomsDArchive[domaineCourant] ?? null)
 	);
 
 	/**
-	 * L'ARBORESCENCE D'ARCHIVE — CINQ LIGNES SUR CINQ ÉTAIENT FAUSSES.
+	 * L'ARBORESCENCE D'ARCHIVE — CINQ LIGNES SUR CINQ ÉTAIENT FAUSSES. Cet écran
+	 * DÉCRIT un artefact que l'utilisateur va ouvrir, et la description était
+	 * composée de littéraux qui avaient divergé de la fabrique : un rapport en
+	 * Markdown là où l'archive écrit du texte nu, un fichier d'index jamais produit,
+	 * un nom de note mis en ardoise là où le fichier reprend le titre au caractère
+	 * près, un dossier de pièces jointes sans le dossier par note, et pas de racine.
+	 * PLUS AUCUN NOM N'EST ÉCRIT ICI : les trois noms et les deux fabriques viennent
+	 * de `$lib/export/noms.ts`.
 	 *
-	 * Cet écran DÉCRIT un artefact que l'utilisateur va ouvrir. La description
-	 * était composée de littéraux, et les littéraux avaient divergé de la
-	 * fabrique : elle annonçait un rapport en Markdown là où l'archive écrit du
-	 * texte nu, un fichier d'index que `construireLArchive()` n'a jamais
-	 * produit, un nom de note mis en ardoise là où le fichier reprend le titre
-	 * au caractère près, un dossier de pièces jointes sans le dossier par note
-	 * qu'il contient, et pas de racine là où l'archive range tout sous le
-	 * dossier racine du domaine.
+	 * CE QUE L'ARCHIVE CONTIENT (`export/archive.ts:765-818`) : une entrée par
+	 * dossier du domaine, RACINE COMPRISE ; un fichier par note ; un dossier de
+	 * pièces PAR NOTE sous le dossier voisin ; le rapport de conversion à la racine.
 	 *
-	 * PLUS AUCUN NOM N'EST ÉCRIT ICI. Les trois noms et les deux fabriques
-	 * viennent de `$lib/export/noms.ts`, la source que `construireLArchive()`
-	 * lit elle-même. Un nom qui changerait à la source changerait ici.
+	 * LA RACINE EST NOMMÉE PAR LE NOM DU DOMAINE, ET C'EST EXACT TANT QUE LE DOMAINE
+	 * N'A PAS ÉTÉ RENOMMÉ : l'archive range sous le nom du DOSSIER racine, que la
+	 * création pose égal au nom du domaine mais que `modifierUnDomaine()` ne suit
+	 * pas. Le nom du dossier racine n'atteint pas cet écran. Écart consigné.
 	 *
-	 * CE QUE L'ARCHIVE CONTIENT, ligne à ligne (`export/archive.ts:765-818`) :
-	 * une entrée par dossier du domaine, RACINE COMPRISE ; un fichier par note,
-	 * à la place de son dossier ; un dossier de pièces PAR NOTE sous le dossier
-	 * voisin ; et le rapport de conversion, à la racine.
-	 *
-	 * LA RACINE EST NOMMÉE PAR LE NOM DU DOMAINE, ET C'EST EXACT TANT QUE LE
-	 * DOMAINE N'A PAS ÉTÉ RENOMMÉ. L'archive range sous le nom du DOSSIER racine
-	 * (`export/archive.ts:744`, chemin bâti par `donnees/export.ts:119-127`), que
-	 * la création pose égal au nom du domaine (`donnees/administration.ts:1853`)
-	 * mais que `modifierUnDomaine()` (`:1953-1996`) ne suit pas. Le nom du
-	 * dossier racine n'atteint pas cet écran ; le corriger demande de le servir,
-	 * ce qui déborde ce lot. L'écart est consigné, non masqué.
-	 *
-	 * LE CHEMIN MONTRÉ EST CELUI D'UNE VRAIE NOTE, pas la première branche d'un
-	 * arbre où la note montrée pouvait ne pas se trouver : chaque segment sort
-	 * du rangement de la note dont le nom de fichier est affiché en dessous.
+	 * LE CHEMIN MONTRÉ EST CELUI D'UNE VRAIE NOTE : chaque segment sort du rangement
+	 * de la note dont le nom de fichier est affiché en dessous.
 	 */
 	const archive = $derived.by(() => {
 		const liste = notesDuDomaine(domaineCourant);
 		const note = liste[0];
-		/* `Note.dossier` n'affiche PAS la racine — `lecture.ts:295-299` : elle
-		   porte le nom du domaine et le rangement la sous-entend. L'archive, elle,
-		   l'écrit. C'est l'écart que l'écran taisait. */
+		/* `Note.dossier` n'affiche PAS la racine (`lecture.ts:295-299`) : elle porte le
+		   nom du domaine et le rangement la sous-entend. L'archive, elle, l'écrit. */
 		const sousLaRacine = (note?.dossier ?? '')
 			.split('›')
 			.map((s) => s.trim())
@@ -341,9 +235,8 @@
 		const avecPieces = liste.find((n) => n.pj > 0);
 
 		/* Le tirage des branches : un seul enfant montré par niveau, donc un
-		   dernier-né à chaque cran. Le trait vertical du premier cran tient parce
-		   que l'entrée de racine qu'il prolonge est suivie d'autres ; les crans
-		   suivants sont des blancs, une branche close ne se prolongeant pas. */
+		   dernier-né à chaque cran. Le trait vertical du premier cran tient parce que
+		   l'entrée de racine qu'il prolonge est suivie d'autres. */
 		const rameau = (profondeur: number, texte: string): string =>
 			'│   ' + '    '.repeat(profondeur - 1) + '└── ' + texte + '\n';
 
@@ -373,27 +266,18 @@
 		/>
 
 		<!--
-			AUCUN BLANC ENTRE LES NŒUDS PORTEURS DE TEXTE, et il doit le rester :
-			le relevé d'ordre de tabulation du niveau 1 construit le nom accessible
-			sur `textContent`, où un blanc réintroduit par le formateur se voit
-			(CLAUDE.md §6, P-6). D'où les gardes de formatage ci-dessous, dont la
-			forme est exacte et obligatoire : un commentaire rédigé autrement
-			n'est pas reconnu par le formateur.
+			AUCUN BLANC ENTRE LES NŒUDS PORTEURS DE TEXTE, et il doit le rester : le nom
+			accessible se construit sur `textContent`, où un blanc réintroduit par le
+			formateur se voit. D'où les gardes de formatage ci-dessous, dont la forme est
+			exacte et obligatoire — un commentaire rédigé autrement n'est pas reconnu.
 		-->
 		<!--
-			CET ÉCRAN A PROMIS LA RÉIMPORTATION, ET ELLE N'EXISTE PAS.
-
-			Le texte affirmait que « réimporter l'archive reconstitue le domaine à
-			l'identique […] ce qui garantit que vous n'êtes pas prisonnier de ce
-			produit ». Aucun chemin d'import d'archive n'existe dans le produit :
-			l'import écarte le format d'archive (`donnees/import.ts:118`) et la
-			relecture d'archive (`export/archive.ts`) n'est appelée que par ses
-			propres contrôles. La phrase promettait l'inverse exact de ce qui est.
-
-			CE QUI EST VRAI ET QUI SE DIT — l'archive est du texte, un fichier par
-			note, rangé comme le domaine, métadonnées en tête de chaque fichier. Ce
-			bloc de métadonnées est ce qui RENDRA la réimportation possible ; il ne
-			la rend pas disponible aujourd'hui, et l'écran ne l'annonce plus.
+			CET ÉCRAN A PROMIS LA RÉIMPORTATION, ET ELLE N'EXISTE PAS. Le texte affirmait
+			que « réimporter l'archive reconstitue le domaine à l'identique » ; aucun
+			chemin d'import d'archive n'existe — l'import écarte le format d'archive
+			(`donnees/import.ts:118`) et la relecture d'archive n'est appelée que par ses
+			propres contrôles. Ce qui est vrai et qui se dit : l'archive est du texte, un
+			fichier par note, rangé comme le domaine, métadonnées en tête.
 		-->
 		<!-- prettier-ignore -->
 		<section class="reversible"

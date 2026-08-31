@@ -2,66 +2,38 @@
 	/**
 	 * V-11 — Page d'un domaine. Route `/univers/{univers}/{domaine}`.
 	 *
-	 * C'EST LA FORME CANONIQUE au sens de `RG-M03-02` (`docs/routes.md` §2.2), et
-	 * la SEULE forme publiée depuis ARB-001 : la forme raccourcie
+	 * C'EST LA FORME CANONIQUE au sens de `RG-M03-02` (`docs/routes.md` §2.2) et la
+	 * SEULE forme publiée depuis `ARB-001` : la forme raccourcie
 	 * `/domaines/{domaine}` n'est pas implémentée, le produit ne l'émet jamais, et
-	 * `/domaines/…` rend la page non trouvée par le chemin de code unique
-	 * d'ADR-007. La clause de désambiguïsation de `RG-M03-02` est **sans objet**
-	 * (E-09) et **ne doit jamais être implémentée** : elle ne pouvait se
-	 * déclencher que sur la forme raccourcie. L'unicité d'un domaine n'est portée
-	 * que par son univers (RG-STR-02), d'où le segment d'univers obligatoire.
-	 * Le gabarit d'adresse est `$lib/rangement/adresses` ; P-10 le prolongera en
-	 * `/notes` et `/signets`.
+	 * `/domaines/…` rend la page non trouvée. La clause de désambiguïsation de
+	 * `RG-M03-02` est SANS OBJET et NE DOIT JAMAIS ÊTRE IMPLÉMENTÉE : elle ne
+	 * pouvait se déclencher que sur la forme raccourcie. L'unicité d'un domaine
+	 * n'est portée que par son univers (`RG-STR-02`), d'où le segment obligatoire.
 	 *
 	 * LES GESTES DE CET ÉCRAN MÈNENT QUELQUE PART, et c'est la route qui les
 	 * accroche, par sélecteur et jamais par balisage réécrit (`ARB-063`,
-	 * `[domaine]/cablage.ts`) : les segments de la barre de fraîcheur, les quatre
-	 * indicateurs de santé, les six pastilles de module, les lignes de type et les
-	 * lignes de contributeur ouvrent la liste des notes du domaine, sur la facette
-	 * qui les nomme quand elle existe. Trois n'en ont pas et ouvrent la liste sans
-	 * filtre — un filtre approchant mentirait ; le câblage le dit et l'énumère.
+	 * `[domaine]/cablage.ts`). Trois n'ont pas de facette et ouvrent la liste sans
+	 * filtre — un filtre approchant mentirait.
 	 *
 	 * UNE LIGNE DE CONTRIBUTEUR EST UN BOUTON, comme la ligne de type qui lui fait
-	 * face dans la colonne. Le gel la dessine en `<div>` faute de destination —
-	 * il n'a pas de serveur —, et elle ne menait donc nulle part : la facette
-	 * `auteur` de la liste existe et est honorée, la ligne y mène. La règle de
-	 * neutralisation est celle de `.type-ligne`, sa jumelle, et le rendu ne bouge
-	 * pas d'un pixel.
+	 * face : le gel la dessine en `<div>` faute de destination, et elle ne menait
+	 * nulle part. La règle de neutralisation est celle de `.type-ligne`, sa jumelle,
+	 * et le rendu ne bouge pas d'un pixel.
 	 *
-	 * HUIT ÉTATS — `verif/scenarios/V-11.json`. Trois axes, vecteur complet :
-	 * domaine × profil × état.
+	 * Coquille de forme abrégée ; le chemin courant du rail est `[nom du domaine]`.
 	 *
-	 * COQUILLE DE FORME ABRÉGÉE — ARB-021, A-1, vérifié sur le gel. `<main>` porte
-	 * la classe `domaine` (ARB-015) ; le chemin courant du rail est `[nom du
-	 * domaine]`, ce qui déplie et met en évidence le nœud homonyme.
-	 *
-	 * `.noeud` N'EST PAS PORTÉE ICI — nœud d'arborescence du rail, rendu par la
+	 * `.noeud` n'est pas portée ici — nœud d'arborescence du rail, rendu par la
 	 * coquille ; nœud de GRAPHE en V-19 et V-20, règles inconciliables
-	 * (`docs/DESIGN.md` §2.H). Aucune factorisation. Même vigilance sur `.mesure`,
-	 * dont `ECART-019` relève TROIS définitions divergentes sur trois vues : celle
-	 * portée ici est celle de `src/vues/V-11.css`, et elle ne se promeut pas.
+	 * (`docs/DESIGN.md` §2.H). Même vigilance sur `.mesure`, dont `ECART-019` relève
+	 * TROIS définitions divergentes sur trois vues : celle d'ici est dans
+	 * `src/vues/V-11.css`, et elle ne se promeut pas.
 	 *
-	 * LE PROFIL « LECTEUR » N'EST PAS UN RÔLE DU GABARIT. La planche pose
-	 * `data-role="lecteur"`, valeur qu'aucune règle du socle ni de la feuille de
-	 * V-11 ne lit — la seule règle sur `data-role` est
-	 * `.app:not([data-role="admin"]) .si-admin`. Le gabarit ne connaît que
-	 * `referent` et `admin` ; « lecteur » y est un non-administrateur, et c'est
-	 * `data-droits="lecture"` qui porte l'effet visible. Divergence de balisage
-	 * MESURÉE NULLE, déclarée ici plutôt que réglée en rouvrant un gabarit gelé.
+	 * LE PROFIL « LECTEUR » N'EST PAS UN RÔLE DU GABARIT : la seule règle sur
+	 * `data-role` est `.app:not([data-role="admin"]) .si-admin`, et c'est
+	 * `data-droits="lecture"` qui porte l'effet visible.
 	 *
-	 * AUCUN CHIFFRE N'EST SAISI (P-02) : santé, compteurs de modules, palmarès,
-	 * répartition par type et contributeurs sont calculés depuis les propriétés
-	 * servies.
-	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011).
-	 *
-	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette` et `dialog#palette`
-	 * (divergence mesurée nulle, `docs/releve-vues.md` §4.1) et `div.planche`,
-	 * bloc hors produit (§2.G).
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-11.css`, posé par `node verif/feuilles-de-vue.mjs V-11
-	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 * Aucun chiffre n'est saisi. Le style est dans `src/socle.css` et
+	 * `src/vues/V-11.css`.
 	 */
 	import type {
 		CleDeModule,
@@ -84,57 +56,39 @@
 
 	/**
 	 * LES SOURCES DE L'ÉCRAN SONT REQUISES — le motif est retiré, pas contourné.
+	 * Optionnelles, de défaut la constante de `seeds/corpus.ts`, une route qui en
+	 * oubliait une servait le jeu de démonstration SANS QUE RIEN NE PROTESTE : « En
+	 * attente de révision » servait le même chiffre à qui que ce soit.
 	 *
-	 * Elles ont été OPTIONNELLES, de défaut la constante de `seeds/corpus.ts`, et
-	 * cette forme garantissait qu'une route qui en oubliait une servait le jeu de
-	 * démonstration SANS QUE RIEN NE PROTESTE : « En attente de révision » servait
-	 * le même chiffre à qui que ce soit, et aucun compilateur, aucun test, aucun
-	 * écran ne le disait.
-	 *
-	 * `exactOptionalPropertyTypes` et `strict` sont actifs, `svelte-check` est
-	 * dans `pnpm check` : une route qui oublierait l'une d'elles NE COMPILE PLUS.
-	 *
-	 * `detailDomaines` ET `modules` RENDENT `P-04` EFFECTIVE, et leurs deux
-	 * sources sont distinctes : les CLÉS actives d'un domaine viennent de
+	 * `detailDomaines` ET `modules` RENDENT `P-04` EFFECTIVE, et leurs deux sources
+	 * sont distinctes : les CLÉS actives d'un domaine viennent de
 	 * `modules_de_domaine` (`RG-STR-06`), les LIBELLÉS du catalogue de produit
 	 * `$lib/rangement/modules.ts`.
 	 *
-	 * LES DEUX TABLES DE MESURE SONT PARTIELLES, ET C'EST DÉLIBÉRÉ. `Partial` et
-	 * non `Record` total : exiger la forme complète interdirait au chargeur de
-	 * passer un ensemble vide — l'état neutre explicite que P-02 réclame quand la
-	 * mesure est indisponible. Ce qui n'y est pas se DIT, jamais ne s'invente.
+	 * LES DEUX TABLES DE MESURE SONT PARTIELLES, ET C'EST DÉLIBÉRÉ : exiger la forme
+	 * complète interdirait au chargeur de passer un ensemble vide — l'état neutre
+	 * explicite. Ce qui n'y est pas se DIT, jamais ne s'invente.
 	 */
 	interface Proprietes {
-		/** Le vecteur complet de l'état — domaine × profil × état. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Les notes lisibles, servies par le chargeur. */
 		notes: readonly Note[];
-		/** Les univers déclarés — vides tant que l'instance n'en porte aucun. */
 		univers: readonly Univers[];
-		/** Les domaines accessibles — vides tant que l'instance n'en porte aucun. */
 		domaines: readonly Domaine[];
 		/** L'utilisateur connecté. `null` : aucun compte connu. */
 		compte?: CompteAffiche | null;
-		/** Consultations des sept derniers jours, par note. */
 		mesures7j: Partial<Record<IdentifiantNote, number>>;
-		/** Ancienneté de modification, en jours, par note. */
 		modifications: Partial<Record<IdentifiantNote, number>>;
 		/** Les demandes de révision ouvertes — vides quand rien n'est signalé. */
 		revisions: readonly DemandeDeRevision[];
-		/** Description et modules activés, par domaine — lus en base. */
 		detailDomaines: Record<NomDeDomaine, DetailDeDomaine>;
 		/** Le catalogue des modules — nom et sous-titre de chaque clé. */
 		modules: Record<CleDeModule, Module>;
 		/**
-		 * Le nombre de dossiers du domaine, racine exclue — le compteur porté par
-		 * l'entrée « Dossiers » de la section « Accès ».
-		 *
-		 * ABSENT, IL EST DÉDUIT DU RANGEMENT DES NOTES, comme la maquette le
-		 * déduit : elle n'a que `window.CORPUS` pour le calculer. Cette déduction
-		 * ne voit PAS un dossier vide — mesuré sur le corpus, `Infrastructure`
-		 * porte sept dossiers sous sa racine et la déduction en rend six. Le
-		 * défaut reste la déduction pour que le gel ne bouge pas ; un chargeur qui
-		 * lit la table `dossiers` passe le compte réel.
+		 * Le nombre de dossiers du domaine, racine exclue. ABSENT, IL EST DÉDUIT DU
+		 * RANGEMENT DES NOTES, comme la maquette le déduit ; cette déduction ne voit
+		 * PAS un dossier vide — sept dossiers sous une racine, six déduits. Le défaut
+		 * reste la déduction pour que le gel ne bouge pas ; un chargeur qui lit la
+		 * table `dossiers` passe le compte réel.
 		 */
 		nombreDeDossiers?: number;
 	}
@@ -156,28 +110,18 @@
 	const reglage = $derived(vecteur ?? {});
 	const profil = $derived(String(reglage['role'] ?? 'referent'));
 	/**
-	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
-	 *
-	 * Le gel POSE les actions puis les cache —
-	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
-	 * (`mockups/V-11-page-domaine.html:338`) et
-	 * `.app:not([data-role="admin"]) .si-admin { display: none }` (`:339`).
-	 * Une maquette statique n'a pas de serveur : le masquage y est sa SEULE
-	 * possibilité. Le produit peut ne pas émettre le nœud, et P-09 l'exige —
-	 * « ni grisée, NI MASQUÉE ». La classe reste posée quand le nœud est rendu :
-	 * elle porte aussi le rendu. Énumération : `docs/omissions-p09.md`.
+	 * L'ABSENCE, ET NON LE MASQUAGE — `P-09`, `RG-M05-08`, `ARB-040`. Le gel pose
+	 * les actions puis les cache en feuille (`mockups/V-11-page-domaine.html:338`),
+	 * seule possibilité d'une maquette statique ; le produit ne les émet pas, « ni
+	 * grisée, NI MASQUÉE ». La classe reste posée quand le nœud est rendu : elle
+	 * porte aussi le rendu.
 	 */
 	const ecriture = $derived(profil !== 'lecteur');
 	const admin = $derived(profil === 'admin');
 	const vide = $derived(reglage['etat'] === 'vide');
 
-	/**
-	 * AUCUN DOMAINE — l'état vide, écrit plutôt que subi. La liste servie ne peut
-	 * pas être vide sur cette route : le chargeur résout le domaine de l'adresse
-	 * avant d'ouvrir l'écran. Le repli est là pour que la propriété soit honnête
-	 * sur toute sa forme — un tableau vide rendait `domaines[0].nom` et sortait
-	 * en 500.
-	 */
+	/** AUCUN DOMAINE — l'état vide, écrit plutôt que subi : un tableau vide rendait
+	    `domaines[0].nom` et sortait en 500. */
 	const AUCUN_DOMAINE: Domaine = { nom: '', univers: '', couleur: '' };
 
 	const courant = $derived(
@@ -185,35 +129,26 @@
 	);
 
 	/**
-	 * LA MISE EN ÉVIDENCE DU RAIL — LE DOMAINE COURANT, ET LUI SEUL.
-	 *
-	 * Le gel en marquait DEUX : `coquille()` de la maquette AJOUTE la marque et ne
-	 * la retire jamais (`V-11:1819-1832`), si bien que la planche rendait d'abord
-	 * « Infrastructure » — le domaine que son scénario charge — puis ajoutait le
-	 * domaine visité sans effacer le premier. La vue recopiait ce comportement,
-	 * et donc le NOM D'UN DOMAINE DU JEU DE DÉMONSTRATION, écrit en dur : sur une
-	 * instance qui ne porte pas ce nom, le rail marquait un nœud inexistant ; sur
-	 * une qui le porte, il le marquait sans qu'on l'ait visité.
-	 *
-	 * Une page de domaine n'a qu'un domaine courant. C'était déjà écrit ici, sous
-	 * la forme d'une dette assumée au banc ; le banc a été supprimé, la dette se
-	 * paie.
+	 * LA MISE EN ÉVIDENCE DU RAIL — LE DOMAINE COURANT, ET LUI SEUL. Le gel en
+	 * marquait DEUX : `coquille()` AJOUTE la marque et ne la retire jamais
+	 * (`V-11:1819-1832`), si bien que la planche marquait d'abord le domaine de son
+	 * scénario. La vue recopiait ce comportement, donc le NOM D'UN DOMAINE DU JEU DE
+	 * DÉMONSTRATION, écrit en dur : sur une instance qui ne le porte pas, le rail
+	 * marquait un nœud inexistant.
 	 */
 	const railCourant = $derived([courant.nom]);
-	/* `NomDeDomaine` est une chaîne : la table de détail peut ne rien porter
-	   pour un domaine créé dans la console. Le repli vide évite la page en
-	   erreur, et ne change rien au gel — tous ses domaines ont leur détail. */
+	/* `NomDeDomaine` est une chaîne : la table de détail peut ne rien porter pour un
+	   domaine créé dans la console. Le repli vide évite la page en erreur. */
 	const detail = $derived(detailDomaines[courant.nom] ?? { description: '', modules: [] });
 	const notesDuDomaine = $derived(vide ? [] : corpus.filter((n) => n.domaine === courant.nom));
 
-	/* ── Fraîcheur ──────────────────────────────────────────────────────────
-	   Le même composant que partout ailleurs (P-01) : la répartition compte les
-	   niveaux que le corpus porte. L'ordre des parts est celui du gel. */
+	/* Fraîcheur — le même composant que partout ailleurs (`ADR-005`) : la
+	   répartition compte les niveaux que le corpus porte, dans l'ordre du gel. */
 	interface Part {
 		readonly cle: 'frais' | 'vieil' | 'obs';
 		readonly classe: string;
-		/* Le pluriel n'est plus porté : les trois formes sont en `+s`, et
-		   `accord()` (`$lib/vocabulaire`) est la seule source de cette règle. */
+		/* Le pluriel n'est plus porté : les trois formes sont en `+s`, et `accord()`
+		   est la seule source de cette règle. */
 		readonly singulier: string;
 	}
 
@@ -244,12 +179,9 @@
 		return `${n} ${accord(n, p.singulier)}${contexte ? ` · ${contexte}` : ''}`;
 	}
 
-	/* ── Témoin de fraîcheur ─────────────────────────────────────────────────
-	   Rien n'est écrit ici : la classe, le nombre de barres et le libellé
-	   sortent tous les trois de `$lib/fraicheur`, l'implémentation unique de
-	   P-01 (ADR-005). Une fonction locale qui rendrait le nombre de barres
-	   serait `barresFraicheur` réécrite sans son nom — c'est exactement ce
-	   qu'elle était avant T-013c. */
+	/* Témoin de fraîcheur — rien n'est écrit ici : la classe, le nombre de barres et
+	   le libellé sortent tous les trois de `$lib/fraicheur`. Une fonction locale qui
+	   rendrait le nombre de barres serait `barresFraicheur` réécrite sans son nom. */
 
 	/* ── Santé du domaine ───────────────────────────────────────────────────── */
 	const jamais = $derived(notesDuDomaine.filter((n) => n.revise === null).length);
@@ -258,8 +190,8 @@
 	);
 	const brouillons = $derived(notesDuDomaine.filter((n) => n.brouillon).length);
 
-	/* ── Arborescence de dossiers, déduite du rangement réel des notes ───────
-	   Aucune structure séparée : le rangement affiché est celui qui existe. */
+	/* Arborescence de dossiers, déduite du rangement réel des notes : aucune
+	   structure séparée, le rangement affiché est celui qui existe. */
 	interface NoeudDeDossier {
 		readonly enfants: Record<string, NoeudDeDossier>;
 	}
@@ -311,9 +243,8 @@
 		return j === 1 ? 'hier' : `il y a ${j} j`;
 	}
 
-	/* ── Répartition par type ────────────────────────────────────────────────
-	   Le tri est décroissant sur le compte ; à égalité, l'ordre d'apparition est
-	   conservé — le tri du gel est stable et n'ajoute aucun départage. */
+	/* Répartition par type — tri décroissant sur le compte ; à égalité, l'ordre
+	   d'apparition est conservé, le tri du gel étant stable. */
 	const parType = $derived.by<readonly [string, number][]>(() => {
 		const table: Record<string, number> = {};
 		for (const n of notesDuDomaine) table[n.type] = (table[n.type] ?? 0) + 1;
@@ -346,27 +277,14 @@
 	});
 	const maxiContrib = $derived(contribs[0]?.notes ?? 1);
 
-	/** Nombre en français — `x.toLocaleString("fr-FR")` du gel. */
 	function nb(x: number): string {
 		return x.toLocaleString('fr-FR');
 	}
 </script>
 
-<!--
-	`svelte/no-navigation-without-resolve` EST DÉSACTIVÉE POUR LE BALISAGE DE
-	CETTE VUE, ET LA RAISON EST LA MÊME QUE POUR LE FIL D'ARIANE DE LA COQUILLE.
-
-	La règle veille à ce qu'une adresse interne passe par `resolve()` de
-	SvelteKit. Les adresses de cette vue sont COMPOSÉES par
-	`$lib/rangement/adresses.ts`, la fabrique unique du rangement : la règle
-	inspecte l'EXPRESSION du `href`, elle ne peut pas la suivre jusque là, et
-	elle ne peut pas non plus la vérifier ici. Faire passer une adresse déjà
-	composée par `resolve()` ne prouverait rien de plus et ajouterait une
-	seconde source de vérité pour une forme qui n'en a qu'une.
-
-	Même geste, même justification qu'en V-03, V-22, V-24 et
-	`src/lib/coquille/BarreSuperieure.svelte`.
--->
+<!-- `svelte/no-navigation-without-resolve` EST DÉSACTIVÉE POUR LE BALISAGE DE
+	CETTE VUE : ses adresses sont COMPOSÉES par `$lib/rangement/adresses.ts`, la
+	fabrique unique du rangement, que la règle ne sait pas suivre. -->
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
 <!-- Le témoin de fraîcheur — une seule fabrique, pour qu'il ne diverge pas. -->
 {#snippet temoin(n: Note)}
@@ -494,20 +412,16 @@
 		</div>
 
 		<!--
-			L'ACCÈS AUX MODULES EST RENDU QUEL QUE SOIT L'ÉTAT — ÉCART ASSUMÉ AU GEL.
-
-			Le gel masque le bloc entier sur un domaine sans note
-			(`mockups/V-11-page-domaine.html:882`), et le port l'a suivi. Dans une
-			maquette statique le masquage ne coûtait rien : aucune pastille n'y
-			navigue. Dans le produit il fermait le SEUL chemin vers la racine des
-			dossiers — donc vers le seul geste qui crée un dossier —, et un domaine
-			neuf n'a par définition aucune note. Le même masquage frappait aussi un
-			lecteur au périmètre étroit sur un domaine peuplé : `etat` se décide sur
-			les notes LISIBLES par l'appelant.
-
-			LA LIGNE DE PARTAGE : « Accès » offre des ENTRÉES, elles sont rendues
-			toujours ; les quatre panneaux qui suivent sont des MESURES de notes, et
-			une mesure sans note n'a rien à dire — ils restent dans `.si-peuple`.
+			L'ACCÈS AUX MODULES EST RENDU QUEL QUE SOIT L'ÉTAT — ÉCART ASSUMÉ AU GEL, qui
+			masque le bloc entier sur un domaine sans note
+			(`mockups/V-11-page-domaine.html:882`). Dans une maquette le masquage ne
+			coûtait rien ; dans le produit il fermait le SEUL chemin vers la racine des
+			dossiers — donc vers le seul geste qui crée un dossier —, et un domaine neuf
+			n'a par définition aucune note. Il frappait aussi un lecteur au périmètre
+			étroit sur un domaine peuplé : `etat` se décide sur les notes LISIBLES.
+			LA LIGNE DE PARTAGE : « Accès » offre des ENTRÉES, rendues toujours ; les
+			quatre panneaux qui suivent sont des MESURES de notes, et une mesure sans note
+			n'a rien à dire — ils restent dans `.si-peuple`.
 		-->
 		<div class="section-titre">
 			<h2>Accès</h2>

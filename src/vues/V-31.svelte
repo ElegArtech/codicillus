@@ -1,46 +1,26 @@
 <script lang="ts">
 	/**
-	 * V-31 — Console · Templates.
-	 * Route `/console/templates` (`docs/routes.md` §3.6).
+	 * V-31 — Console · Templates. Route `/console/templates` (`docs/routes.md` §3.6).
 	 *
-	 * COQUILLE DE FORME ABRÉGÉE, ENVELOPPE `console` — vérifié sur le gel par
-	 * `node verif/releve-vues.mjs --formes` (ARB-021, A-1 ; ARB-023).
+	 * Coquille de forme abrégée, enveloppe `console`.
 	 *
-	 * `data-numerote="non"` EST POSÉ SUR `div.app`, ET NULLE PART AILLEURS.
-	 * Le gel l'écrit là (`V-31:1488`) alors que la règle qui l'exploite vise
-	 * `body` (`docs/releve-vues.md` §7.7) : dans cette vue l'attribut ne produit
-	 * donc RIEN, et le gel le veut ainsi. Le porter sur `<body>` — ce que
-	 * `verif/references/protocole-app.json` → `attributs_de_corps` permettrait —
-	 * CHANGERAIT le rendu. C'est un comblement, et il serait rouge au banc.
+	 * `data-numerote="non"` EST POSÉ SUR `div.app`, ET NULLE PART AILLEURS : le gel
+	 * l'écrit là (`V-31:1488`) alors que la règle qui l'exploite vise `body`.
+	 * L'attribut ne produit donc RIEN ici, et le porter sur `<body>` CHANGERAIT le
+	 * rendu.
 	 *
-	 * CE QUI EST COMMUN, ET CE QUI NE L'EST PAS. `src/lib/console/` porte les
-	 * treize classes des dix vues de console et le panneau des six registres
-	 * (`sections.ts`, en-tête). Propres à V-31 : `rassurance`,
-	 * `structure-apercu`, `redaction-tpl`, `outils-red`, `oz`, `ob`, `ob--txt`,
-	 * et le modificateur de grille `tg--templates`. V-31 est la vue qui emploie
-	 * le PLUS d'homonymes du périmètre — quinze (`docs/releve-vues.md` §7.3),
-	 * dont `.selecteur`, `.prose` et `.contexte` : AUCUNE FACTORISATION.
+	 * `src/lib/console/` porte les classes communes aux dix vues de console. V-31 est
+	 * la vue qui emploie le PLUS d'homonymes du périmètre — quinze, dont
+	 * `.selecteur`, `.prose` et `.contexte` : AUCUNE FACTORISATION.
 	 *
-	 * LE PANNEAU `tiroir-form` NE PÈSE AUCUN PIXEL, ET C'EST LE GEL. Hors de
-	 * `div.app`, `.app[data-form="ouvert"] .tiroir-form` ne l'atteint pas. Le
-	 * NIVEAU 1 en est le seul juge (`CLAUDE.md` §6, P-3).
+	 * LE PANNEAU `tiroir-form` NE PÈSE AUCUN PIXEL : hors de `div.app`,
+	 * `.app[data-form="ouvert"] .tiroir-form` ne l'atteint pas. Aucun `autofocus` :
+	 * dans le dialogue, `showModal()` focalise déjà `button.dlg__fermer`.
 	 *
-	 * AUCUN `autofocus` : hors dialogue, le focus ne survit pas à `stabiliser()`
-	 * (`CLAUDE.md` §6, P-4). Dans le dialogue, `showModal()` — établi par le
-	 * banc (ARB-017) — focalise déjà `button.dlg__fermer`.
+	 * AUCUN CHIFFRE N'EST SAISI : la structure annoncée est extraite du contenu du
+	 * squelette — la règle du gel (`V-31:3295`), pas une table parallèle.
 	 *
-	 * AUCUN CHIFFRE N'EST SAISI (P-02) : le total d'utilisations est la somme
-	 * des utilisations de `TEMPLATES`, et la structure annoncée est extraite du
-	 * contenu du squelette — la règle du gel (`V-31:3295`), pas une table
-	 * parallèle.
-	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011).
-	 *
-	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette`, `dialog#palette` fermé,
-	 * et `div.planche`, bloc hors produit (§2.G).
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-31.css` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 * Le style est dans `src/socle.css` et `src/vues/V-31.css`.
 	 */
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import BoutonDeCreation from '$lib/console/BoutonDeCreation.svelte';
@@ -58,47 +38,32 @@
 	} from '../../seeds/corpus';
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état — formulaire × suppression. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-31')`. */
 		notes: readonly Note[];
-		/** Les univers déclarés, servis par la route. Vide : aucun périmètre. */
 		univers: readonly Univers[];
-		/** Les domaines déclarés, servis par la route. Vide : aucun domaine. */
 		domaines: readonly Domaine[];
-		/** L'utilisateur courant, servi par la route. */
 		compte: UtilisateurCourant;
-		/** Les squelettes déclarés, servis par la route. Vide : aucun squelette. */
 		templates: readonly Template[];
-		/** Les types de note proposés, servis par la route. */
 		typesNote: readonly TypeDeNote[];
 		/**
-		 * CE QUE LA VUE FAIT QUAND UN GESTE EST CONFIRMÉ — deux rappels, deux
-		 * gestes. Même partage qu'en `V-27`, `V-28`, `V-29`, `V-30` et `V-32` : la
-		 * vue tient l'état de son dialogue, la page tient le réseau. Le template est
-		 * désigné par son identifiant lisible, que `Template.id` porte déjà.
+		 * CE QUE LA VUE FAIT QUAND UN GESTE EST CONFIRMÉ — deux rappels, deux gestes.
+		 * Même partage qu'en `V-27`, `V-28`, `V-29`, `V-30` et `V-32` : la vue tient
+		 * l'état de son dialogue, la page tient le réseau.
 		 */
 		onSupprimer?: (template: string) => void;
 		/** `RG-REF-02` — « Cocher décochera "X", qui l'est actuellement » (`V-31:380`). */
 		onMarquerParDefaut?: (template: string) => void;
 		/**
-		 * DUPLIQUER UN TEMPLATE — `dupliquer(t)` du gel (`V-31:3385`), qui copie
-		 * tout sauf le caractère « par défaut » et suffixe le nom par « (copie) ».
-		 * Le suffixe est composé par la page, qui connaît le nom : la vue ne
-		 * transmet que la DÉSIGNATION du modèle, comme les deux rappels ci-dessus.
+		 * DUPLIQUER UN TEMPLATE — `dupliquer(t)` du gel (`V-31:3385`), qui copie tout
+		 * sauf le caractère « par défaut » et suffixe le nom par « (copie) ». Le
+		 * suffixe est composé par la page, qui connaît le nom.
 		 */
 		onDupliquer?: (template: string) => void;
 		/**
-		 * CE QUE LA VUE FAIT QUAND « CRÉER LE TEMPLATE » OU « ENREGISTRER » EST
-		 * CLIQUÉ — même partage qu'en `V-32` : la vue relève les cinq nœuds de son
-		 * panneau et rend la demande, la page tient le réseau et l'action.
-		 *
-		 * ELLE REND UNE PROMESSE parce qu'un refus s'affiche DANS le formulaire :
-		 * `#champ-nom` et `#erreur-nom` sont des nœuds du gel, révélés au refus, et
-		 * la vue a donc besoin de savoir ce que le serveur a répondu.
-		 *
-		 * `id` NUL DÉSIGNE UNE CRÉATION. C'est la seule chose qui distingue les
-		 * deux gestes : le formulaire, ses champs et sa validation sont les mêmes.
+		 * CE QUE LA VUE FAIT QUAND « CRÉER LE TEMPLATE » OU « ENREGISTRER » EST CLIQUÉ.
+		 * Elle rend une PROMESSE parce qu'un refus s'affiche DANS le formulaire :
+		 * `#champ-nom` et `#erreur-nom` sont des nœuds du gel, révélés au refus. `id` NUL
+		 * DÉSIGNE UNE CRÉATION : c'est la seule chose qui distingue les deux gestes.
 		 */
 		onEnregistrer?: (demande: {
 			readonly id: string | null;
@@ -124,13 +89,10 @@
 		onEnregistrer
 	}: Proprietes = $props();
 
-	/**
-	 * LA STRUCTURE ANNONCÉE EST EXTRAITE DU CONTENU, jamais lue ailleurs.
-	 * C'est la règle du gel (`V-31:3295`) : les titres de section du squelette
-	 * SONT sa structure. `Template.structure` du jeu de semence dit la même
-	 * chose, mais la lire ferait deux sources pour une seule — et le contenu
-	 * saisi dans le panneau, lui, n'a pas de table à consulter.
-	 */
+	/** LA STRUCTURE ANNONCÉE EST EXTRAITE DU CONTENU, jamais lue ailleurs — la règle
+	    du gel (`V-31:3295`) : les titres de section du squelette SONT sa structure.
+	    `Template.structure` dit la même chose, mais la lire ferait deux sources pour
+	    une seule. */
 	function structure(html: string): readonly string[] {
 		return [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map((m) =>
 			(m[1] ?? '').replace(/<[^>]*>/g, '').trim()
@@ -139,40 +101,23 @@
 
 	/**
 	 * Le nombre de notes créées à partir d'un squelette — OU SON ABSENCE.
-	 *
-	 * `Template.utilisations` est FACULTATIF dans `seeds/corpus.ts`, et la base
-	 * NE LE PORTE PAS : `src/lib/donnees/lecture.ts` le dit en propres termes —
-	 * « `utilisations` n'a AUCUNE colonne : c'est un compteur d'emploi » —, et
-	 * aucune colonne de `notes` ne rattache une note au template qui l'a amorcée.
-	 *
-	 * LE REPLI À ZÉRO ÉTAIT SANS CONSÉQUENCE TANT QUE LA VUE LISAIT LE JEU DE
-	 * SEMENCE, qui porte la clé pour ses quatre templates. Servi depuis la base,
-	 * il afficherait « 0 note » partout — et « 0 » n'est pas « indisponible » :
-	 * c'est exactement le zéro muet que `RG-M01-01` vise et que `P-02` proscrit.
-	 *
-	 * `null` DIT L'ABSENCE, ET LE RENDU LA MONTRE PAR « — » — la marque que le
-	 * gel emploie déjà pour un vide (`V-28:614`, `aSupprimer?.nom ?? '—'`). La
-	 * lacune est par ailleurs recensée dans `MESURES_DE_CONSOLE_SANS_CONTREPARTIE`
-	 * (`src/lib/donnees/consoles.ts`), de sorte qu'elle soit comptée et non
-	 * seulement racontée.
+	 * `Template.utilisations` est facultatif et LA BASE NE LE PORTE PAS : aucune
+	 * colonne de `notes` ne rattache une note au template qui l'a amorcée. Un repli à
+	 * zéro afficherait « 0 note » partout, et « 0 » n'est pas « indisponible » : c'est
+	 * le zéro muet que `RG-M01-01` vise. `null` DIT L'ABSENCE, que le rendu montre par
+	 * « — » ; la lacune est recensée dans `MESURES_DE_CONSOLE_SANS_CONTREPARTIE`.
 	 */
 	function utilisations(t: Template): number | null {
 		return t.utilisations ?? null;
 	}
 
-	/** L'absence de compteur, telle qu'elle s'écrit à l'écran. */
 	const INDISPONIBLE = '—';
 
 	/**
-	 * Le total du bandeau — ou `null` si AUCUN template ne porte le compteur.
-	 * Sommer en traitant l'absence comme un zéro rendrait un total faux ; le
-	 * total n'existe que si la donnée existe.
-	 *
-	 * LE REGISTRE VIDE EST TRAITÉ À PART, ET IL N'EST PAS UNE ABSENCE. `every()`
-	 * rend `true` par vacuité : sur une instance neuve, zéro template donnait
-	 * donc « Les — notes déjà créées », un tiret là où la réponse est ZÉRO et
-	 * qu'elle est CERTAINE. Sans template, aucune note n'a pu être amorcée : le
-	 * total se calcule, il ne se devine pas.
+	 * Le total du bandeau — ou `null` si AUCUN template ne porte le compteur : sommer
+	 * en traitant l'absence comme un zéro rendrait un total faux. LE REGISTRE VIDE EST
+	 * TRAITÉ À PART, ET IL N'EST PAS UNE ABSENCE : `every()` rend `true` par vacuité,
+	 * et zéro template donnait « Les — notes déjà créées » là où la réponse est ZÉRO.
 	 */
 	const totalUtilisations = $derived(
 		templates.length > 0 && templates.every((t) => utilisations(t) === null)
@@ -181,14 +126,10 @@
 	);
 
 	/**
-	 * L'ACCORD DE LA PHRASE DE RAPPEL — il court sur le nom, le participe ET le
-	 * verbe : « Les 1 notes déjà créées … ne bougeront pas » aurait été faux
-	 * trois fois pour un seul `+s`. Le total INDISPONIBLE ne porte aucun nombre
-	 * grammatical : la phrase reste alors au pluriel.
-	 *
-	 * L'ARTICLE « Les » A DISPARU, ET C'EST LE NAVIGATEUR QUI L'A DIT : il ne
-	 * s'accorde pas seul devant un chiffre — « La 0 note » sur une instance
-	 * neuve, mesuré à l'écran. Le compte se suffit à lui-même.
+	 * L'ACCORD DE LA PHRASE DE RAPPEL court sur le nom, le participe ET le verbe :
+	 * « Les 1 notes déjà créées … ne bougeront pas » aurait été faux trois fois pour
+	 * un seul `+s`. Le total INDISPONIBLE ne porte aucun nombre grammatical. L'ARTICLE
+	 * « Les » A DISPARU — il ne s'accorde pas seul devant un chiffre.
 	 */
 	const suiteDuTotal = $derived(
 		totalUtilisations === null
@@ -201,25 +142,21 @@
 	);
 
 	/**
-	 * LE SQUELETTE D'UN TEMPLATE NEUF est celui du gel (`V-31:3468`) : une
-	 * section et une ligne de texte d'exemple. Aucun template du jeu de semence
-	 * ne le porte — c'est le point de départ, pas une donnée.
+	 * LE SQUELETTE D'UN TEMPLATE NEUF est celui du gel (`V-31:3468`) : c'est le
+	 * point de départ, pas une donnée.
 	 */
 	const SQUELETTE_NEUF = "<h2>Première section</h2><p>Texte d'exemple, à remplacer.</p>";
 
-	/* ── L'état, tel que le vecteur de planche le décrit ───────────────────
-	   Le panneau et le dialogue ne s'ouvrent que si la position DÉVIE du
-	   réglage par défaut (`V-31:3567`). */
+	/* L'état, tel que le vecteur de planche le décrit. Le panneau et le dialogue ne
+	   s'ouvrent que si la position DÉVIE du réglage par défaut (`V-31:3567`). */
 	const reglage = $derived(vecteur ?? {});
 	const form = $derived(String(reglage['form'] ?? 'ferme'));
 	const sup = $derived(String(reglage['sup'] ?? 'defaut'));
 
 	/**
 	 * LE PANNEAU DEMANDÉ DEPUIS L'ÉCRAN — `ouvrirForm(t)` du gel (`V-31:3456`).
-	 *
-	 * `null` AU RENDU SERVEUR : l'écran reste celui que le vecteur décrit tant
-	 * que personne n'a cliqué, et les planches du banc ne bougent pas d'un pixel.
-	 * `template` nul dans la demande, c'est « Nouveau template » — `ouvrirForm(null)`.
+	 * `null` au rendu serveur. `template` nul dans la demande, c'est « Nouveau
+	 * template » — `ouvrirForm(null)`.
 	 */
 	let demandeDeFormulaire = $state<{ readonly template: string | null } | null>(null);
 
@@ -229,22 +166,16 @@
 		erreurNom = null;
 	}
 
-	/** `fermerForm()` du gel (`V-31:3494`) — le panneau se referme, rien n'est écrit. */
 	function fermerLeFormulaire(): void {
 		demandeDeFormulaire = null;
 		structureVive = null;
 		erreurNom = null;
 	}
 
-	/**
-	 * « NOUVEAU TEMPLATE » OUVRE LE PANNEAU — `V-31:3500` :
-	 * `document.getElementById("creer").addEventListener("click", …)`.
-	 *
-	 * L'ÉCOUTEUR EST POSÉ SUR LE NŒUD, PAS ÉCRIT DANS LE BALISAGE, et pour la
-	 * raison que `V-32` énonce déjà : `#creer` est rendu par
-	 * `BoutonDeCreation.svelte`, commun aux six vues à panneau, et qui ne prend
-	 * aucun comportement en propriété. `$effect` ne court qu'au navigateur.
-	 */
+	/** « NOUVEAU TEMPLATE » OUVRE LE PANNEAU — `V-31:3500`. L'écouteur est posé sur
+	    le nœud, pas écrit dans le balisage : `#creer` est rendu par
+	    `BoutonDeCreation.svelte`, commun aux six vues à panneau, et lui ajouter un
+	    comportement changerait les cinq autres. */
 	$effect(() => {
 		const bouton = document.getElementById('creer');
 		if (bouton === null) return;
@@ -270,14 +201,9 @@
 
 	/**
 	 * LA STRUCTURE ANNONCÉE PENDANT LA FRAPPE — `majStructure()` du gel
-	 * (`V-31:3434`), qui relit `f-contenu` à chaque saisie.
-	 *
-	 * ELLE EST TENUE À PART DU CONTENU RENDU, ET C'EST LE POINT DÉLICAT. Le
-	 * squelette est posé par `{@html}` : le relire dans la même expression
-	 * ferait re-rendre la zone de rédaction à chaque touche, et le point
-	 * d'insertion sauterait au début à chaque caractère. `structureVive` porte
-	 * donc la lecture du document, et le repli sur le contenu servi ne vaut que
-	 * tant que personne n'a rien tapé.
+	 * (`V-31:3434`). ELLE EST TENUE À PART DU CONTENU RENDU : le squelette est posé
+	 * par `{@html}`, et le relire dans la même expression ferait re-rendre la zone de
+	 * rédaction à chaque touche — le point d'insertion sauterait au début.
 	 */
 	let structureVive = $state<readonly string[] | null>(null);
 	const titresEdites = $derived(structureVive ?? (panneauOuvert ? structure(contenuEdite) : []));
@@ -317,16 +243,15 @@
 		return noeud === zone ? null : noeud;
 	}
 
-	/** `majStructure()` du gel — la structure suit ce que la zone contient. */
 	function relireLaStructure(): void {
 		const zone = zoneDeRedaction();
 		if (zone !== null) structureVive = structure(zone.innerHTML);
 	}
 
 	/**
-	 * INSÉRER UN BLOC — le geste du gel, remplacement de la ligne courante
-	 * compris. Le squelette est un contenu que l'utilisateur va remplacer : la
-	 * ligne où il se trouve cède la place, elle ne s'ajoute pas au-dessus.
+	 * INSÉRER UN BLOC — le geste du gel, remplacement de la ligne courante compris :
+	 * le squelette est un contenu que l'utilisateur va remplacer, et la ligne où il
+	 * se trouve cède la place.
 	 */
 	function insererUnBloc(cle: string): void {
 		const zone = zoneDeRedaction();
@@ -347,16 +272,10 @@
 		relireLaStructure();
 	}
 
-	/**
-	 * GRAS, ITALIQUE ET LES DEUX LISTES — `document.execCommand` du gel
-	 * (`V-31:3431`), employé tel quel.
-	 *
-	 * TIPTAP N'EST PAS EMPLOYÉ ICI, ET C'EST MESURÉ. La zone de rédaction est un
-	 * nœud du gel — `#f-contenu`, avec ses classes et son contenu servi ; la
-	 * remplacer par l'arbre d'un éditeur tiers changerait le balisage rendu, ce
-	 * que rien dans cet écran ne demande. La commande native fait exactement ce
-	 * que la maquette fait, sur le nœud que la maquette pose.
-	 */
+	/** GRAS, ITALIQUE ET LES DEUX LISTES — `document.execCommand` du gel
+	    (`V-31:3431`), employé tel quel. TIPTAP N'EST PAS EMPLOYÉ ICI : la zone de
+	    rédaction est un nœud du gel, et la remplacer par l'arbre d'un éditeur tiers
+	    changerait le balisage rendu. */
 	function appliquerUneCommande(commande: string): void {
 		const zone = zoneDeRedaction();
 		if (zone === null) return;
@@ -382,14 +301,10 @@
 		return noeud instanceof HTMLInputElement && noeud.checked;
 	}
 
-	/**
-	 * « CRÉER LE TEMPLATE » / « ENREGISTRER » — le geste de `V-31:3509`.
-	 *
-	 * LES DEUX REFUS SONT CEUX DU GEL, et ils sont éprouvés des DEUX côtés : ici
-	 * pour que la saisie ne parte pas pour rien, et à l'action pour qu'aucun
-	 * client ne les contourne. Ce n'est pas une double définition — c'est la même
-	 * règle, dont le serveur reste le juge : son message l'emporte.
-	 */
+	/** « CRÉER LE TEMPLATE » / « ENREGISTRER » — le geste de `V-31:3509`. Les deux
+	    refus sont ceux du gel, éprouvés des DEUX côtés : ici pour que la saisie ne
+	    parte pas pour rien, et à l'action pour qu'aucun client ne les contourne. Le
+	    serveur reste le juge. */
 	async function validerLeFormulaire(): Promise<void> {
 		const nom = valeurDe('f-nom').trim();
 		const doublon = templates.some((t) => t !== edite && t.nom.toLowerCase() === nom.toLowerCase());
@@ -423,13 +338,9 @@
 	const defautActuel = $derived(templates.find((t) => t.defaut && t !== edite) ?? null);
 
 	/**
-	 * LE TEMPLATE PROPOSÉ À LA SUPPRESSION (`V-31:3574`) : celui par défaut pour
-	 * la position « Template par défaut », le premier qui ne l'est pas pour
-	 * « Template ordinaire ». La position par défaut n'ouvre rien.
-	 */
-	/**
-	 * LE TEMPLATE DONT LA SUPPRESSION EST EXAMINÉE. `null` au rendu serveur :
-	 * l'écran reste celui que le vecteur décrit tant que personne n'a cliqué.
+	 * LE TEMPLATE DONT LA SUPPRESSION EST EXAMINÉE — celui par défaut pour la
+	 * position « Template par défaut », le premier qui ne l'est pas pour « Template
+	 * ordinaire » (`V-31:3574`). `null` au rendu serveur.
 	 */
 	let demande = $state<string | null>(null);
 
@@ -443,23 +354,13 @@
 
 	/**
 	 * `showModal()` — ET LA RAISON POUR LAQUELLE `boite.open` NE SUFFIT PAS À LE
-	 * DÉCIDER, qui a coûté un geste inatteignable.
-	 *
-	 * La vue rend `<dialog open={…}>` : Svelte pose donc l'attribut AVANT que cet
-	 * effet ne coure. `boite.open` vaut déjà vrai, la garde `if (!boite.open)`
-	 * renonce, et la boîte reste OUVERTE SANS ÊTRE MODALE — rendue dans le flux
-	 * de la superposition, sans fond, sans couche supérieure.
-	 *
-	 * Tant que rien ne la recouvrait, la différence ne se voyait pas. Depuis le
-	 * PIED DU PANNEAU DE FORMULAIRE, le tiroir passe DEVANT elle et son bouton de
-	 * validation devient inatteignable : le dialogue s'affiche, et le geste ne
-	 * part jamais. C'est `P-5` — un chemin que rien n'avait parcouru.
-	 *
-	 * `:modal` EST LA SEULE QUESTION QUI VAILLE, parce que c'est exactement celle
-	 * qu'on pose : cette boîte est-elle dans la couche supérieure ? Un dialogue
-	 * ouvert par attribut y répond non, et on le referme pour le rouvrir comme il
-	 * faut — `showModal()` sur un dialogue déjà ouvert lève `InvalidStateError`,
-	 * et l'exception avalée était précisément ce qui masquait le défaut.
+	 * DÉCIDER. La vue rend `<dialog open={…}>` : Svelte pose l'attribut AVANT que cet
+	 * effet ne coure, une garde sur `open` renonce, et la boîte reste OUVERTE SANS
+	 * ÊTRE MODALE — dans le flux, sans couche supérieure. Depuis le pied du panneau de
+	 * formulaire, le tiroir passe alors DEVANT elle et son bouton de validation
+	 * devient inatteignable. `:modal` est la seule question qui vaille ; on referme
+	 * pour rouvrir, `showModal()` sur un dialogue déjà ouvert levant
+	 * `InvalidStateError` — et l'exception avalée masquait le défaut.
 	 */
 	$effect(() => {
 		const boite = document.getElementById('dlg-supprimer');
@@ -474,15 +375,8 @@
 	});
 </script>
 
-<!--
-	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI.
-	La vue passait `instance.version` — le `1.0.0` d'`INSTANCE` du jeu de
-	démonstration, servi comme un fait sur le pied du rail d'une instance
-	réelle. Aucune route ne passe de version : `Coquille` lit celle du paquet
-	sur le contexte que le gabarit racine pose, et la propriété n'est plus
-	qu'un état vide explicite — hors gabarit racine, le pied ne nomme rien
-	plutôt que de nommer un numéro de démonstration.
--->
+<!-- LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI : la
+	vue passait le numéro du jeu de démonstration comme un fait. -->
 <Coquille
 	forme="abregee"
 	role="admin"
@@ -610,9 +504,8 @@
 					</div>
 					<!--
 						L'ÉTAT VIDE, PARCE QUE LE PRODUIT COMMENCE VIDE. Une instance neuve ne
-						porte aucun template : la boucle ne rendait rien, et l'écran se
-						réduisait à une ligne d'en-têtes suivie de blanc, sous une phrase qui
-						rassure sur des squelettes qui n'existent pas encore.
+						porte aucun template : l'écran se réduisait à une ligne d'en-têtes suivie
+						de blanc, sous une phrase qui rassure sur des squelettes inexistants.
 					-->
 				{:else}
 					<div class="zone-etat" id="liste-vide">
@@ -907,17 +800,10 @@
 					<span class="champ__label">Structure produite</span>
 					<div class="structure-apercu" id="apercu-structure">
 						<!--
-							LA CLÉ EST LE RANG, ET C'EST UNE OBLIGATION, PAS UN CHOIX DE STYLE.
-
-							Deux sections peuvent porter le MÊME titre — le bouton « H2 » insère
-							« Titre de section » autant de fois qu'on le clique, et c'est le geste
-							du gel. Une clé sur le titre ferait alors `each_key_duplicate`, et
-							Svelte abandonne l'hydratation de la PAGE ENTIÈRE : plus un écouteur
-							ne serait posé, sur aucun écran de cette route. Le rendu resterait
-							juste, ce qui rend le défaut invisible à l'œil.
-
-							Tant que la structure venait du contenu SERVI, le cas ne pouvait pas
-							se produire. Il le peut depuis que la frappe la met à jour.
+							LA CLÉ EST LE RANG, ET C'EST UNE OBLIGATION : deux sections peuvent porter le
+							MÊME titre — le bouton « H2 » insère « Titre de section » autant de fois qu'on
+							le clique. Une clé sur le titre ferait `each_key_duplicate`, et Svelte abandonne
+							l'hydratation de la PAGE ENTIÈRE, le rendu restant juste.
 						-->
 						{#if panneauOuvert}{#if titresEdites.length}{#each titresEdites as titre, rang (rang)}<span
 										>{titre}</span

@@ -1,95 +1,16 @@
 <script lang="ts">
 	/**
-	 * V-24 — Importer un lot de fichiers existants.
-	 * Route `/importer` (`verif/scenarios/V-24.json`).
+	 * V-24 — Importer un lot de fichiers existants. Route `/importer`.
 	 *
-	 * SEPT ÉTATS, UNE SEULE FENÊTRE — 7 couples, deux contrôles de planche :
-	 * l'étape du parcours (`et`, quatre positions) et l'issue de l'import
-	 * (`issue`, trois positions).
+	 * Quatre étapes, portées par `data-etape` de `div.app` que la feuille de la vue
+	 * lit pour l'avancement du fil de jalons ; hors application, `vecteur` en règle
+	 * la position.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LES TROIS ÉTATS D'ISSUE RENDENT L'ÉTAPE 1, ET C'EST MESURÉ
+	 * AUCUNE MINUTERIE N'EST ÉCRITE ICI ET AUCUN NOMBRE N'EST SAISI : l'étape 4 rend
+	 * un ÉTAT, jamais une transition (`ARB-011`). `TRAITES` est le seul nombre
+	 * déclaré ; tout le reste se déduit du lot.
 	 *
-	 * `issue-erreurs` porte déjà `identiqueA: "et-1"` au scénario. Les deux
-	 * autres — `issue-propre`, `issue-global` — ne le portent pas, et rendent
-	 * pourtant le MÊME écran : leur vecteur est `{ et: "1", issue: … }`, or le
-	 * gel ne relit `issue` que si `div.app` est à l'étape 4
-	 * (`V-24:3396`). Relevé au navigateur, dans les conditions du banc : les
-	 * quatre documents `et-1`, `issue-erreurs`, `issue-propre` et `issue-global`
-	 * sont identiques à l'octet sur `<main>`.
-	 *
-	 * CONSÉQUENCE, ET ELLE EST STRUCTURANTE : **LE RAPPORT D'IMPORT N'EST DANS
-	 * AUCUN DES SEPT ÉTATS.** `div#rapport` est vide et `hidden` partout ; les
-	 * trois issues — terminé avec erreurs, terminé sans erreur, échec global —
-	 * ne sont atteignables qu'en étape 4, que la planche ne combine pas. Le
-	 * squelette ne les écrit donc PAS : ce serait poser des règles qu'aucun cas
-	 * n'exerce (`CLAUDE.md` §6, P-5), et deviner leur rendu plutôt que le
-	 * porter. Remonté au rapport de lot.
-	 *
-	 * `RG-M12-04` — « un fichier en erreur n'interrompt jamais le lot » — est
-	 * donc rendu par ce que les états MONTRENT : la phrase de l'étape 4
-	 * (« le traitement va jusqu'au bout et le rapport détaillera chaque cas »),
-	 * le compteur « en échec » qui vit à côté des deux autres, et les motifs en
-	 * clair des fichiers écartés à l'étape 3. **CE LOT NE DÉCLARE TENUE AUCUNE
-	 * DES RÈGLES `RG-M12-01` À `RG-M12-11`** : ce sont des rendus, pas la preuve
-	 * d'une exigence.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * L'ÉTAPE 4 EST UN INSTANT FIGÉ — ARB-011
-	 *
-	 * Le gel avance par `setInterval(…, 130)` (`V-24:3122`) : un fichier tous
-	 * les 130 ms. Le banc, lui, ne patiente pas, il AVANCE une horloge virtuelle
-	 * de 1 000 ms après avoir réglé la planche (`conditions.mjs` du banc,
-	 * `AVANCE_ETAT_MS`), puis capture. Sept tics sont donc dus — 130, 260, …,
-	 * 910 ms —, et l'écran mesuré est celui du septième : barre à 23 %, septième
-	 * fichier du lot en cours, compteurs à 5 / 2 / 0.
-	 *
-	 * (Le chemin complet du module du banc n'est volontairement PAS cité :
-	 * depuis T-070 cette vue est servie par une route réelle, donc BÂTIE, et
-	 * `verif:demo:hors-production` cherche cette chaîne en texte brut dans le
-	 * produit construit — commentaires compris. Écart É-2 du lot T-070.)
-	 *
-	 * AUCUNE MINUTERIE N'EST ÉCRITE ICI, et aucun de ces chiffres n'est saisi
-	 * (P-02) : `TRAITES` est le seul nombre déclaré — le rang de l'instant
-	 * capturé —, et tout le reste s'en déduit sur `LOT_IMPORT`. Le squelette
-	 * rend l'ÉTAT, jamais la transition : « une capture est un instant, pas un
-	 * film » (ARB-011).
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * COQUILLE DE FORME ABRÉGÉE — ARB-021, A-1. `<main class="import-vue"
-	 * id="contenu">` (ARB-015), lien d'évitement et libellé par défaut
-	 * (ARB-019). Un attribut de données hors gabarit — `data-etape` (ARB-021,
-	 * A-2) —, que la feuille de la vue lit pour l'avancement du fil de jalons.
-	 *
-	 * TOUT VIENT DE CE QUE LA ROUTE SERT — le lot déposé, les libellés de format
-	 * et les domaines où écrire sont EXIGÉS en propriété. Ils étaient
-	 * optionnels, de défaut `LOT_IMPORT`, `FORMATS_IMPORT` et `DOMAINES` de
-	 * `seeds/corpus.ts` : un écran d'import sans chargeur montrait donc trente
-	 * fichiers de démonstration comme s'ils venaient d'être déposés.
-	 * L'arborescence détectée, le récapitulatif chiffré, les fichiers écartés et
-	 * leurs motifs sont tous DÉRIVÉS du lot par les fonctions du gel,
-	 * transcrites ici : `arborescenceLot()` (`V-24:2532`) et `resumeLot()`
-	 * (`V-24:2552`).
-	 *
-	 * `JOURNAL_IMPORTS` n'est PAS employé : le journal des imports est une
-	 * section de console (ARB-003, V-35), et aucun des sept états de V-24 ne le
-	 * montre. Le porter ici serait inventer un écran.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * AUCUN COMPORTEMENT — ARB-011. Le choix d'un scénario, le dépôt, le
-	 * glisser-déposer, la navigation du parcours, le renoncement, la relance et
-	 * les notifications sont du temps 3. `div.notifs` est rendu vide.
-	 *
-	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette` et `dialog.palette#palette`
-	 * FERMÉ — `docs/releve-vues.md` §4.1 les mesure : aucune boîte de rendu,
-	 * aucun pixel, aucune entrée dans l'instantané ARIA. Et `div.planche`, bloc
-	 * hors produit (`docs/DESIGN.md` §2.G), que le banc retire lui-même.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-24.css`, posé par `node verif/feuilles-de-vue.mjs V-24
-	 * --installer` (P-6.3). Les `style=` reproduits figurent tous à l'ensemble
-	 * clos du gel de V-24 (ARB-016, P-6.4), y compris la largeur que le script
-	 * de la maquette pose par `.style.width`.
+	 * Le style est dans `src/socle.css` et `src/vues/V-24.css`.
 	 */
 	import type {
 		Domaine,
@@ -105,11 +26,7 @@
 	import { adressesParLesNoms } from '$lib/rangement/adresses';
 	import { accord } from '$lib/vocabulaire';
 
-	/**
-	 * LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM. La
-	 * table vient du gabarit racine, par le contexte de coquille ; hors
-	 * application elle est vide et la dérivation du nom s'applique, comme avant.
-	 */
+	/** Les adresses se composent sur l'identifiant persisté, jamais sur le nom. */
 	const adresses = adressesParLesNoms(designationsDeCoquille());
 	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
 	import {
@@ -119,23 +36,12 @@
 	} from '$lib/donnees/scenarios-d-import';
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état — deux contrôles de planche. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Les notes du périmètre, telles que le chargeur les lit. */
 		notes: readonly Note[];
 		/**
-		 * CE QUE LA ROUTE SERT EST EXIGÉ, LE RESTE A UN ÉTAT VIDE.
-		 *
-		 * Les sources de cet écran étaient OPTIONNELLES, de défaut la constante de
-		 * `seeds/corpus.ts` : une route qui en oubliait une servait le lot, les
-		 * domaines et l'identité du jeu de démonstration sans que rien ne
-		 * proteste. `/importer` sert les domaines où écrire, le lot déposé, les
-		 * libellés de format et le domaine proposé : ces quatre-là sont EXIGÉS, et
-		 * une route qui en oublierait un ne bâtirait plus.
-		 *
-		 * `univers` et `compte` restent optionnelles, avec un ÉTAT VIDE pour
-		 * défaut — le contexte de coquille porte le rail et l'identité réels.
-		 * `instance` a disparu : le contexte sert déjà la version.
+		 * CE QUE LA ROUTE SERT EST EXIGÉ : le lot, les domaines, les libellés de format
+		 * et le domaine proposé étaient optionnels, de défaut les constantes de
+		 * `seeds/corpus.ts`. Le reste a un état vide.
 		 */
 		/** Les univers déclarés. Absente, aucun univers — jamais ceux du jeu. */
 		univers?: readonly Univers[];
@@ -143,82 +49,44 @@
 		domaines: readonly Domaine[];
 		/** Le compte connecté. Absente, un compte VIDE — jamais celui du jeu. */
 		compte?: CompteAffiche | null;
-		/** Le lot déposé, tel que l'analyse le rend. */
 		lotImport: LotDImport;
-		/**
-		 * Les libellés des formats admis — `LIBELLE_PAR_FORMAT` de
-		 * `$lib/donnees/import.ts`, un référentiel du produit. La table est reçue
-		 * PARTIELLE : un service de conversion qui n'en reconnaîtrait qu'une partie
-		 * ne doit pas être empêché de le dire, et le rendu retombe déjà sur
-		 * l'extension quand le libellé manque.
-		 */
+		/** Les libellés des formats admis. Reçue PARTIELLE : le rendu retombe sur l'extension. */
 		formatsImport: Partial<Record<FormatDImport, string>>;
 		/**
-		 * UN LOT DÉJÀ DÉPOSÉ, REMIS PAR L'ÉCRAN QUI L'A REÇU — le gel de V-35.
-		 *
-		 * `mockups/V-35-console-imports.html:3000` fait atterrir le lot de la
-		 * console « à l'étape du choix de scénario » : les fichiers sont donc
-		 * REÇUS AVANT que le scénario ne soit choisi, et le parcours doit les
-		 * tenir pendant l'étape 1. Cette propriété est ce qui les tient.
-		 *
-		 * VIDE, RIEN NE CHANGE — le parcours s'ouvre sur une étape 1 vierge, et
-		 * le dépôt se fait à l'étape 2 comme le gel de V-24 le dessine. La zone
-		 * de dépôt de l'étape 2 reste vivante dans les deux cas : « Remplacer le
-		 * lot » du bloc `lot-depose` la rouvre.
-		 *
-		 * LE LOT N'EST PAS ANALYSÉ POUR AUTANT. Le classement demande une cible,
-		 * et la cible demande un scénario : le lot attend, exactement là où le
-		 * gel le dit.
+		 * Un lot déjà déposé, remis par l'écran qui l'a reçu — le dépôt de la console
+		 * (`mockups/V-35-console-imports.html:3000`) fait atterrir les fichiers AVANT le
+		 * choix du scénario, et l'étape 1 doit les tenir. Vide, le parcours s'ouvre sur
+		 * une étape 1 vierge. Le lot n'est pas analysé pour autant : le classement
+		 * demande une cible, donc un scénario.
 		 */
 		lotRecu?: readonly File[];
-		/**
-		 * L'ANALYSE D'UN LOT DÉPOSÉ — ce que la route fait du dépôt.
-		 *
-		 * Absente, le parcours reste celui de la planche : les vignettes se
-		 * choisissent, le pied avance, et rien n'est envoyé nulle part. Fournie,
-		 * l'étape 2 devient un vrai dépôt : les fichiers partent au serveur, qui
-		 * les CLASSE sans rien écrire — c'est l'étape 3 de `UC-M12-04`, « rien
-		 * n'a encore été écrit » — et rend le lot tel qu'il sera traité.
-		 *
-		 * Rend `null` quand l'analyse a échoué : le parcours reste alors où il est,
-		 * et rien n'est inventé.
-		 */
+		/** L'analyse d'un lot déposé. Absente, rien n'est envoyé nulle part. Fournie, le
+		    serveur CLASSE le lot sans rien écrire — `UC-M12-04` §3, « rien n'a encore été
+		    écrit ». Un refus laisse le parcours où il est. */
 		analyser?: (
 			fichiers: readonly File[],
 			reglages: ReglagesDuDepot
 		) => Promise<Issue<AnalyseDuLot>>;
 		/**
-		 * L'EXÉCUTION DU LOT — réelle ou simulée, c'est le même appel. `RG-M12-02` :
-		 * « un seul chemin de code, donc un rapport de simulation qui dit
-		 * rigoureusement ce que fera l'import réel ». La simulation n'est pas un
-		 * autre geste, c'est un réglage du même.
+		 * L'exécution du lot — réelle ou simulée, c'est le même appel : `RG-M12-02`
+		 * veut un seul chemin de code. La simulation est un réglage, pas un geste.
 		 */
 		importer?: (
 			fichiers: readonly File[],
 			reglages: ReglagesDuDepot
 		) => Promise<Issue<RapportAffiche>>;
 		/**
-		 * LE DOMAINE DE DESTINATION PROPOSÉ — exigé.
-		 *
-		 * Il était optionnel et retombait sur `compte.domaine`, dont le défaut
-		 * était `MOI` du jeu de démonstration : un import sans destination visait
-		 * alors « Infrastructure », un domaine que rien ne pose sur une instance
-		 * réelle. La route le sert toujours ; la branche de repli est supprimée,
-		 * pas neutralisée.
+		 * Le domaine de destination proposé — EXIGÉ. Il retombait sur `compte.domaine`,
+		 * dont le défaut était celui du jeu de démonstration : ne remets pas de repli.
 		 */
 		domaineParDefaut: string;
 	}
 
 	/**
-	 * CE QU'UN GESTE SERVEUR REND — le résultat, OU LE MOTIF DE SON REFUS.
-	 *
-	 * Les deux rappels rendaient `null` sur tout ce qui n'était pas un succès, et
-	 * `avancer()` retournait en silence : « Analyser le lot » ne produisait alors
-	 * RIEN DU TOUT, sans message — une impasse muette. `P-09` veut qu'une action
-	 * offerte aboutisse ; à défaut, elle doit au moins DIRE pourquoi elle refuse.
-	 *
-	 * Le motif est un CODE, comme les motifs de classement : sa mise en français
-	 * est ici, dans `LIBELLE_DU_REFUS`.
+	 * Ce qu'un geste serveur rend : le résultat, OU le motif de son refus. Les deux
+	 * rappels rendaient `null` sur tout ce qui n'était pas un succès, et « Analyser
+	 * le lot » ne produisait alors rien du tout, sans message. Le motif est un code,
+	 * mis en français par `LIBELLE_DU_REFUS`.
 	 */
 	type Issue<T> = { readonly valeur: T } | { readonly refus: string };
 
@@ -226,12 +94,8 @@
 	interface AnalyseDuLot {
 		readonly lot: LotDImport;
 		/**
-		 * LES DOSSIERS QUE LA CIBLE PORTE DÉJÀ, en chemins relatifs à elle.
-		 *
-		 * L'aperçu marquait « dossier créé » sur chaque nœud, sans condition, et
-		 * comptait tous les segments dans « dossiers créés ». Sur le rejeu d'un lot
-		 * déjà importé, l'écran annonçait donc trois créations que l'import n'allait
-		 * pas faire. `UC-M12-04` §3 parle des dossiers « qui seront créés ».
+		 * Les dossiers que la cible porte DÉJÀ, en chemins relatifs à elle : sans
+		 * eux, le rejeu d'un lot annonçait des créations qui n'auraient pas lieu.
 		 */
 		readonly dossiersExistants: readonly string[];
 	}
@@ -239,24 +103,17 @@
 	/** Ce que le dépôt règle, et que les deux appels transportent. */
 	interface ReglagesDuDepot {
 		/**
-		 * LE SCÉNARIO RETENU — il ne partait NULLE PART, et c'est ce qui rendait
-		 * la promesse dangereuse : un lot choisi « domaine complet » arrivait au
-		 * serveur sans rien qui le distingue, et se rangeait dans le domaine
-		 * proposé par défaut. Il voyage désormais, et l'action le refuse quand il
-		 * n'est pas celui que l'import exécute.
+		 * Le scénario retenu. Il ne partait nulle part : un lot arrivait au serveur
+		 * sans rien qui le distingue et se rangeait dans le domaine par défaut.
 		 */
 		readonly scenario: string;
 		readonly domaine: string;
 		readonly simulation: boolean;
 	}
 
-	/**
-	 * LE RAPPORT D'UN LOT, TEL QUE L'ÉCRAN LE REND — `RG-M12-04` et `RG-M12-09`.
-	 *
-	 * Chaque nombre vient du traitement réel : rien n'est déduit ici, et surtout
-	 * rien n'est figé (`P-02`). Les noms sont ceux de `RapportDImport`
-	 * (`$lib/donnees/import.ts`), à la mise en forme près.
-	 */
+	/** Le rapport d'un lot tel que l'écran le rend — `RG-M12-04` et `RG-M12-09`.
+	    Chaque nombre vient du traitement réel ; les noms sont ceux de
+	    `RapportDImport`. */
 	interface RapportAffiche {
 		readonly simulation: boolean;
 		readonly total: number;
@@ -265,7 +122,6 @@
 		readonly ignores: number;
 		readonly echecs: number;
 		readonly dossiersCrees: number;
-		/** Le domaine où le lot a atterri — la section « Structure créée » le nomme. */
 		readonly domaine: string;
 		/** `RG-M12-04` — chaque fichier en échec, avec sa cause en clair. */
 		readonly enEchec: readonly { readonly chemin: string; readonly motif: string }[];
@@ -274,7 +130,6 @@
 			readonly chemin: string;
 			readonly renvois: readonly string[];
 		}[];
-		/** Les notes écrites, créées ou mises à jour, avec leur adresse. */
 		readonly ecrites: readonly {
 			readonly identifiant: string;
 			readonly titre: string;
@@ -298,23 +153,12 @@
 		domaineParDefaut
 	}: Proprietes = $props();
 
-	/**
-	 * LE COMPTE RENDU QUAND AUCUNE IDENTITÉ N'EST SERVIE — un état VIDE, jamais
-	 * un compte du jeu de démonstration. En application, le contexte de coquille
-	 * l'emporte et cette valeur n'atteint aucun écran.
-	 */
+	/** Aucune identité servie : un compte VIDE, jamais celui du jeu de démonstration. */
 	const COMPTE_VIDE = { nom: '', initiales: '', role: '', domaine: '' } satisfies CompteAffiche;
 	const compteRendu = $derived(compte ?? COMPTE_VIDE);
 
-	/* ═══════════════════════════════════════════════════════════════════════
-	   L'ÉTAT DU PARCOURS — local, et seulement quand il y a un parcours
-
-	   `ARB-011` reste vrai de la PLANCHE : sans les deux rappels ci-dessus,
-	   aucun de ces états ne bouge, et les sept captures sont exactement celles
-	   du vecteur. Ce qui suit ne s'anime que sur une route réelle, où le gel
-	   lui-même s'anime — `aller()`, `deposer()`, `lancerImport()` du script de
-	   la maquette. La transition n'est pas inventée : elle est transcrite.
-	   ═══════════════════════════════════════════════════════════════════════ */
+	/* L'état du parcours — local, et vivant seulement quand une route donne les
+	   deux rappels. Sans eux, la vue reste la planche que le vecteur règle. */
 
 	/** Le parcours est-il vivant ? Il l'est dès qu'une route lui donne prise. */
 	const vivant = $derived(analyser !== undefined && importer !== undefined);
@@ -322,17 +166,9 @@
 	let etapeLocale = $state(1);
 	let scenarioLocal = $state<string | null>(null);
 	/**
-	 * LE LOT TENU PAR LE PARCOURS — vide au départ, SAUF si un écran l'a déjà
-	 * reçu et nous le remet (`lotRecu`, le dépôt de la console).
-	 *
-	 * L'initialisation est faite ici et pas dans un effet : un lot remis est
-	 * connu au montage, et le repasser par un effet ferait un premier rendu où
-	 * l'étape 2 s'annonce vide avant de se corriger.
-	 *
-	 * LA VALEUR INITIALE DE `lotRecu` EST BIEN CE QU'ON VEUT, et l'avertissement
-	 * `state_referenced_locally` ne s'applique donc pas : un lot est REMIS une
-	 * fois, à l'ouverture du parcours. Le suivre ensuite écraserait le lot que
-	 * l'utilisateur aurait remplacé à l'étape 2 par celui de son arrivée.
+	 * Le lot tenu par le parcours, initialisé ici et non dans un effet : un lot remis
+	 * est connu au montage. La valeur INITIALE de `lotRecu` est bien ce qu'on veut —
+	 * le suivre écraserait le lot remplacé à l'étape 2.
 	 */
 	// svelte-ignore state_referenced_locally
 	let fichiers = $state<readonly File[]>(lotRecu);
@@ -348,15 +184,10 @@
 	/** Le motif du dernier refus serveur, en code. `null` : aucun refus en cours. */
 	let refus = $state<string | null>(null);
 
-	/** Le domaine effectivement visé — celui qu'on a choisi, sinon le proposé. */
 	const domaineCible = $derived(domaineRetenu || domaineParDefaut);
 	/**
-	 * LE DOMAINE TEL QUE L'ILLUSTRATION LE NOMME — jamais une flèche orpheline.
-	 *
 	 * `domaineParDefaut` vaut la chaîne vide quand aucune cible n'est ouverte au
-	 * compte (`importer/+page.server.ts`, `cibles[0]?.nom ?? ''`). L'illustration
-	 * dit alors ce qu'elle montre — le domaine que l'utilisateur choisira — au
-	 * lieu de nommer un domaine du jeu de démonstration.
+	 * compte : l'illustration nomme alors le geste, jamais un domaine du jeu.
 	 */
 	const domaineIllustre = $derived(domaineCible === '' ? 'le domaine choisi' : domaineCible);
 
@@ -371,31 +202,18 @@
 				: 1
 	);
 
-	/**
-	 * LE SCÉNARIO CHOISI ET LE LOT DÉPOSÉ ne sont pas des réglages de planche :
-	 * ils sont POSÉS par le déplacement d'étape, parce qu'on ne peut pas être à
-	 * l'étape suivante sans avoir répondu à la précédente — `V-24:3387`. À
-	 * l'étape 1, aucun scénario n'est retenu et aucune vignette n'est enfoncée.
-	 */
+	/* Le scénario choisi et le lot déposé ne sont pas des réglages de planche :
+	   ils sont posés par le déplacement d'étape (`V-24:3387`). */
 	const scenarioChoisi = $derived<string | null>(
 		vivant ? scenarioLocal : etape >= 2 ? SCENARIO_LIVRE : null
 	);
 	const depose = $derived(vivant ? fichiers.length > 0 : etape >= 3);
 
-	/* ── Le scénario offert ───────────────────────────────────────────────────
-	   `SCENARIOS` (`V-24:2871`). Ils appartiennent à la maquette, pas au corpus,
-	   et sont transcrits au caractère près. L'illustration est décomposée en
-	   segments plutôt que gardée en chaîne de balisage : le gel l'injecte par
-	   `innerHTML`, ce qui demanderait ici un `{@html}` que rien n'oblige à
-	   employer.
-
-	   LE GEL EN DESSINE TROIS, ET L'IMPORT N'EN EXÉCUTE QU'UN. Les deux autres
-	   n'étaient pas seulement inertes : leur choix ne partait nulle part, et le
-	   lot atterrissait dans le domaine proposé par défaut — un domaine que
-	   l'utilisateur n'avait pas choisi, alors qu'il croyait en créer un. Ce qui
-	   est offert ici est donc ce que `scenarioEstLivre()` reconnaît, et rien de
-	   plus ; ce qui manque aux deux autres est nommé, exigence par exigence,
-	   dans `$lib/donnees/scenarios-d-import.ts`. */
+	/* Le scénario offert — `SCENARIOS` (`V-24:2871`), transcrit de la maquette.
+	   L'illustration est en segments plutôt qu'en balisage : le gel l'injecte par
+	   `innerHTML`. LE GEL EN DESSINE TROIS, L'IMPORT N'EN EXÉCUTE QU'UN : le choix
+	   des deux autres ne partait nulle part et le lot atterrissait dans le domaine
+	   par défaut. N'offre que ce que `scenarioEstLivre()` reconnaît. */
 
 	interface SegmentIllustre {
 		readonly gras: boolean;
@@ -409,28 +227,9 @@
 	}
 
 	/**
-	 * L'ILLUSTRATION NE NOMME PLUS RIEN DU JEU DE DÉMONSTRATION.
-	 *
-	 * Deux corrections, et la seconde défait un arbitrage qui ne tenait pas.
-	 *
-	 * LA CIBLE, d'abord : l'illustration écrivait le nom d'un domaine du jeu, à
-	 * douze lignes du `$derived` qui porte la destination réelle ; sur toute
-	 * autre instance, l'écran annonçait un domaine que rien ne posait.
-	 *
-	 * LES DEUX DOSSIERS, ensuite. Il avait été tranché qu'ils restaient ce
-	 * qu'ils sont — un arbre de FICHIERS sur le disque de l'utilisateur, du
-	 * côté GAUCHE de la flèche. C'était faux de moitié : les mêmes deux noms
-	 * étaient répétés EN GRAS À DROITE, là où la flèche désigne des dossiers DU
-	 * PRODUIT, et c'étaient deux valeurs de `CORPUS[].dossier`. L'écran
-	 * promettait donc à l'installateur deux dossiers que son domaine ne porte
-	 * pas.
-	 *
-	 * L'exemple reste un exemple, il cesse d'être celui du jeu : deux noms
-	 * quelconques d'arborescence de bureau, absents du jeu comme du reste de
-	 * `src/vues/`. Aucune aiguille du contrôle de paquet ne pouvait l'attraper —
-	 * elle ne pose que les chemins entiers, jamais leurs segments — et c'est
-	 * `import-promesses.test.ts` qui tient désormais la porte, sur une liste
-	 * LUE de `seeds/corpus.ts`.
+	 * L'ILLUSTRATION NE NOMME RIEN DU JEU DE DÉMONSTRATION — ni la cible, ni les deux
+	 * dossiers en gras à DROITE de la flèche, qui désignent des dossiers du produit.
+	 * `import-promesses.test.ts` tient la porte, sur une liste lue de `seeds/corpus.ts`.
 	 */
 	const SCENARIOS: readonly Scenario[] = $derived([
 		{
@@ -451,26 +250,15 @@
 	]);
 
 	/**
-	 * CE QUI EST OFFERT — le filtre est ici, et il est PORTÉ PAR LA SOURCE.
-	 *
-	 * Écrire une liste d'une entrée aurait tenu, et se serait périmée en
-	 * silence le jour où un lot livrerait `UC-M12-02` : le filtre lit le module
-	 * qui déclare ce que l'import fait, de sorte qu'y ajouter un scénario livré
-	 * suffit à le rendre offert.
+	 * Le filtre lit le module qui déclare ce que l'import exécute : y ajouter un
+	 * scénario livré suffit à le rendre offert.
 	 */
 	const SCENARIOS_OFFERTS = $derived(SCENARIOS.filter((s) => scenarioEstLivre(s.id)));
 
 	const scenarioCourant = $derived(SCENARIOS_OFFERTS.find((s) => s.id === scenarioChoisi) ?? null);
 
-	/* ── Étape 2 — le dépôt ───────────────────────────────────────────────────
-	   `rendreDepot()` (`V-24:2918`). Le gel y pose trois réglages, un par
-	   scénario, et n'en montre qu'un à la fois. Il n'en reste que deux ici : le
-	   champ du nom de domaine est parti avec le scénario qui le portait, et la
-	   case de simulation garde la sienne — son scénario n'étant plus offert,
-	   elle ne l'est plus non plus. Un seul réglage est donc visible, celui du
-	   domaine de destination. La liste des formats admis et les options de
-	   domaine ne sont peuplées QUE lorsque l'étape 2 a été traversée : aux
-	   étapes 1, 3 et 4 elles restent vides, et le gel le montre. */
+	/* Étape 2 — le dépôt (`rendreDepot()`, `V-24:2918`). Les formats admis et les
+	   options de domaine ne sont peuplés qu'une fois l'étape 2 traversée. */
 
 	/** Les cinq familles annoncées comme admises — `V-24:2929`. */
 	const FORMATS_ADMIS: readonly string[] = [
@@ -489,24 +277,15 @@
 			: '—'
 	);
 
-	/* ── Le lot, et ce qu'on en déduit ────────────────────────────────────────
-	   `resumeLot()` (`V-24:2552`) et `arborescenceLot()` (`V-24:2532`). Aucun
-	   chiffre n'est saisi : tout est compté sur `LOT_IMPORT` (P-02). */
+	/* Le lot, et ce qu'on en déduit — `resumeLot()` (`V-24:2552`) et
+	   `arborescenceLot()` (`V-24:2532`). Aucun chiffre n'est saisi. */
 
 	const LOT = $derived(lotAnalyse ?? lotImport);
 
 	/**
-	 * LES MOTIFS EN CLAIR — les codes du classement, mis en français ICI.
-	 *
-	 * `$lib/donnees/import.ts` le dit de lui-même : « les motifs sont donc des
-	 * codes stables, que la vue mettra en français quand elle en aura la prise.
-	 * Le gel de V-24 en porte d'ailleurs les formulations, dans le lot d'exemple
-	 * du jeu de semence : elles seront reprises là-bas. » C'est fait, et les
-	 * quatre phrases que le lot d'exemple écrit sont reprises au caractère près.
-	 *
-	 * UNE VALEUR INCONNUE PASSE TELLE QUELLE, et ce n'est pas une négligence :
-	 * le lot d'exemple du jeu de semence porte déjà des PHRASES dans ce champ, et
-	 * elles doivent traverser sans être traduites deux fois.
+	 * Les codes de motif du classement, mis en français ici — les formulations du
+	 * gel, au caractère près. Une valeur inconnue passe telle quelle : le lot
+	 * d'exemple porte déjà des phrases dans ce champ, à ne pas traduire deux fois.
 	 */
 	const LIBELLE_DU_MOTIF: Readonly<Record<string, string>> = {
 		'format-non-converti':
@@ -527,18 +306,13 @@
 	};
 
 	/**
-	 * LES FRAGMENTS DE PHRASE DU GEL QUI ENTOURENT UN SEGMENT GRAS.
-	 *
-	 * Ils sont nommés plutôt qu'écrits au balisage pour une raison de rendu, et
-	 * elle est mesurée : Svelte ÉLAGUE les blancs en bord d'élément (`CLAUDE.md`
-	 * §6, P-8), et « reçus depuis » perdrait ses espaces encadrants — le texte
-	 * rendu serait « 30 fichiersreçus depuisExploitation ». Portés dans une
-	 * expression, les blancs survivent. Les phrases sont celles de
-	 * `rendreRapport()` et de `deposer()`, au caractère près.
+	 * Les fragments de phrase du gel qui entourent un segment gras, nommés plutôt
+	 * qu'écrits au balisage pour une raison de rendu : Svelte élague les blancs en
+	 * bord d'élément, et « reçus depuis » perdrait ses espaces encadrants — « 30
+	 * fichiersreçus depuisExploitation ». Portés dans une expression, ils survivent.
 	 */
 	const PHRASES = {
-		/* Deux de ces fragments s'ACCORDENT avec le compte qui les précède : ils
-		   sont des fonctions, et les blancs de bord restent dans l'expression. */
+		/* Deux fragments s'accordent avec le compte qui les précède. */
 		recusDepuis: (n: number): string => ` ${accord(n, 'reçu')} depuis `,
 		bilanAvecErreurs: "L'import est allé jusqu'au bout : ",
 		bilanSansErreur: 'Tous les fichiers retenus ont été convertis. ',
@@ -547,11 +321,8 @@
 	};
 
 	/**
-	 * LA FIN DU BILAN D'UN IMPORT PARTIELLEMENT EN ÉCHEC — l'accord y court sur
-	 * TOUTE la phrase, pas sur un nom : verbe, article, possessif et pronom
-	 * changent avec le compte. Un `+s` sur « fichiers » aurait laissé « Les 1
-	 * fichiers en échec sont listés […] ils n'ont bloqué aucun des autres ».
-	 * C'est le cas de syntagme que la seconde forme d'`accord()` sert.
+	 * L'accord court ici sur TOUT le syntagme — verbe, article, possessif et
+	 * pronom —, pas sur un nom : c'est la seconde forme d'`accord()`.
 	 */
 	function bilanDesEchecs(devenues: number, echecs: number): string {
 		return (
@@ -570,17 +341,10 @@
 	}
 
 	/**
-	 * LES REFUS, MIS EN FRANÇAIS — même régime que les motifs.
-	 *
-	 * QUATRE CODES VIENNENT DE LA ROUTE, LE CINQUIÈME NON. Cible inconnue, cible
-	 * interdite, lot vide, scénario non livré : ce sont les quatre seuls motifs
-	 * que les actions rendent, chacun avant la moindre écriture. Les trois
-	 * premiers n'étaient pas visibles — le
-	 * parcours restait où il était, sans un mot. `erreur-serveur` est le repli de
-	 * l'écran lui-même, posé quand la réponse ne porte aucun motif lisible : il
-	 * ne sait donc PAS ce que le serveur a fait du lot, et sa phrase se garde de
-	 * l'affirmer. Un code inconnu passe tel quel plutôt que d'être remplacé par
-	 * une phrase rassurante qui cacherait ce qui s'est passé.
+	 * Les refus, mis en français. Quatre codes viennent de la route, chacun rendu
+	 * avant la moindre écriture. `erreur-serveur` est le repli de l'écran, posé quand
+	 * la réponse ne porte aucun motif lisible : il ne sait donc PAS ce que le serveur
+	 * a fait du lot, et sa phrase se garde de l'affirmer.
 	 */
 	const LIBELLE_DU_REFUS: Readonly<Record<string, string>> = {
 		'domaine-inconnu':
@@ -608,21 +372,8 @@
 	);
 
 	/**
-	 * LE TITRE DU BILAN — la phrase du gel, et la MISE À JOUR y prend sa place.
-	 *
-	 * Le gel écrit « N notes créées, M fichiers en échec » ou « … aucun échec ».
-	 * `RG-M12-01` fait apparaître un troisième nombre que le gel ne connaissait
-	 * pas — les notes MISES À JOUR par un réimport —, et le taire ferait croire
-	 * qu'un réimport n'a rien fait. Il n'est nommé que lorsqu'il n'est pas nul.
-	 */
-	/**
-	 * L'INTITULÉ DE LA DERNIÈRE SECTION — « Notes créées » du gel, sauf quand ce
-	 * n'est pas vrai.
-	 *
-	 * Le gel ne connaît pas la mise à jour : son lot d'exemple ne crée que des
-	 * notes neuves. Un réimport, lui, n'en crée aucune et en met à jour trois —
-	 * garder « Notes créées — 0 » au-dessus d'une liste de trois notes serait
-	 * faux à l'écran. L'intitulé nomme alors ce que la liste contient.
+	 * L'intitulé de la dernière section — « Notes créées » du gel, sauf quand ce
+	 * n'est pas vrai : un réimport ne crée aucune note et en met à jour trois.
 	 */
 	function intituleDesNotes(r: RapportAffiche): string {
 		if (r.simulation) return `Notes qui seraient écrites — ${r.ecrites.length}`;
@@ -631,26 +382,17 @@
 	}
 
 	/**
-	 * UNE SIMULATION N'A RIEN ÉCRIT, ET AUCUNE PHRASE DU RAPPORT NE DOIT DIRE LE
-	 * CONTRAIRE.
-	 *
-	 * `RG-M12-02` promet « un seul chemin de code, donc un rapport de simulation
-	 * qui dit rigoureusement ce que fera l'import réel ». Le rapport le tient : le
-	 * drapeau `simulation` est le SEUL champ par lequel les deux diffèrent —
-	 * `import.test.ts` le neutralise explicitement avant de comparer les deux
-	 * rapports. L'écran, lui, ne le lisait nulle part : il annonçait « Import
-	 * terminé — 3 notes créées » et offrait trois liens qui rendaient 404, alors
-	 * que la base était inchangée.
-	 *
-	 * LA DOCTRINE DE `import.ts` N'EST PAS EN CAUSE : elle porte sur l'EXÉCUTION,
-	 * où `options.simulation` est lu une seule fois, en dernière instruction de la
-	 * transaction. Un choix de mot dans une vue ne touche ni le plan, ni
-	 * l'écriture, ni le rapport.
+	 * Une simulation n'a rien écrit, et aucune phrase du rapport ne doit dire le
+	 * contraire. `simulation` est le SEUL champ par lequel les deux rapports diffèrent
+	 * (`RG-M12-02`) ; l'écran ne le lisait nulle part et offrait des liens qui
+	 * rendaient 404.
 	 */
 	function auFuturSiSimule(r: RapportAffiche, passe: string, futur: string): string {
 		return r.simulation ? futur : passe;
 	}
 
+	/* `RG-M12-01` — les notes MISES À JOUR font un troisième nombre, que le gel ne
+	   connaît pas et qui n'est nommé que lorsqu'il n'est pas nul. */
 	function titreDuBilan(r: RapportAffiche): string {
 		const creees = auFuturSiSimule(
 			r,
@@ -672,23 +414,16 @@
 			: `${debut}, aucun échec`;
 	}
 
-	/**
-	 * Le sort d'un fichier décide de sa colonne : note, écarté, en échec.
-	 *
-	 * ET LA COLONNE DES NOTES SE PARTAGE EN DEUX — `maj` dit que la cible porte
-	 * déjà cette note, à cette place, donc que l'écriture sera une MISE À JOUR.
-	 * Sans lui, l'aperçu annonçait « 4 notes seront créées » là où l'import
-	 * n'allait en créer aucune. Le champ est absent du jeu de semence, qui n'a pas
-	 * de cible : le compte des mises à jour y reste nul, et l'écran ne bouge pas.
-	 */
+	/** Le sort d'un fichier décide de sa colonne : note, écarté, en échec. `maj`
+	    partage la colonne des notes — la cible porte déjà la note, l'écriture sera une
+	    mise à jour ; sans lui, l'aperçu annonçait des créations imaginaires. */
 	const resume = $derived.by(() => {
 		let notes = 0;
 		let misesAJour = 0;
 		let ignores = 0;
 		let echecs = 0;
-		/* Une table ORDONNÉE, tenue en liste : le gel trie les formats par effectif
-		   décroissant sur un tri stable, donc l'ordre de première rencontre
-		   départage les ex æquo. */
+		/* Une table ORDONNÉE, tenue en liste : le tri du gel est stable, donc
+		   l'ordre de première rencontre départage les ex æquo. */
 		const formats: [FormatDImport, number][] = [];
 		for (const f of LOT.fichiers) {
 			if (f.s === 'ignore') ignores++;
@@ -705,17 +440,12 @@
 
 	interface NoeudDuLot {
 		readonly nom: string;
-		/**
-		 * LE CHEMIN DU NŒUD SOUS LA CIBLE — ce qui permet de dire s'il existe
-		 * déjà. Le nom seul ne suffisait pas : deux branches peuvent porter un
-		 * dossier de même nom à des places différentes.
-		 */
+		/** Le chemin du nœud sous la cible : deux branches peuvent porter le même nom. */
 		readonly chemin: string;
 		readonly enfants: NoeudDuLot[];
 		readonly fichiers: { nom: string; format: FormatDImport }[];
 	}
 
-	/** Le nœud d'un niveau, créé à la première rencontre. */
 	function noeud(niveau: NoeudDuLot[], nom: string, cheminDuParent: string): NoeudDuLot {
 		const deja = niveau.find((n) => n.nom === nom);
 		if (deja) return deja;
@@ -730,20 +460,14 @@
 	}
 
 	/**
-	 * UN DOSSIER QUE LA CIBLE PORTE DÉJÀ N'EST PAS UN DOSSIER CRÉÉ.
-	 *
-	 * Vide — le régime de la planche, où aucune cible n'est connue —, tout est
-	 * neuf, et c'est ce que le gel montre.
+	 * Un dossier que la cible porte déjà n'est pas un dossier créé. Liste vide —
+	 * le régime de la planche, sans cible connue —, tout est neuf.
 	 */
 	function dossierExistant(chemin: string): boolean {
 		return dossiersExistants.includes(chemin);
 	}
 
-	/**
-	 * L'arborescence détectée dans le lot, telle qu'elle deviendra celle des
-	 * dossiers. Seuls les fichiers retenus comptent — un fichier écarté ne crée
-	 * pas de dossier.
-	 */
+	/** L'arborescence du lot. Un fichier écarté ne crée pas de dossier. */
 	const arborescence = $derived.by<NoeudDuLot[]>(() => {
 		const racine: NoeudDuLot[] = [];
 		for (const f of LOT.fichiers) {
@@ -761,10 +485,7 @@
 		return racine;
 	});
 
-	/**
-	 * Les dossiers que l'import CRÉERA, tous niveaux confondus — ceux que la
-	 * cible ne porte pas encore.
-	 */
+	/** Les dossiers que l'import CRÉERA — ceux que la cible ne porte pas encore. */
 	function compterDossiers(niveau: readonly NoeudDuLot[]): number {
 		let total = 0;
 		for (const n of niveau) {
@@ -779,7 +500,6 @@
 		return [...niveau].sort((a, b) => (a.nom < b.nom ? -1 : a.nom > b.nom ? 1 : 0));
 	}
 
-	/** Les formats du récapitulatif, du plus fourni au moins fourni. */
 	const parFormat = $derived(
 		[...resume.formats]
 			.sort((a, b) => b[1] - a[1])
@@ -791,21 +511,15 @@
 
 	const ecartes = $derived(LOT.fichiers.filter((f) => f.s === 'ignore'));
 
-	/* ── Étape 4 — l'instant capturé ──────────────────────────────────────────
-	   `lancerImport()` (`V-24:3100`). Voir l'en-tête : sept tics de 130 ms
-	   tiennent dans l'avance de 1 000 ms du banc, et c'est le seul nombre
-	   déclaré ici. */
+	/* Étape 4 — l'instant capturé (`lancerImport()`, `V-24:3100`). */
 
 	/** Rang de l'instant capturé, en fichiers traités. */
 	const TRAITES = 7;
 
 	const progression = $derived.by(() => {
-		/* SUR UNE ROUTE RÉELLE, LE TRAITEMENT EST AU SERVEUR ET NE SE RACONTE PAS
-		   FICHIER PAR FICHIER. Le gel anime une minuterie locale ; le produit, lui,
-		   attend une réponse. Poser une barre qui progresserait toute seule serait
-		   une valeur illustrative (`P-02`) : la barre reste donc à zéro et les
-		   compteurs à zéro tant que rien n'est connu, puis le rapport les remplace.
-		   L'invite est celle du balisage gelé, « Préparation… ». */
+		/* Sur une route réelle, le traitement est au serveur : une barre qui
+		   progresserait toute seule serait une valeur illustrative. Elle reste à
+		   zéro, comme les compteurs, jusqu'à ce que le rapport les remplace. */
 		if (vivant) return { pourcent: 0, courant: 'Préparation…', notes: 0, ignores: 0, echecs: 0 };
 		if (etape !== 4) {
 			return { pourcent: 0, courant: 'Préparation…', notes: 0, ignores: 0, echecs: 0 };
@@ -828,8 +542,7 @@
 		};
 	});
 
-	/* ── Le fil de jalons et le pied de parcours ──────────────────────────────
-	   `aller()` (`V-24:3331`) et `majPied()` (`V-24:3349`). */
+	/* Le fil de jalons et le pied de parcours — `majPied()` (`V-24:3349`). */
 
 	const JALONS: readonly { readonly rang: number; readonly nom: string }[] = [
 		{ rang: 1, nom: 'Scénario' },
@@ -845,32 +558,20 @@
 	const renoncerMasque = $derived(etape !== 3);
 	/** `termine` de `majPied()` — l'étape 4 avec son rapport à l'écran. */
 	const termine = $derived(etape === 4 && rapport !== null);
-	/** Le rapport à l'écran est-il celui d'une simulation ? */
 	const rapportSimule = $derived(rapport !== null && rapport.simulation);
-	/** L'étape 4 close sur un rapport de SIMULATION : rien n'a été écrit. */
 	const simulationTerminee = $derived(termine && rapportSimule);
-	/** Le retour en arrière reste possible jusqu'à la validation, pas au-delà. */
 	const precedentMasque = $derived(etape === 1 || etape === 4);
 	/**
-	 * « OUVRIR LE DOMAINE » N'EST OFFERT QUE SI QUELQUE CHOSE Y A ÉTÉ ÉCRIT.
-	 * Après une simulation, le domaine ne porte aucune des notes annoncées :
-	 * proposer d'y aller serait promettre ce qui n'existe pas (`P-03`).
-	 *
-	 * CE QUE CELA LAISSE, ET QUI N'EST PAS COMBLÉ ICI : le pied n'a que trois
-	 * boutons, et les trois sont alors retirés — « Renoncer » ne vit qu'à
-	 * l'étape 3, « Retour » pas au-delà de la validation. L'étape 4 d'une
-	 * simulation ne porte donc aucun geste de parcours, et on en sort par la
-	 * coquille. Y ajouter une sortie serait un geste que rien ne demande : le
-	 * vide est remonté tel quel.
+	 * « Ouvrir le domaine » n'est offert que si quelque chose y a été écrit : après
+	 * une simulation, le domaine ne porte aucune des notes annoncées. Le pied de
+	 * l'étape 4 d'une simulation n'a donc aucun geste, et on en sort par la coquille.
 	 */
 	const ouvrirLeDomaine = $derived(termine && !simulationTerminee);
-	/* L'import lancé, « Continuer » disparaît jusqu'à ce que le rapport soit là ;
-	   aucun état de la planche ne l'y voit revenir. */
+	/* L'import lancé, « Continuer » disparaît jusqu'à ce que le rapport soit là. */
 	const suivantMasque = $derived(etape === 4 && !ouvrirLeDomaine);
 	/**
-	 * `majPied()` ne retouche l'inhibition qu'aux étapes 1 à 3 : à l'étape 4
-	 * elle reste celle du dernier passage, et le gel arrive toujours à l'étape 4
-	 * par l'étape 1, où aucun scénario n'était encore retenu. Mesuré sur le gel.
+	 * `majPied()` ne retouche l'inhibition qu'aux étapes 1 à 3 : à l'étape 4, elle
+	 * reste celle du dernier passage.
 	 */
 	const suivantInhibe = $derived(
 		etape === 1 ? scenarioChoisi === null : etape === 2 ? !depose : etape === 3 ? enCours : !termine
@@ -887,29 +588,17 @@
 					: 'Continuer'
 	);
 
-	/* ═══════════════════════════════════════════════════════════════════════
-	   LES GESTES DU PARCOURS — `aller()`, `deposer()`, `lancerImport()` du gel
+	/* Les gestes du parcours. Aucun n'a d'effet sans les deux rappels : `vivant`
+	   en est le seul juge. */
 
-	   Aucun n'a d'effet quand la vue est rendue sans ses deux rappels : la
-	   planche reste ce qu'elle est, et `vivant` en est le seul juge.
-	   ═══════════════════════════════════════════════════════════════════════ */
-
-	/** Le champ de fichiers, caché — voir le balisage. */
 	let champDeFichiers: HTMLInputElement | undefined = $state();
-	/** La zone de dépôt du gel, qui reçoit le glisser-déposer. */
 	let zoneDeDepot: HTMLElement | undefined = $state();
 
 	/**
-	 * LE GLISSER-DÉPOSER — les quatre écouteurs du gel, posés APRÈS LE MONTAGE.
-	 *
-	 * Ils sont posés en script plutôt qu'en attributs parce que `div.depot` n'est
-	 * pas un élément interactif : lui attacher des gestionnaires au balisage
-	 * ferait rougir le contrôle d'accessibilité pour un nœud que le gel écrit
-	 * ainsi. `data-survol` est l'attribut du gel, et la feuille le lit.
-	 *
-	 * L'ARBORESCENCE D'UN DOSSIER DÉPOSÉ EST CONSERVÉE — c'est la promesse écrite
-	 * du scénario, « à l'identique ». Les entrées du transfert sont parcourues en
-	 * profondeur ; à défaut d'entrées, les fichiers nus sont pris.
+	 * Le glisser-déposer, posé APRÈS LE MONTAGE plutôt qu'en attributs : `div.depot`
+	 * n'est pas un élément interactif, et lui attacher des gestionnaires au balisage
+	 * ferait rougir le contrôle d'accessibilité. `data-survol` est l'attribut du gel,
+	 * que la feuille lit. L'arborescence d'un dossier déposé est conservée.
 	 */
 	onMount(() => {
 		const zone = zoneDeDepot;
@@ -944,13 +633,11 @@
 
 	function choisirScenario(id: string): void {
 		if (!vivant) return;
-		/* Une vignette non offerte n'est pas rendue ; la garde est ici pour que le
-		   choix ne puisse pas retenir autre chose que ce que l'import exécute. */
+		/* Le choix ne peut retenir que ce que l'import exécute. */
 		if (!scenarioEstLivre(id)) return;
 		scenarioLocal = id;
 	}
 
-	/** La source affichée : le dossier de tête du lot, ou le nombre de fichiers. */
 	function sourceDe(retenus: readonly File[]): string {
 		const premiers = retenus
 			.map((f) => cheminDuFichier(f))
@@ -971,7 +658,6 @@
 		refus = null;
 	}
 
-	/** Le total du lot, en méga-octets à une décimale — la phrase du gel. */
 	const megaOctets = $derived(
 		Math.round((fichiers.reduce((t, f) => t + f.size, 0) / 1024 / 1024) * 10) / 10
 	);
@@ -999,8 +685,7 @@
 			refus = null;
 			try {
 				const issue = await analyser(fichiers, reglages);
-				/* LE REFUS S'AFFICHE — il retournait en silence, et le bouton
-				   « Analyser le lot » ne produisait alors rien du tout. */
+				/* Le refus s'affiche : « Analyser le lot » ne produisait rien du tout. */
 				if ('refus' in issue) {
 					refus = issue.refus;
 					return;
@@ -1052,26 +737,18 @@
 		etapeLocale = 1;
 	}
 
-	/**
-	 * L'adresse du domaine visé — pour la sortie de l'étape 4. Elle est BÂTIE par
-	 * le constructeur unique du dépôt, jamais écrite à la main : `ARB-001` en fait
-	 * la seule forme publiée.
-	 */
+	/** L'adresse du domaine visé — bâtie par le constructeur unique (`ARB-001`). */
 	const adresseDuDomaine = $derived.by(() => {
 		const cible = domaines.find((d) => d.nom === domaineCible);
-		/* L'IDENTIFIANT PERSISTÉ, PAS LE NOM SLUGIFIÉ. Il ne suit pas les
-		   renommages (`RG-M12-11`) : la sortie de l'étape 4 rendait 404 dès qu'on
-		   avait renommé le domaine visé. */
+		/* L'IDENTIFIANT PERSISTÉ, PAS LE NOM SLUGIFIÉ : il ne suit pas les
+		   renommages (`RG-M12-11`), et la sortie de l'étape 4 rendait 404. */
 		return cible === undefined ? '/' : adresses.domaine(cible.univers, cible.nom);
 	});
 </script>
 
-<!--
-	Les régions serrées reproduisent un DOM que le gel construit en script :
+<!-- Les régions serrées reproduisent un DOM que le gel construit en script :
 	elles sont soustraites au formateur, qui y réintroduirait des blancs entre
-	nœuds — lus par le relevé d'ordre de tabulation du niveau 1
-	(`CLAUDE.md` §6, P-6).
--->
+	nœuds. -->
 <!-- prettier-ignore -->
 {#snippet vignetteDeScenario(s: Scenario)}<button
 		class="scen" type="button" aria-pressed={scenarioChoisi === s.id} onclick={() => choisirScenario(s.id)}
@@ -1173,11 +850,8 @@
 					>
 				</div>
 				<!--
-					« Glissez un dossier OU UNE ARCHIVE ici » au gel. Une archive
-					déposée est ÉCARTÉE — le classement range le format `zip` en voie
-					`ecarte` —, avec son motif visible à l'aperçu. L'invitation ne la
-					nomme donc plus : les formats admis sont ceux du bandeau
-					ci-dessous, et eux seuls.
+					« Glissez un dossier OU UNE ARCHIVE ici » au gel. Une archive déposée
+					est écartée par le classement : l'invitation ne la nomme donc plus.
 				-->
 				<h3>Glissez un dossier ici</h3>
 				<p>
@@ -1186,14 +860,9 @@
 				<button class="btn btn--principal" id="parcourir" onclick={parcourir}
 					>Parcourir mes fichiers</button
 				>
-				<!--
-					LE CHAMP DE FICHIERS DU GEL N'EXISTE PAS : `#parcourir` y est un
-					bouton nu, et le dépôt un comportement de navigateur. Le champ est
-					donc posé ici, CACHÉ, et seulement quand le parcours est vivant —
-					la planche ne le porte pas. C'est le geste de
-					`$lib/cablage/formulaires.ts`, qui pose lui aussi des champs cachés
-					sur des formulaires que le gel n'attribue pas.
-				-->
+				<!-- Le gel ne porte pas de champ de fichiers : `#parcourir` y est un bouton
+					nu. Le champ est donc posé ici, CACHÉ, et seulement quand le parcours est
+					vivant. -->
 				{#if vivant}<input
 						type="file"
 						multiple
@@ -1220,30 +889,13 @@
 					>
 				</div>
 				<!--
-					`#champ-nom-domaine` DU GEL N'EST PLUS RENDU, et c'est le cœur du
-					défaut : « Nom du domaine à créer * » était un champ OBLIGATOIRE
-					que personne ne lisait — ni l'envoi, ni l'action —, sous un
-					scénario que l'import n'exécute pas. Le laisser demandait une
-					saisie pour rien et laissait croire à la création d'un domaine
-					pendant que le lot se rangeait ailleurs.
+					`#champ-nom-domaine` du gel n'est plus rendu : un champ obligatoire que
+					personne ne lisait, sous un scénario que l'import n'exécute pas.
 				-->
-				<!--
-					LA CASE « SIMULATION » APPARTIENT À UN SCÉNARIO QUE L'IMPORT
-					N'EXÉCUTE PAS, ET SA GARDE NE BOUGE PAS. Le gel ne l'offre que sous
-					« corpus préparé » — `UC-M12-03`, que `SCENARIOS_NON_LIVRES`
-					déclare non livré —, et l'aide qu'elle porte recommande justement
-					de vérifier un corpus préparé avant de l'engager. La rebrancher sur
-					le scénario livré servirait cette recommandation sous le SEUL
-					scénario offert : l'écran nommerait de nouveau une fonction que le
-					produit ne tient pas, à l'endroit même que ce lot répare. Le
-					scénario n'étant plus offert, la case ne l'est pas davantage, et
-					rien de ce qu'elle porte n'atteint l'écran.
-
-					CE QUE CE LOT NE TRANCHE PAS : ce qu'il reste à offrir dans ces
-					réglages une fois les deux scénarios non livrés retirés. Offrir la
-					simulation au scénario livré serait un geste d'interface qu'aucune
-					exigence ne demande, et le gel ne le dessine pas.
-				-->
+				<!-- La case « Simulation » n'est offerte que sous « corpus préparé », scénario
+					non livré : rien de ce qu'elle porte n'atteint l'écran. Ne la rebranche pas
+					sur le scénario livré — elle nommerait de nouveau une fonction que le produit
+					ne tient pas. -->
 				<label class="case" id="champ-simulation" hidden={scenarioChoisi !== 'prepare'}>
 					<input
 						type="checkbox"
@@ -1259,11 +911,7 @@
 						>
 					</span>
 				</label>
-				<!--
-					`deposer()` du gel, transcrit : la coche, la phrase chiffrée, et le
-					bouton qui reprend le dépôt. Les deux nombres sont MESURÉS sur les
-					fichiers reçus, jamais annoncés (`P-02`).
-				-->
+				<!-- `deposer()` du gel : les deux nombres sont mesurés sur les fichiers reçus. -->
 				<!-- prettier-ignore -->
 				<div class="lot-depose" id="lot-depose" hidden={!depose}
 					>{#if depose}<span
@@ -1338,10 +986,7 @@
 
 		<!-- ============ ÉTAPE 4 — Import et rapport ============ -->
 		<section class="etape" data-etape="4" data-active={etape === 4 ? 'oui' : 'non'}>
-			<!--
-				`rendreRapport()` du gel remplace ces deux textes quand le rapport
-				arrive : le titre devient « Import terminé », le sous-titre s'efface.
-			-->
+			<!-- `rendreRapport()` remplace ces deux textes quand le rapport arrive. -->
 			<h1 class="etape__titre" id="titre-4">
 				{rapport === null
 					? 'Import en cours'
@@ -1382,26 +1027,12 @@
 				</div>
 			</div>
 
-			<!--
-				LE RAPPORT — `rendreRapport()` du gel, transcrit nœud pour nœud, et
-				nourri du traitement RÉEL. Aucun de ses nombres n'est écrit ici :
-				`RapportAffiche` les porte tous, et ils viennent de la base.
-
-				Les quatre sections sont celles du gel, dans son ordre : le bilan,
-				les fichiers en échec, les références non résolues, la structure
-				créée, les notes écrites. La section « Références non résolues » du
-				gel porte deux exemples ; ici elle porte les renvois que le lot n'a
-				pas résolus, et elle DISPARAÎT quand il n'y en a aucun — une section
-				vide affirmerait qu'il y en a.
-			-->
-			<!--
-				`svelte/no-navigation-without-resolve` est levée pour le seul lien de
-				note ci-dessous. `resolve()` n'accepte qu'un chemin CONNU à la
-				compilation ; l'adresse d'une note importée est bâtie à l'exécution
-				par `adresseDeNote()` — le constructeur unique du dépôt, `ARB-001`,
-				« seule forme publiée ». La résoudre est impossible, la construire à
-				la main serait la faute que la règle vise.
-			-->
+			<!-- Le rapport — `rendreRapport()` du gel, nourri du traitement RÉEL : aucun
+				de ses nombres n'est écrit ici. « Références non résolues » disparaît quand il
+				n'y en a aucune ; une section vide affirmerait le contraire. -->
+			<!-- `svelte/no-navigation-without-resolve` est levée pour le seul lien de note
+				ci-dessous : `resolve()` n'accepte qu'un chemin connu à la compilation, et
+				l'adresse d'une note importée est bâtie à l'exécution (`ARB-001`). -->
 			<!-- eslint-disable svelte/no-navigation-without-resolve -->
 			<!-- prettier-ignore -->
 			<div id="rapport" hidden={rapport === null}

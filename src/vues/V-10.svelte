@@ -4,61 +4,22 @@
 	 *
 	 * C'est le premier des deux segments de LA FORME CANONIQUE au sens de
 	 * `RG-M03-02` ; V-11 en pose le second. La forme raccourcie `/domaines/…`
-	 * n'existe pas (ARB-001) et n'est émise nulle part. Le gabarit d'adresse est
-	 * `$lib/rangement/adresses` — il porte la forme, le motif et la raison, et
-	 * c'est lui que P-10 prolongera.
+	 * n'existe pas (`ARB-001`) et n'est émise nulle part. Le gabarit d'adresse est
+	 * `$lib/rangement/adresses`.
 	 *
-	 * LES LIENS RESTENT CEUX DU GEL — `href="#"`, comme `src/lib/coquille/*` les
-	 * porte depuis T-101. ARB-013 devait permettre l'adresse réelle en retirant
-	 * les lignes `/url:` de l'instantané ARIA ; MESURÉ ici, le filtre de
-	 * le module de capture du banc ne retire rien — son motif `/^\s*\/url:/` ne
-	 * reconnaît pas la forme `- /url: …` que Playwright imprime —, et six des
-	 * sept états sortaient en échec de structure sur cette seule ligne.
-	 * `ECART-013` É-5 annonçait que l'écart mordrait « au premier lot câblant une
-	 * adresse » : c'est ce lot. L'instrument est en écriture humaine seule
-	 * (ARB-013, `PLAN §12`) ; le constat est déclaré au rapport, et le câblage
-	 * attend sa correction. Aucun lien mort n'est pour autant inventé : ce sont
-	 * exactement ceux du gel.
+	 * Coquille de forme abrégée : la classe de `<main>` est `univers`, et le chemin
+	 * courant du rail est VIDE — une page d'univers ne met en évidence aucun
+	 * domaine. `data-etat` est passé au gabarit par `donnees`.
 	 *
-	 * SEPT ÉTATS — `verif/scenarios/V-10.json`, extraits de la planche de revue
-	 * de la maquette gelée. Chacun arrive par son VECTEUR COMPLET : droits ×
-	 * univers × état. Trois axes, jamais un delta.
-	 *
-	 * COQUILLE DE FORME ABRÉGÉE — ARB-021, A-1. Vérifié sur le gel, pas supposé :
-	 * `header.barre` rend deux boutons nus, le rail n'a ni pictogramme ni
-	 * `data-vers`, `Gestion` porte `si-ecriture`, il n'y a pas de
-	 * `#rail-univers`, et l'arborescence est celle des quinze nœuds ÉCRITE AU
-	 * BALISAGE, que le gabarit porte (`arborescence-abregee.ts`). La classe de
-	 * `<main>` est `univers` (ARB-015), le chemin courant du rail est VIDE — une
-	 * page d'univers ne met en évidence aucun domaine.
-	 *
-	 * `data-etat` est l'attribut de données de la vue (ARB-021, A-2) ; il est
-	 * passé au gabarit par `donnees`, tel quel et sous son nom complet.
-	 *
-	 * `.noeud` N'EST PAS PORTÉE ICI. C'est le nœud d'arborescence du rail, rendu
+	 * `.noeud` n'est pas portée ici : c'est le nœud d'arborescence du rail, rendu
 	 * par la coquille ; en V-19 et V-20 la même classe est un nœud de GRAPHE, aux
 	 * règles inconciliables (`docs/DESIGN.md` §2.H). Aucune factorisation.
 	 *
-	 * AUCUN CHIFFRE N'EST SAISI (P-02) : notes, domaines, contributeurs et
-	 * répartition de fraîcheur sont calculés depuis les propriétés servies, comme
-	 * la maquette les calcule depuis `window.CORPUS`.
+	 * Aucun chiffre n'est saisi : notes, domaines, contributeurs et répartition de
+	 * fraîcheur sont calculés depuis les propriétés servies.
 	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT (ARB-011) : l'état est rendu, jamais
-	 * la transition. Les gestes de la maquette — notifications au clic sur une
-	 * part de fraîcheur, sur une carte de domaine, sur un événement — relèvent
-	 * des lots de logique.
-	 *
-	 * NON RENDUS, ET DÉCLARÉS : `template#tpl-palette` et `dialog#palette` — la
-	 * divergence de balisage mesurée NULLE de `docs/releve-vues.md` §4.1
-	 * (instantané ARIA identique, capture identique à l'octet) ; le montage de la
-	 * palette est assigné au lot qui portera V-09. Et `div.planche`, bloc hors
-	 * produit (§2.G), qui ne se porte jamais.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
-	 * (P-6.1) et de `src/vues/V-10.css`, posé par
-	 * `node verif/feuilles-de-vue.mjs V-10 --installer` et identique à l'octet au
-	 * second bloc `<style>` du gel (P-6.3). Les styles en ligne reproduits sont
-	 * ceux du gel, et eux seuls (P-6.4, ARB-016).
+	 * Le style est dans `src/socle.css` et `src/vues/V-10.css` ; les styles en ligne
+	 * reproduits sont ceux du gel.
 	 */
 	import type {
 		CleDeModule,
@@ -78,53 +39,36 @@
 	import { adresseDeNote, adressesParLesNoms } from '$lib/rangement/adresses';
 
 	/**
-	 * LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM.
-	 *
-	 * La vue ne reçoit que des NOMS d'affichage, et les slugifiait pour composer
-	 * ses adresses. `univers.identifiant` et `domaines.identifiant` sont persistés
-	 * et ne suivent PAS les renommages (`RG-M12-11`) : renommer un univers ou un
-	 * domaine en console rendait donc 404 chacun des liens d'ici. La table vient
-	 * du gabarit racine, par le contexte de coquille ; hors application elle est
-	 * vide et la dérivation du nom s'applique, comme avant.
+	 * LES ADRESSES SE COMPOSENT SUR L'IDENTIFIANT PERSISTÉ, PAS SUR LE NOM. La vue
+	 * ne reçoit que des noms d'affichage et les slugifiait ; `univers.identifiant`
+	 * et `domaines.identifiant` sont persistés et ne suivent PAS les renommages
+	 * (`RG-M12-11`), si bien que renommer un univers ou un domaine en console
+	 * rendait 404 chacun des liens d'ici.
 	 */
 	const adresses = adressesParLesNoms(designationsDeCoquille());
 
 	/**
 	 * LES SOURCES DE L'ÉCRAN SONT REQUISES — le motif est retiré, pas contourné.
+	 * Optionnelles, de défaut la constante de `seeds/corpus.ts`, une route qui en
+	 * oubliait une servait le jeu de démonstration SANS QUE RIEN NE PROTESTE : ni le
+	 * compilateur, ni un test, ni l'écran, qui affichait un contenu plausible.
 	 *
-	 * Elles ont été OPTIONNELLES, de défaut la constante de `seeds/corpus.ts`, et
-	 * cette forme garantissait qu'une route qui en oubliait une servait le jeu de
-	 * démonstration SANS QUE RIEN NE PROTESTE : ni le compilateur, ni un test, ni
-	 * l'écran, qui affichait un contenu plausible. Quatre campagnes ont couru
-	 * après les symptômes de ce défaut de défaut.
-	 *
-	 * `exactOptionalPropertyTypes` et `strict` sont actifs, `svelte-check` est
-	 * dans `pnpm check` : une route qui oublierait l'une d'elles NE COMPILE PLUS.
-	 * C'est le seul garde-fou qui tienne sans qu'on ouvre l'écran.
-	 *
-	 * `detailDomaines` ET `modules` RENDENT `P-04` EFFECTIVE, et leurs deux
-	 * sources sont distinctes : les CLÉS actives d'un domaine viennent de
+	 * `detailDomaines` ET `modules` RENDENT `P-04` EFFECTIVE, et leurs deux sources
+	 * sont distinctes : les CLÉS actives d'un domaine viennent de
 	 * `modules_de_domaine` (`RG-STR-06`), les LIBELLÉS du catalogue de produit
-	 * `$lib/rangement/modules.ts`. Ni l'un ni l'autre n'est de la démonstration.
+	 * `$lib/rangement/modules.ts`.
 	 *
-	 * `compte` PEUT LÉGITIMEMENT MANQUER — une page rendue hors gabarit racine
-	 * n'a pas d'identité —, et son état vide est `null` : la barre supérieure
-	 * n'annonce alors personne, plutôt que d'annoncer quelqu'un du jeu.
+	 * `compte` PEUT LÉGITIMEMENT MANQUER — une page rendue hors gabarit racine n'a
+	 * pas d'identité —, et son état vide est `null`.
 	 */
 	interface Proprietes {
-		/** Le vecteur complet de l'état — droits × univers × état. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Les notes lisibles, servies par le chargeur. */
 		notes: readonly Note[];
-		/** Les univers déclarés — vides tant que l'instance n'en porte aucun. */
 		univers: readonly Univers[];
-		/** Les domaines accessibles — vides tant que l'instance n'en porte aucun. */
 		domaines: readonly Domaine[];
 		/** L'utilisateur connecté. `null` : aucun compte connu. */
 		compte?: CompteAffiche | null;
-		/** Les évènements du corpus — vides quand rien n'a bougé. */
 		activite: readonly EvenementDActivite[];
-		/** Description et modules activés, par domaine — lus en base. */
 		detailDomaines: Record<NomDeDomaine, DetailDeDomaine>;
 		/** Le catalogue des modules — nom et sous-titre de chaque clé. */
 		modules: Record<CleDeModule, Module>;
@@ -144,20 +88,10 @@
 	const reglage = $derived(vecteur ?? {});
 	const droits = $derived(reglage['droits'] === 'lecture' ? 'lecture' : 'ecriture');
 	/**
-	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040).
-	 *
-	 * Le gel POSE l'action d'écriture puis la cache par
-	 * `.app[data-droits="lecture"] .si-ecriture { display: none }`
-	 * (`mockups/V-10-page-univers.html:338`) : faute de serveur, une maquette statique n'a
-	 * pas d'autre moyen de dire « cette action n'existe pas pour ce rôle ». Le
-	 * produit peut ne pas l'émettre, et P-09 l'exige — « ni grisée, NI MASQUÉE ».
-	 * La classe reste posée sur le nœud rendu.
-	 *
-	 * AUCUN ÉTAT DÉCLARÉ N'EXERCE CETTE OMISSION, et c'est dit : le nœud vit dans
-	 * l'état vide, qu'aucun vecteur du scénario ne croise avec `droits=lecture`.
-	 * Le différentiel de la batterie 7 ne le voit donc pas (P-5). Il est traité
-	 * comme les autres pour que la vue n'ait qu'une seule règle.
-	 * Énumération : `docs/omissions-p09.md`.
+	 * L'ABSENCE, ET NON LE MASQUAGE — `P-09`, `RG-M05-08`, `ARB-040`. Le gel pose
+	 * l'action d'écriture puis la cache en feuille, seule possibilité d'une maquette
+	 * statique ; le produit ne l'émet pas, « ni grisée, NI MASQUÉE ». La classe reste
+	 * posée sur le nœud rendu.
 	 */
 	const ecriture = $derived(droits !== 'lecture');
 	const etatDeLaPage = $derived(
@@ -173,15 +107,12 @@
 	 */
 	const AUCUN_UNIVERS: Univers = { nom: '', couleur: '', glyphe: '', description: '' };
 
-	/**
-	 * L'univers rendu. La maquette le cherche par son nom dans `window.UNIVERS`
-	 * (`V-10:1814`) ; le produit le cherche dans la liste que le chargeur sert.
-	 */
+	/** L'univers rendu. La maquette le cherche par son nom dans `window.UNIVERS`
+	    (`V-10:1814`) ; le produit le cherche dans la liste que le chargeur sert. */
 	const courant = $derived(
 		univers.find((u) => u.nom === reglage['uni']) ?? univers[0] ?? AUCUN_UNIVERS
 	);
 
-	/** L'état « sans domaine » vide l'univers de ses deux dérivés à la fois. */
 	const notesDeLUnivers = $derived(
 		etatDeLaPage === 'vide' ? [] : corpus.filter((n) => n.univers === courant.nom)
 	);
@@ -216,15 +147,14 @@
 
 	const contribs = $derived(contributeurs(notesDeLUnivers));
 
-	/* ── Répartition de fraîcheur ───────────────────────────────────────────
-	   Le même composant que partout ailleurs (P-01) : la répartition compte les
-	   niveaux que le corpus porte, elle ne les recalcule pas. Les trois parts
-	   sont dans l'ordre du gel — jamais l'ordre alphabétique. */
+	/* Répartition de fraîcheur — le même composant que partout ailleurs
+	   (`ADR-005`) : elle compte les niveaux que le corpus porte, elle ne les
+	   recalcule pas. Les trois parts sont dans l'ordre du gel. */
 	interface Part {
 		readonly cle: 'frais' | 'vieil' | 'obs';
 		readonly classe: string;
-		/* Le pluriel n'est plus porté : les trois formes sont en `+s`, et
-		   `accord()` (`$lib/vocabulaire`) est la seule source de cette règle. */
+		/* Le pluriel n'est plus porté : les trois formes sont en `+s`, et `accord()`
+		   est la seule source de cette règle. */
 		readonly singulier: string;
 	}
 
@@ -255,11 +185,9 @@
 		return `${n} ${accord(n, p.singulier)}${contexte ? ` · ${contexte}` : ''}`;
 	}
 
-	/* ── Les deux glyphes d'univers ─────────────────────────────────────────
-	   `GLYPHES` de la maquette (`V-10:1783`). Le corpus en nomme un troisième,
-	   « corbeille », pour l'univers système que cette vue ne présente pas. */
+	/* Les deux glyphes d'univers — `GLYPHES` de la maquette (`V-10:1783`). Le corpus
+	   en nomme un troisième, « corbeille », pour l'univers système. */
 
-	/** Nombre en français — `x.toLocaleString("fr-FR")` du gel. */
 	function nb(x: number): string {
 		return x.toLocaleString('fr-FR');
 	}
@@ -285,16 +213,13 @@
 	}
 
 	/**
-	 * L'activité de l'univers. Elle est indépendante de l'état « sans domaine » :
-	 * la maquette la filtre sur le corpus entier, jamais sur l'ensemble vidé
-	 * (`V-10:1974`).
+	 * L'activité de l'univers. Elle est indépendante de l'état « sans domaine » : la
+	 * maquette la filtre sur le corpus entier (`V-10:1974`).
 	 *
 	 * UN ÉVÉNEMENT SANS CIBLE N'APPARTIENT À AUCUN UNIVERS. Il était rattaché à
-	 * « Production » — un nom d'univers du jeu de démonstration, écrit en dur dans
-	 * une règle : sur une instance qui ne porte pas ce nom, la règle décidait
-	 * quand même, et sur une qui le porte elle y versait un événement dont rien
-	 * ne dit qu'il en vient. Les trois traces que le chargeur lit portent TOUTES
-	 * une note en cible ; ce qui n'en porte pas n'est rattachable à rien.
+	 * « Production » — un nom d'univers du jeu de démonstration écrit en dur dans une
+	 * règle. Les traces que le chargeur lit portent TOUTES une note en cible ; ce qui
+	 * n'en porte pas n'est rattachable à rien.
 	 */
 	const evenements = $derived(
 		activite.filter((e) => {
@@ -309,26 +234,14 @@
 	);
 </script>
 
-<!--
-	`svelte/no-navigation-without-resolve` EST DÉSACTIVÉE POUR LE BALISAGE DE
-	CETTE VUE, ET LA RAISON EST LA MÊME QUE POUR LE FIL D'ARIANE DE LA COQUILLE.
-
-	La règle veille à ce qu'une adresse interne passe par `resolve()` de
-	SvelteKit. Les adresses de cette vue sont COMPOSÉES par
-	`$lib/rangement/adresses.ts`, la fabrique unique du rangement : la règle
-	inspecte l'EXPRESSION du `href`, elle ne peut pas la suivre jusque là, et
-	elle ne peut pas non plus la vérifier ici. Faire passer une adresse déjà
-	composée par `resolve()` ne prouverait rien de plus et ajouterait une
-	seconde source de vérité pour une forme qui n'en a qu'une.
-
-	Même geste, même justification qu'en V-03, V-22, V-24 et
-	`src/lib/coquille/BarreSuperieure.svelte`.
--->
+<!-- `svelte/no-navigation-without-resolve` EST DÉSACTIVÉE POUR LE BALISAGE DE
+	CETTE VUE : ses adresses sont COMPOSÉES par `$lib/rangement/adresses.ts`, la
+	fabrique unique du rangement, que la règle ne sait pas suivre. -->
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
 <!--
-	La barre de répartition de fraîcheur, et sa légende chiffrée. Deux emplois
-	dans cette vue : l'indicateur consolidé de l'univers et chaque carte de
-	domaine. Un ensemble vide n'affiche pas zéro — il le dit (P-02).
+	La barre de répartition de fraîcheur, et sa légende chiffrée. Deux emplois dans
+	cette vue : l'indicateur consolidé de l'univers et chaque carte de domaine. Un
+	ensemble vide n'affiche pas zéro — il le dit.
 -->
 {#snippet repartition(notes: readonly Note[], contexte: string)}
 	{#if notes.length === 0}<div class="zone-etat__txt" style="margin:0">Aucune note à mesurer.</div>
@@ -423,19 +336,17 @@
 				{#each [0, 1, 2, 3] as rang (rang)}{@render esquisse('116px')}{/each}
 			{:else}
 				<!-- LES DEUX NOMBRES DE CETTE MESURE MÈNENT À LA RECHERCHE, réduite à cet
-					     univers : le total sans autre filtre, le sous-compte sur
-					     `?statut=Brouillon`. Deux boutons FRÈRES, jamais imbriqués — un
-					     bouton dans un bouton n'est pas un document. Les trois autres
-					     mesures restent inertes, et le câblage dit pourquoi. -->
+				     univers : le total sans autre filtre, le sous-compte sur
+				     `?statut=Brouillon`. Deux boutons FRÈRES, jamais imbriqués — un bouton
+				     dans un bouton n'est pas un document. -->
 				<div class="mesure">
 					<button class="mesure__lien" type="button" id="m-notes">
 						<span class="mesure__nom etiq">Notes</span>
 						<div class="mesure__val">{nb(notesDeLUnivers.length)}</div>
 					</button>
-					<!-- LA PARENTHÈSE TOMBE, ET C'EST UN ÉCART DE MAQUETTE ASSUMÉ.
-						     `mockups/V-10:1864` fige « brouillon(s) » ; la parenthèse est
-						     exactement le repli qu'`accord()` existe pour supprimer, et une
-						     maquette est la référence visuelle, pas une loi. -->
+					<!-- LA PARENTHÈSE TOMBE, ÉCART DE MAQUETTE ASSUMÉ : `mockups/V-10:1864`
+					     fige « brouillon(s) », exactement le repli qu'`accord()` existe pour
+					     supprimer. -->
 					<button class="mesure__lien" type="button" id="m-brouillons">
 						<span class="mesure__sous">{`${brouillons} ${accord(brouillons, 'brouillon')}`}</span>
 					</button>

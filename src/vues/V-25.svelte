@@ -2,130 +2,34 @@
 	/**
 	 * V-25 — Mon profil. Route `/mon-profil` (`docs/routes.md`).
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LES SEPT ÉTATS, ET CE QUI LES SÉPARE
+	 * Quatre onglets : un seul `.volet` porte `data-actif="oui"`, le contenu des
+	 * quatre étant rendu dans tous les cas, comme au gel.
 	 *
-	 * `verif/scenarios/V-25.json` déclare sept états sur trois contrôles de
-	 * planche, et AUCUN état de zone :
+	 * LES DISTINCTIONS SONT CALCULÉES, JAMAIS FIGÉES — `M16.5`. Aucun chiffre n'est
+	 * écrit ici : indicateurs, jauges et flux d'activité sortent des sources reçues,
+	 * par trois fonctions qui transcrivent celles du gel — `statistiquesDe()`
+	 * (`V-25:2486`), `progression()` (`V-25:2765-2790`) et `evenementsDe()`
+	 * (`V-25:2830`). Un compte sans contribution rend zéro parce que RIEN NE LE
+	 * PORTE, jamais parce qu'un zéro est écrit quelque part.
 	 *
-	 *   `ong-identite` `ong-securite` `ong-distinctions` `ong-activite`
-	 *     — les quatre onglets. Un seul `.volet` porte `data-actif="oui"` ;
-	 *       les trois autres sont `display:none` (`V-25.css:370`). Le contenu
-	 *       des quatre volets est rendu dans tous les états, comme au gel.
-	 *   `cpt-karim`  — le compte incarné par défaut. Le scénario le marque
-	 *       `identiqueA: "ong-identite"` : c'est le même écran, capturé deux
-	 *       fois, et non un huitième cas.
-	 *   `cpt-neuf`   — le nouvel arrivant. Aucune contribution, aucune
-	 *       distinction obtenue, aucune activité : c'est le cas de corpus vide
-	 *       de la vue, et il est DÉRIVÉ, pas simulé (voir plus bas).
-	 *   `verrou`     — le mot de passe est géré par l'administrateur. Le bloc
-	 *       `#verrou` remplace `#form-mdp`. Son vecteur reste `ong: identite` :
-	 *       la bascule est donc invisible à l'écran, et c'est le gel.
+	 * LA FRAÎCHEUR N'EST PAS AFFICHÉE PAR CETTE VUE : `$lib/fraicheur` n'est pas
+	 * importé, et rien n'est recalculé ici.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LES DISTINCTIONS SONT CALCULÉES, JAMAIS FIGÉES — M16.5 ET P-02
+	 * DEUX LITTÉRAUX DU GEL QUE LA DONNÉE NE PORTE PAS : la règle des initiales
+	 * (`initialesDe()`, déjà transcrite par V-10, V-11 et V-40) et les libellés de
+	 * geste et d'ancienneté (`V-25:2812`, `V-25:2818`) — des textes d'interface.
 	 *
-	 * Rien de ce que cette vue affiche en chiffres n'est écrit ici. Les quatre
-	 * indicateurs de contribution, les six jauges de distinction et le flux
-	 * d'activité sortent tous de `seeds/corpus.ts`, par les trois fonctions
-	 * ci-dessous qui transcrivent celles du gel :
+	 * Coquille de forme abrégée ; `data-onglet`, `data-verrou` et `data-activite`
+	 * passent par `donnees`. `droits` n'est PAS transmis, et c'est délibéré : le gel
+	 * n'écrit jamais `data-droits` sur `div.app`, donc les trois nœuds `si-ecriture`
+	 * du rail et de la barre restent visibles.
 	 *
-	 *   `statistiquesDe()`  — `window.statsDe` (`V-25:2486`). Les notes
-	 *       publiées et les brouillons se COMPTENT sur le corpus ; les
-	 *       citations se comptent sur `RELATIONS` ; les vérifications et les
-	 *       liens sont lus à `CONTRIBUTIONS`, que le corpus déclare
-	 *       explicitement comme la part non calculable — « ce qui est
-	 *       calculable l'est ; le reste […] est déclaré ici plutôt que deviné
-	 *       dans la vue » (`seeds/corpus.ts:2049`).
-	 *   `progression()`     — la jauge d'une distinction, `V-25:2765-2790`.
-	 *   `evenementsDe()`    — `rendreActivite`, `V-25:2830`.
+	 * `#robustesse` reste dans la forme que le gel lui donne AU BALISAGE — quatre
+	 * segments éteints, « Trop court », « 0 / 12 » — parce que `creerRobustesse()`
+	 * n'évalue rien à la construction (`V-25:2618`). Pour la même raison, les trois
+	 * `li` de `#regles` ne portent aucun `data-ok`.
 	 *
-	 * LE COMPTE NEUF N'EST PAS UN JEU DE ZÉROS ÉCRIT À LA MAIN. Le gel pose
-	 * `stats = { publiees: 0, brouillons: 0, verifiees: 0, liens: 0,
-	 * citations: 0, notePhare: null }` (`V-25:3002`) ; ici, la MÊME fonction
-	 * est appelée avec le nom de Léa Marchand, et rend exactement cela —
-	 * elle n'est l'auteur d'aucune note du corpus, `CONTRIBUTIONS` ne la porte
-	 * pas, `RELATIONS` ne cite rien d'elle. Le zéro est un résultat, pas une
-	 * valeur. C'est ce que P-02 exige et ce que la batterie 8 contrôlera.
-	 *
-	 * LA FRAÎCHEUR N'EST PAS AFFICHÉE PAR CETTE VUE. Aucun témoin, aucun
-	 * agrégat, aucun libellé de fraîcheur ne figure à `main.profil` : le seul
-	 * emploi de `window.temoinFraicheur` de la maquette est dans la fabrique de
-	 * la palette V-09, qui n'est pas rendue (voir plus bas). `$lib/fraicheur`
-	 * n'est donc pas importé — et surtout, RIEN N'EST RECALCULÉ ICI : P-01 est
-	 * tenu par abstention, pas par contournement.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LES LITTÉRAUX DU GEL QUE LE CORPUS NE PORTE PAS
-	 *
-	 * Trois, et trois seulement — déclarés, portés tels quels, jamais dérivés :
-	 *
-	 *   1. `IDENTIFIANT_DU_COMPTE_NEUF = 'c-lea'`. Le gel écrit `COMPTE_NEUF`
-	 *      en toutes lettres (`V-25:2984`) : nom, initiales, identifiant,
-	 *      courriel, rôle, domaine, arrivée, dernière connexion. TOUT cela
-	 *      figure à `COMPTES` (`seeds/corpus.ts:2025`, entrée `c-lea`), aux
-	 *      initiales près — huit valeurs sur neuf. Seule la DÉSIGNATION du
-	 *      compte à incarner reste un choix de planche, et c'est ce que cette
-	 *      constante porte.
-	 *   2. La règle des initiales, `initialesDe()`. Le corpus donne
-	 *      `MOI.initiales`, mais aucune initiale pour les autres comptes. La
-	 *      règle est celle de `window.contributeurs` du gel, transcrite comme
-	 *      V-10, V-11 et V-40 l'ont déjà fait. Vérifié : elle rend « KB » pour
-	 *      « Karim Belhadj », soit exactement `MOI.initiales`.
-	 *   3. Les libellés de geste, `GESTES` (`V-25:2812`), et les libellés
-	 *      d'ancienneté de `relatif()` (`V-25:2818`). Ce sont des textes
-	 *      d'interface, pas des données : le corpus porte le type d'événement
-	 *      et son ancienneté en heures, la vue porte les mots.
-	 *
-	 * Tout le reste — quatre lignes attribuées, quatre indicateurs, six
-	 * distinctions, huit événements filtrés à quatre — sort du corpus.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LA COQUILLE, FORME ABRÉGÉE — ARB-021
-	 *
-	 * V-25 est l'une des 26 vues abrégées : barre sans les deux menus
-	 * déroulants, rail sans pictogrammes ni `data-vers`, `Gestion` en
-	 * `si-ecriture`, pas de `#rail-univers`, arborescence écrite au balisage.
-	 * `node verif/releve-vues.mjs --formes` en est le juge.
-	 *
-	 * TROIS ATTRIBUTS DE DONNÉES sont transmis à `div.app` par `donnees`
-	 * (A-2) : `data-onglet`, `data-verrou`, `data-activite`. AUCUNE feuille ne
-	 * les lit — le relevé les classe parmi les onze que seul le script de
-	 * planche consomme (`docs/releve-vues.md` §4). Ils sont portés parce que le
-	 * gel les écrit, et pour que la comparaison de balisage reste exacte.
-	 *
-	 * `droits` N'EST PAS TRANSMIS, et c'est délibéré : le gel de V-25 n'écrit
-	 * JAMAIS `data-droits` sur `div.app` — ses six attributs sont `class`,
-	 * `id`, `data-rail`, `data-onglet`, `data-verrou`, `data-activite`
-	 * (`node verif/releve-vues.mjs V-25`). La propriété laissée absente, le
-	 * gabarit n'émet pas l'attribut. Les trois nœuds `si-ecriture` du rail et
-	 * de la barre restent donc visibles, comme au gel.
-	 *
-	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT — ARB-011. Ni `notifier()`, ni la
-	 * bascule d'onglet au clic, ni l'évaluation de robustesse à la frappe, ni
-	 * l'affichage du mot de passe : le squelette rend l'ÉTAT, jamais la
-	 * transition. `#robustesse` reste donc dans la forme que le gel lui donne
-	 * AU BALISAGE — `data-niveau="court"`, quatre segments éteints, « Trop
-	 * court », « 0 / 12 » —, parce que `creerRobustesse()` n'appelle pas
-	 * `evaluer()` à la construction (`V-25:2618` : la fabrique pose ses
-	 * écouteurs et rend l'objet, sans première évaluation). Pour la même
-	 * raison, les trois `li` de `#regles` ne portent aucun `data-ok`.
-	 *
-	 * L'HÔTE DE PALETTE DE V-09 — `template#tpl-palette` et `dialog#palette`
-	 * fermé — n'est pas rendu : mesuré SANS AUCUNE INCIDENCE sur trente
-	 * maquettes, dont V-25 nommément, instantané ARIA identique et capture
-	 * identique à l'octet (`docs/releve-vues.md` §4.1). Son montage réel
-	 * appartient au lot qui portera V-09 (DAG K-10).
-	 *
-	 * CE QUE CE COMPOSANT NE PROUVE PAS. Il rend un ÉTAT DE MAQUETTE. Les
-	 * `si-ecriture` du rail et de la barre reproduisent le gel, qui retire
-	 * l'élément EN CSS : ce n'est pas P-09, qui exige l'absence du DOM. Ni
-	 * P-09, ni P-02, ni M16.5 ne sont déclarés tenus par ce lot.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
-	 * (P-6.1) et de `src/vues/V-25.css` (P-6.3), posé par
-	 * `node verif/feuilles-de-vue.mjs V-25 --installer`. Les `style=` reproduits
-	 * figurent tous à l'ensemble clos du gel de V-25 (ARB-016).
+	 * Le style est dans `src/socle.css` et `src/vues/V-25.css`.
 	 */
 	import type {
 		Compte,
@@ -144,82 +48,50 @@
 	import { adresseDesNotesDuDomaine } from '$lib/rangement/adresses';
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur?: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-25')`, variante complète. */
 		notes: readonly Note[];
 		/**
-		 * CE QUE LA ROUTE SERT EST EXIGÉ, LE RESTE A UN ÉTAT VIDE.
-		 *
-		 * Les sources de cet écran étaient OPTIONNELLES, de défaut la constante de
-		 * `seeds/corpus.ts` : une route qui en oubliait une affichait l'identité,
-		 * les contributions et le flux d'activité d'un contributeur de
-		 * démonstration comme s'ils étaient ceux du titulaire de la session.
-		 * `/mon-profil` sert les domaines, le compte, les contributions, les
-		 * relations et l'activité : ces cinq-là sont EXIGÉS, et une route qui en
-		 * oublierait un ne bâtirait plus.
-		 *
-		 * `univers`, `comptes` et `distinctions` restent optionnelles, avec un ÉTAT
-		 * VIDE pour défaut : le contexte de coquille porte le rail réel, aucun
-		 * chargeur ne sert la liste des comptes à cet écran, et le barème des
-		 * distinctions n'a aucune table. `instance` a disparu : le contexte sert
-		 * déjà la version.
+		 * CE QUE LA ROUTE SERT EST EXIGÉ, LE RESTE A UN ÉTAT VIDE. Ces sources étaient
+		 * optionnelles, de défaut la constante de `seeds/corpus.ts` : une route qui en
+		 * oubliait une affichait l'identité, les contributions et l'activité d'un
+		 * contributeur de démonstration comme celles du titulaire de la session.
+		 * `univers`, `comptes` et `distinctions` restent optionnelles, avec un état vide.
 		 */
 		/** Les univers déclarés. Absente, aucun univers — jamais ceux du jeu. */
 		univers?: readonly Univers[];
-		/** Les domaines du périmètre du compte, tels que la base les porte. */
 		domaines: readonly Domaine[];
-		/** Le compte connecté — le titulaire de la session. */
 		compte: UtilisateurCourant;
 		/** Les comptes de l'instance. Absente, aucun — jamais ceux du jeu. */
 		comptes?: readonly Compte[];
 		/**
-		 * Les contributions déclarées, par auteur, telles que la base les compte.
-		 * La table est PARTIELLE : un compte sans contribution déclarée existe —
-		 * le gel en montre un —, et le rendu le traite déjà.
-		 *
-		 * `null` N'EST PAS ZÉRO — `P-02`. Un chargeur de route qui compte en base
-		 * ce qui est comptable et ne peut PAS attribuer les liens internes
-		 * (`relations` ne porte pas l'auteur du lien) passe `null` pour celui-là :
-		 * l'indicateur et les distinctions qui le mesurent s'affichent alors en
-		 * état neutre explicite, jamais en zéro muet. Le jeu de semence, lui,
-		 * déclare deux nombres, et rien ne change pour lui.
+		 * Les contributions déclarées, par auteur. La table est PARTIELLE : un compte
+		 * sans contribution déclarée existe. `null` N'EST PAS ZÉRO — un chargeur qui ne
+		 * peut pas attribuer les liens internes passe `null`, et l'indicateur s'affiche
+		 * en état neutre explicite, jamais en zéro muet.
 		 */
 		contributions: Partial<Record<string, ContributionAffichee>>;
 		/**
-		 * Les distinctions du barème. Absente, aucune — le barème vivait dans le
-		 * jeu de démonstration, et aucune table ne le porte : un barème inventé
-		 * mesurerait le titulaire contre des seuils qui ne sont d'aucune instance.
-		 * Aucune servie, le bloc de l'onglet SE TAIT tout entier.
+		 * Les distinctions du barème. Absente, aucune — le barème vivait dans le jeu de
+		 * démonstration et aucune table ne le porte : un barème inventé mesurerait le
+		 * titulaire contre des seuils qui ne sont d'aucune instance. Aucune servie, le
+		 * bloc de l'onglet SE TAIT tout entier.
 		 */
 		distinctions?: readonly Distinction[];
 		/** Le flux d'activité, tel que la base le porte — vide tant qu'aucune table ne l'écrit. */
 		activite: readonly EvenementDActivite[];
-		/** Les relations du périmètre, telles que la base les porte. */
 		relations: readonly Relation[];
 		/**
-		 * LE PROFIL DU COMPTE CONNECTÉ, tel que la base le porte.
-		 *
-		 * Absente, le compte est cherché dans `comptes` par le nom de `compte` —
-		 * c'est le chemin du jeu de semence et des sept états de la planche, et il
-		 * ne bouge pas. Fournie par un chargeur de route, elle l'emporte : l'écran
-		 * cesse alors d'afficher l'identité du corpus et affiche celle du titulaire
-		 * de la session. `src/lib/donnees/profil.ts`, `profilAffiche()`, en est la
-		 * seule fabrique.
+		 * LE PROFIL DU COMPTE CONNECTÉ, tel que la base le porte. Absente, le compte est
+		 * cherché dans `comptes` par le nom de `compte` — le chemin du jeu de semence.
+		 * Fournie, elle l'emporte : l'écran cesse d'afficher l'identité du corpus.
+		 * `profilAffiche()` de `src/lib/donnees/profil.ts` en est la seule fabrique.
 		 */
 		profilDuCompte?: ProfilAffiche | null;
 		/**
-		 * LE RANGEMENT DU TITULAIRE — les deux IDENTIFIANTS d'adresse de son
-		 * domaine de rattachement, tels que la base les joint.
-		 *
-		 * C'est ce qui donne son adresse à « Voir les notes de … ». Elle ne se
-		 * dérive pas du nom affiché : `RG-M12-11` fige l'identifiant à la création
-		 * et le laisse stable ensuite, si bien qu'un domaine renommé s'adresse
-		 * toujours par son premier identifiant.
-		 *
-		 * Fournie à `null`, le titulaire n'a aucun rattachement et le bouton reste
-		 * inerte. Absente, la vue n'est pas branchée sur une base et cherche la
-		 * correspondance par nom dans `domaines` — le chemin du jeu de semence.
+		 * LE RANGEMENT DU TITULAIRE — les deux IDENTIFIANTS d'adresse de son domaine de
+		 * rattachement. C'est ce qui donne son adresse à « Voir les notes de … », et
+		 * elle ne se dérive pas du nom affiché : `RG-M12-11` fige l'identifiant à la
+		 * création. `null` : aucun rattachement, le bouton reste inerte.
 		 */
 		rangementDuProfil?: { readonly univers: string; readonly domaine: string } | null;
 		/**
@@ -230,16 +102,14 @@
 	}
 
 	/**
-	 * Une contribution telle que l'écran la reçoit — deux nombres, dont chacun
-	 * peut être INDISPONIBLE. `Contribution` du jeu de semence s'y range sans
-	 * conversion : ses deux champs sont des nombres.
+	 * Une contribution telle que l'écran la reçoit — deux nombres, dont chacun peut
+	 * être INDISPONIBLE.
 	 */
 	interface ContributionAffichee {
 		readonly verifiees: number | null;
 		readonly liens: number | null;
 	}
 
-	/** Le profil affiché, dans la forme que `profilAffiche()` compose. */
 	interface ProfilAffiche {
 		readonly nom: string;
 		readonly identifiant: string;
@@ -268,7 +138,6 @@
 
 	const reglage = $derived(vecteur ?? {});
 
-	/** L'onglet ouvert. Défaut `identite`, comme le balisage du gel. */
 	const onglet = $derived(typeof reglage['ong'] === 'string' ? reglage['ong'] : 'identite');
 	/** Le compte incarné par la planche : `karim` ou `neuf`. */
 	const cas = $derived(typeof reglage['cpt'] === 'string' ? reglage['cpt'] : 'karim');
@@ -276,16 +145,14 @@
 	const verrouille = $derived(reglage['c-verrou'] === true);
 
 	/**
-	 * LE COMPTE À INCARNER — le seul littéral de désignation du gel.
-	 * `COMPTE_NEUF` (`V-25:2984`) nomme Léa Marchand ; `COMPTES` porte ses huit
-	 * autres valeurs, à l'identique.
+	 * LE COMPTE À INCARNER — le seul littéral de désignation du gel. `COMPTE_NEUF`
+	 * (`V-25:2984`) nomme Léa Marchand ; `COMPTES` porte ses huit autres valeurs.
 	 */
 	const IDENTIFIANT_DU_COMPTE_NEUF = 'c-lea';
 
 	/**
 	 * Les initiales d'un nom — règle de `window.contributeurs` du gel, déjà
-	 * transcrite par V-10, V-11 et V-40. Elle rend « KB » pour « Karim
-	 * Belhadj », c'est-à-dire `MOI.initiales`.
+	 * transcrite par V-10, V-11 et V-40.
 	 */
 	function initialesDe(nom: string): string {
 		return nom
@@ -296,26 +163,19 @@
 			.toUpperCase();
 	}
 
-	/** Le nombre en français — `nb()` du gel, `toLocaleString("fr-FR")`. */
 	function nb(x: number): string {
 		return x.toLocaleString('fr-FR');
 	}
 
-	/**
-	 * LE MARQUEUR D'UNE DONNÉE QUI N'EXISTE PAS — `P-02`, et c'est la seule
-	 * forme que le gel donne au vide : `V-24:1287` écrit le cadratin au
-	 * sous-titre du dépôt tant qu'aucun scénario n'est retenu. Zéro et
-	 * « indisponible » sont deux informations différentes ; c'est le zéro muet
-	 * que `RG-M01-01` vise.
-	 */
+	/** LE MARQUEUR D'UNE DONNÉE QUI N'EXISTE PAS, et c'est la seule forme que le gel
+	    donne au vide : zéro et « indisponible » sont deux informations différentes,
+	    et c'est le zéro muet que `RG-M01-01` vise. */
 	const RIEN = '—';
 
-	/** Un nombre à l'écran, ou le marqueur du vide. */
 	function chiffre(x: number | null): string {
 		return x === null ? RIEN : nb(x);
 	}
 
-	/** Le profil affiché : ce que l'entête, l'identité et la session en lisent. */
 	interface Profil {
 		readonly nom: string;
 		readonly initiales: string;
@@ -327,12 +187,9 @@
 		readonly derniereConnexion: string;
 	}
 
-	/**
-	 * Un compte du corpus, mis dans la forme que la vue attend. `arrivee` et
-	 * `derniere` de `COMPTES` valent, pour Karim, exactement l'`arrivee` et la
-	 * `derniereConnexion` que `CONTRIBUTIONS` porte — le corpus ne se contredit
-	 * pas, et une seule des deux sources suffit donc aux deux comptes.
-	 */
+	/** Un compte du corpus, mis dans la forme que la vue attend. `arrivee` et
+	    `derniere` de `COMPTES` valent exactement ce que `CONTRIBUTIONS` porte : une
+	    seule des deux sources suffit aux deux comptes. */
 	function profilDe(compte: Compte): Profil {
 		return {
 			nom: compte.nom,
@@ -352,15 +209,9 @@
 		)
 	);
 
-	/**
-	 * LE PROFIL RENDU — celui de la base quand un chargeur le passe, celui du
-	 * corpus sinon.
-	 *
-	 * Les initiales ne voyagent pas : la règle du gel est ci-dessus, et
-	 * l'appliquer ici plutôt que de la recevoir garantit qu'il n'en existe
-	 * qu'une. Vérifié sur le jeu de semence — « Karim Belhadj » rend « KB »,
-	 * c'est-à-dire `MOI.initiales`.
-	 */
+	/** LE PROFIL RENDU — celui de la base quand un chargeur le passe, celui du corpus
+	    sinon. Les initiales ne voyagent pas : les appliquer ici plutôt que de les
+	    recevoir garantit qu'il n'en existe qu'une règle. */
 	const profil = $derived<Profil | null>(
 		profilDuCompte !== null && profilDuCompte !== undefined
 			? { ...profilDuCompte, initiales: initialesDe(profilDuCompte.nom) }
@@ -369,7 +220,6 @@
 				: null
 	);
 
-	/** Les quatre lignes du panneau « Attribué par l'administration ». */
 	const attribues = $derived(
 		profil
 			? ([
@@ -381,9 +231,7 @@
 			: []
 	);
 
-	/* ═══════════════════════════════════════════════════════════════════════
-	   LES CONTRIBUTIONS — `window.statsDe`, transcrit (`V-25:2486`)
-	   ═══════════════════════════════════════════════════════════════════════ */
+	/* Les contributions — `window.statsDe`, transcrit (`V-25:2486`). */
 
 	interface Statistiques {
 		readonly publiees: number;
@@ -396,13 +244,11 @@
 	}
 
 	/**
-	 * Ce qui est calculable l'est. Les publications et les brouillons se
-	 * comptent sur le corpus de la vue ; les citations sont, parmi les notes de
-	 * l'auteur, le plus grand nombre de relations qui pointent vers l'une
-	 * d'elles — et la note qui les porte est la note phare. Les vérifications
-	 * et les liens ne sont pas dérivables d'un corpus qui ne garde pas
-	 * l'historique : `CONTRIBUTIONS` les déclare, et son absence pour un compte
-	 * vaut zéro. C'est la lettre du gel.
+	 * Ce qui est calculable l'est : publications et brouillons se comptent sur le
+	 * corpus ; les citations sont, parmi les notes de l'auteur, le plus grand nombre
+	 * de relations pointant vers l'une d'elles — et la note qui les porte est la note
+	 * phare. Les vérifications et les liens ne sont pas dérivables d'un corpus sans
+	 * historique : ils sont déclarés, et leur absence vaut zéro.
 	 */
 	function statistiquesDe(nom: string): Statistiques {
 		const declaree: ContributionAffichee | undefined = contributions[nom];
@@ -429,7 +275,6 @@
 
 	const stats = $derived(profil ? statistiquesDe(profil.nom) : null);
 
-	/** Les quatre indicateurs de contribution, dans l'ordre du gel. */
 	const indicateurs = $derived(
 		stats
 			? ([
@@ -449,9 +294,7 @@
 			: []
 	);
 
-	/* ═══════════════════════════════════════════════════════════════════════
-	   LES SIX DISTINCTIONS — toujours affichées, obtenues ou non
-	   ═══════════════════════════════════════════════════════════════════════ */
+	/* Les six distinctions — toujours affichées, obtenues ou non. */
 
 	interface Jauge {
 		readonly distinction: Distinction;
@@ -461,13 +304,9 @@
 		readonly part: number;
 	}
 
-	/**
-	 * `V-25:2765` — la mesure lue sur les statistiques, jamais une constante.
-	 *
-	 * UNE MESURE INDISPONIBLE NE PROGRESSE PAS DE ZÉRO POUR CENT : elle ne
-	 * progresse pas du tout, et la jauge le dit. Poser `0 %` affirmerait que le
-	 * compte n'a rien fait, ce qu'on ignore (`P-02`).
-	 */
+	/** `V-25:2765` — la mesure lue sur les statistiques, jamais une constante. UNE
+	    MESURE INDISPONIBLE NE PROGRESSE PAS DE ZÉRO POUR CENT : poser `0 %`
+	    affirmerait que le compte n'a rien fait, ce qu'on ignore. */
 	function progression(d: Distinction, s: Statistiques): Jauge {
 		const valeur = s[d.mesure];
 		if (valeur === null) return { distinction: d, valeur: null, obtenue: false, part: 0 };
@@ -479,7 +318,6 @@
 		};
 	}
 
-	/** Ce que l'étiquette accessible d'une distinction dit de son état. */
 	function etatDeLaJauge(j: Jauge): string {
 		if (j.valeur === null) return 'mesure indisponible';
 		return j.obtenue ? 'obtenue' : `progression ${j.part} pour cent`;
@@ -487,9 +325,7 @@
 
 	const jauges = $derived(stats ? distinctions.map((d) => progression(d, stats)) : []);
 
-	/* ═══════════════════════════════════════════════════════════════════════
-	   L'ACTIVITÉ — `rendreActivite` (`V-25:2830`)
-	   ═══════════════════════════════════════════════════════════════════════ */
+	/* L'activité — `rendreActivite` (`V-25:2830`). */
 
 	/** Les libellés de geste — `GESTES` du gel (`V-25:2812`). */
 	const GESTES: Record<TypeDEvenement, string> = {
@@ -512,35 +348,20 @@
 		profil ? activite.filter((e: EvenementDActivite) => e.qui === profil.nom) : []
 	);
 
-	/** Le titre de la note visée, cherché au corpus — `V-25:2861`. */
 	function titreDe(cible: string): string {
 		return notes.find((n) => n.id === cible)?.titre ?? cible;
 	}
 
 	/**
 	 * L'ADRESSE DE « VOIR LES NOTES DE … » — l'issue que le gel propose au nouvel
-	 * arrivant dont le flux d'activité est vide (`V-25:2884`).
+	 * arrivant dont le flux est vide (`V-25:2884`). ELLE EST LUE, JAMAIS DÉRIVÉE DU
+	 * NOM : un domaine ne s'adresse que dans son univers (`RG-STR-02`) et par ses deux
+	 * IDENTIFIANTS, que `RG-M12-11` fige à la création — chercher par nom d'affichage
+	 * composait une adresse qui rend 404 dès le premier renommage.
 	 *
-	 * ELLE EST LUE, JAMAIS DÉRIVÉE DU NOM. Un domaine ne s'adresse que dans son
-	 * univers (`RG-STR-02`), et par les deux IDENTIFIANTS, qui ne suivent ni le
-	 * nom ni l'univers : `RG-M12-11` les fige à la création, si bien qu'un
-	 * domaine renommé garde le sien. Chercher le domaine du titulaire par son
-	 * nom d'affichage composait donc une adresse qui rend 404 dès le premier
-	 * renommage — et une adresse d'homonyme quand deux univers portaient le même
-	 * nom de domaine.
-	 *
-	 * `rangementDuProfil` porte les deux identifiants tels que la base les
-	 * joint. Absente, la vue n'est pas branchée sur une base et retombe sur la
-	 * correspondance par nom du jeu de semence : le banc de comparaison ne bouge
-	 * pas.
-	 *
-	 * SANS ADRESSE, LE BOUTON N'EST PAS RENDU — il était rendu INERTE, et
-	 * `ARB-039` trace la frontière : « le critère est : l'inertie dépend-elle
-	 * d'un droit, ou d'un état que l'utilisateur peut changer lui-même ? ».
-	 * Ici elle dépend d'un droit et d'un module : l'utilisateur ne peut pas la
-	 * lever. C'est donc `P-09`, qui veut l'action absente, ni grisée ni masquée.
-	 * La route est seule à trancher — elle ne passe l'adresse que si la cible
-	 * s'ouvre —, et le rendu par défaut de la vue garde son bouton.
+	 * SANS ADRESSE, LE BOUTON N'EST PAS RENDU — il était rendu INERTE. `ARB-039` :
+	 * l'inertie dépend-elle d'un droit, ou d'un état que l'utilisateur peut changer
+	 * lui-même ? Ici d'un droit : c'est donc `P-09`, l'action absente.
 	 */
 	const adresseDesNotesDuProfil = $derived.by(() => {
 		if (rangementDuProfil !== undefined) {
@@ -552,25 +373,19 @@
 		return duJeu === undefined ? null : adresseDesNotesDuDomaine(duJeu.univers, duJeu.nom);
 	});
 
-	/**
-	 * L'ADRESSE VIENT DE LA FABRIQUE UNIQUE — `$lib/rangement/adresses`,
-	 * `ARB-001` —, et `svelte/no-navigation-without-resolve` ne sait pas la
-	 * vérifier : elle n'est pas un identifiant de route mais une chaîne dérivée
-	 * de deux identifiants. La règle est levée sur cette seule ligne, comme
-	 * `V-24` la lève pour les adresses de son rapport d'import.
-	 */
+	/** L'adresse vient de la fabrique unique (`ARB-001`), et
+	    `svelte/no-navigation-without-resolve` ne sait pas la vérifier : ce n'est pas un
+	    identifiant de route mais une chaîne dérivée. La règle est levée sur cette
+	    seule ligne. */
 	function voirLesNotesDuDomaine(): void {
 		if (adresseDesNotesDuProfil === null) return;
 		/* eslint-disable-next-line svelte/no-navigation-without-resolve */
 		void goto(adresseDesNotesDuProfil);
 	}
 
-	/**
-	 * `data-activite` de `div.app`. Le gel le pose à « vide » pour le nouvel
-	 * arrivant et à « pleine » pour le compte incarné (`V-25:3003` et `:3014`),
-	 * puis le relit pour décider s'il rend un flux ou un encouragement. Les
-	 * deux voies aboutissent au même ensemble d'événements : celui du filtre.
-	 */
+	/** `data-activite` de `div.app` — le gel le pose à « vide » ou « pleine »
+	    (`V-25:3003`, `:3014`) puis le relit pour décider s'il rend un flux ou un
+	    encouragement. */
 	const etatDActivite = $derived(evenements.length ? 'pleine' : 'vide');
 </script>
 
@@ -598,12 +413,9 @@
 	idContenu="contenu"
 >
 	{#snippet enfants()}
-		<!--
-			L'ENTÊTE. `#sous-nom` est construit nœud par nœud par le gel, sans un
-			seul blanc entre les trois enfants : `.entete-profil__sous` est un
-			conteneur `flex` à `gap`, et un blanc inséré s'y verrait au relevé
-			d'ordre de tabulation comme au pixel (P-6, P-8).
-		-->
+		<!-- L'ENTÊTE. `#sous-nom` est construit sans un seul blanc entre ses trois
+			enfants : `.entete-profil__sous` est un conteneur `flex` à `gap`, et un blanc
+			inséré s'y verrait au pixel. -->
 		<header class="entete-profil">
 			<div class="avatar-profil" id="avatar" aria-hidden="true">{profil?.initiales ?? ''}</div>
 			<div class="entete-profil__corps">
@@ -658,14 +470,9 @@
 							style="max-width:380px"
 							value={profil?.courriel ?? ''}
 						/>
-						<!--
-							LE GEL ÉCRIVAIT ICI « Sert aux notifications et à la
-							réinitialisation du mot de passe ». Les deux usages sont faux : le
-							produit n'a AUCUN expéditeur de courriel, et la réinitialisation
-							par lien n'existe pas — V-06 le dit désormais en toutes lettres.
-							Ce qui reste vrai de cette adresse est ce qu'elle EST : une donnée
-							du compte, enregistrée et relue par la console des comptes.
-						-->
+						<!-- LE GEL ÉCRIVAIT ICI « Sert aux notifications et à la réinitialisation
+								du mot de passe ». Les deux usages sont faux : le produit n'a AUCUN
+								expéditeur de courriel, et la réinitialisation par lien n'existe pas. -->
 						<span class="champ__aide"
 							>Enregistrée sur votre compte, et visible dans la console des comptes. Ce produit
 							n'envoie aucun message&nbsp;: ni notification, ni lien de réinitialisation.</span
@@ -678,9 +485,8 @@
 			</div>
 
 			<!--
-				Champs attribués : lisibles, expliqués, jamais de simple grisé. Le gel
-				les construit sans blanc entre les trois cellules ni entre le
-				pictogramme du cadenas et sa mention.
+				Champs attribués : lisibles, expliqués, jamais de simple grisé. Le gel les
+				construit sans blanc entre les trois cellules.
 			-->
 			<div class="panneau bloc">
 				<div class="panneau__tete"><span class="etiq">Attribué par l'administration</span></div>
@@ -857,21 +663,10 @@
 							<span class="interrupteur"><input type="checkbox" id="p-session" checked={preferenceDeSession}><span class="interrupteur__piste"></span></span>
 						</label>
 						<!--
-							L'INTERRUPTEUR « Recevoir les demandes de révision par courriel »
-							N'EST PLUS ÉMIS, et il ne s'agit pas d'un oubli de portage.
-
-							Le gel le posait coché au balisage, sans lui attacher aucun
-							gestionnaire. Rien ne pouvait le tenir : `comptes` n'a aucune
-							colonne de préférence de notification, aucune table de préférences
-							n'existe, et le produit n'a AUCUN expéditeur de courriel — le
-							message promis « quand un collègue signale une de vos notes à
-							revoir » ne partirait de nulle part. Un interrupteur coché est une
-							promesse tenue pour acquise ; celle-ci ne peut pas l'être.
-
-							Le geste est celui que `+layout.svelte` fait pour la donnée de
-							synchronisation de V-07 : ce qui n'a pas de contrepartie n'est pas
-							émis. La lacune reste comptée par `SANS_CONTREPARTIE_EN_BASE`
-							(`$lib/donnees/profil`), qui rougira le jour où la colonne arrive.
+							L'INTERRUPTEUR « Recevoir les demandes de révision par courriel » N'EST PLUS
+							ÉMIS : le gel le posait coché sans lui attacher aucun gestionnaire, et rien ne
+							pouvait le tenir — aucune colonne de préférence, aucun expéditeur de courriel.
+							La lacune reste comptée par `SANS_CONTREPARTIE_EN_BASE`.
 						-->
 					</div>
 					<div>
@@ -909,13 +704,9 @@
 					><span class="stat__sous">{i[2]}</span
 				></div>{/each}</div>
 
-			<!--
-				LE BARÈME NE VIENT D'AUCUNE TABLE, ET SANS DISTINCTION SERVIE LE BLOC SE
-				TAIT. Une étiquette au-dessus d'un conteneur vide ne dit rien : elle
-				annonce une zone que l'écran ne peut pas remplir. Servi, le barème
-				s'affiche entier, distinctions obtenues ou non — une progression est une
-				invitation.
-			-->
+			<!-- LE BARÈME NE VIENT D'AUCUNE TABLE, ET SANS DISTINCTION SERVIE LE BLOC SE
+				TAIT : une étiquette au-dessus d'un conteneur vide annonce une zone que
+				l'écran ne peut pas remplir. -->
 			{#if jauges.length > 0}
 				<span class="etiq" style="display:block;margin:var(--e-6) 0 var(--e-3)">Distinctions</span>
 				<!-- prettier-ignore -->
@@ -948,10 +739,8 @@
 					<span class="etiq">Vos contributions récentes</span>
 					<span class="chiffre" id="n-activite">{evenements.length || ''}</span>
 				</div>
-				<!--
-					Encouragement plutôt qu'un vide : c'est le premier écran que voit un
-					nouvel arrivant, et il décide s'il contribuera.
-				-->
+				<!-- Encouragement plutôt qu'un vide : c'est le premier écran que voit un
+					nouvel arrivant, et il décide s'il contribuera. -->
 				<!-- prettier-ignore -->
 				<div class="panneau__corps" id="activite"
 					>{#if evenements.length === 0}<div class="encouragement"

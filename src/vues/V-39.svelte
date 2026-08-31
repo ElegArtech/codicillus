@@ -1,40 +1,18 @@
 <script lang="ts">
 	/**
-	 * V-39 — États vides, de chargement et d'erreur. Catalogue transverse.
+	 * V-39 — États vides, de chargement et d'erreur. Catalogue transverse, sans
+	 * adresse propre : V-39 est une SECTION de V-41 (`ARB-002`).
 	 *
-	 * `docs/routes.md` §3.7 et §3.8 : V-39 est une SECTION de V-41, sans adresse
-	 * propre (ARB-002). Ce fichier n'existe que pour le mode démo —
-	 * la route de conception du banc (le module de service du banc, ÉCART-011 É-1).
+	 * CETTE VUE EST LA RÉFÉRENCE DES QUATRE ÉTATS DE ZONE DE `RG-M18-03` : dix états
+	 * vides, six esquisses de chargement, quatre portées d'erreur. Le quatrième état
+	 * — « sans droit » — n'a pas de composant : l'action absente n'est pas rendue
+	 * (`ADR-011`).
 	 *
-	 * CETTE VUE EST LA RÉFÉRENCE DES QUATRE ÉTATS DE ZONE DE `RG-M18-03`, que
-	 * toutes les vues suivantes reprendront : dix états vides, six esquisses de
-	 * chargement, quatre portées d'erreur. Le quatrième état — « sans droit » —
-	 * n'a pas de composant : l'action absente n'est pas rendue (ADR-011, A-7 de
-	 * `docs/DESIGN.md`). **Ce lot ne déclare pas `RG-M18-03` tenue** : il produit
-	 * les composants ; qu'ils soient effectivement atteints par chaque zone de
-	 * chaque vue relève de la batterie 9 et des lots concernés.
+	 * AUCUNE MINUTERIE (`ARB-011`) : le battement des esquisses est une animation CSS
+	 * du gel, et l'état `anim` ne fait que la suspendre par `animation-play-state`.
 	 *
-	 * VINGT ET UN ÉTATS, DE DEUX NATURES — `verif/scenarios/V-39.json` :
-	 *   • un état de planche, comparé PAGE ENTIÈRE — `anim`, battement inactif ;
-	 *   • vingt états de ZONE côte à côte — les vignettes de `#vides`,
-	 *     `#squelettes` et `#erreurs`, que le banc découpe dans la page rendue
-	 *     (`verif/references/protocole-app.json`, « page-entiere-zone-isolee »).
-	 * La clé nomme la vignette à découper ; elle ne fait pas disparaître les
-	 * autres — une vignette tient sa largeur de ses voisines dans la grille.
-	 *
-	 * AUCUNE MINUTERIE — ARB-011. Le battement des esquisses est une animation CSS
-	 * du gel, jamais un rendu piloté ; l'état `anim` ne fait que la suspendre, ce
-	 * que la maquette obtient par `animation-play-state`.
-	 *
-	 * LE CADRE VIENT DU GABARIT — `$lib/coquille/Coquille.svelte`, amendé par
-	 * T-101b (ARB-015). La classe `doc` de `<main>` lui est passée en propriété :
-	 * le cadre local que ce fichier composait faute d'elle (`ECART-015` É-1) est
-	 * retiré, et la duplication avec lui.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI. Le rendu vient de `src/socle.css`
-	 * (P-6.1) et de `src/vues/V-39.css` (P-6.3). Les styles en ligne reproduits
-	 * ci-dessous sont ceux de la maquette gelée — voir l'écart déclaré au rapport
-	 * du lot : P-1.7 les refuse, la conformité pixel les impose.
+	 * Le cadre vient du gabarit (`ARB-015`). Le style est dans `src/socle.css` et
+	 * `src/vues/V-39.css` ; les styles en ligne sont ceux du gel.
 	 */
 	import {
 		DOMAINES,
@@ -50,18 +28,10 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 
 	interface Proprietes {
-		/** La clé de l'état demandé, telle que le scénario la déclare. */
 		etat: string;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-39')`, variante complète. */
 		notes: readonly Note[];
-		/**
-		 * LES QUATRE SOURCES DE LA COQUILLE, EN PROPRIÉTÉS OPTIONNELLES (T-045).
-		 *
-		 * Absentes, les constantes du jeu de semence s'appliquent : c'est ce que le
-		 * mode démo passe, et c'est ce qui garantit que le banc ne bouge pas d'un
-		 * pixel. Fournies — par un chargeur de route —, elles l'emportent, et la vue
-		 * cesse de servir une valeur figée, indépendante de la base et de l'identité.
-		 */
+		/** LES QUATRE SOURCES DE LA COQUILLE. Absentes, les constantes du jeu de
+		    semence s'appliquent ; fournies par une route, elles l'emportent. */
 		/** Les univers déclarés. Absente, `UNIVERS` du jeu de semence. */
 		univers?: readonly Univers[];
 		/** Les domaines du périmètre du compte. Absente, `DOMAINES` du jeu de semence. */
@@ -82,9 +52,8 @@
 	}: Proprietes = $props();
 
 	/**
-	 * L'état `anim` suspend le battement des esquisses. La maquette le pose par
-	 * `animation-play-state` sur chaque `.sq`, `.sq-noeud` et `.sq-arete` ; le
-	 * squelette rend le même attribut, sans horloge.
+	 * L'état `anim` suspend le battement des esquisses : la maquette le pose par
+	 * `animation-play-state` sur chaque `.sq`, `.sq-noeud` et `.sq-arete`.
 	 */
 	const pause = $derived(etat === 'anim' ? ';animation-play-state:paused' : '');
 
@@ -97,7 +66,6 @@
 		readonly sobre: boolean;
 	}
 
-	/** Les dix états vides du produit, chacun rattaché à la vue qui l'emploie. */
 	const VIDES: readonly EtatVide[] = [
 		{
 			ou: 'V-07',
@@ -195,7 +163,6 @@
 		}
 	];
 
-	/** Les six esquisses de chargement — une par structure qui arrive. */
 	const SQUELETTES: readonly (readonly [string, string, string])[] = [
 		['V-08', 'Carte de résultat', 'carte'],
 		['V-12', 'Ligne de liste', 'liste'],
@@ -205,7 +172,6 @@
 		['V-21', 'Arborescence', 'arbre']
 	];
 
-	/** Les largeurs des lignes de l'esquisse de liste. */
 	const LIGNES_LISTE = [78, 62, 70, 54];
 	/** Les couples étiquette / valeur de l'esquisse de panneau. */
 	const PILES_PANNEAU: readonly (readonly [string, string])[] = [
@@ -222,7 +188,6 @@
 		[78, 72, 24],
 		[50, 88, 16]
 	];
-	/** Les arêtes du graphe, par rang de nœud. */
 	const ARETES: readonly (readonly [number, number])[] = [
 		[0, 1],
 		[0, 2],
@@ -240,7 +205,6 @@
 		[1, 54]
 	];
 
-	/** La géométrie des arêtes, calculée comme la maquette la calcule. */
 	const ARETES_RENDUES = ARETES.flatMap(([rangDepart, rangArrivee]) => {
 		const depart = NOEUDS[rangDepart];
 		const arrivee = NOEUDS[rangArrivee];
@@ -293,10 +257,9 @@
 
 <!--
 	`ligne(largeur, classe)` — le calque exact de la fabrique du gel
-	(`mockups/V-39-etats.html:2939`), qui pose la largeur d'une ligne d'esquisse
-	en ARGUMENT et jamais en littéral de style : `l.style.width = largeur`. Les
-	largeurs vivent donc au point d'appel, comme dans la maquette, et la
-	déclaration produite est la même des deux côtés (P-6.4, `ECART-017` É-7).
+	(`mockups/V-39-etats.html:2939`), qui pose la largeur d'une ligne d'esquisse en
+	ARGUMENT et jamais en littéral de style. Les largeurs vivent donc au point
+	d'appel, comme dans la maquette.
 -->
 {#snippet ligne(largeur: string, classe: string)}
 	<div class={classe ? `sq sq-l ${classe}` : 'sq sq-l'} style="width:{largeur}{pause}"></div>

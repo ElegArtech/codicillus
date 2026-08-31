@@ -1,60 +1,26 @@
 <script lang="ts">
 	/**
-	 * V-28 — Console · Domaines. Deuxième des dix sections, et la jumelle de
-	 * balisage de V-27 : même enveloppe, même navigation secondaire, même
-	 * panneau de formulaire, même famille de dialogue destructif.
+	 * V-28 — Console · Domaines. Jumelle de balisage de V-27 : même enveloppe, même
+	 * navigation secondaire, même panneau de formulaire, même dialogue destructif.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * ELLE N'A PAS LA MÊME COQUILLE QUE V-27, ET C'EST LE GEL QUI EN DÉCIDE
+	 * ELLE N'A PAS LA MÊME COQUILLE QUE V-27, ET C'EST LE GEL QUI EN DÉCIDE : V-27
+	 * est de forme COMPLÈTE, V-28 de forme ABRÉGÉE — barre sans les deux menus, rail
+	 * sans pictogrammes ni `data-vers`, arborescence de quinze nœuds ÉCRITE AU
+	 * BALISAGE que le corpus ne peut pas produire. C'est le premier fait à ne pas
+	 * généraliser d'une console à l'autre.
 	 *
-	 * V-27 est de forme COMPLÈTE, V-28 de forme ABRÉGÉE (ARB-021, A-1) : barre
-	 * sans les deux menus déroulants, rail sans pictogrammes ni `data-vers`,
-	 * `Gestion` en `si-ecriture`, arborescence de quinze nœuds ÉCRITE AU
-	 * BALISAGE que le corpus ne peut pas produire. Les deux vues du même lot
-	 * portent donc deux formes différentes — c'est mesuré, pas supposé, et
-	 * c'est le premier fait à ne pas généraliser d'une console à l'autre.
+	 * LE PANNEAU `tiroir-form` NE PÈSE AUCUN PIXEL — voir `V-27.svelte`.
 	 *
-	 * L'ENVELOPPE `div.console` est en revanche IDENTIQUE aux dix (ARB-023) :
-	 * grille `244px minmax(0,1fr)`, `aside.nav2` puis `main.travail#travail`.
+	 * `autofocus` — LE SEUL DU PÉRIMÈTRE : `input#sup-saisie` de l'état `sup-vide`,
+	 * et lui seul. Le gel y pose le focus par une minuterie ; sans lui, l'anneau de
+	 * focalisation manque et l'état coûte 4 684 pixels (`ECART-024`). Il n'est PAS
+	 * posé sur les treize `input.saisie` du panneau, qui est hors fenêtre.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LE PANNEAU `tiroir-form` NE PÈSE AUCUN PIXEL — VOIR `V-27.svelte`
+	 * La vue rend `dialog#dlg-supprimer` avec l'attribut `open`, et rien de plus. Les
+	 * gestes sont branchés : le nom d'un domaine ouvre sa page, « Modifier » ouvre le
+	 * tiroir, la suppression demande le nom, les modules basculent.
 	 *
-	 * Même constat, même cause : `.app[data-form="ouvert"] .tiroir-form` ne
-	 * peut pas s'appliquer à un panneau qui vit hors de `div.app`
-	 * (`CLAUDE.md` §6, P-3). Il est rendu exactement, et le niveau 1 en est le
-	 * seul juge.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * `autofocus` — LE SEUL DU PÉRIMÈTRE, ET IL EST MESURÉ
-	 *
-	 * `input#sup-saisie` de l'état `sup-vide`, et lui seul. P-4 (`CLAUDE.md`
-	 * §6) : `autofocus` ne survit à `stabiliser()` que dans un dialogue révélé,
-	 * où la modalité est établie APRÈS la stabilisation. Le gel y pose le focus
-	 * par `setTimeout(() => saisieSup.focus(), 50)` ; sans lui, l'anneau de
-	 * focalisation manque et l'état coûte 4 684 pixels (`ECART-024`).
-	 *
-	 * Il N'EST PAS posé sur les treize `input.saisie` du panneau — le panneau
-	 * est hors fenêtre, le relevé qui les rangeait parmi les cibles à risque
-	 * était faux, et zéro pixel en dépend.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * LE DIALOGUE — ARB-017, RÉVÉLATION `modalite-dialogue`
-	 *
-	 * `sup-vide` ouvre `dialog#dlg-supprimer` ; `sup-plein`, qui est le réglage
-	 * PAR DÉFAUT du contrôle, n'émet aucun `change` et n'ouvre rien — le
-	 * scénario le déclare lui-même identique à `form-ferme`. La vue rend
-	 * l'attribut `open`, et rien de plus : c'est le banc qui établit la
-	 * modalité, des deux côtés.
-	 *
-	 * LES GESTES SONT BRANCHÉS. Le nom d'un domaine ouvre sa page, « Modifier »
-	 * ouvre le tiroir, la suppression demande le nom, les modules basculent. La
-	 * mention « aucun comportement, temps 3 » qui tenait ici était fausse : un
-	 * geste dessiné est un geste promis.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-28.css` (P-6.3). Les `style=` reproduits figurent à
-	 * l'ensemble clos du gel de V-28 (ARB-016, P-6.4).
+	 * Le style est dans `src/socle.css` et `src/vues/V-28.css`.
 	 */
 	import { resolve } from '$app/paths';
 	import { identifiantDUnivers, identifiantDeDomaine } from '$lib/rangement/adresses';
@@ -79,78 +45,47 @@
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import type { RefusDeSaisie, SaisieDeDomaine } from '$lib/console/structure';
 
-	/* LE MOT RENOMMABLE DE `M14.7`, LU SUR LE CONTEXTE DE COQUILLE. Il etait
-	   une constante de `$lib/vocabulaire.ts`, calculee a l'import depuis
-	   `CONFIG.motFiche` de `seeds/corpus.ts` : le renommer en console ne
-	   changeait rien a l'ecran. Hors gabarit racine, le repli rend « Fiche ». */
+	/* Le mot renommable de `M14.7`, lu sur le contexte de coquille : en constante,
+	   le renommer en console ne changeait rien a l'ecran. Repli : « Fiche ». */
 	const motsDuProduit = vocabulaireRendu();
 
-	/**
-	 * LES IDENTIFIANTS D'ADRESSE, LUS EN BASE — PAS DÉRIVÉS DES NOMS.
-	 *
-	 * La vue ne reçoit que des NOMS, et les slugifiait pour composer le lien
-	 * « ouvrir » de chaque ligne. Les identifiants d'un univers et d'un domaine
-	 * sont fixés à la création et ne suivent PAS les renommages (`RG-M12-11`) :
-	 * renommer un domaine depuis cet écran même rendait donc 404 le lien de la
-	 * ligne qu'on venait de modifier. La table vient du gabarit racine.
-	 */
+	/** LES IDENTIFIANTS D'ADRESSE, LUS EN BASE — PAS DÉRIVÉS DES NOMS : la vue ne
+	    reçoit que des NOMS et les slugifiait, or ils sont fixés à la création et ne
+	    suivent PAS les renommages (`RG-M12-11`) — renommer un domaine depuis cet écran
+	    même rendait 404 le lien de la ligne modifiée. */
 	const designations = designationsDeCoquille();
 	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
 	const motFichePluriel = $derived(motsDuProduit.fiches);
 	const motFichePlurielMinuscule = $derived(motsDuProduit.fichesMin);
 
 	interface Proprietes {
-		/** Le vecteur complet de l'état demandé, tel que le scénario le déclare. */
 		vecteur: Record<string, string | boolean> | null;
-		/** Le jeu de semence de la vue — `corpusPourVue('V-28')`, variante complète. */
 		notes: readonly Note[];
-		/** Les univers déclarés, servis par la route. Vide : aucun périmètre. */
 		univers: readonly Univers[];
-		/** Les domaines déclarés, servis par la route. Vide : aucun domaine. */
 		domaines: readonly Domaine[];
-		/** L'utilisateur courant, servi par la route. */
 		compte: UtilisateurCourant;
-		/** Description et modules de chaque domaine, servies par la route. */
 		detailDomaines: Record<NomDeDomaine, DetailDeDomaine>;
 		/**
-		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE — et rien d'autre.
-		 *
-		 * La vue tient l'ÉTAT de son dialogue — quel domaine est visé, ce qui a été
-		 * retapé — parce que c'est ce que le script du gel tenait lui-même
-		 * (`demanderSuppression(d)`, `V-28:3201`), et parce que le décompte exact de
-		 * `RG-M14-02` se calcule sur les notes qu'elle a reçues : personne d'autre
-		 * ne peut le composer.
-		 *
-		 * ELLE NE CONNAÎT NI ROUTE, NI ACTION, NI RÉSEAU. Le rappel est passé par
-		 * `+page.svelte`, qui seul sait à quelle action s'adresser — la frontière est
-		 * celle de `$lib/cablage/formulaires.ts` : le gel n'écrit aucun `method` ni
-		 * aucun `action`, et rien ici n'en invente.
-		 *
-		 * Absent, le dialogue s'ouvre, se ferme et se confirme sans rien envoyer :
-		 * c'est ce que le mode de conception et les tests de propriétés obtiennent.
+		 * CE QUE LA VUE FAIT QUAND LA SUPPRESSION EST CONFIRMÉE — et rien d'autre. La vue
+		 * tient l'ÉTAT de son dialogue parce que le gel le tenait (`V-28:3201`) et parce
+		 * que le décompte exact de `RG-M14-02` se calcule sur les notes qu'elle a reçues.
+		 * ELLE NE CONNAÎT NI ROUTE, NI ACTION, NI RÉSEAU : le gel n'écrit aucun `method`
+		 * ni aucun `action`, et rien ici n'en invente.
 		 */
 		onSupprimer?: (demande: {
 			readonly univers: string;
 			readonly domaine: string;
 			readonly saisie: string;
 		}) => void;
-		/**
-		 * LE CATALOGUE DES SIX MODULES — leur libellé et leur sous-titre, servis
-		 * par la route. Ce n'est pas de la démonstration : c'est le référentiel
-		 * d'interface du produit, et ce qui varie d'un domaine à l'autre — quels
-		 * modules sont ACTIVÉS — entre par `detailDomaines`.
-		 */
+		/** LE CATALOGUE DES SIX MODULES — leur libellé et leur sous-titre. Ce n'est pas
+		    de la démonstration : c'est le référentiel d'interface du produit, et ce qui
+		    varie d'un domaine à l'autre — quels modules sont ACTIVÉS — entre par
+		    `detailDomaines`. */
 		modules: Record<CleDeModule, Module>;
-		/**
-		 * CE QUE LA VUE FAIT QUAND LE PANNEAU EST VALIDÉ — création puis
-		 * enregistrement. Même partage que pour la suppression : la vue tient
-		 * l'état du panneau — quel domaine est édité, quels modules sont cochés —
-		 * parce que c'est ce que `ouvrirForm(d)` tenait au gel (`V-28:3108`), et
-		 * elle ne connaît ni route, ni action, ni réseau.
-		 *
-		 * `onEnregistrer` reçoit d'abord le nom ACTUEL du domaine : c'est la clé
-		 * par laquelle la page retrouve sa désignation canonique.
-		 */
+		/** CE QUE LA VUE FAIT QUAND LE PANNEAU EST VALIDÉ. Même partage : la vue tient
+		    l'état du panneau, comme `ouvrirForm(d)` au gel (`V-28:3108`). `onEnregistrer`
+		    reçoit d'abord le nom ACTUEL du domaine, la clé par laquelle la page retrouve
+		    sa désignation canonique. */
 		onCreer?: (saisie: SaisieDeDomaine) => void;
 		onEnregistrer?: (nom: string, saisie: SaisieDeDomaine) => void;
 		/** Le refus rendu par l'action, rattaché à son champ (`#erreur-nom`). */
@@ -190,17 +125,11 @@
 	}
 
 	/**
-	 * LA COPIE DE TRAVAIL : LE REGISTRE SERVI, ET RIEN QUE LUI.
-	 *
-	 * Une ligne « Téléphonie » y était ajoutée — un littéral du gel, recopié
-	 * pour donner à la maquette le cas « domaine vide », et qu'aucune table ne
-	 * porte. Elle n'était retenue que par une COMPARAISON D'IDENTITÉ,
-	 * `registreDeDomaines === DOMAINES` : la propriété était facultative, et
-	 * une route qui l'oubliait servait donc, à côté des domaines réels, un
-	 * domaine que l'administrateur voyait, ne pouvait ni éditer ni supprimer,
-	 * et qui ne correspondait à rien. La propriété est désormais REQUISE — le
-	 * compilateur refuse la route qui l'oublierait —, la sentinelle n'a plus
-	 * d'objet, et elle part avec le littéral qu'elle gardait.
+	 * LA COPIE DE TRAVAIL : LE REGISTRE SERVI, ET RIEN QUE LUI. Une ligne
+	 * « Téléphonie » y était ajoutée — un littéral du gel qu'aucune table ne porte,
+	 * retenu par une comparaison d'identité au jeu de démonstration : une route qui
+	 * oubliait la propriété servait, à côté des domaines réels, un domaine que
+	 * l'administrateur voyait sans pouvoir ni l'éditer ni le supprimer.
 	 */
 	const domaines: readonly DomaineDeTravail[] = $derived(
 		registreDeDomaines.map((d) => ({
@@ -220,8 +149,8 @@
 	);
 
 	/**
-	 * Palette de domaines : la même intention que celle des univers — hors des
-	 * teintes de fraîcheur —, mais PAS la même liste (`COULEURS`, `V-28:2923`).
+	 * Palette de domaines : même intention que celle des univers — hors des teintes
+	 * de fraîcheur —, mais PAS la même liste (`V-28:2923`).
 	 */
 	const COULEURS = [
 		'#453ba0',
@@ -261,7 +190,6 @@
 	/** Les six modules, dans l'ordre du registre (`Object.keys(window.MODULES)`). */
 	const CLES_DE_MODULE = $derived(Object.keys(modules) as CleDeModule[]);
 
-	/** Le nombre en français — `nb()` du gel, `toLocaleString("fr-FR")`. */
 	function nb(x: number): string {
 		return x.toLocaleString('fr-FR');
 	}
@@ -295,20 +223,17 @@
 		};
 	}
 
-	/* ── Le panneau de formulaire ───────────────────────────────────────────
-	   `ouvrirForm(d)` — à défaut d'appel, le panneau garde son BALISAGE
-	   INITIAL : sélecteur d'univers, nuancier et liste de modules VIDES. */
+	/* Le panneau de formulaire — `ouvrirForm(d)` : à défaut d'appel, il garde son
+	   BALISAGE INITIAL, sélecteur d'univers, nuancier et liste de modules VIDES. */
 
 	/**
-	 * LE PANNEAU S'OUVRE, ET C'EST LA VUE QUI LE TIENT — même arbitrage que pour
-	 * le dialogue de suppression, et même motif : `ouverture` vaut `null` tant
-	 * que personne n'a cliqué, si bien que l'écran rendu est exactement celui que
-	 * le vecteur décrit.
+	 * LE PANNEAU S'OUVRE, ET C'EST LA VUE QUI LE TIENT : `ouverture` vaut `null`
+	 * tant que personne n'a cliqué, si bien que l'écran rendu est celui que le
+	 * vecteur décrit.
 	 */
 	let ouverture = $state<'creation' | 'edition' | null>(null);
 	let cible = $state<string | null>(null);
 
-	/** Les cinq champs du panneau — `edite` du gel (`V-28:3108`), un par un. */
 	let fNom = $state('');
 	let fDescription = $state('');
 	let fUnivers = $state('');
@@ -331,11 +256,9 @@
 	);
 	/**
 	 * LE PANNEAU EST OUVERT SI UN GESTE L'A OUVERT, OU SI LE VECTEUR LE DEMANDE.
-	 *
 	 * C'est cette valeur qui pose `data-form` sur `div.app`, et c'est elle que la
-	 * règle gelée `.app[data-form="ouvert"] ~ .tiroir-form` attend pour lever
-	 * `translateX(100%)`. La rédaction précédente ne lisait que le vecteur : le
-	 * bouton « + » pouvait bien changer d'état, le panneau restait hors fenêtre.
+	 * règle gelée attend pour lever `translateX(100%)` : la rédaction précédente ne
+	 * lisait que le vecteur, et le panneau restait hors fenêtre.
 	 */
 	const ouvert = $derived(ouverture !== null || form !== 'ferme');
 
@@ -360,12 +283,10 @@
 	const descriptionSaisie = $derived(
 		ouverture !== null ? fDescription : edite ? edite.description : ''
 	);
-	/** Le message de `#erreur-nom` : celui de l'écran, ou celui de l'action. */
 	const erreurNom = $derived(
 		erreurLocale ?? (refus !== null && refus.champ === 'nom' ? refus.message : null)
 	);
 
-	/** `ouvrirForm(d)` — `null` pour une création (`V-28:3108`). */
 	function ouvrirForm(d: DomaineDeTravail | null): void {
 		ouverture = d === null ? 'creation' : 'edition';
 		cible = d === null ? null : d.nom;
@@ -377,7 +298,6 @@
 		erreurLocale = null;
 	}
 
-	/** `fermerForm()` — le panneau se referme, la saisie ne survit pas. */
 	function fermerForm(): void {
 		ouverture = null;
 		cible = null;
@@ -385,21 +305,19 @@
 	}
 
 	/**
-	 * `RG-STR-06` — « un domaine active 1 à N modules ». `notes` est verrouillé
-	 * au gel (`data-verrou`), il ne se décoche donc jamais : c'est lui qui tient
-	 * le plancher de 1, ici comme dans `creerUnDomaine()`.
+	 * `RG-STR-06` — « un domaine active 1 à N modules ». `notes` est verrouillé au
+	 * gel (`data-verrou`) et ne se décoche jamais : c'est lui qui tient le plancher
+	 * de 1, ici comme dans `creerUnDomaine()`.
 	 */
 	function basculerLeModule(cle: CleDeModule, actif: boolean): void {
 		if (cle === 'notes') return;
 		fModules = actif ? [...fModules, cle] : fModules.filter((m) => m !== cle);
 	}
 
-	/**
-	 * `form-valider` — LA VALIDATION DE L'ÉCRAN, celle du gel (`V-28:3157`) : nom
-	 * vide ou doublon insensible à la casse, un seul message pour les deux cas.
-	 * Ce n'est pas LA règle — `creerUnDomaine()` refuse quoi qu'il arrive — c'est
-	 * son reflet, qui évite de proposer un geste voué au refus.
-	 */
+	/** `form-valider` — LA VALIDATION DE L'ÉCRAN, celle du gel (`V-28:3157`) : nom
+	    vide ou doublon insensible à la casse, un seul message pour les deux cas. Ce
+	    n'est pas LA règle — `creerUnDomaine()` refuse quoi qu'il arrive — c'est son
+	    reflet, qui évite de proposer un geste voué au refus. */
 	function validerLeForm(): void {
 		const nom = fNom.trim();
 		const doublon = domaines.some(
@@ -425,25 +343,18 @@
 	/* ── La suppression ─────────────────────────────────────────────────── */
 
 	/**
-	 * LE DOMAINE DONT LA SUPPRESSION EST EXAMINÉE, et ce qui a été retapé.
-	 *
-	 * Deux états, et ils ne servent qu'au document vivant : au rendu serveur ils
-	 * valent `null` et `''`, si bien que l'écran rendu est exactement celui que le
-	 * vecteur décrit. C'est le comportement que le script du gel portait, rendu à
-	 * la vue qui le transcrit.
+	 * LE DOMAINE DONT LA SUPPRESSION EST EXAMINÉE, et ce qui a été retapé. Deux
+	 * états qui ne servent qu'au document vivant : au rendu serveur ils valent
+	 * `null` et `''`, et l'écran est celui que le vecteur décrit.
 	 */
 	let demande = $state<string | null>(null);
 	let saisie = $state('');
 
-	/**
-	 * L'OUVERTURE PAR UN CLIC L'EMPORTE SUR LE VECTEUR DE PLANCHE, et ne le
-	 * contredit pas : tant que personne n'a cliqué, `demande` est `null` et l'état
-	 * reste celui que le scénario demande.
-	 */
-	/* `sup === 'vide'` DÉSIGNE UN DOMAINE SANS AUCUNE NOTE, ET LE CHERCHE DANS
-	   CE QUI A ÉTÉ SERVI. Il désignait un littéral de démonstration ; le cas que
-	   la position décrit — « le domaine est vide, la suppression est possible » —
-	   se lit sur le corpus reçu, et n'a jamais eu besoin d'être inventé. */
+	/* `sup === 'vide'` DÉSIGNE UN DOMAINE SANS AUCUNE NOTE, ET LE CHERCHE DANS CE
+	   QUI A ÉTÉ SERVI. Il désignait un littéral de démonstration ; le cas que la
+	   position décrit se lit sur le corpus reçu. L'ouverture par un clic l'emporte
+	   sur le vecteur sans le contredire : tant que personne n'a cliqué, `demande`
+	   est `null`. */
 	const aSupprimer = $derived(
 		demande !== null
 			? (domaines.find((d) => d.nom === demande) ?? null)
@@ -453,31 +364,21 @@
 	);
 
 	/**
-	 * `RG-M14-02`, SECONDE MOITIÉ — « exige la saisie du nom exact du domaine. Le
-	 * bouton reste inactif tant que la saisie ne correspond pas. »
+	 * `RG-M14-02`, SECONDE MOITIÉ — « exige la saisie du nom exact du domaine ». EXACT
+	 * VEUT DIRE EXACT : « correspondance exacte, SANS TOLÉRANCE DE CASSE : le geste
+	 * doit être délibéré » (`V-28:3239`). Aucun `trim()`, aucune normalisation.
 	 *
-	 * EXACT VEUT DIRE EXACT : le gel le commente en propres termes —
-	 * « Correspondance exacte, SANS TOLÉRANCE DE CASSE : le geste doit être
-	 * délibéré » (`V-28:3239-3240`). Aucun `trim()`, aucune normalisation.
-	 *
-	 * CE N'EST PAS LA RÈGLE, C'EST SON REFLET À L'ÉCRAN. La règle est écrite une
-	 * fois, dans `nomConfirme()` de `src/lib/donnees/administration.ts`, et c'est
-	 * ELLE qui décide : l'action refuse une saisie non conforme quoi qu'il arrive.
-	 * Ce module-là ne peut pas être importé ici — il tire le schéma, le connecteur
-	 * et le moteur de recherche —, et c'est pourquoi la comparaison est réécrite.
-	 * Le serveur reste seul juge ; l'écran ne fait qu'éviter de proposer un geste
-	 * qui serait refusé.
+	 * CE N'EST PAS LA RÈGLE, C'EST SON REFLET À L'ÉCRAN : elle est écrite une fois,
+	 * dans `nomConfirme()` de `src/lib/donnees/administration.ts`, qui ne peut pas être
+	 * importé ici — il tire le schéma, le connecteur et le moteur de recherche.
 	 */
 	const confirme = $derived(aSupprimer !== null && saisie === aSupprimer.nom);
 
 	/**
-	 * LA MODALITÉ EST ÉTABLIE SUR LE DOCUMENT VIVANT, jamais au rendu serveur.
-	 *
-	 * La vue rend `<dialog open={…}>` parce qu'un rendu serveur ne peut pas
-	 * appeler `showModal()`. Or l'attribut seul n'obtient NI le fond assombri —
-	 * `.dlg::backdrop` ne s'applique qu'à un dialogue modal (`V-28.css:525`) — NI
-	 * l'inertie du reste de la page, NI la fermeture par `Échap`. `$effect` ne
-	 * tourne qu'au client : le rendu serveur est inchangé.
+	 * LA MODALITÉ EST ÉTABLIE SUR LE DOCUMENT VIVANT, jamais au rendu serveur : la vue
+	 * rend `<dialog open={…}>` parce qu'un rendu serveur ne peut pas appeler
+	 * `showModal()`, or l'attribut seul n'obtient NI le fond assombri, NI l'inertie du
+	 * reste de la page, NI la fermeture par `Échap`.
 	 */
 	$effect(() => {
 		const boite = document.getElementById('dlg-supprimer');
@@ -489,7 +390,6 @@
 		if (!boite.open) boite.showModal();
 	});
 
-	/** Refermer : le dialogue disparaît, et la saisie ne survit pas au geste. */
 	function refermer(): void {
 		demande = null;
 		saisie = '';
@@ -504,8 +404,7 @@
 			? ([
 					[mesuresSup.notes, accord(mesuresSup.notes, 'note')],
 					/* LE MOT RENOMMABLE NE SE REPLURALISE PAS : ses deux formes ont déjà
-					   traversé `pluriel()` dans `formesDuMot()`, et sont passées
-					   explicitement — c'est à cela que sert le troisième argument. */
+					   traversé `pluriel()` dans `formesDuMot()`, et sont passées explicitement. */
 					[
 						mesuresSup.fiches,
 						accord(mesuresSup.fiches, motFicheMinuscule, motFichePlurielMinuscule)
@@ -517,22 +416,17 @@
 	);
 </script>
 
-<!--
-	UN DÉCOMPTE DE CELLULE. Le gel pose `s.style.color = "var(--c-encre-4)"` sur
-	la SEULE cellule à zéro (`V-28:2998`) — un creux typographique, pas une
-	absence. Deux branches littérales plutôt qu'un ternaire dans l'attribut :
-	l'ensemble clos du gel se prouve sur des DÉCLARATIONS, et `verif/styles-en-ligne.mjs`
-	ne résout pas un `undefined` posé en branche (ARB-016, P-6.4).
--->
+<!-- UN DÉCOMPTE DE CELLULE. Le gel pose `s.style.color = "var(--c-encre-4)"` sur
+	la SEULE cellule à zéro (`V-28:2998`) — un creux typographique, pas une absence.
+	Deux branches littérales plutôt qu'un ternaire dans l'attribut : l'ensemble clos
+	du gel se prouve sur des DÉCLARATIONS (`ARB-016`). -->
 <!-- prettier-ignore -->
 {#snippet nombre(valeur: number, classes: string)}{#if valeur}<span class={classes}>{valeur}</span>{:else}<span class={classes} style="color:var(--c-encre-4)">{valeur}</span>{/if}{/snippet}
 
 <!--
 	UNE LIGNE DU TABLEAU DE GESTION, ET AUCUN BLANC ENTRE SES NŒUDS — le gel la
-	construit par script (`rendreListe()`, `V-28:2961`), sans un nœud de texte
-	entre les cellules. `<!-- prettier-ignore -- >` protège la région : le
-	formateur y réintroduirait des blancs, que le relevé de nom accessible du
-	niveau 1 verrait (`CLAUDE.md` §6, P-6).
+	construit par script (`rendreListe()`, `V-28:2961`), sans un nœud de texte entre
+	les cellules. La directive du formateur, ci-dessous, protège la région.
 -->
 <!-- prettier-ignore -->
 {#snippet ligne(d: DomaineDeTravail)}{@const m = mesures(d.nom)}<div class="tg tg--domaines tg--ligne" role="row"
@@ -553,12 +447,9 @@
 	></div
 ></div>{/snippet}
 
-<!--
-	UNE LIGNE DE MODULE. Même régime : `rendreModules()` (`V-28:3048`) assemble
-	l'étiquette sans un blanc, et `data-consequence="non"` est posé à
-	l'initialisation sur les six — la conséquence d'une désactivation ne
-	s'affiche qu'après un geste, donc jamais dans un état rendu.
--->
+<!-- UNE LIGNE DE MODULE. Même régime : `rendreModules()` (`V-28:3048`) assemble
+	l'étiquette sans un blanc, et `data-consequence="non"` est posé à l'initialisation
+	sur les six — la conséquence d'une désactivation ne s'affiche qu'après un geste. -->
 <!-- prettier-ignore -->
 {#snippet moduleDuForm(cle: CleDeModule)}{@const verrou = cle === 'notes'}<label class="mod" data-verrou={verrou ? 'oui' : undefined} data-consequence="non"
 	><input type="checkbox" checked={modulesActifs.includes(cle) || verrou} disabled={verrou} onchange={(e) => basculerLeModule(cle, e.currentTarget.checked)}
@@ -569,15 +460,8 @@
 	></span
 ></label>{/snippet}
 
-<!--
-	LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI.
-	La vue passait `instance.version` — le `1.0.0` d'`INSTANCE` du jeu de
-	démonstration, servi comme un fait sur le pied du rail d'une instance
-	réelle. Aucune route ne passe de version : `Coquille` lit celle du paquet
-	sur le contexte que le gabarit racine pose, et la propriété n'est plus
-	qu'un état vide explicite — hors gabarit racine, le pied ne nomme rien
-	plutôt que de nommer un numéro de démonstration.
--->
+<!-- LA VERSION DU PIED DE RAIL VIENT DU CONTEXTE DE COQUILLE, JAMAIS D'ICI : la
+	vue passait le numéro du jeu de démonstration comme un fait. -->
 <Coquille
 	fil={filDeConsole('Domaines')}
 	{univers}
@@ -685,12 +569,9 @@
 
 				<div class="champ">
 					<label class="champ__label" for="f-desc">Description</label>
-					<!--
-						ÉCART DÉCLARÉ — la valeur d'un `<textarea>` n'est pas atteignable des
-						deux relevés du niveau 1 à la fois. Le motif complet, la mesure et le
-						choix retenu sont écrits à `V-27.svelte`, au même endroit : les deux
-						vues du lot portent le même nœud et le même constat.
-					-->
+					<!-- ÉCART DÉCLARÉ — la valeur d'un `<textarea>` n'est pas atteignable des
+						deux relevés à la fois. Le motif complet est écrit à `V-27.svelte`, au même
+						endroit : les deux vues portent le même nœud et le même constat. -->
 					<textarea
 						class="saisie"
 						id="f-desc"
@@ -799,9 +680,9 @@
 							{videSup ? 'Ce domaine est vide' : 'Ce qui sera détruit'}
 						</div>
 						<!--
-							LE DÉCOMPTE RESTE AFFICHÉ MÊME À ZÉRO : c'est lui qui prouve que le
-							domaine est bien vide, et il rassure autant qu'il alerte. Aucun blanc
-							entre le nombre et son mot — le gel accole les deux nœuds.
+							LE DÉCOMPTE RESTE AFFICHÉ MÊME À ZÉRO : c'est lui qui prouve que le domaine
+							est bien vide. Aucun blanc entre le nombre et son mot — le gel accole les
+							deux nœuds.
 						-->
 						<!-- prettier-ignore -->
 						<ul id="sup-decompte"
@@ -862,11 +743,10 @@
 							<span class="confirmation__cible" id="sup-cible">{aSupprimer?.nom ?? '—'}</span>
 						</label>
 						<!--
-							LE SEUL `autofocus` DU PÉRIMÈTRE — et il ne vaut que dans un dialogue
-							révélé (P-4). Le gel y pose le focus à l'ouverture ; sans lui,
-							l'anneau de focalisation manque à `sup-vide` et l'état coûte
-							4 684 pixels.
-						-->
+								LE SEUL `autofocus` DU PÉRIMÈTRE — il ne vaut que dans un dialogue révélé.
+								Le gel y pose le focus à l'ouverture ; sans lui, l'anneau de focalisation
+								manque à `sup-vide` et l'état coûte 4 684 pixels.
+							-->
 						<!-- svelte-ignore a11y_autofocus -->
 						<input
 							class="saisie"
