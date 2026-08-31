@@ -1012,15 +1012,27 @@
 
 				<div class="champ">
 					<label class="champ__label" for="f-domaine">Domaine principal</label>
-					<select class="selecteur" id="f-domaine"
+					<!--
+						LE SÉLECTEUR SANS RIEN À OFFRIR LE DIT, ET IL NE BLOQUE RIEN. Sur une
+						instance neuve, la liste des domaines est vide : le sélecteur sortait sans
+						une option et sans un mot, sous une étiquette qui promettait un choix. Le
+						rattachement reste FACULTATIF — la colonne est nullable par exigence, et le
+						geste crée alors le compte sans périmètre —, donc l'option de repli porte la
+						chaîne vide : c'est exactement ce que la page traduit en « aucun
+						rattachement ».
+					-->
+					<select class="selecteur" id="f-domaine" disabled={panneauOuvert && domaines.length === 0}
 						>{#if panneauOuvert}{#each domaines as d (d.nom)}<option
 									value={d.nom}
 									selected={d.nom === (edite ? edite.compte.domaine : PREMIER_DOMAINE)}
 									>{d.univers} › {d.nom}</option
+								>{:else}<option value="">Aucun domaine sur cette instance</option
 								>{/each}{/if}</select
 					>
 					<span class="champ__aide"
-						>Détermine son périmètre de contribution et ce qu'il voit à l'accueil.</span
+						>{domaines.length === 0
+							? "Aucun domaine n'existe encore : le compte sera créé sans périmètre de contribution. Créez un domaine dans Console › Domaines pour pouvoir en rattacher un à la création."
+							: "Détermine son périmètre de contribution et ce qu'il voit à l'accueil."}</span
 					>
 				</div>
 

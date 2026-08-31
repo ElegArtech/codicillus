@@ -608,6 +608,21 @@
 							>
 						</div>
 					</div>
+					<!--
+						L'ÉTAT VIDE, PARCE QUE LE PRODUIT COMMENCE VIDE. Une instance neuve ne
+						porte aucun template : la boucle ne rendait rien, et l'écran se
+						réduisait à une ligne d'en-têtes suivie de blanc, sous une phrase qui
+						rassure sur des squelettes qui n'existent pas encore.
+					-->
+				{:else}
+					<div class="zone-etat" id="liste-vide">
+						<div class="zone-etat__titre">Aucun template</div>
+						<div class="zone-etat__txt">
+							Rien n'est proposé au moment de créer une note : le rédacteur part de la page blanche,
+							ce qui reste un choix valable. Le bouton « Nouveau template », en haut à droite, crée
+							le premier squelette.
+						</div>
+					</div>
 				{/each}
 			</div>
 		</div>
