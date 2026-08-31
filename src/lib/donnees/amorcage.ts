@@ -91,3 +91,24 @@ export async function messageDeRefusDEcriture(base: Base, identite: Identite): P
 	if (await instanceSansDomaine(base)) return MESSAGE_AMORCAGE_DOMAINE;
 	return MESSAGE_INTROUVABLE;
 }
+
+/**
+ * LE REFUS TEL QU'IL DOIT ARRIVER À L'ÉCRAN — message, et le drapeau qui le
+ * fait peindre.
+ *
+ * `messageDeRefusDEcriture()` choisissait déjà le bon texte, et le serveur le
+ * servait bien : il était dans la réponse HTTP, vérifié. Mais `+error.svelte`
+ * rend `V-26` pour tout 404 et n'affichait `page.error.message` que dans sa
+ * branche NON-404 — l'administrateur d'une instance neuve lisait donc le texte
+ * générique de la page d'adresse non résolue, et les deux messages d'amorçage
+ * n'ont jamais été peints nulle part depuis qu'ils existent.
+ *
+ * Le drapeau ne voyage QU'AVEC un message d'amorçage, c'est-à-dire au seul
+ * administrateur d'une instance qui n'a pas encore de quoi ranger une note.
+ * Pour tous les autres, la charge est celle d'avant, mot pour mot : `ADR-007`
+ * et son régime indiscernable ne bougent pas.
+ */
+export async function refusDEcriture(base: Base, identite: Identite): Promise<App.Error> {
+	const message = await messageDeRefusDEcriture(base, identite);
+	return message === MESSAGE_INTROUVABLE ? { message } : { message, amorcage: true };
+}

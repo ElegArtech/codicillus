@@ -177,11 +177,24 @@
 			enregistré en base. C'est un CHEMIN qui descend, jamais une raison —
 			`ADR-007` reste tenu : les deux cas rendent le même écran.
 		-->
+		<!--
+			LE MESSAGE D'AMORÇAGE, ENFIN PEINT. Il descendait déjà dans la réponse
+			HTTP, et cette branche ne le rendait nulle part : seule la branche
+			NON-404, plus bas, affichait `page.error.message`. Le serveur disait
+			« créez un univers, puis un domaine, dans la console », l'écran
+			répondait « l'adresse demandée ne correspond à aucune note ».
+
+			Il ne voyage qu'avec le drapeau `amorcage`, posé par `refusDEcriture()`
+			au seul administrateur d'une instance qui n'a pas encore de quoi ranger
+			une note. Sans lui, la vue rend sa réponse habituelle, et les deux cas
+			d'`ADR-007` restent indiscernables.
+		-->
 		<VueConnectee
 			vecteur={{ cas: casDeV26(), droits: ecriture ? 'ecriture' : 'lecture' }}
 			notes={[]}
 			adresse={page.url.pathname}
 			pistes={[]}
+			amorcage={page.error?.amorcage === true ? (page.error.message ?? '') : ''}
 		/>
 	{:else}
 		<!--

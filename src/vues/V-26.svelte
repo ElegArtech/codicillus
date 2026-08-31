@@ -121,6 +121,20 @@
 		 */
 		pistes: readonly string[];
 		/**
+		 * LE MESSAGE D'AMORÇAGE — celui d'une instance qui n'a pas encore de quoi
+		 * ranger une note, et qui nomme l'écran de console qui débloque.
+		 *
+		 * Il est servi par le serveur depuis qu'il existe, et il n'a jamais été
+		 * peint : `+error.svelte` rend cette vue pour tout 404 et n'affichait le
+		 * message du refus que dans sa branche NON-404. L'administrateur d'une
+		 * instance neuve lisait le texte générique de l'adresse non résolue, qui
+		 * lui disait exactement le contraire de ce qu'il fallait faire.
+		 *
+		 * Absent, la vue rend sa réponse habituelle : ce message ne voyage qu'avec
+		 * un refus d'amorçage, donc au seul administrateur (`ADR-007` intact).
+		 */
+		amorcage?: string;
+		/**
 		 * L'ADRESSE RÉELLEMENT DEMANDÉE — la seule entrée d'`adresseNonResolue()`,
 		 * et elle est EXIGÉE.
 		 *
@@ -220,7 +234,8 @@
 		reprises = [],
 		pistes,
 		adresse,
-		supprimee = null
+		supprimee = null,
+		amorcage = ''
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -284,8 +299,18 @@
 
 	/** Ce que la ligne « Adresse demandée » porte à l'écran. */
 	const adresseAffichee = $derived(tombe ? adresse : (resolution?.adresse ?? ''));
-	const titre = $derived(tombe ? TITRE_SUPPRIMEE : TITRE_NON_RESOLUE);
-	const texte = $derived(tombe ? TEXTE_SUPPRIMEE : TEXTE_NON_RESOLUE);
+	/**
+	 * L'AMORÇAGE PASSE DEVANT, et il ne dit pas la même chose que le refus.
+	 * « L'adresse demandée ne correspond à aucune note » est faux ici : l'adresse
+	 * est bonne, c'est l'instance qui n'a nulle part où ranger. Le titre le dit,
+	 * et l'adresse de console se détache du message pour devenir un vrai geste.
+	 */
+	const TITRE_AMORCAGE = "Il n'y a nulle part où ranger une note.";
+	const adresseDeConsole = $derived(/\/console\/[a-z-]+/u.exec(amorcage)?.[0] ?? '');
+	const titre = $derived(
+		amorcage !== '' ? TITRE_AMORCAGE : tombe ? TITRE_SUPPRIMEE : TITRE_NON_RESOLUE
+	);
+	const texte = $derived(amorcage !== '' ? amorcage : tombe ? TEXTE_SUPPRIMEE : TEXTE_NON_RESOLUE);
 	const requete = $derived(
 		(tombe ? (supprimee?.requete ?? '') : (resolution?.requete ?? '')).trim()
 	);
@@ -399,6 +424,18 @@
 	{#snippet enfants()}
 		<h1 id="titre">{titre}</h1>
 		<p class="introuvable__txt" id="txt">{texte}</p>
+		{#if adresseDeConsole !== ''}
+			<!--
+				UN LIEN, PAS UN BOUTON : Svelte n'émet pas les gestionnaires de clic
+				au rendu serveur, et cet écran est précisément celui qu'on atteint
+				avant toute hydratation sur une installation neuve.
+			-->
+			<p class="introuvable__txt">
+				<a class="btn btn--principal" id="aller-console" href={adresseDeConsole}
+					>Ouvrir la console</a
+				>
+			</p>
+		{/if}
 
 		<div class="adresse-demandee">
 			<span class="etiq">Adresse demandée</span>
