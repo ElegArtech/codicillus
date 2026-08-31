@@ -128,14 +128,21 @@
 		/* PAS DE RECHARGEMENT AU SUCCÈS : la boîte « Mot de passe réinitialisé »
 		   doit encore montrer la valeur, qui n'existe nulle part ailleurs — seul
 		   le condensat est en base. Et la liste, elle, n'a pas bougé : aucune
-		   colonne rendue ne change à la réinitialisation. */
+		   colonne rendue ne change à la réinitialisation.
+
+		   LA VALEUR N'EST PLUS ENVOYÉE, ELLE EST RAPPORTÉE : l'action la tire
+		   elle-même, au hasard cryptographique, et rend celle qu'elle vient de
+		   condenser. La boîte montre donc le mot de passe DU COMPTE, jamais un
+		   mot de passe que le navigateur aurait proposé sans savoir s'il a été
+		   accepté. */
 		const retour = await envoyerAUneAction(
 			document,
 			'?/reinitialiserLeMotDePasse',
-			{ 'f-ident': demande.identifiant, 'f-mdp': demande.motDePasse },
+			{ 'f-ident': demande.identifiant },
 			{ rechargerAuSucces: false }
 		);
-		return retour.succes;
+		const pose = retour.donnees as { motDePasse?: string } | undefined;
+		return retour.succes && typeof pose?.motDePasse === 'string' ? pose.motDePasse : null;
 	}}
 	onMotDePasseTransmis={() => {
 		/* LA LISTE VIENT DU SERVEUR : le compte créé n'y entre qu'à la relecture.

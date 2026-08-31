@@ -72,11 +72,18 @@
 		contributions: Partial<Record<string, ContributionAffichee>>;
 		/**
 		 * Les distinctions du barème. Absente, aucune — le barème vivait dans le jeu de
-		 * démonstration et aucune table ne le porte : un barème inventé mesurerait le
-		 * titulaire contre des seuils qui ne sont d'aucune instance. Aucune servie, le
-		 * bloc de l'onglet SE TAIT tout entier.
+		 * démonstration ; le barème du PRODUIT vit dans `src/lib/donnees/distinctions.ts`,
+		 * et c'est lui que la route sert. Aucune servie, l'onglet DIT POURQUOI plutôt que
+		 * de se taire — un onglet qu'on ouvre et qui ne montre rien est un défaut.
 		 */
 		distinctions?: readonly Distinction[];
+		/**
+		 * LA DATE D'OBTENTION DE CHACUNE, par clé de distinction. Elle ne se calcule
+		 * pas : une mesure dit qu'un seuil EST franchi, jamais QUAND il l'a été, et
+		 * c'est tout ce que la table `distinctions_obtenues` porte. Absente, ou clé
+		 * absente : la jauge dit « obtenue » sans date, jamais une date inventée.
+		 */
+		obtentions?: Readonly<Record<string, string>>;
 		/** Le flux d'activité, tel que la base le porte — vide tant qu'aucune table ne l'écrit. */
 		activite: readonly EvenementDActivite[];
 		relations: readonly Relation[];
@@ -99,6 +106,15 @@
 		 * la session courante. Absente, la case reste dans la position du gel.
 		 */
 		preferenceDeSession?: boolean;
+		/**
+		 * LE CHANGEMENT DE MOT DE PASSE EST-IL IMPOSÉ — `M14.6`. La propriété est
+		 * EXIGÉE : une seule route rend cet écran, et l'oubli serait un compte enfermé
+		 * sur un profil sans savoir pourquoi. Vraie, `src/hooks.server.ts` renvoie
+		 * TOUTE autre adresse ici tant que le mot de passe posé par l'administration
+		 * n'est pas remplacé ; l'écran ouvre alors l'onglet « Sécurité » sur
+		 * l'explication, plutôt que de laisser le titulaire tourner en rond.
+		 */
+		changementImpose: boolean;
 	}
 
 	/**
@@ -129,11 +145,13 @@
 		comptes = [],
 		contributions,
 		distinctions = [],
+		obtentions = {},
 		activite,
 		relations,
 		profilDuCompte = null,
 		rangementDuProfil,
-		preferenceDeSession = false
+		preferenceDeSession = false,
+		changementImpose
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -302,6 +320,8 @@
 		readonly valeur: number | null;
 		readonly obtenue: boolean;
 		readonly part: number;
+		/** La date d'obtention, quand elle est connue. `null` : elle ne l'est pas. */
+		readonly obtenueLe: string | null;
 	}
 
 	/** `V-25:2765` — la mesure lue sur les statistiques, jamais une constante. UNE
@@ -309,12 +329,16 @@
 	    affirmerait que le compte n'a rien fait, ce qu'on ignore. */
 	function progression(d: Distinction, s: Statistiques): Jauge {
 		const valeur = s[d.mesure];
-		if (valeur === null) return { distinction: d, valeur: null, obtenue: false, part: 0 };
+		const obtenueLe = obtentions[d.id] ?? null;
+		if (valeur === null) {
+			return { distinction: d, valeur: null, obtenue: false, part: 0, obtenueLe };
+		}
 		return {
 			distinction: d,
 			valeur,
 			obtenue: valeur >= d.seuil,
-			part: Math.min(100, Math.round((valeur / d.seuil) * 100))
+			part: Math.min(100, Math.round((valeur / d.seuil) * 100)),
+			obtenueLe
 		};
 	}
 
@@ -538,6 +562,34 @@
 						</div>
 					</div>
 
+					<!--
+						`M14.6` — CE QUI RETIENT LE TITULAIRE SUR CET ÉCRAN EST DIT. Sans cette
+						phrase, la garde des hooks le renvoyait ici depuis chaque adresse, en
+						silence : il cliquait « Accueil » et retombait sur son profil. Le bloc
+						reprend la forme de `#verrou`, la seule que le gel donne à un avis de ce
+						panneau ; il ne s'affiche que si le geste est réellement exigé.
+					-->
+					<div class="verrou" id="changement-impose" hidden={!changementImpose || verrouille}>
+						<svg
+							width="20"
+							height="20"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="var(--c-alerte)"
+							stroke-width="1.5"
+							style="flex:none;margin-top:1px"
+							><circle cx="8" cy="8" r="6.2" /><path d="M8 4.6v4M8 11.2v.3" /></svg
+						>
+						<div>
+							<h3>Changez ce mot de passe pour continuer</h3>
+							<p>
+								Celui que vous venez d'employer a été posé par un administrateur, qui l'a eu en
+								clair. Tant qu'il n'est pas remplacé, cet écran est le seul accessible : remplissez
+								les trois champs ci-dessous, et le reste du produit s'ouvrira.
+							</p>
+						</div>
+					</div>
+
 					<div id="form-mdp" hidden={verrouille}>
 						<!-- Les règles sont annoncées avant la saisie, comme en V-06. -->
 						<div style="margin-bottom:var(--e-4)">
@@ -685,15 +737,17 @@
 			data-actif={onglet === 'distinctions' ? 'oui' : 'non'}
 			role="tabpanel"
 		>
-			{#if jauges.length > 0}
-				<p
-					class="etape__sous"
-					style="font-family:var(--f-lecture);font-size:var(--t-base);color:var(--c-encre-2);line-height:1.6;margin:0 0 var(--e-5);max-width:64ch"
-				>
-					Ces distinctions sont les vôtres et ne sont visibles que de vous. Elles ne donnent lieu à
-					aucun classement : documenter n'est pas une compétition.
-				</p>
-			{/if}
+			<!-- L'INTRODUCTION EST TOUJOURS RENDUE. Elle ne décrit pas des jauges, elle
+				 énonce la règle qui les gouverne — `RG-M16-03`, « individuelles et
+				 privées » —, et cette règle vaut qu'il y ait six distinctions ou aucune.
+				 La taire quand le bloc est vide laissait l'onglet muet. -->
+			<p
+				class="etape__sous"
+				style="font-family:var(--f-lecture);font-size:var(--t-base);color:var(--c-encre-2);line-height:1.6;margin:0 0 var(--e-5);max-width:64ch"
+			>
+				Ces distinctions sont les vôtres et ne sont visibles que de vous. Elles ne donnent lieu à
+				aucun classement : documenter n'est pas une compétition.
+			</p>
 
 			<span class="etiq" style="display:block;margin-bottom:var(--e-3)">Vos contributions</span>
 			<!-- prettier-ignore -->
@@ -704,11 +758,20 @@
 					><span class="stat__sous">{i[2]}</span
 				></div>{/each}</div>
 
-			<!-- LE BARÈME NE VIENT D'AUCUNE TABLE, ET SANS DISTINCTION SERVIE LE BLOC SE
-				TAIT : une étiquette au-dessus d'un conteneur vide annonce une zone que
-				l'écran ne peut pas remplir. -->
-			{#if jauges.length > 0}
-				<span class="etiq" style="display:block;margin:var(--e-6) 0 var(--e-3)">Distinctions</span>
+			<!-- SANS DISTINCTION SERVIE, LE BLOC DIT POURQUOI — il ne se tait plus.
+				L'onglet était vide pour toujours et rien n'expliquait ce vide : un écran
+				qu'on ouvre et qui ne montre rien doit nommer le geste qui le remplit
+				(`RG-M01-01`). -->
+			<span class="etiq" style="display:block;margin:var(--e-6) 0 var(--e-3)">Distinctions</span>
+			{#if jauges.length === 0}
+				<div class="vide-distinctions">
+					<h2>Aucune distinction à afficher</h2>
+					<p>
+						Les distinctions se dérivent de vos contributions — notes publiées, notes vérifiées,
+						liens déclarés. Publiez une première note pour ouvrir la première d'entre elles.
+					</p>
+				</div>
+			{:else}
 				<!-- prettier-ignore -->
 				<div class="distinctions" id="distinctions"
 					>{#each jauges as j (j.distinction.id)}<article class="dist" data-obtenue={j.obtenue ? 'oui' : 'non'} aria-label={`${j.distinction.nom}, ${j.distinction.critere}, ${etatDeLaJauge(j)}`}
@@ -720,7 +783,7 @@
 							><div class="dist__piste"><i style="width:{j.part}%"></i></div
 							><div class="dist__chiffre"
 								><b>{`${j.valeur === null ? RIEN : nb(Math.min(j.valeur, j.distinction.seuil))} / ${nb(j.distinction.seuil)}`}</b
-								><span class="dist__reste">{j.valeur === null ? 'mesure indisponible' : j.obtenue ? 'obtenue' : `encore ${nb(j.distinction.seuil - j.valeur)} ${j.distinction.quoi}`}</span
+								><span class="dist__reste">{j.valeur === null ? 'mesure indisponible' : j.obtenue ? (j.obtenueLe === null ? 'obtenue' : `obtenue le ${j.obtenueLe}`) : `encore ${nb(j.distinction.seuil - j.valeur)} ${j.distinction.quoi}`}</span
 							></div
 						></div
 					></article>{/each}</div>

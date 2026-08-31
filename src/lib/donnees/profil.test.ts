@@ -156,7 +156,8 @@ const PROFIL_VERROUILLE: ProfilDuCompte = {
 	domaine: null,
 	arriveLe: '2026-01-05',
 	derniereConnexionLe: null,
-	motDePasseVerrouille: true
+	motDePasseVerrouille: true,
+	motDePasseAChanger: false
 };
 
 describe('changerLeMotDePasse — `RG-M16-02`, décidé avant toute requête', () => {
@@ -188,9 +189,25 @@ describe('changerLeMotDePasse — `RG-M16-02`, décidé avant toute requête', (
 /* ═══════════════════ Ce que la base ne porte pas, compté ═══════════════ */
 
 describe('SANS_CONTREPARTIE_EN_BASE — la lacune est comptée, pas racontée', () => {
-	it('en dénombre six, dont le jeton de réinitialisation', () => {
-		expect(SANS_CONTREPARTIE_EN_BASE).toHaveLength(6);
+	it('en dénombre quatre, dont le jeton de réinitialisation', () => {
+		expect(SANS_CONTREPARTIE_EN_BASE).toHaveLength(4);
 		expect(SANS_CONTREPARTIE_EN_BASE.map((d) => d.donnee)).toContain('jeton de réinitialisation');
+	});
+
+	it('ne recense plus les distinctions ni les liens, que la migration 012 ouvre', () => {
+		/* ELLES ÉTAIENT SIX. « DISTINCTIONS » disait qu'aucune table ne portait le
+		   catalogue — vrai, et sans effet : le barème est une constante du PRODUIT
+		   (`BAREME_DES_DISTINCTIONS`), et ce qui manquait vraiment était l'INSTANT
+		   d'obtention, que `distinctions_obtenues` porte désormais.
+		   « CONTRIBUTIONS.liens » disait `relations` sans auteur — vrai aussi, et la
+		   table nomme pourtant la note SOURCE, dont l'auteur est connu : l'indicateur
+		   se compte, il n'est plus indisponible.
+
+		   UN RECENSEMENT QUI MENT DISPENSE D'ALLER VOIR : c'est le contrôle qui
+		   manquait à la liste jumelle de `consoles.ts`, repris ici. */
+		const noms = SANS_CONTREPARTIE_EN_BASE.map((d) => d.donnee);
+		expect(noms).not.toContain('DISTINCTIONS');
+		expect(noms).not.toContain('CONTRIBUTIONS.liens');
 	});
 
 	it('nomme pour chacune l’écran, l’affichage et le motif', () => {

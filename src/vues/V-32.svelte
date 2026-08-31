@@ -110,13 +110,17 @@
 		/**
 		 * RÉINITIALISER LE MOT DE PASSE — `RG-CPT-01` : « la réinitialisation par un
 		 * administrateur reste possible », y compris sur un compte verrouillé.
-		 * `reinitialiser(c)` du gel (`V-32:3228`) engendre la valeur AU NAVIGATEUR : la
-		 * vue engendre et affiche, la page envoie, la base n'en garde que le condensat.
+		 *
+		 * LA VUE NE TIRE PLUS LA VALEUR. `reinitialiser(c)` du gel (`V-32:3228`)
+		 * l'engendrait au navigateur, avec `Math.random()` sur seize mots — dix-huit
+		 * bits d'une suite qui se rejoue, sur la seule porte de secours d'un compte.
+		 * Le geste RAPPORTE désormais le mot de passe que le serveur a tiré et
+		 * condensé, ou `null` s'il n'a rien écrit : la boîte ne montre que ce qui est
+		 * réellement devenu le mot de passe du compte.
 		 */
 		onReinitialiserLeMotDePasse?: (demande: {
 			readonly identifiant: string;
-			readonly motDePasse: string;
-		}) => Promise<boolean>;
+		}) => Promise<string | null>;
 	}
 
 	const {
@@ -193,10 +197,17 @@
 	}
 
 	/**
-	 * LE MOT DE PASSE TEMPORAIRE — la composition du gel (`V-32:2975`) : trois mots
-	 * tirés d'une liste de seize, prononçables et sans caractère ambigu, puis un
-	 * nombre à deux chiffres. NE FIGE JAMAIS CETTE VALEUR pour la faire coïncider
-	 * avec celle de la maquette : ce générateur deviendrait une suite prévisible.
+	 * LE MOT DE PASSE INITIAL PROPOSÉ À LA CRÉATION — la composition du gel
+	 * (`V-32:2975`) : trois mots tirés d'une liste de seize, prononçables et sans
+	 * caractère ambigu, puis un nombre à deux chiffres. NE FIGE JAMAIS CETTE VALEUR
+	 * pour la faire coïncider avec celle de la maquette : ce générateur deviendrait
+	 * une suite prévisible.
+	 *
+	 * IL NE SERT PLUS À LA RÉINITIALISATION, ET C'EST LE POINT : `Math.random()` sur
+	 * seize mots fait dix-huit bits d'une suite qui se rejoue. La valeur posée par
+	 * `reinitialiserLeMotDePasse` est tirée par le serveur — voir
+	 * `$lib/auth/mot-de-passe-temporaire`. Ici, l'administrateur voit la proposition
+	 * dans un champ qu'il peut réécrire avant d'envoyer.
 	 */
 	const MOTS_DE_PASSE: readonly string[] = [
 		'ancre',
@@ -420,20 +431,15 @@
 		null
 	);
 
-	/** `reinitialiser(c)` du gel (`V-32:3228`) — la valeur est engendrée ICI puis
-	    envoyée. La boîte ne s'ouvre qu'une fois l'écriture faite : ouvrir d'abord
-	    annoncerait un mot de passe que la base n'a peut-être pas accepté. */
+	/** `reinitialiser(c)` du gel (`V-32:3228`) — LA VALEUR VIENT DU GESTE, jamais de
+	    cette vue. La boîte ne s'ouvre qu'une fois l'écriture faite : ouvrir d'abord
+	    annoncerait un mot de passe que la base n'a peut-être pas accepté. Sans geste
+	    branché, RIEN NE S'OUVRE : montrer une valeur qu'aucun compte ne porte serait
+	    la valeur illustrative que `P-02` proscrit. */
 	async function reinitialiserLeMotDePasse(c: CompteRendu): Promise<void> {
-		const clair = motDePasse();
-		if (onReinitialiserLeMotDePasse === undefined) {
-			reinitialise = { compte: c, motDePasse: clair };
-			return;
-		}
-		const fait = await onReinitialiserLeMotDePasse({
-			identifiant: c.compte.identifiant,
-			motDePasse: clair
-		});
-		if (fait) reinitialise = { compte: c, motDePasse: clair };
+		if (onReinitialiserLeMotDePasse === undefined) return;
+		const pose = await onReinitialiserLeMotDePasse({ identifiant: c.compte.identifiant });
+		if (pose !== null) reinitialise = { compte: c, motDePasse: pose };
 	}
 
 	/** « Copier le mot de passe » — `V-32:3243`. LE PRESSE-PAPIERS PEUT MANQUER, et le
