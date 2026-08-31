@@ -1,0 +1,368 @@
+/* ==========================================================================
+   LA PALETTE DE RECHERCHE RAPIDE — LA FEUILLE, MONTÉE PARTOUT.
+
+   Ce fichier est le BLOC « V-09 — PALETTE DE RECHERCHE RAPIDE » de
+   `src/vues/V-09.css` (lignes 106 à 272), recopié SÉLECTEUR POUR SÉLECTEUR
+   et DÉCLARATION POUR DÉCLARATION, puis passé au formateur — les feuilles de
+   vue en sont dispensées par `.prettierignore`, ce fichier ne l'est pas, et
+   ce que le formateur change est la forme des guillemets et le zéro de tête.
+   AUCUNE RÈGLE N'EST ÉCRITE ICI (ADR-002, P-1) : la
+   palette est une superposition montée sur TOUTES les routes portant la
+   coquille, et sa feuille ne pouvait donc pas rester liée à la seule route
+   qui monte la planche des états.
+
+   Les classes `.temoin*` et `.past` viennent de `src/socle.css`, chargé par
+   la même mise en page racine. `.touche` vient de la feuille de la vue
+   courante, où les trente-quatre vues de l'espace de travail la déclarent
+   à l'identique.
+   ========================================================================== */
+
+/* ==========================================================================
+   V-09 — PALETTE DE RECHERCHE RAPIDE
+   Superposition invoquée au clavier depuis n'importe quelle vue.
+   Piège le focus, se ferme à l'échappement, rend le focus à son déclencheur.
+
+   La boîte est instanciable hors superposition — c'est ce qui permet d'en
+   présenter tous les états côte à côte sans dupliquer le composant.
+   ========================================================================== */
+
+/* --- Superposition ------------------------------------------------------- */
+.palette {
+	border: 0;
+	padding: 0;
+	margin: 0;
+	max-width: none;
+	max-height: none;
+	width: 100%;
+	height: 100%;
+	background: transparent;
+	display: none;
+}
+.palette[open] {
+	display: block;
+}
+.palette::backdrop {
+	background: rgba(22, 34, 43, 0.46);
+	backdrop-filter: blur(2px);
+}
+
+.palette[open] .palette__boite {
+	position: fixed;
+	top: 11vh;
+	left: 50%;
+	transform: translateX(-50%);
+	width: min(660px, calc(100vw - 32px));
+	max-height: 74vh;
+	animation: palette-entre var(--m-doux) both;
+}
+@keyframes palette-entre {
+	from {
+		opacity: 0;
+		transform: translateX(-50%) translateY(-8px);
+	}
+}
+
+/* --- La boîte ------------------------------------------------------------- */
+.palette__boite {
+	background: var(--c-papier);
+	border: 1px solid var(--c-trait-fort);
+	border-radius: var(--r-3);
+	box-shadow: var(--o-flotte);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+/* Hôte d'un aperçu statique : sert de conteneur de requête, pour que les
+   règles de petit écran s'appliquent à la largeur de l'aperçu et non à celle
+   de la fenêtre. */
+.palette-hote {
+	container-type: inline-size;
+}
+.palette-hote .palette__boite {
+	box-shadow: var(--o-pose);
+}
+
+/* --- Champ --------------------------------------------------------------- */
+.palette__champ {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	padding: var(--e-3) var(--e-4);
+	border-bottom: 1px solid var(--c-trait);
+	flex: none;
+}
+.palette__champ > svg {
+	flex: none;
+	color: var(--c-encre-3);
+}
+.palette__saisie {
+	flex: 1;
+	min-width: 0;
+	border: 0;
+	outline: none;
+	background: none;
+	font-family: var(--f-ui);
+	font-size: var(--t-t3);
+	font-weight: var(--g-moyen);
+	letter-spacing: -0.008em;
+}
+.palette__saisie::placeholder {
+	color: var(--c-encre-4);
+	font-weight: var(--g-normal);
+}
+.palette__saisie::-webkit-search-cancel-button {
+	display: none;
+}
+.palette__effacer {
+	flex: none;
+	border: 0;
+	background: none;
+	cursor: pointer;
+	padding: 4px;
+	color: var(--c-encre-3);
+	border-radius: var(--r-1);
+	line-height: 0;
+}
+.palette__effacer:hover {
+	background: var(--c-fond-creux);
+	color: var(--c-encre);
+}
+
+/* Curseur simulé : un aperçu statique n'a pas le focus, et sans repère il ne
+   dit pas où en est la frappe. */
+.palette__curseur {
+	display: none;
+	width: 1.5px;
+	height: 22px;
+	background: var(--c-accent);
+	flex: none;
+	animation: clignote 1.06s steps(2, start) infinite;
+}
+.palette__boite[data-curseur='oui'] .palette__curseur {
+	display: block;
+}
+@keyframes clignote {
+	50% {
+		opacity: 0;
+	}
+}
+
+/* --- Bandeau de mode dégradé ---------------------------------------------- */
+.palette__degrade {
+	display: none;
+	align-items: center;
+	gap: var(--e-2);
+	padding: var(--e-2) var(--e-4);
+	background: var(--c-alerte-voile);
+	border-bottom: 1px solid #dcc59a;
+	font-size: var(--t-mini);
+	color: var(--c-alerte);
+	flex: none;
+}
+.palette__boite[data-degrade='oui'] .palette__degrade {
+	display: flex;
+}
+
+/* --- Liste ----------------------------------------------------------------- */
+.palette__liste {
+	overflow-y: auto;
+	padding: var(--e-2);
+	flex: 1;
+	min-height: 0;
+}
+.palette__groupe {
+	padding: var(--e-2) var(--e-2) var(--e-1);
+}
+
+.pres {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: var(--e-3);
+	width: 100%;
+	text-align: left;
+	padding: var(--e-2) var(--e-3);
+	border: 1px solid transparent;
+	border-radius: var(--r-2);
+	background: none;
+	cursor: pointer;
+	color: inherit;
+	font-family: inherit;
+	text-decoration: none;
+}
+.pres:hover {
+	background: var(--c-papier-2);
+}
+/* Le résultat sélectionné au clavier est distinct du survol souris : fond
+   accentué et repère de bord, là où le survol ne pose qu'un fond neutre. */
+.pres[data-sel='oui'] {
+	background: var(--c-accent-voile);
+	border-color: var(--c-accent-trait);
+	box-shadow: inset 3px 0 0 var(--c-accent);
+}
+.pres__glyphe {
+	width: 28px;
+	height: 28px;
+	flex: none;
+	border-radius: var(--r-2);
+	display: grid;
+	place-items: center;
+	background: var(--c-fond-creux);
+	color: var(--c-encre-2);
+	font-family: var(--f-donnee);
+	font-size: var(--t-micro);
+	font-weight: var(--g-lourd);
+}
+.pres[data-sel='oui'] .pres__glyphe {
+	background: var(--c-accent);
+	color: #fff;
+}
+.pres__corps {
+	min-width: 0;
+}
+.pres__titre {
+	font-size: var(--t-base);
+	font-weight: var(--g-moyen);
+	line-height: 1.3;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.pres__titre mark {
+	background: #f6e9a8;
+	color: inherit;
+	border-radius: var(--r-1);
+	padding: 0 2px;
+}
+.pres__sous {
+	display: flex;
+	align-items: center;
+	gap: var(--e-2);
+	font-size: var(--t-mini);
+	color: var(--c-encre-3);
+	margin-top: 2px;
+	overflow: hidden;
+	white-space: nowrap;
+}
+.pres__sous .temoin {
+	flex: none;
+}
+.pres__entree {
+	font-family: var(--f-donnee);
+	font-size: var(--t-micro);
+	color: var(--c-encre-3);
+	opacity: 0;
+	flex: none;
+}
+.pres[data-sel='oui'] .pres__entree {
+	opacity: 1;
+	color: var(--c-accent);
+}
+
+/* --- États ------------------------------------------------------------------ */
+.palette__etat {
+	padding: var(--e-6) var(--e-5);
+	text-align: center;
+}
+.palette__etat p {
+	margin: 0 0 var(--e-3);
+	font-size: var(--t-petit);
+	color: var(--c-encre-3);
+	line-height: 1.55;
+}
+.palette__etat strong {
+	color: var(--c-encre);
+}
+.palette__requete {
+	font-family: var(--f-lecture);
+	font-style: italic;
+	color: var(--c-encre);
+}
+
+/* --- Pied --------------------------------------------------------------------- */
+.palette__pied {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--e-3);
+	padding: var(--e-2) var(--e-4);
+	border-top: 1px solid var(--c-trait);
+	background: var(--c-papier-2);
+	flex: none;
+}
+.palette__aides {
+	display: flex;
+	align-items: center;
+	gap: var(--e-4);
+	flex-wrap: wrap;
+}
+.palette__aide {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--e-1);
+	font-size: var(--t-micro);
+	color: var(--c-encre-3);
+}
+.palette__droite {
+	display: flex;
+	align-items: center;
+	gap: var(--e-3);
+	flex: none;
+}
+.palette__compteur {
+	font-family: var(--f-donnee);
+	font-size: var(--t-micro);
+	color: var(--c-encre-3);
+}
+.palette__tous {
+	font-size: var(--t-mini);
+	font-weight: var(--g-fort);
+	color: var(--c-accent);
+	background: none;
+	border: 0;
+	cursor: pointer;
+	padding: 4px var(--e-2);
+	border-radius: var(--r-2);
+	white-space: nowrap;
+}
+.palette__tous:hover {
+	background: var(--c-accent-voile);
+}
+.palette__fermer {
+	display: none;
+}
+
+/* --- Petit écran : la palette occupe la quasi-totalité de l'écran ------------- */
+@media (max-width: 700px) {
+	.palette[open] .palette__boite {
+		top: 0;
+		left: 0;
+		transform: none;
+		width: 100vw;
+		height: 100dvh;
+		max-height: none;
+		border-radius: 0;
+		border: 0;
+	}
+	.palette__fermer {
+		display: inline-flex;
+	}
+	.palette__aides {
+		display: none;
+	}
+}
+@container (max-width: 430px) {
+	.palette__fermer {
+		display: inline-flex;
+	}
+	.palette__aides {
+		display: none;
+	}
+	.palette__saisie {
+		font-size: var(--t-base);
+	}
+	.pres__sous .temoin__txt {
+		display: none;
+	}
+}
