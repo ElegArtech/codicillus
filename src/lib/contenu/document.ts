@@ -1,116 +1,41 @@
 /**
- * LE FORMAT CANONIQUE DU CONTENU D'UNE NOTE — L'IMPLÉMENTATION UNIQUE.
+ * Le format canonique du contenu d'une note — L'IMPLÉMENTATION UNIQUE. `ADR-003` : « le
+ * corps d'une note est conservé en document ProseMirror sérialisé en JSON, dans une
+ * colonne `jsonb` ». Ce module EST ce format : le schéma, la validation qui refuse ce qui
+ * est mal formé, et les formes qu'on en dérive sans le reconstruire.
  *
- * ADR-003, acceptée le 18 août 2026 : « le corps d'une note est conservé en
- * document ProseMirror sérialisé en JSON, dans une colonne `jsonb`. C'est le
- * format canonique. » Ce module EST ce format : le schéma qui le décrit, la
- * validation qui le refuse quand il est mal formé, et les formes qu'on en
- * dérive sans le reconstruire.
+ * LES NOMS DE NŒUDS SONT EN ANGLAIS parce qu'ils sont imposés par les extensions TipTap
+ * que `STACK` §4.3 arrête. Les trois nœuds écrits en propre par `ADR-003` n'ont aucun nom
+ * imposé et portent le nom français de la décision : `alerte`, `diagramme`, `lienInterne`.
  *
- * Le rendu HTML vit à côté (`rendu.ts`) et N'A PAS d'autre entrée que
- * `analyserDocument` : aucun document non validé n'est rendu, aucun second
- * schéma ne circule. C'est la même exigence structurelle que P-01 pour la
- * fraîcheur, et `src/lib/fraicheur.ts` en est le modèle de tenue.
+ * LES SEPT RÈGLES DE FORME CANONIQUE — un document mal formé est REJETÉ, jamais
+ * silencieusement réparé :
  *
- * ═════════════════════════════════════════════════════════════════════════
- * PROVENANCE — CE QUI EST LU, ET OÙ
- *
- *   `cadrage/CAHIER-DES-CHARGES-FONCTIONNEL.md` §M04.6 (l. 580-605) — le
- *   tableau des constructions, l. 584-600, et `RG-M04-05` (copie d'un bloc de
- *   code). Recompté ligne à ligne sur le fichier : en-tête l. 584, filet
- *   l. 585, puis QUINZE lignes de données, l. 586 à 600. Ni plus, ni moins.
- *
- *   `cadrage/STACK-TECHNIQUE.md` §4.3 (l. 254-273, extensions l. 270) — les extensions TipTap
- *   employées, et les TROIS nœuds écrits en propre : bloc d'alerte, bloc de
- *   diagramme, lien interne portant l'identifiant de la cible.
- *
- *   `docs/DESIGN.md` §B-9 « Contenu rédigé » (l. 851-871) — l'inventaire FERMÉ
- *   des classes du corps rédigé, et la règle du glyphe textuel en capitales.
- *
- *   `mockups/V-14-lecture-note.html:1524-1753` et
- *   `mockups/V-03-lecture-publique.html:984-1102` — le contenu rédigé réel du
- *   gel, seule source légitime de document de démonstration (voir
- *   `documents-du-gel.ts`).
- *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI LES NOMS DE NŒUDS SONT EN ANGLAIS, ET TROIS SEULEMENT EN FRANÇAIS
- *
- * Le vocabulaire contractuel du §2.3 du brief porte sur DOUZE termes du
- * produit — note, fiche, registre, univers… — et aucun d'eux ne nomme un nœud
- * de document. Le nom d'un nœud, lui, est imposé par ailleurs : STACK §4.3
- * arrête les extensions TipTap employées, et une extension émet le nom de nœud
- * qu'elle déclare (`paragraph`, `heading`, `bulletList`, `taskItem`…).
- * Renommer ces nœuds obligerait à réécrire chaque extension en propre — c'est
- * exactement ce que la pile a choisi de ne pas faire.
- *
- * Les trois nœuds écrits en propre par ADR-003 n'ont, eux, aucun nom imposé :
- * ils portent le nom français de la décision — `alerte`, `diagramme`,
- * `lienInterne`. L'API TypeScript autour du format est française de bout en
- * bout.
- *
- * `src/lib/base/semence.ts` (T-010) écrivait déjà `doc` / `paragraph` / `text` :
- * ce choix ne rouvre rien, il constate.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES SEPT RÈGLES DE FORME CANONIQUE, ET CE QU'ELLES PROTÈGENT
- *
- * « Schéma refusant l'invalide » (critère de sortie de T-014) veut dire qu'un
- * document mal formé est REJETÉ, jamais silencieusement réparé. Sept règles
- * s'ajoutent au typage des nœuds, et chacune protège une propriété nommée.
- *
- * ELLES ÉTAIENT SIX. `ARB-056` en a ajouté une septième et élargi la
- * cinquième, sur constat de `T-015` — le lot que la règle 1 visait
- * explicitement, et qui a trouvé deux écritures encore admises pour un même
- * document. Les deux entrées portent la marque `ARB-056` ci-dessous :
- *
- *  1. AUCUN TABLEAU VIDE. `content: []` et `marks: []` sont refusés :
- *     l'absence s'écrit par l'absence de la clé. Deux écritures pour le même
- *     document ruineraient l'identité de l'aller-retour de C-04 — la batterie 4
- *     serait verte sans rien prouver.
- *  2. ATTRIBUTS TOTAUX. Tout attribut déclaré est présent ; une valeur absente
- *     s'écrit `null`. Un attribut manquant est un refus, jamais un défaut
- *     silencieux. C'est aussi ce qu'émet `Node.toJSON` de ProseMirror.
- *  3. AUCUN NŒUD DE TEXTE VIDE, et aucun texte consécutif portant les mêmes
- *     marques : ProseMirror fusionne, donc deux écritures existeraient pour le
- *     même document (voir 1).
- *  4. AUCUN RETOUR À LA LIGNE dans un texte hors bloc de code. Le format ne
- *     porte pas de saut de ligne dur (`hardBreak` n'est pas des quinze
- *     constructions) : un « \n » y serait une construction clandestine.
- *  5. AUCUN RETOUR CHARIOT (« \r »), OÙ QUE CE SOIT — élargie par `ARB-056`.
- *     `RG-M04-05` exige que la copie d'un bloc de code donne « exactement ce
- *     que l'utilisateur collera dans son terminal » : la règle est tenue par
- *     REFUS À L'ENTRÉE, pas par nettoyage à la copie — un nettoyage serait une
- *     réparation silencieuse, et le document stocké resterait faux. Elle ne
- *     s'arrêtait qu'aux blocs de code, et `texteEnLigne` n'interdisait que
- *     « \n » : un fichier en CRLF donnait des paragraphes à « \r » final, que
- *     le schéma acceptait. Le motif de `RG-M04-05` n'a aucune raison de
- *     s'arrêter au code — un titre ou un paragraphe porteur d'un « \r »
- *     invisible est une différence qui se propage au texte brut, à l'index, à
- *     la détection de doublon et au diff. L'hygiène de fin de ligne appartient
- *     à la FRONTIÈRE DU FICHIER, donc à l'import (`T-043`) : ici, c'est un
- *     refus, jamais une normalisation — normaliser à la désérialisation serait
- *     « la correction appliquée d'un seul côté » qu'`ADR-004` interdit.
- *  6. MARQUES EXCLUSIVES. `code` exclut toute autre marque (c'est
- *     `excludes: '_'` de ProseMirror), un texte ne porte pas deux marques de
- *     même type, et jamais un lien interne ET un lien externe.
- *  7. LES MARQUES SONT DANS L'ORDRE DE DÉCLARATION DU TYPE `Marque` — ajoutée
- *     par `ARB-056`. `marks: [bold, italic]` et `marks: [italic, bold]` sont
- *     deux JSON différents, donc DEUX DOCUMENTS au sens de l'identité que
- *     mesure la batterie 4 ; or ProseMirror trie les marques par rang de
- *     schéma et n'en produirait jamais qu'une des deux. C'est exactement ce
- *     que la règle 1 existe pour interdire, et elle l'avait manqué. Le schéma
- *     REFUSE tout autre ordre — il ne réordonne pas : réordonner en silence
- *     ferait de la validation une NORMALISATION, ce qui rendrait la batterie 4
- *     verte par construction sur ce point.
+ *  1. AUCUN TABLEAU VIDE. `content: []` et `marks: []` sont refusés : l'absence s'écrit
+ *     par l'absence de la clé. Deux écritures pour le même document ruineraient
+ *     l'identité de l'aller-retour.
+ *  2. ATTRIBUTS TOTAUX. Tout attribut déclaré est présent, une valeur absente s'écrit
+ *     `null` — c'est aussi ce qu'émet `Node.toJSON` de ProseMirror.
+ *  3. AUCUN NŒUD DE TEXTE VIDE, et aucun texte consécutif portant les mêmes marques :
+ *     ProseMirror fusionne, donc deux écritures existeraient (voir 1).
+ *  4. AUCUN RETOUR À LA LIGNE dans un texte hors bloc de code : le format ne porte pas de
+ *     saut de ligne dur.
+ *  5. AUCUN RETOUR CHARIOT, OÙ QUE CE SOIT (`ARB-056`). `RG-M04-05` exige de la copie d'un
+ *     bloc de code « exactement ce que l'utilisateur collera dans son terminal » : la
+ *     règle est tenue par REFUS À L'ENTRÉE. Le motif ne s'arrête pas au code — un « \r »
+ *     invisible dans un titre se propage au texte brut, à l'index et au diff. L'hygiène de
+ *     fin de ligne appartient à la FRONTIÈRE DU FICHIER, donc à l'import.
+ *  6. MARQUES EXCLUSIVES : `code` exclut toute autre marque, un texte ne porte pas deux
+ *     marques de même type, et jamais un lien interne ET un externe.
+ *  7. LES MARQUES SONT DANS L'ORDRE DE DÉCLARATION DU TYPE `Marque` (`ARB-056`) :
+ *     `[bold, italic]` et `[italic, bold]` sont deux JSON différents, or ProseMirror trie
+ *     par rang de schéma. Le schéma REFUSE tout autre ordre, il ne réordonne pas —
+ *     réordonner ferait de la validation une NORMALISATION.
  */
 import { z } from 'zod';
 
-/* ═══════════════════════════════════════════════ Les types ══════════════ */
-
-/** Les trois niveaux d'alerte de M04.6. Aucun quatrième n'existe. */
 export type NiveauDAlerte = 'astuce' | 'attention' | 'danger';
 
-/** Une marque : ce qui s'applique à un fragment de texte, pas à un bloc. */
 export type Marque =
 	| { readonly type: 'bold' }
 	| { readonly type: 'italic' }
@@ -121,13 +46,12 @@ export type Marque =
 	/** Lien externe. `target` et `rel` sont du RENDU, pas du document. */
 	| { readonly type: 'link'; readonly attrs: { readonly href: string } }
 	/**
-	 * Lien interne. ADR-003 : il porte l'IDENTIFIANT de la note cible, jamais
-	 * son titre — c'est ce qui le rend insensible au renommage et ce qui permet
-	 * de le signaler cassé si la cible disparaît.
+	 * Lien interne. `ADR-003` : il porte l'IDENTIFIANT de la note cible, jamais son
+	 * titre — c'est ce qui le rend insensible au renommage et permet de le signaler
+	 * cassé si la cible disparaît.
 	 */
 	| { readonly type: 'lienInterne'; readonly attrs: { readonly cible: string } };
 
-/** Un nœud de texte. Le seul nœud en ligne du format. */
 export interface Texte {
 	readonly type: 'text';
 	readonly text: string;
@@ -144,11 +68,9 @@ export interface Titre {
 	readonly attrs: {
 		readonly level: 1 | 2 | 3 | 4 | 5 | 6;
 		/**
-		 * L'ancre du titre, cible du sommaire (M04.5). Elle est STOCKÉE et non
-		 * dérivée : le gel écrit `id="s-avant"` sur « Avant de commencer »
-		 * (`V-14:1528`) — aucune translittération du libellé ne produit cela, et
-		 * une ancre dérivée du texte casserait tous les liens au premier
-		 * renommage de titre.
+		 * L'ancre du titre, cible du sommaire (M04.5). Elle est STOCKÉE et non dérivée : le gel
+		 * écrit `id="s-avant"` sur « Avant de commencer », qu'aucune translittération ne
+		 * produit, et une ancre dérivée du texte casserait tous les liens au premier renommage.
 		 */
 		readonly ancre: string | null;
 	};
@@ -192,9 +114,8 @@ export interface Tache {
 export interface Citation {
 	readonly type: 'blockquote';
 	/**
-	 * L'attribution, rendue en `<footer>` — `V-14:1685`, et la règle de style
-	 * `blockquote.prose-cit footer` (`V-41:871`). ProseMirror ne connaît pas cet
-	 * attribut : il est ajouté ici parce que le gel l'écrit.
+	 * L'attribution, rendue en `<footer>`. ProseMirror ne connaît pas cet attribut :
+	 * il est ajouté ici parce que le gel l'écrit.
 	 */
 	readonly attrs: { readonly attribution: string | null };
 	readonly content: readonly Bloc[];
@@ -205,18 +126,13 @@ export interface Alerte {
 	readonly attrs: {
 		readonly niveau: NiveauDAlerte;
 		/**
-		 * Le glyphe textuel en capitales. DESIGN.md §B-9 : « les trois niveaux
-		 * d'alerte portent un glyphe textuel en capitales (ASTUCE, ATTENTION,
-		 * DANGER) : la couleur ne fait que répéter (RG-M18-09) », et P-7.2 en
-		 * fait un interdit détectable.
-		 *
-		 * IL EST STOCKÉ, ET CE N'EST PAS UN CONFORT : le gel écrit deux glyphes
-		 * qui ne sont PAS le nom du niveau — `REGISTRE` (`V-14:1711`) et
-		 * `EN BREF` (`V-03:1085`), tous deux sur une alerte de niveau `astuce`.
-		 * Le dériver du niveau rendrait ces deux alertes fausses.
+		 * Le glyphe textuel en capitales : « les trois niveaux d'alerte portent un glyphe
+		 * textuel en capitales (ASTUCE, ATTENTION, DANGER) : la couleur ne fait que répéter »
+		 * (`RG-M18-09`). IL EST STOCKÉ, ET CE N'EST PAS UN CONFORT : le gel écrit deux glyphes
+		 * qui ne sont PAS le nom du niveau — `REGISTRE` et `EN BREF`, tous deux sur une alerte
+		 * `astuce`. Le dériver du niveau rendrait ces deux alertes fausses.
 		 */
 		readonly glyphe: string;
-		/** La première ligne du bandeau, après le glyphe. */
 		readonly titre: string;
 	};
 	readonly content: readonly Bloc[];
@@ -245,14 +161,9 @@ export interface Cellule {
 }
 
 /**
- * L'IMAGE — et ses attributs viennent du gel, non de TipTap.
- *
- * L'extension `image` de la pile porte `src`, `alt` et `title`. Or le gel rend
- * une image dans une FIGURE, dont la légende est en deux parties : un libellé
- * en gras et un texte — `<figcaption><b>Figure</b><span>Légende</span>` au
- * catalogue de blocs de l'éditeur (`V-17:3076`), `<b>Schéma 1</b><span>…</span>`
- * en lecture (`V-14:1622`). Un seul `title` ne sait pas porter les deux.
- * L'ordre de préséance tranche : la maquette décide, la pile s'adapte.
+ * L'image — et ses attributs viennent du gel, non de TipTap : l'extension porte `src`,
+ * `alt` et `title`, quand le gel rend une image dans une FIGURE dont la légende est en
+ * deux parties, un libellé en gras et un texte. Un seul `title` ne sait pas porter les deux.
  */
 export interface Image {
 	readonly type: 'image';
@@ -274,12 +185,10 @@ export interface Separateur {
 export interface Diagramme {
 	readonly type: 'diagramme';
 	readonly attrs: {
-		/** Le diagramme DÉCRIT EN TEXTE (M04.6). C'est lui qui est stocké. */
 		readonly source: string;
 		/**
-		 * Le seul moteur de la pile — STACK-TECHNIQUE.md l. 159, « Mermaid
-		 * 11.16.1, MIT, rendu des diagrammes décrits en texte ». Un autre
-		 * langage est refusé : rien ne saurait le rendre.
+		 * Le seul moteur de la pile (`STACK` : « Mermaid, rendu des diagrammes
+		 * décrits en texte »). Un autre langage est refusé : rien ne saurait le rendre.
 		 */
 		readonly langage: 'mermaid';
 		/** P-06 / RG-M18-11 : la restitution exploitable sans le graphique. */
@@ -291,7 +200,6 @@ export interface Diagramme {
 	};
 }
 
-/** Les douze natures de blocs. Aucune treizième n'existe. */
 export type Bloc =
 	| Paragraphe
 	| Titre
@@ -312,19 +220,10 @@ export interface Document {
 	readonly content: readonly Bloc[];
 }
 
-/* ═══════════════════════════════════════════════ Les schémas ════════════ */
-
 /**
- * TOUTE CHAÎNE D'UN DOCUMENT CANONIQUE passe par ici : les textes, mais aussi
- * chaque attribut porteur de caractères — l'ancre d'un titre, la chaîne
- * d'information d'un bloc de code, l'attribution d'une citation, le glyphe et
- * le titre d'une alerte, la source et l'alternative d'un diagramme, les
- * destinations de lien. C'est donc ici, et à un seul endroit, que se tient la
- * règle 5 élargie par `ARB-056` : aucun retour chariot, OÙ QUE CE SOIT.
- *
- * Le refuser deux fois — une pour les blocs de code, une pour le reste —
- * aurait été deux écritures d'une même règle, ce que la règle 1 réprouve pour
- * les documents et qui ne vaut pas mieux pour le schéma.
+ * Toute chaîne d'un document canonique passe par ici : les textes, mais aussi chaque
+ * attribut porteur de caractères. C'est donc ici, et à un seul endroit, que se tient la
+ * règle 5 — aucun retour chariot, où que ce soit.
  */
 const texteNonVide = z
 	.string()
@@ -366,24 +265,14 @@ const schemaMarque = z.discriminatedUnion(
 );
 
 /**
- * LE RANG D'UNE MARQUE — règle 7 (`ARB-056`).
+ * Le rang d'une marque — règle 7 (`ARB-056`). Les rangs sont ceux de la DÉCLARATION DU
+ * TYPE `Marque`, dans cet ordre et sans trou. Le type `Record<Marque['type'], number>`
+ * fait qu'une neuvième marque ne compile pas tant qu'elle n'a pas son rang.
  *
- * Les rangs sont ceux de la DÉCLARATION DU TYPE `Marque`, l. 114-128 de ce
- * fichier, dans cet ordre et sans trou — `ARB-056` la cite « l. 91-105 », ce
- * qu'elle était avant que ce lot n'allonge l'en-tête de vingt-quatre lignes. Le type de cette table est
- * `Record<Marque['type'], number>` : une neuvième marque ajoutée au type ne
- * compile pas tant qu'elle n'a pas son rang, et un rang donné à une marque qui
- * n'existe pas ne compile pas non plus. La table ne peut donc pas dériver du
- * type en silence — c'est le seul point que `pnpm check` tient à ma place.
- *
- * EXPORTÉE PAR `T-050`, ET POUR UNE SEULE RAISON. Le schéma ProseMirror de
- * l'éditeur (`src/lib/edition/schema.ts`) doit déclarer ses marques DANS CET
- * ORDRE : ProseMirror trie les marques d'un texte par leur rang de schéma, et
- * un schéma d'éditeur ordonné autrement émettrait des documents que la règle 7
- * refuse — refus juste, cause introuvable. La table est donc LUE, jamais
- * recopiée : deux écritures de l'ordre seraient deux ordres au premier
- * changement, ce que la règle 1 existe pour interdire aux documents et qui ne
- * vaut pas mieux pour le schéma.
+ * EXPORTÉE POUR UNE SEULE RAISON : le schéma ProseMirror de l'éditeur doit déclarer ses
+ * marques DANS CET ORDRE, ProseMirror triant par rang de schéma — un schéma ordonné
+ * autrement émettrait des documents que la règle 7 refuse, refus juste et cause
+ * introuvable. La table est LUE, jamais recopiée.
  */
 export const RANG_DE_MARQUE: Readonly<Record<Marque['type'], number>> = {
 	bold: 1,
@@ -409,10 +298,9 @@ const schemaMarques = z
 	.refine((m) => !(m.some((x) => x.type === 'link') && m.some((x) => x.type === 'lienInterne')), {
 		error: 'un texte ne porte pas à la fois un lien externe et un lien interne'
 	})
-	/* Règle 7 — l'ordre, et le REFUS plutôt que le tri. La comparaison est
-	   STRICTE : deux marques de même rang sont deux marques de même type, que la
-	   règle 6 refuse déjà, et une égalité admise ici laisserait passer un ordre
-	   indécidable. */
+	/* Règle 7 — l'ordre, et le REFUS plutôt que le tri. La comparaison est STRICTE :
+	   deux marques de même rang sont deux marques de même type, que la règle 6
+	   refuse déjà, et une égalité admise laisserait passer un ordre indécidable. */
 	.refine(
 		(m) => m.every((x, i) => i === 0 || RANG_DE_MARQUE[m[i - 1]!.type] < RANG_DE_MARQUE[x.type]),
 		{
@@ -430,13 +318,9 @@ const schemaTexte = z.strictObject({
 });
 
 /**
- * Un texte de bloc de code : les retours à la ligne y sont le contenu même —
- * c'est le seul texte du format qui en porte —, et aucune marque n'y entre :
- * ProseMirror déclare le contenu d'un bloc de code sans marques.
- *
- * LE RETOUR CHARIOT Y EST REFUSÉ COMME PARTOUT AILLEURS, par `texteNonVide`
- * (règle 5, élargie par `ARB-056`). Il l'était ici seul jusqu'au 20 août
- * 2026 : `RG-M04-05` est bien le motif de la règle, elle n'en est pas la
+ * Un texte de bloc de code : les retours à la ligne y sont le contenu même — c'est le seul
+ * texte du format qui en porte —, et aucune marque n'y entre. Le retour chariot y est
+ * refusé comme partout ailleurs (règle 5) : `RG-M04-05` est le motif de la règle, pas sa
  * borne.
  */
 const schemaTexteDeCode = z.strictObject({
@@ -444,7 +328,6 @@ const schemaTexteDeCode = z.strictObject({
 	text: texteNonVide
 });
 
-/** Règle 3 — deux textes consécutifs de mêmes marques sont une seconde écriture. */
 function marquesIdentiques(a: readonly Marque[] | undefined, b: readonly Marque[] | undefined) {
 	return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 }
@@ -457,8 +340,8 @@ const schemaContenuEnLigne = z
 	});
 
 /**
- * LES BLOCS, ET LEUR RÉCURSION. `z.lazy` est la seule façon de décrire un
- * arbre : un élément de liste contient des blocs, qui contiennent des listes.
+ * Les blocs, et leur récursion. `z.lazy` est la seule façon de décrire un arbre :
+ * un élément de liste contient des blocs, qui contiennent des listes.
  */
 const schemaBloc: z.ZodType<Bloc> = z.lazy(() =>
 	z.discriminatedUnion(
@@ -541,10 +424,9 @@ const schemaCitation = z.strictObject({
 });
 
 /**
- * Le contenu d'une alerte : des blocs, SAUF une alerte. Le gel n'en imbrique
- * aucune et DESIGN.md §B-9 ne donne aucun rendu à une alerte imbriquée — une
- * construction sans rendu n'est pas une construction (P-3 du plan : ce qui ne
- * se rend pas ne se livre pas).
+ * Le contenu d'une alerte : des blocs, SAUF une alerte. Le gel n'en imbrique aucune
+ * et DESIGN.md ne donne aucun rendu à une alerte imbriquée — une construction sans
+ * rendu n'est pas une construction.
  */
 const schemaContenuDAlerte = z
 	.array(schemaBloc)
@@ -619,11 +501,7 @@ export const schemaDocument = z.strictObject({
 	content: schemaContenuDeBlocs
 });
 
-/* ═════════════════════════════════════════ Le refus de l'invalide ═══════ */
-
-/** Un manquement, situé dans l'arbre. */
 export interface Manquement {
-	/** Le chemin du nœud fautif, tel qu'on le lirait dans le JSON. */
 	readonly chemin: string;
 	readonly message: string;
 }
@@ -651,9 +529,9 @@ function cheminDe(parties: readonly PropertyKey[]): string {
 }
 
 /**
- * Le message français d'un manquement. Les messages de `zod` sont en anglais
- * et décrivent le TYPE attendu ; ceux-ci décrivent la RÈGLE violée, qui est ce
- * qu'un rapport de refus doit dire.
+ * Le message français d'un manquement. Les messages de `zod` sont en anglais et
+ * décrivent le TYPE attendu ; ceux-ci décrivent la RÈGLE violée, qui est ce qu'un
+ * rapport de refus doit dire.
  */
 function messageDe(issue: z.core.$ZodIssue): string {
 	switch (issue.code) {
@@ -666,23 +544,18 @@ function messageDe(issue: z.core.$ZodIssue): string {
 		case 'invalid_value':
 			return `valeur hors du domaine admis : ${issue.message}`;
 		case 'invalid_union':
-			/* Les seules unions du schéma sont discriminées, et chacune porte son
-			   propre message — « nœud inconnu », « marque inconnue ». Le redire
-			   ici l'effacerait. */
+			/* Les seules unions du schéma sont discriminées, et chacune porte son propre
+			   message. Le redire ici l'effacerait. */
 			return issue.message;
 		default:
 			return issue.message;
 	}
 }
 
-/** Le verdict d'un contrôle, quand on ne veut pas de levée d'exception. */
 export type Verdict =
 	| { readonly valide: true; readonly document: Document }
 	| { readonly valide: false; readonly manquements: readonly Manquement[] };
 
-/**
- * LE CONTRÔLE. Il ne répare rien : il dit ce qui manque, et où.
- */
 export function verifierDocument(valeur: unknown): Verdict {
 	const issu = schemaDocument.safeParse(valeur);
 	if (issu.success) return { valide: true, document: issu.data as Document };
@@ -696,10 +569,9 @@ export function verifierDocument(valeur: unknown): Verdict {
 }
 
 /**
- * L'ENTRÉE UNIQUE DU FORMAT. Tout ce qui lit un corps de note passe par ici :
- * le rendu, l'écriture en base, l'export, l'indexation. Un document non validé
- * n'entre nulle part — ADR-003 interdit « toute écriture directe en base d'un
- * document non validé par le schéma ProseMirror ».
+ * L'entrée unique du format. Tout ce qui lit un corps de note passe par ici : le rendu,
+ * l'écriture en base, l'export, l'indexation. `ADR-003` interdit « toute écriture directe
+ * en base d'un document non validé par le schéma ProseMirror ».
  *
  * @throws DocumentInvalide — jamais un document réparé.
  */
@@ -709,24 +581,16 @@ export function analyserDocument(valeur: unknown): Document {
 	return verdict.document;
 }
 
-/* ═════════════════════════════════ Le catalogue des constructions ═══════ */
-
-/** Une des quinze constructions de M04.6, et ce qui la porte dans le format. */
 export interface Construction {
-	/** Le rang dans le tableau de M04.6, l. 586-600. */
 	readonly numero: number;
-	/** Le libellé du cahier des charges, à la lettre. */
 	readonly libelle: string;
-	/** Les nœuds et marques du format qui la portent. */
 	readonly porteurs: readonly string[];
-	/** Ce que le rendu doit produire, et que la commande recherche. */
 	readonly signature: readonly string[];
 }
 
 /**
- * LES QUINZE CONSTRUCTIONS, dans l'ordre du tableau de M04.6 (l. 586-600),
- * relu ligne à ligne. Le tableau du cahier des charges compte quinze lignes :
- * ce catalogue en compte quinze, et `document.test.ts` le vérifie.
+ * Les quinze constructions, dans l'ordre du tableau de M04.6. Le tableau du cahier
+ * compte quinze lignes, ce catalogue aussi, et `document.test.ts` le vérifie.
  */
 export const CONSTRUCTIONS: readonly Construction[] = [
 	{
@@ -811,9 +675,6 @@ export const CONSTRUCTIONS: readonly Construction[] = [
 	}
 ];
 
-/* ═══════════════════════════════════════ Le parcours de l'arbre ═════════ */
-
-/** Les nœuds de structure : ils ne sont pas des blocs, ils en portent. */
 export type Conteneur = ElementDeListe | Tache | LigneDeTableau | CelluleDEntete | Cellule;
 
 /** Tout ce qui peut se trouver dans un `content`. */
@@ -831,12 +692,9 @@ function enfantsDe(noeud: Document | NoeudDeContenu): readonly NoeudDeContenu[] 
 }
 
 /**
- * ADR-003 interdit « toute manipulation du corps par expression régulière ou
- * par transformation de chaîne » : la réécriture de liens, le sommaire et les
- * rétroliens se font par PARCOURS DE L'ARBRE. C'est ce parcours, et il est ici.
- *
- * Il rend les BLOCS, dans l'ordre du document, en traversant les conteneurs —
- * un élément de liste n'est pas un bloc, le paragraphe qu'il porte en est un.
+ * `ADR-003` interdit « toute manipulation du corps par expression régulière ou par
+ * transformation de chaîne » : la réécriture de liens, le sommaire et les rétroliens se
+ * font par PARCOURS DE L'ARBRE, et il est ici. Il rend les BLOCS dans l'ordre du document.
  */
 export function* parcourir(noeud: Document | NoeudDeContenu): Generator<Bloc> {
 	for (const enfant of enfantsDe(noeud)) {
@@ -850,7 +708,6 @@ export function* parcourir(noeud: Document | NoeudDeContenu): Generator<Bloc> {
 	}
 }
 
-/** Les textes d'un nœud, dans l'ordre du document. */
 export function* textes(noeud: Document | NoeudDeContenu): Generator<Texte> {
 	for (const enfant of enfantsDe(noeud)) {
 		if (enfant.type === 'text') yield enfant;
@@ -858,7 +715,6 @@ export function* textes(noeud: Document | NoeudDeContenu): Generator<Texte> {
 	}
 }
 
-/** Les titres du document, dans l'ordre. Matière du sommaire de M04.5. */
 export function titres(document: Document): readonly Titre[] {
 	return [...parcourir(document)].filter((b): b is Titre => b.type === 'heading');
 }
@@ -879,14 +735,11 @@ export function liensInternes(document: Document): readonly string[] {
 }
 
 /**
- * LE TEXTE BRUT — la forme dérivée qu'ADR-003 produit « à l'enregistrement »
- * pour l'indexation, les extraits et la détection de doublon.
- *
- * Une ligne par bloc, dans l'ordre du document, et RIEN QUI NE SOIT PAS LU :
- * le glyphe et le titre d'une alerte en font partie, l'attribution d'une
- * citation aussi, l'alternative d'un diagramme et le texte de remplacement
- * d'une image également — ce sont eux que P-06 rend lisibles quand le
- * graphique ne l'est pas. Un séparateur n'écrit rien.
+ * Le texte brut — la forme dérivée qu'`ADR-003` produit « à l'enregistrement » pour
+ * l'indexation, les extraits et la détection de doublon. Une ligne par bloc, et RIEN QUI NE
+ * SOIT PAS LU : le glyphe et le titre d'une alerte en font partie, l'attribution d'une
+ * citation aussi, l'alternative d'un diagramme et le texte de remplacement d'une image
+ * également — ce sont eux que `P-06` rend lisibles quand le graphique ne l'est pas.
  */
 export function texteBrut(document: Document): string {
 	return document.content.flatMap(lignesDeBloc).join('\n');
@@ -936,13 +789,10 @@ function lignesDeBloc(bloc: Bloc): readonly string[] {
 }
 
 /**
- * LE TEXTE COPIÉ D'UN BLOC DE CODE — `RG-M04-05` : « un texte brut, sans
- * caractère parasite : pas de numéro de ligne, pas de retour chariot Windows,
- * exactement ce que l'utilisateur collera dans son terminal ».
- *
- * La fonction ne nettoie RIEN, et c'est le point : le format refuse déjà le
- * retour chariot à l'entrée (règle 5) et ne sait pas porter un numéro de ligne.
- * Un nettoyage ici masquerait un document stocké faux.
+ * Le texte copié d'un bloc de code — `RG-M04-05` : « un texte brut, sans caractère parasite
+ * […] exactement ce que l'utilisateur collera dans son terminal ». La fonction ne nettoie
+ * RIEN, et c'est le point : le format refuse déjà le retour chariot à l'entrée (règle 5) et
+ * ne sait pas porter un numéro de ligne. Un nettoyage ici masquerait un document faux.
  */
 export function texteDeCopie(bloc: BlocDeCode): string {
 	return (bloc.content ?? []).map((t) => t.text).join('');

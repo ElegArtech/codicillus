@@ -1,55 +1,19 @@
 /**
- * LES COMMANDES DE L'INDEX — réindexer, lire son état, l'éprouver.
+ * Les commandes de l'index — réindexer, lire son état, l'éprouver. Elles vivent en TypeScript
+ * parce que `pnpm check` les contrôle ; le lanceur ne fait que charger, appeler et imprimer.
  *
- * Elles vivent en TypeScript pour la même raison que celles de la base : elles
- * sont contrôlées par `pnpm check`, et le lanceur (`recherche/recherche.mjs`)
- * ne fait que charger, appeler et imprimer.
+ *   `reindexer`  l'index est reconstruit DEPUIS LA BASE, avec les deux nombres — projetées,
+ *                indexées. Il ne prouve rien de l'autorisation.
+ *   `etat`       ce que l'index porte RÉELLEMENT, mesuré sur le moteur.
+ *   `epreuve`    qu'AUCUNE entrée interdite ne sort de l'index, pour les sept personas.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CHAQUE COMMANDE PROUVE, ET CE QU'ELLE NE PROUVE PAS
+ * L'ÉPREUVE COMPARE À `resolution.ts` PLUTÔT QU'À UNE LISTE ATTENDUE : une liste écrite à la
+ * main serait une seconde définition du droit. Elle exige l'ÉGALITÉ des deux ensembles, pas
+ * l'inclusion — une entrée en trop est une FUITE, une entrée manquante une PERTE.
  *
- *   `reindexer`  l'index est reconstruit DEPUIS LA BASE, et le rapport donne
- *                les deux nombres — projetées, indexées. Il ne prouve rien de
- *                l'autorisation : c'est `epreuve` qui s'en charge.
- *
- *   `etat`       ce que l'index porte RÉELLEMENT — entrées, champs réglés,
- *                embedders. Mesuré sur le moteur, jamais supposé. C'est aussi
- *                là que l'indisponibilité du mode « Sens » se lit sur pièce :
- *                aucun embedder déclaré.
- *
- *   `epreuve`    qu'AUCUNE entrée interdite ne sort de l'index, pour les SEPT
- *                personas du plan §5, et que le filtre n'est pas inerte. Elle
- *                ne prouve rien des réponses HTTP du produit : c'est la
- *                batterie 6 qui les mesure.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI L'ÉPREUVE COMPARE À `resolution.ts` PLUTÔT QU'À UNE LISTE ATTENDUE
- *
- * Une liste écrite à la main serait une seconde définition du droit, et la
- * première divergence donnerait raison à la liste. La référence est donc
- * `identifiantsLisibles()` — le chemin que `/` emploie —, et l'épreuve exige
- * l'ÉGALITÉ des deux ensembles, pas l'inclusion :
- *
- *   une entrée dans l'index et pas dans la référence est une FUITE ;
- *   une entrée dans la référence et pas dans l'index est une PERTE — le
- *   produit cacherait à un ayant droit ce qu'il a le droit de lire.
- *
- * Les deux sont des défauts. Ne mesurer que le premier laisserait le second
- * s'installer, et un index trop fermé se signale mal : il ressemble à un corpus
- * pauvre.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES SONDES SONT SYNTHÉTIQUES, ET C'EST `P-26`
- *
- * « Un contrôle dont le seul cas d'épreuve est le défaut qu'il trouve devient
- * inerte en réussissant. » Le corpus livré ne porte AUCUNE note publique en
- * brouillon (mesuré : 0), et aucun droit explicite de dossier (mesuré : 0). Les
- * cas qui séparent les règles les unes des autres n'y sont donc pas.
- *
- * L'épreuve les FABRIQUE — six entrées d'index qui n'existent dans aucune base,
- * posées puis retirées —, et elle porte ses CONTRÔLES POSITIFS avec elle : une
- * entrée qui DOIT sortir à côté de chacune qui doit rester. Sans eux, un filtre
- * qui ne rendrait jamais rien passerait l'épreuve haut la main.
+ * LES SONDES SONT SYNTHÉTIQUES (`P-26`) : le corpus livré ne porte aucune note publique en
+ * brouillon ni aucun droit explicite de dossier. L'épreuve les FABRIQUE, et porte ses
+ * CONTRÔLES POSITIFS avec elle — sans eux, un filtre qui ne rendrait jamais rien passerait.
  */
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
@@ -82,7 +46,6 @@ import type { NoteIndexee } from './notes-indexees';
 export { moteurDeRecherche, etatDeLIndex };
 export type { RapportDeReindexation };
 
-/** La réindexation complète, telle que le lanceur l'appelle. */
 export async function reindexerLeCorpus(
 	base: Base,
 	env: EnvironnementDeRecherche
@@ -90,28 +53,14 @@ export async function reindexerLeCorpus(
 	return await reindexer(base, moteurDeRecherche(env));
 }
 
-/* ═══════════════════════════════════ Les sept personas ════════════════ */
-
 /**
- * LES SEPT PERSONAS — ceux du plan §5 l. 341, plus le compte désactivé.
+ * Les sept personas — ceux du plan §5, plus le compte désactivé. L'attribution des comptes est
+ * reprise à l'identique de la batterie 6 : deux tables de personas divergeraient.
  *
- * L'attribution des comptes est celle de la batterie 6 (`verif/etancheite-attendu.mjs`),
- * et elle est reprise à l'identique : deux tables de personas divergeraient, et
- * la divergence se lirait comme un défaut du produit.
- *
- * LES TROIS PERSONAS DE DROIT SONT UN GABARIT, ET LA BATTERIE 6 LE DIT AUSSI :
- * « le corpus porte cinq comptes et AUCUN droit explicite de dossier. Les trois
- * personas de droit sont donc posés en GABARIT DÉCLARÉ, sur le même compte, le
- * droit étant réécrit entre les passes. Un compte fabriqué serait une semence
- * inventée. »
- *
- * LE COMPTE DÉSACTIVÉ N'EST PAS UNE IDENTITÉ AUTHENTIFIÉE, et c'est le point de
- * son cas. `RG-M14-08` : « un compte désactivé perd IMMÉDIATEMENT l'accès ». Son
- * point d'application est l'établissement de session, pas la résolution des
- * droits — `Identite` ne porte pas `actif`, délibérément
- * (`resolution.ts`). Ce persona est donc mesuré ANONYME, et l'épreuve le
- * déclare : ce qu'elle prouve de lui, c'est qu'aucun chemin de l'index ne lui
- * rend davantage qu'à un anonyme.
+ * LES TROIS PERSONAS DE DROIT SONT UN GABARIT : le corpus ne porte aucun droit explicite de
+ * dossier, ils sont donc posés sur le même compte, le droit étant réécrit entre les passes. LE
+ * COMPTE DÉSACTIVÉ N'EST PAS UNE IDENTITÉ AUTHENTIFIÉE : `RG-M14-08` s'applique à
+ * l'établissement de session, pas à la résolution des droits — il est mesuré ANONYME.
  */
 export interface PersonaDIndex {
 	readonly nom: string;
@@ -160,14 +109,10 @@ export const PERSONAS_DINDEX: readonly PersonaDIndex[] = [
 	}
 ];
 
-/* ═══════════════════════════════════ Les entrées de sonde ═════════════ */
-
 /**
- * LE DOSSIER D'UNE SONDE — un identifiant qui n'est dans aucune arborescence.
- *
- * Il est volontairement hors de la base : aucun périmètre authentifié ne peut le
- * contenir, donc une sonde qui le porte ne peut sortir que par le filtre
- * anonyme ou par le filtre total. C'est ce qui rend chaque attendu lisible.
+ * Le dossier d'une sonde — un identifiant qui n'est dans aucune arborescence, donc
+ * dans aucun périmètre authentifié : une sonde qui le porte ne peut sortir que par
+ * le filtre anonyme ou par le filtre total.
  */
 const DOSSIER_DE_SONDE = '00000000-0000-4000-8000-000000000051';
 const AUTRE_DOSSIER_DE_SONDE = '00000000-0000-4000-8000-000000000052';
@@ -175,7 +120,6 @@ const AUTRE_DOSSIER_DE_SONDE = '00000000-0000-4000-8000-000000000052';
 /** Le terme qui n'appartient qu'aux sondes — il n'est dans aucun titre du corpus. */
 export const TERME_DE_SONDE = 'sondeperimetret051';
 
-/** Une entrée d'index fabriquée pour l'épreuve. Le dossier est celui du parcours. */
 function entreeDeSonde(
 	id: string,
 	visibilite: 'interne' | 'publique',
@@ -202,9 +146,6 @@ function entreeDeSonde(
 	};
 }
 
-/* ═══════════════════════════════════ Le rapport ═══════════════════════ */
-
-/** Ce qu'un persona a obtenu de l'index, comparé à ce que la résolution donne. */
 export interface CasDePersona {
 	readonly persona: string;
 	readonly incarnation: string;
@@ -212,24 +153,18 @@ export interface CasDePersona {
 	readonly filtre: string | null;
 	readonly attendu: number;
 	readonly obtenu: number;
-	/** Dans l'index et pas dans la référence : une FUITE. */
 	readonly fuites: readonly string[];
-	/** Dans la référence et pas dans l'index : une PERTE. */
 	readonly pertes: readonly string[];
-	/** Le nombre de termes essayés, et ce que le filtre a effectivement retenu. */
 	readonly termes: number;
 	readonly fuitesParTerme: readonly string[];
 	/**
-	 * Le nombre de termes pour lesquels le périmètre TOTAL rapporte au moins une
-	 * note interdite à ce persona. Zéro signifie que l'essai est INERTE pour lui
-	 * — le filtre n'avait rien à retenir, et le vert ne prouve rien.
+	 * Le nombre de termes pour lesquels le périmètre TOTAL rapporte au moins une note
+	 * interdite à ce persona. Zéro signifie que l'essai est INERTE pour lui.
 	 */
 	readonly termesMordants: number;
-	/** Le nombre d'entrées interdites que le filtre a effectivement écartées. */
 	readonly ecartees: number;
 }
 
-/** Ce qu'une sonde synthétique attendait, et ce qu'elle a obtenu. */
 export interface CasDeSonde {
 	readonly persona: string;
 	readonly attendues: readonly string[];
@@ -237,7 +172,6 @@ export interface CasDeSonde {
 	readonly conforme: boolean;
 }
 
-/** Ce que l'épreuve rapporte. Des nombres, des cas nommés, et des défauts. */
 export interface RapportDEpreuve {
 	readonly reindexation: RapportDeReindexation;
 	readonly personas: readonly CasDePersona[];
@@ -252,20 +186,12 @@ export interface RapportDEpreuve {
 	readonly defauts: readonly string[];
 }
 
-/* ═══════════════════════════════════ L'épreuve ════════════════════════ */
-
 /**
- * L'ÉPREUVE — sept personas, l'égalité à la résolution, et des sondes qui
- * mordent.
- *
- * ELLE ÉCRIT DANS LA BASE, ET ELLE LA REND PROPRE. Les trois personas de droit
- * exigent un droit explicite, que le corpus ne porte pas ; il est posé sur un
- * dossier racine, puis RETIRÉ, et le rapport dit combien de lignes de droits
- * restent à la fin. La batterie 6 procède exactement ainsi, pour la même raison.
- *
- * ELLE TERMINE PAR UNE RÉINDEXATION. Les entrées de sonde ne vivent que dans
- * l'index ; la reconstruction finale les emporte par construction, plutôt que
- * par un nettoyage qu'un échec en cours de route pourrait sauter.
+ * L'épreuve — sept personas, l'égalité à la résolution, et des sondes qui mordent. ELLE ÉCRIT
+ * DANS LA BASE, ET ELLE LA REND PROPRE : le droit exigé est posé sur un dossier racine puis
+ * RETIRÉ, et le rapport dit combien de lignes restent. ELLE TERMINE PAR UNE RÉINDEXATION : les
+ * entrées de sonde ne vivent que dans l'index, et la reconstruction les emporte par
+ * construction plutôt que par un nettoyage qu'un échec pourrait sauter.
  */
 export async function eprouverLePerimetre(
 	base: Base,
@@ -308,10 +234,9 @@ export async function eprouverLePerimetre(
 		const fuites = [...obtenues].filter((id) => !reference.has(id)).sort();
 		const pertes = [...reference].filter((id) => !obtenues.has(id)).sort();
 
-		/* L'essai par terme, et sa MORDANCE. Le périmètre total est celui de
-		   l'administrateur (`RG-DRO-03`) : ce qu'il rapporte pour un terme est ce
-		   que le terme rapporterait SANS filtre de périmètre. Comparer les deux
-		   dit, terme par terme, ce que le filtre a effectivement écarté. */
+		/* L'essai par terme, et sa MORDANCE : ce que l'administrateur rapporte pour un
+		   terme est ce que le terme rapporterait SANS filtre. Comparer les deux dit,
+		   terme par terme, ce que le filtre a écarté. */
 		const fuitesParTerme: string[] = [];
 		let termesMordants = 0;
 		let ecartees = 0;
@@ -404,7 +329,6 @@ const ADMINISTRATEUR_DE_SONDE: Identite = identiteAuthentifiee(
 	'administrateur'
 );
 
-/** Le persona, incarné : une identité, et le droit posé s'il en faut un. */
 async function incarner(
 	base: Base,
 	persona: PersonaDIndex,
@@ -432,12 +356,9 @@ async function incarner(
 }
 
 /**
- * LE DOSSIER RACINE LE PLUS PEUPLÉ — celui dont le sous-arbre porte le plus de
- * notes.
- *
- * Poser le droit du gabarit sur une racine vide rendrait un périmètre vide, et
- * l'épreuve serait verte sans rien exercer : c'est `P-5`. Le choix est donc
- * MESURÉ, jamais nommé en dur.
+ * Le dossier racine le plus peuplé. Poser le droit du gabarit sur une racine vide
+ * rendrait un périmètre vide, et l'épreuve serait verte sans rien exercer : le choix
+ * est MESURÉ, jamais nommé en dur.
  */
 async function dossierRacineLePlusPeuple(base: Base): Promise<string | null> {
 	const arbre = await base.select({ id: dossiers.id, parentId: dossiers.parentId }).from(dossiers);
@@ -467,13 +388,9 @@ async function dossierRacineLePlusPeuple(base: Base): Promise<string | null> {
 }
 
 /**
- * LES TERMES D'ESSAI — tirés des titres du corpus, jamais inventés.
- *
- * « Quel que soit le terme » ne s'éprouve pas en énumérant tous les mots de la
- * langue. Ce qui compte est que les termes essayés SOIENT CEUX QUI ATTEINDRAIENT
- * les notes interdites : ils sont donc pris dans les titres des notes du corpus,
- * un par note au moins, et le rapport dit combien d'entre eux rapportent
- * effectivement une note interdite sous le périmètre total.
+ * Les termes d'essai — tirés des titres du corpus, jamais inventés. Ce qui compte est
+ * qu'ils SOIENT CEUX QUI ATTEINDRAIENT les notes interdites, et le rapport dit
+ * combien rapportent effectivement une note interdite sous le périmètre total.
  */
 export function termesDEssai(corpus: readonly NoteIndexee[]): readonly string[] {
 	const termes = new Set<string>();
@@ -486,17 +403,11 @@ export function termesDEssai(corpus: readonly NoteIndexee[]): readonly string[] 
 }
 
 /**
- * `RG-M02-04` — EN ANONYME, `statut=` ET `visibilite=` SONT IGNORÉS, JAMAIS
- * REFUSÉS.
- *
- * Trois mesures, et la troisième est celle qui empêche le contrôle d'être vide :
- *
- *   1. le filtre envoyé au moteur est le MÊME avec et sans ces paramètres —
- *      ignorer, c'est ne pas pouvoir s'en servir, pas seulement s'en abstenir ;
- *   2. aucun refus n'est levé : la commande n'attrape rien, et l'absence
- *      d'exception est constatée plutôt que supposée ;
- *   3. un paramètre HONORÉ — `domaine=` — change bien le filtre. Sans cette
- *      mesure, un crible qui laisserait tout tomber passerait le contrôle.
+ * `RG-M02-04` — en anonyme, `statut=` et `visibilite=` sont IGNORÉS, jamais refusés.
+ * Trois mesures, et la troisième empêche le contrôle d'être vide : le filtre envoyé
+ * est le MÊME avec et sans ces paramètres ; aucun refus n'est levé ; et un paramètre
+ * HONORÉ change bien le filtre — sans quoi un crible qui laisserait tout tomber
+ * passerait le contrôle.
  */
 async function eprouverLesParametres(
 	base: Base,
@@ -546,24 +457,11 @@ async function eprouverLesParametres(
 }
 
 /**
- * LES SONDES SYNTHÉTIQUES — six entrées que le corpus ne porte pas.
- *
- * Chacune isole UNE règle, et chaque groupe porte son contrôle positif :
- *
- *   `pub-pub`         publique ET publiée      → l'anonyme la voit
- *   `pub-bro`         publique, BROUILLON      → l'anonyme ne la voit pas
- *   `int-pub`         INTERNE, publiée         → l'anonyme ne la voit pas
- *   `droit-oui`       dans le dossier où le droit est posé → l'ayant droit la voit
- *   `droit-non`       dans un dossier sans droit → l'ayant droit ne la voit pas
- *   `sans-perimetre`  aucun dossier            → PERSONNE ne la voit, administrateur
- *                     compris (`ADR-006` : « un document indexé sans périmètre est
- *                     un document public » — le filtre total exige un dossier)
- *
- * La dernière est construite en forçant le type, et c'est délibéré : le produit
- * ne peut pas fabriquer une entrée sans périmètre — `projeterLeCorpus()` refuse,
- * et le type l'interdit —, mais le filtre doit tenir même si une entrée d'une
- * autre origine s'y trouvait. Une garde qu'aucun cas n'exerce est une garde
- * qu'on espère.
+ * Les sondes synthétiques — six entrées que le corpus ne porte pas. Chacune isole UNE règle,
+ * et chaque groupe porte son contrôle positif : publique et publiée, publique en brouillon et
+ * interne publiée, dans le dossier du droit et hors de lui, et une entrée SANS PÉRIMÈTRE que
+ * personne ne voit. La dernière est construite en forçant le type, et c'est délibéré : le
+ * produit ne peut pas fabriquer une entrée sans périmètre, mais le filtre doit tenir.
  */
 async function eprouverLesSondes(
 	base: Base,
@@ -585,10 +483,9 @@ async function eprouverLesSondes(
 	const forcee = sansPerimetre as unknown as Record<string, unknown>;
 	delete forcee['dossier'];
 	delete forcee['ancetres'];
-	/* `attendre` — `ARB-060` point 1 : l'attente est CONSERVÉE partout où la
-	   latence ne coûte rien, et une épreuve de périmètre qui interrogerait
-	   l'index avant que ses entrées de sonde y soient rendrait « aucune fuite »
-	   sur un index vide. Ce serait un vert sur un chemin non emprunté. */
+	/* `attendre` (`ARB-060` point 1) : une épreuve de périmètre qui interrogerait
+	   l'index avant que ses sondes y soient rendrait « aucune fuite » sur un index
+	   vide. */
 	await indexerDesNotes(client, [...entrees, sansPerimetre], 'attendre');
 
 	const cas: CasDeSonde[] = [];
@@ -596,10 +493,9 @@ async function eprouverLesSondes(
 		/* L'anonyme : la publique ET publiée, et elle seule. */
 		cas.push(await mesurerUneSonde(base, client, 'anonyme', ANONYME, ['epr-pub-pub'], defauts));
 
-		/* L'ayant droit : ce qui est dans le dossier de son droit, et rien d'autre.
-		   Les entrées de sonde ne sont pas dans la base, donc la référence de
-		   `resolution.ts` ne les connaît pas : c'est bien le FILTRE qui décide, et
-		   c'est ce que cette sonde isole. */
+		/* L'ayant droit : ce qui est dans le dossier de son droit. Les entrées de sonde
+		   ne sont pas dans la base, donc la référence ne les connaît pas — c'est bien
+		   le FILTRE qui décide. */
 		const marc = parIdentifiant.get('marc.ferreira');
 		if (marc !== undefined) {
 			await base.delete(droitsDeDossier);
@@ -641,15 +537,13 @@ async function eprouverLesSondes(
 			)
 		);
 	} finally {
-		/* `attendre` de nouveau : le retrait des sondes doit être ACQUIS quand la
-		   commande rend, sinon six entrées étrangères au corpus survivraient à
-		   l'épreuve dans l'index d'exploitation. */
+		/* `attendre` de nouveau : le retrait doit être ACQUIS quand la commande rend,
+		   sinon six entrées étrangères survivraient dans l'index d'exploitation. */
 		await retirerDesNotes(client, [...entrees.map((e) => e.id), 'epr-sans-perimetre'], 'attendre');
 	}
 	return cas;
 }
 
-/** Une sonde : ce que le terme de sonde rapporte à ce persona, et rien d'autre. */
 async function mesurerUneSonde(
 	base: Base,
 	client: Meilisearch,

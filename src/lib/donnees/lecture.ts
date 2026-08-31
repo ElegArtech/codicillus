@@ -1,47 +1,17 @@
 /**
- * LA COUCHE DE LECTURE — les formes de `seeds/corpus.ts`, rendues depuis la base.
+ * La couche de lecture — les formes de `seeds/corpus.ts`, rendues depuis la base.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QU'ELLE EST, ET POURQUOI ELLE REND LES TYPES DU JEU DE SEMENCE
+ * Les 41 vues gelées déclarent leurs propriétés avec les types de `seeds/corpus.ts` : ce
+ * module ne définit donc AUCUN type nouveau, ce qui permet à un chargeur de remplacer
+ * `corpusPourVue(…)` par `lireNotes(…)` sans toucher la vue. Il est l'INVERSE de la
+ * semence, et `pnpm verif:donnees` mesure la fidélité de l'aller-retour.
  *
- * Les 41 vues gelées attendent leurs données en PROPRIÉTÉ, et elles les
- * déclarent avec les types de `seeds/corpus.ts` — `V-12.svelte:78-85` déclare
- * `notes: readonly Note[]`. Ce module ne définit donc AUCUN type nouveau : il
- * réemploie ceux du jeu de semence. C'est ce qui permet à un chargeur de route
- * de remplacer `corpusPourVue('V-12')` par `lireNotes(...)` sans toucher la vue.
- *
- * La base a été semée DEPUIS `seeds/corpus.ts` (`src/lib/base/semence.ts` et
- * `commandes.ts:325` `semer()`). Ce module est donc l'INVERSE de la semence, et
- * `pnpm verif:donnees` mesure que l'aller-retour est fidèle. Là où il ne l'est
- * pas, la batterie le dit et le compte : ce n'est pas à ce module de combler.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI `base` EST UN PARAMÈTRE, ET NON `basePartagee()` APPELÉ ICI
- *
- * Le contrat veut un seul groupe de connexions, celui de
- * `src/lib/base/acces.ts`. Ce module l'honore en n'en ouvrant AUCUN : il reçoit
- * la poignée. Deux raisons de ne pas appeler `basePartagee()` ici même :
- *
- *   1. `acces.ts` importe `$env/dynamic/private`, qui n'existe que dans le
- *      graphe de modules de SvelteKit. Un module de lecture qui en dépendrait
- *      au chargement ne serait plus éprouvable par `vitest`.
- *   2. Un paramètre explicite rend la transaction possible : un chargeur qui
- *      veut plusieurs lectures cohérentes passe son `tx` au lieu de la base.
- *
- * Le type `Base` est importé en `import type` : la déclaration est effacée à la
- * compilation, donc `$env/dynamic/private` n'entre jamais dans ce graphe.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LA FRAÎCHEUR N'EST PAS RECALCULÉE ICI (P-01)
- *
- * `src/lib/fraicheur.ts` est l'implémentation unique. Ce module lui passe une
- * ancienneté et des seuils, et n'écrit aucune comparaison de date à un seuil.
- *
- * ET L'INSTANT DE RÉFÉRENCE EST UN PARAMÈTRE, jamais `new Date()` pris ici.
- * `Note.fraicheur` du jeu de semence est vraie À `DATE_REFERENCE` ; en service,
- * elle est vraie maintenant. Une couche de lecture qui prendrait l'heure
- * elle-même rendrait ses résultats non reproductibles, donc non mesurables —
- * et la batterie d'équivalence ne pourrait rien prouver.
+ * `base` EST UN PARAMÈTRE, et `basePartagee()` n'est pas appelée ici : `acces.ts` importe
+ * `$env/dynamic/private`, qui n'existe que dans le graphe de SvelteKit et rendrait ce
+ * module inéprouvable par `vitest` ; et un paramètre explicite rend la transaction
+ * possible. LA FRAÎCHEUR N'EST PAS RECALCULÉE ICI (`P-01`), et L'INSTANT DE RÉFÉRENCE EST
+ * UN PARAMÈTRE : une couche de lecture qui prendrait l'heure elle-même rendrait ses
+ * résultats non reproductibles.
  */
 import { eq, inArray } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
@@ -85,19 +55,11 @@ import type {
 } from '../../../seeds/corpus';
 import { analyserDocument, texteBrut } from '../contenu/document';
 
-/* ═══════════════════════════════════════════════════ Les instants ═══════ */
-
 /**
- * `2026-07-18T00:00:00.000Z` vers `18/07/2026` — l'inverse exact de
- * `dateCourteEnIso()` de la semence, qui écrit `HEURE_DE_REFERENCE` en UTC.
- *
- * LES COMPOSANTES SONT LUES EN UTC, ET C'EST LA SEULE LECTURE JUSTE. La
- * semence écrit `new Date('2026-07-18T00:00:00.000Z')` ; relire avec
- * `getDate()` donnerait le 17 dans tout fuseau à l'ouest de Greenwich. Le
- * décalage d'un jour déplacerait l'ancienneté, donc le niveau de fraîcheur
- * d'une note posée sur un seuil — le défaut exact que `semer()` se garde de
- * commettre (`commandes.ts`, « un `timestamptz` traverse une conversion de
- * fuseau à l'aller comme au retour »).
+ * `2026-07-18T00:00:00.000Z` vers `18/07/2026` — l'inverse de `dateCourteEnIso()` de la
+ * semence. LES COMPOSANTES SONT LUES EN UTC, ET C'EST LA SEULE LECTURE JUSTE : relire
+ * avec `getDate()` donnerait le 17 dans tout fuseau à l'ouest de Greenwich, et le décalage
+ * d'un jour déplacerait le niveau de fraîcheur d'une note posée sur un seuil.
  */
 export function dateCourteDInstant(instant: Date): string {
 	const jour = String(instant.getUTCDate()).padStart(2, '0');
@@ -116,22 +78,15 @@ export function dateCourteDIso(iso: string): string {
 
 const MILLISECONDES_PAR_JOUR = 86_400_000;
 
-/** Le nombre de jours entiers écoulés entre un instant et l'instant de lecture. */
 export function joursEcoules(instant: Date, maintenant: Date): number {
 	return Math.floor((maintenant.getTime() - instant.getTime()) / MILLISECONDES_PAR_JOUR);
 }
 
 /**
- * L'ANCIENNETÉ DE LA DERNIÈRE MODIFICATION DE CHAQUE NOTE, EN JOURS.
- *
- * CE N'EST PAS `Note.jours`, qui porte l'âge de la VÉRIFICATION : une note
- * vérifiée hier n'a pas été modifiée hier. La colonne lue est `notes.modifie_le`
- * et le comptage passe par `joursEcoules()`, la seule façon de compter un jour
- * dans ce produit.
- *
- * LA TABLE RENDUE EST PARTIELLE, ET C'EST `P-02` : une note dont la ligne
- * manque s'affiche « modification inconnue » plutôt que de recevoir une
- * ancienneté inventée.
+ * L'ancienneté de la dernière MODIFICATION de chaque note, en jours. Ce n'est pas
+ * `Note.jours`, qui porte l'âge de la VÉRIFICATION. LA TABLE RENDUE EST PARTIELLE, ET
+ * C'EST `P-02` : une note dont la ligne manque s'affiche « modification inconnue » plutôt
+ * que de recevoir une ancienneté inventée.
  */
 export async function ancienneteDeModification(
 	base: Base,
@@ -159,52 +114,21 @@ export interface ContexteDeLecture {
 	readonly seuils: SeuilsDeFraicheur;
 }
 
-/* ═══════════════════════════════════════════════════ Le contenu ═════════ */
-
 /**
- * L'EXTRAIT D'UNE NOTE — dérivé du TEXTE BRUT de son corps.
+ * L'extrait d'une note — dérivé du TEXTE BRUT de son corps. `STACK-TECHNIQUE.md` tranche :
+ * des trois formes que le format dérive, le texte brut est produit « à l'enregistrement »
+ * et sert à « l'indexation, les EXTRAITS, la détection de doublon ». L'extrait n'est pas
+ * stocké — aucune colonne — c'est une dérivation.
  *
- * `cadrage/STACK-TECHNIQUE.md:261` tranche la question, et il faut le lire avant
- * de toucher à cette fonction : des trois formes que le format canonique dérive,
- * le **texte brut** est produit « à l'enregistrement » et sert à
- * « l'indexation, les EXTRAITS, la détection de doublon ». L'extrait n'est donc
- * pas une donnée stockée — la table `notes` n'en porte aucune colonne — c'est
- * une dérivation, et sa source est nommée.
+ * LE PARCOURS RESTE STRUCTUREL, JAMAIS TEXTUEL : `texteBrut()` parcourt l'arbre de nœuds,
+ * et `ADR-003` interdit « toute manipulation du corps par expression régulière ».
  *
- * LE PARCOURS RESTE STRUCTUREL, JAMAIS TEXTUEL : `texteBrut()` de
- * `src/lib/contenu/document.ts` parcourt l'arbre de nœuds, et `ADR-003` interdit
- * « toute manipulation du corps par expression régulière ou par transformation
- * de chaîne ».
- *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI CETTE FONCTION NE LÈVE PLUS, ET CE QUE ÇA A COÛTÉ DE LE DÉCOUVRIR
- *
- * Sa première écriture n'admettait qu'un document d'UN SEUL paragraphe à UN SEUL
- * nœud de texte — la forme exacte que la semence écrit — et LEVAIT sur tout le
- * reste. L'intention était juste : un extrait faux se verrait à l'écran sans que
- * rien ne l'ait signalé.
- *
- * Mais l'effet ne l'était pas. `T-050` l'a mesuré en enregistrant une vraie note
- * par l'éditeur : dès le premier corps à deux blocs, `lireNotes()` levait, donc
- * **toute route qui lit le corpus tombait**. Et aucune batterie ne l'aurait vu —
- * aucune n'enregistre. C'est une sonde d'exécutant qui l'a trouvé.
- *
- * Le remède n'est pas d'élargir la tolérance : c'est d'employer la source que la
- * pile désigne. Vérifié sur les 32 notes du corpus : la semence bâtissant le
- * corps DEPUIS l'extrait (`corpsDepuisTexte`), `texteBrut()` rend exactement la
- * même chaîne — l'unitaire qui l'exige est conservé, et il passe à l'octet.
- *
- * CE QU'AUCUNE SOURCE NE DIT, et qui n'est donc pas décidé ici : la LONGUEUR
- * d'un extrait. Les 32 du corpus sont rédigés à la main, d'une à deux phrases ;
- * rien ne fixe où couper, ni comment traiter un titre, une alerte ou un tableau.
- * Cette fonction ne tronque donc pas. Le jour où une source le dira, la coupe se
- * pose ICI, et nulle part ailleurs.
+ * CE QU'AUCUNE SOURCE NE DIT, et qui n'est donc pas décidé ici : la LONGUEUR d'un extrait.
+ * Cette fonction ne tronque pas ; le jour où une source le dira, la coupe se pose ICI.
  */
 export function extraitDuCorps(corps: unknown): string {
 	return texteBrut(analyserDocument(corps));
 }
-
-/* ═══════════════════════════════════════════════════ Le rangement ══════ */
 
 /** Les univers, dans l'ordre que l'administrateur leur a donné (RG-STR-01). */
 export async function lireUnivers(base: Base): Promise<readonly Univers[]> {
@@ -237,7 +161,6 @@ export async function lireUnivers(base: Base): Promise<readonly Univers[]> {
 	});
 }
 
-/** Les domaines, groupés par univers, dans l'ordre d'affichage du rail. */
 export async function lireDomaines(base: Base): Promise<readonly Domaine[]> {
 	const lignes = await base
 		.select({ nom: domaines.nom, universNom: univers.nom, couleur: domaines.couleur })
@@ -249,10 +172,9 @@ export async function lireDomaines(base: Base): Promise<readonly Domaine[]> {
 }
 
 /**
- * Les modules activés, par domaine (RG-STR-06, P-04).
- *
- * `MODULE_EN_ENUM` de la semence traduit `carteMentale` en `carte_mentale` ;
- * la table de retour est son inverse, déclarée et non tacite.
+ * Les modules activés, par domaine (`RG-STR-06`, `P-04`). `MODULE_EN_ENUM` de la semence
+ * traduit `carteMentale` en `carte_mentale` ; la table de retour est son inverse, déclarée
+ * et non tacite.
  */
 const MODULE_DEPUIS_ENUM: Record<string, CleDeModule> = {
 	notes: 'notes',
@@ -292,12 +214,10 @@ export async function lireDescriptionsDeDomaine(base: Base): Promise<ReadonlyMap
 }
 
 /**
- * Le chemin de rangement de chaque dossier, tel que `Note.dossier` l'écrit :
- * les segments SOUS la racine, séparés par « › ».
- *
- * La racine porte le nom de son domaine (décision de la semence,
- * `lignesDeDossier()`) et n'entre pas dans le chemin affiché — c'est ce que
- * `segmentsDeDossier()` défait, et ce que cette fonction refait.
+ * Le chemin de rangement de chaque dossier, tel que `Note.dossier` l'écrit : les segments
+ * SOUS la racine, séparés par « › ». La racine porte le nom de son domaine et n'entre pas
+ * dans le chemin affiché — c'est ce que `segmentsDeDossier()` défait, et ce que cette
+ * fonction refait.
  */
 export async function lireCheminsDeDossier(base: Base): Promise<ReadonlyMap<string, string>> {
 	const lignes = await base
@@ -325,7 +245,6 @@ export async function lireCheminsDeDossier(base: Base): Promise<ReadonlyMap<stri
 	return chemins;
 }
 
-/** Le domaine de chaque dossier, par identifiant de dossier. */
 export async function lireDomainesParDossier(base: Base): Promise<ReadonlyMap<string, string>> {
 	const lignes = await base
 		.select({ id: dossiers.id, domaineNom: domaines.nom })
@@ -334,51 +253,15 @@ export async function lireDomainesParDossier(base: Base): Promise<ReadonlyMap<st
 	return new Map(lignes.map((d) => [d.id, d.domaineNom]));
 }
 
-/* ═══════════════════════════════════════════════════ Les notes ══════════ */
-
 /**
  * Les notes, dans la forme exacte de `interface Note`.
  *
- * UN SEUL CHAMP N'EST PLUS RENDU TEL QUE LE JEU LE PORTE, et c'est `pj`.
+ * `pj` N'EST PAS RENDU TEL QUE LE JEU LE PORTE : le compte rendu est le compte RÉEL de la
+ * table, jamais le chiffre du jeu. Le gel nomme deux des treize pièces, mais leurs tailles
+ * y sont RENDUES — « 1,2 Mo » désigne un intervalle, pas un nombre d'octets.
  *
- *   `pj`          le nombre de pièces jointes. Le compte rendu est le compte
- *                 RÉEL de la table — 0 —, jamais le chiffre du jeu : P-02
- *                 interdit la valeur illustrative, et rendre des pièces
- *                 qu'aucune ligne ne porte en serait une. `T-049` a rouvert la
- *                 question et conclu comme `T-030b`, pour un motif plus étroit :
- *                 le gel nomme DEUX des treize pièces (V-14:1831-1840), mais
- *                 leurs tailles y sont RENDUES — « 1,2 Mo », « 18 Ko » — et
- *                 `taille_octets` veut un nombre. « 1,2 Mo » ne désigne pas un
- *                 nombre d'octets, il en désigne un intervalle. Ce ne sont donc
- *                 pas onze pièces qui manquent, ce sont treize TAILLES : même
- *                 les deux nommées ne se sèment pas sans fabriquer un chiffre.
- *                 Le manque est porté par la lacune `Note.pj`, chiffrée à chaque
- *                 exécution, et c'est un défaut du GEL, pas du schéma.
- *
- *   `etiquettes`  leur ORDRE EST RENDU, depuis `T-049`. `005` avait posé
- *                 `etiquettes_de_note.ordre` et `semer()` l'écrivait déjà ;
- *                 seule la référence de l'instrument triait encore.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE `T-049` A DÛ DÉFAIRE, ET POURQUOI C'ÉTAIT UN SEUL GESTE
- *
- * Ce module a rendu, huit lots durant, des étiquettes triées par libellé et des
- * comptes amputés de leur rattachement — alors que la base portait les deux. La
- * cause n'était pas ici : `equivalence.ts` écrivait ses lacunes en LITTÉRAUX et
- * normalisait sa référence en conséquence, si bien que rendre la donnée juste
- * aurait fait DIVERGER 25 notes sur 32 et 5 comptes sur 5. Or « divergence » y
- * signifie « la couche rend MAL » : la couche aurait rougi POUR AVOIR EU RAISON,
- * dans la seule prémisse dont dépendent les lots de câblage.
- *
- * L'instrument gouvernait donc la couche, et c'est l'inversion qu'il fallait
- * défaire. `chiffrerLesLacunes()` MESURE désormais chaque lacune contre la base ;
- * la normalisation se déduit de ce qu'elle rend. Les deux éditions ne pouvaient
- * pas être séparées — d'où un lot, un geste.
- *
- * @param identifiants restreint la lecture à ces notes, DANS la requête. Absent :
- *   tout le corpus, comme les huit appelants qui ne le passent pas. Présent, il
- *   vient d'une décision d'accès déjà prise — le périmètre de `/recherche`, que
- *   le moteur a filtré (`ADR-006`) — et il ne DÉCIDE de rien : il transporte.
+ * @param identifiants restreint la lecture à ces notes, DANS la requête. Absent : tout le
+ *   corpus. Présent, il vient d'une décision d'accès déjà prise et ne DÉCIDE de rien.
  */
 export async function lireNotes(
 	base: Base,
@@ -419,10 +302,9 @@ export async function lireNotes(
 		.innerJoin(comptes, eq(notes.auteurId, comptes.id))
 		.leftJoin(typesDeFiche, eq(notes.typeDeFicheId, typesDeFiche.id));
 
-	/* LA RESTRICTION EST DANS LA REQUÊTE, JAMAIS APRÈS ELLE. `ADR-006` interdit
-	   « toute route qui reçoit une liste puis la filtre » : quand l'appelant sait
-	   déjà quelles notes il a le droit de lire, c'est la clause SQL qui le dit,
-	   et la base ne remonte pas une ligne de plus. */
+	/* LA RESTRICTION EST DANS LA REQUÊTE, JAMAIS APRÈS ELLE : quand l'appelant sait
+	   déjà quelles notes il a le droit de lire, c'est la clause SQL qui le dit, et
+	   la base ne remonte pas une ligne de plus (`ADR-006`). */
 	const lignes = await (identifiants === undefined
 		? socle.orderBy(notes.identifiant)
 		: socle.where(inArray(notes.identifiant, [...identifiants])).orderBy(notes.identifiant));
@@ -445,13 +327,10 @@ export async function lireNotes(
 			dossier: chemins.get(n.dossierId) ?? '',
 			auteur: n.auteurNom,
 			fraicheur: niveauFraicheur(joursEcoules(reference, contexte.maintenant), contexte.seuils),
-			/* L'ÂGE DE LA VÉRIFICATION, PAS CELUI DE LA MODIFICATION. `seeds/corpus.ts`
-			   le documente en propres termes — « jours écoulés depuis la dernière
-			   vérification » —, et la ligne du dessus calcule la fraîcheur sur
-			   `verifie_le ?? modifie_le`. Les deux ont longtemps divergé : le
-			   cartouche d'une note pouvait écrire « Vérifié il y a 3 jours » sur une
-			   note vérifiée il y a neuf mois et modifiée avant-hier. Un seul
-			   instant de référence, deux emplois, aucune seconde définition. */
+			/* L'ÂGE DE LA VÉRIFICATION, PAS CELUI DE LA MODIFICATION, quand la ligne du
+			   dessus calcule la fraîcheur sur `verifie_le ?? modifie_le`. Les deux ont
+			   longtemps divergé : le cartouche pouvait écrire « Vérifié il y a 3 jours »
+			   sur une note vérifiée il y a neuf mois et modifiée avant-hier. */
 			jours: joursEcoules(reference, contexte.maintenant),
 			revise: n.verifieLe === null ? null : dateCourteDInstant(n.verifieLe),
 			vues: n.consultations,
@@ -461,10 +340,9 @@ export async function lireNotes(
 			operationnel: n.corpsOperationnel !== null,
 			etiquettes: etiquettesParNote.get(n.identifiant) ?? []
 		};
-		/* `typeFiche`, `url` et `ajoute` sont OPTIONNELS : la clé est OMISE quand
-		   la colonne est nulle, et non posée à `undefined`. Une clé présente et
-		   vide n'est pas la même valeur qu'une clé absente pour une comparaison
-		   profonde, et c'est cette comparaison qui garde les huit lots suivants. */
+		/* Trois clés OPTIONNELLES : omises quand la colonne est nulle, jamais posées
+		   à `undefined`. Une clé présente et vide n'est pas la même valeur qu'une clé
+		   absente pour une comparaison profonde. */
 		if (n.typeFicheNom !== null) rendu['typeFiche'] = n.typeFicheNom as TypeDeFiche;
 		if (n.signetAdresse !== null) rendu['url'] = n.signetAdresse;
 		if (n.signetAjouteLe !== null) rendu['ajoute'] = dateCourteDIso(n.signetAjouteLe);
@@ -473,34 +351,10 @@ export async function lireNotes(
 }
 
 /**
- * Les étiquettes de chaque note, triées par libellé — voir `lireNotes`.
- *
- * LE TRI EST FAIT ICI, EN TYPESCRIPT, ET SURTOUT PAS PAR `ORDER BY`. Les deux
- * ne donnent pas le même ordre, et l'écart a été mesuré : sur `n-sig-facturation`,
- * PostgreSQL rend « facturation » avant « éditeur », là où
- * `localeCompare(…, 'fr')` rend « éditeur » avant « facturation ». La collation
- * du serveur classe sur les octets de l'encodage, où `é` suit `f` ; la collation
- * française traite `é` comme un `e` accentué, donc avant `f`.
- *
- * Le français est le bon ordre — c'est celui que les maquettes montrent —, et
- * c'est déjà celui de la semence : `lignesDEtiquette()` emploie exactement
- * `localeCompare(a, b, 'fr')`. Déléguer le tri au serveur ferait dépendre
- * l'ordre affiché de la collation de l'instance, c'est-à-dire d'un réglage
- * d'exploitation. Un seul comparateur, dans le code, comme pour la fraîcheur.
- *
- * CE PARAGRAPHE RESTE VRAI ET CESSE D'ÊTRE LE MOTIF, ET LE TRI EST TOMBÉ.
- * Depuis `005`, `etiquettes_de_note.ordre` porte le rang du jeu, `semer()`
- * l'écrit, et `ORDER BY ordre` ne dépend d'aucune collation : c'est l'ordre
- * exact des maquettes, rendu sans comparateur et sans accident. Ce qui retenait
- * la bascule était l'instrument — sa référence triait les étiquettes du jeu par
- * un littéral, si bien que rendre l'ordre juste aurait fait DIVERGER 25 notes
- * sur 32. `T-049` a réparé les deux en un seul geste : `chiffrerLesLacunes()`
- * MESURE désormais l'ordre porté par la base, la lacune se referme d'elle-même,
- * et la normalisation qui triait la référence disparaît avec elle.
- *
- * `localeCompare(…, 'fr')` reste employé par `lignesDEtiquette()` de la semence,
- * qui range le RÉFÉRENTIEL des étiquettes ; ce module n'en a plus besoin, parce
- * qu'il ne classe plus rien — il restitue.
+ * Les étiquettes de chaque note, dans l'ordre porté par `etiquettes_de_note.ordre` —
+ * l'ordre des maquettes, rendu sans comparateur. NE PAS LE REMPLACER PAR UN TRI DE
+ * LIBELLÉ, NI EN SQL NI EN TYPESCRIPT : la collation du serveur classe sur les octets de
+ * l'encodage, où `é` suit `f`, là où `localeCompare(…, 'fr')` le place avant.
  */
 export async function lireEtiquettesParNote(
 	base: Base
@@ -522,11 +376,9 @@ export async function lireEtiquettesParNote(
 }
 
 /**
- * Le nombre de pièces jointes par note — le compte RÉEL de la table.
- *
- * Il vaut 0 partout tant que la semence n'écrit pas de pièce jointe. C'est un
- * fait, pas un défaut de ce module : le rendre autrement serait la « valeur
- * illustrative » que P-02 proscrit.
+ * Le nombre de pièces jointes par note — le compte RÉEL de la table, donc 0
+ * partout tant que rien n'en écrit. Le rendre autrement serait la valeur
+ * illustrative que `P-02` proscrit.
  */
 export async function lirePiecesJointesParNote(base: Base): Promise<ReadonlyMap<string, number>> {
 	const lignes = await base.execute<{ identifiant: string; n: number }>(
@@ -538,14 +390,10 @@ export async function lirePiecesJointesParNote(base: Base): Promise<ReadonlyMap<
 	return new Map(rangs.map((l) => [l.identifiant, l.n]));
 }
 
-/* ═══════════════════════════════════════════════════ Les relations ══════ */
-
 /**
- * Les relations, par les identifiants lisibles de leurs deux extrémités.
- *
- * `notes` est jointe DEUX FOIS — la source et la cible —, ce qui exige deux
- * alias : sans eux, la seconde jointure écraserait la première et les deux
- * extrémités porteraient le même identifiant.
+ * Les relations, par les identifiants lisibles de leurs deux extrémités. `notes`
+ * est jointe DEUX FOIS — source et cible —, ce qui exige deux alias : sans eux, la
+ * seconde jointure écraserait la première.
  */
 export async function lireRelations(base: Base): Promise<readonly Relation[]> {
 	const source = alias(notes, 'note_source');
@@ -583,7 +431,6 @@ export async function lireTypesDeRelation(base: Base): Promise<Record<string, Li
 	return rendu;
 }
 
-/** Les types de relation qui portent une dépendance technique. */
 export async function lireRelationsTechniques(base: Base): Promise<readonly CleDeTypeDeRelation[]> {
 	const lignes = await base
 		.select({ identifiant: typesDeRelation.identifiant })
@@ -593,9 +440,6 @@ export async function lireRelationsTechniques(base: Base): Promise<readonly CleD
 	return lignes.map((t) => t.identifiant as CleDeTypeDeRelation);
 }
 
-/* ═══════════════════════════════════════════════════ Le référentiel ════ */
-
-/** Les types de note, dans l'ordre du référentiel. */
 export async function lireTypesDeNote(base: Base): Promise<readonly TypeDeNote[]> {
 	const lignes = await base
 		.select({ nom: typesDeNote.nom })
@@ -660,16 +504,10 @@ export async function lireTypesDeFiche(
 }
 
 /**
- * LA PRÉSENTATION DES TYPES DE FICHE — description et icône, par nom de type.
- *
- * ELLE EST LUE À PART, ET C'EST DÉLIBÉRÉ. `lireTypesDeFiche()` rend le SCHÉMA —
- * quels champs un type porte —, et une douzaine d'appelants en dépendent sous
- * cette forme exacte. La présentation n'intéresse qu'un écran, la console des
- * types de fiche : elle voyage donc par sa propre porte, plutôt que de changer
- * la forme que tout le reste du produit consomme.
- *
- * UN TYPE SANS DESCRIPTION NI ICÔNE REND DES CHAÎNES VIDES, jamais `null` :
- * l'écran choisit alors ses replis, ce qu'il fait déjà pour les types du gel.
+ * La présentation des types de fiche — description et icône, par nom de type. ELLE EST LUE
+ * À PART, ET C'EST DÉLIBÉRÉ : `lireTypesDeFiche()` rend le SCHÉMA, et une douzaine
+ * d'appelants en dépendent sous cette forme exacte. Un type sans description ni icône rend
+ * des chaînes vides, jamais `null`.
  */
 export async function lirePresentationsDeTypeDeFiche(
 	base: Base
@@ -690,29 +528,18 @@ export async function lirePresentationsDeTypeDeFiche(
 	return rendu;
 }
 
-/** Le libellé et le rang d'un champ, tels que la lecture d'une fiche les emploie. */
 export interface ChampNommeDeFiche {
 	readonly cle: string;
 	readonly nom: string;
 }
 
 /**
- * LES CHAMPS D'UN SEUL TYPE DE FICHE, DANS L'ORDRE DU RÉFÉRENTIEL — le libellé
- * et la clé, et rien d'autre.
+ * Les champs d'un seul type de fiche, dans l'ordre du référentiel — le libellé et la clé.
  *
- * POURQUOI CETTE PORTE PLUTÔT QUE `lireTypesDeFiche()`. Celle-là lit TOUT le
- * référentiel et convertit l'énumération `type_de_champ` en type d'écran ; sa
- * table de conversion ne couvre que quatre des six valeurs que la base accepte,
- * et une valeur non couverte fait LEVER la lecture. Un panneau de lecture qui
- * n'a besoin ni du type de saisie, ni de l'exemple, ni des valeurs de liste n'a
- * aucune raison de payer ce risque : un champ `date` posé n'importe où dans le
- * référentiel ferait alors tomber la lecture de TOUTE fiche.
- *
- * ELLE NE CONVERTIT DONC RIEN, et ne peut pas lever. Elle ne remplace pas
- * `lireTypesDeFiche()` : l'éditeur et la console ont besoin du type de saisie,
- * et c'est là que la conversion doit vivre.
- *
- * LA RESTRICTION EST DANS LA REQUÊTE — un seul type, un seul aller-retour.
+ * POURQUOI CETTE PORTE PLUTÔT QUE `lireTypesDeFiche()` : celle-là convertit l'énumération
+ * `type_de_champ` en type d'écran, sa table ne couvre que quatre des six valeurs que la
+ * base accepte, et une valeur non couverte fait LEVER la lecture — un champ `date` posé
+ * n'importe où ferait tomber la lecture de TOUTE fiche. Celle-ci ne convertit rien.
  */
 export async function lireLesChampsDUnTypeDeFiche(
 	base: Base,
@@ -727,23 +554,13 @@ export async function lireLesChampsDUnTypeDeFiche(
 }
 
 /**
- * LES PROPRIÉTÉS TYPÉES DES NOTES DEMANDÉES — `notes.proprietes_typees`.
+ * Les propriétés typées des notes demandées — `notes.proprietes_typees`.
  *
- * POURQUOI CETTE LECTURE EXISTE. Le schéma d'un type de fiche dit quels champs
- * une fiche PORTE ; il ne dit rien de ce que CETTE note y a mis. La colonne le
- * porte, `peupler()` la remplit, l'export la rend — et aucun écran ne la lisait.
- * Le panneau de détail de la cartographie affichait donc, sous l'intitulé
- * « Propriétés », la valeur d'EXEMPLE du référentiel : une valeur inventée,
- * présentée comme celle de la note choisie.
- *
- * LA RESTRICTION EST DANS LA REQUÊTE — `ADR-006`, comme `lireNotes()`.
- * L'appelant passe les identifiants qu'il a déjà le droit de lire ; la base ne
- * remonte pas une ligne de plus, et une liste vide ne demande rien.
- *
- * LA COLONNE EST UN `jsonb`, DONC DE FORME NON GARANTIE : une reprise de
- * données peut y écrire autre chose qu'un objet de valeurs simples. Ce qui ne
- * se rend pas en texte est ÉCARTÉ plutôt que converti au jugé — un objet passé
- * à `String()` afficherait sa mention d'objet à la place d'une valeur.
+ * Le schéma d'un type de fiche dit quels champs une fiche PORTE ; il ne dit rien de ce que
+ * CETTE note y a mis. Sans cette lecture, le panneau de détail de la cartographie affichait
+ * sous « Propriétés » la valeur d'EXEMPLE du référentiel. LA RESTRICTION EST DANS LA
+ * REQUÊTE (`ADR-006`). LA COLONNE EST UN `jsonb`, DONC DE FORME NON GARANTIE : ce qui ne
+ * se rend pas en texte est ÉCARTÉ plutôt que converti au jugé.
  */
 export async function lireLesProprietesDeFiche(
 	base: Base,
@@ -788,14 +605,11 @@ export async function lireTemplates(base: Base): Promise<readonly Template[]> {
 		.innerJoin(typesDeNote, eq(templates.typeDeNoteId, typesDeNote.id))
 		.orderBy(templates.identifiant);
 
-	/* `defaut` est déclaré OPTIONNEL dans `interface Template`, et le commentaire
-	   du jeu dit pourquoi : « porté par le jeu complet seulement », c'est-à-dire
-	   absent des variantes réduites. Dans le jeu complet il est TOUJOURS présent,
-	   `false` compris — il est donc toujours rendu, et jamais omis quand il est
-	   faux. L'optionnel d'un type n'est pas l'optionnel d'un jeu de données.
-
-	   `utilisations` n'a AUCUNE colonne : c'est un compteur d'emploi, et la
-	   batterie d'équivalence le porte en lacune plutôt que ce module en zéro. */
+	/* `defaut` est déclaré OPTIONNEL dans `interface Template` parce qu'il est
+	   absent des variantes réduites du jeu ; dans le jeu complet il est toujours
+	   présent, `false` compris. L'optionnel d'un type n'est pas l'optionnel d'un jeu
+	   de données. `utilisations` n'a AUCUNE colonne : la batterie d'équivalence le
+	   porte en lacune plutôt que ce module en zéro. */
 	return lignes.map(
 		(t) =>
 			({
@@ -810,16 +624,11 @@ export async function lireTemplates(base: Base): Promise<readonly Template[]> {
 	);
 }
 
-/* ═══════════════════════════════════════════════════ Les comptes ════════ */
-
 /**
- * L'ÉNUMÉRÉ DE LA BASE VERS LE LIBELLÉ AFFICHÉ — les quatre rôles de CDC §2.3.
- *
- * EXPORTÉE DEPUIS `T-077`, et pour une raison de règle : la console doit lire le
- * chemin INVERSE — le sélecteur de `V-32` rend un libellé, la colonne attend
- * l'énuméré — et `RG-M14-07` se joue sur cette correspondance. Deux tables de
- * libellés auraient fini par diverger ; `roleDepuisLeLibelle()`
- * (`./administration.ts`) retourne celle-ci plutôt que d'en écrire une seconde.
+ * L'énuméré de la base vers le libellé affiché — les quatre rôles de CDC §2.3. EXPORTÉE
+ * parce que la console lit le chemin INVERSE, et que `RG-M14-07` se joue sur cette
+ * correspondance : `roleDepuisLeLibelle()` retourne celle-ci plutôt que d'en écrire une
+ * seconde, deux tables de libellés ayant fini par diverger.
  */
 export const ROLE_DEPUIS_ENUM: Record<string, string> = {
 	administrateur: 'Administrateur',
@@ -829,44 +638,18 @@ export const ROLE_DEPUIS_ENUM: Record<string, string> = {
 };
 
 /**
- * Les comptes de la console (V-28).
+ * Les comptes de la console (V-28). Deux champs d'`interface Compte` sont omis :
  *
- * TROIS CHAMPS D'`interface Compte` SONT OMIS DU RÉSULTAT, et la migration `005`
- * a changé le motif de deux d'entre eux :
+ *   `id`        `comptes.identifiant` porte déjà l'identifiant de connexion que le cahier
+ *               énumère ; la table a bien un `id`, mais c'est un UUID tiré au hasard.
+ *   `derniere`  un libellé RELATIF, donc un rendu et non une donnée. Le libellé n'est
+ *               calculable par aucune règle du gel, qui l'écrit tel quel sans dire où
+ *               « N jours » devient « N mois ».
  *
- *   `id`        `c-karim` et ses quatre voisins. TOUJOURS SANS PLACE, et par
- *               décision : `comptes.identifiant` porte déjà l'identifiant de
- *               connexion que CDC:1178 énumère (`karim.belhadj`), et un second
- *               identifiant qu'aucune règle du produit ne demande serait une
- *               colonne de commodité de semence. La table a bien un `id`, mais
- *               c'est un UUID tiré au hasard — rendre l'un pour l'autre serait
- *               rendre une valeur qui change à chaque semence.
- *   `derniere`  « aujourd'hui à 08:41 » — un libellé RELATIF, donc un rendu et
- *               non une donnée. `comptes.derniere_connexion_le` porte l'INSTANT
- *               depuis `005`. Le LIBELLÉ, lui, n'est calculable par aucune règle
- *               du gel : V-32:3043 et V-25:2712 l'écrivent tel quel, et rien ne
- *               dit où « N jours » devient « N mois ». Le rendre demanderait
- *               d'inventer ce seuil, donc un arbitrage — pas une ligne de code.
- *               `chiffrerLesLacunes()` mesure sa restitution ICI, sur ce que ce
- *               module rend : le jour où l'arbitrage tombe et où la fabrique
- *               s'écrit, la lacune se referme sans qu'on touche à l'instrument.
- *
- * `domaine` EST RENDU DEPUIS `T-049`, et son motif d'omission est tombé avec
- * l'instrument qui le portait. `comptes.domaine_id` existe depuis `005`, nullable
- * comme RG-M14-04 (CDC:1149) l'exige, et `semer()` l'écrit pour les cinq comptes.
- * Ce qui retenait le rendu n'était pas la base : c'était le
- * `champsDeCompteSansContrepartie` EN DUR d'`equivalence.ts`, qui écartait le
- * champ de la référence — rendre la donnée juste y aurait produit cinq
- * « divergences », mot qui signifie « la couche rend MAL ». Les deux éditions
- * étaient couplées ; `T-049` les a faites en une fois.
- *
- * LE RATTACHEMENT VIDE SE DIT PAR L'ABSENCE DE LA CLÉ, jamais par une chaîne
- * vide ni par `null` posé. `interface Compte` déclare `domaine` requis, et le
- * jeu en donne un aux cinq comptes ; mais la colonne est nullable PAR EXIGENCE,
- * et un compte dont le domaine a été supprimé n'en a plus. Poser la clé à `null`
- * fabriquerait un nom de domaine qui n'existe pas — l'omettre dit exactement ce
- * que la base dit. C'est la règle que `premiereDifference()` sait voir, et que
- * la sonde `optionnel-pose` éprouve sur les notes.
+ * LE RATTACHEMENT VIDE SE DIT PAR L'ABSENCE DE LA CLÉ, jamais par une chaîne vide ni par
+ * `null` posé : `interface Compte` déclare `domaine` requis, mais la colonne est nullable
+ * PAR EXIGENCE (`RG-M14-04`). Poser la clé à `null` fabriquerait un nom de domaine qui
+ * n'existe pas.
  */
 export async function lireComptes(base: Base): Promise<readonly Partial<Compte>[]> {
 	const lignes = await base
@@ -899,15 +682,10 @@ export async function lireComptes(base: Base): Promise<readonly Partial<Compte>[
 	});
 }
 
-/* ═══════════════════════════════════════════════ La configuration ══════ */
-
 /**
- * La configuration globale (CDC §3.3, M14.7) — la table `parametres`.
- *
- * ELLE EST LUE, JAMAIS REDÉCLARÉE. ADR-005 interdit de dupliquer les seuils
- * ailleurs que dans la configuration que lit l'implémentation unique : cette
- * fonction est le chemin par lequel `niveauFraicheur()` reçoit ses seuils, et
- * il n'y en a pas d'autre.
+ * La configuration globale (CDC §3.3, M14.7) — la table `parametres`. Elle est
+ * LUE, jamais redéclarée : `ADR-005` interdit de dupliquer les seuils ailleurs, et
+ * c'est par ici que `niveauFraicheur()` reçoit les siens.
  */
 export async function lireConfiguration(base: Base): Promise<Configuration> {
 	const lignes = await base
@@ -915,11 +693,9 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 		.from(parametres);
 	const par = new Map(lignes.map((p) => [p.cle, p.valeur]));
 
-	/* UN PARAMÈTRE ABSENT PREND SON DÉFAUT — IL NE FAIT PAS TOMBER LA PAGE.
-	   Ces deux lecteurs levaient. Sur une INSTALLATION NEUVE — base migrée, non
-	   semée —, `parametres` est vide : les quinze pages essayées sortaient en
-	   500, et le produit ne s'ouvrait que sur un jeu de démonstration chargé.
-	   Un paramètre PRÉSENT MAIS DU MAUVAIS TYPE reste une faute, et lève encore :
+	/* UN PARAMÈTRE ABSENT PREND SON DÉFAUT — IL NE FAIT PAS TOMBER LA PAGE. Sur une
+	   installation neuve, `parametres` est vide, et ces lecteurs faisaient sortir
+	   les pages en 500. Un paramètre PRÉSENT MAIS DU MAUVAIS TYPE lève encore :
 	   c'est une base corrompue, pas une base neuve. */
 	const nombre = (cle: string, defaut: number): number => {
 		const valeur = par.get(cle);
@@ -930,17 +706,10 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 		return valeur;
 	};
 	/* UN PLAFOND DE VERSIONS HORS DOMAINE PREND SON DÉFAUT, IL NE SE PROPAGE PAS.
-	   `RG-M07-03` (`CDC:834`) donne au plafond une valeur configurable ET un
-	   défaut — 50 —, et ce défaut vaut pour la clé absente comme pour la valeur
-	   inutilisable : dans les deux cas le produit n'a pas de plafond réglé.
-	   Le cas n'est plus atteignable depuis la console — `validerLaConfiguration()`
-	   refuse désormais le champ vidé —, mais il reste atteignable par une reprise
-	   de base, et c'est ici qu'il compte : `lireConfiguration()` est la SEULE
-	   source des deux consommateurs du plafond, l'écran d'historique
-	   (`histoire.ts:457` → `V-15:288`) et la purge (`edition.ts`). Les replier ici
-	   est ce qui les empêche de diverger — un écran qui annonce « les 0 dernières
-	   sont gardées » pendant qu'une purge décide autre chose est exactement le
-	   défaut qu'on répare. */
+	   `RG-M07-03` donne au plafond un défaut, qui vaut pour la clé absente comme pour la
+	   valeur inutilisable. `lireConfiguration()` est la SEULE source des deux consommateurs
+	   du plafond — l'écran d'historique et la purge —, et les replier ici les empêche de
+	   diverger. */
 	const plafond = (cle: string, defaut: number): number => {
 		const valeur = nombre(cle, defaut);
 		return Number.isSafeInteger(valeur) && valeur >= 1 ? valeur : defaut;
@@ -954,12 +723,9 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 		return valeur;
 	};
 
-	/* LES HUIT CLÉS VIENNENT DU SCHÉMA, ET DE NULLE PART AILLEURS. Elles étaient
-	   ici en littéraux, ce qui suffisait tant que rien n'écrivait dans
-	   `parametres` ; `T-077` y écrit, et `RG-M14-09` — « toute modification de
-	   seuil provoque un recalcul immédiat » — serait fausse à la lettre si
-	   l'écriture posait une clé que cette lecture n'interroge pas. Une seule
-	   table de clés rend ce cas INÉCRIVABLE. */
+	/* LES HUIT CLÉS VIENNENT DU SCHÉMA, ET DE NULLE PART AILLEURS : `RG-M14-09`
+	   serait fausse à la lettre si l'écriture posait une clé que cette lecture
+	   n'interroge pas. Une seule table de clés rend ce cas INÉCRIVABLE. */
 	return {
 		seuilFrais: nombre(CLES_DE_PARAMETRE.seuilFrais, CONFIGURATION_PAR_DEFAUT.seuilFrais),
 		seuilVieillissant: nombre(

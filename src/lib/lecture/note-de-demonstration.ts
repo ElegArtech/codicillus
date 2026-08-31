@@ -1,56 +1,28 @@
 /**
- * LE BLOC D'ARTICLE QUE V-14 ET V-15 PARTAGENT — ses FORMES, plus aucune donnée.
+ * Le bloc d'article que V-14 et V-15 partagent — ses FORMES, plus aucune donnée. Les deux
+ * maquettes portent exactement le même bloc de balisage et le disent : « les deux vues
+ * montrent la même note, jamais deux versions divergentes du markup ». Mesuré : 341 lignes
+ * identiques à l'octet.
  *
- * Les deux maquettes gelées portent EXACTEMENT le même bloc de balisage, et
- * le disent elles-mêmes en tête de ce bloc :
- *
- *   « Partagé par la lecture interne (V-14) et l'historique (V-15) : les deux
- *     vues montrent la même note, jamais deux versions divergentes du
- *     markup. »   — `V-14:1415`, `V-15:1507`
- *
- * Mesuré : `V-14:1415-1755` et `V-15:1507-1847` sont identiques à l'octet,
- * 341 lignes. C'est ce constat, et lui seul, qui justifie un module partagé —
- * `NoteDeDemonstration.svelte` en est le rendu, ce fichier en est la matière.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QU'IL NE PORTE PLUS, ET C'ÉTAIT LE MOTIF
- *
- * Ce module servait `NOTE` — `CORPUS.find(n => n.id === 'n-restaurer-pg')`, LEVÉE
- * COMPRISE si la note disparaissait du jeu —, l'ancienneté comptée depuis la
- * `DATE_REFERENCE` du jeu, et les consultations de sa table de mesures. Trois
- * vues et un chargeur de route l'importaient : le jeu de démonstration
- * descendait dans le produit par ce fichier, sans qu'une seule ligne de
- * `src/vues/` ne soit fautive.
- *
- * Il ne porte plus que des FORMES — les interfaces que le chargeur remplit —
- * et deux fonctions pures. Son seul import du jeu est un import de TYPE.
+ * CE QU'IL NE PORTE PLUS : la note du jeu de démonstration, son ancienneté et ses
+ * consultations — le jeu descendait dans le produit par ce fichier. Son seul import du jeu est
+ * un import de TYPE.
  */
 import type { Note } from '../../../seeds/corpus';
 import { segmentsDeDossier } from '../rangement/adresses';
 
-/* ── Le sommaire ────────────────────────────────────────────────────────────
-   `construireSommaire()` (`V-14:3901`, `V-15:2625`) relève les `h2[id]` et
-   `h3[id]` du corps AFFICHÉ, dans l'ordre du document, et n'en retient rien
-   d'autre : ni h1 — réservé au titre de la note —, ni h4 à h6.
+/* LE SOMMAIRE. `construireSommaire()` relève les `h2[id]` et `h3[id]` du corps
+   AFFICHÉ, dans l'ordre du document, et rien d'autre : « seuls les niveaux 2 et 3
+   alimentent le sommaire ». La numérotation ne porte que sur les niveaux 2, sur deux
+   chiffres.
 
-     « Seuls les niveaux 2 et 3 alimentent le sommaire. »   — `V-14:1704`
+   CETTE LISTE DOIT SUIVRE LES TITRES DU CORPS : elle les redit parce que le corps est
+   du balisage figé dans le composant, et qu'un composant Svelte ne peut pas se relire
+   lui-même comme le script de la maquette relit son DOM. */
 
-   La numérotation ne porte que sur les niveaux 2, sur deux chiffres, et elle
-   est conditionnée à `body[data-numerote] !== "non"` : ni V-14 ni V-15 ne
-   posent cet attribut, les deux numérotent donc. (V-37 le pose, et c'est la
-   seule maquette qui le fasse — `docs/releve-vues.md` §4.)
-
-   CETTE LISTE DOIT SUIVRE LES TITRES DU CORPS. Elle les redit parce que le
-   corps est du balisage figé dans le composant : un composant Svelte ne peut
-   pas se relire lui-même comme le script de la maquette relit son DOM. Le
-   couple est vérifié par le banc — un titre ajouté d'un côté et pas de
-   l'autre fait diverger le niveau 1. */
-
-/** Une entrée de sommaire : son niveau, l'ancre visée, son libellé. */
 export interface EntreeDeSommaire {
 	/** 2 ou 3 — la classe rendue est `n1` pour 2, `n2` pour 3. */
 	readonly niveau: 2 | 3;
-	/** L'identifiant du titre visé, sans croisillon. */
 	readonly ancre: string;
 	readonly libelle: string;
 }
@@ -70,7 +42,6 @@ export const SOMMAIRE_REFERENCE: readonly EntreeDeSommaire[] = [
 	{ niveau: 3, ancre: 's-n3', libelle: 'Niveau 3 — sous-partie' }
 ];
 
-/** Une entrée telle qu'elle se rend : avec son numéro, s'il lui en revient un. */
 export interface LigneDeSommaire extends EntreeDeSommaire {
 	/** Deux chiffres pour un niveau 2, `null` pour un niveau 3. */
 	readonly numero: string | null;
@@ -90,25 +61,14 @@ export function sommaireRendu(entrees: readonly EntreeDeSommaire[]): readonly Li
 	}));
 }
 
-/* ── La prose du cartouche de contrôle ──────────────────────────────────────
-   Le cartouche dit trois choses : QUI a vérifié, QUAND, et — aux deux niveaux
-   qui ne sont plus frais — ce qu'il FAUDRAIT en faire. Les deux premières
-   viennent du journal des vérifications, servi par le chargeur. La troisième ne
-   se déduit d'aucune note : c'est la mise en garde que le gel attache au
-   NIVEAU, et à lui seul (`V-14:4008-4012`).
+/* LA PROSE DU CARTOUCHE DE CONTRÔLE. Il dit qui a vérifié, quand, et — aux deux
+   niveaux qui ne sont plus frais — ce qu'il faudrait en faire. Les deux premières
+   viennent du journal ; la troisième ne se déduit d'aucune note, c'est la mise en
+   garde que le gel attache au NIVEAU (`V-14:4008-4012`).
 
-   CE QUI A DISPARU D'ICI, ET POURQUOI. La table portait aussi un vérificateur
-   et une date par niveau — « Karim Belhadj », « 1er août 2026 » — que le bloc
-   partagé servait quand aucune note affichée ne lui était passée. Ce repli
-   n'existe plus : `NoteDeDemonstration.svelte` EXIGE désormais la note
-   affichée, et les deux vues qui le montent la passent toutes les deux. Un
-   cartouche ne peut donc plus nommer un vérificateur du jeu de démonstration.
+   Ni le libellé, ni le nombre de barres ne sont transcrits : ils sortent de
+   `$lib/fraicheur.ts`, la fabrique unique. */
 
-   CE QUI N'EST TOUJOURS PAS TRANSCRIT, ET C'EST LE POINT : ni le libellé, ni le
-   nombre de barres. Ils sortent de `$lib/fraicheur.ts`, la fabrique unique
-   (P-01, ADR-005), à partir du niveau et de l'ancienneté. */
-
-/** Ce que le cartouche ajoute après la date, au seul titre du NIVEAU. */
 export interface ProseDeControle {
 	/**
 	 * Ce que le gel ajoute après la date, séparateur compris — chaîne vide au
@@ -129,58 +89,35 @@ export const PROSE_PAR_NIVEAU = {
 	obs: { suffixe: ' — ', appui: 'revue nécessaire' }
 } as const satisfies Record<string, ProseDeControle>;
 
-/* ── Le rangement de la note ────────────────────────────────────────────────
-   La ligne « Rangement » des métadonnées : univers, domaine, puis les
-   dossiers, du plus général au plus précis. Elle est DÉDUITE de la note du
-   corpus — `n-restaurer-pg` — et non recopiée : c'est le même chemin que le
-   fil d'Ariane des deux vues, et il n'a aucune raison d'en diverger.
+/* LE RANGEMENT DE LA NOTE — univers, domaine, puis les dossiers. Il est DÉDUIT de la
+   note, non recopié : c'est le même chemin que le fil d'Ariane des deux vues.
 
-   POURQUOI ELLE EST ICI ET LE SÉPARATEUR AILLEURS. Le `›` qui sépare deux
-   segments porte un style en ligne du gel — `color:var(--c-encre-4)` —, et un
-   style en ligne n'est admis que dans un fichier RATTACHÉ à une maquette :
-   par le nommage pour `src/vues/V-xx.svelte` (ARB-016), par déclaration
-   humaine dans `verif/references/preuve-par-le-gel.json` pour une ressource
-   partagée (ARB-022). `src/lib/lecture/` n'est ni l'un ni l'autre, et un agent
-   d'exécution n'écrit jamais dans ce fichier de rattachement. Le séparateur
-   est donc fourni par chaque vue, sous forme de fragment ; le CHEMIN, lui,
-   reste ici, où il ne peut pas diverger. Écart remonté. */
+   POURQUOI LE SÉPARATEUR EST AILLEURS : le `›` porte un style en ligne du gel, et un
+   style en ligne n'est admis que dans un fichier RATTACHÉ à une maquette.
+   `src/lib/lecture/` ne l'est pas. Le séparateur est donc fourni par chaque vue ; le
+   CHEMIN reste ici, où il ne peut pas diverger. */
 
-/** Le chemin de rangement d'une note, du plus haut au plus bas. */
 export function rangementDe(note: Note): readonly string[] {
 	return [note.univers, note.domaine, ...segmentsDeDossier(note.dossier)];
 }
 
-/* ── La note réellement lue ─────────────────────────────────────────────────
-   T-042. Le bloc partagé était, jusqu'à ce lot, la transcription de
-   `n-restaurer-pg` ET RIEN D'AUTRE : `/notes/{identifiant}` servait donc le
-   même article pour les 32 notes du corpus. Le chargeur, lui, rendait déjà la
-   note réelle et son corps rendu — `src/lib/donnees/note.ts` —, et l'écart
-   était déclaré au rapport de `T-033` faute d'une propriété pour les recevoir.
+/* LA NOTE RÉELLEMENT LUE. Le bloc partagé était la transcription d'une seule note du
+   jeu : `/notes/{identifiant}` servait donc le même article pour les 32 notes du
+   corpus. La propriété est OPTIONNELLE, et son absence rend la transcription figée à
+   l'identique.
 
-   C'est cette propriété. Elle est OPTIONNELLE, et son absence rend la
-   transcription figée à l'identique : le banc ne bouge pas.
+   LE CORPS EST RENDU PAR L'APPELANT, ET PAR `rendreDocument` SEUL : cette interface
+   porte du HTML DÉJÀ RENDU, jamais un document canonique — le rendu demande un
+   résolveur de liens internes que seule la couche de données peut construire, et une
+   vue qui rendrait elle-même serait le second chemin qu'`ADR-004` interdit. */
 
-   LE CORPS EST RENDU PAR L'APPELANT, ET PAR `rendreDocument` SEUL. Cette
-   interface porte du HTML DÉJÀ RENDU, jamais un document canonique : le rendu
-   demande un résolveur de liens internes que seule la couche de données peut
-   construire (ADR-004 — une seule implémentation, et
-   `pnpm verif:convertisseur` compte les appelants). Une vue qui rendrait
-   elle-même serait le second chemin que l'ADR interdit. */
-
-/* ── Ce que la base porte, et que le gel écrivait à la main ─────────────────
-   Les quatre descriptions ci-dessous sont les seules choses que le bloc
-   partagé affichait SANS pouvoir les recevoir : le dernier contrôle, la
+/* CE QUE LA BASE PORTE, ET QUE LE GEL ÉCRIVAIT À LA MAIN : le dernier contrôle, la
    dernière modification, la demande de révision courante et la mesure de
-   consultation. Chacune existe en base — `verifications`, `notes.modifie_le`,
-   les quatre colonnes `revision_*`, `consultations` —, aucune n'était lue.
+   consultation. Chacune existe en base, aucune n'était lue.
 
-   ELLES SONT TOUTES FAILLIBLES, ET C'EST LE POINT. Une note jamais vérifiée
-   n'a pas de contrôle ; un journal de vérification peut porter une entrée
-   anonymisée, donc sans nom (`RG-M15-02`) ; une note sans demande courante n'a
-   pas de révision. `null` DIT CES ABSENCES et le bloc les rend en état neutre
-   explicite (`RG-M18-03`) — jamais une valeur d'exemple (P-02). */
+   ELLES SONT TOUTES FAILLIBLES, ET C'EST LE POINT : `null` DIT ces absences et le bloc
+   les rend en état neutre explicite (`RG-M18-03`), jamais par une valeur d'exemple. */
 
-/** Un instant, dans les trois formes que le gel emploie côte à côte. */
 export interface InstantAffiche {
 	/** Forme machine — l'attribut `datetime` d'un `<time>`. */
 	readonly iso: string;
@@ -191,12 +128,9 @@ export interface InstantAffiche {
 }
 
 /**
- * LE DERNIER CONTRÔLE RÉELLEMENT PORTÉ PAR LA NOTE — `M06.2`.
- *
- * `par` vaut `null` quand le journal ne rattache l'entrée à aucun compte :
- * `verifications.compte_id` est effaçable (`on delete set null`) et l'entrée
- * survit à son auteur. Une entrée sans nom reste une vérification ; c'est
- * l'AUTEUR qui manque, pas l'attestation.
+ * Le dernier contrôle réellement porté par la note — `M06.2`. `par` vaut `null` quand
+ * le journal ne rattache l'entrée à aucun compte : l'entrée survit à son auteur, et
+ * c'est l'AUTEUR qui manque, pas l'attestation.
  */
 export interface ControleReel {
 	readonly par: string | null;
@@ -210,9 +144,7 @@ export interface RevisionCourante {
 	readonly commentaire: string | null;
 }
 
-/** La note affichée par le bloc partagé, et ses deux corps déjà rendus. */
 export interface NoteAffichee {
-	/** La note lue — celle que l'adresse désigne, jamais celle du gel. */
 	readonly note: Note;
 	/**
 	 * Le corps du registre Référence, rendu par `rendreDocument`. `null` : la
@@ -224,45 +156,32 @@ export interface NoteAffichee {
 }
 
 /**
- * LA NOTE TELLE QUE V-14 L'AFFICHE — l'identité et les corps, PLUS tout ce que
- * le bloc partagé écrivait à la main faute de le recevoir.
- *
- * ELLE ÉTEND `NoteAffichee` AU LIEU DE LA REMPLACER, et ce n'est pas un détail
- * de forme : `$lib/donnees/edition.ts` construit une `NoteAffichee` pour V-18,
- * l'éditeur de l'Opérationnel, qui n'a ni cartouche de contrôle, ni bandeaux,
- * ni métadonnées — lui imposer ces champs le ferait mentir sur ce qu'il rend.
- * V-15, de son côté, ne passe rien du tout et garde la transcription du gel.
+ * La note telle que V-14 l'affiche — l'identité, les corps, et tout ce que le bloc partagé
+ * écrivait à la main faute de le recevoir. ELLE ÉTEND `NoteAffichee` AU LIEU DE LA REMPLACER :
+ * V-18 construit une `NoteAffichee` sans cartouche, sans bandeaux ni métadonnées.
  */
 export interface LectureAffichee extends NoteAffichee {
 	/**
-	 * LE SOMMAIRE DU CORPS AFFICHÉ, relevé sur le DOCUMENT et non sur le rendu.
-	 *
-	 * Le gel le construit en relisant son propre DOM (`construireSommaire()`,
-	 * `V-14:3901`) ; un composant Svelte ne peut pas se relire. La liste vient
-	 * donc de `titres()` appliqué au document canonique, ce qui donne
-	 * exactement la même matière : les `h2[id]` et `h3[id]`, dans l'ordre.
+	 * Le sommaire du corps affiché, relevé sur le DOCUMENT et non sur le rendu : le gel
+	 * le construit en relisant son propre DOM, et un composant Svelte ne peut pas se
+	 * relire. `titres()` appliqué au document donne exactement la même matière.
 	 */
 	readonly sommaire: readonly EntreeDeSommaire[];
 	/** Le dernier contrôle. `null` : la note n'a jamais été vérifiée. */
 	readonly controle: ControleReel | null;
 	/**
-	 * L'ANCIENNETÉ QUI A SERVI À RÉSOUDRE LE NIVEAU — jours écoulés depuis la
-	 * dernière vérification, et à défaut depuis la dernière modification
-	 * (`RG-M06-01`).
-	 *
-	 * C'est l'entrée de `libelleFraicheur()`, et c'est LA MÊME que celle du
-	 * calcul du niveau : deux anciennetés distinctes feraient dire au libellé
-	 * autre chose que ce que la jauge montre — l'écart exact que P-01 ferme.
+	 * L'ancienneté qui a servi à résoudre le niveau — jours depuis la dernière
+	 * vérification, à défaut depuis la modification (`RG-M06-01`). C'est LA MÊME que
+	 * celle du calcul du niveau : deux anciennetés distinctes feraient dire au libellé
+	 * autre chose que ce que la jauge montre.
 	 */
 	readonly joursDepuisControle: number;
 	/** La dernière modification de la note — ligne « Rédaction ». */
 	readonly modifiee: InstantAffiche;
-	/** La dernière modification du corps Référence — bandeau de resynchronisation. */
 	readonly referenceModifiee: InstantAffiche;
 	/**
-	 * Le corps Référence a été modifié APRÈS le corps Opérationnel : c'est
-	 * l'état que le bandeau `bandeau--resync` signale. Faux quand la note ne
-	 * porte pas d'Opérationnel — il n'y a alors rien à resynchroniser.
+	 * Le corps Référence a été modifié APRÈS le corps Opérationnel — l'état que le
+	 * bandeau signale. Faux quand la note ne porte pas d'Opérationnel.
 	 */
 	readonly resync: boolean;
 	/** La demande de révision courante. `null` : aucune n'est ouverte. */
@@ -273,26 +192,15 @@ export interface LectureAffichee extends NoteAffichee {
 	 */
 	readonly consultations30j: number;
 	/**
-	 * LE CUMUL DE TOUTE LA VIE DE LA NOTE — `notes.compteur_de_consultations`,
-	 * ET IL EST LU APRÈS QUE L'OUVERTURE COURANTE A ÉTÉ COMPTÉE.
+	 * Le cumul de toute la vie de la note, LU APRÈS que l'ouverture courante a été comptée.
 	 *
-	 * Il était pris sur `Note.vues`, que la couche de lecture projette AVANT
-	 * l'écriture de `journaliserUneConsultation()` : la page affichait donc un
-	 * total INFÉRIEUR d'une unité à sa propre fenêtre de trente jours — « 0
-	 * consultations · 1 sur les 30 derniers jours », arithmétiquement
-	 * impossible.
+	 * Il était pris sur `Note.vues`, que la couche de lecture projette AVANT l'écriture du
+	 * journal : la page affichait un total INFÉRIEUR d'une unité à sa propre fenêtre de trente
+	 * jours. LE REMÈDE N'EST PAS DE DÉPLACER L'ÉCRITURE — elle doit rester APRÈS la résolution
+	 * d'accès (`RG-ACC-04`). C'est la LECTURE qui descend.
 	 *
-	 * LE REMÈDE N'EST PAS DE DÉPLACER L'ÉCRITURE. Elle doit rester APRÈS la
-	 * résolution d'accès : refus et inexistence rendent la même réponse, y
-	 * compris en temps (`RG-ACC-04`), et compter avant la résolution
-	 * compterait les refus et les notes absentes. C'est la LECTURE qui
-	 * descend, dans le complément de lecture, qui s'exécute déjà après
-	 * l'écriture et interroge déjà `notes` sur le même identifiant.
-	 *
-	 * LA COLONNE RESTE LA SEULE MÉMOIRE DU CUMUL : rien n'insère dans
-	 * `consultations` hors de `$lib/donnees/consultation.ts`, un corpus semé
-	 * ou une archive réimportée portent donc un compteur sans aucune ligne de
-	 * journal. Dériver le total du journal les remettrait tous à zéro.
+	 * LA COLONNE RESTE LA SEULE MÉMOIRE DU CUMUL : un corpus semé ou une archive réimportée
+	 * portent un compteur sans aucune ligne de journal.
 	 */
 	readonly consultationsTotal: number;
 }

@@ -1,49 +1,27 @@
 /**
- * LA LECTURE D'UN DOMAINE POUR L'EXPORT — la base, et rien d'inventé.
+ * LA LECTURE D'UN DOMAINE POUR L'EXPORT — la base, et rien d'inventé. `UC-M13-01` :
+ * « l'administrateur exporte l'INTÉGRALITÉ d'un domaine dans un format ouvert et
+ * réimportable. » La forme rendue est celle que `export/archive.ts` sait écrire ET
+ * relire — la même des deux côtés, sans quoi « réimportable » ne voudrait rien dire.
  *
- * `UC-M13-01` : « l'administrateur exporte l'INTÉGRALITÉ d'un domaine dans un
- * format ouvert et réimportable. » Ce module lit cette intégralité, et il la
- * rend sous la forme que `src/lib/export/archive.ts` sait écrire ET relire —
- * la même forme des deux côtés, sans quoi « réimportable » ne voudrait rien
- * dire.
+ * CE QUI ENTRE : les dossiers (l'arborescence entière, dossiers VIDES compris), les
+ * notes avec la totalité de leurs colonnes, leurs étiquettes DANS LEUR RANG, leurs
+ * relations sortantes avec leur origine (`P-08`), et leurs pièces jointes.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LA BASE PORTE, ET QUI ENTRE DANS L'ARCHIVE
+ * LA CONSIGNATION DES PIÈCES vise un cas étroit et bien réel : une pièce dont la base
+ * porte la ligne et dont l'entrepôt ne porte pas le fichier. `RG-NF-09` prend la base
+ * et le volume SÉPARÉMENT, une restauration désaccordée produit exactement cet état,
+ * et l'archive le consigne plutôt que d'écrire un fichier vide — une pièce de zéro
+ * octet serait la valeur illustrative que `P-02` proscrit.
  *
- * Les dossiers (l'arborescence entière du domaine, dossiers VIDES compris), les
- * notes avec la totalité de leurs colonnes, leurs étiquettes DANS LEUR RANG
- * (`etiquettes_de_note.ordre`, posé par `005`), leurs relations sortantes avec
- * leur origine (`P-08`), et le recensement de leurs pièces jointes.
+ * L'ORDRE DES DOSSIERS FRÈRES VOYAGE, LA VALEUR DE LEUR POSITION NON : l'archive
+ * conserve l'ordre par celui de ses entrées, et une réimportation reconstitue les
+ * positions par rang. Un domaine dont les positions ne seraient pas un rang dense
+ * verrait ses VALEURS renormalisées, son ordre intact.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LA BASE NE PORTE PAS, ET QUI EST CONSIGNÉ PLUTÔT QUE FABRIQUÉ
- *
- * LES OCTETS DES PIÈCES JOINTES EXISTENT DEPUIS `T-026`, ET ILS ENTRENT ICI.
- * Ce module a longtemps rendu `piecesJointes: []` en consignant chaque pièce au
- * rapport, faute de stockage : la table portait le nom, la taille et le type de
- * média, jamais les octets, et `RACINE_FICHIERS` n'était lue par aucune ligne du
- * dépôt. Le gel promettait pourtant « les images et pièces jointes inclus dans
- * un dossier voisin » (`V-36:2932`).
- *
- * L'entrepôt (`src/lib/fichiers/entrepot.ts`) porte désormais les octets, et
- * l'archive les emporte. LA CONSIGNATION SUBSISTE, mais pour un autre cas, plus
- * étroit et bien réel : une pièce dont la base porte la ligne et dont l'entrepôt
- * ne porte pas le fichier. `RG-NF-09` prend la base et le volume SÉPARÉMENT ;
- * une restauration désaccordée produit exactement cet état, et l'archive le
- * consigne plutôt que d'écrire un fichier vide — une pièce de zéro octet serait
- * la valeur illustrative que `P-02` proscrit.
- *
- * L'ORDRE DES DOSSIERS FRÈRES VOYAGE, LA VALEUR DE LEUR POSITION NON. Les
- * dossiers sont lus ordonnés par `position` ; l'archive conserve cet ordre par
- * l'ordre de ses entrées, et une réimportation reconstitue les positions par
- * rang. Un domaine dont les positions ne seraient pas un rang dense (0, 1, 2…)
- * verrait donc ses VALEURS renormalisées, son ordre intact. Déclaré au rapport
- * du lot.
- *
- * L'HISTORIQUE N'EST PAS L'ÉTAT. L'historique des vérifications (M06.2) et
- * celui des versions ne sont pas exportés : `RG-M13-01` demande de reconstituer
- * LE DOMAINE, et ni le gel ni `UC-M13-01` ne les citent au contenu de
- * l'archive. Déclaré au rapport du lot, non comblé ici.
+ * L'HISTORIQUE N'EST PAS L'ÉTAT : ni les vérifications (M06.2) ni les versions ne
+ * sont exportées — `RG-M13-01` demande de reconstituer LE DOMAINE, et ni le gel ni
+ * `UC-M13-01` ne les citent au contenu de l'archive.
  */
 import { asc, eq } from 'drizzle-orm';
 import type { Base } from '../base/acces';
@@ -68,11 +46,9 @@ import type {
 import { lireLesPiecesAvecLeursOctets } from './pieces';
 
 /**
- * Le domaine, tel que l'adresse d'export le désigne. `DomaineResolu` de
- * `rangement.ts` ne porte PAS l'identifiant lisible — il n'en a pas besoin, il
- * vient de l'adresse —, et l'archive en a besoin : elle porte l'identifiant du
- * domaine dans ses en-têtes et dans son nom de fichier. Le type est donc
- * distinct, et il le dit.
+ * Le domaine, tel que l'adresse d'export le désigne. `DomaineResolu` ne porte PAS
+ * l'identifiant lisible — il n'en a pas besoin —, et l'archive en a besoin : elle le
+ * porte dans ses en-têtes et dans son nom de fichier. Le type est donc distinct.
  */
 export interface DomaineDeLExport {
 	readonly id: string;
@@ -80,13 +56,11 @@ export interface DomaineDeLExport {
 	readonly nom: string;
 }
 
-/** Le domaine lu, et ce que la lecture a constaté d'inexportable. */
 export interface DomaineLu {
 	readonly domaine: DomaineAExporter;
 	readonly avertissements: readonly AvertissementDeConversion[];
 }
 
-/** L'univers, tel que l'adresse d'export le désigne. */
 export interface UniversDeLExport {
 	readonly identifiant: string;
 	readonly nom: string;
@@ -240,10 +214,9 @@ export async function lireLeDomaineAExporter(
 	};
 
 	const titreParNote = new Map(lignesDeNote.map((n) => [n.id, n.titre]));
-	/* Les pièces dont l'entrepôt PORTE les octets entrent dans l'archive ; les
-	   autres sont consignées. La seconde famille n'est plus « le produit ne
-	   stocke pas les fichiers » — il les stocke depuis `T-026` — mais le
-	   désaccord entre la base et le volume que `RG-NF-09` prend séparément. */
+	/* Les pièces dont l'entrepôt PORTE les octets entrent dans l'archive ; les autres
+	   sont consignées — non par absence de stockage, mais par désaccord entre la base
+	   et le volume, que `RG-NF-09` prend séparément. */
 	const piecesParNote = new Map<string, PieceJointeAExporter[]>();
 	for (const piece of lignesDePiece) {
 		if (!idsDeNote.has(piece.noteId)) continue;
@@ -319,11 +292,9 @@ export async function lireLeDomaineAExporter(
 }
 
 /**
- * CE QUE L'ARCHIVE NE PORTE PAS, ÉNUMÉRÉ PLUTÔT QUE TU. Le motif de chacun est
- * dans l'en-tête de ce module. Cette liste est le seul endroit du produit où ces
- * quatre lacunes sont nommées ensemble : un lot qui en comblerait une doit la
- * retirer d'ici, sans quoi le produit continuerait de déclarer un manque qu'il
- * n'a plus.
+ * CE QUE L'ARCHIVE NE PORTE PAS, ÉNUMÉRÉ PLUTÔT QUE TU. Cette liste est le seul
+ * endroit du produit où ces quatre lacunes sont nommées ensemble : un lot qui en
+ * comblerait une doit la retirer d'ici.
  */
 export const CHAMPS_NON_EXPORTES: readonly string[] = [
 	'l’historique des vérifications (M06.2)',

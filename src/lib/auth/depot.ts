@@ -1,15 +1,9 @@
 /**
- * LE DÉPÔT DE L'AUTHENTIFICATION — les requêtes, et rien que les requêtes.
- *
- * Toute la DÉCISION vit ailleurs, dans des modules qui ne parlent pas à la base
- * et qui s'éprouvent donc sans base : `authentification.ts` (la décision),
- * `tentatives.ts` (le barème), `sessions.ts` (l'inactivité), `garde.ts` (les
- * redirections). Ce fichier ne fait que lire et écrire.
- *
- * C'est la répartition que `T-011` a posée pour les droits — « il ne parle pas
- * à la base ; il reçoit des lignes et rend une décision, ce qui le rend
- * éprouvable sans base » — et elle est reprise telle quelle : une règle qu'on ne
- * peut éprouver qu'avec un serveur debout est une règle qu'on éprouve rarement.
+ * LE DÉPÔT DE L'AUTHENTIFICATION — les requêtes, et rien que les requêtes. Toute la
+ * DÉCISION vit ailleurs, dans des modules qui ne parlent pas à la base et qui
+ * s'éprouvent donc sans base : `authentification.ts`, `tentatives.ts`, `sessions.ts`,
+ * `garde.ts`. Une règle qu'on ne peut éprouver qu'avec un serveur debout est une
+ * règle qu'on éprouve rarement.
  */
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import type { Base } from '../base/acces';
@@ -19,12 +13,10 @@ import type { CompteAAuthentifier } from './authentification';
 import { BAREME, type LigneDeTentative } from './tentatives';
 
 /**
- * Le compte portant cet identifiant, ou `null`.
- *
- * UNE SEULE REQUÊTE, ET LA MÊME DANS LES DEUX CAS : l'identifiant porte une
- * contrainte d'unicité (`comptes_identifiant_unique`, 002), donc un index, donc
- * un coût de recherche qui ne dépend pas de l'existence de la ligne. C'est ce
- * qui permet à `authentifier()` d'égaliser le reste du temps de réponse.
+ * Le compte portant cet identifiant, ou `null`. UNE SEULE REQUÊTE, ET LA MÊME DANS
+ * LES DEUX CAS : l'identifiant porte une contrainte d'unicité, donc un index, donc un
+ * coût qui ne dépend pas de l'existence de la ligne. C'est ce qui permet à
+ * `authentifier()` d'égaliser le reste du temps de réponse.
  */
 export async function compteParIdentifiant(
 	base: Base,
@@ -50,19 +42,16 @@ export async function compteParIdentifiant(
 	};
 }
 
-/** Ce qu'une reprise de session rapporte : la session, et le compte qui la porte. */
 export interface SessionEtCompte {
 	readonly sessionId: string;
 	readonly souvenir: boolean;
 	readonly derniereActiviteLe: Date;
 	readonly compte: CompteAAuthentifier;
 	/**
-	 * LE COMPTE DOIT-IL CHANGER SON MOT DE PASSE AVANT D'ALLER PLUS LOIN ?
-	 *
-	 * LES DEUX COLONNES SONT LUES ENSEMBLE, ET LE VERROU L'EMPORTE. `RG-CPT-01`
-	 * interdit à un compte à mot de passe verrouillé de changer le sien : lui
-	 * imposer le changement l'enfermerait dehors, sur un écran qui refuserait
-	 * précisément le geste exigé.
+	 * LE COMPTE DOIT-IL CHANGER SON MOT DE PASSE AVANT D'ALLER PLUS LOIN ? LES DEUX
+	 * COLONNES SONT LUES ENSEMBLE, ET LE VERROU L'EMPORTE : `RG-CPT-01` interdit à un
+	 * compte à mot de passe verrouillé de changer le sien, et lui imposer le changement
+	 * l'enfermerait dehors sur un écran qui refuserait le geste exigé.
 	 */
 	readonly motDePasseAChanger: boolean;
 }
@@ -109,7 +98,6 @@ export async function sessionParCondensat(
 	};
 }
 
-/** Ouvre une session pour un compte, et rend son identifiant. */
 export async function ouvrirUneSession(
 	base: Base,
 	compteId: string,
@@ -138,7 +126,6 @@ export async function toucherLaSession(base: Base, sessionId: string): Promise<v
 		.where(eq(sessions.id, sessionId));
 }
 
-/** Ferme une session — déconnexion, inactivité échue, compte désactivé. */
 export async function fermerLaSession(base: Base, sessionId: string): Promise<void> {
 	await base.update(sessions).set({ fermeeLe: new Date() }).where(eq(sessions.id, sessionId));
 }
@@ -154,16 +141,13 @@ export async function valeurDeDureeDeSession(base: Base): Promise<unknown> {
 }
 
 /**
- * Le nombre de lignes de tentative à relever pour une origine.
- *
- * Il est DÉRIVÉ du barème, non choisi : entre deux remises à zéro, une origine
- * ne peut produire que les tentatives tolérées plus celle qui ouvre le blocage.
- * La marge couvre les succès intercalés. Si le barème s'allonge, la limite suit
- * — un nombre écrit à la main deviendrait faux en silence.
+ * Le nombre de lignes de tentative à relever pour une origine. Il est DÉRIVÉ du
+ * barème, non choisi : entre deux remises à zéro, une origine ne peut produire que les
+ * tentatives tolérées plus celle qui ouvre le blocage. Si le barème s'allonge, la
+ * limite suit — un nombre écrit à la main deviendrait faux en silence.
  */
 export const LIMITE_DE_RELEVE = BAREME.attentesEnSecondes.length + 4;
 
-/** Les dernières tentatives de cette origine, les plus récentes d'abord. */
 export async function tentativesDeLOrigine(
 	base: Base,
 	origine: string

@@ -1,32 +1,16 @@
 /**
- * LE SCHÉMA — la description typée des objets métier de `CAHIER-DES-CHARGES-
- * FONCTIONNEL.md` §3, pour Drizzle ORM 0.45.2 sur PostgreSQL 18.6.
+ * Le schéma — la description typée des objets métier de `CDC` §3, pour Drizzle ORM sur
+ * PostgreSQL.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE FICHIER N'EST PAS CE QUI CRÉE LES TABLES
+ * CE FICHIER N'EST PAS CE QUI CRÉE LES TABLES : elles le sont par
+ * `base/migrations/*.montee.sql`, écrites à la main avec leur descente. Deux descriptions
+ * du même objet peuvent diverger sans que rien ne le dise — `pnpm base:coherence` compare
+ * celle-ci au CATALOGUE de la base migrée et sort en 1 à la première divergence. Les
+ * migrations sont écrites à la main parce que le contrat exige des migrations RÉVERSIBLES
+ * et que `drizzle-kit` ne produit pas de descente.
  *
- * Les tables sont créées par `base/migrations/*.montee.sql`, écrites à la main
- * et accompagnées de leur `*.descente.sql`. Ce fichier en est la vue TYPÉE,
- * celle que l'application interroge.
- *
- * Deux descriptions du même objet peuvent diverger sans que rien ne le dise :
- * `pnpm base:coherence` compare celle-ci au CATALOGUE de la base réellement
- * migrée — tables, colonnes, types, nullabilité, contraintes — et sort en 1 à
- * la première divergence. C'est ce contrôle, et non la bonne volonté, qui tient
- * les deux ensemble.
- *
- * POURQUOI DES MIGRATIONS ÉCRITES À LA MAIN plutôt que `drizzle-kit generate` :
- * le contrat exige des migrations RÉVERSIBLES, et `drizzle-kit` 0.31 ne produit
- * pas de descente. Une réversibilité qu'aucun fichier ne porte ne se prouve
- * pas. Écart déclaré au rapport.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE VOCABULAIRE EST CONTRACTUEL (P-07)
- *
- * Noms de tables, de colonnes, de types et d'exports : les douze termes de
- * `CLAUDE.md` §3 et leurs dérivés directs, sans aucun synonyme. `note` n'est
- * jamais « document », « page » ni « article » ; `etiquette` n'est jamais
- * « tag » ; la fiche n'a pas de table à elle — c'est une note typée (RG-NOT-01).
+ * LE VOCABULAIRE EST CONTRACTUEL (`P-07`) : noms de tables, de colonnes, de types et
+ * d'exports sont les douze termes de `CLAUDE.md` §3, sans aucun synonyme.
  */
 import { sql } from 'drizzle-orm';
 import {
@@ -49,12 +33,9 @@ import {
 } from 'drizzle-orm/pg-core';
 import type { Configuration } from '../../../seeds/corpus';
 
-/* ═══════════════════════════════════════════════ Les énumérations ═══════ */
-
 /**
  * Les quatre rôles des maquettes gelées. CDC §2.2 n'énonce que trois NIVEAUX
- * D'ACCÈS (anonyme, contributeur, administrateur) ; la console des comptes
- * (V-28) et `seeds/corpus.ts` portent quatre RÔLES. Les maquettes priment.
+ * D'ACCÈS ; la console des comptes en porte quatre RÔLES, et les maquettes priment.
  */
 export const roleDeCompte = pgEnum('role_de_compte', [
 	'administrateur',
@@ -98,8 +79,6 @@ export const typeDeChamp = pgEnum('type_de_champ', [
 	'booleen'
 ]);
 
-/* ═══════════════════════════════════════════════════ Les comptes ════════ */
-
 export const comptes = pgTable(
 	'comptes',
 	{
@@ -112,57 +91,37 @@ export const comptes = pgTable(
 		/** RG-CPT-01 — compte de démonstration partagé : droits intacts, mot de passe figé. */
 		motDePasseVerrouille: boolean('mot_de_passe_verrouille').notNull().default(false),
 		/**
-		 * LE MOT DE PASSE A ÉTÉ POSÉ PAR UN ADMINISTRATEUR, ET IL EST À USAGE
-		 * UNIQUE — V-32 l'écrit sous le champ engendré : « il devra être changé à
-		 * la première connexion ». Rien ne le forçait avant cette colonne.
-		 *
-		 * ELLE NE SE LIT JAMAIS SEULE : `mot_de_passe_verrouille` dit qui ne PEUT
-		 * PAS changer son mot de passe (`RG-CPT-01`), et lui imposer le changement
-		 * l'enfermerait dehors. La garde exige les deux.
+		 * Le mot de passe a été posé par un administrateur, et il est à usage unique — V-32 :
+		 * « il devra être changé à la première connexion ». ELLE NE SE LIT JAMAIS SEULE :
+		 * `mot_de_passe_verrouille` dit qui ne PEUT PAS changer son mot de passe
+		 * (`RG-CPT-01`), et lui imposer le changement l'enfermerait dehors.
 		 */
 		motDePasseAChanger: boolean('mot_de_passe_a_changer').notNull().default(false),
 		/**
-		 * UC-M16-01, STACK §4.7 — le condensat Argon2id du mot de passe, et jamais
-		 * le mot de passe (`003_authentification.montee.sql`). NULLABLE : un compte
-		 * sans condensat ne peut pas s'authentifier, ce qui est la fermeture par
-		 * défaut. Le jeu de semence n'en pose aucun.
+		 * `STACK` §4.7 — le condensat Argon2id, et jamais le mot de passe. NULLABLE :
+		 * un compte sans condensat ne peut pas s'authentifier, ce qui est la
+		 * fermeture par défaut.
 		 */
 		condensatMotDePasse: text('condensat_mot_de_passe'),
 		arriveLe: date('arrive_le').notNull(),
 		creeLe: timestamp('cree_le', { withTimezone: true }).notNull().defaultNow(),
 		modifieLe: timestamp('modifie_le', { withTimezone: true }).notNull().defaultNow(),
 		/**
-		 * Le domaine principal du compte (`005`) — BRIEF-VUES.md:1487 pour le
-		 * formulaire de V-32, :1322 pour l'identité de V-25 ; CDC:1177 et :1179
-		 * pour le « rattachement ».
-		 *
-		 * NULLABLE PAR EXIGENCE, et non faute de mieux : RG-M14-04 (CDC:1149) dit
-		 * « les comptes rattachés au domaine supprimé sont conservés ; leur
-		 * rattachement devient vide ». `ON DELETE SET NULL` est la transcription
-		 * littérale de cette phrase — `RESTRICT` interdirait la suppression que la
-		 * règle autorise, `CASCADE` emporterait le compte qu'elle veut conserver.
-		 *
-		 * L'ACTION RÉFÉRENTIELLE N'EST ÉPROUVÉE PAR AUCUNE BATTERIE, et il faut le
-		 * savoir : `base:coherence` déclare ne regarder « ni les valeurs par
-		 * défaut, ni le corps des CHECK, ni les actions référentielles », et les
-		 * sondes de `base:unicite` n'attendent qu'un refus ou une acceptation, pas
-		 * un effet de bord. `SET NULL` est donc, à ce jour, une règle qu'aucun cas
-		 * n'exerce — `P-5`. C'est une dette nommée, pas un oubli.
+		 * Le domaine principal du compte. NULLABLE PAR EXIGENCE, et non faute de mieux :
+		 * `RG-M14-04` dit « les comptes rattachés au domaine supprimé sont conservés ; leur
+		 * rattachement devient vide ». `ON DELETE SET NULL` est la transcription littérale de
+		 * cette phrase — `RESTRICT` interdirait la suppression que la règle autorise, `CASCADE`
+		 * emporterait le compte qu'elle veut conserver. L'ACTION RÉFÉRENTIELLE N'EST ÉPROUVÉE
+		 * PAR AUCUNE BATTERIE : `base:coherence` ne regarde ni les valeurs par défaut, ni le
+		 * corps des CHECK, ni les actions référentielles. Dette nommée, pas oubli.
 		 */
 		domaineId: uuid('domaine_id').references(() => domaines.id, { onDelete: 'set null' }),
 		/**
-		 * L'instant de la dernière connexion (`005`) — CDC:1177, « date de dernière
-		 * connexion », colonne de la liste des comptes.
-		 *
-		 * C'EST UN INSTANT, ET LE JEU N'EN PORTE QUE LE LIBELLÉ. « aujourd'hui à
-		 * 08:41 » est un RENDU relatif ; les deux vues qui l'affichent l'écrivent
-		 * tel quel sans le calculer (V-32:3043, V-25:2712), et le gel ne donne donc
-		 * aucune règle de passage de l'instant vers le libellé. La colonne porte la
-		 * donnée ; la fabrique du libellé n'est écrite nulle part, et l'inventer
-		 * serait un comblement.
-		 *
-		 * Nullable : un compte qui ne s'est jamais connecté n'a pas de dernière
-		 * connexion. Même choix que `condensatMotDePasse`.
+		 * L'instant de la dernière connexion. C'EST UN INSTANT, ET LE JEU N'EN PORTE QUE LE
+		 * LIBELLÉ : « aujourd'hui à 08:41 » est un RENDU relatif, que les deux vues écrivent tel
+		 * quel sans le calculer. Le gel ne donne aucune règle de passage de l'instant vers le
+		 * libellé, et l'inventer serait un comblement. Nullable : un compte qui ne s'est jamais
+		 * connecté n'a pas de dernière connexion.
 		 */
 		derniereConnexionLe: timestamp('derniere_connexion_le', { withTimezone: true })
 	},
@@ -172,8 +131,6 @@ export const comptes = pgTable(
 		index('comptes_domaine_idx').on(t.domaineId)
 	]
 );
-
-/* ═══════════════════════════════ Le rangement : univers → domaine ═══════ */
 
 /**
  * RG-STR-01 et ARB-001. Deux univers ne peuvent porter ni le même nom, ni le
@@ -292,8 +249,6 @@ export const droitsDeDossier = pgTable(
 	(t) => [primaryKey({ name: 'droits_de_dossier_pk', columns: [t.dossierId, t.compteId] })]
 );
 
-/* ═══════════════════════════════════════════════ Le référentiel ═════════ */
-
 export const typesDeNote = pgTable(
 	'types_de_note',
 	{
@@ -363,7 +318,6 @@ export const champsDeTypeDeFiche = pgTable(
 		exemple: text('exemple'),
 		/** `#f-props` de V-29 — l'aide à la saisie, telle que l'administrateur l'écrit. */
 		aide: text('aide'),
-		/** La valeur proposée quand la note n'en porte aucune. */
 		defaut: text('defaut'),
 		/** V-29 — la propriété est-elle requise par le schéma de son type ? */
 		obligatoire: boolean('obligatoire').notNull().default(false),
@@ -412,22 +366,14 @@ export const parametres = pgTable('parametres', {
 });
 
 /**
- * LES HUIT CLÉS DE `parametres`, ÉCRITES UNE FOIS — M14.7 (`CDC:1189-1197`).
+ * Les huit clés de `parametres`, écrites une fois — M14.7. Elles vivaient en littéraux dans
+ * `lireConfiguration()` seule, ce qui suffisait tant que RIEN N'ÉCRIVAIT dans cette table.
+ * Deux jeux de littéraux rendraient possible ce que `RG-M14-09` interdit : un seuil
+ * enregistré sous un nom que la lecture ignore, donc un badge qui ne bouge pas.
  *
- * Elles vivaient en littéraux dans `lireConfiguration()` seule, ce qui suffisait
- * tant que RIEN N'ÉCRIVAIT dans cette table. `T-077` y écrit (`RG-M14-09`), et
- * deux jeux de littéraux auraient rendu possible ce que la règle interdit
- * précisément : un seuil enregistré sous un nom que la lecture ignore, donc un
- * badge qui ne bouge pas.
- *
- * LE TYPE EST LA GARANTIE, PAS LA DISCIPLINE. `Record<keyof Configuration,
- * string>` refuse à la compilation qu'un champ de la configuration n'ait pas sa
- * clé — un neuvième paramètre ajouté à `Configuration` ne se compile plus tant
- * qu'il n'a pas la sienne. C'est ce garde-fou, et lui seul, qui a fait ajouter
- * les deux lignes de `nomOrganisation` : il a rougi avant qu'on y pense.
- *
- * L'import du type est ERASÉ à l'exécution : ce module reste sans dépendance,
- * et le jeu de semence n'entre pas dans le graphe du serveur par cette ligne.
+ * LE TYPE EST LA GARANTIE, PAS LA DISCIPLINE : `Record<keyof Configuration, string>` refuse
+ * à la compilation qu'un champ de la configuration n'ait pas sa clé. L'import du type est
+ * ERASÉ à l'exécution — le jeu de semence n'entre pas dans le graphe du serveur par là.
  */
 export const CLES_DE_PARAMETRE: Readonly<Record<keyof Configuration, string>> = Object.freeze({
 	seuilFrais: 'seuil_frais',
@@ -441,28 +387,18 @@ export const CLES_DE_PARAMETRE: Readonly<Record<keyof Configuration, string>> = 
 });
 
 /**
- * LES VALEURS PAR DÉFAUT DE LA CONFIGURATION — CE QU'UNE INSTANCE VIERGE VAUT.
+ * Les valeurs par défaut de la configuration — ce qu'une instance vierge vaut.
  *
- * MESURÉ LE 21/08/2026 : sur une base migrée mais NON SEMÉE — c'est-à-dire une
- * INSTALLATION NEUVE, l'état normal du produit au premier démarrage — la table
- * `parametres` est vide, `lireConfiguration()` levait sur la première clé
- * absente, et LES QUINZE PAGES ESSAYÉES SORTAIENT EN 500. Le produit était
- * inutilisable tant qu'on ne l'avait pas semé avec le jeu de démonstration.
+ * Sur une base migrée mais NON SEMÉE — l'état normal du produit au premier démarrage —
+ * `parametres` est vide, `lireConfiguration()` levait sur la première clé absente, et les
+ * pages sortaient en 500 : le produit était inutilisable tant qu'on ne l'avait pas semé avec
+ * le jeu de démonstration. Les défauts vivent au même endroit que les clés, pour qu'une clé
+ * ajoutée sans le sien se voie ; les deux seuils viennent de `SEUILS_PAR_DEFAUT`, la
+ * fabrique unique de `P-01`.
  *
- * Ce n'était pas un oubli de câblage : c'était l'absence de tout défaut. Un
- * réglage d'instance a une valeur tant que l'administrateur n'en a pas décidé
- * une autre, et cette valeur est ici — au même endroit que les clés, pour
- * qu'une clé ajoutée sans son défaut se voie au premier coup d'œil.
- *
- * Les deux seuils viennent de `SEUILS_PAR_DEFAUT` (`$lib/fraicheur`), la
- * fabrique unique de `P-01` : les redéclarer ici les ferait diverger.
- * `portailAssistance` est VIDE par défaut — inventer une adresse d'assistance
- * serait poser un lien mort dans le produit de quelqu'un d'autre.
- *
- * `nomOrganisation` est vide POUR LA MÊME RAISON, et le défaut se lit à
- * l'écran : les vues rendent alors « Codicillus » seul — le nom du LOGICIEL,
- * qui reste en dur — au lieu de la « Direction technique » qu'elles écrivaient.
- * Nommer d'office l'organisation d'autrui serait signer son produit à sa place.
+ * `portailAssistance` et `nomOrganisation` sont VIDES par défaut : inventer une adresse
+ * d'assistance poserait un lien mort, et nommer d'office l'organisation d'autrui signerait
+ * son produit à sa place.
  */
 export const CONFIGURATION_PAR_DEFAUT: Readonly<Configuration> = Object.freeze({
 	seuilFrais: 90,
@@ -475,14 +411,10 @@ export const CONFIGURATION_PAR_DEFAUT: Readonly<Configuration> = Object.freeze({
 	dureeSession: 120
 });
 
-/* ══════════════════════════════════════════════════════ La note ═════════ */
-
 /**
- * RG-NOT-01 — une note est unique ; la fiche n'est pas un objet séparé, et le
- * signet non plus (les maquettes en font un type de note portant une adresse).
- *
- * LA FRAÎCHEUR N'EST PAS UNE COLONNE (P-01, ADR-005) : les trois dates de
- * RG-M06-01 sont stockées, le niveau jamais.
+ * `RG-NOT-01` — une note est unique ; la fiche n'est pas un objet séparé, et le signet non
+ * plus. LA FRAÎCHEUR N'EST PAS UNE COLONNE (`P-01`, `ADR-005`) : les trois dates de
+ * `RG-M06-01` sont stockées, le niveau jamais.
  */
 export const notes = pgTable(
 	'notes',
@@ -573,17 +505,11 @@ export const etiquettesDeNote = pgTable(
 			.notNull()
 			.references(() => etiquettes.id, { onDelete: 'cascade' }),
 		/**
-		 * LE RANG DE L'ÉTIQUETTE SUR SA NOTE (`005`).
-		 *
-		 * Sans elle, cette table était une pure liaison, et l'ordre que le jeu
-		 * porte — qui n'est pas l'ordre alphabétique sur 25 notes de 32 — n'y était
-		 * pas représentable. Le seul ordre qu'une liaison sans rang puisse rendre
-		 * est l'ordre PHYSIQUE des lignes, que PostgreSQL ne garantit pas.
-		 *
-		 * L'unicité du couple `(note_id, ordre)` avec un défaut à `0` fait de
-		 * l'omission une ERREUR de la base : deux étiquettes sur une même note sans
-		 * rang explicite se heurtent au même `0`. Le silence est refusé par le
-		 * schéma, pas par une convention d'appelant.
+		 * Le rang de l'étiquette sur sa note. Sans elle, cette table était une pure liaison, et
+		 * le seul ordre qu'elle pouvait rendre était l'ordre PHYSIQUE des lignes, que PostgreSQL
+		 * ne garantit pas. L'unicité du couple `(note_id, ordre)` avec un défaut à `0` fait de
+		 * l'omission une ERREUR de la base : deux étiquettes sans rang explicite se heurtent au
+		 * même `0`.
 		 */
 		ordre: integer('ordre').notNull().default(0)
 	},
@@ -653,24 +579,13 @@ export const verifications = pgTable(
 	(t) => [index('verifications_note_idx').on(t.noteId, t.le.desc())]
 );
 
-/* ═══════════════════════════════ Le journal des consultations (006) ═════ */
-
 /**
  * `RG-M04-09` — le journal que produit toute ouverture d'une note.
  *
- * TROIS DES QUATRE MEMBRES QUE CDC:1225 ÉNUMÈRE : la note, l'horodatage,
- * l'utilisateur. Le quatrième — la durée approximative — N'A PAS DE COLONNE, et
- * c'est un vide DÉCLARÉ, pas un oubli : aucune source ne dit comment on
- * l'obtient ni ce qu'« approximative » borne. Le raisonnement complet est en
- * tête de `base/migrations/006_consultations.montee.sql`.
- *
- * `compteId` NULL EST L'ANONYMISATION, et la définition vient de `RG-M15-02`
- * (CDC:1227) : « aucun identifiant d'utilisateur n'y est associé ». La ligne,
- * elle, existe toujours — anonymiser n'est pas omettre.
- *
- * La forme est celle de `verifications` — la note, le compte, l'instant —
- * parce que M15.2 range les deux journaux côte à côte et que rien ne justifie
- * deux manières de dire la même chose.
+ * TROIS DES QUATRE MEMBRES QUE LE CAHIER ÉNUMÈRE : la note, l'horodatage, l'utilisateur. Le
+ * quatrième — la durée approximative — n'a pas de colonne, et c'est un vide DÉCLARÉ : aucune
+ * source ne dit comment on l'obtient. `compteId` NULL EST L'ANONYMISATION (`RG-M15-02`) : la
+ * ligne existe toujours — anonymiser n'est pas omettre.
  */
 export const consultations = pgTable(
 	'consultations',
@@ -686,20 +601,13 @@ export const consultations = pgTable(
 	(t) => [index('consultations_note_idx').on(t.noteId, t.le.desc())]
 );
 
-/* ═══════════════════════════════════ L'historique des versions (004) ════ */
-
 /**
- * RG-M07-02 — « une version capture titre et les deux corps, immuable ».
+ * `RG-M07-02` — « une version capture titre et les deux corps, immuable ».
  *
- * IMMUABLE SE LIT DANS L'ABSENCE : il n'y a pas de `modifieLe`, parce qu'une
- * version ne se modifie pas. Le refus est porté par un déclencheur sur UPDATE
- * (`004_versions.montee.sql`), non par cette description : Drizzle ne modélise
- * pas les déclencheurs, et `pnpm base:coherence` ne compare donc que colonnes,
- * types, nullabilité et contraintes. La protection est en base ; sa preuve est
- * une épreuve unitaire, pas une ligne de ce fichier.
- *
- * `date` et `heure` de `seeds/corpus.ts` (`interface Version`) sont deux champs
- * d'AFFICHAGE d'un seul instant : la colonne `le` les porte tous deux.
+ * IMMUABLE SE LIT DANS L'ABSENCE : il n'y a pas de `modifieLe`. Le refus est porté par un
+ * déclencheur sur UPDATE, non par cette description — Drizzle ne modélise pas les
+ * déclencheurs. `date` et `heure` du jeu sont deux champs d'AFFICHAGE d'un seul instant : la
+ * colonne `le` les porte tous deux.
  */
 export const versions = pgTable(
 	'versions',
@@ -714,7 +622,6 @@ export const versions = pgTable(
 			.notNull()
 			.references(() => comptes.id, { onDelete: 'restrict' }),
 		resume: text('resume').notNull(),
-		/** Lignes ajoutées et retirées : deux quantités, jamais un solde. */
 		ajout: integer('ajout').notNull(),
 		retrait: integer('retrait').notNull(),
 		/** Capturé parce que le titre est renommable, et que V-16 doit le montrer. */
@@ -733,16 +640,10 @@ export const versions = pgTable(
 	]
 );
 
-/* ══════════════════════════════════════ L'authentification (003) ════════ */
-
 /**
- * STACK §4.7 — « sessions : jetons opaques en base ». Le jeton vit dans le
- * cookie de l'appelant ; la base n'en garde que le condensat
- * (`003_authentification.montee.sql`, qui porte le raisonnement).
- *
- * `souvenir` EXEMPTE du délai d'inactivité, il ne prolonge aucune durée
- * (V-05:582, V-25:1222-1223). Le délai, lui, est lu dans `parametres`
- * (`duree_session`, M14.7) : aucune durée n'est codée en dur.
+ * `STACK` §4.7 — « sessions : jetons opaques en base ». Le jeton vit dans le cookie de
+ * l'appelant ; la base n'en garde que le condensat. `souvenir` EXEMPTE du délai
+ * d'inactivité, il ne prolonge aucune durée, et le délai est lu dans `parametres`.
  */
 export const sessions = pgTable(
 	'sessions',
@@ -767,11 +668,9 @@ export const sessions = pgTable(
 );
 
 /**
- * RG-M16-01 — « un nombre excessif de tentatives DEPUIS UNE MÊME ORIGINE est
- * ralenti puis bloqué temporairement ». STACK §4.7 : « compteur en base ».
- *
- * L'identifiant saisi n'est pas stocké : la règle ne le demande pas, et une
- * saisie décalée d'un champ écrirait un mot de passe dans cette table.
+ * `RG-M16-01` — « un nombre excessif de tentatives DEPUIS UNE MÊME ORIGINE est ralenti puis
+ * bloqué temporairement ». L'identifiant saisi n'est pas stocké : la règle ne le demande pas,
+ * et une saisie décalée d'un champ écrirait un mot de passe dans cette table.
  */
 export const tentativesDeConnexion = pgTable(
 	'tentatives_de_connexion',

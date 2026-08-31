@@ -1,52 +1,29 @@
 /**
- * L'ENVELOPPE DE L'ARCHIVE — écriture et lecture d'un fichier ZIP.
+ * L'ENVELOPPE DE L'ARCHIVE — écriture et lecture d'un fichier ZIP. `V-36:3061` nomme
+ * le fichier téléchargé, et son suffixe fixe le format d'enveloppe. La LECTURE existe
+ * parce que `RG-M13-01` demande que « réimporter l'archive produite reconstitue le
+ * domaine à l'identique » : une écriture qu'aucune lecture ne rouvre ne prouve rien.
  *
- * `mockups/V-36-console-exports.html:3061` nomme le fichier téléchargé, et son
- * suffixe est celui d'un ZIP : c'est le gel qui fixe le format d'enveloppe,
- * pas ce module. Ce module ne fait que l'écrire — et le relire, parce que
- * `RG-M13-01` demande que « réimporter l'archive produite reconstitue le
- * domaine à l'identique » : une écriture qu'aucune lecture ne rouvre ne prouve
- * rien.
+ * ÉCRIT ICI, ET NON PAR UNE BIBLIOTHÈQUE : `STACK §3` épingle les dépendances, et
+ * aucune n'écrit d'archive ; en installer une est interdit (`P-16`, `P-24`).
+ * L'enveloppe est donc écrite avec `node:zlib`, du runtime imposé. Ce module NE
+ * CONVERTIT RIEN — il transporte des octets nommés, `ADR-004` n'est pas en cause.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI ÉCRIT ICI, ET NON PAR UNE BIBLIOTHÈQUE
+ * LE DÉTERMINISME EST UNE EXIGENCE (`R-05`, « un aller-retour non idempotent fait
+ * échouer la construction ») : exporter, réimporter, réexporter rend LES MÊMES
+ * OCTETS, or l'horodatage d'une entrée ZIP suffirait à le casser. Les entrées portent
+ * donc toutes le même instant, le plus ancien que le format sache écrire — le format
+ * MS-DOS ne descend pas sous le 1er janvier 1980. Ce n'est pas une valeur
+ * illustrative au sens de `P-02` : c'est un champ d'enveloppe que rien ne lit ; les
+ * dates du produit sont dans l'en-tête de métadonnées de chaque note.
  *
- * `cadrage/STACK-TECHNIQUE.md` §3 épingle les dépendances, et aucune n'écrit
- * d'archive. Le contrat du lot interdit d'en installer une (`P-16`, `P-24` :
- * `node_modules` est un lien vers l'arbre voisin, et un `pnpm add` dans une
- * copie de travail écrit chez le lot d'à côté). L'enveloppe est donc écrite
- * avec `node:zlib`, qui est du runtime imposé — pas une dépendance de plus.
- *
- * Ce module NE CONVERTIT RIEN : il ne connaît ni le format canonique, ni le
- * Markdown. Il transporte des octets nommés. `ADR-004` n'est donc pas en cause
- * ici, et `verif:convertisseur` n'a rien à y voir.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE DÉTERMINISME EST UNE EXIGENCE, PAS UN CONFORT
- *
- * `STACK-TECHNIQUE.md` l. 461 (`R-05`) : « un aller-retour non idempotent fait
- * échouer la construction ». La propriété éprouvée par le lot est plus forte
- * que la simple relecture : exporter, réimporter, réexporter rend LES MÊMES
- * OCTETS. Or l'horodatage d'une entrée ZIP suffirait à la casser.
- *
- * Les entrées portent donc toutes le MÊME instant, et c'est le plus ancien que
- * le format sache écrire — le format MS-DOS ne descend pas sous le 1er janvier
- * 1980. Ce n'est pas une valeur illustrative au sens de `P-02` : ce n'est pas
- * une donnée du produit affichée à un utilisateur, c'est un champ d'enveloppe
- * que rien ne lit. Les dates du produit — création, modification, dernière
- * vérification — sont dans l'en-tête de métadonnées de chaque note, où elles
- * viennent de la base et de nulle part ailleurs.
- *
- * L'ORDRE DES ENTRÉES EST CELUI QU'ON DONNE, et il est conservé à la relecture.
- * C'est lui qui porte l'ordre des dossiers frères — voir `archive.ts`.
+ * L'ORDRE DES ENTRÉES EST CELUI QU'ON DONNE, et il est conservé à la relecture : c'est
+ * lui qui porte l'ordre des dossiers frères.
  */
 import { deflateRawSync, inflateRawSync } from 'node:zlib';
 
-/** Une entrée d'archive : un nom de chemin, et des octets. */
 export interface EntreeDeZip {
-	/** Le chemin dans l'archive, séparé par des barres obliques. */
 	readonly chemin: string;
-	/** Les octets. Un dossier en porte zéro et son chemin finit par le séparateur. */
 	readonly octets: Uint8Array;
 }
 
@@ -55,8 +32,6 @@ export const SEPARATEUR_DE_CHEMIN_DE_ZIP = '/';
 
 /** Le type de média du fichier produit, pour l'en-tête de la réponse. */
 export const TYPE_MEDIA_DE_ZIP = 'application/zip';
-
-/* ═════════════════════════════════════════════════ Les constantes ═══════ */
 
 const SIGNATURE_LOCALE = 0x04034b50;
 const SIGNATURE_CENTRALE = 0x02014b50;
@@ -79,8 +54,6 @@ const TAILLE_ENTETE_LOCAL = 30;
 const TAILLE_ENTREE_CENTRALE = 46;
 const TAILLE_FIN = 22;
 
-/* ═════════════════════════════════════════════════════ La somme ═════════ */
-
 /** La table de la somme de contrôle cyclique, calculée une fois. */
 const TABLE_CRC = ((): Uint32Array => {
 	const table = new Uint32Array(256);
@@ -92,14 +65,11 @@ const TABLE_CRC = ((): Uint32Array => {
 	return table;
 })();
 
-/** La somme de contrôle cyclique d'un bloc d'octets, telle que le format l'exige. */
 export function sommeDeControle(octets: Uint8Array): number {
 	let c = 0xffffffff;
 	for (const o of octets) c = (TABLE_CRC[(c ^ o) & 0xff] as number) ^ (c >>> 8);
 	return (c ^ 0xffffffff) >>> 0;
 }
-
-/* ═════════════════════════════════════════════════════ L'écriture ═══════ */
 
 /** Un défaut d'enveloppe. La lecture ne devine jamais. */
 export class ZipInvalide extends Error {
@@ -201,8 +171,6 @@ export function ecrireZip(entrees: readonly EntreeDeZip[]): Uint8Array<ArrayBuff
 	return sortie;
 }
 
-/* ═════════════════════════════════════════════════════ La lecture ═══════ */
-
 /**
  * Relit l'archive par son répertoire central — jamais en devinant sur les
  * en-têtes locaux. L'ordre rendu est celui du répertoire, c'est-à-dire l'ordre
@@ -252,7 +220,6 @@ export function lireZip(octets: Uint8Array): readonly EntreeDeZip[] {
 	return entrees;
 }
 
-/** Le bloc de fin, cherché depuis la queue : c'est la seule façon de le trouver. */
 function chercherLaFin(vue: Buffer): number {
 	for (let i = vue.length - TAILLE_FIN; i >= 0; i -= 1) {
 		if (vue.readUInt32LE(i) === SIGNATURE_DE_FIN) return i;

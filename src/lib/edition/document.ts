@@ -1,72 +1,39 @@
 /**
- * LES DEUX PORTES DE L'ÉDITEUR — entrer un document, en ressortir un.
+ * LES DEUX PORTES DE L'ÉDITEUR — entrer un document, en ressortir un. `ADR-003`
+ * interdit « toute écriture directe en base d'un document non validé par le schéma
+ * ProseMirror » : rien ne sort de l'éditeur sans passer par `analyserDocument`, et
+ * rien n'y entre sans que le schéma de l'éditeur ait pu le porter ENTIÈREMENT.
  *
- * ADR-003 interdit « toute écriture directe en base d'un document non validé
- * par le schéma ProseMirror ». La contrepartie est ici : rien ne sort de
- * l'éditeur sans passer par `analyserDocument`, et rien n'y entre sans que le
- * schéma de l'éditeur ait pu le porter ENTIÈREMENT.
+ * LE SENS SORTANT — `documentDepuisNoeud` appelle `analyserDocument(noeud.toJSON())`,
+ * et rien d'autre : aucune normalisation, aucun repli, un document mal produit est
+ * REFUSÉ, jamais réparé. Réparer ici ferait de l'éditeur un second lieu où le format
+ * se décide. `Node.toJSON` émet les attributs en TOTALITÉ et n'émet ni `content` ni
+ * `marks` vides — les règles 1 et 2 du format —, les deux formes coïncident donc par
+ * construction, non par précaution.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * LE SENS SORTANT — UNE SEULE LIGNE UTILE, ET C'EST VOULU
+ * LE SENS ENTRANT — `Node.fromJSON` est INDULGENT sur deux points, et les deux sont
+ * des pertes de donnée sans témoin : un attribut que le schéma ne déclare pas est
+ * IGNORÉ (d'où l'appel d'`analyserDocument` EN PREMIER, qui refuse tout attribut
+ * inconnu), et un contenu structurellement invalide n'est PAS contrôlé par `create` —
+ * seul `check()` le fait, il est donc appelé. Une MARQUE inconnue fait bien lever
+ * ProseMirror, mais son message ne dit pas ce que cela coûte : il est remplacé par un
+ * refus qui NOMME la marque, le chemin et la raison.
  *
- * `documentDepuisNoeud` appelle `analyserDocument(noeud.toJSON())`, et rien
- * d'autre. Aucune normalisation, aucun nettoyage, aucun repli : un document que
- * l'éditeur produirait mal est REFUSÉ, jamais réparé (`DocumentInvalide` porte
- * tous les manquements, avec leur chemin). Réparer ici ferait de l'éditeur un
- * second lieu où le format se décide, et la batterie 4 deviendrait verte par
- * construction sur ce point — exactement l'argument de la règle 7.
- *
- * `Node.toJSON` de ProseMirror émet les attributs en TOTALITÉ et n'émet ni
- * `content` ni `marks` vides : c'est ce que les règles 1 et 2 du format
- * décrivent, et `document.ts` le dit en propres termes. Les deux formes
- * coïncident donc par construction, non par précaution.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE SENS ENTRANT — LE REFUS PLUTÔT QUE LA PERTE SILENCIEUSE
- *
- * `Node.fromJSON` de ProseMirror est INDULGENT sur deux points, et les deux
- * sont des pertes de donnée sans témoin :
- *
- *   · un attribut que le schéma ne déclare pas est IGNORÉ. Il ne peut pas s'en
- *     présenter ici : l'entrée est passée par `analyserDocument`, qui refuse
- *     tout attribut inconnu (`unrecognized_keys`). L'appel est donc fait EN
- *     PREMIER, et il est la garde de ce point.
- *   · un contenu structurellement invalide n'est PAS contrôlé : `create` ne
- *     vérifie pas l'expression de contenu, seul `check()` le fait. Il est donc
- *     appelé, et son échec sort par le même refus que le reste.
- *
- * Une MARQUE inconnue, elle, fait bien lever ProseMirror — et c'est le cas de
- * `highlight`, qu'aucune extension installée n'apporte
- * (`MARQUES_DU_FORMAT_SANS_EXTENSION`). Le message brut de ProseMirror ne dit
- * pas ce que cela coûte : il est remplacé par un refus qui NOMME la marque, le
- * chemin, et la raison. C'est la seule chose que ce module ajoute au
- * comportement de la bibliothèque.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI CE N'EST PAS UN SECOND CONVERTISSEUR — ADR-004
- *
- * ADR-004 porte sur `document ⇄ Markdown`, et l'implémentation unique est
- * `src/lib/contenu/markdown.ts`. Ce module ne produit ni ne lit de Markdown :
- * il fait passer un document canonique dans la représentation en mémoire de
- * ProseMirror, et retour. `pnpm verif:convertisseur` compte les implémentations
- * de la conversion Markdown ; aucune n'est ajoutée ici.
+ * CE N'EST PAS UN SECOND CONVERTISSEUR (`ADR-004`) : ce module ne produit ni ne lit
+ * de Markdown, il fait passer un document canonique dans la représentation en mémoire
+ * de ProseMirror, et retour.
  */
 import { Node as NoeudProseMirror } from 'prosemirror-model';
 import { analyserDocument, type Document } from '../contenu/document';
 import { MARQUES_DU_FORMAT_SANS_EXTENSION, schemaDeLEditeur } from './schema';
 
 /**
- * LE REFUS DE L'ÉDITEUR — distinct de `DocumentInvalide`, et la distinction
- * porte l'information utile.
- *
- * `DocumentInvalide` dit « ce document n'est pas du format ». Celui-ci dit
- * « ce document EST du format, et l'éditeur ne sait pas le porter » : ce n'est
- * pas la même faute, ce n'est pas le même responsable, et ce n'est pas la même
- * réparation. Les confondre ferait passer une lacune d'outillage pour une
- * donnée corrompue.
+ * LE REFUS DE L'ÉDITEUR — distinct de `DocumentInvalide`. Celui-là dit « ce document
+ * n'est pas du format » ; celui-ci dit « il EST du format, et l'éditeur ne sait pas
+ * le porter ». Ni la même faute, ni le même responsable, ni la même réparation : les
+ * confondre ferait passer une lacune d'outillage pour une donnée corrompue.
  */
 export class EditeurIncapable extends Error {
-	/** Ce que l'éditeur ne sait pas porter — nom de marque ou de nœud. */
 	readonly manque: readonly string[];
 
 	constructor(manque: readonly string[], detail: string) {
@@ -82,9 +49,9 @@ export class EditeurIncapable extends Error {
 }
 
 /**
- * Les marques du document que le schéma de l'éditeur ne connaît pas, dans
- * l'ordre de première rencontre. Le parcours est celui du JSON, sans passer par
- * ProseMirror : il faut savoir CE QUI manque avant de tenter de construire.
+ * Les marques du document que le schéma de l'éditeur ne connaît pas, dans l'ordre de
+ * première rencontre. Le parcours est celui du JSON, sans passer par ProseMirror : il
+ * faut savoir CE QUI manque avant de tenter de construire.
  */
 function marquesInconnues(valeur: unknown): readonly string[] {
 	const vues: string[] = [];

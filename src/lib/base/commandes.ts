@@ -1,29 +1,20 @@
 /**
- * LES COMMANDES DE LA BASE — migrer, annuler, semer, et les trois contrôles.
+ * LES COMMANDES DE LA BASE — migrer, annuler, semer, et les trois contrôles. Ce que chacune
+ * prouve, et rien de plus :
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE CHAQUE COMMANDE PROUVE, ET CE QU'ELLE NE PROUVE PAS
- *
- *   `migrer`        — que les montées s'appliquent dans l'ordre. Rien d'autre.
+ *   `migrer`        — que les montées s'appliquent dans l'ordre.
  *   `annuler`       — que les descentes s'appliquent en ordre inverse.
- *   `reversibilite` — que monter, descendre et remonter REDONNE LA MÊME BASE,
- *                     par comparaison d'empreintes structurelles. C'est cette
- *                     commande, et elle seule, qui atteste « migration
- *                     réversible » ; `migrer` et `annuler` ne l'attestent pas.
- *   `semer`         — que le schéma accepte le corpus des maquettes gelées.
- *                     Il ne dit rien du corpus qu'il ne charge pas : la liste
- *                     de ce qui n'entre pas est imprimée à chaque exécution.
- *   `unicite`       — que la BASE refuse les violations d'unicité, et qu'elle
- *                     ACCEPTE le cas de RG-STR-02. Une sonde qui ne ferait que
- *                     le premier laisserait passer une unicité trop large.
- *   `coherence`     — que `src/lib/base/schema.ts` décrit la base réellement
- *                     migrée. Sans ce contrôle, les deux dérivent en silence.
+ *   `reversibilite` — que monter, descendre et remonter REDONNE LA MÊME BASE. Elle seule
+ *                     atteste « migration réversible » ; `migrer` et `annuler` ne le font pas.
+ *   `semer`         — que le schéma accepte le corpus des maquettes gelées. Il ne dit rien du
+ *                     corpus qu'il ne charge pas ; la liste est imprimée.
+ *   `unicite`       — que la BASE refuse les violations d'unicité, et qu'elle ACCEPTE le cas
+ *                     de `RG-STR-02`. Ne faire que le premier laisserait passer une unicité
+ *                     trop large.
+ *   `coherence`     — que `src/lib/base/schema.ts` décrit la base réellement migrée.
  *
- * L'EMPREINTE EST STRUCTURELLE, PAS FACTUELLE. Elle relève types énumérés,
- * tables, colonnes, contraintes, index, déclencheurs et fonctions. Elle ignore
- * délibérément le contenu des tables et le journal des migrations lui-même :
- * une base vide et une base semée ont la même empreinte, et c'est voulu — ce
- * qu'on compare, c'est le schéma.
+ * L'EMPREINTE EST STRUCTURELLE : types énumérés, tables, colonnes, contraintes, index,
+ * déclencheurs et fonctions. Elle ignore le contenu des tables et le journal des migrations.
  */
 import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
@@ -112,7 +103,6 @@ export interface Session {
 	fermer(): Promise<void>;
 }
 
-/** Ouvre une session sur la base décrite par l'environnement. */
 export function ouvrir(env: NodeJS.ProcessEnv = process.env): Session {
 	const config = configurationDeConnexion(env);
 	const pool = new pg.Pool(config);
@@ -127,15 +117,12 @@ export function ouvrir(env: NodeJS.ProcessEnv = process.env): Session {
 	};
 }
 
-/* ═══════════════════════════════════════════════ Les migrations ═════════ */
-
 export interface Migration {
 	readonly nom: string;
 	readonly montee: string;
 	readonly descente: string;
 }
 
-/** Les migrations du dépôt, dans l'ordre de leur nom. */
 export async function lireLesMigrations(racine = process.cwd()): Promise<readonly Migration[]> {
 	const dossier = join(racine, DOSSIER_DES_MIGRATIONS);
 	const fichiers = await readdir(dossier);
@@ -166,7 +153,6 @@ function empreinteDeTexte(texte: string): string {
 	return createHash('sha256').update(texte, 'utf8').digest('hex');
 }
 
-/** Les noms des migrations déjà appliquées, dans l'ordre d'application. */
 export async function migrationsAppliquees(pool: pg.Pool): Promise<readonly string[]> {
 	await assurerLeJournal(pool);
 	const { rows } = await pool.query<{ nom: string }>(
@@ -175,7 +161,6 @@ export async function migrationsAppliquees(pool: pg.Pool): Promise<readonly stri
 	return rows.map((r) => r.nom);
 }
 
-/** Applique les migrations en attente. Chacune dans sa propre transaction. */
 export async function migrer(pool: pg.Pool, racine = process.cwd()): Promise<readonly string[]> {
 	const migrations = await lireLesMigrations(racine);
 	const deja = new Set(await migrationsAppliquees(pool));
@@ -232,8 +217,6 @@ export async function annuler(
 	}
 	return annulees;
 }
-
-/* ═══════════════════════════════════════════════ L'empreinte ════════════ */
 
 const RELEVE_STRUCTUREL = `
 WITH exclues AS (SELECT '${TABLE_DU_JOURNAL}'::text AS nom)
@@ -309,8 +292,6 @@ export async function empreinte(pool: pg.Pool): Promise<Empreinte> {
 	const lignes = rows.map((r) => r.ligne);
 	return { somme: empreinteDeTexte(lignes.join('\n')), lignes };
 }
-
-/* ═══════════════════════════════════════════════ La semence ═════════════ */
 
 export interface RapportDeSemence {
 	readonly comptes: number;
@@ -388,13 +369,10 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 		);
 		await tx.insert(modulesDeDomaine).values(lignesModule);
 
-		/* ── Les comptes, APRÈS les domaines depuis `005` ──────────────────────
-		   Ils étaient posés en premier, « la note a besoin de son auteur ». Depuis
-		   `005` ils ont besoin de leur DOMAINE PRINCIPAL, et l'ordre s'inverse :
-		   univers → domaines → comptes → dossiers → notes. Le rattachement est
-		   écrit À L'INSERTION plutôt que par un UPDATE d'après-coup — un UPDATE
-		   laisserait, l'espace d'une instruction, cinq comptes sans périmètre, un
-		   état qu'aucune règle ne décrit. */
+		/* ── Les comptes, APRÈS les domaines depuis `005` : ils ont besoin de leur
+		   DOMAINE PRINCIPAL, d'où univers → domaines → comptes → dossiers → notes. Le
+		   rattachement est écrit À L'INSERTION plutôt que par un UPDATE d'après-coup,
+		   qui laisserait cinq comptes sans périmètre le temps d'une instruction. */
 		const comptesPoses = await tx
 			.insert(comptes)
 			.values(
@@ -450,14 +428,11 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 			);
 		}
 
-		/* ── LES DROITS DE DOSSIER, APRÈS LES DOSSIERS ────────────────────────
-		   `RG-DRO-02` : sans droit explicite, aucune capacité. Sans ces lignes,
-		   les quatre comptes non administrateurs du jeu ne peuvent RIEN écrire, et
-		   le corpus de démonstration cesse d'être fidèle aux maquettes qu'il sert
-		   — la planche de V-14 rend « Droits : écriture » par défaut, pour un
-		   compte référent. La dérivation est celle de `CDC` §2.3 et vit dans
-		   `lignesDeDroitDeDossier()` ; l'administrateur n'en reçoit AUCUNE
-		   (`RG-DRO-03`). */
+		/* ── LES DROITS DE DOSSIER, APRÈS LES DOSSIERS. `RG-DRO-02` : sans droit
+		   explicite, aucune capacité — sans ces lignes, les quatre comptes non
+		   administrateurs du jeu ne peuvent RIEN écrire. La dérivation est celle de
+		   `CDC §2.3` et vit dans `lignesDeDroitDeDossier()` ; l'administrateur n'en
+		   reçoit AUCUNE (`RG-DRO-03`). */
 		const lignesDroit = lignesDeDroitDeDossier();
 		if (lignesDroit.length > 0) {
 			await tx.insert(droitsDeDossier).values(
@@ -473,12 +448,10 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 		}
 
 		/* Le référentiel. */
-		/* LES TYPES DE NOTE SONT POSÉS PAR LA MIGRATION `007`, pas par la semence :
-		   ce sont des valeurs de schéma, et une installation neuve doit pouvoir
-		   écrire sa première note sans avoir chargé le jeu de démonstration. Le
-		   semis les repose donc SANS ÉCHOUER SI ELLES SONT LÀ — une base montée
-		   avant `007` n'en a pas —, puis relit la table pour bâtir sa table de
-		   correspondance : les lignes ignorées ne reviennent pas d'un `returning`. */
+		/* LES TYPES DE NOTE SONT POSÉS PAR LA MIGRATION `007`, pas par la semence : une
+		   installation neuve doit pouvoir écrire sa première note sans avoir chargé le
+		   jeu de démonstration. Le semis les repose SANS ÉCHOUER SI ELLES SONT LÀ, puis
+		   relit la table : les lignes ignorées ne reviennent pas d'un `returning`. */
 		await tx
 			.insert(typesDeNote)
 			.values(lignesDeTypeDeNote().map((t) => ({ ...t })))
@@ -597,10 +570,9 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 			.returning({ id: notes.id, identifiant: notes.identifiant });
 		const noteParIdentifiant = new Map(notesPosees.map((n) => [n.identifiant, n.id]));
 
-		/* L'ORDRE DU JEU EST ÉCRIT, depuis `005`. `n.etiquettes` est le tableau du
-		   jeu, sans retri : son rang EST le rang. Sans cette colonne, la seule
-		   restitution possible était un tri alphabétique — déterministe, mais faux
-		   sur 25 notes de 32. */
+		/* L'ORDRE DU JEU EST ÉCRIT : `n.etiquettes` est le tableau du jeu, sans retri —
+		   son rang EST le rang. Sans cette colonne, la seule restitution possible était
+		   un tri alphabétique, faux sur 25 notes de 32. */
 		const lignesEtiquetteDeNote = lignesNote.flatMap((n) =>
 			n.etiquettes.map((libelle, rang) => ({
 				noteId: exigerDefini(noteParIdentifiant.get(n.identifiant), `note ${n.identifiant}`),
@@ -628,11 +600,9 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 			}))
 		);
 
-		/* LES VERSIONS — sans elles, l'historique (V-15) et la comparaison (V-16)
-		   n'ont rien à montrer. Ce chargement était déclaré hors périmètre et
-		   imprimé comme tel à chaque exécution ; le périmètre est rouvert.
-		   `versions.numero` est unique PAR NOTE, et le corpus donne les numéros :
-		   ils sont repris tels quels, jamais renumérotés. */
+		/* LES VERSIONS — sans elles, l'historique (V-15) et la comparaison (V-16) n'ont
+		   rien à montrer. `versions.numero` est unique PAR NOTE, et le corpus donne les
+		   numéros : ils sont repris tels quels, jamais renumérotés. */
 		const lignesVersion = lignesDeVersion();
 		if (lignesVersion.length > 0) {
 			await tx.insert(versions).values(
@@ -670,16 +640,12 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 		});
 		await tx.insert(verifications).values(lignesVerification);
 
-		/* ── LE CONTRÔLE D'ALLER-RETOUR, DANS LA MÊME TRANSACTION ────────────
-		   Ce qui a été ÉCRIT n'est pas ce qui sera LU : un `timestamptz` traverse
-		   une conversion de fuseau à l'aller comme au retour, et une date décalée
-		   d'un jour décale l'ancienneté, donc le niveau de fraîcheur d'une note
-		   posée sur un seuil. Le contrôle relit donc les dates DEPUIS LA BASE et
-		   rejoue `niveauFraicheur()` — l'implémentation unique de P-01 — pour
-		   comparer au niveau que les maquettes portent.
-
-		   Il est DANS la transaction : s'il échoue, rien n'est chargé. Une base
-		   à moitié semée qui ment sur la fraîcheur serait pire que pas de base. */
+		/* ── LE CONTRÔLE D'ALLER-RETOUR, DANS LA MÊME TRANSACTION. Ce qui a été ÉCRIT
+		   n'est pas ce qui sera LU : un `timestamptz` traverse une conversion de fuseau
+		   à l'aller comme au retour, et une date décalée d'un jour décale le niveau de
+		   fraîcheur d'une note posée sur un seuil. Le contrôle relit donc les dates
+		   DEPUIS LA BASE et rejoue `niveauFraicheur()`. S'il échoue, rien n'est chargé :
+		   une base à moitié semée qui ment sur la fraîcheur serait pire que rien. */
 		const relues = await tx
 			.select({
 				identifiant: notes.identifiant,
@@ -730,12 +696,9 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 	});
 }
 
-/* ═══════════════════════════════════════════════ Les sondes d'unicité ═══ */
-
 export interface ResultatDeSonde {
 	readonly nom: string;
 	readonly regle: string;
-	/** Ce que la sonde attend : un refus de la base, ou une acceptation. */
 	readonly attendu: 'refus' | 'acceptation';
 	readonly obtenu: 'refus' | 'acceptation';
 	readonly code: string;
@@ -752,13 +715,10 @@ interface Sonde {
 }
 
 /**
- * LES SONDES. Chacune écrit dans une transaction qui est TOUJOURS annulée :
- * la base n'en garde rien, et l'ordre des sondes n'a aucune importance.
- *
- * Trois d'entre elles attendent une ACCEPTATION, et ce n'est pas un remplissage.
- * Une unicité trop large refuserait aussi ces cas-là ; sans elles, la sonde
- * serait verte pour un schéma qui interdit ce que RG-STR-02 autorise
- * expressément — « deux univers peuvent avoir chacun un domaine "support" ».
+ * LES SONDES. Chacune écrit dans une transaction TOUJOURS annulée : la base n'en
+ * garde rien, et leur ordre n'importe pas. Trois attendent une ACCEPTATION, et ce
+ * n'est pas un remplissage : une unicité trop large refuserait aussi ces cas-là, et
+ * la sonde serait verte pour un schéma qui interdit ce que `RG-STR-02` autorise.
  */
 function sondes(): readonly Sonde[] {
 	const nouvelUnivers = (identifiant: string, nom: string): string =>
@@ -933,7 +893,6 @@ function sondes(): readonly Sonde[] {
 	];
 }
 
-/** Joue les sondes d'unicité. Aucune n'écrit durablement : tout est annulé. */
 export async function verifierUnicite(pool: pg.Pool): Promise<readonly ResultatDeSonde[]> {
 	const resultats: ResultatDeSonde[] = [];
 	for (const sonde of sondes()) {
@@ -971,8 +930,6 @@ export async function verifierUnicite(pool: pg.Pool): Promise<readonly ResultatD
 	return resultats;
 }
 
-/* ═══════════════════════════════════ La cohérence schéma ↔ catalogue ════ */
-
 export interface EcartDeCoherence {
 	readonly quoi: string;
 	readonly detail: string;
@@ -986,13 +943,10 @@ interface ColonneDuCatalogue {
 }
 
 /**
- * Compare `src/lib/base/schema.ts` au catalogue de la base migrée : mêmes
- * tables, mêmes colonnes, mêmes types de base, même nullabilité.
- *
- * CE QU'ELLE NE REGARDE PAS, et il faut le savoir : les valeurs par défaut, le
- * détail des contraintes CHECK et les actions référentielles. Le contrôle
- * attrape la dérive de structure — une colonne ajoutée d'un côté seulement —,
- * pas la dérive de comportement.
+ * Compare `src/lib/base/schema.ts` au catalogue de la base migrée : mêmes tables,
+ * colonnes, types de base, nullabilité. ELLE NE REGARDE PAS les valeurs par défaut,
+ * le détail des CHECK ni les actions référentielles — elle attrape la dérive de
+ * structure, pas celle de comportement.
  */
 export async function verifierCoherence(pool: pg.Pool): Promise<readonly EcartDeCoherence[]> {
 	const { rows } = await pool.query<ColonneDuCatalogue>(`
@@ -1119,7 +1073,6 @@ function typeAttendu(type: string): string | null {
 /** La commande de sortie du lot : le SQL brut, pour un diagnostic à la main. */
 export const RELEVE_STRUCTUREL_SQL = RELEVE_STRUCTUREL;
 
-/** Une requête de comptage, pour le rapport de chargement. */
 export async function compter(session: Session, table: string): Promise<number> {
 	const { rows } = await session.pool.query<{ n: string }>(`SELECT count(*) AS n FROM ${table}`);
 	return Number(rows[0]?.n ?? 0);
@@ -1128,9 +1081,6 @@ export async function compter(session: Session, table: string): Promise<number> 
 /** Réexporté pour le lanceur : la marque d'un SQL brut piloté par Drizzle. */
 export { sql };
 
-/* ═══════════════════════════════ Le premier administrateur ══════════════ */
-
-/** Ce qu'il faut pour ouvrir la porte d'une instance neuve. */
 export interface PremierAdministrateur {
 	readonly identifiant: string;
 	readonly nom: string;
@@ -1139,34 +1089,17 @@ export interface PremierAdministrateur {
 }
 
 /**
- * CRÉE LE PREMIER ADMINISTRATEUR D'UNE INSTANCE.
+ * CRÉE LE PREMIER ADMINISTRATEUR D'UNE INSTANCE — sans elle, une instance fraîchement migrée
+ * n'a AUCUN compte et personne ne peut s'y connecter ; le seul chemin restant serait
+ * `base:semer`, c'est-à-dire ouvrir une instance de production avec les identités d'une
+ * maquette.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI CETTE COMMANDE MANQUAIT, ET CE QUE SON ABSENCE COÛTAIT
- *
- * MESURÉ LE 21/08/2026 : une instance fraîchement migrée n'a AUCUN compte, et
- * rien dans le dépôt n'en crée un — ni commande, ni route d'installation, ni
- * ligne de documentation. On ne pouvait donc pas SE CONNECTER à une instance
- * neuve. Le seul chemin praticable était `base:semer`, qui charge les cinq
- * comptes du jeu de démonstration — c'est-à-dire d'ouvrir une instance de
- * production avec les identités d'une maquette.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * ELLE REFUSE DE S'EXÉCUTER DEUX FOIS
- *
- * « Premier » n'est pas un mot de commodité : la commande n'écrit que si la
- * table est VIDE. Un administrateur créé en ligne de commande contourne toute
- * traçabilité — pas de demandeur, pas de validation, pas de journal —, et ce
- * contournement ne se justifie que pour l'amorçage. Les comptes suivants se
- * créent dans la console, par quelqu'un qui répond de ce qu'il fait.
- *
- * LE MOT DE PASSE N'EST NI ENGENDRÉ, NI IMPRIMÉ, NI DEVINÉ : l'appelant le
- * fournit, et seul son condensat Argon2id est écrit — même chemin que la
- * connexion, `$lib/auth/mots-de-passe`.
- *
- * AUCUN DOMAINE DE RATTACHEMENT : une instance neuve n'en a pas encore. La
- * colonne l'admet, et `RG-DRO-03` dispense de toute façon l'administrateur des
- * droits de dossier.
+ * ELLE REFUSE DE S'EXÉCUTER DEUX FOIS : elle n'écrit que si la table est VIDE. Un
+ * administrateur créé en ligne de commande contourne toute traçabilité, et ce contournement ne
+ * se justifie que pour l'amorçage. LE MOT DE PASSE N'EST NI ENGENDRÉ, NI IMPRIMÉ : l'appelant
+ * le fournit, et seul son condensat Argon2id est écrit. AUCUN DOMAINE DE RATTACHEMENT : une
+ * instance neuve n'en a pas encore, et `RG-DRO-03` dispense l'administrateur des droits de
+ * dossier.
  */
 export async function creerLePremierAdministrateur(
 	session: Session,

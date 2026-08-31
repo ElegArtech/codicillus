@@ -1,43 +1,21 @@
 /**
- * L'UNIVERS « ORGANISATION » — le jeu de semence qui montre que le produit ne
- * connaît aucun métier.
+ * L'UNIVERS « ORGANISATION » — la seconde couche du jeu de semence.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI CE FICHIER EXISTE, ET POURQUOI IL N'EST PAS DANS `seeds/corpus.ts`
+ * `seeds/corpus.ts` n'est pas un jeu libre : c'est la TRANSCRIPTION des maquettes
+ * gelées, et `seeds/corpus.test.ts` le prouve en relisant `mockups/`. Y ajouter une
+ * note casse le gel — mesuré : 39 tests tombent. Or le corpus du gel est ENTIÈREMENT
+ * INFORMATIQUE, ce qui donne du produit une idée fausse : les types de fiche et de
+ * relation se CRÉENT DANS LA CONSOLE, rien dans le produit ne parle d'informatique.
  *
- * `seeds/corpus.ts` n'est pas un jeu de démonstration libre : c'est la
- * TRANSCRIPTION des maquettes gelées, et `seeds/corpus.test.ts` le prouve en
- * relisant `mockups/` pour comparer valeur par valeur. C'est cet invariant qui
- * garantit qu'une vue sans propriété rend exactement ce que sa maquette montre.
- * Y ajouter une note, c'est casser le gel — mesuré : 39 tests tombent.
+ * Cette couche ne touche donc ni les maquettes, ni `corpus.ts`, ni le rendu par
+ * défaut des vues : elle n'entre QUE dans la base, par `semer()`. Elle apporte un
+ * univers `Organisation` et trois domaines, deux types de fiche qui ne nomment aucune
+ * technologie, deux types de relation, quatorze notes portant la même mécanique que
+ * les autres, et douze relations dont DEUX QUI FRANCHISSENT la frontière des univers
+ * — c'est le point : le graphe ne s'arrête pas au périmètre d'un métier.
  *
- * Or le corpus du gel est ENTIÈREMENT INFORMATIQUE — trente-deux notes de
- * sauvegardes, de serveurs et de bases —, ce qui donne du produit une idée
- * fausse. Les types de fiche et les types de relation se CRÉENT DANS LA
- * CONSOLE : rien dans le produit ne parle d'informatique. Le jeu de semence,
- * lui, le laissait croire.
- *
- * Ce fichier est donc la seconde couche : elle ne touche ni les maquettes, ni
- * `corpus.ts`, ni le rendu par défaut des vues. Elle n'entre QUE dans la base,
- * par `semer()`. Le gel reste le gel ; le produit montre ce qu'il sait faire.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QU'ELLE APPORTE
- *
- *   · un univers `Organisation` et trois domaines — Gouvernance, Méthodes et
- *     qualité, Ressources humaines ;
- *   · deux types de fiche qui ne nomment aucune technologie — `Processus` et
- *     `Prestataire` — avec leurs champs, pour montrer qu'un type se définit ;
- *   · deux types de relation de même nature — « est validé par », « s'appuie
- *     sur » ;
- *   · quatorze notes portant la même mécanique que les autres : fraîcheur aux
- *     trois niveaux, deux registres, brouillon, visibilité publique, pièces
- *     jointes, étiquettes ;
- *   · douze relations, dont DEUX QUI FRANCHISSENT la frontière des univers —
- *     c'est le point : le graphe ne s'arrête pas au périmètre d'un métier.
- *
- * Les dates sont dérivées de `DATE_REFERENCE`, comme celles du corpus : les
- * deux jeux vieillissent ensemble, et aucune fraîcheur ne diverge de l'autre.
+ * Les dates sont dérivées de `DATE_REFERENCE`, comme celles du corpus : les deux jeux
+ * vieillissent ensemble.
  */
 import { analyserDocument } from '../contenu/document';
 import { instantAvantReference } from './semence';
@@ -65,8 +43,6 @@ function corps(texte: string): LigneDeNote['corpsReference'] {
 function corpsVide(): LigneDeNote['corpsReference'] {
 	return analyserDocument({ type: 'doc', content: [{ type: 'paragraph' }] });
 }
-
-/* ═══════════════════════════════════ La structure ═══════════════════════ */
 
 export function universDOrganisation(): readonly LigneDUnivers[] {
 	return [
@@ -148,8 +124,6 @@ export function dossiersDOrganisation(): readonly LigneDeDossier[] {
 		};
 	});
 }
-
-/* ═══════════════════════════════════ Le référentiel ═════════════════════ */
 
 /**
  * DEUX TYPES DE FICHE QUI NE NOMMENT AUCUNE TECHNOLOGIE. Leur ordre reprend
@@ -267,8 +241,6 @@ export function typesDeRelationDOrganisation(): readonly LigneDeTypeDeRelation[]
 	];
 }
 
-/* ═══════════════════════════════════ Les notes ══════════════════════════ */
-
 interface Graine {
 	readonly id: string;
 	readonly titre: string;
@@ -278,9 +250,7 @@ interface Graine {
 	readonly domaine: string;
 	readonly dossier: readonly string[];
 	readonly auteur: string;
-	/** Jours écoulés depuis la dernière vérification, à la date de référence. */
 	readonly jours: number;
-	/** Jours écoulés depuis la dernière modification. */
 	readonly modifie: number;
 	readonly vues: number;
 	readonly brouillon?: boolean;
@@ -528,7 +498,6 @@ export function notesDOrganisation(): readonly LigneDeNote[] {
 	});
 }
 
-/** Les étiquettes que ces notes introduisent, dédoublonnées et triées. */
 export function etiquettesDOrganisation(): readonly string[] {
 	return [...new Set(GRAINES.flatMap((g) => g.etiquettes))].sort((a, b) =>
 		a.localeCompare(b, 'fr')
@@ -536,12 +505,9 @@ export function etiquettesDOrganisation(): readonly string[] {
 }
 
 /**
- * LES RELATIONS, DONT DEUX QUI FRANCHISSENT LA FRONTIÈRE DES UNIVERS.
- *
- * `n-astreinte` et `n-purge-sauv` appartiennent au corpus du gel, côté
- * technique ; elles s'appuient ici sur une politique et sur un registre de
- * traitements. C'est ce que la cartographie doit montrer : le graphe ne
- * s'arrête pas au périmètre d'un métier.
+ * LES RELATIONS, DONT DEUX QUI FRANCHISSENT LA FRONTIÈRE DES UNIVERS : `n-astreinte`
+ * et `n-purge-sauv` appartiennent au corpus du gel, côté technique, et s'appuient ici
+ * sur une politique et un registre de traitements.
  */
 export function relationsDOrganisation(): readonly LigneDeRelation[] {
 	return [
@@ -606,14 +572,10 @@ export function relationsDOrganisation(): readonly LigneDeRelation[] {
 /**
  * LA FRAÎCHEUR ATTENDUE DE CHAQUE NOTE, DÉCLARÉE.
  *
- * `semer()` relit les dates DEPUIS LA BASE et rejoue `niveauFraicheur()` pour
- * vérifier qu'un aller-retour `timestamptz` n'a pas décalé une note d'un seuil.
- * Le contrôle compare au niveau ANNONCÉ — pour le corpus, celui que la maquette
- * porte ; pour ces quatorze notes, celui-ci. Le déduire de `jours` viderait le
- * contrôle de son sens : il ne comparerait plus qu'un calcul à lui-même.
- *
- * Seuils par défaut : frais en deçà de 90 jours, vieillissant jusqu'à 180,
- * obsolète probable au-delà.
+ * `semer()` relit les dates DEPUIS LA BASE et rejoue `niveauFraicheur()` pour vérifier
+ * qu'un aller-retour `timestamptz` n'a pas décalé une note d'un seuil. Le contrôle
+ * compare au niveau ANNONCÉ : le déduire de `jours` viderait le contrôle de son sens
+ * — il ne comparerait plus qu'un calcul à lui-même.
  */
 export function fraicheurAttendueDOrganisation(): ReadonlyMap<string, 'frais' | 'vieil' | 'obs'> {
 	return new Map([

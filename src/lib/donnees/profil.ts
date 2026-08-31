@@ -1,28 +1,11 @@
 /**
- * LE PROFIL, LE COMPTE ET LA RÉINITIALISATION — la donnée de V-25 et de V-06.
+ * Le profil, le compte et la réinitialisation — la donnée de V-25 et de V-06. Les DÉCISIONS
+ * d'un côté, éprouvables sans base ; les REQUÊTES de l'autre, qui ne décident rien.
  *
- * Lot `T-038`, câblage. Ce module suit la répartition que `T-011` a posée pour
- * les droits et que `T-012` a reprise pour l'authentification : les DÉCISIONS
- * d'un côté, éprouvables sans base ; les REQUÊTES de l'autre, qui ne décident
- * rien. Une règle qu'on ne peut éprouver qu'avec un serveur debout est une
- * règle qu'on éprouve rarement.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QU'IL N'ÉCRIT PAS
- *
- *  - AUCUNE RÈGLE DE DROIT. `src/lib/droits/resolution.ts` est l'implémentation
- *    unique ; le périmètre de lecture est demandé à `identifiantsLisibles()`,
- *    jamais recalculé.
- *  - AUCUN SECOND MÉCANISME DE « RESTER CONNECTÉ ». `ARB-054` §2 est explicite :
- *    le lot qui porte V-25 « ne crée pas un second mécanisme : il lit et écrit
- *    le même ». Le même veut dire `sessions.souvenir`, posé par `T-012` à la
- *    connexion et lu par `sessionExpiree()` de `src/lib/auth/sessions.ts`. Ce
- *    module ne fait que le lire et l'écrire sur la session COURANTE.
- *  - AUCUN CALCUL DE FRAÎCHEUR. `P-01` : V-25 n'affiche aucun signal de
- *    fraîcheur, et rien n'est recalculé ici. Les seuils traversent ce module
- *    dans le contexte de lecture, sans être relus.
- *  - AUCUNE VALEUR DE POLITIQUE DE MOT DE PASSE choisie ici : elle est
- *    TRANSCRITE du gel (voir §4).
+ * CE QU'IL N'ÉCRIT PAS : aucune règle de droit — le périmètre est demandé à
+ * `identifiantsLisibles()` ; aucun SECOND mécanisme de « rester connecté » — `ARB-054` §2 :
+ * « il lit et écrit le même », c'est-à-dire `sessions.souvenir` ; aucun calcul de fraîcheur ;
+ * aucune valeur de politique de mot de passe choisie ici, elles sont TRANSCRITES du gel.
  */
 import { and, count, eq, isNull, ne } from 'drizzle-orm';
 import type { Base } from '../base/acces';
@@ -34,22 +17,14 @@ import { identifiantsLisibles, type DonneeSansContrepartie } from './accueil';
 import { lireNotes, ROLE_DEPUIS_ENUM, type ContexteDeLecture } from './lecture';
 import type { Note } from '../../../seeds/corpus';
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   1. CE QUE LA BASE NE PORTE PAS — compté, jamais comblé
-
-   `P-02` : « aucune valeur illustrative ». Une donnée que la base ne porte pas
-   ne se fabrique pas ; elle se nomme. Le type est celui de `T-031`
-   (`accueil.ts`), réemployé pour que les deux listes se comptent ensemble.
-   ═════════════════════════════════════════════════════════════════════════ */
+/* 1. Ce que la base ne porte pas — compté, jamais comblé. Le type est celui
+   d'`accueil.ts`, réemployé pour que les deux listes se comptent ensemble. */
 
 /**
- * LES SIX DONNÉES DE V-25 ET V-06 QUE LA BASE NE PORTE PAS — relevées sur
- * `src/lib/base/schema.ts`, table par table, jamais supposées.
- *
- * Elles sont rangées ici et non dans `accueil.ts` parce qu'elles portent sur
- * d'autres écrans ; `accueil.test.ts` et `profil.test.ts` les comptent chacun
- * de leur côté, de sorte qu'une migration future fasse rougir un test plutôt
- * que de laisser un commentaire périmé derrière elle.
+ * Les données de V-25 et V-06 que la base ne porte pas — relevées sur le schéma,
+ * table par table. Elles sont ici et non dans `accueil.ts` parce qu'elles portent
+ * sur d'autres écrans, et chaque test les compte de son côté : une migration future
+ * fera rougir un test plutôt que de laisser un commentaire périmé.
  */
 export const SANS_CONTREPARTIE_EN_BASE: readonly DonneeSansContrepartie[] = [
 	{
@@ -98,24 +73,14 @@ export const SANS_CONTREPARTIE_EN_BASE: readonly DonneeSansContrepartie[] = [
 	}
 ];
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   2. LE PROFIL DU COMPTE CONNECTÉ — ce que la base porte, et qui n'atteint
-      pas encore l'écran
-
-   La base porte huit des neuf valeurs d'identité que V-25 affiche. Ce que
-   l'écran en reçoit est une autre affaire, et c'est un écart déclaré au
-   rapport du lot : `src/vues/V-25.svelte` ne déclare que deux propriétés —
-   `vecteur` et `notes` — et lit l'identité affichée dans `seeds/corpus.ts`.
-   Aucun chargeur ne peut donc la lui passer, et `src/vues/` est hors du
-   périmètre de ce lot.
-   ═════════════════════════════════════════════════════════════════════════ */
+/* 2. Le profil du compte connecté. La base porte huit des neuf valeurs d'identité
+   que V-25 affiche ; ce que l'écran en reçoit est une autre affaire — la vue ne
+   déclare que deux propriétés et lit l'identité affichée dans le jeu de semence. */
 
 /**
- * Le profil tel que la base le porte.
- *
- * `derniereConnexionLe` est un INSTANT et le reste : le libellé relatif du gel
- * n'a pas de règle écrite, et il figure à la liste du §1 plutôt que d'être
- * fabriqué ici.
+ * Le profil tel que la base le porte. `derniereConnexionLe` est un INSTANT et le
+ * reste : le libellé relatif du gel n'a pas de règle écrite, et il figure au
+ * recensement du §1 plutôt que d'être fabriqué ici.
  */
 export interface ProfilDuCompte {
 	readonly compteId: string;
@@ -153,15 +118,11 @@ export async function lireLeProfil(base: Base, compteId: string): Promise<Profil
 }
 
 /**
- * Les notes que l'identité peut lire, dans la forme que V-25 déclare.
- *
- * ELLES SERVENT DEUX FOIS, ET LA SECONDE DÉCIDE DE LEUR PORTÉE : la coquille
- * en déduit l'arborescence du rail (`Coquille.svelte`, `sectionsDuRail`), et
- * l'onglet « Distinctions » y compte les contributions. Le rail interdit donc
- * le corpus entier : `RG-ACC-01` — aucun contenu hors périmètre, par aucun
- * chemin. Conséquence assumée et remontée au rapport : les indicateurs de
- * contribution ne comptent que les notes du PÉRIMÈTRE de l'appelant, ce qui
- * n'est pas la même chose que « toutes les notes dont il est l'auteur ».
+ * Les notes que l'identité peut lire, dans la forme que V-25 déclare. ELLES SERVENT DEUX
+ * FOIS, ET LA SECONDE DÉCIDE DE LEUR PORTÉE : la coquille en déduit l'arborescence du rail,
+ * et l'onglet « Distinctions » y compte les contributions. Le rail interdit donc le corpus
+ * entier (`RG-ACC-01`), d'où une conséquence assumée : les indicateurs de contribution ne
+ * comptent que les notes du PÉRIMÈTRE.
  */
 export async function lireLesNotesDuPerimetre(
 	base: Base,
@@ -174,28 +135,17 @@ export async function lireLesNotesDuPerimetre(
 	return corpus.filter((n) => retenus.has(n.id));
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   2 bis. CE QUE V-25 AFFICHE DU PROFIL, ET COMMENT IL Y ARRIVE
+/* 2 bis. Ce que V-25 affiche du profil.
 
-   `T-038` écrivait ici : « le profil RÉEL est lu, et il n'est PAS renvoyé à la
-   page », faute d'une propriété qui le reçoive. La propriété existe désormais —
-   `profilDuCompte` de `src/vues/V-25.svelte` —, et cette section met le profil
-   dans la forme exacte que la vue attend.
-
-   AUCUNE RÈGLE DE DATE N'EST ÉCRITE ICI. `formaterDateFr()` et
-   `formaterDateHeureFr()` de `../dates` sont l'implémentation unique du dépôt ;
-   ce module ne formate rien lui-même. Ce qu'il ne peut pas rendre — le libellé
-   RELATIF que le gel écrit — reste au recensement du §1 : l'instant est vrai,
-   sa mise en mots relative n'a pas de règle écrite.
-   ═════════════════════════════════════════════════════════════════════════ */
+   AUCUNE RÈGLE DE DATE N'EST ÉCRITE ICI : `formaterDateFr()` et
+   `formaterDateHeureFr()` de `../dates` sont l'implémentation unique. Ce qui ne
+   peut pas être rendu — le libellé RELATIF du gel — reste au recensement du §1 :
+   l'instant est vrai, sa mise en mots relative n'a pas de règle écrite. */
 
 /**
- * LE MARQUEUR D'UNE DONNÉE ABSENTE — `P-02`, « une donnée indisponible
- * s'affiche comme telle ».
- *
- * Le cadratin est le marqueur que le GEL emploie lui-même pour une valeur qu'il
- * n'a pas encore : `V-24:1287` pose `—` au sous-titre du dépôt tant qu'aucun
- * scénario n'est retenu. Rien n'est inventé ici, la forme est reprise.
+ * Le marqueur d'une donnée absente — `P-02`, « une donnée indisponible s'affiche
+ * comme telle ». Le cadratin est le marqueur que le GEL emploie lui-même pour une
+ * valeur qu'il n'a pas encore.
  */
 export const RIEN_A_AFFICHER = '—';
 
@@ -215,21 +165,18 @@ export interface ProfilAffiche {
 }
 
 /**
- * Le profil de la base, mis en forme pour l'écran.
- *
- * `domaine` à `null` est un état PRÉVU — `RG-M14-04` veut le domaine principal
- * détachable —, et il s'affiche comme tel plutôt que par une chaîne vide, qui
- * laisserait croire à un libellé perdu.
+ * Le profil de la base, mis en forme pour l'écran. `domaine` à `null` est un état
+ * PRÉVU — `RG-M14-04` veut le domaine principal détachable — et il s'affiche comme
+ * tel plutôt que par une chaîne vide, qui laisserait croire à un libellé perdu.
  */
 export function profilAffiche(profil: ProfilDuCompte): ProfilAffiche {
 	return {
 		nom: profil.nom,
 		identifiant: profil.identifiant,
 		courriel: profil.courriel,
-		/* La colonne porte l'ÉNUMÉRÉ ; l'écran porte le libellé français. La
-		   correspondance est celle de `../donnees/lecture.ts`, l'unique table du
-		   dépôt — en écrire une seconde ici, c'est se donner deux vocabulaires de
-		   rôle qui finiront par diverger (`roleDepuisLeLibelle()` le dit déjà). */
+		/* La colonne porte l'ÉNUMÉRÉ, l'écran porte le libellé français. La
+		   correspondance est celle de `./lecture.ts`, l'unique table du dépôt : en
+		   écrire une seconde donnerait deux vocabulaires de rôle. */
 		role: ROLE_DEPUIS_ENUM[profil.role] ?? profil.role,
 		domaine: profil.domaine ?? RIEN_A_AFFICHER,
 		arrivee: formaterDateFr(profil.arriveLe),
@@ -241,15 +188,10 @@ export function profilAffiche(profil: ProfilDuCompte): ProfilAffiche {
 }
 
 /**
- * LES INITIALES D'UN NOM — la règle du gel, pour les appelants SERVEUR.
- *
- * `window.contributeurs` de la maquette la pose, et V-10, V-11, V-25 et V-40 la
- * transcrivent chacune pour leur propre rendu. Elle est ici pour que le CÔTÉ
- * SERVEUR n'en écrive pas une cinquième : la coquille reçoit un
- * `UtilisateurCourant`, dont les initiales sont un champ obligatoire, et un
- * chargeur qui les recalculerait à la main serait la seconde définition.
- *
- * Vérifié : « Karim Belhadj » rend « KB », soit exactement `MOI.initiales`.
+ * Les initiales d'un nom — la règle du gel, pour les appelants SERVEUR. Quatre vues
+ * la transcrivent chacune pour leur propre rendu ; elle est ici pour que le côté
+ * serveur n'en écrive pas une cinquième, la coquille recevant un
+ * `UtilisateurCourant` dont les initiales sont un champ obligatoire.
  */
 export function initialesDuNom(nom: string): string {
 	return nom
@@ -261,13 +203,10 @@ export function initialesDuNom(nom: string): string {
 }
 
 /**
- * LES VÉRIFICATIONS PORTÉES AU COMPTE — l'indicateur « notes vérifiées ».
- *
- * `verifications.compte_id` existe (`schema.ts`), et le nombre est donc COMPTÉ,
- * jamais déclaré. Zéro est alors un résultat — le compte n'a rien vérifié —, et
- * non l'aveu d'une donnée absente : c'est ce qui distingue cet indicateur de
- * son voisin « liens internes créés », que la table des relations ne permet pas
- * d'attribuer (§1).
+ * Les vérifications portées au compte — l'indicateur « notes vérifiées ».
+ * `verifications.compte_id` existe, et le nombre est donc COMPTÉ, jamais déclaré.
+ * Zéro est alors un résultat, non l'aveu d'une donnée absente — ce qui distingue
+ * cet indicateur de son voisin « liens internes créés » (§1).
  */
 export async function compterLesVerifications(base: Base, compteId: string): Promise<number> {
 	const lignes = await base
@@ -277,24 +216,16 @@ export async function compterLesVerifications(base: Base, compteId: string): Pro
 	return lignes[0]?.combien ?? 0;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   2 ter. CE QUE LE TITULAIRE MODIFIE LUI-MÊME — le panneau « Ce que vous
-   pouvez modifier » de V-25
+/* 2 ter. Ce que le titulaire modifie lui-même — deux champs, et deux seulement.
+   Le gel les oppose au panneau « Attribué par l'administration », dont il écrit que
+   « le rôle et le domaine principal sont fixés par un administrateur » : la
+   frontière est lue, pas choisie.
 
-   DEUX CHAMPS, ET DEUX SEULEMENT. Le gel les nomme et les oppose au panneau
-   voisin, « Attribué par l'administration », dont il écrit en toutes lettres
-   que « le rôle et le domaine principal sont fixés par un administrateur ». La
-   frontière n'est donc pas choisie ici : elle est lue.
+   `RG-CPT-01` ET `RG-M16-02` GOUVERNENT AUSSI CE GESTE : laisser un compte de
+   démonstration partagé changer son adresse électronique déplacerait la
+   réinitialisation de mot de passe vers la boîte du dernier venu. Le refus est pris
+   avant toute validation de saisie. */
 
-   `RG-CPT-01` ET `RG-M16-02` GOUVERNENT AUSSI CE GESTE. Un compte dont le mot
-   de passe est géré par l'administration est un compte de démonstration
-   partagé ; lui laisser changer l'adresse électronique du compte reviendrait à
-   déplacer la réinitialisation de mot de passe vers la boîte du dernier venu.
-   Le refus est le même que celui du changement de mot de passe, et il est pris
-   au même endroit — avant toute validation de saisie.
-   ═════════════════════════════════════════════════════════════════════════ */
-
-/** Les issues de l'enregistrement de l'identité. Elles ne se recouvrent pas. */
 export type IssueDeLIdentite = 'verrouille' | 'nom-vide' | 'courriel-invalide' | 'enregistre';
 
 /** Les deux champs que le titulaire modifie — `#p-affiche` et `#p-courriel`. */
@@ -304,24 +235,17 @@ export interface SaisiesDeLIdentite {
 }
 
 /**
- * LA FORME D'UNE ADRESSE ÉLECTRONIQUE — reprise du type du champ gelé.
- *
- * `V-25:1080` écrit `type="email"` : le contrôle est celui que le navigateur
- * applique déjà, et il est refait ici parce qu'un client peut composer la
- * requête lui-même — le raisonnement de `T-034` sur le droit de rédaction,
- * « l'absence de bouton n'est pas un contrôle d'accès ».
- *
- * Le motif est volontairement celui, minimal, de la plateforme : quelque chose,
- * une arobase, quelque chose, un point, quelque chose. Un motif plus sévère
- * refuserait des adresses valides, ce qu'aucune source ne demande.
+ * La forme d'une adresse électronique — reprise du `type="email"` du champ gelé. Le contrôle
+ * est refait côté serveur parce qu'un client peut composer la requête lui-même : « l'absence
+ * de bouton n'est pas un contrôle d'accès ». Le motif est volontairement celui, minimal, de
+ * la plateforme : un motif plus sévère refuserait des adresses valides.
  */
 const ADRESSE_ELECTRONIQUE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Le nom affiché et l'adresse électronique du titulaire, enregistrés.
- *
- * `modifieLe` est posé au même geste : la colonne existe, et une écriture qui
- * ne la touche pas rendrait l'instant faux pour toutes les lectures suivantes.
+ * Le nom affiché et l'adresse électronique du titulaire, enregistrés. `modifieLe`
+ * est posé au même geste : une écriture qui ne la touche pas rendrait l'instant
+ * faux pour toutes les lectures suivantes.
  */
 export async function enregistrerLIdentite(
 	base: Base,
@@ -346,13 +270,8 @@ export async function enregistrerLIdentite(
 	return 'enregistre';
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   3. LES VECTEURS DE PLANCHE
-
-   Une vue de planche reçoit son état par un vecteur, dont les noms sont ceux
-   de `verif/scenarios/V-xx.json`. Ce module le compose à UN SEUL ENDROIT, sur
-   le modèle de `vecteurDeV22()` et `vecteurDeV23()` de `T-034`.
-   ═════════════════════════════════════════════════════════════════════════ */
+/* 3. Les vecteurs de planche — les noms sont ceux de `verif/scenarios/V-xx.json`,
+   composés à UN SEUL ENDROIT. */
 
 /** Les quatre onglets de V-25 — `docs/routes.md:283`, axe `ong` de la planche. */
 export const ONGLETS = ['identite', 'securite', 'distinctions', 'activite'] as const;
@@ -360,12 +279,9 @@ export const ONGLETS = ['identite', 'securite', 'distinctions', 'activite'] as c
 export type Onglet = (typeof ONGLETS)[number];
 
 /**
- * L'onglet demandé par `?onglet=`, ou le défaut.
- *
- * Une valeur inconnue RETOMBE sur le défaut plutôt que de rendre 404 : le
- * paramètre est un réglage d'affichage, pas une ressource, et `docs/routes.md`
- * §5.3 le range parmi les paramètres de vue. Le défaut est celui du balisage
- * gelé, `identite`.
+ * L'onglet demandé par `?onglet=`, ou le défaut. Une valeur inconnue RETOMBE sur le
+ * défaut plutôt que de rendre 404 : le paramètre est un réglage d'affichage, pas une
+ * ressource.
  */
 export function ongletDemande(parametre: string | null): Onglet {
 	const trouve = ONGLETS.find((o) => o === parametre);
@@ -373,20 +289,12 @@ export function ongletDemande(parametre: string | null): Onglet {
 }
 
 /**
- * LE VECTEUR DE V-25 — deux axes sur trois, et le troisième est un écart.
+ * Le vecteur de V-25 — deux axes sur trois, et le troisième est un écart.
  *
- *   `ong`      — l'onglet, de l'adresse. Réel.
- *   `c-verrou` — `comptes.mot_de_passe_verrouille` du compte connecté. Réel,
- *                lu en base, et c'est `RG-M16-02` : le formulaire cède la place
- *                à l'explication « Compte de démonstration ».
- *   `cpt`      — NON POSÉ, et c'est délibéré. L'axe « Compte » de la planche
- *                choisit entre deux comptes du jeu de semence, que la vue lit
- *                elle-même dans `seeds/corpus.ts` ; aucune de ses deux
- *                positions ne désigne « le compte connecté ». Lui donner une
- *                valeur d'après l'identifiant de l'appelant serait une
- *                correspondance qu'aucune source n'écrit — un comblement. La
- *                vue rend donc sa position par défaut, celle du gel. L'écart
- *                est déclaré au rapport du lot.
+ *   `ong`      — l'onglet, de l'adresse.
+ *   `c-verrou` — `mot_de_passe_verrouille` du compte connecté (`RG-M16-02`).
+ *   `cpt`      — NON POSÉ : l'axe « Compte » de la planche choisit entre deux comptes du jeu
+ *                de semence, et aucune de ses positions ne désigne « le compte connecté ».
  */
 export function vecteurDeV25(
 	onglet: Onglet,
@@ -395,36 +303,24 @@ export function vecteurDeV25(
 	return { ong: onglet, 'c-verrou': verrouille };
 }
 
-/* V-06 N'A PLUS DE VECTEUR, ET C'EST LE CORRECTIF LUI-MÊME.
-   Ses quatre étapes décrivaient un parcours par courriel dont le produit n'a
-   aucun morceau — ni expéditeur, ni table de jeton (§1). La vue rend désormais
-   un écran unique, qui déclare l'indisponibilité et nomme le chemin réel : la
-   réinitialisation par un administrateur, servie par `/console/comptes`. Il n'y
-   a donc plus d'état à choisir, et les deux adresses de la vue rendent le même. */
+/* V-06 N'A PLUS DE VECTEUR : ses quatre étapes décrivaient un parcours par
+   courriel dont le produit n'a aucun morceau (§1). La vue rend un écran unique, qui
+   déclare l'indisponibilité et nomme le chemin réel — la réinitialisation par un
+   administrateur. */
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   4. LA POLITIQUE DE MOT DE PASSE — TRANSCRITE DU GEL, JAMAIS CHOISIE
+/* 4. La politique de mot de passe — TRANSCRITE du gel, jamais choisie.
+   `V-25:2618-2665`, `creerRobustesse()` : `MINI = 12`, `natures()` et les trois
+   règles `longueur`, `varie`, `different`. `RG-M16-01` exige une politique ; le gel
+   en donne la lettre, et les maquettes priment.
 
-   `mockups/V-25-profil.html:2618-2665`, `creerRobustesse()` : `MINI = 12`,
-   `natures()` et les trois règles `longueur`, `varie`, `different`. Les trois
-   libellés en sont l'énoncé à l'écran (`V-25:1160-1162`) : « 12 caractères au
-   minimum », « Au moins deux natures de caractères différentes », « Différent
-   de votre identifiant ». `RG-M16-01` exige une politique ; le gel en donne la
-   lettre, et les maquettes priment.
+   POURQUOI CÔTÉ SERVEUR ALORS QUE LE GEL LA JOUE AU NAVIGATEUR : un contrôle de
+   saisie n'est pas une application de règle, et le gel ne peut pas se protéger
+   d'une requête composée à la main.
 
-   POURQUOI CÔTÉ SERVEUR ALORS QUE LE GEL LA JOUE AU NAVIGATEUR : un contrôle
-   de saisie n'est pas une application de règle. Le gel ne peut pas se protéger
-   d'une requête composée à la main ; c'est le raisonnement que `T-034` a écrit
-   pour le droit de rédaction — « l'absence de bouton n'est pas un contrôle
-   d'accès ».
-
-   LES CLASSES DE CARACTÈRES SONT RECOPIÉES TELLES QUELLES, bornes comprises.
-   Les deux classes de lettres accentuées recouvrent au passage deux signes
-   d'opération latins-1, ce qui rend le compte des « natures » légèrement
-   généreux. C'est le comportement du gel, mesurable et identique des deux
-   côtés ; le corriger ici ferait diverger le serveur de l'écran, et la
-   divergence est le seul vrai défaut.
-   ═════════════════════════════════════════════════════════════════════════ */
+   LES CLASSES DE CARACTÈRES SONT RECOPIÉES TELLES QUELLES, bornes comprises. Les
+   deux classes de lettres accentuées recouvrent au passage deux signes d'opération
+   latins-1, ce qui rend le compte des « natures » légèrement généreux : c'est le
+   comportement du gel, et le corriger ici ferait diverger le serveur de l'écran. */
 
 /** `MINI` du gel — `mockups/V-25-profil.html:2619`. */
 export const MINIMUM_DE_CARACTERES = 12;
@@ -439,7 +335,6 @@ export function naturesDeCaracteres(clair: string): number {
 	return n;
 }
 
-/** Les trois règles, dans l'ordre où le gel les énonce à l'écran. */
 export interface ReglesDuMotDePasse {
 	readonly longueur: boolean;
 	readonly varie: boolean;
@@ -447,10 +342,9 @@ export interface ReglesDuMotDePasse {
 }
 
 /**
- * `evaluer()` du gel, réduit à sa décision : `ok.longueur && ok.varie &&
- * ok.different`. Le reste de la fonction gelée — segments, niveau, libellé —
- * peint l'indicateur de robustesse ; il n'entre dans aucune décision, et il
- * appartient à la vue.
+ * `evaluer()` du gel, réduit à sa décision. Le reste de la fonction gelée —
+ * segments, niveau, libellé — peint l'indicateur de robustesse ; il n'entre dans
+ * aucune décision, et il appartient à la vue.
  */
 export function reglesDuMotDePasse(clair: string, identifiant: string): ReglesDuMotDePasse {
 	const interdit = identifiant.toLowerCase();
@@ -461,29 +355,20 @@ export function reglesDuMotDePasse(clair: string, identifiant: string): ReglesDu
 	};
 }
 
-/** Les trois règles tenues ensemble. */
 export function motDePasseAcceptable(clair: string, identifiant: string): boolean {
 	const r = reglesDuMotDePasse(clair, identifiant);
 	return r.longueur && r.varie && r.different;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   5. LES TROIS GESTES DE SESSION D'`ARB-054`
+/* 5. Les trois gestes de session d'`ARB-054` : « rester connecté sur cet
+   appareil » est une PRÉFÉRENCE persistée, « fermer toutes les autres sessions »
+   opère en base, et le changement de mot de passe ferme les autres sessions. Les
+   trois portent sur `sessions.souvenir`.
 
-   « Rester connecté sur cet appareil » est une PRÉFÉRENCE persistée dans V-25
-   là où V-05 en fait une case de connexion ; « Fermer toutes les autres
-   sessions » opère en base ; le changement de mot de passe ferme les autres
-   sessions. Les trois portent sur `sessions`, la table de `T-012`, et sur son
-   unique colonne `souvenir`.
+   UNE SESSION `souvenir` N'EXPIRE NI PAR INACTIVITÉ NI PAR ÉCHÉANCE : rien n'est à
+   écrire ici pour cela, `sessionExpiree()` porte déjà la règle et ce module se
+   contente de basculer la colonne qu'elle lit. */
 
-   UNE SESSION `souvenir` N'EXPIRE NI PAR INACTIVITÉ NI PAR ÉCHÉANCE
-   (`ARB-054` §2). Rien n'est à écrire ici pour cela : `sessionExpiree()` de
-   `src/lib/auth/sessions.ts` porte déjà la règle, et ce module se contente de
-   basculer la colonne qu'elle lit. C'est ce que « le même mécanisme » veut
-   dire.
-   ═════════════════════════════════════════════════════════════════════════ */
-
-/** La préférence de la session courante, telle que la table la porte. */
 export async function lirePreferenceDeSession(base: Base, sessionId: string): Promise<boolean> {
 	const lignes = await base
 		.select({ souvenir: sessions.souvenir })
@@ -494,14 +379,9 @@ export async function lirePreferenceDeSession(base: Base, sessionId: string): Pr
 }
 
 /**
- * Écrit la préférence sur la session COURANTE, et sur elle seule.
- *
- * « Rester connecté SUR CET APPAREIL » (`V-25:1222`) : l'appareil, c'est la
- * session. La porter sur le compte l'étendrait aux autres appareils, ce que la
- * phrase gelée exclut.
- *
- * Le retrait de l'option est l'une des cinq fins de vie qu'`ARB-054` énumère :
- * repasser à `false` rend la session au délai d'inactivité, sans autre geste.
+ * Écrit la préférence sur la session COURANTE, et sur elle seule : « rester connecté SUR CET
+ * APPAREIL » — l'appareil, c'est la session. La porter sur le compte l'étendrait aux autres
+ * appareils. Repasser à `false` rend la session au délai d'inactivité.
  */
 export async function ecrirePreferenceDeSession(
 	base: Base,
@@ -512,14 +392,10 @@ export async function ecrirePreferenceDeSession(
 }
 
 /**
- * « Fermer toutes les autres sessions » (`V-25:1236`) — rend le nombre fermé.
- *
- * `fermee_le` est posé, la ligne est gardée : la fermeture est définitive et la
- * trace reste, comme pour `fermerLaSession()` de `T-012`. La session courante
- * est explicitement épargnée — le libellé gelé dit « les AUTRES ».
- *
- * Le nombre rendu est mesuré, jamais annoncé : `P-02`. Un appelant qui n'a
- * qu'une session en ferme zéro, et c'est le résultat juste.
+ * « Fermer toutes les autres sessions » — rend le nombre fermé. `fermee_le` est posé, la
+ * ligne est gardée : la fermeture est définitive et la trace reste. La session courante est
+ * explicitement épargnée — le libellé gelé dit « les AUTRES ». Le nombre rendu est mesuré,
+ * jamais annoncé.
  */
 export async function fermerLesAutresSessions(
 	base: Base,
@@ -541,19 +417,12 @@ export async function fermerLesAutresSessions(
 	return fermees.length;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   6. LE CHANGEMENT DE MOT DE PASSE
-   ═════════════════════════════════════════════════════════════════════════ */
+/* 6. Le changement de mot de passe. */
 
 /**
- * Les issues du changement. Elles ne se recouvrent pas, et l'ordre dans lequel
- * elles sont décidées est celui du gel, `RG-M16-02` d'abord.
- *
- *   `verrouille`   — `RG-M16-02` : le mot de passe est géré par l'administration.
- *   `actuel-faux`  — le mot de passe actuel ne correspond pas.
- *   `regles`       — la politique du §4 n'est pas tenue.
- *   `confirmation` — les deux saisies diffèrent (`verifierConfirmation()`).
- *   `change`       — écrit, et les autres sessions fermées.
+ * Les issues du changement. Elles ne se recouvrent pas, et l'ordre dans lequel elles
+ * sont décidées est celui du gel, `RG-M16-02` d'abord : `verrouille`,
+ * `actuel-faux`, `regles`, `confirmation`, `change`.
  */
 export type IssueDuChangement = 'verrouille' | 'actuel-faux' | 'regles' | 'confirmation' | 'change';
 
@@ -571,21 +440,13 @@ export interface SaisiesDuChangement {
 }
 
 /**
- * LE CHANGEMENT DE MOT DE PASSE, ET LA FERMETURE QUI L'ACCOMPAGNE.
+ * Le changement de mot de passe, et la fermeture qui l'accompagne.
  *
- * `ARB-054` §2, sur la foi de `V-25:2917` — « Mot de passe changé, vos autres
- * sessions ont été fermées » : la fermeture n'est pas une option, elle fait
- * partie du geste. Elle est donc ici, dans la fonction qui change, et non chez
- * l'appelant qui pourrait l'oublier.
- *
- * `RG-M16-02` EST APPLIQUÉ AVANT TOUTE VÉRIFICATION. Un compte verrouillé
- * n'est pas un compte dont le mot de passe actuel serait faux : c'est un compte
- * dont le mot de passe ne se change pas d'ici. Vérifier d'abord donnerait à
- * l'appelant un oracle sur le mot de passe d'un compte partagé (`RG-CPT-01`).
- *
- * LA SESSION COURANTE SURVIT. Celui qui change son mot de passe ne se
- * déconnecte pas lui-même — le gel le laisse sur son écran, avec une
- * notification.
+ * `ARB-054` §2, sur la foi de `V-25:2917` — « Mot de passe changé, vos autres sessions ont
+ * été fermées » : la fermeture fait partie du geste, elle est donc ici et non chez l'appelant
+ * qui pourrait l'oublier. `RG-M16-02` EST APPLIQUÉ AVANT TOUTE VÉRIFICATION : vérifier
+ * d'abord donnerait à l'appelant un oracle sur le mot de passe d'un compte partagé
+ * (`RG-CPT-01`). LA SESSION COURANTE SURVIT.
  */
 export async function changerLeMotDePasse(
 	base: Base,

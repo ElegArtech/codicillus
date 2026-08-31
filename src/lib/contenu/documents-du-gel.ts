@@ -1,85 +1,33 @@
 /**
  * LES DOCUMENTS DE DÉMONSTRATION — TRANSCRITS DU GEL, JAMAIS RÉDIGÉS.
  *
- * `seeds/corpus.ts` ne porte pas le corps COURANT des notes : les maquettes
- * l'écrivent au balisage, et `src/lib/lecture/note-de-demonstration.ts` le
- * constate en toutes lettres. T-010 en a tiré la seule dérivation possible —
- * l'`extrait` devient le corps Référence (son É-6, `semence.ts` en-tête, point 1).
+ * `seeds/corpus.ts` ne porte pas le corps COURANT des notes : les maquettes l'écrivent au
+ * balisage. Il porte bien du corps rédigé, mais celui de trois versions anciennes d'une seule
+ * note, typé `BlocDeContenu` : cinq informations que le format exige leur manquent — l'ancre
+ * d'un titre, l'état coché d'une tâche, le glyphe d'une alerte, la nature numérique d'une
+ * cellule, la source d'une figure. Les combler serait décider.
  *
- * Le mot « courant » n'est pas un ornement : le corpus porte bien du corps
- * rédigé, mais celui de TROIS VERSIONS ANCIENNES de la seule note de
- * démonstration — `CONTENU_VERSIONS`, l. 1503-1705, typé `BlocDeContenu`,
- * l. 309-331, extrait de la comparaison de versions (V-16). Ces blocs ne sont
- * PAS transposés ici : cinq informations que le format exige leur manquent —
- * l'ancre d'un titre, l'état coché d'une tâche, le glyphe d'une alerte, la
- * nature numérique d'une cellule, et la source d'une figure. Les combler
- * serait décider ; c'est remonté.
+ * Les quatre documents ci-dessous sont donc la transcription, bloc à bloc, du contenu rédigé
+ * que deux maquettes PORTENT DÉJÀ :
  *
- * CE MODULE NE COMBLE PAS CE VIDE PAR DE LA PROSE. Les quatre documents
- * ci-dessous sont la transcription, bloc à bloc, du contenu rédigé que deux
- * maquettes gelées PORTENT DÉJÀ :
+ *   `V-14-lecture-note.html:1524-1705`      Référence de « Restaurer une sauvegarde
+ *                                           PostgreSQL depuis Barman »
+ *   `V-14-lecture-note.html:1708-1753`      Opérationnel de la même note
+ *   `V-03-lecture-publique.html:984-1078`   Référence de « Réinitialiser son mot de passe »
+ *   `V-03-lecture-publique.html:1081-1102`  Opérationnel de la même note
  *
- *   `mockups/V-14-lecture-note.html:1524-1705`  registre Référence de
- *                                               « Restaurer une sauvegarde
- *                                               PostgreSQL depuis Barman »
- *   `mockups/V-14-lecture-note.html:1708-1753`  registre Opérationnel de la
- *                                               même note
- *   `mockups/V-03-lecture-publique.html:984-1078` registre Référence de
- *                                               « Réinitialiser son mot de
- *                                               passe »
- *   `mockups/V-03-lecture-publique.html:1081-1102` registre Opérationnel de la
- *                                               même note
+ * Écrire un contenu d'exemple qui exercerait commodément les quinze constructions aurait été
+ * plus simple, et faux (`P-02`). Ce que le gel n'exerce pas est COMPTÉ à la fin de ce module.
  *
- * Écrire un contenu d'exemple qui exercerait commodément les quinze
- * constructions aurait été plus simple, et faux : P-02 proscrit la valeur
- * illustrative. Ce que le gel n'exerce pas est COMPTÉ, à la fin de ce module,
- * pas fabriqué — c'est P-5, et c'est ce qui a rendu plusieurs contrôles de ce
- * dépôt inertes pendant des semaines.
+ * TROIS FRAGMENTS NE SONT PAS TRANSCRITS : les deux FIGURES, dont le gel porte le SVG — le
+ * RÉSULTAT — quand M04.6 et `ADR-003` stockent la SOURCE, qui n'existe nulle part ; le LIEN
+ * PRIVÉ de `V-03:1072`, dont la maquette masque le titre de la cible ; l'EXPOSANT de
+ * `V-14:1577`, `sup` n'étant aucune des quinze constructions.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * TROIS FRAGMENTS DU GEL NE SONT PAS TRANSCRITS, ET CHACUN EST DÉCLARÉ
- *
- *  1. LES DEUX FIGURES (`V-14:1585-1623`, `V-03:1004-1040`). Le gel y porte un
- *     SVG écrit à la main, c'est-à-dire le RÉSULTAT d'un diagramme ; M04.6 et
- *     ADR-003 stockent la SOURCE, « un diagramme décrit en texte ». Ces deux
- *     sources-là n'existent nulle part : les transcrire demanderait de les
- *     inventer.
- *
- *     UNE SOURCE DE DIAGRAMME EXISTE POURTANT DANS LE GEL, et il fallait la
- *     chercher avant de l'affirmer absente (P-21) : le catalogue de blocs de
- *     l'éditeur insère « A --> B\nB --> C » dans un `.bloc-code` étiqueté
- *     « diagramme » (`V-17:3078`). C'est un bloc À PEINE INSÉRÉ, pas un corps
- *     rédigé — il ne fait donc pas un document de démonstration, mais il
- *     atteste la forme de la source, et c'est lui que l'unitaire du rendu
- *     emploie plutôt qu'une source écrite pour l'occasion.
- *  2. LE LIEN PRIVÉ de `V-03:1072` — `span.lien-prive`, « une ressource
- *     réservée aux équipes techniques ». La maquette masque le titre de la
- *     cible, donc son identifiant : le nœud ne peut pas être écrit. Le rendu du
- *     cas, lui, existe et est éprouvé en unitaire par un corpus où la cible est
- *     interne.
- *  3. L'EXPOSANT de `V-14:1577` — « 1<sup>er</sup> juillet 2026 ». `sup` n'est
- *     aucune des quinze constructions de M04.6 : la cellule est transcrite
- *     « 1er juillet 2026 », et l'écart est remonté plutôt que comblé par une
- *     seizième construction.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES IDENTIFIANTS DE CIBLE VIENNENT DU CORPUS, PAS D'UNE INVENTION
- *
- * ADR-003 veut qu'un lien interne porte l'IDENTIFIANT de sa cible. Le gel, lui,
- * écrit `href="#"` et le titre en clair. `idParTitre` retrouve donc
- * l'identifiant dans `seeds/corpus.ts` — et lève si le titre n'y est pas, de
- * sorte qu'aucun identifiant ne puisse être inventé ici (errata E-04 : « aucun
- * identifiant n'existe hors du jeu de 32 de V-14 »).
- *
- * DEUX CIBLES DU GEL N'EXISTENT PAS DANS LE CORPUS, et c'est une information,
- * pas un obstacle :
- *
- *   « Reconstruire le dépôt Barman » — le gel la rend DÉJÀ cassée
- *     (`a.lien-casse`, `V-14:1687`) et écrit « n'existe pas encore ». Attendu.
- *   « Renouveler les clés SSH du compte barman » — le gel la rend VALIDE
- *     (`a.lien-int`, `V-14:1536`) alors qu'aucune note du corpus ne porte ce
- *     titre. Le gel et le corpus se contredisent ; la transcription garde le
- *     lien, la résolution le déclare cassé, et la contradiction est remontée.
+ * LES IDENTIFIANTS DE CIBLE VIENNENT DU CORPUS : le gel écrit `href="#"` et le titre en clair,
+ * `ADR-003` veut l'IDENTIFIANT. `idParTitre` le retrouve dans `seeds/corpus.ts` — et LÈVE si
+ * le titre n'y est pas. DEUX CIBLES DU GEL N'EXISTENT PAS DANS LE CORPUS : l'une, le gel la
+ * rend déjà cassée ; l'autre, il la rend VALIDE alors qu'aucune note ne porte ce titre.
  */
 import { CORPUS } from '../../../seeds/corpus';
 import { adresseDeNote, identifiantLisible } from '../rangement/adresses';
@@ -106,8 +54,6 @@ import {
 	type Titre
 } from './document';
 import type { CibleDeNote, ResolveurDeNote } from './rendu';
-
-/* ═════════════════════════════════════ Les fabriques de transcription ═══ */
 
 function txt(text: string, ...marks: Marque[]): Texte {
 	return marks.length === 0 ? { type: 'text', text } : { type: 'text', text, marks };
@@ -170,9 +116,6 @@ const ligne = (...content: (CelluleDEntete | Cellule)[]): LigneDeTableau => ({
 const tableau = (...content: LigneDeTableau[]): Tableau => ({ type: 'table', content });
 const separateur: Separateur = { type: 'horizontalRule' };
 
-/* ═══════════════════════════════════════ Les cibles des liens internes ══ */
-
-/** L'identifiant de la note qui porte ce titre. Lève si elle n'existe pas. */
 export function idParTitre(titreDeNote: string): string {
 	const note = CORPUS.find((n) => n.titre === titreDeNote);
 	if (note === undefined) {
@@ -196,10 +139,8 @@ const CIBLE_DEPOT_BARMAN = cibleInexistante('reconstruire-le-depot-barman');
 export const CIBLES_SANS_NOTE: readonly string[] = [CIBLE_CLES_SSH, CIBLE_DEPOT_BARMAN];
 
 /**
- * LE RÉSOLVEUR DE DÉMONSTRATION — il lit le corpus, il n'invente rien.
- *
- * « Publique » y est la conjonction que RG-ACC-01 impose : visibilité publique
- * ET note publiée. Un brouillon n'est pas public, quelle que soit sa visibilité.
+ * LE RÉSOLVEUR DE DÉMONSTRATION — il lit le corpus, il n'invente rien. « Publique » y
+ * est la conjonction que `RG-ACC-01` impose : visibilité publique ET note publiée.
  */
 export const resoudreDansLeCorpus: ResolveurDeNote = (identifiant: string): CibleDeNote | null => {
 	const note = CORPUS.find((n) => n.id === identifiant);
@@ -211,8 +152,6 @@ export const resoudreDansLeCorpus: ResolveurDeNote = (identifiant: string): Cibl
 		publique: note.visibilite === 'Publique' && !note.brouillon
 	};
 };
-
-/* ═══════════════════════════ V-14 — registre Référence (l. 1524-1706) ═══ */
 
 const V14_REFERENCE_BLOCS: readonly Bloc[] = [
 	para(
@@ -467,8 +406,6 @@ const V14_REFERENCE_BLOCS: readonly Bloc[] = [
 	)
 ];
 
-/* ═════════════════════ V-14 — registre Opérationnel (l. 1708-1753) ══════ */
-
 const V14_OPERATIONNEL_BLOCS: readonly Bloc[] = [
 	alerte(
 		'astuce',
@@ -526,8 +463,6 @@ const V14_OPERATIONNEL_BLOCS: readonly Bloc[] = [
 		txt('.')
 	)
 ];
-
-/* ═══════════════════ V-03 — registre Référence (l. 984-1080) ════════════ */
 
 const V03_REFERENCE_BLOCS: readonly Bloc[] = [
 	para(
@@ -660,8 +595,6 @@ const V03_REFERENCE_BLOCS: readonly Bloc[] = [
 	)
 ];
 
-/* ═════════════════ V-03 — registre Opérationnel (l. 1081-1103) ══════════ */
-
 const V03_OPERATIONNEL_BLOCS: readonly Bloc[] = [
 	alerte(
 		'astuce',
@@ -701,14 +634,9 @@ const V03_OPERATIONNEL_BLOCS: readonly Bloc[] = [
 	)
 ];
 
-/* ═══════════════════════════════════════════════ Les documents ══════════ */
-
-/** Un corps du gel, avec ce qui permet de le retrouver dans la maquette. */
 export interface DocumentDuGel {
-	/** L'identifiant de la note du corpus dont c'est le corps. */
 	readonly note: string;
 	readonly registre: 'reference' | 'operationnel';
-	/** La maquette et les lignes transcrites. */
 	readonly source: string;
 	readonly document: Document;
 }
@@ -745,7 +673,6 @@ export const DOCUMENTS_DU_GEL: readonly DocumentDuGel[] = [
 	}
 ];
 
-/** Le corps d'un registre d'une note du gel. */
 export function documentDuGel(note: string, registre: 'reference' | 'operationnel'): Document {
 	const trouve = DOCUMENTS_DU_GEL.find((d) => d.note === note && d.registre === registre);
 	if (trouve === undefined) throw new Error(`aucun corps du gel pour ${note} / ${registre}`);

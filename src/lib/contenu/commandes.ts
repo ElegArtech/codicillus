@@ -1,24 +1,17 @@
 /**
  * LES DEUX COMMANDES DU FORMAT, et ce que chacune prouve.
  *
- *   `pnpm contenu:constructions` — les quinze constructions de M04.6, une par
- *      une : ce que le contenu du gel en exerce, et ce que le rendu en produit.
- *   `pnpm contenu:invalide` — que le schéma REFUSE, sur des documents mal
- *      formés de quinze genres différents, et avec quel message.
+ *   `pnpm contenu:constructions` — les quinze constructions de M04.6, une par une :
+ *      ce que le contenu du gel en exerce, et ce que le rendu en produit.
+ *   `pnpm contenu:invalide` — que le schéma REFUSE, sur des documents mal formés de
+ *      quinze genres différents, et avec quel message.
  *
- * Les deux vivent ici, en TypeScript contrôlé par `pnpm check` ;
- * `verif/contenu.mjs` ne fait que les lancer et imprimer. C'est le partage
- * qu'emploie déjà `base/base.mjs` (T-003), et il évite un second chemin de
- * résolution de modules dans le dépôt.
+ * Les deux vivent ici, en TypeScript contrôlé par `pnpm check` ; `verif/contenu.mjs`
+ * ne fait que les lancer et imprimer.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LE VERT DE `contenu:constructions` NE DIT PAS
- *
- * Il dit que le rendu produit le balisage attesté pour chaque construction que
- * le GEL EXERCE. Il ne dit rien de deux constructions que le gel n'exerce
- * pas — l'IMAGE et le DIAGRAMME —, et c'est pourquoi la commande les compte et
- * les nomme au lieu de fabriquer un cas qui les rendrait vertes. « Une règle
- * qu'aucun cas n'exerce est une règle dont on ignore si elle marche » (P-5).
+ * CE QUE LE VERT DE `contenu:constructions` NE DIT PAS : rien de l'IMAGE ni du
+ * DIAGRAMME, que le gel n'exerce pas — d'où le compte et le nom, plutôt qu'un cas
+ * fabriqué qui les rendrait vertes (`P-5`).
  */
 import {
 	CONSTRUCTIONS,
@@ -33,24 +26,17 @@ import {
 import { DOCUMENTS_DU_GEL, resoudreDansLeCorpus } from './documents-du-gel';
 import { rendreDocument, type ResolveurDeNote } from './rendu';
 
-/* ══════════════════════════════ Les constructions et leur exercice ══════ */
-
-/** Ce que le gel exerce d'une construction, et ce que le rendu en produit. */
 export interface ReleveDeConstruction {
 	readonly construction: Construction;
-	/** Le nombre d'occurrences dans les quatre corps du gel, par porteur. */
 	readonly parPorteur: Readonly<Record<string, number>>;
 	readonly occurrences: number;
-	/** Les fragments attendus du rendu qui manquent. Vide : la construction rend. */
 	readonly signaturesManquantes: readonly string[];
 }
 
 /**
- * LES DEUX CONSTRUCTIONS QU'AUCUN CONTENU DU GEL N'EXERCE, et pourquoi.
- *
- * Cette liste est OPPOSABLE : la commande sort en 1 si une construction hors
- * liste tombe à zéro occurrence, et aussi si une construction de la liste se
- * met à en avoir. Sans quoi la couverture pourrait se perdre sans témoin.
+ * LES DEUX CONSTRUCTIONS QU'AUCUN CONTENU DU GEL N'EXERCE. Cette liste est
+ * OPPOSABLE : la commande sort en 1 si une construction hors liste tombe à zéro
+ * occurrence, et aussi si une construction de la liste se met à en avoir.
  */
 export const CONSTRUCTIONS_SANS_CONTENU_DU_GEL: Readonly<Record<number, string>> = {
 	10:
@@ -82,9 +68,9 @@ const MARQUES = new Set([
 
 /**
  * Les occurrences d'un porteur DANS UN DOCUMENT. Extrait de
- * `compterDansLesDocuments` pour que la batterie 4 (`aller-retour.ts`) relève
- * l'exercice des constructions DOCUMENT PAR DOCUMENT sans écrire une seconde
- * règle de comptage : deux comptages divergeraient au premier cas limite.
+ * `compterDansLesDocuments` pour que la batterie 4 relève l'exercice des
+ * constructions DOCUMENT PAR DOCUMENT sans écrire une seconde règle de comptage, qui
+ * divergerait au premier cas limite.
  */
 export function compterPorteur(document: Document, porteur: string): number {
 	let n = 0;
@@ -147,7 +133,6 @@ export function compterLesLiensDUnDocument(
 	return { resolus, casses };
 }
 
-/** Les liens internes du gel, séparés par le sort que la résolution leur fait. */
 function compterLesLiens(): { readonly resolus: number; readonly casses: number } {
 	let resolus = 0;
 	let casses = 0;
@@ -159,14 +144,12 @@ function compterLesLiens(): { readonly resolus: number; readonly casses: number 
 	return { resolus, casses };
 }
 
-/** Le rendu des quatre corps du gel, en lecture interne. */
 export function rendusDuGel(): string {
 	return DOCUMENTS_DU_GEL.map((d) =>
 		rendreDocument(d.document, { resoudre: resoudreDansLeCorpus, contexte: 'interne' })
 	).join('\n');
 }
 
-/** Le relevé des quinze constructions. */
 export function releveDesConstructions(): readonly ReleveDeConstruction[] {
 	const html = rendusDuGel();
 	const liens = compterLesLiens();
@@ -186,38 +169,25 @@ export function releveDesConstructions(): readonly ReleveDeConstruction[] {
 	});
 }
 
-/* ═══════════════════════════════════ Les documents mal formés ═══════════ */
-
-/** Un document que le schéma doit refuser, et la règle qu'il viole. */
 export interface CasInvalide {
-	/** Le genre d'invalidité — quatre au minimum sont exigés par le contrat. */
 	readonly genre: string;
 	readonly nom: string;
 	readonly valeur: unknown;
-	/** Le chemin où le refus doit se produire. */
 	readonly chemin: string;
-	/** Ce que le message doit dire. */
 	readonly message: RegExp;
 }
 
 const p = (texte: string) => ({ type: 'paragraph', content: [{ type: 'text', text: texte }] });
 
 /**
- * LES VINGT-QUATRE DOCUMENTS MAL FORMÉS, en sept genres d'invalidité.
+ * LES VINGT-QUATRE DOCUMENTS MAL FORMÉS, en sept genres d'invalidité. Un document mal
+ * formé est REJETÉ, jamais silencieusement réparé. Chaque cas est joué par la
+ * commande ET par l'unitaire — même liste, deux lecteurs —, et les comptes sont
+ * calculés, jamais recopiés : cet en-tête annonçait « quinze, six genres » quand la
+ * liste en portait vingt et un de sept.
  *
- * « Schéma refusant l'invalide » est un critère de sortie littéral de T-014 :
- * un document mal formé est REJETÉ, jamais silencieusement réparé. Chaque cas
- * ci-dessous est joué par la commande ET par l'unitaire — même liste, deux
- * lecteurs. Les comptes sont calculés, jamais recopiés : `rapportDesRefus` les
- * mesure sur la liste (cet en-tête annonçait « quinze, six genres » quand elle
- * en portait déjà vingt et un de sept genres — T-013b l'a constaté et corrigé).
- *
- * UN CAS, UNE RÈGLE. Un document qui violerait deux règles serait refusé pour
- * l'une ou pour l'autre selon l'ordre des contrôles, et le cas passerait pour
- * la mauvaise raison. Deux cas portaient deux fautes depuis que la règle 7
- * existe — leurs marques étaient bien exclusives, mais aussi mal ordonnées :
- * T-013b les a remis dans l'ordre du type pour qu'ils n'éprouvent que la
- * règle 6.
+ * UN CAS, UNE RÈGLE : un document qui violerait deux règles serait refusé pour l'une
+ * ou pour l'autre selon l'ordre des contrôles, et passerait pour la mauvaise raison.
  */
 export const CAS_INVALIDES: readonly CasInvalide[] = [
 	{
@@ -529,11 +499,9 @@ export const CAS_INVALIDES: readonly CasInvalide[] = [
 	}
 ];
 
-/** Le refus d'un cas, tel que le schéma le prononce. */
 export interface Refus {
 	readonly cas: CasInvalide;
 	readonly manquements: readonly Manquement[];
-	/** Le cas a-t-il été refusé, au bon endroit, avec le bon message ? */
 	readonly conforme: boolean;
 }
 
@@ -547,8 +515,6 @@ export function jouerLesCasInvalides(): readonly Refus[] {
 		return { cas, manquements: verdict.manquements, conforme: vise };
 	});
 }
-
-/* ═══════════════════════════════════════════════ Les rapports ═══════════ */
 
 export interface Rapport {
 	readonly texte: string;

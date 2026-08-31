@@ -1,68 +1,30 @@
 /**
- * LES RELATIONS D'UNE NOTE — les lire avec leur ORIGINE, en déclarer une, en
- * retirer une.
+ * Les relations d'une note — les lire avec leur ORIGINE, en déclarer une, en retirer une.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUI MANQUAIT, ET QUI N'ÉTAIT PAS UNE LACUNE D'AFFICHAGE
+ * La table existe depuis longtemps et les cartographies la lisent, mais AUCUNE ROUTE n'en
+ * écrivait une : le graphe était en lecture seule, et `UC-M08-02` n'avait aucun chemin. Ce
+ * module ne lit ni n'écrit un seul libellé de relation : les six types vivent dans
+ * `types_de_relation`, administrables par la console.
  *
- * La table `relations` existe depuis `T-010`, `lireRelations()` la lit depuis
- * `T-030`, `lireRelationsLisibles()` en porte l'origine jusqu'aux
- * cartographies depuis `T-037`. **Aucune route n'en écrivait une.** Le corpus
- * ne pouvait donc porter que les vingt-deux arêtes de la semence : le graphe
- * était en lecture seule, et `UC-M08-02` — « l'utilisateur déclare qu'une
- * application est hébergée sur un serveur » — n'avait aucun chemin.
+ * LES RÈGLES PORTÉES, ET LEUR LIEU EXACT :
  *
- * Ce module est ce chemin. Il ne lit ni n'écrit un seul libellé de relation :
- * les six types vivent dans `types_de_relation`, ils sont administrables par
- * `/console/types-de-relations`, et les recopier ici ferait dire au produit les
- * mots d'un référentiel qu'un administrateur aurait renommés.
+ *   `RG-M08-03` — unicité (source, cible, type), portée par la CONTRAINTE
+ *     `relations_unicite` ; la vérification faite ici la précède pour rendre un refus lisible,
+ *     elle ne la remplace pas.
+ *   `RG-M08-04` — le droit d'écriture sur les DEUX extrémités.
+ *   `RG-M08-06` — le libellé rendu est celui du SENS de lecture.
+ *   `P-08` — l'origine est SÉLECTIONNÉE, jamais déduite : une saisie humaine vaut `declaree`.
+ *     `deduite` et `ambigue` attendent l'inférence, que M08.3 nomme sans la spécifier.
+ *   `RG-M08-05` — la cascade du schéma, aucune ligne d'ici n'y touche.
+ *   `RG-M08-07` — la console ; la référence `RESTRICT` reste la garantie de dernier ressort.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * LES RÈGLES PORTÉES, ET LEUR LIEU EXACT
+ * « DOMAINE » AU CAHIER, DOSSIER À LA BASE : `RG-M08-04` parle du « domaine », mais
+ * `droits_de_dossier` ne référence que des dossiers et `RG-DRO-01` fait descendre un droit
+ * posé haut. Un droit « sur le domaine » se lit donc en résolvant le dossier PORTEUR.
  *
- *   `RG-M08-03` — unicité (source, cible, type). Elle est portée par la
- *     CONTRAINTE `relations_unicite` du schéma ; la vérification faite ici la
- *     précède pour rendre un refus lisible, elle ne la remplace pas. Une course
- *     entre deux requêtes se solde par la contrainte, pas par ce code.
- *   `RG-M08-04` — écrire une relation exige le droit d'écriture sur les DEUX
- *     extrémités. Aucune comparaison de droit n'est écrite ici :
- *     `peutEcrireSurLeDossier()` appelle `resoudreDroitDeDossier()` puis
- *     `capacites()`, qui sont l'implémentation unique (`T-011`).
- *   `RG-M08-06` — le libellé rendu est celui du SENS de lecture : sortant quand
- *     la note lue est la source, entrant quand elle est la cible. Les deux
- *     viennent de la même ligne de `types_de_relation`.
- *   `P-08` — l'origine est SÉLECTIONNÉE, jamais déduite. Une relation saisie
- *     par un humain vaut `declaree`, ce qui est la définition du cahier :
- *     « déclarée (saisie humaine) » (`CDC:901`). Rien d'autre n'écrit cette
- *     colonne à ce jour : `deduite` et `ambigue` attendent l'inférence, que
- *     M08.3 nomme sans la spécifier — le produit n'en fabrique aucune, et le
- *     vide est remonté plutôt que comblé.
- *   `RG-M08-05` — supprimer une note supprime ses relations : c'est la cascade
- *     du schéma, aucune ligne d'ici n'y touche.
- *   `RG-M08-07` — un type utilisé ne se supprime pas sans réaffectation : c'est
- *     la console, et ce module ne la connaît pas. La référence `RESTRICT` de
- *     `type_de_relation_id` reste sa garantie de dernier ressort.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * « DOMAINE » AU CAHIER, DOSSIER À LA BASE — ET CE N'EST PAS UN CHOIX D'ICI
- *
- * `RG-M08-04` parle du « domaine de la source et de la cible ». Le modèle de
- * droits du produit ne pose aucun droit sur un domaine : `droits_de_dossier`
- * ne référence que des dossiers, et `RG-DRO-01` fait descendre un droit posé
- * haut sur toute la branche. Un droit d'écriture « sur le domaine » se lit donc
- * en résolvant le dossier PORTEUR de la note, exactement comme le fait déjà
- * `/notes/{identifiant}/modifier`. Aucune règle nouvelle n'est écrite ; la
- * même autorité répond.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LE REFUS EST UN SEUL OCTET — `RG-ACC-04`, `ADR-007`
- *
- * Une cible qui n'existe pas, une cible qu'on n'a pas le droit de lire, une
- * cible sur laquelle on n'a pas le droit d'écrire et un type inconnu rendent le
- * MÊME résultat : `INTROUVABLE`. Il n'existe pas de motif « interdit » à
- * remonter, et le type de retour n'en offre pas la place. Les deux seuls échecs
- * NOMMÉS — le doublon et la relation réflexive — ne révèlent rien : ils portent
- * sur une note que l'appelant lit déjà et sur des relations qu'il voit déjà.
+ * LE REFUS EST UN SEUL OCTET : cible absente, illisible, interdite en écriture ou type inconnu
+ * rendent le MÊME `INTROUVABLE`. Les deux seuls échecs NOMMÉS — doublon et relation réflexive
+ * — portent sur une note que l'appelant lit déjà.
  */
 import { and, eq, inArray, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
@@ -72,16 +34,10 @@ import { INTROUVABLE, type Identite, type Resolution } from '../droits/resolutio
 import { peutEcrireSurLeDossier } from './edition';
 import type { OrigineDeRelation } from './outils';
 
-/* ═══════════════════════════════════════════ Le mot de l'origine ═══════ */
-
 /**
- * LES TROIS MOTS DE `M08.3`, RECOPIÉS DU CAHIER ET DE LUI SEUL — `CDC:901` :
- * « déclarée (saisie humaine), déduite (inférée par le produit), ambiguë (à
- * confirmer) ».
- *
- * C'est la SEULE traduction de l'énuméré `origine_de_relation` du produit. Une
- * seconde table de mots quelque part ailleurs ferait de `P-08` deux signaux
- * concurrents, exactement ce que `P-01` interdit à la fraîcheur.
+ * Les trois mots de `M08.3`, recopiés du cahier et de lui seul (`CDC:901`). C'est la
+ * SEULE traduction de l'énuméré `origine_de_relation` : une seconde table de mots
+ * ferait de `P-08` deux signaux concurrents.
  */
 export const MOT_DE_L_ORIGINE: Readonly<Record<OrigineDeRelation, string>> = Object.freeze({
 	declaree: 'déclarée',
@@ -97,9 +53,9 @@ export const GLOSE_DE_L_ORIGINE: Readonly<Record<OrigineDeRelation, string>> = O
 });
 
 /**
- * Le mot d'une origine. Passer par une fonction plutôt que par la table permet
- * de refuser une valeur que la base n'aurait pas dû rendre — la colonne est un
- * énuméré `notNull`, donc ce refus ne peut venir que d'un schéma désaccordé.
+ * Le mot d'une origine. Passer par une fonction plutôt que par la table permet de
+ * refuser une valeur que la base n'aurait pas dû rendre — la colonne est un énuméré
+ * `notNull`, donc ce refus ne peut venir que d'un schéma désaccordé.
  */
 export function libelleDOrigine(origine: OrigineDeRelation): string {
 	const mot = MOT_DE_L_ORIGINE[origine];
@@ -107,9 +63,6 @@ export function libelleDOrigine(origine: OrigineDeRelation): string {
 	return mot;
 }
 
-/* ═══════════════════════════════════════════ Ce qu'une relation rend ═══ */
-
-/** La note à l'autre bout — son titre, son type, son domaine. */
 export interface NoteAuBout {
 	readonly identifiant: string;
 	readonly titre: string;
@@ -119,14 +72,11 @@ export interface NoteAuBout {
 }
 
 /**
- * UNE RELATION, LUE DEPUIS UNE NOTE.
- *
- * `sens` n'est pas décoratif : c'est lui qui a décidé du `libelle`, et le
- * conserver permet à l'écran de dire de quel côté la relation a été déclarée
- * sans recalculer quoi que ce soit.
+ * Une relation, lue depuis une note. `sens` n'est pas décoratif : c'est lui qui a
+ * décidé du `libelle`, et le conserver permet à l'écran de dire de quel côté la
+ * relation a été déclarée sans rien recalculer.
  */
 export interface RelationDeLaNote {
-	/** La clé de la ligne — ce que le retrait vise, et rien d'autre. */
 	readonly id: string;
 	readonly sens: 'sortante' | 'entrante';
 	/** L'identifiant du type — `heberge`, `depend`… */
@@ -138,20 +88,16 @@ export interface RelationDeLaNote {
 	readonly autre: NoteAuBout;
 }
 
-/** Un groupe d'affichage : un libellé, et les relations qu'il porte. */
 export interface GroupeDeRelationsDeLaNote {
 	readonly libelle: string;
 	readonly relations: readonly RelationDeLaNote[];
 }
 
 /**
- * LE GROUPEMENT PAR LIBELLÉ — « les relations sont groupées par type dans
- * l'affichage » (`M08.3`).
- *
- * L'ordre des groupes est celui de la première relation rencontrée, et celui
- * des relations est celui reçu : la requête trie par `types_de_relation.ordre`
- * puis par titre, et ce sont les deux seuls ordres que la base porte. Aucun
- * classement n'est inventé ici. Fonction PURE, éprouvée sans base.
+ * Le groupement par libellé — « les relations sont groupées par type dans
+ * l'affichage » (`M08.3`). L'ordre des groupes est celui de la première relation
+ * rencontrée, et celui des relations est celui reçu : la requête trie par
+ * `types_de_relation.ordre` puis par titre, seuls ordres que la base porte.
  */
 export function grouperLesRelations(
 	lues: readonly RelationDeLaNote[]
@@ -168,20 +114,11 @@ export function grouperLesRelations(
 	}));
 }
 
-/* ═══════════════════════════════════════════ La lecture ════════════════ */
-
 /**
- * LES RELATIONS D'UNE NOTE, DANS LES DEUX SENS, BORNÉES AU PÉRIMÈTRE.
- *
- * `lisibles` est la liste des identifiants que l'appelant a le droit de lire —
- * `lireLaNote()` l'a déjà calculée. Elle entre DANS la requête (`ADR-006`) :
- * une relation vers une note interdite n'apparaît pas, faute de quoi le panneau
- * publierait l'existence, et le titre, d'une note qu'on refuse par ailleurs.
- *
- * `notes` est jointe DEUX FOIS — la note lue d'un côté, l'autre bout de
- * l'autre —, ce qui exige un alias : sans lui, la seconde jointure écrase la
- * première. C'est la raison que `lireRelations()` donne, et cette requête en
- * reprend la forme.
+ * Les relations d'une note, dans les deux sens, bornées au périmètre. `lisibles` entre DANS la
+ * requête (`ADR-006`) : une relation vers une note interdite n'apparaît pas, faute de quoi le
+ * panneau publierait l'existence, et le titre, d'une note qu'on refuse par ailleurs. `notes`
+ * est jointe DEUX FOIS, ce qui exige un alias.
  */
 export async function lireLesRelationsDeLaNote(
 	base: Base,
@@ -259,7 +196,6 @@ export interface TypeDeRelationOffert {
 	readonly entrant: string;
 }
 
-/** Les types de relation du référentiel, dans leur ordre d'administration. */
 export async function lireLesTypesOfferts(base: Base): Promise<readonly TypeDeRelationOffert[]> {
 	return await base
 		.select({
@@ -272,25 +208,19 @@ export async function lireLesTypesOfferts(base: Base): Promise<readonly TypeDeRe
 }
 
 /**
- * LES NOTES QUE L'APPELANT PEUT VISER — celles qu'il lit ET sur lesquelles il
- * peut écrire, la note courante exclue.
- *
- * `P-09` est la raison de ce filtre : une note qu'on ne peut pas relier ne doit
- * pas être proposée, sous peine d'offrir une action refusée après le clic. La
- * capacité est résolue par `peutEcrireSurLeDossier()`, l'implémentation unique,
- * sur le dossier PORTEUR — voir l'en-tête, « domaine au cahier, dossier à la
- * base ».
+ * Les notes que l'appelant peut viser — celles qu'il lit ET sur lesquelles il peut écrire, la
+ * note courante exclue. `P-09` est la raison de ce filtre : une note qu'on ne peut pas relier
+ * ne doit pas être proposée.
  */
 export async function lireLesCiblesPossibles(
 	base: Base,
 	identite: Identite,
-	/** L'identifiant lisible de la note courante — elle s'exclut elle-même. */
 	identifiantDeLaNote: string,
 	lisibles: readonly string[]
 ): Promise<readonly NoteAuBout[]> {
-	/* La note courante sort du jeu AVANT la résolution des droits : une note ne
-	   se relie pas à elle-même (`relations_pas_reflexives`), et la garder
-	   coûterait une résolution pour un candidat que le schéma refuse. */
+	/* La note courante sort du jeu AVANT la résolution des droits : une note ne se
+	   relie pas à elle-même (`relations_pas_reflexives`), et la garder coûterait une
+	   résolution pour un candidat que le schéma refuse. */
 	const visables = lisibles.filter((i) => i !== identifiantDeLaNote);
 	if (visables.length === 0) return [];
 
@@ -322,23 +252,18 @@ export async function lireLesCiblesPossibles(
 	return retenues;
 }
 
-/* ═══════════════════════════════════════════ La saisie ═════════════════ */
-
-/** Ce qu'une déclaration de relation demande : un type, une note visée. */
 export interface SaisieDeRelation {
 	readonly type: string;
 	readonly cible: string;
 }
 
-/** Ce qu'une lecture de saisie rend : la saisie, ou le motif du refus. */
 export type LectureDeSaisie =
 	| { readonly ok: true; readonly saisie: SaisieDeRelation }
 	| { readonly ok: false; readonly motif: string };
 
 /**
- * LA SAISIE, LUE DU FORMULAIRE ET DE RIEN D'AUTRE. Fonction PURE au sens qui
- * compte : elle ne touche ni la base, ni l'horloge, ni les droits — elle
- * s'éprouve sans aucun des trois.
+ * La saisie, lue du formulaire et de rien d'autre. Fonction PURE au sens qui compte :
+ * elle ne touche ni la base, ni l'horloge, ni les droits.
  */
 export function lireLaSaisieDeRelation(donnees: FormData): LectureDeSaisie {
 	const type = (donnees.get('type') ?? '').toString().trim();
@@ -348,46 +273,35 @@ export function lireLaSaisieDeRelation(donnees: FormData): LectureDeSaisie {
 	return { ok: true, saisie: { type, cible } };
 }
 
-/* ═══════════════════════════════════════════ L'écriture ════════════════ */
-
 /**
- * LES DEUX SEULS ÉCHECS QU'ON PEUT NOMMER SANS RIEN RÉVÉLER.
- *
- * Tout le reste — cible absente, cible illisible, cible interdite en écriture,
- * type inconnu — rend `INTROUVABLE`, par le même chemin et sans nuance.
+ * Les deux seuls échecs qu'on peut nommer sans rien révéler. Tout le reste — cible
+ * absente, illisible, interdite en écriture, type inconnu — rend `INTROUVABLE`, par
+ * le même chemin et sans nuance.
  */
 export type MotifDeRefus = 'doublon' | 'reflexive';
 
 /**
- * LA FORME D'UNE CLÉ, VÉRIFIÉE AVANT LA REQUÊTE — et ce n'est pas une coquetterie.
- *
- * `relations.id` est un `uuid` : comparer la colonne à une chaîne qui n'en est
- * pas un fait sortir PostgreSQL en erreur de syntaxe, laquelle remonte en 500.
- * Une valeur soumise depuis un formulaire n'est jamais présumée bien formée ;
- * mal formée, elle ne désigne rien, et « ne désigne rien » est déjà un refus
- * que ce module sait rendre.
+ * La forme d'une clé, vérifiée AVANT la requête : `relations.id` est un `uuid`, et
+ * comparer la colonne à une chaîne qui n'en est pas un fait sortir PostgreSQL en
+ * erreur de syntaxe, laquelle remonte en 500. Mal formée, la valeur ne désigne rien,
+ * et « ne désigne rien » est déjà un refus que ce module sait rendre.
  */
 const FORME_DE_CLE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type EcritureDeRelation =
 	{ readonly ok: true; readonly id: string } | { readonly ok: false; readonly motif: MotifDeRefus };
 
-/** Ce qu'une relation écrite rend à l'appelant. */
 export type ResultatDAjout = Resolution<EcritureDeRelation>;
 
 /**
- * DÉCLARER UNE RELATION — `UC-M08-02`.
- *
- * L'ORDRE DES PORTES N'EST PAS INDIFFÉRENT. La source est résolue d'abord, avec
- * son droit ; rien de la saisie n'a encore servi. Puis la cible, puis le type.
- * Un appelant sans droit sur la source ne fait donc pas payer une requête de
- * plus au produit, et ne peut pas sonder l'existence d'une cible.
+ * Déclarer une relation — `UC-M08-02`. L'ORDRE DES PORTES N'EST PAS INDIFFÉRENT : la source
+ * est résolue d'abord, avec son droit, avant que rien de la saisie n'ait servi. Un appelant
+ * sans droit sur la source ne peut donc pas sonder l'existence d'une cible.
  */
 export async function ajouterUneRelation(
 	base: Base,
 	demande: {
 		readonly identite: Identite;
-		/** L'identifiant lisible de la note SOURCE, déjà résolue par la route. */
 		readonly source: string;
 		readonly saisie: SaisieDeRelation;
 	}
@@ -413,9 +327,8 @@ export async function ajouterUneRelation(
 		return INTROUVABLE;
 	}
 
-	/* Une note ne se relie pas à elle-même : `relations_pas_reflexives` le
-	   refuse au schéma, et le refuser ici rend un message plutôt qu'une
-	   violation de contrainte. */
+	/* Une note ne se relie pas à elle-même : le schéma le refuse, et le refuser ici
+	   rend un message plutôt qu'une violation de contrainte. */
 	if (source.cle === cible.cle)
 		return { trouve: true, ressource: { ok: false, motif: 'reflexive' } };
 
@@ -426,9 +339,8 @@ export async function ajouterUneRelation(
 		.limit(1);
 	if (type === undefined) return INTROUVABLE;
 
-	/* `RG-M08-03` — une même relation ne peut exister qu'une fois. La contrainte
-	   `relations_unicite` en reste la garantie ; cette lecture ne fait que
-	   rendre le refus lisible. */
+	/* `RG-M08-03` — la contrainte `relations_unicite` reste la garantie ; cette
+	   lecture ne fait que rendre le refus lisible. */
 	const [deja] = await base
 		.select({ cle: relations.id })
 		.from(relations)
@@ -448,9 +360,8 @@ export async function ajouterUneRelation(
 			sourceId: source.cle,
 			cibleId: cible.cle,
 			typeDeRelationId: type.cle,
-			/* `P-08` — saisie humaine, donc `declaree` (`CDC:901`). La colonne a
-			   ce défaut au schéma ; l'écrire ici dit l'intention plutôt que de la
-			   laisser à une valeur par défaut qu'un autre chemin pourrait changer. */
+			/* `P-08` — saisie humaine, donc `declaree`. L'écrire ici dit l'intention
+			   plutôt que de la laisser à une valeur par défaut. */
 			origine: 'declaree'
 		})
 		.returning({ cle: relations.id });
@@ -460,25 +371,18 @@ export async function ajouterUneRelation(
 }
 
 /**
- * RETIRER UNE RELATION — « chaque relation est supprimable » (`M08.3`).
+ * Retirer une relation — « chaque relation est supprimable » (`M08.3`).
  *
- * TROIS CONDITIONS, ET LA TROISIÈME EST CELLE QU'ON OUBLIE : la ligne visée
- * doit avoir la note courante à L'UNE de ses deux extrémités. Sans elle,
- * l'identifiant d'une relation quelconque, soumis depuis n'importe quelle note,
- * suffirait à la détruire — le droit serait vérifié sur les bonnes notes, mais
- * pas sur celles que l'appelant regarde.
- *
- * Le droit exigé est celui de `RG-M08-04` : écriture sur les deux extrémités.
- * La règle ne distingue pas la création de la suppression, et ce module non
- * plus.
+ * TROIS CONDITIONS, ET LA TROISIÈME EST CELLE QU'ON OUBLIE : la ligne visée doit avoir la note
+ * courante à L'UNE de ses deux extrémités. Sans elle, l'identifiant d'une relation quelconque,
+ * soumis depuis n'importe quelle note, suffirait à la détruire. Le droit exigé est celui de
+ * `RG-M08-04` : la règle ne distingue pas la création de la suppression.
  */
 export async function retirerUneRelation(
 	base: Base,
 	demande: {
 		readonly identite: Identite;
-		/** L'identifiant lisible de la note depuis laquelle on retire. */
 		readonly depuis: string;
-		/** La clé de la relation visée. */
 		readonly relation: string;
 	}
 ): Promise<Resolution<{ readonly retiree: true }>> {

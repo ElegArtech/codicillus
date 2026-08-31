@@ -1,198 +1,58 @@
 /**
- * LE CONVERTISSEUR UNIQUE `document ⇄ Markdown` — L'IMPLÉMENTATION UNIQUE.
+ * Le convertisseur unique `document ⇄ Markdown` — l'implémentation unique (`ADR-004`).
+ * `serialiserEnMarkdown` et `analyserMarkdown` sont les seuls exports exécutables ; les
+ * deux passent par `analyserDocument` — l'aller valide avant d'écrire, le retour avant de
+ * rendre —, de sorte qu'aucun document non validé n'entre ni ne sort (`ADR-003`).
  *
- * `ADR-004`, acceptée le 18 août 2026 : « il existe UNE SEULE implémentation de
- * la conversion `document ⇄ Markdown`, dans l'application. L'import l'utilise
- * dans un sens, l'export dans l'autre. » Ce module EST cette implémentation.
+ * `RG-M13-01` : « l'export est réimportable […] c'est le critère de réussite principal ».
+ * La propriété est une IDENTITÉ, et AUCUNE normalisation n'intervient avant comparaison :
+ * chaque convention ci-dessous est choisie pour que l'aller-retour soit l'identité SANS
+ * retouche.
  *
- * DEUX FONCTIONS, ET AUCUNE AUTRE PORTE. `serialiserEnMarkdown` et
- * `analyserMarkdown` sont les seuls exports exécutables ; tout le reste est
- * privé au module. Les deux passent par `analyserDocument` — l'aller valide
- * avant d'écrire, le retour valide avant de rendre —, de sorte qu'aucun
- * document non validé n'entre ni ne sort : c'est l'interdit d'`ADR-003` sur
- * « toute écriture directe en base d'un document non validé », et c'est le
- * motif de tenue de `rendu.ts`, qui prend lui aussi une valeur INCONNUE.
+ * CE QUE LE GEL FIXE (`ARB-049`) : un diagramme est un bloc clôturé dont la chaîne
+ * d'information nomme le langage (`V-36:3044`) ; un lien interne est de la famille des
+ * doubles crochets et porte l'IDENTIFIANT de la cible, jamais son titre ; trois tirets en
+ * FRAPPE valent séparateur — la LECTURE l'honore, l'ÉCRITURE emploie trois astérisques.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE MESURE LA BATTERIE 4, ET POURQUOI ELLE DÉCIDE DE TOUT
+ * LA COUTURE AVEC L'EN-TÊTE DE MÉTADONNÉES : ce bloc appartient à l'export et à l'import.
+ * `serialiserEnMarkdown` rend le CORPS SEUL et ne commence JAMAIS par une ligne de trois
+ * tirets — la collision est impossible par construction. `analyserMarkdown` reçoit le
+ * CORPS SEUL : trois tirets reçus ici sont un séparateur.
  *
- * `RG-M13-01` (`CAHIER-DES-CHARGES-FONCTIONNEL.md` l. 1113) : « l'export est
- * réimportable […] C'est le critère de réussite principal. » La propriété est
- * une IDENTITÉ : pour tout document du corpus, `analyserMarkdown` de
- * `serialiserEnMarkdown` rend le document d'origine. `STACK-TECHNIQUE.md`
- * l. 461 (`R-05`) en tire la conséquence : « un aller-retour non idempotent
- * fait échouer la construction ».
+ * LES CONVENTIONS MAISON (`ARB-049` décision 3) :
  *
- * Aucune normalisation n'intervient avant comparaison, et ce n'est pas un
- * hasard : chaque convention ci-dessous a été choisie pour que l'aller-retour
- * soit l'identité SANS retouche. Les deux endroits où le Markdown ordinaire
- * perdrait de l'information sont traités par une convention, jamais par un
- * arrondi — voir « LES DEUX PIÈGES D'IDENTITÉ » plus bas.
+ *   ancre d'un titre      liste d'attributs accolée, forme de Pandoc et kramdown
+ *   souligné              deux signes plus ; deux tirets bas sont REFUSÉS, tout lecteur
+ *                         Markdown y voyant du gras
+ *   surligné              deux signes égal — forme d'Obsidian et du greffon `mark`
+ *   italique              un tiret bas, jamais une astérisque (piège 1)
+ *   attribut sans place   une LIGNE D'ATTRIBUTS collée sous le bloc, dont les clés sont
+ *                         EXACTEMENT les noms du format canonique : une clé inconnue
+ *                         n'est pas ignorée, elle est refusée par le schéma
+ *   alerte, tableau riche un CONTENEUR clôturé par des deux-points, de la famille des
+ *                         directives de conteneur, nommé en français
+ *   paragraphe vide       une contre-oblique seule, la forme de Pandoc
+ *   frontière de blocs    une ligne d'accolades vides entre deux listes ADJACENTES DE
+ *                         MÊME GENRE, que rien d'autre ne saurait séparer
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LE GEL FIXE, ET QUI N'ÉTAIT PAS À DÉCIDER (ARB-049)
+ * LES DEUX PIÈGES D'IDENTITÉ :
  *
- *   DIAGRAMME  « 1 diagramme — converti en bloc de code, sans rendu
- *              graphique » — `mockups/V-36-console-exports.html:3044`. Le
- *              diagramme est donc un bloc clôturé dont la chaîne
- *              d'information nomme le langage.
- *   LIEN INTERNE  la famille des doubles crochets — `V-17-editeur.html:1576`
- *              (le raccourci du bouton « Lien interne »), `:1585` (l'invite
- *              « … pour lier une autre note ») et `:3191` (l'entrée de menu
- *              du même nom). Il porte l'IDENTIFIANT de la cible, jamais son
- *              titre : `ADR-003` interdit nommément l'inverse.
- *   SÉPARATEUR  trois tirets EN FRAPPE — la table `RACCOURCIS` de
- *              `V-17-editeur.html:3147` et celle de
- *              `V-18-editeur-operationnel.html:3120` les associent toutes
- *              deux au séparateur. C'est une affordance de frappe (T-021),
- *              pas un format de fichier : la LECTURE l'honore — trois tirets
- *              seuls sur leur ligne sont lus comme un séparateur —,
- *              l'ÉCRITURE emploie trois astérisques, pour la raison dite au
- *              paragraphe suivant.
+ *  1. L'ORDRE DES MARQUES. `[bold, italic]` et `[italic, bold]` sont deux documents
+ *     différents, or l'astérisque simple et la double FUSIONNENT : une suite de trois serait
+ *     la sortie des deux. La parade n'est pas de normaliser l'ordre (ce serait une perte),
+ *     c'est le tiret bas pour l'italique. L'ordre du tableau est l'ordre d'imbrication.
+ *  2. LES BORDS D'UN TEXTE. Une espace en tête ou en fin de ligne est invisible et Markdown la
+ *     mange : elle s'écrit en entité numérique, et l'esperluette s'échappe partout ailleurs
+ *     pour que cette entité ne soit jamais ambiguë.
  *
- * LA COUTURE AVEC L'EN-TÊTE DE MÉTADONNÉES — obligation d'ARB-049 décision 5.
- * `V-36:2929` décrit « Type, étiquettes, auteur, date de dernière
- * vérification, visibilité et propriétés de fiche, dans un bloc de trois
- * tirets en tête de fichier. C'est ce bloc qui rend l'archive réimportable. »
- * CE BLOC N'EST PAS DE CE MODULE : il porte les métadonnées de la NOTE, il
- * appartient à `T-045` (export) et `T-043` (import). Le contrat est donc :
+ * CE MODULE NE NORMALISE RIEN : un retour chariot dans un bloc de code est laissé où il est et
+ * `analyserDocument` refuse le document (`RG-M04-05`). Le nettoyer ici serait la « correction
+ * appliquée d'un seul côté de l'aller-retour » qu'`ADR-004` interdit. De même, une clé
+ * d'attribut inconnue est transmise au schéma, qui refuse.
  *
- *   • `serialiserEnMarkdown` rend le CORPS SEUL, sans en-tête, et ne commence
- *     JAMAIS par une ligne de trois tirets — le séparateur s'écrit en
- *     astérisques. La collision qu'ARB-049 demandait de traiter est donc
- *     IMPOSSIBLE par construction, et non pas seulement improbable.
- *   • `analyserMarkdown` reçoit le CORPS SEUL. C'est à l'appelant de retirer
- *     l'en-tête s'il y en a un. Trois tirets reçus ici sont un séparateur.
- *
- * Aucun lot ultérieur n'a donc à écrire un second analyseur : il retire
- * l'en-tête, et passe le reste ici (`ADR-004` interdit l'autre chemin).
- *
- * ═════════════════════════════════════════════════════════════════════════
- * UNE TROISIÈME SÉRIALISATION EXISTE DANS LE GEL, ET IL FALLAIT LA CHERCHER
- *
- * `ARB-049` retient deux formes du gel. Il en existe une troisième, trouvée en
- * cherchant plutôt qu'en supposant (`P-21`) : `window.blocEnLignes` de
- * `mockups/V-16-comparaison.html:1864-1878` — « représentation linéaire d'un
- * bloc, façon texte source. C'est elle qui est comparée ligne à ligne en mode
- * Texte ». Elle écrit, et ce sont ses lignes exactes :
- *
- *   titre        deux ou trois dièses, puis le texte      ← MÊME FAMILLE
- *   liste        un tiret, puis l'élément                 ← MÊME FAMILLE
- *   tâche        un tiret, une case vide, puis l'élément  ← MÊME FAMILLE
- *   code         clôture d'accents graves + langage       ← MÊME FAMILLE
- *   alerte       conteneur de deux-points, nom = niveau   ← MÊME FAMILLE
- *   figure       forme d'image, puis la légende           ← MÊME FAMILLE
- *   tableau      lignes de barres verticales              ← MÊME FAMILLE
- *
- * SIX FAMILLES SUR SEPT SONT CELLES RETENUES ICI, y compris le conteneur de
- * deux-points pour l'alerte — choisi d'abord pour sa parenté avec
- * remark-directive, et qui se trouve être celui du gel.
- *
- * CE QU'ELLE N'EST PAS, ET C'EST POURQUOI ELLE NE FAIT PAS LOI SUR L'EXPORT.
- * Son entrée est le `BlocDeContenu` de `seeds/corpus.ts` (l. 309-331) — la
- * forme des versions anciennes de V-16, que T-014 a refusé de transposer —, et
- * non le document canonique. Elle est irréversible par construction : elle ne
- * porte ni le glyphe d'une alerte (`P-7.2`, `RG-M18-09`), ni la source d'une
- * image, ni l'ancre d'un titre, ni l'état coché d'une tâche, ni la ligne de
- * filet d'un tableau. `ARB-049` décision 4 refuse justement ces pertes.
- *
- * LES DEUX ENDROITS OÙ CE MODULE S'EN ÉCARTE, DÉCLARÉS PLUTÔT QUE TAIS :
- *
- *  1. L'ALERTE. Le gel nomme le conteneur d'après le NIVEAU et pose le titre
- *     nu derrière. Ici, le conteneur porte le nom du NŒUD — `alerte`, le nom
- *     français qu'`ADR-003` lui donne — et ses trois attributs en liste. Motif :
- *     le glyphe doit survivre, et une seule mécanique d'attributs vaut mieux
- *     que deux. Un arbitrage qui préférerait la forme du gel n'aurait qu'à
- *     déplacer le niveau dans le nom : le reste ne bouge pas.
- *  2. LE TABLEAU. Le gel n'écrit pas de ligne de filet ; sans elle, ni la
- *     ligne de tête ni le caractère numérique d'une colonne ne se relisent.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES CONVENTIONS MAISON, ET LEUR MOTIF (ARB-049 décision 3)
- *
- * Elles sont autorisées à trois conditions : documentées à l'implémentation
- * unique — ce commentaire —, lisibles par un humain (le gel promet « lisible
- * dans n'importe quel éditeur de texte », `V-36:2923`), et fidèles.
- *
- *   ancre d'un titre      la liste d'attributs de Pandoc et de kramdown,
- *                         accolée au titre. L'ancre est un identifiant de
- *                         document (`V-14:1528` écrit `id="s-avant"`), et
- *                         c'est la forme que ces deux outils lui donnent.
- *   souligné              deux signes plus de chaque côté. Deux tirets bas
- *                         sont REFUSÉS : tout lecteur Markdown y voit du
- *                         gras — un humain serait trompé, ce que la décision
- *                         4 refuse au même titre qu'une perte.
- *   surligné              deux signes égal de chaque côté — la forme
- *                         d'Obsidian et du greffon `mark`, la plus répandue.
- *   italique              un tiret bas, et non une astérisque : voir « LES
- *                         DEUX PIÈGES D'IDENTITÉ », piège 1.
- *   attribut sans place   une LIGNE D'ATTRIBUTS collée sous le bloc —
- *                         attribution d'une citation, étiquette et légende
- *                         d'une figure, alternative textuelle d'un
- *                         diagramme, langage impossible à écrire en chaîne
- *                         d'information. Les clés sont EXACTEMENT les noms
- *                         d'attributs du format canonique : une clé inconnue
- *                         n'est donc pas ignorée, elle est refusée par le
- *                         schéma.
- *   alerte, et tableau
- *   à cellules riches     un CONTENEUR clôturé par des deux-points, de la
- *                         famille des directives de conteneur
- *                         (remark-directive, divs clôturés de Pandoc, MyST).
- *                         Le nom du conteneur est français, comme le nœud
- *                         qu'il porte.
- *   paragraphe vide       une ligne portant une seule contre-oblique, la
- *                         forme que Pandoc donne à une ligne vide. Le format
- *                         l'admet (`content` est optionnel) et l'éditeur en
- *                         produit — `V-17:3077` insère un paragraphe vide
- *                         après chaque séparateur.
- *   frontière de blocs    une ligne d'accolades vides entre deux listes
- *                         ADJACENTES DE MÊME GENRE, que rien d'autre ne
- *                         saurait séparer : sans elle, la relecture n'en
- *                         verrait qu'une.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LES DEUX PIÈGES D'IDENTITÉ, ET LEUR PARADE
- *
- *  1. L'ORDRE DES MARQUES. `marks: [bold, italic]` et `marks: [italic, bold]`
- *     sont deux tableaux différents, donc deux documents différents au sens du
- *     JSON stocké. Or l'astérisque simple et la double FUSIONNENT : une suite
- *     de trois serait la sortie des deux, et la relecture n'en rendrait qu'un
- *     — l'aller-retour cesserait d'être l'identité pour l'autre. La parade
- *     n'est pas de normaliser l'ordre (ce serait une perte), c'est de choisir
- *     le tiret bas pour l'italique : les deux imbrications se relisent alors
- *     chacune dans son ordre. L'ordre du tableau est l'ordre d'imbrication,
- *     le premier étant le plus extérieur.
- *  2. LES BORDS D'UN TEXTE. Une espace en tête ou en fin de ligne est
- *     invisible et Markdown la mange. Elle s'écrit donc en entité numérique,
- *     et l'esperluette s'échappe partout ailleurs pour que cette entité ne
- *     soit jamais ambiguë. C'est la seule entité que ce module écrit et lit.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUI N'EST PAS RÉPARÉ, ET C'EST LE POINT
- *
- * `RG-M04-05` veut d'un bloc de code « exactement ce que l'utilisateur
- * collera dans son terminal », et `document.ts` règle 5 tient l'exigence PAR
- * REFUS À L'ENTRÉE : un retour chariot y est rejeté par le schéma. Ce module
- * ne normalise donc RIEN : il découpe les lignes sur le seul saut de ligne,
- * laisse les retours chariot où ils sont, et `analyserDocument` refuse le
- * document. Un nettoyage ici serait la « correction appliquée d'un seul côté
- * de l'aller-retour » qu'`ADR-004` interdit nommément, et il masquerait un
- * fichier faux.
- *
- * De même, une liste d'attributs porteuse d'une clé que le format ne connaît
- * pas n'est pas filtrée : elle est transmise au schéma, qui la refuse.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * LA SEULE LIMITE DE REPRÉSENTATION, DÉCLARÉE ET LEVÉE BRUYAMMENT
- *
- * Un texte portant la marque `code` et composé UNIQUEMENT D'ESPACES n'a pas
- * de forme en Markdown : la règle d'égalisation des espaces d'un span de code
- * (une espace de chaque bord est retirée si les deux bords en portent et que
- * le contenu n'est pas fait que d'espaces) rend l'écriture non inversible.
- * `serialiserEnMarkdown` lève alors `MarkdownNonRepresentable` : la
- * construction « se déclare et se compte » (ARB-049 décision 4), elle ne se
- * dégrade pas en silence. Zéro occurrence au corpus, et le cas est éprouvé
- * en unitaire.
+ * LA SEULE LIMITE DE REPRÉSENTATION : un texte marqué `code` et fait UNIQUEMENT D'ESPACES n'a
+ * pas de forme en Markdown — la règle d'égalisation des espaces d'un span de code rend
+ * l'écriture non inversible. `serialiserEnMarkdown` lève alors `MarkdownNonRepresentable`.
  */
 import {
 	analyserDocument,
@@ -212,13 +72,10 @@ import {
 	type Titre
 } from './document';
 
-/* ═════════════════════════════════════════════ Les formes littérales ════ */
-
 /**
- * L'ACCENT GRAVE, JAMAIS ÉCRIT EN CLAIR AILLEURS QU'ICI. `P-17` de
- * `CLAUDE.md` §6 : un accent grave dans un modèle littéral ferme le modèle, et
- * l'erreur remonte à cent lignes de la cause. Ce module écrit des blocs
- * clôturés : la parade est de ne taper le caractère qu'une fois.
+ * L'ACCENT GRAVE, JAMAIS ÉCRIT EN CLAIR AILLEURS QU'ICI. `P-17` : un accent grave dans un
+ * modèle littéral ferme le modèle, et l'erreur remonte à cent lignes de la cause. Ce
+ * module écrit des blocs clôturés : la parade est de ne taper le caractère qu'une fois.
  */
 const AG = '`';
 
@@ -256,11 +113,9 @@ const MARQUE_PAR_MARQUEUR: readonly (readonly [string, string])[] = [
 ];
 
 /**
- * Les caractères échappés PARTOUT dans un texte en ligne. Chacun ouvre une
- * construction : la contre-oblique l'échappement, l'esperluette l'entité,
- * l'accent grave un span de code, l'astérisque le gras, le tiret bas
- * l'italique, les crochets les deux familles de liens, la barre verticale une
- * cellule de tableau, l'accolade une liste d'attributs.
+ * Les caractères échappés PARTOUT dans un texte en ligne : chacun ouvre une
+ * construction — échappement, entité, span de code, gras, italique, liens,
+ * cellule de tableau, liste d'attributs.
  */
 const TOUJOURS_ECHAPPES: readonly string[] = ['\\', '&', AG, '*', '_', '[', ']', '|', '{'];
 
@@ -273,11 +128,8 @@ const ECHAPPES_EN_TETE: readonly string[] = ['#', '>', '-', ':'];
 /** Les trois genres de liste, et leur adjacence indistinguable. */
 const GENRES_DE_LISTE: readonly string[] = ['bulletList', 'orderedList', 'taskList'];
 
-/* ═════════════════════════════════════════════════ Les deux refus ═══════ */
-
 /** Un Markdown que ce module ne sait pas lire. Il ne devine jamais. */
 export class MarkdownInvalide extends Error {
-	/** La ligne du texte reçu, à partir de 1. */
 	readonly ligne: number;
 
 	constructor(ligne: number, message: string) {
@@ -292,7 +144,6 @@ export class MarkdownInvalide extends Error {
  * « déclarer et compter » d'ARB-049 décision 4 : jamais une perte muette.
  */
 export class MarkdownNonRepresentable extends Error {
-	/** Le cas, tel que l'en-tête du module l'énumère. */
 	readonly cas: string;
 
 	constructor(cas: string, message: string) {
@@ -302,9 +153,6 @@ export class MarkdownNonRepresentable extends Error {
 	}
 }
 
-/* ═════════════════════════════════════ ALLER — l'échappement du texte ═══ */
-
-/** La plus longue suite du caractère donné, dans le texte donné. */
 function plusLongueSuite(texte: string, caractere: string): number {
 	let plus = 0;
 	let suite = 0;
@@ -315,7 +163,6 @@ function plusLongueSuite(texte: string, caractere: string): number {
 	return plus;
 }
 
-/** Un texte en ligne, rendu inoffensif sans rien perdre. */
 function echapperEnLigne(texte: string): string {
 	let out = '';
 	for (let i = 0; i < texte.length; i++) {
@@ -349,7 +196,6 @@ function echapperValeur(valeur: string, delimiteurs: readonly string[]): string 
 	return out;
 }
 
-/** Les espaces des bords, écrites en entité — piège d'identité 2. */
 function protegerLesBords(ligne: string): string {
 	if (ligne === '') return '';
 	if (ligne.trim() === '') return ESPACE_ECRITE.repeat(ligne.length);
@@ -378,9 +224,6 @@ function echapperLaTete(ligne: string): string {
 	return ligne;
 }
 
-/* ═══════════════════════════════════ ALLER — les textes et les marques ══ */
-
-/** Un span de code : la seule construction dont le contenu n'est pas échappé. */
 function spanDeCode(texte: string): string {
 	if (texte.trim() === '') {
 		throw new MarkdownNonRepresentable(
@@ -425,9 +268,6 @@ function ecrireEnLigne(contenu: readonly Texte[] | undefined): string {
 	return protegerLesBords((contenu ?? []).map(ecrireTexte).join(''));
 }
 
-/* ═══════════════════════════════════════ ALLER — les listes d'attributs ═ */
-
-/** Une liste d'attributs, ou la chaîne vide s'il n'y a rien à écrire. */
 function listeDAttributs(paires: readonly (readonly [string, string | null])[]): string {
 	const ecrites = paires
 		.filter((p): p is readonly [string, string] => p[1] !== null)
@@ -435,14 +275,11 @@ function listeDAttributs(paires: readonly (readonly [string, string | null])[]):
 	return ecrites.length === 0 ? '' : '{' + ecrites.join(' ') + '}';
 }
 
-/** L'ancre d'un titre : le raccourci d'identifiant quand elle s'y prête. */
 function attributsDeTitre(ancre: string | null): string {
 	if (ancre === null) return '';
 	if (/^[A-Za-z0-9_-]+$/.test(ancre)) return '{#' + ancre + '}';
 	return listeDAttributs([['ancre', ancre]]);
 }
-
-/* ═══════════════════════════════════════════ ALLER — les conteneurs ═════ */
 
 /**
  * Un conteneur clôturé. La clôture est plus longue que la plus longue clôture
@@ -459,9 +296,6 @@ function conteneur(nom: string, attributs: string, dedans: readonly string[]): s
 	return [cloture + nom + attributs, ...dedans, cloture];
 }
 
-/* ═══════════════════════════════════════════════ ALLER — les blocs ══════ */
-
-/** Deux listes de même genre, côte à côte, ne se distinguent pas sans frontière. */
 function frontiereNecessaire(avant: Bloc, apres: Bloc): boolean {
 	return avant.type === apres.type && GENRES_DE_LISTE.includes(avant.type);
 }
@@ -479,7 +313,6 @@ function ecrireBlocs(blocs: readonly Bloc[]): string[] {
 	return out;
 }
 
-/** Les blocs d'un élément de liste, préfixés du marqueur puis de l'alinéa. */
 function ecrireElement(blocs: readonly Bloc[], marqueur: string, alinea: number): string[] {
 	const dedans = ecrireBlocs(blocs);
 	return dedans.map((ligne, i) => {
@@ -498,11 +331,9 @@ function ecrireTitre(titre: Titre): string[] {
 }
 
 /**
- * Le bloc de code. La chaîne d'information porte le langage TEL QUEL, sans
- * rognage : un langage porteur d'une espace de bord survit ainsi. Quand il
- * porte un saut de ligne ou un accent grave — que le format admet, `language`
- * n'étant qu'un texte non vide —, la chaîne d'information ne peut pas le
- * porter : il passe alors en ligne d'attributs, et rien n'est perdu.
+ * Le bloc de code. La chaîne d'information porte le langage TEL QUEL, sans rognage. Quand
+ * il porte un saut de ligne ou un accent grave — que le format admet —, la chaîne
+ * d'information ne peut pas le porter : il passe en ligne d'attributs, et rien n'est perdu.
  */
 function ecrireBlocDeCode(bloc: BlocDeCode): string[] {
 	const code = (bloc.content ?? []).map((t) => t.text).join('');
@@ -519,10 +350,10 @@ function ecrireBlocDeCode(bloc: BlocDeCode): string[] {
 }
 
 /**
- * LE DIAGRAMME — `ARB-049` décision 1, et le gel : « converti en bloc de
- * code » (`V-36:3044`). La chaîne d'information nomme le langage ; la ligne
- * d'attributs porte l'alternative textuelle de `P-06`, qui est OBLIGATOIRE au
- * format et qui distingue donc un diagramme d'un bloc de code homonyme.
+ * LE DIAGRAMME — `ARB-049` décision 1, et le gel : « converti en bloc de code »
+ * (`V-36:3044`). La chaîne d'information nomme le langage ; la ligne d'attributs porte
+ * l'alternative textuelle de `P-06`, OBLIGATOIRE au format, qui distingue donc un
+ * diagramme d'un bloc de code homonyme.
  */
 function ecrireDiagramme(bloc: Diagramme): string[] {
 	const { source, langage, alternative, etiquette, legende } = bloc.attrs;
@@ -575,16 +406,12 @@ function ecrireTaches(bloc: ListeDeTaches): string[] {
 }
 
 /**
- * LE TABLEAU EN BARRES VERTICALES, quand la forme de GitHub sait le porter :
- * une seule ligne de tête, toute en cellules d'en-tête, un corps tout en
- * cellules ordinaires, des lignes de même longueur, une cellule faite d'un
- * seul paragraphe, et un caractère numérique constant par colonne — que la
- * ligne de filet exprime par l'alignement à droite.
- *
- * Rend `null` dès qu'une de ces conditions manque : le tableau passe alors en
- * conteneurs, qui savent tout porter. Le caractère numérique étant une
- * propriété de CELLULE au format, aucune colonne hétérogène n'est écrite en
- * barres — l'alignement mentirait.
+ * Le tableau en barres verticales, quand la forme de GitHub sait le porter : une seule
+ * ligne de tête toute en cellules d'en-tête, un corps tout en cellules ordinaires, des
+ * lignes de même longueur, une cellule faite d'un seul paragraphe, et un caractère
+ * numérique constant par colonne. Rend `null` dès qu'une condition manque : le tableau
+ * passe alors en conteneurs, qui savent tout porter. Le caractère numérique étant une
+ * propriété de CELLULE, aucune colonne hétérogène n'est écrite en barres.
  */
 function tableauEnBarres(bloc: Tableau): string[] | null {
 	const lignes = bloc.content;
@@ -626,7 +453,6 @@ function tableauEnBarres(bloc: Tableau): string[] | null {
 	];
 }
 
-/** Le tableau en conteneurs — la forme qui sait tout porter. */
 function tableauEnConteneurs(bloc: Tableau): string[] {
 	const lignes = bloc.content.flatMap((ligne) =>
 		conteneur(
@@ -681,9 +507,8 @@ function ecrireBloc(bloc: Bloc): string[] {
 }
 
 /**
- * LE SENS ALLER. La valeur entre INCONNUE et sort validée : c'est
- * `analyserDocument` qui décide, et lui seul — aucun document non validé ne
- * se sérialise.
+ * LE SENS ALLER. La valeur entre INCONNUE et sort validée : c'est `analyserDocument` qui
+ * décide, et lui seul.
  *
  * @throws DocumentInvalide si le document est mal formé.
  * @throws MarkdownNonRepresentable pour la seule limite déclarée à l'en-tête.
@@ -693,12 +518,8 @@ export function serialiserEnMarkdown(valeur: unknown): string {
 	return ecrireBlocs(document.content).join('\n') + '\n';
 }
 
-/* ═══════════════════════════════════ RETOUR — la lecture des attributs ══ */
-
-/** Les attributs relevés sur une ligne d'attributs, valeurs déjà déséchappées. */
 type Attributs = Readonly<Record<string, string>>;
 
-/** Une ligne d'attributs, et jamais la frontière de blocs. */
 function estLigneDAttributs(ligne: string | undefined): boolean {
 	return ligne !== undefined && ligne !== FRONTIERE && /^\{.*\}$/.test(ligne);
 }
@@ -759,16 +580,12 @@ function lireListeDAttributs(ligne: string, numero: number): Attributs {
 	return attrs;
 }
 
-/** Le booléen d'un attribut. Toute autre valeur est transmise telle quelle. */
 function booleen(valeur: string | undefined): unknown {
 	if (valeur === 'oui') return true;
 	if (valeur === 'non') return false;
 	return valeur;
 }
 
-/* ═══════════════════════════════════ RETOUR — les textes et les marques ═ */
-
-/** Le nœud de texte, avec ses marques dans l'ordre d'imbrication. */
 function texteAvecMarques(texte: string, marques: readonly unknown[]): unknown {
 	return marques.length === 0
 		? { type: 'text', text: texte }
@@ -820,18 +637,15 @@ function finDuSpanDeCode(source: string, debut: number, n: number): number {
 	return -1;
 }
 
-/** La règle d'égalisation des espaces d'un span de code, en lecture. */
 function dedansDuSpan(brut: string): string {
 	if (brut.startsWith(' ') && brut.endsWith(' ') && brut.trim() !== '') return brut.slice(1, -1);
 	return brut;
 }
 
 /**
- * LES FRAGMENTS D'UN TEXTE EN LIGNE. Une construction non refermée est lue
- * comme du texte, ce que fait aussi CommonMark : l'écriture échappe tout
- * délimiteur littéral, donc ce cas ne peut venir que d'un fichier écrit à la
- * main — et refuser un fichier d'humain pour une astérisque serait une
- * sévérité sans objet.
+ * Les fragments d'un texte en ligne. Une construction non refermée est lue comme
+ * du texte, ce que fait aussi CommonMark : l'écriture échappe tout délimiteur
+ * littéral, donc ce cas ne peut venir que d'un fichier écrit à la main.
  */
 function lireFragments(source: string, marques: readonly unknown[]): unknown[] {
 	const out: unknown[] = [];
@@ -932,14 +746,11 @@ function lireEnLigne(source: string): unknown {
 	return fragments.length === 0 ? undefined : fragments;
 }
 
-/** Un bloc de texte : paragraphe vide, ou paragraphe. */
 function paragrapheDe(source: string): unknown {
 	if (source === PARAGRAPHE_VIDE) return { type: 'paragraph' };
 	const contenu = lireEnLigne(source);
 	return contenu === undefined ? { type: 'paragraph' } : { type: 'paragraph', content: contenu };
 }
-
-/* ═══════════════════════════════════════════════ RETOUR — les blocs ═════ */
 
 /** Le curseur de lecture. `decalage` porte le numéro de ligne du fichier. */
 interface Curseur {
@@ -948,12 +759,10 @@ interface Curseur {
 	i: number;
 }
 
-/** Le numéro de ligne, tel qu'un humain le compte dans le texte reçu. */
 function numero(c: Curseur): number {
 	return c.decalage + c.i + 1;
 }
 
-/** La ligne d'attributs qui suit immédiatement un bloc, s'il y en a une. */
 function attributsSuivants(c: Curseur): Attributs {
 	const ligne = c.lignes[c.i];
 	if (!estLigneDAttributs(ligne)) return {};
@@ -961,7 +770,6 @@ function attributsSuivants(c: Curseur): Attributs {
 	return lireListeDAttributs(ligne as string, numero(c));
 }
 
-/** Les nœuds portés par un conteneur, selon son nom. */
 function noeudDeConteneur(
 	nom: string,
 	attrs: Attributs,
@@ -1005,7 +813,6 @@ function lireConteneur(c: Curseur, cloture: string, nom: string, attributs: stri
 	return noeudDeConteneur(nom, attrs, lireBlocs(dedans, c.decalage + depart), ouverture);
 }
 
-/** Le bloc clôturé : un bloc de code, ou un diagramme si l'alternative est là. */
 function lireBlocCloture(c: Curseur, cloture: string, information: string): unknown {
 	const ouverture = numero(c);
 	c.i += 1;
@@ -1042,12 +849,9 @@ function lireBlocCloture(c: Curseur, cloture: string, information: string): unkn
 }
 
 /**
- * Le suffixe d'attributs d'un titre, s'il y en a un. Le relevé se fait par
- * ESSAI DE LECTURE, et non par expression régulière : une valeur d'attribut
- * peut porter une accolade fermante, qu'aucun motif court ne saurait borner.
- * Une accolade échappée, ou une accolade prise dans un span de code, ne
- * produit pas de candidat — le premier est échappé, le second ne finit pas la
- * ligne.
+ * Le suffixe d'attributs d'un titre, s'il y en a un. Le relevé se fait par ESSAI
+ * DE LECTURE et non par expression régulière : une valeur d'attribut peut porter
+ * une accolade fermante, qu'aucun motif court ne saurait borner.
  */
 function suffixeDAttributs(texte: string): string | null {
 	for (let i = 0; i < texte.length; i++) {
@@ -1103,7 +907,6 @@ function lireCitation(c: Curseur): unknown {
 	};
 }
 
-/** Le marqueur d'un élément de liste, s'il y en a un sur cette ligne. */
 function marqueurDElement(
 	ligne: string
 ): { genre: string; marqueur: string; alinea: number } | null {
@@ -1165,7 +968,6 @@ function lireListe(c: Curseur, genre: string): unknown {
 		: { type: genre, content: elements };
 }
 
-/** Les cellules d'une ligne de tableau en barres, les barres échappées sautées. */
 function decouperEnCellules(ligne: string): string[] {
 	const morceaux: string[] = [];
 	let courant = '';
@@ -1266,12 +1068,10 @@ function lireBlocs(lignes: readonly string[], decalage: number): unknown[] {
 			continue;
 		}
 		const clotureDeBloc = new RegExp('^(' + AG + '{3,})(.*)$').exec(ligne);
-		/* Une chaîne d'information ne porte JAMAIS d'accent grave — c'est la
-		   règle de CommonMark, et c'est ce qui distingue l'ouverture d'un bloc
-		   d'un PARAGRAPHE QUI COMMENCE PAR UN SPAN DE CODE porteur d'accents
-		   graves : celui-là ferme son span sur la même ligne. L'écriture
-		   respecte la règle : un langage porteur d'un accent grave passe en
-		   ligne d'attributs. */
+		/* Une chaîne d'information ne porte JAMAIS d'accent grave — c'est la règle de
+		   CommonMark, et c'est ce qui distingue l'ouverture d'un bloc d'un PARAGRAPHE QUI
+		   COMMENCE PAR UN SPAN DE CODE porteur d'accents graves : celui-là ferme son span sur
+		   la même ligne. Un langage porteur d'un accent grave passe en ligne d'attributs. */
 		if (clotureDeBloc !== null && !(clotureDeBloc[2] as string).includes(AG)) {
 			blocs.push(lireBlocCloture(c, clotureDeBloc[1] as string, clotureDeBloc[2] as string));
 			continue;
@@ -1313,12 +1113,10 @@ function lireBlocs(lignes: readonly string[], decalage: number): unknown[] {
 }
 
 /**
- * LE SENS RETOUR. Le texte reçu est le CORPS SEUL — l'en-tête de métadonnées
- * appartient à `T-043` et `T-045`, voir la couture à l'en-tête du module.
- *
- * La valeur construite ne sort pas d'ici sans passer par `analyserDocument` :
- * un document structurellement invalide ne peut donc pas entrer par l'import,
- * ce qu'`ADR-003` interdit nommément.
+ * LE SENS RETOUR. Le texte reçu est le CORPS SEUL — l'en-tête de métadonnées appartient à
+ * l'export et à l'import, voir la couture à l'en-tête du module. La valeur construite ne
+ * sort pas d'ici sans passer par `analyserDocument` : un document structurellement
+ * invalide ne peut donc pas entrer par l'import, ce qu'`ADR-003` interdit nommément.
  *
  * @throws MarkdownInvalide si le texte ne se lit pas.
  * @throws DocumentInvalide si ce qu'il décrit n'est pas un document.
@@ -1328,45 +1126,17 @@ export function analyserMarkdown(texte: string): Document {
 }
 
 /**
- * LE MARKDOWN TEL QU'UN FORMULAIRE DE NAVIGATEUR L'ENVOIE — et la seule chose
- * que cette fonction défait.
+ * Le Markdown tel qu'un formulaire de navigateur l'envoie — et la seule chose que cette
+ * fonction défait. Le sérialiseur de formulaire normalise TOUTE fin de ligne en couple
+ * retour chariot + saut avant d'encoder le corps de la requête : le même texte envoyé par
+ * appel direct s'analyse ; envoyé par l'écran, il rendait `422`.
  *
- * ═════════════════════════════════════════════════════════════════════════
- * CE QUE LE NAVIGATEUR FAIT, MESURÉ PLUTÔT QUE SUPPOSÉ — 21/08/2026
- *
- * Le sérialiseur de formulaire normalise TOUTE fin de ligne en couple retour
- * chariot + saut avant d'encoder le corps de la requête. Relevé sur la
- * soumission réelle de `/notes/nouvelle` :
- *
- *   corps-markdown=%23%23+Pourquoi%0D%0A%0D%0AUn+texte+simple.
- *
- * Le même texte, envoyé par appel direct, s'analysait sans un mot ; envoyé par
- * l'écran, il rendait `422`. Deux heures pour un `%0D` — et la leçon est celle
- * de `P-32` : *demander à l'instrument ce qu'il a fait est plus rapide, et plus
- * sûr, que raisonner sur ce qu'il devrait faire.*
- *
- * ═════════════════════════════════════════════════════════════════════════
- * POURQUOI PAS DANS `analyserMarkdown()`, QUI SEMBLAIT L'ENDROIT ÉVIDENT
- *
- * Parce que le format REFUSE un retour chariot dans un bloc de code —
- * `RG-M04-05` (`CDC:602`), « pas de retour chariot Windows, exactement ce que
- * l'utilisateur collera dans son terminal » —, et que ce refus est tenu À
- * L'ENTRÉE, par un cas d'épreuve nommé (`markdown.test.ts:289`). Normaliser
- * dans l'analyseur aurait rendu ce refus INERTE en réussissant : c'est `P-26`
- * mot pour mot, et l'unitaire l'a dit avant que je ne le voie.
- *
- * La normalisation est donc posée à la FRONTIÈRE DE TRANSPORT, où elle défait
- * un artefact d'encodage et rien d'autre. Ce qui traverse le format garde ses
- * refus entiers ; un retour chariot écrit à la main dans un bloc de code arrive
- * par un autre chemin — l'import, l'API — et y reste refusé.
- *
- * ═════════════════════════════════════════════════════════════════════════
- * ET ELLE A DEUX LECTEURS, PAS UN — `P-33`
- *
- * `src/lib/donnees/creation.ts` et `src/lib/donnees/edition.ts` l'emploient
- * tous les deux, et ce sont les deux seuls chemins par lesquels un formulaire
- * atteint le format. Une parade tenue par un seul de ses appelants n'est pas
- * une parade, c'est une exception.
+ * POURQUOI PAS DANS `analyserMarkdown()`, QUI SEMBLE L'ENDROIT ÉVIDENT : le format REFUSE
+ * un retour chariot dans un bloc de code (`RG-M04-05`), et ce refus est tenu À L'ENTRÉE.
+ * Normaliser dans l'analyseur l'aurait rendu INERTE en réussissant. La normalisation est
+ * donc posée à la FRONTIÈRE DE TRANSPORT, où elle défait un artefact d'encodage et rien
+ * d'autre. ELLE A DEUX LECTEURS, PAS UN : `../donnees/creation.ts` et
+ * `../donnees/edition.ts` — une parade tenue par un seul appelant est une exception.
  */
 export function markdownDeFormulaire(texte: string): string {
 	return texte.replace(/\r\n/g, '\n');
