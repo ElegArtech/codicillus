@@ -486,11 +486,28 @@
 		/** La note visée, tant qu'aucune n'est choisie — `cibleRel` du gel. */
 		let visee: CibleDeRelation | null = null;
 
+		/**
+		 * CE QUI EMPÊCHE LA DÉCLARATION D'ABOUTIR, LU UNE FOIS À L'OUVERTURE.
+		 *
+		 * Le référentiel de types est vide sur une instance neuve, et le périmètre
+		 * d'écriture ne contient parfois que la note qu'on lit. Les deux faits sont
+		 * DITS PAR LA BOÎTE (`src/vues/V-40.svelte`), qui les reçoit ; ce câblage
+		 * ne les redit pas — il se contente de ne rien écraser de ce qu'elle écrit,
+		 * et de ne composer aucune phrase sur un libellé absent.
+		 */
+		const sansType = Object.keys(options.types).length === 0;
+		const sansCible = options.cibles.length === 0;
+		const impossible = sansType || sansCible;
+
 		const libellesDuType = (): LibellesDeRelation =>
 			options.types[typeChoisi.value] ?? { sortant: '', entrant: '' };
 
 		/** `majUsage()` — la phrase du gel, au caractère près. */
 		const majUsage = (): void => {
+			/* Sans type, le repli ci-dessus rend deux chaînes vides et la phrase
+			   devient « Se lira «  » depuis cette note… ». La vue a écrit à la place
+			   ce qui manque et où le créer : on la laisse parler. */
+			if (sansType) return;
 			const t = libellesDuType();
 			usage.textContent = `Se lira « ${t.sortant} » depuis cette note, et « ${t.entrant} » depuis l'autre.`;
 		};
@@ -510,6 +527,9 @@
 
 		/** `majApercuRel()` — les deux phrases, dans l'ordre du gel. */
 		const majApercu = (): void => {
+			/* Rien à produire : la zone reste telle que la vue la rend — vide, et
+			   sans le libellé « Ce que cela produira » qui promettrait un aperçu. */
+			if (impossible) return;
 			apercu.replaceChildren();
 			const t = libellesDuType();
 			const autre = visee === null ? null : visee.titre;
@@ -540,6 +560,7 @@
 
 		/** La liste des résultats — vidée, puis repeuplée, comme le gel la fait. */
 		const chercher = (): void => {
+			if (impossible) return;
 			const q = cherche.value.trim().toLowerCase();
 			liste.replaceChildren();
 			if (q === '') {
@@ -583,6 +604,12 @@
 			liste.replaceChildren();
 			liste.setAttribute('data-ouvert', 'non');
 			valider.disabled = true;
+			/* `P-09` — un champ qui ne peut rien trouver ne se propose pas. La vue
+			   pose déjà l'attribut au rendu ; il est reposé ici pour que l'état
+			   survive à une réouverture, et parce que le motif du sélecteur voisin
+			   est le même — repli nommé, puis `disabled`. */
+			cherche.disabled = impossible;
+			typeChoisi.disabled = sansType;
 			majUsage();
 			majApercu();
 		};
@@ -766,6 +793,7 @@
 		notes={data.notes}
 		note={data.lecture.note}
 		{typesRelation}
+		ciblesDeRelation={data.relation.cibles}
 	/>
 {/if}
 
