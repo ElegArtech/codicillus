@@ -561,11 +561,23 @@
 							l'assistance.
 						-->
 						<div class="zone-vide">
-							<div class="zone-vide__titre">Aucun guide ne répond à <em>« {requete} »</em></div>
+							<!--
+								TROIS ÉTATS, ET NON UN SEUL. Le titre citait la requête SANS
+								CONDITION : ouverte sans `?q=`, la page annonçait « Aucun guide ne
+								répond à “ ” » — un texte composé sur une valeur absente. Une
+								recherche sans requête n'est pas une recherche sans résultat.
+							-->
+							<div class="zone-vide__titre">
+								{#if requete !== ''}Aucun guide ne répond à <em>« {requete} »</em
+									>{:else if nbFiltres}Aucun guide ne correspond aux filtres retenus{:else}Aucun
+									guide n'est encore publié{/if}
+							</div>
 							<p>
-								{nbFiltres
-									? 'Aucun guide public ne correspond avec les filtres appliqués. Retirez-en un, ou reformulez votre question.'
-									: "Aucun guide public ne correspond. Essayez d'autres mots, ou demandez directement à l'assistance — votre question signalera le guide manquant."}
+								{requete === '' && nbFiltres === 0
+									? "Aucune note n'a encore été publiée pour la consultation publique. Si vous avez un compte, connectez-vous — /connexion — pour chercher dans tout le corpus ; sinon, l'assistance répond directement."
+									: nbFiltres
+										? 'Aucun guide public ne correspond avec les filtres appliqués. Retirez-en un, ou reformulez votre question.'
+										: "Aucun guide public ne correspond. Essayez d'autres mots, ou demandez directement à l'assistance — votre question signalera le guide manquant."}
 							</p>
 							{#if pistes.length}<div class="reformuler">
 									{#each pistes as piste (piste)}<button

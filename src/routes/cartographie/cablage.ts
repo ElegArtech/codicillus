@@ -220,15 +220,21 @@ export function cablerLaCartographie(
 
 	/* ── 6. « Comment déclarer une relation » — `V-19:3038`. ───────────────── */
 
+	/* LE SÉLECTEUR NOMME LA BALISE, ET C'EST NÉCESSAIRE DEPUIS QUE LE VOILE PORTE
+	   CINQ MESSAGES : les quatre autres offrent un LIEN de même classe — vers la
+	   console, vers la création d'une note, vers le périmètre entier —, et
+	   l'adresse est alors portée par le document. Le seul bouton du voile est
+	   celui-ci.
+
+	   AUCUN GRISAGE : le voile ne rend ce bouton que dans l'état où une note
+	   existe, donc où l'adresse existe. Le bouton désactivé sans motif affiché
+	   qu'on lisait sur une instance neuve n'a plus de chemin pour paraître. */
 	const voile = racine.querySelector('#voile');
-	const versLesRelations = voile?.querySelector<HTMLButtonElement>('.btn--principal') ?? null;
-	if (versLesRelations !== null) {
-		if (options.adresseDesRelations === null) versLesRelations.disabled = true;
-		else {
-			attaches.ecouter(versLesRelations, 'click', () => {
-				document.location.assign(options.adresseDesRelations ?? '');
-			});
-		}
+	const versLesRelations = voile?.querySelector<HTMLButtonElement>('button.btn--principal') ?? null;
+	if (versLesRelations !== null && options.adresseDesRelations !== null) {
+		attaches.ecouter(versLesRelations, 'click', () => {
+			document.location.assign(options.adresseDesRelations ?? '');
+		});
 	}
 
 	/* ── 7. « Aller à un nœud » — `V-19:2934-2985`. ────────────────────────── */
