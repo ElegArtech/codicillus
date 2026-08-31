@@ -4,7 +4,24 @@ import type { Identite } from '$lib/droits/resolution';
 
 declare global {
 	namespace App {
-		// interface Error {}
+		/**
+		 * CE QU'UN REFUS PORTE JUSQU'À L'ÉCRAN.
+		 *
+		 * `message` seul ne suffisait pas : `+error.svelte` rend V-26 pour tout
+		 * 404 et n'affichait `page.error.message` que dans sa branche NON-404. Le
+		 * serveur envoyait donc « Créez un univers, puis un domaine, dans la
+		 * console » et l'administrateur lisait le texte générique — le message
+		 * d'amorçage était servi dans la réponse HTTP et peint nulle part.
+		 *
+		 * `amorcage` dit que le message est celui d'une instance qui n'a pas
+		 * encore de quoi ranger une note, et qu'il doit donc être RENDU. Il ne
+		 * voyage qu'avec ce message-là, c'est-à-dire au seul administrateur : le
+		 * régime indiscernable d'`ADR-007` ne bouge pas pour les autres.
+		 */
+		interface Error {
+			message: string;
+			amorcage?: boolean;
+		}
 
 		/**
 		 * Ce que `src/hooks.server.ts` établit pour CHAQUE requête, et que toute
