@@ -33,6 +33,7 @@ import {
 	etiquettes,
 	etiquettesDeNote,
 	notes,
+	templates,
 	typesDeFiche,
 	typesDeNote,
 	versions
@@ -87,6 +88,17 @@ export interface SaisieDeNote {
 	 * cette fonction est pure.
 	 */
 	readonly proprietes: Readonly<Record<string, string>> | null;
+	/**
+	 * L'IDENTIFIANT LISIBLE DU TEMPLATE qui a amorcé la rédaction, ou `null`. C'est un
+	 * identifiant et non un nom, à la différence du type et du domaine : le choix de
+	 * départ se fait sur `Template.id`, que `lireTemplates()` rend depuis
+	 * `templates.identifiant`, et `?template=` de `docs/routes.md:287` nomme le même.
+	 *
+	 * IL N'EST QU'UNE TRACE D'ORIGINE : le squelette est COPIÉ dans le corps à la
+	 * création, et la note en est aussitôt indépendante. La colonne sert à compter les
+	 * « Utilisations » de V-31, rien d'autre.
+	 */
+	readonly template: string | null;
 }
 
 export type LectureDeSaisie =
@@ -210,6 +222,8 @@ export function lireLaSaisie(formulaire: FormData): LectureDeSaisie {
 		return { ok: false, motif: 'propriétés sans type de fiche' };
 	}
 
+	const template = texte(formulaire, 'template');
+
 	let soumis: { markdown: string; document: unknown };
 	try {
 		soumis = corpsSoumis(formulaire);
@@ -238,7 +252,12 @@ export function lireLaSaisie(formulaire: FormData): LectureDeSaisie {
 			corps: soumis.markdown,
 			corpsDocument: soumis.document,
 			fiche: fiche.length > 0 ? fiche : null,
-			proprietes: fiche.length > 0 ? proprietes.valeurs : null
+			proprietes: fiche.length > 0 ? proprietes.valeurs : null,
+			/* LE TEMPLATE N'EST JAMAIS UN MOTIF DE REFUS. Un identifiant que le
+			   référentiel ne connaît plus laisse la note s'écrire sans provenance :
+			   le contenu est déjà dans le corps soumis, et refuser ici ferait perdre
+			   la rédaction pour une trace. `resoudreLaCible()` le résout ou l'oublie. */
+			template: template.length > 0 ? template : null
 		}
 	};
 }
@@ -255,6 +274,12 @@ export interface CibleDeCreation {
 	 * violerait `notes_proprietes_exigent_un_type_de_fiche`.
 	 */
 	readonly proprietesTypees: Readonly<Record<string, string>> | null;
+	/**
+	 * La ligne de `templates` que la saisie désigne, ou `null` — aucun template, ou un
+	 * identifiant que le référentiel ne connaît plus. VOIR `lireLaSaisie()` : ce n'est
+	 * jamais un refus.
+	 */
+	readonly templateId: string | null;
 }
 
 /**
@@ -377,6 +402,8 @@ export async function resoudreLaCible(
 	const dossier = segments.length === 0 ? racine : resoudreLeChemin(lignes, segments);
 	if (dossier === null) return { sort: 'introuvable' };
 
+	const templateId = await resoudreLeTemplate(base, saisie.template);
+
 	const fiche = await resoudreLeTypeDeFiche(base, saisie);
 	if (fiche.sort === 'introuvable') return { sort: 'fiche-introuvable' };
 	if (fiche.sort === 'manquantes') {
@@ -390,9 +417,28 @@ export async function resoudreLaCible(
 			domaineId,
 			dossierId: dossier.id,
 			typeDeFicheId: fiche.typeDeFicheId,
-			proprietesTypees: fiche.proprietesTypees
+			proprietesTypees: fiche.proprietesTypees,
+			templateId
 		}
 	};
+}
+
+/**
+ * LA PROVENANCE, RÉSOLUE OU OUBLIÉE — jamais un refus.
+ *
+ * Le référentiel des templates est ADMINISTRABLE : un gabarit peut disparaître entre
+ * l'ouverture de l'écran et l'enregistrement. Rendre 404, ou même un 400 nommé, ferait
+ * perdre une rédaction entière pour une TRACE dont le contenu est déjà dans le corps
+ * soumis. L'identifiant inconnu vaut donc « pas de provenance », et la note s'écrit.
+ */
+async function resoudreLeTemplate(base: Base, identifiant: string | null): Promise<string | null> {
+	if (identifiant === null) return null;
+	const [ligne] = await base
+		.select({ id: templates.id })
+		.from(templates)
+		.where(eq(templates.identifiant, identifiant))
+		.limit(1);
+	return ligne?.id ?? null;
 }
 
 /**
@@ -634,6 +680,12 @@ export async function creerUneNote(
 						...(demande.cible.proprietesTypees === null
 							? {}
 							: { proprietesTypees: demande.cible.proprietesTypees }),
+						/* LA PROVENANCE — la trace du squelette qui a amorcé la rédaction.
+						   ABSENTE ⇒ NON ÉCRITE, comme les précédentes : la colonne est
+						   nullable et son absence dit « partie d'une page vierge ». C'est
+						   elle, et elle seule, qui rend « Utilisations » calculable en
+						   V-31. */
+						...(demande.cible.templateId === null ? {} : { templateId: demande.cible.templateId }),
 						/* UN SEUL INSTANT pour les trois dates — celui de la requête. Trois
 						   `now()` de base donneraient trois valeurs différentes. */
 						creeLe: demande.maintenant,

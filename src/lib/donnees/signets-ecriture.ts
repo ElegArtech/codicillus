@@ -153,14 +153,18 @@ export async function creerUnSignet(
 			   l'écran de V-13 n'offre aucun type de fiche. Les deux champs sont donc
 			   vides, et la note s'écrit sans propriétés typées. */
 			fiche: null,
-			proprietes: null
+			proprietes: null,
+			/* UN SIGNET NE PART D'AUCUN SQUELETTE : V-13 n'offre pas le choix de
+			   départ, et il n'y a donc aucune provenance à consigner. */
+			template: null
 		},
 		cible: {
 			typeDeNoteId,
 			domaineId: demande.domaineId,
 			dossierId,
 			typeDeFicheId: null,
-			proprietesTypees: null
+			proprietesTypees: null,
+			templateId: null
 		},
 		identite: demande.identite,
 		maintenant: demande.maintenant,

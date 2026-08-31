@@ -408,6 +408,22 @@
    Six pastilles, toujours les six. Une distinction non obtenue montre le
    chemin qu'il reste — c'est de la reconnaissance, pas une évaluation. */
 .distinctions { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: var(--e-3); }
+
+/* L'ÉTAT VIDE DE L'ONGLET — il n'existait pas, et l'onglet s'ouvrait sur rien.
+   Même forme que les états vides des autres écrans (`.vide-liste` de V-12) :
+   un titre, une phrase, et le geste qui débloque nommé dans la phrase. */
+.vide-distinctions {
+  background: var(--c-papier); border: 1px solid var(--c-trait); border-radius: var(--r-3);
+  padding: var(--e-7) var(--e-5); text-align: center; box-shadow: var(--o-pose);
+}
+.vide-distinctions h2 {
+  font-family: var(--f-ui); font-size: var(--t-t2); font-weight: var(--g-lourd);
+  letter-spacing: -.018em; margin: 0 0 var(--e-2);
+}
+.vide-distinctions p {
+  font-family: var(--f-lecture); font-size: var(--t-base); line-height: 1.6;
+  color: var(--c-encre-2); margin: 0 auto; max-width: 48ch;
+}
 .dist {
   display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--e-1) var(--e-3);
   background: var(--c-papier); border: 1px solid var(--c-trait); border-radius: var(--r-3);
