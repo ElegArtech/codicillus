@@ -25,6 +25,7 @@ import { analyserDocument, titres, type Titre } from '$lib/contenu/document';
 import { rendreDocument } from '$lib/contenu/rendu';
 import { formaterDateFr, formaterDateIso } from '$lib/dates';
 import { compteDeLEspacePublic, journaliserUneConsultation } from '$lib/donnees/consultation';
+import { attacherLOuverture, termeDeProvenance } from '$lib/donnees/recherches';
 import { lireConfiguration, lireNotes } from '$lib/donnees/lecture';
 import { noteVisibleEnAnonyme } from '$lib/droits/resolution';
 import { refuserLAdresse } from '$lib/donnees/rangement';
@@ -89,7 +90,7 @@ async function ciblesDeLien(base: Base): Promise<Map<string, CibleDeNote>> {
 	return cibles;
 }
 
-export const load: PageServerLoad = async ({ params, url }) => {
+export const load: PageServerLoad = async ({ params, url, request }) => {
 	const base = basePartagee();
 	const resolution = await resoudreLeGuide(base, params.identifiant);
 	if (!resolution.trouve) refuserLAdresse(url.pathname);
@@ -115,6 +116,20 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		compte: compteDeLEspacePublic(),
 		maintenant
 	});
+
+	/* L'OUVERTURE ÉVENTUELLE D'UN RÉSULTAT — `RG-M02-03`. V-02 ouvre ses résultats
+	   ICI, et une recherche publique restée sans ouverture est justement ce que
+	   compte l'indicateur nord de V-34. L'ATTACHEMENT EST ANONYME lui aussi : le
+	   journal de recherche de l'espace public ne porte aucun compte. */
+	const terme = termeDeProvenance(request.headers.get('referer'), url);
+	if (terme !== null) {
+		await attacherLOuverture(base, {
+			terme,
+			compte: compteDeLEspacePublic(),
+			identifiant: params.identifiant,
+			maintenant
+		});
+	}
 
 	/* ── Le contenu, lu APRÈS le refus et pas avant (`ADR-006`) ──────────── */
 	const [ligne] = await base

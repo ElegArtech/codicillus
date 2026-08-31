@@ -34,20 +34,26 @@ import {
 } from './lecture';
 import { contexteDeRequete } from './signets';
 import type { EffectifsDeConsole } from '../console/effectifs';
-import { count, eq } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import {
 	comptes,
 	domaines,
+	lignesDeLot,
+	lotsDImport,
 	templates,
 	typesDeFiche,
 	typesDeRelation,
 	univers
 } from '../base/schema';
+import { libelleDeScenario } from './scenarios-d-import';
 import type {
 	Compte,
 	DetailDeDomaine,
 	Domaine,
+	EntreeDeJournalDImport,
+	NomDAuteur,
 	Note,
+	SortDeFichier,
 	Univers,
 	UtilisateurCourant
 } from '../../../seeds/corpus';
@@ -94,63 +100,22 @@ export interface MesureSansContrepartie {
  * supposées. Aucune n'est comblable par une ligne de code : seule une migration les
  * refermerait. `consoles.test.ts` en fait une assertion, de sorte qu'une lacune refermée
  * par une migration future fasse rougir le test au lieu de laisser un commentaire périmé.
+ *
+ * TROIS ENTRÉES V-34 EN SONT SORTIES, ET DEUX D'ENTRE ELLES ÉTAIENT FAUSSES.
+ * `REVISIONS` disait « aucune table de demande de révision » : `002_socle` porte
+ * `notes.revision_demandee`, `revision_commentaire`, `revision_par_id` et `revision_le`
+ * depuis l'origine, lues en quatre endroits du produit. `MODIFICATIONS` disait qu'aucune
+ * table ne compte les modifications par période : la maquette ne demande pas un compte mais
+ * une ANCIENNETÉ en jours, que `notes.modifie_le` donne. `RECHERCHES`, elle, était vraie —
+ * la table est montée par `010_recherches`.
  */
 export const MESURES_DE_CONSOLE_SANS_CONTREPARTIE: readonly MesureSansContrepartie[] = [
-	{
-		donnee: 'RECHERCHES',
-		vue: 'V-34',
-		affichage: 'l’indicateur nord « taux de recherche aboutie » et les trous documentaires',
-		motif:
-			'aucune table de journal de recherche. Le taux se calcule sur des requêtes horodatées avec leur nombre de résultats et d’ouvertures ; rien n’enregistre une recherche.'
-	},
-	{
-		donnee: 'REVISIONS',
-		vue: 'V-34',
-		affichage: 'les notes en attente de révision',
-		motif:
-			'aucune table de demande de révision. Le signalement « à réviser » n’est enregistré nulle part.'
-	},
-	{
-		donnee: 'MODIFICATIONS',
-		vue: 'V-34',
-		affichage: 'le volume de modifications de la période',
-		motif:
-			'`notes.modifie_le` porte l’instant de la dernière modification, jamais un compte par période : une note modifiée trois fois cette semaine n’en laisse qu’une trace.'
-	},
-	{
-		donnee: 'JOURNAL_IMPORTS',
-		vue: 'V-35',
-		affichage: 'le journal transverse des imports de l’instance',
-		motif:
-			'aucune table d’imports. Le service de conversion n’existe pas (`T-042`) et rien n’écrit de lot ; le journal est structurellement vide.'
-	},
-	{
-		donnee: 'LOT_IMPORT',
-		vue: 'V-35',
-		affichage: 'le rapport détaillé d’un lot — fichiers, ignorés, échecs',
-		motif:
-			'même absence : sans table de lot, il n’y a ni lot à ouvrir ni fichier à lister. C’est ce qui laisse `/console/imports/{lot}` non montée — voir le rapport du lot.'
-	},
-	{
-		donnee: 'Template.utilisations',
-		vue: 'V-31',
-		affichage: 'le nombre de notes créées à partir de chaque template, et leur total',
-		motif:
-			'aucune colonne. `templates` n’en porte pas, et `notes` ne rattache aucune note au template qui l’a amorcée : le lien est rompu dès la création — « un squelette est copié au moment de la création », dit l’écran lui-même. Le compteur est donc rendu « — » plutôt que zéro (`P-02`).'
-	},
 	{
 		donnee: 'Compte.derniere',
 		vue: 'V-32',
 		affichage: 'la dernière connexion, sous la forme relative du gel',
 		motif:
 			'`comptes.derniere_connexion_le` porte l’INSTANT, et `src/lib/base/schema.ts` dit que « le gel ne donne aucune règle de passage de l’instant vers le libellé ». La date est rendue au format court du dépôt ; le libellé relatif attend un arbitrage.'
-	},
-	{
-		donnee: 'JOURNAL_IMPORTS (le flux d’activité)',
-		vue: 'V-07',
-		affichage: 'les lots d’import dans le flux d’activité de l’accueil',
-		motif:
-			'`RG-M12-09` a DEUX destinataires — « ce journal alimente le flux d’activité de l’accueil ET l’écran d’administration » —, et la moitié « accueil » n’était signalée nulle part. `lireLActivite()` lit les traces des NOTES du périmètre : un lot d’import n’y laisse aucune trace en tant que lot, et il n’y en aurait pas plus si la table du journal existait — il faudrait encore que le flux la lise.'
 	},
 	{
 		donnee: '(l’issue d’un export)',
@@ -163,16 +128,142 @@ export const MESURES_DE_CONSOLE_SANS_CONTREPARTIE: readonly MesureSansContrepart
 
 /**
  * Le journal des imports est-il enregistré quelque part ? V-35 affirme que « les rapports
- * restent consultables indéfiniment », et aucune table ne les garde : l'écran servait un
- * tableau VIDE sous cette phrase, où un lecteur lisait « aucun import n'a eu lieu » là où
- * la vérité est « rien n'est conservé ». LE DRAPEAU EST DÉRIVÉ DU RECENSEMENT, JAMAIS
- * ÉCRIT À LA MAIN. Il ne tient pas `RG-M12-09` pour autant : l'écran cesse de contredire
- * la règle, il ne la remplit pas.
+ * restent consultables indéfiniment » ; il l'est depuis la migration `009` —
+ * `lots_d_import` et `lignes_de_lot` reçoivent chaque lot, et rien ne les purge.
+ *
+ * LE DRAPEAU RESTE DÉRIVÉ DU RECENSEMENT, JAMAIS ÉCRIT À LA MAIN : c'est la disparition
+ * des entrées `JOURNAL_IMPORTS` et `LOT_IMPORT` qui l'a fait basculer, et il rebasculerait
+ * de lui-même si l'une revenait. La fonction ne dit pas qu'il y a des lots ; elle dit que
+ * ceux qui ont lieu sont gardés.
  */
 export function journalDImportsEnregistre(
 	manquantes: readonly MesureSansContrepartie[] = MESURES_DE_CONSOLE_SANS_CONTREPARTIE
 ): boolean {
 	return !manquantes.some((m) => m.donnee === 'JOURNAL_IMPORTS');
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   LE JOURNAL DES IMPORTS — `RG-M12-09`, seconde moitié
+
+   « Ce journal alimente le flux d'activité de l'accueil ET L'ÉCRAN
+   D'ADMINISTRATION. » Voici l'écran d'administration ; la moitié « accueil » est
+   lue par `/univers/[univers]`, sur la même table.
+
+   AUCUN PLAFOND DE LECTURE, et c'est le brief de V-35 qui le veut : « les
+   rapports restent consultables indéfiniment ». Une limite silencieuse ferait
+   disparaître les lots anciens de l'écran qui promet de les garder.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/** `14:22` — l'heure d'un lot, lue en UTC comme `dateCourteDInstant()`. */
+function heureDInstant(instant: Date): string {
+	const heures = String(instant.getUTCHours()).padStart(2, '0');
+	const minutes = String(instant.getUTCMinutes()).padStart(2, '0');
+	return `${heures}:${minutes}`;
+}
+
+/**
+ * `4 min 12 s` — la durée mesurée d'un lot, dans la forme du gel (`V-35:2736`). Sous la
+ * seconde, elle s'arrondit à la seconde plutôt que d'afficher zéro : un lot a duré.
+ */
+export function dureeLisible(millisecondes: number): string {
+	const secondes = Math.max(1, Math.round(millisecondes / 1000));
+	const minutes = Math.floor(secondes / 60);
+	const reste = secondes % 60;
+	return minutes === 0 ? `${String(reste)} s` : `${String(minutes)} min ${String(reste)} s`;
+}
+
+/**
+ * LE JOURNAL DE L'INSTANCE, du plus récent au plus ancien. `auteur` vient de `comptes`,
+ * `domaine` de la COLONNE du lot — pas d'une jointure : un domaine supprimé ne doit pas
+ * effacer l'endroit où un lot a atterri.
+ *
+ * `notes` COMPTE LES NOTES ÉCRITES, créées ET mises à jour : un réimport qui n'aurait rien
+ * créé afficherait sinon zéro sur un lot qui a bel et bien travaillé.
+ */
+export async function lireLeJournalDImports(
+	base: Base
+): Promise<readonly EntreeDeJournalDImport[]> {
+	const lignes = await base
+		.select({
+			id: lotsDImport.id,
+			le: lotsDImport.le,
+			auteur: comptes.nom,
+			source: lotsDImport.source,
+			scenario: lotsDImport.scenario,
+			simulation: lotsDImport.simulation,
+			domaine: lotsDImport.domaine,
+			dureeMs: lotsDImport.dureeMs,
+			total: lotsDImport.total,
+			notesCreees: lotsDImport.notesCreees,
+			notesMisesAJour: lotsDImport.notesMisesAJour,
+			ignores: lotsDImport.ignores,
+			echecs: lotsDImport.echecs
+		})
+		.from(lotsDImport)
+		.innerJoin(comptes, eq(lotsDImport.auteurId, comptes.id))
+		.orderBy(desc(lotsDImport.le));
+
+	return lignes.map((l) => ({
+		id: l.id,
+		date: dateCourteDInstant(l.le),
+		heure: heureDInstant(l.le),
+		/* `NomDAuteur` est une UNION FERMÉE des trois noms du jeu de démonstration : un
+		   nom lu en base n'y appartient pas, et ne peut y entrer que par une
+		   conversion. Elle est faite ici, une fois, au bord — comme `lireNotes()`. */
+		auteur: l.auteur as NomDAuteur,
+		source: l.source,
+		/* LA SIMULATION EST DITE, ET AU MÊME ENDROIT QUE LE SCÉNARIO : une entrée qui
+		   ne la dirait pas ferait passer un lot annulé pour un lot écrit. */
+		scenario: libelleDeScenario(l.scenario) + (l.simulation ? ' (simulation)' : ''),
+		domaine: l.domaine,
+		fichiers: l.total,
+		notes: l.notesCreees + l.notesMisesAJour,
+		ignores: l.ignores,
+		echecs: l.echecs,
+		duree: dureeLisible(l.dureeMs)
+	}));
+}
+
+/**
+ * LE RAPPORT DÉTAILLÉ D'UN LOT — `/console/imports/{lot}`. Les lignes sont rendues dans
+ * l'ordre de RÉCEPTION, celui que le rang porte : sans lui, l'ordre serait celui du plan
+ * de requête. `null` quand l'identifiant ne désigne aucun lot — la route en fait un 404.
+ */
+export async function lireUnLotDImport(
+	base: Base,
+	identifiant: string
+): Promise<{ readonly source: string; readonly fichiers: readonly LigneDeLotAffichee[] } | null> {
+	/* Un identifiant qui n'est pas un UUID ferait échouer la requête au lieu de rendre
+	   « introuvable » : la forme est éprouvée avant la base. */
+	if (!/^[0-9a-f-]{36}$/i.test(identifiant)) return null;
+	const [lot] = await base
+		.select({ id: lotsDImport.id, source: lotsDImport.source })
+		.from(lotsDImport)
+		.where(eq(lotsDImport.id, identifiant))
+		.limit(1);
+	if (lot === undefined) return null;
+
+	const lignes = await base
+		.select({
+			chemin: lignesDeLot.chemin,
+			sort: lignesDeLot.sort,
+			motif: lignesDeLot.motif
+		})
+		.from(lignesDeLot)
+		.where(eq(lignesDeLot.lotId, lot.id))
+		.orderBy(lignesDeLot.rang);
+
+	return {
+		source: lot.source,
+		fichiers: lignes.map((l) => ({ c: l.chemin, s: l.sort, m: l.motif ?? '' }))
+	};
+}
+
+/** Une ligne de lot telle que le rapport de V-35 la nomme. */
+export interface LigneDeLotAffichee {
+	readonly c: string;
+	readonly s: SortDeFichier;
+	readonly m: string;
 }
 
 /** Les deux positions de l'axe « Données » de la planche V-34. */
@@ -185,9 +276,11 @@ export type EtatDesDonnees = 'completes' | 'insuffisantes';
  * n'est pas une page d'erreur, c'est l'ÉTAT NEUTRE EXPLICITE que `RG-M01-01` exige. Les
  * deux blocs sont toujours dans le document et la feuille en masque un.
  *
- * Le produit n'a aucune des mesures que la section « Suffisantes » calcule. Servir cette
- * section afficherait des chiffres tirés du jeu de semence ; servir des zéros serait pire.
- * LE PARAMÈTRE EXISTE POUR QUE LE CONTRÔLE AIT UN CAS D'ÉPREUVE (`P-26`).
+ * LE VERDICT EST DÉRIVÉ DU RECENSEMENT, JAMAIS ÉCRIT À LA MAIN, et c'est cette propriété
+ * qui compte : le produit porte aujourd'hui les cinq mesures de l'écran, donc plus aucune
+ * entrée V-34, donc `completes` — et le jour où une mesure disparaîtrait, son entrée
+ * reviendrait ici et l'écran se tairait sans qu'une ligne de la route change.
+ * LE PARAMÈTRE EXISTE POUR QUE LE CONTRÔLE AIT SES DEUX CAS D'ÉPREUVE (`P-26`).
  */
 export function etatDesDonnees(
 	manquantes: readonly MesureSansContrepartie[] = MESURES_DE_CONSOLE_SANS_CONTREPARTIE,
