@@ -90,6 +90,14 @@
 		 * le `processingTimeMs` que Meilisearch lui rend.
 		 */
 		dureeMs?: number | null;
+		/**
+		 * LE MOTEUR N'A PAS RÉPONDU — `RG-M04-07`. Une panne de service N'EST PAS un
+		 * corpus vide : sans ce drapeau, la zone de résultats affirmait « Aucun guide
+		 * ne répond à “…” » alors qu'aucune requête n'avait abouti, et le visiteur
+		 * repartait en croyant la connaissance absente. Faux par défaut — l'état
+		 * ordinaire, où l'absence de résultat est bien celle du corpus.
+		 */
+		panne?: boolean;
 	}
 
 	const {
@@ -99,7 +107,8 @@
 		retenues,
 		portail,
 		pistes,
-		dureeMs = null
+		dureeMs = null,
+		panne = false
 	}: Proprietes = $props();
 
 	/** Une adresse absente ou blanche ne mène nulle part : rien ne l'annonce. */
@@ -434,7 +443,29 @@
 				</div>
 
 				<div class="resultats si-nominal" id="resultats">
-					{#if resultats.length === 0}<!--
+					<!--
+						`RG-M04-07` — LE PANNEAU EN ERREUR, ET IL NE CASSE PAS LA PAGE : la
+						recherche n'a pas répondu, tout le reste de l'écran reste servi. Le
+						bloc précède les trois états du vide parce qu'il les CONTREDIT — ne
+						rien trouver et ne pas avoir cherché ne se disent pas pareil.
+					-->
+					{#if panne}
+						<div class="zone-vide">
+							<div class="zone-vide__titre">La recherche n'a pas répondu</div>
+							<p>
+								Le moteur de recherche est momentanément indisponible : aucune requête n'a abouti,
+								et cela ne dit rien du contenu publié. Réessayez dans un instant.
+							</p>
+							<button
+								class="btn btn--principal"
+								type="button"
+								onclick={() => window.location.reload()}>Réessayer</button
+							>
+							{#if assistanceJoignable}<a class="btn" href={portail}
+									>Ouvrir un ticket d'assistance</a
+								>{/if}
+						</div>
+					{:else if resultats.length === 0}<!--
 							Moment le plus important de la vue : l'utilisateur qui ne trouve pas
 							ne doit pas rester bloqué. Aucune création de note ici — le repli est
 							l'assistance.

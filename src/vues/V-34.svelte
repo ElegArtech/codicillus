@@ -46,6 +46,8 @@
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { accord } from '$lib/vocabulaire';
+	import { formaterDateHeureFr } from '$lib/dates';
+	import type { TraceLue } from '$lib/donnees/traces';
 
 	interface Proprietes {
 		vecteur?: Record<string, string | boolean> | null;
@@ -92,6 +94,14 @@
 			readonly famille: FamilleOrpheline;
 			readonly identifiant: IdentifiantNote;
 		}) => void;
+		/**
+		 * `RG-NF-05` — LES DESTRUCTIONS, QUI LES A FAITES ET QUAND. Une trace que personne
+		 * ne peut lire n'est pas une trace : c'est le seul écran d'administration du
+		 * produit, et c'est donc ici qu'elle se relit. ÉTAT VIDE PAR DÉFAUT — une
+		 * instance où rien n'a été détruit n'a rien à montrer, et c'est un fait, pas un
+		 * manque.
+		 */
+		destructions?: readonly TraceLue[];
 	}
 
 	/*
@@ -113,7 +123,8 @@
 		onVoirLesNotes,
 		onOuvrirLaNote,
 		onTrou,
-		onOrpheline
+		onOrpheline,
+		destructions = []
 	}: Proprietes = $props();
 
 	/*
@@ -565,6 +576,38 @@
 						Ces volumes mesurent une activité, pas une performance. Ils ne sont pas comparables entre eux : un référent qui vérifie beaucoup et écrit peu rend le même service qu'un rédacteur prolifique. Aucun classement individuel n'est diffusé ailleurs que sur cet écran d'administration.
 					</p
 				></div
+			></section>
+
+			<!-- ---------- Destructions — RG-NF-05 ---------- -->
+			<!--
+				« Les actions destructives sont confirmées, TRACÉES ET ATTRIBUÉES à leur
+				auteur. » La table `traces_de_suppression` porte la trace ; ce bloc est le
+				seul endroit du produit où on la relit. Sans lui, la règle serait tenue en
+				base et invisible à qui doit en répondre.
+
+				RIEN N'EST RESTAURABLE DEPUIS ICI, et il ne faut pas le laisser croire :
+				`RG-M14-03` veut la suppression définitive, la trace dit ce qui a eu lieu,
+				pas ce qu'on peut défaire.
+			-->
+			<!-- prettier-ignore -->
+			<section class="bloc-a"
+				><div class="bloc-a__tete"
+					><div
+						><h2 class="bloc-a__nom">Destructions</h2
+						><div class="bloc-a__sous">Ce qui a été détruit, par qui, et quand. La suppression est définitive : rien ne se restaure depuis cet écran.</div
+					></div
+				></div
+				><div class="bloc-a__corps" id="destructions"
+					>{#if destructions.length === 0}<div class="zone-etat"><p class="zone-etat__txt">Aucune destruction depuis la mise en service. Notes, dossiers, domaines, univers et types : chaque suppression laissera ici son auteur et son horodatage.</p></div>{:else}<table class="tableau-destructions"
+						><thead><tr><th scope="col">Objet</th><th scope="col">Détruit</th><th scope="col">Emporté avec</th><th scope="col">Par</th><th scope="col">Le</th></tr></thead
+						><tbody>{#each destructions as trace (trace.reference + trace.le.toISOString())}<tr
+							><td>{trace.objet}</td
+							><td>{trace.designation}</td
+							><td class="destruction__detail">{trace.detail === '' ? '—' : trace.detail}</td
+							><td>{trace.auteur}</td
+							><td><time datetime={trace.le.toISOString()}>{formaterDateHeureFr(trace.le)}</time></td
+						></tr>{/each}</tbody
+					></table>{/if}</div
 			></section>
 		</div>
 	{/snippet}

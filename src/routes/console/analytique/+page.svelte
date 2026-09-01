@@ -56,6 +56,7 @@
 	recherches={data.recherches}
 	revisions={data.revisions}
 	modifications={data.modifications}
+	destructions={data.destructions}
 	onVoirLesNotes={(demande) => {
 		const adresse = adresseDeListe(demande.domaine, demande.fraicheur);
 		/* LA RÈGLE EST DÉSARMÉE, ET LE PRÉCÉDENT EST CELUI DU DÉPÔT.

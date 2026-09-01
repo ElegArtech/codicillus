@@ -15,6 +15,8 @@
  *    Svelte ne sait pas émettre littéralement.
  */
 
+import { boutonCommencantPar } from '$lib/cablage/libelles';
+
 export type Debranchement = () => void;
 
 /** Les deux registres de lecture, et rien d'autre — le vocabulaire est clos. */
@@ -115,10 +117,8 @@ export function cablerLeGuide(racine: HTMLElement): Debranchement {
 	/* 4. L'impression, que le gel écrit en attribut et que Svelte ne peut pas
 	   émettre. Le bouton est repéré par son libellé : le gel ne lui donne ni
 	   identifiant, ni classe propre. */
-	const imprimer = Array.from(racine.querySelectorAll('button.btn--plein')).find((b) =>
-		(b.textContent ?? '').trim().startsWith('Imprimer')
-	);
-	if (imprimer !== undefined) {
+	const imprimer = boutonCommencantPar(racine, 'imprimer', 'button.btn--plein');
+	if (imprimer !== null) {
 		ecouter(imprimer, 'click', () => {
 			fenetre?.print();
 		});

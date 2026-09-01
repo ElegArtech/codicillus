@@ -24,6 +24,17 @@ import { schema } from './schema';
 
 export type Base = ReturnType<typeof drizzle<typeof schema>>;
 
+/**
+ * CE QUI EXÉCUTE UNE REQUÊTE — la base, ou la TRANSACTION en cours. La forme se déduit de
+ * `Base` plutôt que de s'écrire : elle suit donc le connecteur sans qu'on y pense.
+ *
+ * Elle existe pour les fonctions qui doivent être appelées DANS une transaction ouverte
+ * ailleurs — l'écriture d'une trace de suppression, la renumérotation des rangs. Leur
+ * signature doit pouvoir recevoir un `tx`, sinon la seule façon de les appeler serait hors
+ * de la transaction, c'est-à-dire au mauvais moment.
+ */
+export type ExecuteurDeBase = Base | Parameters<Parameters<Base['transaction']>[0]>[0];
+
 let base: Base | null = null;
 let groupe: pg.Pool | null = null;
 

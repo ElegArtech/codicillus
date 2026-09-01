@@ -32,6 +32,8 @@ import { ROLE_DEPUIS_ENUM } from './lecture';
 import type { CleDeModule, Configuration } from '../../../seeds/corpus';
 import { identifiantLisible } from '../rangement/adresses';
 import { accord } from '../vocabulaire';
+import { auteurDeLaSuppression, tracerUneSuppression } from './traces';
+import type { Identite } from '../droits/resolution';
 
 /* 1. Les décomptes — comptés en base au moment du geste, jamais supposés. */
 
@@ -480,6 +482,8 @@ export function validerLaConfiguration(
 
 interface UniversEnBase extends EtatDUnUnivers {
 	readonly id: string;
+	/** Le nom d'affichage — ce que la trace de `RG-NF-05` inscrit en désignation. */
+	readonly nom: string;
 }
 
 /**
@@ -508,6 +512,7 @@ export async function mesurerUnUnivers(
 
 	return {
 		id: ligne.id,
+		nom: ligne.nom,
 		systeme: ligne.systeme,
 		decompte: { domaines: mesure?.domaines ?? 0, notes: mesure?.notes ?? 0 }
 	};
@@ -577,6 +582,8 @@ export async function mesurerUnDomaine(
 
 interface TypeDeFicheEnBase {
 	readonly id: string;
+	/** Le nom d'affichage — la désignation que la trace de `RG-NF-05` inscrit. */
+	readonly nom: string;
 	readonly decompte: DecompteDUnTypeDeFiche;
 }
 
@@ -585,7 +592,7 @@ export async function mesurerUnTypeDeFiche(
 	identifiant: string
 ): Promise<TypeDeFicheEnBase | null> {
 	const [ligne] = await base
-		.select({ id: typesDeFiche.id })
+		.select({ id: typesDeFiche.id, nom: typesDeFiche.nom })
 		.from(typesDeFiche)
 		.where(eq(typesDeFiche.identifiant, identifiant))
 		.limit(1);
@@ -603,6 +610,7 @@ export async function mesurerUnTypeDeFiche(
 
 	return {
 		id: ligne.id,
+		nom: ligne.nom,
 		decompte: { notes: portees?.notes ?? 0, proprietes: champs?.proprietes ?? 0 }
 	};
 }
@@ -645,6 +653,56 @@ export async function mesurerUnCompte(
 
 export type IssueDUnGeste<T> = { readonly issue: 'introuvable' } | T;
 
+/* ─────────────────────────── Le détail des traces — `RG-NF-05` ───────────────────
+   CE QUI EST PARTI AVEC L'OBJET DÉTRUIT, EN CLAIR. La trace reprend le décompte que
+   l'écran de confirmation a DÉJÀ montré : un second compte, calculé autrement, ferait
+   deux vérités sur le même geste. Les postes à zéro sont TUS — « 0 dossier » est du
+   bruit dans un journal qu'on relit. */
+
+function detailDuDomaine(decompte: DecompteDUnDomaine): string {
+	const postes: string[] = [];
+	if (decompte.notes > 0) {
+		postes.push(`${String(decompte.notes)} ${accord(decompte.notes, 'note')}`);
+	}
+	if (decompte.dossiers > 0) {
+		postes.push(`${String(decompte.dossiers)} ${accord(decompte.dossiers, 'dossier')}`);
+	}
+	if (decompte.signets > 0) {
+		postes.push(`${String(decompte.signets)} ${accord(decompte.signets, 'signet')}`);
+	}
+	if (decompte.comptesRattaches > 0) {
+		postes.push(
+			`${String(decompte.comptesRattaches)} ${accord(decompte.comptesRattaches, 'compte détaché', 'comptes détachés')}`
+		);
+	}
+	return postes.join(', ');
+}
+
+/**
+ * LE DÉTAIL DIT LA SORTIE, ET IL LE DOIT : « 3 relations » ne distingue pas des relations
+ * DÉTRUITES de relations RÉAFFECTÉES, et les deux ne se relisent pas de la même façon.
+ */
+function detailDuTypeDeRelation(portees: number, sortie: SortieDUnTypeDeRelation): string {
+	if (portees === 0) return '';
+	const nombre = `${String(portees)} ${accord(portees, 'relation')}`;
+	return sortie === 'reaffecter' ? `${nombre} réaffectées` : `${nombre} détruites`;
+}
+
+/**
+ * AUCUNE NOTE N'EST DÉTRUITE AVEC UN TYPE DE NOTE — elles changent de type. Compter sans
+ * dire ce qui leur est arrivé ferait lire une destruction là où il n'y a qu'un déplacement.
+ */
+function detailDuTypeDeNote(notesPortees: number, templatesPortes: number): string {
+	const postes: string[] = [];
+	if (notesPortees > 0) {
+		postes.push(`${String(notesPortees)} ${accord(notesPortees, 'note')}`);
+	}
+	if (templatesPortes > 0) {
+		postes.push(`${String(templatesPortes)} ${accord(templatesPortes, 'template')}`);
+	}
+	return postes.length === 0 ? '' : `${postes.join(' et ')} réaffectés, aucun détruit`;
+}
+
 /**
  * Supprimer un univers — `RG-M14-01`. Une seule écriture, aucune transaction : `ON DELETE
  * RESTRICT` fait de cette suppression un geste atomique par nature. Le verdict la refuse
@@ -652,7 +710,8 @@ export type IssueDUnGeste<T> = { readonly issue: 'introuvable' } | T;
  */
 export async function supprimerUnUnivers(
 	base: Base,
-	identifiant: string
+	identifiant: string,
+	identite: Identite
 ): Promise<IssueDUnGeste<VerdictDUnUnivers>> {
 	const etat = await mesurerUnUnivers(base, identifiant);
 	if (etat === null) return { issue: 'introuvable' };
@@ -660,11 +719,23 @@ export async function supprimerUnUnivers(
 	const verdict = verdictDeSuppressionDUnUnivers(etat);
 	if (verdict.issue !== 'possible') return verdict;
 
+	/* `RG-NF-05` — l'auteur est exigé AVANT la transaction : un refus tombe avant
+	   toute destruction, jamais au milieu. */
+	const auteur = auteurDeLaSuppression(identite);
+
 	/* LES RANGS RESTENT CONTIGUS APRÈS LA SUPPRESSION (`V-27:3513`). Sans cette
 	   renumérotation, un trou survit au geste et le rang « Position 3 » du
 	   sélecteur ne désigne plus le troisième univers. */
 	await base.transaction(async (tx) => {
 		await tx.delete(univers).where(eq(univers.id, etat.id));
+		/* La trace partage la transaction de la destruction — `RG-NF-05`. Un univers
+		   ne se supprime que VIDE : il n'y a rien à détailler. */
+		await tracerUneSuppression(tx, {
+			objet: 'univers',
+			reference: identifiant,
+			designation: etat.nom,
+			auteur
+		});
 		const restants = await tx.select({ id: univers.id }).from(univers).orderBy(univers.ordre);
 		await renumeroterLesUnivers(
 			tx,
@@ -695,6 +766,7 @@ export async function supprimerUnDomaine(
 		readonly univers: string;
 		readonly domaine: string;
 		readonly saisie: unknown;
+		readonly identite: Identite;
 	}
 ): Promise<IssueDUnGeste<VerdictDUnDomaine>> {
 	const etat = await mesurerUnDomaine(base, demande.univers, demande.domaine);
@@ -703,9 +775,21 @@ export async function supprimerUnDomaine(
 	const verdict = verdictDeSuppressionDUnDomaine(etat, demande.saisie);
 	if (verdict.issue !== 'possible') return verdict;
 
+	/* `RG-NF-05` — l'auteur est exigé avant la transaction. */
+	const auteur = auteurDeLaSuppression(demande.identite);
+
 	await base.transaction(async (tx) => {
 		await tx.delete(notes).where(eq(notes.domaineId, etat.id));
 		await tx.delete(domaines).where(eq(domaines.id, etat.id));
+		/* CE QUI EST PARTI AVEC, EN CLAIR — le décompte que l'écran de confirmation a
+		   déjà montré, jamais un second calculé autrement. */
+		await tracerUneSuppression(tx, {
+			objet: 'domaine',
+			reference: `${demande.univers}/${demande.domaine}`,
+			designation: etat.nom,
+			detail: detailDuDomaine(etat.decompte),
+			auteur
+		});
 	});
 
 	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre, jamais avant. */
@@ -721,7 +805,8 @@ export async function supprimerUnDomaine(
  */
 export async function supprimerUnTypeDeFiche(
 	base: Base,
-	identifiant: string
+	identifiant: string,
+	identite: Identite
 ): Promise<IssueDUnGeste<VerdictDUnTypeDeFiche>> {
 	const etat = await mesurerUnTypeDeFiche(base, identifiant);
 	if (etat === null) return { issue: 'introuvable' };
@@ -729,7 +814,19 @@ export async function supprimerUnTypeDeFiche(
 	const verdict = verdictDeSuppressionDUnTypeDeFiche(etat.decompte);
 	if (verdict.issue !== 'possible') return verdict;
 
-	await base.delete(typesDeFiche).where(eq(typesDeFiche.id, etat.id));
+	const auteur = auteurDeLaSuppression(identite);
+	/* UNE TRANSACTION LÀ OÙ IL N'Y EN AVAIT PAS : la destruction seule était atomique
+	   par nature, la trace de `RG-NF-05` ne l'est plus — écrite hors transaction, elle
+	   survivrait à un `delete` refusé, ou manquerait à un `delete` réussi. */
+	await base.transaction(async (tx) => {
+		await tx.delete(typesDeFiche).where(eq(typesDeFiche.id, etat.id));
+		await tracerUneSuppression(tx, {
+			objet: 'type de fiche',
+			reference: identifiant,
+			designation: etat.nom,
+			auteur
+		});
+	});
 	return verdict;
 }
 
@@ -831,7 +928,8 @@ export type VerdictDUnTemplate = { readonly issue: 'possible'; readonly template
  */
 export async function supprimerUnTemplate(
 	base: Base,
-	identifiant: string
+	identifiant: string,
+	identite: Identite
 ): Promise<IssueDUnGeste<VerdictDUnTemplate>> {
 	const [ligne] = await base
 		.select({ id: templates.id, nom: templates.nom })
@@ -840,7 +938,16 @@ export async function supprimerUnTemplate(
 		.limit(1);
 	if (ligne === undefined) return { issue: 'introuvable' };
 
-	await base.delete(templates).where(eq(templates.id, ligne.id));
+	const auteur = auteurDeLaSuppression(identite);
+	await base.transaction(async (tx) => {
+		await tx.delete(templates).where(eq(templates.id, ligne.id));
+		await tracerUneSuppression(tx, {
+			objet: 'template',
+			reference: identifiant,
+			designation: ligne.nom,
+			auteur
+		});
+	});
 	return { issue: 'possible', template: ligne.nom };
 }
 
@@ -905,10 +1012,13 @@ export async function supprimerUnTypeDeRelation(
 		readonly type: string;
 		readonly sortie: SortieDUnTypeDeRelation;
 		readonly vers?: string;
+		readonly identite: Identite;
 	}
 ): Promise<IssueDUnGeste<VerdictDUnTypeDeRelation>> {
 	const [type] = await base
-		.select({ id: typesDeRelation.id })
+		/* `types_de_relation` n'a pas de colonne `nom` : le LIBELLÉ SORTANT est ce que
+		   les écrans affichent, et c'est donc la désignation de la trace. */
+		.select({ id: typesDeRelation.id, nom: typesDeRelation.libelleSortant })
 		.from(typesDeRelation)
 		.where(eq(typesDeRelation.identifiant, demande.type))
 		.limit(1);
@@ -930,6 +1040,8 @@ export async function supprimerUnTypeDeRelation(
 		   ne conserve les relations. Refus, jamais un repli silencieux. */
 		if (accueil === undefined || accueil.id === type.id) return { issue: 'cible-invalide' };
 	}
+
+	const auteur = auteurDeLaSuppression(demande.identite);
 
 	await base.transaction(async (tx) => {
 		if (portees.length > 0) {
@@ -956,6 +1068,16 @@ export async function supprimerUnTypeDeRelation(
 			}
 		}
 		await tx.delete(typesDeRelation).where(eq(typesDeRelation.id, type.id));
+		/* `RG-NF-05`. LE DÉTAIL DIT LA SORTIE, et il le doit : « 3 relations » ne
+		   distingue pas des relations DÉTRUITES de relations RÉAFFECTÉES, et les deux
+		   ne se relisent pas de la même façon six mois plus tard. */
+		await tracerUneSuppression(tx, {
+			objet: 'type de relation',
+			reference: demande.type,
+			designation: type.nom,
+			detail: detailDuTypeDeRelation(portees.length, demande.sortie),
+			auteur
+		});
 	});
 
 	return { issue: 'possible', relations: portees.length, sortie: demande.sortie };
@@ -2075,10 +2197,10 @@ export const SORTIE_REAFFECTER_LES_NOTES =
 export async function supprimerUnTypeDeNote(
 	base: Base,
 	client: Meilisearch,
-	demande: { readonly type: string; readonly vers?: string }
+	demande: { readonly type: string; readonly vers?: string; readonly identite: Identite }
 ): Promise<IssueDUnGeste<VerdictDUnTypeDeNote>> {
 	const [type] = await base
-		.select({ id: typesDeNote.id })
+		.select({ id: typesDeNote.id, nom: typesDeNote.nom })
 		.from(typesDeNote)
 		.where(eq(typesDeNote.identifiant, demande.type))
 		.limit(1);
@@ -2111,6 +2233,8 @@ export async function supprimerUnTypeDeNote(
 		if (accueil === undefined || accueil.id === type.id) return { issue: 'cible-invalide' };
 	}
 
+	const auteur = auteurDeLaSuppression(demande.identite);
+
 	const destination = accueil;
 	await base.transaction(async (tx) => {
 		if (destination !== undefined) {
@@ -2124,6 +2248,16 @@ export async function supprimerUnTypeDeNote(
 				.where(eq(templates.typeDeNoteId, type.id));
 		}
 		await tx.delete(typesDeNote).where(eq(typesDeNote.id, type.id));
+		/* `RG-NF-05`. AUCUNE NOTE N'EST DÉTRUITE ICI — elles changent de type —, et le
+		   détail le dit : compter des notes sans dire ce qui leur est arrivé ferait
+		   lire une destruction là où il n'y a qu'une réaffectation. */
+		await tracerUneSuppression(tx, {
+			objet: 'type de note',
+			reference: demande.type,
+			designation: type.nom,
+			detail: detailDuTypeDeNote(portees.length, gabarits.length),
+			auteur
+		});
 	});
 
 	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre, jamais avant. */

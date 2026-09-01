@@ -37,7 +37,7 @@ import { getTableName } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import { CLES_DE_PARAMETRE } from '../base/schema';
-import type { RoleDeCompte } from '../droits/resolution';
+import { identiteAuthentifiee, type RoleDeCompte } from '../droits/resolution';
 import {
 	AVERTISSEMENT_DEFINITIF,
 	CHAMPS_DE_CONFIGURATION,
@@ -213,6 +213,15 @@ function baseFeinte(options: { readonly echouerA?: number } = {}) {
 			suite(files[rang++] ?? []);
 		},
 		delete: supprimer,
+		/* `RG-NF-05` — la trace de suppression s'insère DANS la transaction, et la
+		   feinte la journalise comme les suppressions : c'est ce partage même que le
+		   contrôle d'atomicité doit pouvoir constater. */
+		insert: (table: Parameters<typeof getTableName>[0]) => ({
+			values: async () => {
+				journal.push(`${dansLaTransaction ? 'tx' : 'hors-tx'}:insert ${getTableName(table)}`);
+				return [];
+			}
+		}),
 		async transaction(corps: (tx: unknown) => Promise<void>) {
 			transactions += 1;
 			dansLaTransaction = true;
@@ -248,6 +257,13 @@ function baseFeinte(options: { readonly echouerA?: number } = {}) {
  */
 const MOTEUR = {} as unknown as Meilisearch;
 
+/**
+ * L'AUTEUR DES DESTRUCTIONS ÉPROUVÉES — `RG-NF-05`. Une identité authentifiée, parce
+ * qu'une destruction anonyme est REFUSÉE : la fonction lève avant d'ouvrir la
+ * transaction, et les contrôles d'atomicité n'auraient plus rien à observer.
+ */
+const AUTEUR = identiteAuthentifiee('compte-1', 'administrateur');
+
 /** Ce que l'entretien de l'index a reçu, appel par appel. */
 const entretiens = vi.hoisted(() => [] as string[][]);
 
@@ -266,7 +282,8 @@ describe('RG-M14-03 — la suppression est atomique : soit tout, soit rien', () 
 		const resultat = await supprimerUnDomaine(feinte.base, MOTEUR, {
 			univers: 'production',
 			domaine: 'infrastructure',
-			saisie: 'Infrastructure'
+			saisie: 'Infrastructure',
+			identite: AUTEUR
 		});
 
 		expect(resultat.issue).toBe('possible');
@@ -274,7 +291,13 @@ describe('RG-M14-03 — la suppression est atomique : soit tout, soit rien', () 
 		/* L'ORDRE N'EST PAS UNE PRÉFÉRENCE : `notes.domaine_id` est en
 		   `ON DELETE RESTRICT` (`002_socle.montee.sql:336`), et le domaine
 		   supprimé en premier ferait échouer la transaction entière. */
-		expect(feinte.journal).toEqual(['tx:delete notes', 'tx:delete domaines']);
+		/* LA TRACE DE `RG-NF-05` EST DANS LA MÊME TRANSACTION, et le journal le
+		   prouve : écrite hors transaction, elle survivrait à une annulation. */
+		expect(feinte.journal).toEqual([
+			'tx:delete notes',
+			'tx:delete domaines',
+			'tx:insert traces_de_suppression'
+		]);
 	});
 
 	it('ANNULE tout quand la seconde échoue — et n’entretient PAS l’index', async () => {
@@ -287,7 +310,8 @@ describe('RG-M14-03 — la suppression est atomique : soit tout, soit rien', () 
 			supprimerUnDomaine(feinte.base, MOTEUR, {
 				univers: 'production',
 				domaine: 'infrastructure',
-				saisie: 'Infrastructure'
+				saisie: 'Infrastructure',
+				identite: AUTEUR
 			})
 		).rejects.toThrow('échec simulé');
 
@@ -305,7 +329,8 @@ describe('RG-M14-03 — la suppression est atomique : soit tout, soit rien', () 
 		const resultat = await supprimerUnDomaine(feinte.base, MOTEUR, {
 			univers: 'production',
 			domaine: 'infrastructure',
-			saisie: 'infrastructure'
+			saisie: 'infrastructure',
+			identite: AUTEUR
 		});
 
 		expect(resultat.issue).toBe('nom-non-confirme');
@@ -325,7 +350,8 @@ describe('RG-M14-05 — le contenu détruit disparaît immédiatement de la rech
 		await supprimerUnDomaine(feinte.base, MOTEUR, {
 			univers: 'production',
 			domaine: 'infrastructure',
-			saisie: 'Infrastructure'
+			saisie: 'Infrastructure',
+			identite: AUTEUR
 		});
 
 		/* `ARB-060` et `T-075` : il n'y a QU'UNE implémentation de l'entretien de
