@@ -30,6 +30,9 @@ export const HOTE_PAR_DEFAUT = '127.0.0.1';
 export const PORT_PAR_DEFAUT = 19432;
 
 /** L'utilisateur et la base par défaut (`.env.example`, `compose.yaml`). */
+/** Le temps qu'une requête attend une connexion avant d'échouer franchement. */
+export const DELAI_DE_CONNEXION_MS = 5_000;
+
 export const UTILISATEUR_PAR_DEFAUT = 'codicillus';
 export const BASE_PAR_DEFAUT = 'codicillus';
 
@@ -97,7 +100,24 @@ export function configurationDeConnexion(env: EnvironnementDeConnexion): PoolCon
 		user:
 			nonVide(env.UTILISATEUR_BASE) ?? nonVide(env.UTILISATEUR_POSTGRES) ?? UTILISATEUR_PAR_DEFAUT,
 		password: motDePasse,
-		database: nonVide(env.NOM_BASE) ?? nonVide(env.BASE_POSTGRES) ?? BASE_PAR_DEFAUT
+		database: nonVide(env.NOM_BASE) ?? nonVide(env.BASE_POSTGRES) ?? BASE_PAR_DEFAUT,
+		/**
+		 * UNE ATTENTE BORNÉE, PARCE QUE LE DÉFAUT EST L'INFINI.
+		 *
+		 * `connectionTimeoutMillis` vaut 0 chez `pg` — une requête qui demande une
+		 * connexion à une base absente attend POUR TOUJOURS. Le groupe se remplit
+		 * de requêtes suspendues, et le serveur cesse de répondre : pas un 500,
+		 * pas une page d'erreur, RIEN. Mesuré sur l'instance de recette le 1er
+		 * septembre, en arrêtant la base sous le serveur — `curl` rend 000, et le
+		 * retour de la base ne ramenait rien.
+		 *
+		 * Cinq secondes : une base lente ou qui redémarre a le temps de répondre,
+		 * et au-delà l'appelant reçoit une erreur franche plutôt qu'un écran qui
+		 * ne vient jamais. C'est ce qui permet au serveur de se rétablir seul —
+		 * les connexions suspendues libèrent le groupe, et la requête suivante
+		 * trouve une base revenue.
+		 */
+		connectionTimeoutMillis: DELAI_DE_CONNEXION_MS
 	};
 }
 
