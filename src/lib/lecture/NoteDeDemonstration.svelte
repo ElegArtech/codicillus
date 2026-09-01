@@ -41,8 +41,7 @@
 	 * « Signaler à réviser ».
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-14.css` / `src/vues/V-15.css`, posées par
-	 * `node verif/feuilles-de-vue.mjs V-xx --installer` (P-6.3). Les deux
+	 * `src/vues/V-14.css` / `src/vues/V-15.css`. Les deux
 	 * feuilles portent les mêmes règles pour ce bloc — c'est ce qui permet au
 	 * composant d'être unique. Les styles en ligne sont ceux du gel (P-6.4).
 	 */
@@ -107,9 +106,8 @@
 		 * `--c-encre-4` —, et un tel style n'est admis que dans un fichier
 		 * RATTACHÉ à une maquette
 		 * gelée : par le nommage pour `src/vues/V-xx.svelte` (ARB-016), par
-		 * déclaration humaine dans `verif/references/preuve-par-le-gel.json` pour
-		 * une ressource partagée (ARB-022). `src/lib/lecture/` n'est ni l'un ni
-		 * l'autre, et **un agent d'exécution n'écrit jamais** dans ce fichier de
+		 * déclaration pour une ressource partagée (ARB-022). `src/lib/lecture/` n'est
+		 * ni l'un ni l'autre, et **un agent d'exécution n'écrit jamais** dans ce
 		 * rattachement — c'est le contournement de vérification nommé par
 		 * PLAN §12. Le fragment vient donc des deux vues, qui, elles, sont
 		 * rattachées par leur nom ; le CHEMIN de rangement, lui, reste dans

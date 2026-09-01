@@ -88,7 +88,7 @@ const SONDES = 'Infrastructure › Supervision › Sondes';
  *
  *  1. le test se lie à la donnée réelle plutôt qu'à une copie de son libellé ;
  *  2. le libellé de ce parent contient le concept « fiche », que M14.7 rend
- *     RENOMMABLE globalement et que `pnpm verif:vocabulaire` compte en dur.
+ *     RENOMMABLE globalement et que le vocabulaire contractuel fige.
  *     L'écrire six fois ici déplaçait le compteur de la batterie 17 — mesuré :
  *     77 avant, 83 après. Un lot qui ne touche aucune vue n'a pas à bouger le
  *     décompte d'une batterie de vocabulaire.

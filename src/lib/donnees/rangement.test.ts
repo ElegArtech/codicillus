@@ -51,7 +51,7 @@ import {
 
 describe('le séparateur de chemin — un relevé du gel, pas une commodité', () => {
 	it('vaut espace, U+203A, espace — et les deux espaces en font partie', () => {
-		/* Le relevé est celui de `verif/scenarios/V-13.json` : entre les deux noms
+		/* Le relevé est celui de la planche de V-13 : entre les deux noms
 		   de dossier, cinq octets `20 e2 80 ba 20`. Les comparer par code de point
 		   plutôt que par un littéral recopié est ce qui rend l'épreuve utile : un
 		   littéral faux serait faux des deux côtés. */

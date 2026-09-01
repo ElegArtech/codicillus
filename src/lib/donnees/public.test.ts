@@ -1,10 +1,9 @@
 /**
  * LES UNITAIRES DU CHEMIN PUBLIC — les décisions, sans base.
  *
- * Ce qui exige une base est `pnpm verif:donnees` et la batterie 6 ; les mêler
- * ici rendrait `pnpm test:unit` dépendant de Docker, et une batterie qui ne
- * s'exécute pas ne prouve rien (`lecture.test.ts` pose la règle, celui-ci la
- * suit).
+ * Ce qui exige une base réelle n'est pas ici : le mêler rendrait `pnpm test:unit`
+ * dépendant de Docker, et un contrôle qui ne s'exécute pas ne prouve rien
+ * (`lecture.test.ts` pose la règle, celui-ci la suit).
  *
  * TROIS PROPRIÉTÉS Y SONT ÉPROUVÉES, ET CHACUNE A UN CAS QUI LA SOLLICITE —
  * `P-5` et `P-26` : un contrôle dont l'unique cas est l'état du dépôt devient

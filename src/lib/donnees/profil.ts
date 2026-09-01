@@ -263,7 +263,7 @@ export async function enregistrerLIdentite(
 	return 'enregistre';
 }
 
-/* 3. Les vecteurs de planche — les noms sont ceux de `verif/scenarios/V-xx.json`,
+/* 3. Les vecteurs de planche — les noms sont ceux des planches de maquette,
    composés à UN SEUL ENDROIT. */
 
 /** Les quatre onglets de V-25 — `docs/routes.md:283`, axe `ong` de la planche. */

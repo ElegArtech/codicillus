@@ -21,7 +21,7 @@
  *
  * CE FICHIER N'ÉCRIT AUCUNE FORME DU MARKDOWN, et c'est une contrainte, pas un
  * style : `ADR-004` réserve les formes à l'implémentation unique, et
- * `pnpm verif:convertisseur` n'exempte de son contrôle A2 que trois fichiers,
+ * Le contrôle A2 du convertisseur n'exempte que trois fichiers,
  * dont celui-ci n'est pas. Les cas adverses sont donc construits en DOCUMENTS
  * CANONIQUES — un bloc de code dont le contenu est trois tirets, par exemple —
  * et c'est le convertisseur qui en écrit la forme. La conséquence est heureuse :

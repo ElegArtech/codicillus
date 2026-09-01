@@ -12,7 +12,7 @@
  *
  * CE QUE CE FICHIER PROUVE, ET RIEN D'AUTRE : la propriété fournie l'emporte,
  * la propriété absente retombe sur la constante du jeu. La conformité de rendu
- * est mesurée par `pnpm verif:maquette V-17 --contre=app`, et par lui seul.
+ * se mesure en comparant l'écran à sa maquette, et par là seulement.
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
