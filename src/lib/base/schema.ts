@@ -807,6 +807,42 @@ export const distinctionsObtenues = pgTable(
 	(t) => [primaryKey({ name: 'distinctions_obtenues_pkey', columns: [t.compteId, t.cle] })]
 );
 
+/**
+ * `RG-NF-05` — QUI A DÉTRUIT QUOI, ET QUAND. « Les actions destructives sont confirmées,
+ * TRACÉES ET ATTRIBUÉES à leur auteur. »
+ *
+ * LA SUPPRESSION DU PRODUIT EST DÉFINITIVE ET SANS CORBEILLE (`RG-M14-03`) : il ne reste
+ * aucune ligne où écrire un « supprimé par », donc la trace ne peut vivre que dans une
+ * table à part. Elle s'écrit DANS LA MÊME TRANSACTION que la destruction — validée
+ * séparément, elle mentirait à la première transaction annulée.
+ *
+ * `reference` EST DU TEXTE, JAMAIS UNE CLÉ ÉTRANGÈRE : la cible n'existe plus. `detail`
+ * porte en clair ce qui est parti avec, et c'est le compte que l'écran de confirmation a
+ * DÉJÀ affiché — jamais un second, calculé autrement.
+ *
+ * `auteurId` EST `NOT NULL` ET EN `RESTRICT` : une trace qui perd son auteur cesse d'être
+ * une attribution. Le produit ne supprime aucun compte (`RG-M14-08`), la contrainte ne
+ * bloque donc rien — elle interdit qu'on la contourne.
+ *
+ * AUCUN CONTENU DÉTRUIT N'EST RECOPIÉ ICI : ce n'est pas une corbeille, et l'y transformer
+ * rendrait récupérable ce que `RG-M14-03` veut définitif.
+ */
+export const tracesDeSuppression = pgTable(
+	'traces_de_suppression',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		objet: text('objet').notNull(),
+		reference: text('reference').notNull(),
+		designation: text('designation').notNull(),
+		detail: text('detail').notNull().default(''),
+		auteurId: uuid('auteur_id')
+			.notNull()
+			.references(() => comptes.id, { onDelete: 'restrict' }),
+		le: timestamp('le', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [index('traces_de_suppression_le_idx').on(t.le.desc())]
+);
+
 export const sessions = pgTable(
 	'sessions',
 	{
@@ -880,6 +916,7 @@ export const schema = {
 	recherches,
 	versions,
 	distinctionsObtenues,
+	tracesDeSuppression,
 	sessions,
 	tentativesDeConnexion
 };

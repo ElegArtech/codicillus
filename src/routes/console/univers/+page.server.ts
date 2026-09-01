@@ -83,7 +83,15 @@ export const actions: Actions = {
 	supprimer: async ({ locals, request }) => {
 		consoleOuverte(locals);
 		const champs = await request.formData();
-		const resultat = await supprimerUnUnivers(basePartagee(), String(champs.get('univers') ?? ''));
+		/* `RG-NF-05` — L'IDENTITÉ DESCEND JUSQU'À LA TRANSACTION QUI DÉTRUIT. Elle
+		   s'arrêtait ici : `supprimerUnUnivers(base, identifiant)` n'avait pas de
+		   paramètre où la mettre, et aucune ligne de la base ne disait qui avait
+		   détruit quoi. `consoleOuverte()` a déjà refusé tout appelant sans droit. */
+		const resultat = await supprimerUnUnivers(
+			basePartagee(),
+			String(champs.get('univers') ?? ''),
+			locals.identite
+		);
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		if (resultat.issue !== 'possible') return fail(400, resultat);
 		return resultat;

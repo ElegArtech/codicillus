@@ -396,6 +396,27 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 @keyframes tourne-notif { to { transform: rotate(360deg); } }
 
+/* L'ATTENTE D'UN GESTE — RG-M18-01, « toute action déclenche un retour visible en
+   moins de 200 ms ». Mesuré avant : un geste de console laissait le bouton
+   strictement identique pendant tout l'aller-retour, et rien n'empêchait un second
+   clic. La forme est celle que le catalogue du socle décrit déjà pour l'état « en
+   attente » — rouet devant le libellé, bouton inerte. */
+.btn__rouet {
+  width: 12px; height: 12px; display: inline-block; flex: none;
+  border: 2px solid var(--c-trait-fort); border-top-color: var(--c-accent);
+  border-radius: 50%; animation: tourne-notif .7s linear infinite;
+}
+.btn--principal .btn__rouet { border-color: rgba(252, 251, 248, .35); border-top-color: #fcfbf8; }
+.btn[aria-busy="true"] { cursor: progress; }
+
+/* Le curseur d'attente sur toute la page : le geste peut partir d'un nœud qui n'est
+   pas un bouton, et l'écran doit dire qu'il travaille dans ce cas aussi. */
+:root[data-geste="encours"], :root[data-geste="encours"] * { cursor: progress !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn__rouet { animation: none; }
+}
+
 @media (max-width: 640px) {
   .notifs { right: var(--e-3); left: var(--e-3); bottom: var(--e-3); max-width: none; }
 }

@@ -100,7 +100,9 @@ export const actions: Actions = {
 		const resultat = await supprimerUnDomaine(basePartagee(), moteurPartage(), {
 			univers: String(champs.get('univers') ?? ''),
 			domaine: String(champs.get('domaine') ?? ''),
-			saisie: champs.get('sup-saisie')
+			saisie: champs.get('sup-saisie'),
+			/* `RG-NF-05` — l'auteur de la destruction, jusque dans la transaction. */
+			identite: locals.identite
 		});
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		if (resultat.issue !== 'possible') return fail(400, resultat);

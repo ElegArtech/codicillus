@@ -458,6 +458,16 @@
 	function creerLaNote(): void {
 		aller(`/notes/nouvelle?titre=${encodeURIComponent(requeteAffichee)}`);
 	}
+
+	/**
+	 * `RG-M04-07` — LA SORTIE DU PANNEAU EN ERREUR. Le moteur n'a pas répondu : la
+	 * même adresse redemandée suffit, la panne étant du côté du service et non de la
+	 * requête. `location.reload()` plutôt qu'`aller()` : conserver l'adresse EXACTE,
+	 * facettes et tri compris, est précisément ce qu'on veut réessayer.
+	 */
+	function reessayer(): void {
+		if (recherchees) window.location.reload();
+	}
 </script>
 
 <!--
@@ -736,7 +746,8 @@
 			<div class="resultats si-nominal" id="resultats">{#if !rendreLesResultats}{:else if motif !== null}<div class="vide"
 					><h2 class="vide__titre">{TITRE_DU_VIDE[motif]}</h2
 					><p class="vide__txt">{TEXTE_DU_VIDE[motif]}</p
-					>{#if motif === 'sans-univers'}<a class="btn btn--principal" href={resolve('/console/univers')}>Créer un univers</a
+					>{#if motif === 'moteur-injoignable'}<button class="btn btn--principal" type="button" onclick={reessayer}>Réessayer</button
+					>{:else if motif === 'sans-univers'}<a class="btn btn--principal" href={resolve('/console/univers')}>Créer un univers</a
 					>{:else if motif === 'corpus-vide' && ecriture}<a class="btn btn--principal si-ecriture" href={resolve('/notes/nouvelle')}>Créer une note</a
 				>{/if}</div>{:else if sansResultat}<div class="vide"
 					><h2 class="vide__titre">Aucun résultat pour <span class="vide__requete">{`« ${requeteAffichee} »`}</span></h2

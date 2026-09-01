@@ -10,9 +10,11 @@
  * CE MODULE NE LIT NI LA BASE NI LE MOTEUR : il part au navigateur avec la palette. Le
  * verdict, lui, se prend côté serveur — `$lib/recherche/vide`.
  */
-export type MotifDuVide = 'sans-index' | 'sans-univers' | 'perimetre-ferme' | 'corpus-vide';
+export type MotifDuVide =
+	'moteur-injoignable' | 'sans-index' | 'sans-univers' | 'perimetre-ferme' | 'corpus-vide';
 
 export const TITRE_DU_VIDE: Readonly<Record<MotifDuVide, string>> = {
+	'moteur-injoignable': "La recherche n'a pas répondu",
 	'sans-index': "La recherche n'a pas encore d'index",
 	'sans-univers': 'Votre base est vide',
 	'perimetre-ferme': 'Aucun dossier ne vous est ouvert',
@@ -20,6 +22,10 @@ export const TITRE_DU_VIDE: Readonly<Record<MotifDuVide, string>> = {
 };
 
 export const TEXTE_DU_VIDE: Readonly<Record<MotifDuVide, string>> = {
+	'moteur-injoignable':
+		'Le moteur de recherche n’a pas répondu : il est peut-être arrêté, ou redémarre. Le ' +
+		'corpus n’est pas perdu et reste lisible depuis le rail — réessayez dans un instant. ' +
+		'Si l’attente dure, un administrateur relance le service de recherche.',
 	'sans-index':
 		'Le moteur interroge un index, et celui de cette instance n’a jamais été construit : ' +
 		'aucune note ne peut être rapportée, même si le corpus en porte. Un administrateur le ' +

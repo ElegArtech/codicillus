@@ -98,8 +98,18 @@ export function poserLeTemoin(racine: ParentNode, etat: EtatDuTemoin): void {
  * brouillon n'est PAS un enregistrement, et poser `enregistre` ferait dire à la barre
  * d'état que la note est sauvée alors que rien n'est parti au serveur. Le libellé,
  * lui, nomme ce qui a bien eu lieu, et à quelle heure.
+ *
+ * IL SE TAIT PENDANT UN ENREGISTREMENT EN COURS — `RG-M18-01`. Mesuré : sur un
+ * enregistrement de 2,5 s, le témoin passait bien à « Enregistrement… » au bout de
+ * 24 ms, puis l'écriture périodique du brouillon le RECOUVRAIT à 411 ms par
+ * « Brouillon local enregistré à … — pas encore enregistré », et l'écran affirmait
+ * pendant deux secondes que rien n'était parti alors que la requête volait. Le retour
+ * visible existait, il ne SURVIVAIT pas. Le brouillon est bien écrit dans ce cas — seul
+ * le témoin se tait, l'enregistrement en cours étant la nouvelle plus importante.
  */
 export function poserLeTemoinDeBrouillon(racine: ParentNode, heure: string): void {
+	const temoin = racine.querySelector<HTMLElement>('#sauvegarde');
+	if (temoin?.dataset['etat'] === 'encours') return;
 	poserLeTemoin(racine, 'modifie');
 	const texte = racine.querySelector<HTMLElement>('#sauvegarde-txt');
 	if (texte === null) return;

@@ -31,6 +31,7 @@ import {
 	lireToutesLesDemandesDeRevision
 } from '$lib/donnees/lecture';
 import { lireLesRecherches } from '$lib/donnees/recherches';
+import { lireLesTracesDeSuppression } from '$lib/donnees/traces';
 import type { PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
@@ -54,6 +55,13 @@ async function consultationsParNote(
 		.groupBy(notes.identifiant);
 	return Object.fromEntries(lignes.map((l) => [l.identifiant, Number(l.n)]));
 }
+
+/**
+ * COMBIEN DE DESTRUCTIONS L'ÉCRAN MONTRE. Le bloc rend compte des gestes récents ; la
+ * table les garde tous. Un plafond parce qu'une console qui charge dix ans de traces
+ * cesse de s'ouvrir, et parce qu'au-delà d'une vingtaine de lignes personne ne lit.
+ */
+const DERNIERES_DESTRUCTIONS = 20;
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
@@ -97,6 +105,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 		   (« Ancienneté de la dernière modification, en jours »), et non un compte par
 		   période. Le calcul est celui de `lecture.ts`, employé par trois autres écrans :
 		   une seconde définition en ferait diverger les alertes. */
-		modifications: await ancienneteDeModification(base, acces.ressource.notes, instant)
+		modifications: await ancienneteDeModification(base, acces.ressource.notes, instant),
+		/* `RG-NF-05` — QUI A DÉTRUIT QUOI, ET QUAND. La table `traces_de_suppression`
+		   est écrite dans la transaction de chaque destruction ; c'est ici qu'elle se
+		   relit, et nulle part ailleurs — le seul écran d'administration du produit.
+		   LE PLAFOND EST CELUI DES AUTRES CLASSEMENTS DE L'ÉCRAN : ce bloc rend compte,
+		   il n'archive pas ; la table, elle, garde tout. */
+		destructions: await lireLesTracesDeSuppression(base, DERNIERES_DESTRUCTIONS)
 	};
 };

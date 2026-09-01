@@ -78,7 +78,9 @@ export const actions: Actions = {
 		const resultat = await supprimerUnTypeDeRelation(basePartagee(), {
 			type: String(champs.get('type-de-relation') ?? ''),
 			sortie,
-			...(typeof vers === 'string' ? { vers } : {})
+			...(typeof vers === 'string' ? { vers } : {}),
+			/* `RG-NF-05` — l'auteur de la destruction, jusque dans la transaction. */
+			identite: locals.identite
 		});
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		if (resultat.issue !== 'possible') return fail(400, resultat);

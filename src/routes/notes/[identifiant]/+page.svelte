@@ -27,6 +27,7 @@
 	import '../../../vues/V-14.css';
 	import { page } from '$app/state';
 	import { cablerLaSuppression, cablerLHistorique } from '$lib/cablage/formulaires';
+	import { porteLeGeste } from '$lib/cablage/libelles';
 	import { cablerLaFermetureDeLHistorique, cablerLaLecture, cablerLaLoupe } from './cablage';
 	import Historique from '../../../vues/V-15.svelte';
 	import '../../../vues/V-15.css';
@@ -572,8 +573,8 @@
 	 * objet global du navigateur, et `no-undef` la refuse.
 	 */
 	function ouvrirLHistorique(racine: Element, cible: string): () => void {
-		const bouton = Array.from(racine.querySelectorAll('button')).find(
-			(b) => (b.textContent ?? '').trim() === 'Historique des versions'
+		const bouton = Array.from(racine.querySelectorAll('button')).find((b) =>
+			porteLeGeste(b, 'historiqueDesVersions')
 		);
 		if (bouton === undefined) return () => {};
 		const aller = (): void => {

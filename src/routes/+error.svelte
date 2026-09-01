@@ -29,6 +29,7 @@
 	import VueConnectee from '../vues/V-26.svelte';
 	import feuillePublique from '../vues/V-04.css?url';
 	import feuilleConnectee from '../vues/V-26.css?url';
+	import { resolve } from '$app/paths';
 	import { casDeV26, vueDeLAdresseNonResolue } from '$lib/donnees/public';
 	import { onMount } from 'svelte';
 	import { cablerLaPageDErreur } from './cablage-erreur';
@@ -50,6 +51,21 @@
 	const portail = $derived(donnees.portailAssistance ?? '');
 
 	const nonResolue = $derived(page.status === 404);
+
+	/**
+	 * CE QUE LA PAGE DE PANNE ÉCRIT. Le message du serveur est repris tel quel quand
+	 * il en est un ; « Internal Error » est le repli de SvelteKit, il ne nomme rien et
+	 * la phrase de repli le remplace. Rien n'est inventé sur la CAUSE : le seul fait
+	 * que cette page connaisse est que la donnée n'a pas été perdue.
+	 */
+	const REPLI_DE_PANNE =
+		'Une des sources de cette page n’a pas répondu. Rien n’est perdu : le contenu ' +
+		'est intact, seule son ouverture a échoué. Réessayez — si l’échec se répète, ' +
+		'signalez-le à un administrateur.';
+	const message = $derived.by(() => {
+		const servi = page.error?.message;
+		return servi === undefined || servi === 'Internal Error' ? REPLI_DE_PANNE : servi;
+	});
 	const vue = $derived(vueDeLAdresseNonResolue(page.url.pathname, session));
 
 	/* LE CÂBLAGE DES TROIS GESTES DE LA PAGE — `ARB-063`, depuis la route.
@@ -125,6 +141,66 @@
 		<VuePublique notes={[]} adresse={page.url.pathname} pistes={[]} {portail} />
 	{/if}
 {:else}
-	<h1>{page.status}</h1>
-	<p>{page.error?.message}</p>
+	<!--
+		TOUT CE QUI N'EST PAS UNE ADRESSE NON RÉSOLUE — la panne. `RG-M04-07` exige
+		d'un état d'erreur « un message ET une possibilité de réessayer » ; ces deux
+		lignes n'en donnaient aucun des deux. Mesuré, moteur de recherche éteint :
+		l'écran servi était « 500 » puis « Internal Error », sans style, sans phrase et
+		sans issue — un cul-de-sac où le seul geste restant est le bouton du
+		navigateur.
+
+		LE MESSAGE DU SERVEUR EST RENDU S'IL EN EST UN, jamais inventé : `error()` en
+		pose un délibéré, et SvelteKit retombe sinon sur « Internal Error », qui
+		n'apprend rien à personne. Dans ce cas, la phrase de repli dit ce qui est vrai
+		— la panne est du côté du service, la donnée n'est pas perdue.
+
+		DEUX SORTIES, PARCE QU'IL EN FAUT UNE QUI MARCHE TOUJOURS : réessayer la même
+		adresse, et revenir à l'accueil si la panne y persiste. `socle.css` est chargé
+		par le gabarit racine : les classes employées ici sont peintes sans feuille
+		supplémentaire.
+	-->
+	<main class="panne">
+		<p class="panne__code">Erreur {page.status}</p>
+		<h1 class="panne__titre">Cette page n'a pas pu être affichée</h1>
+		<p class="panne__txt">
+			{message}
+		</p>
+		<div class="panne__gestes">
+			<button class="btn btn--principal" type="button" onclick={() => globalThis.location.reload()}
+				>Réessayer</button
+			>
+			<a class="btn" href={resolve('/')}>Revenir à l'accueil</a>
+		</div>
+	</main>
 {/if}
+
+<style>
+	.panne {
+		max-width: 44rem;
+		margin: 0 auto;
+		padding: 96px 24px;
+	}
+	.panne__code {
+		margin: 0 0 8px;
+		font-size: 13px;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--c-encre-3);
+	}
+	.panne__titre {
+		margin: 0 0 12px;
+		font-size: 26px;
+		line-height: 1.25;
+		color: var(--c-encre);
+	}
+	.panne__txt {
+		margin: 0 0 24px;
+		color: var(--c-encre-2);
+		line-height: 1.55;
+	}
+	.panne__gestes {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+</style>
