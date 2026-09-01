@@ -41,6 +41,30 @@ let groupe: pg.Pool | null = null;
 export function basePartagee(): Base {
 	if (base === null) {
 		groupe = new pg.Pool(configurationDeConnexion(env));
+		/**
+		 * SANS CET ÉCOUTEUR, LE SERVEUR MEURT QUAND LA BASE S'ABSENTE.
+		 *
+		 * `pg.Pool` émet `error` sur une connexion INACTIVE que le serveur de base
+		 * a fermée de son côté — redémarrage, bascule, coupure réseau. Cet
+		 * événement n'a pas de destinataire par défaut : Node le traite alors en
+		 * exception non capturée et arrête le processus. Le conteneur redémarre,
+		 * retrouve une base encore absente, et remeurt.
+		 *
+		 * MESURÉ SUR L'INSTANCE DE RECETTE, le 1er septembre : le VPS avait
+		 * redémarré, `app` était montée avant PostgreSQL, et elle est restée
+		 * VINGT-DEUX HEURES à ne rien répondre — pas même un 500 — pendant que
+		 * `db`, `frontal` et `recherche` se portaient bien. Rejoué à l'identique en
+		 * arrêtant la base sous le serveur : il meurt, et le retour de la base ne
+		 * le ramène pas.
+		 *
+		 * Écouter suffit. Le groupe est paresseux : la requête suivante ouvre une
+		 * connexion neuve, et le serveur se rétablit de lui-même dès que la base
+		 * répond. Le message reste court — une panne de base ne doit pas noyer le
+		 * journal sous des objets de connexion sérialisés.
+		 */
+		groupe.on('error', (erreur: Error) => {
+			console.error(`[base] connexion inactive perdue : ${erreur.message}`);
+		});
 		base = drizzle(groupe, { schema });
 	}
 	return base;
