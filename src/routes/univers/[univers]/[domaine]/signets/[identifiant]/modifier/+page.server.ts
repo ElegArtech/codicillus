@@ -132,7 +132,9 @@ export const actions: Actions = {
 			base,
 			moteurPartage(),
 			params.identifiant,
-			rangement.domaineId
+			rangement.domaineId,
+			/* `RG-NF-05` — l'auteur de la destruction, jusque dans la transaction. */
+			locals.identite
 		);
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
 		redirect(303, `/univers/${params.univers}/${params.domaine}/signets`);

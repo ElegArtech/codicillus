@@ -718,3 +718,28 @@
 .fil { overflow: hidden; }
 .fil > * { min-width: 0; flex: 0 1 auto; }
 .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- Destructions — RG-NF-05 --------------------------------------------------------
+   Le journal des actions destructives. La forme reprend celle du tableau de gestion —
+   même cadre, mêmes en-têtes en capitales — parce que c'est la seule forme tabulaire du
+   registre : en inventer une seconde ferait deux façons de lire la même chose. */
+.tableau-destructions {
+  width: 100%; border-collapse: collapse;
+  border: 1px solid var(--c-trait); border-radius: var(--r-3);
+  background: var(--c-papier); overflow: hidden;
+}
+.tableau-destructions th {
+  text-align: left; background: var(--c-papier-2);
+  border-bottom: 1px solid var(--c-trait);
+  padding: var(--e-2) var(--e-3);
+  font-family: var(--f-donnee); font-size: var(--t-micro); font-weight: var(--g-moyen);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--c-encre-3);
+  white-space: nowrap;
+}
+.tableau-destructions td {
+  padding: var(--e-2) var(--e-3); font-size: var(--t-petit); color: var(--c-encre-2);
+  border-top: 1px solid var(--c-trait-fin); vertical-align: top;
+}
+.tableau-destructions tbody tr:first-child td { border-top: 0; }
+.tableau-destructions tbody tr:hover { background: var(--c-papier-2); }
+.destruction__detail { color: var(--c-encre-3); }

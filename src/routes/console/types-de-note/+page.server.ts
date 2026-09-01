@@ -93,7 +93,9 @@ export const actions: Actions = {
 		const vers = texteDuChamp(champs, CHAMP_TYPE_DE_NOTE_DACCUEIL);
 		const resultat = await supprimerUnTypeDeNote(basePartagee(), moteurPartage(), {
 			type: texteDuChamp(champs, CHAMP_TYPE_DE_NOTE_CIBLE) ?? '',
-			...(vers === undefined ? {} : { vers })
+			...(vers === undefined ? {} : { vers }),
+			/* `RG-NF-05` — l'auteur de la destruction, jusque dans la transaction. */
+			identite: locals.identite
 		});
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		if (resultat.issue !== 'possible') return fail(400, resultat);

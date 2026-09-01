@@ -41,6 +41,50 @@ export interface RetourDAction {
 	readonly donnees: unknown;
 }
 
+/**
+ * `RG-M18-01` — LE RETOUR VISIBLE, POSÉ AVANT LE PREMIER OCTET ENVOYÉ.
+ *
+ * MESURÉ AVANT : sur un aller-retour d'une seconde et demie, `#form-valider` restait
+ * `disabled=false`, sans `aria-busy`, libellé inchangé, et son fond revenait à sa
+ * couleur de repos 94 ms après le clic — c'est-à-dire que l'écran était STRICTEMENT
+ * identique à ce qu'il était avant, pendant tout le reste de l'attente. Un bouton qui
+ * ne dit rien laisse croire que le clic n'a pas pris, et le second clic partait.
+ *
+ * LA FORME EST CELLE QUE LE SOCLE DÉCRIT DÉJÀ pour l'état « en attente » : rouet
+ * devant le libellé, bouton inerte. Rien n'est inventé ici.
+ *
+ * LE BOUTON EST CELUI QUI A LE FOCUS, et ce n'est pas une devinette : un clic focalise
+ * le bouton cliqué, et tous les gestes de console partent d'un bouton. Quand il n'y en
+ * a pas — geste au clavier, appel programmé —, le curseur d'attente de la page reste,
+ * lui, toujours posé.
+ */
+function ouvrirLAttente(document: Document): Debranchement {
+	document.documentElement.dataset['geste'] = 'encours';
+
+	const actif = document.activeElement;
+	if (!(actif instanceof HTMLButtonElement) || actif.disabled) {
+		return () => {
+			delete document.documentElement.dataset['geste'];
+		};
+	}
+
+	const rouet = document.createElement('span');
+	rouet.className = 'btn__rouet';
+	rouet.setAttribute('aria-hidden', 'true');
+	actif.prepend(rouet);
+	actif.setAttribute('aria-busy', 'true');
+	/* L'INERTIE VIENT APRÈS LE ROUET, jamais avant : un bouton désactivé perd le
+	   focus, et on ne le retrouverait plus pour le rendre. */
+	actif.disabled = true;
+
+	return () => {
+		delete document.documentElement.dataset['geste'];
+		rouet.remove();
+		actif.removeAttribute('aria-busy');
+		actif.disabled = false;
+	};
+}
+
 export interface OptionsDEnvoi {
 	/**
 	 * RECHARGER LA PAGE AU SUCCÈS — vrai par défaut : la liste rendue vient du serveur.
@@ -69,18 +113,36 @@ export async function envoyerAUneAction(
 	const corps = new FormData();
 	for (const [nom, valeur] of Object.entries(champs)) corps.append(nom, valeur);
 
-	const reponse = await fetch(action, {
-		method: 'POST',
-		headers: { 'x-sveltekit-action': 'true' },
-		body: corps
-	});
-	const resultat = deserialize(await reponse.text());
-	const succes = resultat.type === 'success';
-	if (succes && options.rechargerAuSucces !== false) document.location.reload();
-	return {
-		succes,
-		donnees: resultat.type === 'success' || resultat.type === 'failure' ? resultat.data : undefined
-	};
+	/* `RG-M18-01` — AVANT LA REQUÊTE, ET SYNCHRONE : posée après le `await`, l'attente
+	   ne s'afficherait qu'une fois la réponse arrivée, c'est-à-dire jamais. */
+	const fermerLAttente = ouvrirLAttente(document);
+	try {
+		const reponse = await fetch(action, {
+			method: 'POST',
+			headers: { 'x-sveltekit-action': 'true' },
+			body: corps
+		});
+		const resultat = deserialize(await reponse.text());
+		const succes = resultat.type === 'success';
+		/* L'ATTENTE RESTE POSÉE QUAND ON RECHARGE : la rendre ici ferait clignoter le
+		   bouton entre la réponse et le remplacement du document, et le geste aurait
+		   l'air d'avoir échoué pendant une image. Le rechargement l'emporte avec lui. */
+		if (succes && options.rechargerAuSucces !== false) {
+			document.location.reload();
+			return { succes, donnees: resultat.data };
+		}
+		fermerLAttente();
+		return {
+			succes,
+			donnees:
+				resultat.type === 'success' || resultat.type === 'failure' ? resultat.data : undefined
+		};
+	} catch (erreur) {
+		/* UN RÉSEAU QUI TOMBE NE DOIT PAS LAISSER L'ÉCRAN EN ATTENTE POUR TOUJOURS :
+		   sans ce rattrapage, le bouton restait inerte et rouet tournant, sans issue. */
+		fermerLAttente();
+		throw erreur;
+	}
 }
 
 /* ═══════════════════════════════ La configuration — V-33 ════════════════ */

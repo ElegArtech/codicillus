@@ -28,6 +28,7 @@
  */
 import { and, eq, inArray, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
+import { auteurDeLaSuppression, tracerUneSuppression } from './traces';
 import type { Base } from '../base/acces';
 import { domaines, notes, relations, typesDeNote, typesDeRelation } from '../base/schema';
 import { INTROUVABLE, type Identite, type Resolution } from '../droits/resolution';
@@ -401,7 +402,11 @@ export async function retirerUneRelation(
 		.select({
 			cle: relations.id,
 			sourceDossier: source.dossierId,
-			cibleDossier: cible.dossierId
+			cibleDossier: cible.dossierId,
+			/* Les deux titres ne servent QU'À LA TRACE de `RG-NF-05` : après le retrait,
+			   plus rien ne dirait quel lien a disparu. */
+			sourceTitre: source.titre,
+			cibleTitre: cible.titre
 		})
 		.from(relations)
 		.innerJoin(source, eq(relations.sourceId, source.id))
@@ -423,6 +428,22 @@ export async function retirerUneRelation(
 		return INTROUVABLE;
 	}
 
-	await base.delete(relations).where(eq(relations.id, ligne.cle));
+	/* `RG-NF-05` — l'auteur est exigé avant la destruction. */
+	const auteur = auteurDeLaSuppression(demande.identite);
+
+	/* UNE TRANSACTION LÀ OÙ IL N'Y EN AVAIT PAS : le retrait seul était atomique par
+	   nature, la trace ne l'est plus — écrite hors transaction, elle survivrait à un
+	   retrait refusé, ou manquerait à un retrait réussi. */
+	await base.transaction(async (tx) => {
+		await tx.delete(relations).where(eq(relations.id, ligne.cle));
+		/* LA DÉSIGNATION EST LE LIEN, PAS LA RELATION : une relation n'a pas de nom, et
+		   « source → cible » est la seule chose qui se relise. */
+		await tracerUneSuppression(tx, {
+			objet: 'relation',
+			reference: ligne.cle,
+			designation: `${ligne.sourceTitre} → ${ligne.cibleTitre}`,
+			auteur
+		});
+	});
 	return { trouve: true, ressource: { retiree: true } };
 }

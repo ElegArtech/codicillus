@@ -27,8 +27,11 @@ import {
 	chaineDAncetres,
 	indexerLesDroits,
 	type DroitDeDossier,
+	type Identite,
 	type IndexDesDroits
 } from '../droits/resolution';
+import { auteurDeLaSuppression, tracerUneSuppression } from './traces';
+import { accord } from '../vocabulaire';
 import { initialesDuNom } from './accueil';
 import { identifiantLisible } from '../rangement/adresses';
 import { entretenirLIndex } from '../recherche/entretien';
@@ -496,12 +499,29 @@ export async function renommerOuDeplacerUnDossier(
  */
 export const SAISIE_NON_CONFORME = 'Le nom saisi ne correspond pas à celui du dossier.';
 
+/**
+ * CE QUI EST PARTI AVEC LE DOSSIER, EN CLAIR — le décompte que l'écran de confirmation a
+ * déjà montré. Les postes à zéro sont TUS : un dossier vide détruit seul n'a pas de détail.
+ */
+function detailDuDossier(sousDossiers: number, notesDetruites: number): string {
+	const postes: string[] = [];
+	if (sousDossiers > 0) {
+		postes.push(`${String(sousDossiers)} ${accord(sousDossiers, 'sous-dossier')}`);
+	}
+	if (notesDetruites > 0) {
+		postes.push(`${String(notesDetruites)} ${accord(notesDetruites, 'note')}`);
+	}
+	return postes.join(', ');
+}
+
 export interface DemandeDeSuppressionDeDossier {
 	readonly dossierId: string;
 	/** Le nom saisi par l'utilisateur — `RG-M03-04`, « le nom exact ». */
 	readonly saisie: string;
 	readonly lignes: readonly LigneDeDossier[];
 	readonly droit: (dossierId: string) => DroitDeDossier | null;
+	/** `RG-NF-05` — l'auteur, jusque dans la transaction qui détruit. */
+	readonly identite: Identite;
 }
 
 export interface SuppressionDeDossierFaite {
@@ -553,9 +573,22 @@ export async function supprimerUnDossier(
 		.from(notes)
 		.where(inArray(notes.dossierId, identifiantsDeDossier));
 
+	/* `RG-NF-05` — l'auteur est exigé AVANT la transaction : un refus tombe avant
+	   toute destruction, jamais au milieu. */
+	const auteur = auteurDeLaSuppression(demande.identite);
+
 	await base.transaction(async (tx) => {
 		await tx.delete(notes).where(inArray(notes.dossierId, identifiantsDeDossier));
 		await tx.delete(dossiers).where(eq(dossiers.id, dossier.id));
+		/* LA TRACE PARTAGE LA TRANSACTION. Le détail reprend ce que l'écran de
+		   confirmation a montré — le sous-arbre entier, pas le seul dossier visé. */
+		await tracerUneSuppression(tx, {
+			objet: 'dossier',
+			reference: dossier.id,
+			designation: dossier.nom,
+			detail: detailDuDossier(branche.length - 1, detruites.length),
+			auteur
+		});
 	});
 
 	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre, jamais avant. */

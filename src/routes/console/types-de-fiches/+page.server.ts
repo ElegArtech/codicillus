@@ -74,7 +74,9 @@ export const actions: Actions = {
 		const champs = await request.formData();
 		const resultat = await supprimerUnTypeDeFiche(
 			basePartagee(),
-			String(champs.get('type-de-fiche') ?? '')
+			String(champs.get('type-de-fiche') ?? ''),
+			/* `RG-NF-05` — l'auteur de la destruction, jusque dans la transaction. */
+			locals.identite
 		);
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		if (resultat.issue !== 'possible') return fail(400, resultat);

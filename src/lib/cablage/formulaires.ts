@@ -26,6 +26,7 @@
 /* Import de TYPE pur — voir `ChampDeFicheAuFormulaire` : il ne fait entrer aucune
    ligne de code, il POSE LE LIEN qu'aucun compilateur ne voyait sans lui. */
 import type { ChampDeFiche } from '../../../seeds/corpus';
+import { boutonDuGeste } from './libelles';
 
 /** Le séparateur de chemin du corpus — `SEPARATEUR_DE_CHEMIN`, `rangement.ts:111`. */
 const SEPARATEUR = ' › ';
@@ -697,10 +698,8 @@ export function cablerLaSuppression(
 		if (!b.hasAttribute('type')) b.type = 'button';
 	}
 
-	const bouton = Array.from(formulaire.querySelectorAll('button')).find(
-		(b) => (b.textContent ?? '').trim() === 'Supprimer'
-	);
-	if (bouton === undefined) return () => {};
+	const bouton = boutonDuGeste(formulaire, 'supprimer');
+	if (bouton === null) return () => {};
 	const reaction = (): void => {
 		if (!formulaire.ownerDocument.defaultView?.confirm(options.rappel)) return;
 		formulaire.requestSubmit();

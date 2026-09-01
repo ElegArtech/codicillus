@@ -46,6 +46,7 @@ import {
 	AUCUN_RESULTAT,
 	type MotifDuVide,
 	indexAbsent,
+	moteurInjoignable,
 	motifDuPerimetreVide
 } from '$lib/recherche/vide';
 import type { Base } from '$lib/base/acces';
@@ -260,21 +261,31 @@ async function lireLaRecherche(
 	const tri = ordreDeTriDemande(demande.get('tri')) ?? ORDRE_PAR_DEFAUT;
 	const mode = modeDemande(demande);
 
-	/* L'INDEX PEUT NE PAS EXISTER — voir `indexAbsent()`. Les deux requêtes
-	   partent ensemble et se rattrapent ensemble : la page se rend alors sans
-	   résultat ET en disant pourquoi, plutôt qu'en 500. Toute autre panne du
-	   moteur remonte telle quelle : elle n'est pas un état de l'installation. */
+	/* DEUX PANNES DU MOTEUR SE RATTRAPENT ICI, ET LA PAGE SE REND DANS LES DEUX CAS.
+	   L'INDEX ABSENT est une installation neuve (`indexAbsent()`) ; LE MOTEUR
+	   INJOIGNABLE est un service arrêté (`moteurInjoignable()`), et c'était la panne
+	   qui sortait `/recherche` en 500 — mesuré, moteur éteint : la page entière
+	   rendait « Internal Error » quand la palette de la coquille, sur la même panne,
+	   affichait déjà son message et son « Réessayer ». `RG-M04-07` : un panneau en
+	   erreur ne casse jamais la page. Toute autre panne remonte telle quelle. */
 	const interrogation = await Promise.all([
 		chercherLesNotes(base, client, identite, { requete, tri }),
 		/* AUCUN TRI SUR LA SECONDE : elle ne lit aucune note et seul son TOTAL est
 		   employé — le dénominateur de la règle d'affluence. Trier un compte n'a
 		   pas de sens, et le demander au moteur coûterait sans rien rendre. */
 		chercherLesNotes(base, client, identite, { requete: '' })
-	]).catch((erreur: unknown) => {
-		if (indexAbsent(erreur)) return null;
-		throw erreur;
-	});
-	const [trouvees, toutLeLisible] = interrogation ?? [AUCUN_RESULTAT, AUCUN_RESULTAT];
+	])
+		.then((resultats) => ({ panne: null, resultats }) as const)
+		.catch((erreur: unknown) => {
+			/* La panne est portée par le VERDICT qui sera rendu, pas par un booléen de
+			   plus : le motif n'a ainsi qu'une seule écriture. */
+			if (indexAbsent(erreur)) return { panne: 'sans-index', resultats: null } as const;
+			if (moteurInjoignable(erreur)) {
+				return { panne: 'moteur-injoignable', resultats: null } as const;
+			}
+			throw erreur;
+		});
+	const [trouvees, toutLeLisible] = interrogation.resultats ?? [AUCUN_RESULTAT, AUCUN_RESULTAT];
 	const notes = dansLOrdreDuMoteur(
 		await lireNotes(base, contexte, trouvees.identifiants),
 		trouvees.identifiants
@@ -302,10 +313,10 @@ async function lireLaRecherche(
 	/* LE MOTIF N'EST DEMANDÉ QUE LORSQUE LE PÉRIMÈTRE EST VIDE : une recherche
 	   ordinaire ne touche ni la table des univers ni celle des droits. */
 	const motif =
-		toutLeLisible.total > 0
-			? null
-			: interrogation === null
-				? ('sans-index' as const)
+		interrogation.panne !== null
+			? interrogation.panne
+			: toutLeLisible.total > 0
+				? null
 				: await motifDuPerimetreVide(base, identite);
 
 	const commun = {

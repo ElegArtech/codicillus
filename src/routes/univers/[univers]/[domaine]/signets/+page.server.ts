@@ -115,7 +115,14 @@ export const actions: Actions = {
 
 		const rangement = await lireLeRangement(base, segments);
 		if (rangement === null) error(404, MESSAGE_INTROUVABLE);
-		const fait = await supprimerUnSignet(base, moteurPartage(), identifiant, rangement.domaineId);
+		const fait = await supprimerUnSignet(
+			base,
+			moteurPartage(),
+			identifiant,
+			rangement.domaineId,
+			/* `RG-NF-05` — l'auteur de la destruction, jusque dans la transaction. */
+			locals.identite
+		);
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
 		redirect(303, `/univers/${params.univers}/${params.domaine}/signets`);
 	}

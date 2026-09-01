@@ -13,6 +13,7 @@
  * d'effacement, dessiné donc promis. ÉCHAP EFFACE, comme au gel et comme en V-02.
  */
 import { resolve } from '$app/paths';
+import { boutonCommencantPar } from '$lib/cablage/libelles';
 
 export type Debranchement = () => void;
 
@@ -80,10 +81,8 @@ export function cablerLAccueilPublic(racine: HTMLElement): Debranchement {
 	   parce qu'il est dessiné, et il rechargera la page le jour où l'état sera
 	   servi. Le rechargement est le seul rattrapage juste : la liste vient du
 	   chargeur, pas d'un appel que le navigateur saurait rejouer. */
-	const reessayer = Array.from(racine.querySelectorAll('.zone-erreur button.btn')).find((b) =>
-		(b.textContent ?? '').trim().startsWith('Réessayer')
-	);
-	if (reessayer !== undefined) {
+	const reessayer = boutonCommencantPar(racine, 'reessayer', '.zone-erreur button.btn');
+	if (reessayer !== null) {
 		ecouter(reessayer, 'click', () => {
 			fenetre?.location.reload();
 		});
