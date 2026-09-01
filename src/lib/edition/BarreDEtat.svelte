@@ -20,9 +20,8 @@
 	 * porte, sur son premier `kbd`, une marge gauche EN LIGNE — et `margin-left`
 	 * est une propriété CONTRAINTE par P-1.2. Un style en ligne n'est prouvé que
 	 * par la maquette RATTACHÉE au fichier : par le nommage pour
-	 * `src/vues/V-xx.svelte` (ARB-016, P-6.4), par déclaration humaine dans
-	 * `verif/references/preuve-par-le-gel.json` pour une ressource partagée
-	 * (ARB-022). `src/lib/edition/` n'a ni l'un ni l'autre, et un agent
+	 * `src/vues/V-xx.svelte` (ARB-016, P-6.4), par déclaration pour une ressource
+	 * partagée (ARB-022). `src/lib/edition/` n'a ni l'un ni l'autre, et un agent
 	 * d'exécution n'écrit jamais dans ce fichier de rattachement (PLAN §12). Le
 	 * fragment vient donc des deux vues, qui, elles, sont rattachées par leur nom.
 	 * C'est exactement la jurisprudence du séparateur `›` de V-14.
@@ -33,9 +32,8 @@
 	 * (`V-17.css:746`).
 
 	 * ATTENTION, PIÈGE D'INSTRUMENT : ne jamais citer un attribut de style sous sa
-	 * forme exacte dans un commentaire. `verif/jetons.mjs` balaie le FICHIER, pas
-	 * l'arbre : la citation devient un constat P-1.7, dans un fichier qui n'a
-	 * aucune maquette pour en répondre. Même famille que P-9.
+	 * forme exacte dans un commentaire : décris-la. Une citation se lit comme une
+	 * déclaration de style, dans un fichier qui n'a aucune maquette pour en répondre.
 	 *
 	 * AUCUNE MINUTERIE, AUCUN COMPORTEMENT ICI (ARB-011). Le composant REND l'état
 	 * de sauvegarde, il ne l'atteint pas : ce sont les câblages de `src/lib/edition/`
@@ -45,8 +43,7 @@
 	 * l'état de DÉPART, celui du rendu au serveur, et rien d'autre.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-17.css` / `src/vues/V-18.css`, posées par
-	 * `node verif/feuilles-de-vue.mjs V-xx --installer` (P-6.3). Les deux feuilles
+	 * `src/vues/V-17.css` / `src/vues/V-18.css`. Les deux feuilles
 	 * portent les mêmes règles pour ce bloc — c'est ce qui permet au composant
 	 * d'être unique.
 	 */

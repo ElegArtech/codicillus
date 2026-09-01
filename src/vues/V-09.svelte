@@ -1,61 +1,20 @@
 <script lang="ts">
 	/**
 	 * V-09 — Palette de recherche rapide. AUCUNE ROUTE : la palette est une
-	 * superposition, pas une page (`docs/routes.md`, `verif/scenarios/V-09.json`
-	 * → `"routes": []`). Ce que la maquette gelée sert est sa PLANCHE D'ÉTATS.
+	 * superposition, pas une page (`docs/routes.md`). Ce que la maquette sert est
+	 * sa PLANCHE D'ÉTATS, les six côte à côte.
 	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * CE QUE CE COMPOSANT NE PROUVE PAS, ET IL FAUT LE DIRE EN PREMIER
+	 * CE FICHIER EST LA PLANCHE, PAS LA PALETTE VIVANTE. Celle que le produit
+	 * monte — ouverture au raccourci et au clic du champ de la barre supérieure,
+	 * focus piégé, rendu au déclencheur, résultats bornés au périmètre de
+	 * lecture — est `src/lib/coquille/PaletteDeRecherche.svelte`, montée par le
+	 * gabarit racine sur toutes les routes en session (`UC-M02-01`). Les deux ne
+	 * se doublent pas : cette planche rend six aperçus statiques, elle ne branche
+	 * aucun geste.
 	 *
-	 * Il rend six APERÇUS STATIQUES. Aucun raccourci clavier n'est branché,
-	 * aucune modalité n'est ouverte, aucun focus n'est piégé ni rendu à son
-	 * déclencheur, aucune durée n'est mesurée. `P-09`, `RG-M02-01` et toute
-	 * performance de recherche NE SONT PAS TENUES par ce lot. Le tableau
-	 * « Règles clavier » de la planche est du TEXTE : il décrit ce que le temps
-	 * 3 devra livrer, il ne l'atteste pas.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * NI COQUILLE NI `<main>` — ET C'EST CE QUI DÉCIDE DE LA DÉROGATION K-10
-	 *
-	 * `docs/releve-vues.md` §5.1 : V-09 est l'une des sept vues sans coquille
-	 * (V-01 à V-06, V-09), et la seule dont l'enveloppe soit `div.planche-vue`.
-	 * Le seul lien d'évitement est `#etats` « Aller aux états ».
-	 *
-	 * `docs/dag-phase-1.md` K-10 autorise ce lot, et lui seul, à rouvrir
-	 * `src/lib/coquille/` pour monter la palette sur le champ de recherche de
-	 * la barre supérieure (`V-37:3714`). LA DÉROGATION N'EST PAS EMPRUNTÉE, et
-	 * la vérification est faite avant d'écrire, pas après :
-	 *
-	 *   • V-09 n'a pas de coquille — sa palette est instanciée dans sa propre
-	 *     planche, par `window.creerPalette(hote, opts)` sur six hôtes
-	 *     `div.cas__hote.palette-hote` (`V-09:1348`). Rien à monter sur une
-	 *     barre que cette vue ne porte pas ;
-	 *   • les 30 maquettes qui portent l'hôte de palette hors `div.app` —
-	 *     `template#tpl-palette` et `dialog#palette`, forme strictement
-	 *     identique — ne lui donnent AUCUNE boîte de rendu. Mesuré par retrait
-	 *     sur V-25 et V-33 : instantané ARIA identique, capture identique à
-	 *     l'octet (`docs/releve-vues.md` §4.1). La divergence de balisage est
-	 *     mesurée nulle ; elle se déclare et ne se rouvre pas ;
-	 *   • le montage réel — ouvrir la palette au clic du champ, à Ctrl+K,
-	 *     piéger le focus, le rendre au déclencheur — est du COMPORTEMENT, que
-	 *     ARB-011 range au temps 3. `docs/releve-vues.md` §8.4 le dit déjà : la
-	 *     dérogation K-10 « est mesurée nulle : l'hôte de palette n'a aucune
-	 *     incidence », « donc elle peut attendre le temps 3 ».
-	 *
-	 * Le gabarit reste donc REGELÉ et non rouvert : cinq passages ont eu lieu,
-	 * il n'y en a pas de sixième, et les 29 vues conformes ne sont pas
-	 * exposées à une preuve de non-régression qu'aucun besoin ne justifie.
-	 *
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * SIX ÉTATS DE ZONE, ET UNE SEULE PAGE — ARB-014
-	 *
-	 * `verif/scenarios/V-09.json` : `"planche": false`, `"controles": null`,
-	 * six états portant chacun `zone: { selecteur: "#etats section.cas",
-	 * index: 0…5 }`. `verif/references/protocole-app.json` → `etats_de_zone` →
-	 * `V-09` déclare le protocole `page-entiere-zone-isolee` et l'obligation :
-	 * « À la route de conception du banc, l'application rend la planche des six cas de
-	 * la palette, comme la maquette les montre côte à côte. La clé d'état ne
-	 * change pas la page : elle nomme le cas que le banc découpera. »
+	 * NI COQUILLE NI `<main>` : V-09 est l'une des sept vues sans coquille, et la
+	 * seule dont l'enveloppe soit `div.planche-vue`. Son unique lien d'évitement
+	 * est `#etats`.
 	 *
 	 * Ce composant IGNORE donc `etat` : il rend la même page pour les six clés.
 	 * VÉRIFIÉ côté référence — les six relevés de DOM de la maquette gelée ont
@@ -84,10 +43,10 @@
 	 * style en ligne, et les deux boutons du pied prennent `tabindex="-1"`.
 	 * « Un aperçu ne capte ni le focus ni le clavier : il illustre. »
 	 *
-	 * AUCUNE FOCALISATION N'EST DÉCLARÉE, et il n'en faut aucune :
-	 * `docs/releve-vues.md` §6 donne « — » à V-09 dans la colonne
-	 * « Focalisation à l'ouverture ». `verif/references/protocole-app.json` →
-	 * `focalisations` ne nomme que V-23 et V-06. Rien à demander.
+	 * AUCUNE FOCALISATION N'EST DÉCLARÉE POUR CETTE PLANCHE, et il n'en faut
+	 * aucune : `docs/releve-vues.md` §6 lui donne « — » dans la colonne
+	 * « Focalisation à l'ouverture ». La palette vivante, elle, prend le focus —
+	 * c'est son geste, et il est dans `PaletteDeRecherche.svelte`.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * LA DURÉE N'EST PLUS UNE CONSTANTE, ET L'ARGUMENT QUI LA JUSTIFIAIT EST
@@ -135,8 +94,7 @@
 	 * nulle, et rien ne les ouvre à l'instant capturé.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-09.css`, posé par `node verif/feuilles-de-vue.mjs V-09
-	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 * `src/vues/V-09.css`	 * . Les styles en ligne sont ceux du gel (P-6.4).
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
 	 * LA HAUTEUR DE LISTE — LE CALQUE DE LA FABRIQUE, ET CE QUE LA MESURE DIT
@@ -148,21 +106,9 @@
 	 * et l'appelle avec les mêmes valeurs : c'est la sortie qu'`ECART-020` É-3
 	 * a établie pour les déclarations `‹calculé›` (`docs/releve-vues.md` §7.1).
 	 *
-	 * UN TROU D'INSTRUMENT EST RELEVÉ AU PASSAGE, et il est remonté plutôt que
-	 * contourné. `ensembleDuGel('V-09')` de `verif/styles-en-ligne.mjs` porte
-	 * `max-height:268px` — le littéral de repli — et `max-height:` — la forme
-	 * non résolue —, mais PAS `max-height:300px`, que l'extracteur ne voit pas
-	 * parce que la valeur vit dans un objet d'options et non dans une
-	 * affectation de style. Mesuré des deux façons :
-	 *
-	 *   style="max-height: {cas.hauteur};"                  → 0 hors du gel
-	 *   style="max-height: {…etroit ? '300px' : '268px'};"  → 1 hors du gel
-	 *                                                         (max-height:300px)
-	 *
-	 * La seconde forme dénonce une valeur QUE LE GEL POSE POURTANT. Le calque
-	 * est donc gardé — il est la forme prescrite —, et le manque de
-	 * l'extracteur est déclaré ici et au rapport de lot, jamais tu.
-	 * `verif/**` est en écriture humaine seule : rien n'y est touché.
+	 * La hauteur passe par `cas.hauteur` et non par une expression ternaire
+	 * écrite au balisage : la valeur du cas étroit vient de la table, comme dans
+	 * la maquette, et ne se recopie nulle part.
 	 */
 	import type { Note } from '../../seeds/corpus';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
@@ -399,8 +345,8 @@
 			 * le retire quand `window.DROITS_LECTURE` est vrai (`V-09:1226`) ;
 			 * V-09 ne pose JAMAIS cette globale — `grep DROITS_LECTURE` ne la
 			 * trouve qu'à cette lecture, jamais en écriture. La planche n'a
-			 * d'ailleurs aucun contrôle de droits, et `verif/scenarios/V-09.json`
-			 * aucun état de lecture seule. La phrase de `cas__quoi` — « Le bouton
+			 * d'ailleurs aucun contrôle de droits, et sa planche aucun état de
+			 * lecture seule. La phrase de `cas__quoi` — « Le bouton
 			 * disparaît pour un lecteur sans droit d'écriture » — décrit donc une
 			 * règle qu'AUCUN ÉTAT N'EXERCE : elle relève de P-09, que ce lot ne
 			 * déclare pas tenue. Rendre le bouton conditionnel ici serait rendre

@@ -7,7 +7,7 @@
  * apostrophe typographique glissée à la place d'une droite, un fragment oublié :
  * le cas rougit.
  *
- * Le gel est immuable et contrôlé par `pnpm verif:gel` : le lire est le seul
+ * La maquette est immuable : la lire est le seul
  * moyen d'attester une transcription sans redire à la main ce qu'elle dit déjà.
  */
 import { readFileSync } from 'node:fs';

@@ -16,7 +16,7 @@
 	 * vingt-six vues abrégées.
 	 *
 	 * CE QUI EST MESURÉ, ET D'OÙ VIENT CHAQUE VALEUR :
-	 *   `forme="abregee"`      — `node verif/releve-vues.mjs --formes` : V-28 à
+	 *   `forme="abregee"`      — relevé des formes : V-28 à
 	 *                            V-36 sont de la forme abrégée ; V-27 non.
 	 *   `classeEnveloppe`      — `div.console`, les dix vues (ARB-023,
 	 *                            `ECART-024`).
