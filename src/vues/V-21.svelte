@@ -23,7 +23,7 @@
 	 * rendue en permanence et révélée par la bascule « Liste » — c'est la
 	 * matière de `RG-M18-11`, que ce lot NE DÉCLARE PAS TENUE.
 	 *
-	 * TROIS ÉTATS — `verif/scenarios/V-21.json`, DEUX RENDUS DISTINCTS. Le
+	 * TROIS ÉTATS À LA PLANCHE, DEUX RENDUS DISTINCTS. Le
 	 * relevé du gel donne `lent` STRICTEMENT IDENTIQUE à `dv-complets` : la case
 	 * « Branches lentes » n'a AUCUN gestionnaire de `change`, elle n'est lue
 	 * qu'au dépliage d'une branche (`V-21:2444`), donc jamais dans un squelette
@@ -59,8 +59,7 @@
 	 * bloc hors produit (§2.G).
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-21.css`, posé par `node verif/feuilles-de-vue.mjs V-21
-	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 * `src/vues/V-21.css`	 * . Les styles en ligne sont ceux du gel (P-6.4).
 	 */
 	import type { Domaine, Note, Univers } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';

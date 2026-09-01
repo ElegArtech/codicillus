@@ -11,7 +11,7 @@
  * POURQUOI CE CAS DOIT ÊTRE SYNTHÉTIQUE — `P-5` ET `P-26`
  *
  * `pieces_jointes` compte ZÉRO ligne (mesuré le 20/08/2026), et
- * `pnpm verif:donnees` le chiffre autrement : « 7 notes sur 32 en déclarent,
+ * Une mesure en base le chiffre autrement : « 7 notes sur 32 en déclarent,
  * 13 pièces déclarées, 2 nommées au gel dont 0 chiffrables en octets, 0 portées
  * en base ». La branche « pièce résolue » de `resoudreUnePieceJointe()` n'est
  * donc exercée par AUCUN état du dépôt : sans les lignes fabriquées ci-dessous,

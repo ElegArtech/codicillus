@@ -1,10 +1,9 @@
 /**
  * LES UNITAIRES DES DEUX BRANCHES DE `/` — la décision d'accès, sans base.
  *
- * Ce qui exige une base est `pnpm verif:donnees` et la batterie 6 ; les mêler
- * ici rendrait `pnpm test:unit` dépendant de Docker, et une batterie qui ne
- * s'exécute pas ne prouve rien (`lecture.test.ts` pose la règle, celui-ci la
- * suit).
+ * Ce qui exige une base réelle n'est pas ici : le mêler rendrait `pnpm test:unit`
+ * dépendant de Docker, et un contrôle qui ne s'exécute pas ne prouve rien
+ * (`lecture.test.ts` pose la règle, celui-ci la suit).
  *
  * CE QUE CE FICHIER ÉPROUVE, ET POURQUOI IL EXISTE. `resolution.test.ts` prouve
  * déjà la résolution des droits ; ce fichier prouve que **le chemin de

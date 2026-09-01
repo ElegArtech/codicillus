@@ -207,7 +207,7 @@ function baseDEpreuve(lignes: LigneDeNote[]) {
  *
  * @param echecDeSoumission le moteur refuse l'enfilement (arrêté, injoignable)
  * @param echecDeTache la tâche est enfilée puis échoue — ce que le chemin de
- *   requête ne voit plus, et que le contrôle de `verif/budgets.mjs` relève
+ *   requête ne voit plus, et que un relevé de budget montre
  */
 function moteurDEpreuve(
 	echecDeSoumission: string | null = null,
@@ -485,7 +485,7 @@ describe('ARB-060 — l’entretien SOUMET la tâche et ne l’attend pas', () =
 	it('NE LÈVE PLUS quand la tâche du moteur échoue après la soumission', async () => {
 		/* Ce cas mesure exactement la garantie qui a CHANGÉ DE PLACE. Elle n'est
 		   pas perdue : le moteur conserve ses tâches, et le contrôle « aucune
-		   tâche en échec dans le moteur » de `verif/budgets.mjs` la relève après
+		   tâche en échec dans le moteur » se relève après
 		   coup. Un jour où ce contrôle disparaîtrait, ce cas resterait vert — c'est
 		   pourquoi il NOMME le contrôle qui le complète. */
 		const { base } = baseDEpreuve([uneNote('n-1', 'd-atelier')]);

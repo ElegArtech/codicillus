@@ -285,7 +285,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 
 	return {
 		/* `uni` porte le NOM, non l'identifiant d'adresse : c'est ce que l'axe
-		   « Univers » de la planche emploie (`verif/scenarios/V-10.json`, valeurs
+		   « Univers » de la planche emploie (la planche de la maquette, valeurs
 		   `Production` et `Projets`), et ce que la vue cherche dans les univers
 		   qu'elle reçoit.
 

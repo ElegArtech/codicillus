@@ -6,7 +6,7 @@
  *   `pnpm contenu:invalide` — que le schéma REFUSE, sur des documents mal formés de
  *      quinze genres différents, et avec quel message.
  *
- * Les deux vivent ici, en TypeScript contrôlé par `pnpm check` ; `verif/contenu.mjs`
+ * Les deux vivent ici, en TypeScript contrôlé par `pnpm check` ; un contrôle de contenu
  * ne fait que les lancer et imprimer.
  *
  * CE QUE LE VERT DE `contenu:constructions` NE DIT PAS : rien de l'IMAGE ni du

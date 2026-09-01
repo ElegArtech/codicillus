@@ -4,7 +4,7 @@
  * Ce fichier ÉPINGLE les conventions d'ARB-049 : chaque forme y est écrite en
  * clair, de sorte qu'une convention ne puisse pas changer sans qu'un test le
  * dise. C'est pour cela qu'il est exempté du seul contrôle A2 de
- * `pnpm verif:convertisseur` — et il reste soumis aux autres, dont A2b, qui
+ * le contrôle du convertisseur — et il reste soumis aux autres, dont A2b, qui
  * exige qu'il importe l'implémentation unique plutôt que d'en refaire une.
  *
  * L'aller-retour, lui, n'est pas ici : il est la batterie 4, et il vit dans
