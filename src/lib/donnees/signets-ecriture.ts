@@ -24,6 +24,7 @@ import { entretenirLIndex } from '../recherche/entretien';
 import { retirerDesNotes } from '../recherche/moteur';
 import type { Identite, Resolution } from '../droits/resolution';
 import { INTROUVABLE } from '../droits/resolution';
+import { auteurDeLaSuppression, tracerUneSuppression } from './traces';
 import { creerUneNote, etiquetteDuLibelle } from './creation';
 
 /** Le type de note que porte tout signet — `seeds/corpus.ts`, `TypeDeNote`. */
@@ -235,17 +236,29 @@ export async function supprimerUnSignet(
 	base: Base,
 	client: Meilisearch,
 	identifiant: string,
-	domaineId: string
+	domaineId: string,
+	identite: Identite
 ): Promise<Resolution<{ identifiant: string }>> {
 	const [ligne] = await base
-		.select({ id: notes.id, domaineId: notes.domaineId })
+		/* Le titre ne sert QU'À LA TRACE de `RG-NF-05` : après la destruction, plus rien
+		   ne dirait quel signet a disparu. */
+		.select({ id: notes.id, domaineId: notes.domaineId, titre: notes.titre })
 		.from(notes)
 		.where(eq(notes.identifiant, identifiant))
 		.limit(1);
 	if (ligne === undefined || ligne.domaineId !== domaineId) return INTROUVABLE;
 
+	/* `RG-NF-05` — l'auteur est exigé avant la transaction. */
+	const auteur = auteurDeLaSuppression(identite);
+
 	await base.transaction(async (tx) => {
 		await tx.delete(notes).where(eq(notes.id, ligne.id));
+		await tracerUneSuppression(tx, {
+			objet: 'signet',
+			reference: identifiant,
+			designation: ligne.titre,
+			auteur
+		});
 	});
 
 	/* Après la transaction — le contenu détruit disparaît immédiatement de la

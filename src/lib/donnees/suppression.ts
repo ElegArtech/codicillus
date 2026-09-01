@@ -28,6 +28,8 @@ import { domaines, notes, univers, versions } from '../base/schema';
 import { INTROUVABLE, type Identite, type Resolution } from '../droits/resolution';
 import { adresseDeDomaine, identifiantLisible } from '../rangement/adresses';
 import { entretenirLIndex } from '../recherche/entretien';
+import { auteurDeLaSuppression, tracerUneSuppression } from './traces';
+import { accord } from '../vocabulaire';
 import { resoudreLEditionDUneNote } from './edition';
 import type { ContexteDeLecture } from './lecture';
 import type { Retrolien } from './note';
@@ -89,6 +91,31 @@ export function resumeDeSuppression(
 			piecesJointesPerdues: etat.ressource.piecesJointes
 		}
 	};
+}
+
+/**
+ * CE QUI EST PARTI AVEC LA NOTE, EN CLAIR — la trace de `RG-NF-05` reprend le décompte que
+ * l'écran de confirmation a DÉJÀ montré, jamais un second calculé autrement. Les postes à
+ * zéro sont TUS : « 0 version perdue » est du bruit dans un journal qu'on relit.
+ */
+function detailDeLaNote(resume: ResumeDeSuppression): string {
+	const postes: string[] = [];
+	if (resume.retroliensCasses > 0) {
+		postes.push(
+			`${String(resume.retroliensCasses)} ${accord(resume.retroliensCasses, 'rétrolien cassé', 'rétroliens cassés')}`
+		);
+	}
+	if (resume.versionsPerdues > 0) {
+		postes.push(
+			`${String(resume.versionsPerdues)} ${accord(resume.versionsPerdues, 'version', 'versions')}`
+		);
+	}
+	if (resume.piecesJointesPerdues > 0) {
+		postes.push(
+			`${String(resume.piecesJointesPerdues)} ${accord(resume.piecesJointesPerdues, 'pièce jointe', 'pièces jointes')}`
+		);
+	}
+	return postes.join(', ');
 }
 
 export interface DemandeDeSuppression {
@@ -185,8 +212,21 @@ export async function supprimerUneNote(
 		rangement?.domaine ?? identifiantLisible(lecture.note.domaine)
 	);
 
+	/* `RG-NF-05` — L'AUTEUR EST EXIGÉ AVANT LA TRANSACTION : un refus doit tomber
+	   avant toute destruction, jamais au milieu. */
+	const auteur = auteurDeLaSuppression(demande.identite);
+
 	await base.transaction(async (tx) => {
 		await tx.delete(notes).where(eq(notes.identifiant, demande.identifiant));
+		/* LA TRACE EST DANS LA MÊME TRANSACTION QUE LA DESTRUCTION — écrite à côté,
+		   elle mentirait dès la première annulation. */
+		await tracerUneSuppression(tx, {
+			objet: 'note',
+			reference: demande.identifiant,
+			designation: resume.ressource.titre,
+			detail: detailDeLaNote(resume.ressource),
+			auteur
+		});
 	});
 
 	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre, jamais avant. */

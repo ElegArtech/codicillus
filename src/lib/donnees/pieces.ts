@@ -27,6 +27,7 @@ import {
 import { INTROUVABLE, type Identite, type Resolution } from '../droits/resolution';
 import { adresseDePieceJointe } from '../rangement/adresses';
 import { peutEcrireSurLeDossier } from './edition';
+import { auteurDeLaSuppression, tracerUneSuppression } from './traces';
 import { lireConfiguration } from './lecture';
 
 /**
@@ -233,7 +234,20 @@ export async function retirerUnePieceJointeParNom(
 		.limit(1);
 	if (piece === undefined) return INTROUVABLE;
 
+	/* `RG-NF-05` — l'auteur est exigé avant la destruction. */
+	const auteur = auteurDeLaSuppression(retrait.identite);
+
 	if (!(await retirerUnePieceJointe(base, racine, note.id, piece.id))) return INTROUVABLE;
+	/* LA TRACE SUIT L'EFFACEMENT, ET NON L'INVERSE : les OCTETS vivent hors base, donc
+	   ce geste n'est de toute façon pas transactionnel de bout en bout — tracer avant
+	   aurait inscrit un retrait que l'entrepôt pouvait encore refuser. La trace dit ce
+	   qui a EU LIEU. */
+	await tracerUneSuppression(base, {
+		objet: 'pièce jointe',
+		reference: `${retrait.note}/${nom}`,
+		designation: nom,
+		auteur
+	});
 	return { trouve: true, ressource: { nom } };
 }
 

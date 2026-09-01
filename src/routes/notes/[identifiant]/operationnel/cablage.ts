@@ -17,6 +17,7 @@ import { soumettreVers } from '$lib/cablage/formulaires';
 import { adresseDeModificationDeNote } from '$lib/edition/gestes';
 import type { Bloc, Document, Titre } from '$lib/contenu/document';
 import { accord } from '$lib/vocabulaire';
+import { boutonDuGeste, type GesteCable } from '$lib/cablage/libelles';
 
 export type Debranchement = () => void;
 
@@ -50,15 +51,14 @@ export function planDeLaReference(corps: Element | null): Document | null {
 	return { type: 'doc', content: blocs };
 }
 
-/** Le bouton du bandeau qui redouble `#a-resync`, repéré par son libellé. */
-function boutonDuBandeau(formulaire: ParentNode, libelle: string): HTMLButtonElement | null {
+/**
+ * Le bouton du bandeau qui redouble `#a-resync`, repéré par son LIBELLÉ — le gel ne lui
+ * donne rien d'autre. Le libellé vient de `$lib/cablage/libelles` : `RG-M18-16`, une
+ * traduction qui le changerait ici sans le changer là débrancherait le geste en silence.
+ */
+function boutonDuBandeau(formulaire: ParentNode, geste: GesteCable): HTMLButtonElement | null {
 	const avis = formulaire.querySelector('#avis');
-	if (avis === null) return null;
-	return (
-		Array.from(avis.querySelectorAll('button')).find(
-			(b) => (b.textContent ?? '').trim() === libelle
-		) ?? null
-	);
+	return avis === null ? null : boutonDuGeste(avis, geste);
 }
 
 /**
@@ -116,7 +116,7 @@ export function cablerLOperationnel(
 	if (resynchroniser !== null) {
 		resynchroniser.type = 'button';
 		ecouter(resynchroniser, 'click', () => soumettreVers(formulaire, '?/resynchroniser'));
-		const redouble = boutonDuBandeau(formulaire, 'Marquer comme resynchronisé');
+		const redouble = boutonDuBandeau(formulaire, 'marquerResynchronise');
 		if (redouble !== null) {
 			redouble.type = 'button';
 			ecouter(redouble, 'click', () => resynchroniser.click());
@@ -201,7 +201,7 @@ export function cablerLOperationnel(
 	 * montrer les deux registres côte à côte — c'est la position `cote` de son propre
 	 * panneau. Un seul chemin, deux déclencheurs, comme au geste 2.
 	 */
-	const comparer = boutonDuBandeau(formulaire, 'Comparer les deux registres');
+	const comparer = boutonDuBandeau(formulaire, 'comparerLesRegistres');
 	if (comparer !== null) {
 		comparer.type = 'button';
 		ecouter(comparer, 'click', () => positionner('cote'));
@@ -224,7 +224,7 @@ export function cablerLOperationnel(
 			entree.type = 'button';
 			ecouter(entree, 'click', reprendre);
 		}
-		const redouble = boutonDuBandeau(formulaire, 'Reprendre le plan de la Référence');
+		const redouble = boutonDuBandeau(formulaire, 'reprendreLePlan');
 		if (redouble !== null) {
 			redouble.type = 'button';
 			ecouter(redouble, 'click', reprendre);

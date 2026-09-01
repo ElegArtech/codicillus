@@ -99,6 +99,12 @@
 		propriété du côté de la vue publique, et la ligne `dureeMs={data.dureeMs}`
 		ci-dessous. La vue n'appartient pas à ce lot ; la donnée, elle, est prête.
 	-->
+	<!--
+		`panne` — `RG-M04-07`. V-02 ne reçoit pas `motif` : les quatre autres motifs
+		nomment des gestes d'administration qui n'ont aucun sens pour un visiteur
+		anonyme. Le cinquième, lui, le concerne — sans ce drapeau, la page annonçait
+		« Aucun guide ne répond à “…” » alors qu'aucune requête n'avait abouti.
+	-->
 	<VuePublique
 		vecteur={data.vecteur}
 		notes={data.notes}
@@ -106,5 +112,6 @@
 		retenues={data.retenues}
 		portail={data.portail}
 		pistes={data.pistes}
+		panne={data.motif === 'moteur-injoignable'}
 	/>
 {/if}
