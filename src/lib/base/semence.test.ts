@@ -1,10 +1,9 @@
 /**
  * LES UNITAIRES DE LA SEMENCE — ce qui se contrôle SANS base de données.
  *
- * Ce qui exige une base — réversibilité, unicités, cohérence du catalogue —
- * n'est pas ici : c'est `pnpm verif:base`, qui a besoin du conteneur `db`.
- * Mélanger les deux rendrait `pnpm test:unit` dépendant de Docker, et une
- * batterie qui ne s'exécute pas est une batterie qui ne prouve rien.
+ * Ce qui exige une base réelle — réversibilité, unicités, cohérence du catalogue
+ * — n'est pas ici : le mêler rendrait `pnpm test:unit` dépendant de Docker, et un
+ * contrôle qui ne s'exécute pas ne prouve rien.
  *
  * Ce que ces tests regardent : la DÉRIVATION du corpus vers les lignes. C'est
  * la seule partie où une erreur silencieuse est possible — un chemin de
@@ -240,7 +239,7 @@ describe('les volumes dérivés du corpus', () => {
 /* ═══════════════════════════════════════════════════════════════════════════
    MIGRATION 005 — LES TROIS DONNÉES QUE LE SCHÉMA N'ACCUEILLAIT PAS
 
-   `pnpm verif:donnees` relevait six lacunes ; 005 en referme trois, et ces
+   une mesure en base relevait six lacunes ; 005 en referme trois, et ces
    unitaires sont les cas qui les exercent. Sans eux la migration serait posée et
    sa dérivation seulement espérée (`P-5`).
 
@@ -376,7 +375,7 @@ describe('005 — le rang d’une étiquette sur sa note', () => {
 	/**
 	 * LE TEST QUI DONNE UN SENS AU RANG. Si l'ordre du jeu était l'ordre
 	 * alphabétique, la colonne `ordre` ne porterait aucune information et 005
-	 * serait du poids mort. Le chiffre est celui que `pnpm verif:donnees` imprime
+	 * serait du poids mort. Le chiffre est celui qu'une mesure en base imprime
 	 * pour cette lacune : 25 notes sur 32.
 	 */
 	it('porte une information que le tri alphabétique perdrait — 25 notes sur 32', () => {

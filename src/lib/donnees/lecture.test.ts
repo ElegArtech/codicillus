@@ -1,9 +1,8 @@
 /**
  * LES UNITAIRES DE LA COUCHE DE LECTURE — ce qui se contrôle SANS base.
  *
- * Ce qui exige une base est `pnpm verif:donnees`, qui a besoin du conteneur
- * `db`. Mélanger les deux rendrait `pnpm test:unit` dépendant de Docker, et une
- * batterie qui ne s'exécute pas est une batterie qui ne prouve rien
+ * Ce qui exige une base réelle n'est pas ici : le mêler rendrait `pnpm test:unit`
+ * dépendant de Docker, et un contrôle qui ne s'exécute pas ne prouve rien
  * (`semence.test.ts` pose la règle, celui-ci la suit).
  *
  * Ce que ces tests regardent : les CONVERSIONS. C'est la seule partie de la
