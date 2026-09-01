@@ -478,7 +478,9 @@ export const actions: Actions = {
 			dossierId: dossier.id,
 			saisie: typeof brut === 'string' ? brut : '',
 			lignes,
-			droit: (id) => droitEffectif(acces, id)
+			droit: (id) => droitEffectif(acces, id),
+			/* `RG-NF-05` — l'auteur de la destruction, jusque dans la transaction. */
+			identite: locals.identite
 		});
 		if (!fait.fait) {
 			if (fait.message === '') error(404, MESSAGE_INTROUVABLE);

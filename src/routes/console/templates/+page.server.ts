@@ -183,7 +183,9 @@ export const actions: Actions = {
 		const champs = await request.formData();
 		const resultat = await supprimerUnTemplate(
 			basePartagee(),
-			String(champs.get('template') ?? '')
+			String(champs.get('template') ?? ''),
+			/* `RG-NF-05` — l'auteur de la destruction, jusque dans la transaction. */
+			locals.identite
 		);
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		return resultat;

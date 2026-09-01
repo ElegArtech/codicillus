@@ -20,6 +20,7 @@
 	import '../../../../../vues/V-22.css';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { porteLeGeste } from '$lib/cablage/libelles';
 	import { soumettreVers } from '$lib/cablage/formulaires';
 	import { cablerLesFacettes } from '$lib/cablage/facettes';
 	import {
@@ -94,10 +95,7 @@
 			   l'état vide. Le gel ne donne pas d'identifiant à la seconde : elle se
 			   reconnaît à son libellé, dans le bloc qui n'accueille qu'elle. */
 			const amorce = vise.closest('.vide-signets .btn');
-			if (
-				vise.closest('#nouveau') !== null ||
-				(amorce?.textContent ?? '').trim() === 'Ajouter le premier signet'
-			) {
+			if (vise.closest('#nouveau') !== null || porteLeGeste(amorce, 'ajouterLePremierSignet')) {
 				evenement.preventDefault();
 				location.assign(adresseDeCreationDeSignet(segments.univers, segments.domaine));
 				return;
@@ -118,7 +116,7 @@
 			   reconnaît à son libellé, dans le bloc qui n'accueille que lui.
 			   Les menus eux-mêmes, les pastilles et « Tout effacer » sont portés
 			   par le câblage commun des facettes, monté plus haut. */
-			if ((amorce?.textContent ?? '').trim() === 'Réinitialiser les filtres') {
+			if (porteLeGeste(amorce, 'reinitialiserLesFiltres')) {
 				const adresse = new URL(location.href);
 				for (const f of FACETTES) adresse.searchParams.delete(f.id);
 				evenement.preventDefault();
@@ -135,7 +133,7 @@
 			if (identifiant === null) return;
 			evenement.preventDefault();
 			const titre = (carte.querySelector('.sig__titre')?.textContent ?? '').trim();
-			if ((bouton.textContent ?? '').trim() === 'Modifier') {
+			if (porteLeGeste(bouton, 'modifier')) {
 				location.assign(
 					adresseDeModificationDeSignet(segments.univers, segments.domaine, identifiant)
 				);
