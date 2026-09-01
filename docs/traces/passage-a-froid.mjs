@@ -3,12 +3,12 @@
  *
  * Il monte une base vide, applique les migrations, N'EN SÈME AUCUNE DONNÉE,
  * crée à la main le strict nécessaire — un univers, un domaine, deux notes, un
- * signet —, puis ouvre les trente-neuf routes du produit dans Chromium et LIT LE
- * HTML SERVI. Il échoue si un seul nom du jeu de démonstration s'y trouve.
+ * signet —, puis ouvre les quarante-deux routes du produit dans Chromium et LIT
+ * LE HTML SERVI. Il échoue si un seul nom du jeu de démonstration s'y trouve.
  *
  * IL PÈSE AUSSI LE CODE HTTP DE CHAQUE ROUTE, et c'est la moitié du contrôle :
  * chaque route porte, écrit à côté d'elle, le code qu'on attend d'elle. Le
- * passage a longtemps IMPRIMÉ ce code sans jamais le juger — trente-neuf pages
+ * passage a longtemps IMPRIMÉ ce code sans jamais le juger — quarante-deux pages
  * en 500 se seraient relevées en 500 sous un verdict « PASSAGE À FROID COMPLET »
  * et un code de sortie 0. Le dépôt porte cet incident-là au passé.
  *
@@ -45,9 +45,16 @@
  * IL POSE SON DÉCOR ET IL LE DIT — c'est ce qui le distingue d'un instrument qui
  * triche. Il crée le premier administrateur (`pnpm base:administrateur`), puis
  * il pose un droit `gestionnaire` sur le dossier racine du domaine qu'il vient
- * de créer : `droits_de_dossier` ne porte AUCUNE ligne sur une instance neuve,
- * et `RG-DRO-02` est sans appel — aucun droit explicite, aucune capacité. Sans
- * ce geste, le produit est en lecture seule et aucune note ne peut naître.
+ * de créer.
+ *
+ * CE DROIT-LÀ EST SUPERFLU, ET IL FAUT LE SAVOIR. Le fichier a longtemps affirmé
+ * ici que sans lui « le produit est en lecture seule pour tout le monde,
+ * administrateur compris » : c'est faux. `RG-DRO-03` fait de l'administrateur
+ * celui qui contourne tous les droits de dossier, sans lire la table
+ * (`src/lib/droits/resolution.ts`), et quatorze gestes d'écriture ont été joués
+ * sans ce décor. Il est gardé parce qu'il ne coûte rien et qu'il rapproche le
+ * passage d'une instance réellement administrée ; il ne conditionne aucune des
+ * écritures qui suivent.
  *
  * IL ÉCRIT EN BASE, mais dans une base à lui, qu'il détruit et recrée à chaque
  * passage. Aucune autre base du poste n'est touchée.
@@ -410,6 +417,19 @@ try {
 		['/console/exports', 200],
 		['/console/analytique', 200],
 		['/console/configuration', 200],
+		/* LES TROIS ROUTES NÉES LE 31/08. Le relevé en ouvrait 39 quand le produit
+		   en portait 42 : une route qu'aucun contrôle n'ouvre est une route dont
+		   personne ne sait si elle rend. */
+		['/console/types-de-note', 200],
+		/* Le journal d'imports est vide sur une instance neuve — aucun lot n'a été
+		   passé —, et l'identifiant demandé ne désigne donc rien. 404 est la
+		   réponse juste, et c'est elle qu'on veut voir. */
+		['/console/imports/lot-qui-n-existe-pas', 404],
+		/* 200 PARCE QU'ELLE RENVOIE À L'ACCUEIL. La page d'indisponibilité se
+		   dérobe tant que l'instance est disponible (`RG-NF-10`) : ce que le
+		   passage relève ici, c'est qu'elle ne s'affiche PAS sur une instance
+		   saine — Playwright suit la redirection et lit l'accueil. */
+		['/indisponibilite', 200],
 		/* L'ADRESSE QUI N'EXISTE PAS — c'est V-26, et c'est là que la table
 		   d'adresses de sa planche s'afficherait si la route ne passait pas la
 		   sienne. Elle est ouverte dans les deux polarités, et elle est la seule
