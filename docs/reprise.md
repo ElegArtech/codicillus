@@ -73,6 +73,23 @@ bon, table renommée en base pour faire lever une lecture, serveur ralenti à 1,
 | `RG-M18-01` retour sous 200 ms | **non tenue.** Le « premier changement visible » d'un bouton de console était le fond `:active` **revenant au repos** à 94 ms ; rien ensuite pendant 1,7 s. Et « Enregistrement… » était **recouvert à 411 ms** par le témoin de brouillon. Réparé : 24 et 31 ms, et le témoin se tait pendant un enregistrement |
 | `RG-M18-16` i18n non interdite | **architecture tenue** — chaque phrase est un gabarit entier à un seul site. Mais un motif la condamnait ailleurs : **onze gestes retrouvaient leur bouton par le texte affiché**. Traduire « Supprimer » et le bouton d'une note ne fait plus rien, sans erreur ni avertissement. Les onze littéraux sont désormais dans une table close |
 
+## L'instance de recette
+
+Elle tourne sur un VPS, derrière un tunnel — l'accès et l'exploitation sont décrits dans
+`codicillus-vpn/ACCES.md`, hors dépôt. Au 1er septembre elle porte ce code, ses migrations sont
+appliquées jusqu'à `013`, son index de recherche est posé, et elle est vide de données.
+
+**AUCUNE SAUVEGARDE N'EST PLANIFIÉE**, et c'est ce qui manque de plus urgent. `RG-NF-09` porte
+sur deux éléments — la base **et** le volume `fichiers` — et aucune tâche périodique ne les
+copie. Une restauration n'a jamais été éprouvée non plus : une sauvegarde qu'on n'a pas rejouée
+n'est pas une sauvegarde. C'est le seul manque de cette instance dont l'absence ne se remarque
+qu'au moment où il est trop tard.
+
+Elle est aussi restée vingt-deux heures indisponible après un redémarrage du VPS, sans que
+personne le sache. Le défaut applicatif est réparé — le serveur survit désormais à la perte de sa
+base et se rétablit seul —, mais **rien ne surveille cette instance** : la panne a été trouvée
+parce qu'on est allé voir.
+
 ## Ce qui reste
 
 - **`docs/routes.md`, `DESIGN.md`, `releve-vues.md` et `arbitrages.md`** décrivent l'état d'avant
