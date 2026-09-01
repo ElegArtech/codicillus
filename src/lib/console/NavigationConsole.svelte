@@ -4,7 +4,7 @@
 	 *
 	 * MOTIF COMMUN AUX DIX VUES DE CONSOLE. Mesuré, pas supposé : `aside.nav2`
 	 * est IDENTIQUE À L'OCTET dans les dix maquettes gelées
-	 * (`node verif/inventaire-composants.mjs --classe=nav2`,
+	 * (inventaire des composants, classe `nav2`,
 	 * `docs/releve-vues.md` §8.2). Seul l'argument de `rendreConsole()` change
 	 * — la section courante —, et le gel en fait un paramètre, pas un balisage.
 	 *

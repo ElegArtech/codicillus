@@ -1,7 +1,7 @@
 /**
  * LA BATTERIE 4 — « pour tout document du corpus, sérialiser puis désérialiser redonne le
  * document d'origine ». `RG-M13-01` en fait « le critère de réussite principal » du produit.
- * Elle est ici, en TypeScript contrôlé par `pnpm check` ; `verif/aller-retour.mjs` ne fait que
+ * Elle est ici, en TypeScript contrôlé par `pnpm check` ; un contrôle d'aller-retour ne ferait que
  * la lancer et imprimer.
  *
  * LE CORPUS EST PETIT : `DOCUMENTS_DU_GEL` porte QUATRE corps, qui n'exercent que TREIZE des

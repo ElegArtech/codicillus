@@ -4,7 +4,7 @@
 	 * Route `/console/types-de-fiches` (`docs/routes.md` §3.6).
 	 *
 	 * COQUILLE DE FORME ABRÉGÉE, ENVELOPPE `console` — vérifié sur le gel par
-	 * `node verif/releve-vues.mjs --formes` : V-29 partage la signature
+	 * relevé des formes : V-29 partage la signature
 	 * barre/rail des 26 vues abrégées (ARB-021, A-1). L'enveloppe et le nœud qui
 	 * précède `<main>` viennent d'ARB-023 : `classeEnveloppe="console"`,
 	 * `avantContenu` rendant `aside.nav2`, `classeContenu="travail"`,
@@ -51,8 +51,7 @@
 	 * bloc hors produit (§2.G), qui ne se porte jamais.
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI : `src/socle.css` (P-6.1) et
-	 * `src/vues/V-29.css`, posé par `node verif/feuilles-de-vue.mjs V-29
-	 * --installer` (P-6.3). Les styles en ligne sont ceux du gel (P-6.4).
+	 * `src/vues/V-29.css`	 * . Les styles en ligne sont ceux du gel (P-6.4).
 	 */
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import BoutonDeCreation from '$lib/console/BoutonDeCreation.svelte';

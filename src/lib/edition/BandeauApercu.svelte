@@ -12,7 +12,7 @@
 	 * Le `flex:1` en ligne de son libellé est du gel, et `flex` n'est pas une
 	 * propriété contrainte par P-1 : il peut vivre dans une ressource non
 	 * rattachée. (On ne cite jamais un attribut de style sous sa forme exacte dans
-	 * un commentaire : `verif/jetons.mjs` balaie le fichier, pas l'arbre.)
+	 * un commentaire : décris la forme, ne l'écris pas.)
 	 *
 	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI (P-6.1, P-6.3).
 	 */

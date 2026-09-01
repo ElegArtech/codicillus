@@ -15,10 +15,8 @@
 	 * inventer une abstraction que le gel ne porte pas.
 	 *
 	 * AUCUN `style=` NE PEUT VIVRE ICI, et ce n'est pas une préférence.
-	 * `verif/references/preuve-par-le-gel.json` (ARB-022) ne rattache que
-	 * `src/lib/coquille` à une maquette ; `src/lib/auth` n'y figure pas, donc
-	 * aucun gel ne répond de ses styles en ligne et P-1 s'y applique EN ENTIER
-	 * (`verif/styles-en-ligne.mjs`). Ce fragment n'en porte aucun, et ne doit
+	 * Aucune maquette ne répond des styles de `src/lib/auth` — seul un composant
+	 * `V-xx.svelte` a un gel qui puisse en répondre. Ce fragment n'en porte aucun, et ne doit
 	 * jamais en porter : un style en ligne appartient au composant `V-xx.svelte`
 	 * que son propre gel prouve. Ce fichier n'est pas déclaré à
 	 * `preuve-par-le-gel.json`, et un agent d'exécution ne l'y déclare jamais.

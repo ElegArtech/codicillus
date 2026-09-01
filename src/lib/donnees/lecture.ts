@@ -4,7 +4,7 @@
  * Les 41 vues gelées déclarent leurs propriétés avec les types de `seeds/corpus.ts` : ce
  * module ne définit donc AUCUN type nouveau, ce qui permet à un chargeur de remplacer
  * `corpusPourVue(…)` par `lireNotes(…)` sans toucher la vue. Il est l'INVERSE de la
- * semence, et `pnpm verif:donnees` mesure la fidélité de l'aller-retour.
+ * semence, et une mesure en base établit la fidélité de l'aller-retour.
  *
  * `base` EST UN PARAMÈTRE, et `basePartagee()` n'est pas appelée ici : `acces.ts` importe
  * `$env/dynamic/private`, qui n'existe que dans le graphe de SvelteKit et rendrait ce

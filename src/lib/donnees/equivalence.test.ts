@@ -12,7 +12,7 @@
  * le dise.
  *
  * Les cas ci-dessous sont donc SYNTHÉTIQUES et indépendants du dépôt : ils ne
- * lisent ni la base, ni `seeds/corpus.ts`. C'est ce que `verif/fraicheur.test.ts`
+ * lisent ni la base, ni `seeds/corpus.ts`. C'est ce que le contrôle de fraîcheur
  * fait pour le contrôle B3 de la batterie 5, et c'est pourquoi ce contrôle-là est
  * resté éprouvé après sa propre correction.
  *
