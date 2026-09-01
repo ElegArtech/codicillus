@@ -60,12 +60,21 @@ Sur une instance neuve — `pnpm base:migrer`, `pnpm base:administrateur`, rien 
 
 ---
 
+## Les cinq règles qui n'avaient jamais été mesurées
+
+Elles l'ont été le 1er septembre, en ouvrant les écrans — moteur de recherche éteint pour de
+bon, table renommée en base pour faire lever une lecture, serveur ralenti à 1,8 s.
+
+| Règle | Verdict |
+|---|---|
+| `RG-M04-07` panneau en erreur | **non tenue.** Moteur éteint, `/recherche` rendait **500** et une page morte, pendant que la version publique affirmait « Aucun guide ne répond à “charte” » — un mensonge. Réparé : la panne est nommée, « Réessayer » offert, la page reste peinte. La palette faisait déjà mieux |
+| `RG-M17-04` journaux anonymisés | **tenue.** Parcours anonyme complet : `consultations` et `recherches` écrivent leurs lignes avec `compte_id` NULL, ouverture attachée comprise |
+| `RG-NF-05` destructions tracées | **non tenue.** Une note supprimée retirait 1 note, 2 relations et 3 étiquettes, et **aucune des 27 tables ne gagnait une ligne** : rien ne disait qui avait détruit quoi. Migration `013`, onze chemins câblés, `auteur_id` en `ON DELETE RESTRICT` — une trace qui perd son auteur cesse d'être une attribution |
+| `RG-M18-01` retour sous 200 ms | **non tenue.** Le « premier changement visible » d'un bouton de console était le fond `:active` **revenant au repos** à 94 ms ; rien ensuite pendant 1,7 s. Et « Enregistrement… » était **recouvert à 411 ms** par le témoin de brouillon. Réparé : 24 et 31 ms, et le témoin se tait pendant un enregistrement |
+| `RG-M18-16` i18n non interdite | **architecture tenue** — chaque phrase est un gabarit entier à un seul site. Mais un motif la condamnait ailleurs : **onze gestes retrouvaient leur bouton par le texte affiché**. Traduire « Supprimer » et le bouton d'une note ne fait plus rien, sans erreur ni avertissement. Les onze littéraux sont désormais dans une table close |
+
 ## Ce qui reste
 
-- **Cinq règles n'ont jamais été mesurées** : `RG-M04-07` (états de panneau en erreur),
-  `RG-M17-04` (anonymisation des journaux), `RG-NF-05` (actions destructives tracées et
-  attribuées), `RG-M18-01` (retour visible sous 200 ms), `RG-M18-16` (internationalisation non
-  interdite).
 - **`docs/routes.md`, `DESIGN.md`, `releve-vues.md` et `arbitrages.md`** décrivent l'état d'avant
   et n'ont pas été remesurés. `routes.md` fait toujours autorité sur les adresses, le code le
   cite ; les trois autres sont de l'historique.
