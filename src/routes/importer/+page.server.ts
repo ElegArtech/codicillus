@@ -28,6 +28,7 @@ import {
 	SOURCE_SANS_DOSSIER,
 	VOIE_PAR_FORMAT,
 	classerLeLot,
+	clePlaceEtTitre,
 	convertirLeLot,
 	enregistrerLeLot,
 	entreeDeJournal,
@@ -275,7 +276,11 @@ async function preparerLeLot(
 	   pas encore ne contient rien, et la carte est vide. */
 	const cible =
 		destination.cible === null
-			? { notes: new Map<string, string>(), dossiers: [] as readonly string[] }
+			? {
+					notes: new Map<string, string>(),
+					notesParPlaceEtTitre: new Map<string, string>(),
+					dossiers: [] as readonly string[]
+				}
 			: await contenuDeLaCible(base, acces, destination.cible.id);
 
 	const plan = classerLeLot(source, fichiers, {
@@ -283,6 +288,7 @@ async function preparerLeLot(
 		conversions,
 		identifiantsPris: await identifiantsPris(base),
 		notesDeLaCible: cible.notes,
+		notesParPlaceEtTitre: cible.notesParPlaceEtTitre,
 		profondeurDeDepart: destination.profondeur
 	});
 
@@ -545,6 +551,7 @@ async function contenuDeLaCible(
 	racineId: string
 ): Promise<{
 	readonly notes: ReadonlyMap<string, string>;
+	readonly notesParPlaceEtTitre: ReadonlyMap<string, string>;
 	readonly dossiers: readonly string[];
 }> {
 	const enfants = new Map<string, { id: string; nom: string }[]>();
@@ -568,16 +575,34 @@ async function contenuDeLaCible(
 	}
 
 	const lignes = await base
-		.select({ identifiant: notesDuSchema.identifiant, dossierId: notesDuSchema.dossierId })
+		.select({
+			identifiant: notesDuSchema.identifiant,
+			dossierId: notesDuSchema.dossierId,
+			/* LE TITRE EST LU POUR L'IDEMPOTENCE, et pour rien d'autre : c'est lui
+			   qui, avec la place, redonne au fichier SA note quand une collision
+			   lui a valu un identifiant suffixé. */
+			titre: notesDuSchema.titre
+		})
 		.from(notesDuSchema);
 	const carte = new Map<string, string>();
+	const parPlaceEtTitre = new Map<string, string>();
 	for (const n of lignes) {
 		const place = chemins.get(n.dossierId);
-		if (place !== undefined) carte.set(n.identifiant, place);
+		if (place === undefined) continue;
+		carte.set(n.identifiant, place);
+		/* PREMIÈRE ARRIVÉE, PREMIÈRE SERVIE : deux notes de même titre au même
+		   endroit sont un état que rien n'interdit en base ; en reprendre une seule
+		   vaut mieux que d'en créer une troisième à chaque lot rejoué. */
+		const cle = clePlaceEtTitre(place === '' ? [] : place.split('/'), n.titre);
+		if (!parPlaceEtTitre.has(cle)) parPlaceEtTitre.set(cle, n.identifiant);
 	}
 	/* La cible elle-même vaut `''` : elle n'est pas un dossier À CRÉER, et aucun
 	   nœud de l'arborescence du lot ne porte ce chemin. Elle sort de la liste. */
-	return { notes: carte, dossiers: [...chemins.values()].filter((c) => c !== '') };
+	return {
+		notes: carte,
+		notesParPlaceEtTitre: parPlaceEtTitre,
+		dossiers: [...chemins.values()].filter((c) => c !== '')
+	};
 }
 
 /**

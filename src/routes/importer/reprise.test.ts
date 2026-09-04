@@ -17,6 +17,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	classerLeLot,
+	clePlaceEtTitre,
 	SERVICE_INJOIGNABLE,
 	type ResultatDeConversion
 } from '../../lib/donnees/import';
@@ -76,5 +77,57 @@ describe('le verdict de l’aperçu — création ou mise à jour', () => {
 		expect(estUneMiseAJour({ identifiant: null, segments: ['Exploitation'] }, DANS_LA_CIBLE)).toBe(
 			false
 		);
+	});
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LE LOT REJOUÉ — `RG-M12-01`, ET LE CAS QUE L'IDENTIFIANT SEUL NE VOYAIT PAS
+
+   Deux fichiers homonymes rangés à deux endroits : le second reçoit un
+   identifiant SUFFIXÉ, que son titre ne redonne pas. Au réimport, il ne se
+   reconnaissait dans aucune ligne de la cible et repartait en création — le lot
+   rejoué doublait ses notes homonymes. La reconnaissance passe donc aussi par la
+   PLACE ET LE TITRE, et c'est ce que ce cas épingle.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const LOT_HOMONYME = [
+	{ chemin: 'Hermes/Offre.md', octets: 42, texte: 'Un.', binaire: null },
+	{ chemin: 'Olifan/Offre.md', octets: 42, texte: 'Deux.', binaire: null }
+];
+
+const premier = classerLeLot('épreuve', LOT_HOMONYME, {
+	service: SERVICE_INJOIGNABLE,
+	conversions: new Map<string, ResultatDeConversion>(),
+	identifiantsPris: new Set<string>(),
+	profondeurDeDepart: 1
+});
+
+/* Ce que la base porte APRÈS ce premier lot, dans les deux formes que le
+   chargeur en tire — identifiant vers place, place et titre vers identifiant. */
+const apresLePremier = new Map<string, string>();
+const apresLePremierParPlace = new Map<string, string>();
+for (const l of premier.lignes) {
+	if (l.identifiant === null) continue;
+	apresLePremier.set(l.identifiant, l.segments.join('/'));
+	apresLePremierParPlace.set(clePlaceEtTitre(l.segments, l.titre ?? ''), l.identifiant);
+}
+
+const second = classerLeLot('épreuve', LOT_HOMONYME, {
+	service: SERVICE_INJOIGNABLE,
+	conversions: new Map<string, ResultatDeConversion>(),
+	identifiantsPris: new Set(apresLePremier.keys()),
+	notesDeLaCible: apresLePremier,
+	notesParPlaceEtTitre: apresLePremierParPlace,
+	profondeurDeDepart: 1
+});
+
+describe('le même lot rejoué ne crée pas une seconde fois', () => {
+	it('le premier lot suffixe l’homonyme rangé ailleurs', () => {
+		expect(premier.lignes.map((l) => l.identifiant)).toEqual(['offre', 'offre-2']);
+	});
+
+	it('le second lot REPREND les deux, suffixe compris', () => {
+		expect(second.lignes.map((l) => l.identifiant)).toEqual(['offre', 'offre-2']);
+		for (const l of second.lignes) expect(estUneMiseAJour(l, apresLePremier)).toBe(true);
 	});
 });
