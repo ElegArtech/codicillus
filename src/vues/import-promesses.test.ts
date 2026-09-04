@@ -136,8 +136,16 @@ const VECTEURS: readonly (Proprietes | null)[] = [null, { et: '2' }, { et: '3' }
    nulle part. Le lien est ici, et il rougit dans les deux sens.
    ══════════════════════════════════════════════════════════════════════════ */
 describe('les libellés de format — le jeu de démonstration recopie le produit', () => {
-	it('la table du jeu est celle du produit, clé pour clé', () => {
-		expect(FORMATS_IMPORT).toEqual(LIBELLE_PAR_FORMAT);
+	it('le jeu n’affiche aucun libellé que le produit n’écrit pas', () => {
+		/* LE SENS DU LIEN A ÉTÉ PRÉCISÉ, PAS RELÂCHÉ. L'égalité stricte disait deux
+		   choses : le jeu ne montre rien que le produit ignore — c'est le défaut
+		   qu'elle prévient —, et le produit ne connaît rien de plus que la maquette
+		   — ce qui n'a jamais été une règle. Le produit reconnaît désormais des
+		   formats d'image que la maquette de V-24 ne dessine pas ; le jeu reste
+		   fidèle à la maquette, et chacune de ses clés porte LE libellé du produit. */
+		for (const [cle, libelle] of Object.entries(FORMATS_IMPORT)) {
+			expect(LIBELLE_PAR_FORMAT[cle as keyof typeof LIBELLE_PAR_FORMAT]).toBe(libelle);
+		}
 	});
 });
 

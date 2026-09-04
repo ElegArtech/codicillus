@@ -82,16 +82,27 @@ describe('le catalogue des formats — STACK §4.6', () => {
 		expect(VOIE_PAR_FORMAT.txt).toBe('application');
 	});
 
-	it('range les trois formats bureautiques de la table dans le service', () => {
+	it('range les deux formats bureautiques dans le service', () => {
 		expect(VOIE_PAR_FORMAT.docx).toBe('service');
 		expect(VOIE_PAR_FORMAT.pptx).toBe('service');
-		expect(VOIE_PAR_FORMAT.pdf).toBe('service');
+	});
+
+	it('n’envoie PAS le PDF ni les images au convertisseur — ils entrent tels quels', () => {
+		/* Le PDF y passait, et la note portait une TRANSCRIPTION : sans mise en
+		   page, sans tableaux, sans images, et rien du tout d'un document
+		   numérisé. Ce n'est pas le document. Il entre donc entier, et la note le
+		   porte — comme les images, qui étaient purement écartées. */
+		expect(VOIE_PAR_FORMAT.pdf).toBe('integre');
+		expect(VOIE_PAR_FORMAT.png).toBe('integre');
+		expect(VOIE_PAR_FORMAT.jpg).toBe('integre');
+		expect(VOIE_PAR_FORMAT.jpeg).toBe('integre');
+		expect(VOIE_PAR_FORMAT.webp).toBe('integre');
+		expect(VOIE_PAR_FORMAT.gif).toBe('integre');
 	});
 
 	it('écarte ce que la table de STACK ne porte pas', () => {
 		expect(VOIE_PAR_FORMAT.doc).toBe('ecarte');
 		expect(VOIE_PAR_FORMAT.xlsx).toBe('ecarte');
-		expect(VOIE_PAR_FORMAT.png).toBe('ecarte');
 		expect(VOIE_PAR_FORMAT.zip).toBe('ecarte');
 	});
 
@@ -867,41 +878,72 @@ describe('la voie bureautique, service disponible — M12.1, ADR-004', () => {
 		);
 	});
 
-	it('crée la note d’un PDF sans texte, avec son avertissement — M12.1', () => {
-		const scanne = ligne('VPN/Certificats scannes.pdf');
-		/* LA NOTE EST CRÉÉE : ce n’est pas un échec, et ce n’est pas une
-		   reconnaissance de caractères — « hors périmètre » (STACK §4.6). */
-		expect(scanne?.sort).toBe('note');
-		expect(scanne?.avertissements).toEqual(['contenu-scanne']);
-		/* Et l’avertissement est DANS le corps, en français, pas seulement en
-		   code : c’est ce que M12.1 demande de la note. */
-		expect(JSON.stringify(scanne?.corps)).toContain('contenu scanné');
-	});
-
-	it('consigne chaque fichier en erreur avec SON motif — RG-M12-04', () => {
-		expect(ligne('Procedures/Tests trimestriels.docx')?.motif).toBe('fichier-endommage');
-		expect(ligne('VPN/Certificats.pdf')?.motif).toBe('fichier-protege');
-		expect(ligne('Procedures/Annexes.pdf')?.motif).toBe('delai-de-conversion-depasse');
+	it('n’envoie AUCUN PDF au service — il entre entier, verdict ou pas', () => {
+		/* LE VERDICT DU SERVICE EST IGNORÉ POUR UN PDF, y compris son échec : la
+		   voie intégrée n'ouvre pas le fichier, donc rien ne peut la faire échouer
+		   sur son contenu. Un PDF protégé, endommagé ou numérisé se dépose comme
+		   les autres — et se lit, ce qu'une transcription vide n'a jamais permis. */
 		for (const chemin of [
-			'Procedures/Tests trimestriels.docx',
+			'Astreinte/Rotation 2025.pdf',
+			'VPN/Certificats scannes.pdf',
 			'VPN/Certificats.pdf',
 			'Procedures/Annexes.pdf'
 		]) {
+			expect(ligne(chemin)?.sort).toBe('note');
+			expect(ligne(chemin)?.voie).toBe('integre');
+			expect(ligne(chemin)?.avertissements).toEqual([]);
+			expect(ligne(chemin)?.pieceIntegree?.typeMedia).toBe('application/pdf');
+		}
+	});
+
+	it('consigne chaque fichier bureautique en erreur avec SON motif — RG-M12-04', () => {
+		expect(ligne('Procedures/Tests trimestriels.docx')?.motif).toBe('fichier-endommage');
+		for (const chemin of ['Procedures/Tests trimestriels.docx']) {
 			expect(ligne(chemin)?.sort).toBe('echec');
 			expect(ligne(chemin)?.corps).toBeNull();
 		}
 	});
 
-	it('N’INTERROMPT PAS LE LOT sur trois fichiers en erreur — RG-M12-04', () => {
-		/* Le dernier fichier du lot vient APRÈS les trois erreurs, et il est
-		   traité : c’est la règle même, et le compte final ne suffirait pas à le
-		   prouver. */
+	it('N’INTERROMPT PAS LE LOT sur un fichier en erreur — RG-M12-04', () => {
+		/* Le dernier fichier du lot vient APRÈS l’erreur, et il est traité : c’est
+		   la règle même, et le compte final ne suffirait pas à le prouver.
+
+		   LE COMPTE A CHANGÉ AVEC LA VOIE DU PDF : les trois PDF que le service
+		   refusait sont devenus des notes, parce que rien ne les ouvre plus. */
 		const dernier = plan.lignes[plan.lignes.length - 1];
 		expect(dernier?.chemin).toBe('Astreinte/Numéros utiles.txt');
 		expect(dernier?.sort).toBe('note');
 		expect(plan.total).toBe(LOT.length);
-		expect(plan.notes).toBe(5);
-		expect(plan.echecs).toBe(3);
+		expect(plan.notes).toBe(7);
+		expect(plan.echecs).toBe(1);
+	});
+
+	it('fait du PDF une note QUI LE PORTE, et non une transcription', () => {
+		const pdf = ligne('Astreinte/Rotation 2025.pdf');
+		expect(pdf?.titre).toBe('Rotation 2025');
+		expect(pdf?.pieceIntegree).toEqual({
+			nom: 'Rotation 2025.pdf',
+			typeMedia: 'application/pdf'
+		});
+		/* LE CORPS EST LE FICHIER, ET RIEN D'AUTRE : un seul bloc, qui pointe la
+		   pièce sous l'identifiant que CE classement vient de décider. L'adresse
+		   se compose ici parce que l'identifiant se décide ici. */
+		expect(pdf?.corps).toEqual({
+			type: 'doc',
+			content: [
+				{
+					type: 'pieceJointe',
+					attrs: {
+						src: '/notes/rotation-2025/pieces-jointes/Rotation%202025.pdf',
+						nom: 'Rotation 2025.pdf',
+						typeMedia: 'application/pdf'
+					}
+				}
+			]
+		});
+		/* Et le texte que le service avait rendu pour ce même fichier n'y est
+		   nulle part : il n'a pas été demandé. */
+		expect(JSON.stringify(pdf?.corps)).not.toContain('Semaine 1');
 	});
 
 	it('porte les images extraites jusqu’au plan, sans les écrire — RG-M12-07', () => {
