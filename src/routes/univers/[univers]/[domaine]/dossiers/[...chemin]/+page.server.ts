@@ -13,7 +13,8 @@
  * être nommé, pas même comme destination impossible. LE DROIT EFFECTIF EST CELUI DE LA
  * RÉSOLUTION UNIQUE, transmis TEL QUEL : un droit posé sur la racine d'un domaine
  * gouverne tout son sous-arbre (`RG-DRO-01`, `RG-DRO-05`), et le module `dossiers` est
- * EXIGÉ (`RG-STR-06`).
+ * EXIGÉ (`RG-STR-06`) POUR TOUT SAUF LA RACINE — elle porte les droits, qui ne sont
+ * pas du rangement ; `ouvrirLeDossier()` dit pourquoi.
  *
  * QUATRE ACTIONS, ET LEURS DROITS NE SONT PAS LES MÊMES : `CDC` §2.3 réserve la création
  * de sous-dossiers, le renommage, le déplacement, la suppression et la gestion des
@@ -85,6 +86,12 @@ interface ContexteDeDossier {
 	readonly dossier: LigneDeDossier;
 	/** Le droit effectif sur ce dossier — JAMAIS nul : sans lui, on a refusé. */
 	readonly droit: DroitDeDossier;
+	/**
+	 * Le module `dossiers` du domaine. Faux, seule la racine est servie et les
+	 * trois gestes d'arborescence refusent : le domaine se partage encore, il ne
+	 * se range plus.
+	 */
+	readonly rangementActif: boolean;
 }
 
 /**
@@ -146,18 +153,35 @@ async function ouvrirLeDossier(
 	   les capacités à faux. */
 	const droit = dossier === null ? null : droitEffectif(acces, dossier.id);
 
+	/**
+	 * LE MODULE `dossiers` GOUVERNE L'ARBORESCENCE, PAS LES DROITS — et les deux
+	 * étaient tenus par la même porte.
+	 *
+	 * `RG-STR-06` exige le module pour le RANGEMENT : créer des sous-dossiers,
+	 * renommer, déplacer, supprimer. La RACINE, elle, existe dès la création du
+	 * domaine (`RG-STR-01`), les notes y vivent, et c'est le SEUL écran d'où un
+	 * droit s'accorde à un compte. La fermer avec le module rendait un domaine
+	 * IMPARTAGEABLE : un référent rattaché n'y voyait aucune note, et aucune
+	 * adresse ne permettait de l'y autoriser. Mesuré en décochant la case en
+	 * console — la page rendait 404, à l'administrateur compris.
+	 *
+	 * LA RACINE RESTE DONC OUVERTE SANS LE MODULE, et rien d'autre : un descendant
+	 * n'est atteignable que si le rangement est actif, et les trois gestes
+	 * d'arborescence refusent au même octet que partout ailleurs.
+	 */
+	const rangementActif = moduleActif(modules, 'dossiers');
 	const resolution = resoudre(
 		dossier,
-		() => moduleActif(modules, 'dossiers') && capacites(droit).lire
+		() => (rangementActif || viseLaRacine) && capacites(droit).lire
 	);
 	if (!resolution.trouve || droit === null || domaine === null) refuserLAdresse(adresse);
 
-	return { acces, domaine, lignes, dossier: resolution.ressource, droit };
+	return { acces, domaine, lignes, dossier: resolution.ressource, droit, rangementActif };
 }
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const base = basePartagee();
-	const { acces, domaine, lignes, dossier, droit } = await ouvrirLeDossier(
+	const { acces, domaine, lignes, dossier, droit, rangementActif } = await ouvrirLeDossier(
 		params,
 		locals.identite,
 		url.pathname,
@@ -232,7 +256,11 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			   absence, et le sélecteur de destination du dialogue de déplacement ne
 			   coche alors aucune ligne. Ce dialogue n'est de toute façon pas rendu sur
 			   la racine : les deux écritures y refusent muettement. */
-			parentId: dossier.parentId ?? ''
+			parentId: dossier.parentId ?? '',
+			/* Le module du domaine, jusqu'à l'écran : sans lui « Nouveau sous-dossier »
+			   est OMIS, comme « Renommer » et « Supprimer » le sont sur la racine. Un
+			   bouton rendu que l'action refuse est un geste promis et non tenu. */
+			rangementActif
 		},
 		/**
 		 * LES DROITS DU DOSSIER — servis AU SEUL GESTIONNAIRE, et `null` sinon.
@@ -356,11 +384,17 @@ export const actions: Actions = {
 	 */
 	creerSousDossier: async ({ params, locals, request, url }) => {
 		const base = basePartagee();
-		const { acces, domaine, lignes, dossier } = await ouvrirLeDossier(
+		const { acces, domaine, lignes, dossier, rangementActif } = await ouvrirLeDossier(
 			params,
 			locals.identite,
 			url.pathname
 		);
+		/* LE RANGEMENT AVANT LE DROIT : la racine est servie sans le module pour que
+		   les droits s'y accordent, et c'est le seul dossier qui le soit. Créer un
+		   sous-dossier là où l'arborescence est éteinte referait par l'action ce que
+		   la console vient de décocher. L'écran omet déjà le bouton — un geste que
+		   l'écran n'offre pas reste un geste que le serveur doit refuser. */
+		if (!rangementActif) error(404, MESSAGE_INTROUVABLE);
 		if (capacites(droitEffectif(acces, dossier.id)).creerDesSousDossiers !== true) {
 			error(404, MESSAGE_INTROUVABLE);
 		}
@@ -417,11 +451,12 @@ export const actions: Actions = {
 	 * `RG-M03-03` protège l'adresse d'une NOTE, jamais celle d'un dossier.
 	 */
 	renommerOuDeplacer: async ({ params, locals, request, url }) => {
-		const { acces, domaine, lignes, dossier } = await ouvrirLeDossier(
+		const { acces, domaine, lignes, dossier, rangementActif } = await ouvrirLeDossier(
 			params,
 			locals.identite,
 			url.pathname
 		);
+		if (!rangementActif) error(404, MESSAGE_INTROUVABLE);
 		const formulaire = await request.formData();
 		const brutNom = formulaire.get('nouveauNom');
 		const brutDestination = formulaire.get('destination');
@@ -467,11 +502,12 @@ export const actions: Actions = {
 	 * page de dossier où revenir — c'est V-11.
 	 */
 	supprimer: async ({ params, locals, request, url }) => {
-		const { acces, domaine, lignes, dossier } = await ouvrirLeDossier(
+		const { acces, domaine, lignes, dossier, rangementActif } = await ouvrirLeDossier(
 			params,
 			locals.identite,
 			url.pathname
 		);
+		if (!rangementActif) error(404, MESSAGE_INTROUVABLE);
 		const brut = (await request.formData()).get('confirmation');
 
 		const fait = await supprimerUnDossier(basePartagee(), moteurPartage(), {
