@@ -115,8 +115,9 @@ mort de la machine. Il demande une destination, et donc une décision.
 - **`docs/routes.md`, `DESIGN.md`, `releve-vues.md` et `arbitrages.md`** décrivent l'état d'avant
   et n'ont pas été remesurés. `routes.md` fait toujours autorité sur les adresses, le code le
   cite ; les trois autres sont de l'historique.
-- **Rien ne surveille l'instance de recette.** Voir ci-dessus : il faut choisir où le battement
-  sortant est reçu.
+- **Rien ne surveille l'instance de recette**, et c'est assumé pour l'instant — la question a été
+  posée le 4 septembre, la réponse est d'attendre. Voir ci-dessus pour ce que la surveillance
+  demanderait : un battement sortant, et une destination pour le recevoir.
 
 ---
 
