@@ -440,6 +440,21 @@ blockquote.prose-cit footer { font-style: normal; font-size: var(--t-petit); col
 }
 .figure figcaption b { color: var(--c-encre-2); font-weight: var(--g-fort); }
 
+/* La pièce jointe montrée en place : le fichier lui-meme, a la mesure de la
+   page. Le cadre porte une hauteur, sans quoi un cadre vaut zero pixel et le
+   document reste invisible ; le plancher tient sur un ecran court. */
+.piece-integree { margin: var(--e-4) 0; }
+.piece-integree__cadre {
+  display: block; width: 100%; height: 78vh; min-height: 420px;
+  border: 1px solid var(--c-trait-fort); border-radius: var(--r-3);
+  background: var(--c-papier);
+}
+.piece-integree img {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--c-trait); border-radius: var(--r-3);
+}
+.piece-integree__hors-cadre { color: var(--c-encre-2); }
+
 .prose hr { border: 0; border-top: 1px solid var(--c-trait); margin: var(--e-6) 0; }
 
 .lien-int {

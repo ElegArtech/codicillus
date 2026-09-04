@@ -23,6 +23,7 @@ import { error, fail } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { basePartagee, type Base } from '$lib/base/acces';
 import { domaines, dossiers, notes as notesDuSchema, univers } from '$lib/base/schema';
+import { racineDesFichiers } from '$lib/fichiers/entrepot';
 import { capacites } from '$lib/droits/resolution';
 import {
 	SOURCE_SANS_DOSSIER,
@@ -302,6 +303,11 @@ async function preparerLeLot(
 		/* LE CONTENU DE LA CIBLE REMONTE AVEC LE PLAN, et c'est le correctif de
 		   l'aperçu menteur : le classement l'a consulté, il ne l'a pas consigné. */
 		contenuDeLaCible: cible,
+		/* Les octets, par chemin de dépôt — la seule chose que le classement ne
+		   porte pas et que l'écriture exige. */
+		octetsParChemin: new Map(
+			fichiers.filter((f) => f.binaire !== null).map((f) => [f.chemin, f.binaire as Uint8Array])
+		),
 		cible:
 			destination.cible === null
 				? null
@@ -467,7 +473,12 @@ export const actions: Actions = {
 				simulation: prepare.simulation,
 				profondeurDeDepart: prepare.profondeurDeDepart,
 				strict: prepare.strict,
-				domaineCible: prepare.domaine
+				domaineCible: prepare.domaine,
+				/* LES OCTETS DES FICHIERS INTÉGRÉS DESCENDENT JUSQU'À L'ÉCRITURE. Sans
+				   eux, une note intégrée annoncerait une pièce que l'entrepôt ne
+				   porte pas — l'état que `RG-NF-09` appelle un désaccord. */
+				octetsParChemin: prepare.octetsParChemin,
+				racineDesFichiers: racineDesFichiers(env)
 			}
 		);
 
@@ -622,7 +633,11 @@ async function deposes(champs: FormData): Promise<readonly FichierDepose[]> {
 			chemin: partie.name,
 			octets: partie.size,
 			texte: voie === 'application' ? await partie.text() : null,
-			binaire: voie === 'service' ? new Uint8Array(await partie.arrayBuffer()) : null
+			/* LES OCTETS SONT LUS POUR DEUX VOIES, ET LEUR DESTINATION DIFFÈRE : la
+			   voie « service » les envoie au convertisseur, la voie « intégré » les
+			   garde — c'est le fichier lui-même que la note portera. */
+			binaire:
+				voie === 'service' || voie === 'integre' ? new Uint8Array(await partie.arrayBuffer()) : null
 		});
 	}
 	return sortis;
