@@ -28,6 +28,7 @@
 	import { page } from '$app/state';
 	import { cablerLaSuppression, cablerLHistorique } from '$lib/cablage/formulaires';
 	import { porteLeGeste } from '$lib/cablage/libelles';
+	import { formeDeLecture, type FormeDeLecture } from '$lib/fichiers/affichage';
 	import { cablerLaFermetureDeLHistorique, cablerLaLecture, cablerLaLoupe } from './cablage';
 	import Historique from '../../../vues/V-15.svelte';
 	import '../../../vues/V-15.css';
@@ -164,9 +165,132 @@
 	const MARQUE_DU_CABLAGE = 'cablePj';
 
 	interface CablageDesPieces {
-		readonly pieces: readonly { nom: string; adresse: string }[];
+		readonly pieces: readonly { nom: string; adresse: string; typeMedia: string }[];
 		/** `RG-M05-08` / `P-09` — sans le droit d'écrire, aucun geste n'est POSÉ. */
 		readonly ecriture: boolean;
+	}
+
+	/* ═══════════════════════════════ La visionneuse ═════════════════════════ */
+
+	/**
+	 * LIRE UNE PIÈCE SANS QUITTER LA NOTE.
+	 *
+	 * Le lien du panneau menait aux octets, et le navigateur en faisait ce que
+	 * `content-disposition` lui disait : un téléchargement. Une image et un PDF
+	 * n'ont pas besoin de sortir pour être lus — tout navigateur les rend —, et les
+	 * faire sortir COUPE LA LECTURE : le fichier s'ouvre ailleurs, la note qui le
+	 * portait n'est plus à l'écran, et le contexte qui justifiait la pièce est
+	 * perdu. Les deux familles s'ouvrent donc EN PLACE, dans une boîte modale
+	 * au-dessus de la note ; tout le reste garde le lien nu, qui télécharge.
+	 *
+	 * `formeDeLecture()` DÉCIDE, ET C'EST LE MÊME PRÉDICAT QUE LE SERVEUR emploie
+	 * pour sa disposition (`P-01`) : une pièce que la boîte afficherait et que la
+	 * route servirait en `attachment` déclencherait un téléchargement depuis le
+	 * cadre, laissant la boîte vide sans la moindre erreur.
+	 *
+	 * LA BOÎTE VIT SUR LE `document`, JAMAIS DANS LE FORMULAIRE : l'article de la
+	 * note est enveloppé d'un `<form action="?/supprimer">` (`RG-M04-10`), et tout
+	 * bouton qui y naîtrait partirait en suppression.
+	 */
+	const MARQUE_DE_LA_BOITE = 'visionneuse';
+
+	interface PieceLisible {
+		readonly nom: string;
+		readonly adresse: string;
+		readonly forme: FormeDeLecture;
+	}
+
+	/** La boîte, créée une fois par document et retrouvée ensuite par sa marque. */
+	function boiteDeLecture(doc: Document): HTMLDialogElement {
+		const posee = doc.querySelector<HTMLDialogElement>(`dialog[data-${MARQUE_DE_LA_BOITE}]`);
+		if (posee !== null) return posee;
+
+		/* LE VOILE DE LA BOÎTE MODALE. Il ne s'atteint que par le pseudo-élément
+		   `::backdrop`, qu'aucun attribut de style en ligne ne porte : il faut une
+		   règle, donc une feuille. Sans lui, la boîte s'ouvre par-dessus une page
+		   qui reste vive à l'œil alors qu'elle ne répond plus. */
+		const feuille = doc.createElement('style');
+		feuille.dataset[MARQUE_DE_LA_BOITE + 'Voile'] = 'oui';
+		feuille.textContent =
+			'dialog[data-' + MARQUE_DE_LA_BOITE + ']::backdrop{background:rgba(17,17,17,.55)}';
+		doc.head.append(feuille);
+
+		const boite = doc.createElement('dialog');
+		boite.dataset[MARQUE_DE_LA_BOITE] = 'oui';
+		boite.setAttribute('aria-label', 'Pièce jointe');
+		boite.style.cssText =
+			'padding:0;border:1px solid var(--c-trait-fort);border-radius:var(--r-2);' +
+			'background:var(--c-papier);max-width:min(1100px,94vw);width:94vw;' +
+			'max-height:94vh;overflow:hidden';
+
+		const tete = doc.createElement('div');
+		tete.style.cssText =
+			'display:flex;align-items:center;gap:var(--e-3);padding:var(--e-3);' +
+			'border-bottom:1px solid var(--c-trait);font-family:var(--f-ui)';
+
+		const titre = doc.createElement('strong');
+		titre.dataset[MARQUE_DE_LA_BOITE + 'Titre'] = 'oui';
+		titre.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis';
+
+		/* LE TÉLÉCHARGEMENT RESTE OFFERT : lire en place ne remplace pas emporter.
+		   `download` demande la sortie du fichier malgré la disposition `inline`. */
+		const emporter = doc.createElement('a');
+		emporter.className = 'btn btn--discret';
+		emporter.dataset[MARQUE_DE_LA_BOITE + 'Emporter'] = 'oui';
+		emporter.append('Télécharger');
+
+		const fermer = doc.createElement('button');
+		fermer.type = 'button';
+		fermer.className = 'btn btn--discret';
+		fermer.append('Fermer');
+		fermer.addEventListener('click', () => boite.close());
+
+		tete.append(titre, emporter, fermer);
+
+		const corps = doc.createElement('div');
+		corps.dataset[MARQUE_DE_LA_BOITE + 'Corps'] = 'oui';
+		corps.style.cssText =
+			'display:flex;align-items:center;justify-content:center;' +
+			'background:var(--c-fond);height:82vh;overflow:auto';
+
+		boite.append(tete, corps);
+		doc.body.append(boite);
+		return boite;
+	}
+
+	/** Ouvre la boîte sur une pièce — son contenu est refait à chaque ouverture. */
+	function ouvrirLaPiece(doc: Document, piece: PieceLisible): void {
+		const boite = boiteDeLecture(doc);
+		const titre = boite.querySelector(`[data-${MARQUE_DE_LA_BOITE}-titre]`);
+		if (titre !== null) titre.textContent = piece.nom;
+		const emporter = boite.querySelector<HTMLAnchorElement>(
+			`a[data-${MARQUE_DE_LA_BOITE}-emporter]`
+		);
+		if (emporter !== null) {
+			emporter.href = piece.adresse;
+			emporter.download = piece.nom;
+		}
+		const corps = boite.querySelector<HTMLElement>(`[data-${MARQUE_DE_LA_BOITE}-corps]`);
+		if (corps === null) return;
+		corps.replaceChildren();
+
+		if (piece.forme === 'image') {
+			const vue = doc.createElement('img');
+			vue.src = piece.adresse;
+			vue.alt = piece.nom;
+			vue.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain';
+			corps.append(vue);
+		} else {
+			/* UN CADRE, ET NON UN `<embed>` : le cadre porte un titre accessible et
+			   se recharge proprement d'une ouverture à l'autre. Le rendu est celui
+			   de la visionneuse du navigateur — rien n'est embarqué dans le paquet. */
+			const cadre = doc.createElement('iframe');
+			cadre.src = piece.adresse;
+			cadre.title = piece.nom;
+			cadre.style.cssText = 'width:100%;height:100%;border:0';
+			corps.append(cadre);
+		}
+		boite.showModal();
 	}
 
 	/**
@@ -236,6 +360,21 @@
 			const piece = options.pieces[rang];
 			if (piece === undefined) return;
 			lien.href = piece.adresse;
+
+			/* CE QUI SE LIT EN PLACE S'OUVRE DANS LA BOÎTE, LE RESTE GARDE LE LIEN.
+			   L'adresse reste posée dans les deux cas : sans script, le lien mène
+			   toujours aux octets, et le clic interrompu ne l'est que par ce
+			   câblage-ci. */
+			const forme = formeDeLecture(piece.typeMedia);
+			if (forme !== null) {
+				const lire = (evenement: MouseEvent): void => {
+					evenement.preventDefault();
+					ouvrirLaPiece(document, { nom: piece.nom, adresse: piece.adresse, forme });
+				};
+				lien.addEventListener('click', lire);
+				debranchements.push(() => lien.removeEventListener('click', lire));
+			}
+
 			if (!options.ecriture) return;
 			const retrait = document.createElement('button');
 			retrait.type = 'button';
