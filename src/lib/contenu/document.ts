@@ -200,6 +200,31 @@ export interface Diagramme {
 	};
 }
 
+/**
+ * LA PIÈCE JOINTE MONTRÉE EN PLACE — le fichier lui-même, dans le corps de la note.
+ *
+ * ELLE N'EST PAS UNE IMAGE ET N'EST PAS UN TEXTE CONVERTI. Un PDF déposé dans un
+ * dossier est un PDF : ses pages, sa mise en page, ses images. Le réécrire en
+ * Markdown en fait autre chose — une transcription, qui perd tout ce que le
+ * document portait et que personne n'a demandé. Ce bloc porte donc le fichier tel
+ * qu'il est, et le navigateur le rend avec ce qu'il sait rendre.
+ *
+ * `typeMedia` EST STOCKÉ, JAMAIS DÉDUIT DU SUFFIXE : c'est ce que le dépôt a
+ * annoncé, et c'est la même valeur que la ligne de `pieces_jointes`. Le rendu s'en
+ * sert pour choisir entre l'image et le cadre — il ne devine rien d'un nom.
+ */
+export interface PieceJointeIntegree {
+	readonly type: 'pieceJointe';
+	readonly attrs: {
+		/** L'adresse des octets — `adresseDePieceJointe()` la compose. */
+		readonly src: string;
+		/** Le nom du fichier, tel que la pièce jointe le porte. */
+		readonly nom: string;
+		/** Le type de média de la pièce, tel que la base le porte. */
+		readonly typeMedia: string;
+	};
+}
+
 export type Bloc =
 	| Paragraphe
 	| Titre
@@ -211,6 +236,7 @@ export type Bloc =
 	| Alerte
 	| Tableau
 	| Image
+	| PieceJointeIntegree
 	| Separateur
 	| Diagramme;
 
@@ -357,6 +383,7 @@ const schemaBloc: z.ZodType<Bloc> = z.lazy(() =>
 			schemaAlerte,
 			schemaTableau,
 			schemaImage,
+			schemaPieceJointe,
 			schemaSeparateur,
 			schemaDiagramme
 		],
@@ -480,6 +507,11 @@ const schemaImage = z.strictObject({
 		etiquette: texteNonVide.nullable(),
 		legende: texteNonVide.nullable()
 	})
+});
+
+const schemaPieceJointe = z.strictObject({
+	type: z.literal('pieceJointe'),
+	attrs: z.strictObject({ src: texteNonVide, nom: texteNonVide, typeMedia: texteNonVide })
 });
 
 const schemaSeparateur = z.strictObject({ type: z.literal('horizontalRule') });
@@ -777,6 +809,11 @@ function lignesDeBloc(bloc: Bloc): readonly string[] {
 				...(bloc.attrs.etiquette === null ? [] : [bloc.attrs.etiquette]),
 				...(bloc.attrs.legende === null ? [] : [bloc.attrs.legende])
 			];
+		case 'pieceJointe':
+			/* LE NOM DU FICHIER, ET RIEN D'AUTRE : le produit ne lit pas dans le
+			   document, et prétendre l'indexer serait mentir sur ce qu'une
+			   recherche trouve. Le nom, lui, est du texte et il est vrai. */
+			return [bloc.attrs.nom];
 		case 'diagramme':
 			return [
 				bloc.attrs.alternative,

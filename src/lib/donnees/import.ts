@@ -28,6 +28,7 @@ import {
 	lignesDeLot,
 	lotsDImport,
 	notes,
+	piecesJointes,
 	relations,
 	typesDeFiche,
 	typesDeNote,
@@ -35,8 +36,9 @@ import {
 } from '../base/schema';
 import type { Document } from '../contenu/document';
 import { analyserMarkdown, markdownImporte } from '../contenu/markdown';
+import { ecrireLesOctets } from '../fichiers/entrepot';
 import { entretenirLIndex } from '../recherche/entretien';
-import { identifiantLisible } from '../rangement/adresses';
+import { adresseDePieceJointe, identifiantLisible } from '../rangement/adresses';
 import { PROFONDEUR_MAX } from './rangement';
 import { proprietesSoumises, retenirLesProprietes } from './creation';
 import {
@@ -58,7 +60,7 @@ import type { FormatDImport, SortDeFichier } from '../../../seeds/corpus';
  * La voie qu'un format emprunte — `application`, `service`, `ecarte`. La table de
  * STACK §4.6 les décide toutes.
  */
-export type VoieDeTraitement = 'application' | 'service' | 'ecarte';
+export type VoieDeTraitement = 'application' | 'service' | 'integre' | 'ecarte';
 
 /**
  * La voie de chaque format — transcription de la table de STACK §4.6, et de rien
@@ -70,11 +72,40 @@ export const VOIE_PAR_FORMAT: Readonly<Record<FormatDImport, VoieDeTraitement>> 
 	txt: 'application',
 	docx: 'service',
 	pptx: 'service',
-	pdf: 'service',
+	/* LE PDF ET LES IMAGES NE SONT PAS CONVERTIS, ET C'EST LE POINT.
+	
+	   Le PDF passait par le service, qui en extrayait le texte : la note portait
+	   une TRANSCRIPTION — sans mise en page, sans tableaux, sans images, et rien
+	   du tout d'un document numérisé. Ce n'est pas le document, c'est un autre
+	   document ; l'ouvrir ne montrait pas ce qu'on avait déposé.
+	
+	   Un PDF déposé dans un dossier est donc une note qui PORTE LE PDF : le
+	   fichier entre à l'entrepôt, le corps le montre en place, et le navigateur
+	   le rend avec ses pages. Les images suivent la même voie, pour la même
+	   raison — elles étaient purement et simplement écartées. */
+	pdf: 'integre',
+	png: 'integre',
+	jpg: 'integre',
+	jpeg: 'integre',
+	webp: 'integre',
+	gif: 'integre',
 	doc: 'ecarte',
 	xlsx: 'ecarte',
-	png: 'ecarte',
 	zip: 'ecarte'
+};
+
+/**
+ * LE TYPE DE MÉDIA D'UN FORMAT INTÉGRÉ — la table est CLOSE, et c'est ce qui rend
+ * le type sûr : rien n'est deviné d'un suffixe à l'exécution, la voie et le type
+ * sont décidés par la même table, écrite une fois.
+ */
+export const TYPE_MEDIA_PAR_FORMAT: Readonly<Partial<Record<FormatDImport, string>>> = {
+	pdf: 'application/pdf',
+	png: 'image/png',
+	jpg: 'image/jpeg',
+	jpeg: 'image/jpeg',
+	webp: 'image/webp',
+	gif: 'image/gif'
 };
 
 /**
@@ -117,6 +148,10 @@ export const LIBELLE_PAR_FORMAT: Readonly<Record<FormatDImport, string>> = {
 	txt: 'Texte brut',
 	xlsx: 'Tableur',
 	png: 'Image',
+	jpg: 'Image',
+	jpeg: 'Image',
+	webp: 'Image',
+	gif: 'Image',
 	zip: 'Archive'
 };
 
@@ -734,6 +769,12 @@ export interface LigneDePlan {
 	 * stockage de pièce jointe n'existe. Les taire ferait croire qu'il n'y en a pas.
 	 */
 	readonly images: readonly ImageExtraite[];
+	/**
+	 * LE FICHIER QUE CETTE NOTE PORTE TEL QUEL — voie « intégré ». Le classement
+	 * n'écrit rien : il DÉCIDE le nom et le type de média, et l'exécution dépose les
+	 * octets sous ce nom. `null` pour toute autre voie.
+	 */
+	readonly pieceIntegree: { readonly nom: string; readonly typeMedia: string } | null;
 }
 
 export interface PlanDImport {
@@ -903,7 +944,8 @@ export function classerLeLot(
 			aplatie: false,
 			renvois: [] as readonly RenvoiDeclare[],
 			avertissements: [] as readonly string[],
-			images: [] as readonly ImageExtraite[]
+			images: [] as readonly ImageExtraite[],
+			pieceIntegree: null as { readonly nom: string; readonly typeMedia: string } | null
 		};
 
 		const ecart = (motif: MotifDEcart): void => {
@@ -932,6 +974,62 @@ export function classerLeLot(
 		}
 		if (voie === 'ecarte') {
 			ecart('format-non-converti');
+			return;
+		}
+
+		/* ── LA VOIE INTÉGRÉE — le fichier devient une note QUI LE PORTE ────────
+		
+		   Aucune conversion, aucun service, aucun texte : le nom du fichier fait le
+		   titre, sa place fait le rangement, et le corps est le fichier lui-même.
+		   L'adresse des octets se compose ICI parce que l'identifiant se décide ici :
+		   l'exécution n'aura qu'à déposer les octets sous ce nom. */
+		if (voie === 'integre') {
+			const typeMedia = format === null ? '' : (TYPE_MEDIA_PAR_FORMAT[format] ?? '');
+			if (typeMedia === '') {
+				echec('contenu-illisible');
+				return;
+			}
+			if (fichier.binaire === null || fichier.binaire.length === 0) {
+				/* Un fichier vide n'a rien à montrer, et une note qui porterait une
+				   pièce absente serait une promesse creuse. */
+				echec('contenu-illisible');
+				return;
+			}
+			const nomDuFichier = fichier.chemin.slice(fichier.chemin.lastIndexOf('/') + 1);
+			const titreIntegre = nomSansExtension(fichier.chemin);
+			const placeIntegree = segmentsPlafonnes(fichier.chemin, contexte.profondeurDeDepart);
+			const identifiantIntegre = identifiantDuFichier(
+				titreIntegre,
+				placeIntegree.segments,
+				pris,
+				dansLaCible,
+				rang + 1,
+				dansLaCibleParPlace
+			);
+			pris.add(identifiantIntegre);
+			lignes.push({
+				...commun,
+				sort: 'note',
+				motif: null,
+				identifiant: identifiantIntegre,
+				titre: titreIntegre,
+				corps: {
+					type: 'doc',
+					content: [
+						{
+							type: 'pieceJointe',
+							attrs: {
+								src: adresseDePieceJointe(identifiantIntegre, nomDuFichier),
+								nom: nomDuFichier,
+								typeMedia
+							}
+						}
+					]
+				},
+				segments: placeIntegree.segments,
+				aplatie: placeIntegree.aplatie,
+				pieceIntegree: { nom: nomDuFichier, typeMedia }
+			});
 			return;
 		}
 		/* LES DEUX VOIES CONVERGENT ICI (`ADR-004`) : un fichier bureautique devient le
@@ -1356,6 +1454,15 @@ export async function executerLImport(
 		readonly strict?: boolean;
 		/** Le NOM du domaine cible, pour dire quand un en-tête en nomme un autre. */
 		readonly domaineCible?: string;
+		/**
+		 * LES OCTETS DES FICHIERS INTÉGRÉS, par chemin de dépôt. La voie « intégré »
+		 * ne convertit rien : c'est le fichier lui-même que la note porte, et il faut
+		 * donc que les octets descendent jusqu'ici. Absente, aucune pièce n'est
+		 * déposée — et une note intégrée annoncerait un fichier qui n'existe pas.
+		 */
+		readonly octetsParChemin?: ReadonlyMap<string, Uint8Array>;
+		/** La racine de l'entrepôt de fichiers. Requise avec les octets. */
+		readonly racineDesFichiers?: string;
 	}
 ): Promise<RapportDImport> {
 	const lignes: LigneDeRapport[] = [];
@@ -1364,6 +1471,8 @@ export async function executerLImport(
 	let dossiersCrees = 0;
 	let relationsCreees = 0;
 	let refuseEnBloc = false;
+
+	const racineDesFichiers = options.racineDesFichiers;
 
 	const appliquer = async (tx: Base): Promise<void> => {
 		/* LE RÉFÉRENTIEL DES TYPES DE NOTE, LU UNE FOIS — par identifiant ET par nom :
@@ -1566,6 +1675,46 @@ export async function executerLImport(
 					.where(eq(notes.id, noteId));
 				await tx.delete(etiquettesDeNote).where(eq(etiquettesDeNote.noteId, noteId));
 				notesMisesAJour += 1;
+			}
+
+			/* ── LA PIÈCE QUE LA NOTE PORTE TELLE QUELLE ──────────────────────────
+			
+			   LES OCTETS D'ABORD, LA LIGNE ENSUITE — le même ordre que
+			   `deposerUnePieceJointe()`, et pour la même raison : une ligne sans
+			   octets est une pièce que le produit annonce et ne peut pas servir.
+			
+			   REJOUÉ, LE LOT NE DÉPOSE PAS DEUX FOIS : la pièce du même nom est
+			   REMPLACÉE — ses octets réécrits sous le même identifiant, sa ligne
+			   mise à jour. Un import est une resynchronisation, pas une
+			   accumulation. */
+			if (ligne.pieceIntegree !== null && racineDesFichiers !== undefined) {
+				const octets = options.octetsParChemin?.get(ligne.chemin);
+				if (octets !== undefined) {
+					const [deja] = await tx
+						.select({ id: piecesJointes.id })
+						.from(piecesJointes)
+						.where(
+							and(eq(piecesJointes.noteId, noteId), eq(piecesJointes.nom, ligne.pieceIntegree.nom))
+						)
+						.limit(1);
+					const pieceId = deja?.id ?? crypto.randomUUID();
+					await ecrireLesOctets(racineDesFichiers, noteId, pieceId, octets);
+					if (deja === undefined) {
+						await tx.insert(piecesJointes).values({
+							id: pieceId,
+							noteId,
+							nom: ligne.pieceIntegree.nom,
+							tailleOctets: octets.length,
+							typeMedia: ligne.pieceIntegree.typeMedia,
+							deposeeParId: cible.auteurId
+						});
+					} else {
+						await tx
+							.update(piecesJointes)
+							.set({ tailleOctets: octets.length, typeMedia: ligne.pieceIntegree.typeMedia })
+							.where(eq(piecesJointes.id, pieceId));
+					}
+				}
 			}
 
 			let ordre = 0;

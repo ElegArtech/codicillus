@@ -28,6 +28,7 @@ import {
 	type Document,
 	type ElementDeListe,
 	type Image,
+	type PieceJointeIntegree,
 	type Marque,
 	type LigneDeTableau,
 	type Tableau,
@@ -236,6 +237,8 @@ function rendreBloc(bloc: Bloc, enveloppe: Enveloppe, options: Rendu): string {
 			return rendreTableau(bloc, options);
 		case 'image':
 			return rendreImage(bloc);
+		case 'pieceJointe':
+			return rendrePieceJointe(bloc);
 		case 'horizontalRule':
 			/* `V-14:1696` — le séparateur, sans classe ni attribut. */
 			return '<hr>';
@@ -353,6 +356,38 @@ function rendreImage(image: Image): string {
 		`<figure class="figure"><button class="figure__cadre" ` +
 		`aria-label="Agrandir ${echapper(alt)}">` +
 		`<img src="${echapper(src)}" alt="${echapper(alt)}"></button>${pied}</figure>`
+	);
+}
+
+/**
+ * LA PIÈCE JOINTE MONTRÉE EN PLACE — le fichier, rendu par le navigateur.
+ *
+ * DEUX FORMES, ET LE TYPE DE MÉDIA STOCKÉ DÉCIDE : une image s'affiche, tout le
+ * reste entre dans un cadre — un PDF y ouvre la visionneuse du navigateur, avec
+ * ses pages, son zoom et son impression. Rien n'est embarqué dans le paquet : ce
+ * qui rend est ce que le navigateur sait déjà rendre.
+ *
+ * LE CADRE PORTE LE NOM DU FICHIER EN TITRE : sans lui, un cadre est un trou noir
+ * pour un lecteur d'écran. Et un lien de secours le suit, pour le cas où le cadre
+ * ne rend rien — un format que ce navigateur-là ne connaît pas.
+ */
+function rendrePieceJointe(bloc: PieceJointeIntegree): string {
+	const { src, nom, typeMedia } = bloc.attrs;
+	const secours =
+		`<a class="piece-integree__hors-cadre" href="${echapper(src)}">` +
+		`Ouvrir ${echapper(nom)}</a>`;
+	if (typeMedia.startsWith('image/')) {
+		return (
+			`<figure class="figure piece-integree" data-type-media="${echapper(typeMedia)}">` +
+			`<img src="${echapper(src)}" alt="${echapper(nom)}">` +
+			`<figcaption>${echapper(nom)}</figcaption></figure>`
+		);
+	}
+	return (
+		`<figure class="figure piece-integree" data-type-media="${echapper(typeMedia)}">` +
+		`<iframe class="piece-integree__cadre" src="${echapper(src)}" ` +
+		`title="${echapper(nom)}"></iframe>` +
+		`<figcaption>${echapper(nom)} ${secours}</figcaption></figure>`
 	);
 }
 
