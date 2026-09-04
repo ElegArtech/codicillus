@@ -67,6 +67,7 @@ import {
 	type Image,
 	type ListeDeTaches,
 	type Marque,
+	type PieceJointeIntegree,
 	type Tableau,
 	type Tache,
 	type Texte,
@@ -85,6 +86,11 @@ const CLOTURE_MINIMALE = 3;
 
 /** Le séparateur écrit — voir la couture avec l'en-tête de métadonnées. */
 const SEPARATEUR_ECRIT = '***';
+
+/** Le marqueur d'une pièce jointe montrée en place — un point d'exclamation, le mot,
+    et le crochet ouvrant du nom. Il ne peut pas se confondre avec celui d'une image,
+    qui n'a pas de mot entre le point d'exclamation et le crochet. */
+const MARQUEUR_DE_PIECE = '!piece-jointe[';
 
 /** Le paragraphe sans contenu : une contre-oblique seule sur sa ligne. */
 const PARAGRAPHE_VIDE = '\\';
@@ -397,6 +403,24 @@ function ecrireImage(bloc: Image): string[] {
 	return attributs === '' ? [ligne] : [ligne, attributs];
 }
 
+/**
+ * LA FORME ÉCRITE D'UNE PIÈCE JOINTE MONTRÉE EN PLACE — le marqueur, le nom entre
+ * crochets, l'adresse entre parenthèses, puis le type de média en liste
+ * d'attributs. Elle est PROCHE de celle d'une image et n'en est pas une : le
+ * marqueur les sépare à la lecture, et le type de média est ce qui décide du rendu.
+ */
+function ecrirePieceJointe(bloc: PieceJointeIntegree): string[] {
+	const { src, nom, typeMedia } = bloc.attrs;
+	return [
+		MARQUEUR_DE_PIECE +
+			echapperValeur(nom, ['[', ']']) +
+			'](' +
+			echapperValeur(src, ['(', ')']) +
+			')',
+		listeDAttributs([['type-media', typeMedia]])
+	];
+}
+
 function ecrireTaches(bloc: ListeDeTaches): string[] {
 	return bloc.content.flatMap((tache: Tache) =>
 		/* L'alinéa d'une tâche est de DEUX espaces, non de la largeur du
@@ -500,6 +524,8 @@ function ecrireBloc(bloc: Bloc): string[] {
 			return tableauEnBarres(bloc) ?? tableauEnConteneurs(bloc);
 		case 'image':
 			return ecrireImage(bloc);
+		case 'pieceJointe':
+			return ecrirePieceJointe(bloc);
 		case 'horizontalRule':
 			return [SEPARATEUR_ECRIT];
 		case 'diagramme':
@@ -1078,6 +1104,28 @@ function lireTableau(c: Curseur): unknown {
 	return { type: 'table', content: lignes };
 }
 
+function lirePieceJointe(c: Curseur, ligne: string): unknown {
+	const debut = MARQUEUR_DE_PIECE.length;
+	const finNom = trouverCloture(ligne, debut, '](');
+	if (finNom === -1) return null;
+	const finSrc = trouverCloture(ligne, finNom + 2, ')');
+	if (finSrc === -1 || finSrc !== ligne.length - 1) return null;
+	c.i += 1;
+	const attrs = attributsSuivants(c);
+	/* LA LIGNE D'ATTRIBUTS N'EST PAS RÉPANDUE TELLE QUELLE, contrairement à celle
+	   d'une image : sa seule clé porte un nom écrit en deux mots, et l'attribut du
+	   nœud en porte un seul. Les répandre ferait entrer une clé que le schéma
+	   refuse — et le refus nommerait l'attribut, jamais la ligne. */
+	return {
+		type: 'pieceJointe',
+		attrs: {
+			src: lireValeur(ligne.slice(finNom + 2, finSrc)),
+			nom: lireValeur(ligne.slice(debut, finNom)),
+			typeMedia: attrs['type-media'] ?? ''
+		}
+	};
+}
+
 function lireImage(c: Curseur, ligne: string): unknown {
 	const finAlt = trouverCloture(ligne, 2, '](');
 	if (finAlt === -1) return null;
@@ -1145,6 +1193,13 @@ function lireBlocs(lignes: readonly string[], decalage: number): unknown[] {
 		if (ligne === '>' || ligne.startsWith('> ')) {
 			blocs.push(lireCitation(c));
 			continue;
+		}
+		if (ligne.startsWith(MARQUEUR_DE_PIECE)) {
+			const piece = lirePieceJointe(c, ligne);
+			if (piece !== null) {
+				blocs.push(piece);
+				continue;
+			}
 		}
 		if (ligne.startsWith('![')) {
 			const image = lireImage(c, ligne);
