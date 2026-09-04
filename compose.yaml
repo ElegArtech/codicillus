@@ -134,6 +134,19 @@ services:
       # Racine des pièces jointes et des images — deuxième et dernier élément
       # de la sauvegarde (RG-NF-09).
       RACINE_FICHIERS: /var/lib/codicillus/fichiers
+      # LE PLAFOND DE CORPS DE REQUÊTE, ET IL DOIT PASSER AU-DESSUS DE CE QUE LA
+      # CONSOLE PROMET. `adapter-node` refuse par défaut tout corps de plus de
+      # 512 ko, en 413, avant que le moindre code applicatif ne voie la requête.
+      # La console, elle, annonce un plafond de pièce jointe de 25 Mo et le fait
+      # RESPECTER par `deposerUnePieceJointe()` : un PDF de 600 ko était donc
+      # refusé par le serveur pendant que l'écran le déclarait recevable, sans
+      # que le refus nomme sa cause. Un import bureautique — plusieurs dizaines
+      # de fichiers en un lot — franchissait la même barrière.
+      #
+      # 128 Mo laisse passer un lot d'import entier et garde une borne : le
+      # plafond par pièce reste celui de la console, éprouvé en base à chaque
+      # dépôt, et c'est lui qui refuse en nommant sa cause.
+      BODY_SIZE_LIMIT: 128M
     volumes:
       - fichiers:/var/lib/codicillus/fichiers
     ports:
