@@ -55,6 +55,7 @@
  * l'écriture non inversible. `serialiserEnMarkdown` lève alors `MarkdownNonRepresentable`.
  */
 import {
+	RANG_DE_MARQUE,
 	analyserDocument,
 	type Alerte,
 	type Bloc,
@@ -587,9 +588,55 @@ function booleen(valeur: string | undefined): unknown {
 }
 
 function texteAvecMarques(texte: string, marques: readonly unknown[]): unknown {
-	return marques.length === 0
+	/* LA MARQUE `code` CHASSE LES AUTRES, PARCE QUE LE SCHÉMA L'EXIGE — elle est
+	   déclarée `excludes` en ProseMirror, et un nœud qui la porte À CÔTÉ d'une
+	   autre fait échouer la VALIDATION DU DOCUMENT ENTIER.
+
+	   Ce n'est pas une subtilité de schéma : `**du `code` en gras**` et
+	   `` [`x`](adresse) `` s'écrivent tous les jours, le lecteur les composait
+	   fidèlement, et la note entière était alors REFUSÉE À L'IMPORT sous le motif
+	   « contenu illisible » — quinze fichiers sur deux cent cinquante-cinq d'un
+	   corpus réel, tous du Markdown parfaitement valide.
+
+	   L'emboîtement est donc APLATI ICI, au seul endroit qui compose un nœud de
+	   texte : le rendu faisait déjà ce choix (`spanDeCode()` ignore les autres
+	   marques), et les deux se contredisaient.
+
+	   ET L'ORDRE EST NORMALISÉ, POUR LA MÊME RAISON ET AU MÊME ENDROIT. La règle 7
+	   refuse un document dont les marques sortent de l'ordre de déclaration, et
+	   c'est juste POUR UN DOCUMENT ÉCRIT PAR LE PRODUIT : deux ordres y seraient
+	   deux écritures d'une seule chose. Mais l'ordre des marques d'un nœud
+	   ProseMirror est celui d'un ENSEMBLE, pas d'un emboîtement — l'emboîtement
+	   n'existe qu'en Markdown, où `_**x**_` et `**_x_**` désignent le même texte
+	   gras et italique. Faire porter le refus à la LECTURE revenait à rejeter la
+	   note entière d'un fichier écrit ailleurs, sur une différence sans contenu :
+	   onze fichiers d'un corpus réel, tous du Markdown ordinaire.
+
+	   Le tri est donc à la lecture, et LE REFUS RESTE À L'ÉCRITURE — un document
+	   mal ordonné que le produit composerait est toujours refusé par le schéma. */
+	const retenues = marques.some((m) => typeDeMarque(m) === 'code')
+		? [{ type: 'code' }]
+		: [...marques].sort((g, d) => rangDe(g) - rangDe(d));
+	return retenues.length === 0
 		? { type: 'text', text: texte }
-		: { type: 'text', text: texte, marks: [...marques] };
+		: { type: 'text', text: texte, marks: retenues };
+}
+
+/** Le type d'une marque en cours de composition — elles voyagent en `unknown`. */
+function typeDeMarque(marque: unknown): string {
+	return typeof marque === 'object' && marque !== null
+		? String((marque as { type?: unknown }).type ?? '')
+		: '';
+}
+
+/**
+ * LE RANG D'UNE MARQUE, LU DANS `RANG_DE_MARQUE` ET JAMAIS RECOPIÉ. Un type que la
+ * table ne porte pas se range en queue : le schéma le refusera pour ce qu'il est —
+ * une marque inconnue —, et non pour un ordre qui n'aurait rien voulu dire.
+ */
+function rangDe(marque: unknown): number {
+	const rang = (RANG_DE_MARQUE as Record<string, number | undefined>)[typeDeMarque(marque)];
+	return rang ?? Number.MAX_SAFE_INTEGER;
 }
 
 /** La longueur de la suite d'accents graves qui commence en `depuis`. */
@@ -814,15 +861,24 @@ function lireConteneur(c: Curseur, cloture: string, nom: string, attributs: stri
 }
 
 function lireBlocCloture(c: Curseur, cloture: string, information: string): unknown {
-	const ouverture = numero(c);
+	/* AUCUN NUMÉRO DE LIGNE N'EST RETENU ICI : la seule sortie qui en avait besoin
+	   était le refus du bloc non refermé, et ce refus n'existe plus. */
 	c.i += 1;
 	const dedans: string[] = [];
 	while (c.i < c.lignes.length && c.lignes[c.i] !== cloture) {
 		dedans.push(c.lignes[c.i] as string);
 		c.i += 1;
 	}
-	if (c.i >= c.lignes.length) throw new MarkdownInvalide(ouverture, 'bloc clôturé non refermé');
-	c.i += 1;
+	/* LA FIN DU DOCUMENT REFERME LE BLOC, ELLE NE LE CASSE PAS. CommonMark le dit :
+	   « the fenced code block ends at the end of the containing block ». Un fichier
+	   dont la clôture manque — une frappe avalée, un export tronqué — est du
+	   Markdown VALIDE, et le refuser rejetait la note entière sous « contenu
+	   illisible », sans que rien ne nomme la ligne fautive.
+
+	   LE CONTENU DÉJÀ LU EST GARDÉ : ce qui a été écrit avant la fin du fichier est
+	   ce que l'auteur a écrit. `c.i` est au bout, il n'y a pas de ligne d'attributs
+	   à lire au-delà, et `attributsSuivants()` rend l'ensemble vide. */
+	if (c.i < c.lignes.length) c.i += 1;
 	const attrs = attributsSuivants(c);
 	const texte = dedans.join('\n');
 	if (attrs['alternative'] !== undefined) {
@@ -1140,4 +1196,47 @@ export function analyserMarkdown(texte: string): Document {
  */
 export function markdownDeFormulaire(texte: string): string {
 	return texte.replace(/\r\n/g, '\n');
+}
+
+/**
+ * L'expression d'une ligne qui n'est QU'UNE IMAGE SANS ALTERNATIVE : le point
+ * d'exclamation, les deux crochets vides, puis la source entre parenthèses jusqu'au
+ * bout de la ligne. Le groupe capture la source.
+ */
+const IMAGE_SANS_ALTERNATIVE = /^!\[\]\((.+)\)$/;
+
+/**
+ * LE MARKDOWN TEL QU'UN FICHIER ÉTRANGER L'APPORTE — et la seule chose que cette
+ * fonction défait : l'image dont l'alternative textuelle est vide.
+ *
+ * `P-06` l'exige non vide sur tout contenu graphique, et le schéma refuse le
+ * document sans elle. LE REFUS EST JUSTE POUR CE QUE LE PRODUIT ÉCRIT : son éditeur
+ * demande l'alternative, et une image posée sans elle est un manquement que rien ne
+ * doit laisser passer. IL NE L'EST PAS POUR CE QU'IL LIT : un fichier écrit ailleurs
+ * porte des images sans alternative, et refuser le document ENTIER pour cela ne rend
+ * l'image accessible à personne — il fait perdre la note.
+ *
+ * L'ALTERNATIVE DE SECOURS EST LE NOM DU FICHIER POINTÉ, jamais un texte inventé :
+ * c'est la seule description que le document porte, elle se lit comme le pis-aller
+ * qu'elle est, et elle se corrige dans l'éditeur.
+ *
+ * POURQUOI PAS DANS `analyserMarkdown()` : pour la raison qui y garde déjà la
+ * normalisation des fins de ligne — l'analyseur tient les refus À L'ENTRÉE, et une
+ * réparation posée en son sein les rendrait INERTES pour tout le monde, l'éditeur
+ * compris. La réparation est donc à la FRONTIÈRE D'IMPORT, et son unique lecteur est
+ * le classement d'un lot.
+ */
+export function markdownImporte(texte: string): string {
+	return texte
+		.split('\n')
+		.map((ligne) => {
+			const image = IMAGE_SANS_ALTERNATIVE.exec(ligne);
+			if (image === null) return ligne;
+			const source = image[1] as string;
+			const nom = source.slice(source.lastIndexOf('/') + 1);
+			/* Une source qui ne laisse aucun nom — elle finit par une barre — n'a rien
+			   à donner : la ligne repart telle quelle, et le schéma la refusera. */
+			return nom === '' ? ligne : `![${nom}](${source})`;
+		})
+		.join('\n');
 }
