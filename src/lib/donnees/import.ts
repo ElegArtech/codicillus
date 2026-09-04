@@ -34,7 +34,7 @@ import {
 	typesDeRelation
 } from '../base/schema';
 import type { Document } from '../contenu/document';
-import { analyserMarkdown } from '../contenu/markdown';
+import { analyserMarkdown, markdownImporte } from '../contenu/markdown';
 import { entretenirLIndex } from '../recherche/entretien';
 import { identifiantLisible } from '../rangement/adresses';
 import { PROFONDEUR_MAX } from './rangement';
@@ -766,6 +766,22 @@ export interface ContexteDeClassement {
 	 */
 	readonly notesDeLaCible?: ReadonlyMap<string, string> | undefined;
 	/**
+	 * LA MÊME CIBLE, PRISE PAR L'AUTRE BOUT : la note rangée à une PLACE et portant un
+	 * TITRE, indexée par `clePlaceEtTitre()`. `notesDeLaCible` va de l'identifiant vers
+	 * la place, et ne sait donc répondre qu'à « la note nommée ainsi est-elle ici ? ».
+	 *
+	 * ELLE NE RÉPOND PAS À LA QUESTION DU RÉIMPORT, et c'est le défaut qu'elle a coûté :
+	 * une note née d'une COLLISION porte un identifiant suffixé — `offre-2` pour le
+	 * second `offre.md` d'un lot —, que son titre ne redonne pas. Au réimport, le
+	 * fichier retrouvait `offre` occupé par une note rangée ailleurs, ne se
+	 * reconnaissait dans aucune ligne, et repartait en `offre-3` : le lot rejoué
+	 * DOUBLAIT ses notes homonymes. Mesuré sur un corpus réel — vingt-trois notes de
+	 * plus sur deux domaines, pour deux lots rejoués à l'identique.
+	 *
+	 * VIDE PAR DÉFAUT : sans elle, la reconnaissance retombe sur l'identifiant seul.
+	 */
+	readonly notesParPlaceEtTitre?: ReadonlyMap<string, string> | undefined;
+	/**
 	 * Le verdict du service pour chaque fichier de la voie « service ». Établi AVANT
 	 * le classement, qui est synchrone et n'a pas de réseau : c'est ce qui en fait une
 	 * décision pure, et ce qui laisse la simulation faire exactement l'import réel.
@@ -805,12 +821,27 @@ export function identifiantDuFichier(
 	segments: readonly string[],
 	pris: ReadonlySet<string>,
 	notesDeLaCible: ReadonlyMap<string, string>,
-	rang: number
+	rang: number,
+	notesParPlaceEtTitre: ReadonlyMap<string, string> = new Map()
 ): string {
+	/* LA NOTE RANGÉE ICI ET PORTANT CE TITRE, D'ABORD — c'est elle que le fichier
+	   met à jour, quel que soit l'identifiant qu'une collision lui a donné. */
+	const deja = notesParPlaceEtTitre.get(clePlaceEtTitre(segments, titre));
+	if (deja !== undefined) return deja;
+
 	const racine = identifiantLisible(titre) || `note-${rang}`;
 	const place = notesDeLaCible.get(racine);
 	if (place !== undefined && place === segments.join('/')) return racine;
 	return identifiantLibre(titre, pris, rang);
+}
+
+/**
+ * La clé d'une note dans son sous-arbre : sa place, puis son titre. Le séparateur est
+ * un caractère qu'aucun nom de dossier ni titre ne porte — une barre ferait d'un titre
+ * contenant une barre la note d'un dossier qui n'existe pas.
+ */
+export function clePlaceEtTitre(segments: readonly string[], titre: string): string {
+	return segments.join('/') + '\u0000' + titre;
 }
 
 /**
@@ -847,6 +878,7 @@ export function classerLeLot(
 ): PlanDImport {
 	const pris = new Set(contexte.identifiantsPris);
 	const dansLaCible = contexte.notesDeLaCible ?? new Map<string, string>();
+	const dansLaCibleParPlace = contexte.notesParPlaceEtTitre ?? new Map<string, string>();
 	const lignes: LigneDePlan[] = [];
 	const cheminsVus = new Set<string>();
 
@@ -939,7 +971,10 @@ export function classerLeLot(
 		const entete = detacherLEnTete(texte);
 		let corps: Document;
 		try {
-			corps = analyserMarkdown(entete.texte);
+			/* LA FRONTIÈRE D'IMPORT — voir `markdownImporte()`. Un fichier écrit
+			   ailleurs n'a pas à tenir les refus que le produit s'impose à lui-même
+			   quand ces refus ne coûtent que la note. */
+			corps = analyserMarkdown(markdownImporte(entete.texte));
 		} catch {
 			/* RG-M12-04 : le lot continue. La cause technique ne remonte pas —
 			   STACK §4.7, « aucune trace technique ne remonte à l'interface ». */
@@ -972,7 +1007,7 @@ export function classerLeLot(
 		   le corpus en désigne une seule. */
 		const identifiant =
 			entete.identifiant === null
-				? identifiantDuFichier(titre, segments, pris, dansLaCible, rang + 1)
+				? identifiantDuFichier(titre, segments, pris, dansLaCible, rang + 1, dansLaCibleParPlace)
 				: entete.identifiant;
 		pris.add(identifiant);
 
