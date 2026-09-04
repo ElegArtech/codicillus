@@ -16,9 +16,15 @@
  * octet ; 200 pour les octets ; 500 quand la ligne est en base, l'appelant y a droit, et
  * l'entrepôt ne porte pas les octets — CE N'EST PAS UN CAS D'`ADR-007`.
  *
- * LES IMAGES SONT SERVIES `inline`, TOUT LE RESTE `attachment` : `M04.7` décrit un
- * panneau de TÉLÉCHARGEMENT, mais `M04.6` compte l'IMAGE parmi les constructions d'un
- * corps. LE TYPE DE MÉDIA N'EST JAMAIS DEVINÉ, et le refus de reniflement l'accompagne.
+ * CE QUI SE LIT EN PLACE EST SERVI `inline`, TOUT LE RESTE `attachment` : `M04.7`
+ * décrit un panneau de TÉLÉCHARGEMENT, mais `M04.6` compte l'IMAGE parmi les
+ * constructions d'un corps, et un PDF qu'on ne peut pas lire sans le sortir de
+ * l'application n'est pas lu — il est exporté. LE PRÉDICAT N'EST PAS ÉCRIT ICI :
+ * `seLitEnLigne()` le porte, et le panneau de la note pose SES affordances sur le
+ * même (`P-01`) — un `attachment` déclenche un téléchargement jusque dans un cadre,
+ * donc une visionneuse branchée sur une disposition contraire resterait blanche.
+ *
+ * LE TYPE DE MÉDIA N'EST JAMAIS DEVINÉ, et le refus de reniflement l'accompagne.
  * PAS DE CACHE PARTAGÉ : il rendrait `RG-M04-08` inopérante par un en-tête.
  */
 import { error } from '@sveltejs/kit';
@@ -26,11 +32,9 @@ import { env } from '$env/dynamic/private';
 import { basePartagee } from '$lib/base/acces';
 import { resoudreUnePieceJointe } from '$lib/donnees/edition';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
+import { seLitEnLigne } from '$lib/fichiers/affichage';
 import { lireLesOctets, racineDesFichiers } from '$lib/fichiers/entrepot';
 import type { RequestHandler } from './$types';
-
-/** Le groupe de types de média qui s'affichent à leur place dans un corps. */
-const PREFIXE_DES_IMAGES = 'image/';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const resolue = await resoudreUnePieceJointe(basePartagee(), {
@@ -51,7 +55,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		);
 	}
 
-	const enLigne = piece.typeMedia.startsWith(PREFIXE_DES_IMAGES);
+	const enLigne = seLitEnLigne(piece.typeMedia);
 	return new Response(octets, {
 		status: 200,
 		headers: new Headers({
