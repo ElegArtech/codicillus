@@ -1,6 +1,6 @@
 # Où reprendre
 
-*État au 1er septembre 2026. Ce fichier ne dit que ce qui a été **ouvert dans un navigateur**,
+*État au 4 septembre 2026. Ce fichier ne dit que ce qui a été **ouvert dans un navigateur**,
 sur une base migrée jamais semée. Ce qu'un contrôle déclare n'y entre pas.*
 
 ```
@@ -12,6 +12,25 @@ aiguilles       = 0        111 aiguilles, deux zones du paquet
 ```
 
 ---
+
+## Ce que le 4 septembre a réparé
+
+- **Il n'y avait aucune sauvegarde.** `RG-NF-09` porte sur deux éléments — la base et le volume
+  `fichiers` — et rien ne les copiait : ni crontab, ni tâche systemd, sur une instance qui tourne
+  depuis quatre jours. Un timer les archive désormais chaque nuit, avec rattrapage si la machine
+  était éteinte. Les deux archives sont **relues juste après leur écriture**, par les outils qui
+  les restaureront : une sauvegarde vide sort non-zéro et se voit dans `systemctl status`, au lieu
+  de se découvrir le jour du sinistre. `outils/sauvegarder.sh`, `outils/restaurer.sh`.
+- **Et elle a été rejouée**, ce qui est l'autre moitié de l'exigence. Un univers, un domaine, une
+  note et un fichier créés par le produit sur l'instance de recette, sauvegardés, retrouvés dans
+  une base d'épreuve jetable, puis effacés par la restauration du jeu précédent : l'instance est
+  revenue à son état d'avant, l'index de recherche compris. **Une sauvegarde qu'on n'a pas
+  restaurée n'est pas une sauvegarde.**
+- **Un domaine sans le module `dossiers` ne se partageait plus.** Décocher la case en console
+  fermait la page de la racine — la seule d'où un droit s'accorde à un compte —, et elle rendait
+  404 à l'administrateur compris. Le module gouverne l'ARBORESCENCE, pas les droits : la racine
+  reste servie sans lui, les trois gestes de rangement refusent, et « Nouveau sous-dossier » est
+  omis comme « Renommer » et « Supprimer » le sont déjà là.
 
 ## Ce que la veille a trouvé, et qui était faux depuis longtemps
 
@@ -79,24 +98,25 @@ Elle tourne sur un VPS, derrière un tunnel — l'accès et l'exploitation sont 
 `codicillus-vpn/ACCES.md`, hors dépôt. Au 1er septembre elle porte ce code, ses migrations sont
 appliquées jusqu'à `013`, son index de recherche est posé, et elle est vide de données.
 
-**AUCUNE SAUVEGARDE N'EST PLANIFIÉE**, et c'est ce qui manque de plus urgent. `RG-NF-09` porte
-sur deux éléments — la base **et** le volume `fichiers` — et aucune tâche périodique ne les
-copie. Une restauration n'a jamais été éprouvée non plus : une sauvegarde qu'on n'a pas rejouée
-n'est pas une sauvegarde. C'est le seul manque de cette instance dont l'absence ne se remarque
-qu'au moment où il est trop tard.
+**LA SAUVEGARDE EST POSÉE** depuis le 4 septembre — `codicillus-sauvegarde.timer`, chaque nuit à
+2 h 30, un jeu par dossier horodaté sous `/var/sauvegardes/codicillus`, quatorze quotidiennes puis
+les mensuelles sur six mois. Elle a été restaurée pour de vrai le jour où elle a été posée.
 
-Elle est aussi restée vingt-deux heures indisponible après un redémarrage du VPS, sans que
-personne le sache. Le défaut applicatif est réparé — le serveur survit désormais à la perte de sa
-base et se rétablit seul —, mais **rien ne surveille cette instance** : la panne a été trouvée
-parce qu'on est allé voir.
+Elle est restée vingt-deux heures indisponible après un redémarrage du VPS, sans que personne le
+sache. Le défaut applicatif est réparé — le serveur survit désormais à la perte de sa base et se
+rétablit seul —, mais **rien ne surveille cette instance** : la panne a été trouvée parce qu'on
+est allé voir. C'est le manque qui reste, et il est difficile à combler d'ici : l'instance n'est
+joignable que par le tunnel, donc aucun service extérieur ne peut l'interroger. Seul un battement
+SORTANT — le VPS annonce qu'il est vivant, et l'alerte se déclenche quand il se tait — détecte la
+mort de la machine. Il demande une destination, et donc une décision.
 
 ## Ce qui reste
 
 - **`docs/routes.md`, `DESIGN.md`, `releve-vues.md` et `arbitrages.md`** décrivent l'état d'avant
   et n'ont pas été remesurés. `routes.md` fait toujours autorité sur les adresses, le code le
   cite ; les trois autres sont de l'historique.
-- Décocher le module `dossiers` d'un domaine fait reperdre la page d'où les droits s'accordent.
-  L'écran l'annonce désormais, mais c'est un piège de conception qui mériterait mieux.
+- **Rien ne surveille l'instance de recette.** Voir ci-dessus : il faut choisir où le battement
+  sortant est reçu.
 
 ---
 
@@ -117,6 +137,15 @@ pnpm test:unit      les unitaires
 
 pnpm build && node docs/traces/passage-a-froid.mjs           42 routes, base neuve
 pnpm build && node docs/traces/aiguilles-dans-le-paquet.mjs  ce qui se livre au navigateur
+```
+
+Sur le VPS, deux gestes d'exploitation de plus — ils vivent dans `outils/`, donc ils suivent le
+code et le rsync les remplace :
+
+```
+sudo outils/sauvegarder.sh              un jeu de plus, relu ; le timer le fait chaque nuit
+sudo outils/restaurer.sh --eprouver     rejoue le dernier jeu dans une base jetable, sans risque
+sudo outils/restaurer.sh --pour-de-vrai remplace la base, le volume, et réindexe
 ```
 
 Deux contrôles seulement, et ils lancent le produit plutôt que de le juger sur pièces. Le premier
