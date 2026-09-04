@@ -393,7 +393,20 @@ export interface Relation {
 	readonly type: CleDeTypeDeRelation;
 }
 
-export type FormatDImport = 'docx' | 'doc' | 'pptx' | 'pdf' | 'md' | 'txt' | 'xlsx' | 'png' | 'zip';
+export type FormatDImport =
+	| 'docx'
+	| 'doc'
+	| 'pptx'
+	| 'pdf'
+	| 'md'
+	| 'txt'
+	| 'xlsx'
+	| 'png'
+	| 'jpg'
+	| 'jpeg'
+	| 'webp'
+	| 'gif'
+	| 'zip';
 
 /** Sort réservé à un fichier du lot : converti en note, ignoré, ou en échec. */
 export type SortDeFichier = 'note' | 'ignore' | 'echec';
@@ -1987,7 +2000,14 @@ export const LOT_IMPORT: LotDImport = {
 	]
 };
 
-export const FORMATS_IMPORT: Record<FormatDImport, string> = {
+/**
+ * LES FORMATS QUE LA MAQUETTE DESSINE — jeu de démonstration, et elle en dessine
+ * NEUF. La table du PRODUIT est `LIBELLE_PAR_FORMAT` (`$lib/donnees/import`), et
+ * elle est complète : le produit reconnaît des formats d'image que la maquette
+ * n'a jamais montrés. `Partial` dit exactement cela, plutôt que d'obliger ce jeu
+ * à inventer des lignes que la référence ne porte pas.
+ */
+export const FORMATS_IMPORT: Partial<Record<FormatDImport, string>> = {
 	docx: 'Traitement de texte',
 	doc: 'Traitement de texte (ancien)',
 	pptx: 'Présentation',

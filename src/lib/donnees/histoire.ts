@@ -468,6 +468,10 @@ export function blocDAffichage(bloc: Bloc): BlocDeContenu {
 			return { cle, type: 'tableau', ...tableauDAffichage(bloc) };
 		case 'image':
 			return { cle, type: 'figure', legende: bloc.attrs.legende ?? bloc.attrs.alt };
+		case 'pieceJointe':
+			/* Une pièce montrée en place se compare par son NOM : c'est ce qui change
+			   d'une version à l'autre — le fichier, lui, ne se diffe pas. */
+			return { cle, type: 'figure', legende: bloc.attrs.nom };
 		case 'diagramme':
 			return { cle, type: 'figure', legende: bloc.attrs.legende ?? bloc.attrs.alternative };
 		case 'horizontalRule':

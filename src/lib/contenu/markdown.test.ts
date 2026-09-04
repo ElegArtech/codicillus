@@ -160,6 +160,24 @@ describe('les formes écrites — ARB-049, et ce qui est épinglé ne bougera pa
 		);
 	});
 
+	it('la pièce jointe montrée en place s’écrit et se relit', () => {
+		/* Elle n'est PAS une image : le marqueur les sépare, et le type de média
+		   voyage — c'est lui qui décide du rendu, jamais le suffixe du nom. */
+		const bloc = {
+			type: 'pieceJointe',
+			attrs: {
+				src: '/notes/annexe-5/pieces-jointes/Annexe%205.pdf',
+				nom: 'Annexe 5.pdf',
+				typeMedia: 'application/pdf'
+			}
+		};
+		const ecrit =
+			'!piece-jointe[Annexe 5.pdf](/notes/annexe-5/pieces-jointes/Annexe%205.pdf)\n' +
+			'{type-media="application/pdf"}\n';
+		expect(serialiserEnMarkdown(doc(bloc))).toBe(ecrit);
+		expect(analyserMarkdown(ecrit)).toEqual(doc(bloc));
+	});
+
 	it('l’alerte est un conteneur, et ses trois attributs y sont', () => {
 		expect(
 			serialiserEnMarkdown(
