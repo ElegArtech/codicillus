@@ -17,6 +17,7 @@ import {
 	MarkdownNonRepresentable,
 	analyserMarkdown,
 	markdownDeFormulaire,
+	markdownImporte,
 	serialiserEnMarkdown
 } from './markdown';
 
@@ -104,19 +105,22 @@ describe('les formes écrites — ARB-049, et ce qui est épinglé ne bougera pa
 		expect(analyserMarkdown('**_x_**')).toEqual(gras_italique);
 	});
 
-	it('l’ordre INVERSE n’est plus un document — règle 7, ARB-056', () => {
-		/* Ce cas épinglait les DEUX ordres jusqu'au 20 août 2026, l'un et l'autre
-		   sérialisés puis relus. `ARB-056` a fait de l'ordre une règle de forme
-		   canonique : « le schéma refuse tout autre ordre, il ne réordonne pas ».
-		   Les deux entrées du convertisseur validant, le refus se prononce des
-		   deux côtés.
-		
-		   LE TIRET BAS RESTE NÉCESSAIRE, et c'est ce que ce cas prouve encore : il
-		   rend les deux imbrications DISTINGUABLES, donc le « _**x**_ » d'un
-		   fichier importé relisible — et par là refusable. Avec trois astérisques
-		   des deux côtés, la relecture aurait rendu un ordre ou l'autre sans que
-		   rien ne le dise, et le refus n'aurait jamais eu lieu. */
-		expect(() => analyserMarkdown('_**x**_')).toThrow(DocumentInvalide);
+	it('l’ordre INVERSE est REFUSÉ À L’ÉCRITURE, et NORMALISÉ À LA LECTURE — règle 7, ARB-056', () => {
+		/* `ARB-056` a fait de l'ordre des marques une règle de forme canonique :
+		   « le schéma refuse tout autre ordre, il ne réordonne pas ». Elle tient
+		   pour ce que LE PRODUIT ÉCRIT — deux ordres y seraient deux écritures
+		   d'une seule chose —, et le sérialiseur la fait respecter.
+
+		   ELLE NE TIENT PAS POUR CE QUE LE PRODUIT LIT, et c'est ce que ce cas a
+		   changé le 4 septembre 2026. `_**x**_` est du Markdown ordinaire, écrit
+		   par tous les éditeurs ; l'ordre d'emboîtement n'y porte aucun sens que
+		   l'ensemble de marques d'un nœud ProseMirror puisse perdre. Le refus à la
+		   lecture faisait rejeter LA NOTE ENTIÈRE à l'import, sous « contenu
+		   illisible » — onze fichiers d'un corpus réel. Le lecteur normalise donc,
+		   et les deux emboîtements rendent le même document. */
+		const canonique = doc(p(t('x', { type: 'bold' }, { type: 'italic' })));
+		expect(analyserMarkdown('_**x**_')).toEqual(canonique);
+		expect(analyserMarkdown('**_x_**')).toEqual(canonique);
 		expect(() =>
 			serialiserEnMarkdown(doc(p(t('x', { type: 'italic' }, { type: 'bold' }))))
 		).toThrow(DocumentInvalide);
@@ -321,14 +325,44 @@ describe('ce qui est REFUSÉ, et jamais réparé', () => {
 		);
 	});
 
-	it('un bloc clôturé non refermé', () => {
-		expect(() => analyserMarkdown(CLOTURE + 'bash\nls')).toThrow(MarkdownInvalide);
+	/* CE CAS A CHANGÉ DE CAMP, ET IL N'EST PLUS ICI : voir « la fin du document
+	   referme le bloc » plus bas. Un fichier réel dont la clôture manquait faisait
+	   refuser la note ENTIÈRE à l'import, sous « contenu illisible ». */
+
+	it('la fin du document referme le bloc clôturé — CommonMark, et un fichier réel', () => {
+		/* « The fenced code block ends... at the end of the containing block. » Le
+		   contenu déjà lu est GARDÉ : c'est ce que l'auteur a écrit. */
+		expect(analyserMarkdown(CLOTURE + 'bash\nls')).toEqual(
+			doc({ type: 'codeBlock', attrs: { language: 'bash' }, content: [t('ls')] })
+		);
 	});
 
 	it('LA SEULE LIMITE DE REPRÉSENTATION : un span de code fait d’espaces, levée bruyamment', () => {
 		expect(() => serialiserEnMarkdown(doc(p(t('  ', { type: 'code' }))))).toThrow(
 			MarkdownNonRepresentable
 		);
+	});
+});
+
+describe('la frontière d’import — ce qu’un fichier écrit ailleurs apporte', () => {
+	it('donne au fichier son nom pour alternative, plutôt que de perdre la note', () => {
+		/* `P-06` veut l'alternative non vide, et le schéma la refuse absente. Un
+		   fichier écrit ailleurs en porte : refuser le document entier ne rend
+		   l'image accessible à personne, il fait perdre la note. */
+		expect(markdownImporte('![](media/schema-reseau.png)')).toBe(
+			'![schema-reseau.png](media/schema-reseau.png)'
+		);
+		expect(() => analyserMarkdown('![](media/schema-reseau.png)')).toThrow(DocumentInvalide);
+		expect(() => analyserMarkdown(markdownImporte('![](media/schema-reseau.png)'))).not.toThrow();
+	});
+
+	it('ne touche pas une image qui porte déjà son alternative', () => {
+		const posee = '![Le schéma du réseau](media/schema-reseau.png)';
+		expect(markdownImporte(posee)).toBe(posee);
+	});
+
+	it('laisse au schéma une source qui ne donne aucun nom', () => {
+		expect(markdownImporte('![](media/)')).toBe('![](media/)');
 	});
 });
 
