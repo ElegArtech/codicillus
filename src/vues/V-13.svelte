@@ -157,6 +157,12 @@
 		readonly destinations: readonly DestinationReelle[];
 		readonly dossierId: string;
 		readonly parentId: string;
+		/**
+		 * Le module `dossiers` du domaine. Faux, la page est celle de la RACINE — la
+		 * seule servie sans le module, parce que les droits s'y accordent — et
+		 * l'arborescence n'existe pas : « Nouveau sous-dossier » est omis.
+		 */
+		readonly rangementActif: boolean;
 	}
 
 	const {
@@ -212,6 +218,11 @@
 	 */
 	const gestionnaire = $derived(niveau === 'gestionnaire');
 	const redacteur = $derived(niveau === 'gestionnaire' || niveau === 'redacteur');
+
+	/* LE RANGEMENT EST-IL ACTIF ? Sans `rangement`, l'arbre est déduit des notes et
+	   il n'y a aucun module à consulter : c'est le mode du gel, l'arborescence est
+	   celle du corpus. Avec lui, le domaine décide. */
+	const arborescence = $derived(rangement === null || rangement.rangementActif);
 
 	/* Arborescence — DEUX SOURCES, UNE SEULE STRUCTURE. Sans `rangement`, l'arbre
 	   est déduit du rangement réel des NOTES, comme au gel : un chemin que le
@@ -618,10 +629,15 @@
 					étaient rendus et ne pouvaient rien produire. « Nouveau sous-dossier » et
 					« Gérer les droits » marchent sur la racine — c'est même le seul endroit d'où
 					le premier dossier d'un domaine se crée.
+
+					ET « NOUVEAU SOUS-DOSSIER » EST OMIS SANS LE MODULE `dossiers` : la racine
+					reste servie pour que les droits s'y accordent, mais l'arborescence est
+					éteinte et l'action refuse. « Gérer les droits » reste — c'est tout l'objet
+					de cette page-là.
 				-->
-				{#if gestionnaire}<button class="btn si-gestionnaire" id="a-sousdossier"
-						>Nouveau sous-dossier</button
-					>
+				{#if gestionnaire}{#if arborescence}<button class="btn si-gestionnaire" id="a-sousdossier"
+							>Nouveau sous-dossier</button
+						>{/if}
 					{#if !surLaRacine}<button class="btn si-gestionnaire" id="a-renommer"
 							>Renommer ou déplacer</button
 						>{/if}
