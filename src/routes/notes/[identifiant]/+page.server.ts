@@ -210,8 +210,15 @@ function grouperLesRelations(lues: readonly RelationLue[]): readonly GroupeDeRel
 export interface PieceJointeCablee {
 	/** Le nom de FICHIER, tel que la base le porte. C'est la clé du retrait. */
 	readonly nom: string;
-	/** L'adresse de téléchargement, composée par `adresseDePieceJointe()`. */
+	/** L'adresse des octets, composée par `adresseDePieceJointe()`. */
 	readonly adresse: string;
+	/**
+	 * LE TYPE DE MÉDIA TEL QUE LA BASE LE PORTE — il décide si le panneau ouvre la
+	 * pièce dans la visionneuse ou la laisse sortir. Il est passé plutôt que déduit
+	 * du suffixe à l'écran : le suffixe est un nom, le type est ce que le dépôt a
+	 * annoncé, et les deux se contredisent régulièrement.
+	 */
+	readonly typeMedia: string;
 }
 
 interface ComplementsDeLecture {
@@ -474,7 +481,8 @@ async function complementsDeLecture(
 		   n'est pas une convention d'écran : c'est le même tableau. */
 		piecesJointes: lignesDePiece.map((pj) => ({
 			nom: pj.nom,
-			adresse: adresseDePieceJointe(lecture.note.id, pj.nom)
+			adresse: adresseDePieceJointe(lecture.note.id, pj.nom),
+			typeMedia: pj.typeMedia
 		}))
 	};
 }
