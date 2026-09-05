@@ -1034,10 +1034,6 @@ span.btn { cursor: default; pointer-events: none; }
 .dc-b:hover { background: var(--c-papier-2); }
 .dc-b input { accent-color: var(--c-accent); margin: 0; flex: none; }
 
-@media (max-width: 1240px) {
-  .app { grid-template-columns: minmax(0,1fr); }
-  .rail { display: none; }
-}
 @media (max-width: 900px) {
   .biblio { grid-template-columns: minmax(0, 1fr); }
   .sommaire-b {
