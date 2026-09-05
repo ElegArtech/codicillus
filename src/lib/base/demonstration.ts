@@ -28,7 +28,8 @@ import {
 	typesDeNote,
 	typesDeRelation,
 	univers,
-	verifications
+	verifications,
+	CONFIGURATION_PAR_DEFAUT
 } from './schema';
 import { analyserMarkdown } from '../contenu/markdown';
 import { hacherMotDePasse } from '../auth/mots-de-passe';
@@ -317,6 +318,31 @@ export async function peupler(
 			const verifieLe =
 				verifieIlYA === undefined ? null : new Date(maintenant - Number(verifieIlYA) * JOUR);
 			const revision = entete['revision-demandee'];
+			/**
+			 * LE CYCLE DE L'OPÉRATIONNEL — `014`. Sans corps opérationnel il n'y en a
+			 * pas, et `notes_operationnel_verification_coherente` le refuserait ; avec
+			 * un corps, le défaut est « vérifié à l'instant », parce que créer le
+			 * registre le vérifie. `verifie-operationnel-il-y-a-jours` déplace la date
+			 * pour que le jeu montre les deux registres dans DEUX ÉTATS DIFFÉRENTS —
+			 * ce qui est tout l'intérêt d'un cycle par registre.
+			 */
+			const verifieOperationnelIlYA = entete['verifie-operationnel-il-y-a-jours'];
+			const verifieLeOperationnel =
+				operationnel === null
+					? null
+					: new Date(
+							maintenant -
+								(verifieOperationnelIlYA === undefined ? 0 : Number(verifieOperationnelIlYA) * JOUR)
+						);
+			/* Les durées de validité : celles de l'instance, sauf mention dans
+			   l'en-tête. Une valeur nulle ou négative serait refusée par la base — le
+			   repli sur le défaut la garde hors de la transaction. */
+			const jours = (cle: string, defaut: number): number => {
+				const brut = entete[cle];
+				if (brut === undefined) return defaut;
+				const valeur = Number(brut);
+				return Number.isSafeInteger(valeur) && valeur >= 1 ? valeur : defaut;
+			};
 
 			const [posee] = await tx
 				.insert(notes)
@@ -353,9 +379,26 @@ export async function peupler(
 					signetAdresse: entete['adresse'] ?? null,
 					statut: entete['statut'] === 'brouillon' ? 'brouillon' : 'publiee',
 					verifieLe,
+					verifieLeOperationnel,
+					validiteReference: jours(
+						'validite-reference',
+						CONFIGURATION_PAR_DEFAUT.validiteReference
+					),
+					validiteOperationnel: jours(
+						'validite-operationnel',
+						CONFIGURATION_PAR_DEFAUT.validiteOperationnel
+					),
 					compteurDeConsultations: 0,
 					revisionDemandee: revision !== undefined,
 					revisionCommentaire: revision ?? null,
+					/* La demande vise le registre nommé par l'en-tête, la Référence à
+					   défaut — et rien du tout s'il n'y a pas de demande. */
+					revisionRegistre:
+						revision === undefined
+							? null
+							: entete['revision-registre'] === 'operationnel'
+								? ('operationnel' as const)
+								: ('reference' as const),
 					revisionParId:
 						entete['revision-par'] === undefined
 							? null
@@ -373,7 +416,23 @@ export async function peupler(
 			   flux d'activité de l'accueil resterait vide alors que les notes
 			   s'affichent vérifiées. */
 			if (verifieLe !== null) {
-				await tx.insert(verifications).values({ noteId, compteId: auteurId, le: verifieLe });
+				await tx.insert(verifications).values({
+					noteId,
+					compteId: auteurId,
+					registre: 'reference',
+					le: verifieLe
+				});
+				combienDeVerifications += 1;
+			}
+			/* La création du registre Opérationnel EST une vérification : le fil
+			   d'activité doit la montrer comme telle, avec son registre. */
+			if (verifieLeOperationnel !== null) {
+				await tx.insert(verifications).values({
+					noteId,
+					compteId: auteurId,
+					registre: 'operationnel',
+					le: verifieLeOperationnel
+				});
 				combienDeVerifications += 1;
 			}
 
