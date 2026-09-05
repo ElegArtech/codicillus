@@ -54,6 +54,17 @@ de `src/socle.css` et une feuille par vue.
     adresse propre, `/bibliotheque/vivacite`, ouverte à tout compte connecté.
 12. **`compte`, `univers` et `domaines` continuent de descendre par le contexte de coquille**
     (`CLE_IDENTITE`), jamais par des propriétés recopiées : six vues en dépendent.
+13. **La coquille n'a plus qu'une feuille.** Ses règles étaient recopiées à l'octet près dans les
+    trente-cinq feuilles de vue — 3 980 lignes décrivant toutes le même gabarit. Elles sont
+    remontées dans `src/socle.css`. Sans ça, refondre le rail voulait dire éditer trente-cinq
+    fichiers, et ils divergeaient au premier oubli.
+14. **Les bascules automatiques d'état ne sont pas stockées.** L'historique les montre — « Passage
+    automatique à « À vérifier » » — mais elles se DÉDUISENT du couple (vérifiée, validité). Une
+    table d'événements imposerait un ordonnanceur pour recopier ce qu'un calcul rend.
+15. **Les outils quittent le rail pour la carte de compte.** La référence ne montre ni Cartographie,
+    ni Import, ni Console dans le rail : elle les place sur les pages d'univers et de domaine. Ils
+    vivent désormais dans le menu de la carte de compte, en bas du rail — aucune adresse ne devient
+    inatteignable, c'est la seule contrainte.
 
 ## 3. Le harnais — minimum, et rien de plus
 
