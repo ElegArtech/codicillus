@@ -52,13 +52,8 @@
   border-radius: var(--r-2);
   font-size: var(--t-petit2); color: var(--c-encre-2);
 }
-.ligne-vivacite[data-attention="0"],
-.ligne-vivacite[data-attention="1"] { background: transparent; }
-.ligne-vivacite[data-attention="2"] { background: var(--c-attention-2); }
-.ligne-vivacite[data-attention="3"] { background: var(--c-arevoir-voile); }
 /* L'obsolète porte SON voile, pas celui d'« à revoir » : les deux partagent le
    degré d'attention, jamais la teinte. */
-.ligne-vivacite[data-attention="3"]:has(.glyphe--obsolete) { background: var(--c-obsolete-voile); }
 
 .ligne-vivacite__etat {
   display: inline-flex; align-items: center; gap: var(--e-2);
@@ -74,22 +69,6 @@
 .ligne-vivacite[data-attention="2"] .ligne-vivacite__echeance,
 .ligne-vivacite[data-attention="3"] .ligne-vivacite__echeance { font-weight: var(--g-fort); }
 
-.glyphe--ajour, .glyphe--bientot, .glyphe--averifier, .glyphe--arevoir, .glyphe--obsolete {
-  /* La teinte vient du socle ; ces sélecteurs ne servent qu'à la porter au
-     texte qui accompagne le glyphe, par `currentColor`. */
-  color: inherit;
-}
-.ligne-vivacite__etat.glyphe--ajour     { color: var(--c-ajour); }
-.ligne-vivacite__etat.glyphe--bientot   { color: var(--c-bientot); }
-.ligne-vivacite__etat.glyphe--averifier { color: var(--c-averifier); }
-.ligne-vivacite__etat.glyphe--arevoir   { color: var(--c-arevoir); }
-.ligne-vivacite__etat.glyphe--obsolete  { color: var(--c-obsolete); }
-.ligne-vivacite__echeance.glyphe--ajour     { color: var(--c-encre-3); }
-.ligne-vivacite__echeance.glyphe--bientot   { color: var(--c-encre-3); }
-.ligne-vivacite__echeance.glyphe--averifier { color: var(--c-averifier); }
-.ligne-vivacite__echeance.glyphe--arevoir   { color: var(--c-arevoir); }
-.ligne-vivacite__echeance.glyphe--obsolete  { color: var(--c-obsolete); }
-
 /* --------------------------------------------------------------------------
    LA FORME DE RAIL — glyphe de 12 px et durée abrégée, pour les listes denses.
    -------------------------------------------------------------------------- */
@@ -97,11 +76,6 @@
   display: inline-flex; align-items: center; gap: var(--e-2);
   font-family: var(--f-donnee); font-size: var(--t-mini);
 }
-.rail-compact.glyphe--ajour     { color: var(--c-ajour); }
-.rail-compact.glyphe--bientot   { color: var(--c-bientot); }
-.rail-compact.glyphe--averifier { color: var(--c-averifier); }
-.rail-compact.glyphe--arevoir   { color: var(--c-arevoir); }
-.rail-compact.glyphe--obsolete  { color: var(--c-obsolete); }
 
 /* --------------------------------------------------------------------------
    L'ENCADRÉ « CYCLE » — la logique dite en clair, une fois.
