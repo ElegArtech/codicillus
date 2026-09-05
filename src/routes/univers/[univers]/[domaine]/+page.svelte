@@ -7,10 +7,6 @@
 	 * de défaut les constantes de `seeds/corpus.ts`, un oubli ici servait le jeu de
 	 * démonstration en silence.
 	 *
-	 * `nombreDeDossiers` reste optionnelle, pour une raison distincte : absente, le
-	 * compteur du module « Dossiers » se déduit du rangement des notes — et un
-	 * dossier vide n'y compte pas ; c'est pourquoi le chargeur la sert.
-	 *
 	 * `modules` EST LE CATALOGUE DE LIBELLÉS DU PRODUIT, pas une donnée d'instance :
 	 * les clés actives d'un domaine viennent de `modules_de_domaine` par
 	 * `detailDomaines` (`RG-STR-06`).
@@ -19,7 +15,6 @@
 	import Vue from '../../../../vues/V-11.svelte';
 	import '../../../../vues/V-11.css';
 	import { cablerLeDomaine } from './cablage';
-	import { page } from '$app/state';
 	import { CATALOGUE_DE_MODULES } from '$lib/rangement/modules';
 	import type { PageData } from './$types';
 
@@ -28,28 +23,12 @@
 	let enveloppe: HTMLDivElement;
 
 	/**
-	 * L'UNIVERS DU DOMAINE, LU À LA LISTE DES DOMAINES, JAMAIS SUPPOSÉ — ce que fait
-	 * la vue, et pour la même raison : le segment d'adresse est un identifiant
-	 * lisible, dont le NOM ne se redérive pas. « Poste de travail » et
-	 * « poste-de-travail » ne se retrouvent pas l'un l'autre.
+	 * LE CÂBLAGE NE PORTE PLUS D'ADRESSE. Les six entrées de « Contenu du domaine »
+	 * et d'« Explorer », les trois actions du bandeau et le menu ⋯ sont des ancres
+	 * du balisage ; il ne reste à câbler que les deux sélecteurs, qui sont des
+	 * formulaires. La racine d'écoute suffit.
 	 */
-	const domaine = $derived(String(data.vecteur.dom));
-	const univers = $derived(data.domaines.find((d) => d.nom === domaine)?.univers ?? '');
-
-	/**
-	 * LES DEUX IDENTIFIANTS D'ADRESSE VIENNENT DES SEGMENTS DEMANDÉS, pas d'une
-	 * slugification des noms : ce sont ceux sur lesquels le chargeur vient de
-	 * résoudre le domaine, et ils ne suivent pas les renommages (`RG-M12-11`). Les
-	 * noms restent pour les paramètres de requête qui en attendent un.
-	 */
-	onMount(() =>
-		cablerLeDomaine(enveloppe, {
-			univers,
-			domaine,
-			universIdentifiant: page.params.univers ?? '',
-			domaineIdentifiant: page.params.domaine ?? ''
-		})
-	);
+	onMount(() => cablerLeDomaine(enveloppe));
 </script>
 
 <div bind:this={enveloppe} style="display:contents">
@@ -60,9 +39,14 @@
 		domaines={data.domaines}
 		detailDomaines={data.detailDomaines}
 		nombreDeDossiers={data.nombreDeDossiers}
-		mesures7j={data.mesures7j}
-		modifications={data.modifications}
-		revisions={data.revisions}
+		vivacites={data.vivacites}
+		mesures={data.mesures}
+		fenetreDeConsultation={data.fenetreDeConsultation}
+		activite={data.activite}
+		filtreDActivite={data.filtreDActivite}
+		derniereActiviteHeures={data.derniereActiviteHeures}
+		seuilBientot={data.seuilBientot}
+		adressesDuDomaine={data.adressesDuDomaine}
 		modules={CATALOGUE_DE_MODULES}
 	/>
 </div>

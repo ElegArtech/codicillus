@@ -325,25 +325,46 @@ const SOPHIE_AFFICHEE: CompteAffiche = {
 };
 
 describe('V-11 — page d’un domaine', () => {
-	/** Le strict nécessaire pour rendre l'écran, sans une ligne du jeu. */
+	/**
+	 * Le strict nécessaire pour rendre l'écran, sans une ligne du jeu.
+	 *
+	 * LES ADRESSES SONT UNE SOURCE, ET C'EST NOUVEAU : la vue ne les dérive plus
+	 * des noms d'affichage. `identifiantLisible()` n'est pas idempotente — un
+	 * identifiant qui porte un souligné en ressort avec un tiret —, et les quatre
+	 * sorties de « Contenu du domaine » rendaient 404 sur `audit_code`.
+	 */
+	const ADRESSES = {
+		domaine: '/univers/projets/migration-2026',
+		notes: '/univers/projets/migration-2026/notes',
+		fiches: '/univers/projets/migration-2026/notes?type=Fiche',
+		dossiers: '/univers/projets/migration-2026/dossiers/migration-2026',
+		signets: '/univers/projets/migration-2026/signets'
+	};
+
 	const SOCLE_VIDE = {
 		univers: UNIVERS_PROJETS,
 		domaines: DOMAINE_MIGRATION,
 		detailDomaines: { 'Migration 2026': { description: '', modules: ['notes'] } },
-		mesures7j: {},
-		modifications: {},
-		revisions: [],
-		modules: CATALOGUE_DE_MODULES
+		modules: CATALOGUE_DE_MODULES,
+		vivacites: {},
+		mesures: {},
+		fenetreDeConsultation: 7,
+		activite: [],
+		filtreDActivite: 'tous',
+		derniereActiviteHeures: null,
+		seuilBientot: 10,
+		nombreDeDossiers: 0,
+		adressesDuDomaine: ADRESSES
 	};
 
 	it('le domaine rendu est celui de la liste servie', async () => {
 		const b = await corps('V-11', { ...SOCLE_VIDE, notes: [] });
-		expect(b).toContain('<h1 id="titre">Migration 2026</h1>');
-		expect(b).not.toContain('<h1 id="titre">Infrastructure</h1>');
+		expect(b).toContain('>Migration 2026</h1>');
+		expect(b).not.toContain('>Infrastructure</h1>');
 	});
 
-	/* Même découpage qu'en V-10, et pour la même raison : le rail abrégé est une
-	   donnée du gel tant qu'aucun gabarit racine ne lui sert la base. */
+	/* Même découpage qu'en V-10, et pour la même raison : le rail est une donnée du
+	   gabarit racine, absent de ce harnais. */
 	it('aucune ligne du jeu de démonstration n’atteint le contenu', async () => {
 		const b = await corps('V-11', { ...SOCLE_VIDE, notes: [] });
 		const contenu = /<main[\s\S]*?<\/main>/.exec(b)?.[0] ?? '';
@@ -358,38 +379,83 @@ describe('V-11 — page d’un domaine', () => {
 		expect(b).toContain('Sophie Nguyen — menu utilisateur');
 	});
 
-	it('sans demande de révision servie, rien n’est signalé', async () => {
-		expect(await corps('V-11', { ...SOCLE_VIDE, notes: [] })).toContain('Rien de signalé');
+	/**
+	 * L'ÉTAT VIDE NOMME LE GESTE QUI DÉBLOQUE. Un domaine sans note n'a rien à
+	 * surveiller, rien à classer et rien à raconter : les trois panneaux le disent
+	 * et offrent la création de la première note, plutôt que de ne rien rendre.
+	 */
+	it('un domaine sans note dit ce qu’il n’a pas, et le geste qui débloque', async () => {
+		const b = await corps('V-11', { ...SOCLE_VIDE, notes: [] });
+		expect(b).toContain('Rien à surveiller');
+		expect(b).toContain('Aucune note à mesurer.');
+		expect(b).toContain('Créer la première note');
+		expect(b).toContain('note au total');
 	});
 
-	/* Tables de mesure vides : zéro consulté et ancienneté inconnue, jamais un
-	   chiffre repris d'ailleurs (`P-02`). */
-	it('une table de mesure vide se dit, elle ne se comble pas', async () => {
-		const notes = corpusPourVue('V-11').filter((n) => n.domaine === 'Migration 2026');
-		const b = await corps('V-11', { ...SOCLE_VIDE, notes });
-		expect(b).toContain('ligne-note__n">0 vue<');
-		expect(b).toContain('ligne-note__n">—<');
-	});
-
-	/* LE LIBELLÉ DE JOUR ZÉRO. `joursEcoules()` rend 0 en deçà de vingt-quatre
-	   heures, et la vue disait « hier » d'une note modifiée le jour même. */
-	it('une modification du jour se dit « aujourd’hui », jamais « hier »', async () => {
+	/**
+	 * LA VIVACITÉ VIENT DU CHARGEUR, ET RIEN N'EST RECALCULÉ. Une table vide ne
+	 * compte AUCUN état — elle ne retombe pas sur la fraîcheur à trois niveaux que
+	 * la note porte encore.
+	 */
+	it('les compteurs de vivacité suivent la table servie', async () => {
 		const notes = corpusPourVue('V-11').filter((n) => n.domaine === 'Migration 2026');
 		const premiere = notes[0];
 		if (premiere === undefined) throw new Error('le corpus de V-11 ne porte pas Migration 2026');
 		const b = await corps('V-11', {
 			...SOCLE_VIDE,
 			notes,
-			modifications: { [premiere.id]: 0 }
+			vivacites: { [premiere.id]: 'arevoir' }
 		});
-		expect(b).toContain("aujourd'hui");
+		expect(b).toContain('À revoir');
+		expect(b).toContain('note nécessite votre attention');
+		/* Le détail de l'alerte NOMME la note concernée. */
+		expect(b).toContain(premiere.titre);
+		expect(b).not.toContain('Bientôt à vérifier');
+	});
+
+	it('sans état servi, aucune note n’est comptée ni signalée', async () => {
+		const notes = corpusPourVue('V-11').filter((n) => n.domaine === 'Migration 2026');
+		const b = await corps('V-11', { ...SOCLE_VIDE, notes });
+		expect(b).toContain('Aucun état de vivacité mesuré.');
+		expect(b).toContain('Rien à surveiller');
+		expect(b).toContain('Vivacité non mesurée');
+	});
+
+	/* Table de mesure vide : zéro consulté, jamais un chiffre repris d'ailleurs
+	   (`P-02`). */
+	it('une table de mesure vide se dit, elle ne se comble pas', async () => {
+		const notes = corpusPourVue('V-11').filter((n) => n.domaine === 'Migration 2026');
+		const b = await corps('V-11', { ...SOCLE_VIDE, notes });
+		expect(b).toContain('ligne-note__n">0 vue<');
+	});
+
+	/* L'activité est SERVIE ; la vue n'en dérive que le libellé d'ancienneté. */
+	it('le fil rend l’activité servie, et son ancienneté en clair', async () => {
+		const b = await corps('V-11', {
+			...SOCLE_VIDE,
+			notes: [],
+			derniereActiviteHeures: 2,
+			activite: [
+				{
+					genre: 'verification',
+					objet: 'Objet de contrôle T-09',
+					note: null,
+					par: 'Zoé',
+					heures: 2
+				}
+			]
+		});
+		expect(b).toContain('Objet de contrôle T-09');
+		expect(b).toContain('par Zoé · il y a 2 h');
+		expect(b).toContain('Note vérifiée');
+		expect(b).not.toContain('Rien ne s’est encore passé dans ce domaine.');
 	});
 
 	/**
-	 * LA SECTION « ACCÈS » SUIT LES MODULES DU DOMAINE — `P-04` —, et les nomme
-	 * par le catalogue de produit, jamais par une constante du jeu.
+	 * LES TUILES SUIVENT LES MODULES DU DOMAINE — `P-04` —, et les nomment par le
+	 * catalogue de produit, jamais par une constante du jeu.
 	 */
-	it('la section « Accès » suit les modules du domaine et le catalogue', async () => {
+	it('« Contenu du domaine » suit les modules du domaine et le catalogue', async () => {
 		const b = await corps('V-11', {
 			...SOCLE_VIDE,
 			detailDomaines: {
@@ -400,6 +466,8 @@ describe('V-11 — page d’un domaine', () => {
 		expect(b).toContain(DESCRIPTION_DE_CONTROLE);
 		expect(b).toContain(`module__nom">${CATALOGUE_DE_MODULES.signets.nom}`);
 		expect(b).not.toContain(`module__nom">${CATALOGUE_DE_MODULES.notes.nom}`);
+		/* L'adresse de la tuile est celle du chargeur, pas une dérivation du nom. */
+		expect(b).toContain(`href="${ADRESSES.signets}"`);
 	});
 
 	it('une clé de module inconnue du catalogue se nomme par elle-même', async () => {
