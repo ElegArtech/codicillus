@@ -172,8 +172,7 @@
    Comprendre ce qui a changé. Deux lectures du même écart : le journal de
    modifications ligne à ligne, et la confrontation visuelle bloc à bloc.
    ========================================================================== */
-.compare {
-  max-width: 1400px; width: 100%; margin: 0 auto;
+.compare { width: 100%;
   padding: var(--e-5) var(--e-5) var(--e-8);
 }
 

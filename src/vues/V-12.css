@@ -288,8 +288,7 @@
    Parcourir et filtrer tout le contenu d'un domaine sans passer par la
    recherche. La liste est l'outil du référent qui traite une file d'obsolètes.
    ========================================================================== */
-.liste-vue {
-  max-width: 1160px; width: 100%; margin: 0 auto;
+.liste-vue { width: 100%;
   padding: var(--e-5) var(--e-5) var(--e-8);
 }
 

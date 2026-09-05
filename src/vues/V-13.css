@@ -302,8 +302,7 @@
    Le droit effectif de l'utilisateur est affiché explicitement : il commande
    tout ce qui est proposé sur cet écran.
    ========================================================================== */
-.dossier-vue {
-  max-width: 1080px; width: 100%; margin: 0 auto;
+.dossier-vue { width: 100%;
   padding: var(--e-5) var(--e-5) var(--e-8);
 }
 
