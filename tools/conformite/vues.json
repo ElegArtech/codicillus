@@ -1,0 +1,37 @@
+[
+	{ "cle": "accueil", "route": "/", "capture": "01-accueil.png" },
+	{ "cle": "univers", "route": "/univers/claude", "capture": "02-univers-claude.png" },
+	{
+		"cle": "domaine",
+		"route": "/univers/claude/audit_code",
+		"capture": "03-domaine-audit_code.png"
+	},
+	{
+		"cle": "note",
+		"route": "/notes/note-technique-claude-code-linux",
+		"capture": "04-note-claude-reference.png"
+	},
+	{
+		"cle": "operationnel",
+		"route": "/notes/note-technique-claude-code-linux?registre=operationnel",
+		"capture": "05-note-claude-operationnel.png"
+	},
+	{
+		"cle": "historique",
+		"route": "/notes/note-technique-claude-code-linux/historique",
+		"capture": "06-historique.png"
+	},
+	{ "cle": "etats", "route": "/bibliotheque/vivacite", "capture": "07-planche-etats.png" },
+	{
+		"cle": "pg",
+		"route": "/notes/n-restaurer-une-sauvegarde-postgresql",
+		"capture": "08-note-postgresql-a-revoir-sans-operationnel.png"
+	},
+	{
+		"cle": "tiroirs",
+		"route": "/notes/note-technique-claude-code-linux",
+		"capture": "09-note-900px-tiroirs.png",
+		"largeur": 900,
+		"hauteur": 1000
+	}
+]
