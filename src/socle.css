@@ -123,7 +123,13 @@
   /* --- Dimensions de structure --------------------------------------------- */
   --l-rail:     300px;   /* barre latérale gauche */
   --l-sommaire: 190px;
-  --l-lecture:  680px;   /* mesure du texte : confort de lecture, non maximisé */
+  /* LA MESURE DU TEXTE — RELATIVE, ET NON UNE LARGEUR FIXE. Une valeur en pixels
+     ne suivait ni la place disponible ni la taille de police : sur un écran large,
+     les paragraphes s'arrêtaient à 680 px pendant que les blocs de code occupaient
+     les 930 px de la colonne, et le bord en escalier se lisait comme un défaut de
+     mise en page. Elle grandit désormais avec la colonne, jusqu'à une borne de
+     lecture : au-delà d'une centaine de caractères, l'œil perd sa ligne au retour. */
+  --l-lecture:  min(100%, 120ch);
   --l-large:    900px;   /* débord des objets denses : code, tableaux, schémas */
   --l-panneaux: 340px;   /* colonne contexte, et largeur du tiroir */
   --l-barre:    52px;
