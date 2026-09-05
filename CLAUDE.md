@@ -9,8 +9,9 @@ dans un navigateur, on commite.
 
 ## Ce que fait le produit
 
-- **Chaque note affiche si elle est encore digne de confiance** — un signal de fraîcheur calculé sur
-  la date de dernière vérification, visible partout, remis au vert en un clic.
+- **Chaque note affiche si elle est encore digne de confiance** — la **vivacité**, cinq états
+  calculés sur la dernière vérification et une durée de validité PROPRE À CHAQUE REGISTRE, visible
+  partout, remise au vert en un clic.
 - **Une note porte deux registres de lecture** — *Référence* dense, *Opérationnel* pas-à-pas.
 - **Le corpus est un graphe** — notes typées (Application, Serveur, Équipement réseau, Contact),
   reliées par des relations qualifiées.
@@ -54,11 +55,22 @@ maquette, aucun document de `docs/` n'est une raison de laisser un défaut en pl
 par doctrine » a déjà coûté deux fois : dix-huit pages en 500, et un univers créé qu'aucune adresse
 n'ouvrait.
 
-**`mockups/` est la référence visuelle**, pas une loi. Les 41 vues disent à quoi ressemblent les
-écrans ; suis-les quand tu portes une vue, et écarte-t-en quand elles empêchent le produit de
-marcher. Elles ne disent rien du comportement ni des données : un bouton dessiné est un geste
-promis, le rendre inerte est un défaut. `seeds/corpus.ts` est un jeu de DÉMONSTRATION, jamais la
-vérité du produit.
+**`design_handoff_refonte_codicillus/` FAIT FOI.** C'est la référence de l'interface, et elle
+prime sur tout le reste — sur `mockups/`, sur ce que rend le produit aujourd'hui, sur ce que tu
+trouverais plus joli. L'ordre d'autorité, en cas d'écart : `README.md` du paquet > les captures de
+`captures/` > le prototype `Codicillus - Lecture de note.dc.html` > les images de `maquettes/`.
+Les deux `SPEC-*.md` font foi sur ce qu'ils couvrent — les cinq états de vivacité, le modèle et la
+navigation. Tu ne copies pas le HTML du prototype : tu recrées ses écrans dans le code du dépôt,
+avec les jetons de `src/socle.css` et une feuille par vue.
+
+**Vocabulaire à l'écran depuis la refonte : « Vivacité »**, jamais « fraîcheur ». Le code, les
+tables et les routes gardent `fraicheur` ; seuls les libellés visibles changent. Jamais « tag »,
+« espace », « document », « version opérationnelle » à l'écran.
+
+**`mockups/` est l'ANCIENNE référence visuelle** — les 41 vues d'avant la refonte. Elle reste
+vraie pour tout écran que le paquet de refonte ne couvre pas, et elle cède partout où il en parle.
+Ni l'une ni l'autre ne dit rien du comportement : un bouton dessiné est un geste promis, le rendre
+inerte est un défaut. `seeds/corpus.ts` est un jeu de DÉMONSTRATION, jamais la vérité du produit.
 
 **Pas de cérémonie.** Pas de contrat de tâche, pas de dossier d'écart, pas de nouvel arbitrage
 `ARB-xxx`, pas de journal, pas de rapport. Les dossiers d'écart, les contrats de tâche, le journal
@@ -83,7 +95,8 @@ proteste. Quatre campagnes y ont couru ; `eslint.config.js` l'interdit désormai
 
 **Note** (jamais « document », « page », « article ») · **Fiche** (une note typée) · **Registre**
 (Référence / Opérationnel) · **Univers → Domaine → Dossier (10 niveaux) → Note** · **Étiquette**
-(jamais « tag ») · **Relation** · **Signet** · **Fraîcheur** · **Vérifier** · **Console**.
+(jamais « tag ») · **Relation** · **Signet** · **Vivacité** (à l'écran) / **Fraîcheur** (dans le
+code) · **Vérifier** · **Console**.
 
 Ni dans l'interface, ni dans le code, ni dans les tables, routes, types ou noms de fichiers.
 

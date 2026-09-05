@@ -55,6 +55,22 @@ export function formaterDateCourteFr(
 }
 
 /**
+ * Date au mois abrégé : « 11 nov. 2026 ». C'est la forme des lignes de vivacité et des
+ * légendes de frise, où la forme en toutes lettres pousse la ligne au retour à la ligne.
+ */
+export function formaterDateAbregeeFr(
+	valeur: EntreeDate,
+	fuseau: string = FUSEAU_PAR_DEFAUT
+): string {
+	return new Intl.DateTimeFormat('fr-FR', {
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric',
+		timeZone: fuseau
+	}).format(versDate(valeur));
+}
+
+/**
  * Date et heure : « 18 août 2026 à 14:03 ».
  */
 export function formaterDateHeureFr(

@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./polices.css">
+<style>
+html,body{margin:0;height:100%;background:#f5f4ef;color:#16222b;font-family:"Archivo","Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:#1f5a3c;text-decoration:none}a:hover{color:#15402a;text-decoration:underline}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+*{box-sizing:border-box}
+::selection{background:#e6efe9}
+:focus-visible{outline:2px solid #1f5a3c;outline-offset:2px;border-radius:2px}
+@keyframes monte{from{opacity:0;transform:translateY(8px)}}
+</style>
+</helmet>
+<div id="app" style="display:grid;height:100vh;overflow:hidden;background:#f5f4ef;position:relative;grid-template-columns:{{ gridCols }};{{ cadreCapture }}">
+
+<!-- Voile des tiroirs -->
+<sc-if value="{{ tiroirOuvert }}" hint-placeholder-val="{{ false }}"><div onClick="{{ fermerTiroirs }}" style="position:absolute;inset:0;z-index:30;background:rgba(22,34,43,.32)"></div></sc-if>
+
+<!-- ===================== SIDEBAR GAUCHE ===================== -->
+<sc-if value="{{ montrerGauche }}" hint-placeholder-val="{{ true }}">
+<nav style="display:flex;flex-direction:column;border-right:1px solid #e3e6e1;overflow-y:auto;padding:22px 20px 20px;min-width:0;background:#f5f4ef;{{ styleGauche }}">
+  <a href="#" style="display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit">
+    <span style="width:36px;height:36px;border-radius:6px;background:#1f5a3c;color:#fcfbf8;display:grid;place-items:center;font-family:'Literata',Georgia,serif;font-weight:600;font-size:20px;flex:none">C</span>
+    <span style="display:flex;flex-direction:column;min-width:0">
+      <span style="font-family:'Literata',Georgia,serif;font-size:24px;font-weight:600;line-height:1.1;color:#1f5a3c">Codicillus</span>
+      <span style="font-size:12.5px;color:#536066;margin-top:2px">Vos connaissances. Vivantes.</span>
+    </span>
+  </a>
+
+  <label style="margin-top:22px;display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid #dfe3df;border-radius:6px;background:#fcfbf8;color:#93a2a6;cursor:text">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg>
+    <input placeholder="Rechercher..." style="flex:1;min-width:0;border:0;background:none;outline:none;font:inherit;font-size:14px;color:#16222b">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#93a2a6;border:1px solid #e3e6e1;border-radius:4px;padding:2px 6px">⌘ K</span>
+  </label>
+
+  <div style="margin-top:28px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066;padding-left:4px">Univers</div>
+  <div style="display:flex;flex-direction:column;gap:2px;margin-top:10px">
+    <sc-for list="{{ arbre }}" as="u" hint-placeholder-count="6">
+      <div style="display:flex;align-items:center;gap:6px;border-radius:6px;min-height:{{ u.hauteur }};background:{{ u.bg }};color:{{ u.couleur }};font-weight:{{ u.poids }};font-size:{{ u.taille }};padding-left:{{ u.pad }}" style-hover="background:#ecebe5">
+        <button onClick="{{ u.onToggle }}" aria-label="Déplier" style="width:20px;height:28px;display:grid;place-items:center;flex:none;color:#93a2a6;visibility:{{ u.chevron }}" style-hover="color:#16222b"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform 140ms;transform:{{ u.rotation }}"><path d="M6 3l5 5-5 5"></path></svg></button>
+        <button onClick="{{ u.onClick }}" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;padding:6px 10px 6px 0;text-align:left;color:inherit">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="flex:none;opacity:.9"><path d="{{ u.icone }}"></path></svg>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ u.nom }}</span>
+          <sc-if value="{{ u.n }}" hint-placeholder-val="{{ true }}"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#536066;font-weight:400">{{ u.n }}</span></sc-if>
+        </button>
+      </div>
+    </sc-for>
+    <button style="display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:6px;color:#536066;font-size:14px" style-hover="background:#ecebe5;color:#16222b">
+      <span style="width:22px;text-align:center;font-size:16px;line-height:1">+</span>Créer un univers
+    </button>
+  </div>
+
+  <div style="margin-top:30px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066;padding-left:4px">Récents</div>
+  <div style="display:flex;flex-direction:column;gap:2px;margin-top:10px">
+    <sc-for list="{{ recents }}" as="r" hint-placeholder-count="5">
+      <button onClick="{{ r.onClick }}" style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px;text-align:left;min-height:36px;font-size:14px;background:{{ r.bg }};color:{{ r.couleur }};font-weight:{{ r.poids }}" style-hover="background:#ecebe5">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="flex:none;opacity:.8"><path d="M4 2.5h6l2.5 2.5v8.5H4z"></path><path d="M6 8h4M6 10.5h4"></path></svg>
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.titre }}</span>
+      </button>
+    </sc-for>
+    <button style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px;color:#536066;font-size:13.5px" style-hover="background:#ecebe5;color:#16222b">
+      <span style="width:16px;text-align:center">→</span>Voir tous les récents
+    </button>
+  </div>
+
+  <div style="flex:1"></div>
+  <button style="margin-top:24px;display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #dfe3df;border-radius:8px;background:#fcfbf8;text-align:left" style-hover="border-color:#9aa7a3">
+    <span style="width:32px;height:32px;border-radius:50%;background:#1f5a3c;color:#fcfbf8;display:grid;place-items:center;font-size:12px;font-weight:600;flex:none">AB</span>
+    <span style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <span style="font-size:14px;font-weight:500">Alexandre Berge</span>
+      <span style="font-size:12px;color:#536066">alex@codicillus.dev</span>
+    </span>
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#536066" stroke-width="1.5"><path d="M4 6l4 4 4-4"></path></svg>
+  </button>
+</nav>
+</sc-if>
+
+<!-- ===================== COLONNE CENTRALE ===================== -->
+<main ref="{{ refCentre }}" style="position:relative;background:#fcfbf8;overflow-y:auto;min-width:0;display:flex;flex-direction:column">
+
+  <!-- Header -->
+  <header style="position:sticky;top:0;z-index:5;background:#fcfbf8;border-bottom:1px solid #eceee9;display:flex;align-items:center;gap:16px;padding:14px 24px;min-height:64px">
+    <sc-if value="{{ gaucheRepliee }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ ouvrirGauche }}" aria-label="Navigation" style="width:40px;height:40px;border:1px solid #dfe3df;border-radius:6px;display:grid;place-items:center;flex:none;background:#fcfbf8" style-hover="border-color:#9aa7a3"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h12M2 12h12"></path></svg></button>
+    </sc-if>
+    <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#536066;min-width:0;flex:1">
+      <button onClick="{{ ouvrirAccueil }}" style="color:#536066;display:flex;align-items:center;gap:8px" title="Accueil" style-hover="color:#1f5a3c"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 8L8 3l5.5 5M4 7v6h8V7"></path></svg><sc-if value="{{ vueAccueil }}" hint-placeholder-val="{{ false }}"><span style="color:#16222b">Accueil</span></sc-if></button>
+      <sc-if value="{{ vueUnivers }}" hint-placeholder-val="{{ false }}">
+      <span style="color:#93a2a6">›</span><span>Univers</span><span style="color:#93a2a6">›</span><span style="color:#16222b">{{ uni.nom }}</span>
+      </sc-if>
+      <sc-if value="{{ vueDomaine }}" hint-placeholder-val="{{ false }}">
+      <span style="color:#93a2a6">›</span><span>Univers</span><span style="color:#93a2a6">›</span><button onClick="{{ dom.ouvrirUnivers }}" style="color:#1f5a3c" style-hover="text-decoration:underline">{{ dom.univers }}</button><span style="color:#93a2a6">›</span><span style="color:#16222b">{{ dom.nom }}</span>
+      </sc-if>
+      <sc-if value="{{ filNote }}" hint-placeholder-val="{{ true }}">
+      <span style="color:#93a2a6">›</span>
+      <button onClick="{{ ouvrirUniversCourant }}" style="color:#1f5a3c" style-hover="text-decoration:underline">{{ note.univers }}</button>
+      <span style="color:#93a2a6">›</span>
+      </sc-if>
+      <sc-if value="{{ vueHistorique }}" hint-placeholder-val="{{ false }}"><button onClick="{{ retourNote }}" style="color:#1f5a3c" style-hover="text-decoration:underline">{{ note.slug }}</button><span style="color:#93a2a6">›</span><span style="color:#16222b">historique</span></sc-if>
+      <sc-if value="{{ vueEtats }}" hint-placeholder-val="{{ false }}"><span style="color:#16222b">planche des états de vivacité</span></sc-if>
+      <sc-if value="{{ vueNote }}" hint-placeholder-val="{{ true }}"><span style="color:#16222b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ note.slug }}</span></sc-if>
+    </div>
+    <sc-if value="{{ montrerModif }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;align-items:center;gap:10px;color:#536066;font-size:12.5px;line-height:1.35">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#1f5a3c" stroke-width="1.5"><path d="M1 10h4l2-5 3 10 2-6 1.5 3H19"></path></svg>
+      <span style="display:flex;flex-direction:column"><span style="color:#16222b">Dernière modification</span><span>{{ note.modifie }}</span></span>
+    </div>
+    </sc-if>
+    <sc-if value="{{ vueNote }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;align-items:center;gap:8px;position:relative">
+      <button style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:6px;background:#1f5a3c;color:#fcfbf8;font-weight:600;font-size:14px;min-height:40px" style-hover="background:#174631">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11z"></path></svg>Modifier
+      </button>
+      <sc-if value="{{ droiteRepliee }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ ouvrirDroite }}" aria-label="Contexte de la note" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border:1px solid #dfe3df;border-radius:6px;font-size:13.5px;background:#fcfbf8;color:#16222b" style-hover="border-color:#9aa7a3"><svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ viv.couleur }}" stroke-width="1.5"></circle><path d="{{ viv.path }}" fill="{{ viv.couleur }}"></path></svg>Contexte</button>
+      </sc-if>
+      <button onClick="{{ toggleMenu }}" aria-label="Plus d'actions" style="width:40px;height:40px;border:1px solid #dfe3df;border-radius:6px;display:grid;place-items:center;background:#fcfbf8" style-hover="border-color:#9aa7a3">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.4"></circle><circle cx="8" cy="8" r="1.4"></circle><circle cx="8" cy="13" r="1.4"></circle></svg>
+      </button>
+      <sc-if value="{{ menuOuvert }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;top:46px;right:0;width:250px;background:#fcfbf8;border:1px solid #dfe3df;border-radius:8px;box-shadow:0 6px 20px -4px rgba(22,34,43,.18),0 2px 6px rgba(22,34,43,.08);padding:6px;display:flex;flex-direction:column;animation:monte 160ms both;z-index:10">
+          <button onClick="{{ marquerVerifie }}" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:5px;text-align:left;font-size:14px;color:#1f5a3c;font-weight:500" style-hover="background:#e6efe9"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8.5l3.5 3.5L13 4.5"></path></svg>{{ libMarquer }}</button>
+          <button onClick="{{ signalerReviser }}" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:5px;text-align:left;font-size:14px" style-hover="background:#f0efe9"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5v4M8 11v.5"></path></svg>{{ libReviser }}</button>
+          <div style="height:1px;background:#eceee9;margin:6px 4px"></div>
+          <button onClick="{{ ouvrirHistorique }}" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:5px;text-align:left;font-size:14px" style-hover="background:#f0efe9">Historique des versions</button>
+          <button style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:5px;text-align:left;font-size:14px" style-hover="background:#f0efe9">Exporter</button>
+          <button style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:5px;text-align:left;font-size:14px" style-hover="background:#f0efe9">Imprimer</button>
+          <div style="height:1px;background:#eceee9;margin:6px 4px"></div>
+          <button style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:5px;text-align:left;font-size:14px;color:#a52c1b" style-hover="background:#f7e7e3">Supprimer</button>
+        </div>
+      </sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ vueRetour }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ retourNote }}" style="display:flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid #dfe3df;border-radius:6px;font-size:14px;font-weight:500;background:#fcfbf8" style-hover="border-color:#9aa7a3">← Retour à la note</button>
+    </sc-if>
+    <sc-if value="{{ vueAccueilOuUnivers }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button style="display:flex;align-items:center;gap:8px;height:40px;padding:0 16px;border:1px solid #dfe3df;border-radius:6px;font-size:14px;font-weight:500;background:#fcfbf8" style-hover="border-color:#1f5a3c;color:#1f5a3c"><span style="font-size:17px;line-height:1">+</span>Créer</button>
+        <span style="width:36px;height:36px;border-radius:50%;background:#1f5a3c;color:#fcfbf8;display:grid;place-items:center;font-size:12px;font-weight:600">AB</span>
+      </div>
+    </sc-if>
+  </header>
+
+  <!-- ===== VUE UNIVERS ===== -->
+  <sc-if value="{{ vueUnivers }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:28px clamp(20px,4vw,56px) 96px;width:100%;display:flex;flex-direction:column;gap:26px">
+
+    <!-- Bandeau -->
+    <section style="border:1px solid #e3e6e1;border-radius:10px;background:#fcfbf8;overflow:hidden">
+      <div style="display:flex;flex-wrap:wrap;gap:24px 32px;padding:30px 32px 26px;align-items:flex-start">
+        <span style="width:80px;height:80px;border-radius:10px;background:#e6efe9;display:grid;place-items:center;color:#1f5a3c;flex:none"><svg width="36" height="36" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="{{ uni.icone }}"></path></svg></span>
+        <div style="flex:1;min-width:260px;display:flex;flex-direction:column">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Univers</span>
+          <h1 style="font-family:'Literata',Georgia,serif;font-weight:600;font-size:42px;line-height:1.1;margin:8px 0 0;color:#1f5a3c;letter-spacing:-.01em">{{ uni.nom }}</h1>
+          <p style="margin:16px 0 0;font-size:16.5px;line-height:1.55;color:#46585f;max-width:min(100%,60ch);text-wrap:pretty">{{ uni.description }}</p>
+          <div style="display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:20px;font-size:14px;color:#46585f">
+            <sc-for list="{{ uni.stats }}" as="s" hint-placeholder-count="4">
+              <span style="display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#1f5a3c" stroke-width="1.4"><path d="{{ s.icone }}"></path></svg><strong style="color:#16222b;font-weight:600">{{ s.n }}</strong>{{ s.lib }}</span>
+            </sc-for>
+          </div>
+        </div>
+        <button style="display:flex;align-items:center;gap:10px;height:44px;padding:0 18px;border:1px solid #dfe3df;border-radius:8px;font-size:14px;font-weight:500;background:#fcfbf8;flex:none" style-hover="border-color:#1f5a3c;color:#1f5a3c"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4" cy="4" r="2"></circle><circle cx="12" cy="6" r="2"></circle><circle cx="7" cy="12.5" r="2"></circle><path d="M5.8 4.6l4.3 1M11 7.7l-3 3.2M5.2 5.6l1.3 5"></path></svg>Cartographie des univers <span>→</span></button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 32px;padding:16px 32px;border-top:1px solid #eceee9;font-size:15px;color:#46585f">
+        <sc-for list="{{ uni.compteurs }}" as="c" hint-placeholder-count="5">
+          <span style="display:flex;align-items:center;gap:10px"><svg width="12" height="12" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ c.couleur }}" stroke-width="1.8"></circle><path d="{{ c.path }}" fill="{{ c.couleur }}"></path></svg><strong style="font-family:'Literata',Georgia,serif;font-size:24px;font-weight:600;color:#16222b">{{ c.n }}</strong>{{ c.lib }}</span>
+        </sc-for>
+        <span style="flex:1"></span>
+        <span><strong style="font-family:'Literata',Georgia,serif;font-size:19px;font-weight:600;color:#16222b;margin-right:6px">{{ uni.total }}</strong>notes au total</span>
+      </div>
+    </section>
+
+    <!-- Domaines -->
+    <section style="border:1px solid #e3e6e1;border-radius:10px;background:#fcfbf8;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;border-bottom:1px solid #eceee9">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Domaines</span>
+        <span style="display:flex;align-items:center;gap:18px;font-size:13px;color:#536066"><span>{{ uni.nbDomaines }}</span><button style="display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border:1px solid #dfe3df;border-radius:6px;font-size:13px;color:#16222b;background:#fcfbf8" style-hover="border-color:#9aa7a3">Activité récente<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"></path></svg></button></span>
+      </div>
+      <div style="display:flex;flex-direction:column;padding:0 22px">
+        <sc-for list="{{ uni.domaines }}" as="d" hint-placeholder-count="4">
+          <button onClick="{{ d.onClick }}" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto auto auto 24px;align-items:center;gap:16px 24px;padding:16px 0;border-bottom:1px solid #f0f0ea;text-align:left;margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:6px" style-hover="background:#f5f4ef">
+            <span style="width:40px;height:40px;border-radius:8px;background:#e6efe9;display:grid;place-items:center;color:#1f5a3c"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="{{ d.icone }}"></path></svg></span>
+            <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:16px;font-weight:600">{{ d.nom }}</span><span style="font-size:13.5px;color:#536066;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ d.description }}</span></span>
+            <span style="font-size:13.5px;color:#536066;white-space:nowrap;min-width:72px"><strong style="font-family:'Literata',Georgia,serif;font-size:17px;font-weight:600;color:#16222b;margin-right:6px">{{ d.n }}</strong>{{ d.unite }}</span>
+            <span style="display:flex;align-items:center;gap:22px;min-width:0">
+              <sc-for list="{{ d.compteurs }}" as="c"><span style="display:flex;align-items:center;gap:8px;font-size:14px;min-width:44px;color:{{ c.encre }}"><svg width="10" height="10" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ c.couleur }}" stroke-width="2"></circle><path d="{{ c.path }}" fill="{{ c.couleur }}"></path></svg>{{ c.n }}</span></sc-for>
+            </span>
+            <span style="font-size:13px;color:#93a2a6;white-space:nowrap;min-width:64px;text-align:right">{{ d.dernier }}</span>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#536066" stroke-width="1.5"><path d="M6 3l5 5-5 5"></path></svg>
+          </button>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- À surveiller + activité -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:22px;align-items:start">
+      <section style="border:1px solid #e3e6e1;border-radius:10px;background:#fcfbf8;padding:20px 22px;display:flex;flex-direction:column;gap:6px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066;margin-bottom:10px">À surveiller</div>
+        <sc-for list="{{ uni.alertes }}" as="a" hint-placeholder-count="2">
+          <button style="display:flex;align-items:center;gap:16px;padding:12px 8px;border-radius:8px;text-align:left" style-hover="background:#f5f4ef">
+            <span style="width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none;background:{{ a.voile }}"><svg width="18" height="18" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ a.couleur }}" stroke-width="1.5"></circle><path d="{{ a.path }}" fill="{{ a.couleur }}"></path></svg></span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:14.5px;font-weight:500"><span style="color:{{ a.couleur }}">{{ a.n }}</span> {{ a.titre }}</span><span style="font-size:12.5px;color:#536066">{{ a.detail }}</span></span>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#536066" stroke-width="1.5"><path d="M6 3l5 5-5 5"></path></svg>
+          </button>
+        </sc-for>
+        <sc-if value="{{ uni.calme }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:14px;padding:12px 8px;font-size:14px;color:#46585f"><svg width="18" height="18" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="#1d6b4a" stroke-width="1.5"></circle><path d="M5 8.5l2 2 4-4.5" fill="none" stroke="#1d6b4a" stroke-width="1.8"></path></svg>Rien à surveiller : toutes les notes de cet univers sont à jour.</div></sc-if>
+        <button style="display:flex;align-items:center;gap:12px;margin-top:10px;padding:0 8px;font-size:13.5px;color:#16222b" style-hover="color:#1f5a3c"><span style="width:16px;text-align:center">→</span>Voir toutes les notes à surveiller</button>
+      </section>
+      <section style="border:1px solid #e3e6e1;border-radius:10px;background:#fcfbf8;padding:20px 22px;min-width:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Activité récente</span><button style="display:flex;align-items:center;gap:8px;font-size:13px;color:#536066" style-hover="color:#1f5a3c">Voir toute l'activité →</button></div>
+        <div style="display:flex;flex-direction:column">
+          <sc-for list="{{ uni.activite }}" as="a" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:start;gap:14px;padding:0 0 18px;position:relative">
+              <span style="position:absolute;left:11px;top:24px;bottom:0;width:1px;background:#e3e6e1;display:{{ a.fil }}"></span>
+              <span style="width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:{{ a.couleur }};color:#fcfbf8;position:relative"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="{{ a.icone }}"></path></svg></span>
+              <span style="display:flex;flex-direction:column;gap:3px;min-width:0;padding-top:2px"><span style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong style="font-weight:600">{{ a.type }}</strong><span style="color:#46585f"> — {{ a.objet }}</span></span><span style="font-size:12.5px;color:#536066">par {{ a.par }} · {{ a.quand }}</span></span>
+              <span style="padding:4px 10px;border-radius:5px;background:#f0efe9;font-size:12px;color:#46585f;white-space:nowrap">{{ a.badge }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===== VUE DOMAINE ===== -->
+  <sc-if value="{{ vueDomaine }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:28px clamp(20px,4vw,56px) 96px;width:100%;display:flex;flex-direction:column;gap:22px">
+
+    <!-- Bandeau -->
+    <section style="border:1px solid #e3e6e1;border-left:4px solid #1f5a3c;border-radius:10px;background:#fcfbf8;padding:30px 32px 26px;display:flex;flex-direction:column;gap:22px">
+      <div style="display:flex;flex-wrap:wrap;gap:20px 32px;align-items:flex-start">
+        <div style="flex:1;min-width:260px;display:flex;flex-direction:column">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Domaine</span>
+          <h1 style="font-family:'Literata',Georgia,serif;font-weight:600;font-size:42px;line-height:1.1;margin:8px 0 0;letter-spacing:-.01em">{{ dom.nom }}</h1>
+          <p style="margin:16px 0 0;font-family:'Literata',Georgia,serif;font-size:17px;line-height:1.55;color:#46585f">Le domaine {{ dom.nom }} de l'Univers <strong style="font-weight:600;color:#16222b">{{ dom.univers }}</strong>. {{ dom.description }}</p>
+          <div style="display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:20px;font-size:14px;color:#46585f">
+            <sc-for list="{{ dom.stats }}" as="s" hint-placeholder-count="3">
+              <span style="display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#1f5a3c" stroke-width="1.4"><path d="{{ s.icone }}"></path></svg><strong style="color:#16222b;font-weight:600">{{ s.n }}</strong>{{ s.lib }}</span>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button style="display:flex;align-items:center;gap:8px;height:40px;padding:0 18px;border-radius:6px;background:#1f5a3c;color:#fcfbf8;font-weight:600;font-size:14px" style-hover="background:#174631"><span style="font-size:17px;line-height:1">+</span>Nouvelle note</button>
+          <button style="height:40px;padding:0 18px;border:1px solid #dfe3df;border-radius:6px;font-size:14px;font-weight:500;background:#fcfbf8" style-hover="border-color:#9aa7a3">Importer</button>
+          <button style="height:40px;padding:0 18px;border:1px solid #dfe3df;border-radius:6px;font-size:14px;font-weight:500;background:#fcfbf8" style-hover="border-color:#9aa7a3">Exporter</button>
+          <button aria-label="Plus d'actions" style="width:40px;height:40px;border:1px solid #dfe3df;border-radius:6px;display:grid;place-items:center;background:#fcfbf8" style-hover="border-color:#9aa7a3"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.4"></circle><circle cx="8" cy="8" r="1.4"></circle><circle cx="13" cy="8" r="1.4"></circle></svg></button>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;border:1px solid #e3e6e1;border-radius:8px;overflow:hidden">
+        <sc-for list="{{ dom.compteurs }}" as="c" hint-placeholder-count="3">
+          <span style="display:flex;align-items:center;gap:12px;padding:14px 22px;border-right:1px solid #eceee9;font-size:14px;color:#46585f;flex:1;min-width:150px"><svg width="12" height="12" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ c.couleur }}" stroke-width="1.8"></circle><path d="{{ c.path }}" fill="{{ c.couleur }}"></path></svg><strong style="font-family:'Literata',Georgia,serif;font-size:22px;font-weight:600;color:#16222b">{{ c.n }}</strong>{{ c.lib }}</span>
+        </sc-for>
+        <span style="padding:14px 22px;font-size:14px;color:#46585f;margin-left:auto"><strong style="font-family:'Literata',Georgia,serif;font-size:18px;font-weight:600;color:#16222b;margin-right:6px">{{ dom.total }}</strong>{{ dom.totalLib }}</span>
+      </div>
+    </section>
+
+    <!-- Contenu + à surveiller -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:22px;align-items:start">
+      <section style="border:1px solid #e3e6e1;border-radius:10px;background:#fcfbf8;padding:20px 22px;display:flex;flex-direction:column;gap:20px;min-width:0">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Contenu du domaine</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px">
+          <sc-for list="{{ dom.contenu }}" as="t" hint-placeholder-count="4">
+            <button style="display:flex;flex-direction:column;gap:10px;padding:14px 14px 0;border:1px solid #e3e6e1;border-radius:8px;text-align:left;background:#fcfbf8;overflow:hidden" style-hover="border-color:#9aa7a3">
+              <span style="display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:6px;background:#f5f4ef;display:grid;place-items:center;color:#1f5a3c"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="{{ t.icone }}"></path></svg></span><span style="font-size:14px;font-weight:500">{{ t.lib }}</span></span>
+              <span style="font-family:'Literata',Georgia,serif;font-size:26px;font-weight:600;line-height:1;padding-left:2px">{{ t.n }}</span>
+              <span style="height:3px;width:100%;margin-top:4px;background:{{ t.barre }}"></span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="height:1px;background:#eceee9"></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066;margin-top:-6px">Explorer</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:-8px">
+          <button style="display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid #e3e6e1;border-radius:8px;text-align:left;background:#fcfbf8" style-hover="border-color:#9aa7a3">
+            <span style="width:36px;height:36px;border-radius:6px;background:#f5f4ef;display:grid;place-items:center;color:#1f5a3c;flex:none"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4" cy="4" r="2"></circle><circle cx="12" cy="6" r="2"></circle><circle cx="7" cy="12.5" r="2"></circle><path d="M5.8 4.6l4.3 1M11 7.7l-3 3.2M5.2 5.6l1.3 5"></path></svg></span>
+            <span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:500">Cartographie</span><span style="font-size:12.5px;color:#536066">Voir les relations et dépendances</span></span>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#536066" stroke-width="1.5"><path d="M6 3l5 5-5 5"></path></svg>
+          </button>
+          <button style="display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid #e3e6e1;border-radius:8px;text-align:left;background:#fcfbf8" style-hover="border-color:#9aa7a3">
+            <span style="width:36px;height:36px;border-radius:6px;background:#f5f4ef;display:grid;place-items:center;color:#1f5a3c;flex:none"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="3.5" cy="8" r="2"></circle><circle cx="12.5" cy="3.5" r="2"></circle><circle cx="12.5" cy="12.5" r="2"></circle><path d="M5.5 7.5l5-3M5.5 8.5l5 3"></path></svg></span>
+            <span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:500">Carte mentale</span><span style="font-size:12.5px;color:#536066">Visualiser l'arborescence du domaine</span></span>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#536066" stroke-width="1.5"><path d="M6 3l5 5-5 5"></path></svg>
+          </button>
+        </div>
+      </section>
+
+      <section style="border:1px solid #e3e6e1;border-radius:10px;background:#fcfbf8;padding:20px 22px;display:flex;flex-direction:column;gap:6px;min-width:0">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066;margin-bottom:10px">À surveiller</div>
+        <sc-for list="{{ dom.alertes }}" as="a" hint-placeholder-count="2">
+          <button style="display:flex;align-items:center;gap:16px;padding:12px 8px;border-radius:8px;text-align:left" style-hover="background:#f5f4ef">
+            <span style="width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none;background:{{ a.voile }}"><svg width="18" height="18" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ a.couleur }}" stroke-width="1.5"></circle><path d="{{ a.path }}" fill="{{ a.couleur }}"></path></svg></span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:14.5px;font-weight:500"><span style="color:{{ a.couleur }}">{{ a.n }}</span> {{ a.titre }}</span><span style="font-size:12.5px;color:#536066;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.detail }}</span></span>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#536066" stroke-width="1.5"><path d="M6 3l5 5-5 5"></path></svg>
+          </button>
+        </sc-for>
+        <sc-if value="{{ dom.calme }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:14px;padding:12px 8px;font-size:14px;color:#46585f"><svg width="18" height="18" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="#1d6b4a" stroke-width="1.5"></circle><path d="M5 8.5l2 2 4-4.5" fill="none" stroke="#1d6b4a" stroke-width="1.8"></path></svg>Rien à surveiller : toutes les notes de ce domaine sont à jour.</div></sc-if>
+        <button style="display:flex;align-items:center;gap:12px;margin-top:10px;padding:0 8px;font-size:13.5px;color:#16222b" style-hover="color:#1f5a3c"><span style="width:16px;text-align:center">→</span>Voir toutes les notes à surveiller</button>
+      </section>
+    </div>
+
+    <!-- Notes + activité -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:22px;align-items:start">
+      <section style="border:1px solid #e3e6e1;border-radius:10px;background:#fcfbf8;padding:20px 22px;min-width:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Notes les plus consultées</span><button style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#536066" style-hover="color:#1f5a3c">7 jours<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"></path></svg></button></div>
+        <div style="display:flex;flex-direction:column;margin-top:10px">
+          <sc-for list="{{ dom.notes }}" as="it" hint-placeholder-count="5">
+            <button onClick="{{ it.onClick }}" style="display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 6px;margin:0 -6px;border-radius:6px;border-bottom:1px solid #f0f0ea;text-align:left" style-hover="background:#f5f4ef">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#536066">{{ it.num }}</span>
+              <span style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font-size:14.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.titre }}</span><span style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:{{ it.couleur }}"><svg width="11" height="11" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ it.couleur }}" stroke-width="1.8"></circle><path d="{{ it.path }}" fill="{{ it.couleur }}"></path></svg>{{ it.etat }}</span></span>
+              <span style="font-size:13px;color:#536066;white-space:nowrap">{{ it.vues }}</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{ dom.vide }}" hint-placeholder-val="{{ false }}"><div style="padding:16px 6px;font-size:14px;color:#536066">Aucune note dans ce domaine pour l'instant.</div></sc-if>
+        </div>
+        <button style="display:flex;align-items:center;gap:12px;margin-top:14px;font-size:13.5px;color:#16222b" style-hover="color:#1f5a3c"><span style="width:16px;text-align:center">→</span>Voir toutes les notes les plus consultées</button>
+      </section>
+
+      <section style="border:1px solid #e3e6e1;border-radius:10px;background:#fcfbf8;padding:20px 22px;min-width:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Activité récente</span><button style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#536066" style-hover="color:#1f5a3c">Tous les événements<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"></path></svg></button></div>
+        <div style="display:flex;flex-direction:column">
+          <sc-for list="{{ dom.activite }}" as="a" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:start;gap:14px;padding:0 0 18px;position:relative">
+              <span style="position:absolute;left:11px;top:24px;bottom:0;width:1px;background:#e3e6e1;display:{{ a.fil }}"></span>
+              <span style="width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:{{ a.couleur }};color:#fcfbf8;position:relative"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="{{ a.icone }}"></path></svg></span>
+              <span style="display:flex;flex-direction:column;gap:3px;min-width:0;padding-top:2px"><span style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong style="font-weight:600">{{ a.type }}</strong><span style="color:#46585f"> — {{ a.objet }}</span></span><span style="font-size:12.5px;color:#536066">par {{ a.par }} · {{ a.quand }}</span></span>
+              <span style="padding:4px 10px;border-radius:5px;background:#f0efe9;font-size:12px;color:#46585f;white-space:nowrap">{{ a.badge }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <button style="display:flex;align-items:center;gap:12px;margin-top:6px;font-size:13.5px;color:#16222b" style-hover="color:#1f5a3c"><span style="width:16px;text-align:center">→</span>Voir toute l'activité</button>
+      </section>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===== VUE ACCUEIL ===== -->
+  <sc-if value="{{ vueAccueil }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:36px clamp(20px,4vw,56px) 96px;width:100%;display:flex;flex-direction:column;gap:22px">
+    <div>
+      <h1 style="font-family:'Literata',Georgia,serif;font-weight:600;font-size:38px;line-height:1.15;margin:0;letter-spacing:-.01em">Bonjour Alexandre.</h1>
+      <p style="margin:12px 0 0;font-family:'Literata',Georgia,serif;font-size:17px;color:#46585f"><strong style="color:#1f5a3c;font-weight:600">{{ acc.total }}</strong> notes dans votre bibliothèque, dont <strong style="color:#1f5a3c;font-weight:600">{{ acc.ajour }}</strong> sont actuellement à jour.</p>
+    </div>
+
+    <label style="display:flex;align-items:center;gap:14px;padding:12px 18px;border:1px solid #dfe3df;border-radius:8px;background:#fcfbf8;cursor:text;box-shadow:0 1px 2px rgba(22,34,43,.05)" style-hover="border-color:#9aa7a3">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#536066" stroke-width="1.5"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg>
+      <input placeholder="Rechercher une note, une fiche, un signet..." style="flex:1;min-width:0;border:0;background:none;outline:none;font-family:'Literata',Georgia,serif;font-size:17px;color:#16222b">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#536066;border:1px solid #e3e6e1;border-radius:4px;padding:3px 7px;background:#f5f4ef">⌘ K</span>
+    </label>
+
+    <!-- À surveiller -->
+    <section style="border:1px solid #e3e6e1;border-radius:10px;background:#fcfbf8;padding:22px 24px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">À surveiller</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px 28px;margin-top:16px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ acc.alertes }}" as="a" hint-placeholder-count="2">
+            <button onClick="{{ a.onClick }}" style="display:flex;align-items:center;gap:16px;padding:12px 8px;border-radius:8px;text-align:left" style-hover="background:#f5f4ef">
+              <span style="width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none;background:{{ a.voile }}"><svg width="18" height="18" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ a.couleur }}" stroke-width="1.5"></circle><path d="{{ a.path }}" fill="{{ a.couleur }}"></path></svg></span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:14.5px;font-weight:500"><span style="color:{{ a.couleur }}">{{ a.n }}</span> {{ a.titre }}</span><span style="font-size:12.5px;color:#536066">{{ a.detail }}</span></span>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#536066" stroke-width="1.5"><path d="M6 3l5 5-5 5"></path></svg>
+            </button>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;padding-top:4px">
+          <sc-for list="{{ acc.compteurs }}" as="c" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:20px 56px 1fr;align-items:center;gap:12px;padding:6px 0;font-size:14px">
+              <svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ c.couleur }}" stroke-width="1.5"></circle><path d="{{ c.path }}" fill="{{ c.couleur }}"></path></svg>
+              <span style="font-family:'Literata',Georgia,serif;font-size:19px;font-weight:600">{{ c.n }}</span><span style="color:#46585f">{{ c.lib }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="border-radius:8px;padding:18px 20px;display:flex;gap:14px;background:{{ acc.bilan.voile }}">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{ acc.bilan.couleur }}" stroke-width="1.5" style="flex:none;margin-top:2px"><path d="M12 2.5l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10v-6z"></path><path d="{{ acc.bilan.trait }}"></path></svg>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Literata',Georgia,serif;font-size:18px;font-weight:600;color:{{ acc.bilan.couleur }}">{{ acc.bilan.titre }}</span><span style="font-size:13.5px;line-height:1.55;color:#46585f">{{ acc.bilan.texte }}</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Consultations -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:22px">
+      <sc-for list="{{ acc.listes }}" as="L" hint-placeholder-count="2">
+        <section style="border:1px solid #e3e6e1;border-radius:10px;background:#fcfbf8;padding:20px 22px;min-width:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">{{ L.titre }}</span><button style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#536066" style-hover="color:#1f5a3c">{{ L.periode }}<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"></path></svg></button></div>
+          <div style="display:flex;flex-direction:column;margin-top:10px">
+            <sc-for list="{{ L.items }}" as="it" hint-placeholder-count="5">
+              <button onClick="{{ it.onClick }}" style="display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;gap:14px;padding:11px 6px;margin:0 -6px;border-radius:6px;border-bottom:1px solid #f0f0ea;text-align:left" style-hover="background:#f5f4ef">
+                <span style="width:32px;height:32px;border-radius:6px;background:#f5f4ef;display:grid;place-items:center;color:#1f5a3c"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="{{ L.icone }}"></path></svg></span>
+                <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.titre }}</span><span style="font-size:12.5px;color:#536066">{{ it.sous }}</span></span>
+                <span style="display:flex;align-items:center;gap:8px;font-size:12.5px;white-space:nowrap;color:{{ it.couleur }}"><svg width="12" height="12" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ it.couleur }}" stroke-width="1.8"></circle><path d="{{ it.path }}" fill="{{ it.couleur }}"></path></svg>{{ it.etat }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <button style="display:flex;align-items:center;gap:12px;margin-top:14px;font-size:13.5px;color:#16222b" style-hover="color:#1f5a3c"><span style="width:16px;text-align:center">→</span>{{ L.tout }}</button>
+        </section>
+      </sc-for>
+    </div>
+
+    <!-- Univers -->
+    <section style="border:1px solid #e3e6e1;border-radius:10px;background:#fcfbf8;padding:20px 22px;overflow-x:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Vos univers</span><button style="display:flex;align-items:center;gap:8px;font-size:13px;color:#536066" style-hover="color:#1f5a3c">Voir tous les univers →</button></div>
+      <div style="display:grid;grid-template-columns:minmax(160px,1.4fr) 80px repeat(5,minmax(72px,.7fr)) minmax(120px,1fr) 24px;gap:0 12px;align-items:center;margin-top:12px;min-width:820px;font-size:14px">
+        <span></span><span></span>
+        <sc-for list="{{ acc.colonnes }}" as="col" hint-placeholder-count="5"><span style="font-size:12.5px;color:#536066;padding:6px 0">{{ col }}</span></sc-for>
+        <span></span><span></span>
+        <sc-for list="{{ acc.univers }}" as="u" hint-placeholder-count="6">
+          <span style="display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #f0f0ea;font-weight:500"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#1f5a3c" stroke-width="1.4" style="flex:none"><path d="{{ u.icone }}"></path></svg>{{ u.nom }}</span>
+          <span style="padding:11px 0;border-top:1px solid #f0f0ea;font-size:12.5px;color:#536066;white-space:nowrap">{{ u.notes }}</span>
+          <sc-for list="{{ u.compteurs }}" as="c"><span style="display:flex;align-items:center;gap:8px;padding:11px 0;border-top:1px solid #f0f0ea;font-family:'JetBrains Mono',monospace;font-size:13px;color:{{ c.encre }}"><svg width="10" height="10" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ c.couleur }}" stroke-width="2"></circle><path d="{{ c.path }}" fill="{{ c.couleur }}"></path></svg>{{ c.n }}</span></sc-for>
+          <span style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#eceee9;border-top:0;align-self:center"><sc-for list="{{ u.barre }}" as="seg"><span style="height:100%;background:{{ seg.couleur }};width:{{ seg.pct }}"></span></sc-for></span>
+          <button onClick="{{ u.onClick }}" style="display:grid;place-items:center;height:100%;border-top:1px solid #f0f0ea;color:#536066" style-hover="color:#1f5a3c"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3l5 5-5 5"></path></svg></button>
+        </sc-for>
+      </div>
+    </section>
+  </div>
+  </sc-if>
+
+  <!-- ===== VUE NOTE ===== -->
+  <sc-if value="{{ vueNote }}" hint-placeholder-val="{{ true }}">
+  <div style="display:grid;gap:40px;padding:24px clamp(20px,3.5vw,64px) 96px;grid-template-columns:{{ centreCols }}">
+
+    <!-- Sommaire -->
+    <sc-if value="{{ montrerSommaire }}" hint-placeholder-val="{{ true }}">
+    <aside style="position:sticky;top:88px;align-self:start;padding-top:220px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066;margin-bottom:12px">Sommaire</div>
+      <div style="display:flex;flex-direction:column;border-left:1px solid #e3e6e1">
+        <sc-for list="{{ sommaire }}" as="s" hint-placeholder-count="6">
+          <button onClick="{{ s.onClick }}" style="display:grid;grid-template-columns:22px 1fr;gap:8px;padding:7px 12px 7px 14px;text-align:left;font-size:13px;line-height:1.35;margin-left:-1px;border-left:2px solid {{ s.barre }};color:{{ s.couleur }};font-weight:{{ s.poids }}" style-hover="color:#16222b">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;padding-top:1px">{{ s.num }}</span>
+            <span style="display:flex;flex-direction:column"><span>{{ s.titre }}</span><sc-if value="{{ s.sous }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;color:#93a2a6;margin-top:1px">{{ s.sous }}</span></sc-if></span>
+          </button>
+        </sc-for>
+      </div>
+    </aside>
+    </sc-if>
+
+    <!-- Document -->
+    <article style="min-width:0;width:100%">
+
+      <!-- Registre -->
+      <div style="display:flex;align-items:flex-end;gap:4px;border-bottom:1px solid #e3e6e1">
+        <button onClick="{{ choisirReference }}" style="display:flex;align-items:center;gap:10px;padding:13px 22px;font-size:14.5px;margin-bottom:-1px;border-bottom:2px solid {{ tabRef.barre }};color:{{ tabRef.couleur }};font-weight:{{ tabRef.poids }};background:{{ tabRef.bg }};border-radius:6px 6px 0 0" style-hover="color:#1f5a3c">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5c2-.8 4-.8 6 .5 2-1.3 4-1.3 6-.5v9c-2-.8-4-.8-6 .5-2-1.3-4-1.3-6-.5z"></path><path d="M8 4v9"></path></svg>Référence
+        </button>
+        <sc-if value="{{ aOperationnel }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ choisirOperationnel }}" style="display:flex;align-items:center;gap:10px;padding:13px 22px;font-size:14.5px;margin-bottom:-1px;border-bottom:2px solid {{ tabOp.barre }};color:{{ tabOp.couleur }};font-weight:{{ tabOp.poids }};background:{{ tabOp.bg }};border-radius:6px 6px 0 0" style-hover="color:#1f5a3c">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"></path></svg>Opérationnel
+        </button>
+        </sc-if>
+        <div style="flex:1"></div>
+        <sc-if value="{{ sansOperationnel }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ creerOperationnel }}" style="display:flex;align-items:center;gap:8px;padding:9px 16px;margin-bottom:8px;border:1px solid #dfe3df;border-radius:6px;font-size:14px;color:#16222b;background:#fcfbf8" style-hover="border-color:#1f5a3c;color:#1f5a3c">
+          <span style="font-size:16px;line-height:1">+</span>Créer la version opérationnelle
+        </button>
+        </sc-if>
+      </div>
+
+      <!-- Vivacité — ligne compacte -->
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px 18px;padding:14px 4px 14px 6px;margin-top:6px;border-radius:6px;font-size:13.5px;color:#536066;background:{{ viv.fondLigne }}">
+        <span style="display:flex;align-items:center;gap:10px;font-weight:600;color:{{ viv.couleur }}">
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ viv.couleur }}" stroke-width="1.5"></circle><path d="{{ viv.path }}" fill="{{ viv.couleur }}"></path></svg>{{ viv.lib }}
+        </span>
+        <span style="width:1px;height:16px;background:#dfe3df"></span>
+        <span>{{ viv.ligneVerif }}</span>
+        <span style="width:1px;height:16px;background:#dfe3df"></span>
+        <span style="color:{{ viv.couleurEcheance }};font-weight:{{ viv.poidsEcheance }}">{{ viv.ligneEcheance }}</span>
+        <span style="width:1px;height:16px;background:#dfe3df"></span>
+        <button onClick="{{ ouvrirHistorique }}" style="display:flex;align-items:center;gap:6px;color:#536066" style-hover="color:#1f5a3c">Voir l'historique <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"></path></svg></button>
+        <sc-if value="{{ viv.revision }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:99px;background:#f8e6dc;color:#b4471c;font-size:12px;font-weight:500">Révision demandée · {{ viv.revisionPar }}</span></sc-if>
+      </div>
+
+      <!-- Titre -->
+      <h1 style="font-family:'Literata',Georgia,serif;font-weight:500;font-size:40px;line-height:1.2;letter-spacing:-.01em;margin:34px 0 0;max-width:min(100%,32ch);text-wrap:pretty">{{ note.titre }}</h1>
+
+      <!-- Étiquettes -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:26px">
+        <sc-for list="{{ note.etiquettes }}" as="e" hint-placeholder-count="4">
+          <a href="#" style="padding:8px 14px;border-radius:6px;background:#e6efe9;color:#1f5a3c;font-size:13.5px;font-weight:500;text-decoration:none" style-hover="background:#d8e6dc">{{ e }}</a>
+        </sc-for>
+        <button style="display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid #dfe3df;border-radius:6px;color:#536066;font-size:13.5px;background:#fcfbf8" style-hover="border-color:#9aa7a3;color:#16222b"><span style="font-size:15px;line-height:1">+</span>Ajouter une étiquette</button>
+      </div>
+
+      <!-- Métadonnées -->
+      <div style="display:flex;flex-wrap:wrap;margin-top:34px;gap:0">
+        <sc-for list="{{ metas }}" as="m" hint-placeholder-count="4">
+          <div style="display:flex;align-items:flex-start;gap:12px;padding:0 24px 0 0;margin-right:24px;border-right:1px solid #e3e6e1;min-height:44px;flex:0 1 auto">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16222b" stroke-width="1.4" style="flex:none;margin-top:1px"><path d="{{ m.icone }}"></path></svg>
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:500">{{ m.valeur }}</span><span style="font-size:12.5px;color:#536066">{{ m.libelle }}</span></span>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- Séparateur documentaire -->
+      <div style="display:flex;align-items:center;gap:16px;margin:36px 0 40px"><span style="flex:1;height:1px;background:#e3e6e1"></span><svg width="22" height="14" viewBox="0 0 22 14" fill="none" stroke="#1f5a3c" stroke-width="1.4"><circle cx="4" cy="7" r="3"></circle><rect x="9" y="1" width="4" height="12" rx="1.5"></rect><circle cx="18" cy="7" r="3"></circle></svg><span style="flex:1;height:1px;background:#e3e6e1"></span></div>
+
+      <!-- Résumé -->
+      <p style="font-size:18px;line-height:1.65;color:#16222b;margin:0 0 48px;max-width:min(100%,72ch);text-wrap:pretty">{{ resume }}</p>
+
+      <!-- Sections -->
+      <sc-for list="{{ sections }}" as="s" hint-placeholder-count="3">
+        <section id="{{ s.id }}" style="margin-bottom:56px">
+          <h2 style="display:flex;align-items:baseline;gap:22px;margin:0 0 22px;font-family:'Literata',Georgia,serif;font-weight:500;font-size:27px;line-height:1.25;letter-spacing:-.005em">
+            <span style="font-family:'Literata',Georgia,serif;font-weight:500;color:#1f5a3c;font-size:26px">{{ s.num }}</span><span>{{ s.titre }}</span>
+          </h2>
+          <sc-for list="{{ s.blocs }}" as="b" hint-placeholder-count="2">
+            <sc-if value="{{ b.estP }}" hint-placeholder-val="{{ true }}">
+              <p style="font-size:16.5px;line-height:1.7;margin:0 0 18px;max-width:min(100%,75ch);text-wrap:pretty"><sc-for list="{{ b.runs }}" as="r"><sc-if value="{{ r.code }}"><code style="font-family:'JetBrains Mono',monospace;font-size:14px;background:#efeee8;color:#16222b;padding:2px 7px;border-radius:4px">{{ r.t }}</code></sc-if><sc-if value="{{ r.texte }}">{{ r.t }}</sc-if><sc-if value="{{ r.fort }}"><strong style="font-weight:600">{{ r.t }}</strong></sc-if></sc-for></p>
+            </sc-if>
+            <sc-if value="{{ b.estCode }}" hint-placeholder-val="{{ false }}">
+              <div style="margin:0 0 22px;border:1px solid #e3e6e1;border-radius:8px;background:#f5f4ef;overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px 0"><span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#536066">{{ b.lang }}</span><button onClick="{{ b.copier }}" style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#536066" style-hover="color:#1f5a3c"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="9" height="9" rx="1.5"></rect><path d="M11 5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2"></path></svg>{{ b.libCopier }}</button></div>
+                <pre style="margin:0;padding:12px 18px 18px;font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.6;overflow-x:auto;color:#16222b"><sc-for list="{{ b.lignes }}" as="l"><span style="display:block;color:{{ l.couleur }}">{{ l.t }}</span></sc-for></pre>
+              </div>
+            </sc-if>
+            <sc-if value="{{ b.estListe }}" hint-placeholder-val="{{ false }}">
+              <ul style="margin:0 0 20px;padding-left:22px;font-size:16.5px;line-height:1.7;max-width:min(100%,75ch);display:flex;flex-direction:column;gap:6px"><sc-for list="{{ b.items }}" as="it"><li><sc-for list="{{ it }}" as="r"><sc-if value="{{ r.code }}"><code style="font-family:'JetBrains Mono',monospace;font-size:14px;background:#efeee8;padding:2px 7px;border-radius:4px">{{ r.t }}</code></sc-if><sc-if value="{{ r.texte }}">{{ r.t }}</sc-if><sc-if value="{{ r.fort }}"><strong style="font-weight:600">{{ r.t }}</strong></sc-if></sc-for></li></sc-for></ul>
+            </sc-if>
+            <sc-if value="{{ b.estEtapes }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:8px;margin:0 0 22px;max-width:min(100%,80ch)"><sc-for list="{{ b.items }}" as="it"><label style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border:1px solid #e3e6e1;border-radius:6px;font-size:15.5px;line-height:1.5;cursor:pointer;background:#fcfbf8" style-hover="border-color:#9aa7a3"><input type="checkbox" style="accent-color:#1f5a3c;width:16px;height:16px;margin-top:4px;flex:none"><span><sc-for list="{{ it }}" as="r"><sc-if value="{{ r.code }}"><code style="font-family:'JetBrains Mono',monospace;font-size:13.5px;background:#efeee8;padding:2px 7px;border-radius:4px">{{ r.t }}</code></sc-if><sc-if value="{{ r.texte }}">{{ r.t }}</sc-if><sc-if value="{{ r.fort }}"><strong style="font-weight:600">{{ r.t }}</strong></sc-if></sc-for></span></label></sc-for></div>
+            </sc-if>
+            <sc-if value="{{ b.estAvis }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:14px;padding:14px 18px;margin:0 0 22px;border-radius:6px;max-width:min(100%,80ch);font-size:15.5px;line-height:1.6;background:{{ b.fond }};color:{{ b.encre }}"><span style="font-family:'JetBrains Mono',monospace;font-weight:700;flex:none">{{ b.marque }}</span><span><sc-for list="{{ b.runs }}" as="r"><sc-if value="{{ r.code }}"><code style="font-family:'JetBrains Mono',monospace;font-size:13.5px;background:rgba(22,34,43,.07);padding:2px 7px;border-radius:4px">{{ r.t }}</code></sc-if><sc-if value="{{ r.texte }}">{{ r.t }}</sc-if><sc-if value="{{ r.fort }}"><strong style="font-weight:600">{{ r.t }}</strong></sc-if></sc-for></span></div>
+            </sc-if>
+            <sc-if value="{{ b.estSchema }}" hint-placeholder-val="{{ false }}">
+              <figure style="margin:0 0 22px;border:1px solid #e3e6e1;border-radius:8px;background:#fcfbf8;overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid #eceee9"><span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#536066">schéma · mermaid</span><span style="font-size:12.5px;color:#536066">{{ b.legende }}</span></div>
+                <svg viewBox="0 0 760 250" style="display:block;width:100%;height:auto;max-height:320px;font-family:'Archivo',sans-serif" role="img" aria-label="{{ b.legende }}">
+                  <defs><marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#536066"></path></marker></defs>
+                  <g fill="none" stroke="#536066" stroke-width="1.4" marker-end="url(#fl)">
+                    <path d="M150 60H190"></path><path d="M340 60H380"></path><path d="M455 92V128"></path>
+                    <path d="M520 160H580"></path><path d="M390 160H330"></path>
+                    <path d="M250 184V225H455V196" stroke-dasharray="4 4"></path>
+                  </g>
+                  <g stroke-width="1.4">
+                    <rect x="20" y="36" width="130" height="48" rx="6" fill="#f5f4ef" stroke="#9aa7a3"></rect>
+                    <rect x="190" y="36" width="150" height="48" rx="6" fill="#f5f4ef" stroke="#9aa7a3"></rect>
+                    <rect x="380" y="36" width="150" height="48" rx="6" fill="#f5f4ef" stroke="#9aa7a3"></rect>
+                    <path d="M455 128L525 160L455 192L385 160z" fill="#fcfbf8" stroke="#1f5a3c"></path>
+                    <rect x="580" y="136" width="160" height="48" rx="6" fill="#e6efe9" stroke="#1d6b4a"></rect>
+                    <rect x="170" y="136" width="160" height="48" rx="6" fill="#f6eedd" stroke="#8f5c00"></rect>
+                  </g>
+                  <g font-size="13" fill="#16222b" text-anchor="middle">
+                    <text x="85" y="56">curl</text><text x="85" y="72" font-family="JetBrains Mono,monospace" font-size="11" fill="#536066">install.sh</text>
+                    <text x="265" y="56">Installateur natif</text><text x="265" y="72" font-size="11" fill="#536066">détecte l'architecture</text>
+                    <text x="455" y="56">Binaire déposé</text><text x="455" y="72" font-family="JetBrains Mono,monospace" font-size="11" fill="#536066">~/.local/bin/claude</text>
+                    <text x="455" y="156" font-size="12" fill="#1f5a3c">~/.local/bin</text><text x="455" y="171" font-size="12" fill="#1f5a3c">dans le PATH ?</text>
+                    <text x="660" y="156" fill="#1d6b4a" font-weight="600">claude --version</text><text x="660" y="172" font-size="11" fill="#1d6b4a">installation validée</text>
+                    <text x="250" y="156" fill="#8f5c00" font-weight="600">Incident 03</text><text x="250" y="172" font-size="11" fill="#8f5c00">command not found</text>
+                    <text x="552" y="152" font-size="11" fill="#536066">oui</text><text x="360" y="152" font-size="11" fill="#536066">non</text>
+                    <text x="352" y="240" font-size="11" fill="#536066">corriger le PATH, puis revérifier</text>
+                  </g>
+                </svg>
+                <details style="border-top:1px solid #eceee9"><summary style="display:flex;align-items:center;gap:8px;padding:9px 18px;font-size:12.5px;color:#536066;cursor:pointer;list-style:none"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"></path></svg>Source mermaid</summary><pre style="margin:0;padding:6px 18px 16px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.6;color:#46585f;overflow-x:auto;background:#f5f4ef"><sc-for list="{{ b.lignes }}" as="l"><span style="display:block">{{ l.t }}</span></sc-for></pre></details>
+              </figure>
+            </sc-if>
+            <sc-if value="{{ b.estTableau }}" hint-placeholder-val="{{ false }}">
+              <div style="margin:0 0 22px;border:1px solid #e3e6e1;border-radius:8px;overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:14px;min-width:560px"><thead><tr><sc-for list="{{ b.tetes }}" as="h"><th style="text-align:left;padding:10px 14px;background:#f5f4ef;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#536066;font-weight:500;border-bottom:1px solid #e3e6e1">{{ h }}</th></sc-for></tr></thead><tbody><sc-for list="{{ b.lignes }}" as="lg"><tr><sc-for list="{{ lg }}" as="c"><td style="padding:10px 14px;border-bottom:1px solid #eceee9;font-family:'JetBrains Mono',monospace;font-size:13px">{{ c }}</td></sc-for></tr></sc-for></tbody></table></div>
+            </sc-if>
+          </sc-for>
+          <sc-if value="{{ s.aComplement }}" hint-placeholder-val="{{ false }}">
+            <details style="border:1px solid #e3e6e1;border-radius:6px;background:#fcfbf8"><summary style="display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13.5px;color:#536066;cursor:pointer;list-style:none"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"></path></svg>Notes et explications complémentaires</summary><p style="margin:0;padding:4px 16px 16px;font-size:15px;line-height:1.65;color:#46585f">{{ s.complement }}</p></details>
+          </sc-if>
+        </section>
+      </sc-for>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:28px;border-top:1px solid #e3e6e1;font-size:13.5px;color:#536066;flex-wrap:wrap">
+        <span>{{ viv.rappel }}</span>
+        <button onClick="{{ ouvrirEtats }}" style="color:#536066;text-decoration:underline dotted" style-hover="color:#1f5a3c">Planche des états de vivacité</button>
+      </div>
+    </article>
+  </div>
+  </sc-if>
+
+  <!-- ===== VUE HISTORIQUE ===== -->
+  <sc-if value="{{ vueHistorique }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:32px clamp(20px,4vw,64px) 96px;width:100%;max-width:1100px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Historique</div>
+    <h1 style="font-family:'Literata',Georgia,serif;font-weight:500;font-size:32px;line-height:1.25;margin:10px 0 0;text-wrap:pretty">{{ note.titre }}</h1>
+    <p style="margin:14px 0 0;font-size:15px;color:#536066;line-height:1.6;max-width:640px">Versions du contenu, vérifications et changements d'état de vivacité, du plus récent au plus ancien. Chaque registre a son propre cycle.</p>
+
+    <div style="display:flex;gap:4px;margin-top:28px;border-bottom:1px solid #e3e6e1">
+      <sc-for list="{{ filtres }}" as="f" hint-placeholder-count="3">
+        <button onClick="{{ f.onClick }}" style="padding:10px 16px;font-size:14px;margin-bottom:-1px;border-bottom:2px solid {{ f.barre }};color:{{ f.couleur }};font-weight:{{ f.poids }}" style-hover="color:#1f5a3c">{{ f.lib }}</button>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-direction:column;margin-top:28px;border-left:1px solid #e3e6e1;margin-left:8px">
+      <sc-for list="{{ evenements }}" as="ev" hint-placeholder-count="5">
+        <div style="display:grid;grid-template-columns:150px 1fr;gap:20px;padding:0 0 30px 26px;position:relative">
+          <span style="position:absolute;left:-9px;top:3px;width:17px;height:17px;display:grid;place-items:center;background:#fcfbf8"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ ev.couleur }}" stroke-width="1.5"></circle><path d="{{ ev.path }}" fill="{{ ev.couleur }}"></path></svg></span>
+          <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:14px;font-weight:500">{{ ev.date }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#536066">{{ ev.registre }}</span></span>
+          <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+            <span style="font-size:15.5px;font-weight:500;color:{{ ev.couleurTitre }}">{{ ev.titre }}</span>
+            <span style="font-size:14px;color:#536066;line-height:1.55">{{ ev.detail }}</span>
+            <sc-if value="{{ ev.version }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:10px;margin-top:6px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;padding:3px 8px;border:1px solid #dfe3df;border-radius:4px;color:#46585f">{{ ev.version }}</span><button onClick="{{ ev.comparer }}" style="font-size:13px;color:#1f5a3c" style-hover="text-decoration:underline">{{ ev.libComparer }}</button></div>
+            </sc-if>
+            <sc-if value="{{ ev.diffOuvert }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:10px;border:1px solid #e3e6e1;border-radius:8px;overflow:hidden;background:#e3e6e1;font-size:13.5px;line-height:1.6;animation:monte 160ms both">
+                <div style="background:#f7e7e3;padding:12px 14px"><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#a52c1b;letter-spacing:.06em;margin-bottom:6px">− AVANT</div>{{ ev.avant }}</div>
+                <div style="background:#e6efe9;padding:12px 14px"><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#1f5a3c;letter-spacing:.06em;margin-bottom:6px">+ APRÈS</div>{{ ev.apres }}</div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===== PLANCHE DES ÉTATS ===== -->
+  <sc-if value="{{ vueEtats }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:32px clamp(20px,4vw,64px) 96px;width:100%;max-width:1100px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Composant</div>
+    <h1 style="font-family:'Literata',Georgia,serif;font-weight:500;font-size:32px;line-height:1.25;margin:10px 0 0">États de vivacité</h1>
+    <p style="margin:14px 0 0;font-size:15px;color:#536066;line-height:1.6;max-width:640px">Cinq états, un seul composant. Forme, libellé et information temporelle portent le sens ; la couleur le répète. Plus la note demande d'attention, plus la ligne prend de place visuelle.</p>
+    <div style="display:flex;flex-direction:column;gap:18px;margin-top:32px">
+      <sc-for list="{{ planche }}" as="p" hint-placeholder-count="5">
+        <div style="display:grid;grid-template-columns:180px 1fr;gap:24px;align-items:start;padding:20px 0;border-top:1px solid #e3e6e1">
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:15px;font-weight:600">{{ p.lib }}</span><span style="font-size:13px;color:#536066;line-height:1.5">{{ p.regle }}</span></div>
+          <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0 18px;padding:12px 6px;border-radius:6px;font-size:13.5px;color:#536066;background:{{ p.fondLigne }}">
+              <span style="display:flex;align-items:center;gap:10px;font-weight:600;color:{{ p.couleur }}"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ p.couleur }}" stroke-width="1.5"></circle><path d="{{ p.path }}" fill="{{ p.couleur }}"></path></svg>{{ p.lib }}</span>
+              <span style="width:1px;height:16px;background:#dfe3df"></span><span>{{ p.ligneVerif }}</span>
+              <span style="width:1px;height:16px;background:#dfe3df"></span><span style="color:{{ p.couleurEcheance }};font-weight:{{ p.poidsEcheance }}">{{ p.ligneEcheance }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;font-size:12.5px;color:#536066"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase">Rail compact</span><span style="display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:{{ p.couleur }}"><svg width="12" height="12" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ p.couleur }}" stroke-width="1.8"></circle><path d="{{ p.path }}" fill="{{ p.couleur }}"></path></svg>{{ p.compact }}</span></div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="margin-top:36px;padding:18px 20px;border:1px solid #e3e6e1;border-radius:8px;font-size:14px;line-height:1.65;color:#46585f;max-width:720px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066;margin-bottom:8px">Cycle</div>
+      Vérification → <strong style="color:#16222b">À jour</strong> pendant la durée de validité → <strong style="color:#16222b">Bientôt à vérifier</strong> {{ seuilTexte }} avant l'échéance → à l'échéance, passage automatique à <strong style="color:#16222b">À vérifier</strong> → après 14 jours de retard ou sur demande de révision, <strong style="color:#16222b">À revoir</strong> → après 90 jours de retard, <strong style="color:#16222b">Obsolète</strong>. Une nouvelle vérification relance le cycle.
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- Toast -->
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:sticky;bottom:24px;align-self:center;margin-top:auto;display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:8px;background:#16222b;color:#fcfbf8;font-size:13.5px;font-weight:500;box-shadow:0 6px 20px -4px rgba(22,34,43,.18);animation:monte 200ms both;z-index:20"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#4fbf8b" stroke-width="2"><path d="M3 8.5l3.5 3.5L13 4.5"></path></svg>{{ toast }}</div>
+  </sc-if>
+</main>
+
+<!-- ===================== SIDEBAR DROITE ===================== -->
+<sc-if value="{{ montrerDroite }}" hint-placeholder-val="{{ true }}">
+<aside style="border-left:1px solid #e3e6e1;overflow-y:auto;padding:28px 24px 32px;display:flex;flex-direction:column;gap:0;min-width:0;background:#fcfbf8;{{ styleDroite }}">
+
+  <sc-if value="{{ droiteRepliee }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ fermerTiroirs }}" aria-label="Fermer" style="align-self:flex-end;margin:-10px -8px 10px 0;width:32px;height:32px;border-radius:6px;display:grid;place-items:center;color:#536066" style-hover="background:#f0efe9"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3l10 10M13 3L3 13"></path></svg></button>
+  </sc-if>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Actions</div>
+  <div style="display:flex;flex-direction:column;gap:2px;margin-top:10px">
+    <sc-for list="{{ actions }}" as="a" hint-placeholder-count="6">
+      <button onClick="{{ a.onClick }}" style="display:flex;align-items:center;gap:12px;padding:7px 8px;margin-left:-8px;border-radius:5px;text-align:left;font-size:14px;color:{{ a.couleur }}" style-hover="background:#f0efe9">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="flex:none"><path d="{{ a.icone }}"></path></svg>{{ a.lib }}
+      </button>
+    </sc-for>
+  </div>
+
+  <div style="height:1px;background:#e3e6e1;margin:22px 0"></div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Contexte</div>
+  <div style="margin-top:10px;font-size:14px;line-height:1.6">
+    <a href="#" style="color:#16222b">{{ note.univers }}</a>
+    <div style="display:flex;align-items:center;gap:8px;color:#46585f"><span style="color:#93a2a6;font-family:'JetBrains Mono',monospace">└</span><button onClick="{{ ouvrirDomaineCourant }}" style="color:#16222b" style-hover="color:#1f5a3c;text-decoration:underline">{{ note.domaine }}</button></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px;padding-left:22px;font-size:13px;color:#536066"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#1f5a3c" stroke-width="1.4"><path d="M2 8h12M9 4l4 4-4 4"></path></svg>{{ note.voisines }}</div>
+  </div>
+
+  <div style="height:1px;background:#e3e6e1;margin:22px 0"></div>
+  <button style="display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;width:100%" style-hover="color:#1f5a3c">
+    <span style="display:flex;flex-direction:column;gap:8px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Relations</span><span style="font-size:14px"><span style="font-family:'JetBrains Mono',monospace;margin-right:8px">{{ note.relations }}</span>notes liées</span></span>
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3l5 5-5 5"></path></svg>
+  </button>
+
+  <div style="height:1px;background:#e3e6e1;margin:22px 0"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Pièces jointes</span>
+    <span style="display:flex;align-items:center;gap:18px"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#536066">{{ note.pieces }}</span><button style="display:flex;align-items:center;gap:6px;font-size:13px;color:#536066" style-hover="color:#1f5a3c"><span style="font-size:15px;line-height:1">+</span>Ajouter</button></span>
+  </div>
+
+  <div style="height:1px;background:#e3e6e1;margin:22px 0"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Rétroliens</span>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#536066;padding-right:82px">{{ note.retroliens }}</span>
+  </div>
+
+  <!-- Vivacité (registre) -->
+  <div style="margin-top:28px;padding:18px 18px 20px;border:1px solid #e3e6e1;border-radius:8px;background:#fcfbf8">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Vivacité ({{ registreLib }})</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px;font-size:17px;font-weight:600;color:{{ viv.couleur }}"><svg width="18" height="18" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="{{ viv.couleur }}" stroke-width="1.5"></circle><path d="{{ viv.path }}" fill="{{ viv.couleur }}"></path></svg>{{ viv.lib }}</div>
+    <div style="font-size:13.5px;color:#536066;margin-top:4px;padding-left:28px">{{ viv.ligneVerif }}</div>
+    <!-- Frise -->
+    <div style="position:relative;height:14px;margin:22px 0 10px">
+      <div style="position:absolute;left:0;right:0;top:6px;height:2px;background:{{ viv.couleur }};width:{{ viv.pctEcoule }}"></div>
+      <div style="position:absolute;top:6px;height:0;border-top:2px dashed #b8c2bd;left:{{ viv.pctEcoule }};right:0"></div>
+      <span style="position:absolute;left:0;top:0;width:14px;height:14px;border-radius:50%;background:{{ viv.couleur }};transform:translateX(-50%)"></span>
+      <span style="position:absolute;top:0;width:14px;height:14px;border-radius:50%;background:{{ viv.couleur }};border:2px solid #fcfbf8;box-shadow:0 0 0 1.5px {{ viv.couleur }};transform:translateX(-50%);left:{{ viv.pctAujourdhui }}"></span>
+      <span style="position:absolute;right:0;top:0;width:14px;height:14px;border-radius:50%;border:2px solid {{ viv.couleurEcheanceRond }};background:#fcfbf8;transform:translateX(50%)"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;font-size:12.5px;line-height:1.4;gap:8px">
+      <span style="display:flex;flex-direction:column"><span style="font-weight:500;color:#16222b">{{ viv.verifieeCourt }}</span><span style="color:#536066">vérifiée</span></span>
+      <span style="display:flex;flex-direction:column;text-align:center"><span style="font-weight:500;color:#16222b">aujourd'hui</span><span style="color:#536066">{{ viv.aujourdhuiRel }}</span></span>
+      <span style="display:flex;flex-direction:column;text-align:right"><span style="font-weight:500;color:#16222b">{{ viv.echeanceCourt }}</span><span style="color:#536066">échéance</span></span>
+    </div>
+  </div>
+
+  <!-- Rappel automatique -->
+  <div style="margin-top:16px;padding:16px 18px;border-radius:8px;background:#f5f4ef;display:flex;gap:12px">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#1f5a3c" stroke-width="1.4" style="flex:none;margin-top:1px"><circle cx="8" cy="9" r="5.5"></circle><path d="M8 6.5V9l2 1.2M6 2h4M12.5 4.5l1-1"></path></svg>
+    <div style="display:flex;flex-direction:column;gap:4px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#536066">Rappel automatique</span><span style="font-size:13.5px;line-height:1.5;color:#46585f">{{ viv.rappel }}</span></div>
+  </div>
+</aside>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;vue&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;accueil&quot;,&quot;options&quot;:[&quot;accueil&quot;,&quot;univers&quot;,&quot;domaine&quot;,&quot;note&quot;,&quot;historique&quot;,&quot;etats&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;seuilBientot&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:10,&quot;min&quot;:3,&quot;max&quot;:30,&quot;unit&quot;:&quot;jours&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Vivacité&quot;},&quot;forcerEtat&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;auto&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;ajour&quot;,&quot;bientot&quot;,&quot;averifier&quot;,&quot;arevoir&quot;,&quot;obsolete&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Vivacité&quot;}}">
+const J = 86400000;
+const TODAY = new Date('2026-09-05T12:00:00');
+const d = s => new Date(s + 'T12:00:00');
+const iso = x => x.toISOString().slice(0, 10);
+const jours = (a, b) => Math.round((b - a) / J);
+const fmtL = x => x.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+const fmtC = x => x.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+const fmtJ = x => x.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+const pl = (n, m) => `${n} ${m}${n > 1 ? 's' : ''}`;
+
+const DISQUE = 'M8 1.5a6.5 6.5 0 1 1 0 13a6.5 6.5 0 1 1 0-13z';
+const ETATS = {
+  ajour:     { lib: 'À jour',             couleur: '#1d6b4a', voile: '#e4efe8', path: DISQUE, attention: 0, regle: 'La vérification est valide.' },
+  bientot:   { lib: 'Bientôt à vérifier', couleur: '#6f6a0e', voile: '#f2f0dc', path: 'M8 8V1.5A6.5 6.5 0 1 1 1.5 8z', attention: 1, regle: 'L\'échéance approche. Signal discret.' },
+  averifier: { lib: 'À vérifier',         couleur: '#8f5c00', voile: '#f6eedd', path: 'M8 1.5a6.5 6.5 0 0 1 0 13z', attention: 2, regle: 'Échéance atteinte : bascule automatique.' },
+  arevoir:   { lib: 'À revoir',           couleur: '#b4471c', voile: '#f8e6dc', path: 'M7.1 4h1.8v5H7.1zM7.1 10.3h1.8v1.8H7.1z', attention: 3, regle: 'Retard important ou révision demandée.' },
+  obsolete:  { lib: 'Obsolète',           couleur: '#a52c1b', voile: '#f7e7e3', path: '', attention: 3, regle: 'Plus considérée comme exploitable.' }
+};
+
+function runs(s) {
+  const out = []; const re = /(`[^`]+`|\*\*[^*]+\*\*)/g; let i = 0, m;
+  while ((m = re.exec(s))) {
+    if (m.index > i) out.push({ t: s.slice(i, m.index), texte: true });
+    if (m[0][0] === '`') out.push({ t: m[0].slice(1, -1), code: true }); else out.push({ t: m[0].slice(2, -2), fort: true });
+    i = m.index + m[0].length;
+  }
+  if (i < s.length) out.push({ t: s.slice(i), texte: true });
+  return out;
+}
+const P = t => ({ type: 'p', runs: runs(t) });
+const CODE = (lang, ...l) => ({ type: 'code', lang, lignes: l.map(t => ({ t, couleur: t.startsWith('#') ? '#1f5a3c' : '#16222b' })) });
+const LI = (...items) => ({ type: 'liste', items: items.map(runs) });
+const ETAPES = (...items) => ({ type: 'etapes', items: items.map(runs) });
+const AVIS = (t, niveau) => ({ type: 'avis', runs: runs(t), niveau: niveau || 'info' });
+const TAB = (tetes, ...lignes) => ({ type: 'tableau', tetes, lignes });
+const SCHEMA = (legende, ...l) => ({ type: 'schema', legende, lignes: l.map(t => ({ t })) });
+const S = (titre, sous, blocs, complement) => ({ titre, sous, blocs, complement });
+
+const NOTES = {
+  claude: {
+    id: 'claude', titre: 'Note technique — Installation de Claude Code sous Linux et mode autonome',
+    slug: 'note-technique-claude-code-linux', univers: 'Claude', domaine: 'audit_code', voisines: '4 autres notes dans ce domaine',
+    etiquettes: ['Linux', 'Ubuntu 20.04+', 'Claude Code', 'CLI Anthropic'],
+    creee: '2026-08-13', auteur: 'Alexandre Berge', modifie: 'il y a 4 jours par Alexandre Berge', consultations: 2, consult30: 2, version: 'v1.0.0',
+    relations: 3, pieces: 0, retroliens: 0,
+    resume: 'Cette note décrit l\'installation de Claude Code (CLI Anthropic) sur Linux (x64/ARM64), ainsi que la résolution des problèmes courants (notamment l\'erreur de commande non trouvée) et l\'activation du mode autonome.',
+    registres: {
+      reference: { verifiee: '2026-08-13', validite: 90, par: 'Alexandre Berge', sections: [
+        S('Prérequis système', '', [P('Installer `curl` (utilisé par l\'installateur) :'), CODE('bash', '# Debian / Ubuntu', 'sudo apt update && sudo apt install -y curl', '', '# Fedora', 'sudo dnf install curl', '', '# Arch', 'sudo pacman -S curl'), P('Vérifier l\'architecture avec `uname -m` : la valeur attendue est `x86_64` ou `aarch64`. L\'installateur natif ne dépend pas de Node.js ; seule l\'installation via npm le requiert (18+).')], 'Sur les distributions à noyau ancien (glibc < 2.28), l\'installateur natif refuse de s\'exécuter. Passer alors par npm ou par un conteneur.'),
+        S('Installation', '(installateur natif)', [P('L\'installateur natif télécharge le binaire correspondant à l\'architecture et le place dans `~/.local/bin` :'), CODE('bash', 'curl -fsSL https://claude.ai/install.sh | bash'), P('Le parcours d\'installation tient en quatre étapes ; la seule bifurcation est la présence de `~/.local/bin` dans le `PATH` :'), SCHEMA('Parcours d\'installation et point de bifurcation', 'flowchart LR', '  A[curl install.sh] --> B[Installateur natif]', '  B --> C[Binaire déposé dans ~/.local/bin]', '  C --> D{~/.local/bin dans le PATH ?}', '  D -- oui --> E[claude --version]', '  D -- non --> F[Incident 03 : command not found]', '  F -. corriger le PATH .-> D'), AVIS('Si `~/.local/bin` n\'est pas dans le `PATH`, la commande `claude` ne sera pas trouvée après l\'installation. Voir l\'incident connu ci-dessous.')]),
+        S('Incident connu', 'claude: command not found', [P('Le binaire est présent mais le shell ne connaît pas son répertoire. Ajouter `~/.local/bin` au `PATH` de façon persistante :'), CODE('bash', 'echo \'export PATH="$HOME/.local/bin:$PATH"\' >> ~/.bashrc', 'source ~/.bashrc'), P('Vérifier ensuite avec `claude --version`. Sous zsh, remplacer `~/.bashrc` par `~/.zshrc`.')]),
+        S('Première exécution', 'et authentification', [P('Depuis le répertoire d\'un projet, lancer `claude`. La première exécution enchaîne trois étapes :'), LI('choix du thème d\'affichage (clair / sombre) ;', 'connexion au compte Anthropic via le navigateur (un code de vérification s\'affiche dans le terminal) ;', 'autorisation d\'accès au répertoire courant, mémorisée dans `~/.claude.json`.')]),
+        S('Mode autonome', 'bypass des permissions', [P('Par défaut, chaque commande et chaque écriture de fichier demande une confirmation. Le mode autonome les supprime :'), CODE('bash', 'claude --dangerously-skip-permissions'), AVIS('**Réservé à un environnement isolé** (conteneur, machine virtuelle jetable, sans accès aux identifiants de production). Le mode autonome exécute sans confirmation tout ce que le modèle décide.', 'danger')]),
+        S('Précautions', '', [LI('Ne jamais lancer le mode autonome dans un répertoire contenant des secrets non versionnés.', 'Travailler sur une branche dédiée et relire le diff avant toute fusion.', 'Limiter la session avec `--max-turns` lorsque la tâche est bornée.')]),
+        S('Références', '', [LI('Documentation officielle Claude Code — installation et prise en main.', 'Fiche interne « Mode autonome — Bonnes pratiques » (relation « complète »).', 'Incident « PATH Linux » (relation « corrige »).')]),
+        S('Purge', '', [P('Pour retirer complètement l\'outil et sa configuration :'), CODE('bash', 'rm -rf ~/.local/bin/claude ~/.claude ~/.claude.json')])
+      ] },
+      operationnel: { verifiee: '2026-08-14', validite: 21, par: 'Alexandre Berge', sections: [
+        S('Préparer la machine', '', [ETAPES('Vérifier `uname -m` → `x86_64` ou `aarch64`.', 'Installer `curl` si absent.')]),
+        S('Installer', '', [CODE('bash', 'curl -fsSL https://claude.ai/install.sh | bash'), ETAPES('Attendre la fin du téléchargement du binaire.', 'Ouvrir un nouveau terminal.')]),
+        S('Corriger le PATH si besoin', '', [ETAPES('Si `claude: command not found` : ajouter `~/.local/bin` au PATH dans `~/.bashrc`.', 'Recharger le shell puis `claude --version`.')]),
+        S('Authentifier', '', [ETAPES('Lancer `claude` dans le projet.', 'Se connecter dans le navigateur avec le compte Anthropic.', 'Autoriser le répertoire courant.')]),
+        S('Mode autonome', 'environnement isolé uniquement', [AVIS('**Point de vigilance** — n\'activer le mode autonome que dans un conteneur ou une VM jetable.', 'danger'), ETAPES('Créer une branche dédiée.', 'Lancer `claude --dangerously-skip-permissions`.', 'Relire le diff complet avant fusion.')])
+      ] }
+    },
+    evenements: [
+      { date: '2026-09-04', registre: 'operationnel', type: 'etat', etat: 'averifier', titre: 'Passage automatique à « À vérifier »', detail: 'Échéance de la vérification du 14 août atteinte (validité : 21 jours).' },
+      { date: '2026-09-01', registre: 'reference', type: 'version', version: 'v1.0.0 · révision de forme', titre: 'Contenu modifié par Alexandre Berge', detail: 'Reformulation de la section 03 (Incident connu). Aucun changement de fond, version conservée.', avant: 'Ajouter le chemin au PATH puis recharger le shell.', apres: 'Le binaire est présent mais le shell ne connaît pas son répertoire. Ajouter ~/.local/bin au PATH de façon persistante.' },
+      { date: '2026-08-14', registre: 'operationnel', type: 'verif', etat: 'ajour', titre: 'Version opérationnelle créée et vérifiée', detail: 'Dérivée de la référence par Alexandre Berge. Durée de validité : 21 jours (échéance le 4 septembre).' },
+      { date: '2026-08-13', registre: 'reference', type: 'verif', etat: 'ajour', titre: 'Vérifiée par Alexandre Berge', detail: 'Durée de validité : 90 jours. Échéance le 11 novembre 2026.' },
+      { date: '2026-08-13', registre: 'reference', type: 'version', version: 'v1.0.0', titre: 'Création de la note', detail: 'Rédigée par Alexandre Berge dans Claude › audit_code.', avant: '—', apres: 'Première version : 8 sections, 6 blocs de code.' }
+    ]
+  },
+  pg: {
+    id: 'pg', titre: 'Restaurer une sauvegarde PostgreSQL',
+    slug: 'n-restaurer-une-sauvegarde-postgresql', univers: 'Infrastructure', domaine: 'Sauvegardes', voisines: '2 autres notes dans ce dossier',
+    etiquettes: ['postgresql', 'sauvegarde', 'astreinte', 'restauration'],
+    creee: '2026-01-12', auteur: 'k.belhadj', modifie: 'le 10 mars 2026 par k.belhadj', consultations: 412, consult30: 17, version: 'v1.2.0',
+    relations: 4, pieces: 2, retroliens: 3,
+    resume: 'Cette procédure couvre la restauration d\'une base PostgreSQL depuis les sauvegardes gérées sur le serveur de sauvegarde. Elle couvre la restauration complète et la restauration à un instant donné. Elle ne couvre pas la bascule d\'un réplica en primaire, traitée séparément.',
+    registres: {
+      reference: { verifiee: '2026-05-17', validite: 90, par: 'k.belhadj', sections: [
+        S('Avant de commencer', 'prérequis et fenêtre', [LI('Un accès d\'administration sur le serveur de sauvegarde et sur le serveur cible.', 'La clé du compte de sauvegarde déployée vers la cible.', 'L\'espace disque disponible sur la cible : au moins **1,4 fois** la taille de la sauvegarde.'), AVIS('**ATTENTION — la base cible est arrêtée pendant toute la restauration.** Comptez 40 minutes pour une base de 120 Go sur disque local. Prévenez l\'astreinte applicative avant de démarrer et déclarez la fenêtre au comité des changements si l\'intervention n\'est pas un rétablissement.', 'danger')]),
+        S('Choisir la sauvegarde', '', [P('Les sauvegardes sont listées de la plus récente à la plus ancienne. Recoupez toujours l\'identifiant obtenu avec le tableau de suivi tenu par l\'exploitation : une sauvegarde valide au sens de l\'outil peut porter des données déjà corrompues si l\'incident est antérieur.'), TAB(['Identifiant', 'Date', 'Type', 'Taille', 'Rétention'], ['20260310T020112', '10 mars 2026, 02:01', 'Complète', '118 Go', '30 jours'], ['20260303T020108', '3 mars 2026, 02:01', 'Complète', '117 Go', '30 jours'], ['20260224T020115', '24 février 2026, 02:01', 'Complète', '116 Go', '30 jours'])]),
+        S('Les deux modes', '', [P('**Restauration complète** — on revient à l\'état de la sauvegarde. C\'est le mode du remplacement de matériel ou de la reconstruction d\'un environnement.'), P('**Restauration à un instant donné** — on rejoue les journaux de transaction jusqu\'à un horodatage choisi. C\'est le mode de la suppression accidentelle : on revient à la seconde qui précède l\'erreur.')]),
+        S('Après la restauration', '', [P('Une restauration n\'est pas finie quand la base démarre. Elle est finie quand une **requête témoin** rend le résultat attendu et que l\'application se reconnecte. Le compte rendu d\'intervention porte les deux, plus la durée réelle — c\'est ce chiffre qui alimente la politique de sauvegarde.')])
+      ] },
+      operationnelLatent: { validite: 30, sections: [
+        S('Arrêter le service sur la cible', '', [ETAPES('Prévenir l\'astreinte applicative.', 'Arrêter le service de base de données sur le serveur cible.', 'Vérifier qu\'aucune connexion ne subsiste.'), AVIS('**POINT DE NON-RETOUR** — au-delà de cette étape, la base cible est écrasée.', 'danger')]),
+        S('Transférer la sauvegarde', '', [ETAPES('Se connecter au serveur de sauvegarde avec le compte dédié.', 'Lancer la restauration vers la cible, en précisant l\'identifiant relevé.', 'Surveiller le transfert : il occupe la bande passante du lien de secours.')]),
+        S('Rejouer les journaux', '', [ETAPES('Laisser l\'outil rejouer les journaux jusqu\'à la fin de la sauvegarde.', 'Pour une restauration à un instant donné, préciser l\'horodatage cible **dans le fuseau du serveur de bases**, pas dans le vôtre.')]),
+        S('Vérifier', '', [ETAPES('Démarrer le service.', 'Exécuter la requête témoin et comparer au résultat attendu.', 'Vérifier la reconnexion applicative.', 'Relever la durée réelle et la consigner au compte rendu.')]),
+        S('En cas d\'échec', '', [P('Si le rejeu s\'interrompt, ne relancez pas la restauration sur la même cible : le répertoire est dans un état intermédiaire. Repartez d\'un répertoire vide, et signalez l\'incident — un rejeu qui échoue met en cause la sauvegarde elle-même, donc toutes les autres.')])
+      ] }
+    },
+    evenements: [
+      { date: '2026-08-29', registre: 'reference', type: 'etat', etat: 'arevoir', titre: 'Passage automatique à « À revoir »', detail: '14 jours après l\'échéance sans nouvelle vérification.' },
+      { date: '2026-08-15', registre: 'reference', type: 'etat', etat: 'averifier', titre: 'Passage automatique à « À vérifier »', detail: 'Échéance de la vérification du 17 mai atteinte (validité : 90 jours).' },
+      { date: '2026-05-17', registre: 'reference', type: 'verif', etat: 'ajour', titre: 'Vérifiée par k.belhadj', detail: 'Durée de validité : 90 jours. Échéance le 15 août 2026.' },
+      { date: '2026-03-10', registre: 'reference', type: 'version', version: 'v1.2.0', titre: 'Contenu modifié par k.belhadj', detail: 'Mise à jour du tableau des sauvegardes disponibles.', avant: '20260217T020101 · 17 février 2026 · Complète · 115 Go', apres: '20260310T020112 · 10 mars 2026 · Complète · 118 Go' },
+      { date: '2026-02-24', registre: 'reference', type: 'verif', etat: 'ajour', titre: 'Vérifiée par k.belhadj', detail: 'Durée de validité : 90 jours.' },
+      { date: '2026-01-12', registre: 'reference', type: 'version', version: 'v1.0.0', titre: 'Création de la note', detail: 'Rédigée par k.belhadj dans Infrastructure › Sauvegardes.', avant: '—', apres: 'Première version : 4 sections, 1 tableau.' }
+    ]
+  }
+};
+
+const IC_UNIVERS = {
+  Claude: 'M8 1.5v13M1.5 8h13M3.4 3.4l9.2 9.2M12.6 3.4L3.4 12.6',
+  Candidature: 'M2 5.5h12v8H2zM5.5 5.5V3.5h5v2M2 9h12',
+  'Business Analysis': 'M2 14h12M4 11V7M8 11V4M12 11V9',
+  Substack: 'M2.5 3h11M2.5 6.5h11M2.5 10h11v4h-11z',
+  Agents: 'M8 5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM3 15a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM13 15a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM7 5L4 11M9 5l3 6M5 13h6',
+  Infrastructure: 'M2 2.5h12v4H2zM2 9.5h12v4H2zM4.5 4.5h.01M4.5 11.5h.01'
+};
+/* Répartition par état, dans l'ordre ajour / bientot / averifier / arevoir / obsolete. */
+const REPARTITION = { Claude: [20, 2, 1, 1, 0], Candidature: [15, 2, 1, 0, 0], 'Business Analysis': [11, 1, 0, 0, 0], Substack: [7, 0, 1, 0, 0], Agents: [6, 0, 0, 0, 0], Infrastructure: [6, 1, 0, 1, 1] };
+const RECEMMENT = [['claude', 'Note technique – Installation de Claude Code sous Linux', 'il y a 12 min', 'ajour'], [null, 'Mode autonome – Bonnes pratiques', 'il y a 1 h', 'ajour'], [null, 'Prompt – Architecture LLM', 'il y a 3 h', 'bientot'], ['pg', 'Restaurer une sauvegarde PostgreSQL', 'il y a 5 h', 'arevoir'], [null, 'Workflow – Analyse IA', 'il y a 7 h', 'ajour']];
+const PLUS_CONSULTEES = [['pg', 'Restaurer une sauvegarde PostgreSQL', '412 consultations', 'arevoir'], [null, 'Workflow – Analyse IA', '142 consultations', 'ajour'], [null, 'Prompt – Architecture LLM', '118 consultations', 'bientot'], [null, 'Mode autonome – Bonnes pratiques', '94 consultations', 'ajour'], [null, 'Politique de sauvegarde', '87 consultations', 'averifier']];
+const DESCRIPTIONS = {
+  Claude: 'Notes techniques, prompts et harnais autour de Claude et de Claude Code : installation, audit de code, bonnes pratiques d\'autonomie.',
+  Candidature: 'CV, lettres et préparation d\'entretiens. Chaque pièce est datée et revérifiée avant envoi.',
+  'Business Analysis': 'Cadrages, ateliers et livrables d\'analyse. Les connaissances méthodologiques de référence.',
+  Substack: 'Veille, connaissance et production autour de l\'écosystème Substack.',
+  Agents: 'Orchestration d\'agents : patrons, garde-fous et retours d\'expérience.',
+  Infrastructure: 'Exploitation, sauvegardes et réseau. Les procédures que l\'astreinte doit pouvoir suivre les yeux fermés.'
+};
+const DESC_DOMAINES = {
+  audit_code: 'Audits, incidents et procédures autour de Claude Code.', prompts: 'Prompts utilisés dans l\'univers.', harnais: 'Bancs d\'évaluation et harnais LLM.',
+  CV: 'Versions datées du CV.', Lettres: 'Lettres de motivation et relances.', Entretiens: 'Préparation et comptes rendus d\'entretiens.',
+  Cadrage: 'Notes de cadrage et périmètres.', Ateliers: 'Supports et restitutions d\'ateliers.', Brouillons: 'Articles en cours d\'écriture.', 'Publiés': 'Articles publiés et leurs sources.',
+  Orchestration: 'Patrons d\'orchestration et garde-fous.', Sauvegardes: 'Politique, procédures et fiches de sauvegarde.', 'Réseau': 'Équipements, bascules et incidents réseau.'
+};
+const IC_DOMAINE = 'M1.5 4.5h4l1.5 1.5h7.5v7.5h-13z';
+const IC_DOSSIER = 'M1.5 4.5h4l1.5 1.5h7.5v7.5h-13zM1.5 8h13';
+const IC_NOTE = 'M4 2.5h6l2.5 2.5v8.5H4zM6 8h4M6 10.5h4';
+/* Univers → domaines → dossiers / notes. `note` référence une note du prototype. */
+const ARBRE = [
+  { nom: 'Claude', n: 24, enfants: [
+    { nom: 'audit_code', n: 9, enfants: [
+      { nom: 'Note technique – Installation de Claude Code', note: 'claude' },
+      { nom: 'Incident – PATH Linux' }, { nom: 'Mode autonome – Bonnes pratiques' }, { nom: 'Workflow – Analyse IA' },
+      { nom: 'archives', dossier: true, enfants: [{ nom: 'Ancienne procédure npm' }] }
+    ] },
+    { nom: 'prompts', n: 11, enfants: [{ nom: 'Prompt – Architecture LLM' }, { nom: 'Prompt – Revue de code' }] },
+    { nom: 'harnais', n: 4, enfants: [{ nom: 'Harnais d\'évaluation' }] }
+  ] },
+  { nom: 'Candidature', n: 18, enfants: [{ nom: 'CV', n: 6, enfants: [] }, { nom: 'Lettres', n: 8, enfants: [] }, { nom: 'Entretiens', n: 4, enfants: [] }] },
+  { nom: 'Business Analysis', n: 12, enfants: [{ nom: 'Cadrage', n: 7, enfants: [] }, { nom: 'Ateliers', n: 5, enfants: [] }] },
+  { nom: 'Substack', n: 8, enfants: [{ nom: 'Brouillons', n: 5, enfants: [] }, { nom: 'Publiés', n: 3, enfants: [] }] },
+  { nom: 'Agents', n: 6, enfants: [{ nom: 'Orchestration', n: 6, enfants: [] }] },
+  { nom: 'Infrastructure', n: 9, enfants: [
+    { nom: 'Sauvegardes', n: 3, enfants: [
+      { nom: 'Exploitation', dossier: true, enfants: [{ nom: 'Restaurer une sauvegarde PostgreSQL', note: 'pg' }, { nom: 'Politique de sauvegarde' }] },
+      { nom: 'Fiche BKP-01' }
+    ] },
+    { nom: 'Réseau', n: 6, enfants: [] }
+  ] }
+];
+const RECENTS = [['claude', 'Note technique – Installation de Claude Code'], ['pg', 'Restaurer une sauvegarde PostgreSQL'], [null, 'Prompt – Architecture LLM'], [null, 'Workflow – Analyse IA'], [null, 'Mode autonome – Bonnes pratiques']];
+const ICONES = {
+  cal: 'M4 5h16v15H4zM4 10h16M8 3v4M16 3v4', user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+  eye: 'M3 12c2.5-4.5 6-6.5 9-6.5s6.5 2 9 6.5c-2.5 4.5-6 6.5-9 6.5s-6.5-2-9-6.5zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', tag: 'M3 3h8l10 10-8 8L3 11zM7.5 7.5h.01',
+  crayon: 'M11 2.5l2.5 2.5L5 13.5H2.5V11z', horloge: 'M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12zM8 4.5V8l2.5 1.5', export: 'M8 2v8M5 7l3 3 3-3M2.5 12.5h11',
+  imprimer: 'M4.5 6V2.5h7V6M4.5 12H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-1.5M4.5 10h7v3.5h-7z', supprimer: 'M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8'
+};
+
+class Component extends DCLogic {
+  state = { vue: null, noteId: 'claude', registre: 'reference', menu: false, actif: 0, verifs: {}, revisions: {}, opCree: {}, ajoutes: {}, diffs: {}, filtre: 'tous', largeur: 1440, toast: '', copie: '', tiroir: null, ouverts: { 'Claude': true, 'Claude/audit_code': true, 'Infrastructure': true, 'Infrastructure/Sauvegardes': true, 'Infrastructure/Sauvegardes/Exploitation': true } };
+
+  ouvrirUnivers(nom) { this.setState(s => ({ vue: 'univers', universNom: nom, menu: false, tiroir: null, ouverts: { ...s.ouverts, [nom]: true } })); }
+
+  pageUnivers(nom, CLES) {
+    const u = ARBRE.find(x => x.nom === nom) || ARBRE[0];
+    const rep = REPARTITION[u.nom]; const total = rep.reduce((a, b) => a + b, 0);
+    /* Les états hors « à jour » sont portés par les premiers domaines, à hauteur de leur effectif. */
+    let reste = rep.slice(1);
+    const domaines = u.enfants.map((dm, i) => {
+      const n = dm.n || 0; let r = [0, 0, 0, 0, 0]; let pris = 0;
+      reste = reste.map((c, k) => { const p = Math.min(c, n - pris); r[k + 1] = p; pris += p; return c - p; });
+      r[0] = n - pris;
+      const feuilles = (dm.enfants || []).flatMap(e => e.enfants ? e.enfants : [e]);
+      const derniers = ['il y a 2 h', 'il y a 1 j', 'il y a 3 j', 'il y a 6 j', 'il y a 12 j'];
+      /* Trois colonnes d'état sur la ligne : à jour, bientôt, puis tout ce qui est en retard (à vérifier + à revoir + obsolète). */
+      const retard = r[2] + r[3] + r[4];
+      const colonnes = [[r[0], 'ajour'], [r[1], 'bientot'], [retard, r[3] + r[4] ? 'arevoir' : 'averifier']];
+      return {
+        nom: dm.nom, description: DESC_DOMAINES[dm.nom] || '', n, unite: n > 1 ? 'notes' : 'note', vide: n === 0,
+        icone: i % 3 === 0 ? IC_NOTE : i % 3 === 1 ? 'M2 3h12v10H2zM4.5 6.5l2 1.5-2 1.5M8 9.5h3' : 'M2.5 8c1.5-3 3.5-4.5 5.5-4.5S12 5 13.5 8c-1.5 3-3.5 4.5-5.5 4.5S4 11 2.5 8zM8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
+        dernier: n ? derniers[i % derniers.length] : '—',
+        compteurs: colonnes.map(([c, k]) => ({ n: n ? c : '—', couleur: n ? ETATS[k].couleur : '#c9d0cc', path: ETATS[k].path, encre: !n ? '#93a2a6' : c && k !== 'ajour' ? ETATS[k].couleur : c ? '#16222b' : '#93a2a6' })),
+        feuilles, r, dossiers: (dm.enfants || []).filter(e => e.dossier).length,
+        onClick: () => this.ouvrirDomaine(u.nom, dm.nom)
+      };
+    });
+    /* type, badge, couleur du disque, icône blanche */
+    const IC_CRAYON = 'M11 2.5l2.5 2.5L5 13.5H2.5V11z', IC_COCHE = 'M3 8.5l3.5 3.5L13 4.5', IC_IMPORT = 'M8 2v8M5 7l3 3 3-3M2.5 13h11', IC_PLUS = 'M8 3v10M3 8h10';
+    const types = [['Note vérifiée', 'Vérification', '#1d6b4a', IC_COCHE], ['Note modifiée', 'Note', '#1f5a3c', IC_CRAYON], ['Nouvelle note', 'Note', '#1f5a3c', IC_PLUS], ['Échéance atteinte', 'Vivacité', '#8f5c00', 'M8 4.5V8l2.5 1.5'], ['Import terminé', 'Import', '#46585f', IC_IMPORT]];
+    const quands = ['il y a 2 h', 'il y a 12 h', 'il y a 1 j', 'il y a 2 j', 'il y a 4 j'];
+    const brut = domaines.flatMap(dm => dm.feuilles.map(f => ({ objet: f.nom, domaine: dm.nom }))).slice(0, 5);
+    if (!brut.length) brut.push({ objet: `${total} notes ajoutées depuis Fichiers déposés`, domaine: u.enfants[0] ? u.enfants[0].nom : '', import: true });
+    const activite = brut.map((a, i) => { const t = a.import ? types[4] : types[i % 4]; return { ...a, type: t[0], badge: t[1], couleur: t[2], icone: t[3], par: 'Alexandre Berge', quand: quands[i], fil: i < brut.length - 1 ? 'block' : 'none' }; });
+    const attention = rep[2] + rep[3] + rep[4];
+    const alertes = [];
+    if (attention) alertes.push({ n: attention, titre: attention > 1 ? 'notes nécessitent votre attention' : 'note nécessite votre attention', detail: 'Leur période de validité est dépassée', ...ETATS[rep[3] + rep[4] ? 'arevoir' : 'averifier'] });
+    if (rep[1]) alertes.push({ n: rep[1], titre: rep[1] > 1 ? 'notes arrivent bientôt à échéance' : 'note arrive bientôt à échéance', detail: `Vérification prévue dans les ${this.props.seuilBientot ?? 10} prochains jours`, ...ETATS.bientot });
+    return {
+      nom: u.nom, icone: IC_UNIVERS[u.nom], description: DESCRIPTIONS[u.nom] || '', total,
+      stats: [{ n: total, lib: 'notes', icone: IC_NOTE }, { n: u.enfants.length, lib: u.enfants.length > 1 ? 'domaines' : 'domaine', icone: IC_DOMAINE }, { n: 1, lib: 'contributeur', icone: 'M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2.5 14.5a5.5 5.5 0 0 1 11 0' }, { n: activite[0].quand, lib: 'dernière activité', icone: 'M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12zM8 4.5V8l2.5 1.5' }],
+      compteurs: rep.map((c, k) => ({ n: c, lib: ETATS[CLES[k]].lib.toLowerCase(), couleur: ETATS[CLES[k]].couleur, path: ETATS[CLES[k]].path })).filter(c => c.n),
+      domaines, activite, alertes, calme: alertes.length === 0, nbDomaines: pl(u.enfants.length, 'domaine'), types, quands
+    };
+  }
+
+  ouvrirDomaine(univers, domaine) { this.setState(s => ({ vue: 'domaine', universNom: univers, domaineNom: domaine, menu: false, tiroir: null, ouverts: { ...s.ouverts, [univers]: true, [univers + '/' + domaine]: true } })); }
+
+  pageDomaine(uni, CLES) {
+    const dm = uni.domaines.find(x => x.nom === this.state.domaineNom) || uni.domaines[0];
+    const r = dm.r; const n = dm.n;
+    const attention = r[2] + r[3] + r[4];
+    /* Les états se posent sur les premières notes listées : retard d'abord, puis bientôt, puis à jour. */
+    /* Une note réelle du prototype porte son vrai état ; les états synthétiques restants vont aux autres feuilles. */
+    const reel = f => { if (!f.note) return null; const N = NOTES[f.note]; const reg = N.registres.reference; const cle = f.note + ':reference'; return this.etatDe(this.state.verifs[cle] || reg.verifiee, reg.validite, this.state.revisions[cle]).cle; };
+    const restants = { ajour: r[0], bientot: r[1], averifier: r[2], arevoir: r[3], obsolete: r[4] };
+    const feuilles = dm.feuilles.slice(0, 5);
+    feuilles.forEach(f => { const k = reel(f); if (k && restants[k] > 0) restants[k]--; });
+    const etatsNotes = []; ['obsolete', 'arevoir', 'averifier', 'bientot', 'ajour'].forEach(k => { for (let i = 0; i < restants[k]; i++) etatsNotes.push(k); });
+    let curseur = 0;
+    const vues = [5, 3, 3, 3, 2];
+    const notes = feuilles.map((f, i) => { const k = reel(f) || etatsNotes[curseur++] || 'ajour'; return { num: String(i + 1).padStart(2, '0'), titre: f.nom, etat: ETATS[k].lib, couleur: ETATS[k].couleur, path: ETATS[k].path, vues: pl(vues[i], 'vue'), onClick: () => { if (f.note) this.setState({ noteId: f.note, registre: 'reference', vue: 'note', actif: 0, menu: false }); } }; });
+    const alertes = [];
+    if (attention) alertes.push({ n: attention, titre: attention > 1 ? 'notes nécessitent votre attention' : 'note nécessite votre attention', detail: notes.find(x => x.etat !== 'À jour' && x.etat !== 'Bientôt à vérifier') ? notes.find(x => x.etat !== 'À jour' && x.etat !== 'Bientôt à vérifier').titre : 'Leur période de validité est dépassée', ...ETATS[r[3] + r[4] ? 'arevoir' : 'averifier'] });
+    if (r[1]) alertes.push({ n: r[1], titre: r[1] > 1 ? 'notes arrivent bientôt à échéance' : 'note arrive bientôt à échéance', detail: `Vérification prévue dans les ${this.props.seuilBientot ?? 10} prochains jours`, ...ETATS.bientot });
+    const activite = dm.feuilles.slice(0, 5).map((f, i) => { const t = uni.types[i % 4]; return { objet: f.nom, type: t[0], badge: t[1], couleur: t[2], icone: t[3], par: 'Alexandre Berge', quand: uni.quands[i], fil: i < Math.min(dm.feuilles.length, 5) - 1 ? 'block' : 'none' }; });
+    if (!activite.length) activite.push({ objet: dm.nom, type: 'Domaine créé', badge: 'Domaine', couleur: '#46585f', icone: 'M8 3v10M3 8h10', par: 'Alexandre Berge', quand: 'il y a 3 mois', fil: 'none' });
+    return {
+      nom: dm.nom, univers: uni.nom, description: dm.description, total: n, totalLib: n > 1 ? 'notes au total' : 'note au total', vide: n === 0,
+      ouvrirUnivers: () => this.ouvrirUnivers(uni.nom),
+      stats: [{ n, lib: n > 1 ? 'notes' : 'note', icone: IC_NOTE }, { n: 1, lib: 'contributeur', icone: 'M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2.5 14.5a5.5 5.5 0 0 1 11 0' }, { n: activite[0].quand, lib: 'dernière activité', icone: 'M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12zM8 4.5V8l2.5 1.5' }],
+      compteurs: [[r[0], 'ajour'], [r[1], 'bientot'], [r[2], 'averifier'], [r[3], 'arevoir'], [r[4], 'obsolete']].filter(([c, k], i) => i < 2 || c).map(([c, k]) => ({ n: c, lib: ETATS[k].lib, couleur: c ? ETATS[k].couleur : '#c9d0cc', path: ETATS[k].path })),
+      contenu: [{ lib: 'Notes', n, icone: IC_NOTE, barre: n ? '#1f5a3c' : '#e3e6e1' }, { lib: 'Dossiers', n: dm.dossiers, icone: IC_DOSSIER, barre: dm.dossiers ? '#9aa7a3' : '#e3e6e1' }, { lib: 'Fiches', n: 0, icone: 'M2 3h12v10H2zM2 6.5h12M6 6.5V13', barre: '#e3e6e1' }, { lib: 'Signets', n: 0, icone: 'M4 2h8v12l-4-3-4 3z', barre: '#e3e6e1' }],
+      alertes, calme: alertes.length === 0, notes, activite
+    };
+  }
+
+  arbre(note) {
+    const rows = []; const ouverts = this.state.ouverts;
+    const visite = (n, chemin, depth) => {
+      const cle = chemin ? chemin + '/' + n.nom : n.nom;
+      const type = depth === 0 ? 'univers' : n.note || (!n.enfants && !n.dossier) ? 'note' : n.dossier ? 'dossier' : 'domaine';
+      const aEnfants = !!(n.enfants && n.enfants.length);
+      const ouvert = !!ouverts[cle];
+      const vue = this.state.vue || this.props.vue || 'accueil';
+      const actif = vue === 'univers' ? (type === 'univers' && n.nom === this.state.universNom) : vue === 'domaine' ? (type === 'domaine' && n.nom === this.state.domaineNom && chemin === this.state.universNom) : vue === 'accueil' ? false : type === 'note' ? n.note === note.id : type === 'univers' ? n.nom === note.univers : type === 'domaine' && n.nom === note.domaine && chemin === note.univers;
+      rows.push({
+        cle, nom: n.nom, n: n.n || '', depth, pad: (depth * 14) + 'px', hauteur: depth === 0 ? '38px' : '32px', taille: depth === 0 ? '15px' : '13.5px',
+        icone: type === 'univers' ? IC_UNIVERS[n.nom] : type === 'domaine' ? IC_DOMAINE : type === 'dossier' ? IC_DOSSIER : IC_NOTE,
+        chevron: aEnfants ? 'visible' : 'hidden', rotation: ouvert ? 'rotate(90deg)' : 'rotate(0deg)',
+        bg: actif && (type === 'note' || vue === 'univers' || vue === 'domaine') ? '#e9e8e1' : 'transparent', couleur: actif ? '#1f5a3c' : type === 'note' ? '#46585f' : '#16222b', poids: actif ? 600 : type === 'univers' ? 500 : 400,
+        onToggle: () => this.setState(s => ({ ouverts: { ...s.ouverts, [cle]: !s.ouverts[cle] } })),
+        onClick: () => { if (n.note) this.setState({ noteId: n.note, registre: 'reference', vue: 'note', actif: 0, menu: false, tiroir: null }); else if (type === 'univers') this.ouvrirUnivers(n.nom); else if (type === 'domaine') this.ouvrirDomaine(chemin, n.nom); else if (aEnfants) this.setState(s => ({ ouverts: { ...s.ouverts, [cle]: !s.ouverts[cle] } })); }
+      });
+      if (aEnfants && ouvert) n.enfants.forEach(e => visite(e, cle, depth + 1));
+    };
+    ARBRE.forEach(u => visite(u, '', 0));
+    return rows;
+  }
+  refCentre = React.createRef();
+
+  componentDidMount() {
+    /* Adresse directe d'une vue : #vue=note&note=pg&registre=operationnel&univers=Claude&domaine=audit_code&largeur=1600 */
+    const p = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+    if (p.get('vue')) {
+      const s = { vue: p.get('vue') };
+      if (p.get('note')) s.noteId = p.get('note');
+      if (p.get('registre')) s.registre = p.get('registre');
+      if (p.get('univers')) s.universNom = p.get('univers');
+      if (p.get('domaine')) s.domaineNom = p.get('domaine');
+      if (p.get('largeur')) { this.largeurForcee = +p.get('largeur'); s.largeur = this.largeurForcee; }
+      if (p.get('hauteur')) this.hauteurForcee = +p.get('hauteur');
+      this.setState(s);
+    }
+    this.onResize = () => this.setState({ largeur: this.largeurForcee || window.innerWidth });
+    if (!this.largeurForcee) this.onResize(); window.addEventListener('resize', this.onResize);
+    const el = this.refCentre.current;
+    if (el) { this.onScroll = () => this.majActif(); el.addEventListener('scroll', this.onScroll, { passive: true }); }
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this.onResize); const el = this.refCentre.current; if (el && this.onScroll) el.removeEventListener('scroll', this.onScroll); clearTimeout(this.tToast); }
+
+  majActif() {
+    const el = this.refCentre.current; if (!el) return;
+    const secs = el.querySelectorAll('section[id^="sec-"]'); let actif = 0;
+    secs.forEach((s, i) => { if (s.getBoundingClientRect().top - el.getBoundingClientRect().top < 140) actif = i; });
+    if (actif !== this.state.actif) this.setState({ actif });
+  }
+  aller(i) {
+    const el = this.refCentre.current; const s = el && el.querySelector('#sec-' + i);
+    if (s) el.scrollTo({ top: s.offsetTop - 90, behavior: 'smooth' });
+  }
+  dire(toast) { clearTimeout(this.tToast); this.setState({ toast }); this.tToast = setTimeout(() => this.setState({ toast: '' }), 2600); }
+
+  cle() { return this.state.noteId + ':' + this.state.registre; }
+  registreCourant(note) {
+    const r = this.state.registre;
+    if (r === 'operationnel' && !note.registres.operationnel && this.state.opCree[note.id]) return { ...note.registres.operationnelLatent, verifiee: iso(TODAY), par: 'Alexandre Berge' };
+    return note.registres[r] || note.registres.reference;
+  }
+  etatDe(verifiee, validite, revision) {
+    const seuil = this.props.seuilBientot ?? 10;
+    const force = this.props.forcerEtat;
+    const v = d(verifiee); const e = new Date(v.getTime() + validite * J); const reste = jours(TODAY, e);
+    let cle = reste > seuil ? 'ajour' : reste >= 0 ? 'bientot' : reste > -14 ? 'averifier' : reste > -90 ? 'arevoir' : 'obsolete';
+    if (revision) cle = 'arevoir';
+    if (force && force !== 'auto') cle = force;
+    return { cle, v, e, reste };
+  }
+  ligneViv(x, verifieePar, revision) {
+    const E = ETATS[x.cle]; const { v, e, reste } = x;
+    const ligneEcheance = reste > 0 ? `Prochaine vérification : ${fmtC(e)} (dans ${pl(reste, 'jour')})` : reste === 0 ? `Échéance aujourd'hui : ${fmtC(e)}` : `Échéance dépassée de ${pl(-reste, 'jour')} (${fmtC(e)})`;
+    const rappel = reste >= 0 ? `Cette note repassera automatiquement à « À vérifier » le ${fmtC(e)}.` : x.cle === 'obsolete' ? `Échéance dépassée depuis le ${fmtC(e)}. Une nouvelle vérification relancera le cycle.` : `En attente de vérification depuis le ${fmtC(e)}. Passage à « ${reste > -14 ? 'À revoir' : 'Obsolète'} » ${reste > -14 ? 'le ' + fmtC(new Date(e.getTime() + 14 * J)) : 'le ' + fmtC(new Date(e.getTime() + 90 * J))}.`;
+    const total = e - v; const pctA = Math.max(0, Math.min(1, (TODAY - v) / total));
+    return {
+      ...E, ligneVerif: `Vérifiée le ${fmtL(v)}${verifieePar ? ' par ' + verifieePar : ''}`, ligneEcheance,
+      couleurEcheance: E.attention >= 2 ? E.couleur : '#536066', poidsEcheance: E.attention >= 2 ? 600 : 400,
+      fondLigne: E.attention >= 3 ? E.voile : E.attention === 2 ? 'rgba(143,92,0,.06)' : 'transparent',
+      rappel, revision: !!revision, revisionPar: revision || '',
+      pctEcoule: (pctA * 100).toFixed(1) + '%', pctAujourdhui: (pctA * 100).toFixed(1) + '%', couleurEcheanceRond: reste < 0 ? E.couleur : '#b8c2bd',
+      verifieeCourt: fmtC(v), echeanceCourt: fmtC(e), aujourdhuiRel: reste >= 0 ? `J−${reste}` : `J+${-reste}`,
+      compact: reste >= 0 ? `dans ${reste} j` : `${-reste} j de retard`
+    };
+  }
+
+  renderVals() {
+    const st = this.state; const vue = st.vue || this.props.vue || 'accueil';
+    const note = NOTES[st.noteId];
+    const reg = this.registreCourant(note);
+    const aOp = !!(note.registres.operationnel || st.opCree[note.id]);
+    const cle = this.cle();
+    const verifiee = st.verifs[cle] || reg.verifiee; const par = st.verifs[cle] ? 'Alexandre Berge' : reg.par;
+    const x = this.etatDe(verifiee, reg.validite, st.revisions[cle]);
+    const viv = this.ligneViv(x, par, st.revisions[cle]);
+
+    const sections = reg.sections.map((s, i) => ({
+      ...s, id: 'sec-' + i, num: String(i + 1).padStart(2, '0'), aComplement: !!s.complement,
+      blocs: s.blocs.map((b, k) => {
+        const id = cle + i + ':' + k;
+        const o = { ...b, estP: b.type === 'p', estCode: b.type === 'code', estListe: b.type === 'liste', estEtapes: b.type === 'etapes', estAvis: b.type === 'avis', estTableau: b.type === 'tableau', estSchema: b.type === 'schema' };
+        if (o.estCode) { o.libCopier = st.copie === id ? 'Copié' : 'Copier'; o.copier = () => { try { navigator.clipboard.writeText(b.lignes.map(l => l.t).join('\n')); } catch (e) {} this.setState({ copie: id }); setTimeout(() => this.setState({ copie: '' }), 1600); }; }
+        if (o.estAvis) { const danger = b.niveau === 'danger'; o.fond = danger ? '#f7e7e3' : '#eef3ef'; o.encre = danger ? '#7a2a1c' : '#2d4a3a'; o.marque = danger ? '!' : 'i'; }
+        return o;
+      })
+    }));
+    const sommaire = sections.map((s, i) => ({ num: s.num, titre: s.titre, sous: s.sous, onClick: () => this.aller(i), barre: i === st.actif ? '#1f5a3c' : 'transparent', couleur: i === st.actif ? '#1f5a3c' : '#536066', poids: i === st.actif ? 600 : 400 }));
+
+    const tab = (actif) => ({ barre: actif ? '#1f5a3c' : 'transparent', couleur: actif ? '#1f5a3c' : '#46585f', poids: actif ? 600 : 400, bg: actif ? '#f5f4ef' : 'transparent' });
+    const l = st.largeur; const droiteRepliee = l < 1180; const gaucheRepliee = l < 1024;
+    const montrerDroite = vue === 'note' && (!droiteRepliee || st.tiroir === 'droite');
+    const montrerGauche = !gaucheRepliee || st.tiroir === 'gauche';
+    const montrerSommaire = l >= 1380 && vue === 'note';
+    const gridCols = (gaucheRepliee ? '' : '300px ') + 'minmax(0,1fr)' + (!droiteRepliee && vue === 'note' ? ' 340px' : '');
+    const tiroir = 'position:absolute;top:0;bottom:0;z-index:40;width:min(340px,86vw);box-shadow:0 6px 20px -4px rgba(22,34,43,.18),0 2px 6px rgba(22,34,43,.08);animation:monte 180ms both';
+    const styleGauche = gaucheRepliee ? tiroir + ';left:0' : '';
+    const styleDroite = droiteRepliee ? tiroir + ';right:0' : '';
+
+    const arbre = this.arbre(note);
+    const recents = RECENTS.map(([id, titre]) => { const actif = id === note.id && vue === 'note'; return { titre, bg: actif ? '#e9e8e1' : 'transparent', couleur: actif ? '#1f5a3c' : '#16222b', poids: actif ? 600 : 400, onClick: () => { if (id) this.setState({ noteId: id, registre: 'reference', vue: 'note', actif: 0, menu: false }); } }; });
+
+    const metas = [
+      { icone: ICONES.cal, valeur: fmtL(d(note.creee)), libelle: 'Date de création' },
+      { icone: ICONES.user, valeur: note.auteur, libelle: 'Rédacteur' },
+      { icone: ICONES.eye, valeur: pl(note.consultations, 'consultation'), libelle: `${note.consult30} sur les 30 derniers jours` },
+      { icone: ICONES.tag, valeur: 'Version', libelle: note.version }
+    ];
+
+    const marquerVerifie = () => { this.setState(s => ({ verifs: { ...s.verifs, [cle]: iso(TODAY) }, revisions: { ...s.revisions, [cle]: null }, menu: false, ajoutes: { ...s.ajoutes, [note.id]: [{ date: iso(TODAY), registre: st.registre, type: 'verif', etat: 'ajour', titre: 'Vérifiée par Alexandre Berge', detail: `Durée de validité : ${reg.validite} jours. Échéance le ${fmtL(new Date(TODAY.getTime() + reg.validite * J))}.` }, ...(s.ajoutes[note.id] || [])] } })); this.dire('Vérifiée à l\'instant — le cycle repart pour ' + pl(reg.validite, 'jour')); };
+    const signalerReviser = () => { const actif = !!st.revisions[cle]; this.setState(s => ({ revisions: { ...s.revisions, [cle]: actif ? null : 'Alexandre Berge' }, menu: false, ajoutes: actif ? s.ajoutes : { ...s.ajoutes, [note.id]: [{ date: iso(TODAY), registre: st.registre, type: 'etat', etat: 'arevoir', titre: 'Révision demandée par Alexandre Berge', detail: 'La note passe à « À revoir » jusqu\'à la prochaine vérification.' }, ...(s.ajoutes[note.id] || [])] } })); this.dire(actif ? 'Demande de révision levée' : 'Révision demandée — la note passe à « À revoir »'); };
+    const ouvrirHistorique = () => this.setState({ vue: 'historique', menu: false, filtre: 'tous' });
+    const retourNote = () => this.setState({ vue: 'note', menu: false });
+    const creerOperationnel = () => { this.setState(s => ({ opCree: { ...s.opCree, [note.id]: true }, registre: 'operationnel', actif: 0, ajoutes: { ...s.ajoutes, [note.id]: [{ date: iso(TODAY), registre: 'operationnel', type: 'verif', etat: 'ajour', titre: 'Version opérationnelle créée et vérifiée', detail: `Dérivée de la référence par Alexandre Berge. Durée de validité : ${note.registres.operationnelLatent.validite} jours.` }, ...(s.ajoutes[note.id] || [])] } })); this.dire('Version opérationnelle créée — son propre cycle de vivacité démarre'); };
+
+    const actions = [
+      { lib: 'Modifier la référence', icone: ICONES.crayon, couleur: '#16222b', onClick: () => {} },
+      { lib: aOp ? 'Modifier l\'opérationnel' : 'Créer l\'opérationnel', icone: ICONES.crayon, couleur: '#16222b', onClick: aOp ? () => {} : creerOperationnel },
+      { lib: 'Historique des versions', icone: ICONES.horloge, couleur: '#16222b', onClick: ouvrirHistorique },
+      { lib: 'Exporter', icone: ICONES.export, couleur: '#16222b', onClick: () => {} },
+      { lib: 'Imprimer', icone: ICONES.imprimer, couleur: '#16222b', onClick: () => {} },
+      { lib: 'Supprimer', icone: ICONES.supprimer, couleur: '#a52c1b', onClick: () => {} }
+    ];
+
+    const tous = [...(st.ajoutes[note.id] || []), ...note.evenements];
+    const filtres = [['tous', 'Tous'], ['reference', 'Référence'], ['operationnel', 'Opérationnel']].map(([k, lib]) => ({ lib, onClick: () => this.setState({ filtre: k }), barre: st.filtre === k ? '#1f5a3c' : 'transparent', couleur: st.filtre === k ? '#1f5a3c' : '#46585f', poids: st.filtre === k ? 600 : 400 }));
+    const evenements = tous.filter(ev => st.filtre === 'tous' || ev.registre === st.filtre).map((ev, i) => {
+      const E = ev.etat ? ETATS[ev.etat] : null; const k = note.id + ':' + i + ev.date;
+      return { ...ev, date: fmtL(d(ev.date)), registre: ev.registre === 'reference' ? 'Référence' : 'Opérationnel', couleur: E ? E.couleur : '#9aa7a3', path: E ? E.path : (ev.type === 'version' ? 'M5 5h6v6H5z' : ''), couleurTitre: E && E.attention >= 2 ? E.couleur : '#16222b', diffOuvert: !!st.diffs[k], libComparer: st.diffs[k] ? 'Masquer la comparaison' : 'Comparer avec la version précédente', comparer: () => this.setState(s => ({ diffs: { ...s.diffs, [k]: !s.diffs[k] } })) };
+    });
+
+    const seuil = this.props.seuilBientot ?? 10;
+    const CLES = Object.keys(ETATS);
+    const ouvrirNote = id => () => { if (id) this.setState({ noteId: id, registre: 'reference', vue: 'note', actif: 0, menu: false }); };
+    const totaux = [0, 0, 0, 0, 0]; Object.values(REPARTITION).forEach(r => r.forEach((n, i) => { totaux[i] += n; }));
+    const total = totaux.reduce((a, b) => a + b, 0); const attention = totaux[2] + totaux[3] + totaux[4]; const critiques = totaux[3] + totaux[4];
+    const item = ([id, titre, sous, etat]) => ({ titre, sous, etat: ETATS[etat].lib, couleur: ETATS[etat].couleur, path: ETATS[etat].path, onClick: ouvrirNote(id) });
+    const acc = {
+      total, ajour: totaux[0],
+      alertes: [
+        { n: totaux[1], titre: totaux[1] > 1 ? 'notes arrivent bientôt à échéance' : 'note arrive bientôt à échéance', detail: `Vérification prévue dans les ${seuil} prochains jours`, ...ETATS.bientot, onClick: () => {} },
+        { n: attention, titre: attention > 1 ? 'notes nécessitent votre attention' : 'note nécessite votre attention', detail: 'Leur période de validité est dépassée', ...ETATS[critiques ? 'arevoir' : 'averifier'], onClick: () => {} }
+      ],
+      compteurs: CLES.map((k, i) => ({ n: totaux[i], lib: ETATS[k].lib, couleur: ETATS[k].couleur, path: ETATS[k].path })),
+      bilan: critiques ? { ...ETATS.arevoir, titre: critiques > 1 ? `${critiques} notes critiques` : '1 note critique', texte: `${totaux[3]} à revoir, ${totaux[4]} obsolète. La plus ancienne : « Restaurer une sauvegarde PostgreSQL », échéance dépassée de 21 jours.`, trait: 'M12 7.5v5M12 15.5v.5' } : { ...ETATS.ajour, titre: 'Tout est sous contrôle', texte: 'Aucune note critique.', trait: 'M8.5 12l2.5 2.5 4.5-5' },
+      listes: [
+        { titre: 'Récemment consultées', periode: '7 derniers jours', icone: IC_NOTE, tout: 'Voir toutes les consultations', items: RECEMMENT.map(item) },
+        { titre: 'Les plus consultées', periode: '30 derniers jours', icone: 'M2 14h12M4 11V8M8 11V4M12 11V6', tout: 'Voir toutes les notes les plus consultées', items: PLUS_CONSULTEES.map(item) }
+      ],
+      colonnes: CLES.map(k => k === 'bientot' ? 'Bientôt' : ETATS[k].lib),
+      univers: ARBRE.map(u => { const r = REPARTITION[u.nom]; const n = r.reduce((a, b) => a + b, 0); return {
+        nom: u.nom, icone: IC_UNIVERS[u.nom], notes: pl(n, 'note'),
+        compteurs: r.map((c, i) => ({ n: c, couleur: c ? ETATS[CLES[i]].couleur : '#c9d0cc', path: ETATS[CLES[i]].path, encre: c && i >= 2 ? ETATS[CLES[i]].couleur : c ? '#16222b' : '#93a2a6' })),
+        barre: r.map((c, i) => ({ couleur: ETATS[CLES[i]].couleur, pct: (c / n * 100).toFixed(1) + '%' })).filter(s => s.pct !== '0.0%'),
+        onClick: () => this.ouvrirUnivers(u.nom)
+      }; })
+    };
+    const uni = this.pageUnivers(st.universNom || note.univers, CLES);
+    const dom = vue === 'domaine' ? this.pageDomaine(uni, CLES) : null;
+    const exemples = { ajour: [-23, 90], bientot: [-84, 90], averifier: [-94, 90], arevoir: [-111, 90], obsolete: [-200, 90] };
+    const planche = Object.keys(ETATS).map(k => { const [dv, val] = exemples[k]; const v = new Date(TODAY.getTime() + dv * J); const xx = { cle: k, v, e: new Date(v.getTime() + val * J), reste: jours(TODAY, new Date(v.getTime() + val * J)) }; return { ...this.ligneViv(xx, null, null), regle: ETATS[k].regle }; });
+
+    return {
+      cadreCapture: this.largeurForcee ? `width:${this.largeurForcee}px;height:${this.hauteurForcee || 1100}px` : '',
+      gridCols, centreCols: montrerSommaire ? '190px minmax(0,1fr)' : 'minmax(0,1fr)', montrerSommaire, montrerDroite, montrerGauche, gaucheRepliee, droiteRepliee, styleGauche, styleDroite,
+      tiroirOuvert: !!st.tiroir, fermerTiroirs: () => this.setState({ tiroir: null }), ouvrirGauche: () => this.setState({ tiroir: 'gauche', menu: false }), ouvrirDroite: () => this.setState({ tiroir: 'droite', menu: false }),
+      vueNote: vue === 'note', vueHistorique: vue === 'historique', vueEtats: vue === 'etats', vueAccueil: vue === 'accueil', vueAccueilNon: vue !== 'accueil', vueRetour: vue === 'historique' || vue === 'etats', montrerModif: vue === 'note' || vue === 'historique', vueAccueil: vue === 'accueil',
+      acc, ouvrirAccueil: () => this.setState({ vue: 'accueil', menu: false, tiroir: null }),
+      uni, dom, vueUnivers: vue === 'univers', vueDomaine: vue === 'domaine', vueAccueilOuUnivers: vue === 'accueil' || vue === 'univers' || vue === 'domaine', filNote: vue === 'note' || vue === 'historique' || vue === 'etats', ouvrirUniversCourant: () => this.ouvrirUnivers(note.univers), ouvrirDomaineCourant: () => this.ouvrirDomaine(note.univers, note.domaine),
+      note, arbre, recents, metas, resume: note.resume, sections, sommaire, actions, viv,
+      registreLib: st.registre === 'reference' ? 'Référence' : 'Opérationnel',
+      aOperationnel: aOp, sansOperationnel: !aOp, tabRef: tab(st.registre === 'reference'), tabOp: tab(st.registre === 'operationnel'),
+      choisirReference: () => this.setState({ registre: 'reference', actif: 0 }), choisirOperationnel: () => this.setState({ registre: 'operationnel', actif: 0 }), creerOperationnel,
+      menuOuvert: st.menu, toggleMenu: () => this.setState(s => ({ menu: !s.menu })), marquerVerifie, signalerReviser, ouvrirHistorique, retourNote, ouvrirEtats: () => this.setState({ vue: 'etats', menu: false }),
+      libMarquer: 'Marquer comme vérifiée', libReviser: st.revisions[cle] ? 'Lever la demande de révision' : 'Signaler à réviser',
+      filtres, evenements, planche, seuilTexte: pl(seuil, 'jour'), toast: st.toast
+    };
+  }
+}
+</script>
+</body>
+</html>
