@@ -265,12 +265,16 @@ function rendreTitre(titre: Titre, options: Rendu): string {
  * exactement le texte stocké.
  */
 function rendreBlocDeCode(bloc: BlocDeCode): string {
+	const texte = (bloc.content ?? []).map((t) => t.text).join('');
+	if (bloc.attrs.language === LANGAGE_DE_DIAGRAMME && texte.trim() !== '') {
+		return rendreDiagrammeSansAlternative(texte);
+	}
 	const langage =
 		bloc.attrs.language === null
 			? ''
 			: `<span class="etiq">${echapper(bloc.attrs.language)}</span>`;
 	const copier = '<button class="btn btn--discret btn-copier">Copier</button>';
-	const code = echapper((bloc.content ?? []).map((t) => t.text).join(''));
+	const code = echapper(texte);
 	return (
 		`<div class="bloc-code"><div class="bloc-code__tete">${langage}${copier}</div>` +
 		`<pre><code>${code}</code></pre></div>`
@@ -401,6 +405,37 @@ function rendrePieceJointe(bloc: PieceJointeIntegree): string {
  * montre, c'est le RENDU GRAPHIQUE en lecture — le conteneur ci-dessous vient du contrat de
  * Mermaid. Écart déclaré.
  */
+/** La chaîne d'information qui fait d'un bloc clôturé un diagramme. */
+const LANGAGE_DE_DIAGRAMME = 'mermaid';
+
+/**
+ * LE DIAGRAMME ÉCRIT COMME TOUT LE MONDE L'ÉCRIT — un bloc clôturé ```mermaid, sans
+ * ligne d'attributs.
+ *
+ * `analyserBlocCloture` ne rend un nœud `diagramme` QUE si une ligne d'attributs porte
+ * l'alternative textuelle, et le schéma l'exige non vide (`P-06`) : un fichier Markdown
+ * ordinaire — celui que GitHub, GitLab, Obsidian et l'éditeur de cette application
+ * dessinent tous — arrive donc en `codeBlock`, et s'affichait en CODE. Sur les
+ * 300 notes de l'instance de recette, PAS UN SEUL nœud `diagramme` : tout le Mermaid y
+ * est un bloc de code, et pas un schéma ne se dessinait.
+ *
+ * Le cadre est celui du diagramme, la loupe l'ouvre donc aussi.
+ *
+ * AUCUNE ALTERNATIVE N'EST INVENTÉE — il n'y en a pas, et en fabriquer une serait
+ * mentir à qui ne voit pas l'écran. Ni `role="img"` ni `aria-label` : le témoin dit au
+ * rendu client de garder la SOURCE lisible par les technologies d'assistance au lieu
+ * de la retirer de l'arbre. Un diagramme qui veut une vraie alternative reste le nœud
+ * `diagramme`, et lui l'exige.
+ */
+function rendreDiagrammeSansAlternative(source: string): string {
+	return (
+		`<figure class="figure"><button class="figure__cadre" ` +
+		`aria-label="Agrandir le diagramme">` +
+		`<pre class="mermaid" data-sans-alternative="oui">${echapper(source)}</pre>` +
+		`</button></figure>`
+	);
+}
+
 function rendreDiagramme(diagramme: Diagramme): string {
 	const { source, alternative, etiquette, legende } = diagramme.attrs;
 	const parts =

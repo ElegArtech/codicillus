@@ -151,8 +151,15 @@ function poser(pre: HTMLElement, balisage: string): HTMLElement {
 	const document = pre.ownerDocument;
 	const dessin = document.createElement('div');
 	dessin.className = 'diagramme';
-	dessin.setAttribute('role', 'img');
-	dessin.setAttribute('aria-label', pre.getAttribute('aria-label') ?? '');
+	/* SANS ALTERNATIVE, PAS DE `role="img"` : un dessin annoncé comme image et muet
+	   vaut moins que la source. Le `<pre>` reste alors dans l'arbre d'accessibilité,
+	   masqué à l'œil seulement — c'est le seul texte qui dise ce que le schéma
+	   montre, et il n'est pas inventé. */
+	const alternative = pre.getAttribute('aria-label');
+	if (alternative !== null) {
+		dessin.setAttribute('role', 'img');
+		dessin.setAttribute('aria-label', alternative);
+	}
 	dessin.innerHTML = balisage;
 	const svg = dessin.querySelector('svg');
 	if (svg !== null) {
@@ -172,7 +179,11 @@ function poser(pre: HTMLElement, balisage: string): HTMLElement {
 		   dimensionne sur son contenu, et « Agrandir » RAPETISSAIT le diagramme. */
 		svg.setAttribute('data-diagramme', 'oui');
 	}
-	pre.hidden = true;
+	if (alternative === null) {
+		pre.classList.add('diagramme__source-lue');
+	} else {
+		pre.hidden = true;
+	}
 	pre.removeAttribute('role');
 	pre.removeAttribute('aria-label');
 	pre.after(dessin);
