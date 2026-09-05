@@ -23,7 +23,13 @@
 /* AUCUNE DE CES DEUX RÈGLES NE DÉCLARE `display` : le socle escamote les
    colonnes par `display:none` à égalité de spécificité, et une déclaration
    ici gagnerait par l'ordre du cascade — le sommaire ne disparaîtrait plus. */
-.colonne-sommaire { position: sticky; top: calc(var(--h-entete) + var(--e-5)); padding-top: 220px; }
+/* LE SOMMAIRE COMMENCE EN HAUT DE LA COLONNE, avec le sélecteur de registre et la
+   ligne de vivacité. Il était poussé de 220 px en dur pour s'aligner sur le titre :
+   un nombre magique, que rien ne faisait suivre — la ligne de vivacité se replie sur
+   deux lignes selon la largeur, le titre selon sa longueur, et l'alignement se
+   défaisait dès que l'un des deux bougeait. Il laissait surtout une colonne vide sur
+   la hauteur d'un écran. */
+.colonne-sommaire { position: sticky; top: calc(var(--h-entete) + var(--e-5)); }
 .document { min-width: 0; width: 100%; }
 
 /* --- Le sommaire ---------------------------------------------------------- */
@@ -124,7 +130,11 @@
 .titre-note {
   font-family: var(--f-lecture); font-size: var(--t-titre); font-weight: var(--g-moyen);
   line-height: var(--i-serre); letter-spacing: -.01em;
-  margin: 34px 0 0; max-width: 32ch; text-wrap: pretty;
+  /* LE TITRE SUIT LA COLONNE, comme le corps. Il portait une mesure de 32 caractères
+     — le dernier plafond en dur de l'écran : à 2560 px il s'arrêtait à 768 px sous un
+     texte qui en occupait 2450, et la page semblait cassée en deux. `text-wrap: pretty`
+     garde une coupe équilibrée quelle que soit la largeur. */
+  margin: 34px 0 0; max-width: var(--l-lecture); text-wrap: pretty;
 }
 
 .etiquettes { display: flex; flex-wrap: wrap; gap: var(--e-2); margin-top: 26px; }
