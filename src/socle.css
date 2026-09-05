@@ -620,6 +620,48 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 /* --------------------------------------------------------------------------
+   4 quinquies. LA TEINTE D'UN ÉTAT DE VIVACITÉ
+   Trois vues rendaient la même ligne compacte et le même rail, et recopiaient
+   les mêmes dix règles de teinte : la coquille venait d'apprendre ce que coûte
+   une règle partagée écrite trois fois. Les GÉOMÉTRIES restent aux vues — un
+   compteur dense et une ligne de note n'ont ni la même graisse ni le même
+   interlettre —, la teinte est ici.
+
+   L'ATTENTION EST PROGRESSIVE : la ligne est transparente tant que la note se
+   tait, teintée quand l'échéance est passée, sur le voile de l'état quand elle
+   demande une décision. C'est `data-attention` qui décide, jamais une couleur
+   écrite au balisage.
+   -------------------------------------------------------------------------- */
+.ligne-vivacite[data-attention="0"],
+.ligne-vivacite[data-attention="1"] { background: transparent; }
+.ligne-vivacite[data-attention="2"] { background: var(--c-attention-2); }
+.ligne-vivacite[data-attention="3"] { background: var(--c-arevoir-voile); }
+/* L'obsolète porte SON voile : les deux partagent le degré d'attention, jamais
+   la teinte. */
+.ligne-vivacite[data-attention="3"]:has(.glyphe--obsolete) { background: var(--c-obsolete-voile); }
+
+.ligne-vivacite__etat.glyphe--ajour     { color: var(--c-ajour); }
+.ligne-vivacite__etat.glyphe--bientot   { color: var(--c-bientot); }
+.ligne-vivacite__etat.glyphe--averifier { color: var(--c-averifier); }
+.ligne-vivacite__etat.glyphe--arevoir   { color: var(--c-arevoir); }
+.ligne-vivacite__etat.glyphe--obsolete  { color: var(--c-obsolete); }
+
+/* L'ÉCHÉANCE RESTE GRISE TANT QUE LA NOTE SE TAIT, et ne prend la couleur de
+   l'état qu'à partir d'« à vérifier » : c'est l'information que le lecteur doit
+   voir en premier, et la mettre en couleur plus tôt la banaliserait. */
+.ligne-vivacite__echeance.glyphe--ajour     { color: var(--c-encre-3); }
+.ligne-vivacite__echeance.glyphe--bientot   { color: var(--c-encre-3); }
+.ligne-vivacite__echeance.glyphe--averifier { color: var(--c-averifier); }
+.ligne-vivacite__echeance.glyphe--arevoir   { color: var(--c-arevoir); }
+.ligne-vivacite__echeance.glyphe--obsolete  { color: var(--c-obsolete); }
+
+.rail-compact.glyphe--ajour     { color: var(--c-ajour); }
+.rail-compact.glyphe--bientot   { color: var(--c-bientot); }
+.rail-compact.glyphe--averifier { color: var(--c-averifier); }
+.rail-compact.glyphe--arevoir   { color: var(--c-arevoir); }
+.rail-compact.glyphe--obsolete  { color: var(--c-obsolete); }
+
+/* --------------------------------------------------------------------------
    5. BOUTONS
    -------------------------------------------------------------------------- */
 .btn {
