@@ -167,251 +167,282 @@
   .pres__sous .temoin__txt { display: none; }
 }
 
-/* ==========================================================================
-   BARRE DE RÉPARTITION DE FRAÎCHEUR
-   Commune au tableau de bord (V-07), aux pages d'univers et de domaine
-   (V-10, V-11) et aux listes (V-12).
-
-   Les trois parts se distinguent par leur remplissage autant que par leur
-   teinte — plein, rayé fin, hachuré large — de sorte que la répartition reste
-   lisible sans la couleur, en niveaux de gris comme en vision périphérique.
-   Le hachurage de la part obsolète reprend celui du témoin de fraîcheur.
-   ========================================================================== */
-
-.repart { display: flex; height: 14px; border-radius: var(--r-1); overflow: hidden; border: 1px solid var(--c-trait); }
-.repart button { border: 0; padding: 0; cursor: pointer; transition: filter var(--m-vif); }
-.repart button:hover { filter: brightness(.9); }
-.repart button + button { border-left: 1px solid var(--c-papier); }
-.repart .p-frais { background: var(--c-frais); }
-.repart .p-vieil {
-  background: repeating-linear-gradient(90deg, var(--c-vieil) 0 2px, #c99a3d 2px 5px);
-}
-.repart .p-obs {
-  background: repeating-linear-gradient(135deg, var(--c-obsolete) 0 4px, #d1705f 4px 8px);
-}
-.legende { display: flex; gap: var(--e-3); flex-wrap: wrap; margin-top: var(--e-2); }
-.legende span { display: inline-flex; align-items: center; gap: var(--e-1); font-size: var(--t-mini); color: var(--c-encre-2); }
-.legende i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
-.legende .p-frais { background: var(--c-frais); }
-.legende .p-vieil { background: repeating-linear-gradient(90deg, var(--c-vieil) 0 2px, #c99a3d 2px 5px); }
-.legende .p-obs { background: repeating-linear-gradient(135deg, var(--c-obsolete) 0 3px, #d1705f 3px 6px); }
-.legende b { font-family: var(--f-donnee); font-weight: var(--g-lourd); }
 
 /* ==========================================================================
    V-10 — PAGE D'UN UNIVERS
-   Vue consolidée d'un ensemble de domaines partageant un contexte. Point de
-   pilotage, et point d'entrée vers les domaines.
+   Trois blocs : le bandeau, la carte des domaines, puis les deux cartes
+   « À surveiller » et « Activité récente ».
+
+   AUCUNE COULEUR D'ÉTAT N'EST ÉCRITE ICI EN VALEUR. Les cinq teintes de la
+   vivacité sont des jetons du socle, et le glyphe les porte par sa classe :
+   une couleur recopiée dans cette feuille aurait divergé du glyphe qu'elle
+   accompagne au premier ajustement.
    ========================================================================== */
 .univers {
-  max-width: 1160px; width: 100%; margin: 0 auto;
-  padding: var(--e-5) var(--e-5) var(--e-8);
+  width: 100%;
+  padding: 28px clamp(20px, 4vw, 56px) 96px;
+  display: flex; flex-direction: column; gap: 26px;
 }
 
-/* --- Couverture ------------------------------------------------------------ */
-.couverture {
-  display: flex; align-items: flex-start; gap: var(--e-4);
-  padding: var(--e-5);
-  border-radius: var(--r-3);
-  margin-bottom: var(--e-5);
-  color: #eef2f4;
-  background: var(--teinte);
-  position: relative; overflow: hidden;
-}
-/* Trame discrète empruntée au registre : des filets réguliers, comme les
-   lignes d'un cahier de consignation. */
-.couverture::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: repeating-linear-gradient(0deg, rgba(255,255,255,.055) 0 1px, transparent 1px 9px);
-}
-.couverture__sceau {
-  width: 52px; height: 52px; flex: none; border-radius: var(--r-2);
+/* --- L'en-tête : « + Créer » et l'avatar ---------------------------------- */
+.avatar-entete {
+  width: 34px; height: 34px; flex: none; border-radius: var(--r-rond);
   display: grid; place-items: center;
-  background: rgba(255,255,255,.13);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
+  background: var(--c-accent); color: #fff;
+  font-size: var(--t-mini); font-weight: var(--g-fort); letter-spacing: .02em;
+  text-decoration: none;
 }
-.couverture__corps { flex: 1; min-width: 0; }
-.couverture__sur { color: rgba(238,242,244,.62); margin-bottom: var(--e-1); }
-.couverture h1 {
-  font-family: var(--f-ui); font-size: clamp(1.6rem, 3.6vw, 2.125rem);
-  font-weight: var(--g-lourd); letter-spacing: -.026em; line-height: 1.1;
-  margin: 0 0 var(--e-2);
-}
-.couverture p {
-  font-family: var(--f-lecture); font-size: var(--t-base); line-height: 1.65;
-  color: rgba(238,242,244,.82); margin: 0; max-width: 64ch;
-}
-.couverture__actions { flex: none; position: relative; z-index: 1; }
-.couverture .btn {
-  background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.24); color: #fff;
-}
-.couverture .btn:hover { background: rgba(255,255,255,.24); border-color: rgba(255,255,255,.4); }
+.avatar-entete:hover { background: var(--c-accent-fonce); text-decoration: none; }
 
-/* --- Indicateurs consolidés -------------------------------------------------- */
-.consolide {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 1.5fr; gap: var(--e-3);
-  margin-bottom: var(--e-5);
+/* --- 1. Le bandeau -------------------------------------------------------- */
+.bandeau {
+  border: 1px solid var(--c-trait); border-radius: var(--r-4);
+  background: var(--c-papier); overflow: hidden;
 }
-.mesure {
-  background: var(--c-papier); border: 1px solid var(--c-trait); border-radius: var(--r-3);
-  padding: var(--e-4); box-shadow: var(--o-pose);
+.bandeau__haut {
+  display: flex; flex-wrap: wrap; align-items: flex-start;
+  gap: var(--e-5) var(--e-6);
+  padding: 30px 32px 26px;
 }
-.mesure__nom { display: block; margin-bottom: var(--e-2); }
-.mesure__val {
-  font-family: var(--f-donnee); font-size: 1.75rem; font-weight: var(--g-lourd);
-  line-height: 1; letter-spacing: -.03em;
-}
-.mesure__sous { display: block; font-size: var(--t-mini); color: var(--c-encre-3); margin-top: var(--e-2); }
-.mesure--large .legende { margin-top: var(--e-2); }
-/* Les deux nombres de la mesure « Notes » sont des BOUTONS : ils ouvrent la
-   recherche réduite à cet univers. La règle est celle de V-11, où la même
-   classe neutralise le même bouton ; elle ne fait que rendre au bouton
-   l apparence du bloc que le gel dessine. */
-.mesure__lien {
-  display: block; width: 100%; text-align: left; background: none; border: 0;
-  padding: 0; cursor: pointer; color: inherit; font: inherit;
-}
-.mesure__lien:hover .mesure__val, .mesure__lien:hover .mesure__sous { color: var(--c-accent); }
-
-.avatars { display: flex; margin-top: var(--e-2); }
-.avatar-pile {
-  width: 24px; height: 24px; border-radius: 50%; flex: none;
+.bandeau__sceau {
+  width: 80px; height: 80px; flex: none; border-radius: var(--r-4);
   display: grid; place-items: center;
-  font-size: var(--t-micro); font-weight: var(--g-lourd);
-  color: #fff; background: var(--c-encre-2);
-  box-shadow: 0 0 0 2px var(--c-papier);
+  background: var(--c-accent-voile); color: var(--c-accent);
 }
-.avatar-pile + .avatar-pile { margin-left: -7px; }
+.bandeau__corps { flex: 1; min-width: 260px; display: flex; flex-direction: column; }
+.bandeau h1 {
+  font-family: var(--f-lecture); font-size: var(--t-garde); font-weight: var(--g-fort);
+  line-height: var(--i-serre); letter-spacing: -.01em;
+  color: var(--c-accent); margin: var(--e-2) 0 0;
+}
+.bandeau__desc {
+  margin: var(--e-4) 0 0;
+  font-size: var(--t-corps); line-height: 1.55; color: var(--c-encre-2);
+  max-width: min(100%, 60ch); text-wrap: pretty;
+}
+.bandeau__stats {
+  display: flex; flex-wrap: wrap; gap: 10px 26px; margin-top: 20px;
+  font-size: var(--t-base); color: var(--c-encre-2);
+}
+.stat { display: flex; align-items: center; gap: var(--e-2); }
+.stat svg { color: var(--c-accent); flex: none; }
+.stat b { color: var(--c-encre); font-weight: var(--g-fort); }
+.bandeau__carto { flex: none; height: 44px; padding: 0 18px; border-radius: var(--r-3); font-size: var(--t-base); font-weight: var(--g-moyen); text-decoration: none; }
+.bandeau__carto:hover { border-color: var(--c-accent); color: var(--c-accent); text-decoration: none; }
 
-/* --- Cartes de domaines --------------------------------------------------------- */
-.grille-domaines {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--e-3);
+/* La bande des compteurs : un par état NON NUL, et le total à droite. */
+.bandeau__compteurs {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-2) var(--e-6);
+  padding: var(--e-4) 32px;
+  border-top: 1px solid var(--c-trait-fin);
+  font-size: var(--t-ui); color: var(--c-encre-2);
 }
-.carte-dom {
-  display: flex; flex-direction: column; gap: var(--e-3);
-  background: var(--c-papier);
-  border: 1px solid var(--c-trait); border-radius: var(--r-3);
-  border-top: 3px solid var(--teinte);
-  padding: var(--e-4);
-  box-shadow: var(--o-pose);
-  transition: border-color var(--m-vif), transform var(--m-vif);
+.compteur { display: flex; align-items: center; gap: 10px; }
+.compteur b {
+  font-family: var(--f-lecture); font-size: 24px; font-weight: var(--g-fort);
+  color: var(--c-encre); line-height: 1;
 }
-.carte-dom:hover { transform: translateY(-1px); box-shadow: var(--o-flotte); }
-.carte-dom__tete { display: flex; align-items: flex-start; gap: var(--e-3); }
-.carte-dom__nom {
-  font-family: var(--f-ui); font-size: var(--t-t3); font-weight: var(--g-lourd);
-  letter-spacing: -.014em; margin: 0; flex: 1; min-width: 0;
-  text-decoration: none; color: inherit;
+.bandeau__total { margin-left: auto; }
+.bandeau__total b {
+  font-family: var(--f-lecture); font-size: 19px; font-weight: var(--g-fort);
+  color: var(--c-encre);
 }
-.carte-dom__nom:hover { color: var(--c-accent); }
-.carte-dom__n {
-  font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-3); flex: none;
-}
-.carte-dom__desc {
-  font-family: var(--f-lecture); font-size: var(--t-petit); line-height: 1.55;
-  color: var(--c-encre-2); margin: 0;
-}
-.carte-dom__modules {
-  display: flex; gap: var(--e-1); flex-wrap: wrap;
-  margin-top: auto; padding-top: var(--e-3); border-top: 1px solid var(--c-trait-fin);
-}
+.bandeau__aucune { color: var(--c-encre-2); font-size: var(--t-base); }
 
-/* --- Activité --------------------------------------------------------------------- */
-.flux { list-style: none; margin: 0; padding: 0 0 0 var(--e-5); border-left: 1px solid var(--c-trait); }
-.flux li { position: relative; padding-bottom: var(--e-4); }
-.flux li:last-child { padding-bottom: 0; }
-.flux li::before {
-  content: ""; position: absolute; left: calc(var(--e-5) * -1 - 4px); top: 4px;
-  width: 9px; height: 9px; border-radius: 50%;
-  background: var(--c-papier); box-shadow: 0 0 0 1.5px var(--c-trait-fort);
+/* --- 2. La carte des domaines --------------------------------------------- */
+.panneau .tete__droite {
+  display: flex; align-items: center; gap: 18px;
+  font-size: var(--t-petit); color: var(--c-encre-3);
 }
-.flux li[data-type="verification"]::before { background: var(--c-frais); box-shadow: 0 0 0 1.5px var(--c-frais); }
-.flux li[data-type="revision"]::before { background: var(--c-vieil); box-shadow: 0 0 0 1.5px var(--c-vieil); }
-.flux li[data-type="import"]::before { background: var(--c-accent); box-shadow: 0 0 0 1.5px var(--c-accent); }
-.flux__txt { font-size: var(--t-petit); line-height: 1.5; }
-.flux__txt a { color: var(--c-encre); font-weight: var(--g-fort); text-decoration: none; border-bottom: 1px solid var(--c-trait-fort); }
-.flux__txt a:hover { color: var(--c-accent); border-color: var(--c-accent); }
-.flux__quand { font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-3); display: block; margin-top: 2px; }
-.flux__ou { color: var(--c-encre-3); }
+.tete__compte { white-space: nowrap; }
 
-.section-titre {
-  display: flex; align-items: baseline; justify-content: space-between; gap: var(--e-4);
-  margin: var(--e-6) 0 var(--e-3);
-  padding-bottom: var(--e-2); border-bottom: 1px solid var(--c-trait);
+/* Le sélecteur de tri. Son libellé est lu par les lecteurs d'écran et masqué à
+   l'œil : la référence ne dessine qu'un bouton, un `select` nu n'annonce rien. */
+.tri { display: flex; align-items: center; }
+.tri__lib {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
 }
-.section-titre h2 {
-  font-family: var(--f-ui); font-size: var(--t-t2); font-weight: var(--g-lourd);
-  letter-spacing: -.016em; margin: 0;
+.tri__select {
+  height: 32px; padding: 0 var(--e-3);
+  border: 1px solid var(--c-trait); border-radius: var(--r-2);
+  background: var(--c-papier); color: var(--c-encre);
+  font-family: var(--f-ui); font-size: var(--t-petit); cursor: pointer;
 }
+.tri__select:hover { border-color: var(--c-trait-fort); }
 
-/* --- Univers sans domaine ------------------------------------------------------------ */
-.vide-univers {
-  background: var(--c-papier); border: 1px solid var(--c-trait); border-radius: var(--r-3);
-  padding: var(--e-7) var(--e-5); text-align: center;
+.lignes-dom { display: flex; flex-direction: column; padding: 0 22px; }
+.ligne-dom {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto auto 24px;
+  align-items: center; gap: var(--e-4) var(--e-5);
+  margin: 0 -8px; padding: var(--e-4) var(--e-2);
+  border-bottom: 1px solid var(--c-trait-ligne); border-radius: var(--r-2);
+  color: inherit; text-decoration: none;
 }
+.ligne-dom:last-child { border-bottom: 0; }
+.ligne-dom:hover { background: var(--c-papier-2); text-decoration: none; }
+.ligne-dom__sceau {
+  width: 40px; height: 40px; border-radius: var(--r-3);
+  display: grid; place-items: center;
+  background: var(--c-accent-voile); color: var(--c-accent);
+}
+.ligne-dom__nom { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ligne-dom__titre { font-size: var(--t-t3); font-weight: var(--g-fort); }
+.ligne-dom__desc {
+  font-size: var(--t-petit2); color: var(--c-encre-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ligne-dom__n {
+  font-size: var(--t-petit2); color: var(--c-encre-3);
+  white-space: nowrap; min-width: 72px;
+}
+.ligne-dom__n b {
+  font-family: var(--f-lecture); font-size: var(--t-lect); font-weight: var(--g-fort);
+  color: var(--c-encre);
+}
+/* Le tiret d'un ensemble vide : ni chiffre, ni zéro. */
+.ligne-dom__rien { font-style: normal; color: var(--c-encre-4); }
+.ligne-dom__etats { display: flex; align-items: center; gap: 22px; min-width: 0; }
+.ligne-dom__etat {
+  display: flex; align-items: center; gap: var(--e-2);
+  font-size: var(--t-base); min-width: 44px;
+}
+/* Le libellé accompagne toujours le glyphe (RG-M18-09) ; à cette densité il est
+   lu, pas montré — le chiffre et la forme portent la ligne. */
+.ligne-dom__etat-lib {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+.ligne-dom__nb { font-weight: var(--g-normal); color: var(--c-encre-4); }
+.ligne-dom__nb--ajour { color: var(--c-encre); }
+.ligne-dom__nb--bientot { color: var(--c-bientot); }
+.ligne-dom__nb--averifier { color: var(--c-averifier); }
+.ligne-dom__nb--arevoir { color: var(--c-arevoir); }
+.ligne-dom__nb--obsolete { color: var(--c-obsolete); }
+.ligne-dom__quand {
+  font-size: var(--t-petit); color: var(--c-encre-4);
+  white-space: nowrap; min-width: 64px; text-align: right;
+}
+.ligne-dom .chevron { color: var(--c-encre-3); }
+
+/* L'univers sans domaine — l'état vide, et le geste qui le lève. */
+.vide-univers { padding: var(--e-7) var(--e-5); text-align: center; }
 .vide-univers h2 {
-  font-family: var(--f-ui); font-size: var(--t-t2); font-weight: var(--g-lourd);
-  margin: 0 0 var(--e-2); letter-spacing: -.016em;
+  font-family: var(--f-lecture); font-size: var(--t-section); font-weight: var(--g-moyen);
+  margin: 0 0 var(--e-2); letter-spacing: -.01em;
 }
 .vide-univers p {
-  font-family: var(--f-lecture); font-size: var(--t-base); color: var(--c-encre-2);
-  margin: 0 auto var(--e-4); max-width: 50ch; line-height: 1.6;
+  font-size: var(--t-base2); color: var(--c-encre-2);
+  margin: 0 auto var(--e-4); max-width: 52ch; line-height: 1.6;
+}
+.vide-univers .btn { text-decoration: none; }
+
+/* --- 3. Les deux cartes du bas -------------------------------------------- */
+.duo {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+  gap: 22px; align-items: start;
+}
+.panneau--carte {
+  padding: 20px 22px; display: flex; flex-direction: column; gap: var(--e-1);
+  min-width: 0;
+}
+.panneau--carte > .etiq { margin-bottom: 10px; }
+.carte__vide {
+  margin: 0; padding: var(--e-3) var(--e-2);
+  font-size: var(--t-base); color: var(--c-encre-2); line-height: 1.55;
+}
+.carte__calme {
+  display: flex; align-items: center; gap: 14px;
+  margin: 0; padding: var(--e-3) var(--e-2);
+  font-size: var(--t-base); color: var(--c-encre-2);
+}
+.carte__calme svg { color: var(--c-ajour); flex: none; }
+.carte__lien {
+  display: flex; align-items: center; gap: var(--e-3);
+  margin-top: 10px; padding: var(--e-1) var(--e-2);
+  font-size: var(--t-petit2); color: var(--c-encre); text-decoration: none;
+}
+.carte__lien:hover { color: var(--c-accent); text-decoration: none; }
+.carte__fleche { width: 16px; text-align: center; color: var(--c-encre-3); }
+
+/* Une alerte : la pastille porte le voile de l'état, le chiffre sa teinte. */
+.alerte {
+  display: flex; align-items: center; gap: var(--e-4);
+  padding: var(--e-3) var(--e-2); border-radius: var(--r-3);
+  color: inherit; text-decoration: none;
+}
+.alerte:hover { background: var(--c-papier-2); text-decoration: none; }
+.alerte__pastille {
+  width: 38px; height: 38px; flex: none; border-radius: 50%;
+  display: grid; place-items: center;
+}
+.alerte__pastille--ajour     { background: var(--c-ajour-voile); }
+.alerte__pastille--bientot   { background: var(--c-bientot-voile); }
+.alerte__pastille--averifier { background: var(--c-averifier-voile); }
+.alerte__pastille--arevoir   { background: var(--c-arevoir-voile); }
+.alerte__pastille--obsolete  { background: var(--c-obsolete-voile); }
+.alerte__corps { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.alerte__titre { font-size: var(--t-base2); font-weight: var(--g-moyen); }
+.alerte__n { font-weight: var(--g-moyen); }
+.alerte__n--ajour     { color: var(--c-ajour); }
+.alerte__n--bientot   { color: var(--c-bientot); }
+.alerte__n--averifier { color: var(--c-averifier); }
+.alerte__n--arevoir   { color: var(--c-arevoir); }
+.alerte__n--obsolete  { color: var(--c-obsolete); }
+.alerte__detail { font-size: var(--t-meta); color: var(--c-encre-3); }
+.alerte .chevron { color: var(--c-encre-3); flex: none; }
+
+/* Le fil d'activité : un trait vertical, cinq disques, cinq badges. */
+.fil-activite { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.trace {
+  display: grid; grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: start; gap: 14px; padding: 0 0 18px; position: relative;
+}
+.trace::before {
+  content: ""; position: absolute; left: 11px; top: 24px; bottom: 0;
+  width: 1px; background: var(--c-trait);
+}
+.trace--dernier { padding-bottom: 0; }
+.trace--dernier::before { display: none; }
+.trace__disque {
+  width: 24px; height: 24px; border-radius: 50%; position: relative;
+  display: grid; place-items: center; color: var(--c-papier);
+}
+.trace__disque--verification { background: var(--c-ajour); }
+.trace__disque--edition      { background: var(--c-accent); }
+.trace__disque--publication  { background: var(--c-accent); }
+.trace__disque--revision     { background: var(--c-averifier); }
+.trace__disque--import       { background: var(--c-encre-2); }
+.trace__corps { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-top: 2px; }
+.trace__titre {
+  font-size: var(--t-base);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.trace__titre b { font-weight: var(--g-fort); }
+.trace__objet { color: var(--c-encre-2); }
+.trace__objet a { color: inherit; text-decoration: none; }
+.trace__objet a:hover { color: var(--c-accent); text-decoration: underline; }
+.trace__quand { font-size: var(--t-meta); color: var(--c-encre-3); }
+.trace__badge {
+  padding: var(--e-1) 10px; border-radius: 5px;
+  background: var(--c-fond-creux); color: var(--c-encre-2);
+  font-size: var(--t-mini); white-space: nowrap;
 }
 
-/* --- Planche de revue (hors produit) ----------------------------------------------- */
-.planche {
-  position: fixed; z-index: 120; left: 50%; bottom: var(--e-4); transform: translateX(-50%);
-  display: flex; align-items: center; gap: var(--e-4); flex-wrap: wrap;
-  background: var(--c-encre); color: #cfd8db;
-  padding: var(--e-2) var(--e-4); border-radius: 999px;
-  box-shadow: var(--o-flotte); font-size: var(--t-mini); max-width: calc(100vw - var(--e-6));
-}
-.planche fieldset { border: 0; margin: 0; padding: 0; display: flex; align-items: center; gap: var(--e-2); }
-.planche legend { float: left; margin-right: var(--e-2); font-family: var(--f-donnee); font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase; color: #7d8f95; }
-.planche label { cursor: pointer; }
-.planche input { position: absolute; opacity: 0; pointer-events: none; }
-.planche label span { display: inline-block; padding: 4px var(--e-2); border-radius: 999px; border: 1px solid #33454f; color: #cfd8db; }
-.planche input:checked + span { background: #cfd8db; color: var(--c-encre); border-color: #cfd8db; font-weight: var(--g-fort); }
-.planche input:focus-visible + span { outline: 2px solid #8f86e0; outline-offset: 2px; }
-.planche__sep { width: 1px; height: 22px; background: #33454f; }
-
-@media (max-width: 1240px) {
-  .app { grid-template-columns: minmax(0,1fr); }
-  .rail { display: none; }
-}
+/* --- Petits écrans -------------------------------------------------------- */
 @media (max-width: 900px) {
-  .consolide { grid-template-columns: repeat(2, 1fr); }
-  .consolide .mesure--large { grid-column: 1 / -1; }
+  .ligne-dom {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: var(--e-2) var(--e-4);
+  }
+  .ligne-dom__etats { grid-column: 2 / -1; }
+  .ligne-dom__quand { grid-column: 2 / -1; text-align: left; }
+  .ligne-dom .chevron { display: none; }
 }
 @media (max-width: 640px) {
-  .univers { padding: var(--e-4) var(--e-4) var(--e-7); }
-  .couverture { flex-direction: column; padding: var(--e-4); }
-  .couverture__actions { width: 100%; }
-  .couverture__actions .btn { width: 100%; justify-content: center; }
-  .grille-domaines { grid-template-columns: minmax(0, 1fr); }
-  .planche { display: none; }
+  .bandeau__haut { padding: var(--e-5) var(--e-4) var(--e-4); }
+  .bandeau__compteurs { padding: var(--e-3) var(--e-4); }
+  .bandeau__carto { width: 100%; }
+  .bandeau__total { margin-left: 0; }
+  .lignes-dom { padding: 0 var(--e-4); }
 }
-
-/* --- Barre supérieure sur petit écran --------------------------------------
-   La barre doit tenir à 360 px sans provoquer de défilement horizontal de la
-   page (RG-M18-12) : le champ de recherche devient élastique et lâche ses
-   rappels clavier, qui n'ont pas de sens sans clavier physique. */
-@media (max-width: 640px) {
-  .barre { padding: 0 var(--e-3); gap: var(--e-2); }
-  .recherche { width: auto; flex: 1 1 90px; min-width: 0; }
-  .recherche .touche { display: none; }
-  .recherche__txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .fil { flex: 0 1 auto; }
-  /* Le fil d'Ariane ne tient pas sur 360 px : seul le segment courant reste,
-     les ancêtres restent atteignables par le rail. */
-  .fil > *:not(.fil__courant) { display: none; }
-  .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-}
-
-/* --- Fil d'Ariane : ne pousse jamais la page ------------------------------
-   Le titre d'une note peut être long, et les segments ne se coupent pas tout
-   seuls : sans troncature, le fil élargit la barre, qui élargit la grille, qui
-   fait défiler la page. Le défaut ne se voyait qu'à 768 px — entre les deux
-   largeurs qu'on regarde d'ordinaire. */
-.fil { overflow: hidden; }
-.fil > * { min-width: 0; flex: 0 1 auto; }
-.fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
