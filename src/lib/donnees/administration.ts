@@ -295,6 +295,15 @@ export interface ErreurDeConfiguration {
 	readonly champ:
 		| 'frais'
 		| 'vieil'
+		/* LES CINQ RÉGLAGES DU CYCLE DE VIVACITÉ — `T-10`. Le suffixe EST celui du
+		   nœud : le peintre cherche `#champ-{id}`, `#erreur-{id}`, `#erreur-{id}-txt`
+		   et focalise `#c-{id}`. Un suffixe qui ne serait pas celui de l'`input`
+		   rendrait le refus muet, sans que rien ne lève. */
+		| 'validite-reference'
+		| 'validite-operationnel'
+		| 'bientot'
+		| 'retard-revoir'
+		| 'retard-obsolete'
 		| 'portail'
 		| 'mot'
 		| 'versions'
@@ -353,31 +362,64 @@ export function messageSeuilNonCroissant(seuilFrais: number): string {
 	return `Doit dépasser le seuil frais (${seuilFrais} ${accord(seuilFrais, 'jour')}). En l’état, aucune note ne serait jamais vieillissante : le témoin passerait directement du vert au rouge.`;
 }
 
+/* ── Le cycle de vivacité — les cinq réglages de `014`, et l'ordre qu'ils supposent ──
+
+   `vivacite()` lit ces cinq nombres dans un ordre qu'aucune colonne ne garde :
+   `reste > bientot → À jour`, `reste >= 0 → Bientôt à vérifier`, puis les deux
+   retards. Une combinaison qui rompt cet ordre ne se voit pas — elle EFFACE
+   silencieusement un état du cycle, et la note reste dans un état que la planche
+   `/bibliotheque/vivacite` annonce sans qu'il puisse jamais survenir. Les trois
+   règles ci-dessous sont ce que le calcul suppose, refusé au champ. */
+
+/** Une durée de validité, ou un seuil de cycle : un nombre entier de jours, au moins un. */
+export const MESSAGE_CYCLE_MINIMAL = 'Ce réglage doit être un nombre entier de jours, au moins 1.';
+
 /**
- * Les dix paramètres que `V-33` règle AUJOURD'HUI — et le fait qu'ils ne soient plus la
- * configuration entière est ÉCRIT, non subi. `Record<ChampReglableEnConsole, string>` reste le
- * garde-fou : un paramètre nommé ici ne compile pas tant qu'il n'a pas son champ dans la table
- * du câblage et dans la lecture.
+ * `seuil_bientot` doit rester SOUS la plus courte des deux validités. À égalité, le reste
+ * vaut la validité le jour même de la vérification : `reste > bientot` n'est jamais vrai et
+ * l'état « À jour » disparaît du cycle.
+ */
+export function messageBientotTropGrand(validiteLaPlusCourte: number): string {
+	return `Doit rester sous la plus courte des deux validités (${validiteLaPlusCourte} ${accord(validiteLaPlusCourte, 'jour')}). En l’état, une note serait annoncée « Bientôt à vérifier » dès sa vérification, sans jamais passer par « À jour ».`;
+}
+
+/**
+ * `retard_revoir` doit rester SOUS `retard_obsolete`. À égalité ou au-delà, aucune note ne
+ * traverse jamais « À revoir » : elle saute de « À vérifier » à « Obsolète ».
+ */
+export function messageRetardNonCroissant(retardObsolete: number): string {
+	return `Doit rester sous le retard d’obsolescence (${retardObsolete} ${accord(retardObsolete, 'jour')}). En l’état, aucune note ne passerait par « À revoir » : elle sauterait de « À vérifier » à « Obsolète ».`;
+}
+
+/**
+ * LA CONFIGURATION ENTIÈRE EST RÉGLABLE EN CONSOLE — `T-10`. Le type ne retranche plus rien :
+ * `ChampReglableEnConsole` EST `keyof Configuration`, et `Record<ChampReglableEnConsole, string>`
+ * reste le garde-fou — un paramètre ajouté à `Configuration` ne compile pas tant qu'il n'a pas
+ * son champ dans cette table, dans celle du câblage et dans la lecture.
  *
  * Un champ déclaré ici sans `input` correspondant est un piège : le formulaire n'envoie rien,
  * `texte()` rend la chaîne vide et l'enregistrement écrase la valeur réglée à chaque clic. Le
- * préfixe `c-` fait partie du nom. C'EST POURQUOI LES CINQ RÉGLAGES DU CYCLE DE VIVACITÉ EN
- * SONT EXCLUS : la migration `014` les a posés en base et la lecture leur donne leur défaut,
- * mais `V-33` ne porte pas encore leurs champs. Les nommer ici les remettrait à zéro à chaque
- * enregistrement de la console. Ils y entreront avec les champs qui les règlent.
+ * préfixe `c-` fait partie du nom. LES CINQ RÉGLAGES DU CYCLE DE VIVACITÉ EN ÉTAIENT EXCLUS
+ * POUR CETTE RAISON : la migration `014` les avait posés en base sans que `V-33` porte leurs
+ * champs, et le produit affichait un cycle qu'il ne laissait pas régler. `V-33` les porte
+ * désormais, groupe « Vivacité », et l'exclusion est levée.
  */
-export type ChampReglableEnConsole = Exclude<
-	keyof Configuration,
-	'validiteReference' | 'validiteOperationnel' | 'seuilBientot' | 'retardRevoir' | 'retardObsolete'
->;
+export type ChampReglableEnConsole = keyof Configuration;
 
-/** Les dix réglages que `V-33` porte. */
+/** Les quinze réglages que `V-33` porte. */
 export type ConfigurationReglableEnConsole = Pick<Configuration, ChampReglableEnConsole>;
 
 export const CHAMPS_DE_CONFIGURATION: Readonly<Record<ChampReglableEnConsole, string>> =
 	Object.freeze({
 		seuilFrais: 'c-frais',
 		seuilVieillissant: 'c-vieil',
+		/* LE CYCLE DE VIVACITÉ. Le suffixe de chaque identifiant est celui que
+		   `ErreurDeConfiguration` nomme : `c-bientot` répond à `#erreur-bientot`. */
+		validiteReference: 'c-validite-reference',
+		validiteOperationnel: 'c-validite-operationnel',
+		seuilBientot: 'c-bientot',
+		retardRevoir: 'c-retard-revoir',
+		retardObsolete: 'c-retard-obsolete',
 		versionsMax: 'c-versions',
 		portailAssistance: 'c-portail',
 		nomOrganisation: 'c-organisation',
@@ -410,6 +452,11 @@ export function valeursDeConfigurationSaisies(
 	return {
 		seuilFrais: nombre('seuilFrais'),
 		seuilVieillissant: nombre('seuilVieillissant'),
+		validiteReference: nombre('validiteReference'),
+		validiteOperationnel: nombre('validiteOperationnel'),
+		seuilBientot: nombre('seuilBientot'),
+		retardRevoir: nombre('retardRevoir'),
+		retardObsolete: nombre('retardObsolete'),
 		versionsMax: nombre('versionsMax'),
 		portailAssistance: texte('portailAssistance').trim(),
 		nomOrganisation: texte('nomOrganisation').trim(),
@@ -479,6 +526,43 @@ export function validerLaConfiguration(
 	   et le message conservé reste disponible pour la fois suivante. */
 	if (valeurs.indisponibiliteActive && valeurs.messageDIndisponibilite === '') {
 		erreurs.push({ champ: 'message-indisponibilite', message: MESSAGE_INDISPONIBILITE_VIDE });
+	}
+
+	/* LE CYCLE DE VIVACITÉ — `T-10`. Les cinq réglages sont d'abord éprouvés SÉPARÉMENT :
+	   un nombre hors domaine rend les comparaisons d'ordre sans objet, et deux refus sur
+	   le même champ diraient deux choses à la fois. Les comparaisons ne portent donc que
+	   sur les valeurs qui ont passé leur propre contrôle. */
+	const jours = (valeur: number): boolean => Number.isSafeInteger(valeur) && valeur >= 1;
+	const cycle = [
+		['validite-reference', valeurs.validiteReference],
+		['validite-operationnel', valeurs.validiteOperationnel],
+		['bientot', valeurs.seuilBientot],
+		['retard-revoir', valeurs.retardRevoir],
+		['retard-obsolete', valeurs.retardObsolete]
+	] as const;
+	for (const [champ, valeur] of cycle) {
+		if (!jours(valeur)) erreurs.push({ champ, message: MESSAGE_CYCLE_MINIMAL });
+	}
+
+	if (
+		jours(valeurs.validiteReference) &&
+		jours(valeurs.validiteOperationnel) &&
+		jours(valeurs.seuilBientot)
+	) {
+		const laPlusCourte = Math.min(valeurs.validiteReference, valeurs.validiteOperationnel);
+		if (valeurs.seuilBientot >= laPlusCourte) {
+			erreurs.push({ champ: 'bientot', message: messageBientotTropGrand(laPlusCourte) });
+		}
+	}
+	if (
+		jours(valeurs.retardRevoir) &&
+		jours(valeurs.retardObsolete) &&
+		valeurs.retardRevoir >= valeurs.retardObsolete
+	) {
+		erreurs.push({
+			champ: 'retard-revoir',
+			message: messageRetardNonCroissant(valeurs.retardObsolete)
+		});
 	}
 
 	if (erreurs.length > 0) return { issue: 'valeurs-refusees', erreurs };
