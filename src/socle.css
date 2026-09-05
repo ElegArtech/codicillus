@@ -123,13 +123,19 @@
   /* --- Dimensions de structure --------------------------------------------- */
   --l-rail:     300px;   /* barre latérale gauche */
   --l-sommaire: 190px;
-  /* LA MESURE DU TEXTE — RELATIVE, ET NON UNE LARGEUR FIXE. Une valeur en pixels
-     ne suivait ni la place disponible ni la taille de police : sur un écran large,
-     les paragraphes s'arrêtaient à 680 px pendant que les blocs de code occupaient
-     les 930 px de la colonne, et le bord en escalier se lisait comme un défaut de
-     mise en page. Elle grandit désormais avec la colonne, jusqu'à une borne de
-     lecture : au-delà d'une centaine de caractères, l'œil perd sa ligne au retour. */
-  --l-lecture:  min(100%, 120ch);
+  /* LA MESURE DU TEXTE SUIT LA COLONNE, SANS PLAFOND. Elle a valu 680 px, puis
+     120 caractères : les deux étaient des plafonds, et les deux se voyaient — le
+     texte s'arrêtait pendant que les blocs de code occupaient toute la colonne, et
+     le bord en escalier se lisait comme un défaut de mise en page.
+
+     TOUT LE RESTE DE LA CHAÎNE EST DÉJÀ FLUIDE — mesuré : à 3440 px de fenêtre,
+     `.app`, `.cadre`, `.lecture`, `.document` et `.prose` grandissent tous ; seul
+     le paragraphe s'arrêtait. La largeur de lecture est désormais celle que la
+     fenêtre donne, et c'est le lecteur qui la règle en dimensionnant sa fenêtre.
+
+     Poser ici une valeur — `min(100%, 90ch)` par exemple — rétablirait une mesure
+     de lecture en un seul endroit, pour les sept vues qui rendent de la prose. */
+  --l-lecture:  100%;
   --l-large:    900px;   /* débord des objets denses : code, tableaux, schémas */
   --l-panneaux: 340px;   /* colonne contexte, et largeur du tiroir */
   --l-barre:    52px;
