@@ -1,21 +1,30 @@
 /**
- * LE CHARGEUR DE `/univers/{univers}` — V-10. « Connecté (AU MOINS UN DOMAINE LISIBLE) » :
- * la session vient de `src/hooks.server.ts`, « lisible » de `resolution.ts`, et les deux
- * refus passent par le même point de sortie (`ADR-007`). `univers` et `domaines` sont
- * réduits à ce qui porte au moins un domaine lisible : une carte de domaine mène à une
- * page atteignable (`P-03`). `modules`, `compte` et `instance` ne sont pas passés.
+ * LE CHARGEUR DE `/univers/{univers}` — V-10.
  *
- * L'ACTIVITÉ NE S'INVENTE PAS (`P-02`) : la base porte quatre des cinq types de
- * `TypeDEvenement`, chacun par une trace horodatée et signée — `verification`, `edition`,
- * `revision` et, depuis la migration `009`, `import`. LE CINQUIÈME, `publication`, N'A
- * AUCUNE TRACE et n'est JAMAIS ÉMIS. LA FENÊTRE EST DE SEPT JOURS, ET ELLE EST LUE DANS
- * LE GEL : la zone annonce elle-même son absence par « Rien de neuf CETTE SEMAINE ».
+ * IL PRODUIT DES COMPTES, PAS UN CORPUS. La page d'un univers montre une répartition
+ * de vivacité, trois compteurs par domaine et un fil de sept jours : elle n'a jamais
+ * eu besoin des notes elles-mêmes. Ce chargeur ne projette donc que les colonnes du
+ * CYCLE de chaque note, les agrège, et sert des nombres — la vue n'a rien à
+ * recalculer, et rien du corpus ne part dans le paquet du navigateur.
  *
- * `RG-M12-09` A DEUX DESTINATAIRES — « ce journal alimente LE FLUX D'ACTIVITÉ DE
- * L'ACCUEIL et l'écran d'administration » : la moitié « accueil » est ici.
+ * LA RÉPARTITION EST CELLE DES REGISTRES *RÉFÉRENCE* (`SPEC-modele-navigation.md`).
+ * L'Opérationnel a son propre cycle, et le compter avec ferait apparaître deux fois la
+ * même note dans une bande de cinq compteurs qui annonce un total de notes.
  *
- * UN ÉVÉNEMENT SANS AUTEUR CONNU N'EST PAS RENDU : les trois jointures sur `comptes` sont
- * INTERNES, une ligne de flux s'écrivant « QUI a fait QUOI ».
+ * AUCUN ÉTAT N'EST CALCULÉ ICI. `cycleDuRegistre()` donne le cycle, `vivacite()` donne
+ * l'état : ce sont les deux implémentations uniques, et les seuils viennent de la
+ * configuration, pas d'une constante locale.
+ *
+ * LES ADRESSES SONT COMPOSÉES ICI, ET SEULEMENT ICI. `univers.identifiant` et
+ * `domaines.identifiant` sont PERSISTÉS et ne suivent pas les renommages
+ * (`RG-M12-11`) ; les dériver d'un nom d'affichage rendait 404 dès le premier
+ * renommage, et pire encore sur un nom qui EST déjà une adresse — `audit_code`
+ * devenait `audit-code`.
+ *
+ * L'ACTIVITÉ NE S'INVENTE PAS (`P-02`). La base porte cinq traces horodatées et
+ * signées : la vérification, la version, la naissance de la note, la demande de
+ * révision et le lot d'import. La fenêtre est de sept jours — la carte le dit
+ * elle-même quand elle est vide.
  */
 import { basePartagee } from '$lib/base/acces';
 import type { Base } from '$lib/base/acces';
@@ -32,212 +41,351 @@ import { resoudre } from '$lib/droits/resolution';
 import {
 	domaineLisible,
 	dossiersDuDomaine,
-	lireDomainesDeLUnivers,
-	lireNotesLisibles,
-	lireUniversParIdentifiant,
 	ouvrirLAcces,
 	peutEcrireDansLUn,
 	refuserLAdresse,
 	type AccesAuRangement
 } from '$lib/donnees/rangement';
-import { lireModulesParDomaine, lireUnivers } from '$lib/donnees/lecture';
+import { lireSeuilsDeVivacite } from '$lib/donnees/lecture';
+import { cycleDuRegistre, type LigneDeCycles } from '$lib/donnees/vivacite';
 import { accesALaConsole } from '$lib/donnees/consoles';
+import {
+	ORDRE_DES_ETATS,
+	vivacite,
+	type EtatDeVivacite,
+	type SeuilsDeVivacite
+} from '$lib/fraicheur';
+import { LIBELLE_DE_FRAICHEUR } from '$lib/liste/facettes';
 import { accord } from '$lib/vocabulaire';
 import { and, eq, gte, inArray } from 'drizzle-orm';
-import type {
-	DetailDeDomaine,
-	Domaine,
-	EvenementDActivite,
-	NomDeDomaine,
-	Univers
-} from '../../../../seeds/corpus';
+import { alias } from 'drizzle-orm/pg-core';
+import type { TypeDEvenement } from '../../../../seeds/corpus';
 import type { PageServerLoad } from './$types';
-
-interface RangementLisible {
-	readonly univers: readonly Univers[];
-	readonly domaines: readonly Domaine[];
-	readonly detailDomaines: Record<NomDeDomaine, DetailDeDomaine>;
-}
-
-/**
- * LE RANGEMENT RÉDUIT À CE QUI EST LISIBLE — et la réduction est un refus de
- * porte fermée, pas une précaution.
- *
- * `P-03` : « une entrée visible est une entrée qui fonctionne ». La carte d'un
- * domaine sur lequel l'appelant n'a aucun droit mènerait à une adresse que cette
- * même route refuse — un lien mort, et un nom de domaine divulgué que `RG-ACC-01`
- * n'autorise pas davantage.
- *
- * AUCUNE RÈGLE DE DROIT N'EST ÉCRITE ICI : `domaineLisible()` interroge
- * `capacites()`, l'implémentation unique.
- *
- * CE CODE EST LE MÊME DANS LE CHARGEUR VOISIN, et la duplication est SUBIE :
- * `+page.server.ts` n'admet que les exports que SvelteKit valide.
- */
-async function lireLeRangementLisible(
-	base: Base,
-	acces: AccesAuRangement
-): Promise<RangementLisible> {
-	const lignes = await base
-		.select({
-			id: tableDesDomaines.id,
-			nom: tableDesDomaines.nom,
-			couleur: tableDesDomaines.couleur,
-			description: tableDesDomaines.description,
-			universNom: tableDesUnivers.nom
-		})
-		.from(tableDesDomaines)
-		.innerJoin(tableDesUnivers, eq(tableDesDomaines.universId, tableDesUnivers.id))
-		.orderBy(tableDesUnivers.ordre, tableDesDomaines.nom);
-
-	const lisibles = lignes.filter((ligne) => domaineLisible(acces, ligne.id));
-	const modulesParDomaine = await lireModulesParDomaine(base);
-
-	/* `DetailDeDomaine.modules` est la liste RÉELLE de `modules_de_domaine`. Un
-	   domaine sans aucune ligne fille rend une liste vide : la base ne porte pas
-	   le plancher « 1 à N » de RG-STR-06 (déclaré par `002_socle.montee.sql`), et
-	   supposer un module par défaut serait le combler ici, au mauvais endroit. */
-	const detail: Record<string, DetailDeDomaine> = {};
-	for (const ligne of lisibles) {
-		detail[ligne.nom] = {
-			description: ligne.description,
-			modules: modulesParDomaine.get(ligne.nom) ?? []
-		};
-	}
-
-	const tousLesUnivers = await lireUnivers(base);
-	return {
-		univers: tousLesUnivers.filter((u) => lisibles.some((l) => l.universNom === u.nom)),
-		domaines: lisibles.map(
-			(l) => ({ nom: l.nom, univers: l.universNom, couleur: l.couleur }) as Domaine
-		),
-		detailDomaines: detail as Record<NomDeDomaine, DetailDeDomaine>
-	};
-}
 
 const MILLISECONDES_PAR_JOUR = 86_400_000;
 const MILLISECONDES_PAR_HEURE = 3_600_000;
-/** La semaine que la zone d'activité annonce elle-même quand elle est vide. */
+/** La semaine que la carte d'activité annonce elle-même quand elle est vide. */
 const FENETRE_DACTIVITE_JOURS = 7;
+/** Cinq lignes de fil, comme la référence — au-delà, la carte devient une liste. */
+const LIGNES_DACTIVITE = 5;
+/**
+ * L'écart au-dessous duquel une version EST la naissance de la note. Créer une note
+ * écrit sa première version dans la foulée ; annoncer « Nouvelle note » et « Note
+ * modifiée » pour le même geste ferait compter deux fois un seul fait.
+ */
+const MARGE_DE_NAISSANCE = 60_000;
+
+/** Le chemin de la cartographie — `docs/routes.md` §3.4, le périmètre en requête. */
+const ADRESSE_DE_LA_CARTOGRAPHIE = '/cartographie';
+/** La recherche, seule liste que le produit ait à l'échelle d'un univers. */
+const ADRESSE_DE_LA_RECHERCHE = '/recherche';
+/** La console des domaines — le seul écran du produit qui écrive un domaine. */
+const ADRESSE_DE_LA_CONSOLE_DES_DOMAINES = '/console/domaines';
+const ADRESSE_DE_LA_NOUVELLE_NOTE = '/notes/nouvelle';
+const ADRESSE_DU_PROFIL = '/mon-profil';
+
+/** Le paramètre de requête composé, jamais concaténé à la main. */
+function requete(chemin: string, valeurs: readonly (readonly [string, string])[]): string {
+	const parametres = new URLSearchParams();
+	for (const [nom, valeur] of valeurs) parametres.append(nom, valeur);
+	return `${chemin}?${parametres.toString()}`;
+}
 
 /**
- * L'ACTIVITÉ DE LA SEMAINE, LUE DANS LES TROIS TRACES QUI EXISTENT.
+ * LES NOTES « À SURVEILLER » D'UN UNIVERS, dans la seule liste que le produit sache
+ * rendre à cette échelle.
+ *
+ * ÉCART ASSUMÉ, ET IL EST DÉCLARÉ : `/recherche` porte une facette de fraîcheur à
+ * TROIS valeurs, quand la vivacité en a cinq. « Vieillissant » et « Obsolète
+ * probable » réunis sont les notes dont l'échéance est passée — ce que les deux
+ * alertes désignent —, à la nuance des validités qui ne sont pas de quatre-vingt-dix
+ * jours. La liste est réelle, et c'est ce qui compte : un lien mort ne l'était pas.
+ */
+function adresseDeSurveillance(universNom: string): string {
+	return requete(ADRESSE_DE_LA_RECHERCHE, [
+		['univers', universNom],
+		['fraicheur', LIBELLE_DE_FRAICHEUR.vieil],
+		['fraicheur', LIBELLE_DE_FRAICHEUR.obs]
+	]);
+}
+
+/** La répartition vide — cinq états, cinq zéros, dans l'ordre des compteurs. */
+function repartitionVide(): Record<EtatDeVivacite, number> {
+	return { ajour: 0, bientot: 0, averifier: 0, arevoir: 0, obsolete: 0 };
+}
+
+/** La forme que la vue rend : cinq entrées, toujours, y compris à zéro. */
+function enCompteurs(
+	repartition: Record<EtatDeVivacite, number>
+): readonly { etat: EtatDeVivacite; n: number }[] {
+	return ORDRE_DES_ETATS.map((etat) => ({ etat, n: repartition[etat] }));
+}
+
+/** L'ancienneté en heures, jamais négative — une horloge qui recule n'est pas un fait. */
+function heuresDepuis(instant: Date, maintenant: Date): number {
+	return Math.max(
+		0,
+		Math.floor((maintenant.getTime() - instant.getTime()) / MILLISECONDES_PAR_HEURE)
+	);
+}
+
+/**
+ * LES COLONNES DE CYCLE D'UNE NOTE, telles que la requête les rend. Les deux noms de
+ * vérificateur ne sont pas projetés : ils ne servent qu'aux LIBELLÉS d'une note
+ * ouverte, et cette page n'en affiche aucun. `cycleDuRegistre()` reste l'unique
+ * chemin — c'est lui qui décide du repli de `RG-M06-01`, pas ce chargeur.
+ */
+interface LigneDeNotePourCompteur {
+	readonly domaineId: string;
+	readonly auteur: string;
+	readonly creeLe: Date;
+	readonly modifieLe: Date;
+	readonly corpsOperationnelModifieLe: Date | null;
+	readonly verifieLe: Date | null;
+	readonly verifieLeOperationnel: Date | null;
+	readonly validiteReference: number;
+	readonly validiteOperationnel: number;
+	readonly revisionDemandee: boolean;
+	readonly revisionRegistre: 'reference' | 'operationnel' | null;
+	readonly revisionPar: string | null;
+}
+
+/** L'état du registre RÉFÉRENCE d'une note, par les deux implémentations uniques. */
+function etatDeReference(
+	ligne: LigneDeNotePourCompteur,
+	maintenant: Date,
+	seuils: SeuilsDeVivacite
+): EtatDeVivacite {
+	const cycles: LigneDeCycles = {
+		modifieLe: ligne.modifieLe,
+		corpsOperationnelModifieLe: ligne.corpsOperationnelModifieLe,
+		verifieLe: ligne.verifieLe,
+		verifieLeOperationnel: ligne.verifieLeOperationnel,
+		validiteReference: ligne.validiteReference,
+		validiteOperationnel: ligne.validiteOperationnel,
+		revisionDemandee: ligne.revisionDemandee,
+		revisionRegistre: ligne.revisionRegistre,
+		revisionPar: ligne.revisionPar,
+		verifieParReference: null,
+		verifieParOperationnel: null
+	};
+	const cycle = cycleDuRegistre(cycles, 'reference');
+	/* La Référence existe toujours (`RG-NOT-02`) : `cycleDuRegistre` ne rend `null`
+	   que pour l'Opérationnel absent. La garde est là pour le compilateur. */
+	if (cycle === null) return 'ajour';
+	return vivacite(cycle, maintenant, seuils).etat;
+}
+
+/** La dernière trace datée d'une note — la plus récente de ses quatre dates. */
+function derniereTrace(ligne: LigneDeNotePourCompteur): Date {
+	const dates = [
+		ligne.creeLe,
+		ligne.modifieLe,
+		ligne.corpsOperationnelModifieLe,
+		ligne.verifieLe,
+		ligne.verifieLeOperationnel
+	].filter((d): d is Date => d !== null);
+	return dates.reduce(
+		(tard, d) => (d.getTime() > tard.getTime() ? d : tard),
+		dates[0] ?? new Date(0)
+	);
+}
+
+/**
+ * LES NOTES DES DOMAINES OUVERTS, RÉDUITES AU PÉRIMÈTRE DE LECTURE.
  *
  * Le filtre de périmètre est DANS la requête, jamais après elle (`ADR-006`). Un
  * périmètre vide n'interroge pas la base : un ensemble vide passé à une clause
  * d'appartenance ne se rend pas de la même façon selon le dialecte.
+ */
+async function lireLesNotesDesDomaines(
+	base: Base,
+	acces: AccesAuRangement,
+	domainesOuverts: readonly string[]
+): Promise<readonly LigneDeNotePourCompteur[]> {
+	if (domainesOuverts.length === 0) return [];
+	const autorises = acces.perimetre.tout ? null : [...acces.perimetre.dossiers];
+	if (autorises !== null && autorises.length === 0) return [];
+	const filtre = autorises === null ? undefined : inArray(tableDesNotes.dossierId, autorises);
+
+	/* LE DEMANDEUR DE RÉVISION EST UN AUTRE COMPTE QUE L'AUTEUR, et la jointure doit
+	   le dire : `cycleDuRegistre()` ne force « À revoir » que si elle porte un NOM. La
+	   jointure est EXTERNE — la plupart des notes n'en ont pas. */
+	const demandeur = alias(comptes, 'demandeur_de_revision');
+
+	return base
+		.select({
+			domaineId: tableDesNotes.domaineId,
+			auteur: comptes.nom,
+			creeLe: tableDesNotes.creeLe,
+			modifieLe: tableDesNotes.modifieLe,
+			corpsOperationnelModifieLe: tableDesNotes.corpsOperationnelModifieLe,
+			verifieLe: tableDesNotes.verifieLe,
+			verifieLeOperationnel: tableDesNotes.verifieLeOperationnel,
+			validiteReference: tableDesNotes.validiteReference,
+			validiteOperationnel: tableDesNotes.validiteOperationnel,
+			revisionDemandee: tableDesNotes.revisionDemandee,
+			revisionRegistre: tableDesNotes.revisionRegistre,
+			revisionPar: demandeur.nom
+		})
+		.from(tableDesNotes)
+		.innerJoin(comptes, eq(tableDesNotes.auteurId, comptes.id))
+		.leftJoin(demandeur, eq(tableDesNotes.revisionParId, demandeur.id))
+		.where(and(inArray(tableDesNotes.domaineId, [...domainesOuverts]), filtre));
+}
+
+/** Un événement du fil, dans la forme que la vue rend. */
+interface EvenementDUnivers {
+	readonly type: TypeDEvenement;
+	readonly qui: string;
+	readonly objet: string;
+	readonly adresse: string;
+	readonly heures: number;
+}
+
+/**
+ * L'ACTIVITÉ DE LA SEMAINE, LUE DANS LES CINQ TRACES QUI EXISTENT.
+ *
+ * UN ÉVÉNEMENT SANS AUTEUR CONNU N'EST PAS RENDU : les jointures sur `comptes` sont
+ * INTERNES, une ligne de fil s'écrivant « QUI a fait QUOI ».
  */
 async function lireLActiviteRecente(
 	base: Base,
 	acces: AccesAuRangement,
 	maintenant: Date,
 	/**
-	 * LES DOMAINES DE L'UNIVERS OUVERT, ET LISIBLES. Ils ne servent qu'aux lots
-	 * d'import : un lot ne vise aucune note, il vise un DOMAINE, et c'est la seule
-	 * chose qui le rattache à l'univers de cette page. Les trois autres traces
-	 * portent une note en cible, et la vue les rattache par elle.
+	 * LES DOMAINES OUVERTS DE CET UNIVERS. Ils bornent les quatre traces de note, et
+	 * ils sont la SEULE chose qui rattache un lot d'import à un univers : un lot ne
+	 * vise aucune note, il vise un domaine.
 	 */
-	domainesDeLUnivers: readonly string[]
-): Promise<readonly EvenementDActivite[]> {
+	domainesOuverts: readonly string[]
+): Promise<readonly EvenementDUnivers[]> {
+	if (domainesOuverts.length === 0) return [];
 	const autorises = acces.perimetre.tout ? null : [...acces.perimetre.dossiers];
 	if (autorises !== null && autorises.length === 0) return [];
-	const filtre = autorises === null ? undefined : inArray(tableDesNotes.dossierId, autorises);
+	const perimetre = autorises === null ? undefined : inArray(tableDesNotes.dossierId, autorises);
+	const surLUnivers = inArray(tableDesNotes.domaineId, [...domainesOuverts]);
 	const depuis = new Date(maintenant.getTime() - FENETRE_DACTIVITE_JOURS * MILLISECONDES_PAR_JOUR);
 
 	const verifiees = await base
-		.select({ cible: tableDesNotes.identifiant, qui: comptes.nom, le: verifications.le })
+		.select({
+			objet: tableDesNotes.titre,
+			cible: tableDesNotes.identifiant,
+			qui: comptes.nom,
+			le: verifications.le
+		})
 		.from(verifications)
 		.innerJoin(tableDesNotes, eq(verifications.noteId, tableDesNotes.id))
 		.innerJoin(comptes, eq(verifications.compteId, comptes.id))
-		.where(and(gte(verifications.le, depuis), filtre));
+		.where(and(gte(verifications.le, depuis), surLUnivers, perimetre));
 
+	/* LA VERSION QUI ACCOMPAGNE LA NAISSANCE N'EST PAS UNE MODIFICATION : elle est
+	   écartée ici, et la naissance est rendue par sa propre trace. */
 	const modifiees = await base
-		.select({ cible: tableDesNotes.identifiant, qui: comptes.nom, le: versions.le })
+		.select({
+			objet: tableDesNotes.titre,
+			cible: tableDesNotes.identifiant,
+			qui: comptes.nom,
+			le: versions.le,
+			creeLe: tableDesNotes.creeLe
+		})
 		.from(versions)
 		.innerJoin(tableDesNotes, eq(versions.noteId, tableDesNotes.id))
 		.innerJoin(comptes, eq(versions.auteurId, comptes.id))
-		.where(and(gte(versions.le, depuis), filtre));
+		.where(and(gte(versions.le, depuis), surLUnivers, perimetre));
 
-	/* LES LOTS D'IMPORT — `RG-M12-09`. Un lot n'a PAS de note cible : il n'en a pas
-	   une, il en a douze, et `EvenementDActivite.cible` vaut `null` pour lui — le jeu
-	   de démonstration le montrait déjà ainsi.
-
-	   DEUX FILTRES QUI DISENT LA MÊME CHOSE — « quelque chose a été écrit » : une
-	   SIMULATION n'écrit rien (`RG-M12-02`), un lot refusé en bloc non plus
-	   (`RG-M12-03`, mode strict) et son journal compte alors zéro note. Les annoncer
-	   au flux ferait chercher des notes qui n'existent pas.
-
-	   LE PÉRIMÈTRE EST CELUI DU DOMAINE VISÉ, éprouvé par `domaineLisible()` comme le
-	   rangement de cette même page : un lot entré dans un domaine qu'on ne peut pas
-	   lire n'est pas une activité qui nous regarde. */
-	const lots =
-		domainesDeLUnivers.length === 0
-			? []
-			: await base
-					.select({
-						qui: comptes.nom,
-						le: lotsDImport.le,
-						source: lotsDImport.source,
-						notesCreees: lotsDImport.notesCreees,
-						notesMisesAJour: lotsDImport.notesMisesAJour
-					})
-					.from(lotsDImport)
-					.innerJoin(comptes, eq(lotsDImport.auteurId, comptes.id))
-					.where(
-						and(
-							gte(lotsDImport.le, depuis),
-							eq(lotsDImport.simulation, false),
-							inArray(lotsDImport.domaineId, [...domainesDeLUnivers])
-						)
-					);
-
-	const importes = lots.filter((l) => l.notesCreees + l.notesMisesAJour > 0);
+	const creees = await base
+		.select({
+			objet: tableDesNotes.titre,
+			cible: tableDesNotes.identifiant,
+			qui: comptes.nom,
+			le: tableDesNotes.creeLe
+		})
+		.from(tableDesNotes)
+		.innerJoin(comptes, eq(tableDesNotes.auteurId, comptes.id))
+		.where(and(gte(tableDesNotes.creeLe, depuis), surLUnivers, perimetre));
 
 	const signalees = await base
-		.select({ cible: tableDesNotes.identifiant, qui: comptes.nom, le: tableDesNotes.revisionLe })
+		.select({
+			objet: tableDesNotes.titre,
+			cible: tableDesNotes.identifiant,
+			qui: comptes.nom,
+			le: tableDesNotes.revisionLe
+		})
 		.from(tableDesNotes)
 		.innerJoin(comptes, eq(tableDesNotes.revisionParId, comptes.id))
 		.where(
-			and(eq(tableDesNotes.revisionDemandee, true), gte(tableDesNotes.revisionLe, depuis), filtre)
+			and(
+				eq(tableDesNotes.revisionDemandee, true),
+				gte(tableDesNotes.revisionLe, depuis),
+				surLUnivers,
+				perimetre
+			)
 		);
 
-	function evenement(
-		type: EvenementDActivite['type'],
-		ligne: { cible: string; qui: string; le: Date | null }
-	): EvenementDActivite | null {
+	/* LES LOTS D'IMPORT — `RG-M12-09`. Une SIMULATION n'écrit rien (`RG-M12-02`) et un
+	   lot refusé en bloc non plus : les annoncer ferait chercher des notes qui
+	   n'existent pas. */
+	const lots = await base
+		.select({
+			qui: comptes.nom,
+			le: lotsDImport.le,
+			source: lotsDImport.source,
+			notesCreees: lotsDImport.notesCreees,
+			notesMisesAJour: lotsDImport.notesMisesAJour
+		})
+		.from(lotsDImport)
+		.innerJoin(comptes, eq(lotsDImport.auteurId, comptes.id))
+		.where(
+			and(
+				gte(lotsDImport.le, depuis),
+				eq(lotsDImport.simulation, false),
+				inArray(lotsDImport.domaineId, [...domainesOuverts])
+			)
+		);
+
+	function surNote(
+		type: TypeDEvenement,
+		ligne: { objet: string; cible: string; qui: string; le: Date | null }
+	): EvenementDUnivers | null {
 		if (ligne.le === null) return null;
 		return {
 			type,
 			qui: ligne.qui,
-			cible: ligne.cible,
-			heures: Math.floor((maintenant.getTime() - ligne.le.getTime()) / MILLISECONDES_PAR_HEURE)
-		} as EvenementDActivite;
+			objet: ligne.objet,
+			adresse: `/notes/${ligne.cible}`,
+			heures: heuresDepuis(ligne.le, maintenant)
+		};
 	}
 
-	const evenements = [
-		...verifiees.map((l) => evenement('verification', l)),
-		...modifiees.map((l) => evenement('edition', l)),
-		...signalees.map((l) => evenement('revision', l)),
-		...importes.map((l) => {
-			const ecrites = l.notesCreees + l.notesMisesAJour;
-			return {
-				type: 'import' as const,
-				qui: l.qui,
-				cible: null,
-				heures: Math.floor((maintenant.getTime() - l.le.getTime()) / MILLISECONDES_PAR_HEURE),
-				/* LE DÉTAIL EST MESURÉ, PAS ILLUSTRÉ : le nombre vient du journal du
-				   lot, la source du dossier déposé. */
-				detail: `${String(ecrites)} ${accord(ecrites, 'note reprise', 'notes reprises')} depuis ${l.source}`
-			} as EvenementDActivite;
-		})
-	].filter((e): e is EvenementDActivite => e !== null);
+	const evenements: readonly EvenementDUnivers[] = [
+		...verifiees.map((l) => surNote('verification', l)),
+		...modifiees
+			.filter((l) => l.le.getTime() - l.creeLe.getTime() > MARGE_DE_NAISSANCE)
+			.map((l) => surNote('edition', l)),
+		...creees.map((l) => surNote('publication', l)),
+		...signalees.map((l) => surNote('revision', l)),
+		...lots
+			.filter((l) => l.notesCreees + l.notesMisesAJour > 0)
+			.map((l) => {
+				const ecrites = l.notesCreees + l.notesMisesAJour;
+				return {
+					type: 'import' as const,
+					qui: l.qui,
+					/* LE DÉTAIL EST MESURÉ, PAS ILLUSTRÉ : le nombre vient du journal du lot,
+					   la source du dossier déposé. */
+					objet: `${String(ecrites)} ${accord(ecrites, 'note reprise', 'notes reprises')} depuis ${l.source}`,
+					adresse: '',
+					heures: heuresDepuis(l.le, maintenant)
+				};
+			})
+	].filter((e): e is EvenementDUnivers => e !== null);
 
-	/* Du plus récent au plus ancien — l'ordre du gel, où `heures` croît le long
-	   de la liste. À égalité, l'identifiant de note départage : sans lui, l'ordre
+	/* Du plus récent au plus ancien. À égalité, l'objet départage : sans lui, l'ordre
 	   dépendrait de celui que le serveur a rendu, donc du plan de requête. */
-	return evenements.sort(
-		(a, b) => a.heures - b.heures || (a.cible ?? '').localeCompare(b.cible ?? '', 'fr')
-	);
+	return [...evenements]
+		.sort((a, b) => a.heures - b.heures || a.objet.localeCompare(b.objet, 'fr'))
+		.slice(0, LIGNES_DACTIVITE);
 }
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
@@ -245,75 +393,123 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const maintenant = new Date();
 	const acces = await ouvrirLAcces(base, locals.identite, maintenant);
 
-	const univers = await lireUniversParIdentifiant(base, params.univers);
-	const domainesDeLUnivers = univers === null ? [] : await lireDomainesDeLUnivers(base, univers.id);
-	const lisibles = domainesDeLUnivers.filter((d) => domaineLisible(acces, d.id));
+	const [universOuvert] = await base
+		.select({
+			id: tableDesUnivers.id,
+			identifiant: tableDesUnivers.identifiant,
+			nom: tableDesUnivers.nom,
+			description: tableDesUnivers.description,
+			glyphe: tableDesUnivers.glyphe
+		})
+		.from(tableDesUnivers)
+		.where(eq(tableDesUnivers.identifiant, params.univers));
+
+	const tousLesDomaines =
+		universOuvert === undefined
+			? []
+			: await base
+					.select({
+						id: tableDesDomaines.id,
+						identifiant: tableDesDomaines.identifiant,
+						nom: tableDesDomaines.nom,
+						description: tableDesDomaines.description
+					})
+					.from(tableDesDomaines)
+					.where(eq(tableDesDomaines.universId, universOuvert.id))
+					.orderBy(tableDesDomaines.nom);
+
+	const lisibles = tousLesDomaines.filter((d) => domaineLisible(acces, d.id));
 
 	/**
-	 * UN UNIVERS SANS AUCUN DOMAINE S'OUVRE, et rend l'état vide du gel. Il rendait
-	 * 404 : on crée un univers en premier sur une instance neuve, et aucun chemin
-	 * ne l'ouvrait ensuite.
+	 * UN UNIVERS SANS AUCUN DOMAINE S'OUVRE, et rend son état vide. Il rendait 404 :
+	 * on crée un univers en premier sur une instance neuve, et aucun chemin ne
+	 * l'ouvrait ensuite.
 	 *
 	 * Les deux refus ne bougent pas — univers absent, ou univers dont aucun domaine
-	 * n'est lisible : 404 par le même point de sortie (`ADR-007`). Seul s'ouvre
-	 * celui qui ne porte rien, où il n'y a aucun contenu à protéger.
+	 * n'est lisible : 404 par le même point de sortie (`ADR-007`).
 	 */
-	const vide = univers !== null && domainesDeLUnivers.length === 0;
+	const vide = universOuvert !== undefined && tousLesDomaines.length === 0;
 	const ouvrable = locals.identite.type === 'authentifie' && vide;
-	const resolution = resoudre(univers, () => lisibles.length > 0 || ouvrable);
+	const resolution = resoudre(universOuvert ?? null, () => lisibles.length > 0 || ouvrable);
 	if (!resolution.trouve) refuserLAdresse(url.pathname);
+	const univers = resolution.ressource;
 
-	/* Les dossiers des seuls domaines lisibles : c'est sur eux que se lit la
-	   capacité d'écriture, jamais sur l'univers entier. */
+	/* Les dossiers des seuls domaines lisibles : c'est sur eux que se lit la capacité
+	   d'écriture, jamais sur l'univers entier. Sur un univers vide, il n'y en a aucun,
+	   et c'est l'accès à la console qui décide — un domaine ne se crée que là. */
 	const dossiersLisibles = lisibles.flatMap((d) =>
 		dossiersDuDomaine(acces, d.id).map((ligne) => ligne.id)
 	);
+	const ecriture = vide
+		? accesALaConsole(locals.identite)
+		: peutEcrireDansLUn(acces, dossiersLisibles);
 
-	const rangement = await lireLeRangementLisible(base, acces);
+	const seuils = await lireSeuilsDeVivacite(base);
+	const notesLisibles = await lireLesNotesDesDomaines(
+		base,
+		acces,
+		lisibles.map((d) => d.id)
+	);
 
-	/* L'univers ouvert doit être dans la liste passée à la vue, même vide :
-	   `lireLeRangementLisible()` ne garde que ceux qui portent un domaine lisible,
-	   et `V-10.svelte:163` lit `univers[0].nom` — sur une liste vide, c'est un 500.
-	   On n'ajoute que celui que l'adresse nomme déjà : la liste complète révélerait
-	   les autres. */
-	const universOuvert = rangement.univers.some((u) => u.nom === resolution.ressource.nom)
-		? rangement.univers
-		: [
-				...rangement.univers,
-				...(await lireUnivers(base)).filter((u) => u.nom === resolution.ressource.nom)
-			];
+	/* L'agrégation : une passe, deux accumulateurs — l'univers et chaque domaine. */
+	const repartitionDeLUnivers = repartitionVide();
+	const parDomaine = new Map<
+		string,
+		{ repartition: Record<EtatDeVivacite, number>; le: Date | null }
+	>();
+	for (const d of lisibles) parDomaine.set(d.id, { repartition: repartitionVide(), le: null });
+	const auteurs = new Set<string>();
+	let derniereDeLUnivers: Date | null = null;
+
+	for (const ligne of notesLisibles) {
+		const etat = etatDeReference(ligne, maintenant, seuils);
+		repartitionDeLUnivers[etat] += 1;
+		auteurs.add(ligne.auteur);
+		const trace = derniereTrace(ligne);
+		if (derniereDeLUnivers === null || trace.getTime() > derniereDeLUnivers.getTime()) {
+			derniereDeLUnivers = trace;
+		}
+		const cumul = parDomaine.get(ligne.domaineId);
+		if (cumul === undefined) continue;
+		cumul.repartition[etat] += 1;
+		if (cumul.le === null || trace.getTime() > cumul.le.getTime()) cumul.le = trace;
+	}
 
 	return {
-		/* `uni` porte le NOM, non l'identifiant d'adresse : c'est ce que l'axe
-		   « Univers » de la planche emploie (la planche de la maquette, valeurs
-		   `Production` et `Projets`), et ce que la vue cherche dans les univers
-		   qu'elle reçoit.
-
-		   `etat` vaut « vide » quand l'univers ne porte aucun domaine ; hors de ce
-		   cas il n'est pas posé et vaut « nominal ». */
-		vecteur: {
-			uni: resolution.ressource.nom,
-			/* Sur un univers vide, c'est l'accès à la console qui décide :
-			   `peutEcrireDansLUn()` interroge les dossiers, il n'y en a aucun, et le
-			   bouton « Créer un domaine » resterait caché à l'administrateur. Un
-			   domaine ne se crée qu'à la console — même prédicat que la destination. */
-			droits: (vide ? accesALaConsole(locals.identite) : peutEcrireDansLUn(acces, dossiersLisibles))
-				? 'ecriture'
-				: 'lecture',
-			...(vide ? { etat: 'vide' } : {})
+		univers: {
+			nom: univers.nom,
+			description: univers.description,
+			glyphe: univers.glyphe
 		},
-		notes: await lireNotesLisibles(base, acces.perimetre, acces.contexte),
-		univers: universOuvert,
-		domaines: rangement.domaines,
-		detailDomaines: rangement.detailDomaines,
-		/* LES DOMAINES LISIBLES DE CET UNIVERS, pour les lots d'import : ils sont
-		   déjà calculés au-dessus, et un lot entré ailleurs n'est pas l'activité de
-		   cet univers. */
+		droits: ecriture ? ('ecriture' as const) : ('lecture' as const),
+		repartition: enCompteurs(repartitionDeLUnivers),
+		contributeurs: auteurs.size,
+		heuresDepuisLActivite:
+			derniereDeLUnivers === null ? null : heuresDepuis(derniereDeLUnivers, maintenant),
+		domaines: lisibles.map((d) => {
+			const cumul = parDomaine.get(d.id);
+			return {
+				nom: d.nom,
+				description: d.description,
+				adresse: `/univers/${univers.identifiant}/${d.identifiant}`,
+				repartition: enCompteurs(cumul?.repartition ?? repartitionVide()),
+				heures:
+					cumul?.le === undefined || cumul?.le === null ? null : heuresDepuis(cumul.le, maintenant)
+			};
+		}),
 		activite: await lireLActiviteRecente(
 			base,
 			acces,
 			maintenant,
 			lisibles.map((d) => d.id)
-		)
+		),
+		seuilBientot: seuils.bientot,
+		adresses: {
+			cartographie: requete(ADRESSE_DE_LA_CARTOGRAPHIE, [['perimetre', `univers|${univers.nom}`]]),
+			surveillance: adresseDeSurveillance(univers.nom),
+			creationDeDomaine: ADRESSE_DE_LA_CONSOLE_DES_DOMAINES,
+			creationDeNote: ADRESSE_DE_LA_NOUVELLE_NOTE,
+			profil: ADRESSE_DU_PROFIL
+		}
 	};
 };
