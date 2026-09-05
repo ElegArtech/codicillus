@@ -14,6 +14,7 @@
 import { getContext } from 'svelte';
 import type { VocabulaireRendu } from '../vocabulaire';
 import { SANS_DESIGNATION, type DesignationsDeRangement } from '../rangement/adresses';
+import type { NoteDuRail as NoteDuRailPourContexte } from './arborescence';
 
 /** La clé du contexte. Une constante, jamais une chaîne recopiée. */
 export const CLE_IDENTITE = Symbol.for('codicillus.identite-de-coquille');
@@ -23,6 +24,17 @@ export interface CompteAffiche {
 	readonly initiales: string;
 	readonly role: string;
 	readonly domaine: string;
+	/**
+	 * LE COURRIEL, SOUS LE NOM DANS LA CARTE DE COMPTE du rail. La colonne existe
+	 * (`comptes.courriel`, non nulle) et n'était servie nulle part : la carte
+	 * affichait un nom sans adresse, ou pire l'adresse de démonstration du gel.
+	 * Chaîne vide hors gabarit racine — la carte n'émet alors pas la ligne.
+	 *
+	 * OPTIONNEL, ET IL DOIT L'ÊTRE : quinze vues construisent un `CompteAffiche` de
+	 * rendu par défaut et ne connaissent pas de courriel. Le gabarit racine, lui, le
+	 * sert toujours.
+	 */
+	readonly courriel?: string;
 }
 
 export interface UniversDeRail {
@@ -38,6 +50,27 @@ export interface DomaineDeRail {
 	readonly nom: string;
 	readonly univers: string;
 	readonly couleur: string;
+}
+
+/**
+ * UNE NOTE DU RAIL — le strict nécessaire pour la poser en feuille de
+ * l'arborescence et pour compter. La forme est celle qu'`arborescence.ts` demande ;
+ * elle n'est pas recopiée ici, elle en vient.
+ */
+export type { NoteDuRail } from './arborescence';
+
+/**
+ * UNE NOTE RÉCEMMENT CONSULTÉE — la section « RÉCENTS » du rail, cinq lignes.
+ *
+ * ELLES VIENNENT DE LA TABLE `consultations`, filtrée sur le compte connecté : le
+ * gel en écrit cinq en dur, et les servir aurait annoncé à chacun les lectures d'un
+ * autre. AUCUN COMPTE, AUCUNE CONSULTATION : la liste est vide et la section n'est
+ * pas rendue — une zone vide n'apprend rien.
+ */
+export interface NoteRecente {
+	/** L'identifiant lisible — `/notes/{identifiant}`. */
+	readonly identifiant: string;
+	readonly titre: string;
 }
 
 /**
@@ -67,6 +100,15 @@ export interface IdentiteDeCoquille {
 	readonly administrateur: boolean;
 	readonly univers: readonly UniversDeRail[];
 	readonly domaines: readonly DomaineDeRail[];
+	/**
+	 * LES NOTES QUE LE RAIL POSE EN FEUILLES, et sur lesquelles il compte. Elles
+	 * descendent d'ICI et non de la propriété `notes` des vues : chaque route y
+	 * passait SON corpus — celui de la page —, et l'arbre du rail changeait donc de
+	 * contenu d'un écran à l'autre. Vide hors gabarit racine.
+	 */
+	readonly notes?: readonly NoteDuRailPourContexte[] | undefined;
+	/** Les cinq dernières notes consultées PAR CE COMPTE. Vide : pas de section. */
+	readonly recents?: readonly NoteRecente[] | undefined;
 	/**
 	 * LA VERSION DU PRODUIT, LUE SUR `package.json` — la vraie, pas le `1.0.0` de
 	 * `INSTANCE`. `null` hors gabarit racine (page d'erreur) : la propriété reprend
