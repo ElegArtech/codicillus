@@ -32,3 +32,8 @@ blob-report/
 # Système
 .DS_Store
 *.log
+
+# Les sorties de la comparaison écran / capture : des images regardées puis
+# jetées. La RÉFÉRENCE, elle, est versionnée — c'est `design_handoff_.../captures`.
+tools/conformite/rendu/
+tools/conformite/cote-a-cote/
