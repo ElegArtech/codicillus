@@ -95,8 +95,16 @@ bon, table renommée en base pour faire lever une lecture, serveur ralenti à 1,
 ## L'instance de recette
 
 Elle tourne sur un VPS, derrière un tunnel — l'accès et l'exploitation sont décrits dans
-`codicillus-vpn/ACCES.md`, hors dépôt. Au 1er septembre elle porte ce code, ses migrations sont
-appliquées jusqu'à `013`, son index de recherche est posé, et elle est vide de données.
+`codicillus-vpn/ACCES.md`, hors dépôt. **Au 5 septembre elle porte la refonte de l'interface**,
+ses migrations sont appliquées jusqu'à `014`, son index est reconstruit sur ses **300 notes
+réelles**, treize univers et un compte.
+
+La migration `014` — un cycle de vivacité par registre — a été passée sur ces données réelles.
+Elle est purement additive : deux colonnes de validité prenant leur défaut, une date de
+vérification opérationnelle nulle, un registre de révision repris à `reference`. Une sauvegarde a
+été prise et RELUE juste avant (28 tables, 48 fichiers), et le compte des notes a été vérifié
+identique après. Le jeu de conformité — `pnpm base:conformite` — n'a jamais été passé sur cette
+instance et ne doit pas l'être : il efface le contenu.
 
 **LA SAUVEGARDE EST POSÉE** depuis le 4 septembre — `codicillus-sauvegarde.timer`, chaque nuit à
 2 h 30, un jeu par dossier horodaté sous `/var/sauvegardes/codicillus`, quatorze quotidiennes puis
