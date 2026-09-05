@@ -157,6 +157,14 @@ export async function envoyerAUneAction(
 const CHAMPS_DE_CONFIGURATION = {
 	seuilFrais: 'c-frais',
 	seuilVieillissant: 'c-vieil',
+	/* LES CINQ RÉGLAGES DU CYCLE DE VIVACITÉ — `T-10`. Absents d'ici, leurs champs
+	   auraient beau exister à l'écran : le navigateur n'aurait rien envoyé, et
+	   l'enregistrement les aurait reposés à leur valeur d'avant. */
+	validiteReference: 'c-validite-reference',
+	validiteOperationnel: 'c-validite-operationnel',
+	seuilBientot: 'c-bientot',
+	retardRevoir: 'c-retard-revoir',
+	retardObsolete: 'c-retard-obsolete',
 	versionsMax: 'c-versions',
 	portailAssistance: 'c-portail',
 	nomOrganisation: 'c-organisation',

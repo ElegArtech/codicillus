@@ -26,6 +26,13 @@ export type Debranchement = () => void;
 const CHAMPS = [
 	'c-frais',
 	'c-vieil',
+	/* Le cycle de vivacité — `T-10`. Sans eux, changer une validité ne faisait pas
+	   bouger le témoin : l'écran ne disait pas qu'il y avait à enregistrer. */
+	'c-validite-reference',
+	'c-validite-operationnel',
+	'c-bientot',
+	'c-retard-revoir',
+	'c-retard-obsolete',
 	'c-versions',
 	'c-portail',
 	'c-organisation',
@@ -113,6 +120,14 @@ export function peindreLesRefusDeConfiguration(
 	const CHAMPS_REFUSABLES = [
 		'frais',
 		'vieil',
+		/* Le cycle de vivacité — `T-10`. Les cinq suffixes sont ceux que
+		   `ErreurDeConfiguration` nomme, et `#c-{suffixe}` est l'`input` que le
+		   premier refus focalise. */
+		'validite-reference',
+		'validite-operationnel',
+		'bientot',
+		'retard-revoir',
+		'retard-obsolete',
 		'portail',
 		'mot',
 		'versions',
