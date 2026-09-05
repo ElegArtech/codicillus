@@ -43,7 +43,8 @@ import {
 	typesDeNote,
 	typesDeRelation,
 	univers,
-	verifications
+	verifications,
+	versions
 } from './schema';
 import { analyserMarkdown } from '../contenu/markdown';
 import { hacherMotDePasse } from '../auth/mots-de-passe';
@@ -54,7 +55,9 @@ import {
 	ANCIENNETE_PAR_ETAT,
 	CONSULTATIONS_DE_CONFORMITE,
 	NOTES_ATTENDUES,
+	RELATIONS_DE_CONFORMITE,
 	REPARTITION_ATTENDUE,
+	TYPES_DE_RELATION_DE_CONFORMITE,
 	UNIVERS_DE_CONFORMITE,
 	type ConsultationSemee,
 	type DomaineSeme,
@@ -222,6 +225,8 @@ interface NoteAPoser {
 	 * sans déplacer aucun état.
 	 */
 	readonly ancienneteJours: number | null;
+	/** La note est rédigée en toutes lettres dans `seeds/conformite/`, pas engendrée. */
+	readonly redigee: boolean;
 }
 
 /**
@@ -316,7 +321,8 @@ function notesDUnDomaine(
 			validiteOperationnel: validite('validite-operationnel', 21),
 			ancienneteOperationnel:
 				lue?.operationnel == null ? null : anciennete === undefined ? 0 : Number(anciennete),
-			ancienneteJours: nommee.ancienneteJours ?? null
+			ancienneteJours: nommee.ancienneteJours ?? null,
+			redigee: nommee.fichier !== undefined
 		};
 	});
 
@@ -337,7 +343,8 @@ function notesDUnDomaine(
 			validiteReference: 90,
 			validiteOperationnel: 21,
 			ancienneteOperationnel: null,
-			ancienneteJours: null
+			ancienneteJours: null,
+			redigee: false
 		};
 	});
 
@@ -598,6 +605,28 @@ export async function chargerLaConformite(
 			}
 		}
 
+		/**
+		 * LES TYPES DE RELATION. Le jeu les efface en tête ; sans les reposer, le panneau
+		 * RELATIONS d'une note ne peut rien porter, et la cartographie n'a pas d'arête à
+		 * dessiner. Ce sont ceux du jeu de démonstration : un vocabulaire de relations est
+		 * un choix d'instance, pas une donnée de refonte.
+		 */
+		const typesRelationPoses = await tx
+			.insert(typesDeRelation)
+			.values(
+				TYPES_DE_RELATION_DE_CONFORMITE.map((t, ordre) => ({
+					identifiant: t.identifiant,
+					libelleSortant: t.sortant,
+					libelleEntrant: t.entrant,
+					technique: t.technique,
+					ordre
+				}))
+			)
+			.returning({ id: typesDeRelation.id, identifiant: typesDeRelation.identifiant });
+		const typeRelationParIdentifiant = new Map(
+			typesRelationPoses.map((t) => [t.identifiant, t.id])
+		);
+
 		/* Le type « Note » vient de la migration `007`, jamais d'une semence. */
 		const typesPoses = await tx
 			.select({ id: typesDeNote.id, nom: typesDeNote.nom })
@@ -617,6 +646,25 @@ export async function chargerLaConformite(
 			compteId: string;
 			registre: 'reference' | 'operationnel';
 			le: Date;
+		}[] = [];
+		/**
+		 * LES VERSIONS. Sans elles, la ligne « Version » d'une note dit « aucune version
+		 * capturée » et l'historique n'a rien à comparer — deux panneaux de la référence
+		 * restent creux. Chaque note reçoit celle de sa naissance ; les deux notes écrites en
+		 * toutes lettres en reçoivent une seconde, pour que la comparaison AVANT / APRÈS ait
+		 * quelque chose à montrer.
+		 */
+		const lignesDeVersion: {
+			noteId: string;
+			numero: number;
+			le: Date;
+			auteurId: string;
+			resume: string;
+			ajout: number;
+			retrait: number;
+			titre: string;
+			corpsReference: ReturnType<typeof analyserMarkdown>;
+			corpsOperationnel: ReturnType<typeof analyserMarkdown> | null;
 		}[] = [];
 
 		for (const note of aPoser) {
@@ -684,6 +732,39 @@ export async function chargerLaConformite(
 				});
 			}
 
+			/* La naissance de la note, puis — pour les deux notes rédigées — la révision de
+			   forme que l'historique de la référence montre au 1er septembre. */
+			const creeLe = new Date(verifieLe.getTime() - 60 * JOUR);
+			const corpsReference = analyserMarkdown(note.reference);
+			const corpsOperationnel =
+				note.operationnel === null ? null : analyserMarkdown(note.operationnel);
+			lignesDeVersion.push({
+				noteId,
+				numero: 1,
+				le: creeLe,
+				auteurId,
+				resume: 'Création de la note',
+				ajout: note.reference.split('\n').length,
+				retrait: 0,
+				titre: note.titre,
+				corpsReference,
+				corpsOperationnel: null
+			});
+			if (note.redigee) {
+				lignesDeVersion.push({
+					noteId,
+					numero: 2,
+					le: verifieLe,
+					auteurId,
+					resume: 'Reformulation, sans changement de fond',
+					ajout: 4,
+					retrait: 2,
+					titre: note.titre,
+					corpsReference,
+					corpsOperationnel
+				});
+			}
+
 			for (const [rang, libelle] of note.etiquettes.entries()) {
 				let etiquetteId = etiquetteParLibelle.get(libelle);
 				if (etiquetteId === undefined) {
@@ -699,6 +780,22 @@ export async function chargerLaConformite(
 		}
 
 		await tx.insert(verifications).values(lignesDeVerification);
+		await tx.insert(versions).values(lignesDeVersion);
+
+		/* LES RELATIONS des deux notes rédigées — la capture de la première en annonce
+		   trois, celle de la seconde quatre. Elles traversent les univers : c'est le point
+		   d'un graphe. Une note absente du jeu est ignorée plutôt que de faire échouer la
+		   charge entière pour un lien d'illustration. */
+		const lignesDeRelation = RELATIONS_DE_CONFORMITE.flatMap((r) => {
+			const sourceId = noteParTitre.get(r.source);
+			const cibleId = noteParTitre.get(r.cible);
+			const typeDeRelationId = typeRelationParIdentifiant.get(r.type);
+			if (sourceId === undefined || cibleId === undefined || typeDeRelationId === undefined) {
+				return [];
+			}
+			return [{ sourceId, cibleId, typeDeRelationId, origine: 'declaree' as const }];
+		});
+		if (lignesDeRelation.length > 0) await tx.insert(relations).values(lignesDeRelation);
 
 		/* LES CONSULTATIONS. Le rail montre cinq récents et l'accueil deux listes : sans
 		   lignes ici, ces trois zones sont vides. Les ouvertures des trente derniers
