@@ -625,10 +625,6 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
 .sug-lien__actions { display: flex; gap: var(--e-1); flex: none; }
 .sug-lien__actions .btn { padding: 4px var(--e-2); font-size: var(--t-mini); }
 
-@media (max-width: 1240px) {
-  .app { grid-template-columns: minmax(0,1fr); }
-  .rail { display: none; }
-}
 @media (max-width: 980px) {
   .editeur { grid-template-columns: minmax(0, 1fr); }
   /* Les métadonnées passent dans un panneau escamotable. */
@@ -902,10 +898,6 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
 .planche input:focus-visible + span { outline: 2px solid #8f86e0; outline-offset: 2px; }
 .planche__sep { width: 1px; height: 22px; background: #33454f; }
 
-@media (max-width: 1240px) {
-  .app { grid-template-columns: minmax(0,1fr); }
-  .rail { display: none; }
-}
 @media (max-width: 980px) {
   .app[data-reference="cote"] .editeur { grid-template-columns: minmax(0, 1fr); }
   .app[data-reference="cote"] .meta-panneau { display: none; }

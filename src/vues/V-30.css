@@ -387,10 +387,6 @@
 }
 .effet-immediat[data-actif="oui"] { opacity: 1; }
 
-@media (max-width: 1240px) {
-  .app { grid-template-columns: minmax(0,1fr); }
-  .rail { display: none; }
-}
 @media (max-width: 900px) {
   /* La navigation secondaire devient un sélecteur. */
   .console { grid-template-columns: minmax(0, 1fr); }

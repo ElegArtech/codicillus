@@ -418,10 +418,6 @@ svg .noeud[data-fantome="oui"] .noeud__forme { stroke-dasharray: 3 2.5; }
 .planche input:focus-visible + span { outline: 2px solid #8f86e0; outline-offset: 2px; }
 .planche__sep { width: 1px; height: 22px; background: #33454f; }
 
-@media (max-width: 1240px) {
-  .app { grid-template-columns: minmax(0,1fr); }
-  .rail { display: none; }
-}
 @media (max-width: 1080px) {
   .scene { grid-template-columns: minmax(0, 1fr); }
   .detail-col {

@@ -576,10 +576,6 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
 .regle b { display: block; color: var(--c-encre); font-weight: var(--g-fort); }
 .regle span { color: var(--c-encre-2); }
 
-@media (max-width: 1240px) {
-  .app { grid-template-columns: minmax(0,1fr); }
-  .rail { display: none; }
-}
 @media (max-width: 640px) {
   .bord, .demo-lecture, .regles { padding-left: var(--e-4); padding-right: var(--e-4); }
   .planche { display: none; }
