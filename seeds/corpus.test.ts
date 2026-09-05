@@ -368,7 +368,16 @@ const CHAMPS_DE_CONFIG_HORS_GEL = [
 	   planche ne les dessine non plus : la règle exigeait une page activable, et
 	   rien dans le produit ne l'activait. */
 	'indisponibiliteActive',
-	'messageDIndisponibilite'
+	'messageDIndisponibilite',
+	/* LES CINQ RÉGLAGES DU CYCLE DE VIVACITÉ — migration `014`. Le gel ne les a
+	   jamais portés : il ne connaît qu'une fraîcheur à trois niveaux, calculée sur
+	   l'ancienneté, sans durée de validité ni cycle par registre. Ils sont un
+	   réglage d'instance du produit, pas une donnée de la maquette. */
+	'validiteReference',
+	'validiteOperationnel',
+	'seuilBientot',
+	'retardRevoir',
+	'retardObsolete'
 ] as const;
 
 describe('corpus.ts reproduit la maquette de référence', () => {

@@ -354,17 +354,24 @@ export function messageSeuilNonCroissant(seuilFrais: number): string {
 }
 
 /**
- * Les dix paramètres que `V-33` règle. `Record<keyof Configuration, string>` est le
- * garde-fou : un onzième paramètre ne compile pas tant qu'il n'a pas son champ ici, dans la
- * table du câblage et dans la lecture.
+ * Les dix paramètres que `V-33` règle AUJOURD'HUI — et le fait qu'ils ne soient plus la
+ * configuration entière est ÉCRIT, non subi. `Record<ChampReglableEnConsole, string>` reste le
+ * garde-fou : un paramètre nommé ici ne compile pas tant qu'il n'a pas son champ dans la table
+ * du câblage et dans la lecture.
  *
  * Un champ déclaré ici sans `input` correspondant est un piège : le formulaire n'envoie rien,
  * `texte()` rend la chaîne vide et l'enregistrement écrase la valeur réglée à chaque clic. Le
- * préfixe `c-` fait partie du nom.
+ * préfixe `c-` fait partie du nom. C'EST POURQUOI LES CINQ RÉGLAGES DU CYCLE DE VIVACITÉ EN
+ * SONT EXCLUS : la migration `014` les a posés en base et la lecture leur donne leur défaut,
+ * mais `V-33` ne porte pas encore leurs champs. Les nommer ici les remettrait à zéro à chaque
+ * enregistrement de la console. Ils y entreront avec les champs qui les règlent.
  */
-export type ChampReglableEnConsole = keyof Configuration;
+export type ChampReglableEnConsole = Exclude<
+	keyof Configuration,
+	'validiteReference' | 'validiteOperationnel' | 'seuilBientot' | 'retardRevoir' | 'retardObsolete'
+>;
 
-/** Les dix réglages que `V-33` porte — la configuration entière. */
+/** Les dix réglages que `V-33` porte. */
 export type ConfigurationReglableEnConsole = Pick<Configuration, ChampReglableEnConsole>;
 
 export const CHAMPS_DE_CONFIGURATION: Readonly<Record<ChampReglableEnConsole, string>> =
