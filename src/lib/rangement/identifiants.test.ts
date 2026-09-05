@@ -15,6 +15,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { CORPUS } from '../../../seeds/corpus';
+import { identifiantLisible } from './adresses';
 import {
 	CORPS_PAR_DEFAUT,
 	identifiantDeNote,
@@ -147,5 +148,43 @@ describe('ARB-062 §2.4 — la levée de collision', () => {
 		   de candidats distincts. */
 		const suite = Array.from({ length: 50 }, (_, i) => identifiantSuivant('n-x', i + 1));
 		expect(new Set(suite).size).toBe(suite.length);
+	});
+});
+
+/**
+ * L'IDEMPOTENCE — la propriété qui manquait, et le défaut qu'elle a laissé passer.
+ *
+ * `adresseDeDomaine()` rappelle `identifiantLisible()` sur son second argument, que
+ * l'appelant a pourtant déjà traduit en identifiant persisté. Tant que la fonction
+ * n'était pas idempotente, un identifiant portant un souligné changeait à chaque
+ * passage, et le fil d'Ariane de toute note d'un tel domaine rendait 404.
+ */
+describe('identifiantLisible — appliquée deux fois, elle ne bouge plus', () => {
+	const noms = [
+		'audit_code',
+		'Réseau',
+		'Poste de travail',
+		'Migration 2026',
+		'Business Analysis',
+		'CV',
+		'mon-domaine',
+		'date_achat'
+	];
+	for (const nom of noms) {
+		it(`« ${nom} » : le second passage rend le premier`, () => {
+			const une = identifiantLisible(nom);
+			expect(identifiantLisible(une)).toBe(une);
+		});
+	}
+
+	it('garde le souligné d’un identifiant déjà valide — c’est un caractère d’adresse', () => {
+		expect(identifiantLisible('audit_code')).toBe('audit_code');
+		expect(identifiantLisible('date_achat')).toBe('date_achat');
+	});
+
+	it('dérive toujours ce qui n’est pas encore une adresse', () => {
+		expect(identifiantLisible('Réseau')).toBe('reseau');
+		expect(identifiantLisible('Poste de travail')).toBe('poste-de-travail');
+		expect(identifiantLisible('Business Analysis')).toBe('business-analysis');
 	});
 });
