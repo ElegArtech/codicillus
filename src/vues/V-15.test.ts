@@ -1,30 +1,26 @@
 /**
- * V-15 — L'HISTORIQUE MONTRE *CETTE* NOTE.
+ * V-15 — L'HISTORIQUE EST UNE PAGE, ET ELLE DIT LA VÉRITÉ DE *CETTE* NOTE.
  *
- * LE DÉFAUT QUE CE FICHIER FERME. `V-15.svelte` montait le bloc partagé SANS
- * `affichee`, et le bloc retombe alors sur la note de démonstration :
- * `/notes/{identifiant}?version` rendait, POUR N'IMPORTE QUELLE NOTE, le titre
- * « Restaurer une sauvegarde PostgreSQL depuis Barman », son rangement, son
- * auteur, ses 412 consultations, le sommaire de son corps et un cartouche
- * « Vérifié par Karim Belhadj » — le tout sous un fil d'Ariane qui, lui,
- * nommait la vraie note. Les deux liens internes du corps transcrit menaient à
- * `n-diag-barman`, une note qui rend 404 sur une instance réelle.
+ * LE DÉFAUT QUE CE FICHIER GARDE FERMÉ. L'historique était un tiroir superposé à
+ * `/notes/{identifiant}` : sans adresse propre, sans fil qui le nomme, et rendu
+ * SANS la note dont il parlait — le bloc partagé retombait alors sur la note de
+ * démonstration, si bien que `?version` affichait « Restaurer une sauvegarde
+ * PostgreSQL » sous le fil d'Ariane d'une autre note. `note` est désormais
+ * REQUISE, et rien du jeu ne peut plus prendre sa place.
  *
- * LE CORPS EST RENDU PAR `rendreDocument`, ET PAR RIEN D'AUTRE — ADR-004. Ce
- * fichier n'écrit aucun HTML de corps à la main, ce que l'ADR interdit
- * nommément, « y compris dans un test ».
+ * CE QUE CES CAS ÉPROUVENT — le RENDU, à partir d'états construits ici : le fil,
+ * son ordre, le glyphe de chaque événement, le titre coloré à partir d'« À
+ * vérifier », la pastille de version et son panneau de comparaison, l'état vide
+ * qui NOMME son geste. Ils n'éprouvent RIEN de ce que le chargeur tire de la
+ * base : cela se mesure sur une base réelle, dans un navigateur.
  *
- * LES DEUX POLARITÉS SONT JOUÉES — P-5. La seconde section garde le DÉFAUT :
- * sans propriété, la transcription figée du gel, à l'identique. Un correctif
- * qui aurait supprimé la transcription au lieu de la reléguer au défaut ferait
- * échouer cette moitié-là.
+ * LES DEUX POLARITÉS SONT JOUÉES (`P-5`) : le panneau de comparaison est rendu
+ * quand la comparaison est servie, et ABSENT quand elle ne l'est pas — un rendu
+ * qui l'écrirait toujours passerait pour juste.
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
-import { corpusPourVue, noteParIdentifiant, VERSIONS, type Note } from '../../seeds/corpus';
-import { documentDuGel, resoudreDansLeCorpus } from '../lib/contenu/documents-du-gel';
-import { rendreDocument } from '../lib/contenu/rendu';
-import type { LectureAffichee } from '../lib/lecture/note-de-demonstration';
+import { corpusPourVue, noteParIdentifiant } from '../../seeds/corpus';
 
 const NOTES = corpusPourVue('V-15');
 
@@ -35,197 +31,235 @@ const NOTE_DU_GEL = (() => {
 	return note;
 })();
 
-/** L'AUTRE note à corps transcrit du gel — jamais celle de la démonstration. */
-const AUTRE_NOTE = (() => {
+/** La note dont l'historique est ouvert — jamais celle de la démonstration. */
+const LA_NOTE = (() => {
 	const note = noteParIdentifiant('n-mot-de-passe');
 	if (!note) throw new Error('seeds/corpus.ts : « n-mot-de-passe » a disparu');
 	return note;
 })();
 
-/** Le corps rendu par l'implémentation unique — ADR-004, jamais un second chemin. */
-function corpsRenduDuGel(note: Note, registre: 'reference' | 'operationnel'): string {
-	return rendreDocument(documentDuGel(note.id, registre), {
-		resoudre: resoudreDansLeCorpus,
-		contexte: 'interne'
-	});
+const ADRESSE = `/notes/${LA_NOTE.id}`;
+
+const ONGLETS = [
+	{ libelle: 'Tous', actif: true, adresse: `${ADRESSE}/historique` },
+	{ libelle: 'Référence', actif: false, adresse: `${ADRESSE}/historique?registre=reference` },
+	{
+		libelle: 'Opérationnel',
+		actif: false,
+		adresse: `${ADRESSE}/historique?registre=operationnel`
+	}
+];
+
+/** Le socle d'un événement — chaque cas n'écrase que ce qu'il éprouve. */
+function evenement(surcharge: Record<string, unknown>): Record<string, unknown> {
+	return {
+		cle: 'e-1',
+		date: '13 août 2026',
+		registre: 'Référence',
+		etat: null,
+		titre: 'Création de la note',
+		detail: 'Rédigée par Alexandre Berge dans Claude › audit_code.',
+		version: null,
+		adresseComparaison: '',
+		libelleComparaison: 'Comparer avec la version précédente',
+		comparaison: null,
+		adresseRestauration: '',
+		restaurationDepliee: false,
+		numero: '',
+		...surcharge
+	};
 }
 
-const REFERENCE_RENDUE = corpsRenduDuGel(AUTRE_NOTE, 'reference');
-
-const AFFICHEE: LectureAffichee = {
-	note: AUTRE_NOTE,
-	reference: REFERENCE_RENDUE,
-	operationnel: null,
-	sommaire: [{ niveau: 2, ancre: 's-epreuve', libelle: "Un titre d'épreuve" }],
-	controle: {
-		par: 'Marc Ferreira',
-		quand: { iso: '2026-03-05', jour: '5 mars 2026', heureDite: '5 mars 2026 à 08:12' }
-	},
-	joursDepuisControle: 4,
-	modifiee: { iso: '2026-03-02', jour: '2 mars 2026', heureDite: '2 mars 2026 à 17:40' },
-	referenceModifiee: { iso: '2026-03-02', jour: '2 mars 2026', heureDite: '2 mars 2026 à 17:40' },
-	resync: false,
-	revision: null,
-	consultations30j: 7,
-	consultationsTotal: 431
-};
-
-/**
- * LE SOCLE DE PROPRIÉTÉS REQUISES. L'historique ne peut plus se rendre sans la
- * note dont il parle ni sans l'article qu'il coiffe : leur absence rendait la
- * transcription figée du gel, et c'était le défaut.
- */
 function rendu(proprietes: Record<string, unknown>): Promise<string> {
 	return rendreLaVue('V-15', {
-		vecteur: null,
+		note: LA_NOTE,
 		notes: NOTES,
-		note: AUTRE_NOTE,
-		affichee: AFFICHEE,
-		versions: {},
-		retentionVersions: 50,
-		versionAffichee: null,
-		onComparer: () => undefined,
+		adresseDeLaNote: ADRESSE,
+		onglets: ONGLETS,
+		evenements: [],
+		vide: null,
 		...proprietes
 	});
 }
 
 afterAll(fermerLeHarnais);
 
-describe('V-15 — l’historique sert l’article de la note demandée', () => {
-	it('rend le titre, le corps et le cartouche de la note reçue', async () => {
-		const html = await rendu({ note: AUTRE_NOTE, affichee: AFFICHEE });
-		expect(html).toContain(AUTRE_NOTE.titre);
-		expect(REFERENCE_RENDUE.length).toBeGreaterThan(200);
-		expect(html).toContain(REFERENCE_RENDUE);
-		expect(html).toContain('<strong>Marc Ferreira</strong>');
+describe('V-15 — la page nomme la note dont elle montre l’historique', () => {
+	it('rend le titre de la note reçue, et le fil se ferme sur « historique »', async () => {
+		const html = await rendu({});
+		expect(html).toContain(`<h1 class="hist__titre">${LA_NOTE.titre}</h1>`);
+		expect(html).toContain('<span class="fil__courant">historique</span>');
 	});
 
-	/**
-	 * LE CŒUR DU DÉFAUT : rien de la note de démonstration ne doit subsister
-	 * sous le fil d'Ariane d'une autre note — ni son titre, ni son auteur, ni
-	 * son compteur, ni les trois vérificateurs de la planche.
-	 */
 	it('ne laisse rien de la note de démonstration', async () => {
-		const html = await rendu({ note: AUTRE_NOTE, affichee: AFFICHEE });
+		const html = await rendu({});
 		expect(html).not.toContain(NOTE_DU_GEL.titre);
-		expect(html).not.toContain(`${NOTE_DU_GEL.vues} consultations`);
-		/* LE CARTOUCHE, ET NON LA PAGE : « Karim Belhadj » est aussi le compte
-		   courant du jeu, dont le nom coiffe le menu utilisateur de la barre.
-		   C'est l'attribution du contrôle qui ne doit plus venir de la planche. */
-		expect(html).not.toContain('par <strong>Karim Belhadj</strong>');
-		/* Le sommaire suit le corps affiché, et non les onze titres du gel. */
-		expect(html).toContain("Un titre d'épreuve");
-		expect(html).not.toContain('s-prerequis');
+		expect(html).not.toContain('Karim Belhadj');
 	});
 
-	/**
-	 * LE LIEN INTERNE DU CORPS TRANSCRIT — `n-diag-barman`. Il ne se rend que
-	 * faute de note affichée ; servi sur une instance réelle, il menait à une
-	 * note qui n'existe pas.
-	 */
-	it('ne rend aucun lien vers la note du corps transcrit', async () => {
-		const html = await rendu({ note: AUTRE_NOTE, affichee: AFFICHEE });
-		expect(html).not.toContain('n-diag-barman');
+	it('pose « ← Retour à la note » sur l’adresse servie', async () => {
+		const html = await rendu({});
+		expect(html).toContain(`href="${ADRESSE}"`);
+		expect(html).toContain('Retour à la note');
 	});
 
-	it('rend le cumul de consultations servi, et non celui du corpus', async () => {
-		const html = await rendu({ note: AUTRE_NOTE, affichee: AFFICHEE });
-		expect(html).toContain('431 consultations · 7 sur les 30 derniers jours');
+	/** La phrase d'explication de la référence, au mot près. */
+	it('porte le label mono et la phrase d’explication', async () => {
+		const html = await rendu({});
+		expect(html).toContain('Historique');
+		expect(html).toContain('Chaque registre a son propre cycle.');
 	});
 });
 
-/**
- * L’ÉTAT CONSULTÉ N’EST PAS TOUJOURS LA NOTE COURANTE — `?version={n}`.
- *
- * LE DÉFAUT QUE CES CAS FERMENT. Le bandeau annonçait « Version N … vous
- * consultez un état antérieur » au-dessus du titre, du corps et du sommaire les
- * PLUS RÉCENTS : `lireLHistoire()` capturait pourtant le titre et les deux corps
- * de la version demandée, les servait au navigateur, et aucun nœud ne les
- * lisait. « Restaurer cette version » écrasait donc la note avec un contenu que
- * l’écran n’avait jamais montré — ce que `RG-M18-05` refuse.
- *
- * CE QUE CES CAS NE PROUVENT PAS. Ils éprouvent le RENDU à partir d’un état
- * construit ici ; ils ne prouvent rien de ce que le chargeur tire de la table
- * `versions`, ni de l’appariement d’un numéro d’adresse à une ligne. Cela se
- * mesure sur une base réelle, dans un navigateur, et le relevé du lot le porte.
- */
-describe('V-15 — l’article suit l’état consulté, pas la note courante', () => {
-	/** Le titre que la version a CAPTURÉ — la note a été renommée depuis (`RG-M07-02`). */
-	const TITRE_CAPTURE = 'Un titre que la note ne porte plus';
-
-	/** L’historique, dans la forme que le corpus donne — jamais une forme réécrite ici. */
-	const HISTORIQUE = (() => {
-		const lignes = VERSIONS['n-restaurer-pg'];
-		if (lignes === undefined || lignes.length < 2)
-			throw new Error('seeds/corpus.ts : « n-restaurer-pg » n’a plus deux versions');
-		return lignes;
-	})();
-
-	/** La plus ancienne des deux : consultée, elle N’EST PAS la version courante. */
-	const ANTERIEURE = HISTORIQUE[HISTORIQUE.length - 1] as (typeof HISTORIQUE)[number];
-
-	const AFFICHEE_ANTERIEURE: LectureAffichee = {
-		...AFFICHEE,
-		note: { ...AUTRE_NOTE, titre: TITRE_CAPTURE }
-	};
-
-	function renduAnterieur(): Promise<string> {
-		return rendu({
-			note: AUTRE_NOTE,
-			affichee: AFFICHEE_ANTERIEURE,
-			versions: { [AUTRE_NOTE.id]: HISTORIQUE },
-			versionAffichee: ANTERIEURE.n
+describe('V-15 — le fil rend ce que le chargeur lui donne, et rien de plus', () => {
+	it('rend les événements dans l’ordre servi, sans les retrier', async () => {
+		const html = await rendu({
+			evenements: [
+				evenement({ cle: 'a', date: '4 septembre 2026', titre: 'Le plus récent' }),
+				evenement({ cle: 'b', date: '13 août 2026', titre: 'Le plus ancien' })
+			]
 		});
-	}
-
-	it('rend le bandeau d’état antérieur au-dessus du titre capturé', async () => {
-		const html = await renduAnterieur();
-		expect(html).toContain(`Version ${ANTERIEURE.n} du ${ANTERIEURE.date}`);
-		expect(html).toContain(`<h1 class="titre-note" id="h-titre">${TITRE_CAPTURE}</h1>`);
-	});
-
-	/** Le fil se ferme sur le titre de l’ARTICLE qu’il coiffe, comme partout ailleurs. */
-	it('ferme le fil d’Ariane sur le titre capturé', async () => {
-		const html = await renduAnterieur();
-		expect(html).toContain(`<span class="fil__courant">${TITRE_CAPTURE}</span>`);
-	});
-
-	/** LE PANNEAU NOMME LA NOTE, ET NON L’ÉTAT : c’est son historique qui est ouvert. */
-	it('garde le titre de la note en tête du panneau d’historique', async () => {
-		const html = await renduAnterieur();
-		expect(html).toContain(`id="tiroir-note">${AUTRE_NOTE.titre}</div>`);
+		expect(html.indexOf('Le plus récent')).toBeLessThan(html.indexOf('Le plus ancien'));
 	});
 
 	/**
-	 * P-5 — LA POLARITÉ. Sans version antérieure consultée, le titre de l’article
-	 * est celui de la note : un rendu qui prendrait toujours le titre capturé
-	 * passerait pour juste.
+	 * LE GLYPHE VIENT DE LA FABRIQUE UNIQUE. Un événement d'état rend le glyphe
+	 * de vivacité et sa classe de teinte ; un événement qui ne change aucun cycle
+	 * — une version, une création — rend le jalon neutre.
 	 */
-	it('rend le titre de la note quand aucune version antérieure n’est consultée', async () => {
-		const html = await rendu({ note: AUTRE_NOTE, affichee: AFFICHEE });
-		expect(html).toContain(`<h1 class="titre-note" id="h-titre">${AUTRE_NOTE.titre}</h1>`);
-		expect(html).not.toContain(TITRE_CAPTURE);
+	it('rend le glyphe de l’état, et le jalon neutre à défaut', async () => {
+		const avecEtat = await rendu({
+			evenements: [evenement({ etat: 'averifier', titre: 'Passage automatique à « À vérifier »' })]
+		});
+		expect(avecEtat).toContain('glyphe--averifier');
+
+		const sansEtat = await rendu({ evenements: [evenement({ etat: null })] });
+		expect(sansEtat).not.toContain('glyphe--averifier');
+		/* Le carré du jalon neutre — la forme que la référence dessine. */
+		expect(sansEtat).toContain('M5 5h6v6H5z');
+	});
+
+	/**
+	 * LE TITRE SE COLORE DÈS « À vérifier ». Le degré d'attention vient de la
+	 * fabrique : la vue le porte en attribut, elle ne le décide pas.
+	 */
+	it('porte le degré d’attention de l’état sur le titre', async () => {
+		const calme = await rendu({ evenements: [evenement({ etat: 'ajour' })] });
+		expect(calme).toContain('data-attention="0"');
+
+		const criant = await rendu({ evenements: [evenement({ etat: 'arevoir' })] });
+		expect(criant).toContain('data-attention="3"');
+	});
+
+	it('rend la date et le registre de chaque événement', async () => {
+		const html = await rendu({
+			evenements: [evenement({ date: '14 août 2026', registre: 'Référence + Opérationnel' })]
+		});
+		expect(html).toContain('14 août 2026');
+		expect(html).toContain('Référence + Opérationnel');
 	});
 });
 
-/**
- * LE MOTIF EST RETIRÉ, ET C'EST CE QUE CETTE SECTION MESURE.
- *
- * `note` et `affichee` étaient optionnelles, et leur absence rendait l'article
- * du gel : le titre « Restaurer une sauvegarde PostgreSQL depuis Barman », son
- * rangement, son auteur, ses consultations et son sommaire, sous un fil
- * d'Ariane qui, lui, nommait la vraie note. Les deux sont REQUISES — une route
- * qui les oublierait ne compilerait plus.
- */
-describe('V-15 — rien du jeu de démonstration ne subsiste au défaut', () => {
-	it('ne rend ni la note du gel ni son corps transcrit', async () => {
-		const html = await rendu({});
-		expect(html).not.toContain(NOTE_DU_GEL.titre);
-		expect(html).not.toContain('id="s-restaurer"');
+describe('V-15 — une version porte sa pastille et son panneau de comparaison', () => {
+	const VERSION = evenement({
+		titre: 'Contenu modifié par Alexandre Berge',
+		version: 'v3',
+		adresseComparaison: `${ADRESSE}/historique?comparer=3`,
+		numero: '3'
 	});
 
-	it('ne nomme aucun compte du jeu au menu utilisateur', async () => {
+	it('rend la pastille mono et le lien de comparaison', async () => {
+		const html = await rendu({ evenements: [VERSION] });
+		expect(html).toContain('v3');
+		expect(html).toContain('Comparer avec la version précédente');
+		expect(html).toContain(`${ADRESSE}/historique?comparer=3`);
+	});
+
+	/** `P-5` — LA POLARITÉ : le panneau n'est rendu que s'il est servi. */
+	it('n’écrit aucun panneau tant que la comparaison n’est pas servie', async () => {
+		const html = await rendu({ evenements: [VERSION] });
+		expect(html).not.toContain('AVANT');
+		expect(html).not.toContain('APRÈS');
+	});
+
+	it('rend les deux colonnes quand la comparaison est servie', async () => {
+		const html = await rendu({
+			evenements: [
+				{
+					...VERSION,
+					libelleComparaison: 'Masquer la comparaison',
+					comparaison: {
+						avant: ['Ligne qui part'],
+						apres: ['Ligne qui arrive'],
+						identique: false,
+						registre: 'Référence',
+						resteAvant: '',
+						resteApres: ''
+					}
+				}
+			]
+		});
+		expect(html).toContain('AVANT');
+		expect(html).toContain('APRÈS');
+		expect(html).toContain('Ligne qui part');
+		expect(html).toContain('Ligne qui arrive');
+		expect(html).toContain('Masquer la comparaison');
+	});
+
+	/**
+	 * `P-09` — LE GESTE DE RESTAURATION N'EST PRÉPARÉ QUE POUR QUI PEUT ÉCRIRE :
+	 * ni lien, ni formulaire, ni champ caché n'entrent dans la page sans le droit.
+	 */
+	it('n’émet la restauration que pour qui peut écrire', async () => {
+		const sansDroit = await rendu({ evenements: [VERSION] });
+		expect(sansDroit).not.toContain('Restaurer cette version');
+
+		const avecDroit = await rendu({
+			ecriture: true,
+			evenements: [
+				{
+					...VERSION,
+					adresseRestauration: `${ADRESSE}/historique?restaurer=3`,
+					restaurationDepliee: true
+				}
+			]
+		});
+		expect(avecDroit).toContain('Restaurer cette version');
+		expect(avecDroit).toContain(`action="${ADRESSE}?/restaurer"`);
+		expect(avecDroit).toContain('name="version" value="3"');
+	});
+});
+
+describe('V-15 — aucune donnée : la page le dit, et nomme le geste', () => {
+	it('rend l’état vide servi et son geste', async () => {
+		const html = await rendu({
+			evenements: [],
+			vide: {
+				titre: 'Cette note n’a pas de registre Opérationnel',
+				texte: 'Créez-le : sa création ouvrira ce fil.',
+				adresse: `${ADRESSE}/operationnel`,
+				libelle: 'Créer l’Opérationnel'
+			}
+		});
+		expect(html).toContain('Cette note n’a pas de registre Opérationnel');
+		expect(html).toContain('Créer l’Opérationnel');
+		expect(html).toContain(`href="${ADRESSE}/operationnel"`);
+	});
+
+	/** `P-5` — servi un fil, la page ne rend PAS l'état vide. */
+	it('n’écrit aucun état vide quand le fil porte un événement', async () => {
+		const html = await rendu({ evenements: [evenement({})], vide: null });
+		expect(html).not.toContain('hist__vide');
+		expect(html).toContain('Création de la note');
+	});
+});
+
+describe('V-15 — les trois onglets sont un filtre réel', () => {
+	it('rend les trois adresses, et marque l’onglet actif', async () => {
 		const html = await rendu({});
-		expect(html).not.toContain('Karim Belhadj — menu utilisateur');
+		expect(html).toContain(`href="${ADRESSE}/historique?registre=reference"`);
+		expect(html).toContain(`href="${ADRESSE}/historique?registre=operationnel"`);
+		/* L'onglet actif est marqué par `aria-current`, jamais par la seule barre. */
+		expect(html).toContain('aria-current="page"');
 	});
 });
