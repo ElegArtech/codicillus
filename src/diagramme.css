@@ -1,0 +1,56 @@
+/* ==========================================================================
+   LE DIAGRAMME RENDU — LA FEUILLE, MONTÉE PARTOUT.
+
+   Le conteneur du graphique n'est dans AUCUNE maquette : les 41 vues dessinent
+   le cadre de figure et la loupe, jamais le dessin lui-même, que seul le
+   navigateur produit (`rendu.ts` : « Écart déclaré »). Ce fichier est donc le
+   strict nécessaire pour que le dessin tienne dans le cadre du gel, et il
+   n'emploie que des jetons du socle (P-1) — les COULEURS du dessin, elles, ne
+   sont pas ici : elles sont passées au moteur en `themeVariables`
+   (`$lib/contenu/diagrammes.ts`).
+
+   Montée dans la mise en page racine, comme `palette.css` : un diagramme
+   s'affiche en lecture (V-14, V-15), en guide (V-03), dans les deux éditeurs
+   (V-17, V-18) et dans l'aperçu (V-31), et une feuille de vue ne les voit pas
+   toutes.
+   ========================================================================== */
+
+/* Le dessin remplace la source à sa place exacte, et se centre dans le cadre.
+   Sa largeur maximale est posée en ligne par le module de rendu : c'est celle
+   que le moteur mesure sur le diagramme, et elle empêche un petit schéma d'être
+   étiré à la pleine largeur de la page. */
+.diagramme {
+	margin: 0 auto;
+	display: block;
+}
+
+.diagramme svg {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+/* La source d'un diagramme dont la syntaxe ne s'analyse pas RESTE VISIBLE — on
+   ne corrige pas ce qu'on ne voit plus. Le liseré la signale sans rien affirmer
+   de plus que le fait : ce texte n'a pas pu être dessiné. */
+pre.mermaid[data-diagramme='erreur'] {
+	font-family: var(--f-donnee);
+	font-size: var(--t-petit);
+	white-space: pre-wrap;
+	margin: 0;
+	padding: var(--e-3);
+	border-left: 2px solid var(--c-danger);
+	background: var(--c-danger-voile);
+	color: var(--c-encre);
+	overflow-x: auto;
+}
+
+/* LE DESSIN AGRANDI. La loupe clone le `<svg>` seul (`cablage.ts`) et le pose
+   dans une boîte qui se dimensionne sur son contenu : un dessin en `width: 100%`
+   n'y avait rien à remplir, et le geste « Agrandir » rendait le diagramme PLUS
+   PETIT qu'en place. La largeur est donnée ici, et au seul diagramme — la loupe
+   sert aussi les images et les pièces jointes, qui portent la leur. */
+#loupe-contenu svg[data-diagramme] {
+	width: min(900px, 84vw);
+	height: auto;
+}
