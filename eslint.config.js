@@ -160,6 +160,10 @@ export default ts.config(
 			'src/lib/base/semence-organisation.ts',
 			'src/lib/base/commandes.ts',
 			'src/lib/base/demonstration.ts',
+			// `conformite.ts` est le troisième chargeur, et le même argument le couvre :
+			// seule la commande `base/base.mjs conformite` le charge, par `ssrLoadModule`.
+			// Aucune route ne l'atteint, donc le jeu du prototype ne part dans aucun paquet.
+			'src/lib/base/conformite.ts',
 			// LA SONDE ET LA BATTERIE. `documents-du-gel.ts` et `equivalence.ts`
 			// comparent le produit au jeu. `equivalence.ts` n'est importé que par
 			// `equivalence.test.ts` ; `documents-du-gel.ts` ne l'est que par

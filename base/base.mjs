@@ -34,6 +34,11 @@ Usage : node base/base.mjs <commande>
   peupler           REMPLACE le contenu par le jeu de démonstration : une DSI de
                     120 personnes, sa gouvernance, sa comitologie, ses notes de
                     service et sa documentation technique. Reproductible.
+  conformite        REMPLACE le contenu par le CORPUS DU PROTOTYPE VALIDÉ : les six
+                    univers de seeds/conformite.ts, leurs domaines et leurs
+                    soixante-dix-sept notes, chacune dans l'état que les captures
+                    de design_handoff_refonte_codicillus/captures/ montrent.
+                    Aucun compte n'est supprimé ; ceux qui manquent sont créés.
   administrateur    crée le PREMIER administrateur d’une instance neuve.
                     Refuse si un compte existe déjà — les suivants se créent en
                     console. Le mot de passe se donne par MDP_ADMINISTRATEUR :
@@ -268,6 +273,29 @@ try {
 				`Tous les comptes du jeu ont le mot de passe : ${D.MOT_DE_PASSE_DE_DEMONSTRATION}`
 			);
 			console.log("Le compte a.berge, s'il existait, est conservé avec son mot de passe.");
+			console.log('');
+			console.log('Pense à réindexer la recherche : pnpm base:reindexer');
+			break;
+		}
+
+		/**
+		 * LE JEU DE CONFORMITÉ — `T-03`. Il ne remplace pas `peupler`, il en est un
+		 * second : `peupler` sert la DSI de démonstration du produit, celui-ci sert le
+		 * corpus du prototype validé, pour que chaque écran soit comparable à sa
+		 * capture. Ni l'un ni l'autre n'est la vérité du produit, qui commence VIDE.
+		 */
+		case 'conformite': {
+			const C = await vite.ssrLoadModule('/src/lib/base/conformite.ts');
+			const rapport = await C.chargerLaConformite(session);
+			for (const [quoi, combien] of Object.entries(rapport)) {
+				ligne(quoi, Array.isArray(combien) ? combien.join(' / ') : String(combien));
+			}
+			console.log('');
+			console.log('La répartition ci-dessus a été RELUE depuis la base, pas annoncée.');
+			console.log(
+				`Les comptes créés par cette commande ont le mot de passe : ${C.MOT_DE_PASSE_DE_CONFORMITE}`
+			);
+			console.log('Les comptes qui existaient déjà gardent le leur, dont a.berge.');
 			console.log('');
 			console.log('Pense à réindexer la recherche : pnpm base:reindexer');
 			break;
