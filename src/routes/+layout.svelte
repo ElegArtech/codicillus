@@ -21,6 +21,7 @@
 	import { onMount, setContext } from 'svelte';
 	import PaletteDeRecherche from '$lib/coquille/PaletteDeRecherche.svelte';
 	import { cablerLaCoquille } from '$lib/cablage/coquille';
+	import { cablerLesTiroirs } from '$lib/coquille/tiroirs';
 	import { observerLesDiagrammes } from '$lib/contenu/diagrammes';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 	import { formesDuMot } from '$lib/vocabulaire';
@@ -68,6 +69,19 @@
 		},
 		get domaines() {
 			return data.domaines ?? [];
+		},
+		/* LES FEUILLES DE L'ARBRE DU RAIL — les notes, lues une fois par le
+		   gabarit racine. Elles venaient de la propriété `notes` que chaque vue
+		   passait, c'est-à-dire du corpus de SA page : l'arbre changeait de
+		   contenu d'un écran à l'autre. Vide sur la page d'erreur. */
+		get notes() {
+			return data.notes ?? [];
+		},
+		/* LES CINQ DERNIÈRES NOTES CONSULTÉES PAR CE COMPTE. Le gel en écrit cinq
+		   en dur ; les servir aurait annoncé à chacun les lectures des autres.
+		   Vide sans session et sans consultation : la section ne se rend pas. */
+		get recents() {
+			return data.recents ?? [];
 		},
 		/* La version du paquet, pas le `1.0.0` du jeu de semence. `null` sur la
 		   page d'erreur, qui peut être rendue sans données de gabarit. */
@@ -165,6 +179,13 @@
 	 * s'il y a un diagramme à l'écran.
 	 */
 	onMount(() => observerLesDiagrammes(document));
+
+	/**
+	 * LES TIROIRS DE LA COQUILLE — le rail sous 1024 px, la colonne de contexte sous
+	 * 1180 px. Ici plutôt que dans chaque route : les seuils appartiennent à la
+	 * coquille, et la mise en page racine est le seul endroit qui les voit toutes.
+	 */
+	onMount(() => cablerLesTiroirs(document));
 
 	onMount(() =>
 		cablerLaCoquille(document, {

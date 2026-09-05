@@ -238,12 +238,21 @@ const SOCLE_V40 = {
 	typesRelation: TYPES_RELATION
 };
 
-/** Les quatre sources de la coquille, communes aux vues qui la portent. */
+/**
+ * Les quatre sources de la coquille, communes aux vues qui la portent.
+ *
+ * `univers` ET `domaines` SONT DÉSORMAIS INERTES PARTOUT, et c'est le sens de la
+ * refonte de la coquille : la navigation vient du chargeur racine, lue une fois et
+ * descendue par contexte. Elle était dérivée des propriétés de CHAQUE vue,
+ * c'est-à-dire du corpus de SA page — le rail changeait donc de contenu d'un écran à
+ * l'autre —, et vingt-six vues portaient en plus un rail écrit au balisage. Ce que
+ * chaque vue fait de ces deux tables DANS SON CONTENU reste éprouvé ailleurs.
+ */
 function coquille(inertes: readonly string[] = []): readonly Source[] {
 	const inerte = (cle: string) => (inertes.includes(cle) ? ({ inerte: true } as const) : {});
 	return [
-		{ cle: 'univers', defaut: UNIVERS, autre: AUTRES_UNIVERS, ...inerte('univers') },
-		{ cle: 'domaines', defaut: DOMAINES, autre: AUTRES_DOMAINES, ...inerte('domaines') },
+		{ cle: 'univers', defaut: UNIVERS, autre: AUTRES_UNIVERS, inerte: true },
+		{ cle: 'domaines', defaut: DOMAINES, autre: AUTRES_DOMAINES, inerte: true },
 		{ cle: 'compte', defaut: MOI, autre: AUTRE_COMPTE, marqueur: 'ZQ', ...inerte('compte') },
 		{
 			cle: 'instance',
@@ -422,12 +431,13 @@ const VUES: Readonly<
 	'V-40': {
 		base: SOCLE_V40,
 		sources: [
-			{ cle: 'univers', defaut: [], autre: AUTRES_UNIVERS },
+			{ cle: 'univers', defaut: [], autre: AUTRES_UNIVERS, inerte: true },
 			{
 				cle: 'domaines',
 				defaut: [],
 				autre: AUTRES_DOMAINES,
-				base: { ...SOCLE_V40, univers: UNIVERS }
+				base: { ...SOCLE_V40, univers: UNIVERS },
+				inerte: true
 			},
 			{ cle: 'compte', defaut: null, autre: AUTRE_COMPTE, marqueur: 'ZQ' },
 			{
@@ -484,7 +494,7 @@ const VUES: Readonly<
 			typesNote: TYPES_NOTE
 		},
 		sources: [
-			{ cle: 'univers', socle: true, autre: AUTRES_UNIVERS },
+			{ cle: 'univers', socle: true, autre: AUTRES_UNIVERS, inerte: true },
 			{ cle: 'domaines', socle: true, autre: AUTRES_DOMAINES },
 			{ cle: 'compte', socle: true, autre: AUTRE_COMPTE, marqueur: 'ZQ' },
 			{ cle: 'instance', socle: true, autre: AUTRE_INSTANCE, marqueur: '9.9.9' },
@@ -555,7 +565,7 @@ describe.each(NOMS)('%s — les sources passées en propriétés', (vue) => {
 		}
 
 		if (source.inerte) {
-			it(`fournie, \`${source.cle}\` ne change rien — le rail abrégé ne s’en dérive pas`, () => {
+			it(`fournie, \`${source.cle}\` ne change rien — le rail vient du chargeur racine`, () => {
 				expect(corps(vue, etat, { [source.cle]: source.autre })).toBe(corps(vue, etat));
 			});
 		} else {
