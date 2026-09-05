@@ -15,9 +15,20 @@
  * public, ce qui est exactement `RG-ACC-02`.
  */
 import { basePartagee } from '$lib/base/acces';
-import { lireAccueil } from '$lib/donnees/accueil';
+import { lireAccueil, lireLeTableauDeVivacite } from '$lib/donnees/accueil';
 import { lireConfiguration } from '$lib/donnees/lecture';
 import type { PageServerLoad } from './$types';
+
+/**
+ * LES DEUX LISTES QUE LES ALERTES DE L'ACCUEIL OUVRENT. La liste est CLOSE : un
+ * paramètre hors liste n'a aucun chemin jusqu'à la réponse, et l'accueil rend son
+ * tableau de bord entier.
+ */
+const SURVEILLANCES = ['bientot', 'retard'] as const;
+
+function surveillanceDemandee(valeur: string | null): 'bientot' | 'retard' | null {
+	return SURVEILLANCES.find((s) => s === valeur) ?? null;
+}
 
 /**
  * L'ADRESSE DU PORTAIL D'ASSISTANCE VIENT DE LA BASE, PAS D'UNE CONSTANTE : c'est
@@ -28,33 +39,66 @@ import type { PageServerLoad } from './$types';
  * `lireConfiguration()` et n'en gardait que deux nombres. Une requête au lieu de
  * deux, et `P-01` reste tenue — les seuils sortent toujours du même endroit.
  */
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const base = basePartagee();
 	const config = await lireConfiguration(base);
 	const seuils = { frais: config.seuilFrais, vieillissant: config.seuilVieillissant };
-	const accueil = await lireAccueil(base, locals.identite, { maintenant: new Date(), seuils });
+	/* L'INSTANT DE RÉFÉRENCE EST PRIS UNE FOIS, ET LES DEUX LECTURES LE PARTAGENT :
+	   deux `new Date()` peuvent tomber de part et d'autre de minuit, et l'état d'une
+	   note posée sur son échéance changerait entre la salutation et le tableau. */
+	const maintenant = new Date();
+	const accueil = await lireAccueil(base, locals.identite, { maintenant, seuils });
 
-	/* L'ÉTAT « BASE VIDE » — POUR L'ADMINISTRATEUR SEUL, ET C'EST CE QUI LE REND
-	 * VRAI. Un périmètre vide n'est pas une base vide : un lecteur au périmètre
-	 * étroit lit zéro note sur une base qui en porte trente-deux. L'argument ne
-	 * couvre pas l'administrateur — `RG-DRO-03` lui rend le périmètre TOTAL, donc
-	 * zéro note lue EST une base vide, et l'affirmation gelée « Votre base ne
-	 * contient encore aucune note » devient exacte pour lui.
-	 *
-	 * Sans ce partage, le bloc d'amorçage et ses deux boutons ne s'affichaient
-	 * JAMAIS, pas même sur l'instance neuve pour laquelle ils sont dessinés. */
+	/* LES SEUILS DU CYCLE VIENNENT DE LA MÊME CONFIGURATION que ceux de la fabrique à
+	   trois niveaux — une seule lecture, une seule définition de la vivacité (`P-01`).
+	   Recomposer l'objet ailleurs rouvrirait la divergence. */
+	const seuilsDeVivacite = {
+		bientot: config.seuilBientot,
+		retardRevoir: config.retardRevoir,
+		retardObsolete: config.retardObsolete
+	};
+
+	/* LE TABLEAU DE VIVACITÉ N'EST LU QU'AVEC UNE SESSION : V-01 n'en affiche rien, et
+	   trois requêtes de plus sur chaque requête publique se paieraient pour rien. Le
+	   périmètre passé est celui que `lireAccueil()` VIENT DE RÉSOUDRE — le résoudre une
+	   seconde fois ouvrirait deux périmètres dans une même réponse. */
+	const tableau =
+		locals.identite.type === 'authentifie'
+			? await lireLeTableauDeVivacite(
+					base,
+					accueil.notes.map((n) => n.id),
+					locals.identite.compteId,
+					maintenant,
+					seuilsDeVivacite
+				)
+			: null;
+
+	/* QUI EST ADMINISTRATEUR — `RG-DRO-03`. V-07 en tire la SUITE qu'elle propose sur
+	   une bibliothèque vide : créer un univers passe par la console, et la console
+	   n'est ouverte qu'à lui. Ce n'est pas une exposition de droit au navigateur
+	   (`ADR-006`) : aucune décision d'accès n'est prise à partir de ce booléen, seul
+	   le libellé du geste en dépend.
+
+	   L'ÉTAT « BASE VIDE » N'EST PLUS UN VECTEUR DE PLANCHE : V-07 lit zéro note et le
+	   dit elle-même. Un état joué par un réglage d'écran finissait toujours par
+	   diverger de l'état réel. */
 	const administrateur =
 		locals.identite.type === 'authentifie' && locals.identite.role === 'administrateur';
-	const baseVide = administrateur && accueil.session && accueil.notes.length === 0;
 
-	/* ET LE PANNEAU REÇOIT AUSSI LE FAIT, PAS SEULEMENT L'ÉTAT. Les deux gestes de
-	 * l'écran d'amorçage sont gardés par la capacité d'écriture, qui vaut faux sur
-	 * une instance neuve : le bloc d'actions sortait vide sous un texte qui conseille
-	 * de rapatrier. La suite vraie, à zéro univers, est la console, et V-07 ne peut
-	 * la proposer qu'à l'administrateur. */
 	return {
 		...accueil,
-		...(baseVide ? { vecteur: { etat: 'vide', administrateur } } : {}),
+		administrateur,
+		vivacites: tableau?.notes ?? [],
+		/* LE SEUIL EST NOMMÉ À L'ÉCRAN — « Vérification prévue dans les 10 prochains
+		   jours » —, et il est CONFIGURABLE en console : l'écrire dans la vue aurait
+		   fait mentir la phrase au premier réglage changé. */
+		seuilBientot: config.seuilBientot,
+		/* LA LISTE FILTRÉE DE « À SURVEILLER » — les deux alertes MÈNENT quelque part,
+		   et ce quelque part est cette même adresse : un chevron qui n'ouvre rien est
+		   un geste promis et mort. Toute autre valeur est ignorée, jamais refusée. */
+		surveiller: surveillanceDemandee(url.searchParams.get('surveiller')),
+		recemment: tableau?.recemment ?? [],
+		plusConsultees: tableau?.plusConsultees ?? [],
 		portail: config.portailAssistance
 	};
 };
