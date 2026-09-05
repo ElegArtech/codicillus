@@ -490,6 +490,25 @@ export interface Configuration {
 	readonly seuilFrais: number;
 	/** En deçà, vieillissante ; au-delà, obsolète probable. */
 	readonly seuilVieillissant: number;
+	/**
+	 * LES CINQ RÉGLAGES DU CYCLE DE VIVACITÉ — la fabrique à cinq états.
+	 *
+	 * Les deux premiers sont les durées de validité PAR DÉFAUT d'un registre, en
+	 * jours : ce qu'une note neuve reçoit dans ses colonnes, et non ce qui la
+	 * gouverne ensuite — chaque note porte ensuite les siennes.
+	 *
+	 * Les trois suivants sont les seuils du calcul, communs à toutes les notes :
+	 * à combien de jours de l'échéance le signal s'allume, et à quel retard
+	 * l'état descend d'un cran, puis d'un dernier.
+	 *
+	 * `seuilFrais` et `seuilVieillissant` RESTENT : la fabrique à trois niveaux
+	 * sert les vues qui n'ont pas encore été portées.
+	 */
+	readonly validiteReference: number;
+	readonly validiteOperationnel: number;
+	readonly seuilBientot: number;
+	readonly retardRevoir: number;
+	readonly retardObsolete: number;
 	readonly versionsMax: number;
 	readonly portailAssistance: string;
 	/**

@@ -12,6 +12,7 @@
  * au lieu d'appeler le composant unique est interdit (`DESIGN.md` §3.7).
  */
 import type { NiveauFraicheur } from '../../seeds/corpus';
+import { FUSEAU_PAR_DEFAUT, formaterDateAbregeeFr, formaterDateFr } from './dates';
 import { accord } from './vocabulaire';
 
 export type { NiveauFraicheur };
@@ -170,5 +171,316 @@ export function temoinFraicheur(note: EtatDeFraicheur): Temoin {
 		classe: classeTemoin(note.fraicheur),
 		barres: barresFraicheur(note.fraicheur),
 		libelle: libelleFraicheur(note)
+	};
+}
+
+/* ==========================================================================
+   LA VIVACITÉ — CINQ ÉTATS, UNE SEULE FABRIQUE
+
+   Ce qui précède est la fabrique à TROIS niveaux, celle que les vues montent
+   encore aujourd'hui. Ce qui suit la remplace : cinq états, un cycle PAR
+   REGISTRE, et un calcul qui part de l'échéance au lieu de l'ancienneté.
+   Les deux cohabitent le temps que les vues passent des unes aux autres ;
+   la première s'en va quand plus personne ne l'appelle.
+
+   Le principe ne change pas (P-01, ADR-005) : il n'existe qu'UNE
+   implémentation. Aucune vue ne recalcule un état, ne construit un libellé
+   d'échéance, ne place un rond sur une frise. Tout sort d'ici.
+
+   « Vivacité » est le mot de l'écran ; « fraîcheur » reste celui du module,
+   des tables et des routes. C'est le seul endroit du produit où les deux se
+   croisent, et c'est voulu.
+   ========================================================================== */
+
+/** Les cinq états, du plus calme au plus criant. L'ordre est celui des compteurs. */
+export type EtatDeVivacite = 'ajour' | 'bientot' | 'averifier' | 'arevoir' | 'obsolete';
+
+/** L'ordre d'affichage des cinq états — compteurs, barre empilée, planche. */
+export const ORDRE_DES_ETATS = [
+	'ajour',
+	'bientot',
+	'averifier',
+	'arevoir',
+	'obsolete'
+] as const satisfies readonly EtatDeVivacite[];
+
+/**
+ * Le degré d'attention que l'état réclame. Il commande le fond de la ligne
+ * compacte et le poids de l'échéance — jamais une couleur écrite dans une vue.
+ * Une documentation saine est silencieuse ; plus elle demande d'attention,
+ * plus l'interface attire l'œil.
+ */
+export type Attention = 0 | 1 | 2 | 3;
+
+/**
+ * Les seuils du cycle, en jours. Comme les seuils de la fabrique à trois
+ * niveaux, ils sont un PARAMÈTRE : la console doit pouvoir les rejouer.
+ */
+export interface SeuilsDeVivacite {
+	/** Au-dessous de ce reste, l'échéance est annoncée comme proche. */
+	readonly bientot: number;
+	/** Retard à partir duquel l'état passe de « À vérifier » à « À revoir ». */
+	readonly retardRevoir: number;
+	/** Retard à partir duquel l'état passe de « À revoir » à « Obsolète ». */
+	readonly retardObsolete: number;
+}
+
+/** Les valeurs du prototype validé : 10 jours, puis 14 et 90 de retard. */
+export const SEUILS_DE_VIVACITE: SeuilsDeVivacite = {
+	bientot: 10,
+	retardRevoir: 14,
+	retardObsolete: 90
+};
+
+/** Ce que le glyphe et le libellé doivent savoir d'un état, et rien de plus. */
+export interface DescriptionDEtat {
+	readonly etat: EtatDeVivacite;
+	/** Le libellé visible. Il accompagne TOUJOURS le glyphe (RG-M18-09). */
+	readonly libelle: string;
+	/** Le modificateur de classe : c'est de lui que vient la teinte. */
+	readonly classe: string;
+	/**
+	 * Le remplissage de l'anneau, en données de tracé. Vide pour l'obsolète :
+	 * l'anneau nu EST sa forme.
+	 */
+	readonly glyphe: string;
+	readonly attention: Attention;
+	/** La règle en une phrase — la planche des états la rend telle quelle. */
+	readonly regle: string;
+}
+
+/**
+ * LES CINQ ÉTATS. La forme porte l'information : disque plein, trois quarts,
+ * demi-disque, point d'exclamation, anneau vide. Un lecteur qui ne distingue
+ * pas le vert de l'ambre lit quand même l'état, et le libellé le nomme.
+ */
+export const ETATS_DE_VIVACITE: Readonly<Record<EtatDeVivacite, DescriptionDEtat>> = {
+	ajour: {
+		etat: 'ajour',
+		libelle: 'À jour',
+		classe: 'glyphe--ajour',
+		glyphe: 'M8 1.5a6.5 6.5 0 1 1 0 13a6.5 6.5 0 1 1 0-13z',
+		attention: 0,
+		regle: 'La vérification est valide.'
+	},
+	bientot: {
+		etat: 'bientot',
+		libelle: 'Bientôt à vérifier',
+		classe: 'glyphe--bientot',
+		glyphe: 'M8 8V1.5A6.5 6.5 0 1 1 1.5 8z',
+		attention: 1,
+		regle: "L'échéance approche. Signal discret."
+	},
+	averifier: {
+		etat: 'averifier',
+		libelle: 'À vérifier',
+		classe: 'glyphe--averifier',
+		glyphe: 'M8 1.5a6.5 6.5 0 0 1 0 13z',
+		attention: 2,
+		regle: 'Échéance atteinte : bascule automatique.'
+	},
+	arevoir: {
+		etat: 'arevoir',
+		libelle: 'À revoir',
+		classe: 'glyphe--arevoir',
+		glyphe: 'M7.1 4h1.8v5H7.1zM7.1 10.3h1.8v1.8H7.1z',
+		attention: 3,
+		regle: 'Retard important ou révision demandée.'
+	},
+	obsolete: {
+		etat: 'obsolete',
+		libelle: 'Obsolète',
+		classe: 'glyphe--obsolete',
+		glyphe: '',
+		attention: 3,
+		regle: 'Plus considérée comme exploitable.'
+	}
+};
+
+/**
+ * LE CYCLE D'UN REGISTRE — l'entrée de la fabrique.
+ *
+ * Chaque registre d'une note porte le sien : sa date de vérification, sa
+ * durée de validité, son état. Les deux registres d'une même note vivent donc
+ * deux cycles indépendants, et créer l'Opérationnel en démarre un neuf.
+ */
+export interface CycleDeVivacite {
+	/**
+	 * La dernière vérification du registre, ou `null` — jamais vérifié. Le
+	 * calcul retombe alors sur la modification (RG-M06-01) ; le LIBELLÉ, lui,
+	 * cesse d'affirmer un geste qui n'a pas eu lieu.
+	 */
+	readonly verifiee: string | Date | null;
+	/**
+	 * La date de modification, repli du calcul quand rien n'a été vérifié.
+	 * REQUISE : une note en porte toujours une, et un repli optionnel laisserait
+	 * une vue distraite compter les jours depuis l'époque Unix.
+	 */
+	readonly modifiee: string | Date;
+	/** La durée de validité du registre, en jours. Référence 90, Opérationnel 21. */
+	readonly validite: number;
+	/** Qui a vérifié. Absent, la ligne s'arrête à la date. */
+	readonly par?: string | null;
+	/**
+	 * La demande de révision active : le compte qui l'a posée. Elle FORCE
+	 * « À revoir » quel que soit le temps restant, jusqu'à la prochaine
+	 * vérification.
+	 */
+	readonly revisionPar?: string | null;
+}
+
+/** Le numéro du jour civil dans le fuseau du produit — un entier, jamais un instant. */
+function jourCivil(valeur: string | Date, fuseau: string): number {
+	const date = valeur instanceof Date ? valeur : new Date(valeur);
+	if (Number.isNaN(date.getTime())) throw new Error(`Date invalide : ${String(valeur)}`);
+	const [annee, mois, jour] = new Intl.DateTimeFormat('en-CA', {
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+		timeZone: fuseau
+	})
+		.format(date)
+		.split('-')
+		.map(Number);
+	return Date.UTC(annee ?? 0, (mois ?? 1) - 1, jour ?? 1) / 86400000;
+}
+
+/** Le jour civil rendu à une date, posée à midi : aucun fuseau ne la fait glisser. */
+function dateDuJour(numero: number): Date {
+	return new Date(numero * 86400000 + 43200000);
+}
+
+/**
+ * L'ÉTAT, ET LUI SEUL. Le calcul est purement temporel — le reste avant
+ * échéance, mesuré en jours civils —, à une exception : une demande de
+ * révision force « À revoir », parce qu'un humain a dit que le contenu était
+ * douteux et que le calendrier n'en sait rien.
+ *
+ * Les bornes, à la lettre de la spécification : un reste égal au seuil est
+ * « Bientôt », un reste nul est encore « Bientôt » (l'échéance est
+ * aujourd'hui, pas hier), un reste de −14 jours est déjà « À revoir ».
+ */
+export function etatDeVivacite(
+	reste: number,
+	revision: boolean,
+	seuils: SeuilsDeVivacite = SEUILS_DE_VIVACITE
+): EtatDeVivacite {
+	if (revision) return 'arevoir';
+	if (reste > seuils.bientot) return 'ajour';
+	if (reste >= 0) return 'bientot';
+	if (reste > -seuils.retardRevoir) return 'averifier';
+	if (reste > -seuils.retardObsolete) return 'arevoir';
+	return 'obsolete';
+}
+
+/**
+ * TOUT CE QUE L'ÉCRAN AFFICHE d'un cycle. Une vue lit ces champs, elle n'en
+ * dérive aucun : le jour où le libellé d'échéance change, il change ici, et
+ * partout à la fois.
+ */
+export interface Vivacite extends DescriptionDEtat {
+	/** Le reste avant échéance, en jours civils. Négatif : l'échéance est passée. */
+	readonly reste: number;
+	/** Le point de départ du cycle : la vérification, ou la modification à défaut. */
+	readonly depart: Date;
+	readonly echeance: Date;
+	readonly jamaisVerifiee: boolean;
+	readonly revision: boolean;
+	/** Le compte qui a demandé la révision, ou la chaîne vide. */
+	readonly revisionPar: string;
+	/** « Vérifiée le 13 août 2026 par Alexandre Berge », ou « Jamais vérifiée ». */
+	readonly ligneVerification: string;
+	/** « Prochaine vérification : 11 nov. 2026 (dans 67 jours) », ou son retard. */
+	readonly ligneEcheance: string;
+	/** La phrase du rappel automatique — colonne contexte et pied de note. */
+	readonly rappel: string;
+	/** La forme des rails et des listes : « dans 67 j », « 21 j de retard », « jamais ». */
+	readonly compact: string;
+	/** La légende centrale de la frise : « J−67 » ou « J+21 ». */
+	readonly relatif: string;
+	/** La position d'aujourd'hui sur la frise, de 0 à 1. */
+	readonly fraction: number;
+	/** Les deux légendes de la frise, au mois abrégé. */
+	readonly departCourt: string;
+	readonly echeanceCourt: string;
+	/** L'échéance est passée : son rond se remplit au lieu de rester en anneau. */
+	readonly echeanceEchue: boolean;
+}
+
+/** « 1 jour », « 67 jours » — l'unité s'accorde, le symbole « j » jamais. */
+function enJours(n: number): string {
+	return `${n} ${n > 1 ? 'jours' : 'jour'}`;
+}
+
+/**
+ * LA FABRIQUE UNIQUE DE LA VIVACITÉ. Elle prend le cycle d'UN registre et le
+ * jour où on le regarde ; elle rend l'état, ses libellés, sa frise et son
+ * rappel. Aucune vue n'en refait un morceau.
+ *
+ * `aujourdhui` est un PARAMÈTRE et non une horloge cachée : sans lui, deux
+ * appels d'un même rendu pourraient tomber de part et d'autre de minuit, et
+ * aucun test ne pourrait épingler une borne.
+ */
+export function vivacite(
+	cycle: CycleDeVivacite,
+	aujourdhui: string | Date,
+	seuils: SeuilsDeVivacite = SEUILS_DE_VIVACITE,
+	fuseau: string = FUSEAU_PAR_DEFAUT
+): Vivacite {
+	const jamaisVerifiee = cycle.verifiee === null;
+	const depart = jourCivil(cycle.verifiee ?? cycle.modifiee, fuseau);
+	const echeance = depart + cycle.validite;
+	const jour = jourCivil(aujourdhui, fuseau);
+	const reste = echeance - jour;
+
+	const revisionPar = cycle.revisionPar ?? '';
+	const revision = revisionPar !== '';
+	const description = ETATS_DE_VIVACITE[etatDeVivacite(reste, revision, seuils)];
+
+	const dateDepart = dateDuJour(depart);
+	const dateEcheance = dateDuJour(echeance);
+	const echeanceCourt = formaterDateAbregeeFr(dateEcheance, fuseau);
+
+	const ligneVerification = jamaisVerifiee
+		? 'Jamais vérifiée'
+		: `Vérifiée le ${formaterDateFr(dateDepart, fuseau)}${cycle.par ? ` par ${cycle.par}` : ''}`;
+
+	const ligneEcheance =
+		reste > 0
+			? `Prochaine vérification : ${echeanceCourt} (dans ${enJours(reste)})`
+			: reste === 0
+				? `Échéance aujourd'hui : ${echeanceCourt}`
+				: `Échéance dépassée de ${enJours(-reste)} (${echeanceCourt})`;
+
+	const bascule = reste > -seuils.retardRevoir ? seuils.retardRevoir : seuils.retardObsolete;
+	const rappel =
+		reste >= 0
+			? `Cette note repassera automatiquement à « À vérifier » le ${echeanceCourt}.`
+			: description.etat === 'obsolete'
+				? `Échéance dépassée depuis le ${echeanceCourt}. Une nouvelle vérification relancera le cycle.`
+				: `En attente de vérification depuis le ${echeanceCourt}. Passage à « ${
+						reste > -seuils.retardRevoir ? 'À revoir' : 'Obsolète'
+					} » le ${formaterDateAbregeeFr(dateDuJour(echeance + bascule), fuseau)}.`;
+
+	const total = echeance - depart;
+	const fraction = total <= 0 ? 1 : Math.max(0, Math.min(1, (jour - depart) / total));
+
+	return {
+		...description,
+		reste,
+		depart: dateDepart,
+		echeance: dateEcheance,
+		jamaisVerifiee,
+		revision,
+		revisionPar,
+		ligneVerification,
+		ligneEcheance,
+		rappel,
+		compact: jamaisVerifiee ? 'jamais' : reste >= 0 ? `dans ${reste} j` : `${-reste} j de retard`,
+		relatif: reste >= 0 ? `J−${reste}` : `J+${-reste}`,
+		fraction,
+		departCourt: formaterDateAbregeeFr(dateDepart, fuseau),
+		echeanceCourt,
+		echeanceEchue: reste < 0
 	};
 }
