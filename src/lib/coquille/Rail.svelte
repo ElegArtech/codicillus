@@ -1,80 +1,142 @@
 <script lang="ts">
 	/**
-	 * Coquille applicative (V-37) — la navigation latérale. AUCUNE RÈGLE DE STYLE N'EST
-	 * ÉCRITE ICI (P-1, ADR-002). Le chevron déplie, le nom navigue.
+	 * Coquille applicative — la navigation latérale, 300 px.
 	 *
-	 * DEUX FORMES, ET ELLES NE SE DÉDUISENT PAS L'UNE DE L'AUTRE (ARB-021). COMPLÈTE : le
-	 * rail est construit à partir du corpus, `#rail-univers` en est l'hôte, les entrées
-	 * d'outils portent un pictogramme et un `data-vers`. ABRÉGÉE : le rail est ÉCRIT AU
-	 * BALISAGE (voir `arborescence-abregee.ts`), sans hôte, sans pictogramme, sans
-	 * `data-vers`, et le chevron n'y porte pas `type="button"`.
+	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI (P-1, ADR-002) : tout est dans la section
+	 * « 4 ter » de `src/socle.css`. Le chevron déplie, le nom navigue.
 	 *
-	 * LE LIBELLÉ DU CHEVRON : aucune des deux formes ne fait dire « Replier » à un nœud
-	 * que la page courante déplie — le gel construit son libellé sur l'état PERSISTÉ du
-	 * rail, vide à tout chargement, puis déplie les ancêtres sans toucher à `aria-label`.
-	 * D'où `deplie` (le balisage, qui pilote `aria-label`) distinct de `ouvert` (le rendu,
-	 * qui pilote `data-ouvert` et `aria-expanded`). Le rail est `display: none` sous
-	 * 1240 px, sans contre-règle : ARB-010 l'assume, et RG-M18-12 / RG-M18-13 restent NON
-	 * TENUES. SIGNETS EST UNE ADRESSE GLOBALE — un signet est une NOTE (`RG-NOT-01`).
+	 * SEPT ZONES, DE HAUT EN BAS — la marque, le champ de recherche, le label UNIVERS,
+	 * l'arborescence dépliable, « + Créer un univers », les RÉCENTS, la carte de compte.
 	 *
-	 * P-09 / RG-M05-08 — L'ABSENCE, ET NON LE MASQUAGE (ARB-040) : QUATRE NŒUDS SONT
-	 * CONDITIONNÉS ICI, ET SEUL LEUR RENDU L'EST — la classe `si-*` reste intacte sur le
-	 * nœud émis, car elle porte AUSSI la mise en forme. LA SECTION « GESTION » EST LE SEUL
-	 * NŒUD OÙ LE PRODUIT S'ÉCARTE DE LA CLASSE DU GEL, et `RG-DRO-03` l'exige : la forme
-	 * abrégée la pose en `si-ecriture` faute de rôle à lire, quand `/console` répond 404 à
-	 * qui n'est pas administrateur.
+	 * LE RENDU EST SERVEUR ET SANS HYDRATATION. Ce qui suppose un script :
+	 *   • le chevron d'une branche (`$lib/cablage/coquille.ts`) — et les branches du
+	 *     chemin courant sont dépliées PAR LE SERVEUR, donc l'arbre reste utilisable ;
+	 *   • le champ de recherche, qui ouvre la palette — il retombe sur `/recherche`.
+	 * La carte de compte, elle, est un `details` NATIF : son menu s'ouvre sans script,
+	 * et ses entrées sont des liens, pas des boutons à câbler.
+	 *
+	 * P-03 / P-09 — L'ABSENCE, ET NON LE MASQUAGE : une entrée dont la cible rendrait
+	 * 404 n'est pas émise. « + Créer un univers » mène à la console et n'est donc émise
+	 * qu'à l'administrateur ; « Import » demande de pouvoir écrire quelque part.
 	 */
+	import { getContext } from 'svelte';
 	import { resolve } from '$app/paths';
-	import type { NoeudRendu, SectionRendue } from './arborescence';
-	import type { NoeudAbregeRendu, SectionAbregeeRendue } from './arborescence-abregee';
+	import Pictogramme from '$lib/console/Pictogramme.svelte';
+	import {
+		AUCUNE_PAGE,
+		railRendu,
+		sectionsDuRail,
+		type NoeudRendu,
+		type SectionRendue
+	} from './arborescence';
+	import { COMPTE_VIDE } from './compte-vide';
+	import { glypheDUnivers, iconeDeNoeud } from './glyphes';
+	import type { SectionAbregeeRendue } from './arborescence-abregee';
+	import {
+		CLE_IDENTITE,
+		designationsDeCoquille,
+		type CompteAffiche,
+		type IdentiteDeCoquille,
+		type NoteRecente
+	} from './identite';
 
 	interface Proprietes {
-		/** La forme portée par la vue (ARB-021, A-1). */
-		forme?: 'complete' | 'abregee';
-		/** Forme complète : les univers porteurs d'au moins un domaine, et leurs arbres. */
-		sections?: readonly SectionRendue[];
-		/** Forme abrégée : les deux sections écrites au balisage du gel. */
-		sectionsAbregees?: readonly SectionAbregeeRendue[];
 		/**
-		 * La version affichée au pied du rail — celle du paquet dès qu'un gabarit
-		 * racine la donne, celle de la vue hors application. Rien n'est calculé ici.
+		 * Les univers, leurs domaines, leurs dossiers et leurs notes, DÉJÀ RENDUS
+		 * pour la page courante — `Coquille.svelte` seule sait laquelle c'est.
+		 *
+		 * ABSENTE, LE RAIL SE DÉRIVE DU CONTEXTE D'IDENTITÉ, sans page courante : une
+		 * vue qui monte le rail sans passer par la coquille garde ainsi une
+		 * navigation réelle, au lieu du rail vide qu'elle affichait.
+		 */
+		sections?: readonly SectionRendue[] | undefined;
+		/** Les cinq dernières notes consultées. Vide : la section n'est pas rendue. */
+		recents?: readonly NoteRecente[] | undefined;
+		/** Le compte affiché par la carte du bas. Absent : celui du contexte. */
+		compte?: CompteAffiche | undefined;
+		/**
+		 * La version du produit, telle que `package.json` la déclare. Elle vit au bas
+		 * du menu de compte : la référence ne lui donne pas de place propre, et la
+		 * perdre priverait le support du seul numéro qu'un utilisateur peut lire.
 		 */
 		version: string;
-		/** L'entrée « Accueil » est la page courante (ARB-021). V-07 seule. */
-		accueilCourant?: boolean;
 		/**
-		 * DROITS EFFECTIFS — P-09. En lecture seule, les entrées `si-ecriture` ne sont
-		 * pas ÉMISES. Absente, la propriété vaut « aucune restriction » : exactement
-		 * ce que fait le socle, dont la règle ne se déclenche que sur
-		 * `data-droits="lecture"`.
+		 * DROITS EFFECTIFS — P-09. En lecture seule, les entrées d'écriture ne sont
+		 * pas ÉMISES. Absente : aucune restriction.
 		 */
 		droits?: 'ecriture' | 'lecture' | undefined;
 		/**
-		 * PROFIL — P-09. La section `si-admin` n'est ÉMISE que pour l'administrateur.
-		 * Le socle masque `.si-admin` dès que `data-role` vaut autre chose qu'`admin` ;
-		 * le défaut `referent` du gabarit est donc restrictif.
+		 * PROFIL — P-09, RG-DRO-03. La console et la création d'un univers ne sont
+		 * ÉMISES que pour l'administrateur : elles rendent 404 à tout autre.
 		 */
 		role?: 'referent' | 'admin';
+		/**
+		 * LES DEUX ENTRÉES DE CRÉATION QUI EXIGENT UN DOMAINE — émises, ou pas du
+		 * tout. Le verdict vient de `+layout.server.ts`, un prédicat par cible.
+		 */
+		creations?: { readonly dossier: boolean; readonly signet: boolean };
+		/** Le rattachement du compte, qui donne l'adresse des deux entrées ci-dessus. */
+		rangement?: { readonly univers: string; readonly domaine: string } | null | undefined;
+		/** La page courante EST l'accueil — le lien de la marque n'y mène plus. */
+		accueilCourant?: boolean;
+		/** L'identifiant de la note ouverte — la ligne « Récents » qui la porte est active. */
+		noteCourante?: string | null;
+		/**
+		 * LA FORME ABRÉGÉE N'EXISTE PLUS, ET SES DEUX PROPRIÉTÉS SONT ACCEPTÉES SANS
+		 * ÊTRE LUES. Vingt-six vues portaient un rail écrit au balisage, dont l'arbre
+		 * n'était pas celui du corpus : deux navigations pour un seul produit, et la
+		 * seconde mentait. Il n'y en a plus qu'une, et elle se dérive des données.
+		 *
+		 * Les propriétés restent déclarées parce que des vues les passent encore, et
+		 * que le compilateur les casserait toutes.
+		 */
+		forme?: 'complete' | 'abregee';
+		sectionsAbregees?: readonly SectionAbregeeRendue[];
 	}
 
 	const {
-		forme = 'complete',
-		sections = [],
-		sectionsAbregees = [],
+		sections,
+		recents,
+		compte,
 		version,
-		accueilCourant = false,
 		droits,
-		role = 'referent'
+		role = 'referent',
+		creations = { dossier: true, signet: true },
+		rangement,
+		accueilCourant = false,
+		noteCourante = null
 	}: Proprietes = $props();
 
-	/* Les deux conditions sont la TRANSCRIPTION des deux règles du socle, pas une
-	   interprétation : `.si-ecriture` disparaît quand `data-droits` vaut
-	   « lecture », `.si-admin` quand `data-role` ne vaut pas « admin ». */
+	/**
+	 * L'IDENTITÉ RÉELLE L'EMPORTE — `./identite.ts` porte le contrat. Hors
+	 * application, `getContext` rend `undefined` et les propriétés s'appliquent.
+	 */
+	const identite = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const designations = designationsDeCoquille();
+
+	/**
+	 * L'ARBORESCENCE — celle que la coquille a rendue pour la page courante, ou,
+	 * à défaut, celle que le contexte permet de dériver SANS page courante.
+	 */
+	const arbre = $derived(
+		sections ??
+			(identite === undefined
+				? []
+				: railRendu(
+						sectionsDuRail(identite.univers, identite.domaines, identite.notes ?? []),
+						AUCUNE_PAGE,
+						null,
+						designations
+					))
+	);
+	const compteAffiche = $derived(compte ?? identite?.compte ?? COMPTE_VIDE);
+	const recentsAffiches = $derived(recents ?? identite?.recents ?? []);
+
 	const ecriture = $derived(droits !== 'lecture');
 	const admin = $derived(role === 'admin');
 
 	/**
-	 * LES TROIS MOTIFS DE ROUTE DU RAIL, ÉCRITS EN CONSTANTES pour que
+	 * LES MOTIFS DE ROUTE, ÉCRITS EN CONSTANTES pour que
 	 * `svelte/no-navigation-without-resolve` voie `resolve()` appelée sur un motif
 	 * connu. `resolve()` n'accepte pas de chaîne de requête : celle de « Signets »
 	 * est concaténée après, le chemin passant par la résolution du cadre.
@@ -82,40 +144,58 @@
 	const ROUTE_UNIVERS = '/univers/[univers]' as const;
 	const ROUTE_DOMAINE = '/univers/[univers]/[domaine]' as const;
 	const ROUTE_DOSSIER = '/univers/[univers]/[domaine]/dossiers/[...chemin]' as const;
+	const ROUTE_NOTE = '/notes/[identifiant]' as const;
 
-	/**
-	 * L'ADRESSE D'UN NŒUD DU RAIL EST COMPOSÉE DANS LE BALISAGE, pas dans une
-	 * fonction d'aide : `svelte/no-navigation-without-resolve` inspecte l'EXPRESSION
-	 * du `href` et veut y voir `resolve()`, qu'une fonction d'aide lui cache — une
-	 * adresse concaténée casse sous une racine de déploiement.
-	 */
+	const sousTitre = $derived(
+		compteAffiche.domaine ? `${compteAffiche.role} · ${compteAffiche.domaine}` : compteAffiche.role
+	);
+	const designation = $derived(
+		compteAffiche.nom === '' ? 'Menu utilisateur' : `${compteAffiche.nom} — menu utilisateur`
+	);
 </script>
 
+<!--
+	UNE BRANCHE — domaine, dossier ou note. Le chevron n'est émis que si le nœud a
+	des enfants ; sinon un espaceur tient sa place, pour que les icônes s'alignent.
+-->
 {#snippet branche(n: NoeudRendu)}
 	<li data-cle={n.cle} data-ouvert={n.ouvert ? 'oui' : 'non'}>
-		<div class="noeud" class:noeud--courant={n.courant} data-ouvert={n.ouvert ? 'oui' : undefined}>
+		<div class="noeud" class:noeud--courant={n.page} data-ouvert={n.ouvert ? 'oui' : undefined}>
 			{#if n.enfants.length}<button
 					class="noeud__chevron"
 					type="button"
 					aria-expanded={n.ouvert}
 					aria-label="Déplier {n.nom}"
-					><svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"
-						><path d="M3 1l4 4-4 4z" /></svg
+					><svg
+						width="10"
+						height="10"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"><path d="M6 3l5 5-5 5" /></svg
 					></button
-				>{:else}<span style="width: 20px; flex: none;"></span>{/if}<a
+				>{:else}<span class="noeud__vide"></span>{/if}<a
 				class="noeud__nom"
-				href={n.cible === null
-					? '#'
-					: n.cible.chemin.length > 0
-						? resolve(ROUTE_DOSSIER, {
-								univers: n.cible.univers,
-								domaine: n.cible.domaine,
-								chemin: n.cible.chemin.join('/')
-							})
-						: n.cible.domaine !== ''
-							? resolve(ROUTE_DOMAINE, { univers: n.cible.univers, domaine: n.cible.domaine })
-							: resolve(ROUTE_UNIVERS, { univers: n.cible.univers })}
-				aria-current={n.page ? 'page' : undefined}>{n.nom}</a
+				href={n.type === 'note'
+					? resolve(ROUTE_NOTE, { identifiant: n.identifiant ?? '' })
+					: n.cible === null
+						? '#'
+						: n.cible.chemin.length > 0
+							? resolve(ROUTE_DOSSIER, {
+									univers: n.cible.univers,
+									domaine: n.cible.domaine,
+									chemin: n.cible.chemin.join('/')
+								})
+							: resolve(ROUTE_DOMAINE, { univers: n.cible.univers, domaine: n.cible.domaine })}
+				aria-current={n.page ? 'page' : undefined}
+				><Pictogramme
+					traits={iconeDeNoeud(n.type)}
+					taille="16"
+					boite="0 0 16 16"
+					epaisseur="1.4"
+				/><span class="noeud__texte">{n.nom}</span>{#if n.compte !== null}<span
+						class="noeud__compte">{n.compte}</span
+					>{/if}</a
 			>{#if n.chargement}<span class="noeud__rouet" aria-label="Chargement"></span>{/if}
 		</div>
 		{#if n.enfants.length}
@@ -126,220 +206,205 @@
 	</li>
 {/snippet}
 
-<!--
-	La branche de la FORME ABRÉGÉE. Elle diffère de la précédente sur cinq points,
-	tous relevés au balisage du gel (`V-25:978-1053`) : pas de `data-cle`, pas de
-	`data-ouvert="non"` sur un nœud fermé, pas de `type="button"` sur le chevron, un
-	libellé de chevron pris au balisage, et un espaceur de feuille sans `flex`.
--->
-{#snippet brancheAbregee(n: NoeudAbregeRendu)}
-	<li data-ouvert={n.ouvert ? 'oui' : undefined}>
-		<div class="noeud" class:noeud--courant={n.courant} data-ouvert={n.ouvert ? 'oui' : undefined}>
-			{#if n.enfants.length}<button
-					class="noeud__chevron"
-					aria-expanded={n.ouvert}
-					aria-label="{n.deplie ? 'Replier' : 'Déplier'} {n.nom}"
-					><svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"
-						><path d="M3 1l4 4-4 4z" /></svg
-					></button
-				>{:else}<span style="width:20px"></span>{/if}<a
-				class="noeud__nom"
-				href={n.cible === null
-					? '#'
-					: n.cible.chemin.length > 0
-						? resolve(ROUTE_DOSSIER, {
-								univers: n.cible.univers,
-								domaine: n.cible.domaine,
-								chemin: n.cible.chemin.join('/')
-							})
-						: n.cible.domaine !== ''
-							? resolve(ROUTE_DOMAINE, { univers: n.cible.univers, domaine: n.cible.domaine })
-							: resolve(ROUTE_UNIVERS, { univers: n.cible.univers })}
-				aria-current={n.page ? 'page' : undefined}>{n.nom}</a
-			>
-		</div>
-		{#if n.enfants.length}
-			<ul>
-				{#each n.enfants as enfant (enfant.nom)}{@render brancheAbregee(enfant)}{/each}
+<aside class="rail" aria-label="Navigation principale">
+	<!-- LA CROIX DU TIROIR — rendue toujours, visible sous 1024 px seulement, où le
+	     rail est un tiroir. Le voile ferme aussi ; les deux gestes existent. -->
+	<button class="rail__fermer" type="button" data-fermer-tiroir aria-label="Fermer la navigation"
+		><svg
+			width="16"
+			height="16"
+			viewBox="0 0 16 16"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8" /></svg
+		></button
+	>
+	<a class="rail__marque" href={accueilCourant ? '#' : resolve('/')}>
+		<span class="rail__sceau" aria-hidden="true">C</span>
+		<span class="rail__identite">
+			<span class="rail__nom">Codicillus</span>
+			<span class="rail__accroche">Vos connaissances. Vivantes.</span>
+		</span>
+	</a>
+
+	<!--
+		LE CHAMP DE RECHERCHE OUVRE LA PALETTE — `$lib/cablage/coquille.ts` reconnaît
+		`.recherche` et lui passe le clic ; sans script, il mène à `/recherche`. C'est
+		un LIEN et non un `div[role=button]` : la destination de repli est réelle.
+	-->
+	<a class="recherche" id="ouvrir-recherche" href={resolve('/recherche')}>
+		<svg
+			width="15"
+			height="15"
+			viewBox="0 0 16 16"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="1.5"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5L14 14" /></svg
+		>
+		<span class="recherche__txt">Rechercher…</span>
+		<kbd class="touche">⌘ K</kbd>
+	</a>
+
+	<div class="rail__zone">
+		<div class="rail__titre etiq">Univers</div>
+		{#if arbre.length === 0}
+			<!-- LE VIDE NE SE DIT PAS PAREIL SELON QUI LE LIT : cette phrase envoyait
+			     l'administrateur qui vient d'installer « demander à un administrateur »,
+			     alors qu'il est le seul compte de l'instance. -->
+			<p class="rail__vide">
+				{#if admin}Aucun univers n'existe encore. Créez-en un ci-dessous, puis un domaine : le
+					rangement s'ouvrira ici.{:else}Aucun domaine ne vous est accessible pour l'instant.
+					Demandez à un administrateur de vous rattacher à un domaine — votre compte existe, il n'a
+					simplement pas encore de périmètre.{/if}
+			</p>
+		{:else}
+			<ul class="arbre">
+				{#each arbre as section (section.nom)}
+					<li data-ouvert={section.ouvert ? 'oui' : 'non'}>
+						<div
+							class="noeud noeud--univers"
+							class:noeud--courant={section.page}
+							class:noeud--branche={section.courant && !section.page}
+							data-ouvert={section.ouvert ? 'oui' : undefined}
+						>
+							{#if section.domaines.length}<button
+									class="noeud__chevron"
+									type="button"
+									aria-expanded={section.ouvert}
+									aria-label="Déplier {section.nom}"
+									><svg
+										width="10"
+										height="10"
+										viewBox="0 0 16 16"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"><path d="M6 3l5 5-5 5" /></svg
+									></button
+								>{:else}<span class="noeud__vide"></span>{/if}<a
+								class="noeud__nom"
+								href={section.cible === null
+									? '#'
+									: resolve(ROUTE_UNIVERS, { univers: section.cible.univers })}
+								aria-current={section.page ? 'page' : undefined}
+								><Pictogramme
+									traits={glypheDUnivers(section.glyphe)}
+									taille="16"
+									boite="0 0 24 24"
+									epaisseur="1.4"
+								/><span class="noeud__texte">{section.nom}</span>{#if section.compte > 0}<span
+										class="noeud__compte">{section.compte}</span
+									>{/if}</a
+							>
+						</div>
+						{#if section.domaines.length}
+							<ul>
+								{#each section.domaines as domaine (domaine.cle)}{@render branche(domaine)}{/each}
+							</ul>
+						{/if}
+					</li>
+				{/each}
 			</ul>
 		{/if}
-	</li>
-{/snippet}
 
-<aside class="rail" aria-label="Navigation principale">
-	<div class="rail__marque">
-		<div class="rail__sceau" aria-hidden="true">C</div>
-		<div class="rail__nom">Codicillus</div>
+		<!-- CRÉER UN UNIVERS EST UN GESTE DE CONSOLE (`RG-DRO-03`) : l'entrée mène à
+		     la table des univers, où le formulaire s'ouvre. Émise au seul
+		     administrateur, parce qu'elle rend 404 à tout autre. -->
+		{#if admin}<a class="rail__action" href={resolve('/console/univers')}>
+				<span class="rail__signe" aria-hidden="true">+</span>Créer un univers
+			</a>{/if}
 	</div>
 
-	<div class="rail__section">
-		<a
-			class="rail__lien"
-			href={accueilCourant ? '#' : resolve('/')}
-			aria-current={accueilCourant ? 'page' : undefined}
-			data-vers={forme === 'abregee'
-				? undefined
-				: accueilCourant
-					? "Vous êtes déjà sur l'accueil"
-					: 'Accueil contributeur — vue V-07'}
-		>
+	<!-- AUCUN COMPTE, AUCUNE CONSULTATION : PAS DE SECTION. Une zone « Récents »
+	     vide n'apprend rien ; elle n'est simplement pas rendue. -->
+	{#if recentsAffiches.length > 0}
+		<div class="rail__zone">
+			<div class="rail__titre etiq">Récents</div>
+			<ul class="rail__recents">
+				{#each recentsAffiches as note (note.identifiant)}
+					<li>
+						<a
+							class="rail__recent"
+							href={resolve(ROUTE_NOTE, { identifiant: note.identifiant })}
+							aria-current={note.identifiant === noteCourante ? 'page' : undefined}
+						>
+							<Pictogramme
+								traits={iconeDeNoeud('note')}
+								taille="16"
+								boite="0 0 16 16"
+								epaisseur="1.4"
+							/><span class="noeud__texte">{note.titre}</span>
+						</a>
+					</li>
+				{/each}
+			</ul>
+			<!-- « TOUS LES RÉCENTS » N'A PAS DE PAGE PROPRE, et en inventer une serait
+			     un écran de plus à tenir : le geste se ferme sur la recherche triée par
+			     consultation, qui est la seule liste du produit qui ordonne les notes
+			     par leur lecture. -->
+			<a class="rail__action" href="{resolve('/recherche')}?tri=consultations">
+				<span class="rail__signe" aria-hidden="true">→</span>Voir tous les récents
+			</a>
+		</div>
+	{/if}
+
+	<!--
+		LA CARTE DE COMPTE — et le menu que la barre supérieure portait. Un `details`
+		NATIF : il s'ouvre sans script, au clavier comme à la souris, et ses entrées
+		sont des LIENS. Aucune adresse n'est devenue inatteignable en quittant le
+		rail : Cartographie, Carte mentale, Signets, Import et Console vivent ici.
+	-->
+	<details class="rail__compte">
+		<summary aria-label={designation} title={designation}>
+			<span class="avatar" aria-hidden="true">{compteAffiche.initiales}</span>
+			<span class="rail__compte-textes">
+				<span class="rail__compte-nom">{compteAffiche.nom}</span>
+				{#if compteAffiche.courriel}<span class="rail__compte-courriel"
+						>{compteAffiche.courriel}</span
+					>{/if}
+			</span>
 			<svg
-				width="15"
-				height="15"
+				class="rail__compte-chevron"
+				width="14"
+				height="14"
 				viewBox="0 0 16 16"
 				fill="none"
 				stroke="currentColor"
-				stroke-width="1.4"><path d="M2 7l6-4.5L14 7v6.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7z" /></svg
+				stroke-width="1.5"
+				aria-hidden="true"><path d="M4 6l4 4 4-4" /></svg
 			>
-			Accueil
-		</a>
-	</div>
-
-	{#if forme === 'abregee'}
-		{#each sectionsAbregees as section (section.nom)}<div class="rail__section">
-				{#if section.cible === undefined}<div class="rail__titre etiq">{section.nom}</div>{:else}<a
-						class="rail__titre rail__titre--lien etiq"
-						href={resolve(ROUTE_UNIVERS, { univers: section.cible })}>{section.nom}</a
+		</summary>
+		<div class="rail__menu">
+			<div class="rail__menu-entete">
+				<div class="rail__menu-nom">{compteAffiche.nom}</div>
+				<div class="rail__menu-role">{sousTitre}</div>
+			</div>
+			{#if ecriture}
+				<a class="rail__menu-lien" href={resolve('/notes/nouvelle')}>Nouvelle note</a>
+				{#if creations.dossier && rangement}<a
+						class="rail__menu-lien"
+						href={resolve(ROUTE_DOMAINE, {
+							univers: rangement.univers,
+							domaine: rangement.domaine
+						})}>Nouveau dossier</a
 					>{/if}
-				<ul class="arbre">
-					{#each section.arbre as noeud (noeud.nom)}{@render brancheAbregee(noeud)}{/each}
-				</ul>
-			</div>{/each}
-		<!-- LE VIDE NE SE DIT PAS PAREIL SELON QUI LE LIT : cette phrase envoyait
-		     l'administrateur qui vient d'installer « demander à un administrateur »,
-		     alors qu'il est le seul compte de l'instance. -->
-	{:else}
-		<div id="rail-univers">
-			{#if sections.length === 0}<div class="rail__vide">
-					{#if role === 'admin'}Aucun univers n'existe encore sur cette instance. Créez-en un dans
-						la console, puis un domaine : le rangement s'ouvrira ici.{:else}Aucun domaine ne vous
-						est accessible pour l'instant. Demandez à un administrateur de vous rattacher à un
-						domaine — votre compte existe, il n'a simplement pas encore de périmètre.{/if}
-				</div>{:else}{#each sections as section (section.nom)}<div class="rail__section">
-						{#if section.cible === null}<div class="rail__titre etiq">{section.nom}</div>{:else}<a
-								class="rail__titre rail__titre--lien etiq"
-								href={resolve(ROUTE_UNIVERS, { univers: section.cible.univers })}>{section.nom}</a
-							>{/if}
-						<ul class="arbre">
-							{#each section.domaines as domaine (domaine.cle)}{@render branche(domaine)}{/each}
-						</ul>
-					</div>{/each}{/if}
+				{#if creations.signet && rangement}<a
+						class="rail__menu-lien"
+						href="{resolve(ROUTE_DOMAINE, {
+							univers: rangement.univers,
+							domaine: rangement.domaine
+						})}/signets/nouveau">Nouveau signet</a
+					>{/if}
+				<div class="rail__menu-sep"></div>
+			{/if}
+			<a class="rail__menu-lien" href={resolve('/cartographie')}>Cartographie</a>
+			<a class="rail__menu-lien" href={resolve('/carte-mentale')}>Carte mentale</a>
+			<a class="rail__menu-lien" href="{resolve('/recherche')}?type=Signet">Signets</a>
+			{#if ecriture}<a class="rail__menu-lien" href={resolve('/importer')}>Import</a>{/if}
+			<div class="rail__menu-sep"></div>
+			<a class="rail__menu-lien" href={resolve('/mon-profil')}>Mon profil</a>
+			{#if admin}<a class="rail__menu-lien" href={resolve('/console')}>Console</a>{/if}
+			<a class="rail__menu-lien" href={resolve('/deconnexion')}>Se déconnecter</a>
+			<div class="rail__menu-version etiq">Codicillus {version}</div>
 		</div>
-	{/if}
-
-	{#if forme === 'abregee'}
-		<div class="rail__section">
-			<div class="rail__titre etiq">Outils</div>
-			<!-- LA FORME ABRÉGÉE PORTE LES MÊMES ADRESSES QUE LA COMPLÈTE. Elle les
-				laissait à `href="#"` : quatre liens morts, et `P-03` n'en admet aucun. -->
-			<a class="rail__lien" href={resolve('/cartographie')}>Cartographie</a>
-			<a class="rail__lien" href={resolve('/carte-mentale')}>Carte mentale</a>
-			<a class="rail__lien" href="{resolve('/recherche')}?type=Signet">Signets</a>
-			{#if ecriture}<a class="rail__lien si-ecriture" href={resolve('/importer')}>Import</a>{/if}
-		</div>
-
-		<!-- RG-DRO-03 — « CONSOLE » SE GARDE SUR LE RÔLE, PAS SUR LES DROITS, ET SA
-			CLASSE DIT LE MÊME VERDICT. Gardée sur `ecriture`, la section fuyait
-			l'existence et l'adresse de la console à tout rédacteur. Gardée sur `admin`
-			mais laissée en `si-ecriture`, elle disparaissait sous le socle pour
-			l'administrateur d'une instance neuve, qui porte `data-droits="lecture"`. -->
-		{#if admin}
-			<div class="rail__section si-admin">
-				<div class="rail__titre etiq">Gestion</div>
-				<a class="rail__lien" href={resolve('/console')}>Console</a>
-			</div>
-		{/if}
-	{:else}
-		<div class="rail__section">
-			<div class="rail__titre etiq">Outils</div>
-			<a class="rail__lien" href={resolve('/cartographie')} data-vers="Cartographie — vue V-19">
-				<svg
-					width="15"
-					height="15"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.4"
-					><circle cx="4" cy="4" r="2" /><circle cx="12" cy="12" r="2" /><path
-						d="M5.6 5.6l4.8 4.8"
-					/></svg
-				>
-				Cartographie
-			</a>
-			<a class="rail__lien" href={resolve('/carte-mentale')} data-vers="Carte mentale — vue V-21">
-				<svg
-					width="15"
-					height="15"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.4"
-					><rect x="1.5" y="6" width="5" height="4" rx="1" /><rect
-						x="9.5"
-						y="2"
-						width="5"
-						height="4"
-						rx="1"
-					/><rect x="9.5" y="10" width="5" height="4" rx="1" /><path
-						d="M6.5 8h1.5v-4h1.5M8 8v4h1.5"
-					/></svg
-				>
-				Carte mentale
-			</a>
-			<a
-				class="rail__lien"
-				href="{resolve('/recherche')}?type=Signet"
-				data-vers="Signets — vue V-22"
-			>
-				<svg
-					width="15"
-					height="15"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.4"><path d="M4 2.5h8v11l-4-3-4 3v-11z" /></svg
-				>
-				Signets
-			</a>
-			{#if ecriture}<a
-					class="rail__lien si-ecriture"
-					href={resolve('/importer')}
-					data-vers="Import — vue V-24"
-				>
-					<svg
-						width="15"
-						height="15"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.4"><path d="M8 10.5V2M4.8 6.2L8 2.8l3.2 3.4M2.5 13.5h11" /></svg
-					>
-					Import
-				</a>{/if}
-		</div>
-
-		{#if admin}
-			<div class="rail__section si-admin">
-				<div class="rail__titre etiq">Gestion</div>
-				<a class="rail__lien" href={resolve('/console/univers')} data-vers="Console — vue V-27">
-					<svg
-						width="15"
-						height="15"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.4"
-						><path
-							d="M6.5 1.8h3l.3 1.7 1.5.9 1.6-.7 1.5 2.6-1.2 1.2v1.7l1.2 1.2-1.5 2.6-1.6-.7-1.5.9-.3 1.7h-3l-.3-1.7-1.5-.9-1.6.7L.6 12.4l1.2-1.2V9.5L.6 8.3l1.5-2.6 1.6.7 1.5-.9z"
-						/><circle cx="8" cy="8" r="2" /></svg
-					>
-					Console
-				</a>
-			</div>
-		{/if}
-	{/if}
-
-	<div class="rail__pied">
-		<span class="etiq">Codicillus {version}</span>
-	</div>
+	</details>
 </aside>

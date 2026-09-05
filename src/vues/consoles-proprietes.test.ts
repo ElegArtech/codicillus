@@ -222,8 +222,9 @@ describe('V-27 — Univers', () => {
 		compteRendu(rendu, MOI.nom);
 		// `univers` : la description de « Production », que seule cette table porte.
 		expect(rendu).toContain("Ce qui tourne aujourd'hui");
-		// `domaines` : le rail de la forme complète les nomme.
-		expect(rendu).toContain('Poste de travail');
+		/* `domaines` NE PASSE PLUS PAR LE RAIL : la navigation vient du chargeur
+		   racine et non des propriétés de la vue (voir `Coquille.svelte`). Ce que la
+		   table de la console rend d'un domaine est éprouvé par V-28, ci-dessous. */
 
 		const autre = await rendre('V-27', {
 			...SOCLE,
@@ -233,8 +234,8 @@ describe('V-27 — Univers', () => {
 		});
 		compteRendu(autre, AUTRE_COMPTE.nom);
 		expect(autre).not.toContain("Ce qui tourne aujourd'hui");
-		expect(autre).not.toContain('Poste de travail');
-		expect(autre).toContain('Migration 2026');
+		/* L'univers servi, lui, est bien celui de la table de la console. */
+		expect(autre).toContain(AUTRES_UNIVERS[0]?.description ?? '');
 	});
 
 	test('sur une instance neuve, aucun univers du jeu n’est rendu', async () => {

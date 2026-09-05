@@ -21,15 +21,18 @@
  */
 import { basePartagee } from '$lib/base/acces';
 import paquet from '../../package.json';
-import { eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import {
 	CLES_DE_PARAMETRE,
 	CONFIGURATION_PAR_DEFAUT,
 	comptes,
+	consultations,
 	domaines,
+	notes,
 	parametres,
 	univers
 } from '$lib/base/schema';
+import type { NoteDuRail, NoteRecente } from '$lib/coquille/identite';
 import { capaciteDEcriture } from '$lib/donnees/public';
 import { cleDeDomaine, type DesignationsDeRangement } from '$lib/rangement/adresses';
 import type { Base } from '$lib/base/acces';
@@ -134,9 +137,21 @@ async function identiteAffichable(
 	base: Base,
 	compteId: string,
 	acces: AccesAuRangement
-): Promise<{ nom: string; initiales: string; role: string; domaine: string } | null> {
+): Promise<{
+	nom: string;
+	initiales: string;
+	role: string;
+	domaine: string;
+	courriel: string;
+} | null> {
 	const [ligne] = await base
-		.select({ nom: comptes.nom, role: comptes.role, id: domaines.id, domaine: domaines.nom })
+		.select({
+			nom: comptes.nom,
+			courriel: comptes.courriel,
+			role: comptes.role,
+			id: domaines.id,
+			domaine: domaines.nom
+		})
 		.from(comptes)
 		.leftJoin(domaines, eq(domaines.id, comptes.domaineId))
 		.where(eq(comptes.id, compteId))
@@ -147,8 +162,114 @@ async function identiteAffichable(
 		nom: ligne.nom,
 		initiales: initialesDe(ligne.nom),
 		role: LIBELLE_DU_ROLE[ligne.role] ?? ligne.role,
-		domaine: lisible ? (ligne.domaine ?? '') : ''
+		domaine: lisible ? (ligne.domaine ?? '') : '',
+		/* LE COURRIEL EST CELUI DU COMPTE, PAS CELUI DU GEL. La carte de compte du
+		   rail affiche l'adresse sous le nom, et le prototype y écrit une adresse de
+		   démonstration qu'un utilisateur lit comme la sienne. */
+		courriel: ligne.courriel
 	};
+}
+
+/**
+ * LE CHEMIN DE DOSSIERS DE CHAQUE DOSSIER, tel que le rail l'attend — les segments
+ * SOUS la racine, séparés par « › ». La racine porte le nom de son domaine et
+ * n'entre pas dans le chemin (`RG-STR-03`).
+ *
+ * IL SE CALCULE SUR `acces.dossiers`, DÉJÀ LU : `ouvrirLAcces()` charge
+ * l'arborescence entière pour résoudre les droits, et une seconde lecture de la même
+ * table se paierait sur toutes les pages du produit.
+ */
+function cheminsDeDossier(acces: AccesAuRangement): ReadonlyMap<string, string> {
+	const parId = new Map(acces.dossiers.map((d) => [d.id, d]));
+	const chemins = new Map<string, string>();
+	for (const dossier of acces.dossiers) {
+		const segments: string[] = [];
+		let courant = parId.get(dossier.id);
+		while (courant !== undefined && courant.profondeur > 1) {
+			segments.unshift(courant.nom);
+			courant = courant.parentId === null ? undefined : parId.get(courant.parentId);
+		}
+		chemins.set(dossier.id, segments.join(' › '));
+	}
+	return chemins;
+}
+
+/**
+ * LES NOTES QUE LE RAIL POSE EN FEUILLES, et sur lesquelles il compte.
+ *
+ * ELLES NE PEUVENT VENIR QUE D'ICI. Chaque route passait à la coquille SON corpus —
+ * celui de la page —, et l'arbre du rail changeait donc de contenu d'un écran à
+ * l'autre : les notes d'un domaine apparaissaient sur la page de ce domaine et
+ * disparaissaient sur la suivante.
+ *
+ * LA LECTURE EST BORNÉE PAR LE PÉRIMÈTRE, dans le `where` et non après : « aucune
+ * route qui reçoit une liste puis la filtre ». Cinq colonnes, pas une de plus — ni
+ * corps, ni étiquettes, ni fraîcheur : ce qui suit chaque requête du produit doit
+ * rester le strict nécessaire à une ligne de navigation.
+ */
+async function notesDuRail(base: Base, acces: AccesAuRangement): Promise<readonly NoteDuRail[]> {
+	const autorises = acces.perimetre.tout ? null : [...acces.perimetre.dossiers];
+	if (autorises !== null && autorises.length === 0) return [];
+	const lignes = await base
+		.select({
+			identifiant: notes.identifiant,
+			titre: notes.titre,
+			dossierId: notes.dossierId,
+			domaine: domaines.nom,
+			univers: univers.nom
+		})
+		.from(notes)
+		.innerJoin(domaines, eq(domaines.id, notes.domaineId))
+		.innerJoin(univers, eq(univers.id, domaines.universId))
+		.where(autorises === null ? undefined : inArray(notes.dossierId, autorises));
+	const chemins = cheminsDeDossier(acces);
+	return lignes.map((l) => ({
+		id: l.identifiant,
+		titre: l.titre,
+		univers: l.univers,
+		domaine: l.domaine,
+		dossier: chemins.get(l.dossierId) ?? ''
+	}));
+}
+
+/** Le nombre de lignes de la section « RÉCENTS » du rail. */
+const RECENTS_AU_RAIL = 5;
+
+/**
+ * LES CINQ DERNIÈRES NOTES CONSULTÉES PAR CE COMPTE — la section « RÉCENTS ».
+ *
+ * PAR CE COMPTE, ET C'EST TOUT LE POINT : `consultations` porte les lectures de
+ * tout le monde, et servir les plus récentes sans filtre annonçait à chacun ce que
+ * les autres lisent. Le périmètre borne en plus la requête, une consultation
+ * survivant au retrait d'un droit.
+ *
+ * AUCUNE CONSULTATION : la liste est vide, et le rail n'émet pas la section — une
+ * zone vide n'apprend rien à personne.
+ */
+async function recentsDuCompte(
+	base: Base,
+	compteId: string,
+	acces: AccesAuRangement
+): Promise<readonly NoteRecente[]> {
+	const autorises = acces.perimetre.tout ? null : [...acces.perimetre.dossiers];
+	if (autorises !== null && autorises.length === 0) return [];
+	const lignes = await base
+		.select({
+			identifiant: notes.identifiant,
+			titre: notes.titre,
+			le: sql<string>`max(${consultations.le})`
+		})
+		.from(consultations)
+		.innerJoin(notes, eq(notes.id, consultations.noteId))
+		.where(
+			autorises === null
+				? eq(consultations.compteId, compteId)
+				: and(eq(consultations.compteId, compteId), inArray(notes.dossierId, autorises))
+		)
+		.groupBy(notes.identifiant, notes.titre)
+		.orderBy(desc(sql`max(${consultations.le})`))
+		.limit(RECENTS_AU_RAIL);
+	return lignes.map((l) => ({ identifiant: l.identifiant, titre: l.titre }));
 }
 
 /**
@@ -301,6 +422,10 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			administrateur: false,
 			rangement: null,
 			compte: null,
+			/* L'ANONYME N'A PAS DE COQUILLE : ni arbre, ni récents. L'état vide, dit,
+			   plutôt qu'une absence de clé que la page d'erreur lirait `undefined`. */
+			notes: [] as readonly NoteDuRail[],
+			recents: [] as readonly NoteRecente[],
 			version: VERSION_DU_PRODUIT,
 			...(await parametresDeCoquille(basePartagee()))
 		};
@@ -333,6 +458,11 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		 */
 		rangement: await rangementDuCompte(base, locals.identite.compteId, acces),
 		compte: await identiteAffichable(base, locals.identite.compteId, acces),
+		/* LES FEUILLES DE L'ARBRE ET LES CINQ RÉCENTS — lus ICI, une fois, et
+		   descendus par contexte : trente routes qui les recopieraient divergeraient
+		   au premier oubli (`P-35`). */
+		notes: await notesDuRail(base, acces),
+		recents: await recentsDuCompte(base, locals.identite.compteId, acces),
 		version: VERSION_DU_PRODUIT,
 		...(await parametresDeCoquille(base)),
 		...(await arborescenceDeNavigation(base, acces, locals.identite.role === 'administrateur'))

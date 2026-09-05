@@ -11,9 +11,9 @@
 	 */
 	import type { Snippet } from 'svelte';
 	import type { Domaine, Note, Univers } from '../../../seeds/corpus';
+	import { resolve } from '$app/paths';
 	import { adresseDeNote, adressesParLesNoms } from '$lib/rangement/adresses';
-	import { railRendu, sectionsDuRail } from './arborescence';
-	import { railAbregeRendu, sectionsAbregeesDuCorpus } from './arborescence-abregee';
+	import { railRendu, sectionsDuRail, type PageCourante } from './arborescence';
 	import BarreSuperieure from './BarreSuperieure.svelte';
 	import Rail from './Rail.svelte';
 	import PileDeNotifications from './PileDeNotifications.svelte';
@@ -27,6 +27,12 @@
 		readonly initiales: string;
 		readonly role: string;
 		readonly domaine: string;
+		/**
+		 * LE COURRIEL, SOUS LE NOM DANS LA CARTE DE COMPTE. Optionnel, et il doit
+		 * l'être : vingt-cinq vues passent cette propriété et ne le connaissent pas.
+		 * En application, le contexte d'identité le porte.
+		 */
+		readonly courriel?: string;
 	}
 
 	interface Proprietes {
@@ -34,8 +40,12 @@
 		fil: readonly string[];
 		/** Le chemin de rangement mis en évidence dans le rail, du domaine au dernier dossier. */
 		courant?: readonly string[];
+		/**
+		 * ACCEPTÉES, PLUS LUES POUR LE RAIL : la navigation vient du chargeur racine
+		 * (voir `universEffectif`). Vingt-cinq vues les passent, et le compilateur les
+		 * casserait toutes.
+		 */
 		univers: readonly Univers[];
-		/** Les domaines accessibles à l'utilisateur. Vide : aucun périmètre. */
 		domaines: readonly Domaine[];
 		notes: readonly Note[];
 		compte: Compte;
@@ -55,6 +65,14 @@
 		brancheEnChargement?: string | null;
 		/** Notifications visibles à l'instant rendu — un état, jamais une minuterie. */
 		notifications?: readonly Notification[];
+		/**
+		 * LA PARTIE DROITE DE L'EN-TÊTE, FOURNIE PAR LA VUE. Elle change à chaque
+		 * écran — « + Créer » et l'avatar sur l'accueil, « Modifier » et le menu ⋮ sur
+		 * une note, « ← Retour à la note » sur l'historique — et la coquille n'a aucun
+		 * moyen de la deviner. OPTIONNELLE : les vues qui n'en posent pas rendent un
+		 * en-tête réduit au fil d'Ariane, ce qui était déjà leur cas.
+		 */
+		actionsDEntete?: Snippet | undefined;
 		enfants?: Snippet;
 		/** Contenu présenté par le catalogue V-37 — `data-contenu` de la maquette. */
 		contenu?: 'bord' | 'lecture';
@@ -81,14 +99,14 @@
 		 */
 		libelleEvitement?: string;
 		/**
-		 * LA FORME DE COQUILLE que la vue porte (ARB-021). `complete` est le défaut ;
-		 * `abregee` — 26 vues — perd les deux menus déroulants, les pictogrammes du
-		 * rail, `data-vers` et `#rail-univers`. `Gestion` y est en `si-admin` : le gel
-		 * l'écrit `si-ecriture`, et `RG-DRO-03` dit le rôle.
+		 * LA FORME DE COQUILLE — ELLE N'EN DÉCIDE PLUS RIEN, ET C'EST L'OBJET DE LA
+		 * REFONTE. Vingt-six vues portaient une coquille « abrégée » : un rail écrit au
+		 * balisage, sans pictogramme, sans menu, avec un arbre qui n'était pas celui du
+		 * corpus. Deux navigations pour un seul produit, et la seconde mentait.
 		 *
-		 * En forme abrégée, `univers`, `domaines`, `notes` et `brancheEnChargement` ne
-		 * servent PAS au rail, qui ne s'y dérive pas du corpus. Ils restent exigés
-		 * parce que la coquille est une seule interface.
+		 * IL N'Y EN A PLUS QU'UNE. La propriété reste acceptée — vingt-six vues la
+		 * passent, et le compilateur les casserait toutes —, elle n'est simplement plus
+		 * lue.
 		 */
 		forme?: 'complete' | 'abregee';
 		/**
@@ -135,8 +153,6 @@
 	const {
 		fil,
 		courant = [],
-		univers,
-		domaines,
 		notes,
 		compte,
 		version,
@@ -145,13 +161,13 @@
 		droits,
 		brancheEnChargement = null,
 		notifications = [],
+		actionsDEntete,
 		enfants,
 		contenu,
 		classeContenu,
 		idContenu = 'contenu',
 		cibleEvitement,
 		libelleEvitement = 'Aller au contenu',
-		forme = 'complete',
 		donnees,
 		superposition,
 		accueilCourant = false,
@@ -179,12 +195,23 @@
 	 */
 	const designations = designationsDeCoquille();
 	const adresses = adressesParLesNoms(designations);
-	/* LA PRÉSENCE DU CONTEXTE DÉCIDE, PAS SON CONTENU. Retomber sur les
-	   propriétés du gel quand la liste servie est VIDE ferait afficher
-	   l'arborescence des maquettes — et des adresses en 404 — sur une instance
-	   neuve. Une base vide n'est pas une absence de base : elle se rend vide. */
-	const universEffectif = $derived(identite === undefined ? univers : identite.univers);
-	const domainesEffectifs = $derived(identite === undefined ? domaines : identite.domaines);
+	/**
+	 * LA NAVIGATION VIENT DU CHARGEUR RACINE, ET DE LUI SEUL.
+	 *
+	 * `univers`, `domaines` et `notes` sont des propriétés que chaque vue remplit
+	 * avec le corpus de SA page : le rail changeait donc de contenu d'un écran à
+	 * l'autre — les notes d'un domaine y apparaissaient sur la page de ce domaine et
+	 * disparaissaient sur la suivante —, et vingt-six vues portaient en plus un rail
+	 * ÉCRIT AU BALISAGE qui ne dérivait de rien. Trois navigations pour un produit.
+	 *
+	 * Le gabarit racine lit l'arborescence UNE FOIS, pour toutes les pages, bornée par
+	 * les droits de l'appelant. Hors application le contexte est absent et le rail est
+	 * VIDE — il dit alors le geste qui débloque, ce qu'aucune valeur de repli ne
+	 * saurait faire : l'arborescence des maquettes servie en repli, c'est justement le
+	 * défaut que quatre campagnes ont chassé.
+	 */
+	const universEffectif = $derived(identite?.univers ?? []);
+	const domainesEffectifs = $derived(identite?.domaines ?? []);
 	const compteEffectif = $derived(identite?.compte ?? compte);
 	/* Hors application, ou sur la page d'erreur, le contexte est absent ou `null`
 	   et la propriété reprend la main. */
@@ -228,37 +255,45 @@
 			: { dossier: rangementEffectif !== null, signet: rangementEffectif?.signets === true }
 	);
 
+	/** Les feuilles de l'arbre, et les cinq récents — voir `universEffectif`. */
+	const notesDuRail = $derived(identite?.notes ?? []);
+	const recents = $derived(identite?.recents ?? []);
+
 	/**
-	 * L'arborescence du rail — DEUX DÉRIVATIONS, et une seule sert. La forme
-	 * complète dérive du corpus ; la forme abrégée est écrite au balisage du gel,
-	 * et les deux arbres ne sont pas emboîtés (`arborescence-abregee.ts`).
+	 * LA PAGE COURANTE, TELLE QUE LE RAIL LA LIT — trois choses, et le fil les donne
+	 * toutes.
+	 *
+	 * `courant` va du domaine au dernier dossier. L'UNIVERS N'Y EST PAS : il est le
+	 * SECOND segment du fil, par la même convention qu'`adressesDuFil()` — et sans lui
+	 * le rail ne pouvait ni mettre l'univers en évidence ni le déplier, ce que la
+	 * référence demande. Un fil qui s'arrête là — `['Accueil', univers]` — EST la page
+	 * de l'univers.
+	 *
+	 * LA NOTE OUVERTE SE LIT SUR L'ADRESSE, seul endroit qui la porte : le fil ne
+	 * donne que son TITRE, et deux notes peuvent porter le même. `page.url` n'est lu
+	 * qu'en application — hors requête, il lèverait.
 	 */
+	const pageDuRail: PageCourante = $derived({
+		chemin: courant,
+		note: identite === undefined ? null : noteDeLAdresse(page.url.pathname),
+		univers: fil[0] === 'Accueil' ? (fil[1] ?? null) : null,
+		surLUnivers: fil[0] === 'Accueil' && fil.length === 2
+	});
+
+	/** L'identifiant lisible de la note ouverte, ou `null`. */
+	function noteDeLAdresse(chemin: string): string | null {
+		const segments = chemin.split('/').filter((s) => s !== '');
+		return segments[0] === 'notes' ? (segments[1] ?? null) : null;
+	}
+
+	/** L'arborescence du rail — univers, domaines, dossiers, et les notes en feuilles. */
 	const sections = $derived(
-		forme === 'abregee'
-			? []
-			: railRendu(
-					sectionsDuRail(universEffectif, domainesEffectifs, notes),
-					courant,
-					brancheEnChargement,
-					designations
-				)
-	);
-	/* LA FORME ABRÉGÉE SUIT LA BASE DÈS QU'ELLE EN A UNE. Sans contexte,
-	   `railAbregeRendu()` rend un rail VIDE : l'arbre du gel en valeur par défaut
-	   partait dans le paquet servi au navigateur, pris ou non. */
-	const sectionsAbregees = $derived(
-		forme !== 'abregee'
-			? []
-			: identite === undefined
-				? railAbregeRendu(courant)
-				: railAbregeRendu(
-						courant,
-						sectionsAbregeesDuCorpus(
-							sectionsDuRail(universEffectif, domainesEffectifs, notes),
-							designations
-						),
-						designations
-					)
+		railRendu(
+			sectionsDuRail(universEffectif, domainesEffectifs, notesDuRail),
+			pageDuRail,
+			brancheEnChargement,
+			designations
+		)
 	);
 
 	/** L'ancre déclarée par la vue, à défaut l'identifiant de `<main>`. */
@@ -332,6 +367,19 @@
 	}
 
 	const ciblesDuFil = $derived(adressesDuFil(fil, courant, notes));
+
+	/**
+	 * LE COMPTE, DANS LA FORME QUE LA CARTE DU RAIL DEMANDE. `courriel` est
+	 * optionnel sur la propriété — vingt-cinq vues la passent et ne le connaissent
+	 * pas —, et la carte n'émet pas la ligne quand il est vide.
+	 */
+	const compteDuRail = $derived({
+		nom: compteEffectif.nom,
+		initiales: compteEffectif.initiales,
+		role: compteEffectif.role,
+		domaine: compteEffectif.domaine,
+		courriel: compteEffectif.courriel ?? ''
+	});
 </script>
 
 <!--
@@ -355,29 +403,31 @@
 	data-contenu={contenu}
 >
 	<!--
-		`droits` et `role` DESCENDENT jusqu'aux deux composants : P-09 leur demande
-		de ne pas ÉMETTRE ce que le socle se contentait de cacher.
+		LE VOILE DES TIROIRS — rendu toujours, visible seulement quand `data-tiroir`
+		est posé sur `div.app`. Un clic dessus ferme : c'est le geste que tout le
+		monde essaie en premier. `$lib/coquille/tiroirs.ts` porte le câblage.
+	-->
+	<div class="voile" data-fermer-tiroir aria-hidden="true"></div>
+
+	<!--
+		`droits` et `role` DESCENDENT jusqu'au rail : P-09 lui demande de ne pas
+		ÉMETTRE ce que le socle se contentait de cacher.
 	-->
 	<Rail
-		{forme}
 		{sections}
-		{sectionsAbregees}
+		{recents}
+		compte={compteDuRail}
 		version={versionEffective}
-		{accueilCourant}
 		droits={droitsEffectifs}
 		role={roleEffectif}
+		{creations}
+		rangement={rangementEffectif}
+		{accueilCourant}
+		noteCourante={pageDuRail.note}
 	/>
 
 	<div class="cadre">
-		<BarreSuperieure
-			{fil}
-			cibles={ciblesDuFil}
-			{rail}
-			compte={compteEffectif}
-			{forme}
-			droits={droitsEffectifs}
-			{creations}
-		/>
+		<BarreSuperieure {fil} cibles={ciblesDuFil} accueil={resolve('/')} actions={actionsDEntete} />
 
 		{#if classeEnveloppe}<div class={classeEnveloppe}>
 				{#if avantContenu}{@render avantContenu()}{/if}
