@@ -29,15 +29,16 @@ import {
 	relations,
 	typesDeNote,
 	typesDeRelation,
+	univers,
 	verifications
 } from '$lib/base/schema';
 import { analyserDocument, type Document } from '$lib/contenu/document';
-import { ancresDuDocument, rendreDocument, type ResolveurDeNote } from '$lib/contenu/rendu';
+import { ancresDuDocument } from '$lib/contenu/rendu';
 import { formaterDateFr, formaterDateHeureFr, formaterDateIso } from '$lib/dates';
 import { notificationsDeLAdresse } from '$lib/donnees/traitement-differe';
 import { compteDe, journaliserUneConsultation } from '$lib/donnees/consultation';
 import { attacherLOuverture, termeDeProvenance } from '$lib/donnees/recherches';
-import { lireLHistoire, versionDemandee, type VersionCapturee } from '$lib/donnees/histoire';
+import { lireLHistoire, versionDemandee } from '$lib/donnees/histoire';
 import {
 	joursEcoules,
 	lireLesChampsDUnTypeDeFiche,
@@ -61,6 +62,12 @@ import type {
 	LectureAffichee
 } from '$lib/lecture/note-de-demonstration';
 import {
+	ligneDeDerniereModification,
+	type AdressesDeLecture,
+	type ContexteDeLaNote,
+	type EnteteDeLecture
+} from '$lib/lecture/ecran';
+import {
 	extensionEtNom,
 	tailleEnClair,
 	type GroupeDeRelations,
@@ -78,7 +85,13 @@ import {
 	retirerUnePieceJointeParNom
 } from '$lib/donnees/pieces';
 import { racineDesFichiers } from '$lib/fichiers/entrepot';
-import { adresseDePieceJointe } from '$lib/rangement/adresses';
+import {
+	adresseDeDomaine,
+	adresseDeDossier,
+	adresseDePieceJointe,
+	adresseDesNotesDuDomaine,
+	segmentsDeDossier
+} from '$lib/rangement/adresses';
 import { supprimerUneNote } from '$lib/donnees/suppression';
 import {
 	commentaireDeRevision,
@@ -90,7 +103,7 @@ import { moteurPartage } from '$lib/recherche/acces';
 import { lireLesCiblesPossibles, lireLesTypesOfferts } from '$lib/donnees/relations';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
-import type { Note } from '../../../../seeds/corpus';
+import type { Note, Version } from '../../../../seeds/corpus';
 
 /**
  * Le type de média que la norme HTTP donne à des octets sans type déclaré. Il
@@ -258,6 +271,17 @@ interface ComplementsDeLecture {
 	/** Les mêmes pièces que `panneaux.pieces`, dans le même ordre — voir ci-dessus. */
 	readonly piecesJointes: readonly PieceJointeCablee[];
 	readonly vivacite: VivaciteDeLaNote;
+	/**
+	 * LA DATE DE CRÉATION, EN TOUTES LETTRES — la première métadonnée de
+	 * l'en-tête. La version, elle, se lit sur l'historique et `load()` la joint.
+	 */
+	readonly creeeLe: string;
+	/** L'ancienneté de la dernière modification, en jours pleins. */
+	readonly joursDepuisModification: number;
+	/** La durée de validité du registre AFFICHÉ — la bulle du geste la cite. */
+	readonly validiteCourante: number;
+	/** La section « Contexte » de la colonne de droite. */
+	readonly contexte: ContexteDeLaNote;
 }
 
 /**
@@ -289,37 +313,6 @@ async function proprietesDeLaFiche(
 	return champs.map((champ) => ({ nom: champ.nom, valeur: valeurs[champ.cle] ?? null }));
 }
 
-/**
- * L’ARTICLE D’UNE VERSION ANTÉRIEURE — `?version={n}`.
- *
- * TROIS CHAMPS CHANGENT, ET TROIS SEULEMENT : le titre et les deux corps que la
- * version a CAPTURÉS. Le sommaire suit le corps affiché, faute de quoi ses ancres
- * pointeraient sur des titres absents de la page. Le reste — contrôle, fraîcheur,
- * dates, révision, consultations — sont des faits de LA NOTE que `versions` ne
- * porte pas : les recomposer serait les inventer.
- *
- * LE CORPS EST RENDU PAR `rendreDocument`, ET PAR RIEN D’AUTRE (`ADR-004`), avec
- * le résolveur que `lireLaNote()` a construit sur le périmètre de l’appelant.
- */
-function articleDeLaVersion(
-	courante: LectureAffichee,
-	version: VersionCapturee,
-	resoudreUneNote: ResolveurDeNote
-): LectureAffichee {
-	const rendre = (document: Document): string =>
-		rendreDocument(document, { resoudre: resoudreUneNote, contexte: 'interne' });
-	return {
-		...courante,
-		/* LE TITRE EST RENOMMABLE (`RG-M07-02`), et c’est pour cela que la version
-		   le capture. Le reste de la note — rangement, type, visibilité — est celui
-		   d’aujourd’hui : la version ne le porte pas. */
-		note: { ...courante.note, titre: version.titre },
-		reference: rendre(version.reference),
-		operationnel: version.operationnel === null ? null : rendre(version.operationnel),
-		sommaire: sommaireDe(version.reference)
-	};
-}
-
 async function complementsDeLecture(
 	base: Base,
 	lecture: LectureDeNote,
@@ -340,9 +333,11 @@ async function complementsDeLecture(
 		.select({
 			cle: notes.id,
 			consultations: notes.compteurDeConsultations,
+			creeLe: notes.creeLe,
 			modifieLe: notes.modifieLe,
 			verifieLe: notes.verifieLe,
 			corpsReference: notes.corpsReference,
+			corpsOperationnel: notes.corpsOperationnel,
 			corpsReferenceModifieLe: notes.corpsReferenceModifieLe,
 			corpsOperationnelModifieLe: notes.corpsOperationnelModifieLe,
 			/* LES QUATRE COLONNES DU CYCLE PAR REGISTRE — `014`. Elles ne sont lues
@@ -355,9 +350,17 @@ async function complementsDeLecture(
 			revisionCommentaire: notes.revisionCommentaire,
 			revisionLe: notes.revisionLe,
 			revisionRegistre: notes.revisionRegistre,
-			revisionPar: comptes.nom
+			revisionPar: comptes.nom,
+			/* LES DEUX IDENTIFIANTS DE RANGEMENT — ils ne se dérivent PAS des noms :
+			   un identifiant est fixé à la création et ne suit pas les renommages
+			   (`RG-M12-11`). Sans eux, la colonne de contexte mènerait en 404 dès
+			   qu'un domaine change de nom. */
+			universIdentifiant: univers.identifiant,
+			domaineIdentifiant: domaines.identifiant
 		})
 		.from(notes)
+		.innerJoin(domaines, eq(notes.domaineId, domaines.id))
+		.innerJoin(univers, eq(domaines.universId, univers.id))
 		.leftJoin(comptes, eq(notes.revisionParId, comptes.id))
 		.where(eq(notes.identifiant, identifiant))
 		.limit(1);
@@ -495,7 +498,13 @@ async function complementsDeLecture(
 				registre === 'operationnel' && lecture.corps.redige
 					? lecture.corps.html
 					: corpsDuRegistreOperationnel,
-			sommaire: sommaireDuDocument(ligne.corpsReference),
+			/* LE SOMMAIRE SUIT LE REGISTRE AFFICHÉ. Il était toujours celui de la
+			   Référence : sur l'Opérationnel, ses ancres visaient des titres absents
+			   de la page, et le sommaire annonçait un plan que le corps ne tenait
+			   pas. Le registre sans corps n'a pas de titre, donc pas de sommaire. */
+			sommaire: sommaireDuDocument(
+				registre === 'operationnel' ? ligne.corpsOperationnel : ligne.corpsReference
+			),
 			controle:
 				ligne.verifieLe === null
 					? null
@@ -573,7 +582,58 @@ async function complementsDeLecture(
 			reference: vivaciteDeReference,
 			operationnelle: vivaciteOperationnelle,
 			bascules: basculesDUneNote(ligneDeCycles, maintenant, seuilsDeVivacite)
-		}
+		},
+		creeeLe: formaterDateFr(ligne.creeLe),
+		validiteCourante:
+			registre === 'operationnel' ? ligne.validiteOperationnel : ligne.validiteReference,
+		joursDepuisModification: joursEcoules(ligne.modifieLe, maintenant),
+		contexte: contexteDeLaNote(lecture, ligne.universIdentifiant, ligne.domaineIdentifiant)
+	};
+}
+
+/**
+ * LA SECTION « CONTEXTE » DE LA COLONNE DE DROITE — l'univers, le conteneur
+ * direct de la note, et ce qu'il y a d'autre à lire à côté.
+ *
+ * LE VOISINAGE EST COMPTÉ SUR LE CORPUS LISIBLE, jamais sur la table : une note
+ * qu'on n'a pas le droit de lire n'est pas une voisine, et la compter dirait à
+ * un lecteur qu'il existe des notes qu'il ne verra pas (`RG-ACC-01`). À zéro,
+ * la ligne n'est pas rendue : un lien vers une liste vide est un geste promis
+ * pour rien.
+ */
+function contexteDeLaNote(
+	lecture: LectureDeNote,
+	universIdentifiant: string,
+	domaineIdentifiant: string
+): ContexteDeLaNote {
+	const note = lecture.note;
+	const segments = segmentsDeDossier(note.dossier);
+	const dansUnDossier = segments.length > 0;
+
+	const voisines = lecture.notes.filter(
+		(n) =>
+			n.id !== note.id &&
+			n.univers === note.univers &&
+			n.domaine === note.domaine &&
+			(dansUnDossier ? n.dossier === note.dossier : true)
+	).length;
+
+	const ou = dansUnDossier ? 'ce dossier' : 'ce domaine';
+	return {
+		univers: note.univers,
+		rangement: {
+			libelle: dansUnDossier ? (segments.at(-1) ?? note.domaine) : note.domaine,
+			adresse: dansUnDossier
+				? adresseDeDossier(universIdentifiant, domaineIdentifiant, segments)
+				: adresseDeDomaine(universIdentifiant, domaineIdentifiant)
+		},
+		voisinage:
+			voisines === 0
+				? null
+				: {
+						libelle: `${voisines} ${voisines > 1 ? 'autres notes' : 'autre note'} dans ${ou}`,
+						adresse: adresseDesNotesDuDomaine(universIdentifiant, domaineIdentifiant)
+					}
 	};
 }
 
@@ -635,12 +695,11 @@ export const load: PageServerLoad = async ({ params, url, locals, request }) => 
 	   L'ACCÈS EST DÉJÀ DÉCIDÉ : `lireLHistoire()` prend la lecture RÉSOLUE
 	   ci-dessus, jamais un identifiant nu — il n'existe pas deux décisions
 	   d'accès à cette adresse. */
-	const histoire = await lireLHistoire(
-		base,
-		lecture,
-		maintenant,
-		versionDemandee(url.searchParams.get('version'))
-	);
+	/* L'HISTORIQUE SERT ENCORE DEUX CHOSES ICI : le NUMÉRO de la dernière version,
+	   que l'en-tête affiche, et le NOMBRE de versions, que la confirmation de
+	   suppression chiffre (`RG-M04-10`). Aucune version n'est DÉSIGNÉE : le fil et
+	   la comparaison ont leur page, `/notes/{identifiant}/historique`. */
+	const histoire = await lireLHistoire(base, lecture, maintenant, null);
 
 	/* LE CORPS QUE L'ÉCRAN AFFICHE EST CELUI DU REGISTRE RÉFÉRENCE : le gel rend
 	   les deux enveloppes et cache la seconde, et la bascule est un COMPORTEMENT
@@ -723,24 +782,39 @@ export const load: PageServerLoad = async ({ params, url, locals, request }) => 
 		 */
 		histoire,
 		/**
-		 * L’ARTICLE DE LA VERSION CONSULTÉE, ou `null` quand l’adresse ne désigne
-		 * aucune version : la note COURANTE est alors la bonne réponse.
-		 *
-		 * SANS CE CHAMP, V-15 RENDAIT LE CORPS COURANT SOUS UN BANDEAU ANNONÇANT UN
-		 * ÉTAT ANTÉRIEUR, et « Restaurer cette version » écrasait la note avec un texte
-		 * que l’écran n’avait jamais montré (`RG-M18-05`).
-		 */
-		afficheeDeLaVersion:
-			histoire.affichee === null
-				? null
-				: articleDeLaVersion(complements.affichee, histoire.affichee, lecture.resoudreUneNote),
-		/**
 		 * LA NOTE TELLE QU'ELLE S'AFFICHE — l'identité, le corps rendu, le sommaire,
 		 * le dernier contrôle, les dates, la révision courante et la mesure de
 		 * consultation.
 		 */
 		affichee: complements.affichee,
 		panneaux: complements.panneaux,
+		/**
+		 * L'EN-TÊTE — création, version, dernière modification. La version est le
+		 * NUMÉRO de la dernière capturée, jamais un compte de versions : les deux
+		 * divergent dès qu'une purge de rétention passe (`M14.7`). Aucune version
+		 * capturée : `null`, et l'écran le dit.
+		 */
+		entete: enteteDeLecture(
+			complements.creeeLe,
+			complements.joursDepuisModification,
+			histoire.versions,
+			lecture.note.auteur
+		),
+		/** L'univers, le conteneur direct de la note, et son voisinage lisible. */
+		contexte: complements.contexte,
+		/**
+		 * LES ADRESSES DES GESTES, COMPOSÉES ICI. La vue n'écrit aucun gabarit
+		 * d'adresse : un gabarit écrit à l'écran devient un lien mort au premier
+		 * renommage, et rien ne le signale.
+		 */
+		adresses: adressesDeLecture(params.identifiant),
+		/**
+		 * CE QUE LE GESTE QUI VIENT D'AVOIR LIEU ANNONCE. Les trois gestes de
+		 * vivacité finissent par un `303` — une redirection ne transporte que son
+		 * adresse —, et le paramètre est LU PUIS OUBLIÉ : il ne change ni le rendu
+		 * de la note, ni ce que le chargeur va chercher.
+		 */
+		annonce: annonceDuGeste(url.searchParams.get(PARAMETRE_DU_GESTE), complements.validiteCourante),
 		/**
 		 * LES PIÈCES, SOUS LA FORME QUE LE CÂBLAGE ADRESSE. Le gel les pose en `a.pj`
 		 * avec un `href="#"` : sans cette liste, aucun lien ne mène nulle part.
@@ -823,13 +897,83 @@ async function contexteDUnGeste() {
  * REJOUE l'écriture. Le `303` referme cela — et les valeurs rendues n'étaient lues
  * par personne, aucune propriété `form` n'existant sur cette page.
  */
-function adresseDeLaNote(identifiant: string, registre: Registre): string {
+function adresseDeLaNote(identifiant: string, registre: Registre, fait?: string): string {
 	/* LE REGISTRE SURVIT AU GESTE. Sans lui, vérifier l'Opérationnel ramenait sur la
 	   Référence, et l'onglet que l'utilisateur venait d'attester disparaissait sous
-	   ses yeux. `reference` est le défaut de l'adresse : elle n'a rien à porter. */
-	return registre === 'operationnel'
-		? `/notes/${identifiant}?registre=operationnel`
-		: `/notes/${identifiant}`;
+	   ses yeux. `reference` est le défaut de l'adresse : elle n'a rien à porter.
+
+	   `fait` PORTE LA BULLE. Une redirection ne transporte que son adresse : sans ce
+	   paramètre, aucun geste ne pourrait dire ce qu'il vient de faire. */
+	const parametres = new URLSearchParams();
+	if (registre === 'operationnel') parametres.set('registre', registre);
+	if (fait !== undefined) parametres.set(PARAMETRE_DU_GESTE, fait);
+	const requete = parametres.toString();
+	return requete === '' ? `/notes/${identifiant}` : `/notes/${identifiant}?${requete}`;
+}
+
+/** La planche des cinq états — le lien discret du pied de note (V-42). */
+const ADRESSE_DE_LA_PLANCHE = '/bibliotheque/vivacite';
+
+/**
+ * LES ADRESSES DES GESTES DE LA LECTURE. Toutes partent de l'identifiant lisible
+ * de la note, et aucune n'est écrite dans la vue : le jour où l'une change, elle
+ * change ici.
+ */
+function adressesDeLecture(identifiant: string): AdressesDeLecture {
+	const note = `/notes/${identifiant}`;
+	return {
+		reference: note,
+		operationnel: `${note}?registre=operationnel`,
+		modifier: `${note}/modifier`,
+		modifierLOperationnel: `${note}/operationnel`,
+		historique: `${note}/historique`,
+		relations: `${note}/relations`,
+		planche: ADRESSE_DE_LA_PLANCHE
+	};
+}
+
+/** L'en-tête de la note — création, version capturée, dernière modification. */
+function enteteDeLecture(
+	creeeLe: string,
+	joursDepuisModification: number,
+	versionsCapturees: readonly Version[],
+	auteur: string
+): EnteteDeLecture {
+	const derniere = versionsCapturees[0];
+	return {
+		creeeLe,
+		version: derniere === undefined ? null : `v${derniere.n}`,
+		/* QUI A MODIFIÉ EN DERNIER : l'auteur de la dernière version capturée. La
+		   table `notes` ne porte pas de « modifié par » ; à défaut de version, la
+		   note reste attribuée à son auteur, qui est ce qu'on sait d'elle. */
+		derniereModification: ligneDeDerniereModification(
+			joursDepuisModification,
+			derniere?.date ?? creeeLe,
+			derniere?.auteur ?? auteur
+		)
+	};
+}
+
+/**
+ * LE PARAMÈTRE QUI PORTE LE GESTE ACCOMPLI, et les quatre phrases du prototype.
+ * Une valeur inconnue ne rend rien : une adresse forgée ne fabrique pas une
+ * annonce.
+ */
+const PARAMETRE_DU_GESTE = 'fait';
+
+function annonceDuGeste(fait: string | null, validite: number): string | null {
+	switch (fait) {
+		case 'verifiee':
+			return `Vérifiée à l'instant — le cycle repart pour ${validite} ${validite > 1 ? 'jours' : 'jour'}`;
+		case 'signalee':
+			return 'Révision demandée — la note passe à « À revoir »';
+		case 'levee':
+			return 'Demande de révision levée';
+		case 'operationnel':
+			return 'Version opérationnelle créée — son propre cycle de vivacité démarre';
+		default:
+			return null;
+	}
 }
 
 /**
@@ -861,7 +1005,7 @@ export const actions: Actions = {
 			maintenant
 		});
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
-		redirect(303, adresseDeLaNote(params.identifiant, registre));
+		redirect(303, adresseDeLaNote(params.identifiant, registre, 'verifiee'));
 	},
 
 	/**
@@ -899,7 +1043,7 @@ export const actions: Actions = {
 			commentaire
 		});
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
-		redirect(303, adresseDeLaNote(params.identifiant, registre));
+		redirect(303, adresseDeLaNote(params.identifiant, registre, 'signalee'));
 	},
 
 	/**
@@ -955,7 +1099,7 @@ export const actions: Actions = {
 			maintenant
 		});
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
-		redirect(303, adresseDeLaNote(params.identifiant, registre));
+		redirect(303, adresseDeLaNote(params.identifiant, registre, 'levee'));
 	},
 
 	/**
