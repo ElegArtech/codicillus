@@ -17,6 +17,8 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc --noEmit && eslint . && prettier --check .",
 		"test:unit": "vitest run",
 		"base:migrer": "node base/base.mjs migrer",
+		"base:coherence": "node base/base.mjs coherence",
+		"base:reversibilite": "node base/base.mjs reversibilite",
 		"base:annuler": "node base/base.mjs annuler",
 		"base:etat": "node base/base.mjs etat",
 		"base:semer": "node base/base.mjs semer",

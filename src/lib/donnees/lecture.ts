@@ -35,7 +35,7 @@ import {
 	typesDeRelation,
 	univers
 } from '../base/schema';
-import { niveauFraicheur, type SeuilsDeFraicheur } from '../fraicheur';
+import { niveauFraicheur, type SeuilsDeFraicheur, type SeuilsDeVivacite } from '../fraicheur';
 import type {
 	ChampDeFiche,
 	DemandeDeRevision,
@@ -843,7 +843,7 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 		return valeur;
 	};
 
-	/* LES DIX CLÉS VIENNENT DU SCHÉMA, ET DE NULLE PART AILLEURS : `RG-M14-09`
+	/* LES QUINZE CLÉS VIENNENT DU SCHÉMA, ET DE NULLE PART AILLEURS : `RG-M14-09`
 	   serait fausse à la lettre si l'écriture posait une clé que cette lecture
 	   n'interroge pas. Une seule table de clés rend ce cas INÉCRIVABLE. */
 	return {
@@ -851,6 +851,25 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 		seuilVieillissant: nombre(
 			CLES_DE_PARAMETRE.seuilVieillissant,
 			CONFIGURATION_PAR_DEFAUT.seuilVieillissant
+		),
+		/* LES CINQ RÉGLAGES DU CYCLE PASSENT PAR `plafond()`, ET NON PAR `nombre()` :
+		   une validité nulle ou négative pose une échéance avant sa vérification, un
+		   seuil négatif inverse l'ordre des cinq états. Le défaut reprend la main
+		   plutôt que de servir un cycle qui n'a pas de sens — même jurisprudence que
+		   le plafond de versions. */
+		validiteReference: plafond(
+			CLES_DE_PARAMETRE.validiteReference,
+			CONFIGURATION_PAR_DEFAUT.validiteReference
+		),
+		validiteOperationnel: plafond(
+			CLES_DE_PARAMETRE.validiteOperationnel,
+			CONFIGURATION_PAR_DEFAUT.validiteOperationnel
+		),
+		seuilBientot: plafond(CLES_DE_PARAMETRE.seuilBientot, CONFIGURATION_PAR_DEFAUT.seuilBientot),
+		retardRevoir: plafond(CLES_DE_PARAMETRE.retardRevoir, CONFIGURATION_PAR_DEFAUT.retardRevoir),
+		retardObsolete: plafond(
+			CLES_DE_PARAMETRE.retardObsolete,
+			CONFIGURATION_PAR_DEFAUT.retardObsolete
 		),
 		versionsMax: plafond(CLES_DE_PARAMETRE.versionsMax, CONFIGURATION_PAR_DEFAUT.versionsMax),
 		portailAssistance: chaine(
@@ -885,4 +904,18 @@ export async function lireConfiguration(base: Base): Promise<Configuration> {
 export async function lireSeuils(base: Base): Promise<SeuilsDeFraicheur> {
 	const config = await lireConfiguration(base);
 	return { frais: config.seuilFrais, vieillissant: config.seuilVieillissant };
+}
+
+/**
+ * Les seuils du CYCLE — la forme que `vivacite()` attend. C'est le pendant de
+ * `lireSeuils()` pour la fabrique à cinq états : un chargeur qui recomposerait
+ * l'objet lui-même rouvrirait la divergence que `P-01` ferme.
+ */
+export async function lireSeuilsDeVivacite(base: Base): Promise<SeuilsDeVivacite> {
+	const config = await lireConfiguration(base);
+	return {
+		bientot: config.seuilBientot,
+		retardRevoir: config.retardRevoir,
+		retardObsolete: config.retardObsolete
+	};
 }
