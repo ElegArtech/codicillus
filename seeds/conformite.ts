@@ -47,6 +47,17 @@ export interface DomaineSeme {
 	/** La répartition des états, dans l'ordre ajour / bientot / averifier / arevoir / obsolete. */
 	readonly repartition: readonly [number, number, number, number, number];
 	readonly nommees: readonly NoteSemee[];
+	/**
+	 * LES TITRES DE REMPLISSAGE — de quoi porter les états que les notes nommées ne portent
+	 * pas. Le prototype ne montre que onze notes sur soixante-dix-sept ; les soixante-six
+	 * autres n'existent QUE par leur état, parce que c'est tout ce que les captures en
+	 * montrent : un compteur, une barre empilée, un nombre dans le rail. Leur titre est donc
+	 * plausible et rien de plus, et leur corps tient en une phrase.
+	 *
+	 * Il en faut exactement `notes − nommees.length` : le chargeur refuse tout autre compte
+	 * plutôt que d'inventer un titre en silence.
+	 */
+	readonly remplissage: readonly string[];
 }
 
 export interface UniversSeme {
@@ -85,6 +96,12 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 					{ titre: 'Mode autonome — Bonnes pratiques', etat: 'ajour' },
 					{ titre: 'Workflow — Analyse IA', etat: 'ajour' },
 					{ titre: 'Ancienne procédure npm', dossier: 'archives', etat: 'ajour' }
+				],
+				remplissage: [
+					'Audit — Dépendances du dépôt',
+					'Procédure — Revue assistée avant fusion',
+					'Incident — Jeton d’authentification expiré',
+					'Checklist — Session de code assistée'
 				]
 			},
 			{
@@ -95,6 +112,17 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 				nommees: [
 					{ titre: 'Prompt — Architecture LLM', etat: 'ajour' },
 					{ titre: 'Prompt — Revue de code', etat: 'ajour' }
+				],
+				remplissage: [
+					'Prompt — Rédaction d’une note technique',
+					'Prompt — Extraction d’une procédure',
+					'Prompt — Synthèse de réunion',
+					'Prompt — Traduction technique',
+					'Prompt — Génération de tests',
+					'Prompt — Analyse d’incident',
+					'Prompt — Reformulation pour l’astreinte',
+					'Prompt — Cadrage d’un besoin',
+					'Prompt — Relecture orthographique'
 				]
 			},
 			{
@@ -102,7 +130,12 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 				description: "Bancs d'évaluation et harnais LLM.",
 				notes: 4,
 				repartition: [4, 0, 0, 0, 0],
-				nommees: [{ titre: "Harnais d'évaluation", etat: 'ajour' }]
+				nommees: [{ titre: "Harnais d'évaluation", etat: 'ajour' }],
+				remplissage: [
+					'Banc — Jeux d’évaluation internes',
+					'Banc — Mesure de régression',
+					'Harnais — Journalisation des exécutions'
+				]
 			}
 		]
 	},
@@ -118,21 +151,45 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 				description: 'Versions datées du CV.',
 				notes: 6,
 				repartition: [5, 1, 0, 0, 0],
-				nommees: []
+				nommees: [],
+				remplissage: [
+					'CV — Version courante',
+					'CV — Version longue',
+					'CV — Version anglaise',
+					'CV — Format une page',
+					'CV — Rubrique compétences',
+					'CV — Historique des versions'
+				]
 			},
 			{
 				nom: 'Lettres',
 				description: 'Lettres de motivation et relances.',
 				notes: 8,
 				repartition: [7, 1, 0, 0, 0],
-				nommees: []
+				nommees: [],
+				remplissage: [
+					'Lettre — Modèle générique',
+					'Lettre — Poste de business analyst',
+					'Lettre — Poste de chef de projet',
+					'Lettre — Relance après entretien',
+					'Lettre — Candidature spontanée',
+					'Lettre — Réponse à une annonce',
+					'Lettre — Remerciements',
+					'Lettre — Refus d’une proposition'
+				]
 			},
 			{
 				nom: 'Entretiens',
 				description: "Préparation et comptes rendus d'entretiens.",
 				notes: 4,
 				repartition: [3, 0, 0, 0, 1],
-				nommees: []
+				nommees: [],
+				remplissage: [
+					'Entretien — Questions récurrentes',
+					'Entretien — Préparation technique',
+					'Entretien — Compte rendu du 12 mars',
+					'Entretien — Négociation salariale'
+				]
 			}
 		]
 	},
@@ -148,14 +205,30 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 				description: 'Notes de cadrage et périmètres.',
 				notes: 7,
 				repartition: [6, 1, 0, 0, 0],
-				nommees: []
+				nommees: [],
+				remplissage: [
+					'Cadrage — Note de périmètre',
+					'Cadrage — Parties prenantes',
+					'Cadrage — Objectifs et indicateurs',
+					'Cadrage — Contraintes et hypothèses',
+					'Cadrage — Trajectoire de livraison',
+					'Cadrage — Risques identifiés',
+					'Cadrage — Glossaire du projet'
+				]
 			},
 			{
 				nom: 'Ateliers',
 				description: "Supports et restitutions d'ateliers.",
 				notes: 5,
 				repartition: [5, 0, 0, 0, 0],
-				nommees: []
+				nommees: [],
+				remplissage: [
+					'Atelier — Cartographie des processus',
+					'Atelier — Priorisation des besoins',
+					'Atelier — Parcours utilisateur',
+					'Atelier — Restitution du 4 février',
+					'Atelier — Modèle d’animation'
+				]
 			}
 		]
 	},
@@ -170,14 +243,26 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 				description: "Articles en cours d'écriture.",
 				notes: 5,
 				repartition: [4, 0, 1, 0, 0],
-				nommees: []
+				nommees: [],
+				remplissage: [
+					'Brouillon — L’écriture technique au quotidien',
+					'Brouillon — Ce que la documentation coûte',
+					'Brouillon — Notes de lecture',
+					'Brouillon — Retour sur six mois d’agents',
+					'Brouillon — Plan de la série'
+				]
 			},
 			{
 				nom: 'Publiés',
 				description: 'Articles publiés et leurs sources.',
 				notes: 3,
 				repartition: [3, 0, 0, 0, 0],
-				nommees: []
+				nommees: [],
+				remplissage: [
+					'Publié — Pourquoi vérifier une note',
+					'Publié — Le graphe comme plan',
+					'Publié — Deux registres pour une note'
+				]
 			}
 		]
 	},
@@ -193,7 +278,15 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 				description: 'Patrons d’orchestration et garde-fous.',
 				notes: 6,
 				repartition: [6, 0, 0, 0, 0],
-				nommees: []
+				nommees: [],
+				remplissage: [
+					'Patron — Orchestrateur et exécutants',
+					'Patron — Reprise après échec',
+					'Patron — Passage de contexte',
+					'Garde-fou — Périmètres d’écriture disjoints',
+					'Garde-fou — Budget de tours',
+					'Retour — Une vague de six agents'
+				]
 			}
 		]
 	},
@@ -218,15 +311,101 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 					},
 					{ titre: 'Politique de sauvegarde', dossier: 'Exploitation', etat: 'averifier' },
 					{ titre: 'Fiche BKP-01', etat: 'ajour' }
-				]
+				],
+				remplissage: []
 			},
 			{
 				nom: 'Réseau',
 				description: 'Équipements, bascules et incidents réseau.',
 				notes: 6,
 				repartition: [5, 1, 0, 0, 0],
-				nommees: []
+				nommees: [],
+				remplissage: [
+					'Bascule — Lien opérateur principal',
+					'Équipement — Commutateur cœur de réseau',
+					'Incident — Perte de la liaison secondaire',
+					'Procédure — Mise à jour du pare-feu',
+					'Plan — Adressage interne',
+					'Équipement — Points d’accès sans fil'
+				]
 			}
 		]
+	}
+];
+
+/**
+ * LA RÉPARTITION ATTENDUE, dans l'ordre `ORDRE_DES_ETATS` — ce que `01-accueil.png` affiche en
+ * toutes lettres : « 77 notes dans votre bibliothèque, dont 65 sont actuellement à jour », puis
+ * les cinq compteurs 65 / 6 / 3 / 2 / 1. Le chargeur la RELIT depuis la base avant de rendre la
+ * main : c'est la seule garantie que le jeu vaut quelque chose.
+ */
+export const REPARTITION_ATTENDUE: readonly [number, number, number, number, number] = [
+	65, 6, 3, 2, 1
+];
+
+/** Le total des notes, dérivé de la répartition — jamais écrit deux fois. */
+export const NOTES_ATTENDUES: number = REPARTITION_ATTENDUE.reduce((a, b) => a + b, 0);
+
+/**
+ * LE PROFIL DE CONSULTATION D'UNE NOTE — `RG-M04-09`.
+ *
+ * Sans lignes dans `consultations`, la section « RÉCENTS » du rail et les deux listes de
+ * l'accueil sont vides : elles ne se déduisent d'aucun autre fait. Le profil porte donc les
+ * trois nombres que `01-accueil.png` montre — le cumul de toute la vie de la note, ce qu'elle
+ * a pris sur trente jours, et depuis combien d'heures elle a été ouverte pour la dernière
+ * fois. `heuresDepuisLaDerniere` à `null` : la note n'a pas été ouverte de la semaine, elle ne
+ * paraît pas dans « Récemment consultées ».
+ *
+ * L'ORDRE DES DEUX LISTES EN DÉCOULE, il n'est pas écrit à côté : « les plus consultées » se
+ * classe par `total`, « récemment consultées » par `heuresDepuisLaDerniere`.
+ */
+export interface ConsultationSemee {
+	/** Le titre de la note consultée — il doit exister dans `UNIVERS_DE_CONFORMITE`. */
+	readonly titre: string;
+	/** Le cumul, celui de `notes.compteur_de_consultations`. */
+	readonly total: number;
+	/** Combien de ce cumul tombent dans les trente derniers jours. */
+	readonly trenteDerniersJours: number;
+	/** L'ancienneté de la dernière ouverture, en heures. `null` : plus d'une semaine. */
+	readonly heuresDepuisLaDerniere: number | null;
+}
+
+/** Les six notes que `01-accueil.png` et `08-…png` chiffrent. Les autres n'ont aucune ligne. */
+export const CONSULTATIONS_DE_CONFORMITE: readonly ConsultationSemee[] = [
+	{
+		titre: 'Note technique — Installation de Claude Code sous Linux et mode autonome',
+		total: 2,
+		trenteDerniersJours: 2,
+		heuresDepuisLaDerniere: 0.2
+	},
+	{
+		titre: 'Mode autonome — Bonnes pratiques',
+		total: 94,
+		trenteDerniersJours: 12,
+		heuresDepuisLaDerniere: 1
+	},
+	{
+		titre: 'Prompt — Architecture LLM',
+		total: 118,
+		trenteDerniersJours: 14,
+		heuresDepuisLaDerniere: 3
+	},
+	{
+		titre: 'Restaurer une sauvegarde PostgreSQL',
+		total: 412,
+		trenteDerniersJours: 17,
+		heuresDepuisLaDerniere: 5
+	},
+	{
+		titre: 'Workflow — Analyse IA',
+		total: 142,
+		trenteDerniersJours: 16,
+		heuresDepuisLaDerniere: 7
+	},
+	{
+		titre: 'Politique de sauvegarde',
+		total: 87,
+		trenteDerniersJours: 11,
+		heuresDepuisLaDerniere: null
 	}
 ];
