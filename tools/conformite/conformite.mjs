@@ -33,6 +33,24 @@ const COTE = join(ICI, 'cote-a-cote');
 const SITE = process.env.SITE_CONFORMITE ?? 'http://localhost:5173';
 
 /**
+ * `.env` N'EST PAS CHARGÉ PAR NODE. Le fichier est la seule adresse des identifiants de
+ * développement — `CLAUDE.md` le dit, et le dépôt est public — mais rien ne le lit hors de Vite :
+ * l'outil sortait sur « connexion refusée » avec un mot de passe vide.
+ */
+function chargerEnv() {
+	const chemin = join(RACINE, '.env');
+	if (!existsSync(chemin)) return;
+	for (const ligne of readFileSync(chemin, 'utf8').split('\n')) {
+		const coupe = ligne.indexOf('=');
+		if (coupe <= 0 || ligne.startsWith('#')) continue;
+		const cle = ligne.slice(0, coupe).trim();
+		if (process.env[cle] === undefined) process.env[cle] = ligne.slice(coupe + 1).trim();
+	}
+}
+
+chargerEnv();
+
+/**
  * Le compte de développement. Les captures sont prises connecté : la coquille, le rail et la
  * colonne contexte n'existent pas autrement.
  */
