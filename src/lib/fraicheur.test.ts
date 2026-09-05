@@ -17,12 +17,19 @@
 import { describe, expect, it } from 'vitest';
 import {
 	BARRES_DE_JAUGE,
+	ETATS_DE_VIVACITE,
+	ORDRE_DES_ETATS,
+	SEUILS_DE_VIVACITE,
 	SEUILS_PAR_DEFAUT,
 	barresFraicheur,
 	classeTemoin,
 	libelleFraicheur,
 	niveauFraicheur,
+	etatDeVivacite,
 	temoinFraicheur,
+	vivacite,
+	type CycleDeVivacite,
+	type EtatDeVivacite,
 	type NiveauFraicheur
 } from './fraicheur';
 
@@ -313,3 +320,278 @@ describe('libelleFraicheur — les deux gardes, avant les quatre branches du gel
 		expect(jamais.barres).toBe(barresFraicheur('vieil'));
 	});
 });
+
+/* ==========================================================================
+   LA VIVACITÉ — CINQ ÉTATS
+
+   Ce qui précède épingle la fabrique à trois niveaux. Ce qui suit épingle
+   celle qui la remplace, et d'abord ses BORNES : c'est le seul endroit où une
+   comparaison stricte se distingue d'une comparaison large, donc le seul
+   endroit où une réécriture distraite change l'état affiché sur une note
+   réelle sans rien casser d'autre.
+
+   LES LIBELLÉS SONT ÉCRITS EN CLAIR ICI, contrairement à ceux du dessus.
+   L'appareil qui l'interdisait a été supprimé, et la spécification les donne
+   au caractère près : « Prochaine vérification : … (dans 67 jours) ». Une
+   phrase que personne ne fige est une phrase que la première refonte déplace.
+   ========================================================================== */
+
+/** Le jour où le prototype a été validé, et celui de toutes ses captures. */
+const AUJOURDHUI = '2026-09-05';
+
+/** Le jour civil, en ISO, à N jours d'aujourd'hui. */
+function jour(decalage: number): string {
+	const d = new Date(Date.UTC(2026, 8, 5) + decalage * 86400000);
+	return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Un cycle dont l'échéance tombe dans exactement `reste` jours. C'est la seule
+ * grandeur qui compte : la date de vérification n'est qu'un moyen de l'obtenir.
+ */
+function cycleDeReste(reste: number, validite = 90): CycleDeVivacite {
+	return { verifiee: jour(reste - validite), modifiee: jour(reste - validite), validite };
+}
+
+describe('les seuils de vivacité — ceux du prototype validé', () => {
+	it('valent 10 jours, puis 14 et 90 jours de retard', () => {
+		expect(SEUILS_DE_VIVACITE.bientot).toBe(10);
+		expect(SEUILS_DE_VIVACITE.retardRevoir).toBe(14);
+		expect(SEUILS_DE_VIVACITE.retardObsolete).toBe(90);
+	});
+});
+
+describe('etatDeVivacite — les bornes, une par une', () => {
+	const cas: Array<[number, EtatDeVivacite]> = [
+		[400, 'ajour'],
+		[11, 'ajour'], // au-dessus du seuil : encore silencieux
+		[10, 'bientot'], // ÉGAL au seuil : l'échéance s'annonce déjà
+		[1, 'bientot'],
+		[0, 'bientot'], // l'échéance est AUJOURD'HUI, pas hier
+		[-1, 'averifier'], // le premier jour de retard
+		[-13, 'averifier'],
+		[-14, 'arevoir'], // quatorze jours de retard : la bascule est atteinte
+		[-89, 'arevoir'],
+		[-90, 'obsolete'], // quatre-vingt-dix : atteinte, donc franchie
+		[-400, 'obsolete']
+	];
+	for (const [reste, attendu] of cas) {
+		it(`reste ${reste} → ${attendu}`, () => {
+			expect(etatDeVivacite(reste, false)).toBe(attendu);
+			expect(vivacite(cycleDeReste(reste), AUJOURDHUI).etat).toBe(attendu);
+		});
+	}
+
+	it('prend les seuils en paramètre, jamais en constante locale', () => {
+		const resserres = { bientot: 30, retardRevoir: 7, retardObsolete: 30 } as const;
+		expect(etatDeVivacite(20, false, resserres)).toBe('bientot');
+		expect(etatDeVivacite(20, false)).toBe('ajour');
+		expect(etatDeVivacite(-8, false, resserres)).toBe('arevoir');
+		expect(etatDeVivacite(-8, false)).toBe('averifier');
+	});
+});
+
+describe('la demande de révision — un humain passe avant le calendrier', () => {
+	it('force « À revoir » même à quatre-vingts jours de marge', () => {
+		expect(etatDeVivacite(80, true)).toBe('arevoir');
+		const v = vivacite({ ...cycleDeReste(80), revisionPar: 'Alexandre Berge' }, AUJOURDHUI);
+		expect(v.etat).toBe('arevoir');
+		expect(v.revision).toBe(true);
+		expect(v.revisionPar).toBe('Alexandre Berge');
+	});
+
+	it('sans demande, le même cycle est à jour — la révision est bien la CAUSE', () => {
+		const v = vivacite(cycleDeReste(80), AUJOURDHUI);
+		expect(v.etat).toBe('ajour');
+		expect(v.revision).toBe(false);
+		expect(v.revisionPar).toBe('');
+	});
+
+	it('une demande levée rend la main au calendrier, sans autre geste', () => {
+		const pose = { ...cycleDeReste(-2), revisionPar: 'k.belhadj' };
+		expect(vivacite(pose, AUJOURDHUI).etat).toBe('arevoir');
+		const leve: CycleDeVivacite = { ...pose, revisionPar: null };
+		expect(vivacite(leve, AUJOURDHUI).etat).toBe('averifier');
+	});
+});
+
+describe('les deux registres — deux cycles, et ils ne se touchent pas', () => {
+	/* La note « claude » du prototype : sa Référence est à jour, son
+	   Opérationnel est à vérifier depuis un jour. Le même écran, deux états. */
+	const reference: CycleDeVivacite = {
+		verifiee: '2026-08-13',
+		modifiee: '2026-08-13',
+		validite: 90,
+		par: 'Alexandre Berge'
+	};
+	const operationnel: CycleDeVivacite = {
+		verifiee: '2026-08-14',
+		modifiee: '2026-08-14',
+		validite: 21,
+		par: 'Alexandre Berge'
+	};
+
+	it('la même note porte deux états différents en même temps', () => {
+		expect(vivacite(reference, AUJOURDHUI).etat).toBe('ajour');
+		expect(vivacite(operationnel, AUJOURDHUI).etat).toBe('averifier');
+	});
+
+	it('vérifier le registre courant ne touche pas l’autre', () => {
+		/* « Marquer comme vérifiée » repose la date du SEUL registre affiché. */
+		const operationnelVerifie: CycleDeVivacite = { ...operationnel, verifiee: AUJOURDHUI };
+		expect(vivacite(operationnelVerifie, AUJOURDHUI).etat).toBe('ajour');
+		/* La Référence, elle, n'a pas bougé d'un jour. */
+		expect(vivacite(reference, AUJOURDHUI).reste).toBe(67);
+	});
+
+	it('l’Opérationnel créé à l’instant démarre un cycle neuf', () => {
+		const cree: CycleDeVivacite = { verifiee: AUJOURDHUI, modifiee: AUJOURDHUI, validite: 21 };
+		const v = vivacite(cree, AUJOURDHUI);
+		expect(v.etat).toBe('ajour');
+		expect(v.reste).toBe(21);
+	});
+});
+
+describe('les libellés — la spécification, au caractère près', () => {
+	const claude = vivacite(
+		{ verifiee: '2026-08-13', modifiee: '2026-08-13', validite: 90, par: 'Alexandre Berge' },
+		AUJOURDHUI
+	);
+
+	it('la ligne de vérification nomme la date et l’auteur', () => {
+		expect(claude.ligneVerification).toBe('Vérifiée le 13 août 2026 par Alexandre Berge');
+	});
+
+	it('sans auteur, la ligne s’arrête à la date', () => {
+		const sans = vivacite(
+			{ verifiee: '2026-08-13', modifiee: '2026-08-13', validite: 90 },
+			AUJOURDHUI
+		);
+		expect(sans.ligneVerification).toBe('Vérifiée le 13 août 2026');
+	});
+
+	it('l’échéance à venir se compte en jours pleins', () => {
+		expect(claude.ligneEcheance).toBe('Prochaine vérification : 11 nov. 2026 (dans 67 jours)');
+		expect(claude.reste).toBe(67);
+	});
+
+	it('l’échéance du jour se nomme, elle ne se compte pas', () => {
+		expect(vivacite(cycleDeReste(0), AUJOURDHUI).ligneEcheance).toBe(
+			"Échéance aujourd'hui : 5 sept. 2026"
+		);
+	});
+
+	it('l’échéance dépassée compte le RETARD, et le nom s’accorde', () => {
+		expect(vivacite(cycleDeReste(-4), AUJOURDHUI).ligneEcheance).toBe(
+			'Échéance dépassée de 4 jours (1 sept. 2026)'
+		);
+		expect(vivacite(cycleDeReste(-1), AUJOURDHUI).ligneEcheance).toContain('de 1 jour (');
+		expect(vivacite(cycleDeReste(-1), AUJOURDHUI).ligneEcheance).not.toContain('1 jours');
+	});
+
+	it('une note jamais vérifiée ne prétend pas l’avoir été', () => {
+		const jamais = vivacite({ verifiee: null, modifiee: '2026-08-13', validite: 90 }, AUJOURDHUI);
+		expect(jamais.ligneVerification).toBe('Jamais vérifiée');
+		expect(jamais.jamaisVerifiee).toBe(true);
+		expect(jamais.compact).toBe('jamais');
+		/* Le NIVEAU, lui, se lit sur la modification : le calcul ne s'arrête pas. */
+		expect(jamais.etat).toBe('ajour');
+		expect(jamais.reste).toBe(67);
+	});
+
+	it('la forme compacte des rails et des listes', () => {
+		expect(vivacite(cycleDeReste(67), AUJOURDHUI).compact).toBe('dans 67 j');
+		expect(vivacite(cycleDeReste(-21), AUJOURDHUI).compact).toBe('21 j de retard');
+		expect(vivacite(cycleDeReste(0), AUJOURDHUI).compact).toBe('dans 0 j');
+	});
+
+	it('la légende centrale de la frise change de signe avec le retard', () => {
+		expect(vivacite(cycleDeReste(67), AUJOURDHUI).relatif).toBe('J−67');
+		expect(vivacite(cycleDeReste(-21), AUJOURDHUI).relatif).toBe('J+21');
+	});
+});
+
+describe('le rappel automatique — la logique dite en clair', () => {
+	it('avant l’échéance, il annonce la bascule à venir', () => {
+		expect(vivacite(cycleDeReste(67), AUJOURDHUI).rappel).toBe(
+			'Cette note repassera automatiquement à « À vérifier » le 11 nov. 2026.'
+		);
+	});
+
+	it('en retard, il nomme l’échéance manquée ET la bascule suivante', () => {
+		expect(vivacite(cycleDeReste(-4), AUJOURDHUI).rappel).toBe(
+			'En attente de vérification depuis le 1 sept. 2026. Passage à « À revoir » le 15 sept. 2026.'
+		);
+	});
+
+	it('à revoir, la bascule annoncée est l’obsolescence', () => {
+		expect(vivacite(cycleDeReste(-20), AUJOURDHUI).rappel).toContain('Passage à « Obsolète » le ');
+	});
+
+	it('obsolète, il n’annonce plus rien : il dit comment repartir', () => {
+		const v = vivacite(cycleDeReste(-120), AUJOURDHUI);
+		expect(v.etat).toBe('obsolete');
+		expect(v.rappel).toContain('Une nouvelle vérification relancera le cycle.');
+		expect(v.rappel).not.toContain('Passage à');
+	});
+});
+
+describe('la frise — la position d’aujourd’hui, bornée à ses deux extrémités', () => {
+	it('vaut zéro le jour de la vérification, un à l’échéance', () => {
+		expect(vivacite(cycleDeReste(90), AUJOURDHUI).fraction).toBe(0);
+		expect(vivacite(cycleDeReste(0), AUJOURDHUI).fraction).toBe(1);
+	});
+
+	it('tient le milieu du cycle au milieu du trait', () => {
+		expect(vivacite(cycleDeReste(45), AUJOURDHUI).fraction).toBeCloseTo(0.5, 5);
+	});
+
+	it('ne déborde JAMAIS, même très en retard — le rond sortirait du cadre', () => {
+		expect(vivacite(cycleDeReste(-400), AUJOURDHUI).fraction).toBe(1);
+	});
+
+	it('le rond d’échéance ne se remplit qu’une fois l’échéance passée', () => {
+		expect(vivacite(cycleDeReste(0), AUJOURDHUI).echeanceEchue).toBe(false);
+		expect(vivacite(cycleDeReste(-1), AUJOURDHUI).echeanceEchue).toBe(true);
+	});
+});
+
+describe('les cinq états — la forme porte l’information, pas la couleur', () => {
+	it('portent cinq libellés distincts, et cinq classes distinctes', () => {
+		const libelles = ORDRE_DES_ETATS.map((e) => ETATS_DE_VIVACITE[e].libelle);
+		const classes = ORDRE_DES_ETATS.map((e) => ETATS_DE_VIVACITE[e].classe);
+		expect(new Set(libelles).size).toBe(5);
+		expect(new Set(classes).size).toBe(5);
+	});
+
+	it('portent cinq FORMES distinctes — un lecteur sans couleur lit l’état', () => {
+		const formes = ORDRE_DES_ETATS.map((e) => ETATS_DE_VIVACITE[e].glyphe);
+		expect(new Set(formes).size).toBe(5);
+		/* L'obsolète est le seul anneau nu : son vide EST sa forme. */
+		expect(ETATS_DE_VIVACITE.obsolete.glyphe).toBe('');
+	});
+
+	it('montent en attention sans jamais redescendre', () => {
+		const attentions = ORDRE_DES_ETATS.map((e) => ETATS_DE_VIVACITE[e].attention);
+		expect(attentions).toEqual([0, 1, 2, 3, 3]);
+	});
+
+	it('la fabrique rend la description de l’état, jamais une autre', () => {
+		for (const etat of ORDRE_DES_ETATS) {
+			const v = vivacite(cycleDeReste(RESTES_PAR_ETAT[etat]), AUJOURDHUI);
+			expect(v.etat).toBe(etat);
+			expect(v.libelle).toBe(ETATS_DE_VIVACITE[etat].libelle);
+			expect(v.classe).toBe(ETATS_DE_VIVACITE[etat].classe);
+			expect(v.attention).toBe(ETATS_DE_VIVACITE[etat].attention);
+		}
+	});
+});
+
+/** Un reste qui tombe dans chacun des cinq états — la planche V-41 en vit. */
+const RESTES_PAR_ETAT: Record<EtatDeVivacite, number> = {
+	ajour: 67,
+	bientot: 6,
+	averifier: -4,
+	arevoir: -21,
+	obsolete: -120
+};

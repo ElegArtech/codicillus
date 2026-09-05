@@ -50,6 +50,14 @@ export const visibilite = pgEnum('visibilite', ['interne', 'publique']);
 /** CDC §3.2 et RG-NOT-04 — brouillon ou publiée, défaut publiée. */
 export const statutDeNote = pgEnum('statut_de_note', ['brouillon', 'publiee']);
 
+/**
+ * `RG-NOT-02` — les deux registres de lecture d'une note. Le type vivait en
+ * TypeScript seul (`donnees/note.ts`), et la base ne savait donc pas dire de
+ * QUEL registre parlaient une vérification ou une demande de révision. Même
+ * ensemble, même ordre, mêmes valeurs que `Registre`.
+ */
+export const registreDeNote = pgEnum('registre_de_note', ['reference', 'operationnel']);
+
 /** CDC §2.3 — les trois droits hérités dans l'arborescence de dossiers. */
 export const droitDeDossier = pgEnum('droit_de_dossier', ['lecteur', 'redacteur', 'gestionnaire']);
 
@@ -460,7 +468,21 @@ export const notes = pgTable(
 		corpsOperationnelModifieLe: timestamp('corps_operationnel_modifie_le', {
 			withTimezone: true
 		}),
+		/** La vérification de la RÉFÉRENCE — le registre canonique (`RG-NOT-02`). */
 		verifieLe: timestamp('verifie_le', { withTimezone: true }),
+		/**
+		 * La vérification de l'OPÉRATIONNEL — son cycle est indépendant de celui de
+		 * la Référence, et créer le registre le démarre. Nulle tant qu'aucun corps
+		 * opérationnel n'existe : `notes_operationnel_verification_coherente`.
+		 */
+		verifieLeOperationnel: timestamp('verifie_le_operationnel', { withTimezone: true }),
+		/**
+		 * Les durées de validité, en jours, PAR REGISTRE. Une référence
+		 * d'architecture tient un trimestre, une procédure d'exploitation trois
+		 * semaines : une seule durée aurait fait mentir l'un des deux registres.
+		 */
+		validiteReference: integer('validite_reference').notNull().default(90),
+		validiteOperationnel: integer('validite_operationnel').notNull().default(21),
 		compteurDeConsultations: integer('compteur_de_consultations').notNull().default(0),
 		revisionDemandee: boolean('revision_demandee').notNull().default(false),
 		revisionCommentaire: text('revision_commentaire'),
@@ -468,6 +490,8 @@ export const notes = pgTable(
 			onDelete: 'set null'
 		}),
 		revisionLe: timestamp('revision_le', { withTimezone: true }),
+		/** Le registre que la demande de révision VISE — nul quand il n'y en a pas. */
+		revisionRegistre: registreDeNote('revision_registre'),
 		typeDeFicheId: uuid('type_de_fiche_id').references(() => typesDeFiche.id, {
 			onDelete: 'restrict'
 		}),
@@ -503,7 +527,13 @@ export const notes = pgTable(
 		),
 		check(
 			'notes_revision_coherente',
-			sql`(NOT ${t.revisionDemandee} AND ${t.revisionCommentaire} IS NULL AND ${t.revisionParId} IS NULL AND ${t.revisionLe} IS NULL) OR (${t.revisionDemandee} AND ${t.revisionParId} IS NOT NULL AND ${t.revisionLe} IS NOT NULL)`
+			sql`(NOT ${t.revisionDemandee} AND ${t.revisionCommentaire} IS NULL AND ${t.revisionParId} IS NULL AND ${t.revisionLe} IS NULL AND ${t.revisionRegistre} IS NULL) OR (${t.revisionDemandee} AND ${t.revisionParId} IS NOT NULL AND ${t.revisionLe} IS NOT NULL AND ${t.revisionRegistre} IS NOT NULL)`
+		),
+		check('notes_validite_reference_positive', sql`${t.validiteReference} > 0`),
+		check('notes_validite_operationnel_positive', sql`${t.validiteOperationnel} > 0`),
+		check(
+			'notes_operationnel_verification_coherente',
+			sql`${t.corpsOperationnel} IS NOT NULL OR ${t.verifieLeOperationnel} IS NULL`
 		),
 		check(
 			'notes_signet_coherent',
@@ -679,6 +709,13 @@ export const verifications = pgTable(
 			.notNull()
 			.references(() => notes.id, { onDelete: 'cascade' }),
 		compteId: uuid('compte_id').references(() => comptes.id, { onDelete: 'set null' }),
+		/**
+		 * LE REGISTRE ATTESTÉ. Sans lui, l'historique d'une note mêlait les deux
+		 * cycles en une seule colonne de dates, et rien ne disait laquelle avait
+		 * remis quoi au vert. Défaut `reference` : c'est le seul registre que le
+		 * produit savait vérifier avant `014`.
+		 */
+		registre: registreDeNote('registre').notNull().default('reference'),
 		le: timestamp('le', { withTimezone: true }).notNull().defaultNow()
 	},
 	(t) => [index('verifications_note_idx').on(t.noteId, t.le.desc())]

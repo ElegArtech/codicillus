@@ -58,6 +58,12 @@ export default ts.config(
 			'.claude/',
 			'cadrage/',
 			'mockups/',
+			/* LE PAQUET DE REFONTE — un prototype de conception livré en HTML et
+			   ses scripts d'exécution, lus comme référence visuelle et jamais
+			   exécutés par le produit. Les relire aux règles du dépôt rend
+			   vingt-deux erreurs sur du code qui n'est pas le nôtre, et qu'on ne
+			   corrigera pas : c'est la source gelée, comme `mockups/`. */
+			'design_handoff_refonte_codicillus/',
 			'règles/',
 			'guide/'
 		]
