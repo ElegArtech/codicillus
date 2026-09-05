@@ -1,9 +1,15 @@
 /**
- * Vérifier une note, et demander sa révision — le mécanisme central du produit, côté
- * écriture : « n'importe quel contributeur habilité peut le remettre au vert EN UN CLIC,
- * SANS FORMULAIRE ».
+ * Vérifier un REGISTRE d'une note, et demander sa révision — le mécanisme central du
+ * produit, côté écriture : « n'importe quel contributeur habilité peut le remettre au vert
+ * EN UN CLIC, SANS FORMULAIRE ».
  *
- * CE MODULE N'ÉCRIT AUCUN CALCUL DE FRAÎCHEUR : il écrit une DATE — `notes.verifie_le` —,
+ * LES TROIS GESTES VISENT UN REGISTRE, ET LUI SEUL — c'est ce que `014` a rendu possible et
+ * ce que ce module tient. Une note porte deux registres de lecture, deux durées de validité,
+ * deux cycles : vérifier la Référence ne remet pas l'Opérationnel au vert, et réciproquement.
+ * Le registre n'a pas de défaut ici — un défaut ferait taire l'appelant qui a oublié de le
+ * dire, et le geste tomberait silencieusement sur la Référence.
+ *
+ * CE MODULE N'ÉCRIT AUCUN CALCUL DE FRAÎCHEUR : il écrit une DATE — celle du registre visé —,
  * et le niveau s'en déduit à la lecture. Aucun seuil, aucun niveau, aucun libellé n'est
  * nommé ici ; le badge repasse au vert parce que la date a bougé.
  *
@@ -21,23 +27,24 @@
  * retombant sur la date de modification à défaut de vérification.
  *
  * UNE SEULE DEMANDE COURANTE — `RG-M06-06`, tenue par le schéma : la demande est portée par
- * QUATRE COLONNES DE LA NOTE, jamais par une table. Une seconde demande est un `UPDATE` qui
- * écrase. `RG-M06-07` est tenue par COMPOSITION : les colonnes d'une vérification sont la
+ * CINQ COLONNES DE LA NOTE depuis `014`, jamais par une table. Une seconde demande est un
+ * `UPDATE` qui écrase — y compris quand elle vise l'AUTRE registre : la règle dit une seule
+ * demande par NOTE, et la déplacer d'un registre à l'autre n'en fait pas deux. `RG-M06-07` est tenue par COMPOSITION : les colonnes d'une vérification sont la
  * date de vérification étendue de `LEVEE_DE_LA_DEMANDE`, l'objet même qu'emploie la levée.
  *
  * `P-09` dit que l'action interdite n'est pas RENDUE ; cela ne dispense pas de la REFUSER.
  */
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import { notes, verifications } from '../base/schema';
 import { INTROUVABLE, type Identite, type Resolution } from '../droits/resolution';
 import { entretenirLIndex } from '../recherche/entretien';
-import { lireLaNote } from './note';
+import { lireLaNote, type Registre } from './note';
 import type { ContexteDeLecture } from './lecture';
 
 /**
- * L'effacement d'une demande de révision — les quatre colonnes remises à leur état neutre.
+ * L'effacement d'une demande de révision — les cinq colonnes remises à leur état neutre.
  * Cet état n'est pas un choix : `notes_revision_coherente` n'admet que deux configurations,
  * tout nul quand la demande est absente, demandeur et date présents quand elle est là.
  *
@@ -49,29 +56,49 @@ export interface LeveeDeLaDemande {
 	readonly revisionCommentaire: null;
 	readonly revisionParId: null;
 	readonly revisionLe: null;
+	/** `014` — le registre visé tombe avec la demande : sans elle, il ne désigne rien. */
+	readonly revisionRegistre: null;
 }
 
 export const LEVEE_DE_LA_DEMANDE: LeveeDeLaDemande = Object.freeze({
 	revisionDemandee: false,
 	revisionCommentaire: null,
 	revisionParId: null,
-	revisionLe: null
+	revisionLe: null,
+	revisionRegistre: null
 });
+
+/**
+ * LA DATE QUE LA VÉRIFICATION POSE — celle du registre visé, et JAMAIS les deux.
+ *
+ * C'est une UNION et non un objet à deux champs optionnels : deux champs optionnels
+ * laisseraient écrire les deux dates d'un même geste, c'est-à-dire remettre au vert un
+ * registre que personne n'a relu. Ici, le type n'a pas de forme où les deux tiennent.
+ */
+export type DateDuRegistre =
+	{ readonly verifieLe: Date } | { readonly verifieLeOperationnel: Date };
+
+/** La date du registre, et l'unique endroit du produit qui choisit la colonne. */
+export function dateDuRegistre(registre: Registre, quand: Date): DateDuRegistre {
+	return registre === 'operationnel' ? { verifieLeOperationnel: quand } : { verifieLe: quand };
+}
 
 /**
  * Les colonnes qu'une vérification écrit sur `notes`, et rien d'autre. Le type est
  * la garantie de `RG-M06-05` : il ne déclare ni corps, ni titre, ni `modifieLe`, ni
  * les deux dates de corps. Un point d'appel qui voudrait en écrire une n'a pas de
  * champ où la poser.
+ *
+ * L'EFFACEMENT DE LA DEMANDE EST CONDITIONNEL DEPUIS `014`, et le type le dit : une
+ * vérification de la Référence n'emporte pas une demande qui visait l'Opérationnel.
  */
-export interface ColonnesDUneVerification extends LeveeDeLaDemande {
-	readonly verifieLe: Date;
-}
+export type ColonnesDUneVerification = DateDuRegistre | (DateDuRegistre & LeveeDeLaDemande);
 
 /** La ligne d'historique — `UC-M06-02`, « l'historique complet est conservé ». */
 export interface LigneDeVerification {
 	readonly noteId: string;
 	readonly compteId: string;
+	readonly registre: Registre;
 	readonly le: Date;
 }
 
@@ -96,11 +123,15 @@ export interface PlanDeVerification {
 export function planDUneVerification(
 	noteId: string,
 	compteId: string,
-	maintenant: Date
+	maintenant: Date,
+	registre: Registre,
+	/** La demande de révision courante vise-t-elle CE registre ? Elle seule est levée. */
+	demandeSurCeRegistre: boolean
 ): PlanDeVerification {
+	const date = dateDuRegistre(registre, maintenant);
 	return {
-		colonnes: { verifieLe: maintenant, ...LEVEE_DE_LA_DEMANDE },
-		journal: { noteId, compteId, le: maintenant }
+		colonnes: demandeSurCeRegistre ? { ...date, ...LEVEE_DE_LA_DEMANDE } : date,
+		journal: { noteId, compteId, registre, le: maintenant }
 	};
 }
 
@@ -115,18 +146,22 @@ export interface ColonnesDUneDemandeDeRevision {
 	readonly revisionCommentaire: string;
 	readonly revisionParId: string;
 	readonly revisionLe: Date;
+	/** `014` — la demande VISE un registre. La contrainte l'exige dès qu'elle existe. */
+	readonly revisionRegistre: Registre;
 }
 
 export function colonnesDUneDemandeDeRevision(
 	commentaire: string,
 	parId: string,
-	quand: Date
+	quand: Date,
+	registre: Registre
 ): ColonnesDUneDemandeDeRevision {
 	return {
 		revisionDemandee: true,
 		revisionCommentaire: commentaire,
 		revisionParId: parId,
-		revisionLe: quand
+		revisionLe: quand,
+		revisionRegistre: registre
 	};
 }
 
@@ -144,6 +179,11 @@ export function commentaireDeRevision(saisi: unknown): string | null {
 
 export interface DemandeDeGeste {
 	readonly identifiant: string;
+	/**
+	 * LE REGISTRE VISÉ — requis, sans défaut. Les deux cycles d'une note sont
+	 * indépendants ; un geste qui ne dit pas lequel il vise n'est pas un geste.
+	 */
+	readonly registre: Registre;
 	readonly identite: Identite;
 	readonly contexte: ContexteDeLecture;
 	readonly maintenant: Date;
@@ -153,6 +193,8 @@ interface NoteAAttester {
 	readonly noteId: string;
 	/** L'état de la demande courante AVANT le geste — `RG-M06-06`, `RG-M06-07`. */
 	readonly demandeCourante: boolean;
+	/** La demande courante vise-t-elle LE REGISTRE du geste ? Elle seule sera levée. */
+	readonly demandeSurCeRegistre: boolean;
 }
 
 /**
@@ -185,24 +227,45 @@ async function resoudreLeGeste(
 
 	/* `lireLaNote()` rend la note dans la forme du jeu de semence, qui ne porte ni
 	   l'identifiant technique ni la demande courante : les deux sont relus ici,
-	   APRÈS la décision d'accès, et jamais avant. */
+	   APRÈS la décision d'accès, et jamais avant. Le corps Opérationnel l'est aussi,
+	   en PRÉSENCE seule — le geste sur un registre qui n'existe pas doit être refusé
+	   avant l'écriture, sans quoi `notes_operationnel_verification_coherente` le
+	   refuserait en 500. */
 	const [ligne] = await base
-		.select({ id: notes.id, revisionDemandee: notes.revisionDemandee })
+		.select({
+			id: notes.id,
+			revisionDemandee: notes.revisionDemandee,
+			revisionRegistre: notes.revisionRegistre,
+			operationnelModifieLe: notes.corpsOperationnelModifieLe
+		})
 		.from(notes)
 		.where(eq(notes.identifiant, demande.identifiant))
 		.limit(1);
 	if (ligne === undefined) return INTROUVABLE;
 
+	/* LE REGISTRE OPÉRATIONNEL DOIT EXISTER POUR QU'ON PUISSE L'ATTESTER. Le refus est
+	   le `404` de la famille : l'écran n'offre le geste que lorsque l'onglet existe, et
+	   une soumission qui l'atteint autrement vise une ressource qui n'est pas là. */
+	if (demande.registre === 'operationnel' && ligne.operationnelModifieLe === null) {
+		return INTROUVABLE;
+	}
+
 	return {
 		trouve: true,
-		ressource: { noteId: ligne.id, demandeCourante: ligne.revisionDemandee }
+		ressource: {
+			noteId: ligne.id,
+			demandeCourante: ligne.revisionDemandee,
+			demandeSurCeRegistre: ligne.revisionDemandee && ligne.revisionRegistre === demande.registre
+		}
 	};
 }
 
 export interface VerificationFaite {
 	readonly identifiant: string;
+	/** Le registre attesté — l'autre n'a pas bougé. */
+	readonly registre: Registre;
 	readonly verifieLe: Date;
-	/** Une demande de révision courante a été effacée — `RG-M06-07`. */
+	/** Une demande de révision VISANT CE REGISTRE a été effacée — `RG-M06-07`. */
 	readonly demandeEffacee: boolean;
 }
 
@@ -232,7 +295,9 @@ export async function verifierLaNote(
 	const plan = planDUneVerification(
 		acces.ressource.noteId,
 		demande.identite.compteId,
-		demande.maintenant
+		demande.maintenant,
+		demande.registre,
+		acces.ressource.demandeSurCeRegistre
 	);
 
 	await base.transaction(async (tx) => {
@@ -240,6 +305,7 @@ export async function verifierLaNote(
 		await tx.insert(verifications).values({
 			noteId: plan.journal.noteId,
 			compteId: plan.journal.compteId,
+			registre: plan.journal.registre,
 			le: plan.journal.le
 		});
 	});
@@ -252,14 +318,17 @@ export async function verifierLaNote(
 		trouve: true,
 		ressource: {
 			identifiant: demande.identifiant,
-			verifieLe: plan.colonnes.verifieLe,
-			demandeEffacee: acces.ressource.demandeCourante
+			registre: demande.registre,
+			verifieLe: plan.journal.le,
+			demandeEffacee: acces.ressource.demandeSurCeRegistre
 		}
 	};
 }
 
 export interface DemandeDeRevisionFaite {
 	readonly identifiant: string;
+	/** Le registre que la demande vise. */
+	readonly registre: Registre;
 	readonly commentaire: string;
 	readonly le: Date;
 	/** La demande a REMPLACÉ une demande courante — `RG-M06-06`. */
@@ -290,7 +359,8 @@ export async function demanderUneRevision(
 	const colonnes = colonnesDUneDemandeDeRevision(
 		demande.commentaire,
 		demande.identite.compteId,
-		demande.maintenant
+		demande.maintenant,
+		demande.registre
 	);
 	await base.update(notes).set(colonnes).where(eq(notes.id, acces.ressource.noteId));
 
@@ -298,6 +368,7 @@ export async function demanderUneRevision(
 		trouve: true,
 		ressource: {
 			identifiant: demande.identifiant,
+			registre: colonnes.revisionRegistre,
 			commentaire: colonnes.revisionCommentaire,
 			le: colonnes.revisionLe,
 			aRemplace: acces.ressource.demandeCourante
@@ -307,18 +378,23 @@ export async function demanderUneRevision(
 
 export interface LeveeFaite {
 	readonly identifiant: string;
+	/** Le registre visé par le geste. */
+	readonly registre: Registre;
+	/** Une demande VISANT CE REGISTRE était courante, et elle est levée. */
 	readonly avaitUneDemande: boolean;
 }
 
 /**
- * Lever la demande de révision (`M06.3`, `V-14:1427`).
+ * Lever la demande de révision (`M06.3`, `V-14:1427`) — celle du registre visé.
  *
  * ELLE N'ATTESTE RIEN, et c'est toute la différence avec `verifierLaNote()` : elle écrit
  * `LEVEE_DE_LA_DEMANDE` seul, sans date de vérification et sans ligne d'historique.
  * Confondre les deux remettrait au vert une note dont personne n'a attesté le contenu.
  *
- * L'écriture est INCONDITIONNELLE : une garde ferait dépendre l'effet d'une lecture
- * antérieure à l'écriture, donc d'une course.
+ * L'ÉCRITURE EST CONDITIONNÉE AU REGISTRE, ET SEULEMENT À LUI. Elle l'est en SQL — la
+ * clause porte le registre — et non par une garde en TypeScript : une garde ferait
+ * dépendre l'effet d'une lecture antérieure à l'écriture, donc d'une course. Lever
+ * depuis l'Opérationnel n'efface pas une demande qui visait la Référence.
  */
 export async function leverLaDemandeDeRevision(
 	base: Base,
@@ -327,13 +403,17 @@ export async function leverLaDemandeDeRevision(
 	const acces = await resoudreLeGeste(base, demande);
 	if (!acces.trouve) return INTROUVABLE;
 
-	await base.update(notes).set(LEVEE_DE_LA_DEMANDE).where(eq(notes.id, acces.ressource.noteId));
+	await base
+		.update(notes)
+		.set(LEVEE_DE_LA_DEMANDE)
+		.where(and(eq(notes.id, acces.ressource.noteId), eq(notes.revisionRegistre, demande.registre)));
 
 	return {
 		trouve: true,
 		ressource: {
 			identifiant: demande.identifiant,
-			avaitUneDemande: acces.ressource.demandeCourante
+			registre: demande.registre,
+			avaitUneDemande: acces.ressource.demandeSurCeRegistre
 		}
 	};
 }
