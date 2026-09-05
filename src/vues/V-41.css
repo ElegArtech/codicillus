@@ -223,7 +223,19 @@
 .prose code {
   font-family: var(--f-donnee); font-size: .84em;
   background: var(--c-papier-2); border: 1px solid var(--c-trait-fin);
-  border-radius: var(--r-1); padding: 1px 5px; white-space: nowrap;
+  border-radius: var(--r-1); padding: 1px 5px; overflow-wrap: anywhere;
+}
+
+/* LE CODE EN BLOC N'EST PAS DU CODE EN LIGNE. La règle `.prose code` ci-dessus
+   habille le code INCISÉ DANS UNE PHRASE — fond, rayon, `white-space: nowrap`
+   pour qu'il ne se coupe pas en deux au milieu d'un nom de commande. Elle
+   atteignait aussi le `code` d'un `pre`, dont elle écrasait les retours à la
+   ligne : une source mermaid de dix lignes devenait UNE ligne de 2 200 px, qui
+   sortait de son cadre et faisait défiler la page entière horizontalement.
+   Un bloc trop large défile DANS SON PROPRE CADRE, jamais en poussant la page. */
+.prose pre { overflow-x: auto; max-width: 100%; }
+.prose pre code {
+  white-space: pre; background: none; border: 0; padding: 0; border-radius: 0;
 }
 .bloc-code {
   border: 1px solid var(--c-trait); border-radius: var(--r-3); overflow: hidden;
