@@ -142,39 +142,30 @@ describe('V-14 — la propriété fournie l’emporte', () => {
 	});
 
 	/**
-	 * V-14 est la SEULE vue de forme COMPLÈTE de ce lot : son rail se dérive du
-	 * corpus, `univers` et `domaines` y ont donc un effet observable — ce qui
-	 * n'est pas le cas des quatre vues abrégées (`Coquille.svelte` le dit).
+	 * LE RAIL NE SE DÉRIVE PLUS DES PROPRIÉTÉS DE LA VUE, ET C'EST LA REFONTE DE LA
+	 * COQUILLE.
+	 *
+	 * `univers`, `domaines` et `notes` sont des propriétés que chaque vue remplit
+	 * avec le corpus de SA page : le rail changeait de contenu d'un écran à l'autre.
+	 * La navigation vient désormais du chargeur racine, lue une fois et descendue par
+	 * contexte, bornée par les droits de l'appelant.
+	 *
+	 * CE QUE CE CAS GARDE — et c'est le défaut qu'il ferme — : SANS CONTEXTE, LE RAIL
+	 * EST VIDE, quoi qu'on serve à la vue. Le défaut était `UNIVERS` du jeu de
+	 * démonstration : une instance neuve voyait l'arborescence des maquettes, et des
+	 * adresses qui rendent 404.
 	 */
-	it('dérive son rail des univers et domaines reçus, et de rien d’autre', async () => {
-		/* Le titre d'une section du rail est un LIEN vers la page de son univers
-		   depuis qu'un univers sans domaine doit pouvoir s'atteindre. LE RELEVÉ
-		   SE FAIT DANS LE RAIL, et non dans la page : le fil d'Ariane porte le
-		   même lien pour l'univers de la note, et un relevé fait sur la page
-		   entière mesurerait le fil au lieu du rail. */
-		const titre = (nom: string) => `href="/univers/${nom.toLowerCase()}">${nom}</a>`;
+	it('ne dérive plus son rail des propriétés — sans contexte, il est vide', async () => {
 		const rail = (html: string) => /<aside class="rail"[\s\S]*?<\/aside>/.exec(html)?.[0] ?? '';
+		const nomme = (nom: string) => `>${nom}</span>`;
 
-		/* SANS UNIVERS SERVI, LE RAIL EST VIDE. Le défaut était `UNIVERS` du jeu
-		   de démonstration : une instance neuve — zéro univers, l'état normal au
-		   premier démarrage — voyait l'arborescence des maquettes, et des
-		   adresses qui rendent 404. */
 		const vide = rail(await rendu({}));
-		expect(vide).not.toContain(titre('Production'));
-		expect(vide).not.toContain(titre('Projets'));
+		expect(vide).not.toContain(nomme('Production'));
+		expect(vide).not.toContain(nomme('Projets'));
 
-		const deux = rail(await rendu({ univers: UNIVERS, domaines: DOMAINES }));
-		expect(deux).toContain(titre('Production'));
-		expect(deux).toContain(titre('Projets'));
-
-		const html = rail(
-			await rendu({
-				univers: UNIVERS.filter((u) => u.nom === 'Production'),
-				domaines: DOMAINES
-			})
-		);
-		expect(html).toContain(titre('Production'));
-		expect(html).not.toContain(titre('Projets'));
+		/* Servir les deux tables ne change RIEN au rail : elles ne l'alimentent plus. */
+		const servi = rail(await rendu({ univers: UNIVERS, domaines: DOMAINES }));
+		expect(servi).toBe(vide);
 	});
 
 	it('rend la note reçue — titre, rangement et pièces jointes', async () => {

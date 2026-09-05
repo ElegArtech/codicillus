@@ -13,10 +13,11 @@
  */
 import type { CompteAffiche } from './identite';
 
-/** Aucun compte connu. Les quatre libellés sont vides, jamais inventés. */
+/** Aucun compte connu. Les cinq libellés sont vides, jamais inventés. */
 export const COMPTE_VIDE: CompteAffiche = {
 	nom: '',
 	initiales: '',
 	role: '',
-	domaine: ''
+	domaine: '',
+	courriel: ''
 };
