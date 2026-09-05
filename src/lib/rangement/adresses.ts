@@ -22,11 +22,28 @@
  */
 
 /**
+ * UN IDENTIFIANT DÉJÀ VALIDE — minuscules, chiffres, tirets et soulignés, sans bord ni
+ * répétition de séparateur. Il se reconnaît pour que la dérivation ne le retouche pas.
+ */
+const DEJA_UN_IDENTIFIANT = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
+
+/**
  * L'identifiant lisible dérivé d'un nom — sans diacritique, en minuscules, les séquences non
  * alphanumériques réduites à un tiret unique. « Poste de travail » → `poste-de-travail`,
  * « Migration 2026 » → `migration-2026`, « Réseau » → `reseau`.
+ *
+ * ELLE EST IDEMPOTENTE, ET CE N'EST PAS UN CONFORT : les adresses la rappellent sur des
+ * identifiants DÉJÀ PERSISTÉS — `adresseDeDomaine()` la pose sur son second argument, que
+ * `adressesParLesNoms()` a pourtant déjà traduit en identifiant. Sans idempotence, un
+ * identifiant portant un souligné change à chaque passage : `audit_code` devenait
+ * `audit-code`, et le fil d'Ariane de toute note d'un tel domaine rendait 404 — la ligne
+ * du rail, elle, marchait, si bien que le défaut ne se voyait que d'un écran sur deux.
+ *
+ * Le souligné est un caractère d'adresse LÉGITIME : la console le garde quand un nom en
+ * porte un, et les clés de propriété de fiche s'écrivent avec.
  */
 export function identifiantLisible(nom: string): string {
+	if (DEJA_UN_IDENTIFIANT.test(nom)) return nom;
 	return nom
 		.normalize('NFD')
 		.replace(/[\u0300-\u036f]/g, '')
