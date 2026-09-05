@@ -7,6 +7,8 @@ dossier: Exploitation › Astreinte
 auteur: k.belhadj
 etiquettes: astreinte, incident, exploitation
 verifie-il-y-a-jours: 260
+validite-operationnel: 21
+verifie-operationnel-il-y-a-jours: 30
 ---
 L'astreinte couvre les nuits, les week-ends et les jours fériés. Elle a un objectif unique : **rétablir le service**. Comprendre la cause est utile, mais vient après, et jamais au prix du rétablissement.
 
