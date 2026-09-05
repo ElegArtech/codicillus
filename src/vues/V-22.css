@@ -417,8 +417,7 @@
    Retrouver les liens web utiles d'un domaine. Un signet n'est pas une note :
    il mène ailleurs, et cela doit se voir avant le clic, pas après.
    ========================================================================== */
-.signets-vue {
-  max-width: 1080px; width: 100%; margin: 0 auto;
+.signets-vue { width: 100%;
   padding: var(--e-5) var(--e-5) var(--e-8);
 }
 

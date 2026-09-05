@@ -542,7 +542,7 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
 .nav2__selecteur { display: none; }
 
 /* --- Zone de travail ------------------------------------------------------------ */
-.travail { min-width: 0; padding: var(--e-5) var(--e-5) var(--e-8); max-width: 1180px; }
+.travail { min-width: 0; padding: var(--e-5) var(--e-5) var(--e-8); }
 
 .tete-section {
   display: flex; align-items: flex-start; justify-content: space-between;

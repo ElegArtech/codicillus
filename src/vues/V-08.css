@@ -174,8 +174,7 @@
   display: grid; align-items: start;
   grid-template-columns: 268px minmax(0, 1fr);
   gap: var(--e-6);
-  padding: var(--e-5) var(--e-5) var(--e-8);
-  max-width: 1400px; width: 100%;
+  padding: var(--e-5) var(--e-5) var(--e-8); width: 100%;
 }
 
 /* --- Barre de requête ------------------------------------------------------ */
