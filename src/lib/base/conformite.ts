@@ -216,6 +216,12 @@ interface NoteAPoser {
 	readonly validiteOperationnel: number;
 	/** L'ancienneté de la vérification de l'Opérationnel, en jours. Nulle sans Opérationnel. */
 	readonly ancienneteOperationnel: number | null;
+	/**
+	 * L'ancienneté de la vérification de la Référence quand elle s'écarte de celle de son état.
+	 * Nulle : celle de l'état. Elle sert à faire vivre le fil d'activité — sept derniers jours —
+	 * sans déplacer aucun état.
+	 */
+	readonly ancienneteJours: number | null;
 }
 
 /**
@@ -309,7 +315,8 @@ function notesDUnDomaine(
 			validiteReference: validite('validite-reference', 90),
 			validiteOperationnel: validite('validite-operationnel', 21),
 			ancienneteOperationnel:
-				lue?.operationnel == null ? null : anciennete === undefined ? 0 : Number(anciennete)
+				lue?.operationnel == null ? null : anciennete === undefined ? 0 : Number(anciennete),
+			ancienneteJours: nommee.ancienneteJours ?? null
 		};
 	});
 
@@ -329,7 +336,8 @@ function notesDUnDomaine(
 			etiquettes: [],
 			validiteReference: 90,
 			validiteOperationnel: 21,
-			ancienneteOperationnel: null
+			ancienneteOperationnel: null,
+			ancienneteJours: null
 		};
 	});
 
@@ -612,7 +620,10 @@ export async function chargerLaConformite(
 		}[] = [];
 
 		for (const note of aPoser) {
-			const verifieLe = new Date(maintenant.getTime() - ANCIENNETE_PAR_ETAT[note.etat] * JOUR);
+			/* L'ancienneté propre l'emporte quand la note en porte une : elle sert à faire
+			   vivre le fil d'activité sans déplacer l'état. */
+			const anciennete = note.ancienneteJours ?? ANCIENNETE_PAR_ETAT[note.etat];
+			const verifieLe = new Date(maintenant.getTime() - anciennete * JOUR);
 			const verifieLeOperationnel =
 				note.ancienneteOperationnel === null
 					? null
