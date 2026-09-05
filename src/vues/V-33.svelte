@@ -330,17 +330,93 @@
 			></div
 		></section>
 
-		<!-- ============ Fraîcheur ============ -->
+		<!-- ============ Vivacité ============ -->
+		<!-- Le groupe porte TROIS familles de réglages, et chacune dit ce qu'elle sert :
+			les deux validités de registre, les trois bascules automatiques du cycle, et
+			l'échelle à trois niveaux. Les cinq premiers étaient en base depuis `014` sans
+			aucun champ pour les régler — le produit affichait un cycle qu'il ne laissait
+			pas toucher. Les deux derniers RESTENT : la fabrique à trois niveaux sert
+			encore les écrans non refondus, et les retirer les casserait. -->
 		<!-- prettier-ignore -->
 		<section class="groupe"
 			><div class="groupe__tete"
 				><div
-					><h2 class="groupe__nom">Fraîcheur</h2
-					><div class="groupe__sous">Au bout de combien de temps une note cesse d'être considérée comme fiable. C'est le réglage le plus visible du produit : il décide du signal affiché sur chaque note, partout.</div
+					><h2 class="groupe__nom">Vivacité</h2
+					><div class="groupe__sous">Au bout de combien de temps une note cesse d'être digne de confiance, et par quels états elle passe ensuite. C'est le réglage le plus visible du produit : il décide du signal affiché sur chaque note, partout.</div
 				></div
 			></div
 			><div class="groupe__corps"
-				><div class="duo-champs"
+				><div class="sous-groupe"
+					><h3 class="sous-groupe__nom">Durée de validité, registre par registre</h3
+					><p class="sous-groupe__sous">Combien de temps une vérification tient avant que l'échéance ne tombe. Une référence se démode lentement, une procédure vite : chaque registre a sa durée. Ce sont les valeurs que reçoit une note NOUVELLE — celles déjà créées gardent la leur.</p
+					><div class="duo-champs"
+						><div class="champ" id="champ-validite-reference"
+							><label class="champ__label" for="c-validite-reference">Validité du registre Référence</label
+							><div class="champ-nombre"
+								><input class="saisie" type="number" id="c-validite-reference" min="1" max="3650" step="1" value={config.validiteReference}
+								><span class="champ-nombre__unite">jours après la dernière vérification</span
+							></div
+							><span class="champ__aide">Passé ce délai, la Référence d'une note arrive à échéance et bascule d'elle-même à « À vérifier ».</span
+							><div class="champ__erreur" id="erreur-validite-reference" hidden
+								>{@render marqueurDErreur()}<span id="erreur-validite-reference-txt"></span
+							></div
+						></div
+						><div class="champ" id="champ-validite-operationnel"
+							><label class="champ__label" for="c-validite-operationnel">Validité du registre Opérationnel</label
+							><div class="champ-nombre"
+								><input class="saisie" type="number" id="c-validite-operationnel" min="1" max="3650" step="1" value={config.validiteOperationnel}
+								><span class="champ-nombre__unite">jours après la dernière vérification</span
+							></div
+							><span class="champ__aide">La même chose pour le pas-à-pas, qui se périme plus vite : une procédure suit les versions de l'outil qu'elle décrit.</span
+							><div class="champ__erreur" id="erreur-validite-operationnel" hidden
+								>{@render marqueurDErreur()}<span id="erreur-validite-operationnel-txt"></span
+							></div
+						></div
+					></div
+				></div
+				><div class="sous-groupe"
+					><h3 class="sous-groupe__nom">Bascules automatiques du cycle</h3
+					><p class="sous-groupe__sous">Les trois moments où l'état d'une note change tout seul, sans que personne n'intervienne. Ils se comptent en jours autour de l'échéance, et l'ordre compte : l'alerte doit précéder l'échéance, et « À revoir » précéder « Obsolète ».</p
+					><div class="trio-champs"
+						><div class="champ" id="champ-bientot"
+							><label class="champ__label" for="c-bientot">Alerte « Bientôt à vérifier »</label
+							><div class="champ-nombre"
+								><input class="saisie" type="number" id="c-bientot" min="1" max="3650" step="1" value={config.seuilBientot}
+								><span class="champ-nombre__unite">jours avant l'échéance</span
+							></div
+							><span class="champ__aide">Combien de jours avant l'échéance une note quitte « À jour » pour « Bientôt à vérifier ». Doit rester sous la plus courte des deux validités.</span
+							><div class="champ__erreur" id="erreur-bientot" hidden
+								>{@render marqueurDErreur()}<span id="erreur-bientot-txt"></span
+							></div
+						></div
+						><div class="champ" id="champ-retard-revoir"
+							><label class="champ__label" for="c-retard-revoir">Passage à « À revoir »</label
+							><div class="champ-nombre"
+								><input class="saisie" type="number" id="c-retard-revoir" min="1" max="3650" step="1" value={config.retardRevoir}
+								><span class="champ-nombre__unite">jours de retard</span
+							></div
+							><span class="champ__aide">Passé ce retard sur l'échéance, une note « À vérifier » passe à « À revoir ». Une demande de révision l'y met tout de suite, sans attendre.</span
+							><div class="champ__erreur" id="erreur-retard-revoir" hidden
+								>{@render marqueurDErreur()}<span id="erreur-retard-revoir-txt"></span
+							></div
+						></div
+						><div class="champ" id="champ-retard-obsolete"
+							><label class="champ__label" for="c-retard-obsolete">Passage à « Obsolète »</label
+							><div class="champ-nombre"
+								><input class="saisie" type="number" id="c-retard-obsolete" min="1" max="3650" step="1" value={config.retardObsolete}
+								><span class="champ-nombre__unite">jours de retard</span
+							></div
+							><span class="champ__aide">Passé ce retard, une note « À revoir » passe à « Obsolète » : elle n'engage plus personne. Doit dépasser le seuil précédent.</span
+							><div class="champ__erreur" id="erreur-retard-obsolete" hidden
+								>{@render marqueurDErreur()}<span id="erreur-retard-obsolete-txt"></span
+							></div
+						></div
+					></div
+				></div
+				><div class="sous-groupe"
+					><h3 class="sous-groupe__nom">Échelle à trois niveaux</h3
+					><p class="sous-groupe__sous">L'échelle frais · vieillissant · obsolète, comptée en jours depuis la dernière vérification, sans distinction de registre. Elle sert les écrans qui n'ont pas encore le cycle à cinq états — listes, tableau de bord, aperçu ci-dessous.</p
+					><div class="duo-champs"
 					><div class="champ" id="champ-frais"
 						><label class="champ__label" for="c-frais">Frais jusqu'à</label
 						><div class="champ-nombre"
@@ -382,6 +458,7 @@
 						>{#each blocsDeMouvement as b (b.cle)}<div class="mvt" data-sens={b.sens}><span class="mvt__n">{b.n}</span><div class="mvt__corps"><div class="mvt__quoi">{b.quoi}</div><div class="mvt__liste">{b.liste}</div></div></div>{/each}</div
 					>{:else}<div class="impact__rien" style="margin-top:var(--e-3)">Ces seuils produisent exactement la même répartition que ceux en vigueur. Aucun signal ne changera dans le produit.</div
 					>{/if}{/if}</div
+				></div
 			></div
 		></section>
 
