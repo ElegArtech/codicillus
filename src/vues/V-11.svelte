@@ -2,42 +2,35 @@
 	/**
 	 * V-11 — Page d'un domaine. Route `/univers/{univers}/{domaine}`.
 	 *
-	 * C'EST LA FORME CANONIQUE au sens de `RG-M03-02` (`docs/routes.md` §2.2) et la
-	 * SEULE forme publiée depuis `ARB-001` : la forme raccourcie
-	 * `/domaines/{domaine}` n'est pas implémentée, le produit ne l'émet jamais, et
-	 * `/domaines/…` rend la page non trouvée. La clause de désambiguïsation de
-	 * `RG-M03-02` est SANS OBJET et NE DOIT JAMAIS ÊTRE IMPLÉMENTÉE : elle ne
-	 * pouvait se déclencher que sur la forme raccourcie. L'unicité d'un domaine
-	 * n'est portée que par son univers (`RG-STR-02`), d'où le segment obligatoire.
+	 * TROIS BLOCS, DANS CET ORDRE : le bandeau au filet vert et sa bande de
+	 * compteurs de vivacité ; « Contenu du domaine » et « À surveiller » ; « Notes
+	 * les plus consultées » et « Activité récente ».
 	 *
-	 * LES GESTES DE CET ÉCRAN MÈNENT QUELQUE PART, et c'est la route qui les
-	 * accroche, par sélecteur et jamais par balisage réécrit (`ARB-063`,
-	 * `[domaine]/cablage.ts`). Trois n'ont pas de facette et ouvrent la liste sans
-	 * filtre — un filtre approchant mentirait.
+	 * C'EST LA FORME CANONIQUE au sens de `RG-M03-02` et la SEULE forme publiée
+	 * depuis `ARB-001` : la forme raccourcie `/domaines/{domaine}` n'est pas
+	 * implémentée. L'unicité d'un domaine n'est portée que par son univers
+	 * (`RG-STR-02`), d'où le segment obligatoire.
 	 *
-	 * UNE LIGNE DE CONTRIBUTEUR EST UN BOUTON, comme la ligne de type qui lui fait
-	 * face : le gel la dessine en `<div>` faute de destination, et elle ne menait
-	 * nulle part. La règle de neutralisation est celle de `.type-ligne`, sa jumelle,
-	 * et le rendu ne bouge pas d'un pixel.
+	 * LES GESTES DE CET ÉCRAN MÈNENT QUELQUE PART, ET CE SONT DES LIENS. Les six
+	 * entrées de « Contenu du domaine » et d'« Explorer » sont des ancres composées
+	 * par `$lib/rangement/adresses.ts` : elles n'ont plus besoin d'être reconnues à
+	 * leur TEXTE par le câblage, où renommer un module rendait sa tuile inerte sans
+	 * qu'aucune compilation ne proteste. Il ne reste au câblage que les deux
+	 * sélecteurs, qui sont des formulaires (`./cablage.ts`).
 	 *
-	 * Coquille de forme abrégée ; le chemin courant du rail est `[nom du domaine]`.
+	 * AUCUN ÉTAT DE VIVACITÉ N'EST CALCULÉ ICI (`P-01`, `ADR-005`) : les cinq états
+	 * viennent du chargeur, qui les tient de `vivacite()`. La vue compte, elle ne
+	 * date rien.
 	 *
-	 * `.noeud` n'est pas portée ici — nœud d'arborescence du rail, rendu par la
-	 * coquille ; nœud de GRAPHE en V-19 et V-20, règles inconciliables
-	 * (`docs/DESIGN.md` §2.H). Même vigilance sur `.mesure`, dont `ECART-019` relève
-	 * TROIS définitions divergentes sur trois vues : celle d'ici est dans
-	 * `src/vues/V-11.css`, et elle ne se promeut pas.
-	 *
-	 * LE PROFIL « LECTEUR » N'EST PAS UN RÔLE DU GABARIT : la seule règle sur
-	 * `data-role` est `.app:not([data-role="admin"]) .si-admin`, et c'est
-	 * `data-droits="lecture"` qui porte l'effet visible.
+	 * LE PRODUIT COMMENCE VIDE. Un domaine sans note garde ses quatre tuiles à zéro,
+	 * sa bande de compteurs dit « aucune note à mesurer », et les trois panneaux
+	 * nomment le geste qui débloque plutôt que de ne rien rendre.
 	 *
 	 * Aucun chiffre n'est saisi. Le style est dans `src/socle.css` et
 	 * `src/vues/V-11.css`.
 	 */
 	import type {
 		CleDeModule,
-		DemandeDeRevision,
 		DetailDeDomaine,
 		Domaine,
 		IdentifiantNote,
@@ -46,20 +39,39 @@
 		Note,
 		Univers
 	} from '../../seeds/corpus';
+	import { getContext } from 'svelte';
 	import Coquille from '$lib/coquille/Coquille.svelte';
+	import GlypheDeVivacite from '$lib/GlypheDeVivacite.svelte';
 	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
-	import type { CompteAffiche } from '$lib/coquille/identite';
-	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
+	import {
+		CLE_IDENTITE,
+		type CompteAffiche,
+		type IdentiteDeCoquille
+	} from '$lib/coquille/identite';
+	import { ETATS_DE_VIVACITE, ORDRE_DES_ETATS, type EtatDeVivacite } from '$lib/fraicheur';
 	import { libelleDeModule } from '$lib/rangement/modules';
 	import { accord } from '$lib/vocabulaire';
-	import { adresseDeNote, adressesParLesNoms, segmentsDeDossier } from '$lib/rangement/adresses';
-	import { designationsDeCoquille } from '$lib/coquille/identite';
+	import { adresseDeNote } from '$lib/rangement/adresses';
 
 	/**
-	 * LES SOURCES DE L'ÉCRAN SONT REQUISES — le motif est retiré, pas contourné.
-	 * Optionnelles, de défaut la constante de `seeds/corpus.ts`, une route qui en
-	 * oubliait une servait le jeu de démonstration SANS QUE RIEN NE PROTESTE : « En
-	 * attente de révision » servait le même chiffre à qui que ce soit.
+	 * UN ÉVÉNEMENT DU FIL, tel que le chargeur le sert. Le GENRE est une donnée ;
+	 * le titre affiché, le badge et la couleur du disque sont du dessin, et se
+	 * décident ici.
+	 */
+	interface EvenementDuDomaine {
+		readonly genre: 'verification' | 'modification' | 'creation' | 'echeance' | 'import';
+		readonly objet: string;
+		/** L'identifiant de la note visée, ou `null` : un lot d'import n'en vise aucune. */
+		readonly note: string | null;
+		/** Vide pour une bascule automatique : personne ne l'a faite. */
+		readonly par: string;
+		readonly heures: number;
+	}
+
+	/**
+	 * LES SOURCES DE L'ÉCRAN SONT REQUISES. Optionnelles, de défaut une constante
+	 * de `seeds/corpus.ts`, une route qui en oubliait une servait le jeu de
+	 * démonstration SANS QUE RIEN NE PROTESTE.
 	 *
 	 * `detailDomaines` ET `modules` RENDENT `P-04` EFFECTIVE, et leurs deux sources
 	 * sont distinctes : les CLÉS actives d'un domaine viennent de
@@ -77,21 +89,45 @@
 		domaines: readonly Domaine[];
 		/** L'utilisateur connecté. `null` : aucun compte connu. */
 		compte?: CompteAffiche | null;
-		mesures7j: Partial<Record<IdentifiantNote, number>>;
-		modifications: Partial<Record<IdentifiantNote, number>>;
-		/** Les demandes de révision ouvertes — vides quand rien n'est signalé. */
-		revisions: readonly DemandeDeRevision[];
 		detailDomaines: Record<NomDeDomaine, DetailDeDomaine>;
 		/** Le catalogue des modules — nom et sous-titre de chaque clé. */
 		modules: Record<CleDeModule, Module>;
 		/**
-		 * Le nombre de dossiers du domaine, racine exclue. ABSENT, IL EST DÉDUIT DU
-		 * RANGEMENT DES NOTES, comme la maquette le déduit ; cette déduction ne voit
-		 * PAS un dossier vide — sept dossiers sous une racine, six déduits. Le défaut
-		 * reste la déduction pour que le gel ne bouge pas ; un chargeur qui lit la
-		 * table `dossiers` passe le compte réel.
+		 * L'état de vivacité du registre RÉFÉRENCE, par note. PARTIELLE : une note
+		 * absente n'est pas mesurée, et ne compte dans aucun état.
 		 */
-		nombreDeDossiers?: number;
+		vivacites: Partial<Record<IdentifiantNote, EtatDeVivacite>>;
+		/** Les consultations sur la fenêtre que le panneau annonce. */
+		mesures: Partial<Record<IdentifiantNote, number>>;
+		/** La fenêtre de consultation, en jours — ce que le sélecteur affiche. */
+		fenetreDeConsultation: number;
+		/** Le fil d'activité, du plus récent au plus ancien. */
+		activite: readonly EvenementDuDomaine[];
+		/** La position du sélecteur du fil. */
+		filtreDActivite: string;
+		/** Ancienneté de la dernière activité, en heures. `null` : aucune trace. */
+		derniereActiviteHeures: number | null;
+		/** Le seuil « bientôt à vérifier », en jours — l'alerte l'annonce. */
+		seuilBientot: number;
+		/**
+		 * LES ADRESSES DU DOMAINE, COMPOSÉES PAR LE CHARGEUR sur les identifiants
+		 * PERSISTÉS. La vue ne connaît que des NOMS d'affichage, qui ne se
+		 * redérivent pas en identifiant : `audit_code` est déjà une adresse et la
+		 * console le garde tel quel, quand la dérivation en fait `audit-code` et
+		 * rend 404.
+		 */
+		adressesDuDomaine: {
+			readonly domaine: string;
+			readonly notes: string;
+			readonly fiches: string;
+			readonly dossiers: string;
+			readonly signets: string;
+		};
+		/**
+		 * Le nombre de dossiers du domaine, racine exclue. REQUIS : le déduire du
+		 * rangement des notes ne voit pas un dossier VIDE, et la tuile mentait.
+		 */
+		nombreDeDossiers: number;
 	}
 
 	const {
@@ -100,26 +136,28 @@
 		univers,
 		domaines,
 		compte: compteConnecte = null,
-		mesures7j,
-		modifications,
-		revisions: demandesDeRevision,
 		detailDomaines,
 		modules,
-		nombreDeDossiers = undefined
+		vivacites,
+		mesures,
+		fenetreDeConsultation,
+		activite,
+		filtreDActivite,
+		derniereActiviteHeures,
+		seuilBientot,
+		adressesDuDomaine,
+		nombreDeDossiers
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
 	const profil = $derived(String(reglage['role'] ?? 'referent'));
 	/**
-	 * L'ABSENCE, ET NON LE MASQUAGE — `P-09`, `RG-M05-08`, `ARB-040`. Le gel pose
-	 * les actions puis les cache en feuille (`mockups/V-11-page-domaine.html:338`),
-	 * seule possibilité d'une maquette statique ; le produit ne les émet pas, « ni
-	 * grisée, NI MASQUÉE ». La classe reste posée quand le nœud est rendu : elle
-	 * porte aussi le rendu.
+	 * L'ABSENCE, ET NON LE MASQUAGE — `P-09`, `RG-M05-08`, `ARB-040`. Une action
+	 * qu'on ne peut pas faire n'est « ni grisée, NI MASQUÉE » : elle n'est pas
+	 * émise.
 	 */
 	const ecriture = $derived(profil !== 'lecteur');
 	const admin = $derived(profil === 'admin');
-	const vide = $derived(reglage['etat'] === 'vide');
 
 	/** AUCUN DOMAINE — l'état vide, écrit plutôt que subi : un tableau vide rendait
 	    `domaines[0].nom` et sortait en 500. */
@@ -130,235 +168,260 @@
 	);
 
 	/**
-	 * LA MISE EN ÉVIDENCE DU RAIL — LE DOMAINE COURANT, ET LUI SEUL. Le gel en
-	 * marquait DEUX : `coquille()` AJOUTE la marque et ne la retire jamais
-	 * (`V-11:1819-1832`), si bien que la planche marquait d'abord le domaine de son
-	 * scénario. La vue recopiait ce comportement, donc le NOM D'UN DOMAINE DU JEU DE
-	 * DÉMONSTRATION, écrit en dur : sur une instance qui ne le porte pas, le rail
-	 * marquait un nœud inexistant.
+	 * LA MISE EN ÉVIDENCE DU RAIL — LE DOMAINE COURANT, ET LUI SEUL. Le nom d'un
+	 * domaine du jeu de démonstration écrit en dur marquait, sur une instance qui
+	 * ne le porte pas, un nœud inexistant.
 	 */
 	const railCourant = $derived([courant.nom]);
 	/* `NomDeDomaine` est une chaîne : la table de détail peut ne rien porter pour un
 	   domaine créé dans la console. Le repli vide évite la page en erreur. */
 	const detail = $derived(detailDomaines[courant.nom] ?? { description: '', modules: [] });
-	const notesDuDomaine = $derived(vide ? [] : corpus.filter((n) => n.domaine === courant.nom));
+	const notesDuDomaine = $derived(corpus.filter((n) => n.domaine === courant.nom));
+	const vide = $derived(notesDuDomaine.length === 0);
 
-	/* Fraîcheur — le même composant que partout ailleurs (`ADR-005`) : la
-	   répartition compte les niveaux que le corpus porte, dans l'ordre du gel. */
-	interface Part {
-		readonly cle: 'frais' | 'vieil' | 'obs';
-		readonly classe: string;
-		/* Le pluriel n'est plus porté : les trois formes sont en `+s`, et `accord()`
-		   est la seule source de cette règle. */
-		readonly singulier: string;
+	/* ── La vivacité : on COMPTE, on ne calcule pas ─────────────────────────── */
+
+	function etatDe(n: Note): EtatDeVivacite | undefined {
+		return vivacites[n.id];
 	}
 
-	const PARTS: readonly Part[] = [
-		{ cle: 'frais', classe: 'p-frais', singulier: 'fraîche' },
-		{ cle: 'vieil', classe: 'p-vieil', singulier: 'vieillissante' },
-		{ cle: 'obs', classe: 'p-obs', singulier: 'obsolète' }
-	];
-
-	function compte(notes: readonly Note[], cle: Part['cle']): number {
-		return notes.filter((n) => n.fraicheur === cle).length;
-	}
-
-	function partsPresentes(notes: readonly Note[]): readonly Part[] {
-		return PARTS.filter((p) => compte(notes, p.cle) > 0);
-	}
-
-	function resumeRepartition(notes: readonly Note[]): string {
-		return (
-			partsPresentes(notes)
-				.map((p) => `${compte(notes, p.cle)} ${accord(compte(notes, p.cle), p.singulier)}`)
-				.join(', ') + ` sur ${notes.length}`
-		);
-	}
-
-	function libellePart(p: Part, notes: readonly Note[], contexte: string): string {
-		const n = compte(notes, p.cle);
-		return `${n} ${accord(n, p.singulier)}${contexte ? ` · ${contexte}` : ''}`;
-	}
-
-	/* Témoin de fraîcheur — rien n'est écrit ici : la classe, le nombre de barres et
-	   le libellé sortent tous les trois de `$lib/fraicheur`. Une fonction locale qui
-	   rendrait le nombre de barres serait `barresFraicheur` réécrite sans son nom. */
-
-	/* ── Santé du domaine ───────────────────────────────────────────────────── */
-	const jamais = $derived(notesDuDomaine.filter((n) => n.revise === null).length);
-	const revisions = $derived(
-		demandesDeRevision.filter((r) => notesDuDomaine.some((n) => n.id === r.id)).length
+	const compteurs = $derived(
+		ORDRE_DES_ETATS.map((etat) => ({
+			etat,
+			description: ETATS_DE_VIVACITE[etat],
+			n: notesDuDomaine.filter((note) => etatDe(note) === etat).length
+		}))
 	);
-	const brouillons = $derived(notesDuDomaine.filter((n) => n.brouillon).length);
+	/** Un compteur NUL n'est pas rendu : la bande dit ce qui est, pas ce qui manque. */
+	const compteursPresents = $derived(compteurs.filter((c) => c.n > 0));
 
-	/* Arborescence de dossiers, déduite du rangement réel des notes : aucune
-	   structure séparée, le rangement affiché est celui qui existe. */
-	interface NoeudDeDossier {
-		readonly enfants: Record<string, NoeudDeDossier>;
+	function combien(etat: EtatDeVivacite): number {
+		return compteurs.find((c) => c.etat === etat)?.n ?? 0;
 	}
 
-	function arbreDuDomaine(domaine: string): Record<string, NoeudDeDossier> {
-		const racines: Record<string, NoeudDeDossier> = {};
-		for (const n of corpus) {
-			if (n.domaine !== domaine || !n.dossier) continue;
-			let niveau = racines;
-			for (const segment of segmentsDeDossier(n.dossier)) {
-				const existant = niveau[segment];
-				const noeud = existant ?? { enfants: {} };
-				if (!existant) niveau[segment] = noeud;
-				niveau = noeud.enfants;
-			}
+	/* ── Les alertes — les mêmes que la page d'univers, la note en plus ─────── */
+	interface Alerte {
+		readonly n: number;
+		readonly etat: EtatDeVivacite;
+		readonly titre: string;
+		readonly detail: string;
+	}
+
+	/** Les états qui réclament une attention, du plus criant au moins criant. */
+	const ETATS_EN_RETARD: readonly EtatDeVivacite[] = ['obsolete', 'arevoir', 'averifier'];
+
+	/** La note la plus criante du domaine — c'est elle que le détail nomme. */
+	const noteEnRetard = $derived.by<Note | undefined>(() => {
+		for (const etat of ETATS_EN_RETARD) {
+			const trouvee = notesDuDomaine.find((n) => etatDe(n) === etat);
+			if (trouvee !== undefined) return trouvee;
 		}
-		return racines;
-	}
+		return undefined;
+	});
 
-	function compterDossiers(arbre: Record<string, NoeudDeDossier>): number {
-		let total = 0;
-		for (const noeud of Object.values(arbre)) total += 1 + compterDossiers(noeud.enfants);
-		return total;
-	}
+	const alertes = $derived.by<readonly Alerte[]>(() => {
+		const liste: Alerte[] = [];
+		const attention = combien('averifier') + combien('arevoir') + combien('obsolete');
+		if (attention > 0) {
+			liste.push({
+				n: attention,
+				etat: combien('arevoir') + combien('obsolete') > 0 ? 'arevoir' : 'averifier',
+				titre: accord(
+					attention,
+					'note nécessite votre attention',
+					'notes nécessitent votre attention'
+				),
+				/* LE DÉTAIL NOMME LA NOTE, quand il y en a une à nommer. */
+				detail: noteEnRetard?.titre ?? 'Leur période de validité est dépassée'
+			});
+		}
+		const bientot = combien('bientot');
+		if (bientot > 0) {
+			liste.push({
+				n: bientot,
+				etat: 'bientot',
+				titre: accord(
+					bientot,
+					'note arrive bientôt à échéance',
+					'notes arrivent bientôt à échéance'
+				),
+				detail: `Vérification prévue dans les ${String(seuilBientot)} prochains jours`
+			});
+		}
+		return liste;
+	});
 
-	/** Les compteurs portés par les entrées de module. Quatre modules sur six en
-	 *  ont un ; cartographie et carte mentale n'en portent pas. */
+	/* ── Contenu du domaine ─────────────────────────────────────────────────── */
+
+	/** L'ordre des quatre tuiles, et celui des deux entrées d'exploration. */
+	const CLES_DE_TUILE: readonly CleDeModule[] = ['notes', 'dossiers', 'fiches', 'signets'];
+	const CLES_DEXPLORATION: readonly CleDeModule[] = ['cartographie', 'carteMentale'];
+
+	/** Les compteurs portés par les tuiles. Les deux entrées d'exploration n'en ont pas. */
 	const comptes = $derived<Partial<Record<CleDeModule, number>>>({
 		notes: notesDuDomaine.length,
-		dossiers: nombreDeDossiers ?? compterDossiers(arbreDuDomaine(courant.nom)),
+		dossiers: nombreDeDossiers,
 		fiches: notesDuDomaine.filter((n) => n.type === 'Fiche').length,
 		signets: notesDuDomaine.filter((n) => n.type === 'Signet').length
 	});
 
-	/* ── Palmarès ───────────────────────────────────────────────────────────── */
+	const actifs = $derived(detail.modules as readonly string[]);
+	/**
+	 * LES TUILES — les clés connues dans l'ordre du produit, PUIS les clés que le
+	 * catalogue ne porte pas. Une clé stockée en base et inconnue ici se nomme par
+	 * elle-même plutôt que de disparaître sans un mot.
+	 */
+	const tuiles = $derived([
+		...CLES_DE_TUILE.filter((c) => actifs.includes(c)),
+		...actifs.filter(
+			(c) =>
+				!CLES_DE_TUILE.includes(c as CleDeModule) && !CLES_DEXPLORATION.includes(c as CleDeModule)
+		)
+	] as readonly string[]);
+	const exploration = $derived(CLES_DEXPLORATION.filter((c) => actifs.includes(c)));
+
+	/* ── Palmarès et fil ────────────────────────────────────────────────────── */
 	const populaires = $derived(
-		[...notesDuDomaine].sort((a, b) => (mesures7j[b.id] ?? 0) - (mesures7j[a.id] ?? 0)).slice(0, 5)
-	);
-	const recentes = $derived(
 		[...notesDuDomaine]
-			.sort((a, b) => (modifications[a.id] ?? 999) - (modifications[b.id] ?? 999))
+			.sort(
+				(a, b) =>
+					(mesures[b.id] ?? 0) - (mesures[a.id] ?? 0) || a.titre.localeCompare(b.titre, 'fr')
+			)
 			.slice(0, 5)
 	);
 
-	function ancienneteDeModification(n: Note): string {
-		const j = modifications[n.id];
-		if (typeof j !== 'number') return '—';
-		if (j <= 0) return "aujourd'hui";
-		return j === 1 ? 'hier' : `il y a ${j} j`;
+	/** Ancienneté en clair — la forme du prototype, « il y a 2 h », « il y a 3 j ». */
+	function relatif(heures: number): string {
+		if (heures < 1) return "à l'instant";
+		if (heures < 24) return `il y a ${String(heures)} h`;
+		const jours = Math.round(heures / 24);
+		if (jours < 31) return `il y a ${String(jours)} j`;
+		const mois = Math.round(jours / 30);
+		return `il y a ${String(mois)} mois`;
 	}
 
-	/* Répartition par type — tri décroissant sur le compte ; à égalité, l'ordre
-	   d'apparition est conservé, le tri du gel étant stable. */
-	const parType = $derived.by<readonly [string, number][]>(() => {
-		const table: Record<string, number> = {};
-		for (const n of notesDuDomaine) table[n.type] = (table[n.type] ?? 0) + 1;
-		return Object.entries(table).sort((a, b) => b[1] - a[1]);
-	});
-	const maxiType = $derived(Math.max(...parType.map(([, v]) => v)));
+	/** Ce que chaque genre d'événement affiche — titre, badge, teinte du disque. */
+	const DESSIN_DEVENEMENT: Readonly<
+		Record<EvenementDuDomaine['genre'], { titre: string; badge: string; classe: string }>
+	> = {
+		verification: { titre: 'Note vérifiée', badge: 'Vérification', classe: 'evt--verification' },
+		modification: { titre: 'Note modifiée', badge: 'Note', classe: 'evt--modification' },
+		creation: { titre: 'Nouvelle note', badge: 'Note', classe: 'evt--creation' },
+		echeance: { titre: 'Échéance atteinte', badge: 'Vivacité', classe: 'evt--echeance' },
+		import: { titre: 'Import terminé', badge: 'Import', classe: 'evt--import' }
+	};
 
-	/* ── Contributeurs ──────────────────────────────────────────────────────── */
-	interface Contributeur {
-		readonly nom: string;
-		readonly initiales: string;
-		readonly notes: number;
-	}
-
-	const contribs = $derived.by<readonly Contributeur[]>(() => {
-		const par: Record<string, number> = {};
-		for (const n of notesDuDomaine) par[n.auteur] = (par[n.auteur] ?? 0) + 1;
-		return Object.entries(par)
-			.map(([nom, c]) => ({
-				nom,
-				initiales: nom
-					.split(' ')
-					.map((m) => m[0])
-					.join('')
-					.slice(0, 2)
-					.toUpperCase(),
-				notes: c
-			}))
-			.sort((a, b) => b.notes - a.notes || a.nom.localeCompare(b.nom, 'fr'));
-	});
-	const maxiContrib = $derived(contribs[0]?.notes ?? 1);
+	/* ── Contributeurs et dernière activité — les statistiques du bandeau ───── */
+	const contributeurs = $derived(new Set(notesDuDomaine.map((n) => n.auteur)).size);
 
 	function nb(x: number): string {
 		return x.toLocaleString('fr-FR');
 	}
 
-	const adresses = adressesParLesNoms(designationsDeCoquille());
+	/**
+	 * L'AVATAR DE L'EN-TÊTE — l'identité RÉELLE, celle du gabarit racine. Hors
+	 * application le contexte est absent, la propriété reprend la main, et sans
+	 * initiales connues l'avatar n'est PAS rendu : une pastille vide n'est pas une
+	 * identité.
+	 */
+	const identiteDeCoquille = getContext<IdentiteDeCoquille | undefined>(CLE_IDENTITE);
+	const compteAffiche = $derived(identiteDeCoquille?.compte ?? compteConnecte);
 
 	/**
-	 * OÙ MÈNE UNE TUILE DE MODULE — et il fallait qu'elle mène quelque part.
+	 * OÙ MÈNE UNE ENTRÉE DE MODULE — et il faut qu'elle mène quelque part.
 	 *
-	 * Les six tuiles de la section « Accès » étaient des boutons INERTES : un geste
-	 * dessiné qui ne faisait rien. La conséquence dépassait l'ornement — la tuile
-	 * « Dossiers » est le seul chemin depuis un domaine vers la page de son dossier
-	 * racine, d'où « Gérer les droits » accorde un accès. Sans elle, aucune adresse
-	 * ouvrable ne menait au geste, et le produit restait mono-utilisateur.
-	 *
-	 * LA RACINE S'ADRESSE PAR LE CHEMIN NU, que le chargeur de V-13 redirige vers sa
-	 * forme nommée : c'est la seule adresse composable sans connaître le nom de la
-	 * racine.
-	 *
-	 * CARTOGRAPHIE ET CARTE MENTALE SONT DES ÉCRANS GLOBAUX : leur périmètre voyage
-	 * en paramètre, sous la forme `type|nom` que leurs chargeurs relisent.
+	 * LA RACINE DES DOSSIERS S'ADRESSE PAR LE CHEMIN NU, que le chargeur de V-13
+	 * redirige vers sa forme nommée : c'est la seule adresse composable sans
+	 * connaître le nom de la racine. CARTOGRAPHIE ET CARTE MENTALE SONT DES ÉCRANS
+	 * GLOBAUX : leur périmètre voyage en paramètre, sous la forme `type|nom` que
+	 * leurs chargeurs relisent.
 	 */
 	function perimetreDuDomaine(nom: string): string {
 		return `?perimetre=${encodeURIComponent('domaine|' + nom)}`;
 	}
 
-	function adresseDeModule(cle: CleDeModule): string {
-		const u = courant.univers;
-		const d = courant.nom;
+	function adresseDeModule(cle: string): string {
 		switch (cle) {
 			case 'notes':
-				return adresses.notes(u, d);
+				return adressesDuDomaine.notes;
 			case 'dossiers':
-				return adresses.dossier(u, d, []);
-			/* Les fiches sont les notes de type « Fiche » : le compteur de la tuile les
-			   compte ainsi, et la liste de V-12 sait retenir cette facette. */
+				return adressesDuDomaine.dossiers;
 			case 'fiches':
-				return `${adresses.notes(u, d)}?type=Fiche`;
+				return adressesDuDomaine.fiches;
 			case 'signets':
-				return adresses.signets(u, d);
+				return adressesDuDomaine.signets;
 			case 'cartographie':
-				return `/cartographie${perimetreDuDomaine(d)}`;
+				return `/cartographie${perimetreDuDomaine(courant.nom)}`;
 			case 'carteMentale':
-				return `/carte-mentale${perimetreDuDomaine(d)}`;
+				return `/carte-mentale${perimetreDuDomaine(courant.nom)}`;
 			default:
 				/* Une clé stockée que le catalogue ne porte pas — même repli que
 				   `libelleDeModule()` : la page du domaine, jamais un lien mort. */
-				return adresses.domaine(u, d);
+				return adressesDuDomaine.domaine;
 		}
 	}
+
+	/** L'éditeur, pré-réglé sur ce domaine. */
+	const adresseDeLaNouvelleNote = $derived(
+		`/notes/nouvelle?domaine=${encodeURIComponent(courant.nom)}`
+	);
+	const adresseDesNotes = $derived(adressesDuDomaine.notes);
 </script>
 
 <!-- `svelte/no-navigation-without-resolve` EST DÉSACTIVÉE POUR LE BALISAGE DE
 	CETTE VUE : ses adresses sont COMPOSÉES par `$lib/rangement/adresses.ts`, la
 	fabrique unique du rangement, que la règle ne sait pas suivre. -->
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
-<!-- Le témoin de fraîcheur — une seule fabrique, pour qu'il ne diverge pas. -->
-{#snippet temoin(n: Note)}
-	<span class="temoin {classeTemoin(n.fraicheur)}"
-		><span class="temoin__jauge" aria-hidden="true"
-			>{#each [0, 1, 2] as rang (rang)}<i
-					class={rang < barresFraicheur(n.fraicheur) ? 'plein' : undefined}
-				></i>{/each}</span
-		><span class="temoin__txt">{libelleFraicheur(n)}</span></span
+
+<!-- Le chevron d'une ligne cliquable — un seul dessin, partout. -->
+{#snippet chevron()}
+	<svg
+		class="chevron"
+		width="16"
+		height="16"
+		viewBox="0 0 16 16"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="1.5"
+		aria-hidden="true"><path d="M6 3l5 5-5 5" /></svg
 	>
 {/snippet}
 
-<!-- Une ligne de palmarès : rang facultatif, titre, témoin, mesure. -->
-{#snippet ligneNote(n: Note, rang: number | null, mesure: string)}
-	<a class="ligne-note" href={adresseDeNote(n.id)}
-		>{#if rang !== null}<span class="ligne-note__rang">{String(rang).padStart(2, '0')}</span
-			>{/if}<span class="ligne-note__corps"
-			><span class="ligne-note__titre">{n.titre}</span><span class="ligne-note__sous"
-				>{@render temoin(n)}</span
-			></span
-		><span class="ligne-note__n">{mesure}</span></a
+<!-- Le pictogramme d'un module, par sa clé. Une clé inconnue rend le dessin de note. -->
+{#snippet pictogramme(cle: string)}
+	<svg
+		width="20"
+		height="20"
+		viewBox="0 0 16 16"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="1.3"
+		aria-hidden="true"
+		>{#if cle === 'dossiers'}<path
+				d="M1.5 4.5h4l1.5 1.5h7.5v7.5h-13zM1.5 8h13"
+			/>{:else if cle === 'fiches'}<path
+				d="M2 3h12v10H2zM2 6.5h12M6 6.5V13"
+			/>{:else if cle === 'signets'}<path
+				d="M4 2h8v12l-4-3-4 3z"
+			/>{:else if cle === 'cartographie'}<circle cx="4" cy="4" r="2" /><circle
+				cx="12"
+				cy="6"
+				r="2"
+			/><circle cx="7" cy="12" r="2" /><path
+				d="M5.8 4.6l4.4 1M5.4 5.7l1.2 4.4"
+			/>{:else if cle === 'carteMentale'}<circle cx="3.5" cy="8" r="1.8" /><rect
+				x="9.5"
+				y="2"
+				width="5"
+				height="3.4"
+				rx="1"
+			/><rect x="9.5" y="10.6" width="5" height="3.4" rx="1" /><path
+				d="M5.3 8h2.2V3.7h2M7.5 8v4.3h2"
+			/>{:else}<path d="M4 2.5h6l2.5 2.5v8.5H4zM6 8h4M6 10.5h4" />{/if}</svg
 	>
 {/snippet}
 
 <Coquille
-	forme="abregee"
 	classeContenu="domaine"
 	fil={['Accueil', courant.univers, courant.nom]}
 	courant={railCourant}
@@ -371,251 +434,373 @@
 	compte={compteConnecte ?? COMPTE_VIDE}
 	version=""
 >
+	{#snippet actionsDEntete()}
+		{#if ecriture}<a class="btn si-ecriture" href={adresseDeLaNouvelleNote}
+				><svg
+					width="14"
+					height="14"
+					viewBox="0 0 16 16"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.8"
+					aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg
+				>Créer</a
+			>{/if}{#if compteAffiche !== null && compteAffiche.initiales !== ''}<a
+				class="avatar-entete"
+				href="/mon-profil"
+				title={compteAffiche.nom}
+				aria-label={compteAffiche.nom + ' — mon profil'}>{compteAffiche.initiales}</a
+			>{/if}
+	{/snippet}
+
 	{#snippet enfants()}
-		<header class="couv" id="couv" style="--teinte:{courant.couleur}">
-			<div class="couv__corps">
-				<div class="couv__sur">
-					<span class="couv__puce"></span>
-					<span class="etiq" id="univers-lien">{courant.univers}</span>
+		<!-- ═══ 1. LE BANDEAU ═══════════════════════════════════════════════ -->
+		<header class="bandeau" id="couv">
+			<div class="bandeau__haut">
+				<div class="bandeau__corps">
+					<span class="etiq">Domaine</span>
+					<h1 class="bandeau__nom" id="titre">{courant.nom}</h1>
+					<p class="bandeau__phrase" id="description">
+						{'Le domaine ' + courant.nom + " de l'Univers "}<b>{courant.univers}</b>{'. ' +
+							detail.description}
+					</p>
+					<ul class="stats">
+						<li class="stat">
+							<svg
+								width="16"
+								height="16"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.3"
+								aria-hidden="true"><path d="M4 2.5h6l2.5 2.5v8.5H4zM6 8h4M6 10.5h4" /></svg
+							><b>{nb(notesDuDomaine.length)}</b><span>{accord(notesDuDomaine.length, 'note')}</span
+							>
+						</li>
+						<li class="stat">
+							<svg
+								width="16"
+								height="16"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.3"
+								aria-hidden="true"
+								><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2.5 14.5a5.5 5.5 0 0 1 11 0" /></svg
+							><b>{nb(contributeurs)}</b><span>{accord(contributeurs, 'contributeur')}</span>
+						</li>
+						<li class="stat">
+							<svg
+								width="16"
+								height="16"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.3"
+								aria-hidden="true"
+								><path d="M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12zM8 4.5V8l2.5 1.5" /></svg
+							><b>{derniereActiviteHeures === null ? '—' : relatif(derniereActiviteHeures)}</b><span
+								>dernière activité</span
+							>
+						</li>
+					</ul>
 				</div>
-				<h1 id="titre">{courant.nom}</h1>
-				<p id="description">{detail.description}</p>
-			</div>
-			<div class="couv__actions">
-				<!-- P-09 · ARB-040 — omises, jamais masquées. `V-11:1105`, `:1109`, `:1110` -->
-				{#if ecriture}<button class="btn btn--principal si-ecriture" id="a-creer">
-						<svg
-							width="14"
-							height="14"
-							viewBox="0 0 16 16"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.8"><path d="M8 3v10M3 8h10" /></svg
+
+				<div class="bandeau__actions">
+					<!-- P-09 · ARB-040 — omises, jamais masquées ni grisées. -->
+					{#if ecriture}<a
+							class="btn btn--principal si-ecriture"
+							id="a-creer"
+							href={adresseDeLaNouvelleNote}
+							><svg
+								width="14"
+								height="14"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.8"
+								aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg
+							>Nouvelle note</a
 						>
-						Nouvelle note
-					</button>
-					<button class="btn si-ecriture" id="a-importer">Importer ici</button>{/if}
-				{#if admin}<button class="btn si-admin" id="a-exporter">Exporter</button>{/if}
+						<a class="btn si-ecriture" id="a-importer" href="/importer">Importer</a>{/if}
+					{#if admin}<a class="btn si-admin" id="a-exporter" href="/console/exports">Exporter</a
+						>{/if}
+					<!--
+						LE MENU EST UN `details`, ET C'EST DÉLIBÉRÉ : il s'ouvre, se ferme et se
+						parcourt au clavier sans une ligne de script. Un menu câblé après
+						hydratation reste mort pour un navigateur qui n'exécute rien.
+					-->
+					<details class="menu-dom">
+						<summary class="btn menu-dom__bouton" aria-label="Autres actions du domaine"
+							><svg
+								width="16"
+								height="16"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								aria-hidden="true"
+								><circle cx="3" cy="8" r="1.4" /><circle cx="8" cy="8" r="1.4" /><circle
+									cx="13"
+									cy="8"
+									r="1.4"
+								/></svg
+							></summary
+						>
+						<div class="menu-dom__liste">
+							<a class="menu-dom__lien" href={adresseDesNotes}>Voir toutes les notes</a>
+							{#if exploration.includes('cartographie')}<a
+									class="menu-dom__lien"
+									href={adresseDeModule('cartographie')}>Cartographie du domaine</a
+								>{/if}
+							{#if admin}<a class="menu-dom__lien si-admin" href="/console/domaines"
+									>Modifier le domaine</a
+								>{/if}
+						</div>
+					</details>
+				</div>
+			</div>
+
+			<!-- LA BANDE DE COMPTEURS — un état non nul, un compteur. -->
+			<div class="bande" id="vivacites">
+				{#if compteursPresents.length === 0}
+					<span class="bande__vide"
+						>{vide ? 'Aucune note à mesurer.' : 'Aucun état de vivacité mesuré.'}</span
+					>
+				{:else}
+					{#each compteursPresents as c (c.etat)}
+						<span class="bande__cellule"
+							><GlypheDeVivacite etat={c.etat} taille={14} /><b class="bande__n">{nb(c.n)}</b><span
+								class="bande__lib">{c.description.libelle}</span
+							></span
+						>
+					{/each}
+				{/if}
+				<span class="bande__total"
+					><b>{nb(notesDuDomaine.length)}</b>{' ' +
+						accord(notesDuDomaine.length, 'note au total', 'notes au total')}</span
+				>
 			</div>
 		</header>
 
-		<section class="sante" id="sante" aria-label="Santé du domaine">
-			<div class="mesure mesure--fraicheur">
-				<span class="mesure__nom etiq">Fraîcheur du domaine</span>
-				<div class="total-notes">
-					<b>{nb(notesDuDomaine.length)}</b>{accord(notesDuDomaine.length, 'note')}
+		<!-- ═══ 2. CONTENU DU DOMAINE · À SURVEILLER ════════════════════════ -->
+		<div class="grille-dom">
+			<section class="carte" id="modules">
+				<div class="carte__tete"><span class="etiq">Contenu du domaine</span></div>
+				<div class="carte__corps">
+					{#if tuiles.length === 0}
+						<p class="vide-txt">
+							Aucun module n'est activé sur ce domaine. Ils s'activent depuis la console, sur la
+							fiche du domaine.
+						</p>
+					{:else}
+						<div class="tuiles">
+							{#each tuiles as m (m)}
+								<a class="module tuile" href={adresseDeModule(m)}>
+									<span class="tuile__tete"
+										><span class="tuile__ic">{@render pictogramme(m)}</span><span
+											class="module__nom">{libelleDeModule(modules, m).nom}</span
+										></span
+									>
+									<span class="module__n tuile__n"
+										>{typeof comptes[m as CleDeModule] === 'number'
+											? nb(comptes[m as CleDeModule] ?? 0)
+											: '—'}</span
+									>
+									<span
+										class="tuile__barre"
+										data-plein={(comptes[m as CleDeModule] ?? 0) > 0 ? 'oui' : 'non'}
+									></span>
+								</a>
+							{/each}
+						</div>
+					{/if}
+
+					{#if exploration.length > 0}
+						<div class="explorer">
+							<span class="etiq">Explorer</span>
+							<div class="explorer__grille">
+								{#each exploration as m (m)}
+									<a class="module explo" href={adresseDeModule(m)}
+										><span class="explo__ic">{@render pictogramme(m)}</span><span
+											class="explo__corps"
+											><span class="module__nom">{libelleDeModule(modules, m).nom}</span><span
+												class="explo__sous">{libelleDeModule(modules, m).sous}</span
+											></span
+										>{@render chevron()}</a
+									>
+								{/each}
+							</div>
+						</div>
+					{/if}
 				</div>
-				{#if notesDuDomaine.length === 0}<div class="zone-etat__txt" style="margin:0">
-						Aucune note à mesurer.
-					</div>
-				{:else}<div class="repart" role="img" aria-label={resumeRepartition(notesDuDomaine)}>
-						{#each partsPresentes(notesDuDomaine) as p (p.cle)}<button
-								type="button"
-								class={p.classe}
-								style="flex:{compte(notesDuDomaine, p.cle)}"
-								title={libellePart(p, notesDuDomaine, courant.nom)}
-								aria-label={libellePart(p, notesDuDomaine, courant.nom)}
-							></button>{/each}
-					</div>
-					<div class="legende">
-						{#each partsPresentes(notesDuDomaine) as p (p.cle)}<span
-								><i class={p.classe}></i><b>{compte(notesDuDomaine, p.cle)}</b>
-								{accord(compte(notesDuDomaine, p.cle), p.singulier)}</span
-							>{/each}
-					</div>{/if}
-			</div>
-			<div class="mesure{jamais > 0 ? ' mesure--appel' : ''}{jamais === 0 ? ' mesure--nulle' : ''}">
-				<!-- prettier-ignore -->
-				<button class="mesure__lien" type="button"><span class="mesure__nom etiq">Jamais vérifiées</span><div class="mesure__val">{nb(jamais)}</div><span class="mesure__sous">{jamais ? 'Aucune date de contrôle' : 'Toutes ont été contrôlées au moins une fois'}</span></button>
-			</div>
-			<div
-				class="mesure{revisions > 0 ? ' mesure--appel' : ''}{revisions === 0
-					? ' mesure--nulle'
-					: ''}"
-			>
-				<!-- prettier-ignore -->
-				<button class="mesure__lien" type="button"><span class="mesure__nom etiq">En attente de révision</span><div class="mesure__val">{nb(revisions)}</div><span class="mesure__sous">{revisions ? 'Signalées par des collègues' : 'Rien de signalé'}</span></button>
-			</div>
-			<div class="mesure{brouillons === 0 ? ' mesure--nulle' : ''}">
-				<!-- prettier-ignore -->
-				<button class="mesure__lien" type="button"><span class="mesure__nom etiq">Brouillons</span><div class="mesure__val">{nb(brouillons)}</div><span class="mesure__sous">{brouillons ? 'Non visibles du public' : 'Rien en attente de publication'}</span></button>
-			</div>
-		</section>
+			</section>
 
-		<div class="si-vide">
-			<div class="amorce">
-				<h2>Ce domaine ne contient aucune note</h2>
-				<p>
-					L'espace existe, il attend son contenu. Le plus rapide reste de reprendre ce qui est déjà
-					écrit ailleurs plutôt que de repartir d'une page blanche.
-				</p>
-				<div class="amorce__actions">
-					<!-- P-09 · ARB-040 — omises, jamais masquées. `V-11:1123`, `:1124` -->
-					{#if ecriture}<button class="btn btn--principal si-ecriture" id="v-importer"
-							>Importer dans ce domaine</button
-						>
-						<button class="btn si-ecriture" id="v-creer">Créer la première note</button>{/if}
-				</div>
-			</div>
-		</div>
-
-		<!--
-			L'ACCÈS AUX MODULES EST RENDU QUEL QUE SOIT L'ÉTAT — ÉCART ASSUMÉ AU GEL, qui
-			masque le bloc entier sur un domaine sans note
-			(`mockups/V-11-page-domaine.html:882`). Dans une maquette le masquage ne
-			coûtait rien ; dans le produit il fermait le SEUL chemin vers la racine des
-			dossiers — donc vers le seul geste qui crée un dossier —, et un domaine neuf
-			n'a par définition aucune note. Il frappait aussi un lecteur au périmètre
-			étroit sur un domaine peuplé : `etat` se décide sur les notes LISIBLES.
-			LA LIGNE DE PARTAGE : « Accès » offre des ENTRÉES, rendues toujours ; les
-			quatre panneaux qui suivent sont des MESURES de notes, et une mesure sans note
-			n'a rien à dire — ils restent dans `.si-peuple`.
-		-->
-		<div class="section-titre">
-			<h2>Accès</h2>
-			<span class="etiq" id="n-modules"
-				>{detail.modules.length}
-				{accord(detail.modules.length, 'module activé', 'modules activés')}</span
-			>
-		</div>
-		<section class="modules" id="modules">
-			{#each detail.modules as m (m)}
-				<a class="module" href={adresseDeModule(m)}
-					><span class="module__ic"
-						>{#if m === 'notes'}<svg
-								width="16"
-								height="16"
-								viewBox="0 0 16 16"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.4"
-								><path
-									d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5L9 1.5zM9 1.5v4h4"
-								/></svg
-							>{:else if m === 'dossiers'}<svg
-								width="16"
-								height="16"
-								viewBox="0 0 16 16"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.4"
-								><path
-									d="M1.5 4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4z"
-								/></svg
-							>{:else if m === 'fiches'}<svg
-								width="16"
-								height="16"
-								viewBox="0 0 16 16"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.4"
-								><rect x="2" y="3" width="12" height="10" rx="1.4" /><path
-									d="M2 6h12M5.5 9h5"
-								/></svg
-							>{:else if m === 'cartographie'}<svg
-								width="16"
-								height="16"
-								viewBox="0 0 16 16"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.4"
-								><circle cx="4" cy="4" r="2" /><circle cx="12" cy="6" r="2" /><circle
-									cx="7"
-									cy="12"
-									r="2"
-								/><path d="M5.8 4.6l4.4 1M5.4 5.7l1.2 4.4" /></svg
-							>{:else if m === 'signets'}<svg
-								width="16"
-								height="16"
-								viewBox="0 0 16 16"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.4"><path d="M4 2.5h8v11l-4-3-4 3v-11z" /></svg
-							>{:else}<svg
-								width="16"
-								height="16"
-								viewBox="0 0 16 16"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.4"
-								><circle cx="3.5" cy="8" r="1.8" /><rect
-									x="9.5"
-									y="2"
-									width="5"
-									height="3.4"
-									rx="1"
-								/><rect x="9.5" y="10.6" width="5" height="3.4" rx="1" /><path
-									d="M5.3 8h2.2V3.7h2M7.5 8v4.3h2"
-								/></svg
-							>{/if}</span
-					><span class="module__corps"
-						><span class="module__nom"
-							>{libelleDeModule(modules, m).nom}{#if typeof comptes[m] === 'number'}<span
-									class="module__n">{comptes[m]}</span
-								>{/if}</span
-						><span class="module__sous">{libelleDeModule(modules, m).sous}</span></span
-					></a
-				>
-			{/each}
-		</section>
-
-		<div class="si-peuple">
-			<div class="grille-dom" style="margin-top:var(--e-6)">
-				<div class="colonne">
-					<section class="panneau">
-						<div class="panneau__tete">
-							<span class="etiq">Notes les plus consultées</span><span class="etiq">7 jours</span>
-						</div>
-						<div class="panneau__corps panneau__corps--serre" id="populaires">
-							{#if !vide}{#each populaires as n, rang (n.id)}{@render ligneNote(
-										n,
-										rang + 1,
-										`${mesures7j[n.id] ?? 0} ${accord(mesures7j[n.id] ?? 0, 'vue')}`
-									)}{/each}{/if}
-						</div>
-					</section>
-
-					<section class="panneau">
-						<div class="panneau__tete"><span class="etiq">Notes récemment modifiées</span></div>
-						<div class="panneau__corps panneau__corps--serre" id="recentes">
-							{#if !vide}{#each recentes as n (n.id)}{@render ligneNote(
-										n,
-										null,
-										ancienneteDeModification(n)
-									)}{/each}{/if}
-						</div>
-					</section>
-				</div>
-
-				<div class="colonne">
-					<section class="panneau">
-						<div class="panneau__tete"><span class="etiq">Répartition par type</span></div>
-						<div class="panneau__corps" id="types">
-							{#if !vide}
-								<div class="types">
-									{#each parType as [type, n] (type)}<button class="type-ligne" type="button"
-											><span class="type-ligne__nom">{type}</span><span class="type-ligne__barre"
-												><i style="width:{Math.round((n / maxiType) * 100)}%"></i></span
-											><span class="type-ligne__n">{n}</span></button
-										>{/each}
-								</div>
-							{/if}
-						</div>
-					</section>
-
-					<section class="panneau">
-						<div class="panneau__tete">
-							<span class="etiq">Contributeurs</span><span class="chiffre" id="n-contribs"
-								>{#if !vide}{contribs.length}{/if}</span
+			<section class="carte" id="surveiller">
+				<div class="carte__tete"><span class="etiq">À surveiller</span></div>
+				<div class="carte__corps">
+					{#if alertes.length === 0}
+						<div class="calme">
+							<span class="calme__marque" aria-hidden="true"
+								><svg
+									width="16"
+									height="16"
+									viewBox="0 0 16 16"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.8"><path d="M3 8.5l3.5 3.5L13 4.5" /></svg
+								></span
 							>
+							<div class="calme__corps">
+								<span class="calme__titre">Rien à surveiller</span>
+								<span class="calme__sous"
+									>{vide
+										? 'Ce domaine ne contient encore aucune note.'
+										: 'Toutes les notes du domaine sont à jour.'}</span
+								>
+							</div>
 						</div>
-						<div class="panneau__corps" id="contribs">
-							<!-- prettier-ignore -->
-							{#if !vide}{#each contribs as c, rang (rang)}<button class="contrib" type="button"><span class="contrib__av">{c.initiales}</span><span class="contrib__nom">{c.nom}</span><span class="contrib__part"><span class="contrib__barre"><i style="width:{Math.round((c.notes / maxiContrib) * 100)}%"></i></span><span class="contrib__n">{c.notes + ' ' + accord(c.notes, 'note')}</span></span></button>{/each}{/if}
-						</div>
-					</section>
+						{#if vide && ecriture}<a class="lien-tout si-ecriture" href={adresseDeLaNouvelleNote}
+								>→ Créer la première note</a
+							>{/if}
+					{:else}
+						{#each alertes as a (a.etat)}
+							<a class="alerte" href={adresseDesNotes}
+								><span class="alerte__pastille alerte__pastille--{a.etat}"
+									><GlypheDeVivacite etat={a.etat} taille={18} /></span
+								><span class="alerte__corps"
+									><span class="alerte__titre"
+										><b class="alerte__n alerte__n--{a.etat}">{nb(a.n)}</b>{' ' + a.titre}</span
+									><span class="alerte__detail">{a.detail}</span></span
+								>{@render chevron()}</a
+							>
+						{/each}
+						<a class="lien-tout" href={adresseDesNotes}>→ Voir toutes les notes à surveiller</a>
+					{/if}
 				</div>
-			</div>
+			</section>
+		</div>
+
+		<!-- ═══ 3. NOTES LES PLUS CONSULTÉES · ACTIVITÉ RÉCENTE ═════════════ -->
+		<div class="grille-dom">
+			<section class="carte" id="populaires">
+				<div class="carte__tete">
+					<span class="etiq">Notes les plus consultées</span>
+					<!--
+						LE SÉLECTEUR EST UNE ADRESSE : le formulaire remet la page avec sa
+						fenêtre, et le chargeur mesure celle-là. Sans script, le bouton
+						« Appliquer » le soumet ; avec, `cablage.ts` le fait au changement.
+					-->
+					<form class="filtre" method="get" data-filtre>
+						<input type="hidden" name="evenements" value={filtreDActivite} />
+						<select class="filtre__choix" name="vues" aria-label="Fenêtre de consultation">
+							<option value="7" selected={fenetreDeConsultation === 7}>7 jours</option>
+							<option value="30" selected={fenetreDeConsultation === 30}>30 jours</option>
+						</select>
+						<button class="filtre__ok" type="submit">Appliquer</button>
+					</form>
+				</div>
+				<div class="carte__corps carte__corps--liste">
+					{#if populaires.length === 0}
+						<p class="vide-txt">
+							Aucune note dans ce domaine — rien à consulter, donc rien à classer.
+						</p>
+						{#if ecriture}<a class="lien-tout si-ecriture" href={adresseDeLaNouvelleNote}
+								>→ Créer la première note</a
+							>{/if}
+					{:else}
+						{#each populaires as n, rang (n.id)}
+							<a class="ligne-note" href={adresseDeNote(n.id)}
+								><span class="ligne-note__rang">{String(rang + 1).padStart(2, '0')}</span><span
+									class="ligne-note__corps"
+									><span class="ligne-note__titre">{n.titre}</span><span class="ligne-note__sous"
+										>{#if etatDe(n) !== undefined}<GlypheDeVivacite
+												etat={etatDe(n) ?? 'ajour'}
+												taille={12}
+											/><span class="ligne-note__etat ligne-note__etat--{etatDe(n) ?? 'ajour'}"
+												>{ETATS_DE_VIVACITE[etatDe(n) ?? 'ajour'].libelle}</span
+											>{:else}<span class="ligne-note__etat">Vivacité non mesurée</span>{/if}</span
+									></span
+								><span class="ligne-note__n"
+									>{nb(mesures[n.id] ?? 0) + ' ' + accord(mesures[n.id] ?? 0, 'vue')}</span
+								></a
+							>
+						{/each}
+					{/if}
+				</div>
+			</section>
+
+			<section class="carte" id="activite">
+				<div class="carte__tete">
+					<span class="etiq">Activité récente</span>
+					<form class="filtre" method="get" data-filtre>
+						<input type="hidden" name="vues" value={String(fenetreDeConsultation)} />
+						<select class="filtre__choix" name="evenements" aria-label="Genre d'événement">
+							<option value="tous" selected={filtreDActivite === 'tous'}>Tous les événements</option
+							>
+							<option value="verification" selected={filtreDActivite === 'verification'}
+								>Vérifications</option
+							>
+							<option value="note" selected={filtreDActivite === 'note'}>Notes</option>
+							<option value="vivacite" selected={filtreDActivite === 'vivacite'}>Vivacité</option>
+							<option value="import" selected={filtreDActivite === 'import'}>Imports</option>
+						</select>
+						<button class="filtre__ok" type="submit">Appliquer</button>
+					</form>
+				</div>
+				<div class="carte__corps carte__corps--liste">
+					{#if activite.length === 0}
+						<p class="vide-txt">
+							{filtreDActivite === 'tous'
+								? 'Rien ne s’est encore passé dans ce domaine.'
+								: 'Aucun événement de ce genre dans ce domaine.'}
+						</p>
+						{#if filtreDActivite === 'tous' && ecriture}<a
+								class="lien-tout si-ecriture"
+								href={adresseDeLaNouvelleNote}>→ Créer la première note</a
+							>{/if}
+					{:else}
+						<ol class="fil-evt">
+							{#each activite as e, rang (String(rang) + e.genre + e.objet)}
+								<li class="evt {DESSIN_DEVENEMENT[e.genre].classe}">
+									<span class="evt__disque" aria-hidden="true"
+										><svg
+											width="12"
+											height="12"
+											viewBox="0 0 16 16"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											>{#if e.genre === 'verification'}<path
+													d="M3 8.5l3.5 3.5L13 4.5"
+												/>{:else if e.genre === 'modification'}<path
+													d="M11 2.5l2.5 2.5L5 13.5H2.5V11z"
+												/>{:else if e.genre === 'creation'}<path
+													d="M8 3v10M3 8h10"
+												/>{:else if e.genre === 'echeance'}<path d="M8 3.5V8l3 2" />{:else}<path
+													d="M8 2v8M5 7l3 3 3-3M2.5 13h11"
+												/>{/if}</svg
+										></span
+									>
+									<span class="evt__corps"
+										><span class="evt__titre"
+											><b>{DESSIN_DEVENEMENT[e.genre].titre}</b><span
+												class="evt__tiret"
+												aria-hidden="true">—</span
+											>{#if e.note !== null}<a class="evt__objet" href={adresseDeNote(e.note)}
+													>{e.objet}</a
+												>{:else}{e.objet}{/if}</span
+										><span class="evt__meta"
+											>{(e.par === '' ? 'automatique' : 'par ' + e.par) +
+												' · ' +
+												relatif(e.heures)}</span
+										></span
+									>
+									<span class="evt__badge">{DESSIN_DEVENEMENT[e.genre].badge}</span>
+								</li>
+							{/each}
+						</ol>
+					{/if}
+				</div>
+			</section>
 		</div>
 	{/snippet}
 </Coquille>
