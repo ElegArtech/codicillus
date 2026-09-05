@@ -198,11 +198,6 @@
   font-size: var(--t-meta); font-weight: var(--g-moyen);
   white-space: nowrap; flex: none;
 }
-.ligne-vivacite__etat.glyphe--ajour     { color: var(--c-ajour); }
-.ligne-vivacite__etat.glyphe--bientot   { color: var(--c-bientot); }
-.ligne-vivacite__etat.glyphe--averifier { color: var(--c-averifier); }
-.ligne-vivacite__etat.glyphe--arevoir   { color: var(--c-arevoir); }
-.ligne-vivacite__etat.glyphe--obsolete  { color: var(--c-obsolete); }
 
 /* --------------------------------------------------------------------------
    5. VOS UNIVERS — un tableau
@@ -255,11 +250,6 @@
   display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--f-donnee); font-size: var(--t-petit);
 }
-.rail-compact.glyphe--ajour     { color: var(--c-ajour); }
-.rail-compact.glyphe--bientot   { color: var(--c-bientot); }
-.rail-compact.glyphe--averifier { color: var(--c-averifier); }
-.rail-compact.glyphe--arevoir   { color: var(--c-arevoir); }
-.rail-compact.glyphe--obsolete  { color: var(--c-obsolete); }
 .rail-compact__n { color: var(--c-encre); }
 /* UN ZÉRO NE CRIE PAS : le glyphe s'efface et le chiffre passe au gris, de
    sorte que la ligne se lise d'un coup d'œil sur les états PRÉSENTS. */
