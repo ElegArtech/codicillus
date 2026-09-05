@@ -1,17 +1,20 @@
 /**
  * LES ACCORDS QUI RESTAIENT — ET L'APOSTROPHE DES DEUX JUMEAUX.
  *
- * CE QUE CE FICHIER FERME. Cinq nœuds servaient une phrase fausse dès qu'un
- * compte valait un, et un sixième servait la même phrase sous deux apostrophes
+ * CE QUE CE FICHIER FERME. Quatre nœuds servaient une phrase fausse dès qu'un
+ * compte valait un, et un cinquième servait la même phrase sous deux apostrophes
  * différentes selon qu'elle venait de la vue ou du serveur :
  *
  *   `V-34`  « 1 contributeurs actifs », « 1 notes au total », et un
  *           « consultations sur 7 jours » figé au pluriel ;
- *   `V-10`  « 0 brouillon(s) » ;
  *   `V-15`  « il y a 1 an(s) » ;
  *   `V-33` / `donnees/administration.ts` — `En l'état` d'un côté, `En l’état`
  *           de l'autre : le MÊME nœud, `#erreur-vieil-txt`, changeait de
  *           caractère entre l'aperçu immédiat et le retour d'« Enregistrer ».
+ *
+ * LE CAS DE V-10 EST PARTI AVEC SON NŒUD : la refonte de la page d'un univers ne
+ * compte plus les brouillons, et `src/vues/V-10.test.ts` éprouve les accords de
+ * l'écran qui l'a remplacée.
  *
  * C'EST LA VALEUR 1 QUI PORTAIT LA FAUTE, et chaque cas la joue — avec 0 et 2
  * de part et d'autre, sans quoi un `+s` inconditionnel resterait vert d'un
@@ -28,14 +31,12 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
 import {
 	CONFIG,
-	UNIVERS,
 	corpusPourVue,
 	type Configuration,
 	type Note,
 	type RequeteDeRecherche,
 	type Version
 } from '../../seeds/corpus';
-import { CATALOGUE_DE_MODULES } from '../lib/rangement/modules';
 import { messageSeuilNonCroissant } from '../lib/donnees/administration';
 import type { LectureAffichee } from '../lib/lecture/note-de-demonstration';
 
@@ -149,57 +150,6 @@ describe('V-34 — les lignes d’adoption s’accordent, parce qu’elles sont 
 		expect(await adoption({ notes: [UNE], recherches: journal(2) })).toContain(
 			'2 recherches sur 30 jours'
 		);
-	});
-});
-
-/* ── V-10 — le compte de brouillons de l'univers ─────────────────────────── */
-
-describe('V-10 — le compte de brouillons ne porte plus de parenthèse', () => {
-	const UN_UNIVERS = UNIVERS[0];
-	if (UN_UNIVERS === undefined) throw new Error('seeds/corpus.ts : « UNIVERS » est vide');
-
-	const [P10, S10] = corpusPourVue('V-10');
-	if (P10 === undefined || S10 === undefined)
-		throw new Error('seeds/corpus.ts : « V-10 » ne sert plus deux notes');
-
-	/** Deux notes rattachées à l'univers rendu, dont on décide le statut. */
-	const brouillon = (modele: Note, oui: boolean): Note => ({
-		...modele,
-		univers: UN_UNIVERS.nom,
-		brouillon: oui
-	});
-
-	function rendu10(notes: readonly Note[]): Promise<string> {
-		return rendreLaVue('V-10', {
-			vecteur: null,
-			notes,
-			univers: [UN_UNIVERS],
-			domaines: [],
-			detailDomaines: {},
-			activite: [],
-			modules: CATALOGUE_DE_MODULES
-		});
-	}
-
-	/**
-	 * L'ÉCART DE MAQUETTE EST ASSUMÉ, ET C'EST ICI QU'IL SE MESURE.
-	 * `mockups/V-10:1864` fige « brouillon(s) » ; deux parenthèses recopiées ne
-	 * valent pas une phrase fausse à 1, et la parenthèse est exactement le repli
-	 * qu'`accord()` existe pour supprimer.
-	 */
-	it('accorde le compte, à zéro, à un et à deux', async () => {
-		const aucun = await rendu10([brouillon(P10, false)]);
-		expect(aucun).toContain('<span class="mesure__sous">0 brouillon</span>');
-
-		const un = await rendu10([brouillon(P10, true), brouillon(S10, false)]);
-		expect(un).toContain('<span class="mesure__sous">1 brouillon</span>');
-
-		const deux = await rendu10([brouillon(P10, true), brouillon(S10, true)]);
-		expect(deux).toContain('<span class="mesure__sous">2 brouillons</span>');
-	});
-
-	it('ne sert plus la parenthèse du repli', async () => {
-		expect(await rendu10([brouillon(P10, true)])).not.toContain('brouillon(s)');
 	});
 });
 
