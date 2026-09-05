@@ -83,6 +83,7 @@ import {
 	fraicheurAttendueDOrganisation,
 	universDOrganisation
 } from './semence-organisation';
+import type { Registre } from '../donnees/note';
 
 /** Le dossier des migrations, relatif à la racine du dépôt. */
 export const DOSSIER_DES_MIGRATIONS = 'base/migrations';
@@ -555,6 +556,7 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 					corpsReferenceModifieLe: n.modifieLe,
 					corpsOperationnelModifieLe: n.corpsOperationnelModifieLe,
 					verifieLe: n.verifieLe,
+					verifieLeOperationnel: n.verifieLeOperationnel,
 					compteurDeConsultations: n.compteurDeConsultations,
 					revisionDemandee: n.revisionDemandee,
 					revisionCommentaire: n.revisionCommentaire,
@@ -563,6 +565,11 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 							? null
 							: exigerDefini(compteParNom.get(n.revisionParNom), `compte ${n.revisionParNom}`),
 					revisionLe: n.revisionLe,
+					/* `014` — la demande VISE un registre, et `notes_revision_coherente`
+					   l'exige dès qu'elle existe. Le corpus n'en nomme aucun : les trois
+					   demandes du jeu portaient sur la note entière, c'est-à-dire sur sa
+					   Référence. */
+					revisionRegistre: n.revisionDemandee ? ('reference' as const) : null,
 					signetAdresse: n.signetAdresse,
 					signetAjouteLe: n.signetAjouteLe
 				}))
@@ -628,15 +635,22 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 		   VÉRIFICATEUR n'est nulle part dans les maquettes — la colonne reste
 		   nulle plutôt que de désigner quelqu'un au hasard. */
 		const lignesVerification = lignesNote.flatMap((n) => {
-			const le = n.verifieLe;
-			if (le === null) return [];
-			return [
-				{
-					noteId: exigerDefini(noteParIdentifiant.get(n.identifiant), `note ${n.identifiant}`),
+			const noteId = exigerDefini(noteParIdentifiant.get(n.identifiant), `note ${n.identifiant}`);
+			/* UNE ENTRÉE PAR REGISTRE VÉRIFIÉ — `014`. Les deux cycles ont chacun leur
+			   histoire, et une entrée sans registre les mêlerait de nouveau. */
+			const lignes: { noteId: string; compteId: null; registre: Registre; le: Date }[] = [];
+			if (n.verifieLe !== null) {
+				lignes.push({ noteId, compteId: null, registre: 'reference', le: n.verifieLe });
+			}
+			if (n.verifieLeOperationnel !== null) {
+				lignes.push({
+					noteId,
 					compteId: null,
-					le
-				}
-			];
+					registre: 'operationnel',
+					le: n.verifieLeOperationnel
+				});
+			}
+			return lignes;
 		});
 		await tx.insert(verifications).values(lignesVerification);
 
