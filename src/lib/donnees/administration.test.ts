@@ -456,6 +456,13 @@ describe('RG-M14-07 — le dernier administrateur ne perd pas son rôle', () => 
 const CONFIGURATION_VALABLE: Configuration = {
 	seuilFrais: 45,
 	seuilVieillissant: 120,
+	/* Les cinq réglages du cycle de vivacité ne sont pas réglables en console, et la
+	   validation ne les regarde donc pas. Ils sont là parce que le type les exige. */
+	validiteReference: 90,
+	validiteOperationnel: 21,
+	seuilBientot: 10,
+	retardRevoir: 14,
+	retardObsolete: 90,
 	versionsMax: 50,
 	portailAssistance: 'https://assistance.exemple.fr',
 	nomOrganisation: 'Organisation d’épreuve',
@@ -650,16 +657,29 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 
 	it('l’enregistrement écrit les paramètres que l’écran règle, et eux seuls', () => {
 		/* La boucle d'écriture parcourt les champs du formulaire, jamais les
-		   clés de base : une clé sans champ ne serait pas écrite. Les deux tables
-		   portent aujourd'hui les mêmes noms, et le contrôle les compare plutôt
-		   que de recopier une liste — c'est la même source que celle que la
-		   boucle emploie. */
+		   clés de base : une clé sans champ ne serait pas écrite, et une clé SANS
+		   champ ne doit surtout pas l'être — elle serait écrasée par la chaîne vide
+		   à chaque enregistrement. C'est le cas des cinq réglages du cycle de
+		   vivacité depuis `014` : ils existent en base, `V-33` ne les porte pas
+		   encore, et ils ne doivent donc PAS entrer dans l'écriture. */
 		const ecrites = Object.keys(CHAMPS_DE_CONFIGURATION).map(
 			(champ) => CLES_DE_PARAMETRE[champ as keyof typeof CLES_DE_PARAMETRE]
 		);
 		expect(ecrites).toContain(CLES_DE_PARAMETRE.nomOrganisation);
 		expect(ecrites).toContain(CLES_DE_PARAMETRE.seuilFrais);
-		expect(ecrites).toHaveLength(Object.keys(CLES_DE_PARAMETRE).length);
+		/* POLARITÉ INVERSE — les cinq réglages du cycle sont hors de l'écriture, et
+		   chacun est nommé : le jour où `V-33` leur donne un champ, ce cas rougit et
+		   rappelle qu'il faut aussi les ajouter à `CHAMPS_DE_CONFIGURATION`. */
+		for (const cle of [
+			CLES_DE_PARAMETRE.validiteReference,
+			CLES_DE_PARAMETRE.validiteOperationnel,
+			CLES_DE_PARAMETRE.seuilBientot,
+			CLES_DE_PARAMETRE.retardRevoir,
+			CLES_DE_PARAMETRE.retardObsolete
+		]) {
+			expect(ecrites).not.toContain(cle);
+		}
+		expect(ecrites).toHaveLength(Object.keys(CLES_DE_PARAMETRE).length - 5);
 	});
 
 	it('la saisie est lue comme le gel la lit — nombres convertis, textes ébarbés', () => {

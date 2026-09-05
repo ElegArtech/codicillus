@@ -31,6 +31,7 @@ import {
 	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core';
+import { SEUILS_DE_VIVACITE } from '../fraicheur';
 import type { Configuration } from '../../../seeds/corpus';
 
 /**
@@ -381,7 +382,7 @@ export const parametres = pgTable('parametres', {
 });
 
 /**
- * Les dix clés de `parametres`, écrites une fois — M14.7 et `RG-NF-10`. Elles vivaient en littéraux dans
+ * Les quinze clés de `parametres`, écrites une fois — M14.7 et `RG-NF-10`. Elles vivaient en littéraux dans
  * `lireConfiguration()` seule, ce qui suffisait tant que RIEN N'ÉCRIVAIT dans cette table.
  * Deux jeux de littéraux rendraient possible ce que `RG-M14-09` interdit : un seuil
  * enregistré sous un nom que la lecture ignore, donc un badge qui ne bouge pas.
@@ -393,6 +394,11 @@ export const parametres = pgTable('parametres', {
 export const CLES_DE_PARAMETRE: Readonly<Record<keyof Configuration, string>> = Object.freeze({
 	seuilFrais: 'seuil_frais',
 	seuilVieillissant: 'seuil_vieillissant',
+	validiteReference: 'validite_reference',
+	validiteOperationnel: 'validite_operationnel',
+	seuilBientot: 'seuil_bientot',
+	retardRevoir: 'retard_revoir',
+	retardObsolete: 'retard_obsolete',
 	versionsMax: 'versions_max',
 	portailAssistance: 'portail_assistance',
 	nomOrganisation: 'nom_organisation',
@@ -420,6 +426,16 @@ export const CLES_DE_PARAMETRE: Readonly<Record<keyof Configuration, string>> = 
 export const CONFIGURATION_PAR_DEFAUT: Readonly<Configuration> = Object.freeze({
 	seuilFrais: 90,
 	seuilVieillissant: 180,
+	/* LES CINQ RÉGLAGES DU CYCLE DE VIVACITÉ. Les deux validités sont ce qu'une
+	   note NEUVE reçoit dans ses colonnes — la base porte les mêmes défauts, et
+	   `014` les y a posés ; les trois seuils viennent de `SEUILS_DE_VIVACITE`,
+	   fabrique unique du calcul (`P-01`). Les redire ici en littéraux ouvrirait
+	   la divergence même que `ADR-005` interdit. */
+	validiteReference: 90,
+	validiteOperationnel: 21,
+	seuilBientot: SEUILS_DE_VIVACITE.bientot,
+	retardRevoir: SEUILS_DE_VIVACITE.retardRevoir,
+	retardObsolete: SEUILS_DE_VIVACITE.retardObsolete,
 	versionsMax: 50,
 	portailAssistance: '',
 	nomOrganisation: '',

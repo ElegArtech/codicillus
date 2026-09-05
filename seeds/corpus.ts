@@ -31,7 +31,7 @@
    tient toujours. Aucun cycle n'en naît — `fraicheur.ts` ne prend d'ici qu'un
    `import type`, effacé à la compilation.
    ========================================================================== */
-import { SEUILS_PAR_DEFAUT } from '../src/lib/fraicheur.js';
+import { SEUILS_DE_VIVACITE, SEUILS_PAR_DEFAUT } from '../src/lib/fraicheur.js';
 
 /* ── Date de référence ─────────────────────────────────────────────────────
    Les maquettes affichent « Vérifié il y a 12 jours » à partir d'un couple
@@ -2252,6 +2252,17 @@ export const DISTINCTIONS: readonly Distinction[] = [
 export const CONFIG: Configuration = {
 	seuilFrais: SEUILS_PAR_DEFAUT.frais,
 	seuilVieillissant: SEUILS_PAR_DEFAUT.vieillissant,
+	/* LES CINQ RÉGLAGES DU CYCLE, aux valeurs du prototype validé. Les trois
+	   seuils sont LUS de `SEUILS_DE_VIVACITE`, pour la même raison que les deux
+	   au-dessus : l'instance de démonstration ne redit pas les défauts du
+	   produit, elle les emploie. Les deux validités n'ont pas d'équivalent dans
+	   la fabrique — elles sont une donnée de la NOTE, dont ceci n'est que la
+	   valeur de départ. */
+	validiteReference: 90,
+	validiteOperationnel: 21,
+	seuilBientot: SEUILS_DE_VIVACITE.bientot,
+	retardRevoir: SEUILS_DE_VIVACITE.retardRevoir,
+	retardObsolete: SEUILS_DE_VIVACITE.retardObsolete,
 	versionsMax: 50,
 	portailAssistance: 'https://assistance.exemple.fr/nouveau-ticket',
 	/* L'INSTANCE DE DÉMONSTRATION NE SE NOMME PAS, ET C'EST DÉLIBÉRÉ. Le nom de
