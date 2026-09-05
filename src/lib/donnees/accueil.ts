@@ -15,7 +15,7 @@
  * qu'elle-même. Rien n'est comblé : les sources que la base ne porte pas sont nommées par
  * `SANS_CONTREPARTIE_EN_BASE`.
  */
-import { and, count, desc, eq, gte, inArray, lt } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, lt, ne, sql } from 'drizzle-orm';
 import type { Base } from '../base/acces';
 import {
 	comptes,
@@ -25,6 +25,8 @@ import {
 	droitsDeDossier,
 	lotsDImport,
 	notes,
+	typesDeNote,
+	univers,
 	verifications,
 	versions
 } from '../base/schema';
@@ -46,6 +48,13 @@ import {
 	lireUnivers
 } from './lecture';
 import { lireLesDomainesLisibles, ouvrirLAcces } from './rangement';
+import { cycleDuRegistre } from './vivacite';
+import {
+	SEUILS_DE_VIVACITE,
+	vivacite,
+	type EtatDeVivacite,
+	type SeuilsDeVivacite
+} from '../fraicheur';
 import { accord } from '../vocabulaire';
 import type {
 	DemandeDeRevision,
@@ -618,4 +627,253 @@ export async function lireAccueil(
 	const lisible = domainesLisibles.some((d) => d.nom === compte.domaine);
 	const ajuste = lisible ? compte : { ...compte, domaine: '' as typeof compte.domaine };
 	return { ...rendu, compte: ajuste };
+}
+
+/* ==========================================================================
+   LE TABLEAU DE VIVACITÉ DE L'ACCUEIL — ce que V-07 met sous les yeux.
+
+   Cinq blocs le lisent : la salutation (« N notes, dont M à jour »), la carte
+   « À surveiller » (deux alertes, cinq compteurs, un bilan), les deux listes de
+   consultation, et le tableau des univers. Ils comptent TOUS LA MÊME CHOSE —
+   l'état de vivacité du registre Référence de chaque note lisible — et c'est
+   pourquoi il n'y a ici qu'une lecture : deux comptages concurrents finiraient
+   par se contredire à l'écran, comme `RG-M01-02` le dit déjà des révisions.
+
+   AUCUN ÉTAT N'EST CALCULÉ ICI. Le cycle sort de `cycleDuRegistre()`, l'état et
+   ses libellés de `vivacite()` — la fabrique unique (`P-01`, `ADR-005`). Ce
+   module ne fait que projeter les colonnes et rassembler.
+   ========================================================================== */
+
+/**
+ * L'ÉTAT DE VIVACITÉ D'UNE NOTE, tel que l'accueil le montre. Le registre est la
+ * RÉFÉRENCE : c'est le registre canonique (`RG-NOT-02`), le seul que toute note
+ * possède, et compter une note deux fois — une par registre — ferait un total
+ * qui ne serait celui d'aucune bibliothèque.
+ */
+export interface EtatDeNoteALAccueil {
+	/** L'identifiant lisible — `/notes/{identifiant}`. */
+	readonly identifiant: string;
+	readonly titre: string;
+	/** Le nom de l'univers, la clé du tableau « Vos univers ». */
+	readonly univers: string;
+	readonly etat: EtatDeVivacite;
+	/** Le libellé de l'état — il accompagne TOUJOURS le glyphe (`RG-M18-09`). */
+	readonly libelle: string;
+	/** « dans 67 j », « 21 j de retard », « jamais ». */
+	readonly compact: string;
+	/** Le reste avant échéance, en jours. Négatif : l'échéance est passée. */
+	readonly reste: number;
+}
+
+/** Une note de la liste « Récemment consultées » — les sept derniers jours. */
+export interface NoteRecemmentConsultee {
+	readonly identifiant: string;
+	readonly titre: string;
+	/** L'ancienneté de la dernière ouverture, en minutes entières. */
+	readonly minutes: number;
+}
+
+/** Une note de la liste « Les plus consultées » — les trente derniers jours. */
+export interface NoteLaPlusConsultee {
+	readonly identifiant: string;
+	readonly titre: string;
+	/** Les consultations tombées DANS la fenêtre — jamais le cumul de toute la vie. */
+	readonly consultations: number;
+}
+
+/** Ce que le chargeur de `/` ajoute pour V-07. */
+export interface TableauDeVivacite {
+	/** Toutes les notes lisibles, une ligne par note. Les signets n'en sont pas. */
+	readonly notes: readonly EtatDeNoteALAccueil[];
+	readonly recemment: readonly NoteRecemmentConsultee[];
+	readonly plusConsultees: readonly NoteLaPlusConsultee[];
+}
+
+/** La fenêtre de « Récemment consultées », en jours — le libellé de la carte. */
+const JOURS_RECEMMENT = 7;
+/** La fenêtre de « Les plus consultées », en jours — le libellé de la carte. */
+const JOURS_PLUS_CONSULTEES = 30;
+/** Cinq lignes par carte, comme le rail en porte cinq dans « Récents ». */
+const LIGNES_PAR_CARTE = 5;
+
+/**
+ * L'ÉTAT DE CHAQUE NOTE LISIBLE, RÉFÉRENCE.
+ *
+ * LES SIGNETS N'EN SONT PAS : « un signet n'est pas une note ; le vocabulaire est
+ * contractuel, et les compteurs le suivent ». Le crible porte sur
+ * `types_de_note.identifiant`, PERSISTÉ et stable, jamais sur le nom affiché —
+ * renommer le type en console ferait sinon entrer trois signets dans la
+ * bibliothèque sans que rien ne le dise.
+ *
+ * LE NOM DU DEMANDEUR DE RÉVISION EST JOINT parce que la fabrique en dépend : une
+ * demande sans compte nommé ne force pas « À revoir » (`vivacite()`), et
+ * `revision_par_id` est `SET NULL` à la suppression du compte (`RG-M15-02`).
+ */
+async function lireLesEtatsDeVivacite(
+	base: Base,
+	identifiants: readonly string[],
+	maintenant: Date,
+	seuils: SeuilsDeVivacite
+): Promise<readonly EtatDeNoteALAccueil[]> {
+	if (identifiants.length === 0) return [];
+	const lignes = await base
+		.select({
+			identifiant: notes.identifiant,
+			titre: notes.titre,
+			universNom: univers.nom,
+			modifieLe: notes.modifieLe,
+			corpsOperationnelModifieLe: notes.corpsOperationnelModifieLe,
+			verifieLe: notes.verifieLe,
+			verifieLeOperationnel: notes.verifieLeOperationnel,
+			validiteReference: notes.validiteReference,
+			validiteOperationnel: notes.validiteOperationnel,
+			revisionDemandee: notes.revisionDemandee,
+			revisionRegistre: notes.revisionRegistre,
+			revisionPar: comptes.nom
+		})
+		.from(notes)
+		.innerJoin(domaines, eq(notes.domaineId, domaines.id))
+		.innerJoin(univers, eq(domaines.universId, univers.id))
+		.innerJoin(typesDeNote, eq(notes.typeDeNoteId, typesDeNote.id))
+		.leftJoin(comptes, eq(notes.revisionParId, comptes.id))
+		.where(
+			and(inArray(notes.identifiant, [...identifiants]), ne(typesDeNote.identifiant, 'signet'))
+		);
+
+	return lignes.flatMap((l) => {
+		const cycle = cycleDuRegistre(
+			{
+				modifieLe: l.modifieLe,
+				corpsOperationnelModifieLe: l.corpsOperationnelModifieLe,
+				verifieLe: l.verifieLe,
+				verifieLeOperationnel: l.verifieLeOperationnel,
+				validiteReference: l.validiteReference,
+				validiteOperationnel: l.validiteOperationnel,
+				revisionDemandee: l.revisionDemandee,
+				revisionRegistre: l.revisionRegistre,
+				revisionPar: l.revisionPar,
+				verifieParReference: null,
+				verifieParOperationnel: null
+			},
+			'reference'
+		);
+		/* La Référence existe toujours (`RG-NOT-02`) ; `cycleDuRegistre` ne rend
+		   `null` que pour l'Opérationnel. La garde est celle du type, pas une
+		   supposition sur la donnée. */
+		if (cycle === null) return [];
+		const etat = vivacite(cycle, maintenant, seuils);
+		return [
+			{
+				identifiant: l.identifiant,
+				titre: l.titre,
+				univers: l.universNom,
+				etat: etat.etat,
+				libelle: etat.libelle,
+				compact: etat.compact,
+				reste: etat.reste
+			}
+		];
+	});
+}
+
+/**
+ * LES NOTES QUE CE COMPTE A ROUVERTES CETTE SEMAINE — jamais celles des autres.
+ * Servir les lectures de tout le monde annoncerait à chacun ce que ses collègues
+ * consultent ; `recentsDuCompte()` du gabarit racine filtre déjà de même.
+ */
+async function lireLesNotesRecemmentConsultees(
+	base: Base,
+	identifiants: readonly string[],
+	compteId: string,
+	maintenant: Date
+): Promise<readonly NoteRecemmentConsultee[]> {
+	if (identifiants.length === 0) return [];
+	const lignes = await base
+		.select({
+			identifiant: notes.identifiant,
+			titre: notes.titre,
+			derniere: sql<Date>`max(${consultations.le})`
+		})
+		.from(consultations)
+		.innerJoin(notes, eq(notes.id, consultations.noteId))
+		.where(
+			and(
+				inArray(notes.identifiant, [...identifiants]),
+				eq(consultations.compteId, compteId),
+				gte(consultations.le, debutDeFenetre(maintenant, JOURS_RECEMMENT))
+			)
+		)
+		.groupBy(notes.identifiant, notes.titre)
+		.orderBy(desc(sql`max(${consultations.le})`))
+		.limit(LIGNES_PAR_CARTE);
+
+	return lignes.map((l) => ({
+		identifiant: l.identifiant,
+		titre: l.titre,
+		minutes: Math.max(
+			0,
+			Math.floor((maintenant.getTime() - new Date(l.derniere).getTime()) / 60_000)
+		)
+	}));
+}
+
+/**
+ * LES NOTES LES PLUS OUVERTES DE LA FENÊTRE — celles de TOUT LE MONDE, et c'est
+ * la différence avec la carte d'à côté : « les plus consultées » est un fait du
+ * corpus, « récemment consultées » un fait de la personne.
+ *
+ * LE NOMBRE AFFICHÉ EST CELUI DE LA FENÊTRE, PAS LE CUMUL DE
+ * `notes.compteur_de_consultations` : la carte annonce « 30 derniers jours », et
+ * un chiffre qui contredit son propre libellé est un défaut. Le classement est
+ * donc le même que le chiffre — il n'y a pas deux mesures à l'écran.
+ */
+async function lireLesNotesLesPlusConsultees(
+	base: Base,
+	identifiants: readonly string[],
+	maintenant: Date
+): Promise<readonly NoteLaPlusConsultee[]> {
+	if (identifiants.length === 0) return [];
+	const lignes = await base
+		.select({ identifiant: notes.identifiant, titre: notes.titre, combien: count() })
+		.from(consultations)
+		.innerJoin(notes, eq(notes.id, consultations.noteId))
+		.where(
+			and(
+				inArray(notes.identifiant, [...identifiants]),
+				gte(consultations.le, debutDeFenetre(maintenant, JOURS_PLUS_CONSULTEES))
+			)
+		)
+		.groupBy(notes.identifiant, notes.titre)
+		.orderBy(desc(count()))
+		.limit(LIGNES_PAR_CARTE);
+
+	return lignes.map((l) => ({
+		identifiant: l.identifiant,
+		titre: l.titre,
+		consultations: l.combien
+	}));
+}
+
+/**
+ * LE TABLEAU DE VIVACITÉ, EN UNE FOIS. Il est SÉPARÉ de `lireAccueil()` à
+ * dessein : `/bibliotheque/vivacite` appelle celle-ci pour son rail, et n'a que
+ * faire de trois requêtes de plus.
+ *
+ * `identifiants` est le périmètre DÉJÀ RÉSOLU — celui que `lireAccueil()` vient
+ * de rendre. Le recalculer ici rouvrirait la porte à deux périmètres divergents
+ * dans une même réponse.
+ */
+export async function lireLeTableauDeVivacite(
+	base: Base,
+	identifiants: readonly string[],
+	compteId: string,
+	maintenant: Date,
+	seuils: SeuilsDeVivacite = SEUILS_DE_VIVACITE
+): Promise<TableauDeVivacite> {
+	const [notesEvaluees, recemment, plusConsultees] = await Promise.all([
+		lireLesEtatsDeVivacite(base, identifiants, maintenant, seuils),
+		lireLesNotesRecemmentConsultees(base, identifiants, compteId, maintenant),
+		lireLesNotesLesPlusConsultees(base, identifiants, maintenant)
+	]);
+	return { notes: notesEvaluees, recemment, plusConsultees };
 }

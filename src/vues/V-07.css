@@ -1,527 +1,296 @@
-
 /* ==========================================================================
-   BARRE DE RÉPARTITION DE FRAÎCHEUR
-   Commune au tableau de bord (V-07), aux pages d'univers et de domaine
-   (V-10, V-11) et aux listes (V-12).
+   V-07 — ACCUEIL CONNECTÉ
+   La première vue après la connexion, et la plus revue du produit après la
+   lecture d'une note. Cinq blocs empilés dans une colonne unique : salutation,
+   recherche, « À surveiller », les deux cartes de consultation, les univers.
 
-   Les trois parts se distinguent par leur remplissage autant que par leur
-   teinte — plein, rayé fin, hachuré large — de sorte que la répartition reste
-   lisible sans la couleur, en niveaux de gris comme en vision périphérique.
-   Le hachurage de la part obsolète reprend celui du témoin de fraîcheur.
+   TROIS BLOCS SONT PARTAGÉS AVEC D'AUTRES VUES et portent donc leurs noms de
+   classe d'origine, pour être remontés au socle à la convergence :
+     `.ligne-vivacite__etat`  glyphe + libellé en couleur d'état — V-42
+     `.rail-compact`          glyphe + chiffre mono, forme dense — V-42
+     `.glyphe--*`             la teinte d'un état — socle, section 4 bis
    ========================================================================== */
 
-.repart { display: flex; height: 14px; border-radius: var(--r-1); overflow: hidden; border: 1px solid var(--c-trait); }
-.repart button { border: 0; padding: 0; cursor: pointer; transition: filter var(--m-vif); }
-.repart button:hover { filter: brightness(.9); }
-.repart button + button { border-left: 1px solid var(--c-papier); }
-.repart .p-frais { background: var(--c-frais); }
-.repart .p-vieil {
-  background: repeating-linear-gradient(90deg, var(--c-vieil) 0 2px, #c99a3d 2px 5px);
-}
-.repart .p-obs {
-  background: repeating-linear-gradient(135deg, var(--c-obsolete) 0 4px, #d1705f 4px 8px);
-}
-.legende { display: flex; gap: var(--e-3); flex-wrap: wrap; margin-top: var(--e-2); }
-.legende span { display: inline-flex; align-items: center; gap: var(--e-1); font-size: var(--t-mini); color: var(--c-encre-2); }
-.legende i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
-.legende .p-frais { background: var(--c-frais); }
-.legende .p-vieil { background: repeating-linear-gradient(90deg, var(--c-vieil) 0 2px, #c99a3d 2px 5px); }
-.legende .p-obs { background: repeating-linear-gradient(135deg, var(--c-obsolete) 0 3px, #d1705f 3px 6px); }
-.legende b { font-family: var(--f-donnee); font-weight: var(--g-lourd); }
+/* --------------------------------------------------------------------------
+   LA COLONNE CENTRALE
+   -------------------------------------------------------------------------- */
+.accueil {
+  display: flex; flex-direction: column; gap: 22px;
+  padding: 36px;
+  min-width: 0;
 
-/* ==========================================================================
-   V-07 — ACCUEIL CONTRIBUTEUR
-   Le tableau de bord quotidien. C'est la page la plus revue du produit après
-   la lecture d'une note, et la première vue après la connexion.
-
-   Priorité de lecture, dans l'ordre : la recherche, les quatre indicateurs,
-   la corbeille de révisions — c'est ce qui appelle une action —, les
-   domaines, l'activité, les raccourcis. La composition suit cet ordre : ce
-   qui appelle une action occupe la colonne large, ce qui informe la colonne
-   étroite.
-
-   Aucun chiffre n'est écrit dans cette vue. Tout est calculé à partir du
-   corpus et des tables de mesures ; une donnée absente produit un état
-   neutre explicite, jamais une valeur de remplissage.
-   ========================================================================== */
-.tdb {
-  max-width: 1160px; width: 100%; margin: 0 auto;
-  padding: var(--e-6) var(--e-5) var(--e-8);
+  /* Deux tailles que le socle ne porte pas encore : le grand chiffre de
+     compteur du prototype (19 px) et l'en-tête de tableau (12,5 px est
+     `--t-meta`, il n'y a que le chiffre à déclarer). */
+  --t-compteur: 1.1875rem;   /* 19px — chiffre Literata d'un compteur d'état */
 }
 
-/* --- Salutation ---------------------------------------------------------
-   Elle nomme la personne et son périmètre, et porte un chiffre marquant :
-   c'est ce qui distingue un tableau de bord d'une page d'accueil générique. */
-.salut { margin-bottom: var(--e-4); }
+@media (max-width: 900px) { .accueil { padding: var(--e-5) var(--e-4) var(--e-7); } }
+
+/* `.btn` est dessiné pour un `<button>` ; posé sur un `<a>` — et il doit l'être
+   quand le geste EST une adresse —, il hérite du soulignement du lien. La règle
+   remontera au socle à la convergence. */
+.accueil .btn, .barre__actions .btn, .barre__actions .avatar { text-decoration: none; }
+.accueil .btn:hover, .barre__actions .btn:hover { text-decoration: none; }
+
+/* --------------------------------------------------------------------------
+   1. SALUTATION
+   -------------------------------------------------------------------------- */
+.salut { display: flex; flex-direction: column; gap: 10px; }
 .salut__titre {
-  font-family: var(--f-ui); font-size: clamp(1.5rem, 3.2vw, 2rem);
-  font-weight: var(--g-lourd); letter-spacing: -.026em; line-height: 1.12;
-  margin: 0 0 var(--e-2);
+  font-family: var(--f-lecture); font-size: var(--t-salut); font-weight: var(--g-fort);
+  line-height: var(--i-serre); margin: 0; text-wrap: pretty;
 }
 .salut__sous {
-  font-family: var(--f-lecture); font-size: var(--t-lect); line-height: 1.55;
+  font-family: var(--f-lecture); font-size: var(--t-lect); line-height: 1.5;
   color: var(--c-encre-2); margin: 0; max-width: 68ch;
 }
-.salut__sous b { font-family: var(--f-donnee); font-weight: var(--g-lourd); color: var(--c-encre); }
+.salut__sous b { font-weight: var(--g-fort); color: var(--c-accent); }
 
-/* --- Aide de première visite ---------------------------------------------
-   Affichée une seule fois par compte, refermable. Elle ne dit qu'une chose :
-   le raccourci qui remplace toute la navigation. */
-.aide {
-  display: flex; align-items: flex-start; gap: var(--e-3);
-  background: var(--c-accent-voile);
-  border: 1px solid var(--c-accent-trait);
-  border-radius: var(--r-3);
-  padding: var(--e-3) var(--e-4);
-  margin-bottom: var(--e-4);
-  font-size: var(--t-petit); line-height: 1.5; color: var(--c-encre);
-}
-.aide__marque { flex: none; line-height: 0; color: var(--c-accent); margin-top: 2px; }
-.aide__corps { flex: 1; min-width: 0; }
-.aide__fermer {
-  flex: none; border: 0; background: none; cursor: pointer; padding: 4px;
-  color: var(--c-encre-3); border-radius: var(--r-1); line-height: 0;
-}
-.aide__fermer:hover { background: rgba(22,34,43,.08); color: var(--c-encre); }
-
-/* --- Recherche : priorité de lecture n° 1 --------------------------------
-   Le champ est proéminent et reçoit le focus à l'ouverture de la page. La
-   première frappe passe le relais à la palette (V-09) : il n'existe qu'un
-   seul composant de recherche dans le produit, et c'est celui-là. */
+/* --------------------------------------------------------------------------
+   2. LE GRAND CHAMP DE RECHERCHE
+   Il reprend `.recherche` du socle — même boîte, même comportement de clic —
+   et n'en change que l'échelle : pleine largeur, plus haut, texte de lecture.
+   -------------------------------------------------------------------------- */
 .quete {
-  display: flex; align-items: center; gap: var(--e-3);
-  background: var(--c-papier);
-  border: 1px solid var(--c-trait-fort);
+  width: 100%; padding: 13px var(--e-4); gap: var(--e-3);
   border-radius: var(--r-3);
-  padding: var(--e-3) var(--e-4);
-  box-shadow: var(--o-pose);
-  margin-bottom: var(--e-5);
 }
-.quete:focus-within { border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-voile); }
-.quete > svg { flex: none; color: var(--c-encre-3); }
-.quete__saisie {
-  flex: 1; min-width: 0; border: 0; outline: none; background: none;
-  font-family: var(--f-ui); font-size: var(--t-t2); font-weight: var(--g-moyen);
-  letter-spacing: -.012em; color: var(--c-encre);
-}
-.quete__saisie::placeholder { color: var(--c-encre-4); font-weight: var(--g-normal); }
-.quete__saisie::-webkit-search-cancel-button { display: none; }
-.quete__rappel {
-  flex: none; display: inline-flex; align-items: center; gap: var(--e-1);
-  font-size: var(--t-mini); color: var(--c-encre-3);
-}
-
-/* --- Indicateurs : priorité de lecture n° 2 ------------------------------
-   Quatre valeurs, toutes cliquables : un indicateur qui ne mène nulle part
-   n'est qu'une décoration. Celui qui appelle une action porte un filet ;
-   celui qui vaut zéro est atténué plutôt que masqué — un zéro est une
-   information, une absence n'en est pas une. */
-.indics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--e-3); margin-bottom: var(--e-5); }
-.ind {
-  background: var(--c-papier); border: 1px solid var(--c-trait); border-radius: var(--r-3);
-  box-shadow: var(--o-pose); overflow: hidden;
-}
-.ind__lien {
-  display: block; width: 100%; text-align: left; background: none; border: 0;
-  padding: var(--e-4); cursor: pointer; color: inherit; font: inherit;
-}
-.ind__lien:hover .ind__val { color: var(--c-accent); }
-.ind__nom { display: block; margin-bottom: var(--e-2); }
-.ind__val {
-  font-family: var(--f-donnee); font-size: 1.625rem; font-weight: var(--g-lourd);
-  line-height: 1; letter-spacing: -.03em; display: block;
-}
-.ind__sous { display: block; font-size: var(--t-mini); color: var(--c-encre-3); margin-top: var(--e-2); line-height: 1.4; }
-.ind--appel { border-left: 4px solid var(--c-vieil); }
-.ind--appel .ind__val { color: var(--c-vieil); }
-.ind--nulle .ind__val { color: var(--c-encre-4); }
-
-/* La tendance ne repose jamais sur la couleur seule : un chevron orienté et
-   le signe du nombre portent la même information. */
-.tendance {
-  display: inline-flex; align-items: center; gap: var(--e-1);
-  font-family: var(--f-donnee); font-size: var(--t-mini); font-weight: var(--g-fort);
-  margin-top: var(--e-2);
-}
-.tendance--hausse { color: var(--c-frais); }
-.tendance--baisse { color: var(--c-obsolete); }
-.tendance--stable { color: var(--c-encre-3); }
-.tendance svg { flex: none; }
-.tendance span { font-weight: var(--g-normal); color: var(--c-encre-3); }
-
-/* --- Les deux colonnes ---------------------------------------------------
-   À gauche ce qui appelle une action, à droite ce qui situe. */
-.grille-tdb { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--e-4); align-items: start; }
-.colonne { display: flex; flex-direction: column; gap: var(--e-4); }
-
-/* --- Corbeille de révisions : priorité de lecture n° 3 -------------------
-   Le commentaire du demandeur est repris intégralement : c'est lui qui dit
-   quoi faire, et le tronquer obligerait à ouvrir la note pour le savoir. */
-.revision {
-  display: block; width: 100%; text-align: left; background: none; border: 0;
-  padding: var(--e-3) 0; cursor: pointer; color: inherit; font: inherit;
-}
-.revision + .revision { border-top: 1px solid var(--c-trait-fin); }
-.revision:hover .revision__titre { color: var(--c-accent-fonce); }
-.revision__tete { display: flex; align-items: baseline; gap: var(--e-3); }
-.revision__titre {
-  flex: 1; min-width: 0; font-size: var(--t-base); font-weight: var(--g-fort); line-height: 1.32;
-}
-.revision__dom { flex: none; }
-.revision__com {
-  font-family: var(--f-lecture); font-size: var(--t-petit); line-height: 1.55;
-  color: var(--c-encre-2); margin: var(--e-2) 0 0;
-  padding: 2px 0 2px var(--e-3);
-  border-left: 2px solid var(--c-alerte);
-}
-.revision__sous {
-  display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap;
-  font-size: var(--t-mini); color: var(--c-encre-3); margin-top: var(--e-2);
-}
-
-/* --- Vos domaines : priorité de lecture n° 4 -----------------------------
-   Nom, volume, et répartition de fraîcheur. La barre est cliquable part par
-   part : elle mène à la liste du domaine pré-filtrée sur le niveau cliqué. */
-.dom { padding: var(--e-3) 0; }
-.dom + .dom { border-top: 1px solid var(--c-trait-fin); }
-.dom__tete { display: flex; align-items: center; gap: var(--e-2); }
-.dom__puce { width: 9px; height: 9px; border-radius: 2px; background: var(--teinte); flex: none; }
-.dom__nom {
-  flex: 1; min-width: 0; background: none; border: 0; padding: 0; cursor: pointer;
-  text-align: left; font-family: var(--f-ui); font-size: var(--t-petit);
-  font-weight: var(--g-fort); color: inherit;
+.quete:hover { border-color: var(--c-trait-fort); }
+.quete__txt {
+  font-family: var(--f-lecture); font-size: var(--t-lect); color: var(--c-encre-4);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.dom__nom:hover { color: var(--c-accent); }
-/* Le compte de notes d un domaine et les deux nombres du pied sont des
-   BOUTONS : ils ouvrent la liste des notes du domaine pour le premier, la
-   recherche pour les seconds. Le gel les dessine en span faute de
-   destination — il n a pas de serveur. La neutralisation ne fait que rendre
-   au bouton l apparence du span : rien d autre n est ajouté. */
-.dom__n {
-  flex: none; font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-3);
-  background: none; border: 0; padding: 0; line-height: inherit; cursor: pointer;
-}
-.dom__n:hover { color: var(--c-accent); }
-.dom .repart { margin-top: var(--e-2); }
-.dom__vide { font-size: var(--t-mini); color: var(--c-encre-3); margin-top: var(--e-2); }
 
-/* --- Activité récente : priorité de lecture n° 5 -------------------------
-   Le type d'événement est porté par un pictogramme et par le verbe, jamais
-   par la seule teinte du médaillon. */
-.evt { display: flex; align-items: flex-start; gap: var(--e-3); padding: var(--e-2) 0; }
-.evt + .evt { border-top: 1px solid var(--c-trait-fin); }
-.evt__marque {
-  flex: none; width: 26px; height: 26px; border-radius: var(--r-2);
-  display: grid; place-items: center;
-  background: var(--c-fond-creux); color: var(--c-encre-2);
-}
-.evt--verification .evt__marque { background: var(--c-frais-voile); color: var(--c-frais); }
-.evt--publication  .evt__marque { background: var(--c-accent-voile); color: var(--c-accent); }
-.evt--revision     .evt__marque { background: var(--c-alerte-voile); color: var(--c-alerte); }
-.evt--import       .evt__marque { background: var(--c-info-voile); color: var(--c-info); }
-.evt__corps { flex: 1; min-width: 0; font-size: var(--t-petit); line-height: 1.45; }
-.evt__qui { font-weight: var(--g-fort); }
-.evt__cible { color: inherit; font-weight: var(--g-moyen); text-decoration: none; border-bottom: 1px solid var(--c-trait-fort); }
-.evt__cible:hover { color: var(--c-accent); border-bottom-color: var(--c-accent); }
-.evt__detail { display: block; font-size: var(--t-mini); color: var(--c-encre-3); margin-top: 2px; }
-.evt__quand { flex: none; font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-3); padding-top: 5px; }
-
-/* --- Raccourcis de création : priorité de lecture n° 6 -------------------
-   Absents en lecture seule : une action interdite n'est pas affichée. */
-.raccourcis { display: flex; flex-direction: column; gap: var(--e-2); }
-
-/* --- Pied de page --------------------------------------------------------
-   Version, volume et fraîcheur de la synchronisation : de quoi savoir ce
-   qu'on regarde, et de quand cela date. */
-.pied-tdb {
-  display: flex; align-items: center; gap: var(--e-4); flex-wrap: wrap;
-  justify-content: space-between;
-  margin-top: var(--e-6); padding-top: var(--e-3);
-  border-top: 1px solid var(--c-trait);
-  font-size: var(--t-mini); color: var(--c-encre-3);
-}
-.pied-tdb b { font-family: var(--f-donnee); font-weight: var(--g-moyen); color: var(--c-encre-2); }
-.pied-tdb button {
-  background: none; border: 0; padding: 0; font: inherit; color: inherit;
-  line-height: inherit; cursor: pointer;
-}
-.pied-tdb button:hover { color: var(--c-accent); }
-
-/* --- Amorçage : base neuve -----------------------------------------------
-   Un corpus vide ne produit pas un tableau de bord à zéro : il produit un
-   écran d'amorçage, avec les deux seules actions qui aient un sens. */
-.amorce {
-  background: var(--c-papier); border: 1px solid var(--c-trait); border-radius: var(--r-3);
-  padding: var(--e-7) var(--e-5); text-align: center; box-shadow: var(--o-pose);
-}
-.amorce h2 {
-  font-family: var(--f-ui); font-size: var(--t-t1); font-weight: var(--g-lourd);
-  letter-spacing: -.02em; margin: 0 0 var(--e-3);
-}
-.amorce p {
-  font-family: var(--f-lecture); font-size: var(--t-lect); line-height: var(--i-lect);
-  color: var(--c-encre-2); margin: 0 auto var(--e-5); max-width: 50ch;
-}
-.amorce__actions { display: flex; gap: var(--e-3); justify-content: center; flex-wrap: wrap; }
-.amorce__actions .btn { padding: 12px var(--e-5); }
-
-.app[data-etat="vide"] .si-peuple { display: none; }
-.app:not([data-etat="vide"]) .si-vide { display: none; }
-
-/* --- Panneau en erreur ---------------------------------------------------
-   Une zone en erreur ne fait jamais tomber la page : les autres continuent
-   de fonctionner, et celle-ci propose de réessayer. */
-.panneau--erreur { border-color: #e2b8b0; }
-.panneau--erreur .panneau__tete { background: var(--c-danger-voile); border-bottom-color: #e2b8b0; }
-
-/* --- Esquisses de chargement ---------------------------------------------
-   Une esquisse dessine la structure à venir : l'utilisateur doit deviner ce
-   qui arrive, pas regarder un sablier. */
-.esq-l { height: 13px; margin-bottom: var(--e-2); border-radius: var(--r-1); }
-.esq-b { height: 30px; margin-bottom: var(--e-2); border-radius: var(--r-2); }
-
-/* --- Planche de revue (hors produit) ----------------------------------------------- */
-.planche {
-  position: fixed; z-index: 120; left: 50%; bottom: var(--e-4); transform: translateX(-50%);
-  display: flex; align-items: center; gap: var(--e-4); flex-wrap: wrap;
-  background: var(--c-encre); color: #cfd8db;
-  padding: var(--e-2) var(--e-4); border-radius: 999px;
-  box-shadow: var(--o-flotte); font-size: var(--t-mini); max-width: calc(100vw - var(--e-6));
-}
-.planche fieldset { border: 0; margin: 0; padding: 0; display: flex; align-items: center; gap: var(--e-2); }
-.planche legend { float: left; margin-right: var(--e-2); font-family: var(--f-donnee); font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase; color: #7d8f95; }
-.planche label { cursor: pointer; }
-.planche input { position: absolute; opacity: 0; pointer-events: none; }
-.planche label span { display: inline-block; padding: 4px var(--e-2); border-radius: 999px; border: 1px solid #33454f; color: #cfd8db; }
-.planche input:checked + span { background: #cfd8db; color: var(--c-encre); border-color: #cfd8db; font-weight: var(--g-fort); }
-.planche input:focus-visible + span { outline: 2px solid #8f86e0; outline-offset: 2px; }
-.planche__sep { width: 1px; height: 22px; background: #33454f; }
-
-/* --- Réponses aux petits écrans -------------------------------------------
-   Empilement dans l'ordre de la priorité de lecture. Les quatre indicateurs
-   passent en grille de deux plutôt que de rétrécir jusqu'à l'illisible. */
-@media (max-width: 1240px) {
-  .app { grid-template-columns: minmax(0,1fr); }
-  .rail { display: none; }
-}
-@media (max-width: 900px) {
-  .grille-tdb { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-width: 700px) {
-  .indics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 640px) {
-  /* La barre supérieure doit tenir à 360 px sans défilement horizontal de la
-     page : le champ de recherche devient élastique et lâche ses rappels
-     clavier, qui n'ont de toute façon pas de sens sans clavier physique. */
-  .barre { padding: 0 var(--e-3); gap: var(--e-2); }
-  .recherche { width: auto; flex: 1 1 90px; min-width: 0; }
-  .recherche .touche { display: none; }
-  .recherche__txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .fil { flex: 0 1 auto; }
-  /* Le fil d'Ariane ne tient pas sur 360 px : seul le segment courant reste,
-     les ancêtres restent atteignables par le rail. */
-  .fil > *:not(.fil__courant) { display: none; }
-  .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  .tdb { padding: var(--e-4) var(--e-4) var(--e-7); }
-  .quete { padding: var(--e-3); }
-  .quete__saisie { font-size: var(--t-t3); }
-  .quete__rappel { display: none; }
-  .pied-tdb { flex-direction: column; align-items: flex-start; gap: var(--e-2); }
-  .planche { display: none; }
-}
-
-/* ==========================================================================
-   V-09 — PALETTE DE RECHERCHE RAPIDE
-   Superposition invoquée au clavier depuis n'importe quelle vue.
-   Piège le focus, se ferme à l'échappement, rend le focus à son déclencheur.
-
-   La boîte est instanciable hors superposition — c'est ce qui permet d'en
-   présenter tous les états côte à côte sans dupliquer le composant.
-   ========================================================================== */
-
-/* --- Superposition ------------------------------------------------------- */
-.palette {
-  border: 0; padding: 0; margin: 0; max-width: none; max-height: none;
-  width: 100%; height: 100%; background: transparent; display: none;
-}
-.palette[open] { display: block; }
-.palette::backdrop { background: rgba(22, 34, 43, .46); backdrop-filter: blur(2px); }
-
-.palette[open] .palette__boite {
-  position: fixed; top: 11vh; left: 50%; transform: translateX(-50%);
-  width: min(660px, calc(100vw - 32px));
-  max-height: 74vh;
-  animation: palette-entre var(--m-doux) both;
-}
-@keyframes palette-entre { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } }
-
-/* --- La boîte ------------------------------------------------------------- */
-.palette__boite {
+/* --------------------------------------------------------------------------
+   LA CARTE — le conteneur des trois derniers blocs
+   -------------------------------------------------------------------------- */
+.carte {
   background: var(--c-papier);
-  border: 1px solid var(--c-trait-fort);
-  border-radius: var(--r-3);
-  box-shadow: var(--o-flotte);
-  overflow: hidden;
-  display: flex; flex-direction: column;
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-4);
+  min-width: 0;
 }
-
-/* Hôte d'un aperçu statique : sert de conteneur de requête, pour que les
-   règles de petit écran s'appliquent à la largeur de l'aperçu et non à celle
-   de la fenêtre. */
-.palette-hote { container-type: inline-size; }
-.palette-hote .palette__boite { box-shadow: var(--o-pose); }
-
-/* --- Champ --------------------------------------------------------------- */
-.palette__champ {
-  display: flex; align-items: center; gap: var(--e-3);
-  padding: var(--e-3) var(--e-4);
-  border-bottom: 1px solid var(--c-trait);
-  flex: none;
-}
-.palette__champ > svg { flex: none; color: var(--c-encre-3); }
-.palette__saisie {
-  flex: 1; min-width: 0; border: 0; outline: none; background: none;
-  font-family: var(--f-ui); font-size: var(--t-t3); font-weight: var(--g-moyen);
-  letter-spacing: -.008em;
-}
-.palette__saisie::placeholder { color: var(--c-encre-4); font-weight: var(--g-normal); }
-.palette__saisie::-webkit-search-cancel-button { display: none; }
-.palette__effacer {
-  flex: none; border: 0; background: none; cursor: pointer; padding: 4px;
-  color: var(--c-encre-3); border-radius: var(--r-1); line-height: 0;
-}
-.palette__effacer:hover { background: var(--c-fond-creux); color: var(--c-encre); }
-
-/* Curseur simulé : un aperçu statique n'a pas le focus, et sans repère il ne
-   dit pas où en est la frappe. */
-.palette__curseur {
-  display: none; width: 1.5px; height: 22px; background: var(--c-accent); flex: none;
-  animation: clignote 1.06s steps(2, start) infinite;
-}
-.palette__boite[data-curseur="oui"] .palette__curseur { display: block; }
-@keyframes clignote { 50% { opacity: 0; } }
-
-/* --- Bandeau de mode dégradé ---------------------------------------------- */
-.palette__degrade {
-  display: none; align-items: center; gap: var(--e-2);
-  padding: var(--e-2) var(--e-4);
-  background: var(--c-alerte-voile); border-bottom: 1px solid #dcc59a;
-  font-size: var(--t-mini); color: var(--c-alerte); flex: none;
-}
-.palette__boite[data-degrade="oui"] .palette__degrade { display: flex; }
-
-/* --- Liste ----------------------------------------------------------------- */
-.palette__liste { overflow-y: auto; padding: var(--e-2); flex: 1; min-height: 0; }
-.palette__groupe { padding: var(--e-2) var(--e-2) var(--e-1); }
-
-.pres {
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center;
-  gap: var(--e-3);
-  width: 100%; text-align: left;
-  padding: var(--e-2) var(--e-3);
-  border: 1px solid transparent; border-radius: var(--r-2);
-  background: none; cursor: pointer; color: inherit; font-family: inherit;
-  text-decoration: none;
-}
-.pres:hover { background: var(--c-papier-2); }
-/* Le résultat sélectionné au clavier est distinct du survol souris : fond
-   accentué et repère de bord, là où le survol ne pose qu'un fond neutre. */
-.pres[data-sel="oui"] {
-  background: var(--c-accent-voile);
-  border-color: var(--c-accent-trait);
-  box-shadow: inset 3px 0 0 var(--c-accent);
-}
-.pres__glyphe {
-  width: 28px; height: 28px; flex: none; border-radius: var(--r-2);
-  display: grid; place-items: center;
-  background: var(--c-fond-creux); color: var(--c-encre-2);
-  font-family: var(--f-donnee); font-size: var(--t-micro); font-weight: var(--g-lourd);
-}
-.pres[data-sel="oui"] .pres__glyphe { background: var(--c-accent); color: #fff; }
-.pres__corps { min-width: 0; }
-.pres__titre {
-  font-size: var(--t-base); font-weight: var(--g-moyen); line-height: 1.3;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.pres__titre mark { background: #f6e9a8; color: inherit; border-radius: var(--r-1); padding: 0 2px; }
-.pres__sous {
-  display: flex; align-items: center; gap: var(--e-2);
-  font-size: var(--t-mini); color: var(--c-encre-3); margin-top: 2px;
-  overflow: hidden; white-space: nowrap;
-}
-.pres__sous .temoin { flex: none; }
-.pres__entree {
-  font-family: var(--f-donnee); font-size: var(--t-micro); color: var(--c-encre-3);
-  opacity: 0; flex: none;
-}
-.pres[data-sel="oui"] .pres__entree { opacity: 1; color: var(--c-accent); }
-
-/* --- États ------------------------------------------------------------------ */
-.palette__etat { padding: var(--e-6) var(--e-5); text-align: center; }
-.palette__etat p { margin: 0 0 var(--e-3); font-size: var(--t-petit); color: var(--c-encre-3); line-height: 1.55; }
-.palette__etat strong { color: var(--c-encre); }
-.palette__requete { font-family: var(--f-lecture); font-style: italic; color: var(--c-encre); }
-
-/* --- Pied --------------------------------------------------------------------- */
-.palette__pied {
+.carte__tete {
   display: flex; align-items: center; justify-content: space-between; gap: var(--e-3);
-  padding: var(--e-2) var(--e-4);
-  border-top: 1px solid var(--c-trait);
-  background: var(--c-papier-2);
-  flex: none;
+  padding: var(--e-4) var(--e-5) 0;
 }
-.palette__aides { display: flex; align-items: center; gap: var(--e-4); flex-wrap: wrap; }
-.palette__aide { display: inline-flex; align-items: center; gap: var(--e-1); font-size: var(--t-micro); color: var(--c-encre-3); }
-.palette__droite { display: flex; align-items: center; gap: var(--e-3); flex: none; }
-.palette__compteur { font-family: var(--f-donnee); font-size: var(--t-micro); color: var(--c-encre-3); }
-.palette__tous {
-  font-size: var(--t-mini); font-weight: var(--g-fort); color: var(--c-accent);
-  background: none; border: 0; cursor: pointer; padding: 4px var(--e-2); border-radius: var(--r-2);
-  white-space: nowrap;
+.carte__periode { font-size: var(--t-meta); color: var(--c-encre-3); }
+.carte__action {
+  font-size: var(--t-petit); color: var(--c-accent); text-decoration: none;
+  font-weight: var(--g-moyen); white-space: nowrap;
 }
-.palette__tous:hover { background: var(--c-accent-voile); }
-.palette__fermer { display: none; }
+.carte__action:hover { text-decoration: underline; }
+.carte__corps { padding: var(--e-4) var(--e-5) var(--e-5); }
+.carte__corps--lignes { padding: var(--e-3) var(--e-3) var(--e-2); }
+.carte__pied {
+  padding: var(--e-3) var(--e-5) var(--e-4);
+  border-top: 1px solid var(--c-trait-fin);
+}
 
-/* --- Petit écran : la palette occupe la quasi-totalité de l'écran ------------- */
-@media (max-width: 700px) {
-  .palette[open] .palette__boite {
-    top: 0; left: 0; transform: none;
-    width: 100vw; height: 100dvh; max-height: none; border-radius: 0; border: 0;
+/* L'ÉTAT VIDE NE LAISSE JAMAIS UNE ZONE BLANCHE : il nomme le geste qui
+   débloque, et le rend cliquable quand il existe. */
+.vide { display: flex; flex-direction: column; align-items: flex-start; gap: var(--e-4); }
+.vide__txt {
+  margin: 0; font-size: var(--t-base); line-height: 1.6;
+  color: var(--c-encre-2); max-width: 68ch;
+}
+
+/* --------------------------------------------------------------------------
+   3. À SURVEILLER — trois blocs sur une grille élastique
+   -------------------------------------------------------------------------- */
+.surveiller {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--e-5);
+  padding: var(--e-4) var(--e-5) var(--e-5);
+  align-items: start;
+}
+
+/* --- Les deux alertes ----------------------------------------------------- */
+.alertes { display: flex; flex-direction: column; gap: var(--e-2); min-width: 0; }
+.alerte {
+  display: flex; align-items: center; gap: var(--e-3);
+  padding: 10px var(--e-2); border-radius: var(--r-3);
+  color: inherit; text-decoration: none;
+  transition: background var(--m-vif);
+}
+.alerte:hover { background: var(--c-papier-2); text-decoration: none; }
+.alerte__pastille {
+  width: 38px; height: 38px; flex: none; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c-fond-creux);
+}
+.alerte__pastille.glyphe--ajour     { background: var(--c-ajour-voile); }
+.alerte__pastille.glyphe--bientot   { background: var(--c-bientot-voile); }
+.alerte__pastille.glyphe--averifier { background: var(--c-averifier-voile); }
+.alerte__pastille.glyphe--arevoir   { background: var(--c-arevoir-voile); }
+.alerte__pastille.glyphe--obsolete  { background: var(--c-obsolete-voile); }
+
+.alerte__corps { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.alerte__titre { font-size: var(--t-base); color: var(--c-encre); line-height: 1.35; }
+.alerte__titre b { font-weight: var(--g-fort); }
+.alerte__detail { font-size: var(--t-meta); color: var(--c-encre-3); line-height: 1.35; }
+.alerte__chevron { flex: none; color: var(--c-encre-4); font-size: var(--t-t3); line-height: 1; }
+.alerte:hover .alerte__chevron { color: var(--c-accent); }
+
+/* --- Les cinq compteurs --------------------------------------------------- */
+.compteurs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.compteur { display: grid; grid-template-columns: 16px 42px minmax(0, 1fr); align-items: center; gap: var(--e-3); }
+.compteur__n {
+  font-family: var(--f-lecture); font-size: var(--t-compteur); font-weight: var(--g-fort);
+  line-height: 1; text-align: right;
+}
+.compteur__lib { font-size: var(--t-base); color: var(--c-encre-2); }
+
+/* --- Le bilan ------------------------------------------------------------- */
+.bilan {
+  display: flex; align-items: flex-start; gap: var(--e-3);
+  padding: var(--e-4); border-radius: var(--r-3);
+}
+.bilan--ajour   { background: var(--c-ajour-voile); }
+.bilan--arevoir { background: var(--c-arevoir-voile); }
+.bilan__marque { flex: none; line-height: 0; margin-top: 2px; }
+.bilan__titre {
+  margin: 0; font-family: var(--f-lecture); font-size: var(--t-lect);
+  font-weight: var(--g-fort); line-height: var(--i-serre);
+}
+.bilan__txt { margin: var(--e-2) 0 0; font-size: var(--t-petit); line-height: 1.55; color: var(--c-encre-2); }
+
+/* --------------------------------------------------------------------------
+   4. LES DEUX CARTES DE CONSULTATION
+   -------------------------------------------------------------------------- */
+.duo {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 22px; align-items: start;
+}
+@media (max-width: 520px) { .duo { grid-template-columns: minmax(0, 1fr); } }
+
+/* UNE LIGNE ENTIÈRE EST CLIQUABLE : c'est un lien, pas une ligne qui en
+   contient un. Le survol porte la surface, jamais un soulignement seul. */
+.ligne {
+  display: grid; grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center; gap: var(--e-3);
+  padding: 10px var(--e-3); border-radius: var(--r-2);
+  color: inherit; text-decoration: none;
+}
+.ligne + .ligne { box-shadow: 0 -1px 0 var(--c-trait-ligne); }
+.ligne:hover { background: var(--c-papier-2); text-decoration: none; }
+.ligne:hover + .ligne, .ligne:hover { box-shadow: none; }
+.ligne__icone {
+  width: 32px; height: 32px; flex: none; border-radius: var(--r-2);
+  display: grid; place-items: center;
+  background: var(--c-fond-creux); color: var(--c-encre-3);
+}
+.ligne__corps { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ligne__titre {
+  font-size: var(--t-base); font-weight: var(--g-moyen); color: var(--c-encre);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ligne:hover .ligne__titre { color: var(--c-accent-fonce); }
+.ligne__sous { font-size: var(--t-meta); color: var(--c-encre-3); }
+
+/* --------------------------------------------------------------------------
+   LA FORME « GLYPHE + LIBELLÉ EN COULEUR » — partagée avec la ligne de
+   vivacité de la lecture d'une note (`V-42.css`). Même nom, même teinte.
+   -------------------------------------------------------------------------- */
+.ligne-vivacite__etat {
+  display: inline-flex; align-items: center; gap: var(--e-2);
+  font-size: var(--t-meta); font-weight: var(--g-moyen);
+  white-space: nowrap; flex: none;
+}
+.ligne-vivacite__etat.glyphe--ajour     { color: var(--c-ajour); }
+.ligne-vivacite__etat.glyphe--bientot   { color: var(--c-bientot); }
+.ligne-vivacite__etat.glyphe--averifier { color: var(--c-averifier); }
+.ligne-vivacite__etat.glyphe--arevoir   { color: var(--c-arevoir); }
+.ligne-vivacite__etat.glyphe--obsolete  { color: var(--c-obsolete); }
+
+/* --------------------------------------------------------------------------
+   5. VOS UNIVERS — un tableau
+   -------------------------------------------------------------------------- */
+.tableau {
+  display: flex; flex-direction: column;
+  padding: var(--e-3) var(--e-3) var(--e-2);
+  overflow-x: auto;
+}
+.tableau__entete, .tableau__ligne {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) 96px repeat(5, 84px) minmax(140px, 1fr) 20px;
+  align-items: center; gap: var(--e-3);
+  min-width: 0;
+}
+.tableau__entete {
+  padding: var(--e-2) var(--e-3) 10px;
+  font-size: var(--t-meta); color: var(--c-encre-3);
+}
+/* La première colonne d'en-tête ne répète pas le titre de la carte. */
+.tableau__entete > span:first-child { visibility: hidden; }
+.tableau__entete > span:nth-child(2) { visibility: hidden; }
+
+.tableau__ligne {
+  padding: 12px var(--e-3); border-radius: var(--r-2);
+  color: inherit; text-decoration: none;
+  box-shadow: 0 -1px 0 var(--c-trait-ligne);
+}
+.tableau__ligne:hover { background: var(--c-papier-2); text-decoration: none; box-shadow: none; }
+.tableau__ligne:hover + .tableau__ligne { box-shadow: none; }
+
+.tableau__nom {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  font-size: var(--t-ui); font-weight: var(--g-moyen);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tableau__ligne:hover .tableau__nom { color: var(--c-accent-fonce); }
+.tableau__glyphe { flex: none; line-height: 0; color: var(--c-accent); }
+.tableau__notes { font-size: var(--t-petit); color: var(--c-encre-3); white-space: nowrap; }
+.tableau__barre { min-width: 0; }
+.tableau__chevron { color: var(--c-encre-4); font-size: var(--t-t3); line-height: 1; text-align: right; }
+.tableau__ligne:hover .tableau__chevron { color: var(--c-accent); }
+
+/* --------------------------------------------------------------------------
+   LA FORME DE RAIL — glyphe et chiffre mono, pour les colonnes denses.
+   Même nom de classe que `V-42.css` : un compteur de tableau et un rail de
+   liste sont la même chose, et doivent le rester.
+   -------------------------------------------------------------------------- */
+.rail-compact {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--f-donnee); font-size: var(--t-petit);
+}
+.rail-compact.glyphe--ajour     { color: var(--c-ajour); }
+.rail-compact.glyphe--bientot   { color: var(--c-bientot); }
+.rail-compact.glyphe--averifier { color: var(--c-averifier); }
+.rail-compact.glyphe--arevoir   { color: var(--c-arevoir); }
+.rail-compact.glyphe--obsolete  { color: var(--c-obsolete); }
+.rail-compact__n { color: var(--c-encre); }
+/* UN ZÉRO NE CRIE PAS : le glyphe s'efface et le chiffre passe au gris, de
+   sorte que la ligne se lise d'un coup d'œil sur les états PRÉSENTS. */
+.rail-compact[data-nul="oui"] { color: #c9d0cc; }
+.rail-compact[data-nul="oui"] .rail-compact__n { color: var(--c-encre-4); }
+
+/* --- La barre empilée ------------------------------------------------------ */
+.barre-etats {
+  display: flex; height: 8px; width: 100%;
+  border-radius: var(--r-rond); overflow: hidden;
+  background: var(--c-fond-creux);
+}
+.barre-etats__part { min-width: 3px; }
+.barre-etats__part.glyphe--ajour     { background: var(--c-ajour); }
+.barre-etats__part.glyphe--bientot   { background: var(--c-bientot); }
+.barre-etats__part.glyphe--averifier { background: var(--c-averifier); }
+.barre-etats__part.glyphe--arevoir   { background: var(--c-arevoir); }
+.barre-etats__part.glyphe--obsolete  { background: var(--c-obsolete); }
+
+/* --------------------------------------------------------------------------
+   PETITS ÉCRANS — le tableau des univers perd ses colonnes de détail avant
+   de devenir illisible ; la barre empilée et le total suffisent alors.
+   -------------------------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .tableau__entete, .tableau__ligne {
+    grid-template-columns: minmax(140px, 1.4fr) 88px repeat(5, 62px) 20px;
   }
-  .palette__fermer { display: inline-flex; }
-  .palette__aides { display: none; }
+  .tableau__barre { display: none; }
 }
-@container (max-width: 430px) {
-  .palette__fermer { display: inline-flex; }
-  .palette__aides { display: none; }
-  .palette__saisie { font-size: var(--t-base); }
-  .pres__sous .temoin__txt { display: none; }
+@media (max-width: 820px) {
+  .tableau__entete, .tableau__ligne { grid-template-columns: minmax(0, 1fr) auto 20px; }
+  .tableau__entete > span:nth-child(n + 3):nth-child(-n + 7) { display: none; }
+  .tableau__ligne .rail-compact { display: none; }
 }
-
-/* --- Barre supérieure sur petit écran --------------------------------------
-   La barre doit tenir à 360 px sans provoquer de défilement horizontal de la
-   page (RG-M18-12) : le champ de recherche devient élastique et lâche ses
-   rappels clavier, qui n'ont pas de sens sans clavier physique. */
-@media (max-width: 640px) {
-  .barre { padding: 0 var(--e-3); gap: var(--e-2); }
-  .recherche { width: auto; flex: 1 1 90px; min-width: 0; }
-  .recherche .touche { display: none; }
-  .recherche__txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .fil { flex: 0 1 auto; }
-  /* Le fil d'Ariane ne tient pas sur 360 px : seul le segment courant reste,
-     les ancêtres restent atteignables par le rail. */
-  .fil > *:not(.fil__courant) { display: none; }
-  .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-}
-
-/* --- Fil d'Ariane : ne pousse jamais la page ------------------------------
-   Le titre d'une note peut être long, et les segments ne se coupent pas tout
-   seuls : sans troncature, le fil élargit la barre, qui élargit la grille, qui
-   fait défiler la page. Le défaut ne se voyait qu'à 768 px — entre les deux
-   largeurs qu'on regarde d'ordinaire. */
-.fil { overflow: hidden; }
-.fil > * { min-width: 0; flex: 0 1 auto; }
-.fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

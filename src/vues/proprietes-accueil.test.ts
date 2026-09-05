@@ -25,14 +25,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createServer, type ViteDevServer } from 'vite';
 import {
-	ACTIVITE,
 	DOMAINES,
 	INSTANCE,
-	MESURES_7J,
-	MESURES_7J_PREC,
-	MODIFICATIONS,
 	MOI,
-	REVISIONS,
 	UNIVERS,
 	corpusPourVue,
 	type IdentifiantDeVue,
@@ -100,103 +95,162 @@ afterAll(async () => {
 	await serveur?.close();
 });
 
-describe('V-07 — accueil contributeur', () => {
+/**
+ * LES ÉTATS DE VIVACITÉ SERVIS — des valeurs de CONTRÔLE, distinctes du jeu de
+ * semence : leurs titres n'y figurent pas, de sorte qu'un titre lu à l'écran ne
+ * puisse venir que de la propriété.
+ */
+const UNIVERS_DE_CONTROLE = [
+	{
+		nom: 'Univers de contrôle T-07',
+		couleur: '#1f5a3c',
+		glyphe: 'boussole',
+		ordre: 1,
+		description: DESCRIPTION_DE_CONTROLE
+	}
+];
+
+const VIVACITES = [
+	{
+		identifiant: 'ctrl-a',
+		titre: 'Contrôle T-07 — à jour',
+		univers: 'Univers de contrôle T-07',
+		etat: 'ajour',
+		libelle: 'À jour',
+		compact: 'dans 67 j',
+		reste: 67
+	},
+	{
+		identifiant: 'ctrl-b',
+		titre: 'Contrôle T-07 — bientôt',
+		univers: 'Univers de contrôle T-07',
+		etat: 'bientot',
+		libelle: 'Bientôt à vérifier',
+		compact: 'dans 6 j',
+		reste: 6
+	},
+	{
+		identifiant: 'ctrl-c',
+		titre: 'Contrôle T-07 — obsolète',
+		univers: 'Univers de contrôle T-07',
+		etat: 'obsolete',
+		libelle: 'Obsolète',
+		compact: '110 j de retard',
+		reste: -110
+	}
+];
+
+describe('V-07 — accueil connecté', () => {
 	/**
 	 * CE QUE CE CAS PROUVE, ET C'EST L'OBJET DE LA CAMPAGNE : une source qui
 	 * n'arrive pas ne rend PLUS le jeu de démonstration. Elle rendait « Bonjour
 	 * Karim. » et « Codicillus 1.0.0 » sur toute instance, et rien ne protestait.
-	 * Les neuf sources sont maintenant EXIGÉES — une route qui en oublierait une
-	 * ne compile plus —, et leur valeur manquante rend l'ÉTAT VIDE.
 	 *
-	 * LES VALEURS CHERCHÉES VIENNENT DE LEUR SOURCE, jamais d'une chaîne écrite
-	 * ici : `MOI` et `INSTANCE` du jeu.
+	 * ET L'ÉTAT VIDE NOMME LE GESTE : chacun des cinq blocs dit quoi faire, aucun
+	 * n'affiche un zéro muet. C'est le chemin de l'instance neuve, celui qu'un
+	 * écran vérifié sur une base semée ne prouve jamais.
 	 */
 	it('sans source servie, rien du jeu de démonstration n’atteint l’écran', async () => {
 		const b = await corps('V-07', {});
 		expect(b).not.toContain('Bonjour ' + MOI.prenom + '.'); // compte
 		expect(b).toContain('Bonjour.');
 		expect(b).not.toContain('Codicillus ' + INSTANCE.version); // instance
-		expect(b).toContain('Rien de signalé'); // revisions
-		expect(b).toContain('Rien de neuf cette semaine'); // activite
-		expect(b).toContain("Aucune n'a bougé cette semaine"); // modifications
+		expect(b).toContain('Votre bibliothèque ne contient encore aucune note.');
+		// Les deux listes et le tableau disent le vide, ils ne l'affichent pas en zéro.
+		expect(b).toContain('Rien à consulter pour l’instant');
+		expect(b).toContain('Aucun univers');
+		// Aucune note lisible : pas d'alerte, pas de compteur, pas de bilan.
+		expect(b).not.toContain('surveiller=bientot');
 	}, 60_000);
 
 	it('la propriété fournie l’emporte', async () => {
 		expect(await corps('V-07', { compte: SOPHIE })).toContain('Bonjour Sophie.');
-		/* Les deux vont ensemble : les domaines sont groupés par univers, et une
-		   liste d'univers vide n'en laisse passer aucun. */
-		expect(await corps('V-07', { univers: UNIVERS, domaines: [DOMAINES[3]] })).toContain(
-			'dans 1 domaine'
+
+		const peuple = await corps('V-07', { vivacites: VIVACITES, seuilBientot: 10 });
+		// La salutation compte ce qui est servi, jamais le corpus du jeu.
+		expect(peuple).toContain('3</b> notes dans votre bibliothèque, dont <b>1</b>');
+		// Les deux alertes MÈNENT quelque part — une liste filtrée, pas un chevron mort.
+		expect(peuple).toContain('surveiller=bientot');
+		expect(peuple).toContain('surveiller=retard');
+		// Le bilan nomme la plus ancienne des notes critiques, et son retard.
+		expect(peuple).toContain('Contrôle T-07 — obsolète');
+		expect(peuple).toContain('échéance dépassée de 110 jours');
+
+		// Le seuil affiché est CELUI QUI EST SERVI : il est configurable en console.
+		expect(await corps('V-07', { vivacites: VIVACITES, seuilBientot: 3 })).toContain(
+			'dans les 3 prochains jours'
 		);
-		expect(await corps('V-07', { revisions: REVISIONS })).toContain('Signalées par des collègues');
-		expect(await corps('V-07', { activite: ACTIVITE })).toContain('evt evt--');
-		expect(await corps('V-07', { modifications: MODIFICATIONS })).toContain(
-			'mises à jour cette semaine'
-		);
-		// Une table de mesure vide n'est pas un chiffre faux : c'est l'état neutre
-		// que P-02 réclame quand la mesure n'a pas répondu. La tendance le dit.
-		expect(
-			await corps('V-07', { mesures7j: MESURES_7J, mesures7jPrec: MESURES_7J_PREC })
-		).not.toContain('tendance--stable');
+
+		// Les deux listes de consultation, et leur sous-ligne propre.
+		const listes = await corps('V-07', {
+			vivacites: VIVACITES,
+			recemment: [{ identifiant: 'ctrl-a', titre: 'Contrôle T-07 — à jour', minutes: 12 }],
+			plusConsultees: [
+				{ identifiant: 'ctrl-c', titre: 'Contrôle T-07 — obsolète', consultations: 412 }
+			]
+		});
+		expect(listes).toContain('il y a 12 min');
+		expect(listes).toContain('412 consultations');
+
+		// Le tableau des univers groupe les états servis sous l'univers servi.
+		const tableau = await corps('V-07', {
+			vivacites: VIVACITES,
+			univers: UNIVERS_DE_CONTROLE
+		});
+		expect(tableau).toContain('Univers de contrôle T-07');
+		expect(tableau).toContain('3 notes');
 	}, 60_000);
 
 	/* ═══════════════════════════════════════════════════════════════════════
-	   L'ÉCRAN D'AMORÇAGE OFFRE LE GESTE QU'IL CONSEILLE
+	   L'ÉCRAN NEUF OFFRE LE GESTE QU'IL CONSEILLE
 
 	   Mesuré sur le produit construit, instance à zéro univers, session
 	   administrateur : le bloc d'actions sortait VIDE sous un texte qui
-	   conseille de rapatrier. Ses deux gestes sont gardés par la capacité
-	   d'écriture — fausse sur une instance neuve — et leurs adresses rendent
-	   404 tant qu'aucun univers n'existe : la garde est juste, elle reste. Ce
-	   qui manquait est la troisième action, la seule suite vraie.
+	   conseille de rapatrier. Trois situations, trois suites, et une seule
+	   vraie à la fois.
 	   ═══════════════════════════════════════════════════════════════════════ */
 
-	/**
-	 * LE CONTENU DU BLOC D'ACTIONS, commentaires de rendu retirés — les marqueurs
-	 * d'hydratation d'un bloc conditionnel non pris sont émis même vide, et un
-	 * document qui les porte n'offre pourtant aucun geste.
-	 */
-	function actionsDAmorce(rendu: string): string {
-		const bloc = /<div class="amorce__actions">([\s\S]*?)<\/div>/.exec(rendu)?.[1] ?? '';
+	/** Le bloc d'amorce, commentaires de rendu retirés. */
+	function amorce(rendu: string): string {
+		const bloc = /<div class="vide">([\s\S]*?)<\/div>/.exec(rendu)?.[1] ?? '';
 		return bloc.replace(/<!--[\s\S]*?-->/g, '').trim();
 	}
 
 	it('à zéro univers, l’administrateur reçoit le geste que l’écran conseille', async () => {
-		const actions = actionsDAmorce(
-			await corps('V-07', {
-				vecteur: { etat: 'vide', administrateur: true },
-				univers: [],
-				ecriture: false
-			})
+		const bloc = amorce(
+			await corps('V-07', { univers: [], vivacites: [], ecriture: false, administrateur: true })
 		);
-		expect(actions).not.toBe('');
-		expect(actions).toContain('/console/univers');
-		expect(actions).toContain('Créer votre premier univers');
-		// Les deux gestes d'origine restent gardés : leurs adresses rendent 404.
-		expect(actions).not.toContain('v-importer');
-		expect(actions).not.toContain('v-creer');
+		expect(bloc).not.toBe('');
+		expect(bloc).toContain('/console/univers');
+		expect(bloc).toContain('Créer votre premier univers');
+		// Les deux gestes d'écriture restent gardés : leurs adresses rendent 404.
+		expect(bloc).not.toContain('/notes/nouvelle');
 	}, 60_000);
 
-	it('à zéro univers, un compte qui n’est pas administrateur ne reçoit rien', async () => {
-		const actions = actionsDAmorce(
-			await corps('V-07', { vecteur: { etat: 'vide' }, univers: [], ecriture: false })
-		);
-		expect(actions).toBe('');
+	it('à zéro univers, un compte qui n’est pas administrateur ne reçoit aucun bouton', async () => {
+		const rendu = await corps('V-07', {
+			univers: [],
+			vivacites: [],
+			ecriture: false,
+			administrateur: false
+		});
+		expect(amorce(rendu)).not.toContain('<a');
+		// Il reçoit tout de même la SUITE VRAIE, qui n'est pas un bouton.
+		expect(rendu).toContain('Aucun univers ne vous est ouvert');
 	}, 60_000);
 
-	it('des univers et l’écriture ouverte : les deux gestes d’origine, inchangés', async () => {
-		const actions = actionsDAmorce(
+	it('des univers et l’écriture ouverte : le geste est la première note', async () => {
+		const bloc = amorce(
 			await corps('V-07', {
-				vecteur: { etat: 'vide', administrateur: true },
 				univers: UNIVERS,
-				ecriture: true
+				vivacites: [],
+				ecriture: true,
+				administrateur: true
 			})
 		);
-		expect(actions).toContain('v-importer');
-		expect(actions).toContain('Importer votre patrimoine existant');
-		expect(actions).toContain('v-creer');
-		expect(actions).toContain('Créer votre première note');
-		expect(actions).not.toContain('/console/univers');
+		expect(bloc).toContain('/notes/nouvelle');
+		expect(bloc).toContain('Créer votre première note');
+		expect(bloc).not.toContain('/console/univers');
 	}, 60_000);
 });
 

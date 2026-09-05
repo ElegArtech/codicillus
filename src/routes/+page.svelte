@@ -4,15 +4,15 @@
 	 * contributeur avec session. `data.session` vient du chargeur, jamais du navigateur
 	 * (`ADR-006`).
 	 *
-	 * `vecteur={null}` demande à chaque vue son état par défaut : « aucune note » est un
-	 * état de V-07 dont la phrase gelée affirme « Votre base ne contient encore aucune
-	 * note », or un périmètre vide n'est pas une base vide. `ecriture` VIENT DU GABARIT, PAS
-	 * DE LA VUE — V-07 la recevait de son seul vecteur de planche, donc toujours vraie.
+	 * V-07 NE REÇOIT PLUS DE VECTEUR DE PLANCHE : ses états — bibliothèque vide, aucun
+	 * univers, aucune consultation — se lisent sur la DONNÉE, et un état joué par un
+	 * réglage d'écran finissait toujours par diverger de l'état réel. `ecriture` et
+	 * `administrateur` viennent du gabarit et du chargeur, jamais de la vue.
 	 *
-	 * LES DEUX FEUILLES DE VUE, ET LA SEULE RÈGLE QUI SE CROISE : `V-07.css:3` pose `.app {
-	 * display: grid; … }`, et la racine de V-01 est `div.public.app`. L'ORDRE DES DEUX
-	 * IMPORTS EST DONC PORTEUR — `V-01.css` vient EN SECOND, de sorte que son `.public {
-	 * display: flex; … }`, même spécificité et source postérieure, l'emporte.
+	 * LES DEUX FEUILLES DE VUE, ET L'ORDRE DE LEURS IMPORTS EST PORTEUR. La racine de V-01
+	 * est `div.public.app`, et `.app` est une grille — `src/socle.css`. `V-01.css` vient
+	 * DONC EN SECOND, de sorte que son `.public { display: flex; … }`, source postérieure,
+	 * l'emporte. Ne pas les intervertir.
 	 */
 	import { onMount } from 'svelte';
 	import VuePublique from '../vues/V-01.svelte';
@@ -40,17 +40,17 @@
 
 {#if data.session}
 	<VueContributeur
-		vecteur={data.vecteur ?? null}
 		notes={data.notes}
 		compte={data.compte}
 		univers={data.univers}
 		domaines={data.domaines}
-		mesures7j={data.mesures7j}
-		mesures7jPrec={data.mesures7jPrec}
-		modifications={data.modifications}
-		activite={data.activite}
-		revisions={data.revisions}
+		vivacites={data.vivacites}
+		recemment={data.recemment}
+		plusConsultees={data.plusConsultees}
+		seuilBientot={data.seuilBientot}
+		surveiller={data.surveiller}
 		ecriture={data.ecriture}
+		administrateur={data.administrateur}
 	/>
 {:else}
 	<!--
