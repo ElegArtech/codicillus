@@ -7,6 +7,8 @@ dossier: Réseau
 auteur: j.tanaka
 etiquettes: reseau, astreinte, continuite
 verifie-il-y-a-jours: 5
+validite-operationnel: 30
+verifie-operationnel-il-y-a-jours: 5
 ---
 La bascule fait passer le trafic sortant du lien opérateur principal vers le lien de secours. Elle est jouée en cas de coupure du lien principal, de dégradation prolongée, ou lors des exercices semestriels.
 

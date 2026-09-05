@@ -264,6 +264,11 @@ export interface LigneDeNote {
 	readonly modifieLe: Date;
 	readonly corpsOperationnelModifieLe: Date | null;
 	readonly verifieLe: Date | null;
+	/**
+	 * `014` — le cycle de l'Opérationnel. Nul sans corps opérationnel :
+	 * `notes_operationnel_verification_coherente` refuse l'autre cas.
+	 */
+	readonly verifieLeOperationnel: Date | null;
 	readonly compteurDeConsultations: number;
 	/**
 	 * Les étiquettes DANS L'ORDRE DU JEU : cet ordre n'est pas l'ordre alphabétique
@@ -531,6 +536,10 @@ export function lignesDeNote(notes: readonly Note[] = CORPUS): readonly LigneDeN
 			modifieLe,
 			corpsOperationnelModifieLe: n.operationnel ? modifieLe : null,
 			verifieLe: n.revise === null ? null : instantDeDateCourte(n.revise),
+			/* CRÉER LE REGISTRE LE VÉRIFIE : le jeu pose donc la même date que sa
+			   modification. Le corpus ne porte pas de seconde date de révision, et en
+			   inventer une désaccorderait les deux cycles sans que rien ne le dise. */
+			verifieLeOperationnel: n.operationnel ? modifieLe : null,
 			compteurDeConsultations: n.vues,
 			etiquettes: n.etiquettes,
 			signetAdresse: n.url ?? null,
@@ -617,6 +626,15 @@ export function lignesDeParametre(): readonly { cle: string; valeur: unknown }[]
 	return [
 		{ cle: 'seuil_frais', valeur: CONFIG.seuilFrais },
 		{ cle: 'seuil_vieillissant', valeur: CONFIG.seuilVieillissant },
+		/* Les cinq réglages du cycle de vivacité — `014`. Ils sont posés PARCE QUE la
+		   lecture les interroge : une instance semée qui les laisserait absents se
+		   rabattrait sur les défauts, ce qui marche, mais rendrait la console muette
+		   sur ce que l'instance vaut réellement. */
+		{ cle: 'validite_reference', valeur: CONFIG.validiteReference },
+		{ cle: 'validite_operationnel', valeur: CONFIG.validiteOperationnel },
+		{ cle: 'seuil_bientot', valeur: CONFIG.seuilBientot },
+		{ cle: 'retard_revoir', valeur: CONFIG.retardRevoir },
+		{ cle: 'retard_obsolete', valeur: CONFIG.retardObsolete },
 		{ cle: 'versions_max', valeur: CONFIG.versionsMax },
 		{ cle: 'portail_assistance', valeur: CONFIG.portailAssistance },
 		{ cle: 'mot_fiche', valeur: CONFIG.motFiche },

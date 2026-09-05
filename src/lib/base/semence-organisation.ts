@@ -486,6 +486,9 @@ export function notesDOrganisation(): readonly LigneDeNote[] {
 			modifieLe,
 			corpsOperationnelModifieLe: g.operationnel === true ? modifieLe : null,
 			verifieLe: instantAvantReference(g.jours),
+			/* `014` — créer le registre le vérifie ; la graine ne porte pas de seconde
+			   date, et le cycle de l'Opérationnel part donc de sa modification. */
+			verifieLeOperationnel: g.operationnel === true ? modifieLe : null,
 			compteurDeConsultations: g.vues,
 			etiquettes: g.etiquettes,
 			signetAdresse: null,
