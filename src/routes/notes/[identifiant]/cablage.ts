@@ -16,6 +16,7 @@
  * l'agrandissement d'une figure.
  */
 import { soumettreVers } from '$lib/cablage/formulaires';
+import type { Registre } from '$lib/donnees/note';
 import { adresseDeNote } from '$lib/rangement/adresses';
 
 export type Debranchement = () => void;
@@ -23,6 +24,14 @@ export type Debranchement = () => void;
 export interface OptionsDeLaLecture {
 	/** L'identifiant lisible de la note lue — la racine de toutes ses adresses. */
 	readonly identifiant: string;
+	/**
+	 * LE REGISTRE AFFICHÉ — celui que les trois gestes de vivacité visent.
+	 *
+	 * Il voyage EN COUPLE DE SOUMISSION et non dans l'adresse : `?/verifier`
+	 * REMPLACE la chaîne de requête de la page, et `?registre=operationnel` n'y
+	 * survivrait pas. Sans lui, vérifier l'Opérationnel attesterait la Référence.
+	 */
+	readonly registre: Registre;
 	/** `RG-M05-08` / `P-09` — sans le droit d'écrire, aucun geste n'est posé. */
 	readonly ecriture: boolean;
 	/**
@@ -88,8 +97,13 @@ export function cablerLaLecture(
 
 	/* ═══════════════════ 1. LA FRAÎCHEUR — les trois gestes de M06 ═════════ */
 
+	/** Le registre courant, joint à chaque geste de vivacité — jamais deviné au serveur. */
+	const coupleDeRegistre = { nom: 'registre', valeur: options.registre };
+
 	/* « Marquer comme vérifié » — `UC-M06-02`, un clic et aucun champ. */
-	agir(document.getElementById('btn-verifier'), () => soumettreVers(formulaire, '?/verifier'));
+	agir(document.getElementById('btn-verifier'), () =>
+		soumettreVers(formulaire, '?/verifier', coupleDeRegistre)
+	);
 
 	/* Le dépliage du panneau de signalement — `V-14:4039`, transcrit. */
 	const panneauReviser = document.getElementById('panneau-reviser');
@@ -121,12 +135,12 @@ export function cablerLaLecture(
 	agir(document.getElementById('btn-reviser-envoi'), () => {
 		poserChamp(formulaire, 'commentaire', zoneReviser?.value ?? '');
 		replier();
-		soumettreVers(formulaire, '?/signaler');
+		soumettreVers(formulaire, '?/signaler', coupleDeRegistre);
 	});
 
 	/* « Lever la demande » — le bandeau de révision, `V-14:1427`. */
 	agir(boutonNomme(document.getElementById('bandeau-revision'), 'Lever la demande'), () =>
-		soumettreVers(formulaire, '?/lever')
+		soumettreVers(formulaire, '?/lever', coupleDeRegistre)
 	);
 
 	/* ═══════════════════ 2. LES DEUX AUTRES BANDEAUX ══════════════════════ */
