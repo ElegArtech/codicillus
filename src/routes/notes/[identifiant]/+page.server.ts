@@ -43,8 +43,16 @@ import {
 	lireLesChampsDUnTypeDeFiche,
 	lireLesProprietesDeFiche,
 	lireSeuils,
+	lireSeuilsDeVivacite,
 	type ContexteDeLecture
 } from '$lib/donnees/lecture';
+import { vivacite, type Vivacite } from '$lib/fraicheur';
+import {
+	basculesDUneNote,
+	cycleDuRegistre,
+	type BasculeDeVivacite,
+	type LigneDeCycles
+} from '$lib/donnees/vivacite';
 import type { Identite } from '$lib/droits/resolution';
 import { lireLaNote, registreDemande, type LectureDeNote, type Registre } from '$lib/donnees/note';
 import type {
@@ -221,11 +229,35 @@ export interface PieceJointeCablee {
 	readonly typeMedia: string;
 }
 
+/**
+ * LA VIVACITÉ DES DEUX REGISTRES — la fabrique à cinq états, servie par la base.
+ *
+ * `courante` est celle du registre AFFICHÉ : la ligne compacte, la carte de la
+ * colonne contexte, la frise et le rappel en sortent tous, sans qu'aucune vue ne
+ * recalcule quoi que ce soit (`P-01`, `ADR-005`).
+ *
+ * `operationnelle` est `null` quand la note n'a pas de registre Opérationnel —
+ * l'état vide explicite : il n'y a pas de cycle, et l'écran répond par le geste
+ * qui le débloque, « Créer la version opérationnelle ».
+ */
+interface VivaciteDeLaNote {
+	readonly courante: Vivacite;
+	readonly reference: Vivacite;
+	readonly operationnelle: Vivacite | null;
+	/**
+	 * LES BASCULES AUTOMATIQUES DÉJÀ SURVENUES, des deux registres, la plus récente
+	 * d'abord. Elles ne sont PAS stockées : `basculesDUneNote()` les dérive du couple
+	 * (vérifiée, validité). L'historique les montre à côté des vérifications.
+	 */
+	readonly bascules: readonly BasculeDeVivacite[];
+}
+
 interface ComplementsDeLecture {
 	readonly affichee: LectureAffichee;
 	readonly panneaux: PanneauxDeLaNote;
 	/** Les mêmes pièces que `panneaux.pieces`, dans le même ordre — voir ci-dessus. */
 	readonly piecesJointes: readonly PieceJointeCablee[];
+	readonly vivacite: VivaciteDeLaNote;
 }
 
 /**
@@ -313,9 +345,16 @@ async function complementsDeLecture(
 			corpsReference: notes.corpsReference,
 			corpsReferenceModifieLe: notes.corpsReferenceModifieLe,
 			corpsOperationnelModifieLe: notes.corpsOperationnelModifieLe,
+			/* LES QUATRE COLONNES DU CYCLE PAR REGISTRE — `014`. Elles ne sont lues
+			   que pour être passées à `cycleDuRegistre()` : cette route n'en dérive
+			   rien elle-même. */
+			verifieLeOperationnel: notes.verifieLeOperationnel,
+			validiteReference: notes.validiteReference,
+			validiteOperationnel: notes.validiteOperationnel,
 			revisionDemandee: notes.revisionDemandee,
 			revisionCommentaire: notes.revisionCommentaire,
 			revisionLe: notes.revisionLe,
+			revisionRegistre: notes.revisionRegistre,
 			revisionPar: comptes.nom
 		})
 		.from(notes)
@@ -331,7 +370,7 @@ async function complementsDeLecture(
 	   attestation : la colonne est effaçable, et `RG-M15-02` fait de l'anonymat un
 	   état normal du journal. */
 	const attestations = await base
-		.select({ par: comptes.nom, le: verifications.le })
+		.select({ par: comptes.nom, le: verifications.le, registre: verifications.registre })
 		.from(verifications)
 		.leftJoin(comptes, eq(verifications.compteId, comptes.id))
 		.where(eq(verifications.noteId, ligne.cle))
@@ -402,6 +441,45 @@ async function complementsDeLecture(
 	const proprietesDeFiche = await proprietesDeLaFiche(base, lecture);
 
 	const domaineParNote = new Map<string, string>(lecture.notes.map((n) => [n.id, n.domaine]));
+
+	/* LE DERNIER VÉRIFICATEUR DE CHAQUE REGISTRE — les attestations sont déjà triées
+	   de la plus récente à la plus ancienne, la PREMIÈRE de chaque registre est donc
+	   la bonne. Un `find` sur une liste triée, pas une seconde requête. */
+	const dernierVerificateur = (registreVoulu: Registre): string | null =>
+		attestations.find((a) => a.registre === registreVoulu)?.par ?? null;
+
+	/* LA LIGNE DE CYCLES — l'unique forme d'entrée de `cycleDuRegistre()`. Aucune
+	   propriété n'est calculée ici : la route PROJETTE, le producteur DÉCIDE. */
+	const ligneDeCycles: LigneDeCycles = {
+		modifieLe: ligne.modifieLe,
+		corpsOperationnelModifieLe: ligne.corpsOperationnelModifieLe,
+		verifieLe: ligne.verifieLe,
+		verifieLeOperationnel: ligne.verifieLeOperationnel,
+		validiteReference: ligne.validiteReference,
+		validiteOperationnel: ligne.validiteOperationnel,
+		revisionDemandee: ligne.revisionDemandee,
+		revisionRegistre: ligne.revisionRegistre,
+		revisionPar: ligne.revisionPar,
+		verifieParReference: dernierVerificateur('reference'),
+		verifieParOperationnel: dernierVerificateur('operationnel')
+	};
+
+	const seuilsDeVivacite = await lireSeuilsDeVivacite(base);
+	/* LA RÉFÉRENCE EXISTE TOUJOURS (`RG-NOT-02`) : son cycle n'est jamais nul, et le
+	   repli n'est là que parce que le type est commun aux deux registres. */
+	const cycleDeReference = cycleDuRegistre(ligneDeCycles, 'reference');
+	const cycleOperationnel = cycleDuRegistre(ligneDeCycles, 'operationnel');
+	const vivaciteDeReference = vivacite(
+		cycleDeReference ?? {
+			verifiee: ligne.verifieLe,
+			modifiee: ligne.modifieLe,
+			validite: ligne.validiteReference
+		},
+		maintenant,
+		seuilsDeVivacite
+	);
+	const vivaciteOperationnelle =
+		cycleOperationnel === null ? null : vivacite(cycleOperationnel, maintenant, seuilsDeVivacite);
 
 	/* `RG-M06-01` — la fraîcheur se lit sur la dernière vérification, et à défaut
 	   sur la dernière modification. L'ANCIENNETÉ SERVIE AU LIBELLÉ EST CELLE-LÀ,
@@ -483,7 +561,19 @@ async function complementsDeLecture(
 			nom: pj.nom,
 			adresse: adresseDePieceJointe(lecture.note.id, pj.nom),
 			typeMedia: pj.typeMedia
-		}))
+		})),
+		vivacite: {
+			/* Le registre AFFICHÉ commande : bascule sur Opérationnel, et TOUT ce qui
+			   parle de vivacité parle de l'Opérationnel. Sans registre opérationnel,
+			   il n'y a rien à afficher d'autre que la Référence. */
+			courante:
+				registre === 'operationnel' && vivaciteOperationnelle !== null
+					? vivaciteOperationnelle
+					: vivaciteDeReference,
+			reference: vivaciteDeReference,
+			operationnelle: vivaciteOperationnelle,
+			bascules: basculesDUneNote(ligneDeCycles, maintenant, seuilsDeVivacite)
+		}
 	};
 }
 
@@ -657,6 +747,13 @@ export const load: PageServerLoad = async ({ params, url, locals, request }) => 
 		 */
 		piecesJointes: complements.piecesJointes,
 		/**
+		 * LA VIVACITÉ DES DEUX REGISTRES — tout ce que l'écran dit de l'état, de
+		 * l'échéance, de la frise et du rappel automatique sort d'ici. Une vue qui
+		 * recalculerait un seul de ces champs rouvrirait la divergence que la fabrique
+		 * unique ferme.
+		 */
+		vivacite: complements.vivacite,
+		/**
 		 * DE QUOI DÉCLARER UNE RELATION SANS QUITTER LA NOTE — le dialogue
 		 * `d-relation`, que le gel place dans le panneau « Relations » de V-14.
 		 *
@@ -726,25 +823,45 @@ async function contexteDUnGeste() {
  * REJOUE l'écriture. Le `303` referme cela — et les valeurs rendues n'étaient lues
  * par personne, aucune propriété `form` n'existant sur cette page.
  */
-function adresseDeLaNote(identifiant: string): string {
-	return `/notes/${identifiant}`;
+function adresseDeLaNote(identifiant: string, registre: Registre): string {
+	/* LE REGISTRE SURVIT AU GESTE. Sans lui, vérifier l'Opérationnel ramenait sur la
+	   Référence, et l'onglet que l'utilisateur venait d'attester disparaissait sous
+	   ses yeux. `reference` est le défaut de l'adresse : elle n'a rien à porter. */
+	return registre === 'operationnel'
+		? `/notes/${identifiant}?registre=operationnel`
+		: `/notes/${identifiant}`;
+}
+
+/**
+ * LE REGISTRE QUE LE GESTE VISE — le champ que le câblage joint à la soumission.
+ *
+ * L'adresse d'une action est `?/verifier` : elle REMPLACE la chaîne de requête de la
+ * page, et `?registre=operationnel` n'y survit pas. Le registre voyage donc dans le
+ * formulaire, comme le commentaire de révision. Absent, c'est la Référence —
+ * `registreDemande()` en décide, et il en décide seul.
+ */
+function registreDuGeste(formulaire: FormData): Registre {
+	const soumis = formulaire.get('registre');
+	return registreDemande(typeof soumis === 'string' ? soumis : null);
 }
 
 export const actions: Actions = {
 	/** VÉRIFIER — `UC-M06-02`. Un clic, aucun champ : rien à valider avant d'écrire. */
-	verifier: async ({ params, locals }) => {
+	verifier: async ({ params, locals, request }) => {
 		const { base, maintenant, contexte } = await contexteDUnGeste();
-		/* SEUL CE GESTE ENTRETIENT L'INDEX DES TROIS — il écrit `verifieLe`, champ
-		   projeté et triable. Signaler et lever n'écrivent que les colonnes de
-		   révision, qu'aucune entrée d'index ne porte. */
+		const registre = registreDuGeste(await request.formData());
+		/* SEUL CE GESTE ENTRETIENT L'INDEX DES TROIS — il écrit une date de
+		   vérification, champ projeté et triable. Signaler et lever n'écrivent que les
+		   colonnes de révision, qu'aucune entrée d'index ne porte. */
 		const fait = await verifierLaNote(base, moteurPartage(), {
 			identifiant: params.identifiant,
+			registre,
 			identite: locals.identite,
 			contexte,
 			maintenant
 		});
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
-		redirect(303, adresseDeLaNote(params.identifiant));
+		redirect(303, adresseDeLaNote(params.identifiant, registre));
 	},
 
 	/**
@@ -754,6 +871,7 @@ export const actions: Actions = {
 	signaler: async ({ params, locals, request }) => {
 		const { base, maintenant, contexte } = await contexteDUnGeste();
 		const formulaire = await request.formData();
+		const registre = registreDuGeste(formulaire);
 		const commentaire = commentaireDeRevision(formulaire.get('commentaire'));
 
 		if (commentaire === null) {
@@ -763,6 +881,7 @@ export const actions: Actions = {
 			   régime, effet neutre quand aucune demande n'est courante. */
 			const acces = await leverLaDemandeDeRevision(base, {
 				identifiant: params.identifiant,
+				registre,
 				identite: locals.identite,
 				contexte,
 				maintenant
@@ -773,13 +892,14 @@ export const actions: Actions = {
 
 		const fait = await demanderUneRevision(base, {
 			identifiant: params.identifiant,
+			registre,
 			identite: locals.identite,
 			contexte,
 			maintenant,
 			commentaire
 		});
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
-		redirect(303, adresseDeLaNote(params.identifiant));
+		redirect(303, adresseDeLaNote(params.identifiant, registre));
 	},
 
 	/**
@@ -814,7 +934,9 @@ export const actions: Actions = {
 			modification: { corps: { saisi: histoire.affichee.reference } }
 		});
 		if (!issue.trouve) error(404, MESSAGE_INTROUVABLE);
-		redirect(303, adresseDeLaNote(params.identifiant));
+		/* La restauration porte sur la RÉFÉRENCE — les versions ne capturent qu'elle —,
+		   et l'adresse de retour dit le même registre que le geste. */
+		redirect(303, adresseDeLaNote(params.identifiant, 'reference'));
 	},
 
 	/**
@@ -822,16 +944,18 @@ export const actions: Actions = {
 	 * vert. Confondre les deux serait confondre « cette demande n'a plus lieu
 	 * d'être » et « ce contenu est d'actualité ».
 	 */
-	lever: async ({ params, locals }) => {
+	lever: async ({ params, locals, request }) => {
 		const { base, maintenant, contexte } = await contexteDUnGeste();
+		const registre = registreDuGeste(await request.formData());
 		const fait = await leverLaDemandeDeRevision(base, {
 			identifiant: params.identifiant,
+			registre,
 			identite: locals.identite,
 			contexte,
 			maintenant
 		});
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
-		redirect(303, adresseDeLaNote(params.identifiant));
+		redirect(303, adresseDeLaNote(params.identifiant, registre));
 	},
 
 	/**

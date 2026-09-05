@@ -32,6 +32,7 @@ import {
 	piecesJointes,
 	statutDeNote as enumDeStatut,
 	typesDeFiche,
+	verifications,
 	versions,
 	visibilite as enumDeVisibilite
 } from '../base/schema';
@@ -991,9 +992,13 @@ export async function enregistrerLaNote(
 
 	/* La version capture ce que l'enregistrement PRODUIT (`RG-M07-02`) : le titre
 	   passé est celui d'APRÈS. */
+	/* L'identité est authentifiée depuis la garde du haut ; la constante la porte
+	   dans les fermetures, où le compilateur ne suit plus le rétrécissement. */
+	const auteurId = demande.identite.compteId;
+
 	const version = versionDUnEnregistrement({
 		dernierNumero: dernier?.numero ?? 0,
-		auteurId: demande.identite.compteId,
+		auteurId,
 		maintenant: demande.maintenant,
 		titre,
 		corps: apres,
@@ -1023,6 +1028,7 @@ export async function enregistrerLaNote(
 	 * `RG-M07-01` décide s'il faut écrire une version : un second comparateur rendrait
 	 * possible une note qui porte une version sans en porter la date.
 	 */
+	let cycleOperationnelDemarre = false;
 	if (modification.corps !== undefined) {
 		if (demande.registre === 'operationnel') {
 			colonnes.corpsOperationnel = apres.operationnel;
@@ -1032,6 +1038,24 @@ export async function enregistrerLaNote(
 			   ensemble, ou aucune ne l'est. Le retrait emporte donc la date. */
 			if (apres.operationnel === null) colonnes.corpsOperationnelModifieLe = null;
 			else if (change) colonnes.corpsOperationnelModifieLe = demande.maintenant;
+			/**
+			 * CRÉER LE REGISTRE OPÉRATIONNEL DÉMARRE SON CYCLE — le paquet de refonte :
+			 * « crée le registre (vérifié à l'instant, validité propre) ». Celui qui
+			 * l'écrit vient de le relire ligne à ligne ; le faire naître déjà en retard
+			 * afficherait « À vérifier » sur un contenu écrit il y a dix secondes.
+			 *
+			 * LA CONDITION EST LE PASSAGE DE NUL À NON NUL, jamais la simple présence :
+			 * une modification ultérieure de l'Opérationnel n'est PAS une vérification
+			 * (`RG-M06-05` — modifier n'atteste pas).
+			 *
+			 * ET LE RETRAIT EMPORTE LA DATE, comme celle de modification :
+			 * `notes_operationnel_verification_coherente` refuse un cycle sans corps.
+			 */
+			if (apres.operationnel === null) colonnes.verifieLeOperationnel = null;
+			else if (ligne.corpsOperationnel === null) {
+				colonnes.verifieLeOperationnel = demande.maintenant;
+				cycleOperationnelDemarre = true;
+			}
 		} else {
 			colonnes.corpsReference = apres.reference;
 			if (empreinteDuCorps(ligne.corpsReference) !== empreinteDuCorps(apres.reference)) {
@@ -1044,6 +1068,17 @@ export async function enregistrerLaNote(
 
 	await base.transaction(async (tx) => {
 		if (ecrit) await tx.update(notes).set(colonnes).where(eq(notes.id, ligne.id));
+		/* LA CRÉATION DU REGISTRE EST UNE ATTESTATION, ET L'HISTORIQUE LE DIT : la
+		   ligne part dans la MÊME transaction que la date, faute de quoi le journal
+		   des vérifications et la colonne dénormalisée divergeraient. */
+		if (cycleOperationnelDemarre) {
+			await tx.insert(verifications).values({
+				noteId: ligne.id,
+				compteId: auteurId,
+				registre: 'operationnel',
+				le: demande.maintenant
+			});
+		}
 		if (version !== null) {
 			await tx.insert(versions).values({
 				noteId: ligne.id,
