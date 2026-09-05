@@ -45,11 +45,9 @@ import {
 	corpusPourVue,
 	noteParIdentifiant,
 	type ChampDeFiche,
-	type Note,
 	type TypeDeChamp,
 	type UtilisateurCourant
 } from '../../seeds/corpus';
-import type { LectureAffichee } from '../lib/lecture/note-de-demonstration';
 import { TYPES_DE_FICHE as TYPES_DE_FICHE_PEUPLES } from '../../seeds/demonstration';
 import type { CompteAffiche } from '../lib/coquille/identite';
 import { calculerLesFamilles } from '../lib/graphe/familles';
@@ -125,32 +123,6 @@ const v23 = (p: ComponentProps<typeof import('./V-23.svelte').default>) => rendr
    de route passera vient de la base, et il vaut mieux que le cas d'épreuve lui
    ressemble. Seuls les libellés de relation sont marqués, pour être
    reconnaissables sans ambiguïté dans le balisage. */
-
-/**
- * LA NOTE TELLE QUE LE CHARGEUR L'AFFICHE — l'enveloppe minimale.
- *
- * Les deux corps sont `null` et le sommaire est vide : ce sont des états que
- * `LectureAffichee` déclare, et ils suffisent à ce que la vue rende son
- * enveloppe. Aucun corps n'est écrit à la main — ce serait le second
- * convertisseur qu'`ADR-004` interdit, y compris dans un test.
- */
-function afficheeDe(note: Note): LectureAffichee {
-	const instant = { iso: '2026-03-02', jour: '2 mars 2026', heureDite: '2 mars 2026 à 17:40' };
-	return {
-		note,
-		reference: null,
-		operationnel: null,
-		sommaire: [],
-		controle: null,
-		joursDepuisControle: 4,
-		modifiee: instant,
-		referenceModifiee: instant,
-		resync: false,
-		revision: null,
-		consultations30j: 7,
-		consultationsTotal: 431
-	};
-}
 
 /** Une autre identité que `MOI` : autres initiales, autre nom, autre domaine. */
 const AUTRE_COMPTE: UtilisateurCourant = {
@@ -233,21 +205,35 @@ function compter(html: string, motif: RegExp): number {
 
 /* ═══════════════════════════════════════════════════════════════════════ */
 
-describe('V-15 — historique des versions', () => {
+describe('V-15 — historique d’une note', () => {
 	const notes = corpusPourVue('V-15');
 	/* LA NOTE DONT L'HISTORIQUE EST OUVERT. Elle vient du corpus servi, jamais
 	   d'une saisie : c'est la forme qu'un chargeur produit. */
 	const LA_NOTE = notes[0]!;
-	const AFFICHEE = afficheeDe(LA_NOTE);
 	const SOCLE = {
-		vecteur: null,
 		notes,
 		note: LA_NOTE,
-		affichee: AFFICHEE,
-		versions: {},
-		retentionVersions: 50,
-		versionAffichee: null,
-		onComparer: () => undefined
+		adresseDeLaNote: `/notes/${LA_NOTE.id}`,
+		onglets: [
+			{ libelle: 'Tous', actif: true, adresse: `/notes/${LA_NOTE.id}/historique` },
+			{
+				libelle: 'Référence',
+				actif: false,
+				adresse: `/notes/${LA_NOTE.id}/historique?registre=reference`
+			},
+			{
+				libelle: 'Opérationnel',
+				actif: false,
+				adresse: `/notes/${LA_NOTE.id}/historique?registre=operationnel`
+			}
+		],
+		evenements: [],
+		vide: {
+			titre: 'Aucun événement sur ce registre',
+			texte: 'Vérifiez la note ou modifiez son contenu.',
+			adresse: `/notes/${LA_NOTE.id}`,
+			libelle: 'Ouvrir la note'
+		}
 	};
 
 	it("sans identité servie, aucun compte du jeu de démonstration n'est nommé", async () => {
@@ -257,36 +243,21 @@ describe('V-15 — historique des versions', () => {
 	});
 
 	it("l'identité servie est celle qui est rendue", async () => {
-		const body = await v15({ ...SOCLE, compte: AUTRE_COMPTE });
+		const body = await v15({ ...SOCLE, compte: AUTRE_COMPTE_AFFICHE });
 		expect(body).toContain('Sophie Nguyen');
 		expect(body).toContain('>SN<');
 	});
 
-	/* La rétention n'est annoncée que lorsqu'il y a quelque chose à conserver :
-	   le gel efface le texte plutôt que d'annoncer zéro. */
-	it('annonce la rétention servie, et non celle du jeu', async () => {
-		const body = await v15({
-			...SOCLE,
-			versions: { [LA_NOTE.id]: VERSIONS['n-restaurer-pg']! },
-			retentionVersions: 7
-		});
-		expect(body).toContain('les 7 dernières sont gardées');
-		expect(body).not.toContain('les 50 dernières sont gardées');
+	/* AUCUN ÉVÉNEMENT : LA PAGE LE DIT, et nomme le geste qui remplit le fil. */
+	it("l'état vide servi est rendu, et il nomme son geste", async () => {
+		const body = await v15(SOCLE);
+		expect(body).toContain('Aucun événement sur ce registre');
+		expect(body).toContain('Ouvrir la note');
 	});
 
-	it("l'historique rendu est celui de la note ouverte, et rien d'autre", async () => {
-		const vide = await v15(SOCLE);
-		expect(vide).toContain('Aucune version antérieure');
-		expect(vide).not.toContain('Version 14');
-
-		/* L'historique est lu SOUS LA CLÉ DE LA NOTE OUVERTE : servi sous une
-		   autre clé, il ne se rend pas. C'est ce que le levier `hist` de la
-		   planche contournait, en choisissant une note du jeu. */
-		const servi = await v15({ ...SOCLE, versions: { [LA_NOTE.id]: VERSIONS['n-restaurer-pg']! } });
-		expect(servi).toContain('Version 14');
-	});
-
-	it("la forme abrégée ne dérive rien des univers ni des domaines — la propriété est acceptée, elle n'est pas exercée", async () => {
+	/* Le rail vient du gabarit racine : hors application, ni univers ni domaines
+	   ne changent quoi que ce soit au rendu. */
+	it('les univers et les domaines sont acceptés, ils ne sont pas exercés', async () => {
 		const temoin = await v15(SOCLE);
 		const restreint = await v15({ ...SOCLE, univers: UN_UNIVERS, domaines: UN_DOMAINE });
 		expect(restreint).toBe(temoin);
