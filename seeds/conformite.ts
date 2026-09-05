@@ -35,6 +35,15 @@ export interface NoteSemee {
 	/** Le chemin de dossier sous le domaine, vide à la racine. */
 	readonly dossier?: string;
 	readonly etat: EtatSeme;
+	/**
+	 * L'ANCIENNETÉ DE VÉRIFICATION, EN JOURS, quand elle doit s'écarter de celle de son état.
+	 *
+	 * Sans elle, TOUTES les notes d'un même état sont vérifiées le même jour, et le fil
+	 * d'activité — sept derniers jours — sort vide sur les six univers. La capture d'un univers
+	 * en montre cinq traces. Une note à jour vérifiée il y a deux heures reste à jour : l'état
+	 * ne bouge pas, seule la date du geste change.
+	 */
+	readonly ancienneteJours?: number;
 	/** La note est écrite en toutes lettres dans `seeds/conformite/` — son corps en vient. */
 	readonly fichier?: string;
 }
@@ -98,9 +107,14 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 						fichier: 'claude.md'
 					},
 					{ titre: 'Incident — PATH Linux', etat: 'arevoir' },
-					{ titre: 'Mode autonome — Bonnes pratiques', etat: 'ajour' },
-					{ titre: 'Workflow — Analyse IA', etat: 'ajour' },
-					{ titre: 'Ancienne procédure npm', dossier: 'archives', etat: 'ajour' }
+					{ titre: 'Mode autonome — Bonnes pratiques', etat: 'ajour', ancienneteJours: 1 },
+					{ titre: 'Workflow — Analyse IA', etat: 'ajour', ancienneteJours: 2 },
+					{
+						titre: 'Ancienne procédure npm',
+						dossier: 'archives',
+						etat: 'ajour',
+						ancienneteJours: 0
+					}
 				],
 				remplissage: [
 					'Audit — Dépendances du dépôt',
@@ -116,7 +130,7 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 				repartition: [11, 0, 0, 0, 0],
 				nommees: [
 					{ titre: 'Prompt — Architecture LLM', etat: 'ajour' },
-					{ titre: 'Prompt — Revue de code', etat: 'ajour' }
+					{ titre: 'Prompt — Revue de code', etat: 'ajour', ancienneteJours: 3 }
 				],
 				remplissage: [
 					'Prompt — Rédaction d’une note technique',
@@ -135,7 +149,7 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 				description: "Bancs d'évaluation et harnais LLM.",
 				notes: 4,
 				repartition: [4, 0, 0, 0, 0],
-				nommees: [{ titre: "Harnais d'évaluation", etat: 'ajour' }],
+				nommees: [{ titre: "Harnais d'évaluation", etat: 'ajour', ancienneteJours: 5 }],
 				remplissage: [
 					'Banc — Jeux d’évaluation internes',
 					'Banc — Mesure de régression',
