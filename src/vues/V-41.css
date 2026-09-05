@@ -869,7 +869,7 @@ span.btn { cursor: default; pointer-events: none; }
   font-weight: var(--g-fort); box-shadow: inset 3px 0 0 var(--c-accent);
 }
 
-.corps-b { min-width: 0; padding: var(--e-5) var(--e-5) var(--e-8); max-width: 1060px; }
+.corps-b { min-width: 0; padding: var(--e-5) var(--e-5) var(--e-8); }
 
 .famille { margin-bottom: var(--e-8); scroll-margin-top: calc(var(--l-barre) + var(--e-4)); }
 .famille__nom {
