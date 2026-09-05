@@ -37,6 +37,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	colonnesDUneDemandeDeRevision,
 	commentaireDeRevision,
+	dateDuRegistre,
 	LEVEE_DE_LA_DEMANDE,
 	planDUneVerification
 } from './verification';
@@ -48,6 +49,14 @@ const KARIM = 'c0000000-0000-4000-8000-000000000001';
 const SOPHIE = 'c0000000-0000-4000-8000-000000000002';
 const INSTANT = new Date('2026-08-20T09:14:00.000Z');
 const PLUS_TARD = new Date('2026-08-21T11:02:00.000Z');
+
+/**
+ * Le plan d'une vérification de la Référence sur une note SANS demande courante —
+ * le cas ordinaire, celui que la plupart des cas ci-dessous inspectent.
+ */
+function planDeReference(demandeSurCeRegistre = true) {
+	return planDUneVerification(NOTE, KARIM, INSTANT, 'reference', demandeSurCeRegistre);
+}
 
 /** Les clés triées d'un objet — la forme comparable d'un jeu de colonnes. */
 function colonnesDe(objet: object): readonly string[] {
@@ -70,7 +79,7 @@ const COLONNES_DE_DATE_DE_MODIFICATION = [
 
 describe('RG-M06-05 — vérifier est une action DISTINCTE de la modification', () => {
 	it('le plan ne porte que deux écritures : la note, et son journal — donc AUCUNE VERSION', () => {
-		const plan = planDUneVerification(NOTE, KARIM, INSTANT);
+		const plan = planDeReference();
 		/* `RG-M07-01` capture une version « à chaque enregistrement qui modifie le
 		   corps ». Il n'y a ici aucun membre où une version pourrait se poser : le
 		   plan est clos à deux, et la fonction n'exécute que ce qu'il porte. */
@@ -80,7 +89,7 @@ describe('RG-M06-05 — vérifier est une action DISTINCTE de la modification', 
 	});
 
 	it('ne MODIFIE PAS le contenu : aucune colonne de corps ni de titre', () => {
-		const { colonnes } = planDUneVerification(NOTE, KARIM, INSTANT);
+		const { colonnes } = planDeReference();
 		for (const interdite of COLONNES_DE_CONTENU) {
 			expect(colonnesDe(colonnes)).not.toContain(interdite);
 		}
@@ -94,57 +103,134 @@ describe('RG-M06-05 — vérifier est une action DISTINCTE de la modification', 
 		   liste pour une raison de vocabulaire : vérifier n'est pas modifier
 		   (`CLAUDE.md` §3), et `RG-M06-01` retombe sur la date de modification à
 		   défaut de vérification — la bouger ouvrirait un SECOND chemin au vert. */
-		const { colonnes } = planDUneVerification(NOTE, KARIM, INSTANT);
+		const { colonnes } = planDeReference();
 		for (const interdite of COLONNES_DE_DATE_DE_MODIFICATION) {
 			expect(colonnesDe(colonnes)).not.toContain(interdite);
 		}
 	});
 
-	it('écrit EXACTEMENT cinq colonnes, et l’ensemble est clos', () => {
+	it('écrit EXACTEMENT six colonnes, et l’ensemble est clos', () => {
 		/* La polarité inverse des trois cas ci-dessus : sans elle, un plan VIDE
-		   les passerait tous les trois (`P-5`). */
-		const { colonnes } = planDUneVerification(NOTE, KARIM, INSTANT);
+		   les passerait tous les trois (`P-5`). La sixième est `revisionRegistre`,
+		   que `014` a jointe aux quatre colonnes de la demande. */
+		const { colonnes } = planDeReference();
 		expect(colonnesDe(colonnes)).toEqual([
 			'revisionCommentaire',
 			'revisionDemandee',
 			'revisionLe',
 			'revisionParId',
+			'revisionRegistre',
 			'verifieLe'
 		]);
-		expect(colonnes.verifieLe).toBe(INSTANT);
+		expect(colonnes).toMatchObject({ verifieLe: INSTANT });
 	});
 
 	it('la date de la note et celle du journal sont UN SEUL instant', () => {
 		/* `002_socle.montee.sql:449-451` — « `notes.verifie_le` est la dernière
 		   ligne de cette table, dénormalisée ». Deux lectures d'horloge feraient
 		   diverger la dénormalisation de sa source, d'une milliseconde d'abord. */
-		const plan = planDUneVerification(NOTE, KARIM, INSTANT);
-		expect(plan.colonnes.verifieLe).toBe(plan.journal.le);
-		expect(plan.journal).toEqual({ noteId: NOTE, compteId: KARIM, le: INSTANT });
+		const plan = planDeReference();
+		expect(plan.colonnes).toMatchObject({ verifieLe: plan.journal.le });
+		expect(plan.journal).toEqual({
+			noteId: NOTE,
+			compteId: KARIM,
+			registre: 'reference',
+			le: INSTANT
+		});
+	});
+});
+
+/* ═══════════════════ LE CYCLE PAR REGISTRE — migration `014` ═══════════ */
+
+describe('un cycle PAR REGISTRE : vérifier l’un ne touche jamais l’autre', () => {
+	it('vérifier la Référence n’écrit QUE `verifieLe`', () => {
+		const { colonnes } = planDeReference();
+		expect(colonnesDe(colonnes)).toContain('verifieLe');
+		expect(colonnesDe(colonnes)).not.toContain('verifieLeOperationnel');
+	});
+
+	it('vérifier l’Opérationnel n’écrit QUE `verifieLeOperationnel`', () => {
+		/* C'est LE point du lot : une seule date bouge, l'autre registre garde son
+		   état. Un objet à deux champs optionnels aurait laissé écrire les deux ; le
+		   type n'a pas de forme où les deux tiennent, et ce cas le mesure. */
+		const { colonnes } = planDUneVerification(NOTE, KARIM, INSTANT, 'operationnel', true);
+		expect(colonnesDe(colonnes)).toContain('verifieLeOperationnel');
+		expect(colonnesDe(colonnes)).not.toContain('verifieLe');
+		expect(colonnes).toMatchObject({ verifieLeOperationnel: INSTANT });
+	});
+
+	it('la fabrique de la date ne rend jamais les deux colonnes', () => {
+		expect(dateDuRegistre('reference', INSTANT)).toEqual({ verifieLe: INSTANT });
+		expect(dateDuRegistre('operationnel', INSTANT)).toEqual({
+			verifieLeOperationnel: INSTANT
+		});
+	});
+
+	it('le journal DIT quel registre a été attesté', () => {
+		expect(planDUneVerification(NOTE, KARIM, INSTANT, 'operationnel', false).journal).toEqual({
+			noteId: NOTE,
+			compteId: KARIM,
+			registre: 'operationnel',
+			le: INSTANT
+		});
+	});
+
+	it('une demande qui vise l’AUTRE registre n’est PAS levée', () => {
+		/* Signaler l'Opérationnel puis vérifier la Référence ne doit pas faire
+		   disparaître le bandeau de l'Opérationnel : personne n'a relu ce
+		   registre-là. Le plan ne porte alors que sa date. */
+		const { colonnes } = planDUneVerification(NOTE, KARIM, INSTANT, 'reference', false);
+		expect(colonnesDe(colonnes)).toEqual(['verifieLe']);
+		expect(colonnesDe(colonnes)).not.toContain('revisionDemandee');
+	});
+
+	it('une demande VISANT ce registre est levée, elle', () => {
+		const { colonnes } = planDUneVerification(NOTE, KARIM, INSTANT, 'operationnel', true);
+		expect(colonnesDe(colonnes)).toEqual([
+			'revisionCommentaire',
+			'revisionDemandee',
+			'revisionLe',
+			'revisionParId',
+			'revisionRegistre',
+			'verifieLeOperationnel'
+		]);
+	});
+
+	it('une demande de révision NOMME le registre qu’elle vise', () => {
+		const surLOperationnel = colonnesDUneDemandeDeRevision(
+			'l’étape 4 ne passe plus',
+			SOPHIE,
+			INSTANT,
+			'operationnel'
+		);
+		expect(surLOperationnel.revisionRegistre).toBe('operationnel');
+		expect(
+			colonnesDUneDemandeDeRevision('le schéma est faux', SOPHIE, INSTANT, 'reference')
+				.revisionRegistre
+		).toBe('reference');
 	});
 });
 
 /* ═══════════════════════════════════ RG-M06-07 ══════════════════════════ */
 
 describe('RG-M06-07 — vérifier EFFACE la demande de révision et son commentaire', () => {
-	it('les quatre colonnes de la demande sont remises à leur état neutre', () => {
-		const { colonnes } = planDUneVerification(NOTE, KARIM, INSTANT);
-		expect(colonnes.revisionDemandee).toBe(false);
-		expect(colonnes.revisionCommentaire).toBeNull();
-		expect(colonnes.revisionParId).toBeNull();
-		expect(colonnes.revisionLe).toBeNull();
+	it('les cinq colonnes de la demande sont remises à leur état neutre', () => {
+		const { colonnes } = planDeReference();
+		expect(colonnes).toMatchObject({
+			revisionDemandee: false,
+			revisionCommentaire: null,
+			revisionParId: null,
+			revisionLe: null,
+			revisionRegistre: null
+		});
 	});
 
 	it('l’effacement est LE MÊME que celui de la levée — pas une seconde écriture', () => {
 		/* La composition est la garantie : si un jour la levée effaçait une colonne
 		   de plus, la vérification l'effacerait aussi, sans qu'on ait à y penser.
 		   Ce cas échouerait si l'une des deux se mettait à recopier l'autre. */
-		const { colonnes } = planDUneVerification(NOTE, KARIM, INSTANT);
-		for (const clef of colonnesDe(LEVEE_DE_LA_DEMANDE)) {
-			expect(colonnes[clef as keyof typeof LEVEE_DE_LA_DEMANDE]).toBe(
-				LEVEE_DE_LA_DEMANDE[clef as keyof typeof LEVEE_DE_LA_DEMANDE]
-			);
-		}
+		const { colonnes } = planDeReference();
+		expect(colonnes).toMatchObject({ ...LEVEE_DE_LA_DEMANDE });
 	});
 
 	it('POLARITÉ INVERSE — la levée seule n’ATTESTE rien : pas de date de vérification', () => {
@@ -155,14 +241,22 @@ describe('RG-M06-07 — vérifier EFFACE la demande de révision et son commenta
 			'revisionCommentaire',
 			'revisionDemandee',
 			'revisionLe',
-			'revisionParId'
+			'revisionParId',
+			'revisionRegistre'
 		]);
 		expect(colonnesDe(LEVEE_DE_LA_DEMANDE)).not.toContain('verifieLe');
+		expect(colonnesDe(LEVEE_DE_LA_DEMANDE)).not.toContain('verifieLeOperationnel');
 	});
 
 	it('POLARITÉ INVERSE — signaler n’EFFACE PAS la vérification acquise', () => {
-		const colonnes = colonnesDUneDemandeDeRevision('la syntaxe a changé', KARIM, INSTANT);
+		const colonnes = colonnesDUneDemandeDeRevision(
+			'la syntaxe a changé',
+			KARIM,
+			INSTANT,
+			'reference'
+		);
 		expect(colonnesDe(colonnes)).not.toContain('verifieLe');
+		expect(colonnesDe(colonnes)).not.toContain('verifieLeOperationnel');
 	});
 
 	it('l’état neutre est gelé : personne ne peut le muter d’ailleurs', () => {
@@ -173,27 +267,44 @@ describe('RG-M06-07 — vérifier EFFACE la demande de révision et son commenta
 /* ═══════════════════════════════════ RG-M06-06 ══════════════════════════ */
 
 describe('RG-M06-06 — une SEULE demande courante, la nouvelle REMPLACE la précédente', () => {
-	it('une demande écrit les QUATRE colonnes, donc n’en laisse aucune de la précédente', () => {
+	it('une demande écrit les CINQ colonnes, donc n’en laisse aucune de la précédente', () => {
 		/* Le remplacement est tenu par le schéma : la demande vit dans quatre
 		   colonnes de la note (`002_socle.montee.sql:358-361`), pas dans une table.
 		   Mais un `UPDATE` PARTIEL laisserait le demandeur ou la date de la demande
 		   précédente en place, sous le commentaire de la nouvelle — un bandeau
 		   attribué au mauvais collègue. L'ensemble clos est ce qui l'interdit. */
-		const colonnes = colonnesDUneDemandeDeRevision('le paragraphe 3.2 est faux', SOPHIE, INSTANT);
+		const colonnes = colonnesDUneDemandeDeRevision(
+			'le paragraphe 3.2 est faux',
+			SOPHIE,
+			INSTANT,
+			'reference'
+		);
 		expect(colonnesDe(colonnes)).toEqual([
 			'revisionCommentaire',
 			'revisionDemandee',
 			'revisionLe',
-			'revisionParId'
+			'revisionParId',
+			'revisionRegistre'
 		]);
 	});
 
 	it('la seconde demande ne partage AUCUNE valeur avec la première', () => {
-		const premiere = colonnesDUneDemandeDeRevision('la syntaxe a changé', SOPHIE, INSTANT);
-		const seconde = colonnesDUneDemandeDeRevision('le lien est mort', KARIM, PLUS_TARD);
+		const premiere = colonnesDUneDemandeDeRevision(
+			'la syntaxe a changé',
+			SOPHIE,
+			INSTANT,
+			'reference'
+		);
+		const seconde = colonnesDUneDemandeDeRevision(
+			'le lien est mort',
+			KARIM,
+			PLUS_TARD,
+			'operationnel'
+		);
 		expect(seconde.revisionCommentaire).not.toBe(premiere.revisionCommentaire);
 		expect(seconde.revisionParId).not.toBe(premiere.revisionParId);
 		expect(seconde.revisionLe).not.toBe(premiere.revisionLe);
+		expect(seconde.revisionRegistre).not.toBe(premiere.revisionRegistre);
 		expect(seconde.revisionDemandee).toBe(true);
 	});
 
@@ -201,10 +312,11 @@ describe('RG-M06-06 — une SEULE demande courante, la nouvelle REMPLACE la pré
 		/* `notes_revision_coherente` (`002_socle.montee.sql:382-388`) : tout nul,
 		   ou drapeau levé AVEC demandeur ET date. Une demande sans demandeur serait
 		   refusée par la base — le type l'interdit avant. */
-		const colonnes = colonnesDUneDemandeDeRevision('à revoir', SOPHIE, INSTANT);
+		const colonnes = colonnesDUneDemandeDeRevision('à revoir', SOPHIE, INSTANT, 'reference');
 		expect(colonnes.revisionDemandee).toBe(true);
 		expect(colonnes.revisionParId).toBe(SOPHIE);
 		expect(colonnes.revisionLe).toBe(INSTANT);
+		expect(colonnes.revisionRegistre).toBe('reference');
 	});
 });
 

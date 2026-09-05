@@ -139,6 +139,8 @@
 		   La suppression, elle, passe par `requestSubmit()` après confirmation. */
 		const defaireLecture = cablerLaLecture(formulaire, {
 			identifiant: data.lecture.note.id,
+			/* Les trois gestes de vivacité visent le registre AFFICHÉ, et lui seul. */
+			registre: data.lecture.registre,
 			ecriture: data.vecteur.droits === 'ecriture',
 			/* `RG-M13-03` — l'export est réservé à l'administrateur. Pour les
 			   autres, l'entrée n'a pas de destination, et le câblage la retire. */
