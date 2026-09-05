@@ -34,11 +34,10 @@ import {
 	corpusPourVue,
 	type Configuration,
 	type Note,
-	type RequeteDeRecherche,
-	type Version
+	type RequeteDeRecherche
 } from '../../seeds/corpus';
 import { messageSeuilNonCroissant } from '../lib/donnees/administration';
-import type { LectureAffichee } from '../lib/lecture/note-de-demonstration';
+import { ancienneteEnClair } from '../routes/notes/[identifiant]/historique/evenements';
 
 afterAll(fermerLeHarnais);
 
@@ -153,74 +152,43 @@ describe('V-34 — les lignes d’adoption s’accordent, parce qu’elles sont 
 	});
 });
 
-/* ── V-15 — l'ancienneté d'une version ───────────────────────────────────── */
+/* ── V-15 — l'ancienneté annoncée par l'historique ──────────────────────── */
 
-describe('V-15 — l’ancienneté d’une version ne porte plus de parenthèse', () => {
-	const NOTE_15: Note = (() => {
-		const premiere = corpusPourVue('V-15')[0];
-		if (premiere === undefined) throw new Error('seeds/corpus.ts : « V-15 » ne sert plus de note');
-		return premiere;
-	})();
-
-	const AFFICHEE: LectureAffichee = {
-		note: NOTE_15,
-		reference: '',
-		operationnel: null,
-		sommaire: [],
-		controle: null,
-		joursDepuisControle: 4,
-		modifiee: { iso: '2026-03-02', jour: '2 mars 2026', heureDite: '2 mars 2026 à 17:40' },
-		referenceModifiee: {
-			iso: '2026-03-02',
-			jour: '2 mars 2026',
-			heureDite: '2 mars 2026 à 17:40'
-		},
-		resync: false,
-		revision: null,
-		consultations30j: 0,
-		consultationsTotal: 0
-	};
-
-	const version = (jours: number): Version => ({
-		n: 1,
-		jours,
-		date: '2 mars 2026',
-		heure: '17:40',
-		auteur: 'Sophie Nguyen',
-		ajout: 4,
-		retrait: 1,
-		resume: 'Une révision d’épreuve'
-	});
-
-	function rendu15(jours: number): Promise<string> {
-		return rendreLaVue('V-15', {
-			vecteur: null,
-			notes: corpusPourVue('V-15'),
-			note: NOTE_15,
-			affichee: AFFICHEE,
-			versions: { [NOTE_15.id]: [version(jours)] },
-			retentionVersions: 50,
-			versionAffichee: null,
-			onComparer: () => undefined
-		});
-	}
+/**
+ * LE SITE A DÉMÉNAGÉ AVEC L'ÉCRAN. L'historique n'affiche plus l'âge d'une
+ * version — son fil porte des dates entières —, mais l'en-tête de la page
+ * annonce toujours « Dernière modification / il y a 4 jours par X », et c'est le
+ * même accord. La phrase est construite par `ancienneteEnClair()`, donc éprouvée
+ * ici SANS monter un écran : la faute vivait dans la phrase, pas dans le rendu.
+ */
+describe('V-15 — l’ancienneté annoncée ne porte plus de parenthèse', () => {
+	/** Le jour de référence, fixe : une horloge rendrait ces bornes mouvantes. */
+	const MAINTENANT = new Date('2026-09-05T12:00:00Z');
+	const ilYA = (jours: number): string =>
+		ancienneteEnClair(new Date(MAINTENANT.getTime() - jours * 86_400_000), MAINTENANT);
 
 	/**
 	 * ZÉRO AN N'EST PAS ATTEIGNABLE PAR CETTE BRANCHE — en deçà de douze mois,
-	 * la ligne compte en mois, et c'est ce que le premier cas fixe. La faute
-	 * vivait à un an, et l'écart de maquette (`mockups/V-15:2764`) est assumé.
+	 * la phrase compte en mois, et c'est ce que le premier cas fixe. La faute
+	 * vivait à un an.
 	 */
-	it('compte en mois sous l’année, puis accorde « an » à un et à deux', async () => {
-		const mois = texteDe(await rendu15(200));
-		expect(mois).toContain('il y a 7 mois');
-		expect(mois).not.toMatch(/il y a \d+ ans?\b/);
+	it('compte en mois sous l’année, puis accorde « an » à un et à deux', () => {
+		expect(ilYA(200)).toBe('il y a 7 mois');
+		expect(ilYA(200)).not.toMatch(/il y a \d+ ans?\b/);
 
-		expect(texteDe(await rendu15(365))).toContain('il y a 1 an');
-		expect(texteDe(await rendu15(730))).toContain('il y a 2 ans');
+		expect(ilYA(365)).toBe('il y a 1 an');
+		expect(ilYA(730)).toBe('il y a 2 ans');
 	});
 
-	it('ne sert plus la parenthèse du repli', async () => {
-		expect(await rendu15(365)).not.toContain('an(s)');
+	it('ne sert plus la parenthèse du repli', () => {
+		expect(ilYA(365)).not.toContain('an(s)');
+	});
+
+	/** Les deux bornes basses, que la même phrase porte. */
+	it('dit le jour même et la veille sans compter', () => {
+		expect(ilYA(0)).toBe("aujourd'hui");
+		expect(ilYA(1)).toBe('hier');
+		expect(ilYA(4)).toBe('il y a 4 jours');
 	});
 });
 
