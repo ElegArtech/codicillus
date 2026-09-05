@@ -19,19 +19,13 @@
 	 * `?/supprimer` : réécrire `formulaire.action` avant `requestSubmit()` est une COURSE,
 	 * et elle a fait partir une restauration vers une suppression.
 	 */
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { deserialize } from '$app/forms';
 	import Vue from '../../../vues/V-14.svelte';
 	import '../../../vues/V-14.css';
-	import { page } from '$app/state';
-	import { cablerLaSuppression, cablerLHistorique } from '$lib/cablage/formulaires';
-	import { porteLeGeste } from '$lib/cablage/libelles';
+	import { cablerLaSuppression } from '$lib/cablage/formulaires';
 	import { formeDeLecture, type FormeDeLecture } from '$lib/fichiers/affichage';
-	import { cablerLaFermetureDeLHistorique, cablerLaLecture, cablerLaLoupe } from './cablage';
-	import Historique from '../../../vues/V-15.svelte';
-	import '../../../vues/V-15.css';
+	import { cablerLaLecture, cablerLaLoupe } from './cablage';
 	import Dialogues from '../../../vues/V-40.svelte';
 	import '../../../vues/V-40.css';
 	import type { LibellesDeRelation } from '../../../../seeds/corpus';
@@ -69,20 +63,13 @@
 	);
 
 	/**
-	 * L'HISTORIQUE EST UN ÉTAT DE CETTE ADRESSE, PAS UNE AUTRE PAGE. V-15 n'a pas
-	 * de chemin propre : elle est superposée à `/notes/{identifiant}`, et son unique
-	 * état adressable est `?version={n}` — `?version` nu désignant la version
-	 * courante. La présence du paramètre décide laquelle des deux vues est montée,
-	 * et rien d'autre : ni un état local, ni un booléen inventé.
+	 * L'HISTORIQUE A SA PAGE — `/notes/{identifiant}/historique`. Il était un ÉTAT de
+	 * cette adresse-ci, `?version`, et V-15 s'y superposait ; elle est désormais une
+	 * route à part entière, et cette page n'a plus qu'une vue à monter. L'action
+	 * `?/restaurer` reste ici : c'est la note qu'on restaure, et le formulaire de
+	 * l'historique la vise par son adresse.
 	 */
-	const historiqueOuvert = $derived(page.url.searchParams.has('version'));
 	const adresse = $derived(`/notes/${data.lecture.note.id}`);
-
-	/** `RG-M18-05` — l'action irréversible rappelle ce qu'elle va écraser. */
-	const rappelDeRestauration = (numero: number): string =>
-		`Restaurer la version ${String(numero)} de « ${data.lecture.note.titre} » ?\n\n` +
-		'Le corps actuel est remplacé par celui de cette version.\n' +
-		'Rien n’est perdu : la restauration capture sa propre version.';
 
 	let formulaire: HTMLFormElement;
 
@@ -102,15 +89,10 @@
 			if (!bouton.hasAttribute('type')) bouton.type = 'button';
 		}
 		const defaireSuppression = cablerLaSuppression(formulaire, { rappel });
-		const defaireHistorique = historiqueOuvert
-			? cablerLHistorique(formulaire, formulaire, { adresse, rappel: rappelDeRestauration })
-			: ouvrirLHistorique(formulaire, adresse);
-		const defairePieces = historiqueOuvert
-			? () => {}
-			: cablerLesPiecesJointes(formulaire, {
-					pieces: data.piecesJointes,
-					ecriture: data.vecteur.droits === 'ecriture'
-				});
+		const defairePieces = cablerLesPiecesJointes(formulaire, {
+			pieces: data.piecesJointes,
+			ecriture: data.vecteur.droits === 'ecriture'
+		});
 		/**
 		 * LE DIALOGUE `d-relation`, câblé sur le DOCUMENT et non sur le formulaire :
 		 * la boîte vit hors de l'enveloppe `<form action="?/supprimer">`, exprès. Ses
@@ -119,7 +101,7 @@
 		 */
 		const relation = data.relation;
 		const defaireRelation =
-			historiqueOuvert || relation === null
+			relation === null
 				? () => {}
 				: cablerLeDialogueDeRelation(formulaire.ownerDocument, {
 						cibles: relation.cibles,
@@ -147,17 +129,12 @@
 			exports: data.administrateur ? ADRESSE_DES_EXPORTS : null
 		});
 		const defaireLoupe = cablerLaLoupe(formulaire.ownerDocument);
-		const defaireFermeture = historiqueOuvert
-			? cablerLaFermetureDeLHistorique(formulaire.ownerDocument, adresse)
-			: () => {};
 		return () => {
 			defaireSuppression();
-			defaireHistorique();
 			defairePieces();
 			defaireRelation();
 			defaireLecture();
 			defaireLoupe();
-			defaireFermeture();
 		};
 	});
 
@@ -296,23 +273,22 @@
 	}
 
 	/**
-	 * LE PANNEAU, REPÉRÉ PAR SON LIBELLÉ : le gel ne donne aux panneaux latéraux ni
-	 * identifiant ni classe distinctive — autant de `section.panneau.repliable`
-	 * identiques, que seul le texte de leur `.etiq` sépare.
+	 * UNE ZONE DE LA COLONNE DE CONTEXTE, REPÉRÉE PAR SON ATTRIBUT.
+	 *
+	 * Elle l'était par son LIBELLÉ, le gel ne donnant aux panneaux latéraux ni
+	 * identifiant ni classe distinctive. La colonne refondue porte `data-zone` sur
+	 * chacune : le câblage vise l'attribut, et un libellé réécrit ne débranche plus
+	 * ni le dépôt d'une pièce, ni la déclaration d'une relation.
 	 *
 	 * `Document | Element`, ET SURTOUT PAS `ParentNode` : celui-ci est une interface
 	 * de typage, pas un objet global du navigateur, et `no-undef` la refuse.
 	 */
-	function panneauNomme(racine: Document | Element, libelle: string): HTMLElement | null {
-		for (const section of Array.from(racine.querySelectorAll('section.panneau'))) {
-			const etiquette = section.querySelector('.panneau__tete .etiq');
-			if ((etiquette?.textContent ?? '').trim() === libelle) return section as HTMLElement;
-		}
-		return null;
+	function zoneDeContexte(racine: Document | Element, zone: string): HTMLElement | null {
+		return racine.querySelector<HTMLElement>(`[data-zone="${zone}"]`);
 	}
 
 	function panneauDesPieces(racine: Element): HTMLElement | null {
-		return panneauNomme(racine, 'Pièces jointes');
+		return zoneDeContexte(racine, 'pieces');
 	}
 
 	/**
@@ -417,14 +393,14 @@
 
 		const ajouter = document.createElement('button');
 		ajouter.type = 'button';
-		ajouter.className = 'btn btn--discret si-ecriture';
+		ajouter.className = 'zone__depot si-ecriture';
 		ajouter.dataset[MARQUE_DU_CABLAGE] = 'ajout';
 		ajouter.append('+ Ajouter');
 		const ouvrir = (): void => champ.click();
 		ajouter.addEventListener('click', ouvrir);
 		debranchements.push(() => ajouter.removeEventListener('click', ouvrir));
 
-		panneau.querySelector('.panneau__tete')?.append(champ, ajouter);
+		panneau.querySelector('.zone__tete')?.append(champ, ajouter);
 		return () => debranchements.forEach((d) => d());
 	}
 
@@ -470,8 +446,8 @@
 	 */
 	function cablerLeDialogueDeRelation(document: Document, options: CablageDeRelation): () => void {
 		const boite = document.querySelector<HTMLDialogElement>('dialog#d-relation');
-		const panneau = panneauNomme(document, 'Relations');
-		const declencheur = panneau?.querySelector<HTMLButtonElement>('.panneau__tete button') ?? null;
+		const panneau = zoneDeContexte(document, 'relations');
+		const declencheur = panneau?.querySelector<HTMLButtonElement>('button.zone__ajout') ?? null;
 		if (boite === null || declencheur === null) return () => {};
 
 		const typeChoisi = boite.querySelector<HTMLSelectElement>('#rel-type');
@@ -705,66 +681,22 @@
 		champ.value = nom;
 		if (existant === null) cible.appendChild(champ);
 	}
-
-	/**
-	 * LE BOUTON « HISTORIQUE DES VERSIONS » DE V-14 — il ouvre l'état, il ne fait
-	 * rien d'autre. Le gel le pose sans comportement (`ARB-011`).
-	 *
-	 * `Element` ET NON `ParentNode` : celui-ci est une interface de typage, pas un
-	 * objet global du navigateur, et `no-undef` la refuse.
-	 */
-	function ouvrirLHistorique(racine: Element, cible: string): () => void {
-		const bouton = Array.from(racine.querySelectorAll('button')).find((b) =>
-			porteLeGeste(b, 'historiqueDesVersions')
-		);
-		if (bouton === undefined) return () => {};
-		const aller = (): void => {
-			racine.ownerDocument?.location.assign(`${cible}?version`);
-		};
-		bouton.addEventListener('click', aller);
-		return () => bouton.removeEventListener('click', aller);
-	}
 </script>
 
 <form method="POST" action="?/supprimer" bind:this={formulaire} style="display:contents">
-	{#if historiqueOuvert}
-		<!--
-			L’ARTICLE SUIT L’ADRESSE. `?version={n}` désignant une version antérieure,
-			c’est l’état CAPTURÉ par cette version que le chargeur rend, et non celui
-			d’aujourd’hui. `?version` nu ne désigne aucune version, la note courante EST
-			la réponse, et `afficheeDeLaVersion` vaut `null`.
-		-->
-		<Historique
-			vecteur={{ panneau: 'ouvert', droits: data.vecteur.droits }}
-			notes={data.notes}
-			note={data.lecture.note}
-			affichee={data.afficheeDeLaVersion ?? data.affichee}
-			versions={{ [data.lecture.note.id]: data.histoire.versions }}
-			retentionVersions={data.histoire.retention}
-			versionAffichee={data.histoire.affichee?.numero ?? null}
-			onComparer={(a, b) => {
-				/* `resolve()` compose le CHEMIN ; la chaîne de requête s'ajoute après, et
-				   la règle ne sait pas la reconnaître. */
-				const adresse =
-					resolve('/notes/[identifiant]/comparaison', {
-						identifiant: data.lecture.note.id
-					}) + `?versions=${a}-${b}`;
-				// eslint-disable-next-line svelte/no-navigation-without-resolve
-				void goto(adresse);
-			}}
-		/>
-	{:else}
-		<Vue
-			adresseDesRelations={resolve('/notes/[identifiant]/relations', {
-				identifiant: data.lecture.note.id
-			})}
-			vecteur={data.vecteur}
-			notes={data.notes}
-			affichee={data.affichee}
-			panneaux={data.panneaux}
-			notifications={data.notifications}
-		/>
-	{/if}
+	<Vue
+		vecteur={data.vecteur}
+		notes={data.notes}
+		affichee={data.affichee}
+		panneaux={data.panneaux}
+		registre={data.lecture.registre}
+		vivacite={data.vivacite}
+		entete={data.entete}
+		contexte={data.contexte}
+		adresses={data.adresses}
+		annonce={data.annonce}
+		notifications={data.notifications}
+	/>
 </form>
 
 <!--
@@ -780,7 +712,7 @@
 	`catalogue={false}` — le seul dialogue nommé, sans le cadre de la planche et
 	sans attribut `open` : la modalité est posée au clic par `showModal()`.
 -->
-{#if !historiqueOuvert && data.relation !== null}
+{#if data.relation !== null}
 	<Dialogues
 		etat="d-relation"
 		catalogue={false}
