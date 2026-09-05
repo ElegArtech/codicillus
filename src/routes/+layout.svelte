@@ -14,9 +14,14 @@
 	   feuille de la vue courante. C'est le bloc « palette » de `src/vues/V-09.css`,
 	   recopié à la déclaration près (ADR-002). */
 	import '../palette.css';
+	/* LA FEUILLE DU DIAGRAMME RENDU — montée ici pour la même raison que la
+	   palette : un diagramme s'affiche sur six vues, et aucune feuille de vue ne
+	   les voit toutes. */
+	import '../diagramme.css';
 	import { onMount, setContext } from 'svelte';
 	import PaletteDeRecherche from '$lib/coquille/PaletteDeRecherche.svelte';
 	import { cablerLaCoquille } from '$lib/cablage/coquille';
+	import { observerLesDiagrammes } from '$lib/contenu/diagrammes';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 	import { formesDuMot } from '$lib/vocabulaire';
 	import type { LayoutData } from './$types';
@@ -146,6 +151,21 @@
 	 * La mise en page racine est le seul endroit qui les voit tous. Le câblage y est
 	 * délégué sur le document, donc insensible au changement de page.
 	 */
+	/**
+	 * LES DIAGRAMMES SONT RENDUS ICI, ET UNE SEULE FOIS.
+	 *
+	 * Le serveur émet la SOURCE d'un diagramme dans `<pre class="mermaid">`
+	 * (`rendu.ts`) et l'éditeur en émet un identique dans sa vue de nœud ; le
+	 * dessin, lui, est l'affaire du navigateur. Personne ne l'y faisait : `mermaid`
+	 * était en dépendance et n'était importé nulle part, une note qui décrivait un
+	 * schéma en affichait le texte, et « Agrandir » ouvrait une boîte vide.
+	 *
+	 * Ici plutôt que dans chacune des six routes qui affichent un corps rédigé —
+	 * celle qu'on oublierait n'aurait pas de dessin. Le moteur n'est chargé que
+	 * s'il y a un diagramme à l'écran.
+	 */
+	onMount(() => observerLesDiagrammes(document));
+
 	onMount(() =>
 		cablerLaCoquille(document, {
 			rangement: data.rangement,

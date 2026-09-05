@@ -189,9 +189,29 @@ function placerDansLaPremiereCellule(transaction: Transaction): Transaction {
 	return transaction.setSelection(Selection.near(transaction.doc.resolve($depuis.start(1) + 3)));
 }
 
+/**
+ * LA SOURCE PROPOSÉE À L'INSERTION, ET ELLE SE DESSINE.
+ *
+ * Le gel écrit `A --> B` (`SOURCE_DE_DIAGRAMME_DU_GEL`, `constructions.ts`), qui
+ * n'est PAS du Mermaid : sans mot de tête — `flowchart`, `sequenceDiagram`,
+ * `erDiagram`… — le moteur ne sait pas quel diagramme lire et refuse la source.
+ * L'auteur qui reprenait la forme dessinée dans la maquette obtenait donc un
+ * diagramme qui ne se dessinait jamais.
+ *
+ * EN UNE SEULE LIGNE, parce qu'une invite de navigateur est un champ d'une ligne :
+ * un `\n` dans la valeur proposée n'y survit pas. Le point-virgule est le
+ * séparateur d'instructions de Mermaid, et cette source-là se dessine telle quelle.
+ */
+const SOURCE_PROPOSEE = 'flowchart LR; A[Début] --> B[Fin]';
+
 function diagramme(fenetre: Window): Command {
 	return (etat, envoyer) => {
-		const source = fenetre.prompt('Source du diagramme') ?? '';
+		const source =
+			fenetre.prompt(
+				'Source du diagramme (Mermaid — la première ligne donne le type : ' +
+					'flowchart, sequenceDiagram, erDiagram…)',
+				SOURCE_PROPOSEE
+			) ?? '';
 		if (source.trim() === '') return false;
 		const alternative = fenetre.prompt('Alternative textuelle du diagramme') ?? '';
 		return inserer(noeudDeSchema('diagramme'), { source: source.trim(), alternative })(
