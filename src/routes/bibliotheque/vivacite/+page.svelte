@@ -8,6 +8,7 @@
 </script>
 
 <Vue
+	seuils={data.seuils}
 	notes={data.notes}
 	univers={data.univers}
 	domaines={data.domaines}
