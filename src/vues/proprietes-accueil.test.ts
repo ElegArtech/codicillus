@@ -1,7 +1,7 @@
 /**
  * T-041 — LES QUATRE VUES ACCEPTENT LEURS SOURCES, ET LE DÉFAUT RESTE LE JEU.
  *
- * V-07, V-08, V-10 et V-11 lisaient les constantes du jeu de semence AU NIVEAU
+ * V-07, V-08 et V-11 lisaient les constantes du jeu de semence AU NIVEAU
  * DU MODULE : un chargeur de route pouvait passer `notes`, et rien d'autre
  * n'atteignait l'écran. « En attente de révision = 3 » s'affichait pour un
  * compte qui ne lit aucune note ; « Bonjour Karim. » était servi à Sophie
@@ -285,7 +285,12 @@ describe('V-08 — recherche interne', () => {
 });
 
 /* ═════════════════════════════════════════════════════════════════════════
-   V-10 ET V-11 — LE MOTIF EST RETIRÉ, ET C'EST L'AUTRE POLARITÉ QUI EST ÉPROUVÉE
+   V-11 — LE MOTIF EST RETIRÉ, ET C'EST L'AUTRE POLARITÉ QUI EST ÉPROUVÉE
+
+   V-10 N'EST PLUS ICI : la refonte de la page d'un univers lui donne des
+   propriétés déjà agrégées — une répartition de vivacité, des lignes de
+   domaine, un fil —, et `src/vues/V-10.test.ts` les éprouve avec ses trois
+   états vides.
 
    Ces deux vues ont déclaré leurs sources OPTIONNELLES, de défaut la constante
    de `seeds/corpus.ts`. Ce défaut garantissait qu'une route qui en oubliait une
@@ -318,98 +323,6 @@ const SOPHIE_AFFICHEE: CompteAffiche = {
 	role: SOPHIE.role,
 	domaine: SOPHIE.domaine
 };
-
-describe('V-10 — page d’un univers', () => {
-	/** Le strict nécessaire pour rendre l'écran, sans une ligne du jeu. */
-	const SOCLE_VIDE = {
-		univers: UNIVERS_PROJETS,
-		domaines: [],
-		detailDomaines: {},
-		activite: [],
-		modules: CATALOGUE_DE_MODULES
-	};
-
-	it('l’univers rendu est celui de la liste servie', async () => {
-		const b = await corps('V-10', { ...SOCLE_VIDE, notes: [] });
-		expect(b).toContain('<h1 id="titre">Projets</h1>');
-		expect(b).not.toContain('<h1 id="titre">Production</h1>');
-	});
-
-	it('sans domaine servi, l’univers rend son état vide', async () => {
-		const b = await corps('V-10', { ...SOCLE_VIDE, notes: [] });
-		expect(b).toContain('Cet univers ne contient aucun domaine');
-	});
-
-	/**
-	 * LE CONTRÔLE QUI TIENT TOUT LE LOT : sur des sources qui ne portent rien du
-	 * jeu, rien du jeu ne doit apparaître. Un défaut de propriété resté quelque
-	 * part se verrait ici, et nulle part ailleurs.
-	 *
-	 * LA MESURE EST DÉCOUPÉE SUR LE CONTENU, ET C'EST DÉCLARÉ. Le rail de forme
-	 * ABRÉGÉE est une DONNÉE écrite au balisage du gel
-	 * (`arborescence-abregee.ts`) : hors gabarit racine — ce que rend ce harnais
-	 * —, il nomme les dossiers du gel. En application il suit la base
-	 * (`Coquille.svelte`, `sectionsAbregeesDuCorpus`). Mesurer le document
-	 * entier mesurerait ce balisage, pas les propriétés de la vue.
-	 */
-	it('aucune ligne du jeu de démonstration n’atteint le contenu', async () => {
-		const b = await corps('V-10', { ...SOCLE_VIDE, notes: [] });
-		const contenu = /<main[\s\S]*?<\/main>/.exec(b)?.[0] ?? '';
-		expect(contenu).not.toContain('Karim Belhadj');
-		expect(contenu).not.toContain('Infrastructure');
-		expect(contenu).not.toContain('Restaurer une sauvegarde PostgreSQL');
-		expect(b).not.toContain('Karim Belhadj — menu utilisateur');
-		expect(b).not.toContain('Codicillus 1.0.0');
-	});
-
-	it('l’identité servie l’emporte', async () => {
-		const b = await corps('V-10', { ...SOCLE_VIDE, notes: [], compte: SOPHIE_AFFICHEE });
-		expect(b).toContain('Sophie Nguyen — menu utilisateur');
-	});
-
-	it('sans activité servie, la semaine se dit vide', async () => {
-		expect(await corps('V-10', { ...SOCLE_VIDE, notes: [] })).toContain(
-			'Rien de neuf cette semaine'
-		);
-	});
-
-	/**
-	 * LES PASTILLES DE MODULE — deux sources, et elles sont distinctes. Les CLÉS
-	 * actives viennent de `detailDomaines`, donc de `modules_de_domaine`
-	 * (`RG-STR-06`) ; les LIBELLÉS du catalogue de produit. `P-04` : un module
-	 * retiré du domaine disparaît de sa carte.
-	 */
-	it('les pastilles suivent les modules du domaine, et se nomment par le catalogue', async () => {
-		const b = await corps('V-10', {
-			...SOCLE_VIDE,
-			domaines: DOMAINE_MIGRATION,
-			detailDomaines: {
-				'Migration 2026': { description: DESCRIPTION_DE_CONTROLE, modules: ['signets'] }
-			},
-			notes: []
-		});
-		expect(b).toContain(DESCRIPTION_DE_CONTROLE);
-		expect(b).toContain(CATALOGUE_DE_MODULES.signets.nom);
-		expect(b).not.toContain(CATALOGUE_DE_MODULES.carteMentale.sous);
-	});
-
-	/**
-	 * UNE CLÉ STOCKÉE QUE LE CATALOGUE NE PORTE PAS NE MET PAS L'ÉCRAN EN ERREUR.
-	 * `modules[m].nom` la déréférençait sans garde : une énumération élargie en
-	 * base avant que le catalogue ne suive faisait sortir la page en 500.
-	 */
-	it('une clé de module inconnue du catalogue se nomme par elle-même', async () => {
-		const b = await corps('V-10', {
-			...SOCLE_VIDE,
-			domaines: DOMAINE_MIGRATION,
-			detailDomaines: {
-				'Migration 2026': { description: '', modules: ['module-a-venir'] }
-			},
-			notes: []
-		});
-		expect(b).toContain('module-a-venir');
-	});
-});
 
 describe('V-11 — page d’un domaine', () => {
 	/** Le strict nécessaire pour rendre l'écran, sans une ligne du jeu. */
