@@ -427,3 +427,77 @@ export const CONSULTATIONS_DE_CONFORMITE: readonly ConsultationSemee[] = [
 		heuresDepuisLaDerniere: null
 	}
 ];
+
+/* ─────────────────────────────────────────────── Les relations ───────── */
+
+/**
+ * LE VOCABULAIRE DES RELATIONS. Un jeu qui efface la table des types doit la rendre : sans elle,
+ * le panneau RELATIONS d'une note ne peut rien porter et la cartographie n'a aucune arête à
+ * dessiner. Ce sont ceux du jeu de démonstration — un vocabulaire de relations est un choix
+ * d'instance, jamais une donnée de refonte.
+ */
+export interface TypeDeRelationSeme {
+	readonly identifiant: string;
+	readonly sortant: string;
+	readonly entrant: string;
+	readonly technique: boolean;
+}
+
+export const TYPES_DE_RELATION_DE_CONFORMITE: readonly TypeDeRelationSeme[] = [
+	{ identifiant: 'depend-de', sortant: 'dépend de', entrant: 'dont dépendent', technique: true },
+	{
+		identifiant: 'documente',
+		sortant: 'documente',
+		entrant: 'est documenté par',
+		technique: false
+	},
+	{ identifiant: 'complete', sortant: 'complète', entrant: 'est complété par', technique: false },
+	{ identifiant: 'corrige', sortant: 'corrige', entrant: 'est corrigé par', technique: false },
+	{ identifiant: 'remplace', sortant: 'remplace', entrant: 'est remplacé par', technique: false }
+];
+
+export interface RelationSemee {
+	/** Le TITRE de la note source — les notes du jeu se désignent par leur titre. */
+	readonly source: string;
+	readonly cible: string;
+	readonly type: string;
+}
+
+/**
+ * LES RELATIONS DES DEUX NOTES RÉDIGÉES. La capture de la première en annonce trois, celle de la
+ * seconde quatre. Elles traversent les univers, et c'est le point d'un graphe : une procédure
+ * d'exploitation est documentée par une fiche d'un autre domaine.
+ */
+export const RELATIONS_DE_CONFORMITE: readonly RelationSemee[] = [
+	{
+		source: 'Note technique — Installation de Claude Code sous Linux et mode autonome',
+		cible: 'Mode autonome — Bonnes pratiques',
+		type: 'complete'
+	},
+	{
+		source: 'Note technique — Installation de Claude Code sous Linux et mode autonome',
+		cible: 'Incident — PATH Linux',
+		type: 'corrige'
+	},
+	{
+		source: 'Note technique — Installation de Claude Code sous Linux et mode autonome',
+		cible: 'Ancienne procédure npm',
+		type: 'remplace'
+	},
+	{
+		source: 'Restaurer une sauvegarde PostgreSQL',
+		cible: 'Politique de sauvegarde',
+		type: 'depend-de'
+	},
+	{ source: 'Restaurer une sauvegarde PostgreSQL', cible: 'Fiche BKP-01', type: 'documente' },
+	{
+		source: 'Restaurer une sauvegarde PostgreSQL',
+		cible: 'Workflow — Analyse IA',
+		type: 'complete'
+	},
+	{
+		source: 'Restaurer une sauvegarde PostgreSQL',
+		cible: "Harnais d'évaluation",
+		type: 'documente'
+	}
+];
