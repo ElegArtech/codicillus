@@ -11,7 +11,7 @@
  */
 import { basePartagee } from '$lib/base/acces';
 import { lireAccueil } from '$lib/donnees/accueil';
-import { lireConfiguration } from '$lib/donnees/lecture';
+import { lireConfiguration, lireSeuilsDeVivacite } from '$lib/donnees/lecture';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -23,6 +23,13 @@ export const load: PageServerLoad = async ({ locals }) => {
 	});
 
 	return {
+		/**
+		 * LES SEUILS DU CYCLE, LUS EN BASE. La planche les AFFICHE en toutes lettres dans son
+		 * encadré et les EMPLOIE pour ses cinq exemples : les prendre à la constante ferait
+		 * mentir la page dès qu'un administrateur les règle en console — et c'est exactement
+		 * ce qu'elle faisait.
+		 */
+		seuils: await lireSeuilsDeVivacite(base),
 		notes: accueil.notes,
 		/* SANS SESSION, `lireAccueil()` ne rend ni univers ni domaines : le rail est
 		   alors vide, et c'est la vérité — pas un repli sur un jeu d'exemple. */

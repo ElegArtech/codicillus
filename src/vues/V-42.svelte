@@ -18,10 +18,10 @@
 	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
 	import {
 		ORDRE_DES_ETATS,
-		SEUILS_DE_VIVACITE,
 		vivacite,
 		type CycleDeVivacite,
-		type EtatDeVivacite
+		type EtatDeVivacite,
+		type SeuilsDeVivacite
 	} from '$lib/fraicheur';
 	import type { Domaine, Note, Univers } from '../../seeds/corpus';
 
@@ -32,9 +32,14 @@
 		domaines: readonly Domaine[];
 		/** Le jour de référence, pris par le chargeur. Jamais une horloge de navigateur. */
 		aujourdhui: string;
+		/**
+		 * LES SEUILS EN VIGUEUR, LUS EN BASE. La planche les affiche ET les emploie : une
+		 * constante ferait mentir la page dès qu'un administrateur les règle en console.
+		 */
+		seuils: SeuilsDeVivacite;
 	}
 
-	const { notes, univers, domaines, aujourdhui }: Proprietes = $props();
+	const { notes, univers, domaines, aujourdhui, seuils }: Proprietes = $props();
 
 	/**
 	 * L'ANCIENNETÉ QUI POSE CHAQUE ÉTAT, pour une validité de quatre-vingt-dix jours. Ce sont les
@@ -61,7 +66,7 @@
 		ORDRE_DES_ETATS.map((etat) => {
 			const verifiee = ilYA(ANCIENNETE[etat]);
 			const cycle: CycleDeVivacite = { verifiee, modifiee: verifiee, validite: VALIDITE };
-			return { etat, viv: vivacite(cycle, aujourdhui) };
+			return { etat, viv: vivacite(cycle, aujourdhui, seuils) };
 		})
 	);
 </script>
@@ -127,12 +132,12 @@
 			<p class="cycle__texte">
 				Vérification → <strong>À jour</strong> pendant la durée de validité →
 				<strong>Bientôt à vérifier</strong>
-				{SEUILS_DE_VIVACITE.bientot} jours avant l'échéance → à l'échéance, passage automatique à
+				{seuils.bientot} jours avant l'échéance → à l'échéance, passage automatique à
 				<strong>À vérifier</strong>
-				→ après {SEUILS_DE_VIVACITE.retardRevoir} jours de retard ou sur demande de révision,
+				→ après {seuils.retardRevoir} jours de retard ou sur demande de révision,
 				<strong>À revoir</strong>
-				→ après {SEUILS_DE_VIVACITE.retardObsolete} jours de retard, <strong>Obsolète</strong>. Une
-				nouvelle vérification relance le cycle.
+				→ après {seuils.retardObsolete} jours de retard, <strong>Obsolète</strong>. Une nouvelle
+				vérification relance le cycle.
 			</p>
 		</aside>
 	{/snippet}
