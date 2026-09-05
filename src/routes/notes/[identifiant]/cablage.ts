@@ -42,14 +42,32 @@ export interface OptionsDeLaLecture {
 	readonly exports: string | null;
 }
 
+/**
+ * LE TEXTE D'UN NŒUD, LES BLANCS RÉDUITS À UN ESPACE. Un simple `trim()` ne
+ * suffit pas : le formateur coupe un libellé long entre deux lignes, et
+ * « Historique des\n\t\t\tversions » n'est plus égal à « Historique des
+ * versions ». Le geste se débranchait alors sans erreur de compilation, ce qui
+ * est exactement le défaut que `RG-M18-16` cherche à empêcher.
+ */
 function libelle(noeud: Element): string {
-	return (noeud.textContent ?? '').trim();
+	return (noeud.textContent ?? '').replace(/\s+/gu, ' ').trim();
 }
 
-/** Le bouton d'une zone, reconnu à son libellé — le gel ne lui donne pas d'identifiant. */
+/** Le bouton d'une zone, reconnu à son libellé — aucun identifiant ne le distingue. */
 function boutonNomme(racine: ParentNode | null, texte: string): HTMLButtonElement | null {
 	if (racine === null) return null;
 	return Array.from(racine.querySelectorAll('button')).find((b) => libelle(b) === texte) ?? null;
+}
+
+/**
+ * TOUS LES BOUTONS D'UN MÊME LIBELLÉ, et c'est nécessaire depuis la refonte : la
+ * lecture offre « Exporter », « Imprimer » et « Supprimer » DEUX FOIS — dans le
+ * menu ⋮ et dans la colonne de contexte. Un `find` n'en câblait qu'un, et l'autre
+ * restait inerte sans que rien ne le dise.
+ */
+function boutonsNommes(racine: ParentNode | null, texte: string): readonly HTMLButtonElement[] {
+	if (racine === null) return [];
+	return Array.from(racine.querySelectorAll('button')).filter((b) => libelle(b) === texte);
 }
 
 /**
@@ -89,8 +107,8 @@ export function cablerLaLecture(
 	const aller = (cible: string): void => {
 		document.location.assign(cible);
 	};
-	/** Un bouton du gel qui agit : on l'écoute, on ne touche pas à son type. */
-	const agir = (bouton: Element | null, geste: () => void): void => {
+	/** Un nœud qui agit : on l'écoute, on ne touche pas à son type. */
+	const agir = (bouton: Element | null, geste: (evenement: Event) => void): void => {
 		if (bouton === null) return;
 		ecouter(bouton, 'click', geste);
 	};
@@ -138,7 +156,12 @@ export function cablerLaLecture(
 		soumettreVers(formulaire, '?/signaler', coupleDeRegistre);
 	});
 
-	/* « Lever la demande » — le bandeau de révision, `V-14:1427`. */
+	/* « Lever la demande de révision » — l'entrée du menu ⋮, et le bouton du bandeau
+	   de révision que V-15 porte encore. Les deux visent la même action ; le premier
+	   est reconnu par son identifiant, le second par son libellé. */
+	agir(document.getElementById('btn-lever'), () =>
+		soumettreVers(formulaire, '?/lever', coupleDeRegistre)
+	);
 	agir(boutonNomme(document.getElementById('bandeau-revision'), 'Lever la demande'), () =>
 		soumettreVers(formulaire, '?/lever', coupleDeRegistre)
 	);
@@ -166,57 +189,101 @@ export function cablerLaLecture(
 		aller(`${adresse}/operationnel`)
 	);
 
-	/* ═══════════════════ 3. LA BASCULE DE REGISTRE — `V-14:3948` ══════════ */
+	/* ═══════════════════ 3. LE SOMMAIRE — suivi et défilement doux ════════ */
 
 	/**
-	 * LES DEUX CORPS SONT RENDUS EN PERMANENCE, et la bascule ne fait que déplacer
-	 * l'attribut `hidden` — le geste du gel. `data-registre` suit sur l'enveloppe
-	 * parce que la feuille gelée le lit ; `aria-selected` sur les onglets parce que
-	 * le rôle `tab` l'exige. L'ADRESSE EST REMPLACÉE et non empilée : la bascule
-	 * n'est pas une navigation.
+	 * LA BASCULE DE REGISTRE N'EST PLUS CÂBLÉE, ET C'EST LE POINT : les deux onglets
+	 * sont des LIENS vers `?registre=…`. Le serveur sert alors le corps, le sommaire
+	 * ET la vivacité du registre demandé — la bascule marche sans script, et « tout
+	 * ce qui parle de vivacité parle du registre affiché » n'a plus à être tenu par
+	 * un échange d'attribut `hidden` sur deux corps rendus en double.
+	 *
+	 * CE QUI RESTE ICI EST DU COMPORTEMENT PUR : le suivi au défilement et le
+	 * défilement doux du sommaire. Sans script, les ancres marchent — le saut est
+	 * seulement sec, et aucune entrée ne se met en évidence.
 	 */
-	const app = document.getElementById('app');
-	const onglets = Array.from(
-		document.querySelectorAll<HTMLButtonElement>('#registre button[data-reg]')
-	);
-	const corpsDeReference = document.getElementById('corps-reference');
-	const corpsOperationnel = document.getElementById('corps-operationnel');
-	for (const onglet of onglets) {
-		const registre = onglet.dataset['reg'];
-		if (registre === undefined) continue;
-		agir(onglet, () => {
-			app?.setAttribute('data-registre', registre);
-			for (const autre of onglets) {
-				autre.setAttribute('aria-selected', String(autre === onglet));
-			}
-			if (corpsDeReference !== null) corpsDeReference.hidden = registre !== 'reference';
-			if (corpsOperationnel !== null) corpsOperationnel.hidden = registre !== 'operationnel';
-			if (fenetre !== null) {
-				fenetre.history.replaceState(fenetre.history.state, '', `?registre=${registre}`);
-				fenetre.scrollTo({ top: 0, behavior: 'smooth' });
-			}
+	const sommaire = document.getElementById('sommaire');
+	const entrees = Array.from(sommaire?.querySelectorAll<HTMLAnchorElement>('a[href^="#"]') ?? []);
+	const titres = entrees.map((a) => document.getElementById(decodeURIComponent(a.hash.slice(1))));
+
+	/** La bande de lecture : un titre passé au-dessus de cette ligne est « en cours ». */
+	const BANDE_DE_LECTURE = 140;
+
+	const majEntreeActive = (): void => {
+		let actif = -1;
+		titres.forEach((titre, rang) => {
+			if (titre !== null && titre.getBoundingClientRect().top < BANDE_DE_LECTURE) actif = rang;
 		});
+		entrees.forEach((entree, rang) => {
+			if (rang === actif) entree.setAttribute('aria-current', 'true');
+			else entree.removeAttribute('aria-current');
+		});
+	};
+
+	if (entrees.length > 0 && fenetre !== null) {
+		majEntreeActive();
+		ecouter(fenetre, 'scroll', majEntreeActive);
+		for (const [rang, entree] of entrees.entries()) {
+			agir(entree, (evenement: Event) => {
+				const titre = titres[rang];
+				if (titre === undefined || titre === null) return;
+				evenement.preventDefault();
+				titre.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				fenetre.history.replaceState(fenetre.history.state, '', entree.hash);
+			});
+		}
 	}
 
-	/* « Ajouter une version opérationnelle » — l'invite qui remplace les
-	   onglets quand la note n'a pas de second registre (`V-14:1517`). */
-	agir(document.getElementById('invite-op'), () => aller(`${adresse}/operationnel`));
+	/* ═══════════════════ 3 bis. LA BULLE DU GESTE ═════════════════════════ */
+
+	/**
+	 * ELLE S'EFFACE AU BOUT DE 2,6 s, ET SON PARAMÈTRE AVEC. Le geste finit par une
+	 * redirection qui porte `?fait=…` ; laissé dans l'adresse, il ferait reparaître
+	 * la bulle à chaque rechargement, et un partage de l'adresse annoncerait à
+	 * quelqu'un d'autre un geste qu'il n'a pas fait.
+	 */
+	const bulle = document.getElementById('toast');
+	if (bulle !== null && fenetre !== null) {
+		const adresseSansGeste = new URL(fenetre.location.href);
+		adresseSansGeste.searchParams.delete('fait');
+		fenetre.history.replaceState(fenetre.history.state, '', adresseSansGeste.toString());
+		const minuterie = fenetre.setTimeout(() => bulle.remove(), DUREE_DE_LA_BULLE);
+		jetables.push(() => fenetre.clearTimeout(minuterie));
+	}
 
 	/* ═══════════════════ 4. LE PANNEAU « ACTIONS » ════════════════════════ */
 
 	/**
-	 * LES CINQ ENTRÉES DU MENU SONT RECONNUES À LEUR LIBELLÉ : le gel ne leur donne
-	 * ni identifiant ni classe distinctive. « Historique des versions » et
-	 * « Supprimer » ne sont PAS ici — la première est câblée par
-	 * `ouvrirLHistorique()`, la seconde par `cablerLaSuppression()` avec son rappel
-	 * chiffré (`RG-M04-10`).
+	 * LES ENTRÉES SONT RECONNUES À LEUR LIBELLÉ, et elles sont DEUX à le porter :
+	 * la colonne de contexte et le menu ⋮ offrent les mêmes gestes, comme le
+	 * prototype les offre. C'est le document ENTIER qu'on parcourt, et TOUS les
+	 * boutons d'un libellé qu'on câble — un seul câblé laissait l'autre inerte.
+	 *
+	 * « Historique des versions » n'y est plus : les deux entrées qui y mènent sont
+	 * des LIENS vers `/notes/{identifiant}/historique`. « Supprimer » est câblée par
+	 * `cablerLaSuppression()`, avec son rappel chiffré (`RG-M04-10`) — sur le PREMIER
+	 * bouton seulement, et les autres lui délèguent, pour qu'une seule confirmation
+	 * soit demandée.
 	 */
-	const menu = document.querySelector('.actions-liste');
-	agir(boutonNomme(menu, 'Modifier la référence'), () => aller(`${adresse}/modifier`));
-	agir(boutonNomme(menu, "Modifier l'opérationnel"), () => aller(`${adresse}/operationnel`));
-	/* `RG-M18-17` — l'impression est celle du navigateur, et la feuille gelée
+	const gestes = (texte: string, geste: () => void): void => {
+		for (const bouton of boutonsNommes(document, texte)) agir(bouton, geste);
+	};
+	gestes('Modifier la référence', () => aller(`${adresse}/modifier`));
+	gestes("Modifier l'opérationnel", () => aller(`${adresse}/operationnel`));
+	/* SANS REGISTRE OPÉRATIONNEL, LA COLONNE OFFRE DE LE CRÉER : le geste mène à son
+	   éditeur, qui EST l'endroit où on l'écrit. */
+	gestes("Créer l'opérationnel", () => aller(`${adresse}/operationnel`));
+	/* `RG-M18-17` — l'impression est celle du navigateur, et la feuille de la vue
 	   porte déjà ses règles d'impression (`V-14.css`, la requête de média). */
-	agir(boutonNomme(menu, 'Imprimer'), () => fenetre?.print());
+	gestes('Imprimer', () => fenetre?.print());
+
+	/* La suppression : le second bouton délègue au premier, celui que
+	   `cablerLaSuppression()` a câblé avec la confirmation chiffrée. */
+	const suppressions = boutonsNommes(document, 'Supprimer');
+	const premiereSuppression = suppressions[0];
+	if (premiereSuppression !== undefined) {
+		for (const autre of suppressions.slice(1)) agir(autre, () => premiereSuppression.click());
+	}
 
 	/**
 	 * « EXPORTER » — LE PÉRIMÈTRE DE L'EXPORT EST LE DOMAINE, PAS LA NOTE : aucune
@@ -225,9 +292,8 @@ export function cablerLaLecture(
 	 * morte : la route rend 404 à qui n'est pas administrateur, et `P-03` n'admet pas
 	 * un geste visible qui ne mène nulle part.
 	 */
-	const exporter = boutonNomme(menu, 'Exporter');
 	const ouExporter = options.exports;
-	if (exporter !== null) {
+	for (const exporter of boutonsNommes(document, 'Exporter')) {
 		if (ouExporter === null) exporter.remove();
 		else agir(exporter, () => aller(ouExporter));
 	}
@@ -286,6 +352,9 @@ export function cablerLaLecture(
 
 /** `V-14:3971` — combien de temps le bouton de copie dit « Copié ». */
 const DUREE_DE_L_ACCUSE = 1400;
+
+/** Combien de temps la bulle d'un geste reste à l'écran — 2,6 s au prototype. */
+const DUREE_DE_LA_BULLE = 2600;
 
 /** Le suffixe que la légende du gel porte et que la loupe retire. */
 const INVITE_DE_LEGENDE = /\s*Cliquez pour agrandir\.?\s*$/;

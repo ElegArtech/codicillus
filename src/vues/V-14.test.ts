@@ -1,37 +1,42 @@
 /**
- * V-14 — LE CONTEXTE, ET SURTOUT LA NOTE LUE (T-042).
+ * V-14 — LA LECTURE D'UNE NOTE, ET CE QU'ELLE NE DOIT JAMAIS INVENTER.
  *
- * LE DÉFAUT QUE CE FICHIER FERME EST LE PLUS VISIBLE DU PRODUIT :
- * `/notes/{identifiant}` servait l'article de `n-restaurer-pg` POUR LES 32
- * NOTES. Le chargeur rendait pourtant déjà la note réelle et son corps —
- * `src/lib/donnees/note.ts` —, mais la vue ne déclarait aucune propriété pour
- * les recevoir (écart déclaré au rapport de `T-033`).
+ * TROIS DÉFAUTS SONT FERMÉS ICI, ET CHACUN A COÛTÉ.
  *
- * LE CORPS EST RENDU PAR `rendreDocument`, ET PAR RIEN D'AUTRE. Ce contrôle
- * emprunte l'implémentation unique d'ADR-004 pour construire la propriété : il
- * n'écrit aucun HTML de corps à la main, ce qui serait le second convertisseur
- * que l'ADR interdit nommément — y compris « dans un test ».
+ *  1. LA NOTE SERVIE EST CELLE QU'ON LIT. `/notes/{identifiant}` a servi l'article
+ *     d'une note du jeu de démonstration POUR TOUT LE CORPUS, faute d'une propriété
+ *     pour recevoir la vraie.
+ *  2. LA VIVACITÉ N'EST PAS RECALCULÉE. L'état, les libellés, la frise et le rappel
+ *     sortent tous de `vivacite()` — la fabrique unique (`P-01`, `ADR-005`). Les cas
+ *     ci-dessous construisent leurs attentes PAR ELLE : un libellé réécrit dans la
+ *     vue ferait tomber le contrôle, et c'est exactement ce qu'on veut.
+ *  3. LE REGISTRE AFFICHÉ COMMANDE TOUT. Bascule sur l'Opérationnel, et la ligne, la
+ *     carte, la frise et le rappel parlent de SON cycle — les deux registres d'une
+ *     même note vivent deux états différents.
  *
- * LA SECONDE MOITIÉ EST LA PLUS IMPORTANTE. Un défaut de DÉFAUT ferait bouger
- * les 44 couples du banc ; les cas de la seconde section sont la polarité que
- * P-5 réclame.
+ * LE CORPS EST RENDU PAR `rendreDocument`, ET PAR RIEN D'AUTRE : ce fichier n'écrit
+ * aucun HTML de corps à la main, ce qui serait le second convertisseur qu'`ADR-004`
+ * interdit — « y compris dans un test ».
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { fermerLeHarnais, rendreLaVue } from './harnais.test-utils';
 import {
 	corpusPourVue,
-	DOMAINES,
 	MOI,
 	noteParIdentifiant,
-	UNIVERS,
 	type Note,
 	type UtilisateurCourant
 } from '../../seeds/corpus';
 import { documentDuGel, resoudreDansLeCorpus } from '../lib/contenu/documents-du-gel';
 import { rendreDocument } from '../lib/contenu/rendu';
 import type { LectureAffichee } from '../lib/lecture/note-de-demonstration';
-import { adresseDeDomaine } from '../lib/rangement/adresses';
-import { VOCABULAIRE_PAR_DEFAUT } from '../lib/vocabulaire';
+import type {
+	AdressesDeLecture,
+	ContexteDeLaNote,
+	EnteteDeLecture,
+	VivaciteDesRegistres
+} from '../lib/lecture/ecran';
+import { vivacite, type CycleDeVivacite } from '../lib/fraicheur';
 
 const NOTES = corpusPourVue('V-14');
 
@@ -39,6 +44,13 @@ const NOTES = corpusPourVue('V-14');
 const NOTE_DU_GEL = (() => {
 	const note = noteParIdentifiant('n-restaurer-pg');
 	if (!note) throw new Error('seeds/corpus.ts : « n-restaurer-pg » a disparu');
+	return note;
+})();
+
+/** L'AUTRE note à corps transcrit du gel — jamais celle de la démonstration. */
+const AUTRE_NOTE = (() => {
+	const note = noteParIdentifiant('n-mot-de-passe');
+	if (!note) throw new Error('seeds/corpus.ts : « n-mot-de-passe » a disparu');
 	return note;
 })();
 
@@ -50,13 +62,6 @@ const SOPHIE: UtilisateurCourant = {
 	role: 'Administrateur'
 };
 
-/** L'AUTRE note à corps transcrit du gel — jamais celle de la démonstration. */
-const AUTRE_NOTE = (() => {
-	const note = noteParIdentifiant('n-mot-de-passe');
-	if (!note) throw new Error('seeds/corpus.ts : « n-mot-de-passe » a disparu');
-	return note;
-})();
-
 /** Le corps rendu par l'implémentation unique — ADR-004, jamais un second chemin. */
 function corpsRenduDuGel(note: Note, registre: 'reference' | 'operationnel'): string {
 	return rendreDocument(documentDuGel(note.id, registre), {
@@ -65,21 +70,36 @@ function corpsRenduDuGel(note: Note, registre: 'reference' | 'operationnel'): st
 	});
 }
 
-/**
- * LA NOTE AFFICHÉE, COMPLÈTE — et « complète » a changé de sens.
- *
- * Elle ne portait que l'identité et les deux corps ; le reste de l'écran —
- * cartouche de contrôle, dates, bandeaux, mesure de consultation, sommaire —
- * restait la transcription du gel, quelle que fût la note ouverte. Ces champs
- * sont ceux que le chargeur lit désormais en base.
- *
- * LES VALEURS SONT CELLES D'UN CAS, PAS CELLES DU GEL : elles ne coïncident
- * avec aucune date de la planche, et c'est ce qui rend les contrôles
- * ci-dessous capables de dire non (P-5).
- */
-/** Les deux corps rendus, nommés : `LectureAffichee` les admet nuls, pas eux. */
 const REFERENCE_RENDUE = corpsRenduDuGel(AUTRE_NOTE, 'reference');
 const OPERATIONNEL_RENDU = corpsRenduDuGel(AUTRE_NOTE, 'operationnel');
+
+/** Le jour d'observation, fixe : une borne ne se prouve pas sur l'horloge. */
+const AUJOURDHUI = '2026-09-05';
+
+/** Le cycle d'un registre, posé à N jours de sa vérification. */
+function cycleDepuis(jours: number, validite: number, revisionPar?: string): CycleDeVivacite {
+	const verifiee = new Date(Date.UTC(2026, 8, 5, 12) - jours * 86_400_000)
+		.toISOString()
+		.slice(0, 10);
+	return {
+		verifiee,
+		modifiee: verifiee,
+		validite,
+		par: 'Karim Belhadj',
+		...(revisionPar === undefined ? {} : { revisionPar })
+	};
+}
+
+/** La Référence à jour du prototype : vérifiée il y a 23 jours, valable 90. */
+const REFERENCE_A_JOUR = vivacite(cycleDepuis(23, 90), AUJOURDHUI);
+/** L'Opérationnel à vérifier : vérifié il y a 22 jours, valable 21. */
+const OPERATIONNEL_A_VERIFIER = vivacite(cycleDepuis(22, 21), AUJOURDHUI);
+
+const VIVACITE: VivaciteDesRegistres = {
+	courante: REFERENCE_A_JOUR,
+	reference: REFERENCE_A_JOUR,
+	operationnelle: OPERATIONNEL_A_VERIFIER
+};
 
 const AFFICHEE: LectureAffichee = {
 	note: AUTRE_NOTE,
@@ -92,21 +112,16 @@ const AFFICHEE: LectureAffichee = {
 	},
 	joursDepuisControle: 4,
 	modifiee: { iso: '2026-03-02', jour: '2 mars 2026', heureDite: '2 mars 2026 à 17:40' },
-	referenceModifiee: {
-		iso: '2026-03-02',
-		jour: '2 mars 2026',
-		heureDite: '2 mars 2026 à 17:40'
-	},
+	referenceModifiee: { iso: '2026-03-02', jour: '2 mars 2026', heureDite: '2 mars 2026 à 17:40' },
 	resync: false,
 	revision: null,
 	consultations30j: 7,
-	/* TROIS NOMBRES DISTINCTS, ET C'EST LE POINT. `Note.vues` du corpus, le
-	   cumul servi et la fenêtre de trente jours ne coïncident pas : sans cela,
-	   un rendu qui lirait encore `note.vues` passerait pour juste. */
+	/* TROIS NOMBRES DISTINCTS, ET C'EST LE POINT : `Note.vues` du corpus, le cumul
+	   servi et la fenêtre de trente jours ne coïncident pas. */
 	consultationsTotal: 431
 };
 
-/** Les sept panneaux latéraux, tous vides — l'état que la vue doit DIRE. */
+/** Les panneaux, tous vides — l'état que la colonne doit DIRE en un chiffre. */
 const PANNEAUX_VIDES = {
 	voisines: [],
 	pieces: [],
@@ -116,125 +131,216 @@ const PANNEAUX_VIDES = {
 	proprietes: []
 };
 
-/**
- * LE SOCLE DE PROPRIÉTÉS REQUISES. La note affichée, les panneaux et l'adresse
- * des relations ne sont plus optionnels : leur absence rendait la transcription
- * figée du gel et ses sept panneaux transcrits, et c'était le défaut.
- */
-function rendu(proprietes: Record<string, unknown>): Promise<string> {
+const ENTETE: EnteteDeLecture = {
+	creeeLe: '12 janvier 2026',
+	version: 'v3',
+	derniereModification: 'il y a 4 jours par Karim Belhadj'
+};
+
+const CONTEXTE: ContexteDeLaNote = {
+	univers: AUTRE_NOTE.univers,
+	rangement: { libelle: AUTRE_NOTE.domaine, adresse: '/univers/production/exploitation' },
+	voisinage: { libelle: '4 autres notes dans ce domaine', adresse: '/univers/u/d/notes' }
+};
+
+const ADRESSES: AdressesDeLecture = {
+	reference: `/notes/${AUTRE_NOTE.id}`,
+	operationnel: `/notes/${AUTRE_NOTE.id}?registre=operationnel`,
+	modifier: `/notes/${AUTRE_NOTE.id}/modifier`,
+	modifierLOperationnel: `/notes/${AUTRE_NOTE.id}/operationnel`,
+	historique: `/notes/${AUTRE_NOTE.id}/historique`,
+	relations: `/notes/${AUTRE_NOTE.id}/relations`,
+	planche: '/bibliotheque/vivacite'
+};
+
+/** Le socle de propriétés requises : la route ne peut pas les oublier. */
+function rendu(proprietes: Record<string, unknown> = {}): Promise<string> {
 	return rendreLaVue('V-14', {
 		vecteur: null,
 		notes: NOTES,
 		affichee: AFFICHEE,
 		panneaux: PANNEAUX_VIDES,
-		adresseDesRelations: `/notes/${AUTRE_NOTE.id}/relations`,
+		registre: 'reference',
+		vivacite: VIVACITE,
+		entete: ENTETE,
+		contexte: CONTEXTE,
+		adresses: ADRESSES,
 		...proprietes
 	});
 }
 
 afterAll(fermerLeHarnais);
 
-describe('V-14 — la propriété fournie l’emporte', () => {
+describe('V-14 — la note lue est celle qu’on lit', () => {
+	it('rend le titre, le corps et les métadonnées de la note reçue', async () => {
+		const html = await rendu();
+		expect(html).toContain(AUTRE_NOTE.titre);
+		expect(html).not.toContain(NOTE_DU_GEL.titre);
+		expect(REFERENCE_RENDUE.length).toBeGreaterThan(200);
+		expect(html).toContain(REFERENCE_RENDUE);
+		expect(html).toContain('12 janvier 2026');
+		expect(html).toContain('v3');
+		expect(html).toContain('431 consultations');
+		expect(html).toContain('7 sur les 30 derniers jours');
+		expect(html).not.toContain(`${AUTRE_NOTE.vues} consultations`);
+	});
+
 	it('sert le compte reçu, et non celui du jeu de semence', async () => {
 		const html = await rendu({ compte: SOPHIE });
 		expect(html).toContain('Sophie Nguyen — menu utilisateur');
 		expect(html).not.toContain(`${MOI.nom} — menu utilisateur`);
 	});
 
-	/**
-	 * LE RAIL NE SE DÉRIVE PLUS DES PROPRIÉTÉS DE LA VUE, ET C'EST LA REFONTE DE LA
-	 * COQUILLE.
-	 *
-	 * `univers`, `domaines` et `notes` sont des propriétés que chaque vue remplit
-	 * avec le corpus de SA page : le rail changeait de contenu d'un écran à l'autre.
-	 * La navigation vient désormais du chargeur racine, lue une fois et descendue par
-	 * contexte, bornée par les droits de l'appelant.
-	 *
-	 * CE QUE CE CAS GARDE — et c'est le défaut qu'il ferme — : SANS CONTEXTE, LE RAIL
-	 * EST VIDE, quoi qu'on serve à la vue. Le défaut était `UNIVERS` du jeu de
-	 * démonstration : une instance neuve voyait l'arborescence des maquettes, et des
-	 * adresses qui rendent 404.
-	 */
-	it('ne dérive plus son rail des propriétés — sans contexte, il est vide', async () => {
-		const rail = (html: string) => /<aside class="rail"[\s\S]*?<\/aside>/.exec(html)?.[0] ?? '';
-		const nomme = (nom: string) => `>${nom}</span>`;
+	it('ne rend le corps que du registre affiché', async () => {
+		const surLaReference = await rendu();
+		expect(surLaReference).toContain(REFERENCE_RENDUE);
+		expect(surLaReference).not.toContain(OPERATIONNEL_RENDU);
 
-		const vide = rail(await rendu({}));
-		expect(vide).not.toContain(nomme('Production'));
-		expect(vide).not.toContain(nomme('Projets'));
-
-		/* Servir les deux tables ne change RIEN au rail : elles ne l'alimentent plus. */
-		const servi = rail(await rendu({ univers: UNIVERS, domaines: DOMAINES }));
-		expect(servi).toBe(vide);
+		const surLOperationnel = await rendu({ registre: 'operationnel' });
+		expect(surLOperationnel).toContain(OPERATIONNEL_RENDU);
+		expect(surLOperationnel).not.toContain(REFERENCE_RENDUE);
 	});
 
-	it('rend la note reçue — titre, rangement et pièces jointes', async () => {
-		const html = await rendu({ affichee: AFFICHEE });
-		expect(html).toContain(AUTRE_NOTE.titre);
-		expect(html).not.toContain(NOTE_DU_GEL.titre);
-		/* LE LIEN DE RANGEMENT N'EST PLUS UNE ANCRE VIDE : il porte l'adresse
-		   canonique du domaine, composée par la fabrique unique. Le contrôle
-		   suit la vue, et il vérifie toujours la même chose — que la ligne
-		   « Rangement » parle de la note REÇUE, et non de celle du gel. */
-		expect(html).toContain(
-			`<a href="${adresseDeDomaine(AUTRE_NOTE.univers, AUTRE_NOTE.domaine)}">${AUTRE_NOTE.domaine}</a>`
-		);
-	});
-
-	it('rend le corps de la note reçue, rendu par l’implémentation unique', async () => {
-		const html = await rendu({ affichee: AFFICHEE });
-		expect(REFERENCE_RENDUE.length).toBeGreaterThan(200);
-		expect(html).toContain(REFERENCE_RENDUE);
-		expect(html).toContain(OPERATIONNEL_RENDU);
-	});
-
-	it('rend le contrôle, les dates et la mesure de la note reçue', async () => {
-		const html = await rendu({ affichee: AFFICHEE });
-		/* Le cartouche : le vérificateur et la date du journal, jamais ceux de la
-		   planche — « Karim Belhadj » et « 1er août 2026 » n'apparaissent plus. */
-		expect(html).toContain('<strong>Marc Ferreira</strong>');
-		expect(html).toContain('5 mars 2026');
-		expect(html).not.toContain('1<sup>er</sup> août 2026');
-		/* La ligne « Rédaction » et la mesure de consultation. */
-		expect(html).toContain('2 mars 2026 à 17:40');
-		expect(html).not.toContain('il y a 3 semaines');
-		/* LE CUMUL EST CELUI QUE LE CHARGEUR A RELU APRÈS AVOIR COMPTÉ
-		   L'OUVERTURE, jamais `Note.vues`, projeté avant elle : les afficher
-		   côte à côte donnait un total inférieur à sa propre fenêtre. */
-		expect(html).toContain('431 consultations · 7 sur les 30 derniers jours');
-		expect(html).not.toContain(`${AUTRE_NOTE.vues} consultations`);
-		/* Le sommaire suit le corps affiché, et non les onze titres du gel. */
-		expect(html).toContain("Un titre d'épreuve");
-		expect(html).not.toContain('s-prerequis');
-	});
-
-	it('dit qu’une note n’a jamais été vérifiée plutôt que d’inventer un contrôle', async () => {
-		const html = await rendu({ affichee: { ...AFFICHEE, controle: null } });
-		expect(html).toContain('Jamais vérifiée');
-		expect(html).not.toContain('<strong>Marc Ferreira</strong>');
-	});
-
-	/**
-	 * P-02 — les sept panneaux latéraux étaient transcrits du gel : deux pièces
-	 * jointes, quatre relations, trois rétroliens et quatre vérifications, les
-	 * mêmes pour toutes les notes. Sans données, ils DISENT le vide.
-	 */
-	it('rend les panneaux vides en état neutre, jamais en exemple', async () => {
-		const html = await rendu({ affichee: AFFICHEE });
-		expect(html).toContain('Aucune pièce jointe');
-		expect(html).toContain('Aucune relation');
-		expect(html).toContain('Aucun rétrolien');
-		expect(html).not.toContain('Plan de reprise — volet bases');
-		expect(html).not.toContain('pg-prod-01');
-		expect(html).not.toContain("Consignes d'astreinte — nuit et week-end");
-		expect(html).not.toContain('Restaurer une sauvegarde MariaDB');
-	});
-
-	it('rend les panneaux servis, et rien qu’eux', async () => {
+	it('dit qu’un registre est vide plutôt que d’inventer un corps', async () => {
 		const html = await rendu({
-			affichee: AFFICHEE,
+			registre: 'operationnel',
+			affichee: { ...AFFICHEE, operationnel: null }
+		});
+		expect(html).toContain('Registre Opérationnel vide');
+		expect(html).not.toContain(OPERATIONNEL_RENDU);
+	});
+});
+
+describe('V-14 — la vivacité vient de la fabrique, et du registre affiché', () => {
+	it('rend l’état, la vérification, l’échéance et le rappel de la Référence', async () => {
+		const html = await rendu();
+		expect(html).toContain(REFERENCE_A_JOUR.libelle);
+		expect(html).toContain(REFERENCE_A_JOUR.ligneVerification);
+		expect(html).toContain(REFERENCE_A_JOUR.ligneEcheance);
+		expect(html).toContain(REFERENCE_A_JOUR.rappel);
+		/* La carte de la colonne nomme le registre : deux cycles cohabitent. */
+		expect(html).toContain('Vivacité (Référence)');
+		expect(html).toContain('data-attention="0"');
+	});
+
+	it('bascule TOUT sur le cycle de l’Opérationnel', async () => {
+		const html = await rendu({
+			registre: 'operationnel',
+			vivacite: { ...VIVACITE, courante: OPERATIONNEL_A_VERIFIER }
+		});
+		expect(OPERATIONNEL_A_VERIFIER.etat).toBe('averifier');
+		expect(html).toContain('Vivacité (Opérationnel)');
+		expect(html).toContain(OPERATIONNEL_A_VERIFIER.ligneEcheance);
+		expect(html).toContain(OPERATIONNEL_A_VERIFIER.rappel);
+		expect(html).toContain('data-attention="2"');
+		/* Et rien de l'autre registre ne subsiste. */
+		expect(html).not.toContain(REFERENCE_A_JOUR.ligneEcheance);
+	});
+
+	it('pose la frise sur la position rendue par la fabrique', async () => {
+		const html = await rendu();
+		const attendue = `${(REFERENCE_A_JOUR.fraction * 100).toFixed(1)}%`;
+		expect(html).toContain(attendue);
+		expect(html).toContain(REFERENCE_A_JOUR.departCourt);
+		expect(html).toContain(REFERENCE_A_JOUR.echeanceCourt);
+		expect(html).toContain(REFERENCE_A_JOUR.relatif);
+	});
+
+	it('annonce la demande de révision quand elle vise ce registre', async () => {
+		const demandee = vivacite(cycleDepuis(23, 90, 'Karim Belhadj'), AUJOURDHUI);
+		const html = await rendu({
+			vivacite: { ...VIVACITE, courante: demandee, reference: demandee }
+		});
+		expect(demandee.etat).toBe('arevoir');
+		expect(html).toContain('Révision demandée · Karim Belhadj');
+		expect(html).toContain('Lever la demande de révision');
+		expect(html).toContain('id="btn-lever"');
+		/* Le menu propose l'un OU l'autre : la demande posée, on la lève. */
+		expect(html).not.toContain('id="btn-reviser"');
+	});
+});
+
+describe('V-14 — le sélecteur de registre', () => {
+	it('rend deux onglets quand l’Opérationnel existe, et marque celui qui est ouvert', async () => {
+		const html = await rendu({ registre: 'operationnel' });
+		expect(html).toContain(`href="${ADRESSES.reference}"`);
+		expect(html).toContain(`href="${ADRESSES.operationnel}"`);
+		expect(html).toContain('Opérationnel</a>');
+		expect(html).not.toContain('Créer la version opérationnelle');
+	});
+
+	/**
+	 * `README` du paquet : « Pas d'onglet Opérationnel désactivé ». Sans registre,
+	 * un seul onglet, et le geste qui crée le second — jamais une porte fermée.
+	 */
+	it('n’affiche jamais d’onglet désactivé : sans Opérationnel, il offre de le créer', async () => {
+		const html = await rendu({ vivacite: { ...VIVACITE, operationnelle: null } });
+		expect(html).toContain('Créer la version opérationnelle');
+		expect(html).toContain(`href="${ADRESSES.modifierLOperationnel}"`);
+		expect(html).not.toContain(`href="${ADRESSES.operationnel}"`);
+		expect(html).not.toContain('disabled');
+		/* Et la colonne d'actions propose de le créer, non de le modifier. */
+		expect(html).toContain("Créer l'opérationnel");
+		expect(html).not.toContain("Modifier l'opérationnel");
+	});
+});
+
+describe('V-14 — les libellés dont un geste dépend', () => {
+	/**
+	 * `src/routes/notes/{identifiant}/cablage.ts` et `$lib/cablage/libelles.ts`
+	 * retrouvent ces boutons PAR LEUR TEXTE. Les renommer débranche le geste sans
+	 * erreur de compilation : ce contrôle est le seul qui puisse s'en apercevoir.
+	 */
+	it('porte les libellés que le câblage vise, au caractère près', async () => {
+		const html = await rendu();
+		for (const libelle of [
+			'Modifier la référence',
+			"Modifier l'opérationnel",
+			'Exporter',
+			'Imprimer',
+			'Supprimer',
+			'Marquer comme vérifiée',
+			'Signaler à réviser',
+			'Historique des versions'
+		]) {
+			expect(html).toContain(libelle);
+		}
+		/* Les trois identifiants que le câblage cherche. */
+		expect(html).toContain('id="btn-verifier"');
+		expect(html).toContain('id="btn-reviser"');
+		expect(html).toContain('id="panneau-reviser"');
+	});
+
+	/** `P-09`, `ARB-040` — en lecture seule, l'action d'écriture n'est pas ÉMISE. */
+	it('n’émet aucune action d’écriture sans le droit d’écrire', async () => {
+		const html = await rendu({ vecteur: { droits: 'lecture' } });
+		expect(html).not.toContain('Modifier la référence');
+		expect(html).not.toContain('Marquer comme vérifiée');
+		expect(html).not.toContain('Supprimer');
+		expect(html).not.toContain('id="panneau-reviser"');
+		/* Ce qui reste lisible reste offert. */
+		expect(html).toContain('Imprimer');
+		expect(html).toContain('Historique des versions');
+	});
+});
+
+describe('V-14 — la colonne de contexte ne ment pas', () => {
+	it('dit un compteur à zéro en un chiffre, sans grande zone vide', async () => {
+		const html = await rendu();
+		const colonne = html.slice(html.indexOf('data-zone="pieces"'));
+		expect(colonne).toContain('Pièces jointes');
+		expect(colonne).toContain('Rétroliens');
+		/* Aucune phrase d'excuse, aucun exemple du gel. */
+		expect(html).not.toContain('Aucune pièce jointe');
+		expect(html).not.toContain('Aucun rétrolien');
+		expect(html).not.toContain('pg-prod-01');
+		expect(html).not.toContain('Plan de reprise — volet bases');
+	});
+
+	it('rend les pièces et les rétroliens servis, et rien qu’eux', async () => {
+		const html = await rendu({
 			panneaux: {
-				voisines: [],
+				...PANNEAUX_VIDES,
 				pieces: [
 					{
 						nom: 'Journal',
@@ -259,194 +365,52 @@ describe('V-14 — la propriété fournie l’emporte', () => {
 				],
 				retroliens: [
 					{ identifiant: 'n-astreinte', titre: 'Consignes d’astreinte', domaine: 'Infrastructure' }
-				],
-				verifications: [{ par: null, iso: '2026-03-05', jour: '5 mars 2026' }],
-				proprietes: []
-			}
-		});
-		expect(html).toContain('Journal');
-		expect(html).toContain('pg-prod-02');
-		expect(html).toContain('Consignes d’astreinte');
-		/* Une attestation que le journal ne rattache à aucun compte est DITE,
-		   jamais attribuée (`RG-M15-02`). */
-		expect(html).toContain('auteur non journalisé');
-		expect(html).not.toContain('Aucune relation');
-	});
-
-	it('n’invente aucun corps quand le registre n’existe pas', async () => {
-		const html = await rendu({ affichee: { ...AFFICHEE, operationnel: null } });
-		/* L'enveloppe du gel reste — le nœud ne disparaît pas —, et elle ne
-		   porte AUCUN contenu : ni la transcription du gel, ni un corps inventé.
-		   Les marques de rendu de Svelte sont retirées avant de mesurer, elles
-		   ne portent aucun texte. */
-		const enveloppe = html.slice(html.indexOf('id="corps-operationnel"'));
-		const contenu = enveloppe.slice(0, enveloppe.indexOf('</div>')).replaceAll(/<!--.*?-->/gu, '');
-		expect(contenu).toBe('id="corps-operationnel" hidden="">');
-		expect(html).not.toContain('id="o-preparer"');
-	});
-});
-
-/**
- * LE PANNEAU DE PROPRIÉTÉS ET LA PASTILLE DE TYPE — le huitième panneau que
- * `BRIEF-VUES.md:797` énumère, que le gel ne dessine pas, et sans lequel les
- * propriétés typées d'une fiche ne se relisaient NULLE PART hors de l'éditeur.
- *
- * CE QUE CES CAS NE PROUVENT PAS, et il faut le dire : ils éprouvent le RENDU
- * à partir d'une liste construite ici. Ils ne prouvent rien de la forme que le
- * chargeur produit — l'appariement `champs[i].cle → valeurs[cle]`, l'ordre du
- * référentiel, l'écart d'une colonne `jsonb` de forme non garantie. Cela se
- * mesure sur une base réelle, dans un navigateur, et le relevé du lot le porte.
- */
-describe('V-14 — les propriétés typées d’une fiche se relisent', () => {
-	/** Une note du corpus qui EST une fiche — le type vient d'elle, pas d'ici. */
-	const FICHE = (() => {
-		const note = noteParIdentifiant('n-pg-prod-01');
-		if (!note?.typeFiche)
-			throw new Error('seeds/corpus.ts : « n-pg-prod-01 » n’est plus une fiche');
-		return note;
-	})();
-
-	const AFFICHEE_FICHE: LectureAffichee = { ...AFFICHEE, note: FICHE };
-
-	it('rend la pastille « Fiche <type> », et non le seul type de note', async () => {
-		const html = await rendu({ affichee: AFFICHEE_FICHE });
-		/* LE MOT VIENT DE SA SOURCE, PAS D'UN LITTÉRAL. `NoteDeDemonstration` le
-		   lit sur le contexte de coquille ; rendue hors gabarit racine, la vue
-		   retombe sur `VOCABULAIRE_PAR_DEFAUT` — la même valeur que le repli du
-		   gel, et la seule que ce rendu puisse porter. */
-		expect(html).toContain(
-			`<span class="past past--type">${VOCABULAIRE_PAR_DEFAUT.fiche} ${FICHE.typeFiche}</span>`
-		);
-	});
-
-	it('rend les propriétés servies, dans l’ordre reçu', async () => {
-		const html = await rendu({
-			affichee: AFFICHEE_FICHE,
-			panneaux: {
-				...PANNEAUX_VIDES,
-				proprietes: [
-					{ nom: 'Nom DNS', valeur: 'pg-prod-01.interne' },
-					{ nom: 'Salle', valeur: 'Datacentre A' }
 				]
 			}
 		});
-		expect(html).toContain('Propriétés de fiche');
-		expect(html).toContain('pg-prod-01.interne');
-		expect(html).toContain('Datacentre A');
-		/* L'ORDRE EST MESURÉ DANS LE PANNEAU, et non dans la page : « Salle »
-		   est aussi un dossier du rail, et un relevé fait sur la page entière
-		   mesurerait la coquille au lieu du panneau. */
-		const panneau = html.slice(html.indexOf('Propriétés de fiche'));
-		expect(panneau.indexOf('Nom DNS')).toBeLessThan(panneau.indexOf('Salle'));
+		expect(html).toContain('Journal');
+		expect(html).toContain('18 Ko · déposé le 4 juin 2026');
+		expect(html).toContain('Consignes d’astreinte');
+		/* Les relations se comptent, et le compte mène à leur page. */
+		expect(html).toContain('note liée');
+		expect(html).toContain(`href="${ADRESSES.relations}"`);
 	});
 
-	/** `RG-M18-03` — l'absence est DITE, jamais comblée par l'exemple du référentiel. */
-	it('dit qu’une propriété n’est pas renseignée plutôt que d’inventer une valeur', async () => {
-		const html = await rendu({
-			affichee: AFFICHEE_FICHE,
-			panneaux: { ...PANNEAUX_VIDES, proprietes: [{ nom: 'vCPU', valeur: null }] }
-		});
-		expect(html).toContain('Non renseignée');
-	});
-
-	/**
-	 * P-5 — la polarité. Sans ce cas, un panneau rendu inconditionnellement
-	 * passerait pour conforme : `BRIEF-VUES.md:797` le borne à « si la note est
-	 * une fiche », et une note ordinaire n'a pas de propriétés typées.
-	 */
-	it('ne rend aucun panneau de propriétés sur une note qui n’est pas une fiche', async () => {
-		const html = await rendu({
-			affichee: AFFICHEE,
-			panneaux: { ...PANNEAUX_VIDES, proprietes: [] }
-		});
-		expect(AUTRE_NOTE.typeFiche).toBeUndefined();
-		expect(html).not.toContain('Propriétés de fiche');
+	it('ne rend la ligne de voisinage que s’il y a des voisines', async () => {
+		expect(await rendu()).toContain('4 autres notes dans ce domaine');
+		const seule = await rendu({ contexte: { ...CONTEXTE, voisinage: null } });
+		expect(seule).not.toContain('autres notes dans ce');
 	});
 });
 
-/**
- * LE MOTIF EST RETIRÉ, ET C'EST CE QUE CETTE SECTION MESURE.
- *
- * Chaque propriété de contexte portait pour DÉFAUT une constante du jeu de
- * démonstration, et la note affichée était optionnelle : une route qui les
- * oubliait servait l'article de « Restaurer une sauvegarde PostgreSQL », le
- * compte « Karim Belhadj », la version `1.0.0` d'`INSTANCE` et les sept
- * panneaux transcrits du gel — SANS QUE RIEN NE PROTESTE. Quatre campagnes ont
- * couru après les symptômes de ce défaut-là.
- *
- * `affichee`, `panneaux` et `adresseDesRelations` sont désormais REQUISES : une
- * route qui les oublierait ne compilerait plus. Le contexte, que le gabarit
- * racine porte, rend VIDE.
- */
+describe('V-14 — le pied de note et la bulle du geste', () => {
+	it('rend le rappel automatique et le lien vers la planche', async () => {
+		const html = await rendu();
+		expect(html).toContain(REFERENCE_A_JOUR.rappel);
+		expect(html).toContain('Planche des états de vivacité');
+		expect(html).toContain(`href="${ADRESSES.planche}"`);
+	});
+
+	it('ne rend aucune bulle sans geste, et le texte servi sinon', async () => {
+		expect(await rendu()).not.toContain('id="toast"');
+		const html = await rendu({
+			annonce: "Vérifiée à l'instant — le cycle repart pour 90 jours"
+		});
+		expect(html).toContain('id="toast"');
+		expect(html).toContain("Vérifiée à l'instant — le cycle repart pour 90 jours");
+	});
+});
+
 describe('V-14 — rien du jeu de démonstration ne subsiste au défaut', () => {
 	it('ne nomme aucun compte du jeu quand aucun ne lui est servi', async () => {
-		const html = await rendu({});
+		const html = await rendu();
 		expect(html).not.toContain(`${MOI.nom} — menu utilisateur`);
 	});
 
-	it('ne rend ni la note du gel, ni son rangement, ni ses corps transcrits', async () => {
-		const html = await rendu({});
-		expect(html).not.toContain(NOTE_DU_GEL.titre);
-		expect(html).not.toContain(
-			`<a href="${adresseDeDomaine(NOTE_DU_GEL.univers, NOTE_DU_GEL.domaine)}">Infrastructure</a>`
-		);
-		expect(html).not.toContain('id="s-restaurer"');
-		expect(html).not.toContain('id="o-preparer"');
-	});
-});
-
-/**
- * LE PANNEAU « POSITION » — LE LIBELLÉ D'UNE NOTE VOISINE, ET LE JUMEAU NON
- * RAPPORTÉ DE LA FRAÎCHEUR MENSONGÈRE.
- *
- * `libelleCompactDe()` construisait un objet littéral SANS `revise`. Le champ
- * est optionnel dans `EtatDeFraicheur` et sa garde est stricte : `undefined` ne
- * la déclenchait pas, et une note voisine JAMAIS VÉRIFIÉE lisait « il y a
- * 3 mois » là où la note principale, sur la même page, dit « Jamais vérifiée ».
- * Le type ne pouvait pas protester — c'est ce qui a laissé passer le défaut.
- */
-describe('V-14 — la fraîcheur d’une note voisine ne ment pas', () => {
-	const VOISINE = {
-		identifiant: 'n-voisine',
-		sens: '←' as const,
-		titre: 'La note qui précède',
-		fraicheur: 'vieil' as const,
-		jours: 92,
-		revise: '2026-05-25'
-	};
-
-	it('rend le libellé compact d’une voisine vérifiée', async () => {
-		const html = await rendu({
-			panneaux: { ...PANNEAUX_VIDES, voisines: [VOISINE] }
-		});
-		expect(html).toContain('il y a 3 mois');
-		expect(html).not.toContain('>jamais<');
-	});
-
-	it('dit « jamais » d’une voisine que personne n’a jamais vérifiée', async () => {
-		const html = await rendu({
-			panneaux: { ...PANNEAUX_VIDES, voisines: [{ ...VOISINE, revise: null }] }
-		});
-		expect(html).toContain('>jamais<');
-		expect(html).not.toContain('il y a 3 mois');
-	});
-});
-
-/**
- * LE PANNEAU D'ERREUR PERMANENT — retiré, avec la maquette qui le portait.
- *
- * « Statistiques indisponibles / Le service de mesure ne répond pas » était
- * rendu SANS CONDITION sur chaque note, avec un bouton « Réessayer » inerte, et
- * 300 px au-dessus d'un compteur de consultations qui fonctionne.
- */
-describe('V-14 — aucun panneau n’annonce une panne qui n’a pas eu lieu', () => {
-	it('ne rend plus « Statistiques indisponibles » ni son bouton inerte', async () => {
-		const html = await rendu({ affichee: AFFICHEE });
-		expect(html).not.toContain('Statistiques indisponibles');
-		expect(html).not.toContain('Le service de mesure ne répond pas');
-		expect(html).not.toContain('Réessayer');
-		expect(html).not.toContain('panneau--erreur');
-		/* Le compteur, lui, reste — c'est lui que le panneau contredisait. */
-		expect(html).toContain('431 consultations · 7 sur les 30 derniers jours');
+	it('ne dérive plus son rail des propriétés — sans contexte, il est vide', async () => {
+		const rail = (html: string) => /<aside class="rail"[\s\S]*?<\/aside>/.exec(html)?.[0] ?? '';
+		const vide = rail(await rendu());
+		expect(vide).not.toContain('>Production</span>');
+		expect(vide).not.toContain('>Projets</span>');
 	});
 });
