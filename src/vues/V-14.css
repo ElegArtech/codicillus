@@ -1,159 +1,450 @@
-
 /* ==========================================================================
    V-14 — LECTURE D'UNE NOTE
+   L'écran cœur du produit, refondu sur le prototype validé du 5 septembre
+   2026. Trois colonnes : sommaire (190), document, contexte (340). Les deux
+   colonnes latérales sont marquées `data-colonne` ; c'est `src/socle.css` qui
+   les escamote aux trois seuils, et la vue ne mesure aucune largeur.
+
+   AUCUNE VALEUR ARBITRAIRE : tout passe par un jeton du socle. Les quelques
+   dimensions écrites en clair — la position d'un rond de frise, l'alignement
+   du sommaire sur le titre — sont des GÉOMÉTRIES, pas des couleurs ni des
+   graduations d'espacement.
    ========================================================================== */
 
-/* ==========================================================================
-   SYSTÈME DE LECTURE
-   Sommaire, en-tête de note, cartouche de fraîcheur, métadonnées, sélecteur
-   de registre et rendu du corps rédigé. Commun à la lecture interne (V-14) et
-   à la lecture publique (V-03) : la seconde est une amputation de la première,
-   jamais une réécriture.
-   ========================================================================== */
+/* --- La grille de lecture ------------------------------------------------- */
+.lecture {
+  display: grid; align-items: start;
+  grid-template-columns: var(--l-sommaire) minmax(0, 1fr) var(--l-panneaux);
+  gap: var(--e-7);
+  padding: var(--e-5) 0 96px clamp(20px, 3.5vw, 64px);
+  width: 100%;
+}
 
-/* La colonne d'article est plus large que la mesure du texte : le texte garde
-   sa longueur de ligne, tandis que les objets denses — blocs de code, tableaux,
-   schémas, alertes — prennent la largeur dont ils ont réellement besoin. Un
-   tableau de sauvegardes contraint à 80 caractères n'aide personne. */
-.article { min-width: 0; max-width: var(--l-large); }
+/* AUCUNE DE CES DEUX RÈGLES NE DÉCLARE `display` : le socle escamote les
+   colonnes par `display:none` à égalité de spécificité, et une déclaration
+   ici gagnerait par l'ordre du cascade — le sommaire ne disparaîtrait plus. */
+.colonne-sommaire { position: sticky; top: calc(var(--h-entete) + var(--e-5)); padding-top: 220px; }
+.document { min-width: 0; width: 100%; }
 
-/* --- Sommaire ------------------------------------------------------------ */
-.sommaire { position: sticky; top: calc(var(--l-barre) + var(--e-5)); }
-.sommaire__liste { list-style: none; margin: var(--e-2) 0 0; padding: 0; border-left: 2px solid var(--c-trait); }
+/* --- Le sommaire ---------------------------------------------------------- */
+.sommaire__liste {
+  list-style: none; margin: var(--e-3) 0 0; padding: 0;
+  border-left: 1px solid var(--c-trait);
+}
 .sommaire__liste ul { list-style: none; margin: 0; padding: 0; }
 .sommaire a {
-  display: flex; gap: var(--e-2);
-  padding: 5px var(--e-3); margin-left: -2px;
+  display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: var(--e-2);
+  padding: 7px var(--e-3) 7px 14px; margin-left: -1px;
   border-left: 2px solid transparent;
-  font-size: var(--t-petit); line-height: 1.35; color: var(--c-encre-3); text-decoration: none;
+  font-size: var(--t-petit); line-height: 1.35;
+  color: var(--c-encre-3); text-decoration: none;
 }
 .sommaire a:hover { color: var(--c-encre); }
 .sommaire a[aria-current="true"] {
   color: var(--c-accent); font-weight: var(--g-fort); border-left-color: var(--c-accent);
 }
-.sommaire .n2 a { padding-left: var(--e-6); font-size: var(--t-mini); }
-.sommaire__num { font-family: var(--f-donnee); font-size: var(--t-micro); color: var(--c-encre-4); padding-top: 1px; }
-.sommaire a[aria-current="true"] .sommaire__num { color: var(--c-accent); }
+.sommaire__num { font-family: var(--f-donnee); font-size: 11.5px; padding-top: 1px; }
+.sommaire .n2 a { padding-left: var(--e-6); }
+.sommaire .n2 a span:last-child { color: var(--c-encre-4); font-size: 11.5px; }
 
-/* --- En-tête de la note --------------------------------------------------- */
-.entete { margin-bottom: var(--e-5); }
-.entete__sur { display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; margin-bottom: var(--e-3); }
-.titre-note {
-  font-family: var(--f-ui); font-size: var(--t-titre); font-weight: var(--g-lourd);
-  line-height: var(--i-serre); letter-spacing: -.022em;
-  margin: 0 0 var(--e-4);
-  text-wrap: balance;
+/* --- Le sélecteur de registre --------------------------------------------- */
+.registres {
+  display: flex; align-items: flex-end; gap: var(--e-1);
+  border-bottom: 1px solid var(--c-trait);
+}
+.registres__onglet {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 22px; margin-bottom: -1px;
+  border-bottom: 2px solid transparent; border-radius: var(--r-2) var(--r-2) 0 0;
+  font-size: var(--t-base2); color: var(--c-encre-2); text-decoration: none;
+}
+.registres__onglet:hover { color: var(--c-accent); }
+/* L'ONGLET ACTIF EST CELUI DE LA PAGE COURANTE : les deux onglets sont des
+   liens, et `aria-current` dit lequel est ouvert — pas une classe d'état. */
+.registres__onglet[aria-current="page"] {
+  background: var(--c-papier-2); color: var(--c-accent);
+  font-weight: var(--g-fort); border-bottom-color: var(--c-accent);
+}
+/* JAMAIS D'ONGLET DÉSACTIVÉ : sans Opérationnel, le geste qui le crée. */
+.registres__creer { margin: 0 0 var(--e-2) auto; text-decoration: none; font-weight: var(--g-normal); }
+.registres__creer:hover { border-color: var(--c-accent); color: var(--c-accent); }
+.registres__plus { font-size: var(--t-t3); line-height: 1; }
+
+/* --- La ligne de vivacité -------------------------------------------------
+   RECOPIÉE DE `V-42.css`, SOUS LES MÊMES NOMS : la planche des états et la
+   lecture d'une note rendent la MÊME ligne, et c'est ce qui prouve qu'elles
+   ne divergent pas. À la convergence, ces règles remontent au socle.
+   L'ATTENTION EST PROGRESSIVE : transparente tant que la note se tait, teintée
+   quand l'échéance est passée, sur le voile de l'état quand elle demande une
+   décision. C'est `data-attention` qui décide, jamais une couleur au balisage.
+   -------------------------------------------------------------------------- */
+.ligne-vivacite {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--e-2) 18px;
+  margin: 6px 0 0; padding: 14px var(--e-1) 14px 6px;
+  border-radius: var(--r-2);
+  font-size: var(--t-petit2); color: var(--c-encre-3);
+}
+.ligne-vivacite[data-attention="0"],
+.ligne-vivacite[data-attention="1"] { background: transparent; }
+.ligne-vivacite[data-attention="2"] { background: var(--c-attention-2); }
+.ligne-vivacite[data-attention="3"] { background: var(--c-arevoir-voile); }
+/* L'obsolète porte SON voile, pas celui d'« à revoir » : les deux partagent le
+   degré d'attention, jamais la teinte. */
+.ligne-vivacite[data-attention="3"]:has(.glyphe--obsolete) { background: var(--c-obsolete-voile); }
+
+.ligne-vivacite__etat {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-weight: var(--g-fort); color: currentColor;
+}
+.ligne-vivacite__sep { width: 1px; height: 16px; flex: none; background: var(--c-trait); }
+.ligne-vivacite__verif { color: var(--c-encre-3); }
+.ligne-vivacite__echeance { color: var(--c-encre-3); }
+/* À partir d'« à vérifier », l'échéance passe en gras et prend la couleur de
+   l'état : c'est l'information que le lecteur doit voir en premier. */
+.ligne-vivacite[data-attention="2"] .ligne-vivacite__echeance,
+.ligne-vivacite[data-attention="3"] .ligne-vivacite__echeance { font-weight: var(--g-fort); }
+
+.ligne-vivacite__etat.glyphe--ajour     { color: var(--c-ajour); }
+.ligne-vivacite__etat.glyphe--bientot   { color: var(--c-bientot); }
+.ligne-vivacite__etat.glyphe--averifier { color: var(--c-averifier); }
+.ligne-vivacite__etat.glyphe--arevoir   { color: var(--c-arevoir); }
+.ligne-vivacite__etat.glyphe--obsolete  { color: var(--c-obsolete); }
+.ligne-vivacite__echeance.glyphe--ajour     { color: var(--c-encre-3); }
+.ligne-vivacite__echeance.glyphe--bientot   { color: var(--c-encre-3); }
+.ligne-vivacite__echeance.glyphe--averifier { color: var(--c-averifier); }
+.ligne-vivacite__echeance.glyphe--arevoir   { color: var(--c-arevoir); }
+.ligne-vivacite__echeance.glyphe--obsolete  { color: var(--c-obsolete); }
+
+.ligne-vivacite__histoire {
+  display: inline-flex; align-items: center; gap: var(--e-1);
+  color: var(--c-encre-3); text-decoration: none;
+}
+.ligne-vivacite__histoire:hover { color: var(--c-accent); }
+
+.pastille-revision {
+  display: inline-flex; align-items: center; gap: var(--e-1);
+  padding: 3px 9px; border-radius: var(--r-rond);
+  background: var(--c-arevoir-voile); color: var(--c-arevoir);
+  font-size: var(--t-mini); font-weight: var(--g-moyen);
 }
 
-/* --- CARTOUCHE DE CONTRÔLE : la signature ---------------------------------- */
-.cartouche {
-  position: relative; overflow: hidden;
-  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--e-4);
-  border: 1.5px solid currentColor; border-radius: var(--r-3);
-  padding: var(--e-3) var(--e-4);
-  margin-bottom: var(--e-4);
-}
-.cartouche__bloc { display: flex; align-items: center; gap: var(--e-3); min-width: 0; }
-.cartouche .temoin__jauge { height: 26px; gap: 3px; }
-.cartouche .temoin__jauge i { width: 7px; border-width: 1.5px; border-radius: var(--r-1); }
-.cartouche .temoin__jauge i:nth-child(1) { height: 12px; }
-.cartouche .temoin__jauge i:nth-child(2) { height: 19px; }
-.cartouche .temoin__jauge i:nth-child(3) { height: 26px; }
-.cartouche__valeur {
-  font-family: var(--f-donnee); font-size: var(--t-t3); font-weight: var(--g-lourd);
-  line-height: 1.1; letter-spacing: -.01em;
-}
-.cartouche__detail { font-size: var(--t-mini); color: var(--c-encre-2); margin-top: 3px; }
-.cartouche__detail time { border-bottom: 1px dotted var(--c-encre-4); cursor: help; }
-.cartouche__actions { display: flex; gap: var(--e-2); flex: none; }
-
-.cartouche[data-niveau="frais"] { color: var(--c-frais); background: var(--c-frais-voile); }
-.cartouche[data-niveau="vieil"] { color: var(--c-vieil); background: var(--c-vieil-voile); }
-.cartouche[data-niveau="obs"]   {
-  color: var(--c-obsolete);
-  background:
-    repeating-linear-gradient(135deg,
-      var(--c-obsolete-voile) 0 9px, #f2ddd8 9px 18px);
-}
-.cartouche__valeur, .cartouche__detail strong { color: inherit; }
-.cartouche__detail { color: color-mix(in srgb, currentColor 62%, var(--c-encre)); }
-
-.cartouche .btn--verifier {
-  border-color: currentColor; color: inherit; background: var(--c-papier);
-  font-weight: var(--g-lourd);
-}
-.cartouche .btn--verifier:hover { background: currentColor; color: var(--c-papier); }
-
-/* Le tampon : retour visuel de la vérification en un clic */
-.tampon {
-  position: absolute; inset: 0; display: grid; place-items: center;
-  pointer-events: none; opacity: 0;
-}
-.tampon span {
-  font-family: var(--f-donnee); font-weight: var(--g-lourd); font-size: 1.5rem;
-  letter-spacing: .18em; color: var(--c-frais);
-  border: 3px solid var(--c-frais); border-radius: var(--r-2);
-  padding: var(--e-2) var(--e-4);
-  transform: rotate(-7deg);
-  background: rgba(252,251,248,.82);
-}
-.cartouche.tamponne .tampon { animation: tamponner var(--m-ample) both; }
-@keyframes tamponner {
-  0%   { opacity: 0; transform: scale(1.9); }
-  35%  { opacity: 1; transform: scale(1); }
-  75%  { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1); }
-}
-.cartouche.tamponne .temoin__jauge i { animation: remplir var(--m-doux) both; }
-.cartouche.tamponne .temoin__jauge i:nth-child(2) { animation-delay: 90ms; }
-.cartouche.tamponne .temoin__jauge i:nth-child(3) { animation-delay: 180ms; }
-@keyframes remplir { from { transform: scaleY(.2); opacity: .3; } }
-
-/* --- Métadonnées ---------------------------------------------------------- */
-.meta {
-  display: grid; grid-template-columns: auto 1fr; gap: var(--e-2) var(--e-4);
-  font-size: var(--t-petit);
-  padding: var(--e-3) 0; border-top: 1px solid var(--c-trait-fin); border-bottom: 1px solid var(--c-trait-fin);
-}
-.meta dt { color: var(--c-encre-3); font-size: var(--t-mini); padding-top: 2px; }
-.meta dd { margin: 0; display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; }
-.meta a { color: var(--c-encre); text-decoration: none; border-bottom: 1px solid var(--c-trait-fort); }
-.meta a:hover { color: var(--c-accent); border-color: var(--c-accent); }
-.chiffre { font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-2); }
-
-/* --- Sélecteur de registre ------------------------------------------------- */
-.registre {
-  display: flex; align-items: center; gap: var(--e-2);
-  margin: var(--e-5) 0 var(--e-6);
-  padding: var(--e-1);
-  background: var(--c-fond-creux); border: 1px solid var(--c-trait);
-  border-radius: var(--r-3); width: fit-content;
-}
-.registre button {
-  border: 0; background: transparent; cursor: pointer;
-  padding: 7px var(--e-4); border-radius: var(--r-2);
-  font-size: var(--t-petit); font-weight: var(--g-fort); color: var(--c-encre-2);
-  display: flex; align-items: center; gap: var(--e-2);
-}
-.registre button[aria-selected="true"] {
-  background: var(--c-papier); color: var(--c-encre); box-shadow: var(--o-pose);
-}
-.registre__pt { width: 6px; height: 6px; border-radius: 50%; background: var(--c-encre-4); }
-.registre button[aria-selected="true"] .registre__pt { background: var(--c-accent); }
-.invite-op {
+/* LA FORME DE RAIL — glyphe de 12 px et durée abrégée, pour les listes denses.
+   Recopiée de `V-42.css` sous le même nom, pour la même raison. */
+.rail-compact {
   display: inline-flex; align-items: center; gap: var(--e-2);
-  margin: var(--e-5) 0 var(--e-6);
-  font-size: var(--t-petit); color: var(--c-encre-3);
-  border: 1px dashed var(--c-trait-fort); border-radius: var(--r-2);
-  padding: var(--e-2) var(--e-3); background: none; cursor: pointer;
+  font-family: var(--f-donnee); font-size: var(--t-mini);
 }
-.invite-op:hover { color: var(--c-accent); border-color: var(--c-accent); }
+.rail-compact.glyphe--ajour     { color: var(--c-ajour); }
+.rail-compact.glyphe--bientot   { color: var(--c-bientot); }
+.rail-compact.glyphe--averifier { color: var(--c-averifier); }
+.rail-compact.glyphe--arevoir   { color: var(--c-arevoir); }
+.rail-compact.glyphe--obsolete  { color: var(--c-obsolete); }
 
-/* --- Corps rédigé --------------------------------------------------------- */
+/* --- Titre, étiquettes, métadonnées --------------------------------------- */
+.titre-note {
+  font-family: var(--f-lecture); font-size: var(--t-titre); font-weight: var(--g-moyen);
+  line-height: var(--i-serre); letter-spacing: -.01em;
+  margin: 34px 0 0; max-width: 32ch; text-wrap: pretty;
+}
+
+.etiquettes { display: flex; flex-wrap: wrap; gap: var(--e-2); margin-top: 26px; }
+.etiquette {
+  padding: var(--e-2) 14px; border-radius: var(--r-2);
+  background: var(--c-accent-voile); color: var(--c-accent);
+  font-size: var(--t-petit2); font-weight: var(--g-moyen);
+}
+.etiquettes__ajout {
+  display: inline-flex; align-items: center; gap: var(--e-2);
+  padding: var(--e-2) 14px;
+  border: 1px solid var(--c-trait); border-radius: var(--r-2);
+  background: var(--c-papier); color: var(--c-encre-3);
+  font-size: var(--t-petit2); text-decoration: none;
+}
+.etiquettes__ajout:hover { border-color: var(--c-trait-fort); color: var(--c-encre); }
+.etiquettes__ajout span { font-size: var(--t-ui); line-height: 1; }
+
+.metas { display: flex; flex-wrap: wrap; margin-top: 34px; }
+.meta-item {
+  display: flex; align-items: flex-start; gap: var(--e-3);
+  padding-right: var(--e-5); margin-right: var(--e-5);
+  border-right: 1px solid var(--c-trait); min-height: 44px; flex: 0 1 auto;
+}
+.meta-item:last-child { border-right: 0; margin-right: 0; padding-right: 0; }
+.meta-item svg { flex: none; margin-top: 1px; color: var(--c-encre); }
+.meta-item__corps { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.meta-item__valeur { font-size: var(--t-base); font-weight: var(--g-moyen); }
+.meta-item__libelle { font-size: var(--t-meta); color: var(--c-encre-3); }
+
+/* Le séparateur documentaire — deux filets et le petit glyphe vert. */
+.filet-doc {
+  display: flex; align-items: center; gap: var(--e-4);
+  margin: 36px 0 40px; color: var(--c-accent);
+}
+.filet-doc__trait { flex: 1; height: 1px; background: var(--c-trait); }
+
+/* --- Le pied de note ------------------------------------------------------ */
+.pied-note {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--e-4); flex-wrap: wrap;
+  margin-top: var(--e-7); padding-top: 28px;
+  border-top: 1px solid var(--c-trait);
+  font-size: var(--t-petit2); color: var(--c-encre-3);
+}
+.pied-note__planche { color: var(--c-encre-3); text-decoration: underline dotted; }
+.pied-note__planche:hover { color: var(--c-accent); }
+
+/* --- La partie droite de l'en-tête ---------------------------------------- */
+.modif {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--c-encre-3); font-size: var(--t-meta); line-height: 1.35;
+}
+.modif svg { flex: none; color: var(--c-accent); }
+.modif__corps { display: flex; flex-direction: column; min-width: 0; }
+.modif__titre { color: var(--c-encre); }
+.modif__quand { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Un bouton qui est un LIEN ne porte pas le soulignement des liens. */
+.barre__actions .btn { min-height: var(--h-bouton); text-decoration: none; }
+.barre__actions .btn--principal { padding: 10px 18px; font-size: var(--t-base); }
+.btn--carre { width: var(--h-bouton); height: var(--h-bouton); padding: 0; }
+/* LE BOUTON DU TIROIR N'EXISTE QUE SOUS 1180 PX, là où la colonne de contexte
+   devient un tiroir. Le socle le cache, mais `.btn` du socle vient APRÈS sa règle
+   et lui rendait son `display` : la vue tranche, aux deux mêmes seuils. */
+.ouvrir-contexte {
+  display: none; gap: var(--e-2); padding: 0 var(--e-3); font-size: var(--t-petit2);
+}
+
+/* Le menu ⋮ — 250 px, ouvert par `data-ouvert` (`$lib/cablage/coquille.ts`). */
+/* LES DEUX TEINTES DU MENU passent par le sélecteur de la liste : le socle
+   colore `.menu-barre__liste button` en encre, et une classe seule perdait. */
+.menu-note .menu-barre__liste { min-width: 250px; padding: 6px; }
+.menu-note .menu-barre__liste .menu-note__verifier {
+  color: var(--c-accent); font-weight: var(--g-moyen);
+}
+.menu-note .menu-barre__liste .menu-note__verifier:hover { background: var(--c-accent-voile); }
+.menu-note .menu-barre__liste .menu-note__verifier svg { color: var(--c-accent); }
+.menu-note .menu-barre__liste .menu-note__danger { color: var(--c-danger); }
+.menu-note .menu-barre__liste .menu-note__danger:hover { background: var(--c-danger-voile); }
+.menu-note__lien {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 10px; border-radius: var(--r-2);
+  font-size: var(--t-base); color: var(--c-encre); text-decoration: none;
+}
+.menu-note__lien:hover { background: var(--c-papier-2); }
+
+/* --- La colonne de contexte ------------------------------------------------
+   Elle ne déclare pas `display` non plus : sous 1180 px le socle la sort du
+   flux et la rend en tiroir. */
+.contexte {
+  border-left: 1px solid var(--c-trait);
+  background: var(--c-papier);
+  padding: 28px var(--e-5) var(--e-6);
+  position: sticky; top: var(--h-entete);
+  max-height: calc(100vh - var(--h-entete)); overflow-y: auto;
+  min-width: 0;
+}
+.contexte::-webkit-scrollbar { width: 6px; }
+.contexte::-webkit-scrollbar-thumb { background: var(--c-trait); border-radius: 3px; }
+
+/* La croix du tiroir : rendue toujours, montrée quand la colonne EST un tiroir. */
+.contexte__fermer {
+  display: none; margin: -10px -8px 10px auto;
+  width: 32px; height: 32px; border: 0; border-radius: var(--r-2);
+  background: none; color: var(--c-encre-3); cursor: pointer;
+  place-items: center;
+}
+.app[data-tiroir="contexte"] .contexte__fermer { display: grid; }
+.contexte__fermer:hover { background: var(--c-fond-creux); color: var(--c-encre); }
+
+.zone + .zone,
+.carte-vivacite { margin-top: 22px; }
+.zone + .zone { padding-top: 22px; border-top: 1px solid var(--c-trait); }
+.zone__titre { margin: 0; }
+.zone__actions { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
+.action {
+  display: flex; align-items: center; gap: var(--e-3);
+  padding: 7px var(--e-2); margin-left: -8px;
+  border: 0; border-radius: 5px; background: none; cursor: pointer;
+  text-align: left; font-family: var(--f-ui); font-size: var(--t-base);
+  color: var(--c-encre); text-decoration: none;
+}
+.action:hover { background: var(--c-fond-creux); }
+.action svg { flex: none; }
+.action--danger { color: var(--c-danger); }
+.action--danger:hover { background: var(--c-danger-voile); }
+
+.contexte__univers { margin: 10px 0 0; font-size: var(--t-base); line-height: 1.6; }
+.contexte__rangement {
+  display: flex; align-items: center; gap: var(--e-2);
+  margin: 0; font-size: var(--t-base); line-height: 1.6;
+}
+.contexte__rangement a { color: var(--c-encre); text-decoration: none; }
+.contexte__rangement a:hover { color: var(--c-accent); text-decoration: underline; }
+.contexte__branche { color: var(--c-encre-4); font-family: var(--f-donnee); }
+.contexte__voisines { margin: 6px 0 0; padding-left: 22px; font-size: var(--t-petit); }
+.contexte__voisines a {
+  display: inline-flex; align-items: center; gap: var(--e-2);
+  color: var(--c-encre-3); text-decoration: none;
+}
+.contexte__voisines a svg { color: var(--c-accent); }
+.contexte__voisines a:hover { color: var(--c-accent); }
+
+.zone__lien {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e-3);
+  color: inherit; text-decoration: none;
+}
+.zone__lien:hover { color: var(--c-accent); }
+.zone__lien-corps { display: flex; flex-direction: column; gap: var(--e-2); }
+.zone__compte { font-size: var(--t-base); }
+.zone__compte .chiffre { margin-right: var(--e-2); }
+.zone__tete { display: flex; align-items: center; justify-content: space-between; gap: var(--e-3); }
+.zone__ajout,
+.zone__depot {
+  display: inline-flex; align-items: center; gap: var(--e-1);
+  border: 0; background: none; cursor: pointer;
+  font-family: var(--f-ui); font-size: var(--t-petit); color: var(--c-encre-3);
+  padding: 0;
+}
+.zone__ajout:hover, .zone__depot:hover { color: var(--c-accent); }
+.zone__ajout span { font-size: var(--t-ui); line-height: 1; }
+.zone__liste { display: flex; flex-direction: column; gap: var(--e-1); margin-top: 10px; }
+.zone__note {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: var(--e-2); margin: 0 calc(var(--e-2) * -1);
+  border-radius: var(--r-2); color: inherit; text-decoration: none;
+}
+.zone__note:hover { background: var(--c-papier-2); }
+.zone__note-titre { font-size: var(--t-petit); font-weight: var(--g-moyen); line-height: 1.35; }
+.zone__note-sous { font-size: var(--t-mini); color: var(--c-encre-3); }
+
+.pj {
+  display: flex; align-items: center; gap: var(--e-3);
+  padding: var(--e-2); margin: 0 calc(var(--e-2) * -1);
+  border-radius: var(--r-2); color: inherit; text-decoration: none;
+}
+.pj:hover { background: var(--c-papier-2); }
+.pj__ext {
+  flex: none; width: 34px; height: 34px; border-radius: var(--r-2);
+  display: grid; place-items: center; background: var(--c-fond-creux);
+  font-family: var(--f-donnee); font-size: var(--t-micro); font-weight: var(--g-lourd);
+  color: var(--c-encre-2);
+}
+.pj__corps { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pj__nom { font-size: var(--t-petit); font-weight: var(--g-moyen); line-height: 1.35; }
+.pj__sous { font-size: var(--t-mini); color: var(--c-encre-3); }
+
+.chiffre { font-family: var(--f-donnee); font-size: var(--t-petit); color: var(--c-encre-3); }
+
+/* --- La carte de vivacité et sa frise -------------------------------------- */
+.carte-vivacite {
+  padding: 18px 18px 20px;
+  border: 1px solid var(--c-trait); border-radius: var(--r-3);
+  background: var(--c-papier);
+}
+.carte-vivacite p { margin: 0; }
+.carte-vivacite__etat {
+  display: flex; align-items: center; gap: 10px; margin-top: 14px;
+  font-size: var(--t-lect); font-weight: var(--g-fort);
+}
+.carte-vivacite__etat.glyphe--ajour     { color: var(--c-ajour); }
+.carte-vivacite__etat.glyphe--bientot   { color: var(--c-bientot); }
+.carte-vivacite__etat.glyphe--averifier { color: var(--c-averifier); }
+.carte-vivacite__etat.glyphe--arevoir   { color: var(--c-arevoir); }
+.carte-vivacite__etat.glyphe--obsolete  { color: var(--c-obsolete); }
+.carte-vivacite__verif {
+  font-size: var(--t-petit2); color: var(--c-encre-3);
+  margin-top: var(--e-1); padding-left: 28px;
+}
+
+/* LA FRISE — trait plein de la vérification à aujourd'hui, pointillé jusqu'à
+   l'échéance. La position vient de `fraction`, calculée par la fabrique : la
+   vue ne fait que la poser en pourcentage. */
+.frise { position: relative; height: 14px; margin: 22px 0 10px; }
+.frise__ecoule { position: absolute; left: 0; top: 6px; height: 2px; background: currentColor; }
+.frise__ecoule.glyphe--ajour     { color: var(--c-ajour); }
+.frise__ecoule.glyphe--bientot   { color: var(--c-bientot); }
+.frise__ecoule.glyphe--averifier { color: var(--c-averifier); }
+.frise__ecoule.glyphe--arevoir   { color: var(--c-arevoir); }
+.frise__ecoule.glyphe--obsolete  { color: var(--c-obsolete); }
+.frise__reste {
+  position: absolute; top: 6px; right: 0; height: 0;
+  border-top: 2px dashed var(--c-trait-fort);
+}
+.frise__rond {
+  position: absolute; top: 0; width: 14px; height: 14px; border-radius: 50%;
+  background: currentColor;
+}
+.frise__rond.glyphe--ajour     { color: var(--c-ajour); }
+.frise__rond.glyphe--bientot   { color: var(--c-bientot); }
+.frise__rond.glyphe--averifier { color: var(--c-averifier); }
+.frise__rond.glyphe--arevoir   { color: var(--c-arevoir); }
+.frise__rond.glyphe--obsolete  { color: var(--c-obsolete); }
+.frise__rond--depart { left: 0; transform: translateX(-50%); }
+.frise__rond--jour {
+  transform: translateX(-50%);
+  border: 2px solid var(--c-papier);
+  box-shadow: 0 0 0 1.5px currentColor;
+}
+/* Le rond d'échéance reste un anneau tant qu'elle n'est pas passée. */
+.frise__rond--echeance {
+  right: 0; transform: translateX(50%);
+  background: var(--c-papier); border: 2px solid var(--c-trait-fort);
+}
+.frise__rond--echeance[data-echue="oui"] { border-color: currentColor; }
+
+.frise__legendes {
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--e-2);
+  font-size: var(--t-meta); line-height: 1.4;
+}
+.frise__legende { display: flex; flex-direction: column; }
+.frise__legende--centre { text-align: center; }
+.frise__legende--fin { text-align: right; }
+.frise__date { font-weight: var(--g-moyen); color: var(--c-encre); }
+.frise__mot { color: var(--c-encre-3); }
+
+.carte-rappel {
+  display: flex; gap: var(--e-3);
+  margin-top: var(--e-4); padding: var(--e-4) 18px;
+  border-radius: var(--r-3); background: var(--c-fond);
+}
+.carte-rappel svg { flex: none; margin-top: 1px; color: var(--c-accent); }
+.carte-rappel__corps { display: flex; flex-direction: column; gap: var(--e-1); }
+.carte-rappel__texte { font-size: var(--t-petit2); line-height: 1.5; color: var(--c-encre-2); }
+
+/* --- La bulle du geste ----------------------------------------------------
+   Fond encre, coche verte, bas de l'écran au centre. Le câblage l'efface au
+   bout de 2,6 s ; sans script elle reste, et c'est un moindre mal. */
+.toast {
+  position: fixed; z-index: 95; bottom: var(--e-5); left: 50%;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 18px; border-radius: var(--r-3);
+  background: var(--c-encre); color: var(--c-papier);
+  font-size: var(--t-petit2); font-weight: var(--g-moyen);
+  box-shadow: var(--o-flotte);
+  animation: monte var(--m-monte) both;
+  max-width: calc(100vw - var(--e-6));
+}
+.toast svg { flex: none; color: #6fc79a; }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+/* --- Corps rédigé ---------------------------------------------------------
+   LE CORPS EST EN ARCHIVO, LES TITRES EN LITERATA : c'est le partage du
+   prototype validé — l'interface et le corps de note dans la même famille,
+   la lecture réservée aux titres et aux grands nombres. */
 .prose {
-  font-family: var(--f-lecture); font-size: var(--t-lect);
+  font-family: var(--f-ui); font-size: var(--t-corps);
   line-height: var(--i-lect); color: var(--c-encre);
   counter-reset: sec;
+}
+
+/* LE RÉSUMÉ EST LE PREMIER PARAGRAPHE DU CORPS, et il n'existe pas ailleurs :
+   aucune colonne ne porte de résumé distinct, et en inventer un serait le
+   remplir d'une phrase que personne n'a écrite. Il est mis en avant, jamais
+   dupliqué. */
+.prose > p:first-child {
+  font-size: var(--t-t3); line-height: 1.65; max-width: 72ch;
+  margin-bottom: var(--e-7);
+  text-wrap: pretty;
 }
 .prose > * + * { margin-top: var(--e-4); }
 .prose p { margin: 0; }
@@ -168,24 +459,23 @@
 
 .prose h2 {
   counter-increment: sec;
-  font-family: var(--f-ui); font-size: var(--t-t1); font-weight: var(--g-lourd);
-  line-height: 1.25; letter-spacing: -.018em;
-  margin: var(--e-7) 0 var(--e-4);
-  padding-top: var(--e-3); border-top: 1px solid var(--c-trait);
-  display: flex; gap: var(--e-3); align-items: baseline;
-  scroll-margin-top: calc(var(--l-barre) + var(--e-4));
+  font-family: var(--f-lecture); font-size: var(--t-section); font-weight: var(--g-moyen);
+  line-height: 1.25; letter-spacing: -.005em;
+  margin: var(--e-8) 0 22px;
+  display: flex; gap: 22px; align-items: baseline;
+  scroll-margin-top: calc(var(--h-entete) + var(--e-5));
 }
 /* La numérotation n'est pas décorative : le type de note est « Procédure »,
    l'ordre des sections porte l'ordre des opérations. */
 .prose h2::before {
   content: counter(sec, decimal-leading-zero);
-  font-family: var(--f-donnee); font-size: var(--t-base); font-weight: var(--g-moyen);
+  font-family: var(--f-lecture); font-size: var(--t-t1); font-weight: var(--g-moyen);
   color: var(--c-accent); flex: none;
 }
 .prose h3 {
-  font-family: var(--f-ui); font-size: var(--t-t2); font-weight: var(--g-fort);
-  line-height: 1.3; letter-spacing: -.012em; margin: var(--e-6) 0 var(--e-3);
-  scroll-margin-top: calc(var(--l-barre) + var(--e-4));
+  font-family: var(--f-lecture); font-size: var(--t-t2); font-weight: var(--g-moyen);
+  line-height: 1.3; letter-spacing: -.008em; margin: var(--e-6) 0 var(--e-3);
+  scroll-margin-top: calc(var(--h-entete) + var(--e-5));
 }
 .prose h4 { font-family: var(--f-ui); font-size: var(--t-t3); font-weight: var(--g-fort); margin: var(--e-5) 0 var(--e-2); }
 .prose h5 { font-family: var(--f-ui); font-size: var(--t-base); font-weight: var(--g-fort); margin: var(--e-4) 0 var(--e-2); }
@@ -218,29 +508,38 @@
 }
 
 .prose .taches { list-style: none; padding-left: 0; }
-.taches li { display: flex; gap: var(--e-3); align-items: flex-start; }
+/* UNE ÉTAPE EST UN GESTE À FAIRE : elle porte son propre cadre, pour qu'on
+   retrouve où on en est en revenant à l'écran. */
+.taches li {
+  display: flex; gap: var(--e-3); align-items: flex-start;
+  padding: 10px 14px;
+  border: 1px solid var(--c-trait); border-radius: var(--r-2);
+  background: var(--c-papier);
+}
 .taches li::before { display: none; }
 .taches input { margin: .38em 0 0; accent-color: var(--c-accent); flex: none; }
 .taches input:disabled { opacity: 1; }
 .taches li:has(input:checked) { color: var(--c-encre-3); }
 
 .prose code {
-  font-family: var(--f-donnee); font-size: .84em;
-  background: var(--c-papier-2); border: 1px solid var(--c-trait-fin);
-  border-radius: var(--r-1); padding: 1px 5px; white-space: nowrap;
+  font-family: var(--f-donnee); font-size: var(--t-base);
+  background: var(--c-fond-creux); color: var(--c-encre);
+  border-radius: var(--r-1); padding: 2px 7px; white-space: nowrap;
 }
 .bloc-code {
   border: 1px solid var(--c-trait); border-radius: var(--r-3); overflow: hidden;
-  background: var(--c-papier-2);
+  background: var(--c-fond);
 }
 .bloc-code__tete {
   display: flex; align-items: center; justify-content: space-between;
-  padding: var(--e-2) var(--e-2) var(--e-2) var(--e-4);
-  border-bottom: 1px solid var(--c-trait-fin); background: var(--c-papier);
+  padding: 10px var(--e-4) 0;
 }
+.bloc-code__tete .btn-copier { font-size: var(--t-meta); padding: 2px var(--e-1); }
+/* Le nom du langage se lit tel qu'il est écrit — « bash », pas « BASH ». */
+.bloc-code__tete .etiq { text-transform: none; letter-spacing: 0; font-size: var(--t-meta); }
 .bloc-code pre {
-  margin: 0; padding: var(--e-4); overflow-x: auto;
-  font-family: var(--f-donnee); font-size: var(--t-petit); line-height: 1.7;
+  margin: 0; padding: var(--e-3) var(--e-4) var(--e-4); overflow-x: auto;
+  font-family: var(--f-donnee); font-size: var(--t-petit2); line-height: 1.6;
 }
 .bloc-code code { background: none; border: 0; padding: 0; font-size: inherit; white-space: pre; }
 .j-cmd { color: var(--c-accent-fonce); font-weight: var(--g-moyen); }
@@ -343,99 +642,6 @@ blockquote.prose-cit footer { font-style: normal; font-size: var(--t-petit); col
 body[data-numerote="non"] .prose h2::before { content: none; }
 body[data-numerote="non"] .prose h2 { gap: 0; }
 
-/* --- Grille à trois colonnes -------------------------------------------- */
-.lecture {
-  display: grid; align-items: start;
-  grid-template-columns: var(--l-sommaire) minmax(0,1fr) var(--l-panneaux);
-  gap: var(--e-6);
-  padding: var(--e-5) var(--e-5) var(--e-8);
-  max-width: 1560px; width: 100%; margin: 0 auto;
-}
-
-/* --- Bandeaux d'alerte --------------------------------------------------- */
-.bandeaux { display: flex; flex-direction: column; gap: var(--e-2); margin-bottom: var(--e-5); }
-.bandeaux:not(:has(.bandeau:not([hidden]))) { display: none; }
-.bandeau {
-  display: flex; gap: var(--e-3); align-items: flex-start;
-  padding: var(--e-3) var(--e-4);
-  border: 1px solid var(--c-trait); border-radius: var(--r-3);
-  background: var(--c-papier);
-  font-size: var(--t-petit); line-height: 1.5;
-}
-.bandeau__marque {
-  flex: none; width: 22px; height: 22px; border-radius: var(--r-1);
-  display: grid; place-items: center; font-weight: var(--g-lourd);
-  font-family: var(--f-donnee); font-size: var(--t-mini);
-}
-.bandeau__corps { flex: 1; min-width: 0; }
-.bandeau__titre { font-weight: var(--g-fort); margin-bottom: 2px; }
-.bandeau__note {
-  margin-top: var(--e-2); padding-left: var(--e-3);
-  border-left: 2px solid var(--c-trait); color: var(--c-encre-2);
-  font-family: var(--f-lecture); font-size: var(--t-petit);
-}
-.bandeau--revision { background: var(--c-alerte-voile); border-color: #dcc59a; }
-.bandeau--revision .bandeau__marque { background: var(--c-alerte); color: #fff; }
-.bandeau--brouillon { background: var(--c-papier-2); border-color: var(--c-trait-fort); border-style: dashed; }
-.bandeau--brouillon .bandeau__marque { background: var(--c-encre-2); color: #fff; }
-.bandeau--resync { background: var(--c-info-voile); border-color: #b6cfdd; }
-.bandeau--resync .bandeau__marque { background: var(--c-info); color: #fff; }
-
-/* --- Colonne droite -------------------------------------------------------- */
-.panneaux { display: flex; flex-direction: column; gap: var(--e-3); position: sticky; top: calc(var(--l-barre) + var(--e-5)); max-height: calc(100vh - var(--l-barre) - var(--e-7)); overflow-y: auto; padding-bottom: var(--e-5); }
-.panneaux::-webkit-scrollbar { width: 6px; }
-.panneaux::-webkit-scrollbar-thumb { background: var(--c-trait); border-radius: 3px; }
-.actions-liste { display: flex; flex-direction: column; gap: var(--e-1); }
-
-.item {
-  display: flex; gap: var(--e-2); align-items: flex-start;
-  padding: var(--e-2); border-radius: var(--r-2); text-decoration: none; color: inherit;
-}
-.item:hover { background: var(--c-papier-2); }
-.item + .item { border-top: 1px solid var(--c-trait-fin); border-radius: 0; }
-.item__nom { font-size: var(--t-petit); font-weight: var(--g-moyen); line-height: 1.35; }
-.item__sous { font-size: var(--t-mini); color: var(--c-encre-3); margin-top: 2px; display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; }
-
-.rel-groupe + .rel-groupe { margin-top: var(--e-3); }
-.rel-groupe__titre { margin-bottom: var(--e-1); display: flex; align-items: center; gap: var(--e-2); }
-.rel-groupe__titre::after { content: ""; flex: 1; height: 1px; background: var(--c-trait-fin); }
-
-.jauge-prox { display: inline-flex; gap: 2px; }
-.jauge-prox i { width: 3px; height: 9px; background: var(--c-trait-fort); border-radius: 1px; }
-.jauge-prox i.on { background: var(--c-accent); }
-
-.chrono { list-style: none; margin: 0; padding: 0 0 0 var(--e-4); border-left: 1px solid var(--c-trait); }
-.chrono li { position: relative; padding: 0 0 var(--e-3); font-size: var(--t-petit); }
-.chrono li:last-child { padding-bottom: 0; }
-.chrono li::before {
-  content: ""; position: absolute; left: calc(var(--e-4) * -1 - 4px); top: 5px;
-  width: 7px; height: 7px; border-radius: 50%; background: var(--c-papier);
-  box-shadow: 0 0 0 1.5px var(--c-trait-fort);
-}
-.chrono li:first-child::before { background: var(--c-frais); box-shadow: 0 0 0 1.5px var(--c-frais); }
-.chrono time { font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-3); display: block; }
-
-.pj { display: flex; align-items: center; gap: var(--e-3); padding: var(--e-2); border-radius: var(--r-2); }
-.pj:hover { background: var(--c-papier-2); }
-.pj__ext {
-  flex: none; width: 34px; height: 34px; border-radius: var(--r-2);
-  display: grid; place-items: center; background: var(--c-fond-creux);
-  font-family: var(--f-donnee); font-size: var(--t-micro); font-weight: var(--g-lourd);
-  color: var(--c-encre-2);
-}
-
-/* --- Propriétés de fiche ----------------------------------------------------
-   LE HUITIÈME PANNEAU, absent du gel et exigé par le cadrage (BRIEF-VUES:797,
-   CDC:886). Les règles sont DÉCLARÉES ICI, et non empruntées à V-20 : `.prop`
-   et `.prop__cle` y sont propres à cette vue-là (DESIGN.md:1205-1206, deux
-   vues), et P-1 autorise une règle propre qui n'emploie que des jetons du
-   socle — c'est le cas des trois ci-dessous. */
-.propriete { display: flex; align-items: baseline; gap: var(--e-2); font-size: var(--t-petit); }
-.propriete + .propriete { margin-top: var(--e-1); }
-.propriete__cle { flex: none; width: 92px; font-size: var(--t-mini); color: var(--c-encre-3); }
-.propriete__valeur { min-width: 0; overflow-wrap: anywhere; }
-.propriete__valeur[data-vide="oui"] { color: var(--c-encre-3); font-style: italic; }
-
 /* --- Signalement à réviser -------------------------------------------------- */
 .reviser { margin-top: var(--e-3); display: none; }
 .reviser[data-ouvert="oui"] { display: block; }
@@ -447,66 +653,6 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
 }
 .reviser textarea:focus { background: var(--c-papier); border-color: var(--c-accent); outline: none; box-shadow: 0 0 0 3px var(--c-accent-voile); }
 .reviser__pied { display: flex; gap: var(--e-2); margin-top: var(--e-2); }
-
-/* --- État de chargement ------------------------------------------------------- */
-.app[data-etat="chargement"] .vue-reelle { display: none; }
-.app:not([data-etat="chargement"]) .vue-esquisse { display: none; }
-.vue-esquisse .esq { display: block; }
-.esq-l { height: 13px; margin-bottom: var(--e-2); }
-
-/* --- Panneau d'erreur d'une zone ------------------------------------------------ */
-.panneau--erreur { border-color: #e2b8b0; }
-.panneau--erreur .panneau__tete { background: var(--c-danger-voile); border-bottom-color: #e2b8b0; }
-
-/* --- Planche de revue (hors produit) ----------------------------------------------- */
-.planche {
-  position: fixed; z-index: 120; left: 50%; bottom: var(--e-4); transform: translateX(-50%);
-  display: flex; align-items: center; gap: var(--e-4); flex-wrap: wrap;
-  background: var(--c-encre); color: #cfd8db;
-  padding: var(--e-2) var(--e-4); border-radius: 999px;
-  box-shadow: var(--o-flotte); font-size: var(--t-mini); max-width: calc(100vw - var(--e-6));
-}
-.planche fieldset { border: 0; margin: 0; padding: 0; display: flex; align-items: center; gap: var(--e-2); }
-.planche legend { float: left; margin-right: var(--e-2); font-family: var(--f-donnee); font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase; color: #7d8f95; }
-.planche label { cursor: pointer; }
-.planche input { position: absolute; opacity: 0; pointer-events: none; }
-.planche label span { display: inline-block; padding: 4px var(--e-2); border-radius: 999px; border: 1px solid #33454f; color: #cfd8db; }
-.planche input:checked + span { background: #cfd8db; color: var(--c-encre); border-color: #cfd8db; font-weight: var(--g-fort); }
-.planche input:focus-visible + span { outline: 2px solid #8f86e0; outline-offset: 2px; }
-.planche__sep { width: 1px; height: 22px; background: #33454f; }
-
-/* --- Réponses aux petits écrans ---------------------------------------------------- */
-@media (max-width: 1480px) {
-  .lecture { grid-template-columns: var(--l-sommaire) minmax(0,1fr) 264px; gap: var(--e-5); }
-}
-@media (max-width: 1240px) {
-  .app { grid-template-columns: minmax(0,1fr); }
-  .rail { display: none; }
-  .lecture { grid-template-columns: minmax(0,1fr) 264px; }
-  .sommaire { grid-column: 1 / -1; position: static; }
-  .sommaire__liste { display: flex; flex-wrap: wrap; border-left: 0; border-top: 2px solid var(--c-trait); }
-  .sommaire__liste .n2 { display: none; }
-  .sommaire a { border-left: 0; border-top: 2px solid transparent; margin: -2px 0 0; }
-  .sommaire a[aria-current="true"] { border-left-color: transparent; border-top-color: var(--c-accent); }
-  .article { max-width: none; }
-}
-@media (max-width: 900px) {
-  .lecture { grid-template-columns: minmax(0,1fr); padding: var(--e-4) var(--e-4) var(--e-8); }
-  .panneaux { position: static; max-height: none; overflow: visible; }
-  .recherche { width: auto; }
-  .recherche__txt, .recherche .touche { display: none; }
-  .cartouche { grid-template-columns: 1fr; }
-  .cartouche__actions { width: 100%; }
-  .cartouche__actions .btn { flex: 1; }
-  .titre-note { font-size: var(--t-t1); }
-  .prose { font-size: 1rem; }
-  .meta { grid-template-columns: 1fr; gap: var(--e-1); }
-  .meta dt { margin-top: var(--e-2); }
-  .planche { display: none; }
-  .repliable > .panneau__corps { display: none; }
-  .repliable[data-ouvert="oui"] > .panneau__corps { display: block; }
-  .repliable .panneau__tete { cursor: pointer; }
-}
 
 /* ==========================================================================
    V-09 — PALETTE DE RECHERCHE RAPIDE
@@ -676,32 +822,41 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
   .pres__sous .temoin__txt { display: none; }
 }
 
-/* --- Impression --------------------------------------------------------------------- */
+
+/* --- Réponses aux seuils de largeur ---------------------------------------
+   Les mêmes que le socle, au pixel : le socle escamote les colonnes, la vue
+   referme les pistes de sa grille. Deux jeux de seuils qui ne concordent pas
+   laisseraient une piste vide de 190 px à l'écran. */
+@media (max-width: 1379.98px) {
+  .lecture { grid-template-columns: minmax(0, 1fr) var(--l-panneaux); }
+}
+@media (max-width: 1179.98px) {
+  .lecture { grid-template-columns: minmax(0, 1fr); padding-right: clamp(20px, 3.5vw, 64px); }
+  .ouvrir-contexte { display: inline-flex; }
+  /* En tiroir, la colonne reprend son propre défilement et sa croix. */
+  .app[data-tiroir="contexte"] .contexte { padding-top: var(--e-4); }
+}
+@media (max-width: 900px) {
+  .lecture { padding: var(--e-4) var(--e-4) var(--e-8); }
+  .titre-note { font-size: var(--t-hist); }
+  .metas { gap: var(--e-3) 0; }
+  .meta-item { border-right: 0; margin-right: var(--e-5); padding-right: 0; }
+  .modif { display: none; }
+  .prose h2 { font-size: var(--t-t2); }
+}
+
+/* --- Impression ------------------------------------------------------------
+   `RG-M18-17` — ce qui s'imprime est la note, pas l'application autour. */
 @media print {
-  .rail, .barre, .panneaux, .sommaire, .planche, .notifs, .cartouche__actions, .registre { display: none !important; }
+  .rail, .barre, .contexte, .colonne-sommaire, .notifs, .toast, .registres, .pied-note {
+    display: none !important;
+  }
   .lecture { grid-template-columns: 1fr; padding: 0; }
-  .article { max-width: none; }
+  .document { max-width: none; }
   body { background: #fff; }
   .lien-ext::after { content: " (" attr(href) ")"; font-size: .75em; }
   .lien-int::after { content: " [note interne]"; font-size: .75em; color: #666; }
 }
-
-/* --- Barre supérieure sur petit écran --------------------------------------
-   La barre doit tenir à 360 px sans provoquer de défilement horizontal de la
-   page (RG-M18-12) : le champ de recherche devient élastique et lâche ses
-   rappels clavier, qui n'ont pas de sens sans clavier physique. */
-@media (max-width: 640px) {
-  .barre { padding: 0 var(--e-3); gap: var(--e-2); }
-  .recherche { width: auto; flex: 1 1 90px; min-width: 0; }
-  .recherche .touche { display: none; }
-  .recherche__txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .fil { flex: 0 1 auto; }
-  /* Le fil d'Ariane ne tient pas sur 360 px : seul le segment courant reste,
-     les ancêtres restent atteignables par le rail. */
-  .fil > *:not(.fil__courant) { display: none; }
-  .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-}
-
 /* --- Contenus larges : le débordement reste dans son bloc ------------------
    Un tableau ou un bloc de code trop large défile dans son propre cadre ; il
    ne fait jamais défiler la page entière (RG-M18-12). */
@@ -716,4 +871,18 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
    largeurs qu'on regarde d'ordinaire. */
 .fil { overflow: hidden; }
 .fil > * { min-width: 0; flex: 0 1 auto; }
+/* LE CHEVRON NE SE COMPRIME PAS : réduit à zéro, le fil devenait une suite de
+   mots collés, et le chemin ne se lisait plus. */
+.fil > .fil__sep { flex: none; }
 .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- Barre supérieure sur petit écran --------------------------------------
+   La barre doit tenir à 360 px sans provoquer de défilement horizontal de la
+   page (RG-M18-12) : le fil d'Ariane se réduit à son segment courant, les
+   ancêtres restant atteignables par le rail. */
+@media (max-width: 640px) {
+  .barre { padding: 0 var(--e-3); gap: var(--e-2); }
+  .fil { flex: 0 1 auto; }
+  .fil > *:not(.fil__courant) { display: none; }
+  .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
