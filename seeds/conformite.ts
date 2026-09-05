@@ -63,7 +63,12 @@ export interface DomaineSeme {
 export interface UniversSeme {
 	readonly nom: string;
 	readonly description: string;
-	/** Le tracé du glyphe de l'univers, dans une boîte de 16 × 16. */
+	/**
+	 * LE GLYPHE DE L'UNIVERS — une CLÉ de la liste close que la console propose
+	 * (`src/lib/coquille/glyphes.ts`), jamais un tracé. Le rail et la page d'univers
+	 * rendent le choix fait en console : un tracé libre y retombe sur le repli, et les
+	 * six univers portaient alors la même icône.
+	 */
 	readonly glyphe: string;
 	readonly couleur: string;
 	readonly domaines: readonly DomaineSeme[];
@@ -78,7 +83,7 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 		nom: 'Claude',
 		description:
 			"Notes techniques, prompts et harnais autour de Claude et de Claude Code : installation, audit de code, bonnes pratiques d'autonomie.",
-		glyphe: 'M8 1.5v13M1.5 8h13M3.4 3.4l9.2 9.2M12.6 3.4L3.4 12.6',
+		glyphe: 'boussole',
 		couleur: '#1f5a3c',
 		domaines: [
 			{
@@ -143,7 +148,7 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 		nom: 'Candidature',
 		description:
 			"CV, lettres et préparation d'entretiens. Chaque pièce est datée et revérifiée avant envoi.",
-		glyphe: 'M2 5.5h12v8H2zM5.5 5.5V3.5h5v2M2 9h12',
+		glyphe: 'livre',
 		couleur: '#1f5a3c',
 		domaines: [
 			{
@@ -197,7 +202,7 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 		nom: 'Business Analysis',
 		description:
 			"Cadrages, ateliers et livrables d'analyse. Les connaissances méthodologiques de référence.",
-		glyphe: 'M2 14h12M4 11V7M8 11V4M12 11V9',
+		glyphe: 'jalon',
 		couleur: '#1f5a3c',
 		domaines: [
 			{
@@ -235,7 +240,7 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 	{
 		nom: 'Substack',
 		description: "Veille, connaissance et production autour de l'écosystème Substack.",
-		glyphe: 'M2.5 3h11M2.5 6.5h11M2.5 10h11v4h-11z',
+		glyphe: 'corbeille',
 		couleur: '#1f5a3c',
 		domaines: [
 			{
@@ -269,8 +274,7 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 	{
 		nom: 'Agents',
 		description: "Orchestration d'agents : patrons, garde-fous et retours d'expérience.",
-		glyphe:
-			'M8 5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM3 15a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM13 15a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM7 5L4 11M9 5l3 6M5 13h6',
+		glyphe: 'engrenage',
 		couleur: '#1f5a3c',
 		domaines: [
 			{
@@ -294,7 +298,7 @@ export const UNIVERS_DE_CONFORMITE: readonly UniversSeme[] = [
 		nom: 'Infrastructure',
 		description:
 			"Exploitation, sauvegardes et réseau. Les procédures que l'astreinte doit pouvoir suivre les yeux fermés.",
-		glyphe: 'M2 2.5h12v4H2zM2 9.5h12v4H2zM4.5 4.5h.01M4.5 11.5h.01',
+		glyphe: 'pile',
 		couleur: '#1f5a3c',
 		domaines: [
 			{
