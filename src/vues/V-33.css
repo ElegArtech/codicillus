@@ -464,6 +464,24 @@
 .groupe__corps { padding: var(--e-4); display: flex; flex-direction: column; gap: var(--e-4); }
 
 .duo-champs { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e-4); }
+.trio-champs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--e-4); }
+
+/* --- Sous-groupes de reglages -----------------------------------------------
+   Un groupe qui porte plusieurs familles de reglages dit laquelle sert a quoi :
+   le groupe Vivacite en porte trois, et sans intitule intermediaire les sept
+   champs se lisaient comme une seule liste. Le filet ne separe qu'entre deux
+   sous-groupes, jamais au-dessus du premier. */
+.sous-groupe { display: flex; flex-direction: column; gap: var(--e-3); }
+.sous-groupe + .sous-groupe { padding-top: var(--e-4); border-top: 1px solid var(--c-trait-fin); }
+.sous-groupe__nom {
+  font-family: var(--f-ui); font-size: var(--t-petit); font-weight: var(--g-lourd);
+  letter-spacing: -.006em; margin: 0;
+}
+.sous-groupe__sous {
+  font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.45; max-width: 62ch;
+  margin: -2px 0 0;
+}
+
 .champ-nombre { display: flex; align-items: center; gap: var(--e-2); }
 .champ-nombre .saisie { width: 100px; font-family: var(--f-donnee); text-align: right; }
 .champ-nombre__unite { font-size: var(--t-petit); color: var(--c-encre-2); }
@@ -532,6 +550,7 @@
 
 @media (max-width: 720px) {
   .duo-champs { grid-template-columns: 1fr; }
+  .trio-champs { grid-template-columns: 1fr; }
   .comparaison__ligne { grid-template-columns: 1fr; }
   .comparaison__nom { text-align: left; }
 }

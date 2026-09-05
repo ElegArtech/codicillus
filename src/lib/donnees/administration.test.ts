@@ -43,11 +43,14 @@ import {
 	CHAMPS_DE_CONFIGURATION,
 	estLeDernierAdministrateur,
 	MESSAGE_ADRESSE_INVALIDE,
+	MESSAGE_CYCLE_MINIMAL,
 	MESSAGE_LIBELLE_VIDE,
 	MESSAGE_PLAFOND_HORS_DOMAINE,
 	MESSAGE_SESSION_HORS_DOMAINE,
 	MESSAGE_SEUIL_MINIMAL,
 	MESSAGE_TAILLE_HORS_DOMAINE,
+	messageBientotTropGrand,
+	messageRetardNonCroissant,
 	messageSeuilNonCroissant,
 	nomConfirme,
 	roleDepuisLeLibelle,
@@ -456,8 +459,10 @@ describe('RG-M14-07 — le dernier administrateur ne perd pas son rôle', () => 
 const CONFIGURATION_VALABLE: Configuration = {
 	seuilFrais: 45,
 	seuilVieillissant: 120,
-	/* Les cinq réglages du cycle de vivacité ne sont pas réglables en console, et la
-	   validation ne les regarde donc pas. Ils sont là parce que le type les exige. */
+	/* Les cinq réglages du cycle de vivacité, désormais réglables en console — `T-10`.
+	   Les valeurs forment un cycle COHÉRENT : `bientot` sous la plus courte des deux
+	   validités, `retardRevoir` sous `retardObsolete`. Un jeu incohérent ferait
+	   refuser tous les cas qui n'éprouvent pas le cycle. */
 	validiteReference: 90,
 	validiteOperationnel: 21,
 	seuilBientot: 10,
@@ -604,6 +609,81 @@ describe('RG-M14-10 — la validation refuse les combinaisons incohérentes', ()
 	});
 });
 
+/**
+ * `T-10` — L'ORDRE QUE LE CALCUL SUPPOSE, ET QUE RIEN NE GARDAIT.
+ *
+ * `vivacite()` lit les cinq réglages dans un ordre strict. Une combinaison qui le rompt
+ * n'échoue pas : elle EFFACE un état du cycle en silence, et la planche
+ * `/bibliotheque/vivacite` continue d'annoncer un état qui ne peut plus survenir. Les
+ * trois règles sont donc refusées AU CHAMP, jamais rattrapées.
+ */
+describe('T-10 — la validation refuse un cycle de vivacité incohérent', () => {
+	it('LAISSE PASSER un cycle cohérent — c’est celui du produit par défaut', () => {
+		expect(validerLaConfiguration(CONFIGURATION_VALABLE).issue).toBe('possible');
+	});
+
+	it('refuse chacun des cinq réglages nul, négatif ou fractionnaire', () => {
+		const parChamp = [
+			['validiteReference', 'validite-reference'],
+			['validiteOperationnel', 'validite-operationnel'],
+			['seuilBientot', 'bientot'],
+			['retardRevoir', 'retard-revoir'],
+			['retardObsolete', 'retard-obsolete']
+		] as const;
+		for (const [reglage, champ] of parChamp) {
+			for (const valeur of [0, -1, 2.5, Number.NaN]) {
+				const verdict = validerLaConfiguration({ ...CONFIGURATION_VALABLE, [reglage]: valeur });
+				if (verdict.issue !== 'valeurs-refusees') throw new Error(`${reglage} = ${valeur} accepté`);
+				expect(verdict.erreurs).toContainEqual({ champ, message: MESSAGE_CYCLE_MINIMAL });
+			}
+		}
+	});
+
+	it('refuse un retard « À revoir » qui atteint ou dépasse l’obsolescence', () => {
+		/* 120 contre 90 : le cas de la tâche. Et 90 contre 90 : à égalité, « À revoir »
+		   n'a pas un seul jour d'existence. */
+		for (const retardRevoir of [120, 90]) {
+			const verdict = validerLaConfiguration({ ...CONFIGURATION_VALABLE, retardRevoir });
+			if (verdict.issue !== 'valeurs-refusees') throw new Error('refus attendu');
+			expect(verdict.erreurs).toEqual([
+				{ champ: 'retard-revoir', message: messageRetardNonCroissant(90) }
+			]);
+		}
+	});
+
+	it('refuse une alerte « Bientôt » qui atteint la plus COURTE des deux validités', () => {
+		/* La plus courte, et non la Référence : à 21 jours de validité opérationnelle,
+		   une alerte à 21 jours ferait naître toute procédure « Bientôt à vérifier »,
+		   sans qu'elle passe jamais par « À jour ». */
+		for (const seuilBientot of [21, 40]) {
+			const verdict = validerLaConfiguration({ ...CONFIGURATION_VALABLE, seuilBientot });
+			if (verdict.issue !== 'valeurs-refusees') throw new Error('refus attendu');
+			expect(verdict.erreurs).toEqual([{ champ: 'bientot', message: messageBientotTropGrand(21) }]);
+		}
+		expect(validerLaConfiguration({ ...CONFIGURATION_VALABLE, seuilBientot: 20 }).issue).toBe(
+			'possible'
+		);
+	});
+
+	it('le message dit le réglage en cause ET ce qui arriverait', () => {
+		expect(messageRetardNonCroissant(90)).toContain('90 jours');
+		expect(messageRetardNonCroissant(90)).toContain('« À revoir »');
+		expect(messageBientotTropGrand(21)).toContain('21 jours');
+		expect(messageBientotTropGrand(21)).toContain('« À jour »');
+	});
+
+	/**
+	 * UN CHAMP NE DIT QU'UN REFUS À LA FOIS. Un réglage hors domaine rend les
+	 * comparaisons d'ordre sans objet : les cumuler écrirait deux messages dans le même
+	 * `#erreur-{champ}-txt`, dont un seul serait lisible.
+	 */
+	it('un réglage hors domaine ne reçoit pas EN PLUS un refus d’ordre', () => {
+		const verdict = validerLaConfiguration({ ...CONFIGURATION_VALABLE, seuilBientot: 0 });
+		if (verdict.issue !== 'valeurs-refusees') throw new Error('refus attendu');
+		expect(verdict.erreurs).toEqual([{ champ: 'bientot', message: MESSAGE_CYCLE_MINIMAL }]);
+	});
+});
+
 describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () => {
 	it('les huit clés d’écriture SONT les huit paramètres de la configuration', () => {
 		/* C'est la garantie structurelle de la règle : une clé écrite hors de
@@ -618,7 +698,7 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 		expect(CLES_DE_PARAMETRE.seuilVieillissant).toBe('seuil_vieillissant');
 	});
 
-	it('les dix noms de champ sont ceux du gel, préfixe compris', () => {
+	it('les quinze noms de champ sont ceux du gel, préfixe compris', () => {
 		expect(CHAMPS_DE_CONFIGURATION.seuilFrais).toBe('c-frais');
 		expect(CHAMPS_DE_CONFIGURATION.seuilVieillissant).toBe('c-vieil');
 		expect(Object.keys(CHAMPS_DE_CONFIGURATION).sort()).toEqual(
@@ -634,9 +714,45 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 				/* `RG-NF-10` — les deux réglages de la page d'indisponibilité. Ils
 				   n'ont aucune planche au gel, et le préfixe `c-` reste la règle. */
 				'indisponibiliteActive',
-				'messageDIndisponibilite'
+				'messageDIndisponibilite',
+				/* `T-10` — les cinq réglages du cycle de vivacité. */
+				'validiteReference',
+				'validiteOperationnel',
+				'seuilBientot',
+				'retardRevoir',
+				'retardObsolete'
 			].sort()
 		);
+	});
+
+	/**
+	 * `T-10` — LE SUFFIXE DE REFUS EST CELUI DE L'`input`, ET C'EST TOUT CE QUI FAIT
+	 * PARLER UN REFUS. Le peintre cherche `#champ-{suffixe}`, `#erreur-{suffixe}`,
+	 * `#erreur-{suffixe}-txt` et focalise `#c-{suffixe}` : un champ nommé `c-bientot`
+	 * dont l'erreur s'appellerait `seuilBientot` refuserait en silence.
+	 */
+	it('les cinq champs du cycle portent le préfixe `c-` et le suffixe de leur refus', () => {
+		expect(CHAMPS_DE_CONFIGURATION.validiteReference).toBe('c-validite-reference');
+		expect(CHAMPS_DE_CONFIGURATION.validiteOperationnel).toBe('c-validite-operationnel');
+		expect(CHAMPS_DE_CONFIGURATION.seuilBientot).toBe('c-bientot');
+		expect(CHAMPS_DE_CONFIGURATION.retardRevoir).toBe('c-retard-revoir');
+		expect(CHAMPS_DE_CONFIGURATION.retardObsolete).toBe('c-retard-obsolete');
+
+		const suffixes = validerLaConfiguration({
+			...CONFIGURATION_VALABLE,
+			validiteReference: 0,
+			validiteOperationnel: 0,
+			seuilBientot: 0,
+			retardRevoir: 0,
+			retardObsolete: 0
+		});
+		if (suffixes.issue !== 'valeurs-refusees') throw new Error('refus attendu');
+		for (const erreur of suffixes.erreurs) {
+			expect(
+				Object.values(CHAMPS_DE_CONFIGURATION),
+				`le refus « ${erreur.champ} » ne désigne aucun champ de l’écran`
+			).toContain(`c-${erreur.champ}`);
+		}
 	});
 
 	it('`nom_organisation` a sa clé de base ET son champ de console', () => {
@@ -655,21 +771,30 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 		expect(CHAMPS_DE_CONFIGURATION.nomOrganisation).toBe('c-organisation');
 	});
 
-	it('l’enregistrement écrit les paramètres que l’écran règle, et eux seuls', () => {
-		/* La boucle d'écriture parcourt les champs du formulaire, jamais les
-		   clés de base : une clé sans champ ne serait pas écrite, et une clé SANS
-		   champ ne doit surtout pas l'être — elle serait écrasée par la chaîne vide
-		   à chaque enregistrement. C'est le cas des cinq réglages du cycle de
-		   vivacité depuis `014` : ils existent en base, `V-33` ne les porte pas
-		   encore, et ils ne doivent donc PAS entrer dans l'écriture. */
+	/**
+	 * `T-10` — LE CAS A ÉTÉ RETOURNÉ, ET C'EST LE POINT DE LA TÂCHE.
+	 *
+	 * Il épinglait l'inverse : les cinq réglages du cycle de vivacité étaient HORS de
+	 * l'écriture, parce que `V-33` ne portait pas leurs champs et qu'une clé écrite
+	 * sans `input` est reposée à la chaîne vide à chaque enregistrement. Le produit
+	 * affichait donc un cycle qu'il ne laissait pas régler, et l'enregistrement de la
+	 * configuration menaçait de l'effacer.
+	 *
+	 * CE QUI EST ÉPINGLÉ DÉSORMAIS : une clé RÉGLABLE ne peut pas être écrasée par la
+	 * chaîne vide. Le piège n'est pas paré par l'absence de champ, il l'est par la
+	 * PRÉSENCE d'un `input` dont le nom est celui de la table — et la table est la
+	 * même des deux côtés du fil. Les deux moitiés sont éprouvées : toute clé de base
+	 * est écrite, et toute clé écrite reçoit une valeur qui n'est jamais la chaîne
+	 * vide sur une configuration valable. L'écran, lui, est éprouvé par `V-33.test.ts`.
+	 */
+	it('aucune clé réglable ne peut être écrasée par la chaîne vide', () => {
 		const ecrites = Object.keys(CHAMPS_DE_CONFIGURATION).map(
 			(champ) => CLES_DE_PARAMETRE[champ as keyof typeof CLES_DE_PARAMETRE]
 		);
-		expect(ecrites).toContain(CLES_DE_PARAMETRE.nomOrganisation);
-		expect(ecrites).toContain(CLES_DE_PARAMETRE.seuilFrais);
-		/* POLARITÉ INVERSE — les cinq réglages du cycle sont hors de l'écriture, et
-		   chacun est nommé : le jour où `V-33` leur donne un champ, ce cas rougit et
-		   rappelle qu'il faut aussi les ajouter à `CHAMPS_DE_CONFIGURATION`. */
+		/* PLUS AUCUNE CLÉ DE BASE N'EST HORS DE L'ÉCRITURE : le compte est exact, et
+		   les cinq du cycle sont nommées une à une — le jour où l'une reprendrait le
+		   chemin de l'exclusion, ce cas rougit. */
+		expect(ecrites.sort()).toEqual(Object.values(CLES_DE_PARAMETRE).sort());
 		for (const cle of [
 			CLES_DE_PARAMETRE.validiteReference,
 			CLES_DE_PARAMETRE.validiteOperationnel,
@@ -677,15 +802,79 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 			CLES_DE_PARAMETRE.retardRevoir,
 			CLES_DE_PARAMETRE.retardObsolete
 		]) {
-			expect(ecrites).not.toContain(cle);
+			expect(ecrites).toContain(cle);
 		}
-		expect(ecrites).toHaveLength(Object.keys(CLES_DE_PARAMETRE).length - 5);
+
+		/* LA MOITIÉ QUI COMPTE : ce que l'écriture POSE. La lecture du formulaire est
+		   celle de l'action, et la charge est celle que le câblage envoie — les valeurs
+		   des champs, par leur identifiant. Aucune des quinze clés ne reçoit la chaîne
+		   vide, et les cinq du cycle reçoivent le nombre saisi. */
+		const porte = Object.fromEntries(
+			Object.entries(CHAMPS_DE_CONFIGURATION).map(([champ, id]) => [
+				id,
+				String(CONFIGURATION_VALABLE[champ as keyof typeof CONFIGURATION_VALABLE])
+			])
+		);
+		porte[CHAMPS_DE_CONFIGURATION.indisponibiliteActive] = 'non';
+		const relues = valeursDeConfigurationSaisies((champ) => porte[champ]);
+		expect(validerLaConfiguration(relues).issue).toBe('possible');
+		expect(relues.validiteReference).toBe(CONFIGURATION_VALABLE.validiteReference);
+		expect(relues.validiteOperationnel).toBe(CONFIGURATION_VALABLE.validiteOperationnel);
+		expect(relues.seuilBientot).toBe(CONFIGURATION_VALABLE.seuilBientot);
+		expect(relues.retardRevoir).toBe(CONFIGURATION_VALABLE.retardRevoir);
+		expect(relues.retardObsolete).toBe(CONFIGURATION_VALABLE.retardObsolete);
+		/* RIEN N'EST PERDU EN ROUTE : ce qui revient est ce qui a été servi, aux
+		   quinze clés. Un champ oublié dans la table rendrait `0` ou la chaîne vide,
+		   et c'est exactement cette valeur-là qui allait en base. */
+		expect(relues).toEqual(CONFIGURATION_VALABLE);
+	});
+
+	/**
+	 * `T-10` — L'ENREGISTREMENT QUI NE TOUCHE À RIEN NE DOIT RIEN EFFACER.
+	 *
+	 * C'est le geste exact du défaut : ouvrir la console, changer le nom de
+	 * l'organisation, enregistrer. Les cinq réglages du cycle repartent avec la charge,
+	 * inchangés — et non à zéro.
+	 */
+	it('un enregistrement qui ne touche pas au cycle repose le cycle à l’identique', () => {
+		const porte = Object.fromEntries(
+			Object.entries(CHAMPS_DE_CONFIGURATION).map(([champ, id]) => [
+				id,
+				String(CONFIGURATION_VALABLE[champ as keyof typeof CONFIGURATION_VALABLE])
+			])
+		);
+		porte[CHAMPS_DE_CONFIGURATION.indisponibiliteActive] = 'non';
+		porte[CHAMPS_DE_CONFIGURATION.nomOrganisation] = 'Autre organisation';
+
+		const relues = valeursDeConfigurationSaisies((champ) => porte[champ]);
+		const verdict = validerLaConfiguration(relues);
+		expect(verdict.issue).toBe('possible');
+		if (verdict.issue !== 'possible') return;
+		expect(verdict.valeurs.nomOrganisation).toBe('Autre organisation');
+		expect({
+			validiteReference: verdict.valeurs.validiteReference,
+			validiteOperationnel: verdict.valeurs.validiteOperationnel,
+			seuilBientot: verdict.valeurs.seuilBientot,
+			retardRevoir: verdict.valeurs.retardRevoir,
+			retardObsolete: verdict.valeurs.retardObsolete
+		}).toEqual({
+			validiteReference: CONFIGURATION_VALABLE.validiteReference,
+			validiteOperationnel: CONFIGURATION_VALABLE.validiteOperationnel,
+			seuilBientot: CONFIGURATION_VALABLE.seuilBientot,
+			retardRevoir: CONFIGURATION_VALABLE.retardRevoir,
+			retardObsolete: CONFIGURATION_VALABLE.retardObsolete
+		});
 	});
 
 	it('la saisie est lue comme le gel la lit — nombres convertis, textes ébarbés', () => {
 		const porte: Record<string, string> = {
 			'c-frais': '30',
 			'c-vieil': '60',
+			'c-validite-reference': '120',
+			'c-validite-operationnel': '30',
+			'c-bientot': '7',
+			'c-retard-revoir': '10',
+			'c-retard-obsolete': '60',
 			'c-versions': '20',
 			'c-portail': '  https://assistance.exemple.fr  ',
 			'c-organisation': '  Organisation d’épreuve  ',
@@ -699,6 +888,11 @@ describe('RG-M14-09 — les seuils écrits sont ceux que la lecture relit', () =
 		expect(valeurs).toEqual({
 			seuilFrais: 30,
 			seuilVieillissant: 60,
+			validiteReference: 120,
+			validiteOperationnel: 30,
+			seuilBientot: 7,
+			retardRevoir: 10,
+			retardObsolete: 60,
 			versionsMax: 20,
 			portailAssistance: 'https://assistance.exemple.fr',
 			nomOrganisation: 'Organisation d’épreuve',
