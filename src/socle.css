@@ -488,9 +488,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .fil {
   display: flex; align-items: center; gap: 10px;
-  min-width: 0; flex: 1; font-size: var(--t-base); color: var(--c-encre-3);
+  min-width: 0; flex: 1; overflow: hidden;
+  font-size: var(--t-base); color: var(--c-encre-3);
 }
-.fil a { color: var(--c-accent); text-decoration: none; white-space: nowrap; }
+/* UN SEGMENT DE FIL SE TRONQUE, IL NE POUSSE PAS LA PAGE. Seul `.fil__courant`
+   savait le faire : un titre de note porté par un ANCÊTRE — le fil d'une page
+   d'historique — sortait de la fenêtre et forçait un défilement horizontal de
+   toute l'application sous 700 px. `min-width: 0` est ce qui autorise un enfant
+   de boîte flexible à devenir plus étroit que son contenu. */
+.fil a {
+  color: var(--c-accent); text-decoration: none;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .fil a:hover { text-decoration: underline; }
 .fil__maison { display: flex; align-items: center; gap: var(--e-2); color: var(--c-encre-3); flex: none; }
 .fil__maison:hover { color: var(--c-accent); }
