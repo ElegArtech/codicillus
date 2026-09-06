@@ -22,6 +22,8 @@
  * vue n'en rendait que l'état vide, et un tiers de l'écran promettait un contenu qui
  * n'arrivait jamais.
  */
+import { goto } from '$app/navigation';
+import { resolve } from '$app/paths';
 import {
 	Attaches,
 	cablerLaVue,
@@ -67,6 +69,8 @@ export interface DetailDeNoeud {
 	readonly rupture: boolean;
 	readonly famille: string | null;
 	readonly origineDeFamille: string | null;
+	/** Où la note est rangée — « Univers › Domaine ». */
+	readonly rangement: string;
 	readonly affinites: readonly VoisinAffiche[];
 	readonly adresse: string;
 	readonly adresseDuVoisinage: string;
@@ -75,6 +79,8 @@ export interface DetailDeNoeud {
 export interface OptionsDeLaCartographie {
 	/** Ce que le sélecteur de périmètre montre au montage — `type|nom`. */
 	readonly perimetreCourant: string;
+	/** Les domaines lisibles et leur univers — le second sélecteur suit le premier. */
+	readonly domaines: readonly { readonly nom: string; readonly univers: string }[];
 	readonly adresseParType: string;
 	/** Où mène « Déclarer une relation », ou `null` s'il n'y a pas de note. */
 	readonly adresseDesRelations: string | null;
@@ -134,6 +140,8 @@ export function cablerLaCartographie(
 		vivacite: EtatDeVivacite[];
 		taille: EtatDExploration['taille'];
 		degreMinimum: number;
+		masquerIsolees: boolean;
+		types: string[] | null;
 		contours: boolean;
 		nomsDeFamille: boolean;
 	} = {
@@ -141,18 +149,26 @@ export function cablerLaCartographie(
 		vivacite: [...options.exploration.vivacite],
 		taille: options.exploration.taille,
 		degreMinimum: options.exploration.degreMinimum,
+		masquerIsolees: options.exploration.masquerIsolees,
+		types: options.exploration.types === null ? null : [...options.exploration.types],
 		contours: options.exploration.contours,
 		nomsDeFamille: options.exploration.nomsDeFamille
 	};
 
 	/* ── 1. Le masquage, et l'adresse qui le suit ──────────────────────────── */
 
-	const traitsDuNoeud = (noeud: Element): { vivacite: EtatDeVivacite | null; degre: number } => {
+	const traitsDuNoeud = (
+		noeud: Element
+	): { vivacite: EtatDeVivacite | null; degre: number; type: string } => {
 		const brut = noeud.getAttribute('data-vivacite') ?? '';
 		const vivacite = (ORDRE_DES_ETATS as readonly string[]).includes(brut)
 			? (brut as EtatDeVivacite)
 			: null;
-		return { vivacite, degre: Number(noeud.getAttribute('data-degre') ?? '0') };
+		return {
+			vivacite,
+			degre: Number(noeud.getAttribute('data-degre') ?? '0'),
+			type: codeDeType(noeud)
+		};
 	};
 
 	const appliquerLesFiltres = (): void => {
@@ -206,6 +222,12 @@ export function cablerLaCartographie(
 		poser('vivacite', etat.vivacite.join(','), EXPLORATION_DE_PLANCHE.vivacite.join(','));
 		poser('taille', etat.taille, EXPLORATION_DE_PLANCHE.taille);
 		poser('degre', String(etat.degreMinimum), String(EXPLORATION_DE_PLANCHE.degreMinimum));
+		poser('isolees', etat.masquerIsolees ? 'oui' : 'non', 'non');
+		/* LES TYPES NE S'ÉCRIVENT QUE S'IL EN MANQUE UN. Tous cochés, c'est le défaut,
+		   et l'adresse reste courte ; aucun coché est une intention — « ne montre
+		   rien » — qui doit se transmettre telle quelle. */
+		if (etat.types === null) p.delete('types');
+		else p.set('types', etat.types.join(','));
 		poser('contours', etat.contours ? 'oui' : 'non', 'oui');
 		poser('noms', etat.nomsDeFamille ? 'oui' : 'non', 'oui');
 		fenetre.history.replaceState(fenetre.history.state, '', adresse.toString());
@@ -352,7 +374,7 @@ export function cablerLaCartographie(
 			d.extrait === '' ? '' : `<p class="detail__extrait">${echapper(d.extrait)}</p>`,
 			etiquettes === '' ? '' : `<p class="detail__etiquettes">${etiquettes}</p>`,
 			`<div class="detail__section"><span class="etiq">Mesures</span><div class="crit">`,
-			`<div class="crit__boite"><span class="crit__val">${d.centralite.toFixed(2).replace('.', ',')}</span><span class="crit__nom">Centralité</span></div>`,
+			`<div class="crit__boite" title="Part de la centralité de passage la plus élevée du périmètre : le nœud le plus central vaut 1,00."><span class="crit__val">${d.centralite.toFixed(2).replace('.', ',')}</span><span class="crit__nom">Centralité<span class="apropos" aria-hidden="true">ⓘ</span></span></div>`,
 			`<div class="crit__boite"><span class="crit__val">${d.declarees + d.deduites}</span><span class="crit__nom">Relations</span></div>`,
 			`</div>`,
 			d.rupture
@@ -364,6 +386,8 @@ export function cablerLaCartographie(
 			   — « 12 connexions : 4 déclarées, 2 déduites, 9 affinités » —, dont les
 			   parts font quinze. Les relations se comptent ensemble, les affinités à
 			   part, parce qu'elles ne sont pas de même nature. */
+			`<div class="detail__section"><span class="etiq">Rangement</span>`,
+			`<p class="detail__vide-ligne">${echapper(d.rangement)}</p></div>`,
 			`<div class="detail__section"><span class="etiq">Relations</span>`,
 			`<p class="prop"><span class="prop__cle">Déclarées</span>${d.declarees}</p>`,
 			`<p class="prop"><span class="prop__cle">Déduites</span>${d.deduites}</p>`,
@@ -376,7 +400,11 @@ export function cablerLaCartographie(
 				? ''
 				: [
 						`<div class="detail__section"><span class="etiq">Affinités</span>`,
-						`<button type="button" class="btn btn--discret" id="detail-affinites">Montrer les ${d.affinites.length} notes proches sur la carte</button>`,
+						`<button type="button" class="btn btn--discret" id="detail-affinites">${
+							d.affinites.length === 1
+								? 'Montrer la note proche sur la carte'
+								: `Montrer les ${d.affinites.length} notes proches sur la carte`
+						}</button>`,
 						`<div class="rel-groupe">${affinites}</div></div>`
 					].join(''),
 			`<div class="detail__section detail__actions">`,
@@ -424,7 +452,9 @@ export function cablerLaCartographie(
 		const identifiant = noeud?.getAttribute('data-id') ?? null;
 		if (identifiant === null) return;
 		const adresse = options.detailParNoeud[identifiant]?.adresse;
-		if (adresse !== undefined) document.location.assign(adresse);
+		/* `adresseDeNote()` compose l'adresse sur l'identifiant lisible de la note. */
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		if (adresse !== undefined) void goto(adresse);
 	});
 
 	attaches.ecouter(graphe, 'keydown', (evenement) => {
@@ -492,58 +522,123 @@ export function cablerLaCartographie(
 	cocher('#c-noms', (v) => {
 		etat.nomsDeFamille = v;
 	});
+	cocher('#c-isolees', (v) => {
+		etat.masquerIsolees = v;
+	});
 
 	const ruptures = racine.querySelector<HTMLInputElement>('#c-ruptures');
 	attaches.ecouter(ruptures, 'change', () => {
-		graphe.setAttribute('data-criticite', ruptures?.checked === true ? 'oui' : 'non');
+		graphe.setAttribute('data-ruptures', ruptures?.checked === true ? 'oui' : 'non');
 	});
 
-	attaches.ecouter(racine.querySelector('#reinitialiser'), 'click', () => {
-		naviguerAvec(null, null);
-	});
+	attaches.ecouter(racine.querySelector('#reinitialiser'), 'click', reinitialiser);
 
-	/** Une navigation qui ne garde que le périmètre — pour les deux réglages qui redessinent. */
+	/**
+	 * LES DEUX SEULS RÉGLAGES QUI REDESSINENT — le périmètre, qui change les données,
+	 * et la taille, qui change le rayon de chaque nœud donc la disposition. Tous les
+	 * autres se jouent sur le graphe en place.
+	 *
+	 * `goto` PLUTÔT QUE `location.assign` : une navigation de client, qui rejoue le
+	 * chargeur de cette page et rien d'autre — ni la coquille, ni le rail, ni les
+	 * polices. `location.assign` reconstruisait tout le document à chaque essai.
+	 *
+	 * ELLE GARDE LES FILTRES. Elle les jetait — changer de périmètre remettait les
+	 * cinq états, les deux couches et le degré minimum à leur valeur de repos —, si
+	 * bien que comparer deux périmètres sous le même filtre était impossible.
+	 * `Réinitialiser` reste le geste qui les jette, et il est écrit sur un bouton.
+	 */
 	function naviguerAvec(cle: string | null, valeur: string | null): void {
-		const adresse = new URL(document.location.href);
-		const perimetre = adresse.searchParams.get('perimetre');
-		const neuve = new URL(adresse.pathname, adresse.origin);
-		if (perimetre !== null) neuve.searchParams.set('perimetre', perimetre);
-		if (cle !== null && valeur !== null) neuve.searchParams.set(cle, valeur);
-		document.location.assign(neuve.toString());
+		const adresse = new URL(resolve('/cartographie'), document.location.origin);
+		for (const [nom, v] of new URL(document.location.href).searchParams) {
+			adresse.searchParams.append(nom, v);
+		}
+		if (cle !== null && valeur !== null) adresse.searchParams.set(cle, valeur);
+		/* Le chemin vient de `resolve()` ; ce que la règle ne sait pas exprimer, c'est
+		   la requête. Même désarmement qu'en `V-13`, `V-03`, `V-22` et `V-24`. */
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		void goto(adresse, { noScroll: true, keepFocus: true });
 	}
 
-	/* ── 7. La légende isole un type ───────────────────────────────────────── */
+	/** `Réinitialiser` : le périmètre reste, tout le reste retourne au repos. */
+	function reinitialiser(): void {
+		const perimetre = new URL(document.location.href).searchParams.get('perimetre');
+		const adresse = new URL(resolve('/cartographie'), document.location.origin);
+		if (perimetre !== null) adresse.searchParams.set('perimetre', perimetre);
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		void goto(adresse, { noScroll: true, keepFocus: true });
+	}
 
-	let isole: string | null = null;
-	attaches.ecouter(racine.querySelector('#legende-types'), 'click', (evenement) => {
-		const bouton = (evenement.target as Element | null)?.closest('.lg');
-		if (bouton === null || bouton === undefined) return;
-		const code = codeDeType(bouton);
-		isole = isole === code ? null : code;
-		graphe.setAttribute('data-isole', isole === null ? 'non' : 'oui');
-		for (const autre of elements(racine, '#legende-types .lg')) {
-			autre.setAttribute(
-				'data-isole',
-				isole !== null && codeDeType(autre) === isole ? 'oui' : 'non'
-			);
-		}
-		for (const noeud of elements(graphe, '.noeud')) {
-			noeud.setAttribute(
-				'data-type-visible',
-				isole === null || codeDeType(noeud) === isole ? 'oui' : 'non'
-			);
-		}
+	/* ── 7. Les types se cochent ────────────────────────────────────────────
+	   ILS S'ISOLAIENT AU CLIC, ET LE GESTE NE MARCHAIT PAS. Le code d'un type se
+	   relisait sur un `<text>` du nœud — `.noeud__code` — que le canevas ne rend
+	   plus depuis que les pastilles y sont nues : `codeDeType()` rendait la chaîne
+	   vide pour tout nœud, jamais égale au code du bouton, si bien que cliquer un
+	   type mettait le graphe ENTIER à quatorze pour cent. Le nœud porte désormais
+	   son code en attribut, et le filtre est une case comme les quatre autres :
+	   même prédicat, même compte, même adresse. */
+
+	const casesDeType = (): HTMLInputElement[] =>
+		Array.from(racine.querySelectorAll<HTMLInputElement>('#filtre-types input[data-type]'));
+
+	attaches.ecouter(racine.querySelector('#filtre-types'), 'change', () => {
+		const toutes = casesDeType();
+		const cochees = toutes.filter((c) => c.checked).map((c) => c.dataset['type'] ?? '');
+		/* Toutes cochées, c'est `null` : le filtre ne connaît pas les types créés en
+		   console, et une liste close en ferait disparaître un sans le dire. */
+		etat.types = cochees.length === toutes.length ? null : cochees;
+		rejouer();
 	});
 
-	/* ── 8. Le périmètre — l'adresse le porte, et lui seul navigue ─────────── */
+	/* ── 8. Le périmètre — deux sélecteurs qui se composent ──────────────────
+	   IL NAVIGUE, ET C'EST LE SEUL RÉGLAGE QUI LE DOIT : changer de périmètre change
+	   les DONNÉES — les familles et la centralité se calculent dessus, au chargeur.
+	   Mais il navigue par `goto`, jamais par `location.assign` : la première est une
+	   navigation de client, qui ne rejoue ni la coquille ni le rail. */
 
-	const perimetre = racine.querySelector<HTMLSelectElement>('#perimetre');
-	if (perimetre !== null) {
-		perimetre.value = options.perimetreCourant;
-		attaches.ecouter(perimetre, 'change', () => {
-			naviguerAvec('perimetre', perimetre.value);
+	const selUnivers = racine.querySelector<HTMLSelectElement>('#perimetre-univers');
+	const selDomaine = racine.querySelector<HTMLSelectElement>('#perimetre-domaine');
+
+	/** La valeur de périmètre que les deux sélecteurs composent — `type|nom`. */
+	const perimetreCompose = (universChoisi: string, domaineChoisi: string): string => {
+		if (domaineChoisi !== '') return `domaine|${domaineChoisi}`;
+		if (universChoisi !== '') return `univers|${universChoisi}`;
+		return 'global|';
+	};
+
+	if (selUnivers !== null) {
+		attaches.ecouter(selUnivers, 'change', () => {
+			/* CHANGER D'UNIVERS LÂCHE LE DOMAINE. Le garder désignerait un domaine
+			   d'un autre univers, et le périmètre affiché ne serait plus celui du
+			   sélecteur — l'écran mentirait sur ce qu'il montre. */
+			naviguerAvec('perimetre', perimetreCompose(selUnivers.value, ''));
 		});
 	}
+	if (selDomaine !== null) {
+		attaches.ecouter(selDomaine, 'change', () => {
+			const universDuDomaine =
+				options.domaines.find((d) => d.nom === selDomaine.value)?.univers ?? '';
+			naviguerAvec(
+				'perimetre',
+				perimetreCompose(selUnivers?.value ?? universDuDomaine, selDomaine.value)
+			);
+		});
+	}
+
+	/* ── 8 bis. Le panneau d'affichage se replie ─────────────────────────────
+	   Il est posé SUR le canevas : sur un petit écran, ou pour regarder un îlot
+	   qu'il recouvre, on doit pouvoir le pousser de côté sans perdre ses réglages. */
+
+	const panneau = racine.querySelector('#commandes');
+	const bascule = racine.querySelector('#panneau-bascule');
+	attaches.ecouter(bascule, 'click', () => {
+		const ouvert = panneau?.getAttribute('data-replie') !== 'oui';
+		panneau?.setAttribute('data-replie', ouvert ? 'oui' : 'non');
+		bascule?.setAttribute('aria-expanded', ouvert ? 'false' : 'true');
+		bascule?.setAttribute(
+			'aria-label',
+			ouvert ? 'Déplier le panneau d’affichage' : 'Replier le panneau d’affichage'
+		);
+	});
 
 	/* ── 9. La profondeur du voisinage, en vue locale ──────────────────────── */
 
@@ -551,9 +646,7 @@ export function cablerLaCartographie(
 		attaches.ecouter(bouton, 'click', () => {
 			const niveau = bouton.getAttribute('data-profondeur');
 			if (niveau === null) return;
-			const adresse = new URL(document.location.href);
-			adresse.searchParams.set('profondeur', niveau);
-			document.location.assign(adresse.toString());
+			naviguerAvec('profondeur', niveau);
 		});
 	}
 
@@ -564,7 +657,9 @@ export function cablerLaCartographie(
 		if (onglet === null || onglet === undefined) return;
 		evenement.preventDefault();
 		const cible = (onglet as HTMLElement).dataset['vue'];
-		if (cible === 'maitre') document.location.assign(options.adresseParType);
+		/* L'adresse vient de la route, qui l'a déjà passée par `resolve()`. */
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		if (cible === 'maitre') void goto(options.adresseParType);
 	});
 
 	/* ── 11. « Déclarer une relation », depuis le bandeau ──────────────────── */
@@ -572,7 +667,9 @@ export function cablerLaCartographie(
 	const versRelations = racine.querySelector('#vers-relations');
 	if (versRelations !== null && options.adresseDesRelations !== null) {
 		attaches.ecouter(versRelations, 'click', () => {
-			document.location.assign(options.adresseDesRelations ?? '');
+			/* Composée par la route à partir de l'identifiant lisible de la note. */
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
+			void goto(options.adresseDesRelations ?? '');
 		});
 	}
 
@@ -587,6 +684,12 @@ export function cablerLaCartographie(
 	/* L'état d'ouverture est posé une fois : la vue l'a déjà rendu, et le rejouer
 	   ici garantit que les deux prédicats donnent bien le même masquage. */
 	appliquerLesFiltres();
+
+	/* LA SÉLECTION NE SURVIT PAS À UN CHANGEMENT DE PÉRIMÈTRE. Le câblage se refait
+	   à chaque navigation de client, mais le document, lui, garde ce que le câblage
+	   précédent y avait posé : le panneau restait ouvert sur une note absente du
+	   nouveau dessin, et le graphe entier estompé autour d'elle. */
+	effacerLaSelection();
 
 	/**
 	 * LA VUE LOCALE OUVRE SUR SON NŒUD, PANNEAU REMPLI. Les traits d'affinité y sont
