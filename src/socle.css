@@ -339,6 +339,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* --- L'arborescence ------------------------------------------------------ */
 .arbre { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+/* LE LISERÉ D'UN UNIVERS — une règle d'un pixel sous son bloc, dans SA teinte.
+   Elle appartient à l'univers du dessus, jamais à l'espace entre deux : une
+   séparation partagée n'aurait pas de couleur à porter. Diluée, elle sépare sans
+   peser ; le dernier univers n'en a pas, il n'a rien à séparer d'en dessous. */
+.arbre > li { padding-bottom: 6px; border-bottom: 1px solid color-mix(in srgb, var(--teinte) 40%, transparent); }
+.arbre > li:last-child { padding-bottom: 0; border-bottom: 0; }
 /* L'INDENTATION EST DE 14 PX PAR NIVEAU, et elle se cumule par l'imbrication :
    aucune vue n'a à calculer une profondeur. */
 .arbre ul { list-style: none; margin: 0; padding-left: 14px; display: flex; flex-direction: column; gap: 2px; }
