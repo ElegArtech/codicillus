@@ -278,8 +278,20 @@
    douze îlots se lisaient comme une seule masse grise. Le canevas est la surface de
    lecture de cet écran — il prend le papier, pas le fond. */
 .zone-graphe { position: relative; min-width: 0; background: var(--c-papier); overflow: hidden; }
-.zone-graphe svg { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
-.zone-graphe svg.tire { cursor: grabbing; }
+/* LA RÈGLE VISE LE CANEVAS, PAS TOUT SVG DE LA ZONE — et c'est un défaut réparé.
+   Elle était écrite `.zone-graphe svg`, pour l'unique dessin ; mais la zone porte
+   NEUF autres `svg` — l'icône du bandeau d'avis, les trois outils flottants, les
+   miniatures de la légende. Chacun recevait `width: 100%; height: 100%`.
+
+   Vu en vrai sur l'instance : `/cartographie?perimetre=univers|Substack` — un
+   périmètre de 148 notes sans aucune relation déclarée, donc le seul cas où le
+   bandeau d'avis se rend. Son icône de 16 pixels remplissait tout le canevas d'un
+   point d'exclamation, et il n'y avait plus de carte du tout. Le défaut dormait
+   depuis toujours dans `.dense-bandeau`, qui ne s'affichait jamais.
+
+   `#graphe` est l'identifiant du dessin, et lui seul doit s'étendre. */
+#graphe { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+#graphe.tire { cursor: grabbing; }
 
 /* --- La colonne de commande ---------------------------------------------------- */
 .legende__bloc + .legende__bloc { margin-top: var(--e-5); }
