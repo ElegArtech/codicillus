@@ -68,7 +68,11 @@ function grapheDeDeuxTypesHorsGel(): ReturnType<typeof sousGraphe> {
 		if (n.id === arete.vers) return retypee(n, 1);
 		return n;
 	});
-	return sousGraphe(notes, { type: 'global' }, [arete]);
+	/* `retirees` : ce cas veut DEUX nœuds, ceux que l'arête touche. Le sort des
+	   isolées est désormais exigé à chaque appel — sans quoi le corpus entier
+	   entrerait dans le graphe et le décompte des types porterait sur trente-deux
+	   notes au lieu des deux qu'on éprouve. */
+	return sousGraphe(notes, { type: 'global' }, [arete], 'retirees');
 }
 
 describe('l’encodage d’un type que la table du gel ne porte pas', () => {
@@ -137,10 +141,13 @@ describe('l’encodage d’un type que la table du gel ne porte pas', () => {
 		}
 	});
 
-	it('nomme « Fiche », le cinquième type de note que la table du gel omet', () => {
-		/* Une note de type Fiche sans type de fiche s'étiquetait « Note ». */
-		expect(TYPES.has('Fiche')).toBe(false);
+	it('nomme « Fiche », le cinquième type de note', () => {
+		/* Une note de type Fiche sans type de fiche s'étiquetait « Note ». Elle
+		   passait par la DÉRIVATION, qui lui donnait une forme au hasard du
+		   hachage ; la table la porte désormais, avec le carré de la maquette.
+		   Ce qui est éprouvé est le RÉSULTAT, pas le chemin qui y mène. */
 		expect(encodageDuType('Fiche').nom).toBe('Fiche');
+		expect(encodageDuType('Fiche').forme).toBe('carre');
 	});
 
 	it('rend trois caractères même pour un nom d’une seule lettre', () => {
