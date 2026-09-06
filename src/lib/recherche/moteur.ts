@@ -43,7 +43,7 @@ import {
 	indexerLesDroits,
 	perimetreDeLecture
 } from '../droits/resolution';
-import { extraitDuCorps, lireEtiquettesParNote } from '../donnees/lecture';
+import { lireEtiquettesParNote, texteDuCorps } from '../donnees/lecture';
 import {
 	type ConfigurationDeRecherche,
 	type EnvironnementDeRecherche,
@@ -194,7 +194,12 @@ export async function projeterLeCorpus(
 		return {
 			id: n.identifiant,
 			titre: n.titre,
-			extrait: extraitDuCorps(n.corpsReference),
+			/* L'INDEX PREND LE CORPS ENTIER, ET LUI SEUL. `extrait` est un champ
+			   CHERCHABLE (`notes-indexees.ts`) : y mettre l'extrait borné rendrait
+			   introuvable tout ce qui est écrit au-delà du deuxième paragraphe. Rien
+			   n'est perdu à l'écran — la recherche ne rapatrie que l'identifiant
+			   (`attributesToRetrieve`), et le texte affiché vient de la base. */
+			extrait: texteDuCorps(n.corpsReference),
 			auteur: n.auteurNom,
 			type: n.typeNom,
 			typeFiche: n.typeFicheNom,
