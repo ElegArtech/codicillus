@@ -93,6 +93,23 @@
 			href="%sveltekit.assets%/polices/jetbrains-mono-700-normal-latin.woff2"
 		/>
 		<link rel="stylesheet" href="%sveltekit.assets%/polices/polices.css" />
+		<!--
+			LA MARQUE DE L'ONGLET — le sceau du rail, rien d'autre : un « C » de
+			Literata 600 en papier sur le vert d'accent, aux mêmes proportions
+			(`socle.css:319`). Il n'en existait AUCUN fichier dans le dépôt, et
+			`/favicon.ico` répondait 404 à chaque ouverture.
+
+			`favicon.ico` PORTE TROIS TAILLES — 16, 32 et 48 — parce que c'est
+			l'adresse que tout navigateur demande de lui-même, sans qu'on la déclare :
+			elle doit suffire seule. Le PNG de 32 et l'icône Apple de 180 sont là pour
+			les clients qui préfèrent les lire dans la déclaration.
+
+			Le carré d'Apple N'EST PAS ARRONDI : le système l'arrondit lui-même, et
+			un coin déjà rogné y donnerait un double arrondi.
+		-->
+		<link rel="icon" href="%sveltekit.assets%/favicon.ico" sizes="any" />
+		<link rel="icon" type="image/png" sizes="32x32" href="%sveltekit.assets%/favicon-32.png" />
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
