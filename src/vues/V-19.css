@@ -193,21 +193,40 @@
   min-height: 560px;
 }
 
-/* --- Barre de contrôle -------------------------------------------------------- */
+/* --- Barre de contrôle ----------------------------------------------------------
+   ELLE APPARTIENT À LA PAGE, PAS AU DESSIN. Elle portait les réglages du graphe —
+   couches, vivacité, taille — au même rang que le périmètre : deux natures de
+   commande sur une seule ligne, et rien pour dire laquelle change les données et
+   laquelle change le rendu. Ce qui règle le DESSIN vit désormais dans le panneau
+   posé sur le canevas ; ici ne restent que le titre, le périmètre et les gestes de
+   cadrage. */
 .controles {
   display: flex; align-items: center; gap: var(--e-3); flex-wrap: wrap;
-  padding: var(--e-3) var(--e-4);
+  padding: var(--e-3) var(--e-4) var(--e-3) var(--e-5);
   border-bottom: 1px solid var(--c-trait); background: var(--c-papier);
 }
 .controles__groupe { display: flex; align-items: center; gap: var(--e-2); }
-.controles select {
+.controles__titre { display: flex; align-items: center; gap: var(--e-3); min-width: 0; }
+.controles__glyphe {
+  flex: none; width: 40px; height: 40px; display: grid; place-items: center;
+  border-radius: var(--r-2); background: var(--c-accent-voile); color: var(--c-accent-fonce);
+}
+.controles__outils {
+  display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; margin-left: auto;
+}
+.choix, .controles select {
   font: inherit; font-size: var(--t-petit); padding: 5px var(--e-2);
   border: 1px solid var(--c-trait); border-radius: var(--r-2);
-  background: var(--c-papier); color: var(--c-encre);
+  background: var(--c-papier); color: var(--c-encre); max-width: 172px;
 }
+/* Rien ne sert d'un bouton « Effacer la sélection » grisé en permanence : le
+   panneau contextuel porte sa croix, et l'échappement ferme. Il n'apparaît que
+   lorsqu'il y a quelque chose à effacer. */
+#effacer-sel[disabled] { display: none; }
 
 /* La barre du mode local : un retour, un titre, la profondeur, les mesures. */
 .controles--locale { align-items: flex-start; }
+.controles--locale .controles__titre { display: block; }
 .controles__titre h1 {
   font-family: var(--f-lecture); font-size: var(--t-t2); font-weight: var(--g-moyen);
   letter-spacing: -.014em; margin: 0; line-height: 1.2;
@@ -243,7 +262,7 @@
 .rech-graphe input {
   font: inherit; font-size: var(--t-petit); padding: 5px var(--e-3) 5px 28px;
   border: 1px solid var(--c-trait); border-radius: var(--r-2);
-  background: var(--c-papier); color: var(--c-encre); width: 210px;
+  background: var(--c-papier); color: var(--c-encre); width: 186px;
 }
 .rech-graphe input:focus { outline: none; border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-voile); }
 .rech-graphe svg { position: absolute; left: 9px; top: 8px; color: var(--c-encre-3); pointer-events: none; }
@@ -262,41 +281,90 @@
 .rg__s { font-size: var(--t-micro); color: var(--c-encre-3); font-family: var(--f-donnee); }
 
 /* --- La scène ------------------------------------------------------------------
-   DEUX COLONNES, ET NON TROIS. La troisième était réservée EN PERMANENCE au
-   panneau de détail, qui n'affichait que « Aucun nœud sélectionné » — et dont le
-   contenu n'était même pas rempli. Le canevas garde donc toute sa place tant que
-   rien n'est choisi ; le panneau s'ouvre en tiroir par-dessus. */
-.scene { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 0; position: relative; }
-.scene[data-mode="locale"] { grid-template-columns: minmax(0, 1fr); }
+   UNE SEULE COLONNE, ET LE CANEVAS LA PREND TOUTE. Elle en avait deux, puis trois :
+   une colonne de commande de deux cent trente-deux pixels réservée en permanence, et
+   un panneau de détail. Sur mille cinq cents pixels, un quart de l'écran allait à des
+   cases à cocher pendant que le graphe — le seul objet de la page — se serrait au
+   milieu. Le panneau d'affichage et le panneau de détail sont désormais posés SUR le
+   canevas : l'un se replie, l'autre n'existe que si un nœud est choisi. */
+.scene { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; position: relative; }
 
-.legende-col {
-  border-right: 1px solid var(--c-trait); background: var(--c-papier);
-  padding: var(--e-4) var(--e-3); overflow-y: auto; min-height: 0;
-}
 /* LE FOND DU CANEVAS EST CLAIR, ET C'EST CE QUI FAIT EXISTER LES ÎLOTS. Sur le
    beige de l'application, un aplat à neuf pour cent ne se distingue de rien : les
    douze îlots se lisaient comme une seule masse grise. Le canevas est la surface de
    lecture de cet écran — il prend le papier, pas le fond. */
 .zone-graphe { position: relative; min-width: 0; background: var(--c-papier); overflow: hidden; }
+/* LE DESSIN NE PASSE PAS SOUS LE PANNEAU. Il est posé sur le canevas, et deux îlots
+   se retrouvaient derrière lui — on ne pouvait ni les lire ni les atteindre sans
+   d'abord replier ce qui les cachait. La zone lui réserve donc sa largeur tant qu'il
+   est déplié ; repliée, elle la rend au dessin. Le repère du graphe suit, et le
+   déplacement comme le zoom restent justes : c'est la même surface, plus étroite. */
+.zone-graphe { box-sizing: border-box; }
+.zone-graphe:has(.panneau:not([data-replie="oui"])) { padding-left: 218px; }
+/* LE TIROIR DE DÉTAIL, LUI, NE RÉSERVE RIEN, ET C'EST UN ARBITRAGE. Lui réserver sa
+   largeur rétrécissait le canevas À CHAQUE SÉLECTION : le repère se recalait, et
+   toute la carte sautait au moment précis où l'on venait de viser un nœud. Une carte
+   qu'on ne reconnaît plus d'un clic à l'autre ne s'explore pas. Le tiroir passe donc
+   par-dessus — il s'ouvre sur un geste, il se ferme d'une croix ou de l'échappement,
+   et la sélection estompe déjà tout ce qui n'est pas le voisinage visé. */
 /* LA RÈGLE VISE LE CANEVAS, PAS TOUT SVG DE LA ZONE — et c'est un défaut réparé.
    Elle était écrite `.zone-graphe svg`, pour l'unique dessin ; mais la zone porte
-   NEUF autres `svg` — l'icône du bandeau d'avis, les trois outils flottants, les
-   miniatures de la légende. Chacun recevait `width: 100%; height: 100%`.
+   une vingtaine d'autres `svg` — l'icône du bandeau d'avis, les outils flottants,
+   les miniatures du panneau. Chacun recevait `width: 100%; height: 100%`.
 
    Vu en vrai sur l'instance : `/cartographie?perimetre=univers|Substack` — un
    périmètre de 148 notes sans aucune relation déclarée, donc le seul cas où le
    bandeau d'avis se rend. Son icône de 16 pixels remplissait tout le canevas d'un
-   point d'exclamation, et il n'y avait plus de carte du tout. Le défaut dormait
-   depuis toujours dans `.dense-bandeau`, qui ne s'affichait jamais.
+   point d'exclamation, et il n'y avait plus de carte du tout.
 
    `#graphe` est l'identifiant du dessin, et lui seul doit s'étendre. */
 #graphe { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 #graphe.tire { cursor: grabbing; }
 
-/* --- La colonne de commande ---------------------------------------------------- */
-.legende__bloc + .legende__bloc { margin-top: var(--e-5); }
-.legende__note { font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.5; margin-top: var(--e-2); }
-.legende__mesure { font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-3); margin: 0 0 var(--e-2); }
+/* --- Le panneau d'affichage -----------------------------------------------------
+   IL EST POSÉ SUR LE CANEVAS QU'IL COMMANDE. En colonne réservée, il séparait le
+   réglage de son effet par une bordure et deux cents pixels ; posé dessus, on voit
+   la carte changer sous la case qu'on coche. Il se replie d'un bouton, et le
+   canevas reprend tout.
+
+   LARGE DE CENT QUATRE-VINGT-DIX PIXELS : la ligne « ● Bientôt à vérifier 34 »
+   tient, et c'est la plus longue. Au-delà, il mordrait sur le dessin sans rien
+   gagner. */
+.panneau {
+  position: absolute; z-index: 20; top: var(--e-4); left: var(--e-4);
+  width: 202px; max-height: calc(100% - var(--e-4) * 2);
+  display: flex; flex-direction: column;
+  background: var(--c-papier); border: 1px solid var(--c-trait);
+  border-radius: var(--r-3); box-shadow: var(--o-flotte);
+}
+.panneau__tete {
+  display: flex; align-items: center; gap: var(--e-2); flex: none;
+  padding: var(--e-3) var(--e-3) var(--e-3) var(--e-4);
+  border-bottom: 1px solid var(--c-trait-fin); color: var(--c-encre-2);
+}
+.panneau__nom { flex: 1; font-size: var(--t-petit); font-weight: var(--g-fort); color: var(--c-encre); }
+.panneau__bascule {
+  flex: none; width: 24px; height: 24px; display: grid; place-items: center;
+  border: 0; background: none; cursor: pointer; border-radius: var(--r-1); color: var(--c-encre-3);
+}
+.panneau__bascule:hover { background: var(--c-fond-creux); color: var(--c-encre); }
+.panneau__bascule svg { transform: rotate(90deg); transition: transform var(--m-doux); }
+.panneau[data-replie="oui"] .panneau__bascule svg { transform: rotate(0deg); }
+.panneau[data-replie="oui"] .panneau__corps { display: none; }
+.panneau[data-replie="oui"] .panneau__tete { border-bottom: 0; }
+.panneau__corps { overflow-y: auto; min-height: 0; padding: var(--e-3) var(--e-3) var(--e-4); }
+
+/* Le `ⓘ` porte ce qui demandait un paragraphe. Il ne s'ouvre pas, il ne prend pas
+   de place : l'info-bulle du navigateur suffit, et le lecteur d'écran la lit. */
+.apropos {
+  border: 0; background: none; cursor: help; padding: 0 0 0 4px;
+  color: var(--c-encre-4); font-size: 11px; line-height: 1;
+}
+.apropos:hover { color: var(--c-accent); }
+
+/* --- Les blocs du panneau ------------------------------------------------------- */
+.legende__bloc + .legende__bloc { margin-top: var(--e-4); }
+.legende__bloc > .etiq { display: flex; align-items: center; margin-bottom: var(--e-1); }
 
 .lg + .lg { margin-top: 1px; }
 .lg {
@@ -305,7 +373,6 @@
   border-radius: var(--r-2); cursor: pointer; color: inherit; font: inherit; text-align: left;
 }
 .lg:hover { background: var(--c-papier-2); }
-.lg[data-isole="oui"] { background: var(--c-accent-voile); border-color: var(--c-accent-trait); }
 .lg--case input { flex: none; margin: 0; accent-color: var(--c-accent); }
 .lg__forme { flex: none; }
 .lg__nom { flex: 1; min-width: 0; font-size: var(--t-petit); font-weight: var(--g-moyen); }
@@ -340,7 +407,8 @@
    L'AFFINITÉ NE SE DESSINE PAS EN ARÊTES. Une appartenance commune réunit un
    ENSEMBLE de notes : sa forme juste est un îlot, pas cent cinq segments dont
    chacun, pris seul, affirmerait un rapport que personne n'a déclaré. L'îlot porte
-   un contour, une teinte, un moyeu et un en-tête.
+   un contour, une teinte et un en-tête — et rien en son centre : une famille n'est
+   pas un objet auquel ses notes se relient.
 
    HUIT TEINTES, TOUTES FROIDES, ET C'EST LE POINT DÉLICAT. La teinte d'un îlot est
    NOMINALE — elle distingue deux voisins, comme on colorie deux pays sur une carte,
@@ -354,8 +422,8 @@
    relations. Un aplat très pâle et un filet à peine visible suffisent — c'est la
    TEINTE qui dit l'îlot, pas son bord. */
 .famille__contour {
-  fill: currentColor; fill-opacity: 0.1;
-  stroke: currentColor; stroke-opacity: 0.22; stroke-width: 1;
+  fill: currentColor; fill-opacity: 0.13;
+  stroke: currentColor; stroke-opacity: 0.3; stroke-width: 1;
 }
 .famille__tete { pointer-events: none; }
 .famille__pastille { fill: currentColor; }
@@ -382,48 +450,6 @@
 
 .graphe[data-contours="non"] .familles { display: none; }
 .graphe[data-noms="non"] .familles-noms { display: none; }
-
-/* --- Moyeux ----------------------------------------------------------------------
-   TROIS NIVEAUX, ET LA HIÉRARCHIE SE LIT AVANT LES MOTS : le moyeu du périmètre au
-   centre, les moyeux de famille en couronne, les notes autour d'eux.
-
-   LE MOYEU N'EST PAS UNE NOTE. Il ne porte ni vivacité, ni centralité, ni point de
-   rupture — ce sont des mesures du graphe des RELATIONS, et un rangement n'en est
-   pas une. Il ne se sélectionne pas et n'ouvre aucun panneau. */
-.moyeu { pointer-events: none; }
-.moyeu__forme { fill: currentColor; stroke: var(--c-papier); stroke-width: 2.5; }
-.moyeu--perimetre { color: var(--c-accent-fonce); }
-.moyeu--perimetre .moyeu__forme { stroke-width: 3; }
-/* LE NOM DU PÉRIMÈTRE EST SOUS LE MOYEU, PAS DEDANS. Un disque de trente unités ne
-   contient pas un nom libre : « Tout le corpus » y sortait en « ut le corpu ».
-   Dedans, le code de trois lettres, qui tient toujours. */
-.moyeu__nom {
-  font-family: var(--f-ui); font-size: 13px; font-weight: 700;
-  text-anchor: middle; fill: var(--c-encre);
-  paint-order: stroke; stroke: var(--c-papier); stroke-width: 4px; stroke-linejoin: round;
-}
-.moyeu__code {
-  font-family: var(--f-donnee); font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
-  text-anchor: middle; fill: var(--c-encre-3);
-  paint-order: stroke; stroke: var(--c-papier); stroke-width: 3px; stroke-linejoin: round;
-}
-.moyeu__code--dedans {
-  font-size: 13px; dominant-baseline: central; fill: #fff; stroke: none;
-}
-.moyeu__nom--dedans { fill: #fff; stroke: none; dominant-baseline: central; }
-
-
-/* --- Rattachements ---------------------------------------------------------------
-   LE RAYON D'UN RANGEMENT N'EST PAS UNE RELATION, ET IL NE PEUT PAS EN AVOIR L'AIR.
-   Il est plus fin et plus pâle que la plus faible des relations déclarées, il ne
-   porte aucune étiquette, il ne réagit pas au survol, et la légende le nomme. Il
-   n'entre dans aucune mesure : ni degré, ni centralité, ni point de rupture. */
-/* LE RAYON PREND LA TEINTE DE SON ÎLOT — c'est ce qui le rattache visuellement à
-   son groupe sans ajouter de code à lire, et ce qui l'éloigne définitivement de
-   l'encre neutre des relations. */
-.rattachement { stroke: currentColor; stroke-opacity: 0.34; stroke-width: 0.9; fill: none; }
-.rattachement--tronc { stroke-opacity: 0.45; stroke-width: 1.3; }
-.graphe[data-focus="oui"] .rattachements { opacity: 0.25; }
 
 /* --- Nœuds ----------------------------------------------------------------------------- */
 /* CANTONNÉES AU SVG, ET CE N'EST PAS UNE PRÉCAUTION.
@@ -472,6 +498,10 @@ svg .noeud__nom {
    navigateur, pas un seul n'était lisible. Les NOMS DE FAMILLE, eux, restent : ils
    sont peu nombreux, et ce sont eux qui permettent de s'orienter. */
 .graphe[data-dense="oui"] .noeud__nom { display: none; }
+/* SAUF LES NŒUDS STRUCTURANTS. Un dessin où RIEN n'est nommé n'a plus de prise :
+   les quelques nœuds assez gros pour porter leur titre sans le heurter d'un voisin
+   le gardent, et ce sont précisément ceux qu'on cherche du regard. */
+.graphe[data-dense="oui"] .noeud[data-gros="oui"] .noeud__nom,
 .graphe[data-dense="oui"] .noeud:hover .noeud__nom,
 .graphe[data-dense="oui"] .noeud:focus-visible .noeud__nom,
 .graphe[data-dense="oui"] .noeud[data-choisi="oui"] .noeud__nom,
@@ -533,8 +563,6 @@ svg .noeud[data-isolee="oui"] { opacity: 0.82; }
 .graphe[data-focus="oui"] .noeud[data-actif="non"] { opacity: .14; }
 .graphe[data-focus="oui"] .arete[data-actif="non"] { opacity: .1; }
 .graphe[data-focus="oui"] .noeud[data-actif="oui"][data-fantome="oui"] { opacity: .62; }
-.graphe[data-isole="oui"] .noeud[data-type-visible="non"] { opacity: .1; }
-.graphe[data-isole="oui"] .arete { opacity: .12; }
 
 /* Le nœud choisi porte un anneau clair, jamais un contour épais : à cinq unités de
    rayon, une bordure de trois pixels avale la pastille. */
@@ -545,22 +573,55 @@ svg .noeud[data-isolee="oui"] { opacity: 0.82; }
 .rupture-anneau { fill: none; stroke: var(--c-danger); stroke-width: 2; stroke-dasharray: 5 3.5; }
 .rupture-fanion { fill: var(--c-danger); }
 .rupture-glyphe { fill: #fff; font-family: var(--f-donnee); font-size: 7px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
-.graphe[data-criticite="non"] .rupture-anneau, .graphe[data-criticite="non"] .rupture-fanion, .graphe[data-criticite="non"] .rupture-glyphe { display: none; }
+/* L'ATTRIBUT SE NOMMAIT `data-criticite`, ET LE MOT NE DÉSIGNAIT RIEN : il mêlait
+   l'importance structurelle, le nombre de liens et le point d'articulation. Trois
+   canaux distincts portent ces trois choses — taille, degré, anneau interrompu —, et
+   chacun se nomme par ce qu'il montre. */
+.graphe[data-ruptures="non"] .rupture-anneau, .graphe[data-ruptures="non"] .rupture-fanion, .graphe[data-ruptures="non"] .rupture-glyphe { display: none; }
 
 /* --- La légende du dessin — RG-M09-07 ------------------------------------------
    « Une légende explique la sémantique de chaque encodage visuel. Aucun encodage
-   n'est laissé à l'interprétation. » Elle est SOUS le canevas, dans les deux
-   modes, parce que c'est le dessin qu'elle explique. */
+   n'est laissé à l'interprétation. » Les cinq canaux y sont, et une seule fois :
+   forme, couleur, trait, contour, taille.
+
+   ELLE EST COMPACTE ET CENTRÉE, JAMAIS UNE BANDE. Elle occupait toute la largeur du
+   canevas, appuyée à gauche, et se disputait le regard avec le dessin qu'elle
+   explique. Posée au milieu du bord bas, elle se lit quand on la cherche et
+   s'oublie le reste du temps. */
 .legende-pied {
-  position: absolute; z-index: 10; left: var(--e-4); bottom: var(--e-4);
-  display: flex; gap: var(--e-4); flex-wrap: wrap; max-width: calc(100% - 90px);
-  padding: var(--e-3) var(--e-4);
-  background: var(--c-papier); border: 1px solid var(--c-trait);
-  border-radius: var(--r-2); box-shadow: var(--o-pose);
+  position: absolute; z-index: 10; bottom: var(--e-3); left: 50%; transform: translateX(-50%);
+  display: flex; gap: var(--e-3) var(--e-4); flex-wrap: wrap; justify-content: center;
+  max-width: min(920px, calc(100% - 250px));
+  padding: var(--e-2) var(--e-4);
+  background: color-mix(in srgb, var(--c-papier) 92%, transparent);
+  border: 1px solid var(--c-trait);
+  border-radius: 999px; box-shadow: var(--o-pose);
+  backdrop-filter: blur(3px);
 }
-.legende-pied__items { display: flex; gap: var(--e-3); flex-wrap: wrap; margin-top: var(--e-1); }
-.lp { display: inline-flex; align-items: center; gap: var(--e-1); font-size: var(--t-micro); color: var(--c-encre-2); }
-.lp .lg__forme { width: 18px; height: 18px; }
+/* Le tiroir de détail prend la droite du canevas : la légende se recentre sur ce
+   qui en reste visible plutôt que de passer dessous. Un élément positionné se
+   repère sur la boîte de PADDING — la réserve faite au tiroir ne le décale pas. */
+.scene:has(.detail-col:not([hidden])) .legende-pied {
+  transform: translateX(calc(-50% - 168px));
+}
+.legende-pied__bloc { display: flex; align-items: center; gap: var(--e-2); }
+.legende-pied__bloc + .legende-pied__bloc { border-left: 1px solid var(--c-trait-fin); padding-left: var(--e-4); }
+.legende-pied:has(.legende-pied__bloc:nth-child(4)) { border-radius: var(--r-3); }
+.legende-pied .etiq { flex: none; }
+.legende-pied__items { display: flex; gap: var(--e-3); flex-wrap: nowrap; }
+.lp { display: inline-flex; align-items: center; gap: var(--e-1); font-size: var(--t-micro); color: var(--c-encre-2); white-space: nowrap; }
+.lp .lg__forme { width: 16px; height: 16px; }
+/* La pastille d'îlot : le contour de famille, en miniature. */
+.lp__ilot {
+  flex: none; width: 16px; height: 11px; border-radius: 5px;
+  background: color-mix(in srgb, #4b52a3 12%, transparent); border: 1px solid color-mix(in srgb, #4b52a3 34%, transparent);
+}
+/* Les trois pastilles de taille, croissantes : le canal se lit d'un coup d'œil. */
+.lp__tailles { display: inline-flex; align-items: center; gap: 3px; }
+.lp__tailles i { display: block; border-radius: 50%; background: var(--c-encre-4); }
+.lp__tailles i:nth-child(1) { width: 5px; height: 5px; }
+.lp__tailles i:nth-child(2) { width: 8px; height: 8px; }
+.lp__tailles i:nth-child(3) { width: 12px; height: 12px; }
 
 /* --- Panneau contextuel ---------------------------------------------------------
    IL N'EXISTE QUE LORSQU'UN NŒUD EST CHOISI — `hidden` au balisage, ouvert par le
@@ -583,7 +644,15 @@ svg .noeud[data-isolee="oui"] { opacity: 0.82; }
 .detail__sous { display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; margin: 0 0 var(--e-3); }
 .detail__type { font-family: var(--f-donnee); font-size: var(--t-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--c-encre-3); }
 .detail__etat { font-size: var(--t-mini); font-weight: var(--g-fort); color: currentColor; }
-.detail__extrait { font-family: var(--f-lecture); font-size: var(--t-petit); line-height: 1.55; color: var(--c-encre-2); margin: 0 0 var(--e-3); }
+/* L'EXTRAIT EST UN EXTRAIT. Il portait le CORPS ENTIER de la note — mesuré au
+   navigateur, cinquante lignes pour « Restaurer une sauvegarde PostgreSQL » —, si
+   bien que les mesures, les relations et les trois actions tombaient hors de l'écran :
+   le panneau ne servait plus qu'à lire une note qu'on n'avait pas demandé à ouvrir. */
+.detail__extrait {
+  font-family: var(--f-lecture); font-size: var(--t-petit); line-height: 1.55;
+  color: var(--c-encre-2); margin: 0 0 var(--e-3);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden;
+}
 .detail__etiquettes { display: flex; gap: var(--e-1); flex-wrap: wrap; margin: 0 0 var(--e-3); }
 .detail__etiq {
   font-family: var(--f-donnee); font-size: var(--t-micro); color: var(--c-encre-3);
@@ -655,7 +724,10 @@ svg .noeud[data-isolee="oui"] { opacity: 0.82; }
 .progression { width: 220px; height: 5px; border-radius: 3px; background: var(--c-fond-creux); margin: 0 auto var(--e-3); overflow: hidden; }
 .progression i { display: block; height: 100%; background: var(--c-accent); width: 0; transition: width 120ms linear; }
 
-/* Le bandeau : un conseil au-dessus du graphe, jamais un blocage. */
+/* Le bandeau : un conseil au-dessus du graphe, jamais un blocage.
+   IL COMMENCE OÙ COMMENCE LE DESSIN. Posé à gauche de la ZONE, il passait sous le
+   panneau d'affichage, qui en mangeait le premier tiers — « Aucune relation… » se
+   lisait « …périmètre ». */
 .avis-bandeau {
   position: absolute; z-index: 15; left: var(--e-4); right: var(--e-4); top: var(--e-4);
   display: flex; align-items: center; gap: var(--e-3); flex-wrap: wrap;
@@ -686,17 +758,36 @@ svg .noeud[data-isolee="oui"] { opacity: 0.82; }
 .alt-texte b { font-weight: var(--g-fort); }
 .alt-rel { color: var(--c-encre-2); }
 
+.zone-graphe:has(.panneau:not([data-replie="oui"])) .avis-bandeau,
+.zone-graphe:has(.panneau:not([data-replie="oui"])) .voile { left: calc(218px + var(--e-4)); }
+
 @media (max-width: 1080px) {
-  .scene { grid-template-columns: 200px minmax(0, 1fr); }
   .detail-col { width: 300px; }
+  /* Sous mille quatre-vingts pixels, réserver deux cent dix-huit pixels au panneau
+     ne laisserait plus de quoi dessiner : il repasse par-dessus, et se replie. */
+  .zone-graphe:has(.panneau:not([data-replie="oui"])) { padding-left: 0; }
+  .scene:has(.detail-col:not([hidden])) .legende-pied { transform: translateX(-50%); }
+  /* La légende passe sous le panneau plutôt que de le heurter. */
+  .legende-pied { max-width: calc(100% - var(--e-4) * 2); flex-wrap: wrap; border-radius: var(--r-3); }
+}
+@media (max-width: 860px) {
   .legende-pied { display: none; }
+  .controles__outils { width: 100%; margin-left: 0; }
 }
 @media (max-width: 760px) {
-  /* Mode dégradé : la liste des nœuds prime sur un graphe illisible. */
+  /* Mode dégradé : la liste des nœuds prime sur un graphe illisible.
+     LE DESSIN SEUL DISPARAÎT, PAS SA ZONE. La zone PORTE le panneau d'affichage, qui
+     porte lui-même la liste équivalente des nœuds : la masquer emporterait la seule
+     lecture qui reste sur un écran étroit. */
   .carto { height: auto; }
-  .scene { grid-template-columns: minmax(0, 1fr); }
-  .zone-graphe { display: none; }
-  .legende-col { border-right: 0; border-bottom: 1px solid var(--c-trait); }
+  .scene { display: block; }
+  .zone-graphe { overflow: visible; }
+  #graphe, .outils-graphe, .voile { display: none; }
+  .panneau {
+    position: static; width: auto; max-height: none;
+    border: 0; border-bottom: 1px solid var(--c-trait); border-radius: 0; box-shadow: none;
+  }
+  .panneau__corps { overflow: visible; }
   .alt-texte[open] summary { color: var(--c-accent); }
   .alt-texte { margin-top: var(--e-3); }
 }

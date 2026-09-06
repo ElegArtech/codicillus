@@ -52,6 +52,19 @@ export interface EtatDExploration {
 	readonly taille: MesureDeTaille;
 	/** Le degré en deçà duquel un nœud est masqué — 0 : aucun ne l'est. */
 	readonly degreMinimum: number;
+	/**
+	 * ÉCARTER D'UN GESTE LES NOTES QU'AUCUNE RELATION NE TOUCHE. C'est le même effet
+	 * qu'un degré minimum de 1, et c'est pour cela qu'il existe : sur un corpus où
+	 * les deux tiers des notes sont isolées, « les enlever » est la première chose
+	 * qu'on veut essayer, et personne ne devine qu'un curseur nommé « degré » le fait.
+	 */
+	readonly masquerIsolees: boolean;
+	/**
+	 * LES CODES DE TYPE AFFICHÉS — `null` : tous. Les types ne sont PAS une liste
+	 * figée : la console en crée, et un filtre qui n'admettrait que ceux du code
+	 * ferait disparaître les autres sans qu'aucune case ne le dise.
+	 */
+	readonly types: readonly string[] | null;
 	/** Les contours de famille sont-ils dessinés ? Et leurs noms ? */
 	readonly contours: boolean;
 	readonly nomsDeFamille: boolean;
@@ -66,6 +79,8 @@ export const EXPLORATION_DE_PLANCHE: EtatDExploration = {
 	vivacite: [...ORDRE_DES_ETATS],
 	taille: 'centralite',
 	degreMinimum: 0,
+	masquerIsolees: false,
+	types: null,
 	contours: true,
 	nomsDeFamille: true,
 	centre: null,
@@ -99,6 +114,16 @@ function booleenLu(brut: string | null): boolean | null {
 
 const MESURES: readonly MesureDeTaille[] = ['uniforme', 'connexions', 'centralite'];
 
+/**
+ * LES CODES DE TYPE D'UNE ADRESSE. Ils ne se valident pas contre une liste — voir
+ * `types` — mais contre une FORME : deux à six caractères de code, sans quoi
+ * n'importe quel texte entrerait dans un attribut du dessin.
+ */
+function codesLus(brut: string | null): string[] | null {
+	if (brut === null) return null;
+	return [...new Set(brut.split(','))].filter((c) => /^[A-Za-z0-9]{2,6}$/.test(c));
+}
+
 /** Le degré minimum le plus haut qu'offre le curseur. */
 export const DEGRE_MINIMUM_MAXIMAL = 5;
 
@@ -109,6 +134,8 @@ export function explorationDeLAdresse(parametres: URLSearchParams): EtatDExplora
 	const degre = entierLu(parametres.get('degre'), 0, DEGRE_MINIMUM_MAXIMAL);
 	const contours = booleenLu(parametres.get('contours'));
 	const noms = booleenLu(parametres.get('noms'));
+	const isolees = booleenLu(parametres.get('isolees'));
+	const types = codesLus(parametres.get('types'));
 	const centre = parametres.get('centre');
 	const profondeur = entierLu(parametres.get('profondeur'), 1, PROFONDEUR_MAXIMALE);
 
@@ -117,6 +144,8 @@ export function explorationDeLAdresse(parametres: URLSearchParams): EtatDExplora
 		vivacite: etats ?? EXPLORATION_DE_PLANCHE.vivacite,
 		taille: taille ?? EXPLORATION_DE_PLANCHE.taille,
 		degreMinimum: degre ?? EXPLORATION_DE_PLANCHE.degreMinimum,
+		masquerIsolees: isolees ?? EXPLORATION_DE_PLANCHE.masquerIsolees,
+		types,
 		contours: contours ?? EXPLORATION_DE_PLANCHE.contours,
 		nomsDeFamille: noms ?? EXPLORATION_DE_PLANCHE.nomsDeFamille,
 		/* Une chaîne vide ne désigne aucun nœud : c'est la vue complète. */
