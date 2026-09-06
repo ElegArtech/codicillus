@@ -359,7 +359,11 @@ svg .noeud[data-fantome="oui"] .noeud__forme { stroke-dasharray: 3 2.5; }
 
 .scene { display: grid; grid-template-columns: minmax(0, 1fr) 318px; min-height: 0; }
 .zone-graphe { position: relative; min-width: 0; background: var(--c-fond); overflow: hidden; }
-.zone-graphe svg { display: block; width: 100%; height: 100%; }
+/* LE CANEVAS, PAS TOUT SVG DE LA ZONE. Même défaut qu'en V-19, où il s'est vu :
+   la zone porte aussi les icônes des outils flottants, et chacune recevait
+   `width: 100%`. Ici il dort — cette vue n'a pas de bandeau — mais il y dormait
+   aussi là-bas jusqu'à ce qu'un périmètre sans relation le réveille. */
+#graphe { display: block; width: 100%; height: 100%; }
 .detail-col { border-left: 1px solid var(--c-trait); overflow-y: auto; padding: var(--e-4); background: var(--c-papier); }
 
 /* --- Fil du déroulé ------------------------------------------------------------
