@@ -606,7 +606,7 @@
 										traits={glypheDUnivers(ligne.glyphe)}
 										taille="18"
 										boite="0 0 24 24"
-										epaisseur="1.6"
+										epaisseur="2"
 									/></span
 								>{ligne.nom}
 							</span>
