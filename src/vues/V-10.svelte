@@ -402,7 +402,7 @@
 						traits={glypheDUnivers(univers.glyphe)}
 						taille="36"
 						boite="0 0 24 24"
-						epaisseur="1.4"
+						epaisseur="1.8"
 					/>
 				</span>
 				<div class="bandeau__corps">
