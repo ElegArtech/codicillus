@@ -383,12 +383,19 @@
 			maximumDeMesure
 		);
 
-	/**
-	 * LES NŒUDS ASSEZ GROS POUR PORTER LEUR NOM EN PERMANENCE. Au-delà de ce rayon,
-	 * un nœud est structurant : son titre s'écrit, et il n'y en a qu'une poignée. En
-	 * dessous, le nom se lit au survol ou à la sélection — voir plus bas.
-	 */
+	/* ── LES NŒUDS QUI PORTENT LEUR NOM EN PERMANENCE ──────────────────────────
+	   Un dessin où RIEN n'est nommé n'a pas de prise : les nœuds structurants
+	   gardent leur titre, et ce sont ceux qu'on cherche du regard.
+
+	   DEUX CONDITIONS, ET LA SECONDE EST CELLE QUI COMPTE. Le seul seuil de rayon a
+	   été mesuré sur l'instance de recette : les nœuds les plus centraux y sont TOUS
+	   dans le même amas — c'est ce qui les rend centraux —, si bien qu'une quinzaine
+	   de titres se sont empilés au même endroit en une tache illisible, pendant que
+	   le reste de la carte n'en portait aucun. Le nombre est donc PLAFONNÉ : les huit
+	   plus gros, et eux seuls. Les autres se lisent au survol ou à la sélection. */
+
 	const RAYON_DE_NOEUD_NOMME = 11;
+	const NOEUDS_NOMMES_AU_PLUS = 8;
 
 	/* ── LES ÎLOTS SÉMANTIQUES ─────────────────────────────────────────────────
 	   La forme juste d'une appartenance est un ENSEMBLE, pas un faisceau de
@@ -583,6 +590,20 @@
 	const NOEUDS_AVANT_DE_TAIRE_LES_ETIQUETTES = 36;
 
 	const dense = $derived(graphe.noeuds.length > NOEUDS_AVANT_DE_TAIRE_LES_ETIQUETTES);
+
+	const noeudsNommes = $derived.by<ReadonlySet<string>>(() => {
+		if (!dense) return new Set(graphe.noeuds.map((n) => n.id));
+		return new Set(
+			graphe.noeuds
+				.map((n) => [n.id, rayon(n.id)] as const)
+				.filter(([, r]) => r >= RAYON_DE_NOEUD_NOMME)
+				/* À rayon égal, l'identifiant tranche : le classement ne doit pas
+				   dépendre de l'ordre de la requête. */
+				.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+				.slice(0, NOEUDS_NOMMES_AU_PLUS)
+				.map(([id]) => id)
+		);
+	});
 
 	/* L'avancement du calcul de disposition : un état figé, jamais une animation. */
 	const AVANCEMENT = 77;
@@ -944,7 +965,7 @@
 									data-code={codeDuNoeud(n.note)}
 									data-fantome={n.fantome ? 'oui' : 'non'}
 									data-actif="non"
-									data-gros={ray >= RAYON_DE_NOEUD_NOMME ? 'oui' : 'non'}
+									data-gros={noeudsNommes.has(n.id) ? 'oui' : 'non'}
 									data-choisi={n.id === centreValide ? 'oui' : 'non'}
 									data-masque={masqueDeNoeud(n.id, n.note) ? 'oui' : 'non'}
 									data-vivacite={etat ?? ''}
