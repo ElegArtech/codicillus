@@ -362,8 +362,8 @@
 }
 .apercu-nav__ligne[data-courant="oui"] { background: var(--c-papier); font-weight: var(--g-fort); color: var(--c-encre); box-shadow: var(--o-pose); }
 .apercu-nav__sceau {
-  width: 20px; height: 20px; border-radius: var(--r-1); flex: none;
-  display: grid; place-items: center; color: #fff;
+  width: 20px; height: 20px; flex: none;
+  display: grid; place-items: center;
 }
 
 /* --- Refus de suppression -----------------------------------------------------------------

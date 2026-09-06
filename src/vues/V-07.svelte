@@ -182,6 +182,8 @@
 	interface LigneDUnivers {
 		readonly nom: string;
 		readonly glyphe: string;
+		/** La couleur choisie en console — elle teinte le TRAIT de l'icône. */
+		readonly couleur: string;
 		readonly notes: number;
 		readonly compteurs: readonly number[];
 	}
@@ -194,6 +196,7 @@
 				return {
 					nom: u.nom,
 					glyphe: u.glyphe,
+					couleur: u.couleur,
 					notes: siennes.length,
 					compteurs: ORDRE_DES_ETATS.map((etat) => compter(siennes, etat))
 				};
@@ -598,7 +601,7 @@
 					{#each lignesDUnivers as ligne (ligne.nom)}
 						<a class="tableau__ligne" role="row" href={adresses.univers(ligne.nom)}>
 							<span class="tableau__nom" role="cell">
-								<span class="tableau__glyphe" aria-hidden="true"
+								<span class="tableau__glyphe" aria-hidden="true" style="color:{ligne.couleur}"
 									><Pictogramme
 										traits={glypheDUnivers(ligne.glyphe)}
 										taille="18"
