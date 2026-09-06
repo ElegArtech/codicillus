@@ -291,7 +291,7 @@
 										traits={glypheDUnivers(section.glyphe)}
 										taille="16"
 										boite="0 0 24 24"
-										epaisseur="1.4"
+										epaisseur="1.9"
 									/></span
 								><span class="noeud__texte">{section.nom}</span>{#if section.compte > 0}<span
 										class="noeud__compte">{section.compte}</span

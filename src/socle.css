@@ -386,7 +386,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
    les noms. Cette enveloppe ne sert qu'à poser la couleur sur le pictogramme, qui
    dessine en `currentColor`. */
 .noeud__teinte { flex: none; line-height: 0; }
-.noeud__teinte > svg { opacity: .9; }
 .noeud__texte { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* LE COMPTEUR — mono, à droite, aux niveaux univers et domaine seulement. */
 .noeud__compte {
