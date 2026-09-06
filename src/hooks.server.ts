@@ -110,6 +110,37 @@ export const init: ServerInit = () => {
 	verifierLaConfiguration(env);
 };
 
+/**
+ * L'ÉCRAN COURANT EST NOMMÉ SUR `<html>`, DÈS LE PREMIER OCTET DU DOCUMENT.
+ *
+ * Les quarante-deux feuilles de vue partagent un espace de noms global : 575 de
+ * leurs 861 couples se contredisent sur au moins un sélecteur. Le routeur ajoute
+ * la feuille de la vue VISÉE dès le clic, et n'ouvre la vue qu'une fois sa donnée
+ * arrivée : entre les deux — 317 ms mesurées sur l'instance — cette feuille
+ * repeignait l'écran qu'on regardait encore. Chaque feuille est donc portée par
+ * `@scope (html[data-route="…"])`, et cet attribut dit laquelle vaut.
+ *
+ * IL EST POSÉ ICI, ET PAS PAR LA MISE EN PAGE : la feuille est lue avant que le
+ * moindre script ne tourne. Un attribut ajouté à l'hydratation arriverait après
+ * le premier rendu, et l'écran se peindrait d'abord sans son style.
+ *
+ * `+layout.svelte` le suit ensuite, à chaque navigation de client.
+ */
+function nommerLEcran(
+	event: Parameters<Handle>[0]['event'],
+	resoudre: Parameters<Handle>[0]['resolve']
+) {
+	return resoudre(event, {
+		transformPageChunk: ({ html }) =>
+			html.replace('<html lang="fr">', '<html lang="fr" data-route="' + routeSure(event) + '">')
+	});
+}
+
+/** L'identifiant de route, réduit aux caractères qu'une valeur d'attribut admet. */
+function routeSure(event: Parameters<Handle>[0]['event']): string {
+	return (event.route.id ?? '').replace(/["'<>&]/g, '');
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.identite = ANONYME;
 
@@ -199,10 +230,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	   page d'erreur) — y compris sans session. Rien ne la redirige ici. */
 	if (regime === 'deconnexion' || regime === 'publique') {
 		if (cookiePerime) event.cookies.delete(NOM_DU_COOKIE, { path: ATTRIBUTS_DU_COOKIE.path });
-		return resolve(event);
+		return nommerLEcran(event, resolve);
 	}
 
-	if (etat === 'valide') return resolve(event);
+	if (etat === 'valide') return nommerLEcran(event, resolve);
 
 	/* RG-ACC-03 — « à l'expiration de la session, l'utilisateur est renvoyé vers
 	   la page de connexion avec le message Session expirée. La page qu'il tentait
@@ -222,7 +253,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	if (cookiePerime) event.cookies.delete(NOM_DU_COOKIE, { path: ATTRIBUTS_DU_COOKIE.path });
-	return resolve(event);
+	return nommerLEcran(event, resolve);
 };
 
 /** La réponse 302 de §5.2, cookie périmé effacé dans la même réponse. */
