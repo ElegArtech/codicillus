@@ -70,6 +70,30 @@ http://127.0.0.1 {
 		}
 	}
 
+	# ── LES POLICES SE GARDENT ──────────────────────────────────────────────
+	# Elles ne portaient AUCUN `Cache-Control`, et `Last-Modified` vaut la date de
+	# construction de l'image : la fraîcheur heuristique du navigateur tombait donc
+	# à zéro, et les neuf woff2 repartaient en 200 — pas même en 304 — à CHAQUE
+	# chargement de page. Le texte se rendait dans la police de repli le temps
+	# qu'elles arrivent, et tout l'écran se recalait. Mesuré sur cette instance.
+	#
+	# UN FICHIER DE POLICE NE CHANGE PAS SOUS LE MÊME NOM : une autre police est un
+	# autre fichier. `immutable` est donc exact, et il évite jusqu'à la requête de
+	# revalidation.
+	@polices path /polices/*.woff2
+	handle @polices {
+		header Cache-Control "public, max-age=31536000, immutable"
+		reverse_proxy app:3000
+	}
+
+	# LA FEUILLE, ELLE, PEUT GAGNER UNE FACE. Une heure suffit à ne plus la
+	# redemander à chaque page, et borne la traîne à une heure le jour où elle change.
+	@feuille_polices path /polices/polices.css
+	handle @feuille_polices {
+		header Cache-Control "public, max-age=3600"
+		reverse_proxy app:3000
+	}
+
 	handle {
 		reverse_proxy app:3000
 	}
