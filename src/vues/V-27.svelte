@@ -121,8 +121,20 @@
 	 */
 
 	/**
-	 * Palette d'univers : teintes profondes, tenues à l'écart du vert, de l'ambre et
-	 * du rouge, qui appartiennent au signal de fraîcheur (`V-27:3253`).
+	 * PALETTE D'UNIVERS — vingt teintes, dont des vives.
+	 *
+	 * Les huit premières sont celles d'origine, et elles le restent : des univers
+	 * les portent en base, et une couleur retirée du choix ne serait plus
+	 * re-sélectionnable après un changement d'avis.
+	 *
+	 * LE VERT, L'AMBRE ET LE ROUGE NE SONT PLUS ÉCARTÉS. La maquette les réservait
+	 * au signal de vivacité (`V-27:3253`) ; ils reviennent parce qu'une palette qui
+	 * s'interdit un tiers du cercle chromatique n'offre pas vingt choix distincts.
+	 * Le risque de confusion reste faible : le signal de vivacité vit sur les NOTES,
+	 * en pastilles pleines et toujours accompagné de son libellé, jamais sur le
+	 * trait d'une icône d'univers.
+	 *
+	 * Toutes sont assez sombres pour tenir en trait de 1,9 sur le papier clair.
 	 */
 	const COULEURS = [
 		'#24485c',
@@ -132,7 +144,19 @@
 		'#3e5266',
 		'#7a2f8f',
 		'#5b4636',
-		'#6b7c87'
+		'#6b7c87',
+		'#b0261f',
+		'#d1451b',
+		'#b3671a',
+		'#7d7a12',
+		'#4f7a1e',
+		'#1f7a4a',
+		'#0f7a6b',
+		'#146a9e',
+		'#2d4bb8',
+		'#6237c4',
+		'#a8236b',
+		'#c02a52'
 	];
 
 	/** L'univers tel que la copie de travail de la maquette le porte (`V-27:3236`). */
@@ -612,8 +636,8 @@
 						>{#if ouvert}{#each COULEURS as c (c)}<button type="button" style="background:{c}" aria-pressed={c === couleurChoisie} aria-label="Couleur {c}" onclick={() => (fCouleur = c)}></button>{/each}{/if}</div
 					>
 					<span class="champ__aide"
-						>Choisie hors des teintes de fraîcheur — vert, ambre et rouge sont réservés au signal de
-						fiabilité.</span
+						>Vingt teintes. Elle colore le trait de l'icône, dans la navigation comme sur la page de
+						l'univers.</span
 					>
 				</div>
 
