@@ -399,7 +399,8 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			identifiant: tableDesUnivers.identifiant,
 			nom: tableDesUnivers.nom,
 			description: tableDesUnivers.description,
-			glyphe: tableDesUnivers.glyphe
+			glyphe: tableDesUnivers.glyphe,
+			couleur: tableDesUnivers.couleur
 		})
 		.from(tableDesUnivers)
 		.where(eq(tableDesUnivers.identifiant, params.univers));
@@ -479,7 +480,8 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		univers: {
 			nom: univers.nom,
 			description: univers.description,
-			glyphe: univers.glyphe
+			glyphe: univers.glyphe,
+			couleur: univers.couleur
 		},
 		droits: ecriture ? ('ecriture' as const) : ('lecture' as const),
 		repartition: enCompteurs(repartitionDeLUnivers),

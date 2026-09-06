@@ -286,12 +286,14 @@
 									? '#'
 									: resolve(ROUTE_UNIVERS, { univers: section.cible.univers })}
 								aria-current={section.page ? 'page' : undefined}
-								><Pictogramme
-									traits={glypheDUnivers(section.glyphe)}
-									taille="16"
-									boite="0 0 24 24"
-									epaisseur="1.4"
-								/><span class="noeud__texte">{section.nom}</span>{#if section.compte > 0}<span
+								><span class="noeud__teinte" style="color:{section.couleur}"
+									><Pictogramme
+										traits={glypheDUnivers(section.glyphe)}
+										taille="16"
+										boite="0 0 24 24"
+										epaisseur="1.4"
+									/></span
+								><span class="noeud__texte">{section.nom}</span>{#if section.compte > 0}<span
 										class="noeud__compte">{section.compte}</span
 									>{/if}</a
 							>
