@@ -38,9 +38,8 @@ export interface EncodageDeType {
  * dérivation, ce qui lui donnait une forme au hasard du hachage.
  *
  * « DOSSIER » N'Y FIGURE PAS, et c'est délibéré même si la légende de la maquette le
- * nomme : un dossier est un RANGEMENT, et le rangement se dessine en moyeu, jamais
- * en nœud de corpus. L'inscrire ici laisserait croire qu'une note peut être de type
- * dossier.
+ * nomme : un dossier est un RANGEMENT, et le rangement ne se dessine pas en nœud de
+ * corpus. L'inscrire ici laisserait croire qu'une note peut être de type dossier.
  *
  * LES TEINTES NE SERVENT PLUS AU DESSIN — la couleur d'un nœud porte sa vivacité.
  * Elles ne subsistent que pour la dérivation d'un type créé en console, qui a besoin
@@ -767,11 +766,20 @@ const RAIDEUR = 0.045;
  * Le rappel horizontal est donc affaibli dans le rapport du cadre : l'équilibre
  * devient une ellipse de MÊMES PROPORTIONS que le repère, et le dessin s'étale.
  */
-const RAPPEL_AU_CENTRE = 0.006;
+const RAPPEL_AU_CENTRE = 0.022;
 const PAS = 0.55;
 const AMORTISSEMENT = 0.72;
 const MARGE = 92;
-const ZOOM_MAX_DE_CADRAGE = 1.3;
+/**
+ * JUSQU'OÙ LE CADRAGE PEUT GROSSIR UN PETIT NUAGE.
+ *
+ * IL PLAFONNAIT À 1,3, ET C'ÉTAIT TROP BAS POUR LA VUE LOCALE : un voisinage de cinq
+ * nœuds occupait le tiers du canevas au milieu d'un vide, alors que l'écran entier
+ * est fait pour lui. Le plafond existe pour qu'un graphe de deux nœuds ne soit pas
+ * étiré jusqu'à l'absurde ; à 2,4 il tient encore ce rôle et laisse un voisinage
+ * remplir sa page.
+ */
+const ZOOM_MAX_DE_CADRAGE = 2.4;
 
 /**
  * LES PROPORTIONS DE LA SURFACE UTILE — celles que le dessin doit remplir, marges
@@ -783,18 +791,23 @@ const ZOOM_MAX_DE_CADRAGE = 1.3;
 const PROPORTION_UTILE = (LARGEUR - MARGE * 2) / (HAUTEUR - MARGE * 2);
 
 /**
- * Le rappel horizontal. Sous une répulsion en carré inverse, le rayon d'équilibre
- * varie comme la racine cubique de l'inverse du rappel : pour étirer le nuage d'un
- * facteur `PROPORTION_UTILE`, il faut donc diviser le rappel par son CUBE. Mesuré
- * plutôt que supposé — voir l'étendue rendue au contrôle de disposition.
+ * LE RAPPEL HORIZONTAL, AFFAIBLI POUR QUE LE NUAGE PRENNE LA FORME DU CADRE.
+ *
+ * L'EXPOSANT ÉTAIT DE TROIS, et il l'était pour un nuage de NŒUDS libres, dont le
+ * rayon d'équilibre varie comme la racine cubique de l'inverse du rappel. Ce qui
+ * s'écarte aujourd'hui, ce sont des ÎLOTS que la répulsion entre familles sépare à
+ * distance fixe : leur étalement suit le rappel bien plus vite, et l'exposant trois
+ * rendait une bande de deux fois plus large que haute dans un cadre qui ne l'est
+ * qu'une fois et demie — le tiers bas du canevas restait vide. Mesuré au navigateur.
  */
-const RAPPEL_HORIZONTAL = RAPPEL_AU_CENTRE / PROPORTION_UTILE ** 3;
+const RAPPEL_HORIZONTAL = RAPPEL_AU_CENTRE / PROPORTION_UTILE ** 1.5;
 
 /** Le départ suit déjà les proportions visées : y arriver coûte moins de tours. */
 const RAYON_INITIAL_X = 190 * PROPORTION_UTILE;
 
 /**
- * LA RAIDEUR DU RAPPEL VERS L'ANCRAGE DE FAMILLE — l'affinité PLACE, elle ne trace pas.
+ * LA RAIDEUR DU RAPPEL VERS LE BARYCENTRE DE LA FAMILLE — l'affinité PLACE, elle ne
+ * trace pas.
  *
  * C'est la traduction mécanique de la décision : une appartenance commune n'est pas
  * un lien entre deux objets, et la dessiner en arêtes reviendrait, pour une famille
@@ -802,34 +815,35 @@ const RAYON_INITIAL_X = 190 * PROPORTION_UTILE;
  * dont chacun, pris seul, affirme un rapport que personne n'a déclaré. Le regroupement
  * se lit donc dans la GÉOGRAPHIE du dessin, et dans le contour qui l'entoure.
  *
- * LA VALEUR EST MESURÉE, PAS CHOISIE. Elle valait cinquante fois moins, au motif
- * qu'« une famille rapproche, une relation attache » — et le résultat était que les
- * îlots se traversaient tous : le rayon d'un îlot dépassait l'écart entre deux
- * ancrages voisins, si bien qu'aucun contour ne délimitait quoi que ce soit. Les
- * valeurs ont été mesurées sur le corpus de démonstration, en surveillant les deux
- * grandeurs qui décident de la lisibilité — le rayon du plus gros îlot et l'écart
- * entre deux ancrages :
+ * LE RAPPEL VISE LE BARYCENTRE COURANT DE LA FAMILLE, PAS UN POINT IMPOSÉ. Il visait
+ * une COURONNE d'ancrages posés autour du centre du repère : les îlots se rangeaient
+ * en rosace, à égale distance d'un milieu qui ne voulait rien dire, et la carte
+ * affirmait que le corpus rayonne depuis un point. Un regroupement doit ÉMERGER des
+ * données ; l'imposer, c'est dessiner la géométrie qu'on a choisie, pas celle qu'on a.
  *
- *     0,035 → rayon 157, écart 140      0,12 → rayon 119, écart 173
- *     0,07  → rayon 136, écart 156      0,20 → rayon 103, écart 197
- *                                        0,25 → rayon  97, écart 199
- *
- * Un îlot est séparé de son voisin dès que son rayon passe sous la moitié de
- * l'écart. C'est atteint à partir de 0,2 ; au-delà de 0,3 les nœuds d'un même îlot
- * commencent à se serrer sans que la séparation progresse.
- *
- * Elle dépasse la raideur d'un ressort de relation sans lui être comparable : un
- * ressort agit ENTRE DEUX CORPS et porte une longueur de repos, ce rappel-ci tire
- * vers un point FIXE. Les deux nombres ne mesurent pas la même chose.
+ * ELLE RESTE MODÉRÉE, ET C'EST L'ARBITRAGE. Trop forte, elle écrase la topologie des
+ * vraies relations — deux notes reliées mais rangées dans deux familles ne peuvent
+ * plus se rapprocher. Ce qui SÉPARE les îlots n'est donc pas le serrement de chacun,
+ * c'est la répulsion entre familles, juste en dessous.
  */
-const RAIDEUR_DE_FAMILLE = 0.25;
+const RAIDEUR_DE_FAMILLE = 0.13;
 
 /**
- * LE DÉGAGEMENT AUTOUR DU MOYEU CENTRAL. Les notes s'y installaient — le moyeu du
- * périmètre se retrouvait recouvert par des nœuds qui n'ont rien à y faire, et les
- * rayons de rattachement partaient de sous un tas. Le centre est réservé.
+ * LA RÉPULSION ENTRE FAMILLES — ce qui fait exister les îlots sans les ranger.
+ *
+ * Deux familles dont les barycentres se rapprochent trop se poussent l'une l'autre,
+ * membres compris. C'est ce qui remplace la couronne : la séparation vient d'une
+ * force, donc d'un équilibre que les données commandent, et non d'un cercle tracé à
+ * l'avance. Une famille nombreuse tient plus de place et repousse plus loin.
+ *
+ * LE COÛT EST EN O(F²) SUR LE NOMBRE DE FAMILLES, jamais en O(n²) sur les notes : la
+ * poussée se calcule UNE FOIS par paire de familles, puis se distribue à leurs
+ * membres. Sur le corpus de recette — soixante-dix-sept notes, douze familles —, cela
+ * fait soixante-six paires par tour au lieu de deux mille huit cent cinquante.
  */
-const DEGAGEMENT_DU_MOYEU = 74;
+const SEPARATION_DE_BASE = 118;
+const SEPARATION_PAR_MEMBRE = 23;
+const POUSSEE_ENTRE_FAMILLES = 0.12;
 
 /** La raideur d'un lien souple — voir `liensSouples`. */
 const RAIDEUR_SOUPLE = 0.015;
@@ -838,31 +852,16 @@ const RAIDEUR_SOUPLE = 0.015;
 export const ITERATIONS_DE_DISPOSITION = 320;
 
 /**
- * L'ANCRAGE DE CHAQUE FAMILLE — une COURONNE autour du centre, le moyeu au milieu.
+ * LES FAMILLES EFFECTIVEMENT DESSINÉES.
  *
- * Le rappel visait d'abord le barycentre courant de la famille : tous dérivaient vers
- * le centre du repère, et les douze familles s'empilaient au même endroit. Il a
- * ensuite visé une spirale — mieux réparti, mais sans lecture : rien ne disait que le
- * corpus rayonne depuis un point.
+ * ELLE EXISTE POUR QU'IL N'Y EN AIT QU'UNE. La disposition rapproche les nœuds d'une
+ * même famille, et la vue entoure ces mêmes nœuds d'un contour : les deux doivent
+ * partir de la MÊME liste. Deux constructions parallèles finiraient par diverger
+ * d'une famille, et le contour cernerait un groupe que le dessin n'a pas rapproché.
  *
- * LA COURONNE DIT LA STRUCTURE. Le moyeu du périmètre occupe le centre, les familles
- * l'entourent, et les rattachements se lisent comme des rayons. C'est la disposition
- * de la maquette, et elle porte une information : le corpus a un centre, et des
- * groupes qui en dépendent.
- *
- * ELLE NE DÉPEND QUE DU RANG — donc du classement par effectif, qui est déterministe.
- * Deux chargements du même périmètre posent les mêmes îlots aux mêmes places.
- */
-/**
- * LES FAMILLES EFFECTIVEMENT DESSINÉES, dans l'ordre qui décide de leurs ancrages.
- *
- * ELLE EXISTE POUR QU'IL N'Y EN AIT QU'UNE. La disposition place les nœuds autour
- * d'un ancrage par famille, et la vue dessine un moyeu à ce même ancrage : les deux
- * doivent partir de la MÊME liste, dans le MÊME ordre. Deux constructions parallèles
- * finiraient par diverger d'une famille, et le moyeu se poserait à côté de son îlot.
- *
- * UNE FAMILLE D'UN SEUL NŒUD PRÉSENT NE RAPPROCHE DE PERSONNE : elle n'a ni ancrage
- * ni moyeu, et son unique note se rattache directement au moyeu du périmètre.
+ * UNE FAMILLE D'UN SEUL NŒUD PRÉSENT NE RAPPROCHE DE PERSONNE : elle n'est pas
+ * dessinée, et son unique note se place comme n'importe quelle note sans famille —
+ * librement, sans qu'aucun trait ne la rattache à quoi que ce soit.
  */
 export function famillesPresentes(
 	g: Graphe,
@@ -876,37 +875,6 @@ export function famillesPresentes(
 	}
 	return [...comptes.entries()].filter(([, n]) => n >= 2).map(([nom]) => nom);
 }
-
-export function ancragesDeFamille(noms: readonly string[]): Map<string, Place> {
-	const ancres = new Map<string, Place>();
-	if (noms.length === 0) return ancres;
-	/* Le rayon laisse le moyeu respirer au centre et les contours tenir au bord. */
-	/* LA COURONNE S'ÉLARGIT AVEC LE NOMBRE D'ÎLOTS. À douze familles, un rayon fixe
-	   les faisait se chevaucher deux à deux : mesuré au navigateur, les contours se
-	   traversaient tous. Au-delà de six familles, la couronne pousse vers le bord —
-	   sans jamais le franchir, la marge tenant le contour à l'intérieur du cadre. */
-	/* Le plafond tient compte de la marge que `contourDeGroupe()` ajoute autour des
-	   nœuds : au-delà, les contours des îlots sortaient du cadre à droite et en bas —
-	   mesuré au navigateur. */
-	const serrement = Math.min(1, Math.max(0, (noms.length - 4) / 10));
-	const part = 0.56 + 0.3 * serrement;
-	const rayonX = (LARGEUR / 2 - MARGE) * part;
-	const rayonY = (HAUTEUR / 2 - MARGE) * part;
-	/* Un quart de tour de décalage : la première famille — la plus nombreuse —
-	   se pose en haut plutôt qu'à droite, où le tiroir la recouvrirait. */
-	const depart = -Math.PI / 2;
-	noms.forEach((nom, rang) => {
-		const angle = depart + (rang / noms.length) * Math.PI * 2;
-		ancres.set(nom, {
-			x: LARGEUR / 2 + Math.cos(angle) * rayonX,
-			y: HAUTEUR / 2 + Math.sin(angle) * rayonY
-		});
-	});
-	return ancres;
-}
-
-/** Le centre du repère — la place du moyeu de périmètre. */
-export const CENTRE: Place = { x: LARGEUR / 2, y: HAUTEUR / 2 };
 
 export interface OptionsDeDisposition {
 	readonly iterations?: number;
@@ -937,22 +905,21 @@ export interface OptionsDeDisposition {
  * NOTES DU JEU DE DÉMONSTRATION : le jeu descendait dans le produit par la géométrie.
  */
 /**
- * CE QUE LA DISPOSITION REND — les places, ET les repères qui vont avec.
+ * CE QUE LA DISPOSITION REND — les places, et rien d'autre.
  *
- * LES ANCRAGES SORTENT D'ICI, ET C'EST UNE CORRECTION. `ancragesDeFamille()` les
- * donne dans le repère de TRAVAIL ; le cadrage final translate et grossit tout le
- * nuage pour le faire tenir dans le cadre. La vue dessinait donc les moyeux aux
- * coordonnées d'AVANT le cadrage et les nœuds à celles d'APRÈS : aucun moyeu ne
- * tombait au centre de son îlot, et les rayons de rattachement partaient de côté.
- * Mesuré au navigateur. Le cadrage est appliqué ici, une fois, à tout ce qui se
- * dessine — nœuds, ancrages et moyeu central.
+ * ELLE RENDAIT AUSSI UN « MOYEU » ET DES « ANCRAGES », et c'étaient les deux repères
+ * d'une géométrie imposée : un point au centre du repère, portant le nom du
+ * périmètre, et une couronne d'ancrages autour de lui. La vue y accrochait des
+ * rayons — du moyeu vers chaque famille, de chaque famille vers ses notes. Sur le
+ * corpus de recette, cela faisait soixante-dix-sept traits que personne n'a déclarés
+ * pour sept relations qui existent : la carte disait d'abord « tout part d'ici »,
+ * ce qui est faux, et seulement ensuite ce que le corpus contient.
+ *
+ * Un périmètre est un CONTEXTE DE FILTRAGE, pas un nœud du graphe ; une famille est
+ * une APPARTENANCE, pas un objet auquel on se relie. Ni l'un ni l'autre ne se dessine.
  */
 export interface Disposition {
 	readonly places: Map<string, Place>;
-	/** L'ancrage de chaque famille, dans le repère du dessin. */
-	readonly ancres: Map<string, Place>;
-	/** Le moyeu du périmètre, dans le repère du dessin. */
-	readonly moyeu: Place;
 }
 
 export function disposer(g: Graphe, options: OptionsDeDisposition = {}): Disposition {
@@ -991,13 +958,13 @@ export function disposer(g: Graphe, options: OptionsDeDisposition = {}): Disposi
 			vy: 0
 		});
 	}
-	if (n === 0) return { places: new Map(), ancres: new Map(), moyeu: CENTRE };
+	if (n === 0) return { places: new Map() };
 
 	const liens = g.aretes.filter((r) => p.has(r.de) && p.has(r.vers));
 	const souples = (options.liensSouples ?? []).filter(([a, b]) => p.has(a) && p.has(b));
 
-	/* Les nœuds de chaque famille — la liste et son ordre viennent de la fabrique
-	   unique, celle que la vue emploie pour poser les moyeux. */
+	/* Les nœuds de chaque famille — la liste vient de la fabrique unique, celle que
+	   la vue emploie pour tracer les contours. */
 	const parFamille = new Map<string, string[]>();
 	if (familleParNoeud !== undefined) {
 		for (const nom of famillesPresentes(g, familleParNoeud)) parFamille.set(nom, []);
@@ -1008,7 +975,12 @@ export function disposer(g: Graphe, options: OptionsDeDisposition = {}): Disposi
 		}
 	}
 
-	const ancres = ancragesDeFamille([...parFamille.keys()]);
+	/* LES ÎLOTS ÉMERGENT, ILS NE SONT PAS POSÉS. Le barycentre de chaque famille est
+	   RECALCULÉ à chaque tour depuis les places courantes : c'est un point que les
+	   données produisent, pas une case d'une couronne. */
+	const nomsDeFamille = [...parFamille.keys()];
+	const barycentres = new Map<string, Place>();
+	const poussees = new Map<string, { x: number; y: number }>();
 
 	for (let t = 0; t < iterations; t++) {
 		const refroid = 1 - t / iterations;
@@ -1048,18 +1020,6 @@ export function disposer(g: Graphe, options: OptionsDeDisposition = {}): Disposi
 			b.vy -= uy * f;
 		}
 
-		/* Le dégagement du moyeu : une poussée radiale, et seulement en deçà du rayon. */
-		for (const id of ids) {
-			const q = p.get(id) as Corps;
-			const dx = q.x - LARGEUR / 2;
-			const dy = q.y - HAUTEUR / 2;
-			const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
-			if (d >= DEGAGEMENT_DU_MOYEU) continue;
-			const f = (DEGAGEMENT_DU_MOYEU - d) * 0.12;
-			q.vx += (dx / d) * f;
-			q.vy += (dy / d) * f;
-		}
-
 		/* Les liens souples : même ressort, raideur bien moindre. */
 		for (const [a, b] of souples) {
 			const qa = p.get(a) as Corps;
@@ -1074,15 +1034,64 @@ export function disposer(g: Graphe, options: OptionsDeDisposition = {}): Disposi
 			qb.vy -= (dy / d) * f;
 		}
 
-		/* LE RAPPEL VERS L'ANCRAGE DE LA FAMILLE — c'est ici, et nulle part sur le
-		   dessin, que l'affinité agit. */
-		for (const [nom, membres] of parFamille) {
-			const ancre = ancres.get(nom);
-			if (ancre === undefined) continue;
+		/* ── L'AFFINITÉ AGIT ICI, ET NULLE PART SUR LE DESSIN ────────────────
+		   Trois temps, et le coût de chacun est écrit à côté :
+
+		     1. le barycentre de chaque famille            O(n)
+		     2. la répulsion entre familles, par paires    O(F²), F ≪ n
+		     3. le rappel de chaque membre vers le sien    O(n)
+
+		   Les paires de NOTES ne sont jamais parcourues pour l'affinité : une
+		   famille de quinze notes coûte quinze additions, pas cent cinq. */
+
+		for (const nom of nomsDeFamille) {
+			const membres = parFamille.get(nom) as string[];
+			let sx = 0;
+			let sy = 0;
 			for (const id of membres) {
 				const q = p.get(id) as Corps;
-				q.vx += (ancre.x - q.x) * RAIDEUR_DE_FAMILLE;
-				q.vy += (ancre.y - q.y) * RAIDEUR_DE_FAMILLE;
+				sx += q.x;
+				sy += q.y;
+			}
+			barycentres.set(nom, { x: sx / membres.length, y: sy / membres.length });
+			poussees.set(nom, { x: 0, y: 0 });
+		}
+
+		/* La séparation visée croît avec l'effectif : une famille nombreuse occupe
+		   plus de place, et doit donc tenir ses voisines plus loin. */
+		const etendue = (nom: string): number =>
+			SEPARATION_PAR_MEMBRE * Math.sqrt((parFamille.get(nom) as string[]).length);
+
+		for (let i = 0; i < nomsDeFamille.length; i++) {
+			for (let j = i + 1; j < nomsDeFamille.length; j++) {
+				const nomA = nomsDeFamille[i] as string;
+				const nomB = nomsDeFamille[j] as string;
+				const a = barycentres.get(nomA) as Place;
+				const b = barycentres.get(nomB) as Place;
+				const dx = b.x - a.x;
+				const dy = b.y - a.y;
+				const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+				const visee = SEPARATION_DE_BASE + etendue(nomA) + etendue(nomB);
+				if (d >= visee) continue;
+				const f = (visee - d) * POUSSEE_ENTRE_FAMILLES;
+				const ux = dx / d;
+				const uy = dy / d;
+				const pa = poussees.get(nomA) as { x: number; y: number };
+				const pb = poussees.get(nomB) as { x: number; y: number };
+				pa.x -= ux * f;
+				pa.y -= uy * f;
+				pb.x += ux * f;
+				pb.y += uy * f;
+			}
+		}
+
+		for (const nom of nomsDeFamille) {
+			const centreDeFamille = barycentres.get(nom) as Place;
+			const poussee = poussees.get(nom) as { x: number; y: number };
+			for (const id of parFamille.get(nom) as string[]) {
+				const q = p.get(id) as Corps;
+				q.vx += (centreDeFamille.x - q.x) * RAIDEUR_DE_FAMILLE + poussee.x;
+				q.vy += (centreDeFamille.y - q.y) * RAIDEUR_DE_FAMILLE + poussee.y;
 			}
 		}
 
@@ -1098,42 +1107,31 @@ export function disposer(g: Graphe, options: OptionsDeDisposition = {}): Disposi
 		}
 	}
 
-	/* ── LE CADRAGE, SUR UNE ÉTENDUE ROBUSTE ──────────────────────────────────
-	   IL SE RÉGLAIT SUR LES EXTRÊMES, ET C'EST CE QUI FAISAIT LA BOULE. Sur les
-	   trois cents notes de l'instance de recette, une vingtaine de nœuds partent
-	   loin — ceux qu'une relation tire vers un îlot lointain, et ceux que rien ne
-	   retient. Le cadrage prenait leur boîte englobante, donc grossissait très peu,
-	   et les deux cent quatre-vingts autres se retrouvaient tassés au milieu en une
-	   masse illisible. Mesuré au navigateur sur l'instance déployée.
+	/* ── LE CADRAGE, SUR L'ÉTENDUE ENTIÈRE ────────────────────────────────────
+	   IL SE RÉGLAIT SUR DES CENTILES — du cinquième au quatre-vingt-quinzième —, et
+	   c'était la parade à un défaut qui n'existe plus. Les îlots étaient posés sur
+	   une COURONNE de rayon fixe : les nœuds qu'aucune famille ne retenait partaient
+	   loin, la boîte englobante suivait, le grossissement tombait à rien, et tout le
+	   reste se tassait au milieu en une boule.
 
-	   L'ÉTENDUE EST DONC CELLE DU GROS DU NUAGE — du cinquième au quatre-vingt-quinzième
-	   centile. Les quelques nœuds qui sortent de ce cadre restent DESSINÉS, simplement
-	   plus près du bord : la marge leur laisse la place, et on ne perd aucun nœud. Un
-	   corpus de trente notes n'y voit pas de différence — il n'a pas d'extrêmes. */
-	const centile = (valeurs: number[], part: number): number => {
-		const triees = [...valeurs].sort((a, b) => a - b);
-		const rang = (triees.length - 1) * part;
-		const bas = Math.floor(rang);
-		const haut = Math.ceil(rang);
-		const a = triees[bas] ?? 0;
-		const b = triees[haut] ?? a;
-		return a + (b - a) * (rang - bas);
-	};
-
+	   Depuis que les familles se repoussent au lieu d'être rangées, l'étendue est
+	   celle du nuage lui-même, et le centile COUPAIT : des îlots entiers sortaient du
+	   cadre par le haut, et la carte s'ouvrait sur des nœuds à moitié dessinés —
+	   mesuré au navigateur. Le cadrage prend donc les extrêmes, et rien n'est coupé. */
 	const xs = ids.map((id) => (p.get(id) as Corps).x);
 	const ys = ids.map((id) => (p.get(id) as Corps).y);
-	const minX = centile(xs, 0.05);
-	const maxX = centile(xs, 0.95);
-	const minY = centile(ys, 0.05);
-	const maxY = centile(ys, 0.95);
+	const minX = Math.min(...xs);
+	const maxX = Math.max(...xs);
+	const minY = Math.min(...ys);
+	const maxY = Math.max(...ys);
 
 	const ex = maxX - minX || 1;
 	const ey = maxY - minY || 1;
 	const k = Math.min((LARGEUR - MARGE * 2) / ex, (HAUTEUR - MARGE * 2) / ey, ZOOM_MAX_DE_CADRAGE);
 
-	/* LE CADRAGE, APPLIQUÉ À TOUT CE QUI SE DESSINE — la même transformation affine
-	   pour les nœuds, les ancrages et le moyeu. Les appliquer séparément, ou n'en
-	   transformer qu'une partie, désaligne le dessin de ses repères. */
+	/* LE CADRAGE, APPLIQUÉ À TOUT CE QUI SE DESSINE. La vue calcule ses contours de
+	   famille SUR LES PLACES RENDUES ICI, donc après cadrage : c'est ce qui garantit
+	   qu'un contour ne peut pas se poser à côté de l'îlot qu'il cerne. */
 	const cadrer = (q: Place): Place => ({
 		x: MARGE + (q.x - minX) * k + (LARGEUR - MARGE * 2 - ex * k) / 2,
 		y: MARGE + (q.y - minY) * k + (HAUTEUR - MARGE * 2 - ey * k) / 2
@@ -1142,10 +1140,7 @@ export function disposer(g: Graphe, options: OptionsDeDisposition = {}): Disposi
 	const places = new Map<string, Place>();
 	for (const id of ids) places.set(id, cadrer(p.get(id) as Corps));
 
-	const ancresCadrees = new Map<string, Place>();
-	for (const [nom, ancre] of ancres) ancresCadrees.set(nom, cadrer(ancre));
-
-	return { places, ancres: ancresCadrees, moyeu: cadrer(CENTRE) };
+	return { places };
 }
 
 /* ── LE CONTOUR D'UNE FAMILLE ──────────────────────────────────────────────
