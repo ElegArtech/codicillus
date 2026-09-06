@@ -168,9 +168,24 @@
 }
 
 /* ==========================================================================
-   V-19 — CARTOGRAPHIE, VUE COMPLÈTE
+   V-19 — CARTOGRAPHIE : L'EXPLORATEUR DE GRAPHE
    Le graphe n'a aucune donnée propre : nœuds et arêtes sont dérivés du corpus
    et des relations déclarées sur les notes.
+
+   LA GRAMMAIRE VISUELLE, ET ELLE COMMANDE TOUT CE FICHIER — un canal, une
+   information :
+
+     forme + code de trois lettres  →  le TYPE
+     couleur + glyphe               →  la VIVACITÉ
+     taille                         →  la CENTRALITÉ
+     anneau interrompu et fanion    →  le POINT DE RUPTURE
+     trait plein / trait fin        →  relation DÉCLARÉE / DÉDUITE
+     proximité et contour           →  l'AFFINITÉ sémantique
+
+   LA TEINTE D'UN NŒUD VIENT DE `currentColor`, que la classe d'état pose sur le
+   groupe (`.glyphe--ajour` et les quatre autres, définies au socle). Elle
+   portait le TYPE, en attribut de présentation SVG écrit dans la vue : trois
+   canaux disaient alors la même chose, et il n'en restait aucun pour l'état.
    ========================================================================== */
 .carto {
   display: grid; grid-template-rows: auto 1fr;
@@ -182,96 +197,391 @@
 .controles {
   display: flex; align-items: center; gap: var(--e-3); flex-wrap: wrap;
   padding: var(--e-3) var(--e-4);
-  border-bottom: 1px solid var(--c-trait);
-  background: var(--c-papier);
+  border-bottom: 1px solid var(--c-trait); background: var(--c-papier);
 }
 .controles__groupe { display: flex; align-items: center; gap: var(--e-2); }
 .controles select {
+  font: inherit; font-size: var(--t-petit); padding: 5px var(--e-2);
   border: 1px solid var(--c-trait); border-radius: var(--r-2);
-  background: var(--c-papier); padding: 6px var(--e-2);
-  font-size: var(--t-petit); cursor: pointer;
+  background: var(--c-papier); color: var(--c-encre);
 }
+
+/* La barre du mode local : un retour, un titre, la profondeur, les mesures. */
+.controles--locale { align-items: flex-start; }
+.controles__titre h1 {
+  font-family: var(--f-lecture); font-size: var(--t-t2); font-weight: var(--g-moyen);
+  letter-spacing: -.014em; margin: 0; line-height: 1.2;
+}
+.controles__titre p { margin: 3px 0 0; font-size: var(--t-petit); color: var(--c-encre-3); }
+.retour {
+  display: inline-flex; align-items: center; gap: var(--e-1);
+  font-size: var(--t-petit); color: var(--c-encre-3); text-decoration: none;
+  align-self: center;
+}
+.retour:hover { color: var(--c-accent); }
+.mesures {
+  display: flex; gap: var(--e-3); align-items: center;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--c-trait); border-radius: var(--r-2); background: var(--c-papier-2);
+}
+.mesures__item { font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-2); }
+
 .bascule-vue {
-  display: flex; align-items: center; gap: var(--e-1); padding: 2px;
-  background: var(--c-fond-creux); border: 1px solid var(--c-trait); border-radius: var(--r-2);
+  display: inline-flex; gap: 2px; padding: 2px;
+  background: var(--c-fond-creux); border-radius: var(--r-2);
 }
 .bascule-vue button {
-  border: 0; background: none; cursor: pointer;
-  padding: 5px var(--e-3); border-radius: var(--r-1);
-  font-size: var(--t-mini); font-weight: var(--g-fort); color: var(--c-encre-2);
+  font: inherit; font-size: var(--t-petit); padding: 4px var(--e-3);
+  border: 0; background: none; border-radius: var(--r-1); cursor: pointer; color: var(--c-encre-3);
 }
-.bascule-vue button[aria-selected="true"] { background: var(--c-papier); color: var(--c-encre); box-shadow: var(--o-pose); }
+.bascule-vue button[aria-selected="true"],
+.bascule-vue button[aria-pressed="true"] {
+  background: var(--c-accent); color: #fff; box-shadow: var(--o-pose); font-weight: var(--g-fort);
+}
 
 .rech-graphe { position: relative; }
 .rech-graphe input {
-  width: 208px; padding: 6px var(--e-3) 6px 30px;
+  font: inherit; font-size: var(--t-petit); padding: 5px var(--e-3) 5px 28px;
   border: 1px solid var(--c-trait); border-radius: var(--r-2);
-  background: var(--c-papier); font-family: var(--f-ui); font-size: var(--t-petit);
+  background: var(--c-papier); color: var(--c-encre); width: 210px;
 }
 .rech-graphe input:focus { outline: none; border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-voile); }
 .rech-graphe svg { position: absolute; left: 9px; top: 8px; color: var(--c-encre-3); pointer-events: none; }
 .rech-graphe__liste {
-  display: none; position: absolute; z-index: 40; top: calc(100% + 4px); left: 0;
-  width: 264px; max-height: 240px; overflow-y: auto; padding: var(--e-1);
-  background: var(--c-papier); border: 1px solid var(--c-trait-fort);
-  border-radius: var(--r-2); box-shadow: var(--o-flotte);
+  display: none; position: absolute; z-index: 40; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--c-papier); border: 1px solid var(--c-trait);
+  border-radius: var(--r-2); box-shadow: var(--o-flotte); padding: var(--e-1); max-height: 260px; overflow-y: auto;
 }
 .rech-graphe[data-ouvert="oui"] .rech-graphe__liste { display: block; }
 .rg {
-  display: block; width: 100%; padding: var(--e-2); border: 0; background: none;
-  cursor: pointer; border-radius: var(--r-2); text-align: left; color: inherit; font: inherit;
+  display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left;
+  padding: var(--e-2); border: 0; background: none; cursor: pointer; border-radius: var(--r-1); color: inherit; font: inherit;
 }
 .rg:hover, .rg[data-sel="oui"] { background: var(--c-accent-voile); }
 .rg__t { font-size: var(--t-petit); font-weight: var(--g-moyen); }
 .rg__s { font-size: var(--t-micro); color: var(--c-encre-3); font-family: var(--f-donnee); }
 
-/* --- Scène ---------------------------------------------------------------------- */
-.scene { display: grid; grid-template-columns: 216px minmax(0, 1fr) 318px; min-height: 0; }
+/* --- La scène ------------------------------------------------------------------
+   DEUX COLONNES, ET NON TROIS. La troisième était réservée EN PERMANENCE au
+   panneau de détail, qui n'affichait que « Aucun nœud sélectionné » — et dont le
+   contenu n'était même pas rempli. Le canevas garde donc toute sa place tant que
+   rien n'est choisi ; le panneau s'ouvre en tiroir par-dessus. */
+.scene { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 0; position: relative; }
+.scene[data-mode="locale"] { grid-template-columns: minmax(0, 1fr); }
 
-.legende-col, .detail-col {
-  border-right: 1px solid var(--c-trait);
-  overflow-y: auto; padding: var(--e-4);
-  background: var(--c-papier);
+.legende-col {
+  border-right: 1px solid var(--c-trait); background: var(--c-papier);
+  padding: var(--e-4) var(--e-3); overflow-y: auto; min-height: 0;
 }
-.detail-col { border-right: 0; border-left: 1px solid var(--c-trait); }
-
-.zone-graphe { position: relative; min-width: 0; background: var(--c-fond); overflow: hidden; }
-.zone-graphe svg { display: block; width: 100%; height: 100%; cursor: grab; }
+/* LE FOND DU CANEVAS EST CLAIR, ET C'EST CE QUI FAIT EXISTER LES ÎLOTS. Sur le
+   beige de l'application, un aplat à neuf pour cent ne se distingue de rien : les
+   douze îlots se lisaient comme une seule masse grise. Le canevas est la surface de
+   lecture de cet écran — il prend le papier, pas le fond. */
+.zone-graphe { position: relative; min-width: 0; background: var(--c-papier); overflow: hidden; }
+.zone-graphe svg { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 .zone-graphe svg.tire { cursor: grabbing; }
 
-/* --- Légende ---------------------------------------------------------------------- */
-.lg + .lg { margin-top: var(--e-1); }
+/* --- La colonne de commande ---------------------------------------------------- */
+.legende__bloc + .legende__bloc { margin-top: var(--e-5); }
+.legende__note { font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.5; margin-top: var(--e-2); }
+.legende__mesure { font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-3); margin: 0 0 var(--e-2); }
+
+.lg + .lg { margin-top: 1px; }
 .lg {
   display: flex; align-items: center; gap: var(--e-2); width: 100%;
-  padding: var(--e-2); border: 1px solid transparent; border-radius: var(--r-2);
-  background: none; cursor: pointer; text-align: left; color: inherit; font: inherit;
+  padding: 5px var(--e-2); border: 1px solid transparent; background: none;
+  border-radius: var(--r-2); cursor: pointer; color: inherit; font: inherit; text-align: left;
 }
 .lg:hover { background: var(--c-papier-2); }
 .lg[data-isole="oui"] { background: var(--c-accent-voile); border-color: var(--c-accent-trait); }
+.lg--case input { flex: none; margin: 0; accent-color: var(--c-accent); }
 .lg__forme { flex: none; }
 .lg__nom { flex: 1; min-width: 0; font-size: var(--t-petit); font-weight: var(--g-moyen); }
 .lg__n { font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-3); }
-.legende__bloc + .legende__bloc { margin-top: var(--e-5); }
-.legende__note { font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.5; margin-top: var(--e-2); }
+/* LE GLYPHE NE S'ÉTIRE PAS. Un `svg` dans une boîte flexible prend la hauteur de sa
+   ligne : ses attributs `width` et `height` ne sont qu'une taille INTRINSÈQUE, que
+   `align-items: stretch` écrase. Mesuré au navigateur — les cinq glyphes de la
+   légende du pied faisaient quatre-vingts pixels de haut. */
+.lg .glyphe,
+.lp .glyphe { flex: none; width: 14px; height: 14px; }
 
-/* ==========================================================================
-   CARTOGRAPHIE — socle commun
-   Encodage des nœuds, arêtes, panneau de détail, superpositions d'état et
-   outils flottants. Partagé par la vue complète (V-19) et la vue par type
-   maître (V-20) : dans le produit, ce sont deux modes d'une même page.
-   ========================================================================== */
+/* Les deux natures de trait, en miniature — la légende dit ce que le dessin fait. */
+.lg__trait { flex: none; width: 18px; height: 0; border-top-style: solid; color: var(--c-encre-3); }
+.lg__trait--declaree { border-top-width: 2px; border-top-color: var(--c-trait-fort); }
+.lg__trait--deduite  { border-top-width: 1px; border-top-color: var(--c-encre-4); }
+.lg__trait--affinite { border-top-width: 1px; border-top-style: dashed; border-top-color: var(--c-encre-4); }
 
-/* --- Panneau de détail ------------------------------------------------------------- */
-.detail__vide { padding: var(--e-6) var(--e-2); text-align: center; }
-.detail__vide p { font-size: var(--t-petit); color: var(--c-encre-3); line-height: 1.55; margin: var(--e-2) 0 0; }
-.detail__tete { display: flex; align-items: flex-start; gap: var(--e-3); margin-bottom: var(--e-3); }
-.detail__titre {
-  font-family: var(--f-ui); font-size: var(--t-t3); font-weight: var(--g-lourd);
-  letter-spacing: -.014em; margin: 0; flex: 1; min-width: 0; line-height: 1.25;
+.curseur { display: flex; justify-content: space-between; font-size: var(--t-mini); color: var(--c-encre-3); }
+.curseur output { font-family: var(--f-donnee); color: var(--c-encre); font-weight: var(--g-fort); }
+#degre-min { width: 100%; accent-color: var(--c-accent); margin: var(--e-1) 0 var(--e-2); }
+
+.cle-lecture { font-size: var(--t-mini); line-height: 1.45; margin-bottom: var(--e-2); }
+.cle-lecture b { display: block; color: var(--c-encre); font-weight: var(--g-fort); }
+.cle-lecture span { color: var(--c-encre-3); }
+
+.btn--discret {
+  width: 100%; margin-top: var(--e-2); justify-content: center;
+  font-size: var(--t-mini); color: var(--c-encre-3);
 }
-.detail__sous { display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; margin-bottom: var(--e-3); }
+
+/* --- Îlots sémantiques ----------------------------------------------------------
+   L'AFFINITÉ NE SE DESSINE PAS EN ARÊTES. Une appartenance commune réunit un
+   ENSEMBLE de notes : sa forme juste est un îlot, pas cent cinq segments dont
+   chacun, pris seul, affirmerait un rapport que personne n'a déclaré. L'îlot porte
+   un contour, une teinte, un moyeu et un en-tête.
+
+   HUIT TEINTES, TOUTES FROIDES, ET C'EST LE POINT DÉLICAT. La teinte d'un îlot est
+   NOMINALE — elle distingue deux voisins, comme on colorie deux pays sur une carte,
+   elle ne mesure rien. Elle ne peut donc pas emprunter les cinq teintes de la
+   vivacité, qui, elles, MESURENT : un îlot vert au-dessus de nœuds rouges ferait
+   lire un état là où il n'y a qu'une identité. Les cinq états de vivacité sont
+   chauds — vert profond, or, ambre, brique, rouge —, les huit teintes d'îlot sont
+   froides. C'est le partage le plus sûr : chaud = état, froid = groupe. */
+/* LE CONTOUR EST UN VOILE, PAS UN CADRE. Il était tireté et appuyé : à douze îlots
+   le dessin devenait une grille de pointillés qui se disputaient l'œil avec les
+   relations. Un aplat très pâle et un filet à peine visible suffisent — c'est la
+   TEINTE qui dit l'îlot, pas son bord. */
+.famille__contour {
+  fill: currentColor; fill-opacity: 0.1;
+  stroke: currentColor; stroke-opacity: 0.22; stroke-width: 1;
+}
+.famille__tete { pointer-events: none; }
+.famille__pastille { fill: currentColor; }
+.famille__nom {
+  font-family: var(--f-ui); font-size: 13px; font-weight: 700; letter-spacing: -0.008em;
+  text-anchor: middle; fill: currentColor;
+  paint-order: stroke; stroke: var(--c-papier); stroke-width: 4px; stroke-linejoin: round;
+}
+.famille__compte {
+  font-family: var(--f-donnee); font-size: 9.5px; text-anchor: middle; fill: var(--c-encre-3);
+  paint-order: stroke; stroke: var(--c-papier); stroke-width: 3px; stroke-linejoin: round;
+}
+
+/* Les huit teintes, posées par le RANG de la famille — donc par son effectif, qui
+   est déterministe : deux chargements du même périmètre teintent les mêmes îlots. */
+[data-teinte="0"] { color: #4b52a3; }
+[data-teinte="1"] { color: #1b6b7a; }
+[data-teinte="2"] { color: #7a5f9e; }
+[data-teinte="3"] { color: #2f6f9f; }
+[data-teinte="4"] { color: #8a4a7d; }
+[data-teinte="5"] { color: #2b7f7a; }
+[data-teinte="6"] { color: #5a6b8c; }
+[data-teinte="7"] { color: #6f5bb5; }
+
+.graphe[data-contours="non"] .familles { display: none; }
+.graphe[data-noms="non"] .familles-noms { display: none; }
+
+/* --- Moyeux ----------------------------------------------------------------------
+   TROIS NIVEAUX, ET LA HIÉRARCHIE SE LIT AVANT LES MOTS : le moyeu du périmètre au
+   centre, les moyeux de famille en couronne, les notes autour d'eux.
+
+   LE MOYEU N'EST PAS UNE NOTE. Il ne porte ni vivacité, ni centralité, ni point de
+   rupture — ce sont des mesures du graphe des RELATIONS, et un rangement n'en est
+   pas une. Il ne se sélectionne pas et n'ouvre aucun panneau. */
+.moyeu { pointer-events: none; }
+.moyeu__forme { fill: currentColor; stroke: var(--c-papier); stroke-width: 2.5; }
+.moyeu--perimetre { color: var(--c-accent-fonce); }
+.moyeu--perimetre .moyeu__forme { stroke-width: 3; }
+/* LE NOM DU PÉRIMÈTRE EST SOUS LE MOYEU, PAS DEDANS. Un disque de trente unités ne
+   contient pas un nom libre : « Tout le corpus » y sortait en « ut le corpu ».
+   Dedans, le code de trois lettres, qui tient toujours. */
+.moyeu__nom {
+  font-family: var(--f-ui); font-size: 13px; font-weight: 700;
+  text-anchor: middle; fill: var(--c-encre);
+  paint-order: stroke; stroke: var(--c-papier); stroke-width: 4px; stroke-linejoin: round;
+}
+.moyeu__code {
+  font-family: var(--f-donnee); font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  text-anchor: middle; fill: var(--c-encre-3);
+  paint-order: stroke; stroke: var(--c-papier); stroke-width: 3px; stroke-linejoin: round;
+}
+.moyeu__code--dedans {
+  font-size: 13px; dominant-baseline: central; fill: #fff; stroke: none;
+}
+.moyeu__nom--dedans { fill: #fff; stroke: none; dominant-baseline: central; }
+
+
+/* --- Rattachements ---------------------------------------------------------------
+   LE RAYON D'UN RANGEMENT N'EST PAS UNE RELATION, ET IL NE PEUT PAS EN AVOIR L'AIR.
+   Il est plus fin et plus pâle que la plus faible des relations déclarées, il ne
+   porte aucune étiquette, il ne réagit pas au survol, et la légende le nomme. Il
+   n'entre dans aucune mesure : ni degré, ni centralité, ni point de rupture. */
+/* LE RAYON PREND LA TEINTE DE SON ÎLOT — c'est ce qui le rattache visuellement à
+   son groupe sans ajouter de code à lire, et ce qui l'éloigne définitivement de
+   l'encre neutre des relations. */
+.rattachement { stroke: currentColor; stroke-opacity: 0.34; stroke-width: 0.9; fill: none; }
+.rattachement--tronc { stroke-opacity: 0.45; stroke-width: 1.3; }
+.graphe[data-focus="oui"] .rattachements { opacity: 0.25; }
+
+/* --- Nœuds ----------------------------------------------------------------------------- */
+/* CANTONNÉES AU SVG, ET CE N'EST PAS UNE PRÉCAUTION.
+   `.noeud`, `.noeud__nom` et `.noeud__code` nomment DEUX choses dans la même
+   page : les nœuds du graphe, ici, et les branches de l'arborescence du rail,
+   qui est rendu sur tout écran de coquille. Sans le `svg`, la déclaration
+   `pointer-events: none` — qui n'a de sens que pour une étiquette de graphe —
+   tombait sur les liens du rail et les rendait INERTES. */
+svg .noeud { cursor: pointer; }
+/* LE FILET EST FIN, ET C'EST UNE CONSÉQUENCE DE L'ÉCHELLE. À cinq unités de rayon,
+   un contour de deux pixels mange la pastille : il ne restait qu'un anneau clair, et
+   la teinte de vivacité — le canal principal — ne se voyait plus. */
+svg .noeud__forme {
+  fill: currentColor; stroke: var(--c-papier); stroke-width: 1.1;
+  transition: opacity var(--m-doux);
+}
+/* LA TEINTE DE VIVACITÉ, REPRISE AU RAIL — et c'est le piège que ce fichier annonce
+   depuis toujours, réalisé. `socle.css` pose `.noeud { color: var(--c-encre-2) }`
+   pour les branches de l'ARBORESCENCE du rail. `.glyphe--ajour` a exactement la même
+   spécificité (0,1,0) et perd donc l'arbitrage à l'ordre de chargement : tous les
+   nœuds du graphe sortaient en encre secondaire. Mesuré au navigateur — teinte
+   calculée `#46585f` là où `--c-ajour` vaut `#1d6b4a`, sur des nœuds portant
+   pourtant la bonne classe.
+
+   Le préfixe `svg` monte la spécificité à (0,2,1) et cantonne la règle au dessin,
+   où `.noeud` ne peut désigner qu'un nœud de graphe. C'est le canal PRINCIPAL de
+   l'écran : sans lui, la carte ne répond plus à « où sont les zones fragiles ? ». */
+svg .noeud.glyphe--ajour { color: var(--c-ajour); }
+svg .noeud.glyphe--bientot { color: var(--c-bientot); }
+svg .noeud.glyphe--averifier { color: var(--c-averifier); }
+svg .noeud.glyphe--arevoir { color: var(--c-arevoir); }
+svg .noeud.glyphe--obsolete { color: var(--c-obsolete); }
+svg .noeud--sans-etat { color: var(--c-encre-4); }
+svg .noeud__code {
+  font-family: var(--f-donnee); font-size: 8px; font-weight: 700;
+  text-anchor: middle; dominant-baseline: central; pointer-events: none; fill: #fff;
+}
+svg .noeud__nom {
+  font-family: var(--f-ui); font-size: 9.5px; font-weight: 600;
+  text-anchor: middle; pointer-events: none; fill: var(--c-encre);
+  paint-order: stroke; stroke: var(--c-papier); stroke-width: 3px; stroke-linejoin: round;
+}
+/* LES ÉTIQUETTES SE TAISENT QUAND LE GRAPHE EST DENSE, et reviennent au survol, à
+   la sélection, et pour le voisinage mis en avant. À quatre-vingts nœuds dans un
+   repère de mille unités, deux titres se chevauchent avant d'être lus — mesuré au
+   navigateur, pas un seul n'était lisible. Les NOMS DE FAMILLE, eux, restent : ils
+   sont peu nombreux, et ce sont eux qui permettent de s'orienter. */
+.graphe[data-dense="oui"] .noeud__nom { display: none; }
+.graphe[data-dense="oui"] .noeud:hover .noeud__nom,
+.graphe[data-dense="oui"] .noeud:focus-visible .noeud__nom,
+.graphe[data-dense="oui"] .noeud[data-choisi="oui"] .noeud__nom,
+.graphe[data-dense="oui"][data-focus="oui"] .noeud[data-actif="oui"] .noeud__nom { display: block; }
+
+/* Le nœud survolé passe DEVANT : son étiquette serait sinon recouverte par les
+   formes des nœuds dessinés après lui. */
+svg .noeud:hover, svg .noeud[data-choisi="oui"] { paint-order: normal; }
+
+svg .noeud[data-fantome="oui"] .noeud__forme { stroke-dasharray: 3 2.5; }
+.noeud[data-fantome="oui"] { opacity: .5; }
+
+/* LA NOTE QU'AUCUNE RELATION NE TOUCHE EST DESSINÉE, ET DISCRÈTE. Elle était
+   RETIRÉE, et c'était le défaut de fond de cet écran : seize notes sur trente-deux
+   disparaissaient du corpus de démonstration, si bien que la question « qu'est-ce
+   qui n'est relié à rien ? » — celle pour laquelle on ouvre une cartographie —
+   était la seule à laquelle elle ne pouvait pas répondre. */
+.noeud[data-isolee="oui"] { opacity: .58; }
+.noeud[data-isolee="oui"] .noeud__nom { opacity: .72; }
+
+/* Le filtre ne retire jamais un nœud du document : il garde sa place, et le
+   rallumer ne fait pas sauter la carte.
+
+   CANTONNÉE AU SVG, ET CE N'EST PAS UNE PRÉCAUTION : `.noeud` nomme aussi les
+   branches du rail, rendu sur tout écran de coquille. Sans le `svg`, porter le
+   degré minimum à 1 faisait disparaître le rail entier. */
+svg .noeud[data-masque="oui"],
+svg .arete[data-masque="oui"],
+svg .arete__etiquette[data-masque="oui"] { display: none; }
+
+/* LA NOTE ISOLÉE EST À PEINE ESTOMPÉE, ET C'EST UN ARBITRAGE MESURÉ. Elle l'était à
+   58 % — mais sur l'instance de recette soixante-huit notes sur soixante-dix-sept
+   n'ont aucune relation déclarée : atténuer LA MAJORITÉ du dessin éteignait la
+   couleur de vivacité, c'est-à-dire le canal principal, pour signaler ce que
+   l'absence de trait dit déjà d'elle-même. Le compte exact est dans la colonne, et
+   le curseur de degré minimum les écarte d'un geste. */
+svg .noeud[data-isolee="oui"] { opacity: 0.82; }
+
+/* --- Arêtes ---------------------------------------------------------------------------
+   LE TRAIT PORTE LA COUCHE, ET RIEN D'AUTRE. Il portait la dépendance TECHNIQUE
+   — plein contre pointillé —, et la couche s'ajoutait par-dessus : deux
+   informations sur un même canal. La technicité reste LUE — c'est elle qui décide
+   des points de rupture — mais elle ne se dessine plus sur le trait.
+
+   UNE ARÊTE EST NEUTRE. La teinter de la couleur de son nœud source rouvrirait
+   l'ambiguïté qu'on vient de fermer : le rouge est une couleur de vivacité. */
+.arete { stroke: var(--c-trait-fort); stroke-width: 1.7; fill: none; transition: opacity var(--m-doux); }
+.arete[data-couche="deduites"] { stroke: var(--c-encre-4); stroke-width: .9; }
+.arete__etiquette {
+  font-family: var(--f-donnee); font-size: 9px; text-anchor: middle;
+  fill: var(--c-encre-3); pointer-events: none;
+  paint-order: stroke; stroke: var(--c-papier); stroke-width: 3px; stroke-linejoin: round;
+}
+
+/* LES TRAITS D'AFFINITÉ N'EXISTENT QU'AUTOUR D'UN NŒUD CHOISI, à la demande. */
+.affinite { stroke: var(--c-encre-4); stroke-width: 1; stroke-dasharray: 2 4; fill: none; opacity: .55; }
+
+/* Focus persistant : le reste du graphe reste estompé jusqu'au prochain clic. */
+.graphe[data-focus="oui"] .noeud[data-actif="non"] { opacity: .14; }
+.graphe[data-focus="oui"] .arete[data-actif="non"] { opacity: .1; }
+.graphe[data-focus="oui"] .noeud[data-actif="oui"][data-fantome="oui"] { opacity: .62; }
+.graphe[data-isole="oui"] .noeud[data-type-visible="non"] { opacity: .1; }
+.graphe[data-isole="oui"] .arete { opacity: .12; }
+
+/* Le nœud choisi porte un anneau clair, jamais un contour épais : à cinq unités de
+   rayon, une bordure de trois pixels avale la pastille. */
+.noeud[data-choisi='oui'] .noeud__forme { stroke: var(--c-encre); stroke-width: 2; }
+
+/* Marquage du point de rupture : anneau interrompu et fanion, pas seulement
+   une teinte. Il reste identifiable en niveaux de gris. */
+.rupture-anneau { fill: none; stroke: var(--c-danger); stroke-width: 2; stroke-dasharray: 5 3.5; }
+.rupture-fanion { fill: var(--c-danger); }
+.rupture-glyphe { fill: #fff; font-family: var(--f-donnee); font-size: 7px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.graphe[data-criticite="non"] .rupture-anneau, .graphe[data-criticite="non"] .rupture-fanion, .graphe[data-criticite="non"] .rupture-glyphe { display: none; }
+
+/* --- La légende du dessin — RG-M09-07 ------------------------------------------
+   « Une légende explique la sémantique de chaque encodage visuel. Aucun encodage
+   n'est laissé à l'interprétation. » Elle est SOUS le canevas, dans les deux
+   modes, parce que c'est le dessin qu'elle explique. */
+.legende-pied {
+  position: absolute; z-index: 10; left: var(--e-4); bottom: var(--e-4);
+  display: flex; gap: var(--e-4); flex-wrap: wrap; max-width: calc(100% - 90px);
+  padding: var(--e-3) var(--e-4);
+  background: var(--c-papier); border: 1px solid var(--c-trait);
+  border-radius: var(--r-2); box-shadow: var(--o-pose);
+}
+.legende-pied__items { display: flex; gap: var(--e-3); flex-wrap: wrap; margin-top: var(--e-1); }
+.lp { display: inline-flex; align-items: center; gap: var(--e-1); font-size: var(--t-micro); color: var(--c-encre-2); }
+.lp .lg__forme { width: 18px; height: 18px; }
+
+/* --- Panneau contextuel ---------------------------------------------------------
+   IL N'EXISTE QUE LORSQU'UN NŒUD EST CHOISI — `hidden` au balisage, ouvert par le
+   câblage. En tiroir par-dessus le canevas, jamais une colonne réservée. */
+.detail-col {
+  position: absolute; z-index: 45; top: 0; right: 0; bottom: 0; width: 336px;
+  background: var(--c-papier); border-left: 1px solid var(--c-trait-fort);
+  box-shadow: var(--o-flotte); overflow-y: auto; padding: var(--e-4);
+}
+.detail__tete { display: flex; align-items: flex-start; gap: var(--e-3); margin-bottom: var(--e-2); }
+.detail__titre {
+  font-family: var(--f-lecture); font-size: var(--t-t3); font-weight: var(--g-moyen);
+  letter-spacing: -.012em; margin: 0; flex: 1; min-width: 0; line-height: 1.25;
+}
+.detail__fermer {
+  flex: none; width: 26px; height: 26px; border: 0; background: none; cursor: pointer;
+  border-radius: var(--r-1); color: var(--c-encre-3); font-size: 18px; line-height: 1;
+}
+.detail__fermer:hover { background: var(--c-fond-creux); color: var(--c-encre); }
+.detail__sous { display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; margin: 0 0 var(--e-3); }
+.detail__type { font-family: var(--f-donnee); font-size: var(--t-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--c-encre-3); }
+.detail__etat { font-size: var(--t-mini); font-weight: var(--g-fort); color: currentColor; }
+.detail__extrait { font-family: var(--f-lecture); font-size: var(--t-petit); line-height: 1.55; color: var(--c-encre-2); margin: 0 0 var(--e-3); }
+.detail__etiquettes { display: flex; gap: var(--e-1); flex-wrap: wrap; margin: 0 0 var(--e-3); }
+.detail__etiq {
+  font-family: var(--f-donnee); font-size: var(--t-micro); color: var(--c-encre-3);
+  border: 1px solid var(--c-trait); border-radius: 999px; padding: 2px var(--e-2);
+}
 .detail__section { margin-top: var(--e-4); padding-top: var(--e-3); border-top: 1px solid var(--c-trait-fin); }
 .detail__section > .etiq { display: block; margin-bottom: var(--e-2); }
+.detail__vide-ligne { font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.5; margin: 0; }
+.detail__actions { display: flex; flex-direction: column; gap: var(--e-2); }
+.detail__actions .btn { justify-content: center; }
 
 .crit { display: flex; gap: var(--e-2); flex-wrap: wrap; }
 .crit__boite {
@@ -281,69 +591,34 @@
 }
 .crit__val { font-family: var(--f-donnee); font-size: var(--t-t3); font-weight: var(--g-lourd); line-height: 1; }
 .crit__nom { font-size: var(--t-micro); color: var(--c-encre-3); margin-top: 3px; display: block; }
-.crit__boite--rupture { border-color: #e2b8b0; background: var(--c-danger-voile); }
+.crit__boite--rupture { border-color: #e2b8b0; background: var(--c-danger-voile); margin-top: var(--e-2); flex-basis: 100%; }
 .crit__boite--rupture .crit__val { color: var(--c-danger); font-size: var(--t-base); }
 
-.rel-groupe + .rel-groupe { margin-top: var(--e-3); }
-.rel-groupe__titre { display: flex; align-items: center; gap: var(--e-2); margin-bottom: var(--e-1); }
-.rel-groupe__titre::after { content: ""; flex: 1; height: 1px; background: var(--c-trait-fin); }
+.rel-groupe { margin-top: var(--e-2); }
 .rel-item {
-  display: flex; align-items: center; gap: var(--e-2); width: 100%;
+  display: flex; flex-direction: column; gap: 1px; width: 100%;
   padding: var(--e-2); border: 0; background: none; cursor: pointer;
-  border-radius: var(--r-2); text-align: left; color: inherit; font: inherit;
+  border-radius: var(--r-2); text-align: left; color: inherit; font: inherit; text-decoration: none;
 }
 .rel-item:hover { background: var(--c-papier-2); }
-.rel-item__nom { flex: 1; min-width: 0; font-size: var(--t-petit); font-weight: var(--g-moyen); }
+/* EN COLONNE, ET NON EN LIGNE. Le motif d'un rapprochement se dit en toutes lettres
+   — « d'après un mot du titre procédure » — et, posé sur la même ligne, il écrasait
+   le titre de la note en une colonne d'un mot par ligne. Mesuré au navigateur. */
+.rel-item__nom {
+  min-width: 0; font-size: var(--t-petit); font-weight: var(--g-moyen);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .rel-item__type { font-family: var(--f-donnee); font-size: var(--t-micro); color: var(--c-encre-3); }
 
-.prop { display: flex; align-items: baseline; gap: var(--e-2); font-size: var(--t-petit); }
+.prop { display: flex; align-items: baseline; gap: var(--e-2); font-size: var(--t-petit); margin: 0; }
 .prop + .prop { margin-top: var(--e-1); }
 .prop__cle { flex: none; width: 92px; font-size: var(--t-mini); color: var(--c-encre-3); }
 
-/* --- Nœuds ----------------------------------------------------------------------------- */
-/* CANTONNÉES AU SVG, ET CE N'EST PAS UNE PRÉCAUTION.
-   `.noeud`, `.noeud__nom` et `.noeud__code` nomment DEUX choses dans la même
-   page : les nœuds du graphe, ici, et les branches de l'arborescence du rail,
-   qui est rendu sur tout écran de coquille. Sans le `svg`, la déclaration
-   `pointer-events: none` — qui n'a de sens que pour une étiquette de graphe,
-   posée par-dessus sa forme — tombait sur les liens du rail et les rendait
-   INERTES : visibles, soulignés, curseur de lien, et le clic passait au travers.
-   Mesuré au navigateur : sur /cartographie le lien « Doctrine » du rail ne
-   naviguait pas, alors qu'il naviguait depuis /recherche. Les autres propriétés
-   sont des attributs SVG (`text-anchor`, `fill`, `stroke`, `paint-order`) : le
-   `svg` ne restreint donc rien qui servait ailleurs. */
-svg .noeud { cursor: pointer; }
-svg .noeud__forme { stroke-width: 1.5; transition: opacity var(--m-doux); }
-svg .noeud__code {
-  font-family: var(--f-donnee); font-size: 8px; font-weight: 700;
-  text-anchor: middle; dominant-baseline: central; pointer-events: none; fill: #fff;
-}
-svg .noeud__nom {
-  font-family: var(--f-ui); font-size: 11px; font-weight: 600;
-  text-anchor: middle; pointer-events: none; fill: var(--c-encre);
-  paint-order: stroke; stroke: var(--c-fond); stroke-width: 3px; stroke-linejoin: round;
-}
-svg .noeud[data-fantome="oui"] .noeud__forme { stroke-dasharray: 3 2.5; }
-.noeud[data-fantome="oui"] { opacity: .5; }
-.arete { stroke: var(--c-trait-fort); stroke-width: 1.4; fill: none; transition: opacity var(--m-doux); }
-.arete[data-technique="non"] { stroke-dasharray: 4 3; stroke: var(--c-encre-4); }
-
-/* Focus persistant : le reste du graphe reste estompé jusqu'au prochain clic. */
-.graphe[data-focus="oui"] .noeud[data-actif="non"] { opacity: .14; }
-.graphe[data-focus="oui"] .arete[data-actif="non"] { opacity: .1; }
-.graphe[data-focus="oui"] .noeud[data-actif="oui"][data-fantome="oui"] { opacity: .62; }
-.noeud[data-choisi="oui"] .noeud__forme { stroke: var(--c-encre); stroke-width: 3; }
-.graphe[data-isole="oui"] .noeud[data-type-visible="non"] { opacity: .1; }
-.graphe[data-isole="oui"] .arete { opacity: .12; }
-
-/* Marquage du point de rupture : anneau interrompu et fanion, pas seulement
-   une teinte. Il reste identifiable en niveaux de gris. */
-.rupture-anneau { fill: none; stroke: var(--c-danger); stroke-width: 2; stroke-dasharray: 5 3.5; }
-.rupture-fanion { fill: var(--c-danger); }
-.rupture-glyphe { fill: #fff; font-family: var(--f-donnee); font-size: 8px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
-.graphe[data-criticite="non"] .rupture-anneau, .graphe[data-criticite="non"] .rupture-fanion, .graphe[data-criticite="non"] .rupture-glyphe { display: none; }
-
-/* --- Superpositions d'état ---------------------------------------------------------------- */
+/* --- Superpositions d'état ----------------------------------------------------------------
+   LE VOILE NE COUVRE QUE CE QUI N'A RIEN À DESSINER. Il couvrait aussi l'absence
+   de RELATION, si bien qu'un périmètre de trente-deux notes se voyait masqué au
+   motif qu'aucune n'était reliée — alors que le nuage de leurs familles est
+   parfaitement lisible, et qu'il dit quelque chose d'utile sur le corpus. */
 .voile {
   position: absolute; inset: 0; display: none;
   place-items: center; padding: var(--e-5);
@@ -368,15 +643,14 @@ svg .noeud[data-fantome="oui"] .noeud__forme { stroke-dasharray: 3 2.5; }
 .progression { width: 220px; height: 5px; border-radius: 3px; background: var(--c-fond-creux); margin: 0 auto var(--e-3); overflow: hidden; }
 .progression i { display: block; height: 100%; background: var(--c-accent); width: 0; transition: width 120ms linear; }
 
-/* Bandeau « trop dense » : conseil au-dessus du graphe, jamais un blocage. */
-.dense-bandeau {
+/* Le bandeau : un conseil au-dessus du graphe, jamais un blocage. */
+.avis-bandeau {
   position: absolute; z-index: 15; left: var(--e-4); right: var(--e-4); top: var(--e-4);
-  display: none; align-items: center; gap: var(--e-3); flex-wrap: wrap;
+  display: flex; align-items: center; gap: var(--e-3); flex-wrap: wrap;
   padding: var(--e-3) var(--e-4);
   background: var(--c-alerte-voile); border: 1px solid #dcc59a; border-radius: var(--r-3);
   box-shadow: var(--o-pose); font-size: var(--t-petit); color: var(--c-alerte);
 }
-.app[data-dense="oui"] .dense-bandeau { display: flex; }
 
 /* --- Outils flottants -------------------------------------------------------------------- */
 .outils-graphe {
@@ -398,32 +672,12 @@ svg .noeud[data-fantome="oui"] .noeud__forme { stroke-dasharray: 3 2.5; }
 .alt-texte ul { list-style: none; margin: var(--e-2) 0 0; padding: 0; font-size: var(--t-mini); line-height: 1.6; }
 .alt-texte li { padding: var(--e-2) 0; border-top: 1px solid var(--c-trait-fin); }
 .alt-texte b { font-weight: var(--g-fort); }
-
-/* --- Planche de revue (hors produit) ----------------------------------------------- */
-.planche {
-  position: fixed; z-index: 120; left: 50%; bottom: var(--e-4); transform: translateX(-50%);
-  display: flex; align-items: center; gap: var(--e-4); flex-wrap: wrap;
-  background: var(--c-encre); color: #cfd8db;
-  padding: var(--e-2) var(--e-4); border-radius: 999px;
-  box-shadow: var(--o-flotte); font-size: var(--t-mini); max-width: calc(100vw - var(--e-6));
-}
-.planche fieldset { border: 0; margin: 0; padding: 0; display: flex; align-items: center; gap: var(--e-2); }
-.planche legend { float: left; margin-right: var(--e-2); font-family: var(--f-donnee); font-size: var(--t-micro); letter-spacing: .08em; text-transform: uppercase; color: #7d8f95; }
-.planche label { cursor: pointer; }
-.planche input { position: absolute; opacity: 0; pointer-events: none; }
-.planche label span { display: inline-block; padding: 4px var(--e-2); border-radius: 999px; border: 1px solid #33454f; color: #cfd8db; }
-.planche input:checked + span { background: #cfd8db; color: var(--c-encre); border-color: #cfd8db; font-weight: var(--g-fort); }
-.planche input:focus-visible + span { outline: 2px solid #8f86e0; outline-offset: 2px; }
-.planche__sep { width: 1px; height: 22px; background: #33454f; }
+.alt-rel { color: var(--c-encre-2); }
 
 @media (max-width: 1080px) {
-  .scene { grid-template-columns: 186px minmax(0, 1fr); }
-  .detail-col {
-    position: fixed; z-index: 55; inset: var(--l-barre) 0 0 auto; width: 318px;
-    border-left: 1px solid var(--c-trait-fort); box-shadow: var(--o-flotte);
-    display: none;
-  }
-  .app[data-detail="ouvert"] .detail-col { display: block; }
+  .scene { grid-template-columns: 200px minmax(0, 1fr); }
+  .detail-col { width: 300px; }
+  .legende-pied { display: none; }
 }
 @media (max-width: 760px) {
   /* Mode dégradé : la liste des nœuds prime sur un graphe illisible. */
@@ -433,7 +687,6 @@ svg .noeud[data-fantome="oui"] .noeud__forme { stroke-dasharray: 3 2.5; }
   .legende-col { border-right: 0; border-bottom: 1px solid var(--c-trait); }
   .alt-texte[open] summary { color: var(--c-accent); }
   .alt-texte { margin-top: var(--e-3); }
-  .planche { display: none; }
 }
 
 /* --- Barre supérieure sur petit écran --------------------------------------
@@ -455,8 +708,7 @@ svg .noeud[data-fantome="oui"] .noeud__forme { stroke-dasharray: 3 2.5; }
 /* --- Fil d'Ariane : ne pousse jamais la page ------------------------------
    Le titre d'une note peut être long, et les segments ne se coupent pas tout
    seuls : sans troncature, le fil élargit la barre, qui élargit la grille, qui
-   fait défiler la page. Le défaut ne se voyait qu'à 768 px — entre les deux
-   largeurs qu'on regarde d'ordinaire. */
+   fait défiler la page. */
 .fil { overflow: hidden; }
 .fil > * { min-width: 0; flex: 0 1 auto; }
 .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

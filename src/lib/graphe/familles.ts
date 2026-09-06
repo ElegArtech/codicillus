@@ -211,8 +211,41 @@ export interface FamilleSemantique {
 	readonly membres: readonly string[];
 }
 
+/**
+ * UNE NOTE PROCHE, ET CE QUI LA RAPPROCHE. Le lien d'affinité n'est JAMAIS dessiné
+ * dans la vue générale — une appartenance commune n'est pas un lien entre deux
+ * objets, et la tracer donnerait à croire que quelqu'un l'a déclarée. Il est révélé
+ * autour d'UN nœud choisi, à la demande, et il porte alors son motif : « d'après
+ * l'étiquette installation » dit quelque chose ; un pointillé anonyme, non.
+ */
+export interface VoisinDAffinite {
+	/** L'identifiant de la note proche. */
+	readonly note: string;
+	/** La force du rapprochement — la somme des traits partagés. */
+	readonly poids: number;
+	/** Le trait qui pèse le plus lourd entre ces deux notes-là. */
+	readonly trait: string;
+	readonly nature: NatureDeTrait;
+	/** Ce que la ligne dit en toutes lettres — voir `ORIGINE_DE_NATURE`. */
+	readonly origine: string;
+}
+
+/**
+ * Le nombre de voisins gardés par note. Le graphe d'affinité est DENSE — six fois
+ * les relations déclarées sur le corpus de démonstration, et sa densité croît au
+ * carré du corpus. Tout descendre au navigateur pour un panneau qui en montre
+ * quelques-uns coûterait plus que l'écran n'en tire.
+ */
+const VOISINS_GARDES = 12;
+
 export interface FamillesSemantiques {
 	readonly familles: readonly FamilleSemantique[];
+	/**
+	 * LES NOTES PROCHES DE CHACUNE, par ordre de force décroissante. La table était
+	 * CALCULÉE PUIS JETÉE : `calculerLesFamilles()` la bâtissait pour Louvain et pour
+	 * rattacher les solitaires, et seule la partition survivait à la fonction.
+	 */
+	readonly voisinsParNote: Readonly<Record<string, readonly VoisinDAffinite[]>>;
 	/** Les notes que rien ne rapproche d'aucune autre — comptées, jamais tues. */
 	readonly sansFamille: number;
 	/** Le nombre de notes lisibles examinées, familles et solitaires confondues. */
@@ -228,7 +261,7 @@ export interface FamillesSemantiques {
 
 /** Le résultat d'un périmètre sans une seule note lisible. */
 function aucuneFamille(calculeLe: string): FamillesSemantiques {
-	return { familles: [], sansFamille: 0, notesExaminees: 0, calculeLe };
+	return { familles: [], voisinsParNote: {}, sansFamille: 0, notesExaminees: 0, calculeLe };
 }
 
 /**
@@ -277,11 +310,40 @@ export function calculerLesFamilles(
 	 * est bâtie AVANT le graphe et gardée après lui : le rattachement des notes que
 	 * Louvain laisse seules s'y lit sans réinterroger graphology.
 	 */
-	const voisins = new Map<string, Map<string, number>>();
-	const rapprocher = (a: string, b: string, poids: number): void => {
-		const siens = voisins.get(a);
-		if (siens === undefined) voisins.set(a, new Map([[b, poids]]));
-		else siens.set(b, (siens.get(b) ?? 0) + poids);
+	interface Rapprochement {
+		poids: number;
+		/** Le trait le plus lourd de la paire — celui que le panneau nomme. */
+		trait: string;
+		nature: NatureDeTrait;
+		part: number;
+	}
+	const voisins = new Map<string, Map<string, Rapprochement>>();
+	const rapprocher = (
+		a: string,
+		b: string,
+		part: number,
+		libelle: string,
+		nature: NatureDeTrait
+	): void => {
+		let siens = voisins.get(a);
+		if (siens === undefined) {
+			siens = new Map();
+			voisins.set(a, siens);
+		}
+		const deja = siens.get(b);
+		if (deja === undefined) {
+			siens.set(b, { poids: part, trait: libelle, nature, part });
+			return;
+		}
+		deja.poids += part;
+		/* Le motif affiché est le trait le plus lourd, jamais le dernier vu : deux
+		   notes peuvent partager une étiquette ET un mot de titre, et c'est
+		   l'étiquette qui explique le rapprochement. */
+		if (part > deja.part) {
+			deja.part = part;
+			deja.trait = libelle;
+			deja.nature = nature;
+		}
 	};
 	for (const [, trait] of retenus) {
 		const part = poidsParPaire(trait.nature, trait.notes.length);
@@ -289,17 +351,17 @@ export function calculerLesFamilles(
 			for (let j = i + 1; j < trait.notes.length; j += 1) {
 				const a = trait.notes[i] as string;
 				const b = trait.notes[j] as string;
-				rapprocher(a, b, part);
-				rapprocher(b, a, part);
+				rapprocher(a, b, part, trait.libelle, trait.nature);
+				rapprocher(b, a, part, trait.libelle, trait.nature);
 			}
 		}
 	}
 
 	for (const [a, siens] of voisins) {
 		if (!graphe.hasNode(a)) graphe.addNode(a);
-		for (const [b, poids] of siens) {
+		for (const [b, rapprochement] of siens) {
 			if (!graphe.hasNode(b)) graphe.addNode(b);
-			if (!graphe.hasEdge(a, b)) graphe.addEdge(a, b, { poids });
+			if (!graphe.hasEdge(a, b)) graphe.addEdge(a, b, { poids: rapprochement.poids });
 		}
 	}
 
@@ -354,7 +416,7 @@ export function calculerLesFamilles(
 		let meilleurPoids = 0;
 		for (const groupe of groupes) {
 			let poids = 0;
-			for (const membre of groupe) poids += siens.get(membre) ?? 0;
+			for (const membre of groupe) poids += siens.get(membre)?.poids ?? 0;
 			if (poids > meilleurPoids) {
 				meilleure = groupe;
 				meilleurPoids = poids;
@@ -399,8 +461,28 @@ export function calculerLesFamilles(
 		};
 	});
 
+	/* LES NOTES PROCHES DE CHACUNE, gardées cette fois. L'ordre est la force
+	   décroissante, puis le rang dans le périmètre : deux voisins de même poids se
+	   suivent toujours dans le même ordre, sans quoi le panneau se réordonnerait
+	   d'une consultation à l'autre sans que rien n'ait changé. */
+	const voisinsParNote: Record<string, readonly VoisinDAffinite[]> = {};
+	for (const [note, siens] of voisins) {
+		const classes = [...siens.entries()]
+			.sort((a, b) => b[1].poids - a[1].poids || parRang(a[0], b[0]))
+			.slice(0, VOISINS_GARDES)
+			.map(([autre, r]) => ({
+				note: autre,
+				poids: r.poids,
+				trait: r.trait,
+				nature: r.nature,
+				origine: ORIGINE_DE_NATURE[r.nature]
+			}));
+		if (classes.length > 0) voisinsParNote[note] = classes;
+	}
+
 	return {
 		familles,
+		voisinsParNote,
 		sansFamille: notesLisibles.length - regroupees.size,
 		notesExaminees: notesLisibles.length,
 		calculeLe

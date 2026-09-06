@@ -14,9 +14,10 @@
  *      aussi bien si l'argument était ignoré — et dans son état VIDE, qui ne
  *      rend aucun nœud.
  *   2. L'ÉTAT DE ZONE DANS SES DEUX POLARITÉS, sur des cas SYNTHÉTIQUES,
- *      indépendants de l'état du dépôt (`P-26`). Le cas qui compte est le plus
- *      contre-intuitif : des notes sans aucune relation, qui est un périmètre
- *      VIDE au sens de la cartographie.
+ *      indépendants de l'état du dépôt (`P-26`). Le cas qui compte est celui de
+ *      notes sans aucune relation : il ne se décide plus pareil selon le sort
+ *      réservé aux isolées — la vue complète les garde et reste peuplée, la vue
+ *      par type maître les retire et devient vide.
  *   3. LE PÉRIMÈTRE RECOPIÉ DE LA VUE. Le chargeur doit décider l'état de zone
  *      sur le MÊME sous-graphe que la vue dessine, et il recopie donc une
  *      constante qui vit dans `src/vues/`. La recopie est gardée par une
@@ -61,14 +62,14 @@ describe('sousGraphe — les arêtes injectées', () => {
 	const B = 'n-tester-pra';
 
 	it('ne relie pas ces deux notes quand aucune arête ne les touche', () => {
-		const duJeu = sousGraphe(CORPUS, { type: 'global' }, RELATIONS);
+		const duJeu = sousGraphe(CORPUS, { type: 'global' }, RELATIONS, 'retirees');
 		expect(duJeu.index.has(A)).toBe(false);
 		expect(duJeu.index.has(B)).toBe(false);
 	});
 
 	it('emploie les arêtes reçues, et elles seules', () => {
 		const arete: Relation = { de: A, vers: B, type: 'documente' };
-		const graphe = sousGraphe(CORPUS, { type: 'global' }, [arete]);
+		const graphe = sousGraphe(CORPUS, { type: 'global' }, [arete], 'retirees');
 
 		expect(graphe.aretes).toEqual([arete]);
 		expect(graphe.noeuds.map((n) => n.id).sort()).toEqual([A, B].sort());
@@ -81,7 +82,7 @@ describe('sousGraphe — les arêtes injectées', () => {
 		   démonstration. Une instance neuve, dont la table des relations est vide,
 		   recevait donc les vingt-deux arêtes du jeu. Le paramètre est exigé, et
 		   son état vide se rend vide. */
-		const vide = sousGraphe(CORPUS, { type: 'global' }, []);
+		const vide = sousGraphe(CORPUS, { type: 'global' }, [], 'retirees');
 		expect(vide.aretes).toEqual([]);
 		expect(vide.noeuds).toEqual([]);
 	});
@@ -94,8 +95,8 @@ describe('sousGraphe — les arêtes injectées', () => {
 		];
 		const ordreB: Relation[] = [...ordreA].reverse();
 
-		expect(sousGraphe(notes, { type: 'global' }, ordreA).aretes).toEqual(ordreA);
-		expect(sousGraphe(notes, { type: 'global' }, ordreB).aretes).toEqual(ordreB);
+		expect(sousGraphe(notes, { type: 'global' }, ordreA, 'retirees').aretes).toEqual(ordreA);
+		expect(sousGraphe(notes, { type: 'global' }, ordreB, 'retirees').aretes).toEqual(ordreB);
 	});
 
 	it("décide aussi de l'ordre des nœuds FANTÔMES, et de rien d'autre", () => {
@@ -111,8 +112,8 @@ describe('sousGraphe — les arêtes injectées', () => {
 		];
 		const ordreB: Relation[] = [...ordreA].reverse();
 
-		const a = sousGraphe(notes, dedansSeul, ordreA).noeuds;
-		const b = sousGraphe(notes, dedansSeul, ordreB).noeuds;
+		const a = sousGraphe(notes, dedansSeul, ordreA, 'retirees').noeuds;
+		const b = sousGraphe(notes, dedansSeul, ordreB, 'retirees').noeuds;
 		expect(a.filter((n) => n.fantome).length).toBe(2);
 		expect(a.map((n) => n.id)).not.toEqual(b.map((n) => n.id));
 	});
@@ -121,32 +122,41 @@ describe('sousGraphe — les arêtes injectées', () => {
 /* ═══════════════════════════════════════════ L'état de zone ════════════ */
 
 describe('etatDeCartographie', () => {
-	it('rend « vide » quand le périmètre ne porte aucune relation', () => {
-		const notes = [note('n-restaurer-maria'), note('n-tester-pra')];
-		expect(etatDeCartographie(grapheReel(notes, [], { type: 'global' }))).toBe('vide');
-	});
-
 	it('rend « vide » sur un périmètre sans aucune note', () => {
-		expect(etatDeCartographie(grapheReel([], [], { type: 'global' }))).toBe('vide');
+		expect(etatDeCartographie(grapheReel([], [], { type: 'global' }, 'gardees'))).toBe('vide');
+		expect(etatDeCartographie(grapheReel([], [], { type: 'global' }, 'retirees'))).toBe('vide');
 	});
 
 	it('rend « nominal » dès qu’une relation touche le périmètre', () => {
 		const notes = [note('n-srv-app-01'), note('n-facturation')];
 		const aretes: Relation[] = [{ de: 'n-srv-app-01', vers: 'n-facturation', type: 'heberge' }];
-		expect(etatDeCartographie(grapheReel(notes, aretes, { type: 'global' }))).toBe('nominal');
+		expect(etatDeCartographie(grapheReel(notes, aretes, { type: 'global' }, 'gardees'))).toBe(
+			'nominal'
+		);
 	});
 
-	it('se décide sur les arêtes, pas sur les notes du périmètre', () => {
-		/* Trente-deux notes, zéro relation : la carte est vide, la liste ne l'est
-		   pas. C'est ce que dit le voile du gel — « elle se nourrit des relations
-		   déclarées sur les notes ». */
-		expect(etatDeCartographie(grapheReel(CORPUS, [], { type: 'global' }))).toBe('vide');
+	it('se décide sur les NŒUDS, donc sur le sort réservé aux isolées', () => {
+		/* LE CHANGEMENT DE DOCTRINE, MESURÉ AUX DEUX BOUTS. Trente-deux notes,
+		   zéro relation :
+
+		   • la vue complète les GARDE — le canevas porte trente-deux nœuds placés
+		     par leurs familles, et le déclarer vide poserait un voile par-dessus un
+		     dessin peuplé. Ce qui manque est une relation DÉCLARÉE, et c'est un
+		     bandeau qui le dit, pas un voile ;
+		   • la vue par type maître les RETIRE — elle dessine des dépendances, et
+		     sans arête il n'y a rien à dessiner. Elle reste « vide », comme avant. */
+		expect(etatDeCartographie(grapheReel(CORPUS, [], { type: 'global' }, 'gardees'))).toBe(
+			'nominal'
+		);
+		expect(etatDeCartographie(grapheReel(CORPUS, [], { type: 'global' }, 'retirees'))).toBe('vide');
 	});
 
 	it('ne rend jamais « dense » : le seuil de RG-M09-04 n’existe pas', () => {
 		/* Le corpus entier et ses vingt-deux relations restent « nominal ». Le
 		   jour où le seuil sera arbitré, ce test devra être rouvert. */
-		expect(etatDeCartographie(grapheReel(CORPUS, RELATIONS, { type: 'global' }))).toBe('nominal');
+		expect(etatDeCartographie(grapheReel(CORPUS, RELATIONS, { type: 'global' }, 'gardees'))).toBe(
+			'nominal'
+		);
 	});
 });
 
@@ -184,9 +194,13 @@ describe('les périmètres d’affichage recopiés des vues', () => {
 		   L'ancien périmètre y rend une carte vide ; le nouveau la rend entière. */
 		const ailleurs = CORPUS.map((n) => ({ ...n, univers: `Socle ${n.univers}` }));
 
-		expect(etatDeCartographie(grapheReel(ailleurs, RELATIONS, PERIMETRE_DE_V19))).toBe('nominal');
+		expect(etatDeCartographie(grapheReel(ailleurs, RELATIONS, PERIMETRE_DE_V19, 'gardees'))).toBe(
+			'nominal'
+		);
 		expect(
-			etatDeCartographie(grapheReel(ailleurs, RELATIONS, { type: 'univers', nom: 'Production' }))
+			etatDeCartographie(
+				grapheReel(ailleurs, RELATIONS, { type: 'univers', nom: 'Production' }, 'gardees')
+			)
 		).toBe('vide');
 	});
 
@@ -195,10 +209,12 @@ describe('les périmètres d’affichage recopiés des vues', () => {
 		   Production, si bien que l'ancien périmètre et le nouveau rendent le MÊME
 		   sous-graphe — mêmes arêtes, mêmes nœuds, aucun fantôme. Les six états
 		   déclarés de V-19 ne bougent donc pas d'un pixel, et le périmètre reste
-		   discriminant : un autre univers rend zéro arête. */
-		const gel = grapheReel(CORPUS, RELATIONS, { type: 'univers', nom: 'Production' });
-		const ouvert = grapheReel(CORPUS, RELATIONS, PERIMETRE_DE_V19);
-		const projets = grapheReel(CORPUS, RELATIONS, { type: 'univers', nom: 'Projets' });
+		   discriminant : un autre univers rend zéro arête.
+		   L'ÉLAGAGE EST CONSTANT ENTRE LES TROIS : la mesure porte sur le périmètre,
+		   et garder les isolées d'un côté ferait comparer deux découpages différents. */
+		const gel = grapheReel(CORPUS, RELATIONS, { type: 'univers', nom: 'Production' }, 'retirees');
+		const ouvert = grapheReel(CORPUS, RELATIONS, PERIMETRE_DE_V19, 'retirees');
+		const projets = grapheReel(CORPUS, RELATIONS, { type: 'univers', nom: 'Projets' }, 'retirees');
 
 		expect(gel.aretes.length).toBe(22);
 		expect(ouvert.aretes.length).toBe(22);
@@ -224,7 +240,7 @@ describe('l’origine d’une relation', () => {
 			type: 'heberge',
 			origine: 'deduite'
 		};
-		const graphe = grapheReel([note(lue.de), note(lue.vers)], [lue], { type: 'global' });
+		const graphe = grapheReel([note(lue.de), note(lue.vers)], [lue], { type: 'global' }, 'gardees');
 		expect(graphe.aretes[0]).toBe(lue);
 		expect((graphe.aretes[0] as RelationLisible).origine).toBe('deduite');
 	});
@@ -235,7 +251,7 @@ describe('l’origine d’une relation', () => {
 			{ de: 'n-srv-app-01', vers: 'n-referentiel', type: 'heberge', origine: 'deduite' }
 		];
 		const notes = [note('n-srv-app-01'), note('n-facturation'), note('n-referentiel')];
-		const graphe = grapheReel(notes, lues, { type: 'global' });
+		const graphe = grapheReel(notes, lues, { type: 'global' }, 'gardees');
 		expect(graphe.aretes.map((r) => (r as RelationLisible).origine)).toEqual([
 			'ambigue',
 			'deduite'

@@ -51,6 +51,37 @@ import {
 import { TYPES_DE_FICHE as TYPES_DE_FICHE_PEUPLES } from '../../seeds/demonstration';
 import type { CompteAffiche } from '../lib/coquille/identite';
 import { calculerLesFamilles } from '../lib/graphe/familles';
+import { centralites, sousGraphe } from '../lib/graphe/cartographie';
+import type { EtatDeVivacite } from '../lib/fraicheur';
+import type { Note } from '../../seeds/corpus';
+
+/**
+ * CE QUE LE CAS SERT POUR LA VIVACITÉ. La route la lit en base — les colonnes du
+ * cycle, par registre —, ce qu'un unitaire sans conteneur ne peut pas faire. Le cas
+ * sert donc SA propre table, dérivée du niveau à trois positions que le corpus de
+ * vue porte : c'est le cas qui choisit son entrée, jamais la vue qui la fabrique.
+ */
+const ETAT_SERVI: Readonly<Record<string, EtatDeVivacite>> = {
+	frais: 'ajour',
+	vieil: 'averifier',
+	obs: 'obsolete'
+};
+
+function vivaciteServie(notes: readonly Note[]): Record<string, EtatDeVivacite> {
+	const table: Record<string, EtatDeVivacite> = {};
+	for (const n of notes) table[n.id] = ETAT_SERVI[n.fraicheur] ?? 'ajour';
+	return table;
+}
+
+/** La centralité, calculée comme le chargeur la calcule : sur le graphe du périmètre. */
+function centraliteServie(
+	notes: readonly Note[],
+	relations: readonly import('../../seeds/corpus').Relation[]
+): Record<string, number> {
+	return Object.fromEntries(
+		centralites(sousGraphe(notes, { type: 'global' }, relations, 'gardees'))
+	);
+}
 
 /* ── Le harnais ───────────────────────────────────────────────────────────
    Un seul serveur pour tout le fichier : le monter coûte quelques secondes,
@@ -310,7 +341,13 @@ describe('V-19 — cartographie', () => {
 		   sont CALCULÉES sur le corpus de la vue, jamais écrites à la main : c'est
 		   ce que le chargeur fait, et un cas qui les inventerait n'éprouverait
 		   qu'une forme. L'instant est fixe pour que la date rendue le soit. */
-		familles: calculerLesFamilles(notes, INSTANT_DU_CALCUL)
+		familles: calculerLesFamilles(notes, INSTANT_DU_CALCUL),
+		/* LA CENTRALITÉ ET LA VIVACITÉ SONT EXIGÉES ELLES AUSSI : la première
+		   commande la TAILLE des nœuds, la seconde leur COULEUR. Optionnelles,
+		   leur absence rendrait une carte grise et de taille uniforme sans que
+		   rien ne le dise. */
+		centralite: centraliteServie(notes, RELATIONS),
+		vivaciteParNote: vivaciteServie(notes)
 	} as const;
 
 	it('rend ce qui lui est servi, et le sélecteur ouvre sur tout le corpus', async () => {
@@ -357,10 +394,64 @@ describe('V-19 — cartographie', () => {
 		expect(compter(body, /data-technique="non"/g)).toBe(1);
 	});
 
-	it('sans relation servie, la carte est vide — jamais celle du jeu', async () => {
+	it('sans relation servie, aucune arête — mais les notes restent dessinées', async () => {
+		/* LE CAS A CHANGÉ AVEC LA DOCTRINE, ET LE DÉFAUT QU'IL GARDE EST LE MÊME.
+		   Ce qu'il éprouvait : `relations` avait pour défaut `RELATIONS` du jeu de
+		   démonstration, si bien qu'une route qui l'oubliait dessinait le graphe du
+		   jeu. C'est toujours ce qu'il éprouve — zéro arête servie, zéro arête rendue.
+
+		   CE QU'IL N'ÉPROUVE PLUS : l'absence des TITRES. Il vérifiait qu'aucun titre
+		   du jeu n'atteignait le balisage, ce qui n'était vrai que parce que la vue
+		   RETIRAIT les nœuds sans arête. Elle les garde désormais — les notes servies
+		   sont dessinées, placées par leurs familles —, et exiger leur absence
+		   reviendrait à exiger le défaut qu'on vient de corriger. La fuite du jeu se
+		   contrôle donc là où elle peut encore se produire : les ARÊTES. */
 		const body = await v19({ ...SOCLE, relations: [] });
 		expect(compter(body, /class="arete"/g)).toBe(0);
-		expect(body).not.toContain('Restaurer une sauvegarde PostgreSQL');
+		/* Les nœuds sont ceux du corpus SERVI, tous : c'est la mesure de
+		   structuration que l'écran doit rendre — « ces notes n'ont aucune
+		   relation déclarée » — et non un canevas vide. */
+		expect(compter(body, /class="noeud /g)).toBe(notes.length);
+		expect(body).toContain("Aucune relation n'est déclarée dans ce corpus");
+	});
+
+	it('les notes isolées sont dessinées, et marquées comme telles', async () => {
+		/* LE DÉFAUT DE FOND DE CET ÉCRAN, ÉPROUVÉ SUR SA CAUSE. Seize des
+		   trente-deux notes du corpus de démonstration ne portent aucune relation :
+		   elles étaient RETIRÉES du graphe, si bien que la question « qu'est-ce qui
+		   n'est relié à rien ? » — celle pour laquelle on ouvre une cartographie —
+		   était la seule à laquelle elle ne pouvait pas répondre. */
+		const body = await v19({ ...SOCLE });
+		const relies = new Set(RELATIONS.flatMap((r) => [r.de, r.vers]));
+		const isolees = notes.filter((n) => !relies.has(n.id)).length;
+		expect(isolees).toBeGreaterThan(0);
+		expect(compter(body, /data-isolee="oui"/g)).toBe(isolees);
+		expect(compter(body, /class="noeud /g)).toBe(notes.length);
+	});
+
+	it('la couleur porte la vivacité, et la forme porte le type', async () => {
+		/* LA GRAMMAIRE FIGÉE, ÉPROUVÉE SUR LE BALISAGE. La teinte était un attribut
+		   de présentation écrit dans la vue, et elle disait le TYPE — que la forme et
+		   le code de trois lettres disaient déjà. Elle vient désormais de la classe
+		   d'état, et aucun `fill=` de type ne subsiste sur un nœud. */
+		const body = await v19({ ...SOCLE });
+		expect(body).toContain('glyphe--ajour');
+		expect(compter(body, /data-vivacite="/g)).toBeGreaterThan(0);
+		/* Les sept teintes de la table des types ne sont plus posées sur un nœud. */
+		expect(body).not.toContain('fill="#1b6b7a"');
+		expect(body).not.toContain('fill="#453ba0"');
+	});
+
+	it('aucun trait d’affinité dans la vue complète', async () => {
+		/* LA DÉCISION, GARDÉE PAR UN CONTRÔLE. Une appartenance commune n'est pas un
+		   lien entre deux objets : sur ce corpus, la dessiner donnerait cent
+		   trente-quatre traits pour vingt-deux relations déclarées, et chacun, pris
+		   seul, affirmerait un rapport que personne n'a déclaré. Elle place les nœuds
+		   et les entoure ; le calque des traits reste VIDE tant qu'aucun nœud n'est
+		   choisi. */
+		const body = await v19({ ...SOCLE });
+		expect(compter(body, /class="affinite"/g)).toBe(0);
+		expect(body).toContain('class="famille__contour"');
 	});
 });
 
