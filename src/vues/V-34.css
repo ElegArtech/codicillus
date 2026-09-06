@@ -1,3 +1,19 @@
+/* ==========================================================================
+   CETTE FEUILLE NE VAUT QUE SUR SON ÉCRAN — /console/analytique
+
+   Les quarante-deux feuilles de vue partagent un espace de noms global : 575
+   couples sur 861 se contredisent sur au moins un sélecteur. Or le routeur
+   ajoute la feuille de la vue VISÉE dès le clic, et n'ouvre la vue qu'après
+   sa donnée : sans cette portée, elle repeint pendant ce temps-là l'écran
+   qu'on regarde encore — mesuré à 26 px de titre et 50 px de bandeau.
+
+   @scope NE CHANGE AUCUNE SPÉCIFICITÉ : chaque règle garde exactement le
+   poids qu'elle avait, et l'écran rendu ici est celui d'un chargement
+   complet de cette adresse. L'attribut data-route est posé sur <html> par
+   `src/hooks.server.ts` au rendu, et suivi par `+layout.svelte` à la bascule.
+   ========================================================================== */
+@scope (html[data-route="/console/analytique"]) {
+
 
 /* ==========================================================================
    V-09 — PALETTE DE RECHERCHE RAPIDE
@@ -635,3 +651,6 @@
 .tableau-destructions tbody tr:first-child td { border-top: 0; }
 .tableau-destructions tbody tr:hover { background: var(--c-papier-2); }
 .destruction__detail { color: var(--c-encre-3); }
+
+
+}

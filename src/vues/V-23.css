@@ -1,3 +1,19 @@
+/* ==========================================================================
+   CETTE FEUILLE NE VAUT QUE SUR SON ÉCRAN — /univers/[univers]/[domaine]/signets/[identifiant]/modifier, /univers/[univers]/[domaine]/signets/nouveau
+
+   Les quarante-deux feuilles de vue partagent un espace de noms global : 575
+   couples sur 861 se contredisent sur au moins un sélecteur. Or le routeur
+   ajoute la feuille de la vue VISÉE dès le clic, et n'ouvre la vue qu'après
+   sa donnée : sans cette portée, elle repeint pendant ce temps-là l'écran
+   qu'on regarde encore — mesuré à 26 px de titre et 50 px de bandeau.
+
+   @scope NE CHANGE AUCUNE SPÉCIFICITÉ : chaque règle garde exactement le
+   poids qu'elle avait, et l'écran rendu ici est celui d'un chargement
+   complet de cette adresse. L'attribut data-route est posé sur <html> par
+   `src/hooks.server.ts` au rendu, et suivi par `+layout.svelte` à la bascule.
+   ========================================================================== */
+@scope (html:is([data-route="/univers/[univers]/[domaine]/signets/[identifiant]/modifier"], [data-route="/univers/[univers]/[domaine]/signets/nouveau"])) {
+
 
 /* ==========================================================================
    V-09 — PALETTE DE RECHERCHE RAPIDE
@@ -482,3 +498,6 @@
 .fil { overflow: hidden; }
 .fil > * { min-width: 0; flex: 0 1 auto; }
 .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+
+}

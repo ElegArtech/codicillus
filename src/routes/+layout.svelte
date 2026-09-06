@@ -19,6 +19,7 @@
 	   les voit toutes. */
 	import '../diagramme.css';
 	import { onMount, setContext } from 'svelte';
+	import { page } from '$app/state';
 	import PaletteDeRecherche from '$lib/coquille/PaletteDeRecherche.svelte';
 	import { cablerLaCoquille } from '$lib/cablage/coquille';
 	import { cablerLesTiroirs } from '$lib/coquille/tiroirs';
@@ -198,6 +199,26 @@
 			ouvrirLaPalette: data.session ? () => palette?.ouvrir() : undefined
 		})
 	);
+
+	/**
+	 * L'ÉCRAN COURANT, NOMMÉ SUR `<html>` — la suite de ce que pose
+	 * `src/hooks.server.ts` au rendu.
+	 *
+	 * Chaque feuille de vue est portée par `@scope (html[data-route="…"])` : sans
+	 * cet attribut, aucune ne s'applique. Le routeur charge la feuille de la vue
+	 * VISÉE dès le clic et n'ouvre la vue qu'une fois sa donnée arrivée ; tant que
+	 * l'attribut n'a pas basculé, cette feuille ne touche pas l'écran qu'on regarde
+	 * encore. Il bascule ICI, dans le même passage que le remplacement du contenu :
+	 * le style et le balisage de la nouvelle vue arrivent donc sur la même image.
+	 *
+	 * `$effect` et non `onMount` : la valeur change à chaque navigation, pas une
+	 * fois. La route est nulle sur la page d'erreur — l'attribut vaut alors la
+	 * chaîne vide, et aucune feuille de vue ne s'applique, ce qui est exact : la
+	 * page d'erreur porte la sienne par la tête du document.
+	 */
+	$effect(() => {
+		document.documentElement.dataset.route = page.route.id ?? '';
+	});
 </script>
 
 {@render children()}
