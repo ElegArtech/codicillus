@@ -44,6 +44,7 @@
 	import Pictogramme from '$lib/console/Pictogramme.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { filDeConsole, type TraitDePictogramme } from '$lib/console/sections';
+	import { GLYPHES_DUNIVERS, GLYPHE_PAR_DEFAUT, glypheDUnivers } from '$lib/coquille/glyphes';
 	import type { RefusDeSaisie, SaisieDUnivers } from '$lib/console/structure';
 
 	interface Proprietes {
@@ -111,42 +112,13 @@
 			: 'refus'
 	);
 
-	/**
-	 * LES SIX GLYPHES D'UNIVERS, décomposés en primitives typées plutôt que gardés
-	 * en chaîne de balisage — le gel les injecte par `innerHTML` (`V-27:3242`), ce
-	 * qui demanderait ici un `{@html}` que rien n'oblige à employer.
+	/*
+	 * LES GLYPHES D'UNIVERS VIENNENT DE `$lib/coquille/glyphes`, ET DE LÀ SEULEMENT.
+	 * Cette vue en tenait une copie ; les deux tables avaient divergé sur
+	 * `engrenage`, et le rail rendait alors une icône que ce sélecteur ne proposait
+	 * pas — un univers portait un dessin introuvable dans le formulaire qui l'avait
+	 * posé.
 	 */
-	const GLYPHES: Record<string, readonly TraitDePictogramme[]> = {
-		pile: [
-			{ forme: 'rect', x: '3', y: '4', largeur: '18', hauteur: '5', rx: '1.5' },
-			{ forme: 'rect', x: '3', y: '12', largeur: '18', hauteur: '5', rx: '1.5' },
-			{ forme: 'path', d: 'M6.5 6.5h.01M6.5 14.5h.01M3 19.5h18' }
-		],
-		jalon: [{ forme: 'path', d: 'M6 21V3M6 4h11l-2.2 3.5L17 11H6' }],
-		corbeille: [
-			{
-				forme: 'path',
-				d: 'M4 7h16M9.5 7V4.5h5V7M6 7l1 12.5a1.5 1.5 0 0 0 1.5 1.4h7a1.5 1.5 0 0 0 1.5-1.4L18 7'
-			}
-		],
-		boussole: [
-			{ forme: 'circle', cx: '12', cy: '12', r: '9' },
-			{ forme: 'path', d: 'M15.5 8.5l-2 5-5 2 2-5z' }
-		],
-		livre: [
-			{
-				forme: 'path',
-				d: 'M4 4.5A1.5 1.5 0 0 1 5.5 3H11v18H5.5A1.5 1.5 0 0 1 4 19.5zM20 4.5A1.5 1.5 0 0 0 18.5 3H13v18h5.5a1.5 1.5 0 0 0 1.5-1.5z'
-			}
-		],
-		engrenage: [
-			{ forme: 'circle', cx: '12', cy: '12', r: '3' },
-			{
-				forme: 'path',
-				d: 'M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3'
-			}
-		]
-	};
 
 	/**
 	 * Palette d'univers : teintes profondes, tenues à l'écart du vert, de l'ambre et
@@ -213,7 +185,7 @@
 
 	let fNom = $state('');
 	let fDescription = $state('');
-	let fGlyphe = $state('boussole');
+	let fGlyphe = $state(GLYPHE_PAR_DEFAUT);
 	let fCouleur = $state(COULEURS[0] as string);
 	let fOrdre = $state(1);
 	/** Le message de `#erreur-nom`, quand la validation de l'écran refuse. */
@@ -246,7 +218,9 @@
 	);
 	/* Les quatre valeurs retenues : celles du panneau OUVERT quand il l'est, et
 	   celles que le vecteur décrit sinon. */
-	const glypheChoisi = $derived(ouverture !== null ? fGlyphe : edite ? edite.glyphe : 'boussole');
+	const glypheChoisi = $derived(
+		ouverture !== null ? fGlyphe : edite ? edite.glyphe : GLYPHE_PAR_DEFAUT
+	);
 	const couleurChoisie = $derived(
 		ouverture !== null ? fCouleur : edite ? edite.couleur : (COULEURS[0] as string)
 	);
@@ -273,7 +247,7 @@
 		cible = u === null ? null : u.nom;
 		fNom = u === null ? '' : u.nom;
 		fDescription = u === null ? '' : u.description;
-		fGlyphe = u === null ? 'boussole' : u.glyphe;
+		fGlyphe = u === null ? GLYPHE_PAR_DEFAUT : u.glyphe;
 		fCouleur = u === null ? (COULEURS[0] as string) : u.couleur;
 		fOrdre = u === null ? liste.length + 1 : u.ordre;
 		erreurLocale = null;
@@ -437,7 +411,7 @@
 
 <!-- Un glyphe d'univers, à la taille et à l'épaisseur que le gel lui donne. -->
 {#snippet glyphe(cle: string, taille: string, epaisseur: string)}<Pictogramme
-		traits={(GLYPHES[cle] ?? GLYPHES['boussole']) as readonly TraitDePictogramme[]}
+		traits={glypheDUnivers(cle) as readonly TraitDePictogramme[]}
 		{taille}
 		boite="0 0 24 24"
 		{epaisseur}
@@ -627,7 +601,7 @@
 					<span class="champ__label">Icône</span>
 					<!-- prettier-ignore -->
 					<div class="icones" id="f-icones" role="group" aria-label="Icône de l'univers"
-						>{#if ouvert}{#each Object.keys(GLYPHES) as cle (cle)}<button type="button" aria-pressed={cle === glypheChoisi} aria-label="Icône {cle}" onclick={() => (fGlyphe = cle)}>{@render glyphe(cle, '19', '1.6')}</button>{/each}{/if}</div
+						>{#if ouvert}{#each Object.keys(GLYPHES_DUNIVERS) as cle (cle)}<button type="button" aria-pressed={cle === glypheChoisi} aria-label="Icône {cle}" onclick={() => (fGlyphe = cle)}>{@render glyphe(cle, '19', '1.6')}</button>{/each}{/if}</div
 					>
 				</div>
 
