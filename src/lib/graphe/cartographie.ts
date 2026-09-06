@@ -889,7 +889,7 @@ export function ancragesDeFamille(noms: readonly string[]): Map<string, Place> {
 	   nœuds : au-delà, les contours des îlots sortaient du cadre à droite et en bas —
 	   mesuré au navigateur. */
 	const serrement = Math.min(1, Math.max(0, (noms.length - 4) / 10));
-	const part = 0.56 + 0.28 * serrement;
+	const part = 0.56 + 0.3 * serrement;
 	const rayonX = (LARGEUR / 2 - MARGE) * part;
 	const rayonY = (HAUTEUR / 2 - MARGE) * part;
 	/* Un quart de tour de décalage : la première famille — la plus nombreuse —
@@ -1098,18 +1098,35 @@ export function disposer(g: Graphe, options: OptionsDeDisposition = {}): Disposi
 		}
 	}
 
-	/* Cadrage sur l'ensemble. */
-	let minX = Infinity;
-	let maxX = -Infinity;
-	let minY = Infinity;
-	let maxY = -Infinity;
-	for (const id of ids) {
-		const q = p.get(id) as Corps;
-		minX = Math.min(minX, q.x);
-		maxX = Math.max(maxX, q.x);
-		minY = Math.min(minY, q.y);
-		maxY = Math.max(maxY, q.y);
-	}
+	/* ── LE CADRAGE, SUR UNE ÉTENDUE ROBUSTE ──────────────────────────────────
+	   IL SE RÉGLAIT SUR LES EXTRÊMES, ET C'EST CE QUI FAISAIT LA BOULE. Sur les
+	   trois cents notes de l'instance de recette, une vingtaine de nœuds partent
+	   loin — ceux qu'une relation tire vers un îlot lointain, et ceux que rien ne
+	   retient. Le cadrage prenait leur boîte englobante, donc grossissait très peu,
+	   et les deux cent quatre-vingts autres se retrouvaient tassés au milieu en une
+	   masse illisible. Mesuré au navigateur sur l'instance déployée.
+
+	   L'ÉTENDUE EST DONC CELLE DU GROS DU NUAGE — du cinquième au quatre-vingt-quinzième
+	   centile. Les quelques nœuds qui sortent de ce cadre restent DESSINÉS, simplement
+	   plus près du bord : la marge leur laisse la place, et on ne perd aucun nœud. Un
+	   corpus de trente notes n'y voit pas de différence — il n'a pas d'extrêmes. */
+	const centile = (valeurs: number[], part: number): number => {
+		const triees = [...valeurs].sort((a, b) => a - b);
+		const rang = (triees.length - 1) * part;
+		const bas = Math.floor(rang);
+		const haut = Math.ceil(rang);
+		const a = triees[bas] ?? 0;
+		const b = triees[haut] ?? a;
+		return a + (b - a) * (rang - bas);
+	};
+
+	const xs = ids.map((id) => (p.get(id) as Corps).x);
+	const ys = ids.map((id) => (p.get(id) as Corps).y);
+	const minX = centile(xs, 0.05);
+	const maxX = centile(xs, 0.95);
+	const minY = centile(ys, 0.05);
+	const maxY = centile(ys, 0.95);
+
 	const ex = maxX - minX || 1;
 	const ey = maxY - minY || 1;
 	const k = Math.min((LARGEUR - MARGE * 2) / ex, (HAUTEUR - MARGE * 2) / ey, ZOOM_MAX_DE_CADRAGE);
