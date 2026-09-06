@@ -629,7 +629,7 @@ export function cablerLaCartographie(
 	   qu'il recouvre, on doit pouvoir le pousser de côté sans perdre ses réglages. */
 
 	const panneau = racine.querySelector('#commandes');
-	const bascule = racine.querySelector('#panneau-bascule');
+	const bascule = racine.querySelector('#carto-reglages-bascule');
 	attaches.ecouter(bascule, 'click', () => {
 		const ouvert = panneau?.getAttribute('data-replie') !== 'oui';
 		panneau?.setAttribute('data-replie', ouvert ? 'oui' : 'non');

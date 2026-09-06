@@ -214,7 +214,8 @@
 .controles__outils {
   display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; margin-left: auto;
 }
-.choix, .controles select {
+/* `.choix` aussi était pris — cinq vues. Voir le préfixe, plus haut. */
+.carto-choix, .controles select {
   font: inherit; font-size: var(--t-petit); padding: 5px var(--e-2);
   border: 1px solid var(--c-trait); border-radius: var(--r-2);
   background: var(--c-papier); color: var(--c-encre); max-width: 172px;
@@ -300,7 +301,7 @@
    est déplié ; repliée, elle la rend au dessin. Le repère du graphe suit, et le
    déplacement comme le zoom restent justes : c'est la même surface, plus étroite. */
 .zone-graphe { box-sizing: border-box; }
-.zone-graphe:has(.panneau:not([data-replie="oui"])) { padding-left: 218px; }
+.zone-graphe:has(.carto-reglages:not([data-replie="oui"])) { padding-left: 218px; }
 /* LE TIROIR DE DÉTAIL, LUI, NE RÉSERVE RIEN, ET C'EST UN ARBITRAGE. Lui réserver sa
    largeur rétrécissait le canevas À CHAQUE SÉLECTION : le repère se recalait, et
    toute la carte sautait au moment précis où l'on venait de viser un nœud. Une carte
@@ -322,6 +323,17 @@
 #graphe.tire { cursor: grabbing; }
 
 /* --- Le panneau d'affichage -----------------------------------------------------
+   IL S'APPELAIT `.panneau`, ET C'ÉTAIT UN NOM DU SOCLE. `socle.css:757` le déclare,
+   et dix vues s'en servent — dont V-10, pour ses trois cartes « Domaines », « À
+   surveiller » et « Activité récente ». Une feuille de vue reste chargée après la
+   navigation : passer par la cartographie puis rouvrir un univers posait donc ces
+   trois cartes en `position: absolute`, empilées par-dessus le rail, en haut à
+   gauche. Vu en vrai sur l'instance de recette.
+
+   TOUT CE QUI EST PROPRE À CET ÉCRAN PORTE DONC LE PRÉFIXE `carto-`. C'est la même
+   règle que pour `.noeud`, écrite plus bas : un nom partagé par deux vues est une
+   règle partagée par deux vues, et l'ordre de chargement décide laquelle gagne.
+
    IL EST POSÉ SUR LE CANEVAS QU'IL COMMANDE. En colonne réservée, il séparait le
    réglage de son effet par une bordure et deux cents pixels ; posé dessus, on voit
    la carte changer sous la case qu'on coche. Il se replie d'un bouton, et le
@@ -330,29 +342,29 @@
    LARGE DE CENT QUATRE-VINGT-DIX PIXELS : la ligne « ● Bientôt à vérifier 34 »
    tient, et c'est la plus longue. Au-delà, il mordrait sur le dessin sans rien
    gagner. */
-.panneau {
+.carto-reglages {
   position: absolute; z-index: 20; top: var(--e-4); left: var(--e-4);
   width: 202px; max-height: calc(100% - var(--e-4) * 2);
   display: flex; flex-direction: column;
   background: var(--c-papier); border: 1px solid var(--c-trait);
   border-radius: var(--r-3); box-shadow: var(--o-flotte);
 }
-.panneau__tete {
+.carto-reglages__tete {
   display: flex; align-items: center; gap: var(--e-2); flex: none;
   padding: var(--e-3) var(--e-3) var(--e-3) var(--e-4);
   border-bottom: 1px solid var(--c-trait-fin); color: var(--c-encre-2);
 }
-.panneau__nom { flex: 1; font-size: var(--t-petit); font-weight: var(--g-fort); color: var(--c-encre); }
-.panneau__bascule {
+.carto-reglages__nom { flex: 1; font-size: var(--t-petit); font-weight: var(--g-fort); color: var(--c-encre); }
+.carto-reglages__bascule {
   flex: none; width: 24px; height: 24px; display: grid; place-items: center;
   border: 0; background: none; cursor: pointer; border-radius: var(--r-1); color: var(--c-encre-3);
 }
-.panneau__bascule:hover { background: var(--c-fond-creux); color: var(--c-encre); }
-.panneau__bascule svg { transform: rotate(90deg); transition: transform var(--m-doux); }
-.panneau[data-replie="oui"] .panneau__bascule svg { transform: rotate(0deg); }
-.panneau[data-replie="oui"] .panneau__corps { display: none; }
-.panneau[data-replie="oui"] .panneau__tete { border-bottom: 0; }
-.panneau__corps { overflow-y: auto; min-height: 0; padding: var(--e-3) var(--e-3) var(--e-4); }
+.carto-reglages__bascule:hover { background: var(--c-fond-creux); color: var(--c-encre); }
+.carto-reglages__bascule svg { transform: rotate(90deg); transition: transform var(--m-doux); }
+.carto-reglages[data-replie="oui"] .carto-reglages__bascule svg { transform: rotate(0deg); }
+.carto-reglages[data-replie="oui"] .carto-reglages__corps { display: none; }
+.carto-reglages[data-replie="oui"] .carto-reglages__tete { border-bottom: 0; }
+.carto-reglages__corps { overflow-y: auto; min-height: 0; padding: var(--e-3) var(--e-3) var(--e-4); }
 
 /* Le `ⓘ` porte ce qui demandait un paragraphe. Il ne s'ouvre pas, il ne prend pas
    de place : l'info-bulle du navigateur suffit, et le lecteur d'écran la lit. */
@@ -758,14 +770,14 @@ svg .noeud[data-isolee="oui"] { opacity: 0.82; }
 .alt-texte b { font-weight: var(--g-fort); }
 .alt-rel { color: var(--c-encre-2); }
 
-.zone-graphe:has(.panneau:not([data-replie="oui"])) .avis-bandeau,
-.zone-graphe:has(.panneau:not([data-replie="oui"])) .voile { left: calc(218px + var(--e-4)); }
+.zone-graphe:has(.carto-reglages:not([data-replie="oui"])) .avis-bandeau,
+.zone-graphe:has(.carto-reglages:not([data-replie="oui"])) .voile { left: calc(218px + var(--e-4)); }
 
 @media (max-width: 1080px) {
   .detail-col { width: 300px; }
   /* Sous mille quatre-vingts pixels, réserver deux cent dix-huit pixels au panneau
      ne laisserait plus de quoi dessiner : il repasse par-dessus, et se replie. */
-  .zone-graphe:has(.panneau:not([data-replie="oui"])) { padding-left: 0; }
+  .zone-graphe:has(.carto-reglages:not([data-replie="oui"])) { padding-left: 0; }
   .scene:has(.detail-col:not([hidden])) .legende-pied { transform: translateX(-50%); }
   /* La légende passe sous le panneau plutôt que de le heurter. */
   .legende-pied { max-width: calc(100% - var(--e-4) * 2); flex-wrap: wrap; border-radius: var(--r-3); }
@@ -783,11 +795,11 @@ svg .noeud[data-isolee="oui"] { opacity: 0.82; }
   .scene { display: block; }
   .zone-graphe { overflow: visible; }
   #graphe, .outils-graphe, .voile { display: none; }
-  .panneau {
+  .carto-reglages {
     position: static; width: auto; max-height: none;
     border: 0; border-bottom: 1px solid var(--c-trait); border-radius: 0; box-shadow: none;
   }
-  .panneau__corps { overflow: visible; }
+  .carto-reglages__corps { overflow: visible; }
   .alt-texte[open] summary { color: var(--c-accent); }
   .alt-texte { margin-top: var(--e-3); }
 }
