@@ -350,16 +350,19 @@ describe('V-19 — cartographie', () => {
 		vivaciteParNote: vivaciteServie(notes)
 	} as const;
 
-	it('rend ce qui lui est servi, et le sélecteur ouvre sur tout le corpus', async () => {
+	it('rend ce qui lui est servi, et les deux sélecteurs ouvrent sur tout le corpus', async () => {
 		const body = await v19({ ...SOCLE });
-		expect(body).toContain('>Univers Production<');
-		expect(body).toContain('>Domaine Infrastructure<');
+		expect(body).toContain('>Univers : Production<');
+		expect(body).toContain('>Domaine : Infrastructure<');
 		expect(body).toContain('est hébergé par');
 		expect(compter(body, /class="arete"/g)).toBeGreaterThan(1);
 		/* LE DÉFAUT RÉPARÉ : le périmètre valait `global|` et le sélecteur n'en
 		   portait aucune option. Le contrôle s'ouvrait sans valeur au-dessus
-		   d'une carte qui montrait tout, et rien ne ramenait au corpus entier. */
-		expect(body).toContain('<option value="global|">Tous les domaines</option>');
+		   d'une carte qui montrait tout, et rien ne ramenait au corpus entier.
+		   LES DEUX SÉLECTEURS ONT REMPLACÉ L'UNIQUE, qui mêlait les univers et les
+		   domaines dans une même liste : chacun porte son option « tous ». */
+		expect(body).toContain('>Univers : tous<');
+		expect(body).toContain('>Domaine : tous<');
 	});
 
 	it('sans identité servie, aucun compte du jeu n’atteint le balisage', async () => {
@@ -373,12 +376,12 @@ describe('V-19 — cartographie', () => {
 		expect(body).toContain('>SN<');
 	});
 
-	it('le rangement servi décide seul du sélecteur de périmètre', async () => {
+	it('le rangement servi décide seul des sélecteurs de périmètre', async () => {
 		const body = await v19({ ...SOCLE, univers: UN_UNIVERS, domaines: UN_DOMAINE });
-		expect(body).toContain('>Univers Projets<');
-		expect(body).not.toContain('>Univers Production<');
-		expect(body).toContain('>Domaine Applications<');
-		expect(body).not.toContain('>Domaine Infrastructure<');
+		expect(body).toContain('>Univers : Projets<');
+		expect(body).not.toContain('>Univers : Production<');
+		expect(body).toContain('>Domaine : Applications<');
+		expect(body).not.toContain('>Domaine : Infrastructure<');
 	});
 
 	it('les relations servies décident seules — libellés et dépendances techniques', async () => {

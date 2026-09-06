@@ -17,7 +17,6 @@
 	 */
 	import Vue from '../../vues/V-19.svelte';
 	import '../../vues/V-19.css';
-	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { adresseDeNote } from '$lib/rangement/adresses';
@@ -26,7 +25,7 @@
 	import { pointsArticulation, sousGraphe, typeDe } from '$lib/graphe/cartographie';
 	import { cablerLaCartographie, type DetailDeNoeud } from './cablage';
 
-	import type { IdentifiantNote } from '../../../seeds/corpus';
+	import type { Domaine, IdentifiantNote } from '../../../seeds/corpus';
 
 	import type { PageData } from './$types';
 
@@ -53,6 +52,29 @@
 
 	const titreParNote = $derived(new Map(data.notes.map((n) => [n.id, n.titre] as const)));
 
+	/**
+	 * LA CENTRALITÉ LA PLUS HAUTE DU PÉRIMÈTRE — le dénominateur de ce que le panneau
+	 * montre.
+	 *
+	 * LA MESURE EST NORMALISÉE SUR LE NOMBRE DE PAIRES DU GRAPHE, et c'est juste :
+	 * c'est ce qui la rend comparable d'un périmètre à l'autre, et c'est elle que la
+	 * TAILLE d'un nœud porte. Mais elle est ILLISIBLE À L'ÉCRAN sur un corpus peu
+	 * relié : sur l'instance de recette, la note la plus centrale vaut 0,002, et le
+	 * panneau affichait « 0,00 » pour tout le monde — un chiffre qui ne distingue
+	 * personne n'est pas une mesure, c'est du bruit.
+	 *
+	 * LE PANNEAU MONTRE DONC LA PART DE LA PLUS HAUTE, et il le dit. Les deux nombres
+	 * ordonnent les nœuds de la même façon ; celui-ci se lit.
+	 */
+	const centraliteMaximale = $derived.by(() => {
+		let max = 0;
+		for (const noeud of graphe.noeuds) {
+			const v = data.centralite[noeud.id] ?? 0;
+			if (v > max) max = v;
+		}
+		return max;
+	});
+
 	const detailParNoeud = $derived.by<Record<string, DetailDeNoeud>>(() => {
 		const table: Record<string, DetailDeNoeud> = {};
 		for (const noeud of graphe.noeuds) {
@@ -77,7 +99,8 @@
 				etiquettes: n.etiquettes,
 				etat: etat === null ? 'Vivacité inconnue' : ETATS_DE_VIVACITE[etat].libelle,
 				classeDEtat: etat === null ? '' : ETATS_DE_VIVACITE[etat].classe,
-				centralite: data.centralite[n.id] ?? 0,
+				centralite:
+					centraliteMaximale === 0 ? 0 : (data.centralite[n.id] ?? 0) / centraliteMaximale,
 				declarees,
 				deduites,
 				entrantes,
@@ -85,6 +108,10 @@
 				rupture: ruptures.has(n.id),
 				famille: famille?.nom ?? null,
 				origineDeFamille: famille?.origine ?? null,
+				/* LE RANGEMENT EST UN FAIT DÉCLARÉ, et il ne se dessine PAS : il ferait
+				   un arbre de rayons par-dessus le graphe des relations. Il se LIT, ici,
+				   sur le nœud qu'on a choisi. */
+				rangement: n.univers + ' › ' + n.domaine,
 				/* LE TRANSTYPAGE NE COMBLE AUCUN TROU : les identifiants des voisins
 				   d'affinité sortent des mêmes notes lisibles que le graphe, et
 				   `familles.ts` les rend en `string` parce qu'il ne connaît pas le
@@ -105,9 +132,29 @@
 		return table;
 	});
 
-	onMount(() => {
+	/**
+	 * LE CÂBLAGE SE REFAIT QUAND LES DONNÉES CHANGENT, ET C'EST UN DÉFAUT RÉPARÉ.
+	 *
+	 * Il s'accrochait à `onMount`, donc UNE FOIS. Depuis que le périmètre navigue par
+	 * `goto` — une navigation de client, qui rejoue le chargeur sans remonter le
+	 * composant —, la table `detailParNoeud` du câblage restait celle du périmètre
+	 * PRÉCÉDENT : le panneau montrait une note absente du dessin, la recherche
+	 * proposait des nœuds qui n'y étaient plus, et la sélection gardait le graphe
+	 * entier estompé. Mesuré au navigateur en passant de « tous » à « Substack ».
+	 *
+	 * `$effect` rebranche à chaque changement de ses dépendances et débranche avant :
+	 * les écouteurs ne s'empilent pas.
+	 */
+	$effect(() => {
 		const debrancher = cablerLaCartographie(enveloppe, {
 			perimetreCourant: data.perimetreDemande,
+			/* LES DOMAINES VIENNENT DU GABARIT RACINE, comme la vue les reçoit : le
+			   second sélecteur ne propose que les domaines de l'univers choisi, et le
+			   câblage doit retrouver l'univers d'un domaine pour composer le périmètre. */
+			domaines: (page.data.domaines as readonly Domaine[]).map((d) => ({
+				nom: d.nom as string,
+				univers: d.univers as string
+			})),
 			adresseParType: resolve('/cartographie/par-type'),
 			adresseDesRelations:
 				data.premiereNote === null ? null : `${adresseDeNote(data.premiereNote)}/relations`,

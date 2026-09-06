@@ -37,7 +37,64 @@
 	 *
 	 * LES NOTES ISOLÉES SONT DESSINÉES. Elles étaient retirées, et c'était le
 	 * défaut de fond : la seule question à laquelle la carte ne pouvait pas
-	 * répondre était celle pour laquelle on l'ouvre.
+	 * répondre était celle pour laquelle on l'ouvre. Aucun trait ne les rattache à
+	 * quoi que ce soit — leur isolement EST l'information.
+	 *
+	 * RIEN NE SE DESSINE QUI N'AIT ÉTÉ DÉCLARÉ. L'écran portait un nœud central au
+	 * nom du périmètre, un moyeu par famille, et des rayons de l'un vers les autres
+	 * puis vers chaque note : sur l'instance de recette, soixante-dix-sept traits
+	 * inventés pour sept relations réelles, et une rosace qui affirmait que le
+	 * corpus rayonne depuis un point. Un périmètre est un CONTEXTE DE FILTRAGE ;
+	 * une famille est une APPARTENANCE. Ni l'un ni l'autre n'est un objet du graphe.
+	 *
+	 * ── CE QUI NE DOIT PAS REVENIR ────────────────────────────────────────────
+	 * Chacun de ces points a été rendu, vu au navigateur, et retiré. Les remettre
+	 * ne se discute pas au cas par cas : ils se tiennent, et c'est ensemble qu'ils
+	 * refaisaient une illustration là où il faut un explorateur.
+	 *
+	 *   · UN NŒUD AU NOM DU PÉRIMÈTRE. Un périmètre filtre, il n'est pas un objet
+	 *     du graphe, et rien n'est « relié à l'univers ».
+	 *   · UN MOYEU PAR FAMILLE, ET DES RAYONS VERS SES NOTES. Une appartenance
+	 *     n'est pas un lien vers un centre.
+	 *   · DES ARÊTES D'AFFINITÉ EN VUE COMPLÈTE. Six fois plus nombreuses que les
+	 *     relations, et chacune affirme un rapport que personne n'a déclaré.
+	 *   · DES ANCRAGES DE FAMILLE POSÉS SUR UN CERCLE. Un regroupement s'observe,
+	 *     il ne se range pas ; la couronne dessinait la géométrie qu'on avait
+	 *     choisie, pas celle qu'on avait.
+	 *   · LE RETRAIT DES NOTES ISOLÉES. Sur l'instance de recette, soixante-huit
+	 *     sur soixante-dix-sept : c'est la mesure, pas le bruit.
+	 *   · UN PLAFOND SUR LA TAILLE. À `min(degré, 8)`, une note à quarante-deux
+	 *     relations se dessine comme une note à huit.
+	 *   · UNE COLONNE DE RÉGLAGES RÉSERVÉE EN PERMANENCE, ni un panneau de détail
+	 *     vide. Le canevas garde sa place tant qu'on ne demande rien.
+	 *   · DES PARAGRAPHES D'EXPLICATION DANS LE PANNEAU. Chaque ligne est une
+	 *     légende, un filtre et un compte ; ce qui demande une phrase tient dans
+	 *     un `ⓘ`.
+	 *   · UNE SECONDE LÉGENDE. Il y en a UNE, sous le dessin, et elle nomme les
+	 *     cinq canaux.
+	 *   · UN RECHARGEMENT DE PAGE SUR UN FILTRE. Seuls le périmètre et la mesure
+	 *     de taille naviguent, et par `goto`.
+	 *   · UN VOILE SUR UN GRAPHE PEUPLÉ. « Aucune relation » se dit en bandeau ;
+	 *     le nuage des familles reste lisible et dit quelque chose.
+	 *   · UNE PLACE DE DÉPART TIRÉE DU RANG DU NŒUD. Elle est hachée sur son
+	 *     identifiant : ajouter une note ne redessine pas la carte.
+	 *
+	 * ── CE QU'ON REGARDE POUR VÉRIFIER, DANS UN NAVIGATEUR ─────────────────────
+	 * Sur un corpus RÉEL, jamais sur cinq nœuds — c'est à la densité que tout se
+	 * joue. Deux secondes de regard doivent donner, dans cet ordre : les zones de
+	 * famille, les nœuds structurants, les taches de vivacité, les relations.
+	 *
+	 *   1. Aucun trait ne part d'un point central, et aucun nœud ne porte le nom
+	 *      du périmètre. Le compte de `.rattachement` et de `.moyeu` est ZÉRO.
+	 *   2. Le nombre de `.arete` égale celui des couches cochées, à l'unité.
+	 *   3. Les notes sans relation sont TOUTES dessinées, et sans trait.
+	 *   4. Le dessin ne passe ni sous le panneau, ni sous le fil, ni hors cadre.
+	 *   5. Cocher une case n'appelle pas le serveur, et l'adresse suit.
+	 *   6. Un clic ouvre le panneau ; un double-clic ouvre la note.
+	 *   7. Molette, glisser et « Recentrer » répondent.
+	 *   8. Changer de périmètre garde les filtres et vide la sélection.
+	 *   9. Un périmètre sans relation montre la carte ET le bandeau.
+	 *  10. Recharger deux fois le même périmètre rend la MÊME carte.
 	 *
 	 * DEUX MODES, UNE SEULE FEUILLE. Sans `?centre=`, la vue complète ; avec, le
 	 * VOISINAGE d'un nœud à une, deux ou trois profondeurs. Les deux partagent le
@@ -88,7 +145,6 @@
 		titreDe,
 		typeDe,
 		typesPresents,
-		codeCourt,
 		etendreLeGraphe,
 		famillesPresentes,
 		voisinage,
@@ -105,7 +161,7 @@
 		type EtatDExploration
 	} from '../routes/cartographie/etat-dexploration';
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
-	import { formaterDateHeureFr, formaterDateIso } from '$lib/dates';
+	import { formaterDateHeureFr } from '$lib/dates';
 	import type { FamillesSemantiques } from '$lib/graphe/familles';
 
 	/* Le mot renommable de `M14.7`, lu sur le contexte de coquille. */
@@ -251,11 +307,33 @@
 
 	const UNIVERS_PROPOSES = $derived(univers.filter((u) => !u.systeme));
 
+	/* ── LE PÉRIMÈTRE, EN DEUX SÉLECTEURS ──────────────────────────────────────
+	   Un seul les mélangeait — « Univers Substack », « Domaine Cadrage » à la
+	   suite —, ce qui obligeait à lire un préfixe pour savoir de quoi on parlait, et
+	   rendait impossible le geste évident : rester dans un univers et n'y regarder
+	   qu'un domaine. Les deux sélecteurs se composent, et le second ne propose que
+	   les domaines du premier. */
+
+	/** L'univers du périmètre courant — celui choisi, ou celui du domaine choisi. */
+	const universChoisi = $derived.by(() => {
+		if (perimetre.type === 'univers') return perimetre.nom ?? '';
+		if (perimetre.type === 'domaine') {
+			return domaines.find((d) => d.nom === perimetre.nom)?.univers ?? '';
+		}
+		return '';
+	});
+
+	const domaineChoisi = $derived(perimetre.type === 'domaine' ? (perimetre.nom ?? '') : '');
+
+	const domainesProposes = $derived(
+		universChoisi === '' ? domaines : domaines.filter((d) => d.univers === universChoisi)
+	);
+
 	/**
 	 * LES PLACES DES NŒUDS. Le départ de chaque corps est haché sur SON identifiant :
 	 * ajouter une note ne déplace plus les autres, et on reconnaît sa carte d'une
-	 * visite à l'autre. Les familles tirent au barycentre — c'est là, et nulle part
-	 * sur le dessin, que l'affinité agit.
+	 * visite à l'autre. Les familles tirent au barycentre et se repoussent entre
+	 * elles — c'est là, et nulle part sur le dessin, que l'affinité agit.
 	 */
 	const disposition = $derived(disposer(graphe, { familleParNoeud: familleParNote, liensSouples }));
 	const places = $derived(disposition.places);
@@ -305,26 +383,65 @@
 			maximumDeMesure
 		);
 
-	/* TROIS ÉCHELLES, ET ELLES DISENT LE NIVEAU. Le moyeu du périmètre domine, les
-	   moyeux de famille viennent ensuite, les notes en dessous : la hiérarchie se lit
-	   avant même qu'on ait lu un mot. */
-	/* LE NOM TIENT DANS LE MOYEU, OU IL PASSE DESSOUS. « Substack » tient, « Tout le
-	   corpus » non : posé dedans, il sortait du disque des deux côtés. Le seuil est
-	   celui du diamètre, en caractères. */
-	const NOM_TENANT_DANS_LE_MOYEU = 11;
-	const RAYON_DE_MOYEU = 34;
-	const RAYON_DE_MOYEU_DE_FAMILLE = 11;
+	/**
+	 * LES NŒUDS ASSEZ GROS POUR PORTER LEUR NOM EN PERMANENCE. Au-delà de ce rayon,
+	 * un nœud est structurant : son titre s'écrit, et il n'y en a qu'une poignée. En
+	 * dessous, le nom se lit au survol ou à la sélection — voir plus bas.
+	 */
+	const RAYON_DE_NOEUD_NOMME = 11;
 
-	/* ── LES CONTOURS DE FAMILLE ───────────────────────────────────────────────
+	/* ── LES ÎLOTS SÉMANTIQUES ─────────────────────────────────────────────────
 	   La forme juste d'une appartenance est un ENSEMBLE, pas un faisceau de
 	   segments : le contour dit d'un trait ce que cent cinq arêtes diraient mal, et
 	   il ne peut pas être confondu avec une relation déclarée — ce qu'un pointillé,
 	   si discret soit-il, ne garantit jamais.
 
-	   ILS SONT D'UNE SEULE TEINTE, ET C'EST VOULU. Les colorer famille par famille
-	   ajouterait un sixième code couleur à expliquer (`RG-M09-07`), et la teinte est
-	   déjà prise : elle porte la vivacité. Ce qui distingue deux familles voisines
-	   est leur NOM, écrit au barycentre. */
+	   L'ÎLOT N'A NI CENTRE NI MOYEU. Il en portait un — un disque au barycentre, d'où
+	   partait un rayon vers chacun de ses membres. C'était un objet inventé, et ses
+	   rayons autant : une famille est ce que ses notes ont en commun, pas une chose à
+	   laquelle elles se relient. Ne restent que la GÉOGRAPHIE — la disposition les
+	   rapproche — et le CONTOUR, qui la donne à voir. */
+
+	interface Ilot {
+		readonly cle: string;
+		readonly nom: string;
+		readonly origine: string;
+		readonly rang: number;
+		readonly membres: readonly string[];
+	}
+
+	/** Le nombre de teintes d'îlot — voir `V-19.css`. */
+	const TEINTES_DE_FAMILLE = 8;
+
+	const famillesDessinees = $derived(famillesPresentes(graphe, familleParNote));
+
+	/**
+	 * LE RANG D'UN ÎLOT VIENT DU CLASSEMENT DU CHARGEUR, jamais de l'ordre des nœuds
+	 * du dessin. C'est lui qui décide de la teinte : pris sur l'ordre de parcours du
+	 * graphe, deux chargements du même périmètre auraient recoloré les îlots.
+	 */
+	const ilots = $derived.by<Ilot[]>(() => {
+		const dessinees = new Set(famillesDessinees);
+		/* Un objet plutôt qu'une `Map` : ce regroupement se REFAIT à chaque changement
+		   de graphe, il n'est jamais muté après coup, et `svelte/prefer-svelte-reactivity`
+		   n'admet pas de `Map` qu'on remplit — à raison, une `Map` mutée dans un état
+		   dérivé ne réveille rien. */
+		const membresParNom: Record<string, string[]> = {};
+		for (const n of graphe.noeuds) {
+			const nom = familleParNote.get(n.id);
+			if (nom === undefined || !dessinees.has(nom)) continue;
+			(membresParNom[nom] ??= []).push(n.id);
+		}
+		return familles.familles
+			.filter((f) => membresParNom[f.nom] !== undefined)
+			.map((f, rang) => ({
+				cle: f.cle,
+				nom: f.nom,
+				origine: f.origine,
+				rang,
+				membres: membresParNom[f.nom] ?? []
+			}));
+	});
 
 	interface ContourDeFamille {
 		readonly cle: string;
@@ -336,15 +453,12 @@
 		readonly tete: Place;
 	}
 
-	/** Le nombre de teintes d'îlot — voir `V-19.css`. */
-	const TEINTES_DE_FAMILLE = 8;
-
 	const contoursDeFamille = $derived.by<ContourDeFamille[]>(() => {
 		if (!exploration.contours) return [];
 		const dessines: ContourDeFamille[] = [];
-		for (const m of moyeux) {
-			const pts = [m.place, ...m.membres.map((id) => positionDe(id))];
-			const rayons = [RAYON_DE_MOYEU_DE_FAMILLE, ...m.membres.map((id) => rayon(id))];
+		for (const ilot of ilots) {
+			const pts = ilot.membres.map((id) => positionDe(id));
+			const rayons = ilot.membres.map((id) => rayon(id));
 			const chemin = contourDeGroupe(pts, rayons);
 			if (chemin === null) continue;
 			const centre = barycentre(pts);
@@ -352,85 +466,18 @@
 			/* L'EN-TÊTE SE POSE AU-DESSUS DE L'ÎLOT, comme un titre de carte. Au
 			   barycentre, il tombait au milieu des nœuds et se disputait la place
 			   avec leurs titres. */
-			const haut = Math.min(...pts.map((p, i) => p.y - (rayons[i] ?? 0)));
+			const haut = Math.min(...pts.map((pt, i) => pt.y - (rayons[i] ?? 0)));
 			dessines.push({
-				cle: m.cle,
-				nom: m.nom,
-				effectif: m.effectif,
-				rang: m.rang % TEINTES_DE_FAMILLE,
+				cle: ilot.cle,
+				nom: ilot.nom,
+				effectif: ilot.membres.length,
+				rang: ilot.rang % TEINTES_DE_FAMILLE,
 				chemin,
-				tete: { x: centre.x, y: haut - 18 }
+				tete: { x: centre.x, y: haut - 20 }
 			});
 		}
 		return dessines;
 	});
-
-	/* ── LE MOYEU DU PÉRIMÈTRE ET LES MOYEUX DE FAMILLE ────────────────────────
-	   LE CENTRE PORTE LE NOM DU PÉRIMÈTRE, ET C'EST UNE INFORMATION. Le rattachement
-	   d'une note à son rangement est un FAIT DÉCLARÉ du schéma — toute note est dans
-	   un dossier, un domaine, un univers —, pas une similarité calculée. Et c'est un
-	   ARBRE : un moyeu et ses rayons coûtent N traits, là où une clique d'affinité en
-	   coûterait N². Les deux ne se rangent pas ensemble, et les avoir confondus était
-	   une erreur d'arithmétique autant que de nature.
-
-	   LE RAYON N'EST PAS UNE RELATION, ET IL NE PEUT PAS EN AVOIR L'AIR : il est plus
-	   fin et plus pâle que la plus faible d'entre elles, il ne porte pas d'étiquette,
-	   et la légende le nomme. Il n'entre ni dans les degrés, ni dans la centralité,
-	   ni dans les points de rupture — ce sont des mesures du graphe des RELATIONS. */
-
-	/** Ce que le moyeu central nomme : le périmètre affiché, tel qu'il est choisi. */
-	const nomDuPerimetre = $derived.by(() => {
-		if (perimetre.type === 'univers') return perimetre.nom ?? '';
-		if (perimetre.type === 'domaine') return perimetre.nom ?? '';
-		return 'Tout le corpus';
-	});
-
-	interface MoyeuDeFamille {
-		readonly cle: string;
-		readonly nom: string;
-		readonly origine: string;
-		readonly effectif: number;
-		readonly rang: number;
-		readonly place: Place;
-		readonly membres: readonly string[];
-	}
-
-	const famillesDessinees = $derived(famillesPresentes(graphe, familleParNote));
-	/* LES ANCRAGES VIENNENT DE LA DISPOSITION, jamais d'un second calcul : ils
-	   subissent le même cadrage que les nœuds. Recalculés à part, ils tombaient à
-	   côté de leur îlot — mesuré au navigateur. */
-	const ancresDeFamille = $derived(disposition.ancres);
-	const moyeuCentral = $derived(disposition.moyeu);
-
-	const moyeux = $derived.by<MoyeuDeFamille[]>(() => {
-		const parNom = new Map(familles.familles.map((f) => [f.nom, f] as const));
-		return famillesDessinees.map((nom, rang) => {
-			const membres = graphe.noeuds
-				.filter((n) => familleParNote.get(n.id) === nom)
-				.map((n) => n.id);
-			/* LE MOYEU SE POSE AU BARYCENTRE DE SES MEMBRES, et non sur l'ancrage.
-			   L'ancrage COMMANDE la disposition ; il n'est pas le milieu de ce
-			   qu'elle produit — les nœuds s'en écartent sous la répulsion, et le
-			   moyeu posé dessus se retrouvait au bord de son propre îlot. */
-			const centre = barycentre(membres.map((id) => positionDe(id)));
-			return {
-				cle: parNom.get(nom)?.cle ?? nom,
-				nom,
-				origine: parNom.get(nom)?.origine ?? '',
-				effectif: membres.length,
-				rang,
-				place: centre ?? ancresDeFamille.get(nom) ?? moyeuCentral,
-				membres
-			};
-		});
-	});
-
-	/** Les notes qu'aucune famille dessinée ne réunit : elles pendent au moyeu central. */
-	const orphelinesDeFamille = $derived(
-		graphe.noeuds
-			.filter((n) => !ancresDeFamille.has(familleParNote.get(n.id) ?? ''))
-			.map((n) => n.id)
-	);
 
 	/* ── LES FILTRES ───────────────────────────────────────────────────────────
 	   La vue rend l'état d'OUVERTURE ; `cablage.ts` le fait vivre ensuite, sur les
@@ -438,14 +485,29 @@
 	   n'est retiré du document : un nœud masqué garde sa place, et le rallumer ne
 	   fait pas sauter la carte. */
 
-	const masqueDeNoeud = (id: string): boolean =>
-		noeudMasque({ vivacite: vivaciteDe(id), degre: degreDe(id) }, exploration);
+	const codeDuNoeud = (note: Note): string => typeDe(note).code;
+
+	const masqueDeNoeud = (id: string, note: Note): boolean =>
+		noeudMasque(
+			{ vivacite: vivaciteDe(id), degre: degreDe(id), type: codeDuNoeud(note) },
+			exploration
+		);
+
+	/** Le prédicat d'arête a besoin des deux notes : il les retrouve par l'index. */
+	const masqueParIdentifiant = (id: string): boolean => {
+		const note = graphe.index.get(id)?.note;
+		return note === undefined ? true : masqueDeNoeud(id, note);
+	};
 
 	const coucheDArete = (r: Relation): 'declarees' | 'deduites' =>
 		coucheDeLOrigine((r as { origine?: string }).origine);
 
 	const masqueDArete = (r: Relation): boolean =>
-		areteMasquee(coucheDArete(r), !masqueDeNoeud(r.de) && !masqueDeNoeud(r.vers), exploration);
+		areteMasquee(
+			coucheDArete(r),
+			!masqueParIdentifiant(r.de) && !masqueParIdentifiant(r.vers),
+			exploration
+		);
 
 	/* ── LES COMPTES DE LA COLONNE DE COMMANDE ─────────────────────────────── */
 
@@ -528,9 +590,6 @@
 	const dateDeCalcul = $derived(
 		familles.calculeLe === '' ? null : formaterDateHeureFr(familles.calculeLe)
 	);
-	const dateDeCalculMachine = $derived(
-		familles.calculeLe === '' ? null : formaterDateIso(familles.calculeLe)
-	);
 
 	/* ── CE QUI MANQUE, ET LE GESTE QUI DÉBLOQUE ───────────────────────────────
 	   DEUX RÉGIMES, ET C'EST LA CORRECTION. Le voile couvrait aussi l'absence de
@@ -561,30 +620,43 @@
 
 	const voileActif = $derived(cas === 'chargement' || manque !== null ? 'oui' : undefined);
 
+	/**
+	 * LE FIL PORTE LE PÉRIMÈTRE, et pas seulement le nom de l'écran. « Accueil ›
+	 * Cartographie » ne disait pas de QUOI on regarde la carte, alors que le
+	 * sélecteur venait de le choisir. Le second segment est l'univers, par la
+	 * convention de la coquille : le rail le déplie et le met en évidence.
+	 */
+	const filDAriane = $derived.by<string[]>(() => {
+		const tete = universChoisi === '' ? ['Accueil'] : ['Accueil', universChoisi];
+		return locale ? [...tete, 'Cartographie', 'Voisinage'] : [...tete, 'Cartographie'];
+	});
+
 	/** Le nœud choisi, en mode local — la vue le rend, le câblage l'ouvre. */
 	const noteDuCentre = $derived(
 		centreValide === null ? null : (graphe.index.get(centreValide)?.note ?? null)
 	);
 
-	/* Les cinq clés de lecture — `RG-M09-07` : « aucun encodage n'est laissé à
-	   l'interprétation ». Elles suivent la grammaire figée, canal par canal. */
-	const CLES_DE_LECTURE: readonly (readonly [string, string])[] = [
-		['Forme et code', 'le type de la note'],
-		['Couleur et glyphe', 'la vivacité — le pire des deux registres'],
-		['Taille', 'la centralité de passage, ou le nombre de connexions'],
-		['Anneau interrompu', 'point de rupture : son retrait isole une partie du périmètre'],
-		['Contour pointillé, teinte pâle', 'nœud hors périmètre mais relié'],
-		['Trait plein', 'relation déclarée'],
-		['Trait fin', 'relation déduite'],
-		['Contour et nom', 'famille sémantique : une appartenance, jamais un lien entre deux notes']
-	];
+	/* ── CE QUI S'EXPLIQUE, ET OÙ ──────────────────────────────────────────────
+	   Le panneau portait trois paragraphes — dont « L'affinité sémantique n'est pas
+	   une couche de liens… » — et un bloc de huit clés de lecture. Un explorateur
+	   qu'on ouvre tous les jours n'a pas à redire son mode d'emploi à chaque
+	   ouverture : la légende du dessin nomme les encodages, chaque ligne du panneau
+	   se compte et se filtre, et ce qui demande une phrase tient dans un `ⓘ`. */
 
-	/** Ce que la colonne dit de la densité, quand les étiquettes se taisent. */
-	const mentionDeDensite = $derived(
-		dense
-			? `${graphe.noeuds.length} nœuds : les titres se lisent au survol, à la sélection, ou en grossissant. Les noms de famille restent écrits.`
-			: null
+	const infoDesFamilles = $derived(
+		'Regroupement par proximité de sens — étiquettes, dossier, mots des titres —, ' +
+			'indépendant des relations déclarées. Une appartenance commune rapproche les nœuds ' +
+			'et les entoure ; elle ne se dessine jamais en traits.' +
+			(familles.sansFamille > 0
+				? ` ${familles.sansFamille} ${accord(familles.sansFamille, 'note')} hors famille.`
+				: '') +
+			(dateDeCalcul === null ? '' : ` Calculé le ${dateDeCalcul}.`)
 	);
+
+	const infoDeLaTaille =
+		'Connexions : le nombre de relations qui touchent le nœud. ' +
+		'Centralité : la part des plus courts chemins du périmètre qui passent par lui — ' +
+		'une note peut avoir vingt voisins et ne relier rien à rien.';
 </script>
 
 <!-- Le contour d'un nœud. LA COULEUR N'EST PLUS UN ATTRIBUT DE PRÉSENTATION :
@@ -645,7 +717,7 @@
 	classeContenu="carto"
 	cibleEvitement="liste-noeuds"
 	libelleEvitement="Aller à la liste des nœuds"
-	fil={locale ? ['Accueil', 'Cartographie', 'Voisinage'] : ['Accueil', 'Cartographie']}
+	fil={filDAriane}
 	donnees={{ 'data-detail': 'ferme', 'data-mode': locale ? 'locale' : 'complete' }}
 	{univers}
 	{domaines}
@@ -703,210 +775,92 @@
 				</div>
 			</div>
 		{:else}
-			<!-- ══════════ Vue complète : la barre de commande ══════════ -->
+			<!-- ══════════ Vue complète : le titre et les commandes de périmètre ══════════
+			     LES RÉGLAGES DU GRAPHE NE SONT PAS ICI, et ce n'est pas une question de
+			     place : cette barre appartient à la PAGE — où l'on regarde, et comment
+			     y revenir. Ce qui règle le DESSIN vit dans le panneau « Affichage »,
+			     posé sur le canevas qu'il commande. -->
 			<div class="controles">
-				<div class="controles__groupe">
-					<label class="etiq" for="perimetre">Périmètre</label>
-					<select id="perimetre"
-						><option value="global|">Tous les domaines</option
-						>{#each UNIVERS_PROPOSES as u (u.nom)}<option value="univers|{u.nom}"
-								>Univers {u.nom}</option
-							>{/each}{#each domaines as d (d.nom)}<option value="domaine|{d.nom}"
-								>Domaine {d.nom}</option
+				<div class="controles__titre">
+					<span class="controles__glyphe" aria-hidden="true"
+						><svg
+							width="24"
+							height="24"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.6"
+							><circle cx="12" cy="5" r="2.4" /><circle cx="5" cy="17" r="2.4" /><circle
+								cx="19"
+								cy="17"
+								r="2.4"
+							/><path d="M10.4 6.8 6.6 15M13.6 6.8 17.4 15M7.5 17.4h9" /></svg
+						></span
+					>
+					<div>
+						<h1>Cartographie</h1>
+						<p>Explorez les liens et les forces de votre connaissance.</p>
+					</div>
+				</div>
+
+				<div class="controles__outils">
+					<label class="hors-ecran" for="perimetre-univers">Univers</label>
+					<select id="perimetre-univers" class="choix"
+						><option value="">Univers : tous</option>{#each UNIVERS_PROPOSES as u (u.nom)}<option
+								value={u.nom}
+								selected={u.nom === universChoisi}>{'Univers : ' + u.nom}</option
 							>{/each}</select
 					>
-				</div>
 
-				<div class="bascule-vue" role="tablist" aria-label="Mode de cartographie">
-					<button role="tab" aria-selected="true" data-vue="complete">Vue complète</button>
-					<button role="tab" aria-selected="false" data-vue="maitre">Par type maître</button>
-				</div>
-
-				<div class="rech-graphe" id="rech-graphe">
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.6"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5L14 14" /></svg
+					<label class="hors-ecran" for="perimetre-domaine">Domaine</label>
+					<select id="perimetre-domaine" class="choix"
+						><option value="">Domaine : tous</option>{#each domainesProposes as d (d.nom)}<option
+								value={d.nom}
+								selected={d.nom === domaineChoisi}>{'Domaine : ' + d.nom}</option
+							>{/each}</select
 					>
-					<input
-						type="search"
-						id="rech"
-						placeholder="Rechercher un nœud…"
-						autocomplete="off"
-						aria-label="Chercher un nœud dans le graphe"
-					/>
-					<div class="rech-graphe__liste" id="rech-liste" role="listbox"></div>
-				</div>
 
-				<div style="margin-left:auto;display:flex;gap:var(--e-2)">
-					<button class="btn" id="effacer-sel" disabled>Effacer la sélection</button>
-					<button class="btn" id="recentrer">Recentrer</button>
+					<div class="rech-graphe" id="rech-graphe">
+						<svg
+							width="14"
+							height="14"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.6"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5L14 14" /></svg
+						>
+						<input
+							type="search"
+							id="rech"
+							placeholder="Rechercher un nœud…"
+							autocomplete="off"
+							aria-label="Chercher un nœud dans le graphe"
+						/>
+						<div class="rech-graphe__liste" id="rech-liste" role="listbox"></div>
+					</div>
+
+					<button class="btn" id="recentrer" type="button"
+						><svg
+							width="14"
+							height="14"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.5"
+							><circle cx="8" cy="8" r="3" /><path d="M8 1v2.2M8 12.8V15M1 8h2.2M12.8 8H15" /></svg
+						>Recentrer</button
+					>
+					<button class="btn" id="effacer-sel" type="button" disabled>Effacer la sélection</button>
+
+					<div class="bascule-vue" role="tablist" aria-label="Mode de cartographie">
+						<button role="tab" aria-selected="true" data-vue="complete">Graphe</button>
+						<button role="tab" aria-selected="false" data-vue="maitre">Par type</button>
+					</div>
 				</div>
 			</div>
 		{/if}
 
 		<div class="scene" data-mode={locale ? 'locale' : 'complete'}>
-			{#if !locale}
-				<!-- ---------- Colonne de commande ---------- -->
-				<aside class="legende-col" id="commandes" aria-label="Commandes d’exploration">
-					<div class="legende__bloc">
-						<span class="etiq">Liens</span>
-						<div id="filtre-couches" style="margin-top:var(--e-2)">
-							<label class="lg lg--case"
-								><input
-									type="checkbox"
-									data-couche="declarees"
-									checked={exploration.couches.includes('declarees')}
-								/><span class="lg__trait lg__trait--declaree" aria-hidden="true"></span><span
-									class="lg__nom">Relations déclarées</span
-								><span class="lg__n">{comptesDeCouche.declarees}</span></label
-							>
-							<label class="lg lg--case"
-								><input
-									type="checkbox"
-									data-couche="deduites"
-									checked={exploration.couches.includes('deduites')}
-								/><span class="lg__trait lg__trait--deduite" aria-hidden="true"></span><span
-									class="lg__nom">Relations déduites</span
-								><span class="lg__n">{comptesDeCouche.deduites}</span></label
-							>
-						</div>
-						<p class="legende__note">
-							L'affinité sémantique n'est pas une couche de liens : elle rapproche les nœuds et les
-							entoure. Une appartenance commune n'est pas un lien entre deux notes.
-						</p>
-					</div>
-
-					<div class="legende__bloc">
-						<span class="etiq">Regroupement</span>
-						<div style="margin-top:var(--e-2)">
-							<p class="legende__mesure">
-								{familles.familles.length + ' ' + accord(familles.familles.length, 'famille')} ·
-								{familles.notesExaminees + ' ' + accord(familles.notesExaminees, 'note')}
-							</p>
-							<label class="lg lg--case"
-								><input type="checkbox" id="c-contours" checked={exploration.contours} /><span
-									class="lg__nom">Contours</span
-								></label
-							>
-							<label class="lg lg--case"
-								><input type="checkbox" id="c-noms" checked={exploration.nomsDeFamille} /><span
-									class="lg__nom">Noms</span
-								></label
-							>
-						</div>
-						<p class="legende__note">
-							{#if familles.sansFamille > 0}{familles.sansFamille +
-									' ' +
-									accord(familles.sansFamille, 'note') +
-									' hors famille. '}{/if}Regroupement par proximité de sens — étiquettes, dossier,
-							mots des titres —, indépendant des relations déclarées.
-							{#if dateDeCalcul !== null && dateDeCalculMachine !== null}<time
-									datetime={dateDeCalculMachine}>{'Calculé le ' + dateDeCalcul + '.'}</time
-								>{/if}
-						</p>
-					</div>
-
-					<div class="legende__bloc">
-						<span class="etiq">Vivacité</span>
-						<div id="filtre-vivacite" style="margin-top:var(--e-2)">
-							{#each ORDRE_DES_ETATS as etat (etat)}<label class="lg lg--case"
-									><input
-										type="checkbox"
-										data-vivacite={etat}
-										checked={exploration.vivacite.includes(etat)}
-									/>{@render glypheDEtat(etat)}<span class="lg__nom"
-										>{ETATS_DE_VIVACITE[etat].libelle}</span
-									><span class="lg__n">{comptesDeVivacite[etat]}</span></label
-								>{/each}
-						</div>
-					</div>
-
-					<div class="legende__bloc">
-						<span class="etiq">Nœuds</span>
-						<div id="legende-types" style="margin-top:var(--e-2)">
-							{#each types as t (t.cle)}<button class="lg" type="button" data-isole="non"
-									>{@render miniature(t.type)}<span class="lg__nom">{t.type.nom}</span><span
-										class="lg__n">{t.n}</span
-									></button
-								>{/each}
-						</div>
-						<p class="legende__note">
-							Cliquer un type isole ses nœuds. La forme et le code portent le type ; la couleur
-							porte la vivacité.{#if mentionDeDensite !== null}{' ' + mentionDeDensite}{/if}
-						</p>
-					</div>
-
-					<div class="legende__bloc">
-						<span class="etiq">Taille des nœuds</span>
-						<div id="filtre-taille" style="margin-top:var(--e-2)">
-							{#each [['centralite', 'Centralité'], ['connexions', 'Connexions'], ['uniforme', 'Uniforme']] as choix (choix[0])}<label
-									class="lg lg--case"
-									><input
-										type="radio"
-										name="taille"
-										data-taille={choix[0]}
-										checked={exploration.taille === choix[0]}
-									/><span class="lg__nom">{choix[1]}</span></label
-								>{/each}
-						</div>
-					</div>
-
-					<div class="legende__bloc">
-						<span class="etiq">Réduire le bruit</span>
-						<div style="margin-top:var(--e-2)">
-							<label class="curseur" for="degre-min"
-								>Degré minimum <output id="degre-min-valeur">{exploration.degreMinimum}</output
-								></label
-							>
-							<input
-								type="range"
-								id="degre-min"
-								min="0"
-								max={DEGRE_MINIMUM_MAXIMAL}
-								step="1"
-								value={exploration.degreMinimum}
-							/>
-							<p class="legende__mesure">
-								{isolees + ' ' + accord(isolees, 'note')} sans relation déclarée
-							</p>
-							<label class="lg lg--case"
-								><input type="checkbox" id="c-ruptures" checked /><span class="lg__nom"
-									>Points de rupture</span
-								></label
-							>
-						</div>
-						<button class="btn btn--discret" id="reinitialiser">Réinitialiser les filtres</button>
-					</div>
-
-					<div class="legende__bloc">
-						<span class="etiq">Lecture du graphe</span>
-						<div id="legende-cles" style="margin-top:var(--e-2)">
-							{#each CLES_DE_LECTURE as cle (cle[0])}<div class="cle-lecture">
-									<b>{cle[0]}</b><span>{cle[1]}</span>
-								</div>{/each}
-						</div>
-					</div>
-
-					<details class="alt-texte" id="liste-noeuds">
-						<summary>Liste des nœuds et de leurs relations</summary>
-						<ul id="alt-liste">
-							{#each graphe.noeuds as n (n.id)}<li>
-									<b>{n.note.titre}</b>{ligneAlternative(
-										n.id,
-										n.note
-									)}{#each relationsDe(n.id, relations) as r, rang (rang)}<div class="alt-rel">
-											{`${typesRelation[r.type][r.sortant ? 'sortant' : 'entrant']} : ${titreDe(graphe, corpus, r.autre)}`}
-										</div>{/each}
-								</li>{/each}
-						</ul>
-					</details>
-				</aside>
-			{/if}
-
 			<!-- ---------- Le graphe ---------- -->
 			<div class="zone-graphe" id="zone-graphe">
 				<svg
@@ -914,12 +868,12 @@
 					class="graphe"
 					data-focus="non"
 					data-isole="non"
-					data-criticite="oui"
+					data-ruptures="oui"
 					data-contours={exploration.contours ? 'oui' : 'non'}
 					data-noms={exploration.nomsDeFamille ? 'oui' : 'non'}
 					data-dense={dense ? 'oui' : 'non'}
 					role="img"
-					aria-label="Graphe du périmètre. Une liste équivalente est disponible dans la colonne de commande."
+					aria-label="Graphe du périmètre. Une liste équivalente est disponible dans le panneau d’affichage."
 					viewBox="0 0 1000 780"
 					><g id="racine" transform="translate(0,0) scale(1)"
 						><g class="familles" aria-hidden="true"
@@ -928,35 +882,6 @@
 									data-teinte={f.rang}
 									d={f.chemin}
 								/>{/each}</g
-						><!-- LES RAYONS DE RATTACHEMENT — du moyeu du périmètre vers chaque
-						     famille, de chaque famille vers ses notes, et du moyeu vers les
-						     notes qu'aucune famille ne réunit. Plus fins et plus pâles que la
-						     plus faible des relations, et sans étiquette : rien ne doit laisser
-						     croire que quelqu'un les a déclarés. -->
-						<g class="rattachements" aria-hidden="true"
-							>{#if !locale}{#each moyeux as m (m.cle)}<line
-										class="rattachement rattachement--tronc"
-										data-teinte={m.rang % TEINTES_DE_FAMILLE}
-										x1={moyeuCentral.x}
-										y1={moyeuCentral.y}
-										x2={m.place.x}
-										y2={m.place.y}
-									/>{/each}{/if}{#each moyeux as m (m.cle)}{#each m.membres as id (id)}<line
-										class="rattachement"
-										data-teinte={m.rang % TEINTES_DE_FAMILLE}
-										data-membre={id}
-										x1={m.place.x}
-										y1={m.place.y}
-										x2={positionDe(id).x}
-										y2={positionDe(id).y}
-									/>{/each}{/each}{#if !locale}{#each orphelinesDeFamille as id (id)}<line
-										class="rattachement"
-										data-membre={id}
-										x1={moyeuCentral.x}
-										y1={moyeuCentral.y}
-										x2={positionDe(id).x}
-										y2={positionDe(id).y}
-									/>{/each}{/if}</g
 						><g
 							>{#each graphe.aretes as r, rang (rang)}<path
 									class="arete"
@@ -981,32 +906,7 @@
 										y={(positionDe(r.de).y + positionDe(r.vers).y) / 2}
 										>{typesRelation[r.type].sortant}</text
 									>{/each}</g
-							>{/if}<g class="moyeux"
-							><!-- LE MOYEU DU PÉRIMÈTRE N'EST PAS DANS LA VUE LOCALE. Il dit « voici le
-							     corpus et ses groupes » ; un voisinage dit « voici les abords de cette
-							     note ». Posé là, il attire l'œil au centre d'un dessin dont le centre
-							     est ailleurs, et ses rayons traversent tout. -->
-							{#if !locale}<g
-									class="moyeu moyeu--perimetre"
-									transform="translate({moyeuCentral.x},{moyeuCentral.y})"
-									><circle
-										class="moyeu__forme"
-										r={RAYON_DE_MOYEU}
-									/>{#if nomDuPerimetre.length <= NOM_TENANT_DANS_LE_MOYEU}<text
-											class="moyeu__nom moyeu__nom--dedans">{nomDuPerimetre}</text
-										><text class="moyeu__code" y={RAYON_DE_MOYEU + 14}
-											>{'(' + codeCourt(nomDuPerimetre) + ')'}</text
-										>{:else}<text class="moyeu__code moyeu__code--dedans"
-											>{codeCourt(nomDuPerimetre)}</text
-										><text class="moyeu__nom" y={RAYON_DE_MOYEU + 15}>{nomDuPerimetre}</text
-										>{/if}</g
-								>{/if}{#each moyeux as m (m.cle)}<g
-									class="moyeu moyeu--famille"
-									data-teinte={m.rang % TEINTES_DE_FAMILLE}
-									transform="translate({m.place.x},{m.place.y})"
-									><circle class="moyeu__forme" r={RAYON_DE_MOYEU_DE_FAMILLE} /></g
-								>{/each}</g
-						><g class="familles-noms" aria-hidden="true"
+							>{/if}<g class="familles-noms" aria-hidden="true"
 							>{#each contoursDeFamille as f (f.cle)}<g
 									class="famille__tete"
 									data-teinte={f.rang}
@@ -1041,11 +941,12 @@
 										: ETATS_DE_VIVACITE[etat].classe}"
 									transform="translate({positionDe(n.id).x},{positionDe(n.id).y})"
 									data-id={n.id}
+									data-code={codeDuNoeud(n.note)}
 									data-fantome={n.fantome ? 'oui' : 'non'}
 									data-actif="non"
-									data-type-visible="oui"
+									data-gros={ray >= RAYON_DE_NOEUD_NOMME ? 'oui' : 'non'}
 									data-choisi={n.id === centreValide ? 'oui' : 'non'}
-									data-masque={masqueDeNoeud(n.id) ? 'oui' : 'non'}
+									data-masque={masqueDeNoeud(n.id, n.note) ? 'oui' : 'non'}
 									data-vivacite={etat ?? ''}
 									data-degre={degreDe(n.id)}
 									data-isolee={degreDe(n.id) === 0 ? 'oui' : 'non'}
@@ -1053,7 +954,13 @@
 									tabindex="0"
 									role="button"
 									aria-label={libelleDuNoeud(n.id, n.note)}
-									>{@render contour(
+									><!-- LE SURVOL DIT LE NŒUD, ET IL RESTE LÉGER — titre, type, état,
+									     connexions. Il ne modifiait RIEN : l'étiquette de titre
+									     reparaissait sous la pastille, et rien ne disait de quel type ni
+									     de quel état il s'agit, alors que ce sont les deux canaux que le
+									     dessin encode. Un `title` de SVG suffit ; une bulle dessinée
+									     serait un second panneau, et le panneau existe déjà. -->
+									<title>{libelleDuNoeud(n.id, n.note)}</title>{@render contour(
 										contourDeForme(typeDe(n.note), ray)
 									)}{#if ruptures.has(n.id)}<circle class="rupture-anneau" r={ray + 5} /><circle
 											class="rupture-fanion"
@@ -1068,6 +975,204 @@
 						></g
 					></svg
 				>
+
+				<!-- ---------- Le panneau d'affichage ----------
+				     IL EST POSÉ SUR LE CANEVAS QU'IL COMMANDE, et c'est ce qui le distingue
+				     du rail : le rail dit où l'on est dans le produit, ce panneau dit ce
+				     que le dessin montre. Mêler les deux ferait de la navigation générale
+				     un panneau de configuration, et il y en a onze autres écrans.
+
+				     CHAQUE LIGNE EST À LA FOIS UNE LÉGENDE, UN FILTRE ET UN COMPTE. C'est
+				     la seule façon d'expliquer un encodage sans écrire un paragraphe : la
+				     ligne « ● À vérifier 12 » montre la teinte, la nomme, la dénombre, et
+				     l'éteint d'un clic. Les trois paragraphes qui tenaient ce rôle ont été
+				     retirés — un panneau d'exploration n'est pas un manuel. -->
+				{#if !locale}
+					<aside class="panneau" id="commandes" aria-label="Affichage du graphe">
+						<div class="panneau__tete">
+							<svg
+								width="15"
+								height="15"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.5"
+								aria-hidden="true"
+								><circle cx="8" cy="8" r="2.2" /><path
+									d="M8 1.4v1.8M8 12.8v1.8M1.4 8h1.8M12.8 8h1.8M3.4 3.4l1.3 1.3M11.3 11.3l1.3 1.3M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3"
+								/></svg
+							>
+							<span class="panneau__nom">Affichage</span>
+							<button
+								type="button"
+								class="panneau__bascule"
+								id="panneau-bascule"
+								aria-expanded="true"
+								aria-controls="panneau-corps"
+								aria-label="Replier le panneau d’affichage"
+								><svg
+									width="14"
+									height="14"
+									viewBox="0 0 16 16"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.7"><path d="M5 3l5 5-5 5" /></svg
+								></button
+							>
+						</div>
+
+						<div class="panneau__corps" id="panneau-corps">
+							<div class="legende__bloc">
+								<span class="etiq">Liens</span>
+								<div id="filtre-couches">
+									<label class="lg lg--case"
+										><input
+											type="checkbox"
+											data-couche="declarees"
+											checked={exploration.couches.includes('declarees')}
+										/><span class="lg__trait lg__trait--declaree" aria-hidden="true"></span><span
+											class="lg__nom">Relations déclarées</span
+										><span class="lg__n">{comptesDeCouche.declarees}</span></label
+									>
+									<label class="lg lg--case"
+										><input
+											type="checkbox"
+											data-couche="deduites"
+											checked={exploration.couches.includes('deduites')}
+										/><span class="lg__trait lg__trait--deduite" aria-hidden="true"></span><span
+											class="lg__nom">Relations déduites</span
+										><span class="lg__n">{comptesDeCouche.deduites}</span></label
+									>
+								</div>
+							</div>
+
+							<div class="legende__bloc">
+								<span class="etiq"
+									>Regroupement<button
+										type="button"
+										class="apropos"
+										title={infoDesFamilles}
+										aria-label={infoDesFamilles}>ⓘ</button
+									></span
+								>
+								<div>
+									<label class="lg lg--case"
+										><input type="checkbox" id="c-contours" checked={exploration.contours} /><span
+											class="lg__nom">Contours</span
+										><span class="lg__n">{ilots.length}</span></label
+									>
+									<label class="lg lg--case"
+										><input type="checkbox" id="c-noms" checked={exploration.nomsDeFamille} /><span
+											class="lg__nom">Noms</span
+										></label
+									>
+								</div>
+							</div>
+
+							<div class="legende__bloc">
+								<span class="etiq">Vivacité</span>
+								<div id="filtre-vivacite">
+									{#each ORDRE_DES_ETATS as etat (etat)}<label class="lg lg--case"
+											><input
+												type="checkbox"
+												data-vivacite={etat}
+												checked={exploration.vivacite.includes(etat)}
+											/>{@render glypheDEtat(etat)}<span class="lg__nom"
+												>{ETATS_DE_VIVACITE[etat].libelle}</span
+											><span class="lg__n">{comptesDeVivacite[etat]}</span></label
+										>{/each}
+								</div>
+							</div>
+
+							<div class="legende__bloc">
+								<span class="etiq">Nœuds</span>
+								<div id="filtre-types">
+									{#each types as t (t.cle)}<label class="lg lg--case"
+											><input
+												type="checkbox"
+												data-type={t.type.code}
+												checked={exploration.types === null ||
+													exploration.types.includes(t.type.code)}
+											/>{@render miniature(t.type)}<span class="lg__nom">{t.type.nom}</span><span
+												class="lg__n">{t.n}</span
+											></label
+										>{/each}
+								</div>
+							</div>
+
+							<div class="legende__bloc">
+								<span class="etiq"
+									>Taille des nœuds<button
+										type="button"
+										class="apropos"
+										title={infoDeLaTaille}
+										aria-label={infoDeLaTaille}>ⓘ</button
+									></span
+								>
+								<div id="filtre-taille">
+									{#each [['uniforme', 'Uniforme'], ['connexions', 'Connexions'], ['centralite', 'Centralité']] as choix (choix[0])}<label
+											class="lg lg--case"
+											><input
+												type="radio"
+												name="taille"
+												data-taille={choix[0]}
+												checked={exploration.taille === choix[0]}
+											/><span class="lg__nom">{choix[1]}</span></label
+										>{/each}
+								</div>
+							</div>
+
+							<div class="legende__bloc">
+								<span class="etiq">Réduire le bruit</span>
+								<div>
+									<label class="curseur" for="degre-min"
+										>Degré minimum <output id="degre-min-valeur">{exploration.degreMinimum}</output
+										></label
+									>
+									<input
+										type="range"
+										id="degre-min"
+										min="0"
+										max={DEGRE_MINIMUM_MAXIMAL}
+										step="1"
+										value={exploration.degreMinimum}
+									/>
+									<label class="lg lg--case"
+										><input
+											type="checkbox"
+											id="c-isolees"
+											checked={exploration.masquerIsolees}
+										/><span class="lg__nom">Masquer les nœuds isolés</span><span class="lg__n"
+											>{isolees}</span
+										></label
+									>
+									<label class="lg lg--case"
+										><input type="checkbox" id="c-ruptures" checked /><span class="lg__nom"
+											>Points de rupture</span
+										><span class="lg__n">{ruptures.size}</span></label
+									>
+								</div>
+								<button class="btn btn--discret" id="reinitialiser" type="button"
+									>Réinitialiser les filtres</button
+								>
+							</div>
+
+							<details class="alt-texte" id="liste-noeuds">
+								<summary>Liste des nœuds et de leurs relations</summary>
+								<ul id="alt-liste">
+									{#each graphe.noeuds as n (n.id)}<li>
+											<b>{n.note.titre}</b>{ligneAlternative(
+												n.id,
+												n.note
+											)}{#each relationsDe(n.id, relations) as r, rang (rang)}<div class="alt-rel">
+													{`${typesRelation[r.type][r.sortant ? 'sortant' : 'entrant']} : ${titreDe(graphe, corpus, r.autre)}`}
+												</div>{/each}
+										</li>{/each}
+								</ul>
+							</details>
+						</div>
+					</aside>
+				{/if}
 
 				{#if avis !== null}
 					<div class="avis-bandeau">
@@ -1132,13 +1237,24 @@
 					</button>
 				</div>
 
-				<!-- La légende du dessin — `RG-M09-07`, sous le canevas dans les deux modes. -->
+				<!-- La légende du dessin — `RG-M09-07`. LES CINQ CANAUX, ET UNE SEULE FOIS :
+				     elle se répétait dans la colonne de commande, sous le titre « Lecture du
+				     graphe », en huit lignes de prose. Deux légendes pour un dessin, dont
+				     une qu'il fallait lire. -->
 				<div class="legende-pied" aria-hidden="true">
 					<div class="legende-pied__bloc">
-						<span class="etiq">Type de nœud</span>
+						<span class="etiq">Type</span>
 						<div class="legende-pied__items">
 							{#each types.slice(0, 4) as t (t.cle)}<span class="lp"
 									>{@render miniature(t.type)}<span>{t.type.nom}</span></span
+								>{/each}
+						</div>
+					</div>
+					<div class="legende-pied__bloc">
+						<span class="etiq">Vivacité</span>
+						<div class="legende-pied__items">
+							{#each ORDRE_DES_ETATS as etat (etat)}<span class="lp"
+									>{@render glypheDEtat(etat)}<span>{ETATS_DE_VIVACITE[etat].libelle}</span></span
 								>{/each}
 						</div>
 					</div>
@@ -1155,11 +1271,23 @@
 						</div>
 					</div>
 					<div class="legende-pied__bloc">
-						<span class="etiq">Vivacité</span>
+						<span class="etiq">Groupe</span>
 						<div class="legende-pied__items">
-							{#each ORDRE_DES_ETATS as etat (etat)}<span class="lp"
-									>{@render glypheDEtat(etat)}<span>{ETATS_DE_VIVACITE[etat].libelle}</span></span
-								>{/each}
+							<span class="lp"><span class="lp__ilot"></span><span>Famille</span></span>
+						</div>
+					</div>
+					<div class="legende-pied__bloc">
+						<span class="etiq">Taille</span>
+						<div class="legende-pied__items">
+							<span class="lp"
+								><span class="lp__tailles"><i></i><i></i><i></i></span><span
+									>{exploration.taille === 'uniforme'
+										? 'Uniforme'
+										: exploration.taille === 'connexions'
+											? 'Connexions'
+											: 'Centralité'}</span
+								></span
+							>
 						</div>
 					</div>
 				</div>

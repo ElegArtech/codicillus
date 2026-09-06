@@ -25,6 +25,8 @@ export interface TraitsDeNoeud {
 	readonly vivacite: EtatDeVivacite | null;
 	/** Le nombre d'arêtes qui le touchent, toutes couches confondues. */
 	readonly degre: number;
+	/** Le code du type de la note — trois lettres, tel que la légende le montre. */
+	readonly type: string;
 }
 
 /** Ce qu'un réglage regarde des filtres eux-mêmes. */
@@ -32,6 +34,9 @@ export interface ReglagesDeFiltre {
 	readonly couches: readonly CoucheDeLiens[];
 	readonly vivacite: readonly EtatDeVivacite[];
 	readonly degreMinimum: number;
+	readonly masquerIsolees: boolean;
+	/** Les codes de type affichés — `null` : tous, y compris ceux créés en console. */
+	readonly types: readonly string[] | null;
 }
 
 /**
@@ -43,6 +48,8 @@ export interface ReglagesDeFiltre {
  */
 export function noeudMasque(traits: TraitsDeNoeud, reglages: ReglagesDeFiltre): boolean {
 	if (traits.vivacite !== null && !reglages.vivacite.includes(traits.vivacite)) return true;
+	if (reglages.types !== null && !reglages.types.includes(traits.type)) return true;
+	if (reglages.masquerIsolees && traits.degre === 0) return true;
 	return traits.degre < reglages.degreMinimum;
 }
 
