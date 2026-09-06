@@ -1,3 +1,19 @@
+/* ==========================================================================
+   CETTE FEUILLE NE VAUT QUE SUR SON ÉCRAN — /connexion
+
+   Les quarante-deux feuilles de vue partagent un espace de noms global : 575
+   couples sur 861 se contredisent sur au moins un sélecteur. Or le routeur
+   ajoute la feuille de la vue VISÉE dès le clic, et n'ouvre la vue qu'après
+   sa donnée : sans cette portée, elle repeint pendant ce temps-là l'écran
+   qu'on regarde encore — mesuré à 26 px de titre et 50 px de bandeau.
+
+   @scope NE CHANGE AUCUNE SPÉCIFICITÉ : chaque règle garde exactement le
+   poids qu'elle avait, et l'écran rendu ici est celui d'un chargement
+   complet de cette adresse. L'attribut data-route est posé sur <html> par
+   `src/hooks.server.ts` au rendu, et suivi par `+layout.svelte` à la bascule.
+   ========================================================================== */
+@scope (html[data-route="/connexion"]) {
+
 
 body { background: var(--c-fond); }
 
@@ -117,3 +133,6 @@ body { background: var(--c-fond); }
 .planche input:checked + span { background: #cfd8db; color: var(--c-encre); border-color: #cfd8db; font-weight: var(--g-fort); }
 .planche input:focus-visible + span { outline: 2px solid #8f86e0; outline-offset: 2px; }
 .planche__sep { width: 1px; height: 22px; background: #33454f; }
+
+
+}
