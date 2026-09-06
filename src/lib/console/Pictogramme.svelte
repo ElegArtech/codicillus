@@ -4,7 +4,7 @@
 	 *
 	 * Les maquettes de console injectent leurs pictogrammes par `innerHTML`, à
 	 * partir de fragments SVG littéraux : les dix de la navigation secondaire
-	 * (`SECTIONS[].ic`), les six glyphes d'univers de V-27 (`GLYPHES`). Tous
+	 * (`SECTIONS[].ic`), les dix glyphes d'univers (`GLYPHES_DUNIVERS`). Tous
 	 * ont la même enveloppe — `fill="none" stroke="currentColor"` — et ne
 	 * varient que par la taille, la boîte de vue et l'épaisseur de trait.
 	 *
