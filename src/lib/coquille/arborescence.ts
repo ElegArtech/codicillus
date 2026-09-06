@@ -82,6 +82,8 @@ export interface SectionDUnivers {
 	readonly compte: number;
 	/** La clé de pictogramme choisie en console pour cet univers. */
 	readonly glyphe: string;
+	/** La couleur choisie en console — elle TEINTE LE TRAIT du pictogramme. */
+	readonly couleur: string;
 }
 
 /**
@@ -130,6 +132,8 @@ export interface SectionRendue {
 		readonly chemin: readonly string[];
 	} | null;
 	readonly glyphe: string;
+	/** La couleur de l'univers — le trait du pictogramme la porte. */
+	readonly couleur: string;
 	readonly compte: number;
 	readonly domaines: readonly NoeudRendu[];
 	/** L'univers porte la page courante — texte vert, sans fond. */
@@ -251,7 +255,8 @@ export function sectionsDuRail(
 			nom: u.nom,
 			domaines: branches,
 			compte: branches.reduce((somme, d) => somme + d.compte, 0),
-			glyphe: u.glyphe
+			glyphe: u.glyphe,
+			couleur: u.couleur
 		};
 	});
 }
@@ -394,6 +399,7 @@ export function railRendu(
 			nom: s.nom,
 			cible: { univers: identifiantDUnivers(designations, s.nom), domaine: '', chemin: [] },
 			glyphe: s.glyphe,
+			couleur: s.couleur,
 			compte: s.compte,
 			domaines,
 			courant,

@@ -207,7 +207,7 @@
 .bandeau__sceau {
   width: 80px; height: 80px; flex: none; border-radius: var(--r-4);
   display: grid; place-items: center;
-  background: var(--c-accent-voile); color: var(--c-accent);
+  background: var(--c-fond-creux);
 }
 .bandeau__corps { flex: 1; min-width: 260px; display: flex; flex-direction: column; }
 .bandeau h1 {
