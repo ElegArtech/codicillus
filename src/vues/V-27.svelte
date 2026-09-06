@@ -427,7 +427,7 @@
 		><button type="button" disabled={rang === 0} aria-label="Monter {u.nom}" onclick={() => onReordonner?.(u.nom, rang)}><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6.5L6 3.5l3 3"/></svg></button
 		><button type="button" disabled={rang === liste.length - 1} aria-label="Descendre {u.nom}" onclick={() => onReordonner?.(u.nom, rang + 2)}><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5.5L6 8.5l3-3"/></svg></button
 	></div
-	><span class="apercu-nav__sceau" style="background:{u.couleur};width:28px;height:28px">{@render glyphe(u.glyphe, '16', '1.6')}</span
+	><span class="apercu-nav__sceau" style="color:{u.couleur};width:28px;height:28px">{@render glyphe(u.glyphe, '18', '1.6')}</span
 	><div style="min-width:0"
 		><div class="tg__nom"><a class="tg__ouvrir" href={resolve('/univers/[univers]', { univers: identifiantDUnivers(designations, u.nom) })}>{u.nom}</a>{#if u.systeme}<span class="past past--systeme" style="margin-left:var(--e-2)">système</span>{/if}</div
 		><div class="tg__desc">{u.description}</div
@@ -629,12 +629,18 @@
 					>
 				</div>
 
-				<!-- L'ordre, la couleur et l'icône se jugent là où ils apparaîtront. -->
+				<!--
+					L'ordre, la couleur et l'icône se jugent là où ils apparaîtront.
+
+					LA COULEUR TEINTE LE TRAIT DE L'ICÔNE, PAS UN FOND DE CARRÉ. Le fond plein
+					donnait une colonne de pastilles qui pesaient plus que les noms, et l'aperçu
+					mentait sur le rail — qui, lui, ne portait aucune couleur.
+				-->
 				<div class="champ">
 					<span class="champ__label">Aperçu de la navigation</span>
 					<!-- prettier-ignore -->
 					<div class="apercu-nav" id="apercu-nav"
-						>{#if ouvert}{#each apercu as l, rang (rang)}<div class="apercu-nav__ligne" data-courant={l.courant ? 'oui' : undefined}><span class="apercu-nav__sceau" style="background:{l.couleur}">{@render glyphe(l.glyphe, '12', '1.8')}</span>{l.nom}</div>{/each}{/if}</div
+						>{#if ouvert}{#each apercu as l, rang (rang)}<div class="apercu-nav__ligne" data-courant={l.courant ? 'oui' : undefined}><span class="apercu-nav__sceau" style="color:{l.couleur}">{@render glyphe(l.glyphe, '16', '1.5')}</span>{l.nom}</div>{/each}{/if}</div
 					>
 				</div>
 			</div>

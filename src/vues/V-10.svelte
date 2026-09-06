@@ -44,6 +44,8 @@
 		readonly description: string;
 		/** La clé de glyphe choisie en console — `$lib/coquille/glyphes.ts`. */
 		readonly glyphe: string;
+		/** La couleur choisie en console — elle teinte le TRAIT du glyphe. */
+		readonly couleur: string;
 	}
 
 	/** Un compteur d'état. Les cinq sont toujours servis, y compris à zéro. */
@@ -395,7 +397,7 @@
 		<!-- ── 1. LE BANDEAU ────────────────────────────────────────────── -->
 		<section class="bandeau" aria-labelledby="titre">
 			<div class="bandeau__haut">
-				<span class="bandeau__sceau" aria-hidden="true">
+				<span class="bandeau__sceau" aria-hidden="true" style="color:{univers.couleur}">
 					<Pictogramme
 						traits={glypheDUnivers(univers.glyphe)}
 						taille="36"
