@@ -26,8 +26,11 @@ import type { TraitDePictogramme } from '../console/sections';
  * posée. La roue dentée est retenue, parce que c'est elle qui est PORTÉE PAR DES
  * UNIVERS EXISTANTS : la changer les repeindrait tous. V-27 lit cette table.
  *
- * Les quatre derniers — serveur, réseau, bouclier, équipe — étendent le choix
- * au-delà des six d'origine, trop peu nombreux pour une instance réelle.
+ * Les dix derniers — serveur, réseau, bouclier, équipe, puis clé, nuage, code,
+ * graphique, calendrier, cadenas — étendent le choix au-delà des six d'origine,
+ * trop peu nombreuses pour une instance réelle. Chacune doit se distinguer des
+ * autres À 19 PIXELS, la taille du sélecteur : c'est là que deux silhouettes
+ * voisines deviennent le même dessin.
  */
 export const GLYPHES_DUNIVERS: Readonly<Record<string, readonly TraitDePictogramme[]>> = {
 	pile: [
@@ -77,6 +80,30 @@ export const GLYPHES_DUNIVERS: Readonly<Record<string, readonly TraitDePictogram
 	/** Le bouclier — ce qui protège, ce qui engage. */
 	bouclier: [
 		{ forme: 'path', d: 'M12 2.5l7.5 3v6.2c0 4.4-3 8-7.5 9.8-4.5-1.8-7.5-5.4-7.5-9.8V5.5z' }
+	],
+	/** La clé — les accès, les comptes, ce qui s'ouvre sur autorisation. */
+	cle: [
+		{ forme: 'circle', cx: '7.5', cy: '7.5', r: '3.8' },
+		{ forme: 'path', d: 'M10.2 10.2L20.5 20.5M16.8 16.8l2.4-2.4M13.9 13.9l2.4-2.4' }
+	],
+	/** Le nuage — ce qui est hébergé ailleurs. */
+	nuage: [{ forme: 'path', d: 'M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z' }],
+	/** Le code — deux chevrons et la barre oblique. */
+	code: [{ forme: 'path', d: 'M8.5 7.5L3.5 12l5 4.5M15.5 7.5l5 4.5-5 4.5M13.6 5.5l-3.2 13' }],
+	/** Le graphique — un axe et trois barres, pour le pilotage et les chiffres. */
+	graphique: [
+		{ forme: 'path', d: 'M3.5 3.5v17h17' },
+		{ forme: 'path', d: 'M8.5 17.5v-6M13 17.5v-10M17.5 17.5v-3.5' }
+	],
+	/** Le calendrier — les échéances, les campagnes, ce qui a une date. */
+	calendrier: [
+		{ forme: 'rect', x: '3.5', y: '5', largeur: '17', hauteur: '15.5', rx: '2' },
+		{ forme: 'path', d: 'M3.5 10h17M8 3v4M16 3v4' }
+	],
+	/** Le cadenas — ce qui est fermé, ce qui est confidentiel. */
+	cadenas: [
+		{ forme: 'rect', x: '4.5', y: '10.5', largeur: '15', hauteur: '10', rx: '2' },
+		{ forme: 'path', d: 'M8 10.5V7.5a4 4 0 0 1 8 0v3' }
 	],
 	/** L'équipe — deux personnes, pour les univers qui parlent de gens. */
 	equipe: [
