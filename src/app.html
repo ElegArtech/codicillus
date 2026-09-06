@@ -12,6 +12,86 @@
 			Le répertoire est installé par `pnpm socle:extraire` depuis
 			`mockups/polices/` ; `pnpm verif:jetons` en prouve l'identité au gel.
 		-->
+		<!--
+			LES NEUF FACES QUE CHAQUE ÉCRAN EMPLOIE, DEMANDÉES DÈS L'ANALYSE DE
+			L'EN-TÊTE. Sans cela le navigateur ne les découvre qu'après avoir chargé
+			`polices.css`, l'avoir analysé, puis calculé la mise en page : trois
+			étapes en série avant la première requête. Mesuré sur l'instance : le
+			titre d'un univers se rendait en 1236 × 41 px dans la police de repli,
+			puis en 675 × 50 px trente-quatre millisecondes plus tard — tout l'écran
+			se recalait sous les yeux, à chaque ouverture de page.
+
+			`crossorigin` N'EST PAS FACULTATIF, MÊME ICI. Une police se récupère
+			toujours en mode anonyme ; sans l'attribut, le préchargement et la requête
+			de `@font-face` ne sont pas la même requête, et le fichier part deux fois.
+
+			LES SOUS-ENSEMBLES `latin-ext` NE SONT PAS PRÉCHARGÉS : l'interface est en
+			français, ils ne servent qu'aux caractères que `unicode-range` leur
+			réserve, et le navigateur ne les demande que s'il en rencontre un.
+		-->
+		<link
+			rel="preload"
+			as="font"
+			type="font/woff2"
+			crossorigin
+			href="%sveltekit.assets%/polices/archivo-400-normal-latin.woff2"
+		/>
+		<link
+			rel="preload"
+			as="font"
+			type="font/woff2"
+			crossorigin
+			href="%sveltekit.assets%/polices/archivo-500-normal-latin.woff2"
+		/>
+		<link
+			rel="preload"
+			as="font"
+			type="font/woff2"
+			crossorigin
+			href="%sveltekit.assets%/polices/archivo-600-normal-latin.woff2"
+		/>
+		<link
+			rel="preload"
+			as="font"
+			type="font/woff2"
+			crossorigin
+			href="%sveltekit.assets%/polices/archivo-700-normal-latin.woff2"
+		/>
+		<link
+			rel="preload"
+			as="font"
+			type="font/woff2"
+			crossorigin
+			href="%sveltekit.assets%/polices/literata-400-normal-latin.woff2"
+		/>
+		<link
+			rel="preload"
+			as="font"
+			type="font/woff2"
+			crossorigin
+			href="%sveltekit.assets%/polices/literata-600-normal-latin.woff2"
+		/>
+		<link
+			rel="preload"
+			as="font"
+			type="font/woff2"
+			crossorigin
+			href="%sveltekit.assets%/polices/jetbrains-mono-400-normal-latin.woff2"
+		/>
+		<link
+			rel="preload"
+			as="font"
+			type="font/woff2"
+			crossorigin
+			href="%sveltekit.assets%/polices/jetbrains-mono-500-normal-latin.woff2"
+		/>
+		<link
+			rel="preload"
+			as="font"
+			type="font/woff2"
+			crossorigin
+			href="%sveltekit.assets%/polices/jetbrains-mono-700-normal-latin.woff2"
+		/>
 		<link rel="stylesheet" href="%sveltekit.assets%/polices/polices.css" />
 		%sveltekit.head%
 	</head>
