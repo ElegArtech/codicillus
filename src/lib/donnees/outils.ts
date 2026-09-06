@@ -21,14 +21,26 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Base } from '../base/acces';
-import { notes, relations, typesDeRelation } from '../base/schema';
+import { comptes, notes, relations, typesDeRelation } from '../base/schema';
 import type { Perimetre } from '../droits/resolution';
 import {
 	sousGraphe,
 	type Graphe,
-	type Perimetre as PerimetreDAffichage
+	type Perimetre as PerimetreDAffichage,
+	type SortDesIsolees
 } from '../graphe/cartographie';
+import {
+	ETATS_DE_VIVACITE,
+	vivacite,
+	type EtatDeVivacite,
+	type SeuilsDeVivacite
+} from '../fraicheur';
+import { cycleDuRegistre, type LigneDeCycles } from './vivacite';
+import type { Registre } from './note';
 import type { CleDeTypeDeRelation, Note, Relation } from '../../../seeds/corpus';
+
+/** Les deux registres d'une note — l'ordre ne compte pas, on garde le pire des deux. */
+const REGISTRES: readonly Registre[] = ['reference', 'operationnel'];
 
 /**
  * Les trois valeurs de l'énuméré `origine_de_relation`, dans leur ordre de
@@ -151,17 +163,105 @@ export function valeurDeSelecteur(perimetre: PerimetreDAffichage): string {
 export function grapheReel(
 	notesLisibles: readonly Note[],
 	relationsLisibles: readonly Relation[],
-	perimetre: PerimetreDAffichage
+	perimetre: PerimetreDAffichage,
+	isolees: SortDesIsolees
 ): Graphe {
-	return sousGraphe(notesLisibles, perimetre, relationsLisibles);
+	return sousGraphe(notesLisibles, perimetre, relationsLisibles, isolees);
 }
 
 /**
- * L'état de la zone de graphe — `RG-M18-03`, et seulement DEUX de ses positions. `vide` se
- * décide sur les ARÊTES, jamais sur les nœuds : un périmètre peuplé de notes sans aucune
- * relation est vide au sens de la cartographie. `chargement` est un moment du client, que le
- * serveur n'observe pas ; `dense` attend le seuil de `RG-M09-04`, que rien ne donne.
+ * LA VIVACITÉ DE CHAQUE NOTE LISIBLE — c'est elle que la couleur d'un nœud porte.
+ *
+ * La cartographie dépensait TROIS canaux — forme, code de trois lettres et teinte —
+ * pour dire une seule chose, le type, et n'en gardait aucun pour l'état. Or la carte
+ * n'a de valeur que si elle répond à « où sont les zones importantes mais fragiles ? » :
+ * un nœud très central devenu obsolète est le fait le plus utile qu'un corpus puisse
+ * rendre. La forme et le code continuent de porter le type — la redondance de
+ * `RG-M18-09` tient donc des deux côtés, et le glyphe de l'état s'y ajoute.
+ *
+ * L'ÉTAT RENDU EST LE PIRE DES DEUX REGISTRES. Une note porte jusqu'à deux cycles
+ * (`SPEC-vivacite` : « deux registres de la même note peuvent être dans deux états
+ * différents »), et un nœud n'a qu'une couleur. Prendre la Référence seule tairait
+ * une procédure opérationnelle obsolète sous une référence à jour — exactement ce
+ * qu'une carte de santé ne doit pas taire.
+ *
+ * LE PÉRIMÈTRE EST DANS LA REQUÊTE (`ADR-006`), comme partout ici.
+ */
+export async function lireLaVivaciteDesNotes(
+	base: Base,
+	perimetre: Perimetre,
+	maintenant: Date,
+	seuils: SeuilsDeVivacite
+): Promise<Record<string, EtatDeVivacite>> {
+	const autorises = perimetre.tout ? null : [...perimetre.dossiers];
+	if (autorises !== null && autorises.length === 0) return {};
+	const filtre = autorises === null ? undefined : inArray(notes.dossierId, autorises);
+
+	const demandeur = alias(comptes, 'demandeur_de_revision');
+	const lignes = await base
+		.select({
+			identifiant: notes.identifiant,
+			modifieLe: notes.modifieLe,
+			corpsOperationnelModifieLe: notes.corpsOperationnelModifieLe,
+			verifieLe: notes.verifieLe,
+			verifieLeOperationnel: notes.verifieLeOperationnel,
+			validiteReference: notes.validiteReference,
+			validiteOperationnel: notes.validiteOperationnel,
+			revisionDemandee: notes.revisionDemandee,
+			revisionRegistre: notes.revisionRegistre,
+			revisionPar: demandeur.nom
+		})
+		.from(notes)
+		.leftJoin(demandeur, eq(notes.revisionParId, demandeur.id))
+		.where(filtre)
+		.orderBy(notes.identifiant);
+
+	const etats: Record<string, EtatDeVivacite> = {};
+	for (const ligne of lignes) {
+		/* Les deux noms de vérificateur ne nourrissent que la ligne « Vérifiée le …
+		   par … » d'une note, qu'aucune carte n'affiche. Le contrat les exige ;
+		   l'état vide explicite est `null`. */
+		const cycles: LigneDeCycles = {
+			...ligne,
+			verifieParReference: null,
+			verifieParOperationnel: null
+		};
+		let pire: EtatDeVivacite | null = null;
+		let pireAttention = -1;
+		for (const registre of REGISTRES) {
+			const cycle = cycleDuRegistre(cycles, registre);
+			if (cycle === null) continue;
+			const etat = vivacite(cycle, maintenant, seuils).etat;
+			const attention = ETATS_DE_VIVACITE[etat].attention;
+			if (attention > pireAttention) {
+				pireAttention = attention;
+				pire = etat;
+			}
+		}
+		if (pire !== null) etats[ligne.identifiant] = pire;
+	}
+	return etats;
+}
+
+/**
+ * L'état de la zone de graphe — `RG-M18-03`, et seulement DEUX de ses positions.
+ *
+ * `vide` SE DÉCIDE SUR LES NŒUDS, ET C'EST UN CHANGEMENT DE DOCTRINE. Il se décidait
+ * sur les ARÊTES : un périmètre peuplé de notes sans aucune relation était déclaré
+ * vide, et le voile s'étendait sur un canevas qui ne l'était pas. Depuis que la vue
+ * complète garde les notes isolées (`SortDesIsolees`), trente-deux notes et zéro
+ * relation forment un nuage de familles PARFAITEMENT LISIBLE — et c'est même l'image
+ * la plus utile qu'on puisse rendre d'un corpus non structuré. Ce qui manque alors
+ * n'est pas le contenu de l'écran, c'est une relation déclarée : la vue le dit par un
+ * BANDEAU au-dessus du dessin, jamais par un voile qui le masque.
+ *
+ * LA VUE PAR TYPE MAÎTRE N'EN EST PAS AFFECTÉE : elle demande `retirees`, donc un
+ * périmètre sans arête n'y porte aucun nœud, et l'état reste `vide` comme avant.
+ * Une seule définition, juste pour les deux.
+ *
+ * `chargement` est un moment du client, que le serveur n'observe pas ; `dense` attend
+ * le seuil de `RG-M09-04`, que rien ne donne.
  */
 export function etatDeCartographie(graphe: Graphe): 'nominal' | 'vide' {
-	return graphe.aretes.length === 0 ? 'vide' : 'nominal';
+	return graphe.noeuds.length === 0 ? 'vide' : 'nominal';
 }
