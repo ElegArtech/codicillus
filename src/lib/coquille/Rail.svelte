@@ -260,7 +260,7 @@
 		{:else}
 			<ul class="arbre">
 				{#each arbre as section (section.nom)}
-					<li data-ouvert={section.ouvert ? 'oui' : 'non'}>
+					<li data-ouvert={section.ouvert ? 'oui' : 'non'} style="--teinte:{section.couleur}">
 						<div
 							class="noeud noeud--univers"
 							class:noeud--courant={section.page}
