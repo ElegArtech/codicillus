@@ -859,7 +859,7 @@
 
 				<div class="controles__outils">
 					<label class="hors-ecran" for="perimetre-univers">Univers</label>
-					<select id="perimetre-univers" class="choix"
+					<select id="perimetre-univers" class="carto-choix"
 						><option value="">Univers : tous</option>{#each UNIVERS_PROPOSES as u (u.nom)}<option
 								value={u.nom}
 								selected={u.nom === universChoisi}>{'Univers : ' + u.nom}</option
@@ -867,7 +867,7 @@
 					>
 
 					<label class="hors-ecran" for="perimetre-domaine">Domaine</label>
-					<select id="perimetre-domaine" class="choix"
+					<select id="perimetre-domaine" class="carto-choix"
 						><option value="">Domaine : tous</option>{#each domainesProposes as d (d.nom)}<option
 								value={d.nom}
 								selected={d.nom === domaineChoisi}>{'Domaine : ' + d.nom}</option
@@ -1042,8 +1042,8 @@
 				     l'éteint d'un clic. Les trois paragraphes qui tenaient ce rôle ont été
 				     retirés — un panneau d'exploration n'est pas un manuel. -->
 				{#if !locale}
-					<aside class="panneau" id="commandes" aria-label="Affichage du graphe">
-						<div class="panneau__tete">
+					<aside class="carto-reglages" id="commandes" aria-label="Affichage du graphe">
+						<div class="carto-reglages__tete">
 							<svg
 								width="15"
 								height="15"
@@ -1056,13 +1056,13 @@
 									d="M8 1.4v1.8M8 12.8v1.8M1.4 8h1.8M12.8 8h1.8M3.4 3.4l1.3 1.3M11.3 11.3l1.3 1.3M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3"
 								/></svg
 							>
-							<span class="panneau__nom">Affichage</span>
+							<span class="carto-reglages__nom">Affichage</span>
 							<button
 								type="button"
-								class="panneau__bascule"
-								id="panneau-bascule"
+								class="carto-reglages__bascule"
+								id="carto-reglages-bascule"
 								aria-expanded="true"
-								aria-controls="panneau-corps"
+								aria-controls="carto-reglages-corps"
 								aria-label="Replier le panneau d’affichage"
 								><svg
 									width="14"
@@ -1075,7 +1075,7 @@
 							>
 						</div>
 
-						<div class="panneau__corps" id="panneau-corps">
+						<div class="carto-reglages__corps" id="carto-reglages-corps">
 							<div class="legende__bloc">
 								<span class="etiq">Liens</span>
 								<div id="filtre-couches">
