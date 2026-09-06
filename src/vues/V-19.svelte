@@ -387,15 +387,27 @@
 	   Un dessin où RIEN n'est nommé n'a pas de prise : les nœuds structurants
 	   gardent leur titre, et ce sont ceux qu'on cherche du regard.
 
-	   DEUX CONDITIONS, ET LA SECONDE EST CELLE QUI COMPTE. Le seul seuil de rayon a
-	   été mesuré sur l'instance de recette : les nœuds les plus centraux y sont TOUS
-	   dans le même amas — c'est ce qui les rend centraux —, si bien qu'une quinzaine
-	   de titres se sont empilés au même endroit en une tache illisible, pendant que
-	   le reste de la carte n'en portait aucun. Le nombre est donc PLAFONNÉ : les huit
-	   plus gros, et eux seuls. Les autres se lisent au survol ou à la sélection. */
+	   LE SEUL SEUIL DE RAYON NE BORNE RIEN, ET LE PLAFOND NON PLUS. Les nœuds les
+	   plus centraux sont TOUS dans le même amas — c'est ce qui les rend centraux.
+	   Mesuré sur les trois cents notes de la recette : quinze titres empilés au même
+	   endroit en une tache illisible, puis huit encore superposés une fois plafonnés,
+	   pendant que le reste de la carte n'en portait aucun.
+
+	   UN TITRE EST DONC REFUSÉ S'IL EN HEURTE UN AUTRE. Les candidats sont pris du
+	   plus gros au plus petit — à rayon égal, l'identifiant tranche, pour que le
+	   classement ne dépende pas de l'ordre de la requête — et chacun n'est écrit que
+	   si sa boîte est libre. Ce qui reste est lisible, et réparti.
+
+	   LA BOÎTE EST ESTIMÉE, PAS MESURÉE, et c'est voulu : mesurer un texte demande
+	   un document, donc ferait dépendre le dessin du navigateur qui le rend — deux
+	   postes n'auraient plus la même carte. La largeur moyenne d'un caractère de
+	   `.noeud__nom` — Archivo 600 à 9,5 px — vaut 4,9 px ; l'estimation suffit
+	   largement pour décider d'un chevauchement. */
 
 	const RAYON_DE_NOEUD_NOMME = 11;
-	const NOEUDS_NOMMES_AU_PLUS = 8;
+	const NOEUDS_NOMMES_AU_PLUS = 10;
+	const LARGEUR_DE_CARACTERE = 4.9;
+	const HAUTEUR_DETIQUETTE = 12;
 
 	/* ── LES ÎLOTS SÉMANTIQUES ─────────────────────────────────────────────────
 	   La forme juste d'une appartenance est un ENSEMBLE, pas un faisceau de
@@ -593,16 +605,37 @@
 
 	const noeudsNommes = $derived.by<ReadonlySet<string>>(() => {
 		if (!dense) return new Set(graphe.noeuds.map((n) => n.id));
-		return new Set(
-			graphe.noeuds
-				.map((n) => [n.id, rayon(n.id)] as const)
-				.filter(([, r]) => r >= RAYON_DE_NOEUD_NOMME)
-				/* À rayon égal, l'identifiant tranche : le classement ne doit pas
-				   dépendre de l'ordre de la requête. */
-				.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-				.slice(0, NOEUDS_NOMMES_AU_PLUS)
-				.map(([id]) => id)
-		);
+
+		const candidats = graphe.noeuds
+			.map((n) => ({ id: n.id, titre: nomCourt(n.note.titre), r: rayon(n.id) }))
+			.filter((c) => c.r >= RAYON_DE_NOEUD_NOMME)
+			.sort((a, b) => b.r - a.r || a.id.localeCompare(b.id));
+
+		/* Un tableau, puis UN `Set` construit d'un coup : `svelte/prefer-svelte-reactivity`
+		   refuse un `Set` qu'on remplit — à raison, un `Set` muté dans un état dérivé
+		   ne réveille rien. */
+		const retenus: string[] = [];
+		const boites: { x1: number; y1: number; x2: number; y2: number }[] = [];
+		for (const c of candidats) {
+			if (retenus.length >= NOEUDS_NOMMES_AU_PLUS) break;
+			const place = positionDe(c.id);
+			const demiLargeur = (c.titre.length * LARGEUR_DE_CARACTERE) / 2;
+			/* L'étiquette est posée sous la pastille — `y={ray + 12}` au balisage. */
+			const haut = place.y + c.r + 12 - HAUTEUR_DETIQUETTE;
+			const boite = {
+				x1: place.x - demiLargeur,
+				y1: haut,
+				x2: place.x + demiLargeur,
+				y2: haut + HAUTEUR_DETIQUETTE
+			};
+			const heurte = boites.some(
+				(b) => b.x1 < boite.x2 && boite.x1 < b.x2 && b.y1 < boite.y2 && boite.y1 < b.y2
+			);
+			if (heurte) continue;
+			boites.push(boite);
+			retenus.push(c.id);
+		}
+		return new Set(retenus);
 	});
 
 	/* L'avancement du calcul de disposition : un état figé, jamais une animation. */
