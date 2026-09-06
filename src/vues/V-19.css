@@ -656,10 +656,14 @@ svg .noeud[data-isolee="oui"] { opacity: 0.82; }
 .detail__sous { display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; margin: 0 0 var(--e-3); }
 .detail__type { font-family: var(--f-donnee); font-size: var(--t-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--c-encre-3); }
 .detail__etat { font-size: var(--t-mini); font-weight: var(--g-fort); color: currentColor; }
-/* L'EXTRAIT EST UN EXTRAIT. Il portait le CORPS ENTIER de la note — mesuré au
-   navigateur, cinquante lignes pour « Restaurer une sauvegarde PostgreSQL » —, si
-   bien que les mesures, les relations et les trois actions tombaient hors de l'écran :
-   le panneau ne servait plus qu'à lire une note qu'on n'avait pas demandé à ouvrir. */
+/* L'EXTRAIT EST UN EXTRAIT — ET IL L'EST DEPUIS `extraitDuCorps()`, PAS D'ICI.
+   Le panneau portait le CORPS ENTIER de la note : cinquante lignes pour « Restaurer
+   une sauvegarde PostgreSQL », et les mesures, les relations et les trois actions
+   tombaient hors de l'écran. Cette coupe-ci a d'abord été posée SEULE, et c'était un
+   emplâtre : la donnée continuait de descendre en entier, ici comme dans toutes les
+   listes de notes — 3,8 Mo de corps dans la charge d'une page de domaine. La cause
+   est réparée à la source ; la coupe reste, parce qu'un extrait de deux cents
+   caractères tient en quatre lignes et qu'aucun panneau ne doit dépendre de ça. */
 .detail__extrait {
   font-family: var(--f-lecture); font-size: var(--t-petit); line-height: 1.55;
   color: var(--c-encre-2); margin: 0 0 var(--e-3);

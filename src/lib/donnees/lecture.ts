@@ -160,19 +160,60 @@ export interface ContexteDeLecture {
 }
 
 /**
- * L'extrait d'une note — dérivé du TEXTE BRUT de son corps. `STACK-TECHNIQUE.md` tranche :
- * des trois formes que le format dérive, le texte brut est produit « à l'enregistrement »
- * et sert à « l'indexation, les EXTRAITS, la détection de doublon ». L'extrait n'est pas
- * stocké — aucune colonne — c'est une dérivation.
+ * LE TEXTE BRUT DU CORPS, EN ENTIER. `STACK-TECHNIQUE.md` tranche : des trois formes
+ * que le format dérive, le texte brut est produit « à l'enregistrement » et sert à
+ * « l'indexation, les EXTRAITS, la détection de doublon ». Il n'est pas stocké —
+ * aucune colonne —, c'est une dérivation.
  *
- * LE PARCOURS RESTE STRUCTUREL, JAMAIS TEXTUEL : `texteBrut()` parcourt l'arbre de nœuds,
- * et `ADR-003` interdit « toute manipulation du corps par expression régulière ».
+ * LE PARCOURS RESTE STRUCTUREL, JAMAIS TEXTUEL : `texteBrut()` parcourt l'arbre de
+ * nœuds, et `ADR-003` interdit « toute manipulation du corps par expression
+ * régulière ».
  *
- * CE QU'AUCUNE SOURCE NE DIT, et qui n'est donc pas décidé ici : la LONGUEUR d'un extrait.
- * Cette fonction ne tronque pas ; le jour où une source le dira, la coupe se pose ICI.
+ * IL NE SORT QUE VERS L'INDEX. Ce qui part à l'écran est un EXTRAIT — voir juste en
+ * dessous.
+ */
+export function texteDuCorps(corps: unknown): string {
+	return texteBrut(analyserDocument(corps));
+}
+
+/**
+ * LA LONGUEUR D'UN EXTRAIT — deux cents caractères.
+ *
+ * Cette fonction NE TRONQUAIT PAS, et le commentaire qu'elle portait le disait :
+ * « ce qu'aucune source ne dit, et qui n'est donc pas décidé ici : la LONGUEUR d'un
+ * extrait ; le jour où une source le dira, la coupe se pose ICI ». Deux sources le
+ * disent maintenant.
+ *
+ * LE CONTRAT DU TYPE, d'abord : les trente-deux extraits de `seeds/corpus.ts` — la
+ * seule définition de ce que le champ contient — font de 79 à 183 caractères, médiane
+ * 123. Deux cents les laisse tous passer sans coupe.
+ *
+ * LA MESURE, ensuite. `Note.extrait` descend dans TOUTE liste de notes, et de là dans
+ * la charge d'hydratation de la page. Relevé sur l'instance de recette, sur la page
+ * d'un domaine : 4,2 Mo de charge, dont 3,8 Mo de corps de notes entiers — le plus
+ * gros pesant 98 634 caractères à lui seul. La vue, elle, n'en lit que le titre, le
+ * domaine et l'auteur. Le même défaut remplissait le panneau de la cartographie du
+ * corps complet de la note choisie.
+ */
+export const LONGUEUR_D_EXTRAIT = 200;
+
+/**
+ * L'EXTRAIT D'UNE NOTE — le texte brut de son corps, borné.
+ *
+ * LA COUPE TOMBE SUR UN BLANC quand il y en a un dans le dernier tiers : couper au
+ * caractère près donnerait « la restauration à un ins… », qui se lit mal. Sans blanc
+ * — un mot de deux cents caractères, une adresse — la coupe est franche.
+ *
+ * `ADR-003` N'EST PAS ENFREINT : la règle vise le CORPS, qui reste parcouru par
+ * `texteBrut()` en structure. Ce qu'on découpe ici est le texte DÉJÀ dérivé, et
+ * `lastIndexOf` n'est pas une expression régulière.
  */
 export function extraitDuCorps(corps: unknown): string {
-	return texteBrut(analyserDocument(corps));
+	const texte = texteDuCorps(corps);
+	if (texte.length <= LONGUEUR_D_EXTRAIT) return texte;
+	const coupe = texte.slice(0, LONGUEUR_D_EXTRAIT);
+	const blanc = coupe.lastIndexOf(' ');
+	return (blanc > LONGUEUR_D_EXTRAIT * 0.66 ? coupe.slice(0, blanc) : coupe).trimEnd() + '…';
 }
 
 /** Les univers, dans l'ordre que l'administrateur leur a donné (RG-STR-01). */
