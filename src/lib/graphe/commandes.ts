@@ -23,7 +23,7 @@ const PAS_DE_ZOOM = 1.2;
 
 /** Le repère du dessin — le `viewBox` que les trois vues déclarent. */
 const LARGEUR = 1000;
-const HAUTEUR = 620;
+const HAUTEUR = 780;
 
 /** Le grossissement d'un saut vers un nœud — `V-19:2969`. */
 const ZOOM_DE_SAUT = 1.35;
@@ -59,9 +59,19 @@ interface Vue {
 export interface CommandeDeVue {
 	readonly agrandir: () => void;
 	readonly reduire: () => void;
-	/** `ajuster()` du gel : la vue revient à l'origine, sans grossissement. */
+	/** La vue revient à l'origine, sans grossissement. */
 	readonly ajuster: () => void;
 	readonly centrerSur: (x: number, y: number) => void;
+	/** Le décalage courant du repère — ce dont une préhension repart. */
+	readonly position: () => { x: number; y: number };
+	/** Pose le décalage du repère, sans toucher au grossissement. */
+	readonly deplacer: (x: number, y: number) => void;
+	/**
+	 * GROSSIT AUTOUR D'UN POINT DU REPÈRE, et non autour du centre. C'est ce qui rend
+	 * une molette utilisable : grossir au centre pendant qu'on regarde un coin fait
+	 * perdre ce qu'on visait, à chaque cran.
+	 */
+	readonly grossirVers: (x: number, y: number, facteur: number) => void;
 }
 
 /**
@@ -95,6 +105,23 @@ export function cablerLaVue(racine: ParentNode, attaches: Attaches): CommandeDeV
 			vue.k = ZOOM_DE_SAUT;
 			vue.x = LARGEUR / 2 - x * vue.k;
 			vue.y = HAUTEUR / 2 - y * vue.k;
+			appliquer();
+		},
+		position: () => ({ x: vue.x, y: vue.y }),
+		deplacer: (x, y) => {
+			vue.x = x;
+			vue.y = y;
+			appliquer();
+		},
+		grossirVers: (x, y, facteur) => {
+			const avant = vue.k;
+			const apres = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, avant * facteur));
+			if (apres === avant) return;
+			/* Le point du repère sous le pointeur doit rester sous le pointeur : on
+			   corrige le décalage de la différence que le grossissement introduit. */
+			vue.x = x - ((x - vue.x) / avant) * apres;
+			vue.y = y - ((y - vue.y) / avant) * apres;
+			vue.k = apres;
 			appliquer();
 		}
 	};

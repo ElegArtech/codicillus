@@ -191,7 +191,12 @@
 		return { type: 'global' };
 	});
 
-	const graphe = $derived(sousGraphe(corpus, perimetre, relations));
+	/* `retirees` : cette vue-ci dessine des DÉPENDANCES par type maître, et une
+	   note qu'aucune relation ne touche n'a pas de dépendance à montrer. La vue
+	   complète fait l'inverse — elle garde les isolées, parce qu'y voir ce qui
+	   n'est relié à rien est précisément ce qu'on lui demande. Le sort des isolées
+	   est exigé à chaque appel pour que ce choix-là soit écrit, pas subi. */
+	const graphe = $derived(sousGraphe(corpus, perimetre, relations, 'retirees'));
 	const deg = $derived(degres(graphe));
 	const ruptures = $derived(pointsArticulation(graphe, relationsTechniques));
 	const types = $derived(typesPresents(graphe));
