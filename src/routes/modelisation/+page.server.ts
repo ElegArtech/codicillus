@@ -39,14 +39,18 @@ import { TYPE_DE_MENTION } from '$lib/graphe/mentions';
 import { propositionsDeMention } from '$lib/graphe/propositions';
 import {
 	ajouterUneRelation,
+	annulerUnRefus,
 	changerLeTypeDUneRelation,
+	cleDeTriplet,
 	confirmerUneRelation,
 	lireLaSaisieDeRelation,
+	lireLesPropositionsRefusees,
 	lireLesTypesOfferts,
 	proposerLesRelations,
 	rejeterUneRelation,
 	retirerUneRelation
 } from '$lib/donnees/relations';
+import type { PropositionRefusee } from '$lib/donnees/relations';
 import { lireLeGraphe } from '../cartographie/lecture-du-graphe';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -65,11 +69,23 @@ async function monterLeModele(locals: App.Locals, perimetreDemande: string | nul
 	/* `retirees` : voir l'en-tête. Une note que rien ne relie ne répond pas à la
 	   question de cet écran. */
 	const graphe = sousGraphe(lu.notes, perimetre, lu.relations, 'retirees');
-	return { base, perimetre, graphe, ...lu };
+	/* LES REFUS SONT MONTÉS ICI, avec le reste : le chargeur les AFFICHE et l'action
+	   « Proposer » les ÉCARTE, et deux lectures divergeraient le jour où l'une
+	   oublierait la borne de l'autre. */
+	const refuses = await lireLesPropositionsRefusees(base, acces.perimetre);
+	return { base, perimetre, graphe, refuses, ...lu };
+}
+
+/**
+ * LES TRIPLETS REFUSÉS, en clés d'IDENTIFIANTS — l'espace de `propositionsDeMention()`
+ * et des mentions. La table les porte en clés de base ; la lecture les a déjà traduits.
+ */
+function tripletsRefuses(refuses: readonly PropositionRefusee[]): ReadonlySet<string> {
+	return new Set(refuses.map((r) => cleDeTriplet(r.de, r.vers, r.type)));
 }
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	const { base, perimetre, graphe, notes, typesRelation, relationsTechniques } =
+	const { base, perimetre, graphe, notes, typesRelation, relationsTechniques, refuses } =
 		await monterLeModele(locals, url.searchParams.get('perimetre'));
 
 	/* Les arêtes du DESSIN, avec leur origine et leur clé de ligne. `sousGraphe()` les
@@ -147,7 +163,22 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		 * CE QUE « PROPOSER » POSERAIT, compté avant tout clic. Le bouton doit dire ce
 		 * qu'il fera : « Proposer » sans chiffre est un bouton qu'on n'ose pas presser.
 		 */
-		propositionsPossibles: propositionsDeMention(notes, aretes, mentions).length,
+		propositionsPossibles: propositionsDeMention(notes, aretes, mentions, tripletsRefuses(refuses))
+			.length,
+		/**
+		 * LES PROPOSITIONS REFUSÉES, prêtes à lire — titres et libellé de type compris,
+		 * pour que la vue n'ait rien à résoudre. Elles sont bornées au périmètre
+		 * LISIBLE de l'appelant, comme les relations.
+		 */
+		refuses: refuses.map((r) => ({
+			id: r.id,
+			libelle: r.libelle,
+			titreDe: r.titreDe,
+			titreVers: r.titreVers,
+			/* La date part en chaîne : c'est ce que la vue affiche, et une date rendue
+			   telle quelle traverserait la sérialisation pour être reformatée deux fois. */
+			refuseeLe: r.refuseeLe.toLocaleDateString('fr-FR')
+		})),
 		nombreDeMentions: mentions.length,
 		nombreDeDeclarees: aretes.filter((r) => r.origine === 'declaree').length,
 		nombreDePropositions: aretes.filter((r) => r.origine === 'ambigue').length,
@@ -181,13 +212,13 @@ function perimetreDuFormulaire(donnees: FormData): string | null {
 	return brut === '' ? null : brut;
 }
 
-/** Un champ de formulaire, élagué — la lecture est la même pour les six actions. */
+/** Un champ de formulaire, élagué — la lecture est la même pour les sept actions. */
 function champ(donnees: FormData, nom: string): string {
 	return (donnees.get(nom) ?? '').toString().trim();
 }
 
 /**
- * SIX ACTIONS NOMMÉES, AUCUNE PAR DÉFAUT : SvelteKit refuse qu'une action par défaut
+ * SEPT ACTIONS NOMMÉES, AUCUNE PAR DÉFAUT : SvelteKit refuse qu'une action par défaut
  * cohabite avec une action nommée. Chacune a son formulaire, et l'écran fonctionne
  * sans hydratation — c'est ce qui le rend éprouvable dans un navigateur sans rien
  * d'autre.
@@ -287,10 +318,10 @@ export const actions: Actions = {
 	proposer: async ({ request, locals }) => {
 		const donnees = await request.formData();
 		const perimetreDemande = perimetreDuFormulaire(donnees);
-		const { notes, graphe } = await monterLeModele(locals, perimetreDemande);
+		const { notes, graphe, refuses } = await monterLeModele(locals, perimetreDemande);
 		const aretes = graphe.aretes as readonly RelationLisible[];
 		const mentions = aretes.filter((r) => r.origine === 'deduite');
-		const propositions = propositionsDeMention(notes, aretes, mentions);
+		const propositions = propositionsDeMention(notes, aretes, mentions, tripletsRefuses(refuses));
 
 		if (propositions.length === 0) {
 			return fail(400, { message: 'aucune mention ne correspond à une règle de proposition' });
@@ -304,9 +335,29 @@ export const actions: Actions = {
 			return fail(409, {
 				message:
 					String(releve.ecartees) +
-					' proposition(s) écartée(s) : la paire est déjà reliée, ou le droit manque sur une extrémité'
+					' proposition(s) écartée(s), dont ' +
+					String(releve.refusees) +
+					' refusée(s) : la paire est déjà reliée, le lien a été refusé, ou le droit manque sur une extrémité'
 			});
 		}
 		redirect(303, retour(perimetreDemande));
+	},
+
+	/**
+	 * ANNULER UN REFUS — la ligne quitte la mémoire des refus, et RIEN n'est reposé.
+	 * C'est le clic suivant sur « Proposer » qui repropose : reposer ici écrirait une
+	 * relation que personne n'a demandée.
+	 */
+	annulerLeRefus: async ({ request, locals }) => {
+		const donnees = await request.formData();
+		const refus = champ(donnees, 'refus');
+		if (refus === '') return fail(400, { message: 'demande incomplète' });
+
+		const resultat = await annulerUnRefus(basePartagee(), {
+			identite: locals.identite,
+			refus
+		});
+		if (!resultat.trouve) return fail(404, { message: 'refus introuvable' });
+		redirect(303, retour(perimetreDuFormulaire(donnees)));
 	}
 };
