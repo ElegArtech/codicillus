@@ -26,12 +26,19 @@
  * rendent le MÊME `INTROUVABLE`. Les deux seuls échecs NOMMÉS — doublon et relation réflexive
  * — portent sur une note que l'appelant lit déjà.
  */
-import { and, eq, inArray, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { auteurDeLaSuppression, tracerUneSuppression } from './traces';
 import type { Base } from '../base/acces';
-import { domaines, notes, relations, typesDeNote, typesDeRelation } from '../base/schema';
-import { INTROUVABLE, type Identite, type Resolution } from '../droits/resolution';
+import {
+	domaines,
+	notes,
+	propositionsRefusees,
+	relations,
+	typesDeNote,
+	typesDeRelation
+} from '../base/schema';
+import { INTROUVABLE, type Identite, type Perimetre, type Resolution } from '../droits/resolution';
 import { peutEcrireSurLeDossier, peutEcrireSurLeDossierSelon } from './edition';
 import { lireIndexDesDroits, parmiLesIdentifiants } from './note';
 import type { OrigineDeRelation } from './outils';
@@ -473,6 +480,15 @@ interface RelationEcrivable {
 	readonly origine: OrigineDeRelation;
 	readonly sourceTitre: string;
 	readonly cibleTitre: string;
+	/**
+	 * LE TRIPLET DE LA LIGNE, en clés de base. Il est lu ICI parce que le rejet doit
+	 * l'écrire dans `propositions_refusees` : le relire après la suppression serait
+	 * trop tard, et le relire avant coûterait une requête pour trois colonnes que
+	 * cette jointure porte déjà.
+	 */
+	readonly sourceId: string;
+	readonly cibleId: string;
+	readonly typeDeRelationId: string;
 }
 
 /**
@@ -496,7 +512,10 @@ async function relationEcrivable(
 			sourceDossier: source.dossierId,
 			cibleDossier: cible.dossierId,
 			sourceTitre: source.titre,
-			cibleTitre: cible.titre
+			cibleTitre: cible.titre,
+			sourceId: relations.sourceId,
+			cibleId: relations.cibleId,
+			typeDeRelationId: relations.typeDeRelationId
 		})
 		.from(relations)
 		.innerJoin(source, eq(relations.sourceId, source.id))
@@ -505,16 +524,36 @@ async function relationEcrivable(
 		.limit(1);
 
 	if (ligne === undefined) return null;
-	if (ligne.sourceDossier === null || ligne.cibleDossier === null) return null;
-	if (!(await peutEcrireSurLeDossier(base, identite, ligne.sourceDossier))) return null;
-	if (!(await peutEcrireSurLeDossier(base, identite, ligne.cibleDossier))) return null;
+	if (!(await lesDeuxBoutsSontEcrivables(base, identite, ligne))) return null;
 
 	return {
 		cle: ligne.cle,
 		origine: ligne.origine,
 		sourceTitre: ligne.sourceTitre,
-		cibleTitre: ligne.cibleTitre
+		cibleTitre: ligne.cibleTitre,
+		sourceId: ligne.sourceId,
+		cibleId: ligne.cibleId,
+		typeDeRelationId: ligne.typeDeRelationId
 	};
+}
+
+/**
+ * LE DROIT D'ÉCRIRE SUR LES DEUX EXTRÉMITÉS — `RG-M08-04`, pris à sa racine.
+ *
+ * IL EST SORTI DE `relationEcrivable()` PARCE QU'UN SECOND OBJET LE DEMANDE : un refus
+ * de proposition n'est pas une relation et n'a pas de clé dans `relations`, mais la
+ * règle qui le gouverne est exactement celle-ci. Deux copies de la même garde
+ * divergeraient un jour, et la seconde serait la porte.
+ */
+async function lesDeuxBoutsSontEcrivables(
+	base: Base,
+	identite: Identite,
+	bouts: { readonly sourceDossier: string | null; readonly cibleDossier: string | null }
+): Promise<boolean> {
+	if (bouts.sourceDossier === null || bouts.cibleDossier === null) return false;
+	if (!(await peutEcrireSurLeDossier(base, identite, bouts.sourceDossier))) return false;
+	if (!(await peutEcrireSurLeDossier(base, identite, bouts.cibleDossier))) return false;
+	return true;
 }
 
 /**
@@ -600,17 +639,142 @@ export async function confirmerUneRelation(
 	return { trouve: true, ressource: { confirmee: true } };
 }
 
+/* ── LA MÉMOIRE DES REFUS ────────────────────────────────────────────────────
+   « Proposer » est un bouton DE LOT : il pose toutes les propositions du périmètre
+   d'un coup. Sans mémoire, qui en rejetait trois sur quarante les retrouvait au clic
+   suivant, mêlées aux nouvelles — le geste de rejet ne servait à rien.
+
+   LE REFUS N'EST PAS UNE RELATION, ET IL NE VIT PAS DANS LEUR TABLE. Une quatrième
+   valeur d'origine aurait gardé la ligne dans `relations`, et `relations_unicite`
+   aurait alors rendu IMPOSSIBLE de déclarer soi-même la relation refusée. */
+
 /**
- * REJETER UNE PROPOSITION — la ligne disparaît.
+ * LA CLÉ D'UN TRIPLET — source, cible, type. C'est la forme de `cleDArete()`, et ce
+ * n'est pas un hasard : une proposition EST une arête qu'on n'a pas encore écrite.
+ *
+ * ELLE EST ORIENTÉE, et le type en fait partie : refuser « A dépend de B » ne dit rien
+ * de « A documente B », ni de « B dépend de A ».
+ *
+ * LES TROIS VALEURS DOIVENT VENIR DU MÊME ESPACE. Deux jeux de clés se croisent dans
+ * ce module — les identifiants de note et les clés de base — et comparer une clé bâtie
+ * sur l'un à une clé bâtie sur l'autre ne rendrait jamais vrai. Chaque appelant tient
+ * son espace de bout en bout.
+ */
+export function cleDeTriplet(de: string, vers: string, type: string): string {
+	return de + '>' + vers + '>' + type;
+}
+
+/** Un refus, tel que l'écran le montre : les deux titres, le mot du lien, la date. */
+export interface PropositionRefusee {
+	readonly id: string;
+	/** L'identifiant de la note source — celui des adresses, pas la clé de base. */
+	readonly de: string;
+	readonly vers: string;
+	/** L'identifiant du type — `depend-de`, `documente`… */
+	readonly type: string;
+	/** Le libellé du SENS de lecture source → cible (`RG-M08-06`). */
+	readonly libelle: string;
+	readonly titreDe: string;
+	readonly titreVers: string;
+	readonly refuseeLe: Date;
+}
+
+/**
+ * LES TRIPLETS REFUSÉS, BORNÉS AU PÉRIMÈTRE LISIBLE DE L'APPELANT.
+ *
+ * LE FILTRE EST DANS LA REQUÊTE (`ADR-006`), et il porte sur les DEUX extrémités,
+ * exactement comme `lireRelationsLisibles()` : montrer un refus dont une note est
+ * interdite publierait son existence et son titre.
+ */
+export async function lireLesPropositionsRefusees(
+	base: Base,
+	perimetre: Perimetre
+): Promise<readonly PropositionRefusee[]> {
+	const autorises = perimetre.tout ? null : [...perimetre.dossiers];
+	if (autorises !== null && autorises.length === 0) return [];
+
+	const source = alias(notes, 'note_source');
+	const cible = alias(notes, 'note_cible');
+	const filtre =
+		autorises === null
+			? undefined
+			: and(inArray(source.dossierId, autorises), inArray(cible.dossierId, autorises));
+
+	return await base
+		.select({
+			id: propositionsRefusees.id,
+			de: source.identifiant,
+			vers: cible.identifiant,
+			type: typesDeRelation.identifiant,
+			libelle: typesDeRelation.libelleSortant,
+			titreDe: source.titre,
+			titreVers: cible.titre,
+			refuseeLe: propositionsRefusees.refuseeLe
+		})
+		.from(propositionsRefusees)
+		.innerJoin(typesDeRelation, eq(propositionsRefusees.typeDeRelationId, typesDeRelation.id))
+		.innerJoin(source, eq(propositionsRefusees.sourceId, source.id))
+		.innerJoin(cible, eq(propositionsRefusees.cibleId, cible.id))
+		.where(filtre)
+		/* Le plus récent d'abord — un refus qu'on vient de poser se relit en haut du
+		   bloc. L'identifiant tranche les ex æquo : deux refus posés dans la même
+		   milliseconde ne doivent pas changer de rang d'un chargement à l'autre. */
+		.orderBy(desc(propositionsRefusees.refuseeLe), asc(propositionsRefusees.id));
+}
+
+/**
+ * ANNULER UN REFUS — la ligne disparaît, ET RIEN N'EST REPOSÉ. Le refus levé, c'est le
+ * clic suivant sur « Proposer » qui repose la proposition : reposer ici ferait écrire
+ * une relation sans que personne ne l'ait demandé.
+ *
+ * LA GARDE EST CELLE DU REJET — le droit d'écriture sur les deux extrémités
+ * (`RG-M08-04`). UN REFUS N'EST PAS UN DROIT PERSONNEL : n'importe quel compte qui
+ * peut écrire les deux bouts l'annule, parce qu'un refus est une décision sur le
+ * corpus, pas une préférence d'utilisateur.
+ */
+export async function annulerUnRefus(
+	base: Base,
+	demande: { readonly identite: Identite; readonly refus: string }
+): Promise<Resolution<{ readonly annule: true }>> {
+	if (!FORME_DE_CLE.test(demande.refus)) return INTROUVABLE;
+
+	const source = alias(notes, 'note_source');
+	const cible = alias(notes, 'note_cible');
+	const [ligne] = await base
+		.select({
+			cle: propositionsRefusees.id,
+			sourceDossier: source.dossierId,
+			cibleDossier: cible.dossierId
+		})
+		.from(propositionsRefusees)
+		.innerJoin(source, eq(propositionsRefusees.sourceId, source.id))
+		.innerJoin(cible, eq(propositionsRefusees.cibleId, cible.id))
+		.where(eq(propositionsRefusees.id, demande.refus))
+		.limit(1);
+
+	if (ligne === undefined) return INTROUVABLE;
+	if (!(await lesDeuxBoutsSontEcrivables(base, demande.identite, ligne))) return INTROUVABLE;
+
+	await base.delete(propositionsRefusees).where(eq(propositionsRefusees.id, ligne.cle));
+	return { trouve: true, ressource: { annule: true } };
+}
+
+/**
+ * REJETER UNE PROPOSITION — la ligne disparaît, et le refus est ÉCRIT.
  *
  * SEULE UNE PROPOSITION SE REJETTE : une relation `declaree` est rendue INTROUVABLE
  * par ce chemin. Le rejet n'est pas une suppression déguisée — retirer une relation
  * qu'on a saisie passe par `retirerUneRelation()`, qui trace.
  *
- * AUCUNE TRACE N'EST ÉCRITE, et c'est la raison d'être d'une fonction séparée.
- * `RG-NF-05` trace la disparition de ce que quelqu'un a créé ; une hypothèse que le
- * produit a avancée et qu'on refuse n'a jamais existé comme un fait du corpus. La
- * tracer remplirait le journal du bruit de sa propre machinerie.
+ * LES DEUX ÉCRITURES SONT DANS LA MÊME TRANSACTION, et l'ordre compte moins que
+ * l'atomicité : une suppression sans refus écrit ferait revenir la proposition au clic
+ * suivant, un refus écrit sans suppression laisserait à l'écran un lien qu'on vient de
+ * refuser. `ON CONFLICT DO NOTHING` — rejeter deux fois le même triplet n'est pas une
+ * erreur.
+ *
+ * AUCUNE TRACE DE SUPPRESSION N'EST ÉCRITE, et c'est la raison d'être d'une fonction
+ * séparée. `RG-NF-05` trace la disparition de ce que quelqu'un a créé ; une hypothèse
+ * que le produit a avancée et qu'on refuse n'a jamais existé comme un fait du corpus.
  */
 export async function rejeterUneRelation(
 	base: Base,
@@ -620,7 +784,23 @@ export async function rejeterUneRelation(
 	if (ligne === null) return INTROUVABLE;
 	if (ligne.origine !== 'ambigue') return INTROUVABLE;
 
-	await base.delete(relations).where(eq(relations.id, ligne.cle));
+	/* L'AUTEUR EST NOMMÉ QUAND IL Y EN A UN. L'anonyme n'atteint pas cet écran —
+	   `garde.ts` le redirige avant le chargeur —, et la colonne reste nullable parce
+	   qu'un compte supprimé ne doit pas emporter ses refus avec lui. */
+	const auteur = demande.identite.type === 'authentifie' ? demande.identite.compteId : null;
+
+	await base.transaction(async (tx) => {
+		await tx.delete(relations).where(eq(relations.id, ligne.cle));
+		await tx
+			.insert(propositionsRefusees)
+			.values({
+				sourceId: ligne.sourceId,
+				cibleId: ligne.cibleId,
+				typeDeRelationId: ligne.typeDeRelationId,
+				refuseeParId: auteur
+			})
+			.onConflictDoNothing();
+	});
 	return { trouve: true, ressource: { rejetee: true } };
 }
 
@@ -628,11 +808,17 @@ export interface ReleveDesPropositions {
 	/** Les propositions effectivement écrites. */
 	readonly posees: number;
 	/**
-	 * Celles qu'une relation existante, un droit manquant ou un type absent du
-	 * référentiel a écartées. Comptées, jamais tues : « zéro proposée » et « douze
-	 * écartées » ne disent pas la même chose de l'état du corpus.
+	 * Celles qu'une relation existante, un droit manquant, un type absent du
+	 * référentiel ou un REFUS a écartées. Comptées, jamais tues : « zéro proposée » et
+	 * « douze écartées » ne disent pas la même chose de l'état du corpus.
 	 */
 	readonly ecartees: number;
+	/**
+	 * Celles qu'un refus a écartées — un SOUS-ENSEMBLE d'`ecartees`, jamais un compte
+	 * qui s'y ajoute. Le relevé comptait déjà ; il compte maintenant mieux, parce que
+	 * « déjà reliée » et « refusée » n'appellent pas le même geste.
+	 */
+	readonly refusees: number;
 }
 
 /**
@@ -647,11 +833,10 @@ export interface ReleveDesPropositions {
  * la même préséance qu'aux mentions, et pour la même raison — le produit ne redit pas
  * ce que quelqu'un a déjà dit.
  *
- * REJETER PUIS REPROPOSER FAIT REVENIR LA PROPOSITION, et c'est assumé. Le rejet
- * efface la ligne, rien ne garde la mémoire du refus, et une table de refus serait un
- * schéma de plus pour un cas que l'utilisateur provoque lui-même : rien ne se propose
- * sans qu'on ait cliqué. Un rejet suivi d'un clic sur « Proposer » est une DEMANDE de
- * reproposer.
+ * UN TRIPLET REFUSÉ N'EST JAMAIS REPROPOSÉ. `propositions_refusees` est lue sur les
+ * SEULES notes concernées, dans la même requête bornée que les paires déjà reliées, et
+ * les propositions qu'un refus écarte sont comptées à part : le relevé dit combien, et
+ * dit pourquoi. Ce que le rejet a décidé, le bouton de lot ne le défait pas.
  *
  * `RG-M08-04` EST PORTÉE SUR LES DEUX EXTRÉMITÉS, et l'index des droits est lu UNE
  * FOIS pour tout le lot : le lire par proposition coûtait deux requêtes par ligne.
@@ -667,7 +852,7 @@ export async function proposerLesRelations(
 		}[];
 	}
 ): Promise<ReleveDesPropositions> {
-	if (demande.propositions.length === 0) return { posees: 0, ecartees: 0 };
+	if (demande.propositions.length === 0) return { posees: 0, ecartees: 0, refusees: 0 };
 
 	const concernees = [...new Set(demande.propositions.flatMap((p) => [p.de, p.vers]))];
 	const lignes = await base
@@ -695,12 +880,36 @@ export async function proposerLesRelations(
 	const paire = (a: string, b: string): string => (a < b ? a + ' ' + b : b + ' ' + a);
 	const reliees = new Set(existantes.map((r) => paire(r.sourceId, r.cibleId)));
 
+	/* LES TRIPLETS REFUSÉS, sur les mêmes notes et dans la même borne. Les clés sont
+	   celles de la BASE des deux côtés — la table les porte ainsi, et la comparaison
+	   ci-dessous se fait après résolution des identifiants. */
+	const refuses =
+		cles.length === 0
+			? []
+			: await base
+					.select({
+						sourceId: propositionsRefusees.sourceId,
+						cibleId: propositionsRefusees.cibleId,
+						typeDeRelationId: propositionsRefusees.typeDeRelationId
+					})
+					.from(propositionsRefusees)
+					.where(
+						and(
+							inArray(propositionsRefusees.sourceId, cles),
+							inArray(propositionsRefusees.cibleId, cles)
+						)
+					);
+	const tripletsRefuses = new Set(
+		refuses.map((r) => cleDeTriplet(r.sourceId, r.cibleId, r.typeDeRelationId))
+	);
+
 	const index = await lireIndexDesDroits(base, demande.identite);
 	const ecrivable = (dossierId: string | null): boolean =>
 		dossierId !== null && peutEcrireSurLeDossierSelon(demande.identite, dossierId, index);
 
 	const aEcrire: { sourceId: string; cibleId: string; typeDeRelationId: string }[] = [];
 	let ecartees = 0;
+	let refusees = 0;
 	for (const proposition of demande.propositions) {
 		const source = parIdentifiant.get(proposition.de);
 		const cible = parIdentifiant.get(proposition.vers);
@@ -711,6 +920,14 @@ export async function proposerLesRelations(
 		}
 		if (source.cle === cible.cle) {
 			ecartees += 1;
+			continue;
+		}
+		/* LE REFUS PASSE AVANT LA PAIRE DÉJÀ RELIÉE : les deux écartent, mais l'un dit
+		   « quelqu'un a tranché » et l'autre « le lien existe déjà ». Compter le refus
+		   en premier rend le second compte exact. */
+		if (tripletsRefuses.has(cleDeTriplet(source.cle, cible.cle, type))) {
+			ecartees += 1;
+			refusees += 1;
 			continue;
 		}
 		if (reliees.has(paire(source.cle, cible.cle))) {
@@ -728,7 +945,7 @@ export async function proposerLesRelations(
 		aEcrire.push({ sourceId: source.cle, cibleId: cible.cle, typeDeRelationId: type });
 	}
 
-	if (aEcrire.length === 0) return { posees: 0, ecartees };
+	if (aEcrire.length === 0) return { posees: 0, ecartees, refusees };
 
 	/* `P-08` — `ambigue` : « à confirmer ». L'écrire ici dit l'intention plutôt que
 	   de la laisser au défaut de la colonne, qui vaut `declaree`. */
@@ -738,5 +955,9 @@ export async function proposerLesRelations(
 		.onConflictDoNothing()
 		.returning({ cle: relations.id });
 
-	return { posees: posees.length, ecartees: ecartees + (aEcrire.length - posees.length) };
+	return {
+		posees: posees.length,
+		ecartees: ecartees + (aEcrire.length - posees.length),
+		refusees
+	};
 }

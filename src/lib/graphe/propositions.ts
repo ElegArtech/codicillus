@@ -41,6 +41,7 @@
  */
 import type { Note } from '../../../seeds/corpus';
 import { typeCarto } from './cartographie';
+import { cleDeTriplet } from '../donnees/relations';
 import type { RelationLisible } from '../donnees/outils';
 
 /**
@@ -125,11 +126,21 @@ export function usagesParCouple(
  * aucune raison de faire confirmer cela à quelqu'un.
  *
  * L'ORDRE RENDU EST CELUI DES MENTIONS, donc lexical et déterministe.
+ *
+ * UN TRIPLET REFUSÉ NE REVIENT PAS. Le refus porte sur (source, cible, type) : refuser
+ * « A dépend de B » ne dit rien de « A documente B », et bascule donc la proposition si
+ * l'usage du corpus change de type.
+ *
+ * @param refuses LES TRIPLETS DÉJÀ REFUSÉS, en clés de `cleDeTriplet()` bâties sur les
+ *   IDENTIFIANTS de note — les mêmes que `Note.id` et que les deux bouts d'une mention.
+ *   Il est EXIGÉ, sans défaut : un appelant qui l'oublierait reproposerait ce qu'on
+ *   vient de refuser, et le bouton mentirait sur son compte.
  */
 export function propositionsDeMention(
 	notes: readonly Note[],
 	declarees: readonly RelationLisible[],
-	mentions: readonly RelationLisible[]
+	mentions: readonly RelationLisible[],
+	refuses: ReadonlySet<string>
 ): readonly Proposition[] {
 	const usages = usagesParCouple(notes, declarees);
 	if (usages.size === 0) return [];
@@ -144,6 +155,7 @@ export function propositionsDeMention(
 		const cle = cleDeCouple(source, cible);
 		const usage = usages.get(cle);
 		if (usage === undefined) continue;
+		if (refuses.has(cleDeTriplet(mention.de, mention.vers, usage.type))) continue;
 		proposees.push({
 			de: mention.de,
 			vers: mention.vers,

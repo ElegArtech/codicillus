@@ -126,6 +126,26 @@
 	cursor: pointer;
 }
 
+/* LA POIGNÉE — la cible de clic d'une arête, posée SUR son propre tracé.
+   ELLE DOIT SE VOIR QUAND ON LA VISE, sinon elle ne se vise pas : transparente
+   au repos, elle prend un contour à l'accent au survol ET au focus clavier. Le
+   focus n'est pas le survol : une poignée atteinte par la tabulation doit se
+   montrer aussi. */
+.mod-arete__poignee {
+	fill: transparent;
+	stroke: transparent;
+	stroke-width: 1.5;
+	cursor: pointer;
+}
+
+.mod-arete__groupe:hover .mod-arete__poignee,
+.mod-arete__poignee:hover,
+a:focus-visible .mod-arete__poignee {
+	fill: var(--c-fond);
+	fill-opacity: 0.85;
+	stroke: var(--c-accent);
+}
+
 .mod-arete__mot {
 	font-size: 9.5px;
 	fill: var(--c-encre-2);
@@ -198,6 +218,110 @@
 	grid-column: 1 / -1;
 }
 
+/* ── L'ASSISE DE L'ÉTAGEMENT ───────────────────────────────────────────────
+   La paire de liens est une BASCULE : les deux se voient, celui qui est actif
+   se distingue au fond et au trait, jamais à la seule couleur. */
+.mod-assise {
+	grid-column: 1 / -1;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: var(--e-2) var(--e-3);
+}
+
+.mod-assise__choix {
+	display: inline-flex;
+	border: 1px solid var(--c-trait);
+	border-radius: var(--r-2);
+	overflow: hidden;
+}
+
+.mod-assise__choix a {
+	padding: 2px var(--e-2);
+	font-size: var(--t-mini);
+	color: var(--c-encre-2);
+	text-decoration: none;
+}
+
+.mod-assise__choix a + a {
+	border-left: 1px solid var(--c-trait);
+}
+
+.mod-assise__choix a[aria-current='true'] {
+	background: var(--c-fond-creux);
+	color: var(--c-encre);
+	font-weight: 600;
+	box-shadow: inset 0 -2px 0 var(--c-accent);
+}
+
+.mod-assise__phrase {
+	margin: 0;
+	font-size: var(--t-mini);
+	color: var(--c-encre-2);
+}
+
+/* ── L'AVIS ────────────────────────────────────────────────────────────────
+   IL N'EST PAS UNE ALERTE : rien n'a échoué, une question n'a simplement pas
+   encore de réponse. Le liseré est celui de l'attention, pas celui du refus. */
+.mod-avis {
+	grid-column: 1 / -1;
+	border: 1px solid var(--c-trait-fort);
+	border-left-width: 3px;
+	border-radius: var(--r-2);
+	padding: var(--e-2) var(--e-3);
+	font-size: var(--t-mini);
+	color: var(--c-encre-2);
+	margin: 0;
+}
+
+.mod-avis b {
+	color: var(--c-encre);
+}
+
+/* ── LES PROPOSITIONS REFUSÉES ─────────────────────────────────────────────
+   Le bloc traverse les deux colonnes : il est la mémoire de l'écran, pas un
+   détail du panneau, et il doit rester lisible quand le dessin est vide. */
+.mod-refuses {
+	grid-column: 1 / -1;
+}
+
+.mod-refuses__phrase {
+	margin: 0 0 var(--e-2);
+	font-size: var(--t-mini);
+	color: var(--c-encre-2);
+}
+
+.mod-refus {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-2);
+}
+
+.mod-refus li {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--e-2);
+	font-size: var(--t-mini);
+	padding-top: var(--e-2);
+	border-top: 1px solid var(--c-trait);
+}
+
+.mod-refus form {
+	margin: 0 0 0 auto;
+}
+
+.mod-refus__type {
+	color: var(--c-encre-2);
+}
+
+.mod-refus__date {
+	color: var(--c-encre-2);
+}
+
 /* ── L'ALTERNATIVE TEXTUELLE ───────────────────────────────────────────────
    `P-06` : tout contenu graphique porte sa restitution. Elle n'est pas cachée à
    la machine — elle est repliée, et s'ouvre d'un geste. */
@@ -214,8 +338,12 @@
 	line-height: 1.7;
 }
 
+/* L'ÉTAT VIDE OCCUPE LA COLONNE DU DESSIN, jamais la largeur entière : le
+   panneau qui porte « Déclarer une relation » reste à côté, et c'est lui qui
+   fait sortir de cet état. */
 .mod-vide {
-	grid-column: 1 / -1;
+	grid-column: 1;
+	margin: 0;
 	padding: var(--e-5) var(--e-4);
 	text-align: center;
 	color: var(--c-encre-2);
