@@ -54,7 +54,7 @@ interface EnTete {
 	readonly [cle: string]: string;
 }
 
-interface NoteLue {
+export interface NoteLue {
 	readonly entete: EnTete;
 	readonly reference: string;
 	readonly operationnel: string | null;
@@ -65,8 +65,13 @@ interface NoteLue {
  * volontairement pauvre — une clé, deux points, une valeur — parce qu'il n'a
  * qu'un producteur et qu'un lecteur : y mettre un analyseur YAML complet serait
  * une dépendance pour rien.
+ *
+ * ELLE EST EXPORTÉE POUR `seeds/demonstration.test.ts`, qui éprouve les liens de corps
+ * du jeu sans toucher la base. Le contrôle doit passer par le lecteur DU SEMEUR : un
+ * second lecteur finirait par diverger, et le contrôle déclarerait alors vraie une
+ * chose que `peupler()` écrirait autrement.
  */
-function lireLeFichier(texte: string): NoteLue {
+export function lireLaNoteDeDemonstration(texte: string): NoteLue {
 	const lignes = texte.split('\n');
 	if (lignes[0]?.trim() !== '---') throw new Error('en-tête manquant');
 	const fin = lignes.indexOf('---', 1);
@@ -138,7 +143,7 @@ export async function peupler(
 	const lues = await Promise.all(
 		fichiers.map(async (f) => {
 			try {
-				return lireLeFichier(await readFile(path.join(dossierDuContenu, f), 'utf8'));
+				return lireLaNoteDeDemonstration(await readFile(path.join(dossierDuContenu, f), 'utf8'));
 			} catch (cause) {
 				throw new Error(`${f} : ${cause instanceof Error ? cause.message : String(cause)}`, {
 					cause
