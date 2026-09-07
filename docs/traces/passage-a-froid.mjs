@@ -402,6 +402,11 @@ try {
 		['/univers/{univers}/{domaine}/signets/{signet}/modifier', 200],
 		['/cartographie', 200],
 		['/cartographie/par-type', 200],
+		/* LA MODÉLISATION EST UN MODULE DEPUIS `016`/`017`, et le domaine d'épreuve
+		   coche TOUTES les cases de `#f-modules` : elle est donc active sans une
+		   ligne de plus ici. La route reste ouverte à tout compte connecté, module
+		   actif ou non — seule l'entrée de navigation dépend du module. */
+		['/modelisation', 200],
 		['/carte-mentale', 200],
 		['/importer', 200],
 		['/mon-profil', 200],

@@ -185,14 +185,16 @@ export const ROLE_EN_ENUM = {
 } as const;
 
 /**
- * Les six modules des maquettes, en valeurs d'énumération. Seule `carteMentale`
- * change de forme — la casse chameau devient un tiret bas.
+ * Les sept modules du produit, en valeurs d'énumération. Seule `carteMentale`
+ * change de forme — la casse chameau devient un tiret bas ; `modelisation` porte la
+ * MÊME chaîne des deux côtés, et cette divergence-là ne s'agrandit pas.
  */
 export const MODULE_EN_ENUM = {
 	notes: 'notes',
 	dossiers: 'dossiers',
 	fiches: 'fiches',
 	cartographie: 'cartographie',
+	modelisation: 'modelisation',
 	signets: 'signets',
 	carteMentale: 'carte_mentale'
 } as const;

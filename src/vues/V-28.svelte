@@ -169,6 +169,7 @@
 		dossiers: 'DOS',
 		fiches: 'FIC',
 		cartographie: 'CAR',
+		modelisation: 'MOD',
 		signets: 'SIG',
 		carteMentale: 'MEN'
 	};
@@ -181,13 +182,15 @@
 		fiches:
 			'Objets typés — serveurs, applications, contacts — avec leurs propriétés structurées et leurs relations.',
 		cartographie: `Graphe des dépendances entre ${motFichePlurielMinuscule}. N'a d'intérêt que si le domaine déclare des relations.`,
+		modelisation:
+			"La lecture des dépendances : ce qui porte, ce qui dépend, ce qui casse si on le retire. Sans lui, le graphe ne se lit qu'en cartographie.",
 		signets:
 			"Liens web curatés rattachés au domaine : documentation d'éditeur, portails de prestataires.",
 		carteMentale:
 			'Vue arborescente dépliable de tout le domaine, utile pour découvrir son organisation.'
 	});
 
-	/** Les six modules, dans l'ordre du registre (`Object.keys(window.MODULES)`). */
+	/** Les sept modules, dans l'ordre du catalogue du produit. */
 	const CLES_DE_MODULE = $derived(Object.keys(modules) as CleDeModule[]);
 
 	function nb(x: number): string {
