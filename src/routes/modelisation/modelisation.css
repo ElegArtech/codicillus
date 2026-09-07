@@ -1,0 +1,224 @@
+/**
+ * `/modelisation` — la feuille de la vue de modélisation.
+ *
+ * ELLE NE PORTE AUCUNE COULEUR EN DUR : tout vient des jetons de `src/socle.css`, si
+ * bien qu'une reprise d'apparence se fait au socle et non ici. L'écran est FONCTIONNEL
+ * avant d'être beau — la forme sera reprise, la mécanique est ce qui devait exister.
+ *
+ * LA FEUILLE ENTRE DANS LE DOCUMENT AVEC LA VUE, elle ne s'y demande pas : c'est
+ * l'import du composant qui la charge, comme pour les autres vues.
+ */
+
+.modelisation {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 340px;
+	gap: var(--e-4);
+	align-items: start;
+	padding: var(--e-4);
+}
+
+.mod-commandes {
+	grid-column: 1 / -1;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--e-3);
+	padding-bottom: var(--e-3);
+	border-bottom: 1px solid var(--c-trait);
+}
+
+.mod-commandes form {
+	display: flex;
+	align-items: center;
+	gap: var(--e-2);
+	margin: 0;
+}
+
+.mod-mesures {
+	display: flex;
+	gap: var(--e-3);
+	margin-left: auto;
+	flex-wrap: wrap;
+}
+
+.mod-mesure {
+	display: flex;
+	align-items: baseline;
+	gap: var(--e-1);
+	font-size: var(--t-mini);
+	color: var(--c-encre-2);
+}
+
+.mod-mesure b {
+	font-size: var(--t-corps);
+	color: var(--c-encre);
+}
+
+/* ── LE DESSIN ─────────────────────────────────────────────────────────────
+   Il défile DANS SON PROPRE CADRE. Un modèle large ferait défiler la page
+   entière, et la colonne de droite sortirait de l'écran avec lui. */
+.mod-plan {
+	overflow: auto;
+	max-height: 74vh;
+	border: 1px solid var(--c-trait);
+	border-radius: var(--r-2);
+	background: var(--c-fond-creux);
+}
+
+.mod-noeud rect {
+	fill: var(--c-fond);
+	stroke: var(--c-trait-fort);
+	stroke-width: 1;
+}
+
+/* UN POINT DE DÉFAILLANCE UNIQUE SE VOIT AU TRAIT, PAS À LA SEULE COULEUR : un
+   liseré épais reste lisible en niveaux de gris et pour qui ne distingue pas les
+   teintes. Le glyphe qui l'accompagne dans le balisage le dit en toutes lettres. */
+.mod-noeud--rupture rect {
+	stroke: var(--c-alerte);
+	stroke-width: 2.5;
+}
+
+.mod-noeud__titre {
+	font-size: 12px;
+	fill: var(--c-encre);
+}
+
+.mod-noeud__code {
+	font-size: 9.5px;
+	fill: var(--c-encre-2);
+	letter-spacing: 0.06em;
+}
+
+.mod-arete {
+	fill: none;
+	stroke: var(--c-trait-fort);
+	stroke-width: 1.6;
+}
+
+/* La mention et la proposition sont des traits FINS — l'une n'est pas déclarée,
+   l'autre attend qu'on la confirme. Le tireté de la proposition la sépare de la
+   mention : deux états différents ne peuvent pas porter le même trait. */
+.mod-arete--deduite {
+	stroke-width: 0.9;
+	stroke: var(--c-encre-2);
+}
+
+.mod-arete--ambigue {
+	stroke-width: 1.2;
+	stroke: var(--c-encre-2);
+	stroke-dasharray: 5 3;
+}
+
+.mod-arete--retour {
+	stroke-dasharray: 2 3;
+}
+
+.mod-arete--choisie {
+	stroke: var(--c-accent);
+	stroke-width: 3;
+}
+
+.mod-arete__prise {
+	fill: none;
+	stroke: transparent;
+	stroke-width: 12;
+	cursor: pointer;
+}
+
+.mod-arete__mot {
+	font-size: 9.5px;
+	fill: var(--c-encre-2);
+}
+
+/* ── LE PANNEAU ────────────────────────────────────────────────────────────── */
+.mod-panneau {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-4);
+	position: sticky;
+	top: var(--e-3);
+}
+
+.mod-bloc {
+	border: 1px solid var(--c-trait);
+	border-radius: var(--r-2);
+	padding: var(--e-3);
+	background: var(--c-fond);
+}
+
+.mod-bloc h2 {
+	font-size: var(--t-mini);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--c-encre-2);
+	margin: 0 0 var(--e-2);
+}
+
+.mod-bloc form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-2);
+	margin: 0 0 var(--e-2);
+}
+
+.mod-bloc select,
+.mod-bloc input {
+	width: 100%;
+}
+
+.mod-gestes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--e-2);
+}
+
+.mod-gestes form {
+	flex-direction: row;
+	margin: 0;
+}
+
+.mod-fait {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--e-2);
+	font-size: var(--t-mini);
+	padding: 2px 0;
+}
+
+.mod-fait span:first-child {
+	color: var(--c-encre-2);
+}
+
+.mod-message {
+	border: 1px solid var(--c-alerte);
+	border-radius: var(--r-2);
+	padding: var(--e-2) var(--e-3);
+	font-size: var(--t-mini);
+	grid-column: 1 / -1;
+}
+
+/* ── L'ALTERNATIVE TEXTUELLE ───────────────────────────────────────────────
+   `P-06` : tout contenu graphique porte sa restitution. Elle n'est pas cachée à
+   la machine — elle est repliée, et s'ouvre d'un geste. */
+.mod-restitution {
+	grid-column: 1 / -1;
+	border-top: 1px solid var(--c-trait);
+	padding-top: var(--e-3);
+}
+
+.mod-restitution ol {
+	margin: var(--e-2) 0 0;
+	padding-left: var(--e-4);
+	font-size: var(--t-mini);
+	line-height: 1.7;
+}
+
+.mod-vide {
+	grid-column: 1 / -1;
+	padding: var(--e-5) var(--e-4);
+	text-align: center;
+	color: var(--c-encre-2);
+	border: 1px dashed var(--c-trait);
+	border-radius: var(--r-2);
+}

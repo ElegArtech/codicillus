@@ -48,8 +48,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const maintenant = new Date();
 	const acces = await ouvrirLAcces(base, locals.identite, maintenant);
 
-	const { notes, relations, typesRelation, relationsTechniques } = await lireLeGraphe(base, acces);
-
 	/**
 	 * LE PÉRIMÈTRE VIENT DE L'ADRESSE — `RG-M09-05`. `?perimetre=` porte la valeur
 	 * même du sélecteur, `type|nom` ; absente ou illisible, c'est tout le corpus.
@@ -57,8 +55,18 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	 * C'est le chargeur qui le lit, seul à voir `url`, et c'est le MÊME périmètre
 	 * qui décide de l'état de zone et que la vue dessine : décider « vide » sur un
 	 * jeu et dessiner l'autre afficherait le voile au-dessus d'un graphe peuplé.
+	 *
+	 * IL EST LU AVANT LA LECTURE, ET IL DOIT L'ÊTRE : les arêtes DÉDUITES se bornent
+	 * à ses deux extrémités, et `lireLeGraphe()` ne peut pas les fabriquer sans lui.
 	 */
 	const perimetre = perimetreDeLAdresse(url.searchParams.get('perimetre'), PERIMETRE_DE_V19);
+
+	const { notes, relations, typesRelation, relationsTechniques } = await lireLeGraphe(
+		base,
+		acces,
+		perimetre
+	);
+
 	const graphe = grapheReel(notes, relations, perimetre, 'gardees');
 
 	/**

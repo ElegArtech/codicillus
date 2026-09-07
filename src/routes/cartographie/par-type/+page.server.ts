@@ -26,9 +26,15 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const maintenant = new Date();
 	const acces = await ouvrirLAcces(base, locals.identite, maintenant);
 
-	const { notes, relations, typesRelation, relationsTechniques } = await lireLeGraphe(base, acces);
-
+	/* LE PÉRIMÈTRE PRÉCÈDE LA LECTURE : les arêtes déduites se bornent à ses deux
+	   extrémités, et `lireLeGraphe()` ne peut pas les fabriquer sans lui. */
 	const perimetre = perimetreDeLAdresse(url.searchParams.get('perimetre'), PERIMETRE_DE_V20);
+
+	const { notes, relations, typesRelation, relationsTechniques } = await lireLeGraphe(
+		base,
+		acces,
+		perimetre
+	);
 
 	/**
 	 * LE PANNEAU DE DÉTAIL EST BRANCHÉ SUR LA BASE, ET IL LEVAIT. V-20 lisait

@@ -50,6 +50,9 @@ const CAS_DE_REGIME: readonly { readonly chemin: string; readonly attendu: strin
 	{ chemin: '/cartographie', attendu: 'redirection' },
 	{ chemin: '/cartographie/par-type', attendu: 'redirection' },
 	{ chemin: '/carte-mentale', attendu: 'redirection' },
+	/* La modélisation lit le MÊME graphe que la cartographie : deux régimes
+	   différents feraient dire à l'une ce que l'autre tait. */
+	{ chemin: '/modelisation', attendu: 'redirection' },
 	{ chemin: '/bibliotheque', attendu: 'redirection' }
 ];
 
