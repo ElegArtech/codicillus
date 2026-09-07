@@ -2042,3 +2042,45 @@ base            modelisation 13 = cartographie 13 · notes 77 · propositions_re
   et le parcours complet a été rejoué par elles, script coupé compris. Il est noté ici plutôt que
   corrigé — élargir le périmètre une seconde fois pour un chemin qui a déjà une issue serait
   décider à la place de qui commande.
+
+## Lot H — le bouton « Proposer » ment sur son compte
+
+- **Une paire qui se cite mutuellement ne donne plus AUCUNE proposition**, dans les deux sens et
+  sans condition. C'est la doctrine du module appliquée à un cas qu'elle n'avait pas vu :
+  `usagesParCouple()` se tait déjà sur une égalité de TYPE ; une citation réciproque est une
+  égalité sur le SENS. Une déduplication qui aurait gardé le premier sens lexical aurait été le
+  tirage au sort que le module refuse, avec l'apparence d'un raisonnement.
+- **Le relevé voyage dans l'adresse, en trois comptes**, pas dans une réponse d'action : une
+  adresse d'action SvelteKit remplace la chaîne de requête, et le périmètre choisi aurait été
+  perdu au moment même où on veut le montrer. Les comptes sont des entiers validés et la phrase
+  est composée au serveur — vérifié qu'une adresse forgée ne fait afficher aucun texte que le
+  produit n'a pas écrit.
+- **Le message est un `role="status"` en ton d'information**, pas une alerte : le geste a abouti.
+- **Mesuré** : bouton « Proposer 3 » qui posait 2, sans un mot → bouton « Proposer 1 » qui pose 1.
+  Et quand un droit manque sur une extrémité, le bandeau le dit désormais.
+
+## Vague 4 — la clôture
+
+- **`aiguilles-dans-le-paquet` sort à 1, et ce n'est PAS cette session.** Le dépôt a été
+  reconstruit à `08bf423` — le commit d'avant la première ligne de ce plan — et le contrôle y
+  rend **exactement le même échec** : 52 occurrences, 1 fichier. Le fichier est
+  `build/client/_app/immutable/chunks/…`, 662 Ko de chevrotain et mermaid, où « Production » est
+  le nom d'une classe de grammaire et non l'univers du jeu. Mermaid est entré dans le paquet
+  client à `42c56cf feat(diagrammes)`, bien avant cette session. **Le `aiguilles = 0` de
+  `docs/reprise.md` était déjà faux au départ.**
+- **Il n'est pas réparé, et c'est un arbitrage.** C'est un faux positif d'un outil de
+  vérification, pas un défaut du produit ; `CLAUDE.md` interdit de faire grossir l'appareil de
+  vérification, et le périmètre a déjà été élargi deux fois dans cette exécution — pour un défaut
+  qui bloquait une commande documentée (lot G) et pour un défaut que le rejeu a trouvé sur le code
+  de ce plan (lot H). Une troisième fois, sur un outil, serait décider à la place de qui commande.
+  Le fait est relevé dans `docs/reprise.md`.
+- **Le parcours à ZÉRO DONNÉE a été rejoué** sur une base migrée et jamais semée : univers,
+  domaine, type de relation, deux notes, la relation déclarée **depuis l'écran vide** — c'est le
+  défaut que le lot D avait réparé, confirmé ici sur une instance neuve. `/modelisation` rend 200
+  avant tout contenu, avec son avis. **0 incident de console.**
+- **Les gestes de fin du parcours n'ont pas été re-prouvés par moi** : mon script de clôture bute
+  sur le tiroir de console, ancré à droite et hors de la fenêtre quelle que soit sa largeur —
+  une limite du harnais, pas du produit. Ces gestes sont prouvés ailleurs, et il faut savoir par
+  qui : le lot A a retiré puis remis le module sur un domaine et sur les treize, et vu les entrées
+  disparaître et revenir ; le lot D a coché « Dépendance technique » en console et vu l'avis
+  disparaître.
