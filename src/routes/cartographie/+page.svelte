@@ -21,8 +21,15 @@
 	import { resolve } from '$app/paths';
 	import { adresseDeNote } from '$lib/rangement/adresses';
 	import { ETATS_DE_VIVACITE } from '$lib/fraicheur';
+	import { accord } from '$lib/vocabulaire';
 	import { coucheDeLOrigine } from '$lib/graphe/filtres';
-	import { pointsArticulation, sousGraphe, typeDe } from '$lib/graphe/cartographie';
+	import {
+		etendreLeGraphe,
+		pointsArticulation,
+		sousGraphe,
+		typeDe,
+		voisinage
+	} from '$lib/graphe/cartographie';
 	import { cablerLaCartographie, type DetailDeNoeud } from './cablage';
 
 	import type { Domaine, IdentifiantNote } from '../../../seeds/corpus';
@@ -75,6 +82,30 @@
 		return max;
 	});
 
+	/**
+	 * LE VOISINAGE D'UNE NOTE, À LA PROFONDEUR COURANTE — ce que l'écran de voisinage
+	 * DESSINERAIT si on l'ouvrait sur elle.
+	 *
+	 * IL EST CALCULÉ PAR LES MÊMES FONCTIONS QUE LA VUE, et c'est la seule façon que
+	 * les deux comptes s'accordent. Le panneau les portait autrement — une boule
+	 * calculée à part —, et l'écran disait alors deux choses contraires : l'en-tête
+	 * « 18 nœuds · 8 relations », et le panneau dessous « 18 nœuds · 14 relations ».
+	 *
+	 * IL SUIT LA PROFONDEUR CHOISIE : le panneau porte les trois boutons 1, 2, 3, et
+	 * afficher les compteurs de la profondeur 1 sous un bouton « 2 » allumé serait la
+	 * même contradiction, d'un cran plus loin.
+	 */
+	const voisinageDe = (
+		depart: IdentifiantNote
+	): { readonly noeuds: number; readonly relations: number } => {
+		const profondeur = Math.max(1, data.exploration.profondeur);
+		const affinites = (data.familles.voisinsParNote[depart] ?? [])
+			.map((v) => v.note)
+			.filter((note) => graphe.index.has(note as IdentifiantNote));
+		const boule = etendreLeGraphe(voisinage(graphe, depart, profondeur), graphe, affinites);
+		return { noeuds: boule.noeuds.length, relations: boule.aretes.length };
+	};
+
 	const detailParNoeud = $derived.by<Record<string, DetailDeNoeud>>(() => {
 		const table: Record<string, DetailDeNoeud> = {};
 		for (const noeud of graphe.noeuds) {
@@ -92,13 +123,28 @@
 			}
 			const etat = data.vivaciteParNote[n.id] ?? null;
 			const famille = familleParNote.get(n.id) ?? null;
+			const ballon = voisinageDe(n.id);
+
 			table[n.id] = {
 				titre: n.titre,
 				type: typeDe(n).nom,
+				codeType: typeDe(n).code,
 				extrait: n.extrait,
 				etiquettes: n.etiquettes,
 				etat: etat === null ? 'Vivacité inconnue' : ETATS_DE_VIVACITE[etat].libelle,
 				classeDEtat: etat === null ? '' : ETATS_DE_VIVACITE[etat].classe,
+				/* L'ANCIENNETÉ EST CELLE DU CHARGEUR — `joursEcoules()` sur la date de
+				   vérification —, jamais un calcul de la vue : deux horloges donneraient
+				   deux âges pour la même note.
+
+				   ELLE DIT L'ÂGE, PAS LE RETARD. La maquette écrit « J+12 » à côté de
+				   « À vérifier », ce qui se lit comme douze jours de retard sur
+				   l'échéance ; mais le retard dépend de la durée de validité du
+				   REGISTRE, que le chargeur ne descend pas, et douze jours d'âge sont au
+				   contraire une note toute fraîche. Écrire « il y a 102 jours » ne peut
+				   pas être lu de travers. */
+				anciennete:
+					n.revise === null ? 'jamais vérifiée' : `il y a ${n.jours} ${accord(n.jours, 'jour')}`,
 				centralite:
 					centraliteMaximale === 0 ? 0 : (data.centralite[n.id] ?? 0) / centraliteMaximale,
 				declarees,
@@ -125,8 +171,14 @@
 						adresse: adresseDeNote(identifiant)
 					};
 				}),
+				voisinageNoeuds: ballon.noeuds,
+				voisinageRelations: ballon.relations,
 				adresse: adresseDeNote(n.id),
-				adresseDuVoisinage: `?centre=${encodeURIComponent(n.id)}&profondeur=1`
+				adresseDuVoisinage: `?centre=${encodeURIComponent(n.id)}&profondeur=${data.exploration.profondeur}`,
+				/* L'ACTION `?/verifier` DE L'ÉCRAN DE LECTURE — la même, pas une copie :
+				   le geste écrit une date de vérification et relance le cycle de
+				   vivacité, et il n'est écrit qu'à un seul endroit. */
+				adresseDeVerification: `${adresseDeNote(n.id)}?/verifier`
 			};
 		}
 		return table;
@@ -161,7 +213,8 @@
 			exploration: data.exploration,
 			detailParNoeud,
 			locale: data.exploration.centre !== null,
-			centre: data.exploration.centre
+			centre: data.exploration.centre,
+			profondeur: data.exploration.profondeur
 		});
 		return debrancher;
 	});
