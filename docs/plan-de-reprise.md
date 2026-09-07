@@ -1965,3 +1965,80 @@ pnpm check      = 0        1432 fichiers, 0 erreur, 0 avertissement
 pnpm test:unit  = 0        90 fichiers, 2033 contrôles   (départ : 88 / 2012)
 base            modelisation 13 = cartographie 13 · notes 77 · propositions_refusees, 0 ligne
 ```
+
+## Vague 2, lot D — les quatre chantiers de `/modelisation`
+
+- **Un défaut trouvé hors énoncé, et réparé** : le bloc « Déclarer une relation » vivait dans la
+  branche `{:else}` du dessin. Sur une instance sans une seule relation — le cas de toute
+  installation neuve — le dessin est vide et **le formulaire qui sert à déclarer la première
+  partait avec lui**. Le panneau est sorti de la branche, et le bloc « Propositions refusées »
+  avec lui, pour la même raison : rejeter la seule proposition d'une paire peut vider le dessin.
+  Il a été trouvé parce que le contrôle de fin du §C3 a échoué à sa première exécution.
+- **Le jeu de démonstration ne produit AUCUNE proposition**, et c'est correct : ses six mentions
+  tombent sur des couples de types sans usage dominant — `Note → Note` est à égalité 3/3 entre
+  `depend-de` et `documente`, et la règle se tait sur une égalité. Le §C9 supposait à tort que les
+  propositions apparaîtraient seules. Le décor a été posé **par le geste du produit**, pas en
+  changeant le code.
+- **La ligne de refus est rendue en trois éléments distincts**, pas en une chaîne « Titre A —
+  libellé → Titre B » : la forme du plan est illisible quand un titre porte lui-même un tiret
+  cadratin.
+- **`refusees` est un sous-ensemble d'`ecartees`**, jamais un compte qui s'y ajoute, et le refus
+  est compté **avant** « paire déjà reliée » pour que le second compte reste exact.
+- **Le contrôle « la clé d'un triplet » n'assert pas l'absence de collision par concaténation** :
+  `cleDeTriplet('a>b','c','t')` et `cleDeTriplet('a','b>c','t')` sont égales, et un identifiant de
+  note ne porte jamais ce caractère. Une assertion fausse n'a pas été écrite pour la forme.
+
+## Vague 3, lot G — un défaut hors plan, signalé par le lot D
+
+- **`pnpm base:peupler` échouait sur toute base portant une trace de suppression.**
+  `demonstration.ts` supprime les comptes du jeu ; `traces_de_suppression.auteur_id` est en
+  `NOT NULL … ON DELETE RESTRICT`. Une instance sur laquelle on avait supprimé quoi que ce soit ne
+  pouvait plus être repeuplée.
+- **La clé étrangère n'a pas bougé, aucune migration n'a été écrite.** Le `RESTRICT` de `013` est
+  juste — une trace qui perd son auteur cesse d'être une attribution —, et le commentaire le redit
+  à l'endroit du `delete` pour que personne ne « répare » demain en passant en `SET NULL`. C'est
+  l'ordre de suppression du semeur qui était faux.
+- **Les trois commandes ont été vérifiées avant de corriger** : `semer` ne supprime rien
+  (insertion pure), `conformite` efface le contenu sans toucher aux comptes, `peupler` seul était
+  cassé. Seul le cassé a été réparé.
+- **Toutes les traces partent, pas seulement celles des comptes du jeu** : `peupler` REMPLACE le
+  contenu, et une trace survivante parlerait d'une note détruite dans une instance qui n'existe
+  plus.
+- **Aucun unitaire ajouté** : le défaut ne se voit que contre une vraie base, et un contrôle qui
+  inspecterait la liste de suppressions dans le source serait le garde-fou que `CLAUDE.md`
+  interdit. La preuve est le scénario rejoué — suppression par l'écran, échec, correction, succès.
+
+## Vague 3, lot E — la couverture restante
+
+- **Les imports de `lecture-du-graphe.ts` passent de l'alias à des chemins relatifs.** L'alias est
+  posé par le greffon SvelteKit, que `vitest.config.ts` ne charge pas : l'extraction restait
+  inatteignable sans cela, ce qui vidait le chantier de son objet. Les deux autres parades étaient
+  hors périmètre (`vitest.config.ts`, partagé) ou écartées par le plan (`vi.mock`). Le fichier
+  portait déjà un import relatif vers `seeds/` : la convention n'y était pas uniforme.
+- **Le contrôle des titres s'appuie sur `titreDe()` de `cartographie.ts`** — le code du produit —
+  plutôt que sur la carte de titres recomposée dans `+page.server.ts`, qui n'est pas importable
+  sans base. Les deux ont le même repli.
+- **Les mentions des contrôles sont montées par `aretesDeMention()`**, pas par un littéral portant
+  `type: 'mentionne'` : c'est le producteur réel qui pose le type.
+
+## Vague 3, lot F — le rejeu navigateur
+
+- **Les treize gestes passent, aux DEUX passages**, script client allumé puis coupé, avec les
+  mêmes résultats ligne pour ligne. La propriété « marche sans hydratation » tient.
+- **Console : 0 erreur, 0 avertissement, 0 `pageerror`, 0 requête en échec** aux deux passages.
+  Les 40 entrées relevées au premier passage sont toutes des `console.debug` du client HMR du
+  serveur de développement, une paire par chargement.
+- **Le contrôle décisif du §C7 passe** : deux relations sur la même paire, deux chemins distincts,
+  poignées à 24,0 px, et deux clics rendent deux types différents.
+- **UN DÉFAUT TROUVÉ** : « Proposer 3 relation(s) à confirmer » en posait **2**, sans un mot. Une
+  paire qui se cite mutuellement produisait deux propositions sur la même paire non orientée, dont
+  l'écriture en écartait une ; le chiffre du bouton était compté avant cette règle, et l'action ne
+  parlait que si `posees === 0`. Réparé au lot H.
+- **Deux observations sans conséquence sur un geste** : les avertissements de préchargement de
+  police sont l'heuristique du navigateur et non un défaut de câblage — 9 requêtes `woff2` pour
+  9 préchargements, aucun double téléchargement ; et le chevron de l'arbre du rail est un
+  `<button>`, donc script coupé aucun univers ne s'y déplie. **Ce second point n'est pas réparé** :
+  les cartes d'univers de l'accueil et les cartes de domaine de la page d'univers sont des liens,
+  et le parcours complet a été rejoué par elles, script coupé compris. Il est noté ici plutôt que
+  corrigé — élargir le périmètre une seconde fois pour un chemin qui a déjà une issue serait
+  décider à la place de qui commande.
