@@ -24,6 +24,8 @@ L'astreinte intervient sur les services qualifiés vitaux. Elle n'intervient pas
 2. **Depuis quand, et qu'est-ce qui a changé ?** Un changement récent explique la majorité des incidents. Le relevé du comité des changements est en ligne.
 3. **Combien de personnes sont bloquées ?** C'est ce qui décide de réveiller quelqu'un d'autre ou d'attendre le matin.
 
+La première question se pose aussi à la supervision, qui appelle sans savoir ce qu'elle interrompt : [[n-lire-une-alerte-de-supervision|Lire une alerte de supervision]] donne les trois niveaux et les faux positifs connus, et évite de monter une astreinte complète sur une rotation de sauvegarde.
+
 ## Escalade {#s-escalade}
 
 | Situation | Qui | Délai |
@@ -35,6 +37,8 @@ L'astreinte intervient sur les services qualifiés vitaux. Elle n'intervient pas
 
 La dernière ligne est la plus importante et la moins appliquée. Au bout de quarante-cinq minutes sans piste, on appelle. Ce n'est pas un aveu d'échec, c'est la procédure.
 
+Une coupure du lien principal fait exception : elle ne s'escalade pas d'abord, elle se traite. La conduite est écrite dans [[n-bascule-du-reseau-de-secours|Bascule du réseau de secours]], et l'appel vient après, avec le résultat.
+
 
 --- OPERATIONNEL ---
 
@@ -42,6 +46,7 @@ La dernière ligne est la plus importante et la moins appliquée. Au bout de qua
 ## À la prise d'astreinte {#s-a-la-prise-d-astreinte}
 
 - [ ] Vérifier la réception des alertes sur le téléphone d'astreinte.
+- [ ] Si vous n'avez pas pris d'astreinte depuis un mois, revoir les seuils de [[n-lire-une-alerte-de-supervision|la lecture d'alerte]].
 - [ ] Lire le relevé du dernier comité des changements.
 - [ ] Vérifier qu'aucune intervention n'est en cours.
 
