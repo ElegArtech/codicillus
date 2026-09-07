@@ -18,15 +18,35 @@
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { page } from '$app/state';
 	import { adresseDeNote } from '$lib/rangement/adresses';
+	import {
+		DEMI_HAUTEUR,
+		DEMI_LARGEUR,
+		RAYON_DE_POIGNEE,
+		tracerLesAretes
+	} from '$lib/graphe/traces';
 	import type { IdentifiantNote } from '../../../seeds/corpus';
 	import './modelisation.css';
 	import type { ActionData, PageData } from './$types';
 
 	const { data, form }: { data: PageData; form: ActionData } = $props();
 
-	/** La demi-hauteur et la demi-largeur d'un nœud — le dessin les partage. */
-	const DEMI_LARGEUR = 84;
-	const DEMI_HAUTEUR = 21;
+	/**
+	 * LES TRACÉS, PAR CLÉ. La géométrie a quitté ce fichier pour `$lib/graphe/traces`,
+	 * où un unitaire l'atteint : deux relations entre les deux mêmes notes recevaient
+	 * ici un chemin RIGOUREUSEMENT identique, leurs deux prises se superposaient, et
+	 * l'une des deux était inatteignable au clic.
+	 *
+	 * LE MODULE REND SA TABLE RANGÉE PAR CLÉ, pas dans l'ordre d'entrée : la vue lit
+	 * par clé, et l'ordre du balisage reste celui du chargeur.
+	 */
+	const tracesParCle = $derived(
+		new Map(tracerLesAretes(data.aretes, data.noeuds).map((t) => [t.cle, t] as const))
+	);
+
+	/** Le tracé d'une arête, ou un tracé vide — une extrémité peut manquer. */
+	function traceDe(cle: string) {
+		return tracesParCle.get(cle) ?? { cle, d: '', poignee: { x: 0, y: 0 } };
+	}
 
 	const areteChoisie = $derived(data.aretes.find((a) => a.cle === data.areteChoisie) ?? null);
 
@@ -42,29 +62,6 @@
 	const domainesLisibles = $derived(
 		(page.data.domaines as readonly { nom: string }[] | undefined) ?? []
 	);
-
-	/**
-	 * LE CHEMIN D'UNE ARÊTE — du bas de la note qui porte au haut de la note visée.
-	 *
-	 * UNE ARÊTE QUI REMONTE PART ET ARRIVE SUR LE CÔTÉ : dessinée comme les autres, elle
-	 * traverserait le nœud dont elle sort. Le crochet dit sans un mot qu'on remonte.
-	 */
-	function cheminDArete(a: (typeof data.aretes)[number]): string {
-		const source = data.noeuds.find((n) => n.id === a.de);
-		const cible = data.noeuds.find((n) => n.id === a.vers);
-		if (source === undefined || cible === undefined) return '';
-		if (a.retour || source.couche >= cible.couche) {
-			const cote = source.x <= cible.x ? -1 : 1;
-			const x1 = source.x + cote * DEMI_LARGEUR;
-			const x2 = cible.x + cote * DEMI_LARGEUR;
-			const pivot = Math.min(x1, x2) + cote * 46;
-			return `M ${x1} ${source.y} C ${pivot} ${source.y}, ${pivot} ${cible.y}, ${x2} ${cible.y}`;
-		}
-		const y1 = source.y + DEMI_HAUTEUR;
-		const y2 = cible.y - DEMI_HAUTEUR;
-		const milieu = (y1 + y2) / 2;
-		return `M ${source.x} ${y1} C ${source.x} ${milieu}, ${cible.x} ${milieu}, ${cible.x} ${y2}`;
-	}
 
 	/** La classe d'une arête — son origine, son sens, et le fait qu'on l'ait choisie. */
 	function classeDArete(a: (typeof data.aretes)[number]): string {
@@ -270,16 +267,24 @@
 					</defs>
 
 					{#each data.aretes as a (a.cle)}
+						{@const trace = traceDe(a.cle)}
 						<g class="mod-arete__groupe">
-							<path class={classeDArete(a)} d={cheminDArete(a)} marker-end="url(#pointe)" />
+							<path class={classeDArete(a)} d={trace.d} marker-end="url(#pointe)" />
 							<!-- LA PRISE EST UN TRAIT LARGE ET TRANSPARENT : un trait d'un pixel et demi
 								ne se vise pas à la souris, et l'épaissir pour l'attraper mentirait sur
-								la nature de l'arête. -->
+								la nature de l'arête. LA POIGNÉE VIENT PAR-DESSUS : c'est elle qui atteint
+								une arête parallèle à une autre, là où deux prises se recouvrent. -->
 							<a
 								href={adresseDArete(a.cle)}
 								aria-label={a.titreDe + ' ' + a.libelle + ' ' + a.titreVers}
 							>
-								<path class="mod-arete__prise" d={cheminDArete(a)} />
+								<path class="mod-arete__prise" d={trace.d} />
+								<circle
+									class="mod-arete__poignee"
+									cx={trace.poignee.x}
+									cy={trace.poignee.y}
+									r={RAYON_DE_POIGNEE}
+								/>
 							</a>
 						</g>
 					{/each}
