@@ -24,17 +24,22 @@
  * distingue déjà par la seule colonne `origine` (`P-08`). Les séparer ici obligerait
  * chaque appelant à refaire la fusion, donc à décider une seconde fois de la
  * préséance.
+ *
+ * LES IMPORTS SONT RELATIFS, ET C'EST CE QUI REND L'ASSEMBLAGE ÉPROUVABLE. L'alias
+ * du dossier de bibliothèque est posé par le greffon SvelteKit, que la configuration
+ * de vitest ne charge pas : un unitaire qui importe ce fichier sortait sur un module
+ * introuvable, sans rien dire de l'assemblage. Tout `src/lib/` s'écrit déjà ainsi.
  */
-import type { Base } from '$lib/base/acces';
-import { lireRelationsTechniques, lireTypesDeRelation } from '$lib/donnees/lecture';
+import type { Base } from '../../lib/base/acces';
+import { lireRelationsTechniques, lireTypesDeRelation } from '../../lib/donnees/lecture';
 import {
 	lireLesLiensInternes,
 	lireRelationsLisibles,
 	type RelationLisible
-} from '$lib/donnees/outils';
-import { lireNotesLisibles, type AccesAuRangement } from '$lib/donnees/rangement';
-import type { Perimetre as PerimetreDAffichage } from '$lib/graphe/cartographie';
-import { LIBELLES_DE_MENTION, TYPE_DE_MENTION, aretesDeMention } from '$lib/graphe/mentions';
+} from '../../lib/donnees/outils';
+import { lireNotesLisibles, type AccesAuRangement } from '../../lib/donnees/rangement';
+import type { Perimetre as PerimetreDAffichage } from '../../lib/graphe/cartographie';
+import { LIBELLES_DE_MENTION, TYPE_DE_MENTION, aretesDeMention } from '../../lib/graphe/mentions';
 import type { CleDeTypeDeRelation, LibellesDeRelation, Note } from '../../../seeds/corpus';
 
 export interface GrapheLu {
@@ -81,6 +86,34 @@ export async function lireLeGraphe(
 		lireLesLiensInternes(base, acces.perimetre)
 	]);
 
+	return assemblerLeGraphe(
+		notes,
+		declarees,
+		typesRelation,
+		relationsTechniques,
+		liensParNote,
+		perimetre
+	);
+}
+
+/**
+ * L'ASSEMBLAGE DU GRAPHE, SANS UNE SEULE LECTURE. Il était mêlé aux cinq requêtes de
+ * `lireLeGraphe()`, et la règle de préséance entre une relation déclarée et une mention
+ * n'était donc éprouvable qu'au navigateur, contre une base réelle. Le corps est celui
+ * qui était à la suite des lectures, repris sans une ligne réécrite.
+ *
+ * @param perimetre le périmètre d'AFFICHAGE — il borne les mentions aux deux extrémités,
+ *   jamais les relations déclarées, dont une extrémité hors périmètre se dessine en
+ *   fantôme.
+ */
+export function assemblerLeGraphe(
+	notes: readonly Note[],
+	declarees: readonly RelationLisible[],
+	typesRelation: Record<string, LibellesDeRelation>,
+	relationsTechniques: readonly CleDeTypeDeRelation[],
+	liensParNote: ReadonlyMap<string, readonly string[]>,
+	perimetre: PerimetreDAffichage
+): GrapheLu {
 	const mentions = aretesDeMention(notes, liensParNote, declarees, perimetre);
 
 	/* Le référentiel lu, PLUS les deux mots de la mention. La table de la base est
