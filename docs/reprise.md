@@ -11,18 +11,22 @@ pnpm base:migrer     = 0        17 migrations, base neuve
 pnpm base:coherence  = 0        schema.ts décrit exactement la base migrée
 pnpm base:reversibilite = 0     monter, descendre, remonter : empreinte identique
 passage-a-froid      = 0        43 routes, chacune au code attendu d'elle, aucun nom du jeu servi
-aiguilles            = 1        UN FAUX POSITIF, ET IL EST ANTÉRIEUR — voir ci-dessous
+aiguilles            = 0        111 aiguilles, 1252 fichiers, 103 morceaux tiers écartés et NOMMÉS
 ```
 
-**`aiguilles` n'est plus à zéro, et ce n'est pas le travail du 7 septembre.** Le dépôt a été
-reconstruit à `08bf423`, le commit d'avant la première ligne du jour : le contrôle y rend le
-**même** échec, 52 occurrences sur un fichier. Ce fichier est un morceau de 662 Ko de chevrotain
-et de mermaid, où « Production » est le nom d'une classe de grammaire et non l'univers du jeu de
-démonstration. Mermaid est entré dans le paquet client à `42c56cf feat(diagrammes)`. **La ligne
-`aiguilles = 0` de la version précédente de ce fichier était déjà fausse quand elle a été
-écrite** — et c'est la leçon que ce fichier porte déjà sur lui-même. Le faux positif n'a pas été
-« réparé » : c'est un outil de vérification, pas le produit, et on ne fait pas grossir l'appareil
-de vérification pour se rendre un contrôle vert.
+**`aiguilles` était rouge, et il l'était avant le 7 septembre.** Le dépôt a été reconstruit à
+`08bf423`, le commit d'avant la première ligne du jour : le contrôle y rendait le **même** échec,
+52 occurrences sur un fichier. Ce fichier est le morceau de 662 Ko de l'analyseur de Mermaid, où
+« Production » est le nom d'une classe de grammaire — pas l'univers du jeu de démonstration. La
+ligne `aiguilles = 0` de la version précédente de ce fichier était donc **déjà fausse quand elle a
+été écrite**, et c'est la leçon que ce fichier porte sur lui-même.
+
+**Le contrôle est corrigé, et il ne se tait sur rien.** Il n'écarte pas un mot : il écarte un
+FICHIER dont la carte de source dit que toutes ses sources sont sous `node_modules`. Un morceau
+mêlé — une seule source du produit — reste mesuré en entier. L'écart est nommé au relevé, avec son
+compte. Le paquet qui part n'a toujours aucune carte de source : le contrôle en fabrique une à
+lui, en `'hidden'`, dans un répertoire qu'il efface, et apparie par empreinte de CONTENU — les
+cartes changent 56 des 180 fichiers et leurs empreintes de nom avec eux.
 
 ---
 
@@ -194,6 +198,10 @@ mort de la machine. Il demande une destination, et donc une décision.
   de la base de développement parce que 74 sont à la racine de leur domaine et qu'elle
   n'accroche une note qu'à un dossier ; **l'apparence de `/modelisation`**, qui n'a jamais été
   travaillée et attend une maquette ; **les embeddings**, pour le mode « Sens » et les familles.
+- **L'éditeur de note émet deux avertissements de console** — « ProseMirror expects the CSS
+  white-space property to be set » —, relevés au parcours à zéro donnée du 7 septembre. Ils
+  viennent de `prosemirror-view`, dont la feuille n'est pas chargée ; l'éditeur fonctionne. Relevé,
+  pas réparé.
 - **Le chevron de l'arbre du rail est un `<button>`** : script coupé, aucun univers ne s'y
   déplie. Ce n'est pas bloquant — les cartes d'univers de l'accueil et les cartes de domaine de
   la page d'univers sont des liens, et le parcours complet a été rejoué par elles, script coupé
