@@ -248,7 +248,7 @@ export interface Domaine {
 }
 
 export type CleDeModule =
-	'notes' | 'dossiers' | 'fiches' | 'cartographie' | 'signets' | 'carteMentale';
+	'notes' | 'dossiers' | 'fiches' | 'cartographie' | 'signets' | 'carteMentale' | 'modelisation';
 
 export interface Module {
 	readonly nom: string;
@@ -1436,14 +1436,15 @@ export const DOMAINES: readonly Domaine[] = [
 	{ nom: 'Migration 2026', univers: 'Projets', couleur: '#3e5266' }
 ];
 
-/** Les six modules activables sur un domaine. */
+/** Les sept modules activables sur un domaine. */
 export const MODULES: Record<CleDeModule, Module> = {
 	notes: { nom: 'Notes', sous: 'Toutes les notes du domaine' },
 	dossiers: { nom: 'Dossiers', sous: 'Rangement arborescent' },
 	fiches: { nom: 'Fiches', sous: 'Objets typés et leurs relations' },
 	cartographie: { nom: 'Cartographie', sous: 'Graphe des dépendances' },
 	signets: { nom: 'Signets', sous: 'Liens web curatés' },
-	carteMentale: { nom: 'Carte mentale', sous: 'Arbre dépliable du domaine' }
+	carteMentale: { nom: 'Carte mentale', sous: 'Arbre dépliable du domaine' },
+	modelisation: { nom: 'Modélisation', sous: 'Ce qui dépend de quoi' }
 };
 
 export const DETAIL_DOMAINES: Record<NomDeDomaine, DetailDeDomaine> = {
