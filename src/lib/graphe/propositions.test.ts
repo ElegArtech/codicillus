@@ -148,3 +148,90 @@ describe('la mémoire des refus', () => {
 		expect(propositionsDeMention(NOTES, DECLAREES, MENTION, refuses)).toHaveLength(1);
 	});
 });
+
+/**
+ * LA CITATION MUTUELLE — le défaut relevé au rejeu : le bouton disait « Proposer 3 »,
+ * le clic en posait 2, et rien ne le disait. Deux notes qui se citent l'une l'autre
+ * produisaient DEUX propositions sur la même paire non orientée ; l'écriture en
+ * écartait une sur la règle « la paire est déjà reliée ».
+ *
+ * LE REMÈDE N'EST PAS UNE DÉDUPLICATION. Garder le premier sens dans l'ordre lexical
+ * serait un tirage au sort porté par un écran qui dit « à confirmer ». Le corpus dit
+ * que ces deux notes se citent, il ne dit pas laquelle dépend de l'autre : le produit
+ * n'a rien à proposer.
+ */
+describe('la citation mutuelle', () => {
+	/** L'usage qui décide, bien établi : deux Serveur → Application déclarés. */
+	const DECLAREES = [
+		lien('s1', 'a1', 'depend-de', 'declaree'),
+		lien('s2', 'a2', 'depend-de', 'declaree')
+	];
+
+	/**
+	 * LE MÊME USAGE, ÉTABLI DANS LES DEUX SENS. Sans les deux, l'absence de
+	 * proposition sur le sens retour s'expliquerait par le manque de matière, et le
+	 * silence qu'on éprouve ici ne prouverait rien de la règle qu'on répare.
+	 */
+	const DECLAREES_DEUX_SENS = [
+		...DECLAREES,
+		lien('a1', 's2', 'documente', 'declaree'),
+		lien('a2', 's1', 'documente', 'declaree')
+	];
+
+	it('deux notes qui se citent mutuellement ne donnent aucune proposition', () => {
+		const mentions = [
+			lien('s3', 'a3', 'mentionne', 'deduite'),
+			lien('a3', 's3', 'mentionne', 'deduite')
+		];
+		expect(propositionsDeMention(NOTES, DECLAREES_DEUX_SENS, mentions, AUCUN_REFUS)).toEqual([]);
+	});
+
+	it('une citation dans un seul sens donne toujours sa proposition', () => {
+		const mentions = [lien('s3', 'a3', 'mentionne', 'deduite')];
+		const proposees = propositionsDeMention(NOTES, DECLAREES, mentions, AUCUN_REFUS);
+		expect(proposees).toHaveLength(1);
+		expect(proposees[0]?.de).toBe('s3');
+		expect(proposees[0]?.vers).toBe('a3');
+	});
+
+	it('la paire mutuelle se tait sans emporter les citations voisines', () => {
+		const mentions = [
+			lien('s3', 'a3', 'mentionne', 'deduite'),
+			lien('a3', 's3', 'mentionne', 'deduite'),
+			lien('s1', 'a3', 'mentionne', 'deduite')
+		];
+		const proposees = propositionsDeMention(NOTES, DECLAREES, mentions, AUCUN_REFUS);
+		expect(proposees).toHaveLength(1);
+		expect(proposees[0]?.de).toBe('s1');
+		expect(proposees[0]?.vers).toBe('a3');
+	});
+
+	/**
+	 * LA PROPRIÉTÉ QUI A MANQUÉ. Ce que `propositionsDeMention()` rend est ce que
+	 * `proposerLesRelations()` peut poser. Cette dernière parle à PostgreSQL ; ce
+	 * qu'on rejoue ici est sa seule règle purement combinatoire — une paire NON
+	 * ORIENTÉE ne reçoit qu'une écriture —, sur un jeu où aucun droit ne manque,
+	 * aucun type n'est absent et aucun refus n'est posé.
+	 */
+	it('le compte annoncé est celui que lécriture pose', () => {
+		const mentions = [
+			lien('s1', 'a1', 'mentionne', 'deduite'),
+			lien('a1', 's1', 'mentionne', 'deduite'),
+			lien('s2', 'a2', 'mentionne', 'deduite'),
+			lien('s3', 'a3', 'mentionne', 'deduite'),
+			lien('a3', 's3', 'mentionne', 'deduite')
+		];
+		const annonce = propositionsDeMention(NOTES, DECLAREES_DEUX_SENS, mentions, AUCUN_REFUS);
+		expect(annonce).toHaveLength(1);
+
+		const pairesEcrites = new Set<string>();
+		let posees = 0;
+		for (const p of annonce) {
+			const paire = p.de < p.vers ? p.de + ' ' + p.vers : p.vers + ' ' + p.de;
+			if (pairesEcrites.has(paire)) continue;
+			pairesEcrites.add(paire);
+			posees += 1;
+		}
+		expect(posees).toBe(annonce.length);
+	});
+});
