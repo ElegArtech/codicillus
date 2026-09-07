@@ -1,3 +1,5 @@
+@import url('./carto-jetons.css');
+
 /* ==========================================================================
    CETTE FEUILLE NE VAUT QUE SUR SON ÉCRAN — /cartographie
 
@@ -183,667 +185,777 @@
   .pres__sous .temoin__txt { display: none; }
 }
 
+
 /* ==========================================================================
-   V-19 — CARTOGRAPHIE : L'EXPLORATEUR DE GRAPHE
-   Le graphe n'a aucune donnée propre : nœuds et arêtes sont dérivés du corpus
-   et des relations déclarées sur les notes.
+   V-19 — CARTOGRAPHIE ET VOISINAGE
+
+   AUCUNE COULEUR, AUCUN RAYON, AUCUNE OMBRE, AUCUNE TAILLE N'EST ÉCRITE ICI :
+   tout vient de `carto-jetons.css`, importé en tête de cette feuille, et de
+   `socle.css` pour ce que la carte partage avec les quarante autres écrans.
 
    LA GRAMMAIRE VISUELLE, ET ELLE COMMANDE TOUT CE FICHIER — un canal, une
    information :
 
-     forme + code de trois lettres  →  le TYPE
-     couleur + glyphe               →  la VIVACITÉ
-     taille                         →  la CENTRALITÉ
-     anneau interrompu et fanion    →  le POINT DE RUPTURE
-     trait plein / trait fin        →  relation DÉCLARÉE / DÉDUITE
-     proximité et contour           →  l'AFFINITÉ sémantique
-
-   LA TEINTE D'UN NŒUD VIENT DE `currentColor`, que la classe d'état pose sur le
-   groupe (`.glyphe--ajour` et les quatre autres, définies au socle). Elle
-   portait le TYPE, en attribut de présentation SVG écrit dans la vue : trois
-   canaux disaient alors la même chose, et il n'en restait aucun pour l'état.
+     forme                              →  le TYPE du nœud
+     couleur                            →  la VIVACITÉ
+     taille                             →  le réglage « Taille des nœuds »
+     place                              →  la FAMILLE sémantique
+     anneau interrompu                  →  le POINT DE RUPTURE technique
+     plein / tirets / pointillés        →  déclarée / déduite / affinité
+     pointillés fins, sous tout le reste →  le SQUELETTE, c'est-à-dire
+                                            l'appartenance — jamais une relation
    ========================================================================== */
+/* LA HAUTEUR SE PREND SOUS L'EN-TÊTE, PAS SOUS LA BARRE LATÉRALE. Elle valait
+   `100vh - var(--l-barre)`, c'est-à-dire la hauteur de la fenêtre moins la LARGEUR
+   du rail : les deux valent des pixels, la soustraction passait, et le dessin
+   dépassait de douze pixels sous le pli — mesuré au navigateur, la page défilait
+   verticalement sur un écran de mille vingt-quatre. */
 .carto {
   display: grid; grid-template-rows: auto 1fr;
-  height: calc(100vh - var(--l-barre));
+  height: calc(100vh - var(--h-entete));
   min-height: 560px;
+  background: var(--carto-fond-panneau);
 }
 
-/* --- Barre de contrôle ----------------------------------------------------------
-   ELLE APPARTIENT À LA PAGE, PAS AU DESSIN. Elle portait les réglages du graphe —
-   couches, vivacité, taille — au même rang que le périmètre : deux natures de
-   commande sur une seule ligne, et rien pour dire laquelle change les données et
-   laquelle change le rendu. Ce qui règle le DESSIN vit désormais dans le panneau
-   posé sur le canevas ; ici ne restent que le titre, le périmètre et les gestes de
-   cadrage. */
-.controles {
-  display: flex; align-items: center; gap: var(--e-3); flex-wrap: wrap;
-  padding: var(--e-3) var(--e-4) var(--e-3) var(--e-5);
-  border-bottom: 1px solid var(--c-trait); background: var(--c-papier);
+/* --- L'en-tête de page ----------------------------------------------------------
+   ELLE APPARTIENT À LA PAGE, PAS AU DESSIN : où l'on regarde, et comment y
+   revenir. Ce qui règle le DESSIN vit dans le panneau « Affichage », posé sur le
+   canevas qu'il commande. */
+.carto-tete {
+  padding: var(--carto-espace-4) var(--carto-espace-5);
+  border-bottom: 1px solid var(--carto-bordure);
+  background: var(--carto-fond-carte);
 }
-.controles__groupe { display: flex; align-items: center; gap: var(--e-2); }
-.controles__titre { display: flex; align-items: center; gap: var(--e-3); min-width: 0; }
-.controles__glyphe {
-  flex: none; width: 40px; height: 40px; display: grid; place-items: center;
-  border-radius: var(--r-2); background: var(--c-accent-voile); color: var(--c-accent-fonce);
+.carto-tete__ligne {
+  display: flex; align-items: center; gap: var(--carto-espace-4); flex-wrap: wrap;
 }
-.controles__outils {
-  display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; margin-left: auto;
+.carto-tete__glyphe {
+  flex: none; width: 44px; height: 44px; display: grid; place-items: center;
+  border-radius: var(--carto-rayon-champ);
+  background: var(--carto-principal-voile); color: var(--carto-principal-fonce);
 }
-/* `.choix` aussi était pris — cinq vues. Voir le préfixe, plus haut. */
-.carto-choix, .controles select {
-  font: inherit; font-size: var(--t-petit); padding: 5px var(--e-2);
-  border: 1px solid var(--c-trait); border-radius: var(--r-2);
-  background: var(--c-papier); color: var(--c-encre); max-width: 172px;
+.carto-tete__titre { min-width: 0; margin-right: auto; }
+.carto-tete__titre h1 {
+  font-family: var(--carto-police); font-size: var(--carto-t-titre);
+  font-weight: var(--g-fort); letter-spacing: -.018em;
+  margin: 0; line-height: 1.15; color: var(--carto-encre);
 }
+.carto-tete__titre p {
+  margin: 3px 0 0; font-size: var(--carto-t-sous-titre); color: var(--carto-encre-2);
+}
+.carto-tete__outils {
+  display: flex; align-items: center; gap: var(--carto-espace-2); flex-wrap: wrap;
+}
+.carto-tete--voisinage { display: grid; gap: var(--carto-espace-3); }
+.carto-retour {
+  display: inline-flex; align-items: center; gap: var(--carto-espace-1);
+  font-size: var(--carto-t-corps); color: var(--carto-encre-2); text-decoration: none;
+  justify-self: start;
+}
+.carto-retour:hover { color: var(--carto-principal); }
+
+/* --- Les cartes flottantes de l'en-tête ------------------------------------------
+   Blanches, à coins arrondis, ombre légère : la direction artistique les veut
+   posées, pas décollées. */
+.carto-carte {
+  display: flex; align-items: center; gap: var(--carto-espace-3); flex: none;
+  padding: var(--carto-espace-2) var(--carto-espace-3);
+  background: var(--carto-fond-carte);
+  border: 1px solid var(--carto-bordure); border-radius: var(--carto-rayon-carte);
+  box-shadow: var(--carto-ombre-carte);
+}
+.carto-mesure {
+  display: inline-flex; align-items: center; gap: var(--carto-espace-1);
+  font-size: var(--carto-t-meta); color: var(--carto-encre-2); white-space: nowrap;
+}
+.carto-mesure svg { flex: none; color: var(--carto-encre-3); }
+
+/* --- Les segments : profondeur, mode ---------------------------------------------- */
+.carto-segments {
+  display: inline-flex; gap: var(--carto-espace-1); flex: none;
+}
+.carto-segments button, .btn-profondeur {
+  font: inherit; font-size: var(--carto-t-corps); font-weight: var(--g-moyen);
+  min-width: 42px; padding: 5px var(--carto-espace-3);
+  border: 1px solid var(--carto-bordure); background: var(--carto-fond-carte);
+  border-radius: var(--carto-rayon-champ); cursor: pointer; color: var(--carto-encre-2);
+}
+.carto-segments button:hover, .btn-profondeur:hover { background: var(--carto-fond-creux); }
+.carto-segments button[aria-selected="true"],
+.carto-segments button[aria-pressed="true"],
+.btn-profondeur[aria-pressed="true"] {
+  background: var(--carto-principal); border-color: var(--carto-principal);
+  color: var(--carto-sur-principal); font-weight: var(--g-fort);
+}
+
+/* --- Les champs et les boutons ----------------------------------------------------
+   Coins arrondis modérés, bordure d'un pixel gris clair. Les boutons principaux
+   sont pleins et verts ; les secondaires blancs à bordure. */
+.carto-choix {
+  font: inherit; font-size: var(--carto-t-corps); padding: 6px var(--carto-espace-3);
+  border: 1px solid var(--carto-bordure); border-radius: var(--carto-rayon-champ);
+  background: var(--carto-fond-carte); color: var(--carto-encre); max-width: 180px;
+}
+.carto-btn {
+  display: inline-flex; align-items: center; gap: var(--carto-espace-1);
+  font: inherit; font-size: var(--carto-t-corps); font-weight: var(--g-moyen);
+  padding: 6px var(--carto-espace-3);
+  border: 1px solid var(--carto-bordure); border-radius: var(--carto-rayon-champ);
+  background: var(--carto-fond-carte); color: var(--carto-encre-2);
+  cursor: pointer; text-decoration: none;
+}
+.carto-btn:hover { background: var(--carto-fond-creux); color: var(--carto-encre); }
+.carto-btn--principal {
+  background: var(--carto-principal); border-color: var(--carto-principal);
+  color: var(--carto-sur-principal); font-weight: var(--g-fort);
+}
+.carto-btn--principal:hover {
+  background: var(--carto-principal-fonce); color: var(--carto-sur-principal);
+}
+.carto-btn--discret {
+  width: 100%; margin-top: var(--carto-espace-2); justify-content: center;
+  font-size: var(--carto-t-meta); color: var(--carto-encre-2);
+}
+/* LE BOUTON FLOTTANT SE RANGE DEVANT LE PANNEAU, JAMAIS DESSOUS. Le panneau de la
+   note s'ouvre d'office dans le voisinage — y arriver EST la demande — et il porte
+   un rang d'empilement plus haut : « Tout afficher » disparaissait derrière lui à
+   l'ouverture même de l'écran. Il se décale de la largeur du tiroir, comme la
+   légende. */
+.carto-btn--flottant {
+  position: absolute; z-index: 16; top: var(--carto-espace-4); right: var(--carto-espace-4);
+  box-shadow: var(--carto-ombre-carte);
+}
+.carto-scene:has(.detail-col:not([hidden])) .carto-btn--flottant { right: calc(344px + var(--carto-espace-4)); }
+.carto-pied-gestes {
+  position: absolute; z-index: 16; left: var(--carto-espace-4); bottom: var(--carto-espace-4);
+  display: flex; gap: var(--carto-espace-2);
+}
+.carto-pied-gestes .carto-btn { box-shadow: var(--carto-ombre-carte); }
+
 /* Rien ne sert d'un bouton « Effacer la sélection » grisé en permanence : le
-   panneau contextuel porte sa croix, et l'échappement ferme. Il n'apparaît que
-   lorsqu'il y a quelque chose à effacer. */
+   panneau porte sa croix, et l'échappement ferme. */
 #effacer-sel[disabled] { display: none; }
-
-/* La barre du mode local : un retour, un titre, la profondeur, les mesures. */
-.controles--locale { align-items: flex-start; }
-.controles--locale .controles__titre { display: block; }
-.controles__titre h1 {
-  font-family: var(--f-lecture); font-size: var(--t-t2); font-weight: var(--g-moyen);
-  letter-spacing: -.014em; margin: 0; line-height: 1.2;
-}
-.controles__titre p { margin: 3px 0 0; font-size: var(--t-petit); color: var(--c-encre-3); }
-.retour {
-  display: inline-flex; align-items: center; gap: var(--e-1);
-  font-size: var(--t-petit); color: var(--c-encre-3); text-decoration: none;
-  align-self: center;
-}
-.retour:hover { color: var(--c-accent); }
-.mesures {
-  display: flex; gap: var(--e-3); align-items: center;
-  padding: var(--e-2) var(--e-3);
-  border: 1px solid var(--c-trait); border-radius: var(--r-2); background: var(--c-papier-2);
-}
-.mesures__item { font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-2); }
-
-.bascule-vue {
-  display: inline-flex; gap: 2px; padding: 2px;
-  background: var(--c-fond-creux); border-radius: var(--r-2);
-}
-.bascule-vue button {
-  font: inherit; font-size: var(--t-petit); padding: 4px var(--e-3);
-  border: 0; background: none; border-radius: var(--r-1); cursor: pointer; color: var(--c-encre-3);
-}
-.bascule-vue button[aria-selected="true"],
-.bascule-vue button[aria-pressed="true"] {
-  background: var(--c-accent); color: #fff; box-shadow: var(--o-pose); font-weight: var(--g-fort);
-}
 
 .rech-graphe { position: relative; }
 .rech-graphe input {
-  font: inherit; font-size: var(--t-petit); padding: 5px var(--e-3) 5px 28px;
-  border: 1px solid var(--c-trait); border-radius: var(--r-2);
-  background: var(--c-papier); color: var(--c-encre); width: 186px;
+  font: inherit; font-size: var(--carto-t-corps); padding: 6px var(--carto-espace-3) 6px 30px;
+  border: 1px solid var(--carto-bordure); border-radius: var(--carto-rayon-champ);
+  background: var(--carto-fond-carte); color: var(--carto-encre); width: 200px;
 }
-.rech-graphe input:focus { outline: none; border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-voile); }
-.rech-graphe svg { position: absolute; left: 9px; top: 8px; color: var(--c-encre-3); pointer-events: none; }
+.rech-graphe input:focus {
+  outline: none; border-color: var(--carto-principal);
+  box-shadow: 0 0 0 3px var(--carto-principal-voile);
+}
+.rech-graphe > svg { position: absolute; left: 10px; top: 9px; color: var(--carto-encre-3); pointer-events: none; }
 .rech-graphe__liste {
   display: none; position: absolute; z-index: 40; top: calc(100% + 4px); left: 0; right: 0;
-  background: var(--c-papier); border: 1px solid var(--c-trait);
-  border-radius: var(--r-2); box-shadow: var(--o-flotte); padding: var(--e-1); max-height: 260px; overflow-y: auto;
+  background: var(--carto-fond-carte); border: 1px solid var(--carto-bordure);
+  border-radius: var(--carto-rayon-champ); box-shadow: var(--carto-ombre-carte);
+  padding: var(--carto-espace-1); max-height: 260px; overflow-y: auto;
 }
 .rech-graphe[data-ouvert="oui"] .rech-graphe__liste { display: block; }
 .rg {
   display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left;
-  padding: var(--e-2); border: 0; background: none; cursor: pointer; border-radius: var(--r-1); color: inherit; font: inherit;
+  padding: var(--carto-espace-2); border: 0; background: none; cursor: pointer;
+  border-radius: var(--carto-rayon-champ); color: inherit; font: inherit;
 }
-.rg:hover, .rg[data-sel="oui"] { background: var(--c-accent-voile); }
-.rg__t { font-size: var(--t-petit); font-weight: var(--g-moyen); }
-.rg__s { font-size: var(--t-micro); color: var(--c-encre-3); font-family: var(--f-donnee); }
+.rg:hover, .rg[data-sel="oui"] { background: var(--carto-principal-voile); }
+.rg__t { font-size: var(--carto-t-corps); font-weight: var(--g-moyen); }
+.rg__s { font-size: var(--carto-t-meta); color: var(--carto-encre-3); }
 
-/* --- La scène ------------------------------------------------------------------
-   UNE SEULE COLONNE, ET LE CANEVAS LA PREND TOUTE. Elle en avait deux, puis trois :
-   une colonne de commande de deux cent trente-deux pixels réservée en permanence, et
-   un panneau de détail. Sur mille cinq cents pixels, un quart de l'écran allait à des
-   cases à cocher pendant que le graphe — le seul objet de la page — se serrait au
-   milieu. Le panneau d'affichage et le panneau de détail sont désormais posés SUR le
-   canevas : l'un se replie, l'autre n'existe que si un nœud est choisi. */
-.scene { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; position: relative; }
+/* --- La scène et la toile ---------------------------------------------------------
+   UNE SEULE COLONNE, ET LE DESSIN LA PREND TOUTE. Le panneau d'affichage et le
+   panneau de note sont posés SUR la toile : l'un se replie, l'autre n'existe que
+   si un nœud est choisi. */
+.carto-scene {
+  display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; position: relative;
+}
+/* LE FOND DU DESSIN EST BLANC, SANS GRILLE NI TRAME. C'est ce qui fait exister les
+   contours pastel : sur l'ivoire de l'application, un aplat à huit pour cent ne se
+   distingue de rien. */
+.carto-toile {
+  position: relative; min-width: 0; overflow: hidden; box-sizing: border-box;
+  background: var(--carto-fond-dessin);
+}
+/* LE DESSIN NE PASSE NI SOUS LE PANNEAU, NI SOUS LA LÉGENDE. Les deux sont posés
+   SUR la toile ; la toile leur réserve donc leur place dans son remplissage, et le
+   `svg`, qui prend cent pour cent de la boîte de CONTENU, s'arrête avant eux.
 
-/* LE FOND DU CANEVAS EST CLAIR, ET C'EST CE QUI FAIT EXISTER LES ÎLOTS. Sur le
-   beige de l'application, un aplat à neuf pour cent ne se distingue de rien : les
-   douze îlots se lisaient comme une seule masse grise. Le canevas est la surface de
-   lecture de cet écran — il prend le papier, pas le fond. */
-.zone-graphe { position: relative; min-width: 0; background: var(--c-papier); overflow: hidden; }
-/* LE DESSIN NE PASSE PAS SOUS LE PANNEAU. Il est posé sur le canevas, et deux îlots
-   se retrouvaient derrière lui — on ne pouvait ni les lire ni les atteindre sans
-   d'abord replier ce qui les cachait. La zone lui réserve donc sa largeur tant qu'il
-   est déplié ; repliée, elle la rend au dessin. Le repère du graphe suit, et le
-   déplacement comme le zoom restent justes : c'est la même surface, plus étroite. */
-.zone-graphe { box-sizing: border-box; }
-.zone-graphe:has(.carto-reglages:not([data-replie="oui"])) { padding-left: 218px; }
-/* LE TIROIR DE DÉTAIL, LUI, NE RÉSERVE RIEN, ET C'EST UN ARBITRAGE. Lui réserver sa
-   largeur rétrécissait le canevas À CHAQUE SÉLECTION : le repère se recalait, et
-   toute la carte sautait au moment précis où l'on venait de viser un nœud. Une carte
-   qu'on ne reconnaît plus d'un clic à l'autre ne s'explore pas. Le tiroir passe donc
-   par-dessus — il s'ouvre sur un geste, il se ferme d'une croix ou de l'échappement,
-   et la sélection estompe déjà tout ce qui n'est pas le voisinage visé. */
-/* LA RÈGLE VISE LE CANEVAS, PAS TOUT SVG DE LA ZONE — et c'est un défaut réparé.
-   Elle était écrite `.zone-graphe svg`, pour l'unique dessin ; mais la zone porte
-   une vingtaine d'autres `svg` — l'icône du bandeau d'avis, les outils flottants,
-   les miniatures du panneau. Chacun recevait `width: 100%; height: 100%`.
+   SANS LA RÉSERVE DU BAS, les deux familles du sud passaient derrière la carte de
+   légende — mesuré au navigateur sur l'univers Substack : « Outils & Tech » et
+   « Business & Stratégie » y disparaissaient à moitié. Le panneau, lui, avait déjà
+   sa réserve ; la légende n'en avait pas. */
+.carto-toile { padding-bottom: 104px; }
+.carto-toile:has(.carto-reglages:not([data-replie="oui"])) { padding-left: 234px; }
+/* DANS LE VOISINAGE, LE PANNEAU DE LA NOTE A SA RÉSERVE LUI AUSSI. Il y est ouvert
+   D'OFFICE — y arriver EST la demande —, donc réserver sa place ne fait sauter
+   aucun dessin : c'est l'état d'ouverture de l'écran. Sur la cartographie, au
+   contraire, il s'ouvre à la sélection, et lui réserver sa largeur recalerait le
+   repère au moment précis où l'on vient de viser un nœud. */
+.carto-scene[data-mode='locale'] .carto-toile { padding-right: 344px; }
 
-   Vu en vrai sur l'instance : `/cartographie?perimetre=univers|Substack` — un
-   périmètre de 148 notes sans aucune relation déclarée, donc le seul cas où le
-   bandeau d'avis se rend. Son icône de 16 pixels remplissait tout le canevas d'un
-   point d'exclamation, et il n'y avait plus de carte du tout.
-
-   `#graphe` est l'identifiant du dessin, et lui seul doit s'étendre. */
+/* LA RÈGLE VISE LE DESSIN, PAS TOUT SVG DE LA TOILE — la toile porte une vingtaine
+   d'autres `svg` : l'icône du bandeau d'avis, les outils flottants, les miniatures
+   du panneau. Écrite `.carto-toile svg`, elle faisait remplir tout le canevas par
+   un point d'exclamation de seize pixels. */
 #graphe { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 #graphe.tire { cursor: grabbing; }
 
-/* --- Le panneau d'affichage -----------------------------------------------------
-   IL S'APPELAIT `.panneau`, ET C'ÉTAIT UN NOM DU SOCLE. `socle.css:757` le déclare,
-   et dix vues s'en servent — dont V-10, pour ses trois cartes « Domaines », « À
-   surveiller » et « Activité récente ». Une feuille de vue reste chargée après la
-   navigation : passer par la cartographie puis rouvrir un univers posait donc ces
-   trois cartes en `position: absolute`, empilées par-dessus le rail, en haut à
-   gauche. Vu en vrai sur l'instance de recette.
-
-   TOUT CE QUI EST PROPRE À CET ÉCRAN PORTE DONC LE PRÉFIXE `carto-`. C'est la même
-   règle que pour `.noeud`, écrite plus bas : un nom partagé par deux vues est une
-   règle partagée par deux vues, et l'ordre de chargement décide laquelle gagne.
-
-   IL EST POSÉ SUR LE CANEVAS QU'IL COMMANDE. En colonne réservée, il séparait le
-   réglage de son effet par une bordure et deux cents pixels ; posé dessus, on voit
-   la carte changer sous la case qu'on coche. Il se replie d'un bouton, et le
-   canevas reprend tout.
-
-   LARGE DE CENT QUATRE-VINGT-DIX PIXELS : la ligne « ● Bientôt à vérifier 34 »
-   tient, et c'est la plus longue. Au-delà, il mordrait sur le dessin sans rien
-   gagner. */
-.carto-reglages {
-  position: absolute; z-index: 20; top: var(--e-4); left: var(--e-4);
-  width: 202px; max-height: calc(100% - var(--e-4) * 2);
-  display: flex; flex-direction: column;
-  background: var(--c-papier); border: 1px solid var(--c-trait);
-  border-radius: var(--r-3); box-shadow: var(--o-flotte);
+/* --- Le disque du centre ----------------------------------------------------------
+   Un grand disque vert foncé, avec le nom du périmètre en blanc. C'est le seul
+   endroit du dessin où la couleur principale est employée en aplat. */
+.centre { pointer-events: none; }
+.centre__disque { fill: var(--carto-principal); }
+.centre__nom {
+  font-family: var(--carto-police); font-size: calc(var(--carto-t-centre) * 1px);
+  font-weight: var(--g-fort); text-anchor: middle; fill: var(--carto-sur-principal);
 }
-.carto-reglages__tete {
-  display: flex; align-items: center; gap: var(--e-2); flex: none;
-  padding: var(--e-3) var(--e-3) var(--e-3) var(--e-4);
-  border-bottom: 1px solid var(--c-trait-fin); color: var(--c-encre-2);
-}
-.carto-reglages__nom { flex: 1; font-size: var(--t-petit); font-weight: var(--g-fort); color: var(--c-encre); }
-.carto-reglages__bascule {
-  flex: none; width: 24px; height: 24px; display: grid; place-items: center;
-  border: 0; background: none; cursor: pointer; border-radius: var(--r-1); color: var(--c-encre-3);
-}
-.carto-reglages__bascule:hover { background: var(--c-fond-creux); color: var(--c-encre); }
-.carto-reglages__bascule svg { transform: rotate(90deg); transition: transform var(--m-doux); }
-.carto-reglages[data-replie="oui"] .carto-reglages__bascule svg { transform: rotate(0deg); }
-.carto-reglages[data-replie="oui"] .carto-reglages__corps { display: none; }
-.carto-reglages[data-replie="oui"] .carto-reglages__tete { border-bottom: 0; }
-.carto-reglages__corps { overflow-y: auto; min-height: 0; padding: var(--e-3) var(--e-3) var(--e-4); }
-
-/* Le `ⓘ` porte ce qui demandait un paragraphe. Il ne s'ouvre pas, il ne prend pas
-   de place : l'info-bulle du navigateur suffit, et le lecteur d'écran la lit. */
-.apropos {
-  border: 0; background: none; cursor: help; padding: 0 0 0 4px;
-  color: var(--c-encre-4); font-size: 11px; line-height: 1;
-}
-.apropos:hover { color: var(--c-accent); }
-
-/* --- Les blocs du panneau ------------------------------------------------------- */
-.legende__bloc + .legende__bloc { margin-top: var(--e-4); }
-.legende__bloc > .etiq { display: flex; align-items: center; margin-bottom: var(--e-1); }
-
-.lg + .lg { margin-top: 1px; }
-.lg {
-  display: flex; align-items: center; gap: var(--e-2); width: 100%;
-  padding: 5px var(--e-2); border: 1px solid transparent; background: none;
-  border-radius: var(--r-2); cursor: pointer; color: inherit; font: inherit; text-align: left;
-}
-.lg:hover { background: var(--c-papier-2); }
-.lg--case input { flex: none; margin: 0; accent-color: var(--c-accent); }
-.lg__forme { flex: none; }
-.lg__nom { flex: 1; min-width: 0; font-size: var(--t-petit); font-weight: var(--g-moyen); }
-.lg__n { font-family: var(--f-donnee); font-size: var(--t-mini); color: var(--c-encre-3); }
-/* LE GLYPHE NE S'ÉTIRE PAS. Un `svg` dans une boîte flexible prend la hauteur de sa
-   ligne : ses attributs `width` et `height` ne sont qu'une taille INTRINSÈQUE, que
-   `align-items: stretch` écrase. Mesuré au navigateur — les cinq glyphes de la
-   légende du pied faisaient quatre-vingts pixels de haut. */
-.lg .glyphe,
-.lp .glyphe { flex: none; width: 14px; height: 14px; }
-
-/* Les deux natures de trait, en miniature — la légende dit ce que le dessin fait. */
-.lg__trait { flex: none; width: 18px; height: 0; border-top-style: solid; color: var(--c-encre-3); }
-.lg__trait--declaree { border-top-width: 2px; border-top-color: var(--c-trait-fort); }
-.lg__trait--deduite  { border-top-width: 1px; border-top-color: var(--c-encre-4); }
-.lg__trait--affinite { border-top-width: 1px; border-top-style: dashed; border-top-color: var(--c-encre-4); }
-
-.curseur { display: flex; justify-content: space-between; font-size: var(--t-mini); color: var(--c-encre-3); }
-.curseur output { font-family: var(--f-donnee); color: var(--c-encre); font-weight: var(--g-fort); }
-#degre-min { width: 100%; accent-color: var(--c-accent); margin: var(--e-1) 0 var(--e-2); }
-
-.cle-lecture { font-size: var(--t-mini); line-height: 1.45; margin-bottom: var(--e-2); }
-.cle-lecture b { display: block; color: var(--c-encre); font-weight: var(--g-fort); }
-.cle-lecture span { color: var(--c-encre-3); }
-
-.btn--discret {
-  width: 100%; margin-top: var(--e-2); justify-content: center;
-  font-size: var(--t-mini); color: var(--c-encre-3);
+.centre__code {
+  font-family: var(--carto-police); font-size: calc(var(--carto-t-centre-sous) * 1px);
+  text-anchor: middle; fill: var(--carto-sur-principal); opacity: .72;
 }
 
-/* --- Îlots sémantiques ----------------------------------------------------------
-   L'AFFINITÉ NE SE DESSINE PAS EN ARÊTES. Une appartenance commune réunit un
-   ENSEMBLE de notes : sa forme juste est un îlot, pas cent cinq segments dont
-   chacun, pris seul, affirmerait un rapport que personne n'a déclaré. L'îlot porte
-   un contour, une teinte et un en-tête — et rien en son centre : une famille n'est
-   pas un objet auquel ses notes se relient.
+/* --- Le squelette ------------------------------------------------------------------
+   IL SIGNIFIE L'APPARTENANCE, PAS UNE RELATION, et c'est pourquoi il est en
+   pointillés fins, très pâle, et dessiné SOUS tout le reste. La légende ne le nomme
+   pas : il est la charpente du dessin, pas une donnée du corpus. */
+.squelette {
+  stroke: var(--carto-bordure-forte);
+  stroke-width: var(--carto-trait-squelette);
+  stroke-dasharray: var(--carto-tirets-squelette);
+  opacity: var(--carto-opacite-squelette);
+  fill: none;
+}
+.graphe[data-contours="non"] .squelette { opacity: calc(var(--carto-opacite-squelette) * 0.6); }
 
-   HUIT TEINTES, TOUTES FROIDES, ET C'EST LE POINT DÉLICAT. La teinte d'un îlot est
-   NOMINALE — elle distingue deux voisins, comme on colorie deux pays sur une carte,
-   elle ne mesure rien. Elle ne peut donc pas emprunter les cinq teintes de la
-   vivacité, qui, elles, MESURENT : un îlot vert au-dessus de nœuds rouges ferait
-   lire un état là où il n'y a qu'une identité. Les cinq états de vivacité sont
-   chauds — vert profond, or, ambre, brique, rouge —, les huit teintes d'îlot sont
-   froides. C'est le partage le plus sûr : chaud = état, froid = groupe. */
-/* LE CONTOUR EST UN VOILE, PAS UN CADRE. Il était tireté et appuyé : à douze îlots
-   le dessin devenait une grille de pointillés qui se disputaient l'œil avec les
-   relations. Un aplat très pâle et un filet à peine visible suffisent — c'est la
-   TEINTE qui dit l'îlot, pas son bord. */
+/* --- Les contours de famille -------------------------------------------------------
+   Une enveloppe arrondie, remplie de la couleur pastel de la famille, avec une
+   bordure très légère. Son nom est en gras dans sa couleur saturée, précédé d'une
+   petite icône, et son effectif en gris dessous. */
 .famille__contour {
-  fill: currentColor; fill-opacity: 0.13;
-  stroke: currentColor; stroke-opacity: 0.3; stroke-width: 1;
+  fill: var(--teinte-pastel); stroke: var(--teinte-bord);
+  stroke-width: var(--carto-trait-contour);
 }
 .famille__tete { pointer-events: none; }
-.famille__pastille { fill: currentColor; }
+.famille__icone { fill: var(--teinte-sature); }
 .famille__nom {
-  font-family: var(--f-ui); font-size: 13px; font-weight: 700; letter-spacing: -0.008em;
-  text-anchor: middle; fill: currentColor;
-  paint-order: stroke; stroke: var(--c-papier); stroke-width: 4px; stroke-linejoin: round;
+  font-family: var(--carto-police); font-size: calc(var(--carto-t-famille) * 1px);
+  font-weight: var(--g-lourd); letter-spacing: -.008em; fill: var(--teinte-sature);
+  paint-order: stroke; stroke: var(--carto-fond-dessin); stroke-width: 4px; stroke-linejoin: round;
 }
 .famille__compte {
-  font-family: var(--f-donnee); font-size: 9.5px; text-anchor: middle; fill: var(--c-encre-3);
-  paint-order: stroke; stroke: var(--c-papier); stroke-width: 3px; stroke-linejoin: round;
+  font-family: var(--carto-police); font-size: calc(var(--carto-t-famille-compte) * 1px);
+  fill: var(--carto-encre-3);
+  paint-order: stroke; stroke: var(--carto-fond-dessin); stroke-width: 3px; stroke-linejoin: round;
 }
+.graphe[data-contours="non"] .calque-contours { display: none; }
+.graphe[data-noms="non"] .calque-noms { display: none; }
 
-/* Les huit teintes, posées par le RANG de la famille — donc par son effectif, qui
-   est déterministe : deux chargements du même périmètre teintent les mêmes îlots. */
-[data-teinte="0"] { color: #4b52a3; }
-[data-teinte="1"] { color: #1b6b7a; }
-[data-teinte="2"] { color: #7a5f9e; }
-[data-teinte="3"] { color: #2f6f9f; }
-[data-teinte="4"] { color: #8a4a7d; }
-[data-teinte="5"] { color: #2b7f7a; }
-[data-teinte="6"] { color: #5a6b8c; }
-[data-teinte="7"] { color: #6f5bb5; }
+/* LES DIX TEINTES DE FAMILLE, posées par le RANG de la famille — donc par son
+   effectif, qui est déterministe : deux chargements du même périmètre teintent les
+   mêmes contours. La dixième est grise, et c'est « Isolées » : des notes que rien
+   ne rapproche n'ont pas de sujet commun, donc pas de couleur de sujet. */
+[data-teinte="0"] { --teinte-sature: var(--carto-famille-0-sature); --teinte-pastel: var(--carto-famille-0-pastel); --teinte-bord: var(--carto-famille-0-bord); }
+[data-teinte="1"] { --teinte-sature: var(--carto-famille-1-sature); --teinte-pastel: var(--carto-famille-1-pastel); --teinte-bord: var(--carto-famille-1-bord); }
+[data-teinte="2"] { --teinte-sature: var(--carto-famille-2-sature); --teinte-pastel: var(--carto-famille-2-pastel); --teinte-bord: var(--carto-famille-2-bord); }
+[data-teinte="3"] { --teinte-sature: var(--carto-famille-3-sature); --teinte-pastel: var(--carto-famille-3-pastel); --teinte-bord: var(--carto-famille-3-bord); }
+[data-teinte="4"] { --teinte-sature: var(--carto-famille-4-sature); --teinte-pastel: var(--carto-famille-4-pastel); --teinte-bord: var(--carto-famille-4-bord); }
+[data-teinte="5"] { --teinte-sature: var(--carto-famille-5-sature); --teinte-pastel: var(--carto-famille-5-pastel); --teinte-bord: var(--carto-famille-5-bord); }
+[data-teinte="6"] { --teinte-sature: var(--carto-famille-6-sature); --teinte-pastel: var(--carto-famille-6-pastel); --teinte-bord: var(--carto-famille-6-bord); }
+[data-teinte="7"] { --teinte-sature: var(--carto-famille-7-sature); --teinte-pastel: var(--carto-famille-7-pastel); --teinte-bord: var(--carto-famille-7-bord); }
+[data-teinte="8"] { --teinte-sature: var(--carto-famille-8-sature); --teinte-pastel: var(--carto-famille-8-pastel); --teinte-bord: var(--carto-famille-8-bord); }
+[data-teinte="9"] { --teinte-sature: var(--carto-famille-9-sature); --teinte-pastel: var(--carto-famille-9-pastel); --teinte-bord: var(--carto-famille-9-bord); }
 
-.graphe[data-contours="non"] .familles { display: none; }
-.graphe[data-noms="non"] .familles-noms { display: none; }
-
-/* --- Nœuds ----------------------------------------------------------------------------- */
-/* CANTONNÉES AU SVG, ET CE N'EST PAS UNE PRÉCAUTION.
-   `.noeud`, `.noeud__nom` et `.noeud__code` nomment DEUX choses dans la même
-   page : les nœuds du graphe, ici, et les branches de l'arborescence du rail,
-   qui est rendu sur tout écran de coquille. Sans le `svg`, la déclaration
-   `pointer-events: none` — qui n'a de sens que pour une étiquette de graphe —
-   tombait sur les liens du rail et les rendait INERTES. */
+/* --- Les nœuds ----------------------------------------------------------------------
+   CANTONNÉS AU SVG, ET CE N'EST PAS UNE PRÉCAUTION. `.noeud`, `.noeud__nom` nomment
+   DEUX choses dans la même page : les nœuds du graphe, ici, et les branches de
+   l'arborescence du rail, rendu sur tout écran de coquille. Sans le `svg`, la
+   déclaration `pointer-events: none` tombait sur les liens du rail et les rendait
+   INERTES, et `display: none` faisait disparaître le rail entier au premier filtre. */
 svg .noeud { cursor: pointer; }
-/* LE FILET EST FIN, ET C'EST UNE CONSÉQUENCE DE L'ÉCHELLE. À cinq unités de rayon,
-   un contour de deux pixels mange la pastille : il ne restait qu'un anneau clair, et
-   la teinte de vivacité — le canal principal — ne se voyait plus. */
+/* Pleins, avec un fin anneau blanc — la direction artistique. */
 svg .noeud__forme {
-  fill: currentColor; stroke: var(--c-papier); stroke-width: 1.1;
+  fill: currentColor;
+  stroke: var(--carto-fond-dessin); stroke-width: var(--carto-anneau-noeud);
   transition: opacity var(--m-doux);
 }
-/* LA TEINTE DE VIVACITÉ, REPRISE AU RAIL — et c'est le piège que ce fichier annonce
-   depuis toujours, réalisé. `socle.css` pose `.noeud { color: var(--c-encre-2) }`
-   pour les branches de l'ARBORESCENCE du rail. `.glyphe--ajour` a exactement la même
-   spécificité (0,1,0) et perd donc l'arbitrage à l'ordre de chargement : tous les
-   nœuds du graphe sortaient en encre secondaire. Mesuré au navigateur — teinte
-   calculée `#46585f` là où `--c-ajour` vaut `#1d6b4a`, sur des nœuds portant
-   pourtant la bonne classe.
-
-   Le préfixe `svg` monte la spécificité à (0,2,1) et cantonne la règle au dessin,
-   où `.noeud` ne peut désigner qu'un nœud de graphe. C'est le canal PRINCIPAL de
-   l'écran : sans lui, la carte ne répond plus à « où sont les zones fragiles ? ». */
+/* LA TEINTE DE VIVACITÉ, et c'est le canal principal de l'écran. `socle.css` pose
+   `.noeud { color: var(--c-encre-2) }` pour les branches du RAIL, à spécificité
+   égale : le préfixe `svg` monte à (0,2,1) et cantonne la règle au dessin. */
 svg .noeud.glyphe--ajour { color: var(--c-ajour); }
 svg .noeud.glyphe--bientot { color: var(--c-bientot); }
 svg .noeud.glyphe--averifier { color: var(--c-averifier); }
 svg .noeud.glyphe--arevoir { color: var(--c-arevoir); }
 svg .noeud.glyphe--obsolete { color: var(--c-obsolete); }
-svg .noeud--sans-etat { color: var(--c-encre-4); }
-svg .noeud__code {
-  font-family: var(--f-donnee); font-size: 8px; font-weight: 700;
-  text-anchor: middle; dominant-baseline: central; pointer-events: none; fill: #fff;
-}
-svg .noeud__nom {
-  font-family: var(--f-ui); font-size: 9.5px; font-weight: 600;
-  text-anchor: middle; pointer-events: none; fill: var(--c-encre);
-  paint-order: stroke; stroke: var(--c-papier); stroke-width: 3px; stroke-linejoin: round;
-}
-/* LES ÉTIQUETTES SE TAISENT QUAND LE GRAPHE EST DENSE, et reviennent au survol, à
-   la sélection, et pour le voisinage mis en avant. À quatre-vingts nœuds dans un
-   repère de mille unités, deux titres se chevauchent avant d'être lus — mesuré au
-   navigateur, pas un seul n'était lisible. Les NOMS DE FAMILLE, eux, restent : ils
-   sont peu nombreux, et ce sont eux qui permettent de s'orienter. */
-.graphe[data-dense="oui"] .noeud__nom { display: none; }
-/* SAUF LES NŒUDS STRUCTURANTS. Un dessin où RIEN n'est nommé n'a plus de prise :
-   les quelques nœuds assez gros pour porter leur titre sans le heurter d'un voisin
-   le gardent, et ce sont précisément ceux qu'on cherche du regard. */
-.graphe[data-dense="oui"] .noeud[data-gros="oui"] .noeud__nom,
-.graphe[data-dense="oui"] .noeud:hover .noeud__nom,
-.graphe[data-dense="oui"] .noeud:focus-visible .noeud__nom,
-.graphe[data-dense="oui"] .noeud[data-choisi="oui"] .noeud__nom,
-.graphe[data-dense="oui"][data-focus="oui"] .noeud[data-actif="oui"] .noeud__nom { display: block; }
+svg .noeud--sans-etat { color: var(--carto-encre-3); }
 
-/* Le nœud survolé passe DEVANT : son étiquette serait sinon recouverte par les
-   formes des nœuds dessinés après lui. */
+/* LE PIVOT PORTE LA TEINTE SATURÉE DE SA FAMILLE, avec un halo pâle — c'est la
+   seule exception à « la couleur suit la vivacité », et elle est délibérée : sans
+   elle, une famille n'aurait aucune couleur propre sur le dessin, et douze contours
+   pastel ne suffisent pas à distinguer douze branches quand on regarde le centre.
+   La vivacité du pivot se lit au survol et dans le panneau. */
+svg .noeud[data-pivot="oui"] { color: var(--teinte-sature); }
+.pivot__halo { fill: var(--teinte-pastel); stroke: var(--teinte-bord); stroke-width: 1; }
+
+svg .noeud__nom {
+  font-family: var(--carto-police); font-size: calc(var(--carto-t-noeud) * 1px);
+  font-weight: var(--g-fort); text-anchor: middle; pointer-events: none;
+  fill: var(--carto-encre);
+  paint-order: stroke; stroke: var(--carto-fond-dessin); stroke-width: 3px; stroke-linejoin: round;
+  display: none;
+}
+svg .noeud[data-pivot="oui"] .noeud__nom {
+  font-size: calc(var(--carto-t-pivot) * 1px);
+}
+/* LES LIBELLÉS NE S'ÉCRIVENT QUE SUR LES PIVOTS, sur le nœud survolé, sur le nœud
+   choisi et ses voisins, et sur tout le monde au-delà du seuil de zoom. Deux
+   libellés ne se chevauchent jamais : `disposition-carte.ts` tait celui qui en
+   recouvrirait un autre, et c'est lui qui pose `data-nomme`. */
+svg .noeud[data-nomme="oui"] .noeud__nom,
+.graphe[data-zoom="proche"] .noeud .noeud__nom,
+.graphe[data-mode="locale"] .noeud .noeud__nom,
+svg .noeud:hover .noeud__nom,
+svg .noeud:focus-visible .noeud__nom,
+svg .noeud[data-choisi="oui"] .noeud__nom,
+.graphe[data-focus="oui"] .noeud[data-actif="oui"] .noeud__nom { display: block; }
+
+/* Le nœud survolé passe DEVANT : son libellé serait sinon recouvert par les formes
+   des nœuds dessinés après lui. */
 svg .noeud:hover, svg .noeud[data-choisi="oui"] { paint-order: normal; }
 
 svg .noeud[data-fantome="oui"] .noeud__forme { stroke-dasharray: 3 2.5; }
-.noeud[data-fantome="oui"] { opacity: .5; }
-
-/* LA NOTE QU'AUCUNE RELATION NE TOUCHE EST DESSINÉE, ET DISCRÈTE. Elle était
-   RETIRÉE, et c'était le défaut de fond de cet écran : seize notes sur trente-deux
-   disparaissaient du corpus de démonstration, si bien que la question « qu'est-ce
-   qui n'est relié à rien ? » — celle pour laquelle on ouvre une cartographie —
-   était la seule à laquelle elle ne pouvait pas répondre. */
-.noeud[data-isolee="oui"] { opacity: .58; }
-.noeud[data-isolee="oui"] .noeud__nom { opacity: .72; }
+svg .noeud[data-fantome="oui"] { opacity: .6; }
+/* LA NOTE QU'AUCUNE RELATION NE TOUCHE EST DESSINÉE, et à peine estompée : sur un
+   corpus où les deux tiers des notes sont isolées, atténuer la majorité du dessin
+   éteindrait le canal de la vivacité pour signaler ce que l'absence de trait dit
+   déjà d'elle-même. */
+svg .noeud[data-isolee="oui"] { opacity: .84; }
 
 /* Le filtre ne retire jamais un nœud du document : il garde sa place, et le
-   rallumer ne fait pas sauter la carte.
-
-   CANTONNÉE AU SVG, ET CE N'EST PAS UNE PRÉCAUTION : `.noeud` nomme aussi les
-   branches du rail, rendu sur tout écran de coquille. Sans le `svg`, porter le
-   degré minimum à 1 faisait disparaître le rail entier. */
+   rallumer ne fait pas sauter la carte. */
 svg .noeud[data-masque="oui"],
 svg .arete[data-masque="oui"],
 svg .arete__etiquette[data-masque="oui"] { display: none; }
 
-/* LA NOTE ISOLÉE EST À PEINE ESTOMPÉE, ET C'EST UN ARBITRAGE MESURÉ. Elle l'était à
-   58 % — mais sur l'instance de recette soixante-huit notes sur soixante-dix-sept
-   n'ont aucune relation déclarée : atténuer LA MAJORITÉ du dessin éteignait la
-   couleur de vivacité, c'est-à-dire le canal principal, pour signaler ce que
-   l'absence de trait dit déjà d'elle-même. Le compte exact est dans la colonne, et
-   le curseur de degré minimum les écarte d'un geste. */
-svg .noeud[data-isolee="oui"] { opacity: 0.82; }
+/* Le nœud choisi porte un anneau d'encre, jamais un contour épais. */
+svg .noeud[data-choisi="oui"] .noeud__forme { stroke: var(--carto-encre); stroke-width: 2; }
 
-/* --- Arêtes ---------------------------------------------------------------------------
-   LE TRAIT PORTE LA COUCHE, ET RIEN D'AUTRE. Il portait la dépendance TECHNIQUE
-   — plein contre pointillé —, et la couche s'ajoutait par-dessus : deux
-   informations sur un même canal. La technicité reste LUE — c'est elle qui décide
-   des points de rupture — mais elle ne se dessine plus sur le trait.
+/* Le point de rupture : un anneau INTERROMPU, reconnaissable en niveaux de gris. */
+.rupture-anneau {
+  fill: none; stroke: var(--c-danger);
+  stroke-width: var(--carto-trait-declaree); stroke-dasharray: 5 3.5;
+}
+.graphe[data-ruptures="non"] .rupture-anneau { display: none; }
 
-   UNE ARÊTE EST NEUTRE. La teinter de la couleur de son nœud source rouvrirait
-   l'ambiguïté qu'on vient de fermer : le rouge est une couleur de vivacité. */
-.arete { stroke: var(--c-trait-fort); stroke-width: 1.7; fill: none; transition: opacity var(--m-doux); }
-.arete[data-couche="deduites"] { stroke: var(--c-encre-4); stroke-width: .9; }
+/* --- Les relations -------------------------------------------------------------------
+   ELLES SONT DESSINÉES PAR-DESSUS LE SQUELETTE, avec les styles de la légende, et
+   EN TRANSPARENCE FAIBLE par défaut : deux cent quarante-cinq traits à pleine
+   opacité font un paquet où plus rien ne se lit. Celles du nœud survolé ou
+   sélectionné passent en pleine opacité, et les autres s'effacent. LES COMPTEURS ET
+   LA LÉGENDE RESTENT EXACTS quelle que soit la transparence : rien n'est retiré du
+   document, seule l'encre change. */
+.arete {
+  stroke: var(--carto-encre-2); stroke-width: var(--carto-trait-declaree);
+  fill: none; opacity: var(--carto-opacite-relation);
+  transition: opacity var(--m-vif);
+}
+.arete[data-couche="deduites"] {
+  stroke: var(--carto-encre-3); stroke-width: var(--carto-trait-deduite);
+  stroke-dasharray: var(--carto-tirets-deduite);
+}
+.pointe { fill: var(--carto-encre-2); }
+/* LES FLÈCHES NE SE DESSINENT QUE DANS LE VOISINAGE. Sur la carte entière elles
+   ajouteraient deux cent quarante-cinq pointes à un dessin déjà dense, pour une
+   direction que le panneau donne en toutes lettres. */
+.graphe[data-mode="complete"] .arete { marker-end: none; }
+.graphe[data-mode="locale"] .arete { opacity: var(--carto-opacite-relation-active); }
+
 .arete__etiquette {
-  font-family: var(--f-donnee); font-size: 9px; text-anchor: middle;
-  fill: var(--c-encre-3); pointer-events: none;
-  paint-order: stroke; stroke: var(--c-papier); stroke-width: 3px; stroke-linejoin: round;
+  font-family: var(--carto-police); font-size: calc(var(--carto-t-arete) * 1px);
+  text-anchor: middle; fill: var(--carto-encre-3); pointer-events: none;
+  paint-order: stroke; stroke: var(--carto-fond-dessin); stroke-width: 3px; stroke-linejoin: round;
+}
+.affinite {
+  stroke: var(--carto-encre-3); stroke-width: var(--carto-trait-affinite);
+  stroke-dasharray: var(--carto-tirets-affinite); fill: none; opacity: .6;
 }
 
-/* LES TRAITS D'AFFINITÉ N'EXISTENT QU'AUTOUR D'UN NŒUD CHOISI, à la demande. */
-.affinite { stroke: var(--c-encre-4); stroke-width: 1; stroke-dasharray: 2 4; fill: none; opacity: .55; }
+/* Le survol et la sélection : ce qui touche le nœud passe devant, le reste s'efface. */
+.graphe[data-focus="oui"] .noeud[data-actif="non"] { opacity: var(--carto-opacite-noeud-eteint); }
+.graphe[data-focus="oui"] .arete[data-actif="non"] { opacity: var(--carto-opacite-relation-eteinte); }
+.graphe[data-focus="oui"] .arete[data-actif="oui"] { opacity: var(--carto-opacite-relation-active); }
+.graphe[data-focus="oui"] .noeud[data-actif="oui"][data-fantome="oui"] { opacity: .7; }
+.graphe[data-focus="oui"] .squelette { opacity: calc(var(--carto-opacite-squelette) * 0.4); }
 
-/* Focus persistant : le reste du graphe reste estompé jusqu'au prochain clic. */
-.graphe[data-focus="oui"] .noeud[data-actif="non"] { opacity: .14; }
-.graphe[data-focus="oui"] .arete[data-actif="non"] { opacity: .1; }
-.graphe[data-focus="oui"] .noeud[data-actif="oui"][data-fantome="oui"] { opacity: .62; }
+/* --- Le panneau d'affichage ----------------------------------------------------------
+   IL S'APPELAIT `.panneau`, ET C'ÉTAIT UN NOM DU SOCLE que dix vues emploient : une
+   feuille de vue reste chargée après la navigation, et passer par la cartographie
+   posait les trois cartes de V-10 en `position: absolute` par-dessus le rail. Tout
+   ce qui est propre à cet écran porte donc le préfixe `carto-`.
 
-/* Le nœud choisi porte un anneau clair, jamais un contour épais : à cinq unités de
-   rayon, une bordure de trois pixels avale la pastille. */
-.noeud[data-choisi='oui'] .noeud__forme { stroke: var(--c-encre); stroke-width: 2; }
-
-/* Marquage du point de rupture : anneau interrompu et fanion, pas seulement
-   une teinte. Il reste identifiable en niveaux de gris. */
-.rupture-anneau { fill: none; stroke: var(--c-danger); stroke-width: 2; stroke-dasharray: 5 3.5; }
-.rupture-fanion { fill: var(--c-danger); }
-.rupture-glyphe { fill: #fff; font-family: var(--f-donnee); font-size: 7px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
-/* L'ATTRIBUT SE NOMMAIT `data-criticite`, ET LE MOT NE DÉSIGNAIT RIEN : il mêlait
-   l'importance structurelle, le nombre de liens et le point d'articulation. Trois
-   canaux distincts portent ces trois choses — taille, degré, anneau interrompu —, et
-   chacun se nomme par ce qu'il montre. */
-.graphe[data-ruptures="non"] .rupture-anneau, .graphe[data-ruptures="non"] .rupture-fanion, .graphe[data-ruptures="non"] .rupture-glyphe { display: none; }
-
-/* --- La légende du dessin — RG-M09-07 ------------------------------------------
-   « Une légende explique la sémantique de chaque encodage visuel. Aucun encodage
-   n'est laissé à l'interprétation. » Les cinq canaux y sont, et une seule fois :
-   forme, couleur, trait, contour, taille.
-
-   ELLE EST COMPACTE ET CENTRÉE, JAMAIS UNE BANDE. Elle occupait toute la largeur du
-   canevas, appuyée à gauche, et se disputait le regard avec le dessin qu'elle
-   explique. Posée au milieu du bord bas, elle se lit quand on la cherche et
-   s'oublie le reste du temps. */
-.legende-pied {
-  position: absolute; z-index: 10; bottom: var(--e-3); left: 50%; transform: translateX(-50%);
-  display: flex; gap: var(--e-3) var(--e-4); flex-wrap: wrap; justify-content: center;
-  max-width: min(920px, calc(100% - 250px));
-  padding: var(--e-2) var(--e-4);
-  background: color-mix(in srgb, var(--c-papier) 92%, transparent);
-  border: 1px solid var(--c-trait);
-  border-radius: 999px; box-shadow: var(--o-pose);
-  backdrop-filter: blur(3px);
+   IL EST POSÉ SUR LA TOILE QU'IL COMMANDE : on voit le dessin changer sous la case
+   qu'on coche. Il se replie d'un bouton, et la toile reprend tout. Son fond est le
+   gris très clair de la direction artistique, pour le distinguer des cartes. */
+.carto-reglages {
+  position: absolute; z-index: 20;
+  top: var(--carto-espace-4); left: var(--carto-espace-4);
+  width: 218px; max-height: calc(100% - var(--carto-espace-4) * 2);
+  display: flex; flex-direction: column;
+  background: var(--carto-fond-panneau);
+  border: 1px solid var(--carto-bordure);
+  border-radius: var(--carto-rayon-carte); box-shadow: var(--carto-ombre-carte);
 }
-/* Le tiroir de détail prend la droite du canevas : la légende se recentre sur ce
-   qui en reste visible plutôt que de passer dessous. Un élément positionné se
-   repère sur la boîte de PADDING — la réserve faite au tiroir ne le décale pas. */
-.scene:has(.detail-col:not([hidden])) .legende-pied {
+.carto-reglages__tete {
+  display: flex; align-items: center; gap: var(--carto-espace-2); flex: none;
+  padding: var(--carto-espace-3) var(--carto-espace-3) var(--carto-espace-3) var(--carto-espace-4);
+  border-bottom: 1px solid var(--carto-bordure); color: var(--carto-encre-2);
+}
+.carto-reglages__nom {
+  flex: 1; font-size: var(--carto-t-corps); font-weight: var(--g-fort); color: var(--carto-encre);
+}
+.carto-reglages__bascule {
+  flex: none; width: 24px; height: 24px; display: grid; place-items: center;
+  border: 0; background: none; cursor: pointer;
+  border-radius: var(--carto-rayon-champ); color: var(--carto-encre-3);
+}
+.carto-reglages__bascule:hover { background: var(--carto-fond-creux); color: var(--carto-encre); }
+.carto-reglages__bascule svg { transform: rotate(90deg); transition: transform var(--m-doux); }
+.carto-reglages[data-replie="oui"] .carto-reglages__bascule svg { transform: rotate(0deg); }
+.carto-reglages[data-replie="oui"] .carto-reglages__corps { display: none; }
+.carto-reglages[data-replie="oui"] .carto-reglages__tete { border-bottom: 0; }
+.carto-reglages__corps {
+  overflow-y: auto; min-height: 0;
+  padding: var(--carto-espace-3) var(--carto-espace-3) var(--carto-espace-4);
+}
+
+/* Le `ⓘ` porte ce qui demandait un paragraphe. Il ne s'ouvre pas, il ne prend pas
+   de place : l'info-bulle du navigateur suffit, et le lecteur d'écran la lit. */
+.apropos {
+  border: 0; background: none; cursor: help; padding: 0 0 0 4px;
+  color: var(--carto-encre-3); font-size: 11px; line-height: 1;
+}
+.apropos:hover { color: var(--carto-principal); }
+
+/* --- Les blocs du panneau, et la légende du pied ------------------------------------
+   Les titres de section sont en petites capitales espacées, en gris. */
+.carto-etiq {
+  display: flex; align-items: center;
+  font-family: var(--carto-police); font-size: var(--carto-t-section);
+  font-weight: var(--g-fort); text-transform: uppercase;
+  letter-spacing: var(--carto-lettrage-section); color: var(--carto-encre-3);
+}
+.carto-bloc + .carto-bloc { margin-top: var(--carto-espace-4); }
+.carto-bloc > .carto-etiq { margin-bottom: var(--carto-espace-2); }
+
+.lg + .lg { margin-top: 1px; }
+.lg {
+  display: flex; align-items: center; gap: var(--carto-espace-2); width: 100%;
+  padding: 5px var(--carto-espace-2); border: 1px solid transparent; background: none;
+  border-radius: var(--carto-rayon-champ); cursor: pointer; color: inherit;
+  font: inherit; text-align: left;
+}
+.lg:hover { background: var(--carto-fond-creux); }
+.lg--case input, .lg--bascule input { flex: none; margin: 0; accent-color: var(--carto-principal); }
+.lg__forme { flex: none; color: var(--carto-encre-2); }
+.lg__nom {
+  flex: 1; min-width: 0;
+  font-size: var(--carto-t-corps); font-weight: var(--g-moyen); color: var(--carto-encre);
+}
+.lg__nom b { font-weight: var(--g-fort); }
+/* Les compteurs sont alignés à droite, en gris. */
+.lg__n { flex: none; font-size: var(--carto-t-compteur); color: var(--carto-encre-3); }
+.lg__chevron { flex: none; color: var(--carto-encre-3); font-size: 15px; line-height: 1; }
+.lg__sous {
+  margin: 0 0 var(--carto-espace-1); padding: 0 var(--carto-espace-2);
+  font-size: var(--carto-t-meta); color: var(--carto-encre-3);
+}
+.lg .glyphe, .lp .glyphe { flex: none; width: 12px; height: 12px; }
+
+/* L'interrupteur du regroupement : vert quand il est actif. */
+.lg--bascule input { position: absolute; opacity: 0; pointer-events: none; }
+.lg__interrupteur {
+  flex: none; width: 32px; height: 18px; border-radius: var(--carto-rayon-pastille);
+  background: var(--carto-bordure-forte); position: relative; transition: background var(--m-vif);
+}
+.lg__interrupteur::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--carto-fond-carte); transition: transform var(--m-vif);
+}
+.lg--bascule input:checked + .lg__interrupteur { background: var(--carto-principal); }
+.lg--bascule input:checked + .lg__interrupteur::after { transform: translateX(14px); }
+
+/* Les trois natures de trait, en miniature — la légende dit ce que le dessin fait. */
+.lg__trait { flex: none; width: 18px; height: 0; border-top-style: solid; }
+.lg__trait--declaree { border-top-width: 2px; border-top-color: var(--carto-encre-2); }
+.lg__trait--deduite  { border-top-width: 1px; border-top-style: dashed; border-top-color: var(--carto-encre-3); }
+.lg__trait--affinite { border-top-width: 1px; border-top-style: dotted; border-top-color: var(--carto-encre-3); }
+
+.curseur {
+  display: flex; justify-content: space-between;
+  font-size: var(--carto-t-meta); color: var(--carto-encre-3);
+  padding: 0 var(--carto-espace-2);
+}
+.curseur output { color: var(--carto-encre); font-weight: var(--g-fort); }
+.curseur__bornes {
+  display: flex; justify-content: space-between;
+  font-size: var(--carto-t-meta); color: var(--carto-encre-3);
+  padding: 0 var(--carto-espace-2); margin-top: -6px;
+}
+#degre-min { width: 100%; accent-color: var(--carto-principal); margin: var(--carto-espace-1) 0; }
+
+/* --- La légende du dessin — RG-M09-07 ------------------------------------------------
+   « Une légende explique la sémantique de chaque encodage visuel. » Trois canaux y
+   sont, une seule fois : le type, la relation, la vivacité. */
+.carto-legende {
+  position: absolute; z-index: 10; bottom: var(--carto-espace-4); left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: var(--carto-espace-3) var(--carto-espace-5); flex-wrap: wrap;
+  max-width: min(920px, calc(100% - 260px));
+  padding: var(--carto-espace-3) var(--carto-espace-4);
+  background: var(--carto-fond-carte);
+  border: 1px solid var(--carto-bordure); border-radius: var(--carto-rayon-carte);
+  box-shadow: var(--carto-ombre-carte);
+}
+.carto-scene:has(.detail-col:not([hidden])) .carto-legende {
   transform: translateX(calc(-50% - 168px));
 }
-.legende-pied__bloc { display: flex; align-items: center; gap: var(--e-2); }
-.legende-pied__bloc + .legende-pied__bloc { border-left: 1px solid var(--c-trait-fin); padding-left: var(--e-4); }
-.legende-pied:has(.legende-pied__bloc:nth-child(4)) { border-radius: var(--r-3); }
-.legende-pied .etiq { flex: none; }
-.legende-pied__items { display: flex; gap: var(--e-3); flex-wrap: nowrap; }
-.lp { display: inline-flex; align-items: center; gap: var(--e-1); font-size: var(--t-micro); color: var(--c-encre-2); white-space: nowrap; }
-.lp .lg__forme { width: 16px; height: 16px; }
-/* La pastille d'îlot : le contour de famille, en miniature. */
-.lp__ilot {
-  flex: none; width: 16px; height: 11px; border-radius: 5px;
-  background: color-mix(in srgb, #4b52a3 12%, transparent); border: 1px solid color-mix(in srgb, #4b52a3 34%, transparent);
+.carto-legende__bloc { display: grid; gap: var(--carto-espace-2); }
+.carto-legende__items { display: flex; gap: var(--carto-espace-4); flex-wrap: nowrap; }
+.lp {
+  display: inline-flex; align-items: center; gap: var(--carto-espace-1);
+  font-size: var(--carto-t-meta); color: var(--carto-encre-2); white-space: nowrap;
 }
-/* Les trois pastilles de taille, croissantes : le canal se lit d'un coup d'œil. */
-.lp__tailles { display: inline-flex; align-items: center; gap: 3px; }
-.lp__tailles i { display: block; border-radius: 50%; background: var(--c-encre-4); }
-.lp__tailles i:nth-child(1) { width: 5px; height: 5px; }
-.lp__tailles i:nth-child(2) { width: 8px; height: 8px; }
-.lp__tailles i:nth-child(3) { width: 12px; height: 12px; }
+.lp .lg__forme { width: 18px; height: 18px; }
 
-/* --- Panneau contextuel ---------------------------------------------------------
+/* --- Le panneau de la note ------------------------------------------------------------
    IL N'EXISTE QUE LORSQU'UN NŒUD EST CHOISI — `hidden` au balisage, ouvert par le
-   câblage. En tiroir par-dessus le canevas, jamais une colonne réservée. */
+   câblage. En tiroir par-dessus la toile, jamais une colonne réservée : lui
+   réserver sa largeur rétrécirait le dessin À CHAQUE SÉLECTION, et toute la carte
+   sauterait au moment précis où l'on vient de viser un nœud.
+
+   L'ORDRE DE SES SECTIONS EST CELUI DE LA MAQUETTE : type et titre ; vivacité et
+   ancienneté ; description ; étiquettes ; centralité ; connexions ; famille
+   sémantique ; voisinage ; relations ; actions. */
 .detail-col {
-  position: absolute; z-index: 45; top: 0; right: 0; bottom: 0; width: 336px;
-  background: var(--c-papier); border-left: 1px solid var(--c-trait-fort);
-  box-shadow: var(--o-flotte); overflow-y: auto; padding: var(--e-4);
+  position: absolute; z-index: 45; top: 0; right: 0; bottom: 0; width: 344px;
+  background: var(--carto-fond-carte);
+  border-left: 1px solid var(--carto-bordure);
+  box-shadow: var(--carto-ombre-carte); overflow-y: auto;
+  padding: var(--carto-espace-4) var(--carto-espace-4) var(--carto-espace-5);
 }
-.detail__tete { display: flex; align-items: flex-start; gap: var(--e-3); margin-bottom: var(--e-2); }
+.detail__tete { display: flex; align-items: flex-start; gap: var(--carto-espace-3); }
+.detail__vignette {
+  flex: none; width: 40px; height: 40px; display: grid; place-items: center;
+  border-radius: var(--carto-rayon-champ);
+  background: var(--carto-principal-voile); color: var(--carto-principal-fonce);
+}
+.detail__identite { flex: 1; min-width: 0; }
+.detail__type {
+  font-size: var(--carto-t-section); text-transform: uppercase;
+  letter-spacing: var(--carto-lettrage-section); color: var(--carto-encre-3);
+  font-weight: var(--g-fort);
+}
 .detail__titre {
-  font-family: var(--f-lecture); font-size: var(--t-t3); font-weight: var(--g-moyen);
-  letter-spacing: -.012em; margin: 0; flex: 1; min-width: 0; line-height: 1.25;
+  font-family: var(--carto-police); font-size: 1.0625rem; font-weight: var(--g-fort);
+  letter-spacing: -.012em; margin: 2px 0 0; line-height: 1.25; color: var(--carto-encre);
 }
 .detail__fermer {
   flex: none; width: 26px; height: 26px; border: 0; background: none; cursor: pointer;
-  border-radius: var(--r-1); color: var(--c-encre-3); font-size: 18px; line-height: 1;
+  border-radius: var(--carto-rayon-champ); color: var(--carto-encre-3);
+  font-size: 18px; line-height: 1;
 }
-.detail__fermer:hover { background: var(--c-fond-creux); color: var(--c-encre); }
-.detail__sous { display: flex; align-items: center; gap: var(--e-2); flex-wrap: wrap; margin: 0 0 var(--e-3); }
-.detail__type { font-family: var(--f-donnee); font-size: var(--t-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--c-encre-3); }
-.detail__etat { font-size: var(--t-mini); font-weight: var(--g-fort); color: currentColor; }
-/* L'EXTRAIT EST UN EXTRAIT — ET IL L'EST DEPUIS `extraitDuCorps()`, PAS D'ICI.
-   Le panneau portait le CORPS ENTIER de la note : cinquante lignes pour « Restaurer
-   une sauvegarde PostgreSQL », et les mesures, les relations et les trois actions
-   tombaient hors de l'écran. Cette coupe-ci a d'abord été posée SEULE, et c'était un
-   emplâtre : la donnée continuait de descendre en entier, ici comme dans toutes les
-   listes de notes — 3,8 Mo de corps dans la charge d'une page de domaine. La cause
-   est réparée à la source ; la coupe reste, parce qu'un extrait de deux cents
-   caractères tient en quatre lignes et qu'aucun panneau ne doit dépendre de ça. */
+.detail__fermer:hover { background: var(--carto-fond-creux); color: var(--carto-encre); }
+.detail__vivacite {
+  display: flex; align-items: center; gap: var(--carto-espace-2);
+  margin: var(--carto-espace-3) 0 0;
+  font-size: var(--carto-t-corps); font-weight: var(--g-fort);
+}
+.detail__anciennete { color: var(--carto-encre-3); font-weight: var(--g-normal); }
 .detail__extrait {
-  font-family: var(--f-lecture); font-size: var(--t-petit); line-height: 1.55;
-  color: var(--c-encre-2); margin: 0 0 var(--e-3);
+  font-size: var(--carto-t-corps); line-height: 1.6;
+  color: var(--carto-encre-2); margin: var(--carto-espace-3) 0 0;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden;
 }
-.detail__etiquettes { display: flex; gap: var(--e-1); flex-wrap: wrap; margin: 0 0 var(--e-3); }
+.detail__etiquettes {
+  display: flex; gap: var(--carto-espace-1); flex-wrap: wrap; margin: var(--carto-espace-3) 0 0;
+}
+/* Les étiquettes sont des pastilles vert pâle. */
 .detail__etiq {
-  font-family: var(--f-donnee); font-size: var(--t-micro); color: var(--c-encre-3);
-  border: 1px solid var(--c-trait); border-radius: 999px; padding: 2px var(--e-2);
+  font-size: var(--carto-t-meta); color: var(--carto-principal-fonce);
+  background: var(--carto-principal-voile); border: 1px solid var(--carto-principal-trait);
+  border-radius: var(--carto-rayon-pastille); padding: 2px var(--carto-espace-2);
 }
-.detail__section { margin-top: var(--e-4); padding-top: var(--e-3); border-top: 1px solid var(--c-trait-fin); }
-.detail__section > .etiq { display: block; margin-bottom: var(--e-2); }
-.detail__vide-ligne { font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.5; margin: 0; }
-.detail__actions { display: flex; flex-direction: column; gap: var(--e-2); }
-.detail__actions .btn { justify-content: center; }
-
-.crit { display: flex; gap: var(--e-2); flex-wrap: wrap; }
-.crit__boite {
-  flex: 1; min-width: 96px;
-  border: 1px solid var(--c-trait); border-radius: var(--r-2);
-  padding: var(--e-2) var(--e-3); background: var(--c-papier-2);
+.detail__section {
+  margin-top: var(--carto-espace-4); padding-top: var(--carto-espace-3);
+  border-top: 1px solid var(--carto-bordure);
 }
-.crit__val { font-family: var(--f-donnee); font-size: var(--t-t3); font-weight: var(--g-lourd); line-height: 1; }
-.crit__nom { font-size: var(--t-micro); color: var(--c-encre-3); margin-top: 3px; display: block; }
-.crit__boite--rupture { border-color: #e2b8b0; background: var(--c-danger-voile); margin-top: var(--e-2); flex-basis: 100%; }
-.crit__boite--rupture .crit__val { color: var(--c-danger); font-size: var(--t-base); }
+.detail__section > .carto-etiq { display: flex; margin-bottom: var(--carto-espace-2); }
+.detail__vide-ligne {
+  font-size: var(--carto-t-meta); color: var(--carto-encre-3); line-height: 1.5; margin: 0;
+}
+.detail__actions { display: flex; flex-direction: column; gap: var(--carto-espace-2); }
+.detail__actions .carto-btn { justify-content: center; padding: 9px var(--carto-espace-3); }
 
-.rel-groupe { margin-top: var(--e-2); }
+.crit { display: flex; gap: var(--carto-espace-3); flex-wrap: wrap; }
+.crit__boite { flex: 1; min-width: 96px; }
+.crit__val {
+  font-size: 1.25rem; font-weight: var(--g-lourd); line-height: 1.1; color: var(--carto-encre);
+}
+.crit__nom {
+  font-size: var(--carto-t-section); text-transform: uppercase;
+  letter-spacing: var(--carto-lettrage-section);
+  color: var(--carto-encre-3); margin-bottom: 3px; display: block; font-weight: var(--g-fort);
+}
+.crit__detail { font-size: var(--carto-t-meta); color: var(--carto-encre-3); display: block; margin-top: 3px; }
+.crit__boite--rupture {
+  border: 1px solid #e2b8b0; background: var(--c-danger-voile);
+  border-radius: var(--carto-rayon-champ); padding: var(--carto-espace-2) var(--carto-espace-3);
+  margin-top: var(--carto-espace-2); flex-basis: 100%;
+}
+.crit__boite--rupture .crit__val { color: var(--c-danger); font-size: var(--carto-t-corps); }
+
+.rel-groupe { margin-top: var(--carto-espace-2); }
 .rel-item {
-  display: flex; flex-direction: column; gap: 1px; width: 100%;
-  padding: var(--e-2); border: 0; background: none; cursor: pointer;
-  border-radius: var(--r-2); text-align: left; color: inherit; font: inherit; text-decoration: none;
+  display: flex; align-items: center; gap: var(--carto-espace-2); width: 100%;
+  padding: var(--carto-espace-2); border: 0; background: none; cursor: pointer;
+  border-radius: var(--carto-rayon-champ); text-align: left; color: inherit;
+  font: inherit; text-decoration: none;
 }
-.rel-item:hover { background: var(--c-papier-2); }
-/* EN COLONNE, ET NON EN LIGNE. Le motif d'un rapprochement se dit en toutes lettres
-   — « d'après un mot du titre procédure » — et, posé sur la même ligne, il écrasait
-   le titre de la note en une colonne d'un mot par ligne. Mesuré au navigateur. */
+.rel-item:hover { background: var(--carto-fond-creux); }
 .rel-item__nom {
-  min-width: 0; font-size: var(--t-petit); font-weight: var(--g-moyen);
+  flex: 1; min-width: 0; font-size: var(--carto-t-corps); color: var(--carto-encre);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.rel-item__type { font-family: var(--f-donnee); font-size: var(--t-micro); color: var(--c-encre-3); }
+.rel-item__type { flex: none; font-size: var(--carto-t-meta); color: var(--carto-encre-3); }
 
-.prop { display: flex; align-items: baseline; gap: var(--e-2); font-size: var(--t-petit); margin: 0; }
-.prop + .prop { margin-top: var(--e-1); }
-.prop__cle { flex: none; width: 92px; font-size: var(--t-mini); color: var(--c-encre-3); }
+.prop {
+  display: flex; align-items: center; gap: var(--carto-espace-2);
+  font-size: var(--carto-t-corps); margin: 0; color: var(--carto-encre);
+  padding: var(--carto-espace-2) 0;
+}
+.prop + .prop { border-top: 1px solid var(--carto-bordure); }
+.prop__glyphe { flex: none; color: var(--carto-encre-3); }
+.prop__corps { flex: 1; min-width: 0; }
+.prop__cle { display: block; font-weight: var(--g-moyen); }
+.prop__sous { display: block; font-size: var(--carto-t-meta); color: var(--carto-encre-3); }
 
-/* --- Superpositions d'état ----------------------------------------------------------------
-   LE VOILE NE COUVRE QUE CE QUI N'A RIEN À DESSINER. Il couvrait aussi l'absence
-   de RELATION, si bien qu'un périmètre de trente-deux notes se voyait masqué au
-   motif qu'aucune n'était reliée — alors que le nuage de leurs familles est
-   parfaitement lisible, et qu'il dit quelque chose d'utile sur le corpus. */
+/* --- Superpositions d'état -------------------------------------------------------------
+   LE VOILE NE COUVRE QUE CE QUI N'A RIEN À DESSINER. Ce qui manque par-dessus un
+   dessin peuplé se dit par un bandeau, qui n'empêche pas de regarder. */
 .voile {
   position: absolute; inset: 0; display: none;
-  place-items: center; padding: var(--e-5);
-  background: rgba(226, 231, 228, .92);
+  place-items: center; padding: var(--carto-espace-5);
+  background: color-mix(in srgb, var(--carto-fond-dessin) 92%, transparent);
 }
 .voile[data-actif="oui"] { display: grid; }
 .voile__boite {
   max-width: 460px; text-align: center;
-  background: var(--c-papier); border: 1px solid var(--c-trait);
-  border-radius: var(--r-3); padding: var(--e-5); box-shadow: var(--o-pose);
+  background: var(--carto-fond-carte); border: 1px solid var(--carto-bordure);
+  border-radius: var(--carto-rayon-carte); padding: var(--carto-espace-5);
+  box-shadow: var(--carto-ombre-carte);
 }
 .voile__boite h2 {
-  font-family: var(--f-ui); font-size: var(--t-t2); font-weight: var(--g-lourd);
-  letter-spacing: -.018em; margin: 0 0 var(--e-2);
+  font-family: var(--carto-police); font-size: var(--t-t2); font-weight: var(--g-lourd);
+  letter-spacing: -.018em; margin: 0 0 var(--carto-espace-2); color: var(--carto-encre);
 }
 .voile__boite p {
-  font-family: var(--f-lecture); font-size: var(--t-petit); line-height: 1.6;
-  color: var(--c-encre-2); margin: 0 auto var(--e-4); max-width: 44ch;
+  font-size: var(--carto-t-corps); line-height: 1.6;
+  color: var(--carto-encre-2); margin: 0 auto var(--carto-espace-4); max-width: 44ch;
 }
-.voile__actions { display: flex; gap: var(--e-2); justify-content: center; flex-wrap: wrap; }
+.voile__actions { display: flex; gap: var(--carto-espace-2); justify-content: center; flex-wrap: wrap; }
+.progression {
+  width: 220px; height: 5px; border-radius: 3px; background: var(--carto-fond-creux);
+  margin: 0 auto var(--carto-espace-3); overflow: hidden;
+}
+.progression i { display: block; height: 100%; background: var(--carto-principal); width: 0; }
 
-.progression { width: 220px; height: 5px; border-radius: 3px; background: var(--c-fond-creux); margin: 0 auto var(--e-3); overflow: hidden; }
-.progression i { display: block; height: 100%; background: var(--c-accent); width: 0; transition: width 120ms linear; }
-
-/* Le bandeau : un conseil au-dessus du graphe, jamais un blocage.
-   IL COMMENCE OÙ COMMENCE LE DESSIN. Posé à gauche de la ZONE, il passait sous le
-   panneau d'affichage, qui en mangeait le premier tiers — « Aucune relation… » se
-   lisait « …périmètre ». */
 .avis-bandeau {
-  position: absolute; z-index: 15; left: var(--e-4); right: var(--e-4); top: var(--e-4);
-  display: flex; align-items: center; gap: var(--e-3); flex-wrap: wrap;
-  padding: var(--e-3) var(--e-4);
-  background: var(--c-alerte-voile); border: 1px solid #dcc59a; border-radius: var(--r-3);
-  box-shadow: var(--o-pose); font-size: var(--t-petit); color: var(--c-alerte);
+  position: absolute; z-index: 15;
+  left: var(--carto-espace-4); right: var(--carto-espace-4); top: var(--carto-espace-4);
+  display: flex; align-items: center; gap: var(--carto-espace-3); flex-wrap: wrap;
+  padding: var(--carto-espace-3) var(--carto-espace-4);
+  background: var(--c-alerte-voile); border: 1px solid #dcc59a;
+  border-radius: var(--carto-rayon-carte); box-shadow: var(--carto-ombre-carte);
+  font-size: var(--carto-t-corps); color: var(--c-alerte);
 }
 
-/* --- Outils flottants -------------------------------------------------------------------- */
-.outils-graphe {
-  position: absolute; z-index: 12; right: var(--e-4); bottom: var(--e-4);
-  display: flex; flex-direction: column; gap: var(--e-1);
-  background: var(--c-papier); border: 1px solid var(--c-trait);
-  border-radius: var(--r-2); padding: var(--e-1); box-shadow: var(--o-pose);
+/* --- Outils flottants ------------------------------------------------------------------- */
+.carto-outils {
+  position: absolute; z-index: 12; right: var(--carto-espace-4); bottom: var(--carto-espace-4);
+  display: flex; flex-direction: column; gap: var(--carto-espace-1);
+  background: var(--carto-fond-carte); border: 1px solid var(--carto-bordure);
+  border-radius: var(--carto-rayon-champ); padding: var(--carto-espace-1);
+  box-shadow: var(--carto-ombre-carte);
 }
-.outils-graphe button {
+.carto-outils button {
   width: 30px; height: 30px; display: grid; place-items: center;
-  border: 0; background: none; cursor: pointer; border-radius: var(--r-1); color: var(--c-encre-2);
+  border: 0; background: none; cursor: pointer;
+  border-radius: var(--carto-rayon-champ); color: var(--carto-encre-2);
 }
-.outils-graphe button:hover { background: var(--c-fond-creux); color: var(--c-encre); }
+.carto-outils button:hover { background: var(--carto-fond-creux); color: var(--carto-encre); }
 
 /* --- Alternative textuelle --------------------------------------------------------------- */
-.alt-texte { margin-top: var(--e-5); }
-.alt-texte summary { cursor: pointer; font-size: var(--t-petit); font-weight: var(--g-fort); padding: var(--e-2) 0; }
-.alt-texte summary:hover { color: var(--c-accent); }
-.alt-texte ul { list-style: none; margin: var(--e-2) 0 0; padding: 0; font-size: var(--t-mini); line-height: 1.6; }
-.alt-texte li { padding: var(--e-2) 0; border-top: 1px solid var(--c-trait-fin); }
+.alt-texte { margin-top: var(--carto-espace-5); }
+.alt-texte summary {
+  cursor: pointer; font-size: var(--carto-t-corps); font-weight: var(--g-fort);
+  padding: var(--carto-espace-2) 0; color: var(--carto-encre-2);
+}
+.alt-texte summary:hover { color: var(--carto-principal); }
+.alt-texte ul {
+  list-style: none; margin: var(--carto-espace-2) 0 0; padding: 0;
+  font-size: var(--carto-t-meta); line-height: 1.6;
+}
+.alt-texte li { padding: var(--carto-espace-2) 0; border-top: 1px solid var(--carto-bordure); }
 .alt-texte b { font-weight: var(--g-fort); }
-.alt-rel { color: var(--c-encre-2); }
+.alt-rel { color: var(--carto-encre-2); }
 
-.zone-graphe:has(.carto-reglages:not([data-replie="oui"])) .avis-bandeau,
-.zone-graphe:has(.carto-reglages:not([data-replie="oui"])) .voile { left: calc(218px + var(--e-4)); }
+.carto-toile:has(.carto-reglages:not([data-replie="oui"])) .avis-bandeau,
+.carto-toile:has(.carto-reglages:not([data-replie="oui"])) .voile {
+  left: calc(234px + var(--carto-espace-4));
+}
 
 @media (max-width: 1080px) {
   .detail-col { width: 300px; }
-  /* Sous mille quatre-vingts pixels, réserver deux cent dix-huit pixels au panneau
-     ne laisserait plus de quoi dessiner : il repasse par-dessus, et se replie. */
-  .zone-graphe:has(.carto-reglages:not([data-replie="oui"])) { padding-left: 0; }
-  .scene:has(.detail-col:not([hidden])) .legende-pied { transform: translateX(-50%); }
-  /* La légende passe sous le panneau plutôt que de le heurter. */
-  .legende-pied { max-width: calc(100% - var(--e-4) * 2); flex-wrap: wrap; border-radius: var(--r-3); }
+  .carto-toile:has(.carto-reglages:not([data-replie="oui"])) { padding-left: 0; }
+  .carto-scene:has(.detail-col:not([hidden])) .carto-legende { transform: translateX(-50%); }
+  .carto-legende { max-width: calc(100% - var(--carto-espace-4) * 2); flex-wrap: wrap; }
 }
 @media (max-width: 860px) {
-  .legende-pied { display: none; }
-  .controles__outils { width: 100%; margin-left: 0; }
+  /* La légende disparaît : sa réserve avec elle, sans quoi le dessin garderait
+     cent quatre pixels de vide sous lui pour rien. */
+  .carto-legende { display: none; }
+  .carto-toile { padding-bottom: 0; }
+  .carto-tete__outils { width: 100%; }
 }
 @media (max-width: 760px) {
-  /* Mode dégradé : la liste des nœuds prime sur un graphe illisible.
-     LE DESSIN SEUL DISPARAÎT, PAS SA ZONE. La zone PORTE le panneau d'affichage, qui
-     porte lui-même la liste équivalente des nœuds : la masquer emporterait la seule
-     lecture qui reste sur un écran étroit. */
+  /* Mode dégradé : la liste des nœuds prime sur un dessin illisible. LA TOILE
+     RESTE — elle porte le panneau d'affichage, qui porte la liste équivalente. */
   .carto { height: auto; }
-  .scene { display: block; }
-  .zone-graphe { overflow: visible; }
-  #graphe, .outils-graphe, .voile { display: none; }
+  .carto-scene { display: block; }
+  .carto-toile { overflow: visible; }
+  #graphe, .carto-outils, .voile { display: none; }
   .carto-reglages {
     position: static; width: auto; max-height: none;
-    border: 0; border-bottom: 1px solid var(--c-trait); border-radius: 0; box-shadow: none;
+    border: 0; border-bottom: 1px solid var(--carto-bordure); border-radius: 0; box-shadow: none;
   }
   .carto-reglages__corps { overflow: visible; }
-  .alt-texte[open] summary { color: var(--c-accent); }
-  .alt-texte { margin-top: var(--e-3); }
+  .alt-texte { margin-top: var(--carto-espace-3); }
 }
 
 /* --- Barre supérieure sur petit écran --------------------------------------
    La barre doit tenir à 360 px sans provoquer de défilement horizontal de la
-   page (RG-M18-12) : le champ de recherche devient élastique et lâche ses
-   rappels clavier, qui n'ont pas de sens sans clavier physique. */
+   page (RG-M18-12). */
 @media (max-width: 640px) {
   .barre { padding: 0 var(--e-3); gap: var(--e-2); }
   .recherche { width: auto; flex: 1 1 90px; min-width: 0; }
   .recherche .touche { display: none; }
   .recherche__txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .fil { flex: 0 1 auto; }
-  /* Le fil d'Ariane ne tient pas sur 360 px : seul le segment courant reste,
-     les ancêtres restent atteignables par le rail. */
   .fil > *:not(.fil__courant) { display: none; }
   .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
-/* --- Fil d'Ariane : ne pousse jamais la page ------------------------------
-   Le titre d'une note peut être long, et les segments ne se coupent pas tout
-   seuls : sans troncature, le fil élargit la barre, qui élargit la grille, qui
-   fait défiler la page. */
+/* --- Fil d'Ariane : ne pousse jamais la page ------------------------------ */
 .fil { overflow: hidden; }
 .fil > * { min-width: 0; flex: 0 1 auto; }
 .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

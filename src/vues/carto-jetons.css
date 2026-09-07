@@ -1,0 +1,185 @@
+/* ==========================================================================
+   CODICILLUS — JETONS DE LA CARTOGRAPHIE
+
+   LE SEUL ENDROIT OÙ UNE COULEUR, UN RAYON, UNE OMBRE, UNE TAILLE DE POLICE,
+   UNE TAILLE DE NŒUD OU UNE ÉPAISSEUR DE TRAIT DE LA CARTE EST ÉCRITE. Les
+   feuilles de vue et les composants les LISENT ; aucun d'eux n'en pose une.
+
+   POURQUOI UN FICHIER À PART, ET PAS `socle.css`. Le socle porte la langue
+   visuelle de QUARANTE ET UN ÉCRANS de prose et de listes : fond ivoire,
+   surfaces papier, encres chaudes. La carte est un DESSIN — fond blanc franc,
+   contours pastel translucides, un vert profond unique pour tout ce qui est
+   actif. Poser ces valeurs dans le socle les imposerait aux quarante autres.
+   Les jetons ci-dessous s'appuient donc sur ceux du socle partout où la carte
+   ne dit rien de particulier, et ne redéclarent que ce qui lui appartient.
+
+   LES NOMBRES SANS UNITÉ SONT LUS AUSSI PAR LE CALCUL DE DISPOSITION —
+   `src/lib/graphe/jetons.ts` porte les mêmes, et `jetons.test.ts` échoue si
+   les deux divergent d'une unité. C'est ce qui empêche un rayon de nœud d'être
+   de 8 au dessin et de 11 au placement, donc deux nœuds de se recouvrir alors
+   que le calcul les croyait disjoints.
+   ========================================================================== */
+
+:root {
+	/* --- La couleur principale ---------------------------------------------
+	   UN SEUL VERT FONCÉ : le centre du dessin, les boutons pleins, les cases
+	   cochées, les états actifs. Il n'y en a pas d'autre, et c'est la règle. */
+	--carto-principal: var(--c-accent);
+	--carto-principal-fonce: var(--c-accent-fonce);
+	--carto-principal-voile: var(--c-accent-voile);
+	--carto-principal-trait: var(--c-accent-trait);
+	--carto-sur-principal: #ffffff;
+
+	/* --- Les fonds ---------------------------------------------------------
+	   Le dessin est sur BLANC, sans grille ni trame. Le panneau de réglages est
+	   sur un gris très clair. Les cartes flottantes sont blanches. */
+	--carto-fond-dessin: #ffffff;
+	--carto-fond-panneau: #f6f7f7;
+	--carto-fond-carte: #ffffff;
+	--carto-fond-creux: #eff1f1;
+
+	/* --- Les encres --------------------------------------------------------
+	   Gris foncé sur fond blanc ; les libellés secondaires en gris moyen. */
+	--carto-encre: #1f2a2e;
+	--carto-encre-2: #5a686d;
+	--carto-encre-3: #8b979b;
+
+	/* --- Les traits de composant ------------------------------------------- */
+	--carto-bordure: #e3e7e7;
+	--carto-bordure-forte: #cdd4d4;
+
+	/* --- Les rayons -------------------------------------------------------- */
+	--carto-rayon-carte: 12px;
+	--carto-rayon-champ: 8px;
+	--carto-rayon-pastille: 999px;
+
+	/* --- Les ombres --------------------------------------------------------
+	   Légères : une carte flotte, elle ne décolle pas. */
+	--carto-ombre-carte: 0 1px 2px rgba(31, 42, 46, 0.05), 0 6px 18px -8px rgba(31, 42, 46, 0.16);
+	--carto-ombre-halo: 0 0 0 6px;
+
+	/* --- Les tailles de police ---------------------------------------------
+	   UNE SEULE POLICE SANS EMPATTEMENT pour toute l'interface de la carte. */
+	--carto-police: var(--f-ui);
+	--carto-t-titre: 1.5rem;
+	--carto-t-sous-titre: 0.8125rem;
+	--carto-t-section: 0.6875rem; /* petites capitales espacées */
+	--carto-t-corps: 0.8125rem;
+	--carto-t-meta: 0.75rem;
+	--carto-t-compteur: 0.75rem;
+	--carto-lettrage-section: 0.08em;
+
+	/* --- Les tailles de police DU DESSIN, en unités du repère --------------- */
+	--carto-t-noeud: 13;
+	--carto-t-pivot: 15;
+	--carto-t-centre: 17;
+	--carto-t-centre-sous: 11;
+	--carto-t-famille: 18;
+	--carto-t-famille-compte: 13;
+	--carto-t-arete: 14;
+
+	/* --- Les tailles de nœud, en unités du repère ---------------------------
+	   Le rayon d'une note va du minimum au minimum plus l'amplitude, selon la
+	   mesure choisie. Le pivot d'une famille est plus grand ; le centre du
+	   dessin est un grand disque. */
+	--carto-noeud-minimum: 7;
+	--carto-noeud-amplitude: 7;
+	--carto-noeud-uniforme: 9;
+	--carto-pivot: 17;
+	--carto-centre: 48;
+
+	/* --- Les épaisseurs de trait, en unités du repère -----------------------
+	   AUCUN TRAIT N'EST ÉPAIS. Le squelette est en pointillés, les relations
+	   déclarées en trait plein, les déduites en tirets. */
+	--carto-trait-squelette: 1.2;
+	--carto-trait-declaree: 1.8;
+	--carto-trait-deduite: 1.6;
+	--carto-trait-affinite: 1.1;
+	--carto-trait-contour: 1;
+	--carto-anneau-noeud: 1.5;
+
+	/* --- Les motifs de trait ------------------------------------------------ */
+	--carto-tirets-squelette: 2.5 5;
+	--carto-tirets-deduite: 6 4;
+	--carto-tirets-affinite: 1.5 4;
+
+	/* --- Les opacités du dessin --------------------------------------------
+	   Les relations sont dessinées en transparence faible ; celles du nœud
+	   survolé ou sélectionné passent en pleine opacité et les autres s'effacent. */
+	--carto-opacite-relation: 0.4;
+	--carto-opacite-relation-active: 1;
+	--carto-opacite-relation-eteinte: 0.05;
+	--carto-opacite-noeud-eteint: 0.16;
+	--carto-opacite-squelette: 0.5;
+
+	/* --- L'espace ----------------------------------------------------------
+	   Les marges sont généreuses ; aucun élément n'est collé à un autre. */
+	--carto-espace-1: 4px;
+	--carto-espace-2: 8px;
+	--carto-espace-3: 12px;
+	--carto-espace-4: 18px;
+	--carto-espace-5: 26px;
+
+	/* --- Le repère du dessin, et ses marges, en unités du repère ------------ */
+	--carto-repere-largeur: 1200;
+	--carto-repere-hauteur: 860;
+	--carto-repere-marge: 56;
+
+	/* --- Les distances de placement, en unités du repère --------------------
+	   Elles ne servent qu'au calcul : voir `src/lib/graphe/jetons.ts`. */
+	--carto-pas-entre-noeuds: 7;
+	--carto-pas-entre-cercles: 35;
+	--carto-marge-de-contour: 24;
+	--carto-marge-entre-familles: 14;
+	--carto-hauteur-detiquette: 16;
+	--carto-largeur-de-caractere: 6.8;
+	--carto-marge-detiquette: 4;
+
+	/* --- Les dix teintes de famille ----------------------------------------
+	   UNE COULEUR PAR FAMILLE : un fond pastel, pâle et translucide, une
+	   bordure très légère, et une teinte saturée pour le nom et le pivot. Le
+	   rang d'une famille — sa taille décroissante — décide de sa teinte, si
+	   bien qu'un même périmètre rend toujours les mêmes couleurs.
+
+	   LA DIXIÈME EST GRISE, ET C'EST « ISOLÉES » : des notes que rien ne
+	   rapproche n'ont pas de sujet commun, donc pas de couleur de sujet. */
+	--carto-famille-0-sature: #6d4bc4;
+	--carto-famille-0-pastel: rgba(109, 75, 196, 0.08);
+	--carto-famille-0-bord: rgba(109, 75, 196, 0.2);
+
+	--carto-famille-1-sature: #1d7a52;
+	--carto-famille-1-pastel: rgba(29, 122, 82, 0.08);
+	--carto-famille-1-bord: rgba(29, 122, 82, 0.2);
+
+	--carto-famille-2-sature: #b8791a;
+	--carto-famille-2-pastel: rgba(184, 121, 26, 0.09);
+	--carto-famille-2-bord: rgba(184, 121, 26, 0.22);
+
+	--carto-famille-3-sature: #2c6ea8;
+	--carto-famille-3-pastel: rgba(44, 110, 168, 0.08);
+	--carto-famille-3-bord: rgba(44, 110, 168, 0.2);
+
+	--carto-famille-4-sature: #c04a3e;
+	--carto-famille-4-pastel: rgba(192, 74, 62, 0.08);
+	--carto-famille-4-bord: rgba(192, 74, 62, 0.2);
+
+	--carto-famille-5-sature: #17847c;
+	--carto-famille-5-pastel: rgba(23, 132, 124, 0.08);
+	--carto-famille-5-bord: rgba(23, 132, 124, 0.2);
+
+	--carto-famille-6-sature: #4a8a3d;
+	--carto-famille-6-pastel: rgba(74, 138, 61, 0.08);
+	--carto-famille-6-bord: rgba(74, 138, 61, 0.2);
+
+	--carto-famille-7-sature: #c2701f;
+	--carto-famille-7-pastel: rgba(194, 112, 31, 0.08);
+	--carto-famille-7-bord: rgba(194, 112, 31, 0.2);
+
+	--carto-famille-8-sature: #5560b8;
+	--carto-famille-8-pastel: rgba(85, 96, 184, 0.08);
+	--carto-famille-8-bord: rgba(85, 96, 184, 0.2);
+
+	--carto-famille-9-sature: #78868b;
+	--carto-famille-9-pastel: rgba(120, 134, 139, 0.09);
+	--carto-famille-9-bord: rgba(120, 134, 139, 0.22);
+}
