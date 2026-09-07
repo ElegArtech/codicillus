@@ -235,6 +235,7 @@ describe('les périmètres d’affichage recopiés des vues', () => {
 describe('l’origine d’une relation', () => {
 	it('traverse le sous-graphe sans conversion ni perte', () => {
 		const lue: RelationLisible = {
+			id: 'r-1',
 			de: 'n-srv-app-01',
 			vers: 'n-facturation',
 			type: 'heberge',
@@ -247,8 +248,8 @@ describe('l’origine d’une relation', () => {
 
 	it('n’est jamais réécrite en « declaree » par le chemin de lecture', () => {
 		const lues: readonly RelationLisible[] = [
-			{ de: 'n-srv-app-01', vers: 'n-facturation', type: 'heberge', origine: 'ambigue' },
-			{ de: 'n-srv-app-01', vers: 'n-referentiel', type: 'heberge', origine: 'deduite' }
+			{ id: 'r-1', de: 'n-srv-app-01', vers: 'n-facturation', type: 'heberge', origine: 'ambigue' },
+			{ id: null, de: 'n-srv-app-01', vers: 'n-referentiel', type: 'heberge', origine: 'deduite' }
 		];
 		const notes = [note('n-srv-app-01'), note('n-facturation'), note('n-referentiel')];
 		const graphe = grapheReel(notes, lues, { type: 'global' }, 'gardees');

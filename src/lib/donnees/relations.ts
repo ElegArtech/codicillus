@@ -456,3 +456,287 @@ export async function retirerUneRelation(
 	});
 	return { trouve: true, ressource: { retiree: true } };
 }
+
+/* ── LES GESTES DE LA VUE DE MODÉLISATION ───────────────────────────────────
+   Trois gestes de plus que « déclarer » et « retirer » : CHANGER le type d'une
+   relation, CONFIRMER une proposition, la REJETER. Ils portent tous le droit de
+   `RG-M08-04` — les DEUX extrémités —, et aucun n'exige de note d'appui.
+
+   POURQUOI PAS DE NOTE D'APPUI. `retirerUneRelation()` exige `depuis` : l'identifiant
+   d'une relation quelconque, soumis depuis n'importe quelle note, ne doit pas suffire
+   à la détruire. Ici la garde est la même règle prise à sa racine — le droit d'ÉCRIRE
+   sur les deux extrémités. Une relation dont on peut écrire les deux bouts est une
+   relation qu'on a le droit de modifier, quelle que soit la page d'où le geste part. */
+
+interface RelationEcrivable {
+	readonly cle: string;
+	readonly origine: OrigineDeRelation;
+	readonly sourceTitre: string;
+	readonly cibleTitre: string;
+}
+
+/**
+ * LA RELATION VISÉE, SI L'APPELANT PEUT L'ÉCRIRE — sinon `null`, sans nuance. Cible
+ * absente, clé mal formée, droit manquant sur l'une des deux extrémités : le même
+ * silence, et c'est voulu (`ARB-005`).
+ */
+async function relationEcrivable(
+	base: Base,
+	identite: Identite,
+	relation: string
+): Promise<RelationEcrivable | null> {
+	if (!FORME_DE_CLE.test(relation)) return null;
+
+	const source = alias(notes, 'note_source');
+	const cible = alias(notes, 'note_cible');
+	const [ligne] = await base
+		.select({
+			cle: relations.id,
+			origine: relations.origine,
+			sourceDossier: source.dossierId,
+			cibleDossier: cible.dossierId,
+			sourceTitre: source.titre,
+			cibleTitre: cible.titre
+		})
+		.from(relations)
+		.innerJoin(source, eq(relations.sourceId, source.id))
+		.innerJoin(cible, eq(relations.cibleId, cible.id))
+		.where(eq(relations.id, relation))
+		.limit(1);
+
+	if (ligne === undefined) return null;
+	if (ligne.sourceDossier === null || ligne.cibleDossier === null) return null;
+	if (!(await peutEcrireSurLeDossier(base, identite, ligne.sourceDossier))) return null;
+	if (!(await peutEcrireSurLeDossier(base, identite, ligne.cibleDossier))) return null;
+
+	return {
+		cle: ligne.cle,
+		origine: ligne.origine,
+		sourceTitre: ligne.sourceTitre,
+		cibleTitre: ligne.cibleTitre
+	};
+}
+
+/**
+ * CHANGER LE TYPE D'UNE RELATION.
+ *
+ * CE N'EST PAS UN RETRAIT SUIVI D'UNE DÉCLARATION, et la différence se voit : le
+ * retrait écrit une trace de suppression (`RG-NF-05`), et enchaîner les deux
+ * remplirait le journal de disparitions qui n'ont pas eu lieu. La ligne est la même,
+ * seul son type change.
+ *
+ * LE NOUVEAU TYPE FAIT DE LA RELATION UNE SAISIE HUMAINE. Requalifier une proposition
+ * `ambigue` EST la confirmer — quelqu'un a lu l'hypothèse, l'a corrigée, et a tranché.
+ * La laisser ambiguë après ce geste la ferait reproposer indéfiniment.
+ *
+ * `RG-M08-03` reste portée par `relations_unicite` ; la lecture qui précède ne fait
+ * que rendre le refus lisible.
+ */
+export async function changerLeTypeDUneRelation(
+	base: Base,
+	demande: {
+		readonly identite: Identite;
+		readonly relation: string;
+		readonly type: string;
+	}
+): Promise<ResultatDAjout> {
+	const ligne = await relationEcrivable(base, demande.identite, demande.relation);
+	if (ligne === null) return INTROUVABLE;
+
+	const [type] = await base
+		.select({ cle: typesDeRelation.id })
+		.from(typesDeRelation)
+		.where(eq(typesDeRelation.identifiant, demande.type))
+		.limit(1);
+	if (type === undefined) return INTROUVABLE;
+
+	const [courante] = await base
+		.select({ sourceId: relations.sourceId, cibleId: relations.cibleId })
+		.from(relations)
+		.where(eq(relations.id, ligne.cle))
+		.limit(1);
+	if (courante === undefined) return INTROUVABLE;
+
+	const [deja] = await base
+		.select({ cle: relations.id })
+		.from(relations)
+		.where(
+			and(
+				eq(relations.sourceId, courante.sourceId),
+				eq(relations.cibleId, courante.cibleId),
+				eq(relations.typeDeRelationId, type.cle)
+			)
+		)
+		.limit(1);
+	if (deja !== undefined && deja.cle !== ligne.cle) {
+		return { trouve: true, ressource: { ok: false, motif: 'doublon' } };
+	}
+
+	await base
+		.update(relations)
+		.set({ typeDeRelationId: type.cle, origine: 'declaree' })
+		.where(eq(relations.id, ligne.cle));
+
+	return { trouve: true, ressource: { ok: true, id: ligne.cle } };
+}
+
+/**
+ * CONFIRMER UNE PROPOSITION — `ambigue` devient `declaree`.
+ *
+ * SEULE UNE PROPOSITION SE CONFIRME. Une relation déjà déclarée est rendue TROUVÉE et
+ * inchangée plutôt que refusée : le geste a déjà eu lieu, et deux clics sur le même
+ * bouton ne doivent pas produire une erreur.
+ */
+export async function confirmerUneRelation(
+	base: Base,
+	demande: { readonly identite: Identite; readonly relation: string }
+): Promise<Resolution<{ readonly confirmee: true }>> {
+	const ligne = await relationEcrivable(base, demande.identite, demande.relation);
+	if (ligne === null) return INTROUVABLE;
+
+	if (ligne.origine !== 'declaree') {
+		await base.update(relations).set({ origine: 'declaree' }).where(eq(relations.id, ligne.cle));
+	}
+	return { trouve: true, ressource: { confirmee: true } };
+}
+
+/**
+ * REJETER UNE PROPOSITION — la ligne disparaît.
+ *
+ * SEULE UNE PROPOSITION SE REJETTE : une relation `declaree` est rendue INTROUVABLE
+ * par ce chemin. Le rejet n'est pas une suppression déguisée — retirer une relation
+ * qu'on a saisie passe par `retirerUneRelation()`, qui trace.
+ *
+ * AUCUNE TRACE N'EST ÉCRITE, et c'est la raison d'être d'une fonction séparée.
+ * `RG-NF-05` trace la disparition de ce que quelqu'un a créé ; une hypothèse que le
+ * produit a avancée et qu'on refuse n'a jamais existé comme un fait du corpus. La
+ * tracer remplirait le journal du bruit de sa propre machinerie.
+ */
+export async function rejeterUneRelation(
+	base: Base,
+	demande: { readonly identite: Identite; readonly relation: string }
+): Promise<Resolution<{ readonly rejetee: true }>> {
+	const ligne = await relationEcrivable(base, demande.identite, demande.relation);
+	if (ligne === null) return INTROUVABLE;
+	if (ligne.origine !== 'ambigue') return INTROUVABLE;
+
+	await base.delete(relations).where(eq(relations.id, ligne.cle));
+	return { trouve: true, ressource: { rejetee: true } };
+}
+
+export interface ReleveDesPropositions {
+	/** Les propositions effectivement écrites. */
+	readonly posees: number;
+	/**
+	 * Celles qu'une relation existante, un droit manquant ou un type absent du
+	 * référentiel a écartées. Comptées, jamais tues : « zéro proposée » et « douze
+	 * écartées » ne disent pas la même chose de l'état du corpus.
+	 */
+	readonly ecartees: number;
+}
+
+/**
+ * POSER DES PROPOSITIONS — les seules écritures d'origine `ambigue` du produit.
+ *
+ * ELLES NAISSENT D'UN GESTE, JAMAIS D'UNE LECTURE. Le calcul de `propositionsDeMention()`
+ * est pur et pourrait tourner à chaque ouverture ; l'écrire à chaque ouverture ferait
+ * apparaître en base des lignes que personne n'a demandées, sur un écran qu'on ne
+ * faisait que consulter. C'est un bouton, et il porte son nom.
+ *
+ * UNE PAIRE DÉJÀ RELIÉE N'EST JAMAIS PROPOSÉE, dans un sens comme dans l'autre : c'est
+ * la même préséance qu'aux mentions, et pour la même raison — le produit ne redit pas
+ * ce que quelqu'un a déjà dit.
+ *
+ * REJETER PUIS REPROPOSER FAIT REVENIR LA PROPOSITION, et c'est assumé. Le rejet
+ * efface la ligne, rien ne garde la mémoire du refus, et une table de refus serait un
+ * schéma de plus pour un cas que l'utilisateur provoque lui-même : rien ne se propose
+ * sans qu'on ait cliqué. Un rejet suivi d'un clic sur « Proposer » est une DEMANDE de
+ * reproposer.
+ *
+ * `RG-M08-04` EST PORTÉE SUR LES DEUX EXTRÉMITÉS, et l'index des droits est lu UNE
+ * FOIS pour tout le lot : le lire par proposition coûtait deux requêtes par ligne.
+ */
+export async function proposerLesRelations(
+	base: Base,
+	demande: {
+		readonly identite: Identite;
+		readonly propositions: readonly {
+			readonly de: string;
+			readonly vers: string;
+			readonly type: string;
+		}[];
+	}
+): Promise<ReleveDesPropositions> {
+	if (demande.propositions.length === 0) return { posees: 0, ecartees: 0 };
+
+	const concernees = [...new Set(demande.propositions.flatMap((p) => [p.de, p.vers]))];
+	const lignes = await base
+		.select({ cle: notes.id, identifiant: notes.identifiant, dossierId: notes.dossierId })
+		.from(notes)
+		.where(parmiLesIdentifiants(concernees));
+	const parIdentifiant = new Map(lignes.map((l) => [l.identifiant, l] as const));
+
+	const typesVoulus = [...new Set(demande.propositions.map((p) => p.type))];
+	const typesLus = await base
+		.select({ cle: typesDeRelation.id, identifiant: typesDeRelation.identifiant })
+		.from(typesDeRelation)
+		.where(inArray(typesDeRelation.identifiant, typesVoulus));
+	const parType = new Map(typesLus.map((t) => [t.identifiant, t.cle] as const));
+
+	/* LES PAIRES DÉJÀ RELIÉES, lues en une fois sur les seules notes concernées. */
+	const cles = lignes.map((l) => l.cle);
+	const existantes =
+		cles.length === 0
+			? []
+			: await base
+					.select({ sourceId: relations.sourceId, cibleId: relations.cibleId })
+					.from(relations)
+					.where(and(inArray(relations.sourceId, cles), inArray(relations.cibleId, cles)));
+	const paire = (a: string, b: string): string => (a < b ? a + ' ' + b : b + ' ' + a);
+	const reliees = new Set(existantes.map((r) => paire(r.sourceId, r.cibleId)));
+
+	const index = await lireIndexDesDroits(base, demande.identite);
+	const ecrivable = (dossierId: string | null): boolean =>
+		dossierId !== null && peutEcrireSurLeDossierSelon(demande.identite, dossierId, index);
+
+	const aEcrire: { sourceId: string; cibleId: string; typeDeRelationId: string }[] = [];
+	let ecartees = 0;
+	for (const proposition of demande.propositions) {
+		const source = parIdentifiant.get(proposition.de);
+		const cible = parIdentifiant.get(proposition.vers);
+		const type = parType.get(proposition.type);
+		if (source === undefined || cible === undefined || type === undefined) {
+			ecartees += 1;
+			continue;
+		}
+		if (source.cle === cible.cle) {
+			ecartees += 1;
+			continue;
+		}
+		if (reliees.has(paire(source.cle, cible.cle))) {
+			ecartees += 1;
+			continue;
+		}
+		if (!ecrivable(source.dossierId) || !ecrivable(cible.dossierId)) {
+			ecartees += 1;
+			continue;
+		}
+		/* La paire entre dans le jeu des reliées SANS ATTENDRE l'écriture : deux
+		   propositions sur la même paire, dans deux sens ou deux types, en poseraient
+		   deux, et la seconde contredirait la préséance qu'on vient d'appliquer. */
+		reliees.add(paire(source.cle, cible.cle));
+		aEcrire.push({ sourceId: source.cle, cibleId: cible.cle, typeDeRelationId: type });
+	}
+
+	if (aEcrire.length === 0) return { posees: 0, ecartees };
+
+	/* `P-08` — `ambigue` : « à confirmer ». L'écrire ici dit l'intention plutôt que
+	   de la laisser au défaut de la colonne, qui vaut `declaree`. */
+	const posees = await base
+		.insert(relations)
+		.values(aEcrire.map((r) => ({ ...r, origine: 'ambigue' as const })))
+		.onConflictDoNothing()
+		.returning({ cle: relations.id });
+
+	return { posees: posees.length, ecartees: ecartees + (aEcrire.length - posees.length) };
+}

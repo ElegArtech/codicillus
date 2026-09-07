@@ -68,6 +68,9 @@ export const REGIMES: readonly { readonly prefixe: string; readonly regime: Regi
 	{ prefixe: '/console', regime: 'redirection' },
 	{ prefixe: '/cartographie', regime: 'redirection' },
 	{ prefixe: '/carte-mentale', regime: 'redirection' },
+	/* La modélisation lit le MÊME graphe que la cartographie : elle relève du même
+	   régime, faute de quoi une adresse en dirait plus que l'autre du même corpus. */
+	{ prefixe: '/modelisation', regime: 'redirection' },
 	{ prefixe: '/bibliotheque', regime: 'redirection' },
 	/* Régime indiscernable — §5.5, `ADR-007`. Ces deux préfixes portent un IDENTIFIANT
 	   DE CORPUS : leur existence est elle-même l'information confidentielle. */
