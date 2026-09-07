@@ -72,8 +72,8 @@
 	/* --- Les tailles de police DU DESSIN, en unités du repère --------------- */
 	--carto-t-noeud: 13;
 	--carto-t-pivot: 15;
-	--carto-t-centre: 17;
-	--carto-t-centre-sous: 11;
+	--carto-t-centre: 15;
+	--carto-t-centre-sous: 10;
 	--carto-t-famille: 18;
 	--carto-t-famille-compte: 13;
 	--carto-t-arete: 14;
