@@ -327,6 +327,22 @@ describe('V-28 — Domaines', () => {
 		const sansUnivers = await rendre('V-28', { ...SERVI, univers: [] });
 		expect(sansUnivers).not.toBe(servi);
 	});
+
+	/**
+	 * UNE CASE PAR MODULE DU CATALOGUE, ET LE GESTE EXISTE SANS CÂBLAGE DE PLUS.
+	 *
+	 * La liste des cases se DÉRIVE du catalogue servi : la clé `modelisation`, ajoutée
+	 * au catalogue et à l'énuméré de la base, fait apparaître sa case toute seule. Ce
+	 * cas mesure ce dérivé — un jour où quelqu'un écrirait les cases à la main, la
+	 * septième manquerait et personne ne pourrait activer le module.
+	 */
+	test('V-28 offre une case par module du catalogue', async () => {
+		const rendu = await rendre('V-28', SERVI, { form: 'creation' });
+		const zone = rendu.slice(rendu.indexOf('id="f-modules"'));
+		const cases = zone.slice(0, zone.indexOf('</div>')).match(/type="checkbox"/gu) ?? [];
+		expect(cases).toHaveLength(Object.keys(MODULES).length);
+		expect(zone).toContain('Modélisation');
+	});
 });
 
 describe('V-29 — Types de fiche', () => {

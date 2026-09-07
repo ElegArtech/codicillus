@@ -65,6 +65,10 @@ export const droitDeDossier = pgEnum('droit_de_dossier', ['lecteur', 'redacteur'
 /**
  * RG-STR-06 en énumère cinq ; les maquettes en portent six — « Dossiers » s'y
  * ajoute (`seeds/corpus.ts` `MODULES`). Les maquettes priment.
+ *
+ * `modelisation` EST LA SEPTIÈME, ET ELLE EST EN DERNIER — c'est la place que
+ * `ALTER TYPE ... ADD VALUE` lui donne en base (`016`), et le relevé structurel
+ * compare l'ordre, pas l'ensemble. La lire ailleurs ferait rougir la cohérence.
  */
 export const moduleDeDomaine = pgEnum('module_de_domaine', [
 	'notes',
@@ -72,7 +76,8 @@ export const moduleDeDomaine = pgEnum('module_de_domaine', [
 	'fiches',
 	'cartographie',
 	'signets',
-	'carte_mentale'
+	'carte_mentale',
+	'modelisation'
 ]);
 
 /**
@@ -623,6 +628,52 @@ export const relations = pgTable(
 	]
 );
 
+/**
+ * LA MÉMOIRE DES REFUS DE PROPOSITION — une table, et non une valeur de plus sur
+ * `origine_de_relation`.
+ *
+ * « Proposer » est un bouton DE LOT : il pose toutes les propositions du périmètre
+ * d'un coup. Sans mémoire, qui en rejetait trois sur quarante les retrouvait au clic
+ * suivant, mêlées aux nouvelles — le geste de rejet ne servait à rien.
+ *
+ * MARQUER LA LIGNE DANS `relations` ÉTAIT L'AUTRE FORME, et elle casse deux choses :
+ * `relations_unicite` rendrait IMPOSSIBLE de déclarer soi-même la relation refusée, et
+ * tous les lecteurs de `relations` devraient apprendre à ignorer la nouvelle valeur.
+ * Un refus n'est pas une relation : il ne vit pas dans leur table.
+ */
+export const propositionsRefusees = pgTable(
+	'propositions_refusees',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		sourceId: uuid('source_id')
+			.notNull()
+			.references(() => notes.id, { onDelete: 'cascade' }),
+		cibleId: uuid('cible_id')
+			.notNull()
+			.references(() => notes.id, { onDelete: 'cascade' }),
+		/**
+		 * EN CASCADE, là où `relations` emploie `RESTRICT` : une relation est un fait
+		 * qu'on ne détruit pas par ricochet ; un refus est une opinion sur une
+		 * hypothèse, et supprimer le type qu'elle nommait la vide de sens.
+		 */
+		typeDeRelationId: uuid('type_de_relation_id')
+			.notNull()
+			.references(() => typesDeRelation.id, { onDelete: 'cascade' }),
+		/**
+		 * `RG-NF-05` exige qu'une trace de DESTRUCTION garde son auteur ; un refus ne
+		 * détruit rien, et faire dépendre la suppression d'un compte de ses refus serait
+		 * un verrou sans contrepartie.
+		 */
+		refuseeParId: uuid('refusee_par_id').references(() => comptes.id, { onDelete: 'set null' }),
+		refuseeLe: timestamp('refusee_le', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [
+		unique('propositions_refusees_unicite').on(t.sourceId, t.cibleId, t.typeDeRelationId),
+		check('propositions_refusees_pas_reflexives', sql`${t.sourceId} <> ${t.cibleId}`),
+		index('propositions_refusees_cible_idx').on(t.cibleId)
+	]
+);
+
 /** M04.7 — nom, taille, type. RG-M04-08 — la visibilité est celle de la note. */
 export const piecesJointes = pgTable(
 	'pieces_jointes',
@@ -968,6 +1019,7 @@ export const schema = {
 	notes,
 	etiquettesDeNote,
 	relations,
+	propositionsRefusees,
 	piecesJointes,
 	lotsDImport,
 	lignesDeLot,

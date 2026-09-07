@@ -21,6 +21,7 @@
 	 */
 	import { getContext } from 'svelte';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import Pictogramme from '$lib/console/Pictogramme.svelte';
 	import {
 		AUCUNE_PAGE,
@@ -134,6 +135,29 @@
 
 	const ecriture = $derived(droits !== 'lecture');
 	const admin = $derived(role === 'admin');
+
+	/**
+	 * L'ENTRÉE « Modélisation » — ÉMISE SEULEMENT SI LE MODULE VIT QUELQUE PART que
+	 * l'appelant lit. Elle était inconditionnelle, et menait donc à un écran vide sur
+	 * toute instance qui n'a activé le module nulle part : `P-03`, une entrée de
+	 * navigation visible est une entrée qui fonctionne.
+	 *
+	 * LE VERDICT VIENT DU GABARIT RACINE — le seul chargeur qui s'exécute sous TOUTES
+	 * les routes —, lu comme la coquille lit `ecriture`.
+	 *
+	 * LE CONTEXTE D'IDENTITÉ GARDE LA LECTURE, et ce n'est pas une précaution : hors
+	 * application, `page` de `$app/state` n'a AUCUN état de requête et sortir sa
+	 * propriété `data` lève. Le contexte n'est posé que par `+layout.svelte` — son
+	 * absence dit exactement « nous ne sommes pas dans une requête », et l'entrée
+	 * n'est alors pas émise : le rail d'un banc de rendu ne promet rien.
+	 *
+	 * L'ENTRÉE « Cartographie » N'EST PAS TOUCHÉE, et l'asymétrie est assumée : elle
+	 * sert aujourd'hui, rien ne l'a signalée comme un défaut, et la fermer ferait
+	 * disparaître une entrée dont on se sert.
+	 */
+	const modelisationOfferte = $derived(
+		identite !== undefined && page.data['modelisationOfferte'] === true
+	);
 
 	/**
 	 * LES MOTIFS DE ROUTE, ÉCRITS EN CONSTANTES pour que
@@ -399,7 +423,9 @@
 				<div class="rail__menu-sep"></div>
 			{/if}
 			<a class="rail__menu-lien" href={resolve('/cartographie')}>Cartographie</a>
-			<a class="rail__menu-lien" href={resolve('/modelisation')}>Modélisation</a>
+			{#if modelisationOfferte}<a class="rail__menu-lien" href={resolve('/modelisation')}
+					>Modélisation</a
+				>{/if}
 			<a class="rail__menu-lien" href={resolve('/carte-mentale')}>Carte mentale</a>
 			<a class="rail__menu-lien" href="{resolve('/recherche')}?type=Signet">Signets</a>
 			{#if ecriture}<a class="rail__menu-lien" href={resolve('/importer')}>Import</a>{/if}

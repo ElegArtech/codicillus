@@ -380,6 +380,18 @@ const CHAMPS_DE_CONFIG_HORS_GEL = [
 	'retardObsolete'
 ] as const;
 
+/**
+ * LES CLÉS DE `MODULES` QUE LE GEL N'A JAMAIS EUES — même forme close que
+ * `CHAMPS_DE_CONFIG_HORS_GEL`, et pour la même raison.
+ *
+ * `modelisation` est un module du PRODUIT depuis les migrations `016` et `017`. Le gel
+ * n'en dessine aucune case : la modélisation y suivait la cartographie, par une règle
+ * écrite en dur dans la vue du domaine. La clé est vérifiée ABSENTE du gel et PRÉSENTE
+ * dans `corpus.ts` avant d'être écartée — une clé que le gel porterait, ou que
+ * `corpus.ts` aurait perdue, fait tomber le contrôle.
+ */
+const CLES_DE_MODULE_HORS_GEL = ['modelisation'] as const;
+
 describe('corpus.ts reproduit la maquette de référence', () => {
 	const reference = MAQUETTES.get(VUE_DE_REFERENCE)!;
 	const semence: Record<string, unknown> = {
@@ -456,6 +468,13 @@ describe('corpus.ts reproduit la maquette de référence', () => {
 					expect(reference[nom]).not.toHaveProperty(champ);
 					expect(obtenu).toHaveProperty(champ);
 					delete (obtenu as Record<string, unknown>)[champ];
+				}
+			}
+			if (nom === 'MODULES') {
+				for (const cle of CLES_DE_MODULE_HORS_GEL) {
+					expect(reference[nom]).not.toHaveProperty(cle);
+					expect(obtenu).toHaveProperty(cle);
+					delete (obtenu as Record<string, unknown>)[cle];
 				}
 			}
 			expect(obtenu).toEqual(reference[nom]);

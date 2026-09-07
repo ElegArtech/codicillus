@@ -153,6 +153,7 @@ const MODULE_DEPUIS_ENUM: Record<string, CleDeModule> = {
 	dossiers: 'dossiers',
 	fiches: 'fiches',
 	cartographie: 'cartographie',
+	modelisation: 'modelisation',
 	signets: 'signets',
 	carte_mentale: 'carteMentale'
 };
