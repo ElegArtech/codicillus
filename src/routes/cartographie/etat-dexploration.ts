@@ -73,9 +73,19 @@ export interface EtatDExploration {
 	readonly profondeur: number;
 }
 
-/** L'état d'ouverture : tout le corpus, les relations déclarées, les contours posés. */
+/**
+ * L'état d'ouverture : tout le corpus, LES DEUX COUCHES, les contours posés.
+ *
+ * LA COUCHE DÉDUITE ÉTAIT ÉTEINTE À L'OUVERTURE, ET C'ÉTAIT SANS CONSÉQUENCE TANT
+ * QU'ELLE ÉTAIT VIDE : rien ne fabriquait une arête déduite, et la case à cocher
+ * n'avait jamais rien à montrer. Depuis que les MENTIONS l'alimentent, la garder
+ * éteinte ouvrirait la carte d'un corpus relié au rétrolien — un univers entier
+ * consolidé de la sorte — sur un nuage de nœuds SANS UN TRAIT, jusqu'à ce que
+ * quelqu'un devine qu'une case le cache. La carte s'ouvre donc sur ce que le corpus
+ * porte, et la case sert à en RETIRER une part, jamais à en révéler l'essentiel.
+ */
 export const EXPLORATION_DE_PLANCHE: EtatDExploration = {
-	couches: ['declarees'],
+	couches: ['declarees', 'deduites'],
 	vivacite: [...ORDRE_DES_ETATS],
 	taille: 'centralite',
 	degreMinimum: 0,

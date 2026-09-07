@@ -399,6 +399,7 @@
 				<div class="rail__menu-sep"></div>
 			{/if}
 			<a class="rail__menu-lien" href={resolve('/cartographie')}>Cartographie</a>
+			<a class="rail__menu-lien" href={resolve('/modelisation')}>Modélisation</a>
 			<a class="rail__menu-lien" href={resolve('/carte-mentale')}>Carte mentale</a>
 			<a class="rail__menu-lien" href="{resolve('/recherche')}?type=Signet">Signets</a>
 			{#if ecriture}<a class="rail__menu-lien" href={resolve('/importer')}>Import</a>{/if}
