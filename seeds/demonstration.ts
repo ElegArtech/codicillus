@@ -144,6 +144,30 @@ export const UNIVERS: readonly UniversDeDemonstration[] = [
 		ordre: 3,
 		description:
 			"Ce qui n'est pas encore en service. Contenu temporaire par nature : à la clôture du projet, ce qui doit survivre est reversé dans Production."
+	},
+	/**
+	 * SUBSTACK — L'UNIVERS QUI FAIT VOIR LA CARTOGRAPHIE, et c'est sa seule raison
+	 * d'être ici. Les trois univers ci-dessus portent vingt-cinq notes et vingt-deux
+	 * relations : à cette taille, tout dessin est lisible, y compris un mauvais.
+	 *
+	 * CELUI-CI EN PORTE QUATRE-VINGT-DEUX, réparties en neuf familles sémantiques
+	 * d'effectifs très inégaux — de douze notes à cinq — plus huit notes que rien ne
+	 * rapproche de rien. C'est exactement la forme sur laquelle une disposition se
+	 * casse : une petite famille coincée entre deux grandes, des contours qui se
+	 * recouvrent, des libellés qui se chevauchent. Un jeu de vingt-cinq notes ne
+	 * prouve rien de la carte.
+	 *
+	 * IL EST AUTONOME : aucune de ses notes ne se relie aux trois autres univers, et
+	 * c'est ce qui permet de le regarder seul, au sélecteur de périmètre.
+	 */
+	{
+		identifiant: 'substack',
+		nom: 'Substack',
+		couleur: '#2f6b4f',
+		glyphe: 'pile',
+		ordre: 4,
+		description:
+			"Une lettre hebdomadaire sur l'outillage et la méthode de ceux qui écrivent du code. Les chroniques publiées, l'atelier qui les produit, et la veille qui les nourrit."
 	}
 ];
 
@@ -212,6 +236,33 @@ export const DOMAINES: readonly DomaineDeDemonstration[] = [
 		description:
 			'Le remplacement du socle de messagerie et la bascule du parc vers le nouveau domaine.',
 		modules: ['notes', 'dossiers', 'cartographie']
+	},
+	{
+		identifiant: 'chroniques',
+		nom: 'Chroniques',
+		univers: 'Substack',
+		couleur: '#6d4bc4',
+		description:
+			'Les textes publiés : ce que la lettre a dit sur les modèles, la stratégie, le marketing et la fabrique du contenu.',
+		modules: TOUS_MODULES
+	},
+	{
+		identifiant: 'atelier',
+		nom: 'Atelier',
+		univers: 'Substack',
+		couleur: '#1d7a52',
+		description:
+			"Ce qui produit la lettre : l'outillage, l'installation de la chaîne de publication, le code, et la méthode d'écriture.",
+		modules: TOUS_MODULES
+	},
+	{
+		identifiant: 'veille',
+		nom: 'Veille',
+		univers: 'Substack',
+		couleur: '#b8791a',
+		description:
+			"Ce qu'on suit, ce qu'on lit, et le vrac que personne n'a encore rangé — il existe dans toute base réelle, et la carte doit savoir le montrer.",
+		modules: TOUS_MODULES
 	}
 ];
 
@@ -233,7 +284,29 @@ export const DOSSIERS: Readonly<Record<string, readonly string[]>> = {
 		'Supervision'
 	],
 	Applications: ['Fiches applicatives', 'Intégrations'],
-	'Migration 2027': ['Cadrage', 'Lots']
+	'Migration 2027': ['Cadrage', 'Lots'],
+	/* LES DOSSIERS DE SUBSTACK PORTENT LES NOMS DES FAMILLES, et ce n'est pas une
+	   coquetterie : le regroupement sémantique pèse l'étiquette trois, le dossier
+	   deux et le mot de titre un. Le dossier RENFORCE ce que l'étiquette déclare, et
+	   la partition qui en sort est stable — sans lui, deux familles voisines
+	   fusionnent au gré du tirage de Louvain. */
+	Chroniques: ['IA & Productivité', 'Business & Stratégie', 'Marketing', 'Contenu'],
+	Atelier: ['Développement', 'Installation', 'Outils & Tech', 'Méthode'],
+	/* HUIT DOSSIERS D'UN SEUL TENANT POUR LES HUIT NOTES ISOLÉES. Un dossier partagé
+	   les rapprocherait — le dossier est un trait —, et elles ne seraient plus
+	   isolées. C'est la seule façon de fabriquer, dans un jeu de démonstration, ce
+	   qu'une base réelle produit toute seule : des notes que rien ne rejoint. */
+	Veille: [
+		'Veille',
+		'Vrac — brouillons',
+		'Vrac — comptabilité',
+		'Vrac — accès',
+		'Vrac — dates',
+		'Vrac — cuisine',
+		'Vrac — véhicule',
+		'Vrac — loisirs',
+		'Vrac — quotidien'
+	]
 };
 
 /* ─────────────────────────────── Les référentiels de saisie ──────────── */
@@ -442,7 +515,77 @@ export const RELATIONS: readonly RelationDeDemonstration[] = [
 		type: 'documente',
 		cible: 'n-politique-de-securite-des-systemes-d-information'
 	},
-	{ source: 'n-cnil-registre-des-traitements', type: 'documente', cible: 'n-gestion-de-parc' }
+	{ source: 'n-cnil-registre-des-traitements', type: 'documente', cible: 'n-gestion-de-parc' },
+
+	/* ── L'UNIVERS SUBSTACK ──────────────────────────────────────────────────
+	   AUCUNE DE CES RELATIONS NE SORT DE L'UNIVERS, et c'est délibéré : la
+	   cartographie doit pouvoir se regarder au périmètre « Univers : Substack »
+	   sans qu'un seul nœud fantôme vienne du dehors. Elles suivent les familles
+	   sans s'y enfermer — une note de l'atelier documente une chronique, une
+	   chronique dépend d'une note de méthode : c'est ce croisement qui rend la
+	   carte lisible plutôt que décorative. */
+	{ source: 'n-sub-installation', type: 'documente', cible: 'n-sub-claude-code' },
+	{ source: 'n-sub-claude-code', type: 'depend-de', cible: 'n-sub-api-anthropic' },
+	{ source: 'n-sub-vs-code', type: 'depend-de', cible: 'n-sub-claude-code' },
+	{ source: 'n-sub-claude-code', type: 'depend-de', cible: 'n-sub-docker' },
+	{ source: 'n-sub-ressources', type: 'documente', cible: 'n-sub-claude-code' },
+	{ source: 'n-sub-extensions', type: 'depend-de', cible: 'n-sub-vs-code' },
+	{ source: 'n-sub-raccourcis', type: 'documente', cible: 'n-sub-vs-code' },
+	{ source: 'n-sub-editeur-de-texte', type: 'depend-de', cible: 'n-sub-vs-code' },
+	{ source: 'n-sub-terminal', type: 'depend-de', cible: 'n-sub-linux' },
+	{ source: 'n-sub-git', type: 'depend-de', cible: 'n-sub-terminal' },
+	{ source: 'n-sub-debogage', type: 'depend-de', cible: 'n-sub-terminal' },
+	{ source: 'n-sub-gestionnaire-de-paquets', type: 'depend-de', cible: 'n-sub-paquets' },
+	{ source: 'n-sub-prerequis', type: 'documente', cible: 'n-sub-installation' },
+	{ source: 'n-sub-depannage', type: 'documente', cible: 'n-sub-installation' },
+	{ source: 'n-sub-mise-a-jour', type: 'depend-de', cible: 'n-sub-installation' },
+	{ source: 'n-sub-desinstallation', type: 'documente', cible: 'n-sub-installation' },
+	{ source: 'n-sub-proxy', type: 'documente', cible: 'n-sub-installation' },
+	{ source: 'n-sub-configuration', type: 'documente', cible: 'n-sub-variables' },
+	{ source: 'n-sub-env', type: 'documente', cible: 'n-sub-configuration' },
+	{ source: 'n-sub-docker', type: 'depend-de', cible: 'n-sub-linux' },
+	{ source: 'n-sub-serveur', type: 'heberge', cible: 'n-sub-docker' },
+	{ source: 'n-sub-serveur', type: 'depend-de', cible: 'n-sub-linux' },
+	{ source: 'n-sub-tests', type: 'documente', cible: 'n-sub-ci' },
+	{ source: 'n-sub-revue', type: 'encadre', cible: 'n-sub-ci' },
+	{ source: 'n-sub-migrations', type: 'depend-de', cible: 'n-sub-schema' },
+	{ source: 'n-sub-typage', type: 'depend-de', cible: 'n-sub-schema' },
+	{ source: 'n-sub-erreurs', type: 'documente', cible: 'n-sub-journalisation' },
+	{ source: 'n-sub-auth', type: 'depend-de', cible: 'n-sub-ressources' },
+	{ source: 'n-sub-claude', type: 'depend-de', cible: 'n-sub-api-anthropic' },
+	{ source: 'n-sub-prompts', type: 'documente', cible: 'n-sub-claude' },
+	{ source: 'n-sub-agents', type: 'depend-de', cible: 'n-sub-claude' },
+	{ source: 'n-sub-evaluer', type: 'documente', cible: 'n-sub-claude' },
+	{ source: 'n-sub-contexte-long', type: 'depend-de', cible: 'n-sub-cout-par-jeton' },
+	{ source: 'n-sub-ecrire-avec-un-modele', type: 'depend-de', cible: 'n-sub-prompts' },
+	{ source: 'n-sub-assistant-quotidien', type: 'documente', cible: 'n-sub-prompts' },
+	{ source: 'n-sub-tarification', type: 'depend-de', cible: 'n-sub-modele-economique' },
+	{ source: 'n-sub-abonnements', type: 'depend-de', cible: 'n-sub-tarification' },
+	{ source: 'n-sub-partenariats', type: 'depend-de', cible: 'n-sub-modele-economique' },
+	{ source: 'n-sub-go-to-market', type: 'depend-de', cible: 'n-sub-positionnement' },
+	{ source: 'n-sub-positionnement', type: 'depend-de', cible: 'n-sub-audience-cible' },
+	{ source: 'n-sub-etude-de-marche', type: 'documente', cible: 'n-sub-positionnement' },
+	{ source: 'n-sub-page-datterrissage', type: 'depend-de', cible: 'n-sub-audience-cible' },
+	{ source: 'n-sub-reseaux-sociaux', type: 'depend-de', cible: 'n-sub-audience-cible' },
+	{ source: 'n-sub-bienvenue', type: 'depend-de', cible: 'n-sub-page-datterrissage' },
+	{ source: 'n-sub-parrainage', type: 'depend-de', cible: 'n-sub-bienvenue' },
+	{ source: 'n-sub-objet-de-courriel', type: 'documente', cible: 'n-sub-taux-douverture' },
+	{ source: 'n-sub-croissance', type: 'depend-de', cible: 'n-sub-taux-douverture' },
+	{ source: 'n-sub-guide', type: 'documente', cible: 'n-sub-installation' },
+	{ source: 'n-sub-readme', type: 'documente', cible: 'n-sub-guide' },
+	{ source: 'n-sub-documentation', type: 'encadre', cible: 'n-sub-readme' },
+	{ source: 'n-sub-archivage', type: 'encadre', cible: 'n-sub-documentation' },
+	{ source: 'n-sub-controle-avant-publication', type: 'encadre', cible: 'n-sub-relecture' },
+	{ source: 'n-sub-relecture', type: 'depend-de', cible: 'n-sub-titre-et-accroche' },
+	{ source: 'n-sub-calendrier-editorial', type: 'encadre', cible: 'n-sub-decoupage' },
+	{ source: 'n-sub-routine', type: 'depend-de', cible: 'n-sub-calendrier-editorial' },
+	{ source: 'n-sub-prise-de-notes', type: 'encadre', cible: 'n-sub-routine' },
+	{ source: 'n-sub-revue-hebdomadaire', type: 'documente', cible: 'n-sub-croissance' },
+	{ source: 'n-sub-sources', type: 'documente', cible: 'n-sub-lecture-hebdo' },
+	{ source: 'n-sub-flux-rss', type: 'depend-de', cible: 'n-sub-sources' },
+	{ source: 'n-sub-conferences', type: 'documente', cible: 'n-sub-sources' },
+	{ source: 'n-sub-automatiser-sa-veille', type: 'depend-de', cible: 'n-sub-flux-rss' },
+	{ source: 'n-sub-lettres-concurrentes', type: 'documente', cible: 'n-sub-etude-de-marche' }
 ];
 
 /**
@@ -468,5 +611,13 @@ export const DROITS: readonly {
 	{ domaine: 'Applications', compte: 's.nguyen', droit: 'gestionnaire' },
 	{ domaine: 'Applications', compte: 'l.pereira', droit: 'redacteur' },
 	{ domaine: 'Migration 2027', compte: 's.nguyen', droit: 'gestionnaire' },
-	{ domaine: 'Migration 2027', compte: 'l.pereira', droit: 'redacteur' }
+	{ domaine: 'Migration 2027', compte: 'l.pereira', droit: 'redacteur' },
+	{ domaine: 'Chroniques', compte: 'l.pereira', droit: 'gestionnaire' },
+	{ domaine: 'Chroniques', compte: 'k.belhadj', droit: 'redacteur' },
+	{ domaine: 'Chroniques', compte: 's.nguyen', droit: 'redacteur' },
+	{ domaine: 'Atelier', compte: 'j.tanaka', droit: 'gestionnaire' },
+	{ domaine: 'Atelier', compte: 'm.ferreira', droit: 'redacteur' },
+	{ domaine: 'Atelier', compte: 'k.belhadj', droit: 'redacteur' },
+	{ domaine: 'Veille', compte: 's.nguyen', droit: 'gestionnaire' },
+	{ domaine: 'Veille', compte: 'l.pereira', droit: 'redacteur' }
 ];

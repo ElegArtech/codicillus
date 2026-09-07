@@ -13,6 +13,7 @@
  * pas, si bien qu'un appelant qui les oubliait dessinait le graphe du jeu de démonstration.
  */
 import type { Note, Relation } from '../../../seeds/corpus';
+import { NOEUD_AMPLITUDE, NOEUD_MINIMUM, NOEUD_UNIFORME } from './jetons';
 
 /* ── L'encodage des types ──────────────────────────────────────────────────
    « Chaque type a sa géométrie ET son code de trois lettres : la couleur ne
@@ -624,12 +625,15 @@ export function centralites(g: Graphe): ReadonlyMap<string, number> {
 export type MesureDeTaille = 'uniforme' | 'connexions' | 'centralite';
 
 /* LES NŒUDS SONT PETITS, ET C'EST LA MAQUETTE. Une carte de graphe se lit à la
-   FORME du nuage et aux ÎLOTS ; les nœuds y sont des pastilles, pas des jetons. À
-   onze unités de rayon minimum, quatre-vingts nœuds occupaient toute la surface et
-   le dessin n'avait plus de vide — or c'est le vide qui rend un graphe lisible. */
-const RAYON_MINIMAL = 6.5;
-const AMPLITUDE_DE_RAYON = 11;
-const RAYON_UNIFORME = 8;
+   FORME du nuage et aux ÎLOTS ; les nœuds y sont des pastilles, pas des jetons.
+
+   LES TROIS NOMBRES VIENNENT DU FICHIER DE JETONS, et ils ne sont plus ici : le
+   placement des cercles concentriques d'une famille borne l'écart entre deux
+   pastilles par le rayon MAXIMAL qu'une note peut prendre. Les écrire deux fois
+   ferait se recouvrir des nœuds que le calcul croyait disjoints. */
+const RAYON_MINIMAL = NOEUD_MINIMUM;
+const AMPLITUDE_DE_RAYON = NOEUD_AMPLITUDE;
+const RAYON_UNIFORME = NOEUD_UNIFORME;
 
 /**
  * Le rayon d'un nœud, sans plafond. L'échelle est en racine carrée : c'est l'AIRE du
@@ -1197,13 +1201,15 @@ function enveloppeConvexe(points: readonly Place[]): Place[] {
  */
 export function contourDeGroupe(
 	places: readonly Place[],
-	rayons: readonly number[]
+	rayons: readonly number[],
+	/** La marge entre le nœud le plus extérieur et le trait — voir `MARGE_DE_CONTOUR`. */
+	margeDemandee: number = MARGE_DE_CONTOUR
 ): string | null {
 	if (places.length === 0) return null;
 
 	const nuage: Place[] = [];
 	places.forEach((place, i) => {
-		const marge = (rayons[i] ?? 0) + MARGE_DE_CONTOUR;
+		const marge = (rayons[i] ?? 0) + margeDemandee;
 		for (let k = 0; k < POINTS_PAR_NOEUD; k += 1) {
 			const a = (k / POINTS_PAR_NOEUD) * Math.PI * 2;
 			nuage.push({ x: place.x + Math.cos(a) * marge, y: place.y + Math.sin(a) * marge });

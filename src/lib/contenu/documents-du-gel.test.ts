@@ -78,25 +78,25 @@ function texteDuDocument(texte: string): string {
 
 const MAQUETTES = [
 	{
-		fichier: 'mockups/V-14-lecture-note.html',
+		fichier: 'mockups_old/V-14-lecture-note.html',
 		note: 'n-restaurer-pg',
 		registre: 'reference' as const,
 		identifiant: 'corps-reference'
 	},
 	{
-		fichier: 'mockups/V-14-lecture-note.html',
+		fichier: 'mockups_old/V-14-lecture-note.html',
 		note: 'n-restaurer-pg',
 		registre: 'operationnel' as const,
 		identifiant: 'corps-operationnel'
 	},
 	{
-		fichier: 'mockups/V-03-lecture-publique.html',
+		fichier: 'mockups_old/V-03-lecture-publique.html',
 		note: 'n-mot-de-passe',
 		registre: 'reference' as const,
 		identifiant: 'corps-reference'
 	},
 	{
-		fichier: 'mockups/V-03-lecture-publique.html',
+		fichier: 'mockups_old/V-03-lecture-publique.html',
 		note: 'n-mot-de-passe',
 		registre: 'operationnel' as const,
 		identifiant: 'corps-operationnel'
@@ -106,7 +106,7 @@ const MAQUETTES = [
 describe('les corps transcrits du gel', () => {
 	it('sont quatre, chacun rattaché à sa maquette et à ses lignes', () => {
 		expect(DOCUMENTS_DU_GEL).toHaveLength(4);
-		for (const d of DOCUMENTS_DU_GEL) expect(d.source).toMatch(/^mockups\/V-\d\d.*:\d+-\d+$/);
+		for (const d of DOCUMENTS_DU_GEL) expect(d.source).toMatch(/^mockups_old\/V-\d\d.*:\d+-\d+$/);
 	});
 
 	for (const m of MAQUETTES) {

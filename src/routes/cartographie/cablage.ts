@@ -44,6 +44,20 @@ import {
 /** Le nombre de suggestions de la recherche dans le graphe. */
 const MAX_SUGGESTIONS = 8;
 
+/**
+ * Le nombre de notes proches listées dans le panneau. Le graphe d'affinité est
+ * DENSE — le degré médian est de neuf, et le panneau n'est pas une liste de notes :
+ * « Voir tous les voisins » ouvre l'écran qui l'est.
+ */
+const AFFINITES_MONTREES = 5;
+
+/**
+ * LE GROSSISSEMENT AU-DELÀ DUQUEL TOUTES LES NOTES PORTENT LEUR LIBELLÉ. En deçà,
+ * seuls les pivots, le nœud survolé, le nœud choisi et ses voisins sont nommés :
+ * à l'échelle d'un univers entier, deux titres se chevauchent avant d'être lus.
+ */
+const ZOOM_DES_LIBELLES = 1.6;
+
 /** Ce que le panneau contextuel dit d'un nœud — la route le bâtit sur ses données. */
 export interface VoisinAffiche {
 	/** L'identifiant du nœud voisin — c'est lui qui retrouve sa place sur le dessin. */
@@ -56,11 +70,19 @@ export interface VoisinAffiche {
 export interface DetailDeNoeud {
 	readonly titre: string;
 	readonly type: string;
+	/** Le code de trois lettres du type — ce que porte la vignette du panneau. */
+	readonly codeType: string;
 	readonly extrait: string;
 	readonly etiquettes: readonly string[];
 	/** Le libellé de l'état de vivacité, et sa classe de teinte. */
 	readonly etat: string;
 	readonly classeDEtat: string;
+	/**
+	 * L'ANCIENNETÉ, EN TOUTES LETTRES — « J+12 », ou « jamais vérifiée ». La maquette
+	 * la met sur la même ligne que la vivacité, et c'est juste : un état sans son âge
+	 * ne dit pas s'il vient de basculer ou s'il traîne depuis six mois.
+	 */
+	readonly anciennete: string;
 	readonly centralite: number;
 	readonly declarees: number;
 	readonly deduites: number;
@@ -72,8 +94,20 @@ export interface DetailDeNoeud {
 	/** Où la note est rangée — « Univers › Domaine ». */
 	readonly rangement: string;
 	readonly affinites: readonly VoisinAffiche[];
+	/** Les nœuds du voisinage à la profondeur courante — affinités comprises. */
+	readonly voisinageNoeuds: number;
+	/** Les relations comprises dans cette même boule. */
+	readonly voisinageRelations: number;
 	readonly adresse: string;
 	readonly adresseDuVoisinage: string;
+	/**
+	 * OÙ « VÉRIFIER LA NOTE » ENVOIE SA SOUMISSION. C'est l'action `?/verifier` de
+	 * l'écran de lecture — la MÊME, pas une copie : le geste écrit une date de
+	 * vérification et relance le cycle de vivacité, et il n'a qu'un seul endroit où
+	 * il est écrit. Un bouton qui se contenterait d'ouvrir la note serait un bouton
+	 * mort déguisé.
+	 */
+	readonly adresseDeVerification: string;
 }
 
 export interface OptionsDeLaCartographie {
@@ -92,6 +126,8 @@ export interface OptionsDeLaCartographie {
 	readonly locale: boolean;
 	/** Le nœud dont on explore le voisinage, ou `null` en vue complète. */
 	readonly centre: string | null;
+	/** La profondeur courante — ce que les trois boutons du panneau montrent. */
+	readonly profondeur: number;
 }
 
 /**
@@ -132,7 +168,12 @@ export function cablerLaCartographie(
 	if (graphe === null) return attaches.debranchement();
 
 	const document = graphe.ownerDocument;
-	const vue = cablerLaVue(racine, attaches);
+	/* LE SEUIL DE ZOOM : au-delà, TOUTES les notes portent leur libellé. C'est une
+	   règle de la maquette, et elle ne peut se tenir qu'ici — le grossissement ne
+	   vit nulle part ailleurs que dans la commande de vue. */
+	const vue = cablerLaVue(racine, attaches, (grossissement) => {
+		graphe.setAttribute('data-zoom', grossissement >= ZOOM_DES_LIBELLES ? 'proche' : 'loin');
+	});
 
 	/* L'état vit ici, en une seule copie, et l'adresse le reflète. */
 	const etat: {
@@ -173,6 +214,15 @@ export function cablerLaCartographie(
 
 	const appliquerLesFiltres = (): void => {
 		const visibles = new Set<string>();
+		/**
+		 * LA NOTE AU CENTRE DU VOISINAGE EST TOUJOURS VISIBLE, et il faut le dire ici :
+		 * elle n'est PAS dessinée en `.noeud` — c'est le grand disque du centre —, si
+		 * bien que la boucle ci-dessous ne la voyait pas. Toutes les arêtes qui la
+		 * touchent étaient alors déclarées « une extrémité masquée », donc masquées :
+		 * l'écran de voisinage s'ouvrait sans une seule relation, avec les seules
+		 * affinités visibles. Mesuré au navigateur sur « Claude Code ».
+		 */
+		if (options.locale && options.centre !== null) visibles.add(options.centre);
 		for (const noeud of elements(graphe, '.noeud')) {
 			const masque = noeudMasque(traitsDuNoeud(noeud), etat);
 			noeud.setAttribute('data-masque', masque ? 'oui' : 'non');
@@ -261,13 +311,22 @@ export function cablerLaCartographie(
 		racine.querySelector('.app')?.setAttribute('data-detail', 'ferme');
 	};
 
-	const selectionner = (identifiant: string): void => {
+	/** Le nœud choisi, ou `null` — ce qui distingue le survol de la sélection. */
+	let choisi: string | null = null;
+
+	/**
+	 * CE QUI EST ACTIF AUTOUR D'UN NŒUD — le même marquage pour le survol et pour la
+	 * sélection, et c'est ce qui garantit qu'ils montrent la MÊME chose. Le survol
+	 * passe `null` en second argument : il ne pose aucun anneau de choix, et le
+	 * quitter remet tout au repos.
+	 */
+	const marquerLeVoisinage = (identifiant: string, marqueDeChoix: string | null): void => {
 		const voisins = voisinsDe(identifiant);
 		graphe.setAttribute('data-focus', 'oui');
 		for (const noeud of elements(graphe, '.noeud')) {
 			const id = noeud.getAttribute('data-id') ?? '';
 			noeud.setAttribute('data-actif', voisins.has(id) ? 'oui' : 'non');
-			noeud.setAttribute('data-choisi', id === identifiant ? 'oui' : 'non');
+			noeud.setAttribute('data-choisi', id === marqueDeChoix ? 'oui' : 'non');
 		}
 		for (const arete of elements(graphe, '.arete')) {
 			const touche =
@@ -275,12 +334,18 @@ export function cablerLaCartographie(
 				arete.getAttribute('data-vers') === identifiant;
 			arete.setAttribute('data-actif', touche ? 'oui' : 'non');
 		}
+	};
+
+	const selectionner = (identifiant: string): void => {
+		choisi = identifiant;
+		marquerLeVoisinage(identifiant, identifiant);
 		if (effacer !== null) effacer.disabled = false;
 		effacerLesAffinites();
 		remplirLeDetail(identifiant);
 	};
 
 	const effacerLaSelection = (): void => {
+		choisi = null;
 		graphe.setAttribute('data-focus', 'non');
 		for (const noeud of elements(graphe, '.noeud')) {
 			noeud.setAttribute('data-actif', 'non');
@@ -346,6 +411,19 @@ export function cablerLaCartographie(
 
 	/* ── 4. Le contenu du panneau ──────────────────────────────────────────── */
 
+	/**
+	 * LE PANNEAU DE LA NOTE — ses sections, dans l'ordre de la maquette :
+	 * type et titre ; vivacité et ancienneté ; description ; étiquettes ;
+	 * centralité ; connexions et leur détail ; famille sémantique et l'origine de
+	 * son nom ; voisinage, sa profondeur et ses compteurs ; relations, entrantes et
+	 * sortantes ; actions.
+	 *
+	 * AUCUN BOUTON MORT. Les trois actions font ce qu'elles disent : « Isoler le
+	 * voisinage » ouvre l'écran de voisinage, « Ouvrir la note » ouvre la note, et
+	 * « Vérifier la note » soumet l'action `?/verifier` de l'écran de lecture — la
+	 * même, pas une copie. Cette dernière ne s'affiche qu'à qui a le droit d'écrire :
+	 * `si-ecriture` est la classe que la coquille éteint pour les autres.
+	 */
 	function remplirLeDetail(identifiant: string): void {
 		if (detail === null || corpsDuDetail === null) return;
 		const d = options.detailParNoeud[identifiant];
@@ -360,56 +438,100 @@ export function cablerLaCartographie(
 			.map((e) => `<span class="detail__etiq">#&nbsp;${echapper(e)}</span>`)
 			.join('');
 		const affinites = d.affinites
+			.slice(0, AFFINITES_MONTREES)
 			.map(
 				(v) =>
 					`<a class="rel-item" href="${echapper(v.adresse)}"><span class="rel-item__nom">${echapper(v.titre)}</span><span class="rel-item__type">${echapper(v.origine)}</span></a>`
 			)
 			.join('');
 
+		const connexions = d.declarees + d.deduites + d.affinites.length;
+		const accorde = (n: number, mot: string): string => `${n} ${mot}${n > 1 ? 's' : ''}`;
+
+		const profondeurs = [1, 2, 3]
+			.map(
+				(niveau) =>
+					`<button type="button" class="btn-profondeur" data-profondeur="${niveau}" aria-pressed="${
+						niveau === options.profondeur ? 'true' : 'false'
+					}">${niveau}</button>`
+			)
+			.join('');
+
 		html.innerHTML = [
-			`<div class="detail__tete"><h2 class="detail__titre">${echapper(d.titre)}</h2>`,
+			/* 1. Type et titre. */
+			`<div class="detail__tete">`,
+			`<span class="detail__vignette ${echapper(d.classeDEtat)}">${echapper(d.codeType)}</span>`,
+			`<div class="detail__identite"><span class="detail__type">${echapper(d.type)}</span>`,
+			`<h2 class="detail__titre">${echapper(d.titre)}</h2></div>`,
 			`<button type="button" class="detail__fermer" id="detail-fermer" aria-label="Fermer le panneau">×</button></div>`,
-			`<p class="detail__sous"><span class="detail__type">${echapper(d.type)}</span>`,
-			`<span class="detail__etat ${echapper(d.classeDEtat)}">${echapper(d.etat)}</span></p>`,
+
+			/* 2. Vivacité et ancienneté. */
+			`<p class="detail__vivacite ${echapper(d.classeDEtat)}">`,
+			`<svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor"/></svg>`,
+			`${echapper(d.etat)}<span class="detail__anciennete">· ${echapper(d.anciennete)}</span></p>`,
+
+			/* 3. Description. */
 			d.extrait === '' ? '' : `<p class="detail__extrait">${echapper(d.extrait)}</p>`,
+
+			/* 4. Étiquettes. */
 			etiquettes === '' ? '' : `<p class="detail__etiquettes">${etiquettes}</p>`,
-			`<div class="detail__section"><span class="etiq">Mesures</span><div class="crit">`,
-			`<div class="crit__boite" title="Part de la centralité de passage la plus élevée du périmètre : le nœud le plus central vaut 1,00."><span class="crit__val">${d.centralite.toFixed(2).replace('.', ',')}</span><span class="crit__nom">Centralité<span class="apropos" aria-hidden="true">ⓘ</span></span></div>`,
-			`<div class="crit__boite"><span class="crit__val">${d.declarees + d.deduites}</span><span class="crit__nom">Relations</span></div>`,
+
+			/* 5 et 6. Centralité, puis connexions et leur détail. */
+			`<div class="detail__section"><div class="crit">`,
+			`<div class="crit__boite"><span class="crit__nom">Centralité</span>`,
+			`<span class="crit__val">${d.centralite.toFixed(2).replace('.', ',')}</span>`,
+			`<span class="crit__detail">part de la plus haute du périmètre</span></div>`,
+			`<div class="crit__boite"><span class="crit__nom">Connexions</span>`,
+			`<span class="crit__val">${connexions}</span>`,
+			`<span class="crit__detail">${d.declarees} déclarée${d.declarees > 1 ? 's' : ''} · ${d.deduites} déduite${d.deduites > 1 ? 's' : ''} · ${d.affinites.length} affinité${d.affinites.length > 1 ? 's' : ''}</span></div>`,
 			`</div>`,
 			d.rupture
-				? `<div class="crit__boite crit__boite--rupture"><span class="crit__val">Point de rupture</span><span class="crit__nom">son retrait isole une partie du périmètre</span></div>`
+				? `<div class="crit__boite crit__boite--rupture"><span class="crit__val">Point de rupture</span><span class="crit__detail">son retrait isole une partie du périmètre</span></div>`
 				: '',
 			`</div>`,
-			/* LES DEUX NATURES NE S'ADDITIONNENT PAS AVEC LES AFFINITÉS. Un chiffre
-			   unique posé au-dessus des trois serait faux : la maquette en portait un
-			   — « 12 connexions : 4 déclarées, 2 déduites, 9 affinités » —, dont les
-			   parts font quinze. Les relations se comptent ensemble, les affinités à
-			   part, parce qu'elles ne sont pas de même nature. */
-			`<div class="detail__section"><span class="etiq">Rangement</span>`,
-			`<p class="detail__vide-ligne">${echapper(d.rangement)}</p></div>`,
-			`<div class="detail__section"><span class="etiq">Relations</span>`,
-			`<p class="prop"><span class="prop__cle">Déclarées</span>${d.declarees}</p>`,
-			`<p class="prop"><span class="prop__cle">Déduites</span>${d.deduites}</p>`,
-			`<p class="prop"><span class="prop__cle">Sens</span>${d.entrantes} entrante${d.entrantes > 1 ? 's' : ''} · ${d.sortantes} sortante${d.sortantes > 1 ? 's' : ''}</p>`,
-			`</div>`,
+
+			/* 7. Famille sémantique, et l'origine de son nom. */
+			`<div class="detail__section"><span class="carto-etiq">Famille sémantique</span>`,
 			d.famille === null
-				? `<div class="detail__section"><span class="etiq">Famille sémantique</span><p class="detail__vide-ligne">Aucune : cette note ne partage ni étiquette, ni dossier, ni mot de titre avec une autre.</p></div>`
-				: `<div class="detail__section"><span class="etiq">Famille sémantique</span><p class="prop"><span class="prop__cle">${echapper(d.famille)}</span>${echapper(d.origineDeFamille ?? '')}</p></div>`,
-			d.affinites.length === 0
-				? ''
-				: [
-						`<div class="detail__section"><span class="etiq">Affinités</span>`,
-						`<button type="button" class="btn btn--discret" id="detail-affinites">${
-							d.affinites.length === 1
-								? 'Montrer la note proche sur la carte'
-								: `Montrer les ${d.affinites.length} notes proches sur la carte`
-						}</button>`,
-						`<div class="rel-groupe">${affinites}</div></div>`
-					].join(''),
+				? `<p class="detail__vide-ligne">Aucune : cette note ne partage ni étiquette, ni dossier, ni mot de titre avec une autre.</p>`
+				: `<p class="prop"><span class="prop__corps"><span class="prop__cle">${echapper(d.famille)}</span><span class="prop__sous">${echapper(d.origineDeFamille ?? '')}</span></span></p>`,
+			`</div>`,
+
+			/* 8. Voisinage : la profondeur, ses compteurs, et le geste. */
+			`<div class="detail__section"><span class="carto-etiq">Voisinage (profondeur ${options.profondeur})</span>`,
+			`<div class="carto-segments" id="detail-profondeur" role="group" aria-label="Profondeur du voisinage">${profondeurs}</div>`,
+			`<p class="detail__vide-ligne">${accorde(d.voisinageNoeuds, 'nœud')} · ${accorde(d.voisinageRelations, 'relation')} · ${accorde(d.affinites.length, 'affinité')}</p>`,
+			affinites === '' ? '' : `<div class="rel-groupe">${affinites}</div>`,
+			`<a class="rel-item rel-item--tous" href="${echapper(d.adresseDuVoisinage)}"><span class="rel-item__nom">Voir tous les voisins</span><span class="rel-item__type">→</span></a>`,
+			`</div>`,
+
+			/* 9. Relations : le décompte des entrantes et des sortantes. */
+			`<div class="detail__section"><span class="carto-etiq">Relations</span>`,
+			`<p class="prop"><span class="prop__glyphe" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h11M9.5 4.5 13 8l-3.5 3.5"/></svg></span>`,
+			`<span class="prop__corps"><span class="prop__cle">${accorde(d.declarees, 'déclarée')}</span>`,
+			`<span class="prop__sous">dont ${accorde(d.entrantes, 'entrante')} · ${accorde(d.sortantes, 'sortante')}</span></span></p>`,
+			`<p class="prop"><span class="prop__glyphe" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"><path d="M2 8h12"/></svg></span>`,
+			`<span class="prop__corps"><span class="prop__cle">${accorde(d.deduites, 'déduite')}</span>`,
+			`<span class="prop__sous">tirées des liens écrits dans les corps</span></span></p>`,
+			`<p class="prop"><span class="prop__glyphe" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2"><circle cx="8" cy="8" r="6"/></svg></span>`,
+			`<span class="prop__corps"><span class="prop__cle">${accorde(d.affinites.length, 'affinité')}</span>`,
+			d.famille === null
+				? `<span class="prop__sous">aucune famille sémantique</span></span></p>`
+				: `<span class="prop__sous">famille ${echapper(d.famille)}</span></span></p>`,
+			`</div>`,
+
+			/* 10. Actions. */
 			`<div class="detail__section detail__actions">`,
-			`<a class="btn btn--principal" href="${echapper(d.adresseDuVoisinage)}">Isoler le voisinage</a>`,
-			`<a class="btn" href="${echapper(d.adresse)}">Ouvrir la note</a>`,
+			`<a class="carto-btn carto-btn--principal" href="${echapper(d.adresseDuVoisinage)}">`,
+			`<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="2"/><circle cx="3" cy="4" r="1.6"/><circle cx="13" cy="4" r="1.6"/><circle cx="3" cy="12" r="1.6"/><circle cx="13" cy="12" r="1.6"/><path d="M4.3 5 6.6 6.8M11.7 5 9.4 6.8M4.3 11 6.6 9.2M11.7 11 9.4 9.2"/></svg>`,
+			`Isoler le voisinage</a>`,
+			`<a class="carto-btn" href="${echapper(d.adresse)}">`,
+			`<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 2H4v12h8V5z"/><path d="M9 2v3h3"/></svg>`,
+			`Ouvrir la note</a>`,
+			`<form class="si-ecriture" method="post" action="${echapper(d.adresseDeVerification)}">`,
+			`<button class="carto-btn" type="submit">`,
+			`<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3.5 8.4 6.6 11.5 12.5 5"/></svg>`,
+			`Vérifier la note</button></form>`,
 			`</div>`
 		].join('');
 
@@ -419,12 +541,26 @@ export function cablerLaCartographie(
 
 		const fermer = racine.querySelector('#detail-fermer');
 		if (fermer !== null) fermer.addEventListener('click', effacerLaSelection, { once: true });
-		const montrer = racine.querySelector('#detail-affinites');
-		if (montrer !== null) {
-			montrer.addEventListener('click', () => {
-				revelerLesAffinites(identifiant);
+
+		/* LES TROIS BOUTONS DE PROFONDEUR SONT CRÉÉS ICI, donc écoutés ici : le
+		   câblage général s'est accroché avant qu'ils existent. Ils portent le nœud
+		   choisi ET la profondeur — depuis la cartographie, changer la profondeur
+		   seule ne désignerait aucun voisinage. */
+		for (const bouton of elements(racine, '#detail-profondeur .btn-profondeur')) {
+			bouton.addEventListener('click', () => {
+				const niveau = bouton.getAttribute('data-profondeur');
+				if (niveau === null) return;
+				naviguerAvec([
+					['centre', identifiant],
+					['profondeur', niveau]
+				]);
 			});
 		}
+
+		/* LES AFFINITÉS DU NŒUD CHOISI SE MONTRENT SUR LE DESSIN, sans qu'on ait
+		   à le demander : c'est le seul endroit où l'affinité devient un trait, et
+		   elle est bornée au voisinage d'UNE note. */
+		revelerLesAffinites(identifiant);
 	}
 
 	/** Le texte posé dans du balisage : jamais tel quel. */
@@ -473,6 +609,34 @@ export function cablerLaCartographie(
 
 	attaches.ecouter(effacer, 'click', effacerLaSelection);
 
+	/* ── 5 bis. LE SURVOL — les relations du nœud passent en pleine opacité ────
+	   Les relations sont dessinées en transparence faible : sans cela, deux cent
+	   quarante-cinq traits font un paquet où plus rien ne se lit. Le survol les
+	   révèle, et il est TRANSITOIRE — il ne touche pas à la sélection, qui, elle,
+	   ouvre le panneau et survit au geste suivant. */
+
+	const survoler = (identifiant: string): void => {
+		if (choisi !== null) return;
+		marquerLeVoisinage(identifiant, null);
+	};
+
+	const cesserDeSurvoler = (): void => {
+		if (choisi !== null) return;
+		graphe.setAttribute('data-focus', 'non');
+		for (const noeud of elements(graphe, '.noeud')) noeud.setAttribute('data-actif', 'non');
+		for (const arete of elements(graphe, '.arete')) arete.setAttribute('data-actif', 'non');
+	};
+
+	attaches.ecouter(graphe, 'pointerover', (evenement) => {
+		const noeud = (evenement.target as Element | null)?.closest('.noeud');
+		const identifiant = noeud?.getAttribute('data-id') ?? null;
+		if (identifiant !== null) survoler(identifiant);
+	});
+	attaches.ecouter(graphe, 'pointerout', (evenement) => {
+		const noeud = (evenement.target as Element | null)?.closest('.noeud');
+		if (noeud !== null && noeud !== undefined) cesserDeSurvoler();
+	});
+
 	/* ── 6. Les filtres de la colonne de commande ──────────────────────────── */
 
 	const listeDeCases = (selecteur: string): HTMLInputElement[] =>
@@ -497,7 +661,7 @@ export function cablerLaCartographie(
 		if (choisi === undefined) return;
 		/* LA TAILLE CHANGE LE RAYON DES NŒUDS, DONC LE DESSIN : c'est le seul réglage
 		   qui ne peut pas se jouer sur un attribut, et c'est le seul qui navigue. */
-		naviguerAvec('taille', choisi);
+		naviguerAvec([['taille', choisi]]);
 	});
 
 	const curseur = racine.querySelector<HTMLInputElement>('#degre-min');
@@ -516,11 +680,56 @@ export function cablerLaCartographie(
 			rejouer();
 		});
 	};
+	/**
+	 * L'INTERRUPTEUR « FAMILLES SÉMANTIQUES » COMMANDE LES DEUX CASES qu'il coiffe.
+	 * Il ne double aucun réglage : il éteint le regroupement ENTIER d'un geste —
+	 * contours et noms —, là où les deux cases le règlent finement. Sans lui, cacher
+	 * le regroupement demanderait deux clics et la connaissance de ce que chaque
+	 * case recouvre.
+	 */
+	const casesDuRegroupement = (): HTMLInputElement[] =>
+		[
+			racine.querySelector<HTMLInputElement>('#c-contours'),
+			racine.querySelector<HTMLInputElement>('#c-noms')
+		].filter((c): c is HTMLInputElement => c !== null);
+
+	const maitreDuRegroupement = racine.querySelector<HTMLInputElement>('#c-regroupement');
+	attaches.ecouter(maitreDuRegroupement, 'change', () => {
+		const actif = maitreDuRegroupement?.checked === true;
+		for (const c of casesDuRegroupement()) c.checked = actif;
+		etat.contours = actif;
+		etat.nomsDeFamille = actif;
+		rejouer();
+	});
+
+	/** L'interrupteur suit ses deux cases : éteindre les deux l'éteint. */
+	const accorderLeMaitre = (): void => {
+		if (maitreDuRegroupement === null) return;
+		maitreDuRegroupement.checked = etat.contours || etat.nomsDeFamille;
+	};
+
+	/**
+	 * LES DEUX LIGNES DE « PÉRIMÈTRE » PORTENT LE REGARD SUR LEUR SÉLECTEUR. La
+	 * maquette les montre comme des lignes cliquables ; un rappel inerte du périmètre
+	 * serait un bouton mort, et le sélecteur qui le change est à trente centimètres
+	 * de là, en haut de l'écran.
+	 */
+	for (const lien of elements(racine, '.lg--lien[data-vers]')) {
+		attaches.ecouter(lien, 'click', () => {
+			const cible = racine.querySelector<HTMLSelectElement>(
+				`#${lien.getAttribute('data-vers') ?? ''}`
+			);
+			cible?.focus();
+		});
+	}
+
 	cocher('#c-contours', (v) => {
 		etat.contours = v;
+		accorderLeMaitre();
 	});
 	cocher('#c-noms', (v) => {
 		etat.nomsDeFamille = v;
+		accorderLeMaitre();
 	});
 	cocher('#c-isolees', (v) => {
 		etat.masquerIsolees = v;
@@ -531,7 +740,18 @@ export function cablerLaCartographie(
 		graphe.setAttribute('data-ruptures', ruptures?.checked === true ? 'oui' : 'non');
 	});
 
-	attaches.ecouter(racine.querySelector('#reinitialiser'), 'click', reinitialiser);
+	attaches.ecouter(racine.querySelector('#reinitialiser'), 'click', () => {
+		reinitialiser();
+	});
+
+	/**
+	 * « TOUT AFFICHER », DANS LE VOISINAGE : les mêmes filtres jetés, mais le
+	 * voisinage GARDÉ. Sans cette nuance, le bouton renverrait à la cartographie
+	 * entière — ce que « Retour à la cartographie » fait déjà, deux lignes plus haut.
+	 */
+	attaches.ecouter(racine.querySelector('#tout-afficher'), 'click', () => {
+		reinitialiser(true);
+	});
 
 	/**
 	 * LES DEUX SEULS RÉGLAGES QUI REDESSINENT — le périmètre, qui change les données,
@@ -547,23 +767,33 @@ export function cablerLaCartographie(
 	 * bien que comparer deux périmètres sous le même filtre était impossible.
 	 * `Réinitialiser` reste le geste qui les jette, et il est écrit sur un bouton.
 	 */
-	function naviguerAvec(cle: string | null, valeur: string | null): void {
+	function naviguerAvec(reglages: readonly (readonly [string, string])[]): void {
 		const adresse = new URL(resolve('/cartographie'), document.location.origin);
 		for (const [nom, v] of new URL(document.location.href).searchParams) {
 			adresse.searchParams.append(nom, v);
 		}
-		if (cle !== null && valeur !== null) adresse.searchParams.set(cle, valeur);
+		for (const [cle, valeur] of reglages) adresse.searchParams.set(cle, valeur);
 		/* Le chemin vient de `resolve()` ; ce que la règle ne sait pas exprimer, c'est
 		   la requête. Même désarmement qu'en `V-13`, `V-03`, `V-22` et `V-24`. */
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		void goto(adresse, { noScroll: true, keepFocus: true });
 	}
 
-	/** `Réinitialiser` : le périmètre reste, tout le reste retourne au repos. */
-	function reinitialiser(): void {
-		const perimetre = new URL(document.location.href).searchParams.get('perimetre');
+	/**
+	 * `Réinitialiser` : le périmètre reste, tout le reste retourne au repos. Le
+	 * voisinage aussi, sauf quand on demande à le garder — c'est « Tout afficher ».
+	 */
+	function reinitialiser(garderLeVoisinage = false): void {
+		const courante = new URL(document.location.href).searchParams;
+		const perimetre = courante.get('perimetre');
 		const adresse = new URL(resolve('/cartographie'), document.location.origin);
 		if (perimetre !== null) adresse.searchParams.set('perimetre', perimetre);
+		if (garderLeVoisinage) {
+			const centre = courante.get('centre');
+			const profondeur = courante.get('profondeur');
+			if (centre !== null) adresse.searchParams.set('centre', centre);
+			if (profondeur !== null) adresse.searchParams.set('profondeur', profondeur);
+		}
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		void goto(adresse, { noScroll: true, keepFocus: true });
 	}
@@ -610,17 +840,16 @@ export function cablerLaCartographie(
 			/* CHANGER D'UNIVERS LÂCHE LE DOMAINE. Le garder désignerait un domaine
 			   d'un autre univers, et le périmètre affiché ne serait plus celui du
 			   sélecteur — l'écran mentirait sur ce qu'il montre. */
-			naviguerAvec('perimetre', perimetreCompose(selUnivers.value, ''));
+			naviguerAvec([['perimetre', perimetreCompose(selUnivers.value, '')]]);
 		});
 	}
 	if (selDomaine !== null) {
 		attaches.ecouter(selDomaine, 'change', () => {
 			const universDuDomaine =
 				options.domaines.find((d) => d.nom === selDomaine.value)?.univers ?? '';
-			naviguerAvec(
-				'perimetre',
-				perimetreCompose(selUnivers?.value ?? universDuDomaine, selDomaine.value)
-			);
+			naviguerAvec([
+				['perimetre', perimetreCompose(selUnivers?.value ?? universDuDomaine, selDomaine.value)]
+			]);
 		});
 	}
 
@@ -646,7 +875,7 @@ export function cablerLaCartographie(
 		attaches.ecouter(bouton, 'click', () => {
 			const niveau = bouton.getAttribute('data-profondeur');
 			if (niveau === null) return;
-			naviguerAvec('profondeur', niveau);
+			naviguerAvec([['profondeur', niveau]]);
 		});
 	}
 
@@ -697,10 +926,11 @@ export function cablerLaCartographie(
 	 * quoi le dessin parle sans qu'on ait à cliquer le nœud qui est au centre.
 	 */
 	if (options.locale && options.centre !== null) {
-		/* SANS ESTOMPER. `selectionner()` met le reste du graphe à quatorze pour cent
-		   pour isoler un voisinage au sein d'un grand dessin — mais ici l'écran ENTIER
-		   est ce voisinage : l'estomper laverait tout ce qu'on est venu voir. Seul le
-		   panneau s'ouvre, et le nœud choisi porte son anneau. */
+		/* SANS ESTOMPER. `selectionner()` éteint le reste du graphe pour isoler un
+		   voisinage au sein d'un grand dessin — mais ici l'écran ENTIER est ce
+		   voisinage : l'estomper laverait tout ce qu'on est venu voir. Seul le panneau
+		   s'ouvre, et le nœud choisi porte son anneau. */
+		choisi = options.centre;
 		const centre = racine.querySelector(`.noeud[data-id="${CSS.escape(options.centre)}"]`);
 		centre?.setAttribute('data-choisi', 'oui');
 		if (effacer !== null) effacer.disabled = false;
@@ -722,6 +952,28 @@ export function cablerLaCartographie(
  * qu'on regarde un coin fait perdre ce qu'on visait, et c'est le défaut qui rend un
  * zoom inutilisable.
  */
+/** Le repère du dessin, lu sur son `viewBox` — jamais une constante. */
+function repereDuDessin(svg: SVGSVGElement): {
+	x: number;
+	y: number;
+	largeur: number;
+	hauteur: number;
+} {
+	const parts = (svg.getAttribute('viewBox') ?? '')
+		.trim()
+		.split(/[\s,]+/)
+		.map(Number);
+	if (parts.length !== 4 || parts.some((n) => !Number.isFinite(n))) {
+		return { x: 0, y: 0, largeur: 1000, hauteur: 780 };
+	}
+	return {
+		x: parts[0] as number,
+		y: parts[1] as number,
+		largeur: parts[2] as number,
+		hauteur: parts[3] as number
+	};
+}
+
 function cablerLaPrehension(racine: ParentNode, attaches: Attaches, vue: CommandeDeVue): void {
 	const svg = racine.querySelector<SVGSVGElement>('#graphe');
 	if (svg === null) return;
@@ -753,7 +1005,7 @@ function cablerLaPrehension(racine: ParentNode, attaches: Attaches, vue: Command
 		   si le canevas mesure mille pixels. Sans ce rapport, la carte glisse plus
 		   vite ou plus lentement que la main. */
 		const cadre = svg.getBoundingClientRect();
-		const rapport = cadre.width === 0 ? 1 : 1000 / cadre.width;
+		const rapport = cadre.width === 0 ? 1 : repereDuDessin(svg).largeur / cadre.width;
 		vue.deplacer(
 			origineX + (e.clientX - departX) * rapport,
 			origineY + (e.clientY - departY) * rapport
@@ -777,8 +1029,13 @@ function cablerLaPrehension(racine: ParentNode, attaches: Attaches, vue: Command
 		e.preventDefault();
 		const cadre = svg.getBoundingClientRect();
 		if (cadre.width === 0 || cadre.height === 0) return;
-		const x = ((e.clientX - cadre.left) / cadre.width) * 1000;
-		const y = ((e.clientY - cadre.top) / cadre.height) * 620;
+		/* LE REPÈRE SE LIT SUR LE `viewBox`, jamais sur une constante : la
+		   cartographie le calcule sur son contenu, si bien qu'un périmètre de douze
+		   notes et un de trois cents n'ont plus les mêmes bornes. Écrit en dur, le
+		   zoom dérivait sous le pointeur à chaque cran. */
+		const repere = repereDuDessin(svg);
+		const x = repere.x + ((e.clientX - cadre.left) / cadre.width) * repere.largeur;
+		const y = repere.y + ((e.clientY - cadre.top) / cadre.height) * repere.hauteur;
 		vue.grossirVers(x, y, e.deltaY < 0 ? 1.12 : 1 / 1.12);
 	});
 }

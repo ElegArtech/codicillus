@@ -106,8 +106,25 @@ describe('les liens de corps du jeu de démonstration', () => {
 		expect(porteuses.length).toBeGreaterThanOrEqual(6);
 	});
 
-	it('six arêtes déduites, pas une de plus', () => {
-		expect(paires()).toHaveLength(6);
+	it('huit arêtes déduites, pas une de plus', () => {
+		expect(paires()).toHaveLength(8);
+	});
+
+	/**
+	 * LES DEUX MENTIONS DE L'UNIVERS SUBSTACK, NOMMÉES. « Claude Code » cite sa
+	 * configuration et son authentification dans son corps, et aucune relation n'est
+	 * DÉCLARÉE vers l'une ni vers l'autre : ce sont les deux seules arêtes déduites
+	 * de son voisinage, et c'est ce que la maquette de la vue locale montre — deux
+	 * traits en tirets là où les cinq autres sont pleins.
+	 *
+	 * LES TROIS AUTRES LIENS DE CORPS DE CET UNIVERS NE FONT AUCUNE ARÊTE, et c'est
+	 * la règle de préséance qui le veut : « Installation » cite ses prérequis,
+	 * « Configuration » cite ses variables, « VS Code » cite ses extensions, et les
+	 * trois paires portent déjà une relation déclarée.
+	 */
+	it('les deux mentions de Claude Code sont celles que la vue locale dessine', () => {
+		expect(paires()).toContain('n-sub-claude-code → n-sub-configuration');
+		expect(paires()).toContain('n-sub-claude-code → n-sub-auth');
 	});
 
 	it('chaque arête déduite porte le type « mentionne »', () => {

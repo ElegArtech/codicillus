@@ -650,25 +650,25 @@ export const DOCUMENTS_DU_GEL: readonly DocumentDuGel[] = [
 	{
 		note: 'n-restaurer-pg',
 		registre: 'reference',
-		source: 'mockups/V-14-lecture-note.html:1524-1705',
+		source: 'mockups_old/V-14-lecture-note.html:1524-1705',
 		document: analyserDocument({ type: 'doc', content: V14_REFERENCE_BLOCS })
 	},
 	{
 		note: 'n-restaurer-pg',
 		registre: 'operationnel',
-		source: 'mockups/V-14-lecture-note.html:1708-1753',
+		source: 'mockups_old/V-14-lecture-note.html:1708-1753',
 		document: analyserDocument({ type: 'doc', content: V14_OPERATIONNEL_BLOCS })
 	},
 	{
 		note: 'n-mot-de-passe',
 		registre: 'reference',
-		source: 'mockups/V-03-lecture-publique.html:984-1078',
+		source: 'mockups_old/V-03-lecture-publique.html:984-1078',
 		document: analyserDocument({ type: 'doc', content: V03_REFERENCE_BLOCS })
 	},
 	{
 		note: 'n-mot-de-passe',
 		registre: 'operationnel',
-		source: 'mockups/V-03-lecture-publique.html:1081-1102',
+		source: 'mockups_old/V-03-lecture-publique.html:1081-1102',
 		document: analyserDocument({ type: 'doc', content: V03_OPERATIONNEL_BLOCS })
 	}
 ];

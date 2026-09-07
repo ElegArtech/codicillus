@@ -21,9 +21,37 @@ const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 3;
 const PAS_DE_ZOOM = 1.2;
 
-/** Le repère du dessin — le `viewBox` que les trois vues déclarent. */
-const LARGEUR = 1000;
-const HAUTEUR = 780;
+/**
+ * LE REPÈRE DU DESSIN, LU SUR LE `viewBox` — jamais recopié en constante.
+ *
+ * IL ÉTAIT ÉCRIT ICI, À MILLE SUR SEPT CENT QUATRE-VINGTS, ET C'EST DEVENU FAUX :
+ * la cartographie calcule désormais son repère SUR SON CONTENU, si bien qu'un
+ * périmètre de douze notes et un de trois cents n'ont plus les mêmes bornes. Un
+ * recentrage réglé sur une constante sautait alors à côté du nœud visé, et le zoom
+ * à la molette dérivait sous le pointeur. Le repère se lit sur l'élément.
+ */
+const REPERE_DE_REPLI = { x: 0, y: 0, largeur: 1000, hauteur: 780 };
+
+function repereDe(cible: SVGGElement | null): {
+	x: number;
+	y: number;
+	largeur: number;
+	hauteur: number;
+} {
+	const svg = cible?.ownerSVGElement ?? null;
+	const brut = svg?.getAttribute('viewBox') ?? '';
+	const parts = brut
+		.trim()
+		.split(/[\s,]+/)
+		.map(Number);
+	if (parts.length !== 4 || parts.some((n) => !Number.isFinite(n))) return REPERE_DE_REPLI;
+	return {
+		x: parts[0] as number,
+		y: parts[1] as number,
+		largeur: parts[2] as number,
+		hauteur: parts[3] as number
+	};
+}
 
 /** Le grossissement d'un saut vers un nœud — `V-19:2969`. */
 const ZOOM_DE_SAUT = 1.35;
@@ -78,12 +106,23 @@ export interface CommandeDeVue {
  * LE ZOOM ET LE RECENTRAGE — `V-19:2860-2864` et `:2920-2927`. `#recentrer` de V-19
  * est le DOUBLON déclaré d'`#ajuster` : le gel accroche la même fonction aux deux.
  */
-export function cablerLaVue(racine: ParentNode, attaches: Attaches): CommandeDeVue {
+export function cablerLaVue(
+	racine: ParentNode,
+	attaches: Attaches,
+	/**
+	 * CE QUI SE FAIT À CHAQUE CHANGEMENT DE GROSSISSEMENT. La cartographie s'en sert
+	 * pour poser le SEUIL DE ZOOM au-delà duquel TOUTES les notes portent leur
+	 * libellé : c'est une règle de la maquette, et elle ne peut se tenir qu'ici,
+	 * parce que le grossissement ne vit nulle part ailleurs.
+	 */
+	auChangement?: (grossissement: number) => void
+): CommandeDeVue {
 	const cible = racine.querySelector<SVGGElement>('#racine');
 	const vue: Vue = { x: 0, y: 0, k: 1 };
 
 	const appliquer = (): void => {
 		cible?.setAttribute('transform', `translate(${vue.x},${vue.y}) scale(${vue.k})`);
+		auChangement?.(vue.k);
 	};
 
 	const commande: CommandeDeVue = {
@@ -102,9 +141,10 @@ export function cablerLaVue(racine: ParentNode, attaches: Attaches): CommandeDeV
 			appliquer();
 		},
 		centrerSur: (x, y) => {
+			const repere = repereDe(cible);
 			vue.k = ZOOM_DE_SAUT;
-			vue.x = LARGEUR / 2 - x * vue.k;
-			vue.y = HAUTEUR / 2 - y * vue.k;
+			vue.x = repere.x + repere.largeur / 2 - x * vue.k;
+			vue.y = repere.y + repere.hauteur / 2 - y * vue.k;
 			appliquer();
 		},
 		position: () => ({ x: vue.x, y: vue.y }),
@@ -130,6 +170,9 @@ export function cablerLaVue(racine: ParentNode, attaches: Attaches): CommandeDeV
 	attaches.ecouter(racine.querySelector('#zoom-moins'), 'click', commande.reduire);
 	attaches.ecouter(racine.querySelector('#ajuster'), 'click', commande.ajuster);
 	attaches.ecouter(racine.querySelector('#recentrer'), 'click', commande.ajuster);
+	/* « Centrer », dans le voisinage : le même geste, sous le nom que la maquette
+	   lui donne là-bas. Un troisième déclencheur, pas une troisième fonction. */
+	attaches.ecouter(racine.querySelector('#centrer'), 'click', commande.ajuster);
 
 	return commande;
 }
