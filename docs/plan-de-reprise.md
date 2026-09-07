@@ -1884,3 +1884,84 @@ Ils sont dans `CLAUDE.md` ; ceux-ci concernent directement ce plan.
 | **Svelte élague les blancs en bord d'élément** | `+page.svelte` en pose déjà plusieurs (`{x + ' › '}`). Toute phrase ajoutée aux chantiers 3 et 6 porte ses espaces **dans l'expression**. |
 | **Décrire une forme, ne jamais la citer dans un commentaire** | Le chantier 7 écrit de la géométrie SVG et le chantier 2 du Markdown à double crochets : un accent grave dans un modèle littéral, un joker de type MIME ou une classe citée en prose cassent le fichier à cent lignes de la cause. |
 | **Un formulaire de navigateur réécrit toute fin de ligne en CRLF** | Le chantier 4 poste des formulaires. Si un corps de note passe par là, `markdownDeFormulaire()` (`src/lib/contenu/markdown.ts:1252`) est la parade. |
+
+---
+
+# Décisions prises à l'exécution
+
+*Les arbitrages qui s'écartent de ce plan, ou qui le corrigent. Une ligne chacun, avec sa
+raison. Rien d'autre n'est créé — pas de dossier d'écart, pas de contrat de tâche.*
+
+## Vague 0 — nettoyage du corpus
+
+- **Les cinq contrôles sont dans un bloc `DO … RAISE EXCEPTION`, pas dans des `SELECT` lus à
+  l'œil** : le plan décrivait cinq requêtes et un `COMMIT` tapé ensuite ; une exception dans la
+  transaction est la seule forme où le contrôle ne peut pas être sauté.
+- **Résultat mesuré** : 12 → 0 blocs `fixture-liens`, 77 notes, 0 corps vide, 12/12 corps égaux
+  au sens de `jsonb` à leur `versions.numero = 1`, index de recherche à 0 résultat sur
+  « fixture », `modifie_le` inchangé, `relations` toujours `declaree|7`.
+
+## Vague 1, lot B — la géométrie des tracés
+
+- **Le plan se contredisait, et c'est la mesure visible qui l'emporte.** Il demandait à la fois
+  « écart appliqué aux points de contrôle » et « l'écart mesuré entre les milieux vaut
+  `ÉCART_DE_PARALLÈLE` » : le milieu d'une cubique valant `(P0 + 3·P1 + 3·P2 + P3)/8`, déplacer
+  les points de contrôle de `e` ne déplace le milieu que de `0,75·e`. `ECART_DE_PARALLELE` est
+  donc l'écart **entre les milieux**, et le déplacement des points de contrôle vaut `4/3` de
+  cela.
+- **Le résultat est rangé par clé, pas dans l'ordre d'entrée** : c'est ce qui rend le contrôle
+  d'indépendance à l'ordre littéralement vrai, et la vue lit par clé de toute façon.
+- **Une arête dont une extrémité manque ne pèse pas sur l'écartement des poignées** : elle n'a
+  pas de trait où glisser, et la faire compter déplacerait de vraies poignées pour une arête qui
+  ne se dessine pas.
+- **`ECART_DE_PARALLELE = 24`, soit plus que `DISTANCE_DE_COLLISION = 20`** : deux arêtes d'une
+  même paire sont donc séparées par le seul éventail, et la troisième mesure n'a jamais à les
+  traiter.
+- **Le contrôle relit le `d` RENDU**, dont il extrait les huit nombres, plutôt que la géométrie
+  interne du module : un contrôle qui reprendrait les points de contrôle éprouverait sa propre
+  copie.
+
+## Vague 1, lot C — le jeu de démonstration
+
+- **`interface NoteLue` est exportée en plus de la fonction** : le type de retour de
+  `lireLaNoteDeDemonstration()` doit être nommable côté appelant.
+- **Le contrôle navigateur du §C2 n'a pas été fait par ce lot**, et c'est juste : il exigeait
+  `pnpm base:peupler`, interdit au lot sur toute base. Il est repris en vague 4, sur
+  `codicillus_epreuve`. Le compte de six arêtes est établi par le calcul même de la route.
+
+## Vague 1, lot A — le module et les migrations
+
+- **`pnpm base:reversibilite` n'a pas tourné sur la base partagée** : elle vide la base, ce qui
+  aurait détruit les 77 notes réelles. Elle a tourné sur une base jetable, sortie 0, 17
+  migrations, empreinte identique.
+- **`propositionsRefusees` a dû entrer dans l'agrégat `schema` de `src/lib/base/schema.ts`** —
+  défaut du plan, qui ne demandait que le `pgTable`. `verifierCoherence()` itère
+  `Object.values(schema)`, pas les exports du module : sans cela `pnpm base:coherence` sortait à 1.
+- **Le verdict du rail ne passe pas par un `limit 1`**, contrairement à ce que le plan proposait :
+  la première ligne venue peut porter un domaine que l'appelant ne lit pas, et le rail aurait dit
+  « oui » à qui ne verrait rien. La lisibilité se tranche sur l'accès déjà ouvert, sans requête
+  de plus.
+- **`Rail.svelte` lit `page.data` sous garde du contexte d'identité** : `page.data` nu lève hors
+  requête SvelteKit et faisait tomber 337 contrôles ; le contexte `CLE_IDENTITE` est le
+  court-circuit que `Coquille.svelte` emploie déjà.
+- **`seeds/corpus.test.ts` reçoit une exemption nommée** `CLES_DE_MODULE_HORS_GEL`, de la même
+  forme close que `CHAMPS_DE_CONFIG_HORS_GEL` : la clé est vérifiée absente du gel **et** présente
+  dans `corpus.ts` avant d'être écartée.
+- **`docs/routes.md` §9** : vues 35 → 36, total 40 → 41. Le décompte du passage à froid se calcule
+  à l'exécution — il passe de 42 à 43 sans qu'un chiffre soit à écrire.
+
+## Vague 1 — environnement
+
+- **Le piège `node_modules` s'est déclenché** : pnpm v11 lance un `install` de lui-même
+  (`verify-deps-before-run`), et deux copies de travail ont reçu un vrai `node_modules` local.
+  `pnpm-lock.yaml` est resté intact, 0 ligne de diff, et l'arbre principal n'a pas été écrit.
+- **`codicillus_epreuve` a été créée** comme base jetable pour tout ce qui exige
+  `pnpm base:peupler`. `codicillus` ne reçoit jamais ni `peupler` ni `conformite`.
+
+## Vague 1 — état à la sortie
+
+```
+pnpm check      = 0        1432 fichiers, 0 erreur, 0 avertissement
+pnpm test:unit  = 0        90 fichiers, 2033 contrôles   (départ : 88 / 2012)
+base            modelisation 13 = cartographie 13 · notes 77 · propositions_refusees, 0 ligne
+```
