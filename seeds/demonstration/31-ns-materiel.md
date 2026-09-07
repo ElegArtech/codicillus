@@ -14,7 +14,7 @@ verifie-il-y-a-jours: 130
 
 À compter du 1er février 2026, **aucun matériel informatique n'est commandé hors du circuit décrit ci-dessous**. Les commandes passées directement par une direction métier ne seront ni installées, ni raccordées au réseau, ni prises en charge par le support.
 
-Cette règle vaut pour les postes, écrans, périphériques, téléphones, et tout équipement destiné à être connecté au système d'information.
+Cette règle vaut pour les postes, écrans, périphériques, téléphones, et tout équipement destiné à être connecté au système d'information. La dotation du poste à domicile ne fait pas exception : elle suit la note de service sur l'[[n-note-de-service-equipement-du-teletravail|équipement du télétravail]], qui reste en vigueur et renvoie au même circuit.
 
 ## Circuit {#s-circuit}
 
@@ -27,6 +27,8 @@ Cette règle vaut pour les postes, écrans, périphériques, téléphones, et to
 ## Catalogue standard {#s-catalogue-standard}
 
 Le catalogue couvre 90 % des besoins. Une demande hors catalogue est recevable mais doit être motivée par un usage, pas par une préférence. Elle allonge le délai de trois à six semaines et son coût est imputé à la direction demandeuse.
+
+Le contenu du catalogue n'est pas arrêté par le support : il découle des [[n-regles-d-architecture|Règles d'architecture]], qui fixent les systèmes supportés et les modes de raccordement. Un matériel qui n'y a pas sa place n'entre pas au catalogue, quel que soit son prix.
 
 ## Délais annoncés {#s-delais-annonces}
 
