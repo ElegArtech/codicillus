@@ -34,7 +34,7 @@ import {
 } from '$lib/donnees/outils';
 import { ouvrirLAcces } from '$lib/donnees/rangement';
 import { dansLePerimetre, pointsArticulation, sousGraphe, typeDe } from '$lib/graphe/cartographie';
-import { cleDArete, disposerEnCouches } from '$lib/graphe/couches';
+import { cleDArete, disposerEnCouches, type AssiseDeLEtagement } from '$lib/graphe/couches';
 import { TYPE_DE_MENTION } from '$lib/graphe/mentions';
 import { propositionsDeMention } from '$lib/graphe/propositions';
 import {
@@ -84,9 +84,19 @@ function tripletsRefuses(refuses: readonly PropositionRefusee[]): ReadonlySet<st
 	return new Set(refuses.map((r) => cleDeTriplet(r.de, r.vers, r.type)));
 }
 
+/**
+ * L'ASSISE DEMANDÉE PAR L'ADRESSE. Une valeur inconnue vaut `tout` : ignorer plutôt
+ * que refuser (`docs/routes.md` §4.2) — un réglage mal orthographié ne doit pas faire
+ * sortir un écran.
+ */
+function assiseDeLAdresse(demandee: string | null): AssiseDeLEtagement {
+	return demandee === 'declarees' ? 'declarees' : 'tout';
+}
+
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const { base, perimetre, graphe, notes, typesRelation, relationsTechniques, refuses } =
 		await monterLeModele(locals, url.searchParams.get('perimetre'));
+	const assise = assiseDeLAdresse(url.searchParams.get('etagement'));
 
 	/* Les arêtes du DESSIN, avec leur origine et leur clé de ligne. `sousGraphe()` les
 	   rend au type `Relation` du corpus, faute de connaître les colonnes ajoutées ;
@@ -94,7 +104,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const aretes = graphe.aretes as readonly RelationLisible[];
 	const mentions = aretes.filter((r) => r.origine === 'deduite');
 
-	const disposition = disposerEnCouches(graphe);
+	const disposition = disposerEnCouches(graphe, assise);
 
 	/**
 	 * LES POINTS DE DÉFAILLANCE UNIQUE — calculés sur les SEULES relations que
@@ -114,6 +124,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	return {
 		perimetreDemande: valeurDeSelecteur(perimetre),
+		/**
+		 * SUR QUOI L'ÉTAGEMENT S'APPUIE — servi pour que l'écran le DISE. La position
+		 * verticale d'un nœud dépend de ce réglage, et un lecteur qui prend le dessin
+		 * pour un modèle de dépendances déclarées se tromperait sans être averti.
+		 */
+		assise,
 		/** L'arête que l'adresse désigne, sous la forme `de>vers>type`. */
 		areteChoisie: url.searchParams.get('arete'),
 		/**
@@ -200,7 +216,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 
 /**
- * LE RETOUR À LA PAGE, PÉRIMÈTRE CONSERVÉ.
+ * LE RETOUR À LA PAGE, PÉRIMÈTRE ET ASSISE CONSERVÉS.
  *
  * LE PÉRIMÈTRE VOYAGE DANS LE FORMULAIRE, PAS DANS L'ADRESSE DE L'ACTION. Une adresse
  * d'action SvelteKit est un paramètre de requête à part — la forme avec une barre
@@ -209,20 +225,39 @@ export const load: PageServerLoad = async ({ locals, url }) => {
  * chaque déclaration. Un champ caché le porte, et le nom de la porte est le même
  * partout.
  *
+ * L'ASSISE VOYAGE PAR LE MÊME CHEMIN, et pour la même raison : sans elle, déclarer
+ * une relation depuis un étagement réglé sur les seules déclarées ramènerait le
+ * dessin sur tout ce qui est dessiné, et le modèle changerait de forme sous la main.
+ *
  * L'ARÊTE CHOISIE N'EST PAS CONSERVÉE, et c'est délibéré : après un changement de
  * type, un retrait ou un rejet, l'arête désignée n'est plus celle qu'on regardait —
  * elle a changé de clé, ou elle n'existe plus. Rouvrir un panneau sur une arête morte
  * afficherait un panneau vide sans dire pourquoi.
  */
-function retour(perimetre: string | null): string {
-	if (perimetre === null || perimetre === '') return '/modelisation';
-	return '/modelisation?perimetre=' + encodeURIComponent(perimetre);
+function retour(perimetre: string | null, assise: AssiseDeLEtagement): string {
+	const morceaux: string[] = [];
+	if (perimetre !== null && perimetre !== '') {
+		morceaux.push('perimetre=' + encodeURIComponent(perimetre));
+	}
+	/* SEULE LA VALEUR NON NOMINALE VOYAGE : `tout` est ce que l'adresse nue rend, et
+	   l'écrire allongerait chaque adresse sans rien dire de plus. */
+	if (assise === 'declarees') morceaux.push('etagement=declarees');
+	return morceaux.length === 0 ? '/modelisation' : '/modelisation?' + morceaux.join('&');
 }
 
 /** Le champ que tous les formulaires portent — une seule orthographe, partout. */
 function perimetreDuFormulaire(donnees: FormData): string | null {
 	const brut = (donnees.get('perimetre') ?? '').toString().trim();
 	return brut === '' ? null : brut;
+}
+
+/**
+ * L'ASSISE QUE LE FORMULAIRE PORTE. Sans ce champ, le premier geste ramènerait
+ * l'étagement à son état nominal, et le modèle qu'on regardait changerait de forme
+ * sous la main.
+ */
+function assiseDuFormulaire(donnees: FormData): AssiseDeLEtagement {
+	return assiseDeLAdresse((donnees.get('etagement') ?? '').toString().trim());
 }
 
 /** Un champ de formulaire, élagué — la lecture est la même pour les sept actions. */
@@ -262,7 +297,7 @@ export const actions: Actions = {
 						: 'une note ne se relie pas à elle-même'
 			});
 		}
-		redirect(303, retour(perimetreDuFormulaire(donnees)));
+		redirect(303, retour(perimetreDuFormulaire(donnees), assiseDuFormulaire(donnees)));
 	},
 
 	changer: async ({ request, locals }) => {
@@ -278,7 +313,7 @@ export const actions: Actions = {
 		});
 		if (!resultat.trouve) return fail(404, { message: 'relation introuvable' });
 		if (!resultat.ressource.ok) return fail(409, { message: 'cette relation existe déjà' });
-		redirect(303, retour(perimetreDuFormulaire(donnees)));
+		redirect(303, retour(perimetreDuFormulaire(donnees), assiseDuFormulaire(donnees)));
 	},
 
 	retirer: async ({ request, locals }) => {
@@ -293,7 +328,7 @@ export const actions: Actions = {
 			relation
 		});
 		if (!resultat.trouve) return fail(404, { message: 'relation introuvable' });
-		redirect(303, retour(perimetreDuFormulaire(donnees)));
+		redirect(303, retour(perimetreDuFormulaire(donnees), assiseDuFormulaire(donnees)));
 	},
 
 	confirmer: async ({ request, locals }) => {
@@ -306,7 +341,7 @@ export const actions: Actions = {
 			relation
 		});
 		if (!resultat.trouve) return fail(404, { message: 'proposition introuvable' });
-		redirect(303, retour(perimetreDuFormulaire(donnees)));
+		redirect(303, retour(perimetreDuFormulaire(donnees), assiseDuFormulaire(donnees)));
 	},
 
 	rejeter: async ({ request, locals }) => {
@@ -319,7 +354,7 @@ export const actions: Actions = {
 			relation
 		});
 		if (!resultat.trouve) return fail(404, { message: 'proposition introuvable' });
-		redirect(303, retour(perimetreDuFormulaire(donnees)));
+		redirect(303, retour(perimetreDuFormulaire(donnees), assiseDuFormulaire(donnees)));
 	},
 
 	/**
@@ -353,7 +388,7 @@ export const actions: Actions = {
 					' refusée(s) : la paire est déjà reliée, le lien a été refusé, ou le droit manque sur une extrémité'
 			});
 		}
-		redirect(303, retour(perimetreDemande));
+		redirect(303, retour(perimetreDemande, assiseDuFormulaire(donnees)));
 	},
 
 	/**
@@ -371,6 +406,6 @@ export const actions: Actions = {
 			refus
 		});
 		if (!resultat.trouve) return fail(404, { message: 'refus introuvable' });
-		redirect(303, retour(perimetreDuFormulaire(donnees)));
+		redirect(303, retour(perimetreDuFormulaire(donnees), assiseDuFormulaire(donnees)));
 	}
 };

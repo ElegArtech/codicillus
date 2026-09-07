@@ -92,6 +92,38 @@
 		return '?' + morceaux.join('&');
 	}
 
+	/**
+	 * L'ADRESSE D'UNE ASSISE, périmètre conservé. Même règle que `adresseDArete()` :
+	 * la chaîne est composée à la main, `URLSearchParams` étant une classe mutable que
+	 * `svelte/prefer-svelte-reactivity` refuse à raison.
+	 *
+	 * L'ARÊTE CHOISIE NE SUIT PAS : changer d'assise réétage le dessin, et le panneau
+	 * rouvert sur une arête que le nouvel étagement place ailleurs n'apporte rien.
+	 */
+	function adresseDAssise(voulue: 'tout' | 'declarees'): string {
+		const morceaux = [];
+		if (data.perimetreDemande !== 'global|') {
+			morceaux.push('perimetre=' + encodeURIComponent(data.perimetreDemande));
+		}
+		if (voulue === 'declarees') morceaux.push('etagement=declarees');
+		return morceaux.length === 0 ? '?' : '?' + morceaux.join('&');
+	}
+
+	/** Ce sur quoi la hauteur d'un nœud s'appuie, dit en toutes lettres. */
+	const phraseDeLAssise = $derived(
+		data.assise === 'tout'
+			? 'L’étagement s’appuie sur les ' +
+					String(data.nombreDeDeclarees) +
+					' relations déclarées et les ' +
+					String(data.nombreDeMentions) +
+					' mentions : la hauteur d’une note dépend aussi des liens écrits dans les corps.'
+			: 'L’étagement s’appuie sur les seules ' +
+					String(data.nombreDeDeclarees) +
+					' relations déclarées. Les ' +
+					String(data.nombreDeMentions) +
+					' mentions sont dessinées, elles ne placent rien.'
+	);
+
 	const MOT_DE_L_ORIGINE: Record<string, string> = {
 		declaree: 'Déclarée',
 		deduite: 'Mention',
@@ -120,6 +152,9 @@
 			<!-- LE PÉRIMÈTRE SE CHOISIT PAR UNE REQUÊTE, pas par un script : le sélecteur
 				est dans un formulaire qui navigue, et l'adresse obtenue est partageable. -->
 			<form method="GET">
+				<!-- LE RÉGLAGE D'ÉTAGEMENT VOYAGE AVEC LE PÉRIMÈTRE : c'est un formulaire
+					GET, et ce qu'il ne porte pas disparaît de l'adresse. -->
+				<input type="hidden" name="etagement" value={data.assise} />
 				<label class="etiq" for="perimetre">Périmètre</label>
 				<select id="perimetre" name="perimetre">
 					<option value="global|" selected={data.perimetreDemande === 'global|'}
@@ -144,6 +179,7 @@
 			{#if data.propositionsPossibles > 0}
 				<form method="POST" action="?/proposer">
 					<input type="hidden" name="perimetre" value={data.perimetreDemande} />
+					<input type="hidden" name="etagement" value={data.assise} />
 					<button class="btn" type="submit"
 						>{'Proposer ' + String(data.propositionsPossibles) + ' relation(s) à confirmer'}</button
 					>
@@ -156,6 +192,26 @@
 				<span class="mod-mesure"><b>{data.nombreDeMentions}</b> mentions</span>
 				<span class="mod-mesure"><b>{data.noeuds.length}</b> notes reliées</span>
 			</div>
+		</div>
+
+		<!-- ── L'ASSISE DE L'ÉTAGEMENT ───────────────────────────────────────────
+			DES LIENS, PAS UN SCRIPT : l'adresse obtenue est partageable, et l'écran
+			continue de marcher script coupé.
+
+			LA PHRASE EST TOUJOURS RENDUE, y compris à zéro mention : « … et les 0
+			mentions » dit que la règle existe, là où une phrase conditionnelle
+			laisserait croire qu'elle change. -->
+		<div class="mod-assise">
+			<span class="mod-assise__choix">
+				<a href={adresseDAssise('tout')} aria-current={data.assise === 'tout' ? 'true' : undefined}
+					>Sur tout ce qui est dessiné</a
+				><a
+					href={adresseDAssise('declarees')}
+					aria-current={data.assise === 'declarees' ? 'true' : undefined}
+					>Sur les seules relations déclarées</a
+				>
+			</span>
+			<p class="mod-assise__phrase">{phraseDeLAssise}</p>
 		</div>
 
 		<!-- ── L'AVIS QUAND LA QUESTION N'A PAS DE SENS ──────────────────────────
@@ -269,6 +325,7 @@
 					<h2>Déclarer une relation</h2>
 					<form method="POST" action="?/declarer">
 						<input type="hidden" name="perimetre" value={data.perimetreDemande} />
+						<input type="hidden" name="etagement" value={data.assise} />
 						<label class="etiq" for="source">De</label>
 						<select id="source" name="source" required>
 							{#each data.notesDuPerimetre as n (n.id)}
@@ -348,6 +405,7 @@
 								de la QUALIFIER, et le type choisi crée la relation déclarée. -->
 							<form method="POST" action="?/declarer">
 								<input type="hidden" name="perimetre" value={data.perimetreDemande} />
+								<input type="hidden" name="etagement" value={data.assise} />
 								<input type="hidden" name="source" value={areteChoisie.de} />
 								<input type="hidden" name="cible" value={areteChoisie.vers} />
 								<label class="etiq" for="type-mention">Qualifier ce lien</label>
@@ -364,6 +422,7 @@
 						{:else}
 							<form method="POST" action="?/changer">
 								<input type="hidden" name="perimetre" value={data.perimetreDemande} />
+								<input type="hidden" name="etagement" value={data.assise} />
 								<input type="hidden" name="relation" value={areteChoisie.id ?? ''} />
 								<label class="etiq" for="type-change">Changer le type</label>
 								<select id="type-change" name="type" required>
@@ -380,17 +439,20 @@
 								{#if areteChoisie.origine === 'ambigue'}
 									<form method="POST" action="?/confirmer">
 										<input type="hidden" name="perimetre" value={data.perimetreDemande} />
+										<input type="hidden" name="etagement" value={data.assise} />
 										<input type="hidden" name="relation" value={areteChoisie.id ?? ''} />
 										<button class="btn btn--principal" type="submit">Confirmer</button>
 									</form>
 									<form method="POST" action="?/rejeter">
 										<input type="hidden" name="perimetre" value={data.perimetreDemande} />
+										<input type="hidden" name="etagement" value={data.assise} />
 										<input type="hidden" name="relation" value={areteChoisie.id ?? ''} />
 										<button class="btn" type="submit">Rejeter</button>
 									</form>
 								{:else}
 									<form method="POST" action="?/retirer">
 										<input type="hidden" name="perimetre" value={data.perimetreDemande} />
+										<input type="hidden" name="etagement" value={data.assise} />
 										<input type="hidden" name="relation" value={areteChoisie.id ?? ''} />
 										<input type="hidden" name="depuis" value={areteChoisie.de} />
 										<button class="btn btn--destructif" type="submit">Retirer</button>
@@ -449,6 +511,7 @@
 							<span class="mod-refus__date">{r.refuseeLe}</span>
 							<form method="POST" action="?/annulerLeRefus">
 								<input type="hidden" name="perimetre" value={data.perimetreDemande} />
+								<input type="hidden" name="etagement" value={data.assise} />
 								<input type="hidden" name="refus" value={r.id} />
 								<button class="btn" type="submit">Annuler ce refus</button>
 							</form>
