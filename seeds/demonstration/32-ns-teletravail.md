@@ -16,6 +16,8 @@ verifie-il-y-a-jours: 520
 
 L'organisation fournit un ordinateur portable, une alimentation et un casque. Elle ne fournit ni écran, ni siège, ni mobilier. La connexion internet du domicile reste à la charge de l'agent.
 
+Cette dotation se demande par le circuit unique de [[n-note-de-service-commande-de-materiel|commande de matériel]] : aucune acquisition directe n'est prise en charge, même présentée comme urgente et même au titre du télétravail.
+
 ## Usages {#s-usages}
 
 Le poste fourni est **à usage professionnel exclusif**. L'usage personnel, même occasionnel, est proscrit : il mélange des données de nature différente sur un équipement que l'organisation doit pouvoir analyser en cas d'incident.
