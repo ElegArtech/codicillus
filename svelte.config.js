@@ -10,7 +10,10 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 const config = {
 	preprocess: vitePreprocess(),
 	kit: {
-		adapter: adapter(),
+		/* La sortie est `build/`, sauf pour la construction INSTRUMENTÉE que
+		   `aiguilles-dans-le-paquet.mjs` fait à part : elle porte des cartes de source
+		   et ne doit surtout pas remplacer le paquet qui part. */
+		adapter: adapter({ out: process.env.AIGUILLES_SORTIE ?? 'build' }),
 		/**
 		 * LES FEUILLES DE STYLE ENTRENT DANS LE DOCUMENT, ELLES NE SE DEMANDENT PLUS.
 		 *
