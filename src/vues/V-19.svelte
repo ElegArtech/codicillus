@@ -111,7 +111,7 @@
 		RETRAIT_DE_LICONE,
 		disposerLaCarte,
 		disposerLeVoisinage,
-		largeurDeLibelle,
+		etiquettesDeRelation,
 		libelleCourt,
 		libelleDuCentre,
 		type CarteDisposee,
@@ -406,13 +406,32 @@
 	};
 
 	/**
-	 * UN TRAIT NE PORTE SON LIBELLÉ QUE S'IL EST ASSEZ LONG POUR LUI. Sur un
-	 * voisinage dense, une douzaine de traits courts empilaient leurs « déduite » au
-	 * même endroit, et le tas se lisait « dédudéduite » — mesuré sur l'instance de
-	 * recette. Un trait trop court se lit à son style, que la légende nomme.
+	 * LES TRAITS QUI PORTENT LEUR LIBELLÉ. Deux raisons de se taire, et elles se
+	 * mesurent toutes les deux : un trait trop court pour son mot, et un mot qui en
+	 * heurterait un autre. Sur un voisinage dense, une douzaine de milieux tombent
+	 * au même endroit et le tas se lit « dédudéduite » — vu sur l'instance de
+	 * recette. Un trait sans mot se lit à son STYLE, que la légende nomme.
 	 */
-	const porteSonLibelle = (a: NoeudPlace, b: NoeudPlace, texte: string): boolean =>
-		Math.hypot(b.x - a.x, b.y - a.y) - a.r - b.r > largeurDeLibelle(texte) * 1.3;
+	const libelleDeCouche = (r: Relation): string =>
+		coucheDArete(r) === 'declarees' ? 'déclarée' : 'déduite';
+
+	const traitsQuiSeNomment = $derived.by<ReadonlySet<string>>(() => {
+		if (!locale) return new Set<string>();
+		return etiquettesDeRelation(
+			graphe.aretes.map((r, rang) => {
+				const a = positionDe(r.de);
+				const b = positionDe(r.vers);
+				const m = milieuDeCourbe(a, b);
+				return {
+					cle: String(rang),
+					x: m.x,
+					y: m.y,
+					texte: libelleDeCouche(r),
+					portee: Math.hypot(b.x - a.x, b.y - a.y) - a.r - b.r
+				};
+			})
+		);
+	});
 
 	/** Le milieu de la courbe — là où se pose le libellé d'une relation. */
 	const milieuDeCourbe = (a: NoeudPlace, b: NoeudPlace): { x: number; y: number } => {
@@ -919,14 +938,13 @@
 								>{#each graphe.aretes as r, rang (rang)}{@const m = milieuDeCourbe(
 										positionDe(r.de),
 										positionDe(r.vers)
-									)}{#if porteSonLibelle(positionDe(r.de), positionDe(r.vers), coucheDArete(r) === 'declarees' ? 'déclarée' : 'déduite')}<text
+									)}{#if traitsQuiSeNomment.has(String(rang))}<text
 											class="arete__etiquette"
 											data-de={r.de}
 											data-vers={r.vers}
 											data-masque={masqueDArete(r) ? 'oui' : 'non'}
 											x={m.x.toFixed(1)}
-											y={m.y.toFixed(1)}
-											>{coucheDArete(r) === 'declarees' ? 'déclarée' : 'déduite'}</text
+											y={m.y.toFixed(1)}>{libelleDeCouche(r)}</text
 										>{/if}{/each}{#each affinitesDuCentre as v (v.note)}<text
 										class="arete__etiquette arete__etiquette--affinite"
 										x={((positionDe(centreValide ?? '').x + positionDe(v.note).x) / 2).toFixed(1)}

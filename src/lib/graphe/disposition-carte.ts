@@ -51,6 +51,8 @@ import {
 	REPERE_MARGE,
 	TEINTES_DE_FAMILLE,
 	TEINTE_DES_ISOLEES,
+	T_ARETE,
+	T_CENTRE,
 	T_FAMILLE,
 	T_FAMILLE_COMPTE,
 	T_NOEUD
@@ -205,8 +207,59 @@ export interface OptionsDeCarte {
  * grand titre de l'écran le porte en toutes lettres.
  */
 export function libelleDuCentre(titre: string, rayon: number): string {
-	const tenables = Math.max(4, Math.floor((rayon * 1.85) / LARGEUR_DE_CARACTERE));
+	/* LA LARGEUR D'UN CARACTÈRE EST CALIBRÉE SUR LA POLICE DES NŒUDS ; celle du
+	   centre est plus grosse, et l'oublier laissait treize caractères là où onze
+	   tiennent. La corde utile est presque le diamètre entier : le texte est posé à
+	   mi-hauteur, là où le disque est le plus large. */
+	const largeurDUnCaractere = LARGEUR_DE_CARACTERE * (T_CENTRE / T_NOEUD);
+	const tenables = Math.max(4, Math.floor((rayon * 1.95) / largeurDUnCaractere));
 	return titre.length > tenables ? titre.slice(0, tenables - 1).trimEnd() + '…' : titre;
+}
+
+/* ── LES LIBELLÉS DE RELATION ──────────────────────────────────────────────
+   Ils ne sont écrits que dans le voisinage, au milieu de leur trait. Sur un
+   corpus dense, une douzaine de milieux tombent au même endroit et le tas se lit
+   « dédudéduite » — vu sur l'instance de recette. La règle est celle des libellés
+   de nœud : le premier arrivé garde sa place, celui qui la heurte est tu. Un
+   trait sans mot se lit à son STYLE, que la légende nomme. */
+
+/** Un libellé de relation, candidat à l'écriture. */
+export interface EtiquetteDeRelation {
+	readonly cle: string;
+	readonly x: number;
+	readonly y: number;
+	readonly texte: string;
+	/** La longueur du trait, extrémités déduites — un trait court n'écrit rien. */
+	readonly portee: number;
+}
+
+/** Ce qu'un trait doit mesurer, en proportion de son libellé, pour le porter. */
+const PORTEE_MINIMALE = 1.3;
+
+/**
+ * LES LIBELLÉS DE RELATION QUI S'ÉCRIVENT. L'ordre des candidats décide de qui
+ * garde sa place : il est pris tel que l'appelant le donne, c'est-à-dire l'ordre
+ * des arêtes du graphe — déterministe, donc le même à chaque ouverture.
+ */
+export function etiquettesDeRelation(
+	candidats: readonly EtiquetteDeRelation[]
+): ReadonlySet<string> {
+	const prises: Boite[] = [];
+	const retenus: string[] = [];
+	for (const c of candidats) {
+		const largeur = largeurDeLibelle(c.texte) * (T_ARETE / T_NOEUD);
+		if (c.portee < largeur * PORTEE_MINIMALE) continue;
+		const boite = {
+			x1: c.x - largeur / 2,
+			y1: c.y - HAUTEUR_DETIQUETTE / 2,
+			x2: c.x + largeur / 2,
+			y2: c.y + HAUTEUR_DETIQUETTE / 2
+		};
+		if (prises.some((prise) => seHeurtent(prise, boite))) continue;
+		prises.push(boite);
+		retenus.push(c.cle);
+	}
+	return new Set(retenus);
 }
 
 /** Le titre d'un nœud, coupé s'il est trop long — le titre entier reste au survol. */

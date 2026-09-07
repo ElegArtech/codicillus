@@ -22,6 +22,7 @@ import {
 	NOM_DES_ISOLEES,
 	disposerLaCarte,
 	disposerLeVoisinage,
+	etiquettesDeRelation,
 	largeurDeLibelle,
 	libelleCourt,
 	libelleDuCentre,
@@ -336,6 +337,22 @@ describe('la disposition de la carte', () => {
 			expect(autre?.x).toBeCloseTo(place.x, 6);
 			expect(autre?.y).toBeCloseTo(place.y, 6);
 		}
+	});
+
+	it("ne nomme un trait que s'il est long et que la place est libre", () => {
+		/**
+		 * DEUX RAISONS DE SE TAIRE, ET ELLES SE MESURENT. Un trait plus court que son
+		 * mot ne peut pas le porter ; un mot qui en heurterait un autre est tu. Sur
+		 * l'instance de recette, une douzaine de milieux tombaient au même endroit et
+		 * le tas se lisait « dédudéduite ».
+		 */
+		const ecrits = etiquettesDeRelation([
+			{ cle: 'long-libre', x: 0, y: 0, texte: 'déclarée', portee: 400 },
+			{ cle: 'long-heurte', x: 8, y: 4, texte: 'déclarée', portee: 400 },
+			{ cle: 'court', x: 900, y: 900, texte: 'déclarée', portee: 12 },
+			{ cle: 'long-ailleurs', x: 900, y: 0, texte: 'déduite', portee: 400 }
+		]);
+		expect([...ecrits].sort()).toEqual(['long-ailleurs', 'long-libre']);
 	});
 
 	it('coupe le titre du centre à ce que son disque porte', () => {
