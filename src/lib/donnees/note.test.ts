@@ -169,18 +169,31 @@ describe('les rétroliens — déduits du parcours des corps, RG-M05-02', () => 
 
 	it('retient les notes qui citent la cible, dans l’ordre de la requête', () => {
 		const retroliens = retroliensVers('n-a', [
-			{ identifiant: 'n-b', titre: 'B', reference: cite('n-a'), operationnel: null },
-			{ identifiant: 'n-c', titre: 'C', reference: corpsDepuisTexte('rien'), operationnel: null },
+			{
+				identifiant: 'n-b',
+				titre: 'B',
+				domaine: 'Domaine',
+				reference: cite('n-a'),
+				operationnel: null
+			},
+			{
+				identifiant: 'n-c',
+				titre: 'C',
+				domaine: 'Domaine',
+				reference: corpsDepuisTexte('rien'),
+				operationnel: null
+			},
 			{
 				identifiant: 'n-d',
 				titre: 'D',
+				domaine: 'Domaine',
 				reference: corpsDepuisTexte('rien'),
 				operationnel: cite('n-a')
 			}
 		]);
 		expect(retroliens).toEqual([
-			{ identifiant: 'n-b', titre: 'B', adresse: '/notes/n-b' },
-			{ identifiant: 'n-d', titre: 'D', adresse: '/notes/n-d' }
+			{ identifiant: 'n-b', titre: 'B', domaine: 'Domaine', adresse: '/notes/n-b' },
+			{ identifiant: 'n-d', titre: 'D', domaine: 'Domaine', adresse: '/notes/n-d' }
 		]);
 	});
 
@@ -189,6 +202,7 @@ describe('les rétroliens — déduits du parcours des corps, RG-M05-02', () => 
 			{
 				identifiant: 'n-d',
 				titre: 'D',
+				domaine: 'Domaine',
 				reference: corpsDepuisTexte('rien'),
 				operationnel: cite('n-a')
 			}
@@ -199,7 +213,13 @@ describe('les rétroliens — déduits du parcours des corps, RG-M05-02', () => 
 	it('une note qui se cite elle-même n’est pas son propre rétrolien', () => {
 		expect(
 			retroliensVers('n-a', [
-				{ identifiant: 'n-a', titre: 'A', reference: cite('n-a'), operationnel: null }
+				{
+					identifiant: 'n-a',
+					titre: 'A',
+					domaine: 'Domaine',
+					reference: cite('n-a'),
+					operationnel: null
+				}
 			])
 		).toEqual([]);
 	});
@@ -207,7 +227,13 @@ describe('les rétroliens — déduits du parcours des corps, RG-M05-02', () => 
 	it('un corps sans lien ne rend aucun rétrolien, et n’en invente pas', () => {
 		expect(
 			retroliensVers('n-a', [
-				{ identifiant: 'n-b', titre: 'B', reference: corpsDepuisTexte('rien'), operationnel: null }
+				{
+					identifiant: 'n-b',
+					titre: 'B',
+					domaine: 'Domaine',
+					reference: corpsDepuisTexte('rien'),
+					operationnel: null
+				}
 			])
 		).toEqual([]);
 	});
