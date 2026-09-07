@@ -22,16 +22,26 @@
  *      inaperçu sur un jeu déjà trié.
  *   3. LA LECTURE DE LA SAISIE. Les deux champs sont obligatoires, et le refus
  *      porte un motif. Les deux polarités sont jouées.
+ *   4. LA MÉMOIRE DES REFUS, pour ce qu'elle a de contrôlable sans base : la clé
+ *      d'un triplet, qui est pure, et les trois comptes du relevé, lus sur le
+ *      chemin qui n'interroge RIEN. Le cinquième contrôle emploie une base
+ *      feinte locale — l'atomicité d'une transaction ne s'extrait pas.
  */
+import { getTableName } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import {
 	GLOSE_DE_L_ORIGINE,
 	MOT_DE_L_ORIGINE,
+	cleDeTriplet,
 	grouperLesRelations,
 	libelleDOrigine,
 	lireLaSaisieDeRelation,
+	proposerLesRelations,
+	rejeterUneRelation,
 	type RelationDeLaNote
 } from './relations';
+import type { Base } from '../base/acces';
+import { identiteAuthentifiee } from '../droits/resolution';
 import type { OrigineDeRelation } from './outils';
 
 /** Une relation de forme minimale — seul le libellé décide du groupement. */
@@ -128,5 +138,154 @@ describe('la lecture de la saisie', () => {
 		const lue = lireLaSaisieDeRelation(formulaire({ type: 'heberge' }));
 		expect(lue.ok).toBe(false);
 		expect(lue.ok ? '' : lue.motif).toMatch(/note/);
+	});
+});
+
+/* ═══════════════════════ LA MÉMOIRE DES REFUS — C9 ═══════════════════════ */
+
+describe('la clé d’un triplet', () => {
+	it('ne dépend pas de l’ordre des colonnes, et distingue le sens', () => {
+		expect(cleDeTriplet('a', 'b', 'depend-de')).toBe(cleDeTriplet('a', 'b', 'depend-de'));
+		/* LE TYPE EN FAIT PARTIE : refuser « a dépend de b » ne dit rien de
+		   « a documente b ». */
+		expect(cleDeTriplet('a', 'b', 'depend-de')).not.toBe(cleDeTriplet('a', 'b', 'documente'));
+		/* LE SENS EN FAIT PARTIE : refuser « a → b » ne dit rien de « b → a ». */
+		expect(cleDeTriplet('a', 'b', 'depend-de')).not.toBe(cleDeTriplet('b', 'a', 'depend-de'));
+	});
+});
+
+describe('le relevé des propositions', () => {
+	/**
+	 * AUCUNE REQUÊTE N'EST FAITE SUR UN LOT VIDE, et cette base le prouve : elle
+	 * lève au premier appel. Le contrôle porte donc sur le seul chemin du relevé
+	 * qui ne parle pas à PostgreSQL, et il y lit les trois comptes séparément.
+	 */
+	const BASE_QUI_LEVE = new Proxy(
+		{},
+		{
+			get() {
+				throw new Error('aucune requête ne doit partir sur un lot vide');
+			}
+		}
+	) as unknown as Base;
+
+	it('distingue les écartées des refusées, et les trois comptes se lisent à part', async () => {
+		const releve = await proposerLesRelations(BASE_QUI_LEVE, {
+			identite: identiteAuthentifiee('compte-1', 'administrateur'),
+			propositions: []
+		});
+		expect(releve.posees).toBe(0);
+		expect(releve.ecartees).toBe(0);
+		expect(releve.refusees).toBe(0);
+		/* Les trois clés, et rien d'autre : un relevé qui gagnerait un compte sans
+		   que la vue l'apprenne dirait moins que ce qu'il sait. */
+		expect(Object.keys(releve).sort()).toEqual(['ecartees', 'posees', 'refusees']);
+	});
+});
+
+/** Une clé de la forme que `FORME_DE_CLE` exige — sinon la porte refuse avant tout. */
+const RELATION = '11111111-2222-4333-8444-555555555555';
+
+/**
+ * UNE BASE FEINTE, TRANSACTIONNELLE, ET QUI SAIT ÉCHOUER EN COURS — le motif
+ * d'`administration.test.ts`. Elle n'imite pas PostgreSQL et ne prétend pas le
+ * faire : ce qu'elle établit, c'est que les DEUX écritures du rejet partent DANS
+ * le corps de la transaction, la suppression d'abord, et que la première est
+ * annulée quand la seconde échoue.
+ */
+function baseFeinte(options: { readonly echouerALInsertion?: boolean } = {}) {
+	const journal: string[] = [];
+	let dansLaTransaction = false;
+
+	/* Ce que les lectures rendent, dans l'ordre où elles partent : la relation
+	   visée, puis l'arbre des dossiers et les droits explicites — deux fois, une
+	   par extrémité (`lireIndexDesDroits()`). */
+	const files: unknown[][] = [
+		[
+			{
+				cle: RELATION,
+				origine: 'ambigue',
+				sourceDossier: 'dossier-a',
+				cibleDossier: 'dossier-b',
+				sourceTitre: 'A',
+				cibleTitre: 'B',
+				sourceId: 'note-a',
+				cibleId: 'note-b',
+				typeDeRelationId: 'type-1'
+			}
+		],
+		[],
+		[],
+		[],
+		[]
+	];
+	let rang = 0;
+
+	const base = {
+		select: () => base,
+		from: () => base,
+		innerJoin: () => base,
+		where: () => base,
+		limit: () => base,
+		then: (suite: (valeur: unknown) => void) => {
+			suite(files[rang++] ?? []);
+		},
+		delete: (table: Parameters<typeof getTableName>[0]) => ({
+			where: async () => {
+				journal.push(`${dansLaTransaction ? 'tx' : 'hors-tx'}:delete ${getTableName(table)}`);
+				return [];
+			}
+		}),
+		insert: (table: Parameters<typeof getTableName>[0]) => ({
+			values: () => ({
+				onConflictDoNothing: async () => {
+					journal.push(`${dansLaTransaction ? 'tx' : 'hors-tx'}:insert ${getTableName(table)}`);
+					if (options.echouerALInsertion) throw new Error('échec simulé sur le refus');
+					return [];
+				}
+			})
+		}),
+		async transaction(corps: (tx: unknown) => Promise<void>) {
+			dansLaTransaction = true;
+			try {
+				await corps(base);
+			} finally {
+				dansLaTransaction = false;
+			}
+		}
+	};
+
+	return { base: base as unknown as Base, journal };
+}
+
+describe('le rejet écrit le refus dans la MÊME transaction', () => {
+	it('émet la suppression puis l’insertion, les deux dans la transaction', async () => {
+		const feinte = baseFeinte();
+
+		const resultat = await rejeterUneRelation(feinte.base, {
+			identite: identiteAuthentifiee('compte-1', 'administrateur'),
+			relation: RELATION
+		});
+
+		expect(resultat.trouve).toBe(true);
+		/* L'ORDRE N'EST PAS UNE PRÉFÉRENCE : la ligne disparaît, puis le refus la
+		   remplace. Écrit hors transaction, l'un des deux survivrait à l'autre. */
+		expect(feinte.journal).toEqual(['tx:delete relations', 'tx:insert propositions_refusees']);
+	});
+
+	it('ANNULE la suppression quand l’écriture du refus échoue', async () => {
+		const feinte = baseFeinte({ echouerALInsertion: true });
+
+		await expect(
+			rejeterUneRelation(feinte.base, {
+				identite: identiteAuthentifiee('compte-1', 'administrateur'),
+				relation: RELATION
+			})
+		).rejects.toThrow('échec simulé');
+
+		/* LE CŒUR DE LA POLARITÉ INVERSE : la suppression est partie, et c'est la
+		   transaction qui la reprend. Une relation supprimée sans refus écrit ferait
+		   revenir la proposition au clic suivant, sans que rien ne le dise. */
+		expect(feinte.journal).toEqual(['tx:delete relations', 'tx:insert propositions_refusees']);
 	});
 });

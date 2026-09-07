@@ -198,6 +198,50 @@
 	grid-column: 1 / -1;
 }
 
+/* ── LES PROPOSITIONS REFUSÉES ─────────────────────────────────────────────
+   Le bloc traverse les deux colonnes : il est la mémoire de l'écran, pas un
+   détail du panneau, et il doit rester lisible quand le dessin est vide. */
+.mod-refuses {
+	grid-column: 1 / -1;
+}
+
+.mod-refuses__phrase {
+	margin: 0 0 var(--e-2);
+	font-size: var(--t-mini);
+	color: var(--c-encre-2);
+}
+
+.mod-refus {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--e-2);
+}
+
+.mod-refus li {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--e-2);
+	font-size: var(--t-mini);
+	padding-top: var(--e-2);
+	border-top: 1px solid var(--c-trait);
+}
+
+.mod-refus form {
+	margin: 0 0 0 auto;
+}
+
+.mod-refus__type {
+	color: var(--c-encre-2);
+}
+
+.mod-refus__date {
+	color: var(--c-encre-2);
+}
+
 /* ── L'ALTERNATIVE TEXTUELLE ───────────────────────────────────────────────
    `P-06` : tout contenu graphique porte sa restitution. Elle n'est pas cachée à
    la machine — elle est repliée, et s'ouvre d'un geste. */
