@@ -235,6 +235,14 @@
 			<p class="mod-message" role="alert">{form.message}</p>
 		{/if}
 
+		<!-- ── CE QUE « PROPOSER » A ÉCARTÉ ──────────────────────────────────────
+			Un fait, pas un refus : le geste a abouti, et il n'a pas tout posé. Le
+			bouton annonce un nombre ; quand l'écriture en pose moins, se taire fait
+			mentir le bouton. `role="status"` et non `alert` — rien n'a échoué. -->
+		{#if data.avisDeProposition !== null}
+			<p class="mod-message mod-message--avis" role="status">{data.avisDeProposition}</p>
+		{/if}
+
 		{#if data.noeuds.length === 0}
 			<p class="mod-vide">
 				Aucune note reliée dans ce périmètre. Une note n'apparaît ici que lorsqu'une relation

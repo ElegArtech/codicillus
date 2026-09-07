@@ -38,6 +38,18 @@
  * ELLE S'EXPLIQUE EN UNE PHRASE, et la porte : « d'après 7 relations déjà déclarées
  * entre Serveur et Application ». Une proposition qu'on ne peut pas contester est une
  * proposition qu'on ne peut pas refuser en connaissance de cause.
+ *
+ * ELLE SE TAIT AUSSI QUAND DEUX NOTES SE CITENT L'UNE L'AUTRE. `usagesParCouple()` se
+ * tait déjà sur une égalité de TYPES, et une citation mutuelle est la même égalité,
+ * portée sur le SENS : le corpus dit « ces deux notes se citent », il ne dit pas
+ * laquelle dépend de l'autre. Retenir l'un des deux sens — le premier venu, le premier
+ * dans l'ordre lexical — serait un tirage au sort présenté par un écran qui dit « à
+ * confirmer », donc un tirage au sort qui passerait pour un raisonnement.
+ *
+ * C'ÉTAIT UN DÉFAUT VISIBLE. Une paire mutuelle produisait DEUX propositions sur la
+ * même paire non orientée ; le bouton en annonçait deux, l'écriture en écartait une
+ * sur la règle « la paire est déjà reliée », et le compte annoncé n'était pas celui
+ * qui se posait.
  */
 import type { Note } from '../../../seeds/corpus';
 import { typeCarto } from './cartographie';
@@ -55,6 +67,15 @@ const SUPPORT_MINIMAL = 2;
 /** La clé d'un couple de types, ORIENTÉE : source puis cible, jamais l'inverse. */
 function cleDeCouple(source: string, cible: string): string {
 	return source + ' → ' + cible;
+}
+
+/**
+ * LE SENS D'UNE CITATION, ORIENTÉ — sur les IDENTIFIANTS de note, pas sur leurs
+ * types. Elle sert à reconnaître la citation qui revient : `sensDeCitation(b, a)`
+ * présent en même temps que `sensDeCitation(a, b)`, c'est une paire mutuelle.
+ */
+function sensDeCitation(de: string, vers: string): string {
+	return de + ' → ' + vers;
 }
 
 export interface Proposition {
@@ -131,6 +152,9 @@ export function usagesParCouple(
  * « A dépend de B » ne dit rien de « A documente B », et bascule donc la proposition si
  * l'usage du corpus change de type.
  *
+ * DEUX NOTES QUI SE CITENT L'UNE L'AUTRE NE DONNENT RIEN — ni dans un sens, ni dans
+ * l'autre. Voir l'en-tête : c'est l'égalité de `usagesParCouple()`, portée sur le sens.
+ *
  * @param refuses LES TRIPLETS DÉJÀ REFUSÉS, en clés de `cleDeTriplet()` bâties sur les
  *   IDENTIFIANTS de note — les mêmes que `Note.id` et que les deux bouts d'une mention.
  *   Il est EXIGÉ, sans défaut : un appelant qui l'oublierait reproposerait ce qu'on
@@ -148,7 +172,12 @@ export function propositionsDeMention(
 	const typeParNote = new Map(notes.map((n) => [n.id, typeCarto(n)] as const));
 	const proposees: Proposition[] = [];
 
+	/* LES SENS QUE LES CORPS ÉCRIVENT, tels quels. Une paire est mutuelle quand les
+	   deux sens y sont, et elle ne donne alors aucune proposition. */
+	const sensCites = new Set(mentions.map((m) => sensDeCitation(m.de, m.vers)));
+
 	for (const mention of mentions) {
+		if (sensCites.has(sensDeCitation(mention.vers, mention.de))) continue;
 		const source = typeParNote.get(mention.de);
 		const cible = typeParNote.get(mention.vers);
 		if (source === undefined || cible === undefined) continue;
