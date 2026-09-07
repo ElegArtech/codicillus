@@ -27,6 +27,7 @@ import {
 	typesDeFiche,
 	typesDeNote,
 	typesDeRelation,
+	tracesDeSuppression,
 	univers,
 	verifications,
 	CONFIGURATION_PAR_DEFAUT
@@ -181,6 +182,24 @@ export async function peupler(
 		   (`on delete set null`) ; le compte, lui, reste. */
 		await tx.execute(sql`delete from ${domaines}`);
 		await tx.execute(sql`delete from ${univers}`);
+
+		/**
+		 * LES TRACES DE SUPPRESSION PARTENT AVEC LE CONTENU QU'ELLES DÉCRIVENT, ET AVANT LES
+		 * COMPTES. Cette commande REMPLACE le contenu : une trace qui survit parle d'une note
+		 * détruite dans une instance qui n'existe plus. Et le rang est contraint —
+		 * `traces_de_suppression.auteur_id` est `not null references comptes on delete
+		 * RESTRICT`, donc supprimer un compte du jeu qui a tracé une destruction est REFUSÉ
+		 * tant que sa trace est là. Mesuré : sur une instance où une note avait été supprimée
+		 * depuis l'écran de lecture, `pnpm base:peupler` sortait en « violates RESTRICT
+		 * setting of foreign key constraint traces_de_suppression_auteur_id_fkey » — une
+		 * instance sur laquelle on avait détruit quoi que ce soit ne se repeuplait plus.
+		 *
+		 * LA CLÉ ÉTRANGÈRE RESTE EN `RESTRICT`, ET CE N'EST PAS ELLE LE DÉFAUT (migration
+		 * `013`) : une trace qui perd son auteur cesse d'être une attribution, donc cesse de
+		 * tenir `RG-NF-05`. Un `set null` ferait taire le problème en cassant la règle. C'est
+		 * l'ORDRE des suppressions du semeur qui était faux, et c'est lui qu'on corrige.
+		 */
+		await tx.execute(sql`delete from ${tracesDeSuppression}`);
 
 		/* Les comptes du JEU seulement, désignés un à un. Tout autre compte —
 		   celui d'un administrateur réel — n'est pas touché. */
