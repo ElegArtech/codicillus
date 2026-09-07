@@ -59,6 +59,7 @@ import {
 	resoudre,
 	resoudreDroitDeDossier,
 	type Identite,
+	type IndexDesDroits,
 	type Perimetre,
 	type Resolution
 } from '../droits/resolution';
@@ -1404,12 +1405,26 @@ export async function compteExiste(base: Base, compteId: string): Promise<boolea
  * La capacité d'écrire sur un dossier — aucune règle écrite ici :
  * `resoudreDroitDeDossier()` remonte l'arbre, `capacites()` répond par la table
  * de CDC §2.3.
+ *
+ * L'INDEX EST DONNÉ, IL N'EST PAS RELU. Un appelant qui juge N dossiers lit
+ * l'index UNE fois et appelle N fois cette fonction : la variante qui lisait
+ * elle-même l'index faisait 299 allers-retours à la base pour dresser la liste
+ * des cibles de relation d'une note — 342 ms mesurés sur l'instance de recette,
+ * pour une réponse que l'index unique donne sans requête.
  */
+export function peutEcrireSurLeDossierSelon(
+	identite: Identite,
+	dossierId: string,
+	index: IndexDesDroits
+): boolean {
+	return capacites(resoudreDroitDeDossier(identite, dossierId, index)).ecrireDesNotes;
+}
+
+/** La même question pour UN dossier, quand l'appelant n'a pas d'index sous la main. */
 export async function peutEcrireSurLeDossier(
 	base: Base,
 	identite: Identite,
 	dossierId: string
 ): Promise<boolean> {
-	const index = await lireIndexDesDroits(base, identite);
-	return capacites(resoudreDroitDeDossier(identite, dossierId, index)).ecrireDesNotes;
+	return peutEcrireSurLeDossierSelon(identite, dossierId, await lireIndexDesDroits(base, identite));
 }

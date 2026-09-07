@@ -32,7 +32,8 @@ import { auteurDeLaSuppression, tracerUneSuppression } from './traces';
 import type { Base } from '../base/acces';
 import { domaines, notes, relations, typesDeNote, typesDeRelation } from '../base/schema';
 import { INTROUVABLE, type Identite, type Resolution } from '../droits/resolution';
-import { peutEcrireSurLeDossier } from './edition';
+import { peutEcrireSurLeDossier, peutEcrireSurLeDossierSelon } from './edition';
+import { lireIndexDesDroits, parmiLesIdentifiants } from './note';
 import type { OrigineDeRelation } from './outils';
 
 /**
@@ -236,13 +237,21 @@ export async function lireLesCiblesPossibles(
 		.from(notes)
 		.innerJoin(typesDeNote, eq(notes.typeDeNoteId, typesDeNote.id))
 		.innerJoin(domaines, eq(notes.domaineId, domaines.id))
-		.where(inArray(notes.identifiant, visables))
+		.where(parmiLesIdentifiants(visables))
 		.orderBy(notes.titre);
+
+	/* L'INDEX DES DROITS EST LU UNE FOIS, POUR TOUTES LES CANDIDATES. Il l'était une
+	   fois PAR candidate : deux requêtes — l'arbre des dossiers, puis les droits du
+	   compte — pour chacune des 299 notes du corpus, soit 598 allers-retours à la
+	   base dont la journalisation de PostgreSQL a mesuré 342 ms sur l'ouverture d'une
+	   note de l'instance de recette. La règle, elle, ne bouge pas : c'est toujours
+	   `resoudreDroitDeDossier()` puis `capacites()`, par la fonction qui les compose. */
+	const index = await lireIndexDesDroits(base, identite);
 
 	const retenues: NoteAuBout[] = [];
 	for (const c of candidates) {
 		if (c.dossierId === null) continue;
-		if (!(await peutEcrireSurLeDossier(base, identite, c.dossierId))) continue;
+		if (!peutEcrireSurLeDossierSelon(identite, c.dossierId, index)) continue;
 		retenues.push({
 			identifiant: c.identifiant,
 			titre: c.titre,

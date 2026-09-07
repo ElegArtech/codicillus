@@ -463,6 +463,13 @@ export const notes = pgTable(
 		corpsReference: jsonb('corps_reference').notNull(),
 		/** RG-NOT-02 — optionnel, et ne peut exister sans Référence. */
 		corpsOperationnel: jsonb('corps_operationnel'),
+		/**
+		 * LES CIBLES DES LIENS INTERNES DES DEUX REGISTRES — colonne GÉNÉRÉE par la
+		 * base (migration `015`), jamais écrite par le produit. `RG-M05-02` veut le
+		 * rétrolien déduit du parcours de l'arbre : l'expression qui la remplit EST ce
+		 * parcours, dit en JSONPath. Elle se lit, elle ne se pose pas.
+		 */
+		liensInternes: jsonb('liens_internes'),
 		typeDeNoteId: uuid('type_de_note_id')
 			.notNull()
 			.references(() => typesDeNote.id, { onDelete: 'restrict' }),
