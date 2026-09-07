@@ -50,7 +50,7 @@ import {
 	rejeterUneRelation,
 	retirerUneRelation
 } from '$lib/donnees/relations';
-import type { PropositionRefusee } from '$lib/donnees/relations';
+import type { PropositionRefusee, ReleveDesPropositions } from '$lib/donnees/relations';
 import { lireLeGraphe } from '../cartographie/lecture-du-graphe';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -91,6 +91,48 @@ function tripletsRefuses(refuses: readonly PropositionRefusee[]): ReadonlySet<st
  */
 function assiseDeLAdresse(demandee: string | null): AssiseDeLEtagement {
 	return demandee === 'declarees' ? 'declarees' : 'tout';
+}
+
+/**
+ * UN COMPTE LU DANS L'ADRESSE. Quatre chiffres au plus, rien d'autre : le message
+ * ci-dessous est composé ICI, à partir de nombres, jamais d'un texte que l'adresse
+ * porterait — une phrase forgée dans une adresse est une phrase que le produit
+ * n'a pas écrite et qu'il afficherait quand même.
+ */
+function compteDeLAdresse(params: URLSearchParams, nom: string): number | null {
+	const brut = params.get(nom);
+	if (brut === null || !/^\d{1,4}$/.test(brut)) return null;
+	return Number(brut);
+}
+
+/**
+ * CE QUE « PROPOSER » A POSÉ, ET CE QU'ELLE A ÉCARTÉ — en toutes lettres.
+ *
+ * LE BOUTON ANNONCE UN NOMBRE. Quand l'écriture en pose moins — la paire est déjà
+ * reliée, le type a disparu du référentiel, le droit manque sur une extrémité, le
+ * lien a déjà été refusé —, l'écran doit le DIRE. Un bouton qui annonce trois et en
+ * pose deux sans un mot est un bouton qui ment ; c'est le défaut qu'on répare, et il
+ * ne doit pas revenir par une autre porte.
+ *
+ * LE RELEVÉ VOYAGE DANS L'ADRESSE, PAS DANS UNE RÉPONSE D'ACTION, et c'est ce qui
+ * permet à `?/proposer` de garder sa redirection. Une action qui rend un objet fait
+ * rendre la page à l'adresse de l'action — la forme avec une barre oblique —, et le
+ * périmètre choisi serait perdu au moment même où l'on veut le montrer.
+ */
+function avisDeProposition(params: URLSearchParams): string | null {
+	const posees = compteDeLAdresse(params, 'posees');
+	const ecartees = compteDeLAdresse(params, 'ecartees');
+	const refusees = compteDeLAdresse(params, 'refusees');
+	if (posees === null || ecartees === null || refusees === null) return null;
+	if (ecartees === 0) return null;
+	return (
+		String(posees) +
+		' relation(s) posée(s), ' +
+		String(ecartees) +
+		' écartée(s)' +
+		(refusees > 0 ? ', dont ' + String(refusees) + ' déjà refusée(s)' : '') +
+		' : la paire est déjà reliée, le lien a été refusé, ou le droit manque sur une extrémité.'
+	);
 }
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -187,6 +229,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		propositionsPossibles: propositionsDeMention(notes, aretes, mentions, tripletsRefuses(refuses))
 			.length,
 		/**
+		 * CE QUE LE DERNIER « Proposer » A ÉCARTÉ, quand il a écarté quelque chose.
+		 * `null` le reste du temps — et c'est le cas nominal, celui où le bouton a
+		 * tenu son compte.
+		 */
+		avisDeProposition: avisDeProposition(url.searchParams),
+		/**
 		 * LES PROPOSITIONS REFUSÉES, prêtes à lire — titres et libellé de type compris,
 		 * pour que la vue n'ait rien à résoudre. Elles sont bornées au périmètre
 		 * LISIBLE de l'appelant, comme les relations.
@@ -233,8 +281,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
  * type, un retrait ou un rejet, l'arête désignée n'est plus celle qu'on regardait —
  * elle a changé de clé, ou elle n'existe plus. Rouvrir un panneau sur une arête morte
  * afficherait un panneau vide sans dire pourquoi.
+ *
+ * LE RELEVÉ D'UNE PROPOSITION S'Y AJOUTE quand il a quelque chose à dire — voir
+ * `avisDeProposition()`. C'est ce qui permet à `?/proposer` de garder sa redirection
+ * tout en portant son message.
  */
-function retour(perimetre: string | null, assise: AssiseDeLEtagement): string {
+function retour(
+	perimetre: string | null,
+	assise: AssiseDeLEtagement,
+	releve?: ReleveDesPropositions
+): string {
 	const morceaux: string[] = [];
 	if (perimetre !== null && perimetre !== '') {
 		morceaux.push('perimetre=' + encodeURIComponent(perimetre));
@@ -242,6 +298,13 @@ function retour(perimetre: string | null, assise: AssiseDeLEtagement): string {
 	/* SEULE LA VALEUR NON NOMINALE VOYAGE : `tout` est ce que l'adresse nue rend, et
 	   l'écrire allongerait chaque adresse sans rien dire de plus. */
 	if (assise === 'declarees') morceaux.push('etagement=declarees');
+	/* RIEN N'EST ÉCARTÉ, RIEN N'EST DIT : le geste a fait exactement ce que le bouton
+	   annonçait, et une adresse chargée de trois comptes ne l'apprendrait à personne. */
+	if (releve !== undefined && releve.ecartees > 0) {
+		morceaux.push('posees=' + String(releve.posees));
+		morceaux.push('ecartees=' + String(releve.ecartees));
+		morceaux.push('refusees=' + String(releve.refusees));
+	}
 	return morceaux.length === 0 ? '/modelisation' : '/modelisation?' + morceaux.join('&');
 }
 
@@ -388,7 +451,9 @@ export const actions: Actions = {
 					' refusée(s) : la paire est déjà reliée, le lien a été refusé, ou le droit manque sur une extrémité'
 			});
 		}
-		redirect(303, retour(perimetreDemande, assiseDuFormulaire(donnees)));
+		/* LE RELEVÉ SUIT LA REDIRECTION. Le bouton a annoncé un nombre ; s'il en pose
+		   moins, l'écran le dit. Se taire ici est le défaut qu'on répare. */
+		redirect(303, retour(perimetreDemande, assiseDuFormulaire(donnees), releve));
 	},
 
 	/**
