@@ -155,9 +155,17 @@ bon, table renommée en base pour faire lever une lecture, serveur ralenti à 1,
 ## L'instance de recette
 
 Elle tourne sur un VPS, derrière un tunnel — l'accès et l'exploitation sont décrits dans
-`codicillus-vpn/ACCES.md`, hors dépôt. **Au 5 septembre elle porte la refonte de l'interface**,
-ses migrations sont appliquées jusqu'à `014`, son index est reconstruit sur ses **300 notes
+`codicillus-vpn/ACCES.md`, hors dépôt. **Au 7 septembre elle porte les migrations jusqu'à `017`**, son index est reconstruit sur ses **300 notes
 réelles**, treize univers et un compte.
+
+**Le déploiement du 7 septembre.** Sauvegarde `20260907-134913` prise et RELUE juste avant —
+28 tables, 48 fichiers, sortie 0 —, puis `rsync`, `docker compose up -d --build`, et les
+migrations `016` et `017` par le conteneur outil. Après : **300 notes intactes**, 21 domaines,
+13 univers, `modelisation` = 21 = `cartographie` — la reprise n'a rien fait disparaître —,
+`propositions_refusees` posée et vide, six services `healthy`. Vérifié dans un navigateur par le
+tunnel : l'entrée de rail et la tuile EXPLORER mènent à `/modelisation`, et le domaine `Articles`
+y rend **245 mentions sur 97 notes reliées** — les 245 liens « Voir aussi » des chroniques
+Substack, dessinés pour la première fois. Zéro erreur de console.
 
 La migration `014` — un cycle de vivacité par registre — a été passée sur ces données réelles.
 Elle est purement additive : deux colonnes de validité prenant leur défaut, une date de
