@@ -198,6 +198,24 @@
 	grid-column: 1 / -1;
 }
 
+/* ── L'AVIS ────────────────────────────────────────────────────────────────
+   IL N'EST PAS UNE ALERTE : rien n'a échoué, une question n'a simplement pas
+   encore de réponse. Le liseré est celui de l'attention, pas celui du refus. */
+.mod-avis {
+	grid-column: 1 / -1;
+	border: 1px solid var(--c-trait-fort);
+	border-left-width: 3px;
+	border-radius: var(--r-2);
+	padding: var(--e-2) var(--e-3);
+	font-size: var(--t-mini);
+	color: var(--c-encre-2);
+	margin: 0;
+}
+
+.mod-avis b {
+	color: var(--c-encre);
+}
+
 /* ── LES PROPOSITIONS REFUSÉES ─────────────────────────────────────────────
    Le bloc traverse les deux colonnes : il est la mémoire de l'écran, pas un
    détail du panneau, et il doit rester lisible quand le dessin est vide. */
@@ -258,8 +276,12 @@
 	line-height: 1.7;
 }
 
+/* L'ÉTAT VIDE OCCUPE LA COLONNE DU DESSIN, jamais la largeur entière : le
+   panneau qui porte « Déclarer une relation » reste à côté, et c'est lui qui
+   fait sortir de cet état. */
 .mod-vide {
-	grid-column: 1 / -1;
+	grid-column: 1;
+	margin: 0;
 	padding: var(--e-5) var(--e-4);
 	text-align: center;
 	color: var(--c-encre-2);
