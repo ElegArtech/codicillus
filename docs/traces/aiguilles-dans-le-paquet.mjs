@@ -72,8 +72,9 @@
  *
  * Code de retour : 0 si le paquet est propre, 1 sinon.
  */
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readdir, readFile, rm, stat } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { join, relative } from 'node:path';
 import {
 	aiguillesDuCorpus,
@@ -119,6 +120,80 @@ const telQuel = process.argv.includes('--tel-quel');
 
    Ce qui reste vrai des deux côtés : aucune exemption ne s'obtient en changeant
    ce critère, et une exemption périmée fait toujours échouer le contrôle. */
+/**
+ * LES MORCEAUX DE CODE TIERS, ET COMMENT ON LE SAIT.
+ *
+ * LE DÉFAUT QU'ON RÉPARE ICI. Le paquet client porte un morceau de 662 Ko qui est
+ * l'analyseur de Mermaid. Il y a une classe de grammaire nommée « Production » —
+ * et « Production » est aussi le nom d'un univers du jeu de démonstration. Le
+ * contrôle criait donc sur un mot qu'aucune ligne du produit n'a écrit, et il
+ * criait DÉFINITIVEMENT : aucun retrait de littéral ne pouvait le faire taire. Un
+ * garde-fou qui ne peut plus être vert est un garde-fou qu'on débranche.
+ *
+ * CE QUI EST ÉCARTÉ, ET RIEN D'AUTRE : un fichier dont la carte de source dit que
+ * TOUTES ses sources sont sous `node_modules`. Un morceau mêlé — une seule source
+ * du produit — reste mesuré en entier. Aucun mot n'est écarté, aucun seuil n'est
+ * posé, aucune table d'exemption ne grandit : c'est l'ORIGINE du code qui décide,
+ * pas ce qu'il contient.
+ *
+ * POURQUOI UNE SECONDE CONSTRUCTION. Le paquet qui part n'a aucune carte de source,
+ * et il ne doit pas en avoir : une carte livrée publie le code source. Le contrôle
+ * en fabrique donc une à lui, en `'hidden'` — le seul mode qui émette les cartes
+ * SANS ajouter le commentaire qui les référence —, dans un répertoire à part qu'il
+ * efface ensuite. Le paquet mesuré reste celui qui part.
+ *
+ * L'APPARIEMENT SE FAIT PAR EMPREINTE DE CONTENU, JAMAIS PAR NOM. Mesuré : les
+ * cartes changent 56 des 180 fichiers du paquet et leurs empreintes de nom avec
+ * eux. Un morceau reconnu tiers l'est parce que ses OCTETS sont ceux qu'on a su
+ * attribuer, ce qui reste vrai quel que soit son nom.
+ *
+ * ELLE NE SE PAIE QUE QUAND ELLE SERT. Un paquet propre ne déclenche rien : la
+ * construction instrumentée n'a lieu que s'il y a des occurrences clientes à
+ * expliquer.
+ */
+const SORTIE_INSTRUMENTEE = '.aiguilles-cartes';
+
+function empreinteDe(texte) {
+	return createHash('sha256').update(texte).digest('hex');
+}
+
+async function empreintesDesMorceauxTiers() {
+	const code = await new Promise((resoudre) => {
+		const enfant = spawn('pnpm', ['build'], {
+			cwd: racine,
+			stdio: ['ignore', 'ignore', 'ignore'],
+			env: { ...process.env, AIGUILLES_CARTES: 'oui', AIGUILLES_SORTIE: SORTIE_INSTRUMENTEE }
+		});
+		enfant.on('close', resoudre);
+	});
+	if (code !== 0) {
+		console.log('     la construction instrumentée a échoué : rien n’est écarté.');
+		return new Set();
+	}
+
+	const tiers = new Set();
+	const client = join(racine, SORTIE_INSTRUMENTEE, 'client');
+	try {
+		for await (const chemin of fichiersDe(client)) {
+			if (!chemin.endsWith('.js')) continue;
+			let carte;
+			try {
+				carte = JSON.parse(await readFile(`${chemin}.map`, 'utf8'));
+			} catch {
+				continue; /* pas de carte : on ne sait pas, donc on ne l'écarte pas */
+			}
+			const sources = Array.isArray(carte.sources) ? carte.sources : [];
+			if (sources.length === 0) continue;
+			if (!sources.every((x) => String(x).includes('node_modules'))) continue;
+			tiers.add(empreinteDe(await readFile(chemin, 'utf8')));
+		}
+	} catch {
+		/* le répertoire n'existe pas : rien à apprendre */
+	}
+	await rm(join(racine, SORTIE_INSTRUMENTEE), { recursive: true, force: true });
+	return tiers;
+}
+
 const ZONES = [
 	{
 		rep: join(racine, 'build', 'client'),
@@ -298,6 +373,9 @@ for (const zone of ZONES) {
 			const trouvaille = {
 				...vue,
 				fichier: relative(racine, chemin),
+				/* L'empreinte du CONTENU — c'est par elle qu'un morceau se reconnaît
+				   tiers, le nom changeant d'une construction à l'autre. */
+				empreinte: empreinteDe(texte),
 				carte,
 				enCode: masque === null ? 0 : occurrencesEnCode(texte, masque, vue)
 			};
@@ -313,6 +391,35 @@ for (const zone of ZONES) {
 		`     ${relative(racine, zone.rep).padEnd(14)} ${String(zone.lus).padStart(4)} fichiers, ` +
 			`${(zone.octets / 1024).toFixed(0)} Ko de texte`
 	);
+}
+
+/* ── 3 bis. LES MORCEAUX DE CODE TIERS ───────────────────────────────────────
+   Voir `empreintesDesMorceauxTiers()` : on n'écarte pas un mot, on écarte un
+   FICHIER dont la carte de source dit qu'il ne vient pas du produit. Et on ne le
+   fait que s'il y a quelque chose à expliquer. */
+const zoneCliente = ZONES[0];
+let ecartesTiers = [];
+if (zoneCliente !== undefined && zoneCliente.servies.length > 0) {
+	titre('3 bis. L’ORIGINE DES MORCEAUX');
+	console.log('     construction instrumentée, cartes de source, puis effacée…');
+	const tiers = await empreintesDesMorceauxTiers();
+	if (tiers.size > 0) {
+		ecartesTiers = zoneCliente.servies.filter((t) => tiers.has(t.empreinte));
+		zoneCliente.servies = zoneCliente.servies.filter((t) => !tiers.has(t.empreinte));
+	}
+	const fichiers = new Set(ecartesTiers.map((t) => t.fichier));
+	console.log(
+		`     ${tiers.size} morceau(x) du paquet client viennent ENTIÈREMENT de node_modules ; ` +
+			`${fichiers.size} portai(en)t une occurrence.`
+	);
+	for (const f of fichiers) {
+		const dessus = ecartesTiers.filter((t) => t.fichier === f);
+		console.log(
+			`     écarté  ${f}  ×${dessus.reduce((n, t) => n + t.combien, 0)} — code tiers, ` +
+				`aucune source du produit`
+		);
+		console.log(`        « ${[...new Set(dessus.map((t) => t.mot))].join(' · ')} »`);
+	}
 }
 
 /* ── 4. CE QUE LES EXEMPTIONS COUVRENT ───────────────────────────────────────
