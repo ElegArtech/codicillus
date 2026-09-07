@@ -158,6 +158,26 @@
 			</div>
 		</div>
 
+		<!-- ── L'AVIS QUAND LA QUESTION N'A PAS DE SENS ──────────────────────────
+			Sans un seul type marqué « Dépendance technique », `pointsArticulation()`
+			reçoit une liste vide, ne trouve rien, et l'écran dirait silencieusement
+			« aucun point de défaillance unique » là où la vérité est « personne n'a dit
+			ce qui porte une dépendance ». C'est un mensonge par omission. -->
+		{#if data.nombreDeTypesPorteurs === 0}
+			<p class="mod-avis">
+				<b>Aucun type de relation ne porte de dépendance.</b> Les points de défaillance unique ne
+				sont donc pas calculés : le produit ne sait pas encore quelles relations font dépendre une
+				note d'une autre.
+				{#if data.consoleOuverte}
+					<span
+						>Un administrateur le règle sur
+						<a href="/console/types-de-relations">Console › Types de relations</a>, case «
+						Dépendance technique ».</span
+					>
+				{/if}
+			</p>
+		{/if}
+
 		{#if form?.message}
 			<p class="mod-message" role="alert">{form.message}</p>
 		{/if}
@@ -166,6 +186,9 @@
 			<p class="mod-vide">
 				Aucune note reliée dans ce périmètre. Une note n'apparaît ici que lorsqu'une relation
 				déclarée ou un lien écrit dans un corps la rattache à une autre.
+				{#if data.notesDuPerimetre.length >= 2}
+					<span>Déclarez la première relation avec le formulaire ci-contre.</span>
+				{/if}
 			</p>
 		{:else}
 			<div class="mod-plan">
@@ -232,9 +255,16 @@
 					{/each}
 				</svg>
 			</div>
+		{/if}
 
-			<div class="mod-panneau">
-				<!-- ── DÉCLARER ────────────────────────────────────────────────────── -->
+		<!-- ── LE PANNEAU ────────────────────────────────────────────────────────
+			IL EST HORS DE LA BRANCHE DU DESSIN, et c'est un défaut réparé : sur une
+			instance qui n'a encore AUCUNE relation, le dessin est vide, et le
+			formulaire qui sert à déclarer la première partait avec lui. L'écran qui
+			sert à relier les notes ne pouvait pas relier les deux premières. -->
+		<div class="mod-panneau">
+			<!-- ── DÉCLARER ──────────────────────────────────────────────────────── -->
+			{#if data.notesDuPerimetre.length >= 2 && data.typesOfferts.length > 0}
 				<section class="mod-bloc">
 					<h2>Déclarer une relation</h2>
 					<form method="POST" action="?/declarer">
@@ -260,8 +290,34 @@
 						<button class="btn btn--principal" type="submit">Déclarer</button>
 					</form>
 				</section>
+			{:else}
+				<!-- L'ÉTAT VIDE NOMME LE GESTE QUI DÉBLOQUE : une liste de deux
+					sélecteurs sans une seule option est un formulaire qui ne peut pas
+					aboutir, et le rendre inerte ne dirait pas pourquoi. -->
+				<section class="mod-bloc">
+					<h2>Déclarer une relation</h2>
+					{#if data.typesOfferts.length === 0}
+						<p class="mod-fait">
+							<span
+								>Aucun type de relation n'existe encore. Un administrateur en crée un sur
+								<a href="/console/types-de-relations">Console › Types de relations</a>.</span
+							>
+						</p>
+					{:else}
+						<p class="mod-fait">
+							<span
+								>Il faut deux notes dans le périmètre pour déclarer une relation. Créez-en depuis
+								<a href="/notes/nouvelle">Nouvelle note</a>, ou élargissez le périmètre.</span
+							>
+						</p>
+					{/if}
+				</section>
+			{/if}
 
-				<!-- ── L'ARÊTE CHOISIE ─────────────────────────────────────────────── -->
+			<!-- ── L'ARÊTE CHOISIE ────────────────────────────────────────────────
+				Elle n'a de sens qu'avec un dessin : sans arête, il n'y a rien à
+				choisir, et le bloc n'aurait qu'un état vide à montrer. -->
+			{#if data.noeuds.length > 0}
 				<section class="mod-bloc">
 					<h2>Lien choisi</h2>
 					{#if areteChoisie === null}
@@ -344,8 +400,10 @@
 						{/if}
 					{/if}
 				</section>
-			</div>
+			{/if}
+		</div>
 
+		{#if data.noeuds.length > 0}
 			<!-- ── LA RESTITUTION ─────────────────────────────────────────────────
 				`P-06` — tout contenu graphique porte son alternative. Elle dit ce que le
 				dessin dit, dans l'ordre du dessin, et elle est atteignable. -->

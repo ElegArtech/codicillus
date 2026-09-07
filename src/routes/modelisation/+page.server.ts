@@ -97,11 +97,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const disposition = disposerEnCouches(graphe);
 
 	/**
-	 * LES POINTS DE DÉFAILLANCE UNIQUE — calculés sur les SEULES relations techniques
-	 * DÉCLARÉES, et c'est la garantie de cette vue. `estTechnique()` compare le type à
-	 * ceux que `types_de_relation` marque techniques ; `mentionne` n'y est pas et n'y
-	 * sera pas, si bien qu'aucune arête déduite ne peut faire passer une note pour un
-	 * point de rupture. Une citation n'est pas une dépendance.
+	 * LES POINTS DE DÉFAILLANCE UNIQUE — calculés sur les SEULES relations que
+	 * `types_de_relation` MARQUE techniques, et c'est la garantie de cette vue.
+	 * `mentionne` n'y est pas et n'y sera pas, si bien qu'aucune arête déduite ne peut
+	 * faire passer une note pour un point de rupture : une citation n'est pas une
+	 * dépendance.
+	 *
+	 * QUAND LA TABLE NE MARQUE RIEN, LE CALCUL NE DIT RIEN — et c'est le cas de toute
+	 * instance neuve, la colonne valant `false` par défaut depuis la migration `002`.
+	 * L'écran ne peut pas laisser ce silence passer pour « aucun point de défaillance
+	 * unique » : `nombreDeTypesPorteurs` descend, et la vue rend l'avis.
 	 */
 	const ruptures = [...pointsArticulation(graphe, relationsTechniques)];
 
@@ -179,6 +184,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			   telle quelle traverserait la sérialisation pour être reformatée deux fois. */
 			refuseeLe: r.refuseeLe.toLocaleDateString('fr-FR')
 		})),
+		/** Les types qui portent une dépendance, tels que la table les marque. */
+		nombreDeTypesPorteurs: relationsTechniques.length,
+		/**
+		 * L'appelant peut-il aller les régler ? La console n'est ouverte qu'à lui, et
+		 * promettre une adresse qu'on ne peut pas ouvrir est le motif de `V-07`.
+		 */
+		consoleOuverte:
+			locals.identite.type === 'authentifie' && locals.identite.role === 'administrateur',
 		nombreDeMentions: mentions.length,
 		nombreDeDeclarees: aretes.filter((r) => r.origine === 'declaree').length,
 		nombreDePropositions: aretes.filter((r) => r.origine === 'ambigue').length,
