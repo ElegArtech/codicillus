@@ -218,6 +218,14 @@ a:focus-visible .mod-arete__poignee {
 	grid-column: 1 / -1;
 }
 
+/* LE RELEVÉ D'UNE PROPOSITION EST UN CONSTAT, PAS UN REFUS : le geste a abouti, et
+   il n'a pas tout posé. Le ton d'information le distingue de l'alerte, qui reste
+   réservée à ce qui a échoué. */
+.mod-message--avis {
+	border-color: var(--c-info);
+	background: var(--c-info-voile);
+}
+
 /* ── L'ASSISE DE L'ÉTAGEMENT ───────────────────────────────────────────────
    La paire de liens est une BASCULE : les deux se voient, celui qui est actif
    se distingue au fond et au trait, jamais à la seule couleur. */
