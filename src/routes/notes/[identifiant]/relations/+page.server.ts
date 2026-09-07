@@ -65,7 +65,7 @@ async function resoudre(identifiant: string, identite: App.Locals['identite']) {
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const { base, lecture, cle } = await resoudre(params.identifiant, locals.identite);
 
-	const lisibles = lecture.notes.map((n) => n.id);
+	const lisibles = lecture.identifiantsLisibles;
 	const lues = await lireLesRelationsDeLaNote(base, cle, lisibles);
 
 	/* `P-09` — les moyens d'écrire ne sont préparés que pour qui peut écrire.

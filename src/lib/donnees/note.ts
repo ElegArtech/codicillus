@@ -18,7 +18,7 @@
  */
 import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import type { Base } from '../base/acces';
-import { dossiers, droitsDeDossier, notes } from '../base/schema';
+import { domaines, dossiers, droitsDeDossier, notes } from '../base/schema';
 import { analyserDocument, liensInternes, texteBrut, type Document } from '../contenu/document';
 import { rendreDocument, type CibleDeNote, type ResolveurDeNote } from '../contenu/rendu';
 import {
@@ -122,12 +122,14 @@ export function resolveurDeNotes(citables: readonly NoteCitable[]): ResolveurDeN
 export interface Retrolien {
 	readonly identifiant: string;
 	readonly titre: string;
+	readonly domaine: string;
 	readonly adresse: string;
 }
 
 export interface CorpsEnBase {
 	readonly identifiant: string;
 	readonly titre: string;
+	readonly domaine: string;
 	readonly reference: unknown;
 	readonly operationnel: unknown;
 }
@@ -154,6 +156,7 @@ export function retroliensVers(
 			vers.push({
 				identifiant: c.identifiant,
 				titre: c.titre,
+				domaine: c.domaine,
 				adresse: adresseDeNote(c.identifiant)
 			});
 		}
@@ -180,17 +183,23 @@ export function perimetreDeLaLectureDUneNote(identite: Identite, index: IndexDes
  * peut lire, et les charger coûterait sans servir.
  */
 export async function lireIndexDesDroits(base: Base, identite: Identite): Promise<IndexDesDroits> {
-	const arbre = await base.select({ id: dossiers.id, parentId: dossiers.parentId }).from(dossiers);
-	if (identite.type === 'anonyme') return indexerLesDroits(arbre);
-	const explicites = await base
-		.select({
-			dossierId: droitsDeDossier.dossierId,
-			compteId: droitsDeDossier.compteId,
-			droit: droitsDeDossier.droit
-		})
-		.from(droitsDeDossier)
-		.where(eq(droitsDeDossier.compteId, identite.compteId));
-	return indexerLesDroits(arbre, explicites);
+	const arbre = base.select({ id: dossiers.id, parentId: dossiers.parentId }).from(dossiers);
+	if (identite.type === 'anonyme') return indexerLesDroits(await arbre);
+	/* L'ARBRE ET LES DROITS EN MÊME TEMPS : la seconde requête ne dépend pas de la
+	   première, et les enchaîner doublait le coût d'un index qu'une ouverture de note
+	   lit deux fois. */
+	const [dessin, explicites] = await Promise.all([
+		arbre,
+		base
+			.select({
+				dossierId: droitsDeDossier.dossierId,
+				compteId: droitsDeDossier.compteId,
+				droit: droitsDeDossier.droit
+			})
+			.from(droitsDeDossier)
+			.where(eq(droitsDeDossier.compteId, identite.compteId))
+	]);
+	return indexerLesDroits(dessin, explicites);
 }
 
 /**
@@ -205,19 +214,67 @@ function conditionDePerimetre(perimetre: Perimetre): SQL | undefined {
 	return inArray(notes.dossierId, ids);
 }
 
+/**
+ * « PARMI CES IDENTIFIANTS-LÀ » — un SEUL paramètre, jamais trois cents.
+ *
+ * `inArray()` écrit un `in ($1, $2, … $300)`, et le prix se paie deux fois : le pilote
+ * sérialise trois cents valeurs, PostgreSQL analyse et lie un ordre à trois cents
+ * emplacements. Mesuré sur l'ouverture d'une note de l'instance de recette, sur les
+ * trois requêtes qui portent le périmètre : 14,4 ms de `parse` et de `bind`, pour une
+ * liste dont le contenu ne change pas d'une requête à l'autre. Un tableau passé en
+ * bloc et comparé par `= any(…)` dit la même chose en un paramètre.
+ */
+export function parmiLesIdentifiants(identifiants: readonly string[]): SQL {
+	/* `sql.param()` PLUTÔT QUE LA VALEUR NUE : un tableau posé tel quel dans le
+	   gabarit est ÉCLATÉ par l'ORM en autant d'emplacements, et l'on retrouve le
+	   `in ($1, … $299)` qu'on voulait fuir — sur un `any()`, qui n'en veut pas. */
+	return sql`${notes.identifiant} = any(${sql.param([...identifiants])}::text[])`;
+}
+
 export interface LectureDeNote {
 	readonly note: Note;
 	readonly corps: CorpsDeNote;
+	/**
+	 * LES DEUX CORPS BRUTS, TELS QUE LA TABLE LES PORTE — déjà lus par cette fonction, et
+	 * donnés pour n'être pas relus. Un appelant qui les redemandait à la base payait une
+	 * seconde fois le transport et l'analyse du document : 65 ko pour la plus grosse note
+	 * de l'instance de recette, à chaque ouverture. `null` quand la colonne l'est.
+	 */
+	readonly documents: {
+		readonly reference: unknown;
+		readonly operationnel: unknown;
+	};
 	/** Ce que l'appelant peut faire sur le dossier porteur (CDC §2.3). */
 	readonly capacites: Capacites;
 	readonly retroliens: readonly Retrolien[];
 	/**
-	 * Le corpus lisible par l'appelant, dans la forme que les vues attendent en propriété — la
-	 * coquille en dérive son rail. Lui passer les 32 notes montrerait à un lecteur les dossiers
-	 * qu'il n'a pas le droit de lire (`RG-ACC-01`). L'intersection avec `lireNotes()` est faite
-	 * en mémoire, et c'est l'écart déclaré en tête de ce module.
+	 * LA NOTE OUVERTE ET SES DEUX VOISINES DE RANGEMENT, dans la forme que les vues
+	 * attendent en propriété — et lisibles par l'appelant : une note qu'il n'a pas le droit
+	 * de lire n'y est pas (`RG-ACC-01`), le filtre étant dans la requête.
+	 *
+	 * TROIS NOTES, ET JAMAIS PLUS. Deux usages tirent de cette liste : la fratrie du
+	 * panneau « Position », qui nomme la précédente et la suivante, et le fil d'Ariane qui
+	 * y retrouve la note ouverte. Ni l'un ni l'autre ne regarde plus loin. Ce qui se
+	 * COMPTE est dans `voisinage`, ce qui BORNE est dans `identifiantsLisibles`.
 	 */
 	readonly notes: readonly Note[];
+	/**
+	 * TOUS LES IDENTIFIANTS QUE L'APPELANT PEUT LIRE — le périmètre, sous la seule forme
+	 * qui n'oblige pas à en dresser les notes. C'est lui qui borne les relations affichées
+	 * et les cibles offertes, et il ne coûte qu'une colonne.
+	 */
+	readonly identifiantsLisibles: readonly string[];
+	/**
+	 * CE QU'IL Y A D'AUTRE À LIRE À CÔTÉ — compté sur le corpus LISIBLE, jamais sur la
+	 * table : une note qu'on n'a pas le droit de lire n'est pas une voisine, et la compter
+	 * dirait à un lecteur qu'il existe des notes qu'il ne verra pas (`RG-ACC-01`). Deux
+	 * décomptes parce que l'écran en emploie deux : le dossier quand la note en a un, le
+	 * domaine sinon.
+	 */
+	readonly voisinage: {
+		readonly dansLeRangement: number;
+		readonly dansLeDomaine: number;
+	};
 	/**
 	 * Le résolveur des liens internes du périmètre, celui-là même qui a rendu `corps` — et non
 	 * un second, reconstruit par l'appelant. `/notes/{identifiant}?version={n}` montre le corps
@@ -279,6 +336,7 @@ export async function lireLaNote(
 		.select({
 			identifiant: notes.identifiant,
 			dossierId: notes.dossierId,
+			domaineId: notes.domaineId,
 			visibilite: notes.visibilite,
 			statut: notes.statut,
 			corpsReference: notes.corpsReference,
@@ -302,30 +360,58 @@ export async function lireLaNote(
 	if (!resolution.trouve) return resolution;
 	const trouvee = resolution.ressource;
 
-	/* La forme `Note` vient de la couche de lecture, et d'elle seule : c'est ce
-	   qui garantit que l'écran reçoit ce que le jeu de semence lui donnait. */
-	const toutes = await lireNotes(base, demande.contexte);
+	/* LE CORPUS CITABLE — SANS SES CORPS. Le résolveur des liens internes n'a besoin
+	   que du titre et de la visibilité ; les deux colonnes de corps n'étaient
+	   sélectionnées que pour nourrir les rétroliens, qui ont désormais leur propre
+	   requête, bornée. Les charger ici, c'était lire 3 Mo de JSONB — 47 ms de base
+	   et 165 ms de désérialisation mesurés sur l'instance de recette — à chaque
+	   ouverture de note. */
+	const citables = await base
+		.select({
+			identifiant: notes.identifiant,
+			titre: notes.titre,
+			domaineId: notes.domaineId,
+			dossierId: notes.dossierId,
+			visibilite: notes.visibilite,
+			statut: notes.statut
+		})
+		.from(notes)
+		.where(conditionDePerimetre(perimetre))
+		.orderBy(notes.identifiant);
+	const identifiantsLisibles = citables.map((c) => c.identifiant);
+
+	/* LE RANGEMENT DE LA NOTE, SUR LES IDENTIFIANTS SEULS — la fratrie triée dont
+	   `voisinesDe()` tire la précédente et la suivante, et les deux décomptes que
+	   l'écran affiche. Aucune de ces trois réponses ne demande un corps ; les
+	   dresser en forme `Note` coûtait, sur le plus gros domaine de l'instance de
+	   recette, 32 ms de base et 118 ms d'analyse — les 143 corps du domaine lus et
+	   parcourus pour en tirer 143 extraits que la lecture d'une note n'affiche pas. */
+	const duRangement = citables.filter(
+		(c) => c.domaineId === trouvee.domaineId && c.dossierId === trouvee.dossierId
+	);
+	const rang = duRangement.findIndex((c) => c.identifiant === trouvee.identifiant);
+	const voisinage = {
+		dansLeRangement: Math.max(duRangement.length - 1, 0),
+		dansLeDomaine: Math.max(citables.filter((c) => c.domaineId === trouvee.domaineId).length - 1, 0)
+	};
+
+	/* LA FORME `Note`, POUR LA NOTE OUVERTE ET SES DEUX VOISINES — trois notes, et
+	   jamais plus. C'est exactement ce que la vue en tire : le panneau « Position »
+	   nomme la précédente et la suivante, et le fil d'Ariane y retrouve la note
+	   ouverte. Le PÉRIMÈTRE, lui, reste entier et vit dans `identifiantsLisibles` ;
+	   les décomptes vivent dans `voisinage`. Servir le corpus ici coûtait 286 ko de
+	   charge d'hydratation pour une note qui en pèse 139 octets. */
+	const troisNotes = [
+		duRangement[rang - 1]?.identifiant,
+		trouvee.identifiant,
+		duRangement[rang + 1]?.identifiant
+	].filter((i): i is string => i !== undefined);
+	const toutes = await lireNotes(base, demande.contexte, troisNotes);
 	const note = toutes.find((n) => n.id === trouvee.identifiant);
 	/* La couche de lecture n'a pas rendu une note que la table porte : c'est un
 	   défaut de cette couche, pas un refus. Il sort quand même par `INTROUVABLE` —
 	   rien de ce chemin ne doit pouvoir distinguer deux causes. */
 	if (note === undefined) return resoudre<LectureDeNote>(null, () => false);
-
-	/* Le corpus DU PÉRIMÈTRE, en une seule requête : il sert trois fois — cibles des
-	   liens internes, matière des rétroliens, identifiants que la coquille montre. */
-	const citables = await base
-		.select({
-			identifiant: notes.identifiant,
-			titre: notes.titre,
-			visibilite: notes.visibilite,
-			statut: notes.statut,
-			corpsReference: notes.corpsReference,
-			corpsOperationnel: notes.corpsOperationnel
-		})
-		.from(notes)
-		.where(conditionDePerimetre(perimetre))
-		.orderBy(notes.identifiant);
-	const lisibles = new Set(citables.map((c) => c.identifiant));
 
 	const resolveur = resolveurDeNotes(
 		citables.map((c) => ({
@@ -343,18 +429,67 @@ export async function lireLaNote(
 		ressource: {
 			note,
 			corps: corpsRendu(valeur, demande.registre, resolveur),
+			documents: {
+				reference: trouvee.corpsReference,
+				operationnel: trouvee.corpsOperationnel
+			},
 			capacites: capacites(resoudreDroitDeDossier(demande.identite, trouvee.dossierId, index)),
-			retroliens: retroliensVers(
-				trouvee.identifiant,
-				citables.map((c) => ({
-					identifiant: c.identifiant,
-					titre: c.titre,
-					reference: c.corpsReference,
-					operationnel: c.corpsOperationnel
-				}))
-			),
-			notes: toutes.filter((n) => lisibles.has(n.id)),
+			retroliens: await lireLesRetroliens(base, trouvee.identifiant, perimetre),
+			notes: toutes,
+			identifiantsLisibles,
+			voisinage,
 			resoudreUneNote: resolveur
 		}
 	};
+}
+
+/**
+ * LES RÉTROLIENS D'UNE NOTE — déduits, jamais saisis (`RG-M05-02`), et lus sur les
+ * seules notes qui peuvent en porter un.
+ *
+ * LA DÉCISION RESTE À `liensInternes()`, qui parcourt l'arbre du document : c'est
+ * `retroliensVers()`, inchangé, qui dit si une note en cite une autre. Ce que la
+ * requête fait n'est pas de décider, c'est de RESTREINDRE LES CANDIDATES — une note
+ * dont le corps sérialisé ne contient nulle part l'identifiant visé ne peut pas le
+ * citer. `ADR-003` n'est pas enfreint : le corps n'est ni découpé ni réécrit, il est
+ * seulement testé pour savoir s'il vaut la peine d'être analysé.
+ *
+ * ELLE ÉPARGNE LE CORPUS. Les rétroliens se lisaient en chargeant les DEUX corps des
+ * 300 notes de l'instance de recette puis en analysant les 600 documents : 47 ms de
+ * base et 165 ms d'analyse, à chaque ouverture de note. Les candidates se comptent
+ * ici sur les doigts d'une main.
+ */
+async function lireLesRetroliens(
+	base: Base,
+	identifiant: string,
+	perimetre: Perimetre
+): Promise<readonly Retrolien[]> {
+	const candidates = await base
+		.select({
+			identifiant: notes.identifiant,
+			titre: notes.titre,
+			domaine: domaines.nom,
+			reference: notes.corpsReference,
+			operationnel: notes.corpsOperationnel
+		})
+		.from(notes)
+		.innerJoin(domaines, eq(notes.domaineId, domaines.id))
+		.where(and(conditionDePerimetre(perimetre), citeLIdentifiant(identifiant)))
+		.orderBy(notes.identifiant);
+	return retroliensVers(identifiant, candidates);
+}
+
+/**
+ * LE FILTRE DE CANDIDATURE, EN SQL — vrai dès que la note porte, dans l'un de ses
+ * deux registres, une marque de lien interne visant l'identifiant.
+ *
+ * IL N'AFFIRME PAS QU'IL Y A UN RÉTROLIEN : il écarte les notes où il ne PEUT PAS y
+ * en avoir. La décision reste à `retroliensVers()`, qui parcourt l'arbre.
+ *
+ * IL LIT LA COLONNE DÉRIVÉE, JAMAIS LE CORPS (migration `015`) : le corps est stocké
+ * hors ligne, et l'interroger demandait de décompresser tout le corpus — 47 ms
+ * mesurés à chaque ouverture de note sur l'instance de recette.
+ */
+function citeLIdentifiant(identifiant: string): SQL {
+	return sql`${notes.liensInternes} @> ${JSON.stringify([identifiant])}::jsonb`;
 }

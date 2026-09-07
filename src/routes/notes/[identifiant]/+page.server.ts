@@ -18,7 +18,7 @@
  */
 import { error, fail, redirect } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
-import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { basePartagee, type Base } from '$lib/base/acces';
 import {
 	comptes,
@@ -55,7 +55,13 @@ import {
 	type LigneDeCycles
 } from '$lib/donnees/vivacite';
 import type { Identite } from '$lib/droits/resolution';
-import { lireLaNote, registreDemande, type LectureDeNote, type Registre } from '$lib/donnees/note';
+import {
+	lireLaNote,
+	parmiLesIdentifiants,
+	registreDemande,
+	type LectureDeNote,
+	type Registre
+} from '$lib/donnees/note';
 import type {
 	EntreeDeSommaire,
 	InstantAffiche,
@@ -313,12 +319,68 @@ async function proprietesDeLaFiche(
 	return champs.map((champ) => ({ nom: champ.nom, valeur: valeurs[champ.cle] ?? null }));
 }
 
+/**
+ * LES RELATIONS DÉCLARÉES DEPUIS CETTE NOTE, et celles qui la visent.
+ *
+ * LE PÉRIMÈTRE EST CELUI QUE `lireLaNote()` A CALCULÉ, et il entre dans la requête
+ * (`ADR-006`) : une relation vers une note qu'on n'a pas le droit de lire n'affiche
+ * pas son titre. IL SE LIT SUR LES IDENTIFIANTS, PAS SUR LES NOTES DU RANGEMENT :
+ * une relation traverse les domaines, et la borner au voisinage de la note ouverte
+ * ferait taire le titre d'une note parfaitement lisible.
+ */
+async function lesRelationsSortantes(
+	base: Base,
+	lecture: LectureDeNote,
+	cle: string
+): Promise<readonly RelationLue[]> {
+	const lisibles = lecture.identifiantsLisibles;
+	if (lisibles.length === 0) return [];
+	return await base
+		.select({
+			libelle: typesDeRelation.libelleSortant,
+			identifiant: notes.identifiant,
+			titre: notes.titre,
+			type: typesDeNote.nom,
+			domaine: domaines.nom
+		})
+		.from(relations)
+		.innerJoin(typesDeRelation, eq(relations.typeDeRelationId, typesDeRelation.id))
+		.innerJoin(notes, eq(relations.cibleId, notes.id))
+		.innerJoin(typesDeNote, eq(notes.typeDeNoteId, typesDeNote.id))
+		.innerJoin(domaines, eq(notes.domaineId, domaines.id))
+		.where(and(eq(relations.sourceId, cle), parmiLesIdentifiants(lisibles)))
+		.orderBy(typesDeRelation.ordre, notes.titre);
+}
+
+async function lesRelationsEntrantes(
+	base: Base,
+	lecture: LectureDeNote,
+	cle: string
+): Promise<readonly RelationLue[]> {
+	const lisibles = lecture.identifiantsLisibles;
+	if (lisibles.length === 0) return [];
+	return await base
+		.select({
+			libelle: typesDeRelation.libelleEntrant,
+			identifiant: notes.identifiant,
+			titre: notes.titre,
+			type: typesDeNote.nom,
+			domaine: domaines.nom
+		})
+		.from(relations)
+		.innerJoin(typesDeRelation, eq(relations.typeDeRelationId, typesDeRelation.id))
+		.innerJoin(notes, eq(relations.sourceId, notes.id))
+		.innerJoin(typesDeNote, eq(notes.typeDeNoteId, typesDeNote.id))
+		.innerJoin(domaines, eq(notes.domaineId, domaines.id))
+		.where(and(eq(relations.cibleId, cle), parmiLesIdentifiants(lisibles)))
+		.orderBy(typesDeRelation.ordre, notes.titre);
+}
+
 async function complementsDeLecture(
 	base: Base,
 	lecture: LectureDeNote,
 	registre: Registre,
-	corpsDuRegistreReference: string | null,
-	corpsDuRegistreOperationnel: string | null,
+	corpsRendus: Promise<CorpsDesDeuxRegistres>,
 	maintenant: Date
 ): Promise<ComplementsDeLecture> {
 	const identifiant = lecture.note.id;
@@ -336,8 +398,10 @@ async function complementsDeLecture(
 			creeLe: notes.creeLe,
 			modifieLe: notes.modifieLe,
 			verifieLe: notes.verifieLe,
-			corpsReference: notes.corpsReference,
-			corpsOperationnel: notes.corpsOperationnel,
+			/* LES DEUX CORPS NE SONT PAS RELUS ICI : `lireLaNote()` les a déjà lus, et
+			   `lecture.documents` les porte. Les redemander coûtait un second transport
+			   et une seconde analyse du même document — 65 ko pour la plus grosse note
+			   de l'instance de recette. */
 			corpsReferenceModifieLe: notes.corpsReferenceModifieLe,
 			corpsOperationnelModifieLe: notes.corpsOperationnelModifieLe,
 			/* LES QUATRE COLONNES DU CYCLE PAR REGISTRE — `014`. Elles ne sont lues
@@ -369,81 +433,64 @@ async function complementsDeLecture(
 	   MÊME que partout dans cette famille (`RG-ACC-04`). */
 	if (ligne === undefined) error(404, MESSAGE_INTROUVABLE);
 
-	/* Le journal des vérifications — `M06.2`. Une entrée sans compte reste une
-	   attestation : la colonne est effaçable, et `RG-M15-02` fait de l'anonymat un
-	   état normal du journal. */
-	const attestations = await base
-		.select({ par: comptes.nom, le: verifications.le, registre: verifications.registre })
-		.from(verifications)
-		.leftJoin(comptes, eq(verifications.compteId, comptes.id))
-		.where(eq(verifications.noteId, ligne.cle))
-		.orderBy(desc(verifications.le));
+	/* LES SIX LECTURES QUI SUIVENT NE S'ATTENDENT PAS L'UNE L'AUTRE, ET ELLES NE
+	   S'ATTENDENT DONC PLUS. Aucune ne lit ce qu'une autre écrit — ce sont six
+	   lectures, et la seule écriture de la requête a déjà eu lieu. Les enchaîner
+	   coûtait six allers-retours à la base pour rien : chacun tient dans les 2 ms
+	   que la boucle applicative met à parler à PostgreSQL sur cette machine, et
+	   c'est ce prix-là, répété vingt-sept fois, qui faisait le gros du temps
+	   serveur une fois les corps retirés du chemin. */
+	const [
+		attestations,
+		lignesDePiece,
+		sortantes,
+		entrantes,
+		mesureDeConsultation,
+		proprietesDeFiche
+	] = await Promise.all([
+		/* Le journal des vérifications — `M06.2`. Une entrée sans compte reste une
+			   attestation : la colonne est effaçable, et `RG-M15-02` fait de l'anonymat
+			   un état normal du journal. */
+		base
+			.select({ par: comptes.nom, le: verifications.le, registre: verifications.registre })
+			.from(verifications)
+			.leftJoin(comptes, eq(verifications.compteId, comptes.id))
+			.where(eq(verifications.noteId, ligne.cle))
+			.orderBy(desc(verifications.le)),
 
-	const lignesDePiece = await base
-		.select({
-			nom: piecesJointes.nom,
-			tailleOctets: piecesJointes.tailleOctets,
-			typeMedia: piecesJointes.typeMedia,
-			deposeeLe: piecesJointes.deposeeLe
-		})
-		.from(piecesJointes)
-		.where(eq(piecesJointes.noteId, ligne.cle))
-		.orderBy(desc(piecesJointes.deposeeLe));
+		base
+			.select({
+				nom: piecesJointes.nom,
+				tailleOctets: piecesJointes.tailleOctets,
+				typeMedia: piecesJointes.typeMedia,
+				deposeeLe: piecesJointes.deposeeLe
+			})
+			.from(piecesJointes)
+			.where(eq(piecesJointes.noteId, ligne.cle))
+			.orderBy(desc(piecesJointes.deposeeLe)),
 
-	/* LE PÉRIMÈTRE EST CELUI QUE `lireLaNote()` A CALCULÉ, et il entre dans la
-	   requête (ADR-006) : une relation vers une note qu'on n'a pas le droit de
-	   lire n'affiche pas son titre. */
-	const lisibles = lecture.notes.map((n) => n.id);
-	const sansRelation = lisibles.length === 0;
+		lesRelationsSortantes(base, lecture, ligne.cle),
+		lesRelationsEntrantes(base, lecture, ligne.cle),
 
-	const sortantes = sansRelation
-		? []
-		: await base
-				.select({
-					libelle: typesDeRelation.libelleSortant,
-					identifiant: notes.identifiant,
-					titre: notes.titre,
-					type: typesDeNote.nom,
-					domaine: domaines.nom
-				})
-				.from(relations)
-				.innerJoin(typesDeRelation, eq(relations.typeDeRelationId, typesDeRelation.id))
-				.innerJoin(notes, eq(relations.cibleId, notes.id))
-				.innerJoin(typesDeNote, eq(notes.typeDeNoteId, typesDeNote.id))
-				.innerJoin(domaines, eq(notes.domaineId, domaines.id))
-				.where(and(eq(relations.sourceId, ligne.cle), inArray(notes.identifiant, lisibles)))
-				.orderBy(typesDeRelation.ordre, notes.titre);
+		/* LA MESURE DE CONSULTATION VIENT DU JOURNAL, sur la fenêtre de trente jours
+			   que le gel annonce. `MESURES_7J` de la semence nomme « 7 j » la même
+			   donnée : la contradiction se tranche ici en lisant la table. */
+		base
+			.select({ nombre: sql<number>`count(*)::int` })
+			.from(consultations)
+			.where(
+				and(
+					eq(consultations.noteId, ligne.cle),
+					gte(
+						consultations.le,
+						new Date(maintenant.getTime() - JOURS_DE_MESURE * MILLISECONDES_PAR_JOUR)
+					)
+				)
+			),
 
-	const entrantes = sansRelation
-		? []
-		: await base
-				.select({
-					libelle: typesDeRelation.libelleEntrant,
-					identifiant: notes.identifiant,
-					titre: notes.titre,
-					type: typesDeNote.nom,
-					domaine: domaines.nom
-				})
-				.from(relations)
-				.innerJoin(typesDeRelation, eq(relations.typeDeRelationId, typesDeRelation.id))
-				.innerJoin(notes, eq(relations.sourceId, notes.id))
-				.innerJoin(typesDeNote, eq(notes.typeDeNoteId, typesDeNote.id))
-				.innerJoin(domaines, eq(notes.domaineId, domaines.id))
-				.where(and(eq(relations.cibleId, ligne.cle), inArray(notes.identifiant, lisibles)))
-				.orderBy(typesDeRelation.ordre, notes.titre);
-
-	/* LA MESURE DE CONSULTATION VIENT DU JOURNAL, sur la fenêtre de trente jours
-	   que le gel annonce. `MESURES_7J` de la semence nomme « 7 j » la même
-	   donnée : la contradiction se tranche ici en lisant la table. */
-	const depuis = new Date(maintenant.getTime() - JOURS_DE_MESURE * MILLISECONDES_PAR_JOUR);
-	const [mesure] = await base
-		.select({ nombre: sql<number>`count(*)::int` })
-		.from(consultations)
-		.where(and(eq(consultations.noteId, ligne.cle), gte(consultations.le, depuis)));
-
-	const proprietesDeFiche = await proprietesDeLaFiche(base, lecture);
-
-	const domaineParNote = new Map<string, string>(lecture.notes.map((n) => [n.id, n.domaine]));
+		proprietesDeLaFiche(base, lecture)
+	]);
+	const mesure = mesureDeConsultation[0];
 
 	/* LE DERNIER VÉRIFICATEUR DE CHAQUE REGISTRE — les attestations sont déjà triées
 	   de la plus récente à la plus ancienne, la PREMIÈRE de chaque registre est donc
@@ -490,6 +537,12 @@ async function complementsDeLecture(
 	   donneraient deux âges pour un seul signal (P-01). */
 	const referenceDeFraicheur = ligne.verifieLe ?? ligne.modifieLe;
 
+	/* LES DEUX CORPS SONT ATTENDUS ICI, ET PAS PLUS TÔT : ils ne servent qu'à la
+	   PROJECTION ci-dessous, et leur résolution a couru pendant que les lectures
+	   de cette fonction couraient. */
+	const { reference: corpsDuRegistreReference, operationnel: corpsDuRegistreOperationnel } =
+		await corpsRendus;
+
 	return {
 		affichee: {
 			note: lecture.note,
@@ -503,7 +556,7 @@ async function complementsDeLecture(
 			   de la page, et le sommaire annonçait un plan que le corps ne tenait
 			   pas. Le registre sans corps n'a pas de titre, donc pas de sommaire. */
 			sommaire: sommaireDuDocument(
-				registre === 'operationnel' ? ligne.corpsOperationnel : ligne.corpsReference
+				registre === 'operationnel' ? lecture.documents.operationnel : lecture.documents.reference
 			),
 			controle:
 				ligne.verifieLe === null
@@ -552,10 +605,14 @@ async function complementsDeLecture(
 				};
 			}),
 			relations: grouperLesRelations([...sortantes, ...entrantes]),
+			/* LE DOMAINE VIENT DE LA REQUÊTE QUI A TROUVÉ LE RÉTROLIEN, et non d'une
+			   table dressée sur le corpus : une note qui pointe vers celle-ci depuis
+			   un autre domaine y perdait son domaine dès que la lecture a cessé de
+			   dresser le corpus entier. */
 			retroliens: lecture.retroliens.map((r) => ({
 				identifiant: r.identifiant,
 				titre: r.titre,
-				domaine: domaineParNote.get(r.identifiant) ?? ''
+				domaine: r.domaine
 			})),
 			verifications: attestations.map((a) => ({
 				par: a.par,
@@ -610,13 +667,13 @@ function contexteDeLaNote(
 	const segments = segmentsDeDossier(note.dossier);
 	const dansUnDossier = segments.length > 0;
 
-	const voisines = lecture.notes.filter(
-		(n) =>
-			n.id !== note.id &&
-			n.univers === note.univers &&
-			n.domaine === note.domaine &&
-			(dansUnDossier ? n.dossier === note.dossier : true)
-	).length;
+	/* LE DÉCOMPTE VIENT DE LA LECTURE, qui l'a fait sur le corpus lisible ENTIER.
+	   Le filtrer ici sur `lecture.notes` le ramènerait aux deux voisines que cette
+	   liste porte désormais, et l'écran annoncerait « 2 autres notes » sur un
+	   domaine qui en compte cent quarante-deux. */
+	const voisines = dansUnDossier
+		? lecture.voisinage.dansLeRangement
+		: lecture.voisinage.dansLeDomaine;
 
 	const ou = dansUnDossier ? 'ce dossier' : 'ce domaine';
 	return {
@@ -699,49 +756,25 @@ export const load: PageServerLoad = async ({ params, url, locals, request }) => 
 	   que l'en-tête affiche, et le NOMBRE de versions, que la confirmation de
 	   suppression chiffre (`RG-M04-10`). Aucune version n'est DÉSIGNÉE : le fil et
 	   la comparaison ont leur page, `/notes/{identifiant}/historique`. */
-	const histoire = await lireLHistoire(base, lecture, maintenant, null);
-
-	/* LE CORPS QUE L'ÉCRAN AFFICHE EST CELUI DU REGISTRE RÉFÉRENCE : le gel rend
-	   les deux enveloppes et cache la seconde, et la bascule est un COMPORTEMENT
-	   non livré. Le volet visible est donc toujours `corps-reference`, quel que
-	   soit `?registre=`.
-
-	   D'OÙ CETTE SECONDE RÉSOLUTION, ET SEULEMENT DANS CE SENS-LÀ. Elle passe par
-	   `lireLaNote()`, donc par la MÊME décision d'accès — jamais par une requête
-	   écrite ici. Le chemin ordinaire n'en paie pas le coût.
-
-	   UN CORPS EXISTANT MAIS VIDE REND `null`, et la vue le DIT : `corpsRendu()`
-	   sépare `existe` de `redige` (`RG-M18-03`). */
-	const corpsDeReference =
-		registre === 'reference'
-			? lecture.corps.redige
-				? lecture.corps.html
-				: null
-			: await corpsCharge(base, params.identifiant, 'reference', locals.identite, contexte);
-
-	/* LES DEUX CORPS SONT SERVIS ENSEMBLE, PARCE QUE LA BASCULE NE RECHARGE PAS :
-	   le script du gel échange l'attribut « sans rechargement ». Sans le second
-	   corps, l'onglet « Opérationnel » ouvrait un volet vide.
-
-	   LE COÛT EST BORNÉ AU CAS QUI L'EXERCE : la seconde lecture n'a lieu que si
-	   la note PORTE un registre Opérationnel — la condition même sous laquelle
-	   les deux onglets sont rendus.
-
-	   ELLE PASSE PAR `lireLaNote()`, donc par la MÊME décision d'accès. Un refus
-	   rend un volet vide, jamais un aveu. */
-	const corpsOperationnel =
-		registre === 'reference' && lecture.note.operationnel
-			? await corpsCharge(base, params.identifiant, 'operationnel', locals.identite, contexte)
-			: null;
-
-	const complements = await complementsDeLecture(
+	/* LES QUATRE LECTURES QUI SUIVENT NE S'ATTENDENT PAS L'UNE L'AUTRE — l'histoire,
+	   les deux corps, les compléments et les moyens de relier. Une seule contrainte
+	   d'ordre subsiste, et elle est tenue : les compléments relisent le compteur de
+	   consultations APRÈS l'écriture ci-dessus, laquelle est déjà faite. Les
+	   enchaîner faisait payer en série une douzaine d'allers-retours à la base qui
+	   n'avaient aucune raison de se suivre. */
+	const corps = corpsDesDeuxRegistres(
 		base,
-		lecture,
+		params.identifiant,
 		registre,
-		corpsDeReference,
-		corpsOperationnel,
-		maintenant
+		lecture,
+		locals.identite,
+		contexte
 	);
+	const [histoire, complements, relation] = await Promise.all([
+		lireLHistoire(base, lecture, maintenant, null),
+		complementsDeLecture(base, lecture, registre, corps, maintenant),
+		moyensDeRelier(base, locals.identite, params.identifiant, lecture)
+	]);
 
 	return {
 		/**
@@ -827,35 +860,81 @@ export const load: PageServerLoad = async ({ params, url, locals, request }) => 
 		 * unique ferme.
 		 */
 		vivacite: complements.vivacite,
-		/**
-		 * DE QUOI DÉCLARER UNE RELATION SANS QUITTER LA NOTE — le dialogue
-		 * `d-relation`, que le gel place dans le panneau « Relations » de V-14.
-		 *
-		 * `P-09` — LES MOYENS D'ÉCRIRE NE SONT PRÉPARÉS QUE POUR QUI PEUT ÉCRIRE.
-		 * `null` sinon : ni bouton, ni boîte, ni sélecteur n'entrent dans le DOM.
-		 *
-		 * LES CIBLES SONT CELLES SUR LESQUELLES L'APPELANT PEUT ÉCRIRE (`RG-M08-04`,
-		 * les deux extrémités) : une note qu'il ne pourrait pas relier n'est pas
-		 * proposée, plutôt que refusée après le clic.
-		 *
-		 * DEUX LISTES VIDES NE RENDENT PAS CETTE PROPRIÉTÉ NULLE, ET C'EST VOULU :
-		 * servir `null` sur une instance neuve laisserait « + Ajouter » n'ouvrir plus
-		 * rien. La boîte est montée et nomme elle-même ce qui manque. `null` reste
-		 * réservé à l'absence de droit.
-		 */
-		relation: lecture.capacites.ecrireDesNotes
-			? {
-					types: await lireLesTypesOfferts(base),
-					cibles: await lireLesCiblesPossibles(
-						base,
-						locals.identite,
-						params.identifiant,
-						lecture.notes.map((n) => n.id)
-					)
-				}
-			: null
+		/** Les moyens de relier — `moyensDeRelier()` dit ce qu'ils sont et à qui. */
+		relation
 	};
 };
+
+interface CorpsDesDeuxRegistres {
+	readonly reference: string | null;
+	readonly operationnel: string | null;
+}
+
+/**
+ * LES DEUX CORPS RENDUS QUE L'ÉCRAN MONTRE.
+ *
+ * LE CORPS AFFICHÉ EST CELUI DU REGISTRE RÉFÉRENCE : le gel rend les deux enveloppes
+ * et cache la seconde, et la bascule est un COMPORTEMENT non livré. Le volet visible
+ * est donc toujours `corps-reference`, quel que soit `?registre=`. D'où la seconde
+ * résolution, et seulement dans ce sens-là : elle passe par `lireLaNote()`, donc par
+ * la MÊME décision d'accès — jamais par une requête écrite ici. Un corps existant
+ * mais VIDE rend `null`, et la vue le DIT (`corpsRendu()` sépare `existe` de
+ * `redige`, `RG-M18-03`).
+ *
+ * LES DEUX SONT SERVIS ENSEMBLE, PARCE QUE LA BASCULE NE RECHARGE PAS : le script du
+ * gel échange l'attribut « sans rechargement ». Sans le second corps, l'onglet
+ * « Opérationnel » ouvrait un volet vide. LE COÛT EST BORNÉ AU CAS QUI L'EXERCE — la
+ * seconde lecture n'a lieu que si la note PORTE un registre Opérationnel, la
+ * condition même sous laquelle les deux onglets sont rendus.
+ */
+async function corpsDesDeuxRegistres(
+	base: Base,
+	identifiant: string,
+	registre: Registre,
+	lecture: LectureDeNote,
+	identite: Identite,
+	contexte: ContexteDeLecture
+): Promise<CorpsDesDeuxRegistres> {
+	const [reference, operationnel] = await Promise.all([
+		registre === 'reference'
+			? Promise.resolve(lecture.corps.redige ? lecture.corps.html : null)
+			: corpsCharge(base, identifiant, 'reference', identite, contexte),
+		registre === 'reference' && lecture.note.operationnel
+			? corpsCharge(base, identifiant, 'operationnel', identite, contexte)
+			: Promise.resolve(null)
+	]);
+	return { reference, operationnel };
+}
+
+/**
+ * DE QUOI DÉCLARER UNE RELATION SANS QUITTER LA NOTE — le dialogue `d-relation`, que
+ * le gel place dans le panneau « Relations » de V-14.
+ *
+ * `P-09` — LES MOYENS D'ÉCRIRE NE SONT PRÉPARÉS QUE POUR QUI PEUT ÉCRIRE. `null`
+ * sinon : ni bouton, ni boîte, ni sélecteur n'entrent dans le DOM.
+ *
+ * LES CIBLES SONT CELLES SUR LESQUELLES L'APPELANT PEUT ÉCRIRE (`RG-M08-04`, les deux
+ * extrémités) : une note qu'il ne pourrait pas relier n'est pas proposée, plutôt que
+ * refusée après le clic.
+ *
+ * DEUX LISTES VIDES NE RENDENT PAS CETTE PROPRIÉTÉ NULLE, ET C'EST VOULU : servir
+ * `null` sur une instance neuve laisserait « + Ajouter » n'ouvrir plus rien. La boîte
+ * est montée et nomme elle-même ce qui manque. `null` reste réservé à l'absence de
+ * droit.
+ */
+async function moyensDeRelier(
+	base: Base,
+	identite: Identite,
+	identifiant: string,
+	lecture: LectureDeNote
+) {
+	if (!lecture.capacites.ecrireDesNotes) return null;
+	const [types, cibles] = await Promise.all([
+		lireLesTypesOfferts(base),
+		lireLesCiblesPossibles(base, identite, identifiant, lecture.identifiantsLisibles)
+	]);
+	return { types, cibles };
+}
 
 /**
  * L'AUTRE CORPS DE LA NOTE, RÉSOLU UNE SECONDE FOIS — et par le même chemin :

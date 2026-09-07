@@ -37,7 +37,7 @@ import { resumeDeSuppression, type EtatAvantSuppression } from './suppression';
 
 /** Un rétrolien, dans la forme que `retroliensVers()` produit. */
 function retrolien(identifiant: string, titre: string) {
-	return { identifiant, titre, adresse: adresseDeNote(identifiant) };
+	return { identifiant, titre, domaine: 'Domaine', adresse: adresseDeNote(identifiant) };
 }
 
 function etat(surcharge: Partial<EtatAvantSuppression> = {}): EtatAvantSuppression {
@@ -131,12 +131,14 @@ describe('RG-M04-10 et le gel de V-40 — ce que la confirmation annonce', () =>
 			{
 				identifiant: 'n-astreinte',
 				titre: 'Procédure d’astreinte',
+				domaine: 'Domaine',
 				reference: corpsQuiCite('n-restaurer-pg', 3),
 				operationnel: null
 			},
 			{
 				identifiant: 'n-sauvegardes',
 				titre: 'Politique de sauvegardes',
+				domaine: 'Domaine',
 				reference: corpsQuiCite('n-restaurer-pg', 1),
 				operationnel: null
 			}

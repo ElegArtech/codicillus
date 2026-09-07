@@ -359,8 +359,6 @@ export async function lireNotes(
 	   réponse est de ne rien demander à la base. */
 	if (identifiants !== undefined && identifiants.length === 0) return [];
 
-	const chemins = await lireCheminsDeDossier(base);
-
 	const socle = base
 		.select({
 			identifiant: notes.identifiant,
@@ -391,12 +389,18 @@ export async function lireNotes(
 	/* LA RESTRICTION EST DANS LA REQUÊTE, JAMAIS APRÈS ELLE : quand l'appelant sait
 	   déjà quelles notes il a le droit de lire, c'est la clause SQL qui le dit, et
 	   la base ne remonte pas une ligne de plus (`ADR-006`). */
-	const lignes = await (identifiants === undefined
-		? socle.orderBy(notes.identifiant)
-		: socle.where(inArray(notes.identifiant, [...identifiants])).orderBy(notes.identifiant));
-
-	const etiquettesParNote = await lireEtiquettesParNote(base);
-	const piecesParNote = await lirePiecesJointesParNote(base);
+	/* LES QUATRE LECTURES NE S'ATTENDENT PAS L'UNE L'AUTRE — les chemins de dossier,
+	   les notes, les étiquettes et le compte des pièces. Aucune ne lit ce qu'une
+	   autre rapporte : c'est la PROJECTION, plus bas, qui les assemble. Les
+	   enchaîner faisait payer en série quatre allers-retours à la base. */
+	const [chemins, lignes, etiquettesParNote, piecesParNote] = await Promise.all([
+		lireCheminsDeDossier(base),
+		identifiants === undefined
+			? socle.orderBy(notes.identifiant)
+			: socle.where(inArray(notes.identifiant, [...identifiants])).orderBy(notes.identifiant),
+		lireEtiquettesParNote(base),
+		lirePiecesJointesParNote(base)
+	]);
 
 	return lignes.map((n) => {
 		/* La fraîcheur se lit sur la dernière vérification, et à défaut sur la
