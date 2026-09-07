@@ -15,7 +15,7 @@ Serveur de bases de données principal. Porte les bases des applications de gest
 ## À savoir avant d'intervenir {#s-a-savoir-avant-d-intervenir}
 
 - Le redémarrage prend **4 à 6 minutes** — la reprise des index est plus longue que l'arrêt.
-- La fenêtre de sauvegarde va de 2 h à 3 h 30 ; aucune intervention pendant.
+- La fenêtre de sauvegarde vers [[n-bkp-01|bkp-01]] va de 2 h à 3 h 30 ; aucune intervention pendant.
 - La supervision remonte une alerte de charge tous les lundis à 8 h : c'est la reprise d'activité, pas un incident.
 
 ## Capacité {#s-capacite}

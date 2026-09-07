@@ -18,6 +18,8 @@ La supervision produit environ soixante alertes par semaine. La plupart ne deman
 
 **Critique.** Le service est dégradé ou interrompu. On agit immédiatement, y compris en astreinte.
 
+Une alerte critique sur une base de données a déjà sa suite écrite : quand le service ne repart pas seul, [[n-restaurer-une-sauvegarde-postgresql|Restaurer une sauvegarde PostgreSQL]] porte la conduite complète, point de non-retour compris. Ne l'improvisez pas à trois heures du matin.
+
 ## Ce qu'il faut regarder avant d'agir {#s-ce-qu-il-faut-regarder-avant-d-agir}
 
 1. **L'alerte est-elle isolée ?** Dix alertes simultanées désignent rarement dix pannes : cherchez le point commun — une salle, un lien, un hyperviseur.
