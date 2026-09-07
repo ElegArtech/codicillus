@@ -1,117 +1,73 @@
 <script lang="ts">
 	/**
-	 * V-19 — Cartographie. Route `/cartographie`, atteinte par l'entrée de rail
-	 * « Outils › Cartographie ».
+	 * V-19 — Cartographie et voisinage. Route `/cartographie`, atteinte par
+	 * l'entrée de rail « Cartographie ».
 	 *
-	 * CE QUE CET ÉCRAN EST : un EXPLORATEUR DE GRAPHE, pas une illustration du
-	 * corpus. Il répond à quatre questions, et elles commandent tout le reste —
-	 * qu'est-ce qui structure le corpus, qu'est-ce qui n'est relié à rien, quels
-	 * groupes se forment d'eux-mêmes, et où les zones importantes sont-elles
-	 * devenues fragiles.
+	 * DEUX ÉCRANS, UNE SEULE FEUILLE. Sans `?centre=`, la CARTOGRAPHIE du périmètre ;
+	 * avec, le VOISINAGE d'une note à une, deux ou trois profondeurs. Les deux
+	 * partagent l'encodage, la légende et le panneau de note — les séparer en deux
+	 * fichiers dupliquerait sept cents lignes pour changer un cadre.
 	 *
-	 * LA GRAMMAIRE VISUELLE — UN CANAL, UNE INFORMATION. C'est la règle dont tout
-	 * découle, et elle a été figée après mesure :
+	 * ── LE DESSIN EST UN ARBRE, PLUS UNE SIMULATION DE FORCES ──────────────────
+	 * C'est LE changement de fond, et il vient d'une mesure : sur l'univers réel —
+	 * cent quarante-huit notes, deux cent quarante-cinq mentions, treize familles —
+	 * la simulation rendait une boule. Les contours se recouvraient, les libellés se
+	 * chevauchaient, et les traits passaient tous dans le même paquet. Une simulation
+	 * cherche un minimum d'énergie ; rien dans ses forces ne l'oblige à être lisible.
 	 *
-	 *   forme + code de trois lettres  →  le TYPE du nœud
-	 *   couleur + glyphe               →  la VIVACITÉ
-	 *   taille                         →  la CENTRALITÉ de passage
-	 *   anneau interrompu et fanion    →  le POINT DE RUPTURE technique
-	 *   trait plein                    →  la relation DÉCLARÉE
-	 *   trait fin                      →  la relation DÉDUITE
-	 *   proximité et contour           →  l'AFFINITÉ sémantique
+	 * Le squelette est désormais CONSTRUIT (`$lib/graphe/disposition-carte`) :
 	 *
-	 * LA COULEUR PORTAIT LE TYPE, ET C'ÉTAIT LA DÉPENSE À CORRIGER : trois canaux —
-	 * forme, code, teinte — disaient la même chose, et il n'en restait aucun pour
-	 * l'état. `RG-M18-09` tient toujours des deux côtés — le type reste porté par la
-	 * forme ET le code, la vivacité par la couleur ET le glyphe.
+	 *   · le PÉRIMÈTRE affiché est un grand disque au centre ;
+	 *   · chaque FAMILLE sémantique est une branche, sur un anneau autour de lui ;
+	 *   · son secteur angulaire est proportionnel à son nombre de notes ;
+	 *   · ses notes tiennent sur des cercles concentriques autour de son PIVOT — sa
+	 *     note la plus centrale, dessinée plus grande, à la forme de son type ;
+	 *   · « Isolées » — sans famille et sans relation — part en périphérie.
 	 *
-	 * L'AFFINITÉ NE SE DESSINE PAS EN ARÊTES, ET C'EST UNE DÉCISION, PAS UN OUBLI.
-	 * Une appartenance commune n'est pas un lien entre deux objets : un trait
-	 * partagé qui réunit quinze notes est UN fait, le décomposer en cent cinq
-	 * segments l'encode avec cent cinq traits d'encre dont chacun, pris seul,
-	 * affirme un rapport que personne n'a déclaré. Mesuré sur le corpus de
-	 * démonstration : cent trente-quatre arêtes d'affinité pour vingt-deux
-	 * relations déclarées. Elle PLACE les nœuds (`disposer()`) et les ENTOURE
-	 * (`contourDeGroupe()`) ; elle ne devient un trait que dans la vue locale,
-	 * autour d'un nœud choisi, et étiquetée de son motif.
+	 * LES TRAITS DU SQUELETTE DISENT L'APPARTENANCE, PAS UNE RELATION. Ils sont en
+	 * pointillés, ils passent SOUS tout le reste, et la légende ne les nomme pas :
+	 * ils sont la charpente du dessin, pas une donnée du corpus. Les RELATIONS se
+	 * dessinent par-dessus, avec les styles de la légende — trait plein pour
+	 * déclarée, tirets pour déduite, pointillés pour affinité.
 	 *
-	 * LES NOTES ISOLÉES SONT DESSINÉES. Elles étaient retirées, et c'était le
-	 * défaut de fond : la seule question à laquelle la carte ne pouvait pas
-	 * répondre était celle pour laquelle on l'ouvre. Aucun trait ne les rattache à
-	 * quoi que ce soit — leur isolement EST l'information.
+	 * ── LA GRAMMAIRE VISUELLE — UN CANAL, UNE INFORMATION ──────────────────────
 	 *
-	 * RIEN NE SE DESSINE QUI N'AIT ÉTÉ DÉCLARÉ. L'écran portait un nœud central au
-	 * nom du périmètre, un moyeu par famille, et des rayons de l'un vers les autres
-	 * puis vers chaque note : sur l'instance de recette, soixante-dix-sept traits
-	 * inventés pour sept relations réelles, et une rosace qui affirmait que le
-	 * corpus rayonne depuis un point. Un périmètre est un CONTEXTE DE FILTRAGE ;
-	 * une famille est une APPARTENANCE. Ni l'un ni l'autre n'est un objet du graphe.
+	 *   forme                   →  le TYPE du nœud
+	 *   couleur                 →  la VIVACITÉ
+	 *   taille                  →  le réglage « Taille des nœuds »
+	 *   place                   →  la FAMILLE sémantique
+	 *   anneau interrompu       →  le POINT DE RUPTURE technique
+	 *   trait plein / tirets / pointillés  →  déclarée / déduite / affinité
 	 *
-	 * ── CE QUI NE DOIT PAS REVENIR ────────────────────────────────────────────
-	 * Chacun de ces points a été rendu, vu au navigateur, et retiré. Les remettre
-	 * ne se discute pas au cas par cas : ils se tiennent, et c'est ensemble qu'ils
-	 * refaisaient une illustration là où il faut un explorateur.
+	 * LE PIVOT FAIT EXCEPTION SUR LA COULEUR, et c'est la direction artistique : il
+	 * porte la teinte SATURÉE de sa famille, avec un halo pâle. Sa vivacité se lit
+	 * au survol et dans le panneau. Sans cette exception, une famille n'aurait
+	 * aucune couleur propre sur le dessin, et douze contours pastel ne suffisent pas
+	 * à distinguer douze branches quand on regarde le centre.
 	 *
-	 *   · UN NŒUD AU NOM DU PÉRIMÈTRE. Un périmètre filtre, il n'est pas un objet
-	 *     du graphe, et rien n'est « relié à l'univers ».
-	 *   · UN MOYEU PAR FAMILLE, ET DES RAYONS VERS SES NOTES. Une appartenance
-	 *     n'est pas un lien vers un centre.
-	 *   · DES ARÊTES D'AFFINITÉ EN VUE COMPLÈTE. Six fois plus nombreuses que les
-	 *     relations, et chacune affirme un rapport que personne n'a déclaré.
-	 *   · DES ANCRAGES DE FAMILLE POSÉS SUR UN CERCLE. Un regroupement s'observe,
-	 *     il ne se range pas ; la couronne dessinait la géométrie qu'on avait
-	 *     choisie, pas celle qu'on avait.
-	 *   · LE RETRAIT DES NOTES ISOLÉES. Sur l'instance de recette, soixante-huit
-	 *     sur soixante-dix-sept : c'est la mesure, pas le bruit.
-	 *   · UN PLAFOND SUR LA TAILLE. À `min(degré, 8)`, une note à quarante-deux
-	 *     relations se dessine comme une note à huit.
-	 *   · UNE COLONNE DE RÉGLAGES RÉSERVÉE EN PERMANENCE, ni un panneau de détail
-	 *     vide. Le canevas garde sa place tant qu'on ne demande rien.
-	 *   · DES PARAGRAPHES D'EXPLICATION DANS LE PANNEAU. Chaque ligne est une
-	 *     légende, un filtre et un compte ; ce qui demande une phrase tient dans
-	 *     un `ⓘ`.
-	 *   · UNE SECONDE LÉGENDE. Il y en a UNE, sous le dessin, et elle nomme les
-	 *     cinq canaux.
-	 *   · UN RECHARGEMENT DE PAGE SUR UN FILTRE. Seuls le périmètre et la mesure
-	 *     de taille naviguent, et par `goto`.
-	 *   · UN VOILE SUR UN GRAPHE PEUPLÉ. « Aucune relation » se dit en bandeau ;
-	 *     le nuage des familles reste lisible et dit quelque chose.
-	 *   · UNE PLACE DE DÉPART TIRÉE DU RANG DU NŒUD. Elle est hachée sur son
-	 *     identifiant : ajouter une note ne redessine pas la carte.
+	 * ── CE QUI EST ÉCRIT, ET CE QUI NE L'EST PAS ───────────────────────────────
+	 * Le nom d'une famille et son effectif sont écrits UNE SEULE FOIS, en haut à
+	 * gauche de son contour, et rien ne les recouvre jamais : leurs boîtes sont
+	 * réservées AVANT tout libellé de nœud. Les libellés de nœud ne s'écrivent que
+	 * sur les PIVOTS, sur le nœud survolé, sur le nœud sélectionné et ses voisins, et
+	 * sur tout le monde au-delà du seuil de zoom. Deux libellés ne se chevauchent
+	 * jamais : celui qui en recouvrirait un autre est tu.
 	 *
-	 * ── CE QU'ON REGARDE POUR VÉRIFIER, DANS UN NAVIGATEUR ─────────────────────
-	 * Sur un corpus RÉEL, jamais sur cinq nœuds — c'est à la densité que tout se
-	 * joue. Deux secondes de regard doivent donner, dans cet ordre : les zones de
-	 * famille, les nœuds structurants, les taches de vivacité, les relations.
+	 * ── AUCUNE COULEUR, AUCUNE TAILLE ÉCRITE ICI ───────────────────────────────
+	 * Tout vient de `src/vues/carto-jetons.css` — pour le style — et de
+	 * `$lib/graphe/jetons` — pour la géométrie. Les deux fichiers portent les mêmes
+	 * nombres, et `jetons.test.ts` échoue s'ils divergent.
 	 *
-	 *   1. Aucun trait ne part d'un point central, et aucun nœud ne porte le nom
-	 *      du périmètre. Le compte de `.rattachement` et de `.moyeu` est ZÉRO.
-	 *   2. Le nombre de `.arete` égale celui des couches cochées, à l'unité.
-	 *   3. Les notes sans relation sont TOUTES dessinées, et sans trait.
-	 *   4. Le dessin ne passe ni sous le panneau, ni sous le fil, ni hors cadre.
-	 *   5. Cocher une case n'appelle pas le serveur, et l'adresse suit.
-	 *   6. Un clic ouvre le panneau ; un double-clic ouvre la note.
-	 *   7. Molette, glisser et « Recentrer » répondent.
-	 *   8. Changer de périmètre garde les filtres et vide la sélection.
-	 *   9. Un périmètre sans relation montre la carte ET le bandeau.
-	 *  10. Recharger deux fois le même périmètre rend la MÊME carte.
+	 * ── CE QUI RESTE VRAI DE L'ÉCRAN D'AVANT ───────────────────────────────────
+	 *   · Les notes ISOLÉES sont dessinées. Leur isolement EST l'information.
+	 *   · Le dessin est DÉTERMINISTE : même périmètre, même dessin, sans mouvement.
+	 *   · AUCUNE DONNÉE PROPRE (`RG-M09-01`) : tout vient du chargeur.
+	 *   · Le comportement vit dans `cablage.ts`, voisin de la route.
+	 *   · `.noeud` est ICI un nœud de graphe ; le même nom désigne un nœud
+	 *     d'ARBORESCENCE dans 33 autres vues, dont le rail de cette page même. Les
+	 *     deux règles sont inconciliables et AUCUNE FACTORISATION N'EST PERMISE.
 	 *
-	 * DEUX MODES, UNE SEULE FEUILLE. Sans `?centre=`, la vue complète ; avec, le
-	 * VOISINAGE d'un nœud à une, deux ou trois profondeurs. Les deux partagent le
-	 * dessin, l'encodage et la légende — les séparer en deux fichiers dupliquerait
-	 * sept cents lignes pour changer un cadre.
-	 *
-	 * AUCUNE DONNÉE PROPRE (`RG-M09-01`) : tout vient du chargeur, et rien n'a de
-	 * défaut tiré de `seeds/corpus.ts`.
-	 *
-	 * LE COMPORTEMENT VIT DANS `cablage.ts`, VOISIN DE LA ROUTE : la vue ne porte
-	 * aucun gestionnaire, et les filtres ne rechargent jamais la page.
-	 *
-	 * `.noeud` EST ICI UN NŒUD DE GRAPHE : le même nom de classe désigne un nœud
-	 * d'ARBORESCENCE dans 33 autres vues, dont le rail de cette page même. Les deux
-	 * règles sont inconciliables et AUCUNE FACTORISATION N'EST PERMISE.
-	 *
-	 * Le style est dans `src/socle.css` et `src/vues/V-19.css`.
+	 * Le style est dans `src/socle.css`, `src/vues/carto-jetons.css` et `V-19.css`.
 	 */
 	import type {
 		CleDeTypeDeRelation,
@@ -130,14 +86,14 @@
 	import { getContext } from 'svelte';
 	import { resolve } from '$app/paths';
 	import {
-		barycentre,
 		centralites,
+		codeCourt,
 		contourDeForme,
-		contourDeGroupe,
 		degres,
-		disposer,
 		distancesDepuis,
 		estTechnique,
+		etendreLeGraphe,
+		famillesPresentes,
 		pointsArticulation,
 		rayonDeNoeud,
 		relationsDe,
@@ -145,13 +101,21 @@
 		titreDe,
 		typeDe,
 		typesPresents,
-		etendreLeGraphe,
-		famillesPresentes,
 		voisinage,
 		type Contour,
-		type EncodageDeType,
-		type Place
+		type EncodageDeType
 	} from '$lib/graphe/cartographie';
+	import { HAUTEUR_DETIQUETTE, MARGE_DETIQUETTE } from '$lib/graphe/jetons';
+	import {
+		DESCENTE_DU_COMPTE,
+		RETRAIT_DE_LICONE,
+		disposerLaCarte,
+		disposerLeVoisinage,
+		libelleCourt,
+		type CarteDisposee,
+		type MesuresDeNoeud,
+		type NoeudPlace
+	} from '$lib/graphe/disposition-carte';
 	import { areteMasquee, coucheDeLOrigine, noeudMasque } from '$lib/graphe/filtres';
 	import { ETATS_DE_VIVACITE, ORDRE_DES_ETATS, type EtatDeVivacite } from '$lib/fraicheur';
 	import {
@@ -185,8 +149,7 @@
 		familles: FamillesSemantiques;
 		/**
 		 * LA CENTRALITÉ DE PASSAGE, PAR NŒUD — `CDC M09.5`. EXIGÉE : c'est le
-		 * chargeur qui la calcule, sur le graphe du périmètre. La vue ne la refait
-		 * pas ; un défaut vide la ferait taire sans que rien ne le dise.
+		 * chargeur qui la calcule, sur le graphe du périmètre.
 		 */
 		centralite: Readonly<Record<string, number>>;
 		/** La vivacité de chaque note — le pire de ses deux registres. */
@@ -233,8 +196,8 @@
 		return { type: 'global' };
 	});
 
-	/* `gardees` : voir l'en-tête. Une note qu'aucune relation ne touche est un fait
-	   sur le corpus, pas un nœud à jeter. */
+	/* `gardees` : une note qu'aucune relation ne touche est un fait sur le corpus,
+	   pas un nœud à jeter. */
 	const grapheComplet = $derived(sousGraphe(corpus, perimetre, relations, 'gardees'));
 
 	/** La famille de chaque note — elle PLACE le nœud, et l'entoure. */
@@ -245,9 +208,9 @@
 	);
 
 	/* ── LES DEUX MODES ────────────────────────────────────────────────────────
-	   Le centre demandé n'ouvre le mode local que s'il désigne un nœud du
-	   périmètre : une adresse qui nomme une note supprimée, ou qu'on n'a pas le
-	   droit de lire, retombe sur la vue complète plutôt que sur un écran vide. */
+	   Le centre demandé n'ouvre le voisinage que s'il désigne un nœud du périmètre :
+	   une adresse qui nomme une note supprimée, ou qu'on n'a pas le droit de lire,
+	   retombe sur la cartographie plutôt que sur un écran vide. */
 
 	const centreValide = $derived(
 		exploration.centre !== null && grapheComplet.index.has(exploration.centre)
@@ -258,11 +221,9 @@
 	const profondeur = $derived(Math.min(PROFONDEUR_MAXIMALE, Math.max(1, exploration.profondeur)));
 
 	/**
-	 * LES AFFINITÉS DU CENTRE, EN VUE LOCALE — l'exception à la règle, et son seul
-	 * lieu. L'écran entier est « autour d'un nœud choisi » : y arriver EST la
-	 * demande. Les traits portent alors leur motif — « d'après l'étiquette
-	 * installation » dit quelque chose, un pointillé anonyme non — et leur nombre est
-	 * borné par construction au voisinage d'UNE note.
+	 * LES AFFINITÉS DU CENTRE, DANS LE VOISINAGE. L'écran entier est « autour d'une
+	 * note choisie » : y arriver EST la demande. Les traits portent alors leur motif,
+	 * et leur nombre est borné par construction au voisinage d'UNE note.
 	 */
 	const affinitesDuCentre = $derived(
 		centreValide === null
@@ -283,36 +244,20 @@
 				)
 	);
 
-	/** Les rappels qui empêchent un voisin d'affinité de partir au bord du dessin. */
-	const liensSouples = $derived(
-		centreValide === null ? [] : affinitesDuCentre.map((v) => [centreValide, v.note] as const)
-	);
-
 	const deg = $derived(degres(graphe));
 	const ruptures = $derived(pointsArticulation(graphe, relationsTechniques));
 	const types = $derived(typesPresents(graphe));
-	const distances = $derived(
-		centreValide === null ? new Map<string, number>() : distancesDepuis(graphe, centreValide)
-	);
 
 	/**
-	 * LA CENTRALITÉ DU MODE LOCAL EST RECALCULÉE SUR LE SOUS-GRAPHE, et c'est
-	 * nécessaire : celle du chargeur mesure des passages dans le corpus entier, et
-	 * l'employer ici dessinerait de gros nœuds pour des chemins qui ne sont pas sur
-	 * l'écran. Le coût est celui d'une douzaine de nœuds.
+	 * LA CENTRALITÉ DU VOISINAGE EST RECALCULÉE SUR LE SOUS-GRAPHE : celle du
+	 * chargeur mesure des passages dans le corpus entier, et l'employer ici
+	 * dessinerait de gros nœuds pour des chemins qui ne sont pas sur l'écran.
 	 */
 	const centraliteRendue = $derived(
 		centreValide === null ? centralite : Object.fromEntries(centralites(graphe))
 	);
 
 	const UNIVERS_PROPOSES = $derived(univers.filter((u) => !u.systeme));
-
-	/* ── LE PÉRIMÈTRE, EN DEUX SÉLECTEURS ──────────────────────────────────────
-	   Un seul les mélangeait — « Univers Substack », « Domaine Cadrage » à la
-	   suite —, ce qui obligeait à lire un préfixe pour savoir de quoi on parlait, et
-	   rendait impossible le geste évident : rester dans un univers et n'y regarder
-	   qu'un domaine. Les deux sélecteurs se composent, et le second ne propose que
-	   les domaines du premier. */
 
 	/** L'univers du périmètre courant — celui choisi, ou celui du domaine choisi. */
 	const universChoisi = $derived.by(() => {
@@ -329,43 +274,24 @@
 		universChoisi === '' ? domaines : domaines.filter((d) => d.univers === universChoisi)
 	);
 
-	/**
-	 * LES PLACES DES NŒUDS. Le départ de chaque corps est haché sur SON identifiant :
-	 * ajouter une note ne déplace plus les autres, et on reconnaît sa carte d'une
-	 * visite à l'autre. Les familles tirent au barycentre et se repoussent entre
-	 * elles — c'est là, et nulle part sur le dessin, que l'affinité agit.
-	 */
-	const disposition = $derived(disposer(graphe, { familleParNoeud: familleParNote, liensSouples }));
-	const places = $derived(disposition.places);
+	/** Ce que le disque du centre porte : le périmètre affiché, et son code court. */
+	const nomDuPerimetre = $derived(
+		perimetre.type === 'global' ? 'Tout le corpus' : (perimetre.nom ?? '')
+	);
+	const codeDuPerimetre = $derived(
+		perimetre.type === 'global' ? '' : codeCourt(perimetre.nom ?? '')
+	);
 
-	/**
-	 * LA COURBE D'UNE ARÊTE. Un graphe tracé au segment droit se lit comme un schéma
-	 * de câblage ; la courbe est ce qui en fait une carte. Le point de contrôle est
-	 * le milieu, décalé perpendiculairement d'un huitième de la portée : assez pour
-	 * que deux arêtes entre les mêmes régions ne se confondent pas, assez peu pour
-	 * qu'aucune ne mente sur ce qu'elle relie.
-	 */
-	const COURBURE = 0.12;
-	const courbe = (a: Place, b: Place): string => {
-		const dx = b.x - a.x;
-		const dy = b.y - a.y;
-		const cx = (a.x + b.x) / 2 - dy * COURBURE;
-		const cy = (a.y + b.y) / 2 + dx * COURBURE;
-		return `M${a.x.toFixed(1)} ${a.y.toFixed(1)}Q${cx.toFixed(1)} ${cy.toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
-	};
+	/* ── LES MESURES QUE LA DISPOSITION LIT ─────────────────────────────────── */
 
-	const ORIGINE: Place = { x: 0, y: 0 };
-	const positionDe = (id: string): Place => places.get(id) ?? ORIGINE;
 	const degreDe = (id: string): number => deg.get(id) ?? 0;
 	const centraliteDe = (id: string): number => centraliteRendue[id] ?? 0;
 	const vivaciteDe = (id: string): EtatDeVivacite | null => vivaciteParNote[id] ?? null;
 
-	/* ── LA TAILLE ─────────────────────────────────────────────────────────────
-	   Elle plafonnait à huit connexions : une note à quarante-deux relations était
-	   dessinée comme une note à huit, et le seul canal capable de dire « ceci est
-	   central » s'éteignait juste avant de devenir utile. L'échelle est désormais
-	   relative au périmètre affiché, et sans plafond. */
-
+	/**
+	 * L'ÉCHELLE DE TAILLE EST RELATIVE AU PÉRIMÈTRE AFFICHÉ, et sans plafond : une
+	 * note à quarante-deux relations ne se dessine pas comme une note à huit.
+	 */
 	const maximumDeMesure = $derived.by(() => {
 		if (exploration.taille === 'uniforme') return 1;
 		let max = 0;
@@ -383,126 +309,113 @@
 			maximumDeMesure
 		);
 
-	/* ── LES NŒUDS QUI PORTENT LEUR NOM EN PERMANENCE ──────────────────────────
-	   Un dessin où RIEN n'est nommé n'a pas de prise : les nœuds structurants
-	   gardent leur titre, et ce sont ceux qu'on cherche du regard.
+	const titrePar = $derived(new Map(corpus.map((n) => [n.id as string, n.titre] as const)));
 
-	   LE SEUL SEUIL DE RAYON NE BORNE RIEN, ET LE PLAFOND NON PLUS. Les nœuds les
-	   plus centraux sont TOUS dans le même amas — c'est ce qui les rend centraux.
-	   Mesuré sur les trois cents notes de la recette : quinze titres empilés au même
-	   endroit en une tache illisible, puis huit encore superposés une fois plafonnés,
-	   pendant que le reste de la carte n'en portait aucun.
+	const mesures = $derived<MesuresDeNoeud>({
+		rayon,
+		degre: degreDe,
+		centralite: centraliteDe,
+		titre: (id) => titrePar.get(id) ?? id
+	});
 
-	   UN TITRE EST DONC REFUSÉ S'IL EN HEURTE UN AUTRE. Les candidats sont pris du
-	   plus gros au plus petit — à rayon égal, l'identifiant tranche, pour que le
-	   classement ne dépende pas de l'ordre de la requête — et chacun n'est écrit que
-	   si sa boîte est libre. Ce qui reste est lisible, et réparti.
+	/* ── L'ADJACENCE DU DESSIN — relations ET affinités du centre ─────────────
+	   Le voisinage place ses nœuds de proche en proche : un voisin d'affinité, qui
+	   n'a aucune relation déclarée vers le centre, doit pourtant avoir un parent,
+	   sans quoi il n'a pas de secteur et se pose sur l'origine. */
 
-	   LA BOÎTE EST ESTIMÉE, PAS MESURÉE, et c'est voulu : mesurer un texte demande
-	   un document, donc ferait dépendre le dessin du navigateur qui le rend — deux
-	   postes n'auraient plus la même carte. La largeur moyenne d'un caractère de
-	   `.noeud__nom` — Archivo 600 à 9,5 px — vaut 4,9 px ; l'estimation suffit
-	   largement pour décider d'un chevauchement. */
+	/* Des objets plutôt que des `Map` : ces tables se REFONT à chaque changement de
+	   graphe, elles ne sont jamais mutées après coup, et `svelte/prefer-svelte-reactivity`
+	   n'admet pas une `Map` qu'on remplit — à raison, une `Map` mutée dans un état
+	   dérivé ne réveille rien. */
+	const adjacenceDuDessin = $derived.by<Record<string, string[]>>(() => {
+		const table: Record<string, string[]> = {};
+		const relier = (a: string, b: string): void => {
+			const deja = (table[a] ??= []);
+			if (!deja.includes(b)) deja.push(b);
+		};
+		for (const r of graphe.aretes) {
+			relier(r.de, r.vers);
+			relier(r.vers, r.de);
+		}
+		for (const v of affinitesDuCentre) {
+			relier(centreValide ?? '', v.note);
+			relier(v.note, centreValide ?? '');
+		}
+		return table;
+	});
 
-	const RAYON_DE_NOEUD_NOMME = 11;
-	const NOEUDS_NOMMES_AU_PLUS = 10;
-	const LARGEUR_DE_CARACTERE = 4.9;
-	const HAUTEUR_DETIQUETTE = 12;
+	/** La profondeur de chaque nœud du voisinage — affinités comprises. */
+	const distances = $derived.by<ReadonlyMap<string, number>>(() => {
+		if (centreValide === null) return new Map<string, number>();
+		const table: Record<string, number> = Object.fromEntries(distancesDepuis(graphe, centreValide));
+		/* Un voisin d'affinité est à UN SAUT du centre par le sens, jamais par une
+		   relation : sans lui donner cette profondeur, il resterait hors du dessin. */
+		for (const v of affinitesDuCentre) table[v.note] ??= 1;
+		return new Map(Object.entries(table));
+	});
 
-	/* ── LES ÎLOTS SÉMANTIQUES ─────────────────────────────────────────────────
-	   La forme juste d'une appartenance est un ENSEMBLE, pas un faisceau de
-	   segments : le contour dit d'un trait ce que cent cinq arêtes diraient mal, et
-	   il ne peut pas être confondu avec une relation déclarée — ce qu'un pointillé,
-	   si discret soit-il, ne garantit jamais.
+	/* ── LE DESSIN ─────────────────────────────────────────────────────────────
+	   Il se calcule ICI, une fois, et rien au navigateur ne le refait : les places
+	   descendent dans le balisage, et `cablage.ts` les relit sur le document. */
 
-	   L'ÎLOT N'A NI CENTRE NI MOYEU. Il en portait un — un disque au barycentre, d'où
-	   partait un rayon vers chacun de ses membres. C'était un objet inventé, et ses
-	   rayons autant : une famille est ce que ses notes ont en commun, pas une chose à
-	   laquelle elles se relient. Ne restent que la GÉOGRAPHIE — la disposition les
-	   rapproche — et le CONTOUR, qui la donne à voir. */
+	const carte = $derived.by<CarteDisposee>(() =>
+		centreValide === null
+			? disposerLaCarte(graphe, {
+					familleParNoeud: familleParNote,
+					ordreDesFamilles: familles.familles.map((f) => f.nom),
+					mesures,
+					perimetre: { nom: nomDuPerimetre, code: codeDuPerimetre }
+				})
+			: disposerLeVoisinage(graphe, {
+					centre: centreValide,
+					familleParNoeud: familleParNote,
+					ordreDesFamilles: familles.familles.map((f) => f.nom),
+					mesures,
+					distances,
+					voisinsDe: (id) => adjacenceDuDessin[id] ?? [],
+					code: ''
+				})
+	);
 
-	interface Ilot {
-		readonly cle: string;
-		readonly nom: string;
-		readonly origine: string;
-		readonly rang: number;
-		readonly membres: readonly string[];
-	}
-
-	/** Le nombre de teintes d'îlot — voir `V-19.css`. */
-	const TEINTES_DE_FAMILLE = 8;
-
-	const famillesDessinees = $derived(famillesPresentes(graphe, familleParNote));
+	const ORIGINE: NoeudPlace = {
+		id: '',
+		x: 0,
+		y: 0,
+		r: 0,
+		pivot: false,
+		famille: null,
+		teinte: null
+	};
+	const positionDe = (id: string): NoeudPlace => carte.places.get(id) ?? ORIGINE;
 
 	/**
-	 * LE RANG D'UN ÎLOT VIENT DU CLASSEMENT DU CHARGEUR, jamais de l'ordre des nœuds
-	 * du dessin. C'est lui qui décide de la teinte : pris sur l'ordre de parcours du
-	 * graphe, deux chargements du même périmètre auraient recoloré les îlots.
+	 * LA COURBE D'UNE RELATION. Un graphe tracé au segment droit se confond avec le
+	 * squelette, qui est droit lui aussi : la courbe est ce qui sépare la relation de
+	 * l'appartenance. Le point de contrôle est le milieu, décalé perpendiculairement
+	 * d'un huitième de la portée.
 	 */
-	const ilots = $derived.by<Ilot[]>(() => {
-		const dessinees = new Set(famillesDessinees);
-		/* Un objet plutôt qu'une `Map` : ce regroupement se REFAIT à chaque changement
-		   de graphe, il n'est jamais muté après coup, et `svelte/prefer-svelte-reactivity`
-		   n'admet pas de `Map` qu'on remplit — à raison, une `Map` mutée dans un état
-		   dérivé ne réveille rien. */
-		const membresParNom: Record<string, string[]> = {};
-		for (const n of graphe.noeuds) {
-			const nom = familleParNote.get(n.id);
-			if (nom === undefined || !dessinees.has(nom)) continue;
-			(membresParNom[nom] ??= []).push(n.id);
-		}
-		return familles.familles
-			.filter((f) => membresParNom[f.nom] !== undefined)
-			.map((f, rang) => ({
-				cle: f.cle,
-				nom: f.nom,
-				origine: f.origine,
-				rang,
-				membres: membresParNom[f.nom] ?? []
-			}));
-	});
+	const COURBURE = 0.1;
+	const courbe = (a: NoeudPlace, b: NoeudPlace): string => {
+		const dx = b.x - a.x;
+		const dy = b.y - a.y;
+		const cx = (a.x + b.x) / 2 - dy * COURBURE;
+		const cy = (a.y + b.y) / 2 + dx * COURBURE;
+		return `M${a.x.toFixed(1)} ${a.y.toFixed(1)}Q${cx.toFixed(1)} ${cy.toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+	};
 
-	interface ContourDeFamille {
-		readonly cle: string;
-		readonly nom: string;
-		readonly effectif: number;
-		readonly rang: number;
-		readonly chemin: string;
-		/** Où se pose l'en-tête : au-dessus du point le plus haut de l'îlot. */
-		readonly tete: Place;
-	}
-
-	const contoursDeFamille = $derived.by<ContourDeFamille[]>(() => {
-		if (!exploration.contours) return [];
-		const dessines: ContourDeFamille[] = [];
-		for (const ilot of ilots) {
-			const pts = ilot.membres.map((id) => positionDe(id));
-			const rayons = ilot.membres.map((id) => rayon(id));
-			const chemin = contourDeGroupe(pts, rayons);
-			if (chemin === null) continue;
-			const centre = barycentre(pts);
-			if (centre === null) continue;
-			/* L'EN-TÊTE SE POSE AU-DESSUS DE L'ÎLOT, comme un titre de carte. Au
-			   barycentre, il tombait au milieu des nœuds et se disputait la place
-			   avec leurs titres. */
-			const haut = Math.min(...pts.map((pt, i) => pt.y - (rayons[i] ?? 0)));
-			dessines.push({
-				cle: ilot.cle,
-				nom: ilot.nom,
-				effectif: ilot.membres.length,
-				rang: ilot.rang % TEINTES_DE_FAMILLE,
-				chemin,
-				tete: { x: centre.x, y: haut - 20 }
-			});
-		}
-		return dessines;
-	});
+	/** Le milieu de la courbe — là où se pose le libellé d'une relation. */
+	const milieuDeCourbe = (a: NoeudPlace, b: NoeudPlace): { x: number; y: number } => {
+		const dx = b.x - a.x;
+		const dy = b.y - a.y;
+		return {
+			x: (a.x + b.x) / 2 - (dy * COURBURE) / 2,
+			y: (a.y + b.y) / 2 + (dx * COURBURE) / 2
+		};
+	};
 
 	/* ── LES FILTRES ───────────────────────────────────────────────────────────
 	   La vue rend l'état d'OUVERTURE ; `cablage.ts` le fait vivre ensuite, sur les
-	   mêmes attributs, avec le MÊME prédicat (`$lib/graphe/filtres`). Aucun nœud
-	   n'est retiré du document : un nœud masqué garde sa place, et le rallumer ne
-	   fait pas sauter la carte. */
+	   mêmes attributs, avec le MÊME prédicat (`$lib/graphe/filtres`). */
 
 	const codeDuNoeud = (note: Note): string => typeDe(note).code;
 
@@ -512,7 +425,6 @@
 			exploration
 		);
 
-	/** Le prédicat d'arête a besoin des deux notes : il les retrouve par l'index. */
 	const masqueParIdentifiant = (id: string): boolean => {
 		const note = graphe.index.get(id)?.note;
 		return note === undefined ? true : masqueDeNoeud(id, note);
@@ -528,7 +440,7 @@
 			exploration
 		);
 
-	/* ── LES COMPTES DE LA COLONNE DE COMMANDE ─────────────────────────────── */
+	/* ── LES COMPTES DU PANNEAU D'AFFICHAGE ────────────────────────────────── */
 
 	const comptesDeCouche = $derived.by(() => {
 		let declarees = 0;
@@ -540,10 +452,6 @@
 		return { declarees, deduites };
 	});
 
-	/* Un objet plutôt qu'une `Map` : ce décompte se REFAIT à chaque changement de
-	   graphe, il n'est jamais muté après coup, et `svelte/prefer-svelte-reactivity`
-	   n'admet pas de `Map` qu'on remplit — à raison, une `Map` mutée dans un état
-	   dérivé ne réveille rien. */
 	const comptesDeVivacite = $derived.by<Record<EtatDeVivacite, number>>(() => {
 		const table = Object.fromEntries(ORDRE_DES_ETATS.map((e) => [e, 0])) as Record<
 			EtatDeVivacite,
@@ -560,10 +468,16 @@
 	/** Les notes du dessin qu'aucune relation ne touche — la mesure de structuration. */
 	const isolees = $derived(graphe.noeuds.filter((n) => degreDe(n.id) === 0).length);
 
-	/* ── LES ALTERNATIVES TEXTUELLES ───────────────────────────────────────── */
+	/** Les familles réellement dessinées, et le nombre de notes qu'elles réunissent. */
+	const famillesDessinees = $derived(famillesPresentes(graphe, familleParNote));
+	const notesEnFamille = $derived(
+		graphe.noeuds.filter((n) => {
+			const nom = familleParNote.get(n.id);
+			return nom !== undefined && famillesDessinees.includes(nom);
+		}).length
+	);
 
-	const nomCourt = (titre: string): string =>
-		titre.length > 26 ? `${titre.slice(0, 25)}…` : titre;
+	/* ── LES ALTERNATIVES TEXTUELLES ───────────────────────────────────────── */
 
 	const libelleDEtat = (id: string): string => {
 		const etat = vivaciteDe(id);
@@ -585,59 +499,6 @@
 		);
 	};
 
-	/**
-	 * AU-DELÀ DE CE NOMBRE DE NŒUDS, LES ÉTIQUETTES SONT TUES PAR DÉFAUT.
-	 *
-	 * Le repère fait mille sur six cent vingt, marges déduites huit cent seize sur
-	 * quatre cent trente-six. L'écart entre deux nœuds décroît comme l'inverse de la
-	 * racine du nombre : à quatre-vingts nœuds il tombe sous trente-cinq unités,
-	 * quand un titre en occupe une centaine. Mesuré au navigateur sur l'instance de
-	 * recette — soixante-dix-sept notes, et pas un titre lisible.
-	 *
-	 * TOUT EXPLORATEUR DE GRAPHE FAIT AINSI, et pour cette raison : le nom d'un nœud
-	 * se lit au survol, à la sélection, ou en grossissant. Ce qui reste écrit en
-	 * permanence, ce sont les NOMS DE FAMILLE — ils sont peu nombreux, et ce sont eux
-	 * qui permettent de s'orienter.
-	 */
-	const NOEUDS_AVANT_DE_TAIRE_LES_ETIQUETTES = 36;
-
-	const dense = $derived(graphe.noeuds.length > NOEUDS_AVANT_DE_TAIRE_LES_ETIQUETTES);
-
-	const noeudsNommes = $derived.by<ReadonlySet<string>>(() => {
-		if (!dense) return new Set(graphe.noeuds.map((n) => n.id));
-
-		const candidats = graphe.noeuds
-			.map((n) => ({ id: n.id, titre: nomCourt(n.note.titre), r: rayon(n.id) }))
-			.filter((c) => c.r >= RAYON_DE_NOEUD_NOMME)
-			.sort((a, b) => b.r - a.r || a.id.localeCompare(b.id));
-
-		/* Un tableau, puis UN `Set` construit d'un coup : `svelte/prefer-svelte-reactivity`
-		   refuse un `Set` qu'on remplit — à raison, un `Set` muté dans un état dérivé
-		   ne réveille rien. */
-		const retenus: string[] = [];
-		const boites: { x1: number; y1: number; x2: number; y2: number }[] = [];
-		for (const c of candidats) {
-			if (retenus.length >= NOEUDS_NOMMES_AU_PLUS) break;
-			const place = positionDe(c.id);
-			const demiLargeur = (c.titre.length * LARGEUR_DE_CARACTERE) / 2;
-			/* L'étiquette est posée sous la pastille — `y={ray + 12}` au balisage. */
-			const haut = place.y + c.r + 12 - HAUTEUR_DETIQUETTE;
-			const boite = {
-				x1: place.x - demiLargeur,
-				y1: haut,
-				x2: place.x + demiLargeur,
-				y2: haut + HAUTEUR_DETIQUETTE
-			};
-			const heurte = boites.some(
-				(b) => b.x1 < boite.x2 && boite.x1 < b.x2 && b.y1 < boite.y2 && boite.y1 < b.y2
-			);
-			if (heurte) continue;
-			boites.push(boite);
-			retenus.push(c.id);
-		}
-		return new Set(retenus);
-	});
-
 	/* L'avancement du calcul de disposition : un état figé, jamais une animation. */
 	const AVANCEMENT = 77;
 
@@ -646,12 +507,9 @@
 	);
 
 	/* ── CE QUI MANQUE, ET LE GESTE QUI DÉBLOQUE ───────────────────────────────
-	   DEUX RÉGIMES, ET C'EST LA CORRECTION. Le voile couvrait aussi l'absence de
-	   RELATION, si bien qu'un périmètre de trente-deux notes se voyait masqué au
-	   motif qu'aucune n'était reliée — alors que le nuage des familles est
-	   parfaitement lisible, et qu'il dit quelque chose d'utile. Le voile ne reste
-	   que là où il n'y a RIEN À DESSINER ; ce qui manque par-dessus un dessin
-	   peuplé se dit par un bandeau, qui n'empêche pas de regarder. */
+	   Le voile ne reste que là où il n'y a RIEN À DESSINER ; ce qui manque
+	   par-dessus un dessin peuplé se dit par un bandeau, qui n'empêche pas de
+	   regarder. */
 
 	type ManqueBloquant = 'univers' | 'domaine' | 'note';
 	type Avis = 'relation' | 'perimetre';
@@ -675,32 +533,33 @@
 	const voileActif = $derived(cas === 'chargement' || manque !== null ? 'oui' : undefined);
 
 	/**
-	 * LE FIL PORTE LE PÉRIMÈTRE, et pas seulement le nom de l'écran. « Accueil ›
-	 * Cartographie » ne disait pas de QUOI on regarde la carte, alors que le
-	 * sélecteur venait de le choisir. Le second segment est l'univers, par la
-	 * convention de la coquille : le rail le déplie et le met en évidence.
+	 * LE FIL PORTE LE PÉRIMÈTRE, et pas seulement le nom de l'écran : le sélecteur
+	 * vient de choisir de QUOI on regarde la carte.
 	 */
 	const filDAriane = $derived.by<string[]>(() => {
 		const tete = universChoisi === '' ? ['Accueil'] : ['Accueil', universChoisi];
 		return locale ? [...tete, 'Cartographie', 'Voisinage'] : [...tete, 'Cartographie'];
 	});
 
-	/** Le nœud choisi, en mode local — la vue le rend, le câblage l'ouvre. */
+	/** La note au centre, dans le voisinage — la vue la rend, le câblage l'ouvre. */
 	const noteDuCentre = $derived(
 		centreValide === null ? null : (graphe.index.get(centreValide)?.note ?? null)
 	);
 
-	/* ── CE QUI S'EXPLIQUE, ET OÙ ──────────────────────────────────────────────
-	   Le panneau portait trois paragraphes — dont « L'affinité sémantique n'est pas
-	   une couche de liens… » — et un bloc de huit clés de lecture. Un explorateur
-	   qu'on ouvre tous les jours n'a pas à redire son mode d'emploi à chaque
-	   ouverture : la légende du dessin nomme les encodages, chaque ligne du panneau
-	   se compte et se filtre, et ce qui demande une phrase tient dans un `ⓘ`. */
+	/* ── LES COMPTEURS DU VOISINAGE ────────────────────────────────────────── */
+
+	const compteursDuVoisinage = $derived({
+		noeuds: graphe.noeuds.length,
+		relations: graphe.aretes.length,
+		affinites: affinitesDuCentre.length
+	});
+
+	/* ── CE QUI S'EXPLIQUE, ET OÙ ──────────────────────────────────────────── */
 
 	const infoDesFamilles = $derived(
 		'Regroupement par proximité de sens — étiquettes, dossier, mots des titres —, ' +
-			'indépendant des relations déclarées. Une appartenance commune rapproche les nœuds ' +
-			'et les entoure ; elle ne se dessine jamais en traits.' +
+			'indépendant des relations déclarées. Une famille est une branche du dessin : ' +
+			'ses notes entourent son pivot, et un contour la cerne.' +
 			(familles.sansFamille > 0
 				? ` ${familles.sansFamille} ${accord(familles.sansFamille, 'note')} hors famille.`
 				: '') +
@@ -711,12 +570,18 @@
 		'Connexions : le nombre de relations qui touchent le nœud. ' +
 		'Centralité : la part des plus courts chemins du périmètre qui passent par lui — ' +
 		'une note peut avoir vingt voisins et ne relier rien à rien.';
+
+	/** Le repère du dessin, tel que la disposition l'a calculé sur son contenu. */
+	const boiteDuRepere = $derived(
+		`${carte.repere.x.toFixed(1)} ${carte.repere.y.toFixed(1)} ${carte.repere.largeur.toFixed(1)} ${carte.repere.hauteur.toFixed(1)}`
+	);
+
+	/** Le regroupement est-il montré ? L'interrupteur commande les deux cases. */
+	const regroupementActif = $derived(exploration.contours || exploration.nomsDeFamille);
 </script>
 
-<!-- Le contour d'un nœud. LA COULEUR N'EST PLUS UN ATTRIBUT DE PRÉSENTATION :
-     elle vient de `currentColor`, que la classe d'état pose sur le groupe. C'est
-     ce qui permet à la vivacité de commander la teinte sans qu'aucune règle de
-     style ne soit écrite dans la vue (`ADR-002`). -->
+<!-- Le contour d'un nœud. LA COULEUR N'EST PAS UN ATTRIBUT DE PRÉSENTATION : elle
+     vient de `currentColor`, que la classe d'état pose sur le groupe. -->
 {#snippet contour(f: Contour)}{#if f.balise === 'circle'}<circle
 			r={f.r}
 			class="noeud__forme"
@@ -732,39 +597,31 @@
 			class="noeud__forme"
 		/>{:else}<path d={f.d} class="noeud__forme" />{/if}{/snippet}
 
-<!-- La miniature de type de la légende : le même contour, au rayon 9, en encre
-     neutre — la teinte y dirait un état que la légende ne parle pas. -->
+<!-- La miniature de type de la légende : le même contour, en encre neutre — la
+     teinte y dirait un état que la légende ne parle pas. -->
 {#snippet miniature(t: EncodageDeType)}<svg
-		width="26"
-		height="26"
-		viewBox="-13 -13 26 26"
+		width="20"
+		height="20"
+		viewBox="-11 -11 22 22"
 		class="lg__forme"
-		>{@render contour(contourDeForme(t, 9))}<text class="noeud__code" style="font-size:6px"
-			>{t.code}</text
-		></svg
+		aria-hidden="true">{@render contour(contourDeForme(t, 7.5))}</svg
 	>{/snippet}
 
-<!-- Le glyphe d'un état, dans la légende de vivacité comme dans le panneau : le
-     même chemin que `GlypheDeVivacite`, à la même géométrie. La couleur ne porte
-     jamais seule l'information (`RG-M18-09`). -->
+<!-- Le glyphe d'un état. La couleur ne porte jamais seule l'information. -->
 {#snippet glypheDEtat(etat: EtatDeVivacite)}<svg
 		class="glyphe {ETATS_DE_VIVACITE[etat].classe}"
-		width="14"
-		height="14"
+		width="12"
+		height="12"
 		viewBox="0 0 16 16"
-		aria-hidden="true"
-		><circle
-			cx="8"
-			cy="8"
-			r="6.5"
-			fill="none"
-			stroke="currentColor"
-			stroke-width="1.6"
-		/>{#if ETATS_DE_VIVACITE[etat].glyphe}<path
-				d={ETATS_DE_VIVACITE[etat].glyphe}
-				fill="currentColor"
-			/>{/if}</svg
+		aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="currentColor" /></svg
 	>{/snippet}
+
+<!-- La petite icône qui précède un nom de famille — une étoile à quatre branches. -->
+{#snippet etoileDeFamille(x: number, y: number, r: number)}<path
+		class="famille__icone"
+		d="M{x} {y - r}Q{x + r * 0.16} {y - r * 0.16} {x + r} {y}Q{x + r * 0.16} {y + r * 0.16} {x} {y +
+			r}Q{x - r * 0.16} {y + r * 0.16} {x - r} {y}Q{x - r * 0.16} {y - r * 0.16} {x} {y - r}Z"
+	/>{/snippet}
 
 <Coquille
 	forme="abregee"
@@ -786,64 +643,29 @@
 >
 	{#snippet enfants()}
 		{#if locale}
-			<!-- ══════════ Vue locale : le voisinage d'un nœud ══════════ -->
-			<div class="controles controles--locale">
-				<a class="retour" href={resolve('/cartographie')}
+			<!-- ══════════ Voisinage d'une note ══════════ -->
+			<div class="carto-tete carto-tete--voisinage">
+				<a class="carto-retour" href={resolve('/cartographie')}
 					><svg
 						width="14"
 						height="14"
 						viewBox="0 0 16 16"
 						fill="none"
 						stroke="currentColor"
-						stroke-width="1.7"><path d="M10 3L5 8l5 5" /></svg
+						stroke-width="1.7"
+						aria-hidden="true"><path d="M10 3L5 8l5 5" /></svg
 					>Retour à la cartographie</a
 				>
-				<div class="controles__titre">
-					<!-- LES GUILLEMETS NE SONT PAS UN ORNEMENT : « Voisinage de Ancienne procédure »
-					     se lit mal, et aucune règle d'élision ne tient sur un titre libre — il
-					     peut commencer par une voyelle, un chiffre, une majuscule ou un guillemet. -->
-					<h1>{'Voisinage de « ' + (noteDuCentre?.titre ?? '') + ' »'}</h1>
-					<p>Explorer les relations et les proximités autour de cette note.</p>
-				</div>
 
-				<div class="controles__groupe" style="margin-left:auto">
-					<span class="etiq" id="etiq-profondeur">Profondeur</span>
-					<div class="bascule-vue" role="group" aria-labelledby="etiq-profondeur">
-						{#each [1, 2, 3] as niveau (niveau)}<button
-								type="button"
-								class="btn-profondeur"
-								data-profondeur={niveau}
-								aria-pressed={niveau === profondeur}>{niveau}</button
-							>{/each}
-					</div>
-				</div>
-
-				<div class="mesures">
-					<span class="mesures__item"
-						>{graphe.noeuds.length + ' ' + accord(graphe.noeuds.length, 'nœud')}</span
-					><span class="mesures__item"
-						>{graphe.aretes.length + ' ' + accord(graphe.aretes.length, 'relation')}</span
-					><span class="mesures__item"
-						>{(familles.voisinsParNote[centreValide ?? '']?.length ?? 0) + ' affinités'}</span
-					>
-				</div>
-			</div>
-		{:else}
-			<!-- ══════════ Vue complète : le titre et les commandes de périmètre ══════════
-			     LES RÉGLAGES DU GRAPHE NE SONT PAS ICI, et ce n'est pas une question de
-			     place : cette barre appartient à la PAGE — où l'on regarde, et comment
-			     y revenir. Ce qui règle le DESSIN vit dans le panneau « Affichage »,
-			     posé sur le canevas qu'il commande. -->
-			<div class="controles">
-				<div class="controles__titre">
-					<span class="controles__glyphe" aria-hidden="true"
+				<div class="carto-tete__ligne">
+					<span class="carto-tete__glyphe" aria-hidden="true"
 						><svg
-							width="24"
-							height="24"
+							width="26"
+							height="26"
 							viewBox="0 0 24 24"
 							fill="none"
 							stroke="currentColor"
-							stroke-width="1.6"
+							stroke-width="1.5"
 							><circle cx="12" cy="5" r="2.4" /><circle cx="5" cy="17" r="2.4" /><circle
 								cx="19"
 								cy="17"
@@ -851,92 +673,211 @@
 							/><path d="M10.4 6.8 6.6 15M13.6 6.8 17.4 15M7.5 17.4h9" /></svg
 						></span
 					>
-					<div>
-						<h1>Cartographie</h1>
-						<p>Explorez les liens et les forces de votre connaissance.</p>
+					<div class="carto-tete__titre">
+						<h1>{'Voisinage de ' + (noteDuCentre?.titre ?? '')}</h1>
+						<p>Explorer les relations et les proximités autour de cette note.</p>
+					</div>
+
+					<div class="carto-carte carto-carte--profondeur">
+						<span class="carto-etiq" id="etiq-profondeur">Profondeur</span>
+						<div class="carto-segments" role="group" aria-labelledby="etiq-profondeur">
+							{#each [1, 2, 3] as niveau (niveau)}<button
+									type="button"
+									class="btn-profondeur"
+									data-profondeur={niveau}
+									aria-pressed={niveau === profondeur}>{niveau}</button
+								>{/each}
+						</div>
+					</div>
+
+					<div class="carto-carte carto-carte--mesures">
+						<span class="carto-mesure"
+							><svg
+								width="14"
+								height="14"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"
+								aria-hidden="true"
+								><circle cx="8" cy="4" r="2" /><circle cx="4" cy="12" r="2" /><circle
+									cx="12"
+									cy="12"
+									r="2"
+								/><path d="M7 5.7 5 10M9 5.7 11 10M6 12h4" /></svg
+							>{compteursDuVoisinage.noeuds +
+								' ' +
+								accord(compteursDuVoisinage.noeuds, 'nœud')}</span
+						>
+						<span class="carto-mesure"
+							><svg
+								width="14"
+								height="14"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"
+								aria-hidden="true"
+								><path
+									d="M6.5 9.5 9.5 6.5M4 8a2.5 2.5 0 0 1 0-3.5l1-1a2.5 2.5 0 0 1 3.5 3.5M12 8a2.5 2.5 0 0 1 0 3.5l-1 1a2.5 2.5 0 0 1-3.5-3.5"
+								/></svg
+							>{compteursDuVoisinage.relations +
+								' ' +
+								accord(compteursDuVoisinage.relations, 'relation')}</span
+						>
+						<span class="carto-mesure"
+							><svg
+								width="14"
+								height="14"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.4"
+								stroke-dasharray="2 2"
+								aria-hidden="true"><circle cx="8" cy="8" r="5.5" /></svg
+							>{compteursDuVoisinage.affinites + ' affinités'}</span
+						>
 					</div>
 				</div>
-
-				<div class="controles__outils">
-					<label class="hors-ecran" for="perimetre-univers">Univers</label>
-					<select id="perimetre-univers" class="carto-choix"
-						><option value="">Univers : tous</option>{#each UNIVERS_PROPOSES as u (u.nom)}<option
-								value={u.nom}
-								selected={u.nom === universChoisi}>{'Univers : ' + u.nom}</option
-							>{/each}</select
-					>
-
-					<label class="hors-ecran" for="perimetre-domaine">Domaine</label>
-					<select id="perimetre-domaine" class="carto-choix"
-						><option value="">Domaine : tous</option>{#each domainesProposes as d (d.nom)}<option
-								value={d.nom}
-								selected={d.nom === domaineChoisi}>{'Domaine : ' + d.nom}</option
-							>{/each}</select
-					>
-
-					<div class="rech-graphe" id="rech-graphe">
-						<svg
-							width="14"
-							height="14"
-							viewBox="0 0 16 16"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.6"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5L14 14" /></svg
-						>
-						<input
-							type="search"
-							id="rech"
-							placeholder="Rechercher un nœud…"
-							autocomplete="off"
-							aria-label="Chercher un nœud dans le graphe"
-						/>
-						<div class="rech-graphe__liste" id="rech-liste" role="listbox"></div>
-					</div>
-
-					<button class="btn" id="recentrer" type="button"
+			</div>
+		{:else}
+			<!-- ══════════ Cartographie ══════════
+			     LES RÉGLAGES DU DESSIN NE SONT PAS ICI, et ce n'est pas une question de
+			     place : cette barre appartient à la PAGE — où l'on regarde, et comment y
+			     revenir. Ce qui règle le DESSIN vit dans le panneau « Affichage », posé
+			     sur le canevas qu'il commande. -->
+			<div class="carto-tete">
+				<div class="carto-tete__ligne">
+					<span class="carto-tete__glyphe" aria-hidden="true"
 						><svg
-							width="14"
-							height="14"
-							viewBox="0 0 16 16"
+							width="26"
+							height="26"
+							viewBox="0 0 24 24"
 							fill="none"
 							stroke="currentColor"
 							stroke-width="1.5"
-							><circle cx="8" cy="8" r="3" /><path d="M8 1v2.2M8 12.8V15M1 8h2.2M12.8 8H15" /></svg
-						>Recentrer</button
+							><circle cx="12" cy="5" r="2.4" /><circle cx="5" cy="17" r="2.4" /><circle
+								cx="19"
+								cy="17"
+								r="2.4"
+							/><path d="M10.4 6.8 6.6 15M13.6 6.8 17.4 15M7.5 17.4h9" /></svg
+						></span
 					>
-					<button class="btn" id="effacer-sel" type="button" disabled>Effacer la sélection</button>
+					<div class="carto-tete__titre">
+						<h1>Cartographie</h1>
+						<p>Explorez les liens et les forces de votre connaissance.</p>
+					</div>
 
-					<div class="bascule-vue" role="tablist" aria-label="Mode de cartographie">
-						<button role="tab" aria-selected="true" data-vue="complete">Graphe</button>
-						<button role="tab" aria-selected="false" data-vue="maitre">Par type</button>
+					<div class="carto-tete__outils">
+						<label class="hors-ecran" for="perimetre-univers">Univers</label>
+						<select id="perimetre-univers" class="carto-choix"
+							><option value="">Univers : tous</option>{#each UNIVERS_PROPOSES as u (u.nom)}<option
+									value={u.nom}
+									selected={u.nom === universChoisi}>{'Univers : ' + u.nom}</option
+								>{/each}</select
+						>
+
+						<label class="hors-ecran" for="perimetre-domaine">Domaine</label>
+						<select id="perimetre-domaine" class="carto-choix"
+							><option value="">Domaine : tous</option>{#each domainesProposes as d (d.nom)}<option
+									value={d.nom}
+									selected={d.nom === domaineChoisi}>{'Domaine : ' + d.nom}</option
+								>{/each}</select
+						>
+
+						<div class="rech-graphe" id="rech-graphe">
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.6"
+								aria-hidden="true"
+								><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5L14 14" /></svg
+							>
+							<input
+								type="search"
+								id="rech"
+								placeholder="Rechercher dans le graphe…"
+								autocomplete="off"
+								aria-label="Chercher un nœud dans le graphe"
+							/>
+							<div class="rech-graphe__liste" id="rech-liste" role="listbox"></div>
+						</div>
+
+						<button class="carto-btn" id="recentrer" type="button"
+							><svg
+								width="14"
+								height="14"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.5"
+								aria-hidden="true"
+								><circle cx="8" cy="8" r="3" /><path
+									d="M8 1v2.2M8 12.8V15M1 8h2.2M12.8 8H15"
+								/></svg
+							>Recentrer</button
+						>
+						<button class="carto-btn" id="effacer-sel" type="button" disabled
+							>Effacer la sélection</button
+						>
+
+						<div class="carto-segments" role="tablist" aria-label="Mode de cartographie">
+							<button role="tab" aria-selected="true" data-vue="complete">Graphe</button>
+							<button role="tab" aria-selected="false" data-vue="maitre">Par type</button>
+						</div>
 					</div>
 				</div>
 			</div>
 		{/if}
 
-		<div class="scene" data-mode={locale ? 'locale' : 'complete'}>
-			<!-- ---------- Le graphe ---------- -->
-			<div class="zone-graphe" id="zone-graphe">
+		<div class="carto-scene" data-mode={locale ? 'locale' : 'complete'}>
+			<!-- ---------- Le dessin ---------- -->
+			<div class="carto-toile" id="zone-graphe">
 				<svg
 					id="graphe"
 					class="graphe"
 					data-focus="non"
-					data-isole="non"
+					data-zoom="loin"
 					data-ruptures="oui"
 					data-contours={exploration.contours ? 'oui' : 'non'}
 					data-noms={exploration.nomsDeFamille ? 'oui' : 'non'}
-					data-dense={dense ? 'oui' : 'non'}
+					data-mode={locale ? 'locale' : 'complete'}
 					role="img"
-					aria-label="Graphe du périmètre. Une liste équivalente est disponible dans le panneau d’affichage."
-					viewBox="0 0 1000 780"
+					aria-label="Dessin du périmètre. Une liste équivalente est disponible dans le panneau d’affichage."
+					viewBox={boiteDuRepere}
+					preserveAspectRatio="xMidYMid meet"
+					><defs
+						><marker
+							id="pointe"
+							viewBox="0 0 10 10"
+							refX="9"
+							refY="5"
+							markerWidth="5"
+							markerHeight="5"
+							orient="auto-start-reverse"><path class="pointe" d="M0 1L9 5L0 9z" /></marker
+						></defs
 					><g id="racine" transform="translate(0,0) scale(1)"
-						><g class="familles" aria-hidden="true"
-							>{#each contoursDeFamille as f (f.cle)}<path
+						><!-- 1. Les contours de famille, tout au fond. -->
+						<g class="calque-contours" aria-hidden="true"
+							>{#each carte.familles as f (f.cle)}<path
 									class="famille__contour"
-									data-teinte={f.rang}
+									data-teinte={f.teinte}
 									d={f.chemin}
 								/>{/each}</g
-						><g
+						><!-- 2. Le squelette : l'appartenance, jamais une relation. -->
+						<g class="calque-squelette" aria-hidden="true"
+							>{#each carte.squelette as trait, rang (rang)}<line
+									class="squelette"
+									x1={trait.x1.toFixed(1)}
+									y1={trait.y1.toFixed(1)}
+									x2={trait.x2.toFixed(1)}
+									y2={trait.y2.toFixed(1)}
+								/>{/each}</g
+						><!-- 3. Les relations, par-dessus, avec les styles de la légende. -->
+						<g class="calque-relations"
 							>{#each graphe.aretes as r, rang (rang)}<path
 									class="arete"
 									d={courbe(positionDe(r.de), positionDe(r.vers))}
@@ -946,84 +887,106 @@
 									data-couche={coucheDArete(r)}
 									data-masque={masqueDArete(r) ? 'oui' : 'non'}
 									data-technique={estTechnique(r.type, relationsTechniques) ? 'oui' : 'non'}
+									marker-end="url(#pointe)"
 									><title
 										>{`${titreDe(graphe, corpus, r.de)} ${typesRelation[r.type].sortant} ${titreDe(graphe, corpus, r.vers)}`}</title
 									></path
 								>{/each}</g
-						>{#if locale}<g class="aretes-etiquettes" aria-hidden="true"
-								>{#each graphe.aretes as r, rang (rang)}<text
+						><!-- 4. Les affinités du centre — dans le voisinage seulement. -->
+						<g class="calque-affinites" id="affinites"
+							>{#if locale}{#each affinitesDuCentre as v (v.note)}<line
+										class="affinite"
+										data-de={centreValide}
+										data-vers={v.note}
+										x1={positionDe(centreValide ?? '').x}
+										y1={positionDe(centreValide ?? '').y}
+										x2={positionDe(v.note).x}
+										y2={positionDe(v.note).y}><title>{v.origine + ' ' + v.trait}</title></line
+									>{/each}{/if}</g
+						><!-- 5. Les libellés des relations — dans le voisinage seulement. -->
+						{#if locale}<g class="calque-etiquettes-relation" aria-hidden="true"
+								>{#each graphe.aretes as r, rang (rang)}{@const m = milieuDeCourbe(
+										positionDe(r.de),
+										positionDe(r.vers)
+									)}<text
 										class="arete__etiquette"
 										data-de={r.de}
 										data-vers={r.vers}
 										data-masque={masqueDArete(r) ? 'oui' : 'non'}
-										x={(positionDe(r.de).x + positionDe(r.vers).x) / 2}
-										y={(positionDe(r.de).y + positionDe(r.vers).y) / 2}
-										>{typesRelation[r.type].sortant}</text
+										x={m.x.toFixed(1)}
+										y={m.y.toFixed(1)}
+										>{coucheDArete(r) === 'declarees' ? 'déclarée' : 'déduite'}</text
+									>{/each}{#each affinitesDuCentre as v (v.note)}<text
+										class="arete__etiquette arete__etiquette--affinite"
+										x={((positionDe(centreValide ?? '').x + positionDe(v.note).x) / 2).toFixed(1)}
+										y={((positionDe(centreValide ?? '').y + positionDe(v.note).y) / 2).toFixed(1)}
+										>affinité</text
 									>{/each}</g
-							>{/if}<g class="familles-noms" aria-hidden="true"
-							>{#each contoursDeFamille as f (f.cle)}<g
+							>{/if}<!-- 6. Le disque du centre : le périmètre, ou la note du voisinage. -->
+						{#if graphe.noeuds.length > 0}<g
+								class="centre"
+								transform="translate({carte.centre.x},{carte.centre.y})"
+								aria-hidden="true"
+								><circle class="centre__disque" r={carte.centre.r} /><text
+									class="centre__nom"
+									y={carte.centre.code === '' ? 4 : 0}>{libelleCourt(carte.centre.libelle)}</text
+								>{#if carte.centre.code !== ''}<text class="centre__code" y="16"
+										>({carte.centre.code})</text
+									>{/if}</g
+							>{/if}<!-- 7. Les nœuds. -->
+						<g class="calque-noeuds"
+							>{#each graphe.noeuds as n (n.id)}{@const place = positionDe(n.id)}{@const etat =
+									vivaciteDe(n.id)}{#if !(locale && n.id === centreValide)}<g
+										class="noeud {etat === null
+											? 'noeud--sans-etat'
+											: ETATS_DE_VIVACITE[etat].classe}"
+										transform="translate({place.x},{place.y})"
+										data-id={n.id}
+										data-code={codeDuNoeud(n.note)}
+										data-fantome={n.fantome ? 'oui' : 'non'}
+										data-actif="non"
+										data-pivot={place.pivot ? 'oui' : 'non'}
+										data-teinte={place.teinte ?? ''}
+										data-nomme={carte.etiquettes.has(n.id) ? 'oui' : 'non'}
+										data-choisi="non"
+										data-masque={masqueDeNoeud(n.id, n.note) ? 'oui' : 'non'}
+										data-vivacite={etat ?? ''}
+										data-degre={degreDe(n.id)}
+										data-isolee={degreDe(n.id) === 0 ? 'oui' : 'non'}
+										data-saut={distances.get(n.id) ?? ''}
+										tabindex="0"
+										role="button"
+										aria-label={libelleDuNoeud(n.id, n.note)}
+										><title>{libelleDuNoeud(n.id, n.note)}</title>{#if place.pivot}<circle
+												class="pivot__halo"
+												r={place.r + 7}
+											/>{/if}{@render contour(
+											contourDeForme(typeDe(n.note), place.pivot ? place.r : rayon(n.id))
+										)}{#if ruptures.has(n.id)}<circle
+												class="rupture-anneau"
+												r={(place.pivot ? place.r : rayon(n.id)) + 5}
+											/>{/if}<text
+											class="noeud__nom"
+											y={carte.etiquettesAuDessus.has(n.id)
+												? -place.r - MARGE_DETIQUETTE
+												: place.r + MARGE_DETIQUETTE + HAUTEUR_DETIQUETTE * 0.72}
+											>{libelleCourt(n.note.titre)}</text
+										></g
+									>{/if}{/each}</g
+						><!-- 8. Les noms de famille, au-dessus de tout : rien ne les recouvre. -->
+						<g class="calque-noms" aria-hidden="true"
+							>{#each carte.familles as f (f.cle)}<g
 									class="famille__tete"
-									data-teinte={f.rang}
-									transform="translate({f.tete.x},{f.tete.y})"
-									><circle
-										class="famille__pastille"
-										cx={-f.nom.length * 3.4 - 8}
-										cy="-4"
-										r="3.5"
-									/><text class="famille__nom">{f.nom}</text><text class="famille__compte" y="14"
-										>{f.effectif + ' ' + accord(f.effectif, 'note')}</text
-									></g
-								>{/each}</g
-						><g class="affinites" id="affinites"
-							>{#each affinitesDuCentre as v (v.note)}<line
-									class="affinite"
-									x1={positionDe(centreValide ?? '').x}
-									y1={positionDe(centreValide ?? '').y}
-									x2={positionDe(v.note).x}
-									y2={positionDe(v.note).y}><title>{v.origine + ' ' + v.trait}</title></line
-								>{/each}{#each affinitesDuCentre as v (v.note)}<text
-									class="affinite__etiquette"
-									x={(positionDe(centreValide ?? '').x + positionDe(v.note).x) / 2}
-									y={(positionDe(centreValide ?? '').y + positionDe(v.note).y) / 2}>affinité</text
-								>{/each}</g
-						><g
-							>{#each graphe.noeuds as n (n.id)}{@const ray = rayon(n.id)}{@const etat = vivaciteDe(
-									n.id
-								)}<g
-									class="noeud {etat === null
-										? 'noeud--sans-etat'
-										: ETATS_DE_VIVACITE[etat].classe}"
-									transform="translate({positionDe(n.id).x},{positionDe(n.id).y})"
-									data-id={n.id}
-									data-code={codeDuNoeud(n.note)}
-									data-fantome={n.fantome ? 'oui' : 'non'}
-									data-actif="non"
-									data-gros={noeudsNommes.has(n.id) ? 'oui' : 'non'}
-									data-choisi={n.id === centreValide ? 'oui' : 'non'}
-									data-masque={masqueDeNoeud(n.id, n.note) ? 'oui' : 'non'}
-									data-vivacite={etat ?? ''}
-									data-degre={degreDe(n.id)}
-									data-isolee={degreDe(n.id) === 0 ? 'oui' : 'non'}
-									data-saut={distances.get(n.id) ?? ''}
-									tabindex="0"
-									role="button"
-									aria-label={libelleDuNoeud(n.id, n.note)}
-									><!-- LE SURVOL DIT LE NŒUD, ET IL RESTE LÉGER — titre, type, état,
-									     connexions. Il ne modifiait RIEN : l'étiquette de titre
-									     reparaissait sous la pastille, et rien ne disait de quel type ni
-									     de quel état il s'agit, alors que ce sont les deux canaux que le
-									     dessin encode. Un `title` de SVG suffit ; une bulle dessinée
-									     serait un second panneau, et le panneau existe déjà. -->
-									<title>{libelleDuNoeud(n.id, n.note)}</title>{@render contour(
-										contourDeForme(typeDe(n.note), ray)
-									)}{#if ruptures.has(n.id)}<circle class="rupture-anneau" r={ray + 5} /><circle
-											class="rupture-fanion"
-											cx={ray * 0.9}
-											cy={-ray * 1.05}
-											r="5.5"
-										/><text class="rupture-glyphe" x={ray * 0.9} y={-ray * 1.05}>!</text>{/if}<text
-										class="noeud__nom"
-										y={ray + 12}>{nomCourt(n.note.titre)}</text
+									data-teinte={f.teinte}
+									transform="translate({f.tete.x.toFixed(1)},{f.tete.y.toFixed(1)})"
+									>{@render etoileDeFamille(
+										RETRAIT_DE_LICONE / 2.6,
+										-RETRAIT_DE_LICONE / 3.6,
+										RETRAIT_DE_LICONE / 3
+									)}<text class="famille__nom" x={RETRAIT_DE_LICONE}>{f.nom}</text><text
+										class="famille__compte"
+										x={RETRAIT_DE_LICONE}
+										y={DESCENTE_DU_COMPTE}>{f.effectif + ' ' + accord(f.effectif, 'note')}</text
 									></g
 								>{/each}</g
 						></g
@@ -1033,14 +996,11 @@
 				<!-- ---------- Le panneau d'affichage ----------
 				     IL EST POSÉ SUR LE CANEVAS QU'IL COMMANDE, et c'est ce qui le distingue
 				     du rail : le rail dit où l'on est dans le produit, ce panneau dit ce
-				     que le dessin montre. Mêler les deux ferait de la navigation générale
-				     un panneau de configuration, et il y en a onze autres écrans.
+				     que le dessin montre.
 
-				     CHAQUE LIGNE EST À LA FOIS UNE LÉGENDE, UN FILTRE ET UN COMPTE. C'est
-				     la seule façon d'expliquer un encodage sans écrire un paragraphe : la
+				     CHAQUE LIGNE EST À LA FOIS UNE LÉGENDE, UN FILTRE ET UN COMPTE. La
 				     ligne « ● À vérifier 12 » montre la teinte, la nomme, la dénombre, et
-				     l'éteint d'un clic. Les trois paragraphes qui tenaient ce rôle ont été
-				     retirés — un panneau d'exploration n'est pas un manuel. -->
+				     l'éteint d'un clic. -->
 				{#if !locale}
 					<aside class="carto-reglages" id="commandes" aria-label="Affichage du graphe">
 						<div class="carto-reglages__tete">
@@ -1076,8 +1036,27 @@
 						</div>
 
 						<div class="carto-reglages__corps" id="carto-reglages-corps">
-							<div class="legende__bloc">
-								<span class="etiq">Liens</span>
+							<!-- 1. Périmètre — ce que le dessin montre, en toutes lettres.
+							     LES DEUX LIGNES SONT DES BOUTONS QUI FONT QUELQUE CHOSE : elles
+							     portent le regard sur le sélecteur correspondant. Un rappel
+							     inerte du périmètre serait un bouton mort. -->
+							<div class="carto-bloc">
+								<span class="carto-etiq">Périmètre</span>
+								<button type="button" class="lg lg--lien" data-vers="perimetre-univers"
+									><span class="lg__nom"
+										>Univers : <b>{universChoisi === '' ? 'Tous' : universChoisi}</b></span
+									><span class="lg__chevron" aria-hidden="true">›</span></button
+								>
+								<button type="button" class="lg lg--lien" data-vers="perimetre-domaine"
+									><span class="lg__nom"
+										>Domaine : <b>{domaineChoisi === '' ? 'Tous' : domaineChoisi}</b></span
+									><span class="lg__chevron" aria-hidden="true">›</span></button
+								>
+							</div>
+
+							<!-- 2. Liens -->
+							<div class="carto-bloc">
+								<span class="carto-etiq">Liens</span>
 								<div id="filtre-couches">
 									<label class="lg lg--case"
 										><input
@@ -1100,8 +1079,9 @@
 								</div>
 							</div>
 
-							<div class="legende__bloc">
-								<span class="etiq"
+							<!-- 3. Regroupement -->
+							<div class="carto-bloc">
+								<span class="carto-etiq"
 									>Regroupement<button
 										type="button"
 										class="apropos"
@@ -1110,10 +1090,26 @@
 									></span
 								>
 								<div>
+									<label class="lg lg--bascule"
+										><span class="lg__nom">Familles sémantiques</span><input
+											type="checkbox"
+											id="c-regroupement"
+											checked={regroupementActif}
+										/><span class="lg__interrupteur" aria-hidden="true"></span></label
+									>
+									<p class="lg__sous">
+										{carte.familles.length +
+											' ' +
+											accord(carte.familles.length, 'famille') +
+											' · ' +
+											notesEnFamille +
+											' ' +
+											accord(notesEnFamille, 'note')}
+									</p>
 									<label class="lg lg--case"
 										><input type="checkbox" id="c-contours" checked={exploration.contours} /><span
 											class="lg__nom">Contours</span
-										><span class="lg__n">{ilots.length}</span></label
+										><span class="lg__n">{carte.familles.length}</span></label
 									>
 									<label class="lg lg--case"
 										><input type="checkbox" id="c-noms" checked={exploration.nomsDeFamille} /><span
@@ -1123,8 +1119,9 @@
 								</div>
 							</div>
 
-							<div class="legende__bloc">
-								<span class="etiq">Vivacité</span>
+							<!-- 4. Vivacité -->
+							<div class="carto-bloc">
+								<span class="carto-etiq">Vivacité</span>
 								<div id="filtre-vivacite">
 									{#each ORDRE_DES_ETATS as etat (etat)}<label class="lg lg--case"
 											><input
@@ -1138,8 +1135,9 @@
 								</div>
 							</div>
 
-							<div class="legende__bloc">
-								<span class="etiq">Nœuds</span>
+							<!-- 5. Nœuds -->
+							<div class="carto-bloc">
+								<span class="carto-etiq">Nœuds</span>
 								<div id="filtre-types">
 									{#each types as t (t.cle)}<label class="lg lg--case"
 											><input
@@ -1154,8 +1152,9 @@
 								</div>
 							</div>
 
-							<div class="legende__bloc">
-								<span class="etiq"
+							<!-- 6. Taille des nœuds -->
+							<div class="carto-bloc">
+								<span class="carto-etiq"
 									>Taille des nœuds<button
 										type="button"
 										class="apropos"
@@ -1176,8 +1175,9 @@
 								</div>
 							</div>
 
-							<div class="legende__bloc">
-								<span class="etiq">Réduire le bruit</span>
+							<!-- 7. Réduire le bruit -->
+							<div class="carto-bloc">
+								<span class="carto-etiq">Réduire le bruit</span>
 								<div>
 									<label class="curseur" for="degre-min"
 										>Degré minimum <output id="degre-min-valeur">{exploration.degreMinimum}</output
@@ -1191,6 +1191,9 @@
 										step="1"
 										value={exploration.degreMinimum}
 									/>
+									<div class="curseur__bornes" aria-hidden="true">
+										<span>0</span><span>{DEGRE_MINIMUM_MAXIMAL}</span>
+									</div>
 									<label class="lg lg--case"
 										><input
 											type="checkbox"
@@ -1206,7 +1209,15 @@
 										><span class="lg__n">{ruptures.size}</span></label
 									>
 								</div>
-								<button class="btn btn--discret" id="reinitialiser" type="button"
+								<button class="carto-btn carto-btn--discret" id="reinitialiser" type="button"
+									><svg
+										width="13"
+										height="13"
+										viewBox="0 0 16 16"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="1.6"
+										aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3" /></svg
 									>Réinitialiser les filtres</button
 								>
 							</div>
@@ -1226,6 +1237,26 @@
 							</details>
 						</div>
 					</aside>
+				{:else}
+					<button class="carto-btn carto-btn--flottant" id="tout-afficher" type="button"
+						>Tout afficher</button
+					>
+					<div class="carto-pied-gestes">
+						<button class="carto-btn" id="centrer" type="button"
+							><svg
+								width="14"
+								height="14"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.5"
+								aria-hidden="true"
+								><circle cx="8" cy="8" r="3" /><path
+									d="M8 1v2.2M8 12.8V15M1 8h2.2M12.8 8H15"
+								/></svg
+							>Centrer</button
+						>
+					</div>
 				{/if}
 
 				{#if avis !== null}
@@ -1237,7 +1268,9 @@
 							fill="none"
 							stroke="currentColor"
 							stroke-width="1.6"
-							style="flex:none"><path d="M8 5.5v3.5M8 11.2v.3" /><circle cx="8" cy="8" r="6" /></svg
+							style="flex:none"
+							aria-hidden="true"
+							><path d="M8 5.5v3.5M8 11.2v.3" /><circle cx="8" cy="8" r="6" /></svg
 						>
 						<span style="flex:1"
 							>{#if avis === 'relation'}Aucune relation n'est déclarée dans ce corpus. Les nœuds
@@ -1246,13 +1279,14 @@
 								relation ne touche ce périmètre. Les nœuds ci-dessus sont placés par leurs familles
 								sémantiques.{/if}</span
 						>
-						{#if avis === 'relation'}<button class="btn" id="vers-relations"
+						{#if avis === 'relation'}<button class="carto-btn" id="vers-relations"
 								>Déclarer une relation</button
-							>{:else}<a class="btn" href={resolve('/cartographie')}>Voir tout le corpus</a>{/if}
+							>{:else}<a class="carto-btn" href={resolve('/cartographie')}>Voir tout le corpus</a
+							>{/if}
 					</div>
 				{/if}
 
-				<div class="outils-graphe">
+				<div class="carto-outils">
 					<button type="button" id="zoom-plus" aria-label="Agrandir" title="Agrandir">
 						<svg
 							width="16"
@@ -1291,57 +1325,36 @@
 					</button>
 				</div>
 
-				<!-- La légende du dessin — `RG-M09-07`. LES CINQ CANAUX, ET UNE SEULE FOIS :
-				     elle se répétait dans la colonne de commande, sous le titre « Lecture du
-				     graphe », en huit lignes de prose. Deux légendes pour un dessin, dont
-				     une qu'il fallait lire. -->
-				<div class="legende-pied" aria-hidden="true">
-					<div class="legende-pied__bloc">
-						<span class="etiq">Type</span>
-						<div class="legende-pied__items">
+				<!-- La légende du dessin — `RG-M09-07`. TROIS CANAUX, ET UNE SEULE FOIS :
+				     le type, la relation, la vivacité. Le squelette n'y figure pas — il
+				     n'est pas une donnée du corpus mais la charpente du dessin. -->
+				<div class="carto-legende" aria-hidden="true">
+					<div class="carto-legende__bloc">
+						<span class="carto-etiq">Type de nœud</span>
+						<div class="carto-legende__items">
 							{#each types.slice(0, 4) as t (t.cle)}<span class="lp"
 									>{@render miniature(t.type)}<span>{t.type.nom}</span></span
 								>{/each}
 						</div>
 					</div>
-					<div class="legende-pied__bloc">
-						<span class="etiq">Vivacité</span>
-						<div class="legende-pied__items">
-							{#each ORDRE_DES_ETATS as etat (etat)}<span class="lp"
-									>{@render glypheDEtat(etat)}<span>{ETATS_DE_VIVACITE[etat].libelle}</span></span
-								>{/each}
-						</div>
-					</div>
-					<div class="legende-pied__bloc">
-						<span class="etiq">Relation</span>
-						<div class="legende-pied__items">
+					<div class="carto-legende__bloc">
+						<span class="carto-etiq">Relation</span>
+						<div class="carto-legende__items">
 							<span class="lp"
 								><span class="lg__trait lg__trait--declaree"></span><span>Déclarée</span></span
 							><span class="lp"
 								><span class="lg__trait lg__trait--deduite"></span><span>Déduite</span></span
-							>{#if locale}<span class="lp"
-									><span class="lg__trait lg__trait--affinite"></span><span>Affinité</span></span
-								>{/if}
-						</div>
-					</div>
-					<div class="legende-pied__bloc">
-						<span class="etiq">Groupe</span>
-						<div class="legende-pied__items">
-							<span class="lp"><span class="lp__ilot"></span><span>Famille</span></span>
-						</div>
-					</div>
-					<div class="legende-pied__bloc">
-						<span class="etiq">Taille</span>
-						<div class="legende-pied__items">
-							<span class="lp"
-								><span class="lp__tailles"><i></i><i></i><i></i></span><span
-									>{exploration.taille === 'uniforme'
-										? 'Uniforme'
-										: exploration.taille === 'connexions'
-											? 'Connexions'
-											: 'Centralité'}</span
-								></span
+							><span class="lp"
+								><span class="lg__trait lg__trait--affinite"></span><span>Affinité</span></span
 							>
+						</div>
+					</div>
+					<div class="carto-legende__bloc">
+						<span class="carto-etiq">Vivacité</span>
+						<div class="carto-legende__items">
+							{#each ORDRE_DES_ETATS as etat (etat)}<span class="lp"
+									>{@render glypheDEtat(etat)}<span>{ETATS_DE_VIVACITE[etat].libelle}</span></span
+								>{/each}
 						</div>
 					</div>
 				</div>
@@ -1365,7 +1378,7 @@
 								</p>
 								{#if administrateur}
 									<div class="voile__actions">
-										<a class="btn btn--principal" href={resolve('/console/univers')}
+										<a class="carto-btn carto-btn--principal" href={resolve('/console/univers')}
 											>Créer un univers</a
 										>
 									</div>
@@ -1378,7 +1391,7 @@
 								</p>
 								{#if administrateur}
 									<div class="voile__actions">
-										<a class="btn btn--principal" href={resolve('/console/domaines')}
+										<a class="carto-btn carto-btn--principal" href={resolve('/console/domaines')}
 											>Créer un domaine</a
 										>
 									</div>
@@ -1390,8 +1403,9 @@
 									reliez-la à une autre.
 								</p>
 								<div class="voile__actions">
-									<a class="btn btn--principal si-ecriture" href={resolve('/notes/nouvelle')}
-										>Créer une note</a
+									<a
+										class="carto-btn carto-btn--principal si-ecriture"
+										href={resolve('/notes/nouvelle')}>Créer une note</a
 									>
 								</div>
 							</div>{/if}
@@ -1399,12 +1413,11 @@
 				</div>
 			</div>
 
-			<!-- ---------- Panneau contextuel ----------
-			     IL N'APPARAÎT QUE LORSQU'UN NŒUD EST CHOISI. Il occupait un tiers de
-			     l'écran en permanence pour n'y écrire que « Aucun nœud sélectionné » —
-			     et son contenu n'était même pas rempli, ce que son câblage déclarait.
-			     Le canevas garde donc toute sa place tant que rien n'est choisi. -->
-			<aside class="detail-col" id="detail" aria-label="Détail du nœud sélectionné" hidden>
+			<!-- ---------- Panneau de la note ----------
+			     IL N'APPARAÎT QUE LORSQU'UN NŒUD EST CHOISI, sauf dans le voisinage, où la
+			     note du centre est choisie d'office : y arriver EST la demande. Son contenu
+			     est bâti par `cablage.ts`, à partir de la table que la route descend. -->
+			<aside class="detail-col" id="detail" aria-label="Panneau de la note choisie" hidden>
 				<div id="detail-corps"></div>
 			</aside>
 		</div>

@@ -64,7 +64,12 @@ import { niveauFraicheur } from '../src/lib/fraicheur.js';
 
 /* ── Lecture des maquettes ────────────────────────────────────────────────── */
 
-const DOSSIER_MAQUETTES = fileURLToPath(new URL('../mockups/', import.meta.url));
+/* LES 41 MAQUETTES D'AVANT LA REFONTE VIVENT DÉSORMAIS DANS `mockups_old/`.
+   `mockups/` porte la refonte de la cartographie ; les quarante et une vues gelées
+   ont été déplacées d'un cran, et ce chemin les suit. Il ne se devine pas : lu au
+   mauvais endroit, ce contrôle ne trouve aucune maquette et déclare le corpus
+   conforme à rien. */
+const DOSSIER_MAQUETTES = fileURLToPath(new URL('../mockups_old/', import.meta.url));
 
 /** Le bloc de données d'une vue : le premier `<script>` qui déclare au moins
  *  une globale en majuscules. Les blocs suivants sont du code de rendu — ils
