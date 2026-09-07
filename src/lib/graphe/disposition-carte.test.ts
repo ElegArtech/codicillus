@@ -24,6 +24,7 @@ import {
 	disposerLeVoisinage,
 	largeurDeLibelle,
 	libelleCourt,
+	libelleDuCentre,
 	type CarteDisposee,
 	type MesuresDeNoeud
 } from './disposition-carte';
@@ -335,6 +336,17 @@ describe('la disposition de la carte', () => {
 			expect(autre?.x).toBeCloseTo(place.x, 6);
 			expect(autre?.y).toBeCloseTo(place.y, 6);
 		}
+	});
+
+	it('coupe le titre du centre à ce que son disque porte', () => {
+		/* IL Y EST ÉCRIT EN BLANC : ce qui déborde du disque tombe sur fond blanc et
+		   DISPARAÎT. « 2026_05_18_Fusion DIN… » se lisait « 5_18_Fusion ». */
+		const long = '2026_05_18_Fusion DINUM-DITP - la refondation introuvable';
+		expect(libelleDuCentre(long, 48).length).toBeLessThan(libelleCourt(long).length);
+		expect(libelleDuCentre(long, 48).endsWith('…')).toBe(true);
+		expect(libelleDuCentre('Substack', 48)).toBe('Substack');
+		/* Un disque deux fois plus grand en porte deux fois plus. */
+		expect(libelleDuCentre(long, 96).length).toBeGreaterThan(libelleDuCentre(long, 48).length);
 	});
 
 	it('coupe un titre trop long et laisse le titre entier au survol', () => {

@@ -196,6 +196,19 @@ export interface OptionsDeCarte {
 
 /* ── LES OUTILS DE GÉOMÉTRIE ───────────────────────────────────────────────── */
 
+/**
+ * LE TITRE ÉCRIT DANS LE DISQUE DU CENTRE, coupé à ce que le disque porte.
+ *
+ * IL Y ÉTAIT ÉCRIT EN BLANC ET DÉBORDAIT, et sur fond blanc la part qui dépasse
+ * DISPARAÎT : « 2026_05_18_Fusion DIN… » se lisait « 5_18_Fusion ». Vu sur
+ * l'instance de recette. Le titre entier reste dans le `title` du groupe, et le
+ * grand titre de l'écran le porte en toutes lettres.
+ */
+export function libelleDuCentre(titre: string, rayon: number): string {
+	const tenables = Math.max(4, Math.floor((rayon * 1.85) / LARGEUR_DE_CARACTERE));
+	return titre.length > tenables ? titre.slice(0, tenables - 1).trimEnd() + '…' : titre;
+}
+
 /** Le titre d'un nœud, coupé s'il est trop long — le titre entier reste au survol. */
 export function libelleCourt(titre: string): string {
 	return titre.length > CARACTERES_DUN_LIBELLE

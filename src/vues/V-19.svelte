@@ -111,7 +111,9 @@
 		RETRAIT_DE_LICONE,
 		disposerLaCarte,
 		disposerLeVoisinage,
+		largeurDeLibelle,
 		libelleCourt,
+		libelleDuCentre,
 		type CarteDisposee,
 		type MesuresDeNoeud,
 		type NoeudPlace
@@ -402,6 +404,15 @@
 		const cy = (a.y + b.y) / 2 + dx * COURBURE;
 		return `M${a.x.toFixed(1)} ${a.y.toFixed(1)}Q${cx.toFixed(1)} ${cy.toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
 	};
+
+	/**
+	 * UN TRAIT NE PORTE SON LIBELLÉ QUE S'IL EST ASSEZ LONG POUR LUI. Sur un
+	 * voisinage dense, une douzaine de traits courts empilaient leurs « déduite » au
+	 * même endroit, et le tas se lisait « dédudéduite » — mesuré sur l'instance de
+	 * recette. Un trait trop court se lit à son style, que la légende nomme.
+	 */
+	const porteSonLibelle = (a: NoeudPlace, b: NoeudPlace, texte: string): boolean =>
+		Math.hypot(b.x - a.x, b.y - a.y) - a.r - b.r > largeurDeLibelle(texte) * 1.3;
 
 	/** Le milieu de la courbe — là où se pose le libellé d'une relation. */
 	const milieuDeCourbe = (a: NoeudPlace, b: NoeudPlace): { x: number; y: number } => {
@@ -908,15 +919,15 @@
 								>{#each graphe.aretes as r, rang (rang)}{@const m = milieuDeCourbe(
 										positionDe(r.de),
 										positionDe(r.vers)
-									)}<text
-										class="arete__etiquette"
-										data-de={r.de}
-										data-vers={r.vers}
-										data-masque={masqueDArete(r) ? 'oui' : 'non'}
-										x={m.x.toFixed(1)}
-										y={m.y.toFixed(1)}
-										>{coucheDArete(r) === 'declarees' ? 'déclarée' : 'déduite'}</text
-									>{/each}{#each affinitesDuCentre as v (v.note)}<text
+									)}{#if porteSonLibelle(positionDe(r.de), positionDe(r.vers), coucheDArete(r) === 'declarees' ? 'déclarée' : 'déduite')}<text
+											class="arete__etiquette"
+											data-de={r.de}
+											data-vers={r.vers}
+											data-masque={masqueDArete(r) ? 'oui' : 'non'}
+											x={m.x.toFixed(1)}
+											y={m.y.toFixed(1)}
+											>{coucheDArete(r) === 'declarees' ? 'déclarée' : 'déduite'}</text
+										>{/if}{/each}{#each affinitesDuCentre as v (v.note)}<text
 										class="arete__etiquette arete__etiquette--affinite"
 										x={((positionDe(centreValide ?? '').x + positionDe(v.note).x) / 2).toFixed(1)}
 										y={((positionDe(centreValide ?? '').y + positionDe(v.note).y) / 2).toFixed(1)}
@@ -926,10 +937,11 @@
 						{#if graphe.noeuds.length > 0}<g
 								class="centre"
 								transform="translate({carte.centre.x},{carte.centre.y})"
-								aria-hidden="true"
-								><circle class="centre__disque" r={carte.centre.r} /><text
-									class="centre__nom"
-									y={carte.centre.code === '' ? 4 : 0}>{libelleCourt(carte.centre.libelle)}</text
+								><title>{carte.centre.libelle}</title><circle
+									class="centre__disque"
+									r={carte.centre.r}
+								/><text class="centre__nom" y={carte.centre.code === '' ? 4 : 0}
+									>{libelleDuCentre(carte.centre.libelle, carte.centre.r)}</text
 								>{#if carte.centre.code !== ''}<text class="centre__code" y="16"
 										>({carte.centre.code})</text
 									>{/if}</g
