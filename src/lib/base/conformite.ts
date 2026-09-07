@@ -115,12 +115,13 @@ const COMPTES_DU_JEU: readonly CompteDuJeu[] = [
 	}
 ];
 
-/** Les six modules d'un domaine (`RG-STR-06`) : le prototype les montre tous. */
+/** Les sept modules d'un domaine (`RG-STR-06`) : le prototype les montre tous. */
 const MODULES_DU_JEU = [
 	'notes',
 	'dossiers',
 	'fiches',
 	'cartographie',
+	'modelisation',
 	'signets',
 	'carte_mentale'
 ] as const;

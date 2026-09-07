@@ -28,6 +28,7 @@ import {
 	comptes,
 	consultations,
 	domaines,
+	modulesDeDomaine,
 	notes,
 	parametres,
 	univers
@@ -102,6 +103,27 @@ async function rangementDuCompte(
 		signets: moduleActif(modules, 'signets') && peutEcrireDansLUn(acces, siens)
 	};
 }
+/**
+ * LE MODULE MODÉLISATION EXISTE-T-IL QUELQUE PART DANS CE QUE L'APPELANT PEUT LIRE ?
+ *
+ * L'ENTRÉE DE RAIL EST GLOBALE — le menu de compte n'est pas celui d'un domaine. La
+ * gager sur un domaine précis n'aurait pas de sens, et la laisser inconditionnelle
+ * promettrait un écran vide : `P-03`, une entrée visible est une entrée qui fonctionne.
+ *
+ * ELLE N'EST PAS BORNÉE PAR UN `limit 1`, ET C'EST DÉLIBÉRÉ : la première ligne venue
+ * peut porter un domaine que l'appelant ne lit pas, et le rail dirait alors « oui » à
+ * qui ne verrait rien. La lecture porte la SEULE colonne de domaine, sur les seules
+ * lignes qui portent la valeur — au plus une par domaine de l'instance —, et la
+ * lisibilité se tranche sur l'accès DÉJÀ ouvert, sans une requête de plus.
+ */
+async function modelisationOfferte(base: Base, acces: AccesAuRangement): Promise<boolean> {
+	const lignes = await base
+		.select({ domaineId: modulesDeDomaine.domaineId })
+		.from(modulesDeDomaine)
+		.where(eq(modulesDeDomaine.module, 'modelisation'));
+	return lignes.some((l) => domaineLisible(acces, l.domaineId));
+}
+
 /**
  * L'IDENTITÉ AFFICHABLE DU COMPTE CONNECTÉ, LUE UNE FOIS AU GABARIT RACINE et
  * descendue par contexte : trente routes qui la recopieraient divergeraient au
@@ -422,6 +444,9 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			administrateur: false,
 			rangement: null,
 			compte: null,
+			/* L'ANONYME N'A PAS DE MENU DE COMPTE : l'entrée n'est pas offerte, et la
+			   clé est servie plutôt qu'absente — la page d'erreur la lirait `undefined`. */
+			modelisationOfferte: false,
 			/* L'ANONYME N'A PAS DE COQUILLE : ni arbre, ni récents. L'état vide, dit,
 			   plutôt qu'une absence de clé que la page d'erreur lirait `undefined`. */
 			notes: [] as readonly NoteDuRail[],
@@ -463,6 +488,10 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		   au premier oubli (`P-35`). */
 		notes: await notesDuRail(base, acces),
 		recents: await recentsDuCompte(base, locals.identite.compteId, acces),
+		/* L'ENTRÉE « Modélisation » DU MENU DE COMPTE — émise seulement si le module
+		   vit sur un domaine que l'appelant lit. Elle était inconditionnelle, et menait
+		   donc à un écran vide sur toute instance qui ne l'a pas activé. */
+		modelisationOfferte: await modelisationOfferte(base, acces),
 		version: VERSION_DU_PRODUIT,
 		...(await parametresDeCoquille(base)),
 		...(await arborescenceDeNavigation(base, acces, locals.identite.role === 'administrateur'))

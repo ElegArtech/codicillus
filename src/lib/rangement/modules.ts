@@ -1,5 +1,5 @@
 /**
- * LE CATALOGUE DES SIX MODULES — un référentiel du PRODUIT, pas du jeu.
+ * LE CATALOGUE DES SEPT MODULES — un référentiel du PRODUIT, pas du jeu.
  *
  * Les CLÉS actives d'un domaine viennent de la base : `modules_de_domaine` (`RG-STR-06`).
  * Leurs LIBELLÉS, eux, ne sont dans aucune table — ce sont les noms que le produit donne à ses
@@ -13,12 +13,19 @@
  */
 import type { CleDeModule, Module } from '../../../seeds/corpus';
 
-/** Les six modules activables sur un domaine, dans l'ordre de `RG-STR-06`. */
+/**
+ * Les sept modules activables sur un domaine, dans l'ordre de `RG-STR-06`.
+ *
+ * `modelisation` SUIT `cartographie` : c'est l'ordre dans lequel les entrées
+ * d'exploration se lisent sur la page du domaine, les deux façons de lire la même
+ * matière l'une après l'autre.
+ */
 export const CATALOGUE_DE_MODULES: Record<CleDeModule, Module> = {
 	notes: { nom: 'Notes', sous: 'Toutes les notes du domaine' },
 	dossiers: { nom: 'Dossiers', sous: 'Rangement arborescent' },
 	fiches: { nom: 'Fiches', sous: 'Objets typés et leurs relations' },
 	cartographie: { nom: 'Cartographie', sous: 'Graphe des dépendances' },
+	modelisation: { nom: 'Modélisation', sous: 'Ce qui dépend de quoi' },
 	signets: { nom: 'Signets', sous: 'Liens web curatés' },
 	carteMentale: { nom: 'Carte mentale', sous: 'Arbre dépliable du domaine' }
 };
