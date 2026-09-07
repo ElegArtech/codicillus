@@ -45,11 +45,14 @@ import {
 	corpusPourVue,
 	noteParIdentifiant,
 	type ChampDeFiche,
+	type CleDeModule,
+	type Domaine,
 	type TypeDeChamp,
 	type UtilisateurCourant
 } from '../../seeds/corpus';
 import { TYPES_DE_FICHE as TYPES_DE_FICHE_PEUPLES } from '../../seeds/demonstration';
 import type { CompteAffiche } from '../lib/coquille/identite';
+import { CATALOGUE_DE_MODULES } from '../lib/rangement/modules';
 import { calculerLesFamilles } from '../lib/graphe/familles';
 import { centralites, sousGraphe } from '../lib/graphe/cartographie';
 import type { EtatDeVivacite } from '../lib/fraicheur';
@@ -141,6 +144,7 @@ async function rendre(vue: string, props: object): Promise<string> {
 
 /* Sept portes typées : le contrat de propriétés de chaque vue est vérifié à la
    compilation, le rendu passe par le graphe de Vite. */
+const v11 = (p: ComponentProps<typeof import('./V-11.svelte').default>) => rendre('V-11', p);
 const v15 = (p: ComponentProps<typeof import('./V-15.svelte').default>) => rendre('V-15', p);
 const v16 = (p: ComponentProps<typeof import('./V-16.svelte').default>) => rendre('V-16', p);
 const v19 = (p: ComponentProps<typeof import('./V-19.svelte').default>) => rendre('V-19', p);
@@ -235,6 +239,87 @@ function compter(html: string, motif: RegExp): number {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * LA PAGE D'UN DOMAINE — ce que la MODÉLISATION y devient depuis `016`/`017`.
+ *
+ * Elle suivait la CARTOGRAPHIE, par une règle écrite en dur dans la vue : un domaine
+ * qui avait ouvert son graphe voyait les deux entrées, et aucune console ne pouvait
+ * les séparer. `modelisation` est désormais une clé du catalogue et une valeur de
+ * l'énuméré : la tuile se rend par la même boucle que les deux autres.
+ */
+describe('V-11 — page d’un domaine', () => {
+	const DOMAINE_DEPREUVE: Domaine = {
+		nom: 'Domaine d’épreuve',
+		univers: 'Univers d’épreuve',
+		couleur: '#453ba0'
+	};
+	const UNIVERS_DEPREUVE = [
+		{
+			nom: 'Univers d’épreuve',
+			couleur: '#453ba0',
+			glyphe: 'U',
+			ordre: 1,
+			systeme: false,
+			description: ''
+		}
+	];
+
+	function pageDuDomaine(
+		modulesActifs: readonly CleDeModule[]
+	): ComponentProps<typeof import('./V-11.svelte').default> {
+		return {
+			vecteur: null,
+			notes: [],
+			univers: UNIVERS_DEPREUVE,
+			domaines: [DOMAINE_DEPREUVE],
+			detailDomaines: {
+				[DOMAINE_DEPREUVE.nom]: { description: '', modules: modulesActifs }
+			},
+			modules: CATALOGUE_DE_MODULES,
+			vivacites: {},
+			mesures: {},
+			fenetreDeConsultation: 7,
+			activite: [],
+			filtreDActivite: 'tout',
+			derniereActiviteHeures: null,
+			seuilBientot: 30,
+			adressesDuDomaine: {
+				domaine: '/univers/u/d',
+				notes: '/univers/u/d/notes',
+				fiches: '/univers/u/d/notes?type=Fiche',
+				dossiers: '/univers/u/d/dossiers/',
+				signets: '/univers/u/d/signets'
+			},
+			nombreDeDossiers: 0
+		};
+	}
+
+	it('la tuile Modélisation n’est rendue que si le module est actif', async () => {
+		const sans = await v11(pageDuDomaine(['notes', 'cartographie']));
+		expect(sans).toContain('/cartographie?');
+		expect(sans).not.toContain('/modelisation');
+
+		const avec = await v11(pageDuDomaine(['notes', 'cartographie', 'modelisation']));
+		expect(avec).toContain('/modelisation?');
+		expect(avec).toContain('Ce qui dépend de quoi');
+	});
+
+	/**
+	 * LE CAS QUE LA RÈGLE EN DUR RENDAIT IMPOSSIBLE À ÉCRIRE. La modélisation
+	 * s'allumait par ricochet de la cartographie ; elle s'active seule désormais, et
+	 * un domaine qui n'a pas ouvert son graphe ne l'offre plus.
+	 */
+	it('un domaine sans cartographie n’offre plus la modélisation par ricochet', async () => {
+		const rendu = await v11(pageDuDomaine(['notes']));
+		expect(rendu).not.toContain('/modelisation');
+		expect(rendu).not.toContain('/cartographie?');
+
+		const seule = await v11(pageDuDomaine(['notes', 'modelisation']));
+		expect(seule).toContain('/modelisation?');
+		expect(seule).not.toContain('/cartographie?');
+	});
+});
 
 describe('V-15 — historique d’une note', () => {
 	const notes = corpusPourVue('V-15');
