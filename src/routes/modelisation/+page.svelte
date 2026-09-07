@@ -363,5 +363,41 @@
 				</details>
 			</section>
 		{/if}
+
+		<!-- ── LES PROPOSITIONS REFUSÉES ───────────────────────────────────────
+			IL EST HORS DU DESSIN, ET C'EST NÉCESSAIRE : refuser la seule proposition
+			d'une paire peut vider le dessin, et un bloc rendu dans la branche du
+			dessin emporterait alors le seul geste qui défait le refus. Il n'existe
+			que s'il y a quelque chose dedans — un cadre vide dirait qu'il manque une
+			donnée. -->
+		{#if data.refuses.length > 0}
+			<section class="mod-bloc mod-refuses">
+				<h2>Propositions refusées</h2>
+				<p class="mod-refuses__phrase">
+					Ces liens ont été proposés puis refusés. Ils ne seront plus proposés. Vous pouvez toujours
+					les déclarer vous-même.
+				</p>
+				<ul class="mod-refus">
+					{#each data.refuses as r (r.id)}
+						<li>
+							<!-- LES TROIS PARTIES SONT DISTINCTES, et ce n'est pas décoratif : un
+								titre qui porte lui-même un tiret cadratin rendrait la ligne illisible
+								s'ils étaient concaténés en un seul texte. -->
+							<span class="mod-refus__lien">
+								<span class="mod-refus__note">{r.titreDe}</span><span class="mod-refus__type"
+									>{' — ' + r.libelle + ' → '}</span
+								><span class="mod-refus__note">{r.titreVers}</span>
+							</span>
+							<span class="mod-refus__date">{r.refuseeLe}</span>
+							<form method="POST" action="?/annulerLeRefus">
+								<input type="hidden" name="perimetre" value={data.perimetreDemande} />
+								<input type="hidden" name="refus" value={r.id} />
+								<button class="btn" type="submit">Annuler ce refus</button>
+							</form>
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
 	{/snippet}
 </Coquille>
