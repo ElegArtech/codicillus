@@ -72,8 +72,8 @@ export const MARGE_DETIQUETTE = 4;
 
 export const T_NOEUD = 13;
 export const T_PIVOT = 15;
-export const T_CENTRE = 17;
-export const T_CENTRE_SOUS = 11;
+export const T_CENTRE = 15;
+export const T_CENTRE_SOUS = 10;
 export const T_FAMILLE = 18;
 export const T_FAMILLE_COMPTE = 13;
 export const T_ARETE = 14;
