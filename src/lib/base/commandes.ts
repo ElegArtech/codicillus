@@ -365,7 +365,13 @@ export async function semer(session: Session): Promise<RapportDeSemence> {
 			d.modules.map((module) => ({
 				domaineId: exigerDefini(domaineParNom.get(d.nom), `domaine ${d.nom}`),
 				module: module as
-					'notes' | 'dossiers' | 'fiches' | 'cartographie' | 'signets' | 'carte_mentale'
+					| 'notes'
+					| 'dossiers'
+					| 'fiches'
+					| 'cartographie'
+					| 'modelisation'
+					| 'signets'
+					| 'carte_mentale'
 			}))
 		);
 		await tx.insert(modulesDeDomaine).values(lignesModule);

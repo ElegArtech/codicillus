@@ -1668,15 +1668,16 @@ export async function modifierUnUnivers(
 	return { issue: 'possible', identifiant, nom: nomRetenu };
 }
 
-/** Les six modules, de la clé du gel vers la valeur de l'énumération de base. */
+/** Les sept modules, de la clé du produit vers la valeur de l'énumération de base. */
 const MODULE_VERS_ENUM: Record<
 	CleDeModule,
-	'notes' | 'dossiers' | 'fiches' | 'cartographie' | 'signets' | 'carte_mentale'
+	'notes' | 'dossiers' | 'fiches' | 'cartographie' | 'modelisation' | 'signets' | 'carte_mentale'
 > = {
 	notes: 'notes',
 	dossiers: 'dossiers',
 	fiches: 'fiches',
 	cartographie: 'cartographie',
+	modelisation: 'modelisation',
 	signets: 'signets',
 	carteMentale: 'carte_mentale'
 };

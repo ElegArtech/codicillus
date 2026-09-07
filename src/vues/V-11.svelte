@@ -255,7 +255,11 @@
 
 	/** L'ordre des quatre tuiles, et celui des deux entrées d'exploration. */
 	const CLES_DE_TUILE: readonly CleDeModule[] = ['notes', 'dossiers', 'fiches', 'signets'];
-	const CLES_DEXPLORATION: readonly CleDeModule[] = ['cartographie', 'carteMentale'];
+	const CLES_DEXPLORATION: readonly CleDeModule[] = [
+		'cartographie',
+		'modelisation',
+		'carteMentale'
+	];
 
 	/** Les compteurs portés par les tuiles. Les deux entrées d'exploration n'en ont pas. */
 	const comptes = $derived<Partial<Record<CleDeModule, number>>>({
@@ -279,18 +283,6 @@
 		)
 	] as readonly string[]);
 	const exploration = $derived(CLES_DEXPLORATION.filter((c) => actifs.includes(c)));
-
-	/**
-	 * LA MODÉLISATION SUIT LA CARTOGRAPHIE, ET N'EST PAS UN MODULE À PART.
-	 *
-	 * `modules_de_domaine.module` est un ÉNUMÉRÉ de la base : y ajouter une valeur
-	 * demande une migration, et laisser la clé vivre dans le type sans qu'elle existe
-	 * en base offrirait à la console un module qu'aucune écriture ne pourrait poser.
-	 * La modélisation est un SECOND RENDU de la même matière — les relations — et elle
-	 * s'active donc avec elle : un domaine qui a ouvert son graphe a ouvert les deux
-	 * façons de le lire, et un domaine qui ne l'a pas ouvert n'en voit aucune.
-	 */
-	const modelisationOfferte = $derived(exploration.includes('cartographie'));
 
 	/* ── Palmarès et fil ────────────────────────────────────────────────────── */
 	const populaires = $derived(
@@ -572,8 +564,10 @@
 							{#if exploration.includes('cartographie')}<a
 									class="menu-dom__lien"
 									href={adresseDeModule('cartographie')}>Cartographie du domaine</a
-								><a class="menu-dom__lien" href={adresseDeModule('modelisation')}
-									>Modélisation du domaine</a
+								>{/if}
+							{#if exploration.includes('modelisation')}<a
+									class="menu-dom__lien"
+									href={adresseDeModule('modelisation')}>Modélisation du domaine</a
 								>{/if}
 							{#if admin}<a class="menu-dom__lien si-admin" href="/console/domaines"
 									>Modifier le domaine</a
@@ -652,19 +646,6 @@
 										>{@render chevron()}</a
 									>
 								{/each}
-								<!-- LA MODÉLISATION — la troisième façon de lire le domaine, et la
-									seule qui réponde à « qu'est-ce qui dépend de quoi ». Elle n'est
-									pas tirée du catalogue : voir `modelisationOfferte`. -->
-								{#if modelisationOfferte}
-									<a class="module explo" href={adresseDeModule('modelisation')}
-										><span class="explo__ic">{@render pictogramme('modelisation')}</span><span
-											class="explo__corps"
-											><span class="module__nom">Modélisation</span><span class="explo__sous"
-												>Ce qui dépend de quoi</span
-											></span
-										>{@render chevron()}</a
-									>
-								{/if}
 							</div>
 						</div>
 					{/if}

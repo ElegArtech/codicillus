@@ -21,7 +21,10 @@ import {
 	TYPES_RELATION,
 	UNIVERS
 } from '../../../seeds/corpus';
+import type { CleDeModule } from '../../../seeds/corpus';
 import { SEUILS_PAR_DEFAUT, niveauFraicheur } from '../fraicheur';
+import { CATALOGUE_DE_MODULES } from '../rangement/modules';
+import { moduleDeDomaine } from './schema';
 import {
 	MODULE_EN_ENUM,
 	ROLE_EN_ENUM,
@@ -126,9 +129,23 @@ describe('les traductions d’énumération', () => {
 		]);
 	});
 
-	it('couvre les six modules des maquettes', () => {
-		expect(Object.keys(MODULE_EN_ENUM)).toHaveLength(6);
+	it('couvre les sept modules du produit', () => {
+		expect(Object.keys(MODULE_EN_ENUM)).toHaveLength(7);
 		expect(MODULE_EN_ENUM.carteMentale).toBe('carte_mentale');
+		expect(MODULE_EN_ENUM.modelisation).toBe('modelisation');
+	});
+
+	/**
+	 * LE CONTRÔLE QUI EMPÊCHE LA PROCHAINE CLÉ D'ÊTRE AJOUTÉE D'UN SEUL CÔTÉ. Le
+	 * catalogue est le référentiel du produit, l'énuméré celui de la base ; une clé
+	 * posée dans l'un sans l'autre rend soit une case de console qu'aucune écriture ne
+	 * peut poser, soit une valeur stockée que rien ne sait nommer.
+	 */
+	it('le catalogue de modules et l’énuméré de la base portent les mêmes clés', () => {
+		const traduites = Object.keys(CATALOGUE_DE_MODULES).map(
+			(cle) => MODULE_EN_ENUM[cle as CleDeModule]
+		);
+		expect([...traduites].sort()).toEqual([...moduleDeDomaine.enumValues].sort());
 	});
 
 	it('traduit « interrupteur » en « booleen », le type de CDC §3.5', () => {
