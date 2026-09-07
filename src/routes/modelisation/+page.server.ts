@@ -34,19 +34,23 @@ import {
 } from '$lib/donnees/outils';
 import { ouvrirLAcces } from '$lib/donnees/rangement';
 import { dansLePerimetre, pointsArticulation, sousGraphe, typeDe } from '$lib/graphe/cartographie';
-import { cleDArete, disposerEnCouches } from '$lib/graphe/couches';
+import { cleDArete, disposerEnCouches, type AssiseDeLEtagement } from '$lib/graphe/couches';
 import { TYPE_DE_MENTION } from '$lib/graphe/mentions';
 import { propositionsDeMention } from '$lib/graphe/propositions';
 import {
 	ajouterUneRelation,
+	annulerUnRefus,
 	changerLeTypeDUneRelation,
+	cleDeTriplet,
 	confirmerUneRelation,
 	lireLaSaisieDeRelation,
+	lireLesPropositionsRefusees,
 	lireLesTypesOfferts,
 	proposerLesRelations,
 	rejeterUneRelation,
 	retirerUneRelation
 } from '$lib/donnees/relations';
+import type { PropositionRefusee } from '$lib/donnees/relations';
 import { lireLeGraphe } from '../cartographie/lecture-du-graphe';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -65,12 +69,34 @@ async function monterLeModele(locals: App.Locals, perimetreDemande: string | nul
 	/* `retirees` : voir l'en-tête. Une note que rien ne relie ne répond pas à la
 	   question de cet écran. */
 	const graphe = sousGraphe(lu.notes, perimetre, lu.relations, 'retirees');
-	return { base, perimetre, graphe, ...lu };
+	/* LES REFUS SONT MONTÉS ICI, avec le reste : le chargeur les AFFICHE et l'action
+	   « Proposer » les ÉCARTE, et deux lectures divergeraient le jour où l'une
+	   oublierait la borne de l'autre. */
+	const refuses = await lireLesPropositionsRefusees(base, acces.perimetre);
+	return { base, perimetre, graphe, refuses, ...lu };
+}
+
+/**
+ * LES TRIPLETS REFUSÉS, en clés d'IDENTIFIANTS — l'espace de `propositionsDeMention()`
+ * et des mentions. La table les porte en clés de base ; la lecture les a déjà traduits.
+ */
+function tripletsRefuses(refuses: readonly PropositionRefusee[]): ReadonlySet<string> {
+	return new Set(refuses.map((r) => cleDeTriplet(r.de, r.vers, r.type)));
+}
+
+/**
+ * L'ASSISE DEMANDÉE PAR L'ADRESSE. Une valeur inconnue vaut `tout` : ignorer plutôt
+ * que refuser (`docs/routes.md` §4.2) — un réglage mal orthographié ne doit pas faire
+ * sortir un écran.
+ */
+function assiseDeLAdresse(demandee: string | null): AssiseDeLEtagement {
+	return demandee === 'declarees' ? 'declarees' : 'tout';
 }
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	const { base, perimetre, graphe, notes, typesRelation, relationsTechniques } =
+	const { base, perimetre, graphe, notes, typesRelation, relationsTechniques, refuses } =
 		await monterLeModele(locals, url.searchParams.get('perimetre'));
+	const assise = assiseDeLAdresse(url.searchParams.get('etagement'));
 
 	/* Les arêtes du DESSIN, avec leur origine et leur clé de ligne. `sousGraphe()` les
 	   rend au type `Relation` du corpus, faute de connaître les colonnes ajoutées ;
@@ -78,14 +104,19 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const aretes = graphe.aretes as readonly RelationLisible[];
 	const mentions = aretes.filter((r) => r.origine === 'deduite');
 
-	const disposition = disposerEnCouches(graphe);
+	const disposition = disposerEnCouches(graphe, assise);
 
 	/**
-	 * LES POINTS DE DÉFAILLANCE UNIQUE — calculés sur les SEULES relations techniques
-	 * DÉCLARÉES, et c'est la garantie de cette vue. `estTechnique()` compare le type à
-	 * ceux que `types_de_relation` marque techniques ; `mentionne` n'y est pas et n'y
-	 * sera pas, si bien qu'aucune arête déduite ne peut faire passer une note pour un
-	 * point de rupture. Une citation n'est pas une dépendance.
+	 * LES POINTS DE DÉFAILLANCE UNIQUE — calculés sur les SEULES relations que
+	 * `types_de_relation` MARQUE techniques, et c'est la garantie de cette vue.
+	 * `mentionne` n'y est pas et n'y sera pas, si bien qu'aucune arête déduite ne peut
+	 * faire passer une note pour un point de rupture : une citation n'est pas une
+	 * dépendance.
+	 *
+	 * QUAND LA TABLE NE MARQUE RIEN, LE CALCUL NE DIT RIEN — et c'est le cas de toute
+	 * instance neuve, la colonne valant `false` par défaut depuis la migration `002`.
+	 * L'écran ne peut pas laisser ce silence passer pour « aucun point de défaillance
+	 * unique » : `nombreDeTypesPorteurs` descend, et la vue rend l'avis.
 	 */
 	const ruptures = [...pointsArticulation(graphe, relationsTechniques)];
 
@@ -93,6 +124,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	return {
 		perimetreDemande: valeurDeSelecteur(perimetre),
+		/**
+		 * SUR QUOI L'ÉTAGEMENT S'APPUIE — servi pour que l'écran le DISE. La position
+		 * verticale d'un nœud dépend de ce réglage, et un lecteur qui prend le dessin
+		 * pour un modèle de dépendances déclarées se tromperait sans être averti.
+		 */
+		assise,
 		/** L'arête que l'adresse désigne, sous la forme `de>vers>type`. */
 		areteChoisie: url.searchParams.get('arete'),
 		/**
@@ -147,7 +184,30 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		 * CE QUE « PROPOSER » POSERAIT, compté avant tout clic. Le bouton doit dire ce
 		 * qu'il fera : « Proposer » sans chiffre est un bouton qu'on n'ose pas presser.
 		 */
-		propositionsPossibles: propositionsDeMention(notes, aretes, mentions).length,
+		propositionsPossibles: propositionsDeMention(notes, aretes, mentions, tripletsRefuses(refuses))
+			.length,
+		/**
+		 * LES PROPOSITIONS REFUSÉES, prêtes à lire — titres et libellé de type compris,
+		 * pour que la vue n'ait rien à résoudre. Elles sont bornées au périmètre
+		 * LISIBLE de l'appelant, comme les relations.
+		 */
+		refuses: refuses.map((r) => ({
+			id: r.id,
+			libelle: r.libelle,
+			titreDe: r.titreDe,
+			titreVers: r.titreVers,
+			/* La date part en chaîne : c'est ce que la vue affiche, et une date rendue
+			   telle quelle traverserait la sérialisation pour être reformatée deux fois. */
+			refuseeLe: r.refuseeLe.toLocaleDateString('fr-FR')
+		})),
+		/** Les types qui portent une dépendance, tels que la table les marque. */
+		nombreDeTypesPorteurs: relationsTechniques.length,
+		/**
+		 * L'appelant peut-il aller les régler ? La console n'est ouverte qu'à lui, et
+		 * promettre une adresse qu'on ne peut pas ouvrir est le motif de `V-07`.
+		 */
+		consoleOuverte:
+			locals.identite.type === 'authentifie' && locals.identite.role === 'administrateur',
 		nombreDeMentions: mentions.length,
 		nombreDeDeclarees: aretes.filter((r) => r.origine === 'declaree').length,
 		nombreDePropositions: aretes.filter((r) => r.origine === 'ambigue').length,
@@ -156,7 +216,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 
 /**
- * LE RETOUR À LA PAGE, PÉRIMÈTRE CONSERVÉ.
+ * LE RETOUR À LA PAGE, PÉRIMÈTRE ET ASSISE CONSERVÉS.
  *
  * LE PÉRIMÈTRE VOYAGE DANS LE FORMULAIRE, PAS DANS L'ADRESSE DE L'ACTION. Une adresse
  * d'action SvelteKit est un paramètre de requête à part — la forme avec une barre
@@ -165,14 +225,24 @@ export const load: PageServerLoad = async ({ locals, url }) => {
  * chaque déclaration. Un champ caché le porte, et le nom de la porte est le même
  * partout.
  *
+ * L'ASSISE VOYAGE PAR LE MÊME CHEMIN, et pour la même raison : sans elle, déclarer
+ * une relation depuis un étagement réglé sur les seules déclarées ramènerait le
+ * dessin sur tout ce qui est dessiné, et le modèle changerait de forme sous la main.
+ *
  * L'ARÊTE CHOISIE N'EST PAS CONSERVÉE, et c'est délibéré : après un changement de
  * type, un retrait ou un rejet, l'arête désignée n'est plus celle qu'on regardait —
  * elle a changé de clé, ou elle n'existe plus. Rouvrir un panneau sur une arête morte
  * afficherait un panneau vide sans dire pourquoi.
  */
-function retour(perimetre: string | null): string {
-	if (perimetre === null || perimetre === '') return '/modelisation';
-	return '/modelisation?perimetre=' + encodeURIComponent(perimetre);
+function retour(perimetre: string | null, assise: AssiseDeLEtagement): string {
+	const morceaux: string[] = [];
+	if (perimetre !== null && perimetre !== '') {
+		morceaux.push('perimetre=' + encodeURIComponent(perimetre));
+	}
+	/* SEULE LA VALEUR NON NOMINALE VOYAGE : `tout` est ce que l'adresse nue rend, et
+	   l'écrire allongerait chaque adresse sans rien dire de plus. */
+	if (assise === 'declarees') morceaux.push('etagement=declarees');
+	return morceaux.length === 0 ? '/modelisation' : '/modelisation?' + morceaux.join('&');
 }
 
 /** Le champ que tous les formulaires portent — une seule orthographe, partout. */
@@ -181,13 +251,22 @@ function perimetreDuFormulaire(donnees: FormData): string | null {
 	return brut === '' ? null : brut;
 }
 
-/** Un champ de formulaire, élagué — la lecture est la même pour les six actions. */
+/**
+ * L'ASSISE QUE LE FORMULAIRE PORTE. Sans ce champ, le premier geste ramènerait
+ * l'étagement à son état nominal, et le modèle qu'on regardait changerait de forme
+ * sous la main.
+ */
+function assiseDuFormulaire(donnees: FormData): AssiseDeLEtagement {
+	return assiseDeLAdresse((donnees.get('etagement') ?? '').toString().trim());
+}
+
+/** Un champ de formulaire, élagué — la lecture est la même pour les sept actions. */
 function champ(donnees: FormData, nom: string): string {
 	return (donnees.get(nom) ?? '').toString().trim();
 }
 
 /**
- * SIX ACTIONS NOMMÉES, AUCUNE PAR DÉFAUT : SvelteKit refuse qu'une action par défaut
+ * SEPT ACTIONS NOMMÉES, AUCUNE PAR DÉFAUT : SvelteKit refuse qu'une action par défaut
  * cohabite avec une action nommée. Chacune a son formulaire, et l'écran fonctionne
  * sans hydratation — c'est ce qui le rend éprouvable dans un navigateur sans rien
  * d'autre.
@@ -218,7 +297,7 @@ export const actions: Actions = {
 						: 'une note ne se relie pas à elle-même'
 			});
 		}
-		redirect(303, retour(perimetreDuFormulaire(donnees)));
+		redirect(303, retour(perimetreDuFormulaire(donnees), assiseDuFormulaire(donnees)));
 	},
 
 	changer: async ({ request, locals }) => {
@@ -234,7 +313,7 @@ export const actions: Actions = {
 		});
 		if (!resultat.trouve) return fail(404, { message: 'relation introuvable' });
 		if (!resultat.ressource.ok) return fail(409, { message: 'cette relation existe déjà' });
-		redirect(303, retour(perimetreDuFormulaire(donnees)));
+		redirect(303, retour(perimetreDuFormulaire(donnees), assiseDuFormulaire(donnees)));
 	},
 
 	retirer: async ({ request, locals }) => {
@@ -249,7 +328,7 @@ export const actions: Actions = {
 			relation
 		});
 		if (!resultat.trouve) return fail(404, { message: 'relation introuvable' });
-		redirect(303, retour(perimetreDuFormulaire(donnees)));
+		redirect(303, retour(perimetreDuFormulaire(donnees), assiseDuFormulaire(donnees)));
 	},
 
 	confirmer: async ({ request, locals }) => {
@@ -262,7 +341,7 @@ export const actions: Actions = {
 			relation
 		});
 		if (!resultat.trouve) return fail(404, { message: 'proposition introuvable' });
-		redirect(303, retour(perimetreDuFormulaire(donnees)));
+		redirect(303, retour(perimetreDuFormulaire(donnees), assiseDuFormulaire(donnees)));
 	},
 
 	rejeter: async ({ request, locals }) => {
@@ -275,7 +354,7 @@ export const actions: Actions = {
 			relation
 		});
 		if (!resultat.trouve) return fail(404, { message: 'proposition introuvable' });
-		redirect(303, retour(perimetreDuFormulaire(donnees)));
+		redirect(303, retour(perimetreDuFormulaire(donnees), assiseDuFormulaire(donnees)));
 	},
 
 	/**
@@ -287,10 +366,10 @@ export const actions: Actions = {
 	proposer: async ({ request, locals }) => {
 		const donnees = await request.formData();
 		const perimetreDemande = perimetreDuFormulaire(donnees);
-		const { notes, graphe } = await monterLeModele(locals, perimetreDemande);
+		const { notes, graphe, refuses } = await monterLeModele(locals, perimetreDemande);
 		const aretes = graphe.aretes as readonly RelationLisible[];
 		const mentions = aretes.filter((r) => r.origine === 'deduite');
-		const propositions = propositionsDeMention(notes, aretes, mentions);
+		const propositions = propositionsDeMention(notes, aretes, mentions, tripletsRefuses(refuses));
 
 		if (propositions.length === 0) {
 			return fail(400, { message: 'aucune mention ne correspond à une règle de proposition' });
@@ -304,9 +383,29 @@ export const actions: Actions = {
 			return fail(409, {
 				message:
 					String(releve.ecartees) +
-					' proposition(s) écartée(s) : la paire est déjà reliée, ou le droit manque sur une extrémité'
+					' proposition(s) écartée(s), dont ' +
+					String(releve.refusees) +
+					' refusée(s) : la paire est déjà reliée, le lien a été refusé, ou le droit manque sur une extrémité'
 			});
 		}
-		redirect(303, retour(perimetreDemande));
+		redirect(303, retour(perimetreDemande, assiseDuFormulaire(donnees)));
+	},
+
+	/**
+	 * ANNULER UN REFUS — la ligne quitte la mémoire des refus, et RIEN n'est reposé.
+	 * C'est le clic suivant sur « Proposer » qui repropose : reposer ici écrirait une
+	 * relation que personne n'a demandée.
+	 */
+	annulerLeRefus: async ({ request, locals }) => {
+		const donnees = await request.formData();
+		const refus = champ(donnees, 'refus');
+		if (refus === '') return fail(400, { message: 'demande incomplète' });
+
+		const resultat = await annulerUnRefus(basePartagee(), {
+			identite: locals.identite,
+			refus
+		});
+		if (!resultat.trouve) return fail(404, { message: 'refus introuvable' });
+		redirect(303, retour(perimetreDuFormulaire(donnees), assiseDuFormulaire(donnees)));
 	}
 };
