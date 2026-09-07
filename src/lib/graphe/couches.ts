@@ -50,7 +50,37 @@ export interface DispositionEnCouches {
 	 * fait du corpus, et le taire ferait croire à un modèle acyclique qu'il n'est pas.
 	 */
 	readonly retours: ReadonlySet<string>;
+	/**
+	 * LES ARÊTES QUE L'ASSISE A ÉCARTÉES — dessinées, mais sans voix sur les
+	 * positions. Elles sont DISTINCTES des retours, et ce n'est pas un détail : une
+	 * mention écartée n'est pas une arête qui remonte, et l'écran ne dira jamais
+	 * d'elle « ce lien referme un circuit ». À l'assise `tout`, cet ensemble est
+	 * vide.
+	 */
+	readonly horsEtagement: ReadonlySet<string>;
 }
+
+/**
+ * SUR QUOI L'ÉTAGEMENT S'APPUIE.
+ *
+ * `tout` : les arêtes déclarées ET les mentions — le dessin le plus riche, et celui
+ * qui répond sur un corpus consolidé au lien de corps, où l'étagement sur les seules
+ * déclarées donnerait UNE couche unique portant tout le périmètre : un peigne, pas
+ * un modèle.
+ *
+ * `declarees` : les seules relations qu'un humain a saisies — le modèle au sens
+ * strict, où la position ne doit rien à une citation.
+ *
+ * IL N'A PAS DE DÉFAUT, ET C'EST LA RÈGLE DE `SortDesIsolees` : un défaut ferait
+ * pencher un appelant sans que personne l'ait décidé.
+ *
+ * IL PORTE SUR L'ORIGINE, PAS SUR L'ATTRIBUT DE DÉPENDANCE. `origine` dit QUI l'a
+ * affirmé — un humain ou le corps d'une note —, et c'est la question de l'étagement.
+ * `technique` dit ce que le lien PORTE, et c'est la question des points de rupture.
+ * Étager sur les seules relations techniques effondrerait tout corpus documentaire
+ * en une seule couche.
+ */
+export type AssiseDeLEtagement = 'tout' | 'declarees';
 
 /** L'écart horizontal entre deux nœuds voisins d'une couche. */
 const PAS_HORIZONTAL = 210;
@@ -65,7 +95,8 @@ const VIDE: DispositionEnCouches = {
 	nombreDeCouches: 0,
 	largeur: MARGE * 2,
 	hauteur: MARGE * 2,
-	retours: new Set()
+	retours: new Set(),
+	horsEtagement: new Set()
 };
 
 /**
@@ -223,15 +254,28 @@ function ordonner(
 }
 
 /**
+ * L'ORIGINE D'UNE ARÊTE, quand le graphe la porte.
+ *
+ * `Graphe.aretes` est typé `Relation` — la forme du corpus, qui ne connaît pas les
+ * colonnes ajoutées par la base. Les objets, EUX, sont ceux de `RelationLisible` et
+ * portent `origine` : la lecture est donc sûre en fait, et prudente en type. Une
+ * arête sans origine lisible est tenue pour DÉCLARÉE, parce que c'est la valeur par
+ * défaut de la colonne et qu'écarter par défaut ferait disparaître d'un étagement
+ * des arêtes que personne n'a voulu écarter.
+ */
+function origineDe(r: Relation): string {
+	const lue = (r as { readonly origine?: unknown }).origine;
+	return typeof lue === 'string' ? lue : 'declaree';
+}
+
+/**
  * LA DISPOSITION EN COUCHES D'UN GRAPHE ORIENTÉ.
  *
- * ELLE ÉTAGE SUR TOUTES LES ARÊTES DESSINÉES, déclarées comme déduites. Étager sur
- * les seules déclarées donnerait, sur un corpus consolidé au lien de corps et sans
- * une relation saisie, UNE couche unique portant tout le périmètre : un peigne, pas
- * un modèle. Les deux natures sont orientées, et l'étagement ne demande rien de plus
- * qu'une orientation.
+ * L'ASSISE DIT SUR QUOI ELLE S'APPUIE, et elle est exigée : voir
+ * `AssiseDeLEtagement`. Les arêtes que l'assise écarte sont DESSINÉES quand même —
+ * elles sortent dans `horsEtagement` —, elles ne placent simplement rien.
  */
-export function disposerEnCouches(g: Graphe): DispositionEnCouches {
+export function disposerEnCouches(g: Graphe, assise: AssiseDeLEtagement): DispositionEnCouches {
 	if (g.noeuds.length === 0) return VIDE;
 
 	const ids = g.noeuds.map((n) => n.id).sort();
@@ -255,14 +299,33 @@ export function disposerEnCouches(g: Graphe): DispositionEnCouches {
 		entrantes.get(r.vers)?.push(r);
 	}
 
-	const retours = aretesDeRetour(ids, sortantes);
-	const etage = etages(ids, sortantes, retours);
+	/* LES ARÊTES QUE L'ASSISE ÉCARTE, relevées AVANT le parcours des retours : une
+	   mention qui ne place rien ne doit pas non plus fermer un circuit, sans quoi
+	   l'écran dirait d'elle qu'elle remonte alors qu'elle n'étage même pas. */
+	const horsEtagement = new Set<string>(
+		assise === 'declarees'
+			? aretes.filter((r) => origineDe(r) !== 'declaree').map((r) => cleDArete(r))
+			: []
+	);
+	const etageantes = new Map<string, Relation[]>();
+	for (const id of ids) etageantes.set(id, []);
+	for (const r of aretes) {
+		if (horsEtagement.has(cleDArete(r))) continue;
+		etageantes.get(r.de)?.push(r);
+	}
+
+	const retours = aretesDeRetour(ids, etageantes);
+	/* LES DEUX ENSEMBLES RESTENT DISTINCTS AU-DEHORS, et ne se confondent que pour
+	   les calculs : `etages()` et `ordonner()` écartent les deux, la vue n'en nomme
+	   qu'un. */
+	const ecartees = new Set([...retours, ...horsEtagement]);
+	const etage = etages(ids, sortantes, ecartees);
 
 	const hauteurEnCouches = Math.max(...ids.map((id) => etage.get(id) ?? 0)) + 1;
 	const parCouche: string[][] = Array.from({ length: hauteurEnCouches }, () => []);
 	for (const id of ids) parCouche[etage.get(id) ?? 0]?.push(id);
 
-	const ordonnees = ordonner(parCouche, sortantes, entrantes, retours);
+	const ordonnees = ordonner(parCouche, sortantes, entrantes, ecartees);
 
 	const largeurUtile = Math.max(...ordonnees.map((c) => c.length)) * PAS_HORIZONTAL;
 	const places = new Map<string, PlaceEnCouche>();
@@ -287,6 +350,7 @@ export function disposerEnCouches(g: Graphe): DispositionEnCouches {
 		nombreDeCouches: hauteurEnCouches,
 		largeur: largeurUtile + MARGE * 2,
 		hauteur: (hauteurEnCouches - 1) * PAS_VERTICAL + MARGE * 2,
-		retours
+		retours,
+		horsEtagement
 	};
 }

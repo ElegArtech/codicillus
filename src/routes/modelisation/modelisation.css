@@ -198,6 +198,48 @@
 	grid-column: 1 / -1;
 }
 
+/* ── L'ASSISE DE L'ÉTAGEMENT ───────────────────────────────────────────────
+   La paire de liens est une BASCULE : les deux se voient, celui qui est actif
+   se distingue au fond et au trait, jamais à la seule couleur. */
+.mod-assise {
+	grid-column: 1 / -1;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: var(--e-2) var(--e-3);
+}
+
+.mod-assise__choix {
+	display: inline-flex;
+	border: 1px solid var(--c-trait);
+	border-radius: var(--r-2);
+	overflow: hidden;
+}
+
+.mod-assise__choix a {
+	padding: 2px var(--e-2);
+	font-size: var(--t-mini);
+	color: var(--c-encre-2);
+	text-decoration: none;
+}
+
+.mod-assise__choix a + a {
+	border-left: 1px solid var(--c-trait);
+}
+
+.mod-assise__choix a[aria-current='true'] {
+	background: var(--c-fond-creux);
+	color: var(--c-encre);
+	font-weight: 600;
+	box-shadow: inset 0 -2px 0 var(--c-accent);
+}
+
+.mod-assise__phrase {
+	margin: 0;
+	font-size: var(--t-mini);
+	color: var(--c-encre-2);
+}
+
 /* ── L'AVIS ────────────────────────────────────────────────────────────────
    IL N'EST PAS UNE ALERTE : rien n'a échoué, une question n'a simplement pas
    encore de réponse. Le liseré est celui de l'attention, pas celui du refus. */
