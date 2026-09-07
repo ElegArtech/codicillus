@@ -10,7 +10,7 @@ verifie-il-y-a-jours: 11
 validite-operationnel: 21
 verifie-operationnel-il-y-a-jours: 24
 ---
-Cette procédure couvre la restauration d'une base PostgreSQL depuis les sauvegardes gérées sur le serveur de sauvegarde. Elle couvre la restauration complète et la restauration à un instant donné. Elle **ne couvre pas** la bascule d'un réplica en primaire, traitée séparément.
+Cette procédure couvre la restauration d'une base PostgreSQL depuis les sauvegardes gérées sur [[n-bkp-01|bkp-01]]. Elle couvre la restauration complète et la restauration à un instant donné. Elle **ne couvre pas** la bascule d'un réplica en primaire, traitée séparément.
 
 ## Avant de commencer {#s-avant-de-commencer}
 
