@@ -126,6 +126,26 @@
 	cursor: pointer;
 }
 
+/* LA POIGNÉE — la cible de clic d'une arête, posée SUR son propre tracé.
+   ELLE DOIT SE VOIR QUAND ON LA VISE, sinon elle ne se vise pas : transparente
+   au repos, elle prend un contour à l'accent au survol ET au focus clavier. Le
+   focus n'est pas le survol : une poignée atteinte par la tabulation doit se
+   montrer aussi. */
+.mod-arete__poignee {
+	fill: transparent;
+	stroke: transparent;
+	stroke-width: 1.5;
+	cursor: pointer;
+}
+
+.mod-arete__groupe:hover .mod-arete__poignee,
+.mod-arete__poignee:hover,
+a:focus-visible .mod-arete__poignee {
+	fill: var(--c-fond);
+	fill-opacity: 0.85;
+	stroke: var(--c-accent);
+}
+
 .mod-arete__mot {
 	font-size: 9.5px;
 	fill: var(--c-encre-2);
