@@ -1,17 +1,77 @@
 # Où reprendre
 
-*État au 4 septembre 2026. Ce fichier ne dit que ce qui a été **ouvert dans un navigateur**,
+*État au 7 septembre 2026. Ce fichier ne dit que ce qui a été **ouvert dans un navigateur**,
 sur une base migrée jamais semée. Ce qu'un contrôle déclare n'y entre pas.*
 
 ```
-pnpm check      = 0        0 erreur, 0 avertissement
-pnpm test:unit  = 0        83 fichiers, 1 885 contrôles
-pnpm build      = 0
-passage-a-froid = 0        42 routes, chacune au code attendu d'elle, aucun nom du jeu servi
-aiguilles       = 0        111 aiguilles, deux zones du paquet
+pnpm check           = 0        0 erreur, 0 avertissement, 1432 fichiers
+pnpm test:unit       = 0        92 fichiers, 2 060 contrôles
+pnpm build           = 0
+pnpm base:migrer     = 0        17 migrations, base neuve
+pnpm base:coherence  = 0        schema.ts décrit exactement la base migrée
+pnpm base:reversibilite = 0     monter, descendre, remonter : empreinte identique
+passage-a-froid      = 0        43 routes, chacune au code attendu d'elle, aucun nom du jeu servi
+aiguilles            = 1        UN FAUX POSITIF, ET IL EST ANTÉRIEUR — voir ci-dessous
 ```
 
+**`aiguilles` n'est plus à zéro, et ce n'est pas le travail du 7 septembre.** Le dépôt a été
+reconstruit à `08bf423`, le commit d'avant la première ligne du jour : le contrôle y rend le
+**même** échec, 52 occurrences sur un fichier. Ce fichier est un morceau de 662 Ko de chevrotain
+et de mermaid, où « Production » est le nom d'une classe de grammaire et non l'univers du jeu de
+démonstration. Mermaid est entré dans le paquet client à `42c56cf feat(diagrammes)`. **La ligne
+`aiguilles = 0` de la version précédente de ce fichier était déjà fausse quand elle a été
+écrite** — et c'est la leçon que ce fichier porte déjà sur lui-même. Le faux positif n'a pas été
+« réparé » : c'est un outil de vérification, pas le produit, et on ne fait pas grossir l'appareil
+de vérification pour se rendre un contrôle vert.
+
 ---
+
+## Ce que le 7 septembre a fait
+
+Neuf lots, cinq vagues. Le détail des arbitrages est dans `docs/plan-de-reprise.md`, section
+« Décisions prises à l'exécution ».
+
+- **Les mentions ont enfin de quoi se voir.** Le jeu de démonstration cite ses propres notes —
+  neuf liens de corps dans six fichiers, **six arêtes déduites** —, et un unitaire tient le
+  compte : orientation, dédoublonnage, et l'effacement quand une relation déclarée porte déjà la
+  paire, dans un sens comme dans l'autre.
+- **La Modélisation est un module de domaine**, activable comme Cartographie (migrations `016`
+  et `017`). La reprise l'a activée partout où Cartographie l'était : **13 domaines sur 13**,
+  rien n'a disparu. La console offre sa case sans une ligne de câblage de plus, et l'entrée de
+  rail ne s'affiche que là où le module vit.
+- **Une proposition rejetée ne revient plus.** Le refus est une table à part, `propositions_
+  refusees`, et non une quatrième origine : garder la ligne dans `relations` aurait rendu
+  IMPOSSIBLE de déclarer soi-même la relation refusée, `relations_unicite` s'y opposant. La vue
+  montre les refus et permet de les annuler.
+- **Deux relations entre deux mêmes notes s'atteignent chacune.** Leurs deux prises se
+  superposaient exactement : l'une des deux était inatteignable au clic. La géométrie a quitté la
+  vue pour un module éprouvé — éventail des parallèles, une poignée par arête, glissée le long de
+  **son** tracé. Mesuré au navigateur : 29 arêtes, 29 tracés distincts, aucune paire de poignées à
+  moins de 20 px.
+- **L'écran dit sur quoi son étagement s'appuie**, et un réglage d'adresse le borne aux relations
+  déclarées. Le réglage porte sur l'ORIGINE, pas sur l'attribut de dépendance : étager sur les
+  seules relations techniques effondrerait tout corpus documentaire en une couche.
+- **L'écran dit quand « aucun point de défaillance unique » ne veut rien dire.** Sur une instance
+  où aucun type ne porte de dépendance — le cas de toute instance neuve —, il l'annonce et nomme
+  l'adresse qui débloque, à l'administrateur seul. Aucune migration : la colonne `technique`
+  existe depuis `002`, et le calcul la lisait déjà.
+
+## Les trois défauts que la vérification a trouvés, et qu'aucun chantier n'avait prévus
+
+- **Le formulaire qui sert à déclarer la première relation partait avec le dessin vide.** Il
+  vivait dans la branche `{:else}` : sur une instance sans une seule relation, l'écran qui sert à
+  relier les notes ne pouvait pas relier les deux premières. Trouvé parce qu'un contrôle de fin a
+  échoué, pas parce que quelqu'un l'avait prévu.
+- **`pnpm base:peupler` échouait sur toute base portant une trace de suppression.** Le semeur
+  supprime les comptes du jeu, et `traces_de_suppression.auteur_id` est en `RESTRICT` : une
+  instance sur laquelle on avait supprimé quoi que ce soit ne pouvait plus être repeuplée. La clé
+  étrangère est juste et n'a pas bougé — c'est l'ordre de suppression qui était faux.
+- **« Proposer 3 relation(s) à confirmer » en posait 2, sans un mot.** Deux notes qui se citent
+  réciproquement donnaient deux propositions sur la même paire, dont l'écriture écartait une ; le
+  chiffre du bouton était compté avant cette règle. Le produit se tait désormais sur une citation
+  mutuelle — il sait que deux notes se citent, pas laquelle dépend de l'autre —, et l'action dit
+  ce qu'elle écarte. **Trouvé au rejeu des clics dans un navigateur, et par rien d'autre** : ni le
+  typage, ni les 2 060 unitaires ne le voyaient.
 
 ## Ce que le 4 septembre a réparé
 
@@ -120,6 +180,16 @@ mort de la machine. Il demande une destination, et donc une décision.
 
 ## Ce qui reste
 
+- **Trois chantiers sont cadrés et non exécutés** — `docs/plan-de-reprise.md` les porte, avec
+  pour chacun l'état actuel, le périmètre, ce qu'il faut produire avant de coder et les
+  arbitrages déjà pris. Dans l'ordre : **la carte mentale**, qui n'affiche que **3 notes sur 77**
+  de la base de développement parce que 74 sont à la racine de leur domaine et qu'elle
+  n'accroche une note qu'à un dossier ; **l'apparence de `/modelisation`**, qui n'a jamais été
+  travaillée et attend une maquette ; **les embeddings**, pour le mode « Sens » et les familles.
+- **Le chevron de l'arbre du rail est un `<button>`** : script coupé, aucun univers ne s'y
+  déplie. Ce n'est pas bloquant — les cartes d'univers de l'accueil et les cartes de domaine de
+  la page d'univers sont des liens, et le parcours complet a été rejoué par elles, script coupé
+  compris. Relevé, pas réparé.
 - **`docs/routes.md`, `DESIGN.md`, `releve-vues.md` et `arbitrages.md`** décrivent l'état d'avant
   et n'ont pas été remesurés. `routes.md` fait toujours autorité sur les adresses, le code le
   cite ; les trois autres sont de l'historique.
