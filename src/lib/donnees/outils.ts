@@ -56,6 +56,14 @@ export type OrigineDeRelation = 'declaree' | 'deduite' | 'ambigue';
  */
 export interface RelationLisible extends Relation {
 	readonly origine: OrigineDeRelation;
+	/**
+	 * LA CLÉ DE LA LIGNE, quand il y en a une. `null` sur une arête DÉDUITE : une
+	 * mention n'est pas une ligne, elle est calculée à la lecture. C'est ce qui permet
+	 * à la vue de modélisation de désigner une relation pour la changer ou la retirer
+	 * SANS repasser par la note — et de savoir, du même coup, laquelle ne se retire
+	 * pas parce qu'elle n'existe nulle part.
+	 */
+	readonly id: string | null;
 }
 
 /**
@@ -86,6 +94,7 @@ export async function lireRelationsLisibles(
 
 	const lignes = await base
 		.select({
+			id: relations.id,
 			de: source.identifiant,
 			vers: cible.identifiant,
 			type: typesDeRelation.identifiant,
@@ -101,12 +110,55 @@ export async function lireRelationsLisibles(
 	return lignes.map(
 		(l) =>
 			({
+				id: l.id,
 				de: l.de,
 				vers: l.vers,
 				type: l.type as CleDeTypeDeRelation,
 				origine: l.origine
 			}) as unknown as RelationLisible
 	);
+}
+
+/**
+ * LES LIENS INTERNES DE CHAQUE NOTE LISIBLE — la matière des arêtes DÉDUITES.
+ *
+ * LA COLONNE EST GÉNÉRÉE PAR LA BASE (migration `015`) : l'expression qui la remplit
+ * EST le parcours de l'arbre des deux corps, dit en JSONPath. Elle ne peut donc pas
+ * être en retard sur un corps, et rien n'a à la maintenir. C'est ce qui permet aux
+ * mentions de se calculer à la lecture sans qu'une seule ligne ne soit écrite.
+ *
+ * ELLE NE LIT PAS LES CORPS. Les corps sont stockés hors ligne et pèsent le corpus
+ * entier ; cette requête ne rapporte que des tableaux d'identifiants. C'est la même
+ * économie que celle des rétroliens d'une note — 47 ms de base et 165 ms d'analyse
+ * mesurés sur l'instance de recette, ici pour tout le graphe et non pour une note.
+ *
+ * LE PÉRIMÈTRE EST DANS LA REQUÊTE (`ADR-006`). UNE NOTE SANS LIEN N'ENTRE PAS DANS
+ * LA TABLE : l'absence de clé et un tableau vide disent la même chose, et n'en garder
+ * qu'une forme épargne une entrée par note sur un corpus peu lié.
+ */
+export async function lireLesLiensInternes(
+	base: Base,
+	perimetre: Perimetre
+): Promise<ReadonlyMap<string, readonly string[]>> {
+	const table = new Map<string, readonly string[]>();
+	const autorises = perimetre.tout ? null : [...perimetre.dossiers];
+	if (autorises !== null && autorises.length === 0) return table;
+
+	const lignes = await base
+		.select({ identifiant: notes.identifiant, liens: notes.liensInternes })
+		.from(notes)
+		.where(autorises === null ? undefined : inArray(notes.dossierId, autorises))
+		.orderBy(notes.identifiant);
+
+	for (const ligne of lignes) {
+		/* LA COLONNE EST DU `jsonb` : son type statique ne dit rien de sa forme, et le
+		   crible ci-dessous ne comble aucun trou — il constate que l'expression
+		   génératrice rend bien un tableau de chaînes. */
+		if (!Array.isArray(ligne.liens)) continue;
+		const cibles = ligne.liens.filter((c): c is string => typeof c === 'string');
+		if (cibles.length > 0) table.set(ligne.identifiant, cibles);
+	}
+	return table;
 }
 
 /**
