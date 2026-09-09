@@ -305,19 +305,16 @@ describe('V-11 — page d’un domaine', () => {
 		expect(avec).toContain('Ce qui dépend de quoi');
 	});
 
-	/**
-	 * LE CAS QUE LA RÈGLE EN DUR RENDAIT IMPOSSIBLE À ÉCRIRE. La modélisation
-	 * s'allumait par ricochet de la cartographie ; elle s'active seule désormais, et
-	 * un domaine qui n'a pas ouvert son graphe ne l'offre plus.
-	 */
-	it('un domaine sans cartographie n’offre plus la modélisation par ricochet', async () => {
+	it('les explorations restent disponibles sans module activé, la modélisation reste facultative', async () => {
 		const rendu = await v11(pageDuDomaine(['notes']));
 		expect(rendu).not.toContain('/modelisation');
-		expect(rendu).not.toContain('/cartographie?');
+		expect(rendu).toContain('/cartographie?perimetre=domaine%7C');
+		expect(rendu).toContain('/carte-mentale?perimetre=domaine%7C');
 
-		const seule = await v11(pageDuDomaine(['notes', 'modelisation']));
-		expect(seule).toContain('/modelisation?');
-		expect(seule).not.toContain('/cartographie?');
+		const avec = await v11(pageDuDomaine(['notes', 'modelisation']));
+		expect(avec).toContain('/modelisation?');
+		expect(avec).toContain('/cartographie?');
+		expect(avec).toContain('/carte-mentale?');
 	});
 });
 

@@ -79,6 +79,7 @@
 	/** Les adresses que l'écran ouvre. Composées par le chargeur, jamais ici. */
 	interface AdressesDeLUnivers {
 		readonly cartographie: string;
+		readonly carteMentale: string;
 		/** La liste réelle des notes de cet univers dont la validité est dépassée. */
 		readonly surveillance: string;
 		/** Là où l'on crée un domaine — la console, seul écran qui en écrive un. */
@@ -425,22 +426,45 @@
 						{/each}
 					</div>
 				</div>
-				<a class="btn bandeau__carto" href={adresses.cartographie}
-					><svg
-						width="16"
-						height="16"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.4"
-						aria-hidden="true"
-						><circle cx="4" cy="4" r="2" /><circle cx="12" cy="6" r="2" /><circle
-							cx="7"
-							cy="12.5"
-							r="2"
-						/><path d="M5.8 4.6l4.3 1M11 7.7l-3 3.2M5.2 5.6l1.3 5" /></svg
-					>Cartographie des univers →</a
-				>
+				<div class="bandeau__exploration">
+					<a class="btn bandeau__carto" href={adresses.cartographie}
+						><svg
+							width="16"
+							height="16"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.4"
+							aria-hidden="true"
+							><circle cx="4" cy="4" r="2" /><circle cx="12" cy="6" r="2" /><circle
+								cx="7"
+								cy="12.5"
+								r="2"
+							/><path d="M5.8 4.6l4.3 1M11 7.7l-3 3.2M5.2 5.6l1.3 5" /></svg
+						>Cartographie →</a
+					>
+					<a class="btn bandeau__carto" href={adresses.carteMentale}>
+						<svg
+							width="16"
+							height="16"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.4"
+							aria-hidden="true"
+							><circle cx="3.5" cy="8" r="1.8" /><rect
+								x="9.5"
+								y="2"
+								width="5"
+								height="3.4"
+								rx="1"
+							/><rect x="9.5" y="10.6" width="5" height="3.4" rx="1" /><path
+								d="M5.3 8h2.2V3.7h2M7.5 8v4.3h2"
+							/></svg
+						>
+						Carte mentale →</a
+					>
+				</div>
 			</div>
 
 			<!-- LA BANDE DES COMPTEURS — un par état NON NUL. Sans note, elle nomme le
