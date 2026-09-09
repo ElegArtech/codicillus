@@ -41,6 +41,7 @@
 	import BoutonDeCreation from '$lib/console/BoutonDeCreation.svelte';
 	import NavigationConsole from '$lib/console/NavigationConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
+	import { EXPLORATIONS_PERMANENTES } from '$lib/rangement/modules';
 	import { filDeConsole } from '$lib/console/sections';
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import type { RefusDeSaisie, SaisieDeDomaine } from '$lib/console/structure';
@@ -190,8 +191,10 @@
 			'Vue arborescente dépliable de tout le domaine, utile pour découvrir son organisation.'
 	});
 
-	/** Les sept modules, dans l'ordre du catalogue du produit. */
-	const CLES_DE_MODULE = $derived(Object.keys(modules) as CleDeModule[]);
+	/** Les modules configurables, dans l'ordre du catalogue du produit. */
+	const CLES_DE_MODULE = $derived(
+		(Object.keys(modules) as CleDeModule[]).filter((cle) => !EXPLORATIONS_PERMANENTES.includes(cle))
+	);
 
 	function nb(x: number): string {
 		return x.toLocaleString('fr-FR');
@@ -490,7 +493,7 @@
 	></div
 	><span class="tg__univers"><i style="background:{couleurUnivers(d.univers)}"></i>{d.univers}</span
 	>{@render nombre(m.notes, 'tg__n tg--reduit')}{@render nombre(m.fiches, 'tg__n tg--reduit')}{@render nombre(m.signets, 'tg__n tg--masquable tg--reduit')}{@render nombre(m.dossiers, 'tg__n tg--masquable tg--reduit')}{@render nombre(m.contributeurs, 'tg__n tg--masquable tg--reduit')}<div class="tg__modules tg--reduit"
-		>{#each d.modules as cle (cle)}<span class="mod-pastille" title={modules[cle].nom}>{CODES_MODULES[cle]}</span>{/each}</div
+		>{#each d.modules.filter((cle) => !EXPLORATIONS_PERMANENTES.includes(cle)) as cle (cle)}<span class="mod-pastille" title={modules[cle].nom}>{CODES_MODULES[cle]}</span>{/each}</div
 	><div class="tg__actions"
 		><button class="btn" type="button" onclick={() => ouvrirForm(d)}>Modifier</button
 		><button class="btn btn--destructif" type="button" aria-label="Supprimer le domaine {d.nom}" onclick={() => { demande = d.nom; saisie = ''; }}><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"/></svg></button
@@ -541,7 +544,7 @@
 	{#snippet enfants()}
 		<TeteDeSection
 			titre="Domaines"
-			description="Les espaces de connaissance. Chaque domaine a ses contributeurs, son rangement et ses modules : un domaine qui n'a pas besoin de cartographie ne doit pas en afficher l'onglet."
+			description="Chaque domaine a ses contributeurs, son rangement et ses modules. Cartographie et Carte mentale sont toujours disponibles."
 		>
 			{#snippet action()}
 				<BoutonDeCreation libelle="Nouveau domaine" onCliquer={() => ouvrirForm(null)} />
@@ -661,6 +664,10 @@
 
 				<div class="champ">
 					<span class="champ__label">Modules</span>
+					<p class="champ__aide">
+						Cartographie et Carte mentale sont toujours disponibles pour tous les univers et
+						domaines.
+					</p>
 					<span class="champ__aide" style="margin-bottom:var(--e-2)"
 						>Un module désactivé n'apparaît nulle part pour ce domaine : ni onglet grisé, ni entrée
 						morte.</span

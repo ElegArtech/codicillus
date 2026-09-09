@@ -14,7 +14,7 @@
 import type { CleDeModule, Module } from '../../../seeds/corpus';
 
 /**
- * Les sept modules activables sur un domaine, dans l'ordre de `RG-STR-06`.
+ * Les sept modules du domaine, dans l'ordre de `RG-STR-06`.
  *
  * `modelisation` SUIT `cartographie` : c'est l'ordre dans lequel les entrées
  * d'exploration se lisent sur la page du domaine, les deux façons de lire la même
@@ -39,3 +39,6 @@ export const CATALOGUE_DE_MODULES: Record<CleDeModule, Module> = {
 export function libelleDeModule(catalogue: Record<CleDeModule, Module>, cle: string): Module {
 	return catalogue[cle as CleDeModule] ?? { nom: cle, sous: '' };
 }
+
+/** Ces lectures du corpus sont disponibles sans activation dans la console. */
+export const EXPLORATIONS_PERMANENTES: readonly CleDeModule[] = ['cartographie', 'carteMentale'];

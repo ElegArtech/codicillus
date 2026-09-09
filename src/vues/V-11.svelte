@@ -49,7 +49,7 @@
 		type IdentiteDeCoquille
 	} from '$lib/coquille/identite';
 	import { ETATS_DE_VIVACITE, ORDRE_DES_ETATS, type EtatDeVivacite } from '$lib/fraicheur';
-	import { libelleDeModule } from '$lib/rangement/modules';
+	import { EXPLORATIONS_PERMANENTES, libelleDeModule } from '$lib/rangement/modules';
 	import { accord } from '$lib/vocabulaire';
 	import { adresseDeNote } from '$lib/rangement/adresses';
 
@@ -282,7 +282,9 @@
 				!CLES_DE_TUILE.includes(c as CleDeModule) && !CLES_DEXPLORATION.includes(c as CleDeModule)
 		)
 	] as readonly string[]);
-	const exploration = $derived(CLES_DEXPLORATION.filter((c) => actifs.includes(c)));
+	const exploration = $derived(
+		CLES_DEXPLORATION.filter((c) => EXPLORATIONS_PERMANENTES.includes(c) || actifs.includes(c))
+	);
 
 	/* ── Palmarès et fil ────────────────────────────────────────────────────── */
 	const populaires = $derived(
