@@ -44,6 +44,16 @@ export const ORIGINES_DE_COUCHE: Readonly<Record<CoucheDeLiens, readonly Origine
 export const PROFONDEUR_MAXIMALE = 3;
 
 export interface EtatDExploration {
+	readonly forces?: {
+		readonly repulsion: number;
+		readonly distance: number;
+		readonly attraction: number;
+		readonly centrage: number;
+	};
+	readonly recherche?: string;
+	readonly affinites?: boolean;
+	readonly fleches?: boolean;
+	readonly libelles?: boolean;
 	/** Les couches de liens dessinées. Vide : aucun trait, le nuage des familles seul. */
 	readonly couches: readonly CoucheDeLiens[];
 	/** Les états de vivacité affichés. */
@@ -149,7 +159,21 @@ export function explorationDeLAdresse(parametres: URLSearchParams): EtatDExplora
 	const centre = parametres.get('centre');
 	const profondeur = entierLu(parametres.get('profondeur'), 1, PROFONDEUR_MAXIMALE);
 
+	const force = (cle: string): number => {
+		const valeur = Number(parametres.get(cle) ?? 1);
+		return Number.isFinite(valeur) ? Math.min(3, Math.max(0.25, valeur)) : 1;
+	};
 	return {
+		forces: {
+			repulsion: force('repulsion'),
+			distance: force('distance'),
+			attraction: force('attraction'),
+			centrage: force('centrage')
+		},
+		affinites: booleenLu(parametres.get('affinites')) ?? true,
+		recherche: (parametres.get('recherche') ?? '').slice(0, 200),
+		fleches: booleenLu(parametres.get('fleches')) ?? false,
+		libelles: booleenLu(parametres.get('libelles')) ?? false,
 		couches: couches ?? EXPLORATION_DE_PLANCHE.couches,
 		vivacite: etats ?? EXPLORATION_DE_PLANCHE.vivacite,
 		taille: taille ?? EXPLORATION_DE_PLANCHE.taille,

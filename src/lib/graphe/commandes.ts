@@ -191,3 +191,19 @@ export function placeDuNoeud(
 	if (mesure === null) return null;
 	return { x: Number(mesure[1]), y: Number(mesure[2]) };
 }
+
+/** Le trait s'arrête au bord du nœud, pour garder sa flèche visible. */
+export function courbeDeLien(
+	a: { x: number; y: number; r: number },
+	b: { x: number; y: number; r: number }
+): string {
+	const dx = b.x - a.x,
+		dy = b.y - a.y;
+	const cx = (a.x + b.x) / 2 - dy * 0.1,
+		cy = (a.y + b.y) / 2 + dx * 0.1;
+	const debut = Math.hypot(cx - a.x, cy - a.y) || 1;
+	const fin = Math.hypot(b.x - cx, b.y - cy) || 1;
+	const ra = Math.min(a.r + 2, debut / 2),
+		rb = Math.min(b.r + 3, fin / 2);
+	return `M${a.x + ((cx - a.x) * ra) / debut} ${a.y + ((cy - a.y) * ra) / debut}Q${cx} ${cy} ${b.x - ((b.x - cx) * rb) / fin} ${b.y - ((b.y - cy) * rb) / fin}`;
+}
