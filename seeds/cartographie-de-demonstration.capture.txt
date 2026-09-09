@@ -1,101 +1,105 @@
 # Cartographie du jeu de démonstration — univers Substack
 
-repère -704.1 -526.0 1433.5 1027.3
-centre Substack (SUB) r=48.0
-nœuds 82 · familles 10 · traits de squelette 82
+repère -869.2 -684.7 1987.9 1424.6
+centre  () r=0.0
+nœuds 82 · familles 14 · traits de squelette 0
 
 ## Familles
-Développement · 12 notes · teinte 0 · pivot n-sub-linux · centre 166.7 -313.8 · rayon 111.0 · titre 96.1 -384.5
-Installation · 11 notes · teinte 1 · pivot n-sub-installation · centre 415.3 -155.6 · rayon 111.0 · titre 344.6 -226.2
-IA & Productivité · 10 notes · teinte 2 · pivot n-sub-claude · centre 455.3 79.5 · rayon 111.0 · titre 384.6 8.8
-Outils & Tech · 9 notes · teinte 3 · pivot n-sub-claude-code · centre 270.7 274.1 · rayon 111.0 · titre 200.1 203.4
-Business & Stratégie · 8 notes · teinte 4 · pivot n-sub-positionnement · centre -44.5 334.3 · rayon 111.0 · titre -115.2 263.7
-Marketing · 7 notes · teinte 5 · pivot n-sub-audience-cible · centre -301.8 256.9 · rayon 76.0 · titre -350.2 208.5
-Contenu · 6 notes · teinte 6 · pivot n-sub-guide · centre -436.4 122.3 · rayon 76.0 · titre -484.8 74.0
-Méthode · 6 notes · teinte 7 · pivot n-sub-routine · centre -465.0 -41.2 · rayon 76.0 · titre -513.4 -89.6
-Veille · 5 notes · teinte 8 · pivot n-sub-sources · centre -382.3 -194.1 · rayon 76.0 · titre -430.7 -242.5
-Isolées · 8 notes · teinte 9 · pivot n-sub-anniversaires · centre -185.4 -359.0 · rayon 111.0 · titre -256.0 -429.7
+Business & Stratégie · 4 notes · teinte 4 · pivot n-sub-abonnements · centre -334.9 403.0 · rayon 127.4 · titre -417.3 292.4
+Développement · 2 notes · teinte 0 · pivot n-sub-auth · centre -163.1 -163.2 · rayon 80.2 · titre -215.0 -214.3
+Développement · 3 notes · teinte 0 · pivot n-sub-ci · centre 466.4 196.5 · rayon 113.4 · titre 406.3 102.5
+Veille · 4 notes · teinte 8 · pivot n-sub-conferences · centre 27.7 556.7 · rayon 147.3 · titre -38.3 425.5
+IA & Productivité · 2 notes · teinte 2 · pivot n-sub-contexte-long · centre -460.7 164.1 · rayon 84.1 · titre -514.9 108.8
+IA & Productivité · 3 notes · teinte 2 · pivot n-sub-ecrire-avec-un-modele · centre 334.6 104.0 · rayon 106.0 · titre 281.1 14.1
+Outils & Tech · 3 notes · teinte 3 · pivot n-sub-editeur-de-texte · centre -98.6 229.3 · rayon 118.6 · titre -150.2 122.8
+Développement · 2 notes · teinte 0 · pivot n-sub-erreurs · centre -490.2 -3.9 · rayon 84.1 · titre -544.4 -59.2
+Business & Stratégie · 2 notes · teinte 4 · pivot n-sub-etude-de-marche · centre 552.1 -311.0 · rayon 93.2 · titre 528.3 -402.1
+Développement · 2 notes · teinte 0 · pivot n-sub-linux · centre 171.3 182.7 · rayon 92.6 · titre 151.9 91.3
+Développement · 3 notes · teinte 0 · pivot n-sub-migrations · centre 291.9 409.2 · rayon 108.2 · titre 229.8 324.0
+Marketing · 2 notes · teinte 5 · pivot n-sub-objet-de-courriel · centre 100.3 -459.3 · rayon 87.0 · titre 39.4 -505.1
+Installation · 2 notes · teinte 1 · pivot n-sub-paquets · centre -417.3 -153.1 · rayon 121.3 · titre -514.4 -189.2
+Contenu · 2 notes · teinte 6 · pivot n-sub-relecture · centre -383.5 -383.5 · rayon 86.3 · titre -401.8 -468.6
 
 ## Nœuds
-n-sub-abonnements -79.1 350.1 r=7.0
-n-sub-agents 481.5 52.0 r=7.0
-n-sub-anniversaires -185.4 -359.0 r=17.0 pivot nommé
-n-sub-api-anthropic 444.6 43.0 r=11.3
-n-sub-archivage -427.3 -36.5 r=7.0
-n-sub-assistant-quotidien 492.2 88.4 r=7.0
-n-sub-audience-cible -301.8 256.9 r=17.0 pivot nommé
-n-sub-auth 153.2 -278.3 r=7.0
-n-sub-automatiser-sa-veille 466.0 115.9 r=7.0
-n-sub-bienvenue -277.3 227.8 r=7.9
-n-sub-brouillon-abandonne -172.2 -323.4 r=7.0
-n-sub-calendrier-editorial -401.0 108.5 r=7.5
-n-sub-ci 129.2 -307.8 r=7.3
-n-sub-claude 455.3 79.5 r=17.0 pivot nommé
-n-sub-claude-code 270.7 274.1 r=17.0 pivot nommé
-n-sub-conferences -404.3 -163.1 r=7.0
-n-sub-configuration 381.6 -138.0 r=9.7
-n-sub-contexte-long 429.0 106.9 r=7.0
-n-sub-controle-avant-publication -457.8 -3.9 r=7.0
-n-sub-courses -209.7 -329.8 r=7.0
-n-sub-cout-par-jeton 434.8 9.4 r=7.0
-n-sub-croissance -40.9 296.5 r=7.5
-n-sub-debogage 308.6 270.6 r=7.0
-n-sub-decoupage -498.3 -22.8 r=7.0
-n-sub-depannage 416.8 -193.6 r=7.0
-n-sub-desinstallation 448.9 -173.2 r=7.0
-n-sub-digicode -222.8 -365.4 r=7.0
-n-sub-docker 383.2 -175.9 r=11.0
-n-sub-documentation -412.3 151.7 r=8.9
-n-sub-ecrire-avec-un-modele 526.2 96.7 r=7.0
-n-sub-editeur-de-texte 292.7 305.1 r=7.0
-n-sub-env 447.3 -135.2 r=7.0
-n-sub-erreurs 190.7 -284.4 r=7.0
-n-sub-etude-de-marche -10.0 318.5 r=7.9
-n-sub-evaluer 404.9 132.2 r=7.0
-n-sub-extensions 254.9 308.6 r=7.0
-n-sub-facture-imprimeur -198.6 -394.7 r=7.0
-n-sub-flux-rss -351.3 -172.2 r=7.6
-n-sub-gestionnaire-de-paquets 232.9 277.6 r=7.0
-n-sub-git 330.3 231.9 r=7.0
-n-sub-go-to-market -75.5 312.3 r=7.0
-n-sub-guide -436.4 122.3 r=17.0 pivot nommé
-n-sub-installation 415.3 -155.6 r=17.0 pivot nommé
-n-sub-journalisation 105.6 -273.9 r=7.0
-n-sub-lecture-hebdo -413.4 -216.1 r=7.0
-n-sub-lettres-concurrentes -360.4 -225.1 r=7.0
-n-sub-levain -161.1 -388.3 r=7.0
-n-sub-linux 166.7 -313.8 r=17.0 pivot nommé
-n-sub-migrations 109.9 -359.6 r=7.0
-n-sub-mise-a-jour 413.7 -117.6 r=7.0
-n-sub-modele-economique -13.6 356.3 r=7.5
-n-sub-objet-de-courriel -326.3 286.0 r=7.0
-n-sub-page-datterrissage -264.4 263.5 r=8.2
-n-sub-paquets 345.6 -177.4 r=7.0
-n-sub-parrainage -339.2 250.2 r=7.0
-n-sub-partenariats -51.5 407.0 r=7.0
-n-sub-piscine -147.9 -352.6 r=7.0
-n-sub-plaque -210.7 -427.5 r=7.0
-n-sub-positionnement -44.5 334.3 r=17.0 pivot nommé
-n-sub-prerequis 437.1 -225.2 r=7.0
-n-sub-prise-de-notes -492.8 -67.1 r=7.0
-n-sub-prompts 418.4 70.5 r=9.7
-n-sub-proxy 484.9 -133.8 r=7.0
-n-sub-raccourcis 211.2 316.3 r=7.0
-n-sub-readme -456.9 154.3 r=9.7
-n-sub-relecture -473.2 112.7 r=7.3
-n-sub-reseaux-sociaux -314.7 221.2 r=7.0
-n-sub-ressources 142.7 -343.3 r=7.0
-n-sub-revue 192.7 -382.1 r=7.0
-n-sub-revue-hebdomadaire -449.0 -75.6 r=7.0
-n-sub-routine -465.0 -41.2 r=17.0 pivot nommé
-n-sub-schema 180.3 -349.3 r=7.3
-n-sub-serveur 204.3 -319.9 r=7.0
-n-sub-sources -382.3 -194.1 r=17.0 pivot nommé
-n-sub-tarification -48.1 372.1 r=7.5
-n-sub-taux-douverture -288.9 292.6 r=7.5
-n-sub-terminal 286.6 239.6 r=9.7
-n-sub-tests 239.6 -310.2 r=7.0
-n-sub-titre-et-accroche -438.6 84.4 r=7.0
-n-sub-typage 185.8 -243.4 r=7.0
-n-sub-variables 393.4 -85.9 r=7.0
-n-sub-vs-code 248.8 243.1 r=10.3
+n-sub-abonnements -259.4 382.8 r=7.0 nommé
+n-sub-agents 304.6 -131.9 r=7.0 nommé
+n-sub-anniversaires 345.2 267.6 r=7.0
+n-sub-api-anthropic 125.1 -81.5 r=11.3 nommé
+n-sub-archivage -273.7 -50.1 r=7.0 nommé
+n-sub-assistant-quotidien 218.0 300.9 r=7.0 nommé↑
+n-sub-audience-cible 688.2 -209.8 r=8.5 nommé
+n-sub-auth -208.0 -143.1 r=7.0 nommé
+n-sub-automatiser-sa-veille 155.1 514.2 r=7.0 nommé
+n-sub-bienvenue 580.4 -193.5 r=7.9 nommé↑
+n-sub-brouillon-abandonne 297.0 -320.7 r=7.0 nommé↑
+n-sub-calendrier-editorial -106.8 -514.2 r=7.5 nommé
+n-sub-ci 519.2 229.0 r=7.3 nommé
+n-sub-claude 272.3 1.4 r=11.1 nommé↑
+n-sub-claude-code -39.6 -49.0 r=14.0 nommé
+n-sub-conferences -31.3 657.0 r=7.0 nommé
+n-sub-configuration 23.0 -254.9 r=9.7 nommé
+n-sub-contexte-long -413.5 139.8 r=7.0 nommé
+n-sub-controle-avant-publication -284.5 -337.9 r=7.0 nommé
+n-sub-courses 435.7 40.6 r=7.0
+n-sub-cout-par-jeton -507.9 188.3 r=7.0 nommé
+n-sub-croissance 184.9 -551.3 r=7.5 nommé
+n-sub-debogage 106.6 89.3 r=7.0
+n-sub-decoupage -218.2 -453.1 r=7.0 nommé
+n-sub-depannage -176.9 55.8 r=7.0 nommé
+n-sub-desinstallation -50.1 -161.3 r=7.0 nommé
+n-sub-digicode -152.7 411.2 r=7.0 nommé
+n-sub-docker 58.8 157.0 r=11.0 nommé
+n-sub-documentation -308.2 66.4 r=8.9 nommé↑
+n-sub-ecrire-avec-un-modele 381.1 45.1 r=7.0 nommé
+n-sub-editeur-de-texte -54.1 304.8 r=7.0 nommé
+n-sub-env -28.8 -375.5 r=7.0 nommé
+n-sub-erreurs -443.0 -28.2 r=7.0 nommé
+n-sub-etude-de-marche 536.2 -370.2 r=7.9 nommé
+n-sub-evaluer 365.4 104.5 r=7.0
+n-sub-extensions -143.2 267.6 r=7.0 nommé
+n-sub-facture-imprimeur 222.3 -378.9 r=7.0 nommé
+n-sub-flux-rss 57.8 457.1 r=7.6 nommé
+n-sub-gestionnaire-de-paquets -413.0 -196.5 r=7.0 nommé↑
+n-sub-git 199.2 -162.6 r=7.0 nommé
+n-sub-go-to-market 601.4 -117.8 r=7.0 nommé
+n-sub-guide -207.9 123.4 r=10.2 nommé
+n-sub-installation -186.2 -68.7 r=12.4 nommé
+n-sub-journalisation -537.4 20.3 r=7.0 nommé
+n-sub-lecture-hebdo 86.7 626.5 r=7.0 nommé
+n-sub-lettres-concurrentes 434.7 -319.8 r=7.0 nommé
+n-sub-levain -15.8 -439.8 r=7.0 nommé
+n-sub-linux 180.4 125.6 r=10.2 nommé
+n-sub-migrations 347.1 454.7 r=7.0 nommé↑
+n-sub-mise-a-jour -352.2 -14.2 r=7.0 nommé↑
+n-sub-modele-economique -409.8 432.9 r=7.5 nommé
+n-sub-objet-de-courriel 46.4 -474.1 r=7.0
+n-sub-page-datterrissage 658.0 -306.9 r=8.2 nommé
+n-sub-paquets -507.4 -148.0 r=7.0 nommé
+n-sub-parrainage 504.8 -94.6 r=7.0 nommé
+n-sub-partenariats -389.3 323.4 r=7.0 nommé
+n-sub-piscine 339.8 -280.4 r=7.0 nommé
+n-sub-plaque -369.3 251.4 r=7.0 nommé↑
+n-sub-positionnement 567.5 -252.3 r=8.4 nommé
+n-sub-prerequis -162.7 -255.7 r=7.0 nommé↑
+n-sub-prise-de-notes -190.1 -528.9 r=7.0 nommé↑
+n-sub-prompts 290.8 160.1 r=9.7 nommé
+n-sub-proxy -327.1 -158.2 r=7.0 nommé
+n-sub-raccourcis 24.3 58.8 r=7.0 nommé
+n-sub-readme -310.0 182.0 r=9.7 nommé
+n-sub-relecture -394.4 -329.6 r=7.3 nommé
+n-sub-reseaux-sociaux 783.5 -157.6 r=7.0 nommé
+n-sub-ressources -118.2 -183.3 r=7.0 nommé
+n-sub-revue 413.3 259.5 r=7.0 nommé
+n-sub-revue-hebdomadaire 97.7 -619.7 r=7.0 nommé
+n-sub-routine -134.4 -415.3 r=7.5 nommé
+n-sub-schema 237.1 463.0 r=7.3 nommé
+n-sub-serveur 158.9 243.0 r=7.0 nommé
+n-sub-sources -4.1 550.2 r=7.8 nommé
+n-sub-tarification -310.1 482.1 r=7.5 nommé
+n-sub-taux-douverture 153.8 -445.0 r=7.5 nommé
+n-sub-terminal 174.9 -15.1 r=9.7 nommé
+n-sub-tests 464.3 133.5 r=7.0 nommé
+n-sub-titre-et-accroche -372.2 -437.6 r=7.0 nommé
+n-sub-typage 259.3 355.0 r=7.0 nommé
+n-sub-variables 121.6 -337.9 r=7.0 nommé
+n-sub-vs-code -58.2 157.1 r=10.3 nommé

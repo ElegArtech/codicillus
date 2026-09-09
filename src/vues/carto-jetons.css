@@ -33,24 +33,24 @@
 	/* --- Les fonds ---------------------------------------------------------
 	   Le dessin est sur BLANC, sans grille ni trame. Le panneau de réglages est
 	   sur un gris très clair. Les cartes flottantes sont blanches. */
-	--carto-fond-dessin: #ffffff;
-	--carto-fond-panneau: #f6f7f7;
-	--carto-fond-carte: #ffffff;
-	--carto-fond-creux: #eff1f1;
+	--carto-fond-dessin: var(--c-papier);
+	--carto-fond-panneau: var(--c-fond);
+	--carto-fond-carte: var(--c-papier);
+	--carto-fond-creux: var(--c-fond-creux);
 
 	/* --- Les encres --------------------------------------------------------
 	   Gris foncé sur fond blanc ; les libellés secondaires en gris moyen. */
-	--carto-encre: #1f2a2e;
-	--carto-encre-2: #5a686d;
-	--carto-encre-3: #8b979b;
+	--carto-encre: var(--c-encre);
+	--carto-encre-2: var(--c-encre-2);
+	--carto-encre-3: var(--c-encre-3);
 
 	/* --- Les traits de composant ------------------------------------------- */
-	--carto-bordure: #e3e7e7;
-	--carto-bordure-forte: #cdd4d4;
+	--carto-bordure: var(--c-trait);
+	--carto-bordure-forte: var(--c-trait-fort);
 
 	/* --- Les rayons -------------------------------------------------------- */
-	--carto-rayon-carte: 12px;
-	--carto-rayon-champ: 8px;
+	--carto-rayon-carte: 8px;
+	--carto-rayon-champ: 5px;
 	--carto-rayon-pastille: 999px;
 
 	/* --- Les ombres --------------------------------------------------------
@@ -143,9 +143,9 @@
 
 	   LA DIXIÈME EST GRISE, ET C'EST « ISOLÉES » : des notes que rien ne
 	   rapproche n'ont pas de sujet commun, donc pas de couleur de sujet. */
-	--carto-famille-0-sature: #6d4bc4;
-	--carto-famille-0-pastel: rgba(109, 75, 196, 0.08);
-	--carto-famille-0-bord: rgba(109, 75, 196, 0.2);
+	--carto-famille-0-sature: #526b45;
+	--carto-famille-0-pastel: rgba(82, 107, 69, 0.08);
+	--carto-famille-0-bord: rgba(82, 107, 69, 0.2);
 
 	--carto-famille-1-sature: #1d7a52;
 	--carto-famille-1-pastel: rgba(29, 122, 82, 0.08);
@@ -155,9 +155,9 @@
 	--carto-famille-2-pastel: rgba(184, 121, 26, 0.09);
 	--carto-famille-2-bord: rgba(184, 121, 26, 0.22);
 
-	--carto-famille-3-sature: #2c6ea8;
-	--carto-famille-3-pastel: rgba(44, 110, 168, 0.08);
-	--carto-famille-3-bord: rgba(44, 110, 168, 0.2);
+	--carto-famille-3-sature: #6d7566;
+	--carto-famille-3-pastel: rgba(109, 117, 102, 0.08);
+	--carto-famille-3-bord: rgba(109, 117, 102, 0.2);
 
 	--carto-famille-4-sature: #c04a3e;
 	--carto-famille-4-pastel: rgba(192, 74, 62, 0.08);
@@ -175,9 +175,9 @@
 	--carto-famille-7-pastel: rgba(194, 112, 31, 0.08);
 	--carto-famille-7-bord: rgba(194, 112, 31, 0.2);
 
-	--carto-famille-8-sature: #5560b8;
-	--carto-famille-8-pastel: rgba(85, 96, 184, 0.08);
-	--carto-famille-8-bord: rgba(85, 96, 184, 0.2);
+	--carto-famille-8-sature: #8a7952;
+	--carto-famille-8-pastel: rgba(138, 121, 82, 0.08);
+	--carto-famille-8-bord: rgba(138, 121, 82, 0.2);
 
 	--carto-famille-9-sature: #78868b;
 	--carto-famille-9-pastel: rgba(120, 134, 139, 0.09);

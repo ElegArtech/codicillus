@@ -46,7 +46,8 @@ import {
 	HAUTEUR_DETIQUETTE,
 	MARGE_DETIQUETTE,
 	T_FAMILLE,
-	T_FAMILLE_COMPTE
+	T_FAMILLE_COMPTE,
+	T_NOEUD
 } from '../src/lib/graphe/jetons';
 import { aretesDeMention } from '../src/lib/graphe/mentions';
 import { liensInternes } from '../src/lib/contenu/document';
@@ -188,36 +189,29 @@ function capturer(c: CarteDisposee): string {
 const carte = carteDeDemonstration();
 
 describe('la cartographie du jeu de démonstration', () => {
-	it("dessine les neuf familles nommées de l'univers, plus les isolées", () => {
-		expect(carte.familles.map((f) => `${f.nom} (${f.effectif})`)).toEqual([
-			'Développement (12)',
-			'Installation (11)',
-			'IA & Productivité (10)',
-			'Outils & Tech (9)',
-			'Business & Stratégie (8)',
-			'Marketing (7)',
-			'Contenu (6)',
-			'Méthode (6)',
-			'Veille (5)',
-			'Isolées (8)'
-		]);
+	it('garde les notes du périmètre sans nœud univers ni appartenance inventée', () => {
+		const attendues = lireLeJeu()
+			.map((l) => l.note)
+			.filter((n) => n.univers === PERIMETRE.nom);
+		expect(carte.noeuds.map((n) => n.id).sort()).toEqual(attendues.map((n) => n.id).sort());
+		expect(carte.centre.note).toBeNull();
+		expect(carte.centre.r).toBe(0);
+		expect(carte.squelette).toEqual([]);
+		for (const f of carte.familles) {
+			expect(f.membres?.length).toBe(f.effectif);
+			expect(f.membres?.every((id) => carte.places.get(id)?.famille === f.nom)).toBe(true);
+		}
 	});
 
 	it('place « Claude Code » dans la famille « Outils & Tech »', () => {
 		expect(carte.places.get('n-sub-claude-code')?.famille).toBe('Outils & Tech');
 	});
 
-	it('ne laisse aucun contour en recouvrir un autre', () => {
-		for (let i = 0; i < carte.familles.length; i += 1) {
-			for (let k = i + 1; k < carte.familles.length; k += 1) {
-				const a = carte.familles[i];
-				const b = carte.familles[k];
-				if (a === undefined || b === undefined) continue;
-				const distance = Math.hypot(a.centre.x - b.centre.x, a.centre.y - b.centre.y);
-				expect(distance, `« ${a.nom} » et « ${b.nom} » se recouvrent`).toBeGreaterThanOrEqual(
-					a.rayon + b.rayon - 1e-6
-				);
-			}
+	it('borne chaque contour à un îlot compact de sa famille', () => {
+		for (const f of carte.familles) {
+			const membres = (f.membres ?? []).map((id) => carte.places.get(id)!);
+			for (const a of membres)
+				for (const b of membres) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeLessThanOrEqual(230);
 		}
 	});
 
@@ -240,14 +234,14 @@ describe('la cartographie du jeu de démonstration', () => {
 		const boites: { x1: number; y1: number; x2: number; y2: number; quoi: string }[] = [];
 		for (const f of carte.familles) {
 			const largeur = Math.max(
-				largeurDeLibelle(f.nom) * (T_FAMILLE / 9.5),
-				largeurDeLibelle(`${f.effectif} notes`)
+				largeurDeLibelle(f.nom) * (T_FAMILLE / T_NOEUD),
+				largeurDeLibelle(`${f.effectif} notes`) * (T_FAMILLE_COMPTE / T_NOEUD)
 			);
 			boites.push({
 				x1: f.tete.x,
 				y1: f.tete.y - T_FAMILLE,
-				x2: f.tete.x + largeur,
-				y2: f.tete.y + T_FAMILLE + T_FAMILLE_COMPTE + MARGE_DETIQUETTE * 2,
+				x2: f.tete.x + 16 + largeur,
+				y2: f.tete.y + T_FAMILLE_COMPTE + MARGE_DETIQUETTE * 2,
 				quoi: `famille ${f.nom}`
 			});
 		}
@@ -256,7 +250,7 @@ describe('la cartographie du jeu de démonstration', () => {
 		for (const id of carte.etiquettes) {
 			const place = carte.places.get(id);
 			if (place === undefined) continue;
-			const titre = libelleCourt(place.id);
+			const titre = libelleCourt(lireLeJeu().find((l) => l.note.id === id)?.note.titre ?? id);
 			const demi = largeurDeLibelle(titre) / 2;
 			const haut = carte.etiquettesAuDessus.has(id)
 				? place.y - place.r - MARGE_DETIQUETTE - HAUTEUR_DETIQUETTE

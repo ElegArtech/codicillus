@@ -99,7 +99,9 @@
 		depart: IdentifiantNote
 	): { readonly noeuds: number; readonly relations: number } => {
 		const profondeur = Math.max(1, data.exploration.profondeur);
-		const affinites = (data.familles.voisinsParNote[depart] ?? [])
+		const affinites = (
+			data.exploration.affinites === false ? [] : (data.familles.voisinsParNote[depart] ?? [])
+		)
 			.map((v) => v.note)
 			.filter((note) => graphe.index.has(note as IdentifiantNote));
 		const boule = etendreLeGraphe(voisinage(graphe, depart, profondeur), graphe, affinites);
@@ -116,10 +118,11 @@
 			let sortantes = 0;
 			for (const r of graphe.aretes) {
 				if (r.de !== n.id && r.vers !== n.id) continue;
-				if (coucheDeLOrigine((r as { origine?: string }).origine) === 'declarees') declarees += 1;
-				else deduites += 1;
-				if (r.de === n.id) sortantes += 1;
-				else entrantes += 1;
+				if (coucheDeLOrigine((r as { origine?: string }).origine) === 'declarees') {
+					declarees += 1;
+					if (r.de === n.id) sortantes += 1;
+					else entrantes += 1;
+				} else deduites += 1;
 			}
 			const etat = data.vivaciteParNote[n.id] ?? null;
 			const famille = familleParNote.get(n.id) ?? null;
@@ -212,7 +215,9 @@
 				data.premiereNote === null ? null : `${adresseDeNote(data.premiereNote)}/relations`,
 			exploration: data.exploration,
 			detailParNoeud,
-			locale: data.exploration.centre !== null,
+			locale:
+				data.exploration.centre !== null &&
+				graphe.index.has(data.exploration.centre as IdentifiantNote),
 			centre: data.exploration.centre,
 			profondeur: data.exploration.profondeur
 		});
