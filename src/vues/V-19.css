@@ -325,7 +325,7 @@
   position: absolute; z-index: 16; top: var(--carto-espace-4); right: var(--carto-espace-4);
   box-shadow: var(--carto-ombre-carte);
 }
-.carto-scene:has(.detail-col:not([hidden])) .carto-btn--flottant { right: calc(344px + var(--carto-espace-4)); }
+.carto-scene:has(.detail-col:not([hidden])) .carto-btn--flottant { right: calc(320px + var(--carto-espace-4)); }
 .carto-pied-gestes {
   position: absolute; z-index: 16; left: var(--carto-espace-4); bottom: var(--carto-espace-4);
   display: flex; gap: var(--carto-espace-2);
@@ -385,14 +385,14 @@
    légende — mesuré au navigateur sur l'univers Substack : « Outils & Tech » et
    « Business & Stratégie » y disparaissaient à moitié. Le panneau, lui, avait déjà
    sa réserve ; la légende n'en avait pas. */
-.carto-toile { padding-bottom: 104px; }
-.carto-toile:has(.carto-reglages:not([data-replie="oui"])) { padding-left: 234px; }
+.carto-toile { padding-bottom: 86px; }
+.carto-toile:has(.carto-reglages:not([data-replie="oui"])) { padding-left: 242px; }
 /* DANS LE VOISINAGE, LE PANNEAU DE LA NOTE A SA RÉSERVE LUI AUSSI. Il y est ouvert
    D'OFFICE — y arriver EST la demande —, donc réserver sa place ne fait sauter
    aucun dessin : c'est l'état d'ouverture de l'écran. Sur la cartographie, au
    contraire, il s'ouvre à la sélection, et lui réserver sa largeur recalerait le
    repère au moment précis où l'on vient de viser un nœud. */
-.carto-scene[data-mode='locale'] .carto-toile { padding-right: 344px; }
+.carto-scene:has(.detail-col:not([hidden])) .carto-toile { padding-right: 320px; }
 
 /* LA RÈGLE VISE LE DESSIN, PAS TOUT SVG DE LA TOILE — la toile porte une vingtaine
    d'autres `svg` : l'icône du bandeau d'avis, les outils flottants, les miniatures
@@ -400,33 +400,6 @@
    un point d'exclamation de seize pixels. */
 #graphe { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 #graphe.tire { cursor: grabbing; }
-
-/* --- Le disque du centre ----------------------------------------------------------
-   Un grand disque vert foncé, avec le nom du périmètre en blanc. C'est le seul
-   endroit du dessin où la couleur principale est employée en aplat. */
-.centre { pointer-events: none; }
-.centre__disque { fill: var(--carto-principal); }
-.centre__nom {
-  font-family: var(--carto-police); font-size: calc(var(--carto-t-centre) * 1px);
-  font-weight: var(--g-fort); text-anchor: middle; fill: var(--carto-sur-principal);
-}
-.centre__code {
-  font-family: var(--carto-police); font-size: calc(var(--carto-t-centre-sous) * 1px);
-  text-anchor: middle; fill: var(--carto-sur-principal); opacity: .72;
-}
-
-/* --- Le squelette ------------------------------------------------------------------
-   IL SIGNIFIE L'APPARTENANCE, PAS UNE RELATION, et c'est pourquoi il est en
-   pointillés fins, très pâle, et dessiné SOUS tout le reste. La légende ne le nomme
-   pas : il est la charpente du dessin, pas une donnée du corpus. */
-.squelette {
-  stroke: var(--carto-bordure-forte);
-  stroke-width: var(--carto-trait-squelette);
-  stroke-dasharray: var(--carto-tirets-squelette);
-  opacity: var(--carto-opacite-squelette);
-  fill: none;
-}
-.graphe[data-contours="non"] .squelette { opacity: calc(var(--carto-opacite-squelette) * 0.6); }
 
 /* --- Les contours de famille -------------------------------------------------------
    Une enveloppe arrondie, remplie de la couleur pastel de la famille, avec une
@@ -472,7 +445,7 @@
    l'arborescence du rail, rendu sur tout écran de coquille. Sans le `svg`, la
    déclaration `pointer-events: none` tombait sur les liens du rail et les rendait
    INERTES, et `display: none` faisait disparaître le rail entier au premier filtre. */
-svg .noeud { cursor: pointer; }
+svg .noeud { cursor: grab; display: inline; }
 /* Pleins, avec un fin anneau blanc — la direction artistique. */
 svg .noeud__forme {
   fill: currentColor;
@@ -494,8 +467,8 @@ svg .noeud--sans-etat { color: var(--carto-encre-3); }
    elle, une famille n'aurait aucune couleur propre sur le dessin, et douze contours
    pastel ne suffisent pas à distinguer douze branches quand on regarde le centre.
    La vivacité du pivot se lit au survol et dans le panneau. */
-svg .noeud[data-pivot="oui"] { color: var(--teinte-sature); }
-.pivot__halo { fill: var(--teinte-pastel); stroke: var(--teinte-bord); stroke-width: 1; }
+
+.pivot__halo { fill: var(--carto-principal-voile); stroke: var(--carto-principal-trait); stroke-width: 1; }
 
 svg .noeud__nom {
   font-family: var(--carto-police); font-size: calc(var(--carto-t-noeud) * 1px);
@@ -513,7 +486,7 @@ svg .noeud[data-pivot="oui"] .noeud__nom {
    recouvrirait un autre, et c'est lui qui pose `data-nomme`. */
 svg .noeud[data-nomme="oui"] .noeud__nom,
 .graphe[data-zoom="proche"] .noeud .noeud__nom,
-.graphe[data-mode="locale"] .noeud .noeud__nom,
+.graphe[data-libelles="oui"] .noeud .noeud__nom,
 svg .noeud:hover .noeud__nom,
 svg .noeud:focus-visible .noeud__nom,
 svg .noeud[data-choisi="oui"] .noeud__nom,
@@ -535,6 +508,7 @@ svg .noeud[data-isolee="oui"] { opacity: .84; }
    rallumer ne fait pas sauter la carte. */
 svg .noeud[data-masque="oui"],
 svg .arete[data-masque="oui"],
+svg .affinite[data-masque="oui"],
 svg .arete__etiquette[data-masque="oui"] { display: none; }
 
 /* Le nœud choisi porte un anneau d'encre, jamais un contour épais. */
@@ -567,8 +541,9 @@ svg .noeud[data-choisi="oui"] .noeud__forme { stroke: var(--carto-encre); stroke
 /* LES FLÈCHES NE SE DESSINENT QUE DANS LE VOISINAGE. Sur la carte entière elles
    ajouteraient deux cent quarante-cinq pointes à un dessin déjà dense, pour une
    direction que le panneau donne en toutes lettres. */
-.graphe[data-mode="complete"] .arete { marker-end: none; }
+.graphe[data-fleches="non"] .arete { marker-end: none; }
 .graphe[data-mode="locale"] .arete { opacity: var(--carto-opacite-relation-active); }
+.graphe[data-mode="locale"] .arete__etiquette { font-size: calc(var(--carto-t-noeud) * .75px); }
 
 .arete__etiquette {
   font-family: var(--carto-police); font-size: calc(var(--carto-t-arete) * 1px);
@@ -737,7 +712,7 @@ svg .noeud[data-choisi="oui"] .noeud__forme { stroke: var(--carto-encre); stroke
    ancienneté ; description ; étiquettes ; centralité ; connexions ; famille
    sémantique ; voisinage ; relations ; actions. */
 .detail-col {
-  position: absolute; z-index: 45; top: 0; right: 0; bottom: 0; width: 344px;
+  position: absolute; z-index: 45; top: 0; right: 0; bottom: 0; width: 320px;
   background: var(--carto-fond-carte);
   border-left: 1px solid var(--carto-bordure);
   box-shadow: var(--carto-ombre-carte); overflow-y: auto;
@@ -911,8 +886,31 @@ svg .noeud[data-choisi="oui"] .noeud__forme { stroke: var(--carto-encre); stroke
 
 .carto-toile:has(.carto-reglages:not([data-replie="oui"])) .avis-bandeau,
 .carto-toile:has(.carto-reglages:not([data-replie="oui"])) .voile {
-  left: calc(234px + var(--carto-espace-4));
+  left: calc(242px + var(--carto-espace-4));
 }
+
+/* Les réglages restent accessibles dans les deux modes. */
+.carto-requete {
+  width: 100%; min-height: 36px; box-sizing: border-box;
+  font: inherit; font-size: var(--carto-t-corps);
+  padding: var(--carto-espace-2); color: var(--carto-encre);
+  background: var(--carto-fond-carte); border: 1px solid var(--carto-bordure);
+  border-radius: var(--carto-rayon-champ);
+}
+.carto-requete:focus-visible { outline: 2px solid var(--carto-principal); outline-offset: 2px; }
+#compte-visible { margin-top: var(--carto-espace-2); }
+.carto-parametres { border-top: 1px solid var(--carto-bordure); margin-top: var(--carto-espace-4); }
+.carto-parametres summary { cursor: pointer; font-size: var(--carto-t-corps); font-weight: var(--g-fort); padding: var(--carto-espace-3) 0; }
+.carto-reglage-force { display: grid; gap: var(--carto-espace-2); margin-bottom: var(--carto-espace-3); font-size: var(--carto-t-meta); }
+.carto-reglage-force input { width: 100%; accent-color: var(--carto-principal); }
+.carto-bloc + .carto-bloc { padding-top: var(--carto-espace-3); border-top: 1px solid var(--carto-bordure); }
+.lg { padding-inline: var(--carto-espace-1); }
+.lg__nom { font-weight: var(--g-normal); }
+.carto-reglages, .detail-col { scrollbar-width: thin; }
+.famille__contour { stroke-dasharray: 3 4; pointer-events: none; }
+.carto-outils button { min-width: 32px; min-height: 32px; }
+.carto-choix, .carto-btn, .rech-graphe input { min-height: 36px; }
+.graphe[data-mode="locale"] .noeud[data-choisi="oui"] .noeud__nom { font-size: calc(var(--carto-t-pivot) * 1px); }
 
 @media (max-width: 1080px) {
   .detail-col { width: 300px; }
@@ -928,18 +926,16 @@ svg .noeud[data-choisi="oui"] .noeud__forme { stroke: var(--carto-encre); stroke
   .carto-tete__outils { width: 100%; }
 }
 @media (max-width: 760px) {
-  /* Mode dégradé : la liste des nœuds prime sur un dessin illisible. LA TOILE
-     RESTE — elle porte le panneau d'affichage, qui porte la liste équivalente. */
-  .carto { height: auto; }
-  .carto-scene { display: block; }
-  .carto-toile { overflow: visible; }
-  #graphe, .carto-outils, .voile { display: none; }
-  .carto-reglages {
-    position: static; width: auto; max-height: none;
-    border: 0; border-bottom: 1px solid var(--carto-bordure); border-radius: 0; box-shadow: none;
-  }
-  .carto-reglages__corps { overflow: visible; }
-  .alt-texte { margin-top: var(--carto-espace-3); }
+  .carto { height: calc(100dvh - var(--h-entete)); min-height: 640px; }
+  .carto-scene { min-height: 420px; }
+  .carto-scene:has(.detail-col:not([hidden])) .carto-toile { padding-right: 0; }
+  .detail-col { width: min(320px, 90vw); }
+  .carto-reglages { max-height: calc(100% - 36px); }
+  .carto-tete { padding: var(--carto-espace-3); }
+  .carto-tete__titre h1 { font-size: var(--t-t2); }
+  .carto-tete__glyphe { display: none; }
+  .carto-tete__outils { gap: var(--carto-espace-1); }
+  .carto-choix { max-width: 44vw; }
 }
 
 /* --- Barre supérieure sur petit écran --------------------------------------
@@ -961,4 +957,9 @@ svg .noeud[data-choisi="oui"] .noeud__forme { stroke: var(--carto-encre); stroke
 .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 
+}
+
+.famille__contour[data-masque="oui"],
+.famille__tete[data-masque="oui"] {
+ display: none;
 }
