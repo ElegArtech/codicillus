@@ -508,6 +508,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		seuilBientot: seuils.bientot,
 		adresses: {
 			cartographie: requete(ADRESSE_DE_LA_CARTOGRAPHIE, [['perimetre', `univers|${univers.nom}`]]),
+			carteMentale: requete('/carte-mentale', [['perimetre', `univers|${univers.nom}`]]),
 			surveillance: adresseDeSurveillance(univers.nom),
 			creationDeDomaine: ADRESSE_DE_LA_CONSOLE_DES_DOMAINES,
 			creationDeNote: ADRESSE_DE_LA_NOUVELLE_NOTE,

@@ -328,19 +328,13 @@ describe('V-28 — Domaines', () => {
 		expect(sansUnivers).not.toBe(servi);
 	});
 
-	/**
-	 * UNE CASE PAR MODULE DU CATALOGUE, ET LE GESTE EXISTE SANS CÂBLAGE DE PLUS.
-	 *
-	 * La liste des cases se DÉRIVE du catalogue servi : la clé `modelisation`, ajoutée
-	 * au catalogue et à l'énuméré de la base, fait apparaître sa case toute seule. Ce
-	 * cas mesure ce dérivé — un jour où quelqu'un écrirait les cases à la main, la
-	 * septième manquerait et personne ne pourrait activer le module.
-	 */
-	test('V-28 offre une case par module du catalogue', async () => {
+	test('V-28 réserve les cases aux modules configurables', async () => {
 		const rendu = await rendre('V-28', SERVI, { form: 'creation' });
 		const zone = rendu.slice(rendu.indexOf('id="f-modules"'));
 		const cases = zone.slice(0, zone.indexOf('</div>')).match(/type="checkbox"/gu) ?? [];
-		expect(cases).toHaveLength(Object.keys(MODULES).length);
+		expect(cases).toHaveLength(Object.keys(MODULES).length - 2);
+		expect(zone).not.toContain('mod__nom">Cartographie');
+		expect(zone).not.toContain('mod__nom">Carte mentale');
 		expect(zone).toContain('Modélisation');
 	});
 });

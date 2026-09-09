@@ -243,6 +243,7 @@
 .stat { display: flex; align-items: center; gap: var(--e-2); }
 .stat svg { color: var(--c-accent); flex: none; }
 .stat b { color: var(--c-encre); font-weight: var(--g-fort); }
+.bandeau__exploration { display: flex; flex-direction: column; gap: var(--e-2); flex: none; }
 .bandeau__carto { flex: none; height: 44px; padding: 0 18px; border-radius: var(--r-3); font-size: var(--t-base); font-weight: var(--g-moyen); text-decoration: none; }
 .bandeau__carto:hover { border-color: var(--c-accent); color: var(--c-accent); text-decoration: none; }
 
@@ -458,7 +459,7 @@
 @media (max-width: 640px) {
   .bandeau__haut { padding: var(--e-5) var(--e-4) var(--e-4); }
   .bandeau__compteurs { padding: var(--e-3) var(--e-4); }
-  .bandeau__carto { width: 100%; }
+  .bandeau__exploration, .bandeau__carto { width: 100%; }
   .bandeau__total { margin-left: 0; }
   .lignes-dom { padding: 0 var(--e-4); }
 }

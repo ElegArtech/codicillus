@@ -53,6 +53,7 @@ function repartition(valeurs: Partial<Record<EtatDeVivacite, number>>) {
 
 const ADRESSES = {
 	cartographie: '/cartographie?perimetre=univers%7CClaude',
+	carteMentale: '/carte-mentale?perimetre=univers%7CClaude',
 	surveillance: '/recherche?univers=Claude',
 	creationDeDomaine: '/console/domaines',
 	creationDeNote: '/notes/nouvelle',
