@@ -1,74 +1,6 @@
 <script lang="ts">
-	/**
-	 * V-19 — Cartographie et voisinage. Route `/cartographie`, atteinte par
-	 * l'entrée de rail « Cartographie ».
-	 *
-	 * DEUX ÉCRANS, UNE SEULE FEUILLE. Sans `?centre=`, la CARTOGRAPHIE du périmètre ;
-	 * avec, le VOISINAGE d'une note à une, deux ou trois profondeurs. Les deux
-	 * partagent l'encodage, la légende et le panneau de note — les séparer en deux
-	 * fichiers dupliquerait sept cents lignes pour changer un cadre.
-	 *
-	 * ── LE DESSIN EST UN ARBRE, PLUS UNE SIMULATION DE FORCES ──────────────────
-	 * C'est LE changement de fond, et il vient d'une mesure : sur l'univers réel —
-	 * cent quarante-huit notes, deux cent quarante-cinq mentions, treize familles —
-	 * la simulation rendait une boule. Les contours se recouvraient, les libellés se
-	 * chevauchaient, et les traits passaient tous dans le même paquet. Une simulation
-	 * cherche un minimum d'énergie ; rien dans ses forces ne l'oblige à être lisible.
-	 *
-	 * Le squelette est désormais CONSTRUIT (`$lib/graphe/disposition-carte`) :
-	 *
-	 *   · le PÉRIMÈTRE affiché est un grand disque au centre ;
-	 *   · chaque FAMILLE sémantique est une branche, sur un anneau autour de lui ;
-	 *   · son secteur angulaire est proportionnel à son nombre de notes ;
-	 *   · ses notes tiennent sur des cercles concentriques autour de son PIVOT — sa
-	 *     note la plus centrale, dessinée plus grande, à la forme de son type ;
-	 *   · « Isolées » — sans famille et sans relation — part en périphérie.
-	 *
-	 * LES TRAITS DU SQUELETTE DISENT L'APPARTENANCE, PAS UNE RELATION. Ils sont en
-	 * pointillés, ils passent SOUS tout le reste, et la légende ne les nomme pas :
-	 * ils sont la charpente du dessin, pas une donnée du corpus. Les RELATIONS se
-	 * dessinent par-dessus, avec les styles de la légende — trait plein pour
-	 * déclarée, tirets pour déduite, pointillés pour affinité.
-	 *
-	 * ── LA GRAMMAIRE VISUELLE — UN CANAL, UNE INFORMATION ──────────────────────
-	 *
-	 *   forme                   →  le TYPE du nœud
-	 *   couleur                 →  la VIVACITÉ
-	 *   taille                  →  le réglage « Taille des nœuds »
-	 *   place                   →  la FAMILLE sémantique
-	 *   anneau interrompu       →  le POINT DE RUPTURE technique
-	 *   trait plein / tirets / pointillés  →  déclarée / déduite / affinité
-	 *
-	 * LE PIVOT FAIT EXCEPTION SUR LA COULEUR, et c'est la direction artistique : il
-	 * porte la teinte SATURÉE de sa famille, avec un halo pâle. Sa vivacité se lit
-	 * au survol et dans le panneau. Sans cette exception, une famille n'aurait
-	 * aucune couleur propre sur le dessin, et douze contours pastel ne suffisent pas
-	 * à distinguer douze branches quand on regarde le centre.
-	 *
-	 * ── CE QUI EST ÉCRIT, ET CE QUI NE L'EST PAS ───────────────────────────────
-	 * Le nom d'une famille et son effectif sont écrits UNE SEULE FOIS, en haut à
-	 * gauche de son contour, et rien ne les recouvre jamais : leurs boîtes sont
-	 * réservées AVANT tout libellé de nœud. Les libellés de nœud ne s'écrivent que
-	 * sur les PIVOTS, sur le nœud survolé, sur le nœud sélectionné et ses voisins, et
-	 * sur tout le monde au-delà du seuil de zoom. Deux libellés ne se chevauchent
-	 * jamais : celui qui en recouvrirait un autre est tu.
-	 *
-	 * ── AUCUNE COULEUR, AUCUNE TAILLE ÉCRITE ICI ───────────────────────────────
-	 * Tout vient de `src/vues/carto-jetons.css` — pour le style — et de
-	 * `$lib/graphe/jetons` — pour la géométrie. Les deux fichiers portent les mêmes
-	 * nombres, et `jetons.test.ts` échoue s'ils divergent.
-	 *
-	 * ── CE QUI RESTE VRAI DE L'ÉCRAN D'AVANT ───────────────────────────────────
-	 *   · Les notes ISOLÉES sont dessinées. Leur isolement EST l'information.
-	 *   · Le dessin est DÉTERMINISTE : même périmètre, même dessin, sans mouvement.
-	 *   · AUCUNE DONNÉE PROPRE (`RG-M09-01`) : tout vient du chargeur.
-	 *   · Le comportement vit dans `cablage.ts`, voisin de la route.
-	 *   · `.noeud` est ICI un nœud de graphe ; le même nom désigne un nœud
-	 *     d'ARBORESCENCE dans 33 autres vues, dont le rail de cette page même. Les
-	 *     deux règles sont inconciliables et AUCUNE FACTORISATION N'EST PERMISE.
-	 *
-	 * Le style est dans `src/socle.css`, `src/vues/carto-jetons.css` et `V-19.css`.
-	 */
+	/** Cartographie des notes et de leurs relations. Le périmètre filtre le corpus ;
+	 * il ne constitue jamais un nœud. Les familles sont une couche de lecture. */
 	import type {
 		CleDeTypeDeRelation,
 		Domaine,
@@ -83,6 +15,7 @@
 		type CompteAffiche,
 		type IdentiteDeCoquille
 	} from '$lib/coquille/identite';
+	import { courbeDeLien } from '$lib/graphe/commandes';
 	import { getContext } from 'svelte';
 	import { resolve } from '$app/paths';
 	import {
@@ -113,7 +46,6 @@
 		disposerLeVoisinage,
 		etiquettesDeRelation,
 		libelleCourt,
-		libelleDuCentre,
 		type CarteDisposee,
 		type MesuresDeNoeud,
 		type NoeudPlace
@@ -228,7 +160,7 @@
 	 * et leur nombre est borné par construction au voisinage d'UNE note.
 	 */
 	const affinitesDuCentre = $derived(
-		centreValide === null
+		centreValide === null || exploration.affinites === false
 			? []
 			: (familles.voisinsParNote[centreValide] ?? []).filter((v) => grapheComplet.index.has(v.note))
 	);
@@ -366,6 +298,7 @@
 					familleParNoeud: familleParNote,
 					ordreDesFamilles: familles.familles.map((f) => f.nom),
 					mesures,
+					forces: exploration.forces ?? {},
 					perimetre: { nom: nomDuPerimetre, code: codeDuPerimetre }
 				})
 			: disposerLeVoisinage(graphe, {
@@ -373,6 +306,7 @@
 					familleParNoeud: familleParNote,
 					ordreDesFamilles: familles.familles.map((f) => f.nom),
 					mesures,
+					forces: exploration.forces ?? {},
 					distances,
 					voisinsDe: (id) => adjacenceDuDessin[id] ?? [],
 					code: ''
@@ -391,21 +325,6 @@
 	const positionDe = (id: string): NoeudPlace => carte.places.get(id) ?? ORIGINE;
 
 	/**
-	 * LA COURBE D'UNE RELATION. Un graphe tracé au segment droit se confond avec le
-	 * squelette, qui est droit lui aussi : la courbe est ce qui sépare la relation de
-	 * l'appartenance. Le point de contrôle est le milieu, décalé perpendiculairement
-	 * d'un huitième de la portée.
-	 */
-	const COURBURE = 0.1;
-	const courbe = (a: NoeudPlace, b: NoeudPlace): string => {
-		const dx = b.x - a.x;
-		const dy = b.y - a.y;
-		const cx = (a.x + b.x) / 2 - dy * COURBURE;
-		const cy = (a.y + b.y) / 2 + dx * COURBURE;
-		return `M${a.x.toFixed(1)} ${a.y.toFixed(1)}Q${cx.toFixed(1)} ${cy.toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
-	};
-
-	/**
 	 * LES TRAITS QUI PORTENT LEUR LIBELLÉ. Deux raisons de se taire, et elles se
 	 * mesurent toutes les deux : un trait trop court pour son mot, et un mot qui en
 	 * heurterait un autre. Sur un voisinage dense, une douzaine de milieux tombent
@@ -418,18 +337,28 @@
 	const traitsQuiSeNomment = $derived.by<ReadonlySet<string>>(() => {
 		if (!locale) return new Set<string>();
 		return etiquettesDeRelation(
-			graphe.aretes.map((r, rang) => {
-				const a = positionDe(r.de);
-				const b = positionDe(r.vers);
-				const m = milieuDeCourbe(a, b);
-				return {
-					cle: String(rang),
-					x: m.x,
-					y: m.y,
-					texte: libelleDeCouche(r),
-					portee: Math.hypot(b.x - a.x, b.y - a.y) - a.r - b.r
-				};
-			})
+			graphe.aretes
+				.map((r, rang) => {
+					const a = positionDe(r.de);
+					const b = positionDe(r.vers);
+					const m = milieuDeCourbe(a, b);
+					return {
+						cle: String(rang),
+						x: m.x,
+						y: m.y,
+						texte: libelleDeCouche(r),
+						portee: Math.hypot(b.x - a.x, b.y - a.y) - a.r - b.r
+					};
+				})
+				.filter(
+					(c) =>
+						!carte.familles.some(
+							(f) =>
+								Math.abs(c.y - f.tete.y) < 40 &&
+								c.x > f.tete.x - 70 &&
+								c.x < f.tete.x + f.nom.length * 10 + 70
+						)
+				)
 		);
 	});
 
@@ -438,8 +367,8 @@
 		const dx = b.x - a.x;
 		const dy = b.y - a.y;
 		return {
-			x: (a.x + b.x) / 2 - (dy * COURBURE) / 2,
-			y: (a.y + b.y) / 2 + (dx * COURBURE) / 2
+			x: (a.x + b.x) / 2 - dy * 0.05,
+			y: (a.y + b.y) / 2 + dx * 0.05
 		};
 	};
 
@@ -588,8 +517,8 @@
 
 	const infoDesFamilles = $derived(
 		'Regroupement par proximité de sens — étiquettes, dossier, mots des titres —, ' +
-			'indépendant des relations déclarées. Une famille est une branche du dessin : ' +
-			'ses notes entourent son pivot, et un contour la cerne.' +
+			'indépendant des relations déclarées. Les contours indiquent les familles ; ' +
+			'les relations déterminent la position des notes.' +
 			(familles.sansFamille > 0
 				? ` ${familles.sansFamille} ${accord(familles.sansFamille, 'note')} hors famille.`
 				: '') +
@@ -765,7 +694,9 @@
 								stroke-width="1.4"
 								stroke-dasharray="2 2"
 								aria-hidden="true"><circle cx="8" cy="8" r="5.5" /></svg
-							>{compteursDuVoisinage.affinites + ' affinités'}</span
+							>{compteursDuVoisinage.affinites +
+								' ' +
+								accord(compteursDuVoisinage.affinites, 'affinité')}</span
 						>
 					</div>
 				</div>
@@ -869,14 +800,16 @@
 				<svg
 					id="graphe"
 					class="graphe"
+					data-fleches={exploration.fleches ? 'oui' : 'non'}
+					data-libelles={exploration.libelles ? 'oui' : 'non'}
 					data-focus="non"
 					data-zoom="loin"
 					data-ruptures="oui"
 					data-contours={exploration.contours ? 'oui' : 'non'}
 					data-noms={exploration.nomsDeFamille ? 'oui' : 'non'}
 					data-mode={locale ? 'locale' : 'complete'}
-					role="img"
-					aria-label="Dessin du périmètre. Une liste équivalente est disponible dans le panneau d’affichage."
+					role="group"
+					aria-label="Dessin du périmètre. Glissez une note pour la déplacer, le fond pour parcourir, utilisez la molette pour zoomer. Une liste équivalente est disponible dans le panneau d’affichage."
 					viewBox={boiteDuRepere}
 					preserveAspectRatio="xMidYMid meet"
 					><defs
@@ -895,22 +828,15 @@
 							>{#each carte.familles as f (f.cle)}<path
 									class="famille__contour"
 									data-teinte={f.teinte}
+									data-famille={f.nom}
+									data-membres={JSON.stringify(f.membres ?? [])}
 									d={f.chemin}
-								/>{/each}</g
-						><!-- 2. Le squelette : l'appartenance, jamais une relation. -->
-						<g class="calque-squelette" aria-hidden="true"
-							>{#each carte.squelette as trait, rang (rang)}<line
-									class="squelette"
-									x1={trait.x1.toFixed(1)}
-									y1={trait.y1.toFixed(1)}
-									x2={trait.x2.toFixed(1)}
-									y2={trait.y2.toFixed(1)}
 								/>{/each}</g
 						><!-- 3. Les relations, par-dessus, avec les styles de la légende. -->
 						<g class="calque-relations"
 							>{#each graphe.aretes as r, rang (rang)}<path
 									class="arete"
-									d={courbe(positionDe(r.de), positionDe(r.vers))}
+									d={courbeDeLien(positionDe(r.de), positionDe(r.vers))}
 									data-de={r.de}
 									data-vers={r.vers}
 									data-actif="non"
@@ -945,69 +871,56 @@
 											data-masque={masqueDArete(r) ? 'oui' : 'non'}
 											x={m.x.toFixed(1)}
 											y={m.y.toFixed(1)}>{libelleDeCouche(r)}</text
-										>{/if}{/each}{#each affinitesDuCentre as v (v.note)}<text
-										class="arete__etiquette arete__etiquette--affinite"
-										x={((positionDe(centreValide ?? '').x + positionDe(v.note).x) / 2).toFixed(1)}
-										y={((positionDe(centreValide ?? '').y + positionDe(v.note).y) / 2).toFixed(1)}
-										>affinité</text
-									>{/each}</g
-							>{/if}<!-- 6. Le disque du centre : le périmètre, ou la note du voisinage. -->
-						{#if graphe.noeuds.length > 0}<g
-								class="centre"
-								transform="translate({carte.centre.x},{carte.centre.y})"
-								><title>{carte.centre.libelle}</title><circle
-									class="centre__disque"
-									r={carte.centre.r}
-								/><text class="centre__nom" y={carte.centre.code === '' ? 4 : 0}
-									>{libelleDuCentre(carte.centre.libelle, carte.centre.r)}</text
-								>{#if carte.centre.code !== ''}<text class="centre__code" y="16"
-										>({carte.centre.code})</text
-									>{/if}</g
+										>{/if}{/each}</g
 							>{/if}<!-- 7. Les nœuds. -->
 						<g class="calque-noeuds"
 							>{#each graphe.noeuds as n (n.id)}{@const place = positionDe(n.id)}{@const etat =
-									vivaciteDe(n.id)}{#if !(locale && n.id === centreValide)}<g
-										class="noeud {etat === null
-											? 'noeud--sans-etat'
-											: ETATS_DE_VIVACITE[etat].classe}"
-										transform="translate({place.x},{place.y})"
-										data-id={n.id}
-										data-code={codeDuNoeud(n.note)}
-										data-fantome={n.fantome ? 'oui' : 'non'}
-										data-actif="non"
-										data-pivot={place.pivot ? 'oui' : 'non'}
-										data-teinte={place.teinte ?? ''}
-										data-nomme={carte.etiquettes.has(n.id) ? 'oui' : 'non'}
-										data-choisi="non"
-										data-masque={masqueDeNoeud(n.id, n.note) ? 'oui' : 'non'}
-										data-vivacite={etat ?? ''}
-										data-degre={degreDe(n.id)}
-										data-isolee={degreDe(n.id) === 0 ? 'oui' : 'non'}
-										data-saut={distances.get(n.id) ?? ''}
-										tabindex="0"
-										role="button"
-										aria-label={libelleDuNoeud(n.id, n.note)}
-										><title>{libelleDuNoeud(n.id, n.note)}</title>{#if place.pivot}<circle
-												class="pivot__halo"
-												r={place.r + 7}
-											/>{/if}{@render contour(
-											contourDeForme(typeDe(n.note), place.pivot ? place.r : rayon(n.id))
-										)}{#if ruptures.has(n.id)}<circle
-												class="rupture-anneau"
-												r={(place.pivot ? place.r : rayon(n.id)) + 5}
-											/>{/if}<text
-											class="noeud__nom"
-											y={carte.etiquettesAuDessus.has(n.id)
-												? -place.r - MARGE_DETIQUETTE
-												: place.r + MARGE_DETIQUETTE + HAUTEUR_DETIQUETTE * 0.72}
-											>{libelleCourt(n.note.titre)}</text
-										></g
-									>{/if}{/each}</g
+									vivaciteDe(n.id)}<g
+									class="noeud {etat === null
+										? 'noeud--sans-etat'
+										: ETATS_DE_VIVACITE[etat].classe}"
+									transform="translate({place.x},{place.y})"
+									data-id={n.id}
+									data-rayon={place.r}
+									data-famille={place.famille ?? ''}
+									data-code={codeDuNoeud(n.note)}
+									data-fantome={n.fantome ? 'oui' : 'non'}
+									data-actif="non"
+									data-pivot={place.pivot ? 'oui' : 'non'}
+									data-teinte={place.teinte ?? ''}
+									data-nomme={carte.etiquettes.has(n.id) ? 'oui' : 'non'}
+									data-choisi="non"
+									data-masque={masqueDeNoeud(n.id, n.note) ? 'oui' : 'non'}
+									data-vivacite={etat ?? ''}
+									data-degre={degreDe(n.id)}
+									data-isolee={degreDe(n.id) === 0 ? 'oui' : 'non'}
+									data-saut={distances.get(n.id) ?? ''}
+									tabindex="0"
+									role="button"
+									aria-label={libelleDuNoeud(n.id, n.note)}
+									><title>{libelleDuNoeud(n.id, n.note)}</title>{#if place.pivot}<circle
+											class="pivot__halo"
+											r={place.r + 7}
+										/>{/if}{@render contour(
+										contourDeForme(typeDe(n.note), place.pivot ? place.r : rayon(n.id))
+									)}{#if ruptures.has(n.id)}<circle
+											class="rupture-anneau"
+											r={(place.pivot ? place.r : rayon(n.id)) + 5}
+										/>{/if}<text
+										class="noeud__nom"
+										y={carte.etiquettesAuDessus.has(n.id)
+											? -place.r - MARGE_DETIQUETTE
+											: place.r + MARGE_DETIQUETTE + HAUTEUR_DETIQUETTE * 0.72}
+										>{libelleCourt(n.note.titre)}</text
+									></g
+								>{/each}</g
 						><!-- 8. Les noms de famille, au-dessus de tout : rien ne les recouvre. -->
 						<g class="calque-noms" aria-hidden="true"
 							>{#each carte.familles as f (f.cle)}<g
 									class="famille__tete"
 									data-teinte={f.teinte}
+									data-famille={f.nom}
+									data-membres={JSON.stringify(f.membres ?? [])}
 									transform="translate({f.tete.x.toFixed(1)},{f.tete.y.toFixed(1)})"
 									>{@render etoileDeFamille(
 										RETRAIT_DE_LICONE / 2.6,
@@ -1031,243 +944,298 @@
 				     CHAQUE LIGNE EST À LA FOIS UNE LÉGENDE, UN FILTRE ET UN COMPTE. La
 				     ligne « ● À vérifier 12 » montre la teinte, la nomme, la dénombre, et
 				     l'éteint d'un clic. -->
-				{#if !locale}
-					<aside class="carto-reglages" id="commandes" aria-label="Affichage du graphe">
-						<div class="carto-reglages__tete">
-							<svg
-								width="15"
-								height="15"
+				<aside
+					class="carto-reglages"
+					data-replie={locale ? 'oui' : 'non'}
+					id="commandes"
+					aria-label="Affichage du graphe"
+				>
+					<div class="carto-reglages__tete">
+						<svg
+							width="15"
+							height="15"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.5"
+							aria-hidden="true"
+							><circle cx="8" cy="8" r="2.2" /><path
+								d="M8 1.4v1.8M8 12.8v1.8M1.4 8h1.8M12.8 8h1.8M3.4 3.4l1.3 1.3M11.3 11.3l1.3 1.3M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3"
+							/></svg
+						>
+						<span class="carto-reglages__nom">Affichage</span>
+						<button
+							type="button"
+							class="carto-reglages__bascule"
+							id="carto-reglages-bascule"
+							aria-expanded={!locale}
+							aria-controls="carto-reglages-corps"
+							aria-label={locale
+								? 'Déplier le panneau d’affichage'
+								: 'Replier le panneau d’affichage'}
+							><svg
+								width="14"
+								height="14"
 								viewBox="0 0 16 16"
 								fill="none"
 								stroke="currentColor"
-								stroke-width="1.5"
-								aria-hidden="true"
-								><circle cx="8" cy="8" r="2.2" /><path
-									d="M8 1.4v1.8M8 12.8v1.8M1.4 8h1.8M12.8 8h1.8M3.4 3.4l1.3 1.3M11.3 11.3l1.3 1.3M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3"
-								/></svg
-							>
-							<span class="carto-reglages__nom">Affichage</span>
-							<button
-								type="button"
-								class="carto-reglages__bascule"
-								id="carto-reglages-bascule"
-								aria-expanded="true"
-								aria-controls="carto-reglages-corps"
-								aria-label="Replier le panneau d’affichage"
-								><svg
-									width="14"
-									height="14"
-									viewBox="0 0 16 16"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="1.7"><path d="M5 3l5 5-5 5" /></svg
-								></button
-							>
+								stroke-width="1.7"><path d="M5 3l5 5-5 5" /></svg
+							></button
+						>
+					</div>
+
+					<div class="carto-reglages__corps" id="carto-reglages-corps">
+						<div class="carto-bloc">
+							<label class="carto-etiq" for="filtrer-notes">Filtrer les notes</label>
+							<input
+								class="carto-requete"
+								id="filtrer-notes"
+								type="search"
+								placeholder="Titre, étiquette, type…"
+								value={exploration.recherche ?? ''}
+							/>
+							<p class="lg__sous" id="compte-visible" aria-live="polite"></p>
 						</div>
 
-						<div class="carto-reglages__corps" id="carto-reglages-corps">
-							<!-- 1. Périmètre — ce que le dessin montre, en toutes lettres.
+						<!-- 1. Périmètre — ce que le dessin montre, en toutes lettres.
 							     LES DEUX LIGNES SONT DES BOUTONS QUI FONT QUELQUE CHOSE : elles
 							     portent le regard sur le sélecteur correspondant. Un rappel
 							     inerte du périmètre serait un bouton mort. -->
-							<div class="carto-bloc">
-								<span class="carto-etiq">Périmètre</span>
-								<button type="button" class="lg lg--lien" data-vers="perimetre-univers"
-									><span class="lg__nom"
-										>Univers : <b>{universChoisi === '' ? 'Tous' : universChoisi}</b></span
-									><span class="lg__chevron" aria-hidden="true">›</span></button
+						<div class="carto-bloc">
+							<span class="carto-etiq">Périmètre</span>
+							<button type="button" class="lg lg--lien" data-vers="perimetre-univers"
+								><span class="lg__nom"
+									>Univers : <b>{universChoisi === '' ? 'Tous' : universChoisi}</b></span
+								><span class="lg__chevron" aria-hidden="true">›</span></button
+							>
+							<button type="button" class="lg lg--lien" data-vers="perimetre-domaine"
+								><span class="lg__nom"
+									>Domaine : <b>{domaineChoisi === '' ? 'Tous' : domaineChoisi}</b></span
+								><span class="lg__chevron" aria-hidden="true">›</span></button
+							>
+						</div>
+
+						<!-- 2. Liens -->
+						<div class="carto-bloc">
+							<span class="carto-etiq">Liens</span>
+							<div id="filtre-couches">
+								<label class="lg lg--case"
+									><input
+										type="checkbox"
+										data-couche="declarees"
+										checked={exploration.couches.includes('declarees')}
+									/><span class="lg__trait lg__trait--declaree" aria-hidden="true"></span><span
+										class="lg__nom">Relations déclarées</span
+									><span class="lg__n">{comptesDeCouche.declarees}</span></label
 								>
-								<button type="button" class="lg lg--lien" data-vers="perimetre-domaine"
-									><span class="lg__nom"
-										>Domaine : <b>{domaineChoisi === '' ? 'Tous' : domaineChoisi}</b></span
-									><span class="lg__chevron" aria-hidden="true">›</span></button
+								<label class="lg lg--case"
+									><input
+										type="checkbox"
+										data-couche="deduites"
+										checked={exploration.couches.includes('deduites')}
+									/><span class="lg__trait lg__trait--deduite" aria-hidden="true"></span><span
+										class="lg__nom">Relations déduites</span
+									><span class="lg__n">{comptesDeCouche.deduites}</span></label
 								>
 							</div>
+						</div>
 
-							<!-- 2. Liens -->
-							<div class="carto-bloc">
-								<span class="carto-etiq">Liens</span>
-								<div id="filtre-couches">
-									<label class="lg lg--case"
+						<!-- 3. Regroupement -->
+						<div class="carto-bloc">
+							<span class="carto-etiq"
+								>Regroupement<button
+									type="button"
+									class="apropos"
+									title={infoDesFamilles}
+									aria-label={infoDesFamilles}>ⓘ</button
+								></span
+							>
+							<div>
+								<label class="lg lg--bascule"
+									><span class="lg__nom">Familles sémantiques</span><input
+										type="checkbox"
+										id="c-regroupement"
+										checked={regroupementActif}
+									/><span class="lg__interrupteur" aria-hidden="true"></span></label
+								>
+								<p class="lg__sous">
+									{famillesDessinees.length +
+										' ' +
+										accord(famillesDessinees.length, 'famille') +
+										' · ' +
+										notesEnFamille +
+										' ' +
+										accord(notesEnFamille, 'note')}
+								</p>
+								<label class="lg lg--case"
+									><input type="checkbox" id="c-contours" checked={exploration.contours} /><span
+										class="lg__nom">Contours</span
+									><span class="lg__n">{carte.familles.length}</span></label
+								>
+								<label class="lg lg--case"
+									><input type="checkbox" id="c-noms" checked={exploration.nomsDeFamille} /><span
+										class="lg__nom">Noms</span
+									></label
+								>
+							</div>
+						</div>
+
+						<!-- 4. Vivacité -->
+						<div class="carto-bloc">
+							<span class="carto-etiq">Vivacité</span>
+							<div id="filtre-vivacite">
+								{#each ORDRE_DES_ETATS as etat (etat)}<label class="lg lg--case"
 										><input
 											type="checkbox"
-											data-couche="declarees"
-											checked={exploration.couches.includes('declarees')}
-										/><span class="lg__trait lg__trait--declaree" aria-hidden="true"></span><span
-											class="lg__nom">Relations déclarées</span
-										><span class="lg__n">{comptesDeCouche.declarees}</span></label
-									>
-									<label class="lg lg--case"
+											data-vivacite={etat}
+											checked={exploration.vivacite.includes(etat)}
+										/>{@render glypheDEtat(etat)}<span class="lg__nom"
+											>{ETATS_DE_VIVACITE[etat].libelle}</span
+										><span class="lg__n">{comptesDeVivacite[etat]}</span></label
+									>{/each}
+							</div>
+						</div>
+
+						<!-- 5. Nœuds -->
+						<div class="carto-bloc">
+							<span class="carto-etiq">Nœuds</span>
+							<div id="filtre-types">
+								{#each types as t (t.cle)}<label class="lg lg--case"
 										><input
 											type="checkbox"
-											data-couche="deduites"
-											checked={exploration.couches.includes('deduites')}
-										/><span class="lg__trait lg__trait--deduite" aria-hidden="true"></span><span
-											class="lg__nom">Relations déduites</span
-										><span class="lg__n">{comptesDeCouche.deduites}</span></label
-									>
-								</div>
-							</div>
-
-							<!-- 3. Regroupement -->
-							<div class="carto-bloc">
-								<span class="carto-etiq"
-									>Regroupement<button
-										type="button"
-										class="apropos"
-										title={infoDesFamilles}
-										aria-label={infoDesFamilles}>ⓘ</button
-									></span
-								>
-								<div>
-									<label class="lg lg--bascule"
-										><span class="lg__nom">Familles sémantiques</span><input
-											type="checkbox"
-											id="c-regroupement"
-											checked={regroupementActif}
-										/><span class="lg__interrupteur" aria-hidden="true"></span></label
-									>
-									<p class="lg__sous">
-										{carte.familles.length +
-											' ' +
-											accord(carte.familles.length, 'famille') +
-											' · ' +
-											notesEnFamille +
-											' ' +
-											accord(notesEnFamille, 'note')}
-									</p>
-									<label class="lg lg--case"
-										><input type="checkbox" id="c-contours" checked={exploration.contours} /><span
-											class="lg__nom">Contours</span
-										><span class="lg__n">{carte.familles.length}</span></label
-									>
-									<label class="lg lg--case"
-										><input type="checkbox" id="c-noms" checked={exploration.nomsDeFamille} /><span
-											class="lg__nom">Noms</span
+											data-type={t.type.code}
+											checked={exploration.types === null ||
+												exploration.types.includes(t.type.code)}
+										/>{@render miniature(t.type)}<span class="lg__nom">{t.type.nom}</span><span
+											class="lg__n">{t.n}</span
 										></label
-									>
-								</div>
+									>{/each}
 							</div>
+						</div>
 
-							<!-- 4. Vivacité -->
-							<div class="carto-bloc">
-								<span class="carto-etiq">Vivacité</span>
-								<div id="filtre-vivacite">
-									{#each ORDRE_DES_ETATS as etat (etat)}<label class="lg lg--case"
-											><input
-												type="checkbox"
-												data-vivacite={etat}
-												checked={exploration.vivacite.includes(etat)}
-											/>{@render glypheDEtat(etat)}<span class="lg__nom"
-												>{ETATS_DE_VIVACITE[etat].libelle}</span
-											><span class="lg__n">{comptesDeVivacite[etat]}</span></label
-										>{/each}
-								</div>
+						<!-- 6. Taille des nœuds -->
+						<div class="carto-bloc">
+							<span class="carto-etiq"
+								>Taille des nœuds<button
+									type="button"
+									class="apropos"
+									title={infoDeLaTaille}
+									aria-label={infoDeLaTaille}>ⓘ</button
+								></span
+							>
+							<div id="filtre-taille">
+								{#each [['uniforme', 'Uniforme'], ['connexions', 'Connexions'], ['centralite', 'Centralité']] as choix (choix[0])}<label
+										class="lg lg--case"
+										><input
+											type="radio"
+											name="taille"
+											data-taille={choix[0]}
+											checked={exploration.taille === choix[0]}
+										/><span class="lg__nom">{choix[1]}</span></label
+									>{/each}
 							</div>
+						</div>
 
-							<!-- 5. Nœuds -->
-							<div class="carto-bloc">
-								<span class="carto-etiq">Nœuds</span>
-								<div id="filtre-types">
-									{#each types as t (t.cle)}<label class="lg lg--case"
-											><input
-												type="checkbox"
-												data-type={t.type.code}
-												checked={exploration.types === null ||
-													exploration.types.includes(t.type.code)}
-											/>{@render miniature(t.type)}<span class="lg__nom">{t.type.nom}</span><span
-												class="lg__n">{t.n}</span
-											></label
-										>{/each}
-								</div>
-							</div>
-
-							<!-- 6. Taille des nœuds -->
-							<div class="carto-bloc">
-								<span class="carto-etiq"
-									>Taille des nœuds<button
-										type="button"
-										class="apropos"
-										title={infoDeLaTaille}
-										aria-label={infoDeLaTaille}>ⓘ</button
-									></span
+						<!-- 7. Réduire le bruit -->
+						<div class="carto-bloc">
+							<span class="carto-etiq">Réduire le bruit</span>
+							<div>
+								<label class="curseur" for="degre-min"
+									>Degré minimum <output id="degre-min-valeur">{exploration.degreMinimum}</output
+									></label
 								>
-								<div id="filtre-taille">
-									{#each [['uniforme', 'Uniforme'], ['connexions', 'Connexions'], ['centralite', 'Centralité']] as choix (choix[0])}<label
-											class="lg lg--case"
-											><input
-												type="radio"
-												name="taille"
-												data-taille={choix[0]}
-												checked={exploration.taille === choix[0]}
-											/><span class="lg__nom">{choix[1]}</span></label
-										>{/each}
+								<input
+									type="range"
+									id="degre-min"
+									min="0"
+									max={DEGRE_MINIMUM_MAXIMAL}
+									step="1"
+									value={exploration.degreMinimum}
+								/>
+								<div class="curseur__bornes" aria-hidden="true">
+									<span>0</span><span>{DEGRE_MINIMUM_MAXIMAL}</span>
 								</div>
+								<label class="lg lg--case"
+									><input
+										type="checkbox"
+										id="c-isolees"
+										checked={exploration.masquerIsolees}
+									/><span class="lg__nom">Masquer les nœuds isolés</span><span class="lg__n"
+										>{isolees}</span
+									></label
+								>
+								<label class="lg lg--case"
+									><input type="checkbox" id="c-ruptures" checked /><span class="lg__nom"
+										>Points de rupture</span
+									><span class="lg__n">{ruptures.size}</span></label
+								>
 							</div>
+							<button class="carto-btn carto-btn--discret" id="reinitialiser" type="button"
+								><svg
+									width="13"
+									height="13"
+									viewBox="0 0 16 16"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.6"
+									aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3" /></svg
+								>Réinitialiser les filtres</button
+							>
+						</div>
 
-							<!-- 7. Réduire le bruit -->
-							<div class="carto-bloc">
-								<span class="carto-etiq">Réduire le bruit</span>
-								<div>
-									<label class="curseur" for="degre-min"
-										>Degré minimum <output id="degre-min-valeur">{exploration.degreMinimum}</output
-										></label
-									>
+						<label class="lg lg--case"
+							><input
+								id="c-affinites"
+								type="checkbox"
+								checked={exploration.affinites !== false}
+							/><span>Affinités de la note sélectionnée</span></label
+						>
+						<details class="carto-parametres">
+							<summary>Forces et affichage</summary>
+							{#each [['repulsion', 'Répulsion'], ['distance', 'Distance des liens'], ['attraction', 'Attraction des liens'], ['centrage', 'Centrage']] as [cle, libelle] (cle)}
+								<label class="carto-reglage-force">
+									<span>{libelle}</span>
 									<input
 										type="range"
-										id="degre-min"
-										min="0"
-										max={DEGRE_MINIMUM_MAXIMAL}
-										step="1"
-										value={exploration.degreMinimum}
+										min="0.25"
+										max="3"
+										step="0.25"
+										data-force={cle}
+										value={exploration.forces?.[cle as 'repulsion'] ?? 1}
 									/>
-									<div class="curseur__bornes" aria-hidden="true">
-										<span>0</span><span>{DEGRE_MINIMUM_MAXIMAL}</span>
-									</div>
-									<label class="lg lg--case"
-										><input
-											type="checkbox"
-											id="c-isolees"
-											checked={exploration.masquerIsolees}
-										/><span class="lg__nom">Masquer les nœuds isolés</span><span class="lg__n"
-											>{isolees}</span
-										></label
-									>
-									<label class="lg lg--case"
-										><input type="checkbox" id="c-ruptures" checked /><span class="lg__nom"
-											>Points de rupture</span
-										><span class="lg__n">{ruptures.size}</span></label
-									>
-								</div>
-								<button class="carto-btn carto-btn--discret" id="reinitialiser" type="button"
-									><svg
-										width="13"
-										height="13"
-										viewBox="0 0 16 16"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="1.6"
-										aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2v3h-3" /></svg
-									>Réinitialiser les filtres</button
-								>
-							</div>
-
-							<details class="alt-texte" id="liste-noeuds">
-								<summary>Liste des nœuds et de leurs relations</summary>
-								<ul id="alt-liste">
-									{#each graphe.noeuds as n (n.id)}<li>
-											<b>{n.note.titre}</b>{ligneAlternative(
-												n.id,
-												n.note
-											)}{#each relationsDe(n.id, relations) as r, rang (rang)}<div class="alt-rel">
-													{`${typesRelation[r.type][r.sortant ? 'sortant' : 'entrant']} : ${titreDe(graphe, corpus, r.autre)}`}
-												</div>{/each}
-										</li>{/each}
-								</ul>
-							</details>
-						</div>
-					</aside>
-				{:else}
+								</label>
+							{/each}
+							<label class="lg lg--case"
+								><input
+									id="c-fleches"
+									type="checkbox"
+									checked={exploration.fleches ?? false}
+								/><span>Flèches des relations</span></label
+							>
+							<label class="lg lg--case"
+								><input
+									id="c-libelles"
+									type="checkbox"
+									checked={exploration.libelles ?? false}
+								/><span>Tous les titres</span></label
+							>
+						</details>
+						<details class="alt-texte" id="liste-noeuds">
+							<summary>Liste des nœuds et de leurs relations</summary>
+							<ul id="alt-liste">
+								{#each graphe.noeuds as n (n.id)}<li>
+										<b>{n.note.titre}</b>{ligneAlternative(
+											n.id,
+											n.note
+										)}{#each relationsDe(n.id, relations) as r, rang (rang)}<div class="alt-rel">
+												{`${typesRelation[r.type][r.sortant ? 'sortant' : 'entrant']} : ${titreDe(graphe, corpus, r.autre)}`}
+											</div>{/each}
+									</li>{/each}
+							</ul>
+						</details>
+					</div>
+				</aside>
+				{#if locale}
 					<button class="carto-btn carto-btn--flottant" id="tout-afficher" type="button"
 						>Tout afficher</button
 					>

@@ -243,6 +243,13 @@ try {
 	await page.fill('#motdepasse', MOT_DE_PASSE);
 	await Promise.all([page.waitForURL(`${BASE_URL}/`), page.click('#valider')]);
 
+	/* Le graphe doit aussi fonctionner avant la toute première note. */
+	await page.goto(`${BASE_URL}/cartographie`, { waitUntil: 'networkidle' });
+	await page.getByRole('heading', { name: 'Aucun univers sur cette instance' }).waitFor();
+	if ((await page.locator('#graphe .noeud').count()) !== 0) {
+		throw new Error('La cartographie vide contient un nœud artificiel.');
+	}
+
 	/* L'UNIVERS ET LE DOMAINE — par la console, avec les gestes de la console.
 	   C'est le chemin qu'un installateur suit, et le seul : sur zéro univers,
 	   l'éditeur et l'import rendent 404 par conception. */

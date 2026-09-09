@@ -22,6 +22,8 @@
  * vue n'en rendait que l'état vide, et un tiers de l'écran promettait un contenu qui
  * n'arrivait jamais.
  */
+import { courbeDeLien } from '$lib/graphe/commandes';
+import { contourDeGroupe } from '$lib/graphe/cartographie';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import {
@@ -168,6 +170,14 @@ export function cablerLaCartographie(
 	if (graphe === null) return attaches.debranchement();
 
 	const document = graphe.ownerDocument;
+	const normaliser = (texte: string): string =>
+		texte
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '')
+			.toLocaleLowerCase('fr');
+	let recherche = options.exploration.recherche ?? '';
+	let fleches = options.exploration.fleches ?? false;
+	let libelles = options.exploration.libelles ?? false;
 	/* LE SEUIL DE ZOOM : au-delà, TOUTES les notes portent leur libellé. C'est une
 	   règle de la maquette, et elle ne peut se tenir qu'ici — le grossissement ne
 	   vit nulle part ailleurs que dans la commande de vue. */
@@ -224,7 +234,15 @@ export function cablerLaCartographie(
 		 */
 		if (options.locale && options.centre !== null) visibles.add(options.centre);
 		for (const noeud of elements(graphe, '.noeud')) {
-			const masque = noeudMasque(traitsDuNoeud(noeud), etat);
+			const id = noeud.getAttribute('data-id') ?? '';
+			const d = options.detailParNoeud[id];
+			const texte = d === undefined ? '' : [d.titre, d.type, ...d.etiquettes].join(' ');
+			const correspond = normaliser(recherche)
+				.split(/\s+/)
+				.filter(Boolean)
+				.every((mot) => normaliser(texte).includes(mot));
+			const masque =
+				id !== options.centre && (noeudMasque(traitsDuNoeud(noeud), etat) || !correspond);
 			noeud.setAttribute('data-masque', masque ? 'oui' : 'non');
 			if (!masque) visibles.add(noeud.getAttribute('data-id') ?? '');
 		}
@@ -246,6 +264,24 @@ export function cablerLaCartographie(
 				areteMasquee(coucheEffective, extremites, etat) ? 'oui' : 'non'
 			);
 		}
+		for (const trait of elements(graphe, '.affinite')) {
+			trait.setAttribute(
+				'data-masque',
+				visibles.has(trait.getAttribute('data-de') ?? '') &&
+					visibles.has(trait.getAttribute('data-vers') ?? '')
+					? 'non'
+					: 'oui'
+			);
+		}
+		for (const forme of elements(graphe, '.famille__contour, .famille__tete')) {
+			const membres = JSON.parse(forme.getAttribute('data-membres') ?? '[]') as string[];
+			forme.setAttribute('data-masque', membres.every((id) => visibles.has(id)) ? 'non' : 'oui');
+		}
+		const compteur = racine.querySelector('#compte-visible');
+		if (compteur)
+			compteur.textContent = `${visibles.size} / ${elements(graphe, '.noeud').length} notes affichées`;
+		graphe.setAttribute('data-fleches', fleches ? 'oui' : 'non');
+		graphe.setAttribute('data-libelles', libelles ? 'oui' : 'non');
 		graphe.setAttribute('data-contours', etat.contours ? 'oui' : 'non');
 		graphe.setAttribute('data-noms', etat.nomsDeFamille ? 'oui' : 'non');
 	};
@@ -268,6 +304,9 @@ export function cablerLaCartographie(
 			if (valeur === defaut) p.delete(cle);
 			else p.set(cle, valeur);
 		};
+		poser('recherche', recherche, '');
+		poser('fleches', fleches ? 'oui' : 'non', 'non');
+		poser('libelles', libelles ? 'oui' : 'non', 'non');
 		poser('couches', etat.couches.join(','), EXPLORATION_DE_PLANCHE.couches.join(','));
 		poser('vivacite', etat.vivacite.join(','), EXPLORATION_DE_PLANCHE.vivacite.join(','));
 		poser('taille', etat.taille, EXPLORATION_DE_PLANCHE.taille);
@@ -287,6 +326,29 @@ export function cablerLaCartographie(
 		appliquerLesFiltres();
 		ecrireLAdresse();
 	};
+
+	attaches.ecouter(racine.querySelector('#filtrer-notes'), 'input', (evenement) => {
+		recherche = (evenement.target as HTMLInputElement).value;
+		rejouer();
+	});
+	for (const curseur of elements(racine, '[data-force]')) {
+		attaches.ecouter(curseur, 'change', () => {
+			naviguerAvec([
+				[curseur.getAttribute('data-force') ?? '', (curseur as HTMLInputElement).value]
+			]);
+		});
+	}
+	attaches.ecouter(racine.querySelector('#c-affinites'), 'change', (evenement) => {
+		naviguerAvec([['affinites', (evenement.target as HTMLInputElement).checked ? 'oui' : 'non']]);
+	});
+	attaches.ecouter(racine.querySelector('#c-fleches'), 'change', (evenement) => {
+		fleches = (evenement.target as HTMLInputElement).checked;
+		rejouer();
+	});
+	attaches.ecouter(racine.querySelector('#c-libelles'), 'change', (evenement) => {
+		libelles = (evenement.target as HTMLInputElement).checked;
+		rejouer();
+	});
 
 	/* ── 2. La sélection d'un nœud, et le panneau qu'elle ouvre ────────────── */
 
@@ -381,7 +443,8 @@ export function cablerLaCartographie(
 	 * disparaissent à la sélection suivante.
 	 */
 	const revelerLesAffinites = (identifiant: string): void => {
-		if (calqueDAffinites === null) return;
+		if (calqueDAffinites === null || options.locale || options.exploration.affinites === false)
+			return;
 		effacerLesAffinites();
 		const source = placeDuNoeud(racine, identifiant);
 		if (source === null) return;
@@ -395,9 +458,17 @@ export function cablerLaCartographie(
 			   voisinage local n'en montre qu'une partie. Sans place, pas de trait —
 			   jamais un trait qui pend vers un nœud absent. */
 			const place = placeDuNoeud(racine, voisin.note);
-			if (place === null) continue;
+			if (
+				place === null ||
+				racine
+					.querySelector(`.noeud[data-id="${CSS.escape(voisin.note)}"]`)
+					?.getAttribute('data-masque') === 'oui'
+			)
+				continue;
 			const trait = document.createElementNS(svg, 'line');
 			trait.setAttribute('class', 'affinite');
+			trait.setAttribute('data-de', identifiant);
+			trait.setAttribute('data-vers', voisin.note);
 			trait.setAttribute('x1', String(source.x));
 			trait.setAttribute('y1', String(source.y));
 			trait.setAttribute('x2', String(place.x));
@@ -445,7 +516,7 @@ export function cablerLaCartographie(
 			)
 			.join('');
 
-		const connexions = d.declarees + d.deduites + d.affinites.length;
+		const connexions = d.declarees + d.deduites;
 		const accorde = (n: number, mot: string): string => `${n} ${mot}${n > 1 ? 's' : ''}`;
 
 		const profondeurs = [1, 2, 3]
@@ -483,7 +554,7 @@ export function cablerLaCartographie(
 			`<span class="crit__detail">part de la plus haute du périmètre</span></div>`,
 			`<div class="crit__boite"><span class="crit__nom">Connexions</span>`,
 			`<span class="crit__val">${connexions}</span>`,
-			`<span class="crit__detail">${d.declarees} déclarée${d.declarees > 1 ? 's' : ''} · ${d.deduites} déduite${d.deduites > 1 ? 's' : ''} · ${d.affinites.length} affinité${d.affinites.length > 1 ? 's' : ''}</span></div>`,
+			`<span class="crit__detail">${d.declarees} déclarée${d.declarees > 1 ? 's' : ''} · ${d.deduites} déduite${d.deduites > 1 ? 's' : ''}</span></div>`,
 			`</div>`,
 			d.rupture
 				? `<div class="crit__boite crit__boite--rupture"><span class="crit__val">Point de rupture</span><span class="crit__detail">son retrait isole une partie du périmètre</span></div>`
@@ -535,8 +606,18 @@ export function cablerLaCartographie(
 			`</div>`
 		].join('');
 
+		for (const lien of html.querySelectorAll<HTMLAnchorElement>('a')) {
+			const cible = new URL(lien.href, document.location.href);
+			const centre = cible.searchParams.get('centre');
+			if (centre === null) continue;
+			const adresse = new URL(document.location.href);
+			adresse.searchParams.set('centre', centre);
+			adresse.searchParams.set('profondeur', String(options.profondeur));
+			lien.href = adresse.toString();
+		}
 		corpsDuDetail.appendChild(html);
 		(detail as HTMLElement).hidden = false;
+		(detail as HTMLElement).scrollTop = 0;
 		racine.querySelector('.app')?.setAttribute('data-detail', 'ouvert');
 
 		const fermer = racine.querySelector('#detail-fermer');
@@ -573,6 +654,10 @@ export function cablerLaCartographie(
 	/* ── 5. Les gestes du canevas ──────────────────────────────────────────── */
 
 	attaches.ecouter(graphe, 'click', (evenement) => {
+		if (graphe.getAttribute('data-glisse') === 'oui') {
+			graphe.removeAttribute('data-glisse');
+			return;
+		}
 		const noeud = (evenement.target as Element | null)?.closest('.noeud');
 		if (noeud === null || noeud === undefined) {
 			effacerLaSelection();
@@ -859,6 +944,15 @@ export function cablerLaCartographie(
 
 	const panneau = racine.querySelector('#commandes');
 	const bascule = racine.querySelector('#carto-reglages-bascule');
+	if (document.defaultView?.matchMedia('(max-width: 1080px)').matches) {
+		panneau?.setAttribute('data-replie', 'oui');
+		bascule?.setAttribute('aria-expanded', 'false');
+		bascule?.setAttribute('aria-label', 'Déplier le panneau d’affichage');
+	}
+	attaches.ecouter(racine.querySelector('.carto-retour'), 'click', (evenement) => {
+		evenement.preventDefault();
+		naviguerAvec([['centre', '']]);
+	});
 	attaches.ecouter(bascule, 'click', () => {
 		const ouvert = panneau?.getAttribute('data-replie') !== 'oui';
 		panneau?.setAttribute('data-replie', ouvert ? 'oui' : 'non');
@@ -953,90 +1047,143 @@ export function cablerLaCartographie(
  * zoom inutilisable.
  */
 /** Le repère du dessin, lu sur son `viewBox` — jamais une constante. */
-function repereDuDessin(svg: SVGSVGElement): {
-	x: number;
-	y: number;
-	largeur: number;
-	hauteur: number;
-} {
-	const parts = (svg.getAttribute('viewBox') ?? '')
-		.trim()
-		.split(/[\s,]+/)
-		.map(Number);
-	if (parts.length !== 4 || parts.some((n) => !Number.isFinite(n))) {
-		return { x: 0, y: 0, largeur: 1000, hauteur: 780 };
-	}
-	return {
-		x: parts[0] as number,
-		y: parts[1] as number,
-		largeur: parts[2] as number,
-		hauteur: parts[3] as number
-	};
-}
-
 function cablerLaPrehension(racine: ParentNode, attaches: Attaches, vue: CommandeDeVue): void {
 	const svg = racine.querySelector<SVGSVGElement>('#graphe');
-	if (svg === null) return;
-
-	let tire = false;
-	let departX = 0;
-	let departY = 0;
-	let origineX = 0;
-	let origineY = 0;
-
+	const dessin = racine.querySelector<SVGGElement>('#racine');
+	if (svg === null || dessin === null) return;
+	let geste: {
+		id: number;
+		x: number;
+		y: number;
+		origineX: number;
+		origineY: number;
+		noeud: Element | null;
+		deplace: boolean;
+	} | null = null;
+	const point = (x: number, y: number, cible: SVGGraphicsElement): DOMPoint => {
+		const matrice = cible.getScreenCTM();
+		return matrice ? new DOMPoint(x, y).matrixTransform(matrice.inverse()) : new DOMPoint(x, y);
+	};
+	const rafraichirLesTraits = (): void => {
+		for (const trait of elements(svg, '.arete, .affinite, .arete__etiquette')) {
+			const a = placeDuNoeud(racine, trait.getAttribute('data-de') ?? '');
+			const b = placeDuNoeud(racine, trait.getAttribute('data-vers') ?? '');
+			if (!a || !b) continue;
+			const dx = b.x - a.x,
+				dy = b.y - a.y;
+			const rayon = (id: string): number =>
+				Number(
+					racine.querySelector(`.noeud[data-id="${CSS.escape(id)}"]`)?.getAttribute('data-rayon') ??
+						9
+				);
+			if (trait.tagName === 'path')
+				trait.setAttribute(
+					'd',
+					courbeDeLien(
+						{ ...a, r: rayon(trait.getAttribute('data-de') ?? '') },
+						{ ...b, r: rayon(trait.getAttribute('data-vers') ?? '') }
+					)
+				);
+			else if (trait.tagName === 'line') {
+				for (const [cle, valeur] of Object.entries({ x1: a.x, y1: a.y, x2: b.x, y2: b.y }))
+					trait.setAttribute(cle, String(valeur));
+			} else {
+				trait.setAttribute('x', String((a.x + b.x) / 2 - dy * 0.05));
+				trait.setAttribute('y', String((a.y + b.y) / 2 + dx * 0.05));
+			}
+		}
+		for (const contour of elements(svg, '.famille__contour')) {
+			const ids = new Set<string>(JSON.parse(contour.getAttribute('data-membres') ?? '[]'));
+			const membres = elements(svg, '.noeud').filter((n) =>
+				ids.has(n.getAttribute('data-id') ?? '')
+			);
+			const places = membres
+				.map((n) => placeDuNoeud(racine, n.getAttribute('data-id') ?? ''))
+				.filter((p) => p !== null);
+			const chemin = contourDeGroupe(
+				places,
+				membres.map((n) => Number(n.getAttribute('data-rayon') ?? 9)),
+				24
+			);
+			if (chemin) contour.setAttribute('d', chemin);
+		}
+	};
 	attaches.ecouter(svg, 'pointerdown', (evenement) => {
 		const e = evenement as PointerEvent;
-		/* Un clic sur un nœud choisit ; seul le fond se saisit. */
-		if ((e.target as Element | null)?.closest('.noeud') !== null) return;
-		tire = true;
-		departX = e.clientX;
-		departY = e.clientY;
-		const place = vue.position();
-		origineX = place.x;
-		origineY = place.y;
-		svg.classList.add('tire');
-		svg.setPointerCapture(e.pointerId);
+		if (e.button !== 0 || geste !== null) return;
+		const noeud = (e.target as Element | null)?.closest('.noeud') ?? null;
+		const p = point(e.clientX, e.clientY, noeud ? dessin : svg);
+		const origine = noeud
+			? placeDuNoeud(racine, noeud.getAttribute('data-id') ?? '')
+			: vue.position();
+		if (!origine) return;
+		svg.removeAttribute('data-glisse');
+		geste = {
+			id: e.pointerId,
+			x: p.x,
+			y: p.y,
+			origineX: origine.x,
+			origineY: origine.y,
+			noeud,
+			deplace: false
+		};
 	});
-
 	attaches.ecouter(svg, 'pointermove', (evenement) => {
-		if (!tire) return;
 		const e = evenement as PointerEvent;
-		/* Le repère fait mille unités de large : un pixel d'écran n'en vaut un que
-		   si le canevas mesure mille pixels. Sans ce rapport, la carte glisse plus
-		   vite ou plus lentement que la main. */
-		const cadre = svg.getBoundingClientRect();
-		const rapport = cadre.width === 0 ? 1 : repereDuDessin(svg).largeur / cadre.width;
-		vue.deplacer(
-			origineX + (e.clientX - departX) * rapport,
-			origineY + (e.clientY - departY) * rapport
-		);
+		if (!geste || geste.id !== e.pointerId) return;
+		const p = point(e.clientX, e.clientY, geste.noeud ? dessin : svg);
+		const dx = p.x - geste.x,
+			dy = p.y - geste.y;
+		if (!geste.deplace && Math.hypot(dx, dy) < 3) return;
+		svg.setPointerCapture(e.pointerId);
+		geste.deplace = true;
+		svg.classList.add('tire');
+		if (geste.noeud) {
+			geste.noeud.setAttribute(
+				'transform',
+				`translate(${geste.origineX + dx},${geste.origineY + dy})`
+			);
+			rafraichirLesTraits();
+		} else vue.deplacer(geste.origineX + dx, geste.origineY + dy);
 	});
-
 	const relacher = (evenement: Event): void => {
-		if (!tire) return;
-		tire = false;
-		svg.classList.remove('tire');
 		const e = evenement as PointerEvent;
-		if (e.pointerId !== undefined && svg.hasPointerCapture(e.pointerId)) {
-			svg.releasePointerCapture(e.pointerId);
-		}
+		if (!geste || geste.id !== e.pointerId) return;
+		if (geste.deplace) svg.setAttribute('data-glisse', 'oui');
+		geste = null;
+		svg.classList.remove('tire');
+		if (svg.hasPointerCapture(e.pointerId)) svg.releasePointerCapture(e.pointerId);
 	};
 	attaches.ecouter(svg, 'pointerup', relacher);
 	attaches.ecouter(svg, 'pointercancel', relacher);
-
 	attaches.ecouter(svg, 'wheel', (evenement) => {
 		const e = evenement as WheelEvent;
 		e.preventDefault();
-		const cadre = svg.getBoundingClientRect();
-		if (cadre.width === 0 || cadre.height === 0) return;
-		/* LE REPÈRE SE LIT SUR LE `viewBox`, jamais sur une constante : la
-		   cartographie le calcule sur son contenu, si bien qu'un périmètre de douze
-		   notes et un de trois cents n'ont plus les mêmes bornes. Écrit en dur, le
-		   zoom dérivait sous le pointeur à chaque cran. */
-		const repere = repereDuDessin(svg);
-		const x = repere.x + ((e.clientX - cadre.left) / cadre.width) * repere.largeur;
-		const y = repere.y + ((e.clientY - cadre.top) / cadre.height) * repere.hauteur;
-		vue.grossirVers(x, y, e.deltaY < 0 ? 1.12 : 1 / 1.12);
+		const p = point(e.clientX, e.clientY, svg);
+		vue.grossirVers(p.x, p.y, e.deltaY < 0 ? 1.12 : 1 / 1.12);
+	});
+	attaches.ecouter(svg, 'keydown', (evenement) => {
+		const e = evenement as KeyboardEvent;
+		if (e.key === '+' || e.key === '=') {
+			e.preventDefault();
+			vue.agrandir();
+		}
+		if (e.key === '-') {
+			e.preventDefault();
+			vue.reduire();
+		}
+		const direction = {
+			ArrowLeft: [1, 0],
+			ArrowRight: [-1, 0],
+			ArrowUp: [0, 1],
+			ArrowDown: [0, -1]
+		}[e.key];
+		if (direction) {
+			e.preventDefault();
+			const p = vue.position(),
+				pas = e.shiftKey ? 100 : 30;
+			vue.deplacer(p.x + (direction[0] ?? 0) * pas, p.y + (direction[1] ?? 0) * pas);
+		}
 	});
 }
 
@@ -1074,7 +1221,12 @@ function cablerLaRechercheDeNoeud(
 		}
 
 		const trouves = Object.entries(detailParNoeud)
-			.filter(([, d]) => d.titre.toLocaleLowerCase('fr').includes(requete))
+			.filter(
+				([id, d]) =>
+					d.titre.toLocaleLowerCase('fr').includes(requete) &&
+					racine.querySelector(`.noeud[data-id="${CSS.escape(id)}"]:not([data-masque="oui"])`) !==
+						null
+			)
 			.slice(0, MAX_SUGGESTIONS);
 
 		for (const [identifiant, d] of trouves) {
