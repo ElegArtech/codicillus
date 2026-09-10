@@ -96,8 +96,8 @@ export interface NoeudRendu {
 	/** Ce que le nœud EST — l'icône et l'adresse en dépendent. */
 	readonly type: TypeDeNoeud;
 	/**
-	 * L'ADRESSE DU NŒUD de rangement — domaine ou dossier. `null` pour une note,
-	 * dont l'adresse est `identifiant`.
+	 * LE RANGEMENT DU NŒUD. Une note le conserve pour pouvoir être déplacée depuis
+	 * le rail ; son adresse propre reste portée par `identifiant`.
 	 *
 	 * Elle est calculée ICI, à la construction, parce que c'est le seul endroit qui
 	 * connaisse à la fois l'univers, le domaine et le chemin — la clé
@@ -107,6 +107,9 @@ export interface NoeudRendu {
 		readonly univers: string;
 		readonly domaine: string;
 		readonly chemin: readonly string[];
+		/** Les noms affichés, pour préremplir la création sans les redériver. */
+		readonly domaineAffiche: string;
+		readonly dossierAffiche: readonly string[];
 	} | null;
 	/** L'identifiant lisible d'une note — `/notes/{identifiant}`. `null` sinon. */
 	readonly identifiant: string | null;
@@ -130,6 +133,8 @@ export interface SectionRendue {
 		readonly univers: string;
 		readonly domaine: string;
 		readonly chemin: readonly string[];
+		readonly domaineAffiche: string;
+		readonly dossierAffiche: readonly string[];
 	} | null;
 	readonly glyphe: string;
 	/** La couleur de l'univers — le trait du pictogramme la porte. */
@@ -326,7 +331,9 @@ export function rendreNoeuds(
 				cheminDuNoeud,
 				designations
 			),
-			...n.notes.map((note) => rendreNote(note, page))
+			...n.notes.map((note) =>
+				rendreNote(note, page, univers, domaineDuNoeud, cheminDuNoeud, designations)
+			)
 		];
 		const estCourant = courant.includes(n.nom);
 		return {
@@ -343,7 +350,9 @@ export function rendreNoeuds(
 					: {
 							univers: identifiantDUnivers(designations, univers),
 							domaine: identifiantDeDomaine(designations, univers, domaineDuNoeud),
-							chemin: cheminDuNoeud.map(identifiantLisible)
+							chemin: cheminDuNoeud.map(identifiantLisible),
+							domaineAffiche: domaineDuNoeud,
+							dossierAffiche: cheminDuNoeud
 						},
 			identifiant: null,
 			/* LE COMPTEUR NE PARAÎT QU'AUX DEUX PREMIERS NIVEAUX — la référence ne le
@@ -361,13 +370,26 @@ export function rendreNoeuds(
 	});
 }
 
-function rendreNote(note: NoeudDeNote, page: PageCourante): NoeudRendu {
+function rendreNote(
+	note: NoeudDeNote,
+	page: PageCourante,
+	univers: string,
+	domaine: string,
+	chemin: readonly string[],
+	designations: DesignationsDeRangement
+): NoeudRendu {
 	const active = page.note !== null && page.note === note.identifiant;
 	return {
 		nom: note.nom,
 		cle: note.cle,
 		type: 'note',
-		cible: null,
+		cible: {
+			univers: identifiantDUnivers(designations, univers),
+			domaine: identifiantDeDomaine(designations, univers, domaine),
+			chemin: chemin.map(identifiantLisible),
+			domaineAffiche: domaine,
+			dossierAffiche: chemin
+		},
 		identifiant: note.identifiant,
 		compte: null,
 		enfants: [],
@@ -397,7 +419,13 @@ export function railRendu(
 		const courant = page.univers === s.nom;
 		return {
 			nom: s.nom,
-			cible: { univers: identifiantDUnivers(designations, s.nom), domaine: '', chemin: [] },
+			cible: {
+				univers: identifiantDUnivers(designations, s.nom),
+				domaine: '',
+				chemin: [],
+				domaineAffiche: '',
+				dossierAffiche: []
+			},
 			glyphe: s.glyphe,
 			couleur: s.couleur,
 			compte: s.compte,
