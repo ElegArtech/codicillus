@@ -49,6 +49,7 @@
 <Vue
 	vecteur={data.vecteur}
 	notes={data.notes}
+	vivacites={data.vivacites}
 	domaines={data.domaines}
 	relations={data.relations}
 	mesures7j={data.mesures7j}

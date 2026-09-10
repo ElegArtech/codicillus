@@ -88,7 +88,7 @@
 
 	/** Les onze familles, dans l'ordre du gel. Le sommaire en est la table. */
 	const FAMILLES: readonly { readonly id: string; readonly nom: string }[] = [
-		{ id: 'fraicheur', nom: 'Signal de fraîcheur' },
+		{ id: 'fraicheur', nom: 'Signal de vivacité' },
 		{ id: 'boutons', nom: 'Boutons' },
 		{ id: 'champs', nom: 'Champs de saisie' },
 		{ id: 'pastilles', nom: 'Pastilles et marqueurs' },
@@ -431,8 +431,75 @@
 	{/snippet}
 
 	{#snippet enfants()}
-		<!-- prettier-ignore -->
-		<section class="famille" id="fraicheur"><h2 class="famille__nom">Signal de fraîcheur</h2><p class="famille__sous">La signature du produit. Trois niveaux, jamais portés par la couleur seule : une jauge à trois barres étagées, un libellé en clair, et des hachures sur l'obsolète. Un seul constructeur les produit tous, dans toutes les vues.</p><section class="compo"><div class="compo__tete"><div class="compo__nom">Témoin, trois niveaux</div><div class="compo__quand">Partout où une note apparaît : carte de résultat, ligne de liste, panneau de relations, cartographie. <b>Ne jamais afficher une note sans son témoin</b> — c'est le renseignement qui décide si l'on peut s'y fier.</div></div><div class="compo__demo">{#each exemples as n (n.id)}{@const t = temoinFraicheur(n)}<div class="echantillon">{@render temoin(t)}<span class="echantillon__nom">{t.libelle}</span></div>{/each}</div></section><section class="compo"><div class="compo__tete"><div class="compo__nom">Témoin avec date</div><div class="compo__quand">En tête de note (V-14) et dans le cartouche de contrôle, où l'on a la place de dater le dernier contrôle.</div></div><div class="compo__demo compo__demo--pile">{#each exemples as n (n.id)}{@const t = temoinFraicheur(n)}<div class="echantillon"><span style="display:inline-flex;align-items:center;gap:var(--e-1)">{@render temoin(t)}<span style="font-family:var(--f-donnee);font-size:var(--t-mini);color:var(--c-encre-3)">{' · vérifiée le ' + n.revise}</span></span><span class="echantillon__nom">{t.libelle}</span></div>{/each}</div></section><section class="compo"><div class="compo__tete"><div class="compo__nom">Barre de répartition</div><div class="compo__quand">Sur une page de domaine, d'univers ou de dossier : la santé d'un ensemble en un coup d'œil. Chaque part est cliquable et mène à la liste filtrée correspondante.</div></div><div class="compo__demo compo__demo--pile"><div class="repart" role="img" aria-label={libelleRepartition}>{#each repartition as p (p.cle)}{@const l = accord(p.compte, p.pluriel, p.singulier) + ' · ' + domaineEchantillon}<span class={p.classe} title={l} style="flex:{p.compte}"></span>{/each}</div><div class="legende">{#each repartition as p (p.cle)}<span><i class={p.classe}></i><b>{p.compte}</b> {p.compte > 1 ? p.pluriel : p.singulier}</span>{/each}</div></div></section></section>
+		<section class="famille" id="fraicheur">
+			<h2 class="famille__nom">Signal de vivacité</h2>
+			<p class="famille__sous">
+				La signature du produit. Trois niveaux, jamais portés par la couleur seule : une jauge à
+				trois barres étagées, un libellé en clair, et des hachures sur l'obsolète. Un seul
+				constructeur les produit tous, dans toutes les vues.
+			</p>
+			<section class="compo">
+				<div class="compo__tete">
+					<div class="compo__nom">Témoin, trois niveaux</div>
+					<div class="compo__quand">
+						Partout où une note apparaît : carte de résultat, ligne de liste, panneau de relations,
+						cartographie. <b>Ne jamais afficher une note sans son témoin</b> — c'est le renseignement
+						qui décide si l'on peut s'y fier.
+					</div>
+				</div>
+				<div class="compo__demo">
+					{#each exemples as n (n.id)}{@const t = temoinFraicheur(n)}
+						<div class="echantillon">
+							{@render temoin(t)}<span class="echantillon__nom">{t.libelle}</span>
+						</div>{/each}
+				</div>
+			</section>
+			<section class="compo">
+				<div class="compo__tete">
+					<div class="compo__nom">Témoin avec date</div>
+					<div class="compo__quand">
+						En tête de note (V-14) et dans le cartouche de contrôle, où l'on a la place de dater le
+						dernier contrôle.
+					</div>
+				</div>
+				<div class="compo__demo compo__demo--pile">
+					{#each exemples as n (n.id)}{@const t = temoinFraicheur(n)}
+						<div class="echantillon">
+							<span style="display:inline-flex;align-items:center;gap:var(--e-1)"
+								>{@render temoin(t)}<span
+									style="font-family:var(--f-donnee);font-size:var(--t-mini);color:var(--c-encre-3)"
+									>{' · vérifiée le ' + n.revise}</span
+								></span
+							><span class="echantillon__nom">{t.libelle}</span>
+						</div>{/each}
+				</div>
+			</section>
+			<section class="compo">
+				<div class="compo__tete">
+					<div class="compo__nom">Barre de répartition</div>
+					<div class="compo__quand">
+						Sur une page de domaine, d'univers ou de dossier : la santé d'un ensemble en un coup
+						d'œil. Chaque part est cliquable et mène à la liste filtrée correspondante.
+					</div>
+				</div>
+				<div class="compo__demo compo__demo--pile">
+					<div class="repart" role="img" aria-label={libelleRepartition}>
+						{#each repartition as p (p.cle)}{@const l =
+								accord(p.compte, p.pluriel, p.singulier) + ' · ' + domaineEchantillon}<span
+								class={p.classe}
+								title={l}
+								style="flex:{p.compte}"
+							></span>{/each}
+					</div>
+					<div class="legende">
+						{#each repartition as p (p.cle)}<span
+								><i class={p.classe}></i><b>{p.compte}</b>
+								{p.compte > 1 ? p.pluriel : p.singulier}</span
+							>{/each}
+					</div>
+				</div>
+			</section>
+		</section>
 
 		<!-- prettier-ignore -->
 		<section class="famille" id="boutons"><h2 class="famille__nom">Boutons</h2><p class="famille__sous">Une seule action principale par écran, et jamais deux boutons pleins côte à côte. Le poids visuel dit la hiérarchie : si tout est important, plus rien ne l'est.</p><section class="compo"><div class="compo__tete"><div class="compo__nom">Variantes</div><div class="compo__quand"><b>Principale</b> : l'action attendue de l'écran, une seule. <b>Secondaire</b> : les actions courantes. <b>Discrète</b> : les actions d'appoint, dans les barres denses. <b>Destructive</b> : tout ce qui détruit, toujours détachée des actions neutres.</div></div><div class="compo__demo"><div class="echantillon"><span class="btn btn--principal">Enregistrer</span><span class="echantillon__nom">btn--principal</span></div><div class="echantillon"><span class="btn">Annuler</span><span class="echantillon__nom">btn</span></div><div class="echantillon"><span class="btn btn--discret">Options</span><span class="echantillon__nom">btn--discret</span></div><div class="echantillon"><span class="btn btn--destructif">Supprimer</span><span class="echantillon__nom">btn--destructif</span></div></div></section><section class="compo"><div class="compo__tete"><div class="compo__nom">Avec pictogramme</div><div class="compo__quand">Le pictogramme précède toujours le libellé et ne le remplace jamais, sauf dans une barre d'outils où l'infobulle prend le relais.</div></div><div class="compo__demo"><div class="echantillon"><span class="btn btn--principal"><span style="line-height:0">{@render plus()}</span>Nouvelle note</span><span class="echantillon__nom">principale</span></div><div class="echantillon"><span class="btn"><span style="line-height:0">{@render plus()}</span>Ajouter</span><span class="echantillon__nom">secondaire</span></div></div></section><section class="compo"><div class="compo__tete"><div class="compo__nom">États</div><div class="compo__quand">Le focus visible est <b>obligatoire</b> : il conditionne l'usage au clavier. Un bouton désactivé doit être rare — préférer masquer une action interdite plutôt que la montrer inaccessible.</div></div><div class="compo__demo"><div class="echantillon"><span class="btn">Normal</span><span class="echantillon__nom">normal</span></div><div class="echantillon"><span class="btn" style="outline:2px solid var(--c-accent);outline-offset:2px">Focus</span><span class="echantillon__nom">focus</span></div><div class="echantillon"><button class="btn" type="button" disabled>Désactivé</button><span class="echantillon__nom">désactivé</span></div><div class="echantillon"><button class="btn" type="button" disabled><span style="width:12px;height:12px;border:2px solid var(--c-trait-fort);border-top-color:var(--c-accent);border-radius:50%;animation:tourne-notif .7s linear infinite;display:inline-block"></span>Enregistrement…</button><span class="echantillon__nom">en attente</span></div></div></section></section>
@@ -446,8 +513,113 @@
 		<!-- eslint-disable svelte/no-navigation-without-resolve -- l'adresse de la carte
 			sort de la fabrique unique, `$lib/rangement/adresses.ts` (`ARB-001`), et la
 			règle ne peut pas suivre l'expression du `href` jusque là. -->
-		<!-- prettier-ignore -->
-		<section class="famille" id="conteneurs"><h2 class="famille__nom">Conteneurs</h2><p class="famille__sous">Quatre niveaux de mise en boîte, du plus au moins engageant. Ne jamais en imbriquer deux du même type : deux cadres emboîtés ne hiérarchisent rien.</p><section class="compo"><div class="compo__tete"><div class="compo__nom">Carte de résultat</div><div class="compo__quand">Un objet cliquable dans une liste de résultats. Elle porte toujours le témoin de fraîcheur et le chemin de rangement.</div></div><div class="compo__demo compo__demo--pile">{#if noteDeCarte}<a class="carte" href={adresseDeLaCarte} data-index="0"><div class="carte__haut"><h2 class="carte__titre">{@render surligne(surligner(noteDeCarte.titre, REQUETE_DEMO))}</h2>{#if noteDeCarte.brouillon}<span class="past past--brouillon">Brouillon</span>{/if}<span class="past past--type">{noteDeCarte.typeFiche ? motFiche + ' ' + noteDeCarte.typeFiche : noteDeCarte.type}</span></div><p class="carte__extrait">{@render surligne(surligner(noteDeCarte.extrait, REQUETE_DEMO))}</p><div class="carte__signal">{@render temoin(temoinFraicheur(noteDeCarte))}{#if noteDeCarte.revise}<span class="carte__revision">Révisé le {noteDeCarte.revise}</span>{:else}<span class="carte__revision" data-jamais="oui">Jamais révisé</span>{/if}{#if noteDeCarte.operationnel}<span class="marque-op">↳ Trouvé dans le registre Opérationnel</span>{/if}</div><div class="carte__pied"><span class="carte__chemin"><span>{noteDeCarte.univers + ' › '}</span><b>{noteDeCarte.domaine}</b><span>{' › ' + noteDeCarte.dossier}</span></span><span class="sep">·</span><span>{noteDeCarte.auteur}</span><span class="sep">·</span><span>{nombre(noteDeCarte.vues)} consultations</span>{#if noteDeCarte.pj}<span class="sep">·</span><span>{noteDeCarte.pj}{noteDeCarte.pj > 1 ? ' pièces jointes' : ' pièce jointe'}</span>{/if}{#if noteDeCarte.visibilite === 'Publique'}<span class="sep">·</span><span class="carte__visibilite">Publique</span>{/if}</div></a>{/if}</div></section><section class="compo"><div class="compo__tete"><div class="compo__nom">Panneau</div><div class="compo__quand">Un regroupement thématique dans une page. En-tête étiqueté, corps aéré.</div></div><div class="compo__demo compo__demo--pile"><section class="panneau"><div class="panneau__tete"><span class="etiq">Relations</span><span class="chiffre">4</span></div><div class="panneau__corps"><div class="zone-etat__txt">Contenu du panneau.</div></div></section></div></section><section class="compo"><div class="compo__tete"><div class="compo__nom">Encart</div><div class="compo__quand">Une remarque de second plan à l'intérieur d'un corps de texte. Filet latéral, jamais de fond coloré vif — un encart n'est pas une alerte.</div></div><div class="compo__demo compo__demo--pile"><div class="encart-b">Cette procédure suppose que la sauvegarde du jour soit terminée. Vérifiez-le avant de commencer.</div></div></section><section class="compo"><div class="compo__tete"><div class="compo__nom">Panneau latéral</div><div class="compo__quand">Un formulaire secondaire qui garde le contexte visible derrière lui — édition d'un objet de la console, historique d'une note. Préféré à la boîte de dialogue quand la saisie est longue.</div></div><div class="compo__demo"><div class="zone-etat__txt">Aucun spécimen : un panneau latéral s'ouvre sur le contexte qu'il garde visible, et cette page n'en a pas. Il est en service dans l'historique d'une note, où il se déploie sur la lecture.</div></div></section></section>
+		<section class="famille" id="conteneurs">
+			<h2 class="famille__nom">Conteneurs</h2>
+			<p class="famille__sous">
+				Quatre niveaux de mise en boîte, du plus au moins engageant. Ne jamais en imbriquer deux du
+				même type : deux cadres emboîtés ne hiérarchisent rien.
+			</p>
+			<section class="compo">
+				<div class="compo__tete">
+					<div class="compo__nom">Carte de résultat</div>
+					<div class="compo__quand">
+						Un objet cliquable dans une liste de résultats. Elle porte toujours le témoin de
+						vivacité et le chemin de rangement.
+					</div>
+				</div>
+				<div class="compo__demo compo__demo--pile">
+					{#if noteDeCarte}<a class="carte" href={adresseDeLaCarte} data-index="0"
+							><div class="carte__haut">
+								<h2 class="carte__titre">
+									{@render surligne(surligner(noteDeCarte.titre, REQUETE_DEMO))}
+								</h2>
+								{#if noteDeCarte.brouillon}<span class="past past--brouillon">Brouillon</span
+									>{/if}<span class="past past--type"
+									>{noteDeCarte.typeFiche
+										? motFiche + ' ' + noteDeCarte.typeFiche
+										: noteDeCarte.type}</span
+								>
+							</div>
+							<p class="carte__extrait">
+								{@render surligne(surligner(noteDeCarte.extrait, REQUETE_DEMO))}
+							</p>
+							<div class="carte__signal">
+								{@render temoin(temoinFraicheur(noteDeCarte))}{#if noteDeCarte.revise}<span
+										class="carte__revision">Révisé le {noteDeCarte.revise}</span
+									>{:else}<span class="carte__revision" data-jamais="oui">Jamais révisé</span
+									>{/if}{#if noteDeCarte.operationnel}<span class="marque-op"
+										>↳ Trouvé dans le registre Opérationnel</span
+									>{/if}
+							</div>
+							<div class="carte__pied">
+								<span class="carte__chemin"
+									><span>{noteDeCarte.univers + ' › '}</span><b>{noteDeCarte.domaine}</b><span
+										>{' › ' + noteDeCarte.dossier}</span
+									></span
+								><span class="sep">·</span><span>{noteDeCarte.auteur}</span><span class="sep"
+									>·</span
+								><span>{nombre(noteDeCarte.vues)} consultations</span>{#if noteDeCarte.pj}<span
+										class="sep">·</span
+									><span
+										>{noteDeCarte.pj}{noteDeCarte.pj > 1
+											? ' pièces jointes'
+											: ' pièce jointe'}</span
+									>{/if}{#if noteDeCarte.visibilite === 'Publique'}<span class="sep">·</span><span
+										class="carte__visibilite">Publique</span
+									>{/if}
+							</div></a
+						>{/if}
+				</div>
+			</section>
+			<section class="compo">
+				<div class="compo__tete">
+					<div class="compo__nom">Panneau</div>
+					<div class="compo__quand">
+						Un regroupement thématique dans une page. En-tête étiqueté, corps aéré.
+					</div>
+				</div>
+				<div class="compo__demo compo__demo--pile">
+					<section class="panneau">
+						<div class="panneau__tete">
+							<span class="etiq">Relations</span><span class="chiffre">4</span>
+						</div>
+						<div class="panneau__corps"><div class="zone-etat__txt">Contenu du panneau.</div></div>
+					</section>
+				</div>
+			</section>
+			<section class="compo">
+				<div class="compo__tete">
+					<div class="compo__nom">Encart</div>
+					<div class="compo__quand">
+						Une remarque de second plan à l'intérieur d'un corps de texte. Filet latéral, jamais de
+						fond coloré vif — un encart n'est pas une alerte.
+					</div>
+				</div>
+				<div class="compo__demo compo__demo--pile">
+					<div class="encart-b">
+						Cette procédure suppose que la sauvegarde du jour soit terminée. Vérifiez-le avant de
+						commencer.
+					</div>
+				</div>
+			</section>
+			<section class="compo">
+				<div class="compo__tete">
+					<div class="compo__nom">Panneau latéral</div>
+					<div class="compo__quand">
+						Un formulaire secondaire qui garde le contexte visible derrière lui — édition d'un objet
+						de la console, historique d'une note. Préféré à la boîte de dialogue quand la saisie est
+						longue.
+					</div>
+				</div>
+				<div class="compo__demo">
+					<div class="zone-etat__txt">
+						Aucun spécimen : un panneau latéral s'ouvre sur le contexte qu'il garde visible, et
+						cette page n'en a pas. Il est en service dans l'historique d'une note, où il se déploie
+						sur la lecture.
+					</div>
+				</div>
+			</section>
+		</section>
 		<!-- eslint-enable svelte/no-navigation-without-resolve -->
 
 		<!-- prettier-ignore -->

@@ -625,7 +625,17 @@ describe('V-33 — Configuration', () => {
 
 describe('V-34 — Analytique', () => {
 	/** Ce que le chargeur passe VRAIMENT : deux mesures comptées, aucune inventée. */
-	const SERVI = { relations: [], mesures7j: {}, mesures7jPrec: {} };
+	const SERVI = {
+		relations: [],
+		mesures7j: {},
+		mesures7jPrec: {},
+		get vivacites() {
+			const etats = ['ajour', 'bientot', 'averifier', 'arevoir', 'obsolete'] as const;
+			return Object.fromEntries(
+				corpusPourVue('V-34').map((note, rang) => [note.id, etats[rang % 5]])
+			);
+		}
+	};
 
 	test('les domaines reçus font loi — la santé est rendue domaine par domaine', async () => {
 		const plancher = await rendre('V-34', { ...SERVI, domaines: [] });
@@ -639,6 +649,14 @@ describe('V-34 — Analytique', () => {
 		expect(occurrences(autres, 'Migration 2026')).toBeGreaterThan(
 			occurrences(plancher, 'Migration 2026')
 		);
+	});
+
+	test('la santé répartit les cinq états de vivacité servis', async () => {
+		const rendu = await rendre('V-34', { ...SERVI, domaines: DOMAINES });
+		for (const libelle of ['À jour', 'Bientôt à vérifier', 'À vérifier', 'À revoir', 'Obsolète']) {
+			expect(rendu).toContain(libelle);
+		}
+		expect(rendu).toContain('répartition de vivacité');
 	});
 
 	test('la coquille ne descend plus l’identité du jeu de démonstration', async () => {
@@ -728,7 +746,9 @@ describe('V-36 — Exports', () => {
 	test('une instance sans aucun domaine n’annonce aucun nom d’archive', async () => {
 		const neuve = await rendre('V-36', { domaines: [], notes: [], nomsDArchive: {} });
 		expect(neuve).not.toContain(DATE_REFERENCE);
-		expect(neuve).not.toContain('.zip');
+		/* Le suffixe figure désormais dans le filtre du sélecteur de fichier de
+		   réimportation. Ce qui ne doit pas exister sans domaine est un NOM annoncé,
+		   et son conteneur est l'oracle exact. */
 		expect(neuve).not.toContain('arbo-archive');
 	});
 });

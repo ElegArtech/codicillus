@@ -408,7 +408,7 @@
 	const PROFONDEUR_MAX = 10;
 
 	/** Le niveau qu'aurait le sous-dossier à créer — `V-13:2196`. */
-	const niveauDuSousDossier = $derived(chemin.length + 1);
+	const niveauDuSousDossier = $derived(chemin.length + 2);
 
 	/** Le décompte de `RG-M03-04` — `V-13:2333`-`2351`. */
 	const sousArbreDetruit = $derived(compterSousArbre(chemin));
@@ -799,7 +799,10 @@
 					/>
 					<span class="champ__aide" id="creer-aide"
 						>Un nom court et parlant. Ce dossier sera au niveau {niveauDuSousDossier} sur {PROFONDEUR_MAX}
-						— il restera {PROFONDEUR_MAX - niveauDuSousDossier} niveaux disponibles en dessous.</span
+						— racine du domaine comprise ; il restera {Math.max(
+							0,
+							PROFONDEUR_MAX - niveauDuSousDossier
+						)} niveaux disponibles en dessous.</span
 					>
 					<div class="champ__erreur" id="creer-erreur" hidden={erreurDeCreation === null}>
 						{erreurDeCreation ?? ''}

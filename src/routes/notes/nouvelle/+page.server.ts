@@ -79,7 +79,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		 * PENDANT la rédaction : les poser depuis le serveur peindrait un
 		 * enregistrement en échec sur un écran qui n'a rien enregistré (`P-02`).
 		 */
-		vecteur: { cas: templateDemande === null ? 'vierge' : 'template' },
+		vecteur: {
+			cas:
+				templateDemande !== null || creation.referentiels.templates.length > 0
+					? 'template'
+					: 'vierge'
+		},
 		templateDemande,
 		/**
 		 * LA MARQUE DU COMPTE, POUR LA CLÉ DU BROUILLON LOCAL (`RG-NF-02`). Ce n'est

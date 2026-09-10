@@ -42,7 +42,13 @@
 		Relation,
 		RequeteDeRecherche
 	} from '../../seeds/corpus';
-	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
+	import {
+		barresFraicheur,
+		classeTemoin,
+		ETATS_DE_VIVACITE,
+		libelleFraicheur,
+		type EtatDeVivacite
+	} from '$lib/fraicheur';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
 	import { accord } from '$lib/vocabulaire';
@@ -52,6 +58,7 @@
 	interface Proprietes {
 		vecteur?: Record<string, string | boolean> | null;
 		notes: readonly Note[];
+		vivacites: Record<string, EtatDeVivacite>;
 		domaines: readonly Domaine[];
 		relations: readonly Relation[];
 		/** LES DEUX TABLES DE MESURE QUE LE PRODUIT PORTE, EXIGÉES. `Partial<Record<…>>`
@@ -113,6 +120,7 @@
 	const {
 		vecteur,
 		notes,
+		vivacites = {},
 		domaines,
 		relations,
 		mesures7j,
@@ -235,14 +243,6 @@
 
 	type FamilleOrpheline = (typeof ORPH)[number]['cle'];
 
-	/** Les libellés de fraîcheur de la facette de `V-12`, et pas d'autres : c'est
-	 *  eux que l'adresse pré-filtrée attend (`docs/routes.md` §4.2). */
-	const LIBELLE_DE_FRAICHEUR: Record<string, string> = {
-		frais: 'Frais',
-		vieil: 'Vieillissant',
-		obs: 'Obsolète probable'
-	};
-
 	/** L'onglet courant au chargement (`var orphCourant`, `V-34:3183`). */
 	const ORPH_COURANT = 'jamaisVerifiees';
 
@@ -259,32 +259,39 @@
 	/* ── La barre de répartition, calque de `V-34:2960` ────────────────────── */
 
 	interface Repartition {
-		frais: number;
-		vieil: number;
-		obs: number;
+		ajour: number;
+		bientot: number;
+		averifier: number;
+		arevoir: number;
+		obsolete: number;
 		total: number;
 	}
 
-	/** `window.repartitionFraicheur` (`V-34:1937`). */
+	/** La répartition des cinq états du registre Référence. */
 	const repartition = (liste: readonly Note[]): Repartition => ({
-		frais: liste.filter((n) => n.fraicheur === 'frais').length,
-		vieil: liste.filter((n) => n.fraicheur === 'vieil').length,
-		obs: liste.filter((n) => n.fraicheur === 'obs').length,
+		ajour: liste.filter((n) => vivacites[n.id] === 'ajour').length,
+		bientot: liste.filter((n) => vivacites[n.id] === 'bientot').length,
+		averifier: liste.filter((n) => vivacites[n.id] === 'averifier').length,
+		arevoir: liste.filter((n) => vivacites[n.id] === 'arevoir').length,
+		obsolete: liste.filter((n) => vivacites[n.id] === 'obsolete').length,
 		total: liste.length
 	});
 
 	const PARTS = [
-		{ cle: 'frais', classe: 'p-frais', singulier: 'fraîche' },
-		{ cle: 'vieil', classe: 'p-vieil', singulier: 'vieillissante' },
-		{ cle: 'obs', classe: 'p-obs', singulier: 'obsolète' }
+		{ cle: 'ajour', classe: 'p-ajour' },
+		{ cle: 'bientot', classe: 'p-bientot' },
+		{ cle: 'averifier', classe: 'p-averifier' },
+		{ cle: 'arevoir', classe: 'p-arevoir' },
+		{ cle: 'obsolete', classe: 'p-obsolete' }
 	] as const;
 
 	const partsDe = (r: Repartition, contexte?: string) =>
 		PARTS.filter((p) => r[p.cle]).map((p) => ({
 			...p,
 			n: r[p.cle],
-			court: `${r[p.cle]} ${accord(r[p.cle], p.singulier)}`,
-			libelle: `${r[p.cle]} ${accord(r[p.cle], p.singulier)}${contexte ? ` · ${contexte}` : ''}`
+			libelleEtat: ETATS_DE_VIVACITE[p.cle].libelle,
+			court: `${r[p.cle]} ${ETATS_DE_VIVACITE[p.cle].libelle}`,
+			libelle: `${r[p.cle]} · ${ETATS_DE_VIVACITE[p.cle].libelle}${contexte ? ` · ${contexte}` : ''}`
 		}));
 
 	const libelleDeBarre = (r: Repartition) =>
@@ -413,12 +420,25 @@
 	>{/snippet}
 
 <!-- La barre de répartition du produit, et sa légende chiffrée (`V-34:2960`). -->
-<!-- prettier-ignore -->
-{#snippet barreRepartition(r: Repartition, dom: Domaine)}<div class="repart" role="img" aria-label={libelleDeBarre(r)}
-		>{#each partsDe(r, dom.nom) as p (p.cle)}<button type="button" class={p.classe} style="flex:{p.n}" title={p.libelle} aria-label={p.libelle} onclick={() => onVoirLesNotes?.({ domaine: dom.nom, fraicheur: LIBELLE_DE_FRAICHEUR[p.cle] ?? p.cle })}></button>{/each}</div
-	><div class="legende"
-		>{#each partsDe(r) as p (p.cle)}<span><i class={p.classe}></i><b>{p.n}</b>{` ${accord(p.n, p.singulier)}`}</span>{/each}</div
-	>{/snippet}
+{#snippet barreRepartition(r: Repartition, dom: Domaine)}<div
+		class="repart"
+		role="img"
+		aria-label={libelleDeBarre(r)}
+	>
+		{#each partsDe(r, dom.nom) as p (p.cle)}<button
+				type="button"
+				class={p.classe}
+				style="flex:{p.n}"
+				title={p.libelle}
+				aria-label={p.libelle}
+				onclick={() => onVoirLesNotes?.({ domaine: dom.nom, fraicheur: p.libelleEtat })}
+			></button>{/each}
+	</div>
+	<div class="legende">
+		{#each partsDe(r) as p (p.cle)}<span
+				><i class={p.classe}></i><b>{p.n}</b>{` ${p.libelleEtat}`}</span
+			>{/each}
+	</div>{/snippet}
 
 <!-- Une ligne de classement (`V-34:3318`) — avec rang et cliquable, ou sans. -->
 <!-- prettier-ignore -->
@@ -506,7 +526,7 @@
 				><div class="bloc-a__tete"
 					><div
 						><h2 class="bloc-a__nom">Santé documentaire</h2
-						><div class="bloc-a__sous">Par domaine : répartition de fraîcheur, et ce qui appelle une intervention.</div
+						><div class="bloc-a__sous">Par domaine : répartition de vivacité, et ce qui appelle une intervention.</div
 					></div
 				></div
 				><div class="bloc-a__corps" id="sante"

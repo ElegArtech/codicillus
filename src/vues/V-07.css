@@ -303,3 +303,13 @@
 
 
 }
+
+.liste-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  padding: var(--e-4);
+  color: var(--c-encre);
+  text-decoration: none;
+}
+.liste-note:hover { background: var(--c-papier-2); }

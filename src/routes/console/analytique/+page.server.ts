@@ -17,8 +17,9 @@
  */
 import { error } from '@sveltejs/kit';
 import { and, count, eq, gte, lt } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { basePartagee, type Base } from '$lib/base/acces';
-import { consultations, notes } from '$lib/base/schema';
+import { comptes, consultations, notes } from '$lib/base/schema';
 import {
 	contexteDeRequete,
 	lireLesDesignationsDeDomaine,
@@ -28,14 +29,56 @@ import {
 import {
 	ancienneteDeModification,
 	lireRelations,
+	lireSeuilsDeVivacite,
 	lireToutesLesDemandesDeRevision
 } from '$lib/donnees/lecture';
+import { cycleDuRegistre, type LigneDeCycles } from '$lib/donnees/vivacite';
+import { vivacite, type EtatDeVivacite } from '$lib/fraicheur';
 import { lireLesRecherches } from '$lib/donnees/recherches';
 import { lireLesTracesDeSuppression } from '$lib/donnees/traces';
 import type { PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 const SEPT_JOURS = 7 * 24 * 60 * 60 * 1000;
+
+async function lireLesEtatsDeVivacite(
+	base: Base,
+	maintenant: Date
+): Promise<Record<string, EtatDeVivacite>> {
+	const demandeur = alias(comptes, 'demandeur_de_revision_analytique');
+	const lignes = await base
+		.select({
+			identifiant: notes.identifiant,
+			modifieLe: notes.modifieLe,
+			corpsOperationnelModifieLe: notes.corpsOperationnelModifieLe,
+			verifieLe: notes.verifieLe,
+			verifieLeOperationnel: notes.verifieLeOperationnel,
+			validiteReference: notes.validiteReference,
+			validiteOperationnel: notes.validiteOperationnel,
+			revisionDemandee: notes.revisionDemandee,
+			revisionRegistre: notes.revisionRegistre,
+			revisionPar: demandeur.nom
+		})
+		.from(notes)
+		.leftJoin(demandeur, eq(notes.revisionParId, demandeur.id));
+	const seuils = await lireSeuilsDeVivacite(base);
+	return Object.fromEntries(
+		lignes.map((ligne) => {
+			const cycle = cycleDuRegistre(
+				{
+					...ligne,
+					verifieParReference: null,
+					verifieParOperationnel: null
+				} satisfies LigneDeCycles,
+				'reference'
+			);
+			return [
+				ligne.identifiant,
+				cycle === null ? 'ajour' : vivacite(cycle, maintenant, seuils).etat
+			];
+		})
+	);
+}
 
 /**
  * LES CONSULTATIONS D'UNE FENÊTRE, PAR NOTE — la table montée par `006`. Les deux entrées
@@ -75,6 +118,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		vecteur: vecteurDeV34(),
 		notes: acces.ressource.notes,
+		vivacites: await lireLesEtatsDeVivacite(base, instant),
 		domaines: acces.ressource.domaines,
 		/* NI `univers` NI `compte` : LA COQUILLE LES LIT AU CONTEXTE D'IDENTITÉ.
 		   Ils descendaient jusqu'à `CoquilleDeConsole`, qui retombait sur les

@@ -407,7 +407,7 @@ export const actions: Actions = {
 		   pas —, tandis que la contrainte de base compte depuis la racine. Le plafond
 		   est le même ; seule la façon de le dire diffère. */
 		if (dossier.profondeur + 1 > PROFONDEUR_MAX) {
-			return fail(422, { creation: tropProfond(dossier.profondeur) });
+			return fail(422, { creation: tropProfond(dossier.profondeur + 1) });
 		}
 
 		/* Un frère du même nom rendrait deux adresses identiques : refus, pas de

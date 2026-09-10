@@ -814,13 +814,13 @@ describe('la voie bureautique, service disponible — M12.1, ADR-004', () => {
 			chemin: 'Astreinte/Rotation 2025.pdf',
 			octets: 99,
 			texte: null,
-			binaire: new Uint8Array([1])
+			binaire: new TextEncoder().encode('%PDF-1.7\n%%EOF\n')
 		},
 		{
 			chemin: 'VPN/Certificats scannes.pdf',
 			octets: 99,
 			texte: null,
-			binaire: new Uint8Array([1])
+			binaire: new TextEncoder().encode('%PDF-1.7\n%%EOF\n')
 		},
 		{
 			chemin: 'Procedures/Tests trimestriels.docx',
@@ -828,8 +828,18 @@ describe('la voie bureautique, service disponible — M12.1, ADR-004', () => {
 			texte: null,
 			binaire: new Uint8Array([1])
 		},
-		{ chemin: 'VPN/Certificats.pdf', octets: 99, texte: null, binaire: new Uint8Array([1]) },
-		{ chemin: 'Procedures/Annexes.pdf', octets: 99, texte: null, binaire: new Uint8Array([1]) },
+		{
+			chemin: 'VPN/Certificats.pdf',
+			octets: 99,
+			texte: null,
+			binaire: new TextEncoder().encode('%PDF-1.7\n%%EOF\n')
+		},
+		{
+			chemin: 'Procedures/Annexes.pdf',
+			octets: 99,
+			texte: null,
+			binaire: new TextEncoder().encode('%PDF-1.7\n%%EOF\n')
+		},
 		{ chemin: 'Astreinte/Numéros utiles.txt', octets: 12, texte: 'Le standard.', binaire: null }
 	];
 

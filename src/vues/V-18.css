@@ -970,3 +970,16 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
 
 
 }
+
+.redaction.ProseMirror { white-space: pre-wrap; }
+.commandes {
+  display: none; position: fixed; z-index: 60;
+  bottom: var(--e-8); left: max(var(--e-4), 30vw);
+  width: 292px; max-height: 292px; overflow-y: auto;
+  padding: var(--e-1); background: var(--c-papier);
+  border: 1px solid var(--c-trait-fort); border-radius: var(--r-3);
+  box-shadow: var(--o-flotte);
+}
+.commandes[data-ouvert="oui"] { display: block; }
+.cmd { display: block; width: 100%; padding: var(--e-2); border: 0; background: none; text-align: left; cursor: pointer; }
+.cmd[aria-selected="true"] { background: var(--c-accent-voile); }

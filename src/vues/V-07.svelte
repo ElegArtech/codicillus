@@ -69,6 +69,7 @@
 	type IdentiteAffichee = { readonly [K in keyof UtilisateurCourant]: string };
 
 	interface Proprietes {
+		revisions?: readonly { id: string | number; par: string; commentaire: string }[];
 		/** Le corpus lisible — la coquille en a besoin pour résoudre le fil. */
 		notes: readonly Note[];
 		/** Les univers portant au moins un domaine lisible. Vide : instance neuve. */
@@ -110,7 +111,8 @@
 		seuilBientot = 0,
 		surveiller = null,
 		ecriture = false,
-		administrateur = false
+		administrateur = false,
+		revisions = []
 	}: Proprietes = $props();
 
 	/**
@@ -564,6 +566,27 @@
 		</div>
 
 		<!-- ═══ 5. VOS UNIVERS ══════════════════════════════════════════════════ -->
+		{#if revisions.length > 0}
+			<section class="carte" aria-labelledby="t-revisions">
+				<div class="carte__tete">
+					<span class="etiq" id="t-revisions">Révisions demandées</span>
+				</div>
+				{#each revisions as revision (revision.id)}
+					{@const cible = corpus.find((n) => n.id === revision.id)}
+					{#if cible}
+						<a
+							class="liste-note"
+							href={resolve('/notes/[identifiant]', { identifiant: String(cible.id) })}
+						>
+							<strong>{cible.titre}</strong>
+							<span>{revision.commentaire}</span>
+							<small>{revision.par}</small>
+						</a>
+					{/if}
+				{/each}
+			</section>
+		{/if}
+
 		<section class="carte" aria-labelledby="t-univers">
 			<div class="carte__tete">
 				<span class="etiq" id="t-univers">Vos univers</span>
