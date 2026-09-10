@@ -32,6 +32,7 @@ import {
 	piecesJointes,
 	statutDeNote as enumDeStatut,
 	typesDeFiche,
+	univers,
 	verifications,
 	versions,
 	visibilite as enumDeVisibilite
@@ -355,6 +356,8 @@ export async function resoudreLEditionDeLOperationnel(
  * l'implémentation unique de la descente d'arborescence.
  */
 export interface RangementDemande {
+	/** Identifiant persistant de l'univers, lorsqu'un geste connaît la cible exacte. */
+	readonly univers?: string;
 	readonly domaine: string;
 	readonly dossier: string;
 }
@@ -522,6 +525,7 @@ export function lireLaModification(champs: ChampsSoumis): LectureDuFormulaire {
 		corps: champLu(champs, 'corps'),
 		markdown: champLu(champs, CHAMP_CORPS_MARKDOWN),
 		titre: champLu(champs, 'titre'),
+		univers: champLu(champs, 'univers'),
 		domaine: champLu(champs, 'domaine'),
 		dossier: champLu(champs, 'dossier'),
 		visibilite: champLu(champs, 'visibilite'),
@@ -552,8 +556,14 @@ export function lireLaModification(champs: ChampsSoumis): LectureDuFormulaire {
 	   le second rangerait la note ailleurs que là où l'utilisateur l'a demandé. */
 	const domaine = texteUtile(lus.domaine);
 	const dossier = texteUtile(lus.dossier);
-	if ((domaine === null) !== (dossier === null)) return refuser('rangement incomplet');
-	const rangement = domaine === null || dossier === null ? undefined : { domaine, dossier };
+	const universDemande = texteUtile(lus.univers);
+	if ((domaine === null) !== (dossier === null) || (universDemande !== null && domaine === null)) {
+		return refuser('rangement incomplet');
+	}
+	const rangement =
+		domaine === null || dossier === null
+			? undefined
+			: { domaine, dossier, ...(universDemande === null ? {} : { univers: universDemande }) };
 
 	let visibilite: VisibiliteDeNote | undefined;
 	const visibiliteSoumise = texteUtile(lus.visibilite);
@@ -726,7 +736,12 @@ async function destinationDuRangement(
 	const candidats = await base
 		.select({ id: domaines.id })
 		.from(domaines)
-		.where(eq(domaines.nom, rangement.domaine))
+		.innerJoin(univers, eq(domaines.universId, univers.id))
+		.where(
+			rangement.univers === undefined
+				? eq(domaines.nom, rangement.domaine)
+				: and(eq(domaines.nom, rangement.domaine), eq(univers.identifiant, rangement.univers))
+		)
 		.limit(2);
 	const domaine = candidats.length === 1 ? candidats[0] : undefined;
 	if (domaine === undefined) return null;

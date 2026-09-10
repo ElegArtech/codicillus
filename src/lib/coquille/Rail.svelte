@@ -19,10 +19,12 @@
 	 * 404 n'est pas émise. « + Créer un univers » mène à la console et n'est donc émise
 	 * qu'à l'administrateur ; « Import » demande de pouvoir écrire quelque part.
 	 */
-	import { getContext } from 'svelte';
+	import { getContext, tick } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Pictogramme from '$lib/console/Pictogramme.svelte';
+	import { identifiantLisible } from '$lib/rangement/adresses';
 	import {
 		AUCUNE_PAGE,
 		railRendu,
@@ -170,6 +172,198 @@
 	const ROUTE_DOSSIER = '/univers/[univers]/[domaine]/dossiers/[...chemin]' as const;
 	const ROUTE_NOTE = '/notes/[identifiant]' as const;
 
+	type TypeDeCibleContextuelle = 'univers' | 'domaine' | 'dossier' | 'note';
+	interface CibleContextuelle {
+		readonly type: TypeDeCibleContextuelle;
+		readonly nom: string;
+		readonly cible: NoeudRendu['cible'];
+		readonly identifiant: string | null;
+	}
+
+	let menuContextuel = $state<CibleContextuelle | null>(null);
+	let positionDuMenu = $state({ x: 0, y: 0 });
+	let elementDuMenu = $state<HTMLDivElement>();
+	let noteDeplacee = $state<CibleContextuelle | null>(null);
+	let cibleDeDepot = $state<string | null>(null);
+
+	function cibleDeNoeud(noeud: NoeudRendu): CibleContextuelle {
+		return {
+			type: noeud.type,
+			nom: noeud.nom,
+			cible: noeud.cible,
+			identifiant: noeud.identifiant
+		};
+	}
+
+	function cibleDUnivers(section: SectionRendue): CibleContextuelle {
+		return { type: 'univers', nom: section.nom, cible: section.cible, identifiant: null };
+	}
+
+	async function ouvrirLeMenu(evenement: MouseEvent, cible: CibleContextuelle): Promise<void> {
+		if (cible.type === 'univers' && !admin) return;
+		if ((cible.type === 'domaine' || cible.type === 'dossier') && !ecriture) return;
+		evenement.preventDefault();
+		positionDuMenu = {
+			x: Math.min(evenement.clientX, window.innerWidth - 240),
+			y: Math.min(evenement.clientY, window.innerHeight - 190)
+		};
+		menuContextuel = cible;
+		await tick();
+		elementDuMenu?.querySelector<HTMLElement>('a, button')?.focus();
+	}
+
+	function fermerLeMenu(evenement?: MouseEvent): void {
+		if (
+			evenement?.target instanceof Element &&
+			evenement.target.closest('.rail__menu-contextuel') !== null
+		) {
+			return;
+		}
+		menuContextuel = null;
+	}
+
+	function fermerLeMenuAuClavier(evenement: KeyboardEvent): void {
+		if (evenement.key === 'Escape') menuContextuel = null;
+	}
+
+	function avecParametres(adresse: string, parametres: Record<string, string>): string {
+		return `${adresse}?${new URLSearchParams(parametres)}`;
+	}
+
+	function adresseDeCreationDeNote(cible: CibleContextuelle): string {
+		if (cible.cible === null) return resolve('/notes/nouvelle');
+		const dossier =
+			cible.type === 'domaine'
+				? cible.cible.domaineAffiche
+				: cible.cible.dossierAffiche.join(' › ');
+		return avecParametres(resolve('/notes/nouvelle'), {
+			domaine: cible.cible.domaineAffiche,
+			dossier
+		});
+	}
+
+	function adresseDeCreationDeDossier(cible: CibleContextuelle): string {
+		if (cible.cible === null) return '#';
+		const chemin =
+			cible.type === 'domaine'
+				? identifiantLisible(cible.cible.domaineAffiche)
+				: cible.cible.chemin.join('/');
+		const adresse = resolve(ROUTE_DOSSIER, {
+			univers: cible.cible.univers,
+			domaine: cible.cible.domaine,
+			chemin
+		});
+		return avecParametres(adresse, { creation: 'dossier' });
+	}
+
+	function adresseDeCreationDeDomaine(cible: CibleContextuelle): string {
+		return avecParametres(resolve('/console/domaines'), {
+			univers: cible.cible?.univers ?? '',
+			creation: 'domaine'
+		});
+	}
+
+	function adresseDeNote(cible: CibleContextuelle): string {
+		return resolve(ROUTE_NOTE, { identifiant: cible.identifiant ?? '' });
+	}
+
+	function confirmerLaSuppression(evenement: SubmitEvent, cible: CibleContextuelle): void {
+		if (!window.confirm(`Supprimer définitivement la note « ${cible.nom} » ?`)) {
+			evenement.preventDefault();
+			return;
+		}
+		menuContextuel = null;
+	}
+
+	function confirmerLaSuppressionCourante(evenement: SubmitEvent): void {
+		if (menuContextuel !== null) confirmerLaSuppression(evenement, menuContextuel);
+	}
+
+	function peutRecevoir(cible: CibleContextuelle): boolean {
+		return ecriture && (cible.type === 'domaine' || cible.type === 'dossier');
+	}
+
+	function commencerLeDeplacement(evenement: DragEvent, cible: CibleContextuelle): void {
+		if (!ecriture || cible.type !== 'note' || cible.identifiant === null) {
+			evenement.preventDefault();
+			return;
+		}
+		noteDeplacee = cible;
+		menuContextuel = null;
+		if (evenement.dataTransfer !== null) {
+			evenement.dataTransfer.effectAllowed = 'move';
+			evenement.dataTransfer.setData('text/plain', cible.identifiant);
+		}
+	}
+
+	function survolerLaDestination(
+		evenement: DragEvent,
+		cible: CibleContextuelle,
+		cle: string
+	): void {
+		if (noteDeplacee === null || !peutRecevoir(cible)) return;
+		evenement.preventDefault();
+		cibleDeDepot = cle;
+		if (evenement.dataTransfer !== null) evenement.dataTransfer.dropEffect = 'move';
+	}
+
+	function quitterLaDestination(evenement: DragEvent, cle: string): void {
+		if (
+			cibleDeDepot === cle &&
+			(!(evenement.relatedTarget instanceof Node) ||
+				!(evenement.currentTarget as Element).contains(evenement.relatedTarget))
+		) {
+			cibleDeDepot = null;
+		}
+	}
+
+	function dossierDeDestination(cible: CibleContextuelle): string {
+		if (cible.cible === null) return '';
+		return cible.type === 'domaine'
+			? cible.cible.domaineAffiche
+			: cible.cible.dossierAffiche.join(' › ');
+	}
+
+	async function deposerLaNote(evenement: DragEvent, cible: CibleContextuelle): Promise<void> {
+		if (noteDeplacee === null || noteDeplacee.identifiant === null || !peutRecevoir(cible)) return;
+		evenement.preventDefault();
+		const note = noteDeplacee;
+		const destination = cible.cible;
+		cibleDeDepot = null;
+		if (destination === null) return;
+
+		const memeDomaine = note.cible?.domaine === destination.domaine;
+		const origine = note.cible?.dossierAffiche.join(' › ') ?? '';
+		const destinationAffichee =
+			cible.type === 'domaine' ? '' : destination.dossierAffiche.join(' › ');
+		if (memeDomaine && origine === destinationAffichee) {
+			noteDeplacee = null;
+			return;
+		}
+
+		const formulaire = new FormData();
+		formulaire.set('univers', destination.univers);
+		formulaire.set('domaine', destination.domaineAffiche);
+		formulaire.set('dossier', dossierDeDestination(cible));
+		try {
+			const reponse = await fetch(`${adresseDeNote(note)}/modifier`, {
+				method: 'POST',
+				body: formulaire
+			});
+			if (!reponse.ok) throw new Error('deplacement refuse');
+			await invalidateAll();
+		} catch {
+			window.alert("La note n'a pas pu être déplacée vers ce dossier.");
+		} finally {
+			noteDeplacee = null;
+		}
+	}
+
+	function terminerLeDeplacement(): void {
+		noteDeplacee = null;
+		cibleDeDepot = null;
+	}
+
 	const sousTitre = $derived(
 		compteAffiche.domaine ? `${compteAffiche.role} · ${compteAffiche.domaine}` : compteAffiche.role
 	);
@@ -178,13 +372,23 @@
 	);
 </script>
 
+<!-- Les adresses du menu contextuel sont toutes composées dans les fonctions
+	ci-dessus à partir de `resolve()` ; la règle ne suit pas un appel de fonction. -->
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
+
 <!--
 	UNE BRANCHE — domaine, dossier ou note. Le chevron n'est émis que si le nœud a
 	des enfants ; sinon un espaceur tient sa place, pour que les icônes s'alignent.
 -->
 {#snippet branche(n: NoeudRendu)}
 	<li data-cle={n.cle} data-ouvert={n.ouvert ? 'oui' : 'non'}>
-		<div class="noeud" class:noeud--courant={n.page} data-ouvert={n.ouvert ? 'oui' : undefined}>
+		<div
+			class="noeud"
+			class:noeud--courant={n.page}
+			class:noeud--deplace={noteDeplacee?.identifiant === n.identifiant}
+			class:noeud--depot={cibleDeDepot === n.cle}
+			data-ouvert={n.ouvert ? 'oui' : undefined}
+		>
 			{#if n.enfants.length}<button
 					class="noeud__chevron"
 					type="button"
@@ -212,6 +416,13 @@
 								})
 							: resolve(ROUTE_DOMAINE, { univers: n.cible.univers, domaine: n.cible.domaine })}
 				aria-current={n.page ? 'page' : undefined}
+				draggable={ecriture && n.type === 'note'}
+				oncontextmenu={(evenement) => ouvrirLeMenu(evenement, cibleDeNoeud(n))}
+				ondragstart={(evenement) => commencerLeDeplacement(evenement, cibleDeNoeud(n))}
+				ondragend={terminerLeDeplacement}
+				ondragover={(evenement) => survolerLaDestination(evenement, cibleDeNoeud(n), n.cle)}
+				ondragleave={(evenement) => quitterLaDestination(evenement, n.cle)}
+				ondrop={(evenement) => deposerLaNote(evenement, cibleDeNoeud(n))}
 				><Pictogramme
 					traits={iconeDeNoeud(n.type)}
 					taille="16"
@@ -229,6 +440,12 @@
 		{/if}
 	</li>
 {/snippet}
+
+<svelte:window
+	onclick={fermerLeMenu}
+	onkeydown={fermerLeMenuAuClavier}
+	onresize={() => fermerLeMenu()}
+/>
 
 <aside class="rail" aria-label="Navigation principale">
 	<!-- LA CROIX DU TIROIR — rendue toujours, visible sous 1024 px seulement, où le
@@ -310,6 +527,7 @@
 									? '#'
 									: resolve(ROUTE_UNIVERS, { univers: section.cible.univers })}
 								aria-current={section.page ? 'page' : undefined}
+								oncontextmenu={(evenement) => ouvrirLeMenu(evenement, cibleDUnivers(section))}
 								><span class="noeud__teinte" style="color:{section.couleur}"
 									><Pictogramme
 										traits={glypheDUnivers(section.glyphe)}
@@ -443,3 +661,38 @@
 		</div>
 	</details>
 </aside>
+
+{#if menuContextuel}
+	<div
+		class="rail__menu-contextuel"
+		role="menu"
+		aria-label={`Actions pour ${menuContextuel.nom}`}
+		style={`left:${positionDuMenu.x}px;top:${positionDuMenu.y}px`}
+		bind:this={elementDuMenu}
+	>
+		<div class="rail__menu-contextuel-titre">{menuContextuel.nom}</div>
+		{#if menuContextuel.type === 'univers'}
+			<a role="menuitem" href={adresseDeCreationDeDomaine(menuContextuel)}>Créer un domaine</a>
+		{:else if menuContextuel.type === 'domaine'}
+			<a role="menuitem" href={adresseDeCreationDeNote(menuContextuel)}>Créer une note</a>
+			<a role="menuitem" href={adresseDeCreationDeDossier(menuContextuel)}>Créer un dossier</a>
+		{:else if menuContextuel.type === 'dossier'}
+			<a role="menuitem" href={adresseDeCreationDeNote(menuContextuel)}>Créer une note ici</a>
+			<a role="menuitem" href={adresseDeCreationDeDossier(menuContextuel)}>Créer un sous-dossier</a>
+		{:else if menuContextuel.identifiant}
+			<a role="menuitem" href={adresseDeNote(menuContextuel)}>Ouvrir</a>
+			{#if ecriture}
+				<a role="menuitem" href={`${adresseDeNote(menuContextuel)}/modifier`}>Modifier</a>
+				<form
+					method="POST"
+					action={`${adresseDeNote(menuContextuel)}?/supprimer`}
+					onsubmit={confirmerLaSuppressionCourante}
+				>
+					<button type="submit" role="menuitem" class="rail__menu-contextuel-danger"
+						>Supprimer</button
+					>
+				</form>
+			{/if}
+		{/if}
+	</div>
+{/if}
