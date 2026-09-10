@@ -1,0 +1,9 @@
+{
+  "id": "PAR-019",
+  "aiguilles": 111,
+  "textes": 4,
+  "instantanes_dom": 39,
+  "trouvees": [],
+  "trace": "docs/traces/recette-personas/PAR-019/fr-FR/passe-2-complement/trace.zip",
+  "mesure": "Texte des captures et instantanés DOM enregistrés, hors contenu des balises script/style."
+}

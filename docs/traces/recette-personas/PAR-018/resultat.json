@@ -1,0 +1,39 @@
+{
+  "id": "PAR-018",
+  "persona": "intervenant",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "objectif": "Registre choisi visible avec sommaire adapté et adresse partageable",
+  "assertions": [
+    {
+      "assertion": "Référence ouverte par défaut",
+      "ok": true
+    },
+    {
+      "assertion": "Corps Opérationnel et adresse partageable",
+      "ok": true
+    },
+    {
+      "assertion": "Registre restauré",
+      "ok": true
+    },
+    {
+      "assertion": "Invitation littérale « Ajouter une version opérationnelle » incompatible vocabulaire refonte; note sans opérationnel non exercée",
+      "ok": false
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-018/fr-FR/passe-2",
+  "correction_candidate": null,
+  "limites": [
+    "Vérification du corpus de démonstration par aiguilles non réalisée.",
+    "Les dossiers de traces conservent les essais techniques et leurs reprises. Les erreurs de sélecteur, de connexion préalable et de prérequis ne prouvent aucun défaut produit.",
+    "Oracle complet non couvert : ce rouge inclut une limite de recette, pas uniquement un défaut produit démontré.",
+    "Attente historique ou persona à rapprocher de la refonte et des droits : aucune restauration de l’ancienne interface demandée."
+  ],
+  "essais_avec_traces": [
+    "docs/traces/recette-personas/PAR-018/fr-FR/passe-1",
+    "docs/traces/recette-personas/PAR-018/fr-FR/passe-2"
+  ]
+}

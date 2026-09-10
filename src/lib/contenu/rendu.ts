@@ -273,7 +273,7 @@ function rendreBlocDeCode(bloc: BlocDeCode): string {
 		bloc.attrs.language === null
 			? ''
 			: `<span class="etiq">${echapper(bloc.attrs.language)}</span>`;
-	const copier = '<button class="btn btn--discret btn-copier">Copier</button>';
+	const copier = '<button type="button" class="btn btn--discret btn-copier">Copier</button>';
 	const code = echapper(texte);
 	return (
 		`<div class="bloc-code"><div class="bloc-code__tete">${langage}${copier}</div>` +
@@ -357,7 +357,7 @@ function rendreImage(image: Image): string {
 		(legende === null ? '' : `<span>${echapper(legende)}</span>`);
 	const pied = parts === '' ? '' : `<figcaption>${parts}</figcaption>`;
 	return (
-		`<figure class="figure"><button class="figure__cadre" ` +
+		`<figure class="figure"><button type="button" class="figure__cadre" ` +
 		`aria-label="Agrandir ${echapper(alt)}">` +
 		`<img src="${echapper(src)}" alt="${echapper(alt)}"></button>${pied}</figure>`
 	);
@@ -429,7 +429,7 @@ const LANGAGE_DE_DIAGRAMME = 'mermaid';
  */
 function rendreDiagrammeSansAlternative(source: string): string {
 	return (
-		`<figure class="figure"><button class="figure__cadre" ` +
+		`<figure class="figure"><button type="button" class="figure__cadre" ` +
 		`aria-label="Agrandir le diagramme">` +
 		`<pre class="mermaid" data-sans-alternative="oui">${echapper(source)}</pre>` +
 		`</button></figure>`
@@ -443,7 +443,7 @@ function rendreDiagramme(diagramme: Diagramme): string {
 		(legende === null ? '' : `<span>${echapper(legende)}</span>`);
 	const pied = parts === '' ? '' : `<figcaption>${parts}</figcaption>`;
 	return (
-		`<figure class="figure"><button class="figure__cadre" ` +
+		`<figure class="figure"><button type="button" class="figure__cadre" ` +
 		`aria-label="Agrandir ${echapper(etiquette ?? 'le diagramme')}">` +
 		`<pre class="mermaid" role="img" aria-label="${echapper(alternative)}">` +
 		`${echapper(source)}</pre></button>${pied}</figure>`

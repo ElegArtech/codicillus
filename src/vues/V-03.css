@@ -22,7 +22,7 @@ body { background: var(--c-fond); }
    Hors coquille applicative : ni navigation latérale, ni palette, ni menu de
    création. Le visiteur n'a pas de compte et n'en aura pas.
    ========================================================================== */
-.public { min-height: 100vh; display: flex; flex-direction: column; }
+.public.app { min-height: 100vh; display: flex; flex-direction: column; }
 
 /* --- Bandeau minimal ------------------------------------------------------- */
 .chapeau {
@@ -482,6 +482,7 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
   padding: var(--e-5) var(--e-5) var(--e-8);
   flex: 1;
 }
+.lecture-pub--sans-sommaire { grid-template-columns: minmax(0, 1fr) 262px; }
 
 /* Fil d'Ariane public : réduit au domaine, le rangement interne n'est pas
    exposé. */
@@ -551,6 +552,7 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
 /* --- Petit écran : cas prioritaire ---------------------------------------- */
 @media (max-width: 1080px) {
   .lecture-pub { grid-template-columns: var(--l-sommaire) minmax(0, 1fr); }
+  .lecture-pub--sans-sommaire { grid-template-columns: minmax(0, 1fr); }
   .aparte { grid-column: 1 / -1; position: static; }
   .aparte > * { flex: 1; }
 }

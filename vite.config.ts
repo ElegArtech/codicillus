@@ -18,6 +18,8 @@ export default defineConfig({
 		sourcemap: process.env.AIGUILLES_CARTES === 'oui' ? 'hidden' : false
 	},
 	server: {
-		port: Number(process.env.PORT_DEV ?? 5173)
+		port: Number(process.env.PORT_DEV ?? 5173),
+		// Les captures et vidéos ne participent pas au rechargement du produit.
+		watch: { ignored: ['**/docs/traces/**'] }
 	}
 });

@@ -1,0 +1,5 @@
+import {cloner,ouvrirNavigateur,fermerInstance} from '../preparer.mjs';
+const c=await cloner('/tmp/codicillus_recette9_mtv40vd1/configuration.json','l1_explore2','garnie',5499);await new Promise(r=>setTimeout(r,1200));const b=await ouvrirNavigateur(c,'referent','lot1/exploration2');const p=b.page;
+for(const u of ['/univers/atelier-recette','/univers/atelier-recette/exploitation-recette','/dossiers/'+b.instance.donnees.dossierEnfant.id,'/univers/atelier-recette/exploitation-recette/notes']){await p.goto(b.instance.url+u);console.log('URL',p.url(),'TEXT',await p.locator('body').innerText());console.log('UI',await p.locator('a,button,input,select').evaluateAll(es=>es.filter(e=>e.checkVisibility()).map(e=>({tag:e.tagName,text:e.textContent?.slice(0,60),label:e.getAttribute('aria-label'),href:e.getAttribute('href')}))));}
+await p.goto(b.instance.url+'/');await p.keyboard.press('Control+k');await p.getByRole('textbox',{name:'Recherche rapide'}).fill('relais');await p.waitForTimeout(600);console.log('PALETTE',await p.locator('body').innerText());
+await b.fermer();await fermerInstance(c);

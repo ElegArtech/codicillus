@@ -198,7 +198,7 @@
 		><span>›</span><a href={resolve('/recherche')}>Guides</a>
 	</nav>
 
-	<main class="lecture-pub">
+	<main class="lecture-pub" class:lecture-pub--sans-sommaire={SOMMAIRE.length === 0}>
 		<!-- Sommaire — LE BLOC ENTIER TOMBE QUAND LE GUIDE N'A PAS DE TITRE DE NIVEAU 2,
 			état ordinaire d'une note courte sur une instance neuve : un titre
 			« Sommaire » et un bouton de repli au-dessus d'une liste vide annoncent une

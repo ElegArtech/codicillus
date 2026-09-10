@@ -1,0 +1,32 @@
+{
+  "id": "PAR-098",
+  "persona": "administrateur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Nom erroné bloque suppression",
+      "ok": true
+    },
+    {
+      "nom": "Recherche nettoyée",
+      "ok": true
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": "Nom erroné bouton inactif ; suppression atomique définitive ; recherche nettoyée immédiatement ; comptes conservés sans rattachement."
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-098/fr-FR/passe-2",
+  "correction_candidate": [
+    "Nom erroné bouton inactif ; suppression atomique définitive ; recherche nettoyée immédiatement ; comptes conservés sans rattachement."
+  ],
+  "limites": [
+    "Comptes conservés et atomicité non établis"
+  ],
+  "jeu": "garnie",
+  "passe": 2
+}

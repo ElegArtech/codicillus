@@ -1,0 +1,10 @@
+{
+  "nom": "dossier",
+  "statut": "vert",
+  "erreur": null,
+  "erreurs": [],
+  "captures": [
+    "01-dialogue-apres-navigation"
+  ],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/corrections/dossier"
+}

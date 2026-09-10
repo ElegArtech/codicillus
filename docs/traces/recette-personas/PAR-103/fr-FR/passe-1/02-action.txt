@@ -1,0 +1,136 @@
+Aller au contenu
+C
+Codicillus
+Vos connaissances. Vivantes.
+Rechercher…
+⌘ K
+UNIVERS
+Atelier boréal
+3
++
+Créer un univers
+RA
+Recette administrateur
+administrateur@recette.invalid
+›
+Console
+›
+Configuration
+Console
+Administration de l'instance
+CONTENUS
+Univers
+1
+Domaines
+1
+Types de note
+5
+Types de fiches
+0
+Types de relations
+0
+Templates
+0
+UTILISATEURS
+Comptes
+4
+SYSTÈME
+Imports
+0
+Exports
+Analytique
+Configuration
+Configuration
+
+Les réglages qui pilotent le comportement du produit. Ils prennent effet immédiatement, pour tout le monde.
+
+Organisation
+Le nom de l'organisation qui héberge cette instance. « Codicillus » est le nom du logiciel ; celui-ci est le vôtre.
+Nom de l'organisation
+Facultatif. « Codicillus » est le nom du logiciel, et il se suffit à lui-même.
+Vivacité
+Au bout de combien de temps une note cesse d'être digne de confiance, et par quels états elle passe ensuite. C'est le réglage le plus visible du produit : il décide du signal affiché sur chaque note, partout.
+Durée de validité, registre par registre
+
+Combien de temps une vérification tient avant que l'échéance ne tombe. Une référence se démode lentement, une procédure vite : chaque registre a sa durée. Ce sont les valeurs que reçoit une note NOUVELLE — celles déjà créées gardent la leur.
+
+Validité du registre Référence
+jours après la dernière vérification
+Passé ce délai, la Référence d'une note arrive à échéance et bascule d'elle-même à « À vérifier ».
+Validité du registre Opérationnel
+jours après la dernière vérification
+La même chose pour le pas-à-pas, qui se périme plus vite : une procédure suit les versions de l'outil qu'elle décrit.
+Bascules automatiques du cycle
+
+Les trois moments où l'état d'une note change tout seul, sans que personne n'intervienne. Ils se comptent en jours autour de l'échéance, et l'ordre compte : l'alerte doit précéder l'échéance, et « À revoir » précéder « Obsolète ».
+
+Alerte « Bientôt à vérifier »
+jours avant l'échéance
+Combien de jours avant l'échéance une note quitte « À jour » pour « Bientôt à vérifier ». Doit rester sous la plus courte des deux validités.
+Passage à « À revoir »
+jours de retard
+Passé ce retard sur l'échéance, une note « À vérifier » passe à « À revoir ». Une demande de révision l'y met tout de suite, sans attendre.
+Doit rester sous le retard d’obsolescence (100 jours). En l’état, aucune note ne passerait par « À revoir » : elle sauterait de « À vérifier » à « Obsolète ».
+Passage à « Obsolète »
+jours de retard
+Passé ce retard, une note « À revoir » passe à « Obsolète » : elle n'engage plus personne. Doit dépasser le seuil précédent.
+Échelle à trois niveaux
+
+L'échelle frais · vieillissant · obsolète, comptée en jours depuis la dernière vérification, sans distinction de registre. Elle sert les écrans qui n'ont pas encore le cycle à cinq états — listes, tableau de bord, aperçu ci-dessous.
+
+Frais jusqu'à
+jours après la dernière vérification
+Vieillissant jusqu'à
+jours, puis obsolète
+EFFET SUR 3 NOTES DE LA BASE
+aucun changement
+Actuellement
+Avec ces seuils
+1
+fraîche
+1
+vieillissante
+1
+obsolète
+Ces seuils produisent exactement la même répartition que ceux en vigueur. Aucun signal ne changera dans le produit.
+Historique
+Combien d'états antérieurs sont conservés pour chaque note. Au-delà, les plus anciens sont supprimés à mesure que de nouveaux arrivent.
+Versions conservées par note
+versions
+Au-delà de 50 versions, la plus ancienne est supprimée à chaque nouvel enregistrement. Réduire cette valeur supprimera les versions excédentaires dès le prochain enregistrement d'une note.
+Espace public
+Où mène le repli proposé au visiteur qui ne trouve pas sa réponse.
+Adresse du portail d'assistance
+Cible du bouton « Ouvrir un ticket d'assistance », présent sur toutes les vues publiques et sur les pages introuvables.
+Vocabulaire
+Le mot employé pour désigner une note structurée. Chaque équipe a le sien : fiche, objet, actif, élément.
+Libellé du concept
+Au singulier, avec sa majuscule. Le pluriel est déduit.
+Où le mot apparaîtra
+Console : Types de fiches
+Éditeur : Type de fiche — ajoute des propriétés structurées
+Page de domaine : Fiches · module activé
+Recherche : Filtrer par type · Fiche
+Fichiers et session
+Limites techniques. Les modifier n'affecte pas ce qui existe déjà.
+Taille maximale d'une pièce jointe
+Mo
+Les fichiers déjà déposés au-delà de cette limite restent accessibles.
+Durée de session
+30 minutes
+1 heure
+2 heures
+4 heures
+8 heures
+Délai d'inactivité au bout duquel la session se ferme, sauf si l'utilisateur a choisi de rester connecté.
+Indisponibilité programmée
+Ferme l'instance à tout le monde sauf aux administrateurs, le temps d'une intervention. Les autres comptes reçoivent une page qui dit ce qui se passe, à la place de l'application.
+État de l'instance
+Ouverte — tout le monde travaille
+Indisponibilité activée
+Inactive : l’instance répond normalement à tout le monde. Une activation prend effet à la requête suivante, y compris pour les sessions déjà ouvertes.
+Message affiché
+Dites ce qui se passe et quand ça revient. C'est le seul texte que les comptes renvoyés liront.
+Modifications non enregistrées — elles ne s'appliquent pas encore.
+Rétablir les valeurs enregistrées
+Enregistrer les réglages

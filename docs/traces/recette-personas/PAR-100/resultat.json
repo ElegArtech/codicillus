@@ -1,0 +1,43 @@
+{
+  "id": "PAR-100",
+  "persona": "administrateur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Modules configurables",
+      "ok": true
+    },
+    {
+      "nom": "Au moins un module imposé",
+      "ok": false
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": "Modules non activés absents des entrées et indicateurs ; minimum un module. Le statut HTTP de l’accès manuel au module désactivé n’est pas prescrit."
+    },
+    {
+      "nom": "Valeurs distinctives premier jeu absentes du rendu enregistré",
+      "ok": true,
+      "detail": []
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-100/fr-FR/passe-2",
+  "correction_candidate": [],
+  "limites": [
+    "Absence dans tous indicateurs et cartes non établie",
+    "Rouge de preuve incomplète : les contrôles non achevés ou sélecteurs imparfaits ne constituent pas à eux seuls un défaut produit."
+  ],
+  "jeu": "garnie",
+  "passe": 2,
+  "aiguilles_premier_jeu": [],
+  "budget_reel": {
+    "passes_produit": 2,
+    "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+    "videos_recette_enregistrees": 2
+  },
+  "prerequis_sql": "Aucun ajout SQL au clone"
+}

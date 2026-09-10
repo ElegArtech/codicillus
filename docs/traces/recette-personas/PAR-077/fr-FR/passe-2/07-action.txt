@@ -1,0 +1,79 @@
+Aller au contenu
+C
+Codicillus
+Vos connaissances. Vivantes.
+Rechercher…
+⌘ K
+UNIVERS
+Univers aurore
++
+Créer un univers
+RA
+Recette administrateur
+administrateur@recette.invalid
+›
+Console
+›
+Domaines
+Console
+Administration de l'instance
+CONTENUS
+Univers
+1
+Domaines
+1
+Types de note
+5
+Types de fiches
+0
+Types de relations
+0
+Templates
+0
+UTILISATEURS
+Comptes
+4
+SYSTÈME
+Imports
+0
+Exports
+Analytique
+Configuration
+Domaines
+
+Chaque domaine a ses contributeurs, son rangement et ses modules. Cartographie et Carte mentale sont toujours disponibles.
+
+Nouveau domaine
+NOM
+UNIVERS
+NOTES
+FICHES
+SIGNETS
+DOSSIERS
+CONTRIB.
+MODULES ACTIVÉS
+Domaine aurore
+Univers aurore
+0
+0
+0
+0
+0
+NOT
+DOS
+Modifier
+Nouveau domaine
+Il apparaîtra dans la navigation de ceux qui y ont accès.
+Nom *
+Description
+Univers de rattachement *
+Le rattachement change la place du domaine dans la navigation, jamais son contenu.
+Couleur
+Sert au repérage. Choisie hors des teintes de fraîcheur.
+Modules
+
+Cartographie et Carte mentale sont toujours disponibles pour tous les univers et domaines.
+
+Un module désactivé n'apparaît nulle part pour ce domaine : ni onglet grisé, ni entrée morte.
+Annuler
+Créer le domaine

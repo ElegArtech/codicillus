@@ -1,0 +1,67 @@
+Aller à la rédaction
+C
+Codicillus
+Vos connaissances. Vivantes.
+Rechercher…
+⌘ K
+UNIVERS
+Atelier boréal
+3
+Exploitation boréale
+3
+Relève boréale
+RR
+Recette referent
+referent@recette.invalid
+›
+Atelier boréal
+›
+Exploitation boréale
+›
+Nouvelle note
+Titre de la note
+H2
+H3
+H4
+G
+I
+S
+B
+
+
+
+
+RANGEMENT
+Type de note *
+Procédure
+Guide
+Note
+Fiche
+Signet
+Domaine *
+Atelier boréal › Exploitation boréale
+Changer de domaine réinitialise le dossier.
+Dossier *
+Racine boréale
+Relève boréale
+3
+Étiquettes
+Entrée pour valider. Une étiquette qui n'existe pas est créée.
+PUBLICATION
+Visibilité
+Interne
+Publique
+Consultable par les comptes de cette instance.
+Statut
+Publiée
+Brouillon
+FICHE STRUCTURÉE
+Type de fiche
+Aucun — note simple
+Optionnel. Un type ajoute des propriétés structurées et rend la note exploitable en cartographie.
+Aucune modification
+Annuler
+Prévisualiser
+Enregistrer
+Ctrl
+S

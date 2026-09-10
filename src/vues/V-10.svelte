@@ -251,6 +251,7 @@
 	 */
 	interface ColonneDeDomaine {
 		readonly etat: EtatDeVivacite;
+		readonly libelle: string;
 		readonly n: number;
 		readonly classe: string;
 	}
@@ -265,13 +266,19 @@
 				(etat) => compte(etat, d.repartition) > 0
 			) ?? 'averifier';
 		return [
-			{ etat: 'ajour', n: compte('ajour', d.repartition), classe: 'ligne-dom__nb--ajour' },
+			{
+				etat: 'ajour',
+				libelle: ETATS_DE_VIVACITE.ajour.libelle,
+				n: compte('ajour', d.repartition),
+				classe: 'ligne-dom__nb--ajour'
+			},
 			{
 				etat: 'bientot',
+				libelle: ETATS_DE_VIVACITE.bientot.libelle,
 				n: compte('bientot', d.repartition),
 				classe: 'ligne-dom__nb--bientot'
 			},
-			{ etat: pire, n: retard, classe: `ligne-dom__nb--${pire}` }
+			{ etat: pire, libelle: 'En retard', n: retard, classe: `ligne-dom__nb--${pire}` }
 		];
 	}
 
@@ -554,9 +561,7 @@
 										><GlypheDeVivacite etat={c.etat} taille={10} />{#if n === 0}<i
 												class="ligne-dom__rien">—</i
 											>{:else}<b class="ligne-dom__nb {c.n === 0 ? '' : c.classe}">{c.n}</b
-											>{/if}<span class="ligne-dom__etat-lib"
-											>{ETATS_DE_VIVACITE[c.etat].libelle}</span
-										></span
+											>{/if}<span class="ligne-dom__etat-lib">{c.libelle}</span></span
 									>
 								{/each}
 							</span>

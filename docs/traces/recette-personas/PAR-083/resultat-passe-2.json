@@ -1,0 +1,28 @@
+{
+  "id": "PAR-083",
+  "persona": "referent",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Édition droits accessible",
+      "ok": true
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": "Droit spécifique prioritaire ; son retrait restitue héritage ; aucun accès en absence de droit ; droit racine appliqué au sous-arbre."
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-083/fr-FR/passe-2",
+  "correction_candidate": [
+    "Droit spécifique prioritaire ; son retrait restitue héritage ; aucun accès en absence de droit ; droit racine appliqué au sous-arbre."
+  ],
+  "limites": [
+    "Cycle droit spécifique, retrait et héritage non réalisé"
+  ],
+  "jeu": "garnie",
+  "passe": 2
+}

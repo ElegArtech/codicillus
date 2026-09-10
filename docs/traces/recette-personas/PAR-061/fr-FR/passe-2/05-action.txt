@@ -1,0 +1,77 @@
+Aller au contenu
+C
+Codicillus
+Vos connaissances. Vivantes.
+Rechercher…
+⌘ K
+UNIVERS
+Atelier boréal
+3
++
+Créer un univers
+RA
+Recette administrateur
+administrateur@recette.invalid
+›
+Console
+›
+Templates
+Console
+Administration de l'instance
+CONTENUS
+Univers
+1
+Domaines
+1
+Types de note
+5
+Types de fiches
+0
+Types de relations
+0
+Templates
+1
+UTILISATEURS
+Comptes
+4
+SYSTÈME
+Imports
+0
+Exports
+Analytique
+Configuration
+Templates
+
+Les squelettes proposés au moment de créer une note. Ils font gagner la page blanche, jamais l'écriture : le rédacteur reste libre de tout modifier ou de partir de rien.
+
+Nouveau template
+Modifier ou supprimer un template n'affecte aucune note existante. Un squelette est copié au moment de la création : la note devient aussitôt indépendante. 0 note déjà créée à partir de ces templates ne bougera pas.
+NOM ET STRUCTURE
+TYPE DE NOTE
+PAR DÉFAUT
+UTILISATIONS
+Relais polaire
+Squelette polaire de recette
+Procédure
+Marquer
+0 note
+Modifier
+Nouveau template
+Ce que vous écrivez ici est exactement ce que trouvera le rédacteur.
+Nom *
+Affiché au moment de choisir un point de départ.
+Description
+Type de note associé
+Choisir ce template pré-remplira le type de la note. Le rédacteur pourra le changer.
+Template par défaut
+Proposé en premier dans le sélecteur. Un seul template peut l'être : cocher celui-ci décochera l'actuel.
+Contenu du squelette
+Éditeur réduit : titres, listes, tâches et encadrés. Le texte sert d'exemple, il est destiné à être remplacé.
+H2
+H3
+G
+I
+Structure produite
+Les titres de section, tels qu'ils apparaîtront dans le sélecteur de template.
+Annuler
+Créer le template

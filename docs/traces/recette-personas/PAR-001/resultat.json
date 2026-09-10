@@ -1,0 +1,38 @@
+{
+  "id": "PAR-001",
+  "persona": "referent",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "objectif": "Tableau de bord personnalisé visible avec indicateurs, activité et révisions réels",
+  "assertions": [
+    {
+      "assertion": "Salutation personnalisée et volume réel 3 notes",
+      "ok": true
+    },
+    {
+      "assertion": "Indicateur brouillons",
+      "ok": false
+    },
+    {
+      "assertion": "Activité récente",
+      "ok": false
+    },
+    {
+      "assertion": "Pied version et synchronisation",
+      "ok": false
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-001/fr-FR/passe-2-reprise",
+  "correction_candidate": "Accueil : pas indicateur brouillons, activité récente ni pied version/synchronisation exigés.",
+  "limites": [
+    "Vérification du corpus de démonstration par aiguilles non réalisée.",
+    "Les dossiers de traces conservent les essais techniques et leurs reprises. Les erreurs de sélecteur, de connexion préalable et de prérequis ne prouvent aucun défaut produit."
+  ],
+  "essais_avec_traces": [
+    "docs/traces/recette-personas/PAR-001/fr-FR/passe-1",
+    "docs/traces/recette-personas/PAR-001/fr-FR/passe-2",
+    "docs/traces/recette-personas/PAR-001/fr-FR/passe-2-reprise"
+  ]
+}

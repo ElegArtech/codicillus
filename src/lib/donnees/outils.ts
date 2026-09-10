@@ -243,11 +243,16 @@ export async function lireLaVivaciteDesNotes(
 	base: Base,
 	perimetre: Perimetre,
 	maintenant: Date,
-	seuils: SeuilsDeVivacite
+	seuils: SeuilsDeVivacite,
+	selection?: { readonly identifiants: readonly string[]; readonly registre: Registre }
 ): Promise<Record<string, EtatDeVivacite>> {
+	if (selection?.identifiants.length === 0) return {};
 	const autorises = perimetre.tout ? null : [...perimetre.dossiers];
 	if (autorises !== null && autorises.length === 0) return {};
-	const filtre = autorises === null ? undefined : inArray(notes.dossierId, autorises);
+	const filtre = and(
+		autorises === null ? undefined : inArray(notes.dossierId, autorises),
+		selection === undefined ? undefined : inArray(notes.identifiant, [...selection.identifiants])
+	);
 
 	const demandeur = alias(comptes, 'demandeur_de_revision');
 	const lignes = await base
@@ -280,7 +285,7 @@ export async function lireLaVivaciteDesNotes(
 		};
 		let pire: EtatDeVivacite | null = null;
 		let pireAttention = -1;
-		for (const registre of REGISTRES) {
+		for (const registre of selection === undefined ? REGISTRES : [selection.registre]) {
 			const cycle = cycleDuRegistre(cycles, registre);
 			if (cycle === null) continue;
 			const etat = vivacite(cycle, maintenant, seuils).etat;

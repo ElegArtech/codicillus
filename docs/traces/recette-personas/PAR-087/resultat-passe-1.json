@@ -1,0 +1,40 @@
+{
+  "id": "PAR-087",
+  "persona": "contributeur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Ancien Référence restauré",
+      "ok": false
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": "Ancien Référence restauré ; Opérationnel courant préservé ; état précédant restauration capturé et restaurable ; versions immuables."
+    }
+  ],
+  "erreurs": [
+    {
+      "type": "requestfailed",
+      "url": "http://127.0.0.1:5587/notes/recette-interne/historique/__data.json?restaurer=2&x-sveltekit-invalidated=01",
+      "texte": "net::ERR_ABORTED"
+    },
+    {
+      "type": "requestfailed",
+      "url": "http://127.0.0.1:5587/notes/recette-interne/historique/__data.json?x-sveltekit-invalidated=01",
+      "texte": "net::ERR_ABORTED"
+    }
+  ],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-087/fr-FR/passe-1",
+  "correction_candidate": [
+    "Ancien Référence restauré",
+    "Ancien Référence restauré ; Opérationnel courant préservé ; état précédant restauration capturé et restaurable ; versions immuables."
+  ],
+  "limites": [
+    "Préservation Opérationnel, capture et immuabilité non établies"
+  ],
+  "jeu": "garnie",
+  "passe": 1
+}

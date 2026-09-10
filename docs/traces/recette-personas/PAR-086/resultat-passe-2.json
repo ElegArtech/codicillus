@@ -1,0 +1,33 @@
+{
+  "id": "PAR-086",
+  "persona": "contributeur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Métadonnée seule sans désynchronisation",
+      "ok": true
+    },
+    {
+      "nom": "Modification référence signale désynchronisation",
+      "ok": false
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": "Métadonnée et vérification ne désynchronisent pas ; corps Référence effectif oui ; Opérationnel ou marquage lèvent le signal ; vérifier ne crée pas de version."
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-086/fr-FR/passe-2",
+  "correction_candidate": [
+    "Modification référence signale désynchronisation",
+    "Métadonnée et vérification ne désynchronisent pas ; corps Référence effectif oui ; Opérationnel ou marquage lèvent le signal ; vérifier ne crée pas de version."
+  ],
+  "limites": [
+    "Levée signal et vérification sans version non établies"
+  ],
+  "jeu": "garnie",
+  "passe": 2
+}

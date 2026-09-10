@@ -16,7 +16,6 @@
 	 * compilateur croit connaître, et aucun champ n'est créé à la volée — poser un `name`
 	 * sur un nœud existant, en revanche, n'insère rien.
 	 */
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Vue from '../../../../../../vues/V-13.svelte';
@@ -59,7 +58,9 @@
 		return racine.querySelector<HTMLDialogElement>(`#${id}`);
 	}
 
-	onMount(() => {
+	$effect(() => {
+		// Une navigation entre dossiers conserve la route mais renouvelle ses commandes.
+		void data.rangement;
 		const debranchements: (() => void)[] = [];
 		function surClic(cible: Element | null, faire: () => void): void {
 			if (cible === null) return;

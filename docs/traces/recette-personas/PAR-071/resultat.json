@@ -1,0 +1,42 @@
+{
+  "id": "PAR-071",
+  "persona": "externe",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "objectif": "Guide public trouvé et lisible sans compte avec confiance visible",
+  "assertions": [
+    {
+      "critere": "Vous ne trouvez pas ? Ouvrir un ticket d'assistance",
+      "reussi": false
+    },
+    {
+      "critere": "Pas besoin de compte pour consulter",
+      "reussi": true
+    },
+    {
+      "critere": "Guide lisible sans session",
+      "reussi": true
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-071/fr-FR/reprise-isolee",
+  "correction_candidate": [
+    "Vous ne trouvez pas ? Ouvrir un ticket d'assistance"
+  ],
+  "limites": [
+    "Adresse d'assistance non configurée dans le décor ; absence CTA ne prouve pas un défaut de configuration. Carte résultats publique très étroite et clic pointeur bloqué, ouverture clavier réussie."
+  ],
+  "prerequis": "Types Application et Serveur, champ Version et type héberge préchargés dans clone avant trace pour PAR-043..048 ; graphe en étoile préchargé pour PAR-045..048.",
+  "passes_executees": 2,
+  "budget_reel": {
+    "passes_produit_completes": 0,
+    "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+    "build": "build préexistant, aucun rebuild de ce lot"
+  },
+  "reproduction": [
+    "docs/traces/recette-personas/lot2/executer.mjs",
+    "docs/traces/recette-personas/lot2/reprendre.mjs",
+    "docs/traces/recette-personas/lot2/reparer-selecteurs.mjs"
+  ]
+}
