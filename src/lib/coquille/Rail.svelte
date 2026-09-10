@@ -20,7 +20,7 @@
 	 * qu'à l'administrateur ; « Import » demande de pouvoir écrire quelque part.
 	 */
 	import { getContext, tick } from 'svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Pictogramme from '$lib/console/Pictogramme.svelte';
@@ -375,16 +375,52 @@
 		return resolve(ROUTE_NOTE, { identifiant: cible.identifiant ?? '' });
 	}
 
-	function confirmerLaSuppression(evenement: SubmitEvent, cible: CibleContextuelle): void {
-		if (!window.confirm(`Supprimer définitivement la note « ${cible.nom} » ?`)) {
-			evenement.preventDefault();
-			return;
+	function adresseDeSuppression(cible: CibleContextuelle): string {
+		if (cible.type === 'univers') return `${resolve('/console/univers')}?/supprimer`;
+		if (cible.type === 'domaine') return `${resolve('/console/domaines')}?/supprimer`;
+		if (cible.type === 'dossier' && cible.cible !== null) {
+			return `${resolve(ROUTE_DOSSIER, {
+				univers: cible.cible.univers,
+				domaine: cible.cible.domaine,
+				chemin: cible.cible.chemin.join('/')
+			})}?/supprimer`;
 		}
-		menuContextuel = null;
+		return `${adresseDeNote(cible)}?/supprimer`;
 	}
 
-	function confirmerLaSuppressionCourante(evenement: SubmitEvent): void {
-		if (menuContextuel !== null) confirmerLaSuppression(evenement, menuContextuel);
+	function champsDeSuppression(cible: CibleContextuelle): FormData {
+		const champs = new FormData();
+		if (cible.type === 'univers') {
+			champs.set(CHAMP_UNIVERS_CIBLE, cible.cible?.univers ?? '');
+		} else if (cible.type === 'domaine') {
+			champs.set(CHAMP_UNIVERS_CIBLE, cible.cible?.univers ?? '');
+			champs.set(CHAMP_DOMAINE_CIBLE, cible.cible?.domaine ?? '');
+			champs.set('sup-saisie', cible.nom);
+		} else if (cible.type === 'dossier') {
+			champs.set('confirmation', cible.nom);
+		}
+		return champs;
+	}
+
+	async function supprimerDepuisLeMenu(): Promise<void> {
+		if (menuContextuel === null) return;
+		const cible = menuContextuel;
+		const contenu = cible.type === 'domaine' || cible.type === 'dossier' ? ' et son contenu' : '';
+		if (!window.confirm(`Supprimer définitivement « ${cible.nom} »${contenu} ?`)) return;
+		menuContextuel = null;
+		try {
+			const reponse = await fetch(adresseDeSuppression(cible), {
+				method: 'POST',
+				body: champsDeSuppression(cible)
+			});
+			if (!reponse.ok) {
+				window.alert(`« ${cible.nom} » ne peut pas être supprimé.`);
+				return;
+			}
+			await goto(resolve('/'));
+		} catch {
+			window.alert('La suppression a échoué.');
+		}
 	}
 
 	function peutRecevoir(cible: CibleContextuelle): boolean {
@@ -806,29 +842,44 @@
 		{#if menuContextuel.type === 'univers'}
 			<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}>Renommer</button>
 			<a role="menuitem" href={adresseDeCreationDeDomaine(menuContextuel)}>Créer un domaine</a>
+			<button
+				type="button"
+				role="menuitem"
+				class="rail__menu-contextuel-danger"
+				onclick={supprimerDepuisLeMenu}>Supprimer</button
+			>
 		{:else if menuContextuel.type === 'domaine'}
 			{#if admin}<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}
 					>Renommer</button
 				>{/if}
 			<a role="menuitem" href={adresseDeCreationDeNote(menuContextuel)}>Créer une note</a>
 			<a role="menuitem" href={adresseDeCreationDeDossier(menuContextuel)}>Créer un dossier</a>
+			{#if admin}<button
+					type="button"
+					role="menuitem"
+					class="rail__menu-contextuel-danger"
+					onclick={supprimerDepuisLeMenu}>Supprimer</button
+				>{/if}
 		{:else if menuContextuel.type === 'dossier'}
 			<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}>Renommer</button>
 			<a role="menuitem" href={adresseDeCreationDeNote(menuContextuel)}>Créer une note ici</a>
 			<a role="menuitem" href={adresseDeCreationDeDossier(menuContextuel)}>Créer un sous-dossier</a>
+			<button
+				type="button"
+				role="menuitem"
+				class="rail__menu-contextuel-danger"
+				onclick={supprimerDepuisLeMenu}>Supprimer</button
+			>
 		{:else if menuContextuel.identifiant}
 			<a role="menuitem" href={adresseDeNote(menuContextuel)}>Ouvrir</a>
 			{#if ecriture}
 				<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}>Renommer</button>
-				<form
-					method="POST"
-					action={`${adresseDeNote(menuContextuel)}?/supprimer`}
-					onsubmit={confirmerLaSuppressionCourante}
+				<button
+					type="button"
+					role="menuitem"
+					class="rail__menu-contextuel-danger"
+					onclick={supprimerDepuisLeMenu}>Supprimer</button
 				>
-					<button type="submit" role="menuitem" class="rail__menu-contextuel-danger"
-						>Supprimer</button
-					>
-				</form>
 			{/if}
 		{/if}
 	</div>
