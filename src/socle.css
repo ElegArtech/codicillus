@@ -472,9 +472,20 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .rail__menu-nom { font-size: var(--t-petit); font-weight: var(--g-fort); }
 .rail__menu-role { font-size: var(--t-mini); color: var(--c-encre-3); margin-top: 2px; }
+.rail__menu-console {
+  margin: 0 var(--e-1) var(--e-1);
+  padding: var(--e-1) 0;
+  border-top: 1px solid var(--c-trait);
+  border-bottom: 1px solid var(--c-trait);
+}
 .rail__menu-lien {
   padding: 9px 10px; border-radius: var(--r-2);
   font-size: var(--t-base); color: var(--c-encre); text-decoration: none;
+}
+.rail__menu-console .rail__menu-lien { display: block; }
+.rail__menu-lien--console { color: var(--c-accent); font-weight: var(--g-fort); }
+.rail__menu-lien--principal {
+  background: var(--c-accent-voile); color: var(--c-accent); font-weight: var(--g-moyen);
 }
 .rail__menu-lien:hover { background: var(--c-papier-2); color: var(--c-accent); text-decoration: none; }
 .rail__menu-sep { height: 1px; background: var(--c-trait-fin); margin: var(--e-1) var(--e-1); }
