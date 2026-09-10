@@ -404,8 +404,15 @@
 				<div class="rail__menu-nom">{compteAffiche.nom}</div>
 				<div class="rail__menu-role">{sousTitre}</div>
 			</div>
+			{#if admin}<div class="rail__menu-console">
+					<a class="rail__menu-lien rail__menu-lien--console" href={resolve('/console')}>Console</a>
+				</div>{/if}
 			{#if ecriture}
-				<a class="rail__menu-lien" href={resolve('/notes/nouvelle')}>Nouvelle note</a>
+				<a
+					class="rail__menu-lien"
+					class:rail__menu-lien--principal={admin}
+					href={resolve('/notes/nouvelle')}>Nouvelle note</a
+				>
 				{#if creations.dossier && rangement}<a
 						class="rail__menu-lien"
 						href={resolve(ROUTE_DOMAINE, {
@@ -431,7 +438,6 @@
 			{#if ecriture}<a class="rail__menu-lien" href={resolve('/importer')}>Import</a>{/if}
 			<div class="rail__menu-sep"></div>
 			<a class="rail__menu-lien" href={resolve('/mon-profil')}>Mon profil</a>
-			{#if admin}<a class="rail__menu-lien" href={resolve('/console')}>Console</a>{/if}
 			<a class="rail__menu-lien" href={resolve('/deconnexion')}>Se déconnecter</a>
 			<div class="rail__menu-version etiq">Codicillus {version}</div>
 		</div>
