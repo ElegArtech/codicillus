@@ -661,7 +661,7 @@
 					<div class="couleurs" id="f-couleurs" role="group" aria-label="Couleur du domaine"
 						>{#if ouvert}{#each COULEURS as c (c)}<button type="button" style="background:{c}" aria-pressed={c === couleurChoisie} aria-label="Couleur {c}" onclick={() => (fCouleur = c)}></button>{/each}{/if}</div
 					>
-					<span class="champ__aide">Sert au repérage. Choisie hors des teintes de fraîcheur.</span>
+					<span class="champ__aide">Sert au repérage. Choisie hors des teintes de vivacité.</span>
 				</div>
 
 				<div class="champ">

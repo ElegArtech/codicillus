@@ -66,6 +66,9 @@
 		readonly adresseRestauration: string;
 		readonly restaurationDepliee: boolean;
 		readonly numero: string;
+		readonly adresseVersion?: string;
+		readonly htmlVersion?: string | null;
+		readonly comparaisonComplete?: string;
 	}
 
 	/** L'état vide d'un onglet — il NOMME le geste qui le remplit. */
@@ -273,6 +276,9 @@
 							{#if ev.version !== null}
 								<div class="hist__version">
 									<span class="hist__pastille">{ev.version}</span>
+									{#if ev.adresseVersion}<a class="hist__lien" href={ev.adresseVersion}
+											>Lire cette version</a
+										>{/if}
 									<a class="hist__lien" href={ev.adresseComparaison}>{ev.libelleComparaison}</a>
 									{#if ev.adresseRestauration !== ''}<a
 											class="hist__lien"
@@ -282,6 +288,18 @@
 								</div>
 							{/if}
 
+							{#if ev.htmlVersion !== undefined && ev.htmlVersion !== null}
+								<div class="hist__lecture">
+									<p>Version {ev.version} · {ev.date} · lecture seule</p>
+									<!-- eslint-disable-next-line svelte/no-at-html-tags -- rendu canonique validé et échappé par rendreDocument -->
+									<div class="prose">{@html ev.htmlVersion}</div>
+								</div>
+							{/if}
+							{#if ev.comparaison && ev.comparaisonComplete}
+								<a class="hist__lien" href={ev.comparaisonComplete}
+									>Comparaison complète · Texte et Visuel</a
+								>
+							{/if}
 							{#if ev.comparaison}
 								<!--
 									LE PANNEAU DE COMPARAISON — deux colonnes, ce qui part à gauche sur

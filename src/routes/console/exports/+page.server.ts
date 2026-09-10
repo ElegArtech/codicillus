@@ -17,15 +17,21 @@
  * renvoie pas : le bouton du gel est une minuterie, et `ARB-011` interdit de rendre une
  * transition.
  */
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import { basePartagee } from '$lib/base/acces';
 import {
+	accesALaConsole,
 	contexteDeRequete,
 	lireLesDesignationsDeDomaine,
 	resoudreLaConsole
 } from '$lib/donnees/consoles';
-import { nomDArchive } from '$lib/export/archive';
-import type { PageServerLoad } from './$types';
+import { CollisionDArchive, reimporterLeDomaine } from '$lib/donnees/export';
+import { ArchiveInvalide, nomDArchive, reimporterLArchive } from '$lib/export/archive';
+import { ZipInvalide } from '$lib/export/zip';
+import { racineDesFichiers } from '$lib/fichiers/entrepot';
+import { moteurPartage } from '$lib/recherche/acces';
+import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -55,4 +61,46 @@ export const load: PageServerLoad = async ({ locals }) => {
 			])
 		)
 	};
+};
+
+export const actions: Actions = {
+	reimporter: async ({ locals, request }) => {
+		/* La garde porte aussi sur l'écriture : poster directement l'action ne doit
+		   pas ouvrir une voie que la page refuse. */
+		if (!accesALaConsole(locals.identite)) error(404, MESSAGE_INTROUVABLE);
+
+		const champs = await request.formData();
+		const fichier = champs.get('archive');
+		if (!(fichier instanceof File) || fichier.size === 0) {
+			return fail(400, {
+				operation: 'reimporter' as const,
+				succes: false as const,
+				message: 'Choisissez une archive ZIP exportée par Codicillus.'
+			});
+		}
+
+		try {
+			const domaine = reimporterLArchive(new Uint8Array(await fichier.arrayBuffer()));
+			const resultat = await reimporterLeDomaine(
+				basePartagee(),
+				moteurPartage(),
+				racineDesFichiers(env),
+				domaine
+			);
+			return { operation: 'reimporter' as const, succes: true as const, ...resultat };
+		} catch (cause) {
+			if (
+				cause instanceof ArchiveInvalide ||
+				cause instanceof ZipInvalide ||
+				cause instanceof CollisionDArchive
+			) {
+				return fail(400, {
+					operation: 'reimporter' as const,
+					succes: false as const,
+					message: cause.message
+				});
+			}
+			throw cause;
+		}
+	}
 };

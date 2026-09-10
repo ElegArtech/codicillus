@@ -854,3 +854,7 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
 
 
 }
+
+.redaction.ProseMirror { white-space: pre-wrap; }
+.commandes { position: fixed; bottom: var(--e-8); left: max(var(--e-4), 30vw); }
+.cmd[aria-selected="true"] { background: var(--c-accent-voile); }

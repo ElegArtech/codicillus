@@ -189,6 +189,10 @@ export function cablerLaLecture(
 		aller(`${adresse}/operationnel`)
 	);
 
+	agir(document.getElementById('btn-resynchroniser'), () =>
+		soumettreVers(formulaire, '?/resynchroniser')
+	);
+
 	/* ═══════════════════ 3. LE SOMMAIRE — suivi et défilement doux ════════ */
 
 	/**

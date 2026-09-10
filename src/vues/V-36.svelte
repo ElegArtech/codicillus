@@ -84,6 +84,23 @@
 		 * source. Un domaine que la table ne nomme pas n'a pas d'arborescence rendue.
 		 */
 		nomsDArchive: Readonly<Record<string, string>>;
+		/** Issue rendue par l'action de réimportation de la page. */
+		resultatImport?:
+			| {
+					readonly operation: 'reimporter';
+					readonly succes: false;
+					readonly message: string;
+			  }
+			| {
+					readonly operation: 'reimporter';
+					readonly succes: true;
+					readonly univers: string;
+					readonly domaine: string;
+					readonly notes: number;
+					readonly dossiers: number;
+					readonly avertissements: readonly string[];
+			  }
+			| null;
 	}
 
 	/*
@@ -91,7 +108,7 @@
 	 * `univers`, `compte` et `instance` sans jamais les lire : elle ne faisait que
 	 * les remettre à `CoquilleDeConsole`, qui retombait sur le jeu de démonstration.
 	 */
-	const { notes, domaines, onExporter, nomsDArchive }: Proprietes = $props();
+	const { notes, domaines, onExporter, nomsDArchive, resultatImport = null }: Proprietes = $props();
 
 	/* Le calque des fabriques du gel : un gel qui produit une valeur par une
 	   fabrique n'admet pas qu'on la réécrive autrement (`ECART-020` É-3). Ces
@@ -271,24 +288,68 @@
 			formateur se voit. D'où les gardes de formatage ci-dessous, dont la forme est
 			exacte et obligatoire — un commentaire rédigé autrement n'est pas reconnu.
 		-->
-		<!--
-			CET ÉCRAN A PROMIS LA RÉIMPORTATION, ET ELLE N'EXISTE PAS. Le texte affirmait
-			que « réimporter l'archive reconstitue le domaine à l'identique » ; aucun
-			chemin d'import d'archive n'existe — l'import écarte le format d'archive
-			(`donnees/import.ts:118`) et la relecture d'archive n'est appelée que par ses
-			propres contrôles. Ce qui est vrai et qui se dit : l'archive est du texte, un
-			fichier par note, rangé comme le domaine, métadonnées en tête.
-		-->
 		<!-- prettier-ignore -->
 		<section class="reversible"
 			><div class="reversible__ic"
 				><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9 2.5H5.5a1.5 1.5 0 0 0-1.5 1.5v16a1.5 1.5 0 0 0 1.5 1.5h13a1.5 1.5 0 0 0 1.5-1.5V8.5L14 2.5H9zM14 2.5V8h5.5"/><path d="M7.5 12.5h9M7.5 16h6"/></svg
 			></div
 			><div
-				><h2>Cet export s'ouvre sans ce produit</h2
-				><p>L'archive est du texte : un fichier par note, rangé dans la même arborescence, avec ses métadonnées en tête de fichier. Elle se lit dans n'importe quel éditeur, se met sous gestion de versions et se conserve telle quelle. <b>La réimporter dans Codicillus n'est pas encore possible</b> : l'import accepte un dossier de fichiers, et écarte les archives.</p
+				><h2>Cet export est réimportable</h2
+				><p>L'archive reste lisible sans ce produit : un fichier texte par note, rangé dans la même arborescence, avec ses métadonnées. <b>La réimporter reconstitue le domaine</b>, ses dossiers, ses notes, ses relations et ses pièces jointes.</p
 			></div
 		></section>
+
+		<section class="import-archive" aria-labelledby="titre-import-archive">
+			<div class="import-archive__texte">
+				<h2 id="titre-import-archive">Réimporter une archive</h2>
+				<p>
+					Déposez une archive ZIP produite depuis cet écran. La réimportation est atomique : une
+					archive invalide ou une collision ne crée aucun élément.
+				</p>
+			</div>
+			<form
+				method="POST"
+				action="?/reimporter"
+				enctype="multipart/form-data"
+				class="import-archive__formulaire"
+			>
+				<div class="champ" data-etat={resultatImport?.succes === false ? 'erreur' : undefined}>
+					<label class="champ__label" for="archive">Archive à réimporter</label>
+					<input
+						class="saisie"
+						id="archive"
+						name="archive"
+						type="file"
+						accept=".zip,application/zip"
+						required
+					/>
+					{#if resultatImport?.succes === false}<div class="champ__erreur" role="alert">
+							{resultatImport.message}
+						</div>{:else}<span class="champ__aide"
+							>L'univers est recréé s'il n'existe pas. Une désignation ambiguë ou déjà utilisée est
+							refusée.</span
+						>{/if}
+				</div>
+				<button class="btn btn--principal" type="submit">Réimporter l'archive</button>
+			</form>
+			{#if resultatImport?.succes === true}
+				<div class="resultat resultat--import" role="status">
+					<div>
+						<h3>Domaine réimporté</h3>
+						<p>
+							{`${resultatImport.univers} › ${resultatImport.domaine} — ${resultatImport.notes} ${accord(resultatImport.notes, 'note')} et ${resultatImport.dossiers} ${accord(resultatImport.dossiers, 'dossier')} reconstitués.`}
+						</p>
+						{#if resultatImport.avertissements.length > 0}<div class="resultat__liste">
+								{#each resultatImport.avertissements as avertissement, position (position)}<div
+										class="resultat__item"
+									>
+										{avertissement}
+									</div>{/each}
+							</div>{/if}
+					</div>
+				</div>
+			{/if}
+		</section>
 
 		<div class="grille-export">
 			<div>
