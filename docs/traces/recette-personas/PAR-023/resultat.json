@@ -1,0 +1,30 @@
+{
+  "id": "PAR-023",
+  "persona": "contributeur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "objectif": "Note issue du template choisi publiée avec contenu et type attendus",
+  "assertions": [
+    {
+      "assertion": "Prérequis second jeu établi avant navigation (note longue / template / fichier selon parcours)",
+      "ok": true
+    },
+    {
+      "assertion": "Objectif complet poursuivi au navigateur",
+      "ok": false,
+      "detail": "locator.check: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel(/Guide polaire/)\u001b[22m\n"
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-023/fr-FR/passe-2-reprise",
+  "correction_candidate": "Template préparé avant parcours mais aucun choix visible dans écran de création observé.",
+  "limites": [
+    "Vérification du corpus de démonstration par aiguilles non réalisée.",
+    "Les dossiers de traces conservent les essais techniques et leurs reprises. Les erreurs de sélecteur, de connexion préalable et de prérequis ne prouvent aucun défaut produit."
+  ],
+  "essais_avec_traces": [
+    "docs/traces/recette-personas/PAR-023/fr-FR/passe-1",
+    "docs/traces/recette-personas/PAR-023/fr-FR/passe-2-reprise"
+  ]
+}

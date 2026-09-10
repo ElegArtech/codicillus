@@ -1,0 +1,11 @@
+[
+  {
+    "type": "console",
+    "texte": "u: Not found: /notes/recette-interne/pieces-jointes/diagnostic-polaire.txt\n    at Z (http://127.0.0.1:5720/_app/immutable/chunks/D-sWmu71.js:2:10545)\n    at async HTMLHtmlElement.<anonymous> (http://127.0.0.1:5720/_app/immutable/chunks/D-sWmu71.js:2:16283)"
+  },
+  {
+    "type": "requestfailed",
+    "url": "http://127.0.0.1:5720/notes/recette-interne/pieces-jointes/diagnostic-polaire.txt",
+    "texte": "net::ERR_ABORTED"
+  }
+]

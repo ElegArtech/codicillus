@@ -1,0 +1,35 @@
+{
+  "id": "PAR-083",
+  "persona": "referent",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Action /Droits|Gérer les accès/",
+      "ok": false,
+      "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+    },
+    {
+      "nom": "Édition droits accessible",
+      "ok": false
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": "Droit spécifique prioritaire ; son retrait restitue héritage ; aucun accès en absence de droit ; droit racine appliqué au sous-arbre."
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-083/fr-FR/passe-1",
+  "correction_candidate": [
+    "Action cherchée parmi les liens et boutons visibles, absente.",
+    "Édition droits accessible",
+    "Droit spécifique prioritaire ; son retrait restitue héritage ; aucun accès en absence de droit ; droit racine appliqué au sous-arbre."
+  ],
+  "limites": [
+    "Cycle droit spécifique, retrait et héritage non réalisé"
+  ],
+  "jeu": "garnie",
+  "passe": 1
+}

@@ -1,0 +1,38 @@
+{
+  "id": "PAR-099",
+  "persona": "administrateur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Univers contenant domaine protégé",
+      "ok": true
+    },
+    {
+      "nom": "Action /Supprimer/",
+      "ok": false,
+      "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+    },
+    {
+      "nom": "Création vierge",
+      "ok": true
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": "Univers et type fiche protégés ; relation exige traitement explicite ; ancienne note inchangée ; création vierge reste défaut."
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-099/fr-FR/passe-2",
+  "correction_candidate": [
+    "Action cherchée parmi les liens et boutons visibles, absente.",
+    "Univers et type fiche protégés ; relation exige traitement explicite ; ancienne note inchangée ; création vierge reste défaut."
+  ],
+  "limites": [
+    "Protection type fiche, relation et ancienne note non établies"
+  ],
+  "jeu": "garnie",
+  "passe": 2
+}

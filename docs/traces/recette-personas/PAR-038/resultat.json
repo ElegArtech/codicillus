@@ -1,0 +1,38 @@
+{
+  "id": "PAR-038",
+  "persona": "referent",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "objectif": "Brouillon visible et cherchable aux habilités, marqué et invisible en public",
+  "assertions": [
+    {
+      "assertion": "Brouillon marqué en lecture",
+      "ok": true
+    },
+    {
+      "assertion": "Brouillon cherchable et marqué",
+      "ok": true
+    },
+    {
+      "assertion": "Indicateur brouillons accueil",
+      "ok": true
+    },
+    {
+      "assertion": "Invisibilité anonyme et exclusion agrégats non exercées",
+      "ok": false
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-038/fr-FR/passe-2-reprise",
+  "correction_candidate": null,
+  "limites": [
+    "Vérification du corpus de démonstration par aiguilles non réalisée.",
+    "Les dossiers de traces conservent les essais techniques et leurs reprises. Les erreurs de sélecteur, de connexion préalable et de prérequis ne prouvent aucun défaut produit.",
+    "Oracle complet non couvert : ce rouge inclut une limite de recette, pas uniquement un défaut produit démontré."
+  ],
+  "essais_avec_traces": [
+    "docs/traces/recette-personas/PAR-038/fr-FR/passe-1",
+    "docs/traces/recette-personas/PAR-038/fr-FR/passe-2-reprise"
+  ]
+}

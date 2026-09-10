@@ -1,0 +1,24 @@
+{
+  "id": "PAR-077",
+  "persona": "administrateur",
+  "langue": "fr-FR",
+  "statut": "vert",
+  "objectif_atteint": true,
+  "assertions": [
+    {
+      "nom": "Première note retrouvée",
+      "ok": true
+    },
+    {
+      "nom": "État initial vide explicite",
+      "ok": true,
+      "detail": "Capture 01-navigation montre le corpus vide avant création"
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-077/fr-FR/passe-2",
+  "correction_candidate": [],
+  "limites": [],
+  "jeu": "vide",
+  "passe": 2
+}

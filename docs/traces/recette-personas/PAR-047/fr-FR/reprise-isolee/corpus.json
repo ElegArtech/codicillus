@@ -1,0 +1,9 @@
+{
+  "id": "PAR-047",
+  "aiguilles": 111,
+  "textes": 8,
+  "instantanes_dom": 82,
+  "trouvees": [],
+  "trace": "docs/traces/recette-personas/PAR-047/fr-FR/reprise-isolee/trace.zip",
+  "mesure": "Texte des captures et instantanés DOM enregistrés, hors contenu des balises script/style."
+}

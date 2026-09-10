@@ -60,6 +60,7 @@
 	vecteur={data.vecteur}
 	notes={data.notes}
 	univers={data.univers}
+	universInitial={data.universInitial}
 	domaines={data.domaines}
 	compte={data.compte}
 	detailDomaines={data.detailDomaines}

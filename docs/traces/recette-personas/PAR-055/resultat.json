@@ -1,0 +1,39 @@
+{
+  "id": "PAR-055",
+  "persona": "administrateur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "objectif": "Domaine exporté puis reconstitué à l’identique par réimport de l’archive",
+  "assertions": [
+    {
+      "critere": "Archive réimportable",
+      "reussi": false
+    }
+  ],
+  "erreurs": [
+    {
+      "type": "requestfailed",
+      "url": "http://127.0.0.1:5755/console/exports/atelier-recette/exploitation-recette",
+      "texte": "net::ERR_ABORTED"
+    }
+  ],
+  "traces": "docs/traces/recette-personas/PAR-055/fr-FR/passe-2",
+  "correction_candidate": [
+    "Archive réimportable"
+  ],
+  "limites": [
+    "Export annonce explicitement que les archives sont écartées par import."
+  ],
+  "passes_executees": 2,
+  "budget_reel": {
+    "passes_produit_completes": 0,
+    "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+    "build": "build préexistant, aucun rebuild de ce lot"
+  },
+  "reproduction": [
+    "docs/traces/recette-personas/lot2/executer.mjs",
+    "docs/traces/recette-personas/lot2/reprendre.mjs",
+    "docs/traces/recette-personas/lot2/reparer-selecteurs.mjs"
+  ]
+}

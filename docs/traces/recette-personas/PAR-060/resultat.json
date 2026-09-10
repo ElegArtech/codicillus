@@ -1,0 +1,29 @@
+{
+  "id": "PAR-060",
+  "persona": "administrateur",
+  "langue": "fr-FR",
+  "statut": "vert",
+  "objectif_atteint": true,
+  "objectif": "Vocabulaire relationnel enregistré avec libellés direct et inverse adaptés",
+  "assertions": [
+    {
+      "critere": "Libellés direct et inverse persistés",
+      "reussi": true
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-060/fr-FR/passe-2",
+  "correction_candidate": [],
+  "limites": [],
+  "passes_executees": 2,
+  "budget_reel": {
+    "passes_produit_completes": 1,
+    "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+    "build": "build préexistant, aucun rebuild de ce lot"
+  },
+  "reproduction": [
+    "docs/traces/recette-personas/lot2/executer.mjs",
+    "docs/traces/recette-personas/lot2/reprendre.mjs",
+    "docs/traces/recette-personas/lot2/reparer-selecteurs.mjs"
+  ]
+}

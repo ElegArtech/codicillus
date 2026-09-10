@@ -1,0 +1,123 @@
+Aller au contenu
+C
+Codicillus
+Vos connaissances. Vivantes.
+Rechercher…
+⌘ K
+UNIVERS
+Atelier boréal
+3
++
+Créer un univers
+RA
+Recette administrateur
+administrateur@recette.invalid
+›
+Console
+›
+Analytique
+Console
+Administration de l'instance
+CONTENUS
+Univers
+1
+Domaines
+1
+Types de note
+5
+Types de fiches
+0
+Types de relations
+0
+Templates
+0
+UTILISATEURS
+Comptes
+4
+SYSTÈME
+Imports
+0
+Exports
+Analytique
+Configuration
+Analytique
+
+Ce que l'usage réel dit du corpus. Les chiffres n'ont d'intérêt que s'ils débouchent sur une décision éditoriale : chaque bloc propose l'action qui va avec.
+
+30 DERNIERS JOURS
+Santé documentaire
+Par domaine : répartition de fraîcheur, et ce qui appelle une intervention.
+Exploitation boréale
+3 notes · 1 contributeur
+1
+fraîche
+1
+vieillissante
+1
+obsolète
+0
+jamais vérifiée
+0
+brouillon
+3
+opérationnels désynchronisés
+Notes orphelines
+Trois façons d'être orpheline, qui n'appellent pas la même décision : une note jamais vérifiée n'est pas une note que personne ne lit.
+Jamais vérifiées0
+Peu consultées3
+Sans lien entrant3
+
+Aucune autre note n'y renvoie. Elles existent hors du tissu : personne ne tombera dessus par navigation.
+
+Archive de la station boréale
+Pas revu depuis 8 mois
+Exploitation boréale
+Recette contributeur
+0 vue / 7 j
+Lier depuis une note
+Ouvrir
+Relève du relais boréal
+Vérifié il y a 4 mois
+Exploitation boréale
+Recette contributeur
+0 vue / 7 j
+Lier depuis une note
+Ouvrir
+Accès public au relais boréal
+Vérifié il y a 3 jours
+Exploitation boréale
+Recette contributeur
+0 vue / 7 j
+Lier depuis une note
+Ouvrir
+Adoption
+L'usage réel, sur les sept derniers jours.
+0
+consultation sur 7 jours
+aucune semaine de référence à comparer
+3
+notes au total
+1 ouverte au public
+1
+contributeur actif
+au moins une note à son nom
+NOTES LES PLUS CONSULTÉES
+01
+Archive de la station boréale
+0 vue
+02
+Relève du relais boréal
+0 vue
+03
+Accès public au relais boréal
+0 vue
+VOLUMES DE CONTRIBUTION
+Recette contributeur
+3 notes
+
+Ces volumes mesurent une activité, pas une performance. Ils ne sont pas comparables entre eux : un référent qui vérifie beaucoup et écrit peu rend le même service qu'un rédacteur prolifique. Aucun classement individuel n'est diffusé ailleurs que sur cet écran d'administration.
+
+Destructions
+Ce qui a été détruit, par qui, et quand. La suppression est définitive : rien ne se restaure depuis cet écran.
+
+Aucune destruction depuis la mise en service. Notes, dossiers, domaines, univers et types : chaque suppression laissera ici son auteur et son horodatage.

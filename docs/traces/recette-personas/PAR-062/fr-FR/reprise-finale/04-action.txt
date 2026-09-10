@@ -1,0 +1,108 @@
+Aller au contenu
+C
+Codicillus
+Vos connaissances. Vivantes.
+Rechercher…
+⌘ K
+UNIVERS
+Atelier boréal
+3
++
+Créer un univers
+RA
+Recette administrateur
+administrateur@recette.invalid
+›
+Console
+›
+Comptes
+Console
+Administration de l'instance
+CONTENUS
+Univers
+1
+Domaines
+1
+Types de note
+5
+Types de fiches
+0
+Types de relations
+0
+Templates
+0
+UTILISATEURS
+Comptes
+4
+SYSTÈME
+Imports
+0
+Exports
+Analytique
+Configuration
+Comptes
+
+Les accès à l'instance. Un compte désactivé conserve ses contributions : les notes qu'il a écrites restent à son nom, et l'historique des vérifications n'est pas réécrit.
+
+Nouveau compte
+NOM ET IDENTIFIANT
+RÔLE
+DOMAINE
+DERNIÈRE CONNEXION
+RA
+Recette administrateur
+recette.administrateur
+seul administrateur
+Administrateur
+Exploitation boréale
+10/09/2026
+Modifier
+Désactiver
+RC
+Recette contributeur
+recette.contributeur
+Contributeur
+Exploitation boréale
+Jamais
+Modifier
+Désactiver
+RI
+Recette intervenant
+recette.intervenant
+Lecteur
+Exploitation boréale
+Jamais
+Modifier
+Désactiver
+RR
+Recette referent
+recette.referent
+Référent
+Exploitation boréale
+Jamais
+Modifier
+Désactiver
+Nouveau compte
+L'utilisateur devra changer son mot de passe à la première connexion.
+Identifiant *
+Sert à se connecter. Il ne pourra plus être modifié ensuite.
+Nom affiché *
+Apparaît sur les notes et dans l'activité.
+Adresse électronique
+Sert aux notifications et à la réinitialisation autonome du mot de passe.
+Mot de passe initial *
+Généré automatiquement. Il devra être changé à la première connexion.
+Rôle *
+Lecteur
+Contributeur
+Référent
+Administrateur
+Écrit et modifie les notes de son domaine.
+Domaine principal
+Aucun domaine
+Atelier boréal › Exploitation boréale
+Détermine son périmètre de contribution et ce qu'il voit à l'accueil.
+Mot de passe verrouillé
+Le compte ne pourra pas changer son mot de passe lui-même : seule l'administration le fera. Réservé aux comptes de démonstration et aux accès partagés.
+Annuler
+Créer le compte

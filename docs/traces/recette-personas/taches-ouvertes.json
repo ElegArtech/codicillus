@@ -1,0 +1,2966 @@
+[
+  {
+    "id": "RC-PAR001",
+    "parcours": "PAR-001",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M01-01"
+      ],
+      "RG": [
+        "RG-M01-01",
+        "RG-M01-02",
+        "RG-M01-03"
+      ]
+    },
+    "candidats": "Accueil : pas indicateur brouillons, activité récente ni pied version/synchronisation exigés.",
+    "criteres_restants": [
+      {
+        "assertion": "Indicateur brouillons",
+        "ok": false
+      },
+      {
+        "assertion": "Activité récente",
+        "ok": false
+      },
+      {
+        "assertion": "Pied version et synchronisation",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-001/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR002",
+    "parcours": "PAR-002",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M01-02"
+      ],
+      "RG": []
+    },
+    "candidats": "Univers : carte du domaine classe les deux notes en retard en Obsolète alors que synthèse différencie À revoir et Obsolète.",
+    "criteres_restants": [
+      {
+        "assertion": "Santé consolidée cohérente : répartition domaine ne classe pas À revoir comme Obsolète",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-002/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR003",
+    "parcours": "PAR-003",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M01-03"
+      ],
+      "RG": [
+        "RG-M01-04"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Répartition par type, notes jamais vérifiées et demandes de révision absentes du domaine observé; stabilité entre rôles non établie",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-003/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR004",
+    "parcours": "PAR-004",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M02-01"
+      ],
+      "RG": []
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Échap ferme sans changer contexte",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-004/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR007",
+    "parcours": "PAR-007",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M02-04"
+      ],
+      "RG": [
+        "RG-M02-01"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Objectif complet poursuivi au navigateur",
+        "ok": false,
+        "detail": "locator.click: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /^Sens/ }).filter({ visible: true }).first()\u001b[22m\n\u001b[2m    - locator resolved to <button disabled data-mode=\"sens\" aria-pressed=\"false\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    15 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is not enabled\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-007/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR008",
+    "parcours": "PAR-008",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M02-05"
+      ],
+      "RG": []
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Facette étiquette disponible",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-008/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR010",
+    "parcours": "PAR-010",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M02-07"
+      ],
+      "RG": [
+        "RG-M02-03"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Requête reprise et reformulation",
+        "ok": false
+      },
+      {
+        "assertion": "Objectif complet poursuivi au navigateur",
+        "ok": false,
+        "detail": "Action recherchée absente : Créer cette note"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-010/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR011",
+    "parcours": "PAR-011",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M03-01"
+      ],
+      "RG": [
+        "RG-M03-01"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Objectif complet poursuivi au navigateur",
+        "ok": false,
+        "detail": "Action recherchée absente : Déplier Atelier boréal"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-011/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR012",
+    "parcours": "PAR-012",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M03-02"
+      ],
+      "RG": []
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Dossier parent Racine boréale présent dans fil",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-012/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR013",
+    "parcours": "PAR-013",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M03-03"
+      ],
+      "RG": []
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Objectif complet poursuivi au navigateur",
+        "ok": false,
+        "detail": "Action recherchée absente : Affichage compact"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-013/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR014",
+    "parcours": "PAR-014",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M03-04"
+      ],
+      "RG": [
+        "RG-M03-04"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Renommage, déplacement et tous droits effectifs non atteints",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-014/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR015",
+    "parcours": "PAR-015",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M03-05"
+      ],
+      "RG": [
+        "RG-M03-04",
+        "RG-M18-05"
+      ]
+    },
+    "candidats": "Clic Supprimer après navigation racine vers dossier enfant donne 404 sans confirmation. Aucune suppression SQL constatée.",
+    "criteres_restants": [
+      {
+        "assertion": "Volumes annoncés 1 sous-dossier et 3 notes",
+        "ok": false
+      },
+      {
+        "assertion": "Objectif complet poursuivi au navigateur",
+        "ok": false,
+        "detail": "locator.fill: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('textbox').filter({ visible: true }).first()\u001b[22m\n"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-015/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR016",
+    "parcours": "PAR-016",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M03-06"
+      ],
+      "RG": [
+        "RG-M03-04"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Objectif complet poursuivi au navigateur",
+        "ok": false,
+        "detail": "Action recherchée absente : Retirer l'accès de Recette contributeur"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-016/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR017",
+    "parcours": "PAR-017",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M04-01"
+      ],
+      "RG": [
+        "RG-M04-01",
+        "RG-M15-01"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Métadonnée /Procédure/",
+        "ok": false
+      },
+      {
+        "assertion": "Métadonnée /Interne/",
+        "ok": false
+      },
+      {
+        "assertion": "Métadonnée /Vérifié il y a/",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-017/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR018",
+    "parcours": "PAR-018",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M04-02"
+      ],
+      "RG": [
+        "RG-NOT-03"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Invitation littérale « Ajouter une version opérationnelle » incompatible vocabulaire refonte; note sans opérationnel non exercée",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-018/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR019",
+    "parcours": "PAR-019",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M04-03"
+      ],
+      "RG": []
+    },
+    "candidats": "Sommaire encore visible avec Aucun titre dans cette note alors que oracle demande son absence.",
+    "criteres_restants": [
+      {
+        "assertion": "Sommaire absent sans titre",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-019/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR020",
+    "parcours": "PAR-020",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M04-04"
+      ],
+      "RG": [
+        "RG-M04-08"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-020/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR021",
+    "parcours": "PAR-021",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M04-05"
+      ],
+      "RG": [
+        "RG-M04-10",
+        "RG-M18-05"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Objectif complet poursuivi au navigateur",
+        "ok": false,
+        "detail": "Action recherchée absente : Supprimer"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-021/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR023",
+    "parcours": "PAR-023",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M05-02"
+      ],
+      "RG": []
+    },
+    "candidats": "Template préparé avant parcours mais aucun choix visible dans écran de création observé.",
+    "criteres_restants": [
+      {
+        "assertion": "Objectif complet poursuivi au navigateur",
+        "ok": false,
+        "detail": "locator.check: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel(/Guide polaire/)\u001b[22m\n"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-023/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR025",
+    "parcours": "PAR-025",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M05-04"
+      ],
+      "RG": []
+    },
+    "candidats": "Saisie Markdown conservée littérale après enregistrement : titre et gras non convertis.",
+    "criteres_restants": [
+      {
+        "assertion": "Titre et gras convertis",
+        "ok": false
+      },
+      {
+        "assertion": "Ensemble des constructions Markdown exigées non exercé",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-025/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR026",
+    "parcours": "PAR-026",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M05-05"
+      ],
+      "RG": []
+    },
+    "candidats": "Saisie /citation sur ligne vide sans menu de commandes puis texte littéral en lecture.",
+    "criteres_restants": [
+      {
+        "assertion": "Bloc citation enregistré",
+        "ok": false
+      },
+      {
+        "assertion": "Navigation, fermeture et ensemble des entrées menu non exercés",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-026/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR027",
+    "parcours": "PAR-027",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M05-06"
+      ],
+      "RG": [
+        "RG-M05-02"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Objectif complet poursuivi au navigateur",
+        "ok": false,
+        "detail": "Action recherchée absente : Lien interne"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-027/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR029",
+    "parcours": "PAR-029",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M05-08"
+      ],
+      "RG": [
+        "RG-M05-03",
+        "RG-M05-04"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Suggestions explicites avec acceptation",
+        "ok": false
+      },
+      {
+        "assertion": "Aucun lien suggéré acceptável observé pour ce contenu; acceptation sélective non atteinte",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-029/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR030",
+    "parcours": "PAR-030",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M05-09"
+      ],
+      "RG": [
+        "RG-M05-05",
+        "RG-M05-06",
+        "RG-M05-07"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Sauvegarde automatique périodique et avertissement au départ non exercés",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-030/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR032",
+    "parcours": "PAR-032",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M05-11"
+      ],
+      "RG": [
+        "RG-NOT-02",
+        "RG-NOT-03"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Objectif complet poursuivi au navigateur",
+        "ok": false,
+        "detail": "locator.fill: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('textbox', { name: 'Corps de la note' })\u001b[22m\n"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-032/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR033",
+    "parcours": "PAR-033",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M05-12"
+      ],
+      "RG": [
+        "RG-M05-08",
+        "RG-M05-09"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Droits écriture origine et destination de déplacement non exercés",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-033/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR034",
+    "parcours": "PAR-034",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M06-01"
+      ],
+      "RG": [
+        "RG-M06-01",
+        "RG-M06-02",
+        "RG-M06-03",
+        "RG-M06-04"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Libellé oracle Vérifié il y a X mois",
+        "ok": false
+      },
+      {
+        "assertion": "Objectif complet poursuivi au navigateur",
+        "ok": false,
+        "detail": "locator.fill: Timeout 3500ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('textbox', { name: 'Requête de recherche' })\u001b[22m\n"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-034/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR035",
+    "parcours": "PAR-035",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M06-02"
+      ],
+      "RG": [
+        "RG-M06-05"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Levée demande révision et absence de nouvelle version non exercées dans ce cas",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-035/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR036",
+    "parcours": "PAR-036",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M06-03"
+      ],
+      "RG": [
+        "RG-M06-06",
+        "RG-M06-07",
+        "RG-M04-02"
+      ]
+    },
+    "candidats": "Commentaire envoyé via btn-reviser-envoi non visible sur note ni accueil.",
+    "criteres_restants": [
+      {
+        "assertion": "Commentaire sur note",
+        "ok": false
+      },
+      {
+        "assertion": "Commentaire accueil",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-036/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR037",
+    "parcours": "PAR-037",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M06-04"
+      ],
+      "RG": [
+        "RG-M06-08",
+        "RG-M06-09",
+        "RG-M06-10",
+        "RG-M04-04"
+      ]
+    },
+    "candidats": "Après modification du corps Référence, aucun signal à resynchroniser ni action Marquer comme resynchronisé observés sur Opérationnel.",
+    "criteres_restants": [
+      {
+        "assertion": "Signal à resynchroniser",
+        "ok": false
+      },
+      {
+        "assertion": "Objectif complet poursuivi au navigateur",
+        "ok": false,
+        "detail": "Action recherchée absente : Marquer comme resynchronisé"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-037/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR038",
+    "parcours": "PAR-038",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M06-05"
+      ],
+      "RG": [
+        "RG-M06-11",
+        "RG-NOT-04",
+        "RG-M04-03"
+      ]
+    },
+    "candidats": null,
+    "criteres_restants": [
+      {
+        "assertion": "Invisibilité anonyme et exclusion agrégats non exercées",
+        "ok": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-038/resultat.json",
+    "budget": {
+      "limite": "Le nombre de reprises techniques ne prouve pas deux passes produit complètes."
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR039",
+    "parcours": "PAR-039",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M07-01"
+      ],
+      "RG": [
+        "RG-M07-01",
+        "RG-M07-02",
+        "RG-M07-03",
+        "RG-M07-04"
+      ]
+    },
+    "candidats": [
+      "Ancienne version restituée"
+    ],
+    "criteres_restants": [
+      {
+        "critere": "Ancienne version restituée",
+        "reussi": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-039/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR040",
+    "parcours": "PAR-040",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M07-02"
+      ],
+      "RG": []
+    },
+    "candidats": [
+      "Vérifier contradiction du parcours historique avec refonte ; ne pas rétablir ancien écran automatiquement."
+    ],
+    "criteres_restants": [
+      {
+        "critere": "Ancienne version restituée",
+        "reussi": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-040/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR041",
+    "parcours": "PAR-041",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M07-03"
+      ],
+      "RG": []
+    },
+    "candidats": [
+      "Deux modes Texte et Visuel disponibles"
+    ],
+    "criteres_restants": [
+      {
+        "critere": "Deux modes Texte et Visuel disponibles",
+        "reussi": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-041/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR042",
+    "parcours": "PAR-042",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M07-04"
+      ],
+      "RG": [
+        "RG-M07-05",
+        "RG-M07-06"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Plafond, suppression et variantes de restauration non tous démontrés ; oracle complet non atteint."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-042/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR043",
+    "parcours": "PAR-043",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M08-01"
+      ],
+      "RG": [
+        "RG-M08-02",
+        "RG-NOT-01",
+        "RG-M08-01"
+      ]
+    },
+    "candidats": [
+      "Propriété relue"
+    ],
+    "criteres_restants": [
+      {
+        "critere": "Propriété relue",
+        "reussi": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-043/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR044",
+    "parcours": "PAR-044",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M08-02"
+      ],
+      "RG": [
+        "RG-M08-03",
+        "RG-M08-04",
+        "RG-M08-05",
+        "RG-NOT-01",
+        "RG-M08-01"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Suppression et contrôles droits relation non tous démontrés."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-044/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR045",
+    "parcours": "PAR-045",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M09-01"
+      ],
+      "RG": [
+        "RG-M09-02",
+        "RG-M09-03"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Cas fantôme, stabilité et profondeur non tous démontrés."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-045/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR046",
+    "parcours": "PAR-046",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M09-02"
+      ],
+      "RG": [
+        "RG-M09-04"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Cas fantôme, stabilité et profondeur non tous démontrés."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-046/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR047",
+    "parcours": "PAR-047",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M09-03"
+      ],
+      "RG": [
+        "RG-M09-05"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Cas fantôme, stabilité et profondeur non tous démontrés."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-047/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR048",
+    "parcours": "PAR-048",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M09-04"
+      ],
+      "RG": []
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Cas fantôme, stabilité et profondeur non tous démontrés."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-048/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR049",
+    "parcours": "PAR-049",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M10-01"
+      ],
+      "RG": [
+        "RG-M10-01"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Note ouverte depuis une feuille",
+        "reussi": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-049/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR050",
+    "parcours": "PAR-050",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M11-01"
+      ],
+      "RG": [
+        "RG-M11-01",
+        "RG-M11-02"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Modification et suppression non vérifiées."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-050/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR051",
+    "parcours": "PAR-051",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M12-01"
+      ],
+      "RG": [
+        "RG-M12-01",
+        "RG-M12-02",
+        "RG-M12-03"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Idempotence, images et références croisées non démontrées intégralement."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-051/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR052",
+    "parcours": "PAR-052",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M12-02"
+      ],
+      "RG": [
+        "RG-M12-01",
+        "RG-M12-02",
+        "RG-M12-03"
+      ]
+    },
+    "candidats": [
+      "locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('link', { name: 'Importer un domaine complet', exact: true }).first()\u001b[22m\n"
+    ],
+    "criteres_restants": [
+      {
+        "critere": "Poursuite du geste utilisateur",
+        "reussi": false,
+        "detail": "locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('link', { name: 'Importer un domaine complet', exact: true }).first()\u001b[22m\n"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-052/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR053",
+    "parcours": "PAR-053",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M12-03"
+      ],
+      "RG": [
+        "RG-M12-01",
+        "RG-M12-02",
+        "RG-M12-03"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Idempotence, images et références croisées non démontrées intégralement."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-053/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR054",
+    "parcours": "PAR-054",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M12-04"
+      ],
+      "RG": [
+        "RG-M12-04",
+        "RG-M12-05",
+        "RG-M12-06",
+        "RG-M12-07",
+        "RG-M12-08",
+        "RG-M12-09",
+        "RG-M12-10",
+        "RG-M12-11"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Idempotence, images et références croisées non démontrées intégralement."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-054/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR055",
+    "parcours": "PAR-055",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M13-01"
+      ],
+      "RG": [
+        "RG-M13-01",
+        "RG-M13-02",
+        "RG-M13-03"
+      ]
+    },
+    "candidats": [
+      "Archive réimportable"
+    ],
+    "criteres_restants": [
+      {
+        "critere": "Archive réimportable",
+        "reussi": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-055/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR056",
+    "parcours": "PAR-056",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M14-01"
+      ],
+      "RG": [
+        "RG-M14-01"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Ordre, rattachement et refus suppression non tous vérifiés."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-056/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR057",
+    "parcours": "PAR-057",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M14-02"
+      ],
+      "RG": [
+        "RG-M14-02",
+        "RG-M14-03",
+        "RG-M14-04",
+        "RG-M14-05"
+      ]
+    },
+    "candidats": [
+      "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5557/univers/atelier-recette/exploitation-recette\", waiting until \"domcontentloaded\"\u001b[22m\n"
+    ],
+    "criteres_restants": [
+      {
+        "critere": "Poursuite du geste utilisateur",
+        "reussi": false,
+        "detail": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:5557/univers/atelier-recette/exploitation-recette\", waiting until \"domcontentloaded\"\u001b[22m\n"
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-057/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR058",
+    "parcours": "PAR-058",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M14-03"
+      ],
+      "RG": [
+        "RG-M14-02",
+        "RG-M14-03",
+        "RG-M14-04",
+        "RG-M14-05",
+        "RG-M18-05"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Comptes conservés et recherche non vérifiés."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-058/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR059",
+    "parcours": "PAR-059",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M14-04"
+      ],
+      "RG": [
+        "RG-M14-06"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Ordre propriétés et suppression type utilisé non démontrés."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-059/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR061",
+    "parcours": "PAR-061",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M14-06"
+      ],
+      "RG": []
+    },
+    "candidats": [
+      "Template proposé"
+    ],
+    "criteres_restants": [
+      {
+        "critere": "Template proposé",
+        "reussi": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-061/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR062",
+    "parcours": "PAR-062",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M14-07"
+      ],
+      "RG": [
+        "RG-M14-07",
+        "RG-M14-08"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Révocation session active et réinitialisation non démontrées."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-062/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR063",
+    "parcours": "PAR-063",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M15-01"
+      ],
+      "RG": []
+    },
+    "candidats": [
+      "Requête infructueuse proposée"
+    ],
+    "criteres_restants": [
+      {
+        "critere": "Requête infructueuse proposée",
+        "reussi": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-063/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR064",
+    "parcours": "PAR-064",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M15-02"
+      ],
+      "RG": []
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Actions de correction état orphelin non achevées."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-064/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR065",
+    "parcours": "PAR-065",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M15-03"
+      ],
+      "RG": []
+    },
+    "candidats": [
+      "Note prioritaire atteinte"
+    ],
+    "criteres_restants": [
+      {
+        "critere": "Note prioritaire atteinte",
+        "reussi": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-065/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR066",
+    "parcours": "PAR-066",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M16-01"
+      ],
+      "RG": [
+        "RG-M16-01",
+        "RG-NF-07"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Connexion locale effectivement réalisée et session ouverte ; durée session prolongée, destination protégée restaurée et limitation des tentatives non établies. La trace est suspendue pendant la saisie et soumission des secrets ; captures PNG et vidéo documentent le geste, puis trace DOM active sur accueil authentifié et note autorisée."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-066/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR069",
+    "parcours": "PAR-069",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M16-04"
+      ],
+      "RG": [
+        "RG-M16-02"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "critere": "Oracle complet du parcours démontré",
+        "reussi": false,
+        "detail": "Compte verrouillé non démontré."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-069/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR071",
+    "parcours": "PAR-071",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M17-01"
+      ],
+      "RG": [
+        "RG-M17-04"
+      ]
+    },
+    "candidats": [
+      "Vous ne trouvez pas ? Ouvrir un ticket d'assistance"
+    ],
+    "criteres_restants": [
+      {
+        "critere": "Vous ne trouvez pas ? Ouvrir un ticket d'assistance",
+        "reussi": false
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-071/resultat.json",
+    "budget": {
+      "passes_produit_completes": 0,
+      "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+      "build": "build préexistant, aucun rebuild de ce lot"
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR072",
+    "parcours": "PAR-072",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M02-03",
+        "UC-M04-02",
+        "UC-M06-02"
+      ],
+      "RG": [
+        "RG-M04-05",
+        "RG-M06-05",
+        "RG-M06-07"
+      ]
+    },
+    "candidats": [
+      "Le bouton Copier du registre Opérationnel soumet le formulaire supprimer et transforme la lecture en 404."
+    ],
+    "criteres_restants": [
+      {
+        "nom": "Action /À revoir|À vérifier/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Action /^Vérifier|Je confirme/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Commande copiée brute sans CRLF ni numéros ; premier geste technique avant 60 s ; badge vert, vérificateur et date à jour, aucun nouveau contenu ni version."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-072/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR073",
+    "parcours": "PAR-073",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M05-02",
+        "UC-M05-04",
+        "UC-M05-06"
+      ],
+      "RG": [
+        "RG-REF-01",
+        "RG-M05-02",
+        "RG-M05-05",
+        "RG-M05-06"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Rétrolien réciproque",
+        "ok": false
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Note trouvée sous 10 s ; contenu rendu fidèle ; lien vers cible et rétrolien réciproque ; procédure réalisable en moins de 5 min."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-073/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 2
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR074",
+    "parcours": "PAR-074",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M17-01"
+      ],
+      "RG": [
+        "RG-M17-01",
+        "RG-M17-02",
+        "RG-M17-03"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Action /Ouvrir un ticket/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Guide public publié lisible sans compte ; portail configuré atteint ; aucune action d’écriture ni contenu interne."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-074/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 3
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR075",
+    "parcours": "PAR-075",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M06-03",
+        "UC-M03-03"
+      ],
+      "RG": [
+        "RG-M06-07",
+        "RG-M01-01"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Action /À revoir/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Action /Signaler|révision/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Action /^Signaler|Confirmer/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Action /À revoir/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Action /^Vérifier|Je confirme/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Action /Titre|Vivacité/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Demande et commentaire effacés ; note verte ; liste filtrée et triée sur données réelles."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-075/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 2
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR076",
+    "parcours": "PAR-076",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M15-01"
+      ],
+      "RG": [
+        "RG-ACC-04"
+      ]
+    },
+    "candidats": [
+      "Référent : aucun accès Analytique trouvé depuis accueil ; /console/analytique répond 404."
+    ],
+    "criteres_restants": [
+      {
+        "nom": "Action /Console|Analytique|Trous/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Action /Créer une note/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Liste et création référent accessibles",
+        "ok": false
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": {
+          "objectif_atteint": "Le référent consulte les requêtes récurrentes sans résultat et dispose de la création de note préremplie depuis cette liste.",
+          "statut_derivation": "manque_contradiction_sources",
+          "constat_navigation": "V-34 est réservée administrateur ; aucune destination autorisée équivalente n’est prescrite pour le référent. Un refus 404 ne satisfait pas l’objectif PU-04."
+        }
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-076/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 2
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR078",
+    "parcours": "PAR-078",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M16-01"
+      ],
+      "RG": [
+        "RG-ACC-03"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Session expirée expliquée",
+        "ok": false
+      },
+      {
+        "nom": "Retour interne sauvegardé",
+        "ok": false
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "302 avec motif et suite internes ; message Session expirée ; destination restaurée."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-078/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR079",
+    "parcours": "PAR-079",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M16-04"
+      ],
+      "RG": [
+        "RG-ACC-04",
+        "RG-M16-01"
+      ]
+    },
+    "candidats": [
+      "Récupération autonome : aucun formulaire de courriel proposé après Mot de passe oublié."
+    ],
+    "criteres_restants": [
+      {
+        "nom": "Réinitialisation autonome offerte",
+        "ok": false
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Étape d’envoi identique connu/inconnu ; lien expiré inutilisable ; réussite valide mène à une connexion possible."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-079/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR081",
+    "parcours": "PAR-081",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [],
+      "RG": [
+        "RG-ACC-01",
+        "RG-ACC-04",
+        "RG-M02-04",
+        "RG-M04-08",
+        "RG-M17-01",
+        "RG-M17-02",
+        "RG-NF-04",
+        "RG-NF-04"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Corps 404 comparables",
+        "ok": false
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Aucune fuite par résultats ou suggestions ; paramètres privés ignorés ; réponse 404 V-04 comparable corps, en-têtes, code et temps ; pas de formulaire d’écriture."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-081/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR082",
+    "parcours": "PAR-082",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [],
+      "RG": [
+        "RG-DRO-01",
+        "RG-M05-08",
+        "RG-ACC-04",
+        "RG-M18-03"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Action /À revoir/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Créer/modifier/vérifier/signaler/supprimer et console absents ; zone sans droit explicable ; ressource interdite entière 404 V-26 indiscernable."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-082/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR083",
+    "parcours": "PAR-083",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M03-06"
+      ],
+      "RG": [
+        "RG-DRO-01",
+        "RG-DRO-02",
+        "RG-DRO-05"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Droit spécifique prioritaire ; son retrait restitue héritage ; aucun accès en absence de droit ; droit racine appliqué au sous-arbre."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-083/resultat.json",
+    "budget": {
+      "passes_produit": 2,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 4
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR084",
+    "parcours": "PAR-084",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M03-04"
+      ],
+      "RG": [
+        "RG-STR-04",
+        "RG-STR-05"
+      ]
+    },
+    "candidats": [
+      "Le refus de profondeur fonctionne, mais l’aide promet niveau 10/10 puis la validation refuse « Ce dossier serait au niveau 10 »."
+    ],
+    "criteres_restants": [
+      {
+        "nom": "Création à la profondeur maximale absente",
+        "ok": false
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Aucun déplacement ni sous-dossier créé ; profondeur refusée explicitement ; geste absent si défaut de droit."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-084/resultat.json",
+    "budget": {
+      "passes_produit": 2,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 6
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR085",
+    "parcours": "PAR-085",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M05-06"
+      ],
+      "RG": [
+        "RG-M03-03",
+        "RG-M05-09"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Action /Déplacer/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Identifiant conservé",
+        "ok": false
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Même note atteinte par même identifiant ; contenu et liens préservés ; déplacement interdit sans droit aux deux bouts."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-085/resultat.json",
+    "budget": {
+      "passes_produit": 2,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 2
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR086",
+    "parcours": "PAR-086",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M05-11"
+      ],
+      "RG": [
+        "RG-M06-08",
+        "RG-M06-09",
+        "RG-M06-10",
+        "RG-M07-01"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Modification référence signale désynchronisation",
+        "ok": false
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Métadonnée et vérification ne désynchronisent pas ; corps Référence effectif oui ; Opérationnel ou marquage lèvent le signal ; vérifier ne crée pas de version."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-086/resultat.json",
+    "budget": {
+      "passes_produit": 2,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 2
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR088",
+    "parcours": "PAR-088",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M07-03"
+      ],
+      "RG": []
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Comparaison identique expliquée",
+        "ok": false
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Comparaison refusée avec explication ; couple différent normalisé ancien à gauche."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-088/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR089",
+    "parcours": "PAR-089",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M05-09"
+      ],
+      "RG": [
+        "RG-NF-02",
+        "RG-M18-02"
+      ]
+    },
+    "candidats": [
+      "Après erreur réseau de sauvegarde puis réessai, éditeur affiché vide ; vérifier perte de saisie."
+    ],
+    "criteres_restants": [
+      {
+        "nom": "Contenu préservé",
+        "ok": false
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Contenu conservé ; état de sauvegarde exact ; sortie avertie ; erreur persistante et réessai ; aucun faux succès."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-089/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR090",
+    "parcours": "PAR-090",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M08-02"
+      ],
+      "RG": [
+        "RG-M08-03",
+        "RG-M08-04",
+        "RG-M08-06",
+        "RG-M09-01"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Relation directe rendue",
+        "ok": false
+      },
+      {
+        "nom": "Relation inverse rendue",
+        "ok": false
+      },
+      {
+        "nom": "Doublon empêché",
+        "ok": false
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Une seule relation ; inverse adapté ; origine indiquée ; graphe instantanément cohérent ; doublon impossible."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-090/resultat.json",
+    "budget": {
+      "passes_produit": 2,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 4
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR091",
+    "parcours": "PAR-091",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M09-03",
+        "UC-M09-04"
+      ],
+      "RG": [
+        "RG-M09-03",
+        "RG-M09-05",
+        "RG-M09-07"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Action /Ouvrir la note|Lire la note/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Périmètre/mode/type/sélection restaurés ; focus persistant ; un voisinage à un saut ; lien note exploitable ; fantômes autorisés navigables."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-091/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR092",
+    "parcours": "PAR-092",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M09-03",
+        "UC-M10-01"
+      ],
+      "RG": [
+        "RG-M09-02",
+        "RG-M09-04",
+        "RG-M10-01",
+        "RG-M18-11"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Action /Liste|Textuel/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Global rabattu ; nœud absent ignoré ; exploration progressive ; type vide expliqué ; maître isolé Aucune connexion ; branches non autorisées absentes ; listes textuelles utilisables."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-092/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR093",
+    "parcours": "PAR-093",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M11-01"
+      ],
+      "RG": [
+        "RG-M11-01",
+        "RG-M11-02"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Saisie conservée ; signet modifié cherchable ; destination externe accessible avec indication ; suppression seulement habilitée."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-093/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR094",
+    "parcours": "PAR-094",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M12-03"
+      ],
+      "RG": [
+        "RG-M12-01",
+        "RG-M12-02",
+        "RG-M12-07",
+        "RG-M12-08",
+        "RG-M12-11"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Simulation sans mutation ; mise à jour idempotente ; liens conservés ; indexation sous 10 s ; collisions hors mise à jour rendues uniques."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-094/resultat.json",
+    "budget": {
+      "passes_produit": 2,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 2
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR095",
+    "parcours": "PAR-095",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M12-04"
+      ],
+      "RG": [
+        "RG-M12-03",
+        "RG-M12-04",
+        "RG-M12-10"
+      ]
+    },
+    "candidats": [
+      "Un fichier nommé invalide.pdf contenant du texte brut non PDF est accepté comme note avec « aucun échec ». "
+    ],
+    "criteres_restants": [
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Fichier fautif n’arrête pas lot ; raisons et références rapportées ; scan averti ; profondeur aplatie signalée ; rapport reste dans V-24 pour contributeur ; résultat strict distinct sans inventer une transaction non spécifiée."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-095/resultat.json",
+    "budget": {
+      "passes_produit": 2,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 2
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR096",
+    "parcours": "PAR-096",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M13-01"
+      ],
+      "RG": [
+        "RG-M13-01",
+        "RG-M13-02"
+      ]
+    },
+    "candidats": [
+      "La vue Exports annonce explicitement que la réimportation de son archive est indisponible."
+    ],
+    "criteres_restants": [
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Domaine reconstitué à l’identique ; éléments ignorés uniquement avec rapport ; aucun échec unitaire ne bloque archive."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-096/resultat.json",
+    "budget": {
+      "passes_produit": 2,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 2
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR097",
+    "parcours": "PAR-097",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M14-02"
+      ],
+      "RG": [
+        "RG-STR-02",
+        "RG-M03-02"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Ancienne canonique redirigée 308 ; homonymie inter-univers admise ; forme raccourcie 404 sans écran de choix."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-097/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR098",
+    "parcours": "PAR-098",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M14-03"
+      ],
+      "RG": [
+        "RG-M14-02",
+        "RG-M14-03",
+        "RG-M14-04",
+        "RG-M14-05"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Nom erroné bouton inactif ; suppression atomique définitive ; recherche nettoyée immédiatement ; comptes conservés sans rattachement."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-098/resultat.json",
+    "budget": {
+      "passes_produit": 2,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 2
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR099",
+    "parcours": "PAR-099",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [],
+      "RG": [
+        "RG-STR-01",
+        "RG-M14-01",
+        "RG-M14-06",
+        "RG-M08-07",
+        "RG-REF-01",
+        "RG-REF-02"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Action /Supprimer/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Univers et type fiche protégés ; relation exige traitement explicite ; ancienne note inchangée ; création vierge reste défaut."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-099/resultat.json",
+    "budget": {
+      "passes_produit": 2,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 2
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR100",
+    "parcours": "PAR-100",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M14-02"
+      ],
+      "RG": [
+        "RG-STR-06"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Au moins un module imposé",
+        "ok": false
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Modules non activés absents des entrées et indicateurs ; minimum un module. Le statut HTTP de l’accès manuel au module désactivé n’est pas prescrit."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-100/resultat.json",
+    "budget": {
+      "passes_produit": 2,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 2
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR101",
+    "parcours": "PAR-101",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [
+        "UC-M14-07"
+      ],
+      "RG": [
+        "RG-M14-07",
+        "RG-M14-08",
+        "RG-CPT-02"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Dernier administrateur conservé ; accès désactivé perdu immédiatement ; auteur des contributions conservé."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-101/resultat.json",
+    "budget": {
+      "passes_produit": 2,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 4
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR103",
+    "parcours": "PAR-103",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [],
+      "RG": [
+        "RG-M06-02",
+        "RG-M06-03",
+        "RG-M14-09",
+        "RG-M14-10",
+        "RG-M01-04"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Valeurs incohérentes refusées explicitement ; valeurs valides recalculent immédiatement le même signal partout ; brouillons exclus des agrégats."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-103/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR104",
+    "parcours": "PAR-104",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [],
+      "RG": [
+        "RG-DA-01",
+        "RG-M18-10"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Action /Bibliothèque/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "/bibliotheque au premier niveau ; V-38/39/40 sections sans route ; focus piégé puis rendu ; variantes visibles."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-104/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR105",
+    "parcours": "PAR-105",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [],
+      "RG": [
+        "RG-M18-07",
+        "RG-M18-08",
+        "RG-M18-09",
+        "RG-M18-10",
+        "RG-M18-12",
+        "RG-M18-13",
+        "RG-M18-17",
+        "RG-DA-03"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Recherche et lecture utilisables 360 px ; contraste AA et indices autres que couleur ; impression sans navigation/panneaux avec confiance et adresses de liens."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-105/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  },
+  {
+    "id": "RC-PAR106",
+    "parcours": "PAR-106",
+    "statut": "ouverte",
+    "exigences": {
+      "EX": [],
+      "UC": [],
+      "RG": [
+        "RG-M02-01",
+        "RG-M04-07",
+        "RG-M18-01",
+        "RG-M18-04",
+        "RG-M18-14",
+        "RG-NF-01",
+        "RG-NF-06"
+      ]
+    },
+    "candidats": [],
+    "criteres_restants": [
+      {
+        "nom": "Action /À revoir/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Action /Vérifier/",
+        "ok": false,
+        "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+      },
+      {
+        "nom": "Oracle complet",
+        "ok": false,
+        "detail": "Corps et recherche utilisables ; repli mots-clés ; zone erreur explicite sans page cassée ; notification d’action sous 200 ms ; aucun secret ni trace brute."
+      }
+    ],
+    "travail": "Rejouer et compléter les preuves des critères restants ; corriger les défauts reproduits. Ne pas confondre assertion non exécutée et défaut démontré.",
+    "preuve": "docs/traces/recette-personas/PAR-106/resultat.json",
+    "budget": {
+      "passes_produit": 1,
+      "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+      "videos_recette_enregistrees": 1
+    },
+    "livraison": "non livré"
+  }
+]

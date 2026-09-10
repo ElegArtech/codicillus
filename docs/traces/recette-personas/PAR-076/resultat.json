@@ -1,0 +1,62 @@
+{
+  "id": "PAR-076",
+  "persona": "referent",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Action /Console|Analytique|Trous/",
+      "ok": false,
+      "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+    },
+    {
+      "nom": "Action /Créer une note/",
+      "ok": false,
+      "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+    },
+    {
+      "nom": "Liste et création référent accessibles",
+      "ok": false
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": {
+        "objectif_atteint": "Le référent consulte les requêtes récurrentes sans résultat et dispose de la création de note préremplie depuis cette liste.",
+        "statut_derivation": "manque_contradiction_sources",
+        "constat_navigation": "V-34 est réservée administrateur ; aucune destination autorisée équivalente n’est prescrite pour le référent. Un refus 404 ne satisfait pas l’objectif PU-04."
+      }
+    },
+    {
+      "nom": "Valeurs distinctives premier jeu absentes du rendu enregistré",
+      "ok": true,
+      "detail": []
+    }
+  ],
+  "erreurs": [
+    {
+      "type": "http",
+      "code": 404,
+      "url": "http://127.0.0.1:5576/console/analytique"
+    },
+    {
+      "type": "console",
+      "texte": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    }
+  ],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-076/fr-FR/passe-1",
+  "correction_candidate": [
+    "Référent : aucun accès Analytique trouvé depuis accueil ; /console/analytique répond 404."
+  ],
+  "limites": [],
+  "jeu": "garnie",
+  "passe": 1,
+  "aiguilles_premier_jeu": [],
+  "budget_reel": {
+    "passes_produit": 1,
+    "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+    "videos_recette_enregistrees": 2
+  },
+  "prerequis_sql": "Aucun ajout SQL au clone"
+}

@@ -35,6 +35,8 @@ import {
 } from '$lib/donnees/public';
 import { compteDe } from '$lib/donnees/consultation';
 import { journaliserUneRecherche } from '$lib/donnees/recherches';
+import { lireLaVivaciteDesNotes } from '$lib/donnees/outils';
+import { lireSeuilsDeVivacite } from '$lib/donnees/lecture';
 import { moteurPartage } from '$lib/recherche/acces';
 import {
 	ORDRE_PAR_DEFAUT,
@@ -396,5 +398,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		maintenant: contexte.maintenant
 	});
 
-	return recherche;
+	const vivacites = recherche.session
+		? await lireLaVivaciteDesNotes(
+				base,
+				{ tout: true },
+				contexte.maintenant,
+				await lireSeuilsDeVivacite(base),
+				{ identifiants: recherche.notes.map((note) => note.id), registre: 'reference' }
+			)
+		: {};
+	return { ...recherche, vivacites };
 };

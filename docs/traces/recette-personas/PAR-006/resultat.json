@@ -1,0 +1,34 @@
+{
+  "id": "PAR-006",
+  "persona": "intervenant",
+  "langue": "fr-FR",
+  "statut": "vert",
+  "objectif_atteint": true,
+  "objectif": "Note pertinente retrouvée malgré les fautes prévues",
+  "assertions": [
+    {
+      "assertion": "Résultat adapté reles",
+      "ok": true
+    },
+    {
+      "assertion": "Résultat adapté relve boreal",
+      "ok": true
+    },
+    {
+      "assertion": "Résultat adapté xylophone quantique",
+      "ok": true
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-006/fr-FR/passe-2-reprise",
+  "correction_candidate": null,
+  "limites": [
+    "Vérification du corpus de démonstration par aiguilles non réalisée.",
+    "Les dossiers de traces conservent les essais techniques et leurs reprises. Les erreurs de sélecteur, de connexion préalable et de prérequis ne prouvent aucun défaut produit."
+  ],
+  "essais_avec_traces": [
+    "docs/traces/recette-personas/PAR-006/fr-FR/passe-1",
+    "docs/traces/recette-personas/PAR-006/fr-FR/passe-2",
+    "docs/traces/recette-personas/PAR-006/fr-FR/passe-2-reprise"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "PAR-084",
+  "persona": "referent",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Action /Créer un sous-dossier|Nouveau dossier/",
+      "ok": false,
+      "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+    },
+    {
+      "nom": "Action /^Créer$/",
+      "ok": false,
+      "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": "Aucun déplacement ni sous-dossier créé ; profondeur refusée explicitement ; geste absent si défaut de droit."
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-084/fr-FR/passe-1",
+  "correction_candidate": [
+    "Action cherchée parmi les liens et boutons visibles, absente.",
+    "Action cherchée parmi les liens et boutons visibles, absente.",
+    "Aucun déplacement ni sous-dossier créé ; profondeur refusée explicitement ; geste absent si défaut de droit."
+  ],
+  "limites": [
+    "Prérequis profondeur dix non établi; refus profondeur non démontré"
+  ],
+  "jeu": "garnie",
+  "passe": 1
+}

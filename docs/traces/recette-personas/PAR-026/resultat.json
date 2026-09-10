@@ -1,0 +1,34 @@
+{
+  "id": "PAR-026",
+  "persona": "contributeur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "objectif": "Bloc choisi dans le menu de commandes présent dans la note enregistrée",
+  "assertions": [
+    {
+      "assertion": "Bloc citation enregistré",
+      "ok": false
+    },
+    {
+      "assertion": "Navigation, fermeture et ensemble des entrées menu non exercés",
+      "ok": false
+    }
+  ],
+  "erreurs": [
+    {
+      "type": "requestfailed",
+      "url": "http://127.0.0.1:5526/notes/n-commandes-polaires-par-026/__data.json?enregistree=1&x-sveltekit-invalidated=11",
+      "texte": "net::ERR_ABORTED"
+    }
+  ],
+  "traces": "docs/traces/recette-personas/PAR-026/fr-FR/passe-1",
+  "correction_candidate": "Saisie /citation sur ligne vide sans menu de commandes puis texte littéral en lecture.",
+  "limites": [
+    "Vérification du corpus de démonstration par aiguilles non réalisée.",
+    "Les dossiers de traces conservent les essais techniques et leurs reprises. Les erreurs de sélecteur, de connexion préalable et de prérequis ne prouvent aucun défaut produit."
+  ],
+  "essais_avec_traces": [
+    "docs/traces/recette-personas/PAR-026/fr-FR/passe-1"
+  ]
+}

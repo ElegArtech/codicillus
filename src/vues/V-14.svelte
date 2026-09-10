@@ -139,7 +139,7 @@
 		historique: 'Historique des versions',
 		signaler: 'Signaler à réviser',
 		lever: 'Lever la demande de révision',
-		creerLOperationnel: 'Créer la version opérationnelle'
+		creerLOperationnel: 'Créer le registre Opérationnel'
 	} as const;
 
 	/** La frise : la position d'aujourd'hui, en pourcentage, telle que la fabrique la donne. */

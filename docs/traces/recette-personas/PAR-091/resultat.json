@@ -1,0 +1,44 @@
+{
+  "id": "PAR-091",
+  "persona": "referent",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Paramètres conservés",
+      "ok": true
+    },
+    {
+      "nom": "Action /Ouvrir la note|Lire la note/",
+      "ok": false,
+      "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": "Périmètre/mode/type/sélection restaurés ; focus persistant ; un voisinage à un saut ; lien note exploitable ; fantômes autorisés navigables."
+    },
+    {
+      "nom": "Valeurs distinctives premier jeu absentes du rendu enregistré",
+      "ok": true,
+      "detail": []
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-091/fr-FR/passe-1",
+  "correction_candidate": [],
+  "limites": [
+    "Voisinage, fantômes et focus non établis",
+    "Rouge de preuve incomplète : les contrôles non achevés ou sélecteurs imparfaits ne constituent pas à eux seuls un défaut produit."
+  ],
+  "jeu": "garnie",
+  "passe": 1,
+  "aiguilles_premier_jeu": [],
+  "budget_reel": {
+    "passes_produit": 1,
+    "precision": "Les reprises dues aux sélecteurs, attentes et prérequis de recette ne comptent pas comme une passe produit supplémentaire. Les vidéos présentes gardent ces reprises.",
+    "videos_recette_enregistrees": 1
+  },
+  "prerequis_sql": "Aucun ajout SQL au clone"
+}

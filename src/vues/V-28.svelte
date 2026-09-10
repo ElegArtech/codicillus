@@ -63,6 +63,7 @@
 		vecteur: Record<string, string | boolean> | null;
 		notes: readonly Note[];
 		univers: readonly Univers[];
+		universInitial: string;
 		domaines: readonly Domaine[];
 		compte: UtilisateurCourant;
 		detailDomaines: Record<NomDeDomaine, DetailDeDomaine>;
@@ -97,6 +98,7 @@
 		vecteur,
 		notes,
 		univers,
+		universInitial,
 		domaines: registreDeDomaines,
 		compte,
 		detailDomaines,
@@ -312,7 +314,7 @@
 		cible = d === null ? null : d.nom;
 		fNom = d === null ? '' : d.nom;
 		fDescription = d === null ? '' : d.description;
-		fUnivers = d === null ? ((univers[0] as Univers)?.nom ?? '') : d.univers;
+		fUnivers = d === null ? universInitial || ((univers[0] as Univers)?.nom ?? '') : d.univers;
 		fCouleur = d === null ? (COULEURS[0] as string) : d.couleur;
 		fModules = d === null ? [...MODULES_A_LA_CREATION] : [...d.modules];
 		erreurLocale = null;

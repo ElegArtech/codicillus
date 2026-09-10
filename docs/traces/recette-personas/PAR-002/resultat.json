@@ -1,0 +1,45 @@
+{
+  "id": "PAR-002",
+  "persona": "referent",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "objectif": "Santé consolidée de l’univers et domaines accessibles visibles",
+  "assertions": [
+    {
+      "assertion": "/3\\s+notes/",
+      "ok": true
+    },
+    {
+      "assertion": "/1\\s+domaine/",
+      "ok": true
+    },
+    {
+      "assertion": "/1\\s+contributeur/",
+      "ok": true
+    },
+    {
+      "assertion": "/Cartographie/",
+      "ok": true
+    },
+    {
+      "assertion": "/Exploitation boréale/",
+      "ok": true
+    },
+    {
+      "assertion": "Santé consolidée cohérente : répartition domaine ne classe pas À revoir comme Obsolète",
+      "ok": false
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-002/fr-FR/passe-2",
+  "correction_candidate": "Univers : carte du domaine classe les deux notes en retard en Obsolète alors que synthèse différencie À revoir et Obsolète.",
+  "limites": [
+    "Vérification du corpus de démonstration par aiguilles non réalisée.",
+    "Les dossiers de traces conservent les essais techniques et leurs reprises. Les erreurs de sélecteur, de connexion préalable et de prérequis ne prouvent aucun défaut produit."
+  ],
+  "essais_avec_traces": [
+    "docs/traces/recette-personas/PAR-002/fr-FR/passe-1",
+    "docs/traces/recette-personas/PAR-002/fr-FR/passe-2"
+  ]
+}

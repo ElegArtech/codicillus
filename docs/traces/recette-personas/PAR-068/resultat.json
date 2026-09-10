@@ -1,0 +1,30 @@
+{
+  "id": "PAR-068",
+  "persona": "contributeur",
+  "langue": "fr-FR",
+  "statut": "vert",
+  "objectif_atteint": true,
+  "objectif": "Informations de profil modifiées et relues avec les nouvelles valeurs",
+  "assertions": [
+    {
+      "critere": "Nouvelles valeurs relues",
+      "reussi": true
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-068/fr-FR/reprise-finale",
+  "correction_candidate": [],
+  "limites": [],
+  "prerequis": "Types Application et Serveur, champ Version et type héberge préchargés dans clone avant trace pour PAR-043..048 ; graphe en étoile préchargé pour PAR-045..048.",
+  "passes_executees": 2,
+  "budget_reel": {
+    "passes_produit_completes": 1,
+    "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+    "build": "build préexistant, aucun rebuild de ce lot"
+  },
+  "reproduction": [
+    "docs/traces/recette-personas/lot2/executer.mjs",
+    "docs/traces/recette-personas/lot2/reprendre.mjs",
+    "docs/traces/recette-personas/lot2/reparer-selecteurs.mjs"
+  ]
+}
