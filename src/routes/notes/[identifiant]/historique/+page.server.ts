@@ -27,6 +27,7 @@ import { basculesDUneNote, type LigneDeCycles } from '$lib/donnees/vivacite';
 import type { EtatDeVivacite } from '$lib/fraicheur';
 import { adresseDeNote } from '$lib/rangement/adresses';
 import { accord } from '$lib/vocabulaire';
+import { rendreDocument } from '$lib/contenu/rendu';
 import {
 	ancienneteEnClair,
 	comparaisonDemandee,
@@ -92,6 +93,9 @@ export interface EvenementAffiche {
 	readonly restaurationDepliee: boolean;
 	/** Le numéro soumis à `?/restaurer`, en clair pour le champ caché. */
 	readonly numero: string;
+	readonly adresseVersion?: string;
+	readonly htmlVersion?: string | null;
+	readonly comparaisonComplete?: string;
 }
 
 /** L'état vide de l'onglet courant — il nomme le geste qui le remplit. */
@@ -106,13 +110,19 @@ export interface EtatVide {
 /** L'adresse de la page, avec les seuls paramètres qui ont une valeur. */
 function adresseDuFil(
 	identifiant: string,
-	parametres: { registre?: FiltreDeRegistre; comparer?: number; restaurer?: number }
+	parametres: {
+		registre?: FiltreDeRegistre;
+		comparer?: number;
+		restaurer?: number;
+		version?: number;
+	}
 ): string {
 	const requete = new URLSearchParams();
 	if (parametres.registre !== undefined && parametres.registre !== 'tous') {
 		requete.set('registre', parametres.registre);
 	}
 	if (parametres.comparer !== undefined) requete.set('comparer', String(parametres.comparer));
+	if (parametres.version !== undefined) requete.set('version', String(parametres.version));
 	if (parametres.restaurer !== undefined) requete.set('restaurer', String(parametres.restaurer));
 	const suite = requete.toString();
 	return `${adresseDeNote(identifiant)}/historique${suite === '' ? '' : `?${suite}`}`;
@@ -381,6 +391,7 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 
 	const comparee = comparaisonDemandee(url.searchParams.get('comparer'));
 	const restauree = restaurationDemandee(url.searchParams.get('restaurer'));
+	const versionLue = comparaisonDemandee(url.searchParams.get('version'));
 	const comparaison =
 		comparee === null ? null : comparaisonDeLaVersion(lignesDeVersion, comparee, filtre);
 
@@ -434,6 +445,39 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 								restaurer: e.numero
 							}),
 			restaurationDepliee: depliee,
+			adresseVersion:
+				e.numero === null
+					? ''
+					: adresseDuFil(params.identifiant, { registre: filtre, version: e.numero }),
+			htmlVersion:
+				e.numero !== null && e.numero === versionLue
+					? rendreDocument(
+							(filtre === 'operationnel'
+								? lignesDeVersion.find((v) => v.numero === e.numero)?.corpsOperationnel
+								: lignesDeVersion.find((v) => v.numero === e.numero)?.corpsReference) ?? {
+								type: 'doc',
+								content: []
+							},
+							{
+								contexte: 'interne',
+								resoudre: (id) => {
+									const cible = lecture.notes.find((n) => n.id === id);
+									return cible
+										? {
+												id,
+												titre: cible.titre,
+												adresse: adresseDeNote(id),
+												publique: cible.visibilite === 'Publique'
+											}
+										: null;
+								}
+							}
+						)
+					: null,
+			comparaisonComplete:
+				e.numero !== null && lignesDeVersion.some((v) => v.numero < (e.numero ?? 0))
+					? `${adresseDeNote(params.identifiant)}/comparaison?versions=${lignesDeVersion.find((v) => v.numero < (e.numero ?? 0))?.numero}-${e.numero}`
+					: '',
 			numero: e.numero === null ? '' : String(e.numero)
 		};
 	});

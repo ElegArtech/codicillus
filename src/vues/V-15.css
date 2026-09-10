@@ -305,3 +305,5 @@
 
 
 }
+
+.hist__lecture { margin-block: var(--e-4); padding: var(--e-4); border: 1px solid var(--c-trait); border-radius: var(--r-2); }

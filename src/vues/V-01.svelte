@@ -282,7 +282,7 @@
 						></a>{/each}</div>
 						<!-- Bascule vers la recherche publique complète (V-02). -->
 						<div class="passe-v02">
-							Affiner par domaine, par type de guide ou par fraîcheur<a
+							Affiner par domaine, par type de guide ou par vivacité<a
 								class="btn"
 								href="{resolve('/recherche')}{suffixeDeRequete}">Ouvrir la recherche complète</a
 							>

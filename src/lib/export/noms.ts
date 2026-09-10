@@ -15,8 +15,8 @@ export const NOM_DU_RAPPORT = 'rapport-de-conversion.txt';
 /** Le suffixe d'un fichier de note. */
 export const SUFFIXE_DE_NOTE = '.md';
 
-/** Les deux noms que la racine de l'archive se réserve. */
-const RESERVES: readonly string[] = [DOSSIER_DES_PIECES, NOM_DU_RAPPORT];
+/** Les noms que la racine de l'archive se réserve. */
+const RESERVES: readonly string[] = [DOSSIER_DES_PIECES, NOM_DU_RAPPORT, 'domaine.json'];
 
 /** Le caractère dont l'allongement du séparateur de registre ajoute une occurrence. */
 export const ALLONGEMENT = '%';

@@ -15,9 +15,9 @@
 	import Vue from '../../../vues/V-36.svelte';
 	import '../../../vues/V-36.css';
 	import { adresseDeLArchive } from './cablage';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	const { data }: { data: PageData } = $props();
+	const { data, form }: { data: PageData; form: ActionData | null } = $props();
 </script>
 
 <!--
@@ -34,6 +34,7 @@
 	notes={data.notes}
 	domaines={data.domaines}
 	nomsDArchive={data.nomsDArchive}
+	resultatImport={form}
 	onExporter={(domaine) => {
 		/* LA DÉSIGNATION EST CANONIQUE, comme partout ailleurs : le sélecteur rend
 		   un NOM de domaine, l'adresse attend deux identifiants lisibles

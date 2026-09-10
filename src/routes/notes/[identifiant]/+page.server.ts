@@ -82,7 +82,11 @@ import {
 	type ProprieteDeFicheAffichee,
 	type VoisineAffichee
 } from '$lib/lecture/panneaux';
-import { enregistrerLaNote, operationnelDesynchronise } from '$lib/donnees/edition';
+import {
+	enregistrerLaNote,
+	operationnelDesynchronise,
+	attesterLaResynchronisation
+} from '$lib/donnees/edition';
 import {
 	deposerUnePieceJointe,
 	NomDePieceDejaPris,
@@ -1069,6 +1073,17 @@ function registreDuGeste(formulaire: FormData): Registre {
 }
 
 export const actions: Actions = {
+	resynchroniser: async ({ params, locals }) => {
+		const { base, maintenant, contexte } = await contexteDUnGeste();
+		const fait = await attesterLaResynchronisation(base, {
+			identifiant: params.identifiant,
+			identite: locals.identite,
+			contexte,
+			maintenant
+		});
+		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
+		redirect(303, adresseDeLaNote(params.identifiant, 'operationnel'));
+	},
 	/** VÉRIFIER — `UC-M06-02`. Un clic, aucun champ : rien à valider avant d'écrire. */
 	verifier: async ({ params, locals, request }) => {
 		const { base, maintenant, contexte } = await contexteDUnGeste();

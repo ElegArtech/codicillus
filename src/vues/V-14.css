@@ -907,3 +907,18 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
 
 
 }
+
+@media (min-width: 1180px) {
+  .lecture--sans-sommaire { grid-template-columns: minmax(0, 1fr) var(--l-panneaux); }
+}
+.demande-revision {
+  padding: var(--e-3) var(--e-4);
+  border-left: 3px solid var(--c-accent);
+  background: var(--c-fond);
+  margin-bottom: var(--e-4);
+  white-space: pre-wrap;
+}
+
+.fiche-proprietes { margin: 0; }
+.fiche-proprietes dt { color: var(--c-encre-3); font-size: var(--t-petit); }
+.fiche-proprietes dd { margin: var(--e-1) 0 var(--e-3); overflow-wrap: anywhere; }

@@ -229,7 +229,7 @@
 {/snippet}
 
 <Coquille
-	classeContenu="lecture"
+	classeContenu={affichee.sommaire.length === 0 ? 'lecture lecture--sans-sommaire' : 'lecture'}
 	cibleEvitement="article"
 	fil={['Accueil', ...rangement, note.titre]}
 	courant={rangement.slice(1)}
@@ -245,9 +245,11 @@
 >
 	{#snippet enfants()}
 		<!-- ═══════════ Sommaire — 190 px, collant, il disparaît sous 1380 px ═══ -->
-		<div class="colonne-sommaire" data-colonne="sommaire">
-			<SommaireDeLaNote entrees={affichee.sommaire} />
-		</div>
+		{#if affichee.sommaire.length > 0}
+			<div class="colonne-sommaire" data-colonne="sommaire">
+				<SommaireDeLaNote entrees={affichee.sommaire} />
+			</div>
+		{/if}
 
 		<!-- ═══════════ Le document ═════════════════════════════════════════════ -->
 		<article class="document" id="article">
@@ -313,6 +315,20 @@
 				{/if}
 			</p>
 			<!-- eslint-enable svelte/no-navigation-without-resolve -->
+
+			{#if viv.revision && affichee.revision?.commentaire}
+				<p class="demande-revision">{affichee.revision.commentaire}</p>
+			{/if}
+			{#if registre === 'operationnel' && affichee.resync}
+				<div class="demande-revision" id="bandeau-resync">
+					<p>Opérationnel à resynchroniser : le corps Référence a été modifié.</p>
+					{#if ecriture}
+						<button type="button" class="btn" id="btn-resynchroniser"
+							>Marquer comme resynchronisé</button
+						>
+					{/if}
+				</div>
+			{/if}
 
 			<!-- Le signalement — déplié par l'entrée « Signaler à réviser » du menu ⋮.
 				 `UC-M06-03` veut l'explication : sans elle, l'action refuse. -->
@@ -494,6 +510,18 @@
 					{/if}
 				</div>
 			</section>
+
+			{#if panneaux.proprietes.length > 0}
+				<section class="zone" data-zone="proprietes">
+					<p class="etiq zone__titre">Propriétés de la fiche</p>
+					<dl class="fiche-proprietes">
+						{#each panneaux.proprietes as propriete (propriete.nom)}
+							<dt>{propriete.nom}</dt>
+							<dd>{propriete.valeur ?? 'Non renseignée'}</dd>
+						{/each}
+					</dl>
+				</section>
+			{/if}
 
 			<section class="zone" data-zone="contexte">
 				<p class="etiq zone__titre">Contexte</p>

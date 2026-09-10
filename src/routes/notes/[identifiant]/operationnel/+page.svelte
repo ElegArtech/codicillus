@@ -17,6 +17,10 @@
 	 * nomme.
 	 */
 	import { onMount } from 'svelte';
+	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
+	import type { SubmitFunction } from '@sveltejs/kit';
+	import { peindreLeRefusDEdition } from '$lib/edition/gestes';
 	import Vue from '../../../../vues/V-18.svelte';
 	import '../../../../vues/V-18.css';
 	import { page } from '$app/state';
@@ -35,6 +39,30 @@
 	const { data }: { data: PageData } = $props();
 
 	let formulaire: HTMLFormElement;
+	const surEnvoi: SubmitFunction =
+		() =>
+		async ({ result, update }) => {
+			if (result.type === 'error') {
+				peindreLeRefusDEdition(formulaire, {
+					motif: 'Enregistrement impossible. Votre saisie est conservée ; réessayez.'
+				});
+				return;
+			}
+			if (result.type === 'failure') {
+				peindreLeRefusDEdition(formulaire, result.data ?? null);
+				return;
+			}
+			if (result.type === 'success') {
+				const adresse = new URL(
+					resolve('/notes/[identifiant]', { identifiant: page.params['identifiant'] ?? '' }),
+					window.location.origin
+				);
+				adresse.searchParams.set('registre', 'operationnel');
+				window.location.assign(adresse);
+				return;
+			}
+			await update({ reset: false });
+		};
 
 	/**
 	 * L'ORDRE DES TROIS GESTES COMPTE. L'éditeur d'abord : il prend la zone du gel et
@@ -76,7 +104,7 @@
 	});
 </script>
 
-<form method="POST" bind:this={formulaire} style="display:contents">
+<form method="POST" use:enhance={surEnvoi} bind:this={formulaire} style="display:contents">
 	<Vue
 		vecteur={data.vecteur}
 		notes={data.notes}

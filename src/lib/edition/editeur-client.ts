@@ -14,6 +14,15 @@
  */
 import { EditorState, Selection, type Command, type Transaction } from '@tiptap/pm/state';
 import { EditorView } from '@tiptap/pm/view';
+import {
+	inputRules,
+	InputRule,
+	textblockTypeInputRule,
+	wrappingInputRule,
+	undoInputRule
+} from '@tiptap/pm/inputrules';
+import { analyserMarkdown, markdownDeFormulaire, MarkdownInvalide } from '../contenu/markdown';
+import { menuDeCommandes } from './menu-commandes';
 import { history, redo, undo } from '@tiptap/pm/history';
 import { keymap } from '@tiptap/pm/keymap';
 import { baseKeymap, chainCommands, setBlockType, toggleMark, wrapIn } from '@tiptap/pm/commands';
@@ -391,7 +400,40 @@ export function monterLEditeur(
 		...(doc === undefined ? {} : { doc }),
 		plugins: [
 			history(),
+			inputRules({
+				rules: [
+					textblockTypeInputRule(/^(#{2,4})\s$/, noeudDeSchema('heading'), (m) => ({
+						level: m[1]?.length ?? 2
+					})),
+					textblockTypeInputRule(/^```([a-z]*)\s$/, noeudDeSchema('codeBlock'), (m) => ({
+						language: m[1] || null
+					})),
+					wrappingInputRule(/^>\s$/, noeudDeSchema('blockquote')),
+					wrappingInputRule(/^[-+*]\s$/, noeudDeSchema('bulletList')),
+					wrappingInputRule(/^(\d+)\.\s$/, noeudDeSchema('orderedList'), (m) => ({
+						start: Number(m[1])
+					})),
+					...(
+						[
+							[/\*\*([^*]+)\*\*$/, 'bold'],
+							[/(?<!\*)\*([^*]+)\*$/, 'italic'],
+							[/`([^`]+)`$/, 'code']
+						] as const
+					).map(
+						([motif, nom]) =>
+							new InputRule(motif, (state, match, start, end) => {
+								const texte = match[1];
+								if (!texte) return null;
+								const debut = start;
+								return state.tr
+									.replaceWith(debut, end, schema.text(texte, [marqueDeSchema(nom).create()]))
+									.removeStoredMark(marqueDeSchema(nom));
+							})
+					)
+				]
+			}),
 			keymap({
+				Backspace: undoInputRule,
 				'Mod-z': undo,
 				'Mod-y': redo,
 				'Mod-Shift-z': redo,
@@ -415,8 +457,28 @@ export function monterLEditeur(
 	   par le document. `mount` EST UNE OPTION RÉELLE de `EditorView`, mais elle n'est
 	   pas déclarée dans le type public : d'où l'élargissement local, seule entorse de
 	   ce fichier. */
+	const insererMarkdown = (vue: EditorView, texte: string): boolean => {
+		if (vue.state.selection.$from.parent.type.spec.code) return false;
+		if (!/(^|\n)(#{1,6} |[-*>] |[0-9]+\. |```)|\*\*[^*]+\*\*/.test(texte)) return false;
+		try {
+			const doc = noeudDepuisDocument(analyserMarkdown(markdownDeFormulaire(texte)));
+			vue.dispatch(vue.state.tr.replaceSelection(new Slice(doc.content, 0, 0)).scrollIntoView());
+			return true;
+		} catch (erreur) {
+			if (erreur instanceof MarkdownInvalide) return false;
+			throw erreur;
+		}
+	};
+	const menu = menuDeCommandes(zone, table.bloc);
 	const vue: EditorView = new EditorView({ mount: zone } as unknown as HTMLElement, {
 		state: etat,
+		handlePaste: (vue, evenement) => {
+			if (evenement.clipboardData?.getData('text/html')) return false;
+			return insererMarkdown(vue, evenement.clipboardData?.getData('text/plain') ?? '');
+		},
+		handleTextInput: (vue, _debut, _fin, texte) =>
+			texte.includes('\n') && insererMarkdown(vue, texte),
+		handleKeyDown: (vue, evenement) => menu.clavier(vue, evenement),
 		/* Les signatures de ProseMirror passent bien plus que ce que ces vues lisent ;
 		   le rétrécissement est local et nommé. */
 		nodeViews: {
@@ -430,6 +492,7 @@ export function monterLEditeur(
 		},
 		dispatchTransaction(transaction: Transaction) {
 			vue.updateState(vue.state.apply(transaction));
+			menu.actualiser(vue);
 			/* `data-vide` commande le seul rendu visible du vide — l'invite d'amorçage
 			   que la feuille gelée écrit en `::before`. Il est déduit, jamais déclaré. */
 			zone.setAttribute('data-vide', vue.state.doc.textContent.trim() === '' ? 'oui' : 'non');
@@ -511,6 +574,7 @@ export function monterLEditeur(
 		detruire: () => {
 			racine.removeEventListener('mousedown', auMousedown);
 			racine.removeEventListener('click', auClic);
+			menu.detruire();
 			vue.destroy();
 		}
 	};

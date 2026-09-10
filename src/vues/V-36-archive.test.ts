@@ -235,21 +235,47 @@ describe('V-36 — l’arborescence annoncée est celle de l’archive produite'
 	});
 });
 
-/**
- * LA PROMESSE DE RÉIMPORTATION A ÉTÉ RETIRÉE, ET ELLE DOIT LE RESTER.
- *
- * Aucun chemin d'import d'archive n'existe : l'import écarte le format
- * d'archive, et la relecture d'archive n'est appelée que par ses propres
- * contrôles. L'écran affirmait pourtant que « réimporter l'archive reconstitue
- * le domaine à l'identique ». Tant qu'aucun lot ne livre la réimportation,
- * l'écran ne la nomme que pour dire qu'elle n'est pas disponible.
- */
-describe('V-36 — la réimportation n’est plus promise', () => {
-	test('l’écran ne promet aucune reconstitution du domaine', async () => {
+describe('V-36 — la réimportation est accessible', () => {
+	test('l’écran porte le dépôt de l’archive et la garantie transactionnelle', async () => {
 		const rendu = await rendreV36({ notes: notesDuJeuSansPieces() });
-		expect(rendu).not.toContain('Cet export est réimportable');
-		expect(rendu).not.toContain('reconstitue le domaine');
-		expect(rendu).not.toContain("rend l'archive réimportable");
-		expect(rendu).toContain("n'est pas encore possible");
+		expect(rendu).toContain('Cet export est réimportable');
+		expect(rendu).toContain('action="?/reimporter"');
+		expect(rendu).toContain('enctype="multipart/form-data"');
+		expect(rendu).toContain('name="archive"');
+		expect(rendu).toContain('ne crée aucun élément');
+	});
+
+	test('le refus conserve le motif rendu par l’action', async () => {
+		const rendu = await rendreV36({
+			notes: notesDuJeuSansPieces(),
+			resultatImport: {
+				operation: 'reimporter',
+				succes: false,
+				message: 'archive invalide : identité du domaine incomplète'
+			}
+		});
+		expect(rendu).toContain('role="alert"');
+		expect(rendu).toContain('archive invalide : identité du domaine incomplète');
+	});
+
+	test('la réussite nomme le domaine et les éléments reconstitués', async () => {
+		const rendu = await rendreV36({
+			notes: notesDuJeuSansPieces(),
+			resultatImport: {
+				operation: 'reimporter',
+				succes: true,
+				univers: 'Opérations',
+				domaine: 'Continuité',
+				notes: 3,
+				dossiers: 2,
+				avertissements: ['Une propriété inconnue a été conservée.']
+			}
+		});
+		expect(rendu).toContain('Domaine réimporté');
+		expect(rendu).toContain('Opérations');
+		expect(rendu).toContain('Continuité');
+		expect(rendu).toContain('3 notes');
+		expect(rendu).toContain('2 dossiers');
+		expect(rendu).toContain('Une propriété inconnue a été conservée.');
 	});
 });

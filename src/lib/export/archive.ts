@@ -9,8 +9,9 @@
  * nom reprend le titre ; l'arborescence de dossiers reproduite ; les métadonnées en en-tête
  * de chaque fichier, dans un bloc de trois tirets — « c'est ce bloc qui rend l'archive
  * réimportable » ; les images et pièces jointes dans un DOSSIER VOISIN ; un rapport de
- * conversion. Cinq éléments, et pas un sixième : ni index, ni manifeste, ni table de
- * relations. LES DEUX LISTES DE MÉTADONNÉES SE COMPLÈTENT : le gel en nomme six,
+ * conversion. Un manifeste de domaine complète ces éléments afin qu'un domaine sans note
+ * conserve encore son identité et sa configuration ; l'index n'entre jamais dans l'archive.
+ * LES DEUX LISTES DE MÉTADONNÉES SE COMPLÈTENT : le gel en nomme six,
  * `UC-M13-01` neuf, et l'union des deux est écrite.
  *
  * LA COUTURE AVEC LE CONVERTISSEUR (`ARB-049` décision 5) : `serialiserEnMarkdown` rend le
@@ -27,7 +28,7 @@
  * LES NOMS DE CHEMIN SONT ÉCHAPPÉS : un nom peut porter une barre oblique, que le ZIP
  * emploie comme séparateur, et un renommage silencieux perdrait le nom d'un dossier VIDE
  * qu'aucun en-tête ne porterait. Seuls la barre oblique et le signe pour cent sont échappés
- * — transformation totale, inversible, lisible. Deux noms sont RÉSERVÉS à la racine.
+ * — transformation totale, inversible, lisible. Trois noms sont RÉSERVÉS à la racine.
  *
  * CE MODULE NE CONVERTIT RIEN (`ADR-004`) : ce qui est écrit ici est l'ENVELOPPE d'un
  * fichier. Le rapport de conversion est du texte, jamais du Markdown.
@@ -87,6 +88,12 @@ export interface NoteAExporter {
 	readonly corpsReferenceModifieLe: string;
 	readonly corpsOperationnelModifieLe: string | null;
 	readonly verifieLe: string | null;
+	readonly cycle?: {
+		validiteReference: number;
+		validiteOperationnel: number;
+		verifieLeOperationnel: string | null;
+		revisionRegistre: 'reference' | 'operationnel' | null;
+	};
 	readonly consultations: number;
 	readonly signetAdresse: string | null;
 	readonly signetAjouteLe: string | null;
@@ -101,6 +108,7 @@ export interface NoteAExporter {
 }
 
 export interface DomaineAExporter {
+	readonly configuration?: { description: string; couleur: string; modules: readonly string[] };
 	readonly universIdentifiant: string;
 	readonly universNom: string;
 	readonly identifiant: string;
@@ -229,6 +237,7 @@ const CLES = [
 	'corps_reference_modifie_le',
 	'corps_operationnel_modifie_le',
 	'verifie_le',
+	'cycle',
 	'consultations',
 	'signet_adresse',
 	'signet_ajoute_le',
@@ -484,6 +493,7 @@ function ecrireLaNote(
 		['corps_reference_modifie_le', note.corpsReferenceModifieLe],
 		['corps_operationnel_modifie_le', note.corpsOperationnelModifieLe],
 		['verifie_le', note.verifieLe],
+		['cycle', note.cycle],
 		['consultations', note.consultations],
 		['signet_adresse', note.signetAdresse],
 		['signet_ajoute_le', note.signetAjouteLe],
@@ -594,7 +604,8 @@ export interface ArchiveConstruite {
 }
 
 /**
- * Construit l'archive du domaine — les cinq éléments du gel, et rien d'autre.
+ * Construit l'archive du domaine — les éléments du gel et le manifeste nécessaire à
+ * la réimportation d'un domaine vide.
  *
  * `RG-M13-02` est tenue ici, et c'est le seul endroit où elle peut l'être : une
  * note dont le corps n'est pas convertible est IGNORÉE et consignée.
@@ -603,7 +614,12 @@ export function construireLArchive(
 	domaine: DomaineAExporter,
 	avertissementsDAmont: readonly AvertissementDeConversion[] = []
 ): ArchiveConstruite {
-	const entrees: EntreeDeZip[] = [];
+	const { notes: _notes, dossiers: _dossiers, ...identite } = domaine;
+	void _notes;
+	void _dossiers;
+	const entrees: EntreeDeZip[] = [
+		{ chemin: 'domaine.json', octets: new TextEncoder().encode(JSON.stringify(identite)) }
+	];
 	/* Ce que la LECTURE EN BASE a déjà constaté et que l'archive ne peut pas
 	   constater elle-même — une pièce dont le produit ne stocke pas les octets, par
 	   exemple. `RG-M13-02` veut que ce soit consigné, et le seul endroit où le faire
@@ -723,6 +739,44 @@ function relationsLues(champs: ReadonlyMap<string, unknown>): readonly RelationA
 	});
 }
 
+function cycleLu(champs: ReadonlyMap<string, unknown>): NoteAExporter['cycle'] | undefined {
+	const brut = champs.get('cycle');
+	if (brut === undefined) return undefined;
+	if (brut === null || typeof brut !== 'object' || Array.isArray(brut)) {
+		throw new ArchiveInvalide('cycle de vivacité illisible');
+	}
+	const cycle = brut as Record<string, unknown>;
+	if (
+		typeof cycle.validiteReference !== 'number' ||
+		!Number.isInteger(cycle.validiteReference) ||
+		cycle.validiteReference <= 0 ||
+		typeof cycle.validiteOperationnel !== 'number' ||
+		!Number.isInteger(cycle.validiteOperationnel) ||
+		cycle.validiteOperationnel <= 0 ||
+		!(cycle.verifieLeOperationnel === null || typeof cycle.verifieLeOperationnel === 'string') ||
+		!([null, 'reference', 'operationnel'] as unknown[]).includes(cycle.revisionRegistre)
+	) {
+		throw new ArchiveInvalide('cycle de vivacité incomplet');
+	}
+	return cycle as unknown as NonNullable<NoteAExporter['cycle']>;
+}
+
+function configurationLue(meta: Partial<DomaineAExporter>): DomaineAExporter['configuration'] {
+	const brut = meta.configuration;
+	if (brut === undefined) return undefined;
+	if (
+		brut === null ||
+		typeof brut !== 'object' ||
+		typeof brut.description !== 'string' ||
+		typeof brut.couleur !== 'string' ||
+		!Array.isArray(brut.modules) ||
+		brut.modules.some((module) => typeof module !== 'string')
+	) {
+		throw new ArchiveInvalide('configuration du domaine illisible');
+	}
+	return brut;
+}
+
 /**
  * Relit l'archive et rend le domaine. C'est ce chemin, et lui seul, qui rend
  * `RG-M13-01` mesurable : sans lui, « réimportable » serait une déclaration. Le
@@ -735,19 +789,35 @@ export function lireLArchive(entrees: readonly EntreeDeZip[]): DomaineAExporter 
 	const pieces = new Map<string, Uint8Array>();
 
 	for (const entree of entrees) {
-		if (entree.chemin === NOM_DU_RAPPORT) continue;
+		if (entree.chemin === NOM_DU_RAPPORT || entree.chemin === 'domaine.json') continue;
 		if (entree.chemin.startsWith(DOSSIER_DES_PIECES + '/')) {
 			pieces.set(entree.chemin, entree.octets);
 		}
 	}
 
+	const manifeste = entrees.find((e) => e.chemin === 'domaine.json');
+	let meta: Partial<DomaineAExporter> = {};
+	if (manifeste) {
+		try {
+			meta = JSON.parse(new TextDecoder().decode(manifeste.octets)) as Partial<DomaineAExporter>;
+		} catch {
+			throw new ArchiveInvalide('identité du domaine illisible');
+		}
+		if (
+			!meta ||
+			['universNom', 'universIdentifiant', 'nom', 'identifiant'].some(
+				(cle) => typeof (meta as Record<string, unknown>)[cle] !== 'string'
+			)
+		)
+			throw new ArchiveInvalide('identité du domaine incomplète');
+	}
 	let universNom: string | null = null;
 	let universIdentifiant: string | null = null;
 	let domaineNom: string | null = null;
 	let domaineIdentifiant: string | null = null;
 
 	for (const entree of entrees) {
-		if (entree.chemin === NOM_DU_RAPPORT) continue;
+		if (entree.chemin === NOM_DU_RAPPORT || entree.chemin === 'domaine.json') continue;
 		if (entree.chemin.startsWith(DOSSIER_DES_PIECES + '/')) continue;
 		if (entree.chemin.endsWith('/')) {
 			dossiers.push({ chemin: segmentsDepuisLArchive(entree.chemin.slice(0, -1)) });
@@ -791,6 +861,7 @@ export function lireLArchive(entrees: readonly EntreeDeZip[]): DomaineAExporter 
 		}
 
 		const identifiant = texteExige(champs, 'identifiant');
+		const cycle = cycleLu(champs);
 		const brutesDesPieces = champs.get('pieces_jointes');
 		const listeDesPieces: PieceJointeAExporter[] = [];
 		if (Array.isArray(brutesDesPieces)) {
@@ -836,6 +907,7 @@ export function lireLArchive(entrees: readonly EntreeDeZip[]): DomaineAExporter 
 			corpsReferenceModifieLe: texteExige(champs, 'corps_reference_modifie_le'),
 			corpsOperationnelModifieLe: texteOuNull(champs, 'corps_operationnel_modifie_le'),
 			verifieLe: texteOuNull(champs, 'verifie_le'),
+			...(cycle === undefined ? {} : { cycle }),
 			consultations: nombreLu(champs, 'consultations'),
 			signetAdresse: texteOuNull(champs, 'signet_adresse'),
 			signetAjouteLe: texteOuNull(champs, 'signet_ajoute_le'),
@@ -851,11 +923,13 @@ export function lireLArchive(entrees: readonly EntreeDeZip[]): DomaineAExporter 
 		});
 	}
 
+	const configuration = configurationLue(meta);
 	return {
-		universIdentifiant: universIdentifiant ?? '',
-		universNom: universNom ?? '',
-		identifiant: domaineIdentifiant ?? '',
-		nom: domaineNom ?? '',
+		universIdentifiant: universIdentifiant ?? meta.universIdentifiant ?? '',
+		universNom: universNom ?? meta.universNom ?? '',
+		identifiant: domaineIdentifiant ?? meta.identifiant ?? '',
+		nom: domaineNom ?? meta.nom ?? '',
+		...(configuration === undefined ? {} : { configuration }),
 		dossiers,
 		notes
 	};
