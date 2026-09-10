@@ -19,7 +19,6 @@
 	 * `?/supprimer` : réécrire `formulaire.action` avant `requestSubmit()` est une COURSE,
 	 * et elle a fait partir une restauration vers une suppression.
 	 */
-	import { onMount } from 'svelte';
 	import { deserialize } from '$app/forms';
 	import Vue from '../../../vues/V-14.svelte';
 	import '../../../vues/V-14.css';
@@ -73,7 +72,8 @@
 
 	let formulaire: HTMLFormElement;
 
-	onMount(() => {
+	$effect(() => {
+		void data.lecture;
 		/* AUCUN BOUTON DU GEL NE SOUMET — et sans cette ligne, ils soumettaient TOUS,
 		   vers `?/supprimer`. « Imprimer », « Modifier la référence », « Historique
 		   des versions » et « Exporter » partaient en suppression.

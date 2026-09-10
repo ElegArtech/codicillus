@@ -1,0 +1,37 @@
+{
+  "id": "PAR-040",
+  "persona": "contributeur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "objectif": "Version ancienne consultable en lecture seule avec identité et date",
+  "assertions": [
+    {
+      "critere": "Corps modifié relu",
+      "reussi": true
+    },
+    {
+      "critere": "Ancienne version restituée",
+      "reussi": false
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-040/fr-FR/passe-2",
+  "correction_candidate": [
+    "Vérifier contradiction du parcours historique avec refonte ; ne pas rétablir ancien écran automatiquement."
+  ],
+  "limites": [
+    "Historique consulté après création réelle de v2. Écran chronologique, aucune commande de lecture de v1 ni cases de sélection de deux versions trouvées. Oracle panneau superposé en contradiction possible avec refonte."
+  ],
+  "passes_executees": 2,
+  "budget_reel": {
+    "passes_produit_completes": 0,
+    "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+    "build": "build préexistant, aucun rebuild de ce lot"
+  },
+  "reproduction": [
+    "docs/traces/recette-personas/lot2/executer.mjs",
+    "docs/traces/recette-personas/lot2/reprendre.mjs",
+    "docs/traces/recette-personas/lot2/reparer-selecteurs.mjs"
+  ]
+}

@@ -52,12 +52,19 @@ import { CATALOGUE_DE_MODULES } from '$lib/rangement/modules';
  * refuser un module que l'écran propose.
  */
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const base = basePartagee();
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
 
+	const designationsUnivers = await lireLesDesignationsDUnivers(base);
+	const universInitial =
+		Object.entries(designationsUnivers).find(
+			([, identifiant]) => identifiant === url.searchParams.get('univers')
+		)?.[0] ?? '';
+
 	return {
+		universInitial,
 		vecteur: null,
 		notes: acces.ressource.notes,
 		univers: acces.ressource.univers,
@@ -70,7 +77,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		   `/console/univers` emploie déjà, et pour la même raison : le `<select>`
 		   de rattachement porte le nom, les deux gestes exigent l'identifiant, et
 		   la correspondance est LUE, jamais dérivée du nom. */
-		designationsUnivers: await lireLesDesignationsDUnivers(base)
+		designationsUnivers
 	};
 };
 

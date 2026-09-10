@@ -29,7 +29,8 @@
 	import type { Domaine, Note, Univers, UtilisateurCourant } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
-	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
+	import { ETATS_DE_VIVACITE, type EtatDeVivacite } from '$lib/fraicheur';
+	import GlypheDeVivacite from '$lib/GlypheDeVivacite.svelte';
 	import { accord, vocabulaireRendu } from '$lib/vocabulaire';
 	import { resolve } from '$app/paths';
 	/* LES QUATRE MOTIFS DU VIDE, LEUR TITRE ET LEUR TEXTE — écrits une seule fois
@@ -58,6 +59,7 @@
 	 * « Karim Belhadj » à tout compte connecté. Le défaut est l'ÉTAT VIDE.
 	 */
 	interface Proprietes {
+		vivacites: Readonly<Record<string, EtatDeVivacite>>;
 		vecteur: Record<string, string | boolean> | null;
 		/** Les notes à rendre — jeu de semence, ou résultat du moteur. */
 		notes: readonly Note[];
@@ -134,6 +136,7 @@
 
 	const {
 		vecteur,
+		vivacites,
 		notes: corpus,
 		recherchees = false,
 		requete,
@@ -223,8 +226,11 @@
 		},
 		{
 			id: 'fraicheur',
-			nom: 'Fraîcheur',
-			cle: (n) => [{ frais: 'Frais', vieil: 'Vieillissant', obs: 'Obsolète probable' }[n.fraicheur]]
+			nom: 'Vivacité',
+			cle: (n) => {
+				const etat = vivacites[n.id];
+				return etat === undefined ? [] : [ETATS_DE_VIVACITE[etat].libelle];
+			}
 		},
 		{ id: 'etiquette', nom: 'Étiquette', cle: (n) => n.etiquettes, prefixe: '#', repliee: true },
 		{ id: 'visibilite', nom: 'Visibilité', cle: (n) => [n.visibilite], repliee: true }
@@ -475,11 +481,9 @@
 	partout ailleurs. Le libellé accompagne toujours la jauge (RG-M18-09).
 -->
 <!-- prettier-ignore -->
-{#snippet temoin(n: Note)}<span class="temoin {classeTemoin(n.fraicheur)}"
-		><span class="temoin__jauge" aria-hidden="true"
-			>{#each [0, 1, 2] as rang (rang)}<i class={rang < barresFraicheur(n.fraicheur) ? 'plein' : undefined}></i>{/each}</span
-		><span class="temoin__txt">{libelleFraicheur(n)}</span></span
-	>{/snippet}
+{#snippet temoin(n: Note)}{@const etat = vivacites[n.id]}{#if etat !== undefined}<span class="temoin"
+		><GlypheDeVivacite {etat} /><span class="temoin__txt">{ETATS_DE_VIVACITE[etat].libelle}</span></span
+	>{/if}{/snippet}
 
 <!-- Un texte, avec les termes de la requête marqués — `surligner()` du gel. -->
 <!-- prettier-ignore -->

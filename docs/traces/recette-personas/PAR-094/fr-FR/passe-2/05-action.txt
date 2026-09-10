@@ -1,0 +1,37 @@
+Aller au contenu
+C
+Codicillus
+Vos connaissances. Vivantes.
+Rechercher…
+⌘ K
+UNIVERS
+Atelier boréal
+3
+RC
+Recette contributeur
+contributeur@recette.invalid
+›
+Importer
+SCÉNARIO
+DÉPÔT
+APERÇU
+IMPORT
+Ce qui va être créé
+
+Rien n'a encore été écrit. Vérifiez l'arborescence détectée et les fichiers écartés, puis validez ou renoncez.
+
+ARBORESCENCE DÉTECTÉE
+FICHIERS ÉCARTÉS
+1
+notes seront créées
+PAR FORMAT
+1
+Markdown
+STRUCTURE
+0
+dossiers créés
+0
+fichiers écartés
+Retour
+Renoncer
+Lancer l'import

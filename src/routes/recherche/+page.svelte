@@ -67,6 +67,7 @@
 	-->
 	<VueConnectee
 		vecteur={data.vecteur}
+		vivacites={data.vivacites}
 		notes={data.notes}
 		recherchees={data.recherchees}
 		requete={data.requete}

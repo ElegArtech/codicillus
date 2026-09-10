@@ -1,0 +1,12 @@
+{
+  "nom": "vivacite",
+  "statut": "vert",
+  "erreur": null,
+  "erreurs": [],
+  "captures": [
+    "01-recherche",
+    "02-facette",
+    "03-univers"
+  ],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/corrections/vivacite"
+}

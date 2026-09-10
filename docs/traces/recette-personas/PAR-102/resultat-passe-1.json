@@ -1,0 +1,34 @@
+{
+  "id": "PAR-102",
+  "persona": "contributeur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Action /^Sécurité$/",
+      "ok": false,
+      "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+    },
+    {
+      "nom": "Formulaire absent",
+      "ok": true
+    },
+    {
+      "nom": "Explication verrouillage",
+      "ok": true
+    },
+    {
+      "nom": "Droit édition conservé",
+      "ok": true
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-102/fr-FR/passe-1",
+  "correction_candidate": [
+    "Action cherchée parmi les liens et boutons visibles, absente."
+  ],
+  "limites": [],
+  "jeu": "garnie",
+  "passe": 1
+}

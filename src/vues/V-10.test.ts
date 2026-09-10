@@ -182,7 +182,7 @@ describe('V-10 — les compteurs de la référence', () => {
 	it('réunit le retard en une colonne, à la couleur du pire état présent', async () => {
 		const html = await rendu(CLAUDE);
 		const ligne = colonnesDe(html);
-		expect(texteDe(ligne)).toBe('5 À jour 2 Bientôt à vérifier 2 À revoir');
+		expect(texteDe(ligne)).toBe('5 À jour 2 Bientôt à vérifier 2 En retard');
 		expect(ligne).toContain('ligne-dom__nb--arevoir');
 		expect(ligne).not.toContain('ligne-dom__nb--averifier');
 	});
@@ -199,7 +199,7 @@ describe('V-10 — les compteurs de la référence', () => {
 			]
 		});
 		const ligne = colonnesDe(html);
-		expect(texteDe(ligne)).toBe('11 À jour 0 Bientôt à vérifier 0 À vérifier');
+		expect(texteDe(ligne)).toBe('11 À jour 0 Bientôt à vérifier 0 En retard');
 		expect(ligne).not.toContain('ligne-dom__nb--bientot');
 	});
 

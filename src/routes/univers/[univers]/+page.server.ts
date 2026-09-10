@@ -50,12 +50,12 @@ import { lireSeuilsDeVivacite } from '$lib/donnees/lecture';
 import { cycleDuRegistre, type LigneDeCycles } from '$lib/donnees/vivacite';
 import { accesALaConsole } from '$lib/donnees/consoles';
 import {
+	ETATS_DE_VIVACITE,
 	ORDRE_DES_ETATS,
 	vivacite,
 	type EtatDeVivacite,
 	type SeuilsDeVivacite
 } from '$lib/fraicheur';
-import { LIBELLE_DE_FRAICHEUR } from '$lib/liste/facettes';
 import { accord } from '$lib/vocabulaire';
 import { and, eq, gte, inArray } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
@@ -95,17 +95,15 @@ function requete(chemin: string, valeurs: readonly (readonly [string, string])[]
  * LES NOTES « À SURVEILLER » D'UN UNIVERS, dans la seule liste que le produit sache
  * rendre à cette échelle.
  *
- * ÉCART ASSUMÉ, ET IL EST DÉCLARÉ : `/recherche` porte une facette de fraîcheur à
- * TROIS valeurs, quand la vivacité en a cinq. « Vieillissant » et « Obsolète
- * probable » réunis sont les notes dont l'échéance est passée — ce que les deux
- * alertes désignent —, à la nuance des validités qui ne sont pas de quatre-vingt-dix
- * jours. La liste est réelle, et c'est ce qui compte : un lien mort ne l'était pas.
+ * Les valeurs de recherche reprennent les états calculés pour les compteurs.
  */
 function adresseDeSurveillance(universNom: string): string {
 	return requete(ADRESSE_DE_LA_RECHERCHE, [
 		['univers', universNom],
-		['fraicheur', LIBELLE_DE_FRAICHEUR.vieil],
-		['fraicheur', LIBELLE_DE_FRAICHEUR.obs]
+		...ORDRE_DES_ETATS.filter((etat) => etat !== 'ajour').map((etat): readonly [string, string] => [
+			'fraicheur',
+			ETATS_DE_VIVACITE[etat].libelle
+		])
 	]);
 }
 
@@ -510,7 +508,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			cartographie: requete(ADRESSE_DE_LA_CARTOGRAPHIE, [['perimetre', `univers|${univers.nom}`]]),
 			carteMentale: requete('/carte-mentale', [['perimetre', `univers|${univers.nom}`]]),
 			surveillance: adresseDeSurveillance(univers.nom),
-			creationDeDomaine: ADRESSE_DE_LA_CONSOLE_DES_DOMAINES,
+			creationDeDomaine: `${ADRESSE_DE_LA_CONSOLE_DES_DOMAINES}?${new URLSearchParams({ univers: univers.identifiant })}`,
 			creationDeNote: ADRESSE_DE_LA_NOUVELLE_NOTE,
 			profil: ADRESSE_DU_PROFIL
 		}

@@ -1,0 +1,21 @@
+{
+  "id": "PAR-108",
+  "persona": "administrateur",
+  "langue": "fr-FR",
+  "statut": "vert",
+  "objectif_atteint": true,
+  "assertions": [
+    {
+      "nom": "Parcours ajouté après exploration accompli sans erreur navigateur",
+      "ok": true,
+      "detail": null
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-108/fr-FR/rejeu-4",
+  "jeu": "garnie",
+  "limites": [
+    "Ajout après exploration, hors dérivation initiale aveugle. Un rejeu formel après correction."
+  ],
+  "correction_candidate": []
+}

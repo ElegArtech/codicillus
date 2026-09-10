@@ -1,0 +1,26 @@
+{
+  "id": "PAR-077",
+  "persona": "administrateur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Première note retrouvée",
+      "ok": true
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": "Structure et première note atteignables ; états vides explicites ; aucun chiffre fictif. Le cahier impose néanmoins Non classé par défaut et des référentiels fournis : zéro objet absolument n’est pas son état initial contractuel."
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-077/fr-FR/passe-1",
+  "correction_candidate": [
+    "Structure et première note atteignables ; états vides explicites ; aucun chiffre fictif. Le cahier impose néanmoins Non classé par défaut et des référentiels fournis : zéro objet absolument n’est pas son état initial contractuel."
+  ],
+  "limites": [],
+  "jeu": "garnie",
+  "passe": 1
+}

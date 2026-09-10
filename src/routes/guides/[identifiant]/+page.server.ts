@@ -30,7 +30,7 @@ import { lireConfiguration, lireNotes } from '$lib/donnees/lecture';
 import { noteVisibleEnAnonyme } from '$lib/droits/resolution';
 import { refuserLAdresse } from '$lib/donnees/rangement';
 import { resoudreLeGuide } from '$lib/donnees/public';
-import { adresseDeDomaine, adresseDePieceJointe } from '$lib/rangement/adresses';
+import { adresseDePieceJointe } from '$lib/rangement/adresses';
 import type { CibleDeNote } from '$lib/contenu/rendu';
 import type { PageServerLoad } from './$types';
 
@@ -198,7 +198,7 @@ export const load: PageServerLoad = async ({ params, url, request }) => {
 			titre: note.titre,
 			type: note.type,
 			domaine: note.domaine,
-			adresseDuDomaine: adresseDeDomaine(ligne.universIdentifiant, ligne.domaineIdentifiant),
+			adresseDuDomaine: `/recherche?${new URLSearchParams({ domaine: note.domaine })}`,
 			auteur: note.auteur,
 			modifieLe: formaterDateFr(ligne.modifieLe),
 			modifieIso: formaterDateIso(ligne.modifieLe),

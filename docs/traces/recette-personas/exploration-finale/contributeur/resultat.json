@@ -1,0 +1,41 @@
+{
+  "persona": "contributeur",
+  "jeu": "garnie",
+  "objectif": "Formaliser une connaissance, la retrouver et continuer à la modifier sans perdre le travail enregistré.",
+  "observations": [
+    {
+      "fait": "Création de Transmission du diagnostic austral dans Relève boréale, contenu lisible après sauvegarde, version v1.",
+      "preuve": "01-note-creee.png"
+    },
+    {
+      "fait": "La recherche globale retrouve la nouvelle note par son titre ; ouverture par Entrée.",
+      "preuve": "02-recherche.png"
+    },
+    {
+      "fait": "Modification depuis la note retrouvée ; après rechargement complet le texte initial et la phrase ajoutée sont présents, version v2.",
+      "preuve": "03-modification-persistante.png"
+    }
+  ],
+  "limites": [
+    "Exploration sur clone garni uniquement, aucune conclusion sur instance vide.",
+    "Message recherche par sens indisponible, repli mots-clés fonctionnel.",
+    "Message indexation en cours affiché, note néanmoins retrouvée.",
+    "Le libellé Créer la version opérationnelle est visible ; vocabulaire divergent.",
+    "Aucune exploration des modifications concurrentes ni des interruptions de rédaction avant sauvegarde.",
+    "Deux délais de sélecteur du script (Créer puis Enregistrer exact) et une erreur initiale de syntaxe eval : erreurs de pilotage, pas défauts produit."
+  ],
+  "objectifEtatFinalCandidat": "Les actions de création du registre Opérationnel emploient le vocabulaire Registre et Opérationnel, sans le libellé version opérationnelle.",
+  "preuves": [
+    "01-note-creee.png",
+    "02-recherche.png",
+    "03-modification-persistante.png",
+    "trace.zip",
+    "actions.json",
+    "erreurs.json",
+    "final.png"
+  ],
+  "certificationGlobale": false,
+  "nettoyage": "Navigateur fermé, serveur clone arrêté, conteneur recherche supprimé ; fermerInstance terminé sans erreur.",
+  "eslint": "Code de sortie 0",
+  "erreursNavigateur": []
+}

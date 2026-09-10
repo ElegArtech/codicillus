@@ -1,0 +1,339 @@
+Aller à la bibliothèque
+C
+Codicillus
+Vos connaissances. Vivantes.
+Rechercher…
+⌘ K
+UNIVERS
+Atelier boréal
+3
++
+Créer un univers
+RA
+Recette administrateur
+administrateur@recette.invalid
+›
+Bibliothèque de composants
+Signal de fraîcheur
+Boutons
+Champs de saisie
+Pastilles et marqueurs
+Conteneurs
+Navigation
+Restitution de données
+Superpositions
+Contenu rédigé
+Retours
+Identité
+Signal de fraîcheur
+
+La signature du produit. Trois niveaux, jamais portés par la couleur seule : une jauge à trois barres étagées, un libellé en clair, et des hachures sur l'obsolète. Un seul constructeur les produit tous, dans toutes les vues.
+
+Témoin, trois niveaux
+Partout où une note apparaît : carte de résultat, ligne de liste, panneau de relations, cartographie. Ne jamais afficher une note sans son témoin — c'est le renseignement qui décide si l'on peut s'y fier.
+Vérifié il y a 3 jours
+Vérifié il y a 3 jours
+Vérifié il y a 4 mois
+Vérifié il y a 4 mois
+Pas revu depuis 8 mois
+Pas revu depuis 8 mois
+Témoin avec date
+En tête de note (V-14) et dans le cartouche de contrôle, où l'on a la place de dater le dernier contrôle.
+Vérifié il y a 3 jours
+· vérifiée le 07/09/2026
+Vérifié il y a 3 jours
+Vérifié il y a 4 mois
+· vérifiée le 13/05/2026
+Vérifié il y a 4 mois
+Pas revu depuis 8 mois
+· vérifiée le 03/01/2026
+Pas revu depuis 8 mois
+Barre de répartition
+Sur une page de domaine, d'univers ou de dossier : la santé d'un ensemble en un coup d'œil. Chaque part est cliquable et mène à la liste filtrée correspondante.
+1
+fraîche
+1
+vieillissante
+1
+obsolète
+Boutons
+
+Une seule action principale par écran, et jamais deux boutons pleins côte à côte. Le poids visuel dit la hiérarchie : si tout est important, plus rien ne l'est.
+
+Variantes
+Principale : l'action attendue de l'écran, une seule. Secondaire : les actions courantes. Discrète : les actions d'appoint, dans les barres denses. Destructive : tout ce qui détruit, toujours détachée des actions neutres.
+Enregistrer
+btn--principal
+Annuler
+btn
+Options
+btn--discret
+Supprimer
+btn--destructif
+Avec pictogramme
+Le pictogramme précède toujours le libellé et ne le remplace jamais, sauf dans une barre d'outils où l'infobulle prend le relais.
+Nouvelle note
+principale
+Ajouter
+secondaire
+États
+Le focus visible est obligatoire : il conditionne l'usage au clavier. Un bouton désactivé doit être rare — préférer masquer une action interdite plutôt que la montrer inaccessible.
+Normal
+normal
+Focus
+focus
+Désactivé
+désactivé
+Enregistrement…
+en attente
+Champs de saisie
+
+Toujours une étiquette au-dessus, jamais dans le champ : une étiquette flottante disparaît au moment précis où l'on en aurait besoin. L'aide est sous le champ, l'erreur remplace l'aide.
+
+Texte, quatre états
+L'erreur est toujours accompagnée de son motif, jamais d'un simple contour rouge. Le message dit ce qui ne va pas et ce qu'il faut faire.
+Normal
+Focus
+Erreur
+Ce nom est déjà pris dans ce dossier.
+Désactivé
+Attribué par un administrateur.
+Zone longue et sélecteur
+La zone longue pour tout texte de plus d'une ligne. Le sélecteur quand les valeurs possibles sont connues, fermées et peu nombreuses.
+Zone longue
+Sélecteur
+Procédure
+Guide
+Note
+Fiche
+Signet
+Sélecteur arborescent
+Pour choisir un dossier : la hiérarchie doit rester lisible pendant le choix, ce qu'un menu déroulant à chemins concaténés ne permet pas.
+Relève boréale
+3
+Case, interrupteur, étiquettes
+La case pour un choix qui sera validé avec le formulaire ; l'interrupteur pour un réglage qui prend effet immédiatement. Les confondre trompe sur le moment où l'action se produit.
+Inclure les brouillons
+case
+Notifications par courriel
+interrupteur
+postgresql
+sauvegarde
+saisie d'étiquettes
+Pastilles et marqueurs
+
+Des étiquettes courtes qui qualifient sans commenter. Elles ne portent jamais d'action, sauf le filtre actif, dont la croix est explicite.
+
+Familles de pastilles
+Le domaine porte sa teinte d'identification, le type reste neutre, l'étiquette est en monospace avec son croisillon. Le brouillon est hachuré comme l'obsolète : ce n'est pas encore publiable.
+Domaine
+past--domaine
+Procédure
+past--type
+Serveur
+type de fiche
+postgresql
+past--etiquette
+brouillon
+brouillon
+Type : Procédure
+filtre actif
+Conteneurs
+
+Quatre niveaux de mise en boîte, du plus au moins engageant. Ne jamais en imbriquer deux du même type : deux cadres emboîtés ne hiérarchisent rien.
+
+Carte de résultat
+Un objet cliquable dans une liste de résultats. Elle porte toujours le témoin de fraîcheur et le chemin de rangement.
+Archive de la station boréale
+Procédure
+
+Référence du relais boréal : inventaire et diagnostic ancienne.
+
+Pas revu depuis 8 mois
+Révisé le 03/01/2026
+↳ Trouvé dans le registre Opérationnel
+Atelier boréal › Exploitation boréale › Relève boréale
+·
+Recette contributeur
+·
+0 consultations
+Panneau
+Un regroupement thématique dans une page. En-tête étiqueté, corps aéré.
+RELATIONS
+4
+Contenu du panneau.
+Encart
+Une remarque de second plan à l'intérieur d'un corps de texte. Filet latéral, jamais de fond coloré vif — un encart n'est pas une alerte.
+Cette procédure suppose que la sauvegarde du jour soit terminée. Vérifiez-le avant de commencer.
+Panneau latéral
+Un formulaire secondaire qui garde le contexte visible derrière lui — édition d'un objet de la console, historique d'une note. Préféré à la boîte de dialogue quand la saisie est longue.
+Aucun spécimen : un panneau latéral s'ouvre sur le contexte qu'il garde visible, et cette page n'en a pas. Il est en service dans l'historique d'une note, où il se déploie sur la lecture.
+Navigation
+
+Dire où l'on est avant de dire où aller. Chaque composant de cette famille répond à « où suis-je », « que puis-je voir d'autre », ou « comment je reviens ».
+
+Fil d'Ariane
+En tête de chaque vue. Le dernier segment n'est jamais cliquable : c'est la page courante, et l'offrir au clic est une promesse vide.
+Accueil
+›
+Univers
+›
+Domaine
+›
+Dossier
+›
+Sous-dossier
+Onglets
+Pour des vues alternatives d'un même objet — les quatre volets du profil, les registres d'une note. Jamais pour des objets différents : ce serait de la navigation déguisée.
+Identité
+Sécurité
+Distinctions
+Activité
+Arborescence
+Le chevron déplie, le nom navigue. Deux cibles distinctes, toujours — c'est la règle posée en V-37 et tenue par le rail de gauche, qui en est l'exemplaire vivant.
+Voir la navigation latérale de cette page : c'est le même composant, alimenté par le corpus.
+Pagination
+Au-delà de cinquante éléments. Elle indique toujours la page courante et le total : « page 3 » sans savoir combien il y en a n'aide pas à décider.
+‹
+1
+2
+3
+…
+9
+›
+180 notes · 20 par page
+Restitution de données
+
+Un chiffre seul ne décide de rien. Chacun de ces composants ajoute au chiffre ce qui permet d'en tirer une conclusion : une comparaison, une tendance, une part.
+
+Tableau triable
+Pour des données homogènes et comparables colonne par colonne. L'en-tête trié porte aria-sort et une flèche : sans elle, on ne sait pas ce qui a été trié.
+NOTE	DOMAINE	VUES
+
+Archive de la station boréale	Exploitation boréale	0
+Relève du relais boréal	Exploitation boréale	0
+Accès public au relais boréal	Exploitation boréale	0
+Indicateur chiffré avec tendance
+La tendance est indispensable : 1 240 consultations ne veut rien dire, « 1 240, en hausse de 12 % » veut dire quelque chose. Une tendance stable se dit aussi.
+1 240
+consultations sur 7 jours
+▲ +12 %
+59 %
+recherches abouties
+▼ −4 %
+32
+notes publiées
+= inchangé
+Chronologie
+Pour une succession d'événements datés : historique d'une note, activité d'un compte. La pastille de gauche encode la nature de l'événement.
+Recette contributeur — edition
+il y a 0 h
+Recette contributeur — publication
+il y a 0 h
+Recette contributeur — edition
+il y a 0 h
+Recette contributeur — publication
+il y a 0 h
+Superpositions
+
+Tout ce qui passe au-dessus du contenu. Règle commune : ce qui exige une décision avant de continuer est une boîte de dialogue ; tout le reste doit pouvoir être ignoré.
+
+Boîte de dialogue
+Piège le focus, se ferme à Échap, rend le focus à son déclencheur. Le catalogue complet est en V-40.
+Ouvrir une boîte
+Palette de recherche rapide
+Une superposition, ouverte au raccourci depuis n'importe quelle page : elle cherche sans faire quitter la page où l'on est. C'est le raccourci universel du produit.
+Le spécimen est vivant, et il est déjà monté sur cette page : Ctrl K l'ouvre ici comme partout ailleurs. Un second appui replace le focus dans le champ, Échap ferme.
+Menu contextuel
+Les actions d'un objet précis, ouvertes depuis lui. L'action destructive y est séparée par un filet et colorée : c'est le seul endroit où elle voisine des actions neutres.
+Ouvrir
+Entrée
+Modifier
+E
+Dupliquer
+Supprimer
+Suppr
+Aucune entrée choisie
+Infobulle
+Un complément court sur un élément dont le sens n'est pas évident. Jamais pour une information nécessaire : elle est inaccessible au toucher et invisible à l'impression.
+Survolez-moi
+Dernière vérification il y a 12 jours
+Contenu rédigé
+
+Le rendu de toutes les constructions de l'éditeur. La mesure du texte est bornée à 680 pixels ; seuls le code, les tableaux, les figures et les alertes débordent, parce qu'ils se lisent en balayage et non en ligne.
+
+Constructions de l'éditeur
+Titres, listes, tâches, citation, code, tableau, alertes. Ce rendu est identique dans l'éditeur (V-17) et en lecture (V-14) : c'est le même fragment de style.
+Titre de section
+
+Un paragraphe de corps rédigé, composé en Literata pour la lecture longue à l'écran. Il peut contenir du gras, de l'italique, du code en ligne et un lien vers une autre note.
+
+Sous-titre
+Élément de liste à puces
+Second élément
+Première étape numérotée
+Seconde étape
+Contrôle effectué
+Contrôle à faire
+Une citation, ou une parole rapportée.
+BASH
+restaurer --source srv-exemple-01 --vers /var/lib/exemple
+Serveur	Rôle
+srv-exemple-01	Principal
+srv-exemple-02	Réplica
+ASTUCE
+Gagner du temps
+Le raccourci Ctrl+K ouvre la recherche depuis n'importe où.
+ATTENTION
+À savoir avant
+La restauration ferme les connexions en cours.
+DANGER
+IRRÉVERSIBLE
+Cette commande écrase le répertoire de données.
+
+Un dernier paragraphe après le séparateur.
+
+Retours
+
+Ce que le produit répond quand il a quelque chose à dire, rien à montrer, ou un problème. Les planches complètes sont en V-38 et V-39.
+
+Notifications
+Quatre types. Le succès s'efface, l'erreur persiste et propose une issue, l'information est refermable, le suivi montre son avancement puis dit ce qu'il a produit.
+Succès
+Erreur
+Information
+En cours
+État vide
+Un titre qui nomme la situation, une phrase qui explique, une action qui en sort. « Il n'y a rien » et « vos filtres ne renvoient rien » ne se confondent jamais.
+Ce dossier est vide
+
+Aucune note n'y est rangée pour l'instant, et il ne contient aucun sous-dossier.
+
+Créer une note ici
+Créer un sous-dossier
+État de chargement
+Une esquisse de la structure qui arrive, jamais un rouet universel : l'utilisateur doit deviner ce qui va s'afficher.
+État d'erreur local
+La panne d'un panneau ne condamne pas l'écran. Le message dit ce qui continue de fonctionner et propose de réessayer.
+Ce panneau n'a pas pu se charger
+Le reste de la note s'affiche normalement : vous pouvez continuer à lire et à écrire.
+Réessayer
+Identité
+
+Représenter les personnes et les gestes. Un avatar n'est jamais seul quand le nom peut tenir à côté : deux initiales ne suffisent pas à identifier un collègue.
+
+Avatar et pile d'avatars
+L'avatar simple dans une ligne d'activité ou la barre supérieure. La pile quand plusieurs personnes ont contribué : au-delà de quatre, un compteur prend le relais.
+RA
+avatar
+Rc
+pile d'avatars
+Touche clavier
+Pour désigner une touche ou un raccourci dans un texte d'interface. Toujours la notation réelle du clavier, jamais une paraphrase.
+Ouvrir la recherche :
+Ctrl
+K
+· Fermer :
+Échap
+L'enregistrement a échoué
+Spécimen de la bibliothèque : rien n'a été écrit.
