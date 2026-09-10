@@ -290,7 +290,7 @@
 	const ROUTE_DE_NOTE = '/notes/[identifiant]' as const;
 </script>
 
-<!-- LA PARTIE DROITE DE L'EN-TÊTE — « + Créer » en contour, puis l'avatar.
+<!-- LA PARTIE DROITE DE L'EN-TÊTE — créer une note, puis l'avatar.
      `P-09` : le bouton n'est pas rendu quand il n'a nulle part où mener. -->
 {#snippet actions()}
 	{#if ecriture}
@@ -303,19 +303,7 @@
 				stroke="currentColor"
 				stroke-width="1.6"
 				aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg
-			>Créer</a
-		>
-	{:else if administrateur}
-		<a class="btn" href={resolve('/console/univers')}
-			><svg
-				width="14"
-				height="14"
-				viewBox="0 0 16 16"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.6"
-				aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg
-			>Créer</a
+			>Créer une note</a
 		>
 	{/if}
 	<a class="avatar" href={resolve('/mon-profil')} title={moi.nom} aria-label="Mon profil"

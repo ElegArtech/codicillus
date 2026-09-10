@@ -96,6 +96,11 @@
 		const champDep = formulaire.querySelector<HTMLInputElement>('#dep-nom');
 		const champSup = formulaire.querySelector<HTMLInputElement>('#sup-saisie');
 		const validerSup = formulaire.querySelector<HTMLButtonElement>('#sup-valider');
+		if (data.vecteur.creation === true) {
+			if (champCreer !== null) champCreer.value = '';
+			dlgCreer?.showModal();
+			champCreer?.focus();
+		}
 
 		/* 4. NOUVELLE NOTE — une NAVIGATION, pas une action : rien n'est écrit ici,
 		   et le droit qui la gouverne est celui de la route d'arrivée.
