@@ -417,7 +417,7 @@
 				window.alert(`« ${cible.nom} » ne peut pas être supprimé.`);
 				return;
 			}
-			await goto(resolve('/'));
+			await goto(resolve('/'), { invalidateAll: true });
 		} catch {
 			window.alert('La suppression a échoué.');
 		}
